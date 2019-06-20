@@ -243,7 +243,8 @@ TEST_F(AudioTest, SetRoutingPolicy) {
   ExpectCallback();
 }
 
-// Out-of-range enum should cause debug message, but no disconnect.
+// Out-of-range enum should be blocked at sender-side with a debug message
+// printed to stderr, and not disconnect.
 TEST_F(AudioTest, SetBadRoutingPolicy) {
   audio_core_->SetRoutingPolicy(
       static_cast<fuchsia::media::AudioOutputRoutingPolicy>(-1u));

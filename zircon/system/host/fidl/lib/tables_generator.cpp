@@ -143,11 +143,24 @@ void TablesGenerator::GenerateArray(const Collection& collection) {
 }
 
 void TablesGenerator::Generate(const coded::EnumType& enum_type) {
+    std::string validator_func = std::string("EnumValidatorFor_") +
+                                 std::string(enum_type.coded_name);
+    Emit(&tables_file_, "static constexpr bool ");
+    Emit(&tables_file_, validator_func);
+    Emit(&tables_file_, "(uint64_t v) { return ");
+    for (const auto& member : enum_type.members) {
+        Emit(&tables_file_, "(v == ");
+        Emit(&tables_file_, member);
+        Emit(&tables_file_, ") || ");
+    }
+    Emit(&tables_file_, "false; }\n");
+
     Emit(&tables_file_, "const fidl_type_t ");
     Emit(&tables_file_, NameTable(enum_type.coded_name));
     Emit(&tables_file_, " = fidl_type_t(::fidl::FidlCodedEnum(");
     Emit(&tables_file_, "::fidl::FidlCodedPrimitive::k");
     Emit(&tables_file_, PrimitiveSubtypeToString(enum_type.subtype));
+    Emit(&tables_file_, ", &" + validator_func);
     Emit(&tables_file_, "));\n\n");
 }
 

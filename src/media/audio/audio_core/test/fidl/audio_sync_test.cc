@@ -128,8 +128,8 @@ TEST_F(AudioSyncTest, SetRoutingPolicy) {
             audio_core_sync_->SetRoutingPolicy(
                 fuchsia::media::AudioOutputRoutingPolicy::ALL_PLUGGED_OUTPUTS));
 
-  // Out-of-range enum should cause debug message, but no error nor disconnect.
-  EXPECT_EQ(ZX_OK,
+  // Out-of-range enum should be blocked at sender-side.
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS,
             audio_core_sync_->SetRoutingPolicy(
                 static_cast<fuchsia::media::AudioOutputRoutingPolicy>(-1u)));
 

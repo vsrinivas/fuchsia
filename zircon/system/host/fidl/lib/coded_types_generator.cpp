@@ -353,10 +353,30 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
     case flat::Decl::Kind::kEnum: {
         auto enum_decl = static_cast<const flat::Enum*>(decl);
         std::string enum_name = NameCodedName(enum_decl->name);
+        std::vector<uint64_t> members;
+        for (const auto& member : enum_decl->members) {
+            std::unique_ptr<flat::ConstantValue> value;
+            uint64_t uint64 = 0;
+            bool ok = member.value->Value().Convert(flat::ConstantValue::Kind::kUint64, &value);
+            if (ok) {
+                uint64 = static_cast<flat::NumericConstantValue<uint64_t>*>(value.get())->value;
+            } else {
+                ok = member.value->Value().Convert(flat::ConstantValue::Kind::kInt64, &value);
+                if (ok) {
+                    // Note: casting int64_t to uint64_t is well-defined.
+                    uint64 = static_cast<uint64_t>(
+                        static_cast<flat::NumericConstantValue<int64_t>*>(value.get())->value);
+                } else {
+                    assert(false && "Failed to convert enum member to uint64 or int64");
+                }
+            }
+            members.push_back(uint64);
+        }
         named_coded_types_.emplace(&enum_decl->name,
                                    std::make_unique<coded::EnumType>(
                                        std::move(enum_name), enum_decl->type->subtype,
-                                       flat::PrimitiveType::SubtypeSize(enum_decl->type->subtype)));
+                                       flat::PrimitiveType::SubtypeSize(enum_decl->type->subtype),
+                                       std::move(members)));
         break;
     }
     case flat::Decl::Kind::kProtocol: {

@@ -146,11 +146,13 @@ struct PrimitiveType : public Type {
 };
 
 struct EnumType : public Type {
-    EnumType(std::string name, types::PrimitiveSubtype subtype, uint32_t size)
+    EnumType(std::string name, types::PrimitiveSubtype subtype, uint32_t size,
+             std::vector<uint64_t> members)
         : Type(Kind::kEnum, std::move(name), size, CodingNeeded::kAlways),
-          subtype(subtype) {}
+          subtype(subtype), members(std::move(members)) {}
 
     const types::PrimitiveSubtype subtype;
+    const std::vector<uint64_t> members;
 };
 
 struct BitsType : public Type {

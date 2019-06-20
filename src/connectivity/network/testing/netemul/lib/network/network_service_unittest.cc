@@ -332,8 +332,7 @@ TEST_F(NetworkServiceTest, BadEndpointConfigurations) {
   auto badBacking = GetDefaultEndpointConfig();
   badBacking.backing =
       static_cast<fuchsia::netemul::network::EndpointBacking>(-1);
-  ASSERT_OK(epm->CreateEndpoint(epname, std::move(badBacking), &status, &eph));
-  ASSERT_NOK(status);
+  ASSERT_NOK(epm->CreateEndpoint(epname, std::move(badBacking), &status, &eph));
   ASSERT_FALSE(eph.is_valid());
 
   // can't create endpoint which violates maximum MTU

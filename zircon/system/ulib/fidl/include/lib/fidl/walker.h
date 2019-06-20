@@ -143,6 +143,7 @@ private:
             case fidl::kFidlTypeEnum:
                 state = kStateEnum;
                 enum_state.underlying_type = fidl_type->coded_enum.underlying_type;
+                enum_state.validate = fidl_type->coded_enum.validate;
                 break;
             case fidl::kFidlTypeBits:
                 state = kStateBits;
@@ -313,6 +314,7 @@ private:
         union {
             struct {
                 fidl::FidlCodedPrimitive underlying_type;
+                fidl::EnumValidationPredicate validate;
             } enum_state;
             struct {
                 fidl::FidlCodedPrimitive underlying_type;
@@ -454,7 +456,40 @@ void Walker<VisitorImpl>::Walk(VisitorImpl& visitor) {
 
         switch (frame->state) {
         case Frame::kStateEnum: {
-            // TODO(FIDL-627): Validate enums
+            uint64_t value;
+            switch (frame->enum_state.underlying_type) {
+            case FidlCodedPrimitive::kUint8:
+                value = *PtrTo<uint8_t>(frame->position);
+                break;
+            case FidlCodedPrimitive::kUint16:
+                value = *PtrTo<uint16_t>(frame->position);
+                break;
+            case FidlCodedPrimitive::kUint32:
+                value = *PtrTo<uint32_t>(frame->position);
+                break;
+            case FidlCodedPrimitive::kUint64:
+                value = *PtrTo<uint64_t>(frame->position);
+                break;
+            case FidlCodedPrimitive::kInt8:
+                value = static_cast<uint64_t>(*PtrTo<int8_t>(frame->position));
+                break;
+            case FidlCodedPrimitive::kInt16:
+                value = static_cast<uint64_t>(*PtrTo<int16_t>(frame->position));
+                break;
+            case FidlCodedPrimitive::kInt32:
+                value = static_cast<uint64_t>(*PtrTo<int32_t>(frame->position));
+                break;
+            case FidlCodedPrimitive::kInt64:
+                value = static_cast<uint64_t>(*PtrTo<int64_t>(frame->position));
+                break;
+            default:
+                __builtin_unreachable();
+            }
+            if (!frame->enum_state.validate(value)) {
+                // TODO(FIDL-523): Make this strictness dependent.
+                visitor.OnError("not a valid enum member");
+                FIDL_STATUS_GUARD(Status::kConstraintViolationError);
+            }
             Pop();
             continue;
         }

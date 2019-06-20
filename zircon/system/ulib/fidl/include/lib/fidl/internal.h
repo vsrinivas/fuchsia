@@ -123,11 +123,15 @@ enum struct FidlCodedPrimitive : uint32_t {
     kFloat64,
 };
 
+typedef bool (*EnumValidationPredicate)(uint64_t);
+
 struct FidlCodedEnum {
     const FidlCodedPrimitive underlying_type;
+    const EnumValidationPredicate validate;
 
-    constexpr explicit FidlCodedEnum(FidlCodedPrimitive underlying_type)
-        : underlying_type(underlying_type) {}
+    constexpr explicit FidlCodedEnum(FidlCodedPrimitive underlying_type,
+                                     EnumValidationPredicate validate)
+        : underlying_type(underlying_type), validate(validate) {}
 };
 
 struct FidlCodedBits {

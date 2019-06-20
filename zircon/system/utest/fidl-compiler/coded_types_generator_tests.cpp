@@ -576,6 +576,10 @@ enum MyEnum : uint16 {
     auto type_enum_enum = static_cast<const fidl::coded::EnumType*>(type_enum);
     ASSERT_EQ(fidl::types::PrimitiveSubtype::kUint16, type_enum_enum->subtype);
 
+    ASSERT_EQ(2, type_enum_enum->members.size());
+    ASSERT_EQ(0x1, type_enum_enum->members[0]);
+    ASSERT_EQ(0x10, type_enum_enum->members[1]);
+
     END_TEST;
 }
 

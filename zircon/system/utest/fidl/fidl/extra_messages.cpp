@@ -4,6 +4,14 @@
 
 extern "C" {
 
+extern const fidl_type_t fidl_test_coding_Uint8EnumTable;
+extern const fidl_type_t fidl_test_coding_Uint8EnumStructTable;
+extern const fidl_type_t fidl_test_coding_Uint64EnumTable;
+extern const fidl_type_t fidl_test_coding_Uint64EnumStructTable;
+extern const fidl_type_t fidl_test_coding_Uint32EnumTable;
+extern const fidl_type_t fidl_test_coding_Uint32EnumStructTable;
+extern const fidl_type_t fidl_test_coding_Uint16EnumTable;
+extern const fidl_type_t fidl_test_coding_Uint16EnumStructTable;
 extern const fidl_type_t fidl_test_coding_StructWithManyHandlesTable;
 extern const fidl_type_t fidl_test_coding_SmallerTableOfStructWithHandleTable;
 extern const fidl_type_t fidl_test_coding_StructWithHandleTable;
@@ -15,8 +23,16 @@ extern const fidl_type_t fidl_test_coding_SampleXUnionStructTable;
 extern const fidl_type_t fidl_test_coding_SampleNullableXUnionStructTable;
 extern const fidl_type_t fidl_test_coding_OlderSimpleTableTable;
 extern const fidl_type_t fidl_test_coding_NewerSimpleTableTable;
+extern const fidl_type_t fidl_test_coding_Int8EnumTable;
+extern const fidl_type_t fidl_test_coding_Int8EnumStructTable;
+extern const fidl_type_t fidl_test_coding_Int64EnumTable;
+extern const fidl_type_t fidl_test_coding_Int64EnumStructTable;
+extern const fidl_type_t fidl_test_coding_Int32EnumTable;
+extern const fidl_type_t fidl_test_coding_Int32EnumStructTable;
 extern const fidl_type_t fidl_test_coding_Int32BitsTable;
 extern const fidl_type_t fidl_test_coding_Int32BitsStructTable;
+extern const fidl_type_t fidl_test_coding_Int16EnumTable;
+extern const fidl_type_t fidl_test_coding_Int16EnumStructTable;
 extern const fidl_type_t fidl_test_coding_Int16BitsTable;
 extern const fidl_type_t fidl_test_coding_Int16BitsStructTable;
 
@@ -50,6 +66,38 @@ static const ::fidl::FidlXUnionField fidl_test_coding_SampleXUnionNullableRefFie
 };
 const fidl_type_t fidl_test_coding_SampleXUnionNullableRefTable = fidl_type_t(::fidl::FidlCodedXUnion(3u, fidl_test_coding_SampleXUnionNullableRefFields, ::fidl::kNullable, "fidl.test.coding/SampleXUnion"));
 
+
+static constexpr bool EnumValidatorFor_fidl_test_coding_Uint8Enum(uint64_t v) { return (v == 0ul) || (v == 255ul) || (v == 42ul) || false; }
+const fidl_type_t fidl_test_coding_Uint8EnumTable = fidl_type_t(::fidl::FidlCodedEnum(::fidl::FidlCodedPrimitive::kUint8, &EnumValidatorFor_fidl_test_coding_Uint8Enum));
+
+static const ::fidl::FidlStructField fidl_test_coding_Uint8EnumStructFields[] = {
+    ::fidl::FidlStructField(&fidl_test_coding_Uint8EnumTable, 0u, 0u)
+};
+const fidl_type_t fidl_test_coding_Uint8EnumStructTable = fidl_type_t(::fidl::FidlCodedStruct(fidl_test_coding_Uint8EnumStructFields, 1u, 1u, "fidl.test.coding/Uint8EnumStruct"));
+
+static constexpr bool EnumValidatorFor_fidl_test_coding_Uint64Enum(uint64_t v) { return (v == 0ul) || (v == 18446744073709551615ul) || (v == 42ul) || false; }
+const fidl_type_t fidl_test_coding_Uint64EnumTable = fidl_type_t(::fidl::FidlCodedEnum(::fidl::FidlCodedPrimitive::kUint64, &EnumValidatorFor_fidl_test_coding_Uint64Enum));
+
+static const ::fidl::FidlStructField fidl_test_coding_Uint64EnumStructFields[] = {
+    ::fidl::FidlStructField(&fidl_test_coding_Uint64EnumTable, 0u, 0u)
+};
+const fidl_type_t fidl_test_coding_Uint64EnumStructTable = fidl_type_t(::fidl::FidlCodedStruct(fidl_test_coding_Uint64EnumStructFields, 1u, 8u, "fidl.test.coding/Uint64EnumStruct"));
+
+static constexpr bool EnumValidatorFor_fidl_test_coding_Uint32Enum(uint64_t v) { return (v == 0ul) || (v == 4294967295ul) || (v == 42ul) || false; }
+const fidl_type_t fidl_test_coding_Uint32EnumTable = fidl_type_t(::fidl::FidlCodedEnum(::fidl::FidlCodedPrimitive::kUint32, &EnumValidatorFor_fidl_test_coding_Uint32Enum));
+
+static const ::fidl::FidlStructField fidl_test_coding_Uint32EnumStructFields[] = {
+    ::fidl::FidlStructField(&fidl_test_coding_Uint32EnumTable, 0u, 0u)
+};
+const fidl_type_t fidl_test_coding_Uint32EnumStructTable = fidl_type_t(::fidl::FidlCodedStruct(fidl_test_coding_Uint32EnumStructFields, 1u, 4u, "fidl.test.coding/Uint32EnumStruct"));
+
+static constexpr bool EnumValidatorFor_fidl_test_coding_Uint16Enum(uint64_t v) { return (v == 0ul) || (v == 65535ul) || (v == 42ul) || false; }
+const fidl_type_t fidl_test_coding_Uint16EnumTable = fidl_type_t(::fidl::FidlCodedEnum(::fidl::FidlCodedPrimitive::kUint16, &EnumValidatorFor_fidl_test_coding_Uint16Enum));
+
+static const ::fidl::FidlStructField fidl_test_coding_Uint16EnumStructFields[] = {
+    ::fidl::FidlStructField(&fidl_test_coding_Uint16EnumTable, 0u, 0u)
+};
+const fidl_type_t fidl_test_coding_Uint16EnumStructTable = fidl_type_t(::fidl::FidlCodedStruct(fidl_test_coding_Uint16EnumStructFields, 1u, 2u, "fidl.test.coding/Uint16EnumStruct"));
 
 static const ::fidl::FidlStructField fidl_test_coding_StructWithManyHandlesFields[] = {
     ::fidl::FidlStructField(&HandlehandlenonnullableTable, 0u, 0u),
@@ -112,12 +160,44 @@ static const ::fidl::FidlTableField fidl_test_coding_NewerSimpleTableFields[] = 
 };
 const fidl_type_t fidl_test_coding_NewerSimpleTableTable = fidl_type_t(::fidl::FidlCodedTable(fidl_test_coding_NewerSimpleTableFields, 3u, "fidl.test.coding/NewerSimpleTable"));
 
+static constexpr bool EnumValidatorFor_fidl_test_coding_Int8Enum(uint64_t v) { return (v == 18446744073709551488ul) || (v == 127ul) || (v == 42ul) || false; }
+const fidl_type_t fidl_test_coding_Int8EnumTable = fidl_type_t(::fidl::FidlCodedEnum(::fidl::FidlCodedPrimitive::kInt8, &EnumValidatorFor_fidl_test_coding_Int8Enum));
+
+static const ::fidl::FidlStructField fidl_test_coding_Int8EnumStructFields[] = {
+    ::fidl::FidlStructField(&fidl_test_coding_Int8EnumTable, 0u, 0u)
+};
+const fidl_type_t fidl_test_coding_Int8EnumStructTable = fidl_type_t(::fidl::FidlCodedStruct(fidl_test_coding_Int8EnumStructFields, 1u, 1u, "fidl.test.coding/Int8EnumStruct"));
+
+static constexpr bool EnumValidatorFor_fidl_test_coding_Int64Enum(uint64_t v) { return (v == 9223372036854775808ul) || (v == 9223372036854775807ul) || (v == 42ul) || false; }
+const fidl_type_t fidl_test_coding_Int64EnumTable = fidl_type_t(::fidl::FidlCodedEnum(::fidl::FidlCodedPrimitive::kInt64, &EnumValidatorFor_fidl_test_coding_Int64Enum));
+
+static const ::fidl::FidlStructField fidl_test_coding_Int64EnumStructFields[] = {
+    ::fidl::FidlStructField(&fidl_test_coding_Int64EnumTable, 0u, 0u)
+};
+const fidl_type_t fidl_test_coding_Int64EnumStructTable = fidl_type_t(::fidl::FidlCodedStruct(fidl_test_coding_Int64EnumStructFields, 1u, 8u, "fidl.test.coding/Int64EnumStruct"));
+
+static constexpr bool EnumValidatorFor_fidl_test_coding_Int32Enum(uint64_t v) { return (v == 18446744071562067968ul) || (v == 2147483647ul) || (v == 42ul) || false; }
+const fidl_type_t fidl_test_coding_Int32EnumTable = fidl_type_t(::fidl::FidlCodedEnum(::fidl::FidlCodedPrimitive::kInt32, &EnumValidatorFor_fidl_test_coding_Int32Enum));
+
+static const ::fidl::FidlStructField fidl_test_coding_Int32EnumStructFields[] = {
+    ::fidl::FidlStructField(&fidl_test_coding_Int32EnumTable, 0u, 0u)
+};
+const fidl_type_t fidl_test_coding_Int32EnumStructTable = fidl_type_t(::fidl::FidlCodedStruct(fidl_test_coding_Int32EnumStructFields, 1u, 4u, "fidl.test.coding/Int32EnumStruct"));
+
 const fidl_type_t fidl_test_coding_Int32BitsTable = fidl_type_t(::fidl::FidlCodedBits(::fidl::FidlCodedPrimitive::kUint32, 67110976ul));
 
 static const ::fidl::FidlStructField fidl_test_coding_Int32BitsStructFields[] = {
     ::fidl::FidlStructField(&fidl_test_coding_Int32BitsTable, 0u, 0u)
 };
 const fidl_type_t fidl_test_coding_Int32BitsStructTable = fidl_type_t(::fidl::FidlCodedStruct(fidl_test_coding_Int32BitsStructFields, 1u, 4u, "fidl.test.coding/Int32BitsStruct"));
+
+static constexpr bool EnumValidatorFor_fidl_test_coding_Int16Enum(uint64_t v) { return (v == 18446744073709518848ul) || (v == 32767ul) || (v == 42ul) || false; }
+const fidl_type_t fidl_test_coding_Int16EnumTable = fidl_type_t(::fidl::FidlCodedEnum(::fidl::FidlCodedPrimitive::kInt16, &EnumValidatorFor_fidl_test_coding_Int16Enum));
+
+static const ::fidl::FidlStructField fidl_test_coding_Int16EnumStructFields[] = {
+    ::fidl::FidlStructField(&fidl_test_coding_Int16EnumTable, 0u, 0u)
+};
+const fidl_type_t fidl_test_coding_Int16EnumStructTable = fidl_type_t(::fidl::FidlCodedStruct(fidl_test_coding_Int16EnumStructFields, 1u, 2u, "fidl.test.coding/Int16EnumStruct"));
 
 const fidl_type_t fidl_test_coding_Int16BitsTable = fidl_type_t(::fidl::FidlCodedBits(::fidl::FidlCodedPrimitive::kUint16, 21ul));
 

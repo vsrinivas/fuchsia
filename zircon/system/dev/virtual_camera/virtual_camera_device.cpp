@@ -53,7 +53,7 @@ void VirtualCameraDevice::RemoveStream(uint64_t stream_id) {
 }
 
 zx_status_t VirtualCameraDevice::GetFormats(uint32_t index, fidl_txn_t* txn) {
-    fuchsia_hardware_camera_VideoFormat formats[16];
+    fuchsia_hardware_camera_VideoFormat formats[16] = {};
 
     fuchsia_hardware_camera_VideoFormat format = {
         .format = {.width = 640,

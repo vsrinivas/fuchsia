@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <stddef.h>
+#include <limits>
 #include <memory>
 
 #include <lib/fidl/coding.h>
@@ -1856,6 +1857,105 @@ bool validate_invalid_32bit_bits() {
     END_TEST;
 }
 
+template <typename T>
+bool TestValidEnum(const fidl_type_t* coding_table) {
+    BEGIN_HELPER;
+
+    // See extra_messages.test.fidl for the list of valid members.
+    using Underlying = decltype(T::e);
+    for (const Underlying valid_value : {
+        static_cast<Underlying>(42),
+        std::numeric_limits<Underlying>::min(),
+        std::numeric_limits<Underlying>::max(),
+    }) {
+        T message { .e = valid_value };
+        const char* error = nullptr;
+        auto status = fidl_validate(coding_table, &message, sizeof(message), 0, &error);
+        EXPECT_EQ(status, ZX_OK);
+        EXPECT_NULL(error);
+    }
+
+    END_HELPER;
+}
+
+template <typename T>
+bool TestInvalidEnum(const fidl_type_t* coding_table) {
+    BEGIN_HELPER;
+
+    // See extra_messages.test.fidl for the list of valid members.
+    using Underlying = decltype(T::e);
+    for (const Underlying invalid_value : {
+        static_cast<Underlying>(7),
+        static_cast<Underlying>(30),
+        static_cast<Underlying>(std::numeric_limits<Underlying>::min() + 1),
+        static_cast<Underlying>(std::numeric_limits<Underlying>::max() - 1),
+    }) {
+        T message { .e = invalid_value };
+        const char* error = nullptr;
+        auto status = fidl_validate(coding_table, &message, sizeof(message), 0, &error);
+        EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
+        EXPECT_STR_EQ(error, "not a valid enum member");
+    }
+
+    END_HELPER;
+}
+
+bool validate_int8_enum() {
+    BEGIN_TEST;
+    EXPECT_TRUE(TestValidEnum<Int8Enum>(&fidl_test_coding_Int8EnumStructTable));
+    EXPECT_TRUE(TestInvalidEnum<Int8Enum>(&fidl_test_coding_Int8EnumStructTable));
+    END_TEST;
+}
+
+bool validate_int16_enum() {
+    BEGIN_TEST;
+    EXPECT_TRUE(TestValidEnum<Int16Enum>(&fidl_test_coding_Int16EnumStructTable));
+    EXPECT_TRUE(TestInvalidEnum<Int16Enum>(&fidl_test_coding_Int16EnumStructTable));
+    END_TEST;
+}
+
+bool validate_int32_enum() {
+    BEGIN_TEST;
+    EXPECT_TRUE(TestValidEnum<Int32Enum>(&fidl_test_coding_Int32EnumStructTable));
+    EXPECT_TRUE(TestInvalidEnum<Int32Enum>(&fidl_test_coding_Int32EnumStructTable));
+    END_TEST;
+}
+
+bool validate_int64_enum() {
+    BEGIN_TEST;
+    EXPECT_TRUE(TestValidEnum<Int64Enum>(&fidl_test_coding_Int64EnumStructTable));
+    EXPECT_TRUE(TestInvalidEnum<Int64Enum>(&fidl_test_coding_Int64EnumStructTable));
+    END_TEST;
+}
+
+bool validate_uint8_enum() {
+    BEGIN_TEST;
+    EXPECT_TRUE(TestValidEnum<Uint8Enum>(&fidl_test_coding_Uint8EnumStructTable));
+    EXPECT_TRUE(TestInvalidEnum<Uint8Enum>(&fidl_test_coding_Uint8EnumStructTable));
+    END_TEST;
+}
+
+bool validate_uint16_enum() {
+    BEGIN_TEST;
+    EXPECT_TRUE(TestValidEnum<Uint16Enum>(&fidl_test_coding_Uint16EnumStructTable));
+    EXPECT_TRUE(TestInvalidEnum<Uint16Enum>(&fidl_test_coding_Uint16EnumStructTable));
+    END_TEST;
+}
+
+bool validate_uint32_enum() {
+    BEGIN_TEST;
+    EXPECT_TRUE(TestValidEnum<Uint32Enum>(&fidl_test_coding_Uint32EnumStructTable));
+    EXPECT_TRUE(TestInvalidEnum<Uint32Enum>(&fidl_test_coding_Uint32EnumStructTable));
+    END_TEST;
+}
+
+bool validate_uint64_enum() {
+    BEGIN_TEST;
+    EXPECT_TRUE(TestValidEnum<Uint64Enum>(&fidl_test_coding_Uint64EnumStructTable));
+    EXPECT_TRUE(TestInvalidEnum<Uint64Enum>(&fidl_test_coding_Uint64EnumStructTable));
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(null_parameters)
 RUN_TEST(validate_null_validate_parameters)
 END_TEST_CASE(null_parameters)
@@ -1951,6 +2051,18 @@ RUN_TEST(validate_zero_32bit_bits)
 RUN_TEST(validate_valid_32bit_bits)
 RUN_TEST(validate_invalid_32bit_bits)
 END_TEST_CASE(bits)
+
+
+BEGIN_TEST_CASE(enums)
+RUN_TEST(validate_int8_enum)
+RUN_TEST(validate_int16_enum)
+RUN_TEST(validate_int32_enum)
+RUN_TEST(validate_int64_enum)
+RUN_TEST(validate_uint8_enum)
+RUN_TEST(validate_uint16_enum)
+RUN_TEST(validate_uint32_enum)
+RUN_TEST(validate_uint64_enum)
+END_TEST_CASE(enums)
 
 } // namespace
 } // namespace fidl

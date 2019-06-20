@@ -30,6 +30,15 @@ extern const fidl_type_t fidl_test_coding_Int32BitsStructTable;
 extern const fidl_type_t fidl_test_coding_Int16BitsTable;
 extern const fidl_type_t fidl_test_coding_Int16BitsStructTable;
 
+extern const fidl_type_t fidl_test_coding_Int8EnumStructTable;
+extern const fidl_type_t fidl_test_coding_Int16EnumStructTable;
+extern const fidl_type_t fidl_test_coding_Int32EnumStructTable;
+extern const fidl_type_t fidl_test_coding_Int64EnumStructTable;
+extern const fidl_type_t fidl_test_coding_Uint8EnumStructTable;
+extern const fidl_type_t fidl_test_coding_Uint16EnumStructTable;
+extern const fidl_type_t fidl_test_coding_Uint32EnumStructTable;
+extern const fidl_type_t fidl_test_coding_Uint64EnumStructTable;
+
 extern const fidl_type_t fidl_test_coding_LinearizerTestVectorOfUint32RequestTable;
 extern const fidl_type_t fidl_test_coding_LinearizerTestVectorOfStringRequestTable;
 
@@ -121,5 +130,15 @@ struct Int32Bits {
     FIDL_ALIGNDECL
     uint32_t bits;
 };
+
+#define TEST_ENUM_DEF(name, t) struct name##Enum { FIDL_ALIGNDECL t e; };
+TEST_ENUM_DEF(Int8, int8_t)
+TEST_ENUM_DEF(Int16, int16_t)
+TEST_ENUM_DEF(Int32, int32_t)
+TEST_ENUM_DEF(Int64, int64_t)
+TEST_ENUM_DEF(Uint8, uint8_t)
+TEST_ENUM_DEF(Uint16, uint16_t)
+TEST_ENUM_DEF(Uint32, uint32_t)
+TEST_ENUM_DEF(Uint64, uint64_t)
 
 } // namespace fidl

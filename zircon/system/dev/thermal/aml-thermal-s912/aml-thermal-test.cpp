@@ -116,10 +116,6 @@ TEST_F(AmlThermalTest, GetDvfsInfo) {
     scpi_opp_t out_opp;
 
     EXPECT_OK(fuchsia_hardware_thermal_DeviceGetDvfsInfo(
-        client_.get(), fuchsia_hardware_thermal_MAX_DVFS_DOMAINS, &status, &out_opp));
-    EXPECT_NE(status, ZX_OK);
-
-    EXPECT_OK(fuchsia_hardware_thermal_DeviceGetDvfsInfo(
         client_.get(), fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN, &status,
         &out_opp));
     EXPECT_EQ(status, ZX_ERR_IO);
@@ -155,14 +151,6 @@ TEST_F(AmlThermalTest, DvfsOperatingPoint) {
 
     zx_status_t status;
     uint16_t op_idx;
-
-    EXPECT_OK(fuchsia_hardware_thermal_DeviceSetDvfsOperatingPoint(
-        client_.get(), 0, fuchsia_hardware_thermal_MAX_DVFS_DOMAINS, &status));
-    EXPECT_NE(status, ZX_OK);
-
-    EXPECT_OK(fuchsia_hardware_thermal_DeviceGetDvfsOperatingPoint(
-        client_.get(), fuchsia_hardware_thermal_MAX_DVFS_DOMAINS, &status, &op_idx));
-    EXPECT_NE(status, ZX_OK);
 
     EXPECT_OK(fuchsia_hardware_thermal_DeviceSetDvfsOperatingPoint(
         client_.get(), 1, fuchsia_hardware_thermal_PowerDomain_BIG_CLUSTER_POWER_DOMAIN, &status));
