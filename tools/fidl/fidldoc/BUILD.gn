@@ -38,9 +38,15 @@ if (host_toolchain == current_toolchain) {
   }
 }
 
+copy("fidldoc_copy_config") {
+  sources = ["src/fidldoc.config.json"]
+  outputs = ["${root_out_dir}/host_${current_cpu}/fidldoc.config.json"]
+}
+
 group("fidldoc") {
   deps = [
     ":fidldoc_bin($host_toolchain)",
+    ":fidldoc_copy_config",
   ]
 }
 
