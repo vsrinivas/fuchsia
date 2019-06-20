@@ -52,11 +52,6 @@ public:
         return zx_vmo_set_size(get(), size);
     }
 
-    zx_status_t clone(uint32_t options, uint64_t offset, uint64_t size,
-                      vmo* result) const {
-        return create_child(options, offset, size, result);
-    }
-
     zx_status_t create_child(uint32_t options, uint64_t offset, uint64_t size,
                              vmo* result) const {
         // Allow for the caller aliasing |result| to |this|.

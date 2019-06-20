@@ -95,12 +95,12 @@ zx_handle_t bootfs_open(zx_handle_t log, const char* purpose,
     zx_status_t status = zx_vmo_create_child(fs->vmo, ZX_VMO_CHILD_COPY_ON_WRITE,
                                              e->data_off, e->data_len, &vmo);
     if (status != ZX_OK)
-        fail(log, "zx_vmo_clone failed: %d", status);
+        fail(log, "zx_vmo_create_child failed: %d", status);
 
     zx_object_set_property(vmo, ZX_PROP_NAME, filename, strlen(filename));
 
     // Drop unnecessary ZX_RIGHT_WRITE rights.
-    // TODO(mcgrathr): Should be superfluous with read-only zx_vmo_clone.
+    // TODO(mcgrathr): Should be superfluous with read-only zx_vmo_create_child.
     status = zx_handle_replace(
         vmo,
         ZX_RIGHT_READ | ZX_RIGHT_MAP |

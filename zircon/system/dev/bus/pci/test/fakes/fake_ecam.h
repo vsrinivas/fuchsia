@@ -269,7 +269,7 @@ public:
     uint8_t bus_start() const { return bus_start_; }
     uint8_t bus_end() const { return bus_end_; }
     zx_status_t get_vmo(zx::vmo* vmo) const {
-        return mmio_.get_vmo()->clone(0, 0, mmio_.get_size(), vmo);
+        return mmio_.get_vmo()->create_child(0, 0, mmio_.get_size(), vmo);
     }
     ddk::MmioBuffer& get_mmio() { return mmio_; }
     void reset() {
