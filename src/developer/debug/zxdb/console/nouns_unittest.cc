@@ -85,4 +85,43 @@ TEST_F(NounsTest, BreakpointList) {
   // should add something here.
 }
 
+TEST_F(NounsTest, FilterTest) {
+  MockConsole console(&session());
+
+  console.ProcessInputLine("filter");
+  auto event = console.GetOutputEvent();
+  ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
+  ASSERT_EQ("No filters.\n", event.output.AsString());
+
+  console.ProcessInputLine("attach foobar");
+  event = console.GetOutputEvent();
+  ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
+  ASSERT_EQ("Waiting for process matching /foobar/", event.output.AsString());
+
+  console.ProcessInputLine("job 1 attach boofar");
+  event = console.GetOutputEvent();
+  ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
+  ASSERT_EQ("Waiting for process matching /boofar/", event.output.AsString());
+
+  console.ProcessInputLine("filter attach hoodar");
+  event = console.GetOutputEvent();
+  ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
+  ASSERT_EQ("Waiting for process matching /hoodar/", event.output.AsString());
+
+  console.ProcessInputLine("filter 1 attach newcar");
+  event = console.GetOutputEvent();
+  ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
+  ASSERT_EQ("Waiting for process matching /newcar/", event.output.AsString());
+
+  console.ProcessInputLine("filter");
+  event = console.GetOutputEvent();
+  ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
+  ASSERT_EQ(R"( # Pattern Job
+ 1 newcar    *
+ 2 boofar    1
+ 3 hoodar    *
+)",
+            event.output.AsString());
+}
+
 }  // namespace zxdb

@@ -7,6 +7,7 @@
 #include <inttypes.h>
 
 #include "src/developer/debug/zxdb/client/breakpoint.h"
+#include "src/developer/debug/zxdb/client/filter.h"
 #include "src/developer/debug/zxdb/client/frame.h"
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/session.h"
@@ -121,6 +122,15 @@ int ConsoleContext::IdForBreakpoint(const Breakpoint* breakpoint) const {
 
   auto found = breakpoint_to_id_.find(breakpoint);
   if (found == breakpoint_to_id_.end()) {
+    FXL_NOTREACHED();
+    return 0;
+  }
+  return found->second;
+}
+
+int ConsoleContext::IdForFilter(const Filter* filter) const {
+  auto found = filter_to_id_.find(filter);
+  if (found == filter_to_id_.end()) {
     FXL_NOTREACHED();
     return 0;
   }
@@ -274,6 +284,25 @@ Breakpoint* ConsoleContext::GetActiveBreakpoint() const {
   return found->second;
 }
 
+void ConsoleContext::SetActiveFilter(const Filter* filter) {
+  int id = IdForFilter(filter);
+  if (id != 0)
+    active_filter_id_ = id;
+}
+
+int ConsoleContext::GetActiveFilterId() const { return active_filter_id_; }
+
+Filter* ConsoleContext::GetActiveFilter() const {
+  if (active_filter_id_ == 0)
+    return nullptr;
+  auto found = id_to_filter_.find(active_filter_id_);
+  if (found == id_to_filter_.end()) {
+    FXL_NOTREACHED();
+    return nullptr;
+  }
+  return found->second;
+}
+
 SourceAffinity ConsoleContext::GetSourceAffinityForThread(
     const Thread* thread) const {
   const ThreadRecord* record = GetThreadRecord(thread);
@@ -366,6 +395,11 @@ Err ConsoleContext::FillOutCommand(Command* cmd) const {
 
   // Breakpoint.
   result = FillOutBreakpoint(cmd);
+  if (result.has_error())
+    return result;
+
+  // Filter.
+  result = FillOutFilter(cmd);
   if (result.has_error())
     return result;
 
@@ -469,6 +503,14 @@ void ConsoleContext::DidCreateBreakpoint(Breakpoint* breakpoint) {
 
   id_to_breakpoint_[id] = breakpoint;
   breakpoint_to_id_[breakpoint] = id;
+}
+
+void ConsoleContext::DidCreateFilter(Filter* filter) {
+  int id = next_filter_id_;
+  next_filter_id_++;
+
+  id_to_filter_[id] = filter;
+  filter_to_id_[filter] = id;
 }
 
 void ConsoleContext::WillDestroyBreakpoint(Breakpoint* breakpoint) {
@@ -897,6 +939,24 @@ Err ConsoleContext::FillOutBreakpoint(Command* cmd) const {
                fxl::StringPrintf("There is no breakpoint %d.", breakpoint_id));
   }
   cmd->set_breakpoint(found_breakpoint->second);
+  return Err();
+}
+
+Err ConsoleContext::FillOutFilter(Command* cmd) const {
+  int filter_id = cmd->GetNounIndex(Noun::kFilter);
+  if (filter_id == Command::kNoIndex) {
+    // No index: use the active one (which may not exist).
+    cmd->set_filter(GetActiveFilter());
+    return Err();
+  }
+
+  // Explicit index given, look it up.
+  auto found_filter = id_to_filter_.find(filter_id);
+  if (found_filter == id_to_filter_.end()) {
+    return Err(ErrType::kInput,
+               fxl::StringPrintf("There is no filter %d.", filter_id));
+  }
+  cmd->set_filter(found_filter->second);
   return Err();
 }
 

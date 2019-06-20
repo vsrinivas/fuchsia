@@ -25,6 +25,7 @@ namespace zxdb {
 class Breakpoint;
 class Download;
 class Err;
+class Filter;
 class SystemObserver;
 class SystemSymbols;
 
@@ -62,6 +63,11 @@ class System : public ClientObject {
   // once you return to the message loop.
   virtual std::vector<Breakpoint*> GetBreakpoints() const = 0;
 
+  // Returns all filters currently in this System instance. The returned
+  // pointers are managed by the System object and should not be cached once
+  // you return to the message loop.
+  virtual std::vector<Filter*> GetFilters() const = 0;
+
   // Returns all symbol servers registered with this symbol instance. The
   // returned pointers are managed by the System object and should not be
   // cached once you return to the message loop.
@@ -91,6 +97,9 @@ class System : public ClientObject {
   // Creates an internal breakpoint. Internal breakpoints are not reported by
   // GetBreakpoints() and are used to implement internal stepping functions.
   virtual Breakpoint* CreateNewInternalBreakpoint() = 0;
+
+  // Creates a new filter. It will have no associated pattern.
+  virtual Filter* CreateNewFilter() = 0;
 
   // Deletes the given breakpoint. The passed-in pointer will be invalid after
   // this call. Used for both internal and external breakpoints.

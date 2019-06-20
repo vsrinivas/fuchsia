@@ -10,6 +10,7 @@
 #include "src/developer/debug/shared/logging/debug.h"
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/client/breakpoint_impl.h"
+#include "src/developer/debug/zxdb/client/filter.h"
 #include "src/developer/debug/zxdb/client/job_context_impl.h"
 #include "src/developer/debug/zxdb/client/process_impl.h"
 #include "src/developer/debug/zxdb/client/remote_api.h"
@@ -264,6 +265,15 @@ std::vector<Breakpoint*> SystemImpl::GetBreakpoints() const {
   return result;
 }
 
+std::vector<Filter*> SystemImpl::GetFilters() const {
+  std::vector<Filter*> result;
+  result.reserve(filters_.size());
+  for (const auto& filter : filters_) {
+    result.push_back(filter.get());
+  }
+  return result;
+}
+
 std::vector<SymbolServer*> SystemImpl::GetSymbolServers() const {
   std::vector<SymbolServer*> result;
   result.reserve(symbol_servers_.size());
@@ -420,6 +430,16 @@ Breakpoint* SystemImpl::CreateNewInternalBreakpoint() {
   Breakpoint* to_return = owning.get();
 
   breakpoints_[id] = std::move(owning);
+  return to_return;
+}
+
+Filter* SystemImpl::CreateNewFilter() {
+  Filter* to_return = filters_.emplace_back(std::make_unique<Filter>()).get();
+
+  // Notify observers (may mutate filter list).
+  for (auto& observer : observers())
+    observer.DidCreateFilter(to_return);
+
   return to_return;
 }
 

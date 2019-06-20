@@ -17,6 +17,7 @@ static_library("client") {
     "breakpoint_settings.h",
     "client_object.h",
     "disassembler.h",
+    "filter.h",
     "finish_physical_frame_thread_controller.h",
     "finish_thread_controller.h",
     "frame.h",

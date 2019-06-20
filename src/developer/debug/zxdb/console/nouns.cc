@@ -11,6 +11,7 @@
 
 #include "src/developer/debug/zxdb/client/breakpoint.h"
 #include "src/developer/debug/zxdb/client/breakpoint_location.h"
+#include "src/developer/debug/zxdb/client/filter.h"
 #include "src/developer/debug/zxdb/client/frame.h"
 #include "src/developer/debug/zxdb/client/job.h"
 #include "src/developer/debug/zxdb/client/process.h"
@@ -117,6 +118,102 @@ bool HandleFrameNoun(ConsoleContext* context, const Command& cmd, Err* err) {
 
   FormatFrameAsync(context, cmd.target(), cmd.thread(), cmd.frame(),
                    cmd.HasSwitch(kForceTypes));
+  return true;
+}
+
+// Filters ---------------------------------------------------------------------
+
+const char kFilterShortHelp[] = "filter: Select or list process filters.";
+const char kFilterHelp[] =
+    R"(filter [ <id> [ <command> ... ] ]
+
+  Selects or lists process filters. Process filters allow you to attach to
+  processes that spawn under a job as soon as they spawn. You can use "attach"
+  to create a new filter.
+
+  The debugger watches for processes launched from within all jobs currently
+  attached (see "help job") and applies the relevant filters. Filters can either
+  be global (the default, applying to all jobs the debugger is attached to) or
+  apply only to specific jobs.
+
+Examples
+
+  filter
+    Lists all filters on the current job.
+
+  filter 1
+    Selects filter 1 to be the active filter.
+
+  job 3 filter
+    List all filters on job 3.
+
+  filter 3 attach foo
+    Update filter 3 to attach to processes named "foo".
+)";
+
+void ListFilters(ConsoleContext* context, JobContext* job) {
+  int active_filter_id = context->GetActiveFilterId();
+  auto filters = context->session()->system().GetFilters();
+
+  std::vector<std::vector<std::string>> rows;
+  for (auto& filter : filters) {
+    if (job && filter->job() && filter->job() != job) {
+      continue;
+    }
+
+    auto id = context->IdForFilter(filter);
+
+    std::vector<std::string>& row = rows.emplace_back();
+
+    // "Current thread" marker.
+    if (id == active_filter_id)
+      row.push_back(GetRightArrow());
+    else
+      row.emplace_back();
+
+    row.push_back(fxl::StringPrintf("%d", id));
+    row.push_back(filter->pattern());
+
+    if (filter->job()) {
+      auto job_id = context->IdForJobContext(filter->job());
+      row.push_back(fxl::StringPrintf("%d", job_id));
+    } else {
+      row.push_back("*");
+    }
+  }
+
+  if (rows.empty()) {
+    Console::get()->Output("No filters.\n");
+    return;
+  }
+
+  OutputBuffer out;
+  FormatTable(
+      {ColSpec(Align::kLeft),
+       ColSpec(Align::kRight, 0, "#", 0, Syntax::kSpecial),
+       ColSpec(Align::kLeft, 0, "Pattern"), ColSpec(Align::kRight, 0, "Job")},
+      rows, &out);
+  Console::get()->Output(out);
+}
+
+// Returns true if processing should stop (either a filter command or an error),
+// false to continue processing to the next noun type.
+bool HandleFilterNoun(ConsoleContext* context, const Command& cmd, Err* err) {
+  if (!cmd.HasNoun(Noun::kFilter))
+    return false;
+
+  *err = cmd.ValidateNouns({Noun::kJob, Noun::kFilter});
+  if (err->has_error())
+    return true;
+
+  if (cmd.GetNounIndex(Noun::kFilter) == Command::kNoIndex) {
+    // Just "filter", this lists available filters.
+    ListFilters(context, cmd.job_context());
+    return true;
+  }
+
+  FXL_DCHECK(cmd.filter());
+  context->SetActiveFilter(cmd.filter());
   return true;
 }
 
@@ -706,6 +803,8 @@ Err ExecuteNoun(ConsoleContext* context, const Command& cmd) {
 
   if (HandleBreakpointNoun(context, cmd, &result))
     return result;
+  if (HandleFilterNoun(context, cmd, &result))
+    return result;
 
   // Work backwards in specificity (frame -> thread -> process).
   if (HandleFrameNoun(context, cmd, &result))
@@ -746,6 +845,8 @@ void AppendNouns(std::map<Noun, NounRecord>* nouns) {
                  CommandGroup::kSymbol);
   (*nouns)[Noun::kJob] =
       NounRecord({"job", "j"}, kJobShortHelp, kJobHelp, CommandGroup::kJob);
+  (*nouns)[Noun::kFilter] =
+      NounRecord({"filter"}, kFilterShortHelp, kFilterHelp, CommandGroup::kJob);
 }
 
 const std::vector<SwitchRecord>& GetNounSwitches() {

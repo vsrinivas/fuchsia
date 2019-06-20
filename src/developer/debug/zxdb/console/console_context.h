@@ -17,6 +17,7 @@ namespace zxdb {
 
 class Breakpoint;
 class Command;
+class Filter;
 class Frame;
 class Session;
 
@@ -44,6 +45,7 @@ class ConsoleContext : public ProcessObserver,
   int IdForThread(const Thread* thread) const;
   int IdForFrame(const Frame* frame) const;
   int IdForBreakpoint(const Breakpoint* breakpoint) const;
+  int IdForFilter(const Filter* filter) const;
   int IdForSymbolServer(const SymbolServer* symbol_server) const;
 
   // The active target will always exist except during setup and teardown.
@@ -81,6 +83,12 @@ class ConsoleContext : public ProcessObserver,
   void SetActiveBreakpoint(const Breakpoint* breakpoint);
   int GetActiveBreakpointId() const;
   Breakpoint* GetActiveBreakpoint() const;
+
+  // Sets the active filter. Can be null/0 if there is no active filter (set to
+  // null to clear).
+  void SetActiveFilter(const Filter* filter);
+  int GetActiveFilterId() const;
+  Filter* GetActiveFilter() const;
 
   // Each thread maintains a source affinity which was the last command that
   // implies either source code or disassembly viewing. This is used to control
@@ -142,6 +150,7 @@ class ConsoleContext : public ProcessObserver,
   void WillDestroyTarget(Target* target) override;
   void DidCreateBreakpoint(Breakpoint* breakpoint) override;
   void WillDestroyBreakpoint(Breakpoint* breakpoint) override;
+  void DidCreateFilter(Filter* filter) override;
   void DidCreateSymbolServer(SymbolServer* symbol_server) override;
   void OnSymbolIndexingInformation(const std::string& msg) override;
 
@@ -186,6 +195,7 @@ class ConsoleContext : public ProcessObserver,
                     ThreadRecord const** out_thread_record) const;
   Err FillOutFrame(Command* cmd, const ThreadRecord* thread_record) const;
   Err FillOutBreakpoint(Command* cmd) const;
+  Err FillOutFilter(Command* cmd) const;
   Err FillOutSymbolServer(Command* cmd) const;
 
   // Generates a string describing the breakpoints that were hit.
@@ -207,6 +217,10 @@ class ConsoleContext : public ProcessObserver,
   std::map<const Breakpoint*, int> breakpoint_to_id_;
   int next_breakpoint_id_ = 1;
 
+  std::map<int, Filter*> id_to_filter_;
+  std::map<const Filter*, int> filter_to_id_;
+  int next_filter_id_ = 1;
+
   std::map<int, SymbolServer*> id_to_symbol_server_;
   std::map<const SymbolServer*, int> symbol_server_to_id_;
   int next_symbol_server_id_ = 1;
@@ -214,6 +228,7 @@ class ConsoleContext : public ProcessObserver,
   int active_target_id_ = 0;
   int active_job_context_id_ = 0;
   int active_breakpoint_id_ = 0;
+  int active_filter_id_ = 0;
   int active_symbol_server_id_ = 0;
 };
 

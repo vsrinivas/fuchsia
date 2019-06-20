@@ -18,6 +18,7 @@ namespace zxdb {
 
 class Breakpoint;
 class ConsoleContext;
+class Filter;
 class Frame;
 class Target;
 class JobContext;
@@ -87,6 +88,8 @@ class Command {
   void set_thread(Thread* t) { thread_ = t; }
   Breakpoint* breakpoint() const { return breakpoint_; }
   void set_breakpoint(Breakpoint* b) { breakpoint_ = b; }
+  Filter* filter() const { return filter_; }
+  void set_filter(Filter* b) { filter_ = b; }
   SymbolServer* sym_server() const { return symbol_server_; }
   void set_sym_server(SymbolServer* s) { symbol_server_ = s; }
 
@@ -105,6 +108,7 @@ class Command {
   Thread* thread_ = nullptr;           // Will be null if not running.
   Frame* frame_ = nullptr;  // Will be null if no valid thread stopped.
   Breakpoint* breakpoint_ = nullptr;       // May be null.
+  Filter* filter_ = nullptr;               // May be null.
   SymbolServer* symbol_server_ = nullptr;  // May be null.
 
   Verb verb_ = Verb::kNone;

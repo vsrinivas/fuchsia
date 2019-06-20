@@ -4,6 +4,7 @@
 
 #include "src/developer/debug/zxdb/console/format_function.h"
 
+#include "gtest/gtest.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
 #include "src/developer/debug/zxdb/symbols/collection.h"
@@ -11,7 +12,6 @@
 #include "src/developer/debug/zxdb/symbols/namespace.h"
 #include "src/developer/debug/zxdb/symbols/type_test_support.h"
 #include "src/developer/debug/zxdb/symbols/variable_test_support.h"
-#include "gtest/gtest.h"
 
 namespace zxdb {
 

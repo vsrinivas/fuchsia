@@ -10,6 +10,7 @@
 #include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/zx_status.h"
 #include "src/developer/debug/zxdb/client/backtrace_cache.h"
+#include "src/developer/debug/zxdb/client/filter.h"
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/remote_api.h"
 #include "src/developer/debug/zxdb/client/session.h"
@@ -324,11 +325,16 @@ constexpr int kAttachSystemRootSwitch = 2;
 
 const char kAttachShortHelp[] = "attach: Attach to a running process/job.";
 const char kAttachHelp[] =
-    R"(attach <process/job koid>
+    R"(attach <pattern>
 
   Attaches to an existing process or job. When no noun is provided it will
   assume the KOID refers to a process. To be explicit, prefix with a "process"
   or "job" noun.
+
+  If the argument is not a number, it will be interpreted as a pattern.
+  Processes spawning in the given job (or anywhere if not given) whose name
+  matches the pattern will be attached to automatically. If given a filter as a
+  noun, that filter will be updated.
 
   When attaching to a job, two switches are accepted to refer to special jobs:
 
@@ -376,15 +382,66 @@ Examples
 
   job 3 attach 2323
       Attaches job context 3 to the job with koid 2323.
+
+  attach foobar
+      Attaches to any process that spawns under a job we can see with "foobar"
+      in the name.
+
+  job 3 attach foobar
+      Attaches to any process that spawns under job 3 with "foobar" in the
+      name.
+
+  filter 2 attach foobar
+      Change filter 2's pattern so it now matches any process with "foobar" in
+      the name.
+
+  filter attach 1234
+      Attach to any process that spawns under the current job with "1234" in
+      the name.
 )";
+
+Err DoAttachFilter(ConsoleContext* context, const Command& cmd,
+                   CommandCallback callback = nullptr) {
+  if (cmd.args().size() != 1)
+    return Err("Wrong number of arguments to attach.");
+
+  Filter* filter;
+  if (cmd.HasNoun(Noun::kFilter) &&
+      cmd.GetNounIndex(Noun::kFilter) != Command::kNoIndex) {
+    if (cmd.HasNoun(Noun::kJob)) {
+      return Err("Cannot change job for existing filter.");
+    }
+
+    filter = cmd.filter();
+  } else {
+    JobContext* job = cmd.HasNoun(Noun::kJob) ? cmd.job_context() : nullptr;
+    filter = context->session()->system().CreateNewFilter();
+    filter->set_job(job);
+  }
+
+  filter->set_pattern(cmd.args()[0]);
+
+  Console::get()->Output("Waiting for process matching /" + cmd.args()[0] +
+                         "/");
+  return Err();
+}
+
 Err DoAttach(ConsoleContext* context, const Command& cmd,
              CommandCallback callback = nullptr) {
   // Only a process can be attached.
-  Err err = cmd.ValidateNouns({Noun::kProcess, Noun::kJob});
+  Err err = cmd.ValidateNouns({Noun::kProcess, Noun::kJob, Noun::kFilter});
   if (err.has_error())
     return err;
 
   if (cmd.HasNoun(Noun::kJob)) {
+    Err err = cmd.ValidateNouns({Noun::kJob, Noun::kFilter});
+    if (err.has_error())
+      return err;
+
+    if (cmd.HasNoun(Noun::kFilter)) {
+      return DoAttachFilter(context, cmd, callback);
+    }
+
     // Attach a job.
     err = AssertRunnableJobContext(cmd.job_context());
     if (err.has_error())
@@ -411,10 +468,16 @@ Err DoAttach(ConsoleContext* context, const Command& cmd,
       uint64_t koid = 0;
       err = ReadUint64Arg(cmd, 0, "job koid", &koid);
       if (err.has_error())
-        return err;
+        return DoAttachFilter(context, cmd, callback);
       cmd.job_context()->Attach(koid, std::move(cb));
     }
   } else {
+    if (cmd.HasNoun(Noun::kFilter)) {
+      Err err = cmd.ValidateNouns({Noun::kFilter});
+      if (err.has_error())
+        return err;
+      return DoAttachFilter(context, cmd, callback);
+    }
     // Attach a process.
     err = AssertRunnableTarget(cmd.target());
     if (err.has_error())
@@ -423,8 +486,12 @@ Err DoAttach(ConsoleContext* context, const Command& cmd,
     // Should have one arg which is the koid.
     uint64_t koid = 0;
     err = ReadUint64Arg(cmd, 0, "process koid", &koid);
-    if (err.has_error())
+    if (err.has_error()) {
+      if (!cmd.HasNoun(Noun::kProcess)) {
+        return DoAttachFilter(context, cmd, callback);
+      }
       return err;
+    }
 
     cmd.target()->Attach(
         koid, [callback](fxl::WeakPtr<Target> target, const Err& err) {

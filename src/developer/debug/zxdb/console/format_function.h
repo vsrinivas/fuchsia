@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_FORMAT_FUNCTION_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_FORMAT_FUNCTION_H_
 
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 
@@ -26,3 +27,5 @@ class TargetSymbols;
 OutputBuffer FormatFunctionName(const Function* function, bool show_params);
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_FORMAT_FUNCTION_H_
