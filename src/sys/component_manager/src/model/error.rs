@@ -56,6 +56,8 @@ pub enum ModelError {
         #[fail(cause)]
         err: Error,
     },
+    #[fail(display = "add entry error")]
+    AddEntryError { moniker: AbsoluteMoniker, entry_name: String },
 }
 
 impl ModelError {
@@ -85,6 +87,10 @@ impl ModelError {
 
     pub fn capability_discovery_error(err: impl Into<Error>) -> ModelError {
         ModelError::CapabilityDiscoveryError { err: err.into() }
+    }
+
+    pub fn add_entry_error(moniker: AbsoluteMoniker, entry_name: impl Into<String>) -> ModelError {
+        ModelError::AddEntryError { moniker, entry_name: entry_name.into() }
     }
 }
 

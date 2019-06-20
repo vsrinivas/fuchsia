@@ -179,6 +179,7 @@ impl Hub {
         &'a self,
         realm: Arc<model::Realm>,
         realm_state: &'a model::RealmState,
+        route_fn_factory: model::RoutingFnFactory,
     ) -> Result<(), ModelError> {
         let component_url = realm.component_url.clone();
         let abs_moniker = realm.abs_moniker.clone();
@@ -215,6 +216,16 @@ impl Hub {
                     .map_err(|_| {
                         HubError::add_directory_entry_error(abs_moniker.clone(), "resolved_url")
                     })?;
+
+                // Add an 'in' directory.
+                let decl = realm_state.decl.as_ref().expect("ComponentDecl unavailable.");
+                let tree =
+                    model::DirTree::build_from_uses(route_fn_factory, &abs_moniker, decl.clone())?;
+                let mut in_dir = directory::simple::empty();
+                tree.install(&abs_moniker, &mut in_dir)?;
+                controlled
+                    .add_entry("in", in_dir)
+                    .map_err(|_| HubError::add_directory_entry_error(abs_moniker.clone(), "in"))?;
 
                 // Install the out directory if we can successfully clone it.
                 // TODO(fsamuel): We should probably preserve the original error messages
@@ -271,8 +282,9 @@ impl model::Hook for Hub {
         &'a self,
         realm: Arc<model::Realm>,
         realm_state: &'a model::RealmState,
+        route_fn_factory: model::RoutingFnFactory,
     ) -> BoxFuture<Result<(), ModelError>> {
-        Box::pin(self.on_bind_instance_async(realm, realm_state))
+        Box::pin(self.on_bind_instance_async(realm, realm_state, route_fn_factory))
     }
 
     fn on_add_dynamic_child(&self, _realm: Arc<model::Realm>) -> BoxFuture<Result<(), ModelError>> {
@@ -286,18 +298,27 @@ mod tests {
     use {
         super::*,
         crate::model::{
-            self, hub::Hub, testing::mocks, testing::routing_test_helpers::default_component_decl,
+            self,
+            hub::Hub,
+            testing::mocks,
+            testing::{
+                routing_test_helpers::default_component_decl,
+                test_utils::{dir_contains, list_directory_recursive, read_file},
+            },
         },
-        cm_rust::{self, ChildDecl, ComponentDecl},
+        cm_rust::{
+            self, CapabilityPath, ChildDecl, ComponentDecl, UseDecl, UseDirectoryDecl,
+            UseServiceDecl,
+        },
         fidl::endpoints::{ClientEnd, ServerEnd},
         fidl_fuchsia_io::{
             DirectoryMarker, DirectoryProxy, NodeMarker, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE,
             OPEN_RIGHT_WRITABLE,
         },
-        fidl_fuchsia_sys2 as fsys, files_async,
+        fidl_fuchsia_sys2 as fsys,
         fuchsia_vfs_pseudo_fs::directory::entry::DirectoryEntry,
         fuchsia_zircon as zx,
-        std::{iter, path::PathBuf},
+        std::{convert::TryFrom, iter, path::PathBuf},
     };
 
     /// Hosts an out directory with a 'foo' file.
@@ -355,25 +376,6 @@ mod tests {
         })
     }
 
-    async fn read_file<'a>(root_proxy: &'a DirectoryProxy, path: &'a str) -> String {
-        let file_proxy =
-            io_util::open_file(&root_proxy, &PathBuf::from(path)).expect("Failed to open file.");
-        let res = await!(io_util::read_file(&file_proxy));
-        res.expect("Unable to read file.")
-    }
-
-    async fn dir_contains<'a>(
-        root_proxy: &'a DirectoryProxy,
-        path: &'a str,
-        entry_name: &'a str,
-    ) -> bool {
-        let dir = io_util::open_directory(&root_proxy, &PathBuf::from(path))
-            .expect("Failed to open directory");
-        let entries = await!(files_async::readdir(&dir)).expect("readdir failed");
-        let listing = entries.iter().map(|entry| entry.name.clone()).collect::<Vec<String>>();
-        listing.contains(&String::from(entry_name))
-    }
-
     type DirectoryCallback = Box<Fn(ServerEnd<DirectoryMarker>) + Send + Sync>;
 
     struct ComponentDescriptor {
@@ -381,17 +383,6 @@ mod tests {
         pub decl: ComponentDecl,
         pub host_fn: Option<DirectoryCallback>,
         pub runtime_host_fn: Option<DirectoryCallback>,
-    }
-
-    impl ComponentDescriptor {
-        pub fn new(
-            name: &str,
-            decl: ComponentDecl,
-            host_fn: Option<DirectoryCallback>,
-            runtime_host_fn: Option<DirectoryCallback>,
-        ) -> Self {
-            ComponentDescriptor { name: name.to_string(), decl, host_fn, runtime_host_fn }
-        }
     }
 
     async fn start_component_manager_with_hub(
@@ -449,14 +440,14 @@ mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn run_hub_basic() {
+    async fn hub_basic() {
         let root_component_url = "test:///root".to_string();
         let (_model, hub_proxy) = await!(start_component_manager_with_hub(
             root_component_url.clone(),
             vec![
-                ComponentDescriptor::new(
-                    "root",
-                    ComponentDecl {
+                ComponentDescriptor {
+                    name: "root".to_string(),
+                    decl: ComponentDecl {
                         children: vec![ChildDecl {
                             name: "a".to_string(),
                             url: "test:///a".to_string(),
@@ -464,15 +455,15 @@ mod tests {
                         }],
                         ..default_component_decl()
                     },
-                    None,
-                    None
-                ),
-                ComponentDescriptor::new(
-                    "a",
-                    ComponentDecl { children: vec![], ..default_component_decl() },
-                    None,
-                    None
-                )
+                    host_fn: None,
+                    runtime_host_fn: None
+                },
+                ComponentDescriptor {
+                    name: "a".to_string(),
+                    decl: ComponentDecl { children: vec![], ..default_component_decl() },
+                    host_fn: None,
+                    runtime_host_fn: None
+                }
             ]
         ));
 
@@ -485,13 +476,13 @@ mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn run_hub_out_directory() {
+    async fn hub_out_directory() {
         let root_component_url = "test:///root".to_string();
         let (_model, hub_proxy) = await!(start_component_manager_with_hub(
             root_component_url.clone(),
-            vec![ComponentDescriptor::new(
-                "root",
-                ComponentDecl {
+            vec![ComponentDescriptor {
+                name: "root".to_string(),
+                decl: ComponentDecl {
                     children: vec![ChildDecl {
                         name: "a".to_string(),
                         url: "test:///a".to_string(),
@@ -499,9 +490,9 @@ mod tests {
                     }],
                     ..default_component_decl()
                 },
-                Some(foo_out_dir_fn()),
-                None
-            )]
+                host_fn: Some(foo_out_dir_fn()),
+                runtime_host_fn: None
+            }]
         ));
 
         assert!(await!(dir_contains(&hub_proxy, "self/exec", "out")));
@@ -512,13 +503,13 @@ mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn run_hub_runtime_directory() {
+    async fn hub_runtime_directory() {
         let root_component_url = "test:///root".to_string();
         let (_model, hub_proxy) = await!(start_component_manager_with_hub(
             root_component_url.clone(),
-            vec![ComponentDescriptor::new(
-                "root",
-                ComponentDecl {
+            vec![ComponentDescriptor {
+                name: "root".to_string(),
+                decl: ComponentDecl {
                     children: vec![ChildDecl {
                         name: "a".to_string(),
                         url: "test:///a".to_string(),
@@ -526,11 +517,53 @@ mod tests {
                     }],
                     ..default_component_decl()
                 },
-                None,
-                Some(bleep_runtime_dir_fn())
-            )]
+                host_fn: None,
+                runtime_host_fn: Some(bleep_runtime_dir_fn())
+            }]
         ));
 
         assert_eq!("blah", await!(read_file(&hub_proxy, "self/exec/runtime/bleep")));
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn hub_in_directory() {
+        let root_component_url = "test:///root".to_string();
+        let (_model, hub_proxy) = await!(start_component_manager_with_hub(
+            root_component_url.clone(),
+            vec![ComponentDescriptor {
+                name: "root".to_string(),
+                decl: ComponentDecl {
+                    children: vec![ChildDecl {
+                        name: "a".to_string(),
+                        url: "test:///a".to_string(),
+                        startup: fsys::StartupMode::Lazy,
+                    }],
+                    uses: vec![
+                        UseDecl::Directory(UseDirectoryDecl {
+                            source_path: CapabilityPath::try_from("/data/baz").unwrap(),
+                            target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                        }),
+                        UseDecl::Service(UseServiceDecl {
+                            source_path: CapabilityPath::try_from("/svc/baz").unwrap(),
+                            target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                        }),
+                        UseDecl::Directory(UseDirectoryDecl {
+                            source_path: CapabilityPath::try_from("/data/foo").unwrap(),
+                            target_path: CapabilityPath::try_from("/data/bar").unwrap(),
+                        }),
+                    ],
+                    ..default_component_decl()
+                },
+                host_fn: None,
+                runtime_host_fn: None,
+            }]
+        ));
+
+        let in_dir = io_util::open_directory(&hub_proxy, &PathBuf::from("self/exec/in"))
+            .expect("Failed to open directory");
+        assert_eq!(
+            vec!["data/bar", "data/hippo", "svc/hippo"],
+            await!(list_directory_recursive(&in_dir))
+        );
     }
 }
