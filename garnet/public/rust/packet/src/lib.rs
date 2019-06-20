@@ -658,11 +658,8 @@ pub trait Buffer: ParseBuffer {
     ///
     /// `reset` consumes the entire prefix and suffix, adding them to the body.
     fn reset(&mut self) {
-        // TODO(joshlf): Inline these calls once we have NLL.
-        let prefix = self.prefix_len();
-        let suffix = self.suffix_len();
-        self.grow_front(prefix);
-        self.grow_back(suffix);
+        self.grow_front(self.prefix_len());
+        self.grow_back(self.suffix_len());
     }
 
     /// Undo the effects of a previous parse in preparation for serialization.
@@ -737,11 +734,8 @@ pub trait BufferMut: Buffer + ParseBufferMut {
     /// useful when serializing to ensure that the contents of packets
     /// previously stored in the buffer are not leaked.
     fn reset_zero(&mut self) {
-        // TODO(joshlf): Inline these calls once we have NLL.
-        let prefix = self.prefix_len();
-        let suffix = self.suffix_len();
-        self.grow_front_zero(prefix);
-        self.grow_back_zero(suffix);
+        self.grow_front_zero(self.prefix_len());
+        self.grow_back_zero(self.suffix_len());
     }
 
     /// Serializes a packet in the buffer.
