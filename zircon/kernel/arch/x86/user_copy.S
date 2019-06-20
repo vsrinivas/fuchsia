@@ -25,12 +25,12 @@ FUNCTION(_x86_copy_to_or_from_user)
     // Copy fault_return out of %rcx, because %rcx is used by "rep movsb" later.
     movq %rcx, %r10
 
-    // Disable SMAP protection if SMAP is enabled
-    STAC
-
     // Setup page fault return
     leaq .Lfault_copy(%rip), %rax
     movq %rax, (%r10)
+
+    // Disable SMAP protection if SMAP is enabled
+    STAC
 
     // Between now and the reset of the fault return, we cannot make a function
     // call or manipulate the stack.  We need to be able to restore all callee
@@ -46,11 +46,12 @@ FUNCTION(_x86_copy_to_or_from_user)
     mov $ZX_OK, %rax
 
 .Lcleanup_copy:
+    // Re-enable SMAP protection
+    CLAC
+
     // Reset fault return
     movq $0, (%r10)
 
-    // Re-enable SMAP protection
-    CLAC
     ret
 
 .Lfault_copy:
