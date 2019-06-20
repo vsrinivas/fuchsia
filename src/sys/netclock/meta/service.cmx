@@ -1,0 +1,12 @@
+{
+    "program": {
+        "binary": "bin/netclock"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.net.SocketProvider",
+            "fuchsia.time.DeprecatedNetworkSync"
+        ]
+    }
+}

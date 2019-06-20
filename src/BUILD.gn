@@ -46,6 +46,7 @@ group("tests") {
     "recovery:tests",
     "speech:tests",
     "storage:tests",
+    "sys:tests",
     "testing:tests",
     "tests",
     "ui:tests",

@@ -8,5 +8,13 @@ group("sys") {
     "cmc",
     "component_manager",
     "component_test_runner",
+    "netclock",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    "netclock:tests",
   ]
 }
