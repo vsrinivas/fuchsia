@@ -39,7 +39,7 @@ static bool pmm_smoke_test() {
     END_TEST;
 }
 
-// Allocates more than one page and frees them
+// Allocates more than one page and frees them.
 static bool pmm_multi_alloc_test() {
     BEGIN_TEST;
     list_node list = LIST_INITIAL_VALUE(list);
@@ -51,6 +51,24 @@ static bool pmm_multi_alloc_test() {
     EXPECT_EQ(alloc_count, list_length(&list),
               "pmm_alloc_pages a few pages list count");
 
+    status = pmm_alloc_pages(alloc_count, 0, &list);
+    EXPECT_EQ(ZX_OK, status, "pmm_alloc_pages a few pages");
+    EXPECT_EQ(2 * alloc_count, list_length(&list),
+              "pmm_alloc_pages a few pages list count");
+
+    pmm_free(&list);
+    END_TEST;
+}
+
+// Allocates one page from the bulk allocation api.
+static bool pmm_singleton_list_test() {
+    BEGIN_TEST;
+    list_node list = LIST_INITIAL_VALUE(list);
+
+    zx_status_t status = pmm_alloc_pages(1, 0, &list);
+    EXPECT_EQ(ZX_OK, status, "pmm_alloc_pages a few pages");
+    EXPECT_EQ(1ul, list_length(&list), "pmm_alloc_pages a few pages list count");
+
     pmm_free(&list);
     END_TEST;
 }
@@ -61,7 +79,7 @@ static bool pmm_oversized_alloc_test() {
     list_node list = LIST_INITIAL_VALUE(list);
 
     static const size_t alloc_count =
-        (128 * 1024 * 1024 * 1024ULL) / PAGE_SIZE; // 128GB
+        (1024 * 1024 * 1024 * 1024ULL) / PAGE_SIZE; // 1TB
 
     zx_status_t status = pmm_alloc_pages(alloc_count, 0, &list);
     EXPECT_EQ(ZX_ERR_NO_MEMORY, status, "pmm_alloc_pages failed to alloc");
@@ -1686,8 +1704,8 @@ UNITTEST_START_TESTCASE(pmm_tests)
 VM_UNITTEST(pmm_smoke_test)
 VM_UNITTEST(pmm_alloc_contiguous_one_test)
 VM_UNITTEST(pmm_multi_alloc_test)
-// runs the system out of memory, uncomment for debugging
-//VM_UNITTEST(pmm_oversized_alloc_test)
+VM_UNITTEST(pmm_singleton_list_test)
+VM_UNITTEST(pmm_oversized_alloc_test)
 UNITTEST_END_TESTCASE(pmm_tests, "pmm", "Physical memory manager tests");
 
 UNITTEST_START_TESTCASE(vm_page_list_tests)

@@ -16,18 +16,6 @@
 
 #define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
 
-namespace {
-
-void set_state_alloc(vm_page* page) {
-    LTRACEF("page %p: prev state %s\n", page, page_state_to_string(page->state()));
-
-    DEBUG_ASSERT(page->state() == VM_PAGE_STATE_FREE);
-
-    page->set_state(VM_PAGE_STATE_ALLOC);
-}
-
-} // namespace
-
 PmmNode::PmmNode() {
 }
 
@@ -91,6 +79,19 @@ void PmmNode::AddFreePages(list_node* list) TA_NO_THREAD_SAFETY_ANALYSIS {
     LTRACEF("free count now %" PRIu64 "\n", free_count_);
 }
 
+static void alloc_page_helper(vm_page* page) {
+    LTRACEF("allocating page %p, pa %#" PRIxPTR ", prev state %s\n",
+            page, page->paddr(), page_state_to_string(page->state()));
+
+    DEBUG_ASSERT(page->is_free());
+
+    page->set_state(VM_PAGE_STATE_ALLOC);
+
+#if PMM_ENABLE_FREE_FILL
+    CheckFreeFill(page);
+#endif
+}
+
 zx_status_t PmmNode::AllocPage(uint alloc_flags, vm_page_t** page_out, paddr_t* pa_out) {
     Guard<fbl::Mutex> guard{&lock_};
 
@@ -99,16 +100,10 @@ zx_status_t PmmNode::AllocPage(uint alloc_flags, vm_page_t** page_out, paddr_t* 
         return ZX_ERR_NO_MEMORY;
     }
 
+    alloc_page_helper(page);
+
     DEBUG_ASSERT(free_count_ > 0);
     free_count_--;
-
-    DEBUG_ASSERT(page->is_free());
-
-    set_state_alloc(page);
-
-#if PMM_ENABLE_FREE_FILL
-    CheckFreeFill(page);
-#endif
 
     if (pa_out) {
         *pa_out = page->paddr();
@@ -117,8 +112,6 @@ zx_status_t PmmNode::AllocPage(uint alloc_flags, vm_page_t** page_out, paddr_t* 
     if (page_out) {
         *page_out = page;
     }
-
-    LTRACEF("allocating page %p, pa %#" PRIxPTR "\n", page, page->paddr());
 
     return ZX_OK;
 }
@@ -131,34 +124,36 @@ zx_status_t PmmNode::AllocPages(size_t count, uint alloc_flags, list_node* list)
 
     if (unlikely(count == 0)) {
         return ZX_OK;
+    } else if (count == 1) {
+        vm_page* page;
+        zx_status_t status = AllocPage(alloc_flags, &page, nullptr);
+        if (likely(status == ZX_OK)) {
+            list_add_tail(list, &page->queue_node);
+        }
+        return status;
     }
 
     Guard<fbl::Mutex> guard{&lock_};
 
-    while (count > 0) {
-        vm_page* page = list_remove_head_type(&free_list_, vm_page, queue_node);
-        if (unlikely(!page)) {
-            // free pages that have already been allocated
-            FreeListLocked(list);
-            return ZX_ERR_NO_MEMORY;
-        }
-
-        LTRACEF("allocating page %p, pa %#" PRIxPTR "\n", page, page->paddr());
-
-        DEBUG_ASSERT(free_count_ > 0);
-
-        free_count_--;
-
-        DEBUG_ASSERT(page->is_free());
-#if PMM_ENABLE_FREE_FILL
-        CheckFreeFill(page);
-#endif
-
-        page->set_state(VM_PAGE_STATE_ALLOC);
-        list_add_tail(list, &page->queue_node);
-
-        count--;
+    if (unlikely(count > free_count_)) {
+        return ZX_ERR_NO_MEMORY;
     }
+    free_count_ -= count;
+
+    auto node = &free_list_;
+    while (count-- > 0) {
+        node = list_next(&free_list_, node);
+        alloc_page_helper(containerof(node, vm_page, queue_node));
+    }
+
+    list_node tmp_list = LIST_INITIAL_VALUE(tmp_list);
+    list_split_after(&free_list_, node, &tmp_list);
+    if (list_is_empty(list)) {
+        list_move(&free_list_, list);
+    } else {
+        list_splice_after(&free_list_, list_peek_tail(list));
+    }
+    list_move(&tmp_list, &free_list_);
 
     return ZX_OK;
 }
