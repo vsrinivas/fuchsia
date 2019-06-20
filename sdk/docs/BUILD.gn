@@ -8,6 +8,7 @@ docs = [
   "bootserver",
   "compilation",
   "debugger",
+  "device_discovery",
   "devices",
   "logging",
   "packages",
