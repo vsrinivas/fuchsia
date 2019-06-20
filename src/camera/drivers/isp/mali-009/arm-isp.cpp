@@ -540,7 +540,8 @@ zx_status_t ArmIspDevice::StopStreaming() {
 
 zx_status_t ArmIspDevice::IspCreateInputStream(
     const buffer_collection_info_t* buffer_collection, const frame_rate_t* rate,
-    const input_stream_callback_t* stream, input_stream_protocol_t* out_s) {
+    stream_type_t type, const input_stream_callback_t* stream,
+    input_stream_protocol_t* out_s) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 

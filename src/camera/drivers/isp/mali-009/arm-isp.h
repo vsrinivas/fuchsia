@@ -72,8 +72,8 @@ class ArmIspDevice : public IspDeviceType,
   // ZX_PROTOCOL_ISP
   zx_status_t IspCreateInputStream(
       const buffer_collection_info_t* buffer_collection,
-      const frame_rate_t* rate, const input_stream_callback_t* stream,
-      input_stream_protocol_t* out_s);
+      const frame_rate_t* rate, stream_type_t type,
+      const input_stream_callback_t* stream, input_stream_protocol_t* out_s);
 
   // ISP Init Sequences (init_sequences.cpp)
   void IspLoadSeq_linear();

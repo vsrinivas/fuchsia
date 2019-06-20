@@ -7,6 +7,13 @@ using zx;
 using zircon.device.camera;
 using zircon.device.sysmem;
 
+enum StreamType : uint8 {
+    INVALID = 0;
+    FULL_RESOLUTION = 1;
+    DOWNSCALED = 2;
+    SCALAR = 3;
+};
+
 [Layout = "ddk-callback"]
 protocol InputStreamCallback {
     // This is called by the ISP driver, everytime a frame is ready to be
@@ -29,9 +36,14 @@ protocol InputStream {
 [Layout = "ddk-protocol"]
 protocol Isp {
 
-    // Sent by the client to indicate desired stream characteristics.
     // The driver returns the Stream protocol for this particular stream.
+    // |buffer_collection| : Hold the format and pool of VMOs that the ISP will
+    //                       produce
+    // |stream| : The protocol which calls a function when the ISP is done
+    //            writing to a buffer.
+    // @Returns: |status| : indicates if the stream was created.
+    // @Returns: |st| : Protocol over which the flow of frames is controlled.
     CreateInputStream(zircon.device.sysmem.BufferCollectionInfo buffer_collection,
-                      zircon.device.camera.FrameRate rate,
+                      zircon.device.camera.FrameRate rate, StreamType type,
                       InputStreamCallback stream) -> (zx.status s, InputStream st);
 };
