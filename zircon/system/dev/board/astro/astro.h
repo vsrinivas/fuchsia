@@ -4,16 +4,11 @@
 
 #pragma once
 
-#include <threads.h>
 #include <ddk/device.h>
-#include <ddktl/device.h>
-#include <ddktl/protocol/gpioimpl.h>
-#include <ddktl/protocol/iommu.h>
-#include <ddktl/protocol/platform/bus.h>
-#include <fbl/macros.h>
+#include <ddk/protocol/gpioimpl.h>
+#include <ddk/protocol/iommu.h>
+#include <ddk/protocol/platform/bus.h>
 #include <soc/aml-s905d2/s905d2-gpio.h>
-
-namespace astro {
 
 // BTI IDs for our devices
 enum {
@@ -45,6 +40,24 @@ typedef struct {
     iommu_protocol_t iommu;
 } aml_bus_t;
 
+// astro-sysmem.c
+zx_status_t astro_sysmem_init(aml_bus_t* bus);
+
+// astro-gpio.c
+zx_status_t aml_gpio_init(aml_bus_t* bus);
+
+// astro-i2c.c
+zx_status_t aml_i2c_init(aml_bus_t* bus);
+
+// astro-bluetooth.c
+zx_status_t aml_bluetooth_init(aml_bus_t* bus);
+
+// astro-usb.c
+zx_status_t aml_usb_init(aml_bus_t* bus);
+
+// astro-display.c
+zx_status_t aml_display_init(aml_bus_t* bus);
+
 // These should match the mmio table defined in astro-i2c.c
 enum {
     ASTRO_I2C_A0_0,
@@ -63,65 +76,36 @@ enum {
 };
 
 // Astro GPIO Pins used for board rev detection
-constexpr uint32_t GPIO_HW_ID0 = (S905D2_GPIOZ(7));
-constexpr uint32_t GPIO_HW_ID1 = (S905D2_GPIOZ(8));
-constexpr uint32_t GPIO_HW_ID2 = (S905D2_GPIOZ(3));
+#define GPIO_HW_ID0             (S905D2_GPIOZ(7))
+#define GPIO_HW_ID1             (S905D2_GPIOZ(8))
+#define GPIO_HW_ID2             (S905D2_GPIOZ(3))
 
 /* Astro I2C Devices */
-constexpr uint8_t I2C_BACKLIGHT_ADDR         = (0x2C);
-constexpr uint8_t I2C_FOCALTECH_TOUCH_ADDR   = (0x38);
-constexpr uint8_t I2C_AMBIENTLIGHT_ADDR      = (0x39);
-constexpr uint8_t I2C_AUDIO_CODEC_ADDR       = (0x48);
-constexpr uint8_t I2C_GOODIX_TOUCH_ADDR      = (0x5d);
+#define I2C_BACKLIGHT_ADDR          (0x2C)
+#define I2C_FOCALTECH_TOUCH_ADDR    (0x38)
+#define I2C_AMBIENTLIGHT_ADDR       (0x39)
+#define I2C_AUDIO_CODEC_ADDR        (0x48)
+#define I2C_GOODIX_TOUCH_ADDR       (0x5d)
 
-class Astro;
-using AstroType = ddk::Device<Astro>;
-
-// This is the main class for the Astro platform bus driver.
-class Astro : public AstroType {
-public:
-    explicit Astro(zx_device_t* parent, pbus_protocol_t* pbus, iommu_protocol_t* iommu)
-        : AstroType(parent), pbus_(pbus), iommu_(iommu) {}
-
-    static zx_status_t Create(void* ctx, zx_device_t* parent);
-
-    // Device protocol implementation.
-    void DdkRelease();
-
-private:
-    DISALLOW_COPY_ASSIGN_AND_MOVE(Astro);
-
-    zx_status_t AudioInit();
-    zx_status_t BluetoothInit();
-    zx_status_t ButtonsInit();
-    zx_status_t CanvasInit();
-    zx_status_t ClkInit();
-    zx_status_t DisplayInit();
-    zx_status_t GpioInit();
-    zx_status_t I2cInit();
-    zx_status_t LightInit();
-    zx_status_t MaliInit();
-    zx_status_t RawNandInit();
-    zx_status_t SdioInit();
-    zx_status_t Start();
-    zx_status_t SysmemInit();
-    zx_status_t TeeInit();
-    zx_status_t ThermalInit();
-    zx_status_t TouchInit();
-    zx_status_t UsbInit();
-    zx_status_t VideoInit();
-    int Thread();
-
-    uint32_t GetBoardRev(void);
-    zx_status_t EnableWifi32K(void);
-    zx_status_t SdEmmcConfigurePortB(void);
-
-    ddk::PBusProtocolClient pbus_;
-    ddk::IommuProtocolClient iommu_;
-    ddk::GpioImplProtocolClient gpio_impl_;
-
-    thrd_t thread_;
-
-};
-
-} // namespace astro
+// astro-touch.c
+zx_status_t astro_touch_init(aml_bus_t* bus);
+// aml-raw_nand.c
+zx_status_t aml_raw_nand_init(aml_bus_t* bus);
+// astro-sdio.c
+zx_status_t aml_sdio_init(aml_bus_t* bus);
+// astro-canvas.c
+zx_status_t aml_canvas_init(aml_bus_t* bus);
+// astro-light.c
+zx_status_t ams_light_init(aml_bus_t* bus);
+// astro-thermal.c
+zx_status_t aml_thermal_init(aml_bus_t* bus);
+// astro-video.c
+zx_status_t aml_video_init(aml_bus_t* bus);
+// astro-clk.c
+zx_status_t aml_clk_init(aml_bus_t* bus);
+// astro-audio.c
+zx_status_t astro_tdm_init(aml_bus_t* bus);
+// astro-tee.c
+zx_status_t astro_tee_init(aml_bus_t* bus);
+// astro-buttons.c
+zx_status_t astro_buttons_init(aml_bus_t* bus);

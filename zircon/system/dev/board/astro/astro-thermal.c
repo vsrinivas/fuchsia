@@ -2,21 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "astro.h"
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
+#include <ddk/protocol/gpio.h>
 #include <ddk/protocol/platform/bus.h>
-#include <fbl/unique_ptr.h>
 #include <fuchsia/hardware/thermal/c/fidl.h>
 #include <soc/aml-common/aml-thermal.h>
 #include <soc/aml-meson/g12a-clk.h>
 #include <soc/aml-s905d2/s905d2-gpio.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
-
-#include "astro.h"
-
-namespace astro {
 
 static const pbus_mmio_t thermal_mmios[] = {
     {
@@ -59,22 +56,6 @@ static const pbus_clk_t thermal_clk_gates[] = {
     },
 };
 
-constexpr fuchsia_hardware_thermal_ThermalTemperatureInfo TripPoint(uint32_t temp_c,
-                                                                    int32_t cpu_opp,
-                                                                    int32_t gpu_opp) {
-    constexpr uint32_t kHysteresis = 2;
-
-    return {
-        .up_temp = temp_c + kHysteresis,
-        .down_temp = temp_c - kHysteresis,
-        .fan_level = 0,
-        .big_cluster_dvfs_opp = cpu_opp,
-        .little_cluster_dvfs_opp = 0,
-        .gpu_clk_freq_source = gpu_opp,
-    };
-}
-
-
 /*
  * PASSIVE COOLING - For Astro, we have DVFS support added
  * Below is the operating point information for Big cluster
@@ -99,31 +80,99 @@ constexpr fuchsia_hardware_thermal_ThermalTemperatureInfo TripPoint(uint32_t tem
  * 5 - 846 MHz
  */
 
+// clang-format off
+
 // NOTE: This is a very trivial policy, no data backing it up
 // As we do more testing this policy can evolve.
-static fuchsia_hardware_thermal_ThermalDeviceInfo astro_config = {
+static fuchsia_hardware_thermal_ThermalDeviceInfo aml_astro_config = {
     .active_cooling                     = false,
     .passive_cooling                    = true,
     .gpu_throttling                     = true,
     .num_trip_points                    = 7,
-    .big_little                         = false,
     .critical_temp                      = 102,
+    .big_little                         = false,
     .trip_point_info                    = {
-        // The first trip point entry is the default state of the machine
-        // and the driver does not use the specified temperature/hysterisis
-        // to set any interrupt trip points.
-        TripPoint(0, 10, 5),
-        TripPoint(75, 9, 4),
-        TripPoint(80, 8, 3),
-        TripPoint(85, 7, 3),
-        TripPoint(90, 6, 2),
-        TripPoint(95, 5, 1),
-        TripPoint(100, 4, 0),
+        // Below trip point info is dummy for now.
+        {
+            // This is the initial thermal setup of the device.
+            // CPU freq set to a known stable MAX.
+            .big_cluster_dvfs_opp       = 10,
+            .gpu_clk_freq_source        = 5,
+        },
+        {
+            .up_temp                    = 75,
+            .down_temp                  = 73,
+            .big_cluster_dvfs_opp       = 9,
+            .gpu_clk_freq_source        = 4,
+        },
+        {
+            .up_temp                    = 80,
+            .down_temp                  = 77,
+            .big_cluster_dvfs_opp       = 8,
+            .gpu_clk_freq_source        = 3,
+        },
+        {
+            .up_temp                    = 85,
+            .down_temp                  = 83,
+            .big_cluster_dvfs_opp       = 7,
+            .gpu_clk_freq_source        = 3,
+        },
+        {
+            .up_temp                    = 90,
+            .down_temp                  = 88,
+            .big_cluster_dvfs_opp       = 6,
+            .gpu_clk_freq_source        = 2,
+        },
+        {
+            .up_temp                    = 95,
+            .down_temp                  = 93,
+            .big_cluster_dvfs_opp       = 5,
+            .gpu_clk_freq_source        = 1,
+        },
+        {
+            .up_temp                    = 100,
+            .down_temp                  = 98,
+            .big_cluster_dvfs_opp       = 4,
+            .gpu_clk_freq_source        = 0,
+        },
     },
-    .opps = {},
 };
 
-static aml_opp_info_t opp_info = {
+// clang-format on
+static aml_opp_info_t aml_opp_info = {
+    .voltage_table = {
+        {1022000, 0},
+        {1011000, 3},
+        {1001000, 6},
+        {991000, 10},
+        {981000, 13},
+        {971000, 16},
+        {961000, 20},
+        {951000, 23},
+        {941000, 26},
+        {931000, 30},
+        {921000, 33},
+        {911000, 36},
+        {901000, 40},
+        {891000, 43},
+        {881000, 46},
+        {871000, 50},
+        {861000, 53},
+        {851000, 56},
+        {841000, 60},
+        {831000, 63},
+        {821000, 67},
+        {811000, 70},
+        {801000, 73},
+        {791000, 76},
+        {781000, 80},
+        {771000, 83},
+        {761000, 86},
+        {751000, 90},
+        {741000, 93},
+        {731000, 96},
+        {721000, 100},
+    },
     .opps = {
         {
             // 0
@@ -181,98 +230,58 @@ static aml_opp_info_t opp_info = {
             .volt_mv = 981000,
         },
     },
-    .voltage_table = {
-        {1022000, 0},
-        {1011000, 3},
-        {1001000, 6},
-        {991000, 10},
-        {981000, 13},
-        {971000, 16},
-        {961000, 20},
-        {951000, 23},
-        {941000, 26},
-        {931000, 30},
-        {921000, 33},
-        {911000, 36},
-        {901000, 40},
-        {891000, 43},
-        {881000, 46},
-        {871000, 50},
-        {861000, 53},
-        {851000, 56},
-        {841000, 60},
-        {831000, 63},
-        {821000, 67},
-        {811000, 70},
-        {801000, 73},
-        {791000, 76},
-        {781000, 80},
-        {771000, 83},
-        {761000, 86},
-        {751000, 90},
-        {741000, 93},
-        {731000, 96},
-        {721000, 100},
-    },
 };
 
 static const pbus_metadata_t thermal_metadata[] = {
     {
         .type = DEVICE_METADATA_THERMAL_CONFIG,
-        .data_buffer = &astro_config,
-        .data_size = sizeof(astro_config),
+        .data_buffer = &aml_astro_config,
+        .data_size = sizeof(aml_astro_config),
     },
     {
         .type = DEVICE_METADATA_PRIVATE,
-        .data_buffer = &opp_info,
-        .data_size = sizeof(opp_info),
+        .data_buffer = &aml_opp_info,
+        .data_size = sizeof(aml_opp_info),
     },
 };
 
-static pbus_dev_t thermal_dev = []() {
-    pbus_dev_t dev;
-    dev.name = "aml-thermal";
-    dev.vid = PDEV_VID_AMLOGIC;
-    dev.pid = PDEV_PID_AMLOGIC_S905D2;
-    dev.did = PDEV_DID_AMLOGIC_THERMAL;
-    dev.mmio_list = thermal_mmios;
-    dev.mmio_count = countof(thermal_mmios);
-    dev.clk_list = thermal_clk_gates;
-    dev.clk_count = countof(thermal_clk_gates);
-    dev.irq_list = thermal_irqs;
-    dev.irq_count = countof(thermal_irqs);
-    dev.bti_list = thermal_btis;
-    dev.bti_count = countof(thermal_btis);
-    dev.metadata_list= thermal_metadata;
-    dev.metadata_count = countof(thermal_metadata);
-    return dev;
-}();
+static pbus_dev_t thermal_dev = {
+    .name = "aml-thermal",
+    .vid = PDEV_VID_AMLOGIC,
+    .pid = PDEV_PID_AMLOGIC_S905D2,
+    .did = PDEV_DID_AMLOGIC_THERMAL,
+    .mmio_list = thermal_mmios,
+    .mmio_count = countof(thermal_mmios),
+    .clk_list = thermal_clk_gates,
+    .clk_count = countof(thermal_clk_gates),
+    .irq_list = thermal_irqs,
+    .irq_count = countof(thermal_irqs),
+    .bti_list = thermal_btis,
+    .bti_count = countof(thermal_btis),
+    .metadata_list= thermal_metadata,
+    .metadata_count = countof(thermal_metadata),
+};
 
-zx_status_t Astro::ThermalInit() {
+zx_status_t aml_thermal_init(aml_bus_t* bus) {
     // Configure the GPIO to be Output & set it to alternate
     // function 3 which puts in PWM_D mode.
-    zx_status_t status = gpio_impl_.ConfigOut(S905D2_PWM_D, 0);
+    zx_status_t status = gpio_impl_config_out(&bus->gpio, S905D2_PWM_D, 0);
     if (status != ZX_OK) {
-        zxlogf(ERROR,
-               "%s: ConfigOut failed: %d\n",
-               __func__, status);
+        zxlogf(ERROR, "aml_thermal_init: gpio_impl_config_outgpio_impl_config_out failed: %d\n",
+               status);
         return status;
     }
 
-    status = gpio_impl_.SetAltFunction(S905D2_PWM_D, S905D2_PWM_D_FN);
+    status = gpio_impl_set_alt_function(&bus->gpio, S905D2_PWM_D, S905D2_PWM_D_FN);
     if (status != ZX_OK) {
-        zxlogf(ERROR,
-               "%s: SetAltFunction failed: %d\n",
-               __func__, status);
+        zxlogf(ERROR, "aml_thermal_init: gpio_impl_set_alt_function failed: %d\n", status);
         return status;
     }
 
-    status = pbus_.DeviceAdd(&thermal_dev);
+    status = pbus_device_add(&bus->pbus, &thermal_dev);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: DeviceAdd failed: %d\n", __func__, status);
+        zxlogf(ERROR, "aml_thermal_init: pbus_device_add failed: %d\n", status);
         return status;
     }
     return ZX_OK;
 }
-
-} // namespace astro

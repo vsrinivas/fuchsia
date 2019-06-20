@@ -4,15 +4,11 @@
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
-#include <ddk/metadata.h>
-#include <ddk/metadata/clock.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
 
 #include "astro.h"
-
-namespace astro {
 
 static const pbus_mmio_t clk_mmios[] = {
     // CLK Registers
@@ -27,27 +23,21 @@ static const pbus_mmio_t clk_mmios[] = {
     },
 };
 
-static const pbus_dev_t clk_dev = []() {
-    pbus_dev_t dev;
-    dev.name = "astro-clk";
-    dev.vid = PDEV_VID_AMLOGIC;
-    dev.pid = PDEV_PID_AMLOGIC_S905D2;
-    dev.did = PDEV_DID_AMLOGIC_G12A_CLK;
-    dev.mmio_list = clk_mmios;
-    dev.mmio_count = countof(clk_mmios);
-    return dev;
-}();
+static const pbus_dev_t clk_dev = {
+    .name = "astro-clk",
+    .vid = PDEV_VID_AMLOGIC,
+    .pid = PDEV_PID_AMLOGIC_S905D2,
+    .did = PDEV_DID_AMLOGIC_G12A_CLK,
+    .mmio_list = clk_mmios,
+    .mmio_count = countof(clk_mmios),
+};
 
-zx_status_t Astro::ClkInit() {
-    zx_status_t status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_CLOCK_IMPL,
-                                                 &clk_dev);
+zx_status_t aml_clk_init(aml_bus_t* bus) {
+    zx_status_t status = pbus_protocol_device_add(&bus->pbus, ZX_PROTOCOL_CLOCK_IMPL, &clk_dev);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: ProtocolDeviceAdd failed, st = %d\n",
-               __func__, status);
+        zxlogf(ERROR, "aml_clk_init: pbus_protocol_device_add failed, st = %d\n", status);
         return status;
     }
 
     return ZX_OK;
 }
-
-} // namespace astro

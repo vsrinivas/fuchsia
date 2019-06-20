@@ -8,10 +8,6 @@
 #include <soc/aml-s905d2/s905d2-hw.h>
 #include <hw/reg.h>
 
-#include "astro.h"
-
-namespace astro {
-
 static const pbus_mmio_t mali_mmios[] = {
     {
         .base = S905D2_MALI_BASE,
@@ -49,33 +45,29 @@ static pbus_bti_t mali_btis[] = {
     },
 };
 
-static const pbus_dev_t mali_dev = []() {
-    pbus_dev_t dev;
-    dev.name = "mali";
-    dev.vid = PDEV_VID_AMLOGIC;
-    dev.pid = PDEV_PID_AMLOGIC_S905D2;
-    dev.did = PDEV_DID_AMLOGIC_MALI_INIT;
-    dev.mmio_list = mali_mmios;
-    dev.mmio_count = countof(mali_mmios);
-    dev.irq_list = mali_irqs;
-    dev.irq_count = countof(mali_irqs);
-    dev.bti_list = mali_btis;
-    dev.bti_count = countof(mali_btis);
-    return dev;
-}();
+static const pbus_dev_t mali_dev = {
+    .name = "mali",
+    .vid = PDEV_VID_AMLOGIC,
+    .pid = PDEV_PID_AMLOGIC_S905D2,
+    .did = PDEV_DID_AMLOGIC_MALI_INIT,
+    .mmio_list = mali_mmios,
+    .mmio_count = countof(mali_mmios),
+    .irq_list = mali_irqs,
+    .irq_count = countof(mali_irqs),
+    .bti_list = mali_btis,
+    .bti_count = countof(mali_btis),
+};
 
-zx_status_t Astro::MaliInit() {
+zx_status_t aml_mali_init(pbus_protocol_t* pbus, uint32_t bti_index) {
 
     // Populate the BTI information
     mali_btis[0].iommu_index = 0;
-    mali_btis[0].bti_id      = BTI_MALI;
+    mali_btis[0].bti_id      = bti_index;
 
-    zx_status_t status = pbus_.DeviceAdd(&mali_dev);
+    zx_status_t status = pbus_device_add(pbus, &mali_dev);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: DeviceAdd failed: %d\n", __func__, status);
+        zxlogf(ERROR, "aml_mali_init: pbus_device_add failed: %d\n", status);
         return status;
     }
     return status;
 }
-
-} // namespace astro
