@@ -12,7 +12,7 @@ namespace camera {
 namespace {
 
 [[maybe_unused]]
-constexpr uint32_t kDevice_GetChannel_Ordinal = 1982578164u;
+constexpr uint64_t kDevice_GetChannel_Ordinal = 1982578164lu << 32;
 extern "C" const fidl_type_t fuchsia_hardware_camera_DeviceGetChannelRequestTable;
 
 }  // namespace
@@ -109,14 +109,14 @@ bool Device::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn
 namespace {
 
 [[maybe_unused]]
-constexpr uint32_t kStream_Start_Ordinal = 2078685701u;
+constexpr uint64_t kStream_Start_Ordinal = 2078685701lu << 32;
 [[maybe_unused]]
-constexpr uint32_t kStream_Stop_Ordinal = 1804311781u;
+constexpr uint64_t kStream_Stop_Ordinal = 1804311781lu << 32;
 [[maybe_unused]]
-constexpr uint32_t kStream_ReleaseFrame_Ordinal = 1698050785u;
+constexpr uint64_t kStream_ReleaseFrame_Ordinal = 1698050785lu << 32;
 extern "C" const fidl_type_t fuchsia_hardware_camera_StreamReleaseFrameRequestTable;
 [[maybe_unused]]
-constexpr uint32_t kStream_OnFrameAvailable_Ordinal = 652350782u;
+constexpr uint64_t kStream_OnFrameAvailable_Ordinal = 652350782lu << 32;
 
 }  // namespace
 
@@ -371,14 +371,14 @@ zx_status_t Stream::SendOnFrameAvailableEvent(::zx::unowned_channel _chan, ::fid
 namespace {
 
 [[maybe_unused]]
-constexpr uint32_t kControlV2_GetFormats_Ordinal = 1829792861u;
+constexpr uint64_t kControlV2_GetFormats_Ordinal = 1829792861lu << 32;
 extern "C" const fidl_type_t fuchsia_hardware_camera_ControlV2GetFormatsRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_camera_ControlV2GetFormatsResponseTable;
 [[maybe_unused]]
-constexpr uint32_t kControlV2_CreateStream_Ordinal = 1600661084u;
+constexpr uint64_t kControlV2_CreateStream_Ordinal = 1600661084lu << 32;
 extern "C" const fidl_type_t fuchsia_hardware_camera_ControlV2CreateStreamRequestTable;
 [[maybe_unused]]
-constexpr uint32_t kControlV2_GetDeviceInfo_Ordinal = 1539432325u;
+constexpr uint64_t kControlV2_GetDeviceInfo_Ordinal = 1539432325lu << 32;
 extern "C" const fidl_type_t fuchsia_hardware_camera_ControlV2GetDeviceInfoResponseTable;
 
 }  // namespace
@@ -755,14 +755,14 @@ void ControlV2::Interface::GetDeviceInfoCompleterBase::Reply(::fidl::DecodedMess
 namespace {
 
 [[maybe_unused]]
-constexpr uint32_t kControl_GetFormats_Ordinal = 162112720u;
+constexpr uint64_t kControl_GetFormats_Ordinal = 162112720lu << 32;
 extern "C" const fidl_type_t fuchsia_hardware_camera_ControlGetFormatsRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_camera_ControlGetFormatsResponseTable;
 [[maybe_unused]]
-constexpr uint32_t kControl_CreateStream_Ordinal = 1736026147u;
+constexpr uint64_t kControl_CreateStream_Ordinal = 1736026147lu << 32;
 extern "C" const fidl_type_t fuchsia_hardware_camera_ControlCreateStreamRequestTable;
 [[maybe_unused]]
-constexpr uint32_t kControl_GetDeviceInfo_Ordinal = 1203933883u;
+constexpr uint64_t kControl_GetDeviceInfo_Ordinal = 1203933883lu << 32;
 extern "C" const fidl_type_t fuchsia_hardware_camera_ControlGetDeviceInfoResponseTable;
 
 }  // namespace

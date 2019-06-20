@@ -11,7 +11,7 @@ namespace io {
 namespace {
 
 [[maybe_unused]]
-constexpr uint32_t kDirectoryWatcher_OnEvent_Ordinal = 546032797u;
+constexpr uint64_t kDirectoryWatcher_OnEvent_Ordinal = 546032797lu << 32;
 extern "C" const fidl_type_t fuchsia_io_DirectoryWatcherOnEventRequestTable;
 
 }  // namespace
@@ -258,29 +258,29 @@ Tty& ::llcpp::fuchsia::io::NodeInfo::mutable_tty() {
 namespace {
 
 [[maybe_unused]]
-constexpr uint32_t kNode_Clone_Ordinal = 402549324u;
+constexpr uint64_t kNode_Clone_Ordinal = 402549324lu << 32;
 extern "C" const fidl_type_t fuchsia_io_NodeCloneRequestTable;
 [[maybe_unused]]
-constexpr uint32_t kNode_Close_Ordinal = 1387878023u;
+constexpr uint64_t kNode_Close_Ordinal = 1387878023lu << 32;
 extern "C" const fidl_type_t fuchsia_io_NodeCloseResponseTable;
 [[maybe_unused]]
-constexpr uint32_t kNode_Describe_Ordinal = 526573406u;
+constexpr uint64_t kNode_Describe_Ordinal = 526573406lu << 32;
 extern "C" const fidl_type_t fuchsia_io_NodeDescribeResponseTable;
 [[maybe_unused]]
-constexpr uint32_t kNode_OnOpen_Ordinal = 1191225277u;
+constexpr uint64_t kNode_OnOpen_Ordinal = 1191225277lu << 32;
 extern "C" const fidl_type_t fuchsia_io_NodeOnOpenEventTable;
 [[maybe_unused]]
-constexpr uint32_t kNode_Sync_Ordinal = 1648508842u;
+constexpr uint64_t kNode_Sync_Ordinal = 1648508842lu << 32;
 extern "C" const fidl_type_t fuchsia_io_NodeSyncResponseTable;
 [[maybe_unused]]
-constexpr uint32_t kNode_GetAttr_Ordinal = 1166403528u;
+constexpr uint64_t kNode_GetAttr_Ordinal = 1166403528lu << 32;
 extern "C" const fidl_type_t fuchsia_io_NodeGetAttrResponseTable;
 [[maybe_unused]]
-constexpr uint32_t kNode_SetAttr_Ordinal = 198530458u;
+constexpr uint64_t kNode_SetAttr_Ordinal = 198530458lu << 32;
 extern "C" const fidl_type_t fuchsia_io_NodeSetAttrRequestTable;
 extern "C" const fidl_type_t fuchsia_io_NodeSetAttrResponseTable;
 [[maybe_unused]]
-constexpr uint32_t kNode_Ioctl_Ordinal = 905161895u;
+constexpr uint64_t kNode_Ioctl_Ordinal = 905161895lu << 32;
 extern "C" const fidl_type_t fuchsia_io_NodeIoctlRequestTable;
 extern "C" const fidl_type_t fuchsia_io_NodeIoctlResponseTable;
 
@@ -1265,60 +1265,60 @@ void Node::Interface::IoctlCompleterBase::Reply(::fidl::DecodedMessage<IoctlResp
 namespace {
 
 [[maybe_unused]]
-constexpr uint32_t kFile_Clone_Ordinal = 402549324u;
+constexpr uint64_t kFile_Clone_Ordinal = 402549324lu << 32;
 extern "C" const fidl_type_t fuchsia_io_FileCloneRequestTable;
 [[maybe_unused]]
-constexpr uint32_t kFile_Close_Ordinal = 1387878023u;
+constexpr uint64_t kFile_Close_Ordinal = 1387878023lu << 32;
 extern "C" const fidl_type_t fuchsia_io_FileCloseResponseTable;
 [[maybe_unused]]
-constexpr uint32_t kFile_Describe_Ordinal = 526573406u;
+constexpr uint64_t kFile_Describe_Ordinal = 526573406lu << 32;
 extern "C" const fidl_type_t fuchsia_io_FileDescribeResponseTable;
 [[maybe_unused]]
-constexpr uint32_t kFile_OnOpen_Ordinal = 1191225277u;
+constexpr uint64_t kFile_OnOpen_Ordinal = 1191225277lu << 32;
 extern "C" const fidl_type_t fuchsia_io_FileOnOpenEventTable;
 [[maybe_unused]]
-constexpr uint32_t kFile_Sync_Ordinal = 1648508842u;
+constexpr uint64_t kFile_Sync_Ordinal = 1648508842lu << 32;
 extern "C" const fidl_type_t fuchsia_io_FileSyncResponseTable;
 [[maybe_unused]]
-constexpr uint32_t kFile_GetAttr_Ordinal = 1166403528u;
+constexpr uint64_t kFile_GetAttr_Ordinal = 1166403528lu << 32;
 extern "C" const fidl_type_t fuchsia_io_FileGetAttrResponseTable;
 [[maybe_unused]]
-constexpr uint32_t kFile_SetAttr_Ordinal = 198530458u;
+constexpr uint64_t kFile_SetAttr_Ordinal = 198530458lu << 32;
 extern "C" const fidl_type_t fuchsia_io_FileSetAttrRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileSetAttrResponseTable;
 [[maybe_unused]]
-constexpr uint32_t kFile_Ioctl_Ordinal = 905161895u;
+constexpr uint64_t kFile_Ioctl_Ordinal = 905161895lu << 32;
 extern "C" const fidl_type_t fuchsia_io_FileIoctlRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileIoctlResponseTable;
 [[maybe_unused]]
-constexpr uint32_t kFile_Read_Ordinal = 636961156u;
+constexpr uint64_t kFile_Read_Ordinal = 636961156lu << 32;
 extern "C" const fidl_type_t fuchsia_io_FileReadResponseTable;
 [[maybe_unused]]
-constexpr uint32_t kFile_ReadAt_Ordinal = 2087865796u;
+constexpr uint64_t kFile_ReadAt_Ordinal = 2087865796lu << 32;
 extern "C" const fidl_type_t fuchsia_io_FileReadAtResponseTable;
 [[maybe_unused]]
-constexpr uint32_t kFile_Write_Ordinal = 85125024u;
+constexpr uint64_t kFile_Write_Ordinal = 85125024lu << 32;
 extern "C" const fidl_type_t fuchsia_io_FileWriteRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileWriteResponseTable;
 [[maybe_unused]]
-constexpr uint32_t kFile_WriteAt_Ordinal = 1045766885u;
+constexpr uint64_t kFile_WriteAt_Ordinal = 1045766885lu << 32;
 extern "C" const fidl_type_t fuchsia_io_FileWriteAtRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileWriteAtResponseTable;
 [[maybe_unused]]
-constexpr uint32_t kFile_Seek_Ordinal = 2016048965u;
+constexpr uint64_t kFile_Seek_Ordinal = 2016048965lu << 32;
 extern "C" const fidl_type_t fuchsia_io_FileSeekRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileSeekResponseTable;
 [[maybe_unused]]
-constexpr uint32_t kFile_Truncate_Ordinal = 1118517818u;
+constexpr uint64_t kFile_Truncate_Ordinal = 1118517818lu << 32;
 extern "C" const fidl_type_t fuchsia_io_FileTruncateResponseTable;
 [[maybe_unused]]
-constexpr uint32_t kFile_GetFlags_Ordinal = 1679205366u;
+constexpr uint64_t kFile_GetFlags_Ordinal = 1679205366lu << 32;
 [[maybe_unused]]
-constexpr uint32_t kFile_SetFlags_Ordinal = 1059310710u;
+constexpr uint64_t kFile_SetFlags_Ordinal = 1059310710lu << 32;
 extern "C" const fidl_type_t fuchsia_io_FileSetFlagsRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileSetFlagsResponseTable;
 [[maybe_unused]]
-constexpr uint32_t kFile_GetBuffer_Ordinal = 1958938995u;
+constexpr uint64_t kFile_GetBuffer_Ordinal = 1958938995lu << 32;
 extern "C" const fidl_type_t fuchsia_io_FileGetBufferRequestTable;
 extern "C" const fidl_type_t fuchsia_io_FileGetBufferResponseTable;
 
@@ -3449,57 +3449,57 @@ void File::Interface::GetBufferCompleterBase::Reply(::fidl::DecodedMessage<GetBu
 namespace {
 
 [[maybe_unused]]
-constexpr uint32_t kDirectory_Clone_Ordinal = 402549324u;
+constexpr uint64_t kDirectory_Clone_Ordinal = 402549324lu << 32;
 extern "C" const fidl_type_t fuchsia_io_DirectoryCloneRequestTable;
 [[maybe_unused]]
-constexpr uint32_t kDirectory_Close_Ordinal = 1387878023u;
+constexpr uint64_t kDirectory_Close_Ordinal = 1387878023lu << 32;
 extern "C" const fidl_type_t fuchsia_io_DirectoryCloseResponseTable;
 [[maybe_unused]]
-constexpr uint32_t kDirectory_Describe_Ordinal = 526573406u;
+constexpr uint64_t kDirectory_Describe_Ordinal = 526573406lu << 32;
 extern "C" const fidl_type_t fuchsia_io_DirectoryDescribeResponseTable;
 [[maybe_unused]]
-constexpr uint32_t kDirectory_OnOpen_Ordinal = 1191225277u;
+constexpr uint64_t kDirectory_OnOpen_Ordinal = 1191225277lu << 32;
 extern "C" const fidl_type_t fuchsia_io_DirectoryOnOpenEventTable;
 [[maybe_unused]]
-constexpr uint32_t kDirectory_Sync_Ordinal = 1648508842u;
+constexpr uint64_t kDirectory_Sync_Ordinal = 1648508842lu << 32;
 extern "C" const fidl_type_t fuchsia_io_DirectorySyncResponseTable;
 [[maybe_unused]]
-constexpr uint32_t kDirectory_GetAttr_Ordinal = 1166403528u;
+constexpr uint64_t kDirectory_GetAttr_Ordinal = 1166403528lu << 32;
 extern "C" const fidl_type_t fuchsia_io_DirectoryGetAttrResponseTable;
 [[maybe_unused]]
-constexpr uint32_t kDirectory_SetAttr_Ordinal = 198530458u;
+constexpr uint64_t kDirectory_SetAttr_Ordinal = 198530458lu << 32;
 extern "C" const fidl_type_t fuchsia_io_DirectorySetAttrRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectorySetAttrResponseTable;
 [[maybe_unused]]
-constexpr uint32_t kDirectory_Ioctl_Ordinal = 905161895u;
+constexpr uint64_t kDirectory_Ioctl_Ordinal = 905161895lu << 32;
 extern "C" const fidl_type_t fuchsia_io_DirectoryIoctlRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryIoctlResponseTable;
 [[maybe_unused]]
-constexpr uint32_t kDirectory_Open_Ordinal = 2011483371u;
+constexpr uint64_t kDirectory_Open_Ordinal = 2011483371lu << 32;
 extern "C" const fidl_type_t fuchsia_io_DirectoryOpenRequestTable;
 [[maybe_unused]]
-constexpr uint32_t kDirectory_Unlink_Ordinal = 750443289u;
+constexpr uint64_t kDirectory_Unlink_Ordinal = 750443289lu << 32;
 extern "C" const fidl_type_t fuchsia_io_DirectoryUnlinkRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryUnlinkResponseTable;
 [[maybe_unused]]
-constexpr uint32_t kDirectory_ReadDirents_Ordinal = 782580781u;
+constexpr uint64_t kDirectory_ReadDirents_Ordinal = 782580781lu << 32;
 extern "C" const fidl_type_t fuchsia_io_DirectoryReadDirentsResponseTable;
 [[maybe_unused]]
-constexpr uint32_t kDirectory_Rewind_Ordinal = 1886584199u;
+constexpr uint64_t kDirectory_Rewind_Ordinal = 1886584199lu << 32;
 extern "C" const fidl_type_t fuchsia_io_DirectoryRewindResponseTable;
 [[maybe_unused]]
-constexpr uint32_t kDirectory_GetToken_Ordinal = 840416493u;
+constexpr uint64_t kDirectory_GetToken_Ordinal = 840416493lu << 32;
 extern "C" const fidl_type_t fuchsia_io_DirectoryGetTokenResponseTable;
 [[maybe_unused]]
-constexpr uint32_t kDirectory_Rename_Ordinal = 1251258540u;
+constexpr uint64_t kDirectory_Rename_Ordinal = 1251258540lu << 32;
 extern "C" const fidl_type_t fuchsia_io_DirectoryRenameRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryRenameResponseTable;
 [[maybe_unused]]
-constexpr uint32_t kDirectory_Link_Ordinal = 462052964u;
+constexpr uint64_t kDirectory_Link_Ordinal = 462052964lu << 32;
 extern "C" const fidl_type_t fuchsia_io_DirectoryLinkRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryLinkResponseTable;
 [[maybe_unused]]
-constexpr uint32_t kDirectory_Watch_Ordinal = 1522700084u;
+constexpr uint64_t kDirectory_Watch_Ordinal = 1522700084lu << 32;
 extern "C" const fidl_type_t fuchsia_io_DirectoryWatchRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryWatchResponseTable;
 
@@ -5493,78 +5493,78 @@ void Directory::Interface::WatchCompleterBase::Reply(::fidl::DecodedMessage<Watc
 namespace {
 
 [[maybe_unused]]
-constexpr uint32_t kDirectoryAdmin_Clone_Ordinal = 402549324u;
+constexpr uint64_t kDirectoryAdmin_Clone_Ordinal = 402549324lu << 32;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminCloneRequestTable;
 [[maybe_unused]]
-constexpr uint32_t kDirectoryAdmin_Close_Ordinal = 1387878023u;
+constexpr uint64_t kDirectoryAdmin_Close_Ordinal = 1387878023lu << 32;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminCloseResponseTable;
 [[maybe_unused]]
-constexpr uint32_t kDirectoryAdmin_Describe_Ordinal = 526573406u;
+constexpr uint64_t kDirectoryAdmin_Describe_Ordinal = 526573406lu << 32;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminDescribeResponseTable;
 [[maybe_unused]]
-constexpr uint32_t kDirectoryAdmin_OnOpen_Ordinal = 1191225277u;
+constexpr uint64_t kDirectoryAdmin_OnOpen_Ordinal = 1191225277lu << 32;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminOnOpenEventTable;
 [[maybe_unused]]
-constexpr uint32_t kDirectoryAdmin_Sync_Ordinal = 1648508842u;
+constexpr uint64_t kDirectoryAdmin_Sync_Ordinal = 1648508842lu << 32;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminSyncResponseTable;
 [[maybe_unused]]
-constexpr uint32_t kDirectoryAdmin_GetAttr_Ordinal = 1166403528u;
+constexpr uint64_t kDirectoryAdmin_GetAttr_Ordinal = 1166403528lu << 32;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminGetAttrResponseTable;
 [[maybe_unused]]
-constexpr uint32_t kDirectoryAdmin_SetAttr_Ordinal = 198530458u;
+constexpr uint64_t kDirectoryAdmin_SetAttr_Ordinal = 198530458lu << 32;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminSetAttrRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminSetAttrResponseTable;
 [[maybe_unused]]
-constexpr uint32_t kDirectoryAdmin_Ioctl_Ordinal = 905161895u;
+constexpr uint64_t kDirectoryAdmin_Ioctl_Ordinal = 905161895lu << 32;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminIoctlRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminIoctlResponseTable;
 [[maybe_unused]]
-constexpr uint32_t kDirectoryAdmin_Open_Ordinal = 2011483371u;
+constexpr uint64_t kDirectoryAdmin_Open_Ordinal = 2011483371lu << 32;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminOpenRequestTable;
 [[maybe_unused]]
-constexpr uint32_t kDirectoryAdmin_Unlink_Ordinal = 750443289u;
+constexpr uint64_t kDirectoryAdmin_Unlink_Ordinal = 750443289lu << 32;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminUnlinkRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminUnlinkResponseTable;
 [[maybe_unused]]
-constexpr uint32_t kDirectoryAdmin_ReadDirents_Ordinal = 782580781u;
+constexpr uint64_t kDirectoryAdmin_ReadDirents_Ordinal = 782580781lu << 32;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminReadDirentsResponseTable;
 [[maybe_unused]]
-constexpr uint32_t kDirectoryAdmin_Rewind_Ordinal = 1886584199u;
+constexpr uint64_t kDirectoryAdmin_Rewind_Ordinal = 1886584199lu << 32;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminRewindResponseTable;
 [[maybe_unused]]
-constexpr uint32_t kDirectoryAdmin_GetToken_Ordinal = 840416493u;
+constexpr uint64_t kDirectoryAdmin_GetToken_Ordinal = 840416493lu << 32;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminGetTokenResponseTable;
 [[maybe_unused]]
-constexpr uint32_t kDirectoryAdmin_Rename_Ordinal = 1251258540u;
+constexpr uint64_t kDirectoryAdmin_Rename_Ordinal = 1251258540lu << 32;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminRenameRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminRenameResponseTable;
 [[maybe_unused]]
-constexpr uint32_t kDirectoryAdmin_Link_Ordinal = 462052964u;
+constexpr uint64_t kDirectoryAdmin_Link_Ordinal = 462052964lu << 32;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminLinkRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminLinkResponseTable;
 [[maybe_unused]]
-constexpr uint32_t kDirectoryAdmin_Watch_Ordinal = 1522700084u;
+constexpr uint64_t kDirectoryAdmin_Watch_Ordinal = 1522700084lu << 32;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminWatchRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminWatchResponseTable;
 [[maybe_unused]]
-constexpr uint32_t kDirectoryAdmin_Mount_Ordinal = 2120159974u;
+constexpr uint64_t kDirectoryAdmin_Mount_Ordinal = 2120159974lu << 32;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminMountRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminMountResponseTable;
 [[maybe_unused]]
-constexpr uint32_t kDirectoryAdmin_MountAndCreate_Ordinal = 841348753u;
+constexpr uint64_t kDirectoryAdmin_MountAndCreate_Ordinal = 841348753lu << 32;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminMountAndCreateRequestTable;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminMountAndCreateResponseTable;
 [[maybe_unused]]
-constexpr uint32_t kDirectoryAdmin_Unmount_Ordinal = 620898132u;
+constexpr uint64_t kDirectoryAdmin_Unmount_Ordinal = 620898132lu << 32;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminUnmountResponseTable;
 [[maybe_unused]]
-constexpr uint32_t kDirectoryAdmin_UnmountNode_Ordinal = 383400103u;
+constexpr uint64_t kDirectoryAdmin_UnmountNode_Ordinal = 383400103lu << 32;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminUnmountNodeResponseTable;
 [[maybe_unused]]
-constexpr uint32_t kDirectoryAdmin_QueryFilesystem_Ordinal = 1713999250u;
+constexpr uint64_t kDirectoryAdmin_QueryFilesystem_Ordinal = 1713999250lu << 32;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminQueryFilesystemResponseTable;
 [[maybe_unused]]
-constexpr uint32_t kDirectoryAdmin_GetDevicePath_Ordinal = 787943096u;
+constexpr uint64_t kDirectoryAdmin_GetDevicePath_Ordinal = 787943096lu << 32;
 extern "C" const fidl_type_t fuchsia_io_DirectoryAdminGetDevicePathResponseTable;
 
 }  // namespace

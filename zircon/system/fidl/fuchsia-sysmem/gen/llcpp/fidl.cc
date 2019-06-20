@@ -11,12 +11,12 @@ namespace sysmem {
 namespace {
 
 [[maybe_unused]]
-constexpr uint32_t kBufferCollectionToken_Duplicate_Ordinal = 1580679187u;
+constexpr uint64_t kBufferCollectionToken_Duplicate_Ordinal = 1580679187lu << 32;
 extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionTokenDuplicateRequestTable;
 [[maybe_unused]]
-constexpr uint32_t kBufferCollectionToken_Sync_Ordinal = 840486752u;
+constexpr uint64_t kBufferCollectionToken_Sync_Ordinal = 840486752lu << 32;
 [[maybe_unused]]
-constexpr uint32_t kBufferCollectionToken_Close_Ordinal = 565867829u;
+constexpr uint64_t kBufferCollectionToken_Close_Ordinal = 565867829lu << 32;
 
 }  // namespace
 
@@ -194,14 +194,14 @@ void BufferCollectionToken::Interface::SyncCompleterBase::Reply() {
 namespace {
 
 [[maybe_unused]]
-constexpr uint32_t kHeap_AllocateVmo_Ordinal = 196714381u;
+constexpr uint64_t kHeap_AllocateVmo_Ordinal = 196714381lu << 32;
 extern "C" const fidl_type_t fuchsia_sysmem_HeapAllocateVmoResponseTable;
 [[maybe_unused]]
-constexpr uint32_t kHeap_CreateResource_Ordinal = 900305090u;
+constexpr uint64_t kHeap_CreateResource_Ordinal = 900305090lu << 32;
 extern "C" const fidl_type_t fuchsia_sysmem_HeapCreateResourceRequestTable;
 extern "C" const fidl_type_t fuchsia_sysmem_HeapCreateResourceResponseTable;
 [[maybe_unused]]
-constexpr uint32_t kHeap_DestroyResource_Ordinal = 668940193u;
+constexpr uint64_t kHeap_DestroyResource_Ordinal = 668940193lu << 32;
 
 }  // namespace
 
@@ -608,10 +608,10 @@ void Heap::Interface::DestroyResourceCompleterBase::Reply() {
 namespace {
 
 [[maybe_unused]]
-constexpr uint32_t kDriverConnector_Connect_Ordinal = 813883444u;
+constexpr uint64_t kDriverConnector_Connect_Ordinal = 813883444lu << 32;
 extern "C" const fidl_type_t fuchsia_sysmem_DriverConnectorConnectRequestTable;
 [[maybe_unused]]
-constexpr uint32_t kDriverConnector_GetProtectedMemoryInfo_Ordinal = 282632817u;
+constexpr uint64_t kDriverConnector_GetProtectedMemoryInfo_Ordinal = 282632817lu << 32;
 extern "C" const fidl_type_t fuchsia_sysmem_DriverConnectorGetProtectedMemoryInfoResponseTable;
 
 }  // namespace
@@ -846,13 +846,13 @@ void DriverConnector::Interface::GetProtectedMemoryInfoCompleterBase::Reply(::fi
 namespace {
 
 [[maybe_unused]]
-constexpr uint32_t kAllocator_AllocateNonSharedCollection_Ordinal = 565270487u;
+constexpr uint64_t kAllocator_AllocateNonSharedCollection_Ordinal = 565270487lu << 32;
 extern "C" const fidl_type_t fuchsia_sysmem_AllocatorAllocateNonSharedCollectionRequestTable;
 [[maybe_unused]]
-constexpr uint32_t kAllocator_AllocateSharedCollection_Ordinal = 916773828u;
+constexpr uint64_t kAllocator_AllocateSharedCollection_Ordinal = 916773828lu << 32;
 extern "C" const fidl_type_t fuchsia_sysmem_AllocatorAllocateSharedCollectionRequestTable;
 [[maybe_unused]]
-constexpr uint32_t kAllocator_BindSharedCollection_Ordinal = 493382005u;
+constexpr uint64_t kAllocator_BindSharedCollection_Ordinal = 493382005lu << 32;
 extern "C" const fidl_type_t fuchsia_sysmem_AllocatorBindSharedCollectionRequestTable;
 
 }  // namespace
@@ -1173,12 +1173,12 @@ ImageFormat& ::llcpp::fuchsia::sysmem::BufferFormat::mutable_image() {
 namespace {
 
 [[maybe_unused]]
-constexpr uint32_t kBufferCollectionEvents_OnDuplicatedTokensKnownByServer_Ordinal = 525651766u;
+constexpr uint64_t kBufferCollectionEvents_OnDuplicatedTokensKnownByServer_Ordinal = 525651766lu << 32;
 [[maybe_unused]]
-constexpr uint32_t kBufferCollectionEvents_OnBuffersAllocated_Ordinal = 1748036703u;
+constexpr uint64_t kBufferCollectionEvents_OnBuffersAllocated_Ordinal = 1748036703lu << 32;
 extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionEventsOnBuffersAllocatedRequestTable;
 [[maybe_unused]]
-constexpr uint32_t kBufferCollectionEvents_OnAllocateSingleBufferDone_Ordinal = 1823617849u;
+constexpr uint64_t kBufferCollectionEvents_OnAllocateSingleBufferDone_Ordinal = 1823617849lu << 32;
 extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionEventsOnAllocateSingleBufferDoneRequestTable;
 
 }  // namespace
@@ -1374,30 +1374,30 @@ bool BufferCollectionEvents::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::
 namespace {
 
 [[maybe_unused]]
-constexpr uint32_t kBufferCollection_SetEventSink_Ordinal = 357278768u;
+constexpr uint64_t kBufferCollection_SetEventSink_Ordinal = 357278768lu << 32;
 extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionSetEventSinkRequestTable;
 [[maybe_unused]]
-constexpr uint32_t kBufferCollection_Sync_Ordinal = 364524065u;
+constexpr uint64_t kBufferCollection_Sync_Ordinal = 364524065lu << 32;
 [[maybe_unused]]
-constexpr uint32_t kBufferCollection_SetConstraints_Ordinal = 1411081086u;
+constexpr uint64_t kBufferCollection_SetConstraints_Ordinal = 1411081086lu << 32;
 extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionSetConstraintsRequestTable;
 [[maybe_unused]]
-constexpr uint32_t kBufferCollection_WaitForBuffersAllocated_Ordinal = 456576936u;
+constexpr uint64_t kBufferCollection_WaitForBuffersAllocated_Ordinal = 456576936lu << 32;
 extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionWaitForBuffersAllocatedResponseTable;
 [[maybe_unused]]
-constexpr uint32_t kBufferCollection_CheckBuffersAllocated_Ordinal = 156573902u;
+constexpr uint64_t kBufferCollection_CheckBuffersAllocated_Ordinal = 156573902lu << 32;
 extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionCheckBuffersAllocatedResponseTable;
 [[maybe_unused]]
-constexpr uint32_t kBufferCollection_CloseSingleBuffer_Ordinal = 402848328u;
+constexpr uint64_t kBufferCollection_CloseSingleBuffer_Ordinal = 402848328lu << 32;
 [[maybe_unused]]
-constexpr uint32_t kBufferCollection_AllocateSingleBuffer_Ordinal = 463501412u;
+constexpr uint64_t kBufferCollection_AllocateSingleBuffer_Ordinal = 463501412lu << 32;
 [[maybe_unused]]
-constexpr uint32_t kBufferCollection_WaitForSingleBufferAllocated_Ordinal = 921069347u;
+constexpr uint64_t kBufferCollection_WaitForSingleBufferAllocated_Ordinal = 921069347lu << 32;
 extern "C" const fidl_type_t fuchsia_sysmem_BufferCollectionWaitForSingleBufferAllocatedResponseTable;
 [[maybe_unused]]
-constexpr uint32_t kBufferCollection_CheckSingleBufferAllocated_Ordinal = 318847260u;
+constexpr uint64_t kBufferCollection_CheckSingleBufferAllocated_Ordinal = 318847260lu << 32;
 [[maybe_unused]]
-constexpr uint32_t kBufferCollection_Close_Ordinal = 1618761496u;
+constexpr uint64_t kBufferCollection_Close_Ordinal = 1618761496lu << 32;
 
 }  // namespace
 

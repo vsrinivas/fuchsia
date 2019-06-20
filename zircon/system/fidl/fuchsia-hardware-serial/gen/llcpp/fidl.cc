@@ -12,10 +12,10 @@ namespace serial {
 namespace {
 
 [[maybe_unused]]
-constexpr uint32_t kDevice_GetClass_Ordinal = 1699322127u;
+constexpr uint64_t kDevice_GetClass_Ordinal = 1699322127lu << 32;
 extern "C" const fidl_type_t fuchsia_hardware_serial_DeviceGetClassResponseTable;
 [[maybe_unused]]
-constexpr uint32_t kDevice_SetConfig_Ordinal = 280807052u;
+constexpr uint64_t kDevice_SetConfig_Ordinal = 280807052lu << 32;
 extern "C" const fidl_type_t fuchsia_hardware_serial_DeviceSetConfigResponseTable;
 
 }  // namespace

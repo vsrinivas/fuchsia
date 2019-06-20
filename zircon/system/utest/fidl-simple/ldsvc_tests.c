@@ -253,7 +253,7 @@ static bool ordinals_are_consistent(void) {
 // string.  Encodes some data with the ldmsg encoder, and then decodes it with
 // the fidl decoder.  Then, encodes some data with the fidl encoder, and decodes
 // it with the ldmsg decoder.
-static void check_string_round_trip(uint32_t ordinal_value, const fidl_type_t* table) {
+static void check_string_round_trip(uint64_t ordinal_value, const fidl_type_t* table) {
     ldmsg_req_t req;
     memset(&req.header, 0, sizeof(req.header));
     size_t req_len_out;

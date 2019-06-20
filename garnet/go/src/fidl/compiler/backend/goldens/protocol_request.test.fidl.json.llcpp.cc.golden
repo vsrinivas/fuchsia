@@ -11,16 +11,16 @@ namespace name {
 namespace {
 
 [[maybe_unused]]
-constexpr uint32_t kParent_GetChild_Ordinal = 915586153u;
+constexpr uint64_t kParent_GetChild_Ordinal = 915586153lu << 32;
 extern "C" const fidl_type_t test_name_ParentGetChildResponseTable;
 [[maybe_unused]]
-constexpr uint32_t kParent_GetChildRequest_Ordinal = 1068158078u;
+constexpr uint64_t kParent_GetChildRequest_Ordinal = 1068158078lu << 32;
 extern "C" const fidl_type_t test_name_ParentGetChildRequestResponseTable;
 [[maybe_unused]]
-constexpr uint32_t kParent_TakeChild_Ordinal = 1275478777u;
+constexpr uint64_t kParent_TakeChild_Ordinal = 1275478777lu << 32;
 extern "C" const fidl_type_t test_name_ParentTakeChildRequestTable;
 [[maybe_unused]]
-constexpr uint32_t kParent_TakeChildRequest_Ordinal = 1589872250u;
+constexpr uint64_t kParent_TakeChildRequest_Ordinal = 1589872250lu << 32;
 extern "C" const fidl_type_t test_name_ParentTakeChildRequestRequestTable;
 
 }  // namespace

@@ -81,7 +81,7 @@ void DecodeMessage(
   const InterfaceMethod* method = loader->GetByOrdinal(header.ordinal);
   if (method == nullptr) {
     // Probably should print out raw bytes here instead.
-    FXL_LOG(WARNING) << "Protocol method with ordinal " << header.ordinal
+    FXL_LOG(WARNING) << "Protocol method with ordinal 0x" << std::hex << header.ordinal
                      << " not found";
     return;
   }

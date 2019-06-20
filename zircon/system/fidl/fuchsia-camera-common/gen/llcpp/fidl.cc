@@ -12,14 +12,14 @@ namespace common {
 namespace {
 
 [[maybe_unused]]
-constexpr uint32_t kStream_Start_Ordinal = 932812003u;
+constexpr uint64_t kStream_Start_Ordinal = 932812003lu << 32;
 [[maybe_unused]]
-constexpr uint32_t kStream_Stop_Ordinal = 9009058u;
+constexpr uint64_t kStream_Stop_Ordinal = 9009058lu << 32;
 [[maybe_unused]]
-constexpr uint32_t kStream_ReleaseFrame_Ordinal = 629961612u;
+constexpr uint64_t kStream_ReleaseFrame_Ordinal = 629961612lu << 32;
 extern "C" const fidl_type_t fuchsia_camera_common_StreamReleaseFrameRequestTable;
 [[maybe_unused]]
-constexpr uint32_t kStream_OnFrameAvailable_Ordinal = 1771204245u;
+constexpr uint64_t kStream_OnFrameAvailable_Ordinal = 1771204245lu << 32;
 
 }  // namespace
 
@@ -290,7 +290,7 @@ void ::llcpp::fuchsia::camera::common::VirtualStreamConfig::SizeAndOffsetAsserti
 namespace {
 
 [[maybe_unused]]
-constexpr uint32_t kVirtualCameraFactory_CreateDevice_Ordinal = 2009870148u;
+constexpr uint64_t kVirtualCameraFactory_CreateDevice_Ordinal = 2009870148lu << 32;
 extern "C" const fidl_type_t fuchsia_camera_common_VirtualCameraFactoryCreateDeviceRequestTable;
 
 }  // namespace

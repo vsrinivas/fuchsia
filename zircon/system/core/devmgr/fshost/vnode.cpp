@@ -96,7 +96,7 @@ zx_status_t Connection::HandleFsSpecificMessage(fidl_msg_t* msg, fidl_txn_t* txn
     fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
     // Depending on the state of the migration, GenOrdinal and Ordinal may be the
     // same value.  See FIDL-524.
-    uint32_t ordinal = hdr->ordinal;
+    uint64_t ordinal = hdr->ordinal;
     if (ordinal == fuchsia_fshost_RegistryRegisterFilesystemOrdinal ||
         ordinal == fuchsia_fshost_RegistryRegisterFilesystemGenOrdinal) {
         return fuchsia_fshost_Registry_dispatch(this, txn, msg, Ops());

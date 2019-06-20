@@ -21,7 +21,7 @@ class Encoder final {
  public:
   enum NoHeader { NO_HEADER };
 
-  explicit Encoder(uint32_t ordinal);
+  explicit Encoder(uint64_t ordinal);
   explicit Encoder(NoHeader) {}
   ~Encoder();
 
@@ -38,7 +38,7 @@ class Encoder final {
 
   Message GetMessage();
 
-  void Reset(uint32_t ordinal);
+  void Reset(uint64_t ordinal);
 
   size_t CurrentLength() const { return bytes_.size(); }
 
@@ -47,7 +47,7 @@ class Encoder final {
   std::vector<uint8_t> TakeBytes() { return std::move(bytes_); }
 
  private:
-  void EncodeMessageHeader(uint32_t ordinal);
+  void EncodeMessageHeader(uint64_t ordinal);
 
   std::vector<uint8_t> bytes_;
   std::vector<zx_handle_t> handles_;

@@ -252,7 +252,7 @@ static zx_status_t loader_service_rpc(zx_handle_t h, session_state_t* session_st
     }
 
     if (req_handle != ZX_HANDLE_INVALID) {
-        fprintf(stderr, "dlsvc: unused handle (%#x) opcode=%#x data=\"%s\"\n",
+        fprintf(stderr, "dlsvc: unused handle (%#x) opcode=%#lx data=\"%s\"\n",
                 req_handle, req.header.ordinal, data);
         zx_handle_close(req_handle);
     }

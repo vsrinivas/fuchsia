@@ -131,17 +131,17 @@ zx_status_t WithErrorSyntax_ErrorAsEnum_Response::Clone(WithErrorSyntax_ErrorAsE
 #ifdef __Fuchsia__
 namespace {
   
-constexpr uint32_t kKitchenSink_MethodA_Ordinal = 450577456u;
+constexpr uint64_t kKitchenSink_MethodA_Ordinal = 450577456lu << 32;
 extern "C" const fidl_type_t test_name_KitchenSinkMethodARequestTable;
   
-constexpr uint32_t kKitchenSink_EventA_Ordinal = 1795426833u;
+constexpr uint64_t kKitchenSink_EventA_Ordinal = 1795426833lu << 32;
 extern "C" const fidl_type_t test_name_KitchenSinkEventAEventTable;
   
-constexpr uint32_t kKitchenSink_MethodB_Ordinal = 1999489700u;
+constexpr uint64_t kKitchenSink_MethodB_Ordinal = 1999489700lu << 32;
 extern "C" const fidl_type_t test_name_KitchenSinkMethodBRequestTable;
 extern "C" const fidl_type_t test_name_KitchenSinkMethodBResponseTable;
   
-constexpr uint32_t kKitchenSink_MutateSocket_Ordinal = 115851270u;
+constexpr uint64_t kKitchenSink_MutateSocket_Ordinal = 115851270lu << 32;
 extern "C" const fidl_type_t test_name_KitchenSinkMutateSocketRequestTable;
 extern "C" const fidl_type_t test_name_KitchenSinkMutateSocketResponseTable;
 
@@ -282,7 +282,7 @@ namespace {
 
 class KitchenSink_MethodB_Responder {
  public:
-  KitchenSink_MethodB_Responder(::fidl::internal::PendingResponse response, uint32_t ordinal)
+  KitchenSink_MethodB_Responder(::fidl::internal::PendingResponse response, uint64_t ordinal)
       : response_(std::move(response)), ordinal_(ordinal) {}
 
   void operator()(int64_t result) {
@@ -294,12 +294,12 @@ class KitchenSink_MethodB_Responder {
 
  private:
   ::fidl::internal::PendingResponse response_;
-  uint32_t ordinal_;
+  uint64_t ordinal_;
 };
 
 class KitchenSink_MutateSocket_Responder {
  public:
-  KitchenSink_MutateSocket_Responder(::fidl::internal::PendingResponse response, uint32_t ordinal)
+  KitchenSink_MutateSocket_Responder(::fidl::internal::PendingResponse response, uint64_t ordinal)
       : response_(std::move(response)), ordinal_(ordinal) {}
 
   void operator()(::zx::socket b) {
@@ -311,7 +311,7 @@ class KitchenSink_MutateSocket_Responder {
 
  private:
   ::fidl::internal::PendingResponse response_;
-  uint32_t ordinal_;
+  uint64_t ordinal_;
 };
 
 }  // namespace
@@ -320,7 +320,7 @@ zx_status_t KitchenSink_Stub::Dispatch_(
     ::fidl::Message message,
     ::fidl::internal::PendingResponse response) {
   zx_status_t status = ZX_OK;
-  uint32_t ordinal = message.ordinal();
+  uint64_t ordinal = message.ordinal();
   switch (ordinal) {
     case kKitchenSink_MethodA_Ordinal: {
       const char* error_msg = nullptr;
@@ -427,17 +427,17 @@ zx_status_t KitchenSink_SyncProxy::MutateSocket(::zx::socket a, ::zx::socket* ou
 #ifdef __Fuchsia__
 namespace {
   
-constexpr uint32_t kKitchenSink_MethodA_Ordinal = 450577456u;
+constexpr uint64_t kKitchenSink_MethodA_Ordinal = 450577456lu << 32;
 extern "C" const fidl_type_t test_name_KitchenSinkMethodARequestTable;
   
-constexpr uint32_t kKitchenSink_EventA_Ordinal = 1795426833u;
+constexpr uint64_t kKitchenSink_EventA_Ordinal = 1795426833lu << 32;
 extern "C" const fidl_type_t test_name_KitchenSinkEventAEventTable;
   
-constexpr uint32_t kKitchenSink_MethodB_Ordinal = 1999489700u;
+constexpr uint64_t kKitchenSink_MethodB_Ordinal = 1999489700lu << 32;
 extern "C" const fidl_type_t test_name_KitchenSinkMethodBRequestTable;
 extern "C" const fidl_type_t test_name_KitchenSinkMethodBResponseTable;
   
-constexpr uint32_t kKitchenSink_MutateSocket_Ordinal = 115851270u;
+constexpr uint64_t kKitchenSink_MutateSocket_Ordinal = 115851270lu << 32;
 extern "C" const fidl_type_t test_name_KitchenSinkMutateSocketRequestTable;
 extern "C" const fidl_type_t test_name_KitchenSinkMutateSocketResponseTable;
 
@@ -578,7 +578,7 @@ namespace {
 
 class KitchenSink_MethodB_Responder {
  public:
-  KitchenSink_MethodB_Responder(::fidl::internal::PendingResponse response, uint32_t ordinal)
+  KitchenSink_MethodB_Responder(::fidl::internal::PendingResponse response, uint64_t ordinal)
       : response_(std::move(response)), ordinal_(ordinal) {}
 
   void operator()(int64_t result) {
@@ -590,12 +590,12 @@ class KitchenSink_MethodB_Responder {
 
  private:
   ::fidl::internal::PendingResponse response_;
-  uint32_t ordinal_;
+  uint64_t ordinal_;
 };
 
 class KitchenSink_MutateSocket_Responder {
  public:
-  KitchenSink_MutateSocket_Responder(::fidl::internal::PendingResponse response, uint32_t ordinal)
+  KitchenSink_MutateSocket_Responder(::fidl::internal::PendingResponse response, uint64_t ordinal)
       : response_(std::move(response)), ordinal_(ordinal) {}
 
   void operator()(::zx::socket b) {
@@ -607,7 +607,7 @@ class KitchenSink_MutateSocket_Responder {
 
  private:
   ::fidl::internal::PendingResponse response_;
-  uint32_t ordinal_;
+  uint64_t ordinal_;
 };
 
 }  // namespace
@@ -616,7 +616,7 @@ zx_status_t KitchenSink_Stub::Dispatch_(
     ::fidl::Message message,
     ::fidl::internal::PendingResponse response) {
   zx_status_t status = ZX_OK;
-  uint32_t ordinal = message.ordinal();
+  uint64_t ordinal = message.ordinal();
   switch (ordinal) {
     case kKitchenSink_MethodA_Ordinal: {
       const char* error_msg = nullptr;
@@ -723,17 +723,17 @@ zx_status_t KitchenSink_SyncProxy::MutateSocket(::zx::socket a, ::zx::socket* ou
 #ifdef __Fuchsia__
 namespace {
   
-constexpr uint32_t kChannelProtocol_MethodA_Ordinal = 1432785874u;
+constexpr uint64_t kChannelProtocol_MethodA_Ordinal = 1432785874lu << 32;
 extern "C" const fidl_type_t test_name_ChannelProtocolMethodARequestTable;
   
-constexpr uint32_t kChannelProtocol_EventA_Ordinal = 477676034u;
+constexpr uint64_t kChannelProtocol_EventA_Ordinal = 477676034lu << 32;
 extern "C" const fidl_type_t test_name_ChannelProtocolEventAEventTable;
   
-constexpr uint32_t kChannelProtocol_MethodB_Ordinal = 180770075u;
+constexpr uint64_t kChannelProtocol_MethodB_Ordinal = 180770075lu << 32;
 extern "C" const fidl_type_t test_name_ChannelProtocolMethodBRequestTable;
 extern "C" const fidl_type_t test_name_ChannelProtocolMethodBResponseTable;
   
-constexpr uint32_t kChannelProtocol_MutateSocket_Ordinal = 1258480262u;
+constexpr uint64_t kChannelProtocol_MutateSocket_Ordinal = 1258480262lu << 32;
 extern "C" const fidl_type_t test_name_ChannelProtocolMutateSocketRequestTable;
 extern "C" const fidl_type_t test_name_ChannelProtocolMutateSocketResponseTable;
 
@@ -874,7 +874,7 @@ namespace {
 
 class ChannelProtocol_MethodB_Responder {
  public:
-  ChannelProtocol_MethodB_Responder(::fidl::internal::PendingResponse response, uint32_t ordinal)
+  ChannelProtocol_MethodB_Responder(::fidl::internal::PendingResponse response, uint64_t ordinal)
       : response_(std::move(response)), ordinal_(ordinal) {}
 
   void operator()(int64_t result) {
@@ -886,12 +886,12 @@ class ChannelProtocol_MethodB_Responder {
 
  private:
   ::fidl::internal::PendingResponse response_;
-  uint32_t ordinal_;
+  uint64_t ordinal_;
 };
 
 class ChannelProtocol_MutateSocket_Responder {
  public:
-  ChannelProtocol_MutateSocket_Responder(::fidl::internal::PendingResponse response, uint32_t ordinal)
+  ChannelProtocol_MutateSocket_Responder(::fidl::internal::PendingResponse response, uint64_t ordinal)
       : response_(std::move(response)), ordinal_(ordinal) {}
 
   void operator()(::zx::socket b) {
@@ -903,7 +903,7 @@ class ChannelProtocol_MutateSocket_Responder {
 
  private:
   ::fidl::internal::PendingResponse response_;
-  uint32_t ordinal_;
+  uint64_t ordinal_;
 };
 
 }  // namespace
@@ -912,7 +912,7 @@ zx_status_t ChannelProtocol_Stub::Dispatch_(
     ::fidl::Message message,
     ::fidl::internal::PendingResponse response) {
   zx_status_t status = ZX_OK;
-  uint32_t ordinal = message.ordinal();
+  uint64_t ordinal = message.ordinal();
   switch (ordinal) {
     case kChannelProtocol_MethodA_Ordinal: {
       const char* error_msg = nullptr;
@@ -1019,17 +1019,17 @@ zx_status_t ChannelProtocol_SyncProxy::MutateSocket(::zx::socket a, ::zx::socket
 #ifdef __Fuchsia__
 namespace {
   
-constexpr uint32_t kSocketControlProtocol_MethodA_Ordinal = 1007842318u;
+constexpr uint64_t kSocketControlProtocol_MethodA_Ordinal = 1007842318lu << 32;
 extern "C" const fidl_type_t test_name_SocketControlProtocolMethodARequestTable;
   
-constexpr uint32_t kSocketControlProtocol_EventA_Ordinal = 955483393u;
+constexpr uint64_t kSocketControlProtocol_EventA_Ordinal = 955483393lu << 32;
 extern "C" const fidl_type_t test_name_SocketControlProtocolEventAEventTable;
   
-constexpr uint32_t kSocketControlProtocol_MethodB_Ordinal = 677342235u;
+constexpr uint64_t kSocketControlProtocol_MethodB_Ordinal = 677342235lu << 32;
 extern "C" const fidl_type_t test_name_SocketControlProtocolMethodBRequestTable;
 extern "C" const fidl_type_t test_name_SocketControlProtocolMethodBResponseTable;
   
-constexpr uint32_t kSocketControlProtocol_MutateSocket_Ordinal = 255772213u;
+constexpr uint64_t kSocketControlProtocol_MutateSocket_Ordinal = 255772213lu << 32;
 extern "C" const fidl_type_t test_name_SocketControlProtocolMutateSocketRequestTable;
 extern "C" const fidl_type_t test_name_SocketControlProtocolMutateSocketResponseTable;
 
@@ -1170,7 +1170,7 @@ namespace {
 
 class SocketControlProtocol_MethodB_Responder {
  public:
-  SocketControlProtocol_MethodB_Responder(::fidl::internal::PendingResponse response, uint32_t ordinal)
+  SocketControlProtocol_MethodB_Responder(::fidl::internal::PendingResponse response, uint64_t ordinal)
       : response_(std::move(response)), ordinal_(ordinal) {}
 
   void operator()(int64_t result) {
@@ -1182,12 +1182,12 @@ class SocketControlProtocol_MethodB_Responder {
 
  private:
   ::fidl::internal::PendingResponse response_;
-  uint32_t ordinal_;
+  uint64_t ordinal_;
 };
 
 class SocketControlProtocol_MutateSocket_Responder {
  public:
-  SocketControlProtocol_MutateSocket_Responder(::fidl::internal::PendingResponse response, uint32_t ordinal)
+  SocketControlProtocol_MutateSocket_Responder(::fidl::internal::PendingResponse response, uint64_t ordinal)
       : response_(std::move(response)), ordinal_(ordinal) {}
 
   void operator()(::zx::socket b) {
@@ -1199,7 +1199,7 @@ class SocketControlProtocol_MutateSocket_Responder {
 
  private:
   ::fidl::internal::PendingResponse response_;
-  uint32_t ordinal_;
+  uint64_t ordinal_;
 };
 
 }  // namespace
@@ -1208,7 +1208,7 @@ zx_status_t SocketControlProtocol_Stub::Dispatch_(
     ::fidl::Message message,
     ::fidl::internal::PendingResponse response) {
   zx_status_t status = ZX_OK;
-  uint32_t ordinal = message.ordinal();
+  uint64_t ordinal = message.ordinal();
   switch (ordinal) {
     case kSocketControlProtocol_MethodA_Ordinal: {
       const char* error_msg = nullptr;
@@ -1315,32 +1315,32 @@ zx_status_t SocketControlProtocol_SyncProxy::MutateSocket(::zx::socket a, ::zx::
 #ifdef __Fuchsia__
 namespace {
   
-constexpr uint32_t kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal = 503576693u;
+constexpr uint64_t kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal = 503576693lu << 32;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseNoRequestNoResponseRequestTable;
   
-constexpr uint32_t kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal = 1308023765u;
+constexpr uint64_t kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal = 1308023765lu << 32;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestTable;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseTable;
   
-constexpr uint32_t kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal = 107534328u;
+constexpr uint64_t kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal = 107534328lu << 32;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseNoRequestWithResponseRequestTable;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable;
   
-constexpr uint32_t kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal = 432149361u;
+constexpr uint64_t kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal = 432149361lu << 32;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
   
-constexpr uint32_t kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal = 1995585907u;
+constexpr uint64_t kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal = 1995585907lu << 32;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseTable;
   
-constexpr uint32_t kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal = 426977568u;
+constexpr uint64_t kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal = 426977568lu << 32;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable;
   
-constexpr uint32_t kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal = 1769985842u;
+constexpr uint64_t kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal = 1769985842lu << 32;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseOnEmptyResponseEventTable;
   
-constexpr uint32_t kWithAndWithoutRequestResponse_OnWithResponse_Ordinal = 2051478023u;
+constexpr uint64_t kWithAndWithoutRequestResponse_OnWithResponse_Ordinal = 2051478023lu << 32;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseOnWithResponseEventTable;
 
 }  // namespace
@@ -1561,7 +1561,7 @@ namespace {
 
 class WithAndWithoutRequestResponse_NoRequestEmptyResponse_Responder {
  public:
-  WithAndWithoutRequestResponse_NoRequestEmptyResponse_Responder(::fidl::internal::PendingResponse response, uint32_t ordinal)
+  WithAndWithoutRequestResponse_NoRequestEmptyResponse_Responder(::fidl::internal::PendingResponse response, uint64_t ordinal)
       : response_(std::move(response)), ordinal_(ordinal) {}
 
   void operator()() {
@@ -1571,12 +1571,12 @@ class WithAndWithoutRequestResponse_NoRequestEmptyResponse_Responder {
 
  private:
   ::fidl::internal::PendingResponse response_;
-  uint32_t ordinal_;
+  uint64_t ordinal_;
 };
 
 class WithAndWithoutRequestResponse_NoRequestWithResponse_Responder {
  public:
-  WithAndWithoutRequestResponse_NoRequestWithResponse_Responder(::fidl::internal::PendingResponse response, uint32_t ordinal)
+  WithAndWithoutRequestResponse_NoRequestWithResponse_Responder(::fidl::internal::PendingResponse response, uint64_t ordinal)
       : response_(std::move(response)), ordinal_(ordinal) {}
 
   void operator()(::std::string ret) {
@@ -1588,12 +1588,12 @@ class WithAndWithoutRequestResponse_NoRequestWithResponse_Responder {
 
  private:
   ::fidl::internal::PendingResponse response_;
-  uint32_t ordinal_;
+  uint64_t ordinal_;
 };
 
 class WithAndWithoutRequestResponse_WithRequestEmptyResponse_Responder {
  public:
-  WithAndWithoutRequestResponse_WithRequestEmptyResponse_Responder(::fidl::internal::PendingResponse response, uint32_t ordinal)
+  WithAndWithoutRequestResponse_WithRequestEmptyResponse_Responder(::fidl::internal::PendingResponse response, uint64_t ordinal)
       : response_(std::move(response)), ordinal_(ordinal) {}
 
   void operator()() {
@@ -1603,12 +1603,12 @@ class WithAndWithoutRequestResponse_WithRequestEmptyResponse_Responder {
 
  private:
   ::fidl::internal::PendingResponse response_;
-  uint32_t ordinal_;
+  uint64_t ordinal_;
 };
 
 class WithAndWithoutRequestResponse_WithRequestWithResponse_Responder {
  public:
-  WithAndWithoutRequestResponse_WithRequestWithResponse_Responder(::fidl::internal::PendingResponse response, uint32_t ordinal)
+  WithAndWithoutRequestResponse_WithRequestWithResponse_Responder(::fidl::internal::PendingResponse response, uint64_t ordinal)
       : response_(std::move(response)), ordinal_(ordinal) {}
 
   void operator()(::std::string ret) {
@@ -1620,7 +1620,7 @@ class WithAndWithoutRequestResponse_WithRequestWithResponse_Responder {
 
  private:
   ::fidl::internal::PendingResponse response_;
-  uint32_t ordinal_;
+  uint64_t ordinal_;
 };
 
 }  // namespace
@@ -1629,7 +1629,7 @@ zx_status_t WithAndWithoutRequestResponse_Stub::Dispatch_(
     ::fidl::Message message,
     ::fidl::internal::PendingResponse response) {
   zx_status_t status = ZX_OK;
-  uint32_t ordinal = message.ordinal();
+  uint64_t ordinal = message.ordinal();
   switch (ordinal) {
     case kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal: {
       const char* error_msg = nullptr;
@@ -1883,11 +1883,11 @@ void WithErrorSyntax_ErrorAsEnum_Result::set_err(ErrorEnun value) {
 #ifdef __Fuchsia__
 namespace {
   
-constexpr uint32_t kWithErrorSyntax_ErrorAsPrimitive_Ordinal = 2069369145u;
+constexpr uint64_t kWithErrorSyntax_ErrorAsPrimitive_Ordinal = 2069369145lu << 32;
 extern "C" const fidl_type_t test_name_WithErrorSyntaxErrorAsPrimitiveRequestTable;
 extern "C" const fidl_type_t test_name_WithErrorSyntaxErrorAsPrimitiveResponseTable;
   
-constexpr uint32_t kWithErrorSyntax_ErrorAsEnum_Ordinal = 1284890143u;
+constexpr uint64_t kWithErrorSyntax_ErrorAsEnum_Ordinal = 1284890143lu << 32;
 extern "C" const fidl_type_t test_name_WithErrorSyntaxErrorAsEnumRequestTable;
 extern "C" const fidl_type_t test_name_WithErrorSyntaxErrorAsEnumResponseTable;
 
@@ -1999,7 +1999,7 @@ namespace {
 
 class WithErrorSyntax_ErrorAsPrimitive_Responder {
  public:
-  WithErrorSyntax_ErrorAsPrimitive_Responder(::fidl::internal::PendingResponse response, uint32_t ordinal)
+  WithErrorSyntax_ErrorAsPrimitive_Responder(::fidl::internal::PendingResponse response, uint64_t ordinal)
       : response_(std::move(response)), ordinal_(ordinal) {}
 
   void operator()(WithErrorSyntax_ErrorAsPrimitive_Result result) {
@@ -2011,12 +2011,12 @@ class WithErrorSyntax_ErrorAsPrimitive_Responder {
 
  private:
   ::fidl::internal::PendingResponse response_;
-  uint32_t ordinal_;
+  uint64_t ordinal_;
 };
 
 class WithErrorSyntax_ErrorAsEnum_Responder {
  public:
-  WithErrorSyntax_ErrorAsEnum_Responder(::fidl::internal::PendingResponse response, uint32_t ordinal)
+  WithErrorSyntax_ErrorAsEnum_Responder(::fidl::internal::PendingResponse response, uint64_t ordinal)
       : response_(std::move(response)), ordinal_(ordinal) {}
 
   void operator()(WithErrorSyntax_ErrorAsEnum_Result result) {
@@ -2028,7 +2028,7 @@ class WithErrorSyntax_ErrorAsEnum_Responder {
 
  private:
   ::fidl::internal::PendingResponse response_;
-  uint32_t ordinal_;
+  uint64_t ordinal_;
 };
 
 }  // namespace
@@ -2037,7 +2037,7 @@ zx_status_t WithErrorSyntax_Stub::Dispatch_(
     ::fidl::Message message,
     ::fidl::internal::PendingResponse response) {
   zx_status_t status = ZX_OK;
-  uint32_t ordinal = message.ordinal();
+  uint64_t ordinal = message.ordinal();
   switch (ordinal) {
     case kWithErrorSyntax_ErrorAsPrimitive_Ordinal: {
       if (!response.needs_response()) {

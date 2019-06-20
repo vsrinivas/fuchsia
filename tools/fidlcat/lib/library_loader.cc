@@ -82,7 +82,7 @@ const UnionMember* Union::MemberWithTag(uint32_t tag) const {
   return members_[tag].get();
 }
 
-const UnionMember* Union::MemberWithOrdinal(Ordinal ordinal) const {
+const UnionMember* Union::MemberWithOrdinal(Ordinal32 ordinal) const {
   for (const auto& member : members_) {
     if (member->ordinal() == ordinal) {
       return member.get();
@@ -202,7 +202,7 @@ void Table::DecodeTypes() {
   size_ = std::strtoll(value_["size"].GetString(), nullptr, 10);
   unknown_member_type_ = std::make_unique<RawType>(size_);
   auto member_arr = value_["members"].GetArray();
-  uint32_t max_ordinal = 0;
+  Ordinal32 max_ordinal = 0;
   for (auto& member : member_arr) {
     backing_members_.push_back(
         std::make_unique<TableMember>(enclosing_library_, member));
@@ -221,7 +221,8 @@ InterfaceMethod::InterfaceMethod(const Interface& interface,
                                  const rapidjson::Value& value)
     : enclosing_interface_(interface),
       value_(value),
-      ordinal_(std::strtoll(value["ordinal"].GetString(), nullptr, 10)),
+      // TODO(FIDL-524): Handle two ordinals per method to soft-transition.
+      ordinal_(std::strtoll(value["ordinal"].GetString(), nullptr, 10) << 32),
       name_(value["name"].GetString()) {
   if (value_["has_request"].GetBool()) {
     request_ = std::unique_ptr<Struct>(
@@ -253,7 +254,7 @@ bool Interface::GetMethodByFullName(const std::string& name,
 }
 
 Library::Library(LibraryLoader* enclosing_loader, rapidjson::Document& document,
-                 std::map<Ordinal, const InterfaceMethod*>& index)
+                 std::map<Ordinal64, const InterfaceMethod*>& index)
     : enclosing_loader_(enclosing_loader),
       backing_document_(std::move(document)) {
   auto interfaces_array =

@@ -677,7 +677,7 @@ zx_status_t DcIostate::DevfsFidlHandler(fidl_msg_t* msg, fidl_txn_t* txn, void* 
     zx_status_t r;
     // This is an if statement because, depending on the state of the ordinal
     // migration, GenOrdinal and Ordinal may be the same value.  See FIDL-524.
-    uint32_t ordinal = hdr->ordinal;
+    uint64_t ordinal = hdr->ordinal;
     if (ordinal == fuchsia_io_NodeCloneOrdinal ||
         ordinal == fuchsia_io_NodeCloneGenOrdinal) {
         DECODE_REQUEST(msg, NodeClone);

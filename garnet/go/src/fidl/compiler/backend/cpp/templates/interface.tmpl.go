@@ -182,9 +182,9 @@ namespace {
 
 {{- range .Methods }}
   {{ if ne .GenOrdinal .Ordinal }}
-constexpr uint32_t {{ .GenOrdinalName }} = {{ .GenOrdinal }}u;
+constexpr uint64_t {{ .GenOrdinalName }} = {{ .GenOrdinal }}lu << 32;
   {{- end }}
-constexpr uint32_t {{ .OrdinalName }} = {{ .Ordinal }}u;
+constexpr uint64_t {{ .OrdinalName }} = {{ .Ordinal }}lu << 32;
   {{- if .HasRequest }}
 extern "C" const fidl_type_t {{ .RequestTypeName }};
   {{- end }}
@@ -329,7 +329,7 @@ namespace {
 
 class {{ .ResponderType }} {
  public:
-  {{ .ResponderType }}(::fidl::internal::PendingResponse response, uint32_t ordinal)
+  {{ .ResponderType }}(::fidl::internal::PendingResponse response, uint64_t ordinal)
       : response_(std::move(response)), ordinal_(ordinal) {}
 
   void operator()({{ template "Params" .Response }}) {
@@ -345,7 +345,7 @@ class {{ .ResponderType }} {
 
  private:
   ::fidl::internal::PendingResponse response_;
-  uint32_t ordinal_;
+  uint64_t ordinal_;
 };
     {{- end }}
   {{- end }}
@@ -357,7 +357,7 @@ zx_status_t {{ .StubName }}::Dispatch_(
     ::fidl::Message message,
     ::fidl::internal::PendingResponse response) {
   zx_status_t status = ZX_OK;
-  uint32_t ordinal = message.ordinal();
+  uint64_t ordinal = message.ordinal();
   switch (ordinal) {
     {{- range .Methods }}
       {{- if .HasRequest }}

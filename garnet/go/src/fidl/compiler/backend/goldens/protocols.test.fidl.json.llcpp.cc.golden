@@ -70,13 +70,13 @@ uint32_t& ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result::mutable_
 namespace {
 
 [[maybe_unused]]
-constexpr uint32_t kKitchenSink_MethodA_Ordinal = 450577456u;
+constexpr uint64_t kKitchenSink_MethodA_Ordinal = 450577456lu << 32;
 [[maybe_unused]]
-constexpr uint32_t kKitchenSink_EventA_Ordinal = 1795426833u;
+constexpr uint64_t kKitchenSink_EventA_Ordinal = 1795426833lu << 32;
 [[maybe_unused]]
-constexpr uint32_t kKitchenSink_MethodB_Ordinal = 1999489700u;
+constexpr uint64_t kKitchenSink_MethodB_Ordinal = 1999489700lu << 32;
 [[maybe_unused]]
-constexpr uint32_t kKitchenSink_MutateSocket_Ordinal = 115851270u;
+constexpr uint64_t kKitchenSink_MutateSocket_Ordinal = 115851270lu << 32;
 extern "C" const fidl_type_t test_name_KitchenSinkMutateSocketRequestTable;
 extern "C" const fidl_type_t test_name_KitchenSinkMutateSocketResponseTable;
 
@@ -541,13 +541,13 @@ void KitchenSink::Interface::MutateSocketCompleterBase::Reply(::fidl::DecodedMes
 namespace {
 
 [[maybe_unused]]
-constexpr uint32_t kChannelProtocol_MethodA_Ordinal = 1432785874u;
+constexpr uint64_t kChannelProtocol_MethodA_Ordinal = 1432785874lu << 32;
 [[maybe_unused]]
-constexpr uint32_t kChannelProtocol_EventA_Ordinal = 477676034u;
+constexpr uint64_t kChannelProtocol_EventA_Ordinal = 477676034lu << 32;
 [[maybe_unused]]
-constexpr uint32_t kChannelProtocol_MethodB_Ordinal = 180770075u;
+constexpr uint64_t kChannelProtocol_MethodB_Ordinal = 180770075lu << 32;
 [[maybe_unused]]
-constexpr uint32_t kChannelProtocol_MutateSocket_Ordinal = 1258480262u;
+constexpr uint64_t kChannelProtocol_MutateSocket_Ordinal = 1258480262lu << 32;
 extern "C" const fidl_type_t test_name_ChannelProtocolMutateSocketRequestTable;
 extern "C" const fidl_type_t test_name_ChannelProtocolMutateSocketResponseTable;
 
@@ -1012,13 +1012,13 @@ void ChannelProtocol::Interface::MutateSocketCompleterBase::Reply(::fidl::Decode
 namespace {
 
 [[maybe_unused]]
-constexpr uint32_t kSocketControlProtocol_MethodA_Ordinal = 1007842318u;
+constexpr uint64_t kSocketControlProtocol_MethodA_Ordinal = 1007842318lu << 32;
 [[maybe_unused]]
-constexpr uint32_t kSocketControlProtocol_EventA_Ordinal = 955483393u;
+constexpr uint64_t kSocketControlProtocol_EventA_Ordinal = 955483393lu << 32;
 [[maybe_unused]]
-constexpr uint32_t kSocketControlProtocol_MethodB_Ordinal = 677342235u;
+constexpr uint64_t kSocketControlProtocol_MethodB_Ordinal = 677342235lu << 32;
 [[maybe_unused]]
-constexpr uint32_t kSocketControlProtocol_MutateSocket_Ordinal = 255772213u;
+constexpr uint64_t kSocketControlProtocol_MutateSocket_Ordinal = 255772213lu << 32;
 extern "C" const fidl_type_t test_name_SocketControlProtocolMutateSocketRequestTable;
 extern "C" const fidl_type_t test_name_SocketControlProtocolMutateSocketResponseTable;
 
@@ -1483,13 +1483,13 @@ void SocketControlProtocol::Interface::MutateSocketCompleterBase::Reply(::fidl::
 namespace {
 
 [[maybe_unused]]
-constexpr uint32_t kOvernetInternalProtocol_MethodA_Ordinal = 1993818253u;
+constexpr uint64_t kOvernetInternalProtocol_MethodA_Ordinal = 1993818253lu << 32;
 [[maybe_unused]]
-constexpr uint32_t kOvernetInternalProtocol_EventA_Ordinal = 1746007436u;
+constexpr uint64_t kOvernetInternalProtocol_EventA_Ordinal = 1746007436lu << 32;
 [[maybe_unused]]
-constexpr uint32_t kOvernetInternalProtocol_MethodB_Ordinal = 952134976u;
+constexpr uint64_t kOvernetInternalProtocol_MethodB_Ordinal = 952134976lu << 32;
 [[maybe_unused]]
-constexpr uint32_t kOvernetInternalProtocol_MutateSocket_Ordinal = 1691201382u;
+constexpr uint64_t kOvernetInternalProtocol_MutateSocket_Ordinal = 1691201382lu << 32;
 extern "C" const fidl_type_t test_name_OvernetInternalProtocolMutateSocketRequestTable;
 extern "C" const fidl_type_t test_name_OvernetInternalProtocolMutateSocketResponseTable;
 
@@ -1954,26 +1954,26 @@ void OvernetInternalProtocol::Interface::MutateSocketCompleterBase::Reply(::fidl
 namespace {
 
 [[maybe_unused]]
-constexpr uint32_t kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal = 503576693u;
+constexpr uint64_t kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal = 503576693lu << 32;
 [[maybe_unused]]
-constexpr uint32_t kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal = 1308023765u;
+constexpr uint64_t kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal = 1308023765lu << 32;
 [[maybe_unused]]
-constexpr uint32_t kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal = 107534328u;
+constexpr uint64_t kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal = 107534328lu << 32;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable;
 [[maybe_unused]]
-constexpr uint32_t kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal = 432149361u;
+constexpr uint64_t kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal = 432149361lu << 32;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
 [[maybe_unused]]
-constexpr uint32_t kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal = 1995585907u;
+constexpr uint64_t kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal = 1995585907lu << 32;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
 [[maybe_unused]]
-constexpr uint32_t kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal = 426977568u;
+constexpr uint64_t kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal = 426977568lu << 32;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable;
 [[maybe_unused]]
-constexpr uint32_t kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal = 1769985842u;
+constexpr uint64_t kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal = 1769985842lu << 32;
 [[maybe_unused]]
-constexpr uint32_t kWithAndWithoutRequestResponse_OnWithResponse_Ordinal = 2051478023u;
+constexpr uint64_t kWithAndWithoutRequestResponse_OnWithResponse_Ordinal = 2051478023lu << 32;
 extern "C" const fidl_type_t test_name_WithAndWithoutRequestResponseOnWithResponseEventTable;
 
 }  // namespace
@@ -2688,10 +2688,10 @@ ErrorEnun& ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result::mutable_err(
 namespace {
 
 [[maybe_unused]]
-constexpr uint32_t kWithErrorSyntax_ErrorAsPrimitive_Ordinal = 2069369145u;
+constexpr uint64_t kWithErrorSyntax_ErrorAsPrimitive_Ordinal = 2069369145lu << 32;
 extern "C" const fidl_type_t test_name_WithErrorSyntaxErrorAsPrimitiveResponseTable;
 [[maybe_unused]]
-constexpr uint32_t kWithErrorSyntax_ErrorAsEnum_Ordinal = 1284890143u;
+constexpr uint64_t kWithErrorSyntax_ErrorAsEnum_Ordinal = 1284890143lu << 32;
 extern "C" const fidl_type_t test_name_WithErrorSyntaxErrorAsEnumResponseTable;
 
 }  // namespace

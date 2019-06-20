@@ -387,7 +387,7 @@ zx_status_t launchpad_elf_load_extra(launchpad_t* lp, zx_handle_t vmo,
 
 #define LOADER_SVC_MSG_MAX 1024
 
-static zx_status_t loader_svc_rpc(zx_handle_t loader_svc, uint32_t ordinal,
+static zx_status_t loader_svc_rpc(zx_handle_t loader_svc, uint64_t ordinal,
                                   const void* data, size_t len, zx_handle_t* out) {
     static _Atomic zx_txid_t next_txid;
 

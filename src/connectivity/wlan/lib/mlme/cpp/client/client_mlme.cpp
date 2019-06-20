@@ -111,7 +111,7 @@ zx_status_t ClientMlme::HandleMlmeMsg(const BaseMlmeMsg& msg) {
     Unjoin();
     return HandleMlmeJoinReq(*join_req);
   } else if (!join_ctx_.has_value()) {
-    warnf("rx'ed MLME message (ordinal: %u) before synchronizing with a BSS\n",
+    warnf("rx'ed MLME message (ordinal: %lu) before synchronizing with a BSS\n",
           msg.ordinal());
     return ZX_ERR_BAD_STATE;
   }
@@ -123,7 +123,7 @@ zx_status_t ClientMlme::HandleMlmeMsg(const BaseMlmeMsg& msg) {
       return sta_->SetKeys(setkeys_req->body()->keylist);
     } else {
       warnf(
-          "rx'ed MLME message (ordinal: %u) before authenticating with a BSS\n",
+          "rx'ed MLME message (ordinal: %lu) before authenticating with a BSS\n",
           msg.ordinal());
       return ZX_ERR_BAD_STATE;
     }
@@ -133,11 +133,11 @@ zx_status_t ClientMlme::HandleMlmeMsg(const BaseMlmeMsg& msg) {
   // before.
   auto peer_addr = service::GetPeerAddr(msg);
   if (!peer_addr.has_value()) {
-    warnf("rx'ed unsupported MLME msg (ordinal: %u)\n", msg.ordinal());
+    warnf("rx'ed unsupported MLME msg (ordinal: %lu)\n", msg.ordinal());
     return ZX_ERR_INVALID_ARGS;
   } else if (peer_addr.value() != join_ctx_->bssid()) {
     warnf(
-        "rx'ed MLME msg (ordinal: %u) with unexpected peer addr; expected: %s "
+        "rx'ed MLME msg (ordinal: %lu) with unexpected peer addr; expected: %s "
         "; actual: %s\n",
         msg.ordinal(), join_ctx_->bssid().ToString().c_str(),
         peer_addr->ToString().c_str());
@@ -161,7 +161,7 @@ zx_status_t ClientMlme::HandleMlmeMsg(const BaseMlmeMsg& msg) {
 
   // If the STA exists, forward all incoming MLME messages.
   if (sta_ == nullptr) {
-    warnf("rx'ed MLME message (ordinal: %u) before authenticating with a BSS\n",
+    warnf("rx'ed MLME message (ordinal: %lu) before authenticating with a BSS\n",
           msg.ordinal());
     return ZX_ERR_BAD_STATE;
   }
@@ -179,7 +179,7 @@ zx_status_t ClientMlme::HandleMlmeMsg(const BaseMlmeMsg& msg) {
     sta_->UpdateControlledPort(setctrlport_req->body()->state);
     return ZX_OK;
   } else {
-    warnf("rx'ed unsupported MLME message for client; ordinal: %u\n",
+    warnf("rx'ed unsupported MLME message for client; ordinal: %lu\n",
           msg.ordinal());
     return ZX_ERR_BAD_STATE;
   }

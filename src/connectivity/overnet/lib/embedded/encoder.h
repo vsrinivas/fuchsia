@@ -14,7 +14,7 @@ class FidlChannelIO;
 
 class Encoder {
  public:
-  explicit Encoder(uint32_t ordinal, FidlChannelIO* channel);
+  explicit Encoder(uint64_t ordinal, FidlChannelIO* channel);
 
   size_t Alloc(size_t size);
 
@@ -45,7 +45,7 @@ class Encoder {
   }
 
  private:
-  void EncodeMessageHeader(uint32_t ordinal);
+  void EncodeMessageHeader(uint64_t ordinal);
 
   fuchsia::overnet::protocol::ZirconChannelMessage message_;
   RouterEndpoint::Stream* const stream_;

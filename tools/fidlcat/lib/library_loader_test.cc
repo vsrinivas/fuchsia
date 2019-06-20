@@ -70,7 +70,7 @@ TEST(LibraryLoader, LoadFromOrdinal) {
   found_interface->GetMethodByFullName(
       "test.fidlcat.sys/ComponentController.OnDirectoryReady", &found_method);
 
-  Ordinal correct_ordinal = found_method->ordinal();
+  Ordinal64 correct_ordinal = found_method->ordinal();
   const InterfaceMethod* ordinal_method = loader.GetByOrdinal(correct_ordinal);
   ASSERT_NE(ordinal_method, nullptr);
   ASSERT_EQ(kDesiredInterfaceName,

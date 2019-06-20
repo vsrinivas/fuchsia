@@ -2396,7 +2396,7 @@ __attribute__((__visibility__("hidden"))) void __dl_vseterr(const char*, va_list
 
 #define LOADER_SVC_MSG_MAX 1024
 
-__NO_SAFESTACK static zx_status_t loader_svc_rpc(uint32_t ordinal,
+__NO_SAFESTACK static zx_status_t loader_svc_rpc(uint64_t ordinal,
                                                  const void* data, size_t len,
                                                  zx_handle_t request_handle,
                                                  zx_handle_t* result) {

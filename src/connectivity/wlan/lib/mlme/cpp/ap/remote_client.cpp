@@ -142,7 +142,7 @@ zx_status_t AuthenticatingState::HandleMlmeMsg(const BaseMlmeMsg& msg) {
   } else {
     warnf(
         "[client] [%s] unexpected MLME msg type in authenticating state; "
-        "ordinal: %u\n",
+        "ordinal: %lu\n",
         client_->addr().ToString().c_str(), msg.ordinal());
     return ZX_ERR_INVALID_ARGS;
   }
@@ -294,7 +294,7 @@ zx_status_t AssociatingState::HandleMlmeMsg(const BaseMlmeMsg& msg) {
   } else {
     warnf(
         "[client] [%s] unexpected MLME msg type in associating state; ordinal: "
-        "%u\n",
+        "%lu\n",
         client_->addr().ToString().c_str(), msg.ordinal());
     return ZX_ERR_INVALID_ARGS;
   }
@@ -586,7 +586,7 @@ zx_status_t AssociatedState::HandleMlmeMsg(const BaseMlmeMsg& msg) {
   } else {
     warnf(
         "[client] [%s] unexpected MLME msg type in associated state; ordinal: "
-        "%u\n",
+        "%lu\n",
         client_->addr().ToString().c_str(), msg.ordinal());
     return ZX_ERR_INVALID_ARGS;
   }

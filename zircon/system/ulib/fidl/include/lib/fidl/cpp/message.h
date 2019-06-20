@@ -59,15 +59,10 @@ public:
     zx_txid_t txid() const { return header().txid; }
     void set_txid(zx_txid_t txid) { header().txid = txid; }
 
-    // The flags in the message header.
+    // The ordinal in the message header.
     //
     // Valid only if has_header().
-    uint32_t flags() const { return header().flags; }
-
-    // The flags in the message header.
-    //
-    // Valid only if has_header().
-    uint32_t ordinal() const { return header().ordinal; }
+    uint64_t ordinal() const { return header().ordinal; }
 
     // The message payload that follows the header.
     //

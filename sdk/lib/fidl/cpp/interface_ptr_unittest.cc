@@ -298,7 +298,7 @@ TEST(InterfacePtr, InterfaceCanHandleGeneratedOrdinal) {
   EXPECT_EQ(ZX_OK, message.Read(h2.get(), 0));
 
   // Cribbed from generated .cc file.
-  constexpr uint32_t kFrobinator_Grob_GenOrdinal = 1499796418u;
+  constexpr uint64_t kFrobinator_Grob_GenOrdinal = 1499796418lu << 32;
   fidl_message_header_t *header =
       reinterpret_cast<fidl_message_header_t *>(buffer.bytes());
   header->ordinal = kFrobinator_Grob_GenOrdinal;

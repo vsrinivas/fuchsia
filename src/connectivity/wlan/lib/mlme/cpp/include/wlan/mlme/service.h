@@ -46,12 +46,12 @@ zx_status_t SerializeServiceMsg(fidl::Encoder* enc, T* msg,
 
 template <typename T>
 static zx_status_t SendServiceMsg(DeviceInterface* device, T* message,
-                                  uint32_t ordinal, zx_txid_t txid = 0) {
+                                  uint64_t ordinal, zx_txid_t txid = 0) {
   fidl::Encoder enc(ordinal);
 
   zx_status_t status = SerializeServiceMsg(&enc, message, txid);
   if (status != ZX_OK) {
-    errorf("could not serialize FIDL message %d: %d\n", ordinal, status);
+    errorf("could not serialize FIDL message %lu: %d\n", ordinal, status);
     return status;
   }
   return device->SendService(enc.GetMessage().bytes());
@@ -72,15 +72,15 @@ class BaseMlmeMsg {
   }
 
   zx_txid_t txid() const { return txid_; }
-  uint32_t ordinal() const { return ordinal_; }
+  uint64_t ordinal() const { return ordinal_; }
 
  protected:
-  BaseMlmeMsg(uint32_t ordinal, zx_txid_t txid)
+  BaseMlmeMsg(uint64_t ordinal, zx_txid_t txid)
       : ordinal_(ordinal), txid_(txid) {}
   BaseMlmeMsg(BaseMlmeMsg&&) = default;
   virtual const void* get_type_id() const = 0;
 
-  uint32_t ordinal_ = 0;
+  uint64_t ordinal_ = 0;
   zx_txid_t txid_ = 0;
 
  private:
@@ -92,15 +92,15 @@ template <typename M>
 class MlmeMsg : public BaseMlmeMsg {
  public:
   static const uint8_t kTypeId = 0;
-  MlmeMsg(M&& msg, uint32_t ordinal, zx_txid_t txid = 0)
+  MlmeMsg(M&& msg, uint64_t ordinal, zx_txid_t txid = 0)
       : BaseMlmeMsg(ordinal, txid), msg_(std::move(msg)) {}
   MlmeMsg(MlmeMsg&&) = default;
   ~MlmeMsg() override = default;
 
-  static constexpr uint32_t kNoOrdinal =
+  static constexpr uint64_t kNoOrdinal =
       0;  // Not applicable or does not matter
   static std::optional<MlmeMsg<M>> Decode(fbl::Span<uint8_t> span,
-                                          uint32_t ordinal = kNoOrdinal) {
+                                          uint64_t ordinal = kNoOrdinal) {
     BufferReader reader(span);
     auto h = reader.Read<fidl_message_header_t>();
     if (h == nullptr) {
@@ -110,7 +110,7 @@ class MlmeMsg : public BaseMlmeMsg {
 
     if (ordinal != kNoOrdinal && ordinal != h->ordinal) {
       // Generated code uses hexadecimal to represent ordinal
-      warnf("Mismatched ordinal: expected: 0x%0x, actual: 0x%0x\n", ordinal,
+      warnf("Mismatched ordinal: expected: 0x%0lx, actual: 0x%0lx\n", ordinal,
             h->ordinal);
       return {};
     }
@@ -190,7 +190,7 @@ zx_status_t SendStopConfirm(DeviceInterface* device,
                             ::fuchsia::wlan::mlme::StopResultCodes code);
 zx_status_t SendMeshPathTable(DeviceInterface* device,
                               ::fuchsia::wlan::mesh::MeshPathTable& table,
-                              uint32_t ordinal, zx_txid_t txid);
+                              uint64_t ordinal, zx_txid_t txid);
 
 }  // namespace service
 

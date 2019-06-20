@@ -188,7 +188,7 @@ zx_status_t SendStopConfirm(DeviceInterface* device,
 }
 
 zx_status_t SendMeshPathTable(DeviceInterface* device,
-                              wlan_mesh::MeshPathTable& table, uint32_t ordinal,
+                              wlan_mesh::MeshPathTable& table, uint64_t ordinal,
                               zx_txid_t txid) {
   return SendServiceMsg(device, &table, ordinal, txid);
 }

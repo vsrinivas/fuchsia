@@ -103,7 +103,7 @@ zx_status_t LogExporter::ReadAndDispatchMessage(fidl::MessageBuffer* buffer) {
 
     // This is an if statement because, depending on the state of the ordinal
     // migration, GenOrdinal and Ordinal may be the same value.  See FIDL-524.
-    uint32_t ordinal = message.ordinal();
+    uint64_t ordinal = message.ordinal();
     if (ordinal == fuchsia_logger_LogListenerLogGenOrdinal ||
         ordinal == fuchsia_logger_LogListenerLogOrdinal) {
         return Log(std::move(message));

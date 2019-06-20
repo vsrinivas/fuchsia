@@ -192,7 +192,6 @@ zx_status_t TapDevice::EthmacQueueTx(uint32_t options, ethmac_netbuf_t* netbuf) 
     fidl::Builder builder(temp_buff, sizeof(temp_buff));
     auto* event = builder.New<fuchsia_hardware_ethertap_TapDeviceOnFrameEvent>();
     event->hdr.ordinal = fuchsia_hardware_ethertap_TapDeviceOnFrameOrdinal;
-    event->hdr.flags = 0;
     event->hdr.txid = FIDL_TXID_NO_RESPONSE;
     event->data.count = length;
     auto* data = builder.NewArray<uint8_t>(static_cast<uint32_t>(length));
@@ -231,7 +230,6 @@ zx_status_t TapDevice::EthmacSetParam(uint32_t param, int32_t value, const void*
     fidl::Builder builder(temp_buff, sizeof(temp_buff));
     auto* event = builder.New<fuchsia_hardware_ethertap_TapDeviceOnReportParamsEvent>();
     event->hdr.ordinal = fuchsia_hardware_ethertap_TapDeviceOnReportParamsOrdinal;
-    event->hdr.flags = 0;
     event->hdr.txid = FIDL_TXID_NO_RESPONSE;
 
     event->param = param;

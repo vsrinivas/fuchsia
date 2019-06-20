@@ -13,19 +13,19 @@ namespace dirent {
 namespace {
 
 [[maybe_unused]]
-constexpr uint32_t kDirEntTestInterface_CountNumDirectories_Ordinal = 1763037320u;
+constexpr uint64_t kDirEntTestInterface_CountNumDirectories_Ordinal = 1763037320lu << 32;
 extern "C" const fidl_type_t fidl_test_llcpp_dirent_DirEntTestInterfaceCountNumDirectoriesRequestTable;
 [[maybe_unused]]
-constexpr uint32_t kDirEntTestInterface_ReadDir_Ordinal = 5390459u;
+constexpr uint64_t kDirEntTestInterface_ReadDir_Ordinal = 5390459lu << 32;
 extern "C" const fidl_type_t fidl_test_llcpp_dirent_DirEntTestInterfaceReadDirResponseTable;
 [[maybe_unused]]
-constexpr uint32_t kDirEntTestInterface_ConsumeDirectories_Ordinal = 426073095u;
+constexpr uint64_t kDirEntTestInterface_ConsumeDirectories_Ordinal = 426073095lu << 32;
 extern "C" const fidl_type_t fidl_test_llcpp_dirent_DirEntTestInterfaceConsumeDirectoriesRequestTable;
 [[maybe_unused]]
-constexpr uint32_t kDirEntTestInterface_OnDirents_Ordinal = 1283577530u;
+constexpr uint64_t kDirEntTestInterface_OnDirents_Ordinal = 1283577530lu << 32;
 extern "C" const fidl_type_t fidl_test_llcpp_dirent_DirEntTestInterfaceOnDirentsEventTable;
 [[maybe_unused]]
-constexpr uint32_t kDirEntTestInterface_OneWayDirents_Ordinal = 1810555765u;
+constexpr uint64_t kDirEntTestInterface_OneWayDirents_Ordinal = 1810555765lu << 32;
 extern "C" const fidl_type_t fidl_test_llcpp_dirent_DirEntTestInterfaceOneWayDirentsRequestTable;
 
 }  // namespace

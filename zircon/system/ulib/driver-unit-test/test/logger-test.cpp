@@ -48,7 +48,7 @@ TEST_F(LoggerTest, CreateWithInvalidChannel) {
 
 // Waits for a FIDL message on the channel and populates |out_data| with a pointer to the
 // decoded data.
-void DecodeMessage(const zx::channel& channel, uint32_t want_ordinal, const fidl_type_t* want_type,
+void DecodeMessage(const zx::channel& channel, uint64_t want_ordinal, const fidl_type_t* want_type,
                    fbl::unique_ptr<uint8_t[]>* out_data, uint32_t* out_data_size) {
     // Verify we receive the expected signal on the channel.
     zx_signals_t pending;

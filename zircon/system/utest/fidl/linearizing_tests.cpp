@@ -149,7 +149,6 @@ bool linearize_vector_of_uint32() {
     std::unique_ptr<uint8_t[]> buffer(new uint8_t[buf_size]);
 
     unbounded_nonnullable_vector_of_uint32_inline_data message = {};
-    message.header.flags = 123;
     message.header.ordinal = 456;
     message.header.txid = 789;
     message.vector = (fidl_vector_t) {
@@ -201,7 +200,6 @@ bool linearize_vector_of_nonnullable_uint32_coerce_null_to_empty() {
 
     std::vector<uint8_t> buffer(512);
     unbounded_nonnullable_vector_of_uint32_inline_data message = {};
-    message.header.flags = 123;
     message.header.ordinal = 456;
     message.header.txid = 789;
     // Null data pointer and zero count should be treated as an empty vector

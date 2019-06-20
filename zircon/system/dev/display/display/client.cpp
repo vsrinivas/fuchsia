@@ -39,7 +39,7 @@ zx_status_t decode_message(fidl::Message* msg) {
     const fidl_type_t* table = nullptr;
     // This is an if statement because, depending on the state of the ordinal
     // migration, GenOrdinal and Ordinal may be the same value.  See FIDL-524.
-    uint32_t ordinal = msg->ordinal();
+    uint64_t ordinal = msg->ordinal();
     BEGIN_TABLE_CASE
     SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerImportVmoImage);
     SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerImportImage);
@@ -70,12 +70,12 @@ zx_status_t decode_message(fidl::Message* msg) {
     SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerGetSingleBufferFramebuffer);
     }
     if (!table) {
-        zxlogf(INFO, "Unknown fidl ordinal %u\n", ordinal);
+        zxlogf(INFO, "Unknown fidl ordinal %lu\n", ordinal);
         return ZX_ERR_NOT_SUPPORTED;
     }
     const char* err;
     if ((res = msg->Decode(table, &err)) != ZX_OK) {
-        zxlogf(INFO, "Error decoding message %u: %s\n", ordinal, err);
+        zxlogf(INFO, "Error decoding message %lu: %s\n", ordinal, err);
     }
     return res;
 }
@@ -175,7 +175,7 @@ void Client::HandleControllerApi(async_dispatcher_t* dispatcher, async::WaitBase
 
     // This is an if statement because, depending on the state of the ordinal
     // migration, GenOrdinal and Ordinal may be the same value.  See FIDL-524.
-    uint32_t ordinal = msg.ordinal();
+    uint64_t ordinal = msg.ordinal();
     BEGIN_TABLE_CASE
     HANDLE_REQUEST_CASE(ImportVmoImage);
     HANDLE_REQUEST_CASE(ImportImage);
@@ -214,7 +214,7 @@ void Client::HandleControllerApi(async_dispatcher_t* dispatcher, async::WaitBase
             msg.bytes().data());
         HandleGetSingleBufferFramebuffer(r, &builder, &out_handle, &has_out_handle, &out_type);
     } else {
-        zxlogf(INFO, "Unknown ordinal %u\n", msg.ordinal());
+        zxlogf(INFO, "Unknown ordinal %lu\n", msg.ordinal());
     }
 
     fidl::BytePart resp_bytes = builder.Finalize();

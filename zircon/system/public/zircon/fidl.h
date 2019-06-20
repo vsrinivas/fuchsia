@@ -352,8 +352,7 @@ typedef struct fidl_message_header {
     zx_txid_t txid;
     // This reserved word is used by Epitaphs to represent an error value.
     uint32_t reserved0;
-    uint32_t flags;
-    uint32_t ordinal;
+    uint64_t ordinal;
 } fidl_message_header_t;
 
 // Messages which do not have a response use zero as a special

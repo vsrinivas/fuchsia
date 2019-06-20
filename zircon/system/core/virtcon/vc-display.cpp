@@ -90,7 +90,7 @@ static zx_status_t decode_message(void* bytes, uint32_t num_bytes) {
     const fidl_type_t* table = nullptr;
     // This is an if statement because, depending on the state of the ordinal
     // migration, GenOrdinal and Ordinal may be the same value.  See FIDL-524.
-    uint32_t ordinal = hdr->ordinal;
+    uint64_t ordinal = hdr->ordinal;
     if (ordinal == fuchsia_hardware_display_ControllerDisplaysChangedOrdinal ||
         ordinal == fuchsia_hardware_display_ControllerDisplaysChangedGenOrdinal) {
         table = &fuchsia_hardware_display_ControllerDisplaysChangedEventTable;
@@ -101,10 +101,10 @@ static zx_status_t decode_message(void* bytes, uint32_t num_bytes) {
     if (table != nullptr) {
         const char* err;
         if ((res = fidl_decode(table, bytes, num_bytes, nullptr, 0, &err)) != ZX_OK) {
-            printf("vc: Error decoding message %u: %s\n", ordinal, err);
+            printf("vc: Error decoding message %lu: %s\n", ordinal, err);
         }
     } else {
-        printf("vc: Error unknown ordinal %u\n", ordinal);
+        printf("vc: Error unknown ordinal %lu\n", ordinal);
         res = ZX_ERR_NOT_SUPPORTED;
     }
     return res;
@@ -600,7 +600,7 @@ static zx_status_t dc_callback_handler(port_handler_t* ph, zx_signals_t signals,
     fidl_message_header_t* hdr = (fidl_message_header_t*) fidl_buffer;
     // This is an if statement because, depending on the state of the ordinal
     // migration, GenOrdinal and Ordinal may be the same value.  See FIDL-524.
-    uint32_t ordinal = hdr->ordinal;
+    uint64_t ordinal = hdr->ordinal;
     if (ordinal == fuchsia_hardware_display_ControllerDisplaysChangedOrdinal ||
         ordinal == fuchsia_hardware_display_ControllerDisplaysChangedGenOrdinal) {
         handle_display_changed(
@@ -612,7 +612,7 @@ static zx_status_t dc_callback_handler(port_handler_t* ph, zx_signals_t signals,
             fidl_buffer);
         handle_ownership_change(evt);
     } else {
-        printf("vc: Unknown display callback message %u\n", ordinal);
+        printf("vc: Unknown display callback message %lu\n", ordinal);
     }
 
     return ZX_OK;

@@ -161,7 +161,7 @@ public:
 
     template <typename T>
     bool ExpectEvent(
-        uint32_t ordinal,
+        uint64_t ordinal,
         const fidl_type_t* table,
         std::function<bool(T* data)> check,
         const char* msg) {

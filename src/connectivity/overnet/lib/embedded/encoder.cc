@@ -16,7 +16,7 @@ size_t Align(size_t size) {
 
 }  // namespace
 
-Encoder::Encoder(uint32_t ordinal, FidlChannelIO* fidl_channel_io)
+Encoder::Encoder(uint64_t ordinal, FidlChannelIO* fidl_channel_io)
     : stream_(fidl_channel_io->channel()->overnet_stream()) {
   EncodeMessageHeader(ordinal);
 }
@@ -29,7 +29,7 @@ size_t Encoder::Alloc(size_t size) {
   return offset;
 }
 
-void Encoder::EncodeMessageHeader(uint32_t ordinal) {
+void Encoder::EncodeMessageHeader(uint64_t ordinal) {
   size_t offset = Alloc(sizeof(fidl_message_header_t));
   fidl_message_header_t* header = GetPtr<fidl_message_header_t>(offset);
   header->ordinal = ordinal;

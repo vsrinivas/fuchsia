@@ -11,13 +11,13 @@ namespace name {
 namespace {
 
 [[maybe_unused]]
-constexpr uint32_t kSwitchingOrdinals_OrdinalFive_Ordinal = 2005164903u;
+constexpr uint64_t kSwitchingOrdinals_OrdinalFive_Ordinal = 2005164903lu << 32;
 [[maybe_unused]]
-constexpr uint32_t kSwitchingOrdinals_OnlyGeneratedOrdinal_Ordinal = 667506719u;
+constexpr uint64_t kSwitchingOrdinals_OnlyGeneratedOrdinal_Ordinal = 667506719lu << 32;
 [[maybe_unused]]
-constexpr uint32_t kSwitchingOrdinals_EventOrdinalFifteen_Ordinal = 1467258273u;
+constexpr uint64_t kSwitchingOrdinals_EventOrdinalFifteen_Ordinal = 1467258273lu << 32;
 [[maybe_unused]]
-constexpr uint32_t kSwitchingOrdinals_EventOnlyGeneratedOrdinal_Ordinal = 2146190926u;
+constexpr uint64_t kSwitchingOrdinals_EventOnlyGeneratedOrdinal_Ordinal = 2146190926lu << 32;
 
 }  // namespace
 

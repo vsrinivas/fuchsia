@@ -267,7 +267,7 @@ zx_status_t InfraBss::HandleMlmeMsg(const BaseMlmeMsg& msg) {
 
   auto peer_addr = service::GetPeerAddr(msg);
   if (!peer_addr.has_value()) {
-    warnf("[infra-bss] received unsupported MLME msg; ordinal: %u\n",
+    warnf("[infra-bss] received unsupported MLME msg; ordinal: %lu\n",
           msg.ordinal());
     return ZX_ERR_INVALID_ARGS;
   }
@@ -276,7 +276,7 @@ zx_status_t InfraBss::HandleMlmeMsg(const BaseMlmeMsg& msg) {
     return client->HandleMlmeMsg(msg);
   } else {
     warnf(
-        "[infra-bss] unrecognized peer address in MlmeMsg: %s -- ordinal: %u\n",
+        "[infra-bss] unrecognized peer address in MlmeMsg: %s -- ordinal: %lu\n",
         peer_addr.value().ToString().c_str(), msg.ordinal());
   }
 

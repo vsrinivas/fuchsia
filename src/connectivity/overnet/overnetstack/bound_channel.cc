@@ -253,7 +253,6 @@ BoundChannel::EncodeMessage(fidl::Message message) {
     return overnet::Status(overnet::StatusCode::FAILED_PRECONDITION,
                            "FIDL message without a header");
   }
-  assert(message.flags() == 0);
   fuchsia::overnet::protocol::ZirconChannelMessage msg;
   std::vector<uint8_t>(message.bytes().begin(), message.bytes().end())
       .swap(msg.bytes);

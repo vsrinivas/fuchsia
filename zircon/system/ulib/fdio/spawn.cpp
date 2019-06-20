@@ -163,7 +163,7 @@ static zx_status_t resolve_name(const char* name, size_t name_len,
     return status;
 }
 
-static zx_status_t send_cstring_array(const zx::channel& launcher, int ordinal, const char* const* array) {
+static zx_status_t send_cstring_array(const zx::channel& launcher, uint64_t ordinal, const char* const* array) {
     size_t count = 0;
     size_t len = 0;
 

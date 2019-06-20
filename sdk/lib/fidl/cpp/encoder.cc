@@ -17,7 +17,7 @@ size_t Align(size_t size) {
 
 }  // namespace
 
-Encoder::Encoder(uint32_t ordinal) { EncodeMessageHeader(ordinal); }
+Encoder::Encoder(uint64_t ordinal) { EncodeMessageHeader(ordinal); }
 
 Encoder::~Encoder() = default;
 
@@ -45,13 +45,13 @@ Message Encoder::GetMessage() {
                  HandlePart(handles_.data(), handles_.size(), handles_.size()));
 }
 
-void Encoder::Reset(uint32_t ordinal) {
+void Encoder::Reset(uint64_t ordinal) {
   bytes_.clear();
   handles_.clear();
   EncodeMessageHeader(ordinal);
 }
 
-void Encoder::EncodeMessageHeader(uint32_t ordinal) {
+void Encoder::EncodeMessageHeader(uint64_t ordinal) {
   size_t offset = Alloc(sizeof(fidl_message_header_t));
   fidl_message_header_t* header = GetPtr<fidl_message_header_t>(offset);
   header->ordinal = ordinal;

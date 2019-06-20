@@ -54,9 +54,9 @@ int32_t& ::llcpp::test::name::Union::mutable_Field() {
 namespace {
 
 [[maybe_unused]]
-constexpr uint32_t kInterface_Method_Ordinal = 1061382220u;
+constexpr uint64_t kInterface_Method_Ordinal = 1061382220lu << 32;
 [[maybe_unused]]
-constexpr uint32_t kInterface_OnEvent_Ordinal = 325918733u;
+constexpr uint64_t kInterface_OnEvent_Ordinal = 325918733lu << 32;
 
 }  // namespace
 

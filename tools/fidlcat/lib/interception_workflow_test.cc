@@ -94,7 +94,6 @@ class DataForSyscallTest {
     }
     header_.txid = kTxId;
     header_.reserved0 = kReserved;
-    header_.flags = kFlags;
     header_.ordinal = kOrdinal;
 
     sp_ = stack_ + kMaxStackSizeInWords;
@@ -276,8 +275,7 @@ class DataForSyscallTest {
   static constexpr uint64_t kMaxStackSizeInWords = 0x100;
   static constexpr zx_txid_t kTxId = 0xaaaaaaaa;
   static constexpr uint32_t kReserved = 0x0;
-  static constexpr uint32_t kFlags = 0x0;
-  static constexpr uint32_t kOrdinal = 2011483371;
+  static constexpr uint64_t kOrdinal = 2011483371lu << 32;
   static constexpr char kElfSymbolBuildID[] = "123412341234";
 
  private:

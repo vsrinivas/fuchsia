@@ -37,7 +37,8 @@
 
 namespace fidlcat {
 
-typedef uint32_t Ordinal;
+typedef uint32_t Ordinal32;
+typedef uint64_t Ordinal64;
 
 struct LibraryReadError {
   enum ErrorValue {
@@ -105,14 +106,14 @@ class UnionMember {
   std::string_view name() const { return name_; }
   uint64_t size() const { return size_; }
   uint64_t offset() const { return offset_; }
-  Ordinal ordinal() const { return ordinal_; }
+  Ordinal32 ordinal() const { return ordinal_; }
   const Type* type() const { return type_.get(); }
 
  private:
   const std::string name_;
   const uint64_t offset_;
   const uint64_t size_;
-  const Ordinal ordinal_;
+  const Ordinal32 ordinal_;
   std::unique_ptr<Type> type_;
 };
 
@@ -131,7 +132,7 @@ class Union {
 
   const UnionMember* MemberWithTag(uint32_t tag) const;
 
-  const UnionMember* MemberWithOrdinal(Ordinal ordinal) const;
+  const UnionMember* MemberWithOrdinal(Ordinal32 ordinal) const;
 
   std::unique_ptr<UnionField> DecodeUnion(MessageDecoder* decoder,
                                           std::string_view name,
@@ -227,13 +228,13 @@ class TableMember {
   ~TableMember();
 
   const std::string_view name() const { return name_; }
-  Ordinal ordinal() const { return ordinal_; }
+  Ordinal32 ordinal() const { return ordinal_; }
   uint64_t size() const { return size_; }
   const Type* type() const { return type_.get(); }
 
  private:
   const std::string name_;
-  const Ordinal ordinal_;
+  const Ordinal32 ordinal_;
   const uint64_t size_;
   std::unique_ptr<Type> type_;
 };
@@ -281,7 +282,7 @@ class InterfaceMethod {
   friend class Interface;
 
   const Interface& enclosing_interface() const { return enclosing_interface_; }
-  Ordinal ordinal() const { return ordinal_; }
+  Ordinal64 ordinal() const { return ordinal_; }
   std::string name() const { return name_; }
   Struct* request() const {
     if (request_ != nullptr) {
@@ -306,7 +307,7 @@ class InterfaceMethod {
 
   const Interface& enclosing_interface_;
   const rapidjson::Value& value_;
-  const Ordinal ordinal_;
+  const Ordinal64 ordinal_;
   const std::string name_;
   std::unique_ptr<Struct> request_;
   std::unique_ptr<Struct> response_;
@@ -322,7 +323,7 @@ class Interface {
   const Library& enclosing_library() const { return enclosing_library_; }
   std::string_view name() const { return name_; }
 
-  void AddMethodsToIndex(std::map<Ordinal, const InterfaceMethod*>& index) {
+  void AddMethodsToIndex(std::map<Ordinal64, const InterfaceMethod*>& index) {
     for (size_t i = 0; i < interface_methods_.size(); i++) {
       const InterfaceMethod* method = interface_methods_[i].get();
       index[method->ordinal()] = method;
@@ -376,7 +377,7 @@ class Library {
 
  private:
   Library(LibraryLoader* enclosing_loader, rapidjson::Document& document,
-          std::map<Ordinal, const InterfaceMethod*>& index);
+          std::map<Ordinal64, const InterfaceMethod*>& index);
 
   // Decode all the values from the JSON definition.
   void DecodeTypes();
@@ -407,7 +408,7 @@ class LibraryLoader {
 
   // Returns true and sets **method if the ordinal was present in the map, and
   // false otherwise.
-  const InterfaceMethod* GetByOrdinal(Ordinal ordinal) {
+  const InterfaceMethod* GetByOrdinal(Ordinal64 ordinal) {
     auto m = ordinal_map_.find(ordinal);
     if (m != ordinal_map_.end()) {
       return m->second;
@@ -447,7 +448,7 @@ class LibraryLoader {
   }
 
   std::map<std::string, std::unique_ptr<Library>> representations_;
-  std::map<Ordinal, const InterfaceMethod*> ordinal_map_;
+  std::map<Ordinal64, const InterfaceMethod*> ordinal_map_;
 };
 
 }  // namespace fidlcat

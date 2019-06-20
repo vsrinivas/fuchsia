@@ -69,10 +69,10 @@ int32_t& ::llcpp::fidl::test::llcpp::basictypes::SimpleUnion::mutable_field_b() 
 namespace {
 
 [[maybe_unused]]
-constexpr uint32_t kTestInterface_ConsumeSimpleStruct_Ordinal = 728053387u;
+constexpr uint64_t kTestInterface_ConsumeSimpleStruct_Ordinal = 728053387lu << 32;
 extern "C" const fidl_type_t fidl_test_llcpp_basictypes_TestInterfaceConsumeSimpleStructRequestTable;
 [[maybe_unused]]
-constexpr uint32_t kTestInterface_ConsumeSimpleUnion_Ordinal = 776403313u;
+constexpr uint64_t kTestInterface_ConsumeSimpleUnion_Ordinal = 776403313lu << 32;
 
 }  // namespace
 

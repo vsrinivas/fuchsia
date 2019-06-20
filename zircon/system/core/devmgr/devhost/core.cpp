@@ -105,7 +105,7 @@ static zx_status_t default_rxrpc(void* ctx, zx_handle_t channel) {
 
 static zx_status_t default_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
     fidl_message_header_t* hdr = (fidl_message_header_t*)msg->bytes;
-    printf("devhost: Unsupported FIDL operation: 0x%x\n", hdr->ordinal);
+    printf("devhost: Unsupported FIDL operation: 0x%lx\n", hdr->ordinal);
     zx_handle_close_many(msg->handles, msg->num_handles);
     return ZX_ERR_NOT_SUPPORTED;
 }

@@ -131,7 +131,7 @@ bool TraceProviderImpl::Connection::DecodeAndDispatch(
     auto hdr = reinterpret_cast<fidl_message_header_t*>(buffer);
     // This is an if statement because, depending on the state of the ordinal
     // migration, GenOrdinal and Ordinal may be the same value.  See FIDL-524.
-    uint32_t ordinal = hdr->ordinal;
+    uint64_t ordinal = hdr->ordinal;
     if (ordinal == fuchsia_tracing_provider_ProviderInitializeOrdinal ||
         ordinal == fuchsia_tracing_provider_ProviderInitializeGenOrdinal) {
         zx_status_t status = fidl_decode(&fuchsia_tracing_provider_ProviderInitializeRequestTable,

@@ -939,10 +939,10 @@ void CGenerator::ProduceProtocolForwardDeclaration(const NamedProtocol& named_pr
     for (const auto& method_info : named_protocol.methods) {
         {
             IOFlagsGuard reset_flags(&file_);
-            file_ << "#define " << method_info.ordinal_name << " ((uint32_t)0x"
-                  << std::uppercase << std::hex << method_info.ordinal << std::dec << ")\n";
-            file_ << "#define " << method_info.generated_ordinal_name << " ((uint32_t)0x"
-                  << std::uppercase << std::hex << method_info.generated_ordinal << std::dec << ")\n";
+            file_ << "#define " << method_info.ordinal_name << " ((uint64_t)0x"
+                  << std::uppercase << std::hex << method_info.ordinal << std::dec << " << 32 )\n";
+            file_ << "#define " << method_info.generated_ordinal_name << " ((uint64_t)0x"
+                  << std::uppercase << std::hex << method_info.generated_ordinal << std::dec << " << 32)\n";
         }
         if (method_info.request)
             GenerateStructTypedef(method_info.request->c_name);

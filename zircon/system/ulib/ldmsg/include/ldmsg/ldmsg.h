@@ -16,13 +16,13 @@
 __BEGIN_CDECLS
 
 // See system/fidl/fuchsia-ldsvc/ldsvc.fidl for the definition of these message ordinals.
-#define LDMSG_OP_DONE                    ((uint32_t)0x501635DA)
-#define LDMSG_OP_LOAD_OBJECT             ((uint32_t)0x18D35E60)
-#define LDMSG_OP_LOAD_SCRIPT_INTERPRETER ((uint32_t)0x32CC7F4E)
-#define LDMSG_OP_CONFIG                  ((uint32_t)0x1ADEB78D)
-#define LDMSG_OP_CLONE                   ((uint32_t)0x3862FCB9)
-#define LDMSG_OP_DEBUG_PUBLISH_DATA_SINK ((uint32_t)0x4F64FA41)
-#define LDMSG_OP_DEBUG_LOAD_CONFIG       ((uint32_t)0x722D77BA)
+#define LDMSG_OP_DONE                    ((uint64_t)0x501635DA<<32)
+#define LDMSG_OP_LOAD_OBJECT             ((uint64_t)0x18D35E60<<32)
+#define LDMSG_OP_LOAD_SCRIPT_INTERPRETER ((uint64_t)0x32CC7F4E<<32)
+#define LDMSG_OP_CONFIG                  ((uint64_t)0x1ADEB78D<<32)
+#define LDMSG_OP_CLONE                   ((uint64_t)0x3862FCB9<<32)
+#define LDMSG_OP_DEBUG_PUBLISH_DATA_SINK ((uint64_t)0x4F64FA41<<32)
+#define LDMSG_OP_DEBUG_LOAD_CONFIG       ((uint64_t)0x722D77BA<<32)
 
 #define LDMSG_OP_DONE_OLD                    1u
 #define LDMSG_OP_LOAD_OBJECT_OLD             2u

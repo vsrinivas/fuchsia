@@ -9,18 +9,18 @@ namespace name {
 #ifdef __Fuchsia__
 namespace {
   
-constexpr uint32_t kParent_GetChild_Ordinal = 915586153u;
+constexpr uint64_t kParent_GetChild_Ordinal = 915586153lu << 32;
 extern "C" const fidl_type_t test_name_ParentGetChildRequestTable;
 extern "C" const fidl_type_t test_name_ParentGetChildResponseTable;
   
-constexpr uint32_t kParent_GetChildRequest_Ordinal = 1068158078u;
+constexpr uint64_t kParent_GetChildRequest_Ordinal = 1068158078lu << 32;
 extern "C" const fidl_type_t test_name_ParentGetChildRequestRequestTable;
 extern "C" const fidl_type_t test_name_ParentGetChildRequestResponseTable;
   
-constexpr uint32_t kParent_TakeChild_Ordinal = 1275478777u;
+constexpr uint64_t kParent_TakeChild_Ordinal = 1275478777lu << 32;
 extern "C" const fidl_type_t test_name_ParentTakeChildRequestTable;
   
-constexpr uint32_t kParent_TakeChildRequest_Ordinal = 1589872250u;
+constexpr uint64_t kParent_TakeChildRequest_Ordinal = 1589872250lu << 32;
 extern "C" const fidl_type_t test_name_ParentTakeChildRequestRequestTable;
 
 }  // namespace
@@ -143,7 +143,7 @@ namespace {
 
 class Parent_GetChild_Responder {
  public:
-  Parent_GetChild_Responder(::fidl::internal::PendingResponse response, uint32_t ordinal)
+  Parent_GetChild_Responder(::fidl::internal::PendingResponse response, uint64_t ordinal)
       : response_(std::move(response)), ordinal_(ordinal) {}
 
   void operator()(::fidl::InterfaceHandle<Child> c) {
@@ -155,12 +155,12 @@ class Parent_GetChild_Responder {
 
  private:
   ::fidl::internal::PendingResponse response_;
-  uint32_t ordinal_;
+  uint64_t ordinal_;
 };
 
 class Parent_GetChildRequest_Responder {
  public:
-  Parent_GetChildRequest_Responder(::fidl::internal::PendingResponse response, uint32_t ordinal)
+  Parent_GetChildRequest_Responder(::fidl::internal::PendingResponse response, uint64_t ordinal)
       : response_(std::move(response)), ordinal_(ordinal) {}
 
   void operator()(::fidl::InterfaceRequest<Child> r) {
@@ -172,7 +172,7 @@ class Parent_GetChildRequest_Responder {
 
  private:
   ::fidl::internal::PendingResponse response_;
-  uint32_t ordinal_;
+  uint64_t ordinal_;
 };
 
 }  // namespace
@@ -181,7 +181,7 @@ zx_status_t Parent_Stub::Dispatch_(
     ::fidl::Message message,
     ::fidl::internal::PendingResponse response) {
   zx_status_t status = ZX_OK;
-  uint32_t ordinal = message.ordinal();
+  uint64_t ordinal = message.ordinal();
   switch (ordinal) {
     case kParent_GetChild_Ordinal: {
       if (!response.needs_response()) {
@@ -329,7 +329,7 @@ zx_status_t Child_Stub::Dispatch_(
     ::fidl::Message message,
     ::fidl::internal::PendingResponse response) {
   zx_status_t status = ZX_OK;
-  uint32_t ordinal = message.ordinal();
+  uint64_t ordinal = message.ordinal();
   switch (ordinal) {
     default: {
       status = ZX_ERR_NOT_SUPPORTED;

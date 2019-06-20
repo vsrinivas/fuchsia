@@ -93,7 +93,7 @@ size_t FillLogMessagePayload(fuchsia_logger_LogMessage* lm, fidl_string_t* strin
 
 // Encode |log_msgs| with help from other helpers and writes the msg to
 // |listener|.
-zx_status_t SendLogMessagesHelper(const zx::channel& listener, uint32_t ordinal,
+zx_status_t SendLogMessagesHelper(const zx::channel& listener, uint64_t ordinal,
                                   const fbl::Vector<LogMessage>& log_msgs) {
     size_t n_msgs = log_msgs.size();
     if (n_msgs == 0) {

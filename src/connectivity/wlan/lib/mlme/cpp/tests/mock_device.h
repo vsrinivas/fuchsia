@@ -175,7 +175,7 @@ struct MockDevice : public DeviceInterface {
   // be of type T.
   template <typename T>
   std::vector<MlmeMsg<T>> GetServiceMsgs(
-      uint32_t ordinal = MlmeMsg<T>::kNoOrdinal) {
+      uint64_t ordinal = MlmeMsg<T>::kNoOrdinal) {
     std::vector<MlmeMsg<T>> ret;
     for (auto iter = svc_queue.begin(); iter != svc_queue.end(); ++iter) {
       auto msg = MlmeMsg<T>::Decode(*iter, ordinal);

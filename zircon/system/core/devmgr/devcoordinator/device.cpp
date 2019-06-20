@@ -367,7 +367,7 @@ zx_status_t Device::HandleRead() {
     // TODO: Check txid on the message
     // This is an if statement because, depending on the state of the ordinal
     // migration, GenOrdinal and Ordinal may be the same value.  See FIDL-524.
-    uint32_t ordinal = hdr->ordinal;
+    uint64_t ordinal = hdr->ordinal;
     if (ordinal == fuchsia_device_manager_DeviceControllerBindDriverOrdinal ||
         ordinal == fuchsia_device_manager_DeviceControllerBindDriverGenOrdinal) {
         const char* err_msg = nullptr;
@@ -412,7 +412,7 @@ zx_status_t Device::HandleRead() {
         log(DEVLC, "devcoordinator: suspended dev %p name='%s'\n", this, name_.data());
         CompleteSuspend(resp->status);
     } else {
-        log(ERROR, "devcoordinator: rpc: dev '%s' received wrong unexpected reply %08x\n",
+        log(ERROR, "devcoordinator: rpc: dev '%s' received wrong unexpected reply %16lx\n",
             name_.data(), hdr->ordinal);
         zx_handle_close_many(fidl_msg.handles, fidl_msg.num_handles);
         return ZX_ERR_IO;

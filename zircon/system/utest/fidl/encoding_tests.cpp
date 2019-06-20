@@ -181,8 +181,11 @@ bool encode_single_present_handle_unaligned_error() {
 
     // Test a short, unaligned version of nonnullable message
     // handle. All fidl message objects should be 8 byte aligned.
+    //
+    // We use a byte array rather than fidl_message_header_t to avoid
+    // aligning to 8 bytes.
     struct unaligned_nonnullable_handle_inline_data {
-        fidl_message_header_t header;
+        uint8_t header[sizeof(fidl_message_header_t)];
         zx_handle_t handle;
     };
     struct unaligned_nonnullable_handle_message_layout {

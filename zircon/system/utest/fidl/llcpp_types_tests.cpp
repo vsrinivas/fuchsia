@@ -160,7 +160,7 @@ bool RoundTripTest() {
     alignas(NonnullableChannelMessage) uint8_t buf[sizeof(NonnullableChannelMessage)] = {};
     auto msg = reinterpret_cast<NonnullableChannelMessage*>(&buf[0]);
     msg->header.txid = 10;
-    msg->header.ordinal = 42;
+    msg->header.ordinal = (42lu << 32);
     msg->channel.reset(FIDL_HANDLE_PRESENT);
 
     // Capture the extra handle here; it will not be cleaned by encoded_message
@@ -191,8 +191,8 @@ bool RoundTripTest() {
     uint8_t golden_encoded[] = {
         10, 0, 0, 0,        // txid
         0, 0, 0, 0,         // reserved
-        0, 0, 0, 0,         // flags
-        42, 0, 0, 0,        // ordinal
+        0, 0, 0, 0,         // low bytes of ordinal (was flags)
+        42, 0, 0, 0,        // high bytes of ordinal
         255, 255, 255, 255, // handle present
         0, 0, 0, 0};
 
@@ -207,7 +207,7 @@ bool RoundTripTest() {
     EXPECT_EQ(decode_result.status, ZX_OK);
     EXPECT_NULL(decode_result.error, decode_result.error);
     EXPECT_EQ(decoded_message.message()->header.txid, 10);
-    EXPECT_EQ(decoded_message.message()->header.ordinal, 42);
+    EXPECT_EQ(decoded_message.message()->header.ordinal, (42lu << 32));
     EXPECT_EQ(decoded_message.message()->channel.get(), unsafe_handle_backup);
     // encoded_message should be consumed
     EXPECT_EQ(encoded_message->handles().actual(), 0);

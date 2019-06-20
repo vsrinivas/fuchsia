@@ -94,7 +94,7 @@ zx_status_t LauncherImpl::ReadAndDispatchMessage(fidl::MessageBuffer* buffer) {
         return ZX_ERR_INVALID_ARGS;
     // This is an if statement because, depending on the state of the ordinal
     // migration, GenOrdinal and Ordinal may be the same value.  See FIDL-524.
-    uint32_t ordinal = message.ordinal();
+    uint64_t ordinal = message.ordinal();
     if (ordinal == fuchsia_process_LauncherLaunchOrdinal ||
         ordinal == fuchsia_process_LauncherLaunchGenOrdinal) {
         return Launch(buffer, std::move(message));
@@ -114,7 +114,7 @@ zx_status_t LauncherImpl::ReadAndDispatchMessage(fidl::MessageBuffer* buffer) {
                ordinal == fuchsia_process_LauncherAddHandlesGenOrdinal) {
         return AddHandles(std::move(message));
     } else {
-        fprintf(stderr, "launcher: error: Unknown message ordinal: %d\n", message.ordinal());
+        fprintf(stderr, "launcher: error: Unknown message ordinal: %lu\n", ordinal);
         return ZX_ERR_NOT_SUPPORTED;
     }
 }
@@ -128,7 +128,7 @@ zx_status_t LauncherImpl::Launch(fidl::MessageBuffer* buffer, fidl::Message mess
     }
 
     zx_txid_t txid = message.txid();
-    uint32_t ordinal = message.ordinal();
+    uint64_t ordinal = message.ordinal();
 
     launchpad_t* lp = nullptr;
     PrepareLaunchpad(message, &lp);
@@ -163,7 +163,7 @@ zx_status_t LauncherImpl::CreateWithoutStarting(fidl::MessageBuffer* buffer, fid
     }
 
     zx_txid_t txid = message.txid();
-    uint32_t ordinal = message.ordinal();
+    uint64_t ordinal = message.ordinal();
 
     launchpad_t* lp = nullptr;
     PrepareLaunchpad(message, &lp);

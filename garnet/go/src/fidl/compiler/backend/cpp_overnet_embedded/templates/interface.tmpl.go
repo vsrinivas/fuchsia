@@ -134,9 +134,9 @@ namespace {
 
 {{- range .Methods }}
   {{ if ne .GenOrdinal .Ordinal }}
-constexpr uint32_t {{ .GenOrdinalName }} = {{ .GenOrdinal }}u;
+constexpr uint64_t {{ .GenOrdinalName }} = {{ .GenOrdinal }}lu << 32;
   {{- end }}
-constexpr uint32_t {{ .OrdinalName }} = {{ .Ordinal }}u;
+constexpr uint64_t {{ .OrdinalName }} = {{ .Ordinal }}lu << 32;
   {{- if .HasRequest }}
 extern "C" const fidl_type_t {{ .RequestTypeName }};
   {{- end }}
@@ -257,7 +257,7 @@ zx_status_t {{ .StubName }}::Dispatch_(
     ::fuchsia::overnet::protocol::ZirconChannelMessage message) {
   zx_status_t status = ZX_OK;
   ::overnet::internal::Decoder decoder(std::move(message), io_.get());
-  uint32_t ordinal = decoder.ordinal();
+  uint64_t ordinal = decoder.ordinal();
   switch (ordinal) {
     {{- range .Methods }}
       {{- if .HasRequest }}
