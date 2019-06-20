@@ -41,8 +41,8 @@ class CompositorTest : public SessionTest {
 
     // Generate other parameters needed for session context.
     sys::testing::ComponentContextProvider context_provider_;
-    auto app_context = context_provider_.TakeContext();
-    time_stamper_ = std::make_unique<EventTimestamper>(app_context.get());
+    app_context_ = context_provider_.TakeContext();
+    time_stamper_ = std::make_unique<EventTimestamper>(app_context_.get());
     resource_linker_ = std::make_unique<ResourceLinker>();
     view_linker_ = std::make_unique<ViewLinker>();
 
@@ -63,6 +63,9 @@ class CompositorTest : public SessionTest {
   std::unique_ptr<EventTimestamper> time_stamper_;
   std::unique_ptr<ViewLinker> view_linker_;
   std::unique_ptr<ResourceLinker> resource_linker_;
+
+  // This is saved because it needs to live longer than the EventTimestamper
+  std::unique_ptr<sys::ComponentContext> app_context_;
 };
 
 TEST_F(CompositorTest, Validation) {
