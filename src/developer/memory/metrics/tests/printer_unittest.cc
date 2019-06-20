@@ -133,6 +133,131 @@ TEST_F(PrinterUnitTest, PrintCaptureVMO) {
   });
 }
 
+TEST_F(PrinterUnitTest, PrintSummaryKMEM) {
+  Capture c;
+  TestUtils::CreateCapture(c, {
+    .time = 1234,
+    .kmem = {
+      .total_bytes = 1024*1024,
+      .free_bytes = 1024,
+      .wired_bytes = 2*1024,
+      .total_heap_bytes = 3*1024,
+      .free_heap_bytes = 2*1024,
+      .vmo_bytes = 5*1024,
+      .mmu_overhead_bytes = 6*1024,
+      .ipc_bytes = 7*1024,
+      .other_bytes = 8*1024,
+    },
+  });
+
+  std::ostringstream oss;
+  Printer p(oss);
+  p.PrintSummary(c, KMEM, SORTED);
+
+  ConfirmLines(oss, {
+    "Time: 1234 VMO: 5K Free: 1K",
+  });
+}
+
+TEST_F(PrinterUnitTest, PrintSummaryPROCESS) {
+  Capture c;
+  TestUtils::CreateCapture(c, {
+    .time = 1234,
+    .kmem = {
+      .total_bytes = 1024*1024,
+      .free_bytes = 1024,
+      .wired_bytes = 2*1024,
+      .total_heap_bytes = 3*1024,
+      .free_heap_bytes = 2*1024,
+      .vmo_bytes = 5*1024,
+      .mmu_overhead_bytes = 6*1024,
+      .ipc_bytes = 7*1024,
+      .other_bytes = 8*1024,
+    },
+    .vmos = {{.koid = 1, .name = "v1", .committed_bytes = 1024}},
+    .processes = {{.koid = 100, .name = "p1", .vmos = {1}}},
+  });
+
+  std::ostringstream oss;
+  Printer p(oss);
+  p.PrintSummary(c, PROCESS, SORTED);
+
+  ConfirmLines(oss, {
+    "Time: 1234 VMO: 5K Free: 1K",
+    "kernel<1> 30K",
+    "p1<100> 1K",
+  });
+}
+
+TEST_F(PrinterUnitTest, PrintSummaryVMO) {
+  Capture c;
+  TestUtils::CreateCapture(c, {
+    .time = 1234,
+    .kmem = {
+      .total_bytes = 1024*1024,
+      .free_bytes = 1024,
+      .wired_bytes = 2*1024,
+      .total_heap_bytes = 3*1024,
+      .free_heap_bytes = 2*1024,
+      .vmo_bytes = 5*1024,
+      .mmu_overhead_bytes = 6*1024,
+      .ipc_bytes = 7*1024,
+      .other_bytes = 8*1024,
+    },
+    .vmos = {{.koid = 1, .name = "v1", .committed_bytes = 1024}},
+    .processes = {{.koid = 100, .name = "p1", .vmos = {1}}},
+  });
+
+  std::ostringstream oss;
+  Printer p(oss);
+  p.PrintSummary(c, VMO, SORTED);
+
+  ConfirmLines(oss, {
+    "Time: 1234 VMO: 5K Free: 1K",
+    "kernel<1> 30K",
+    " other 8K",
+    " ipc 7K",
+    " mmu 6K",
+    " vmo 4K",
+    " heap 3K",
+    " wired 2K",
+    "p1<100> 1K",
+    " v1 1K",
+  });
+}
+
+TEST_F(PrinterUnitTest, PrintSummaryVMOShared) {
+  Capture c;
+  TestUtils::CreateCapture(c, {
+    .time = 1234,
+    .kmem = {.vmo_bytes = 6*1024},
+    .vmos = {
+      {.koid = 1, .name = "v1", .committed_bytes = 1024},
+      {.koid = 2, .name = "v2", .committed_bytes = 2*1024},
+      {.koid = 3, .name = "v3", .committed_bytes = 3*1024},
+    },
+    .processes = {
+      {.koid = 100, .name = "p1", .vmos = {1,2}},
+      {.koid = 200, .name = "p2", .vmos = {2,3}},
+    },
+  });
+
+  std::ostringstream oss;
+  Printer p(oss);
+  p.PrintSummary(c, VMO, SORTED);
+
+  ConfirmLines(oss, {
+    "Time: 1234 VMO: 6K Free: 0B",
+    "p2<200> 3K 4K 5K",
+    " v3 3K",
+    " v2 0B 1K 2K",
+    "p1<100> 1K 2K 3K",
+    " v1 1K",
+    " v2 0B 1K 2K",
+    "kernel<1> 0B",
+  });
+}
+
 TEST_F(PrinterUnitTest, OutputSummarySingle) {
   Capture c;
   TestUtils::CreateCapture(c, {
@@ -276,6 +401,33 @@ TEST_F(PrinterUnitTest, OutputSummaryShared) {
     "1234,200,v3,200,200,200",
     "1234,200,v1,100,150,200",
   });
+}
+
+TEST_F(PrinterUnitTest, FormatSize) {
+  struct TestCase {
+    uint64_t bytes;
+    const char* val;
+  };
+  std::vector<TestCase> tests = {
+    {0, "0B"},
+    {1, "1B"},
+    {1023, "1023B"},
+    {1024, "1K"},
+    {1025, "1K"},
+    {1029, "1K"},
+    {1124, "1.1K"},
+    {1536, "1.5K"},
+    {2047, "2K"},
+    {1024*1024, "1M"},
+    {1024*1024*1024, "1G"},
+    {1024UL*1024*1024*1024, "1T"},
+    {1024UL*1024*1024*1024*1024, "1P"},
+    {1024UL*1024*1024*1024*1024*1024, "1E"},
+    {1024UL*1024*1024*1024*1024*1024*1024, "0B"},
+  };
+  for (auto const& test : tests) {
+    EXPECT_STREQ(test.val, FormatSize(test.bytes).c_str());
+  }
 }
 
 }  // namespace test

@@ -6,6 +6,32 @@
 
 namespace memory {
 
+std::string FormatSize(uint64_t bytes) {
+  const char max_string[] = "1023.5T";
+  const int max_string_size = sizeof(max_string);
+  const char units[] = "BKMGTPE";
+  char buf[max_string_size];
+  uint16_t r = 0;
+  int ui = 0;
+  while (bytes > 1023) {
+    r = bytes % 1024;
+    bytes /= 1024;
+    ui++;
+  }
+  unsigned int round_up = ((r % 102) >= 51);
+  r = (r / 102) + round_up;
+  if (r == 10) {
+    bytes++;
+    r = 0;
+  }
+  if (r == 0) {
+    snprintf(buf, max_string_size, "%zu%c", bytes, units[ui]);
+  } else {
+    snprintf(buf, max_string_size, "%zu.%1u%c", bytes, r, units[ui]);
+  }
+  return std::string(buf);
+}
+
 void Printer::PrintCapture(
     const Capture& capture, CaptureLevel level, Sorted sorted) {
   auto const& kmem = capture.kmem();
@@ -86,8 +112,8 @@ void Printer::PrintSummary(
     const Summary& summary, CaptureLevel level, Sorted sorted) {
   auto& kstats = summary.kstats();
   os_ << "Time: " << summary.time()
-      << " VMO: " << kstats.vmo_bytes
-      << " Free: " << kstats.free_bytes << "\n";
+      << " VMO: " << FormatSize(kstats.vmo_bytes)
+      << " Free: " << FormatSize(kstats.free_bytes) << "\n";
 
   if (level == KMEM) {
     return;
@@ -104,9 +130,13 @@ void Printer::PrintSummary(
   }
   for (auto const& s : sorted == SORTED ? sorted_summaries : summaries) {
     os_ << s.name() << "<" << s.koid() << "> "
-        << s.sizes().private_bytes << " "
-        << s.sizes().scaled_bytes << " "
-        << s.sizes().total_bytes << "\n";
+        << FormatSize(s.sizes().private_bytes);
+    if (s.sizes().total_bytes == s.sizes().private_bytes) {
+      os_ << "\n";
+    } else {
+      os_ << " " << FormatSize(s.sizes().scaled_bytes)
+          << " " << FormatSize(s.sizes().total_bytes) << "\n";
+    }
     if (level == PROCESS) {
       continue;
     }
@@ -131,9 +161,13 @@ void Printer::PrintSummary(
         continue;
       }
       os_ << " " << name
-          << " " << sizes.private_bytes
-          << " " << sizes.scaled_bytes
-          << " " << sizes.total_bytes << "\n";
+          << " " << FormatSize(sizes.private_bytes);
+      if (sizes.total_bytes == sizes.private_bytes) {
+        os_ << "\n";
+      } else {
+        os_ << " " << FormatSize(sizes.scaled_bytes)
+            << " " << FormatSize(sizes.total_bytes) << "\n";
+      }
     }
   }
   os_ << std::flush;

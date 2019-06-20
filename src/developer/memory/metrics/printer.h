@@ -15,6 +15,8 @@
 
 namespace memory {
 
+std::string FormatSize(uint64_t size);
+
 enum Sorted { UNSORTED, SORTED };
 
 class Printer {
