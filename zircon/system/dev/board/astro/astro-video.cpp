@@ -11,6 +11,8 @@
 
 #include "astro.h"
 
+namespace astro {
+
 static pbus_mmio_t astro_video_mmios[] = {
     {
         .base = S905D2_CBUS_BASE,
@@ -72,26 +74,31 @@ static const pbus_smc_t astro_video_smcs[] = {
     },
 };
 
-static const pbus_dev_t video_dev = {
-    .name = "aml-video",
-    .vid = PDEV_VID_AMLOGIC,
-    .pid = PDEV_PID_AMLOGIC_S905D2,
-    .did = PDEV_DID_AMLOGIC_VIDEO,
-    .mmio_list = astro_video_mmios,
-    .mmio_count = countof(astro_video_mmios),
-    .bti_list = astro_video_btis,
-    .bti_count = countof(astro_video_btis),
-    .irq_list = astro_video_irqs,
-    .irq_count = countof(astro_video_irqs),
-    .smc_list = astro_video_smcs,
-    .smc_count = countof(astro_video_smcs),
-};
+static const pbus_dev_t video_dev = []() {
+    pbus_dev_t dev;
+    dev.name = "aml-video";
+    dev.vid = PDEV_VID_AMLOGIC;
+    dev.pid = PDEV_PID_AMLOGIC_S905D2;
+    dev.did = PDEV_DID_AMLOGIC_VIDEO;
+    dev.mmio_list = astro_video_mmios;
+    dev.mmio_count = countof(astro_video_mmios);
+    dev.bti_list = astro_video_btis;
+    dev.bti_count = countof(astro_video_btis);
+    dev.irq_list = astro_video_irqs;
+    dev.irq_count = countof(astro_video_irqs);
+    dev.smc_list = astro_video_smcs;
+    dev.smc_count = countof(astro_video_smcs);
+    return dev;
+}();
 
-zx_status_t aml_video_init(aml_bus_t* bus) {
+zx_status_t Astro::VideoInit() {
     zx_status_t status;
-    if ((status = pbus_device_add(&bus->pbus, &video_dev)) != ZX_OK) {
-        zxlogf(ERROR, "aml_video_init: pbus_device_add() failed for video: %d\n", status);
+    if ((status = pbus_.DeviceAdd(&video_dev)) != ZX_OK) {
+        zxlogf(ERROR, "%s: DeviceAdd() failed: %d\n",
+               __func__, status);
         return status;
     }
     return ZX_OK;
 }
+
+} // namespace astro

@@ -142,7 +142,7 @@ bool vim2_enumeration_test() {
 bool astro_enumeration_test() {
     BEGIN_TEST;
     static const char* kDevicePaths[] = {
-        "sys/platform/aml-bus",
+        "sys/platform/astro",
         "sys/platform/05:03:1/aml-axg-gpio",
         "sys/platform/00:00:13/hid-buttons/hid-device-000",
         "sys/platform/05:00:2/aml-i2c",
