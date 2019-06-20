@@ -6,6 +6,7 @@ package testsharder
 import (
 	"fmt"
 	"sort"
+	"strings"
 )
 
 // Shard represents a set of tests with a common execution environment.
@@ -80,7 +81,7 @@ func MultiplyShards(shards []*Shard, multipliers []TestModifier) []*Shard {
 			for _, test := range shard.Tests {
 				if multiplier.Target == test.Name && multiplier.OS == test.OS {
 					shards = append(shards, &Shard{
-						Name:  shard.Env.Name() + " - " + test.Name,
+						Name:  shard.Name + " - " + normalizeTestName(test.Name),
 						Tests: multiplyTest(test, multiplier.TotalRuns),
 						Env:   shard.Env,
 					})
@@ -89,6 +90,13 @@ func MultiplyShards(shards []*Shard, multipliers []TestModifier) []*Shard {
 		}
 	}
 	return shards
+}
+
+// Removes leading slashes and replaces all other `/` with `_`. This allows the
+// shard name to appear in filepaths.
+func normalizeTestName(name string) string {
+	trimmedName := strings.TrimLeft(name, "/")
+	return strings.ReplaceAll(trimmedName, "/", "_")
 }
 
 // Returns a list of Tests containing the same test multiplied by the number of runs.
