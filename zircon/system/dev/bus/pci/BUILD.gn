@@ -8,6 +8,9 @@ group("pci") {
   deps = [
     ":bus-pci",
     ":bus-pci.proxy",
+    ":pci_fake",
+    ":pci_fake.proxy",
+    ":pci_protocol_test_driver",
   ]
 }
 
@@ -128,9 +131,6 @@ test("pci-driver") {
     "test/driver/driver_tests.cpp",
   ]
   deps = [
-    ":pci_fake",
-    ":pci_fake.proxy",
-    ":pci_protocol_test_driver",
     "$zx/system/fidl/fuchsia-device-test:c",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
