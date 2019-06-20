@@ -4,10 +4,7 @@
 
 use std::{cell::RefCell, rc::Rc};
 
-use crate::{
-    context::ContextInner,
-    spinel_sys::*,
-};
+use crate::{context::ContextInner, spinel_sys::*};
 
 #[derive(Debug)]
 pub(crate) struct PathInner {

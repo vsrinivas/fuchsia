@@ -32,9 +32,9 @@ enum PathCommand {
 /// # Examples
 ///
 /// ```no_run
-/// # use spinel_rs::{Context, PathBuilder, Point, SpnError};
+/// # use spinel_rs::{Context, PathBuilder, Point};
 /// #
-/// # fn catch() -> Result<(), SpnError> {
+/// # fn catch() -> Option<()> {
 /// #     let context: Context = unimplemented!();
 /// #
 /// let tl = Point { x: 1.0, y: 1.0 };
@@ -48,7 +48,7 @@ enum PathCommand {
 ///     .line_to(bl)
 ///     .line_to(tl)
 ///     .build()?;
-/// #     Ok(())
+/// #     None
 /// # }
 /// ```
 #[derive(Clone, Debug)]
@@ -75,7 +75,6 @@ impl PathBuilder {
     pub fn new(context: &Context, start_point: Point) -> Self {
         Self { context: Rc::clone(&context.inner), cmds: vec![PathCommand::Move(start_point)] }
     }
-
 
     /// Adds line from `end-point` to `point`. [spn_path_line_to]
     ///
@@ -198,15 +197,13 @@ impl PathBuilder {
     /// [spn_path_end]: https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/src/graphics/lib/compute/spinel/spinel.h#58
     pub fn build(mut self) -> Option<Path> {
         macro_rules! success {
-            ( $result:expr, $path_builder:expr $( , )? ) => {
-                {
-                    if let Err(SpnError::SpnErrorPathBuilderLost) = $result.res() {
-                        $path_builder.context.borrow_mut().reset_path_builder();
-                        return None;
-                    }
-                    $result.success();
+            ( $result:expr, $path_builder:expr $( , )? ) => {{
+                if let Err(SpnError::SpnErrorPathBuilderLost) = $result.res() {
+                    $path_builder.context.borrow_mut().reset_path_builder();
+                    return None;
                 }
-            }
+                $result.success();
+            }};
         }
 
         unsafe {
@@ -216,7 +213,7 @@ impl PathBuilder {
 
             let start_point = match self.cmds[0] {
                 PathCommand::Move(p) => p,
-                _ => panic!("PathBuilder should always be initialized with Move")
+                _ => panic!("PathBuilder should always be initialized with Move"),
             };
             let end_point = self.end_point();
 
@@ -227,22 +224,18 @@ impl PathBuilder {
 
             for cmd in self.cmds {
                 match cmd {
-                    PathCommand::Move(p) => success!(
-                        spn_path_move_to(spn_path_builder, p.x, p.y),
-                        self,
-                    ),
-                    PathCommand::Line(p) => success!(
-                        spn_path_line_to(spn_path_builder, p.x, p.y),
-                        self,
-                    ),
-                    PathCommand::Quad([p1, p2]) => success!(
-                        spn_path_quad_to(spn_path_builder, p1.x, p1.y, p2.x, p2.y),
-                        self,
-                    ),
-                    PathCommand::QuadSmooth(p) => success!(
-                        spn_path_quad_smooth_to(spn_path_builder, p.x, p.y),
-                        self,
-                    ),
+                    PathCommand::Move(p) => {
+                        success!(spn_path_move_to(spn_path_builder, p.x, p.y), self,)
+                    }
+                    PathCommand::Line(p) => {
+                        success!(spn_path_line_to(spn_path_builder, p.x, p.y), self,)
+                    }
+                    PathCommand::Quad([p1, p2]) => {
+                        success!(spn_path_quad_to(spn_path_builder, p1.x, p1.y, p2.x, p2.y), self,)
+                    }
+                    PathCommand::QuadSmooth(p) => {
+                        success!(spn_path_quad_smooth_to(spn_path_builder, p.x, p.y), self,)
+                    }
                     PathCommand::Cubic([p1, p2, p3]) => success!(
                         spn_path_cubic_to(spn_path_builder, p1.x, p1.y, p2.x, p2.y, p3.x, p3.y),
                         self,
