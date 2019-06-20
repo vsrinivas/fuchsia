@@ -29,10 +29,10 @@ fidl_enum! {
 }
 
 
-type WithErrorSyntaxErrorAsPrimitiveResult = std::result::Result< (
+pub type WithErrorSyntaxErrorAsPrimitiveResult = std::result::Result< (
 ), u32 >;
 
-type WithErrorSyntaxErrorAsEnumResult = std::result::Result< (
+pub type WithErrorSyntaxErrorAsEnumResult = std::result::Result< (
 ), ErrorEnun >;
 
 

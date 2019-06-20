@@ -6,7 +6,7 @@ package templates
 
 const Result = `
 {{- define "ResultDeclaration" }}
-type {{ .Name }} = std::result::Result< (
+pub type {{ .Name }} = std::result::Result< (
   {{- if gt (len .Ok) 1 }}
     {{- range $ok_member_type := .Ok }}
       {{ $ok_member_type }},

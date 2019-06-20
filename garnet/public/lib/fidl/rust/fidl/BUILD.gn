@@ -31,10 +31,22 @@ fidl("fidl.rust.test.compilation") {
   ]
 }
 
+# not actually used-- just to ensure successful compilation
+# tests we can compose protocols from another FIDL crate
+fidl("fidl.rust.test.compilation.compose") {
+  sources = [
+    "compilation_compose.test.fidl",
+  ]
+
+  deps = [
+    ":fidl.rust.test.compilation",
+  ]
+}
+
 test_package("rust_fidl_tests") {
   deps = [
-    ":fidl_test",
     ":fidl.rust.test.compilation-rustc",
+    ":fidl_test",
     "//garnet/public/lib/fidl/rust/fidl_tests:fidl_external_tests",
   ]
   tests = [

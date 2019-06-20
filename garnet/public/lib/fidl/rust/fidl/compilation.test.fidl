@@ -8,8 +8,15 @@ xunion TestXUnion {
   bool variant;
 };
 
+enum ErrorReturn: uint32 {
+  OK = 0x00;
+  CHANGED = 0x0D;
+};
+
+[FragileBase]
 protocol TestInterface {
   TestMethod(TestXUnion test_x_union) -> (TestXUnion test_x_union);
+  TestErrorMethod(uint16 arg) -> () error ErrorReturn;
 };
 
 struct HasBigArray {
