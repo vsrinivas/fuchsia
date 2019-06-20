@@ -639,21 +639,6 @@ protocol Calculator {
     Clear();
     -> OnClear();
 };
-
-protocol RealCalculator : Calculator {
-    AddFloats(float32 a, float32 b) -> (float32 sum);
-};
-
-protocol Science {
-    Hypothesize();
-    Investigate();
-    Explode();
-    Reproduce();
-};
-
-protocol ScientificCalculator : RealCalculator, Science {
-    Sin(float32 x) -> (float32 result);
-};
 ```
 
 #### Use
