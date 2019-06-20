@@ -54,6 +54,7 @@ struct AssetCollection {
 }
 
 /// Get `VMO` handle to the [`Asset`] at `path`.
+/// TODO(seancuff): Use a typed error instead.
 fn load_asset_to_vmo(path: &Path) -> Result<mem::Buffer, Error> {
     let file = File::open(path)?;
     let vmo = fdio::get_vmo_copy_from_file(&file)?;
@@ -342,13 +343,24 @@ impl FontService {
         )
     }
 
-    fn get_typeface_by_id(&self, id: u32) -> Result<fonts::TypefaceResponse, Error> {
-        let response = fonts::TypefaceResponse {
-            buffer: Some(self.assets.get_asset(id)?),
-            buffer_id: Some(id),
-            font_index: None,
-        };
-        Ok(response)
+    fn get_typeface_by_id(&self, id: u32) -> Result<fonts::TypefaceResponse, fonts_exp::Error> {
+        match self.assets.get_asset(id) {
+            Ok(buffer) => {
+                let response = fonts::TypefaceResponse {
+                    buffer: Some(buffer),
+                    buffer_id: Some(id),
+                    font_index: None,
+                };
+                Ok(response)
+            }
+            Err(e) => {
+                let msg = e.as_fail().to_string();
+                if msg.starts_with("No asset found") {
+                    return Err(fonts_exp::Error::NotFound);
+                }
+                Err(fonts_exp::Error::Internal)
+            }
+        }
     }
 
     fn get_typefaces_by_family(
@@ -407,8 +419,8 @@ impl FontService {
     ) -> Result<(), Error> {
         match request {
             fonts_exp::ProviderRequest::GetTypefaceById { id, responder } => {
-                let response = self.get_typeface_by_id(id)?;
-                Ok(responder.send(response)?)
+                let mut response = self.get_typeface_by_id(id);
+                Ok(responder.send(&mut response)?)
             }
             fonts_exp::ProviderRequest::GetTypefacesByFamily { family, responder } => {
                 let mut response = self.get_typefaces_by_family(family);

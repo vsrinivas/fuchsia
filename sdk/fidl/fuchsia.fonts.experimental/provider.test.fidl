@@ -15,6 +15,7 @@ const uint32 MAX_TYPEFACE_RESULTS = 500;
 
 enum Error {
     NOT_FOUND = 1;
+    INTERNAL = 2;
 };
 
 /// Experimental additions to |Provider|.
@@ -24,8 +25,13 @@ protocol Provider {
     /// after |ListTypefaces|, e.g. as part of a font selection interface.
     /// As with |fuchsia.fonts.GetTypeface|, it is the caller's responsibility
     /// to properly parse the file.
+    ///
+    /// Possible errors:
+    /// |NOT_FOUND| if no asset with the requested |id| exists.
+    /// |INTERNAL| if the requested |id| exists, but the asset failed to load.
+    ///
     /// Eventually this should probably be folded into |GetTypeface|.
-    GetTypefaceById(uint32 id) -> (ff.TypefaceResponse response);
+    GetTypefaceById(uint32 id) -> (ff.TypefaceResponse response) error Error;
 
     /// Returns a list of |TypefaceInfo| for all typefaces that match
     /// the request, or an empty vector if no matches are found.

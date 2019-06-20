@@ -541,13 +541,21 @@ mod experimental_api {
     async fn test_get_typeface_by_id() -> Result<(), Error> {
         let (_app, font_provider) = start_provider_with_default_fonts()?;
         // There will always be a font with index 0 unless manifest loading fails.
-        let response = await!(font_provider.get_typeface_by_id(0))?;
+        let response = await!(font_provider.get_typeface_by_id(0))?.unwrap();
         assert_eq!(response.buffer_id, Some(0));
         assert!(response.buffer.is_some());
         Ok(())
     }
 
-    fn roboto_info (id: u32, weight: u16) -> fonts_exp::TypefaceInfo {
+    #[fasync::run_singlethreaded(test)]
+    async fn test_get_typeface_by_id_not_found() -> Result<(), Error> {
+        let (_app, font_provider) = start_provider_with_default_fonts()?;
+        let response = await!(font_provider.get_typeface_by_id(std::u32::MAX))?;
+        assert_eq!(response.unwrap_err(), fonts_exp::Error::NotFound);
+        Ok(())
+    }
+
+    fn roboto_info(id: u32, weight: u16) -> fonts_exp::TypefaceInfo {
         fonts_exp::TypefaceInfo {
             asset_id: Some(id),
             font_index: Some(0),
