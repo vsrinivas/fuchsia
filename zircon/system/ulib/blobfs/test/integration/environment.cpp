@@ -63,6 +63,18 @@ RamDisk::~RamDisk() {
     }
 }
 
+zx_status_t RamDisk::SleepAfter(uint32_t block_count) const {
+    return ramdisk_sleep_after(ramdisk_, block_count);
+}
+
+zx_status_t RamDisk::WakeUp() const {
+    return ramdisk_wake(ramdisk_);
+}
+
+zx_status_t RamDisk::GetBlockCounts(ramdisk_block_write_counts_t* counts) const {
+    return ramdisk_get_block_counts(ramdisk_, counts);
+}
+
 void Environment::SetUp() {
     if (config_.path) {
         ASSERT_TRUE(OpenDevice(config_.path));

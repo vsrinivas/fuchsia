@@ -56,6 +56,9 @@ void BlobfsTest::SetUp() {
 }
 
 void BlobfsTest::TearDown() {
+    if (environment_->ramdisk()) {
+        environment_->ramdisk()->WakeUp();
+    }
     CheckInfo();  // Failures here should not prevent unmount.
     ASSERT_NO_FAILURES(Unmount());
     ASSERT_OK(CheckFs());

@@ -1927,23 +1927,22 @@ static bool TestExtendFailure(void) {
     END_TEST;
 }
 
-static bool TestFailedWrite(BlobfsTest* blobfsTest) {
-    BEGIN_TEST;
+*/
 
-    if (gUseRealDisk) {
-        fprintf(stderr, "Ramdisk required; skipping test\n");
-        return true;
+void RunFailedWriteTest(const RamDisk* disk) {
+    if (!disk) {
+        return;
     }
 
-    uint64_t block_size = blobfsTest->GetBlockSize();
-    ASSERT_EQ(blobfs::kBlobfsBlockSize % block_size, 0);
-    const uint64_t kDiskBlocksPerBlobfsBlock = blobfs::kBlobfsBlockSize / block_size;
+    uint32_t page_size = disk->page_size();
+    const uint32_t pages_per_block = blobfs::kBlobfsBlockSize / page_size;
 
-    fbl::unique_ptr<fs_test_utils::BlobInfo> info;
-    ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(MOUNT_PATH, blobfs::kBlobfsBlockSize, &info));
+    std::unique_ptr<fs_test_utils::BlobInfo> info;
+    ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, blobfs::kBlobfsBlockSize, &info));
 
     fbl::unique_fd fd(open(info->path, O_CREAT | O_RDWR));
     ASSERT_TRUE(fd, "Failed to create blob");
+
     // Truncate before sleeping the ramdisk. This is so potential FVM updates
     // do not interfere with the ramdisk block count.
     ASSERT_EQ(ftruncate(fd.get(), info->size_data), 0);
@@ -1956,50 +1955,47 @@ static bool TestFailedWrite(BlobfsTest* blobfsTest) {
     // Non-journal:
     // - One Inode table block
     // - One Data block
-    constexpr uint64_t kBlockCountToWrite = 5;
+    constexpr int kBlockCountToWrite = 5;
+
     // Sleep after |kBlockCountToWrite - 1| blocks. This is 1 less than will be
     // needed to write out the entire blob. This ensures that writing the blob
     // will ultimately fail, but the write operation will return a successful
     // response.
-    ASSERT_TRUE(blobfsTest->ToggleSleep(kDiskBlocksPerBlobfsBlock * (kBlockCountToWrite - 1)));
+    ASSERT_OK(disk->SleepAfter(pages_per_block * (kBlockCountToWrite - 1)));
     ASSERT_EQ(write(fd.get(), info->data.get(), info->size_data),
               static_cast<ssize_t>(info->size_data));
 
     // Since the write operation ultimately failed when going out to disk,
     // syncfs will return a failed response.
     ASSERT_LT(syncfs(fd.get()), 0);
-    ASSERT_EQ(errno, EPIPE);
 
-    ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(MOUNT_PATH, blobfs::kBlobfsBlockSize, &info));
+    ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, blobfs::kBlobfsBlockSize, &info));
     fd.reset(open(info->path, O_CREAT | O_RDWR));
     ASSERT_TRUE(fd, "Failed to create blob");
 
-    if (blobfsTest->GetType() == FsTestType::kFvm) {
-        // On an FVM, truncate may either succeed or fail. If an FVM extend call is necessary,
-        // it will fail since the ramdisk is asleep; otherwise, it will pass.
-        ftruncate(fd.get(), info->size_data);
-    } else {
-        // Since truncate is done entirely in memory, a non-FVM truncate should always pass.
-        ASSERT_EQ(ftruncate(fd.get(), info->size_data), 0);
-    }
+    // On an FVM, truncate may either succeed or fail. If an FVM extend call is necessary,
+    // it will fail since the ramdisk is asleep; otherwise, it will pass.
+    ftruncate(fd.get(), info->size_data);
 
     // Since the ramdisk is asleep and our blobfs is aware of it due to the sync, write should fail.
     ASSERT_LT(write(fd.get(), info->data.get(), blobfs::kBlobfsBlockSize), 0);
-    ASSERT_EQ(errno, EPIPE);
 
-    // Wake the ramdisk and forcibly remount the BlobfsTest, forcing the journal to replay
-    // and restore blobfs to a consistent state.
-    ASSERT_TRUE(blobfsTest->ToggleSleep());
-    ASSERT_TRUE(blobfsTest->ForceRemount());
-
-    // Reset the ramdisk counts so we don't attempt to run ramdisk failure tests,
-    // since we are already failing the ramdisk within this test.
-    ASSERT_TRUE(blobfsTest->ToggleSleep());
-    ASSERT_TRUE(blobfsTest->ToggleSleep());
-    END_TEST;
+    ASSERT_OK(disk->WakeUp());
 }
 
-*/
+TEST_F(BlobfsTest, FailedWrite) {
+    ASSERT_NO_FAILURES(RunFailedWriteTest(environment_->ramdisk()));
+
+    // Force journal replay.
+    Remount();
+}
+
+TEST_F(BlobfsTestWithFvm, FailedWrite) {
+    ASSERT_NO_FAILURES(RunFailedWriteTest(environment_->ramdisk()));
+
+    // Force journal replay.
+    Remount();
+}
 
 class LargeBlobTest : public BlobfsTest {
   public:
@@ -2084,7 +2080,6 @@ RUN_TEST_FVM(MEDIUM, CorruptAtMount)
 RUN_TESTS(LARGE, CreateWriteReopen)
 RUN_TEST_MEDIUM(TestCreateFailure)
 RUN_TEST_MEDIUM(TestExtendFailure)
-RUN_TESTS(SMALL, TestFailedWrite)
 END_TEST_CASE(blobfs_tests)
 
 */

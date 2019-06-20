@@ -18,6 +18,12 @@ class RamDisk {
     ~RamDisk();
 
     const char* path() const { return path_.c_str(); }
+    uint32_t page_size() const { return page_size_; }
+
+    // Expose the ramdisk client functionality.
+    zx_status_t SleepAfter(uint32_t block_count) const;
+    zx_status_t WakeUp() const;
+    zx_status_t GetBlockCounts(ramdisk_block_write_counts_t* counts) const;
 
     DISALLOW_COPY_ASSIGN_AND_MOVE(RamDisk);
 
@@ -50,6 +56,8 @@ class Environment : public zxtest::Environment {
     uint64_t disk_size() const { return block_size_ * block_count_; }
 
     const char* device_path() const { return path_.c_str(); }
+
+    const RamDisk* ramdisk() const { return ramdisk_.get(); }
 
     DISALLOW_COPY_ASSIGN_AND_MOVE(Environment);
 
