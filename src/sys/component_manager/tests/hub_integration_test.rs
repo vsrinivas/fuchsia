@@ -8,18 +8,22 @@ use {
     component_manager_lib::{
         ambient::RealAmbientEnvironment,
         elf_runner::{ElfRunner, ProcessLauncherConnector},
-        model::{self, Hub, Model, ModelParams, testing::test_utils::{list_directory, read_file}},
+        model::{
+            self,
+            testing::test_utils::{list_directory, read_file},
+            Hub, Model, ModelParams,
+        },
         startup,
     },
     failure::{self, Error},
     fidl::endpoints::{ClientEnd, ServerEnd},
     fidl_fidl_examples_routing_echo as fecho,
     fidl_fuchsia_io::{
-        DirectoryMarker, MODE_TYPE_SERVICE, NodeMarker, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+        DirectoryMarker, NodeMarker, MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
     fuchsia_vfs_pseudo_fs::directory::{self, entry::DirectoryEntry},
     fuchsia_zircon as zx,
-    std::{iter, sync::Arc, vec::Vec, path::PathBuf},
+    std::{iter, path::PathBuf, sync::Arc, vec::Vec},
 };
 
 #[fuchsia_async::run_singlethreaded]
@@ -68,14 +72,27 @@ async fn main() -> Result<(), Error> {
     assert_eq!(vec!["echo_client", "echo_server"], await!(list_directory(&children_dir_proxy)));
 
     // These args are from echo_client.cml.
-    assert_eq!("Hippos", await!(read_file(&hub_proxy, "self/children/echo_client/exec/runtime/args/0")));
-    assert_eq!("rule!", await!(read_file(&hub_proxy, "self/children/echo_client/exec/runtime/args/1")));
+    assert_eq!(
+        "Hippos",
+        await!(read_file(&hub_proxy, "self/children/echo_client/exec/runtime/args/0"))
+    );
+    assert_eq!(
+        "rule!",
+        await!(read_file(&hub_proxy, "self/children/echo_client/exec/runtime/args/1"))
+    );
 
-    let svc_dir = "self/children/echo_client/exec/in/svc";
-    let svc_dir_proxy = io_util::open_directory(&hub_proxy, &PathBuf::from(svc_dir))
+    let in_dir = "self/children/echo_client/exec/in";
+    let svc_dir = format!("{}/{}", in_dir, "svc");
+    let svc_dir_proxy = io_util::open_directory(&hub_proxy, &PathBuf::from(svc_dir.clone()))
         .expect("Failed to open directory");
     let echo_service_name = "fidl.examples.routing.echo.Echo";
     assert_eq!(vec![echo_service_name], await!(list_directory(&svc_dir_proxy)));
+
+    // Verify that the 'pkg' directory is avaialble
+    let pkg_dir = format!("{}/{}", in_dir, "pkg");
+    let pkg_dir_proxy = io_util::open_directory(&hub_proxy, &PathBuf::from(pkg_dir))
+        .expect("Failed to open directory");
+    assert_eq!(vec!["bin", "lib", "meta", "test"], await!(list_directory(&pkg_dir_proxy)));
 
     // Verify that we can connect to the echo service from the hub.
     let echo_service = format!("{}/{}", svc_dir, echo_service_name);

@@ -223,6 +223,16 @@ impl Hub {
                     model::DirTree::build_from_uses(route_fn_factory, &abs_moniker, decl.clone())?;
                 let mut in_dir = directory::simple::empty();
                 tree.install(&abs_moniker, &mut in_dir)?;
+                if let Some(pkg_dir) = execution.namespace.clone_package_dir()? {
+                    in_dir
+                        .add_entry(
+                            "pkg",
+                            directory_broker::DirectoryBroker::new(Self::route_open_fn(pkg_dir)),
+                        )
+                        .map_err(|_| {
+                            HubError::add_directory_entry_error(abs_moniker.clone(), "pkg")
+                        })?;
+                }
                 controlled
                     .add_entry("in", in_dir)
                     .map_err(|_| HubError::add_directory_entry_error(abs_moniker.clone(), "in"))?;

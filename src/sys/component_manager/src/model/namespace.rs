@@ -51,6 +51,15 @@ impl IncomingNamespace {
         Ok(Self { package_dir, dir_abort_handles: vec![] })
     }
 
+    pub fn clone_package_dir(&self) -> Result<Option<DirectoryProxy>, ModelError> {
+        if let Some(package_dir) = &self.package_dir {
+            let clone_dir_proxy = io_util::clone_directory(package_dir)
+                .map_err(|e| ModelError::namespace_creation_failed(e))?;
+            return Ok(Some(clone_dir_proxy));
+        }
+        Ok(None)
+    }
+
     /// In addition to populating an fsys::ComponentNamespace, `populate` will start serving and install
     /// handles to pseudo directories.
     pub async fn populate<'a>(
