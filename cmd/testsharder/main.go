@@ -26,6 +26,9 @@ var (
 
 	// Tags are keys on which to filter environments, which are labeled.
 	tags command.StringsFlag
+
+	// The path to the json manifest file containing the tests to mutiply.
+	multipliersPath string
 )
 
 func usage() {
@@ -42,6 +45,7 @@ func init() {
 	flag.StringVar(&outputFile, "output-file", "", "path to a file which will contain the shards as JSON, default is stdout")
 	flag.Var(&mode, "mode", "mode in which to run the testsharder (e.g., normal or restricted).")
 	flag.Var(&tags, "tag", "environment tags on which to filter; only the tests that match all tags will be sharded")
+	flag.StringVar(&multipliersPath, "multipliers", "", "path to the json manifest containing tests to multiply")
 	flag.Usage = usage
 }
 
@@ -68,6 +72,13 @@ func main() {
 
 	// Create shards and write them to an output file if specifed, else stdout.
 	shards := testsharder.MakeShards(specs, mode, tags)
+	if multipliersPath != "" {
+		multipliers, err := testsharder.LoadTestModifiers(multipliersPath)
+		if err != nil {
+			log.Fatal(err)
+		}
+		shards = testsharder.MultiplyShards(shards, multipliers)
+	}
 	f := os.Stdout
 	if outputFile != "" {
 		var err error

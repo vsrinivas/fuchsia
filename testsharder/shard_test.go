@@ -172,3 +172,81 @@ func TestMakeShards(t *testing.T) {
 		assertEqual(t, expected, actual)
 	})
 }
+
+func TestMultiplyShards(t *testing.T) {
+	env1 := Environment{
+		Dimensions: DimensionSet{DeviceType: "QEMU"},
+		Tags:       []string{},
+	}
+	env2 := Environment{
+		Dimensions: DimensionSet{DeviceType: "NUC"},
+		Tags:       []string{},
+	}
+	env3 := Environment{
+		Dimensions: DimensionSet{OS: "Linux"},
+		Tags:       []string{},
+	}
+	makeTest := func(id int, os OS) Test {
+		return Test{
+			Name:     fmt.Sprintf("test%d", id),
+			Location: fmt.Sprintf("/path/to/test/%d", id),
+			OS:       os,
+		}
+	}
+
+	shard := func(env Environment, os OS, ids ...int) *Shard {
+		var tests []Test
+		for _, id := range ids {
+			tests = append(tests, makeTest(id, os))
+		}
+		return &Shard{
+			Name:  env.Name(),
+			Tests: tests,
+			Env:   env,
+		}
+	}
+
+	makeTestModifier := func(id int, os OS, runs int) TestModifier {
+		return TestModifier{
+			Target:    fmt.Sprintf("test%d", id),
+			OS:        os,
+			TotalRuns: runs,
+		}
+	}
+
+	multShard := func(env Environment, os OS, id int, runs int) *Shard {
+		var tests []Test
+		test := makeTest(id, os)
+		for i := 0; i < runs; i++ {
+			tests = append(tests, test)
+		}
+		return &Shard{
+			Name:  env.Name() + " - " + test.Name,
+			Tests: tests,
+			Env:   env,
+		}
+	}
+
+	t.Run("multiply tests in shards", func(t *testing.T) {
+		shards := []*Shard{
+			shard(env1, Fuchsia, 1),
+			shard(env2, Fuchsia, 1, 2),
+			shard(env3, Linux, 3),
+		}
+		multipliers := []TestModifier{
+			makeTestModifier(1, Fuchsia, 2),
+			makeTestModifier(3, Linux, 3),
+		}
+		actual := MultiplyShards(
+			shards,
+			multipliers,
+		)
+		expected := append(
+			shards,
+			multShard(env1, Fuchsia, 1, 2),
+			multShard(env2, Fuchsia, 1, 2),
+			multShard(env3, Linux, 3, 3),
+		)
+		assertEqual(t, expected, actual)
+	})
+}

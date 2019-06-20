@@ -72,6 +72,34 @@ func MakeShards(specs []TestSpec, mode Mode, tags []string) []*Shard {
 	return shards
 }
 
+// Appends new shards to shards where each new shard contains one test repeated
+// multiple times according to the specifications in multipliers.
+func MultiplyShards(shards []*Shard, multipliers []TestModifier) []*Shard {
+	for _, shard := range shards {
+		for _, multiplier := range multipliers {
+			for _, test := range shard.Tests {
+				if multiplier.Target == test.Name && multiplier.OS == test.OS {
+					shards = append(shards, &Shard{
+						Name:  shard.Env.Name() + " - " + test.Name,
+						Tests: multiplyTest(test, multiplier.TotalRuns),
+						Env:   shard.Env,
+					})
+				}
+			}
+		}
+	}
+	return shards
+}
+
+// Returns a list of Tests containing the same test multiplied by the number of runs.
+func multiplyTest(test Test, runs int) []Test {
+	var tests []Test
+	for i := 0; i < runs; i++ {
+		tests = append(tests, test)
+	}
+	return tests
+}
+
 // Abstracts a mapping Environment -> []string, as Environment contains non-comparable
 // members (e.g., string slices), which makes it invalid for a map key.
 type envMap struct {
