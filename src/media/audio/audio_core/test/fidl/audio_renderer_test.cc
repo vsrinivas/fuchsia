@@ -101,6 +101,8 @@ void AudioRendererTest::CreateAndAddPayloadBuffer(uint32_t id) {
 // Sanity test adding a payload buffer. Just verify we don't get a disconnect.
 TEST_F(AudioRendererTest, AddPayloadBuffer) {
   CreateAndAddPayloadBuffer(0);
+  CreateAndAddPayloadBuffer(1);
+  CreateAndAddPayloadBuffer(2);
 
   AssertConnectedAndDiscardAllPackets();
 }
@@ -115,17 +117,7 @@ TEST_F(AudioRendererTest, AddPayloadBufferDuplicateId) {
   AssertConnectedAndDiscardAllPackets();
 }
 
-// AudioRenderer supports only a single payload buffer with id 0.
-//
-// TODO(tjdetwiler): This is an artificial restriction in AudioRenderer that
-// should be removed.
-TEST_F(AudioRendererTest, AddPayloadBufferInvalidIdCausesDisconnect) {
-  CreateAndAddPayloadBuffer(1);
-
-  ExpectDisconnect();
-}
-
-// It is invalid to add a payload buffer while the stream is 'operational'
+// It is invalid to add a payload buffer while there are queued packets.
 TEST_F(AudioRendererTest, AddPayloadBufferWhileOperationalCausesDisconnect) {
   // Configure with one buffer and a valid stream type.
   CreateAndAddPayloadBuffer(0);
@@ -146,12 +138,42 @@ TEST_F(AudioRendererTest, AddPayloadBufferWhileOperationalCausesDisconnect) {
   ExpectDisconnect();
 }
 
-// AudioRenderer does not support removing buffers.
-//
-// TODO(tjdetwiler): This is an artificial restriction in AudioRenderer that
-// should be removed.
-TEST_F(AudioRendererTest, RemovePayloadBufferCausesDisconnect) {
+// Test removing payload buffers.
+TEST_F(AudioRendererTest, RemovePayloadBuffer) {
   CreateAndAddPayloadBuffer(0);
+  CreateAndAddPayloadBuffer(1);
+  CreateAndAddPayloadBuffer(2);
+  audio_renderer_->RemovePayloadBuffer(0);
+  audio_renderer_->RemovePayloadBuffer(1);
+  audio_renderer_->RemovePayloadBuffer(2);
+
+  AssertConnectedAndDiscardAllPackets();
+}
+
+// Test RemovePayloadBuffer with an invalid ID (does not have a corresponding
+// AddPayloadBuffer).
+TEST_F(AudioRendererTest, RemovePayloadBufferInvalidBufferIdCausesDisconnect) {
+  audio_renderer_->RemovePayloadBuffer(0);
+
+  ExpectDisconnect();
+}
+
+// It is invalid to remove a payload buffer while there are queued packets.
+TEST_F(AudioRendererTest, RemovePayloadBufferWhileOperationalCausesDisconnect) {
+  // Configure with one buffer and a valid stream type.
+  CreateAndAddPayloadBuffer(0);
+  audio_renderer_->SetPcmStreamType(kTestStreamType);
+  AssertConnectedAndDiscardAllPackets();
+
+  // Send Packet moves connection into the operational state.
+  fuchsia::media::StreamPacket packet;
+  packet.payload_buffer_id = 0;
+  packet.payload_offset = 0;
+  packet.payload_size = kValidPayloadSize;
+  audio_renderer_->SendPacketNoReply(std::move(packet));
+
+  // Attempt to add new payload buffer while the packet is in flight. This
+  // should fail.
   audio_renderer_->RemovePayloadBuffer(0);
 
   ExpectDisconnect();
@@ -183,7 +205,8 @@ TEST_F(AudioRendererTest, SendPacketNoReply) {
   AssertConnectedAndDiscardAllPackets();
 }
 
-TEST_F(AudioRendererTest, SendPacketNoReplyInvalidPayloadBufferIdCausesDisconnect) {
+TEST_F(AudioRendererTest,
+       SendPacketNoReplyInvalidPayloadBufferIdCausesDisconnect) {
   // Configure with one buffer and a valid stream type.
   CreateAndAddPayloadBuffer(0);
   audio_renderer_->SetPcmStreamType(kTestStreamType);
@@ -200,7 +223,7 @@ TEST_F(AudioRendererTest, SendPacketNoReplyInvalidPayloadBufferIdCausesDisconnec
 
 // It is invalid to SendPacket before the stream type has been configured
 // (SetPcmStreamType).
-TEST_F(AudioRendererTest, SendPacketBeforeSetStreamTypeShouldDisconnect) {
+TEST_F(AudioRendererTest, SendPacketBeforeSetStreamTypeCausesDisconnect) {
   // Add a payload buffer but no stream type.
   CreateAndAddPayloadBuffer(0);
 

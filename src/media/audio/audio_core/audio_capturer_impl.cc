@@ -1294,6 +1294,8 @@ void AudioCapturerImpl::FinishBuffers(const PcbList& finished_buffers) {
     pkt.payload_offset = finished_buffer.offset_frames * bytes_per_frame_;
     pkt.payload_size = finished_buffer.filled_frames * bytes_per_frame_;
 
+    REP(SendingCapturerPacket(*this, pkt));
+
     if (finished_buffer.cbk != nullptr) {
       finished_buffer.cbk(pkt);
     } else {

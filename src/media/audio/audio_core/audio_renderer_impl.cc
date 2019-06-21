@@ -76,7 +76,7 @@ void AudioRendererImpl::Shutdown() {
   }
 
   gain_control_bindings_.CloseAll();
-  payload_buffer_.reset();
+  payload_buffers_.clear();
 
   // Make sure we have left the set of active AudioRenderers.
   if (InContainer()) {
@@ -141,7 +141,7 @@ bool AudioRendererImpl::ValidateConfig() {
     return true;
   }
 
-  if (!format_info_valid() || (payload_buffer_ == nullptr)) {
+  if (!format_info_valid() || payload_buffers_.empty()) {
     return false;
   }
 
@@ -286,29 +286,28 @@ void AudioRendererImpl::SetStreamType(fuchsia::media::StreamType stream_type) {
 }
 
 void AudioRendererImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buffer) {
-  if (id != 0) {
-    FXL_LOG(ERROR) << "Only buffer ID 0 is currently supported.";
-    Shutdown();
-    return;
-  }
-
   auto cleanup = fit::defer([this]() { Shutdown(); });
 
+  // TODO(MTWN-375): Lift this restriction.
   if (IsOperating()) {
     FXL_LOG(ERROR)
         << "Attempted to set payload buffer while in the operational mode.";
     return;
   }
 
-  zx_status_t res;
-  payload_buffer_ = fbl::MakeRefCounted<RefCountedVmoMapper>();
-  res = payload_buffer_->Map(payload_buffer, 0, 0, ZX_VM_PERM_READ, owner_->vmar());
+  auto vmo_mapper = fbl::MakeRefCounted<RefCountedVmoMapper>();
+  // Ideally we would reject this request if we already have a payload buffer
+  // with |id|, however some clients currently rely on being able to update the
+  // payload buffer without first calling |RemovePayloadBuffer|.
+  payload_buffers_[id] = vmo_mapper;
+  zx_status_t res =
+      vmo_mapper->Map(payload_buffer, 0, 0, ZX_VM_PERM_READ, owner_->vmar());
   if (res != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to map payload buffer (res = " << res << ")";
+    FXL_PLOG(ERROR, res) << "Failed to map payload buffer";
     return;
   }
 
-  REP(AddingRendererPayloadBuffer(*this, id, payload_buffer_->size()));
+  REP(AddingRendererPayloadBuffer(*this, id, vmo_mapper->size()));
 
   // Things went well, cancel the cleanup hook. If our config had been
   // validated previously, it will have to be revalidated as we move into the
@@ -318,8 +317,22 @@ void AudioRendererImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buffer) {
 }
 
 void AudioRendererImpl::RemovePayloadBuffer(uint32_t id) {
-  FXL_LOG(ERROR) << "RemovePayloadBuffer is not currently supported.";
-  Shutdown();
+  auto cleanup = fit::defer([this]() { Shutdown(); });
+
+  // TODO(MTWN-375): Lift this restriction.
+  if (IsOperating()) {
+    FXL_LOG(ERROR)
+        << "Attempted to remove payload buffer while in the operational mode.";
+    return;
+  }
+
+  if (payload_buffers_.erase(id) != 1) {
+    FXL_LOG(ERROR) << "Invalid payload buffer id";
+    return;
+  }
+
+  REP(RemovingRendererPayloadBuffer(*this, id));
+  cleanup.cancel();
 }
 
 void AudioRendererImpl::SetPtsUnits(uint32_t tick_per_second_numerator,
@@ -399,12 +412,13 @@ void AudioRendererImpl::SendPacket(fuchsia::media::StreamPacket packet,
     return;
   }
 
-  // Validate we have a valid buffer id. Note we currently only support a
-  // single buffer.
-  if (packet.payload_buffer_id != 0) {
-    FXL_LOG(ERROR) << "Invalid Packet payload_buffer_id.";
+  // Lookup our payload buffer.
+  auto it = payload_buffers_.find(packet.payload_buffer_id);
+  if (it == payload_buffers_.end()) {
+    FXL_LOG(ERROR) << "Invalid payload_buffer_id";
     return;
   }
+  auto payload_buffer = it->second;
 
   // Start by making sure that the region we are receiving is made from an
   // integral number of audio frames. Count the total number of frames in the
@@ -430,15 +444,17 @@ void AudioRendererImpl::SendPacket(fuchsia::media::StreamPacket packet,
 
   // Make sure that the packet offset/size exists entirely within the payload
   // buffer.
-  FXL_DCHECK(payload_buffer_ != nullptr);
+  FXL_DCHECK(payload_buffer != nullptr);
   uint64_t start = packet.payload_offset;
   uint64_t end = start + packet.payload_size;
-  uint64_t pb_size = payload_buffer_->size();
+  uint64_t pb_size = payload_buffer->size();
   if ((start >= pb_size) || (end > pb_size)) {
     FXL_LOG(ERROR) << "Bad packet range [" << start << ", " << end
                    << "). Payload buffer size is " << pb_size;
     return;
   }
+
+  REP(SendingRendererPacket(*this, packet));
 
   // Compute the PTS values for this packet applying our interpolation and
   // continuity thresholds as we go. Start by checking to see if this our PTS
@@ -476,7 +492,7 @@ void AudioRendererImpl::SendPacket(fuchsia::media::StreamPacket packet,
 
   // Create the packet.
   auto packet_ref = fbl::MakeRefCounted<AudioPacketRef>(
-      payload_buffer_, std::move(callback), packet, owner_,
+      payload_buffer, std::move(callback), packet, owner_,
       frame_count << kPtsFractionalBits, start_pts);
 
   // The end pts is the value we will use for the next packet's start PTS, if

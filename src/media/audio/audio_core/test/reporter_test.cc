@@ -422,16 +422,20 @@ TEST_F(ReporterTest, RendererMetrics) {
       GetHierarchy(),
       ChildrenMatch(Contains(AllOf(
           NodeMatches(NameMatches("renderers")),
-          ChildrenMatch(UnorderedElementsAre(NodeMatches(AllOf(
-              NameMatches("1"),
-              MetricList(UnorderedElementsAre(
-                  UIntMetricIs("sample format", 0), UIntMetricIs("channels", 0),
-                  UIntMetricIs("frames per second", 0),
-                  UIntMetricIs("payload buffer size", 0),
-                  DoubleMetricIs("gain db", 0.0), UIntMetricIs("muted", 0),
-                  UIntMetricIs("calls to SetGainWithRamp", 0),
-                  UIntMetricIs("min clock lead time (ns)", 0),
-                  DoubleMetricIs("pts continuity threshold (s)", 0.0)))))))))));
+          ChildrenMatch(UnorderedElementsAre(AllOf(
+              ChildrenMatch(
+                  Contains(AllOf(
+                      NodeMatches(NameMatches("payload buffers")),
+                      ChildrenMatch(IsEmpty())))),
+              NodeMatches(AllOf(
+                  NameMatches("1"),
+                  MetricList(UnorderedElementsAre(
+                      UIntMetricIs("sample format", 0), UIntMetricIs("channels", 0),
+                      UIntMetricIs("frames per second", 0),
+                      DoubleMetricIs("gain db", 0.0), UIntMetricIs("muted", 0),
+                      UIntMetricIs("calls to SetGainWithRamp", 0),
+                      UIntMetricIs("min clock lead time (ns)", 0),
+                      DoubleMetricIs("pts continuity threshold (s)", 0.0))))))))))));
 
   fuchsia::media::AudioStreamType stream_type{
       .sample_format = fuchsia::media::AudioSampleFormat::SIGNED_16,
@@ -439,6 +443,10 @@ TEST_F(ReporterTest, RendererMetrics) {
       .frames_per_second = 48000};
   under_test_.SettingRendererStreamType(renderer, stream_type);
   under_test_.AddingRendererPayloadBuffer(renderer, 0, 4096);
+  under_test_.AddingRendererPayloadBuffer(renderer, 10, 8192);
+  under_test_.SendingRendererPacket(renderer, fuchsia::media::StreamPacket {
+      .payload_buffer_id = 10,
+  });
   under_test_.SettingRendererGain(renderer, -1.0);
   under_test_.SettingRendererGainWithRamp(
       renderer, -1.0, ZX_SEC(1), fuchsia::media::audio::RampType::SCALE_LINEAR);
@@ -452,19 +460,33 @@ TEST_F(ReporterTest, RendererMetrics) {
       GetHierarchy(),
       ChildrenMatch(Contains(AllOf(
           NodeMatches(NameMatches("renderers")),
-          ChildrenMatch(UnorderedElementsAre(NodeMatches(AllOf(
-              NameMatches("1"),
-              MetricList(UnorderedElementsAre(
-                  UIntMetricIs("sample format", static_cast<uint64_t>(
-                                                    stream_type.sample_format)),
-                  UIntMetricIs("channels", stream_type.channels),
-                  UIntMetricIs("frames per second",
-                               stream_type.frames_per_second),
-                  UIntMetricIs("payload buffer size", 4096),
-                  DoubleMetricIs("gain db", -1.0), UIntMetricIs("muted", 1),
-                  UIntMetricIs("calls to SetGainWithRamp", 2),
-                  UIntMetricIs("min clock lead time (ns)", 1000000),
-                  DoubleMetricIs("pts continuity threshold (s)", 5.0)))))))))));
+          ChildrenMatch(UnorderedElementsAre(AllOf(
+              ChildrenMatch(
+                  Contains(AllOf(
+                      NodeMatches(NameMatches("payload buffers")),
+                      ChildrenMatch(UnorderedElementsAre(
+                          NodeMatches(AllOf(
+                              NameMatches("0"),
+                              MetricList(UnorderedElementsAre(
+                                  UIntMetricIs("size", 4096),
+                                  UIntMetricIs("packets", 0))))),
+                          NodeMatches(AllOf(
+                              NameMatches("10"),
+                              MetricList(UnorderedElementsAre(
+                                  UIntMetricIs("size", 8192),
+                                  UIntMetricIs("packets", 1)))))))))),
+              NodeMatches(AllOf(
+                  NameMatches("1"),
+                  MetricList(UnorderedElementsAre(
+                      UIntMetricIs("sample format", static_cast<uint64_t>(
+                                                        stream_type.sample_format)),
+                      UIntMetricIs("channels", stream_type.channels),
+                      UIntMetricIs("frames per second",
+                                   stream_type.frames_per_second),
+                      DoubleMetricIs("gain db", -1.0), UIntMetricIs("muted", 1),
+                      UIntMetricIs("calls to SetGainWithRamp", 2),
+                      UIntMetricIs("min clock lead time (ns)", 1000000),
+                      DoubleMetricIs("pts continuity threshold (s)", 5.0))))))))))));
 }
 
 // Tests methods that change capturer metrics.
@@ -477,14 +499,18 @@ TEST_F(ReporterTest, CapturerMetrics) {
       GetHierarchy(),
       ChildrenMatch(Contains(AllOf(
           NodeMatches(NameMatches("capturers")),
-          ChildrenMatch(UnorderedElementsAre(NodeMatches(AllOf(
-              NameMatches("1"),
-              MetricList(UnorderedElementsAre(
-                  UIntMetricIs("sample format", 0), UIntMetricIs("channels", 0),
-                  UIntMetricIs("frames per second", 0),
-                  UIntMetricIs("payload buffer size", 0),
-                  DoubleMetricIs("gain db", 0.0), UIntMetricIs("muted", 0),
-                  UIntMetricIs("calls to SetGainWithRamp", 0)))))))))));
+          ChildrenMatch(UnorderedElementsAre(AllOf(
+              ChildrenMatch(
+                  Contains(AllOf(
+                      NodeMatches(NameMatches("payload buffers")),
+                      ChildrenMatch(IsEmpty())))),
+              NodeMatches(AllOf(
+                  NameMatches("1"),
+                  MetricList(UnorderedElementsAre(
+                      UIntMetricIs("sample format", 0), UIntMetricIs("channels", 0),
+                      UIntMetricIs("frames per second", 0),
+                      DoubleMetricIs("gain db", 0.0), UIntMetricIs("muted", 0),
+                      UIntMetricIs("calls to SetGainWithRamp", 0))))))))))));
 
   fuchsia::media::AudioStreamType stream_type{
       .sample_format = fuchsia::media::AudioSampleFormat::SIGNED_16,
@@ -492,6 +518,10 @@ TEST_F(ReporterTest, CapturerMetrics) {
       .frames_per_second = 48000};
   under_test_.SettingCapturerStreamType(capturer, stream_type);
   under_test_.AddingCapturerPayloadBuffer(capturer, 0, 4096);
+  under_test_.AddingCapturerPayloadBuffer(capturer, 10, 8192);
+  under_test_.SendingCapturerPacket(capturer, fuchsia::media::StreamPacket {
+      .payload_buffer_id = 10,
+  });
   under_test_.SettingCapturerGain(capturer, -1.0);
   under_test_.SettingCapturerGainWithRamp(
       capturer, -1.0, ZX_SEC(1), fuchsia::media::audio::RampType::SCALE_LINEAR);
@@ -503,17 +533,31 @@ TEST_F(ReporterTest, CapturerMetrics) {
       GetHierarchy(),
       ChildrenMatch(Contains(AllOf(
           NodeMatches(NameMatches("capturers")),
-          ChildrenMatch(UnorderedElementsAre(NodeMatches(AllOf(
-              NameMatches("1"),
-              MetricList(UnorderedElementsAre(
-                  UIntMetricIs("sample format", static_cast<uint64_t>(
-                                                    stream_type.sample_format)),
-                  UIntMetricIs("channels", stream_type.channels),
-                  UIntMetricIs("frames per second",
-                               stream_type.frames_per_second),
-                  UIntMetricIs("payload buffer size", 4096),
-                  DoubleMetricIs("gain db", -1.0), UIntMetricIs("muted", 1),
-                  UIntMetricIs("calls to SetGainWithRamp", 2)))))))))));
+          ChildrenMatch(UnorderedElementsAre(AllOf(
+              ChildrenMatch(
+                  Contains(AllOf(
+                      NodeMatches(NameMatches("payload buffers")),
+                      ChildrenMatch(UnorderedElementsAre(
+                          NodeMatches(AllOf(
+                              NameMatches("0"),
+                              MetricList(UnorderedElementsAre(
+                                  UIntMetricIs("size", 4096),
+                                  UIntMetricIs("packets", 0))))),
+                          NodeMatches(AllOf(
+                              NameMatches("10"),
+                              MetricList(UnorderedElementsAre(
+                                  UIntMetricIs("size", 8192),
+                                  UIntMetricIs("packets", 1)))))))))),
+              NodeMatches(AllOf(
+                  NameMatches("1"),
+                  MetricList(UnorderedElementsAre(
+                      UIntMetricIs("sample format", static_cast<uint64_t>(
+                                                        stream_type.sample_format)),
+                      UIntMetricIs("channels", stream_type.channels),
+                      UIntMetricIs("frames per second",
+                                   stream_type.frames_per_second),
+                      DoubleMetricIs("gain db", -1.0), UIntMetricIs("muted", 1),
+                      UIntMetricIs("calls to SetGainWithRamp", 2))))))))))));
 }
 
 }  // namespace media::audio::test

@@ -145,8 +145,36 @@ void Reporter::AddingRendererPayloadBuffer(const AudioRendererImpl& renderer,
     return;
   }
 
-  // TODO(dalesat): Expand when multiple buffers are allowed.
-  r->payload_buffer_size_.Set(size);
+  r->payload_buffers_.emplace(
+      buffer_id, PayloadBuffer(r->payload_buffers_node_.CreateChild(
+                                   std::to_string(buffer_id)),
+                               size));
+}
+
+void Reporter::RemovingRendererPayloadBuffer(const AudioRendererImpl& renderer,
+                                             uint32_t buffer_id) {
+  Renderer* r = FindRenderer(renderer);
+  if (r == nullptr) {
+    FXL_DLOG(FATAL);
+    return;
+  }
+  r->payload_buffers_.erase(buffer_id);
+}
+
+void Reporter::SendingRendererPacket(
+    const AudioRendererImpl& renderer,
+    const fuchsia::media::StreamPacket& packet) {
+  Renderer* r = FindRenderer(renderer);
+  if (r == nullptr) {
+    FXL_DLOG(FATAL);
+    return;
+  }
+  auto payload_buffer = r->payload_buffers_.find(packet.payload_buffer_id);
+  if (payload_buffer == r->payload_buffers_.end()) {
+    FXL_DLOG(FATAL);
+    return;
+  }
+  payload_buffer->second.packets_.Add(1);
 }
 
 void Reporter::SettingRendererGain(const AudioRendererImpl& renderer,
@@ -237,8 +265,26 @@ void Reporter::AddingCapturerPayloadBuffer(const AudioCapturerImpl& capturer,
     return;
   }
 
-  // TODO(dalesat): Expand when multiple buffers are allowed.
-  c->payload_buffer_size_.Set(size);
+  c->payload_buffers_.emplace(
+      buffer_id, PayloadBuffer(c->payload_buffers_node_.CreateChild(
+                                   std::to_string(buffer_id)),
+                               size));
+}
+
+void Reporter::SendingCapturerPacket(
+    const AudioCapturerImpl& capturer,
+    const fuchsia::media::StreamPacket& packet) {
+  Capturer* c = FindCapturer(capturer);
+  if (c == nullptr) {
+    FXL_DLOG(FATAL);
+    return;
+  }
+  auto payload_buffer = c->payload_buffers_.find(packet.payload_buffer_id);
+  if (payload_buffer == c->payload_buffers_.end()) {
+    FXL_DLOG(FATAL);
+    return;
+  }
+  payload_buffer->second.packets_.Add(1);
 }
 
 void Reporter::SettingCapturerGain(const AudioCapturerImpl& capturer,

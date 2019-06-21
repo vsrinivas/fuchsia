@@ -9,6 +9,7 @@
 #include <lib/fit/function.h>
 
 #include <memory>
+#include <unordered_map>
 
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/binding_set.h"
@@ -146,7 +147,8 @@ class AudioRendererImpl
                    std::unique_ptr<GainControlBinding>>
       gain_control_bindings_;
   bool is_shutdown_ = false;
-  fbl::RefPtr<RefCountedVmoMapper> payload_buffer_;
+  std::unordered_map<uint32_t, fbl::RefPtr<RefCountedVmoMapper>>
+      payload_buffers_;
   bool config_validated_ = false;
 
   // PTS interpolation state.

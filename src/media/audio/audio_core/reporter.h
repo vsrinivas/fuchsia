@@ -85,6 +85,10 @@ class Reporter {
       const fuchsia::media::AudioStreamType& stream_type);
   void AddingRendererPayloadBuffer(const AudioRendererImpl& renderer,
                                    uint32_t buffer_id, uint64_t size);
+  void RemovingRendererPayloadBuffer(const AudioRendererImpl& renderer,
+                                     uint32_t buffer_id);
+  void SendingRendererPacket(const AudioRendererImpl& renderer,
+                             const fuchsia::media::StreamPacket& packet);
   void SettingRendererGain(const AudioRendererImpl& renderer, float gain_db);
   void SettingRendererGainWithRamp(const AudioRendererImpl& renderer,
                                    float gain_db, zx_duration_t duration_ns,
@@ -103,6 +107,8 @@ class Reporter {
       const fuchsia::media::AudioStreamType& stream_type);
   void AddingCapturerPayloadBuffer(const AudioCapturerImpl& capturer,
                                    uint32_t buffer_id, uint64_t size);
+  void SendingCapturerPacket(const AudioCapturerImpl& capturer,
+                             const fuchsia::media::StreamPacket& packet);
   void SettingCapturerGain(const AudioCapturerImpl& capturer, float gain_db);
   void SettingCapturerGainWithRamp(const AudioCapturerImpl& capturer,
                                    float gain_db, zx_duration_t duration_ns,
@@ -132,12 +138,23 @@ class Reporter {
     Input(inspect::Node node) : Device(std::move(node)) {}
   };
 
+  struct PayloadBuffer {
+    PayloadBuffer(inspect::Node node, uint64_t size) : node_(std::move(node)) {
+      size_ = node_.CreateUIntMetric("size", size);
+      packets_ = node_.CreateUIntMetric("packets", 0);
+    }
+
+    inspect::Node node_;
+    inspect::UIntMetric size_;
+    inspect::UIntMetric packets_;
+  };
+
   struct ClientPort {
     ClientPort(inspect::Node node) : node_(std::move(node)) {
       sample_format_ = node_.CreateUIntMetric("sample format", 0);
       channels_ = node_.CreateUIntMetric("channels", 0);
       frames_per_second_ = node_.CreateUIntMetric("frames per second", 0);
-      payload_buffer_size_ = node_.CreateUIntMetric("payload buffer size", 0);
+      payload_buffers_node_ = node_.CreateChild("payload buffers");
       gain_db_ = node_.CreateDoubleMetric("gain db", 0.0);
       muted_ = node_.CreateUIntMetric("muted", 0);
       set_gain_with_ramp_calls_ =
@@ -148,10 +165,8 @@ class Reporter {
     inspect::UIntMetric channels_;
     inspect::UIntMetric frames_per_second_;
 
-    // We only support one payload buffer in a renderer or capturer, so this
-    // single value is adequate for now. When multiple buffers are supported,
-    // we'll need a collection of id/size pairs.
-    inspect::UIntMetric payload_buffer_size_;
+    inspect::Node payload_buffers_node_;
+    std::unordered_map<uint32_t, PayloadBuffer> payload_buffers_;
 
     inspect::DoubleMetric gain_db_;
     inspect::UIntMetric muted_;
