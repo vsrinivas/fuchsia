@@ -4,7 +4,7 @@
 
 driver("bma253") {
   sources = [
-    "bma253.cpp",
+    "bma253.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.clock",
@@ -32,8 +32,8 @@ driver("bma253") {
 test("bma253-test") {
   output_name = "bma253-test"
   sources = [
-    "bma253-test.cpp",
-    "bma253.cpp",
+    "bma253-test.cc",
+    "bma253.cc",
   ]
   deps = [
     "$zx/system/dev/lib/device-protocol-i2c-channel",

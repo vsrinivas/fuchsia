@@ -5,10 +5,10 @@
 library("v2") {
   kernel = true
   sources = [
-    "arm_gicv2.cpp",
-    "arm_gicv2m.cpp",
-    "arm_gicv2m_msi.cpp",
-    "arm_gicv2m_pcie.cpp",
+    "arm_gicv2.cc",
+    "arm_gicv2m.cc",
+    "arm_gicv2m_msi.cc",
+    "arm_gicv2m_pcie.cc",
   ]
   deps = [
     "$zx/kernel/dev/interrupt",

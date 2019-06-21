@@ -4,7 +4,7 @@
 
 library("pci") {
   sources = [
-    "pio.cpp",
+    "pio.cc",
   ]
   deps = [
     "$zx/system/ulib/ddk",

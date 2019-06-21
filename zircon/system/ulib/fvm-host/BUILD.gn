@@ -5,16 +5,16 @@
 library("fvm-host") {
   host = true
   sources = [
-    "container/container.cpp",
-    "container/fvm.cpp",
-    "container/sparse.cpp",
-    "file-wrapper.cpp",
-    "format.cpp",
-    "format/blobfs.cpp",
-    "format/format.cpp",
-    "format/minfs.cpp",
-    "fvm-info.cpp",
-    "sparse-paver.cpp",
+    "container/container.cc",
+    "container/fvm.cc",
+    "container/sparse.cc",
+    "file-wrapper.cc",
+    "format.cc",
+    "format/blobfs.cc",
+    "format/format.cc",
+    "format/minfs.cc",
+    "fvm-info.cc",
+    "sparse-paver.cc",
   ]
   public_deps = [
     # <fvm/format.h> has #include <fs-management/mount.h> though that

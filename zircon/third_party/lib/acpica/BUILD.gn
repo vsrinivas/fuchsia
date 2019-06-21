@@ -77,14 +77,14 @@ static_library("acpica") {
   ]
 
   if (is_kernel) {
-    sources += [ "$zx/kernel/lib/acpica/oszircon.cpp" ]
+    sources += [ "$zx/kernel/lib/acpica/oszircon.cc" ]
     deps = [
       "$zx/kernel/platform/pc:headers",
       "$zx/kernel/vm:headers",
     ]
   } else {
     sources += [
-      "$zx/system/ulib/acpica/osfuchsia.cpp",
+      "$zx/system/ulib/acpica/osfuchsia.cc",
       "source/common/ahids.c",
       "source/common/ahpredef.c",
       "source/common/ahtable.c",

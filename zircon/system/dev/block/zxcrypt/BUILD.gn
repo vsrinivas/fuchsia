@@ -4,11 +4,11 @@
 
 driver("zxcrypt") {
   sources = [
-    "device-info.cpp",
-    "device-manager.cpp",
-    "device.cpp",
-    "extra.cpp",
-    "worker.cpp",
+    "device-info.cc",
+    "device-manager.cc",
+    "device.cc",
+    "extra.cc",
+    "worker.cc",
   ]
   configs += [ "$zx/public/gn/config:integer-paranoia" ]
 

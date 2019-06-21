@@ -62,19 +62,19 @@ if (toolchain.tags + exclude_tags - exclude_tags != toolchain.tags ||
 
     sources = [
       "data.S",
-      "syscall-wrappers.cpp",
-      "zx_cache_flush.cpp",
-      "zx_channel_call.cpp",
-      "zx_cprng_draw.cpp",
-      "zx_deadline_after.cpp",
-      "zx_status_get_string.cpp",
-      "zx_system_get_dcache_line_size.cpp",
-      "zx_system_get_features.cpp",
-      "zx_system_get_num_cpus.cpp",
-      "zx_system_get_physmem.cpp",
-      "zx_system_get_version.cpp",
-      "zx_ticks_get.cpp",
-      "zx_ticks_per_second.cpp",
+      "syscall-wrappers.cc",
+      "zx_cache_flush.cc",
+      "zx_channel_call.cc",
+      "zx_cprng_draw.cc",
+      "zx_deadline_after.cc",
+      "zx_status_get_string.cc",
+      "zx_system_get_dcache_line_size.cc",
+      "zx_system_get_features.cc",
+      "zx_system_get_num_cpus.cc",
+      "zx_system_get_physmem.cc",
+      "zx_system_get_version.cc",
+      "zx_ticks_get.cc",
+      "zx_ticks_per_second.cc",
     ]
 
     configs += [ ":config" ]

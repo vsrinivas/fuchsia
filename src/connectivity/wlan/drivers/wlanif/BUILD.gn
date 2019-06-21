@@ -12,9 +12,9 @@ all_hdrs = [
 ]
 
 all_src = [
-  "convert.cpp",
-  "device.cpp",
-  "driver.cpp",
+  "convert.cc",
+  "device.cc",
+  "driver.cc",
 ]
 
 all_deps = [

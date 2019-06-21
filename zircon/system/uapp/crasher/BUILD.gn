@@ -4,7 +4,7 @@
 
 executable("crasher") {
   sources = [
-    "cpp_specific.cpp",
+    "cpp_specific.cc",
     "crasher.c",
   ]
   cflags = [ "-fstack-protector-all" ]

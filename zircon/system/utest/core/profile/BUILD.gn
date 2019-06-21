@@ -5,7 +5,7 @@
 source_set("profile") {
   testonly = true
   sources = [
-    "profile.cpp",
+    "profile.cc",
   ]
   deps = [
     "$zx/system/ulib/fdio",

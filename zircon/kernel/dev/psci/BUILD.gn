@@ -5,7 +5,7 @@
 library("psci") {
   kernel = true
   sources = [
-    "psci.cpp",
+    "psci.cc",
   ]
   deps = [
     "$zx/kernel/dev/pdev",

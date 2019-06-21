@@ -8,7 +8,7 @@
 # this verifies that the pieces are working together correctly.
 test("backtrace-request-integration") {
   sources = [
-    "backtrace-request-test.cpp",
+    "backtrace-request-test.cc",
   ]
   deps = [
     "$zx/system/ulib/backtrace-request",

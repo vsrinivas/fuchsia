@@ -55,7 +55,7 @@ executable("convert_unittest") {
   testonly = true
 
   sources = [
-    "convert_unittest.cpp",
+    "convert_unittest.cc",
   ]
 
   deps = [
@@ -71,7 +71,7 @@ executable("device_unittest") {
   testonly = true
 
   sources = [
-    "device_unittest.cpp",
+    "device_unittest.cc",
   ]
 
   deps = [

@@ -11,7 +11,7 @@ group("test") {
 
 test("logger-unit") {
   sources = [
-    "logger-test.cpp",
+    "logger-test.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-driver-test:c",

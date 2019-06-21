@@ -4,8 +4,8 @@
 
 driver("astro-tdm-output") {
   sources = [
-    "audio-stream-out.cpp",
-    "tas27xx.cpp",
+    "audio-stream-out.cc",
+    "tas27xx.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.composite",

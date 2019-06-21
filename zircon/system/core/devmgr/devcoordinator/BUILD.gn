@@ -4,7 +4,7 @@
 
 executable("devcoordinator") {
   sources = [
-    "main.cpp",
+    "main.cc",
   ]
 
   deps = [
@@ -38,24 +38,24 @@ source_set("common") {
   visibility = [ ":*" ]
   sources = [
     "binding-internal.h",
-    "binding.cpp",
-    "boot-args.cpp",
+    "binding.cc",
+    "boot-args.cc",
     "boot-args.h",
-    "composite-device.cpp",
-    "coordinator.cpp",
+    "composite-device.cc",
+    "coordinator.cc",
     "coordinator.h",
-    "devfs.cpp",
+    "devfs.cc",
     "devfs.h",
-    "devhost-loader-service.cpp",
+    "devhost-loader-service.cc",
     "devhost-loader-service.h",
-    "device.cpp",
+    "device.cc",
     "device.h",
-    "driver.cpp",
+    "driver.cc",
     "driver.h",
-    "fidl.cpp",
-    "suspend-task.cpp",
-    "task.cpp",
-    "vmo-writer.cpp",
+    "fidl.cc",
+    "suspend-task.cc",
+    "task.cc",
+    "vmo-writer.cc",
     "vmo-writer.h",
   ]
   public_deps = [
@@ -91,10 +91,10 @@ test("devcoordinator-test") {
   output_name = "devcoordinator-test"
   test_group = "ddk"
   sources = [
-    "binding-test.cpp",
-    "boot-args-test.cpp",
-    "coordinator-test.cpp",
-    "task-test.cpp",
+    "binding-test.cc",
+    "boot-args-test.cc",
+    "coordinator-test.cc",
+    "task-test.cc",
   ]
   deps = [
     ":common",

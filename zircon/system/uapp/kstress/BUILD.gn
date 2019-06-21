@@ -6,8 +6,8 @@ import("$zx/kernel/params.gni")
 
 executable("kstress") {
   sources = [
-    "main.cpp",
-    "stress_test.cpp",
+    "main.cc",
+    "stress_test.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-sysinfo:c",
@@ -19,7 +19,7 @@ executable("kstress") {
 
   # The vmstress test has starvation issues when run without the fair scheduler.
   if (enable_fair_scheduler) {
-    sources += ["vmstress.cpp"]
+    sources += ["vmstress.cc"]
   } else {
     defines = [ "DISABLE_VMSTRESS" ]
   }

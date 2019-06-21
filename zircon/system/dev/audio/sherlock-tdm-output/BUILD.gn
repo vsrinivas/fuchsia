@@ -4,9 +4,9 @@
 
 driver("sherlock-tdm-output") {
   sources = [
-    "audio-stream-out.cpp",
-    "tas5720.cpp",
-    "tas5760.cpp",
+    "audio-stream-out.cc",
+    "tas5720.cc",
+    "tas5760.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.composite",

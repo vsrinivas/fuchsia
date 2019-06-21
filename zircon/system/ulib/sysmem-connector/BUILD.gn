@@ -6,7 +6,7 @@ library("sysmem-connector") {
   sdk = "source"
   sdk_headers = [ "lib/sysmem-connector/sysmem-connector.h" ]
   sources = [
-    "sysmem-connector.cpp",
+    "sysmem-connector.cc",
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   deps = [

@@ -17,13 +17,13 @@ library("cobalt-client") {
   ]
   host = true
   sources = [
-    "collector.cpp",
-    "counter.cpp",
-    "histogram.cpp",
-    "metric_info.cpp",
+    "collector.cc",
+    "counter.cc",
+    "histogram.cc",
+    "metric_info.cc",
   ]
   if (is_fuchsia) {
-    sources += [ "cobalt_logger.cpp" ]
+    sources += [ "cobalt_logger.cc" ]
   }
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   public_deps = [
@@ -49,7 +49,7 @@ library("cobalt-client") {
 # This library may only be imported from tests.
 library("in-memory-logger") {
   testonly = true
-  sources = [ "in-memory-logger.cpp" ]
+  sources = [ "in-memory-logger.cc" ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   public_deps = [
     "$zx/system/fidl/fuchsia-cobalt:c.headers",

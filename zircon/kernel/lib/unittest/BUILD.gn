@@ -5,8 +5,8 @@
 library("unittest") {
   kernel = true
   sources = [
-    "unittest.cpp",
-    "user_memory.cpp",
+    "unittest.cc",
+    "user_memory.cc",
   ]
   public_deps = [
     # <lib/unittest/user_memory.h> has #include <lib/crypto/prng.h>.

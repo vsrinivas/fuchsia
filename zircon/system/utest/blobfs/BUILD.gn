@@ -5,7 +5,7 @@
 test("blobfs") {
   test_group = "fs"
   sources = [
-    "blobfs.cpp",
+    "blobfs.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-device:c",

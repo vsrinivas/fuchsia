@@ -12,8 +12,8 @@ group("test") {
 test("minfs-allocator-unit") {
   test_group = "fs"
   sources = [
-    "allocator-test.cpp",
-    "main.cpp",
+    "allocator-test.cc",
+    "main.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-minfs:c",

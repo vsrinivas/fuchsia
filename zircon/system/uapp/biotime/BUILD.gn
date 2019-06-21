@@ -5,7 +5,7 @@
 executable("biotime") {
   testonly = true
   sources = [
-    "biotime.cpp",
+    "biotime.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-hardware-block:c",

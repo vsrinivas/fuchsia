@@ -5,7 +5,7 @@
 library("memory_limit") {
   kernel = true
   sources = [
-    "memory_limit.cpp",
+    "memory_limit.cc",
   ]
   deps = [
     "$zx/kernel/lib/fbl",

@@ -11,13 +11,13 @@ group("test") {
 
 test("crypto") {
   sources = [
-    "aead.cpp",
-    "bytes.cpp",
-    "cipher.cpp",
-    "hkdf.cpp",
-    "hmac.cpp",
-    "secret.cpp",
-    "utils.cpp",
+    "aead.cc",
+    "bytes.cc",
+    "cipher.cc",
+    "hkdf.cc",
+    "hmac.cc",
+    "secret.cc",
+    "utils.cc",
   ]
   deps = [
     "$zx/system/ulib/crypto",

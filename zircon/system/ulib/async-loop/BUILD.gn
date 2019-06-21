@@ -26,7 +26,7 @@ library("async-loop-cpp") {
   sdk_publishable = true
   sdk_headers = [ "lib/async-loop/cpp/loop.h" ]
   sources = [
-    "loop_wrapper.cpp",
+    "loop_wrapper.cc",
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   deps = [

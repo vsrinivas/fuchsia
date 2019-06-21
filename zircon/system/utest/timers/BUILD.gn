@@ -4,7 +4,7 @@
 
 test("timers") {
   sources = [
-    "timers.cpp",
+    "timers.cc",
   ]
   deps = [
     "$zx/system/ulib/fbl",

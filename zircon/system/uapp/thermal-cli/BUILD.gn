@@ -4,7 +4,7 @@
 
 executable("thermal-cli") {
   sources = [
-    "main.cpp",
+    "main.cc",
   ]
   deps = [
     ":common",
@@ -17,7 +17,7 @@ executable("thermal-cli") {
 
 source_set("common") {
   sources = [
-    "thermal-cli.cpp",
+    "thermal-cli.cc",
     "thermal-cli.h",
   ]
   deps = [
@@ -32,7 +32,7 @@ source_set("common") {
 test("thermal-cli-test") {
   output_name = "thermal-cli-test"
   sources = [
-    "test/thermal-cli-test.cpp",
+    "test/thermal-cli-test.cc",
   ]
   include_dirs = [ "." ]
   deps = [

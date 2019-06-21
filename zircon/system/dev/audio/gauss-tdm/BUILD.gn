@@ -5,8 +5,8 @@
 driver("gauss-tdm") {
   sources = [
     "gauss-tdm-out.c",
-    "gauss-tdm-stream.cpp",
-    "tas57xx.cpp",
+    "gauss-tdm-stream.cc",
+    "tas57xx.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.composite",

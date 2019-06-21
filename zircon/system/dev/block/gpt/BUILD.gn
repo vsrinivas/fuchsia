@@ -4,7 +4,7 @@
 
 driver("gpt") {
   sources = [
-    "gpt.cpp",
+    "gpt.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.block",

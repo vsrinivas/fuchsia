@@ -4,7 +4,7 @@
 
 driver("mtk-clk") {
   sources = [
-    "mtk-clk.cpp",
+    "mtk-clk.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.clockimpl",

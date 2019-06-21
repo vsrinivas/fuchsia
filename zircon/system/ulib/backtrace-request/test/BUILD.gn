@@ -11,7 +11,7 @@ group("test") {
 
 test("backtrace-request") {
   sources = [
-    "backtrace-request-test.cpp",
+    "backtrace-request-test.cc",
   ]
   deps = [
     "$zx/system/ulib/backtrace-request:utils",

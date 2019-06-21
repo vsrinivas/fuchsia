@@ -7,9 +7,9 @@ assert(is_kernel)
 library("mtrace") {
   kernel = true
   sources = [
-    "mtrace-ipt.cpp",
-    "mtrace-pmu.cpp",
-    "mtrace.cpp",
+    "mtrace-ipt.cc",
+    "mtrace-pmu.cc",
+    "mtrace.cc",
   ]
   deps = [
     "$zx/kernel/lib/perfmon:headers",

@@ -6,7 +6,7 @@ library("id_allocator") {
   sdk = "source"
   sdk_headers = [ "id_allocator/id_allocator.h" ]
   sources = [
-    "id_allocator.cpp",
+    "id_allocator.cc",
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   public_deps = [

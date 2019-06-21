@@ -22,17 +22,17 @@ library("fidl_base") {
     "lib/fidl/walker.h",
   ]
   sources = [
-    "builder.cpp",
-    "decoding.cpp",
-    "encoding.cpp",
-    "formatting.cpp",
-    "internal.cpp",
-    "linearizing.cpp",
-    "message.cpp",
-    "message_buffer.cpp",
-    "message_builder.cpp",
-    "validating.cpp",
-    "walker.cpp",
+    "builder.cc",
+    "decoding.cc",
+    "encoding.cc",
+    "formatting.cc",
+    "internal.cc",
+    "linearizing.cc",
+    "message.cc",
+    "message_buffer.cc",
+    "message_builder.cc",
+    "validating.cc",
+    "walker.cc",
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   deps = [
@@ -49,8 +49,8 @@ library("fidl") {
   ]
   sources = [
     "epitaph.c",
-    "handle_closing.cpp",
-    "transport.cpp",
+    "handle_closing.cc",
+    "transport.cc",
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   deps = [
@@ -70,7 +70,7 @@ library("fidl-llcpp") {
     "lib/fidl/llcpp/transaction.h",
   ]
   sources = [
-    "llcpp_transaction.cpp",
+    "llcpp_transaction.cc",
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   public_deps = [

@@ -4,8 +4,8 @@
 
 driver("ramdisk") {
   sources = [
-    "ramdisk-controller.cpp",
-    "ramdisk.cpp",
+    "ramdisk-controller.cc",
+    "ramdisk.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.block",

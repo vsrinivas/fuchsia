@@ -6,9 +6,9 @@ import("//build/package.gni")
 
 source_set("lib") {
   sources = [
-    "camera_manager_impl.cpp",
+    "camera_manager_impl.cc",
     "camera_manager_impl.h",
-    "video_device_client.cpp",
+    "video_device_client.cc",
     "video_device_client.h",
   ]
 
@@ -36,7 +36,7 @@ executable("bin") {
   output_name = "camera_manager"
 
   sources = [
-    "camera_manager.cpp",
+    "camera_manager.cc",
   ]
 
   deps = [

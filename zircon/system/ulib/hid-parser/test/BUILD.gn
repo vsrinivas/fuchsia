@@ -11,10 +11,10 @@ group("test") {
 
 test("hid-parser") {
   sources = [
-    "hid-helper-test.cpp",
-    "hid-parser-test.cpp",
-    "hid-report-data.cpp",
-    "hid-utest-data.cpp",
+    "hid-helper-test.cc",
+    "hid-parser-test.cc",
+    "hid-report-data.cc",
+    "hid-utest-data.cc",
   ]
   deps = [
     "$zx/system/ulib/fbl",
@@ -24,5 +24,5 @@ test("hid-parser") {
   ]
 }
 # TODO(BLD-356): hid-parser-fuzzer
-# sources=["hid-parser-fuzztest.cpp"]
+# sources=["hid-parser-fuzztest.cc"]
 # deps= hid-parser fbl fdio unittest

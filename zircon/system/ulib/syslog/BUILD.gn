@@ -12,9 +12,9 @@ library("syslog") {
   ]
   shared = true
   sources = [
-    "fx_logger.cpp",
-    "global.cpp",
-    "logger.cpp",
+    "fx_logger.cc",
+    "global.cc",
+    "logger.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-logger:c",

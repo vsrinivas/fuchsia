@@ -4,7 +4,7 @@
 
 test("chromeos-disk-setup") {
   sources = [
-    "chromeos-disk-setup.cpp",
+    "chromeos-disk-setup.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-io:c",

@@ -10,8 +10,8 @@ group("realtek") {
 
 driver("realtek-audio-codec") {
   sources = [
-    "realtek-codec.cpp",
-    "realtek-stream.cpp",
+    "realtek-codec.cc",
+    "realtek-stream.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.pci",

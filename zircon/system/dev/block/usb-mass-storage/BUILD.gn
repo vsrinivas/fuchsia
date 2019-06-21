@@ -4,7 +4,7 @@
 
 driver("usb-mass-storage") {
   sources = [
-    "usb-mass-storage.cpp",
+    "usb-mass-storage.cc",
   ]
   deps = [
     ":block",
@@ -17,7 +17,7 @@ driver("usb-mass-storage") {
 source_set("block") {
   visibility = [ ":*" ]
   sources = [
-    "block.cpp",
+    "block.cc",
   ]
   public_deps = [
     "$zx/system/banjo/ddk.protocol.block",
@@ -49,7 +49,7 @@ group("tests") {
 
 test("ums-block") {
   sources = [
-    "tests/block.cpp",
+    "tests/block.cc",
   ]
   deps = [
     ":block",
@@ -64,8 +64,8 @@ test("ums-block") {
 
 test("ums") {
   sources = [
-    "tests/usb-mass-storage.cpp",
-    "usb-mass-storage.cpp",
+    "tests/usb-mass-storage.cc",
+    "usb-mass-storage.cc",
   ]
   defines = [ "UNITTEST" ]
   deps = [

@@ -4,9 +4,9 @@
 
 driver("mbr") {
   sources = [
-    "mbr-device.cpp",
+    "mbr-device.cc",
     "mbr-device.h",
-    "mbr.cpp",
+    "mbr.cc",
     "mbr.h",
   ]
   deps = [
@@ -24,10 +24,10 @@ driver("mbr") {
 test("mbr-test") {
   output_name = "mbr-test"
   sources = [
-    "mbr-device-test.cpp",
-    "mbr-device.cpp",
-    "mbr-test.cpp",
-    "mbr.cpp",
+    "mbr-device-test.cc",
+    "mbr-device.cc",
+    "mbr-test.cc",
+    "mbr.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.block",

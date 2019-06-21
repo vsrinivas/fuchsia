@@ -5,7 +5,7 @@
 driver("integration-test") {
   # TODO: testonly = true
   sources = [
-    "test.cpp",
+    "test.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.platform.bus",

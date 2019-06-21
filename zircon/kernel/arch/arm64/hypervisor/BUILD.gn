@@ -5,13 +5,13 @@
 source_set("hypervisor") {
   sources = [
     "el2.S",
-    "el2_cpu_state.cpp",
+    "el2_cpu_state.cc",
     "gic/el2.S",
-    "gic/gicv2.cpp",
-    "gic/gicv3.cpp",
-    "guest.cpp",
-    "vcpu.cpp",
-    "vmexit.cpp",
+    "gic/gicv2.cc",
+    "gic/gicv3.cc",
+    "guest.cc",
+    "vcpu.cc",
+    "vmexit.cc",
   ]
   deps = [
     ":tests",
@@ -27,7 +27,7 @@ source_set("hypervisor") {
 source_set("tests") {
   # TODO: testonly = true
   sources = [
-    "gich_state_test.cpp",
+    "gich_state_test.cc",
   ]
   deps = [
     "$zx/kernel/dev/interrupt/arm_gic/common",

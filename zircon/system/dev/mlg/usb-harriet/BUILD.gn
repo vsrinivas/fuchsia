@@ -4,7 +4,7 @@
 
 driver("usb-harriet") {
   sources = [
-    "usb-harriet.cpp",
+    "usb-harriet.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.usb",

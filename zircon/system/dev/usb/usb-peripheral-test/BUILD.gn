@@ -5,7 +5,7 @@
 if (is_fuchsia) {
   driver("usb-peripheral-test") {
     sources = [
-      "driver.cpp",
+      "driver.cc",
     ]
     deps = [
       "$zx/system/banjo/ddk.protocol.usb",
@@ -22,7 +22,7 @@ if (is_fuchsia) {
   test("usb-peripheral-test") {
     output_name = "usb-peripheral-test"
     sources = [
-      "test.cpp",
+      "test.cc",
     ]
     deps = [
       "$zx/system/ulib/fbl",

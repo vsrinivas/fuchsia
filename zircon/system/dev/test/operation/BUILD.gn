@@ -4,10 +4,10 @@
 
 test("operation") {
   sources = [
-    "operation-list-test.cpp",
-    "operation-pool-test.cpp",
-    "operation-queue-test.cpp",
-    "operation-test.cpp",
+    "operation-list-test.cc",
+    "operation-pool-test.cc",
+    "operation-queue-test.cc",
+    "operation-test.cc",
   ]
   deps = [
     "$zx/system/dev/lib/fake_ddk",

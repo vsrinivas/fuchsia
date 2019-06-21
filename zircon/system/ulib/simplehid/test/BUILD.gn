@@ -11,7 +11,7 @@ group("test") {
 
 test("simplehid") {
   sources = [
-    "simplehid-test.cpp",
+    "simplehid-test.cc",
   ]
   deps = [
     "$zx/system/dev/lib/fake_ddk",

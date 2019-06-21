@@ -4,7 +4,7 @@
 
 executable("audio-codec") {
   sources = [
-    "audio-codec.cpp",
+    "audio-codec.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-hardware-audiocodec:c",

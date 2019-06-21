@@ -4,7 +4,7 @@
 
 test("mtd") {
   sources = [
-    "mtd-interface-tests.cpp",
+    "mtd-interface-tests.cc",
   ]
 
   deps = [

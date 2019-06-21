@@ -10,10 +10,10 @@ library("hid-parser") {
     "hid-parser/usages.h",
   ]
   sources = [
-    "item.cpp",
-    "parser.cpp",
-    "report.cpp",
-    "units.cpp",
+    "item.cc",
+    "parser.cc",
+    "report.cc",
+    "units.cc",
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   deps = [

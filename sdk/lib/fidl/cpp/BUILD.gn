@@ -131,7 +131,7 @@ source_set("test_util") {
   testonly = true
 
   sources = [
-    "test/test_util.cpp",
+    "test/test_util.cc",
     "test/test_util.h",
   ]
 

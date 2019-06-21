@@ -9,10 +9,10 @@ driver_module("virtual_camera_driver") {
   output_name = "virtual_camera_driver"
 
   sources = [
-    "virtual_camera.cpp",
-    "virtual_camera_control.cpp",
+    "virtual_camera.cc",
+    "virtual_camera_control.cc",
     "virtual_camera_control.h",
-    "virtual_camera_device.cpp",
+    "virtual_camera_device.cc",
     "virtual_camera_device.h",
   ]
 

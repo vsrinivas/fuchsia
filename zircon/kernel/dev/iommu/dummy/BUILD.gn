@@ -5,6 +5,6 @@
 library("dummy") {
   kernel = true
   sources = [
-    "dummy_iommu.cpp",
+    "dummy_iommu.cc",
   ]
 }

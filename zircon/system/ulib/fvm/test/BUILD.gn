@@ -11,17 +11,17 @@ group("test") {
 
 test("fvm-unit") {
   sources = [
-    "integrity-validation-test.cpp",
-    "format-info-test.cpp",
-    "partition-entry-test.cpp",
-    "slice-entry-test.cpp",
+    "integrity-validation-test.cc",
+    "format-info-test.cc",
+    "partition-entry-test.cc",
+    "slice-entry-test.cc",
   ]
   deps = [
     "$zx/system/ulib/fvm",
     "$zx/system/ulib/zxtest",
   ]
   if (is_fuchsia) {
-    sources += [ "client-test.cpp" ]
+    sources += [ "client-test.cc" ]
     deps += [
       "$zx/system/ulib/block-client",
       "$zx/system/ulib/fdio",

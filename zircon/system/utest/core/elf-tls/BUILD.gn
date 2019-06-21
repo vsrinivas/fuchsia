@@ -5,7 +5,7 @@
 source_set("elf-tls") {
   testonly = true
   sources = [
-    "tls.cpp",
+    "tls.cc",
   ]
   deps = [
     "$zx/system/ulib/fdio",

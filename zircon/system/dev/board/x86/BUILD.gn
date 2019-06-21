@@ -31,7 +31,7 @@ source_set("smbios") {
   visibility = [ ":*" ]
 
   sources = [
-    "smbios.cpp",
+    "smbios.cc",
   ]
 
   configs += [ ":config" ]
@@ -49,20 +49,20 @@ source_set("smbios") {
 driver("platform-bus-x86") {
   sources = [
     "acpi-dev/dev-battery.c",
-    "acpi-dev/dev-cros-ec/dev.cpp",
-    "acpi-dev/dev-cros-ec/motion.cpp",
+    "acpi-dev/dev-cros-ec/dev.cc",
+    "acpi-dev/dev-cros-ec/motion.cc",
     "acpi-dev/dev-ec.c",
-    "acpi-dev/dev-pwrbtn.cpp",
+    "acpi-dev/dev-pwrbtn.cc",
     "acpi-dev/dev-pwrsrc.c",
-    "acpi-dev/dev-tbmc.cpp",
+    "acpi-dev/dev-tbmc.cc",
     "acpi-dev/dev-thermal.c",
     "acpi-nswalk.c",
     "debug.c",
     "init.c",
     "iommu.c",
-    "methods.cpp",
+    "methods.cc",
     "nhlt.c",
-    "pciroot.cpp",
+    "pciroot.cc",
     "power.c",
     "resources.c",
     "sysmem.c",
@@ -74,7 +74,7 @@ driver("platform-bus-x86") {
   # driver is in pci.cpp.  If not enabled then the kernel pci bus driver
   # initialization code in ACPI (kpci.c) will be built instead.
   if (enable_user_pci) {
-    sources += [ "pci.cpp" ]
+    sources += [ "pci.cc" ]
   } else {
     sources += [ "kpci.c" ]
   }
@@ -140,7 +140,7 @@ test("x86-battery-test") {
 test("x86-board-test") {
   test_group = "ddk"
   sources = [
-    "smbios-test.cpp",
+    "smbios-test.cc",
   ]
   configs += [ ":config" ]
   deps = [

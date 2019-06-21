@@ -13,23 +13,23 @@ group("test") {
 test("blobfs-unit") {
   test_group = "fs"
   sources = [
-    "allocated-extent-iterator-test.cpp",
-    "allocator-test.cpp",
-    "blob-cache-test.cpp",
-    "compressor-test.cpp",
-    "create-tests.cpp",
-    "extent-reserver-test.cpp",
-    "format-test.cpp",
-    "get-allocated-regions-test.cpp",
-    "journal-test.cpp",
-    "node-populator-test.cpp",
-    "node-reserver-test.cpp",
-    "ring-buffer-test.cpp",
-    "unbuffered-operations-builder-test.cpp",
-    "utils.cpp",
-    "vector-extent-iterator-test.cpp",
-    "vmo-buffer-test.cpp",
-    "writeback-test.cpp",
+    "allocated-extent-iterator-test.cc",
+    "allocator-test.cc",
+    "blob-cache-test.cc",
+    "compressor-test.cc",
+    "create-tests.cc",
+    "extent-reserver-test.cc",
+    "format-test.cc",
+    "get-allocated-regions-test.cc",
+    "journal-test.cc",
+    "node-populator-test.cc",
+    "node-reserver-test.cc",
+    "ring-buffer-test.cc",
+    "unbuffered-operations-builder-test.cc",
+    "utils.cc",
+    "vector-extent-iterator-test.cc",
+    "vmo-buffer-test.cc",
+    "writeback-test.cc",
   ]
   deps = [
     "$zx/system/ulib/async-loop",
@@ -44,7 +44,7 @@ test("blobfs-unit") {
 
 test("blobfs-host") {
   sources = [
-    "host-test.cpp",
+    "host-test.cc",
   ]
   deps = [
     "$zx/system/ulib/blobfs",
@@ -55,10 +55,10 @@ test("blobfs-host") {
 test("blobfs-integration") {
   test_group = "fs"
   sources = [
-    "integration/blobfs_integration_test.cpp",
-    "integration/blobfs_test.cpp",
-    "integration/environment.cpp",
-    "integration/integration_main.cpp",
+    "integration/blobfs_integration_test.cc",
+    "integration/blobfs_test.cc",
+    "integration/environment.cc",
+    "integration/integration_main.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-device:c",

@@ -21,7 +21,7 @@ driver_module("msd_img_rgx_mt8167") {
 
 source_set("driver_sources") {
   sources = [
-    "mt8167s-gpu.cpp",
+    "mt8167s-gpu.cc",
     "mt8167s-gpu.h",
   ]
 

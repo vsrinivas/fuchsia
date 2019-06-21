@@ -6,7 +6,7 @@ library("audio-proto-utils") {
   sdk = "source"
   sdk_headers = [ "audio-proto-utils/format-utils.h" ]
   sources = [
-    "format-utils.cpp",
+    "format-utils.cc",
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   deps = [

@@ -5,25 +5,25 @@
 library("vm") {
   kernel = true
   sources = [
-    "bootalloc.cpp",
-    "bootreserve.cpp",
-    "kstack.cpp",
-    "page.cpp",
-    "page_source.cpp",
-    "pinned_vm_object.cpp",
-    "pmm.cpp",
-    "pmm_arena.cpp",
-    "pmm_node.cpp",
-    "vm.cpp",
-    "vm_address_region.cpp",
-    "vm_address_region_or_mapping.cpp",
-    "vm_aspace.cpp",
-    "vm_mapping.cpp",
-    "vm_object.cpp",
-    "vm_object_paged.cpp",
-    "vm_object_physical.cpp",
-    "vm_page_list.cpp",
-    "vmm.cpp",
+    "bootalloc.cc",
+    "bootreserve.cc",
+    "kstack.cc",
+    "page.cc",
+    "page_source.cc",
+    "pinned_vm_object.cc",
+    "pmm.cc",
+    "pmm_arena.cc",
+    "pmm_node.cc",
+    "vm.cc",
+    "vm_address_region.cc",
+    "vm_address_region_or_mapping.cc",
+    "vm_aspace.cc",
+    "vm_mapping.cc",
+    "vm_object.cc",
+    "vm_object_paged.cc",
+    "vm_object_physical.cc",
+    "vm_page_list.cc",
+    "vmm.cc",
   ]
   deps = [
     # TODO: testonly
@@ -49,7 +49,7 @@ library("vm") {
 
 source_set("tests") {
   sources = [
-    "vm_unittest.cpp",
+    "vm_unittest.cc",
   ]
   deps = [
     "$zx/kernel/lib/unittest",

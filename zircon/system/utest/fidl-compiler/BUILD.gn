@@ -8,7 +8,7 @@ if (current_toolchain == default_toolchain) {
     visibility = [ ":examples" ]
     examples_dir = "$zx/system/host/fidl/examples"
     outputs = [
-      "$target_gen_dir/examples.cpp",
+      "$target_gen_dir/examples.cc",
     ]
     sources = [
       "$examples_dir/alignment.test.fidl",
@@ -48,32 +48,32 @@ if (current_toolchain == default_toolchain) {
 } else {
   test("fidl-compiler") {
     sources = [
-      "attributes_tests.cpp",
-      "bits_tests.cpp",
-      "coded_types_generator_tests.cpp",
-      "consts_tests.cpp",
-      "declaration_order_tests.cpp",
-      "enums_tests.cpp",
-      "errors_tests.cpp",
-      "flat_ast_tests.cpp",
-      "formatter_tests.cpp",
-      "json_findings_tests.cpp",
-      "json_generator_tests.cpp",
-      "lint_findings_tests.cpp",
-      "lint_tests.cpp",
-      "ordinals_tests.cpp",
-      "parsing_tests.cpp",
-      "protocol_tests.cpp",
-      "strictness_tests.cpp",
-      "table_tests.cpp",
-      "type_alias_tests.cpp",
-      "types_tests.cpp",
-      "typeshape_tests.cpp",
-      "using_tests.cpp",
-      "utils_tests.cpp",
-      "virtual_source_tests.cpp",
-      "visitor_unittests.cpp",
-      "xunion_tests.cpp",
+      "attributes_tests.cc",
+      "bits_tests.cc",
+      "coded_types_generator_tests.cc",
+      "consts_tests.cc",
+      "declaration_order_tests.cc",
+      "enums_tests.cc",
+      "errors_tests.cc",
+      "flat_ast_tests.cc",
+      "formatter_tests.cc",
+      "json_findings_tests.cc",
+      "json_generator_tests.cc",
+      "lint_findings_tests.cc",
+      "lint_tests.cc",
+      "ordinals_tests.cc",
+      "parsing_tests.cc",
+      "protocol_tests.cc",
+      "strictness_tests.cc",
+      "table_tests.cc",
+      "type_alias_tests.cc",
+      "types_tests.cc",
+      "typeshape_tests.cc",
+      "using_tests.cc",
+      "utils_tests.cc",
+      "virtual_source_tests.cc",
+      "visitor_unittests.cc",
+      "xunion_tests.cc",
     ]
     deps = [
       ":examples",
@@ -88,7 +88,7 @@ if (current_toolchain == default_toolchain) {
     gen_dir = get_label_info(gen_label, "target_gen_dir")
     include_dirs = [ "." ]
     sources = [
-      "$gen_dir/examples.cpp",
+      "$gen_dir/examples.cc",
     ]
     deps = [
       gen_label,

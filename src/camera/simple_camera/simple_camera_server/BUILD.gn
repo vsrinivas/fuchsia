@@ -6,7 +6,7 @@ import("//build/package.gni")
 
 source_set("lib") {
   sources = [
-    "simple_camera_server_app.cpp",
+    "simple_camera_server_app.cc",
     "simple_camera_server_app.h",
   ]
 
@@ -22,7 +22,7 @@ executable("bin") {
   output_name = "simple_camera_server_cpp"
 
   sources = [
-    "simple_camera_server.cpp",
+    "simple_camera_server.cc",
   ]
 
   deps = [

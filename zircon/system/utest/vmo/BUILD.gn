@@ -4,8 +4,8 @@
 
 test("vmo") {
   sources = [
-    "bench.cpp",
-    "vmo.cpp",
+    "bench.cc",
+    "vmo.cc",
   ]
   deps = [
     "$zx/system/ulib/fbl",

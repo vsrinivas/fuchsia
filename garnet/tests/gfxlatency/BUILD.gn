@@ -19,7 +19,7 @@ package("gfxlatency") {
 executable("gfxlatency_executable") {
   output_name = "gfxlatency"
   sources = [
-    "main.cpp",
+    "main.cc",
   ]
   deps = [
     "//zircon/public/fidl/fuchsia-hardware-display:fuchsia-hardware-display_c",

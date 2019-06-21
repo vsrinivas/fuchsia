@@ -10,7 +10,7 @@ import("$zx/public/gn/fidl.gni")
 if (current_toolchain != default_toolchain) {
   test("fidl-coding-tables") {
     sources = [
-      "coding_tables_tests.cpp",
+      "coding_tables_tests.cc",
     ]
     deps = [
       ":fidl.test.example.codingtables.c",

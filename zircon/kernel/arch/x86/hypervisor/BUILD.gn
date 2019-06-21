@@ -4,12 +4,12 @@
 
 source_set("hypervisor") {
   sources = [
-    "guest.cpp",
-    "pvclock.cpp",
-    "vcpu.cpp",
-    "vmexit.cpp",
+    "guest.cc",
+    "pvclock.cc",
+    "vcpu.cc",
+    "vmexit.cc",
     "vmx.S",
-    "vmx_cpu_state.cpp",
+    "vmx_cpu_state.cc",
   ]
   deps = [
     "$zx/kernel/arch/x86:headers",

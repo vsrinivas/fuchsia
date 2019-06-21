@@ -12,8 +12,8 @@ group("test") {
 
 test("fzl-zxtest") {
   sources = [
-    "pinned-vmo-tests.cpp",
-    "vmo-pool-tests.cpp",
+    "pinned-vmo-tests.cc",
+    "vmo-pool-tests.cc",
   ]
   deps = [
     "$zx/system/dev/lib/fake-bti",
@@ -35,13 +35,13 @@ test("fzl-zxtest") {
 
 test("fzl") {
   sources = [
-    "fdio.cpp",
-    "fzl-test.cpp",
-    "memory_probe_tests.cpp",
-    "owned-vmo-mapper-tests.cpp",
-    "resizeable-vmo-mapper-tests.cpp",
-    "vmo-probe.cpp",
-    "vmo-vmar-tests.cpp",
+    "fdio.cc",
+    "fzl-test.cc",
+    "memory_probe_tests.cc",
+    "owned-vmo-mapper-tests.cc",
+    "resizeable-vmo-mapper-tests.cc",
+    "vmo-probe.cc",
+    "vmo-vmar-tests.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-io:c",

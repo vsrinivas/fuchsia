@@ -11,7 +11,7 @@ group("test") {
 
 test("test-utils") {
   sources = [
-    "test-utils-test.cpp",
+    "test-utils-test.cc",
   ]
   deps = [
     "$zx/system/ulib/fdio",

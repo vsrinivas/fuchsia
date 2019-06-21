@@ -5,9 +5,9 @@
 test("zxcrypt") {
   sources = [
     "main.c",
-    "test-device.cpp",
-    "volume.cpp",
-    "zxcrypt.cpp",
+    "test-device.cc",
+    "volume.cc",
+    "zxcrypt.cc",
   ]
 
   # This code does #include "crypto/test/foo.h" to reuse headers from

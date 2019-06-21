@@ -4,8 +4,8 @@
 
 driver("usb-peripheral") {
   sources = [
-    "usb-function.cpp",
-    "usb-peripheral.cpp",
+    "usb-function.cc",
+    "usb-peripheral.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.usb",

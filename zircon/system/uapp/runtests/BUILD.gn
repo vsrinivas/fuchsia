@@ -5,7 +5,7 @@
 executable("runtests") {
   testonly = true
   sources = [
-    "runtests.cpp",
+    "runtests.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-logger:c",

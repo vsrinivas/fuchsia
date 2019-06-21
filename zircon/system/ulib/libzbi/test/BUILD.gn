@@ -11,7 +11,7 @@ group("test") {
 
 test("zbi") {
   sources = [
-    "zbi.cpp",
+    "zbi.cc",
   ]
   deps = [
     "$zx/system/ulib/fbl",

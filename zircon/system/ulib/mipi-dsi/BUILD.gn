@@ -4,7 +4,7 @@
 
 library("mipi-dsi") {
   sources = [
-    "mipi-dsi.cpp",
+    "mipi-dsi.cc",
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   deps = [
@@ -14,7 +14,7 @@ library("mipi-dsi") {
 
 test("mipidsi") {
   sources = [
-    "test/mipi-dsi-test.cpp",
+    "test/mipi-dsi-test.cc",
   ]
   deps = [
   "$zx/system/banjo/ddk.protocol.dsiimpl",

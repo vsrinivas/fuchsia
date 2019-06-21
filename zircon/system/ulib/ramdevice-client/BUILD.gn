@@ -10,8 +10,8 @@ library("ramdevice-client") {
     "ramdevice-client/ramnand.h",
   ]
   sources = [
-    "ramdisk.cpp",
-    "ramnand.cpp",
+    "ramdisk.cc",
+    "ramnand.cc",
   ]
   public_deps = [
     # <ramdevice-client/ramnand.h> has #include <lib/devmgr-integration-test/fixture.h>

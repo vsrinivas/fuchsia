@@ -11,7 +11,7 @@ group("test") {
 
 test("display-core-unittests") {
   sources = [
-    "display-test.cpp",
+    "display-test.cc",
   ]
   include_dirs = [ ".." ]
   deps = [

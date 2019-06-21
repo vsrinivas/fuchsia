@@ -4,7 +4,7 @@
 
 executable("devhost") {
   sources = [
-    "main.cpp",
+    "main.cc",
   ]
   deps = [
     ":driver",
@@ -15,17 +15,17 @@ source_set("common") {
   visibility = [ ":*" ]
 
   sources = [
-    "api.cpp",
-    "composite-device.cpp",
-    "connection-destroyer.cpp",
-    "core.cpp",
-    "devhost.cpp",
-    "device-controller-connection.cpp",
-    "proxy-iostate.cpp",
-    "rpc-server.cpp",
-    "scheduler_profile.cpp",
-    "tracing.cpp",
-    "zx-device.cpp",
+    "api.cc",
+    "composite-device.cc",
+    "connection-destroyer.cc",
+    "core.cc",
+    "devhost.cc",
+    "device-controller-connection.cc",
+    "proxy-iostate.cc",
+    "rpc-server.cc",
+    "scheduler_profile.cc",
+    "tracing.cc",
+    "zx-device.cc",
   ]
 
   public_deps = [
@@ -92,8 +92,8 @@ library("driver") {
 test("devhost-test") {
   test_group = "ddk"
   sources = [
-    "device-controller-connection-test.cpp",
-    "proxy-iostate-test.cpp",
+    "device-controller-connection-test.cc",
+    "proxy-iostate-test.cc",
   ]
   deps = [
     ":common",

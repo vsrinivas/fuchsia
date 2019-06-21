@@ -4,15 +4,15 @@
 
 driver("vim-display") {
   sources = [
-    "edid.cpp",
-    "hdmitx.cpp",
-    "hdmitx_clk.cpp",
-    "registers.cpp",
-    "vim-audio-utils.cpp",
-    "vim-audio.cpp",
-    "vim-display.cpp",
-    "vim-spdif-audio-stream.cpp",
-    "vpp.cpp",
+    "edid.cc",
+    "hdmitx.cc",
+    "hdmitx_clk.cc",
+    "registers.cc",
+    "vim-audio-utils.cc",
+    "vim-audio.cc",
+    "vim-display.cc",
+    "vim-spdif-audio-stream.cc",
+    "vpp.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.amlogiccanvas",

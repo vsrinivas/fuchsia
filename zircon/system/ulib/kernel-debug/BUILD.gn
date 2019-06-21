@@ -4,7 +4,7 @@
 
 library("kernel-debug") {
   sources = [
-    "kernel-debug.cpp",
+    "kernel-debug.cc",
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   deps = [

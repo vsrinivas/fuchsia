@@ -4,8 +4,8 @@
 
 driver("mt8167-tdm-output") {
   sources = [
-    "audio-stream-out.cpp",
-    "codec.cpp",
+    "audio-stream-out.cc",
+    "codec.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.codec",

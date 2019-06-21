@@ -32,7 +32,7 @@ if (current_toolchain == default_toolchain) {
   library("version") {
     kernel = true
     sources = [
-      "version.cpp",
+      "version.cc",
     ]
     defines = [
       # TODO(ZX-3413): These should all go away; the values are useless.

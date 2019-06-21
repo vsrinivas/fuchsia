@@ -11,7 +11,7 @@ group("test") {
 
 test("test-exceptions") {
   sources = [
-    "exception-catcher-test.cpp",
+    "exception-catcher-test.cc",
   ]
   deps = [
     "$zx/system/ulib/fdio",

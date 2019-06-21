@@ -10,8 +10,8 @@ group("qemu") {
 
 driver("qemu-audio-codec") {
   sources = [
-    "qemu-codec.cpp",
-    "qemu-stream.cpp",
+    "qemu-codec.cc",
+    "qemu-stream.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.intelhda.codec",

@@ -4,7 +4,7 @@
 
 driver("lite-on") {
   sources = [
-    "ltr-578als.cpp",
+    "ltr-578als.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.hidbus",
@@ -30,8 +30,8 @@ driver("lite-on") {
 test("ltr-578als-test") {
   output_name = "ltr-578als-test"
   sources = [
-    "ltr-578als-test.cpp",
-    "ltr-578als.cpp",
+    "ltr-578als-test.cc",
+    "ltr-578als.cc",
   ]
   deps = [
     "$zx/system/dev/lib/device-protocol-i2c",

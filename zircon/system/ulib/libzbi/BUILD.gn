@@ -18,7 +18,7 @@ library("libzbi") {
     "zbi.c",
   ]
   if (is_fuchsia && !is_kernel) {
-    sources += [ "zbi-zx.cpp" ]
+    sources += [ "zbi-zx.cc" ]
     deps = [
       "$zx/system/ulib/fbl",
       "$zx/system/ulib/zx",

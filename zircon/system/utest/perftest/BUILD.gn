@@ -5,18 +5,18 @@
 test("perftest") {
   output_name = "perf-test"
   sources = [
-    "clock-test.cpp",
-    "handle-creation-test.cpp",
-    "malloc-test.cpp",
-    "memcpy-test.cpp",
-    "mutex-test.cpp",
-    "null-test.cpp",
-    "object-wait-test.cpp",
-    "results-test.cpp",
-    "runner-test.cpp",
-    "sleep-test.cpp",
-    "syscalls-test.cpp",
-    "timer-test.cpp",
+    "clock-test.cc",
+    "handle-creation-test.cc",
+    "malloc-test.cc",
+    "memcpy-test.cc",
+    "mutex-test.cc",
+    "null-test.cc",
+    "object-wait-test.cc",
+    "results-test.cc",
+    "runner-test.cc",
+    "sleep-test.cc",
+    "syscalls-test.cc",
+    "timer-test.cc",
   ]
   deps = [
     "$zx/system/ulib/async",

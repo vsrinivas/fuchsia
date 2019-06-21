@@ -4,7 +4,7 @@
 
 executable("fvm-check") {
   sources = [
-    "main.cpp",
+    "main.cc",
   ]
   deps = [
     "$zx/system/ulib/digest",

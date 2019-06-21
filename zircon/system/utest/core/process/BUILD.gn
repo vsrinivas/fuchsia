@@ -5,7 +5,7 @@
 source_set("process") {
   testonly = true
   sources = [
-    "process.cpp",
+    "process.cc",
   ]
   deps = [
     "$zx/system/ulib/fdio",

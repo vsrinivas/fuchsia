@@ -63,13 +63,13 @@ if (current_toolchain == default_toolchain) {
   # userboot is a reentrant DSO (no writable segment) with an entry point.
   loadable_module("userboot") {
     sources = [
-      "bootdata.cpp",
-      "bootfs.cpp",
-      "loader-service.cpp",
-      "option.cpp",
-      "start.cpp",
-      "userboot-elf.cpp",
-      "util.cpp",
+      "bootdata.cc",
+      "bootfs.cc",
+      "loader-service.cc",
+      "option.cc",
+      "start.cc",
+      "userboot-elf.cc",
+      "util.cc",
     ]
     configs += [ "$zx/public/gn/config:rodso" ]
     ldflags = [ "-Wl,-e,_start" ]

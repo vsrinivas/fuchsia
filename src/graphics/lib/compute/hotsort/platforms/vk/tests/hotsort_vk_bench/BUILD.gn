@@ -12,7 +12,7 @@ import("../../targets/hotsort_target.gni")
 graphics_compute_vulkan_executable("hotsort_vk_bench") {
   sources = [
     "main.c",
-    "sort.cpp",
+    "sort.cc",
   ]
   deps = [
     ":hs_amd_gcn3_u32",

@@ -4,7 +4,7 @@
 
 executable("gpt") {
   sources = [
-    "gpt.cpp",
+    "gpt.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-hardware-block:c",

@@ -4,7 +4,7 @@
 
 executable("storage-metrics") {
   sources = [
-    "main.cpp",
+    "main.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-hardware-block:c",

@@ -99,11 +99,11 @@ SECTIONS
         PROVIDE_HIDDEN(k_counter_desc_vmo_begin = .);
         KEEP(*(.kcounter.desc.header))
         ASSERT(. - k_counter_desc_vmo_begin == 16,
-               "lib/counters/counters.cpp and kernel.ld mismatch");
+               "lib/counters/counters.cc and kernel.ld mismatch");
         QUAD(kcountdesc_end - kcountdesc_begin);
         PROVIDE_HIDDEN(kcountdesc_begin = .);
         ASSERT(kcountdesc_begin - k_counter_desc_vmo_begin == 24,
-               "lib/counters/counters.cpp and kernel.ld mismatch");
+               "lib/counters/counters.cc and kernel.ld mismatch");
         KEEP(*(SORT_BY_NAME(kcountdesc.*)))
         PROVIDE_HIDDEN(kcountdesc_end = .);
         . = ALIGN(4096);

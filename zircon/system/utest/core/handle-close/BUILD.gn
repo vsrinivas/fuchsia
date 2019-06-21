@@ -5,7 +5,7 @@
 source_set("handle-close") {
   testonly = true
   sources = [
-    "handle-close.cpp",
+    "handle-close.cc",
   ]
   deps = [
     "$zx/system/ulib/fbl",

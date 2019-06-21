@@ -4,7 +4,7 @@
 
 source_set("dw8250") {
   sources = [
-    "uart.cpp",
+    "uart.cc",
   ]
   deps = [
     "$zx/kernel/dev/pdev",

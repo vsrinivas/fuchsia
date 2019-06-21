@@ -9,10 +9,10 @@ library("unittest") {
   host = true
   shared = true
   sources = [
-    "all-tests.cpp",
-    "unittest-main.cpp",
-    "unittest.cpp",
-    "watchdog.cpp",
+    "all-tests.cc",
+    "unittest-main.cc",
+    "unittest.cc",
+    "watchdog.cc",
   ]
   deps = [
     "$zx/system/ulib/fdio",
@@ -23,8 +23,8 @@ library("unittest") {
   }
   if (is_fuchsia) {
     sources += [
-      "crash-handler.cpp",
-      "crash-list.cpp",
+      "crash-handler.cc",
+      "crash-list.cc",
     ]
     deps += [ "$zx/system/ulib/zx" ]
   }

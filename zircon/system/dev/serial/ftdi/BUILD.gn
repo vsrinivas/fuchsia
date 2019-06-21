@@ -4,9 +4,9 @@
 
 driver("ftdi") {
   sources = [
-    "ftdi-i2c.cpp",
-    "ftdi-mpsse.cpp",
-    "ftdi.cpp",
+    "ftdi-i2c.cc",
+    "ftdi-mpsse.cc",
+    "ftdi.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.i2c",
@@ -28,7 +28,7 @@ driver("ftdi") {
 
 driver("ftdi-fake-usb") {
   sources = [
-    "ftdi-function.cpp",
+    "ftdi-function.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.usb",

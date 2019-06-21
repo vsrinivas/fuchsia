@@ -4,21 +4,21 @@
 
 test("debugger") {
   sources = [
-    "crash-and-recover.cpp",
+    "crash-and-recover.cc",
     "crash-and-recover.h",
-    "debugger.cpp",
+    "debugger.cc",
     "debugger.h",
-    "inferior-control.cpp",
+    "inferior-control.cc",
     "inferior-control.h",
-    "inferior.cpp",
+    "inferior.cc",
     "inferior.h",
-    "main.cpp",
-    "start-thread-reg-access.cpp",
-    "suspend-on-start.cpp",
-    "suspended-reg-access.cpp",
-    "utils.cpp",
+    "main.cc",
+    "start-thread-reg-access.cc",
+    "suspend-on-start.cc",
+    "suspended-reg-access.cc",
+    "utils.cc",
     "utils.h",
-    "watchpoint-test.cpp",
+    "watchpoint-test.cc",
   ]
 
   deps = [

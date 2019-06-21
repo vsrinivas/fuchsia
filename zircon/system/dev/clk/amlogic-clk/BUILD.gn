@@ -4,7 +4,7 @@
 
 driver("amlogic-clk") {
   sources = [
-    "aml-clk.cpp",
+    "aml-clk.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.clockimpl",
@@ -30,8 +30,8 @@ test("amlogic-clk-test") {
   testonly = true
   output_name = "amlogic-clk-test"
   sources = [
-    "aml-clk-test.cpp",
-    "aml-clk.cpp",
+    "aml-clk-test.cc",
+    "aml-clk.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.clockimpl",

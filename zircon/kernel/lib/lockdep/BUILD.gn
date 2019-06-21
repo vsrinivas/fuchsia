@@ -4,7 +4,7 @@
 
 source_set("lockdep") {
   sources = [
-    "lock_dep.cpp",
+    "lock_dep.cc",
   ]
   deps = [
     "$zx/kernel/lib/console",

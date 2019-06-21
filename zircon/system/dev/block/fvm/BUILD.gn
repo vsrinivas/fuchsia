@@ -16,9 +16,9 @@ source_set("shared") {
   visibility = [ "./*" ]
   sources = [
     "fvm.c",
-    "fvm.cpp",
-    "slice-extent.cpp",
-    "vpartition.cpp",
+    "fvm.cc",
+    "slice-extent.cc",
+    "vpartition.cc",
   ]
   public_deps = [
     "$zx/system/banjo/ddk.protocol.block",

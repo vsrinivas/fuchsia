@@ -6,7 +6,7 @@ library("range") {
   sdk = "source"
   sdk_headers = [ "range/range.h" ]
   sources = [
-    "range.cpp",
+    "range.cc",
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   public_deps = [

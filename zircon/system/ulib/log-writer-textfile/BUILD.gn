@@ -6,7 +6,7 @@ library("log-writer-textfile") {
   shared = true
   host = true
   sources = [
-    "log-writer-textfile.cpp",
+    "log-writer-textfile.cc",
   ]
   deps = [
     "$zx/system/ulib/fbl",

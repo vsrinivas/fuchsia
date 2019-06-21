@@ -12,7 +12,7 @@ library("hwreg") {
   kernel = true
   static = true
   sources = [
-    "printers.cpp",
+    "printers.cc",
   ]
 
   # **Note!** It's important that this library not depend on the

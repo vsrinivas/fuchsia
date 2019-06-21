@@ -7,14 +7,14 @@ source_set("common") {
   testonly = true
   visibility = [ ":*" ]
   sources = [
-    "engine_tests.cpp",
+    "engine_tests.cc",
     "event_tests.c",
-    "event_tests.cpp",
+    "event_tests.cc",
     "event_tests_ntrace.c",
-    "event_tests_ntrace.cpp",
-    "fields_tests.cpp",
+    "event_tests_ntrace.cc",
+    "fields_tests.cc",
     "no_optimization.c",
-    "record_tests.cpp",
+    "record_tests.cc",
   ]
   deps = [
     "$zx/system/ulib/async",

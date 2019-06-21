@@ -11,9 +11,9 @@ library("audio-utils") {
     "audio-utils/audio-stream.h",
   ]
   sources = [
-    "audio-device-stream.cpp",
-    "audio-input.cpp",
-    "audio-output.cpp",
+    "audio-device-stream.cc",
+    "audio-input.cc",
+    "audio-output.cc",
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   deps = [

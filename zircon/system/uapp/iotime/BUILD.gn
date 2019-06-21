@@ -4,7 +4,7 @@
 
 executable("iotime") {
   sources = [
-    "iotime.cpp",
+    "iotime.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-hardware-block:c",

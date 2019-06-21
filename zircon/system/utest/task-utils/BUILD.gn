@@ -4,7 +4,7 @@
 
 test("task-utils") {
   sources = [
-    "walker.cpp",
+    "walker.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-sysinfo:c",

@@ -6,8 +6,8 @@ import("$zx/public/gn/resource.gni")
 
 test("runtests-utils") {
   sources = [
-    "runtests-utils-test-utils.cpp",
-    "runtests-utils-test.cpp",
+    "runtests-utils-test-utils.cc",
+    "runtests-utils-test.cc",
   ]
   deps = [
     "$zx/system/ulib/fbl",
@@ -16,9 +16,9 @@ test("runtests-utils") {
   ]
   if (is_fuchsia) {
     sources += [
-      "fuchsia-run-test.cpp",
-      "fuchsia-test-main.cpp",
-      "log-exporter-test.cpp",
+      "fuchsia-run-test.cc",
+      "fuchsia-test-main.cc",
+      "log-exporter-test.cc",
     ]
     deps += [ "$zx/system/ulib/memfs" ]
     data_deps = [
@@ -26,7 +26,7 @@ test("runtests-utils") {
       ":test-data",
     ]
   } else {
-    sources += [ "posix-test-main.cpp" ]
+    sources += [ "posix-test-main.cc" ]
   }
 }
 

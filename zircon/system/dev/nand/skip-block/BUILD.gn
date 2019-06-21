@@ -11,8 +11,8 @@ driver("skip-block") {
 
 source_set("common") {
   sources = [
-    "logical-to-physical-map.cpp",
-    "skip-block.cpp",
+    "logical-to-physical-map.cc",
+    "skip-block.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-hardware-nand:c",
@@ -35,8 +35,8 @@ source_set("common") {
 test("skip-block-test") {
   output_name = "skip-block-test"
   sources = [
-    "test/logical-to-physical-map-test.cpp",
-    "test/skip-block-test.cpp",
+    "test/logical-to-physical-map-test.cc",
+    "test/skip-block-test.cc",
   ]
   include_dirs = [ "." ]
   deps = [

@@ -4,7 +4,7 @@
 
 driver("goldfish-control") {
   sources = [
-    "control-device.cpp",
+    "control-device.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.goldfish.control",

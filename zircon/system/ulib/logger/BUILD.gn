@@ -4,8 +4,8 @@
 
 library("logger") {
   sources = [
-    "logger.cpp",
-    "provider.cpp",
+    "logger.cc",
+    "provider.cc",
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   deps = [

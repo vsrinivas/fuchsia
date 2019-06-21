@@ -5,10 +5,10 @@
 test("fs-test-utils") {
   test_group = "fs"
   sources = [
-    "fixture_test.cpp",
-    "main.cpp",
-    "perftest_test.cpp",
-    "unittest_test.cpp",
+    "fixture_test.cc",
+    "main.cc",
+    "perftest_test.cc",
+    "unittest_test.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-io:c",

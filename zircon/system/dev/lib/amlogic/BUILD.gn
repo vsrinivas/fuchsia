@@ -5,8 +5,8 @@
 library("amlogic") {
   sources = [
     "a113-clocks.c",
-    "aml-pdm-audio.cpp",
-    "aml-tdm-audio.cpp",
+    "aml-pdm-audio.cc",
+    "aml-tdm-audio.cc",
     "s905d2-hiu.c",
     "s905d2-mali.c",
     "s905d2-pll-rates.c",

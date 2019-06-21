@@ -8,7 +8,7 @@ library("scsi") {
     "scsi/scsilib_controller.h",
   ]
   sources = [
-    "scsilib.cpp",
+    "scsilib.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.block",
@@ -25,7 +25,7 @@ library("scsi") {
 
 test("scsilib-disk-test") {
   sources = [
-    "scsilib-disk-test.cpp",
+    "scsilib-disk-test.cc",
   ]
   deps = [
     ":scsi",

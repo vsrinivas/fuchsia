@@ -4,7 +4,7 @@
 
 driver("goldfish-display") {
   sources = [
-    "display.cpp",
+    "display.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.display.controller",

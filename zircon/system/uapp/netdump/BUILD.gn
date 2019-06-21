@@ -4,10 +4,10 @@
 
 executable("netdump") {
   sources = [
-    "filter.cpp",
-    "netdump.cpp",
-    "parser.cpp",
-    "tokens.cpp",
+    "filter.cc",
+    "netdump.cc",
+    "parser.cc",
+    "tokens.cc",
   ]
   deps = [
     ":common",
@@ -30,11 +30,11 @@ source_set("common") {
 test("netdump-test") {
   output_name = "netdump-test"
   sources = [
-    "filter.cpp",
-    "test/filter_test.cpp",
-    "test/parser_test.cpp",
-    "test/tokens_test.cpp",
-    "tokens.cpp",
+    "filter.cc",
+    "test/filter_test.cc",
+    "test/parser_test.cc",
+    "test/tokens_test.cc",
+    "tokens.cc",
   ]
   include_dirs = [ "." ]
   deps = [

@@ -12,10 +12,10 @@ library("trace-reader") {
   ]
   host = true
   sources = [
-    "file_reader.cpp",
-    "reader.cpp",
-    "reader_internal.cpp",
-    "records.cpp",
+    "file_reader.cc",
+    "reader.cc",
+    "reader_internal.cc",
+    "records.cc",
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   public_deps = [
@@ -32,9 +32,9 @@ library("trace-reader") {
 
 test("trace-reader-test") {
   sources = [
-    "file_reader_tests.cpp",
-    "reader_tests.cpp",
-    "records_tests.cpp",
+    "file_reader_tests.cc",
+    "reader_tests.cc",
+    "records_tests.cc",
   ]
   deps = [
     "$zx/system/ulib/fbl",

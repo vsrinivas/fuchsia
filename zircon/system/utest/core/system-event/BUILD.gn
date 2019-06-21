@@ -5,7 +5,7 @@
 source_set("system-event") {
   testonly = true
   sources = [
-    "lowmem.cpp",
+    "lowmem.cc",
   ]
   deps = [
     "$zx/system/ulib/fdio",

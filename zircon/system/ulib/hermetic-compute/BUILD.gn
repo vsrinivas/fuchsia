@@ -24,9 +24,9 @@ if (is_hermetic) {
   # This is the library for loading and launching hermetic engine modules.
   library("hermetic-compute") {
     sources = [
-      "get-vdso.cpp",
-      "hermetic-compute.cpp",
-      "launch.cpp",
+      "get-vdso.cc",
+      "hermetic-compute.cc",
+      "launch.cc",
     ]
     public_deps = [
       # <lib/hermetic-compute/hermetic-compute.h> -> <fbl/macros.h>

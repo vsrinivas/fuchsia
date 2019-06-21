@@ -4,7 +4,7 @@
 
 host_tool("fvm") {
   sources = [
-    "main.cpp",
+    "main.cc",
   ]
   deps = [
     "$zx/system/ulib/fbl",
@@ -14,12 +14,12 @@ host_tool("fvm") {
   ]
 
   if (current_os == "linux") {
-    sources += [ "mtd.cpp" ]
+    sources += [ "mtd.cc" ]
     deps += [
       "$zx/system/ulib/ftl-mtd",
       "$zx/system/ulib/mtd",
     ]
   } else {
-    sources += [ "mtd-stub.cpp" ]
+    sources += [ "mtd-stub.cc" ]
   }
 }

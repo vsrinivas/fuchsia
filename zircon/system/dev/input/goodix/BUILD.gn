@@ -4,7 +4,7 @@
 
 driver("goodix") {
   sources = [
-    "gt92xx.cpp",
+    "gt92xx.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.clock",

@@ -14,7 +14,7 @@ group("bringup") {
 executable("running_on_bootfs_test") {
   testonly = true
   sources = [
-    "running_on_bootfs_test.cpp",
+    "running_on_bootfs_test.cc",
   ]
   deps = [
     "//zircon/public/lib/fdio",

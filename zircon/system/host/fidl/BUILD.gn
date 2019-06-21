@@ -6,30 +6,30 @@ if (defined(zx)) {
   library("fidl") {
     host = true
     sources = [
-      "lib/attributes.cpp",
-      "lib/c_generator.cpp",
-      "lib/coded_types_generator.cpp",
-      "lib/error_reporter.cpp",
-      "lib/findings_json.cpp",
-      "lib/flat_ast.cpp",
-      "lib/formatter.cpp",
-      "lib/json_generator.cpp",
-      "lib/lexer.cpp",
-      "lib/library_zx.cpp",
-      "lib/linter.cpp",
-      "lib/linting_tree_callbacks.cpp",
-      "lib/names.cpp",
-      "lib/ordinals.cpp",
-      "lib/parser.cpp",
-      "lib/raw_ast.cpp",
-      "lib/source_file.cpp",
-      "lib/source_location.cpp",
-      "lib/source_manager.cpp",
-      "lib/tables_generator.cpp",
-      "lib/template_string.cpp",
-      "lib/tree_visitor.cpp",
-      "lib/utils.cpp",
-      "lib/virtual_source_file.cpp",
+      "lib/attributes.cc",
+      "lib/c_generator.cc",
+      "lib/coded_types_generator.cc",
+      "lib/error_reporter.cc",
+      "lib/findings_json.cc",
+      "lib/flat_ast.cc",
+      "lib/formatter.cc",
+      "lib/json_generator.cc",
+      "lib/lexer.cc",
+      "lib/library_zx.cc",
+      "lib/linter.cc",
+      "lib/linting_tree_callbacks.cc",
+      "lib/names.cc",
+      "lib/ordinals.cc",
+      "lib/parser.cc",
+      "lib/raw_ast.cc",
+      "lib/source_file.cc",
+      "lib/source_location.cc",
+      "lib/source_manager.cc",
+      "lib/tables_generator.cc",
+      "lib/template_string.cc",
+      "lib/tree_visitor.cc",
+      "lib/utils.cc",
+      "lib/virtual_source_file.cc",
     ]
     public_deps = [
       "$zx/system/ulib/cmdline:headers",
@@ -46,7 +46,7 @@ if (defined(zx)) {
   source_set("json_schema") {
     visibility = [ ":*" ]
     sources = [
-      "$target_gen_dir/json_schema.cpp",
+      "$target_gen_dir/json_schema.cc",
     ]
     deps = [
       ":gen-json-schema",
@@ -57,7 +57,7 @@ if (defined(zx)) {
   action("gen-json-schema") {
     visibility = [ ":json_schema" ]
     outputs = [
-      "$target_gen_dir/json_schema.cpp",
+      "$target_gen_dir/json_schema.cc",
     ]
     sources = [
       "schema.json",
@@ -77,7 +77,7 @@ if (defined(zx)) {
 
   host_tool("fidlc") {
     sources = [
-      "compiler/main.cpp",
+      "compiler/main.cc",
     ]
     deps = [
       ":fidl",
@@ -86,7 +86,7 @@ if (defined(zx)) {
 
   host_tool("fidl-format") {
     sources = [
-      "formatter/main.cpp",
+      "formatter/main.cc",
     ]
     deps = [
       ":fidl",
@@ -95,8 +95,8 @@ if (defined(zx)) {
 
   host_tool("fidl-lint") {
     sources = [
-      "linter/command_line_options.cpp",
-      "linter/main.cpp",
+      "linter/command_line_options.cc",
+      "linter/main.cc",
     ]
     deps = [
       ":fidl",
@@ -113,24 +113,24 @@ if (defined(zx)) {
   source_set("compiler") {
     public_configs = [ ":fidl_config" ]
     sources = [
-      "lib/attributes.cpp",
-      "lib/c_generator.cpp",
-      "lib/error_reporter.cpp",
-      "lib/findings_json.cpp",
-      "lib/flat_ast.cpp",
-      "lib/formatter.cpp",
-      "lib/json_generator.cpp",
-      "lib/lexer.cpp",
-      "lib/library_zx.cpp",
-      "lib/linter.cpp",
-      "lib/names.cpp",
-      "lib/parser.cpp",
-      "lib/raw_ast.cpp",
-      "lib/source_file.cpp",
-      "lib/source_location.cpp",
-      "lib/source_manager.cpp",
-      "lib/tables_generator.cpp",
-      "lib/tree_visitor.cpp",
+      "lib/attributes.cc",
+      "lib/c_generator.cc",
+      "lib/error_reporter.cc",
+      "lib/findings_json.cc",
+      "lib/flat_ast.cc",
+      "lib/formatter.cc",
+      "lib/json_generator.cc",
+      "lib/lexer.cc",
+      "lib/library_zx.cc",
+      "lib/linter.cc",
+      "lib/names.cc",
+      "lib/parser.cc",
+      "lib/raw_ast.cc",
+      "lib/source_file.cc",
+      "lib/source_location.cc",
+      "lib/source_manager.cc",
+      "lib/tables_generator.cc",
+      "lib/tree_visitor.cc",
     ]
   }
 }

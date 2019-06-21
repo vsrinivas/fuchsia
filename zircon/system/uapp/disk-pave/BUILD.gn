@@ -10,8 +10,8 @@ group("disk-pave") {
 
 executable("install-disk-image") {
   sources = [
-    "disk-pave.cpp",
-    "payload-streamer.cpp",
+    "disk-pave.cc",
+    "payload-streamer.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-paver:c",
@@ -28,8 +28,8 @@ executable("install-disk-image") {
 test("install-disk-image-test") {
   output_name = "install-disk-image-test"
   sources = [
-    "payload-streamer.cpp",
-    "test/payload-streamer-test.cpp",
+    "payload-streamer.cc",
+    "test/payload-streamer-test.cc",
   ]
   include_dirs = [ "." ]
   deps = [

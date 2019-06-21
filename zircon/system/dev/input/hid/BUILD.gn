@@ -5,7 +5,7 @@
 driver("hid") {
   sources = [
     "hid-fifo.c",
-    "hid-parser-lib.cpp",
+    "hid-parser-lib.cc",
     "hid.c",
   ]
   deps = [

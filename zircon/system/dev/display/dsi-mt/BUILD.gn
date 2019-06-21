@@ -4,7 +4,7 @@
 
 driver("dsi-mt") {
   sources = [
-    "dsi-mt.cpp",
+    "dsi-mt.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.dsiimpl",

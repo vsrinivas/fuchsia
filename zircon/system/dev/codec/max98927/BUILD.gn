@@ -4,7 +4,7 @@
 
 driver("max98927") {
   sources = [
-    "max98927.cpp",
+    "max98927.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.i2c",

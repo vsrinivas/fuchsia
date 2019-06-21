@@ -6,7 +6,7 @@ source_set("x86") {
   sources = [
     "memcpy.S",
     "memset.S",
-    "selector.cpp",
+    "selector.cc",
   ]
   deps = [
     ":tests",
@@ -18,7 +18,7 @@ source_set("tests") {
   # TODO(mcgrathr): Make this optional somehow and enable testonly taint.
   # testonly = true
   sources = [
-    "tests.cpp",
+    "tests.cc",
   ]
   deps = [
     "$zx/kernel/lib/unittest",

@@ -8,7 +8,7 @@ import("$zx/public/gn/firmware.gni")
 driver("flash-programmer") {
   testonly = true
   sources = [
-    "flash-programmer.cpp",
+    "flash-programmer.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.usb",

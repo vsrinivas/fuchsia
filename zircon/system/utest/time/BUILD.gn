@@ -4,7 +4,7 @@
 
 test("time") {
   sources = [
-    "time_test.cpp",
+    "time_test.cc",
   ]
   deps = [
     "$zx/system/ulib/fdio",

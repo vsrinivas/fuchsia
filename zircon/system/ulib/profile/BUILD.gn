@@ -4,7 +4,7 @@
 
 library("profile") {
   sources = [
-    "profile.cpp",
+    "profile.cc",
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   deps = [

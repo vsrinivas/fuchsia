@@ -4,11 +4,11 @@
 
 source_set("entropy") {
   sources = [
-    "collector.cpp",
-    "collector_unittest.cpp",
-    "hw_rng_collector.cpp",
-    "jitterentropy_collector.cpp",
-    "quality_test.cpp",
+    "collector.cc",
+    "collector_unittest.cc",
+    "hw_rng_collector.cc",
+    "jitterentropy_collector.cc",
+    "quality_test.cc",
   ]
   deps = [
     "$zx/kernel/dev/hw_rng",

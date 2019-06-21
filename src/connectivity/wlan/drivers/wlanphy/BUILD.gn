@@ -8,9 +8,9 @@ import("//build/package.gni")
 driver_module("wlanphy_driver") {
   output_name = "wlanphy"
   sources = [
-    "device.cpp",
+    "device.cc",
     "device.h",
-    "driver.cpp",
+    "driver.cc",
     "driver.h",
   ]
 

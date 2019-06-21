@@ -12,13 +12,13 @@ group("integration") {
 test("zxtest-integration") {
   sources = [
     "assertions_test.c",
-    "assertions_test.cpp",
-    "helper.cpp",
-    "main.cpp",
+    "assertions_test.cc",
+    "helper.cc",
+    "main.cc",
     "print_test.c",
-    "print_test.cpp",
+    "print_test.cc",
     "register_test.c",
-    "register_test.cpp",
+    "register_test.cc",
   ]
   deps = [
     "$zx/system/ulib/fbl",

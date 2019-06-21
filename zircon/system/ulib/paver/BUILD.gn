@@ -4,11 +4,11 @@
 
 library("paver") {
   sources = [
-    "device-partitioner.cpp",
-    "pave-utils.cpp",
-    "paver.cpp",
-    "provider.cpp",
-    "stream-reader.cpp",
+    "device-partitioner.cc",
+    "pave-utils.cc",
+    "paver.cc",
+    "provider.cc",
+    "stream-reader.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-device:c",
@@ -53,11 +53,11 @@ library("paver") {
 test("paver-test") {
   output_name = "paver-test"
   sources = [
-    "test/device-partitioner-test.cpp",
-    "test/fvm-test.cpp",
-    "test/paversvc-test.cpp",
-    "test/stream-reader-test.cpp",
-    "test/test-utils.cpp",
+    "test/device-partitioner-test.cc",
+    "test/fvm-test.cc",
+    "test/paversvc-test.cc",
+    "test/stream-reader-test.cc",
+    "test/test-utils.cc",
   ]
   include_dirs = [ "." ]
   deps = [

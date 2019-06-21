@@ -4,19 +4,19 @@
 
 driver("virtio") {
   sources = [
-    "backends/pci.cpp",
-    "backends/pci_legacy.cpp",
-    "backends/pci_modern.cpp",
-    "block.cpp",
-    "console.cpp",
-    "ethernet.cpp",
-    "gpu.cpp",
-    "input.cpp",
-    "input_kbd.cpp",
-    "input_touch.cpp",
-    "rng.cpp",
-    "socket.cpp",
-    "virtio_driver.cpp",
+    "backends/pci.cc",
+    "backends/pci_legacy.cc",
+    "backends/pci_modern.cc",
+    "block.cc",
+    "console.cc",
+    "ethernet.cc",
+    "gpu.cc",
+    "input.cc",
+    "input_kbd.cc",
+    "input_touch.cc",
+    "rng.cc",
+    "socket.cc",
+    "virtio_driver.cc",
   ]
   deps = [
     ":common",
@@ -36,9 +36,9 @@ driver("virtio") {
 source_set("common") {
   visibility = [ ":*" ]
   sources = [
-    "device.cpp",
-    "ring.cpp",
-    "scsi.cpp",
+    "device.cc",
+    "ring.cc",
+    "scsi.cc",
   ]
   public_deps = [
     "$zx/system/banjo/ddk.protocol.block",
@@ -62,7 +62,7 @@ source_set("common") {
 
 test("virtio-test") {
   sources = [
-    "scsi_test.cpp",
+    "scsi_test.cc",
   ]
   deps = [
     ":common",

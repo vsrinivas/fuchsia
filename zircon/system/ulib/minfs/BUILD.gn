@@ -6,25 +6,25 @@ library("minfs") {
   host = true
   static = true
   sources = [
-    "allocator/allocator-promise.cpp",
-    "allocator/allocator.cpp",
-    "allocator/inode-manager.cpp",
-    "allocator/metadata.cpp",
-    "allocator/storage.cpp",
-    "bcache.cpp",
-    "directory.cpp",
-    "file.cpp",
-    "fsck.cpp",
-    "inspector.cpp",
-    "metrics.cpp",
-    "minfs.cpp",
-    "superblock.cpp",
-    "transaction-limits.cpp",
-    "vnode.cpp",
-    "writeback.cpp",
+    "allocator/allocator-promise.cc",
+    "allocator/allocator.cc",
+    "allocator/inode-manager.cc",
+    "allocator/metadata.cc",
+    "allocator/storage.cc",
+    "bcache.cc",
+    "directory.cc",
+    "file.cc",
+    "fsck.cc",
+    "inspector.cc",
+    "metrics.cc",
+    "minfs.cc",
+    "superblock.cc",
+    "transaction-limits.cc",
+    "vnode.cc",
+    "writeback.cc",
   ]
   if (!is_fuchsia) {
-    sources += [ "host.cpp" ]
+    sources += [ "host.cc" ]
   }
   public_deps = [
     "$zx/system/ulib/bitmap:headers",
@@ -75,9 +75,9 @@ library("minfs") {
       "$zx/system/ulib/zx",
     ]
     sources += [
-      "vnode-allocation.cpp",
-      "work-queue.cpp",
-      "writeback-async.cpp",
+      "vnode-allocation.cc",
+      "work-queue.cc",
+      "writeback-async.cc",
     ]
   }
 }

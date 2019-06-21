@@ -11,7 +11,7 @@ driver("serial") {
 
 source_set("common") {
   sources = [
-    "serial.cpp",
+    "serial.cc",
   ]
   public_deps = [
     "$zx/system/banjo/ddk.protocol.serial",

@@ -4,8 +4,8 @@
 
 driver("goldfish") {
   sources = [
-    "instance.cpp",
-    "pipe-device.cpp",
+    "instance.cc",
+    "pipe-device.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.acpi",

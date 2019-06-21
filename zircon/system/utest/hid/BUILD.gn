@@ -4,7 +4,7 @@
 
 test("hid") {
   sources = [
-    "hid-driver.cpp",
+    "hid-driver.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-hardware-hidctl:c",
@@ -24,9 +24,9 @@ test("hid") {
 
 test("hid-parse-size") {
   sources = [
-    "$zx/system/dev/input/hid/hid-parser-lib.cpp",
-    "$zx/system/utest/hid-parser/hid-report-data.cpp",
-    "hid-parse-test.cpp",
+    "$zx/system/dev/input/hid/hid-parser-lib.cc",
+    "$zx/system/utest/hid-parser/hid-report-data.cc",
+    "hid-parse-test.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.hidbus",

@@ -11,7 +11,7 @@ group("test") {
 
 test("fvm-driver-unittests") {
   sources = [
-    "slice-extent-test.cpp",
+    "slice-extent-test.cc",
   ]
   include_dirs = [ ".." ]
   deps = [

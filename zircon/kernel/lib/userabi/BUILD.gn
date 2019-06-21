@@ -172,7 +172,7 @@ if (is_kernel) {
   source_set("rodso") {
     visibility = [ ":*" ]
     sources = [
-      "rodso.cpp",
+      "rodso.cc",
     ]
     deps = [
       ":headers",
@@ -184,7 +184,7 @@ if (is_kernel) {
   source_set("vdso") {
     visibility = [ ":*" ]
     sources = [
-      "vdso.cpp",
+      "vdso.cc",
     ]
     deps = [
       ":gen-categories",
@@ -245,7 +245,7 @@ if (is_kernel) {
   source_set("userboot") {
     visibility = [ ":*" ]
     sources = [
-      "userboot.cpp",
+      "userboot.cc",
     ]
     include_dirs = [ target_gen_dir ]
     deps = [

@@ -17,14 +17,14 @@ library("fzl") {
     "lib/fzl/vmo-pool.h",
   ]
   sources = [
-    "memory-probe.cpp",
-    "owned-vmo-mapper.cpp",
-    "pinned-vmo.cpp",
-    "resizeable-vmo-mapper.cpp",
-    "time.cpp",
-    "vmar-manager.cpp",
-    "vmo-mapper.cpp",
-    "vmo-pool.cpp",
+    "memory-probe.cc",
+    "owned-vmo-mapper.cc",
+    "pinned-vmo.cc",
+    "resizeable-vmo-mapper.cc",
+    "time.cc",
+    "vmar-manager.cc",
+    "vmo-mapper.cc",
+    "vmo-pool.cc",
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   deps = [

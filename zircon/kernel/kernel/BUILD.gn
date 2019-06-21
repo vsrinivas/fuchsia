@@ -6,26 +6,26 @@ import("$zx/kernel/params.gni")
 
 source_set("kernel") {
   sources = [
-    "brwlock.cpp",
-    "cmdline.cpp",
-    "deadline.cpp",
-    "debug.cpp",
-    "dpc.cpp",
-    "event.cpp",
-    "init.cpp",
-    "mp.cpp",
-    "mutex.cpp",
-    "owned_wait_queue.cpp",
-    "percpu.cpp",
-    "thread.cpp",
-    "timer.cpp",
-    "wait.cpp",
+    "brwlock.cc",
+    "cmdline.cc",
+    "deadline.cc",
+    "debug.cc",
+    "dpc.cc",
+    "event.cc",
+    "init.cc",
+    "mp.cc",
+    "mutex.cc",
+    "owned_wait_queue.cc",
+    "percpu.cc",
+    "thread.cc",
+    "timer.cc",
+    "wait.cc",
   ]
 
   if (enable_fair_scheduler) {
-    sources += [ "fair_scheduler.cpp" ]
+    sources += [ "fair_scheduler.cc" ]
   } else {
-    sources += [ "sched.cpp" ]
+    sources += [ "sched.cc" ]
   }
 
   deps = [

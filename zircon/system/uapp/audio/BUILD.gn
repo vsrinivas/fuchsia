@@ -4,11 +4,11 @@
 
 executable("audio") {
   sources = [
-    "audio.cpp",
-    "sine-source.cpp",
-    "wav-common.cpp",
-    "wav-sink.cpp",
-    "wav-source.cpp",
+    "audio.cc",
+    "sine-source.cc",
+    "wav-common.cc",
+    "wav-sink.cc",
+    "wav-source.cc",
   ]
   deps = [
     "$zx/system/ulib/audio-proto-utils",

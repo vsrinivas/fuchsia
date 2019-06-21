@@ -4,7 +4,7 @@
 
 test("entropy") {
   sources = [
-    "entropy.cpp",
+    "entropy.cc",
   ]
   deps = [
     "$zx/system/ulib/fbl",

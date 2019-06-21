@@ -4,8 +4,8 @@
 
 host_tool("xdc-server") {
   sources = [
-    "usb-handler.cpp",
-    "xdc-server.cpp",
+    "usb-handler.cc",
+    "xdc-server.cc",
   ]
   deps = [
     "$zx/system/ulib/fbl",

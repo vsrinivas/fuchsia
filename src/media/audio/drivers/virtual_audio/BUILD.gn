@@ -24,12 +24,12 @@ driver_module("virtual_audio_driver") {
 
   sources = [
     "virtual_audio.h",
-    "virtual_audio_bus.cpp",
-    "virtual_audio_control_impl.cpp",
+    "virtual_audio_bus.cc",
+    "virtual_audio_control_impl.cc",
     "virtual_audio_control_impl.h",
-    "virtual_audio_device_impl.cpp",
+    "virtual_audio_device_impl.cc",
     "virtual_audio_device_impl.h",
-    "virtual_audio_stream.cpp",
+    "virtual_audio_stream.cc",
     "virtual_audio_stream.h",
     "virtual_audio_stream_in.h",
     "virtual_audio_stream_out.h",

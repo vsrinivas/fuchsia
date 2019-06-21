@@ -11,7 +11,7 @@ group("test") {
 
 test("async-loop") {
   sources = [
-    "loop_tests.cpp",
+    "loop_tests.cc",
   ]
   deps = [
     "$zx/system/ulib/async",

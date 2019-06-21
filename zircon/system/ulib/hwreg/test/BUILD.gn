@@ -11,7 +11,7 @@ group("test") {
 
 test("libhwreg") {
   sources = [
-    "bitfields-test.cpp",
+    "bitfields-test.cc",
   ]
   deps = [
     "$zx/system/dev/lib/mmio",

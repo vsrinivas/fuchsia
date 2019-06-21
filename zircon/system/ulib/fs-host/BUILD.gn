@@ -5,8 +5,8 @@
 library("fs-host") {
   host = true
   sources = [
-    "common.cpp",
-    "file_size_recorder.cpp",
+    "common.cc",
+    "file_size_recorder.cc",
   ]
   deps = [
     "$zx/system/ulib/fbl",

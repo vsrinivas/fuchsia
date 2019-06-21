@@ -4,7 +4,7 @@
 
 driver("msm8x53-clk") {
   sources = [
-    "msm8x53-clk.cpp",
+    "msm8x53-clk.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.clock",
@@ -32,8 +32,8 @@ test("msm8x53-clk-test") {
   testonly = true
   output_name = "msm8x53-clk-test"
   sources = [
-    "msm8x53-clk-test.cpp",
-    "msm8x53-clk.cpp",
+    "msm8x53-clk-test.cc",
+    "msm8x53-clk.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.clock",

@@ -4,9 +4,9 @@
 
 driver("dwmac") {
   sources = [
-    "dwmac-debug.cpp",
-    "dwmac.cpp",
-    "pinned-buffer.cpp",
+    "dwmac-debug.cc",
+    "dwmac.cc",
+    "pinned-buffer.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.clock",

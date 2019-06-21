@@ -4,7 +4,7 @@
 
 driver("mtk-power") {
   sources = [
-    "mtk-power.cpp",
+    "mtk-power.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.gpio",
@@ -30,8 +30,8 @@ test("mtk-power-test") {
   testonly = true
   output_name = "mtk-power-test"
   sources = [
-    "mtk-power-test.cpp",
-    "mtk-power.cpp",
+    "mtk-power-test.cc",
+    "mtk-power.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.platform.bus",

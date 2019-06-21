@@ -5,9 +5,9 @@
 test("futex-ownership") {
   test_group = "sys"
   sources = [
-    "main.cpp",
-    "ownership.cpp",
-    "utils.cpp",
+    "main.cc",
+    "ownership.cc",
+    "utils.cc",
   ]
   deps = [
     "$zx/system/ulib/fbl",

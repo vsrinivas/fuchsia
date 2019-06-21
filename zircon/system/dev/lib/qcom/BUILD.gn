@@ -6,7 +6,7 @@ library("qcom") {
   sdk = "source"
   sdk_headers = [ "qcom/smc.h" ]
   sources = [
-    "qcom-smc.cpp",
+    "qcom-smc.cc",
   ]
   deps = [
     "$zx/system/ulib/ddk",

@@ -14,13 +14,13 @@ library("dispatcher-pool") {
     "dispatcher-pool/dispatcher-wakeup-event.h",
   ]
   sources = [
-    "dispatcher-channel.cpp",
-    "dispatcher-event-source.cpp",
-    "dispatcher-execution-domain.cpp",
-    "dispatcher-interrupt.cpp",
-    "dispatcher-thread-pool.cpp",
-    "dispatcher-timer.cpp",
-    "dispatcher-wakeup-event.cpp",
+    "dispatcher-channel.cc",
+    "dispatcher-event-source.cc",
+    "dispatcher-execution-domain.cc",
+    "dispatcher-interrupt.cc",
+    "dispatcher-thread-pool.cc",
+    "dispatcher-timer.cc",
+    "dispatcher-wakeup-event.cc",
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   deps = [

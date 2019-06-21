@@ -62,7 +62,7 @@ library("ddk") {
 
 test("ddk-unittest") {
   sources = [
-    "test/phys-iter-test.cpp",
+    "test/phys-iter-test.cc",
   ]
   deps = [
     ":ddk",

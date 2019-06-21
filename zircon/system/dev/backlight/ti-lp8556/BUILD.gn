@@ -4,7 +4,7 @@
 
 driver("ti-lp8556") {
   sources = [
-    "ti-lp8556.cpp",
+    "ti-lp8556.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.i2c",

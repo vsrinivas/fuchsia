@@ -11,7 +11,7 @@ group("test") {
 
 test("utf_conversion") {
   sources = [
-    "main.cpp",
+    "main.cc",
   ]
   deps = [
     "$zx/system/ulib/fbl",

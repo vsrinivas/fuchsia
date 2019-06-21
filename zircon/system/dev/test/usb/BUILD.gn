@@ -11,10 +11,10 @@ group("usb") {
 
 test("usb-unittest") {
   sources = [
-    "usb-request-list-test.cpp",
-    "usb-request-pool-test.cpp",
-    "usb-request-queue-test.cpp",
-    "usb-request-test.cpp",
+    "usb-request-list-test.cc",
+    "usb-request-pool-test.cc",
+    "usb-request-queue-test.cc",
+    "usb-request-test.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.usb",

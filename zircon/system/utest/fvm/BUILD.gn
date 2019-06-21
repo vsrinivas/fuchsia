@@ -4,7 +4,7 @@
 
 test("fvm") {
   sources = [
-    "fvm.cpp",
+    "fvm.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-device:c",
@@ -42,7 +42,7 @@ test("fvm") {
 
 library("fvm-test-utils") {
   sources = [
-    "utils.cpp",
+    "utils.cc",
   ]
 
   public_deps = [
@@ -72,7 +72,7 @@ library("fvm-test-utils") {
 
 test("fvm-integration") {
   sources = [
-    "resize-tests.cpp",
+    "resize-tests.cc",
   ]
 
   deps = [

@@ -4,7 +4,7 @@
 
 executable("ping") {
   sources = [
-    "ping.cpp",
+    "ping.cc",
   ]
   deps = [
     "$zx/system/ulib/fdio",

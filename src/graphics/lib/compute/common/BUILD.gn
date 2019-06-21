@@ -24,7 +24,7 @@ source_set("common") {
 
 graphics_compute_unittests("common_unittests") {
   sources = [
-    "util_unittests.cpp",
+    "util_unittests.cc",
   ]
   deps = [
     ":common",

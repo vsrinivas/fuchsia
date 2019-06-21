@@ -4,10 +4,10 @@
 
 library("intel-hda") {
   sources = [
-    "codec-utils/codec-driver-base.cpp",
-    "codec-utils/stream-base.cpp",
-    "utils/codec-caps.cpp",
-    "utils/utils.cpp",
+    "codec-utils/codec-driver-base.cc",
+    "codec-utils/stream-base.cc",
+    "utils/codec-caps.cc",
+    "utils/utils.cc",
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   public_deps = [

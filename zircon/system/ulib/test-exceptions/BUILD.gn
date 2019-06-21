@@ -6,7 +6,7 @@ library("test-exceptions") {
   testonly = true
   shared = true
   sources = [
-    "exception-catcher.cpp",
+    "exception-catcher.cc",
   ]
   deps = [
     "$zx/system/ulib/zx",

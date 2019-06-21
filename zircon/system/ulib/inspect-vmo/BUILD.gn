@@ -15,12 +15,12 @@ library("inspect-vmo") {
     "lib/inspect-vmo/limits.h",
   ]
   sources = [
-    "heap.cpp",
-    "inspect.cpp",
-    "scanner.cpp",
-    "snapshot.cpp",
-    "state.cpp",
-    "types.cpp",
+    "heap.cc",
+    "inspect.cc",
+    "scanner.cc",
+    "snapshot.cc",
+    "state.cc",
+    "types.cc",
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
 

@@ -6,7 +6,7 @@ library("elf-search") {
   sdk = "source"
   sdk_headers = [ "elf-search.h" ]
   sources = [
-    "elf-search.cpp",
+    "elf-search.cc",
   ]
   public_deps = [
     "$zx/system/ulib/fbl:headers",

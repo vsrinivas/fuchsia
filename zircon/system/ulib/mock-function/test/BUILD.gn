@@ -11,7 +11,7 @@ group("test") {
 test("mock-function-test") {
   output_name = "mock-function-test"
   sources = [
-    "mock-function-test.cpp",
+    "mock-function-test.cc",
   ]
   deps = [
     "$zx/system/ulib/fbl",

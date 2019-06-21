@@ -6,7 +6,7 @@ import("//build/test/test_package.gni")
 
 source_set("camera_client_test_src") {
   sources = [
-    "camera_client_test.cpp",
+    "camera_client_test.cc",
     "camera_client_test.h",
   ]
   deps = [
@@ -27,7 +27,7 @@ executable("bin") {
   output_name = "camera_client_test"
 
   sources = [
-    "main.cpp",
+    "main.cc",
   ]
 
   deps = [

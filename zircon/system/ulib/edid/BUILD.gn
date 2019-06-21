@@ -4,9 +4,9 @@
 
 library("edid") {
   sources = [
-    "edid.cpp",
-    "eisa_vid_lut.cpp",
-    "timings.cpp",
+    "edid.cc",
+    "eisa_vid_lut.cc",
+    "timings.cc",
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   deps = [

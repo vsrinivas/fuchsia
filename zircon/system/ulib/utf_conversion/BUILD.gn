@@ -6,7 +6,7 @@ library("utf_conversion") {
   sdk = "static"
   sdk_headers = [ "utf_conversion/utf_conversion.h" ]
   sources = [
-    "utf_conversion.cpp",
+    "utf_conversion.cc",
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   deps = [

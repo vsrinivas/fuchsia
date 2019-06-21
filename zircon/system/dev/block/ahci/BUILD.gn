@@ -18,8 +18,8 @@ group("test") {
 test("ahci-unittest") {
   output_name = "ahci-unittest"
   sources = [
-    "test/fake-bus.cpp",
-    "test/main.cpp",
+    "test/fake-bus.cc",
+    "test/main.cc",
   ]
   deps = [
     ":shared",
@@ -37,10 +37,10 @@ test("ahci-unittest") {
 source_set("shared") {
   visibility = [ "./*" ]
   sources = [
-    "controller.cpp",
-    "pci-bus.cpp",
-    "port.cpp",
-    "sata.cpp",
+    "controller.cc",
+    "pci-bus.cc",
+    "port.cc",
+    "sata.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.block",

@@ -9,7 +9,7 @@ library("zbi-bootfs") {
   kernel = true
 
   sources = [
-    "zbi-bootfs.cpp",
+    "zbi-bootfs.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-hardware-skipblock:c",

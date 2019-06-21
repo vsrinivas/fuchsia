@@ -6,7 +6,7 @@ library("blktest") {
   shared = true
   testonly = true
   sources = [
-    "blktest.cpp",
+    "blktest.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-hardware-block:c",

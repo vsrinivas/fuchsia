@@ -15,8 +15,8 @@ source_set("common") {
   visibility = [ ":*" ]
 
   sources = [
-    "broker-test.cpp",
-    "parent.cpp",
+    "broker-test.cc",
+    "parent.cc",
   ]
   public_deps = [
     "$zx/system/banjo/ddk.protocol.nand",
@@ -37,7 +37,7 @@ source_set("common") {
 
 test("nand-broker") {
   sources = [
-    "main.cpp",
+    "main.cc",
   ]
   deps = [
     ":common",
@@ -46,7 +46,7 @@ test("nand-broker") {
 
 test("nandpart-broker") {
   sources = [
-    "nandpart-main.cpp",
+    "nandpart-main.cc",
   ]
   deps = [
     ":common",

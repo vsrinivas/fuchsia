@@ -4,7 +4,7 @@
 
 test("ramdisk") {
   sources = [
-    "ramdisk.cpp",
+    "ramdisk.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-hardware-block:c",

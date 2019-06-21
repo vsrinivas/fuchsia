@@ -5,13 +5,13 @@
 library("intel") {
   kernel = true
   sources = [
-    "context_table_state.cpp",
-    "device_context.cpp",
-    "domain_allocator.cpp",
-    "intel_iommu.cpp",
-    "iommu_impl.cpp",
-    "iommu_page.cpp",
-    "second_level_pt.cpp",
+    "context_table_state.cc",
+    "device_context.cc",
+    "domain_allocator.cc",
+    "intel_iommu.cc",
+    "iommu_impl.cc",
+    "iommu_page.cc",
+    "second_level_pt.cc",
   ]
   deps = [
     "$zx/kernel/arch/x86/page_tables",

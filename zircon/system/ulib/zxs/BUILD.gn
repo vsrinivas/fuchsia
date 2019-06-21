@@ -9,7 +9,7 @@ library("zxs") {
     "lib/zxs/zxs.h",
   ]
   sources = [
-    "zxs.cpp",
+    "zxs.cc",
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   deps = [

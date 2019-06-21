@@ -5,9 +5,9 @@
 test("int-types") {
   sources = [
     "int-types.c",
-    "int-types.cpp",
+    "int-types.cc",
     "wchar-type.c",
-    "wchar-type.cpp",
+    "wchar-type.cc",
   ]
   configs += [ ":config" ]
   deps = [

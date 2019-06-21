@@ -4,7 +4,7 @@
 
 driver("hid-buttons") {
   sources = [
-    "hid-buttons.cpp",
+    "hid-buttons.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.gpio",
@@ -27,8 +27,8 @@ driver("hid-buttons") {
 test("hid-buttons-test") {
   output_name = "hid-buttons-test"
   sources = [
-    "hid-buttons-test.cpp",
-    "hid-buttons.cpp",
+    "hid-buttons-test.cc",
+    "hid-buttons.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.gpio",

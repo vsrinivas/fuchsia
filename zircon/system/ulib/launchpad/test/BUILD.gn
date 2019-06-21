@@ -11,7 +11,7 @@ group("test") {
 
 test("launchpad") {
   sources = [
-    "launchpad.cpp",
+    "launchpad.cc",
   ]
   deps = [
     "$zx/system/ulib/elfload",

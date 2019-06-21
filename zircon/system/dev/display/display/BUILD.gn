@@ -15,10 +15,10 @@ driver("display") {
 source_set("shared") {
   visibility = [ "./*" ]
   sources = [
-    "client.cpp",
-    "controller.cpp",
-    "fence.cpp",
-    "image.cpp",
+    "client.cc",
+    "controller.cc",
+    "fence.cc",
+    "image.cc",
   ]
   public_deps = [
     "$zx/system/banjo/ddk.protocol.display.controller",

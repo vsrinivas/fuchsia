@@ -4,7 +4,7 @@
 
 library("kernel-mexec") {
   sources = [
-    "kernel-mexec.cpp",
+    "kernel-mexec.cc",
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   deps = [
@@ -28,7 +28,7 @@ library("kernel-mexec") {
 
 test("kernel-mexec-test") {
   sources = [
-    "kernel-mexec_test.cpp",
+    "kernel-mexec_test.cc",
   ]
   deps = [
     ":kernel-mexec",

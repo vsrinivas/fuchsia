@@ -34,10 +34,10 @@ library("fit") {
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   public_configs = [ "$zx/public/gn/config:no_maybe_uninitialized" ]
   sources = [
-    "promise.cpp",
-    "scheduler.cpp",
-    "scope.cpp",
-    "sequencer.cpp",
-    "single_threaded_executor.cpp",
+    "promise.cc",
+    "scheduler.cc",
+    "scope.cc",
+    "sequencer.cc",
+    "single_threaded_executor.cc",
   ]
 }

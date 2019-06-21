@@ -11,7 +11,7 @@ group("test") {
 
 test("syslog") {
   sources = [
-    "syslog_socket_tests.cpp",
+    "syslog_socket_tests.cc",
     "syslog_tests.c",
   ]
   deps = [

@@ -49,11 +49,11 @@ library("async-cpp") {
     "$zx/system/ulib/fit:headers",
   ]
   sources = [
-    "exception.cpp",
-    "receiver.cpp",
-    "task.cpp",
-    "trap.cpp",
-    "wait.cpp",
+    "exception.cc",
+    "receiver.cc",
+    "task.cc",
+    "trap.cc",
+    "wait.cc",
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   deps = [

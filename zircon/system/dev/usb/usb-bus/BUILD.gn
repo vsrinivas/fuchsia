@@ -4,8 +4,8 @@
 
 driver("usb-bus") {
   sources = [
-    "usb-bus.cpp",
-    "usb-device.cpp",
+    "usb-bus.cc",
+    "usb-device.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.usb",

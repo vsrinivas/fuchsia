@@ -4,7 +4,7 @@
 
 executable("miscsvc") {
   sources = [
-    "miscsvc.cpp",
+    "miscsvc.cc",
   ]
   deps = [
     "$zx/system/ulib/async-loop:async-loop-cpp",

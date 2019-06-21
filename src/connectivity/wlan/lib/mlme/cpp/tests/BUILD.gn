@@ -30,13 +30,13 @@ source_set("test_main") {
 
   sources = [
     "mock_device.h",
-    "test_bss.cpp",
+    "test_bss.cc",
     "test_bss.h",
-    "test_data.cpp",
+    "test_data.cc",
     "test_data.h",
-    "test_main.cpp",
+    "test_main.cc",
     "test_timer.h",
-    "test_utils.cpp",
+    "test_utils.cc",
     "test_utils.h",
   ]
 
@@ -58,8 +58,8 @@ executable("ap_mlme_tests") {
   testonly = true
 
   sources = [
-    "ap_mlme_unittest.cpp",
-    "beacon_sender_unittest.cpp",
+    "ap_mlme_unittest.cc",
+    "beacon_sender_unittest.cc",
   ]
 
   deps = [
@@ -79,7 +79,7 @@ executable("client_mlme_tests") {
   testonly = true
 
   sources = [
-    "client_mlme_unittest.cpp",
+    "client_mlme_unittest.cc",
   ]
 
   deps = [
@@ -99,27 +99,27 @@ executable("mac_tests") {
   testonly = true
 
   sources = [
-    "assoc_ctx_unittest.cpp",
-    "channel_unittest.cpp",
-    "element_fidl_unittest.cpp",
-    "element_splitter_unittest.cpp",
-    "element_unittest.cpp",
-    "energy_unittest.cpp",
-    "frame_validation_unittest.cpp",
-    "join_context_unittest.cpp",
-    "mac_frame_unittest.cpp",
-    "macaddr_unittest.cpp",
-    "mcs_unittest.cpp",
-    "packet_unittest.cpp",
-    "parse_beacon_unittest.cpp",
-    "parse_element_unittest.cpp",
-    "parse_mac_header_unittest.cpp",
-    "perr_destination_parser_unittest.cpp",
-    "rate_limiter_unittest.cpp",
-    "tim_element_unittest.cpp",
-    "tim_unittest.cpp",
-    "tx_vector_unittest.cpp",
-    "write_element_unittest.cpp",
+    "assoc_ctx_unittest.cc",
+    "channel_unittest.cc",
+    "element_fidl_unittest.cc",
+    "element_splitter_unittest.cc",
+    "element_unittest.cc",
+    "energy_unittest.cc",
+    "frame_validation_unittest.cc",
+    "join_context_unittest.cc",
+    "mac_frame_unittest.cc",
+    "macaddr_unittest.cc",
+    "mcs_unittest.cc",
+    "packet_unittest.cc",
+    "parse_beacon_unittest.cc",
+    "parse_element_unittest.cc",
+    "parse_mac_header_unittest.cc",
+    "perr_destination_parser_unittest.cc",
+    "rate_limiter_unittest.cc",
+    "tim_element_unittest.cc",
+    "tim_unittest.cc",
+    "tx_vector_unittest.cc",
+    "write_element_unittest.cc",
   ]
 
   deps = [
@@ -137,11 +137,11 @@ executable("mesh_tests") {
   testonly = true
 
   sources = [
-    "hwmp_unittest.cpp",
-    "mesh_deduplicator_unittest.cpp",
-    "mesh_mlme_unittest.cpp",
-    "parse_mp_action_unittest.cpp",
-    "write_mp_action_unittest.cpp",
+    "hwmp_unittest.cc",
+    "mesh_deduplicator_unittest.cc",
+    "mesh_mlme_unittest.cc",
+    "parse_mp_action_unittest.cc",
+    "write_mp_action_unittest.cc",
   ]
 
   deps = [
@@ -161,7 +161,7 @@ executable("scanner_tests") {
   testonly = true
 
   sources = [
-    "scanner_unittest.cpp",
+    "scanner_unittest.cc",
   ]
 
   deps = [
@@ -179,7 +179,7 @@ executable("service_tests") {
   testonly = true
 
   sources = [
-    "service_unittest.cpp",
+    "service_unittest.cc",
   ]
 
   deps = [
@@ -198,7 +198,7 @@ executable("timer_manager_tests") {
   testonly = true
 
   sources = [
-    "timer_manager_unittest.cpp",
+    "timer_manager_unittest.cc",
   ]
 
   deps = [
@@ -218,7 +218,7 @@ executable("buffer_utils_tests") {
   testonly = true
 
   sources = [
-    "buffer_utils_unittest.cpp",
+    "buffer_utils_unittest.cc",
   ]
 
   deps = [
@@ -237,12 +237,12 @@ executable("common_tests") {
   testonly = true
 
   sources = [
-    "channel_scheduler_unittest.cpp",
-    "device_caps_unittest.cpp",
-    "moving_average_unittest.cpp",
-    "rates_elements_unittest.cpp",
-    "span_unittest.cpp",
-    "stats_unittest.cpp",
+    "channel_scheduler_unittest.cc",
+    "device_caps_unittest.cc",
+    "moving_average_unittest.cc",
+    "rates_elements_unittest.cc",
+    "span_unittest.cc",
+    "stats_unittest.cc",
   ]
 
   deps = [

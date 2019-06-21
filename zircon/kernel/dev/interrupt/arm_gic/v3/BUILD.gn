@@ -5,8 +5,8 @@
 library("v3") {
   kernel = true
   sources = [
-    "arm_gicv3.cpp",
-    "arm_gicv3_pcie.cpp",
+    "arm_gicv3.cc",
+    "arm_gicv3_pcie.cc",
   ]
   deps = [
     "$zx/kernel/dev/interrupt",

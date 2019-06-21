@@ -4,7 +4,7 @@
 
 test("pty") {
   sources = [
-    "pty-test.cpp",
+    "pty-test.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-hardware-pty:c",

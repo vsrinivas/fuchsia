@@ -21,7 +21,7 @@ library("lockdep") {
   kernel = true
   static = true
   sources = [
-    "lock_dep.cpp",
+    "lock_dep.cc",
   ]
   public_deps = [
     "$zx/system/ulib/fbl:headers",

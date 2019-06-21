@@ -10,8 +10,8 @@ import("//build/testing/environments.gni")
 executable("modules_bin") {
   testonly = true
   sources = [
-    "dma-format-test.cpp",
-    "dma-mgr-test.cpp",
+    "dma-format-test.cc",
+    "dma-mgr-test.cc",
   ]
   deps = [
     "//src/camera/drivers/isp/modules",

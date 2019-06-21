@@ -28,7 +28,7 @@ foreach(name, test_modules) {
     testonly = true
     visibility = [ ":*" ]
     sources = [
-      "test-module-$name.cpp",
+      "test-module-$name.cc",
     ]
     ldflags = [ "-Wl,-z,stack-size=128" ]
     deps = [
@@ -40,7 +40,7 @@ foreach(name, test_modules) {
 
 test("hermetic-compute-module") {
   sources = [
-    "test.cpp",
+    "test.cc",
   ]
   deps = [
     "$zx/system/ulib/fdio",

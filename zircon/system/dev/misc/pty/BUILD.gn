@@ -4,9 +4,9 @@
 
 driver("pty") {
   sources = [
-    "pty-core.cpp",
-    "pty-driver.cpp",
-    "pty-fifo.cpp",
+    "pty-core.cc",
+    "pty-driver.cc",
+    "pty-fifo.cc",
   ]
   deps = [
     "$zx/kernel/lib/fbl",

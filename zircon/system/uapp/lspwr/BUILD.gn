@@ -4,7 +4,7 @@
 
 executable("lspwr") {
   sources = [
-    "lspwr.cpp",
+    "lspwr.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-hardware-power:c",

@@ -4,7 +4,7 @@
 
 driver("tas5782") {
   sources = [
-    "tas5782.cpp",
+    "tas5782.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.codec",
@@ -24,8 +24,8 @@ driver("tas5782") {
 test("tas5782-test") {
   output_name = "tas5782-test"
   sources = [
-    "tas5782-test.cpp",
-    "tas5782.cpp",
+    "tas5782-test.cc",
+    "tas5782.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.codec",

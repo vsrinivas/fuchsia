@@ -14,12 +14,12 @@ config("wlan_config") {
 driver_module("wlan_driver") {
   output_name = "wlan"
   sources = [
-    "device.cpp",
+    "device.cc",
     "device.h",
-    "driver.cpp",
-    "minstrel.cpp",
+    "driver.cc",
+    "minstrel.cc",
     "minstrel.h",
-    "probe_sequence.cpp",
+    "probe_sequence.cc",
     "probe_sequence.h",
     "proxy_helpers.h",
   ]
@@ -47,12 +47,12 @@ driver_module("wlan_driver") {
 executable("wlan_minstrel_unittest") {
   testonly = true
   sources = [
-    "minstrel.cpp",
+    "minstrel.cc",
     "minstrel.h",
-    "probe_sequence.cpp",
+    "probe_sequence.cc",
     "probe_sequence.h",
-    "tests/minstrel_unittest.cpp",
-    "tests/probe_sequence_unittest.cpp",
+    "tests/minstrel_unittest.cc",
+    "tests/probe_sequence_unittest.cc",
   ]
 
   deps = [

@@ -4,7 +4,7 @@
 
 test("race-tests") {
   sources = [
-    "race-tests.cpp",
+    "race-tests.cc",
   ]
   deps = [
     "$zx/system/ulib/fbl",

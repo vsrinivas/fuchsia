@@ -6,7 +6,7 @@
 test("metrics-composite-latency-event") {
   test_group = "fs"
   sources = [
-    "composite-latency-event-test.cpp",
+    "composite-latency-event-test.cc",
   ]
   deps = [
     "$zx/system/ulib/cobalt-client",
@@ -22,9 +22,9 @@ test("metrics-composite-latency-event") {
 test("metrics-inspect") {
   test_group = "fs"
   sources = [
-    "histograms-test.cpp",
-    "latency-event-test.cpp",
-    "offsets-test.cpp",
+    "histograms-test.cc",
+    "latency-event-test.cc",
+    "offsets-test.cc",
   ]
 
   deps = [
@@ -39,7 +39,7 @@ test("metrics-inspect") {
 test("metrics-cobalt") {
   test_group = "fs"
   sources = [
-    "cobalt-metrics-test.cpp",
+    "cobalt-metrics-test.cc",
   ]
 
   deps = [

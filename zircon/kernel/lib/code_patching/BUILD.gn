@@ -5,6 +5,6 @@
 library("code_patching") {
   kernel = true
   sources = [
-    "code_patching.cpp",
+    "code_patching.cc",
   ]
 }

@@ -4,7 +4,7 @@
 
 driver("mt8167-i2c") {
   sources = [
-    "mt8167-i2c.cpp",
+    "mt8167-i2c.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.gpio",
@@ -28,8 +28,8 @@ driver("mt8167-i2c") {
 test("mt8167-i2c-test") {
   output_name = "mt8167-i2c-test"
   sources = [
-    "mt8167-i2c-test.cpp",
-    "mt8167-i2c.cpp",
+    "mt8167-i2c-test.cc",
+    "mt8167-i2c.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.gpio",

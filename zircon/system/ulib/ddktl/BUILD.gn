@@ -31,9 +31,9 @@ library("ddktl") {
 test_driver("ddktl-test") {
   sources = [
     "test/ddktl-test-binding.c",
-    "test/ddktl-test.cpp",
-    "test/device-tests.cpp",
-    "test/ethernet-tests.cpp",
+    "test/ddktl-test.cc",
+    "test/device-tests.cc",
+    "test/ethernet-tests.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.ethernet",

@@ -5,8 +5,8 @@
 source_set("channel") {
   testonly = true
   sources = [
-    "channel.cpp",
-    "channel-internal.cpp",
+    "channel.cc",
+    "channel-internal.cc",
   ]
   deps = [
     "$zx/system/ulib/fbl",

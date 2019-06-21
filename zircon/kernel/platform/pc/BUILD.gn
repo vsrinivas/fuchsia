@@ -5,19 +5,19 @@
 library("pc") {
   kernel = true
   sources = [
-    "console.cpp",
-    "debug.cpp",
-    "hpet.cpp",
-    "interrupts.cpp",
-    "keyboard.cpp",
-    "memory.cpp",
-    "pcie_quirks.cpp",
-    "pic.cpp",
-    "platform.cpp",
-    "platform_pcie.cpp",
-    "power.cpp",
-    "smbios.cpp",
-    "timer.cpp",
+    "console.cc",
+    "debug.cc",
+    "hpet.cc",
+    "interrupts.cc",
+    "keyboard.cc",
+    "memory.cc",
+    "pcie_quirks.cc",
+    "pic.cc",
+    "platform.cc",
+    "platform_pcie.cc",
+    "power.cc",
+    "smbios.cc",
+    "timer.cc",
   ]
   deps = [
     ":tests",
@@ -53,7 +53,7 @@ library("pc") {
 source_set("tests") {
   # TODO: testonly = true
   sources = [
-    "interrupts_test.cpp",
+    "interrupts_test.cc",
   ]
   deps = [
     ":headers",

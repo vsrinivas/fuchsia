@@ -4,11 +4,11 @@
 
 driver("optee") {
   sources = [
-    "optee-client.cpp",
-    "optee-controller.cpp",
-    "optee-message.cpp",
-    "shared-memory.cpp",
-    "util.cpp",
+    "optee-client.cc",
+    "optee-controller.cc",
+    "optee-message.cc",
+    "shared-memory.cc",
+    "util.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.platform.device",

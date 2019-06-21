@@ -5,7 +5,7 @@
 source_set("sync-completion") {
   testonly = true
   sources = [
-    "completion.cpp",
+    "completion.cc",
     "main.c",
   ]
   deps = [

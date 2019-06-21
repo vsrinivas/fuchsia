@@ -5,7 +5,7 @@
 host_tool("mtd-redundant-storage") {
   if (current_os == "linux") {
     sources = [
-      "mtd-rs-tool.cpp",
+      "mtd-rs-tool.cc",
     ]
   }
   deps = [

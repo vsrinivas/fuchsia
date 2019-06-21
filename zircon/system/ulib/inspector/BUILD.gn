@@ -11,12 +11,12 @@ library("inspector") {
   sdk = "shared"
   sdk_headers = [ "inspector/inspector.h" ]
   sources = [
-    "backtrace.cpp",
-    "debug-info.cpp",
-    "dso-list.cpp",
-    "memory.cpp",
-    "registers.cpp",
-    "utils.cpp",
+    "backtrace.cc",
+    "debug-info.cc",
+    "dso-list.cc",
+    "memory.cc",
+    "registers.cc",
+    "utils.cc",
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   public_deps = [

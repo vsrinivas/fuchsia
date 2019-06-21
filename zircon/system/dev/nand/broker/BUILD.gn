@@ -10,7 +10,7 @@ group("broker") {
 
 driver("nand-broker") {
   sources = [
-    "broker.cpp",
+    "broker.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.nand",

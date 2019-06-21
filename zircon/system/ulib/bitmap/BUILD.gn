@@ -14,8 +14,8 @@ library("bitmap") {
   host = true
   static = true
   sources = [
-    "raw-bitmap.cpp",
-    "rle-bitmap.cpp",
+    "raw-bitmap.cc",
+    "rle-bitmap.cc",
   ]
   public_deps = [
     "$zx/system/ulib/fbl:headers",

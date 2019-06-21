@@ -6,8 +6,8 @@ import("$zx/public/gn/firmware.gni")
 
 driver("qcom-pil") {
   sources = [
-    "binding.cpp",
-    "qcom-pil.cpp",
+    "binding.cc",
+    "qcom-pil.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.platform.bus",

@@ -5,14 +5,14 @@
 driver("usb-audio") {
   sources = [
     "midi.c",
-    "usb-audio-control-interface.cpp",
-    "usb-audio-descriptors.cpp",
-    "usb-audio-device.cpp",
-    "usb-audio-path.cpp",
-    "usb-audio-stream-interface.cpp",
-    "usb-audio-stream.cpp",
-    "usb-audio-units.cpp",
-    "usb-audio.cpp",
+    "usb-audio-control-interface.cc",
+    "usb-audio-descriptors.cc",
+    "usb-audio-device.cc",
+    "usb-audio-path.cc",
+    "usb-audio-stream-interface.cc",
+    "usb-audio-stream.cc",
+    "usb-audio-units.cc",
+    "usb-audio.cc",
     "usb-midi-sink.c",
     "usb-midi-source.c",
   ]

@@ -14,10 +14,10 @@ library("trace-test-utils") {
   ]
   testonly = true
   sources = [
-    "compare_records.cpp",
-    "fixture.cpp",
-    "read_records.cpp",
-    "squelch.cpp",
+    "compare_records.cc",
+    "fixture.cc",
+    "read_records.cc",
+    "squelch.cc",
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   public_deps = [

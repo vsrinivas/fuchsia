@@ -10,7 +10,7 @@ library("task-utils") {
   ]
   sources = [
     "get.c",
-    "walker.cpp",
+    "walker.cc",
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   deps = [

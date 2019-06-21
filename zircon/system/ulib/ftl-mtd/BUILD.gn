@@ -6,8 +6,8 @@ library("ftl-mtd") {
   host = true
 
   sources = [
-    "ftl-volume-wrapper.cpp",
-    "nand-volume-driver.cpp",
+    "ftl-volume-wrapper.cc",
+    "nand-volume-driver.cc",
   ]
 
   public_deps = [

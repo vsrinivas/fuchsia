@@ -6,8 +6,8 @@ library("zxcrypt-dev") {
   shared = true
   static = true
   sources = [
-    "ddk-volume.cpp",
-    "volume.cpp",
+    "ddk-volume.cc",
+    "volume.cc",
   ]
 
   public_deps = [
@@ -42,8 +42,8 @@ library("zxcrypt-dev") {
 library("zxcrypt-fdio") {
   shared = true
   sources = [
-    "fdio-volume.cpp",
-    "volume.cpp",
+    "fdio-volume.cc",
+    "volume.cc",
   ]
   public_deps = [
     # <zxcrypt/volume.h> has #include <crypto/aead.h> (among others).

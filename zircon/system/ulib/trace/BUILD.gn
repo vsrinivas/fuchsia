@@ -35,8 +35,8 @@ template("trace_library") {
     ]
 
     sources = [
-      "event.cpp",
-      "observer.cpp",
+      "event.cc",
+      "observer.cc",
     ]
 
     # Source dependencies, not including the trace engine.

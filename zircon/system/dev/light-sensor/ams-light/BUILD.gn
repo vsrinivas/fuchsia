@@ -4,7 +4,7 @@
 
 driver("ams-light") {
   sources = [
-    "tcs3400.cpp",
+    "tcs3400.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.composite",

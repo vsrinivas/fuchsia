@@ -5,7 +5,7 @@
 library("fbl") {
   kernel = true
   sources = [
-    "arena.cpp",
+    "arena.cc",
   ]
   deps = [
     ":tests",
@@ -20,9 +20,9 @@ source_set("tests") {
   #TODO: testonly = true
   visibility = [ ":*" ]
   sources = [
-    "arena_tests.cpp",
-    "inline_array_tests.cpp",
-    "name_tests.cpp",
+    "arena_tests.cc",
+    "inline_array_tests.cc",
+    "name_tests.cc",
   ]
 
   deps = [

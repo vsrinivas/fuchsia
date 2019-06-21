@@ -4,7 +4,7 @@
 
 driver("as370-gpio") {
   sources = [
-    "as370-gpio.cpp",
+    "as370-gpio.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.gpioimpl",
@@ -22,8 +22,8 @@ driver("as370-gpio") {
 test("as370-gpio-test") {
   output_name = "as370-gpio-test"
   sources = [
-    "as370-gpio-test.cpp",
-    "as370-gpio.cpp",
+    "as370-gpio-test.cc",
+    "as370-gpio.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.gpioimpl",

@@ -4,7 +4,7 @@
 
 driver("aml-uart") {
   sources = [
-    "aml-uart.cpp",
+    "aml-uart.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.platform.bus",

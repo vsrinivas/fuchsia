@@ -4,7 +4,7 @@
 
 test("thread-state") {
   sources = [
-    "thread-state.cpp",
+    "thread-state.cc",
   ]
   deps = [
     "$zx/system/ulib/fbl",

@@ -4,7 +4,7 @@
 
 test("blobfs-bench") {
   sources = [
-    "blobfs-bench.cpp",
+    "blobfs-bench.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-io:c",

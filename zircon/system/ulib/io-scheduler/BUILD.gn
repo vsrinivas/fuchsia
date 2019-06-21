@@ -5,9 +5,9 @@
 library("io-scheduler") {
   static = true
   sources = [
-    "scheduler.cpp",
-    "stream.cpp",
-    "worker.cpp",
+    "scheduler.cc",
+    "stream.cc",
+    "worker.cc",
   ]
   deps = [
     "$zx/system/ulib/fbl",
@@ -18,8 +18,8 @@ library("io-scheduler") {
 test("io-scheduler-test") {
   output_name = "iosched"
   sources = [
-    "test/main.cpp",
-    "test/unique-op.cpp",
+    "test/main.cc",
+    "test/unique-op.cc",
   ]
   deps = [
     "$zx/system/ulib/fbl",

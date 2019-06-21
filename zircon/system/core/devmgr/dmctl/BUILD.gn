@@ -4,7 +4,7 @@
 
 driver("dmctl") {
   sources = [
-    "dmctl.cpp",
+    "dmctl.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-device-manager:c",

@@ -4,7 +4,7 @@
 
 test_driver("sysdev") {
   sources = [
-    "sysdev.cpp",
+    "sysdev.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-boot:c",

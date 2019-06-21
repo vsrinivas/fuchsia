@@ -4,7 +4,7 @@
 
 test("profile") {
   sources = [
-    "profile.cpp",
+    "profile.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-scheduler:c",

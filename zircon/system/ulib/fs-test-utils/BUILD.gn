@@ -6,17 +6,17 @@ library("fs-test-utils") {
   sdk = "source"
   sdk_headers = [
     "fs-test-utils/blobfs/blobfs.h",
-    "fs-test-utils/blobfs/bloblist.cpp",
+    "fs-test-utils/blobfs/bloblist.cc",
     "fs-test-utils/fixture.h",
     "fs-test-utils/perftest.h",
     "fs-test-utils/unittest.h",
   ]
   testonly = true
   sources = [
-    "blobfs/blobfs.cpp",
-    "blobfs/bloblist.cpp",
-    "fixture.cpp",
-    "perftest.cpp",
+    "blobfs/blobfs.cc",
+    "blobfs/bloblist.cc",
+    "fixture.cc",
+    "perftest.cc",
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   public_deps = [

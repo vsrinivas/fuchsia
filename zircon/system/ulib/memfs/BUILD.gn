@@ -10,11 +10,11 @@ library("memfs-cpp") {
   sdk = "source"
   sdk_headers = [ "lib/memfs/cpp/vnode.h" ]
   sources = [
-    "directory.cpp",
-    "dnode.cpp",
-    "file.cpp",
-    "memfs.cpp",
-    "vmo.cpp",
+    "directory.cc",
+    "dnode.cc",
+    "file.cc",
+    "memfs.cc",
+    "vmo.cc",
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   deps = [
@@ -39,7 +39,7 @@ library("memfs") {
   sdk_headers = [ "lib/memfs/memfs.h" ]
   shared = true
   sources = [
-    "memfs-local.cpp",
+    "memfs-local.cc",
   ]
   public_deps = [
     # <lib/memfs/memfs.h> has #include <lib/async/dispatcher.h>.

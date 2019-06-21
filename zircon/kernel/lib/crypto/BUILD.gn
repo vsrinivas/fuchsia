@@ -5,10 +5,10 @@
 library("crypto") {
   kernel = true
   sources = [
-    "global_prng.cpp",
-    "global_prng_unittest.cpp",
-    "prng.cpp",
-    "prng_unittest.cpp",
+    "global_prng.cc",
+    "global_prng_unittest.cc",
+    "prng.cc",
+    "prng_unittest.cc",
   ]
   deps = [
     "$zx/kernel/lib/fbl",

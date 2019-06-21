@@ -19,14 +19,14 @@ group("pci") {
 source_set("user_pci") {
   visibility = [ ":*" ]
   sources = [
-    "allocation.cpp",
-    "bridge.cpp",
-    "bus.cpp",
-    "capabilities.cpp",
-    "config.cpp",
-    "device.cpp",
-    "device_protocol.cpp",
-    "upstream_node.cpp",
+    "allocation.cc",
+    "bridge.cc",
+    "bus.cc",
+    "capabilities.cc",
+    "config.cc",
+    "device.cc",
+    "device_protocol.cc",
+    "upstream_node.cc",
   ]
   public_deps = [
     "$zx/system/banjo/ddk.protocol.pci",
@@ -48,7 +48,7 @@ source_set("user_pci") {
 
 source_set("user_pci.proxy") {
   sources = [
-    "device_proxy.cpp",
+    "device_proxy.cc",
   ]
   public_deps = [
     "$zx/system/banjo/ddk.protocol.pci",
@@ -63,7 +63,7 @@ if (enable_user_pci) {
   driver("bus-pci") {
     sources = [
       # The driver needs bind glue, unlike tests.
-      "bind.cpp",
+      "bind.cc",
     ]
     deps = [
       ":user_pci",
@@ -115,9 +115,9 @@ if (enable_user_pci) {
 # pci_test.so: A zxtest driver to test the PCI protocol
 test("pci-unit") {
   sources = [
-    "test/unit/allocation_tests.cpp",
-    "test/unit/config_tests.cpp",
-    "test/unit/device_tests.cpp",
+    "test/unit/allocation_tests.cc",
+    "test/unit/config_tests.cc",
+    "test/unit/device_tests.cc",
   ]
   deps = [
     ":user_pci",
@@ -128,7 +128,7 @@ test("pci-unit") {
 
 test("pci-driver") {
   sources = [
-    "test/driver/driver_tests.cpp",
+    "test/driver/driver_tests.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-device-test:c",
@@ -144,7 +144,7 @@ test("pci-driver") {
 
 driver("pci_fake") {
   sources = [
-    "test/driver/fake_bus_driver.cpp",
+    "test/driver/fake_bus_driver.cc",
   ]
   public_deps = [
     ":user_pci",
@@ -163,7 +163,7 @@ driver("pci_fake.proxy") {
 
 driver("pci_protocol_test_driver") {
   sources = [
-    "test/driver/protocol_test_driver.cpp",
+    "test/driver/protocol_test_driver.cc",
   ]
   deps = [
     ":user_pci",

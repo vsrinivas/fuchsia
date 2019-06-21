@@ -4,7 +4,7 @@
 
 source_set("debugcommands") {
   sources = [
-    "debugcommands.cpp",
+    "debugcommands.cc",
   ]
   deps = [
     "$zx/kernel/lib/console",

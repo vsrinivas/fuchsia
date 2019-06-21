@@ -83,7 +83,7 @@ executable("vmaps") {
 executable("vmos") {
   sources = [
     "vmo-utils.c",
-    "vmos.cpp",
+    "vmos.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-sysinfo:c",
@@ -96,7 +96,7 @@ executable("vmos") {
 
 executable("memgraph") {
   sources = [
-    "memgraph.cpp",
+    "memgraph.cc",
     "resources.c",
     "vmo-utils.c",
   ]
@@ -138,7 +138,7 @@ executable("kstats") {
 
 executable("threads") {
   sources = [
-    "threads.cpp",
+    "threads.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-sysinfo:c",

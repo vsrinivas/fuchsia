@@ -4,7 +4,7 @@
 
 test("ffl") {
   sources = [
-    "ffl_tests.cpp",
+    "ffl_tests.cc",
   ]
   deps = [
     "$zx/system/ulib/ffl",

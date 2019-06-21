@@ -5,9 +5,9 @@
 source_set("pager") {
   testonly = true
   sources = [
-    "pager.cpp",
-    "test_thread.cpp",
-    "userpager.cpp",
+    "pager.cc",
+    "test_thread.cc",
+    "userpager.cc",
   ]
   deps = [
     "$zx/system/ulib/elf-search",

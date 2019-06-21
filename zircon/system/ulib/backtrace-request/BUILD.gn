@@ -13,7 +13,7 @@ library("backtrace-request") {
 # This is a superset of the SDK backtrace-request library.
 library("utils") {
   sources = [
-    "backtrace-request-utils.cpp",
+    "backtrace-request-utils.cc",
   ]
   deps = [
     "$zx/system/ulib/zircon",

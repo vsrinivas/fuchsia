@@ -11,7 +11,7 @@ group("test") {
 
 test("hermetic-decompressor") {
   sources = [
-    "test.cpp",
+    "test.cc",
   ]
   deps = [
     "$zx/system/ulib/hermetic-decompressor",

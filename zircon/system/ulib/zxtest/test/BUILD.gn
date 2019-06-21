@@ -12,20 +12,20 @@ group("test") {
 
 test("zxtest") {
   sources = [
-    "assertion_test.cpp",
-    "event-broadcaster_test.cpp",
-    "main.cpp",
-    "runner_test.cpp",
-    "test-case_test.cpp",
-    "test-info_test.cpp",
-    "test_test.cpp",
+    "assertion_test.cc",
+    "event-broadcaster_test.cc",
+    "main.cc",
+    "runner_test.cc",
+    "test-case_test.cc",
+    "test-info_test.cc",
+    "test_test.cc",
   ]
   deps = [
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/zxtest",
   ]
   if (is_fuchsia) {
-    sources += [ "death-statement_test.cpp" ]
+    sources += [ "death-statement_test.cc" ]
 
     deps += [
       "$zx/system/ulib/fdio",

@@ -7,7 +7,7 @@ test_driver("ddk-test") {
     "ddk-test-binding.c",
     "ddk-test.c",
     "metadata-test.c",
-    "svc-test.cpp",
+    "svc-test.cc",
     "usb-request-test.c",
   ]
   deps = [

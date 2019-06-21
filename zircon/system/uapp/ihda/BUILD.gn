@@ -4,12 +4,12 @@
 
 executable("ihda") {
   sources = [
-    "ihda.cpp",
-    "intel_hda_codec.cpp",
-    "intel_hda_controller.cpp",
-    "intel_hda_device.cpp",
-    "print_codec_state.cpp",
-    "zircon_device.cpp",
+    "ihda.cc",
+    "intel_hda_codec.cc",
+    "intel_hda_controller.cc",
+    "intel_hda_device.cc",
+    "print_codec_state.cc",
+    "zircon_device.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-hardware-intel-hda:c",

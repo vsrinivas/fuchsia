@@ -4,10 +4,10 @@
 
 driver("nandpart") {
   sources = [
-    "aml-bad-block.cpp",
-    "bad-block.cpp",
-    "nandpart-utils.cpp",
-    "nandpart.cpp",
+    "aml-bad-block.cc",
+    "bad-block.cc",
+    "nandpart-utils.cc",
+    "nandpart.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.badblock",
@@ -26,11 +26,11 @@ driver("nandpart") {
 test("nandpart-test") {
   output_name = "nandpart-test"
   sources = [
-    "aml-bad-block.cpp",
-    "bad-block.cpp",
-    "nandpart-utils.cpp",
-    "test/aml-bad-block-test.cpp",
-    "test/nandpart-utils-test.cpp",
+    "aml-bad-block.cc",
+    "bad-block.cc",
+    "nandpart-utils.cc",
+    "test/aml-bad-block-test.cc",
+    "test/nandpart-utils-test.cc",
   ]
   include_dirs = [ "." ]
   deps = [

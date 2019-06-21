@@ -4,7 +4,7 @@
 
 test("status") {
   sources = [
-    "status.cpp",
+    "status.cc",
   ]
   deps = [
     "$zx/system/ulib/fdio",

@@ -5,11 +5,11 @@
 library("hypervisor") {
   kernel = true
   sources = [
-    "cpu.cpp",
-    "guest_physical_address_space.cpp",
-    "hypervisor_unittest.cpp",
-    "ktrace.cpp",
-    "trap_map.cpp",
+    "cpu.cc",
+    "guest_physical_address_space.cc",
+    "hypervisor_unittest.cc",
+    "ktrace.cc",
+    "trap_map.cc",
   ]
   deps = [
     "$zx/kernel/arch/$zircon_cpu/hypervisor",

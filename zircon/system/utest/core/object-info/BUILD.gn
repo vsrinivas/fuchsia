@@ -5,12 +5,12 @@
 source_set("object-info") {
   testonly = true
   sources = [
-    "basic-object-info-test.cpp",
-    "job-object-info-test.cpp",
-    "process-object-info-test.cpp",
-    "task-object-info-test.cpp",
-    "thread-object-info-test.cpp",
-    "vmar-object-info-test.cpp",
+    "basic-object-info-test.cc",
+    "job-object-info-test.cc",
+    "process-object-info-test.cc",
+    "task-object-info-test.cc",
+    "thread-object-info-test.cc",
+    "vmar-object-info-test.cc",
   ]
   deps = [
     "$zx/system/ulib/fbl",

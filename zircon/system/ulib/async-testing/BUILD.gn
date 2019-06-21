@@ -13,9 +13,9 @@ library("async-testing") {
   ]
   testonly = true
   sources = [
-    "dispatcher_stub.cpp",
-    "test_loop.cpp",
-    "test_loop_dispatcher.cpp",
+    "dispatcher_stub.cc",
+    "test_loop.cc",
+    "test_loop_dispatcher.cc",
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   public_deps = [

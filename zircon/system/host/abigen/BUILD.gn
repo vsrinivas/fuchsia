@@ -4,16 +4,16 @@
 
 host_tool("abigen") {
   sources = [
-    "abigen.cpp",
-    "abigen_generator.cpp",
-    "generator.cpp",
-    "header_generator.cpp",
-    "json_generator.cpp",
-    "kernel_wrapper_generator.cpp",
-    "parser/parser.cpp",
-    "rust_binding_generator.cpp",
-    "syscall_parser.cpp",
-    "types.cpp",
-    "vdso_wrapper_generator.cpp",
+    "abigen.cc",
+    "abigen_generator.cc",
+    "generator.cc",
+    "header_generator.cc",
+    "json_generator.cc",
+    "kernel_wrapper_generator.cc",
+    "parser/parser.cc",
+    "rust_binding_generator.cc",
+    "syscall_parser.cc",
+    "types.cc",
+    "vdso_wrapper_generator.cc",
   ]
 }

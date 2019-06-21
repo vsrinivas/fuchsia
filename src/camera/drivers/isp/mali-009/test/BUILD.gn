@@ -5,7 +5,7 @@
 executable("mali_009_test") {
   testonly = true
   sources = [
-    "isp.cpp",
+    "isp.cc",
   ]
   deps = [
     "//garnet/tests/zircon/libdriver-integration-test:libdriver-integration-test",

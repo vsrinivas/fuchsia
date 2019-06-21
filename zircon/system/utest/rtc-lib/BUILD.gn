@@ -4,7 +4,7 @@
 
 test("rtc-lib") {
   sources = [
-    "rtc.cpp",
+    "rtc.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-hardware-rtc:c",

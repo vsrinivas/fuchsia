@@ -4,7 +4,7 @@
 
 executable("iochk") {
   sources = [
-    "iochk.cpp",
+    "iochk.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-hardware-block:c",

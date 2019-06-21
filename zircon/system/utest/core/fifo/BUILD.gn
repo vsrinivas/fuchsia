@@ -5,7 +5,7 @@
 source_set("fifo") {
   testonly = true
   sources = [
-    "fifo.cpp",
+    "fifo.cc",
   ]
   deps = [
     "$zx/system/ulib/fbl",

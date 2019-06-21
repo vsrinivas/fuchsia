@@ -28,7 +28,7 @@ executable("fx_bin") {
   output_name = "fx"
 
   sources = [
-    "fx.cpp",
+    "fx.cc",
   ]
 
   deps = [

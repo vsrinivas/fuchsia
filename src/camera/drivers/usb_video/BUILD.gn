@@ -9,13 +9,13 @@ driver_module("usb_video_driver") {
   output_name = "usb_video"
 
   sources = [
-    "camera_control_impl.cpp",
+    "camera_control_impl.cc",
     "camera_control_impl.h",
-    "usb-video-stream.cpp",
+    "usb-video-stream.cc",
     "usb-video-stream.h",
-    "usb-video.cpp",
+    "usb-video.cc",
     "usb-video.h",
-    "uvc_format.cpp",
+    "uvc_format.cc",
     "uvc_format.h",
     "video-util.c",
     "video-util.h",

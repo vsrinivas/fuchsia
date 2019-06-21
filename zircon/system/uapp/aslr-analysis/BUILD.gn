@@ -4,7 +4,7 @@
 
 executable("aslr-analysis") {
   sources = [
-    "main.cpp",
+    "main.cc",
   ]
   deps = [
     "$zx/system/ulib/fbl",

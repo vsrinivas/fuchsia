@@ -8,7 +8,7 @@
 source_set("common") {
   visibility = [ ":*" ]
   sources = [
-    "event_vthread.cpp",
+    "event_vthread.cc",
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   deps = [
@@ -75,7 +75,7 @@ source_set("test-common") {
   testonly = true
   visibility = [ ":*" ]
   sources = [
-    "event_vthread_tests.cpp",
+    "event_vthread_tests.cc",
   ]
   deps = [
     "$zx/system/ulib/async",

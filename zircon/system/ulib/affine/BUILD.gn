@@ -14,8 +14,8 @@ library("affine") {
   static = true
 
   sources = [
-    "ratio.cpp",
-    "transform.cpp",
+    "ratio.cc",
+    "transform.cc",
   ]
 
   public_deps = [

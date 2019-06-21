@@ -4,13 +4,13 @@
 
 test("fs-host") {
   sources = [
-    "test-basic.cpp",
-    "test-directory.cpp",
-    "test-maxfile.cpp",
-    "test-rw-workers.cpp",
-    "test-sparse.cpp",
-    "test-truncate.cpp",
-    "util.cpp",
+    "test-basic.cc",
+    "test-directory.cc",
+    "test-maxfile.cc",
+    "test-rw-workers.cc",
+    "test-sparse.cc",
+    "test-truncate.cc",
+    "util.cc",
   ]
   deps = [
     "$zx/system/ulib/minfs",

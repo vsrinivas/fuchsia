@@ -4,9 +4,9 @@
 
 executable("trace-benchmark") {
   sources = [
-    "benchmarks.cpp",
-    "benchmarks_ntrace.cpp",
-    "main.cpp",
+    "benchmarks.cc",
+    "benchmarks_ntrace.cc",
+    "main.cc",
   ]
   deps = [
     "$zx/system/ulib/async",

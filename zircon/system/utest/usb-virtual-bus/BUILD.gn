@@ -12,7 +12,7 @@ group("test") {
 
 test("usb-virtual-bus-ums") {
   sources = [
-    "ums-test.cpp",
+    "ums-test.cc",
   ]
   deps = [
     ":main",
@@ -44,7 +44,7 @@ test("usb-virtual-bus-ums") {
 
 test("usb-virtual-bus-hid") {
   sources = [
-    "usb-hid-test.cpp",
+    "usb-hid-test.cc",
   ]
   deps = [
     ":main",
@@ -71,7 +71,7 @@ test("usb-virtual-bus-hid") {
 
 test("usb-virtual-bus-ftdi") {
   sources = [
-    "ftdi-test.cpp",
+    "ftdi-test.cc",
   ]
   deps = [
     ":main",
@@ -98,9 +98,9 @@ test("usb-virtual-bus-ftdi") {
 source_set("main") {
   testonly = true
   sources = [
-    "helper.cpp",
-    "main.cpp",
-    "usb-virtual-bus.cpp",
+    "helper.cc",
+    "main.cc",
+    "usb-virtual-bus.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-hardware-usb-virtual-bus:c",

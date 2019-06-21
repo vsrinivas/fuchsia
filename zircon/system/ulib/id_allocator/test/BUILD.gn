@@ -11,7 +11,7 @@ group("test") {
 
 test("id_allocator") {
   sources = [
-    "id_allocator.cpp",
+    "id_allocator.cc",
   ]
   deps = [
     "$zx/system/ulib/fbl",

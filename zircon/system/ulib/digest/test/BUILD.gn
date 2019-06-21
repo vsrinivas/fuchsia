@@ -11,8 +11,8 @@ group("test") {
 
 test("digest") {
   sources = [
-    "digest.cpp",
-    "merkle-tree.cpp",
+    "digest.cc",
+    "merkle-tree.cc",
   ]
   deps = [
     "$zx/system/ulib/digest",

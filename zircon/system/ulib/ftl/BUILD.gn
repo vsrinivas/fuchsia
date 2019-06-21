@@ -10,8 +10,8 @@ library("ftl") {
     "ftln/ftln_intrnl.c",
     "ftln/ftln_rd.c",
     "ftln/ftln_util.c",
-    "ftln/ndm-driver.cpp",
-    "ftln/volume.cpp",
+    "ftln/ndm-driver.cc",
+    "ftln/volume.cc",
     "ndm/ndm_init.c",
     "ndm/ndm_intrnl.c",
     "ndm/ndm_vols.c",
@@ -31,10 +31,10 @@ library("ftl") {
   ]
 
   if (is_fuchsia) {
-    sources += [ "utils/semaphore.cpp" ]
+    sources += [ "utils/semaphore.cc" ]
     deps += [ "$zx/system/ulib/zircon" ]
   } else {
-    sources += [ "utils/semaphore_posix.cpp" ]
+    sources += [ "utils/semaphore_posix.cc" ]
     deps += [ "$zx/system/ulib/zircon:headers" ]
   }
 

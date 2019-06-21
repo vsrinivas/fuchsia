@@ -4,7 +4,7 @@
 
 driver("uart16550") {
   sources = [
-    "uart16550.cpp",
+    "uart16550.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.acpi",
@@ -22,8 +22,8 @@ driver("uart16550") {
 test("uart16550-test") {
   output_name = "uart16550-test"
   sources = [
-    "uart16550-test.cpp",
-    "uart16550.cpp",
+    "uart16550-test.cc",
+    "uart16550.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.acpi",

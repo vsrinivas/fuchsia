@@ -11,11 +11,11 @@ source_set("simple_camera_lib") {
   output_name = "simple_camera_lib"
 
   sources = [
-    "buffer_fence.cpp",
+    "buffer_fence.cc",
     "buffer_fence.h",
-    "frame_scheduler.cpp",
+    "frame_scheduler.cc",
     "frame_scheduler.h",
-    "video_display.cpp",
+    "video_display.cc",
     "video_display.h",
   ]
 
@@ -52,7 +52,7 @@ executable("simple_camera_unittests") {
   testonly = true
 
   sources = [
-    "tests/buffer_fence_unittest.cpp",
+    "tests/buffer_fence_unittest.cc",
   ]
   deps = [
     ":simple_camera_lib",

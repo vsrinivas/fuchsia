@@ -41,11 +41,11 @@ template("trace_engine_library") {
     sdk_headers = []
 
     sources = [
-      "context.cpp",
-      "context_api.cpp",
+      "context.cc",
+      "context_api.cc",
       "context_impl.h",
-      "engine.cpp",
-      "nonce.cpp",
+      "engine.cc",
+      "nonce.cc",
     ]
     deps = [
       "$zx/system/ulib/async:async-cpp",

@@ -4,8 +4,8 @@
 
 library("mt8167") {
   sources = [
-    "mt8167-audio-in.cpp",
-    "mt8167-audio-out.cpp",
+    "mt8167-audio-in.cc",
+    "mt8167-audio-out.cc",
   ]
   deps = [
     "$zx/system/dev/lib/mmio",
@@ -20,8 +20,8 @@ library("mt8167") {
 test("mt8167-audio-lib-test") {
   output_name = "mt8167-audio-lib-test"
   sources = [
-    "mt8167-audio-in-test.cpp",
-    "mt8167-audio-in.cpp",
+    "mt8167-audio-in-test.cc",
+    "mt8167-audio-in.cc",
   ]
   deps = [
     "$zx/system/dev/lib/fake_ddk",

@@ -7,9 +7,9 @@ driver("gauss-pdm-input") {
     "a113-audio-device.c",
     "a113-ddr.c",
     "a113-pdm.c",
-    "gauss-pdm-input-stream.cpp",
+    "gauss-pdm-input-stream.cc",
     "gauss-pdm-input.c",
-    "vmo_helper.cpp",
+    "vmo_helper.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.platform.device",

@@ -6,7 +6,7 @@ library("simple-audio-stream") {
   sdk = "source"
   sdk_headers = [ "lib/simple-audio-stream/simple-audio-stream.h" ]
   sources = [
-    "simple-audio-stream.cpp",
+    "simple-audio-stream.cc",
   ]
   public_deps = [
     "$zx/system/fidl/fuchsia-hardware-audio:c.headers",
@@ -29,7 +29,7 @@ library("simple-audio-stream") {
 
 test("sa-unittest") {
   sources = [
-    "tests/sas-test.cpp",
+    "tests/sas-test.cc",
   ]
   deps = [
     ":simple-audio-stream",

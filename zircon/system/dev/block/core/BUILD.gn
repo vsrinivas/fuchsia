@@ -5,10 +5,10 @@
 driver("core") {
   output_name = "block.core"
   sources = [
-    "block-device.cpp",
-    "server-manager.cpp",
-    "server.cpp",
-    "txn-group.cpp",
+    "block-device.cc",
+    "server-manager.cc",
+    "server.cc",
+    "txn-group.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.block",

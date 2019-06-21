@@ -12,14 +12,14 @@ group("test") {
 
 test("ftl") {
   sources = [
-    "block_device_test.cpp",
-    "driver-test.cpp",
-    "ftl-shell.cpp",
-    "ftl-test.cpp",
-    "nand_driver_test.cpp",
-    "nand_operation_test.cpp",
-    "ndm-ram-driver.cpp",
-    "oob_doubler_test.cpp",
+    "block_device_test.cc",
+    "driver-test.cc",
+    "ftl-shell.cc",
+    "ftl-test.cc",
+    "nand_driver_test.cc",
+    "nand_operation_test.cc",
+    "ndm-ram-driver.cc",
+    "oob_doubler_test.cc",
   ]
   include_dirs = [ "$zx/system/dev/block/ftl" ]
   deps = [
@@ -32,10 +32,10 @@ test("ftl") {
 
 test("ftl-integration") {
   sources = [
-    "ftl_integration_test.cpp",
-    "ftl_test_observer.cpp",
-    "integration_main.cpp",
-    "launch.cpp",
+    "ftl_integration_test.cc",
+    "ftl_test_observer.cc",
+    "integration_main.cc",
+    "launch.cc",
   ]
   include_dirs = [ "$zx/system/dev/block/ftl" ]
   deps = [

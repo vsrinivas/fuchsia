@@ -30,7 +30,7 @@ constexpr char kTestName[] = "TestName";
 constexpr char kTestName2[] = "TestName2";
 constexpr char kTestCaseName[] = "TestCase";
 constexpr char kTestCaseName2[] = "TestCase2";
-constexpr char kFileName[] = "filename.cpp";
+constexpr char kFileName[] = "filename.cc";
 constexpr int kLineNumber = 20;
 
 // Test fixture that runs a given closure.

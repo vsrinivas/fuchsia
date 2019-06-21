@@ -11,7 +11,7 @@ source_set("sanitizers") {
     "asan-stubs.c",
     "hooks.c",
     "log.c",
-    "ubsan-stubs.cpp",
+    "ubsan-stubs.cc",
   ]
 
   # There is no '#if __has_feature(coverage)', so this has to be excluded
@@ -28,7 +28,7 @@ source_set("sanitizers") {
 source_set("sancov-stubs") {
   visibility = [ ":*" ]
   sources = [
-    "sancov-stubs.cpp",
+    "sancov-stubs.cc",
   ]
   configs += [ "$zx/public/gn/config:no_sanitizers" ]
 }

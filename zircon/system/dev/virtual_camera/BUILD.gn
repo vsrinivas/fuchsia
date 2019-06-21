@@ -4,8 +4,8 @@
 
 driver("virtual_camera_device") {
   sources = [
-    "virtual_camera_device.cpp",
-    "virtual_camera_stream.cpp",
+    "virtual_camera_device.cc",
+    "virtual_camera_stream.cc",
   ]
 
   deps = [
@@ -26,7 +26,7 @@ driver("virtual_camera_device") {
 
 driver("virtual_camera_factory") {
   sources = [
-    "virtual_camera_factory.cpp",
+    "virtual_camera_factory.cc",
   ]
 
   deps = [

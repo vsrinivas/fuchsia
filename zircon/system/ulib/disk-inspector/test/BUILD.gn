@@ -11,7 +11,7 @@ group("test") {
 
 test("disk-inspector-unit") {
   sources = [
-    "basic-types-test.cpp",
+    "basic-types-test.cc",
   ]
   deps = [
     "$zx/system/ulib/disk-inspector",

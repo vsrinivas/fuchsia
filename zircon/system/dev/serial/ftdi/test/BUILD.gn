@@ -4,7 +4,7 @@
 
 test("ftdi-i2c-test") {
   sources = [
-    "ftdi-i2c-test.cpp",
+    "ftdi-i2c-test.cc",
   ]
   include_dirs = [ ".." ]
   deps = [
@@ -27,8 +27,8 @@ source_set("common") {
   defines = [ "TEST" ]
   include_dirs = [ ".." ]
   sources = [
-    "../ftdi-i2c.cpp",
-    "../ftdi-mpsse.cpp",
+    "../ftdi-i2c.cc",
+    "../ftdi-mpsse.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.i2c",

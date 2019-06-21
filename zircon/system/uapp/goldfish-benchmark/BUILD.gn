@@ -4,7 +4,7 @@
 
 executable("goldfish-benchmark") {
   sources = [
-    "main.cpp",
+    "main.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-hardware-goldfish-pipe:c",

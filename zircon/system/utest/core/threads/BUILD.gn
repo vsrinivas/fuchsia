@@ -5,8 +5,8 @@
 source_set("threads") {
   testonly = true
   sources = [
-    "register-set.cpp",
-    "threads.cpp",
+    "register-set.cc",
+    "threads.cc",
   ]
   deps = [
     ":thread-functions",
@@ -24,7 +24,7 @@ source_set("thread-functions") {
   testonly = true
   visibility = [ ":*" ]
   sources = [
-    "thread-functions/thread-functions.cpp",
+    "thread-functions/thread-functions.cc",
   ]
   configs += [ "$zx/public/gn/config:no_sanitizers" ]
   deps = [

@@ -21,7 +21,7 @@ driver("usb-hid") {
 
 driver("usb-hid-fake-usb") {
   sources = [
-    "usb-hid-function.cpp",
+    "usb-hid-function.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.usb",

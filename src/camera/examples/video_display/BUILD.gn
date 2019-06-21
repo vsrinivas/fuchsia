@@ -9,8 +9,8 @@ executable("video_display_bin") {
   output_name = "video_display"
 
   sources = [
-    "main.cpp",
-    "simple_camera_view.cpp",
+    "main.cc",
+    "simple_camera_view.cc",
     "simple_camera_view.h",
   ]
 

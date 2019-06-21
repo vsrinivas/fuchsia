@@ -5,7 +5,7 @@
 driver("fallback") {
   sources = [
     "fallback-rtc.c",
-    "rtc-impl.cpp",
+    "rtc-impl.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-hardware-rtc:c",

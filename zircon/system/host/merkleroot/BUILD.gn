@@ -4,7 +4,7 @@
 
 host_tool("merkleroot") {
   sources = [
-    "merkleroot.cpp",
+    "merkleroot.cc",
   ]
   deps = [
     "$zx/system/ulib/digest",

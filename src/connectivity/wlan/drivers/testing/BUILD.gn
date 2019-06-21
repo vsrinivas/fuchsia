@@ -13,10 +13,10 @@ group("testing") {
 
 driver_module("wlanphy-testdev") {
   sources = [
-    "driver.cpp",
-    "iface-device.cpp",
+    "driver.cc",
+    "iface-device.cc",
     "iface-device.h",
-    "phy-device.cpp",
+    "phy-device.cc",
     "phy-device.h",
   ]
 

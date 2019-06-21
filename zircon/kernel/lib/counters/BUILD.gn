@@ -12,6 +12,6 @@ library("counters") {
   static = true
   sources = []
   if (is_kernel) {
-    sources += [ "counters.cpp" ]
+    sources += [ "counters.cc" ]
   }
 }

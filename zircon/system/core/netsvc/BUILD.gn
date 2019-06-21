@@ -6,14 +6,14 @@ import("$zx/public/gn/config/product_parameters.gni")
 
 executable("netsvc") {
   sources = [
-    "debuglog.cpp",
-    "device_id.cpp",
-    "netsvc.cpp",
+    "debuglog.cc",
+    "device_id.cc",
+    "netsvc.cc",
   ]
   if (enable_netsvc_debugging_features) {
-    sources += [ "debug-command-enabled.cpp" ]
+    sources += [ "debug-command-enabled.cc" ]
   } else {
-    sources += [ "debug-command-disabled.cpp" ]
+    sources += [ "debug-command-disabled.cc" ]
   }
   deps = [
     ":netsvc_common",
@@ -34,14 +34,14 @@ executable("netsvc") {
 
 source_set("netsvc_common") {
   sources = [
-    "board-name.cpp",
-    "file-api.cpp",
-    "netboot.cpp",
-    "netcp.cpp",
-    "paver.cpp",
-    "payload-streamer.cpp",
-    "tftp.cpp",
-    "zbi.cpp",
+    "board-name.cc",
+    "file-api.cc",
+    "netboot.cc",
+    "netcp.cc",
+    "paver.cc",
+    "payload-streamer.cc",
+    "tftp.cc",
+    "zbi.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-device:c",
@@ -71,10 +71,10 @@ source_set("netsvc_common") {
 test("netsvc-test") {
   output_name = "netsvc-test"
   sources = [
-    "test/file-api-test.cpp",
-    "test/paver-test.cpp",
-    "test/payload-streamer-test.cpp",
-    "test/tftp-test.cpp",
+    "test/file-api-test.cc",
+    "test/paver-test.cc",
+    "test/payload-streamer-test.cc",
+    "test/tftp-test.cc",
   ]
   include_dirs = [ "." ]
   deps = [

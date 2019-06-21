@@ -4,8 +4,8 @@
 
 executable("hid") {
   sources = [
-    "main.cpp",
-    "report.cpp",
+    "main.cc",
+    "report.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-hardware-input:c",

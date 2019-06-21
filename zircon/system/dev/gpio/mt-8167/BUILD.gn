@@ -4,8 +4,8 @@
 
 driver("mt-8167") {
   sources = [
-    "binding.cpp",
-    "mt8167-gpio.cpp",
+    "binding.cc",
+    "mt8167-gpio.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.gpio",
@@ -27,8 +27,8 @@ driver("mt-8167") {
 
 test("mtk-gpio") {
   sources = [
-    "mt8167-gpio-test.cpp",
-    "mt8167-gpio.cpp",
+    "mt8167-gpio-test.cc",
+    "mt8167-gpio.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.gpio",

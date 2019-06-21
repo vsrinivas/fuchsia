@@ -5,7 +5,7 @@
 source_set("shared") {
   visibility = [ ":*" ]
   sources = [
-    "simple-display.cpp",
+    "simple-display.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.display.controller",

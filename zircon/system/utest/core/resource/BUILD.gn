@@ -5,7 +5,7 @@
 source_set("resource") {
   testonly = true
   sources = [
-    "resource.cpp",
+    "resource.cc",
   ]
   deps = [
     "$zx/system/ulib/fdio",

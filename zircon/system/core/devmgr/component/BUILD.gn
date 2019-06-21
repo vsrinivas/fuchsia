@@ -4,7 +4,7 @@
 
 driver("component") {
   sources = [
-    "component.cpp",
+    "component.cc",
   ]
   data_deps = [
     ":component.proxy",
@@ -32,7 +32,7 @@ driver("component") {
 
 driver("component.proxy") {
   sources = [
-    "component-proxy.cpp",
+    "component-proxy.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.amlogiccanvas",

@@ -11,9 +11,9 @@ group("test") {
 
 test("zxio") {
   sources = [
-    "null-test.cpp",
-    "vmofile-test.cpp",
-    "zxio-test.cpp",
+    "null-test.cc",
+    "vmofile-test.cc",
+    "zxio-test.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-io:c",

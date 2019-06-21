@@ -4,7 +4,7 @@
 
 driver("nand") {
   sources = [
-    "nand.cpp",
+    "nand.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.nand",

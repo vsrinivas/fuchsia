@@ -4,7 +4,7 @@
 
 host_tool("ktrace-dump") {
   sources = [
-    "ktrace-dump.cpp",
+    "ktrace-dump.cc",
   ]
   deps = [
     "$zx/system/ulib/fbl",

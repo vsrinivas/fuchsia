@@ -5,7 +5,7 @@
 executable("usb-fwloader") {
   testonly = true
   sources = [
-    "usb-fwloader.cpp",
+    "usb-fwloader.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-device:c",

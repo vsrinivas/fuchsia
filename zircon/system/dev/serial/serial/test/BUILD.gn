@@ -11,7 +11,7 @@ group("test") {
 
 test("serial-unittest") {
   sources = [
-    "serial-test.cpp",
+    "serial-test.cc",
   ]
   include_dirs = [ ".." ]
   deps = [

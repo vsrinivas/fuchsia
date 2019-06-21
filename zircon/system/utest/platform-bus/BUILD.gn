@@ -5,7 +5,7 @@
 test("platform-bus") {
   test_group = "ddk"
   sources = [
-    "main.cpp",
+    "main.cc",
   ]
   deps = [
     "$zx/system/ulib/ddk",

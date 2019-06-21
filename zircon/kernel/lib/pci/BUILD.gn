@@ -5,6 +5,6 @@
 library("pci") {
   kernel = true
   sources = [
-    "pio.cpp",
+    "pio.cc",
   ]
 }

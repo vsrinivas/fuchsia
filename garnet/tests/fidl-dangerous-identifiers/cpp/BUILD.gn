@@ -5,7 +5,7 @@
 source_set("cpp") {
   output_name = "cpp_fidl_dangerous_identifiers_test"
   sources = [
-    "test.cpp",
+    "test.cc",
   ]
   deps = [
     "//garnet/tests/fidl-dangerous-identifiers/fidl/:fidl.test.dangerous.constants.camel",

@@ -4,8 +4,8 @@
 
 driver("aml-rawnand") {
   sources = [
-    "aml-rawnand.cpp",
-    "onfi.cpp",
+    "aml-rawnand.cc",
+    "onfi.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.platform.device",

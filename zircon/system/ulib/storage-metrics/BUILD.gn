@@ -6,7 +6,7 @@ library("storage-metrics") {
   sdk = "source"
   sdk_headers = [ "storage-metrics/storage-metrics.h" ]
   sources = [
-    "storage-metrics.cpp",
+    "storage-metrics.cc",
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   public_deps = [

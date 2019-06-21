@@ -4,7 +4,7 @@
 
 driver("msm8x53-power") {
   sources = [
-    "msm8x53-power.cpp",
+    "msm8x53-power.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.platform.bus",
@@ -28,8 +28,8 @@ test("msm8x53-power-test") {
   testonly = true
   output_name = "msm8x53-power-test"
   sources = [
-    "msm8x53-power-test.cpp",
-    "msm8x53-power.cpp",
+    "msm8x53-power-test.cc",
+    "msm8x53-power.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.platform.bus",

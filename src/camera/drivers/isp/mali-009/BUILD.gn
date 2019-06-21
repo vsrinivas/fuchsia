@@ -8,9 +8,9 @@ import("//build/package.gni")
 driver_module("mali-009-driver") {
   output_name = "mali-009"
   sources = [
-    "arm-isp-test.cpp",
-    "arm-isp.cpp",
-    "init_sequences.cpp",
+    "arm-isp-test.cc",
+    "arm-isp.cc",
+    "init_sequences.cc",
   ]
   deps = [
     "//src/camera/drivers/isp/modules",

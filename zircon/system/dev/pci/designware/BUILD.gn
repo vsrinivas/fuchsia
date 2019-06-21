@@ -9,7 +9,7 @@ library("designware") {
     "dev/pci/designware/dw-pcie.h",
   ]
   sources = [
-    "dw-pcie.cpp",
+    "dw-pcie.cc",
   ]
   deps = [
     "$zx/system/dev/lib/mmio",

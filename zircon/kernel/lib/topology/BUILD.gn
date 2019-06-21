@@ -6,7 +6,7 @@ library("topology") {
   host = true
   kernel = true
   sources = [
-    "system-topology.cpp",
+    "system-topology.cc",
   ]
   deps = [
     ":test",
@@ -17,7 +17,7 @@ library("topology") {
 source_set("test") {
   # TODO: testonly = true
   sources = [
-    "system-topology_test.cpp",
+    "system-topology_test.cc",
   ]
   include_dirs = [ "include" ]
   deps = [

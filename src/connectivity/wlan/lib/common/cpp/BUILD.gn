@@ -8,11 +8,11 @@ config("wlan_common_config") {
 
 source_set("common") {
   sources = [
-    "band.cpp",
-    "channel.cpp",
-    "element.cpp",
-    "element_splitter.cpp",
-    "energy.cpp",
+    "band.cc",
+    "channel.cc",
+    "element.cc",
+    "element_splitter.cc",
+    "energy.cc",
     "include/wlan/common/action_frame.h",
     "include/wlan/common/band.h",
     "include/wlan/common/bitfield.h",
@@ -32,14 +32,14 @@ source_set("common") {
     "include/wlan/common/stats.h",
     "include/wlan/common/tx_vector.h",
     "include/wlan/common/write_element.h",
-    "mac_frame.cpp",
-    "macaddr.cpp",
-    "parse_element.cpp",
-    "parse_mac_header.cpp",
-    "perr_destination_parser.cpp",
-    "tim_element.cpp",
-    "tx_vector.cpp",
-    "write_element.cpp",
+    "mac_frame.cc",
+    "macaddr.cc",
+    "parse_element.cc",
+    "parse_mac_header.cc",
+    "perr_destination_parser.cc",
+    "tim_element.cc",
+    "tx_vector.cc",
+    "write_element.cc",
   ]
 
   public_deps = [

@@ -5,15 +5,15 @@
 library("blobfs") {
   host = true
   sources = [
-    "common.cpp",
-    "compression/lz4.cpp",
-    "compression/zstd.cpp",
-    "extent-reserver.cpp",
-    "fsck.cpp",
-    "iterator/allocated-extent-iterator.cpp",
-    "iterator/block-iterator.cpp",
-    "iterator/vector-extent-iterator.cpp",
-    "node-reserver.cpp",
+    "common.cc",
+    "compression/lz4.cc",
+    "compression/zstd.cc",
+    "extent-reserver.cc",
+    "fsck.cc",
+    "iterator/allocated-extent-iterator.cc",
+    "iterator/block-iterator.cc",
+    "iterator/vector-extent-iterator.cc",
+    "node-reserver.cc",
   ]
   public_deps = [
     "$zx/system/ulib/bitmap:headers",
@@ -49,28 +49,28 @@ library("blobfs") {
   ]
   if (is_fuchsia) {
     sources += [
-      "allocator.cpp",
-      "blob-cache.cpp",
-      "blob.cpp",
-      "blobfs.cpp",
-      "buffer.cpp",
-      "cache-node.cpp",
-      "compression/blob-compressor.cpp",
-      "directory.cpp",
-      "format.cpp",
-      "iterator/node-populator.cpp",
-      "journal-entry.cpp",
-      "journal.cpp",
-      "metrics.cpp",
-      "mount.cpp",
-      "operation.cpp",
-      "ring-buffer.cpp",
-      "unbuffered-operations-builder.cpp",
-      "vmo-buffer.cpp",
-      "write-txn.cpp",
-      "writeback-queue.cpp",
-      "writeback-work.cpp",
-      "writeback.cpp",
+      "allocator.cc",
+      "blob-cache.cc",
+      "blob.cc",
+      "blobfs.cc",
+      "buffer.cc",
+      "cache-node.cc",
+      "compression/blob-compressor.cc",
+      "directory.cc",
+      "format.cc",
+      "iterator/node-populator.cc",
+      "journal-entry.cc",
+      "journal.cc",
+      "metrics.cc",
+      "mount.cc",
+      "operation.cc",
+      "ring-buffer.cc",
+      "unbuffered-operations-builder.cc",
+      "vmo-buffer.cc",
+      "write-txn.cc",
+      "writeback-queue.cc",
+      "writeback-work.cc",
+      "writeback.cc",
     ]
     public_deps += [
       "$zx/system/ulib/block-client:headers",
@@ -105,7 +105,7 @@ library("blobfs") {
       "$zx/system/ulib/zx",
     ]
   } else {
-    sources += [ "host.cpp" ]
+    sources += [ "host.cc" ]
     deps += [ "$zx/system/ulib/fs-host" ]
   }
 }

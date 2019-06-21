@@ -4,9 +4,9 @@
 
 source_set("fshost-registry") {
   sources = [
-    "fs-manager.cpp",
-    "registry.cpp",
-    "vnode.cpp",
+    "fs-manager.cc",
+    "registry.cc",
+    "vnode.cc",
   ]
   public_deps = [
     "$zx/system/fidl/fuchsia-fshost:c",
@@ -29,10 +29,10 @@ source_set("fshost-registry") {
 
 source_set("block-watcher") {
   sources = [
-    "block-device.cpp",
-    "block-watcher.cpp",
-    "filesystem-mounter.cpp",
-    "pkgfs-launcher.cpp",
+    "block-device.cc",
+    "block-watcher.cc",
+    "filesystem-mounter.cc",
+    "pkgfs-launcher.cc",
   ]
   public_deps = [
     "$zx/system/fidl/fuchsia-fshost:c",
@@ -67,7 +67,7 @@ source_set("block-watcher") {
 
 executable("fshost") {
   sources = [
-    "main.cpp",
+    "main.cc",
   ]
   deps = [
     ":block-watcher",
@@ -82,7 +82,7 @@ executable("fshost") {
 test("fshost-test") {
   test_group = "ddk"
   sources = [
-    "fshost-test.cpp",
+    "fshost-test.cc",
   ]
   deps = [
     ":fshost-registry",
@@ -93,8 +93,8 @@ test("fshost-test") {
 test("block-watcher-test") {
   test_group = "ddk"
   sources = [
-    "block-device-test.cpp",
-    "block-watcher-test.cpp",
+    "block-device-test.cc",
+    "block-watcher-test.cc",
   ]
   deps = [
     ":block-watcher",

@@ -11,14 +11,14 @@ group("test") {
 
 test("fs-vnode") {
   sources = [
-    "lazy-dir-tests.cpp",
-    "pseudo-dir-tests.cpp",
-    "pseudo-file-tests.cpp",
-    "remote-dir-tests.cpp",
-    "service-tests.cpp",
-    "teardown-tests.cpp",
-    "tracked-remote-dir-tests.cpp",
-    "vmo-file-tests.cpp",
+    "lazy-dir-tests.cc",
+    "pseudo-dir-tests.cc",
+    "pseudo-file-tests.cc",
+    "remote-dir-tests.cc",
+    "service-tests.cc",
+    "teardown-tests.cc",
+    "tracked-remote-dir-tests.cc",
+    "vmo-file-tests.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-io:c",

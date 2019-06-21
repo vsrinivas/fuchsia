@@ -7,7 +7,7 @@ library("bootfs") {
   sdk_headers = [ "lib/bootfs/parser.h" ]
 
   sources = [
-    "parser.cpp",
+    "parser.cc",
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   deps = [
@@ -19,7 +19,7 @@ library("bootfs") {
 
 test("bootfs-test") {
   sources = [
-    "parser-test.cpp",
+    "parser-test.cc",
   ]
   deps = [
     "$zx/system/ulib/bootfs",

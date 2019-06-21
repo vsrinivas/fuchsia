@@ -14,7 +14,7 @@ group("test") {
 test("minfs-work-queue-unit") {
   test_group = "fs"
   sources = [
-    "work-queue-test.cpp",
+    "work-queue-test.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-minfs:c",
@@ -30,7 +30,7 @@ test("minfs-work-queue-unit") {
 test("minfs-format-unit") {
   test_group = "fs"
   sources = [
-    "format-test.cpp",
+    "format-test.cc",
   ]
   deps = [
     "$zx/system/ulib/minfs",
@@ -43,7 +43,7 @@ test("minfs-format-unit") {
 test("minfs-inspector-unit") {
   test_group = "fs"
   sources = [
-    "inspector-test.cpp",
+    "inspector-test.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-minfs:c",

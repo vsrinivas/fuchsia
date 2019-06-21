@@ -6,7 +6,7 @@ library("framebuffer") {
   sdk = "static"
   sdk_headers = [ "lib/framebuffer/framebuffer.h" ]
   sources = [
-    "framebuffer.cpp",
+    "framebuffer.cc",
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   deps = [

@@ -8,11 +8,11 @@ if (is_fuchsia) {
   test("fidl-simple") {
     sources = [
       "client_tests.c",
-      "fakesocket_tests.cpp",
+      "fakesocket_tests.cc",
       "ldsvc_tests.c",
       "server_tests.c",
       "spaceship_tests.c",
-      "spaceship_tests.cpp",
+      "spaceship_tests.cc",
     ]
     deps = [
       ":fidl.test.fakesocket.c",

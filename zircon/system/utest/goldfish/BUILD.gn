@@ -4,7 +4,7 @@
 
 test("goldfish") {
   sources = [
-    "goldfish-test.cpp",
+    "goldfish-test.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-hardware-goldfish-address-space:c",

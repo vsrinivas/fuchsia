@@ -12,6 +12,6 @@ library("cmdline") {
   host = true
 
   sources = [
-    "args_parser.cpp",
+    "args_parser.cc",
   ]
 }

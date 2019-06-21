@@ -346,7 +346,7 @@ library("c") {
 
 source_set("crt1") {
   sources = [
-    "Scrt1.cpp",
+    "Scrt1.cc",
   ]
 
   # This runs before all runtime setup.
@@ -361,7 +361,7 @@ source_set("crt1") {
   metadata = {
     legacy_sysroot = [
       {
-        crt1 = rebase_path("$target_out_dir/crt1.Scrt1.cpp.o", root_build_dir)
+        crt1 = rebase_path("$target_out_dir/crt1.Scrt1.cc.o", root_build_dir)
         sdk = {
           source = crt1
           link = "lib/Scrt1.o"

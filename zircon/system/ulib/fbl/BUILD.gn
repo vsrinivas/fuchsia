@@ -47,15 +47,15 @@ library("fbl") {
   static = true
 
   sources = [
-    "alloc_checker.cpp",
+    "alloc_checker.cc",
   ]
   if (!is_kernel) {
     configs += [ "$zx/public/gn/config:visibility_hidden" ]
     sources += [
-      "string.cpp",
-      "string_buffer.cpp",
-      "string_piece.cpp",
-      "string_printf.cpp",
+      "string.cc",
+      "string_buffer.cc",
+      "string_piece.cc",
+      "string_printf.cc",
     ]
   }
 

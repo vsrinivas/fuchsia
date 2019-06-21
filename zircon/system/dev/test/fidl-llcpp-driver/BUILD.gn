@@ -4,7 +4,7 @@
 
 driver("fidl-llcpp-driver") {
   sources = [
-    "driver.cpp",
+    "driver.cc",
   ]
 
   deps = [

@@ -11,8 +11,8 @@ group("test") {
 
 test("bitmap") {
   sources = [
-    "raw-bitmap-tests.cpp",
-    "rle-bitmap-tests.cpp",
+    "raw-bitmap-tests.cc",
+    "rle-bitmap-tests.cc",
   ]
   deps = [
     "$zx/system/ulib/bitmap",

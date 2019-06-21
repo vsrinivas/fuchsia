@@ -4,8 +4,8 @@
 
 driver("ram-nand") {
   sources = [
-    "bind.cpp",
-    "ram-nand-ctl.cpp",
+    "bind.cc",
+    "ram-nand-ctl.cc",
   ]
   deps = [
     ":common",
@@ -24,7 +24,7 @@ driver("ram-nand") {
 source_set("common") {
   visibility = [ ":*" ]
   sources = [
-    "ram-nand.cpp",
+    "ram-nand.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.nand",
@@ -38,8 +38,8 @@ source_set("common") {
 test("ram-nand-test") {
   output_name = "ram-nand-test"
   sources = [
-    "test/ram-nand-ctl.cpp",
-    "test/ram-nand.cpp",
+    "test/ram-nand-ctl.cc",
+    "test/ram-nand.cc",
   ]
   include_dirs = [ "." ]
   deps = [

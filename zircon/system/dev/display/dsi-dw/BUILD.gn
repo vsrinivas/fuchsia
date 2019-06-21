@@ -4,7 +4,7 @@
 
 driver("dsi-dw") {
   sources = [
-    "dsi-dw.cpp",
+    "dsi-dw.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.dsiimpl",

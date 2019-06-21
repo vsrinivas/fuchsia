@@ -4,7 +4,7 @@
 
 executable("ktrace") {
   sources = [
-    "ktrace.cpp",
+    "ktrace.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-tracing-kernel:c",

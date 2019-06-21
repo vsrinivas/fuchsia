@@ -4,7 +4,7 @@
 
 driver("ethernet") {
   sources = [
-    "ethernet.cpp",
+    "ethernet.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.ethernet",
@@ -24,8 +24,8 @@ test("ethernet-unittest") {
   testonly = true
   output_name = "ethernet-unittest"
   sources = [
-    "ethernet-test.cpp",
-    "ethernet.cpp",
+    "ethernet-test.cc",
+    "ethernet.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.ethernet",

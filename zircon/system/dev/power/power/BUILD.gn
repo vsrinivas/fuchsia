@@ -4,7 +4,7 @@
 
 driver("power") {
   sources = [
-    "power.cpp",
+    "power.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.power",

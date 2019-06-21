@@ -4,7 +4,7 @@
 
 test("util") {
   sources = [
-    "listnode.cpp",
+    "listnode.cc",
   ]
   deps = [
     "$zx/system/ulib/unittest",

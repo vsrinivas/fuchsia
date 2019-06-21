@@ -4,17 +4,17 @@
 
 driver("mt8167s-display") {
   sources = [
-    "aal.cpp",
-    "ccorr.cpp",
-    "color.cpp",
-    "disp-rdma.cpp",
-    "dither.cpp",
-    "gamma.cpp",
-    "lcd.cpp",
-    "mt-dsi-host.cpp",
-    "mt-sysconfig.cpp",
-    "mt8167s-display.cpp",
-    "ovl.cpp",
+    "aal.cc",
+    "ccorr.cc",
+    "color.cc",
+    "disp-rdma.cc",
+    "dither.cc",
+    "gamma.cc",
+    "lcd.cc",
+    "mt-dsi-host.cc",
+    "mt-sysconfig.cc",
+    "mt8167s-display.cc",
+    "ovl.cc",
   ]
   deps = [
     ":common",
@@ -56,18 +56,18 @@ group("tests") {
 
 test("dsi-host") {
   sources = [
-    "aal.cpp",
-    "ccorr.cpp",
-    "color.cpp",
-    "disp-rdma.cpp",
-    "dither.cpp",
-    "gamma.cpp",
-    "lcd.cpp",
-    "mt-dsi-host.cpp",
-    "mt-sysconfig.cpp",
-    "mt8167s-display-test.cpp",
-    "mt8167s-display.cpp",
-    "ovl.cpp",
+    "aal.cc",
+    "ccorr.cc",
+    "color.cc",
+    "disp-rdma.cc",
+    "dither.cc",
+    "gamma.cc",
+    "lcd.cc",
+    "mt-dsi-host.cc",
+    "mt-sysconfig.cc",
+    "mt8167s-display-test.cc",
+    "mt8167s-display.cc",
+    "ovl.cc",
   ]
   deps = [
     ":common",

@@ -12,14 +12,14 @@ library("zxio") {
     "lib/zxio/zxio.h",
   ]
   sources = [
-    "debuglog.cpp",
-    "null.cpp",
-    "pipe.cpp",
-    "remote.cpp",
-    "socket.cpp",
-    "vmo.cpp",
-    "vmofile.cpp",
-    "zxio.cpp",
+    "debuglog.cc",
+    "null.cc",
+    "pipe.cc",
+    "remote.cc",
+    "socket.cc",
+    "vmo.cc",
+    "vmofile.cc",
+    "zxio.cc",
   ]
   public_deps = [
     # <lib/zxio/zxio.h> has #include <fuchsia/io/llcpp/fidl.h>.

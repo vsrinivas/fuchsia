@@ -6,10 +6,10 @@ assert(current_cpu == "x64")
 
 driver("tpm") {
   sources = [
-    "i2c-cr50.cpp",
-    "tpm-commands.cpp",
-    "tpm-proto.cpp",
-    "tpm.cpp",
+    "i2c-cr50.cc",
+    "tpm-commands.cc",
+    "tpm-proto.cc",
+    "tpm.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.i2c",

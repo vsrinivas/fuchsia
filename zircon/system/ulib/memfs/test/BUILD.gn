@@ -11,7 +11,7 @@ group("test") {
 
 test("memfs-tests") {
   sources = [
-    "memfs-tests.cpp",
+    "memfs-tests.cc",
   ]
   deps = [
     "$zx/system/ulib/async",

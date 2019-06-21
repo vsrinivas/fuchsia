@@ -4,10 +4,10 @@
 
 driver("hikey-display") {
   sources = [
-    "adv7533.cpp",
-    "ddk-interface.cpp",
-    "edid.cpp",
-    "hi3660-dsi.cpp",
+    "adv7533.cc",
+    "ddk-interface.cc",
+    "edid.cc",
+    "hi3660-dsi.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.display.controller",

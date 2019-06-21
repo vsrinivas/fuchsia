@@ -4,7 +4,7 @@
 
 test("cmdline") {
   sources = [
-    "args_parser_unittest.cpp",
+    "args_parser_unittest.cc",
   ]
   deps = [
     "$zx/system/ulib/cmdline",

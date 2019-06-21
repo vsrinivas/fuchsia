@@ -4,7 +4,7 @@
 
 test("spawn") {
   sources = [
-    "spawn.cpp",
+    "spawn.cc",
   ]
   deps = [
     "$zx/system/ulib/fdio",

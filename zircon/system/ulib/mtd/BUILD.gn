@@ -9,7 +9,7 @@ library("mtd") {
 
   if (current_os == "linux") {
     sources = [
-      "mtd-interface.cpp",
+      "mtd-interface.cc",
     ]
   }
 

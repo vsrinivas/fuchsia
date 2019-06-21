@@ -4,7 +4,7 @@
 
 executable("nand-loader") {
   sources = [
-    "main.cpp",
+    "main.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-hardware-nand:c",

@@ -4,7 +4,7 @@
 
 test("ctor") {
   sources = [
-    "ctor.cpp",
+    "ctor.cc",
   ]
   deps = [
     ":dso-ctor",
@@ -18,7 +18,7 @@ library("dso-ctor") {
   testonly = true
   shared = true
   sources = [
-    "dso-ctor/dso-ctor.cpp",
+    "dso-ctor/dso-ctor.cc",
   ]
   deps = [
     "$zx/system/ulib/unittest",

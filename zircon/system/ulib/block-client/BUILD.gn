@@ -5,8 +5,8 @@
 library("block-client") {
   sources = [
     "client.c",
-    "client.cpp",
-    "remote-block-device.cpp",
+    "client.cc",
+    "remote-block-device.cc",
   ]
   public_deps = [
     # <block-client/cpp/client.h> has #include <lib/zx/fifo.h>.
@@ -33,7 +33,7 @@ library("block-client") {
 library("fake-device") {
   testonly = true
   sources = [
-    "fake-device.cpp",
+    "fake-device.cc",
   ]
   public_deps = [
     ":block-client",

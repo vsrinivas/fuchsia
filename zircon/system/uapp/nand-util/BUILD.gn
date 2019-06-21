@@ -4,10 +4,10 @@
 
 executable("nand-util") {
   sources = [
-    "aml.cpp",
-    "commands.cpp",
-    "ftl.cpp",
-    "main.cpp",
+    "aml.cc",
+    "commands.cc",
+    "ftl.cc",
+    "main.cc",
   ]
   deps = [
     ":common",
@@ -25,8 +25,8 @@ executable("nand-util") {
 source_set("common") {
   visibility = [ ":*" ]
   sources = [
-    "ftl_internal.cpp",
-    "nand-broker.cpp",
+    "ftl_internal.cc",
+    "nand-broker.cc",
   ]
   deps = [
     "$zx/system/ulib/pretty",
@@ -43,7 +43,7 @@ source_set("common") {
 test("nand-util-test") {
   output_name = "nand-util-test"
   sources = [
-    "test/ftl_internal_test.cpp",
+    "test/ftl_internal_test.cc",
   ]
   include_dirs = [ "." ]
   deps = [

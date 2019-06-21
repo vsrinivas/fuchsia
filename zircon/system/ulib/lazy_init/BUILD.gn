@@ -30,7 +30,7 @@ test("lazy_init-test") {
     # in program termination, which is not currently supported in the
     # host test environment.
     # See: TODO(ZX-1053)
-    sources += [ "lazy_init_tests.cpp" ]
+    sources += [ "lazy_init_tests.cc" ]
     deps += [
       "$zx/system/ulib/fdio",
       "$zx/system/ulib/zircon",

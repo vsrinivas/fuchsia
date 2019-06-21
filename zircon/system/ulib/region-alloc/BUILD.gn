@@ -6,8 +6,8 @@ library("region-alloc") {
   kernel = true
   static = true
   sources = [
-    "region-alloc-c-api.cpp",
-    "region-alloc.cpp",
+    "region-alloc-c-api.cc",
+    "region-alloc.cc",
   ]
   if (!is_kernel) {
     deps = [

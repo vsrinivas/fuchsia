@@ -5,7 +5,7 @@
 library("xdc-host-utils") {
   host = true
   sources = [
-    "client.cpp",
+    "client.cc",
   ]
   deps = [
     "$zx/system/ulib/fbl",

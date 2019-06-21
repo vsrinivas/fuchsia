@@ -15,7 +15,7 @@ source_set("common") {
   testonly = true
 
   sources = [
-    "fake-nand-interface.cpp",
+    "fake-nand-interface.cc",
   ]
 
   deps = [
@@ -25,7 +25,7 @@ source_set("common") {
 
 test("nand-volume-driver") {
   sources = [
-    "nand-volume-driver-tests.cpp",
+    "nand-volume-driver-tests.cc",
   ]
 
   deps = [
@@ -38,7 +38,7 @@ test("nand-volume-driver") {
 
 test("ftl-volume-wrapper") {
   sources = [
-    "ftl-volume-wrapper-tests.cpp",
+    "ftl-volume-wrapper-tests.cc",
   ]
 
   deps = [

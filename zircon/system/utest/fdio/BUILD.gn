@@ -4,22 +4,22 @@
 
 test("fdio") {
   sources = [
-    "fdio_atexit.cpp",
-    "fdio_directory.cpp",
-    "fdio_fd.cpp",
-    "fdio_fdio.cpp",
-    "fdio_get_vmo.cpp",
+    "fdio_atexit.cc",
+    "fdio_directory.cc",
+    "fdio_fd.cc",
+    "fdio_fdio.cc",
+    "fdio_get_vmo.cc",
     "fdio_handle_fd.c",
-    "fdio_io.cpp",
-    "fdio_null_namespace.cpp",
+    "fdio_io.cc",
+    "fdio_null_namespace.cc",
     "fdio_open_max.c",
     "fdio_path_canonicalize.c",
     "fdio_root.c",
     "fdio_socket.c",
     "fdio_socketpair.c",
-    "fdio_stubs.cpp",
-    "fdio_unsafe.cpp",
-    "fdio_watcher.cpp",
+    "fdio_stubs.cc",
+    "fdio_unsafe.cc",
+    "fdio_watcher.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-io:c",

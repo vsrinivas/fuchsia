@@ -5,7 +5,7 @@
 test("fs-bench") {
   test_group = "fs"
   sources = [
-    "fs-bench.cpp",
+    "fs-bench.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-io:c",

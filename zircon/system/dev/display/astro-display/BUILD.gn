@@ -4,13 +4,13 @@
 
 driver("astro-display") {
   sources = [
-    "aml-dsi-host.cpp",
-    "aml-mipi-phy.cpp",
-    "astro-clock.cpp",
-    "astro-display.cpp",
-    "lcd.cpp",
-    "osd.cpp",
-    "vpu.cpp",
+    "aml-dsi-host.cc",
+    "aml-mipi-phy.cc",
+    "astro-clock.cc",
+    "astro-display.cc",
+    "lcd.cc",
+    "osd.cc",
+    "vpu.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.amlogiccanvas",

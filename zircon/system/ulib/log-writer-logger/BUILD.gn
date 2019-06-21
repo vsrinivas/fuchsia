@@ -6,7 +6,7 @@ library("log-writer-logger") {
   shared = true
   host = true
   sources = [
-    "log-writer-logger.cpp",
+    "log-writer-logger.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-logger:c",

@@ -11,15 +11,15 @@ group("test") {
 
 test("cobalt-client-unit") {
   sources = [
-    "cobalt_logger_test.cpp",
-    "collector_test.cpp",
-    "counter_test.cpp",
-    "histogram_test.cpp",
-    "in-memory-logger-test.cpp",
-    "main.cpp",
-    "metric_options_test.cpp",
-    "timer_test.cpp",
-    "types_internal_test.cpp",
+    "cobalt_logger_test.cc",
+    "collector_test.cc",
+    "counter_test.cc",
+    "histogram_test.cc",
+    "in-memory-logger-test.cc",
+    "main.cc",
+    "metric_options_test.cc",
+    "timer_test.cc",
+    "types_internal_test.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-cobalt:c",

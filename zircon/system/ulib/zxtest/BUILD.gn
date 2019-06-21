@@ -16,16 +16,16 @@ library("zxtest") {
     "zxtest/base/types.h",
   ]
   sources = [
-    "assertion.cpp",
-    "c-wrappers.cpp",
-    "event-broadcaster.cpp",
-    "reporter.cpp",
-    "runner-options.cpp",
-    "runner.cpp",
-    "test-case.cpp",
-    "test-info.cpp",
-    "test.cpp",
-    "zxtest-main.cpp",
+    "assertion.cc",
+    "c-wrappers.cc",
+    "event-broadcaster.cc",
+    "reporter.cc",
+    "runner-options.cc",
+    "runner.cc",
+    "test-case.cc",
+    "test-info.cc",
+    "test.cc",
+    "zxtest-main.cc",
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   public_deps = [
@@ -36,7 +36,7 @@ library("zxtest") {
     "$zx/system/ulib/fbl",
   ]
   if (is_fuchsia) {
-    sources += [ "death-statement.cpp" ]
+    sources += [ "death-statement.cc" ]
 
     public_deps += [
       # Needed for <zircon/status.h>

@@ -5,7 +5,7 @@
 test("hypervisor") {
   sources = [
     "${zircon_cpu}.S",
-    "guest.cpp",
+    "guest.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-sysinfo:c",

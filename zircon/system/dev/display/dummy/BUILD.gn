@@ -4,7 +4,7 @@
 
 driver("dummy") {
   sources = [
-    "dummy-display.cpp",
+    "dummy-display.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.display.controller",

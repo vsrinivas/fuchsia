@@ -11,8 +11,8 @@ group("test") {
 
 test("gpt-unit") {
   sources = [
-    "gpt-tests.cpp",
-    "main.cpp",
+    "gpt-tests.cc",
+    "main.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-hardware-block:c",

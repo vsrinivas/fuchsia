@@ -37,7 +37,7 @@ executable("virtual_audio_bin") {
 
   sources = [
     "//src/media/audio/drivers/virtual_audio/virtual_audio.h",
-    "virtual_audio.cpp",
+    "virtual_audio.cc",
   ]
 
   deps = [

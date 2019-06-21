@@ -4,7 +4,7 @@
 
 test("kernel-unittests") {
   sources = [
-    "kernel-unittests.cpp",
+    "kernel-unittests.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-kernel:c",

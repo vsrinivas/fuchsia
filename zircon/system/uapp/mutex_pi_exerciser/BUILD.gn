@@ -4,10 +4,10 @@
 
 executable("mutex_pi_exerciser") {
   sources = [
-    "event.cpp",
-    "main.cpp",
-    "thread.cpp",
-    "tracer.cpp",
+    "event.cc",
+    "main.cc",
+    "thread.cc",
+    "tracer.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-scheduler:c",

@@ -8,9 +8,9 @@ import("//build/package.gni")
 driver_module("aml-mipicsi-driver") {
   output_name = "aml-mipicsi"
   sources = [
-    "aml-mipi-adap.cpp",
-    "aml-mipi-debug.cpp",
-    "aml-mipi.cpp",
+    "aml-mipi-adap.cc",
+    "aml-mipi-debug.cc",
+    "aml-mipi.cc",
   ]
   deps = [
     "//zircon/public/banjo/ddk.protocol.clock",

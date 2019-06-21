@@ -4,7 +4,7 @@
 
 library("image-format") {
   sources = [
-    "image_format.cpp",
+    "image_format.cc",
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   deps = [

@@ -10,9 +10,9 @@ import("$zx/public/gn/fidl.gni")
 if (current_toolchain != default_toolchain) {
   test("fidl-llcpp-interop") {
     sources = [
-      "basictypes_tests.cpp",
-      "controlflow_tests.cpp",
-      "dirent_tests.cpp",
+      "basictypes_tests.cc",
+      "controlflow_tests.cc",
+      "dirent_tests.cc",
       "generated/fidl_llcpp_basictypes.cc",
       "generated/fidl_llcpp_controlflow.cc",
       "generated/fidl_llcpp_dirent.cc",

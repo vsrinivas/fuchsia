@@ -27,7 +27,7 @@ group("test") {
 
 test("zbi-bootfs-test") {
   sources = [
-    "zbi-bootfs-test.cpp",
+    "zbi-bootfs-test.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-hardware-skipblock:c",

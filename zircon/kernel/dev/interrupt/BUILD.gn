@@ -5,6 +5,6 @@
 library("interrupt") {
   kernel = true
   sources = [
-    "msi.cpp",
+    "msi.cc",
   ]
 }

@@ -12,8 +12,8 @@ group("test") {
 test("block-client-unit") {
   test_group = "fs"
   sources = [
-    "fake-block-device-test.cpp",
-    "remote-block-device-test.cpp",
+    "fake-block-device-test.cc",
+    "remote-block-device-test.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-io:c",

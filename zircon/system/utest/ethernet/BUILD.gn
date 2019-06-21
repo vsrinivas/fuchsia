@@ -4,7 +4,7 @@
 
 test("ethernet") {
   sources = [
-    "ethernet.cpp",
+    "ethernet.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.ethernet",

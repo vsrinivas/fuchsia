@@ -5,7 +5,7 @@
 source_set("port") {
   testonly = true
   sources = [
-    "ports.cpp",
+    "ports.cc",
   ]
   deps = [
     "$zx/system/ulib/fbl",

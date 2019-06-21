@@ -4,8 +4,8 @@
 
 driver("mt8167-tdm-input") {
   sources = [
-    "audio-stream-in.cpp",
-    "tlv320adc.cpp",
+    "audio-stream-in.cc",
+    "tlv320adc.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.composite",

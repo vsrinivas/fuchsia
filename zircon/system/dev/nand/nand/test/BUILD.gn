@@ -11,7 +11,7 @@ group("test") {
 
 test("nand-unittest") {
   sources = [
-    "nand-test.cpp",
+    "nand-test.cc",
   ]
   include_dirs = [ ".." ]
   deps = [
@@ -35,7 +35,7 @@ source_set("common") {
   defines = [ "TEST" ]
   include_dirs = [ ".." ]
   sources = [
-    "../nand.cpp",
+    "../nand.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.nand",

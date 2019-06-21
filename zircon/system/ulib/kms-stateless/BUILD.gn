@@ -1,6 +1,6 @@
 library("kms-stateless") {
   sources = [
-    "kms-stateless.cpp",
+    "kms-stateless.cc",
   ]
   deps = [
     "$zx/system/ulib/fbl",

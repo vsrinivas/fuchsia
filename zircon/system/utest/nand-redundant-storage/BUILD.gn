@@ -4,7 +4,7 @@
 
 test("nand-redundant-storage") {
   sources = [
-    "nand-rs-tests.cpp",
+    "nand-rs-tests.cc",
   ]
 
   deps = [

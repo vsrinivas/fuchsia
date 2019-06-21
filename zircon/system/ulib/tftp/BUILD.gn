@@ -28,8 +28,8 @@ if (!is_kernel) {
   test("tftp-test") {
     output_name = "tftp-test"
     sources = [
-      "tftp-file-test.cpp",
-      "tftp-test.cpp",
+      "tftp-file-test.cc",
+      "tftp-test.cc",
     ]
     deps = [
       "$zx/system/ulib/fbl",

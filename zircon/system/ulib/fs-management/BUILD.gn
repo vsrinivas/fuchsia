@@ -10,11 +10,11 @@ library("fs-management") {
   ]
   shared = true
   sources = [
-    "fsck.cpp",
-    "fvm.cpp",
-    "launch.cpp",
-    "mkfs.cpp",
-    "mount.cpp",
+    "fsck.cc",
+    "fvm.cc",
+    "launch.cc",
+    "mkfs.cc",
+    "mount.cc",
   ]
   public_deps = [
     "$zx/system/fidl/fuchsia-hardware-block-volume:c",

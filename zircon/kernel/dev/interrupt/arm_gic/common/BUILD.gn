@@ -5,7 +5,7 @@
 library("common") {
   kernel = true
   sources = [
-    "arm_gic_hw_interface.cpp",
+    "arm_gic_hw_interface.cc",
   ]
   deps = [
     "$zx/kernel/dev/interrupt",

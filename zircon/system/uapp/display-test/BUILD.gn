@@ -4,10 +4,10 @@
 
 executable("display-test") {
   sources = [
-    "display.cpp",
-    "image.cpp",
-    "main.cpp",
-    "virtual-layer.cpp",
+    "display.cc",
+    "image.cc",
+    "main.cc",
+    "virtual-layer.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-hardware-display:c",

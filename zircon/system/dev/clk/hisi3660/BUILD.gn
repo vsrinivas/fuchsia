@@ -4,7 +4,7 @@
 
 driver("hisi3660") {
   sources = [
-    "hisi3660-clk.cpp",
+    "hisi3660-clk.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.clockimpl",

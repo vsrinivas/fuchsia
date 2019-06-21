@@ -9,8 +9,8 @@ library("driver-unit-test") {
     "driver-unit-test/utils.h",
   ]
   sources = [
-    "logger.cpp",
-    "utils.cpp",
+    "logger.cc",
+    "utils.cc",
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   deps = [

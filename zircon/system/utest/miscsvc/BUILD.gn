@@ -4,7 +4,7 @@
 
 test("miscsvc") {
   sources = [
-    "main.cpp",
+    "main.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-paver:c",

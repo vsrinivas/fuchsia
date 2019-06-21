@@ -4,8 +4,8 @@
 
 executable("xdc-test") {
   sources = [
-    "xdc-device.cpp",
-    "xdc-test.cpp",
+    "xdc-device.cc",
+    "xdc-test.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-usb-debug:c",
@@ -19,8 +19,8 @@ executable("xdc-test") {
 
 host_tool("xdc-test-host") {
   sources = [
-    "xdc-host.cpp",
-    "xdc-test.cpp",
+    "xdc-host.cc",
+    "xdc-test.cc",
   ]
   deps = [
     "$zx/system/ulib/fbl",

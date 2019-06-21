@@ -9,13 +9,13 @@ driver_module("wlantap_driver") {
   output_name = "wlantap"
 
   sources = [
-    "utils.cpp",
+    "utils.cc",
     "utils.h",
     "wlanmac-ifc-proxy.h",
-    "wlantap-ctl.cpp",
-    "wlantap-mac.cpp",
+    "wlantap-ctl.cc",
+    "wlantap-mac.cc",
     "wlantap-mac.h",
-    "wlantap-phy.cpp",
+    "wlantap-phy.cc",
     "wlantap-phy.h",
   ]
 

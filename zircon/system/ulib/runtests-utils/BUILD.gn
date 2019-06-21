@@ -6,8 +6,8 @@ library("runtests-utils") {
   testonly = true
   host = true
   sources = [
-    "discover-and-run-tests.cpp",
-    "runtests-utils.cpp",
+    "discover-and-run-tests.cc",
+    "runtests-utils.cc",
   ]
   public_deps = [
     # <runtests-utils/runtests-utils.h> has #include <lib/zircon-internal/fnv1hash.h>.
@@ -20,8 +20,8 @@ library("runtests-utils") {
   ]
   if (is_fuchsia) {
     sources += [
-      "fuchsia-run-test.cpp",
-      "log-exporter.cpp",
+      "fuchsia-run-test.cc",
+      "log-exporter.cc",
     ]
     public_deps += [
       # <runtests-utils/log-exporter.h> has #include <lib/fidl/cpp/message_buffer.h>.
@@ -47,6 +47,6 @@ library("runtests-utils") {
       "$zx/system/ulib/zx",
     ]
   } else {
-    sources += [ "posix-run-test.cpp" ]
+    sources += [ "posix-run-test.cc" ]
   }
 }

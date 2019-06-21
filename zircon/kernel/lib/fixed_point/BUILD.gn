@@ -5,6 +5,6 @@
 library("fixed_point") {
   kernel = true
   sources = [
-    "fixed_point.cpp",
+    "fixed_point.cc",
   ]
 }

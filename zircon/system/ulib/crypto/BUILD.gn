@@ -21,14 +21,14 @@ group("headers") {
 library("zircon-crypto") {
   shared = true
   sources = [
-    "aead.cpp",
-    "bytes.cpp",
-    "cipher.cpp",
-    "digest.cpp",
-    "error.cpp",
-    "hkdf.cpp",
-    "hmac.cpp",
-    "secret.cpp",
+    "aead.cc",
+    "bytes.cc",
+    "cipher.cc",
+    "digest.cc",
+    "error.cc",
+    "hkdf.cc",
+    "hmac.cc",
+    "secret.cc",
   ]
   deps = [
     "$zx/system/ulib/explicit-memory",

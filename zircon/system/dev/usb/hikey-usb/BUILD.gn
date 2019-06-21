@@ -4,7 +4,7 @@
 
 driver("hikey-usb") {
   sources = [
-    "hikey-usb.cpp",
+    "hikey-usb.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.gpio",

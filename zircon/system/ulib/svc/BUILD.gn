@@ -9,7 +9,7 @@ library("svc") {
     "lib/svc/service.h",
   ]
   sources = [
-    "outgoing.cpp",
+    "outgoing.cc",
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   deps = [

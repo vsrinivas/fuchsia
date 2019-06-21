@@ -4,6 +4,6 @@
 
 source_set("target") {
   sources = [
-    "init.cpp",
+    "init.cc",
   ]
 }

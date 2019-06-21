@@ -5,6 +5,6 @@
 library("pow2_range_allocator") {
   kernel = true
   sources = [
-    "pow2_range_allocator.cpp",
+    "pow2_range_allocator.cc",
   ]
 }

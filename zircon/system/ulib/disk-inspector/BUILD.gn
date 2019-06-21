@@ -5,7 +5,7 @@
 library("disk-inspector") {
   static = true
   sources = [
-    "disk-inspector.cpp",
+    "disk-inspector.cc",
   ]
   public_deps = [
     "$zx/system/ulib/fbl:headers",

@@ -9,7 +9,7 @@ library("hisi-lib") {
     "dev/clk/hisi-lib/hisi-clk.h",
   ]
   sources = [
-    "hisi-clk.cpp",
+    "hisi-clk.cc",
   ]
   public_deps = [
     # <dev/clk/hisi-lib/hisi-clk.h> has #include <lib/mmio/mmio.h>.

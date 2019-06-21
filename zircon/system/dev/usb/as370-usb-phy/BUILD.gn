@@ -4,7 +4,7 @@
 
 driver("as370-usb-phy") {
   sources = [
-    "as370-usb-phy.cpp",
+    "as370-usb-phy.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.platform.device",

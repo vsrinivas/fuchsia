@@ -5,7 +5,7 @@
 source_set("memory-mapping") {
   testonly = true
   sources = [
-    "memory-mapping.cpp",
+    "memory-mapping.cc",
   ]
   deps = [
     "$zx/system/ulib/fdio",

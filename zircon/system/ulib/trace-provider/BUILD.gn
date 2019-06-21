@@ -46,12 +46,12 @@ template("trace_provider_library") {
       sources = []
     }
     sources += [
-      "handler.cpp",
-      "provider_impl.cpp",
+      "handler.cc",
+      "provider_impl.cc",
       "provider_impl.h",
-      "session.cpp",
+      "session.cc",
       "session.h",
-      "utils.cpp",
+      "utils.cc",
       "utils.h",
     ]
 
@@ -70,11 +70,11 @@ template("trace_provider_library") {
   }
 }
 
-trace_provider_fdio_connect_sources = [ "fdio_connect.cpp" ]
+trace_provider_fdio_connect_sources = [ "fdio_connect.cc" ]
 
 trace_provider_fdio_sources = [
-  "fdio_connect.cpp",
-  "provider_with_fdio.cpp",
+  "fdio_connect.cc",
+  "provider_with_fdio.cc",
 ]
 
 trace_provider_fdio_connect_source_deps = [
@@ -147,7 +147,7 @@ library("trace-handler") {
     "$zx/system/ulib/trace-engine:trace-engine-headers-for-handler",
   ]
   sources = [
-    "handler.cpp",
+    "handler.cc",
   ]
 }
 

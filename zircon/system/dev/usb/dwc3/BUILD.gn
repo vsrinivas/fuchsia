@@ -4,11 +4,11 @@
 
 driver("dwc3") {
   sources = [
-    "dwc3-commands.cpp",
-    "dwc3-endpoints.cpp",
-    "dwc3-ep0.cpp",
-    "dwc3-events.cpp",
-    "dwc3.cpp",
+    "dwc3-commands.cc",
+    "dwc3-endpoints.cc",
+    "dwc3-ep0.cc",
+    "dwc3-events.cc",
+    "dwc3.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.composite",

@@ -11,8 +11,8 @@ group("test") {
 
 test("affine") {
   sources = [
-    "ratio.cpp",
-    "transform.cpp",
+    "ratio.cc",
+    "transform.cc",
   ]
   deps = [
     "$zx/system/ulib/affine",

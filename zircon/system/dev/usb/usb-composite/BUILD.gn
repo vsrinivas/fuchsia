@@ -4,8 +4,8 @@
 
 driver("usb-composite") {
   sources = [
-    "usb-composite.cpp",
-    "usb-interface.cpp",
+    "usb-composite.cc",
+    "usb-interface.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.usb",

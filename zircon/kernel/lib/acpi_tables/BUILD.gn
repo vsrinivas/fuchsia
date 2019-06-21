@@ -5,7 +5,7 @@
 library("acpi_tables") {
   kernel = true
   sources = [
-    "acpi_tables.cpp",
+    "acpi_tables.cc",
   ]
   public_deps = [
     # <lib/acpi_tables.h> has #include <acpica/acpi.h>.
@@ -24,7 +24,7 @@ library("acpi_tables") {
 source_set("test") {
   # TODO: testonly = true
   sources = [
-    "acpi_tables_test.cpp",
+    "acpi_tables_test.cc",
   ]
   deps = [
     ":acpi_tables.headers",

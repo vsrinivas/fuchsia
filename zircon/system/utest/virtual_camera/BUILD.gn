@@ -4,7 +4,7 @@
 
 test("virtual_camera_device") {
   sources = [
-    "virtual_camera.cpp",
+    "virtual_camera.cc",
   ]
   deps = [
     "$zx/system/dev/virtual_camera:virtual_camera",
@@ -23,7 +23,7 @@ test("virtual_camera_device") {
 
 test("virtual_camera_factory") {
   sources = [
-    "virtual_camera_factory.cpp",
+    "virtual_camera_factory.cc",
   ]
   deps = [
     "$zx/system/ulib/ddk",

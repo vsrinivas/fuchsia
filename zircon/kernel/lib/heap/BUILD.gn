@@ -5,7 +5,7 @@
 library("heap") {
   kernel = true
   sources = [
-    "heap_wrapper.cpp",
+    "heap_wrapper.cc",
   ]
   deps = [
     "$zx/kernel/lib/console",

@@ -4,7 +4,7 @@
 
 test("logger") {
   sources = [
-    "test.cpp",
+    "test.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-logger:c",

@@ -4,16 +4,16 @@
 
 driver("xhci") {
   sources = [
-    "usb-xhci.cpp",
-    "xdc-transfer.cpp",
-    "xdc.cpp",
-    "xhci-device-manager.cpp",
-    "xhci-root-hub.cpp",
-    "xhci-transfer-common.cpp",
-    "xhci-transfer.cpp",
-    "xhci-trb.cpp",
-    "xhci-util.cpp",
-    "xhci.cpp",
+    "usb-xhci.cc",
+    "xdc-transfer.cc",
+    "xdc.cc",
+    "xhci-device-manager.cc",
+    "xhci-root-hub.cc",
+    "xhci-transfer-common.cc",
+    "xhci-transfer.cc",
+    "xhci-trb.cc",
+    "xhci-util.cc",
+    "xhci.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.composite",

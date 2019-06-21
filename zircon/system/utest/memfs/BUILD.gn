@@ -5,9 +5,9 @@
 test("memfs") {
   test_group = "fs"
   sources = [
-    "fidl-tests.cpp",
-    "memfs-tests.cpp",
-    "vmofile-tests.cpp",
+    "fidl-tests.cc",
+    "memfs-tests.cc",
+    "vmofile-tests.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-io:c",

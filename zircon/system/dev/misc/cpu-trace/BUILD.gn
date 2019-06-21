@@ -4,16 +4,16 @@
 
 driver("cpu-trace") {
   sources = [
-    "cpu-trace.cpp",
-    "perf-mon.cpp",
+    "cpu-trace.cc",
+    "perf-mon.cc",
   ]
 
   if (current_cpu == "arm64") {
-    sources += [ "arm64-pm.cpp" ]
+    sources += [ "arm64-pm.cc" ]
   } else if (current_cpu == "x64") {
     sources += [
-      "intel-pm.cpp",
-      "intel-pt.cpp",
+      "intel-pm.cc",
+      "intel-pt.cc",
     ]
   }
 

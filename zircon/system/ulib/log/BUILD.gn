@@ -6,7 +6,7 @@ library("log") {
   shared = true
   host = true
   sources = [
-    "log.cpp",
+    "log.cc",
   ]
   deps = [
     "$zx/system/ulib/fbl",

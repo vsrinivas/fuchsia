@@ -5,7 +5,7 @@
 driver("gpio-test") {
   # TODO: testonly = true
   sources = [
-    "gpio-test.cpp",
+    "gpio-test.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.gpio",

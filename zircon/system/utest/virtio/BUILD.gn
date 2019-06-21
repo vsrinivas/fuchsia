@@ -4,8 +4,8 @@
 
 test("virtio") {
   sources = [
-    "$zx/system/dev/bus/virtio/input_touch.cpp",
-    "virtio-input.cpp",
+    "$zx/system/dev/bus/virtio/input_touch.cc",
+    "virtio-input.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.hidbus",

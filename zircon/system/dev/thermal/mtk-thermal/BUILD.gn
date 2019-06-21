@@ -4,7 +4,7 @@
 
 driver("mtk-thermal") {
   sources = [
-    "mtk-thermal.cpp",
+    "mtk-thermal.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.clock",
@@ -31,8 +31,8 @@ driver("mtk-thermal") {
 test("mtk-thermal-test") {
   output_name = "mtk-thermal-test"
   sources = [
-    "mtk-thermal-test.cpp",
-    "mtk-thermal.cpp",
+    "mtk-thermal-test.cc",
+    "mtk-thermal.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.clock",

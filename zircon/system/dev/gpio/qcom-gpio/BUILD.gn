@@ -4,8 +4,8 @@
 
 driver("qcom-gpio") {
   sources = [
-    "binding.cpp",
-    "qcom-gpio.cpp",
+    "binding.cc",
+    "qcom-gpio.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.gpioimpl",
@@ -26,8 +26,8 @@ driver("qcom-gpio") {
 test("qcom-gpio-test") {
   output_name = "qcom-gpio-test"
   sources = [
-    "qcom-gpio-test.cpp",
-    "qcom-gpio.cpp",
+    "qcom-gpio-test.cc",
+    "qcom-gpio.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.gpioimpl",

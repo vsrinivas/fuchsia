@@ -11,8 +11,8 @@ library("perftest") {
   ]
   testonly = true
   sources = [
-    "results.cpp",
-    "runner.cpp",
+    "results.cc",
+    "runner.cc",
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   deps = [

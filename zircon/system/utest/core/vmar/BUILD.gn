@@ -5,7 +5,7 @@
 source_set("vmar") {
   testonly = true
   sources = [
-    "vmar.cpp",
+    "vmar.cc",
   ]
   deps = [
     "$zx/system/ulib/fbl",

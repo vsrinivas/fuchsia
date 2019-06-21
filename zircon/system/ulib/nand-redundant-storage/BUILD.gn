@@ -11,7 +11,7 @@ library("nand-redundant-storage") {
 
   if (current_os == "linux") {
     sources = [
-      "nand-rs.cpp",
+      "nand-rs.cc",
     ]
   }
 

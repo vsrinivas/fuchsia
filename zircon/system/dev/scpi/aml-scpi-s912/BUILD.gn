@@ -11,7 +11,7 @@ group("aml-scpi-s912") {
 
 driver("aml-scpi-s912.mailbox") {
   sources = [
-    "aml-mailbox.cpp",
+    "aml-mailbox.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.clock",
@@ -33,7 +33,7 @@ driver("aml-scpi-s912.mailbox") {
 
 driver("scpi") {
   sources = [
-    "aml-scpi.cpp",
+    "aml-scpi.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.mailbox",

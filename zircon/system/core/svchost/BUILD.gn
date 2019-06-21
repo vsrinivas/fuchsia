@@ -4,7 +4,7 @@
 
 library("crashsvc") {
   sources = [
-    "crashsvc.cpp",
+    "crashsvc.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-crash:c",
@@ -20,8 +20,8 @@ library("crashsvc") {
 
 executable("svchost") {
   sources = [
-    "svchost.cpp",
-    "sysmem.cpp",
+    "svchost.cc",
+    "sysmem.cc",
   ]
   deps = [
     ":crashsvc",
@@ -54,7 +54,7 @@ executable("svchost") {
 test("crashsvc-test") {
   output_name = "crashsvc-test"
   sources = [
-    "crashsvc-test.cpp",
+    "crashsvc-test.cc",
   ]
   deps = [
     ":crashsvc",

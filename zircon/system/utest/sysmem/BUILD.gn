@@ -5,7 +5,7 @@
 test("sysmem") {
   test_group = "sys"
   sources = [
-    "sysmem_tests.cpp",
+    "sysmem_tests.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-sysmem:c",

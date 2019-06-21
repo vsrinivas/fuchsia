@@ -6,16 +6,16 @@ source_set("common") {
   testonly = true
   visibility = [ ":*" ]
   sources = [
-    "fidl_coded_types.cpp",
-    "handle_closing_tests.cpp",
-    "linearizing_tests.cpp",
-    "llcpp_types_tests.cpp",
-    "on_error_handle_tests.cpp",
+    "fidl_coded_types.cc",
+    "handle_closing_tests.cc",
+    "linearizing_tests.cc",
+    "llcpp_types_tests.cc",
+    "on_error_handle_tests.cc",
 
     # Generated coding table for fidl/extra_messages.fidl Cannot yet use
     # the FIDL_LIBS directive, since FIDL Tables are not supported in the C
     # generator.  See ./fidl/README.md for details.
-    "fidl/extra_messages.cpp",
+    "fidl/extra_messages.cc",
   ]
   public_deps = [
     "$zx/system/ulib/fbl",
@@ -39,14 +39,14 @@ executable("fidl-handle-policy-test-app") {
 
 test("fidl") {
   sources = [
-    "abi_tests.cpp",
-    "cpp_types_tests.cpp",
-    "decoding_tests.cpp",
-    "encoding_tests.cpp",
-    "formatting_tests.cpp",
-    "message_tests.cpp",
-    "run_with_handle_policy_tests.cpp",
-    "validating_tests.cpp",
+    "abi_tests.cc",
+    "cpp_types_tests.cc",
+    "decoding_tests.cc",
+    "encoding_tests.cc",
+    "formatting_tests.cc",
+    "message_tests.cc",
+    "run_with_handle_policy_tests.cc",
+    "validating_tests.cc",
   ]
   deps = [
     ":common",

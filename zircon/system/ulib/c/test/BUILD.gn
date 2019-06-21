@@ -15,7 +15,7 @@ if (toolchain.tool_dir == "") {
 } else {
   test("noop") {
     sources = [
-      "noop-test.cpp",
+      "noop-test.cc",
     ]
   }
 }
@@ -67,7 +67,7 @@ default_stack_size_cases = [
 foreach(case, default_stack_size_cases) {
   test("default-stack-size-${case.name}") {
     sources = [
-      "default-stack-size-test.cpp",
+      "default-stack-size-test.cc",
     ]
     deps = [
       "$zx/system/ulib/fdio",

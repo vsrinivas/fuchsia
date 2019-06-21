@@ -4,7 +4,7 @@
 
 executable("loadgen") {
   sources = [
-    "loadgen.cpp",
+    "loadgen.cc",
   ]
   deps = [
     "$zx/system/ulib/fbl",

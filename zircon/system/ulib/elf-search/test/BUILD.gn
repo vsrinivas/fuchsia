@@ -11,7 +11,7 @@ group("test") {
 
 test("elf-search") {
   sources = [
-    "elf-search-test.cpp",
+    "elf-search-test.cc",
   ]
   deps = [
     "$zx/system/ulib/elf-search",

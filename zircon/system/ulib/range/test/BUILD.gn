@@ -12,7 +12,7 @@ group("test") {
 test("range") {
   test_group = "sys"
   sources = [
-    "range.cpp",
+    "range.cc",
   ]
   deps = [
     "$zx/system/ulib/fbl",

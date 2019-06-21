@@ -4,7 +4,7 @@
 
 driver("msm8x53-sdhci") {
   sources = [
-    "msm8x53-sdhci.cpp",
+    "msm8x53-sdhci.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.platform.device",

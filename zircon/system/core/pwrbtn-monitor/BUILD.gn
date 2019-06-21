@@ -4,7 +4,7 @@
 
 executable("pwrbtn-monitor") {
   sources = [
-    "pwrbtn-monitor.cpp",
+    "pwrbtn-monitor.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-device-manager:c",

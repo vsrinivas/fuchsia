@@ -10,7 +10,7 @@ library("usb") {
   ]
   sources = [
     "usb-request.c",
-    "usb-wrapper.cpp",
+    "usb-wrapper.cc",
     "usb.c",
   ]
   public_deps = [
@@ -31,7 +31,7 @@ library("usb") {
 
 test("usb-wrapper-test") {
   sources = [
-    "tests/usb-wrapper-tests.cpp",
+    "tests/usb-wrapper-tests.cc",
   ]
   deps = [
     ":usb",

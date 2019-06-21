@@ -14,7 +14,7 @@ generated_resource("zxcrypt_config.txt") {
 
 test("fs-recovery") {
   sources = [
-    "recovery.cpp",
+    "recovery.cc",
   ]
   deps = [
     ":zxcrypt_config.txt",

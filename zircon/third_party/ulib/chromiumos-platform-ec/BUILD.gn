@@ -6,6 +6,6 @@ assert(current_cpu == "x64")
 
 library("chromiumos-platform-ec") {
   sources = [
-    "comm-lpc.cpp",
+    "comm-lpc.cc",
   ]
 }

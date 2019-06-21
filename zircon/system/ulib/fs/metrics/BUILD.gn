@@ -5,7 +5,7 @@
 # Metrics which depend on cobalt only.
 library("metrics-cobalt") {
   sources = [
-    "cobalt-metrics.cpp",
+    "cobalt-metrics.cc",
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   public_deps = [
@@ -21,7 +21,7 @@ library("metrics-cobalt") {
 # Metrics which are logged by inspect vmo only.
 library("metrics-inspect") {
   sources = [
-    "histograms.cpp",
+    "histograms.cc",
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   public_deps = [
@@ -41,7 +41,7 @@ library("metrics-inspect") {
 # TODO(ZX-3150): Remove once inspect broker service is complete.
 library("metrics-composite-latency-event") {
   sources = [
-    "composite-latency-event.cpp",
+    "composite-latency-event.cc",
   ]
   configs += [ "$zx/public/gn/config:visibility_hidden" ]
   public_deps = [

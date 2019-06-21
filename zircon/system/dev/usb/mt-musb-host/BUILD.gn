@@ -11,12 +11,12 @@ driver("mt-musb-host") {
 source_set("common") {
   visibility = [ ":*" ]
   sources = [
-    "usb-device.cpp",
-    "usb-hci.cpp",
-    "usb-request-queue.cpp",
-    "usb-root-hub.cpp",
-    "usb-spew.cpp",
-    "usb-transaction.cpp",
+    "usb-device.cc",
+    "usb-hci.cc",
+    "usb-request-queue.cc",
+    "usb-root-hub.cc",
+    "usb-spew.cc",
+    "usb-transaction.cc",
   ]
   public_deps = [
     "$zx/system/banjo/ddk.protocol.usb.bus",
@@ -38,7 +38,7 @@ source_set("common") {
 test("mt-hci-test") {
   output_name = "mt-hci-test"
   sources = [
-    "usb-hci-test.cpp",
+    "usb-hci-test.cc",
   ]
   deps = [
     ":common",
@@ -49,8 +49,8 @@ test("mt-hci-test") {
 
 test("mt-hci-transaction-test") {
   sources = [
-    "usb-transaction-test.cpp",
-    "usb-transaction.cpp",
+    "usb-transaction-test.cc",
+    "usb-transaction.cc",
   ]
   deps = [
     "$zx/system/dev/lib/device-protocol-pdev",
@@ -69,9 +69,9 @@ test("mt-hci-transaction-test") {
 
 test("mt-hci-request-queue-test") {
   sources = [
-    "usb-request-queue-test.cpp",
-    "usb-request-queue.cpp",
-    "usb-transaction.cpp",
+    "usb-request-queue-test.cc",
+    "usb-request-queue.cc",
+    "usb-transaction.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.usb.hci",

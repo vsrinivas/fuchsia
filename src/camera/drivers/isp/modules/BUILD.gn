@@ -5,10 +5,10 @@
 source_set("modules") {
   visibility = [ "../../*" ]
   sources = [
-    "dma-format.cpp",
-    "dma-mgr.cpp",
-    "sensor.cpp",
-    "stats-mgr.cpp",
+    "dma-format.cc",
+    "dma-mgr.cc",
+    "sensor.cc",
+    "stats-mgr.cc",
   ]
   public_deps = [
     "//zircon/public/banjo/ddk.protocol.camerasensor",

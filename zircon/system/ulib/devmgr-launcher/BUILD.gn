@@ -10,7 +10,7 @@ library("devmgr-launcher") {
   ]
   shared = true
   sources = [
-    "launcher.cpp",
+    "launcher.cc",
   ]
   public_deps = [
     "$zx/system/ulib/fit",

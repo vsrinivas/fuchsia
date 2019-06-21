@@ -6,8 +6,8 @@ library("digest") {
   host = true
 
   sources = [
-    "digest.cpp",
-    "merkle-tree.cpp",
+    "digest.cc",
+    "merkle-tree.cc",
   ]
 
   deps = [

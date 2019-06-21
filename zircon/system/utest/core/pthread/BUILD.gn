@@ -5,7 +5,7 @@
 source_set("pthread") {
   testonly = true
   sources = [
-    "pthread.cpp",
+    "pthread.cc",
   ]
   deps = [
     "$zx/system/ulib/fdio",

@@ -6,7 +6,7 @@ import("$zx/public/gn/firmware.gni")
 
 driver("bt-hci-mediatek") {
   sources = [
-    "bt-hci-mediatek.cpp",
+    "bt-hci-mediatek.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.bt.hci",
@@ -34,8 +34,8 @@ firmware("firmware") {
 test("bt-hci-mediatek-test") {
   output_name = "bt-hci-mediatek-test"
   sources = [
-    "bt-hci-mediatek-test.cpp",
-    "bt-hci-mediatek.cpp",
+    "bt-hci-mediatek-test.cc",
+    "bt-hci-mediatek.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.bt.hci",

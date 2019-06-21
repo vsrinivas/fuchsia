@@ -11,13 +11,13 @@ group("test") {
 
 test("async") {
   sources = [
-    "default_tests.cpp",
-    "exception_tests.cpp",
-    "receiver_tests.cpp",
-    "task_tests.cpp",
-    "time_tests.cpp",
-    "trap_tests.cpp",
-    "wait_tests.cpp",
+    "default_tests.cc",
+    "exception_tests.cc",
+    "receiver_tests.cc",
+    "task_tests.cc",
+    "time_tests.cc",
+    "trap_tests.cc",
+    "wait_tests.cc",
   ]
   deps = [
     "$zx/system/ulib/async",

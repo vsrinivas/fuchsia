@@ -5,7 +5,7 @@
 source_set("futex") {
   testonly = true
   sources = [
-    "futex.cpp",
+    "futex.cc",
   ]
   deps = [
     "$zx/system/ulib/fbl",

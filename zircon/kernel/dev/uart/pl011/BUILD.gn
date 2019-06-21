@@ -4,7 +4,7 @@
 
 source_set("pl011") {
   sources = [
-    "uart.cpp",
+    "uart.cc",
   ]
   deps = [
     "$zx/kernel/dev/pdev",

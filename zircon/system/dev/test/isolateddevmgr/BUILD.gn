@@ -4,7 +4,7 @@
 
 driver("isolateddevmgr-test") {
   sources = [
-    "test-driver.cpp",
+    "test-driver.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-device-manager-test:c",
@@ -20,7 +20,7 @@ driver("isolateddevmgr-test") {
 
 test("isolateddevmgr") {
   sources = [
-    "test.cpp",
+    "test.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-device-manager-test:c",

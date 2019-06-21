@@ -4,11 +4,11 @@
 
 test("inspect-vmo") {
   sources = [
-    "heap_tests.cpp",
-    "inspect_tests.cpp",
-    "scanner_tests.cpp",
-    "snapshot_tests.cpp",
-    "state_tests.cpp",
+    "heap_tests.cc",
+    "inspect_tests.cc",
+    "scanner_tests.cc",
+    "snapshot_tests.cc",
+    "state_tests.cc",
   ]
   deps = [
     "$zx/system/ulib/fbl",

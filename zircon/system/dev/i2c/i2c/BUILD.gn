@@ -4,9 +4,9 @@
 
 driver("i2c") {
   sources = [
-    "i2c-bus.cpp",
-    "i2c-child.cpp",
-    "i2c.cpp",
+    "i2c-bus.cc",
+    "i2c-child.cc",
+    "i2c.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.i2c",

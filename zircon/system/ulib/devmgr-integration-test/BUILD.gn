@@ -9,8 +9,8 @@ library("devmgr-integration-test") {
   # TODO: testonly = true
   shared = true
   sources = [
-    "file-wait.cpp",
-    "launcher.cpp",
+    "file-wait.cc",
+    "launcher.cc",
   ]
   public_deps = [
     # <lib/devmgr-integration-test/fixture.h> has #include <lib/devmgr-launcher/launch.h>.

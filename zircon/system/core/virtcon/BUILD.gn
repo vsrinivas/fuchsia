@@ -12,12 +12,12 @@ group("virtcon") {
 
 # This can't be a source_set() because the test compiles with a #define.
 common_sources = [
-  "keyboard-vt100.cpp",
-  "keyboard.cpp",
-  "textcon.cpp",
-  "vc-device.cpp",
-  "vc-gfx.cpp",
-  "vc-input.cpp",
+  "keyboard-vt100.cc",
+  "keyboard.cc",
+  "textcon.cc",
+  "vc-device.cc",
+  "vc-gfx.cc",
+  "vc-input.cc",
 ]
 
 group("common") {
@@ -45,8 +45,8 @@ group("common") {
 
 executable("virtual-console") {
   sources = common_sources + [
-              "main.cpp",
-              "vc-display.cpp",
+              "main.cc",
+              "vc-display.cc",
             ]
   deps = [
     ":common",
@@ -57,8 +57,8 @@ test("virtual-console-test") {
   output_name = "virtual-console-test"
   defines = [ "BUILD_FOR_TEST" ]
   sources = common_sources + [
-              "keyboard-test.cpp",
-              "textcon-test.cpp",
+              "keyboard-test.cc",
+              "textcon-test.cc",
             ]
   deps = [
     ":common",

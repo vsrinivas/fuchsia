@@ -4,18 +4,18 @@
 
 driver("sysmem") {
   sources = [
-    "allocator.cpp",
-    "binding.cpp",
-    "buffer_collection.cpp",
-    "buffer_collection_token.cpp",
-    "contiguous_pooled_system_ram_memory_allocator.cpp",
-    "device.cpp",
-    "driver.cpp",
-    "koid_util.cpp",
-    "logging.cpp",
-    "logical_buffer_collection.cpp",
-    "memory_allocator.cpp",
-    "usage_pixel_format_cost.cpp",
+    "allocator.cc",
+    "binding.cc",
+    "buffer_collection.cc",
+    "buffer_collection_token.cc",
+    "contiguous_pooled_system_ram_memory_allocator.cc",
+    "device.cc",
+    "driver.cc",
+    "koid_util.cc",
+    "logging.cc",
+    "logical_buffer_collection.cc",
+    "memory_allocator.cc",
+    "usage_pixel_format_cost.cc",
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.platform.bus",
@@ -44,11 +44,11 @@ driver("sysmem") {
 test("sysmem-unittest") {
   output_name = "sysmem-unittest"
   sources = [
-    "contiguous_pooled_system_ram_memory_allocator.cpp",
-    "memory_allocator.cpp",
-    "test/contiguous_pooled_system_ram_memory_allocator_test.cpp",
-    "test/pixel_format_cost_test.cpp",
-    "usage_pixel_format_cost.cpp",
+    "contiguous_pooled_system_ram_memory_allocator.cc",
+    "memory_allocator.cc",
+    "test/contiguous_pooled_system_ram_memory_allocator_test.cc",
+    "test/pixel_format_cost_test.cc",
+    "usage_pixel_format_cost.cc",
   ]
   include_dirs = [ "." ]
   deps = [
