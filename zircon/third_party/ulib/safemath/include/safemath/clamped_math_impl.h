@@ -5,18 +5,17 @@
 #ifndef SAFEMATH_CLAMPED_MATH_IMPL_H_
 #define SAFEMATH_CLAMPED_MATH_IMPL_H_
 
-#include <stddef.h>
-#include <stdint.h>
-
-#include <math.h>
-#include <climits>
-#include <cstdlib>
-#include <limits>
-#include <type_traits>
-
 #include <safemath/checked_math.h>
 #include <safemath/safe_conversions.h>
 #include <safemath/safe_math_shared_impl.h>
+#include <stddef.h>
+#include <stdint.h>
+
+#include <climits>
+#include <cmath>
+#include <cstdlib>
+#include <limits>
+#include <type_traits>
 
 namespace safemath {
 namespace internal {

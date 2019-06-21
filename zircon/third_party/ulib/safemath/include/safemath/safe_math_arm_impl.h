@@ -5,11 +5,11 @@
 #ifndef SAFEMATH_SAFE_MATH_ARM_IMPL_H_
 #define SAFEMATH_SAFE_MATH_ARM_IMPL_H_
 
+#include <safemath/safe_conversions.h>
+
 #include <cassert>
 #include <limits>
 #include <type_traits>
-
-#include <safemath/safe_conversions.h>
 
 namespace safemath {
 namespace internal {

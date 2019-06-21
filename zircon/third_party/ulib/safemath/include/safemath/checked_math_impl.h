@@ -5,17 +5,16 @@
 #ifndef SAFEMATH_CHECKED_MATH_IMPL_H_
 #define SAFEMATH_CHECKED_MATH_IMPL_H_
 
+#include <safemath/safe_conversions.h>
+#include <safemath/safe_math_shared_impl.h>
 #include <stddef.h>
 #include <stdint.h>
 
-#include <math.h>
 #include <climits>
+#include <cmath>
 #include <cstdlib>
 #include <limits>
 #include <type_traits>
-
-#include <safemath/safe_conversions.h>
-#include <safemath/safe_math_shared_impl.h>
 
 namespace safemath {
 namespace internal {
@@ -555,7 +554,7 @@ class CheckedNumericState<T, NUMERIC_FLOATING> {
     return MustTreatAsConstexpr(value_)
                ? value_ <= std::numeric_limits<T>::max() &&
                      value_ >= std::numeric_limits<T>::lowest()
-               : isfinite(value_);
+               : std::isfinite(value_);
   }
   constexpr T value() const { return value_; }
 };

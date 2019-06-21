@@ -5,8 +5,8 @@
 #ifndef SAFEMATH_RANGES_H_
 #define SAFEMATH_RANGES_H_
 
-#include <math.h>
 #include <algorithm>
+#include <cmath>
 
 namespace safemath {
 

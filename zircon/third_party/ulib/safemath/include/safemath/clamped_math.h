@@ -5,12 +5,11 @@
 #ifndef SAFEMATH_CLAMPED_MATH_H_
 #define SAFEMATH_CLAMPED_MATH_H_
 
+#include <safemath/clamped_math_impl.h>
 #include <stddef.h>
 
 #include <limits>
 #include <type_traits>
-
-#include <safemath/clamped_math_impl.h>
 
 namespace safemath {
 namespace internal {
@@ -192,12 +191,14 @@ constexpr ClampedNumeric<typename UnderlyingType<T>::type> MakeClampedNum(
   return value;
 }
 
+#if !SAFEMATH_DISABLE_OSTREAM_OPERATORS
 // Overload the ostream output operator to make logging work nicely.
 template <typename T>
 std::ostream& operator<<(std::ostream& os, const ClampedNumeric<T>& value) {
   os << static_cast<T>(value);
   return os;
 }
+#endif
 
 // These implement the variadic wrapper for the math operations.
 template <template <typename, typename, typename> class M,
