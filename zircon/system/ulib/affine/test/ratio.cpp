@@ -339,6 +339,8 @@ TEST(RatioTestCase, Scale) {
         TestVector{        -198, 48000, 44100,       -216, Fatal::No },
         TestVector{  (49 * 198), 48000, 44100,      10560, Fatal::No },
         TestVector{ -(49 * 198), 48000, 44100,     -10560, Fatal::No },
+        TestVector{  0x1517ffffeae80, 0xbebc200, 0x33333333,  0x4e94914f0000, Fatal::No },
+        TestVector{ -0x1517ffffeae80, 0xbebc200, 0x33333333, -0x4e94914f0000, Fatal::No },
 
         // Overflow
         TestVector{ std::numeric_limits<int64_t>::max(),

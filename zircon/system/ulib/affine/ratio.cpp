@@ -74,11 +74,11 @@ uint64_t ScaleUInt64(uint64_t value, uint32_t numerator, uint32_t denominator) {
     uint64_t high_q = high / denominator;
     uint64_t high_r = high % denominator;
 
-    // If high is larger than the overflow limit, then we can just get out now.
+    // If high_q is larger than the overflow limit, then we can just get out now.
     // The overflow limit will be different depending on whether we are scaling
     // a non-negative number (0x7FFFFFFF) or a negative number (0x80000000)
     constexpr uint64_t OVERFLOW_LIMIT_32 = OVERFLOW_LIMIT_64 >> 32;
-    if (high > OVERFLOW_LIMIT_32) {
+    if (high_q > OVERFLOW_LIMIT_32) {
         return OVERFLOW_LIMIT_64;
     }
 
