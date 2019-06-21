@@ -81,7 +81,7 @@ func MultiplyShards(shards []*Shard, multipliers []TestModifier) []*Shard {
 			for _, test := range shard.Tests {
 				if multiplier.Target == test.Name && multiplier.OS == test.OS {
 					shards = append(shards, &Shard{
-						Name:  shard.Name + " - " + normalizeTestName(test.Name),
+						Name:  shard.Name + "-" + normalizeTestName(test.Name),
 						Tests: multiplyTest(test, multiplier.TotalRuns),
 						Env:   shard.Env,
 					})
