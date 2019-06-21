@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 #![deny(warnings)]
 
+mod args;
 mod file_target;
 mod generator;
 mod io_packet;
@@ -10,6 +11,7 @@ mod issuer;
 mod log;
 mod operations;
 mod sequential_io_generator;
+mod target;
 mod verifier;
 
 extern crate serde;
@@ -17,11 +19,9 @@ extern crate serde;
 use {
     crate::generator::{run_load, GeneratorArgs},
     crate::log::{log_init, Stats},
-    crate::operations::AvailableTargets,
     ::log::{debug, log_enabled, Level::Debug},
     failure::Error,
     std::{
-        env,
         fs::{metadata, File, OpenOptions},
         io::prelude::*,
         process,
@@ -56,15 +56,8 @@ fn create_target(target_name: &String, target_length: u64) {
     f.set_len(target_length).unwrap();
 }
 
-fn parse_target_name() -> String {
-    let mut args = env::args();
-
-    // we are interested in first argument.
-    args.nth(1).unwrap()
-}
-
 fn output_config(generator_args_vec: &Vec<GeneratorArgs>, output_config_file: &String) {
-    let serialized = serde_json::to_string(&generator_args_vec).unwrap();
+    let serialized = serde_json::to_string_pretty(&generator_args_vec).unwrap();
     let mut file = OpenOptions::new()
         .create(true)
         .write(true)
@@ -78,19 +71,7 @@ fn output_config(generator_args_vec: &Vec<GeneratorArgs>, output_config_file: &S
 }
 
 fn main() -> Result<(), Error> {
-    // These are a bunch of inputs that each generator thread receives. These
-    // should be received as input to the app.
-    // TODO(auradkar): Implement args parsing and validation logic.
-    let issuer_queue_depth: usize = 40;
-    let block_size: u64 = 4096;
-    let max_io_size: u64 = 8 * 1024;
-    let align: bool = true;
-    let max_io_count: u64 = 1000;
-    let target_length: u64 = 20 * 1024 * 1024;
-    let thread_count: usize = 3;
-    let target_type_file = AvailableTargets::FileTarget;
-    let sequential: bool = true;
-    let output_config_file: &str = "/tmp/output.config";
+    let args = args::parse();
 
     let start_instant: Instant = Instant::now();
     log_init()?;
@@ -98,35 +79,34 @@ fn main() -> Result<(), Error> {
     let mut thread_handles = vec![];
     let mut generator_args_vec = vec![];
 
-    let file_name = parse_target_name();
-    create_target(&file_name, target_length);
+    create_target(&args.target, args.target_length);
 
-    let metadata = metadata(&file_name)?;
+    let metadata = metadata(&args.target)?;
 
     let mut offset_start = 0 as u64;
-    let range_size = (metadata.len() / thread_count as u64) as u64;
+    let range_size = (metadata.len() / args.thread_count as u64) as u64;
 
     // To keep contention among threads low, each generator owns/updates their
     // stats. The "main" thread holds a
     // reference to these stats so that, when ready, it can print the
     // progress/stats from time to time.
-    let mut stats_array = Vec::with_capacity(thread_count);
+    let mut stats_array = Vec::with_capacity(args.thread_count);
 
-    for i in 0..thread_count {
+    for i in 0..args.thread_count {
         let args = GeneratorArgs::new(
             MAGIC_NUMBER,
             process::id() as u64,
             i as u64, // generator id
-            block_size,
-            max_io_size,
-            align,
+            args.block_size,
+            args.max_io_size,
+            args.align,
             i as u64, // seed
-            file_name.to_string(),
+            args.target.clone(),
             offset_start..(offset_start + range_size),
-            target_type_file,
-            issuer_queue_depth,
-            max_io_count,
-            sequential,
+            args.target_type,
+            args.queue_depth,
+            args.max_io_count,
+            args.sequential,
         );
         generator_args_vec.push(args.clone());
 
@@ -140,7 +120,7 @@ fn main() -> Result<(), Error> {
         offset_start += range_size;
     }
 
-    output_config(&generator_args_vec, &output_config_file.to_string());
+    output_config(&generator_args_vec, &args.output_config_file.to_string());
     for handle in thread_handles {
         handle.join().unwrap()?;
     }

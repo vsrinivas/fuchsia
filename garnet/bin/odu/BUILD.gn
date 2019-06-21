@@ -10,11 +10,13 @@ import("//build/testing/environments.gni")
 
 rustc_binary("bin") {
   name = "odu"
+  version = "0.1.0"
   with_unit_tests = true
   edition = "2018"
 
   deps = [
     "//third_party/rust_crates:byteorder",
+    "//third_party/rust_crates:clap",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:libc",
     "//third_party/rust_crates:log",

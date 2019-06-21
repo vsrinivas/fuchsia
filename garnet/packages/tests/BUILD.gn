@@ -187,6 +187,13 @@ group("odu_tests") {
   ]
 }
 
+group("odu_host_tests") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/odu:odu_tests($host_toolchain)",
+  ]
+}
+
 group("fostr") {
   testonly = true
   public_deps = [
@@ -399,6 +406,7 @@ group("all") {
     ":netstack3",
     ":network",
     ":network_time",
+    ":odu_host_tests",
     ":odu_tests",
     ":omaha_client",
     ":overnet",

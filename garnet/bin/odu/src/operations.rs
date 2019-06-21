@@ -129,11 +129,6 @@ pub trait Target {
     fn start_instant(&self) -> Instant;
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Copy)]
-pub enum AvailableTargets {
-    FileTarget,
-}
-
 /// Not all targets implement all operations. For example truncate is meaningless
 /// for block device where as readdir is meaningless for posix files. When a
 /// structure implements a Target trait, this structure helps to programmatically
