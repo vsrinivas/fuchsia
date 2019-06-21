@@ -24,6 +24,7 @@ base_package_labels += [
   "//src/connectivity/network/mdns/bundles:config",
   "//src/connectivity/network/mdns/bundles:services",
   "//src/connectivity/wlan:service",
+  "//src/developer/bugreport",
   "//src/recovery/factory_reset",
   "//src/sys/netclock:netclock",
 ]
