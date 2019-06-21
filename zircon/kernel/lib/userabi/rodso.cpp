@@ -4,7 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <lib/rodso.h>
+#include <lib/userabi/rodso.h>
 
 #include <inttypes.h>
 #include <vm/vm_address_region.h>

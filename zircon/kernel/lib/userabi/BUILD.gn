@@ -1,0 +1,270 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("$zx/kernel/syscalls/abigen.gni")
+import("$zx/public/gn/toolchain/c_utils.gni")
+import("$zx/public/gn/toolchain/environment_redirect.gni")
+
+library("userabi") {
+  kernel = true
+  sources = []
+  if (is_kernel) {
+    deps = [
+      ":userboot",
+      ":vdso",
+    ]
+    public_configs = [ ":vdso-valid-sysret" ]
+    public_deps = [
+      # Dependents can use the generated header via $public_configs
+      # (above), and so need to depend on the generation action.
+      ":gen-vdso-valid-sysret",
+
+      # <lib/userabi/rodso.h> has #include <object/handle.h>.
+      "$zx/kernel/object",
+    ]
+  } else {
+    # Our own embedded "user" code needs some shared headers.
+    visibility = [
+      "./*",
+      "$zx/system/ulib/zircon/*",
+    ]
+  }
+}
+
+# Embed an RODSO layout object and extract address constants from it.
+#
+# The userboot loadable_module() and the vdso (libzircon) shared_library()
+# both use the special RODSO layout (by default in lld or via rodso.ld in
+# gold).  The kernel needs to use address constants extracted from these
+# ELF files' headers and symbols.
+#
+# This generates three targets:
+#  * "$target_name-code.h" generates the eponymous header in $target_gen_dir
+#  * "$target_name.rsp" generates the eponymous link_output_rspfile()
+#  * "$target_name.image" is a source_set() to embed the image in the kernel
+#
+# Parameters
+#
+#   name
+#     - Required: "USERBOOT" or "VDSO", used in generated macro names
+#     - Type: string
+#
+#   deps
+#     - Required; Should reach the loadable_module() or library() target
+#     and no other linking targets; see link_output_rspfile().
+#     - Type: list(label)
+#
+template("rodso") {
+  rspfile_target = "$target_name.rsp"
+  rspfile = "$target_gen_dir/$rspfile_target"
+
+  link_output_rspfile(rspfile_target) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "testonly",
+                             "visibility",
+                           ])
+    outputs = [
+      rspfile,
+    ]
+  }
+
+  if (is_kernel) {
+    # This generated header file tells the kernel code where the segment
+    # boundaries and entry points are.
+    header_target = "$target_name-code.h"
+    header = "$target_gen_dir/$header_target"
+
+    toolchain_utils_action(header_target) {
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
+
+      deps = [
+        ":$rspfile_target",
+      ]
+      outputs = [
+        header,
+      ]
+      depfile = "$header.d"
+
+      script = "gen-rodso-code.sh"
+      utils = [
+        "nm",
+        "readelf",
+      ]
+      sources = [
+        rspfile,
+      ]
+      args = [
+        "--depfile",
+        rebase_path(depfile, root_build_dir),
+        rebase_path(header, root_build_dir),
+        invoker.name,
+        "@" + rebase_path(rspfile, root_build_dir),
+      ]
+
+      metadata = {
+        generated_sources = rebase_path(outputs, root_build_dir)
+      }
+    }
+
+    # Embed the image itself.
+    rodso_name = target_name
+    source_set("$target_name.image") {
+      visibility = [ ":*" ]
+      sources = [
+        "$target_gen_dir/$target_name.S",
+      ]
+
+      # The generated header is also needed to tell .incbin how much of the
+      # image file to embed (see rodso-asm.h).
+      header = rebase_path(header, target_gen_dir)
+      include_dirs = [
+        target_gen_dir,
+        ".",
+      ]
+      deps = [
+        ":$header_target",
+      ]
+
+      # $target_name.S includes the image contents and so must be
+      # reassembled when that changes.  We can't express that in $inputs here
+      # because we don't know the exact name of the file since that depends
+      # on the toolchain selected.  Fortunately, we already depend on the
+      # generated $header, which is always regenerated whenever the image
+      # binary itself changes.  So this indirect dependency is sufficient.
+      write_file(sources[0],
+                 [
+                   "#include \"rodso-asm.h\"",
+                   "#include \"$header\"",
+                   "RODSO_IMAGE($rodso_name, ${invoker.name})",
+                 ])
+    }
+  } else {
+    not_needed(invoker, [ "name" ])
+  }
+}
+
+# Redirect to the userland vDSO shared library target.
+environment_redirect("userland-vdso") {
+  visibility = [ ":*" ]
+  environment_label = "$zx/public/gn/toolchain:user"
+  deps = [
+    "$zx/system/ulib/zircon",
+  ]
+}
+
+rodso("vdso") {
+  visibility = [ "./*" ]
+  name = "VDSO"
+  deps = [
+    ":userland-vdso",
+  ]
+}
+
+if (is_kernel) {
+  # Support for loading embedded ELF files, used for both vdso and userboot.
+  source_set("rodso") {
+    visibility = [ ":*" ]
+    sources = [
+      "rodso.cpp",
+    ]
+    deps = [
+      ":headers",
+      "$zx/kernel/vm:headers",
+    ]
+  }
+
+  # Initializing, supporting, and validating the vDSO itself.
+  source_set("vdso") {
+    visibility = [ ":*" ]
+    sources = [
+      "vdso.cpp",
+    ]
+    deps = [
+      ":gen-categories",
+      ":headers",
+      ":rodso",
+      ":vdso-code.h",
+      ":vdso.image",
+      "$zx/kernel/lib/version:config-buildid-header",
+      "$zx/kernel/syscalls",
+      "$zx/kernel/vm:headers",
+      "$zx/system/ulib/fbl",
+    ]
+  }
+
+  config("vdso-valid-sysret") {
+    visibility = [ ":*" ]
+    include_dirs = [ target_gen_dir ]
+  }
+
+  action("gen-vdso-valid-sysret") {
+    visibility = [ ":*" ]
+    script = "gen-vdso-valid-sysret.sh"
+    deps = [
+      ":vdso-code.h",
+    ]
+    sources = get_target_outputs(":vdso-code.h")
+    outputs = [
+      "$target_gen_dir/vdso-valid-sysret.h",
+    ]
+    args = rebase_path(sources + outputs)
+  }
+
+  group("vdso-code-header") {
+    deps = [
+      ":vdso-code.h",
+    ]
+    public_configs = [ ":vdso-code-header.config" ]
+  }
+
+  config("vdso-code-header.config") {
+    visibility = [ ":vdso-code-header" ]
+    include_dirs = [ target_gen_dir ]
+  }
+
+  abigen("gen-categories") {
+    visibility = [ ":*" ]
+    gen = [
+      {
+        args = [ "-category" ]
+        outputs = [
+          "$target_gen_dir/zircon/syscall-category.inc",
+        ]
+      },
+    ]
+  }
+
+  # Loading and launching userboot, which loads and launches "real" userland.
+  source_set("userboot") {
+    visibility = [ ":*" ]
+    sources = [
+      "userboot.cpp",
+    ]
+    include_dirs = [ target_gen_dir ]
+    deps = [
+      ":headers",
+      ":rodso",
+      ":userboot-code.h",
+      ":userboot.image",
+      "$zx/kernel/lib/console",
+      "$zx/kernel/lib/counters",
+      "$zx/system/ulib/elf-psabi",
+      "$zx/system/ulib/zircon-internal",
+    ]
+  }
+
+  rodso("userboot") {
+    visibility = [ ":*" ]
+    name = "USERBOOT"
+    deps = [
+      "userboot",
+    ]
+  }
+}

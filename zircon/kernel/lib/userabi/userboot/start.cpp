@@ -4,7 +4,6 @@
 
 #include "bootdata.h"
 #include "bootfs.h"
-#include "kernel.h"
 #include "loader-service.h"
 #include "option.h"
 #include "userboot-elf.h"
@@ -15,6 +14,7 @@
 #include <cstring>
 #include <lib/elf-psabi/sp.h>
 #include <lib/processargs/processargs.h>
+#include <lib/userabi/userboot.h>
 #include <lib/zircon-internal/default_stack_size.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/job.h>

@@ -5,139 +5,143 @@
 import("$zx/public/gn/host_tool_action.gni")
 import("abigen.gni")
 
-source_set("syscalls") {
-  sources = [
-    "channel.cpp",
-    "ddk.cpp",
-    "ddk_${zircon_cpu}.cpp",
-    "ddk_pci.cpp",
-    "debug.cpp",
-    "exceptions.cpp",
-    "fifo.cpp",
-    "futex.cpp",
-    "handle_ops.cpp",
-    "hypervisor.cpp",
-    "object.cpp",
-    "object_wait.cpp",
-    "pager.cpp",
-    "port.cpp",
-    "profile.cpp",
-    "resource.cpp",
-    "socket.cpp",
-    "system.cpp",
-    "system_${zircon_cpu}.cpp",
-    "task.cpp",
-    "test.cpp",
-    "timer.cpp",
-    "vmar.cpp",
-    "vmo.cpp",
-    "zircon.cpp",
-  ]
-  deps = [
-    ":dispatch",
-    ":syscall-abi",
-    "$zx/kernel/dev/udisplay",
-    "$zx/kernel/lib/console",
-    "$zx/kernel/lib/counters",
-    "$zx/kernel/lib/crypto",
-    "$zx/kernel/lib/fbl",
-    "$zx/kernel/lib/gfxconsole",
-    "$zx/kernel/lib/ktrace",
-    "$zx/kernel/lib/mtrace",
-    "$zx/kernel/lib/pci",
-    "$zx/kernel/lib/user_copy",
-    "$zx/kernel/object",
-    "$zx/system/ulib/explicit-memory",
-    "$zx/system/ulib/libzbi",
-    "$zx/system/ulib/region-alloc",
-  ]
-  if (current_cpu == "x64") {
-    deps += [ "$zx/kernel/platform/pc" ]
+if (current_toolchain == default_toolchain) {
+  host_tool_action("generate_syscalls.abigen") {
+    tool = "$zx/system/host/banjo:compiler"
+    sources = [
+      "$zx/system/public/zircon/syscalls.banjo",
+    ]
+    outputs = [
+      abigen_source_file,
+    ]
+    args = [
+      "--backend",
+      "Abigen",
+      "--output",
+      rebase_path(abigen_source_file, root_build_dir),
+      "--files",
+      rebase_path(sources[0], root_build_dir),
+    ]
+  }
+} else {
+  group("syscall-abi") {
+    visibility = [
+      ":*",
+      "$zx/kernel/arch/$zircon_cpu:*",
+      "$zx/system/ulib/zircon:*",
+      "$zx/system/utest/core/bad-syscall:*",
+    ]
+
+    public_configs = [ ":syscall-abi.config" ]
+    deps = [
+      ":syscall-abi.generate",
+    ]
+  }
+
+  config("syscall-abi.config") {
+    visibility = [ ":syscall-abi" ]
+    include_dirs = [ target_gen_dir ]
+  }
+
+  abigen("syscall-abi.generate") {
+    visibility = [ ":syscall-abi" ]
+
+    # TODO(mcgrathr): Rename these from <zircon/...> to <lib/syscalls/...>?
+    gen = [
+      {
+        args = [ "-numbers" ]
+        outputs = [
+          "$target_gen_dir/zircon/zx-syscall-numbers.h",
+        ]
+      },
+      {
+        args = [ "-kernel-header" ]
+        outputs = [
+          "$target_gen_dir/zircon/syscall-definitions.h",
+        ]
+      },
+      {
+        args = [ "-kernel-wrappers" ]
+        outputs = [
+          "$target_gen_dir/zircon/syscall-kernel-wrappers.inc",
+        ]
+      },
+      {
+        args = [ "-kernel-branch" ]
+        outputs = [
+          "$target_gen_dir/zircon/syscall-kernel-branches.S",
+        ]
+      },
+      {
+        args = [ "-json" ]
+        outputs = [
+          "$target_gen_dir/zircon/definitions.json",
+        ]
+      },
+    ]
   }
 }
 
-# Only this file depends on vdso-valid-sysret.h.
-source_set("dispatch") {
-  sources = [
-    "syscalls.cpp",
-  ]
-  deps = [
-    ":syscall-abi",
-    "$zx/kernel/lib/vdso:headers",
-  ]
-}
+if (is_kernel) {
+  source_set("syscalls") {
+    sources = [
+      "channel.cpp",
+      "ddk.cpp",
+      "ddk_${zircon_cpu}.cpp",
+      "ddk_pci.cpp",
+      "debug.cpp",
+      "exceptions.cpp",
+      "fifo.cpp",
+      "futex.cpp",
+      "handle_ops.cpp",
+      "hypervisor.cpp",
+      "object.cpp",
+      "object_wait.cpp",
+      "pager.cpp",
+      "port.cpp",
+      "profile.cpp",
+      "resource.cpp",
+      "socket.cpp",
+      "system.cpp",
+      "system_${zircon_cpu}.cpp",
+      "task.cpp",
+      "test.cpp",
+      "timer.cpp",
+      "vmar.cpp",
+      "vmo.cpp",
+      "zircon.cpp",
+    ]
+    deps = [
+      ":dispatch",
+      ":syscall-abi",
+      "$zx/kernel/dev/udisplay",
+      "$zx/kernel/lib/console",
+      "$zx/kernel/lib/counters",
+      "$zx/kernel/lib/crypto",
+      "$zx/kernel/lib/fbl",
+      "$zx/kernel/lib/gfxconsole",
+      "$zx/kernel/lib/ktrace",
+      "$zx/kernel/lib/mtrace",
+      "$zx/kernel/lib/pci",
+      "$zx/kernel/lib/user_copy",
+      "$zx/kernel/object",
+      "$zx/system/ulib/explicit-memory",
+      "$zx/system/ulib/libzbi",
+      "$zx/system/ulib/region-alloc",
+    ]
+    if (current_cpu == "x64") {
+      deps += [ "$zx/kernel/platform/pc" ]
+    }
+  }
 
-group("syscall-abi") {
-  visibility = [
-    ":*",
-    "$zx/kernel/arch/$zircon_cpu:*",
-    "$zx/system/ulib/zircon:*",
-    "$zx/system/utest/core/bad-syscall:*",
-  ]
-
-  public_configs = [ ":syscall-abi.config" ]
-  deps = [
-    ":syscall-abi.generate",
-  ]
-}
-
-config("syscall-abi.config") {
-  visibility = [ ":syscall-abi" ]
-  include_dirs = [ target_gen_dir ]
-}
-
-host_tool_action("generate_syscalls.abigen") {
-  tool = "$zx/system/host/banjo:compiler"
-  sources = [
-    "$zx/system/public/zircon/syscalls.banjo",
-  ]
-  outputs = [
-    "$root_gen_dir/syscalls.abigen",
-  ]
-  args = [
-    "--backend",
-    "Abigen",
-    "--output",
-    rebase_path(outputs[0]),
-    "--files",
-    rebase_path(sources[0]),
-  ]
-}
-
-abigen("syscall-abi.generate") {
-  visibility = [ ":syscall-abi" ]
-
-  # TODO(mcgrathr): Rename these from <zircon/...> to <lib/syscalls/...>?
-  gen = [
-    {
-      args = [ "-numbers" ]
-      outputs = [
-        "$target_gen_dir/zircon/zx-syscall-numbers.h",
-      ]
-    },
-    {
-      args = [ "-kernel-header" ]
-      outputs = [
-        "$target_gen_dir/zircon/syscall-definitions.h",
-      ]
-    },
-    {
-      args = [ "-kernel-wrappers" ]
-      outputs = [
-        "$target_gen_dir/zircon/syscall-kernel-wrappers.inc",
-      ]
-    },
-    {
-      args = [ "-kernel-branch" ]
-      outputs = [
-        "$target_gen_dir/zircon/syscall-kernel-branches.S",
-      ]
-    },
-    {
-      args = [ "-json" ]
-      outputs = [
-        "$target_gen_dir/zircon/definitions.json",
-      ]
-    },
-  ]
+  # Only this file depends on vdso-valid-sysret.h.
+  source_set("dispatch") {
+    sources = [
+      "syscalls.cpp",
+    ]
+    deps = [
+      ":syscall-abi",
+      "$zx/kernel/lib/userabi:headers",
+    ]
+  }
 }

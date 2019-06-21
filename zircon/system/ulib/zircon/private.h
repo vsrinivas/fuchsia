@@ -8,7 +8,7 @@
 #include <zircon/syscalls.h>
 
 // This defines the struct shared with the kernel.
-#include <lib/vdso-constants.h>
+#include <lib/userabi/vdso-constants.h>
 
 extern __LOCAL const struct vdso_constants DATA_CONSTANTS;
 
@@ -30,5 +30,5 @@ __LOCAL decltype(zx_ticks_get) CODE_soft_ticks_get;
     decltype(name) VDSO_##name __LOCAL __ALIAS("_" #name)
 
 // This symbol is expected to appear in the build-time vDSO symbol table so
-// kernel/lib/vdso/ code can use it.
+// kernel/lib/userabi/ code can use it.
 #define VDSO_KERNEL_EXPORT __attribute__((used))

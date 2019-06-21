@@ -21,6 +21,7 @@
 #ifndef __ASSEMBLER__
 
 #include <stdint.h>
+#include <zircon/time.h>
 
 // This struct contains constants that are initialized by the kernel
 // once at boot time.  From the vDSO code's perspective, they are

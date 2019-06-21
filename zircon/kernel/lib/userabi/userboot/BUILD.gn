@@ -74,7 +74,7 @@ if (current_toolchain == default_toolchain) {
     libs = [ vdso_syms_ld ]
     deps = [
       ":gen-vdso-syms-ld",
-      "$zx/kernel/lib/vdso:headers",
+      "$zx/kernel/lib/userabi:headers",
       "$zx/system/ulib/bootdata",
       "$zx/system/ulib/elf-psabi",
       "$zx/system/ulib/elfload",
@@ -94,14 +94,14 @@ if (current_toolchain == default_toolchain) {
   toolchain_utils_action("gen-vdso-syms-header") {
     visibility = [ ":gen-vdso-syms-ld" ]
 
-    # Use the same link_output_rspfile() that lib/vdso uses to embed it,
+    # Use the same link_output_rspfile() that lib/userabi uses to embed it,
     # so we're sure to be getting the exact same binary.
     deps = [
-      "$zx/kernel/lib/vdso:gen-vdso-code-header.rsp",
+      "$zx/kernel/lib/userabi:vdso.rsp",
     ]
     vdso_gen_dir = get_label_info(deps[0], "target_gen_dir")
     sources = [
-      "$vdso_gen_dir/gen-vdso-code-header.rsp",
+      "$vdso_gen_dir/vdso.rsp",
     ]
 
     outputs = [
@@ -153,12 +153,6 @@ if (current_toolchain == default_toolchain) {
   environment_redirect("userboot") {
     environment_label = ":userboot"
     direct = true
-    deps = [
-      ":userboot",
-    ]
-  }
-
-  group("user") {
     deps = [
       ":userboot",
     ]

@@ -20,6 +20,6 @@ test("channel-fatal") {
 environment_redirect("vdso-code-header") {
   environment_label = "$zx/kernel"
   deps = [
-    "$zx/kernel/lib/vdso:vdso-code-header",
+    "$zx/kernel/lib/userabi:vdso-code-header",
   ]
 }

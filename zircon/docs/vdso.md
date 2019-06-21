@@ -194,7 +194,7 @@ contents of the vDSO.  This is accomplished by the boot-time code that
 sets up the vDSO VMO, before it starts the first userspace process and
 gives it the VMO handle.  At compile time, the offset into the vDSO
 image of
-the [`vdso_constants`](../kernel/lib/vdso/include/lib/vdso-constants.h)
+the [`vdso_constants`](../kernel/lib/userabi/include/lib/userabi/vdso-constants.h)
 data structure is extracted from the vDSO ELF file that will be embedded
 in the kernel.  At boot time, the kernel temporarily maps the pages of
 the VMO covering `vdso_constants` into its own address space long enough

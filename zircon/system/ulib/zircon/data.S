@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/vdso-constants.h>
+#include <lib/userabi/vdso-constants.h>
 
 // This is in assembly so that the LTO compiler cannot see the
 // initializer values and decide it's OK to optimize away references.

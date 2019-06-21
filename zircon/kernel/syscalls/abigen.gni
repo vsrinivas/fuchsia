@@ -4,6 +4,11 @@
 
 import("$zx/public/gn/host_tool_action.gni")
 
+_abigen_label =
+    "$zx/kernel/syscalls:generate_syscalls.abigen($default_toolchain)"
+_abigen_dir = get_label_info(_abigen_label, "root_gen_dir")
+abigen_source_file = "$_abigen_dir/syscalls.abigen"
+
 # Generate syscall bindings/information from `syscalls.banjo`.
 #
 # Parameters
@@ -36,7 +41,10 @@ template("abigen") {
     tool = "$zx/system/host/abigen"
 
     deps = [
-      "$zx/kernel/syscalls:generate_syscalls.abigen",
+      _abigen_label,
+    ]
+    sources = [
+      abigen_source_file,
     ]
 
     outputs = []
@@ -46,9 +54,6 @@ template("abigen") {
       args += gen.args + rebase_path(gen.outputs, root_build_dir)
     }
 
-    sources = [
-      "$root_gen_dir/syscalls.abigen",
-    ]
     args += rebase_path(sources, root_build_dir)
 
     metadata = {

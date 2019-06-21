@@ -11,7 +11,7 @@
 #include <err.h>
 #include <fbl/alloc_checker.h>
 #include <inttypes.h>
-#include <lib/vdso.h>
+#include <lib/userabi/vdso.h>
 #include <pow2.h>
 #include <trace.h>
 #include <vm/vm.h>

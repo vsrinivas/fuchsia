@@ -8,7 +8,7 @@
 #include <kernel/stats.h>
 #include <kernel/thread.h>
 #include <lib/ktrace.h>
-#include <lib/vdso.h>
+#include <lib/userabi/vdso.h>
 #include <object/process_dispatcher.h>
 #include <platform.h>
 #include <syscalls/syscalls.h>

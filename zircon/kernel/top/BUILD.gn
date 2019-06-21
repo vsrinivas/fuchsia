@@ -11,7 +11,7 @@ source_set("top") {
     "$zx/kernel/arch/$zircon_cpu",
     "$zx/kernel/kernel",
     "$zx/kernel/lib/debuglog",
-    "$zx/kernel/lib/userboot",
+    "$zx/kernel/lib/userabi",
     "$zx/kernel/lib/version",
     "$zx/kernel/platform",
     "$zx/kernel/target",

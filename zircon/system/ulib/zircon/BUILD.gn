@@ -81,7 +81,7 @@ if (toolchain.tags + exclude_tags - exclude_tags != toolchain.tags ||
     deps = [
       ":generate",
       ":syscall-asm",
-      "$zx/kernel/lib/vdso:headers",
+      "$zx/kernel/lib/userabi:headers",
     ]
     public_deps = [
       ":generated-public-headers",

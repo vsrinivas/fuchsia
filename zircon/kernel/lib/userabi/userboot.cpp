@@ -13,7 +13,9 @@
 #include <lib/console.h>
 #include <lib/counters.h>
 #include <lib/elf-psabi/sp.h>
-#include <lib/vdso.h>
+#include <lib/userabi/rodso.h>
+#include <lib/userabi/userboot.h>
+#include <lib/userabi/vdso.h>
 #include <lib/zircon-internal/default_stack_size.h>
 #include <lk/init.h>
 #include <mexec.h>
@@ -35,9 +37,7 @@
 #include <lib/crypto/entropy/quality_test.h>
 #endif
 
-#include "user/kernel.h"
 static_assert(userboot::kCmdlineMax == CMDLINE_MAX);
-static_assert(userboot::kLastVdso + 1 - userboot::kFirstVdso == VDso::variants());
 
 namespace {
 
@@ -51,8 +51,8 @@ constexpr size_t stack_size = ZIRCON_DEFAULT_STACK_SIZE;
 
 #include "userboot-code.h"
 
-// This is defined in assembly by userboot-image.S; userboot-code.h
-// gives details about the image's size and layout.
+// This is defined in assembly via RODSO_IMAGE (see rodso-asm.h);
+// userboot-code.h gives details about the image's size and layout.
 extern "C" const char userboot_image[];
 
 KCOUNTER(init_time, "init.userboot.time.msec")

@@ -6,8 +6,8 @@
 
 #pragma once
 
-#include <lib/rodso.h>
-#include <lib/vdso-variants.h>
+#include <lib/userabi/rodso.h>
+#include <lib/userabi/userboot.h>
 #include <vm/vm_object.h>
 
 class VmMapping;
@@ -37,16 +37,14 @@ public:
     // for entering the kernel with <syscall-name>'s syscall number.
     struct ValidSyscallPC;
 
-    static constexpr size_t variants() {
-        return static_cast<size_t>(VdsoVariant::COUNT);
-    }
-
     // Fill in the VMO handles for all the variants.
     void GetVariants(Handle** vmos) const;
 
 private:
+    using Variant = userboot::VdsoVariant;
+
     VDso();
-    void CreateVariant(VdsoVariant);
+    void CreateVariant(Variant);
 
     bool vmo_is_vdso_impl(const fbl::RefPtr<VmObject>& vmo_ref) const {
         if (vmo_ref == vmo()->vmo())
@@ -58,13 +56,12 @@ private:
         return false;
     }
 
-    static constexpr size_t variant_index(VdsoVariant v) {
-        DEBUG_ASSERT(v > VdsoVariant::FULL);
+    static constexpr size_t variant_index(Variant v) {
+        DEBUG_ASSERT(v > Variant::FULL);
         return static_cast<size_t>(v) - 1;
     }
 
-    fbl::RefPtr<VmObjectDispatcher> variant_vmo_[
-        static_cast<size_t>(VdsoVariant::COUNT) - 1];
+    fbl::RefPtr<VmObjectDispatcher> variant_vmo_[static_cast<size_t>(Variant::COUNT) - 1];
 
     static const VDso* instance_;
 };
