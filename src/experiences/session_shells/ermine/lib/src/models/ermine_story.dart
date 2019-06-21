@@ -93,6 +93,8 @@ class ErmineStory implements Story, StoryShell {
     clustersModel.restore(id);
   }
 
+  bool get useInProcessStoryShell => clustersModel.useInProcessStoryShell;
+
   ValueNotifier<bool> editStateNotifier = ValueNotifier(false);
   void edit() => editStateNotifier.value = !editStateNotifier.value;
 

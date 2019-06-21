@@ -27,6 +27,9 @@ class ClustersModel extends ChangeNotifier {
 
   final _storyToCluster = <String, ClusterModel>{};
 
+  /// Flag to use in-process story shell.
+  bool useInProcessStoryShell = true;
+
   /// Change notifier when fullscreen is toggled for a story.
   ValueNotifier<ErmineStory> fullscreenStoryNotifier = ValueNotifier(null);
 

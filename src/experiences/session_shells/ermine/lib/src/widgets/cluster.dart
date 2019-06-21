@@ -4,7 +4,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:tiler/tiler.dart' show Tiler, TileModel;
-
+import 'package:fuchsia_scenic_flutter/child_view.dart' show ChildView;
 import '../models/cluster_model.dart';
 import '../models/ermine_story.dart';
 
@@ -25,23 +25,23 @@ class Cluster extends StatelessWidget {
       model: model.tilerModel,
       chromeBuilder: _chromeBuilder,
       customTilesBuilder: (context, tiles) => TabbedTiles(
-            tiles: tiles,
-            chromeBuilder: (context, tile) => _chromeBuilder(
-                  context,
-                  tile,
-                  custom: true,
-                ),
-            onSelect: (index) => tiles[index].content.focus(),
-            initialIndex: _focusedIndex(tiles),
-          ),
+        tiles: tiles,
+        chromeBuilder: (context, tile) => _chromeBuilder(
+          context,
+          tile,
+          custom: true,
+        ),
+        onSelect: (index) => tiles[index].content.focus(),
+        initialIndex: _focusedIndex(tiles),
+      ),
       sizerBuilder: (context, direction, _, __) => GestureDetector(
-            // Disable listview scrolling on top of sizer.
-            onHorizontalDragStart: (_) {},
-            behavior: HitTestBehavior.translucent,
-            child: TileSizer(
-              direction: direction,
-            ),
-          ),
+        // Disable listview scrolling on top of sizer.
+        onHorizontalDragStart: (_) {},
+        behavior: HitTestBehavior.translucent,
+        child: TileSizer(
+          direction: direction,
+        ),
+      ),
       sizerThickness: TileSizer.kThickness,
     );
   }
@@ -60,28 +60,33 @@ class Cluster extends StatelessWidget {
                   story.editStateNotifier,
                 ]),
                 builder: (context, child) => TileChrome(
-                      name: story.id ?? '<title>',
-                      showTitle: !custom,
-                      editing: story.editStateNotifier.value,
-                      focused: story.focused,
-                      child: AnimatedBuilder(
-                        animation: story.visibilityStateNotifier,
-                        builder: (context, child) => story.isImmersive
-                            ? Offstage()
-                            : StoryWidget(
+                  name: story.id ?? '<title>',
+                  showTitle: !custom,
+                  editing: story.editStateNotifier.value &&
+                      story.useInProcessStoryShell,
+                  focused: story.focused,
+                  child: AnimatedBuilder(
+                    animation: story.visibilityStateNotifier,
+                    builder: (context, child) => story.isImmersive
+                        ? Offstage()
+                        : story.useInProcessStoryShell
+                            ? StoryWidget(
                                 editing: story.editStateNotifier.value,
                                 confirmEdit: confirmEditNotifier,
                                 presenter: story.layoutManager.presenter,
+                              )
+                            : ChildView(
+                                connection: story.childViewConnection,
                               ),
-                      ),
-                      onTap: story.focus,
-                      onDelete: story.delete,
-                      onFullscreen: story.maximize,
-                      onMinimize: story.restore,
-                      onEdit: story.edit,
-                      onCancelEdit: () => confirmEditNotifier.value = false,
-                      onConfirmEdit: () => confirmEditNotifier.value = true,
-                    ),
+                  ),
+                  onTap: story.focus,
+                  onDelete: story.delete,
+                  onFullscreen: story.maximize,
+                  onMinimize: story.restore,
+                  onEdit: story.edit,
+                  onCancelEdit: () => confirmEditNotifier.value = false,
+                  onConfirmEdit: () => confirmEditNotifier.value = true,
+                ),
               )
             : Offstage();
       },
