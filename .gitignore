@@ -45,6 +45,7 @@ topaz/
 vendor/
 !/third_party/rust_crates/vendor
 tmp/
+json_generator_tests_*.txt
 
 ### Specific files
 /garnet/tools/cipd.gni

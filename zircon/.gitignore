@@ -20,7 +20,6 @@ compile_commands.json
 *_LOCAL_*
 *_BASE_*
 *.sublime-*
-json_generator_tests_*.txt
 /benchmarks/
 /infra/.recipe_deps
 /out*

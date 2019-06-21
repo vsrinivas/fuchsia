@@ -32,6 +32,9 @@ enum Enum2 : uint32 {
     enum_0 = 0; // More comments
 };
 
+/// a type alias doc comment
+using TheTypeAlias = vector:9;
+
 union MyUnion { // super annoying!
     string? s;
 };

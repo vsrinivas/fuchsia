@@ -314,8 +314,8 @@ std::unique_ptr<raw::Constant> Parser::ParseConstant() {
     }
 }
 
-std::unique_ptr<raw::Using> Parser::ParseUsing() {
-    ASTScope scope(this);
+std::unique_ptr<raw::Using> Parser::ParseUsing(std::unique_ptr<raw::AttributeList> attributes,
+                                               ASTScope& scope) {
     ConsumeToken(IdentifierOfSubkind(Token::Subkind::kUsing));
     if (!Ok())
         return Fail();
@@ -341,7 +341,7 @@ std::unique_ptr<raw::Using> Parser::ParseUsing() {
     }
 
     return std::make_unique<raw::Using>(
-        scope.GetSourceElement(), std::move(using_path),
+        scope.GetSourceElement(), std::move(attributes), std::move(using_path),
         std::move(maybe_alias), std::move(maybe_type_ctor));
 }
 
@@ -1139,7 +1139,7 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
             return More;
 
         case CASE_IDENTIFIER(Token::Subkind::kUsing): {
-            auto using_decl = ParseUsing();
+            auto using_decl = ParseUsing(std::move(attributes), scope);
             if (using_decl->maybe_type_ctor) {
                 done_with_library_imports = true;
             } else if (done_with_library_imports) {

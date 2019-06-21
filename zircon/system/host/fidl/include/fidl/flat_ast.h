@@ -1026,6 +1026,7 @@ public:
         kStructMember,
         kTableDecl,
         kTableMember,
+        kTypeAliasDecl,
         kUnionDecl,
         kUnionMember,
         kXUnionDecl,

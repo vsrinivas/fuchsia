@@ -1654,7 +1654,7 @@ bool Library::ConsumeTypeAlias(std::unique_ptr<raw::Using> using_directive) {
                                 &partial_type_ctor_))
         return false;
     return RegisterDecl(std::make_unique<TypeAlias>(
-        nullptr /* TODO(FIDL-582): we need to allow attributes */,
+        std::move(using_directive->attributes),
         std::move(alias_name),
         std::move(partial_type_ctor_)));
 }
@@ -2887,7 +2887,17 @@ bool Library::VerifyDeclAttributes(Decl* decl) {
         break;
     }
     case Decl::Kind::kTypeAlias: {
-        // TODO(FIDL-582): We do not yet have attributes on type aliasing.
+        auto type_alias_declaration = static_cast<TypeAlias*>(decl);
+        // Attributes: check placement.
+        ValidateAttributesPlacement(
+            AttributeSchema::Placement::kTypeAliasDecl,
+            type_alias_declaration->attributes.get());
+        if (placement_ok.NoNewErrors()) {
+            // Attributes: check constraints.
+            ValidateAttributesConstraints(
+                type_alias_declaration,
+                type_alias_declaration->attributes.get());
+        }
         break;
     }
     } // switch

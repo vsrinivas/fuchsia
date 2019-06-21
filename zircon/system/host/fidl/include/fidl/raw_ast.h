@@ -282,15 +282,18 @@ public:
 
 class Using final : public SourceElement {
 public:
-    Using(SourceElement const& element, std::unique_ptr<CompoundIdentifier> using_path,
+    Using(SourceElement const& element, std::unique_ptr<AttributeList> attributes,
+          std::unique_ptr<CompoundIdentifier> using_path,
           std::unique_ptr<Identifier> maybe_alias,
           std::unique_ptr<TypeConstructor> maybe_type_ctor)
-        : SourceElement(element), using_path(std::move(using_path)),
+        : SourceElement(element), attributes(std::move(attributes)),
+          using_path(std::move(using_path)),
           maybe_alias(std::move(maybe_alias)),
           maybe_type_ctor(std::move(maybe_type_ctor)) {}
 
     void Accept(TreeVisitor* visitor) const;
 
+    std::unique_ptr<AttributeList> attributes;
     std::unique_ptr<CompoundIdentifier> using_path;
     std::unique_ptr<Identifier> maybe_alias;
     // TODO(FIDL-483): Use a special purpose AST element, as is the case in the

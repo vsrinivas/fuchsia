@@ -120,7 +120,7 @@ table-field-ordinal = ordinal , ":" ;
 
 table-field-declaration = struct-field | "reserved" ;
 
-type-alias-declaration = "using" , IDENTIFIER ,  "=" , type-constructor ;
+type-alias-declaration = ( attribute-list ) , "using" , IDENTIFIER ,  "=" , type-constructor ;
 
 attribute-list = "[" , attributes , "]" ;
 

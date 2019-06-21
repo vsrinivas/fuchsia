@@ -65,8 +65,8 @@ table ExampleTable {
     1: uint32 member;
 };
 
-// TODO: Support placement of an attribute on type alias.
-using TypeAlias = uint32;
+[OnTypeAlias]
+using ExampleTypeAlias = uint32;
 
 [OnUnion]
 union ExampleUnion {
@@ -114,6 +114,10 @@ xunion ExampleXUnion {
     ASSERT_NONNULL(example_table);
     EXPECT_TRUE(example_table->attributes->HasAttribute("OnTable"));
     EXPECT_TRUE(example_table->members.front().maybe_used->attributes->HasAttribute("OnTableMember"));
+
+    auto example_type_alias = library.LookupTypeAlias("ExampleTypeAlias");
+    ASSERT_NONNULL(example_type_alias);
+    EXPECT_TRUE(example_type_alias->attributes->HasAttribute("OnTypeAlias"));
 
     auto example_union = library.LookupUnion("ExampleUnion");
     ASSERT_NONNULL(example_union);

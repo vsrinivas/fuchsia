@@ -94,6 +94,9 @@ void TypeConstructor::Accept(TreeVisitor* visitor) const {
 
 void Using::Accept(TreeVisitor* visitor) const {
     SourceElementMark sem(visitor, *this);
+    if (attributes != nullptr) {
+        visitor->OnAttributeList(attributes);
+    }
     visitor->OnCompoundIdentifier(using_path);
     if (maybe_alias != nullptr) {
         visitor->OnIdentifier(maybe_alias);

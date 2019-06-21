@@ -169,6 +169,15 @@ public:
         return nullptr;
     }
 
+    const fidl::flat::TypeAlias* LookupTypeAlias(const std::string& name) {
+        for (const auto& type_alias_decl : library_->type_alias_declarations_) {
+            if (type_alias_decl->GetName() == name) {
+                return type_alias_decl.get();
+            }
+        }
+        return nullptr;
+    }
+
     const fidl::flat::Union* LookupUnion(const std::string& name) {
         for (const auto& union_decl : library_->union_declarations_) {
             if (union_decl->GetName() == name) {

@@ -16,13 +16,7 @@ void DeclarationOrderTreeVisitor::OnFile(std::unique_ptr<File> const& element) {
     if (element->attributes != nullptr) {
         OnAttributeList(element->attributes);
     }
-
     OnCompoundIdentifier(element->library_name);
-    for (auto i = element->using_list.begin();
-         i != element->using_list.end();
-         ++i) {
-        OnUsing(*i);
-    }
 
     auto bits_decls_it = element->bits_declaration_list.begin();
     auto const_decls_it = element->const_declaration_list.begin();
@@ -32,6 +26,7 @@ void DeclarationOrderTreeVisitor::OnFile(std::unique_ptr<File> const& element) {
     auto table_decls_it = element->table_declaration_list.begin();
     auto union_decls_it = element->union_declaration_list.begin();
     auto xunion_decls_it = element->xunion_declaration_list.begin();
+    auto using_decls_it = element->using_list.begin();
 
     enum Next {
         bits_t,
@@ -42,6 +37,7 @@ void DeclarationOrderTreeVisitor::OnFile(std::unique_ptr<File> const& element) {
         table_t,
         union_t,
         xunion_t,
+        using_t,
     };
 
     std::map<const char*, Next> m;
@@ -83,6 +79,9 @@ void DeclarationOrderTreeVisitor::OnFile(std::unique_ptr<File> const& element) {
         if (xunion_decls_it != element->xunion_declaration_list.end()) {
             m[(*xunion_decls_it)->start_.previous_end().data().data()] = xunion_t;
         }
+        if (using_decls_it != element->using_list.end()) {
+            m[(*using_decls_it)->start_.previous_end().data().data()] = using_t;
+        }
         if (m.size() == 0)
             break;
 
@@ -119,6 +118,10 @@ void DeclarationOrderTreeVisitor::OnFile(std::unique_ptr<File> const& element) {
         case xunion_t:
             OnXUnionDeclaration(*xunion_decls_it);
             ++xunion_decls_it;
+            break;
+        case using_t:
+            OnUsing(*using_decls_it);
+            ++using_decls_it;
             break;
         }
     }

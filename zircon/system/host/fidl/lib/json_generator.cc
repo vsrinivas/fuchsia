@@ -503,6 +503,8 @@ void JSONGenerator::Generate(const flat::TypeAlias& value) {
     GenerateObject([&]() {
         GenerateObjectMember("name", value.name, Position::kFirst);
         GenerateObjectMember("location", NameLocation(value.name));
+        if (value.attributes)
+            GenerateObjectMember("maybe_attributes", value.attributes);
         GenerateObjectMember("partial_type_ctor", *value.partial_type_ctor);
     });
 }

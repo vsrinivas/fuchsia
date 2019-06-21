@@ -2343,7 +2343,7 @@ table ExampleTable {
     1: uint32 member;
 };
 
-// TODO: Support placement of an attribute on type alias.
+[OnTypeAlias]
 using TypeAlias = uint32;
 
 [OnUnion]
@@ -2726,6 +2726,12 @@ xunion ExampleXUnion {
         "line": 42,
         "column": 7
       },
+      "maybe_attributes": [
+        {
+          "name": "OnTypeAlias",
+          "value": ""
+        }
+      ],
       "partial_type_ctor": {
         "name": "uint32",
         "args": [],
