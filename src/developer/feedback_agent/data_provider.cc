@@ -47,40 +47,72 @@ DataProviderImpl::DataProviderImpl(
     : executor_(dispatcher), services_(services), config_(config) {}
 
 void DataProviderImpl::GetData(GetDataCallback callback) {
-  // Today attachments are fetched asynchronously, but annotations are not.
-  // In the future, we can use fit::join_promises() if annotations need to be
-  // fetched asynchronously as well.
-  const auto annotations = GetAnnotations(config_.annotation_allowlist);
-
-  auto promise =
-      fit::join_promise_vector(
-          GetAttachments(services_, config_.attachment_allowlist))
-          .then([annotations = std::move(annotations),
-                 callback = std::move(callback)](
-                    fit::result<std::vector<fit::result<Attachment>>>&
-                        attachments) {
-            DataProvider_GetData_Response response;
-            if (!annotations.empty()) {
-              response.data.set_annotations(annotations);
+  auto annotations =
+      fit::join_promise_vector(GetAnnotations(config_.annotation_allowlist))
+          .and_then([](std::vector<fit::result<Annotation>>& annotations)
+                        -> fit::result<std::vector<Annotation>> {
+            std::vector<Annotation> ok_annotations;
+            for (auto& annotation : annotations) {
+              if (annotation.is_ok()) {
+                ok_annotations.emplace_back(annotation.take_value());
+              }
             }
 
-            if (attachments.is_ok()) {
-              std::vector<Attachment> ok_attachments;
-              for (auto& attachment : attachments.take_value()) {
-                if (attachment.is_ok()) {
-                  ok_attachments.emplace_back(attachment.take_value());
-                }
-              }
+            if (ok_annotations.empty()) {
+              return fit::error();
+            }
 
-              if (!ok_attachments.empty()) {
-                response.data.set_attachments(std::move(ok_attachments));
+            return fit::ok(ok_annotations);
+          });
+
+  auto attachments =
+      fit::join_promise_vector(
+          GetAttachments(services_, config_.attachment_allowlist))
+          .and_then([](std::vector<fit::result<Attachment>>& attachments)
+                        -> fit::result<std::vector<Attachment>> {
+            std::vector<Attachment> ok_attachments;
+            for (auto& attachment : attachments) {
+              if (attachment.is_ok()) {
+                ok_attachments.emplace_back(attachment.take_value());
               }
+            }
+
+            if (ok_attachments.empty()) {
+              return fit::error();
+            }
+
+            return fit::ok(std::move(ok_attachments));
+          });
+
+  auto promise =
+      fit::join_promises(std::move(annotations), std::move(attachments))
+          .and_then([callback = std::move(callback)](
+                        std::tuple<fit::result<std::vector<Annotation>>,
+                                   fit::result<std::vector<Attachment>>>&
+                            annotations_and_attachments) {
+            DataProvider_GetData_Response response;
+
+            auto& annotations = std::get<0>(annotations_and_attachments);
+            if (annotations.is_ok()) {
+              response.data.set_annotations(annotations.take_value());
+            } else {
+              FX_LOGS(WARNING) << "Failed to retrieve any annotations";
+            }
+
+            auto& attachments = std::get<1>(annotations_and_attachments);
+            if (attachments.is_ok()) {
+              response.data.set_attachments(attachments.take_value());
             } else {
               FX_LOGS(WARNING) << "Failed to retrieve any attachments";
             }
 
             DataProvider_GetData_Result result;
             result.set_response(std::move(response));
+            callback(std::move(result));
+          })
+          .or_else([callback = std::move(callback)] {
+            DataProvider_GetData_Result result;
+            result.set_err(ZX_ERR_INTERNAL);
             callback(std::move(result));
           });
 

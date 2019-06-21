@@ -529,7 +529,7 @@ TEST_F(DataProviderImplTest, GetData_Inspect) {
   EXPECT_TRUE(found_inspect_attachment);
 }
 
-TEST_F(DataProviderImplTest, GetData_EmptyAnnotationWhitelist) {
+TEST_F(DataProviderImplTest, GetData_EmptyAnnotationAllowlist) {
   ResetDataProvider(Config{/*annotation_allowlist=*/{}, kDefaultAttachments});
 
   DataProvider_GetData_Result result = GetData();
@@ -537,7 +537,7 @@ TEST_F(DataProviderImplTest, GetData_EmptyAnnotationWhitelist) {
   EXPECT_FALSE(result.response().data.has_annotations());
 }
 
-TEST_F(DataProviderImplTest, GetData_EmptyAttachmentWhitelist) {
+TEST_F(DataProviderImplTest, GetData_EmptyAttachmentAllowlist) {
   ResetDataProvider(Config{kDefaultAnnotations, /*attachment_allowlist=*/{}});
 
   DataProvider_GetData_Result result = GetData();
@@ -545,7 +545,17 @@ TEST_F(DataProviderImplTest, GetData_EmptyAttachmentWhitelist) {
   EXPECT_FALSE(result.response().data.has_attachments());
 }
 
-TEST_F(DataProviderImplTest, GetData_UnknownWhitelistedAnnotation) {
+TEST_F(DataProviderImplTest, GetData_EmptyAllowlists) {
+  ResetDataProvider(
+      Config{/*annotation_allowlist=*/{}, /*attachment_allowlist=*/{}});
+
+  DataProvider_GetData_Result result = GetData();
+  ASSERT_TRUE(result.is_response());
+  EXPECT_FALSE(result.response().data.has_annotations());
+  EXPECT_FALSE(result.response().data.has_attachments());
+}
+
+TEST_F(DataProviderImplTest, GetData_UnknownAllowlistedAnnotation) {
   ResetDataProvider(Config{/*annotation_allowlist=*/{"unknown.annotation"},
                            kDefaultAttachments});
 
@@ -554,7 +564,7 @@ TEST_F(DataProviderImplTest, GetData_UnknownWhitelistedAnnotation) {
   EXPECT_FALSE(result.response().data.has_annotations());
 }
 
-TEST_F(DataProviderImplTest, GetData_UnknownWhitelistedAttachment) {
+TEST_F(DataProviderImplTest, GetData_UnknownAllowlistedAttachment) {
   ResetDataProvider(Config{kDefaultAnnotations,
                            /*attachment_allowlist=*/{"unknown.attachment"}});
 

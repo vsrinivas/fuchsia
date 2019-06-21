@@ -10,6 +10,7 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fidl/cpp/string.h>
 #include <lib/fidl/cpp/synchronous_interface_ptr.h>
+#include <lib/fit/promise.h>
 #include <lib/syslog/cpp/logger.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
@@ -23,21 +24,14 @@ namespace fuchsia {
 namespace feedback {
 namespace {
 
-Annotation BuildAnnotation(const std::string& key, const std::string& value) {
-  Annotation annotation;
-  annotation.key = key;
-  annotation.value = value;
-  return annotation;
-}
-
-std::optional<std::string> GetDeviceBoardName() {
+fit::promise<std::string> GetDeviceBoardName() {
   // fuchsia.sysinfo.Device is not Discoverable so we need to construct the
   // channel ourselves.
   const char kSysInfoPath[] = "/dev/misc/sysinfo";
   const int fd = open(kSysInfoPath, O_RDWR);
   if (fd < 0) {
     FX_LOGS(ERROR) << "failed to open " << kSysInfoPath;
-    return std::nullopt;
+    return fit::make_result_promise<std::string>(fit::error());
   }
 
   zx::channel channel;
@@ -46,7 +40,7 @@ std::optional<std::string> GetDeviceBoardName() {
   if (channel_status != ZX_OK) {
     FX_PLOGS(ERROR, channel_status)
         << "failed to open a channel at " << kSysInfoPath;
-    return std::nullopt;
+    return fit::make_result_promise<std::string>(fit::error());
   }
 
   fidl::SynchronousInterfacePtr<fuchsia::sysinfo::Device> device;
@@ -59,25 +53,25 @@ std::optional<std::string> GetDeviceBoardName() {
   if (fidl_status != ZX_OK) {
     FX_PLOGS(ERROR, fidl_status)
         << "failed to connect to fuchsia.sysinfo.Device";
-    return std::nullopt;
+    return fit::make_result_promise<std::string>(fit::error());
   }
   if (out_status != ZX_OK) {
     FX_PLOGS(ERROR, out_status) << "failed to get device board name";
-    return std::nullopt;
+    return fit::make_result_promise<std::string>(fit::error());
   }
-  return out_board_name;
+  return fit::make_ok_promise(std::string(out_board_name));
 }
 
-std::optional<std::string> ReadStringFromFile(const std::string& filepath) {
+fit::promise<std::string> ReadStringFromFile(const std::string& filepath) {
   std::string content;
   if (!files::ReadFileToString(filepath, &content)) {
     FX_LOGS(ERROR) << "failed to read content from " << filepath;
-    return std::nullopt;
+    return fit::make_result_promise<std::string>(fit::error());
   }
-  return fxl::TrimString(content, "\r\n").ToString();
+  return fit::make_ok_promise(fxl::TrimString(content, "\r\n").ToString());
 }
 
-std::optional<std::string> BuildValue(const std::string& key) {
+fit::promise<std::string> BuildValue(const std::string& key) {
   if (key == "device.board-name") {
     return GetDeviceBoardName();
   } else if (key == "build.board") {
@@ -90,31 +84,36 @@ std::optional<std::string> BuildValue(const std::string& key) {
     return ReadStringFromFile("/config/build-info/version");
   } else {
     FX_LOGS(WARNING) << "Unknown annotation " << key;
-    return std::nullopt;
+    return fit::make_result_promise<std::string>(fit::error());
   }
 }
 
-void PushBackIfValuePresent(const std::string& key,
-                            std::vector<Annotation>* annotations) {
-  const auto value = BuildValue(key);
-  if (value.has_value()) {
-    annotations->push_back(BuildAnnotation(key, value.value()));
-  } else {
-    FX_LOGS(WARNING) << "missing annotation " << key;
-  }
+fit::promise<Annotation> BuildAnnotation(const std::string& key) {
+  return BuildValue(key)
+      .and_then([key](std::string& value) -> fit::result<Annotation> {
+        Annotation annotation;
+        annotation.key = key;
+        annotation.value = value;
+        return fit::ok(std::move(annotation));
+      })
+      .or_else([key]() {
+        FX_LOGS(WARNING) << "Failed to build annotation " << key;
+        return fit::error();
+      });
 }
 
 }  // namespace
 
-std::vector<Annotation> GetAnnotations(const std::set<std::string>& allowlist) {
+std::vector<fit::promise<Annotation>> GetAnnotations(
+    const std::set<std::string>& allowlist) {
   if (allowlist.empty()) {
     FX_LOGS(WARNING) << "Annotation allowlist is empty, nothing to retrieve";
     return {};
   }
 
-  std::vector<Annotation> annotations;
+  std::vector<fit::promise<Annotation>> annotations;
   for (const auto& key : allowlist) {
-    PushBackIfValuePresent(key, &annotations);
+    annotations.push_back(BuildAnnotation(key));
   }
   return annotations;
 }
