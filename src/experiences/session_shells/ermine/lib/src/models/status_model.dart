@@ -2,7 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'dart:math';
+
+import 'package:fidl_fuchsia_memory/fidl_async.dart' as mem;
 import 'package:flutter/foundation.dart';
+import 'package:fuchsia_services/services.dart';
 
 /// Model that manages the Status menu state of this session shell.
 class StatusModel extends ChangeNotifier {
@@ -12,15 +16,30 @@ class StatusModel extends ChangeNotifier {
   final String _cpuValue = '35%';
   final double _cpuFill = 35;
   final double _cpuMax = 100;
-  final String _memValue = '7.6G / 16.1G';
-  final double _memFill = 7.6;
-  final double _memMax = 16.1;
+  String _memValue;
+  double _memFill;
+  double _memMax;
   final String _tasksValue = '13, 1 thr';
   final String _tasksDescriptor = '1 running';
   final String _weatherValue = '16°';
   final String _weatherDescriptor = 'Sunny';
   final String _batteryValue = '99%';
   final String _batteryDescriptor = '3:15 left';
+  StartupContext startupContext;
+  final mem.MonitorProxy statusMemoryService;
+  final _memoryServiceBinding = mem.WatcherBinding();
+
+  StatusModel({this.statusMemoryService}) {
+    statusMemoryService.watch(_memoryServiceBinding.wrap(_MonitorWatcherImpl(this)));
+  }
+
+  factory StatusModel.fromStartupContext(StartupContext startupContext) {
+    final statusMemoryService = mem.MonitorProxy();
+    startupContext
+          .incoming
+          .connectToService(statusMemoryService);
+    return StatusModel(statusMemoryService: statusMemoryService);
+  }
 
   // Date
   String getDate() {
@@ -43,6 +62,12 @@ class StatusModel extends ChangeNotifier {
   String getMem() => '$_memValue';
   double getMemFill() => _memFill;
   double getMemMax() => _memMax;
+
+  @override
+  void dispose() {
+    statusMemoryService.ctrl.close();
+    super.dispose();
+  }
 
   // Tasks
   String getTasks() => '$_tasksValue; $_tasksDescriptor';
@@ -102,5 +127,29 @@ class StatusModel extends ChangeNotifier {
         return 'December';
     }
     return '';
+  }
+
+  void _onChange(mem.Stats stats) {
+    int memTotal = (stats.totalBytes);
+    int memUsed = (memTotal - stats.freeBytes);
+    String memGBTotal = _bytesToGB(memTotal);
+    String memGBUsed = _bytesToGB(memUsed);
+    _memValue = '$memGBUsed / $memGBTotal GB';
+    _memFill = memUsed.toDouble();
+    _memMax = memTotal.toDouble();
+  }
+
+  String _bytesToGB(int bytes) {
+    return (bytes / pow(1024, 3)).toStringAsPrecision(3);
+  }
+}
+
+class _MonitorWatcherImpl extends mem.Watcher {
+  final StatusModel status;
+  _MonitorWatcherImpl(this.status);
+
+  @override
+  Future<void> onChange(mem.Stats stats) async {
+    status._onChange(stats);
   }
 }

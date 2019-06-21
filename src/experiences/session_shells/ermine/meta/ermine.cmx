@@ -11,6 +11,7 @@
             "fuchsia.fonts.Provider",
             "fuchsia.logger.LogSink",
             "fuchsia.app.discover.Suggestions",
+            "fuchsia.memory.Monitor",
             "fuchsia.modular.Clipboard",
             "fuchsia.modular.ComponentContext",
             "fuchsia.modular.SessionShellContext",

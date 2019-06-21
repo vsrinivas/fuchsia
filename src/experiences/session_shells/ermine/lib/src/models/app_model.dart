@@ -58,7 +58,7 @@ class AppModel {
       ValueNotifier<ChildViewConnection>(null);
   ValueNotifier<bool> statusVisibility = ValueNotifier(false);
   KeyChordListener _keyboardListener;
-  StatusModel status = StatusModel();
+  StatusModel status;
 
   AppModel() {
     StartupContext.fromStartupInfo()
@@ -75,6 +75,8 @@ class AppModel {
       startupContext: _startupContext,
       onStoryAttached: clustersModel.getStory,
     );
+
+    status = StatusModel.fromStartupContext(_startupContext);
 
     // Load the ask bar.
     _loadAskBar();
@@ -212,6 +214,7 @@ class AppModel {
     _componentControllerProxy.ctrl.close();
     _suggestionsService.ctrl.close();
     _ask.ctrl.close();
+    status.dispose();
     _keyboardListener.close();
     sessionShell
       ..context.logout()
