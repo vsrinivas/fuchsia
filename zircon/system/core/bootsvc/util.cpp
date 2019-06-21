@@ -5,6 +5,7 @@
 #include "util.h"
 
 #include <ctype.h>
+#include <string.h>
 
 #include <fbl/algorithm.h>
 #include <fs/connection.h>
@@ -67,13 +68,50 @@ bootsvc::ItemValue CreateItemValue(uint32_t type, uint32_t off, uint32_t len) {
     return bootsvc::ItemValue{.offset = off, .length = len};
 }
 
+zx_status_t ProcessFactoryItem(const zx::vmo& vmo, uint32_t offset, uint32_t length,
+                               bootsvc::FactoryItemValue* out_factory_item) {
+    offset = safemath::CheckAdd(offset, sizeof(zbi_header_t)).ValueOrDie<uint32_t>();
+
+    zx::vmo payload;
+    zx_status_t status = zx::vmo::create(length, 0, &payload);
+    if (status != ZX_OK) {
+        printf("bootsvc: Failed to create payload vmo: %s\n", zx_status_get_string(status));
+        return status;
+    }
+
+    auto buffer = std::make_unique<uint8_t[]>(length);
+    status = vmo.read(buffer.get(), offset, length);
+    if (status != ZX_OK) {
+        printf("bootsvc: Failed to read input vmo: %s\n", zx_status_get_string(status));
+        return status;
+    }
+
+    status = payload.write(buffer.get(), 0, length);
+    if (status != ZX_OK) {
+        printf("bootsvc: Failed to write payload vmo: %s\n", zx_status_get_string(status));
+        return status;
+    }
+
+    // Wipe the factory item from the original VMO.
+    memset(buffer.get(), 0, length);
+    status = vmo.write(buffer.get(), offset, length);
+    if (status != ZX_OK) {
+        printf("bootsvc: Failed to wipe input vmo: %s\n", zx_status_get_string(status));
+        return status;
+    }
+
+    *out_factory_item =
+        bootsvc::FactoryItemValue{.vmo = std::move(payload), .length = length};
+    return ZX_OK;
+}
+
 } // namespace
 
 namespace bootsvc {
 
 const char* const kLastPanicFilePath = "log/last-panic.txt";
 
-zx_status_t RetrieveBootImage(zx::vmo* out_vmo, ItemMap* out_map) {
+zx_status_t RetrieveBootImage(zx::vmo* out_vmo, ItemMap* out_map, FactoryItemMap* out_factory_map) {
     // Validate boot image VMO provided by startup handle.
     zx::vmo vmo(zx_take_startup_handle(PA_HND(PA_VMO_BOOTDATA, 0)));
     zbi_header_t header;
@@ -93,6 +131,8 @@ zx_status_t RetrieveBootImage(zx::vmo* out_vmo, ItemMap* out_map) {
 
     // Read boot items from the boot image VMO.
     ItemMap map;
+    FactoryItemMap factory_map;
+
     uint32_t off = sizeof(header);
     uint32_t len = header.length;
     while (len > sizeof(header)) {
@@ -110,8 +150,21 @@ zx_status_t RetrieveBootImage(zx::vmo* out_vmo, ItemMap* out_map) {
             printf("bootsvc: ZBI item too large (%u > %u)\n", item_len, len);
             return ZX_ERR_IO_DATA_INTEGRITY;
         } else if (StoreItem(header.type)) {
-            map.emplace(CreateItemKey(header.type, header.extra),
-                        CreateItemValue(header.type, off, header.length));
+            if (header.type == ZBI_TYPE_STORAGE_BOOTFS_FACTORY) {
+                FactoryItemValue factory_item;
+
+                status = ProcessFactoryItem(vmo, off, header.length, &factory_item);
+                if (status != ZX_OK) {
+                    printf("bootsvc: Failed to process factory item: %s\n",
+                           zx_status_get_string(status));
+                    return status;
+                }
+
+                factory_map.emplace(header.extra, std::move(factory_item));
+            } else {
+                map.emplace(CreateItemKey(header.type, header.extra),
+                            CreateItemValue(header.type, off, header.length));
+            }
             DiscardItem(&vmo, discard_begin, discard_end);
             discard_begin = next_off;
         } else {
@@ -124,6 +177,7 @@ zx_status_t RetrieveBootImage(zx::vmo* out_vmo, ItemMap* out_map) {
     DiscardItem(&vmo, discard_begin, discard_end);
     *out_vmo = std::move(vmo);
     *out_map = std::move(map);
+    *out_factory_map = std::move(factory_map);
     return ZX_OK;
 }
 
@@ -166,8 +220,7 @@ zx_status_t CreateVnodeConnection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, zx
     }
 
     auto conn = std::make_unique<fs::Connection>(vfs, vnode, std::move(local),
-                                                 ZX_FS_FLAG_DIRECTORY |
-                                                     ZX_FS_RIGHT_READABLE |
+                                                 ZX_FS_FLAG_DIRECTORY | ZX_FS_RIGHT_READABLE |
                                                      ZX_FS_RIGHT_WRITABLE);
     status = vfs->ServeConnection(std::move(conn));
     if (status != ZX_OK) {

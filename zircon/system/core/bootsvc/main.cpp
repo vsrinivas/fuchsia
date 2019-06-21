@@ -231,7 +231,8 @@ int main(int argc, char** argv) {
     printf("bootsvc: Retrieving boot image...\n");
     zx::vmo image_vmo;
     bootsvc::ItemMap item_map;
-    status = bootsvc::RetrieveBootImage(&image_vmo, &item_map);
+    bootsvc::FactoryItemMap factory_item_map;
+    status = bootsvc::RetrieveBootImage(&image_vmo, &item_map, &factory_item_map);
     ZX_ASSERT_MSG(status == ZX_OK, "Retrieving boot image failed: %s\n",
                   zx_status_get_string(status));
 
@@ -252,6 +253,9 @@ int main(int argc, char** argv) {
     svcfs_svc->AddService(fuchsia_boot_Items_Name,
                           bootsvc::CreateItemsService(loop.dispatcher(), std::move(image_vmo),
                                                       std::move(item_map)));
+    svcfs_svc->AddService(
+        fuchsia_boot_FactoryItems_Name,
+        bootsvc::CreateFactoryItemsService(loop.dispatcher(), std::move(factory_item_map)));
     svcfs_svc->AddService(fuchsia_boot_Log_Name, bootsvc::CreateLogService(loop.dispatcher(), log));
     zx::job::default_job()->set_property(ZX_PROP_NAME, "root", 4);
     svcfs_svc->AddService(fuchsia_boot_RootJob_Name,

@@ -42,6 +42,7 @@ int main(int argc, char** argv) {
 namespace {
 
 constexpr char kArgumentsPath[] = "/bootsvc/" fuchsia_boot_Arguments_Name;
+constexpr char kFactoryItemsPath[] = "/bootsvc/" fuchsia_boot_FactoryItems_Name;
 constexpr char kItemsPath[] = "/bootsvc/" fuchsia_boot_Items_Name;
 constexpr char kLogPath[] = "/bootsvc/" fuchsia_boot_Log_Name;
 constexpr char kRootJobPath[] = "/bootsvc/" fuchsia_boot_RootJob_Name;
@@ -125,6 +126,52 @@ bool TestBootArguments() {
     END_TEST;
 }
 
+// Make sure the fuchsia.boot.FactoryItems service works
+bool TestFactoryItems() {
+    BEGIN_TEST;
+
+    zx::channel local_items, remote_items;
+    zx_status_t status = zx::channel::create(0, &local_items, &remote_items);
+    ASSERT_EQ(ZX_OK, status);
+
+    // Check that we can open the fuchsia.boot.Items service.
+    status = fdio_service_connect(kItemsPath, remote_items.release());
+    ASSERT_EQ(ZX_OK, status);
+
+    zx::vmo payload;
+    uint32_t length;
+
+    // No factory items should appear here.
+    status = fuchsia_boot_ItemsGet(local_items.get(), ZBI_TYPE_STORAGE_BOOTFS_FACTORY, 0,
+                                   payload.reset_and_get_address(), &length);
+    ASSERT_EQ(ZX_OK, status);
+    ASSERT_FALSE(payload.is_valid());
+    ASSERT_EQ(0, length);
+
+    zx::channel local_factory_items, remote_factory_items;
+    status = zx::channel::create(0, &local_factory_items, &remote_factory_items);
+    ASSERT_EQ(ZX_OK, status);
+
+    // Check that we can open the fuchsia.boot.FactoryItems service.
+    status = fdio_service_connect(kFactoryItemsPath, remote_factory_items.release());
+    ASSERT_EQ(ZX_OK, status);
+
+    status = fuchsia_boot_FactoryItemsGet(local_factory_items.get(), 0,
+                                          payload.reset_and_get_address(), &length);
+    ASSERT_EQ(ZX_OK, status);
+
+    // If we have a valid payload, verify that a second call vends nothing.
+    if (payload.is_valid()) {
+        status = fuchsia_boot_FactoryItemsGet(local_factory_items.get(), 0,
+                                              payload.reset_and_get_address(), &length);
+        ASSERT_EQ(ZX_OK, status);
+        ASSERT_FALSE(payload.is_valid());
+        ASSERT_EQ(0, length);
+    }
+
+    END_TEST;
+}
+
 // Make sure the fuchsia.boot.Items service works
 bool TestBootItems() {
     BEGIN_TEST;
@@ -141,7 +188,6 @@ bool TestBootItems() {
     uint32_t types[] = {
         ZBI_TYPE_CRASHLOG,
         ZBI_TYPE_PLATFORM_ID,
-        ZBI_TYPE_STORAGE_BOOTFS_FACTORY,
         ZBI_TYPE_STORAGE_RAMDISK,
     };
     for (uint32_t type : types) {
@@ -271,5 +317,6 @@ RUN_TEST(TestBootItems)
 RUN_TEST(TestBootLog)
 RUN_TEST(TestBootRootJob)
 RUN_TEST(TestBootRootResource)
+RUN_TEST(TestFactoryItems)
 RUN_TEST(TestVdsosPresent)
 END_TEST_CASE(bootsvc_integration_tests)

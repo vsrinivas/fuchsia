@@ -6,6 +6,17 @@ This will tell bootsvc to execute its test suite instead of the usual boot
 chain. The expected output from a boot in this mode is a unittest suite report
 that says 0 failed tests.
 
+To test that factory items are processed correctly, you need to add a BOOTFS_FACTORY
+item to the boot ZBI. Adding any file should work for this test as no processing
+of the payload occurs here:
+```
+$ scripts/build-zircon-x64 &&
+  build-gcc/tools/zbi -o build-gcc/x64.zbi build-gcc/x64.zbi \
+    -T BOOTFS_FACTORY README.md &&
+  scripts/run-zircon-x64 -k -c userboot=bin/bootsvc \
+    -c bootsvc.next=bin/bootsvc-integration-test,testargument
+```
+
 To test that crashlogs are being added to bootfs, you need to add a CRASHLOG item
 to the boot zbi.  For example, to add the contents of README.md as the crashlog:
 ```

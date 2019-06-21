@@ -46,6 +46,10 @@ private:
 fbl::RefPtr<fs::Service> CreateArgumentsService(async_dispatcher_t* dispatcher, zx::vmo vmo,
                                                 uint64_t size);
 
+// Create a service to retrive factory ZBI items.
+fbl::RefPtr<fs::Service> CreateFactoryItemsService(async_dispatcher_t* dispatcher,
+                                                   FactoryItemMap map);
+
 // Create a service to retrieve ZBI items.
 fbl::RefPtr<fs::Service> CreateItemsService(async_dispatcher_t* dispatcher, zx::vmo vmo,
                                             ItemMap map);

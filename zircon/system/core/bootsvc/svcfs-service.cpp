@@ -36,6 +36,25 @@ constexpr fuchsia_boot_Arguments_ops kArgumentsOps = {
     .Get = ArgumentsGet,
 };
 
+zx_status_t FactoryItemsGet(void* ctx, uint32_t extra, fidl_txn_t* txn) {
+    auto map = static_cast<bootsvc::FactoryItemMap*>(ctx);
+    auto it = map->find(extra);
+    if (it == map->end()) {
+        return fuchsia_boot_FactoryItemsGet_reply(txn, ZX_HANDLE_INVALID, 0);
+    }
+
+    // Erase the entry after reading.
+    zx_handle_t vmo_handle = it->second.vmo.release();
+    uint32_t length = it->second.length;
+    map->erase(it);
+
+    return fuchsia_boot_FactoryItemsGet_reply(txn, vmo_handle, length);
+}
+
+constexpr fuchsia_boot_FactoryItems_ops kFactoryItemsOps = {
+    .Get = FactoryItemsGet,
+};
+
 struct ItemsData {
     zx::vmo vmo;
     bootsvc::ItemMap map;
@@ -140,6 +159,15 @@ fbl::RefPtr<fs::Service> CreateArgumentsService(async_dispatcher_t* dispatcher, 
         [dispatcher, data = std::move(data)](zx::channel channel) mutable {
             auto dispatch = reinterpret_cast<fidl_dispatch_t*>(fuchsia_boot_Arguments_dispatch);
             return fidl_bind(dispatcher, channel.release(), dispatch, &data, &kArgumentsOps);
+        });
+}
+
+fbl::RefPtr<fs::Service> CreateFactoryItemsService(async_dispatcher_t* dispatcher,
+                                                   FactoryItemMap map) {
+    return fbl::MakeRefCounted<fs::Service>(
+        [dispatcher, map = std::move(map)](zx::channel channel) mutable {
+            auto dispatch = reinterpret_cast<fidl_dispatch_t*>(fuchsia_boot_FactoryItems_dispatch);
+            return fidl_bind(dispatcher, channel.release(), dispatch, &map, &kFactoryItemsOps);
         });
 }
 
