@@ -630,12 +630,12 @@ func tcpipErrorToCode(err *tcpip.Error) int16 {
 		}
 	}
 	switch err {
-	case tcpip.ErrUnknownDevice:
-		return C.ENODEV
 	case tcpip.ErrUnknownProtocol:
 		return C.EINVAL
 	case tcpip.ErrUnknownNICID:
 		return C.EINVAL
+	case tcpip.ErrUnknownDevice:
+		return C.ENODEV
 	case tcpip.ErrUnknownProtocolOption:
 		return C.ENOPROTOOPT
 	case tcpip.ErrDuplicateNICID:
@@ -700,6 +700,8 @@ func tcpipErrorToCode(err *tcpip.Error) int16 {
 		return C.EMSGSIZE
 	case tcpip.ErrNoBufferSpace:
 		return C.ENOBUFS
+	case tcpip.ErrBroadcastDisabled, tcpip.ErrNotPermitted:
+		return C.EACCES
 	default:
 		panic(fmt.Sprintf("unknown error %v", err))
 	}
