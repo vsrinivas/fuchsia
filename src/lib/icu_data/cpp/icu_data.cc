@@ -5,6 +5,8 @@
 #include "src/lib/icu_data/cpp/icu_data.h"
 
 #include <lib/zx/vmar.h>
+#include <src/lib/files/directory.h>
+#include <zircon/errors.h>
 
 #include "lib/fsl/vmo/file.h"
 #include "lib/fsl/vmo/sized_vmo.h"
@@ -14,6 +16,7 @@ namespace icu_data {
 namespace {
 
 static constexpr char kIcuDataPath[] = "/pkg/data/icudtl.dat";
+
 static uintptr_t g_icu_data_ptr = 0u;
 static size_t g_icu_data_size = 0;
 
@@ -41,21 +44,31 @@ uintptr_t GetData(const fsl::SizedVmo& icu_data, size_t* size_out) {
 
 }  // namespace
 
-// Initialize ICU data
-//
-// Connects to ICU Data Provider (a service) and requests the ICU data.
-// Then, initializes ICU with the data received.
-//
-// Return value indicates if initialization was successful.
-bool Initialize() {
+zx_status_t Initialize() {
+  return InitializeWithTzResourceDir(nullptr);
+}
+
+zx_status_t InitializeWithTzResourceDir(const char tz_files_dir[]) {
   if (g_icu_data_ptr) {
     // Don't allow calling Initialize twice.
-    return false;
+    return ZX_ERR_ALREADY_BOUND;
+  }
+
+  if (tz_files_dir && !files::IsDirectory(tz_files_dir)) {
+    return ZX_ERR_NOT_DIR;
+  }
+
+  if (tz_files_dir) {
+    // This is how we configure ICU to load time zone resource files from a
+    // separate directory. See
+    // http://userguide.icu-project.org/datetime/timezone#TOC-ICU4C-TZ-Update-with-Drop-in-.res-files-ICU-54-and-newer-
+    setenv("ICU_tz_files_dir", tz_files_dir,
+           /* overwrite existing env variable */ 1);
   }
 
   fsl::SizedVmo icu_data;
   if (!fsl::VmoFromFilename(kIcuDataPath, &icu_data))
-    return false;
+    return ZX_ERR_IO;
 
   size_t data_size = 0;
   uintptr_t data = GetData(icu_data, &data_size);
@@ -66,30 +79,23 @@ bool Initialize() {
     udata_setCommonData(reinterpret_cast<const char*>(data), &err);
     g_icu_data_ptr = data;
     g_icu_data_size = data_size;
-    return err == U_ZERO_ERROR;
+    return (err == U_ZERO_ERROR) ? ZX_OK : ZX_ERR_INTERNAL;
   } else {
     Release();
+    return ZX_ERR_INTERNAL;
   }
-
-  return false;
 }
 
-// Release mapped ICU data
-//
-// If Initialize() was called earlier, unmap the ICU data we had previously
-// mapped to this process. ICU cannot be used after calling this method.
-//
-// Return value indicates if unmapping data was successful.
-bool Release() {
+zx_status_t Release() {
   if (g_icu_data_ptr) {
     // Unmap the ICU data.
     zx_status_t status =
         zx::vmar::root_self()->unmap(g_icu_data_ptr, g_icu_data_size);
     g_icu_data_ptr = 0u;
     g_icu_data_size = 0;
-    return status == ZX_OK;
+    return status;
   } else {
-    return false;
+    return ZX_ERR_BAD_STATE;
   }
 }
 

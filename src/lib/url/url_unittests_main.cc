@@ -13,7 +13,7 @@ int main(int argc, char **argv) {
     return EXIT_FAILURE;
   }
 
-  if (!icu_data::Initialize()) {
+  if (icu_data::Initialize() != ZX_OK) {
     FXL_LOG(ERROR) << "Unable to set common ICU data. "
                    << "Timezone data unavailable.";
     return 1;

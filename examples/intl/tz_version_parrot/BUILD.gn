@@ -1,0 +1,49 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+executable("tz_version_parrot_bin") {
+  output_name = "tz_version_parrot"
+
+  sources = [
+    "main.cc",
+  ]
+
+  deps = [
+    "//sdk/lib/sys/cpp",
+    "//src/lib/icu_data/cpp",
+    "//third_party/icu",
+  ]
+}
+
+package("tz_version_parrot") {
+  deps = [
+    ":tz_version_parrot_bin",
+  ]
+
+  binaries = [
+    {
+      name = "tz_version_parrot"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/tz_version_parrot.cmx")
+      dest = "tz_version_parrot.cmx"
+    },
+    {
+      path = rebase_path("meta/tz_version_parrot_with_tzdata.cmx")
+      dest = "tz_version_parrot_with_tzdata.cmx"
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path("//third_party/icu/common/icudtl.dat")
+      dest = "icudtl.dat"
+    },
+  ]
+}

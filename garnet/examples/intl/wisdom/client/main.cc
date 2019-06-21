@@ -73,7 +73,7 @@ int main(int argc, const char** argv) {
       "timezone", kDefaultTimeZoneString);
 
   // We need to initialize ICU data in order to be able to parse |time_string|.
-  ZX_ASSERT(icu_data::Initialize());
+  ZX_ASSERT(icu_data::Initialize() == ZX_OK);
 
   zx::time timestamp = ParseTimestamp(time_string);
   auto time_zone = ParseOrGetDefaultTimeZone(time_zone_id);

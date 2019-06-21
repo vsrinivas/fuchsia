@@ -301,6 +301,7 @@ group("examples") {
 group("intl_examples") {
   testonly = true
   public_deps = [
+    "//examples/intl/tz_version_parrot/test:tz_version_parrot_test",
     "//garnet/examples/intl/manager:tests",
     "//garnet/examples/intl/wisdom/test:intl_wisdom_test",
   ]

@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "bin/tz_version_parrot"
+    },
+    "sandbox": {
+        "features": [
+            "config-data"
+        ]
+    }
+}

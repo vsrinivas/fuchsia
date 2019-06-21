@@ -1,0 +1,14 @@
+{
+    "program": {
+        "binary": "test/tz_version_parrot_test"
+    },
+    "sandbox": {
+        "features": [
+            "system-temp"
+        ],
+        "services": [
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Loader"
+        ]
+    }
+}

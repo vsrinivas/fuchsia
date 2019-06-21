@@ -57,7 +57,7 @@ std::unique_ptr<Calendar> CalendarIdToCalendar(const CalendarId& calendar_id,
 IntlWisdomServerImpl::IntlWisdomServerImpl(
     std::unique_ptr<sys::ComponentContext> startup_context)
     : startup_context_(std::move(startup_context)) {
-  ZX_ASSERT(icu_data::Initialize());
+  ZX_ASSERT(icu_data::Initialize() == ZX_OK);
   startup_context_->outgoing()->AddPublicService(bindings_.GetHandler(this));
 }
 
