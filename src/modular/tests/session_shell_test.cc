@@ -44,7 +44,7 @@ class SessionShellTest : public modular::testing::TestHarnessFixture {
         fake_session_shell_.GetOnCreateHandler(),
         {.sandbox_services = {"fuchsia.modular.SessionShellContext",
                               "fuchsia.modular.PuppetMaster"}});
-builder.BuildAndRun(test_harness());
+    builder.BuildAndRun(test_harness());
 
     // Wait for our session shell to start.
     RunLoopUntil([&] { return fake_session_shell_.is_running(); });

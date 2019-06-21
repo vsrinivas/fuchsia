@@ -62,9 +62,8 @@ TEST_F(LoginOverrideTest, AuthProviderOverrideLaunchesBaseShell) {
           .url = kSingleUserBaseShellUrl});
 
   // Setting AUTH_PROVIDER should launch the configured base shell.
-  SetLoginOverride(fuchsia::setui::LoginOverride::AUTH_PROVIDER, [&] {
-    builder.BuildAndRun(test_harness());
-  });
+  SetLoginOverride(fuchsia::setui::LoginOverride::AUTH_PROVIDER,
+                   [&] { builder.BuildAndRun(test_harness()); });
 
   RunLoopUntil([&] { return intercepted; });
 }

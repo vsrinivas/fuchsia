@@ -33,26 +33,13 @@ class TestHarnessLauncher final {
   }
 
  private:
-  void LaunchTestHarness(
-      fuchsia::sys::LauncherPtr launcher,
-      fidl::InterfaceRequest<fuchsia::modular::testing::TestHarness>);
-
-  std::shared_ptr<sys::ServiceDirectory> test_harness_svc_;
-  fuchsia::sys::ComponentControllerPtr test_harness_ctrl_;
-  fuchsia::modular::testing::TestHarnessPtr test_harness_;
-
   // In order to avoid depending on the owning thread's run loop, the test
   // harness component is launched and managed in a separate thread which
   // contains its own async loop.
-  async::Loop* test_harness_loop_ = nullptr;
-  // protects |test_harness_loop_|
-  std::mutex test_harness_loop_mutex_;
-  // used to signal when |test_harness_loop_| !=
-  // nullptr
-  std::condition_variable test_harness_loop_cv_;
-  // IMPORTANT: To avoid racy uninitialized access, this thread should be
-  // initialized *after* all of the member variables it uses are initialized.
-  std::unique_ptr<std::thread> harness_launcher_thread_;
+  async::Loop test_harness_loop_;
+  std::shared_ptr<sys::ServiceDirectory> test_harness_svc_;
+  fuchsia::sys::ComponentControllerPtr test_harness_ctrl_;
+  fuchsia::modular::testing::TestHarnessPtr test_harness_;
 };
 
 }  // namespace testing
