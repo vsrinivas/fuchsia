@@ -8,7 +8,7 @@ use {
         Capability, CapabilityPath, ChildDecl, ComponentDecl, ExposeDecl, ExposeSource, OfferDecl,
         OfferSource, UseDecl,
     },
-    fidl::endpoints::{ClientEnd, ServerEnd},
+    fidl::endpoints::{self, ClientEnd, ServerEnd},
     fidl_fidl_examples_echo::{self as echo, EchoMarker, EchoRequest, EchoRequestStream},
     fidl_fuchsia_data as fdata,
     fidl_fuchsia_io::{
@@ -45,18 +45,21 @@ pub async fn get_child_realm<'a>(realm: &'a Realm, child: &'a str) -> Arc<Realm>
 }
 
 /// Construct a capability for the hippo service.
-pub fn new_service_capability() -> Capability {
+pub fn default_service_capability() -> Capability {
     Capability::Service(CapabilityPath::try_from("/svc/hippo").unwrap())
 }
 
-/// Construct a capability for the ambient service fuchsia.sys2.Realm.
-pub fn new_ambient_capability() -> Capability {
-    Capability::Service(CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap())
+pub fn new_service_capability(path: &str) -> Capability {
+    Capability::Service(CapabilityPath::try_from(path).unwrap())
 }
 
 /// Construct a capability for the hippo directory.
-pub fn new_directory_capability() -> Capability {
+pub fn default_directory_capability() -> Capability {
     Capability::Directory(CapabilityPath::try_from("/data/hippo").unwrap())
+}
+
+pub fn new_directory_capability(path: &str) -> Capability {
+    Capability::Directory(CapabilityPath::try_from(path).unwrap())
 }
 
 /// Returns an empty component decl for an executable component.
@@ -172,25 +175,48 @@ impl RoutingTest {
             self.components.clone()
         ));
         match capability {
-            Capability::Service(path) => match &path.to_string() as &str {
-                "/svc/hippo" => {
-                    await!(capability_util::call_echo_svc(
-                        path,
-                        component_resolved_url,
-                        self.namespaces.clone(),
-                        should_succeed
-                    ));
-                }
-                p => {
-                    panic!("Unexpected service capability {}", p);
-                }
-            },
-            Capability::Directory(path) => await!(capability_util::read_data(
+            Capability::Service(path) => {
+                await!(capability_util::call_echo_svc_from_namespace(
+                    path,
+                    component_resolved_url,
+                    self.namespaces.clone(),
+                    should_succeed
+                ));
+            }
+            Capability::Directory(path) => await!(capability_util::read_data_from_namespace(
                 path,
                 component_resolved_url,
                 self.namespaces.clone(),
                 should_succeed
             )),
+            Capability::Storage(_) => panic!("storage capabilities are not supported"),
+        }
+    }
+
+    /// Checks using a capability from a component's exposed directory.
+    pub async fn check_use_exposed_dir(
+        &self,
+        moniker: AbsoluteMoniker,
+        capability: Capability,
+        should_succeed: bool,
+    ) {
+        match capability {
+            Capability::Service(path) => {
+                await!(capability_util::call_echo_svc_from_exposed_dir(
+                    path,
+                    &moniker,
+                    &self.model,
+                    should_succeed
+                ));
+            }
+            Capability::Directory(path) => {
+                await!(capability_util::read_data_from_exposed_dir(
+                    path,
+                    &moniker,
+                    &self.model,
+                    should_succeed
+                ));
+            }
             Capability::Storage(_) => panic!("storage capabilities are not supported"),
         }
     }
@@ -309,16 +335,16 @@ mod capability_util {
     use super::*;
     use cm_rust::NativeIntoFidl;
 
-    /// Looks up `resolved_url` in the namespace, and attempts to read ${dir_path}/hippo. The file
+    /// Looks up `resolved_url` in the namespace, and attempts to read ${path}/hippo. The file
     /// should contain the string "hippo".
-    pub async fn read_data(
+    pub async fn read_data_from_namespace(
         path: CapabilityPath,
         resolved_url: String,
         namespaces: Arc<Mutex<HashMap<String, fsys::ComponentNamespace>>>,
         should_succeed: bool,
     ) {
         let path = path.to_string();
-        let dir_proxy = await!(get_dir(&path, resolved_url, namespaces));
+        let dir_proxy = await!(get_dir_from_namespace(&path, resolved_url, namespaces));
         let file = PathBuf::from("hippo");
         let file_proxy = io_util::open_file(&dir_proxy, &file).expect("failed to open file");
         let res = await!(io_util::read_file(&file_proxy));
@@ -334,19 +360,70 @@ mod capability_util {
 
     /// Looks up `resolved_url` in the namespace, and attempts to use `path`. Expects the service
     /// to be fidl.examples.echo.Echo.
-    pub async fn call_echo_svc(
+    pub async fn call_echo_svc_from_namespace(
         path: CapabilityPath,
         resolved_url: String,
         namespaces: Arc<Mutex<HashMap<String, fsys::ComponentNamespace>>>,
         should_succeed: bool,
     ) {
-        let dir_proxy = await!(get_dir(&path.dirname, resolved_url, namespaces));
+        let dir_proxy = await!(get_dir_from_namespace(&path.dirname, resolved_url, namespaces));
         let node_proxy =
             io_util::open_node(&dir_proxy, &PathBuf::from(path.basename), MODE_TYPE_SERVICE)
                 .expect("failed to open echo service");
         let echo_proxy = echo::EchoProxy::new(node_proxy.into_channel().unwrap());
         let res = await!(echo_proxy.echo_string(Some("hippos")));
 
+        match should_succeed {
+            true => {
+                assert_eq!(res.expect("failed to use echo service"), Some("hippos".to_string()))
+            }
+            false => {
+                let err = res.expect_err("used echo service successfully when it should fail");
+                if let fidl::Error::ClientRead(status) = err {
+                    assert_eq!(status, zx::Status::PEER_CLOSED);
+                } else {
+                    panic!("unexpected error value: {}", err);
+                }
+            }
+        }
+    }
+
+    /// Attempts to read ${path}/hippo in `abs_moniker`'s exposed directory. The file should
+    /// contain the string "hippo".
+    pub async fn read_data_from_exposed_dir<'a>(
+        path: CapabilityPath,
+        abs_moniker: &'a AbsoluteMoniker,
+        model: &'a Model,
+        should_succeed: bool,
+    ) {
+        let (node_proxy, server_end) = endpoints::create_proxy::<NodeMarker>().unwrap();
+        await!(open_exposed_dir(&path, abs_moniker, model, MODE_TYPE_DIRECTORY, server_end));
+        let dir_proxy = DirectoryProxy::new(node_proxy.into_channel().unwrap());
+        let file = PathBuf::from("hippo");
+        let file_proxy = io_util::open_file(&dir_proxy, &file).expect("failed to open file");
+        let res = await!(io_util::read_file(&file_proxy));
+
+        match should_succeed {
+            true => assert_eq!("hippo", res.expect("failed to read file")),
+            false => {
+                let err = res.expect_err("read file successfully when it should fail");
+                assert_eq!(format!("{:?}", err), "ClientRead(Status(PEER_CLOSED))");
+            }
+        }
+    }
+
+    /// Attempts to use the fidl.examples.echo.Echo service at `path` in `abs_moniker`'s exposed
+    /// directory.
+    pub async fn call_echo_svc_from_exposed_dir<'a>(
+        path: CapabilityPath,
+        abs_moniker: &'a AbsoluteMoniker,
+        model: &'a Model,
+        should_succeed: bool,
+    ) {
+        let (node_proxy, server_end) = endpoints::create_proxy::<NodeMarker>().unwrap();
+        await!(open_exposed_dir(&path, abs_moniker, model, MODE_TYPE_SERVICE, server_end));
+        let echo_proxy = echo::EchoProxy::new(node_proxy.into_channel().unwrap());
+        let res = await!(echo_proxy.echo_string(Some("hippos")));
         match should_succeed {
             true => {
                 assert_eq!(res.expect("failed to use echo service"), Some("hippos".to_string()))
@@ -370,7 +447,8 @@ mod capability_util {
         namespaces: Arc<Mutex<HashMap<String, fsys::ComponentNamespace>>>,
         bind_calls: Arc<Mutex<Vec<String>>>,
     ) {
-        let dir_proxy = await!(get_dir(&path.dirname, resolved_url.clone(), namespaces));
+        let dir_proxy =
+            await!(get_dir_from_namespace(&path.dirname, resolved_url.clone(), namespaces));
         let node_proxy =
             io_util::open_node(&dir_proxy, &PathBuf::from(path.basename), MODE_TYPE_SERVICE)
                 .expect("failed to open realm service");
@@ -396,7 +474,8 @@ mod capability_util {
         child_decl: ChildDecl,
     ) {
         let path = CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").expect("no realm service");
-        let dir_proxy = await!(get_dir(&path.dirname, resolved_url.clone(), namespaces));
+        let dir_proxy =
+            await!(get_dir_from_namespace(&path.dirname, resolved_url.clone(), namespaces));
         let node_proxy =
             io_util::open_node(&dir_proxy, &PathBuf::from(path.basename), MODE_TYPE_SERVICE)
                 .expect("failed to open realm service");
@@ -407,8 +486,9 @@ mod capability_util {
         let _ = res.expect("failed to create child");
     }
 
-    /// Returns a cloned DirectoryProxy to the dir `dir_string` inside the namespace of `resolved_url`.
-    async fn get_dir(
+    /// Returns a cloned DirectoryProxy to the dir `dir_string` inside the namespace of
+    /// `resolved_url`.
+    async fn get_dir_from_namespace(
         dir_string: &str,
         resolved_url: String,
         namespaces: Arc<Mutex<HashMap<String, fsys::ComponentNamespace>>>,
@@ -431,11 +511,29 @@ mod capability_util {
 
         dir_proxy_clone
     }
+
+    /// Open the exposed dir for `abs_moniker`.
+    async fn open_exposed_dir<'a>(
+        path: &'a CapabilityPath,
+        abs_moniker: &'a AbsoluteMoniker,
+        model: &'a Model,
+        open_mode: u32,
+        server_end: ServerEnd<NodeMarker>,
+    ) {
+        let realm = await!(model.look_up_realm(abs_moniker))
+            .expect(&format!("realm not found {}", abs_moniker));
+        await!(model.bind_instance(realm.clone())).expect("failed to bind instance");
+        let state = await!(realm.state.lock());
+        let execution = state.execution.as_ref().expect("no execution");
+        let flags = OPEN_RIGHT_READABLE;
+        await!(execution.exposed_dir.root_dir.open(flags, open_mode, path.split(), server_end))
+            .expect("failed to open exposed dir");
+    }
 }
 
 /// OutDir can be used to construct and then host an out directory, containing a directory
 /// structure with 0 or 1 read-only files, and 0 or 1 services.
-struct OutDir {
+pub struct OutDir {
     // TODO: it would be great if this struct held a `directory::simple::Simple` that was mutated
     // by the `add_*` functions, but this is not possible because `directory::simple::Simple`
     // doesn't have `Send` and `Sync` on its internal fields, which is needed for the returned
@@ -446,19 +544,19 @@ struct OutDir {
 }
 
 impl OutDir {
-    fn new() -> OutDir {
+    pub fn new() -> OutDir {
         OutDir { host_service: false, host_directory: false }
     }
     /// Adds `svc/foo` to the out directory, which implements `fidl.examples.echo.Echo`.
-    fn add_service(&mut self) {
+    pub fn add_service(&mut self) {
         self.host_service = true;
     }
     /// Adds `data/foo/hippo` to the out directory, which contains the string `hippo`
-    fn add_directory(&mut self) {
+    pub fn add_directory(&mut self) {
         self.host_directory = true;
     }
     /// Returns a function that will host this outgoing directory on the given ServerEnd.
-    fn host_fn(&self) -> Box<Fn(ServerEnd<DirectoryMarker>) + Send + Sync> {
+    pub fn host_fn(&self) -> Box<Fn(ServerEnd<DirectoryMarker>) + Send + Sync> {
         let host_service = self.host_service;
         let host_directory = self.host_directory;
         Box::new(move |server_end: ServerEnd<DirectoryMarker>| {

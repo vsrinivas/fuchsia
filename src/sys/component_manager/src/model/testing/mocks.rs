@@ -3,58 +3,103 @@
 // found in the LICENSE file.
 
 use {
+    crate::directory_broker::RoutingFn,
     crate::model::*,
     cm_rust::{Capability, ComponentDecl},
     failure::{format_err, Error},
     fidl::endpoints::{ClientEnd, ServerEnd},
+    fidl_fidl_examples_echo::{EchoMarker, EchoRequest, EchoRequestStream},
     fidl_fuchsia_io::{
-        DirectoryMarker, DirectoryProxy, NodeMarker, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+        DirectoryMarker, DirectoryProxy, NodeMarker, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE,
+        OPEN_RIGHT_WRITABLE,
     },
-    fidl_fuchsia_sys2 as fsys, fuchsia_zircon as zx,
+    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+    fuchsia_vfs_pseudo_fs::{
+        directory::{self, entry::DirectoryEntry},
+        file::simple::read_only,
+    },
+    fuchsia_zircon as zx,
     futures::future::FutureObj,
     futures::lock::Mutex,
     futures::prelude::*,
-    std::{collections::HashMap, convert::TryFrom, sync::Arc},
+    std::{collections::HashMap, convert::TryFrom, iter, sync::Arc},
 };
 
-pub struct ProxyingRoutingFnFactory {
-    pub root_dir: DirectoryProxy,
-}
+/// Creates a routing function generator that does the following:
+/// - Redirects all directory capabilities to a directory with the file "hello".
+/// - Redirects all service capabilities to the echo service.
+pub fn proxying_routing_facade() -> impl Fn(AbsoluteMoniker, Capability) -> RoutingFn {
+    let mut sub_dir = directory::simple::empty();
+    let (sub_dir_client, sub_dir_server) = zx::Channel::create().unwrap();
+    sub_dir.open(
+        OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+        MODE_TYPE_DIRECTORY,
+        &mut iter::empty(),
+        ServerEnd::<NodeMarker>::new(sub_dir_server.into()),
+    );
+    sub_dir
+        .add_entry("hello", { read_only(move || Ok(b"friend".to_vec())) })
+        .map_err(|(s, _)| s)
+        .expect("Failed to add 'hello' entry");
+    let sub_dir_proxy = ClientEnd::<DirectoryMarker>::new(sub_dir_client)
+        .into_proxy()
+        .expect("failed to create directory proxy");
+    fasync::spawn(async move {
+        let _ = await!(sub_dir);
+    });
 
-impl ProxyingRoutingFnFactory {
-    pub fn new(root_dir: DirectoryProxy) -> Self {
-        ProxyingRoutingFnFactory { root_dir }
-    }
-}
-
-impl CapabilityRoutingFnFactory for ProxyingRoutingFnFactory {
-    fn create_route_fn(
-        &self,
-        _abs_moniker: &AbsoluteMoniker,
-        _capability: Capability,
-    ) -> Box<FnMut(u32, u32, String, ServerEnd<NodeMarker>) + Send> {
+    move |_abs_moniker: AbsoluteMoniker, capability: Capability| {
         // Create a DirectoryProxy for use by every route function we stamp out.
         let (client_chan, server_chan) = zx::Channel::create().unwrap();
         let flags = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE;
-        self.root_dir
+        sub_dir_proxy
             .clone(flags, ServerEnd::<NodeMarker>::new(server_chan.into()))
             .expect("Unable to clone root directory.");
         let dir = ClientEnd::<DirectoryMarker>::new(client_chan)
             .into_proxy()
             .expect("failed to create directory proxy");
+        let capability = capability.clone();
         Box::new(
             move |flags: u32,
                   mode: u32,
                   relative_path: String,
                   server_end: ServerEnd<NodeMarker>| {
-                if !relative_path.is_empty() {
-                    dir.open(flags, mode, &relative_path, server_end)
-                        .expect("Unable to open 'dir'.");
-                } else {
-                    dir.clone(flags, server_end).expect("Unable to clone 'dir'.");
-                }
+                serve_capability(flags, mode, relative_path, server_end, &dir, &capability);
             },
         )
+    }
+}
+
+fn serve_capability(
+    flags: u32,
+    mode: u32,
+    relative_path: String,
+    server_end: ServerEnd<NodeMarker>,
+    dir: &DirectoryProxy,
+    capability: &Capability,
+) {
+    match capability {
+        Capability::Service(_) => {
+            fasync::spawn(async move {
+                let server_end: ServerEnd<EchoMarker> = ServerEnd::new(server_end.into_channel());
+                let mut stream: EchoRequestStream = server_end.into_stream().unwrap();
+                while let Some(EchoRequest::EchoString { value, responder }) =
+                    await!(stream.try_next()).unwrap()
+                {
+                    responder.send(value.as_ref().map(|s| &**s)).unwrap();
+                }
+            });
+        }
+        Capability::Directory(_) => {
+            if !relative_path.is_empty() {
+                dir.open(flags, mode, &relative_path, server_end).expect("Unable to open 'dir'.");
+            } else {
+                dir.clone(flags, server_end).expect("Unable to clone 'dir'.");
+            }
+        }
+        _ => {
+            panic!("unexpected capability type");
+        }
     }
 }
 

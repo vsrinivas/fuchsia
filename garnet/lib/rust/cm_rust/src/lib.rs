@@ -357,15 +357,23 @@ fidl_translations_opt_type!(fsys::Durability);
 fidl_translations_opt_type!(fdata::Dictionary);
 fidl_translations_identical!(Option<fdata::Dictionary>);
 
+/// A path to a capability.
 #[derive(Debug, Clone, PartialEq, Hash)]
 pub struct CapabilityPath {
+    /// The directory containing the last path element, e.g. `/svc/foo` in `/svc/foo/bar`.
     pub dirname: String,
+    /// The last path element: e.g. `bar` in `/svc/foo/bar`.
     pub basename: String,
 }
 
 impl CapabilityPath {
     pub fn to_string(&self) -> String {
         format!("{}", self)
+    }
+
+    /// Splits the path according to "/", ignoring empty path components
+    pub fn split(&self) -> Vec<String> {
+        self.to_string().split("/").map(|s| s.to_string()).filter(|s| !s.is_empty()).collect()
     }
 }
 

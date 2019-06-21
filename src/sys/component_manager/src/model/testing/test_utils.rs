@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {fidl_fuchsia_io::DirectoryProxy, std::path::PathBuf};
+use {
+    fidl_fidl_examples_echo as echo, fidl_fuchsia_io::DirectoryProxy,
+    fidl_fuchsia_io::MODE_TYPE_SERVICE, std::path::PathBuf,
+};
 
 pub async fn dir_contains<'a>(
     root_proxy: &'a DirectoryProxy,
@@ -36,4 +39,12 @@ pub async fn read_file<'a>(root_proxy: &'a DirectoryProxy, path: &'a str) -> Str
         io_util::open_file(&root_proxy, &PathBuf::from(path)).expect("Failed to open file.");
     let res = await!(io_util::read_file(&file_proxy));
     res.expect("Unable to read file.")
+}
+
+pub async fn call_echo<'a>(root_proxy: &'a DirectoryProxy, path: &'a str) -> String {
+    let node_proxy = io_util::open_node(&root_proxy, &PathBuf::from(path), MODE_TYPE_SERVICE)
+        .expect("failed to open echo service");
+    let echo_proxy = echo::EchoProxy::new(node_proxy.into_channel().unwrap());
+    let res = await!(echo_proxy.echo_string(Some("hippos")));
+    res.expect("failed to use echo service").expect("no result from echo")
 }

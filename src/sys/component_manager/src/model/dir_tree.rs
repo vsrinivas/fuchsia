@@ -4,10 +4,9 @@
 
 use {
     crate::directory_broker::{DirectoryBroker, RoutingFn},
-    crate::model::{
-        error::ModelError, moniker::AbsoluteMoniker, routing_fn_factory::RoutingFnFactory,
-    },
-    cm_rust::{Capability, ComponentDecl},
+    crate::model::addable_directory::AddableDirectory,
+    crate::model::*,
+    cm_rust::{Capability, ComponentDecl, ExposeDecl},
     fuchsia_vfs_pseudo_fs::directory,
     log::*,
     std::collections::HashMap,
@@ -22,8 +21,10 @@ pub struct DirTree {
 
 impl DirTree {
     /// Builds a directory hierarchy from a component's `uses` declarations.
+    /// `routing_facade` is a closure that generates the routing function that will be called
+    /// when a leaf node is opened.
     pub fn build_from_uses(
-        route_fn_factory: RoutingFnFactory,
+        routing_facade: impl Fn(AbsoluteMoniker, Capability) -> RoutingFn,
         abs_moniker: &AbsoluteMoniker,
         decl: ComponentDecl,
     ) -> Result<Self, ModelError> {
@@ -37,38 +38,53 @@ impl DirTree {
                     return Err(ModelError::ComponentInvalid);
                 }
             };
-            tree.add_capability(&route_fn_factory, abs_moniker, capability);
+            tree.add_capability(&routing_facade, abs_moniker, &capability);
         }
         Ok(tree)
     }
 
+    /// Builds a directory hierarchy from a component's `exposes` declarations.
+    /// `routing_facade` is a closure that generates the routing function that will be called
+    /// when a leaf node is opened.
+    pub fn build_from_exposes(
+        routing_facade: impl Fn(AbsoluteMoniker, Capability) -> RoutingFn,
+        abs_moniker: &AbsoluteMoniker,
+        decl: ComponentDecl,
+    ) -> Self {
+        let mut tree = DirTree { directory_nodes: HashMap::new(), broker_nodes: HashMap::new() };
+        for expose in decl.exposes {
+            let capability = match expose {
+                ExposeDecl::Service(d) => Capability::Service(d.target_path),
+                ExposeDecl::Directory(d) => Capability::Directory(d.target_path),
+            };
+            tree.add_capability(&routing_facade, abs_moniker, &capability);
+        }
+        tree
+    }
+
     /// Installs the directory tree into `root_dir`.
-    pub fn install(
+    pub fn install<'entries>(
         self,
         abs_moniker: &AbsoluteMoniker,
-        root_dir: &mut directory::simple::Simple<'static>,
+        root_dir: &mut impl AddableDirectory<'entries>,
     ) -> Result<(), ModelError> {
         for (name, subtree) in self.directory_nodes {
             let mut subdir = directory::simple::empty();
             subtree.install(abs_moniker, &mut subdir)?;
-            root_dir
-                .add_entry(&name, subdir)
-                .map_err(|_| ModelError::add_entry_error(abs_moniker.clone(), &name as &str))?;
+            root_dir.add_node(&name, subdir, abs_moniker)?;
         }
         for (name, route_fn) in self.broker_nodes {
             let node = DirectoryBroker::new(route_fn);
-            root_dir
-                .add_entry(&name, node)
-                .map_err(|_| ModelError::add_entry_error(abs_moniker.clone(), &name as &str))?;
+            root_dir.add_node(&name, node, abs_moniker)?;
         }
         Ok(())
     }
 
     fn add_capability(
         &mut self,
-        route_fn_factory: &RoutingFnFactory,
+        routing_facade: &impl Fn(AbsoluteMoniker, Capability) -> RoutingFn,
         abs_moniker: &AbsoluteMoniker,
-        capability: Capability,
+        capability: &Capability,
     ) {
         let path = capability.path().expect("missing path");
         let components = path.dirname.split("/");
@@ -80,10 +96,8 @@ impl DirTree {
                 ));
             }
         }
-        tree.broker_nodes.insert(
-            path.basename.to_string(),
-            route_fn_factory.create_route_fn(&abs_moniker, capability),
-        );
+        let routing_fn = routing_facade(abs_moniker.clone(), capability.clone());
+        tree.broker_nodes.insert(path.basename.to_string(), routing_fn);
     }
 }
 
@@ -92,71 +106,52 @@ mod tests {
     use {
         super::*,
         crate::model::testing::{mocks, routing_test_helpers::default_component_decl, test_utils},
-        cm_rust::{CapabilityPath, UseDecl, UseDirectoryDecl, UseServiceDecl},
+        cm_rust::{
+            CapabilityPath, ExposeDecl, ExposeDirectoryDecl, ExposeServiceDecl, ExposeSource,
+            UseDecl, UseDirectoryDecl, UseServiceDecl,
+        },
         fidl::endpoints::{ClientEnd, ServerEnd},
+        fidl_fuchsia_io::MODE_TYPE_DIRECTORY,
         fidl_fuchsia_io::{DirectoryMarker, NodeMarker, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
         fuchsia_async as fasync,
-        fuchsia_vfs_pseudo_fs::{
-            directory::{self, entry::DirectoryEntry},
-            file::simple::read_only,
-        },
+        fuchsia_vfs_pseudo_fs::directory::{self, entry::DirectoryEntry},
         fuchsia_zircon as zx,
-        std::{convert::TryFrom, iter, sync::Arc},
+        std::{convert::TryFrom, iter},
     };
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn make_in_directory() {
-        // Make a directory tree that will be forwarded to by ProxyingRoutingFnFactory.
-        let mut sub_dir = directory::simple::empty();
-        let (sub_dir_client, sub_dir_server) = zx::Channel::create().unwrap();
-        sub_dir.open(
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            0,
-            &mut iter::empty(),
-            ServerEnd::<NodeMarker>::new(sub_dir_server.into()),
-        );
-
-        // Add a 'hello' file in the subdirectory for testing purposes.
-        sub_dir
-            .add_entry("hello", { read_only(move || Ok(b"friend".to_vec())) })
-            .map_err(|(s, _)| s)
-            .expect("Failed to add 'hello' entry");
-
-        let sub_dir_proxy = ClientEnd::<DirectoryMarker>::new(sub_dir_client)
-            .into_proxy()
-            .expect("failed to create directory proxy");
-        fasync::spawn(async move {
-            let _ = await!(sub_dir);
-        });
-
-        let route_fn_factory = Arc::new(mocks::ProxyingRoutingFnFactory::new(sub_dir_proxy));
+    async fn build_from_uses() {
+        // Call `build_from_uses` with a routing factory that routes to a mock directory or service,
+        // and a `ComponentDecl` with `use` declarations.
+        let routing_facade = mocks::proxying_routing_facade();
         let decl = ComponentDecl {
             uses: vec![
                 UseDecl::Directory(UseDirectoryDecl {
                     source_path: CapabilityPath::try_from("/data/baz").unwrap(),
-                    target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                    target_path: CapabilityPath::try_from("/in/data/hippo").unwrap(),
                 }),
                 UseDecl::Service(UseServiceDecl {
                     source_path: CapabilityPath::try_from("/svc/baz").unwrap(),
-                    target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                    target_path: CapabilityPath::try_from("/in/svc/hippo").unwrap(),
                 }),
                 UseDecl::Directory(UseDirectoryDecl {
                     source_path: CapabilityPath::try_from("/data/foo").unwrap(),
-                    target_path: CapabilityPath::try_from("/data/bar").unwrap(),
+                    target_path: CapabilityPath::try_from("/in/data/bar").unwrap(),
                 }),
             ],
             ..default_component_decl()
         };
         let abs_moniker = AbsoluteMoniker::root();
-        let tree = DirTree::build_from_uses(route_fn_factory, &abs_moniker, decl.clone())
+        let tree = DirTree::build_from_uses(routing_facade, &abs_moniker, decl.clone())
             .expect("Unable to build 'uses' directory");
 
+        // Convert the tree to a directory.
         let mut in_dir = directory::simple::empty();
         tree.install(&abs_moniker, &mut in_dir).expect("Unable to build pseudodirectory");
         let (in_dir_client, in_dir_server) = zx::Channel::create().unwrap();
         in_dir.open(
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-            0,
+            MODE_TYPE_DIRECTORY,
             &mut iter::empty(),
             ServerEnd::<NodeMarker>::new(in_dir_server.into()),
         );
@@ -167,14 +162,77 @@ mod tests {
             .into_proxy()
             .expect("failed to create directory proxy");
         assert_eq!(
-            vec!["data/bar", "data/hippo", "svc/hippo"],
+            vec!["in/data/bar", "in/data/hippo", "in/svc/hippo"],
             await!(test_utils::list_directory_recursive(&in_dir_proxy))
         );
 
-        // All entries in the in directory lead to foo as a result of ProxyingRoutingFnFactory.
-        assert_eq!("friend", await!(test_utils::read_file(&in_dir_proxy, "data/bar/hello")));
-        assert_eq!("friend", await!(test_utils::read_file(&in_dir_proxy, "data/hippo/hello")));
-        assert_eq!("friend", await!(test_utils::read_file(&in_dir_proxy, "svc/hippo/hello")));
+        // Expect that calls on the directory nodes reach the mock directory/service.
+        assert_eq!("friend", await!(test_utils::read_file(&in_dir_proxy, "in/data/bar/hello")));
+        assert_eq!("friend", await!(test_utils::read_file(&in_dir_proxy, "in/data/hippo/hello")));
+        assert_eq!(
+            "hippos".to_string(),
+            await!(test_utils::call_echo(&in_dir_proxy, "in/svc/hippo"))
+        );
     }
 
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn build_from_exposes() {
+        // Call `build_from_uses` with a routing factory that routes to a mock directory or service,
+        // and a `ComponentDecl` with `expose` declarations.
+        let routing_facade = mocks::proxying_routing_facade();
+        let decl = ComponentDecl {
+            exposes: vec![
+                ExposeDecl::Directory(ExposeDirectoryDecl {
+                    source: ExposeSource::Self_,
+                    source_path: CapabilityPath::try_from("/data/baz").unwrap(),
+                    target_path: CapabilityPath::try_from("/in/data/hippo").unwrap(),
+                }),
+                ExposeDecl::Service(ExposeServiceDecl {
+                    source: ExposeSource::Self_,
+                    source_path: CapabilityPath::try_from("/svc/baz").unwrap(),
+                    target_path: CapabilityPath::try_from("/in/svc/hippo").unwrap(),
+                }),
+                ExposeDecl::Directory(ExposeDirectoryDecl {
+                    source: ExposeSource::Self_,
+                    source_path: CapabilityPath::try_from("/data/foo").unwrap(),
+                    target_path: CapabilityPath::try_from("/in/data/bar").unwrap(),
+                }),
+            ],
+            ..default_component_decl()
+        };
+        let abs_moniker = AbsoluteMoniker::root();
+        let tree = DirTree::build_from_exposes(routing_facade, &abs_moniker, decl.clone());
+
+        // Convert the tree to a directory.
+        let mut expose_dir = directory::simple::empty();
+        tree.install(&abs_moniker, &mut expose_dir).expect("Unable to build pseudodirectory");
+        let (expose_dir_client, expose_dir_server) = zx::Channel::create().unwrap();
+        expose_dir.open(
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            MODE_TYPE_DIRECTORY,
+            &mut iter::empty(),
+            ServerEnd::<NodeMarker>::new(expose_dir_server.into()),
+        );
+        fasync::spawn(async move {
+            let _ = await!(expose_dir);
+        });
+        let expose_dir_proxy = ClientEnd::<DirectoryMarker>::new(expose_dir_client)
+            .into_proxy()
+            .expect("failed to create directory proxy");
+        assert_eq!(
+            vec!["in/data/bar", "in/data/hippo", "in/svc/hippo"],
+            await!(test_utils::list_directory_recursive(&expose_dir_proxy))
+        );
+
+        // Expect that calls on the directory nodes reach the mock directory/service.
+        assert_eq!("friend", await!(test_utils::read_file(&expose_dir_proxy, "in/data/bar/hello")));
+        assert_eq!(
+            "friend",
+            await!(test_utils::read_file(&expose_dir_proxy, "in/data/hippo/hello"))
+        );
+        assert_eq!(
+            "hippos".to_string(),
+            await!(test_utils::call_echo(&expose_dir_proxy, "in/svc/hippo"))
+        );
+    }
 }

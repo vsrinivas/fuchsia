@@ -8,7 +8,7 @@ use {
     cm_rust::CapabilityPath,
     failure::format_err,
     fidl::endpoints::{Proxy, ServerEnd},
-    fidl_fuchsia_io::DirectoryProxy,
+    fidl_fuchsia_io::{DirectoryProxy, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE},
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::{
         future::{join_all, BoxFuture, FutureObj},
@@ -29,7 +29,7 @@ pub trait Hook {
         &'a self,
         realm: Arc<Realm>,
         realm_state: &'a RealmState,
-        route_fn_factory: Arc<dyn CapabilityRoutingFnFactory + Send + Sync>,
+        routing_facade: RoutingFacade,
     ) -> BoxFuture<Result<(), ModelError>>;
 
     // Called when a dynamic instance is added with `realm`.
@@ -95,14 +95,21 @@ impl Model {
         abs_moniker: AbsoluteMoniker,
     ) -> Result<(), ModelError> {
         let realm: Arc<Realm> = await!(self.look_up_realm(&abs_moniker))?;
-        let eager_children = await!(self.bind_instance(realm.clone()))?;
+        await!(self.bind_instance(realm))
+    }
+
+    /// Binds to the component instance of the specified realm, causing it to start if it is
+    /// not already running. Also binds to any descendant component instances that need to be
+    /// eagerly started.
+    pub async fn bind_instance(&self, realm: Arc<Realm>) -> Result<(), ModelError> {
+        let eager_children = await!(self.bind_single_instance(realm))?;
         await!(self.bind_eager_children_recursive(eager_children))?;
         Ok(())
     }
 
     /// Given a realm and path, lazily bind to the instance in the realm, open, then bind its eager
     /// children.
-    pub async fn bind_instance_and_open<'a>(
+    pub async fn bind_instance_open_outgoing<'a>(
         &'a self,
         realm: Arc<Realm>,
         flags: u32,
@@ -111,8 +118,7 @@ impl Model {
         server_chan: zx::Channel,
     ) -> Result<(), ModelError> {
         let eager_children = {
-            let eager_children = await!(self.bind_instance(realm.clone()))?;
-
+            let eager_children = await!(self.bind_single_instance(realm.clone()))?;
             let server_end = ServerEnd::new(server_chan);
             let state = await!(realm.state.lock());
             let out_dir = &state
@@ -125,6 +131,34 @@ impl Model {
                 .outgoing_dir;
             let path = io_util::canonicalize_path(&path.to_string());
             out_dir.open(flags, open_mode, &path, server_end).expect("failed to send open message");
+            eager_children
+        };
+        await!(self.bind_eager_children_recursive(eager_children))?;
+        Ok(())
+    }
+
+    /// Given a realm and path, lazily bind to the instance in the realm, open its exposed
+    /// directory, then bind its eager children.
+    pub async fn bind_instance_open_exposed<'a>(
+        &'a self,
+        realm: Arc<Realm>,
+        server_chan: zx::Channel,
+    ) -> Result<(), ModelError> {
+        let eager_children = {
+            let eager_children = await!(self.bind_single_instance(realm.clone()))?;
+            let server_end = ServerEnd::new(server_chan);
+            let state = await!(realm.state.lock());
+            let exposed_dir = &state
+                .execution
+                .as_ref()
+                .ok_or(ModelError::capability_discovery_error(format_err!(
+                    "component hosting capability isn't running: {}",
+                    realm.abs_moniker
+                )))?
+                .exposed_dir;
+            let flags = OPEN_RIGHT_READABLE;
+            await!(exposed_dir.root_dir.open(flags, MODE_TYPE_DIRECTORY, vec![], server_end))
+                .expect("failed to send open message");
             eager_children
         };
         await!(self.bind_eager_children_recursive(eager_children))?;
@@ -173,6 +207,7 @@ impl Model {
                 zx::Channel::create().map_err(|e| ModelError::namespace_creation_failed(e))?;
             let mut namespace = IncomingNamespace::new(component.package)?;
             let ns = await!(namespace.populate(self.clone(), &realm.abs_moniker, decl))?;
+            let exposed_dir = ExposedDir::new(self, &realm.abs_moniker, state)?;
             let execution = Execution::start_from(
                 component.resolved_url,
                 namespace,
@@ -182,6 +217,7 @@ impl Model {
                 DirectoryProxy::from_channel(
                     fasync::Channel::from_channel(runtime_dir_client).unwrap(),
                 ),
+                exposed_dir,
             )?;
 
             let start_info = fsys::ComponentStartInfo {
@@ -215,12 +251,15 @@ impl Model {
     /// already running. Returns the list of child realms whose instances need to be eagerly started
     /// after this function returns. The caller is responsible for calling
     /// bind_eager_children_recursive themselves to ensure eager children are recursively binded.
-    async fn bind_instance<'a>(&'a self, realm: Arc<Realm>) -> Result<Vec<Arc<Realm>>, ModelError> {
+    async fn bind_single_instance<'a>(
+        &'a self,
+        realm: Arc<Realm>,
+    ) -> Result<Vec<Arc<Realm>>, ModelError> {
         let mut state = await!(realm.state.lock());
         let eager_children = await!(self.populate_realm_state(&mut *state, realm.clone()))?;
-        let route_fn_factory = Arc::new(ModelCapabilityRoutingFnFactory::new(&self));
+        let routing_facade = RoutingFacade::new(self.clone());
         for hook in self.hooks.iter() {
-            await!(hook.on_bind_instance(realm.clone(), &*state, route_fn_factory.clone()))?;
+            await!(hook.on_bind_instance(realm.clone(), &*state, routing_facade.clone()))?;
         }
 
         Ok(eager_children)
@@ -238,9 +277,9 @@ impl Model {
             let futures: Vec<_> = instances_to_bind
                 .iter()
                 .map(|realm| {
-                    FutureObj::new(Box::new(
-                        async move { await!(self.bind_instance(realm.clone())) },
-                    ))
+                    FutureObj::new(Box::new(async move {
+                        await!(self.bind_single_instance(realm.clone()))
+                    }))
                 })
                 .collect();
             let res = await!(join_all(futures));

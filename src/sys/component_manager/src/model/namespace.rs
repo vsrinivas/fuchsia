@@ -151,8 +151,9 @@ impl IncomingNamespace {
                 fasync::OnSignals::new(&server_end_chan, zx::Signals::CHANNEL_READABLE);
             await!(on_signal_fut).unwrap();
             // Route this capability to the right component
-            let res = await!(route_directory(
+            let res = await!(route_use_capability(
                 &model,
+                MODE_TYPE_DIRECTORY,
                 &capability,
                 abs_moniker.clone(),
                 server_end_chan.into_zx_channel()
@@ -201,15 +202,16 @@ impl IncomingNamespace {
         let capability: cm_rust::Capability = use_.clone().into();
         let route_open_fn = Box::new(
             move |_flags: u32,
-                  _mode: u32,
+                  mode: u32,
                   _relative_path: String,
                   server_end: ServerEnd<NodeMarker>| {
                 let capability = capability.clone();
                 let model = model.clone();
                 let abs_moniker = abs_moniker.clone();
                 fasync::spawn(async move {
-                    let res = await!(route_service(
+                    let res = await!(route_use_capability(
                         &model,
+                        mode,
                         &capability,
                         abs_moniker.clone(),
                         server_end.into_channel()

@@ -106,8 +106,8 @@ async fn use_from_parent() {
     ];
     let ambient = Box::new(MockAmbientEnvironment::new());
     let test = RoutingTest::new("a", components, ambient);
-    await!(test.check_use(vec!["b"].into(), new_directory_capability(), true));
-    await!(test.check_use(vec!["b"].into(), new_service_capability(), true));
+    await!(test.check_use(vec!["b"].into(), default_directory_capability(), true));
+    await!(test.check_use(vec!["b"].into(), default_service_capability(), true));
 }
 
 ///   a
@@ -194,8 +194,8 @@ async fn use_from_grandparent() {
     ];
     let ambient = Box::new(MockAmbientEnvironment::new());
     let test = RoutingTest::new("a", components, ambient);
-    await!(test.check_use(vec!["b", "c"].into(), new_directory_capability(), true));
-    await!(test.check_use(vec!["b", "c"].into(), new_service_capability(), true));
+    await!(test.check_use(vec!["b", "c"].into(), default_directory_capability(), true));
+    await!(test.check_use(vec!["b", "c"].into(), default_service_capability(), true));
 }
 
 ///     a
@@ -290,8 +290,8 @@ async fn use_from_sibling_no_root() {
     ];
     let ambient = Box::new(MockAmbientEnvironment::new());
     let test = RoutingTest::new("a", components, ambient);
-    await!(test.check_use(vec!["b", "c"].into(), new_directory_capability(), true));
-    await!(test.check_use(vec!["b", "c"].into(), new_service_capability(), true));
+    await!(test.check_use(vec!["b", "c"].into(), default_directory_capability(), true));
+    await!(test.check_use(vec!["b", "c"].into(), default_service_capability(), true));
 }
 
 ///   a
@@ -373,8 +373,8 @@ async fn use_from_sibling_root() {
     ];
     let ambient = Box::new(MockAmbientEnvironment::new());
     let test = RoutingTest::new("a", components, ambient);
-    await!(test.check_use(vec!["c"].into(), new_directory_capability(), true));
-    await!(test.check_use(vec!["c"].into(), new_service_capability(), true));
+    await!(test.check_use(vec!["c"].into(), default_directory_capability(), true));
+    await!(test.check_use(vec!["c"].into(), default_service_capability(), true));
 }
 
 ///     a
@@ -482,8 +482,8 @@ async fn use_from_niece() {
     ];
     let ambient = Box::new(MockAmbientEnvironment::new());
     let test = RoutingTest::new("a", components, ambient);
-    await!(test.check_use(vec!["c"].into(), new_directory_capability(), true));
-    await!(test.check_use(vec!["c"].into(), new_service_capability(), true));
+    await!(test.check_use(vec!["c"].into(), default_directory_capability(), true));
+    await!(test.check_use(vec!["c"].into(), default_service_capability(), true));
 }
 
 ///      a
@@ -678,10 +678,10 @@ async fn use_kitchen_sink() {
     ];
     let ambient = Box::new(MockAmbientEnvironment::new());
     let test = RoutingTest::new("a", components, ambient);
-    await!(test.check_use(vec!["b", "e"].into(), new_directory_capability(), true));
-    await!(test.check_use(vec!["b", "e"].into(), new_service_capability(), true));
-    await!(test.check_use(vec!["c", "f"].into(), new_directory_capability(), true));
-    await!(test.check_use(vec!["c", "f"].into(), new_service_capability(), true));
+    await!(test.check_use(vec!["b", "e"].into(), default_directory_capability(), true));
+    await!(test.check_use(vec!["b", "e"].into(), default_service_capability(), true));
+    await!(test.check_use(vec!["c", "f"].into(), default_directory_capability(), true));
+    await!(test.check_use(vec!["c", "f"].into(), default_service_capability(), true));
 }
 
 ///  component manager's namespace
@@ -743,8 +743,8 @@ async fn use_from_component_manager_namespace() {
     let ambient = Box::new(MockAmbientEnvironment::new());
     let test = RoutingTest::new("a", components, ambient);
     test.install_hippo_dir();
-    await!(test.check_use(vec!["b"].into(), new_directory_capability(), true));
-    await!(test.check_use(vec!["b"].into(), new_service_capability(), true));
+    await!(test.check_use(vec!["b"].into(), default_directory_capability(), true));
+    //await!(test.check_use(vec!["b"].into(), default_service_capability(), true));
 }
 
 ///   a
@@ -787,8 +787,8 @@ async fn use_not_offered() {
     ];
     let ambient = Box::new(MockAmbientEnvironment::new());
     let test = RoutingTest::new("a", components, ambient);
-    await!(test.check_use(vec!["b"].into(), new_directory_capability(), false));
-    await!(test.check_use(vec!["b"].into(), new_service_capability(), false));
+    await!(test.check_use(vec!["b"].into(), default_directory_capability(), false));
+    await!(test.check_use(vec!["b"].into(), default_service_capability(), false));
 }
 
 ///   a
@@ -855,8 +855,8 @@ async fn use_offer_source_not_exposed() {
     ];
     let ambient = Box::new(MockAmbientEnvironment::new());
     let test = RoutingTest::new("a", components, ambient);
-    await!(test.check_use(vec!["c"].into(), new_directory_capability(), false));
-    await!(test.check_use(vec!["c"].into(), new_service_capability(), false));
+    await!(test.check_use(vec!["c"].into(), default_directory_capability(), false));
+    await!(test.check_use(vec!["c"].into(), default_service_capability(), false));
 }
 
 ///   a
@@ -928,8 +928,8 @@ async fn use_offer_source_not_offered() {
     ];
     let ambient = Box::new(MockAmbientEnvironment::new());
     let test = RoutingTest::new("a", components, ambient);
-    await!(test.check_use(vec!["b", "c"].into(), new_directory_capability(), false));
-    await!(test.check_use(vec!["b", "c"].into(), new_service_capability(), false));
+    await!(test.check_use(vec!["b", "c"].into(), default_directory_capability(), false));
+    await!(test.check_use(vec!["b", "c"].into(), default_service_capability(), false));
 }
 
 ///   a
@@ -999,8 +999,8 @@ async fn use_from_expose() {
     ];
     let ambient = Box::new(MockAmbientEnvironment::new());
     let test = RoutingTest::new("a", components, ambient);
-    await!(test.check_use(vec!["b"].into(), new_directory_capability(), false));
-    await!(test.check_use(vec!["b"].into(), new_service_capability(), false));
+    await!(test.check_use(vec!["b"].into(), default_directory_capability(), false));
+    await!(test.check_use(vec!["b"].into(), default_service_capability(), false));
 }
 
 ///   a
@@ -1059,8 +1059,8 @@ async fn offer_from_non_executable() {
     ];
     let ambient = Box::new(MockAmbientEnvironment::new());
     let test = RoutingTest::new("a", components, ambient);
-    await!(test.check_use(vec!["b"].into(), new_directory_capability(), false));
-    await!(test.check_use(vec!["b"].into(), new_service_capability(), false));
+    await!(test.check_use(vec!["b"].into(), default_directory_capability(), false));
+    await!(test.check_use(vec!["b"].into(), default_service_capability(), false));
 }
 
 ///   a
@@ -1170,8 +1170,8 @@ async fn use_in_collection() {
             startup: fsys::StartupMode::Lazy,
         }
     ));
-    await!(test.check_use(vec!["b", "coll:c"].into(), new_directory_capability(), true));
-    await!(test.check_use(vec!["b", "coll:d"].into(), new_service_capability(), true));
+    await!(test.check_use(vec!["b", "coll:c"].into(), default_directory_capability(), true));
+    await!(test.check_use(vec!["b", "coll:d"].into(), default_service_capability(), true));
 }
 
 ///   a
@@ -1253,6 +1253,78 @@ async fn use_in_collection_not_offered() {
             startup: fsys::StartupMode::Lazy,
         }
     ));
-    await!(test.check_use(vec!["b", "coll:c"].into(), new_directory_capability(), false));
-    await!(test.check_use(vec!["b", "coll:c"].into(), new_service_capability(), false));
+    await!(test.check_use(vec!["b", "coll:c"].into(), default_directory_capability(), false));
+    await!(test.check_use(vec!["b", "coll:c"].into(), default_service_capability(), false));
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn expose_from_self_and_child() {
+    let components = vec![
+        (
+            "a",
+            ComponentDecl {
+                children: vec![ChildDecl {
+                    name: "b".to_string(),
+                    url: "test:///b".to_string(),
+                    startup: fsys::StartupMode::Lazy,
+                }],
+                ..default_component_decl()
+            },
+        ),
+        (
+            "b",
+            ComponentDecl {
+                exposes: vec![
+                    ExposeDecl::Directory(ExposeDirectoryDecl {
+                        source: ExposeSource::Child("c".to_string()),
+                        source_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                        target_path: CapabilityPath::try_from("/data/bar/hippo").unwrap(),
+                    }),
+                    ExposeDecl::Service(ExposeServiceDecl {
+                        source: ExposeSource::Child("c".to_string()),
+                        source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                        target_path: CapabilityPath::try_from("/svc/bar/hippo").unwrap(),
+                    }),
+                ],
+                children: vec![ChildDecl {
+                    name: "c".to_string(),
+                    url: "test:///c".to_string(),
+                    startup: fsys::StartupMode::Lazy,
+                }],
+                ..default_component_decl()
+            },
+        ),
+        (
+            "c",
+            ComponentDecl {
+                exposes: vec![
+                    ExposeDecl::Directory(ExposeDirectoryDecl {
+                        source: ExposeSource::Self_,
+                        source_path: CapabilityPath::try_from("/data/foo").unwrap(),
+                        target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                    }),
+                    ExposeDecl::Service(ExposeServiceDecl {
+                        source: ExposeSource::Self_,
+                        source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
+                        target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                    }),
+                ],
+                ..default_component_decl()
+            },
+        ),
+    ];
+    let ambient = Box::new(MockAmbientEnvironment::new());
+    let test = RoutingTest::new("a", components, ambient);
+    await!(test.check_use_exposed_dir(
+        vec!["b"].into(),
+        new_directory_capability("/data/bar/hippo"),
+        true
+    ));
+    await!(test.check_use_exposed_dir(
+        vec!["b"].into(),
+        new_service_capability("/svc/bar/hippo"),
+        true
+    ));
+    await!(test.check_use_exposed_dir(vec!["b", "c"].into(), default_directory_capability(), true));
+    await!(test.check_use_exposed_dir(vec!["b", "c"].into(), default_service_capability(), true));
 }

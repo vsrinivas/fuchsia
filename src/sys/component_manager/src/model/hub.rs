@@ -179,7 +179,7 @@ impl Hub {
         &'a self,
         realm: Arc<model::Realm>,
         realm_state: &'a model::RealmState,
-        route_fn_factory: model::RoutingFnFactory,
+        routing_facade: model::RoutingFacade,
     ) -> Result<(), ModelError> {
         let component_url = realm.component_url.clone();
         let abs_moniker = realm.abs_moniker.clone();
@@ -219,8 +219,11 @@ impl Hub {
 
                 // Add an 'in' directory.
                 let decl = realm_state.decl.as_ref().expect("ComponentDecl unavailable.");
-                let tree =
-                    model::DirTree::build_from_uses(route_fn_factory, &abs_moniker, decl.clone())?;
+                let tree = model::DirTree::build_from_uses(
+                    routing_facade.route_use_fn_factory(),
+                    &abs_moniker,
+                    decl.clone(),
+                )?;
                 let mut in_dir = directory::simple::empty();
                 tree.install(&abs_moniker, &mut in_dir)?;
                 if let Some(pkg_dir) = execution.namespace.clone_package_dir()? {
@@ -292,9 +295,9 @@ impl model::Hook for Hub {
         &'a self,
         realm: Arc<model::Realm>,
         realm_state: &'a model::RealmState,
-        route_fn_factory: model::RoutingFnFactory,
+        routing_facade: model::RoutingFacade,
     ) -> BoxFuture<Result<(), ModelError>> {
-        Box::pin(self.on_bind_instance_async(realm, realm_state, route_fn_factory))
+        Box::pin(self.on_bind_instance_async(realm, realm_state, routing_facade))
     }
 
     fn on_add_dynamic_child(&self, _realm: Arc<model::Realm>) -> BoxFuture<Result<(), ModelError>> {
