@@ -326,6 +326,38 @@ void tu_unset_exception_port(zx_handle_t handle) {
         tu_fatal(__func__, status);
 }
 
+zx_handle_t tu_create_exception_channel(zx_handle_t task, uint32_t options) {
+    zx_handle_t channel = ZX_HANDLE_INVALID;
+    zx_status_t status = zx_task_create_exception_channel(task, options, &channel);
+    if (status < 0)
+        tu_fatal(__func__, status);
+    return channel;
+}
+
+tu_exception_t tu_read_exception(zx_handle_t channel) {
+    tu_exception_t exception;
+    uint32_t num_bytes = sizeof(exception.info);
+    uint32_t num_handles = 1;
+    tu_channel_read(channel, 0, &exception.info, &num_bytes, &exception.exception, &num_handles);
+    return exception;
+}
+
+zx_handle_t tu_exception_get_process(zx_handle_t exception) {
+    zx_handle_t process = ZX_HANDLE_INVALID;
+    zx_status_t status = zx_exception_get_process(exception, &process);
+    if (status < 0)
+        tu_fatal(__func__, status);
+    return process;
+}
+
+zx_handle_t tu_exception_get_thread(zx_handle_t exception) {
+    zx_handle_t thread = ZX_HANDLE_INVALID;
+    zx_status_t status = zx_exception_get_thread(exception, &thread);
+    if (status < 0)
+        tu_fatal(__func__, status);
+    return thread;
+}
+
 void tu_object_wait_async(zx_handle_t handle, zx_handle_t port, zx_signals_t signals)
 {
     uint64_t key = tu_get_koid(handle);

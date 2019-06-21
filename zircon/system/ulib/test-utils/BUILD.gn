@@ -8,11 +8,13 @@ library("test-utils") {
   sources = [
     "test-utils.c",
   ]
+  public_deps = [
+    "$zx/system/ulib/launchpad",
+  ]
   deps = [
     "$zx/system/ulib/backtrace-request",
     "$zx/system/ulib/elfload",
     "$zx/system/ulib/fdio",
-    "$zx/system/ulib/launchpad",
     "$zx/system/ulib/runtime",
     "$zx/system/ulib/unittest",
     "$zx/system/ulib/zircon",
