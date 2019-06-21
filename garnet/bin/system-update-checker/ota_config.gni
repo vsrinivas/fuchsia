@@ -1,0 +1,40 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config.gni")
+
+# Define system update checker configuration data to be included in the
+# config-data package. Invokers must configure at least one setting.
+#
+#   poll_frequency_minutes (optional)
+#     [int] The number of minutes between update checks. Defaults to never.
+#
+#   update_package_url (optional)
+#     [string] The URL of the update package from which to update. Defaults to
+#     "fuchsia-pkg://fuchsia.com/update/0".
+template("ota_config") {
+  cfg = {
+    forward_variables_from(invoker,
+                           [
+                             "poll_frequency_minutes",
+                             "update_package_url",
+                           ])
+    assert(defined(poll_frequency_minutes) || defined(update_package_url),
+           "at least one config parameter should be defined")
+  }
+
+  config_path = "$target_gen_dir/ota_config.json"
+
+  write_file(config_path, cfg, "json")
+
+  config_data(target_name) {
+    for_pkg = "system-update-checker"
+    outputs = [
+      "ota_config.json",
+    ]
+    sources = [
+      config_path,
+    ]
+  }
+}
