@@ -75,7 +75,8 @@ public:
     // Otherwise it will block the current thread until the |deadline| passes, or until the thread
     // is woken by a FutexWake or FutexRequeue operation on the same |value_ptr| futex.
     zx_status_t FutexWait(user_in_ptr<const zx_futex_t> value_ptr, zx_futex_t current_value,
-                          zx_handle_t new_futex_owner, const Deadline& deadline);
+                          fbl::RefPtr<ThreadDispatcher> futex_owner_thread,
+                          const Deadline& deadline);
 
     // FutexWake will wake up to |wake_count| number of threads blocked on the |value_ptr| futex.
     //
@@ -103,7 +104,7 @@ public:
                              OwnerAction owner_action,
                              user_in_ptr<const zx_futex_t> requeue_ptr,
                              uint32_t requeue_count,
-                             zx_handle_t new_requeue_owner);
+                             fbl::RefPtr<ThreadDispatcher> requeue_owner_thread);
 
     // Get the KOID of the current owner of the specified futex, if any, or ZX_KOID_INVALID if there
     // is no known owner.

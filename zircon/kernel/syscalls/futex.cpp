@@ -16,6 +16,32 @@
 
 #define LOCAL_TRACE 0
 
+// Get a reference to the thread that the user is asserting is the new owner of the futex.
+// The thread must belong to the same process as the caller as futexes may not be owned
+// by threads from another process.
+static zx_status_t ValidateNewFutexOwner(zx_handle_t new_owner_handle,
+                                         fbl::RefPtr<ThreadDispatcher>* new_owner_thread_out) {
+    DEBUG_ASSERT(new_owner_thread_out != nullptr);
+    DEBUG_ASSERT(*new_owner_thread_out == nullptr);
+
+    if (new_owner_handle == ZX_HANDLE_INVALID) {
+        return ZX_OK;
+    }
+
+    auto up = ProcessDispatcher::GetCurrent();
+    zx_status_t status = up->GetDispatcherWithRights(new_owner_handle, 0, new_owner_thread_out);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    if ((*new_owner_thread_out)->process() != up) {
+        new_owner_thread_out->reset();
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    return ZX_OK;
+}
+
 // zx_status_t zx_futex_wait
 zx_status_t sys_futex_wait(user_in_ptr<const zx_futex_t> value_ptr, zx_futex_t current_value,
                            zx_handle_t current_futex_owner, zx_time_t deadline) {
@@ -24,8 +50,15 @@ zx_status_t sys_futex_wait(user_in_ptr<const zx_futex_t> value_ptr, zx_futex_t c
     ProcessDispatcher* dispatcher = ThreadDispatcher::GetCurrent()->process();
     const TimerSlack slack = dispatcher->GetTimerSlackPolicy();
     const Deadline slackDeadline(deadline, slack);
-    return dispatcher->futex_context().FutexWait(value_ptr, current_value, current_futex_owner,
-                                                 slackDeadline);
+
+    fbl::RefPtr<ThreadDispatcher> futex_owner_thread;
+    auto result = ValidateNewFutexOwner(current_futex_owner, &futex_owner_thread);
+    if (result != ZX_OK) {
+        return result;
+    }
+
+    return dispatcher->futex_context().FutexWait(
+        value_ptr, current_value, ktl::move(futex_owner_thread), slackDeadline);
 }
 
 // zx_status_t zx_futex_wake
@@ -47,9 +80,15 @@ zx_status_t sys_futex_requeue(user_in_ptr<const zx_futex_t> wake_ptr,
            "requeue_futex %p requeue_count %" PRIu32 "\n",
            wake_ptr.get(), wake_count, current_value, requeue_ptr.get(), requeue_count);
 
+    fbl::RefPtr<ThreadDispatcher> requeue_owner_thread;
+    auto result = ValidateNewFutexOwner(requeue_owner, &requeue_owner_thread);
+    if (result != ZX_OK) {
+        return result;
+    }
+
     return ProcessDispatcher::GetCurrent()->futex_context().FutexRequeue(
         wake_ptr, wake_count, current_value, FutexContext::OwnerAction::RELEASE,
-        requeue_ptr, requeue_count, requeue_owner);
+        requeue_ptr, requeue_count, ktl::move(requeue_owner_thread));
 }
 
 // zx_status_t zx_futex_wake_single_owner
@@ -69,9 +108,15 @@ zx_status_t sys_futex_requeue_single_owner(user_in_ptr<const zx_futex_t> wake_pt
     LTRACEF("futex %p current_value %d requeue_futex %p requeue_count %" PRIu32 "\n",
            wake_ptr.get(), current_value, requeue_ptr.get(), requeue_count);
 
+    fbl::RefPtr<ThreadDispatcher> requeue_owner_thread;
+    auto result = ValidateNewFutexOwner(requeue_owner, &requeue_owner_thread);
+    if (result != ZX_OK) {
+        return result;
+    }
+
     return ProcessDispatcher::GetCurrent()->futex_context().FutexRequeue(
         wake_ptr, 1u, current_value, FutexContext::OwnerAction::ASSIGN_WOKEN,
-        requeue_ptr, requeue_count, requeue_owner);
+        requeue_ptr, requeue_count, ktl::move(requeue_owner_thread));
 }
 
 zx_status_t sys_futex_get_owner(user_in_ptr<const zx_futex_t> value_ptr,
