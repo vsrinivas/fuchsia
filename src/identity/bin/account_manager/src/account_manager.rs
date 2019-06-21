@@ -18,7 +18,7 @@ use fidl_fuchsia_auth::{
 use fidl_fuchsia_auth::{AuthProviderConfig, UserProfileInfo};
 use fidl_fuchsia_auth_account::{
     AccountListenerMarker, AccountListenerOptions, AccountManagerRequest,
-    AccountManagerRequestStream, AccountMarker, Status,
+    AccountManagerRequestStream, AccountMarker, Lifetime, Status,
 };
 use fuchsia_component::fuchsia_single_component_package_url;
 use fuchsia_inspect::{Inspector, Property};
@@ -150,15 +150,18 @@ impl AccountManager {
             AccountManagerRequest::ProvisionFromAuthProvider {
                 auth_context_provider,
                 auth_provider_type,
+                lifetime,
                 responder,
             } => {
-                let mut response =
-                    await!(self
-                        .provision_from_auth_provider(auth_context_provider, auth_provider_type));
+                let mut response = await!(self.provision_from_auth_provider(
+                    auth_context_provider,
+                    auth_provider_type,
+                    lifetime
+                ));
                 responder.send(response.0, response.1.as_mut().map(OutOfLine))
             }
-            AccountManagerRequest::ProvisionNewAccount { responder } => {
-                let mut response = await!(self.provision_new_account());
+            AccountManagerRequest::ProvisionNewAccount { lifetime, responder } => {
+                let mut response = await!(self.provision_new_account(lifetime));
                 responder.send(response.0, response.1.as_mut().map(OutOfLine))
             }
         }
@@ -290,16 +293,21 @@ impl AccountManager {
         Status::Ok
     }
 
-    async fn provision_new_account(&self) -> (Status, Option<FidlLocalAccountId>) {
+    async fn provision_new_account(
+        &self,
+        lifetime: Lifetime,
+    ) -> (Status, Option<FidlLocalAccountId>) {
         // Create an account
-        let (account_handler, account_id) =
-            match await!(AccountHandlerConnection::create_account(Arc::clone(&self.context))) {
-                Ok((connection, account_id)) => (Arc::new(connection), account_id),
-                Err(err) => {
-                    warn!("Failure creating account: {:?}", err);
-                    return (err.status, None);
-                }
-            };
+        let (account_handler, account_id) = match await!(AccountHandlerConnection::create_account(
+            Arc::clone(&self.context),
+            lifetime
+        )) {
+            Ok((connection, account_id)) => (Arc::new(connection), account_id),
+            Err(err) => {
+                warn!("Failure creating account: {:?}", err);
+                return (err.status, None);
+            }
+        };
 
         // Persist the account both in memory and on disk
         if let Err(err) = await!(self.add_account(account_handler.clone(), account_id.clone())) {
@@ -316,16 +324,19 @@ impl AccountManager {
         &self,
         auth_context_provider: ClientEnd<AuthenticationContextProviderMarker>,
         auth_provider_type: String,
+        lifetime: Lifetime,
     ) -> (Status, Option<FidlLocalAccountId>) {
         // Create an account
-        let (account_handler, account_id) =
-            match await!(AccountHandlerConnection::create_account(Arc::clone(&self.context))) {
-                Ok((connection, account_id)) => (Arc::new(connection), account_id),
-                Err(err) => {
-                    warn!("Failure adding account: {:?}", err);
-                    return (err.status, None);
-                }
-            };
+        let (account_handler, account_id) = match await!(AccountHandlerConnection::create_account(
+            Arc::clone(&self.context),
+            lifetime
+        )) {
+            Ok((connection, account_id)) => (Arc::new(connection), account_id),
+            Err(err) => {
+                warn!("Failure adding account: {:?}", err);
+                return (err.status, None);
+            }
+        };
 
         // Add a service provider to the account
         let _user_profile = match await!(Self::add_service_provider_account(

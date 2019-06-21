@@ -139,6 +139,7 @@ impl AccountHandler {
         id: LocalAccountId,
         context: ClientEnd<AccountHandlerContextMarker>,
     ) -> Status {
+        // TODO(dnordstrom): Implement ephemeral account support.
         match await!(self.init_account(Account::create, id, context)) {
             Ok(()) => Status::Ok,
             Err(err) => {

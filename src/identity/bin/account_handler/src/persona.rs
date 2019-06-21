@@ -11,7 +11,9 @@ use fidl::endpoints::{ClientEnd, ServerEnd};
 use fidl_fuchsia_auth::{
     AuthChangeGranularity, AuthState, AuthenticationContextProviderProxy, TokenManagerMarker,
 };
-use fidl_fuchsia_auth_account::{AuthListenerMarker, PersonaRequest, PersonaRequestStream, Status};
+use fidl_fuchsia_auth_account::{
+    AuthListenerMarker, Lifetime, PersonaRequest, PersonaRequestStream, Status,
+};
 use futures::prelude::*;
 use identity_common::{cancel_or, TaskGroup, TaskGroupCancel};
 use log::{error, warn};
@@ -91,6 +93,10 @@ impl Persona {
         req: PersonaRequest,
     ) -> Result<(), fidl::Error> {
         match req {
+            PersonaRequest::GetLifetime { responder } => {
+                // TODO(dnordstrom): Add method
+                responder.send(Lifetime::Persistent)?;
+            }
             PersonaRequest::GetAuthState { responder } => {
                 let mut response = self.get_auth_state();
                 responder.send(response.0, response.1.as_mut().map(OutOfLine))?;

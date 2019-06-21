@@ -8,7 +8,7 @@ use fidl_fuchsia_auth::{
     AuthStateSummary, AuthenticationContextProviderMarker, AuthenticationContextProviderRequest,
 };
 use fidl_fuchsia_auth_account::{
-    AccountManagerMarker, AccountManagerProxy, LocalAccountId, Status,
+    AccountManagerMarker, AccountManagerProxy, Lifetime, LocalAccountId, Status,
 };
 use fuchsia_async as fasync;
 use fuchsia_component::client::{launch, App};
@@ -32,8 +32,9 @@ lazy_static! {
 /// non-OK responses, or the account ID on success.
 async fn provision_new_account(
     account_manager: &AccountManagerProxy,
+    lifetime: Lifetime,
 ) -> Result<LocalAccountId, Error> {
-    match await!(account_manager.provision_new_account())? {
+    match await!(account_manager.provision_new_account(lifetime))? {
         (Status::Ok, Some(new_account_id)) => Ok(*new_account_id),
         (status, _) => Err(format_err!("ProvisionNewAccount returned status: {:?}", status)),
     }
@@ -63,7 +64,11 @@ async fn provision_account_from_dev_auth_provider(
 
     let (serve_result, provision_result) = await!(join(
         serve_fn,
-        account_manager.provision_from_auth_provider(acp_client_end, "dev_auth_provider"),
+        account_manager.provision_from_auth_provider(
+            acp_client_end,
+            "dev_auth_provider",
+            Lifetime::Persistent
+        ),
     ));
     serve_result?;
     match provision_result? {
@@ -136,14 +141,14 @@ async fn test_provision_new_account() -> Result<(), Error> {
     assert_eq!(await!(account_manager.get_account_ids())?, vec![]);
 
     // Provision a new account.
-    let account_1 = await!(provision_new_account(&account_manager))?;
+    let account_1 = await!(provision_new_account(&account_manager, Lifetime::Persistent))?;
     assert_eq!(
         await!(account_manager.get_account_ids())?,
         vec![LocalAccountId { id: account_1.id }]
     );
 
     // Provision a second new account and verify it has a different ID.
-    let account_2 = await!(provision_new_account(&account_manager))?;
+    let account_2 = await!(provision_new_account(&account_manager, Lifetime::Persistent))?;
     assert_ne!(account_1.id, account_2.id);
 
     let account_ids = await!(account_manager.get_account_ids())?;
@@ -200,7 +205,7 @@ async fn test_get_account_and_persona() -> Result<(), Error> {
 
     assert_eq!(await!(account_manager.get_account_ids())?, vec![]);
 
-    let mut account = await!(provision_new_account(&account_manager))?;
+    let mut account = await!(provision_new_account(&account_manager, Lifetime::Persistent))?;
     // Connect a channel to the newly created account and verify it's usable.
     let (acp_client_end, _) = create_endpoints()?;
     let (account_client_end, account_server_end) = create_endpoints()?;
@@ -235,8 +240,8 @@ async fn test_account_deletion() -> Result<(), Error> {
 
     assert_eq!(await!(account_manager.get_account_ids())?, vec![]);
 
-    let mut account_1 = await!(provision_new_account(&account_manager))?;
-    let account_2 = await!(provision_new_account(&account_manager))?;
+    let mut account_1 = await!(provision_new_account(&account_manager, Lifetime::Persistent))?;
+    let account_2 = await!(provision_new_account(&account_manager, Lifetime::Persistent))?;
     let existing_accounts = await!(account_manager.get_account_ids())?;
     assert!(existing_accounts.contains(&LocalAccountId { id: account_1.id }));
     assert!(existing_accounts.contains(&LocalAccountId { id: account_2.id }));
@@ -269,8 +274,13 @@ async fn test_lifecycle() -> Result<(), Error> {
 
     assert_eq!(await!(account_manager.get_account_ids())?, vec![]);
 
-    let mut account_1 = await!(provision_new_account(&account_manager))?;
-    let mut account_2 = await!(provision_new_account(&account_manager))?;
+    let mut account_1 = await!(provision_new_account(&account_manager, Lifetime::Persistent))?;
+    let mut account_2 = await!(provision_new_account(&account_manager, Lifetime::Persistent))?;
+
+    // Check that attempting to create the account as ephemeral fails.
+    // TODO(dnordstrom): When ephemeral accounts are ready, check that it doesn't survive.
+    assert!(await!(provision_new_account(&account_manager, Lifetime::Ephemeral)).is_err());
+
     let existing_accounts = await!(account_manager.get_account_ids())?;
     assert_eq!(existing_accounts.len(), 2);
 

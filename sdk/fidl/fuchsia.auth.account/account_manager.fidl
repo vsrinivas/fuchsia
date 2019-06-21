@@ -51,6 +51,15 @@ enum Status {
     // include: MAX_LISTENERS, NO_SUITABLE_AUTHENTICATOR, INVALID_AUTH_PROVIDER,
 };
 
+// Provides an upper bound to how long a Fuchsia account can live on the device.
+enum Lifetime : uint8 {
+    // The account lives at the longest to the end of the power cycle it
+    // was created in.
+    EPHEMERAL = 1;
+    // The account lives on the device until it is removed.
+    PERSISTENT = 2;
+};
+
 // A globally unique identifier for a Fuchsia account that is constant across
 // the devices that the account is provisioned on. Identifiers are not human
 // readable.
@@ -167,6 +176,7 @@ protocol AccountManager {
     // |auth_provider_type| A unique identifier for an installed |AuthProvider|
     //                      that should be used to authenticate with the service
     //                      provider
+    // |lifetime| The lifetime of the account.
     //
     // Returns: |status| A |Status| indicating whether the operation was
     //                   successful
@@ -174,16 +184,20 @@ protocol AccountManager {
     //                       operation was successful.
     ProvisionFromAuthProvider(
         fuchsia.auth.AuthenticationContextProvider auth_context_provider,
-        string auth_provider_type)
+        string auth_provider_type,
+        Lifetime lifetime)
         -> (Status status, LocalAccountId? account_id);
 
     // Adds a new, initially empty, Fuchsia account to the current device.
+    //
+    // |lifetime| The lifetime of the account.
     //
     // Returns: |status| A |Status| indicating whether the operation was
     //                   successful
     //          |account_id| The identifier of the newly added account, if the
     //                       operation was successful.
-    ProvisionNewAccount() -> (Status status, LocalAccountId? account_id);
+    ProvisionNewAccount(Lifetime lifetime)
+        -> (Status status, LocalAccountId? account_id);
 
     // TODO(jsankey): Add methods to provision by authenticating directly to an
     //                existing Fuchsia account.
@@ -313,6 +327,9 @@ protocol Account {
     // accounts on a single device.
     GetAccountName() -> (string:MAX_NAME_SIZE name);
 
+    // Returns the account's lifetime.
+    GetLifetime() -> (Lifetime lifetime);
+
     // Returns a vector of all the personae defined for the account.
     // NOTE: Currently all Fuchsia accounts have exactly one persona.
     GetPersonaIds()
@@ -378,6 +395,9 @@ protocol Account {
 // identifiers can usually still be derived via the TokenManger interface.
 protocol Persona {
     compose AuthTarget;
+
+    // Returns the lifetime of this persona.
+    GetLifetime() -> (Lifetime lifetime);
 
     // Connects an interface to acquire and revoke authentication tokens for
     // service provider (aka cloud service) accounts that are visible through

@@ -6,7 +6,7 @@ use crate::account_handler_context::AccountHandlerContext;
 use account_common::{AccountManagerError, LocalAccountId, ResultExt as AccountResultExt};
 use failure::{format_err, ResultExt};
 use fidl::endpoints::{ClientEnd, RequestStream};
-use fidl_fuchsia_auth_account::Status;
+use fidl_fuchsia_auth_account::{Lifetime, Status};
 use fidl_fuchsia_auth_account_internal::{
     AccountHandlerContextMarker, AccountHandlerContextRequestStream, AccountHandlerControlMarker,
     AccountHandlerControlProxy,
@@ -118,7 +118,12 @@ impl AccountHandlerConnection {
     /// channel, and requests that it create a new account.
     pub async fn create_account(
         context: Arc<AccountHandlerContext>,
+        lifetime: Lifetime,
     ) -> Result<(Self, LocalAccountId), AccountManagerError> {
+        if lifetime == Lifetime::Ephemeral {
+            warn!("Ephemeral accounts are not yet implemented");
+            return Err(AccountManagerError::new(Status::InternalError));
+        }
         let account_id = LocalAccountId::new(rand::random::<u64>());
         let connection = Self::new(account_id.clone())?;
         let context_client_end = Self::spawn_context_channel(context)?;

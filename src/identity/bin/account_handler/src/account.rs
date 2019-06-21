@@ -19,7 +19,7 @@ use fidl_fuchsia_auth::{
     AuthChangeGranularity, AuthState, AuthenticationContextProviderProxy, ServiceProviderAccount,
 };
 use fidl_fuchsia_auth_account::{
-    AccountRequest, AccountRequestStream, AuthListenerMarker, PersonaMarker, Status,
+    AccountRequest, AccountRequestStream, AuthListenerMarker, Lifetime, PersonaMarker, Status,
 };
 use fidl_fuchsia_auth_account_internal::AccountHandlerContextProxy;
 use futures::prelude::*;
@@ -195,6 +195,10 @@ impl Account {
             AccountRequest::GetAccountName { responder } => {
                 let response = self.get_account_name();
                 responder.send(&response)?;
+            }
+            AccountRequest::GetLifetime { responder } => {
+                // TODO(dnordstrom): Add method
+                responder.send(Lifetime::Persistent)?;
             }
             AccountRequest::GetAuthState { responder } => {
                 let mut response = self.get_auth_state();

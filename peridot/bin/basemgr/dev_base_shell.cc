@@ -154,6 +154,7 @@ class DevBaseShellApp : modular::SingleServiceApp<fuchsia::modular::BaseShell> {
             }
 
             account_manager_->ProvisionNewAccount(
+                fuchsia::auth::account::Lifetime::PERSISTENT,
                 [](fuchsia::auth::account::Status,
                    std::unique_ptr<fuchsia::auth::account::LocalAccountId>) {
                   FXL_LOG(INFO) << "Provisioned new account. Translating "
