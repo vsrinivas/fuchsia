@@ -63,7 +63,10 @@ static bool can_access(const void* base, size_t len) {
 }
 
 zx_status_t arch_copy_from_user(void* dst, const void* src, size_t len) {
-    DEBUG_ASSERT(!ac_flag());
+    // If we have the SMAP feature, then AC should only be set when running
+    // _x86_copy_to_or_from_user. If we don't have the SMAP feature, then we don't care if AC is set
+    // or not.
+    DEBUG_ASSERT(!g_x86_feature_has_smap || !ac_flag());
 
     if (!can_access(src, len))
         return ZX_ERR_INVALID_ARGS;
@@ -72,12 +75,15 @@ zx_status_t arch_copy_from_user(void* dst, const void* src, size_t len) {
     zx_status_t status = _x86_copy_to_or_from_user(dst, src, len,
                                                    &thr->arch.page_fault_resume);
 
-    DEBUG_ASSERT(!ac_flag());
+    DEBUG_ASSERT(!g_x86_feature_has_smap || !ac_flag());
     return status;
 }
 
 zx_status_t arch_copy_to_user(void* dst, const void* src, size_t len) {
-    DEBUG_ASSERT(!ac_flag());
+    // If we have the SMAP feature, then AC should only be set when running
+    // _x86_copy_to_or_from_user. If we don't have the SMAP feature, then we don't care if AC is set
+    // or not.
+    DEBUG_ASSERT(!g_x86_feature_has_smap || !ac_flag());
 
     if (!can_access(dst, len))
         return ZX_ERR_INVALID_ARGS;
@@ -86,6 +92,6 @@ zx_status_t arch_copy_to_user(void* dst, const void* src, size_t len) {
     zx_status_t status = _x86_copy_to_or_from_user(dst, src, len,
                                                    &thr->arch.page_fault_resume);
 
-    DEBUG_ASSERT(!ac_flag());
+    DEBUG_ASSERT(!g_x86_feature_has_smap || !ac_flag());
     return status;
 }

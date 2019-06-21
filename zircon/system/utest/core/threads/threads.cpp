@@ -18,8 +18,12 @@
 #include <unittest/unittest.h>
 
 #include <lib/test-exceptions/exception-catcher.h>
+#include <lib/zx/event.h>
+#include <lib/zx/handle.h>
 #include <lib/zx/process.h>
+#include <lib/zx/thread.h>
 #include <lib/zx/vmo.h>
+#include <mini-process/mini-process.h>
 
 #include "register-set.h"
 #include "thread-functions/thread-functions.h"
@@ -1287,7 +1291,7 @@ static bool TestThreadLocalRegisterState() {
     RegisterWriteSetup<struct thread_local_regs> setup;
     ASSERT_TRUE(setup.Init());
 
-    zx_thread_state_general_regs_t regs;
+    zx_thread_state_general_regs_t regs = {};
 
 #if defined(__x86_64__)
     // The thread will read these from the fs and gs base addresses
@@ -1668,6 +1672,46 @@ static bool TestDebugRegistersValidation() {
     END_TEST;
 }
 
+// This is a regression test for ZX-4390. Verify that upon entry to the kernel via fault on hardware
+// that lacks SMAP, a subsequent usercopy does not panic.
+static bool TestX86AcFlagUserCopy() {
+    BEGIN_TEST;
+
+#if defined(__x86_64__)
+    zx::process process;
+    zx::thread thread;
+    zx::event event;
+    ASSERT_EQ(zx::event::create(0, &event), ZX_OK);
+    ASSERT_EQ(start_mini_process(zx_job_default(), event.get(), process.reset_and_get_address(),
+                                 thread.reset_and_get_address()),
+              ZX_OK);
+
+    // Suspend the process so we can set its AC flag.
+    zx::handle suspend_token;
+    ASSERT_TRUE(suspend_thread_synchronous(thread.get(), suspend_token.reset_and_get_address()));
+
+    zx_thread_state_general_regs_t regs{};
+    ASSERT_EQ(thread.read_state(ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs)), ZX_OK);
+
+    // Set AC and change its RIP to 0 so that upon resuming, it will fault and enter the kernel.
+    regs.rflags |= (1 << 18);
+    regs.rip = 0;
+    ASSERT_EQ(thread.write_state(ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs)), ZX_OK);
+
+    // Resume.
+    suspend_token.reset();
+
+    // See that it has terminated.
+    ASSERT_EQ(process.wait_one(ZX_THREAD_TERMINATED, zx::time::infinite(), nullptr), ZX_OK);
+    zx_info_process_t proc_info{};
+    ASSERT_EQ(process.get_info(ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), nullptr, nullptr),
+              ZX_OK);
+    ASSERT_EQ(proc_info.return_code, ZX_TASK_RETCODE_EXCEPTION_KILL);
+#endif
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(threads_tests)
 RUN_TEST(TestBasics)
 RUN_TEST(TestInvalidRights)
@@ -1714,4 +1758,5 @@ RUN_TEST(TestWritingArmFlagsRegister)
 // RUN_TEST(TestWriteReadDebugRegisterState);
 // RUN_TEST(TestDebugRegistersValidation);
 
+RUN_TEST(TestX86AcFlagUserCopy)
 END_TEST_CASE(threads_tests)
