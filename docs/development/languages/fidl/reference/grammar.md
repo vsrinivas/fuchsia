@@ -108,7 +108,7 @@ union-field = ( attribute-list ) , type-constructor , IDENTIFIER ;
 
 table-declaration = ( attribute-list ) , "table" , IDENTIFIER , "{" , ( ( attribute-list ) , table-field , ";" )* , "}" ;
 
-table-field = ( attribute-list ) , table-field-ordinal , table-field-declaration ;
+table-field = ( attribute-list ) , table-field-ordinal , table-field-declaration ; [NOTE 5]
 
 table-field-ordinal = ordinal , ":" ;
 
@@ -160,6 +160,9 @@ The `bits-or-enum-member-value` allows the more liberal `literal` in the grammar
 The `protocol-method` error stanza allows the more liberal `type-constructor`
 in the grammar, but the compiler limits this to an `int32`, `uint32`, or
 an enum thereof.
+
+### NOTE 5
+Attributes cannot be placed on a reserved member.
 
 <!-- xrefs -->
 [primitives]: /docs/development/languages/fidl/reference/language.md#primitives
