@@ -29,6 +29,7 @@ FTP                   | Submitted  | Reviewed   | Title
 [FTP-004](ftp-004.md) | 2018-07-19 | 2019-03-14 | Safer Structs for C++
 [FTP-024](ftp-024.md) | 2019-04-02 | 2019-04-11 | Mandatory Source Compatibility
 [FTP-041](ftp-041.md) | 2019-04-08 | 2019-04-23 | Support for Unifying Services and Devices
+[FTP-043](ftp-043.md) | 2019-05-06 | 2019-05-30 | Documentation Comment Format &mdash; Mark me up, mark me down
 
 ## Rejected Proposals
 
