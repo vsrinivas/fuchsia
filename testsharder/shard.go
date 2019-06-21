@@ -102,8 +102,10 @@ func normalizeTestName(name string) string {
 // Returns a list of Tests containing the same test multiplied by the number of runs.
 func multiplyTest(test Test, runs int) []Test {
 	var tests []Test
-	for i := 0; i < runs; i++ {
-		tests = append(tests, test)
+	for i := 1; i <= runs; i++ {
+		testCopy := test
+		testCopy.Name = fmt.Sprintf("%s (%d)", test.Name, i)
+		tests = append(tests, testCopy)
 	}
 	return tests
 }

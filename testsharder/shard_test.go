@@ -217,11 +217,13 @@ func TestMultiplyShards(t *testing.T) {
 	multShard := func(env Environment, os OS, id int, runs int) *Shard {
 		var tests []Test
 		test := makeTest(id, os)
+		origName := test.Name
 		for i := 0; i < runs; i++ {
+			test.Name = fmt.Sprintf("%s (%d)", origName, i+1)
 			tests = append(tests, test)
 		}
 		return &Shard{
-			Name:  env.Name() + "-" + test.Name,
+			Name:  env.Name() + "-" + origName,
 			Tests: tests,
 			Env:   env,
 		}
