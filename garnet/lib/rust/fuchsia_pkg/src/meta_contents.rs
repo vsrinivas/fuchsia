@@ -170,14 +170,6 @@ mod tests {
         assert_eq!(meta_contents.contents(), &expected_contents);
     }
 
-    prop_compose! {
-        fn random_hash()
-            (ref s in random_merkle_hex()) -> Hash
-        {
-            Hash::from_str(s).unwrap()
-        }
-    }
-
     proptest! {
         #[test]
         fn test_reject_invalid_resource_path(

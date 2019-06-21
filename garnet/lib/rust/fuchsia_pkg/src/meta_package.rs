@@ -7,12 +7,19 @@ use crate::path::{check_package_name, check_package_variant};
 use serde_derive::{Deserialize, Serialize};
 use std::io;
 
+#[cfg(test)]
+use proptest_derive::Arbitrary;
+
 /// A `MetaPackage` represents the "meta/package" file of a meta.far (which is
 /// a Fuchsia archive file of a Fuchsia package).
 /// It validates that the name and variant (called "version" in json) are valid.
 #[derive(Debug, Eq, PartialEq)]
+#[cfg_attr(test, derive(Arbitrary))]
 pub struct MetaPackage {
+    #[cfg_attr(test, proptest(regex = r"[-0-9a-z\.]{1,100}"))]
     name: String,
+
+    #[cfg_attr(test, proptest(regex = r"[-0-9a-z\.]{1,100}"))]
     variant: String,
 }
 
@@ -91,7 +98,6 @@ struct MetaPackageV0Serialize<'a> {
 mod tests {
     use super::*;
     use crate::errors::{PackageNameError, PackageVariantError};
-    use crate::test::{random_meta_package, random_package_name, random_package_variant};
     use lazy_static::lazy_static;
     use proptest::prelude::*;
     use regex::Regex;
@@ -155,17 +161,17 @@ mod tests {
     proptest! {
         #[test]
         fn test_serialize_deserialize_is_identity(
-            ref meta_package in random_meta_package()
+            meta_package: MetaPackage,
         ) {
             let mut v: Vec<u8> = Vec::new();
             meta_package.serialize(&mut v).unwrap();
             let meta_package_round_trip = MetaPackage::deserialize(v.as_slice()).unwrap();
-            assert_eq!(meta_package, &meta_package_round_trip);
+            assert_eq!(meta_package, meta_package_round_trip);
         }
 
         #[test]
         fn test_serialized_contains_no_whitespace(
-            ref meta_package in random_meta_package()
+            meta_package: MetaPackage,
         ) {
             lazy_static! {
                 static ref RE: Regex = Regex::new(r"(\p{White_Space})").unwrap();
@@ -177,9 +183,9 @@ mod tests {
 
         #[test]
         fn test_from_name_and_variant_no_error_on_valid_inputs(
-            name in random_package_name(),
-            variant in random_package_variant()
+            meta_package: MetaPackage,
         ) {
+            let MetaPackage { name, variant } = meta_package;
             assert!(MetaPackage::from_name_and_variant(name, variant).is_ok());
         }
     }

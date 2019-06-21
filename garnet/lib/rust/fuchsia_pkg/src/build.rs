@@ -13,12 +13,7 @@ pub fn build(
     meta_package: &MetaPackage,
     meta_far_writer: impl io::Write,
 ) -> Result<(), BuildError> {
-    build_with_file_system(
-        creation_manifest,
-        meta_package,
-        meta_far_writer,
-        &ActualFileSystem {},
-    )
+    build_with_file_system(creation_manifest, meta_package, meta_far_writer, &ActualFileSystem {})
 }
 
 // Used to mock out native filesystem for testing
@@ -253,8 +248,8 @@ mod test_build_with_file_system {
         #[test]
         fn test_meta_far_directory_names_are_exactly_generated_files_and_creation_manifest_far_contents(
             creation_manifest in random_creation_manifest(),
-            meta_package in random_meta_package(),
-            seed in proptest::bits::u64::ANY)
+            meta_package: MetaPackage,
+            seed: u64)
         {
             let mut private_key_bytes = [0u8; 32];
             let mut prng = rand::rngs::StdRng::seed_from_u64(seed);
@@ -290,8 +285,8 @@ mod test_build_with_file_system {
         #[test]
         fn test_meta_far_contains_creation_manifest_far_contents(
             creation_manifest in random_creation_manifest(),
-            meta_package in random_meta_package(),
-            seed in proptest::bits::u64::ANY)
+            meta_package: MetaPackage,
+            seed: u64)
         {
             let mut private_key_bytes = [0u8; 32];
             let mut prng = rand::rngs::StdRng::seed_from_u64(seed);
@@ -320,8 +315,8 @@ mod test_build_with_file_system {
         #[test]
         fn test_meta_far_meta_contents_lists_creation_manifest_external_contents(
             creation_manifest in random_creation_manifest(),
-            meta_package in random_meta_package(),
-            seed in proptest::bits::u64::ANY)
+            meta_package: MetaPackage,
+            seed: u64)
         {
             let mut private_key_bytes = [0u8; 32];
             let mut prng = rand::rngs::StdRng::seed_from_u64(seed);
@@ -426,8 +421,8 @@ mod test_build {
         #[test]
         fn test_meta_far_contains_creation_manifest_far_contents(
             creation_manifest in random_creation_manifest(),
-            meta_package in random_meta_package(),
-            seed in proptest::bits::u64::ANY)
+            meta_package: MetaPackage,
+            seed: u64)
         {
             let mut prng = rand::rngs::StdRng::seed_from_u64(seed);
             let (creation_manifest, _temp_dir) = populate_filesystem_from_creation_manifest(creation_manifest, &mut prng);

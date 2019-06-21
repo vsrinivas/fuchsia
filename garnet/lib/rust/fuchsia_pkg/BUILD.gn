@@ -19,6 +19,7 @@ rustc_library("fuchsia_pkg") {
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:maplit",
     "//third_party/rust_crates:proptest",
+    "//third_party/rust_crates:proptest-derive",
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:regex",
     "//third_party/rust_crates:serde",

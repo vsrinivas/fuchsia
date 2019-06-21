@@ -12,6 +12,12 @@ use {
     },
 };
 
+#[cfg(test)]
+use {
+    proptest::prelude::{any, prop},
+    proptest_derive::Arbitrary,
+};
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct SourceConfigBuilder {
     config: SourceConfig,
@@ -72,24 +78,38 @@ impl SourceConfigBuilder {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[cfg_attr(test, derive(Arbitrary))]
 #[serde(deny_unknown_fields)]
 pub struct SourceConfig {
+    #[cfg_attr(test, proptest(regex = "[[:alnum:]]+"))]
     id: String,
+
     #[serde(rename = "repoURL")]
+    #[cfg_attr(test, proptest(strategy = "tests::arb_url()"))]
     repo_url: String,
+
     #[serde(rename = "blobRepoURL")]
+    #[cfg_attr(test, proptest(strategy = "tests::arb_url()"))]
     blob_repo_url: String,
+
     #[serde(default, rename = "rateLimit")]
     rate_limit: u64,
+
     #[serde(default, rename = "ratePeriod")]
     rate_period: i32,
+
     #[serde(rename = "rootKeys")]
+    #[cfg_attr(test, proptest(strategy = "prop::collection::vec(any::<KeyConfig>(), 1..5)"))]
     root_keys: Vec<KeyConfig>,
+
     #[serde(rename = "transportConfig")]
     transport_config: Option<TransportConfig>,
+
     #[serde(rename = "statusConfig")]
     status_config: Option<StatusConfig>,
+
     auto: bool,
+
     #[serde(rename = "blobKey")]
     blob_key: Option<BlobEncryptionKey>,
 }
@@ -156,6 +176,7 @@ impl PartialOrd for SourceConfig {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[cfg_attr(test, derive(Arbitrary))]
 #[serde(deny_unknown_fields)]
 pub struct TransportConfig {
     disable_keep_alives: bool,
@@ -210,6 +231,7 @@ impl TryFrom<Box<fidl::TransportConfig>> for TransportConfig {
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[cfg_attr(test, derive(Arbitrary))]
 #[serde(rename_all = "lowercase", tag = "type", content = "value", deny_unknown_fields)]
 pub enum KeyConfig {
     Ed25519(#[serde(with = "hex_serde")] Vec<u8>),
@@ -240,6 +262,7 @@ impl fmt::Debug for KeyConfig {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[cfg_attr(test, derive(Arbitrary))]
 pub struct StatusConfig {
     enabled: bool,
 }
@@ -258,6 +281,7 @@ impl TryFrom<Box<fidl::StatusConfig>> for StatusConfig {
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[cfg_attr(test, derive(Arbitrary))]
 pub struct BlobEncryptionKey {
     data: [u8; 32],
 }
@@ -307,7 +331,7 @@ mod tests {
     use {super::*, proptest::prelude::*};
 
     prop_compose! {
-        fn arb_url()(
+        pub(crate) fn arb_url()(
             scheme in "https?",
             host in prop::collection::vec("[[:word:]]+", 1..5),
             port: Option<u16>,
@@ -321,50 +345,6 @@ mod tests {
                 res.push_str(&format!("/{}", path.join("/")));
             }
             res
-        }
-    }
-
-    prop_compose! {
-        fn arb_key_config()(
-            bytes in prop::collection::vec(any::<u8>(), 32),
-        ) -> KeyConfig {
-            KeyConfig::Ed25519(bytes)
-        }
-    }
-
-    prop_compose! {
-        fn arb_encryption_key()(
-            data in [any::<u8>(); 32],
-        ) -> BlobEncryptionKey {
-            BlobEncryptionKey { data }
-        }
-    }
-
-    prop_compose! {
-        fn arb_transport_config()(
-            disable_keep_alives: bool,
-            fields in [any::<i32>(); 9],
-        ) -> TransportConfig {
-            TransportConfig {
-                disable_keep_alives,
-                keep_alive:              fields[0],
-                max_idle_conns:          fields[1],
-                max_idle_conns_per_host: fields[2],
-                connect_timeout:         fields[3],
-                request_timeout:         fields[4],
-                idle_conn_timeout:       fields[5],
-                response_header_timeout: fields[6],
-                expect_continue_timeout: fields[7],
-                tls_handshake_timeout:   fields[8],
-            }
-        }
-    }
-
-    prop_compose! {
-        fn arb_status_config()(
-            enabled: bool,
-        ) -> StatusConfig {
-            StatusConfig { enabled }
         }
     }
 
@@ -401,34 +381,6 @@ mod tests {
         }
     }
 
-    prop_compose! {
-        fn arb_source_config()(
-            id in "[[:alnum:]]+",
-            repo_url in arb_url(),
-            blob_repo_url in arb_url(),
-            rate_limit in any::<u64>(),
-            rate_period in any::<i32>(),
-            root_keys in prop::collection::vec(arb_key_config(), 0..5),
-            transport_config in prop::option::of(arb_transport_config()),
-            status_config in prop::option::of(arb_status_config()),
-            auto: bool,
-            blob_key in prop::option::of(arb_encryption_key()),
-        ) -> SourceConfig {
-            SourceConfig{
-                id,
-                repo_url,
-                blob_repo_url,
-                rate_limit,
-                rate_period,
-                root_keys,
-                transport_config,
-                status_config,
-                auto,
-                blob_key,
-            }
-        }
-    }
-
     proptest! {
         #![proptest_config(ProptestConfig::with_cases(64))]
 
@@ -438,14 +390,14 @@ mod tests {
         }
 
         #[test]
-        fn test_fidl_roundtrips(config in arb_source_config()) {
+        fn test_fidl_roundtrips(config: SourceConfig) {
             let there: fidl::SourceConfig = config.clone().into();
             let back_again: SourceConfig = there.try_into().unwrap();
             assert_eq!(back_again, dbg!(config));
         }
 
         #[test]
-        fn test_json_roundtrips(config in arb_source_config()) {
+        fn test_json_roundtrips(config: SourceConfig) {
             let as_json = &serde_json::to_string(&config).unwrap();
             let same: SourceConfig = serde_json::from_str(as_json).unwrap();
             assert_eq!(same, config);

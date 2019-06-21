@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use crate::CreationManifest;
-use crate::MetaPackage;
 use proptest::prelude::*;
 
 /// Helper to assist asserting a single match branch.
@@ -95,6 +94,12 @@ prop_compose! {
 }
 
 prop_compose! {
+    pub fn random_hash()(s: [u8; 32]) -> fuchsia_merkle::Hash {
+        s.into()
+    }
+}
+
+prop_compose! {
     pub fn random_merkle_hex()(s in "[[:xdigit:]]{64}") -> String {
         s
     }
@@ -109,16 +114,6 @@ prop_compose! {
 prop_compose! {
     pub fn random_package_variant()(s in r"[-0-9a-z\.]{1, 100}") -> String {
         s
-    }
-}
-
-prop_compose! {
-    pub fn random_meta_package()
-        (name in random_package_name(),
-         variant in random_package_variant()
-        ) -> MetaPackage
-    {
-        MetaPackage::from_name_and_variant(name, variant).unwrap()
     }
 }
 
