@@ -880,6 +880,13 @@ Example results:
 
 From //src/graphics/lib/compute/gn/glsl_shader_rules.gni:27
 
+### has_libvulkan_arm_mali
+Board files can set this to true if they have a package with a mali libvulkan VCD.
+
+**Current value (from the default):** `false`
+
+From //garnet/lib/magma/gnbuild/magma.gni:50
+
 ### have_secmem_ta
 The secmem TA must be obtained elsewhere and put into the firmware
 directory.
@@ -2179,7 +2186,7 @@ From //build/config/lto/config.gni:7
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:25](https://fuchsia.googlesource.com/third_party/mesa/+/fbf54cd911dc8370aa91d135082e0587a8a2440d/src/intel/vulkan/BUILD.gn#25)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:25](https://fuchsia.googlesource.com/third_party/mesa/+/9195b850e9cf40cce01a2c9227e1bc2fcad72a78/src/intel/vulkan/BUILD.gn#25)
 
 ### use_prebuilt_dart_sdk
 Whether to use the prebuilt Dart SDK for everything.
