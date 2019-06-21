@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_FUZZING_CPP_FUZZ_INPUT_H_
+#define LIB_FUZZING_CPP_FUZZ_INPUT_H_
 
 #include <cstddef>
 #include <cstdint>
+#include <type_traits>
 
 namespace fuzzing {
 
@@ -13,7 +15,7 @@ namespace fuzzing {
 //
 // API supports zero-copy and single-copy methods for extracting data, both of
 // which can fail.
-class FuzzInput {
+class FuzzInput final {
 public:
   FuzzInput(const uint8_t* data, size_t remaining)
     : data_(data), remaining_(remaining) {}
@@ -27,6 +29,7 @@ public:
   // assume that data pointed to by |out| may have been modified.
   template <typename T>
   bool CopyObject(T* out) {
+    static_assert(std::is_pod<T>());
     uint8_t* out_buf = reinterpret_cast<uint8_t*>(out);
     return CopyBytes(out_buf, sizeof(T));
   }
@@ -52,3 +55,5 @@ private:
 };
 
 }  // namespace fuzzing
+
+#endif // LIB_FUZZING_CPP_FUZZ_INPUT_H_

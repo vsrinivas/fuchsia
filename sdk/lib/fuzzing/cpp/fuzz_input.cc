@@ -22,7 +22,7 @@ const uint8_t* FuzzInput::TakeBytes(size_t size) {
 }
 
 bool FuzzInput::CopyBytes(uint8_t* out, size_t size) {
-  if (remaining_ < size) {
+  if (remaining_ < size || !out) {
     return false;
   }
   memcpy(out, data_, size);

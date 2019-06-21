@@ -7,26 +7,32 @@ import("//build/host.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
 
-source_set("fuzzing") {
-    testonly = true
-    sources = [
-        "fuzz_input.cc",
-        "fuzz_input.h",
-    ]
-    public_configs = [ "//sdk/config" ]
+source_set("cpp") {
+  testonly = true
+  sources = [
+    "fuzz_input.cc",
+    "fuzz_input.h",
+  ]
+  public_configs = [ "//sdk/config" ]
 }
 
 test("fuzz_input_unittests") {
-  sources = [ "fuzz_input_unittest.cc" ]
+  sources = [
+    "fuzz_input_unittest.cc",
+  ]
 
   deps = [
-    ":fuzzing",
+    ":cpp",
     "//third_party/googletest:gtest_main",
   ]
 }
 
 install_host_tools("host_tests") {
   testonly = true
-  deps = [ ":fuzz_input_unittests" ]
-  outputs = [ "fuzz_input_unittests" ]
+  deps = [
+    ":fuzz_input_unittests",
+  ]
+  outputs = [
+    "fuzz_input_unittests",
+  ]
 }
