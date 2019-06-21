@@ -15,6 +15,7 @@ use crate::ip::{
     send_icmp_response, send_ip_packet, IpAddress, IpProto, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr,
     IPV6_MIN_MTU,
 };
+use crate::types::MulticastAddress;
 use crate::wire::icmp::{
     peek_message_type, IcmpDestUnreachable, IcmpIpExt, IcmpMessageType, IcmpPacketBuilder,
     IcmpParseArgs, IcmpTimeExceeded, IcmpUnusedCode, Icmpv4DestUnreachableCode, Icmpv4MessageType,

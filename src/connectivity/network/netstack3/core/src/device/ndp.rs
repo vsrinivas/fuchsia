@@ -27,7 +27,8 @@ use zerocopy::ByteSlice;
 
 use crate::device::ethernet::EthernetNdpDevice;
 use crate::device::{DeviceId, DeviceLayerTimerId};
-use crate::ip::{IpAddress, IpProto, Ipv6, Ipv6Addr};
+use crate::ip::{IpProto, Ipv6, Ipv6Addr};
+use crate::types::MulticastAddress;
 use crate::wire::icmp::ndp::{
     self, options::NdpOption, NeighborAdvertisment, NeighborSolicitation, Options,
 };

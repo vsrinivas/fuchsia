@@ -33,6 +33,7 @@ mod ip;
 #[cfg(test)]
 mod testutil;
 mod transport;
+mod types;
 mod wire;
 
 pub use crate::device::{

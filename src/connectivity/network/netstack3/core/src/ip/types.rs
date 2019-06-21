@@ -98,6 +98,7 @@ mod internal {
 
     use crate::device::DeviceId;
     use crate::error::IpParseError;
+    use crate::types::{MulticastAddress, UnicastAddress};
     use crate::wire::ipv4::{Ipv4Packet, Ipv4PacketBuilder};
     use crate::wire::ipv6::{Ipv6Packet, Ipv6PacketBuilder};
 
@@ -350,14 +351,6 @@ mod internal {
             Self::Version::LOOPBACK_SUBNET.contains(*self)
         }
 
-        /// Is this a multicast address?
-        ///
-        /// `is_multicast` returns `true` if this address is a member of the
-        /// multicast subnet.
-        fn is_multicast(&self) -> bool {
-            Self::Version::MULTICAST_SUBNET.contains(*self)
-        }
-
         /// Is this a unicast address in the context of the given subnet?
         ///
         /// `is_unicast_in_subnet` returns `true` if this address is none of:
@@ -380,6 +373,12 @@ mod internal {
         /// Invoke a function on this address if it is an `Ipv6Address` or
         /// return `default` if it is an `Ipv4Address`.
         fn with_v6<O, F: Fn(Ipv6Addr) -> O>(&self, f: F, default: O) -> O;
+    }
+
+    impl<A: IpAddress> MulticastAddress for A {
+        fn is_multicast(&self) -> bool {
+            <Self as IpAddress>::Version::MULTICAST_SUBNET.contains(*self)
+        }
     }
 
     /// An IPv4 address.
@@ -571,6 +570,12 @@ mod internal {
         }
     }
 
+    impl UnicastAddress for Ipv6Addr {
+        fn is_unicast(&self) -> bool {
+            !self.is_multicast()
+        }
+    }
+
     impl From<net::Ipv6Addr> for Ipv6Addr {
         fn from(ip: net::Ipv6Addr) -> Self {
             Ipv6Addr::new(ip.octets())
@@ -599,25 +604,6 @@ mod internal {
     impl Debug for Ipv6Addr {
         fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
             Display::fmt(self, f)
-        }
-    }
-
-    /// A multicast IP address.
-    ///
-    /// A `MulticastAddr` is wrapper around the IP address type `A` which
-    /// guarantees that it is a multicast address.
-    pub struct MulticastAddr<A: IpAddress>(A);
-
-    impl<A: IpAddress> MulticastAddr<A> {
-        /// Constructs a new `MulticastAddr`.
-        ///
-        /// `new` returns `None` if `addr` is not a multicast address (according
-        /// to [`IpAddress::is_multicast`]).
-        pub fn new(addr: A) -> Option<MulticastAddr<A>> {
-            if !addr.is_multicast() {
-                return None;
-            }
-            Some(MulticastAddr(addr))
         }
     }
 

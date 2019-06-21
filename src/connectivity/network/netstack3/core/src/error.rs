@@ -7,6 +7,7 @@
 use failure::Fail;
 
 use crate::ip::{Ip, IpAddress};
+use crate::types::MulticastAddress;
 use crate::wire::icmp::IcmpIpTypes;
 
 /// Results returned from many functions in the netstack.

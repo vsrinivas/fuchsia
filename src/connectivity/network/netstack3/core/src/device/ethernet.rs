@@ -4,6 +4,8 @@
 
 //! The Ethernet protocol.
 
+use std::collections::{HashMap, VecDeque};
+
 use log::debug;
 use packet::{Buf, MtuError, ParseBuffer, Serializer};
 use specialize_ip_macro::specialize_ip_address;
@@ -13,10 +15,10 @@ use crate::device::arp::{ArpDevice, ArpHardwareType, ArpState};
 use crate::device::{ndp, ndp::NdpState};
 use crate::device::{DeviceId, FrameDestination};
 use crate::ip::{AddrSubnet, Ip, IpAddr, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
+use crate::types::{BroadcastAddress, MulticastAddress, UnicastAddress};
 use crate::wire::arp::peek_arp_types;
 use crate::wire::ethernet::{EthernetFrame, EthernetFrameBuilder};
 use crate::{Context, EventDispatcher, StackState};
-use std::collections::{HashMap, VecDeque};
 
 /// A media access control (MAC) address.
 #[derive(Copy, Clone, Eq, PartialEq, Debug, FromBytes, AsBytes, Unaligned)]
@@ -71,31 +73,26 @@ impl Mac {
         ipv6_addr[8..16].copy_from_slice(&self.to_eui64(eui_magic));
         Ipv6Addr::new(ipv6_addr)
     }
+}
 
-    /// Is this a unicast MAC address?
-    ///
-    /// Returns true if the least significant bit of the first byte of the
-    /// address is 0.
-    pub(crate) fn is_unicast(self) -> bool {
+impl UnicastAddress for Mac {
+    fn is_unicast(&self) -> bool {
         // https://en.wikipedia.org/wiki/MAC_address#Unicast_vs._multicast
         self.0[0] & 1 == 0
     }
+}
 
-    /// Is this a multicast MAC address?
-    ///
-    /// Returns true if the least significant bit of the first byte of the
-    /// address is 1.
-    pub(crate) fn is_multicast(self) -> bool {
+impl MulticastAddress for Mac {
+    fn is_multicast(&self) -> bool {
         // https://en.wikipedia.org/wiki/MAC_address#Unicast_vs._multicast
         self.0[0] & 1 == 1
     }
+}
 
-    /// Is this the broadcast MAC address?
-    ///
-    /// Returns true if this is the broadcast MAC address, FF:FF:FF:FF:FF:FF.
-    pub(crate) fn is_broadcast(self) -> bool {
+impl BroadcastAddress for Mac {
+    fn is_broadcast(&self) -> bool {
         // https://en.wikipedia.org/wiki/MAC_address#Unicast_vs._multicast
-        self == Mac::BROADCAST
+        *self == Mac::BROADCAST
     }
 }
 
