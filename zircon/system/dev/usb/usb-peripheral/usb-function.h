@@ -24,8 +24,8 @@ class UsbFunction : public UsbFunctionType,
                     public ddk::UsbFunctionProtocol<UsbFunction, ddk::base_protocol>,
                     public fbl::RefCounted<UsbFunction>  {
 public:
-    UsbFunction(zx_device_t* parent, UsbPeripheral* peripheral, const FunctionDescriptor* desc)
-        : UsbFunctionType(parent), peripheral_(peripheral), function_descriptor_(*desc) {}
+    UsbFunction(zx_device_t* parent, UsbPeripheral* peripheral, FunctionDescriptor desc)
+        : UsbFunctionType(parent), peripheral_(peripheral), function_descriptor_(std::move(desc)) {}
 
     // Device protocol implementation.
     void DdkRelease();

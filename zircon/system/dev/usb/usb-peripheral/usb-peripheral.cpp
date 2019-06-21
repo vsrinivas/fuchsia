@@ -20,6 +20,7 @@
 #include <ddk/protocol/usb/function.h>
 #include <ddk/protocol/usb/modeswitch.h>
 #include <ddk/usb-peripheral-config.h>
+#include <ddktl/fidl.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
@@ -274,7 +275,8 @@ zx_status_t UsbPeripheral::FunctionRegistered() {
     zxlogf(TRACE, "usb_device_function_registered functions_registered = true\n");
     functions_registered_ = true;
     if (listener_) {
-        fuchsia_hardware_usb_peripheral_EventsFunctionRegistered(listener_.get());
+        ::llcpp::fuchsia::hardware::usb::peripheral::Events::Call::FunctionRegistered(
+            zx::unowned_channel(listener_.get()));
     }
     return DeviceStateChanged();
 }
@@ -424,7 +426,7 @@ zx_status_t UsbPeripheral::SetInterface(uint8_t interface, uint8_t alt_setting) 
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t UsbPeripheral::AddFunction(const FunctionDescriptor* desc) {
+zx_status_t UsbPeripheral::AddFunction(FunctionDescriptor desc) {
     fbl::AutoLock lock(&lock_);
 
     if (functions_bound_) {
@@ -432,7 +434,7 @@ zx_status_t UsbPeripheral::AddFunction(const FunctionDescriptor* desc) {
     }
 
     fbl::AllocChecker ac;
-    auto function = fbl::MakeRefCountedChecked<UsbFunction>(&ac, zxdev(), this, desc);
+    auto function = fbl::MakeRefCountedChecked<UsbFunction>(&ac, zxdev(), this, std::move(desc));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -705,63 +707,61 @@ void UsbPeripheral::UsbDciInterfaceSetSpeed(usb_speed_t speed) {
     speed_ = speed;
 }
 
-zx_status_t UsbPeripheral::MsgSetDeviceDescriptor( const DeviceDescriptor* desc, fidl_txn_t* txn) {
+void UsbPeripheral::SetDeviceDescriptor(DeviceDescriptor desc,
+                                        SetDeviceDescriptorCompleter::Sync completer) {
     zx_status_t status;
-    if (desc->bNumConfigurations != 1) {
+    if (desc.bNumConfigurations != 1) {
         zxlogf(ERROR, "usb_device_ioctl: bNumConfigurations: %u, only 1 supported\n",
-                desc->bNumConfigurations);
+                desc.bNumConfigurations);
         status = ZX_ERR_INVALID_ARGS;
     } else {
         device_desc_.bLength = sizeof(usb_device_descriptor_t);
         device_desc_.bDescriptorType = USB_DT_DEVICE;
-        device_desc_.bcdUSB = desc->bcdUSB;
-        device_desc_.bDeviceClass = desc->bDeviceClass;
-        device_desc_.bDeviceSubClass = desc->bDeviceSubClass;
-        device_desc_.bDeviceProtocol = desc->bDeviceProtocol;
-        device_desc_.bMaxPacketSize0 = desc->bMaxPacketSize0;
-        device_desc_.idVendor = desc->idVendor;
-        device_desc_.idProduct = desc->idProduct;
-        device_desc_.bcdDevice = desc->bcdDevice;
-        device_desc_.iManufacturer = desc->iManufacturer;
-        device_desc_.iProduct = desc->iProduct;
-        device_desc_.iSerialNumber = desc->iSerialNumber;
-        device_desc_.bNumConfigurations = desc->bNumConfigurations;
+        device_desc_.bcdUSB = desc.bcdUSB;
+        device_desc_.bDeviceClass = desc.bDeviceClass;
+        device_desc_.bDeviceSubClass = desc.bDeviceSubClass;
+        device_desc_.bDeviceProtocol = desc.bDeviceProtocol;
+        device_desc_.bMaxPacketSize0 = desc.bMaxPacketSize0;
+        device_desc_.idVendor = desc.idVendor;
+        device_desc_.idProduct = desc.idProduct;
+        device_desc_.bcdDevice = desc.bcdDevice;
+        device_desc_.iManufacturer = desc.iManufacturer;
+        device_desc_.iProduct = desc.iProduct;
+        device_desc_.iSerialNumber = desc.iSerialNumber;
+        device_desc_.bNumConfigurations = desc.bNumConfigurations;
         status = ZX_OK;
     }
 
-    return fuchsia_hardware_usb_peripheral_DeviceSetDeviceDescriptor_reply(txn, status);
+    completer.Reply(status);
 }
 
-zx_status_t UsbPeripheral::MsgAllocStringDesc(const char* name_data, size_t name_size,
-                                              fidl_txn_t* txn) {
+void UsbPeripheral::AllocStringDesc(fidl::StringView name,
+                                    AllocStringDescCompleter::Sync completer) {
     uint8_t index = 0;
-    auto status = AllocStringDesc(fbl::String(name_data, name_size), &index);
-    return fuchsia_hardware_usb_peripheral_DeviceAllocStringDesc_reply(txn, status, index);
+    auto status = AllocStringDesc(fbl::String(name.data(), name.size()), &index);
+    completer.Reply(status, index);
 }
 
-zx_status_t UsbPeripheral::MsgAddFunction(const FunctionDescriptor* desc, fidl_txn_t* txn) {
-    auto status = AddFunction(desc);
-    return fuchsia_hardware_usb_peripheral_DeviceAddFunction_reply(txn, status);
+void UsbPeripheral::AddFunction(FunctionDescriptor desc, AddFunctionCompleter::Sync completer) {
+    completer.Reply(AddFunction(std::move(desc)));
 }
 
-zx_status_t UsbPeripheral::MsgBindFunctions(fidl_txn_t* txn) {
-    auto status = BindFunctions();
-    return fuchsia_hardware_usb_peripheral_DeviceBindFunctions_reply(txn, status);
+void UsbPeripheral::BindFunctions(BindFunctionsCompleter::Sync completer) {
+    completer.Reply(BindFunctions());
 }
 
-zx_status_t UsbPeripheral::MsgClearFunctions(fidl_txn_t* txn) {
+void UsbPeripheral::ClearFunctions(ClearFunctionsCompleter::Sync completer) {
     zxlogf(TRACE, "%s\n", __func__);
 
-    auto status = ClearFunctions();
-    return fuchsia_hardware_usb_peripheral_DeviceClearFunctions_reply(txn, status);
+    completer.Reply(ClearFunctions());
 }
 
-zx_status_t UsbPeripheral::MsgGetMode(fidl_txn_t* txn) {
+void UsbPeripheral::GetMode(GetModeCompleter::Sync completer) {
     fbl::AutoLock lock(&lock_);
 
     uint32_t mode = usb_mode_;
 
-    return fuchsia_hardware_usb_peripheral_DeviceGetMode_reply(txn, ZX_OK, mode);
+    completer.Reply(ZX_OK, mode);
 }
 
 int UsbPeripheral::ListenerCleanupThread() {
@@ -773,7 +773,8 @@ int UsbPeripheral::ListenerCleanupThread() {
     return 0;
 }
 
-zx_status_t UsbPeripheral::MsgSetStateChangeListener(zx_handle_t handle) {
+void UsbPeripheral::SetStateChangeListener(zx::channel listener,
+                                           SetStateChangeListenerCompleter::Sync completer) {
     // This code is wrapped in a loop
     // to prevent a race condition in the event that multiple
     // clients try to set the handle at once.
@@ -788,7 +789,8 @@ zx_status_t UsbPeripheral::MsgSetStateChangeListener(zx_handle_t handle) {
             continue;
         }
         if (listener_.is_valid()) {
-            return ZX_ERR_BAD_STATE;
+            completer.Close(ZX_ERR_BAD_STATE);
+            return;
         }
         if (thread_) {
             int output;
@@ -801,7 +803,7 @@ zx_status_t UsbPeripheral::MsgSetStateChangeListener(zx_handle_t handle) {
             // another caller may have tried to do this while we were blocked on thrd_join.
             continue;
         }
-        listener_ = zx::channel(handle);
+        listener_ = std::move(listener);
         if (thrd_create(
                 &thread_,
                 [](void* arg) -> int {
@@ -809,57 +811,23 @@ zx_status_t UsbPeripheral::MsgSetStateChangeListener(zx_handle_t handle) {
                 },
                 reinterpret_cast<void*>(this)) != thrd_success) {
             listener_.reset();
-            return ZX_ERR_INTERNAL;
+            completer.Close(ZX_ERR_INTERNAL);
+            return;
         }
-        return ZX_OK;
+        return;
     }
 }
 
-zx_status_t UsbPeripheral::MsgSetMode(uint32_t mode, fidl_txn_t* txn) {
+void UsbPeripheral::SetMode(uint32_t mode, SetModeCompleter::Sync completer) {
     fbl::AutoLock lock(&lock_);
     usb_mode_ = mode;
-    auto status = DeviceStateChanged();
-    return fuchsia_hardware_usb_peripheral_DeviceSetMode_reply(txn, status);
+    completer.Reply(DeviceStateChanged());
 }
 
-static fuchsia_hardware_usb_peripheral_Device_ops_t fidl_ops = {
-    .SetDeviceDescriptor =
-        [](void* ctx, const DeviceDescriptor* desc, fidl_txn_t* txn) {
-            return reinterpret_cast<UsbPeripheral*>(ctx)->MsgSetDeviceDescriptor(desc, txn);
-        },
-    .AllocStringDesc =
-        [](void* ctx, const char* name_data, size_t name_size, fidl_txn_t* txn) {
-            return reinterpret_cast<UsbPeripheral*>(ctx)->MsgAllocStringDesc(name_data, name_size,
-                                                                             txn);
-        },
-    .AddFunction =
-        [](void* ctx, const FunctionDescriptor* desc, fidl_txn_t* txn) {
-            return reinterpret_cast<UsbPeripheral*>(ctx)->MsgAddFunction(desc, txn);
-        },
-    .BindFunctions =
-        [](void* ctx, fidl_txn_t* txn) {
-            return reinterpret_cast<UsbPeripheral*>(ctx)->MsgBindFunctions(txn);
-        },
-    .ClearFunctions =
-        [](void* ctx, fidl_txn_t* txn) {
-            return reinterpret_cast<UsbPeripheral*>(ctx)->MsgClearFunctions(txn);
-        },
-    .GetMode =
-        [](void* ctx, fidl_txn_t* txn) {
-            return reinterpret_cast<UsbPeripheral*>(ctx)->MsgGetMode(txn);
-        },
-    .SetMode =
-        [](void* ctx, uint32_t mode, fidl_txn_t* txn) {
-            return reinterpret_cast<UsbPeripheral*>(ctx)->MsgSetMode(mode, txn);
-        },
-    .SetStateChangeListener =
-        [](void* ctx, zx_handle_t handle) {
-            return reinterpret_cast<UsbPeripheral*>(ctx)->MsgSetStateChangeListener(handle);
-        },
-};
-
 zx_status_t UsbPeripheral::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
-    return fuchsia_hardware_usb_peripheral_Device_dispatch(this, txn, msg, &fidl_ops);
+    DdkTransaction transaction(txn);
+    ::llcpp::fuchsia::hardware::usb::peripheral::Device::Dispatch(this, msg, &transaction);
+    return transaction.Status();
 }
 
 void UsbPeripheral::DdkUnbind() {
@@ -897,7 +865,7 @@ zx_status_t UsbPeripheral::SetDefaultConfig(FunctionDescriptor* descriptors, siz
 
     zx_status_t status = ZX_OK;
     for (size_t i = 0; i < length; i++) {
-        status = AddFunction(descriptors + i);
+        status = AddFunction(std::move(*(descriptors + i)));
         if (status != ZX_OK) {
             return status;
         }

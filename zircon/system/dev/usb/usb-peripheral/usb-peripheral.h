@@ -14,7 +14,7 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/string.h>
 #include <fbl/vector.h>
-#include <fuchsia/hardware/usb/peripheral/c/fidl.h>
+#include <fuchsia/hardware/usb/peripheral/llcpp/fidl.h>
 #include <lib/zx/channel.h>
 #include <usb/request-cpp.h>
 
@@ -70,8 +70,8 @@ namespace usb_peripheral {
 
 class UsbFunction;
 
-using DeviceDescriptor = fuchsia_hardware_usb_peripheral_DeviceDescriptor;
-using FunctionDescriptor = fuchsia_hardware_usb_peripheral_FunctionDescriptor;
+using ::llcpp::fuchsia::hardware::usb::peripheral::DeviceDescriptor;
+using ::llcpp::fuchsia::hardware::usb::peripheral::FunctionDescriptor;
 
 class UsbPeripheral;
 using UsbPeripheralType = ddk::Device<UsbPeripheral, ddk::Unbindable, ddk::Messageable>;
@@ -81,7 +81,8 @@ using UsbPeripheralType = ddk::Device<UsbPeripheral, ddk::Unbindable, ddk::Messa
 // one for each USB function in the peripheral role configuration.
 class UsbPeripheral : public UsbPeripheralType,
                       public ddk::EmptyProtocol<ZX_PROTOCOL_USB_PERIPHERAL>,
-                      public ddk::UsbDciInterfaceProtocol<UsbPeripheral> {
+                      public ddk::UsbDciInterfaceProtocol<UsbPeripheral>,
+                      public ::llcpp::fuchsia::hardware::usb::peripheral::Device::Interface {
 public:
     UsbPeripheral(zx_device_t* parent) : UsbPeripheralType(parent), dci_(parent), ums_(parent) {}
 
@@ -100,13 +101,16 @@ public:
     void UsbDciInterfaceSetSpeed(usb_speed_t speed);
 
     // FIDL messages
-    zx_status_t MsgSetDeviceDescriptor(const DeviceDescriptor* desc, fidl_txn_t* txn);
-    zx_status_t MsgAllocStringDesc(const char* name_data, size_t name_size, fidl_txn_t* txn);
-    zx_status_t MsgAddFunction(const FunctionDescriptor* desc, fidl_txn_t* txn);
-    zx_status_t MsgBindFunctions(fidl_txn_t* txn);
-    zx_status_t MsgClearFunctions(fidl_txn_t* txn);
-    zx_status_t MsgGetMode(fidl_txn_t* txn);
-    zx_status_t MsgSetMode(uint32_t mode, fidl_txn_t* txn);
+    void SetDeviceDescriptor(DeviceDescriptor desc,
+                             SetDeviceDescriptorCompleter::Sync completer) override;
+    void AllocStringDesc(fidl::StringView name, AllocStringDescCompleter::Sync completer) override;
+    void AddFunction(FunctionDescriptor desc, AddFunctionCompleter::Sync completer) override;
+    void BindFunctions(BindFunctionsCompleter::Sync completer) override;
+    void ClearFunctions(ClearFunctionsCompleter::Sync completer) override;
+    void GetMode(GetModeCompleter::Sync completer) override;
+    void SetMode(uint32_t mode, SetModeCompleter::Sync completer) override;
+    void SetStateChangeListener(zx::channel listener,
+                                SetStateChangeListenerCompleter::Sync completer) override;
 
     zx_status_t SetFunctionInterface(fbl::RefPtr<UsbFunction> function,
                                      const usb_function_interface_protocol_t* interface);
@@ -120,7 +124,6 @@ public:
 
     inline const ddk::UsbDciProtocolClient& dci() const { return dci_; }
     inline size_t ParentRequestSize() const { return parent_request_size_; }
-    zx_status_t MsgSetStateChangeListener(zx_handle_t handle);
     void UsbPeripheralRequestQueue(usb_request_t* usb_request,
                                    const usb_request_complete_t* complete_cb);
 
@@ -145,7 +148,7 @@ private:
     }
 
     zx_status_t Init();
-    zx_status_t AddFunction(const FunctionDescriptor* desc);
+    zx_status_t AddFunction(FunctionDescriptor desc);
     zx_status_t BindFunctions();
     zx_status_t ClearFunctions();
     zx_status_t DeviceStateChanged() __TA_REQUIRES(lock_);
