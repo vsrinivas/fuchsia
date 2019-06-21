@@ -60,6 +60,9 @@ class Task {
       const buffer_collection_info_t* output_buffer_collection,
       const zx::vmo& config_vmo, const zx::bti& bti);
 
+  bool IsBufferCollectionValid(
+      const buffer_collection_info_t* buffer_collection) const;
+
   fzl::PinnedVmo config_vmo_pinned_;
   fzl::VmoPool output_buffers_;
   fbl::Array<fzl::PinnedVmo> input_buffers_;

@@ -107,6 +107,18 @@ TEST_F(TaskTest, BasicCreationTest) {
   EXPECT_OK(status);
 }
 
+TEST_F(TaskTest, InvalidFormatTest) {
+  SetUpBufferCollections(kNumberOfBuffers);
+  std::unique_ptr<Task> task;
+
+  input_buffer_collection_.format.image.pixel_format.type =
+      fuchsia_sysmem_PixelFormatType_YUY2;
+  EXPECT_EQ(
+      ZX_ERR_INVALID_ARGS,
+      gdc::Task::Create(&input_buffer_collection_, &output_buffer_collection_,
+                        config_vmo_, &callback_, bti_handle_, &task));
+}
+
 TEST_F(TaskTest, InputBufferTest) {
   SetUpBufferCollections(kNumberOfBuffers);
   std::unique_ptr<Task> task;

@@ -29,6 +29,11 @@ zx_status_t Task::InitBuffers(
     const buffer_collection_info_t* input_buffer_collection,
     const buffer_collection_info_t* output_buffer_collection,
     const zx::vmo& config_vmo, const zx::bti& bti) {
+  if (!IsBufferCollectionValid(input_buffer_collection) ||
+      !IsBufferCollectionValid(output_buffer_collection)) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
   // Initialize the VMOPool and pin the output buffers
   zx::vmo output_vmos[countof(output_buffer_collection->vmos)];
   for (uint32_t i = 0; i < output_buffer_collection->buffer_count; ++i) {
@@ -100,10 +105,12 @@ zx_status_t Task::InitBuffers(
 }
 
 // Validates the buffer collection.
-static bool IsBufferCollectionValid(
-    const buffer_collection_info_t* buffer_collection) {
+bool Task::IsBufferCollectionValid(
+    const buffer_collection_info_t* buffer_collection) const {
   if (buffer_collection == nullptr || buffer_collection->buffer_count == 0 ||
-      buffer_collection->buffer_count > countof(buffer_collection->vmos)) {
+      buffer_collection->buffer_count > countof(buffer_collection->vmos) ||
+      buffer_collection->format.image.pixel_format.type !=
+          fuchsia_sysmem_PixelFormatType_NV12) {
     return false;
   }
   return true;
@@ -115,9 +122,7 @@ zx_status_t Task::Create(
     const buffer_collection_info_t* output_buffer_collection,
     const zx::vmo& config_vmo, const gdc_callback_t* callback,
     const zx::bti& bti, std::unique_ptr<Task>* out) {
-  if (callback == nullptr || out == nullptr ||
-      !IsBufferCollectionValid(input_buffer_collection) ||
-      !IsBufferCollectionValid(output_buffer_collection)) {
+  if (callback == nullptr || out == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
 
