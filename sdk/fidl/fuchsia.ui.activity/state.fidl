@@ -1,0 +1,12 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.ui.activity;
+
+/// State is an enumeration of the activity states the system may be in.
+enum State {
+    UNKNOWN = 0;
+    IDLE = 1;
+    ACTIVE = 2;
+};

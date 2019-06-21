@@ -1,0 +1,18 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+
+fidl("fuchsia.ui.activity") {
+  sdk_category = "partner"
+
+  sources = [
+    "activity.fidl",
+    "provider.fidl",
+    "tracker.fidl",
+    "state.fidl",
+  ]
+
+  public_deps = []
+}

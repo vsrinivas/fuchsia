@@ -1,0 +1,28 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.ui.activity;
+
+using zx;
+
+/// The Provider protocol offers a subscription interface through
+/// which clients can watch for changes in the system's activity state.
+[Discoverable]
+protocol Provider {
+    /// Subscribe to changes in the system's state.
+    /// The server will always invoke listener.OnStateChanged at least once with
+    /// the initial state, and after that invoke listener.OnStateChanged
+    /// whenever the system's state changes.
+    WatchState(Listener listener);
+};
+
+/// The Listener protocol subscribes to changes in the system's activity
+/// state. Clients which care about the activity state of the system are
+/// expected to implement this protocol and subscribe via Provider.WatchState.
+protocol Listener {
+    /// Callback that is invoked whenever the system state changes.
+    /// The Listener is expected to acknowledge each call explicitly and will
+    /// not receive new state until this acknowledgement is done.
+    OnStateChanged(State state, zx.time transition_time) -> ();
+};
