@@ -1,0 +1,537 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// WARNING: THIS FILE IS MACHINE GENERATED. DO NOT EDIT.
+// Generated from the banjo.examples.api banjo file
+
+#include <zircon/system/public/zircon/errors.h>
+#include <zircon/system/public/zircon/syscalls/pci.h>
+#include <zircon/system/public/zircon/syscalls/port.h>
+#include <zircon/system/public/zircon/syscalls/profile.h>
+#include <zircon/system/public/zircon/syscalls/smc.h>
+#include <zircon/system/public/zircon/syscalls/system.h>
+#include <zircon/system/public/zircon/types.h>
+
+#include <cstdint>
+#include <memory>
+
+#include "tools/fidlcat/lib/syscall_decoder.h"
+#include "tools/fidlcat/lib/syscall_decoding.h"
+
+namespace fidlcat {
+
+void SyscallDecoder::PopulateSyscalls() {
+  {
+    Syscall* zx_bool = Add("zx_bool", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_bool->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto data = zx_bool->Argument<bool>(SyscallType::kBool);
+    // Inputs
+    zx_bool->Input<zx_handle_t>("handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_bool->Input<bool>("data", std::make_unique<ArgumentAccess<bool>>(data));
+  }
+
+  {
+    Syscall* zx_int8 = Add("zx_int8", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_int8->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto data = zx_int8->Argument<int8_t>(SyscallType::kInt8);
+    // Inputs
+    zx_int8->Input<zx_handle_t>("handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_int8->Input<int8_t>("data", std::make_unique<ArgumentAccess<int8_t>>(data));
+  }
+
+  {
+    Syscall* zx_int16 = Add("zx_int16", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_int16->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto data = zx_int16->Argument<int16_t>(SyscallType::kInt16);
+    // Inputs
+    zx_int16->Input<zx_handle_t>("handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_int16->Input<int16_t>("data", std::make_unique<ArgumentAccess<int16_t>>(data));
+  }
+
+  {
+    Syscall* zx_int32 = Add("zx_int32", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_int32->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto data = zx_int32->Argument<int32_t>(SyscallType::kInt32);
+    // Inputs
+    zx_int32->Input<zx_handle_t>("handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_int32->Input<int32_t>("data", std::make_unique<ArgumentAccess<int32_t>>(data));
+  }
+
+  {
+    Syscall* zx_int64 = Add("zx_int64", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_int64->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto data = zx_int64->Argument<int64_t>(SyscallType::kInt64);
+    // Inputs
+    zx_int64->Input<zx_handle_t>("handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_int64->Input<int64_t>("data", std::make_unique<ArgumentAccess<int64_t>>(data));
+  }
+
+  {
+    Syscall* zx_uint8 = Add("zx_uint8", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_uint8->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto data = zx_uint8->Argument<uint8_t>(SyscallType::kUint8);
+    // Inputs
+    zx_uint8->Input<zx_handle_t>("handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_uint8->Input<uint8_t>("data", std::make_unique<ArgumentAccess<uint8_t>>(data));
+  }
+
+  {
+    Syscall* zx_uint16 = Add("zx_uint16", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_uint16->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto data = zx_uint16->Argument<uint16_t>(SyscallType::kUint16);
+    // Inputs
+    zx_uint16->Input<zx_handle_t>("handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_uint16->Input<uint16_t>("data", std::make_unique<ArgumentAccess<uint16_t>>(data));
+  }
+
+  {
+    Syscall* zx_uint32 = Add("zx_uint32", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_uint32->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto data = zx_uint32->Argument<uint32_t>(SyscallType::kUint32);
+    // Inputs
+    zx_uint32->Input<zx_handle_t>("handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_uint32->Input<uint32_t>("data", std::make_unique<ArgumentAccess<uint32_t>>(data));
+  }
+
+  {
+    Syscall* zx_uint64 = Add("zx_uint64", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_uint64->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto data = zx_uint64->Argument<uint64_t>(SyscallType::kUint64);
+    // Inputs
+    zx_uint64->Input<zx_handle_t>("handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_uint64->Input<uint64_t>("data", std::make_unique<ArgumentAccess<uint64_t>>(data));
+  }
+
+  {
+    Syscall* zx_float32 = Add("zx_float32", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_float32->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto data = zx_float32->Argument<float>(SyscallType::kFloat32);
+    // Inputs
+    zx_float32->Input<zx_handle_t>("handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_float32->Input<float>("data", std::make_unique<ArgumentAccess<float>>(data));
+  }
+
+  {
+    Syscall* zx_float64 = Add("zx_float64", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_float64->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto data = zx_float64->Argument<double>(SyscallType::kFloat64);
+    // Inputs
+    zx_float64->Input<zx_handle_t>("handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_float64->Input<double>("data", std::make_unique<ArgumentAccess<double>>(data));
+  }
+
+  {
+    Syscall* zx_clock = Add("zx_clock", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_clock->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto data = zx_clock->Argument<zx_clock_t>(SyscallType::kClock);
+    // Inputs
+    zx_clock->Input<zx_handle_t>("handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_clock->Input<zx_clock_t>("data", std::make_unique<ArgumentAccess<zx_clock_t>>(data));
+  }
+
+  {
+    Syscall* zx_duration = Add("zx_duration", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_duration->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto data = zx_duration->Argument<zx_duration_t>(SyscallType::kDuration);
+    // Inputs
+    zx_duration->Input<zx_handle_t>("handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_duration->Input<zx_duration_t>("data", std::make_unique<ArgumentAccess<zx_duration_t>>(data));
+  }
+
+  {
+    Syscall* zx_koid = Add("zx_koid", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_koid->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto data = zx_koid->Argument<zx_koid_t>(SyscallType::kKoid);
+    // Inputs
+    zx_koid->Input<zx_handle_t>("handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_koid->Input<zx_koid_t>("data", std::make_unique<ArgumentAccess<zx_koid_t>>(data));
+  }
+
+  {
+    Syscall* zx_paddr = Add("zx_paddr", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_paddr->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto data = zx_paddr->Argument<zx_paddr_t>(SyscallType::kPaddr);
+    // Inputs
+    zx_paddr->Input<zx_handle_t>("handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_paddr->Input<zx_paddr_t>("data", std::make_unique<ArgumentAccess<zx_paddr_t>>(data));
+  }
+
+  {
+    Syscall* zx_rights = Add("zx_rights", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_rights->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto data = zx_rights->Argument<zx_rights_t>(SyscallType::kRights);
+    // Inputs
+    zx_rights->Input<zx_handle_t>("handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_rights->Input<zx_rights_t>("data", std::make_unique<ArgumentAccess<zx_rights_t>>(data));
+  }
+
+  {
+    Syscall* zx_signals = Add("zx_signals", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_signals->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto data = zx_signals->Argument<zx_signals_t>(SyscallType::kSignals);
+    // Inputs
+    zx_signals->Input<zx_handle_t>("handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_signals->Input<zx_signals_t>("data", std::make_unique<ArgumentAccess<zx_signals_t>>(data));
+  }
+
+  {
+    Syscall* zx_time = Add("zx_time", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_time->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto data = zx_time->Argument<zx_time_t>(SyscallType::kTime);
+    // Inputs
+    zx_time->Input<zx_handle_t>("handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_time->Input<zx_time_t>("data", std::make_unique<ArgumentAccess<zx_time_t>>(data));
+  }
+
+  {
+    Syscall* zx_vaddr = Add("zx_vaddr", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_vaddr->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto data = zx_vaddr->Argument<zx_vaddr_t>(SyscallType::kVaddr);
+    // Inputs
+    zx_vaddr->Input<zx_handle_t>("handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_vaddr->Input<zx_vaddr_t>("data", std::make_unique<ArgumentAccess<zx_vaddr_t>>(data));
+  }
+
+  {
+    Syscall* zx_vm_option = Add("zx_vm_option", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_vm_option->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto data = zx_vm_option->Argument<zx_vm_option_t>(SyscallType::kVmOption);
+    // Inputs
+    zx_vm_option->Input<zx_handle_t>("handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_vm_option->Input<zx_vm_option_t>("data", std::make_unique<ArgumentAccess<zx_vm_option_t>>(data));
+  }
+
+  {
+    Syscall* zx_struct = Add("zx_struct", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_struct->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto args = zx_struct->PointerArgument<zx_channel_call_args_t>(SyscallType::kStruct);
+    // Inputs
+    zx_struct->Input<zx_handle_t>("handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+  }
+
+  {
+    Syscall* zx_buffer = Add("zx_buffer", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_buffer->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto data = zx_buffer->PointerArgument<uint8_t>(SyscallType::kUint8);
+    auto size = zx_buffer->Argument<size_t>(SyscallType::kSize);
+    // Inputs
+    zx_buffer->Input<zx_handle_t>("handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_buffer->InputBuffer<uint8_t>("data", std::make_unique<ArgumentAccess<uint8_t>>(data), std::make_unique<ArgumentAccess<size_t>>(size));
+  }
+
+  {
+    Syscall* zx_output_bool = Add("zx_output_bool", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_output_bool->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto result = zx_output_bool->PointerArgument<bool>(SyscallType::kBool);
+    // Inputs
+    zx_output_bool->Input<zx_handle_t>("handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    // Outputs
+    zx_output_bool->Output<bool>(ZX_OK, "result", std::make_unique<ArgumentAccess<bool>>(result));
+  }
+
+  {
+    Syscall* zx_output_int8 = Add("zx_output_int8", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_output_int8->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto result = zx_output_int8->PointerArgument<int8_t>(SyscallType::kInt8);
+    // Inputs
+    zx_output_int8->Input<zx_handle_t>("handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    // Outputs
+    zx_output_int8->Output<int8_t>(ZX_OK, "result", std::make_unique<ArgumentAccess<int8_t>>(result));
+  }
+
+  {
+    Syscall* zx_output_int16 = Add("zx_output_int16", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_output_int16->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto result = zx_output_int16->PointerArgument<int16_t>(SyscallType::kInt16);
+    // Inputs
+    zx_output_int16->Input<zx_handle_t>("handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    // Outputs
+    zx_output_int16->Output<int16_t>(ZX_OK, "result", std::make_unique<ArgumentAccess<int16_t>>(result));
+  }
+
+  {
+    Syscall* zx_output_int32 = Add("zx_output_int32", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_output_int32->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto result = zx_output_int32->PointerArgument<int32_t>(SyscallType::kInt32);
+    // Inputs
+    zx_output_int32->Input<zx_handle_t>("handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    // Outputs
+    zx_output_int32->Output<int32_t>(ZX_OK, "result", std::make_unique<ArgumentAccess<int32_t>>(result));
+  }
+
+  {
+    Syscall* zx_output_int64 = Add("zx_output_int64", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_output_int64->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto result = zx_output_int64->PointerArgument<int64_t>(SyscallType::kInt64);
+    // Inputs
+    zx_output_int64->Input<zx_handle_t>("handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    // Outputs
+    zx_output_int64->Output<int64_t>(ZX_OK, "result", std::make_unique<ArgumentAccess<int64_t>>(result));
+  }
+
+  {
+    Syscall* zx_output_uint8 = Add("zx_output_uint8", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_output_uint8->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto result = zx_output_uint8->PointerArgument<uint8_t>(SyscallType::kUint8);
+    // Inputs
+    zx_output_uint8->Input<zx_handle_t>("handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    // Outputs
+    zx_output_uint8->Output<uint8_t>(ZX_OK, "result", std::make_unique<ArgumentAccess<uint8_t>>(result));
+  }
+
+  {
+    Syscall* zx_output_uint16 = Add("zx_output_uint16", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_output_uint16->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto result = zx_output_uint16->PointerArgument<uint16_t>(SyscallType::kUint16);
+    // Inputs
+    zx_output_uint16->Input<zx_handle_t>("handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    // Outputs
+    zx_output_uint16->Output<uint16_t>(ZX_OK, "result", std::make_unique<ArgumentAccess<uint16_t>>(result));
+  }
+
+  {
+    Syscall* zx_output_uint32 = Add("zx_output_uint32", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_output_uint32->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto result = zx_output_uint32->PointerArgument<uint32_t>(SyscallType::kUint32);
+    // Inputs
+    zx_output_uint32->Input<zx_handle_t>("handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    // Outputs
+    zx_output_uint32->Output<uint32_t>(ZX_OK, "result", std::make_unique<ArgumentAccess<uint32_t>>(result));
+  }
+
+  {
+    Syscall* zx_output_uint64 = Add("zx_output_uint64", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_output_uint64->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto result = zx_output_uint64->PointerArgument<uint64_t>(SyscallType::kUint64);
+    // Inputs
+    zx_output_uint64->Input<zx_handle_t>("handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    // Outputs
+    zx_output_uint64->Output<uint64_t>(ZX_OK, "result", std::make_unique<ArgumentAccess<uint64_t>>(result));
+  }
+
+  {
+    Syscall* zx_output_float32 = Add("zx_output_float32", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_output_float32->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto result = zx_output_float32->PointerArgument<float>(SyscallType::kFloat32);
+    // Inputs
+    zx_output_float32->Input<zx_handle_t>("handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    // Outputs
+    zx_output_float32->Output<float>(ZX_OK, "result", std::make_unique<ArgumentAccess<float>>(result));
+  }
+
+  {
+    Syscall* zx_output_float64 = Add("zx_output_float64", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_output_float64->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto result = zx_output_float64->PointerArgument<double>(SyscallType::kFloat64);
+    // Inputs
+    zx_output_float64->Input<zx_handle_t>("handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    // Outputs
+    zx_output_float64->Output<double>(ZX_OK, "result", std::make_unique<ArgumentAccess<double>>(result));
+  }
+
+  {
+    Syscall* zx_output_clock = Add("zx_output_clock", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_output_clock->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto result = zx_output_clock->PointerArgument<zx_clock_t>(SyscallType::kClock);
+    // Inputs
+    zx_output_clock->Input<zx_handle_t>("handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    // Outputs
+    zx_output_clock->Output<zx_clock_t>(ZX_OK, "result", std::make_unique<ArgumentAccess<zx_clock_t>>(result));
+  }
+
+  {
+    Syscall* zx_output_duration = Add("zx_output_duration", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_output_duration->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto result = zx_output_duration->PointerArgument<zx_duration_t>(SyscallType::kDuration);
+    // Inputs
+    zx_output_duration->Input<zx_handle_t>("handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    // Outputs
+    zx_output_duration->Output<zx_duration_t>(ZX_OK, "result", std::make_unique<ArgumentAccess<zx_duration_t>>(result));
+  }
+
+  {
+    Syscall* zx_output_koid = Add("zx_output_koid", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_output_koid->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto result = zx_output_koid->PointerArgument<zx_koid_t>(SyscallType::kKoid);
+    // Inputs
+    zx_output_koid->Input<zx_handle_t>("handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    // Outputs
+    zx_output_koid->Output<zx_koid_t>(ZX_OK, "result", std::make_unique<ArgumentAccess<zx_koid_t>>(result));
+  }
+
+  {
+    Syscall* zx_output_paddr = Add("zx_output_paddr", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_output_paddr->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto result = zx_output_paddr->PointerArgument<zx_paddr_t>(SyscallType::kPaddr);
+    // Inputs
+    zx_output_paddr->Input<zx_handle_t>("handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    // Outputs
+    zx_output_paddr->Output<zx_paddr_t>(ZX_OK, "result", std::make_unique<ArgumentAccess<zx_paddr_t>>(result));
+  }
+
+  {
+    Syscall* zx_output_rights = Add("zx_output_rights", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_output_rights->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto result = zx_output_rights->PointerArgument<zx_rights_t>(SyscallType::kRights);
+    // Inputs
+    zx_output_rights->Input<zx_handle_t>("handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    // Outputs
+    zx_output_rights->Output<zx_rights_t>(ZX_OK, "result", std::make_unique<ArgumentAccess<zx_rights_t>>(result));
+  }
+
+  {
+    Syscall* zx_output_signals = Add("zx_output_signals", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_output_signals->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto result = zx_output_signals->PointerArgument<zx_signals_t>(SyscallType::kSignals);
+    // Inputs
+    zx_output_signals->Input<zx_handle_t>("handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    // Outputs
+    zx_output_signals->Output<zx_signals_t>(ZX_OK, "result", std::make_unique<ArgumentAccess<zx_signals_t>>(result));
+  }
+
+  {
+    Syscall* zx_output_time = Add("zx_output_time", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_output_time->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto result = zx_output_time->PointerArgument<zx_time_t>(SyscallType::kTime);
+    // Inputs
+    zx_output_time->Input<zx_handle_t>("handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    // Outputs
+    zx_output_time->Output<zx_time_t>(ZX_OK, "result", std::make_unique<ArgumentAccess<zx_time_t>>(result));
+  }
+
+  {
+    Syscall* zx_output_vaddr = Add("zx_output_vaddr", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_output_vaddr->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto result = zx_output_vaddr->PointerArgument<zx_vaddr_t>(SyscallType::kVaddr);
+    // Inputs
+    zx_output_vaddr->Input<zx_handle_t>("handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    // Outputs
+    zx_output_vaddr->Output<zx_vaddr_t>(ZX_OK, "result", std::make_unique<ArgumentAccess<zx_vaddr_t>>(result));
+  }
+
+  {
+    Syscall* zx_output_vm_option = Add("zx_output_vm_option", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_output_vm_option->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto result = zx_output_vm_option->PointerArgument<zx_vm_option_t>(SyscallType::kVmOption);
+    // Inputs
+    zx_output_vm_option->Input<zx_handle_t>("handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    // Outputs
+    zx_output_vm_option->Output<zx_vm_option_t>(ZX_OK, "result", std::make_unique<ArgumentAccess<zx_vm_option_t>>(result));
+  }
+
+  {
+    Syscall* zx_output_struct = Add("zx_output_struct", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_output_struct->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto result = zx_output_struct->PointerArgument<zx_channel_call_args>(SyscallType::kStruct);
+    // Inputs
+    zx_output_struct->Input<zx_handle_t>("handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    // Outputs
+  }
+
+  {
+    Syscall* zx_output_buffer = Add("zx_output_buffer", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_output_buffer->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto data = zx_output_buffer->PointerArgument<uint8_t>(SyscallType::kUint8);
+    auto size = zx_output_buffer->Argument<size_t>(SyscallType::kSize);
+    auto actual = zx_output_buffer->PointerArgument<size_t>(SyscallType::kSize);
+    // Inputs
+    zx_output_buffer->Input<zx_handle_t>("handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_output_buffer->InputBuffer<uint8_t>("data", std::make_unique<ArgumentAccess<uint8_t>>(data), std::make_unique<ArgumentAccess<size_t>>(size));
+    // Outputs
+  }
+
+  {
+    Syscall* zx_return_void = Add("zx_return_void", SyscallReturnType::kVoid);
+    // Arguments
+    auto handle = zx_return_void->Argument<zx_handle_t>(SyscallType::kHandle);
+    // Inputs
+    zx_return_void->Input<zx_handle_t>("handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+  }
+
+  {
+    Syscall* zx_return_status = Add("zx_return_status", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_return_status->Argument<zx_handle_t>(SyscallType::kHandle);
+    // Inputs
+    zx_return_status->Input<zx_handle_t>("handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+  }
+
+  {
+    Syscall* zx_return_ticks = Add("zx_return_ticks", SyscallReturnType::kTicks);
+    // Arguments
+    auto handle = zx_return_ticks->Argument<zx_handle_t>(SyscallType::kHandle);
+    // Inputs
+    zx_return_ticks->Input<zx_handle_t>("handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+  }
+
+  {
+    Syscall* zx_return_time = Add("zx_return_time", SyscallReturnType::kTime);
+    // Arguments
+    auto handle = zx_return_time->Argument<zx_handle_t>(SyscallType::kHandle);
+    // Inputs
+    zx_return_time->Input<zx_handle_t>("handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+  }
+
+  {
+    Syscall* zx_return_uint32 = Add("zx_return_uint32", SyscallReturnType::kUint32);
+    // Arguments
+    auto handle = zx_return_uint32->Argument<zx_handle_t>(SyscallType::kHandle);
+    // Inputs
+    zx_return_uint32->Input<zx_handle_t>("handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+  }
+
+  {
+    Syscall* zx_return_uint64 = Add("zx_return_uint64", SyscallReturnType::kUint64);
+    // Arguments
+    auto handle = zx_return_uint64->Argument<zx_handle_t>(SyscallType::kHandle);
+    // Inputs
+    zx_return_uint64->Input<zx_handle_t>("handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+  }
+}
+
+}  // namespace fidlcat

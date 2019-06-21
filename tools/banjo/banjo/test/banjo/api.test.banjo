@@ -1,0 +1,66 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library banjo.examples.api;
+
+using zx;
+
+protocol Api {
+    bool(handle handle, bool data) -> (zx.status status);
+    int8(handle handle, int8 data) -> (zx.status status);
+    int16(handle handle, int16 data) -> (zx.status status);
+    int32(handle handle, int32 data) -> (zx.status status);
+    int64(handle handle, int64 data) -> (zx.status status);
+    uint8(handle handle, uint8 data) -> (zx.status status);
+    uint16(handle handle, uint16 data) -> (zx.status status);
+    uint32(handle handle, uint32 data) -> (zx.status status);
+    uint64(handle handle, uint64 data) -> (zx.status status);
+    float32(handle handle, float32 data) -> (zx.status status);
+    float64(handle handle, float64 data) -> (zx.status status);
+    clock(handle handle, zx.clock data) -> (zx.status status);
+    duration(handle handle, zx.duration data) -> (zx.status status);
+    koid(handle handle, zx.koid data) -> (zx.status status);
+    paddr(handle handle, zx.paddr data) -> (zx.status status);
+    rights(handle handle, zx.rights data) -> (zx.status status);
+    signals(handle handle, zx.signals data) -> (zx.status status);
+    time(handle handle, zx.time data) -> (zx.status status);
+    vaddr(handle handle, zx.vaddr data) -> (zx.status status);
+    vm_option(handle handle, zx.vm_option data) -> (zx.status status);
+    struct(handle handle, array<zx_channel_call_args_t>:1 args) ->
+        (zx.status status);
+    buffer(handle handle, array<voidptr>:size data, usize size) ->
+        (zx.status status);
+
+    output_bool(handle handle) -> (zx.status status, bool result);
+    output_int8(handle handle) -> (zx.status status, int8 result);
+    output_int16(handle handle) -> (zx.status status, int16 result);
+    output_int32(handle handle) -> (zx.status status, int32 result);
+    output_int64(handle handle) -> (zx.status status, int64 result);
+    output_uint8(handle handle) -> (zx.status status, uint8 result);
+    output_uint16(handle handle) -> (zx.status status, uint16 result);
+    output_uint32(handle handle) -> (zx.status status, uint32 result);
+    output_uint64(handle handle) -> (zx.status status, uint64 result);
+    output_float32(handle handle) -> (zx.status status, float32 result);
+    output_float64(handle handle) -> (zx.status status, float64 result);
+    output_clock(handle handle) -> (zx.status status, zx.clock result);
+    output_duration(handle handle) -> (zx.status status, zx.duration result);
+    output_koid(handle handle) -> (zx.status status, zx.koid result);
+    output_paddr(handle handle) -> (zx.status status, zx.paddr result);
+    output_rights(handle handle) -> (zx.status status, zx.rights result);
+    output_signals(handle handle) -> (zx.status status, zx.signals result);
+    output_time(handle handle) -> (zx.status status, zx.time result);
+    output_vaddr(handle handle) -> (zx.status status, zx.vaddr result);
+    output_vm_option(handle handle) -> (zx.status status, zx.vm_option result);
+    output_struct(handle handle) ->
+        (zx.status status, array<zx_channel_call_args>:1 result);
+    output_buffer(handle handle, array<voidptr>:size data, usize size) ->
+        (zx.status status, usize actual);
+
+    return_void(handle handle) -> ();
+    return_status(handle handle) -> (zx.status status);
+    return_ticks(handle handle) -> (zx.ticks result);
+    return_time(handle handle) -> (zx.time resukt);
+    return_uint32(handle handle) -> (uint32 result);
+    return_uint64(handle handle) -> (uint64 result);
+};
