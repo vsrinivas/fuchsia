@@ -11,14 +11,15 @@ use packet::{Buf, MtuError, ParseBuffer, Serializer};
 use specialize_ip_macro::specialize_ip_address;
 use zerocopy::{AsBytes, FromBytes, Unaligned};
 
-use crate::device::arp::{ArpDevice, ArpHardwareType, ArpState};
+use crate::device::arp::{self, ArpDevice, ArpHardwareType, ArpState};
 use crate::device::{ndp, ndp::NdpState};
 use crate::device::{DeviceId, FrameDestination};
 use crate::ip::{AddrSubnet, Ip, IpAddr, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
-use crate::types::{BroadcastAddress, MulticastAddress, UnicastAddress};
+use crate::types::{BroadcastAddress, MulticastAddr, MulticastAddress, UnicastAddress};
 use crate::wire::arp::peek_arp_types;
 use crate::wire::ethernet::{EthernetFrame, EthernetFrameBuilder};
 use crate::{Context, EventDispatcher, StackState};
+use std::ops::Deref;
 
 /// A media access control (MAC) address.
 #[derive(Copy, Clone, Eq, PartialEq, Debug, FromBytes, AsBytes, Unaligned)]
@@ -224,23 +225,19 @@ pub(crate) fn send_ip_frame<D: EventDispatcher, A: IpAddress, S: Serializer>(
     let state = get_device_state_mut(ctx.state_mut(), device_id);
     let (local_mac, mtu) = (state.mac, state.mtu);
 
-    #[ipv4addr]
-    let dst_mac = {
-        if let Some(dst_mac) = crate::device::arp::lookup::<_, _, EthernetArpDevice>(
-            ctx, device_id, local_mac, local_addr,
-        ) {
-            Ok(dst_mac)
-        } else {
-            Err(IpAddr::V4(local_addr))
-        }
-    };
-
-    #[ipv6addr]
-    let dst_mac = {
-        if let Some(dst_mac) = ndp::lookup::<_, EthernetNdpDevice>(ctx, device_id, local_addr) {
-            Ok(dst_mac)
-        } else {
-            Err(IpAddr::V6(local_addr))
+    let dst_mac = match MulticastAddr::new(local_addr) {
+        Some(multicast) => Ok(Mac::from(&multicast)),
+        None => {
+            #[ipv4addr]
+            {
+                arp::lookup::<_, _, EthernetArpDevice>(ctx, device_id, local_mac, local_addr)
+                    .ok_or(IpAddr::V4(local_addr))
+            }
+            #[ipv6addr]
+            {
+                ndp::lookup::<_, EthernetNdpDevice>(ctx, device_id, local_addr)
+                    .ok_or(IpAddr::V6(local_addr))
+            }
         }
     };
 
@@ -272,6 +269,41 @@ pub(crate) fn send_ip_frame<D: EventDispatcher, A: IpAddress, S: Serializer>(
     }
 
     Ok(())
+}
+
+impl<'a, A: IpAddress> From<&'a MulticastAddr<A>> for Mac {
+    fn from(addr: &'a MulticastAddr<A>) -> Mac {
+        #[specialize_ip_address]
+        fn map_multicast_address<A: IpAddress>(a: &A) -> Mac {
+            // Please refer to RFC7042 for details. especially,
+            // https://tools.ietf.org/html/rfc7042#section-2.1.1
+            // for mapping IPv4 multicast addresses, and
+            // https://tools.ietf.org/html/rfc7042#section-2.3.1
+            // for mapping IPv6 multicast addresses
+            let ip_bytes = a.bytes();
+            let mut mac_bytes = [0; 6];
+            #[ipv4addr]
+            {
+                mac_bytes[0] = 0x01;
+                mac_bytes[1] = 0x00;
+                mac_bytes[2] = 0x5e;
+                mac_bytes[3] = ip_bytes[1] & 0x7f;
+                mac_bytes[4] = ip_bytes[2];
+                mac_bytes[5] = ip_bytes[3];
+            }
+            #[ipv6addr]
+            {
+                mac_bytes[0] = 0x33;
+                mac_bytes[1] = 0x33;
+                mac_bytes[2] = ip_bytes[12];
+                mac_bytes[3] = ip_bytes[13];
+                mac_bytes[4] = ip_bytes[14];
+                mac_bytes[5] = ip_bytes[15];
+            }
+            Mac::new(mac_bytes)
+        }
+        map_multicast_address(addr.deref())
+    }
 }
 
 /// Receive an Ethernet frame from the network.
@@ -714,5 +746,28 @@ mod tests {
         assert_eq!(0, state.add_pending_frame(ip, vec![255]).unwrap()[0]);
         assert_eq!(1, state.add_pending_frame(ip, vec![255]).unwrap()[0]);
         assert_eq!(2, state.add_pending_frame(ip, vec![255]).unwrap()[0]);
+    }
+
+    #[test]
+    fn test_map_multicast_ip_to_ethernet_mac() {
+        let ipv4 = Ipv4Addr::new([224, 1, 1, 1]);
+        let mac = Mac::from(&MulticastAddr::new(ipv4).unwrap());
+        assert_eq!(mac, Mac::new([0x01, 0x00, 0x5e, 0x1, 0x1, 0x1]));
+        let ipv4 = Ipv4Addr::new([224, 129, 1, 1]);
+        let mac = Mac::from(&MulticastAddr::new(ipv4).unwrap());
+        assert_eq!(mac, Mac::new([0x01, 0x00, 0x5e, 0x1, 0x1, 0x1]));
+        let ipv4 = Ipv4Addr::new([225, 1, 1, 1]);
+        let mac = Mac::from(&MulticastAddr::new(ipv4).unwrap());
+        assert_eq!(mac, Mac::new([0x01, 0x00, 0x5e, 0x1, 0x1, 0x1]));
+
+        let ipv6 = Ipv6Addr::new([0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3]);
+        let mac = Mac::from(&MulticastAddr::new(ipv6).unwrap());
+        assert_eq!(mac, Mac::new([0x33, 0x33, 0, 0, 0, 3]));
+        let ipv6 = Ipv6Addr::new([0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 3]);
+        let mac = Mac::from(&MulticastAddr::new(ipv6).unwrap());
+        assert_eq!(mac, Mac::new([0x33, 0x33, 0, 0, 0, 3]));
+        let ipv6 = Ipv6Addr::new([0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 3]);
+        let mac = Mac::from(&MulticastAddr::new(ipv6).unwrap());
+        assert_eq!(mac, Mac::new([0x33, 0x33, 1, 0, 0, 3]));
     }
 }

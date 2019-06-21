@@ -121,7 +121,7 @@ impl<A: MulticastAddress> MulticastAddr<A> {
     ///
     /// `new` returns `None` if `addr` is not a multicast address according to
     /// [`MulticastAddr::is_multicast`].
-    fn new(addr: A) -> Option<MulticastAddr<A>> {
+    pub(crate) fn new(addr: A) -> Option<MulticastAddr<A>> {
         if !addr.is_multicast() {
             return None;
         }
