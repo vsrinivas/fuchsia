@@ -131,7 +131,7 @@ TEST_F(RollSumSplitTest, ReversingPermutation) {
   RollSumSplit r1(min, max);
   RollSumSplit r2(min, max, reversing_permutation);
   for (size_t i = 0; i < 256; i++) {
-    fxl::StringView value = GetValue(max + 1);
+    std::string value = GetValue(max + 1);
     auto f1 = r1.Feed(value, nullptr);
     auto f2 = r2.Feed(value, nullptr);
     EXPECT_TRUE((f1 != f2) || (f1 == max) || (f1 == min));
@@ -144,7 +144,7 @@ TEST_F(RollSumSplitTest, ZeroesPermutation) {
   const size_t max = 8 * 1024;
   RollSumSplit r2(min, max, zeroes_permutation);
   for (size_t i = 0; i < 256; i++) {
-    fxl::StringView value = GetValue(max + 1);
+    std::string value = GetValue(max + 1);
     auto f2 = r2.Feed(value, nullptr);
     EXPECT_TRUE(f2 == max);
   }
