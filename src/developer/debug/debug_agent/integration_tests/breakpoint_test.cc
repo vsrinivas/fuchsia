@@ -80,18 +80,22 @@ class BreakpointStreamBackend : public MockStreamBackend {
     loop_->QuitNow();
   }
 
-  // Records the exception given from the debug agent.
-  void HandleNotifyException(debug_ipc::NotifyException exception) override {
-    exception_ = std::move(exception);
-    loop_->QuitNow();
-  }
-
   void HandleNotifyThreadStarting(debug_ipc::NotifyThread thread) override {
     thread_notification_ = std::move(thread);
     loop_->QuitNow();
   }
+
+  // Records the exception given from the debug agent.
+  void HandleNotifyException(debug_ipc::NotifyException exception) override {
+    exception_ = std::move(exception);
+    ASSERT_FALSE(exception_hit_);
+    exception_hit_ = true;
+    loop_->QuitNow();
+  }
+
   void HandleNotifyThreadExiting(debug_ipc::NotifyThread thread) override {
     thread_notification_ = std::move(thread);
+    ASSERT_TRUE(exception_hit_);
     loop_->QuitNow();
   }
 
@@ -100,11 +104,16 @@ class BreakpointStreamBackend : public MockStreamBackend {
   uint64_t so_test_base_addr_ = 0;
   debug_ipc::NotifyException exception_ = {};
   debug_ipc::NotifyThread thread_notification_ = {};
+
+  bool exception_hit_ = false;
 };
 
 }  // namespace
 
 TEST(BreakpointIntegration, SWBreakpoint) {
+  // Uncomment for debugging the test.
+  //debug_ipc::SetDebugMode(true);
+
   // We attempt to load the pre-made .so.
   SoWrapper so_wrapper;
   ASSERT_TRUE(so_wrapper.Init(kTestSo)) << "Could not load so " << kTestSo;
@@ -151,6 +160,8 @@ TEST(BreakpointIntegration, SWBreakpoint) {
     // We should have found the correct module by now.
     ASSERT_NE(mock_stream_backend.so_test_base_addr(), 0u);
 
+    DEBUG_LOG(Test) << "Modules found. Adding breakpoint.";
+
     // We get the offset of the loaded function within the process space.
     uint64_t module_base = mock_stream_backend.so_test_base_addr();
     uint64_t module_function = module_base + symbol_offset;
@@ -168,6 +179,8 @@ TEST(BreakpointIntegration, SWBreakpoint) {
     debug_ipc::AddOrChangeBreakpointReply breakpoint_reply;
     remote_api->OnAddOrChangeBreakpoint(breakpoint_request, &breakpoint_reply);
     ASSERT_EQ(breakpoint_reply.status, ZX_OK);
+
+    DEBUG_LOG(Test) << "Resuming thread.";
 
     // Resume the process now that the breakpoint is installed.
     remote_api->OnResume(resume_request, &resume_reply);

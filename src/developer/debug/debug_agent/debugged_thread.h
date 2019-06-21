@@ -5,7 +5,9 @@
 #ifndef SRC_DEVELOPER_DEBUG_DEBUG_AGENT_DEBUGGED_THREAD_H_
 #define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_DEBUGGED_THREAD_H_
 
+#include <lib/zx/exception.h>
 #include <lib/zx/thread.h>
+#include <zircon/syscalls/exception.h>
 
 #include "src/developer/debug/ipc/protocol.h"
 #include "src/lib/fxl/macros.h"
@@ -62,7 +64,8 @@ class DebuggedThread {
   // it won't in in this state. The |starting| flag indicates that this is
   // a thread discovered via a debug notification.
   DebuggedThread(DebuggedProcess* process, zx::thread thread,
-                 zx_koid_t thread_koid, ThreadCreationOption option);
+                 zx_koid_t thread_koid, zx::exception exception,
+                 ThreadCreationOption option);
   virtual ~DebuggedThread();
 
   const DebuggedProcess* process() const { return process_; }
@@ -70,11 +73,16 @@ class DebuggedThread {
   const zx::thread& thread() const { return thread_; }
   zx_koid_t koid() const { return koid_; }
 
-  void OnException(uint32_t type);
+  void OnException(zx::exception exception_token,
+                   zx_exception_info_t exception_info);
 
   // Resumes execution of the thread. The thread should currently be in a
   // stopped state. If it's not stopped, this will be ignored.
   void Resume(const debug_ipc::ResumeRequest& request);
+
+  // Resume the thread from an exception.
+  // If |exception_token_| is not valid, this will no-op.
+  void ResumeFromException();
 
   // Pauses execution of the thread. Pausing happens asynchronously so the
   // thread will not necessarily have stopped when this returns. Set the
@@ -125,6 +133,9 @@ class DebuggedThread {
 
   ClientState client_state() const { return client_state_; }
   void set_client_state(ClientState cs) { client_state_ = cs; }
+
+  bool suspended() const { return suspend_token_.is_valid(); }
+  bool in_exception() const { return exception_token_.is_valid(); }
 
  private:
   enum class OnStop {
@@ -211,6 +222,7 @@ class DebuggedThread {
   ClientState client_state_ = ClientState::kRunning;
 
   zx::suspend_token suspend_token_;
+  zx::exception exception_token_;
 
   // This can be set in two cases:
   // - When suspended after hitting a breakpoint, this will be the breakpoint

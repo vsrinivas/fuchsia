@@ -34,13 +34,11 @@ zx_status_t DebuggedJob::Init() {
   return loop->WatchJobExceptions(std::move(config), &job_watch_handle_);
 }
 
-void DebuggedJob::OnProcessStarting(zx_koid_t job_koid, zx_koid_t process_koid,
-                                    zx_koid_t thread_koid) {
-  FXL_DCHECK(job_koid == koid_);
-
-  zx::process process = GetProcessFromKoid(process_koid);
+void DebuggedJob::OnProcessStarting(zx::exception exception_token,
+                                    zx_exception_info_t exception_info) {
+  zx::process process = GetProcessFromException(exception_token.get());
   auto proc_name = NameForObject(process);
-  zx::thread initial_thread = ThreadForKoid(process.get(), thread_koid);
+  zx::thread initial_thread = GetThreadFromException(exception_token.get());
 
   // Tools like fx serve will connect every second or so to the target, spamming
   // logging for this with a lot of "/boot/bin/sh" starting.
@@ -78,8 +76,10 @@ void DebuggedJob::OnProcessStarting(zx_koid_t job_koid, zx_koid_t process_koid,
   // notification for the initial thread which it can stop or continue as it
   // desires. Therefore, we can always resume the thread in the "new process"
   // exception.
-  debug_ipc::MessageLoopTarget::Current()->ResumeFromException(
-      thread_koid, initial_thread, 0);
+  //
+  // Technically it's not necessary to reset the handle, but being explicit here
+  // helps readability.
+  exception_token.reset();
 }
 
 void DebuggedJob::SetFilters(std::vector<std::string> filters) {

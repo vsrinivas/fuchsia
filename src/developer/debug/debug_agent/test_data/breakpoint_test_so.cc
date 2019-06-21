@@ -10,7 +10,11 @@
 
 int gWatchpointVariable = 0;
 
-int InsertBreakpointFunction(int c) { return 10 * c; }
+int InsertBreakpointFunction(int c) {
+  printf("Should receive breakpoint!\n");
+  fflush(stdout);
+  return 10 * c;
+}
 
 void AnotherFunctionForKicks() {}
 

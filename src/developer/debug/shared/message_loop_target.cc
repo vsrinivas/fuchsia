@@ -28,14 +28,6 @@ thread_local MessageLoopTarget* current_message_loop = nullptr;
 
 }  // namespace
 
-// Exception ------------------------------------------------------------
-
-struct MessageLoopTarget::Exception {
-  zx_koid_t thread_koid = 0;
-  // Not-owning. Must outlive.
-  async_exception_t* exception_token = nullptr;
-};
-
 // MessageLoopTarget -----------------------------------------------------------
 
 MessageLoopTarget::MessageLoopTarget()
@@ -71,7 +63,7 @@ void MessageLoopTarget::Cleanup() {
   // We need to remove the signal/exception handlers before the message loop
   // goes away.
   signal_handlers_.clear();
-  exception_handlers_.clear();
+  channel_exception_handlers_.clear();
 
   FXL_DCHECK(current_message_loop == this);
   current_message_loop = nullptr;
@@ -107,24 +99,6 @@ zx_status_t MessageLoopTarget::AddSignalHandler(int id, zx_handle_t object,
   return ZX_OK;
 }
 
-zx_status_t MessageLoopTarget::AddExceptionHandler(int id, zx_handle_t object,
-                                                   uint32_t options,
-                                                   WatchInfo* associated_info) {
-  ExceptionHandler handler;
-  zx_status_t status = handler.Init(id, object, options);
-  if (status != ZX_OK)
-    return status;
-
-  // The handler should not be there already.
-  FXL_DCHECK(exception_handlers_.find(handler.handle()) ==
-             exception_handlers_.end());
-
-  associated_info->exception_handler_key = handler.handle();
-  exception_handlers_[handler.handle()] = std::move(handler);
-
-  return ZX_OK;
-}
-
 zx_status_t MessageLoopTarget::AddChannelExceptionHandler(int id,
                                                           zx_handle_t object,
                                                           uint32_t options,
@@ -135,11 +109,11 @@ zx_status_t MessageLoopTarget::AddChannelExceptionHandler(int id,
     return status;
 
   // The handler should not be there already.
-  FXL_DCHECK(exception_channel_handlers_.find(handler.handle()) ==
-             exception_channel_handlers_.end());
+  FXL_DCHECK(channel_exception_handlers_.find(handler.handle()) ==
+             channel_exception_handlers_.end());
 
   info->exception_channel_handler_key = handler.handle();
-  exception_channel_handlers_[handler.handle()] = std::move(handler);
+  channel_exception_handlers_[handler.handle()] = std::move(handler);
 
   return ZX_OK;
 }
@@ -242,8 +216,8 @@ zx_status_t MessageLoopTarget::WatchProcessExceptions(
 
   // Watch all exceptions for the process.
   zx_status_t status;
-  status = AddExceptionHandler(watch_id, config.process_handle,
-                               ZX_EXCEPTION_PORT_DEBUGGER, &info);
+  status = AddChannelExceptionHandler(watch_id, config.process_handle,
+                                      ZX_EXCEPTION_CHANNEL_DEBUGGER, &info);
   if (status != ZX_OK)
     return status;
 
@@ -278,8 +252,8 @@ zx_status_t MessageLoopTarget::WatchJobExceptions(
   }
 
   // Create and track the exception handle.
-  zx_status_t status = AddExceptionHandler(watch_id, config.job_handle,
-                                           ZX_EXCEPTION_PORT_DEBUGGER, &info);
+  zx_status_t status = AddChannelExceptionHandler(
+      watch_id, config.job_handle, ZX_EXCEPTION_CHANNEL_DEBUGGER, &info);
   if (status != ZX_OK)
     return status;
 
@@ -288,18 +262,6 @@ zx_status_t MessageLoopTarget::WatchJobExceptions(
   watches_[watch_id] = info;
   *out = WatchHandle(this, watch_id);
   return ZX_OK;
-}
-
-zx_status_t MessageLoopTarget::ResumeFromException(zx_koid_t thread_koid,
-                                                   zx::thread& thread,
-                                                   uint32_t options) {
-  auto it = thread_exception_map_.find(thread_koid);
-  FXL_DCHECK(it != thread_exception_map_.end());
-  zx_status_t res = async_resume_from_exception(async_get_default_dispatcher(),
-                                                it->second.exception_token,
-                                                thread.get(), options);
-  thread_exception_map_.erase(thread_koid);
-  return res;
 }
 
 bool MessageLoopTarget::CheckAndProcessPendingTasks() {
@@ -312,71 +274,8 @@ bool MessageLoopTarget::CheckAndProcessPendingTasks() {
   return false;
 }
 
-void MessageLoopTarget::HandleException(const ExceptionHandler& handler,
-                                        zx_port_packet_t packet) {
-  WatchInfo* watch_info = nullptr;
-  {
-    // Some event being watched.
-    std::lock_guard<std::mutex> guard(mutex_);
-    auto found = watches_.find(packet.key);
-    if (found == watches_.end()) {
-      // It is possible to get an exception that doesn't have a watch handle.
-      // A case is a race between detaching from a process and getting an
-      // exception on that process.
-      //
-      // The normal process looks like this:
-      //
-      // 1. In order to correctly detach, the debug agent has to resume threads
-      //    from their exceptions. Otherwise that exception will be treated as
-      //    unhandled when the agent detaches and will bubble up.
-      // 2. The agent detaches from the exception port. This means that the
-      //    watch handle is no longer listening.
-      //
-      // It is possible between (1) and (2) to get an exception, which will be
-      // queued in the exception port of the thread. Now, the agent won't read
-      // from the port until *after* it has detached from the exception port.
-      // This means that this new exception is not handled and will be bubbled
-      // up, which is correct as the debug agent stated that it has nothing more
-      // to do with the process.
-      //
-      // Now the problem is that zircon does not clean stale packets from a
-      // queue, meaning that the next time the message loop waits on the port,
-      // it will find a stale packet. In this context a stale packet means one
-      // that does not have a watch handle, as it was deleted in (1). Hence we
-      // get into this case and we simply log it for posperity.
-      //
-      // TODO(ZX-2623): zircon is going to clean up stale packets from ports
-      //                in the future. When that is done, this case should not
-      //                happen and we should go back into asserting it.
-      FXL_LOG(WARNING) << "Got stale port packet. This is most probably due to "
-                          "a race between detaching from a process and an "
-                          "exception ocurring.";
-      return;
-    }
-    watch_info = &found->second;
-  }
-
-  // Dispatch the watch callback outside of the lock. This depends on the
-  // stability of the WatchInfo pointer in the map (std::map is stable across
-  // updates) and the watch not getting unregistered from another thread
-  // asynchronously (which the API requires and is enforced by a DCHECK in
-  // the StopWatching impl).
-  switch (watch_info->type) {
-    case WatchType::kProcessExceptions:
-      OnProcessException(handler, *watch_info, packet);
-      break;
-    case WatchType::kJobExceptions:
-      OnJobException(handler, *watch_info, packet);
-      break;
-    case WatchType::kTask:
-    case WatchType::kFdio:
-    case WatchType::kSocket:
-      FXL_NOTREACHED();
-  }
-}
-
 void MessageLoopTarget::HandleChannelException(
-    const ChannelExceptionHandler& handler, zx::exception&& exception,
+    const ChannelExceptionHandler& handler, zx::exception exception,
     zx_exception_info_t exception_info) {
   WatchInfo* watch_info = nullptr;
   {
@@ -392,6 +291,8 @@ void MessageLoopTarget::HandleChannelException(
     return;
   }
 
+  FXL_DCHECK(watch_info->exception_watcher);
+
   // We should only receive exceptions here.
   switch (watch_info->type) {
     case WatchType::kTask:
@@ -400,13 +301,14 @@ void MessageLoopTarget::HandleChannelException(
       FXL_NOTREACHED() << "Should only receive exceptions.";
       return;
     case WatchType::kProcessExceptions:
+      OnProcessException(*watch_info, std::move(exception), exception_info);
+      return;
     case WatchType::kJobExceptions:
-      break;
+      OnJobException(*watch_info, std::move(exception), exception_info);
+      return;
   }
 
-  FXL_DCHECK(watch_info->exception_watcher);
-  watch_info->exception_watcher->OnException(std::move(exception),
-                                             exception_info);
+  FXL_NOTREACHED();
 }
 
 uint64_t MessageLoopTarget::GetMonotonicNowNS() const {
@@ -486,12 +388,12 @@ void MessageLoopTarget::StopWatching(int id) {
 
   switch (info.type) {
     case WatchType::kProcessExceptions: {
-      RemoveExceptionHandler(&info);
+      RemoveChannelExceptionHandler(&info);
       RemoveSignalHandler(&info);
       break;
     }
     case WatchType::kJobExceptions: {
-      RemoveExceptionHandler(&info);
+      RemoveChannelExceptionHandler(&info);
       break;
     }
     case WatchType::kTask:
@@ -535,72 +437,39 @@ void MessageLoopTarget::RemoveSignalHandler(WatchInfo* info) {
   info->signal_handler_key = nullptr;
 }
 
-void MessageLoopTarget::RemoveExceptionHandler(WatchInfo* info) {
-  const async_exception_t* key = info->exception_handler_key;
-  FXL_DCHECK(key);
-
-  size_t erase_count = exception_handlers_.erase(key);
-  FXL_DCHECK(erase_count == 1u);
-
-  info->exception_handler_key = nullptr;
-}
-
 void MessageLoopTarget::RemoveChannelExceptionHandler(WatchInfo* info) {
   const async_wait_t* key = info->exception_channel_handler_key;
   FXL_DCHECK(key);
 
-  size_t erase_count = exception_channel_handlers_.erase(key);
+  size_t erase_count = channel_exception_handlers_.erase(key);
   FXL_DCHECK(erase_count == 1u);
 
   info->exception_channel_handler_key = nullptr;
 }
 
-void MessageLoopTarget::AddException(const ExceptionHandler& handler,
-                                     zx_koid_t thread_koid) {
-  // In the case of a "thread exiting" exception, it's possible the thread is
-  // already in an exception state. In this case, we want to overwrite the
-  // previous exception (which is now moot because the thread is gone). This
-  // can happen if an external thread or process kills the thread (e.g.
-  // Control-C) while the debugger is handling an exception (e.g. stopped on
-  // a breakpoint).
-  Exception exception;
-  exception.thread_koid = thread_koid;
-  exception.exception_token = const_cast<async_exception_t*>(handler.handle());
-  thread_exception_map_[thread_koid] = std::move(exception);
-}
-
-void MessageLoopTarget::OnProcessException(const ExceptionHandler& handler,
-                                           const WatchInfo& info,
-                                           const zx_port_packet_t& packet) {
-  if (ZX_PKT_IS_EXCEPTION(packet.type)) {
-    // All debug exceptions.
-    switch (packet.type) {
-      case ZX_EXCP_THREAD_STARTING:
-        AddException(handler, packet.exception.tid);
-        info.exception_watcher->OnThreadStarting(info.task_koid,
-                                                 packet.exception.tid);
-        break;
-      case ZX_EXCP_THREAD_EXITING:
-        AddException(handler, packet.exception.tid);
-        info.exception_watcher->OnThreadExiting(info.task_koid,
-                                                packet.exception.tid);
-        break;
-      case ZX_EXCP_GENERAL:
-      case ZX_EXCP_FATAL_PAGE_FAULT:
-      case ZX_EXCP_UNDEFINED_INSTRUCTION:
-      case ZX_EXCP_SW_BREAKPOINT:
-      case ZX_EXCP_HW_BREAKPOINT:
-      case ZX_EXCP_UNALIGNED_ACCESS:
-      case ZX_EXCP_POLICY_ERROR:
-        AddException(handler, packet.exception.tid);
-        info.exception_watcher->OnException(info.task_koid,
-                                            packet.exception.tid, packet.type);
-        break;
-      default:
-        FXL_NOTREACHED();
-    }
-  } else {
-    FXL_NOTREACHED();
+void MessageLoopTarget::OnProcessException(const WatchInfo& info,
+                                           zx::exception exception,
+                                           zx_exception_info_t exception_info) {
+  switch (exception_info.type) {
+    case ZX_EXCP_THREAD_STARTING:
+      info.exception_watcher->OnThreadStarting(std::move(exception),
+                                               exception_info);
+      break;
+    case ZX_EXCP_THREAD_EXITING:
+      info.exception_watcher->OnThreadExiting(std::move(exception),
+                                              exception_info);
+      break;
+    case ZX_EXCP_GENERAL:
+    case ZX_EXCP_FATAL_PAGE_FAULT:
+    case ZX_EXCP_UNDEFINED_INSTRUCTION:
+    case ZX_EXCP_SW_BREAKPOINT:
+    case ZX_EXCP_HW_BREAKPOINT:
+    case ZX_EXCP_UNALIGNED_ACCESS:
+    case ZX_EXCP_POLICY_ERROR:
+      info.exception_watcher->OnException(std::move(exception), exception_info);
+      break;
+    default:
+      FXL_NOTREACHED();
   }
 }
 
@@ -610,22 +479,18 @@ void MessageLoopTarget::OnProcessTerminated(const WatchInfo& info,
   info.exception_watcher->OnProcessTerminated(info.task_koid);
 }
 
-void MessageLoopTarget::OnJobException(const ExceptionHandler& handler,
-                                       const WatchInfo& info,
-                                       const zx_port_packet_t& packet) {
-  if (ZX_PKT_IS_EXCEPTION(packet.type)) {
-    // All debug exceptions.
-    switch (packet.type) {
-      case ZX_EXCP_PROCESS_STARTING:
-        AddException(handler, packet.exception.tid);
-        info.exception_watcher->OnProcessStarting(
-            info.task_koid, packet.exception.pid, packet.exception.tid);
-        return;
-      default:
-        break;
-    }
+void MessageLoopTarget::OnJobException(const WatchInfo& info,
+                                       zx::exception exception,
+                                       zx_exception_info_t exception_info) {
+  // Currently job exceptions only track process starting exceptions.
+  // TODO(ZX-4391): Debugger job exception ports should receive all exceptions.
+  if (exception_info.type != ZX_EXCP_PROCESS_STARTING) {
+    FXL_NOTREACHED();
+    return;
   }
-  FXL_NOTREACHED();
+
+  info.exception_watcher->OnProcessStarting(std::move(exception),
+                                            exception_info);
 }
 
 void MessageLoopTarget::OnSocketSignal(int watch_id, const WatchInfo& info,

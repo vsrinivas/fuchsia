@@ -15,7 +15,8 @@ MockProcess::~MockProcess() = default;
 
 void MockProcess::AddThread(zx_koid_t koid) {
   threads_[koid] = std::make_unique<DebuggedThread>(
-      this, zx::thread(), koid, ThreadCreationOption::kSuspendedKeepSuspended);
+      this, zx::thread(), koid, zx::exception(),
+      ThreadCreationOption::kSuspendedKeepSuspended);
 }
 
 DebuggedThread* MockProcess::GetThread(zx_koid_t koid) const {

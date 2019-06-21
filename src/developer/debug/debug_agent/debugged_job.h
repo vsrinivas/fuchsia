@@ -59,8 +59,8 @@ class DebuggedJob : public debug_ipc::ZirconExceptionWatcher {
 
  private:
   // ZirconExceptionWatcher implementation.
-  void OnProcessStarting(zx_koid_t job_koid, zx_koid_t process_koid,
-                         zx_koid_t thread_koid) override;
+  void OnProcessStarting(zx::exception exception_token,
+                         zx_exception_info_t exception_info) override;
 
   ProcessStartHandler* handler_;  // Non-owning.
   zx_koid_t koid_;

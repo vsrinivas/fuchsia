@@ -9,6 +9,9 @@
 #include <lib/zx/thread.h>
 #include <zircon/syscalls/object.h>
 
+#include "src/developer/debug/shared/zx_status.h"
+#include "src/lib/fxl/logging.h"
+
 namespace debug_agent {
 
 namespace {
@@ -91,6 +94,22 @@ std::vector<zx::process> GetChildProcesses(zx_handle_t job) {
 
 std::vector<zx::thread> GetChildThreads(zx_handle_t process) {
   return GetChildObjects<zx::thread>(process, ZX_INFO_PROCESS_THREADS);
+}
+
+zx::process GetProcessFromException(zx_handle_t exception) {
+  zx_handle_t process_handle = ZX_HANDLE_INVALID;
+  zx_status_t status = zx_exception_get_process(exception, &process_handle);
+  FXL_DCHECK(status == ZX_OK) << "Got: " << debug_ipc::ZxStatusToString(status);
+
+  return zx::process(process_handle);
+}
+
+zx::thread GetThreadFromException(zx_handle_t exception) {
+  zx_handle_t thread_handle = ZX_HANDLE_INVALID;
+  zx_status_t status = zx_exception_get_thread(exception, &thread_handle);
+  FXL_DCHECK(status == ZX_OK) << "Got: " << debug_ipc::ZxStatusToString(status);
+
+  return zx::thread(thread_handle);
 }
 
 }  // namespace debug_agent

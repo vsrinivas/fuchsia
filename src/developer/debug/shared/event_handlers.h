@@ -53,28 +53,6 @@ class SignalHandler {
   std::unique_ptr<async_wait_t> handle_;
 };
 
-class ExceptionHandler {
- public:
-  static void Handler(async_dispatcher_t*, async_exception_t*,
-                      zx_status_t status, const zx_port_packet_t* packet);
-
-  ExceptionHandler();
-  ~ExceptionHandler();
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(ExceptionHandler);
-  ExceptionHandler(ExceptionHandler&&);
-  ExceptionHandler& operator=(ExceptionHandler&&);
-
-  zx_status_t Init(int id, zx_handle_t object, uint32_t options);
-
-  int watch_info_id() const { return watch_info_id_; }
-  const async_exception_t* handle() const { return handle_.get(); }
-
- private:
-  int watch_info_id_ = -1;
-  std::unique_ptr<async_exception_t> handle_;
-};
-
 // This is the exception handler that uses exception token instead of the
 // deprecated exception ports.
 class ChannelExceptionHandler {
@@ -88,7 +66,7 @@ class ChannelExceptionHandler {
   ChannelExceptionHandler(ChannelExceptionHandler&&);
   ChannelExceptionHandler& operator=(ChannelExceptionHandler&&);
 
-  zx_status_t Init(int id, zx_handle_t object, zx_signals_t signals);
+  zx_status_t Init(int id, zx_handle_t object, uint32_t options);
 
   int watch_info_id() const { return watch_info_id_; }
   const async_wait_t* handle() const { return handle_.get(); }

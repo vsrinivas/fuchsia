@@ -112,7 +112,7 @@ class FakeProcess : public DebuggedProcess {
   DebuggedThread* CreateThread(zx_koid_t tid) {
     if (!thread_) {
       thread_ = std::make_unique<DebuggedThread>(
-          this, zx::thread(), tid,
+          this, zx::thread(), tid, zx::exception(),
           ThreadCreationOption::kSuspendedKeepSuspended);
     }
     return thread_.get();
@@ -245,7 +245,7 @@ TEST(DebuggedThread, FillThreadRecord) {
 
   auto thread = std::make_unique<DebuggedThread>(
       &fake_process, std::move(current_thread), current_thread_koid,
-      ThreadCreationOption::kRunningKeepRunning);
+      zx::exception(), ThreadCreationOption::kRunningKeepRunning);
 
   // Request no stack since this thread should be running.
   debug_ipc::ThreadRecord record;

@@ -139,11 +139,13 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher,
 
  private:
   // ZirconExceptionWatcher implementation.
+  void OnThreadStarting(zx::exception exception_token,
+                        zx_exception_info_t exception_info) override;
   void OnProcessTerminated(zx_koid_t process_koid) override;
-  void OnThreadStarting(zx_koid_t process_koid, zx_koid_t thread_koid) override;
-  void OnThreadExiting(zx_koid_t process_koid, zx_koid_t thread_koid) override;
-  void OnException(zx_koid_t process_koid, zx_koid_t thread_koid,
-                   uint32_t type) override;
+  void OnThreadExiting(zx::exception exception_token,
+                       zx_exception_info_t exception_info) override;
+  void OnException(zx::exception exception_token,
+                   zx_exception_info_t exception_info) override;
 
   void OnStdout(bool close);
   void OnStderr(bool close);

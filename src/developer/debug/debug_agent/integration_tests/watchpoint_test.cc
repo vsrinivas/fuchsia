@@ -87,7 +87,7 @@ TEST(Watchpoint, DefaultCase) {
 TEST(Watchpoint, DISABLED_DefaultCase) {
 #endif
   // Activate this is the test is giving you trouble.
-  /* debug_ipc::SetDebugMode(true); */
+  // debug_ipc::SetDebugMode(true);
 
   static constexpr const char kTestSo[] = "debug_agent_test_so.so";
   SoWrapper so_wrapper;

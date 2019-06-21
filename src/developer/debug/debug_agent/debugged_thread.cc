@@ -5,6 +5,7 @@
 #include "src/developer/debug/debug_agent/debugged_thread.h"
 
 #include <inttypes.h>
+#include <zircon/status.h>
 #include <zircon/syscalls/debug.h>
 #include <zircon/syscalls/exception.h>
 
@@ -71,11 +72,13 @@ const char* ExceptionTypeToString(uint32_t type) {
 }  // namespace
 
 DebuggedThread::DebuggedThread(DebuggedProcess* process, zx::thread thread,
-                               zx_koid_t koid, ThreadCreationOption option)
+                               zx_koid_t koid, zx::exception exception,
+                               ThreadCreationOption option)
     : debug_agent_(process->debug_agent()),
       process_(process),
       thread_(std::move(thread)),
-      koid_(koid) {
+      koid_(koid),
+      exception_token_(std::move(exception)) {
   switch (option) {
     case ThreadCreationOption::kRunningKeepRunning:
       // do nothing
@@ -84,22 +87,24 @@ DebuggedThread::DebuggedThread(DebuggedProcess* process, zx::thread thread,
       state_ = State::kException;
       break;
     case ThreadCreationOption::kSuspendedShouldRun:
-      debug_ipc::MessageLoopTarget::Current()->ResumeFromException(koid,
-                                                                   thread_, 0);
+      ResumeFromException();
       break;
   }
 }
 
 DebuggedThread::~DebuggedThread() = default;
 
-void DebuggedThread::OnException(uint32_t type) {
+void DebuggedThread::OnException(zx::exception exception_token,
+                                 zx_exception_info_t exception_info) {
   state_ = State::kException;
+  exception_token_ = std::move(exception_token);
 
   debug_ipc::NotifyException exception;
-  exception.type = arch::ArchProvider::Get().DecodeExceptionType(*this, type);
+  exception.type =
+      arch::ArchProvider::Get().DecodeExceptionType(*this, exception_info.type);
 
-  DEBUG_LOG(Thread) << ThreadPreamble(this) << "Received exception "
-                    << ExceptionTypeToString(type) << ", interpreted as "
+  DEBUG_LOG(Thread) << ThreadPreamble(this) << "Exception: "
+                    << ExceptionTypeToString(exception_info.type) << " -> "
                     << debug_ipc::NotifyException::TypeToString(exception.type);
 
   zx_thread_state_general_regs regs;
@@ -125,6 +130,11 @@ void DebuggedThread::OnException(uint32_t type) {
 
   FXL_NOTREACHED() << "Invalid exception notification type: "
                    << static_cast<uint32_t>(exception.type);
+
+  // The exception was unhandled, so we close it so that the system can run its
+  // course. The destructor would've done it anyway, but being explicit helps
+  // readability.
+  exception_token_.reset();
 }
 
 void DebuggedThread::HandleSingleStep(debug_ipc::NotifyException* exception,
@@ -244,6 +254,18 @@ void DebuggedThread::Resume(const debug_ipc::ResumeRequest& request) {
   step_in_range_end_ = request.range_end;
 
   ResumeForRunMode();
+}
+
+void DebuggedThread::ResumeFromException() {
+  // We need to mark that this token is correctly handled before closing it.
+  if (exception_token_.is_valid()) {
+    DEBUG_LOG(Thread) << "Resuming from exception.";
+    uint32_t state = ZX_EXCEPTION_STATE_HANDLED;
+    zx_status_t status = exception_token_.set_property(ZX_PROP_EXCEPTION_STATE,
+                                                       &state, sizeof(state));
+    FXL_DCHECK(status == ZX_OK) << "Got: " << zx_status_get_string(status);
+  }
+  exception_token_.reset();
 }
 
 std::optional<DebuggedThread::State> DebuggedThread::Suspend(bool synchronous) {
@@ -504,6 +526,8 @@ DebuggedThread::OnStop DebuggedThread::UpdateForSoftwareBreakpoint(
       }
 
       if (!process_->dl_debug_addr() && process_->RegisterDebugState()) {
+        DEBUG_LOG(Thread) << ThreadPreamble(this)
+                          << "Found ld.so breakpoint. Sending modules.";
         // This breakpoint was the explicit breakpoint ld.so executes to
         // notify us that the loader is ready. Send the current module list
         // and silently keep this thread stopped. The client will explicitly
@@ -657,11 +681,7 @@ void DebuggedThread::ResumeForRunMode() {
     }
     state_ = State::kRunning;
 
-    zx_status_t status =
-        debug_ipc::MessageLoopTarget::Current()->ResumeFromException(
-            koid_, thread_, 0);
-    FXL_DCHECK(status == ZX_OK)
-        << "Expected ZX_OK, got " << debug_ipc::ZxStatusToString(status);
+    ResumeFromException();
   } else if (state_ == State::kSuspended) {
     // A breakpoint should only be current when it was hit which will be
     // caused by an exception.
