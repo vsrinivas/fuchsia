@@ -1,0 +1,85 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//garnet/lib/vulkan/tests/vkprimer/common/common.gni")
+
+declare_args() {
+  vulkan_sdk = ""
+}
+
+executable("vkprimer") {
+  sources = common_sources
+
+  include_dirs = [ "//garnet/lib/vulkan/tests/vkprimer/common" ]
+
+  if (is_fuchsia) {
+    include_dirs += [ "//garnet/lib/vulkan/tests/vkprimer/fuchsia" ]
+
+    deps = [
+      "//garnet/public/lib/vulkan",
+      "//src/lib/fxl",
+    ]
+
+    sources += [
+      "fuchsia/vulkan_surface.cc",
+      "fuchsia/vulkan_surface.h",
+    ]
+  } else {
+    defines = [ "USE_GLFW=1" ]
+
+    include_dirs += [ "//garnet/lib/vulkan/tests/vkprimer/glfw" ]
+
+    sources += [
+      "glfw/vulkan_surface.cc",
+      "glfw/vulkan_surface.h",
+    ]
+
+    deps = [
+      ":spirv_copy",
+      "//third_party/glfw",
+    ]
+
+    if (is_linux) {
+      configs += [ "//src/ui/lib/escher:vulkan_config($host_toolchain)" ]
+
+      libs = [
+        "X11",
+        "Xinerama",
+        "Xcursor",
+        "Xrandr",
+      ]
+    } else if (is_mac) {
+      include_dirs += [ "${vulkan_sdk}/include" ]
+
+      lib_dirs = [ "${vulkan_sdk}/lib" ]
+
+      libs = [ "vulkan" ]
+    }
+  }
+
+  data = [
+    "common/shaders/frag.spv",
+    "common/shaders/vert.spv",
+  ]
+}
+
+copy("spirv_copy") {
+  sources = [
+    "common/shaders/frag.spv",
+    "common/shaders/vert.spv",
+  ]
+
+  outputs = [
+    "$target_out_dir/{{source_file_part}}",
+  ]
+}
+
+#
+# Linux / Mac Build
+#
+group("vkprimer_glfw") {
+  deps = [
+    ":vkprimer($host_toolchain)",
+  ]
+}

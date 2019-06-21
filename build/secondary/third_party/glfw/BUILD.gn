@@ -70,5 +70,5 @@ static_library("glfw") {
       "src/xkb_unicode.c",
     ]
   }
-  configs += [ ":glfw_config" ]
+  public_configs = [ ":glfw_config" ]
 }

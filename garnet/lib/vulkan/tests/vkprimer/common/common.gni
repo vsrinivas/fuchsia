@@ -1,0 +1,46 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+common_path = "//garnet/lib/vulkan/tests/vkprimer/common/"
+
+common_files = [
+  "main.cc",
+  "surface_phys_device_params.h",
+  "utils.cc",
+  "utils.h",
+  "vulkan_command_buffers.cc",
+  "vulkan_command_buffers.h",
+  "vulkan_command_pool.cc",
+  "vulkan_command_pool.h",
+  "vulkan_fixed_functions.cc",
+  "vulkan_fixed_functions.h",
+  "vulkan_framebuffer.cc",
+  "vulkan_framebuffer.h",
+  "vulkan_graphics_pipeline.cc",
+  "vulkan_graphics_pipeline.h",
+  "vulkan_instance.cc",
+  "vulkan_instance.h",
+  "vulkan_layer.cc",
+  "vulkan_layer.h",
+  "vulkan_logical_device.cc",
+  "vulkan_logical_device.h",
+  "vulkan_physical_device.cc",
+  "vulkan_physical_device.h",
+  "vulkan_queue.cc",
+  "vulkan_queue.h",
+  "vulkan_render_pass.cc",
+  "vulkan_render_pass.h",
+  "vulkan_shader.cc",
+  "vulkan_shader.h",
+  "vulkan_swapchain.cc",
+  "vulkan_swapchain.h",
+  "vulkan_sync.cc",
+  "vulkan_sync.h",
+]
+
+common_sources = []
+
+foreach(file, common_files) {
+  common_sources += [ "${common_path}${file}" ]
+}
