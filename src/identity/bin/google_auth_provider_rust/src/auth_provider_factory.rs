@@ -2,12 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::auth_provider::GoogleAuthProvider;
+use crate::auth_provider::{self, GoogleAuthProvider};
+use crate::web::StandaloneWebFrame;
+use failure;
+use fidl::endpoints::{create_proxy, ClientEnd};
 use fidl::Error;
 use fidl_fuchsia_auth::{
     AuthProviderFactoryRequest, AuthProviderFactoryRequestStream, AuthProviderStatus,
 };
+use fidl_fuchsia_web::{ContextMarker, ContextProviderMarker, CreateContextParams, FrameMarker};
 use fuchsia_async as fasync;
+use fuchsia_component::client::connect_to_service;
+use fuchsia_zircon as zx;
 
 use futures::prelude::*;
 use log::error;
@@ -17,13 +23,15 @@ use std::sync::Arc;
 /// returning `AuthProvider` channels for a `GoogleAuthProvider`.
 pub struct GoogleAuthProviderFactory {
     /// The GoogleAuthProvider vended through `GetAuthProvider` requests.
-    google_auth_provider: Arc<GoogleAuthProvider>,
+    google_auth_provider: Arc<GoogleAuthProvider<WebFrameSupplier>>,
 }
 
 impl GoogleAuthProviderFactory {
     /// Create a new `GoogleAuthProviderFactory`
     pub fn new() -> Self {
-        GoogleAuthProviderFactory { google_auth_provider: Arc::new(GoogleAuthProvider::new()) }
+        GoogleAuthProviderFactory {
+            google_auth_provider: Arc::new(GoogleAuthProvider::new(WebFrameSupplier::new())),
+        }
     }
 
     /// Handle requests passed to the supplied stream.
@@ -50,5 +58,42 @@ impl GoogleAuthProviderFactory {
                 .unwrap_or_else(|e| error!("Error handling AuthProvider channel {:?}", e));
         });
         responder.send(AuthProviderStatus::Ok)
+    }
+}
+
+/// Struct that provides new web frames by connecting to a ContextProvider service.
+struct WebFrameSupplier;
+
+impl WebFrameSupplier {
+    /// Create a new `WebFrameSupplier`
+    fn new() -> Self {
+        WebFrameSupplier {}
+    }
+}
+
+impl auth_provider::WebFrameSupplier for WebFrameSupplier {
+    fn new_standalone_frame(&self) -> Result<StandaloneWebFrame, failure::Error> {
+        let context_provider = connect_to_service::<ContextProviderMarker>()?;
+        let (context_proxy, context_server_end) = create_proxy::<ContextMarker>()?;
+
+        // Get a handle to the incoming service directory to pass to the web browser.
+        // TODO(satsukiu): create a method in fidl::endpoints to connect to ServiceFs instead.
+        let (client, server) = zx::Channel::create()?;
+        fdio::service_connect("/svc", server)?;
+        let service_directory = ClientEnd::new(client);
+
+        context_provider.create(
+            CreateContextParams {
+                service_directory: Some(service_directory),
+                data_directory: None,
+                user_agent_product: None,
+                user_agent_version: None,
+            },
+            context_server_end,
+        )?;
+
+        let (frame_proxy, frame_server_end) = create_proxy::<FrameMarker>()?;
+        context_proxy.create_frame(frame_server_end)?;
+        Ok(StandaloneWebFrame::new(context_proxy, frame_proxy))
     }
 }

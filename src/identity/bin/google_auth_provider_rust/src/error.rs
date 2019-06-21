@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::{Error, Fail};
+use failure::{format_err, Error, Fail};
 use fidl_fuchsia_auth::AuthProviderStatus;
+use fidl_fuchsia_web::NavigationControllerError;
 
 /// An extension trait to simplify conversion of results based on general errors to
 /// AuthProviderErrors.
@@ -47,6 +48,17 @@ impl AuthProviderError {
     }
 }
 
+impl From<NavigationControllerError> for AuthProviderError {
+    fn from(navigation_error: NavigationControllerError) -> Self {
+        AuthProviderError {
+            status: match navigation_error {
+                NavigationControllerError::InvalidUrl => AuthProviderStatus::InternalError,
+            },
+            cause: Some(format_err!("Web browser navigation error: {:?}", navigation_error)),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -77,5 +89,12 @@ mod tests {
             format!("{:?}", auth_provider_error.cause.unwrap()),
             format!("{:?}", format_err!("cause"))
         );
+    }
+
+    #[test]
+    fn test_from_navigation_controller_error() {
+        let auth_provider_error = AuthProviderError::from(NavigationControllerError::InvalidUrl);
+        assert_eq!(auth_provider_error.status, AuthProviderStatus::InternalError);
+        assert!(auth_provider_error.cause.is_some());
     }
 }

@@ -12,7 +12,9 @@
 
 mod auth_provider;
 mod auth_provider_factory;
+mod constants;
 mod error;
+mod web;
 
 use crate::auth_provider_factory::GoogleAuthProviderFactory;
 use failure::{Error, ResultExt};

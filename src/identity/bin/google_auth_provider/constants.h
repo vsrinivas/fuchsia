@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// The values in this file should be kept in sync with the values in
+// src/identity/bin/google_auth_provider_rust/src/constants.rs
+
 #include <initializer_list>
 
 namespace google_auth_provider {
