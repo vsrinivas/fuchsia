@@ -111,8 +111,10 @@ impl GattClientFacade {
 
     pub async fn gattc_discover_characteristics(&self) -> Result<Vec<Characteristic>, Error> {
         let tag = "GattClientFacade::gattc_discover_characteristics";
-        let discover_characteristics =
-            self.inner.read().active_proxy.as_ref().unwrap().discover_characteristics();
+        let discover_characteristics = match &self.inner.read().active_proxy {
+            Some(proxy) => proxy.discover_characteristics(),
+            None => fx_err_and_bail!(&with_line!(tag), "Central proxy not available."),
+        };
 
         let (status, chrcs) =
             await!(discover_characteristics).map_err(|_| BTError::new("Failed to send message"))?;
@@ -130,12 +132,11 @@ impl GattClientFacade {
         write_value: Vec<u8>,
     ) -> Result<(), Error> {
         let tag = "GattClientFacade::gattc_write_char_by_id";
-        let write_characteristic =
-            self.inner.read().active_proxy.as_ref().unwrap().write_characteristic(
-                id,
-                offset,
-                &mut write_value.into_iter(),
-            );
+
+        let write_characteristic = match &self.inner.read().active_proxy {
+            Some(proxy) => proxy.write_characteristic(id, offset, &mut write_value.into_iter()),
+            None => fx_err_and_bail!(&with_line!(tag), "Central proxy not available."),
+        };
 
         let status =
             await!(write_characteristic).map_err(|_| BTError::new("Failed to send message"))?;
@@ -154,19 +155,23 @@ impl GattClientFacade {
         id: u64,
         write_value: Vec<u8>,
     ) -> Result<(), Error> {
-        self.inner
-            .read()
-            .active_proxy
-            .as_ref()
-            .unwrap()
-            .write_characteristic_without_response(id, &mut write_value.into_iter())
-            .map_err(|_| BTError::new("Failed to send message").into())
+        let tag = "GattClientFacade::gattc_write_char_by_id_without_response";
+
+        match &self.inner.read().active_proxy {
+            Some(proxy) => proxy
+                .write_characteristic_without_response(id, &mut write_value.into_iter())
+                .map_err(|_| BTError::new("Failed to send message").into()),
+            None => fx_err_and_bail!(&with_line!(tag), "Central proxy not available."),
+        }
     }
 
     pub async fn gattc_read_char_by_id(&self, id: u64) -> Result<Vec<u8>, Error> {
         let tag = "GattClientFacade::gattc_read_char_by_id";
-        let read_characteristic =
-            self.inner.read().active_proxy.as_ref().unwrap().read_characteristic(id);
+
+        let read_characteristic = match &self.inner.read().active_proxy {
+            Some(proxy) => proxy.read_characteristic(id),
+            None => fx_err_and_bail!(&with_line!(tag), "Central proxy not available."),
+        };
 
         let (status, value) =
             await!(read_characteristic).map_err(|_| BTError::new("Failed to send message"))?;
@@ -187,13 +192,11 @@ impl GattClientFacade {
         max_bytes: u16,
     ) -> Result<Vec<u8>, Error> {
         let tag = "GattClientFacade::gattc_read_long_char_by_id";
-        let read_long_characteristic = self
-            .inner
-            .read()
-            .active_proxy
-            .as_ref()
-            .unwrap()
-            .read_long_characteristic(id, offset, max_bytes);
+
+        let read_long_characteristic = match &self.inner.read().active_proxy {
+            Some(proxy) => proxy.read_long_characteristic(id, offset, max_bytes),
+            None => fx_err_and_bail!(&with_line!(tag), "Central proxy not available."),
+        };
 
         let (status, value) =
             await!(read_long_characteristic).map_err(|_| BTError::new("Failed to send message"))?;
@@ -209,7 +212,10 @@ impl GattClientFacade {
 
     pub async fn gattc_read_desc_by_id(&self, id: u64) -> Result<Vec<u8>, Error> {
         let tag = "GattClientFacade::gattc_read_desc_by_id";
-        let read_descriptor = self.inner.read().active_proxy.as_ref().unwrap().read_descriptor(id);
+        let read_descriptor = match &self.inner.read().active_proxy {
+            Some(proxy) => proxy.read_descriptor(id),
+            None => fx_err_and_bail!(&with_line!(tag), "Central proxy not available."),
+        };
 
         let (status, value) =
             await!(read_descriptor).map_err(|_| BTError::new("Failed to send message"))?;
@@ -230,13 +236,10 @@ impl GattClientFacade {
         max_bytes: u16,
     ) -> Result<Vec<u8>, Error> {
         let tag = "GattClientFacade::gattc_read_long_desc_by_id";
-        let read_long_descriptor = self
-            .inner
-            .read()
-            .active_proxy
-            .as_ref()
-            .unwrap()
-            .read_long_descriptor(id, offset, max_bytes);
+        let read_long_descriptor = match &self.inner.read().active_proxy {
+            Some(proxy) => proxy.read_long_descriptor(id, offset, max_bytes),
+            None => fx_err_and_bail!(&with_line!(tag), "Central proxy not available."),
+        };
 
         let (status, value) =
             await!(read_long_descriptor).map_err(|_| BTError::new("Failed to send message"))?;
@@ -252,13 +255,11 @@ impl GattClientFacade {
 
     pub async fn gattc_write_desc_by_id(&self, id: u64, write_value: Vec<u8>) -> Result<(), Error> {
         let tag = "GattClientFacade::gattc_write_desc_by_id";
-        let write_descriptor = self
-            .inner
-            .read()
-            .active_proxy
-            .as_ref()
-            .unwrap()
-            .write_descriptor(id, &mut write_value.into_iter());
+
+        let write_descriptor = match &self.inner.read().active_proxy {
+            Some(proxy) => proxy.write_descriptor(id, &mut write_value.into_iter()),
+            None => fx_err_and_bail!(&with_line!(tag), "Central proxy not available."),
+        };
 
         let status =
             await!(write_descriptor).map_err(|_| BTError::new("Failed to send message"))?;
@@ -278,8 +279,11 @@ impl GattClientFacade {
         value: bool,
     ) -> Result<(), Error> {
         let tag = "GattClientFacade::gattc_toggle_notify_characteristic";
-        let notify_characteristic =
-            self.inner.read().active_proxy.as_ref().unwrap().notify_characteristic(id, value);
+
+        let notify_characteristic = match &self.inner.read().active_proxy {
+            Some(proxy) => proxy.notify_characteristic(id, value),
+            None => fx_err_and_bail!(&with_line!(tag), "Central proxy not available."),
+        };
 
         let status =
             await!(notify_characteristic).map_err(|_| BTError::new("Failed to send message"))?;
