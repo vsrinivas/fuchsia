@@ -40,12 +40,6 @@ bool IsNumericBaseType(int base_type) {
          base_type == BaseType::kBaseTypeUTF;
 }
 
-bool IsRustEnum(const Collection* coll) {
-  // Currently Rust enums (which have a variant part according to the enum
-  // value and no data members) are the only use of the variants we have.
-  return !!coll->variant_part() && coll->data_members().empty();
-}
-
 // Appends the given byte to the destination, escaping as per C rules.
 void AppendEscapedChar(uint8_t ch, std::string* dest) {
   if (ch == '\'' || ch == '\"' || ch == '\\') {
@@ -254,7 +248,8 @@ void FormatCollection(FormatNode* node, const Collection* coll,
   }
 
   // Special-case Rust enums which are encoded as a type of collection.
-  if (IsRustEnum(coll)) {
+  Collection::SpecialType special_type = coll->GetSpecialType();
+  if (special_type == Collection::kRustEnum) {
     FormatRustEnum(node, coll, options, std::move(eval_context));
     return;
   }

@@ -9,6 +9,7 @@
 #include <string>
 #include <vector>
 
+#include "src/developer/debug/zxdb/symbols/dwarf_lang.h"
 #include "src/developer/debug/zxdb/symbols/dwarf_tag.h"
 #include "src/developer/debug/zxdb/symbols/identifier.h"
 #include "src/developer/debug/zxdb/symbols/lazy_symbol.h"
@@ -128,6 +129,13 @@ class Symbol : public fxl::RefCountedThreadSafe<Symbol> {
   // on failure.
   const CompileUnit* GetCompileUnit() const;
 
+  // Computes and returns the language associated with this symbol. This will
+  // be kNone if the language is not known or unset.
+  //
+  // This requires decoding the compile unit so is not super efficient to
+  // get.
+  DwarfLang GetLanguage() const;
+
   // Manual RTTI.
   virtual const ArrayType* AsArrayType() const;
   virtual const BaseType* AsBaseType() const;
@@ -244,6 +252,7 @@ class Symbol : public fxl::RefCountedThreadSafe<Symbol> {
   // Lazily computed full symbol name and identifier name.
   mutable std::optional<std::string> full_name_;
   mutable std::optional<Identifier> identifier_;
+  mutable std::optional<DwarfLang> language_;
 };
 
 }  // namespace zxdb

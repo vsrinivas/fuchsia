@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/developer/debug/zxdb/symbols/symbol.h"
+
+#include "src/developer/debug/zxdb/symbols/compile_unit.h"
 #include "src/developer/debug/zxdb/symbols/symbol_utils.h"
 #include "src/developer/debug/zxdb/symbols/type.h"
 
@@ -45,12 +48,19 @@ const CompileUnit* Symbol::GetCompileUnit() const {
   // case we would add a new function to the symbol factory to get the unit for
   // a LazySymbol.
   const Symbol* cur = this;
-  do {
+  for (;;) {
     if (const CompileUnit* unit = cur->AsCompileUnit())
       return unit;
+    if (!cur->parent())
+      return nullptr;
     cur = cur->parent().Get();
-  } while (cur);
-  return nullptr;  // Got to top with no unit found.
+  }
+}
+
+DwarfLang Symbol::GetLanguage() const {
+  if (const CompileUnit* unit = GetCompileUnit())
+    return unit->language();
+  return DwarfLang::kNone;
 }
 
 const ArrayType* Symbol::AsArrayType() const { return nullptr; }

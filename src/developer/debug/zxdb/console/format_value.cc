@@ -85,12 +85,6 @@ bool IsNumericBaseType(int base_type) {
          base_type == BaseType::kBaseTypeUTF;
 }
 
-bool IsRustEnum(const Collection* coll) {
-  // Currently Rust enums (which have a variant part according to the enum
-  // value and no data members) are the only use of the variants we have.
-  return !!coll->variant_part() && coll->data_members().empty();
-}
-
 // Returns true if the given symbol points to a character type that would
 // appear in a pretty-printed string.
 bool IsCharacterType(fxl::RefPtr<EvalContext>& eval_context, const Type* type) {
@@ -367,7 +361,8 @@ void FormatValue::FormatCollection(fxl::RefPtr<EvalContext> eval_context,
     return;
   }
 
-  if (IsRustEnum(coll)) {
+  Collection::SpecialType special_type = coll->GetSpecialType();
+  if (special_type == Collection::kRustEnum) {
     FormatRustEnum(eval_context, coll, value, options, output_key);
     return;
   }

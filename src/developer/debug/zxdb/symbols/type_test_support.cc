@@ -6,6 +6,7 @@
 
 #include "src/developer/debug/zxdb/symbols/base_type.h"
 #include "src/developer/debug/zxdb/symbols/collection.h"
+#include "src/developer/debug/zxdb/symbols/compile_unit.h"
 #include "src/developer/debug/zxdb/symbols/data_member.h"
 #include "src/developer/debug/zxdb/symbols/inherited_from.h"
 #include "src/developer/debug/zxdb/symbols/variant.h"
@@ -81,6 +82,12 @@ fxl::RefPtr<Collection> MakeDerivedClassPair(
   return derived;
 }
 
+fxl::RefPtr<CompileUnit> MakeRustUnit() {
+  auto unit = fxl::MakeRefCounted<CompileUnit>();
+  unit->set_language(DwarfLang::kRust);
+  return unit;
+}
+
 fxl::RefPtr<Variant> MakeRustVariant(
     const std::string& name, std::optional<uint64_t> discriminant,
     const std::vector<fxl::RefPtr<DataMember>>& members) {
@@ -107,8 +114,10 @@ fxl::RefPtr<Variant> MakeRustVariant(
   auto variant_data =
       fxl::MakeRefCounted<DataMember>(name, LazySymbol(variant_member_type), 0);
 
-  return fxl::MakeRefCounted<Variant>(
+  auto var = fxl::MakeRefCounted<Variant>(
       discriminant, std::vector<LazySymbol>{LazySymbol(variant_data)});
+  var->set_parent(LazySymbol(MakeRustUnit()));
+  return var;
 }
 
 fxl::RefPtr<Collection> MakeRustEnum(
@@ -139,6 +148,7 @@ fxl::RefPtr<Collection> MakeRustEnum(
       fxl::MakeRefCounted<Collection>(DwarfTag::kStructureType, name);
   collection->set_variant_part(LazySymbol(variant_part));
   collection->set_byte_size(byte_size);
+  collection->set_parent(LazySymbol(MakeRustUnit()));
 
   return collection;
 }
@@ -176,8 +186,10 @@ fxl::RefPtr<Collection> MakeTestRustEnum() {
                       std::vector<fxl::RefPtr<DataMember>>{x_data, y_data});
 
   // Structure that contains the variants. It has a variant_part and no data.
-  return MakeRustEnum("RustEnum", discriminant,
+  auto rust_enum = MakeRustEnum("RustEnum", discriminant,
                       {none_variant, scalar_variant, point_variant});
+  rust_enum->set_parent(LazySymbol(MakeRustUnit()));
+  return rust_enum;
 }
 
 }  // namespace zxdb

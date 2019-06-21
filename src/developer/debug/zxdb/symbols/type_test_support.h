@@ -13,6 +13,7 @@ namespace zxdb {
 
 class BaseType;
 class Collection;
+class CompileUnit;
 class Type;
 
 // Used for declarations that have a name and a type.
@@ -49,6 +50,10 @@ fxl::RefPtr<Collection> MakeDerivedClassPair(
     std::initializer_list<NameAndType> base_members,
     const std::string& derived_name,
     std::initializer_list<NameAndType> derived_members);
+
+// Setting this compile unit as the parent of a symbol will mark it as having
+// the Rust language.
+fxl::RefPtr<CompileUnit> MakeRustUnit();
 
 // Makes a Rust variant that can be put into a VariantPart. Rust Variants
 // have a single data member that is a struct containing the members passed in
