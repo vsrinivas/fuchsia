@@ -4,6 +4,8 @@
 
 #include "skip-block.h"
 
+#include <optional>
+
 #include <ddktl/protocol/badblock.h>
 #include <ddktl/protocol/nand.h>
 #include <fbl/vector.h>
@@ -41,6 +43,15 @@ public:
         *out = parent;
         Context* context = reinterpret_cast<Context*>(parent);
         context->dev = reinterpret_cast<nand::SkipBlockDevice*>(args->ctx);
+
+        if (args && args->ops) {
+            if (args->ops->message) {
+                zx_status_t status;
+                if ((status = fidl_.SetMessageOp(args->ctx, args->ops->message)) < 0) {
+                    return status;
+                }
+            }
+        }
         return ZX_OK;
     }
     zx_status_t DeviceGetProtocol(const zx_device_t* device, uint32_t proto_id, void* protocol) override {
@@ -196,6 +207,15 @@ protected:
         ddk_.DeviceRemove(parent());
     }
 
+    void Write(nand::ReadWriteOperation op, bool* bad_block_grown, zx_status_t expected = ZX_OK) {
+        if (!client_) {
+            client_.emplace(std::move(ddk().FidlClient()));
+        }
+        zx_status_t status;
+        ASSERT_OK(client_->Write(std::move(op), &status, bad_block_grown));
+        ASSERT_EQ(status, expected);
+    }
+
     zx_device_t* parent() { return reinterpret_cast<zx_device_t*>(&ctx_); }
     nand::SkipBlockDevice& dev() { return *ctx_.dev; }
     Binder& ddk() { return ddk_; }
@@ -208,6 +228,7 @@ private:
     Binder ddk_;
     FakeNand nand_;
     FakeBadBlock bad_block_;
+    std::optional<::llcpp::fuchsia::hardware::skipblock::SkipBlock::SyncClient> client_;
 };
 
 TEST_F(SkipBlockTest, Create) {
@@ -225,12 +246,12 @@ TEST_F(SkipBlockTest, GrowBadBlock) {
     zx::vmo vmo;
     ASSERT_OK(zx::vmo::create(fbl::round_up(kBlockSize, ZX_PAGE_SIZE), 0, &vmo));
     nand::ReadWriteOperation op = {};
-    op.vmo = vmo.release();
+    op.vmo = std::move(vmo);
     op.block = 5;
     op.block_count = 1;
 
     bool bad_block_grown;
-    ASSERT_OK(dev().Write(op, &bad_block_grown));
+    ASSERT_NO_FATAL_FAILURES(Write(std::move(op), &bad_block_grown));
     ASSERT_TRUE(bad_block_grown);
     ASSERT_EQ(bad_block().grown_bad_blocks().size(), 1);
     ASSERT_EQ(bad_block().grown_bad_blocks()[0], 5);
@@ -254,12 +275,12 @@ TEST_F(SkipBlockTest, GrowMultipleBadBlock) {
     zx::vmo vmo;
     ASSERT_OK(zx::vmo::create(fbl::round_up(kBlockSize, ZX_PAGE_SIZE), 0, &vmo));
     nand::ReadWriteOperation op = {};
-    op.vmo = vmo.release();
+    op.vmo = std::move(vmo);
     op.block = 5;
     op.block_count = 1;
 
     bool bad_block_grown;
-    ASSERT_OK(dev().Write(op, &bad_block_grown));
+    ASSERT_NO_FATAL_FAILURES(Write(std::move(op), &bad_block_grown));
     ASSERT_TRUE(bad_block_grown);
     ASSERT_EQ(bad_block().grown_bad_blocks().size(), 2);
     ASSERT_EQ(bad_block().grown_bad_blocks()[0], 5);
@@ -278,12 +299,12 @@ TEST_F(SkipBlockTest, MappingFailure) {
     zx::vmo vmo;
     ASSERT_OK(zx::vmo::create(fbl::round_up(kBlockSize, ZX_PAGE_SIZE), 0, &vmo));
     nand::ReadWriteOperation op = {};
-    op.vmo = vmo.release();
+    op.vmo = std::move(vmo);
     op.block = 5;
     op.block_count = 1;
 
     bool bad_block_grown;
-    ASSERT_EQ(dev().Write(op, &bad_block_grown), ZX_ERR_INVALID_ARGS);
+    ASSERT_NO_FATAL_FAILURES(Write(std::move(op), &bad_block_grown, ZX_ERR_INVALID_ARGS));
     ASSERT_FALSE(bad_block_grown);
     ASSERT_EQ(bad_block().grown_bad_blocks().size(), 0);
     ASSERT_EQ(nand().last_op(), NAND_OP_WRITE);

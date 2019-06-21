@@ -67,7 +67,7 @@ public:
 
     static Bind* Instance() { return instance_; }
 
-    const zx::channel& FidlClient() { return fidl_.local(); }
+    zx::channel& FidlClient() { return fidl_.local(); }
 
     // Internal fake implementation of ddk functionality.
     virtual zx_status_t DeviceAdd(zx_driver_t* drv, zx_device_t* parent,

@@ -38,7 +38,7 @@ typedef zx_status_t(MessageOp)(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn);
 class FidlMessenger {
 public:
     // Local channel to send FIDL client messages
-    const zx::channel& local() { return local_; }
+    zx::channel& local() { return local_; }
 
     // Set handlers to be called when FIDL message is received
     // Note: Message operation context |op_ctx| and |op| must outlive FidlMessenger

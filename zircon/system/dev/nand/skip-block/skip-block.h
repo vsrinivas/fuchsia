@@ -8,15 +8,15 @@
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/badblock.h>
-#include <ddktl/protocol/nand.h>
 #include <ddktl/protocol/empty-protocol.h>
+#include <ddktl/protocol/nand.h>
 
 #include <fbl/array.h>
 #include <fbl/auto_lock.h>
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
+#include <fuchsia/hardware/skipblock/llcpp/fidl.h>
 #include <lib/operation/nand.h>
-#include <fuchsia/hardware/skipblock/c/fidl.h>
 #include <zircon/thread_annotations.h>
 #include <zircon/types.h>
 
@@ -26,14 +26,15 @@ namespace nand {
 
 using NandOperation = nand::Operation<>;
 
-using PartitionInfo = fuchsia_hardware_skipblock_PartitionInfo;
-using ReadWriteOperation = fuchsia_hardware_skipblock_ReadWriteOperation;
+using ::llcpp::fuchsia::hardware::skipblock::PartitionInfo;
+using ::llcpp::fuchsia::hardware::skipblock::ReadWriteOperation;
 
 class SkipBlockDevice;
 using DeviceType = ddk::Device<SkipBlockDevice, ddk::GetSizable, ddk::Unbindable,
                                ddk::Messageable>;
 
 class SkipBlockDevice : public DeviceType,
+                        public ::llcpp::fuchsia::hardware::skipblock::SkipBlock::Interface,
                         public ddk::EmptyProtocol<ZX_PROTOCOL_SKIP_BLOCK> {
 public:
     // Spawns device node based on parent node.
@@ -48,9 +49,9 @@ public:
     void DdkRelease() { delete this; }
 
     // skip-block fidl implementation.
-    zx_status_t GetPartitionInfo(PartitionInfo* info);
-    zx_status_t Read(const ReadWriteOperation& op);
-    zx_status_t Write(const ReadWriteOperation& op, bool* bad_block_grown);
+    void GetPartitionInfo(GetPartitionInfoCompleter::Sync completer);
+    void Read(ReadWriteOperation op, ReadCompleter::Sync completer);
+    void Write(ReadWriteOperation op, WriteCompleter::Sync completer);
 
 private:
     explicit SkipBlockDevice(zx_device_t* parent, ddk::NandProtocolClient nand,

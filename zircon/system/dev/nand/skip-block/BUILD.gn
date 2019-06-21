@@ -25,7 +25,7 @@ source_set("common") {
     "$zx/system/banjo/ddk.protocol.badblock",
     "$zx/system/banjo/ddk.protocol.nand",
     "$zx/system/dev/lib/operation",
-    "$zx/system/fidl/fuchsia-hardware-skipblock:c",
+    "$zx/system/fidl/fuchsia-hardware-skipblock:llcpp",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",

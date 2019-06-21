@@ -64,9 +64,8 @@ zx_status_t Bind::DeviceAdd(zx_driver_t* drv, zx_device_t* parent,
     }
 
     if (args && args->ops) {
-        const zx_protocol_device_t* ops = reinterpret_cast<const zx_protocol_device_t*>(args->ops);
-        if (ops->message) {
-            if ((status = fidl_.SetMessageOp(args->ctx, ops->message)) < 0) {
+        if (args->ops->message) {
+            if ((status = fidl_.SetMessageOp(args->ctx, args->ops->message)) < 0) {
                 return status;
             }
         }

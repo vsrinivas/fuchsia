@@ -10,7 +10,7 @@
 class DdkTransaction : public fidl::Transaction {
 public:
     DdkTransaction(fidl_txn_t* txn)
-        : txn_(txn), status_called_(false) {}
+        : txn_(txn) {}
 
     ~DdkTransaction() {
         ZX_ASSERT_MSG(status_called_, "DdkTransaction must have it's Status() method used. \
@@ -20,8 +20,8 @@ public:
     /// Status() return the internal state of the DDK transaction. This MUST be called
     /// to bridge the Transaction and DDK dispatcher.
     zx_status_t Status() __WARN_UNUSED_RESULT {
-      status_called_ = true;
-      return reply_;
+        status_called_ = true;
+        return status_;
     }
 
 protected:
@@ -35,11 +35,11 @@ protected:
             .num_handles = static_cast<uint32_t>(msg.handles().size()),
         };
 
-        reply_ = txn_->reply(txn_, &fidl_msg);
+        status_ = txn_->reply(txn_, &fidl_msg);
     }
 
-    void Close(zx_status_t epitaph) final {
-        ZX_ASSERT_MSG(false, "DdkTransaction does not have control of the channel lifetime.\n");
+    void Close(zx_status_t close_status) final {
+        status_ = close_status;
     }
 
     std::unique_ptr<Transaction> TakeOwnership() final {
@@ -48,8 +48,8 @@ protected:
 
 private:
     fidl_txn_t* txn_;
-    zx_status_t reply_;
-    bool status_called_;
+    zx_status_t status_ = ZX_OK;
+    bool status_called_ = false;
 };
 
 #endif // DDK_FIDL_H_

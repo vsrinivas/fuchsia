@@ -13,6 +13,7 @@
 #include <ddk/metadata.h>
 #include <ddk/protocol/badblock.h>
 #include <ddk/protocol/nand.h>
+#include <ddktl/fidl.h>
 
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
@@ -109,7 +110,7 @@ void EraseCompletionCallback(void* cookie, zx_status_t status, nand_operation_t*
         return;
     }
     op->rw.command = NAND_OP_WRITE;
-    op->rw.data_vmo = ctx->op.vmo;
+    op->rw.data_vmo = ctx->op.vmo.get();
     op->rw.oob_vmo = ZX_HANDLE_INVALID;
     op->rw.length = ctx->nand_info->pages_per_block;
     op->rw.offset_nand = ctx->physical_block * ctx->nand_info->pages_per_block;
@@ -117,33 +118,6 @@ void EraseCompletionCallback(void* cookie, zx_status_t status, nand_operation_t*
     ctx->nand->Queue(op, WriteCompletionCallback, cookie);
     return;
 }
-
-// FIDL Message -> SkipBlockDevice translators.
-zx_status_t GetPartitionInfo(void* ctx, fidl_txn_t* txn) {
-    auto* device = reinterpret_cast<SkipBlockDevice*>(ctx);
-    PartitionInfo info;
-    zx_status_t status = device->GetPartitionInfo(&info);
-    return fuchsia_hardware_skipblock_SkipBlockGetPartitionInfo_reply(txn, status, &info);
-}
-
-zx_status_t Read(void* ctx, const ReadWriteOperation* op, fidl_txn_t* txn) {
-    auto* device = reinterpret_cast<SkipBlockDevice*>(ctx);
-    zx_status_t status = device->Read(*op);
-    return fuchsia_hardware_skipblock_SkipBlockRead_reply(txn, status);
-}
-
-zx_status_t Write(void* ctx, const ReadWriteOperation* op, fidl_txn_t* txn) {
-    auto* device = reinterpret_cast<SkipBlockDevice*>(ctx);
-    bool bad_block_grown;
-    zx_status_t status = device->Write(*op, &bad_block_grown);
-    return fuchsia_hardware_skipblock_SkipBlockWrite_reply(txn, status, bad_block_grown);
-}
-
-fuchsia_hardware_skipblock_SkipBlock_ops fidl_ops = {
-    .GetPartitionInfo = GetPartitionInfo,
-    .Read = Read,
-    .Write = Write,
-};
 
 } // namespace
 
@@ -249,24 +223,25 @@ zx_status_t SkipBlockDevice::Bind() {
     return DdkAdd("skip-block");
 }
 
-zx_status_t SkipBlockDevice::GetPartitionInfo(PartitionInfo* info) {
+void SkipBlockDevice::GetPartitionInfo(GetPartitionInfoCompleter::Sync completer) {
     fbl::AutoLock al(&lock_);
 
-    info->block_size_bytes = GetBlockSize();
+    PartitionInfo info;
+    info.block_size_bytes = GetBlockSize();
     uint32_t logical_block_count = UINT32_MAX;
     for (uint32_t copy = 0; copy < copy_count_; copy++) {
         logical_block_count = fbl::min(logical_block_count, block_map_.LogicalBlockCount(copy));
     }
-    info->partition_block_count = logical_block_count;
-    memcpy(info->partition_guid, nand_info_.partition_guid, ZBI_PARTITION_GUID_LEN);
+    info.partition_block_count = logical_block_count;
+    memcpy(info.partition_guid.data(), nand_info_.partition_guid, ZBI_PARTITION_GUID_LEN);
 
-    return ZX_OK;
+    completer.Reply(ZX_OK, info);
 }
 
 zx_status_t SkipBlockDevice::ValidateVmo(const ReadWriteOperation& op) const {
     uint64_t vmo_size;
 
-    zx_status_t status = zx_vmo_get_size(op.vmo, &vmo_size);
+    zx_status_t status = op.vmo.get_size(&vmo_size);
     if (status != ZX_OK) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -276,13 +251,13 @@ zx_status_t SkipBlockDevice::ValidateVmo(const ReadWriteOperation& op) const {
     return ZX_OK;
 }
 
-zx_status_t SkipBlockDevice::Read(const ReadWriteOperation& op) {
+void SkipBlockDevice::Read(ReadWriteOperation op, ReadCompleter::Sync completer) {
     fbl::AutoLock al(&lock_);
 
-    auto vmo = zx::vmo(op.vmo);
     zx_status_t status = ValidateVmo(op);
     if (status != ZX_OK) {
-        return status;
+        completer.Reply(status);
+        return;
     }
 
     // TODO(surajmalhotra): We currently only read from the first copy. Given a
@@ -293,11 +268,12 @@ zx_status_t SkipBlockDevice::Read(const ReadWriteOperation& op) {
     uint32_t physical_block;
     status = block_map_.GetPhysical(kReadCopy, op.block, &physical_block);
     if (status != ZX_OK) {
-        return status;
+        completer.Reply(status);
+        return;
     }
     sync_completion_t completion;
     BlockOperationContext op_context = {
-        .op = op,
+        .op = std::move(op),
         .nand_info = &nand_info_,
         .block_map = &block_map_,
         .nand = &nand_,
@@ -311,7 +287,7 @@ zx_status_t SkipBlockDevice::Read(const ReadWriteOperation& op) {
 
     nand_operation_t* nand_op = nand_op_->operation();
     nand_op->rw.command = NAND_OP_READ;
-    nand_op->rw.data_vmo = op.vmo;
+    nand_op->rw.data_vmo = op.vmo.get();
     nand_op->rw.oob_vmo = ZX_HANDLE_INVALID;
     nand_op->rw.length = nand_info_.pages_per_block;
     nand_op->rw.offset_nand = physical_block * nand_info_.pages_per_block;
@@ -321,30 +297,31 @@ zx_status_t SkipBlockDevice::Read(const ReadWriteOperation& op) {
 
     // Wait on completion.
     sync_completion_wait(&completion, ZX_TIME_INFINITE);
-    return op_context.status;
+    completer.Reply(op_context.status);
 }
 
-zx_status_t SkipBlockDevice::Write(const ReadWriteOperation& op, bool* bad_block_grown) {
+void SkipBlockDevice::Write(ReadWriteOperation op, WriteCompleter::Sync completer) {
     fbl::AutoLock al(&lock_);
 
-    auto vmo = zx::vmo(op.vmo);
+    bool bad_block_grown = false;
     zx_status_t status = ValidateVmo(op);
     if (status != ZX_OK) {
-        return status;
+        completer.Reply(status, bad_block_grown);
+        return;
     }
 
-    *bad_block_grown = false;
     for (uint32_t copy = 0; copy < copy_count_; copy++) {
         for (;;) {
             uint32_t physical_block;
             status = block_map_.GetPhysical(copy, op.block, &physical_block);
             if (status != ZX_OK) {
-                return status;
+                completer.Reply(status, bad_block_grown);
+                return;
             }
 
             sync_completion_t completion;
             BlockOperationContext op_context = {
-                .op = op,
+                .op = std::move(op),
                 .nand_info = &nand_info_,
                 .block_map = &block_map_,
                 .nand = &nand_,
@@ -365,13 +342,15 @@ zx_status_t SkipBlockDevice::Write(const ReadWriteOperation& op, bool* bad_block
 
             // Wait on completion.
             sync_completion_wait(&completion, ZX_TIME_INFINITE);
+            op = std::move(op_context.op);
             if (op_context.mark_bad) {
                 zxlogf(ERROR, "Failed to erase/write block %u, marking bad\n",
                        op_context.physical_block);
                 status = bad_block_.MarkBlockBad(op_context.physical_block);
                 if (status != ZX_OK) {
                     zxlogf(ERROR, "skip-block: Failed to mark block bad\n");
-                    return status;
+                    completer.Reply(status, bad_block_grown);
+                    return;
                 }
                 // Logical to physical mapping has changed, so we need to re-initialize block_map_.
                 fbl::Array<uint32_t> bad_blocks;
@@ -379,16 +358,17 @@ zx_status_t SkipBlockDevice::Write(const ReadWriteOperation& op, bool* bad_block
                 ZX_ASSERT(GetBadBlockList(&bad_blocks) == ZX_OK);
                 block_map_ = LogicalToPhysicalMap(
                     copy_count_, nand_info_.num_blocks, std::move(bad_blocks));
-                *bad_block_grown = true;
+                bad_block_grown = true;
                 continue;
             }
             if (op_context.status != ZX_OK) {
-                return op_context.status;
+                completer.Reply(op_context.status, bad_block_grown);
+                return;
             }
             break;
         }
     }
-    return ZX_OK;
+    completer.Reply(ZX_OK, bad_block_grown);
 }
 
 zx_off_t SkipBlockDevice::DdkGetSize() {
@@ -401,7 +381,9 @@ zx_off_t SkipBlockDevice::DdkGetSize() {
 }
 
 zx_status_t SkipBlockDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
-    return fuchsia_hardware_skipblock_SkipBlock_dispatch(this, txn, msg, &fidl_ops);
+    DdkTransaction transaction(txn);
+    llcpp::fuchsia::hardware::skipblock::SkipBlock::Dispatch(this, msg, &transaction);
+    return transaction.Status();
 }
 
 static constexpr zx_driver_ops_t driver_ops = []() {
@@ -418,4 +400,4 @@ ZIRCON_DRIVER_BEGIN(skip_block, nand::driver_ops, "zircon", "0.1", 2)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_NAND),
     BI_MATCH_IF(EQ, BIND_NAND_CLASS, fuchsia_hardware_nand_Class_BBS),
 ZIRCON_DRIVER_END(skip_block)
-// clang-format on
+    // clang-format on
