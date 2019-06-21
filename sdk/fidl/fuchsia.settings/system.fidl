@@ -1,0 +1,32 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.settings;
+
+/// Settings related to the general system.
+[Discoverable]
+protocol System {
+    /// Gets the current [SystemSettings]. Returns immediately on first call;
+    /// subsequent calls return when the value changes.
+    Watch() -> (SystemSettings settings) error Error;
+
+    /// Changes the login overide to the supplied value.
+    SetLoginOverride(LoginOverride login_override) -> () error Error;
+};
+
+/// Settings related to the general system.
+table SystemSettings {
+    /// If set, indicates a login behavior specified at runtime.
+    1: LoginOverride mode;
+};
+
+/// What preferred login behavior has been set.
+enum LoginOverride {
+    /// No override has been set.
+    NONE = 1;
+    /// Do not require an account and login always as guest.
+    AUTOLOGIN_GUEST = 2;
+    /// Requires a provisioned account through auth provider.
+    AUTH_PROVIDER = 3;
+};

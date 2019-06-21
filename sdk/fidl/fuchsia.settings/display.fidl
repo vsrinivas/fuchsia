@@ -1,0 +1,25 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.settings;
+
+/// Settings related to display
+[Discoverable]
+protocol Display {
+    /// Gets the current [DisplaySettings]. Returns immediately on first call;
+    /// subsequent calls return when the value changes.
+    Watch() -> (DisplaySettings settings) error Error;
+
+    /// Enable or disable automatic adjustment of brightness.
+    SetAutoBrightness(bool auto_brightness) -> () error Error;
+
+    /// Changes the brightness to a value from 0-1.0, with 1.0 representing
+    /// full brightness. Values greater than 1.0 may be added in future.
+    SetBrightness(float32 brightness_value) -> () error Error;
+};
+
+table DisplaySettings {
+    1: bool auto_brightness;
+    2: float32 brightness_value;
+};
