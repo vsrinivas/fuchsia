@@ -5,9 +5,9 @@
 // This target is used for the performance comparison (perfcompare) CQ bots,
 // which compare performance before and after a change.
 //
-// This target runs a subset of benchmarks for the Garnet layer.  It runs a
-// subset of what benchmarks.cc runs.  The reason for running a subset is that
-// the full set of tests currently takes too long and tends to exceed the bot
+// This target runs a subset of the Fuchsia benchmarks.  It runs a subset
+// of what benchmarks.cc runs.  The reason for running a subset is that the
+// full set of tests currently takes too long and tends to exceed the bot
 // timeout.
 
 #include "garnet/testing/benchmarking/benchmarking.h"
@@ -33,7 +33,7 @@ int main(int argc, const char** argv) {
     // Performance tests implemented in the Zircon repo.
     benchmarks_runner.AddLibPerfTestBenchmark(
         fxl::StringPrintf("zircon.perf_test_process%06d", process),
-        "/pkgfs/packages/garnet_benchmarks/0/test/sys/perf-test",
+        "/pkgfs/packages/fuchsia_benchmarks/0/test/sys/perf-test",
         extra_args);
 
     // Performance tests implemented in the Garnet repo (the name

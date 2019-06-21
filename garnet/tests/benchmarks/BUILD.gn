@@ -18,25 +18,12 @@ executable("garnet_benchmarks_bin") {
   ]
 }
 
-executable("garnet_benchmarks_perfcompare_bin") {
-  output_name = "garnet_benchmarks_perfcompare"
-
-  sources = [
-    "benchmarks_perfcompare.cc",
-  ]
-
-  deps = [
-    "//garnet/testing/benchmarking:benchmarking",
-  ]
-}
-
 zircon_extras_manifest("zircon-test-manifest") {
   visibility = [ ":*" ]
   manifest = "tests"
   patterns = [
     "test/fs/fs-bench-test",
     "test/sys/blobfs-bench-test",
-    "test/sys/perf-test",
   ]
 }
 
@@ -45,7 +32,6 @@ package("garnet_benchmarks") {
 
   deps = [
     ":garnet_benchmarks_bin",
-    ":garnet_benchmarks_perfcompare_bin",
     ":zircon-test-manifest",
   ]
 
@@ -61,12 +47,10 @@ package("garnet_benchmarks") {
       name = "garnet_benchmarks"
     },
     {
+      # TODO(PT-175): Remove this when the infra-side config no longer refers
+      # to this script via the garnet_benchmarks package.
       name = rebase_path("benchmarks_perfcompare.sh")
       dest = "benchmarks_perfcompare.sh"
-    },
-    {
-      shell = true
-      name = "garnet_benchmarks_perfcompare"
     },
   ]
 }
