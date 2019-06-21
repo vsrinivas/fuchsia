@@ -171,8 +171,10 @@ public:
 
 class LinearFormats : public ImageFormatSet {
     bool IsSupported(const fuchsia_sysmem_PixelFormat* pixel_format) const override {
-        if (pixel_format->has_format_modifier)
+        if (pixel_format->has_format_modifier &&
+            pixel_format->format_modifier.value != fuchsia_sysmem_FORMAT_MODIFIER_LINEAR) {
             return false;
+        }
         switch (pixel_format->type) {
         case fuchsia_sysmem_PixelFormatType_INVALID:
         case fuchsia_sysmem_PixelFormatType_MJPEG:

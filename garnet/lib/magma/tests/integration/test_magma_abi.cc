@@ -7,6 +7,7 @@
 
 #include "fuchsia/sysmem/cpp/fidl.h"
 #include "magma.h"
+#include "magma_common_defs.h"
 #include "magma_sysmem.h"
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
@@ -276,7 +277,7 @@ public:
             magma_get_buffer_format_description(encoded_bytes.data(), real_size - 1, &description));
     }
 
-    void Sysmem()
+    void Sysmem(bool use_format_modifier)
     {
         magma_sysmem_connection_t connection;
         EXPECT_EQ(MAGMA_STATUS_OK, magma_sysmem_connection_create(&connection));
@@ -299,8 +300,8 @@ public:
         // Create a set of basic 512x512 RGBA image constraints.
         magma_image_format_constraints_t image_constraints{};
         image_constraints.image_format = MAGMA_FORMAT_R8G8B8A8;
-        image_constraints.has_format_modifier = false;
-        image_constraints.format_modifier = 0;
+        image_constraints.has_format_modifier = use_format_modifier;
+        image_constraints.format_modifier = use_format_modifier ? MAGMA_FORMAT_MODIFIER_LINEAR : 0;
         image_constraints.width = 512;
         image_constraints.height = 512;
         image_constraints.layers = 1;
@@ -329,7 +330,9 @@ public:
         uint64_t format_modifier;
         EXPECT_EQ(MAGMA_STATUS_OK, magma_get_buffer_format_modifier(
                                        description, &has_format_modifier, &format_modifier));
-        EXPECT_FALSE(has_format_modifier);
+        if (has_format_modifier) {
+          EXPECT_EQ(MAGMA_FORMAT_MODIFIER_LINEAR, format_modifier);
+        }
 
         magma_image_plane_t planes[4];
         EXPECT_EQ(MAGMA_STATUS_OK, magma_get_buffer_format_plane_info(description, planes));
@@ -431,7 +434,13 @@ TEST(MagmaAbi, ImageFormat)
 TEST(MagmaAbi, Sysmem)
 {
     TestConnection test;
-    test.Sysmem();
+    test.Sysmem(false);
+}
+
+TEST(MagmaAbi, SysmemLinearFormatModifier)
+{
+    TestConnection test;
+    test.Sysmem(true);
 }
 
 TEST(MagmaAbi, FromC) { EXPECT_TRUE(test_magma_abi_from_c()); }
