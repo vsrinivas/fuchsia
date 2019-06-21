@@ -1,4 +1,18 @@
 {
+  "shortcuts": [
+    {
+      "char": "/",
+      "modifier": 128,
+      "chord": "Left Super + /",
+      "description": "Show keyboard shortcuts"
+    },
+    {
+      "char": "/",
+      "modifier": 256,
+      "chord": "Right Super + /",
+      "description": "Show keyboard shortcuts"
+    }
+  ],
   "ask": [
     {
       "char": " ",
@@ -66,13 +80,13 @@
       "hidUsage": 79,
       "modifier": 128,
       "chord": "Left Super + ->",
-      "description": "Toggle status"
+      "description": "Next cluster"
     },
     {
       "hidUsage": 79,
       "modifier": 256,
       "chord": "Right Super + ->",
-      "description": "Toggle status"
+      "description": "Next cluster"
     }
   ],
   "previousCluster": [
@@ -80,13 +94,13 @@
       "hidUsage": 80,
       "modifier": 128,
       "chord": "Left Super + <-",
-      "description": "Toggle status"
+      "description": "Previous cluster"
     },
     {
       "hidUsage": 80,
       "modifier": 256,
       "chord": "Right Super + <-",
-      "description": "Toggle status"
+      "description": "Previous cluster"
     }
   ],
   "logout": [

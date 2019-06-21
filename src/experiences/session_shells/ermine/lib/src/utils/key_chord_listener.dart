@@ -47,6 +47,28 @@ class KeyChordListener extends KeyboardCaptureListenerHack {
     _keyListenerBindings.clear();
   }
 
+  /// Returns keyboard binding help text.
+  String helpText() {
+    final result = <String, List<String>>{};
+    for (final binding in bindings) {
+      if (result.containsKey(binding.description)) {
+        result[binding.description].add(binding.chord);
+      } else {
+        result[binding.description] = [binding.chord];
+      }
+    }
+    final buf = StringBuffer();
+    for (final description in result.keys) {
+      buf.writeln(description);
+      for (final chord in result[description]) {
+        buf
+          ..write('          ')
+          ..writeln(chord);
+      }
+    }
+    return buf.toString();
+  }
+
   /// Adds a binding for a keyboard shortcut.
   void add(KeyChordBinding chord) {
     Timer(Duration(microseconds: 0), () {
@@ -121,6 +143,8 @@ class KeyChordListener extends KeyboardCaptureListenerHack {
 /// Defines a keyboard shortcut binding.
 class KeyChordBinding extends KeyboardEvent {
   String action;
+  String chord;
+  String description;
   VoidCallback onKey;
 
   KeyChordBinding({
@@ -146,7 +170,9 @@ class KeyChordBinding extends KeyboardEvent {
     Map<String, dynamic> object,
     this.onKey,
     this.action,
-  }) : super(
+  })  : chord = object['chord'],
+        description = object['description'],
+        super(
             eventTime: 0,
             deviceId: 0,
             phase: KeyboardEventPhase.pressed,
