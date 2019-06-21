@@ -9,7 +9,7 @@
 library fuchsia.camera.common;
 using fuchsia.sysmem;
 
-/// TODO(braval): This set of declarations would be the bitfield: CameraOutputCapabilities.
+// TODO(braval): This set of declarations would be the bitfield: CameraOutputCapabilities.
 const uint32 CAMERA_OUTPUT_UNKNOWN = 0;
 const uint32 CAMERA_OUTPUT_STILL_IMAGE = 0x01;
 const uint32 CAMERA_OUTPUT_BURST = 0x02;
@@ -19,8 +19,8 @@ const uint32 CAMERA_OUTPUT_DEPTH = 0x10;
 const uint32 CAMERA_OUTPUT_STEREO = 0x20;
 
 /// Identifying information about the device.
-/// TODO(braval): Uncomment the strings when zircon supports llcpp bindings
-/// TODO(CAM-12): Add CameraPose, when we can actually use it.
+// TODO(braval): Uncomment the strings when zircon supports llcpp bindings
+// TODO(CAM-12): Add CameraPose, when we can actually use it.
 struct DeviceInfo {
     /// Currently populated by the camera manager
     uint64 camera_id;

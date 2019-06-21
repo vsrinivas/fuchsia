@@ -266,8 +266,6 @@ struct FrameRate {
 extern "C" const fidl_type_t fuchsia_camera_common_DeviceInfoTable;
 
 // Identifying information about the device.
-// TODO(braval): Uncomment the strings when zircon supports llcpp bindings
-// TODO(CAM-12): Add CameraPose, when we can actually use it.
 struct DeviceInfo {
   static constexpr const fidl_type_t* Type = &fuchsia_camera_common_DeviceInfoTable;
   static constexpr uint32_t MaxNumHandles = 0;
@@ -292,7 +290,6 @@ struct DeviceInfo {
   uint32_t output_capabilities{};
 };
 
-// TODO(braval): This set of declarations would be the bitfield: CameraOutputCapabilities.
 constexpr uint32_t CAMERA_OUTPUT_UNKNOWN = 0u;
 
 constexpr uint32_t CAMERA_OUTPUT_STREAM = 4u;

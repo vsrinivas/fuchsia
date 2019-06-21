@@ -50,8 +50,6 @@ class DirectoryAdmin;
 
 extern "C" const fidl_type_t fuchsia_io_WatchedEventTable;
 
-// TODO(ZX-2645): Unused.
-//
 // WatchedEvent describes events returned from a DirectoryWatcher.
 struct WatchedEvent {
   static constexpr const fidl_type_t* Type = &fuchsia_io_WatchedEventTable;
@@ -157,8 +155,6 @@ struct Tty {
 
 extern "C" const fidl_type_t fuchsia_io_DirectoryWatcherOnEventRequestTable;
 
-// TODO(ZX-2645): Unused.
-//
 // DirectoryWatcher transmits messages from a filesystem server
 // about events happening in the filesystem. Clients can register
 // new watchers using the Directory "Watch" method, where they can
@@ -184,14 +180,11 @@ class DirectoryWatcher final {
 
     ~SyncClient() {}
 
-    // TODO(smklein): Convert this to a vector of WatchedEvents, when possible.
     zx_status_t OnEvent(::fidl::VectorView<uint8_t> events);
 
-    // TODO(smklein): Convert this to a vector of WatchedEvents, when possible.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     zx_status_t OnEvent(::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> events);
 
-    // TODO(smklein): Convert this to a vector of WatchedEvents, when possible.
     // Messages are encoded and decoded in-place.
     zx_status_t OnEvent(::fidl::DecodedMessage<OnEventRequest> params);
 
@@ -203,14 +196,11 @@ class DirectoryWatcher final {
   class Call final {
    public:
 
-    // TODO(smklein): Convert this to a vector of WatchedEvents, when possible.
     static zx_status_t OnEvent(zx::unowned_channel _client_end, ::fidl::VectorView<uint8_t> events);
 
-    // TODO(smklein): Convert this to a vector of WatchedEvents, when possible.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static zx_status_t OnEvent(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<uint8_t> events);
 
-    // TODO(smklein): Convert this to a vector of WatchedEvents, when possible.
     // Messages are encoded and decoded in-place.
     static zx_status_t OnEvent(zx::unowned_channel _client_end, ::fidl::DecodedMessage<OnEventRequest> params);
 
@@ -466,9 +456,6 @@ struct FilesystemInfo {
 
   uint32_t padding{};
 
-  // TODO(smklein): Replace this field with a string when supported
-  // by the "Simple" interface. At the moment, name is a fixed-size,
-  // null-terminated buffer.
   ::fidl::Array<int8_t, 32> name{};
 };
 
@@ -3513,7 +3500,7 @@ class Directory final {
     // };
     // Where names are NOT null-terminated.
     //
-    // TODO: This API is unstable; in the future, watcher will be a "DirectoryWatcher" client.
+    // This API is unstable"; in the future, watcher will be a "DirectoryWatcher" client.
     //
     // Mask specifies a bitmask of events to observe.
     // Options must be zero; it is reserved.
@@ -3532,7 +3519,7 @@ class Directory final {
     // };
     // Where names are NOT null-terminated.
     //
-    // TODO: This API is unstable; in the future, watcher will be a "DirectoryWatcher" client.
+    // This API is unstable"; in the future, watcher will be a "DirectoryWatcher" client.
     //
     // Mask specifies a bitmask of events to observe.
     // Options must be zero; it is reserved.
@@ -3553,7 +3540,7 @@ class Directory final {
     // };
     // Where names are NOT null-terminated.
     //
-    // TODO: This API is unstable; in the future, watcher will be a "DirectoryWatcher" client.
+    // This API is unstable"; in the future, watcher will be a "DirectoryWatcher" client.
     //
     // Mask specifies a bitmask of events to observe.
     // Options must be zero; it is reserved.
@@ -4071,7 +4058,7 @@ class Directory final {
     // };
     // Where names are NOT null-terminated.
     //
-    // TODO: This API is unstable; in the future, watcher will be a "DirectoryWatcher" client.
+    // This API is unstable"; in the future, watcher will be a "DirectoryWatcher" client.
     //
     // Mask specifies a bitmask of events to observe.
     // Options must be zero; it is reserved.
@@ -4090,7 +4077,7 @@ class Directory final {
     // };
     // Where names are NOT null-terminated.
     //
-    // TODO: This API is unstable; in the future, watcher will be a "DirectoryWatcher" client.
+    // This API is unstable"; in the future, watcher will be a "DirectoryWatcher" client.
     //
     // Mask specifies a bitmask of events to observe.
     // Options must be zero; it is reserved.
@@ -4111,7 +4098,7 @@ class Directory final {
     // };
     // Where names are NOT null-terminated.
     //
-    // TODO: This API is unstable; in the future, watcher will be a "DirectoryWatcher" client.
+    // This API is unstable"; in the future, watcher will be a "DirectoryWatcher" client.
     //
     // Mask specifies a bitmask of events to observe.
     // Options must be zero; it is reserved.
@@ -5297,7 +5284,7 @@ class DirectoryAdmin final {
     // };
     // Where names are NOT null-terminated.
     //
-    // TODO: This API is unstable; in the future, watcher will be a "DirectoryWatcher" client.
+    // This API is unstable"; in the future, watcher will be a "DirectoryWatcher" client.
     //
     // Mask specifies a bitmask of events to observe.
     // Options must be zero; it is reserved.
@@ -5316,7 +5303,7 @@ class DirectoryAdmin final {
     // };
     // Where names are NOT null-terminated.
     //
-    // TODO: This API is unstable; in the future, watcher will be a "DirectoryWatcher" client.
+    // This API is unstable"; in the future, watcher will be a "DirectoryWatcher" client.
     //
     // Mask specifies a bitmask of events to observe.
     // Options must be zero; it is reserved.
@@ -5337,7 +5324,7 @@ class DirectoryAdmin final {
     // };
     // Where names are NOT null-terminated.
     //
-    // TODO: This API is unstable; in the future, watcher will be a "DirectoryWatcher" client.
+    // This API is unstable"; in the future, watcher will be a "DirectoryWatcher" client.
     //
     // Mask specifies a bitmask of events to observe.
     // Options must be zero; it is reserved.
@@ -5941,7 +5928,7 @@ class DirectoryAdmin final {
     // };
     // Where names are NOT null-terminated.
     //
-    // TODO: This API is unstable; in the future, watcher will be a "DirectoryWatcher" client.
+    // This API is unstable"; in the future, watcher will be a "DirectoryWatcher" client.
     //
     // Mask specifies a bitmask of events to observe.
     // Options must be zero; it is reserved.
@@ -5960,7 +5947,7 @@ class DirectoryAdmin final {
     // };
     // Where names are NOT null-terminated.
     //
-    // TODO: This API is unstable; in the future, watcher will be a "DirectoryWatcher" client.
+    // This API is unstable"; in the future, watcher will be a "DirectoryWatcher" client.
     //
     // Mask specifies a bitmask of events to observe.
     // Options must be zero; it is reserved.
@@ -5981,7 +5968,7 @@ class DirectoryAdmin final {
     // };
     // Where names are NOT null-terminated.
     //
-    // TODO: This API is unstable; in the future, watcher will be a "DirectoryWatcher" client.
+    // This API is unstable"; in the future, watcher will be a "DirectoryWatcher" client.
     //
     // Mask specifies a bitmask of events to observe.
     // Options must be zero; it is reserved.
