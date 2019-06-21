@@ -562,7 +562,8 @@ zx_status_t ProcessDispatcher::GetInfo(zx_info_process_t* info) {
         state = state_;
         info->return_code = retcode_;
         // TODO: Protect with rights if necessary.
-        info->debugger_attached = debugger_exception_port_ != nullptr;
+        info->debugger_attached = debugger_exception_port_ != nullptr ||
+                                  debug_exceptionate_.HasValidChannel();
     }
 
     switch (state) {

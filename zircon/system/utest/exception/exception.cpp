@@ -1959,6 +1959,34 @@ bool create_exception_channel_invalid_args_test() {
     END_TEST;
 }
 
+bool process_debugger_attached_test() {
+    BEGIN_TEST;
+
+    TestLoop loop;
+
+    zx_info_process_t info;
+    ASSERT_EQ(loop.process().get_info(ZX_INFO_PROCESS, &info, sizeof(info), nullptr, nullptr),
+              ZX_OK);
+    EXPECT_FALSE(info.debugger_attached);
+
+    {
+        zx::channel exception_channel;
+        ASSERT_EQ(loop.process().create_exception_channel(ZX_EXCEPTION_CHANNEL_DEBUGGER,
+                                                          &exception_channel),
+                  ZX_OK);
+
+        ASSERT_EQ(loop.process().get_info(ZX_INFO_PROCESS, &info, sizeof(info), nullptr, nullptr),
+                  ZX_OK);
+        EXPECT_TRUE(info.debugger_attached);
+    }
+
+    ASSERT_EQ(loop.process().get_info(ZX_INFO_PROCESS, &info, sizeof(info), nullptr, nullptr),
+              ZX_OK);
+    EXPECT_FALSE(info.debugger_attached);
+
+    END_TEST;
+}
+
 // Removes a right from a task and ensures that channel creation now fails.
 //
 // |task_func|: TestLoop member function to get the task.
@@ -2752,6 +2780,7 @@ RUN_TEST(exit_closing_excp_handle_test);
 RUN_TEST(create_exception_channel_test);
 RUN_TEST(create_exception_channel_rights_test);
 RUN_TEST(create_exception_channel_invalid_args_test);
+RUN_TEST(process_debugger_attached_test);
 RUN_TEST((task_requires_right_test<&TestLoop::aux_thread, ZX_RIGHT_INSPECT>));
 RUN_TEST((task_requires_right_test<&TestLoop::aux_thread, ZX_RIGHT_DUPLICATE>));
 RUN_TEST((task_requires_right_test<&TestLoop::aux_thread, ZX_RIGHT_TRANSFER>));
