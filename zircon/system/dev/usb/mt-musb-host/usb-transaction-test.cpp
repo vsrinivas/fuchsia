@@ -16,15 +16,15 @@
 namespace mt_usb_hci {
 namespace regs = board_mt8167;
 
-class ControlTest: public zxtest::Test {
+class ControlTest : public zxtest::Test {
 protected:
     void SetUp() {
-        ASSERT_OK(zx::vmo::create(0x731, 0, &vmo_));
-        ASSERT_OK(ddk::MmioBuffer::Create(0, 0x731, std::move(vmo_),
+        zx::vmo vmo;
+        ASSERT_OK(zx::vmo::create(0x731, 0, &vmo));
+        ASSERT_OK(ddk::MmioBuffer::Create(0, 0x731, std::move(vmo),
                                           ZX_CACHE_POLICY_CACHED, &usb_));
     }
 
-    zx::vmo vmo_;
     std::optional<ddk::MmioBuffer> usb_;
 };
 
@@ -137,33 +137,33 @@ TEST_F(ControlTest, TestControlCancel) {
     EXPECT_EQ(ControlState::CANCEL, ctl.state());
 }
 
-class BulkTest: public zxtest::Test {
+class BulkTest : public zxtest::Test {
 protected:
     void SetUp() {
-        ASSERT_OK(zx::vmo::create(0x731, 0, &vmo_));
-        ASSERT_OK(ddk::MmioBuffer::Create(0, 0x731, std::move(vmo_),
+        zx::vmo vmo;
+        ASSERT_OK(zx::vmo::create(0x731, 0, &vmo));
+        ASSERT_OK(ddk::MmioBuffer::Create(0, 0x731, std::move(vmo),
                                           ZX_CACHE_POLICY_CACHED, &usb_));
     }
 
-    zx::vmo vmo_;
     std::optional<ddk::MmioBuffer> usb_;
 
     static constexpr usb_endpoint_descriptor_t in_descriptor_ = {
-        sizeof(usb_endpoint_descriptor_t), // .bLength
-        USB_DT_ENDPOINT, // .bDescriptorType
-        0x81,            // .bEndpointAddress (ep=1, dir=in)
-        0x2,             // .bmAttributes (type=bulk)
-        512,             // .wMaxPacketSize
-        255,             // .bInterval
+        .bLength = sizeof(usb_endpoint_descriptor_t),
+        .bDescriptorType = USB_DT_ENDPOINT,
+        .bEndpointAddress = 0x81,
+        .bmAttributes = 0x2,
+        .wMaxPacketSize = 512,
+        .bInterval = 255,
     };
 
     static constexpr usb_endpoint_descriptor_t out_descriptor_ = {
-        sizeof(usb_endpoint_descriptor_t), // .bLength
-        USB_DT_ENDPOINT, // .bDescriptorType
-        0x2,             // .bEndpointAddress (ep=2, dir=out)
-        0x2,             // .bmAttributes (type=bulk)
-        512,             // .wMaxPacketSize
-        255,             // .bInterval
+        .bLength = sizeof(usb_endpoint_descriptor_t),
+        .bDescriptorType = USB_DT_ENDPOINT,
+        .bEndpointAddress = 0x2,
+        .bmAttributes = 0x2,
+        .wMaxPacketSize = 512,
+        .bInterval = 255,
     };
 };
 
@@ -273,33 +273,33 @@ TEST_F(BulkTest, TestBulkCancel) {
     EXPECT_EQ(BulkState::CANCEL, blk.state());
 }
 
-class InterruptTest: public zxtest::Test {
+class InterruptTest : public zxtest::Test {
 protected:
     void SetUp() {
-        ASSERT_OK(zx::vmo::create(0x731, 0, &vmo_));
-        ASSERT_OK(ddk::MmioBuffer::Create(0, 0x731, std::move(vmo_),
+        zx::vmo vmo;
+        ASSERT_OK(zx::vmo::create(0x731, 0, &vmo));
+        ASSERT_OK(ddk::MmioBuffer::Create(0, 0x731, std::move(vmo),
                                           ZX_CACHE_POLICY_CACHED, &usb_));
     }
 
-    zx::vmo vmo_;
     std::optional<ddk::MmioBuffer> usb_;
 
     static constexpr usb_endpoint_descriptor_t in_descriptor_ = {
         sizeof(usb_endpoint_descriptor_t), // .bLength
-        USB_DT_ENDPOINT, // .bDescriptorType
-        0x81,            // .bEndpointAddress (ep=1, dir=in)
-        0x3,             // .bmAttributes (type=interrupt)
-        512,             // .wMaxPacketSize
-        16,              // .bInterval
+        USB_DT_ENDPOINT,                   // .bDescriptorType
+        0x81,                              // .bEndpointAddress (ep=1, dir=in)
+        0x3,                               // .bmAttributes (type=interrupt)
+        512,                               // .wMaxPacketSize
+        16,                                // .bInterval
     };
 
     static constexpr usb_endpoint_descriptor_t out_descriptor_ = {
         sizeof(usb_endpoint_descriptor_t), // .bLength
-        USB_DT_ENDPOINT, // .bDescriptorType
-        0x2,             // .bEndpointAddress (ep=2, dir=out)
-        0x3,             // .bmAttributes (type=interrupt)
-        512,             // .wMaxPacketSize
-        16,              // .bInterval
+        USB_DT_ENDPOINT,                   // .bDescriptorType
+        0x2,                               // .bEndpointAddress (ep=2, dir=out)
+        0x3,                               // .bmAttributes (type=interrupt)
+        512,                               // .wMaxPacketSize
+        16,                                // .bInterval
     };
 };
 
@@ -411,6 +411,6 @@ TEST_F(InterruptTest, TestInterruptCancel) {
 
 } // namespace mt_usb_hci
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
     return RUN_ALL_TESTS(argc, argv);
 }

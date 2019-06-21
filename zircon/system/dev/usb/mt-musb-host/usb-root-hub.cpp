@@ -115,9 +115,9 @@ zx_status_t UsbRootHub::HandleRequest(usb::UnownedRequest<> req) {
     uint8_t ep_addr = static_cast<uint8_t>(req.request()->header.ep_address & 0xf);
 
     if (ep_addr > 1) { // A USB hub only suports two endpoints: control and interrupt.
-       zxlogf(ERROR, "unsupported hub endpoint address: %d\n", ep_addr);
-       req.Complete(ZX_ERR_INTERNAL, 0);
-       return ZX_ERR_INTERNAL;
+        zxlogf(ERROR, "unsupported hub endpoint address: %d\n", ep_addr);
+        req.Complete(ZX_ERR_INTERNAL, 0);
+        return ZX_ERR_INTERNAL;
     }
 
     if (ep_addr == 0) { // Endpoint-0 control transfers.
@@ -335,7 +335,7 @@ zx_status_t UsbRootHub::GetHubStatus(usb::UnownedRequest<> req) {
     return status;
 }
 
-zx_status_t  UsbRootHub::SetConfiguration(usb::UnownedRequest<> req) {
+zx_status_t UsbRootHub::SetConfiguration(usb::UnownedRequest<> req) {
     uint8_t index = static_cast<uint8_t>(req.request()->setup.wValue & 0xff);
     if (index != 1) {
         zxlogf(ERROR, "unsupported SetConfiguration() index: %d\n", index);
@@ -348,7 +348,7 @@ zx_status_t  UsbRootHub::SetConfiguration(usb::UnownedRequest<> req) {
     return ZX_OK;
 }
 
-zx_status_t  UsbRootHub::SetFeature(usb::UnownedRequest<> req) {
+zx_status_t UsbRootHub::SetFeature(usb::UnownedRequest<> req) {
 
     uint16_t index = le16toh(req.request()->setup.wIndex);
     if (index != 1) {
@@ -358,7 +358,7 @@ zx_status_t  UsbRootHub::SetFeature(usb::UnownedRequest<> req) {
     }
 
     uint8_t bm_req_type = req.request()->setup.bmRequestType;
-    switch (bm_req_type){
+    switch (bm_req_type) {
     case 0x20: // See: 11.24.2 (USB 2.0 spec)
         return SetHubFeature(std::move(req));
     case 0x23: // See: 11.24.2 (USB 2.0 spec)

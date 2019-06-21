@@ -18,11 +18,11 @@ namespace regs = board_mt8167;
 // A testing instance which exposes the Init() method.
 class TUsbHci : public UsbHci {
 public:
-    using UsbHci::UsbHci;
     using UsbHci::Init;
+    using UsbHci::UsbHci;
 };
 
-class HciTest: public zxtest::Test {
+class HciTest : public zxtest::Test {
 protected:
     void SetUp() {
         size_t sz;
@@ -63,6 +63,6 @@ TEST_F(HciTest, TestReadEndpointNumber) {
 
 } // namespace mt_usb_hci
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
     return RUN_ALL_TESTS(argc, argv);
 }

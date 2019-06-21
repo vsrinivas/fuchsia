@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "usb-hci.h"
 #include "trace.h"
 #include "usb-device.h"
-#include "usb-hci.h"
 #include "usb-root-hub.h"
 #include "usb-spew.h"
 
@@ -17,8 +17,8 @@
 #include <fbl/auto_call.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/zx/time.h>
-#include <soc/mt8167/mt8167-usb.h>
 #include <soc/mt8167/mt8167-usb-phy.h>
+#include <soc/mt8167/mt8167-usb.h>
 #include <usb/request-cpp.h>
 #include <usb/usb-request.h>
 #include <zircon/hw/usb.h>
@@ -145,7 +145,7 @@ size_t UsbHci::UsbHciGetRequestSize() {
     return usb::UnownedRequest<>::RequestSize(sizeof(usb_request_t));
 }
 
-zx_status_t UsbHci::Create(zx_device_t* parent) {
+zx_status_t UsbHci::Create(void* ctx, zx_device_t* parent) {
     zx_status_t status;
 
     ddk::PDev pdev(parent);
@@ -241,10 +241,7 @@ zx_status_t UsbHci::Init() {
 }
 
 void UsbHci::StartSession() {
-    regs::DEVCTL::Get().ReadFrom(usb_mmio())
-        .set_hostreq(1)
-        .set_session(1)
-        .WriteTo(usb_mmio());
+    regs::DEVCTL::Get().ReadFrom(usb_mmio()).set_hostreq(1).set_session(1).WriteTo(usb_mmio());
 }
 
 void UsbHci::HandleIrq() {
@@ -255,8 +252,10 @@ void UsbHci::HandleIrq() {
     auto rx_irqs = regs::INTRRX::Get().ReadFrom(usb_mmio()).WriteTo(usb_mmio());
 
     // See: MUSBMHDRC 13.2 for the order in which IRQ events need to be serviced.
-    if (irqs.conn()) HandleConnect();
-    if (irqs.discon()) HandleDisconnect();
+    if (irqs.conn())
+        HandleConnect();
+    if (irqs.discon())
+        HandleDisconnect();
     for (uint8_t i = 0; i <= std::max(rx_ep_count_, tx_ep_count_); i++) {
         auto mask = static_cast<uint16_t>(1 << i);
         if ((tx_irqs.ep_tx() & mask) || (rx_irqs.ep_rx() & mask)) {
@@ -285,7 +284,8 @@ int UsbHci::IrqThread() {
     zx_status_t status;
 
     // Unmask TX/RX and USB-common interrupt to microprocessor.
-    regs::USB_L1INTM::Get().ReadFrom(usb_mmio())
+    regs::USB_L1INTM::Get()
+        .ReadFrom(usb_mmio())
         .set_usbcom(1)
         .set_tx(1)
         .set_rx(1)
@@ -296,7 +296,8 @@ int UsbHci::IrqThread() {
     regs::INTRTXE::Get().ReadFrom(usb_mmio()).set_ep_tx(1).WriteTo(usb_mmio());
 
     // Unmask USB controller interrupts, see: MUSBMHDRC section 3.2.7.
-    regs::INTRUSBE::Get().ReadFrom(usb_mmio())
+    regs::INTRUSBE::Get()
+        .ReadFrom(usb_mmio())
         .set_discon_e(1)
         .set_conn_e(1)
         .WriteTo(usb_mmio());
@@ -324,7 +325,8 @@ zx_status_t UsbHci::InitPhy() {
     regs::U2PHYDTM0_1P::Get().ReadFrom(phy_mmio()).set_force_uart_en(0).WriteTo(phy_mmio());
     regs::U2PHYDTM1_1P::Get().ReadFrom(phy_mmio()).set_rg_uart_en(0).WriteTo(phy_mmio());
     regs::USBPHYACR6_1P::Get().ReadFrom(phy_mmio()).set_rg_usb20_bc11_sw_en(0).WriteTo(phy_mmio());
-    regs::U2PHYACR4_1P::Get().ReadFrom(phy_mmio())
+    regs::U2PHYACR4_1P::Get()
+        .ReadFrom(phy_mmio())
         .set_usb20_dp_100k_en(0)
         .set_rg_usb20_dm_100k_en(0)
         .WriteTo(phy_mmio());
@@ -332,7 +334,8 @@ zx_status_t UsbHci::InitPhy() {
 
     zx::nanosleep(zx::deadline_after(zx::usec(800)));
 
-    regs::U2PHYDTM1_1P::Get().ReadFrom(phy_mmio())
+    regs::U2PHYDTM1_1P::Get()
+        .ReadFrom(phy_mmio())
         .set_force_vbusvalid(1)
         .set_force_sessend(1)
         .set_force_bvalid(1)
@@ -347,7 +350,8 @@ zx_status_t UsbHci::InitPhy() {
 
     zx::nanosleep(zx::deadline_after(zx::usec(5)));
 
-    regs::U2PHYDTM1_1P::Get().ReadFrom(phy_mmio())
+    regs::U2PHYDTM1_1P::Get()
+        .ReadFrom(phy_mmio())
         .set_rg_vbusvalid(1)
         .set_rg_sessend(0)
         .set_rg_bvalid(1)
@@ -377,7 +381,8 @@ zx_status_t UsbHci::InitEndpointControllers() {
     uint32_t fifo_addr = (64 >> 3); // The first 64 bytes are used by endpoint-0.
     for (uint8_t i = 1; i <= rx_ep_count_; i++) {
         regs::INDEX::Get().FromValue(0).set_selected_endpoint(i).WriteTo(usb_mmio());
-        regs::RXFIFOADD::Get().FromValue(0)
+        regs::RXFIFOADD::Get()
+            .FromValue(0)
             .set_rxfifoadd(static_cast<uint16_t>(fifo_addr))
             .WriteTo(usb_mmio());
         fifo_addr += fifo_size;
@@ -387,7 +392,8 @@ zx_status_t UsbHci::InitEndpointControllers() {
     }
     for (uint8_t i = 1; i <= tx_ep_count_; i++) {
         regs::INDEX::Get().FromValue(0).set_selected_endpoint(i).WriteTo(usb_mmio());
-        regs::TXFIFOADD::Get().FromValue(0)
+        regs::TXFIFOADD::Get()
+            .FromValue(0)
             .set_txfifoadd(static_cast<uint16_t>(fifo_addr))
             .WriteTo(usb_mmio());
         fifo_addr += fifo_size;
@@ -396,21 +402,19 @@ zx_status_t UsbHci::InitEndpointControllers() {
     return ZX_OK;
 }
 
-} // namespace mt_usb_hci
-
-static zx_status_t usb_hci_bind(void* ctx, zx_device_t* parent) {
-    return mt_usb_hci::UsbHci::Create(parent);
-}
-
 static constexpr zx_driver_ops_t driver_ops = []() {
     zx_driver_ops_t ops = {};
     ops.version = DRIVER_OPS_VERSION;
-    ops.bind = usb_hci_bind;
+    ops.bind = UsbHci::Create;
     return ops;
 }();
 
-ZIRCON_DRIVER_BEGIN(mt_usb_hci, driver_ops, "zircon", "0.1", 3)
+} // namespace mt_usb_hci
+
+// clang-format off
+ZIRCON_DRIVER_BEGIN(mt_usb_hci, mt_usb_hci::driver_ops, "zircon", "0.1", 3)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_MEDIATEK),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_MUSB_HOST),
 ZIRCON_DRIVER_END(mt_usb_hci)
+// clang-format on

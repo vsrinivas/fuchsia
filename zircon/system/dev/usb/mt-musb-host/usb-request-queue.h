@@ -68,7 +68,7 @@ public:
     zx_status_t QueueRequest(usb::UnownedRequest<> req) override;
     zx_status_t StartQueueThread() override;
     zx_status_t CancelAll() override;
-    size_t GetMaxTransferSize() override ;
+    size_t GetMaxTransferSize() override;
     zx_status_t Halt() override;
 
 protected:

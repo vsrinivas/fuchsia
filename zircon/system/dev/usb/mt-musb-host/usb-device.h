@@ -8,8 +8,8 @@
 
 #include <array>
 #include <fbl/array.h>
-#include <memory>
 #include <lib/mmio/mmio.h>
+#include <memory>
 #include <usb/request-cpp.h>
 #include <zircon/hw/usb.h>
 #include <zircon/types.h>

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "trace.h"
 #include "usb-device.h"
+#include "trace.h"
 
 #include <ddk/debug.h>
 #include <soc/mt8167/mt8167-usb.h>

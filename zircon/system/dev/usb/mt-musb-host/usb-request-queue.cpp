@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "trace.h"
 #include "usb-request-queue.h"
+#include "trace.h"
 #include "usb-spew.h"
 
 #include <ddk/debug.h>
@@ -120,12 +120,13 @@ int TransactionQueue::QueueThread() {
 
 zx_status_t ControlQueue::GetDeviceDescriptor(usb_device_descriptor_t* out) {
     TRACE();
-    usb_setup_t req = { // GET_DESCRIPTOR request, see: USB 2.0 spec. section 9.4.3.
-        0x80,        // .bmRequestType
-        0x6,         // .bRequest
-        0x0100,      // .wValue (type=device)
-        0,           // .wIndex
-        sizeof(*out) // .wLength
+    usb_setup_t req = {
+        // GET_DESCRIPTOR request, see: USB 2.0 spec. section 9.4.3.
+        .bmRequestType = 0x80,
+        .bRequest = 0x6,
+        .wValue = 0x0100,
+        .wIndex = 0,
+        .wLength = sizeof(*out),
     };
 
     transaction_ = std::make_unique<Control>(ControlType::READ, usb_.View(0), req, out,
@@ -143,12 +144,13 @@ zx_status_t ControlQueue::GetDeviceDescriptor(usb_device_descriptor_t* out) {
 }
 
 zx_status_t ControlQueue::SetAddress(uint8_t addr) {
-    usb_setup_t req = { // SET_ADDRESS request, see: USB 2.0 spec. section 9.4.6.
-        0,    // .bmRequestType
-        0x5,  // .bRequest
-        addr, // .wValue
-        0,    // .wIndex
-        0,    // .wLength
+    usb_setup_t req = {
+        // SET_ADDRESS request, see: USB 2.0 spec. section 9.4.6.
+        .bmRequestType = 0,
+        .bRequest = 0x5,
+        .wValue = addr,
+        .wIndex = 0,
+        .wLength = 0,
     };
 
     transaction_ = std::make_unique<Control>(ControlType::ZERO, usb_.View(0), req, nullptr, 0,

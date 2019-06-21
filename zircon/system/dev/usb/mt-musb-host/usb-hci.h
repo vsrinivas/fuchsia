@@ -9,8 +9,9 @@
 
 #include <array>
 #include <ddktl/device.h>
-#include <ddktl/protocol/usb/hci.h>
 #include <ddktl/protocol/usb/bus.h>
+#include <ddktl/protocol/usb/hci.h>
+#include <lib/device-protocol/pdev.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/interrupt.h>
 #include <memory>
@@ -46,7 +47,7 @@ public:
     UsbHci(UsbHci&&) = delete;
     UsbHci& operator=(UsbHci&&) = delete;
 
-    static zx_status_t Create(zx_device_t* parent);
+    static zx_status_t Create(void* ctx, zx_device_t* parent);
 
     // Device protocol implementation.
     void DdkUnbind();

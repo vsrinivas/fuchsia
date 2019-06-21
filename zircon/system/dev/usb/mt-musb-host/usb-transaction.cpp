@@ -49,7 +49,8 @@ size_t FifoWrite(uint8_t ep, const void* in, size_t len, ddk::MmioBuffer* usb) {
 
 void Control::AbortAs(ControlState state) {
     // To abort, flush the EP0-FIFO and clear all error-bits.
-    regs::CSR0_HOST::Get().ReadFrom(&usb_)
+    regs::CSR0_HOST::Get()
+        .ReadFrom(&usb_)
         .set_flushfifo(1)
         .set_error(0)
         .set_naktimeout(0)
@@ -61,14 +62,18 @@ void Control::AbortAs(ControlState state) {
 bool Control::BusError() {
     // TODO(hansens) implement proper control NAK-retry logic.
     auto reg = regs::CSR0_HOST::Get().ReadFrom(&usb_);
-    if (reg.error())      zxlogf(ERROR, "usb device error\n");
-    if (reg.naktimeout()) zxlogf(ERROR, "usb device naktimeout\n");
-    if (reg.rxstall())    zxlogf(ERROR, "usb device rxstall\n");
+    if (reg.error())
+        zxlogf(ERROR, "usb device error\n");
+    if (reg.naktimeout())
+        zxlogf(ERROR, "usb device naktimeout\n");
+    if (reg.rxstall())
+        zxlogf(ERROR, "usb device rxstall\n");
     return reg.error() || reg.naktimeout() || reg.rxstall();
 }
 
 void Control::Advance(bool interrupt) {
     fbl::AutoLock _(&lock_);
+    // clang-format off
     while (!terminal_ && (interrupt || !irq_wait_.load())) {
         interrupt = false;
         switch (state_) {
@@ -87,6 +92,7 @@ void Control::Advance(bool interrupt) {
         case ControlState::CANCEL:         AdvanceCancel(); break;
         }
     }
+    // clang-format on
 }
 
 void Control::Cancel() {
@@ -103,11 +109,13 @@ void Control::Cancel() {
 void Control::AdvanceSetup() {
     FifoWrite(0, &req_, sizeof(req_), &usb_);
     regs::TXFUNCADDR::Get(0).FromValue(0).set_tx_func_addr(faddr_).WriteTo(&usb_);
-    regs::CSR0_HOST::Get().ReadFrom(&usb_)
+    regs::CSR0_HOST::Get()
+        .ReadFrom(&usb_)
         .set_setuppkt(1)
         .set_txpktrdy(1)
         .set_disping(1)
         .WriteTo(&usb_);
+
     state_ = ControlState::SETUP_IRQ;
     irq_wait_ = true;
 }
@@ -119,11 +127,13 @@ void Control::AdvanceSetupIrq() {
         return;
     }
 
+    // clang-format off
     switch (type_) {
     case ControlType::ZERO:  state_ = ControlState::IN_STATUS; break;
     case ControlType::READ:  state_ = ControlState::IN_DATA; break;
     case ControlType::WRITE: state_ = ControlState::OUT_DATA; break;
     }
+    // clang-format on
 }
 
 void Control::AdvanceInData() {
@@ -159,11 +169,12 @@ void Control::AdvanceOutData() {
     size_t len = (remaining > max_pkt_sz0_) ? max_pkt_sz0_ : remaining;
     auto offset = reinterpret_cast<uintptr_t>(buffer_) + actual_.load();
     actual_ += FifoWrite(0, reinterpret_cast<void*>(offset), len, &usb_);
-
-    regs::CSR0_HOST::Get().ReadFrom(&usb_)
+    regs::CSR0_HOST::Get()
+        .ReadFrom(&usb_)
         .set_txpktrdy(1)
         .set_disping(1)
         .WriteTo(&usb_);
+
     state_ = ControlState::OUT_DATA_IRQ;
     irq_wait_ = true;
 }
@@ -178,10 +189,12 @@ void Control::AdvanceOutDataIrq() {
 }
 
 void Control::AdvanceInStatus() {
-    regs::CSR0_HOST::Get().ReadFrom(&usb_)
+    regs::CSR0_HOST::Get()
+        .ReadFrom(&usb_)
         .set_statuspkt(1)
         .set_reqpkt(1)
         .WriteTo(&usb_);
+
     state_ = ControlState::IN_STATUS_IRQ;
     irq_wait_ = true;
 }
@@ -192,19 +205,24 @@ void Control::AdvanceInStatusIrq() {
         AbortAs(ControlState::ERROR);
         return;
     }
-    regs::CSR0_HOST::Get().ReadFrom(&usb_)
+
+    regs::CSR0_HOST::Get()
+        .ReadFrom(&usb_)
         .set_statuspkt(0)
         .set_rxpktrdy(0)
         .WriteTo(&usb_);
+
     state_ = ControlState::SUCCESS;
 }
 
 void Control::AdvanceOutStatus() {
-    regs::CSR0_HOST::Get().FromValue(0)
+    regs::CSR0_HOST::Get()
+        .FromValue(0)
         .set_statuspkt(1)
         .set_txpktrdy(1)
         .set_disping(1)
         .WriteTo(&usb_);
+
     state_ = ControlState::OUT_STATUS_IRQ;
     irq_wait_ = true;
 }
@@ -240,8 +258,8 @@ void BulkBase::AbortAs(BulkState state) {
         if (csr.rxpktrdy()) {
             csr.set_flushfifo(1).WriteTo(&usb_);
         }
-
-        regs::RXCSR_HOST::Get(ep_).ReadFrom(&usb_)
+        regs::RXCSR_HOST::Get(ep_)
+            .ReadFrom(&usb_)
             .set_error(0)
             .set_dataerr_naktimeout(0)
             .set_rxstall(0)
@@ -251,8 +269,8 @@ void BulkBase::AbortAs(BulkState state) {
         if (csr.txpktrdy()) {
             csr.set_flushfifo(1).WriteTo(&usb_);
         }
-
-        regs::TXCSR_HOST::Get(ep_).ReadFrom(&usb_)
+        regs::TXCSR_HOST::Get(ep_)
+            .ReadFrom(&usb_)
             .set_flushfifo(1)
             .set_error(0)
             .set_naktimeout_incomptx(0)
@@ -266,15 +284,21 @@ bool BulkBase::BusError() {
     bool ret;
     if (dir_ == BulkDirection::IN) {
         auto reg = regs::RXCSR_HOST::Get(ep_).ReadFrom(&usb_);
-        if (reg.error())              zxlogf(ERROR, "usb device RX error\n");
-        if (reg.dataerr_naktimeout()) zxlogf(ERROR, "usb device RX naktimeout\n");
-        if (reg.rxstall())            zxlogf(ERROR, "usb device RX rxstall\n");
+        if (reg.error())
+            zxlogf(ERROR, "usb device RX error\n");
+        if (reg.dataerr_naktimeout())
+            zxlogf(ERROR, "usb device RX naktimeout\n");
+        if (reg.rxstall())
+            zxlogf(ERROR, "usb device RX rxstall\n");
         ret = reg.error() || reg.dataerr_naktimeout() || reg.rxstall();
     } else {
         auto reg = regs::TXCSR_HOST::Get(ep_).ReadFrom(&usb_);
-        if (reg.error())               zxlogf(ERROR, "usb device TX error\n");
-        if (reg.naktimeout_incomptx()) zxlogf(ERROR, "usb device TX naktimeout\n");
-        if (reg.rxstall())             zxlogf(ERROR, "usb device TX rxstall\n");
+        if (reg.error())
+            zxlogf(ERROR, "usb device TX error\n");
+        if (reg.naktimeout_incomptx())
+            zxlogf(ERROR, "usb device TX naktimeout\n");
+        if (reg.rxstall())
+            zxlogf(ERROR, "usb device TX rxstall\n");
         ret = reg.error() || reg.naktimeout_incomptx() || reg.rxstall();
     }
     return ret;
@@ -282,7 +306,7 @@ bool BulkBase::BusError() {
 
 void BulkBase::Advance(bool interrupt) {
     fbl::AutoLock _(&lock_);
-    //bool is_terminal = (state_.load() >= BulkState::SUCCESS);
+    // clang-format off
     while (!terminal_ && (interrupt || !irq_wait_.load())) {
         interrupt = false;
         switch (state_) {
@@ -298,6 +322,7 @@ void BulkBase::Advance(bool interrupt) {
         case BulkState::CANCEL:    AdvanceCancel(); break;
         }
     }
+    // clang-format on
 }
 
 void BulkBase::Cancel() {
@@ -344,9 +369,11 @@ void BulkBase::AdvanceSendIrq() {
 }
 
 void BulkBase::AdvanceRecv() {
-    regs::RXCSR_HOST::Get(ep_).FromValue(0)
+    regs::RXCSR_HOST::Get(ep_)
+        .FromValue(0)
         .set_reqpkt(1)
         .WriteTo(&usb_);
+
     state_ = BulkState::RECV_IRQ;
     irq_wait_ = true;
 }
@@ -392,14 +419,17 @@ void BulkBase::AdvanceCancel() {
 
 void Bulk::AdvanceSetupIn() {
     regs::RXFUNCADDR::Get(ep_).FromValue(0).set_rx_func_addr(faddr_).WriteTo(&usb_);
-    regs::RXINTERVAL::Get(ep_).FromValue(0)
+    regs::RXINTERVAL::Get(ep_)
+        .FromValue(0)
         .set_rx_polling_interval_nak_limit_m(interval_)
         .WriteTo(&usb_);
-    regs::RXTYPE::Get(ep_).FromValue(0)
+    regs::RXTYPE::Get(ep_)
+        .FromValue(0)
         .set_rx_protocol(0x2) // Bulk-type.
         .set_rx_target_ep_number(ep_)
         .WriteTo(&usb_);
-    regs::RXMAP::Get(ep_).ReadFrom(&usb_)
+    regs::RXMAP::Get(ep_)
+        .ReadFrom(&usb_)
         .set_maximum_payload_transaction(static_cast<uint16_t>(max_pkt_sz_))
         .WriteTo(&usb_);
 
@@ -417,14 +447,17 @@ void Bulk::AdvanceSetupIn() {
 
 void Bulk::AdvanceSetupOut() {
     regs::TXFUNCADDR::Get(ep_).FromValue(0).set_tx_func_addr(faddr_).WriteTo(&usb_);
-    regs::TXINTERVAL::Get(ep_).FromValue(0)
+    regs::TXINTERVAL::Get(ep_)
+        .FromValue(0)
         .set_tx_polling_interval_nak_limit_m(interval_)
         .WriteTo(&usb_);
-    regs::TXTYPE::Get(ep_).FromValue(0)
+    regs::TXTYPE::Get(ep_)
+        .FromValue(0)
         .set_tx_protocol(0x2) // Bulk-type.
         .set_tx_target_ep_number(ep_)
         .WriteTo(&usb_);
-    regs::TXMAP::Get(ep_).FromValue(0)
+    regs::TXMAP::Get(ep_)
+        .FromValue(0)
         .set_maximum_payload_transaction(static_cast<uint16_t>(max_pkt_sz_))
         .WriteTo(&usb_);
 
@@ -442,14 +475,17 @@ void Bulk::AdvanceSetupOut() {
 
 void Interrupt::AdvanceSetupIn() {
     regs::RXFUNCADDR::Get(ep_).FromValue(0).set_rx_func_addr(faddr_).WriteTo(&usb_);
-    regs::RXINTERVAL::Get(ep_).FromValue(0)
+    regs::RXINTERVAL::Get(ep_)
+        .FromValue(0)
         .set_rx_polling_interval_nak_limit_m(interval_)
         .WriteTo(&usb_);
-    regs::RXTYPE::Get(ep_).FromValue(0)
+    regs::RXTYPE::Get(ep_)
+        .FromValue(0)
         .set_rx_protocol(0x3) // Interrupt-type.
         .set_rx_target_ep_number(ep_)
         .WriteTo(&usb_);
-    regs::RXMAP::Get(ep_).FromValue(0)
+    regs::RXMAP::Get(ep_)
+        .FromValue(0)
         .set_maximum_payload_transaction(static_cast<uint16_t>(max_pkt_sz_))
         .WriteTo(&usb_);
 
@@ -467,14 +503,17 @@ void Interrupt::AdvanceSetupIn() {
 
 void Interrupt::AdvanceSetupOut() {
     regs::TXFUNCADDR::Get(ep_).FromValue(0).set_tx_func_addr(faddr_).WriteTo(&usb_);
-    regs::TXINTERVAL::Get(ep_).FromValue(0)
+    regs::TXINTERVAL::Get(ep_)
+        .FromValue(0)
         .set_tx_polling_interval_nak_limit_m(interval_)
         .WriteTo(&usb_);
-    regs::TXTYPE::Get(ep_).FromValue(0)
+    regs::TXTYPE::Get(ep_)
+        .FromValue(0)
         .set_tx_protocol(0x3) // Interrupt-type.
         .set_tx_target_ep_number(ep_)
         .WriteTo(&usb_);
-    regs::TXMAP::Get(ep_).FromValue(0)
+    regs::TXMAP::Get(ep_)
+        .FromValue(0)
         .set_maximum_payload_transaction(static_cast<uint16_t>(max_pkt_sz_))
         .WriteTo(&usb_);
 

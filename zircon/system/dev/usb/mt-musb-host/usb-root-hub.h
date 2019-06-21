@@ -18,7 +18,6 @@
 #include <zircon/hw/usb/hub.h>
 #include <zircon/thread_annotations.h>
 #include <zircon/types.h>
-#include <zircon/thread_annotations.h>
 
 namespace mt_usb_hci {
 
@@ -35,7 +34,8 @@ struct pvt_configuration_descriptor_t {
 // HubPort represents a hub's physical port.
 class HubPort {
 public:
-    explicit HubPort(ddk::MmioView usb) : usb_(usb) {}
+    explicit HubPort(ddk::MmioView usb)
+        : usb_(usb) {}
 
     ~HubPort() = default;
 
@@ -98,7 +98,7 @@ private:
 // UsbRootHub is the logical USB 2.0 root hub device.  The chipset does not contain a root hub
 // controller, so we emulate the device here.  Because this is the root hub, it is assumed this
 // will be a singleton instance.
-class UsbRootHub: public UsbDevice {
+class UsbRootHub : public UsbDevice {
 public:
     explicit UsbRootHub(uint32_t id, ddk::MmioView usb)
         : id_(id),
@@ -169,65 +169,66 @@ private:
 
     // USB root hub device descriptors.
     static constexpr usb_device_descriptor_t device_descriptor_ = {
-        sizeof(usb_device_descriptor_t), // .bLength
-        USB_DT_DEVICE,   // .bDescriptorType
-        htole16(0x0200), // .bcdUSB
-        USB_CLASS_HUB,   // .bDeviceClass
-        0,               // .bDeviceSubClass
-        1,               // .bDeviceProtocol
-        64,              // .bMaxPacketSize0
-        htole16(0x18d1), // .idVendor
-        htole16(0xa001), // .idProduct
-        htole16(0x0100), // .bcdDevice
-        1,               // .iManufacturer
-        2,               // .iProduct
-        0,               // .iSerialNumber
-        1,               // .bNumConfigurations
+        .bLength = sizeof(usb_device_descriptor_t),
+        .bDescriptorType = USB_DT_DEVICE,
+        .bcdUSB = htole16(0x0200),
+        .bDeviceClass = USB_CLASS_HUB,
+        .bDeviceSubClass = 0,
+        .bDeviceProtocol = 1,
+        .bMaxPacketSize0 = 64,
+        .idVendor = htole16(0x18d1),
+        .idProduct = htole16(0xa001),
+        .bcdDevice = htole16(0x0100),
+        .iManufacturer = 1,
+        .iProduct = 2,
+        .iSerialNumber = 0,
+        .bNumConfigurations = 1,
     };
 
     static constexpr pvt_configuration_descriptor_t config_descriptor_ = {
         .config = {
-            sizeof(usb_configuration_descriptor_t),          // .bLength
-            USB_DT_CONFIG,                                   // .bDescriptorType
-            htole16(sizeof(pvt_configuration_descriptor_t)), // .wTotalLength
-            1,                      // .bNumInterfaces
-            1,                      // .bConfigurationValue
-            0,                      // .iConfiguration
-            0xe0,                   // .bmAttributes (self powered)
-            0,                      // .bMaxPower
+            .bLength = sizeof(usb_configuration_descriptor_t),
+            .bDescriptorType = USB_DT_CONFIG,
+            .wTotalLength = htole16(sizeof(pvt_configuration_descriptor_t)),
+            .bNumInterfaces = 1,
+            .bConfigurationValue = 1,
+            .iConfiguration = 0,
+            .bmAttributes = 0xe0, // self-powered.
+            .bMaxPower = 0,
         },
         .interface = {
-            sizeof(usb_interface_descriptor_t), // .bLength
-            USB_DT_INTERFACE,       // .bDescriptorType
-            0,                      // .bInterfaceNumber
-            0,                      // .bAlternateSetting
-            1,                      // .bNumEndpoints
-            USB_CLASS_HUB,          // .bInterfaceClass
-            0,                      // .bInterfaceSubClass
-            0,                      // .bInterfaceProtocol
-            0,                      // .iInterface
+            .bLength = sizeof(usb_interface_descriptor_t),
+            .bDescriptorType = USB_DT_INTERFACE,
+            .bInterfaceNumber = 0,
+            .bAlternateSetting = 0,
+            .bNumEndpoints = 1,
+            .bInterfaceClass = USB_CLASS_HUB,
+            .bInterfaceSubClass = 0,
+            .bInterfaceProtocol = 0,
+            .iInterface = 0,
         },
-        .endpoint = { // USB hub status change endpoint
-            sizeof(usb_endpoint_descriptor_t), // .bLength
-            USB_DT_ENDPOINT,        // .bDescriptorType
-            USB_ENDPOINT_IN | 1,    // .bEndpointAddress
-            USB_ENDPOINT_INTERRUPT, // .bmAttributes
-            htole16(4),             // .wMaxPacketSize
-            12,                     // .bInterval
+        .endpoint = {
+            // USB hub status change endpoint
+            .bLength = sizeof(usb_endpoint_descriptor_t),
+            .bDescriptorType = USB_DT_ENDPOINT,
+            .bEndpointAddress = USB_ENDPOINT_IN | 1,
+            .bmAttributes = USB_ENDPOINT_INTERRUPT,
+            .wMaxPacketSize = htole16(4),
+            .bInterval = 12,
         },
     };
 
     static constexpr uint8_t string_lang_descriptor_[] = {
-        4,                          // .bLength
-        USB_DT_STRING,              // .bDescriptorType
-        0x09, 0x04,                 // .bString (EN-US as the only supported language)
+        4,             // .bLength
+        USB_DT_STRING, // .bDescriptorType
+        0x09, 0x04,    // .bString (EN-US as the only supported language)
     };
 
     static constexpr uint8_t string_mfr_descriptor_[] = {
-        14,                         // .bLength
-        USB_DT_STRING,              // .bDescriptorType
-        'Z', 0, 'i', 0, 'r', 0,     // .bString
-        'c', 0, 'o', 0, 'n', 0,     // "Zircon", UTF-16LE
+        14,                     // .bLength
+        USB_DT_STRING,          // .bDescriptorType
+        'Z', 0, 'i', 0, 'r', 0, // .bString
+        'c', 0, 'o', 0, 'n', 0, // "Zircon", UTF-16LE
     };
 
     static constexpr uint8_t string_product_descriptor_[] = {
@@ -246,13 +247,16 @@ private:
     };
 
     static constexpr usb_hub_descriptor_t hub_descriptor_ = {
-        sizeof(usb_hub_descriptor_t),   // .bDescLength
-        USB_HUB_DESC_TYPE,              // .bDescriptorType
-        1,                              // .bNbrPorts
-        0,                              // .wHubCharacteristics
-        1,                              // .bPwrOn2PwrGood
-        0,                              // .bHubContrCurrent
-        {{{0, 0, 0, 0}, {0, 0, 0, 0}}}, // .struct-hs (unused)
+        .bDescLength = sizeof(usb_hub_descriptor_t),
+        .bDescriptorType = USB_HUB_DESC_TYPE,
+        .bNbrPorts = 1,
+        .wHubCharacteristics = 0,
+        .bPowerOn2PwrGood = 1,
+        .bHubContrCurrent = 0,
+        .hs = {
+            .DeviceRemovable = {0, 0, 0, 0},
+            .PortPwrCtrlMask = {0, 0, 0, 0},
+        },
     };
 };
 

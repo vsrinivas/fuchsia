@@ -32,7 +32,7 @@ public:
     //
     // If the machine is awaiting a hardware interrupt, any call to Advance(false) is a functional
     // no-op.
-    virtual void Advance(bool interrupt=false) = 0;
+    virtual void Advance(bool interrupt = false) = 0;
 
     // True if the transaction machine has reached a successful state.
     virtual bool Ok() const = 0;
@@ -96,7 +96,7 @@ public:
     size_t actual() const override { return actual_.load(); }
     ControlState state() const { return state_.load(); }
 
-    void Advance(bool interrupt=false) override;
+    void Advance(bool interrupt = false) override;
     bool Ok() const override { return state_.load() == ControlState::SUCCESS; }
     void Cancel() override;
     void Wait() override { __UNUSED auto _ = sync_completion_wait(&complete_, ZX_TIME_INFINITE); }
@@ -110,6 +110,7 @@ private:
     bool BusError();
 
     // Advance from the given state to the next appropriate state.
+    // clang-format off
     void AdvanceSetup()        TA_REQ(lock_);
     void AdvanceSetupIrq()     TA_REQ(lock_);
     void AdvanceInData()       TA_REQ(lock_);
@@ -123,6 +124,7 @@ private:
     void AdvanceSuccess()      TA_REQ(lock_);
     void AdvanceError()        TA_REQ(lock_);
     void AdvanceCancel()       TA_REQ(lock_);
+    // clang-format on
 
     // The type of this Control.
     const ControlType type_;
@@ -148,7 +150,7 @@ private:
     // written to an endpoint-FIFO.  Similarity, for a READ-type transaction, the endpoint-FIFO
     // will be read and its data written to this buffer.  This object does not assume ownership of
     // this pointer.
-    void *buffer_ TA_GUARDED(lock_);
+    void* buffer_ TA_GUARDED(lock_);
 
     // The buffer size.
     const size_t len_;
@@ -221,7 +223,7 @@ public:
     size_t actual() const override { return actual_.load(); }
     BulkState state() const { return state_.load(); }
 
-    void Advance(bool interrupt=false) override;
+    void Advance(bool interrupt = false) override;
     bool Ok() const override { return state_.load() == BulkState::SUCCESS; }
     void Cancel() override;
     void Wait() override { __UNUSED auto _ = sync_completion_wait(&complete_, ZX_TIME_INFINITE); }
@@ -247,6 +249,7 @@ private:
     bool BusError();
 
     // Advance from the given state to the next appropriate state.
+    // clang-format off
     void AdvanceSetup()            TA_REQ(lock_);
     virtual void AdvanceSetupIn()  TA_REQ(lock_) = 0;
     virtual void AdvanceSetupOut() TA_REQ(lock_) = 0;
@@ -257,6 +260,7 @@ private:
     void AdvanceSuccess()          TA_REQ(lock_);
     void AdvanceError()            TA_REQ(lock_);
     void AdvanceCancel()           TA_REQ(lock_);
+    // clang-format on
 
     // The endpoint direction for this transaction.
     const BulkDirection dir_;

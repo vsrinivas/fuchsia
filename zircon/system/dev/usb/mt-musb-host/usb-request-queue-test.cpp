@@ -11,8 +11,8 @@
 #include <fbl/condition_variable.h>
 #include <fbl/mutex.h>
 #include <lib/mmio/mmio.h>
-#include <lib/zx/vmo.h>
 #include <lib/mock-function/mock-function.h>
+#include <lib/zx/vmo.h>
 #include <usb/request-cpp.h>
 #include <zircon/types.h>
 #include <zxtest/zxtest.h>
@@ -56,7 +56,7 @@ public:
 
     // Wait for n-invocations of DispatchRequest() to be invoked.  This allows us to synchronize the
     // tests to the iterations of the queue thread.
-    void Wait(int n=1) {
+    void Wait(int n = 1) {
         fbl::AutoLock _(&lock_);
         while (dispatch_ct_ < n) {
             cond_.Wait(&lock_);
@@ -83,12 +83,12 @@ private:
 class TransactionQueueTest : public zxtest::Test {
 protected:
     void SetUp() {
-        ASSERT_OK(zx::vmo::create(4096, 0, &vmo_));
-        ASSERT_OK(ddk::MmioBuffer::Create(0, 4096, std::move(vmo_),
+        zx::vmo vmo;
+        ASSERT_OK(zx::vmo::create(4096, 0, &vmo));
+        ASSERT_OK(ddk::MmioBuffer::Create(0, 4096, std::move(vmo),
                                           ZX_CACHE_POLICY_CACHED, &mmio_));
     }
 
-    zx::vmo vmo_;
     std::optional<ddk::MmioBuffer> mmio_;
 
     static constexpr usb_request_complete_t cb_ = {
@@ -295,6 +295,6 @@ TEST_F(TransactionQueueTest, QueueThread_CancelAll) {
 
 } // namespace mt_usb_hci
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
     return RUN_ALL_TESTS(argc, argv);
 }
