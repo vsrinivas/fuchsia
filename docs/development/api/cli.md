@@ -47,6 +47,7 @@ determine if the tool is a good fit for Fuchsia or the Fuchsia SDK.
 
 Tools may be used for different development tasks. On a large team these roles
 may be separate people. Some categories are:
+
 - Component development (mods/agents)
 - Driver development (DDK)
 - Fuchsia development (SDK)
@@ -89,6 +90,7 @@ making a tool that accomplishes one small step of a task; instead make a tool
 that will perform a complete task.
 
 For example, when:
+
 - developing a C++ application: run the preprocessor, run the compiler, run the
 linker, start the built executable.
 - working on a unit test: build the tests and run the tests being worked on
@@ -178,6 +180,7 @@ This section is for the convenience of the reader. This document is not
 authoritative on which platforms are supported.
 
 We currently support
+
 - Linux
 - macOS
 
@@ -187,6 +190,7 @@ to keep the platforms listed below in mind.
 
 Tools should be built in a way that makes them easy to port to the following
 platforms:
+
 - Fuchsia (self-hosted)
 - Windows
 
@@ -201,6 +205,7 @@ insensitivity since some platforms are case sensitive.
 ### Development Hosts Using a Non-English Locale
 
 There are several aspects to consider for non-English developers:
+
 - Whether the tool itself can be localized
 - Whether the documentation for the tool can be localized
 - Whether the tool can work with path names and data that include non-ASCII
@@ -237,6 +242,7 @@ whether the tool needs to be called at all.
 ### Command Line Arguments
 
 There are three types of command line arguments:
+
 - exact text
 - arguments
 - options (i.e. switches and keys)
@@ -321,6 +327,7 @@ exclusive.
 
 Passing mutually exclusive options is considered a user error. When this occurs
 the tool will do one of the following:
+
 - Write an error message explaining the issue and exit with a non-zero result
   code; doing no work (i.e. there was no data changed as a result of the call).
   This is the expected handling, so no further documentation or notes are
@@ -393,6 +400,7 @@ argument is handled by the `build` subcommand.
 ### Common Features
 
 Command line tools are expected to support some common switches:
+
 - `--help`
 - `--quiet`
 - `--verbose`
@@ -538,6 +546,7 @@ inputs, missing dependencies, or bugs within the tool. Make error reports
 comprehensible and actionable.
 
 If the error came from bad inputs
+
 1. If the user gave the tool bad data, give context about the error and guide
    the user toward fixing the input, e.g. print which input file (and line
    number if that's appropriate for the input) where the input error occurred.
@@ -552,6 +561,7 @@ If the error came from bad inputs
    tool to get more help).
 
 If the error came from missing dependencies
+
 1. Be clear that the error is from missing dependencies, i.e. don't leave the
    user trying to debug their input data if that is not the issue.
 2. Provide instruction on how to satisfy the dependencies. This can be an
@@ -559,6 +569,7 @@ If the error came from missing dependencies
    instructions (e.g. "`see: http:example.com/how-to-install-foo`").
 
 If the error came from an unexpected state (i.e. a bug) in the tool
+
 1. Apologize. Explain that the tool got into an unexpected state. Don't leave
    the user trying to guess whether their input data was bad or they were
    missing dependencies.
@@ -621,6 +632,7 @@ receiver is a program.
 #### ANSI Color
 
 Use of color is allowed with the following caveats
+
 - Enabling/disabling color output based on terminal information (i.e. whether it
   supports color) is encouraged, but that's not always possible (so it's not
   required)
