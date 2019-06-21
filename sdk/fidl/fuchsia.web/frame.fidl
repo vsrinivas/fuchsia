@@ -155,14 +155,15 @@ protocol Frame {
     /// Input is enabled by default.
     SetEnableInput(bool enable_input);
 
-    /// Sets additional headers on every subsequent network request, with the
-    /// exception of the first request started via the LoadUrl() method in the
-    /// NavigationController protocol.
-    /// Must be called before a page is loaded on the Frame. Calling this
-    /// method after a page is loaded is invalid behavior and will close the
-    /// Frame channel.
+    /// Sets additional headers on all HTTP requests, except for top-frame
+    /// navigations initiated via LoadUrl(). The callback must be processed
+    /// before the first call to NavigationController.LoadUrl(). The underlying
+    /// channel for |provider| must remain open for the entirety of the Frame
+    /// lifetime.
+    /// Invalid usage will result in closure of the Frame channel with
+    /// ERR_INVALID_ARGS.
     [Transitional]
-    SetAdditionalHeadersProvider(AdditionalHeadersProvider? provider);
+    SetAdditionalHeadersProvider(AdditionalHeadersProvider provider) -> ();
 };
 
 protocol AdditionalHeadersProvider {
