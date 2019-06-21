@@ -8,6 +8,7 @@
 
 #include "gtest/gtest.h"
 #include "src/ledger/bin/app/constants.h"
+#include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/storage/public/types.h"
 
 namespace ledger {
@@ -74,6 +75,58 @@ TEST(Inspect, PageDisplayNameToPageId) {
   EXPECT_FALSE(PageDisplayNameToPageId(
       "436C6970626F617264506167655F5F (\"ClipboardPage__\")",
       &malformed_page_id));
+}
+
+TEST(Inspect, CommitIdToDisplayName) {
+  EXPECT_EQ(
+      "0000000000000000000000000000000000000000000000000000000000000000",
+      CommitIdToDisplayName(storage::CommitId(
+          "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0",
+          storage::kCommitIdSize)));
+
+  EXPECT_EQ(
+      "16D25ABC4023C7198F228C19CA4EBF5C7D78D4C1868EA5891DAC1541092D1EFE",
+      CommitIdToDisplayName(storage::CommitId(
+          "\x16\xD2\x5A\xBC\x40\x23\xC7\x19\x8F\x22\x8C\x19\xCA\x4E\xBF\x5C\x7D"
+          "\x78\xD4\xC1\x86\x8E\xA5\x89\x1D\xAC\x15\x41\x09\x2D\x1E\xFE")));
+}
+
+TEST(Inspect, CommitDisplayNameToCommitId) {
+  storage::CommitId root_commit_id;
+  EXPECT_TRUE(CommitDisplayNameToCommitId(
+      "0000000000000000000000000000000000000000000000000000000000000000",
+      &root_commit_id));
+  EXPECT_EQ(
+      storage::CommitId(
+          "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0",
+          storage::kCommitIdSize),
+      root_commit_id);
+
+  storage::CommitId nonzero_commit_id;
+  EXPECT_TRUE(CommitDisplayNameToCommitId(
+      "16D25ABC4023C7198F228C19CA4EBF5C7D78D4C1868EA5891DAC1541092D1EFE",
+      &nonzero_commit_id));
+  EXPECT_EQ(
+      storage::CommitId(
+          "\x16\xD2\x5A\xBC\x40\x23\xC7\x19\x8F\x22\x8C\x19\xCA\x4E\xBF\x5C\x7D"
+          "\x78\xD4\xC1\x86\x8E\xA5\x89\x1D\xAC\x15\x41\x09\x2D\x1E\xFE"),
+      nonzero_commit_id);
+
+  storage::CommitId zero_length_commmit_id;
+  EXPECT_FALSE(CommitDisplayNameToCommitId("", &zero_length_commmit_id));
+
+  storage::CommitId too_short_commit_id;
+  EXPECT_FALSE(CommitDisplayNameToCommitId("475842", &too_short_commit_id));
+
+  storage::CommitId malformed_long_commit_id;
+  EXPECT_FALSE(CommitDisplayNameToCommitId(
+      "16D25ABC4023C7198F228C19CA here's some content that comes from nowhere",
+      &malformed_long_commit_id));
+
+  storage::CommitId malformed_commit_id_of_expected_length;
+  EXPECT_FALSE(CommitDisplayNameToCommitId(
+      "?#D25ABC402>C71.8UF!28C19CA*4EBF5C7D78D4C1, 868EA589/1DAC1Q541t@",
+      &malformed_commit_id_of_expected_length));
 }
 
 }  // namespace

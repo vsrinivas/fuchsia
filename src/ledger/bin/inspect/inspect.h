@@ -19,7 +19,9 @@ inline fxl::StringView kTopLevelNodeName = "ledger_component";
 inline fxl::StringView kRepositoriesInspectPathComponent = "repositories";
 inline fxl::StringView kLedgersInspectPathComponent = "ledgers";
 inline fxl::StringView kPagesInspectPathComponent = "pages";
+inline fxl::StringView kHeadsInspectPathComponent = "heads";
 inline fxl::StringView kCommitsInspectPathComponent = "commits";
+inline fxl::StringView kEntriesInspectPathComponent = "entries";
 // TODO(nathaniel): "requests" was introduced as a demonstration; it should be
 // either given real meaning or cleaned up.
 inline fxl::StringView kRequestsInspectPathComponent = "requests";
@@ -34,6 +36,17 @@ std::string PageIdToDisplayName(const storage::PageId& page_id);
 // display name due to some corruption or mistake, and returns false.
 bool PageDisplayNameToPageId(const std::string& page_display_name,
                              storage::PageId* page_id);
+
+// Converts a |CommitId| to a string suitable to be passed to Inspect for
+// Inspect to show in its user interface and its outputs.
+std::string CommitIdToDisplayName(const storage::CommitId& commit_id);
+
+// The inverse of |CommitIdToDisplayName|, converts a string in the form
+// returned by |CommitIdToDisplayName| to the |CommitId| from which the display
+// name was generated and returns true. Or doesn't, because it doesn't recognize
+// the display name due to some corruption or mistake, and returns false.
+bool CommitDisplayNameToCommitId(const std::string& commit_display_name,
+                                 storage::CommitId* commit_id);
 
 }  // namespace ledger
 

@@ -8,6 +8,7 @@
 
 #include <string>
 
+#include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/lib/fxl/strings/string_number_conversions.h"
 
@@ -57,4 +58,18 @@ bool PageDisplayNameToPageId(const std::string& page_display_name,
                      .substr(0, fuchsia::ledger::PAGE_ID_SIZE * 2),
                  page_id);
 }
+
+std::string CommitIdToDisplayName(const storage::CommitId& commit_id) {
+  return convert::ToHex(commit_id);
+}
+
+bool CommitDisplayNameToCommitId(const std::string& commit_display_name,
+                                 storage::CommitId* commit_id) {
+  if (commit_display_name.size() != storage::kCommitIdSize * 2) {
+    return false;
+  } else {
+    return FromHex(commit_display_name, commit_id);
+  }
+}
+
 }  // namespace ledger
