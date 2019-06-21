@@ -9,28 +9,10 @@ group("all") {
   testonly = true
   public_deps = [
     "//garnet/packages/experimental:kms",
-    "//garnet/packages/experimental:linux_guest",
     "//garnet/packages/experimental:linux_runner",
     "//garnet/packages/experimental:network_settings_server",
     "//garnet/packages/experimental:sys",
     "//garnet/packages/experimental:tennis",
-    "//garnet/packages/experimental:zircon_guest",
-  ]
-}
-
-group("linux_guest") {
-  testonly = true
-  public_deps = [
-    "//garnet/packages/prod:guest_runner",
-    "//src/virtualization/packages/linux_guest",
-  ]
-}
-
-group("debian_guest") {
-  testonly = true
-  public_deps = [
-    "//garnet/packages/prod:guest_runner",
-    "//src/virtualization/packages/debian_guest",
   ]
 }
 
@@ -62,17 +44,6 @@ group("kms") {
     "//garnet/bin/kms:kms",
     "//garnet/bin/kms:kms",
   ]
-}
-
-group("zircon_guest") {
-  testonly = true
-  public_deps = [
-    "//garnet/packages/prod:guest_runner",
-    "//src/virtualization/packages/zircon_guest",
-  ]
-  metadata = {
-    config_package_barrier = []
-  }
 }
 
 group("tennis") {

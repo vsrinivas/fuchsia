@@ -101,6 +101,10 @@ template("guest_package") {
       deps += invoker.deps
     }
 
+    if (defined(invoker.metadata)) {
+      metadata = invoker.metadata
+    }
+
     meta = [
       {
         path =
