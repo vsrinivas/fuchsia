@@ -300,14 +300,12 @@ TEST_F(FormatTest, Structs) {
       " = Pair, \n"
       "  first = Foo, \n"
       "    a = int32_t, 0x110011\n"
-      // TODO(brettw) should be "    b = int32_t&, 0x1100 = 0x10" or similar
-      // when refs are supported.
-      "    b = Err: Unhandled type modifier 0x10, please file a bug.\n"
+      "    b = int32_t&, 0x1100\n"
+      "       = int32_t, 0x12\n"
       "  second = Foo, \n"
       "    a = int32_t, 0x330033\n"
-      // TODO(brettw) should be "    b = int32_t&, 0x1100 = 0x10" or similar
-      // when refs are supported.
-      "    b = Err: Unhandled type modifier 0x10, please file a bug.\n",
+      "    b = int32_t&, 0x1100\n"
+      "       = int32_t, 0x12\n",
       SyncTreeTypeDesc(pair_value, opts));
 }
 
@@ -464,6 +462,45 @@ TEST_F(FormatTest, Pointer) {
       " = Err: The value of type 'int32_t*' is the incorrect size (expecting "
       "8, got 7). Please file a bug.\n",
       SyncTreeTypeDesc(bad_value, opts));
+}
+
+TEST_F(FormatTest, Reference) {
+  FormatExprValueOptions opts;
+
+  auto base_type =
+      fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeSigned, 1, "int");
+  auto ref_type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kReferenceType,
+                                                    LazySymbol(base_type));
+  constexpr uint64_t kAddress = 0x1100;
+  provider()->AddMemory(kAddress, {123, 0, 0, 0, 0, 0, 0, 0});
+
+  // This data refers to the address above.
+  std::vector<uint8_t> data = {0x00, 0x11, 0, 0, 0, 0, 0, 0};
+  ExprValue value(ref_type, data);
+  EXPECT_EQ(
+      " = int&, 0x1100\n"
+      "   = int, 123\n",
+      SyncTreeTypeDesc(value, opts));
+
+  // Test an invalid one with an invalid address.
+  std::vector<uint8_t> bad_data = {0x00, 0x22, 0, 0, 0, 0, 0, 0};
+  opts.verbosity = FormatExprValueOptions::Verbosity::kMedium;
+  value = ExprValue(ref_type, bad_data);
+  EXPECT_EQ(
+      " = int&, 0x2200\n"
+      "   = Err: Invalid pointer 0x2200\n",
+      SyncTreeTypeDesc(value, opts));
+
+  // Test an rvalue reference. This is treated the same as a regular reference
+  // from an interpretation and printing perspective.
+  auto rvalue_ref_type = fxl::MakeRefCounted<ModifiedType>(
+      DwarfTag::kRvalueReferenceType, LazySymbol(base_type));
+  value = ExprValue(rvalue_ref_type, data);
+  opts.verbosity = FormatExprValueOptions::Verbosity::kMedium;
+  EXPECT_EQ(
+      " = int&&, 0x1100\n"
+      "   = int, 123\n",
+      SyncTreeTypeDesc(value, opts));
 }
 
 TEST_F(FormatTest, RustEnum) {

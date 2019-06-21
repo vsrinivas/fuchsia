@@ -454,7 +454,7 @@ TEST_F(FormatValueTest, Reference) {
   opts.verbosity = FormatExprValueOptions::Verbosity::kAllTypes;
   EXPECT_EQ("(int&) 0x1100 = 123", SyncFormatValue(value, opts));
 
-  // Force with minimal formatting (no addr ot type info).
+  // Force with minimal formatting (no addr or type info).
   opts.verbosity = FormatExprValueOptions::Verbosity::kMinimal;
   EXPECT_EQ("123", SyncFormatValue(value, opts));
 

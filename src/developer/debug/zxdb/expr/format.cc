@@ -347,6 +347,38 @@ void FormatPointer(FormatNode* node, const FormatExprValueOptions& options,
   node->children().push_back(std::move(deref_node));
 }
 
+// For now a reference is formatted like a pointer where the outer node is
+// the address, and the inner node is the "dereferenced" value. This is nice
+// because it keeps the formatting code synchronous, while only the value
+// resolution (in the child node) needs to be asynchronous.
+//
+// If this is put into a GUI, we'll want the reference value to be in the
+// main description and not have any children. Visual Studio shows references
+// the same as if it was a value which is probably the correct behavior.
+void FormatReference(FormatNode* node, const FormatExprValueOptions& options,
+                     fxl::RefPtr<EvalContext> eval_context) {
+  node->set_description_kind(FormatNode::kReference);
+
+  Err err = node->value().EnsureSizeIs(kTargetPointerSize);
+  if (err.has_error()) {
+    node->set_err(err);
+    return;
+  }
+
+  // The address goes in the description (see note above).
+  node->set_description(
+      fxl::StringPrintf("0x%" PRIx64, node->value().GetAs<TargetPointer>()));
+
+  auto deref_node = std::make_unique<FormatNode>(
+      std::string(),
+      [ref = node->value()](
+          fxl::RefPtr<EvalContext> context,
+          std::function<void(const Err& err, ExprValue value)> cb) {
+        EnsureResolveReference(context, ref, std::move(cb));
+      });
+  node->children().push_back(std::move(deref_node));
+}
+
 }  // namespace
 
 void FillFormatNodeValue(FormatNode* node, fxl::RefPtr<EvalContext> context,
@@ -409,8 +441,6 @@ void FillFormatNodeDescription(FormatNode* node,
   // Always use this variable below instead of value.type().
   fxl::RefPtr<Type> type = node->value().GetConcreteType(context.get());
 
-  // TODO(brettw) handle references here.
-
   if (const ModifiedType* modified_type = type->AsModifiedType()) {
     // Modified types (references were handled above).
     switch (modified_type->tag()) {
@@ -421,6 +451,10 @@ void FillFormatNodeDescription(FormatNode* node,
           FormatFunctionPointer(value, options, &out);
         else*/
         FormatPointer(node, options, context);
+        break;
+      case DwarfTag::kReferenceType:
+      case DwarfTag::kRvalueReferenceType:
+        FormatReference(node, options, context);
         break;
       default:
         node->set_err(Err("Unhandled type modifier 0x%x, please file a bug.",

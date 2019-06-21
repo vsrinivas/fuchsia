@@ -97,6 +97,7 @@ class FormatNode {
     kCollection,  // Structs, classes.
     kRustEnum,    // Rust-style enum (can have values associated with enums).
     kPointer,
+    kReference,
   };
 
   /* TODO(brettw) in the future I'm think we'll need something like this as
