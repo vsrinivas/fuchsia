@@ -5,25 +5,49 @@ The linter is configured in the [.clang-tidy](/.clang-tidy) file.
 
 ## How to lint
 
-In order to run a specific GN target through the linter, run:
+`fx lint` is a Fuchsia script that wraps language-specific linters in a common
+command line interface. It gathers a list of files, based on the options you
+specify, separates them by matching linter, and executes each required linter.
+`clang-tidy` is used for C and C++ files.
+
+Without any other arguments, `fx lint` lints the files in your
+most recent git commit, and passes them through the linter:
 
 ```
-fx clang-tidy --target=<target>
+fx lint
+```
+
+To restrict linting to C++, add a double-dash (--) followed by the
+file pattern(s) to match, such as:
+
+```
+fx lint -- '*.cc' '*.cpp'
+```
+
+To run a specific GN target through the linter, use:
+
+```
+fx lint --target=<target>
+```
+
+In order to lint all files under the current working directory, add `--all`.
+Running `fx lint --all` from the top-level `fuchsia` directory is generally not
+recommended, and will likely take several hours to complete. Be certain you
+`cd` to the best top level directory for your analysis requirements. For example:
+
+```
+(cd <your/subdir>; fx lint --all -- '*.cc')
 ```
 
 You can also add `--fix` in order to automatically generate fixes for some (but
 not all) of the warnings.
 
-Alternatively, you can run the following to run the current patch through the
-linter:
+Additional options and examples are documented in the tool itself. For the most up
+to date documentation on `fx lint`, including examples, run:
 
 ```
-../scripts/git-file-tidy [--out-dir out/debug-x64]
+fx lint --help
 ```
-
-In order to run the entire repository through the linter, add `--all`. You can
-also add `--fix` in order to automatically generate fixes for some (but not all)
-of the warnings.
 
 ## Suppressing warnings
 
