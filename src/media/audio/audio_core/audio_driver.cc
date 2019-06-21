@@ -40,8 +40,7 @@ zx_status_t AudioDriver::Init(zx::channel stream_channel) {
   res = stream_channel.get_info(ZX_INFO_HANDLE_BASIC, &sc_info, sizeof(sc_info),
                                 nullptr, nullptr);
   if (res != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to to fetch stream channel KOID (res " << res
-                   << ")";
+    FXL_PLOG(ERROR, res) << "Failed to to fetch stream channel KOID";
     return res;
   }
   stream_channel_koid_ = sc_info.koid;
@@ -65,8 +64,7 @@ zx_status_t AudioDriver::Init(zx::channel stream_channel) {
       std::move(stream_channel), owner_->mix_domain_,
       std::move(process_handler), std::move(channel_closed_handler));
   if (res != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to activate stream channel for AudioDriver!  "
-                   << "(res " << res << ")";
+    FXL_PLOG(ERROR, res) << "Failed to activate stream channel for AudioDriver";
     return res;
   }
 
@@ -82,9 +80,8 @@ zx_status_t AudioDriver::Init(zx::channel stream_channel) {
   res = cmd_timeout_->Activate(owner_->mix_domain_,
                                std::move(cmd_timeout_handler));
   if (res != ZX_OK) {
-    FXL_LOG(ERROR)
-        << "Failed to activate command timeout timer for AudioDriver!  "
-        << "(res " << res << ")";
+    FXL_PLOG(ERROR, res)
+        << "Failed to activate command timeout timer for AudioDriver";
     return res;
   }
 
@@ -763,10 +760,9 @@ zx_status_t AudioDriver::ProcessSetFormatResponse(
   }
 
   if (resp.result != ZX_OK) {
-    FXL_LOG(WARNING) << "Error attempting to set format: " << frames_per_sec_
-                     << "Hz " << channel_count_ << "-Ch 0x" << std::hex
-                     << sample_format_ << "(res " << std::dec << resp.result
-                     << ")";
+    FXL_PLOG(WARNING, resp.result)
+        << "Error attempting to set format: " << frames_per_sec_ << "Hz "
+        << channel_count_ << "-Ch 0x" << std::hex << sample_format_;
     return resp.result;
   }
 
@@ -794,8 +790,7 @@ zx_status_t AudioDriver::ProcessSetFormatResponse(
                               std::move(process_handler),
                               std::move(channel_closed_handler));
   if (res != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to activate ring buffer channel (res = " << res
-                   << ")";
+    FXL_PLOG(ERROR, res) << "Failed to activate ring buffer channel";
     return res;
   }
 
@@ -830,8 +825,8 @@ zx_status_t AudioDriver::ProcessGetFifoDepthResponse(
   }
 
   if (resp.result != ZX_OK) {
-    FXL_LOG(ERROR) << "Error when fetching ring buffer fifo depth (res = "
-                   << resp.result << ").";
+    FXL_PLOG(ERROR, resp.result)
+        << "Error when fetching ring buffer fifo depth";
     return resp.result;
   }
 

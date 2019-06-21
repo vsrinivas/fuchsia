@@ -252,8 +252,7 @@ void AudioCapturerImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) {
   payload_buf_vmo_ = std::move(payload_buf_vmo);
   res = payload_buf_vmo_.get_size(&payload_buf_size_);
   if (res != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to fetch payload buffer VMO size (res = " << res
-                   << ")";
+    FXL_PLOG(ERROR, res) << "Failed to fetch payload buffer VMO size";
     return;
   }
 
@@ -283,7 +282,7 @@ void AudioCapturerImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) {
   res = zx::vmar::root_self()->map(0, payload_buf_vmo_, 0, payload_buf_size_,
                                    ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &tmp);
   if (res != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to map payload buffer VMO (res = " << res << ")";
+    FXL_PLOG(ERROR, res) << "Failed to map payload buffer VMO";
     return;
   }
 
@@ -298,7 +297,7 @@ void AudioCapturerImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) {
       });
 
   if (res != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed activate wakeup event (res = " << res << ")";
+    FXL_PLOG(ERROR, res) << "Failed activate wakeup event";
     return;
   }
 
@@ -310,7 +309,7 @@ void AudioCapturerImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) {
       });
 
   if (res != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed activate timer (res = " << res << ")";
+    FXL_PLOG(ERROR, res) << "Failed activate timer";
     return;
   }
 

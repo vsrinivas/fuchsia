@@ -168,13 +168,12 @@ zx_status_t AudioDeviceSettings::InitFromDisk() {
       } else {
         storage_.reset();
         if (!cfg_src.is_default) {
-          FXL_LOG(INFO) << "Failed to read device settings at \"" << path
-                        << "\" (err " << res
-                        << "). Re-creating file from defaults.";
+          FXL_PLOG(INFO, res) << "Failed to read device settings at \"" << path
+                              << "\". Re-creating file from defaults";
           unlink(path);
         } else {
-          FXL_LOG(INFO) << "Could not load default audio settings file \""
-                        << path << "\" (err " << res << ").";
+          FXL_PLOG(INFO, res) << "Could not load default audio settings file \""
+                              << path << "\"";
         }
       }
     }
@@ -203,9 +202,9 @@ zx_status_t AudioDeviceSettings::InitFromDisk() {
 
   zx_status_t res = Serialize();
   if (res != ZX_OK) {
-    FXL_LOG(WARNING) << "Failed to write new settings file at \"" << path
-                     << "\" (err " << res
-                     << "). Settings for this device will not be persisted.";
+    FXL_PLOG(WARNING, res)
+        << "Failed to write new settings file at \"" << path
+        << "\". Settings for this device will not be persisted";
     storage_.reset();
     unlink(path);
   }

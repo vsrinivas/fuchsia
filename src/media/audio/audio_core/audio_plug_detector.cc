@@ -107,9 +107,8 @@ void AudioPlugDetector::AddAudioDevice(int dir_fd, const std::string& name,
                                 dev_channel.reset_and_get_address());
   if (res != ZX_OK) {
     REP(FailedToObtainFdioServiceChannel(name, is_input, res));
-    FXL_LOG(ERROR) << "Failed to obtain FDIO service channel to audio "
-                   << (is_input ? "input" : "output") << " (status " << res
-                   << ")";
+    FXL_PLOG(ERROR, res) << "Failed to obtain FDIO service channel to audio "
+                         << (is_input ? "input" : "output");
     return;
   }
 
@@ -120,9 +119,8 @@ void AudioPlugDetector::AddAudioDevice(int dir_fd, const std::string& name,
   res = dev.GetChannel(&channel);
   if (res != ZX_OK) {
     REP(FailedToObtainStreamChannel(name, is_input, res));
-    FXL_LOG(ERROR) << "Failed to open channel to audio "
-                   << (is_input ? "input" : "output") << " (status " << res
-                   << ")";
+    FXL_PLOG(ERROR, res) << "Failed to open channel to audio "
+                         << (is_input ? "input" : "output");
     return;
   }
 

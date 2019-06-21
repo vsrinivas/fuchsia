@@ -41,9 +41,8 @@ zx_status_t AudioDeviceManager::Init() {
 
   zx_status_t res = throttle_output->Startup();
   if (res != ZX_OK) {
-    FXL_LOG(ERROR)
-        << "AudioDeviceManager failed to initialize the throttle output (res "
-        << res << ")";
+    FXL_PLOG(ERROR, res)
+        << "AudioDeviceManager failed to initialize the throttle output";
     throttle_output->Shutdown();
   }
   throttle_output_ = std::move(throttle_output);
@@ -51,8 +50,7 @@ zx_status_t AudioDeviceManager::Init() {
   // Start monitoring for plug/unplug events of pluggable audio output devices.
   res = plug_detector_.Start(this);
   if (res != ZX_OK) {
-    FXL_LOG(ERROR) << "AudioDeviceManager failed to start plug detector (res "
-                   << res << ")";
+    FXL_PLOG(ERROR, res) << "AudioDeviceManager failed to start plug detector";
     return res;
   }
 
@@ -61,7 +59,7 @@ zx_status_t AudioDeviceManager::Init() {
   if (res == ZX_ERR_ALREADY_EXISTS) {
     FXL_LOG(ERROR) << "FxLoader already started!";
   } else if (res != ZX_OK) {
-    FXL_LOG(WARNING) << "FxLoader::LoadLibrary failed (res: " << res << ")";
+    FXL_PLOG(WARNING, res) << "FxLoader::LoadLibrary failed";
   }
 
   return res;

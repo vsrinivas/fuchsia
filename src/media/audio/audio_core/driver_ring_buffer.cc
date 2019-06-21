@@ -38,7 +38,7 @@ zx_status_t DriverRingBuffer::Init(zx::vmo vmo, uint32_t frame_size,
   zx_status_t res = vmo.get_size(&vmo_size);
 
   if (res != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to get ring buffer VMO size (res " << res << ")";
+    FXL_PLOG(ERROR, res) << "Failed to get ring buffer VMO size";
     return res;
   }
 
@@ -55,7 +55,7 @@ zx_status_t DriverRingBuffer::Init(zx::vmo vmo, uint32_t frame_size,
   res = vmo_mapper_.Map(vmo, 0u, size, flags);
 
   if (res != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to map ring buffer VMO (res " << res << ")";
+    FXL_PLOG(ERROR, res) << "Failed to map ring buffer VMO";
     return res;
   }
 

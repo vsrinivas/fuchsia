@@ -58,7 +58,7 @@ zx_status_t DriverOutput::Init() {
 
   res = driver_->Init(std::move(initial_stream_channel_));
   if (res != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to initialize driver object (res " << res << ")";
+    FXL_PLOG(ERROR, res) << "Failed to initialize driver object";
     return res;
   }
 
@@ -407,14 +407,14 @@ void DriverOutput::OnDriverConfigComplete() {
   // work to do.  See MTWN-5
   zx_status_t res = driver_->Start();
   if (res != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to start ring buffer (res = " << res << ")";
+    FXL_PLOG(ERROR, res) << "Failed to start ring buffer";
     return;
   }
 
   // Start monitoring plug state.
   res = driver_->SetPlugDetectEnabled(true);
   if (res != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to enable plug detection (res = " << res << ")";
+    FXL_PLOG(ERROR, res) << "Failed to enable plug detection";
     return;
   }
 
