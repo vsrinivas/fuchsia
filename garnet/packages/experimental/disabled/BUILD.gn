@@ -12,14 +12,6 @@ group("examples_escher_linux") {
   ]
 }
 
-group("test_amlogic_video") {
-  testonly = true
-  public_deps = [
-    "//garnet/drivers/video/amlogic-decoder:test_amlogic_codec_factory_package",
-    "//garnet/examples/media:use_h264_decoder_test",
-  ]
-}
-
 group("tests_escher_linux") {
   testonly = true
   public_deps = [
@@ -47,13 +39,6 @@ group("biscotti_guest") {
   public_deps = [
     "//garnet/packages/prod:guest_runner",
     "//src/virtualization/packages/biscotti_guest",
-  ]
-}
-
-group("zircon_rust") {
-  testonly = true
-  public_deps = [
-    "//garnet/public/rust/fuchsia-zircon/examples:zircon_rust_examples",
   ]
 }
 

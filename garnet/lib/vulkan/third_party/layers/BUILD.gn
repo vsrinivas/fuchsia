@@ -27,7 +27,6 @@ package("screenshot_layer") {
 
   deps = [
     ":VkLayer_screenshot",
-    "//third_party/vulkan_loader_and_validation_layers/loader",
   ]
 
   libraries = [
@@ -49,7 +48,6 @@ package("rfb_layer") {
 
   deps = [
     ":VkLayer_rfb",
-    "//third_party/vulkan_loader_and_validation_layers/loader",
   ]
 
   libraries = [
@@ -68,22 +66,21 @@ package("rfb_layer") {
 
 shared_library("VkLayer_rfb") {
   sources = [
-    "//third_party/vulkan_loader_and_validation_layers/layers/vk_format_utils.cpp",
     "rfb.cpp",
   ]
   deps = [
     "//garnet/lib/vulkan/src/rfb_server",
-    "//third_party/vulkan_loader_and_validation_layers/layers:layer_common",
+    "//src/graphics/lib/vulkan:micro_layer_common",
   ]
 }
+
 shared_library("VkLayer_screenshot") {
   sources = [
-    "//third_party/vulkan_loader_and_validation_layers/layers/vk_format_utils.cpp",
     "screenshot.cpp",
     "screenshot_parsing.cpp",
     "screenshot_parsing.h",
   ]
   deps = [
-    "//third_party/vulkan_loader_and_validation_layers/layers:layer_common",
+    "//src/graphics/lib/vulkan:micro_layer_common",
   ]
 }

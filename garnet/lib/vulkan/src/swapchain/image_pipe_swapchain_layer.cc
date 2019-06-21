@@ -2,19 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#define FUCHSIA_LAYER 1
+
 #if USE_IMAGEPIPE_SURFACE_FB
 #include "image_pipe_surface_display.h"  // nogncheck
 #else
 #include "image_pipe_surface_async.h"  // nogncheck
 #endif
 
+#include <vk_dispatch_table_helper.h>
+#include <vk_layer_data.h>
+#include <vk_layer_extension_utils.h>
+#include <vulkan/vk_layer.h>
+
 #include <thread>
 #include <vector>
-#include "vk_dispatch_table_helper.h"
-#include "vk_layer_data.h"
-#include "vk_layer_extension_utils.h"
-#include "vk_loader_platform.h"
-#include "vulkan/vk_layer.h"
 
 #define VK_LAYER_API_VERSION VK_MAKE_VERSION(1, 0, VK_HEADER_VERSION)
 

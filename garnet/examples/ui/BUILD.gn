@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
-import("//third_party/vulkan_loader_and_validation_layers/layers/layers.gni")
+import("//src/graphics/lib/vulkan/layers.gni")
 
 group("ui") {
   public_deps = [
@@ -99,7 +99,7 @@ package("direct_input_child") {
 package("pose_buffer_presenter") {
   deps = [
     "lab/pose_buffer_presenter",
-    "//third_party/vulkan_loader_and_validation_layers/layers",
+    "//src/graphics/lib/vulkan:validation_layers",
   ]
 
   binary = "pose_buffer_presenter"
@@ -149,7 +149,7 @@ package("shadertoy_client") {
 package("shadertoy_service") {
   deps = [
     "shadertoy/service",
-    "//third_party/vulkan_loader_and_validation_layers/layers",
+    "//src/graphics/lib/vulkan:validation_layers",
   ]
 
   binary = "shadertoy_service"

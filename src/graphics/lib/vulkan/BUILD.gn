@@ -1,0 +1,51 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("vulkan") {
+  public_deps = [
+    "//third_party/vulkan_loader_and_validation_layers:vulkan",
+  ]
+}
+
+group("headers") {
+  public_configs = [ ":headers_config" ]
+}
+
+# Depend on the loadable modules that are validation layers
+group("validation_layers") {
+  public_deps = [
+    "//third_party/vulkan_loader_and_validation_layers/layers",
+  ]
+}
+
+# Support code for building layers
+group("micro_layer_common") {
+  public_deps = [
+    "//third_party/vulkan_loader_and_validation_layers/layers:micro_layer_common",
+  ]
+}
+
+group("loader_and_validation_tests") {
+  testonly = true
+  public_deps = [
+    "//third_party/vulkan_loader_and_validation_layers/layers:vulkan_loader_and_layers_tests",
+  ]
+}
+
+group("vulkaninfo") {
+  public_deps = [
+    "//third_party/vulkan_loader_and_validation_layers/demos:vulkaninfo_bin",
+  ]
+}
+
+group("loader_linux") {
+  public_deps = [
+    "//third_party/vulkan_loader_and_validation_layers/loader:loader_linux",
+  ]
+}
+
+config("headers_config") {
+  visibility = [ ":*" ]
+  include_dirs = [ "//third_party/vulkan_loader_and_validation_layers/include" ]
+}
