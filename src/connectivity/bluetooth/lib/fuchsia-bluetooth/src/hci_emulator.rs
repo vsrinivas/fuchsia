@@ -54,11 +54,15 @@ impl Emulator {
             acl_buffer_settings: None,
             le_acl_buffer_settings: None,
         };
-        let result = await!(fake_dev.emulator().publish(default_settings))?;
-        match result {
-            Ok(()) => Ok(fake_dev),
-            Err(e) => Err(format_err!("failed to publish bt-hci device: {:#?}", e)),
-        }
+        await!(fake_dev.publish(default_settings))?;
+        Ok(fake_dev)
+    }
+
+    /// Sends a publish message to the controller. This is a convenience method that internally
+    /// handles the FIDL binding error.
+    pub async fn publish(&self, settings: EmulatorSettings) -> Result<(), Error> {
+        let result = await!(self.emulator().publish(settings))?;
+        result.map_err(|e| format_err!("failed to publish bt-hci device: {:#?}", e))
     }
 
     /// Returns a reference to the underlying file.
@@ -291,9 +295,8 @@ mod tests {
             // our expectation is based on the `ADD_FILE` event).
             hci_watcher =
                 VfsWatcher::new(&hci_dir).expect("Failed to create bt-hci directory watcher");
-            let result = await!(fake_dev.emulator().publish(default_settings()))
+            let _ = await!(fake_dev.publish(default_settings()))
                 .expect("Failed to send Publish message to emulator device");
-            assert!(result.is_ok());
             hci_dev = await_timeout!(watch_for_device_helper(
                 &mut hci_watcher,
                 HCI_DEVICE_DIR,

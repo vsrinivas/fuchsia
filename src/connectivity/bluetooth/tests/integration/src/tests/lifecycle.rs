@@ -4,7 +4,9 @@
 
 use {
     failure::{err_msg, Error, ResultExt},
+    fidl_fuchsia_bluetooth::Address,
     fidl_fuchsia_bluetooth_host::HostProxy,
+    fidl_fuchsia_bluetooth_test::EmulatorSettings,
     fuchsia_async as fasync,
     fuchsia_bluetooth::{constants::HOST_DEVICE_DIR, hci, hci_emulator::Emulator, host},
     fuchsia_vfs_watcher::{self as vfs_watcher, WatchEvent, WatchMessage},
@@ -59,10 +61,21 @@ async fn watch_for_host(original_hosts: Vec<PathBuf>) -> Result<PathBuf, Error> 
 // Tests that creating and destroying a fake HCI device binds and unbinds the bt-host driver.
 pub async fn lifecycle_test(_: ()) -> Result<(), Error> {
     let original_hosts = host::list_host_devices();
-    let fake_hci = await!(Emulator::create_and_publish("bt-hci-integration-lifecycle"))?;
-    let bthost = await!(watch_for_host(original_hosts))?;
+    let addr_bytes = Address { bytes: [1, 2, 3, 4, 5, 6] };
+    let addr_str = "06:05:04:03:02:01";
+    let settings = EmulatorSettings {
+        address: Some(addr_bytes),
+        hci_config: None,
+        extended_advertising: None,
+        acl_buffer_settings: None,
+        le_acl_buffer_settings: None,
+    };
+
+    let fake_hci = await!(Emulator::create("bt-hci-integration-lifecycle"))?;
+    let _ = await!(fake_hci.publish(settings))?;
 
     // Check a device showed up within an acceptable timeout
+    let bthost = await!(watch_for_host(original_hosts))?;
     let found_device = hci::open_rdwr(&bthost);
     assert!(found_device.is_ok());
     let found_device = found_device?;
@@ -80,12 +93,15 @@ pub async fn lifecycle_test(_: ()) -> Result<(), Error> {
     let host = HostProxy::new(fasync::Channel::from_channel(handle.into())?);
     let info = await!(host.get_info())
         .context("Is bt-gap running? If so, try stopping it and re-running these tests")?;
-    assert_eq!("00:00:00:00:00:00", info.address);
+
+    // The bt-host should have been initialized with the address that we initially configured.
+    assert_eq!(addr_str, info.address);
 
     // Remove the bt-hci device
     drop(fake_hci);
 
     // Check the host driver is also destroyed
+    // TODO(armansito): Use a VfsWatcher to watch for device removal instead of this loop.
     let _post_destroy_hosts = host::list_host_devices();
     let mut device_found = true;
     let mut retry = 0;
