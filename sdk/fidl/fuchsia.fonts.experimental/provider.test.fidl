@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 // NOTE: This file is unstable and should not be depended on.
+// TODO(seancuff): Convert doc comments to markdown.
 
 library fuchsia.fonts.experimental;
 
@@ -44,6 +45,9 @@ protocol Provider {
     /// This method should be called only if the caller knows |family| exists.
     /// Requesting a family that does not exist results in an error. To search
     /// for fonts by family name (or alias), use |ListTypefaces| instead.
+    ///
+    /// Possible errors:
+    /// |NOT_FOUND| if no family name or alias matches the requested |family|.
     GetTypefacesByFamily(ff.FamilyName family) -> (TypefaceInfoResponse response) error Error;
 };
 
