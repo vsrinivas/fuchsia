@@ -4,7 +4,7 @@
 
 group("storage") {
   deps = [
-    # "blobfs",
+    "fs-management",
     "ramdevice-client",
   ]
 }
@@ -12,7 +12,7 @@ group("storage") {
 group("tests") {
   testonly = true
   deps = [
-    # "blobfs:tests",
+    "fs-management:tests",
     "ramdevice-client:tests",
   ]
 }
