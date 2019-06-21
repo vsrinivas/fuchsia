@@ -28,8 +28,8 @@ bool OpenHelper(const zx::channel& directory, const char* path, zx::channel* res
     ASSERT_EQ(fuchsia_io_DirectoryOpen(directory.get(), ZX_FS_RIGHT_READABLE | ZX_FS_FLAG_DESCRIBE,
                                        0, path, strlen(path), server.release()), ZX_OK);
     zx_signals_t pending;
-    ASSERT_EQ(client.wait_one(ZX_CHANNEL_PEER_CLOSED | ZX_CHANNEL_READABLE,
-                              zx::deadline_after(zx::sec(1)), &pending), ZX_OK);
+    ASSERT_EQ(client.wait_one(ZX_CHANNEL_PEER_CLOSED | ZX_CHANNEL_READABLE, zx::time::infinite(),
+                              &pending), ZX_OK);
     ASSERT_EQ(pending & ZX_CHANNEL_READABLE, ZX_CHANNEL_READABLE);
     *response_channel = std::move(client);
 
@@ -176,8 +176,7 @@ bool ReadEvent(watch_buffer_t* wb, const zx::channel& c, const char** name,
                 uint8_t* event) {
     if (wb->ptr == nullptr) {
         zx_signals_t observed;
-        ASSERT_EQ(c.wait_one(ZX_CHANNEL_READABLE, zx::deadline_after(zx::sec(5)), &observed),
-                  ZX_OK);
+        ASSERT_EQ(c.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), &observed), ZX_OK);
         ASSERT_EQ(observed & ZX_CHANNEL_READABLE, ZX_CHANNEL_READABLE);
         uint32_t actual;
         ASSERT_EQ(c.read(0, wb->buf, nullptr, sizeof(wb->buf), 0, &actual, nullptr), ZX_OK);
