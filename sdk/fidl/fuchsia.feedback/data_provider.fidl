@@ -34,10 +34,10 @@ protocol DataProvider {
 /// that clients can directly forward to the servers.
 table Data {
   /// A vector of key-value string pairs. Keys are guaranteed to be unique.
-  1: vector<Annotation> annotations;
+  1: vector<Annotation>:32 annotations;
 
   /// A vector of key-value string-to-VMO pairs. Keys are guaranteed to be unique.
-  2: vector<Attachment> attachments;
+  2: vector<Attachment>:16 attachments;
 };
 
 /// An annotation and its plain ASCII string key.
