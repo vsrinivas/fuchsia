@@ -907,31 +907,50 @@ mod internal {
         }
     );
 
-    /// An extension trait to the `Ip` trait adding an associated `Packet` type.
+    /// An extension trait to the `Ip` trait adding an associated `PacketBuilder` type.
     ///
-    /// `IpExt` extends the `Ip` trait, adding an associated `Packet` type. It
-    /// cannot be part of the `Ip` trait because it requires a `B: ByteSlice`
-    /// parameter (due to the requirements of `packet::ParsablePacket`).
-    pub(crate) trait IpExt<B: ByteSlice>: Ip {
-        type Packet: IpPacket<B, Self, Builder = Self::PacketBuilder>;
+    /// `IpExt` extends the `Ip` trait, adding an associated `PacketBuilder` type.
+    /// It is not part of the `Ip` trait because it contains associated types that are
+    /// not exported from this crate.
+    pub(crate) trait IpExt: Ip {
         type PacketBuilder: IpPacketBuilder<Self>;
     }
 
     // NOTE(joshlf): We know that this is safe because we seal the Ip trait to
     // only be implemented by Ipv4 and Ipv6.
-    impl<B: ByteSlice, I: Ip> IpExt<B> for I {
-        default type Packet = Never;
+    impl<I: Ip> IpExt for I {
         default type PacketBuilder = Never;
     }
 
-    impl<B: ByteSlice> IpExt<B> for Ipv4 {
-        type Packet = Ipv4Packet<B>;
+    impl IpExt for Ipv4 {
         type PacketBuilder = Ipv4PacketBuilder;
     }
 
-    impl<B: ByteSlice> IpExt<B> for Ipv6 {
-        type Packet = Ipv6Packet<B>;
+    impl IpExt for Ipv6 {
         type PacketBuilder = Ipv6PacketBuilder;
+    }
+
+    /// An extension trait to the `IpExt` trait adding an associated `Packet` type.
+    ///
+    /// `IpExtByteSlice` extends the `IpExt` trait, adding an associated `Packet` type.
+    /// It cannot be part of the `IpExt` trait because it requires a `B: ByteSlice`
+    /// parameter (due to the requirements of `packet::ParsablePacket`).
+    pub(crate) trait IpExtByteSlice<B: ByteSlice>: IpExt {
+        type Packet: IpPacket<B, Self, Builder = Self::PacketBuilder>;
+    }
+
+    // NOTE(joshlf): We know that this is safe because we seal the Ip trait to
+    // only be implemented by Ipv4 and Ipv6.
+    impl<B: ByteSlice, I: Ip> IpExtByteSlice<B> for I {
+        default type Packet = Never;
+    }
+
+    impl<B: ByteSlice> IpExtByteSlice<B> for Ipv4 {
+        type Packet = Ipv4Packet<B>;
+    }
+
+    impl<B: ByteSlice> IpExtByteSlice<B> for Ipv6 {
+        type Packet = Ipv6Packet<B>;
     }
 
     /// An IPv4 or IPv6 packet.

@@ -40,7 +40,7 @@ use packet::{BufferViewMut, ParsablePacket};
 use specialize_ip_macro::specialize_ip;
 use zerocopy::{ByteSlice, ByteSliceMut};
 
-use crate::ip::{Ip, IpAddress, IpExt, IpLayerTimerId, IpPacket, Ipv4Addr, Ipv6Addr};
+use crate::ip::{Ip, IpAddress, IpExtByteSlice, IpLayerTimerId, IpPacket, Ipv4Addr, Ipv6Addr};
 use crate::wire::ipv4::{
     IPV4_CHECKSUM_BYTE_RANGE, IPV4_FRAGMENT_DATA_BYTE_RANGE, IPV4_TOTAL_LENGTH_BYTE_RANGE,
 };
@@ -77,7 +77,7 @@ const MAX_FRAGMENT_BLOCKS: u16 = 8191;
 #[specialize_ip]
 pub(crate) fn process_fragment<B: ByteSlice, D: EventDispatcher, I: Ip>(
     ctx: &mut Context<D>,
-    packet: <I as IpExt<B>>::Packet,
+    packet: <I as IpExtByteSlice<B>>::Packet,
 ) -> FragmentProcessingState<B, I> {
     #[ipv4]
     let ret = ctx.state.ip.v4.fragment_cache.process_fragment(&mut ctx.dispatcher, packet);
@@ -101,7 +101,7 @@ pub(crate) fn reassemble_packet<
     ctx: &mut Context<D>,
     key: &FragmentCacheKey<I::Addr>,
     buffer: BV,
-) -> Result<<I as IpExt<B>>::Packet, FragmentReassemblyError> {
+) -> Result<<I as IpExtByteSlice<B>>::Packet, FragmentReassemblyError> {
     #[ipv4]
     let ret = ctx.state.ip.v4.fragment_cache.reassemble_packet(&mut ctx.dispatcher, key, buffer);
 
@@ -147,7 +147,7 @@ pub(crate) trait FragmentablePacket {
 pub(crate) enum FragmentProcessingState<B: ByteSlice, I: Ip> {
     /// The provided packet is not fragmented so no processing is required.
     /// The packet is returned with this value without any modification.
-    NotNeeded(<I as IpExt<B>>::Packet),
+    NotNeeded(<I as IpExtByteSlice<B>>::Packet),
 
     /// The provided packet is fragmented but it is malformed.
     ///
@@ -320,10 +320,10 @@ impl<I: Ip> IpLayerFragmentCache<I> {
     fn process_fragment<B: ByteSlice, D: EventDispatcher>(
         &mut self,
         dispatcher: &mut D,
-        packet: <I as IpExt<B>>::Packet,
+        packet: <I as IpExtByteSlice<B>>::Packet,
     ) -> FragmentProcessingState<B, I>
     where
-        <I as IpExt<B>>::Packet: FragmentablePacket,
+        <I as IpExtByteSlice<B>>::Packet: FragmentablePacket,
     {
         // Get the fragment data.
         let (id, offset, m_flag) = packet.fragment_data();
@@ -532,7 +532,7 @@ impl<I: Ip> IpLayerFragmentCache<I> {
         dispatcher: &mut D,
         key: &FragmentCacheKey<I::Addr>,
         buffer: BV,
-    ) -> Result<<I as IpExt<B>>::Packet, FragmentReassemblyError> {
+    ) -> Result<<I as IpExtByteSlice<B>>::Packet, FragmentReassemblyError> {
         // Get the fragment cache data.
         let fragment_data = match self.cache.get_mut(key) {
             // Either there are no fragments for the given `key`, or we timed out
@@ -651,7 +651,7 @@ fn reassemble_packet_helper<B: ByteSliceMut, BV: BufferViewMut<B>, I: Ip>(
     mut buffer: BV,
     header: Vec<u8>,
     mut body_fragments: BinaryHeap<PacketBodyFragment>,
-) -> Result<<I as IpExt<B>>::Packet, FragmentReassemblyError> {
+) -> Result<<I as IpExtByteSlice<B>>::Packet, FragmentReassemblyError> {
     let bytes = buffer.as_mut();
 
     // First, copy over the header data.
@@ -721,7 +721,7 @@ fn reassemble_packet_helper<B: ByteSliceMut, BV: BufferViewMut<B>, I: Ip>(
     }
 
     // Parse the packet.
-    match <<I as IpExt<B>>::Packet as ParsablePacket<B, _>>::parse_mut(buffer, ()) {
+    match <<I as IpExtByteSlice<B>>::Packet as ParsablePacket<B, _>>::parse_mut(buffer, ()) {
         Ok(p) => Ok(p),
         _ => Err(FragmentReassemblyError::PacketParsingError),
     }
@@ -729,7 +729,7 @@ fn reassemble_packet_helper<B: ByteSliceMut, BV: BufferViewMut<B>, I: Ip>(
 
 /// Get the header bytes for a packet.
 #[specialize_ip]
-fn get_header<B: ByteSlice, I: Ip>(packet: &<I as IpExt<B>>::Packet) -> Vec<u8> {
+fn get_header<B: ByteSlice, I: Ip>(packet: &<I as IpExtByteSlice<B>>::Packet) -> Vec<u8> {
     #[ipv4]
     {
         packet.copy_header_bytes_for_fragment()

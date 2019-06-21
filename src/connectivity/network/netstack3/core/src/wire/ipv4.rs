@@ -630,7 +630,7 @@ mod tests {
     fn test_parse_padding() {
         // Test that we properly discard post-packet padding.
         let mut buffer = BufferSerializer::new_vec(Buf::new(vec![], ..))
-            .encapsulate(<Ipv4 as IpExt<&[u8]>>::PacketBuilder::new(
+            .encapsulate(<Ipv4 as IpExt>::PacketBuilder::new(
                 DEFAULT_DST_IP,
                 DEFAULT_DST_IP,
                 0,

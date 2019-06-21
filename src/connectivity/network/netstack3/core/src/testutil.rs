@@ -21,8 +21,8 @@ use crate::device::ethernet::{EtherType, Mac};
 use crate::device::{DeviceId, DeviceLayerEventDispatcher};
 use crate::error::{IpParseResult, ParseError, ParseResult};
 use crate::ip::{
-    AddrSubnet, Ip, IpAddr, IpAddress, IpExt, IpPacket, IpProto, Ipv4Addr, Ipv6Addr, Subnet,
-    SubnetEither, IPV6_MIN_MTU,
+    AddrSubnet, Ip, IpAddr, IpAddress, IpExtByteSlice, IpPacket, IpProto, Ipv4Addr, Ipv6Addr,
+    Subnet, SubnetEither, IPV6_MIN_MTU,
 };
 use crate::transport::udp::UdpEventDispatcher;
 use crate::transport::TransportLayerEventDispatcher;
@@ -186,7 +186,7 @@ pub(crate) fn parse_ethernet_frame(
 pub(crate) fn parse_ip_packet<I: Ip>(
     mut buf: &[u8],
 ) -> IpParseResult<I, (&[u8], I::Addr, I::Addr, IpProto)> {
-    let packet = (&mut buf).parse::<<I as IpExt<_>>::Packet>()?;
+    let packet = (&mut buf).parse::<<I as IpExtByteSlice<_>>::Packet>()?;
     let src_ip = packet.src_ip();
     let dst_ip = packet.dst_ip();
     let proto = packet.proto();

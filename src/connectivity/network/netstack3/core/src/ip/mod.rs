@@ -324,7 +324,7 @@ pub(crate) fn receive_ip_packet<D: EventDispatcher, B: BufferMut, I: Ip>(
     let p_len = buffer.prefix_len();
     let s_len = buffer.suffix_len();
 
-    let result = buffer.parse_mut::<<I as IpExt<&mut [u8]>>::Packet>();
+    let result = buffer.parse_mut::<<I as IpExtByteSlice<&mut [u8]>>::Packet>();
 
     if result.is_err() {
         let err = result.unwrap_err();
@@ -902,7 +902,7 @@ where
     assert!(!A::Version::LOOPBACK_SUBNET.contains(src_ip));
     assert!(!A::Version::LOOPBACK_SUBNET.contains(dst_ip));
 
-    let body = body.encapsulate(<A::Version as IpExt<&[u8]>>::PacketBuilder::new(
+    let body = body.encapsulate(<A::Version as IpExt>::PacketBuilder::new(
         src_ip,
         dst_ip,
         DEFAULT_TTL,
@@ -1018,7 +1018,7 @@ mod tests {
         assert!(!device_frames.is_empty());
         let mut buffer = Buf::new(device_frames[0].1.as_slice(), ..);
         let frame = buffer.parse::<EthernetFrame<_>>().unwrap();
-        let packet = buffer.parse::<<Ipv6 as IpExt<&[u8]>>::Packet>().unwrap();
+        let packet = buffer.parse::<<Ipv6 as IpExtByteSlice<&[u8]>>::Packet>().unwrap();
         let (src_ip, dst_ip, proto, _) = drop_packet!(packet);
         assert_eq!(dst_ip, DUMMY_CONFIG_V6.remote_ip);
         assert_eq!(src_ip, DUMMY_CONFIG_V6.local_ip);

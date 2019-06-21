@@ -691,7 +691,7 @@ mod tests {
     ) {
         crate::testutil::set_logger_for_test();
         let buffer = BufferSerializer::new_vec(Buf::new(body, ..))
-            .encapsulate(<Ipv4 as IpExt<&[u8]>>::PacketBuilder::new(
+            .encapsulate(<Ipv4 as IpExt>::PacketBuilder::new(
                 DUMMY_CONFIG_V4.remote_ip,
                 dst_ip,
                 ttl,
