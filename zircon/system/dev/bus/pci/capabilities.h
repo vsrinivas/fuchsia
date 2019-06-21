@@ -1,11 +1,7 @@
-// Copyright 2019 The Fuchsia Authors
-//
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file or at
-// https://opensource.org/licenses/MIT
-
-#ifndef ZIRCON_SYSTEM_DEV_BUS_PCI_CAPABILITIES_H_
-#define ZIRCON_SYSTEM_DEV_BUS_PCI_CAPABILITIES_H_
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+#pragma once
 
 #include "config.h"
 #include <fbl/intrusive_double_list.h>
@@ -133,5 +129,3 @@ static_assert(static_cast<uint16_t>(ExtCapability::Id::kHierarchyId) == 0x28);
 const char* CapabilityIdToName(Capability::Id id);
 const char* ExtCapabilityIdToName(ExtCapability::Id id);
 } // namespace pci
-
-#endif // ZIRCON_SYSTEM_DEV_BUS_PCI_CAPABILITIES_H_

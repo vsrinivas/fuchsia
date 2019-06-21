@@ -79,4 +79,3 @@ TEST_F(PciDriverTests, TestRunner) {
     ASSERT_EQ(report.test_count, report.success_count);
     EXPECT_EQ(report.failure_count, 0);
 }
-

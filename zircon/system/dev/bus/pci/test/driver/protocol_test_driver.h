@@ -1,8 +1,7 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#ifndef ZIRCON_SYSTEM_DEV_BUS_PCI_TEST_DRIVER_PROTOCOL_TEST_DRIVER_H_
-#define ZIRCON_SYSTEM_DEV_BUS_PCI_TEST_DRIVER_PROTOCOL_TEST_DRIVER_H_
+#pragma once
 
 #include "driver_tests.h"
 #include <ddk/device.h>
@@ -71,5 +70,3 @@ protected:
 
     ProtocolTestDriver* drv_;
 };
-
-#endif  // ZIRCON_SYSTEM_DEV_BUS_PCI_TEST_DRIVER_PROTOCOL_TEST_DRIVER_H_

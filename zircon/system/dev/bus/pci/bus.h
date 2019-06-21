@@ -1,8 +1,7 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#ifndef ZIRCON_SYSTEM_DEV_BUS_PCI_BUS_H_
-#define ZIRCON_SYSTEM_DEV_BUS_PCI_BUS_H_
+#pragma once
 
 #include "bridge.h"
 #include "config.h"
@@ -93,5 +92,3 @@ private:
 };
 
 } // namespace pci
-
-#endif // ZIRCON_SYSTEM_DEV_BUS_PCI_BUS_H_
