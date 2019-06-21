@@ -63,5 +63,30 @@ TEST(TestRandomTest, IndependantDraws) {
   EXPECT_THAT(v1, Not(ElementsAreArray(v2)));
 }
 
+TEST(TestRandomTest, NoSeedTruncation) {
+  // Tests that the seed is not accidentally truncated when initializing the
+  // generator.
+  constexpr size_t kNbElement = 20;
+
+  TestRandom random1(1);
+  TestRandom random2(1 + (1 << 8));
+  TestRandom random3(1 + (1 << 16));
+  TestRandom random4(1 + (uint64_t(1) << 32));
+
+  std::vector<uint8_t> v1(kNbElement, 0);
+  std::vector<uint8_t> v2(kNbElement, 0);
+  std::vector<uint8_t> v3(kNbElement, 0);
+  std::vector<uint8_t> v4(kNbElement, 0);
+
+  random1.Draw(&v1);
+  random2.Draw(&v2);
+  random3.Draw(&v3);
+  random4.Draw(&v4);
+
+  EXPECT_THAT(v1, Not(ElementsAreArray(v2)));
+  EXPECT_THAT(v1, Not(ElementsAreArray(v3)));
+  EXPECT_THAT(v1, Not(ElementsAreArray(v4)));
+}
+
 }  // namespace
 }  // namespace rng
