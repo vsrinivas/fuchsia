@@ -232,14 +232,16 @@ struct TableType : public Type {
 
 struct XUnionType : public Type {
     XUnionType(std::string name, std::vector<XUnionField> fields, std::string qname,
-               types::Nullability nullability)
+               types::Nullability nullability, types::Strictness strictness)
         : Type(Kind::kXUnion, std::move(name), 24u, CodingNeeded::kAlways),
-          fields(std::move(fields)), qname(std::move(qname)), nullability(nullability) {}
+          fields(std::move(fields)), qname(std::move(qname)), nullability(nullability),
+          strictness(strictness) {}
 
     std::vector<XUnionField> fields;
     const std::string qname;
     types::Nullability nullability;
     XUnionType* maybe_reference_type = nullptr;
+    types::Strictness strictness;
 };
 
 struct MessageType : public Type {

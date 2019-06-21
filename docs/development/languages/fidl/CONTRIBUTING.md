@@ -68,24 +68,31 @@ we do our best to describe the commands used to validate our work there.
 In `zircon/`:
 
 ```sh
-./scripts/gn gen build-zircon --args='variants = ["host_asan"]'
-./scripts/ninja -C build-zircon tools
-./scripts/ninja -C build-zircon system/utest:host
+# optional; builds fidlc for the host with ASan <https://github.com/google/sanitizers/wiki/AddressSanitizer>
+fx set core.x64 --variant=host_asan
+
+# build fidlc
+fx build zircon/tools
 ```
 
-Tests are now built as:
+### fidlc tests
+
+fidlc tests are at:
+
+* [//zircon/system/utest/fidl-compiler/][fidlc-compiler-tests].
+* [//zircon/system/utest/fidl/][fidlc-tests].
+* [//zircon/system/utest/fidl-coding/tables/][fidlc-coding-tables-tests].
 
 ```sh
-./build-zircon/host-x64-linux-clang/obj/system/utest/fidl-compiler/fidl-compiler-test.debug
-./build-zircon/host-x64-mac-clang/obj/system/utest/fidl-compiler/fidl-compiler-test.debug
-```
+# build & run fidlc tests
+fx build zircon/system/utest:host
+$FUCHSIA_DIR/out/default.zircon/host_tests/fidl-compiler-test.debug
 
-### fidl-coding-table
-
-```sh
-fx set bringup.x64 --variant clang
-fx build && \
-fx run zircon.autorun.boot=/boot/test/sys/fidl-coding-tables-test
+# build & run fidl-coding-tables tests
+# --with-base puts all zircon tests under /boot with the bringup.x64 target, or /system when using the core.x64 target
+fx set bringup.x64 --with-base //garnet/packages/tests:zircon   # optionally append "--variant asan"
+fx build
+fx run -k -c zircon.autorun.boot=/boot/bin/runtests+-t+fidl-coding-tables-test
 ```
 
 ### fidlgen (LLCPP, HLCPP, Rust, Go)
@@ -119,12 +126,10 @@ fx exec topaz/bin/fidlgen_dart/regen.sh
 
 ### C runtime
 
-In `zircon/`:
-
 ```sh
-fx set bringup.x64
-fx build && \
-fx run -c zircon.autorun.boot=/boot/test/sys/fidl-test
+fx set bringup.x64 --with-base //garnet/packages/tests:zircon
+fx build
+fx run -k -c zircon.autorun.boot=/boot/bin/runtests+-t+fidl-test
 ```
 
 When the test completes, you're running in the QEMU emulator.
@@ -269,7 +274,9 @@ fidl fmt --library my_library.fidl -i
 [bindings_test-dart]: https://fuchsia.googlesource.com/topaz/+/master/bin/fidl_bindings_test
 [compatibility_test]: https://fuchsia.googlesource.com/topaz/+/master/bin/fidl_compatibility_test
 [fidlc-source]: /zircon/system/host/fidl/
-[fidlc-tests]: /zircon//system/utest/fidl/
+[fidlc-coding-tables-tests]: /zircon/system/utest/fidl-coding-tables/
+[fidlc-compiler-tests]: /zircon/system/utest/fidl-compiler/
+[fidlc-tests]: /zircon/system/utest/fidl/
 [jsonir]: /docs/development/languages/fidl/reference/json-ir.md
 [rtl-c]: /zircon/system/ulib/fidl/
 [rtl-cpp]: /garnet/lib/fidl/cpp/

@@ -56,7 +56,8 @@
       "size": 24,
       "max_out_of_line": 8,
       "alignment": 8,
-      "max_handles": 0
+      "max_handles": 0,
+      "strict": false
     },
     {
       "name": "test.name/NewerSimpleUnion",
@@ -125,7 +126,8 @@
       "size": 24,
       "max_out_of_line": 4294967295,
       "alignment": 8,
-      "max_handles": 0
+      "max_handles": 0,
+      "strict": false
     }
   ],
   "declaration_order": [

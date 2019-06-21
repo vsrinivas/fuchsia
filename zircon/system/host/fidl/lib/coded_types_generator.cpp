@@ -158,7 +158,8 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
                 coded_xunion_type->coded_name + "NullableRef",
                 coded_xunion_type->fields,
                 coded_xunion_type->qname,
-                types::Nullability::kNullable);
+                types::Nullability::kNullable,
+                coded_xunion_type->strictness);
             coded_xunion_type->maybe_reference_type = nullable_xunion_type.get();
             xunion_type_map_[identifier_type] = nullable_xunion_type.get();
             coded_types_.push_back(std::move(nullable_xunion_type));
@@ -169,7 +170,7 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
             if (iter != protocol_type_map_.end())
                 return iter->second;
             auto name = NameCodedProtocolHandle(NameCodedName(identifier_type->name),
-                                                 identifier_type->nullability);
+                                                identifier_type->nullability);
             auto coded_protocol_type = std::make_unique<coded::ProtocolHandleType>(
                 std::move(name), identifier_type->nullability);
             protocol_type_map_[identifier_type] = coded_protocol_type.get();
@@ -450,7 +451,8 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
                              std::move(xunion_name),
                              std::vector<coded::XUnionField>(),
                              NameFlatName(xunion_decl->name),
-                             types::Nullability::kNonnullable));
+                             types::Nullability::kNonnullable,
+                             xunion_decl->strictness));
         break;
     }
     }

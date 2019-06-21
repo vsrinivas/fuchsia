@@ -27,7 +27,8 @@ static inline void trim(std::string& s) {
             }));
     s.erase(std::find_if(s.rbegin(), s.rend(), [](int ch) {
                 return !std::isspace(ch) && ch != '\n';
-            }).base(),
+            })
+                .base(),
             s.end());
 }
 
@@ -634,7 +635,12 @@ bool json_generator_test_xunion() {
         EXPECT_TRUE(checkJSONGenerator(R"FIDL(
 library fidl.test.json;
 
-xunion xu {
+xunion FlexibleFoo {
+  string s;
+  int32 i;
+};
+
+strict xunion StrictFoo {
   string s;
   int32 i;
 };
@@ -654,7 +660,7 @@ xunion xu {
   "union_declarations": [],
   "xunion_declarations": [
     {
-      "name": "fidl.test.json/xu",
+      "name": "fidl.test.json/FlexibleFoo",
       "location": {
         "filename": "json.fidl",
         "line": 4,
@@ -662,7 +668,7 @@ xunion xu {
       },
       "members": [
         {
-          "ordinal": 730795057,
+          "ordinal": 1056421836,
           "type": {
             "kind": "string",
             "nullable": false
@@ -679,7 +685,7 @@ xunion xu {
           "offset": 0
         },
         {
-          "ordinal": 243975053,
+          "ordinal": 1911600824,
           "type": {
             "kind": "primitive",
             "subtype": "int32"
@@ -699,14 +705,66 @@ xunion xu {
       "size": 24,
       "max_out_of_line": 4294967295,
       "alignment": 8,
-      "max_handles": 0
+      "max_handles": 0,
+      "strict": false
+    },
+    {
+      "name": "fidl.test.json/StrictFoo",
+      "location": {
+        "filename": "json.fidl",
+        "line": 9,
+        "column": 15
+      },
+      "members": [
+        {
+          "ordinal": 215696753,
+          "type": {
+            "kind": "string",
+            "nullable": false
+          },
+          "name": "s",
+          "location": {
+            "filename": "json.fidl",
+            "line": 10,
+            "column": 10
+          },
+          "size": 16,
+          "max_out_of_line": 4294967295,
+          "alignment": 8,
+          "offset": 0
+        },
+        {
+          "ordinal": 2063855467,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int32"
+          },
+          "name": "i",
+          "location": {
+            "filename": "json.fidl",
+            "line": 11,
+            "column": 9
+          },
+          "size": 4,
+          "max_out_of_line": 0,
+          "alignment": 4,
+          "offset": 0
+        }
+      ],
+      "size": 24,
+      "max_out_of_line": 4294967295,
+      "alignment": 8,
+      "max_handles": 0,
+      "strict": true
     }
   ],
   "declaration_order": [
-    "fidl.test.json/xu"
+    "fidl.test.json/StrictFoo",
+    "fidl.test.json/FlexibleFoo"
   ],
   "declarations": {
-    "fidl.test.json/xu": "xunion"
+    "fidl.test.json/FlexibleFoo": "xunion",
+    "fidl.test.json/StrictFoo": "xunion"
   }
 }
 )JSON"));
@@ -1983,7 +2041,8 @@ struct Foo {
   int32 a;
 };
 
-)FIDL", &shared);
+)FIDL",
+                               &shared);
         ASSERT_TRUE(bottom_dep.Compile());
         TestLibrary middle_dep("middle.fidl", R"FIDL(
 library middle;
@@ -1994,7 +2053,8 @@ struct Bar {
   bottom.Foo f;
 };
 
-)FIDL", &shared);
+)FIDL",
+                               &shared);
         ASSERT_TRUE(middle_dep.AddDependentLibrary(std::move(bottom_dep)));
         ASSERT_TRUE(middle_dep.Compile());
 
@@ -2007,7 +2067,8 @@ struct Baz {
   middle.Bar g;
 };
 
-)FIDL", &shared);
+)FIDL",
+                            &shared);
         ASSERT_TRUE(library.AddDependentLibrary(std::move(middle_dep)));
         EXPECT_TRUE(checkJSONGenerator(std::move(library),
                                        R"JSON(
@@ -2095,7 +2156,8 @@ protocol Bottom {
   GetFoo() -> (Foo foo);
 };
 
-)FIDL", &shared);
+)FIDL",
+                               &shared);
         ASSERT_TRUE(bottom_dep.Compile());
         TestLibrary middle_dep("middle.fidl", R"FIDL(
 library middle;
@@ -2107,7 +2169,8 @@ protocol Middle {
   compose bottom.Bottom;
 };
 
-)FIDL", &shared);
+)FIDL",
+                               &shared);
         ASSERT_TRUE(middle_dep.AddDependentLibrary(std::move(bottom_dep)));
         ASSERT_TRUE(middle_dep.Compile());
 
@@ -2120,7 +2183,8 @@ protocol Top {
   compose middle.Middle;
 };
 
-)FIDL", &shared);
+)FIDL",
+                            &shared);
         ASSERT_TRUE(library.AddDependentLibrary(std::move(middle_dep)));
         EXPECT_TRUE(checkJSONGenerator(std::move(library),
                                        R"JSON(

@@ -8,7 +8,7 @@
   "pkg/fidl_base/include/lib/fidl/cpp/string_view.h": "afd0e47c5267205dfc1e96d273d031f0",
   "pkg/fidl_base/include/lib/fidl/cpp/vector_view.h": "0b6aa79ca99734d451b2e7a3659a5cc2",
   "pkg/fidl_base/include/lib/fidl/envelope_frames.h": "c864fbfd5a432f89e8a96130d4fd6336",
-  "pkg/fidl_base/include/lib/fidl/internal.h": "bf656464258b59e3105265a0f453b3ca",
+  "pkg/fidl_base/include/lib/fidl/internal.h": "940db9f9f3c0c2ebd49ca10d056f665c",
   "pkg/fidl_base/include/lib/fidl/internal_callable_traits.h": "1101d33922bf2301fc06e9d83c78965f",
   "pkg/fidl_base/include/lib/fidl/visitor.h": "e597b7d4c54727d91b05feb9e2a7bf0a",
   "pkg/fidl_base/include/lib/fidl/walker.h": "0201dcb44697f79374365956081a5f6e"

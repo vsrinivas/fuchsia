@@ -15,6 +15,11 @@ enum struct Nullability {
     kNonnullable,
 };
 
+enum struct Strictness {
+    kFlexible,
+    kStrict,
+};
+
 // Note: must keep in sync with userspace lib internal.h FidlHandleSubtype.
 enum struct HandleSubtype : zx_obj_type_t {
     // special case to indicate subtype is not specified.

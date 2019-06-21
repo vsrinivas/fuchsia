@@ -456,6 +456,7 @@ void JSONGenerator::Generate(const flat::XUnion& value) {
         GenerateObjectMember("max_out_of_line", value.typeshape.MaxOutOfLine());
         GenerateObjectMember("alignment", value.typeshape.Alignment());
         GenerateObjectMember("max_handles", value.typeshape.MaxHandles());
+        GenerateObjectMember("strict", value.strictness == types::Strictness::kStrict);
     });
 }
 

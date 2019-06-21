@@ -14,11 +14,10 @@ generate and check in their coding tables `extra_messages.cpp` from `extra_messa
 The command to generate `extra_messages.cpp` from `extra_messages.test.fidl` is:
 
 ```bash
-# At ${FUCHSIA_DIR}/zircon
-# Suppose `build-gcc` was the build output location
-scripts/ninja -C ./build-gcc ":tools"
-./build-gcc/tools/fidlc --tables system/utest/fidl/fidl/extra_messages.cpp \
-                        --files system/utest/fidl/fidl/extra_messages.test.fidl
+fx build zircon/tools
+$FUCHSIA_DIR/out/default.zircon/tools/fidlc \
+  --tables $FUCHSIA_DIR/zircon/system/utest/fidl/fidl/extra_messages.cpp \
+  --files $FUCHSIA_DIR/zircon/system/utest/fidl/fidl/extra_messages.test.fidl
 ```
 
 The manual generation/checking-in should go away once we have a more flexible build process that

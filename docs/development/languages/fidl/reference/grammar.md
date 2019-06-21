@@ -102,7 +102,7 @@ struct-field = ( attribute-list ) , type-constructor , IDENTIFIER , ( "=" , cons
 
 union-declaration = ( attribute-list ) , "union" , IDENTIFIER , "{" , ( union-field , ";" )+ , "}" ;
 
-xunion-declaration = ( attribute-list ) , "xunion" , IDENTIFIER , "{" , ( union-field , ";" )* , "}" ;
+xunion-declaration = ( attribute-list ) , ( "strict" ) , "xunion" , IDENTIFIER , "{" , ( union-field , ";" )* , "}" ;
 
 union-field = ( attribute-list ) , type-constructor , IDENTIFIER ;
 

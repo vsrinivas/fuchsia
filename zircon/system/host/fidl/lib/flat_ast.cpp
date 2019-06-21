@@ -1973,7 +1973,8 @@ bool Library::ConsumeXUnionDeclaration(std::unique_ptr<raw::XUnionDeclaration> x
     }
 
     return RegisterDecl(std::make_unique<XUnion>(
-        std::move(xunion_declaration->attributes), std::move(name), std::move(members)));
+        std::move(xunion_declaration->attributes), std::move(name), std::move(members),
+        xunion_declaration->strictness));
 }
 
 bool Library::ConsumeFile(std::unique_ptr<raw::File> file) {

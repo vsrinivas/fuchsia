@@ -36,6 +36,9 @@ namespace fidl {
     case CASE_TOKEN(Token::Kind::kStringLiteral)
 
 namespace {
+
+using types::Strictness;
+
 enum {
     More,
     Done,
@@ -440,11 +443,11 @@ Parser::ParseBitsDeclaration(std::unique_ptr<raw::AttributeList> attributes, AST
 
     auto parse_member = [&members, this]() {
         if (Peek().kind() == Token::Kind::kRightCurly) {
-          ConsumeToken(OfKind(Token::Kind::kRightCurly));
-          return Done;
+            ConsumeToken(OfKind(Token::Kind::kRightCurly));
+            return Done;
         } else {
-          members.emplace_back(ParseBitsMember());
-          return More;
+            members.emplace_back(ParseBitsMember());
+            return More;
         }
     };
 
@@ -537,11 +540,11 @@ Parser::ParseEnumDeclaration(std::unique_ptr<raw::AttributeList> attributes, AST
 
     auto parse_member = [&members, this]() {
         if (Peek().kind() == Token::Kind::kRightCurly) {
-          ConsumeToken(OfKind(Token::Kind::kRightCurly));
-          return Done;
+            ConsumeToken(OfKind(Token::Kind::kRightCurly));
+            return Done;
         } else {
-          members.emplace_back(ParseEnumMember());
-          return More;
+            members.emplace_back(ParseEnumMember());
+            return More;
         }
     };
 
@@ -637,11 +640,11 @@ std::unique_ptr<raw::ProtocolMethod> Parser::ParseProtocolEvent(
     assert(response);
 
     return std::make_unique<raw::ProtocolMethod>(scope.GetSourceElement(),
-                                                  std::move(attributes),
-                                                  std::move(method_name),
-                                                  nullptr /* maybe_request */,
-                                                  std::move(response),
-                                                  std::move(maybe_error));
+                                                 std::move(attributes),
+                                                 std::move(method_name),
+                                                 nullptr /* maybe_request */,
+                                                 std::move(response),
+                                                 std::move(maybe_error));
 }
 
 std::unique_ptr<raw::ProtocolMethod> Parser::ParseProtocolMethod(
@@ -683,11 +686,11 @@ std::unique_ptr<raw::ProtocolMethod> Parser::ParseProtocolMethod(
     assert(request);
 
     return std::make_unique<raw::ProtocolMethod>(scope.GetSourceElement(),
-                                                  std::move(attributes),
-                                                  std::move(method_name),
-                                                  std::move(request),
-                                                  std::move(maybe_response),
-                                                  std::move(maybe_error));
+                                                 std::move(attributes),
+                                                 std::move(method_name),
+                                                 std::move(request),
+                                                 std::move(maybe_response),
+                                                 std::move(maybe_error));
 }
 
 void Parser::ParseProtocolMember(
@@ -696,39 +699,39 @@ void Parser::ParseProtocolMember(
     std::vector<std::unique_ptr<raw::ProtocolMethod>>* methods) {
 
     switch (Peek().kind()) {
-        case Token::Kind::kArrow: {
-            auto event = ParseProtocolEvent(std::move(attributes), scope);
-            methods->push_back(std::move(event));
+    case Token::Kind::kArrow: {
+        auto event = ParseProtocolEvent(std::move(attributes), scope);
+        methods->push_back(std::move(event));
+        break;
+    }
+    case Token::Kind::kIdentifier: {
+        auto identifier = ParseIdentifier();
+        if (!Ok())
             break;
-        }
-        case Token::Kind::kIdentifier: {
-            auto identifier = ParseIdentifier();
-            if (!Ok())
-                break;
-            if (Peek().kind() == Token::Kind::kLeftParen) {
-                auto method = ParseProtocolMethod(
-                    std::move(attributes), scope, std::move(identifier));
-                methods->push_back(std::move(method));
-                break;
-            } else if (identifier->location().data() == "compose") {
-                if (attributes) {
-                    Fail("Cannot attach attributes to compose stanza");
-                    break;
-                }
-                auto protocol_name = ParseCompoundIdentifier();
-                if (!Ok())
-                    break;
-                composed_protocols->push_back(std::make_unique<raw::ComposeProtocol>(
-                    raw::SourceElement(identifier->start_, protocol_name->end_),
-                    std::move(protocol_name)));
-                break;
-            } else {
-                Fail("unrecognized protocol member");
+        if (Peek().kind() == Token::Kind::kLeftParen) {
+            auto method = ParseProtocolMethod(
+                std::move(attributes), scope, std::move(identifier));
+            methods->push_back(std::move(method));
+            break;
+        } else if (identifier->location().data() == "compose") {
+            if (attributes) {
+                Fail("Cannot attach attributes to compose stanza");
                 break;
             }
-        }
-        default:
+            auto protocol_name = ParseCompoundIdentifier();
+            if (!Ok())
+                break;
+            composed_protocols->push_back(std::make_unique<raw::ComposeProtocol>(
+                raw::SourceElement(identifier->start_, protocol_name->end_),
+                std::move(protocol_name)));
             break;
+        } else {
+            Fail("unrecognized protocol member");
+            break;
+        }
+    }
+    default:
+        break;
     }
 }
 
@@ -779,9 +782,9 @@ Parser::ParseProtocolDeclaration(std::unique_ptr<raw::AttributeList> attributes,
         Fail();
 
     return std::make_unique<raw::ProtocolDeclaration>(scope.GetSourceElement(),
-                                                    std::move(attributes), std::move(identifier),
-                                                    std::move(composed_protocols),
-                                                    std::move(methods));
+                                                      std::move(attributes), std::move(identifier),
+                                                      std::move(composed_protocols),
+                                                      std::move(methods));
 }
 
 std::unique_ptr<raw::StructMember> Parser::ParseStructMember() {
@@ -826,11 +829,11 @@ Parser::ParseStructDeclaration(std::unique_ptr<raw::AttributeList> attributes, A
 
     auto parse_member = [&members, this]() {
         if (Peek().kind() == Token::Kind::kRightCurly) {
-          ConsumeToken(OfKind(Token::Kind::kRightCurly));
-          return Done;
+            ConsumeToken(OfKind(Token::Kind::kRightCurly));
+            return Done;
         } else {
-          members.emplace_back(ParseStructMember());
-          return More;
+            members.emplace_back(ParseStructMember());
+            return More;
         }
     };
 
@@ -971,11 +974,11 @@ Parser::ParseUnionDeclaration(std::unique_ptr<raw::AttributeList> attributes, AS
 
     auto parse_member = [&members, this]() {
         if (Peek().kind() == Token::Kind::kRightCurly) {
-          ConsumeToken(OfKind(Token::Kind::kRightCurly));
-          return Done;
+            ConsumeToken(OfKind(Token::Kind::kRightCurly));
+            return Done;
         } else {
-          members.emplace_back(ParseUnionMember());
-          return More;
+            members.emplace_back(ParseUnionMember());
+            return More;
         }
     };
 
@@ -1019,7 +1022,8 @@ std::unique_ptr<raw::XUnionMember> Parser::ParseXUnionMember() {
 }
 
 std::unique_ptr<raw::XUnionDeclaration>
-Parser::ParseXUnionDeclaration(std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope) {
+Parser::ParseXUnionDeclaration(std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope,
+                               types::Strictness strictness) {
     std::vector<std::unique_ptr<raw::XUnionMember>> members;
 
     ConsumeToken(IdentifierOfSubkind(Token::Subkind::kXUnion));
@@ -1036,11 +1040,11 @@ Parser::ParseXUnionDeclaration(std::unique_ptr<raw::AttributeList> attributes, A
 
     auto parse_member = [&]() {
         if (Peek().kind() == Token::Kind::kRightCurly) {
-          ConsumeToken(OfKind(Token::Kind::kRightCurly));
-          return Done;
+            ConsumeToken(OfKind(Token::Kind::kRightCurly));
+            return Done;
         } else {
-          members.emplace_back(ParseXUnionMember());
-          return More;
+            members.emplace_back(ParseXUnionMember());
+            return More;
         }
     };
 
@@ -1061,7 +1065,7 @@ Parser::ParseXUnionDeclaration(std::unique_ptr<raw::AttributeList> attributes, A
 
     return std::make_unique<raw::XUnionDeclaration>(scope.GetSourceElement(),
                                                     std::move(attributes), std::move(identifier),
-                                                    std::move(members));
+                                                    std::move(members), strictness);
 }
 
 std::unique_ptr<raw::File> Parser::ParseFile() {
@@ -1150,12 +1154,30 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
         }
 
         case CASE_IDENTIFIER(Token::Subkind::kUnion):
+            done_with_library_imports = true;
             union_declaration_list.emplace_back(ParseUnionDeclaration(std::move(attributes), scope));
             return More;
 
         case CASE_IDENTIFIER(Token::Subkind::kXUnion):
-            xunion_declaration_list.emplace_back(ParseXUnionDeclaration(std::move(attributes), scope));
+            done_with_library_imports = true;
+            xunion_declaration_list.emplace_back(ParseXUnionDeclaration(std::move(attributes), scope, types::Strictness::kFlexible));
             return More;
+
+        case CASE_IDENTIFIER(Token::Subkind::kStrict):
+            done_with_library_imports = true;
+
+            ConsumeToken(IdentifierOfSubkind(Token::Subkind::kStrict));
+            assert(Ok() && "we should have just seen a strict token");
+
+            switch (Peek().combined()) {
+            case CASE_IDENTIFIER(Token::Subkind::kXUnion):
+                xunion_declaration_list.emplace_back(ParseXUnionDeclaration(std::move(attributes), scope, types::Strictness::kStrict));
+                return More;
+            default:
+                std::string msg = std::string(Token::Name(Peek())) + " cannot be strict";
+                Fail(msg);
+                return Done;
+            }
         }
     };
 

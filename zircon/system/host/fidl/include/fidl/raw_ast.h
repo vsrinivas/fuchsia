@@ -371,10 +371,10 @@ public:
 class ProtocolMethod : public SourceElement {
 public:
     ProtocolMethod(SourceElement const& element, std::unique_ptr<AttributeList> attributes,
-                    std::unique_ptr<Identifier> identifier,
-                    std::unique_ptr<ParameterList> maybe_request,
-                    std::unique_ptr<ParameterList> maybe_response,
-                    std::unique_ptr<TypeConstructor> maybe_error_ctor)
+                   std::unique_ptr<Identifier> identifier,
+                   std::unique_ptr<ParameterList> maybe_request,
+                   std::unique_ptr<ParameterList> maybe_response,
+                   std::unique_ptr<TypeConstructor> maybe_error_ctor)
         : SourceElement(element), attributes(std::move(attributes)),
           identifier(std::move(identifier)),
           maybe_request(std::move(maybe_request)), maybe_response(std::move(maybe_response)),
@@ -403,9 +403,9 @@ public:
 class ProtocolDeclaration final : public SourceElement {
 public:
     ProtocolDeclaration(SourceElement const& element, std::unique_ptr<AttributeList> attributes,
-                         std::unique_ptr<Identifier> identifier,
-                         std::vector<std::unique_ptr<ComposeProtocol>> composed_protocols,
-                         std::vector<std::unique_ptr<ProtocolMethod>> methods)
+                        std::unique_ptr<Identifier> identifier,
+                        std::vector<std::unique_ptr<ComposeProtocol>> composed_protocols,
+                        std::vector<std::unique_ptr<ProtocolMethod>> methods)
         : SourceElement(element), attributes(std::move(attributes)), identifier(std::move(identifier)),
           composed_protocols(std::move(composed_protocols)), methods(std::move(methods)) {}
 
@@ -545,15 +545,17 @@ class XUnionDeclaration final : public SourceElement {
 public:
     XUnionDeclaration(SourceElement const& element, std::unique_ptr<AttributeList> attributes,
                       std::unique_ptr<Identifier> identifier,
-                      std::vector<std::unique_ptr<XUnionMember>> members)
-        : SourceElement(element), attributes(std::move(attributes)), identifier(std::move(identifier)),
-          members(std::move(members)) {}
+                      std::vector<std::unique_ptr<XUnionMember>> members,
+                      types::Strictness strictness)
+        : SourceElement(element), attributes(std::move(attributes)),
+          identifier(std::move(identifier)), members(std::move(members)), strictness(strictness) {}
 
     void Accept(TreeVisitor* visitor) const;
 
     std::unique_ptr<AttributeList> attributes;
     std::unique_ptr<Identifier> identifier;
     std::vector<std::unique_ptr<XUnionMember>> members;
+    const types::Strictness strictness;
 };
 
 class File final : public SourceElement {

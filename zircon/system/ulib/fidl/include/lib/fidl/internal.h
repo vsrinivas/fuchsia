@@ -30,6 +30,11 @@ enum FidlNullability : bool {
     kNullable = true,
 };
 
+enum Strictness : bool {
+    kFlexible = false,
+    kStrict = true,
+};
+
 constexpr inline uint64_t FidlAlign(uint32_t offset) {
     constexpr uint64_t alignment_mask = FIDL_ALIGNMENT - 1;
     return (offset + alignment_mask) & ~alignment_mask;
@@ -199,10 +204,17 @@ struct FidlCodedXUnion {
     const FidlXUnionField* const fields;
     const FidlNullability nullable;
     const char* name; // may be nullptr if omitted at compile time
+    const Strictness strictness;
 
+    // TODO(FIDL-523): The Strictness constructor argument is optional here and defaults to
+    // kFlexible, for backward compatibility with existing coding tables that don't specify
+    // strictness. The argument should be made non-optional once Emit() in tables_generator.cpp has
+    // been updated.
     constexpr FidlCodedXUnion(uint32_t field_count, const FidlXUnionField* fields,
-                              FidlNullability nullable, const char* name)
-        : field_count(field_count), fields(fields), nullable(nullable), name(name) {}
+                              FidlNullability nullable, const char* name,
+                              Strictness strictness = kFlexible)
+        : field_count(field_count), fields(fields), nullable(nullable), name(name),
+          strictness(strictness) {}
 };
 
 // An array is essentially a struct with |array_size / element_size| of the same field, named at

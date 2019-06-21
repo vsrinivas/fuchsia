@@ -12,9 +12,9 @@
 #include <limits>
 #include <map>
 #include <memory>
+#include <optional>
 #include <set>
 #include <string_view>
-#include <optional>
 #include <type_traits>
 #include <variant>
 #include <vector>
@@ -605,9 +605,9 @@ struct PrimitiveType : public Type {
 
     explicit PrimitiveType(types::PrimitiveSubtype subtype)
         : Type(
-            Kind::kPrimitive,
-            types::Nullability::kNonnullable,
-            Shape(subtype)),
+              Kind::kPrimitive,
+              types::Nullability::kNonnullable,
+              Shape(subtype)),
           subtype(subtype) {}
 
     types::PrimitiveSubtype subtype;
@@ -653,8 +653,8 @@ struct RequestHandleType : public Type {
 
 struct TypeConstructor {
     TypeConstructor(Name name, std::unique_ptr<TypeConstructor> maybe_arg_type_ctor,
-               std::optional<types::HandleSubtype> handle_subtype,
-               std::unique_ptr<Constant> maybe_size, types::Nullability nullability)
+                    std::optional<types::HandleSubtype> handle_subtype,
+                    std::unique_ptr<Constant> maybe_size, types::Nullability nullability)
         : name(std::move(name)), maybe_arg_type_ctor(std::move(maybe_arg_type_ctor)),
           handle_subtype(handle_subtype),
           maybe_size(std::move(maybe_size)), nullability(nullability) {}
@@ -799,7 +799,7 @@ struct Table : public TypeDecl {
 
     Table(std::unique_ptr<raw::AttributeList> attributes, Name name, std::vector<Member> members)
         : TypeDecl(Kind::kTable, std::move(attributes), std::move(name)),
-                   members(std::move(members)) {}
+          members(std::move(members)) {}
 
     std::vector<Member> members;
 
@@ -820,7 +820,7 @@ struct Union : public TypeDecl {
 
     Union(std::unique_ptr<raw::AttributeList> attributes, Name name, std::vector<Member> members)
         : TypeDecl(Kind::kUnion, std::move(attributes), std::move(name)),
-                   members(std::move(members)) {}
+          members(std::move(members)) {}
 
     std::vector<Member> members;
     // The offset of each of the union members is the same, so store
@@ -843,10 +843,13 @@ struct XUnion : public TypeDecl {
         FieldShape fieldshape;
     };
 
-    XUnion(std::unique_ptr<raw::AttributeList> attributes, Name name, std::vector<Member> members)
-        : TypeDecl(Kind::kXUnion, std::move(attributes), std::move(name)), members(std::move(members)) {}
+    XUnion(std::unique_ptr<raw::AttributeList> attributes, Name name, std::vector<Member> members,
+           types::Strictness strictness)
+        : TypeDecl(Kind::kXUnion, std::move(attributes), std::move(name)),
+          members(std::move(members)), strictness(strictness) {}
 
     std::vector<Member> members;
+    const types::Strictness strictness;
 
     static TypeShape Shape(std::vector<FieldShape*>* fields, uint32_t extra_handles = 0u);
 };
@@ -884,7 +887,7 @@ struct Protocol : public TypeDecl {
     };
 
     Protocol(std::unique_ptr<raw::AttributeList> attributes, Name name,
-              std::set<Name> composed_protocols, std::vector<Method> methods)
+             std::set<Name> composed_protocols, std::vector<Method> methods)
         : TypeDecl(Kind::kProtocol, std::move(attributes), std::move(name)),
           composed_protocols(std::move(composed_protocols)), methods(std::move(methods)) {
         for (auto& method : this->methods) {
@@ -1103,8 +1106,8 @@ public:
 
 private:
     struct LibraryRef {
-        LibraryRef(const SourceLocation location, Library* library) :
-            location_(location), library_(library) {}
+        LibraryRef(const SourceLocation location, Library* library)
+            : location_(location), library_(library) {}
 
         const SourceLocation location_;
         Library* library_;

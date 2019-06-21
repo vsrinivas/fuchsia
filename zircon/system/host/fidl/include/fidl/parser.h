@@ -237,7 +237,7 @@ private:
 
     std::unique_ptr<raw::XUnionMember> ParseXUnionMember();
     std::unique_ptr<raw::XUnionDeclaration>
-    ParseXUnionDeclaration(std::unique_ptr<raw::AttributeList> attributes, ASTScope&);
+    ParseXUnionDeclaration(std::unique_ptr<raw::AttributeList> attributes, ASTScope&, types::Strictness);
 
     std::unique_ptr<raw::File> ParseFile();
 
