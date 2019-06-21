@@ -87,8 +87,9 @@ class AgentRunner : AgentRunnerStorage::NotificationDelegate {
   // specified in |task_info| is satisfied. The trigger condition is also
   // replicated to the ledger and the task my get scheduled on other user
   // devices too.
-  void ScheduleTask(const std::string& agent_url,
-                    fuchsia::modular::TaskInfo task_info);
+  void ScheduleTask(
+      const std::string& agent_url, fuchsia::modular::TaskInfo task_info,
+      fit::function<void(bool)> done = [](bool) {});
 
   // Deletes a task for |agent_url| that is identified by agent provided
   // |task_id|. The trigger condition is removed from the ledger.

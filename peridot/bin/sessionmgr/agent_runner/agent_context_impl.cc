@@ -267,6 +267,12 @@ void AgentContextImpl::ScheduleTask(fuchsia::modular::TaskInfo task_info) {
   agent_runner_->ScheduleTask(url_, std::move(task_info));
 }
 
+void AgentContextImpl::ScheduleTaskWithCompletion(
+    fuchsia::modular::TaskInfo task_info,
+    ScheduleTaskWithCompletionCallback callback) {
+  agent_runner_->ScheduleTask(url_, std::move(task_info), std::move(callback));
+}
+
 void AgentContextImpl::DeleteTask(std::string task_id) {
   agent_runner_->DeleteTask(url_, task_id);
 }

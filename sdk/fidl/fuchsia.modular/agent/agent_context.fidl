@@ -23,9 +23,11 @@ protocol AgentContext {
 
     /// Schedules a task described in |task_info|. When this task is scheduled to
     /// run, Agent.RunTask() is called.
-    ///
-    /// TODO(MI4-962): Add a callback to task scheduling.
     ScheduleTask(TaskInfo task_info);
+
+    /// Schedules a task described in |task_info|. When this task is scheduled
+    /// to run, Agent.RunTask() is called. Executes the callback on completion.
+    ScheduleTaskWithCompletion(TaskInfo task_info) -> (bool done);
 
     /// No new runs of this task will be scheduled.
     DeleteTask(string task_id);

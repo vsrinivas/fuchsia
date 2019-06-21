@@ -234,6 +234,28 @@ executable("story_shell_embedded_mod_test") {
   ]
 }
 
+executable("trigger_test") {
+  testonly = true
+
+  sources = [
+    "trigger_test.cc",
+  ]
+
+  deps = [
+    "//peridot/lib/testing:session_shell_impl",
+    "//peridot/public/lib/message_queue/cpp",
+    "//peridot/public/lib/modular_test_harness/cpp:test_harness_fixture",
+    "//sdk/fidl/fuchsia.modular.testing",
+    "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/ui/scenic/cpp",
+    "//third_party/googletest:gtest_main",
+    "//zircon/public/lib/fs",
+  ]
+}
+
 test_package("modular_integration_tests") {
   tests = [
     {
@@ -276,6 +298,10 @@ test_package("modular_integration_tests") {
       name = "story_shell_embedded_mod_test"
       environments = basic_envs
     },
+    {
+      name = "trigger_test"
+      environments = basic_envs
+    },
   ]
 
   deps = [
@@ -289,6 +315,7 @@ test_package("modular_integration_tests") {
     ":story_shell_embedded_mod_test",
     ":story_shell_factory_test",
     ":story_shell_test",
+    ":trigger_test",
     "//garnet/public/lib/callback",
     "//peridot/public/lib/app_driver/cpp",
     "//sdk/fidl/fuchsia.modular",

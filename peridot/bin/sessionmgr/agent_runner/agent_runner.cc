@@ -288,7 +288,8 @@ void AgentRunner::ForwardConnectionsToAgent(const std::string& agent_url) {
 }
 
 void AgentRunner::ScheduleTask(const std::string& agent_url,
-                               fuchsia::modular::TaskInfo task_info) {
+                               fuchsia::modular::TaskInfo task_info,
+                               fit::function<void(bool)> done) {
   AgentRunnerStorage::TriggerInfo data;
   data.agent_url = agent_url;
   data.task_id = task_info.task_id;
@@ -311,9 +312,10 @@ void AgentRunner::ScheduleTask(const std::string& agent_url,
     // |AgentRunnerStorageImpl::WriteTask| eventually calls |AddedTask()|
     // after this trigger information has been added to the ledger via a
     // ledger page watching mechanism.
-    agent_runner_storage_->WriteTask(agent_url, data, [](bool) {});
+    agent_runner_storage_->WriteTask(agent_url, data, std::move(done));
   } else {
     AddedTask(MakeTriggerKey(agent_url, data.task_id), data);
+    done(true);
   }
 }
 
