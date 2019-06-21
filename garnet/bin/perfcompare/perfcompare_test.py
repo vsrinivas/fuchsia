@@ -121,8 +121,8 @@ def GenerateTestData(mean, stddev):
 
 class PerfCompareTest(TempDirTestCase):
 
-    def ExampleDataDir(self, mean=1000, stddev=100, drop_one=False):
-        dir_path = self.MakeTempDir()
+    def WriteExampleDataDir(self, dir_path, mean=1000, stddev=100,
+                            drop_one=False):
         results = [('ClockGetTimeExample', GenerateTestData(mean, stddev))]
         if not drop_one:
             results.append(('SecondExample', GenerateTestData(2000, 300)))
@@ -143,10 +143,23 @@ class PerfCompareTest(TempDirTestCase):
         with open(os.path.join(dir_path, 'foo.catapult_json'), 'w') as fh:
             fh.write('dummy_data')
 
+    def ExampleDataDir(self, **kwargs):
+        dir_path = self.MakeTempDir()
+        self.WriteExampleDataDir(dir_path, **kwargs)
         return dir_path
 
     def test_reading_results_from_dir(self):
         dir_path = self.ExampleDataDir()
+        results = perfcompare.ResultsFromDir(dir_path)
+        self.assertEquals(
+            results['ClockGetTimeExample'].FormatConfidenceInterval(),
+            '991 +/- 26')
+
+    def test_reading_results_from_multi_boot_dir(self):
+        dir_path = self.MakeTempDir()
+        subdir = os.path.join(dir_path, 'by_boot', 'boot000000')
+        os.makedirs(subdir)
+        self.WriteExampleDataDir(subdir)
         results = perfcompare.ResultsFromDir(dir_path)
         self.assertEquals(
             results['ClockGetTimeExample'].FormatConfidenceInterval(),

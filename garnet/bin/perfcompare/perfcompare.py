@@ -107,6 +107,16 @@ def IsResultsFilename(name):
 # Accepting tar files here is a convenience for when doing local testing of
 # the statistics.  The Swarming system used for the bots produces "out.tar"
 # files as results.
+#
+# The directory (or tar file) is expected to contain files with names
+# of the following forms:
+#
+#   <name-of-test-executable>_process<number>.json - results that are read here
+#   <name-of-test-executable>_process<number>.catapult_json - ignored here
+#   summary.json - ignored here
+#
+# Each *.json file (except for summary.json) contains results from a
+# separate launch of a performance test process.
 def RawResultsFromDir(filename):
     # Note that sorting the filename listing (from os.listdir() or from
     # tarfile) is not essential, but it helps to make any later processing
@@ -125,12 +135,37 @@ def RawResultsFromDir(filename):
                 yield ReadJsonFile(os.path.join(filename, name))
 
 
+# This function accepts data in two possible formats:
+#
+#  #1 A directory (or tar file), in the format read by RawResultsFromDir(),
+#     containing perf test results from a single boot of Fuchsia.
+#
+#  #2 A directory representing perf test results from multiple boots of
+#     Fuchsia.  It contains a "by_boot" subdir, which contains directories
+#     (or tar files) of the format read by RawResultsFromDir().
+#
+# TODO(PT-202): Currently the fuchsia_perfcompare.py recipe invokes this
+# tool with data of format #1, but it will switch to using format #2.
+#
+# This returns a dict mapping test names to Stats objects.
 def ResultsFromDir(filename):
+    assert os.path.exists(filename)
+    by_boot_dir = os.path.join(filename, 'by_boot')
+    if os.path.exists(by_boot_dir):
+        filenames = [os.path.join(by_boot_dir, name)
+                     for name in sorted(os.listdir(by_boot_dir))]
+    else:
+        filenames = [filename]
+
     results_map = {}
-    for process_run_results in RawResultsFromDir(filename):
-        for test_case in process_run_results:
-            new_value = Mean(test_case['values'])
-            results_map.setdefault(test_case['label'], []).append(new_value)
+    # TODO(PT-202): Currently the processing we do here erases the
+    # distinction between cross-boot variation and cross-process variation,
+    # but we should distinguish between the two.
+    for boot_results_path in filenames:
+        for process_run_results in RawResultsFromDir(boot_results_path):
+            for test_case in process_run_results:
+                new_value = Mean(test_case['values'])
+                results_map.setdefault(test_case['label'], []).append(new_value)
     return {name: Stats(values) for name, values in results_map.iteritems()}
 
 
