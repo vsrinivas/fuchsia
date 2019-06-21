@@ -91,15 +91,15 @@ test_package("vulkan-tests") {
     tests = [
       {
         name = "icd_load"
-        environments = magma_hardware_envs
+        environments = magma_libvulkan_hardware_envs
       },
       {
         name = "magma_memcpy"
-        environments = magma_hardware_envs
+        environments = magma_libvulkan_hardware_envs
       },
       {
         name = "vkreadback"
-        environments = magma_hardware_envs
+        environments = magma_libvulkan_hardware_envs
       },
       {
         name = "vkloop"
@@ -109,11 +109,11 @@ test_package("vulkan-tests") {
       },
       {
         name = "vkext"
-        environments = magma_hardware_envs
+        environments = magma_libvulkan_hardware_envs
       },
       {
         name = "vkcopy"
-        environments = magma_hardware_envs
+        environments = magma_libvulkan_hardware_envs
       },
       {
         name = "vkpriority"
