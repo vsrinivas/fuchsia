@@ -114,6 +114,51 @@ VK_TEST_F(ViewClippingTest, DISABLED_ClipSettingTest) {
   }
 }
 
+// Run a single test case on a view that's added to a ViewHolder after its
+// properties are set to make sure that it still clips.
+#if SCENIC_ENFORCE_VIEW_BOUND_CLIPPING
+VK_TEST_F(ViewClippingTest, ClipSettingBeforeViewCreationTest) {
+#else
+VK_TEST_F(ViewClippingTest, DISABLED_ClipSettingBeforeViewCreationTest) {
+#endif
+  uint32_t scene_id = 5;
+  uint32_t view_id = 15;
+  uint32_t view_holder_id = 30;
+
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
+
+  Apply(scenic::NewCreateSceneCmd(scene_id));
+  Apply(scenic::NewCreateViewHolderCmd(
+      view_holder_id, std::move(view_holder_token), "MyViewHolder"));
+
+  ViewHolder* view_holder = FindResource<ViewHolder>(view_holder_id).get();
+  EXPECT_TRUE(view_holder);
+
+  const float bbox_min[3] = {-5, -10, -15};
+  const float bbox_max[3] = {5, 10, 15};
+  const float inset[3] = {0, 0, 0};
+
+  BoundingBox bbox(vec3(bbox_min[0], bbox_min[1], bbox_min[2]),
+                   vec3(bbox_max[0], bbox_max[1], bbox_max[2]));
+
+  Apply(scenic::NewSetViewPropertiesCmd(view_holder_id, bbox_min, bbox_max,
+                                        inset, inset));
+  const std::vector<plane3>& clip_planes = view_holder->clip_planes();
+
+  Apply(scenic::NewCreateViewCmd(view_id, std::move(view_token), "MyView"));
+
+  std::vector<plane3> test_planes = bbox.CreatePlanes();
+
+  EXPECT_EQ(clip_planes.size(), test_planes.size());
+
+  for (uint32_t p = 0; p < clip_planes.size(); p++) {
+    plane3 test_plane = test_planes[p];
+    plane3 view_plane = clip_planes[p];
+    EXPECT_EQ(test_plane.dir(), view_plane.dir());
+    EXPECT_EQ(test_plane.dist(), view_plane.dist());
+  }
+}
+
 // This test is used to check that meshes get clipped properly
 // by their view holder's clip planes when the EngineRendererVisitor
 // traverses the scene.
