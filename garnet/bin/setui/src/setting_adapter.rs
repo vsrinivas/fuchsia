@@ -66,7 +66,7 @@ impl Adapter for SettingAdapter {
             Ok(Some(setting)) => {
                 self.latest_val = Some(setting.clone());
 
-                if let Ok(store) = self.store.lock() {
+                if let Ok(mut store) = self.store.lock() {
                     if store
                         .write(
                             setting.clone(),
@@ -146,7 +146,7 @@ mod tests {
     }
 
     impl Store for TestStore {
-        fn write(&self, _data: SettingData, sync: bool) -> Result<(), Error> {
+        fn write(&mut self, _data: SettingData, sync: bool) -> Result<(), Error> {
             self.written_data.write().unwrap().push(WrittenData { sync: sync });
             Ok(())
         }

@@ -24,7 +24,7 @@ impl DefaultStore {
 
 impl Store for DefaultStore {
     /// Writes value to presistent storage.
-    fn write(&self, data: SettingData, sync: bool) -> Result<(), Error> {
+    fn write(&mut self, data: SettingData, sync: bool) -> Result<(), Error> {
         let encoded_data = self.codec.encode(data)?;
         let mut file = File::create(self.file_path.clone())?;
         file.write_all(encoded_data.to_string().as_bytes())?;

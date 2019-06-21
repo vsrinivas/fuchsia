@@ -16,7 +16,7 @@ use std::sync::RwLock;
 
 use fuchsia_async as fasync;
 
-type SettingDataMap = Arc<RwLock<HashMap<SettingType, SettingData>>>;
+pub type SettingDataMap = Arc<RwLock<HashMap<SettingType, SettingData>>>;
 
 pub struct SetUIHandler {
     // Tracks active adapters.
@@ -51,7 +51,12 @@ impl SetUIHandler {
                     responder.send(&mut response)?;
                 }
                 SetUiServiceRequest::Watch { setting_type, responder } => {
-                    self.watch(setting_type, responder, last_seen_settings.clone());
+                    self.watch(setting_type, last_seen_settings.clone(), move |data| {
+                        responder.send(&mut SettingsObject {
+                            setting_type: setting_type,
+                            data: data.clone(),
+                        })
+                    });
                 }
                 _ => {}
             }
@@ -62,12 +67,14 @@ impl SetUIHandler {
 
     /// Returns synchronously after registering a listener with the correct adapter and spawning
     /// a thread to handle the next change.
-    fn watch(
+    pub fn watch<R>(
         &self,
         setting_type: SettingType,
-        responder: SetUiServiceWatchResponder,
         last_seen_settings: SettingDataMap,
-    ) {
+        responder: R,
+    ) where
+        R: FnOnce(SettingData) -> Result<(), fidl::Error> + Send + 'static,
+    {
         let (sender, receiver) = channel();
 
         if self
@@ -80,12 +87,7 @@ impl SetUIHandler {
                 await!(receiver.map(|data| {
                     if let Ok(data) = data {
                         last_seen_settings.write().unwrap().insert(setting_type, data.clone());
-                        responder
-                            .send(&mut SettingsObject {
-                                setting_type: setting_type,
-                                data: data.clone(),
-                            })
-                            .ok();
+                        responder(data.clone()).ok();
                     }
                 }));
             });
@@ -115,7 +117,7 @@ impl SetUIHandler {
     }
 
     /// Applies a mutation, blocking until the mutation completes.
-    fn mutate(&self, setting_type: SettingType, mutation: Mutation) -> MutationResponse {
+    pub fn mutate(&self, setting_type: SettingType, mutation: Mutation) -> MutationResponse {
         if let Some(adapter_lock) = self.adapters.read().unwrap().get(&setting_type) {
             if let Ok(mut adapter) = adapter_lock.lock() {
                 adapter.mutate(&mutation);
@@ -142,7 +144,7 @@ mod tests {
     }
 
     impl Store for TestStore {
-        fn write(&self, _data: SettingData, _sync: bool) -> Result<(), Error> {
+        fn write(&mut self, _data: SettingData, _sync: bool) -> Result<(), Error> {
             Ok(())
         }
 

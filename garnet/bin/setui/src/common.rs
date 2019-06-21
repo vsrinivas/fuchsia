@@ -38,7 +38,7 @@ pub trait SettingCodec<T: ToString> {
 pub trait Store {
     /// Writes value to presistent storage. If sync is true, the write will be
     /// blocked until fully persisted to the backing store.
-    fn write(&self, data: SettingData, sync: bool) -> Result<(), Error>;
+    fn write(&mut self, data: SettingData, sync: bool) -> Result<(), Error>;
 
     /// Reads value from persistent storage
     fn read(&self) -> Result<Option<SettingData>, Error>;
