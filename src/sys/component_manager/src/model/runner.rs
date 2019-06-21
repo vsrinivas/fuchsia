@@ -39,6 +39,11 @@ pub enum RunnerError {
         #[fail(cause)]
         err: Error,
     },
+    #[fail(display = "failed to populate the runtime directory: {}", err)]
+    ComponentRuntimeDirectoryError {
+        #[fail(cause)]
+        err: Error,
+    },
 }
 
 impl RunnerError {

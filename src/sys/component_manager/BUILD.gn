@@ -17,6 +17,7 @@ rustc_library("lib") {
   visibility = [ "//src/sys/component_manager/*" ]
 
   deps = [
+    "//garnet/public/rust/fuchsia-zircon/fuchsia-zircon-sys",
     "//garnet/lib/rust/cm_fidl_translator",
     "//garnet/lib/rust/cm_fidl_validator",
     "//garnet/lib/rust/cm_rust",

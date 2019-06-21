@@ -11,7 +11,7 @@ use {
         startup::{Arguments, BuiltinRootServices},
     },
     cm_rust::data::DictionaryExt,
-    failure::{err_msg, format_err, Error, ResultExt},
+    failure::{err_msg, format_err, Error, Fail, ResultExt},
     fdio::fdio_sys,
     fidl::endpoints::{ClientEnd, ServerEnd},
     fidl_fuchsia_data as fdata,
@@ -25,7 +25,7 @@ use {
         directory::{self, entry::DirectoryEntry},
         file::simple::read_only,
     },
-    fuchsia_zircon::{self as zx, HandleBased},
+    fuchsia_zircon::{self as zx, AsHandleRef, HandleBased},
     futures::{
         future::{AbortHandle, Abortable, FutureObj},
         lock::Mutex,
@@ -37,6 +37,7 @@ use {
 // TODO(fsamuel): We might want to store other things in this struct in the
 // future, in which case, RuntimeDirectory might not be an appropriate name.
 pub struct RuntimeDirectory {
+    pub controller: directory::controlled::Controller<'static>,
     /// Called when a component's execution is terminated to drop the 'runtime'
     /// directory.
     abort_handle: AbortHandle,
@@ -45,6 +46,51 @@ pub struct RuntimeDirectory {
 impl Drop for RuntimeDirectory {
     fn drop(&mut self) {
         self.abort_handle.abort();
+    }
+}
+
+/// Errors produced by `ElfRunner`.
+#[derive(Debug, Fail)]
+pub enum ElfRunnerError {
+    #[fail(
+        display = "failed to retrieve process koid for component with url \"{}\": {}",
+        url, err
+    )]
+    ComponentProcessIdError {
+        url: String,
+        #[fail(cause)]
+        err: Error,
+    },
+    #[fail(display = "failed to retrieve job koid for component with url \"{}\": {}", url, err)]
+    ComponentJobIdError {
+        url: String,
+        #[fail(cause)]
+        err: Error,
+    },
+    #[fail(display = "failed to add runtime/elf directory for component with url \"{}\".", url)]
+    ComponentElfDirectoryError { url: String },
+}
+
+impl ElfRunnerError {
+    pub fn component_process_id_error(
+        url: impl Into<String>,
+        err: impl Into<Error>,
+    ) -> ElfRunnerError {
+        ElfRunnerError::ComponentProcessIdError { url: url.into(), err: err.into() }
+    }
+
+    pub fn component_job_id_error(url: impl Into<String>, err: impl Into<Error>) -> ElfRunnerError {
+        ElfRunnerError::ComponentJobIdError { url: url.into(), err: err.into() }
+    }
+
+    pub fn component_elf_directory_error(url: impl Into<String>) -> ElfRunnerError {
+        ElfRunnerError::ComponentElfDirectoryError { url: url.into() }
+    }
+}
+
+impl From<ElfRunnerError> for RunnerError {
+    fn from(err: ElfRunnerError) -> Self {
+        RunnerError::ComponentRuntimeDirectoryError { err: err.into() }
     }
 }
 
@@ -120,13 +166,14 @@ impl ElfRunner {
         ElfRunner { launcher_connector, instances: Mutex::new(HashMap::new()) }
     }
 
-    async fn install_runtime_directory<'a>(
+    async fn create_runtime_directory<'a>(
         &'a self,
         runtime_dir: ServerEnd<DirectoryMarker>,
         args: &'a Vec<String>,
-    ) {
-        let mut directory = directory::simple::empty();
-        directory.open(
+    ) -> RuntimeDirectory {
+        let (runtime_controller, mut runtime_controlled) =
+            directory::controlled::controlled(directory::simple::empty());
+        runtime_controlled.open(
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             0,
             &mut iter::empty(),
@@ -142,21 +189,34 @@ impl ElfRunner {
             });
             count += 1;
         }
-        let _ = directory.add_entry("args", args_dir);
+        let _ = runtime_controlled.add_entry("args", args_dir);
 
-        let mut instances = await!(self.instances.lock());
         let (abort_handle, abort_registration) = AbortHandle::new_pair();
-        let future = Abortable::new(directory, abort_registration);
+        let future = Abortable::new(runtime_controlled, abort_registration);
         fasync::spawn(async move {
             let _ = await!(future);
         });
-        // TODO(fsamuel): This should be keyed off the to-be-implemented
-        // ComponentController interface, and not some random number.
-        let exec_id = {
-            let mut rand_num_generator = rand::thread_rng();
-            rand_num_generator.gen::<u32>()
-        };
-        instances.insert(exec_id, RuntimeDirectory { abort_handle });
+
+        RuntimeDirectory { controller: runtime_controller, abort_handle }
+    }
+
+    async fn create_elf_directory<'a>(
+        &'a self,
+        runtime_dir: &'a RuntimeDirectory,
+        resolved_url: &'a String,
+        process_id: u64,
+        job_id: u64,
+    ) -> Result<(), RunnerError> {
+        let mut elf_dir = directory::simple::empty();
+        elf_dir
+            .add_entry("process_id", { read_only(move || Ok(Vec::from(process_id.to_string()))) })
+            .map_err(|_| ElfRunnerError::component_elf_directory_error(resolved_url.clone()))?;
+        elf_dir
+            .add_entry("job_id", { read_only(move || Ok(Vec::from(job_id.to_string()))) })
+            .map_err(|_| ElfRunnerError::component_elf_directory_error(resolved_url.clone()))?;
+        await!(runtime_dir.controller.add_entry_res("elf", elf_dir))
+            .map_err(|_| ElfRunnerError::component_elf_directory_error(resolved_url.clone()))?;
+        Ok(())
     }
 
     async fn load_launch_info<'a>(
@@ -164,7 +224,7 @@ impl ElfRunner {
         url: String,
         start_info: fsys::ComponentStartInfo,
         launcher: &'a fproc::LauncherProxy,
-    ) -> Result<fproc::LaunchInfo, Error> {
+    ) -> Result<(Option<RuntimeDirectory>, fproc::LaunchInfo), Error> {
         let bin_path = get_program_binary(&start_info)
             .map_err(|e| RunnerError::invalid_args(url.as_ref(), e))?;
         let bin_arg = &[String::from(
@@ -255,11 +315,17 @@ impl ElfRunner {
         }
         launcher.add_names(&mut name_infos.iter_mut())?;
 
-        if let Some(runtime_dir) = start_info.runtime_dir {
-            await!(self.install_runtime_directory(runtime_dir, &args));
+        let mut runtime_dir = None;
+        // TODO(fsamuel): runtime_dir may be unavailable in tests. We should fix tests so
+        // that we don't have to have this check here.
+        if let Some(dir) = start_info.runtime_dir {
+            runtime_dir = Some(await!(self.create_runtime_directory(dir, &args)));
         }
 
-        Ok(fproc::LaunchInfo { executable: executable_vmo, job: child_job, name: name })
+        Ok((
+            runtime_dir,
+            fproc::LaunchInfo { executable: executable_vmo, job: child_job, name: name },
+        ))
     }
 
     async fn start_async(&self, start_info: fsys::ComponentStartInfo) -> Result<(), RunnerError> {
@@ -273,19 +339,48 @@ impl ElfRunner {
             .map_err(|e| RunnerError::component_load_error(resolved_url.as_ref(), e))?;
 
         // Load the component
-        let mut launch_info =
+        let (runtime_dir, mut launch_info) =
             await!(self.load_launch_info(resolved_url.clone(), start_info, &launcher))
                 .map_err(|e| RunnerError::component_load_error(resolved_url.as_ref(), e))?;
 
+        let job_koid = launch_info
+            .job
+            .get_koid()
+            .map_err(|e| ElfRunnerError::component_job_id_error(resolved_url.clone(), e))?
+            .raw_koid();
+
         // Launch the component
-        await!(async {
-            let (status, _process) = await!(launcher.launch(&mut launch_info))?;
+        let process_koid = await!(async {
+            let (status, process) = await!(launcher.launch(&mut launch_info))?;
             if zx::Status::from_raw(status) != zx::Status::OK {
                 return Err(format_err!("failed to launch component: {}", status));
             }
-            Ok(())
+
+            let mut process_koid = 0;
+            if let Some(process) = &process {
+                process_koid = process
+                    .get_koid()
+                    .map_err(|e| {
+                        ElfRunnerError::component_process_id_error(resolved_url.clone(), e)
+                    })?
+                    .raw_koid();
+            }
+
+            Ok(process_koid)
         })
-        .map_err(|e| RunnerError::component_launch_error(resolved_url, e))?;
+        .map_err(|e| RunnerError::component_launch_error(resolved_url.clone(), e))?;
+
+        if let Some(runtime_dir) = runtime_dir {
+            await!(self.create_elf_directory(&runtime_dir, &resolved_url, process_koid, job_koid))?;
+            // TODO(fsamuel): This should be keyed off the to-be-implemented
+            // ComponentController interface, and not some random number.
+            let exec_id = {
+                let mut rand_num_generator = rand::thread_rng();
+                rand_num_generator.gen::<u32>()
+            };
+            let mut instances = await!(self.instances.lock());
+            instances.insert(exec_id, runtime_dir);
+        }
 
         Ok(())
     }
@@ -431,6 +526,17 @@ mod tests {
         // Verify that args are added to the runtime directory.
         assert_eq!("foo", await!(read_file(&runtime_dir_proxy, "args/0")));
         assert_eq!("bar", await!(read_file(&runtime_dir_proxy, "args/1")));
+
+        // Process Id and Job Id will vary with every run of this test. Here we verify that
+        // they exist in the runtime directory, they can be parsed as unsigned integers, they're
+        // greater than zero and they are not the same value. Those are about the only invariants
+        // we can verify across test runs.
+        let process_id = await!(read_file(&runtime_dir_proxy, "elf/process_id")).parse::<u64>()?;
+        let job_id = await!(read_file(&runtime_dir_proxy, "elf/job_id")).parse::<u64>()?;
+        assert!(process_id > 0);
+        assert!(job_id > 0);
+        assert_ne!(process_id, job_id);
+
         Ok(())
     }
 
