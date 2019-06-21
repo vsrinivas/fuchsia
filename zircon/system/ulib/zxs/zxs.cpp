@@ -12,7 +12,7 @@
 #include <zircon/device/ioctl.h>
 #include <zircon/syscalls.h>
 
-zx_status_t zxs_close(const zxs_socket_t socket) {
+zx_status_t zxs_close(zxs_socket_t socket) {
     int16_t out_code;
     zx_status_t status = fuchsia_net_SocketControlClose(
         socket.socket.get(), &out_code);

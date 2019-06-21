@@ -54,6 +54,9 @@ extern "C" const fidl_type_t {{ .ResponseTypeName }};
 {{- end }}
 class {{ .Name }} final {
  public:
+{{- if .ServiceName }}
+  static constexpr char Name_[] = {{ .ServiceName }};
+{{- end }}
 {{ "" }}
   {{- range .Methods }}
 

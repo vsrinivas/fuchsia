@@ -9,7 +9,6 @@
 #include <lib/fdio/io.h>
 #include <lib/zx/socket.h>
 #include <lib/zxio/inception.h>
-#include <lib/zxs/protocol.h>
 #include <poll.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -383,31 +382,26 @@ static fdio_ops_t fdio_socket_dgram_ops = {
     .get_rcvtimeo = fdio_socket_get_rcvtimeo,
 };
 
-static fdio_t* fdio_socket_create(zx::socket socket, int flags,
-                                  fdio_ops_t* ops) {
-    fdio_t* io = fdio_alloc(ops);
+fdio_t* fdio_socket_create(zx::socket socket,
+                           int flags,
+                           zx_info_socket_t info) {
+    fdio_t* io = fdio_alloc(
+        info.options & ZX_SOCKET_DATAGRAM ? &fdio_socket_dgram_ops : &fdio_socket_stream_ops);
     if (io == NULL) {
         return NULL;
     }
     *fdio_get_ioflag(io) = IOFLAG_SOCKET | flags;
-    zxs_socket_t zs = {
-        .socket = std::move(socket),
-        .flags = ops == &fdio_socket_dgram_ops ? ZXS_FLAG_DATAGRAM : 0u,
-        .rcvtimeo = zx::duration::infinite(),
-    };
-    zx_status_t status = zxio_socket_init(fdio_get_zxio_storage(io), std::move(zs));
+    zx_status_t status = zxio_socket_init(
+        fdio_get_zxio_storage(io),
+        {
+            .socket = std::move(socket),
+            .flags = info.options & ZX_SOCKET_DATAGRAM ? ZXS_FLAG_DATAGRAM : 0u,
+            .rcvtimeo = zx::duration::infinite(),
+        });
     if (status != ZX_OK) {
         return NULL;
     }
     return io;
-}
-
-fdio_t* fdio_socket_create_stream(zx::socket s, int flags) {
-    return fdio_socket_create(std::move(s), flags, &fdio_socket_stream_ops);
-}
-
-fdio_t* fdio_socket_create_datagram(zx::socket s, int flags) {
-    return fdio_socket_create(std::move(s), flags, &fdio_socket_dgram_ops);
 }
 
 fdio_t* fd_to_socket(int fd, zxs_socket_t** out_socket) {

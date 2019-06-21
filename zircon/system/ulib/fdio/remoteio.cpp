@@ -168,13 +168,7 @@ static zx_status_t fdio_from_socket(zx::socket socket, fdio_t** out_io) {
     }
     fdio_t* io = nullptr;
     if ((info.options & ZX_SOCKET_HAS_CONTROL) != 0) {
-        // If the socket has a control plane, then the socket is either
-        // a stream or a datagram socket.
-        if ((info.options & ZX_SOCKET_DATAGRAM) != 0) {
-            io = fdio_socket_create_datagram(std::move(socket), IOFLAG_SOCKET_CONNECTED);
-        } else {
-            io = fdio_socket_create_stream(std::move(socket), IOFLAG_SOCKET_CONNECTED);
-        }
+        io = fdio_socket_create(std::move(socket), IOFLAG_SOCKET_CONNECTED, info);
     } else {
         // Without a control plane, the socket is a pipe.
         io = fdio_pipe_create(std::move(socket));
@@ -193,16 +187,14 @@ static zx_status_t fdio_from_socket(zx::socket socket, fdio_t** out_io) {
 // Upon success, |out_io| receives ownership of all handles.
 //
 // Upon failure, consumes all handles.
-static zx_status_t fdio_from_node_info(zx_handle_t raw_handle,
+static zx_status_t fdio_from_node_info(zx::channel handle,
                                        fio::NodeInfo info,
                                        fdio_t** out_io) {
-    zx::handle handle(raw_handle);
-    fdio_t* io = nullptr;
-    zx_status_t status = ZX_OK;
     if (!handle.is_valid()) {
         return ZX_ERR_INVALID_ARGS;
     }
 
+    fdio_t* io = nullptr;
     switch (info.which()) {
     case fio::NodeInfo::Tag::kDirectory:
         io = fdio_dir_create(handle.release());
@@ -220,6 +212,7 @@ static zx_status_t fdio_from_node_info(zx_handle_t raw_handle,
         io = fdio_remote_create(handle.release(), info.mutable_tty().event.release());
         break;
     case fio::NodeInfo::Tag::kVmofile: {
+        zx_status_t status;
         uint64_t seek = 0u;
         zx_status_t io_status = fio::File::Call::Seek(
             zx::unowned_channel(handle.get()), 0, fio::SeekOrigin::START, &status, &seek);
@@ -237,7 +230,8 @@ static zx_status_t fdio_from_node_info(zx_handle_t raw_handle,
         break;
     }
     case fio::NodeInfo::Tag::kPipe: {
-        return fdio_from_socket(std::move(info.mutable_pipe().socket), out_io);
+        io = fdio_pipe_create(std::move(info.mutable_pipe().socket));
+        break;
     }
     default:
         return ZX_ERR_NOT_SUPPORTED;
@@ -258,14 +252,13 @@ static zx_status_t fdio_from_node_info(zx_handle_t raw_handle,
 // of |fdio_t| object to create.
 //
 // Always consumes |channel|.
-static zx_status_t fdio_from_channel(zx_handle_t channel, fdio_t** out_io) {
+static zx_status_t fdio_from_channel(zx::channel channel, fdio_t** out_io) {
     fio::NodeInfo info;
     zx_status_t status = fio::Node::Call::Describe(zx::unowned_channel(channel), &info);
     if (status != ZX_OK) {
-        zx_handle_close(channel);
         return status;
     }
-    return fdio_from_node_info(channel, std::move(info), out_io);
+    return fdio_from_node_info(std::move(channel), std::move(info), out_io);
 }
 
 __EXPORT
@@ -278,7 +271,7 @@ zx_status_t fdio_create(zx_handle_t handle, fdio_t** out_io) {
     fdio_t* io = nullptr;
     switch (info.type) {
     case ZX_OBJ_TYPE_CHANNEL:
-        return fdio_from_channel(handle, out_io);
+        return fdio_from_channel(zx::channel(handle), out_io);
     case ZX_OBJ_TYPE_SOCKET:
         return fdio_from_socket(zx::socket(handle), out_io);
     case ZX_OBJ_TYPE_VMO:
@@ -344,7 +337,7 @@ zx_status_t fdio_remote_open_at(zx_handle_t dir, const char* path, uint32_t flag
         } else if (on_open_status != ZX_OK) {
             return on_open_status;
         }
-        return fdio_from_node_info(handle.release(), std::move(node_info), out_io);
+        return fdio_from_node_info(std::move(handle), std::move(node_info), out_io);
     }
 
     fdio_t* io = fdio_remote_create(handle.release(), 0);

@@ -11,19 +11,19 @@
 #include <fuchsia/boot/c/fidl.h>
 #include <fuchsia/device/manager/c/fidl.h>
 #include <fuchsia/fshost/c/fidl.h>
+#include <fuchsia/net/llcpp/fidl.h>
 #include <fuchsia/paver/c/fidl.h>
 #include <fuchsia/virtualconsole/c/fidl.h>
-#include <fuchsia/net/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
+#include <lib/kernel-debug/kernel-debug.h>
+#include <lib/kernel-mexec/kernel-mexec.h>
 #include <lib/logger/provider.h>
 #include <lib/process-launcher/launcher.h>
 #include <lib/profile/profile.h>
 #include <lib/svc/outgoing.h>
-#include <lib/kernel-debug/kernel-debug.h>
-#include <lib/kernel-mexec/kernel-mexec.h>
 #include <lib/zx/job.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
@@ -114,7 +114,7 @@ static constexpr const char* deprecated_services[] = {
     "fuchsia.logger.LogSink",
     // Interface to resolve shell commands.
     "fuchsia.process.Resolver",
-    fuchsia_net_SocketProvider_Name,
+    ::llcpp::fuchsia::net::SocketProvider::Name_,
     // Legacy interface for netstack, defined in //garnet
     "fuchsia.netstack.Netstack",
     // New interface for netstack (WIP), defined in //zircon
@@ -171,8 +171,9 @@ class ServiceProxy : public fs::Service {
 public:
     ServiceProxy(zx::unowned_channel svc, fbl::StringPiece svc_name)
         : Service([this](zx::channel request) {
-            return fdio_service_connect_at(svc_->get(), svc_name_.data(), request.release());
-        }), svc_(std::move(svc)), svc_name_(svc_name) {}
+              return fdio_service_connect_at(svc_->get(), svc_name_.data(), request.release());
+          }),
+          svc_(std::move(svc)), svc_name_(svc_name) {}
 
     // This proxy may be a directory. Attempt to connect to the requested object,
     // and return a RemoteDir representing the connection.
@@ -217,8 +218,10 @@ void publish_services(const fbl::RefPtr<fs::PseudoDir>& dir,
 }
 
 void publish_remote_service(const fbl::RefPtr<fs::PseudoDir>& dir,
-                           const char* name, zx::unowned_channel forwarding_channel) {
-    dir->AddEntry(name, fbl::MakeRefCounted<fs::Service>(
+                            const char* name, zx::unowned_channel forwarding_channel) {
+    dir->AddEntry(
+        name,
+        fbl::MakeRefCounted<fs::Service>(
             [name, forwarding_channel = std::move(forwarding_channel)](zx::channel request) {
                 return fdio_service_connect_at(forwarding_channel->get(), name, request.release());
             }));
@@ -227,7 +230,9 @@ void publish_remote_service(const fbl::RefPtr<fs::PseudoDir>& dir,
 //TODO(edcoyne): remove this and make virtcon talk virtual filesystems too.
 void publish_proxy_service(const fbl::RefPtr<fs::PseudoDir>& dir,
                            const char* name, zx::unowned_channel forwarding_channel) {
-    dir->AddEntry(name, fbl::MakeRefCounted<fs::Service>(
+    dir->AddEntry(
+        name,
+        fbl::MakeRefCounted<fs::Service>(
             [name, forwarding_channel = std::move(forwarding_channel)](zx::channel request) {
                 const auto request_handle = request.release();
                 return forwarding_channel->write(0, name, static_cast<uint32_t>(strlen(name)),
@@ -238,7 +243,7 @@ void publish_proxy_service(const fbl::RefPtr<fs::PseudoDir>& dir,
 int main(int argc, char** argv) {
     bool require_system = false;
     if (argc > 1) {
-      require_system = strcmp(argv[1], "--require-system") == 0 ? true: false;
+        require_system = strcmp(argv[1], "--require-system") == 0 ? true : false;
     }
     async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
     async_dispatcher_t* dispatcher = loop.dispatcher();
@@ -296,13 +301,13 @@ int main(int argc, char** argv) {
     // if full system is not required drop simple logger service.
     zx_service_provider_instance_t logger_service{.provider = logger_get_service_provider(),
                                                   .ctx = nullptr};
-    if(!require_system) {
-      status = provider_load(&logger_service, dispatcher, outgoing.public_dir());
-      if (status != ZX_OK) {
-          fprintf(stderr, "svchost: error: Failed to publish logger: %d (%s).\n",
-                status, zx_status_get_string(status));
-          return 1;
-      }
+    if (!require_system) {
+        status = provider_load(&logger_service, dispatcher, outgoing.public_dir());
+        if (status != ZX_OK) {
+            fprintf(stderr, "svchost: error: Failed to publish logger: %d (%s).\n",
+                    status, zx_status_get_string(status));
+            return 1;
+        }
     }
 
     publish_services(outgoing.public_dir(), deprecated_services, zx::unowned_channel(appmgr_svc));

@@ -43,7 +43,7 @@ typedef struct zxs_socket {
 //
 // Returns the |zx_status_t| from the socket provider (rather than from the
 // kernel when closing the underlying |zx_handle_t|).
-zx_status_t zxs_close(const zxs_socket_t socket);
+zx_status_t zxs_close(zxs_socket_t socket);
 
 // Send the data in the given |buffer| over |socket|.
 zx_status_t zxs_send(const zxs_socket_t* socket, const void* buffer,
