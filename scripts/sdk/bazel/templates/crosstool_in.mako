@@ -107,6 +107,8 @@ toolchain {
       flag_group {
         flag: "-std=c++14"
         flag: "-xc++"
+        # Needed to compile shared libraries.
+        flag: "-fPIC"
       }
     }
     enabled: true

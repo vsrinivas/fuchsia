@@ -279,6 +279,7 @@ class BazelBuilder(Frontend):
         for dep in atom['deps']:
             data.deps.append(sanitize(dep))
         self.write_file(os.path.join(base, 'BUILD'), 'fidl', data)
+        self.workspace_info.fidl_libraries.append(name);
 
 
 def main():

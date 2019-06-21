@@ -39,7 +39,9 @@ class SdkWorkspaceInfo(object):
         self.with_dart = False
         # Supported target arches.
         self.target_arches = []
-
+        # List of FIDL libraries in the workspace.
+        # Names have already been modified to match Bazel conventions.
+        self.fidl_libraries = []
 
 def write_file(path, template_name, data, is_executable=False):
     '''Writes a file based on a Mako template.'''
@@ -91,5 +93,16 @@ def create_test_workspace(sdk, output, workspace_info):
             })
             write_file(make_dir(os.path.join(dir, 'headers.cc')),
                        'headers', {'headers': files})
+
+    # Tests that generated FIDL bindings are usable.
+    for library in workspace_info.fidl_libraries:
+        dir = os.path.join(output, 'fidl', library)
+        write_file(make_dir(os.path.join(dir, 'BUILD')), 'fidl_build', {
+            'library': library,
+        })
+        write_file(make_dir(os.path.join(dir, 'header_test.cc')),
+                   'fidl_headers', {
+            'header': library.replace('_', '/') + '/cpp/fidl.h',
+        })
 
     return True
