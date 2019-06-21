@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_MEDIA_SIGNAL_GENERATOR_SIGNAL_GENERATOR_H_
-#define GARNET_BIN_MEDIA_SIGNAL_GENERATOR_SIGNAL_GENERATOR_H_
+#ifndef SRC_MEDIA_AUDIO_TOOLS_SIGNAL_GENERATOR_SIGNAL_GENERATOR_H_
+#define SRC_MEDIA_AUDIO_TOOLS_SIGNAL_GENERATOR_SIGNAL_GENERATOR_H_
 
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/fit/function.h>
@@ -173,4 +173,4 @@ class MediaApp {
 
 }  // namespace media::tools
 
-#endif  // GARNET_BIN_MEDIA_SIGNAL_GENERATOR_SIGNAL_GENERATOR_H_
+#endif  // SRC_MEDIA_AUDIO_TOOLS_SIGNAL_GENERATOR_SIGNAL_GENERATOR_H_

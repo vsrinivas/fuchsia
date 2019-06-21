@@ -258,7 +258,8 @@ void MediaApp::AcquireAudioRenderer(sys::ComponentContext* app_context) {
 
   audio_renderer_->BindGainControl(gain_control_.NewRequest());
   gain_control_.set_error_handler([this](zx_status_t status) {
-    FXL_PLOG(ERROR, status) << "Client connection to fuchsia.media.GainControl failed";
+    FXL_PLOG(ERROR, status)
+        << "Client connection to fuchsia.media.GainControl failed";
     Shutdown();
   });
 
