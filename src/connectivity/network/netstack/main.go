@@ -166,6 +166,13 @@ func Main() {
 		return err
 	})
 
+	var nameLookupService net.NameLookupService
+	nameLookupImpl := nameLookupImpl{dnsClient: ns.dnsClient}
+	ctx.OutgoingService.AddService(net.NameLookupName, func(c zx.Channel) error {
+		_, err := nameLookupService.Add(&nameLookupImpl, c, nil)
+		return err
+	})
+
 	var socketProvider net.SocketProviderService
 	ctx.OutgoingService.AddService(net.SocketProviderName, func(c zx.Channel) error {
 		_, err := socketProvider.Add(&socketProviderImpl{ns: ns}, c, nil)

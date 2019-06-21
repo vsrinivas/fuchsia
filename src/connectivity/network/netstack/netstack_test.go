@@ -18,6 +18,7 @@ import (
 	ethernetext "fidlext/fuchsia/hardware/ethernet"
 
 	"netstack/dhcp"
+	"netstack/dns"
 	"netstack/fidlconv"
 	"netstack/link/eth"
 	"netstack/routes"
@@ -284,6 +285,10 @@ func newNetstack(t *testing.T) *Netstack {
 			arp.ProtocolName,
 		}, nil, tcpipstack.Options{})
 
+	// We need to initialize the DNS client, since adding/removing interfaces
+	// sets the DNS servers on that interface, which requires that dnsClient
+	// exist.
+	ns.dnsClient = dns.NewClient(ns.mu.stack)
 	ns.OnInterfacesChanged = func([]netstack.NetInterface2) {}
 	return ns
 }
