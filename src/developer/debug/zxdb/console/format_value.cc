@@ -472,7 +472,11 @@ bool FormatValue::TryFormatArrayOrString(fxl::RefPtr<EvalContext> eval_context,
     if (!array)
       return false;
 
-    if (IsCharacterType(eval_context, array->value_type())) {
+    auto value_type = eval_context->GetConcreteType(array->value_type());
+    if (!value_type)
+      return false;
+
+    if (IsCharacterType(eval_context, value_type.get())) {
       size_t length = array->num_elts();
       bool truncated = false;
       if (length > options.max_array_size) {

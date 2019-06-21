@@ -144,13 +144,24 @@ VariableLocation DecodeVariableLocation(const llvm::DWARFUnit* unit,
 // *size and returns true on success, false on failure.
 bool ReadArraySubrange(llvm::DWARFContext* context,
                        const llvm::DWARFDie& subrange_die, uint64_t* size) {
-  // Extract the DW_AT_count attribute (an unsigned number).
+  // Extract the DW_AT_count attribute which Clang generates, and
+  // DW_AT_upper_bound which GCC generated.
   DwarfDieDecoder range_decoder(context, subrange_die.getDwarfUnit());
+
   llvm::Optional<uint64_t> count;
   range_decoder.AddUnsignedConstant(llvm::dwarf::DW_AT_count, &count);
-  if (!range_decoder.Decode(subrange_die) || !count)
+
+  llvm::Optional<uint64_t> upper_bound;
+  range_decoder.AddUnsignedConstant(llvm::dwarf::DW_AT_upper_bound,
+                                    &upper_bound);
+
+  if (!range_decoder.Decode(subrange_die) || (!count && !upper_bound))
     return false;
-  *size = *count;
+
+  if (count)
+    *size = *count;
+  else
+    *size = *upper_bound;
   return true;
 }
 
@@ -584,6 +595,9 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeDataMember(
   llvm::DWARFDie type;
   decoder.AddReference(llvm::dwarf::DW_AT_type, &type);
 
+  llvm::Optional<bool> artificial;
+  decoder.AddBool(llvm::dwarf::DW_AT_artificial, &artificial);
+
   llvm::Optional<uint64_t> member_offset;
   decoder.AddUnsignedConstant(llvm::dwarf::DW_AT_data_member_location,
                               &member_offset);
@@ -596,6 +610,8 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeDataMember(
     result->set_assigned_name(*name);
   if (type)
     result->set_type(MakeLazy(type));
+  if (artificial)
+    result->set_artificial(*artificial);
   if (member_offset)
     result->set_member_location(static_cast<uint32_t>(*member_offset));
   return result;
@@ -919,6 +935,9 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeVariable(
   llvm::DWARFDie type;
   decoder.AddReference(llvm::dwarf::DW_AT_type, &type);
 
+  llvm::Optional<bool> artificial;
+  decoder.AddBool(llvm::dwarf::DW_AT_artificial, &artificial);
+
   if (!decoder.Decode(die))
     return fxl::MakeRefCounted<Symbol>();
 
@@ -945,6 +964,8 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeVariable(
     variable->set_assigned_name(*name);
   if (type)
     variable->set_type(MakeLazy(type));
+  if (artificial)
+    variable->set_artificial(*artificial);
   variable->set_location(std::move(location));
 
   if (!variable->parent()) {

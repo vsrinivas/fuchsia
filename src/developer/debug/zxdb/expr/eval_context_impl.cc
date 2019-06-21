@@ -169,17 +169,15 @@ void EvalContextImpl::GetVariableValue(fxl::RefPtr<Variable> var,
       var->location().EntryForIP(symbol_context_, *ip);
   if (!loc_entry) {
     // No DWARF location applies to the current instruction pointer.
-    std::string err_str;
+    const char* err_str;
     if (var->location().is_null()) {
       // With no locations, this variable has been completely optimized out.
-      err_str = fxl::StringPrintf("'%s' has been optimized out.",
-                                  var->GetAssignedName().c_str());
+      err_str = "Optimized out.";
     } else {
       // There are locations but none of them match the current IP.
-      err_str = fxl::StringPrintf("'%s' is not available at this address. ",
-                                  var->GetAssignedName().c_str());
+      err_str = "Unavailable";
     }
-    cb(Err(ErrType::kOptimizedOut, std::move(err_str)), var, ExprValue());
+    cb(Err(ErrType::kOptimizedOut, err_str), var, ExprValue());
     return;
   }
 

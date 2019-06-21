@@ -335,6 +335,19 @@ TEST_F(FormatValueTest, GoodStrings) {
   opts.verbosity = FormatExprValueOptions::Verbosity::kAllTypes;
   EXPECT_EQ(std::string("(char[12]) ") + kExpected,
             SyncFormatValue(ExprValue(array_type, data), opts));
+
+  // This type is a "const array of const char". I don't know how to type this
+  // in C (most related things end up as "const pointer to const char") and the
+  // type name looks wrong but GCC will generate this for the type of
+  // compiler-generated variables like __func__.
+  auto char_type = GetCharType();
+  auto const_char = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kConstType,
+                                                      LazySymbol(char_type));
+  auto array_const_char = fxl::MakeRefCounted<ArrayType>(const_char, 12);
+  auto const_array_const_char = fxl::MakeRefCounted<ModifiedType>(
+      DwarfTag::kConstType, LazySymbol(array_const_char));
+  EXPECT_EQ(std::string("(const const char[12]) ") + kExpected,
+            SyncFormatValue(ExprValue(const_array_const_char, data), opts));
 }
 
 TEST_F(FormatValueTest, BadStrings) {

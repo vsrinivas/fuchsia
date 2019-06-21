@@ -294,6 +294,9 @@ void FormatCollection(FormatNode* node, const Collection* coll,
     if (!member)
       continue;
 
+    if (member->artificial())
+      continue;  // Skip compiler-generated data.
+
     std::string member_name = member->GetAssignedName();
 
     ExprValue member_value;

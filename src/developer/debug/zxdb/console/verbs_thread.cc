@@ -506,6 +506,10 @@ Err DoLocals(ConsoleContext* context, const Command& cmd) {
                        const Variable* var = lazy_var.Get()->AsVariable();
                        if (!var)
                          continue;  // Symbols are corrupt.
+
+                       if (var->artificial())
+                         continue;  // Skip compiler-generated symbols.
+
                        const std::string& name = var->GetAssignedName();
                        if (vars.find(name) == vars.end())
                          vars[name] = var;  // New one.
@@ -519,6 +523,12 @@ Err DoLocals(ConsoleContext* context, const Command& cmd) {
     const Variable* var = param.Get()->AsVariable();
     if (!var)
       continue;  // Symbols are corrupt.
+
+    // Here we do not exclude artificial parameters. "this" will be marked as
+    // artificial and we want to include it. We could special-case the object
+    // pointer and exclude the rest, but there's not much other use for
+    // compiler-generated parameters for now.
+
     const std::string& name = var->GetAssignedName();
     if (vars.find(name) == vars.end())
       vars[name] = var;  // New one.

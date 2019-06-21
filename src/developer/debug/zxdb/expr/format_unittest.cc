@@ -309,7 +309,9 @@ TEST_F(FormatTest, Structs) {
       // when refs are supported.
       "    b = Err: Unhandled type modifier 0x10, please file a bug.\n",
       SyncTreeTypeDesc(pair_value, opts));
+}
 
+TEST_F(FormatTest, Struct_Anon) {
   // Test an anonymous struct. Clang will generate structs with no names for
   // things like closures. This struct has no members.
   auto anon_struct = fxl::MakeRefCounted<Collection>(DwarfTag::kStructureType);
@@ -317,10 +319,38 @@ TEST_F(FormatTest, Structs) {
       DwarfTag::kPointerType, LazySymbol(anon_struct));
   ExprValue anon_value(anon_struct_ptr,
                        {0x00, 0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00});
+
   EXPECT_EQ(
       " = (anon struct)*, 0x1100\n"
       "  * = (anon struct), \n",
-      SyncTreeTypeDesc(anon_value, opts));
+      SyncTreeTypeDesc(anon_value, FormatExprValueOptions()));
+}
+
+// Structure members can be marked as "artifical" by the compiler. We shouldn't
+// print these.
+TEST_F(FormatTest, Struct_Artificial) {
+  auto int32_type = MakeInt32Type();
+  auto foo_type =
+      MakeCollectionType(DwarfTag::kStructureType, "Foo",
+                         {{"normal", int32_type}, {"artificial", int32_type}});
+
+  // Print without anything being marked artificial.
+  ExprValue value(foo_type, {1, 0, 0, 0, 2, 0, 0, 0});
+  EXPECT_EQ(
+      " = Foo, \n"
+      "  normal = int32_t, 1\n"
+      "  artificial = int32_t, 2\n",
+      SyncTreeTypeDesc(value, FormatExprValueOptions()));
+
+  // Mark second one as artificial.
+  DataMember* artificial_member = const_cast<DataMember*>(
+      foo_type->data_members()[1].Get()->AsDataMember());
+  artificial_member->set_artificial(true);
+
+  EXPECT_EQ(
+      " = Foo, \n"
+      "  normal = int32_t, 1\n",
+      SyncTreeTypeDesc(value, FormatExprValueOptions()));
 }
 
 // GDB and LLDB both print all members of a union and accept the possibility
