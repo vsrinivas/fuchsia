@@ -2,7 +2,7 @@
 
 This is the command usage guide for zxdb. Please see also:
 
-  * The [setup and troubleshooting guide](debugger.md).
+  * The [setup and troubleshooting guide](README.md).
 
 ## Quick start
 
