@@ -71,6 +71,7 @@ using ::coroutine::CoroutineHandler;
 using ::testing::Contains;
 using ::testing::ElementsAre;
 using ::testing::IsEmpty;
+using ::testing::Not;
 using ::testing::UnorderedElementsAreArray;
 
 std::vector<PageStorage::CommitIdAndBytes> CommitAndBytesFromCommit(
@@ -1495,7 +1496,57 @@ TEST_F(PageStorageTest, GetObjectPartFromSync) {
                    PageStorage::Location::NETWORK, Status::NETWORK_ERROR);
 }
 
-TEST_F(PageStorageTest, DISABLED_GetHugeObjectPartFromSync) {
+TEST_F(PageStorageTest, GetObjectPartFromSyncEndOfChunk) {
+  // Test for LE-797: GetObjectPartFromSync was sometimes called to read zero
+  // bytes off a piece.
+  // Generates a read such that the end of the read is on a boundary between two
+  // chunks.
+
+  std::string data_str = RandomString(environment_.random(), 2 * 65536 + 1);
+
+  FakeSyncDelegate sync;
+  // Given the length of the piece, there will be at least two non-inlined
+  // chunks. This relies on ForEachPiece giving the chunks in order.
+  std::vector<size_t> chunk_lengths;
+  std::vector<ObjectIdentifier> chunk_identifiers;
+  ObjectIdentifier object_identifier = ForEachPiece(
+      data_str, ObjectType::BLOB,
+      [&sync, &chunk_lengths,
+       &chunk_identifiers](std::unique_ptr<const Piece> piece) {
+        ObjectIdentifier object_identifier = piece->GetIdentifier();
+        ObjectDigestInfo digest_info =
+            GetObjectDigestInfo(object_identifier.object_digest());
+        if (digest_info.is_chunk()) {
+          chunk_lengths.push_back(piece->GetData().size());
+          chunk_identifiers.push_back(object_identifier);
+        }
+        if (digest_info.is_inlined()) {
+          return;
+        }
+        sync.AddObject(std::move(object_identifier),
+                       piece->GetData().ToString());
+      });
+  ASSERT_EQ(PieceType::INDEX,
+            GetObjectDigestInfo(object_identifier.object_digest()).piece_type);
+  storage_->SetSyncDelegate(&sync);
+
+  // Read 128 bytes off the end of the first chunk.
+  uint64_t size = 128;
+  ASSERT_LT(size, chunk_lengths[0]);
+  uint64_t offset = chunk_lengths[0] - size;
+
+  fsl::SizedVmo object_part = TryGetObjectPart(object_identifier, offset, size,
+                                               PageStorage::Location::NETWORK);
+  std::string object_part_data;
+  ASSERT_TRUE(fsl::StringFromVmo(object_part, &object_part_data));
+  EXPECT_EQ(data_str.substr(offset, size), convert::ToString(object_part_data));
+  EXPECT_LT(sync.object_requests.size(), sync.GetNumberOfObjectsStored());
+  EXPECT_THAT(sync.object_requests, Contains(object_identifier));
+  EXPECT_THAT(sync.object_requests, Contains(chunk_identifiers[0]));
+  EXPECT_THAT(sync.object_requests, Not(Contains(chunk_identifiers[1])));
+}
+
+TEST_F(PageStorageTest, GetHugeObjectPartFromSync) {
   std::string data_str = RandomString(environment_.random(), 2 * 65536 + 1);
   int64_t offset = 28672;
   int64_t size = 128;

@@ -905,7 +905,7 @@ void PageStorageImpl::FillBufferWithObjectContent(
       continue;
     }
     // Stop iterating as soon as the part has been fully copied.
-    if (global_offset + global_size < child_position) {
+    if (global_offset + global_size <= child_position) {
       break;
     }
     // Create a copy of the VMO to be owned by the recursive call.
