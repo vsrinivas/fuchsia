@@ -284,8 +284,11 @@ fn property_type_name(property: &Property) -> &str {
         Property::String(_, _) => "String",
         Property::Bytes(_, _) => "Bytes",
         Property::Int(_, _) => "Int",
+        Property::IntArray(_, _) => "IntArray",
         Property::UInt(_, _) => "UInt",
+        Property::UIntArray(_, _) => "UIntArray",
         Property::Double(_, _) => "Double",
+        Property::DoubleArray(_, _) => "DoubleArray",
     }
 }
 
@@ -294,6 +297,9 @@ impl_property_assertion!(Bytes, Vec<u8>);
 impl_property_assertion!(UInt, u64);
 impl_property_assertion!(Int, i64);
 impl_property_assertion!(Double, f64);
+impl_property_assertion!(DoubleArray, Vec<f64>);
+impl_property_assertion!(IntArray, Vec<i64>);
+impl_property_assertion!(UIntArray, Vec<u64>);
 
 /// A PropertyAssertion that always passes
 pub struct AnyProperty;
@@ -478,6 +484,24 @@ mod tests {
         let time_key = "@time";
         assert_inspect_tree!(node_hierarchy, key: {
             var time_key: "1.000"
+        });
+    }
+
+    #[test]
+    fn test_arrays() {
+        let node_hierarchy = NodeHierarchy {
+            name: "key".to_string(),
+            children: vec![],
+            properties: vec![
+                Property::UIntArray("@uints".to_string(), vec![1, 2, 3]),
+                Property::IntArray("@ints".to_string(), vec![-2, -4, 0]),
+                Property::DoubleArray("@doubles".to_string(), vec![1.3, 2.5, -3.6]),
+            ],
+        };
+        assert_inspect_tree!(node_hierarchy, key: {
+            "@uints": vec![1u64, 2, 3],
+            "@ints": vec![-2i64, -4, 0],
+            "@doubles": vec![1.3, 2.5, -3.6]
         });
     }
 

@@ -7,7 +7,7 @@ use {
         block::PropertyFormat,
         block_type::BlockType,
         reader::snapshot::{ScannedBlock, Snapshot},
-        Inspector,
+        utils, Inspector,
     },
     failure::{bail, format_err, Error},
     fuchsia_zircon::Vmo,
@@ -54,7 +54,15 @@ pub enum Property {
 
     /// The value is a double.
     Double(String, f64),
-    // TODO(CF-798): add array types
+
+    /// The value is a double array.
+    DoubleArray(String, Vec<f64>),
+
+    /// The value is an integer.
+    IntArray(String, Vec<i64>),
+
+    /// The value is an unsigned integer.
+    UIntArray(String, Vec<u64>),
 }
 
 impl Property {
@@ -63,8 +71,11 @@ impl Property {
             Property::String(name, _)
             | Property::Bytes(name, _)
             | Property::Int(name, _)
+            | Property::IntArray(name, _)
             | Property::UInt(name, _)
-            | Property::Double(name, _) => &name,
+            | Property::UIntArray(name, _)
+            | Property::Double(name, _)
+            | Property::DoubleArray(name, _) => &name,
         }
     }
 }
@@ -111,9 +122,11 @@ fn scan_blocks<'a>(snapshot: &'a Snapshot) -> Result<ScanResult<'a>, Error> {
             BlockType::NodeValue => {
                 result.parse_node(&block)?;
             }
-            // TODO(CF-798): add ArrayValue
             BlockType::IntValue | BlockType::UintValue | BlockType::DoubleValue => {
                 result.parse_numeric_property(&block)?;
+            }
+            BlockType::ArrayValue => {
+                result.parse_array_property(&block)?;
             }
             BlockType::PropertyValue => {
                 result.parse_property(&block)?;
@@ -258,6 +271,38 @@ impl<'a> ScanResult<'a> {
         Ok(())
     }
 
+    fn parse_array_property(&mut self, block: &ScannedBlock) -> Result<(), Error> {
+        let name = self.get_name(block.name_index()?).ok_or(format_err!("failed to parse name"))?;
+        let parent = get_or_create_scanned_node!(self.parsed_nodes, block.parent_index()?);
+        let array_slots = block.array_slots()? as usize;
+        if utils::array_capacity(block.order()) < array_slots {
+            bail!("Tried to read more slots than available");
+        }
+        let value_indexes = 0..array_slots;
+        match block.array_entry_type()? {
+            BlockType::IntValue => {
+                let values = value_indexes
+                    .map(|i| block.array_get_int_slot(i).unwrap())
+                    .collect::<Vec<i64>>();
+                parent.hierarchy.properties.push(Property::IntArray(name, values));
+            }
+            BlockType::UintValue => {
+                let values = value_indexes
+                    .map(|i| block.array_get_uint_slot(i).unwrap())
+                    .collect::<Vec<u64>>();
+                parent.hierarchy.properties.push(Property::UIntArray(name, values));
+            }
+            BlockType::DoubleValue => {
+                let values = value_indexes
+                    .map(|i| block.array_get_double_slot(i).unwrap())
+                    .collect::<Vec<f64>>();
+                parent.hierarchy.properties.push(Property::DoubleArray(name, values));
+            }
+            _ => bail!("Unexpected array entry type format"),
+        }
+        Ok(())
+    }
+
     fn parse_property(&mut self, block: &ScannedBlock) -> Result<(), Error> {
         let name = self.get_name(block.name_index()?).ok_or(format_err!("failed to parse name"))?;
         let parent = get_or_create_scanned_node!(self.parsed_nodes, block.parent_index()?);
@@ -293,13 +338,21 @@ impl<'a> ScanResult<'a> {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::constants};
+    use {
+        super::*,
+        crate::{bitfields::Payload, constants, ArrayProperty},
+    };
 
     #[test]
     fn read_vmo() {
         let inspector = Inspector::new();
         let root = inspector.root();
         let _root_int = root.create_int("int-root", 3);
+        let root_double_array = root.create_double_array("property-double-array", 5);
+        let double_array_data = vec![-1.2, 2.3, 3.4, 4.5, -5.6];
+        for (i, x) in double_array_data.iter().enumerate() {
+            root_double_array.set(i, *x);
+        }
 
         let child1 = root.create_child("child-1");
         let _child1_uint = child1.create_uint("property-uint", 10);
@@ -309,6 +362,12 @@ mod tests {
         let string_data = chars.iter().cycle().take(6000).collect::<String>();
         let _string_prop = child1.create_string("property-string", &string_data);
 
+        let child1_int_array = child1.create_int_array("property-int-array", 3);
+        let int_array_data = vec![-1, 2, 3];
+        for (i, x) in int_array_data.iter().enumerate() {
+            child1_int_array.set(i, *x);
+        }
+
         let child2 = root.create_child("child-2");
         let _child2_double = child2.create_double("property-double", 5.8);
 
@@ -317,13 +376,22 @@ mod tests {
         let bytes_data = (0u8..=9u8).cycle().take(5000).collect::<Vec<u8>>();
         let _bytes_prop = child3.create_bytes("property-bytes", &bytes_data);
 
+        let child3_int_array = child3.create_uint_array("property-uint-array", 4);
+        let uint_array_data = vec![1, 2, 3, 4];
+        for (i, x) in uint_array_data.iter().enumerate() {
+            child3_int_array.set(i, *x);
+        }
+
         let result = NodeHierarchy::try_from(&inspector).unwrap();
 
         assert_eq!(
             result,
             NodeHierarchy {
                 name: "root".to_string(),
-                properties: vec![Property::Int("int-root".to_string(), 3),],
+                properties: vec![
+                    Property::Int("int-root".to_string(), 3),
+                    Property::DoubleArray("property-double-array".to_string(), double_array_data),
+                ],
                 children: vec![
                     NodeHierarchy {
                         name: "child-1".to_string(),
@@ -331,12 +399,17 @@ mod tests {
                             Property::UInt("property-uint".to_string(), 10),
                             Property::Double("property-double".to_string(), -3.4),
                             Property::String("property-string".to_string(), string_data),
+                            Property::IntArray("property-int-array".to_string(), int_array_data),
                         ],
                         children: vec![NodeHierarchy {
                             name: "child-1-1".to_string(),
                             properties: vec![
                                 Property::Int("property-int".to_string(), -9),
                                 Property::Bytes("property-bytes".to_string(), bytes_data),
+                                Property::UIntArray(
+                                    "property-uint-array".to_string(),
+                                    uint_array_data
+                                ),
                             ],
                             children: vec![],
                         },],
@@ -392,5 +465,28 @@ mod tests {
                 children: vec![],
             },
         );
+    }
+
+    #[test]
+    fn test_invalid_array_slots() -> Result<(), Error> {
+        let inspector = Inspector::new();
+        let root = inspector.root();
+        let array = root.create_int_array("int-array", 3);
+
+        let vmo = inspector.vmo.as_ref().unwrap();
+        let vmo_size = vmo.get_size()?;
+        let mut buf = vec![0u8; vmo_size as usize];
+        vmo.read(&mut buf[..], /*offset=*/ 0)?;
+
+        // Mess up with the block slots by setting them to a too big number.
+        let offset = utils::offset_for_index(array.block_index()) + 8;
+        let mut payload =
+            Payload(u64::from_le_bytes(*<&[u8; 8]>::try_from(&buf[offset..offset + 8])?));
+        payload.set_array_slots_count(255);
+
+        buf[offset..offset + 8].clone_from_slice(&payload.value().to_le_bytes()[..]);
+        assert!(NodeHierarchy::try_from(Snapshot::build(&buf)).is_err());
+
+        Ok(())
     }
 }

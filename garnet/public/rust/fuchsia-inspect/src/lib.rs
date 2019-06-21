@@ -147,11 +147,14 @@ macro_rules! inspect_type_impl {
 
             #[cfg(test)]
             impl $name {
-                #[allow(dead_code)]
-                fn get_block(&self) -> Option<crate::block::Block<Arc<Mapping>>> {
+                pub fn get_block(&self) -> Option<crate::block::Block<Arc<Mapping>>> {
                     self.inner.as_ref().and_then(|inner| {
                         inner.state.lock().heap.get_block(inner.block_index).ok()
                     })
+                }
+
+                pub fn block_index(&self) -> u32 {
+                    self.inner.as_ref().unwrap().block_index
                 }
             }
 
@@ -460,14 +463,6 @@ macro_rules! property {
                 struct [<$name Property>]
             );
 
-            impl [<$name Property>] {
-                /// FOR TEST ONLY. Excavates block_index from [<$name Property>].
-                #[cfg(test)]
-                pub fn block_index(&self) -> u32 {
-                    self.inner.as_ref().unwrap().block_index
-                }
-            }
-
             impl<'t> Property<'t> for [<$name Property>] {
                 type Type = &'t $type;
 
@@ -539,6 +534,9 @@ macro_rules! array_property {
                 /// Inspect API Array Property data type.
                 struct [<$name_cap ArrayProperty>]
             );
+
+            impl [<$name_cap ArrayProperty>] {
+            }
 
             impl ArrayProperty for [<$name_cap ArrayProperty>] {
                 type Type = $type;

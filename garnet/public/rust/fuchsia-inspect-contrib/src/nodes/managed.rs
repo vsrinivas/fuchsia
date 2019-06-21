@@ -109,7 +109,7 @@ mod tests {
         assert_inspect_tree!(inspector, root: {
             config: {
                 str_key: "str_value",
-                bytes_key: vec![1, 3, 3, 7],
+                bytes_key: vec![1u8, 3, 3, 7],
                 uint_key: 1u64,
                 child: {
                     int_key: 2i64,
@@ -134,7 +134,7 @@ mod tests {
         assert_inspect_tree!(inspector, root: {
             config: {
                 str_key: "str_value",
-                bytes_key: vec![1, 3, 3, 7],
+                bytes_key: vec![1u8, 3, 3, 7],
                 uint_key: 1u64,
                 child: {
                     int_key: 2i64,
