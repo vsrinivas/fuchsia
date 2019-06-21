@@ -152,7 +152,7 @@ configuration, [capabilities](#capabilities) it [exposes](#expose),
 
 Component declaration is a [components v2](#components-v2) concept.
 
-[fuchsia.sys2.ComponentDecl]: https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.sys2/decls/component_decl.fidl
+[fuchsia.sys2.ComponentDecl]: /sdk/fidl/fuchsia.sys2/decls/component_decl.fidl
 
 #### **Component Framework**
 
@@ -212,10 +212,10 @@ tools such as [cmc], and SDK libraries such as [libsys] and [libsvc].
 
 -   [Components v2](#components-v2)
 
-[fuchsia.sys]: https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.sys/
-[cmc]: https://fuchsia.googlesource.com/fuchsia/+/master/src/sys/cmc
-[libsys]: https://fuchsia.googlesource.com/fuchsia/+/master/sdk/lib/sys
-[libsvc]: https://fuchsia.googlesource.com/fuchsia/+/master/sdk/lib/svc
+[fuchsia.sys]: /sdk/fidl/fuchsia.sys/
+[cmc]: /src/sys/cmc
+[libsys]: /sdk/lib/sys
+[libsvc]: /sdk/lib/svc
 
 #### **Components v2**
 
@@ -226,8 +226,8 @@ implementation. Includes a runtime as implemented by
 
 -   [Components v1](#components-v1)
 
-[fuchsia.sys2]: https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.sys2/
-[cmc]: https://fuchsia.googlesource.com/fuchsia/+/master/garnet/bin/cmc
+[fuchsia.sys2]: /sdk/fidl/fuchsia.sys2/
+[cmc]: /garnet/bin/cmc
 
 #### **Concurrent Device Driver**
 

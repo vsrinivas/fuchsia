@@ -4,10 +4,6 @@
 
     Wrapper over zircon-fdio library
 
-* [fuchsia-app/](/garnet/public/rust/fuchsia-app/)
-
-    Tools for working with Fuchsia Services and Applications
-
 * [fuchsia-archive/](/garnet/public/rust/fuchsia-archive/)
 
     Work with Fuchsia Archives (FARs)

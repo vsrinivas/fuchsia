@@ -202,7 +202,7 @@ The pip unit transformation is a combination of the following factors.
   preferences such as their accessibility needs.  This term has no effect
   when default user settings are in effect.
 
-See [Display Metrics](ui_display_metrics.md) for more details about how
+See [Display Metrics](#display_metrics) for more details about how
 the pip unit transformation is actually determined and used.
 
 #### Examples
@@ -223,7 +223,7 @@ output for a particular rendering context.
 These properties are collectively known as **Metrics** and are summarized
 in the following tables.
 
-### Display Metrics
+### Display Metrics {#display_metrics}
 
 Display metrics describe the physical characteristics of a particular display
 and its basic scale factors.

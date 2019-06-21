@@ -1,7 +1,7 @@
 Magma: Design
 =============
 
-For an overview of Magma including background, hardware requirements, and description of architecture, please see [Magma: Overview](overview.md).
+For an overview of Magma including background, hardware requirements, and description of architecture, please see [Magma: Overview](README.md).
 
 ## Goals
 

@@ -5,7 +5,7 @@
 ## General Advice
 
 This section contains some general advice about defining protocols
-in the [Fuchsia Interface Definition Language](../languages/fidl/README.md).
+in the [Fuchsia Interface Definition Language](/docs/development/languages/fidl/README.md).
 
 ### Protocols not objects
 
@@ -1633,7 +1633,7 @@ pattern used by the client library.
 In order to include the client library in the Fuchsia SDK, we should provide
 implementations of the library in at least two languages.
 
-### Service hubs
+### Service hubs {#service_hubs}
 
 A _service hub_ is a `Discoverable` protocol that simply lets you discover a
 number of other protocols, typically with explicit names:

@@ -24,7 +24,7 @@ executable("unittests") {
 
 A: An unbroken chain of dependencies that roll up to your `fx set` command's
 universe of available packages (expandable using the
-[`--with`](https://fuchsia.googlesource.com/fuchsia/+/master/tools/devshell/set)
+[`--with`](/tools/devshell/set)
 flag), typically going through the `all` target of
 `//<layer>/packages/tests/BUILD.gn`, such as
 [`//garnet/packages/tests:all`](/garnet/packages/tests/BUILD.gn).
@@ -46,7 +46,7 @@ which is itself included in the catch-all group,
 `//garnet/packages/tests:all`
 
 Your product definition (typically one found in
-[products/](https://fuchsia.googlesource.com/fuchsia/+/master/products) may or
+[products/](/products) may or
 may not transitively include this test group. If it doesn't, add it to your `fx
 set` command, like so:
 

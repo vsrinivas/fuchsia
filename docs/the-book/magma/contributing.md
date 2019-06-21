@@ -86,7 +86,7 @@ For details, refer to top level project documentation.
 
 #### S0
 
-For stress testing, run the test script [lib/magma/scripts/stress.sh](../../../lib/magma/scripts/stress.sh)
+For stress testing, run the test script [lib/magma/scripts/stress.sh](/garnet/lib/magma/scripts/stress.sh)
 and ensure that the driver does not leak resources over time.
 
 #### S1

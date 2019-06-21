@@ -1,7 +1,7 @@
 Magma: Porting Guide
 ====================
 
-For an overview of Magma including background, hardware requirements, and description of architecture, please see [Magma: Overview](overview.md).
+For an overview of Magma including background, hardware requirements, and description of architecture, please see [Magma: Overview](README.md).
 
 For each component, a short term and long term process is described, where, in the short term, all Fuchsia related development is performed by the Magma team.
 
@@ -21,7 +21,7 @@ The Magma team writes new code, supporting only the latest gpu hardware generati
 The gpu vendor supplies and maintains the system driver using the Zircon DDK.
 
 ### Tasks
-* Initialize hardware: register access, clocks, regulators, interrupts, firmware.  **Note** where the GPU block is agnostic of these concerns, they should be configured in a separate board driver; see Zircon [platform-bus](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/ddk/platform-bus.md).
+* Initialize hardware: register access, clocks, regulators, interrupts, firmware.  **Note** where the GPU block is agnostic of these concerns, they should be configured in a separate board driver; see Zircon [platform-bus](/zircon/docs/ddk/platform-bus.md).
 	* *msd_driver_create*
 	* *msd_driver_configure*
 	* *msd_driver_destroy*
@@ -81,7 +81,7 @@ Eventually, the vendor will be able to build and test for Fuchsia, so the Fuchsi
 * A simple Vulkan test passes
 	* Test: [vkreadback](/garnet/lib/magma/tests/vkreadback) (draws a color then reads back the framebuffer values)
 * Add support for fuchsia window system integration extensions using zircon framebuffer library
-    * Test: [vkcube](/garnet/lib/magma/tests/vkcube) (animated, using VK_KHR_swapchain)
+    * Test: [vkcube](/garnet/lib/vulkan/tests/vkcube/) (animated, using VK_KHR_swapchain)
 * Add support for fuchsia external memory and semaphore extensions
 	* Test: [vkext](/garnet/lib/magma/tests/vkext)
 

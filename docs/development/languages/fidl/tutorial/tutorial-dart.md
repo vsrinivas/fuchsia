@@ -49,7 +49,7 @@ fx build
 ## `Echo` server
 
 The echo server implementation can be found at:
-[//topaz/examples/fidl/echo_server_async_dart/lib/main.dart](https://fuchsia.googlesource.com//topaz/+/master/examples/fidl/echo_server_async_dart/).
+[//topaz/examples/fidl/echo_server_async_dart/lib/main.dart](https://fuchsia.googlesource.com/topaz/+/master/examples/fidl/echo_server_async_dart/).
 
 This file implements the `main()` function and the `EchoImpl` class:
 
