@@ -54,7 +54,6 @@ func (d *rootDirectory) Open(name string, flags fs.OpenFlags) (fs.File, fs.Direc
 }
 
 func (d *rootDirectory) Read() ([]fs.Dirent, error) {
-	debugLog("pkgfs:root:read")
 
 	d.mu.RLock()
 	dirs := make([]fs.Dirent, 0, len(d.dirs))
@@ -66,12 +65,10 @@ func (d *rootDirectory) Read() ([]fs.Dirent, error) {
 }
 
 func (d *rootDirectory) Close() error {
-	debugLog("pkgfs:root:close")
 	return nil
 }
 
 func (d *rootDirectory) Stat() (int64, time.Time, time.Time, error) {
-	debugLog("pkgfs:root:stat")
 	return 0, d.fs.mountTime, d.fs.mountTime, nil
 }
 

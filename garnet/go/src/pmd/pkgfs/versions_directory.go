@@ -27,7 +27,7 @@ func (d *versionsDirectory) Close() error { return nil }
 
 func (d *versionsDirectory) Open(name string, flags fs.OpenFlags) (fs.File, fs.Directory, *fs.Remote, error) {
 	name = clean(name)
-	debugLog("pkgfs:versionsDirectory:open %q", name)
+
 	if name == "" {
 		return nil, d, nil, nil
 	}

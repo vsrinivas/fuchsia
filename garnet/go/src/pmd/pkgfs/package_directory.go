@@ -20,9 +20,9 @@ import (
 
 type packageDir struct {
 	unsupportedDirectory
-	fs            *Filesystem
-	name, version string
-	contents      map[string]string
+	fs         *Filesystem
+	merkleroot string
+	contents   map[string]string
 
 	// if this packagedir is a subdirectory, then this is the prefix name
 	subdir *string
@@ -82,9 +82,8 @@ func newPackageDirFromBlob(blob string, filesystem *Filesystem) (*packageDir, er
 	}
 
 	pd := packageDir{
-		unsupportedDirectory: unsupportedDirectory(filepath.Join("/packages", p.Name, p.Version)),
-		name:                 p.Name,
-		version:              p.Version,
+		unsupportedDirectory: unsupportedDirectory("package:" + blob),
+		merkleroot:           blob,
 		fs:                   filesystem,
 		contents:             map[string]string{},
 	}
@@ -110,7 +109,7 @@ func newPackageDirFromBlob(blob string, filesystem *Filesystem) (*packageDir, er
 	pd.contents["meta"] = blob
 	for _, name := range fr.List() {
 		if !strings.HasPrefix(name, "meta/") {
-			log.Printf("pkgfs:packageDir:new %q/%q illegal file in meta.far: %q", pd.name, pd.version, name)
+			log.Printf("package:%s illegal file in meta.far: %q", pd.merkleroot, name)
 			continue
 		}
 		pd.contents[name] = name
@@ -120,7 +119,6 @@ func newPackageDirFromBlob(blob string, filesystem *Filesystem) (*packageDir, er
 }
 
 func (d *packageDir) Close() error {
-	debugLog("pkgfs:packageDir:close %q/%q", d.name, d.version)
 	return nil
 }
 
@@ -139,7 +137,6 @@ func (d *packageDir) getBlobFor(path string) (string, bool) {
 
 func (d *packageDir) Open(name string, flags fs.OpenFlags) (fs.File, fs.Directory, *fs.Remote, error) {
 	name = clean(name)
-	debugLog("pkgfs:packagedir:open %q", name)
 
 	if d.subdir != nil {
 		name = filepath.Join(*d.subdir, name)
@@ -150,21 +147,20 @@ func (d *packageDir) Open(name string, flags fs.OpenFlags) (fs.File, fs.Director
 	}
 
 	if flags.Create() || flags.Truncate() || flags.Write() || flags.Append() {
-		debugLog("pkgfs:packagedir:open %q unsupported flags", name)
 		return nil, nil, nil, fs.ErrNotSupported
 	}
 
 	if name == "meta" {
 		if flags.File() || (!flags.Directory() && !flags.Path()) {
-			mff := newMetaFile(d.name, d.version, d.contents[name], d.fs, flags)
+			mff := newMetaFile(d.contents[name], d.fs, flags)
 			return mff, nil, nil, nil
 		}
-		mfd := newMetaFarDir(d.name, d.version, d.contents[name], d.fs)
+		mfd := newMetaFarDir(d.contents[name], d.fs)
 		return nil, mfd, nil, nil
 	}
 
 	if strings.HasPrefix(name, "meta/") {
-		mfd := newMetaFarDir(d.name, d.version, d.contents["meta"], d.fs)
+		mfd := newMetaFarDir(d.contents["meta"], d.fs)
 		return mfd.Open(strings.TrimPrefix(name, "meta"), flags)
 	}
 
@@ -182,7 +178,6 @@ func (d *packageDir) Open(name string, flags fs.OpenFlags) (fs.File, fs.Director
 		}
 	}
 
-	debugLog("pkgfs:packagedir:open %q not found", name)
 	return nil, nil, nil, fs.ErrNotFound
 }
 
@@ -226,7 +221,6 @@ func (d *packageDir) Read() ([]fs.Dirent, error) {
 }
 
 func (d *packageDir) Stat() (int64, time.Time, time.Time, error) {
-	debugLog("pkgfs:packagedir:stat %q/%q", d.name, d.version)
 	// TODO(raggi): forward stat values from the index
 	return 0, d.fs.mountTime, d.fs.mountTime, nil
 }

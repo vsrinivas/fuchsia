@@ -98,7 +98,6 @@ func (d *needsPkgRoot) Open(name string, flags fs.OpenFlags) (fs.File, fs.Direct
 		return nil, nil, nil, fs.ErrNotFound
 	}
 
-	debugLog("pkgfs:needspkgroot:%q open", root)
 	pkgDir := &needsPkgDir{fs: d.fs, pkgRoot: root}
 
 	if len(parts) > 1 {
@@ -154,7 +153,6 @@ func (d *needsPkgDir) Open(name string, flags fs.OpenFlags) (fs.File, fs.Directo
 		return nil, nil, nil, fs.ErrNotFound
 	}
 
-	debugLog("pkgfs:needspkgdir:%q open", name)
 	return &installFile{fs: d.fs, name: name, isPkg: false}, nil, nil, nil
 }
 
@@ -200,7 +198,6 @@ func (d *needsBlobsDir) Open(name string, flags fs.OpenFlags) (fs.File, fs.Direc
 		return nil, nil, nil, fs.ErrNotFound
 	}
 
-	debugLog("pkgfs:needsblob:%q open", name)
 	return &installFile{fs: d.fs, name: name, isPkg: false}, nil, nil, nil
 }
 

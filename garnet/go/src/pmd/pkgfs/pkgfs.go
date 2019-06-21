@@ -148,8 +148,8 @@ func (f *Filesystem) SetSystemRoot(merkleroot string) error {
 	// Ensure that the "system_image" package is also indexed
 	f.static.Set(
 		pkg.Package{
-			Name:    pd.name,
-			Version: pd.version,
+			Name:    "system_image",
+			Version: "0",
 		},
 		merkleroot,
 	)
@@ -160,19 +160,16 @@ func (f *Filesystem) SetSystemRoot(merkleroot string) error {
 func (f *Filesystem) Blockcount() int64 {
 	// TODO(raggi): sum up all packages?
 	// TODO(raggi): delegate to blobfs?
-	debugLog("fs blockcount")
 	return 0
 }
 
 func (f *Filesystem) Blocksize() int64 {
 	// TODO(raggi): sum up all packages?
 	// TODO(raggi): delegate to blobfs?
-	debugLog("fs blocksize")
 	return 0
 }
 
 func (f *Filesystem) Size() int64 {
-	debugLog("fs size")
 	// TODO(raggi): delegate to blobfs?
 	return 0
 }
@@ -299,7 +296,7 @@ func goErrToFSErr(err error) error {
 		case zx.ErrInvalidArgs:
 			return fs.ErrInvalidArgs
 		default:
-			debugLog("pkgfs: unmapped zx status to fs err: %s", e.Status)
+
 			return err
 		}
 	}
@@ -317,7 +314,7 @@ func goErrToFSErr(err error) error {
 	case io.EOF:
 		return fs.ErrEOF
 	default:
-		debugLog("pkgfs: unmapped os err to fs err: %T %v", err, err)
+
 		return err
 	}
 }
