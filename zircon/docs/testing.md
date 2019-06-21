@@ -109,7 +109,7 @@ the `debuglog` virtual terminal.
 
 Many parts of the kernel have unit tests, which report success/failure
 automatically. These unit tests are built using the primitives provided by [the
-kernel unit-test library](../kernel/lib/unittest). You can find these statically
+kernel unit-test library](/zircon/kernel/lib/unittest). You can find these statically
 by searching for `UNITTEST_START_TESTCASE`.
 
 These tests can be run from the shell with `k ut`. `k ut all` will run all tests
@@ -119,12 +119,12 @@ or you can use `k ut $TEST_NAME` to run a specific test.
 
 Many parts of the kernel provide diagnostics, whose output requires manual
 inspection. Some of these diagnostics are used to verify correctness
-(e.g. [`timer_diag`](../kernel/tests/timer_tests.cpp)), while others simply
+(e.g. [`timer_diag`](/zircon/kernel/tests/timer_tests.cpp)), while others simply
 stress test a part of the system
-(e.g. [`timer_stress`](../kernel/tests/timer_tests.cpp)).
+(e.g. [`timer_stress`](/zircon/kernel/tests/timer_tests.cpp)).
 
 To run a diagnostic, simply pass its name to the `k` command. For example, to
-run the kernel's [builtin benchmarks](../kernel/tests/benchmarks.cpp), run `k
+run the kernel's [builtin benchmarks](/zircon/kernel/tests/benchmarks.cpp), run `k
 bench`. To find the full set of kernel diagnostics statically, search for
 `STATIC_COMMAND`. To enumerate them dynamically, run `k help`.
 
