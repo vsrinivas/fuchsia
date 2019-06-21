@@ -60,12 +60,12 @@ class CompositorTest : public SessionTest {
 
  private:
   std::unique_ptr<SceneGraph> scene_graph_;
-  std::unique_ptr<EventTimestamper> time_stamper_;
-  std::unique_ptr<ViewLinker> view_linker_;
-  std::unique_ptr<ResourceLinker> resource_linker_;
 
   // This is saved because it needs to live longer than the EventTimestamper
   std::unique_ptr<sys::ComponentContext> app_context_;
+  std::unique_ptr<EventTimestamper> time_stamper_;
+  std::unique_ptr<ViewLinker> view_linker_;
+  std::unique_ptr<ResourceLinker> resource_linker_;
 };
 
 TEST_F(CompositorTest, Validation) {
