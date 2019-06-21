@@ -5,7 +5,7 @@
 #include "option.h"
 #include "util.h"
 
-#include <string.h>
+#include <cstring>
 
 #define OPTION_DEFAULT(option)             \
     case OPTION_##option:                  \
@@ -54,11 +54,25 @@ static void apply_option(struct options* o, const char* arg) {
     }
 }
 
-void parse_options(zx_handle_t log, struct options* o, char** strings) {
+uint32_t parse_options(zx_handle_t log,
+                       const char* cmdline, size_t cmdline_size,
+                       struct options* o) {
     initialize_options(o);
-    for (char** sp = strings; *sp != NULL; ++sp) {
-        const char* arg = *sp;
-        printl(log, "option \"%s\"", arg);
-        apply_option(o, arg);
+
+    if (cmdline_size == 0 || cmdline[cmdline_size - 1] != '\0') {
+        fail(log, "kernel command line of %zu bytes is unterminated",
+             cmdline_size);
     }
+
+    // Count the strings while parsing them.
+    uint32_t n = 0;
+    for (const char* p = cmdline;
+         p < &cmdline[cmdline_size - 1];
+         p = strchr(p, '\0') + 1) {
+        printl(log, "option \"%s\"", p);
+        apply_option(o, p);
+        ++n;
+    }
+
+    return n;
 }

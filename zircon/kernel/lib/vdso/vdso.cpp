@@ -250,10 +250,10 @@ const VDso* VDso::Create() {
         REDIRECT_SYSCALL(dynsym_window, zx_ticks_get, soft_ticks_get);
     }
 
-    for (size_t v = static_cast<size_t>(Variant::FULL) + 1;
-         v < static_cast<size_t>(Variant::COUNT);
+    for (size_t v = static_cast<size_t>(VdsoVariant::FULL) + 1;
+         v < static_cast<size_t>(VdsoVariant::COUNT);
          ++v)
-        vdso->CreateVariant(static_cast<Variant>(v));
+        vdso->CreateVariant(static_cast<VdsoVariant>(v));
 
     instance_ = vdso;
     return instance_;
@@ -263,14 +263,12 @@ uintptr_t VDso::base_address(const fbl::RefPtr<VmMapping>& code_mapping) {
     return code_mapping ? code_mapping->base() - VDSO_CODE_START : 0;
 }
 
-HandleOwner VDso::vmo_handle(Variant variant) const {
-    ASSERT(variant < Variant::COUNT);
-
-    if (variant == Variant::FULL)
-        return RoDso::vmo_handle();
-
+void VDso::GetVariants(Handle** vmos) const {
     DEBUG_ASSERT(!(vmo_rights() & ZX_RIGHT_WRITE));
-    return Handle::Make(variant_vmo_[variant_index(variant)], vmo_rights());
+    vmos[0] = RoDso::vmo_handle().release();
+    for (size_t i = 1; i < variants(); ++i) {
+        vmos[i] = Handle::Make(variant_vmo_[i - 1], vmo_rights()).release();
+    }
 }
 
 // Each vDSO variant VMO is made via a COW clone of the main/default vDSO
@@ -284,9 +282,9 @@ HandleOwner VDso::vmo_handle(Variant variant) const {
 // instructions, so a process using the variant can never get into syscall
 // entry with that PC value and hence can never pass the vDSO enforcement
 // test.
-void VDso::CreateVariant(Variant variant) {
-    DEBUG_ASSERT(variant > Variant::FULL);
-    DEBUG_ASSERT(variant < Variant::COUNT);
+void VDso::CreateVariant(VdsoVariant variant) {
+    DEBUG_ASSERT(variant > VdsoVariant::FULL);
+    DEBUG_ASSERT(variant < VdsoVariant::COUNT);
     DEBUG_ASSERT(!variant_vmo_[variant_index(variant)]);
 
     fbl::RefPtr<VmObject> new_vmo;
@@ -299,19 +297,19 @@ void VDso::CreateVariant(Variant variant) {
 
     const char* name = nullptr;
     switch (variant) {
-    case Variant::TEST1:
+    case VdsoVariant::TEST1:
         name = "vdso/test1";
         blacklist_test_category1_syscalls(dynsym_window, code_window);
         break;
 
-    case Variant::TEST2:
+    case VdsoVariant::TEST2:
         name = "vdso/test2";
         blacklist_test_category2_syscalls(dynsym_window, code_window);
         break;
 
     // No default case so the compiler will warn about new enum entries.
-    case Variant::FULL:
-    case Variant::COUNT:
+    case VdsoVariant::FULL:
+    case VdsoVariant::COUNT:
         PANIC("VDso::CreateVariant called with bad variant");
     }
 

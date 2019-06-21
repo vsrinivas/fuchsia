@@ -26,4 +26,6 @@ struct options {
     const char* value[OPTION_MAX];
 };
 
-void parse_options(zx_handle_t log, struct options* o, char** strings);
+uint32_t parse_options(zx_handle_t log,
+                       const char* cmdline, size_t cmdline_size,
+                       struct options* o);
