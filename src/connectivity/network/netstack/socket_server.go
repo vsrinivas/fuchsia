@@ -66,7 +66,7 @@ type iostate struct {
 
 // loopWrite connects libc write to the network stack.
 func (ios *iostate) loopWrite() error {
-	const sigs = zx.SignalSocketReadable | zx.SignalSocketReadDisabled |
+	const sigs = zx.SignalSocketReadable | zx.SignalSocketPeerWriteDisabled |
 		zx.SignalSocketPeerClosed | localSignalClosing
 
 	waitEntry, notifyCh := waiter.NewChannelEntry(nil)
@@ -102,7 +102,7 @@ func (ios *iostate) loopWrite() error {
 						panic(err)
 					}
 					switch {
-					case obs&zx.SignalSocketReadDisabled != 0:
+					case obs&zx.SignalSocketPeerWriteDisabled != 0:
 						// The next Read will return zx.BadState.
 						continue
 					case obs&zx.SignalSocketReadable != 0:
