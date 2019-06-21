@@ -8,13 +8,15 @@ protocols.
 
     signal_generator
       [--chans=<NUM_CHANS>]
-      [--rate=<FRAME_RATE>]
       [--int16 | --int24]
+      [--rate=<FRAME_RATE>]
       [--sine[=<FREQ>] | --square[=<FREQ>] | --saw[=<FREQ>] | --noise]
       [--dur=<DURATION_SEC>]
       [--amp=<AMPL>]
       [--wav[=<FILEPATH>]]
       [--frames=<PACKET_SIZE>]
+      [--pts]
+      [--threshold=<SECS>]
       [--gain[=<STREAM_GAIN_DB>]]
       [--mute[=<0|1>]]
       [--ramp]
@@ -23,15 +25,16 @@ protocols.
       [--sgain=<SYSTEM_GAIN_DB>]
       [--smute[=<0|1>]]
       [--last | --all]
+      [--settings<=ENABLED>]
       [--help | --?]
 
 These optional parameters are interpreted as follows:
 
       By default, set stream format to 2-channel float32 at 48000 Hz
     --chans=<NUM_CHANS>     Specify number of channels
-    --rate=<FRAME_RATE>     Set frame rate in Hz
     --int16                 Use 16-bit integer samples
     --int24                 Use 24-in-32-bit integer samples (left-justified 'padded-24')
+    --rate=<FRAME_RATE>     Set frame rate in Hz
 
       By default, signal is a 440.0 Hz sine wave
     --sine[=<FREQ>]         Play sine wave at given frequency (Hz)
@@ -47,8 +50,10 @@ These optional parameters are interpreted as follows:
     --wav[=<FILEPATH>]      Save to .wav file ('/tmp/signal_generator.wav' if only '--wav' is provided)
       Subsequent settings (e.g. gain) do not affect file contents
 
-      By default, submit data to the renderer using buffers of 480 frames
+      By default, submit data in non-timestamped buffers of 480 frames
     --frames=<FRAMES>       Set data buffer size in frames
+    --pts                   Apply presentation timestamps (units: frames)
+    --threshold[=<SECS>]    Set PTS discontinuity threshold, in seconds (0.0, if unspecified)
 
       By default, AudioRenderer gain and mute are not set (unity 0 dB, unmuted, no ramping)
     --gain[=<GAIN_DB>]      Set stream gain (dB in [-160.0, 24.0]; 0.0 if only '--gain' is provided)
@@ -68,13 +73,18 @@ These optional parameters are interpreted as follows:
     --all                   Set 'Play to All' routing policy
                             Note: changes to routing policy persist after playback
 
+      By default, changes to audio device settings are persisted
+    --settings[=<0|1>]      Enable/disable creation/update of device settings
+                            (0=Disable, 1=Enable; 0 is default if only '--settings' is provided)
+
     --help, --?             Show this message
 
 ### IMPORTANT NOTE
 
-Developers can use this tool to manipulate two important systemwide audio
-settings: system ("master") gain/mute and audio output routing.  Changes to
-these settings affect all audio output on the system and continue to have effect
-even after the signal_generator tool runs and exits.  Only use the '--sgain',
-'--smute', '--last' or '--all' flags if you intend to change the system state in
-a persistent, "sticky" way.
+Developers can use this tool to manipulate a few important systemwide audio
+settings: system ("master") gain/mute, audio output routing, and systemwide
+creation/update of settings files for audio input and output devices. Changes to
+these settings affect all audio on the system and continue to have effect even
+after the signal_generator tool exits. Only use the '--sgain', '--smute',
+'--last', '--all' or '--settings' flags when you intend to change the system
+state in a persistent, "sticky" way.

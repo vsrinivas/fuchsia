@@ -35,6 +35,10 @@ constexpr char kSaveToFileDefaultName[] = "/tmp/signal_generator.wav";
 constexpr char kFramesPerPayloadSwitch[] = "frames";
 constexpr char kFramesPerPayloadDefault[] = "480";
 
+constexpr char kUsePtsSwitch[] = "pts";
+constexpr char kPtsContinuityThresholdSwitch[] = "threshold";
+constexpr char kPtsContinuityThresholdDefaultSecs[] = "0.0";
+
 constexpr char kStreamGainSwitch[] = "gain";
 constexpr char kStreamGainDefaultDb[] = "0.0";
 constexpr char kStreamMuteSwitch[] = "mute";
@@ -90,7 +94,7 @@ void usage(const char* prog_name) {
 
   printf("\n\t  By default, signal plays for %s seconds, at amplitude %s\n",
          kDurationDefaultSecs, kAmplitudeDefaultScale);
-  printf("\t--%s=<DURATION_SEC>\tSet playback length in seconds\n",
+  printf("\t--%s=<DURATION_SECS>\tSet playback length in seconds\n",
          kDurationSwitch);
   printf("\t--%s=<AMPL>\t\tSet amplitude (full-scale=1.0, silence=0.0)\n",
          kAmplitudeSwitch);
@@ -103,11 +107,16 @@ void usage(const char* prog_name) {
       "\t  Subsequent settings (e.g. gain) do not affect .wav file contents\n");
 
   printf(
-      "\n\t  By default, submit data to the renderer using buffers of %s "
-      "frames\n",
+      "\n\t  By default, submit data in non-timestamped buffers of %s frames\n",
       kFramesPerPayloadDefault);
   printf("\t--%s=<FRAMES>\tSet data buffer size in frames \n",
          kFramesPerPayloadSwitch);
+  printf("\t--%s\t\t\tApply presentation timestamps (units: frames)\n",
+         kUsePtsSwitch);
+  printf(
+      "\t--%s[=<SECS>]\tSet PTS discontinuity threshold, in seconds (%s, if "
+      "unspecified)\n",
+      kPtsContinuityThresholdSwitch, kPtsContinuityThresholdDefaultSecs);
 
   printf(
       "\n\t  By default, AudioRenderer gain and mute are not set (unity 0 dB "
@@ -155,9 +164,13 @@ void usage(const char* prog_name) {
   printf("\t--%s\t\t\tSet 'Play to All' routing policy\n", kPlayToAllSwitch);
   printf("\t\t\t\tNote: changes to routing policy persist after playback\n");
 
-  printf("\n\t  By default, changes to audio devices are persisted and read\n");
-  printf("\t--%s\t\t\tChange this (0=Disable or 1=Enable, %s is default)\n",
-         kDeviceSettingsSwitch, kDeviceSettingsDefault);
+  printf("\n\t  By default, changes to audio device settings are persisted\n");
+  printf("\t--%s[=<0|1>]\tEnable/disable creation/update of device settings\n",
+         kDeviceSettingsSwitch);
+  printf(
+      "\t\t\t\t(0=Disable, 1=Enable; %s is default if only '--%s' is "
+      "provided)\n",
+      kDeviceSettingsDefault, kDeviceSettingsSwitch);
 
   printf("\n\t--%s, --?\t\tShow this message\n\n", kHelpSwitch);
 }
@@ -241,6 +254,19 @@ int main(int argc, const char** argv) {
       kFramesPerPayloadSwitch, kFramesPerPayloadDefault);
   media_app.set_frames_per_payload(
       fxl::StringToNumber<uint32_t>(frames_per_payload_str));
+
+  // Handle timestamp usage
+  media_app.set_use_pts(command_line.HasOption(kUsePtsSwitch));
+  if (command_line.HasOption(kPtsContinuityThresholdSwitch)) {
+    std::string pts_continuity_threshold_str;
+    command_line.GetOptionValue(kPtsContinuityThresholdSwitch,
+                                &pts_continuity_threshold_str);
+    if (pts_continuity_threshold_str == "") {
+      pts_continuity_threshold_str = kPtsContinuityThresholdDefaultSecs;
+    }
+    media_app.set_pts_continuity_threshold(
+        std::stof(pts_continuity_threshold_str));
+  }
 
   // Handle stream gain
   if (command_line.HasOption(kStreamGainSwitch)) {

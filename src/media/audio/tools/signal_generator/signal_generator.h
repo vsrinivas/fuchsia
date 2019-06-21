@@ -45,6 +45,12 @@ class MediaApp {
     frames_per_payload_ = frames_per_payload;
   }
 
+  void set_use_pts(bool use_pts) { use_pts_ = use_pts; }
+  void set_pts_continuity_threshold(float pts_continuity_threshold) {
+    set_continuity_threshold_ = true;
+    pts_continuity_threshold_secs_ = pts_continuity_threshold;
+  }
+
   void set_save_to_file(bool save_to_file) { save_to_file_ = save_to_file; }
   void set_save_file_name(std::string file_name) { file_name_ = file_name; }
 
@@ -135,6 +141,10 @@ class MediaApp {
 
   double duration_secs_;
   uint32_t frames_per_payload_;
+
+  bool use_pts_ = false;
+  bool set_continuity_threshold_ = false;
+  float pts_continuity_threshold_secs_;
 
   uint32_t total_mapping_size_;
   uint32_t payload_size_;

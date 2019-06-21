@@ -53,15 +53,15 @@ void MediaApp::Run(sys::ComponentContext* app_context) {
   }
 
   if (num_packets_to_send_ > 0) {
-    uint32_t num_payloads_to_prime =
+    uint32_t num_packets_to_prime =
         fbl::min<uint64_t>(payloads_per_total_mapping_, num_packets_to_send_);
-    for (uint32_t payload_num = 0; payload_num < num_payloads_to_prime;
-         ++payload_num) {
-      SendPacket(payload_num);
+    for (uint32_t packet_num = 0; packet_num < num_packets_to_prime;
+         ++packet_num) {
+      SendPacket(packet_num);
     }
 
     audio_renderer_->PlayNoReply(fuchsia::media::NO_TIMESTAMP,
-                                 fuchsia::media::NO_TIMESTAMP);
+                                 (use_pts_ ? 0 : fuchsia::media::NO_TIMESTAMP));
   } else {
     Shutdown();
   }
@@ -205,9 +205,16 @@ void MediaApp::DisplayConfigurationSettings() {
     printf(", after explicitly %smuting this stream", stream_mute_ ? "" : "un");
   }
 
-  printf(".\nSignal will play for %.3f seconds, using %u buffers of %u frames",
-         duration_secs_, payloads_per_total_mapping_, frames_per_payload_);
+  printf(
+      ".\nSignal will play for %.3f seconds, using %u %stimestamped buffers of "
+      "%u frames",
+      duration_secs_, payloads_per_total_mapping_, (!use_pts_ ? "non-" : ""),
+      frames_per_payload_);
 
+  if (set_continuity_threshold_) {
+    printf(", having set the PTS continuity threshold to %f seconds",
+           pts_continuity_threshold_secs_);
+  }
   if (set_system_gain_ || set_system_mute_) {
     printf(", after setting ");
   }
@@ -279,6 +286,13 @@ void MediaApp::SetStreamType() {
   format.channels = num_channels_;
   format.frames_per_second = frame_rate_;
 
+  if (use_pts_) {
+    audio_renderer_->SetPtsUnits(frame_rate_, 1);
+  }
+  if (set_continuity_threshold_) {
+    audio_renderer_->SetPtsContinuityThreshold(pts_continuity_threshold_secs_);
+  }
+
   audio_renderer_->SetPcmStreamType(format);
 
   // Set stream gain and mute, if specified.
@@ -327,6 +341,11 @@ fuchsia::media::StreamPacket MediaApp::CreateAudioPacket(uint64_t payload_num) {
           ? (total_frames_to_send_ - (payload_num * frames_per_payload_)) *
                 frame_size_
           : payload_size_;
+
+  // packet.pts is NO_TIMESTAMP by default unless we override it.
+  if (use_pts_) {
+    packet.pts = payload_num * frames_per_payload_;
+  }
 
   return packet;
 }
