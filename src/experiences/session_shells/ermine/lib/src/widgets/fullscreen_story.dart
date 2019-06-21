@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 import 'package:flutter/material.dart';
+import 'package:fuchsia_scenic_flutter/child_view.dart' show ChildView;
 
 import '../models/app_model.dart';
 import 'story_widget.dart';
@@ -42,13 +43,18 @@ class FullscreenStory extends StatelessWidget {
                       name: story.id,
                       focused: story.focused,
                       showTitle: showFullscreenTitle.value,
-                      editing: story.editStateNotifier.value,
+                      editing: story.editStateNotifier.value &&
+                          story.useInProcessStoryShell,
                       fullscreen: true,
-                      child: StoryWidget(
-                        editing: story.editStateNotifier.value,
-                        presenter: story.layoutManager.presenter,
-                        confirmEdit: confirmEditNotifier,
-                      ),
+                      child: story.useInProcessStoryShell
+                          ? StoryWidget(
+                              editing: story.editStateNotifier.value,
+                              presenter: story.layoutManager.presenter,
+                              confirmEdit: confirmEditNotifier,
+                            )
+                          : ChildView(
+                              connection: story.childViewConnection,
+                            ),
                       onDelete: story.delete,
                       onMinimize: story.restore,
                       onEdit: story.edit,

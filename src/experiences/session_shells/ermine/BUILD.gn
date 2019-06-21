@@ -31,6 +31,10 @@ flutter_app("ermine") {
       path = rebase_path("config/keyboard_shortcuts.json")
       dest = "keyboard_shortcuts.json"
     },
+    {
+      path = rebase_path("config/modular_config.json")
+      dest = "modular_config.json"
+    },
   ]
 }
 

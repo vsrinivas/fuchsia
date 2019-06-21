@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 import 'dart:async';
+import 'dart:convert' show json;
 import 'dart:io';
 
 import 'package:fidl_fuchsia_app_discover/fidl_async.dart'
@@ -71,10 +72,13 @@ class AppModel {
       onStoryDeleted: clustersModel.removeStory,
     )..start();
 
-    StoryShell.advertise(
-      startupContext: _startupContext,
-      onStoryAttached: clustersModel.getStory,
-    );
+    clustersModel.useInProcessStoryShell = _useInProcessStoryShell();
+    if (clustersModel.useInProcessStoryShell) {
+      StoryShell.advertise(
+        startupContext: _startupContext,
+        onStoryAttached: clustersModel.getStory,
+      );
+    }
 
     status = StatusModel.fromStartupContext(_startupContext);
 
@@ -219,5 +223,18 @@ class AppModel {
     sessionShell
       ..context.logout()
       ..stop();
+  }
+
+  bool _useInProcessStoryShell() {
+    File file = File('/pkg/data/modular_config.json');
+    if (file.existsSync()) {
+      final data = json.decode(file.readAsStringSync());
+      if (data is Map &&
+          data['basemgr'] != null &&
+          data['basemgr']['story_shell_url'] != null) {
+        return false;
+      }
+    }
+    return true;
   }
 }
