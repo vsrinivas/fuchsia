@@ -47,7 +47,7 @@ declare_args() {
   build_libvulkan_img_rgx = []
 
   # Board files can set this to true if they have a package with a mali libvulkan VCD.
-  has_libvulkan_arm_mali = false
+  board_has_libvulkan_arm_mali = false
 }
 
 have_prebuilt_libvulkan_arm = prebuilt_libvulkan_arm_path != ""
@@ -69,7 +69,7 @@ magma_hardware_envs = intel_gpu_envs + arm_gpu_envs
 
 magma_libvulkan_hardware_envs = intel_gpu_envs
 if (build_libvulkan_arm_mali != [] || have_prebuilt_libvulkan_arm ||
-    has_libvulkan_arm_mali) {
+    board_has_libvulkan_arm_mali) {
   magma_libvulkan_hardware_envs += arm_gpu_envs
 }
 
