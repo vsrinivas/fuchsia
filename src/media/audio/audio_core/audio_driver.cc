@@ -5,6 +5,7 @@
 #include "src/media/audio/audio_core/audio_driver.h"
 
 #include <audio-proto-utils/format-utils.h>
+#include <zircon/status.h>
 
 #include <cstdio>
 
@@ -464,9 +465,12 @@ zx_status_t AudioDriver::ReadMessage(dispatcher::Channel* channel, void* buf,
 #define CHECK_RESP(_ioctl, _payload, _expect_handle, _is_notif)           \
   do {                                                                    \
     if ((_expect_handle) != rxed_handle.is_valid()) {                     \
-      FXL_LOG(ERROR) << ((_expect_handle) ? "Missing" : "Unexpected")     \
-                     << " handle in " #_ioctl " response";                \
-      return ZX_ERR_INVALID_ARGS;                                         \
+      /* If SET_FORMAT, we will provide better error info later */        \
+      if (msg.hdr.cmd != AUDIO_STREAM_CMD_SET_FORMAT) {                   \
+        FXL_LOG(ERROR) << ((_expect_handle) ? "Missing" : "Unexpected")   \
+                       << " handle in " #_ioctl " response";              \
+        return ZX_ERR_INVALID_ARGS;                                       \
+      }                                                                   \
     }                                                                     \
     if ((msg.hdr.transaction_id == AUDIO_INVALID_TRANSACTION_ID) !=       \
         (_is_notif)) {                                                    \
@@ -761,8 +765,11 @@ zx_status_t AudioDriver::ProcessSetFormatResponse(
 
   if (resp.result != ZX_OK) {
     FXL_PLOG(WARNING, resp.result)
-        << "Error attempting to set format: " << frames_per_sec_ << "Hz "
-        << channel_count_ << "-Ch 0x" << std::hex << sample_format_;
+        << "Error attempting to set format: " << frames_per_sec_ << " Hz, "
+        << channel_count_ << "-chan, 0x" << std::hex << sample_format_;
+    if (resp.result == ZX_ERR_ACCESS_DENIED) {
+      FXL_LOG(ERROR) << "Another client has likely already opened this device!";
+    }
     return resp.result;
   }
 
