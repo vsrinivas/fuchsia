@@ -152,6 +152,7 @@ static constexpr const char* miscsvc_services[] = {
 
 // List of services which are re-routed to bootsvc.
 static constexpr const char* bootsvc_services[] = {
+    fuchsia_boot_FactoryItems_Name,
     fuchsia_boot_Items_Name,
     fuchsia_boot_Log_Name,
     nullptr,

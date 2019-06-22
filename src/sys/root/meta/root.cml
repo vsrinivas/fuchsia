@@ -29,6 +29,11 @@
       "to": [ { "dest": "#devcoordinator" } ],
     },
     {
+      "service": "/bootsvc/fuchsia.boot.FactoryItems",
+      "from": "realm",
+      "to": [ { "dest": "#devcoordinator" } ],
+    },
+    {
       "service": "/bootsvc/fuchsia.boot.Items",
       "from": "realm",
       "to": [ { "dest": "#devcoordinator" } ],
