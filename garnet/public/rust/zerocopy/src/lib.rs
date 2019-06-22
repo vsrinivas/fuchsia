@@ -21,6 +21,9 @@
 #![cfg_attr(not(test), no_std)]
 #![recursion_limit = "2048"]
 
+pub mod byteorder;
+
+pub use crate::byteorder::*;
 pub use zerocopy_derive::*;
 
 use core::cell::{Ref, RefMut};
@@ -29,6 +32,13 @@ use core::marker::PhantomData;
 use core::mem;
 use core::ops::{Deref, DerefMut};
 use core::slice;
+
+// This is a hack to allow derives of FromBytes, AsBytes, and Unaligned to work
+// in this crate. They assume that zerocopy is linked as an extern crate, so
+// they access items from it as `zerocopy::Xxx`. This makes that still work.
+mod zerocopy {
+    pub use crate::*;
+}
 
 // implement an unsafe trait for a range of container types
 macro_rules! impl_for_composite_types {
@@ -1465,13 +1475,6 @@ mod tests {
 
     #[test]
     fn test_as_bytes_methods() {
-        // This is a hack to get the derives below to work. They assume that
-        // zerocopy is linked as an extern crate, so they access items from it
-        // as `zerocopy::Xxx`. This makes that still work.
-        mod zerocopy {
-            pub use crate::*;
-        }
-
         #[derive(Debug, Eq, PartialEq, FromBytes, AsBytes)]
         #[repr(C)]
         struct Foo {

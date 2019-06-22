@@ -13,5 +13,7 @@ rustc_library("zerocopy") {
 
   deps = [
     "//garnet/public/rust/zerocopy/zerocopy-derive",
+    "//third_party/rust_crates:byteorder",
+    "//third_party/rust_crates:rand",
   ]
 }

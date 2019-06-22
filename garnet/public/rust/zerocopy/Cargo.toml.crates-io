@@ -16,4 +16,8 @@ repository = "https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/ru
 include = ["src/*", "Cargo.toml", "LICENSE"]
 
 [dependencies]
+byteorder = "1.3"
 zerocopy-derive = { version = "0.1.3" }
+
+[dev-dependencies]
+rand = "0.6"
