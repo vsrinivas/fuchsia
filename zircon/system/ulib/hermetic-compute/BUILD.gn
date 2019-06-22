@@ -8,9 +8,7 @@ if (is_hermetic) {
   # This is for hermetic_module() targets to use in deps.
   # It's not to used in programs that link to hermetic-compute.
   library("hermetic-engine") {
-    sources = [
-      "engine-start.S",
-    ]
+    sources = []
     public_deps = [
       # <lib/hermetic-compute/hermetic-engine.h> -> <zircon/syscalls.h>
       "$zx/system/ulib/zircon:headers",
@@ -28,6 +26,7 @@ if (is_hermetic) {
     sources = [
       "get-vdso.cpp",
       "hermetic-compute.cpp",
+      "launch.cpp",
     ]
     public_deps = [
       # <lib/hermetic-compute/hermetic-compute.h> -> <fbl/macros.h>
@@ -37,7 +36,6 @@ if (is_hermetic) {
       "$zx/system/ulib/zx:headers",
     ]
     deps = [
-      "$zx/system/ulib/elf-psabi",
       "$zx/system/ulib/elfload",
       "$zx/system/ulib/fdio",
       "$zx/system/ulib/zx",

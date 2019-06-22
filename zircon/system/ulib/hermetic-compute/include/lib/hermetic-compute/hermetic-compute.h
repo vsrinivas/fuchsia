@@ -10,6 +10,8 @@
 #include <cstring>
 #include <fbl/macros.h>
 #include <lib/zx/process.h>
+#include <lib/zx/suspend_token.h>
+#include <lib/zx/thread.h>
 #include <lib/zx/vmar.h>
 #include <optional>
 #include <tuple>
@@ -77,6 +79,11 @@ public:
     zx_status_t Start(uintptr_t entry, uintptr_t sp,
                       zx::handle arg1, uintptr_t arg2);
 
+    // Start the process with complete control over its registers.
+    // The initial thread is left suspended so its state can be modified.
+    zx_status_t Start(zx::handle handle,
+                      zx::thread* out_thread, zx::suspend_token* out_token);
+
     // Wait for the process to finish and (optionally) yield its exit status.
     // This is just a convenient way to wait for the ZX_PROCESS_TERMINATED
     // signal on process() and then collect zx_info_process_t::return_code.
@@ -90,171 +97,207 @@ public:
                     bool writable, uintptr_t* ptr);
 
     //
-    // High-level interface: loading and launching.
+    // High-level interface: argument-driven loading and launching.
     //
     // This is intended to be used with hermetic compute modules built
     // using the <lib/hermetic-compute/hermetic-engine.h> library and
     // sharing data via <lib/hermetic-compute/hermetic-data.h> types.
     //
-
-    // Launcher provides a fluent API for setting up and launching an engine.
-    auto GetLauncher() { return Launcher(*this); }
-
-    // Launcher is a single-use object, meant to be used in "fluent" style:
+    // By calling the HermeticComputeProcess as a function, everything can be
+    // controlled via arguments.  The HermeticExportAgent specializations for
+    // the argument types do all the work.  Any number of arguments get
+    // forwarded to the engine's entry point (see HermeticComputeEngine).
+    // Arguments can be of any type for which there is a HermeticExportAgent
+    // specialization (see below).  Everything else is done as a side effect
+    // by HermeticExportAgent specializations, including loading the code
+    // itself into the process.  Several special wrapper types are provided
+    // below just to have particular side effects when passed as arguments.
     //
-    //   zx_status_t result = engine.GetLauncher()
-    //       .UseVdso(...)
-    //       .Load(...)
-    //       .Start(...)
-    //       .status();
-    //
-    // Each call short-circuits and returns immediately if a previous call
-    // failed.  The result of the first failing call can be fetched with
-    // status(), which returns ZX_OK if nothing has failed.
+    // On success, the initial thread is always created and set up to receive
+    // the arguments in its registers and stack.  It can be left suspended by
+    // passing a Suspended argument that will receive the token to let it run.
+    // Otherwise it's already running when this returns.
+    template <typename... Args>
+    zx_status_t operator()(Args&&... args) {
+        // Side effects of transforming the arguments do all the ELF loading
+        // and miscellaneous setup before Launcher::Launch does the final
+        // stack setup and thread creation.
+        Launcher launcher(*this);
+        launcher.Flatten(std::forward<Args>(args)...);
+        return launcher.status();
+    }
+    // Keep the initial thread suspended so its state can be modified and take
+    // responsibility for letting the thread run.  The thread's register state
+    // will be updated at the end of launching and should not be modified
+    // before then.  Once the launch steps are all complete, the thread and
+    // token handles will be moved into the locations pointed to.  The thread
+    // will be allowed to run as soon as the token handle is closed.
+    struct Suspended {
+        zx::thread* thread;
+        zx::suspend_token* token;
+    };
+
+    // Set the entry point PC for the engine process.
+    struct EntryPoint {
+        uintptr_t pc;
+    };
+
+    // Set the minimum stack size for the engine process.
+    struct StackSize {
+        size_t size;
+    };
+
+    // Load an ET_DYN file from the VMO.  The initial thread will start at its
+    // entry point and its PT_GNU_STACK will determine the stack size, but
+    // there are no corresponding import arguments.  Note that nothing
+    // prevents passing multiple of these.  They will all be loaded, and
+    // the entry point and stack size from the last one will prevail.
+    struct Elf {
+        const zx::vmo& vmo;
+    };
+
+    // Load an ET_DYN file from the VMO.  Imported as const Elf64_Ehdr*.
+    struct ExtraElf {
+        const zx::vmo& vmo;
+    };
+
+    // This exports exactly the same as ExtraElf.  HermeticComputeEngine
+    // requires that this be the first imported argument.  It's distinct just
+    // for clarity in its use and for its second constructor, which doubles as
+    // its default constructor too.
+    struct Vdso : public ExtraElf {
+        explicit Vdso(const zx::vmo& vmo) : ExtraElf{vmo} {}
+        explicit Vdso(const char* variant = nullptr) :
+            ExtraElf{GetVdso(variant)} {}
+    };
+
+    // Launcher is a single-use object that only lives during a call.
+    // It's only ever visible to HermeticExportAgent specializations.
     class Launcher {
     public:
         zx_status_t status() const { return status_; }
 
-        Launcher& Init(const zx::job& job, const char* name) {
-            if (engine_.process()) {
-                status_ = ZX_ERR_BAD_STATE;
-            } else {
-                status_ = engine_.Init(job, name);
-            }
-            return *this;
-        }
-
-        // Supply the given vDSO to the engine.  |vmo| may be invalid to give
-        // it no vDSO at all, so it cannot make any system calls at all.
-        // If this is not called, it's equivalent to calling it with GetVdso().
-        // This only has any effect when called before Load().  Note that this
-        // uses (but does not own) the reference until Load() is called.
-        Launcher& UseVdso(const zx::vmo& vmo) {
-            vdso_.emplace(vmo);
-            return *this;
-        }
-
-        // Load a standard hermetic module, which is a single ELF module that
-        // optionally gets a vDSO loaded (controlled by a prior UseVdso call).
-        //
-        // Any number of arguments get forwarded to the engine's entry point
-        // (see HermeticComputeEngine).  Arguments can be of any type for which
-        // there is a HermeticExportAgent specialization (see below).
-        //
-        // This sets up stacks etc. along with the hermetic::Tcb data.
-        template <typename... Args>
-        Launcher& Load(const zx::vmo& vmo, Args&&... args) {
-            if (status_ == ZX_OK) {
-                if (!vdso_.has_value()) {
-                    vdso_.emplace(GetVdso());
-                }
-                LoadModule(zx::unowned_vmo{vmo}, zx::unowned_vmo{**vdso_});
-                // Template shenanigans below flatten arguments to uintptr_t.
-                LoadFlatten(vmo, **vdso_, std::forward<Args>(args)...);
-                vdso_.reset();
-            }
-            return *this;
-        }
-
-        // Start the module running after everything is loaded up.  After this,
-        // it's running.  Call HermeticComputeProcess::Wait() to let it finish.
-        Launcher& Start(zx::handle handle = {}) {
-            if (status_ == ZX_OK) {
-                status_ = engine_.Start(entry_, sp_, std::move(handle), tcb_);
-            }
-            return *this;
-        }
+        auto& engine() { return engine_; }
 
         // Mark the launcher as having failed so later methods will
-        // short-circuit.  This can be called from e.g. HermeticExportAgent
-        // to report a failure in a complex transfer.
-        Launcher& Abort(zx_status_t status) {
+        // short-circuit.  This can be called to report a failure in a
+        // complex transfer.
+        void Abort(zx_status_t status) {
             ZX_ASSERT(status != ZX_OK);
             status_ = status;
-            return *this;
         }
 
-        // Map a VMO into the engine process.  This can be called by a
-        // HermeticExportAgent.
-        Launcher& Map(const zx::vmo& vmo, uint64_t vmo_offset, size_t size,
-                      bool writable, uintptr_t* ptr) {
+        // Map a VMO into the engine process and return the address of
+        // the mapping.  This returns 0 if the mapping failed or wasn't
+        // attempted due to an error shown in status().
+        uintptr_t Map(const zx::vmo& vmo, uint64_t vmo_offset, size_t size,
+                      bool writable) {
+            uintptr_t ptr = 0;
             if (status_ == ZX_OK) {
-                status_ = engine_.Map(vmo, vmo_offset, size, writable, ptr);
-            } else {
-                *ptr = 0;
+                status_ = engine_.Map(vmo, vmo_offset, size, writable, &ptr);
             }
-            return *this;
+            return ptr;
         }
 
     private:
         friend HermeticComputeProcess;
         HermeticComputeProcess& engine_;
-        std::optional<zx::unowned_vmo> vdso_;
-        uintptr_t vdso_base_ = 0;
-        uintptr_t entry_ = 0;
+        zx::thread thread_;
+        zx::suspend_token token_;
+
+        // Only HermeticExportAgent<Suspended> sets suspended_.
+        friend HermeticExportAgent<Suspended>;
+        std::optional<Suspended> suspended_;
+
+        // Only HermeticExportAgent<EntryPoint> sets entry_pc_;
+        friend HermeticExportAgent<EntryPoint>;
+        uintptr_t entry_pc_ = 0;
+
+        // Only HermeticExportAgent<StackSize> sets stack_size_;
+        friend HermeticExportAgent<StackSize>;
         size_t stack_size_ = 0;
-        uintptr_t sp_ = 0;
-        uintptr_t tcb_ = 0;
+
         zx_status_t status_ = ZX_OK;
 
         DISALLOW_COPY_ASSIGN_AND_MOVE(Launcher);
         Launcher() = delete;
 
         explicit Launcher(HermeticComputeProcess& engine) : engine_(engine) {}
+        ~Launcher();
 
-        void LoadModule(zx::unowned_vmo vmo, zx::unowned_vmo vdso);
+        friend HermeticExportAgent<zx::handle>; // Only caller of SendHandle.
+        zx_handle_t SendHandle(zx::handle handle);
 
         // Forwards any number of uintptr_t arguments.
-        void LoadStack(size_t nargs, ...);
+        void Launch(size_t nargs, ...);
 
-        // HermeticParameter converts an argument to a tuple of simpler
+        // An argument list is fully flattened when it's all uintptr_t.
+        // Then it's ready to pass to Launch.
+        template <typename... T>
+        static constexpr bool kLaunchable =
+            (std::is_same_v<uintptr_t, T> && ...);
+
+        template <typename Arg>
+        using Agent = HermeticExportAgent<std::decay_t<Arg>>;
+
+        template <typename Arg>
+        auto MakeAgent(Launcher& launcher) {
+            return Agent<Arg>(launcher);
+        }
+
+        // HermeticExportAgent converts an argument to a tuple of simpler
         // arguments.  Paste all the tuples together and reflatten.
         template <typename... Args>
-        void LoadFlatten(const zx::vmo& vmo, const zx::vmo& vdso,
-                         Args&&... args) {
-            LoadTuple(
-                vmo, vdso,
-                std::tuple_cat(
-                    HermeticExportAgent<typename std::decay<Args>::type>(
-                        *this)(std::forward<Args>(args))...));
+        void Flatten(Args&&... args) {
+            // Calls evaluate arguments in unspecified order.  So the
+            // make_tuple call (that's not actually evaluated) would invoke
+            // agents in unspecified order, just like doing it directly in
+            // the tuple_cat call.  But list initialization evaluates its
+            // initializers left to right.  So this invokes the agents in
+            // left-to-right order as their results go into the pack.
+            decltype(std::make_tuple(
+                         MakeAgent<Args>(*this)(std::forward<Args>(args))...))
+                pack{MakeAgent<Args>(*this)(std::forward<Args>(args))...};
+
+            // Perfect forwarding in a generic lambda!
+            auto cat =
+                [](auto&&... x) {
+                    return std::tuple_cat(std::forward<decltype(x)>(x)...);
+                };
+
+            // Flatten the pack of tuples to a single tuple and flatten that.
+            FlattenTuple(std::apply(cat, std::move(pack)));
         }
+
+        template <typename... T>
+        using IfLaunchable = std::enable_if_t<kLaunchable<T...>>;
+
+        template <typename... T>
+        using IfNotLaunchable = std::enable_if_t<!kLaunchable<T...>>;
 
         // Unwrap a tuple that's not all uintptr_t and come back around.
         template <typename... T>
-        std::enable_if_t<!(std::is_same_v<uintptr_t, T> && ...)>
-        LoadTuple(const zx::vmo& vmo, const zx::vmo& vdso,
-                  std::tuple<T...> args) {
-            std::apply([&](auto... args) {
-                           LoadFlatten(vmo, vdso, args...);
-                       }, args);
+        IfNotLaunchable<T...> FlattenTuple(std::tuple<T...> args) {
+            // Perfect forwarding in a generic lambda!
+            std::apply(
+                [&](auto&&... x) { Flatten(std::forward<decltype(x)>(x)...); },
+                std::move(args));
         }
 
         // Unwrap a tuple of all uintptr_t and actually make the call.
         template <typename... T>
-        std::enable_if_t<(std::is_same_v<uintptr_t, T> && ...)>
-        LoadTuple(const zx::vmo& vmo, const zx::vmo& vdso,
-                  std::tuple<T...> args) {
-            std::apply([&](auto... args) {
-                           LoadStack(sizeof...(T), args...);
-                       }, args);
+        IfLaunchable<T...> FlattenTuple(std::tuple<T...> args) {
+            // Technically a generic lambda, but they're always all uintptr_t.
+            std::apply(
+                [&](auto... args) { Launch(sizeof...(T), args...); },
+                std::move(args));
         }
     };
 
-    // Shorthand for simple cases.
-    template <typename... Args>
-    zx_status_t Launch(const zx::vmo& vmo, zx::handle handle, Args&&... args) {
-        return GetLauncher()
-            .Load(vmo, std::forward<Args>(args)...)
-            .Start(std::move(handle))
-            .status();
-    }
-
     // Shorthand for simplest cases.
     template <typename... Args>
-    zx_status_t Call(const zx::vmo& vmo, zx::handle handle,
-                     int64_t *result, Args&&... args) {
-        zx_status_t status =
-            Launch(vmo, std::move(handle), std::forward<Args>(args)...);
+    zx_status_t Call(int64_t *result, Args&&... args) {
+        zx_status_t status = (*this)(Vdso{}, std::forward<Args>(args)...);
         if (status == ZX_OK) {
             status = Wait(result);
         }
@@ -266,9 +309,43 @@ private:
     zx::vmar vmar_;
 };
 
+// A base class for the HermeticExportAgent<T> specialization.
+template <typename T>
+class HermeticExportAgentBase {
+public:
+    using type = T;
+
+    explicit HermeticExportAgentBase(
+        HermeticComputeProcess::Launcher& launcher) : launcher_(launcher) {}
+
+    auto& launcher() const { return launcher_; }
+    auto& engine() const { return launcher_.engine(); }
+
+protected:
+    using Base = HermeticExportAgentBase<T>;
+
+    zx_status_t status() const { return launcher().status(); }
+
+    void Abort(zx_status_t status) { launcher().Abort(status); }
+
+    bool Ok() const {
+        return status() == ZX_OK;
+    }
+
+    bool Ok(zx_status_t status) {
+        if (status != ZX_OK) {
+            Abort(status);
+        }
+        return Ok();
+    }
+
+private:
+    HermeticComputeProcess::Launcher& launcher_;
+};
+
 // This can be specialized to provide transparent argument-passing support for
 // nontrivial types.  The default implementation handles trivial types that
-// don't have padding bits.
+// don't have padding bits, and zx::* handle types.
 //
 // The HermeticExportAgent for a type packs arguments "exported" to the
 // hermetic environment, ultimately by flattening everything into uintptr_t[].
@@ -297,23 +374,40 @@ private:
 // launch has been aborted, though it still has to return some value of its
 // std::tuple<...> return type.
 //
+// Handle types (zx::object et al) yield zx_handle_t.  There can be only one
+// handle-typed argument in a call, since only one handle is transferred.
+//
+// TODO(mcgrathr): When the engine side can actually make use of handles, add
+// a magic type that makes a channel stashed in the Launcher and sends that
+// handle, unpacked on the other side to fetch the multiple handles and/or
+// large(r) data blobs(?).  Then make this automagically detect if that has
+// been used and send handles into the channel instead.
 template <typename T>
-class HermeticExportAgent {
+class HermeticExportAgent : public HermeticExportAgentBase<T> {
+private:
+    static constexpr bool kIsHandle = std::is_base_of_v<zx::object_base, T>;
+
 public:
-    using type = T;
+    using Base = HermeticExportAgentBase<T>;
+    using typename Base::type;
+    explicit HermeticExportAgent(
+        HermeticComputeProcess::Launcher& launcher) : Base(launcher) {}
 
-    explicit HermeticExportAgent(HermeticComputeProcess::Launcher&) {}
-
-    static_assert(std::is_standard_layout_v<T>,
+    static_assert(kIsHandle || std::is_standard_layout_v<T>,
                   "need converter for non-standard-layout type");
 
-    static_assert(std::has_unique_object_representations_v<T> ||
+    static_assert(kIsHandle ||
+                  std::has_unique_object_representations_v<T> ||
                   std::is_floating_point_v<T>,
                   "need converter for type with padding bits");
 
-    auto operator()(const type& x) {
-        if constexpr (std::is_integral_v<T> &&
-                      sizeof(T) <= sizeof(uintptr_t)) {
+    template <typename ArgType>
+    auto operator()(ArgType&& x) {
+        static_assert(std::is_same_v<std::decay_t<ArgType>, type>);
+        if constexpr (kIsHandle) {
+            return std::make_tuple(zx::handle{std::move(x)});;
+        } else if constexpr (std::is_integral_v<T> &&
+                             sizeof(T) <= sizeof(uintptr_t)) {
             // Small integer types can just be coerced to uintptr_t.
             return std::make_tuple(static_cast<uintptr_t>(x));
         } else {
@@ -327,43 +421,16 @@ public:
     }
 };
 
-// A base class for the HermeticExportAgent<T> specialization.
-template <typename T>
-class HermeticExportAgentBase {
-public:
-    using type = T;
-
-    explicit HermeticExportAgentBase(
-        HermeticComputeProcess::Launcher& launcher) : launcher_(launcher) {}
-
-    HermeticComputeProcess::Launcher& launcher() { return launcher_; }
-    auto engine() { return launcher()->engine(); }
-
-protected:
-    using Base = HermeticExportAgentBase<T>;
-
-    void Abort(zx_status_t status) { launcher().Abort(status); }
-
-    void Ok(zx_status_t status) {
-        if (status != ZX_OK) {
-            Abort(status);
-        }
-    }
-
-private:
-    HermeticComputeProcess::Launcher& launcher_;
-};
-
 // Specialization for tuples.
 template <typename... T>
 struct HermeticExportAgent<std::tuple<T...>> :
     public HermeticExportAgentBase<std::tuple<T...>> {
     using Base = HermeticExportAgentBase<std::tuple<T...>>;
-    using type = typename Base::type;
+    using typename Base::type;
     explicit HermeticExportAgent(
         HermeticComputeProcess::Launcher& launcher) : Base(launcher) {}
 
-    auto operator()(const type& x) {
+    auto operator()(type x) {
         // Tuples get flattened.  Each element will then get converted.
         return x;
     }
@@ -374,13 +441,13 @@ template <typename T1, typename T2>
 struct HermeticExportAgent<std::pair<T1, T2>> :
     public HermeticExportAgentBase<std::pair<T1, T2>> {
     using Base = HermeticExportAgentBase<std::pair<T1, T2>>;
-    using type = typename Base::type;
+    using typename Base::type;
     explicit HermeticExportAgent(
         HermeticComputeProcess::Launcher& launcher) : Base(launcher) {}
 
-    auto operator()(const type& x) {
+    auto operator()(type x) {
         // Tuplize the pair.
-        return std::make_from_tuple<std::tuple<T1, T2>>(x);
+        return std::make_from_tuple<std::tuple<T1, T2>>(std::move(x));
     }
 };
 
@@ -390,22 +457,162 @@ class HermeticExportAgent<std::array<T, N>> :
     public HermeticExportAgentBase<std::array<T, N>> {
 public:
     using Base = HermeticExportAgentBase<std::array<T, N>>;
-    using type = typename Base::type;
+    using typename Base::type;
     explicit HermeticExportAgent(
         HermeticComputeProcess::Launcher& launcher) : Base(launcher) {}
 
-    // Template so it can take actual arrays too.
-    auto operator()(const type& x) {
+    auto operator()(type x) {
         // Tuplize.  Note that for sizeof(T) < uintptr_t, this is less optimal
         // packing than simply treating the whole array as a block of bytes,
         // which is what happens for structs.  But it's fully general for all
         // element types, allowing recursive type-specific packing.
-        return ArrayTuple(x, std::make_index_sequence<N>());
+        return ArrayTuple(std::move(x), std::make_index_sequence<N>());
     }
 
 private:
     template <typename Array, size_t... I>
-    auto ArrayTuple(const Array& a, std::index_sequence<I...>) {
-        return std::make_tuple(a[I]...);
+    auto ArrayTuple(Array a, std::index_sequence<I...>) {
+        return std::make_tuple(std::move(a[I])...);
+    }
+};
+
+// Specialization for simple ELF loading.
+// Yields an imported argument of const Elf64_Ehdr*.
+template <>
+struct HermeticExportAgent<HermeticComputeProcess::ExtraElf> :
+    public HermeticExportAgentBase<HermeticComputeProcess::ExtraElf> {
+    using Base = HermeticExportAgentBase<HermeticComputeProcess::ExtraElf>;
+    using typename Base::type;
+    explicit HermeticExportAgent(
+        HermeticComputeProcess::Launcher& launcher) : Base(launcher) {}
+
+    auto operator()(const type& elf) {
+        uintptr_t base = 0;
+        if (Ok()) {
+            Ok(engine().LoadElf(elf.vmo, &base, nullptr, nullptr));
+        }
+        return std::make_tuple(base);
+    }
+};
+
+// Vdso is the same as ExtraElf.
+template <>
+struct HermeticExportAgent<HermeticComputeProcess::Vdso> :
+    public HermeticExportAgent<HermeticComputeProcess::ExtraElf> {
+    using Base = HermeticExportAgent<HermeticComputeProcess::ExtraElf>;
+    using typename Base::type;
+    explicit HermeticExportAgent(
+        HermeticComputeProcess::Launcher& launcher) : Base(launcher) {}
+};
+
+// Specialization for loading the main ELF file.
+// Yields no imported arguments.
+template <>
+struct HermeticExportAgent<HermeticComputeProcess::Elf> :
+    public HermeticExportAgentBase<HermeticComputeProcess::Elf> {
+    using Base = HermeticExportAgentBase<HermeticComputeProcess::Elf>;
+    using typename Base::type;
+    explicit HermeticExportAgent(
+        HermeticComputeProcess::Launcher& launcher) : Base(launcher) {}
+
+    // Load the ELF image by side effect and then reduce to the arguments
+    // that set the entry point and stack size.
+    using return_type = std::tuple<HermeticComputeProcess::EntryPoint,
+                                   HermeticComputeProcess::StackSize>;
+    return_type operator()(const type& elf) {
+        uintptr_t entry = 0;
+        size_t stack_size = 0;
+        if (Ok()) {
+            Ok(engine().LoadElf(elf.vmo, nullptr, &entry, &stack_size));
+        }
+        return {{entry}, {stack_size}};
+    }
+};
+
+// Specialization for catching the thread before it runs.
+// Yields no imported arguments.
+template <>
+struct HermeticExportAgent<HermeticComputeProcess::Suspended> :
+    public HermeticExportAgentBase<HermeticComputeProcess::Suspended> {
+    using Base = HermeticExportAgentBase<HermeticComputeProcess::Suspended>;
+    using typename Base::type;
+    explicit HermeticExportAgent(
+        HermeticComputeProcess::Launcher& launcher) : Base(launcher) {}
+
+    auto operator()(const type& suspended) {
+        // TODO(mcgrathr): Make it statically impossible to have two.
+        if (launcher().suspended_) {
+            Abort(ZX_ERR_BAD_STATE);
+        } else {
+            launcher().suspended_ = suspended;
+        }
+        return std::make_tuple();
+    }
+};
+
+// Specialization for setting the entry point.
+// Yields no imported arguments.
+template <>
+struct HermeticExportAgent<HermeticComputeProcess::EntryPoint> :
+    public HermeticExportAgentBase<HermeticComputeProcess::EntryPoint> {
+    using Base = HermeticExportAgentBase<HermeticComputeProcess::EntryPoint>;
+    using typename Base::type;
+    explicit HermeticExportAgent(
+        HermeticComputeProcess::Launcher& launcher) : Base(launcher) {}
+
+    auto operator()(const type& entry) {
+        // TODO(mcgrathr): Make it statically impossible to have two.
+        if (launcher().entry_pc_ != 0) {
+            Abort(ZX_ERR_BAD_STATE);
+        } else {
+            launcher().entry_pc_ = entry.pc;
+        }
+        return std::make_tuple();
+    }
+};
+
+// Specialization for setting the stack size.
+// Yields no imported arguments.
+template <>
+struct HermeticExportAgent<HermeticComputeProcess::StackSize> :
+    public HermeticExportAgentBase<HermeticComputeProcess::StackSize> {
+    using Base = HermeticExportAgentBase<HermeticComputeProcess::StackSize>;
+    using typename Base::type;
+    explicit HermeticExportAgent(
+        HermeticComputeProcess::Launcher& launcher) : Base(launcher) {}
+
+    auto operator()(const type& stack) {
+        // TODO(mcgrathr): Make it statically impossible to have two.
+        if (launcher().stack_size_ != 0) {
+            Abort(ZX_ERR_BAD_STATE);
+        } else {
+            launcher().stack_size_ = stack.size;
+        }
+        return std::make_tuple();
+    }
+};
+// Specialization for passing a handle into the process.
+// Yields zx_handle_t (remote handle value as seen in the process).
+//
+// This can only be used once in the whole call, since only a single handle
+// can be transferred at process startup.  A second use will fail and set
+// status() to ZX_ERR_BAD_STATE.  Note it's valid to use this with an
+// invalid handle; it will yield ZX_HANDLE_INVALID and prevent other uses.
+//
+// TODO(mcgrathr): Make it statically impossible to have two.
+template <>
+struct HermeticExportAgent<zx::handle> :
+    public HermeticExportAgentBase<zx::handle> {
+    using Base = HermeticExportAgentBase<zx::handle>;
+    using typename Base::type;
+    explicit HermeticExportAgent(
+        HermeticComputeProcess::Launcher& launcher) : Base(launcher) {}
+
+    auto operator()(zx::handle handle) {
+        zx_handle_t remote_handle = ZX_HANDLE_INVALID;
+        if (Ok()) {
+            remote_handle = this->launcher().SendHandle(std::move(handle));
+        }
+        return std::make_tuple(remote_handle);
     }
 };

@@ -4,6 +4,9 @@
 
 #pragma once
 
+// Include our sister file from the same directory we're in, first.
+#include "hermetic-data.h"
+
 #include <array>
 #include <cassert>
 #include <cstdarg>
@@ -23,46 +26,70 @@
 template <typename T>
 class HermeticImportAgent;
 
-// This is the base class of hermetic compute engines.
+// This is the primitive base class of hermetic compute engines.  Most engines
+// use HermeticComputeEngine instead, which requires a leading vDSO argument.
 //
 // Engine is the callable derived class being defined.  It will be
-// default-constructed and then immediately called as int64_t(Args...).
-// Then the process will exit with the returned exit status code.
-//
-// TODO(mcgrathr): Make it possible to use the handle for something.
-// That's not really useful without resolving vDSO symbols, which is not soon.
+// default-constructed and then immediately called as void(Args...).
+// Then the process will crash, so it's not expected to return.
 //
 template <typename Engine, typename... Args>
-class HermeticComputeEngine {
+class HermeticComputeEngineBase {
 public:
-    using type = int64_t(Args...);
+    using type = void(Args...);
 
 private:
     // Just instantiating the template defines this function, which always has
     // the extern "C" linkage name called from engine-start.S.  This function
     // is responsible for unwrapping the arguments (however many uintptr_t
     // arguments the caller passed), creating and calling the Engine object.
-    [[noreturn, gnu::used]] static void EngineMain(zx_handle_t handle,
-                                                   const Elf64_Ehdr* vdso,
-                                                   ...) __asm__("EngineMain");
+    [[noreturn, gnu::used]] static void EngineMain(uintptr_t,
+                                                   ...) __asm__("_start");
 
     // Function calls don't guarantee the order of evaluation, so just putting
     // va_arg(args, uintptr_t)... into a call isn't kosher.  However, list
     // initialization does guarantees the order of evaluation.  Hopefully the
     // compiler will actually optimize out the copy to the array.
     template <size_t... I>
-    static std::array<uintptr_t, sizeof...(I)> ArgArray(
-        va_list args, std::index_sequence<I...>) {
+    static std::array<uintptr_t, 1 + sizeof...(I)> ArgArray(
+        uintptr_t first,
+        // The va_list is unused when sizeof...(I) == 0.
+        [[maybe_unused]] va_list args,
+        std::index_sequence<I...>) {
         // The expression has to use I somehow to make ... expansion work.
-        return {((void)I, va_arg(args, uintptr_t))...};
+        return {first, ((void)I, va_arg(args, uintptr_t))...};
+    }
+};
+
+// This is the common base class of hermetic compute engines.  The controlling
+// process much pass a leading HermeticComputeProcess::Vdso argument before the
+// arguments corresponding to Args...
+//
+// Engine is the callable derived class being defined.  It will be
+// default-constructed and then immediately called as int64_t(Args...).
+// Then the process will exit with the returned exit status code.
+//
+template <typename Engine, typename... Args>
+struct HermeticComputeEngine :
+    public HermeticComputeEngineBase<HermeticComputeEngine<Engine, Args...>,
+                                     hermetic::In<Elf64_Ehdr>,
+                                     Args...> {
+    using type = int64_t(Args...);
+
+    void operator()(hermetic::In<Elf64_Ehdr> vdso, Args&&... args) {
+        const auto process_exit = reinterpret_cast<decltype(zx_process_exit)*>(
+            reinterpret_cast<uintptr_t>(vdso) + vdso->e_entry);
+        // The engine's constructor runs just before the call and its
+        // destructor runs just after (before exit).
+        int64_t result = Engine()(std::forward<Args>(args)...);
+        process_exit(result);
     }
 };
 
 template <typename Engine, typename... Args>
-void HermeticComputeEngine<Engine, Args...>::EngineMain(zx_handle_t handle,
-                                                        const Elf64_Ehdr* vdso,
-                                                        ...) {
-    static_assert(std::is_invocable_r<int64_t, Engine, Args...>::value);
+void HermeticComputeEngineBase<Engine, Args...>::EngineMain(uintptr_t first,
+                                                            ...) {
+    static_assert(std::is_invocable_r_v<void, Engine, Args...>);
 
 #ifndef __clang__
     // GCC doesn't respect the __asm__("...") linkage name in a template
@@ -77,14 +104,14 @@ void HermeticComputeEngine<Engine, Args...>::EngineMain(zx_handle_t handle,
 # else
 #  error "what architecture?"
 # endif
-    __asm__(".pushsection .text.EngineMain.trampoline,\"ax\",%%progbits\n"
-            ".globl EngineMain\n"
-            ".hidden EngineMain\n"
-            "EngineMain:\n"
+    __asm__(".pushsection .text._start.trampoline,\"ax\",%%progbits\n"
+            ".globl _start\n"
+            ".hidden _start\n"
+            "_start:\n"
             ".cfi_startproc\n"
             HermeticComputeEngine_tailcall_asm "\n"
             ".cfi_endproc\n"
-            ".size EngineMain,.-EngineMain\n"
+            ".size _start,.-_start\n"
             ".popsection" ::
             HermeticComputeEngine_tailcall_constraint(&EngineMain));
 # undef HermeticComputeEngine_tailcall_asm
@@ -95,18 +122,20 @@ void HermeticComputeEngine<Engine, Args...>::EngineMain(zx_handle_t handle,
     // arguments to this function.  All the arguments together are packed
     // the same way as a tuple of those argument types.
     using Agent = HermeticImportAgent<std::tuple<Args...>>;
-    using Indices = std::make_index_sequence<Agent::kArgumentCount>;
 
-    // The engine's constructor runs just before the call and its
-    // destructor runs just after (before exit).
-    va_list args;
-    va_start(args, vdso);
-    int64_t result = std::apply(Engine(), Agent()(ArgArray(args, Indices())));
-    va_end(args);
+    if (Agent::kArgumentCount == 0) {
+        // The engine's constructor runs just before the call and its
+        // destructor runs just after.
+        std::apply(Engine(), Agent()({}));
+    } else {
+        using Indices = std::make_index_sequence<Agent::kArgumentCount - 1>;
+        va_list args;
+        va_start(args, first);
+        std::apply(Engine(), Agent()(ArgArray(first, args, Indices())));
+        va_end(args);
+    }
 
-    const auto process_exit = reinterpret_cast<decltype(zx_process_exit)*>(
-        reinterpret_cast<uintptr_t>(vdso) + vdso->e_entry);
-    process_exit(result);
+    // Crash if the engine returned.
     __builtin_trap();
 }
 

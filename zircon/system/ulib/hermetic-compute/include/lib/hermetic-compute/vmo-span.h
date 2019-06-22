@@ -68,9 +68,8 @@ struct HermeticExportAgent<VmoSpan<Leaky, Writable>> :
         Base(launcher) {}
 
     std::tuple<uintptr_t, size_t>  operator()(const type& x) {
-        uintptr_t ptr;
-        this->launcher().Map(*x.vmo(), x.map_offset(), x.map_size(),
-                             Writable, &ptr);
+        uintptr_t ptr = this->launcher().Map(
+            *x.vmo(), x.map_offset(), x.map_size(), Writable);
         return {x.offset() - x.map_offset() + ptr, x.size()};
     }
 };

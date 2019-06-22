@@ -5,7 +5,6 @@
 #include <lib/hermetic-compute/hermetic-compute.h>
 
 #include <climits>
-#include <cstdarg>
 #include <elfload/elfload.h>
 #include <lib/zx/thread.h>
 #include <lib/zx/vmar.h>
@@ -53,6 +52,13 @@ zx_status_t MapWithGuards(const zx::vmar& vmar, const zx::vmo& vmo,
 }
 
 constexpr size_t kMaxPhdrs = 16;
+
+constexpr const char kThreadName[] = "hermetic-compute";
+
+zx_status_t CreateThread(const zx::process& process, zx::thread* out_thread) {
+    return zx::thread::create(
+        process, kThreadName, sizeof(kThreadName) - 1, 0, out_thread);
+}
 
 }  // namespace
 
@@ -161,13 +167,51 @@ zx_status_t HermeticComputeProcess::LoadStack(size_t* size,
 
 zx_status_t HermeticComputeProcess::Start(uintptr_t entry, uintptr_t sp,
                                           zx::handle arg1, uintptr_t arg2) {
-    constexpr const char kThreadName[] = "hermetic-compute";
 
     zx::thread thread;
-    zx_status_t status = zx::thread::create(
-        process_, kThreadName, sizeof(kThreadName) - 1, 0, &thread);
+    zx_status_t status = CreateThread(process_, &thread);
     if (status == ZX_OK) {
         status = process_.start(thread, entry, sp, std::move(arg1), arg2);
+    }
+    return status;
+}
+
+zx_status_t HermeticComputeProcess::Start(zx::handle handle,
+                                          zx::thread* out_thread,
+                                          zx::suspend_token* out_token) {
+    zx_status_t status = CreateThread(process_, out_thread);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    status = out_thread->suspend(out_token);
+    if (status == ZX_OK) {
+        // The initial register values are all zeros (except maybe the handle).
+        // They'll be changed before the thread ever runs in user mode.
+        status = process_.start(*out_thread, 0, 0, std::move(handle), 0);
+    }
+
+    if (status == ZX_OK) {
+        // It's started and will immediately suspend itself before ever
+        // reaching user mode, but we have to wait to ensure it's actually
+        // officially suspended before we can access its user register state.
+        zx_signals_t signals;
+        status = out_thread->wait_one(
+            ZX_THREAD_SUSPENDED | ZX_THREAD_TERMINATED,
+            zx::time::infinite(), &signals);
+        if (status == ZX_OK) {
+            if (signals & ZX_THREAD_TERMINATED) {
+                status = ZX_ERR_PEER_CLOSED;
+            } else {
+                ZX_DEBUG_ASSERT(signals & ZX_THREAD_SUSPENDED);
+            }
+        }
+    }
+
+    if (status != ZX_OK) {
+        out_thread->kill();
+        out_thread->reset();
+        out_token->reset();
     }
 
     return status;
@@ -191,149 +235,6 @@ zx_status_t HermeticComputeProcess::Wait(int64_t* result, zx::time deadline) {
         }
     }
     return status;
-}
-
-void HermeticComputeProcess::Launcher::LoadModule(zx::unowned_vmo vmo,
-                                                  zx::unowned_vmo vdso) {
-    // First load up the module and vDSO.  This reports back how much
-    // stack the module requested via PT_GNU_STACK.p_memsz.
-    uintptr_t base;
-    status_ = engine_.LoadElf(*vmo, &base, &entry_, &stack_size_);
-    if (status_ == ZX_OK && *vdso) {
-        status_ = engine_.LoadElf(*vdso, &vdso_base_, nullptr, nullptr);
-    }
-}
-
-void HermeticComputeProcess::Launcher::LoadStack(size_t nargs, ...) {
-    // Bail out early if parameter packing reporting errors.
-    if (status_ != ZX_OK) {
-        return;
-    }
-
-    // Called before LoadModule?
-    if (entry_ == 0) {
-        status_ = ZX_ERR_BAD_STATE;
-        return;
-    }
-
-    // Allocate the stacks and TCB.
-    auto allocate =
-        [&](size_t size, uintptr_t* base, uintptr_t* tos, size_t* tos_pos) {
-            zx::vmo vmo;
-            if (status_ == ZX_OK && size > 0) {
-                uintptr_t addr = 0;
-                status_ = engine_.LoadStack(&size, &vmo, &addr);
-                if (base) {
-                    *base = addr;
-                }
-                if (tos) {
-                    *tos = addr + size;
-                }
-                if (tos_pos) {
-                    *tos_pos = size;
-                }
-            }
-            return vmo;
-        };
-
-    // The TCB points to the unsafe stack, which needs no other setup.
-    {
-        uintptr_t unsafe_sp = 0;
-        allocate(stack_size_, nullptr, &unsafe_sp, nullptr);
-        uintptr_t stack_guard = 0;
-        zx_cprng_draw(&stack_guard, sizeof(stack_guard));
-        zx::vmo tcb_vmo = allocate(sizeof(hermetic::Tcb), &tcb_,
-                                   nullptr, nullptr);
-        hermetic::Tcb tcb(tcb_, stack_guard, unsafe_sp);
-        status_ = tcb_vmo.write(&tcb, 0, sizeof(tcb));
-    }
-
-    // The machine stack is used for passing the arguments other than the
-    // handle.  The shadow call stack pointer (when used) and the vDSO address
-    // are passed as implicit arguments before the nargs uintptr_t arguments.
-    // Since the stack VMO is all zero to begin with, the engine sees a stack
-    // full of uintptr_t{0} arguments no matter how few are actually passed
-    // here.
-    //
-    // We lay the stack out here so that engine-start.S simply pops off all
-    // the register arguments and calls a C entry point with the signature
-    // (zx_handle_t, uintptr_t vdso, ...) -> void.  (The first argument is
-    // already in its register.)
-
-#ifdef __aarch64__
-    constexpr bool kShadowCallStack = true;
-    constexpr size_t kRegisterArgs = 8; // x18 for SSC, then x1..x7 for args
-#elif defined(__x86_64__)
-    constexpr bool kShadowCallStack = false;
-    constexpr size_t kRegisterArgs = 5; // 2nd..6th ABI argument registers
-#else
-# error "unsupported architecture"
-#endif
-
-    // There will always be an even number of pops to keep the SP aligned.
-    constexpr size_t kImplicitPops = kRegisterArgs % 2;
-
-    constexpr size_t kImplicitArgs = (kShadowCallStack ? 1 : 0) + 1; // vDSO
-
-    const size_t arg_space = sizeof(uintptr_t) *
-        ((std::max(kImplicitArgs + nargs, kRegisterArgs) + kImplicitPops +
-          1) & -size_t{2});
-
-    uintptr_t stack_top = 0;
-    size_t stack_top_offset = 0;
-    zx::vmo stack_vmo = allocate(std::max(stack_size_, arg_space),
-                                 nullptr, &stack_top, &stack_top_offset);
-
-    sp_ = stack_top - arg_space;
-
-    const size_t register_args = stack_top_offset - arg_space;
-    const size_t stack_args =
-        register_args + ((kRegisterArgs + kImplicitPops) * sizeof(uintptr_t));
-    size_t registers_used = 0;
-    size_t stack_args_used = 0;
-    auto add_argument =
-        [&](uintptr_t value) {
-            if (status_ != ZX_OK) {
-                // Short-circuit.
-            } else if (registers_used < kRegisterArgs) {
-                status_ = stack_vmo.write(
-                    &value,
-                    register_args + (registers_used++ * sizeof(uintptr_t)),
-                    sizeof(value));
-            } else {
-                status_ = stack_vmo.write(
-                    &value,
-                    stack_args + (stack_args_used++ * sizeof(uintptr_t)),
-                    sizeof(value));
-            }
-        };
-
-    if (kShadowCallStack) {
-        // The first (register) argument is the shadow call stack pointer.
-        // This is popped into a special register and does not affect the
-        // signature of the C entry point.
-        uintptr_t sc_sp = 0;
-        // TODO(mcgrathr): configurability for ssc size?
-        if (stack_size_ > 0) {
-            allocate(PAGE_SIZE, nullptr, &sc_sp, nullptr);
-        }
-        add_argument(sc_sp);
-    }
-
-    // The vDSO address is always the first argument to the C entry point.
-    add_argument(vdso_base_);
-
-    // Remaining arguments (if any) are passed through.  For any up to
-    // kRegisterArgs not filled out here, engine-start.S will pop zeros
-    // into those argument registers.
-    va_list args;
-    va_start(args, nargs);
-    for (size_t i = 0; i < nargs; ++i) {
-        add_argument(va_arg(args, uintptr_t));
-    }
-    va_end(args);
-
-    ZX_DEBUG_ASSERT(registers_used + stack_args_used == kImplicitArgs + nargs);
 }
 
 zx_status_t HermeticComputeProcess::Map(const zx::vmo& vmo,

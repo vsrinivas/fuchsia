@@ -76,6 +76,10 @@ struct Tcb {
     uintptr_t stack_guard;
     HermeticPtr<std::byte> unsafe_sp;
     // TPIDR_EL0 points here.
+
+    static constexpr std::ptrdiff_t ThreadPointerOffset() {
+        return sizeof(Tcb);
+    }
 };
 static_assert(offsetof(Tcb, stack_guard) ==
               sizeof(Tcb) + ZX_TLS_STACK_GUARD_OFFSET);
@@ -95,6 +99,8 @@ struct Tcb {
     HermeticPtr<void> reserved{};       // unused (reserved for runtime)
     uintptr_t stack_guard;
     HermeticPtr<std::byte> unsafe_sp;
+
+    static constexpr std::ptrdiff_t ThreadPointerOffset() { return 0; }
 };
 static_assert(offsetof(Tcb, stack_guard) == ZX_TLS_STACK_GUARD_OFFSET);
 static_assert(offsetof(Tcb, unsafe_sp) == ZX_TLS_UNSAFE_SP_OFFSET);

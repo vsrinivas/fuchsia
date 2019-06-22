@@ -19,6 +19,8 @@ test_modules = [
   "struct",
   "vmo",
   "vmo-out",
+  "handle",
+  "stack-size",
 ]
 
 foreach(name, test_modules) {

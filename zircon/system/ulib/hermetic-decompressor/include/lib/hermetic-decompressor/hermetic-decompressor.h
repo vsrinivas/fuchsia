@@ -76,15 +76,18 @@ public:
 
         // Spin up the engine and start it running.
         // It will write directly into the output VMO.
-        status = hcp.GetLauncher()
-            .UseVdso(*vdso)
-            .Load(*engine_vmo,
-                  LeakyVmoSpan{vmo, vmo_offset, size},
-                  WritableVmoSpan{output, output_offset, output_size})
-            .Start({})
-            .status();
-        if (status != ZX_OK) {
-            return status;
+        status = hcp(HermeticComputeProcess::Vdso{*vdso},
+                     HermeticComputeProcess::Elf{*engine_vmo},
+                     LeakyVmoSpan{vmo, vmo_offset, size},
+                     WritableVmoSpan{output, output_offset, output_size});
+
+        if (status == ZX_OK) {
+            // Wait for it to finish.
+            int64_t result;
+            status = hcp.Wait(&result);
+            if (status == ZX_OK) {
+                status = static_cast<zx_status_t>(result);
+            }
         }
 
         // Wait for it to finish.

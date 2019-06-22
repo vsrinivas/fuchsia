@@ -11,10 +11,12 @@
 #include <fcntl.h>
 #include <filesystem>
 #include <lib/fdio/io.h>
+#include <lib/zx/event.h>
 #include <lib/zx/job.h>
 #include <numeric>
 #include <string>
 #include <unistd.h>
+#include <zircon/syscalls/debug.h>
 #include <zxtest/zxtest.h>
 
 #include "test-module-struct.h"
@@ -49,7 +51,8 @@ TEST(HermeticComputeTests, BasicModuleTest) {
 
     // Synchronous load (default vDSO)
     int64_t result;
-    ASSERT_OK(hcp.Call(module_elf_vmo, {}, &result, 17, 23));
+    ASSERT_OK(hcp.Call(&result, HermeticComputeProcess::Elf{module_elf_vmo},
+                       17, 23));
 
     EXPECT_EQ(17 + 23, result);
 }
@@ -66,7 +69,7 @@ TEST(HermeticComputeTests, ManyArgsTest) {
 
     // This is enough arguments to require passing some on the stack.
     int64_t result;
-    ASSERT_OK(hcp.Call(module_elf_vmo, {}, &result,
+    ASSERT_OK(hcp.Call(&result, HermeticComputeProcess::Elf{module_elf_vmo},
                        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12));
 
     EXPECT_EQ(1 + 2 + 3 + 4 + 5 + 6 + 7 + 8 + 9 + 10 + 11 + 12, result);
@@ -83,7 +86,8 @@ TEST(HermeticComputeTests, FloatTest) {
     ASSERT_OK(hcp.Init(*zx::job::default_job(), "basic-module-test"));
 
     int64_t result;
-    ASSERT_OK(hcp.Call(module_elf_vmo, {}, &result, 1.5f, 1.5, 1.5l));
+    ASSERT_OK(hcp.Call(&result, HermeticComputeProcess::Elf{module_elf_vmo},
+                       1.5f, 1.5, 1.5l));
 
     EXPECT_EQ(static_cast<int64_t>(1.5f + 1.5 + 1.5l), result);
 }
@@ -99,7 +103,8 @@ TEST(HermeticComputeTests, PairTest) {
     ASSERT_OK(hcp.Init(*zx::job::default_job(), "hermetic-pair-test"));
 
     int64_t result;
-    ASSERT_OK(hcp.Call(module_elf_vmo, {}, &result, std::make_pair(17, 23)));
+    ASSERT_OK(hcp.Call(&result, HermeticComputeProcess::Elf{module_elf_vmo},
+                       std::make_pair(17, 23)));
 
     EXPECT_EQ(17 + 23, result);
 }
@@ -115,7 +120,7 @@ TEST(HermeticComputeTests, TupleTest) {
     ASSERT_OK(hcp.Init(*zx::job::default_job(), "hermetic-tuple-test"));
 
     int64_t result;
-    ASSERT_OK(hcp.Call(module_elf_vmo, {}, &result,
+    ASSERT_OK(hcp.Call(&result, HermeticComputeProcess::Elf{module_elf_vmo},
                        std::make_tuple(1, 2, std::make_tuple(), 3, 4),
                        std::make_pair(5, std::make_tuple(6, 7, 8)),
                        std::make_tuple(std::make_tuple(9), 10,
@@ -138,7 +143,8 @@ TEST(HermeticComputeTests, ArrayTest) {
             {1, 2, 3}, {4, 5, 6}, {7, 8, 9}, {10, 11, 12},
         }};
     int64_t result;
-    ASSERT_OK(hcp.Call(module_elf_vmo, {}, &result, array));
+    ASSERT_OK(hcp.Call(&result, HermeticComputeProcess::Elf{module_elf_vmo},
+                       array));
 
     EXPECT_EQ(1 + 2 + 3 + 4 + 5 + 6 + 7 + 8 + 9 + 10 + 11 + 12, result);
 }
@@ -154,7 +160,7 @@ TEST(HermeticComputeTests, DetupleTest) {
     ASSERT_OK(hcp.Init(*zx::job::default_job(), "hermetic-detuple-test"));
 
     int64_t result;
-    ASSERT_OK(hcp.Call(module_elf_vmo, {}, &result,
+    ASSERT_OK(hcp.Call(&result, HermeticComputeProcess::Elf{module_elf_vmo},
                        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12));
 
     EXPECT_EQ(1 + 2 + 3 + 4 + 5 + 6 + 7 + 8 + 9 + 10 + 11 + 12, result);
@@ -171,7 +177,7 @@ TEST(HermeticComputeTests, StructTest) {
     ASSERT_OK(hcp.Init(*zx::job::default_job(), "hermetic-struct-test"));
 
     int64_t result;
-    ASSERT_OK(hcp.Call(module_elf_vmo, {}, &result,
+    ASSERT_OK(hcp.Call(&result, HermeticComputeProcess::Elf{module_elf_vmo},
                        OneWord{1}, MultiWord{2, 3, 4}, Tiny{5, 6}, MakeOdd()));
 
     EXPECT_EQ(1 + 2 + 3 + 4 + 5 + 6 + MakeOdd().Total(), result);
@@ -206,7 +212,8 @@ TEST(HermeticComputeTests, HermeticExportAgentAbortTest) {
 
     int64_t result;
     EXPECT_EQ(ZX_ERR_UNAVAILABLE,
-              hcp.Call(module_elf_vmo, {}, &result, FailToExport{}));
+              hcp.Call(&result, HermeticComputeProcess::Elf{module_elf_vmo},
+                       FailToExport{}));
 }
 
 TEST(HermeticComputeTests, VmoSpanTest) {
@@ -226,7 +233,7 @@ TEST(HermeticComputeTests, VmoSpanTest) {
     ASSERT_OK(vmo.write(data, 0, sizeof(data)));
 
     int64_t result;
-    ASSERT_OK(hcp.Call(module_elf_vmo, {}, &result,
+    ASSERT_OK(hcp.Call(&result, HermeticComputeProcess::Elf{module_elf_vmo},
                        VmoSpan{vmo, 0, PAGE_SIZE}));
 
     EXPECT_EQ(std::accumulate(std::begin(data), std::end(data), 0), result);
@@ -251,7 +258,7 @@ TEST(HermeticComputeTests, WritableVmoSpanTest) {
     static_assert(kSize <= PAGE_SIZE);
 
     int64_t result;
-    ASSERT_OK(hcp.Call(module_elf_vmo, {}, &result,
+    ASSERT_OK(hcp.Call(&result, HermeticComputeProcess::Elf{module_elf_vmo},
                        WritableVmoSpan{vmo, 0, PAGE_SIZE}));
 
     // Read back the data.
@@ -282,8 +289,136 @@ TEST(HermeticComputeTests, LeakyVmoSpanTest) {
     ASSERT_OK(vmo.write(data, kOffset, sizeof(data)));
 
     int64_t result;
-    ASSERT_OK(hcp.Call(module_elf_vmo, {}, &result,
+    ASSERT_OK(hcp.Call(&result, HermeticComputeProcess::Elf{module_elf_vmo},
                        LeakyVmoSpan{vmo, kOffset, sizeof(data)}));
 
     EXPECT_EQ(std::accumulate(std::begin(data), std::end(data), 0), result);
+}
+
+TEST(HermeticComputeTests, SuspendedTest) {
+    constexpr const char kTestModuleFile[] =
+        "lib/hermetic/test-module-basic.so";
+    zx::vmo module_elf_vmo;
+    ASSERT_NO_FATAL_FAILURES(GetElfVmo(kTestModuleFile, &module_elf_vmo),
+                             "loading %s", kTestModuleFile);
+
+    HermeticComputeProcess hcp;
+    ASSERT_OK(hcp.Init(*zx::job::default_job(), "hermetic-suspended-test"));
+
+    // Spin up the engine but hold onto the thread before it starts running.
+    zx::thread thread;
+    zx::suspend_token token;
+    ASSERT_OK(hcp(HermeticComputeProcess::Vdso{},
+                  HermeticComputeProcess::Elf{module_elf_vmo},
+                  HermeticComputeProcess::Suspended{&thread, &token},
+                  17, 23));
+
+    // The arguments should be in the registers now.
+    zx_thread_state_general_regs_t regs;
+    ASSERT_OK(thread.read_state(ZX_THREAD_STATE_GENERAL_REGS,
+                                &regs, sizeof(regs)));
+
+    // Increment the second argument register and write it back.
+    // (The first argument is the vDSO address, so 17 is in the second.)
+#ifdef __x86_64__
+    EXPECT_EQ(regs.rsi, 17);
+    ++regs.rsi;
+#else
+    EXPECT_EQ(regs.r[1], 17);
+    ++regs.r[1];
+#endif
+    ASSERT_OK(thread.write_state(ZX_THREAD_STATE_GENERAL_REGS,
+                                 &regs, sizeof(regs)));
+
+    // Now let the thread run.  The engine starts up with the mutated argument.
+    thread.reset();
+    token.reset();
+
+    int64_t result;
+    ASSERT_OK(hcp.Wait(&result));
+    EXPECT_EQ(18 + 23, result);
+}
+
+TEST(HermeticComputeTests, HandleTest) {
+    constexpr const char kTestModuleFile[] =
+        "lib/hermetic/test-module-handle.so";
+    zx::vmo module_elf_vmo;
+    ASSERT_NO_FATAL_FAILURES(GetElfVmo(kTestModuleFile, &module_elf_vmo),
+                             "loading %s", kTestModuleFile);
+
+    HermeticComputeProcess hcp;
+    ASSERT_OK(hcp.Init(*zx::job::default_job(), "hermetic-handle-test"));
+
+    // Make some handle to transfer.
+    zx::event handle;
+    ASSERT_OK(zx::event::create(0, &handle));
+
+    int64_t result;
+    ASSERT_OK(hcp.Call(&result, HermeticComputeProcess::Elf{module_elf_vmo},
+                       17,
+                       std::make_tuple(
+                           std::array<decltype(handle), 1>{std::move(handle)}),
+                       23));
+
+    EXPECT_EQ(17 + 23, result);
+}
+
+TEST(HermeticComputeTests, TwoHandleTest) {
+    constexpr const char kTestModuleFile[] =
+        "lib/hermetic/test-module-handle.so";
+    zx::vmo module_elf_vmo;
+    ASSERT_NO_FATAL_FAILURES(GetElfVmo(kTestModuleFile, &module_elf_vmo),
+                             "loading %s", kTestModuleFile);
+
+    HermeticComputeProcess hcp;
+    ASSERT_OK(hcp.Init(*zx::job::default_job(), "hermetic-handle-test"));
+
+    // Make some handles to transfer.
+    zx::channel h0, h1;
+    ASSERT_OK(zx::channel::create(0, &h0, &h1));
+
+    // Can't transfer two handles.
+    EXPECT_EQ(ZX_ERR_BAD_STATE,
+              hcp.Call(nullptr, HermeticComputeProcess::Elf{module_elf_vmo},
+                       std::move(h0), std::move(h1)));
+}
+
+TEST(HermeticComputeTests, StackSizeTest) {
+    constexpr const char kTestModuleFile[] =
+        "lib/hermetic/test-module-stack-size.so";
+    zx::vmo module_elf_vmo;
+    ASSERT_NO_FATAL_FAILURES(GetElfVmo(kTestModuleFile, &module_elf_vmo),
+                             "loading %s", kTestModuleFile);
+
+    // The module uses much more stack space than it requests.
+    // So first test that it crashes out of the box as expected.
+    {
+        HermeticComputeProcess hcp;
+        ASSERT_OK(hcp.Init(*zx::job::default_job(),
+                           "hermetic-stack-size-test-1"));
+
+        int64_t result;
+        ASSERT_OK(hcp.Call(&result,
+                           HermeticComputeProcess::Elf{module_elf_vmo}));
+
+        EXPECT_EQ(ZX_TASK_RETCODE_EXCEPTION_KILL, result);
+    }
+
+    // Now test that it actually works when loaded up manually
+    // to specify a larger stack size.
+    HermeticComputeProcess hcp;
+    ASSERT_OK(hcp.Init(*zx::job::default_job(), "hermetic-stack-size-test-2"));
+
+    uintptr_t entry;
+    size_t stack_size;
+    ASSERT_OK(hcp.LoadElf(module_elf_vmo, nullptr, &entry, &stack_size));
+
+    constexpr size_t kStackSize = 64 << 10;
+    EXPECT_GT(kStackSize, stack_size);
+
+    int64_t result;
+    ASSERT_OK(hcp.Call(&result,
+                       HermeticComputeProcess::EntryPoint{entry},
+                       HermeticComputeProcess::StackSize{kStackSize}));
+    EXPECT_EQ(0, result);
 }
