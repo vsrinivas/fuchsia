@@ -9,6 +9,8 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <src/lib/files/unique_fd.h>
 
+#include "lib/json/json_parser.h"
+
 namespace modular {
 
 // A utility for parsing a modular configuration file.
@@ -26,11 +28,19 @@ class ModularConfigReader {
   //
   // If one doesn't exist, uses defaults.
   explicit ModularConfigReader(fxl::UniqueFD dir_fd);
+
+  // Parses |config| into modular configs. If |config| cannot be parsed,
+  // defaults will be used.
+  explicit ModularConfigReader(std::string config, std::string config_path);
   ~ModularConfigReader();
 
   // Returns a ModularConfigReader which sources the config file from the
   // incoming namespace.
   static ModularConfigReader CreateFromNamespace();
+
+  // Parses |doc| into |basemgr_config_| and |sessionmgr_config_|.
+  void ParseConfig(json::JSONParser json_parser, rapidjson::Document doc,
+                   std::string config_path);
 
   // Returns the parsed `basemgr` section of the config.
   fuchsia::modular::session::BasemgrConfig GetBasemgrConfig() const;

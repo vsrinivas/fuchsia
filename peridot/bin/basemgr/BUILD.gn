@@ -45,6 +45,7 @@ executable_package("basemgr") {
     "//peridot/lib/fidl:environment",
     "//peridot/lib/ledger_client:constants",
     "//peridot/lib/modular_config:modular_config",
+    "//peridot/lib/rapidjson",
     "//peridot/public/lib/async/cpp:future",
     "//sdk/fidl/fuchsia.auth",
     "//sdk/fidl/fuchsia.auth.account",

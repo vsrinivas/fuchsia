@@ -169,6 +169,7 @@ source_set("test_harness_impl") {
   public_deps = [
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
+    "//peridot/lib/modular_config",
     "//peridot/public/lib/app_driver/cpp:agent_driver",
     "//sdk/fidl/fuchsia.auth.account",
     "//sdk/fidl/fuchsia.devicesettings",
@@ -197,6 +198,7 @@ source_set("test_harness_impl_unittest") {
   deps = [
     ":test_harness_impl",
     "//peridot/lib/modular_config",
+    "//peridot/lib/rapidjson",
     "//peridot/lib/util:pseudo_dir_server",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.testing",

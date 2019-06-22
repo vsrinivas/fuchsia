@@ -10,6 +10,7 @@
 #include <lib/fsl/vmo/strings.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
 #include <lib/vfs/cpp/pseudo_file.h>
+#include <peridot/lib/modular_config/modular_config.h>
 #include <peridot/lib/modular_config/modular_config_constants.h>
 #include <peridot/lib/modular_config/modular_config_xdr.h>
 #include <peridot/lib/util/pseudo_dir_utils.h>
@@ -299,6 +300,13 @@ zx_status_t TestHarnessImpl::PopulateEnvServicesWithServiceDir(
       std::make_unique<sys::ServiceDirectory>(dir.Unbind().TakeChannel());
 
   return ZX_OK;
+}
+
+void TestHarnessImpl::ParseConfig(std::string config, std::string config_path,
+                                  ParseConfigCallback callback) {
+  auto config_reader = modular::ModularConfigReader(config, config_path);
+  callback(config_reader.GetBasemgrConfig(),
+           config_reader.GetSessionmgrConfig());
 }
 
 void TestHarnessImpl::Run(fuchsia::modular::testing::TestHarnessSpec spec) {

@@ -6,7 +6,6 @@
 #include <lib/fsl/vmo/strings.h>
 #include <lib/modular_test_harness/cpp/fake_session_shell.h>
 #include <lib/modular_test_harness/cpp/test_harness_fixture.h>
-#include <peridot/lib/modular_config/modular_config.h>
 #include <peridot/lib/modular_config/modular_config_constants.h>
 #include <sdk/lib/sys/cpp/component_context.h>
 #include <sdk/lib/sys/cpp/service_directory.h>

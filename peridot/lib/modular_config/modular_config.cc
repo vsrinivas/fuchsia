@@ -6,7 +6,6 @@
 
 #include <fcntl.h>
 
-#include "lib/json/json_parser.h"
 #include "peridot/lib/fidl/json_xdr.h"
 #include "peridot/lib/modular_config/modular_config_constants.h"
 #include "peridot/lib/modular_config/modular_config_xdr.h"
@@ -53,6 +52,28 @@ ModularConfigReader::ModularConfigReader(fxl::UniqueFD dir_fd) {
   json::JSONParser json_parser;
   auto doc = json_parser.ParseFromFileAt(dir_fd.get(), config_path);
 
+  ParseConfig(std::move(json_parser), std::move(doc), config_path);
+}
+
+ModularConfigReader::ModularConfigReader(std::string config,
+                                         std::string config_path) {
+  // Parse the JSON out of the config string.
+  json::JSONParser json_parser;
+  auto doc = json_parser.ParseFromString(config, config_path);
+
+  ParseConfig(std::move(json_parser), std::move(doc), config_path);
+}
+
+// static
+ModularConfigReader ModularConfigReader::CreateFromNamespace() {
+  return ModularConfigReader(fxl::UniqueFD(open("/", O_RDONLY)));
+}
+
+ModularConfigReader::~ModularConfigReader() {}
+
+void ModularConfigReader::ParseConfig(json::JSONParser json_parser,
+                                      rapidjson::Document doc,
+                                      std::string config_path) {
   std::string basemgr_json;
   std::string sessionmgr_json;
   if (json_parser.HasError()) {
@@ -62,7 +83,7 @@ ModularConfigReader::ModularConfigReader(fxl::UniqueFD dir_fd) {
     basemgr_json = "{}";
     sessionmgr_json = "{}";
   } else {
-    // 3. Parse the `basemgr` and `sessionmgr` sections out of the config.
+    // Parse the `basemgr` and `sessionmgr` sections out of the config.
     basemgr_json = GetSectionAsString(doc, modular_config::kBasemgrConfigName);
     sessionmgr_json =
         GetSectionAsString(doc, modular_config::kSessionmgrConfigName);
@@ -75,13 +96,6 @@ ModularConfigReader::ModularConfigReader(fxl::UniqueFD dir_fd) {
     FXL_LOG(ERROR) << "Unable to parse 'sessionmgr' from " << config_path;
   }
 }
-
-// static
-ModularConfigReader ModularConfigReader::CreateFromNamespace() {
-  return ModularConfigReader(fxl::UniqueFD(open("/", O_RDONLY)));
-}
-
-ModularConfigReader::~ModularConfigReader() {}
 
 fuchsia::modular::session::BasemgrConfig ModularConfigReader::GetBasemgrConfig()
     const {

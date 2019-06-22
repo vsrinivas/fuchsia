@@ -360,6 +360,56 @@ TEST_F(TestHarnessImplTest, EnvironmentServiceDirectory) {
   RunLoopUntil([&] { return svc_requested; });
 }
 
+// Tests that that the test harness correctly parses modular configs from a
+// string.
+TEST_F(TestHarnessImplTest, ParseConfigFromString) {
+  auto config = R"({
+  "basemgr": {
+    "test": true,
+    "base_shell": {
+      "url": "fuchsia-pkg://fuchsia.com/dev_base_shell#meta/dev_base_shell.cmx",
+      "keep_alive_after_login": true
+    },
+    "session_shells": [
+      {
+        "url": "fuchsia-pkg://fuchsia.com/dev_session_shell#meta/dev_session_shell.cmx",
+        "display_usage": "near"
+      }
+    ]
+  },
+  "sessionmgr": {
+    "use_memfs_for_ledger": true,
+    "startup_agents": [
+      "fuchsia-pkg://fuchsia.com/startup_agent#meta/startup_agent.cmx"
+    ]
+  }
+  })";
+  auto config_path = "/pkg/data/test_config.json";
+
+  fuchsia::modular::session::BasemgrConfig basemgr_config;
+  fuchsia::modular::session::SessionmgrConfig sessionmgr_config;
+  bool done = false;
+  test_harness()->ParseConfig(
+      config, config_path,
+      [&](fuchsia::modular::session::BasemgrConfig parsed_basemgr_config,
+          fuchsia::modular::session::SessionmgrConfig
+              parsed_sessionmgr_config) {
+        basemgr_config = std::move(parsed_basemgr_config);
+        sessionmgr_config = std::move(parsed_sessionmgr_config);
+        done = true;
+      });
+
+  RunLoopUntil([&] { return done; });
+  EXPECT_TRUE(basemgr_config.test());
+  EXPECT_EQ("fuchsia-pkg://fuchsia.com/dev_base_shell#meta/dev_base_shell.cmx",
+            basemgr_config.base_shell().app_config().url());
+  ASSERT_EQ(1u, basemgr_config.session_shell_map().size());
+  EXPECT_EQ(
+      "fuchsia-pkg://fuchsia.com/dev_session_shell#meta/dev_session_shell.cmx",
+      basemgr_config.session_shell_map().at(0).config().app_config().url());
+  EXPECT_TRUE(sessionmgr_config.use_memfs_for_ledger());
+}
+
 }  // namespace
 }  // namespace testing
 }  // namespace modular

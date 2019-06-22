@@ -63,6 +63,12 @@ protocol TestHarness {
     /// Connects to environment services injected into the TestHarness
     /// environment.
     ConnectToEnvironmentService(string service_name, handle<channel> request);
+
+    /// Parses a modular configuration from string into BasemgrConfig and
+    /// SessionmgrConfig
+    ParseConfig(string config, string config_path)
+        -> (fuchsia.modular.session.BasemgrConfig basemgr_config,
+            fuchsia.modular.session.SessionmgrConfig sessionmgr_config);
 };
 
 /// Describes which service to connect to using |ConnectToModularService()|.

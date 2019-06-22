@@ -87,6 +87,10 @@ class TestHarnessImpl final : fuchsia::modular::testing::TestHarness {
   void ConnectToEnvironmentService(std::string service_name,
                                    zx::channel request) override;
 
+  // |fuchsia::modular::testing::TestHarness|
+  void ParseConfig(std::string config, std::string config_path,
+                   ParseConfigCallback callback) override;
+
   [[nodiscard]] static std::unique_ptr<vfs::PseudoDir> MakeBasemgrConfigDir(
       const fuchsia::modular::testing::TestHarnessSpec& spec);
 
