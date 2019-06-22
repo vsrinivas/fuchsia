@@ -307,6 +307,18 @@ magma::Status ZirconPlatformBuffer::SetMappingAddressRange(
     return MAGMA_STATUS_OK;
 }
 
+bool ZirconPlatformBuffer::Read(void* buffer, uint64_t offset, uint64_t length)
+{
+    zx_status_t status = vmo_.read(buffer, offset, length);
+    return DRETF(status == ZX_OK, "Read failed with status: %d", status);
+}
+
+bool ZirconPlatformBuffer::Write(const void* buffer, uint64_t offset, uint64_t length)
+{
+    zx_status_t status = vmo_.write(buffer, offset, length);
+    return DRETF(status == ZX_OK, "Read failed with status: %d", status);
+}
+
 uint64_t PlatformBuffer::MinimumMappableAddress()
 {
     return MappingAddressRange::CreateDefault()->Base();

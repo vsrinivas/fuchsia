@@ -83,6 +83,8 @@ public:
     magma_status_t GetIsMappable(magma_bool_t* is_mappable_out) override;
     magma::Status SetMappingAddressRange(
         std::unique_ptr<PlatformBuffer::MappingAddressRange> address_range) override;
+    bool Read(void* buffer, uint64_t offset, uint64_t length) override;
+    bool Write(const void* buffer, uint64_t offset, uint64_t length) override;
 
     uint32_t num_pages() { return size_ / PAGE_SIZE; }
 

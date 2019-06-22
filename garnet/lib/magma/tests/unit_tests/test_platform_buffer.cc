@@ -486,6 +486,36 @@ public:
             buffer->SetMappingAddressRange(magma::PlatformBuffer::MappingAddressRange::Create(
                 magma::PlatformHandle::Create(GetVmarHandle(kVmarLength)))));
     }
+
+    static void ReadWrite()
+    {
+        std::unique_ptr<magma::PlatformBuffer> buffer =
+            magma::PlatformBuffer::Create(PAGE_SIZE, "test");
+        constexpr uint32_t kValue = 0xdeadbeef;
+        constexpr uint32_t kOffset = 1;
+        EXPECT_TRUE(buffer->Write(&kValue, kOffset, sizeof(kValue)));
+        EXPECT_FALSE(buffer->Write(&kValue, PAGE_SIZE - 3, sizeof(kValue)));
+
+        uint32_t value_out;
+        EXPECT_FALSE(buffer->Read(&value_out, PAGE_SIZE - 3, sizeof(value_out)));
+
+        EXPECT_TRUE(buffer->Read(&value_out, kOffset, sizeof(value_out)));
+        EXPECT_EQ(kValue, value_out);
+
+        void* virt_addr = nullptr;
+        EXPECT_TRUE(buffer->MapCpu(&virt_addr));
+        EXPECT_EQ(kValue,
+                  *reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(virt_addr) + kOffset));
+
+        std::unique_ptr<magma::PlatformBuffer> wc_buffer =
+            magma::PlatformBuffer::Create(PAGE_SIZE, "test-wc");
+        EXPECT_TRUE(wc_buffer->SetCachePolicy(MAGMA_CACHE_POLICY_WRITE_COMBINING));
+
+        // Read and write are expected to fail on write-combining or uncached
+        // vmos.
+        EXPECT_FALSE(wc_buffer->Write(&kValue, 0, sizeof(kValue)));
+        EXPECT_FALSE(wc_buffer->Read(&value_out, 0, sizeof(value_out)));
+    }
 };
 
 TEST(PlatformBuffer, Basic)
@@ -556,3 +586,5 @@ TEST(PlatformBuffer, NotMappable) { TestPlatformBuffer::NotMappable(); }
 TEST(PlatformBuffer, AddressRegionSize) { TestPlatformBuffer::CheckAddressRegionSize(); }
 
 TEST(PlatformBuffer, MappingAddressRange) { TestPlatformBuffer::MappingAddressRange(); }
+
+TEST(PlatformBuffer, ReadWrite) { TestPlatformBuffer::ReadWrite(); }

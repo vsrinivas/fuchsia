@@ -89,6 +89,12 @@ public:
     virtual magma::Status
     SetMappingAddressRange(std::unique_ptr<MappingAddressRange> address_range) = 0;
 
+    // Read from an offset in the VMO into a buffer.
+    virtual bool Read(void* buffer, uint64_t offset, uint64_t length) = 0;
+
+    // Write from a buffer into an offset in the VMO.
+    virtual bool Write(const void* buffer, uint64_t offset, uint64_t length) = 0;
+
     static bool IdFromHandle(uint32_t handle, uint64_t* id_out);
 
     // Deprecated
