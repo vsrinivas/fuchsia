@@ -92,6 +92,9 @@ template("banjo_c_library") {
         deps += [ "$dep.c" ]
         public_deps += [ "$dep.c.headers" ]
       }
+
+      # Generated headers have #include <ddk/driver.h>.
+      public_deps += [ "$zx/system/ulib/ddk:headers" ]
     }
 
     # Things normally depend on "banjo/foo:c" rather than "banjo/foo:foo.c".

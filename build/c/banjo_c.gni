@@ -45,6 +45,13 @@ template("banjo_c_target") {
       ddktl_internal_header,
     ]
 
+    # The generated headers #include <ddk/*.h> and #include <ddktl/*.h>
+    # files from the libraries (that aren't generated).
+    public_deps = [
+      "//zircon/public/lib/ddk",
+      "//zircon/public/lib/ddktl",
+    ]
+
     # Let dependencies use `#include "$file_stem.h"`.
     public_configs = [ "//build/c:banjo_gen_config" ]
 

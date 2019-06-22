@@ -115,6 +115,13 @@ template("banjo_cpp_library") {
         deps += [ "$dep.cpp" ]
         public_deps += [ "$dep.cpp.headers" ]
       }
+
+      # Generated headers have #include <ddktl/device-internal.h> and
+      # #include <ddk/driver.h> (and others).
+      public_deps += [
+        "$zx/system/ulib/ddk:headers",
+        "$zx/system/ulib/ddktl:headers",
+      ]
     }
 
     # Things normally depend on "banjo/foo:cpp" rather than "banjo/foo:foo.cpp".
