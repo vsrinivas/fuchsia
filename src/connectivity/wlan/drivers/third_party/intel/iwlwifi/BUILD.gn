@@ -97,7 +97,7 @@ driver_module("iwlwifi_driver") {
   ]
 }
 
-all_fw_files = [ "iwlwifi-7265-17.ucode" ]
+all_fw_files = [ "iwlwifi-7265D-29.ucode" ]
 
 foreach(fw_file, all_fw_files) {
   copy("iwlwifi-firmware-copy-" + fw_file) {

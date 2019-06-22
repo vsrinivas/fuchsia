@@ -1024,7 +1024,7 @@ static zx_status_t iwl_pci_bind(void* ctx, zx_device_t* dev) {
         return status;
     }
 
-    IWL_INFO(iwl_trans, "Device ID: %x Subsystem Device ID: %x", pci_info.device_id,
+    IWL_INFO(iwl_trans, "Device ID: %04x Subsystem Device ID: %04x\n", pci_info.device_id,
              subsystem_device_id);
 
     const struct iwl_cfg* cfg;
@@ -1034,8 +1034,9 @@ static zx_status_t iwl_pci_bind(void* ctx, zx_device_t* dev) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    iwl_trans = iwl_trans_pcie_alloc(cfg);
+    iwl_trans = iwl_trans_pcie_alloc(&pci, cfg);
     if (!iwl_trans) {
+        IWL_ERR(iwl_trans, "Failed to allocate PCIE transport: %s\n", zx_status_get_string(status));
         return ZX_ERR_NO_MEMORY;
     }
 
@@ -1104,20 +1105,21 @@ static zx_status_t iwl_pci_bind(void* ctx, zx_device_t* dev) {
 
     status = device_add(dev, &args, &iwl_trans->zxdev);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "Failed to create device: %s\n", zx_status_get_string(status));
+        IWL_ERR(iwl_trans, "Failed to create device: %s\n", zx_status_get_string(status));
         free(iwl_trans);
         return status;
     }
 
     status = iwl_drv_start(iwl_trans);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "Failed to start driver: %s\n", zx_status_get_string(status));
+        IWL_ERR(iwl_trans, "Failed to start driver: %s\n", zx_status_get_string(status));
         goto fail_remove_device;
     }
 
     /* register transport layer debugfs here */
     status = iwl_trans_pcie_dbgfs_register(iwl_trans);
     if (status != ZX_OK) {
+        IWL_ERR(iwl_trans, "Failed to register debugfs: %s\n", zx_status_get_string(status));
         goto fail_stop_device;
     }
 

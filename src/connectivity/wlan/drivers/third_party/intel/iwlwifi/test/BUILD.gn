@@ -40,6 +40,18 @@ executable("dummy_test") {
   deps = testing_deps
 }
 
+executable("pcie_test") {
+  output_name = "pcie_test"
+  testonly = true
+
+  sources = [
+    "pcie_test.cc",
+  ]
+
+  deps = testing_deps
+  deps += [ "//third_party/googletest:gmock" ]
+}
+
 executable("utils_test") {
   output_name = "utils_test"
   testonly = true
@@ -56,12 +68,17 @@ unittest_package("iwlwifi_test") {
 
   deps = [
     ":dummy_test",
+    ":pcie_test",
     ":utils_test",
   ]
 
   tests = [
     {
       name = "dummy_test"
+      environments = basic_envs
+    },
+    {
+      name = "pcie_test"
       environments = basic_envs
     },
     {

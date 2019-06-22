@@ -33,6 +33,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *****************************************************************************/
+#include <lib/device-protocol/pci.h>
+#include <zircon/status.h>
 #include <zircon/syscalls.h>
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/dbg.h"
@@ -543,6 +545,7 @@ static int iwl_pcie_nic_init(struct iwl_trans* trans) {
 
     return 0;
 }
+#endif // NEEDS_PORTING
 
 #define HW_READY_TIMEOUT (50)
 
@@ -596,6 +599,7 @@ int iwl_pcie_prepare_card_hw(struct iwl_trans* trans) {
     return ret;
 }
 
+#if 0  // NEEDS_PORTING
 /*
  * ucode
  */
@@ -1579,19 +1583,20 @@ static int iwl_pcie_init_msix_handler(struct pci_dev* pdev, struct iwl_trans_pci
 
     return 0;
 }
+#endif // NEEDS_PORTING
 
 static int _iwl_trans_pcie_start_hw(struct iwl_trans* trans, bool low_power) {
-    struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
-    uint32_t hpm;
+    //struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
+    //uint32_t hpm;
     int err;
-
-    lockdep_assert_held(&trans_pcie->mutex);
 
     err = iwl_pcie_prepare_card_hw(trans);
     if (err) {
         IWL_ERR(trans, "Error while preparing HW: %d\n", err);
         return err;
     }
+
+#if 0  // NEEDS_PORTING
 
     hpm = iwl_trans_read_prph(trans, HPM_DEBUG);
     if (hpm != 0xa5a5a5a0 && (hpm & PERSISTENCE_BIT)) {
@@ -1624,22 +1629,19 @@ static int _iwl_trans_pcie_start_hw(struct iwl_trans* trans, bool low_power) {
     if (low_power) { pm_runtime_resume(trans->dev); }
 
     return 0;
-}
 #endif // NEEDS_PORTING
+    return -1;
+}
 
 static int iwl_trans_pcie_start_hw(struct iwl_trans* trans, bool low_power) {
-#if 0  // NEEDS_PORTING
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
     int ret;
 
-    mutex_lock(&trans_pcie->mutex);
+    mtx_lock(&trans_pcie->mutex);
     ret = _iwl_trans_pcie_start_hw(trans, low_power);
-    mutex_unlock(&trans_pcie->mutex);
+    mtx_unlock(&trans_pcie->mutex);
 
     return ret;
-#endif // NEEDS_PORTING
-    IWL_ERR(trans, "%s needs porting\n", __FUNCTION__);
-    return -1;
 }
 
 static void iwl_trans_pcie_op_mode_leave(struct iwl_trans* trans) {
@@ -1665,25 +1667,18 @@ static void iwl_trans_pcie_op_mode_leave(struct iwl_trans* trans) {
 }
 
 static void iwl_trans_pcie_write8(struct iwl_trans* trans, uint32_t ofs, uint8_t val) {
-#if 0  // NEEDS_PORTING
-    writeb(val, IWL_TRANS_GET_PCIE_TRANS(trans)->hw_base + ofs);
-#endif // NEEDS_PORTING
-    IWL_ERR(trans, "%s needs porting\n", __FUNCTION__);
+    uintptr_t addr = (uintptr_t)(IWL_TRANS_GET_PCIE_TRANS(trans)->mmio.vaddr) + ofs;
+    *(volatile uint8_t*)addr = val;
 }
 
 static void iwl_trans_pcie_write32(struct iwl_trans* trans, uint32_t ofs, uint32_t val) {
-#if 0  // NEEDS_PORTING
-    writel(val, IWL_TRANS_GET_PCIE_TRANS(trans)->hw_base + ofs);
-#endif // NEEDS_PORTING
-    IWL_ERR(trans, "%s needs porting\n", __FUNCTION__);
+    uintptr_t addr = (uintptr_t)(IWL_TRANS_GET_PCIE_TRANS(trans)->mmio.vaddr) + ofs;
+    *(volatile uint32_t*)addr = val;
 }
 
 static uint32_t iwl_trans_pcie_read32(struct iwl_trans* trans, uint32_t ofs) {
-#if 0  // NEEDS_PORTING
-    return readl(IWL_TRANS_GET_PCIE_TRANS(trans)->hw_base + ofs);
-#endif // NEEDS_PORTING
-    IWL_ERR(trans, "%s needs porting\n", __FUNCTION__);
-    return 0;
+    uintptr_t addr = (uintptr_t)(IWL_TRANS_GET_PCIE_TRANS(trans)->mmio.vaddr) + ofs;
+    return *(volatile uint32_t*)addr;
 }
 
 static uint32_t iwl_trans_pcie_prph_msk(struct iwl_trans* trans) {
@@ -1710,7 +1705,6 @@ static void iwl_trans_pcie_write_prph(struct iwl_trans* trans, uint32_t addr, ui
 
 static void iwl_trans_pcie_configure(struct iwl_trans* trans,
                                      const struct iwl_trans_config* trans_cfg) {
-#if 0  // NEEDS_PORTING
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 
     trans_pcie->cmd_queue = trans_cfg->cmd_queue;
@@ -1726,7 +1720,9 @@ static void iwl_trans_pcie_configure(struct iwl_trans* trans,
                trans_pcie->n_no_reclaim_cmds * sizeof(uint8_t));
 
     trans_pcie->rx_buf_size = trans_cfg->rx_buf_size;
+#if 0  // NEEDS_PORTING
     trans_pcie->rx_page_order = iwl_trans_get_rb_size_order(trans_pcie->rx_buf_size);
+#endif // NEEDS_PORTING
 
     trans_pcie->bc_table_dword = trans_cfg->bc_table_dword;
     trans_pcie->scd_set_active = trans_cfg->scd_set_active;
@@ -1738,6 +1734,7 @@ static void iwl_trans_pcie_configure(struct iwl_trans* trans,
     trans->command_groups = trans_cfg->command_groups;
     trans->command_groups_size = trans_cfg->command_groups_size;
 
+#if 0  // NEEDS_PORTING
     /* Initialize NAPI here - it should be before registering to mac80211
      * in the opmode but after the HW struct is allocated.
      * As this function may be called again in some corner cases don't
@@ -1747,7 +1744,6 @@ static void iwl_trans_pcie_configure(struct iwl_trans* trans,
         init_dummy_netdev(&trans_pcie->napi_dev);
     }
 #endif // NEEDS_PORTING
-    IWL_ERR(trans, "%s needs porting\n", __FUNCTION__);
 }
 
 void iwl_trans_pcie_free(struct iwl_trans* trans) {
@@ -3115,19 +3111,17 @@ static const struct iwl_trans_ops trans_ops_pcie_gen2 = {
 #endif
 };
 
-struct iwl_trans* iwl_trans_pcie_alloc(const struct iwl_cfg* cfg) {
+struct iwl_trans* iwl_trans_pcie_alloc(const pci_protocol_t* pci, const struct iwl_cfg* cfg) {
     struct iwl_trans_pcie* trans_pcie;
     struct iwl_trans* trans;
+    zx_status_t status;
+    int addr_size;
 #if 0  // NEEDS_PORTING
     int ret, addr_size;
-
-    ret = pcim_enable_device(pdev);
-    if (ret) { return ERR_PTR(ret); }
 #endif // NEEDS_PORTING
 
     if (cfg->gen2) {
-        trans =
-            iwl_trans_alloc(sizeof(struct iwl_trans_pcie), cfg, &trans_ops_pcie_gen2);
+        trans = iwl_trans_alloc(sizeof(struct iwl_trans_pcie), cfg, &trans_ops_pcie_gen2);
     } else {
         trans = iwl_trans_alloc(sizeof(struct iwl_trans_pcie), cfg, &trans_ops_pcie);
     }
@@ -3141,7 +3135,9 @@ struct iwl_trans* iwl_trans_pcie_alloc(const struct iwl_cfg* cfg) {
 #if 0  // NEEDS_PORTING
     spin_lock_init(&trans_pcie->irq_lock);
     spin_lock_init(&trans_pcie->reg_lock);
-    mutex_init(&trans_pcie->mutex);
+#endif // NEEDS_PORTING
+    mtx_init(&trans_pcie->mutex, mtx_plain);
+#if 0  // NEEDS_PORTING
     init_waitqueue_head(&trans_pcie->ucode_write_waitq);
     trans_pcie->tso_hdr_page = alloc_percpu(struct iwl_tso_hdr_page);
     if (!trans_pcie->tso_hdr_page) {
@@ -3158,6 +3154,7 @@ struct iwl_trans* iwl_trans_pcie_alloc(const struct iwl_cfg* cfg) {
         pci_disable_link_state(pdev,
                                PCIE_LINK_STATE_L0S | PCIE_LINK_STATE_L1 | PCIE_LINK_STATE_CLKPM);
     }
+#endif // NEEDS_PORTING
 
     trans_pcie->def_rx_queue = 0;
 
@@ -3172,8 +3169,14 @@ struct iwl_trans* iwl_trans_pcie_alloc(const struct iwl_cfg* cfg) {
     }
     trans->max_skb_frags = IWL_PCIE_MAX_FRAGS(trans_pcie);
 
-    pci_set_master(pdev);
+    memcpy(&trans_pcie->pci, &pci, sizeof(trans_pcie->pci));
+    status = pci_enable_bus_master(trans_pcie->pci, true);
+    if (status != ZX_OK) {
+        IWL_ERR(trans, "Failed to enabled bus mastering: %s\n", zx_status_get_string(status));
+        goto out_no_pci;
+    }
 
+#if 0  // NEEDS_PORTING
     ret = pci_set_dma_mask(pdev, DMA_BIT_MASK(addr_size));
     if (!ret) { ret = pci_set_consistent_dma_mask(pdev, DMA_BIT_MASK(addr_size)); }
     if (ret) {
@@ -3185,31 +3188,27 @@ struct iwl_trans* iwl_trans_pcie_alloc(const struct iwl_cfg* cfg) {
             goto out_no_pci;
         }
     }
+#endif // NEEDS_PORTING
 
-    ret = pcim_iomap_regions_request_all(pdev, BIT(0), DRV_NAME);
-    if (ret) {
-        dev_err(&pdev->dev, "pcim_iomap_regions_request_all failed\n");
+    status = pci_map_bar_buffer(trans_pcie->pci, 0 /* bar_id */, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                                &trans_pcie->mmio);
+    if (status != ZX_OK) {
+        IWL_ERR(trans, "Failed to map resources for BAR 0: %s\n", zx_status_get_string(status));
         goto out_no_pci;
     }
 
-    trans_pcie->hw_base = pcim_iomap_table(pdev)[0];
-    if (!trans_pcie->hw_base) {
-        dev_err(&pdev->dev, "pcim_iomap_table failed\n");
-        ret = -ENODEV;
-        goto out_no_pci;
-    }
 
     /* We disable the RETRY_TIMEOUT register (0x41) to keep
      * PCI Tx retries from interfering with C3 CPU state */
-    pci_write_config_byte(pdev, PCI_CFG_RETRY_TIMEOUT, 0x00);
+    pci_config_write8(trans_pcie->pci, PCI_CFG_RETRY_TIMEOUT, 0x00);
 
-    trans_pcie->pci_dev = pdev;
+    #if 0
     iwl_disable_interrupts(trans);
+    #endif
 
     trans->hw_rev = iwl_read32(trans, CSR_HW_REV);
     if (trans->hw_rev == 0xffffffff) {
-        dev_err(&pdev->dev, "HW_REV=0xFFFFFFFF, PCI issues?\n");
-        ret = -EIO;
+        IWL_ERR(trans, "HW_REV=0xFFFFFFFF, PCI issues?\n");
         goto out_no_pci;
     }
 
@@ -3219,6 +3218,7 @@ struct iwl_trans* iwl_trans_pcie_alloc(const struct iwl_cfg* cfg) {
      * "dash" value). To keep hw_rev backwards compatible - we'll store it
      * in the old format.
      */
+#if 0  // NEEDS_PORTING
     if (trans->cfg->device_family >= IWL_DEVICE_FAMILY_8000) {
         unsigned long flags;
 
@@ -3258,6 +3258,7 @@ struct iwl_trans* iwl_trans_pcie_alloc(const struct iwl_cfg* cfg) {
             iwl_trans_release_nic_access(trans, &flags);
         }
     }
+#endif // NEEDS_PORTING
 
     IWL_DEBUG_INFO(trans, "HW REV: 0x%0x\n", trans->hw_rev);
 
@@ -3333,6 +3334,7 @@ struct iwl_trans* iwl_trans_pcie_alloc(const struct iwl_cfg* cfg) {
         }
     }
 #endif
+#if 0  // NEEDS_PORTING
 
     iwl_pcie_set_interrupt_capa(pdev, trans);
     trans->hw_id = (pdev->device << 16) + pdev->subsystem_device;
@@ -3380,9 +3382,11 @@ struct iwl_trans* iwl_trans_pcie_alloc(const struct iwl_cfg* cfg) {
 #if 0  // NEEDS_PORTING
 out_free_ict:
     iwl_pcie_free_ict(trans);
-out_no_pci:
-    free_percpu(trans_pcie->tso_hdr_page);
-    iwl_trans_free(trans);
-    return ERR_PTR(ret);
 #endif // NEEDS_PORTING
+out_no_pci:
+#if 0  // NEEDS_PORTING
+    free_percpu(trans_pcie->tso_hdr_page);
+#endif // NEEDS_PORTING
+    iwl_trans_free(trans);
+    return NULL;
 }

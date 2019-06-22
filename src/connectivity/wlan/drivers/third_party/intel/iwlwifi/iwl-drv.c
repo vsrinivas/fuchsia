@@ -499,7 +499,7 @@ static zx_status_t iwl_request_firmware(struct iwl_drv* drv, bool first) {
   status = load_firmware(drv->zxdev, drv->firmware_name, &firmware.vmo,
                          &firmware.size);
   if (status != ZX_OK) {
-    IWL_ERR(drv, "Failed to load firmware: %s", zx_status_get_string(status));
+    IWL_ERR(drv, "Failed to load firmware: %s\n", zx_status_get_string(status));
     return status;
   }
 #endif

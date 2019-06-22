@@ -36,6 +36,8 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PCIE_INTERNAL_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PCIE_INTERNAL_H_
 
+#include <ddk/mmio-buffer.h>
+#include <ddk/protocol/pci.h>
 #include <threads.h>
 #include <zircon/listnode.h>
 
@@ -46,6 +48,10 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-io.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-op-mode.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
+
+#ifdef __cplusplus
+using std::atomic_int;
+#endif  // __cplusplus
 
 /* We need 2 entries for the TX command and header, and another one might
  * be needed for potential data in the SKB's head. The remaining ones can
@@ -475,7 +481,8 @@ struct cont_rec {
  * @scd_bc_tbls: pointer to the byte count table of the scheduler
  * @kw: keep warm address
  * @pci_dev: basic pci-network driver stuff
- * @hw_base: pci hardware address support
+ * @pci: PCI protocol
+ * @mmio: PCI memory mapped IO
  * @ucode_write_complete: indicates that the ucode has been copied.
  * @ucode_write_waitq: wait queue for uCode load
  * @cmd_queue - command queue number
@@ -553,9 +560,8 @@ struct iwl_trans_pcie {
 
     /* PCI bus related data */
     struct pci_dev* pci_dev;
-#if 0   // NEEDS_PORTING
-    void __iomem* hw_base;
-#endif  // NEEDS_PORTING
+    pci_protocol_t* pci;
+    mmio_buffer_t mmio;
 
     bool ucode_write_complete;
 #if 0   // NEEDS_PORTING
@@ -611,7 +617,7 @@ struct iwl_trans_pcie {
 };
 
 static inline struct iwl_trans_pcie* IWL_TRANS_GET_PCIE_TRANS(struct iwl_trans* trans) {
-    return (void*)trans->trans_specific;
+    return (struct iwl_trans_pcie*)trans->trans_specific;
 }
 
 #if 0   // NEEDS_PORTING
@@ -636,7 +642,7 @@ static inline struct iwl_trans* iwl_trans_pcie_get_trans(struct iwl_trans_pcie* 
  * Convention: trans API functions: iwl_trans_pcie_XXX
  *  Other functions: iwl_pcie_XXX
  */
-struct iwl_trans* iwl_trans_pcie_alloc(const struct iwl_cfg* cfg);
+struct iwl_trans* iwl_trans_pcie_alloc(const pci_protocol_t* pci, const struct iwl_cfg* cfg);
 void iwl_trans_pcie_free(struct iwl_trans* trans);
 
 /*****************************************************
@@ -721,6 +727,7 @@ void iwl_pcie_dump_csr(struct iwl_trans* trans);
 /*****************************************************
  * Helpers
  ******************************************************/
+#endif // NEEDS_PORTING
 static inline void _iwl_disable_interrupts(struct iwl_trans* trans) {
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 
@@ -740,6 +747,7 @@ static inline void _iwl_disable_interrupts(struct iwl_trans* trans) {
     }
     IWL_DEBUG_ISR(trans, "Disabled interrupts\n");
 }
+#if 0  // NEEDS_PORTING
 
 #define IWL_NUM_OF_COMPLETION_RINGS 31
 #define IWL_NUM_OF_TRANSFER_RINGS 527
@@ -788,13 +796,18 @@ static inline void iwl_pcie_ctxt_info_free_fw_img(struct iwl_trans* trans) {
     dram->fw = NULL;
 }
 
+#endif // NEEDS_PORTING
 static inline void iwl_disable_interrupts(struct iwl_trans* trans) {
+#if 0  // NEEDS_PORTING
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 
     spin_lock(&trans_pcie->irq_lock);
     _iwl_disable_interrupts(trans);
     spin_unlock(&trans_pcie->irq_lock);
+#endif // NEEDS_PORTING
+    _iwl_disable_interrupts(trans);
 }
+#if 0  // NEEDS_PORTING
 
 static inline void _iwl_enable_interrupts(struct iwl_trans* trans) {
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
