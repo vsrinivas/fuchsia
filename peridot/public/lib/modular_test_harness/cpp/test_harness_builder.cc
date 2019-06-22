@@ -58,7 +58,12 @@ bool BufferFromString(std::string str, fuchsia::mem::Buffer* buffer) {
 
 }  // namespace
 
-TestHarnessBuilder::TestHarnessBuilder() : env_services_(new vfs::PseudoDir) {}
+TestHarnessBuilder::TestHarnessBuilder(
+    fuchsia::modular::testing::TestHarnessSpec spec)
+    : spec_(std::move(spec)), env_services_(new vfs::PseudoDir) {}
+
+TestHarnessBuilder::TestHarnessBuilder()
+    : TestHarnessBuilder(fuchsia::modular::testing::TestHarnessSpec()) {}
 
 fuchsia::modular::testing::TestHarnessSpec TestHarnessBuilder::BuildSpec() {
   fuchsia::io::DirectoryPtr dir;
@@ -86,6 +91,12 @@ TestHarnessBuilder::BuildOnNewComponentHandler() {
 
         it->second(std::move(startup_info), component.Bind());
       };
+}
+
+void TestHarnessBuilder::BuildAndRun(
+    fuchsia::modular::testing::TestHarnessPtr& test_harness) {
+  test_harness.events().OnNewComponent = BuildOnNewComponentHandler();
+  test_harness->Run(BuildSpec());
 }
 
 TestHarnessBuilder& TestHarnessBuilder::InterceptComponent(

@@ -226,11 +226,8 @@ class StoryBenchmarkTest : public modular::testing::TestHarnessFixture {
         {.url = module_url_,
          .sandbox_services = module_->GetSandboxServices()});
 
-    test_harness().events().OnNewComponent =
-        builder.BuildOnNewComponentHandler();
-
     TRACE_ASYNC_BEGIN("benchmark", "session/start", 0);
-    test_harness()->Run(builder.BuildSpec());
+    builder.BuildAndRun(test_harness());
 
     // Wait for our session shell to start.
     RunLoopUntil([&] {

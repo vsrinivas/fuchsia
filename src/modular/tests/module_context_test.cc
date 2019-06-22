@@ -24,10 +24,7 @@ class ModuleContextTest : public modular::testing::TestHarnessFixture {
     builder.InterceptSessionShell(
         session_shell_.GetOnCreateHandler(),
         {.sandbox_services = {"fuchsia.modular.SessionShellContext"}});
-
-    test_harness().events().OnNewComponent =
-        builder.BuildOnNewComponentHandler();
-    test_harness()->Run(builder.BuildSpec());
+    builder.BuildAndRun(test_harness());
 
     // Wait for our session shell to start.
     RunLoopUntil([this] { return session_shell_.is_running(); });

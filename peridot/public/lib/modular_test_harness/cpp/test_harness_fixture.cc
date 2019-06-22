@@ -7,6 +7,10 @@
 namespace modular {
 namespace testing {
 
+TestHarnessFixture::TestHarnessFixture()
+    : test_harness_launcher_(
+          real_services()->Connect<fuchsia::sys::Launcher>()) {}
+
 void AddModToStory(
     const fuchsia::modular::testing::TestHarnessPtr& test_harness,
     std::string story_name, std::string mod_name,

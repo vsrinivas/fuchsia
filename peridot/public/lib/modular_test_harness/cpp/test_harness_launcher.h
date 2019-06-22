@@ -22,7 +22,7 @@ namespace testing {
 class TestHarnessLauncher final {
  public:
   // Launches the modular test harness component.
-  TestHarnessLauncher();
+  TestHarnessLauncher(fuchsia::sys::LauncherPtr launcher);
 
   // Blocks the current thread until the modular test harness component is
   // destroyed.
@@ -34,6 +34,7 @@ class TestHarnessLauncher final {
 
  private:
   void LaunchTestHarness(
+      fuchsia::sys::LauncherPtr launcher,
       fidl::InterfaceRequest<fuchsia::modular::testing::TestHarness>);
 
   std::shared_ptr<sys::ServiceDirectory> test_harness_svc_;

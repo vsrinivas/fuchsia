@@ -68,10 +68,7 @@ class StoryShellTest : public modular::testing::TestHarnessFixture {
               std::move(startup_info), std::move(intercepted_component));
         },
         {.url = fake_module_url_});
-
-    test_harness().events().OnNewComponent =
-        builder.BuildOnNewComponentHandler();
-    test_harness()->Run(builder.BuildSpec());
+    builder.BuildAndRun(test_harness());
 
     fuchsia::modular::testing::ModularService request;
     request.set_puppet_master(puppet_master_.NewRequest());

@@ -139,9 +139,7 @@ TEST_F(LastFocusTimeTest, LastFocusTimeIncreases) {
   const auto test_module_url = modular::testing::GenerateFakeUrl();
   builder.InterceptComponent(test_module.GetOnCreateHandler(),
                              {.url = test_module_url});
-
-  test_harness().events().OnNewComponent = builder.BuildOnNewComponentHandler();
-  test_harness()->Run(builder.BuildSpec());
+  builder.BuildAndRun(test_harness());
 
   // Wait for our session shell to start.
   RunLoopUntil([&] { return test_session_shell.is_running(); });

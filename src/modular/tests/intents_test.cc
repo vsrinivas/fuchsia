@@ -42,9 +42,7 @@ class IntentsTest : public modular::testing::TestHarnessFixture {
          .sandbox_services =
              modular::testing::FakeModule::GetSandboxServices()});
 
-    test_harness().events().OnNewComponent =
-        builder_.BuildOnNewComponentHandler();
-    test_harness()->Run(builder_.BuildSpec());
+    builder_.BuildAndRun(test_harness());
   }
 
   // Create an Intent with the given handler, parameter name, and parameter

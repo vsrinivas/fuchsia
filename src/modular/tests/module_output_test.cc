@@ -30,10 +30,7 @@ class ModuleOutputTest : public modular::testing::TestHarnessFixture {
         {.url = test_module_url_,
          .sandbox_services = {"fuchsia.app.discover.ModuleOutputWriter",
                               "fuchsia.modular.ModuleContext"}});
-
-    test_harness().events().OnNewComponent =
-        builder_.BuildOnNewComponentHandler();
-    test_harness()->Run(builder_.BuildSpec());
+    builder_.BuildAndRun(test_harness());
   }
 
   std::unique_ptr<modular::testing::FakeModule> test_module_;

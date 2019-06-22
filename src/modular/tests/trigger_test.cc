@@ -35,9 +35,7 @@ class TriggerTest : public modular::testing::TestHarnessFixture {
          .sandbox_services =
              modular::testing::FakeAgent::GetSandboxServices()});
 
-    test_harness().events().OnNewComponent =
-        builder_.BuildOnNewComponentHandler();
-    test_harness()->Run(builder_.BuildSpec());
+    builder_.BuildAndRun(test_harness());
 
     // Start a mod in a story.
     modular::testing::AddModToStory(

@@ -4,20 +4,75 @@
 
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/modular_test_harness/cpp/test_harness_launcher.h>
-#include <src/lib/files/glob.h>
+#include <lib/sys/cpp/testing/fake_launcher.h>
 #include <test/modular/test/harness/cpp/fidl.h>
 
 namespace {
-constexpr char kModularTestHarnessHubPath[] = "/hub/c/modular_test_harness.cmx";
+constexpr char kTestHarnessUrl[] =
+    "fuchsia-pkg://fuchsia.com/modular_test_harness#meta/"
+    "modular_test_harness.cmx";
 }  // namespace
 
-class TestHarnessLauncherTest : public gtest::RealLoopFixture {};
+class FakeController : public fuchsia::sys::ComponentController {
+ public:
+  FakeController(fidl::InterfaceRequest<fuchsia::sys::ComponentController> ctrl)
+      : loop_(&kAsyncLoopConfigNoAttachToThread), binding_(this) {
+    loop_.StartThread();
+    binding_.Bind(std::move(ctrl), loop_.dispatcher());
+  }
+
+  ~FakeController() {
+    loop_.Quit();
+    loop_.JoinThreads();
+  }
+
+  bool is_bound() { return binding_.is_bound(); }
+
+ private:
+  // |fuchsia::sys::ComponentController|
+  void Kill() override { binding_.Unbind(); }
+
+  // |fuchsia::sys::ComponentController|
+  void Detach() override {
+    // Unimplemented.
+    ZX_ASSERT(false);
+  }
+
+  async::Loop loop_;
+  fidl::Binding<fuchsia::sys::ComponentController> binding_;
+};
+
+class TestHarnessLauncherTest : public gtest::RealLoopFixture {
+ public:
+  TestHarnessLauncherTest() {
+    fake_launcher_.RegisterComponent(
+        kTestHarnessUrl,
+        [this](fuchsia::sys::LaunchInfo info,
+               fidl::InterfaceRequest<fuchsia::sys::ComponentController> ctrl) {
+          info_ = std::move(info);
+          fake_ctrl_ = std::make_unique<FakeController>(std::move(ctrl));
+        });
+  }
+
+ protected:
+  fuchsia::sys::LauncherPtr GetTestHarnessLauncher() {
+    fuchsia::sys::LauncherPtr launcher;
+    fake_launcher_.GetHandler()(launcher.NewRequest());
+    return launcher;
+  }
+
+  bool is_running() { return fake_ctrl_ && fake_ctrl_->is_bound(); }
+
+ private:
+  sys::testing::FakeLauncher fake_launcher_;
+  std::unique_ptr<FakeController> fake_ctrl_;
+  fuchsia::sys::LaunchInfo info_;
+};
 
 // Test that the TestHarnessLauncher is able to launch modular_test_harness.cmx.
 TEST_F(TestHarnessLauncherTest, CanLaunchTestHarness) {
-  modular::testing::TestHarnessLauncher launcher;
-  RunLoopUntil(
-      [] { return files::Glob(kModularTestHarnessHubPath).size() > 0; });
+  modular::testing::TestHarnessLauncher launcher(GetTestHarnessLauncher());
+  RunLoopUntil([this] { return is_running(); });
 }
 
 // Test that TestHarnessLauncher will destroy the modular_test_harness.cmx
@@ -25,12 +80,10 @@ TEST_F(TestHarnessLauncherTest, CanLaunchTestHarness) {
 TEST_F(TestHarnessLauncherTest, CleanupInDestructor) {
   // Test that modular_test_harness.cmx is not running.
   {
-    modular::testing::TestHarnessLauncher launcher;
-    RunLoopUntil(
-        [] { return files::Glob(kModularTestHarnessHubPath).size() > 0; });
+    modular::testing::TestHarnessLauncher launcher(GetTestHarnessLauncher());
+    RunLoopUntil([this] { return is_running(); });
   }
   // Test that the modular_test_harness.cmx is no longer running after
   // TestHarnessLauncher is destroyed.
-  auto exists = files::Glob(kModularTestHarnessHubPath).size() > 0;
-  EXPECT_FALSE(exists);
+  EXPECT_FALSE(is_running());
 }

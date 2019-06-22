@@ -18,8 +18,35 @@
 using testing::HasSubstr;
 using testing::Not;
 
-// TestHarnessBuilder. Provides a service directory, typically used for testing
-// environment service building.
+class FakeTestHarness : public fuchsia::modular::testing::TestHarness {
+ public:
+  std::optional<fuchsia::modular::testing::TestHarnessSpec>& spec() {
+    return spec_;
+  }
+
+ private:
+  // |fuchsia::modular::testing::TestHarness|
+  void Run(fuchsia::modular::testing::TestHarnessSpec spec) override {
+    spec_ = std::move(spec);
+  }
+
+  // |fuchsia::modular::testing::TestHarness|
+  void ConnectToModularService(
+      fuchsia::modular::testing::ModularService service) override {}
+
+  // |fuchsia::modular::testing::TestHarness|
+  void ConnectToEnvironmentService(std::string service_name,
+                                   zx::channel request) override {}
+
+  // |fuchsia::modular::testing::TestHarness|
+  void ParseConfig(std::string config, std::string config_path,
+                   ParseConfigCallback callback) override {}
+
+  std::optional<fuchsia::modular::testing::TestHarnessSpec> spec_;
+};
+
+// TestHarnessBuilder. Provides a service directory, typically used for
+// testing environment service building.
 class TestHarnessBuilderTest : public modular::testing::TestHarnessFixture {
  public:
   TestHarnessBuilderTest() {
@@ -44,6 +71,22 @@ class TestHarnessBuilderTest : public modular::testing::TestHarnessFixture {
 
   std::shared_ptr<sys::ServiceDirectory> env_service_dir() {
     return env_service_dir_;
+  }
+
+  std::tuple<fuchsia::modular::testing::TestHarnessSpec,
+             fuchsia::modular::testing::TestHarness::OnNewComponentCallback>
+  TakeSpecAndHandler(modular::testing::TestHarnessBuilder* builder) {
+    FakeTestHarness fake_test_harness;
+    fidl::Binding<fuchsia::modular::testing::TestHarness>
+        fake_test_harness_binding(&fake_test_harness);
+    fuchsia::modular::testing::TestHarnessPtr fake_test_harness_ptr;
+    fake_test_harness_ptr.Bind(fake_test_harness_binding.NewBinding());
+    builder->BuildAndRun(fake_test_harness_ptr);
+
+    RunLoopUntil([&] { return fake_test_harness.spec().has_value(); });
+
+    return {std::move(fake_test_harness.spec()).value(),
+            std::move(fake_test_harness_ptr.events().OnNewComponent)};
   }
 
  private:
@@ -105,7 +148,8 @@ TEST_F(TestHarnessBuilderTest, InterceptSpecTest) {
       [&](auto launch_info, auto handle) { called = "story_shell"; },
       {.url = "story_shell"});
 
-  auto spec = builder.BuildSpec();
+  auto [spec, new_component_handler] = TakeSpecAndHandler(&builder);
+
   EXPECT_EQ("generic", spec.components_to_intercept().at(0).component_url());
   ASSERT_TRUE(spec.components_to_intercept().at(0).has_extra_cmx_contents());
   std::string cmx_str;
@@ -130,29 +174,28 @@ TEST_F(TestHarnessBuilderTest, InterceptSpecTest) {
   EXPECT_EQ("story_shell",
             spec.basemgr_config().story_shell().app_config().url());
 
-  auto handler = builder.BuildOnNewComponentHandler();
   {
     fuchsia::sys::StartupInfo startup_info;
     startup_info.launch_info.url = "generic";
-    handler(std::move(startup_info), nullptr);
+    new_component_handler(std::move(startup_info), nullptr);
     EXPECT_EQ("generic", called);
   }
   {
     fuchsia::sys::StartupInfo startup_info;
     startup_info.launch_info.url = "base_shell";
-    handler(std::move(startup_info), nullptr);
+    new_component_handler(std::move(startup_info), nullptr);
     EXPECT_EQ("base_shell", called);
   }
   {
     fuchsia::sys::StartupInfo startup_info;
     startup_info.launch_info.url = "session_shell";
-    handler(std::move(startup_info), nullptr);
+    new_component_handler(std::move(startup_info), nullptr);
     EXPECT_EQ("session_shell", called);
   }
   {
     fuchsia::sys::StartupInfo startup_info;
     startup_info.launch_info.url = "story_shell";
-    handler(std::move(startup_info), nullptr);
+    new_component_handler(std::move(startup_info), nullptr);
     EXPECT_EQ("story_shell", called);
   }
 }
@@ -166,8 +209,7 @@ TEST_F(TestHarnessBuilderTest, AddService) {
   modular::testing::TestHarnessBuilder builder;
   builder.AddService<test::modular::test::harness::Pinger>(
       pinger_bindings.GetHandler(&pinger_impl));
-  test_harness().events().OnNewComponent = builder.BuildOnNewComponentHandler();
-  test_harness()->Run(builder.BuildSpec());
+  builder.BuildAndRun(test_harness());
 
   test::modular::test::harness::PingerPtr pinger;
   test_harness()->ConnectToEnvironmentService(
@@ -185,7 +227,8 @@ TEST_F(TestHarnessBuilderTest, AddServiceFromComponent) {
   auto fake_url = modular::testing::GenerateFakeUrl();
   builder.AddServiceFromComponent<test::modular::test::harness::Pinger>(
       fake_url);
-  auto spec = builder.BuildSpec();
+
+  auto [spec, new_component_handler] = TakeSpecAndHandler(&builder);
 
   auto& services_from_components =
       spec.env_services().services_from_components();
@@ -207,7 +250,7 @@ TEST_F(TestHarnessBuilderTest, AddServiceFromServiceDirectory) {
   modular::testing::TestHarnessBuilder builder;
   builder.AddServiceFromServiceDirectory<test::modular::test::harness::Pinger>(
       env_service_dir());
-  test_harness()->Run(builder.BuildSpec());
+  builder.BuildAndRun(test_harness());
 
   test::modular::test::harness::PingerPtr pinger;
   test_harness()->ConnectToEnvironmentService(

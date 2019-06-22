@@ -34,9 +34,8 @@ TEST_F(TestHarnessFixtureTest, CanLaunchModular) {
         intercepted = true;
       },
       {.url = kFakeBaseShellUrl});
+  builder.BuildAndRun(test_harness());
 
-  test_harness().events().OnNewComponent = builder.BuildOnNewComponentHandler();
-  test_harness()->Run(builder.BuildSpec());
   RunLoopUntil([&] { return intercepted; });
 }
 
@@ -70,9 +69,8 @@ TEST_F(TestHarnessFixtureTest, FakeComponentLifecycle_KilledByParent) {
       session_shell.GetOnCreateHandler(),
       {.url = modular::testing::GenerateFakeUrl(),
        .sandbox_services = {"fuchsia.modular.SessionShellContext"}});
+  builder.BuildAndRun(test_harness());
 
-  test_harness().events().OnNewComponent = builder.BuildOnNewComponentHandler();
-  test_harness()->Run(builder.BuildSpec());
   RunLoopUntil([&] { return session_shell.is_running(); });
   EXPECT_TRUE(running);
 
@@ -94,9 +92,8 @@ TEST_F(TestHarnessFixtureTest, FakeComponentLifecycle_KilledBySelf) {
   TestComponent base_shell([&] { running = true; }, [&] { running = false; });
   builder.InterceptBaseShell(base_shell.GetOnCreateHandler(),
                              {.url = modular::testing::GenerateFakeUrl()});
+  builder.BuildAndRun(test_harness());
 
-  test_harness().events().OnNewComponent = builder.BuildOnNewComponentHandler();
-  test_harness()->Run(builder.BuildSpec());
   RunLoopUntil([&] { return base_shell.is_running(); });
   EXPECT_TRUE(running);
 
@@ -115,9 +112,8 @@ TEST_F(TestHarnessFixtureTest,
   TestComponent base_shell([&] { running = true; }, [&] { running = false; });
   builder.InterceptBaseShell(base_shell.GetOnCreateHandler(),
                              {.url = modular::testing::GenerateFakeUrl()});
+  builder.BuildAndRun(test_harness());
 
-  test_harness().events().OnNewComponent = builder.BuildOnNewComponentHandler();
-  test_harness()->Run(builder.BuildSpec());
   RunLoopUntil([&] { return base_shell.is_running(); });
   EXPECT_TRUE(running);
 
@@ -143,9 +139,7 @@ TEST_F(TestHarnessFixtureTest, AddModToStory) {
   builder.InterceptComponent(
       mod.GetOnCreateHandler(),
       modular::testing::TestHarnessBuilder::InterceptOptions{.url = mod_url});
-
-  test_harness().events().OnNewComponent = builder.BuildOnNewComponentHandler();
-  test_harness()->Run(builder.BuildSpec());
+  builder.BuildAndRun(test_harness());
 
   modular::testing::AddModToStory(test_harness(), "mystory", "mymod",
                                   fuchsia::modular::Intent{.handler = mod_url});
@@ -164,10 +158,7 @@ class TestFixtureForTestingCleanup
     TestComponent base_shell([&] { running = true; }, [&] { running = false; });
     builder.InterceptBaseShell(base_shell.GetOnCreateHandler(),
                                {.url = modular::testing::GenerateFakeUrl()});
-
-    test_harness().events().OnNewComponent =
-        builder.BuildOnNewComponentHandler();
-    test_harness()->Run(builder.BuildSpec());
+    builder.BuildAndRun(test_harness());
 
     RunLoopUntil([&] { return running; });
     on_running();

@@ -18,6 +18,9 @@ namespace testing {
 // test harness component and provides the |fuchsia.modular.testing.TestHarness|
 // service.
 class TestHarnessFixture : public sys::testing::TestWithEnvironment {
+ public:
+  TestHarnessFixture();
+
  protected:
   fuchsia::modular::testing::TestHarnessPtr& test_harness() {
     return test_harness_launcher_.test_harness();

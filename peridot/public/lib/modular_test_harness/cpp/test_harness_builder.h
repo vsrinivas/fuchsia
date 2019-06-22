@@ -13,8 +13,8 @@ namespace modular {
 namespace testing {
 
 // TestHarnessBuilder is a utility for building a
-// |modular.testing.TestHarnessSpec|. This utility provides methods for hosting
-// environment services and routing intercepted components.
+// |fuchsia.modular.testing.TestHarnessSpec|. This utility provides methods for
+// hosting environment services and routing intercepted components.
 //
 // SAMPLE USAGE:
 //
@@ -41,9 +41,7 @@ namespace testing {
 //   // Start an instance of the modular runtime in the test harness
 //   // environment. As soon as |component_url| is created in
 //   // this environment |component.on_create| is triggered.
-//   test_harness().events().OnNewComponent =
-//   builder.BuildOnNewComponentHandler();
-//   test_harness()->Run(builder.BuildSpec());
+//   builder.BuildAndRun(test_harness_launcher.test_harness());
 //
 //   // ... do something that would cause |component_url| to be created ...
 //   RunLoopUntil([&] { return component.is_running(); });
@@ -74,19 +72,18 @@ class TestHarnessBuilder {
       fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent>
           intercepted_component)>;
 
+  // Builds on top of an empty |fuchsia.modular.testing.TestHarnessSpec|.
   TestHarnessBuilder();
 
-  // Takes the TestHarnessSpec built so far with the builder functions below.
-  //
-  // Can only be called once.
-  fuchsia::modular::testing::TestHarnessSpec BuildSpec();
+  // Builds on top of the supplied |spec|.
+  TestHarnessBuilder(fuchsia::modular::testing::TestHarnessSpec spec);
 
-  // Builds a router function which routes calls to the various handlers
-  // provided to Intercept*() variants. Intended to be used as the handler for
-  // TestHarness.events.OnNewComponent
+  // Builds the underlying TestHarnessSpec and issues a |TestHarness/Run()|.
+  // Binds an OnNewComponent event handler to the supplied |test_harness| to
+  // route the Intercept*() calls issued below.
   //
   // Can only be called once.
-  OnNewComponentHandler BuildOnNewComponentHandler();
+  void BuildAndRun(fuchsia::modular::testing::TestHarnessPtr& test_harness);
 
   // Amends the TestHarnessSpec to include interception instructions based on
   // |options| and stores |on_create| for use in the router function created
@@ -172,6 +169,18 @@ class TestHarnessBuilder {
   }
 
  private:
+  // Takes the TestHarnessSpec built so far with the builder functions below.
+  //
+  // Can only be called once.
+  fuchsia::modular::testing::TestHarnessSpec BuildSpec();
+
+  // Builds a router function which routes calls to the various handlers
+  // provided to Intercept*() variants. Intended to be used as the handler for
+  // TestHarness.events.OnNewComponent
+  //
+  // Can only be called once.
+  OnNewComponentHandler BuildOnNewComponentHandler();
+
   fuchsia::modular::testing::TestHarnessSpec spec_;
 
   // Map from url to handler to be called when that url's component

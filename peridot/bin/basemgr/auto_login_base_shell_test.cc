@@ -17,8 +17,13 @@ TEST_F(AutoLoginBaseShellTest, AutoLoginBaseShellLaunchesSessionShell) {
       "fuchsia-pkg://fuchsia.com/auto_login_base_shell#meta/"
       "auto_login_base_shell.cmx";
 
-  modular::testing::TestHarnessBuilder builder;
+  fuchsia::modular::testing::TestHarnessSpec spec;
+  spec.mutable_basemgr_config()
+      ->mutable_base_shell()
+      ->mutable_app_config()
+      ->set_url(kAutoLoginBaseShellUrl);
 
+  modular::testing::TestHarnessBuilder builder(std::move(spec));
   // Listen for session shell interception.
   bool intercepted = false;
   builder.InterceptSessionShell(
@@ -26,15 +31,7 @@ TEST_F(AutoLoginBaseShellTest, AutoLoginBaseShellLaunchesSessionShell) {
           fuchsia::sys::StartupInfo startup_info,
           fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent>
               component) { intercepted = true; });
-
-  auto spec = builder.BuildSpec();
-  spec.mutable_basemgr_config()
-      ->mutable_base_shell()
-      ->mutable_app_config()
-      ->set_url(kAutoLoginBaseShellUrl);
-
-  test_harness().events().OnNewComponent = builder.BuildOnNewComponentHandler();
-  test_harness()->Run(std::move(spec));
+  builder.BuildAndRun(test_harness());
 
   RunLoopUntil([&] { return intercepted; });
 }

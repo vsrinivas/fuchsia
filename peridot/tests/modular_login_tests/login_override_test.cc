@@ -63,9 +63,7 @@ TEST_F(LoginOverrideTest, AuthProviderOverrideLaunchesBaseShell) {
 
   // Setting AUTH_PROVIDER should launch the configured base shell.
   SetLoginOverride(fuchsia::setui::LoginOverride::AUTH_PROVIDER, [&] {
-    test_harness().events().OnNewComponent =
-        builder.BuildOnNewComponentHandler();
-    test_harness()->Run(builder.BuildSpec());
+    builder.BuildAndRun(test_harness());
   });
 
   RunLoopUntil([&] { return intercepted; });
@@ -97,11 +95,8 @@ TEST_F(LoginOverrideTest, AutoLoginGuestOverrideSkipsBaseShell) {
           fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent>
               component) { intercepted_session_shell = true; });
 
-  SetLoginOverride(fuchsia::setui::LoginOverride::AUTOLOGIN_GUEST, [&] {
-    test_harness().events().OnNewComponent =
-        builder.BuildOnNewComponentHandler();
-    test_harness()->Run(builder.BuildSpec());
-  });
+  SetLoginOverride(fuchsia::setui::LoginOverride::AUTOLOGIN_GUEST,
+                   [&] { builder.BuildAndRun(test_harness()); });
 
   RunLoopUntil([&] { return intercepted_session_shell; });
   EXPECT_FALSE(intercepted_base_shell);

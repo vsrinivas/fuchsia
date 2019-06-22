@@ -121,8 +121,12 @@ class StoryShellFactoryTest : public modular::testing::TestHarnessFixture {
   // Initializes the session shell, story shell factory, and story shell
   // implementations and starts the modular test harness.
   void InitSession() {
-    modular::testing::TestHarnessBuilder builder;
+    // The session shell provides the StoryShellFactory protocol.
+    fuchsia::modular::testing::TestHarnessSpec spec;
+    spec.mutable_basemgr_config()
+        ->set_use_session_shell_for_story_shell_factory(true);
 
+    modular::testing::TestHarnessBuilder builder(std::move(spec));
     test_session_shell_ = std::make_unique<TestSessionShell>();
     builder.InterceptSessionShell(
         test_session_shell_->GetOnCreateHandler(),
@@ -134,16 +138,7 @@ class StoryShellFactoryTest : public modular::testing::TestHarnessFixture {
     test_module_url_ = modular::testing::GenerateFakeUrl();
     builder.InterceptComponent(test_module_->GetOnCreateHandler(),
                                {.url = test_module_url_});
-
-    test_harness().events().OnNewComponent =
-        builder.BuildOnNewComponentHandler();
-    auto spec = builder.BuildSpec();
-
-    // The session shell also provides the StoryShellFactory protocol.
-    spec.mutable_basemgr_config()
-        ->set_use_session_shell_for_story_shell_factory(true);
-
-    test_harness()->Run(std::move(spec));
+    builder.BuildAndRun(test_harness());
 
     // Wait for our session shell to start.
     RunLoopUntil([this] { return test_session_shell_->is_running(); });

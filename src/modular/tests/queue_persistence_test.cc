@@ -143,9 +143,7 @@ TEST_F(QueuePersistenceTest, MessagePersistedToQueue) {
       {.url = test_agent_url,
        .sandbox_services = {"fuchsia.modular.ComponentContext",
                             "fuchsia.modular.AgentContext"}});
-
-  test_harness().events().OnNewComponent = builder.BuildOnNewComponentHandler();
-  test_harness()->Run(builder.BuildSpec());
+  builder.BuildAndRun(test_harness());
 
   // Add the test mod.
   fuchsia::modular::Intent intent;

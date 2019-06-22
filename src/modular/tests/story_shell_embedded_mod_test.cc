@@ -71,9 +71,7 @@ class StoryShellEmbeddedModTest : public modular::testing::TestHarnessFixture {
              modular::testing::FakeModule::GetSandboxServices()});
 
     // Start modular
-    test_harness().events().OnNewComponent =
-        builder_.BuildOnNewComponentHandler();
-    test_harness()->Run(builder_.BuildSpec());
+    builder_.BuildAndRun(test_harness());
 
     // Wait for session shell to start
     RunLoopUntil([&] { return fake_session_shell_.is_running(); });

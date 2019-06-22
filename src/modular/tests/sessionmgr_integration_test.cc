@@ -52,39 +52,15 @@ class TestSessionShell : public modular::testing::FakeComponent {
 
 TEST_F(SessionmgrIntegrationTest,
        RebootCalledIfSessionmgrCrashNumberReachesRetryLimit) {
-  modular::testing::TestHarnessBuilder builder;
+  MockAdmin mock_admin;
+  fidl::BindingSet<fuchsia::device::manager::Administrator> admin_bindings;
 
   TestSessionShell session_shell([] {}, [] {});
+  modular::testing::TestHarnessBuilder builder;
   builder.InterceptSessionShell(session_shell.GetOnCreateHandler(),
                                 {.url = modular::testing::GenerateFakeUrl()});
-
-  test_harness().events().OnNewComponent = builder.BuildOnNewComponentHandler();
-  fuchsia::modular::testing::TestHarnessSpec spec = builder.BuildSpec();
-
-  MockAdmin mock_admin;
-  fidl::BindingSet<fuchsia::device::manager::Administrator> binding;
-
-  auto svc_dir = std::make_unique<vfs::PseudoDir>();
-  svc_dir->AddEntry(
-      fuchsia::device::manager::Administrator::Name_,
-      std::make_unique<vfs::Service>(
-          [&binding, &mock_admin](zx::channel request,
-                                  async_dispatcher_t* dispatcher) {
-            binding.AddBinding(
-                &mock_admin,
-                fidl::InterfaceRequest<fuchsia::device::manager::Administrator>(
-                    std::move(request)));
-          }));
-
-  fuchsia::io::DirectoryPtr directoryPtr;
-  auto req = directoryPtr.NewRequest().TakeChannel();
-  svc_dir->Serve(
-      fuchsia::io::OPEN_RIGHT_WRITABLE | fuchsia::io::OPEN_RIGHT_READABLE,
-      std::move(req));
-  spec.mutable_env_services()->set_service_dir(
-      directoryPtr.Unbind().TakeChannel());
-
-  test_harness()->Run(std::move(spec));
+  builder.AddService(admin_bindings.GetHandler(&mock_admin));
+  builder.BuildAndRun(test_harness());
 
   // kill session_shell
   for (int i = 0; i < 4; i++) {
@@ -97,4 +73,5 @@ TEST_F(SessionmgrIntegrationTest,
   RunLoopUntil([&] { return mock_admin.suspend_called(); });
   EXPECT_TRUE(mock_admin.suspend_called());
 }
+
 }  // namespace

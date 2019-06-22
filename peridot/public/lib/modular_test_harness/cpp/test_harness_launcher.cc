@@ -4,6 +4,8 @@
 
 #include "peridot/public/lib/modular_test_harness/cpp/test_harness_launcher.h"
 
+#include <src/lib/fxl/logging.h>
+
 #include "lib/async/cpp/task.h"
 
 namespace modular {
@@ -14,13 +16,14 @@ constexpr char kTestHarnessUrl[] =
     "modular_test_harness.cmx";
 };
 
-TestHarnessLauncher::TestHarnessLauncher() {
+TestHarnessLauncher::TestHarnessLauncher(fuchsia::sys::LauncherPtr launcher) {
   harness_launcher_thread_.reset(new std::thread(
-      [this](fidl::InterfaceRequest<fuchsia::modular::testing::TestHarness>
+      [this](fuchsia::sys::LauncherPtr launcher,
+             fidl::InterfaceRequest<fuchsia::modular::testing::TestHarness>
                  test_harness_req) {
-        LaunchTestHarness(std::move(test_harness_req));
+        LaunchTestHarness(std::move(launcher), std::move(test_harness_req));
       },
-      test_harness_.NewRequest()));
+      std::move(launcher), test_harness_.NewRequest()));
 }
 
 TestHarnessLauncher::~TestHarnessLauncher() {
@@ -41,6 +44,7 @@ TestHarnessLauncher::~TestHarnessLauncher() {
 }
 
 void TestHarnessLauncher::LaunchTestHarness(
+    fuchsia::sys::LauncherPtr launcher,
     fidl::InterfaceRequest<fuchsia::modular::testing::TestHarness>
         test_harness_req) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
@@ -55,18 +59,12 @@ void TestHarnessLauncher::LaunchTestHarness(
   test_harness_svc_ =
       sys::ServiceDirectory::CreateWithRequest(&launch_info.directory_request);
 
-  auto svc = sys::ServiceDirectory::CreateFromNamespace();
-  svc->Connect<fuchsia::sys::Launcher>()->CreateComponent(
-      std::move(launch_info), test_harness_ctrl_.NewRequest());
-
+  launcher->CreateComponent(std::move(launch_info),
+                            test_harness_ctrl_.NewRequest());
   test_harness_svc_->Connect(std::move(test_harness_req));
 
   // Exit the loop (and therefore the thread), if the modular test harness
   // component exits.
-  test_harness_ctrl_.events().OnTerminated =
-      [&](int64_t return_code, fuchsia::sys::TerminationReason reason) {
-        loop.Quit();
-      };
   test_harness_ctrl_.set_error_handler([&](zx_status_t) { loop.Quit(); });
 
   loop.Run();
