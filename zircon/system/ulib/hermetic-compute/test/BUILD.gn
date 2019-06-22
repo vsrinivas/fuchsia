@@ -1,0 +1,46 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("../hermetic_module.gni")
+
+group("test") {
+  testonly = true
+  deps = [
+    ":hermetic-compute-module",
+  ]
+}
+
+test_modules = [
+  "basic",
+  "many-args",
+]
+
+foreach(name, test_modules) {
+  hermetic_module("test-module-$name") {
+    testonly = true
+    visibility = [ ":*" ]
+    sources = [
+      "test-module-$name.cpp",
+    ]
+    ldflags = [ "-Wl,-z,stack-size=128" ]
+    deps = [
+      "$zx/system/ulib/hermetic-compute:hermetic-engine",
+    ]
+  }
+}
+
+test("hermetic-compute-module") {
+  sources = [
+    "test.cpp",
+  ]
+  deps = [
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/hermetic-compute",
+    "$zx/system/ulib/zxtest",
+  ]
+  data_deps = []
+  foreach(name, test_modules) {
+    data_deps += [ ":test-module-$name" ]
+  }
+}

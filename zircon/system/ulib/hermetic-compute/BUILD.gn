@@ -1,0 +1,46 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("hermetic_module.gni")
+
+if (is_hermetic) {
+  # This is for hermetic_module() targets to use in deps.
+  # It's not to used in programs that link to hermetic-compute.
+  library("hermetic-engine") {
+    sources = [
+      "engine-start.S",
+    ]
+    public_deps = [
+      # <lib/hermetic-compute/hermetic-engine.h> -> <zircon/syscalls.h>
+      "$zx/system/ulib/zircon:headers",
+    ]
+    public_configs = [ ":hermetic-engine.config" ]
+  }
+
+  config("hermetic-engine.config") {
+    visibility = [ ":*" ]
+    defines = [ "HERMETIC_COMPUTE_MODULE" ]
+  }
+} else {
+  # This is the library for loading and launching hermetic engine modules.
+  library("hermetic-compute") {
+    sources = [
+      "get-vdso.cpp",
+      "hermetic-compute.cpp",
+    ]
+    public_deps = [
+      # <lib/hermetic-compute/hermetic-compute.h> -> <fbl/macros.h>
+      "$zx/system/ulib/fbl:headers",
+
+      # <lib/hermetic-compute/hermetic-compute.h> -> <lib/zx/vmar.h>
+      "$zx/system/ulib/zx:headers",
+    ]
+    deps = [
+      "$zx/system/ulib/elf-psabi",
+      "$zx/system/ulib/elfload",
+      "$zx/system/ulib/fdio",
+      "$zx/system/ulib/zx",
+    ]
+  }
+}

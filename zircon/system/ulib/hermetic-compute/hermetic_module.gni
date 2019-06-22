@@ -1,0 +1,63 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("$zx/public/gn/toolchain/environment_redirect.gni")
+
+# True iff the current toolchain builds hermetic modules.
+is_hermetic = toolchain.tags + [ "hermetic" ] - [ "hermetic" ] != toolchain.tags
+
+# Define a loadable_module() for use as a hermetic compute engine.
+#
+# This just like loadable_module() but it builds the code in the special
+# environment necessary to be loaded as a hermetic module.
+#
+# TODO(mcgrathr): Currently it's far too difficult to build code for this
+# environment, so we're reusing some of the hackery done for userboot.  With
+# the right compiler-driver and linkable runtime support, it should be
+# possible to make "hermetic mode" just a config() (i.e. compilation flags
+# and/or static libraries) that can simply be added to any loadable_module().
+# But note that in this build, it would still need to avoid any instrumented
+# variants, e.g. via all terminal targets passing variant_target()
+# target.exclude_variant_tags = invoker.exclude_variant_tags.
+#
+# Parameters
+#
+#   install_path
+#     - Optional: See loadable_module().  hermetic_module() gives
+#     this a different default, but it has the same meaning.
+#     - Default: "lib/hermetic/$output_name.so"
+#
+# See loadable_module() for other parameters and details.
+#
+template("hermetic_module") {
+  if (is_hermetic) {
+    # This toolchain builds things in hermetic mode.
+    loadable_module(target_name) {
+      forward_variables_from(invoker, "*")
+      if (defined(visibility)) {
+        visibility += [ ":$target_name" ]
+      }
+      if (!defined(output_name)) {
+        output_name = target_name
+      }
+      if (!defined(install_path)) {
+        install_path = "lib/hermetic/$output_name.so"
+      }
+    }
+  } else {
+    # Piggy-back on the userboot toolchain to build hermetic code for us.
+    not_needed(invoker, "*")
+    environment_redirect(target_name) {
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
+      environment_label = "$zx/kernel/lib/userabi/userboot"
+      deps = [
+        ":$target_name",
+      ]
+    }
+  }
+}

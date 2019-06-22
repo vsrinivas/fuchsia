@@ -29,6 +29,7 @@ if (current_toolchain == default_toolchain) {
 
       # userboot can't use any instrumentation runtimes.
       exclude_variant_tags = [ "instrumented" ]
+      tags = [ "hermetic" ]
     }
   }
 } else if (toolchain.environment == "userboot") {
@@ -38,6 +39,7 @@ if (current_toolchain == default_toolchain) {
       "$zx/public/gn/config:user",
       "$zx/public/gn/config:static-libc++",
       "$zx/public/gn/config:no_sanitizers",
+      "$zx/public/gn/config:no_undefined_symbols",
     ]
 
     cflags = [

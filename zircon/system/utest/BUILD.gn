@@ -105,6 +105,7 @@ if (current_cpu != "") {
       "$zx/system/ulib/fvm/test",
       "$zx/system/ulib/fzl/test",
       "$zx/system/ulib/gpt/test",
+      "$zx/system/ulib/hermetic-compute/test",
       "$zx/system/ulib/hid-parser/test",
       "$zx/system/ulib/hwreg/test",
       "$zx/system/ulib/id_allocator/test",
