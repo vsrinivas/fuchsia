@@ -29,8 +29,6 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.
 source "${FUCHSIA_DIR}/tools/devshell/lib/style.sh" || exit $?
 source "${FUCHSIA_DIR}/tools/devshell/lib/metrics.sh" || exit $?
 
-fx-config-read
-
 function usage {
   show-what-is-collected
   fx-command-help
