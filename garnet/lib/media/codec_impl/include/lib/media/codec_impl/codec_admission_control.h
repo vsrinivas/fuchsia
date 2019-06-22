@@ -58,11 +58,11 @@ class CodecAdmissionControl {
 
   void RemoveCodec(bool multi_instance);
 
-  async_dispatcher_t* shared_fidl_dispatcher_;
+  async_dispatcher_t* shared_fidl_dispatcher_ = nullptr;
 
   std::mutex lock_;
-  uint32_t single_instance_codec_count_ __TA_GUARDED(lock_);
-  uint32_t multi_instance_codec_count_ __TA_GUARDED(lock_);
+  uint32_t single_instance_codec_count_ __TA_GUARDED(lock_) = 0;
+  uint32_t multi_instance_codec_count_ __TA_GUARDED(lock_) = 0;
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(CodecAdmissionControl);
 };
