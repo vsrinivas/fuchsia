@@ -14,6 +14,16 @@
 
 namespace gdc {
 
+// Validates the buffer collection.
+static bool IsBufferCollectionValid(
+    const buffer_collection_info_t* buffer_collection) {
+  return !(buffer_collection == nullptr ||
+           buffer_collection->buffer_count == 0 ||
+           buffer_collection->buffer_count > countof(buffer_collection->vmos) ||
+           buffer_collection->format.image.pixel_format.type !=
+               fuchsia_sysmem_PixelFormatType_NV12);
+}
+
 zx_status_t Task::GetInputBufferPhysAddr(uint32_t input_buffer_index,
                                          zx_paddr_t* out) const {
   if (input_buffer_index >= input_buffers_.size() || out == nullptr) {
@@ -21,6 +31,15 @@ zx_status_t Task::GetInputBufferPhysAddr(uint32_t input_buffer_index,
   } else {
     *out = input_buffers_[input_buffer_index].region(0).phys_addr;
   }
+  return ZX_OK;
+}
+
+zx_status_t Task::GetInputBufferPhysSize(uint32_t input_buffer_index,
+                                         uint64_t* out) const {
+  if (input_buffer_index >= input_buffers_.size() || out == nullptr) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  *out = input_buffers_[input_buffer_index].region(0).size;
   return ZX_OK;
 }
 
@@ -103,18 +122,6 @@ zx_status_t Task::InitBuffers(
   return status;
 }
 
-// Validates the buffer collection.
-bool Task::IsBufferCollectionValid(
-    const buffer_collection_info_t* buffer_collection) const {
-  if (buffer_collection == nullptr || buffer_collection->buffer_count == 0 ||
-      buffer_collection->buffer_count > countof(buffer_collection->vmos) ||
-      buffer_collection->format.image.pixel_format.type !=
-          fuchsia_sysmem_PixelFormatType_NV12) {
-    return false;
-  }
-  return true;
-}
-
 // static
 zx_status_t Task::Create(
     const buffer_collection_info_t* input_buffer_collection,
@@ -135,8 +142,11 @@ zx_status_t Task::Create(
       input_buffer_collection, output_buffer_collection, config_vmo, bti);
   if (status != ZX_OK) {
     FX_LOG(ERROR, "%s: InitBuffers Failed\n", __func__);
+    return status;
   }
 
+  task->input_format_ = input_buffer_collection->format.image;
+  task->output_format_ = output_buffer_collection->format.image;
   task->callback_ = callback;
 
   *out = std::move(task);

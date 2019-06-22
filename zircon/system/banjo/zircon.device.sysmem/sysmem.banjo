@@ -8,3 +8,6 @@ library zircon.device.sysmem;
 
 struct BufferCollectionInfo {
 };
+
+struct ImageFormat {
+};

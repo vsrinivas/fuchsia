@@ -27,12 +27,24 @@ class Task {
     return config_vmo_pinned_.region(0).phys_addr;
   }
 
+  // Returns the physical address for the config VMO.
+  uint64_t GetConigVmoPhysSize() const {
+    return config_vmo_pinned_.region(0).size;
+  }
+
   // Returns the physical address for the input buffer.
   // |input_buffer_index| : Index of the input buffer for which the address is
   // requested. |out| : Returns the physical address if the index provided is
   // valid.
   zx_status_t GetInputBufferPhysAddr(uint32_t input_buffer_index,
                                      zx_paddr_t* out) const;
+
+  // Returns the size of the input buffer.
+  // |input_buffer_index| : Index of the input buffer for which the address is
+  // requested. |out| : Returns the size if the index provided is
+  // valid.
+  zx_status_t GetInputBufferPhysSize(uint32_t input_buffer_index,
+                                     uint64_t* out) const;
 
   // Validates input buffer index.
   bool IsInputBufferIndexValid(uint32_t input_buffer_index) const {
@@ -44,6 +56,8 @@ class Task {
     return output_buffers_.LockBufferForWrite();
   }
 
+  image_format_t input_format() { return input_format_; }
+  image_format_t output_format() { return output_format_; }
   const gdc_callback_t* callback() { return callback_; }
 
   // Static function to create a task object.
@@ -67,12 +81,11 @@ class Task {
       const buffer_collection_info_t* output_buffer_collection,
       const zx::vmo& config_vmo, const zx::bti& bti);
 
-  bool IsBufferCollectionValid(
-      const buffer_collection_info_t* buffer_collection) const;
-
   fzl::PinnedVmo config_vmo_pinned_;
   fzl::VmoPool output_buffers_;
   fbl::Array<fzl::PinnedVmo> input_buffers_;
+  image_format_t input_format_;
+  image_format_t output_format_;
   const gdc_callback_t* callback_;
 };
 }  // namespace gdc
