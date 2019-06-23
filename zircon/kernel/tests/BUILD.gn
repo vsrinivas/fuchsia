@@ -19,6 +19,7 @@ source_set("tests") {
     "mp_hotplug_tests.cpp",
     "pi_tests.cpp",
     "popcount.cpp",
+    "pow2_tests.cpp",
     "preempt_disable_tests.cpp",
     "printf_tests.cpp",
     "resource_tests.cpp",
@@ -35,7 +36,6 @@ source_set("tests") {
     "$zx/kernel/lib/crypto",
     "$zx/kernel/lib/debuglog",
     "$zx/kernel/lib/fbl",
-    "$zx/kernel/lib/header_tests",
     "$zx/kernel/lib/unittest",
     "$zx/kernel/object",
   ]

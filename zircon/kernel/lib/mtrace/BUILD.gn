@@ -2,7 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-source_set("mtrace") {
+assert(is_kernel)
+
+library("mtrace") {
+  kernel = true
   sources = [
     "mtrace-ipt.cpp",
     "mtrace-pmu.cpp",
@@ -11,5 +14,9 @@ source_set("mtrace") {
   deps = [
     "$zx/kernel/lib/perfmon:headers",
     "$zx/kernel/object",
+  ]
+  public_deps = [
+    # <lib/mtrace.h> has #include <lib/user_copy/user_ptr.h>
+    "$zx/kernel/lib/user_copy:headers",
   ]
 }

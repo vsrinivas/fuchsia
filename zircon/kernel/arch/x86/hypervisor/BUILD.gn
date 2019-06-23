@@ -13,7 +13,7 @@ source_set("hypervisor") {
   ]
   deps = [
     "$zx/kernel/arch/x86:headers",
-    "$zx/kernel/lib/hypervisor:headers",
+    "$zx/kernel/hypervisor:headers",
     "$zx/kernel/platform/pc",
     "$zx/system/ulib/explicit-memory",
   ]

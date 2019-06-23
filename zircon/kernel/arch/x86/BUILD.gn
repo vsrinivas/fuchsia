@@ -138,7 +138,7 @@ library("x86") {
     "$zx/kernel/dev/interrupt:headers",
 
     # arch/x86/hypervisor.h has #include <hypervisor/guest_physical_address_space.h>.
-    "$zx/kernel/lib/hypervisor:headers",
+    "$zx/kernel/hypervisor:headers",
 
     # <arch/aspace.h> has #include <bitmap/rle-bitmap.h>.
     "$zx/system/ulib/bitmap:headers",

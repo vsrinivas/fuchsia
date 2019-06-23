@@ -55,10 +55,10 @@ library("object") {
     "$zx/kernel/dev/interrupt",
     "$zx/kernel/dev/iommu/dummy",
     "$zx/kernel/dev/pcie",
+    "$zx/kernel/hypervisor",
     "$zx/kernel/lib/console",
     "$zx/kernel/lib/counters",
     "$zx/kernel/lib/fbl",
-    "$zx/kernel/lib/hypervisor",
     "$zx/kernel/lib/oom",
     "$zx/system/ulib/pretty",
     "$zx/system/ulib/region-alloc",
@@ -77,7 +77,7 @@ library("object") {
     "$zx/system/ulib/region-alloc:headers",
 
     # <object/vcpu_dispatcher.h> has #include <hypervisor/interrupt_tracker.h>.
-    #"$zx/kernel/lib/hypervisor:headers",
+    #"$zx/kernel/hypervisor:headers",
 
     # <object/process_dispatcher.h> has #include <vm/vm_aspace.h>.
     "$zx/kernel/vm:headers",

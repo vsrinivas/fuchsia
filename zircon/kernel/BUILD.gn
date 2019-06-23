@@ -42,6 +42,9 @@ if (current_toolchain == default_toolchain) {
         # <kernel/thread.h> has #include <vm/kstack.h>.
         "vm:headers.config",
 
+        # <vm/vm_object.h> has #include <lib/user_copy/user_ptr.h>.
+        "$zx/kernel/lib/user_copy:headers.config",
+
         # <lib/ktrace.h> has #include <lib/zircon-internal/ktrace.h>.
         "$zx/system/ulib/zircon-internal:headers.config",
 
@@ -53,9 +56,6 @@ if (current_toolchain == default_toolchain) {
 
         # <dev/iommu.h> has #include <fbl/name.h>
         "lib/fbl:headers.config",
-
-        # <lib/mtrace.h> has #include <lib/user_copy/user_ptr.h>
-        "lib/user_copy:headers.config",
       ]
       configs += common_configs
 
@@ -271,7 +271,7 @@ if (current_toolchain == default_toolchain) {
     #TODO: testonly = true
     visibility = [ ":*" ]
     deps = [
-      "lib/debugcommands",
+      "debugcommands",
       "tests",
     ]
   }

@@ -21,7 +21,7 @@ source_set("ktrace") {
   include_dirs = [ target_gen_dir ]
   deps = [
     ":ktrace-info",
-    "$zx/kernel/lib/hypervisor",
+    "$zx/kernel/hypervisor",
     "$zx/system/ulib/zircon-internal",
   ]
   public_configs = [ ":config" ]

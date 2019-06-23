@@ -20,7 +20,7 @@ source_set("hypervisor") {
     "$zx/kernel/dev/interrupt/arm_gic/v3",
     "$zx/kernel/dev/psci",
     "$zx/kernel/dev/timer/arm_generic",
-    "$zx/kernel/lib/hypervisor:headers",
+    "$zx/kernel/hypervisor:headers",
   ]
 }
 
@@ -31,7 +31,7 @@ source_set("tests") {
   ]
   deps = [
     "$zx/kernel/dev/interrupt/arm_gic/common",
-    "$zx/kernel/lib/hypervisor:headers",
+    "$zx/kernel/hypervisor:headers",
     "$zx/kernel/lib/unittest",
   ]
 }

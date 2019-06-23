@@ -8,6 +8,5 @@ source_set("debugcommands") {
   ]
   deps = [
     "$zx/kernel/lib/console",
-    "$zx/kernel/lib/debug",
   ]
 }

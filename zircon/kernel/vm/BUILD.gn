@@ -40,7 +40,7 @@ library("vm") {
     "$zx/kernel/lib/fbl:headers",
 
     # <vm/vm_object.h> has #include <lib/user_copy/user_ptr.h>.
-    "$zx/kernel/lib/user_copy",
+    "$zx/kernel/lib/user_copy:headers",
 
     # <vm/vm_aspace.h> has #include <lib/crypto/prng.h>
     "$zx/kernel/lib/crypto:headers",
