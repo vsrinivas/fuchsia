@@ -54,9 +54,7 @@ std::string LibraryName(const Library* library, std::string_view separator);
 // or in the 'global' context. Names either reference (or name) things which
 // appear in source, or are synthesized by the compiler (e.g. an anonymous
 // struct name).
-struct Name {
-    Name() {}
-
+struct Name final {
     Name(const Library* library, const SourceLocation name)
         : library_(library), name_(name) {}
 
@@ -1168,8 +1166,12 @@ private:
     Name NextAnonymousName();
     Name DerivedName(const std::vector<std::string_view>& components);
 
-    bool CompileCompoundIdentifier(const raw::CompoundIdentifier* compound_identifier,
-                                   SourceLocation location, Name* out_name);
+    // Attempts to compile a compound identifier, and resolve it to a name
+    // within the context of a library. On success, the name is returned.
+    // On failure, no name is returned, and a failure is emitted, i.e. the
+    // caller is not responsible for reporting the resolution error.
+    std::optional<Name> CompileCompoundIdentifier(
+        const raw::CompoundIdentifier* compound_identifier);
     bool RegisterDecl(std::unique_ptr<Decl> decl);
 
     bool ConsumeConstant(std::unique_ptr<raw::Constant> raw_constant, SourceLocation location,

@@ -85,7 +85,7 @@ void TypeConstructor::Accept(TreeVisitor* visitor) const {
     visitor->OnCompoundIdentifier(identifier);
     if (maybe_arg_type_ctor != nullptr)
         visitor->OnTypeConstructor(maybe_arg_type_ctor);
-    if (handle_subtype.has_value())
+    if (handle_subtype)
         visitor->OnHandleSubtype(handle_subtype.value());
     if (maybe_size != nullptr)
         visitor->OnConstant(maybe_size);

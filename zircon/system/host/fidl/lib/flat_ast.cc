@@ -521,7 +521,7 @@ public:
                 const Size* maybe_size,
                 types::Nullability nullability,
                 std::unique_ptr<Type>* out_type) const {
-        assert(!no_handle_subtype.has_value());
+        assert(!no_handle_subtype);
 
         if (maybe_arg_type != nullptr)
             return CannotBeParameterized(maybe_location);
@@ -550,7 +550,7 @@ public:
                 const Size* size,
                 types::Nullability nullability,
                 std::unique_ptr<Type>* out_type) const {
-        assert(!no_handle_subtype.has_value());
+        assert(!no_handle_subtype);
 
         if (maybe_arg_type != nullptr)
             return CannotBeParameterized(maybe_location);
@@ -581,7 +581,7 @@ public:
                 const Size* size,
                 types::Nullability nullability,
                 std::unique_ptr<Type>* out_type) const {
-        assert(!no_handle_subtype.has_value());
+        assert(!no_handle_subtype);
 
         if (arg_type == nullptr)
             return MustBeParameterized(maybe_location);
@@ -606,7 +606,7 @@ public:
                 const Size* size,
                 types::Nullability nullability,
                 std::unique_ptr<Type>* out_type) const {
-        assert(!no_handle_subtype.has_value());
+        assert(!no_handle_subtype);
 
         if (arg_type == nullptr)
             return MustBeParameterized(maybe_location);
@@ -632,7 +632,7 @@ public:
                 const Size* size,
                 types::Nullability nullability,
                 std::unique_ptr<Type>* out_type) const {
-        assert(!no_handle_subtype.has_value());
+        assert(!no_handle_subtype);
 
         if (arg_type != nullptr)
             return CannotBeParameterized(maybe_location);
@@ -681,7 +681,7 @@ public:
                 const Size* maybe_size,
                 types::Nullability nullability,
                 std::unique_ptr<Type>* out_type) const {
-        assert(!no_handle_subtype.has_value());
+        assert(!no_handle_subtype);
 
         if (arg_type == nullptr)
             return MustBeParameterized(maybe_location);
@@ -716,7 +716,7 @@ public:
                 const Size* size,
                 types::Nullability nullability,
                 std::unique_ptr<Type>* out_type) const {
-        assert(!no_handle_subtype.has_value());
+        assert(!no_handle_subtype);
 
         if (!type_decl_->compiled && type_decl_->kind != Decl::Kind::kProtocol) {
             if (type_decl_->compiling) {
@@ -1443,16 +1443,16 @@ Name Library::DerivedName(const std::vector<std::string_view>& components) {
     return Name(this, GeneratedSimpleName(StringJoin(components, "_")));
 }
 
-bool Library::CompileCompoundIdentifier(const raw::CompoundIdentifier* compound_identifier,
-                                        SourceLocation location, Name* name_out) {
+std::optional<Name> Library::CompileCompoundIdentifier(
+    const raw::CompoundIdentifier* compound_identifier) {
+
     const auto& components = compound_identifier->components;
     assert(components.size() >= 1);
 
     SourceLocation decl_name = components.back()->location();
 
     if (components.size() == 1) {
-        *name_out = Name(this, decl_name);
-        return true;
+        return Name(this, decl_name);
     }
 
     std::vector<std::string_view> library_name;
@@ -1462,19 +1462,18 @@ bool Library::CompileCompoundIdentifier(const raw::CompoundIdentifier* compound_
         library_name.push_back((*iter)->location().data());
     }
 
-    auto filename = location.source_file().filename();
+    auto filename = compound_identifier->location().source_file().filename();
     Library* dep_library = nullptr;
     if (!dependencies_.LookupAndUse(filename, library_name, &dep_library)) {
         std::string message("Unknown dependent library ");
         message += NameLibrary(library_name);
         message += ". Did you require it with `using`?";
         const auto& location = components[0]->location();
-        return Fail(location, message);
+        Fail(location, message);
+        return std::nullopt;
     }
 
-    // Resolve the name.
-    *name_out = Name(dep_library, decl_name);
-    return true;
+    return Name(dep_library, decl_name);
 }
 
 namespace {
@@ -1569,11 +1568,10 @@ bool Library::ConsumeConstant(std::unique_ptr<raw::Constant> raw_constant, Sourc
     switch (raw_constant->kind) {
     case raw::Constant::Kind::kIdentifier: {
         auto identifier = static_cast<raw::IdentifierConstant*>(raw_constant.get());
-        Name name;
-        if (!CompileCompoundIdentifier(identifier->identifier.get(), location, &name)) {
+        auto name = CompileCompoundIdentifier(identifier->identifier.get());
+        if (!name)
             return false;
-        }
-        *out_constant = std::make_unique<IdentifierConstant>(std::move(name));
+        *out_constant = std::make_unique<IdentifierConstant>(std::move(name.value()));
         break;
     }
     case raw::Constant::Kind::kLiteral: {
@@ -1588,8 +1586,8 @@ bool Library::ConsumeConstant(std::unique_ptr<raw::Constant> raw_constant, Sourc
 bool Library::ConsumeTypeConstructor(std::unique_ptr<raw::TypeConstructor> raw_type_ctor,
                                      SourceLocation location,
                                      std::unique_ptr<TypeConstructor>* out_type_ctor) {
-    Name name;
-    if (!CompileCompoundIdentifier(raw_type_ctor->identifier.get(), location, &name))
+    auto name = CompileCompoundIdentifier(raw_type_ctor->identifier.get());
+    if (!name)
         return false;
 
     std::unique_ptr<TypeConstructor> maybe_arg_type_ctor;
@@ -1605,7 +1603,7 @@ bool Library::ConsumeTypeConstructor(std::unique_ptr<raw::TypeConstructor> raw_t
     }
 
     *out_type_ctor = std::make_unique<TypeConstructor>(
-        std::move(name),
+        std::move(name.value()),
         std::move(maybe_arg_type_ctor),
         raw_type_ctor->handle_subtype,
         std::move(maybe_size),
@@ -1802,13 +1800,12 @@ bool Library::ConsumeProtocolDeclaration(
     std::set<Name> composed_protocols;
     for (auto& composed_protocol : protocol_declaration->composed_protocols) {
         auto& protocol_name = composed_protocol->protocol_name;
-        auto location = protocol_name->components[0]->location();
-        Name composed_protocol_name;
-        if (!CompileCompoundIdentifier(protocol_name.get(), location, &composed_protocol_name)) {
+        auto composed_protocol_name = CompileCompoundIdentifier(protocol_name.get());
+        if (!composed_protocol_name)
             return false;
-        }
-        if (!composed_protocols.insert(std::move(composed_protocol_name)).second)
-            return Fail(composed_protocol_name, "protocol composed multiple times");
+        auto maybe_location = composed_protocol_name.value().maybe_location();
+        if (!composed_protocols.insert(std::move(composed_protocol_name.value())).second)
+            return Fail(maybe_location, "protocol composed multiple times");
     }
 
     std::vector<Protocol::Method> methods;
