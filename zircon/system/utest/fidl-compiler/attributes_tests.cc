@@ -29,7 +29,6 @@ struct Empty {};
 [OnLibrary]
 library example;
 
-// TODO: Support placement of an attribute on using.
 using exampleusing;
 
 [OnBits]
@@ -128,6 +127,25 @@ xunion ExampleXUnion {
     ASSERT_NONNULL(example_xunion);
     EXPECT_TRUE(example_xunion->attributes->HasAttribute("OnXUnion"));
     EXPECT_TRUE(example_xunion->members.front().attributes->HasAttribute("OnXUnionMember"));
+
+    END_TEST;
+}
+
+bool no_attribute_on_using_not_event_doc() {
+    BEGIN_TEST;
+
+    TestLibrary library(R"FIDL(
+library example;
+
+/// nope
+[NoAttributeOnUsing, EvenDoc]
+using we.should.not.care;
+
+)FIDL");
+    EXPECT_FALSE(library.Compile());
+    auto errors = library.errors();
+    ASSERT_EQ(errors.size(), 1);
+    ASSERT_STR_STR(errors[0].c_str(), "no attributes allowed on library import, found: Doc, NoAttributeOnUsing, EvenDoc");
 
     END_TEST;
 }
@@ -581,6 +599,7 @@ union MyUnion {
 
 BEGIN_TEST_CASE(attributes_tests)
 RUN_TEST(placement_of_attributes)
+RUN_TEST(no_attribute_on_using_not_event_doc)
 RUN_TEST(no_two_same_attribute_test)
 RUN_TEST(no_two_same_doc_attribute_test)
 RUN_TEST(no_two_same_attribute_on_library_test)

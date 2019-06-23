@@ -5,6 +5,10 @@
 // This is the library
 library test;
 
+/// we do not aggregate attributes, but they should not be
+/// lost either
+///
+/// and it's also neat to format them properly
 using something.or.another as thing;
 
 struct arrays {

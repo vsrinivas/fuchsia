@@ -1615,6 +1615,20 @@ bool Library::ConsumeUsing(std::unique_ptr<raw::Using> using_directive) {
     if (using_directive->maybe_type_ctor)
         return ConsumeTypeAlias(std::move(using_directive));
 
+    if (using_directive->attributes && using_directive->attributes->attributes.size() != 0) {
+        std::string attributes_found = "";
+        for (const auto& attribute : using_directive->attributes->attributes) {
+            if (attributes_found.size() != 0) {
+                attributes_found.append(", ");
+            }
+            attributes_found.append(attribute.name);
+        }
+        std::string message("no attributes allowed on library import, found: ");
+        message.append(attributes_found);
+        const auto& location = using_directive->location();
+        return Fail(location, message);
+    }
+
     std::vector<std::string_view> library_name;
     for (const auto& component : using_directive->using_path->components) {
         library_name.push_back(component->location().data());
