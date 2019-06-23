@@ -30,12 +30,12 @@ public:
     // Suggested replacement string and location, per the JSON schema used by
     // Tricium for a findings/diagnostics
     struct Replacement {
-        const SourceLocation& source_location; // From the Finding
+        const SourceLocation& location; // From the Finding
         std::string replacement;
     };
 
     struct SuggestionWithReplacementLocation {
-        const SourceLocation& source_location; // From the Finding
+        const SourceLocation& location; // From the Finding
         Suggestion suggestion;
     };
 

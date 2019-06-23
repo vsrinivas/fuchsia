@@ -195,8 +195,7 @@ void WriteFindingsToErrorReporter(const Findings& findings,
     for (auto& finding : findings) {
         std::stringstream ss;
         PrintFinding(ss, finding);
-        error_reporter->ReportWarningWithSquiggle(finding.source_location(),
-                                                  ss.str());
+        error_reporter->ReportWarningWithSquiggle(finding.location(), ss.str());
     }
 }
 

@@ -19,7 +19,7 @@ namespace {
 class NoopTreeVisitor : public fidl::raw::DeclarationOrderTreeVisitor {
 public:
     NoopTreeVisitor()
-        : last_source_location_(nullptr) {}
+        : last_location_(nullptr) {}
 
     virtual void OnSourceElementStart(const fidl::raw::SourceElement& element) override {
         OnSourceElementShared(element.start_);
@@ -35,19 +35,19 @@ public:
         // token for an identifier list (for example) is the same as the start
         // token for the first identifier, so we need to make sure we don't
         // print that token twice.
-        if (ws_location > last_source_location_) {
+        if (ws_location > last_location_) {
             int size = (int)(current_token.data().data() - current_token.previous_end().data().data());
             std::string gap(ws_location, size);
             std::string content(current_token.data().data(), current_token.data().size());
             output_ += gap + content;
-            last_source_location_ = ws_location;
+            last_location_ = ws_location;
         }
     }
     std::string& output() { return output_; }
 
 private:
     std::string output_;
-    const char* last_source_location_;
+    const char* last_location_;
 };
 
 // Provides more useful context for string diff than EXPECT_STR_EQ, which shows

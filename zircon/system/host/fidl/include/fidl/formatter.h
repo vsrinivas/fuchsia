@@ -58,7 +58,7 @@ private:
 class FormattingTreeVisitor : public DeclarationOrderTreeVisitor {
 public:
     FormattingTreeVisitor()
-        : last_source_location_(nullptr) {}
+        : last_location_(nullptr) {}
 
     virtual void OnProtocolDeclaration(std::unique_ptr<ProtocolDeclaration> const& element) override {
         OnBlankLineRequiringNode();
@@ -185,7 +185,7 @@ public:
     std::string* formatted_output() { return &formatted_output_; }
 
 private:
-    const char* last_source_location_;
+    const char* last_location_;
 
     static constexpr int kIndentSpaces = 4;
 
@@ -385,14 +385,14 @@ private:
         // token for an identifier list (for example) is the same as the start
         // token for the first identifier, so we need to make sure we don't
         // print that token twice.
-        if (ws_location > last_source_location_) {
+        if (ws_location > last_location_) {
             int size = (int)(current_token.data().data() - current_token.previous_end().data().data());
             std::string gap(ws_location, size);
             std::string content(current_token.data().data(), current_token.data().size());
             std::string total_string = FormatAndPrintSegment(gap + content);
             TrackProtocolMethodAlignment(total_string);
             formatted_output_ += total_string;
-            last_source_location_ = ws_location;
+            last_location_ = ws_location;
         }
     }
 };

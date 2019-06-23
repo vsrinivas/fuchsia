@@ -114,7 +114,7 @@ const fidl::raw::SourceElement& GetElementAsRef(
 // Add a finding with |Finding| constructor arguments.
 // This function is const because the Findings (TreeVisitor) object
 // is not modified. It's Findings object (not owned) is updated.
-Finding* Linter::AddFinding(SourceLocation source_location,
+Finding* Linter::AddFinding(SourceLocation location,
                             std::string check_id,
                             std::string message) {
     bool is_included = included_check_ids_.find(check_id) != included_check_ids_.end();
@@ -123,9 +123,7 @@ Finding* Linter::AddFinding(SourceLocation source_location,
     if (is_excluded && !is_included)
         return nullptr;
 
-    auto result = current_findings_.emplace(
-        new Finding(
-            source_location, check_id, message));
+    auto result = current_findings_.emplace(new Finding(location, check_id, message));
     // Future checks may need to allow multiple findings of the
     // same check ID at the same location.
     assert(result.second &&

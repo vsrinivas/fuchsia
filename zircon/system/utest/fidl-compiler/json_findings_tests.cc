@@ -91,10 +91,9 @@ public:
 
         source_data.remove_prefix(start);
         source_data.remove_suffix(source_data.size() - size);
-        auto source_location = fidl::SourceLocation(source_data, source_file);
+        auto location = fidl::SourceLocation(source_data, source_file);
 
-        return &findings_.emplace_back(
-            source_location, args.check_id, args.message);
+        return &findings_.emplace_back(location, args.check_id, args.message);
     }
 
     bool ExpectJson(std::string expected_json) {

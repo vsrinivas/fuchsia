@@ -275,8 +275,8 @@ private:
     struct FindingPtrCompare {
         // Return true if lhs < rhs.
         bool operator()(const FindingPtr& lhs, const FindingPtr& rhs) const {
-            return lhs->source_location() < rhs->source_location() ||
-                   (lhs->source_location() == rhs->source_location() &&
+            return lhs->location() < rhs->location() ||
+                   (lhs->location() == rhs->location() &&
                     lhs->subcategory() < rhs->subcategory());
         }
     };

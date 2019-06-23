@@ -102,8 +102,8 @@ public:
         auto ast = parser.Parse();
         if (!parser.Ok()) {
             std::string_view beginning(source_file->data().data(), 0);
-            fidl::SourceLocation source_location(beginning, *source_file);
-            findings->emplace_back(source_location, "parser-error",
+            fidl::SourceLocation location(beginning, *source_file);
+            findings->emplace_back(location, "parser-error",
                                    error_reporter_->errors().front() + "\n");
             return false;
         }

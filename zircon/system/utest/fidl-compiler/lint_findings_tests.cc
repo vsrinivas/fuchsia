@@ -48,10 +48,10 @@ public:
                "Bad test! violation_string not found in template");
         std::string expanded_violation_string =
             TemplateString(violation_string).Substitute(substitutions_);
-        auto source_location = library().SourceLocation(
+        auto location = library().SourceLocation(
             start, expanded_violation_string.size());
         auto& finding = expected_findings_.emplace_back(
-            source_location, check_id, message);
+            location, check_id, message);
 
         if (!default_suggestion_.empty()) {
             if (default_replacement_.empty()) {
@@ -241,7 +241,7 @@ private:
                          "Missing check_id");
             ASSERT_FALSE(expected_finding.message().empty(),
                          "Missing message");
-            ASSERT_FALSE(!expected_finding.source_location().valid(),
+            ASSERT_FALSE(!expected_finding.location().valid(),
                          "Missing position");
         }
         return true;
@@ -254,15 +254,15 @@ private:
                                         std::string test_context,
                                         bool assert_positions_match) const {
         std::ostringstream ss;
-        ss << finding.source_location().position_str() << ": ";
+        ss << finding.location().position_str() << ": ";
         utils::PrintFinding(ss, finding);
         auto context = (test_context + ss.str());
         ASSERT_STRING_EQ(expectf.subcategory(),
                          finding.subcategory(),
                          context.c_str());
         if (assert_positions_match) {
-            ASSERT_STRING_EQ(expectf.source_location().position_str(),
-                             finding.source_location().position_str(),
+            ASSERT_STRING_EQ(expectf.location().position_str(),
+                             finding.location().position_str(),
                              context.c_str());
         }
         ASSERT_STRING_EQ(expectf.message(),
@@ -295,7 +295,7 @@ private:
         os << title << ":" << std::endl;
         os << "============================" << std::endl;
         for (; finding != end; finding++) {
-            os << finding->source_location().position_str() << ": ";
+            os << finding->location().position_str() << ": ";
             utils::PrintFinding(os, *finding);
             os << std::endl;
         }

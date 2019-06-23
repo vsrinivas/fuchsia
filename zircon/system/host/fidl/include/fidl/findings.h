@@ -58,9 +58,9 @@ class Finding {
 public:
     // Construct a Finding with an analyzer-specific subcategory string (for
     // example, fidl-lint's check-id), SourceLocation, and message
-    Finding(SourceLocation source_location,
+    Finding(SourceLocation location,
             std::string subcategory, std::string message)
-        : source_location_(source_location),
+        : location_(location),
           subcategory_(subcategory), message_(message) {}
 
     // move constructor
@@ -78,8 +78,8 @@ public:
     // methods to get the relative location of the reference within the file
     // (line and column), and std::string_view (substring) representing the characters
     // from reference start to end.
-    inline const SourceLocation& source_location() const {
-        return source_location_;
+    inline const SourceLocation& location() const {
+        return location_;
     }
 
     // Subcategory of the result (for example, fidl-lint's check-id). Used
@@ -102,7 +102,7 @@ public:
     }
 
 private:
-    SourceLocation source_location_;
+    SourceLocation location_;
     std::string subcategory_;
     std::string message_;
     std::optional<Suggestion> suggestion_;
