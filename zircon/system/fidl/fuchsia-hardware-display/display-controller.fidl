@@ -179,7 +179,7 @@ struct ClientCompositionOp {
 protocol Provider {
     /// Open a virtcon client. |device| should be a handle to one endpoint of a
     /// channel that (on success) will become an open connection to a new
-    /// instance of a display client device. An protocol request |controller|
+    /// instance of a display client device. A protocol request |controller|
     /// provides an interface to the Controller for the new device. Closing the
     /// connection to |device| will also close the |controller| interface. If
     /// the display device already has a virtcon controller then this method
@@ -190,7 +190,7 @@ protocol Provider {
 
     /// Open a primary client. |device| should be a handle to one endpoint of a
     /// channel that (on success) will become an open connection to a new
-    /// instance of a display client device. An protocol request |controller|
+    /// instance of a display client device. A protocol request |controller|
     /// provides an interface to the Controller for the new device. Closing the
     /// connection to |device| will also close the |controller| interface. If
     /// the display device already has a primary controller then this method
