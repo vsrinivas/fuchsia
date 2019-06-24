@@ -2,69 +2,72 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <errno.h>
 #include <pthread.h>
 
-#include <stddef.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cstdlib>
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
-#define kNumThreads 16
-#define kNumIterations 128
+namespace {
 
-static pthread_barrier_t barrier;
-static pthread_t threads[kNumThreads];
-static int barriers_won[kNumThreads];
+struct ThreadArgs {
+    pthread_barrier_t* barrier;
+    std::atomic<int> result;
+};
 
-static bool barrier_wait_test(size_t idx) {
-    BEGIN_HELPER;
+void* BarrierWait(void* arg) {
+    auto args = reinterpret_cast<ThreadArgs*>(arg);
+    args->result = pthread_barrier_wait(args->barrier);
 
-    for (int iteration = 0u; iteration < kNumIterations; iteration++) {
-        int result = pthread_barrier_wait(&barrier);
-        if (result == PTHREAD_BARRIER_SERIAL_THREAD) {
-            barriers_won[idx] += 1;
-        } else {
-            ASSERT_EQ(result, 0,
-                      "Invalid return value from pthread_barrier_wait");
+    return nullptr;
+}
+
+constexpr int kNumThreads = 16;
+constexpr int kNumIterations = 128;
+
+TEST(PThreadBarrierTest, SingleThreadWinsBarrierObjectResetsBetweenIterations) {
+    pthread_barrier_t barrier;
+    ASSERT_EQ(pthread_barrier_init(&barrier, nullptr, kNumThreads), 0);
+
+    for (int count = 0; count < kNumIterations; ++count) {
+        pthread_t threads[kNumThreads];
+        ThreadArgs args[kNumThreads];
+
+        for (int idx = 0; idx < kNumThreads; ++idx) {
+            args[idx].barrier = &barrier;
+            ASSERT_EQ(pthread_create(&threads[idx], nullptr, &BarrierWait,
+                      static_cast<void*>(&args[idx])), 0);
         }
-    }
 
-    END_HELPER;
+        for (int idx = 0; idx < kNumThreads; ++idx) {
+            ASSERT_EQ(pthread_join(threads[idx], nullptr), 0);
+        }
+
+        int num_wins = 0;
+        int num_zeros = 0;
+        for (int idx = 0; idx < kNumThreads; ++idx) {
+            int result = args[idx].result;
+            if (result == PTHREAD_BARRIER_SERIAL_THREAD) {
+                num_wins++;
+            } else if (result == 0) {
+                num_zeros++;
+            } else {
+                ASSERT_EQ(result, 0, "bad result for thread: %d result: %d\n", idx, result);
+            }
+        }
+        ASSERT_EQ(num_wins, 1);
+        ASSERT_EQ(num_zeros, kNumThreads - 1);
+    }
+    ASSERT_EQ(pthread_barrier_destroy(&barrier), 0);
 }
 
-static void* barrier_wait(void* arg) {
-    // The real work is in the subroutine because functions using
-    // ASSERT_* macros must return bool.
-    (void)barrier_wait_test((uintptr_t)arg);
-    return NULL;
+TEST(PThreadBarrierTest, InitWithNoThreadsReturnsInval) {
+    pthread_barrier_t barrier;
+    constexpr pthread_barrierattr_t* kNullAttrs = nullptr;
+    constexpr int kThreadCount = 0;
+    ASSERT_EQ(pthread_barrier_init(&barrier, kNullAttrs, kThreadCount), EINVAL,
+              "zero thread count should fail");
 }
 
-static bool test_barrier(void) {
-    BEGIN_TEST;
-
-    ASSERT_EQ(pthread_barrier_init(&barrier, NULL, kNumThreads), 0, "Failed to initialize barrier!");
-
-    for (int idx = 0; idx < kNumThreads; ++idx) {
-        ASSERT_EQ(pthread_create(&threads[idx], NULL,
-                                 &barrier_wait, (void*)(uintptr_t)idx), 0,
-                  "Failed to create thread!");
-    }
-
-    for (int idx = 0; idx < kNumThreads; ++idx) {
-        ASSERT_EQ(pthread_join(threads[idx], NULL), 0, "Failed to join thread!");
-    }
-
-    int total_barriers_won = 0;
-    for (int idx = 0; idx < kNumThreads; ++idx) {
-        total_barriers_won += barriers_won[idx];
-    }
-    ASSERT_EQ(total_barriers_won, kNumIterations, "Barrier busted!");
-
-    END_TEST;
-}
-
-BEGIN_TEST_CASE(pthread_barrier_tests)
-RUN_TEST(test_barrier)
-END_TEST_CASE(pthread_barrier_tests)
+} // namespace
