@@ -3,7 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::constants::{EMULATOR_DEVICE_DIR, EMULATOR_DRIVER_PATH},
+    crate::{
+        constants::{EMULATOR_DEVICE_DIR, EMULATOR_DRIVER_PATH, HOST_DEVICE_DIR},
+        device_watcher::{DeviceFile, DeviceWatcher, WatchFilter},
+    },
     failure::{bail, format_err, Error},
     fidl_fuchsia_bluetooth_test::{EmulatorSettings, HciEmulatorProxy},
     fidl_fuchsia_device::ControllerSynchronousProxy,
@@ -11,11 +14,9 @@ use {
         DeviceSynchronousProxy, RootDeviceSynchronousProxy, CONTROL_DEVICE, MAX_DEVICE_NAME_LEN,
     },
     fidl_fuchsia_hardware_bluetooth::EmulatorProxy,
-    fuchsia_async::{self as fasync, TimeoutExt},
-    fuchsia_syslog::{fx_log_err, fx_log_info},
-    fuchsia_vfs_watcher::{WatchEvent as VfsWatchEvent, Watcher as VfsWatcher},
+    fuchsia_async as fasync,
+    fuchsia_syslog::fx_log_err,
     fuchsia_zircon as zx,
-    futures::TryStreamExt,
     std::{
         fs::{File, OpenOptions},
         path::{Path, PathBuf},
@@ -35,6 +36,18 @@ pub struct Emulator {
 }
 
 impl Emulator {
+    /// Returns the default settings.
+    // TODO(armansito): Consider defining a library type for EmulatorSettings.
+    pub fn default_settings() -> EmulatorSettings {
+        EmulatorSettings {
+            address: None,
+            hci_config: None,
+            extended_advertising: None,
+            acl_buffer_settings: None,
+            le_acl_buffer_settings: None,
+        }
+    }
+
     /// Publish a new bt-emulator device and return a handle to it. No corresponding bt-hci device
     /// will be published; to do so it must be explicitly configured and created with a call to
     /// `publish()`
@@ -47,22 +60,28 @@ impl Emulator {
     /// Publish a bt-emulator and a bt-hci device using the default emulator settings.
     pub async fn create_and_publish(name: &str) -> Result<Emulator, Error> {
         let fake_dev = await!(Emulator::create(name))?;
-        let default_settings = EmulatorSettings {
-            address: None,
-            hci_config: None,
-            extended_advertising: None,
-            acl_buffer_settings: None,
-            le_acl_buffer_settings: None,
-        };
-        await!(fake_dev.publish(default_settings))?;
+        await!(fake_dev.publish(Self::default_settings()))?;
         Ok(fake_dev)
     }
 
-    /// Sends a publish message to the controller. This is a convenience method that internally
+    /// Sends a publish message to the emulator. This is a convenience method that internally
     /// handles the FIDL binding error.
     pub async fn publish(&self, settings: EmulatorSettings) -> Result<(), Error> {
         let result = await!(self.emulator().publish(settings))?;
         result.map_err(|e| format_err!("failed to publish bt-hci device: {:#?}", e))
+    }
+
+    /// Sends a publish message emulator and returns a Future that resolves when a bt-host device is
+    /// published. Note that this requires the bt-host driver to be installed. On success, returns a
+    /// `DeviceFile` that represents the bt-host device.
+    pub async fn publish_and_wait_for_host(
+        &self,
+        settings: EmulatorSettings,
+    ) -> Result<DeviceFile, Error> {
+        let mut watcher = DeviceWatcher::new(HOST_DEVICE_DIR, watch_timeout())?;
+        let _ = await!(self.publish(settings))?;
+        let topo = PathBuf::from(fdio::device_get_topo_path(self.file())?);
+        await!(watcher.watch_new(&topo, WatchFilter::AddedOrExisting))
     }
 
     /// Returns a reference to the underlying file.
@@ -123,11 +142,12 @@ impl TestDevice {
         zx::Status::ok(status)?;
 
         // Wait until a bt-emulator device gets published under our test device.
-        let topo_path = fdio::device_get_topo_path(&self.0)?;
-        let emulator_dev = await!(watch_for_device(EMULATOR_DEVICE_DIR, &topo_path))?;
+        let topo_path = PathBuf::from(fdio::device_get_topo_path(&self.0)?);
+        let mut watcher = DeviceWatcher::new(EMULATOR_DEVICE_DIR, watch_timeout())?;
+        let emulator_dev = await!(watcher.watch_new(&topo_path, WatchFilter::AddedOrExisting))?;
 
         // Connect to the bt-emulator device.
-        let channel = fdio::clone_channel(&emulator_dev.file)?;
+        let channel = fdio::clone_channel(emulator_dev.file())?;
         let emulator = EmulatorProxy::new(fasync::Channel::from_channel(channel)?);
 
         // Open a HciEmulator protocol channel.
@@ -145,80 +165,13 @@ impl Drop for TestDevice {
     }
 }
 
-// Represents a device file that is opened when waiting for device creation.
-struct DeviceFile {
-    file: File,
-
-    // The path of the device in the namespace. This is an informational field that used to watch
-    // for device removal in the tests below (we use this since it's not possible to obtain the
-    // topological path of a device that got removed).
-    path: PathBuf,
-
-    // Topological path used to verify that the device is published under the correct hierarchy.
-    topo_path: PathBuf,
-}
-
-// Helper macro for waiting on a Future with a timeout.
-macro_rules! await_timeout {
-    ($fut:expr) => {
-        await!($fut.on_timeout(watch_timeout().after_now(), || Err(format_err!(
-            "timed out waiting for device"
-        ))))
-    };
-}
-
-// Helper functions for asynchronously waiting for existing and added devices. These are used by
-// production code and unit tests below.
-
-async fn watch_for_device<'a>(
-    dir_path: &'a str,
-    parent_topo_path: &'a str,
-) -> Result<DeviceFile, Error> {
-    let dir = File::open(dir_path)?;
-    let mut watcher = VfsWatcher::new(&dir)?;
-    await_timeout!(watch_for_device_helper(
-        &mut watcher,
-        dir_path,
-        parent_topo_path,
-        vec![VfsWatchEvent::EXISTING, VfsWatchEvent::ADD_FILE]
-    ))
-}
-
-async fn watch_for_device_helper<'a>(
-    watcher: &'a mut VfsWatcher,
-    dir_path: &'a str,
-    parent_topo_path: &'a str,
-    events: Vec<VfsWatchEvent>,
-) -> Result<DeviceFile, Error> {
-    while let Some(msg) = await!(watcher.try_next())? {
-        if events.contains(&msg.event) {
-            let dev = open_dev(&msg.filename.to_string_lossy(), dir_path)?;
-            if dev.topo_path.starts_with(parent_topo_path) {
-                fx_log_info!("found device: {:#?}", dev.path);
-                return Ok(dev);
-            }
-        }
-    }
-    unreachable!();
-}
-
-fn open_dev(filename: &str, dir: &str) -> Result<DeviceFile, Error> {
-    let path = PathBuf::from(format!("{}/{}", dir, filename));
-    let dev = open_rdwr(&path)?;
-    let topo_path = fdio::device_get_topo_path(&dev)?;
-    Ok(DeviceFile { file: dev, path: path, topo_path: PathBuf::from(topo_path) })
-}
-
 fn open_rdwr<P: AsRef<Path>>(path: P) -> Result<File, Error> {
     OpenOptions::new().read(true).write(true).open(path).map_err(|e| e.into())
 }
 
 #[cfg(test)]
 mod tests {
-    use {
-        super::*, crate::constants::HCI_DEVICE_DIR, fidl_fuchsia_bluetooth_test::EmulatorError,
-        futures::Future,
-    };
+    use {super::*, crate::constants::HCI_DEVICE_DIR, fidl_fuchsia_bluetooth_test::EmulatorError};
 
     fn default_settings() -> EmulatorSettings {
         EmulatorSettings {
@@ -230,47 +183,12 @@ mod tests {
         }
     }
 
-    // Waits until a device with the given `path` gets removed.
-    async fn watch_for_removal<'a>(
-        watcher: &'a mut VfsWatcher,
-        dir: &'a str,
-        path: &'a PathBuf,
-    ) -> Result<(), Error> {
-        while let Some(msg) = await!(watcher.try_next())? {
-            match msg.event {
-                VfsWatchEvent::REMOVE_FILE => {
-                    let dev_path =
-                        PathBuf::from(format!("{}/{}", dir, &msg.filename.to_string_lossy()));
-                    if dev_path == *path {
-                        return Ok(());
-                    }
-                }
-                _ => (),
-            }
-        }
-        unreachable!();
-    }
-
-    fn watch_for_existing<'a>(
-        watcher: &'a mut VfsWatcher,
-        dir: &'a str,
-        parent_topo_path: &'a str,
-    ) -> impl Future<Output = Result<DeviceFile, Error>> + 'a {
-        watch_for_device_helper(watcher, dir, parent_topo_path, vec![VfsWatchEvent::EXISTING])
-    }
-
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_publish_lifecycle() {
-        // Create watchers for bt-hci and bt-emulator device creation.
-        let hci_dir = File::open(HCI_DEVICE_DIR).expect("Failed to open bt-hci device dir");
-        let emul_dir =
-            File::open(EMULATOR_DEVICE_DIR).expect("Failed to open bt-emulator device dir");
-
         // We use these watchers to verify the addition and removal of these devices as tied to the
         // lifetime of the Emulator instance we create below.
-        let mut hci_watcher: VfsWatcher;
-        let mut emul_watcher: VfsWatcher;
-
+        let mut hci_watcher: DeviceWatcher;
+        let mut emul_watcher: DeviceWatcher;
         let mut hci_dev: DeviceFile;
         let mut emul_dev: DeviceFile;
 
@@ -279,31 +197,23 @@ mod tests {
                 await!(Emulator::create("publish-test-0")).expect("Failed to construct Emulator");
             let topo_path = fdio::device_get_topo_path(&fake_dev.dev.0)
                 .expect("Failed to obtain topological path for Emulator");
+            let topo_path = PathBuf::from(topo_path);
 
             // A bt-emulator device should already exist by now.
-            emul_watcher =
-                VfsWatcher::new(&emul_dir).expect("Failed to create bt-emulator directory watcher");
-            emul_dev = await_timeout!(watch_for_existing(
-                &mut emul_watcher,
-                EMULATOR_DEVICE_DIR,
-                &topo_path
-            ))
-            .expect("Expected bt-emulator device to be published");
+            emul_watcher = DeviceWatcher::new(EMULATOR_DEVICE_DIR, watch_timeout())
+                .expect("Failed to create bt-emulator device watcher");
+            emul_dev = await!(emul_watcher.watch_existing(&topo_path))
+                .expect("Expected bt-emulator device to have been published");
 
             // Send a publish message to the device. This call should succeed and result in a new
             // bt-hci device. (Note: it is important for `hci_watcher` to get constructed here since
             // our expectation is based on the `ADD_FILE` event).
-            hci_watcher =
-                VfsWatcher::new(&hci_dir).expect("Failed to create bt-hci directory watcher");
+            hci_watcher = DeviceWatcher::new(HCI_DEVICE_DIR, watch_timeout())
+                .expect("Failed to create bt-hci device watcher");
             let _ = await!(fake_dev.publish(default_settings()))
                 .expect("Failed to send Publish message to emulator device");
-            hci_dev = await_timeout!(watch_for_device_helper(
-                &mut hci_watcher,
-                HCI_DEVICE_DIR,
-                &topo_path,
-                vec![VfsWatchEvent::ADD_FILE]
-            ))
-            .expect("Expected a bt-hci device to be published");
+            hci_dev = await!(hci_watcher.watch_new(&topo_path, WatchFilter::AddedOnly))
+                .expect("Expected a new bt-hci device");
 
             // Once a device is published, it should not be possible to publish again while the
             // HciEmulator channel is open.
@@ -313,13 +223,9 @@ mod tests {
         }
 
         // Both devices should be destroyed when `fake_dev` gets dropped.
-        let _ = await_timeout!(watch_for_removal(&mut hci_watcher, HCI_DEVICE_DIR, &hci_dev.path))
-            .expect("Expected the bt-hci device to get removed");
-        let _ = await_timeout!(watch_for_removal(
-            &mut emul_watcher,
-            EMULATOR_DEVICE_DIR,
-            &emul_dev.path
-        ))
-        .expect("Expected the bt-emulator device to get removed");
+        let _ = await!(hci_watcher.watch_removed(hci_dev.path()))
+            .expect("Expected bt-hci device to get removed");
+        let _ = await!(emul_watcher.watch_removed(emul_dev.path()))
+            .expect("Expected bt-emulator device to get removed");
     }
 }

@@ -8,20 +8,18 @@ use {
     fidl_fuchsia_bluetooth_host::{HostEvent, HostProxy},
     fuchsia_async::{self as fasync, TimeoutExt},
     fuchsia_bluetooth::{
-        error::Error as BtError, expectation::Predicate, hci, hci_emulator::Emulator, host,
-        util::clone_host_state,
+        constants::HOST_DEVICE_DIR, device_watcher::DeviceWatcher, error::Error as BtError,
+        expectation::Predicate, hci_emulator::Emulator, host, util::clone_host_state,
     },
-    fuchsia_vfs_watcher::{WatchEvent as VfsWatchEvent, Watcher as VfsWatcher},
     fuchsia_zircon::{Duration, DurationNum},
     futures::{future, task, Future, FutureExt, Poll, TryFutureExt, TryStreamExt},
     parking_lot::{MappedRwLockReadGuard, RwLock, RwLockReadGuard},
     slab::Slab,
-    std::{borrow::Borrow, collections::HashMap, fs::File, path::PathBuf, pin::Pin, sync::Arc},
+    std::{borrow::Borrow, collections::HashMap, path::PathBuf, pin::Pin, sync::Arc},
 };
 
 use crate::harness::TestHarness;
 
-const BT_HOST_DIR: &str = "/dev/class/bt-host";
 const TIMEOUT_SECONDS: i64 = 10; // in seconds
 
 fn timeout_duration() -> Duration {
@@ -36,7 +34,7 @@ struct HostDriverHarnessInner {
     hci_emulator: Option<Emulator>,
 
     // Access to the bt-host device under test.
-    host_path: String,
+    host_path: PathBuf,
     pub host_proxy: HostProxy,
 
     // Current bt-host driver state.
@@ -98,7 +96,7 @@ impl HostDriverHarness {
 impl HostDriverHarnessInner {
     fn new(
         hci: Emulator,
-        host_path: String,
+        host_path: PathBuf,
         host: HostProxy,
         info: AdapterInfo,
     ) -> HostDriverHarness {
@@ -334,79 +332,17 @@ impl Future for RemoteDeviceStateFuture {
     }
 }
 
-// Returns a Future that resolves when a bt-host device gets added under the given topological
-// path.
-async fn watch_for_new_host_helper(
-    mut watcher: VfsWatcher,
-    parent_topo_path: String,
-) -> Result<(File, PathBuf), Error> {
-    while let Some(msg) = await!(watcher.try_next())? {
-        match msg.event {
-            VfsWatchEvent::EXISTING | VfsWatchEvent::ADD_FILE => {
-                let path =
-                    PathBuf::from(format!("{}/{}", BT_HOST_DIR, msg.filename.to_string_lossy()));
-                let host_fd = hci::open_rdwr(&path)?;
-                let host_topo_path = fdio::device_get_topo_path(&host_fd)?;
-                if host_topo_path.starts_with(parent_topo_path.as_str()) {
-                    return Ok((host_fd, path.clone()));
-                }
-            }
-            _ => (),
-        }
-    }
-    unreachable!();
-}
-
-// Returns a Future that resolves when the bt-host device with the given path gets removed.
-async fn wait_for_host_removal_helper(mut watcher: VfsWatcher, path: String) -> Result<(), Error> {
-    while let Some(msg) = await!(watcher.try_next())? {
-        match msg.event {
-            VfsWatchEvent::REMOVE_FILE => {
-                let actual_path = format!("{}/{}", BT_HOST_DIR, msg.filename.to_string_lossy());
-                if path == actual_path {
-                    return Ok(());
-                }
-            }
-            _ => (),
-        }
-    }
-    unreachable!();
-}
-
-// Wraps a Future inside a timeout that logs a message and resolves to an error on expiration.
-fn timeout<T, F>(fut: F, msg: &'static str) -> impl Future<Output = Result<T, Error>>
-where
-    F: Future<Output = Result<T, Error>>,
-{
-    fut.on_timeout(timeout_duration().after_now(), move || Err(BtError::new(msg).into()))
-}
-
-async fn watch_for_host(watcher: VfsWatcher, hci_path: String) -> Result<(File, PathBuf), Error> {
-    await!(timeout(watch_for_new_host_helper(watcher, hci_path), "timed out waiting for bt-host"))
-}
-
-async fn wait_for_host_removal(watcher: VfsWatcher, path: String) -> Result<(), Error> {
-    await!(timeout(
-        wait_for_host_removal_helper(watcher, path),
-        "timed out waiting for bt-host removal"
-    ))
-}
-
 // Creates a fake bt-hci device and returns the corresponding bt-host device once it gets created.
 async fn setup_emulated_host_test() -> Result<HostDriverHarness, Error> {
-    let fake_hci = await!(Emulator::create_and_publish("bt-hci-integration-test-0"))?;
-    let fake_hci_topo_path = fdio::device_get_topo_path(fake_hci.file())?;
-
-    let dir = File::open(&BT_HOST_DIR)?;
-    let watcher = VfsWatcher::new(&dir)?;
-    let (host_dev_fd, path) = await!(watch_for_host(watcher, fake_hci_topo_path))?;
+    let emulator = await!(Emulator::create("bt-integration-test-host"))?;
+    let host_dev = await!(emulator.publish_and_wait_for_host(Emulator::default_settings()))?;
 
     // Open a Host FIDL interface channel to the bt-host device.
-    let fidl_handle = host::open_host_channel(&host_dev_fd)?;
-    let host = HostProxy::new(fasync::Channel::from_channel(fidl_handle.into())?);
+    let channel = host::open_host_channel(host_dev.file())?;
+    let host = HostProxy::new(fasync::Channel::from_channel(channel.into())?);
     let info = await!(host.get_info())?;
 
-    Ok(HostDriverHarnessInner::new(fake_hci, path.to_string_lossy().to_string(), host, info))
+    Ok(HostDriverHarnessInner::new(emulator, host_dev.path().to_path_buf(), host, info))
 }
 
 async fn run_host_test_async<F, Fut>(test_func: F) -> Result<(), Error>
@@ -423,10 +359,11 @@ where
     let result = await!(test_func(host_test.clone()));
 
     // Shut down the fake bt-hci device and make sure the bt-host device gets removed.
-    let dir = File::open(&BT_HOST_DIR)?;
-    let watcher = VfsWatcher::new(&dir)?;
+    let mut watcher = DeviceWatcher::new(HOST_DEVICE_DIR, timeout_duration())?;
     host_test.0.write().close_fake_hci();
-    await!(wait_for_host_removal(watcher, host_test.0.read().host_path.clone()))?;
+
+    let host_path = &host_test.0.read().host_path;
+    await!(watcher.watch_removed(host_path))?;
     result
 }
 
