@@ -300,7 +300,8 @@ zx_status_t load_test_firmware(const char* firmware_path) {
     if (firmware_path) {
         firmware = firmware_path;
     } else {
-        firmware = fuchsia_hardware_usb_fwloader_PrebuiltType_TESTER;
+        firmware = static_cast<fuchsia_hardware_usb_fwloader_PrebuiltType>(
+            fuchsia_hardware_usb_fwloader_PrebuiltType_TESTER);
     }
     zx_status_t status = load_to_ram(firmware_path, firmware);
     if (status != ZX_OK) {
@@ -335,7 +336,8 @@ zx_status_t load_bootloader(const char* flash_prog_image_path, const char* firmw
     if (flash_prog_image_path) {
         firmware = flash_prog_image_path;
     } else {
-        firmware = fuchsia_hardware_usb_fwloader_PrebuiltType_FLASH;
+        firmware = static_cast<fuchsia_hardware_usb_fwloader_PrebuiltType>(
+            fuchsia_hardware_usb_fwloader_PrebuiltType_FLASH);
     }
 
     zx_status_t status = load_to_ram(flash_prog_image_path, firmware);
@@ -353,7 +355,8 @@ zx_status_t load_bootloader(const char* flash_prog_image_path, const char* firmw
     if (firmware_path) {
         firmware = firmware_path;
     } else {
-        firmware = fuchsia_hardware_usb_fwloader_PrebuiltType_BOOT;
+        firmware = static_cast<fuchsia_hardware_usb_fwloader_PrebuiltType>(
+            fuchsia_hardware_usb_fwloader_PrebuiltType_BOOT);
     }
     status = device_load_firmware(std::move(updated_dev), firmware);
     if (status != ZX_OK) {
