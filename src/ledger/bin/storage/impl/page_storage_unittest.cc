@@ -512,6 +512,10 @@ class PageStorageTest : public ledger::TestWithEnvironment {
   void CheckInboundObjectReferences(
       CoroutineHandler* handler, ObjectIdentifier object_identifier,
       ObjectReferencesAndPriority expected_references) {
+    ASSERT_FALSE(
+        GetObjectDigestInfo(object_identifier.object_digest()).is_inlined())
+        << "Broken test: CheckInboundObjectReferences must be called on "
+           "non-inline pieces only.";
     ObjectReferencesAndPriority stored_references;
     ASSERT_EQ(Status::OK,
               PageStorageImplAccessorForTest::GetDb(storage_)
@@ -525,6 +529,10 @@ class PageStorageTest : public ledger::TestWithEnvironment {
   void CheckInboundCommitReferences(
       CoroutineHandler* handler, ObjectIdentifier object_identifier,
       const std::vector<CommitId>& expected_references) {
+    ASSERT_FALSE(
+        GetObjectDigestInfo(object_identifier.object_digest()).is_inlined())
+        << "Broken test: CheckInboundCommitReferences must be called on "
+           "non-inline pieces only.";
     std::vector<CommitId> stored_references;
     ASSERT_EQ(Status::OK,
               PageStorageImplAccessorForTest::GetDb(storage_)
@@ -701,11 +709,13 @@ TEST_F(PageStorageTest, AddGetLocalCommits) {
 }
 
 TEST_F(PageStorageTest, AddLocalCommitsReferences) {
-  // Create two commits pointing to the same object identifier by creating two
-  // identical journals and commiting them. We then check that both commits are
-  // stored as inbound references of said object.
+  // Create two commits pointing to the same non-inline object identifier by
+  // creating two identical journals and commiting them. We then check that both
+  // commits are stored as inbound references of said object.
   std::unique_ptr<const Commit> base = GetFirstHead();
-  ObjectIdentifier object_id = RandomObjectIdentifier(environment_.random());
+  const ObjectData data(RandomString(environment_.random(), 65536),
+                        InlineBehavior::PREVENT);
+  const ObjectIdentifier object_id = data.object_identifier;
   std::unique_ptr<Journal> journal = storage_->StartCommit(base->Clone());
   journal->Put("key", object_id, KeyPriority::EAGER);
   bool called;
@@ -1716,7 +1726,7 @@ TEST_F(PageStorageTest, GetObjectFromSyncWrongId) {
                Status::DATA_INTEGRITY_ERROR);
 }
 
-TEST_F(PageStorageTest, DISABLED_AddAndGetHugeTreenodeFromLocal) {
+TEST_F(PageStorageTest, AddAndGetHugeTreenodeFromLocal) {
   std::string data_str = RandomString(environment_.random(), 65536);
 
   ObjectData data(std::move(data_str), ObjectType::TREE_NODE,
@@ -1776,6 +1786,11 @@ TEST_F(PageStorageTest, DISABLED_AddAndGetHugeTreenodeFromLocal) {
         ForEachIndexChild(
             piece->GetData(), [this, handler, object_identifier](
                                   ObjectIdentifier piece_identifier) {
+              if (GetObjectDigestInfo(piece_identifier.object_digest())
+                      .is_inlined()) {
+                // References to inline pieces are not stored on disk.
+                return Status::OK;
+              }
               CheckInboundObjectReferences(
                   handler, piece_identifier,
                   {{object_identifier.object_digest(), KeyPriority::EAGER}});
