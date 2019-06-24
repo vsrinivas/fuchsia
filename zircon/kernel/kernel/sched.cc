@@ -431,7 +431,7 @@ void sched_yield() {
 
     // consume the rest of the time slice, deboost ourself, and go to the end of a queue
     current_thread->remaining_time_slice = 0;
-    deboost_thread(current_thread, false);
+    deboost_thread(current_thread, true);
 
     current_thread->state = THREAD_READY;
 
