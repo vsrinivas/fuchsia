@@ -25,6 +25,8 @@ group("tests") {
   deps = [
     ":ledger_tests",
     "bin:ledger_fuzzer_tests",
+    "cloud_provider_memory_diff:tests",
+    "third_party/bup:bup_tests",
   ]
 }
 
@@ -62,8 +64,6 @@ package("ledger_tests") {
     "//src/ledger/bin/tests/e2e_sync",
     "//src/ledger/bin/tests/integration",
     "//src/ledger/cloud_provider_firestore/bin:tests",
-
-    # "//src/ledger/cloud_provider_in_memory/bin",
     "//src/ledger/cloud_provider_in_memory/bin:tests",
     "//src/ledger/lib:ledger_lib_unittests",
   ]
