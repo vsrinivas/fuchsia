@@ -1716,7 +1716,7 @@ TEST_F(PageStorageTest, GetObjectFromSyncWrongId) {
                Status::DATA_INTEGRITY_ERROR);
 }
 
-TEST_F(PageStorageTest, AddAndGetHugeTreenodeFromLocal) {
+TEST_F(PageStorageTest, DISABLED_AddAndGetHugeTreenodeFromLocal) {
   std::string data_str = RandomString(environment_.random(), 65536);
 
   ObjectData data(std::move(data_str), ObjectType::TREE_NODE,
