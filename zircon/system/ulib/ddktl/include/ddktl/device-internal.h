@@ -133,10 +133,10 @@ using is_base_proto = std::is_same<internal::base_protocol, T>;
 // providing a no-op in the DDKTL_DEPRECATED static method.
 #define DDKTL_DEPRECATED(condition)                \
     template <typename T = D, bool En = condition, \
-              typename std::enable_if<!fbl::integral_constant<bool, En>::value, int>::type = 0>
+              typename std::enable_if<!std::integral_constant<bool, En>::value, int>::type = 0>
 #define DDKTL_NOTREADY(condition)                  \
     template <typename T = D, bool En = condition, \
-              typename std::enable_if<fbl::integral_constant<bool, En>::value, int>::type = 0>
+              typename std::enable_if<std::integral_constant<bool, En>::value, int>::type = 0>
 
 // Mixin checks: ensure that a type meets the following qualifications:
 //
