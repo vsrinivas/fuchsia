@@ -135,7 +135,18 @@ TEST(CAbi, LogRecordAbi) {
   static_assert(offsetof(zx_log_record_t, data) == 32, "");
 }
 
-using LoggerIntegrationTest = sys::testing::TestWithEnvironment;
+__BEGIN_CDECLS
+
+// This does not come from header file as this function should only be used in
+// tests and is not for general use.
+void fx_log_reset_global_for_testing(void);
+__END_CDECLS
+
+class LoggerIntegrationTest : public sys::testing::TestWithEnvironment {
+ public:
+  LoggerIntegrationTest() { fx_log_reset_global_for_testing(); }
+  ~LoggerIntegrationTest() override { fx_log_reset_global_for_testing(); }
+};
 
 TEST_F(LoggerIntegrationTest, ListenFiltered) {
   // Make sure there is one syslog message coming from that pid and with a tag
