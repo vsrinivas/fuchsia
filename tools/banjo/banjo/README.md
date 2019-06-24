@@ -20,7 +20,7 @@ Run the following commands:
 
 ```
 fx set ${product}.${board} --with //bundles:tests
-fx run-host-tests banjo_unittests_lib_test
+fx run-host-tests banjo_unittests
 ```
 
 ## Releasing
