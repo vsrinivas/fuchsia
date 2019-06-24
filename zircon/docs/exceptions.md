@@ -1,270 +1,178 @@
-# Exception handling
+# Exception Handling
 
 ## Introduction
 
-Exception handling support in Zircon was inspired by similar support in Mach.
+When a thread encounters a fault condition, for example a segfault, execution
+is paused and the thread enters exception handling. Handlers which have
+registered to receive these exceptions are notified and given a chance to
+inspect or correct the condition.
 
-Exceptions are mainly used for debugging. Outside of debugging
-one generally uses ["signals"](signals.md).
-Signals are the core Zircon mechanism for observing state changes on
-kernel Objects (a Channel becoming readable, a Process terminating,
-an Event becoming signaled, etc).
-See [Signals](#signals) below.
+This functionality is commonly used by debuggers or crash loggers, which want
+to have a chance to interact with threads before they would otherwise crash.
+For applications that just want to track task lifecycles without needing to
+intercept crashes, [signals](signals.md) may be a better choice.
 
-The reader is assumed to have a basic understanding of what exceptions like
-segmentation faults, etc. are, as well as Posix signals.
-This document does not explain what a segfault is, nor what "exception
-handling" is at a high level (though it certainly can if there is a need).
+## The Basics
 
-## Current state
+Exceptions are handled from userspace by creating an exception channel on a
+task (thread, process, or job) with the [`zx_task_create_exception_channel()`]
+system call. The created handle is a standard Zircon
+[channel](objects/channel.md), but is created read-only so can only be used
+for receiving exception messages.
 
-Exceptions are in the process of switching from port-based handling (described
-in this doc) to channel-based handling.
+When an exception occurs, the thread is paused and a message containing a
+`zx_exception_info_t` and an exception handle is sent to the channel. The
+lifetime of the exception is bound to the lifetime of this exception handle, so
+when the receiver is done processing, closing this exception handle will resume
+the exception. This exception handle is non-copyable, meaning that at any given
+time, there is only one handler for this exception.
 
-If possible, new code should prefer to use channels (see
-[`zx_task_create_exception_channel()`]). As channels come online and get the
-necessary features we will begin switching over existing usage. Once ports are
-fully deprecated this documentation will be updated with new instructions.
+By default, closing an exception handle will keep the thread paused and send
+the exception to the next handler. If the receiver has corrected the exception
+and wants the thread to resume execution instead, it can change the exception
+state to `ZX_EXCEPTION_STATE_HANDLED` via [`zx_object_set_property()`] before
+closing.
 
-## The basics
+## Exception Handles
 
-Exceptions are handled from userspace by binding a Zircon Port to the
-Exception Port of the desired object: thread, process, or job.
-This is done with the
-[`zx_task_bind_exception_port()`] system call.
+Exception handles behave similarly to suspend tokens by keeping the thread
+paused until they are closed. Additionally, exception handles have functions
+to help receivers process the exception:
 
-Example:
+* [`zx_object_set_property()`] with `ZX_PROP_EXCEPTION_STATE` to set behavior
+  on handle close
+* [`zx_exception_get_thread()`] to get a handle to the exception thread
+* [`zx_exception_get_process()`] to get a handle to the exception process
+  (process or job exception channels only)
+
+Task handles retrieved from exceptions will have the same rights as the task
+originally passed into [`zx_task_create_exception_channel()`].
+
+### Example
+
+This simple example creates an exception channel and loops reading exceptions
+until the task closes.
 
 ```cpp
-  zx_handle_t eport;
-  auto status = zx_port_create(0, &eport);
-  // ... check status ...
+void ExceptionHandlerLoop(zx_handle_t task) {
+  // Create the exception channel.
   uint32_t options = 0;
-  // The key is anything that is useful to the code handling the exception.
-  uint64_t child_key = 0;
-  // Assume |child| is a process handle.
-  status = zx_task_bind_exception_port(child, eport, child_key, options);
+  zx_handle_t channel;
+  zx_status_t status = zx_task_create_exception_channel(task, options,
+                                                        &channel);
   // ... check status ...
-```
 
-When an exception occurs a report is sent to the port,
-after which the receiver must reply with either "exception handled"
-or "exception not handled".
-The thread stays paused until then, or until the port is unbound,
-either explicitly or by the port being closed (say because the handler
-process exited). If the port is unbound, for whatever reason, the
-exception is processed as if the reply was "exception not handled".
-
-Here is a simple exception handling loop.
-The main components of it are the call to the
-[`zx_port_wait()`] system call
-to wait for an exception, or anything else that's interesting, to happen,
-and the call to the
-[`zx_task_resume_from_exception()`] system call
-to indicate the handler is finished processing the exception.
-
-```cpp
   while (true) {
-    zx_port_packet_t packet;
-    auto status = zx_port_wait(eport, ZX_TIME_INFINITE, &packet);
+    // Wait until we get ZX_CHANNEL_READABLE (exception) or
+    // ZX_CHANNEL_PEER_CLOSED (task terminated).
+    zx_signals_t signals = 0;
+    status = zx_object_wait_one(channel,
+                                ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
+                                ZX_TIME_INFINITE, &signals);
     // ... check status ...
-    if (packet.key != child_key) {
-      // ... do something else, depending on what else the port is used for ...
-      continue;
+
+    if (signals & ZX_CHANNEL_READABLE) {
+      // Read the exception info and handle from the channel.
+      zx_exception_info_t info;
+      zx_handle_t exception;
+      status = zx_channel_read(channel, 0, &info, &exception, sizeof(info), 1,
+                               nullptr, nullptr);
+      // ... check status ...
+
+      // Send the exception out to some other function for processing, which
+      // returns true if the exception has been handled and we can resume the
+      // thread, or false to pass the exception to the next handler.
+      bool handled = process_exception(info, exception);
+      if (handled) {
+        uint32_t state = ZX_EXCEPTION_STATE_HANDLED;
+        status = zx_object_set_property(exception, ZX_PROP_EXCEPTION_STATE,
+                                        &state, sizeof(state));
+        // ... check status ...
+      }
+
+      // Close the exception to finish handling.
+      zx_handle_close(exception);
+    } else {
+      // We got ZX_CHANNEL_PEER_CLOSED, the task has terminated.
+      zx_handle_close(channel);
+      return;
     }
-    if (!ZX_PKT_IS_EXCEPTION(packet.type)) {
-      // ... probably a signal, process it ...
-      continue;
-    }
-    zx_koid_t packet_tid = packet.exception.tid;
-    zx_handle_t thread;
-    status = zx_object_get_child(child, packet_tid, ZX_RIGHT_SAME_RIGHTS,
-                                 &thread);
-    // ... check status ...
-    bool handled = process_exception(child, thread, &packet);
-    uint32_t resume_flags = 0;
-    if (!handled)
-      resume_flags |= ZX_RESUME_TRY_NEXT;
-    status = zx_task_resume_from_exception(thread, eport, resume_flags);
-    // ... check status ...
-    status = zx_handle_close(thread);
-    assert(status == ZX_OK);
   }
+}
 ```
 
-To unbind an exception port, pass **ZX_HANDLE_INVALID** for the
-exception port:
+## Exception Types
 
-```cpp
-  uint32_t options = 0;
-  status = zx_task_bind_exception_port(child, ZX_HANDLE_INVALID,
-                                       key, options);
-  // ... check status ...
-```
+At a high level there are two types of exceptions: architectural and synthetic.
+Architectural exceptions are things like a segfault (e.g., dereferencing the
+NULL pointer) or executing an undefined instruction. Synthetic exceptions are
+things like thread start/stop notifications or
+[policy violations](syscalls/job_set_policy.md).
 
-## Exception processing details
+Architectural and policy exceptions are considered fatal, and will cause the
+process to be killed if they are unhandled. Debugger-only exceptions - thread
+start/stop and process start - are informational and will continue execution
+normally even if the thread isn't explicitly resumed. These exceptions are
+meant to give a debugger a chance to react to these lifetime events correctly,
+as the corresponding thread will be paused until the exception is resumed.
 
-When a thread gets an exception it is paused while the kernel processes
-the exception. The kernel looks for bound exception ports in a specific order
-and if it finds one an "exception report" is sent to the bound port.
+Exception types are defined in
+[`<zircon/syscalls/exception.h>`](../system/public/zircon/syscalls/exception.h).
 
-Exception reports are messages sent through the port with a specific format
-defined by the port message protocol. The packet contents are defined by
-the *zx_packet_exception_t* type defined in
-[`<zircon/syscalls/port.h>`](../system/public/zircon/syscalls/port.h).
+## Exception Channel Types
 
-The exception handler is expected to read the message, decide how it
-wants to process the exception, and then resume the thread that got the
-exception with the
-[`zx_task_resume_from_exception()`] system call.
+Exception channels have different characteristics depending on the task type and
+whether the `ZX_EXCEPTION_CHANNEL_DEBUGGER` flag is passed to
+[`zx_task_create_exception_channel()`]. The table below summarizes the
+differences between the various channel types:
 
-Resuming the thread can be done in either of two ways:
+Channel Type  | `get_thread` | `get_process` | Architectural & Policy Exceptions | Thread Start/Stop Exceptions | Process Start Exception
+------------- | :----------: | :-----------: | :-------------------------------: | :--------------------------: | :---------------------:
+Thread        | X            |               | X                                 |                              |
+Process       | X            | X             | X                                 |                              |
+Process Debug | X            | X             | X                                 | X                            |
+Job           | X            | X             | X                                 |                              |
+Job Debug     | X            | X             |                                   |                              | X
 
-- Resume execution of the thread as if the exception has been resolved.
-If the thread gets another exception then exception processing begins
-again anew. An example of when one would do this is when resuming after a
-debugger breakpoint.
+The channel type also determines the order in which exception channels will be
+given the chance to handle an exception:
 
-```cpp
-  auto status = zx_task_resume_from_exception(thread, eport, 0);
-  // ... check status ...
-```
+1. process debug
+2. thread
+3. process
+4. job (parent job -> grandparent job -> etc)
 
-- Resume exception processing, marking the exception as "unhandled" by the
-current handler, thus giving the next exception port in the search order a
-chance to process the exception. An example of when one would do this is
-when the exception is not one the handler intends to process.
+If there are no remaining exception channels to try, the kernel terminates the
+process as if [`zx_task_kill()`] was called. The return code of a process
+terminated by an exception is `ZX_TASK_RETCODE_EXCEPTION_KILL`, and can be
+obtained with [`zx_object_get_info()`] using `ZX_INFO_PROCESS`.
 
-```cpp
-  auto status = zx_task_resume_from_exception(thread, eport,
-      ZX_RESUME_TRY_NEXT);
-  // ... check status ...
-```
+Each task only supports a single exception channel per type, so for example
+given a process with a debug exception channel attached, trying to create
+a second debug exception channel will fail, but creating a non-debug channel
+will succeed.
 
-If there are no remaining exception ports to try the kernel terminates
-the process, as if [`zx_task_kill()`] was called with the process.
-The return code of a process terminated by an exception is an
-unspecified non-zero value.
-The return code can be obtained with [`zx_object_get_info()`] and
-**ZX_INFO_PROCESS**.
+### `ZX_EXCP_PROCESS_STARTING` and Job Debugger Channels
 
-Example:
+The `ZX_EXCP_PROCESS_STARTING` behaves differently than other exceptions.
+It is only sent to job debugger exception channels, and is only sent to the
+first found handler, essentially assuming `ZX_EXCEPTION_STATE_HANDLED`
+regardless of actual handler behavior. This is also the only exception that
+job debugger channels receive, making them a special-case handler for just
+detecting new processes.
 
-```cpp
-    zx_info_process_t info;
-    auto status = zx_object_get_info(process, ZX_INFO_PROCESS, &info,
-                                     sizeof(info), nullptr, nullptr);
-    // ... check status ...
-    int return_code = info.return_code;
-```
+### Process Debugger First
 
-Resuming the thread requires a handle of the thread, which the handler
-may not yet have. The handle is obtained with the
-[`zx_object_get_child()`] system call.
-The pid,tid necessary to look up the thread are contained in the
-exception report. See the above trivial exception handler example.
+In Zircon the process debugger exception channel is tried first. This is useful
+for at least a few reasons:
 
-## Types of exceptions
+- Allows "fix and continue" debugging, e.g. if a thread gets a segfault,
+  the debugger user can fix the segfault and resume the thread without any
+  non-debugger channels seeing the exception.
+- Ensures debugger breakpoints get sent directly to the debugger without
+  other handlers having to explicitly pass them along.
 
-At a high level there are two types of exceptions: architectural and
-synthetic.
-Architectural exceptions are things like a segment fault (e.g., dereferencing
-the NULL pointer) or executing an undefined instruction. Synthetic exceptions
-are things like thread start and exit notifications. Synthetic
-exceptions are further distinguished as being debugger-specific or not.
-
-We use the term "general exceptions" to describe non-debugger-specific
-exceptions, and we use the term "debugger-specific exceptions" to describe
-exceptions that are only sent to debuggers.
-
-Exception types are enumerated in the *zx_excp_type_t* enum defined
-in [`<zircon/syscalls/exception.h>`](../system/public/zircon/syscalls/exception.h).
-
-## Exception ports
-
-Exception ports are where exception packets get sent to.
-A zircon port is bound to the exception port of a task object
-(thread, process, job) and then exception packets are sent to that
-port in a manner described below.
-
-Zircon supports the following general exception ports:
-
-- *Thread*
-- *Process*
-- *Job*
-
-Zircon also supports the following debugger-specific exception ports:
-
-- *Process Debugger*
-- *Job Debugger*
-
-There is only one of each kind of these per associated object.
-Note that processes and jobs have two distinct exception ports:
-the general one and a debugger-specific one.
-
-To bind to the debugger exception port pass
-**ZX_EXCEPTION_PORT_DEBUGGER** in *options* when binding an
-exception port to the process or job.
-
-## Exception delivery
-
-### Debugger only exceptions
-
-Debugger-only exceptions are only sent to one potential handler
-if it is present: a debugger.
-
-The job debugger exception port receives the following synthetic
-exception:
-
-- **ZX_EXCP_PROCESS_STARTING**
-
-The process debugger exception port receives the following synthetic
-exceptions:
-
-- **ZX_EXCP_THREAD_STARTING**
-- **ZX_EXCP_THREAD_EXITING**
-
-Note that there is no **ZX_EXCP_PROCESS_EXITING** exception.
-Also note that the process debugger exception port also receives
-all general exceptions: We want the debugger to be notified if, for
-example, a thread being debugged segfaults.
-
-### General exceptions
-
-Exceptions that are not debugger specific are all architectural
-exceptions and all synthetic exceptions not previously listed as
-debugger-specific, e.g., **ZX_EXCP_POLICY_ERROR**.
-
-General exceptions are sent to exception ports in the following order:
-
-- *Process Debugger* - The process debugger exception port is for
-things like zxdb and gdb.
-
-- *Thread* - This is for exception ports bound directly to the thread.
-
-- *Process* - This is for exception ports bound directly to the process.
-
-- *Job* - This is for exception ports bound to the process's job. Note that
-jobs have a hierarchy. First the process's job is searched. If it has a bound
-exception port then the exception is delivered to that port. If it does not
-have a bound exception port, or if the handler returns **ZX_RESUME_TRY_NEXT**,
-then that job's parent job is searched, and so on right up to the root job.
-
-If no exception port handles the exception then the kernel finishes
-exception processing by killing the process.
-
-Notes:
-
-- The search order is different than that of Mach. In Zircon the
-debugger exception port is tried first, before all other ports.
-This is useful for at least a few reasons:
-
-    - Allows "fix and continue" debugging. E.g., if a thread gets a segfault,
-      the debugger user can fix the segfault and resume the thread before the
-      thread even knows it got a segfault.
-    - Makes debugger breakpoints easier to reason about.
-
-## Interaction with thread suspension
+## Interaction with Task Suspension
 
 Exceptions and thread suspensions are treated separately.
 In other words, a thread can be both in an exception and be suspended.
@@ -273,95 +181,81 @@ from an exception handler. The thread stays paused until it is resumed
 for both the exception and the suspension:
 
 ```cpp
-  auto status = zx_task_resume_from_exception(thread, eport, 0);
-  // ... check status ...
-```
-
-and one for the suspension:
-
-```cpp
-  // suspend_token was obtained by an earlier call to zx_task_suspend().
-  auto status = zx_handle_close(suspend_token);
-  // ... check status ...
+zx_handle_close(exception);
+zx_handle_close(suspend_token);
 ```
 
 The order does not matter.
 
-## Interaction with thread kill
+## Interaction with Task Kill
 
-If [`zx_task_kill()`] is called on a thread (or its parent process/jobs) while
-it's in an exception, it will stop waiting for the exception handler and proceed
-to terminate.
+[`zx_task_kill()`] stops any exception handling on the task. If it is called on
+a thread (or its parent process/jobs) while the thread is in an exception:
 
-Similarly, a killed thread will still send a **ZX_EXCP_THREAD_EXITING**
-exception if a process debug handler is registered, but will not wait for a
-response from the handler and will instead continue to terminate.
+- the thread will stop waiting for the current exception handler
+- no further exception handlers will receive the exception
+- [`zx_exception_get_thread()`] and [`zx_exception_get_process()`] on the
+  outstanding exception handle will continue to provide valid task handles
+- [`zx_object_set_property()`] to set the exception's state will still return
+  `ZX_OK`, though the state won't have any effect since the thread is no longer
+  blocking on the handler
+
+Additionally, a killed thread will still send a `ZX_EXCP_THREAD_EXITING`
+exception (if a process debug handler is registered), but as above will not
+wait for a response from the handler.
 
 Although [`zx_task_kill()`] is generally asynchronous, meaning the thread may
 not finish terminating by the time the syscall returns, it does synchronously
-stop exception handling such that once it returns the thread cannot be resumed
-and will not pass the current exception to any other handler.
+stop exception handling such that once it returns, closing an exception handle
+will not resume the thread or pass the exception to another handler.
 
 ## Signals
 
-Signals are the core Zircon mechanism for observing state changes on
-kernel Objects (a Channel becoming readable, a Process terminating,
-an Event becoming signaled, etc). See ["signals"](signals.md).
+[Signals](signals.md) are the core Zircon mechanism for observing state changes
+on kernel objects (a channel becoming readable, a process terminating, an event
+becoming signaled, etc). A common pattern in Zircon is to have a message loop
+that waits for signals on one or more objects and handles them as they come in.
 
-Unlike exceptions, signals do not require a response from an exception handler.
-On the other hand signals are sent to whomever is waiting on the thread's
-handle, instead of being sent to the exception port that could be
-bound to the thread's process.
-This is generally not a problem for exception handlers because they generally
-keep track of thread handles anyway. For example, they need the thread handle
-to resume the thread after an exception.
-
-It does, however, mean that an exception handler must wait on the
-port *and* every thread handle that it wishes to monitor.
-Fortunately, one can reduce this to continuing to just have to wait
-on the port by using the
-[`zx_object_wait_async()`] system call
-to have signals regarding each thread sent to the port.
-In other words, there is still just one system call involved to wait
-for something interesting to happen.
+To incorporate exception handling into this pattern, use
+[`zx_object_wait_async()`] to wait for `ZX_CHANNEL_READABLE` (and optionally
+`ZX_CHANNEL_PEER_CLOSED`) on the exception channel.
 
 ```cpp
-  uint64_t key = some_key_denoting_the_thread;
-  bool is_suspended = thread_is_suspended(thread);
-  zx_signals_t signals = ZX_THREAD_TERMINATED;
-  if (is_suspended)
-    signals |= ZX_THREAD_RUNNING;
-  else
-    signals |= ZX_THREAD_SUSPENDED;
-  uint32_t options = ZX_WAIT_ASYNC_ONCE;
-  auto status = zx_object_wait_async(thread, eport, key, signals, options);
+zx_handle_t port;
+zx_status_t status = zx_port_create(0, &port);
+// ... check status ...
+
+// Start waiting on relevant signals on the exception channel.
+status = zx_object_wait_async(exception_channel, port, kMyExceptionKey,
+                              ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, 0);
+// ... check status ...
+
+// ... add other objects to |port| with wait_async() ...
+
+while (1) {
+  zx_port_packet_t packet;
+  status = zx_port_wait(port, ZX_TIME_INFINITE, &packet);
   // ... check status ...
+
+  if (packet.key == kMyExceptionKey) {
+    if (packet.signal.observed & ZX_CHANNEL_READABLE) {
+      // ... extract exception from |exception_channel| and process it ...
+
+      // wait_async() is one-shot so we need to reload it to continue
+      // receiving signals.
+      status = zx_object_wait_async(
+          exception_channel, port, kMyExceptionKey,
+          ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, 0);
+      // ... check status ...
+    } else {
+      // Got ZX_CHANNEL_PEER_CLOSED, task has terminated.
+      zx_handle_close(exception_channel);
+    }
+  } else {
+    // ... handle other objects added to |port| ...
+  }
+}
 ```
-
-When the thread gets any of the specified signals a **ZX_PKT_TYPE_SIGNAL_ONE**
-packet will be sent to the port. After processing the signal the above
-call to [`zx_object_wait_async()`] must be done again, that is the nature
-of **ZX_WAIT_ASYNC_ONCE**.
-
-*Note:* There is both an exception and a signal for thread termination.
-The **ZX_EXCP_THREAD_EXITING** exception is sent first. When the thread
-is finally terminated the **ZX_THREAD_TERMINATED** signal is sent.
-
-The following signals are relevant to exception handlers:
-
-- **ZX_THREAD_TERMINATED**
-- **ZX_THREAD_SUSPENDED**
-- **ZX_THREAD_RUNNING**
-
-When a thread is started **ZX_THREAD_RUNNING** is asserted.
-When it is suspended **ZX_THREAD_RUNNING** is deasserted, and
-**ZX_THREAD_SUSPENDED** is asserted. When the thread is resumed
-**ZX_THREAD_SUSPENDED** is deasserted and **ZX_THREAD_RUNNING** is
-asserted. When a thread terminates both **ZX_THREAD_RUNNING** and
-**ZX_THREAD_SUSPENDED** are deasserted and **ZX_THREAD_TERMINATED**
-is asserted. However, signals are OR'd into the state maintained by
-the port thus you may see any combination of requested signals
-when [`zx_port_wait()`] returns.
 
 ## Comparison with Posix (and Linux)
 
@@ -369,117 +263,53 @@ This table shows equivalent terms, types, and function calls between
 Zircon and Posix/Linux for exceptions and the kinds of things exception
 handlers generally do.
 
-```
-Zircon                       Posix/Linux
-------                       -----------
-Exception/Signal             Signal
-ZX_EXCP_*                    SIG*
-task_bind_exception_port()   ptrace(ATTACH,DETACH)
-task_suspend()               kill(SIGSTOP),ptrace(KILL(SIGSTOP))
-handle_close(suspend_token)  kill(SIGCONT),ptrace(CONT)
-task_resume_from_exception   kill(SIGCONT),ptrace(CONT)
-N/A                          kill(everything_other_than_SIGKILL)
-task_kill()                  kill(SIGKILL)
-TBD                          signal()/sigaction()
-port_wait()                  wait*()
-various                      W*() macros from sys/wait.h
-zx_packet_exception_t        siginfo_t
-zx_exception_context_t       siginfo_t
-thread_read_state            ptrace(GETREGS,GETREGSET)
-thread_write_state           ptrace(SETREGS,SETREGSET)
-process_read_memory          ptrace(PEEKTEXT)
-process_write_memory         ptrace(POKETEXT)
-```
+Zircon                             | Posix/Linux
+------                             | -----------
+Exception/Signal                   | Signal
+ZX_EXCP_*                          | SIG*
+zx_task_create_exception_channel() | ptrace(ATTACH,DETACH)
+zx_task_suspend()                  | kill(SIGSTOP),ptrace(KILL(SIGSTOP))
+zx_handle_close(suspend_token)     | kill(SIGCONT),ptrace(CONT)
+zx_handle_close(exception)         | kill(SIGCONT),ptrace(CONT)
+zx_task_kill()                     | kill(SIGKILL)
+N/A                                | kill(everything_else)
+TBD                                | signal()/sigaction()
+zx_port_wait()                     | wait*()
+various                            | W*() macros from sys/wait.h
+zx_exception_info_t                | siginfo_t
+zx_exception_context_t             | siginfo_t
+zx_thread_read_state()             | ptrace(GETREGS,GETREGSET)
+zx_thread_write_state()            | ptrace(SETREGS,SETREGSET)
+zx_process_read_memory()           | ptrace(PEEKTEXT)
+zx_process_write_memory()          | ptrace(POKETEXT)
 
 Zircon does not have asynchronous signals like `SIGINT`, `SIGQUIT`, `SIGTERM`,
 `SIGUSR1`, `SIGUSR2`, and so on.
 
-Another significant difference from Posix is that the exception handler
-is always run on a separate thread.
+Another significant difference from Posix is that in Zircon a thread cannot
+handle its own exceptions, since Zircon exception handling is a synchronous
+operation driven by userspace rather than an asynchronous callback invoked by
+the kernel.
 
-## Example programs
+## Examples
 
-There are three good example programs in the Zircon tree to use to
-further one's understanding of exceptions and signals in Zircon.
+Zircon code that uses exceptions can be viewed for futher examples, including:
 
-- `system/core/svchost/crashsvc`
+- `system/core/svchost/crashsvc`: system-level crash handler
+- `system/utest/exception`: exception unit tests
+- `system/utest/debugger`: debugger-related functionality unit tests
 
-`crash-svc` is the crash service thread hosted in `svchost`. It
-delegates the processing of the crash to either `ulib/inspector` in a
-standalone zircon build or to a upper layer FIDL service if the build
-contains garnet.
+## SEE ALSO
 
-- `system/utest/exception`
+- [`zx_task_create_exception_channel()`]
+- [`zx_exception_get_thread()`]
+- [`zx_exception_get_process()`]
+- [`zx_object_set_property()`]
 
-The basic exception handling testcase.
-
-- `system/utest/debugger`
-
-Testcase for the rest of the system calls a debugger would use, beyond
-those exercised by `system/utest/exception`.
-There are tests for segfault recovery, reading/writing thread registers,
-reading/writing process memory, as well as various other tests.
-
-## Todo
-
-There are a few outstanding issues:
-
-- `signal()`/`sigaction()` replacement
-
-In Posix one is able to specify handlers for particular signals,
-whereas in Zircon there is currently just the exception port,
-and the handler is expected to understand all possible exceptions.
-This is tracked as ZX-560.
-
-- `W\*()` macros from `sys/wait.h`
-
-When a process exits because of an exception, no information is provided
-on which exception the process got (e.g., segfault). At present only a
-non-specific non-zero exit code is returned.
-This is tracked as ZX-1974.
-
-- more selectiveness in which exceptions to see
-
-In addition to ZX-560 IWBN to be able to specify to the kernel
-when binding the exception port that one is only interested in
-seeing a particular subset of exceptions.
-This is tracked as ZX-990.
-
-- ability to say exception ports unbind quietly when closed
-
-The default behaviour when a port is unbound implicitly due to
-the port being closed is to resume exception processing, i.e.,
-given the next exception port in the search order a try.
-In debugging sessions it is useful to change the default behavior
-and have the port unbound "quietly", in other words leave things as
-is, with the thread still waiting for an exception response.
-This is because debuggers can crash, and obliterating an active debugging
-session is counterproductive.
-This is tracked as ZX-988.
-
-- rights for binding exception ports and getting debuggable thread handles
-
-In Zircon rights can, in general, only be taken away, they can't be added.
-However, one doesn't want to have "debuggability" a default right:
-debuggers are privileged processes. Thus we need a way to obtain handles
-with sufficient rights for debugging.
-This is tracked as ZX-509, ZX-911, and ZX-923.
-
-- no way to obtain currently bound port or to chain handlers
-
-Currently, there's no way to get the currently bound exception port.
-Possible use-cases are for debugging purposes (e.g, to see what's going on
-in the system).
-Another possible use-case is to allow chaining exception handlers, though for
-the case of in-process chaining it's likely better to use a
-`signal()`/`sigaction()` replacement (see ZX-560).
-This is tracked as ZX-1216.
-
-[`zx_object_get_child()`]: syscalls/object_get_child.md
+[`zx_exception_get_process()`]: syscalls/exception_get_process.md
+[`zx_exception_get_thread()`]: syscalls/exception_get_thread.md
 [`zx_object_get_info()`]: syscalls/object_get_info.md
+[`zx_object_set_property()`]: syscalls/object_set_property.md
 [`zx_object_wait_async()`]: syscalls/object_wait_async.md
-[`zx_port_wait()`]: syscalls/port_wait.md
-[`zx_task_bind_exception_port()`]: syscalls/task_bind_exception_port.md
 [`zx_task_create_exception_channel()`]: syscalls/task_create_exception_channel.md
 [`zx_task_kill()`]: syscalls/task_kill.md
-[`zx_task_resume_from_exception()`]: syscalls/task_resume_from_exception.md
