@@ -900,7 +900,7 @@ void PageStorageImpl::FillBufferWithObjectContent(
     ObjectIdentifier child_identifier =
         ToObjectIdentifier(child->object_identifier());
     // Skip children before the part to copy.
-    if (child_position + static_cast<int64_t>(child->size()) < global_offset) {
+    if (child_position + static_cast<int64_t>(child->size()) <= global_offset) {
       sub_offset += child->size();
       continue;
     }
