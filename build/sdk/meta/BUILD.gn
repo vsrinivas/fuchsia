@@ -17,7 +17,6 @@ schemas = [
   "documentation.json",
   "fidl_library.json",
   "host_tool.json",
-  "image.json",
   "loadable_module.json",
   "manifest.json",
   "sysroot.json",

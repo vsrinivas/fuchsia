@@ -25,7 +25,6 @@ pub enum ElementType {
     Documentation,
     FidlLibrary,
     HostTool,
-    Image,
     LoadableModule,
     Sysroot,
 }

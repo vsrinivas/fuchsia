@@ -20,8 +20,6 @@ import("//build/images/shell_commands.gni")
 import("//build/images/zxcrypt.gni")
 import("//build/info/info.gni")
 import("//build/package.gni")
-import("//build/sdk/sdk_atom.gni")
-import("//build/sdk/sdk_molecule.gni")
 import("//garnet/build/pkgfs.gni")
 import("//garnet/go/src/pm/pm.gni")
 
@@ -512,7 +510,6 @@ images += [
       type = "kernel"
       archive = add_qemu_to_build_archives
     }
-    sdk = "qemu-kernel.bin"
     deps = []
     foreach(image, zircon_images) {
       if (image.name == "qemu-kernel" && image.cpu == target_cpu) {
@@ -668,7 +665,6 @@ images += [
     deps = [
       ":fuchsia",
     ]
-    sdk = "fuchsia.zbi"
     if (!use_vboot && custom_signing_script == "") {
       updater = "zbi"
     }
@@ -718,7 +714,6 @@ if (custom_signing_script != "") {
       deps = [
         ":signed",
       ]
-      sdk = "fuchsia.zbi.signed"
       updater = "zbi.signed"
       json = {
         name = "zircon-a.signed"
@@ -764,7 +759,6 @@ if (custom_signing_script != "") {
       deps = [
         ":signed",
       ]
-      sdk = "zircon-a.signed"
       updater = "zbi.signed"
       json = {
         name = "zircon-a.signed"
@@ -921,7 +915,6 @@ if (!bootfs_only) {
         type = "blk"
         archive = add_qemu_to_build_archives
       }
-      sdk = "fvm.blk"
       public = [
         "IMAGE_FVM_RAW",
       ]
@@ -969,7 +962,6 @@ if (!bootfs_only) {
         type = "blk"
         bootserver_pave = [ "--fvm" ]
       }
-      sdk = "fvm.sparse.blk"
       public = [
         "IMAGE_FVM_SPARSE",
       ]
@@ -1133,7 +1125,6 @@ if (target_cpu != "arm64" && !use_vboot) {
       deps = [
         ":vboot",
       ]
-      sdk = "zircon.vboot"
     },
   ]
 
@@ -1157,7 +1148,6 @@ if (target_cpu != "arm64" && !use_vboot) {
         type = "blk"
         bootserver_pave = [ "--bootloader" ]
       }
-      sdk = "local.esp.blk"
       if (!use_vboot && custom_signing_script == "") {
         updater = "bootloader"
       }
@@ -1784,65 +1774,4 @@ write_images_manifest("images-manifest") {
     "$root_build_dir/images.json",
     "$root_build_dir/image_paths.sh",
   ]
-}
-
-###
-### SDK
-###
-
-sdk_images = []
-
-foreach(image, images) {
-  if (defined(image.sdk)) {
-    image_target_name = "${image.sdk}_sdk"
-    sdk_images += [ ":$image_target_name" ]
-    sdk_atom(image_target_name) {
-      id = "sdk://images/${image.sdk}"
-      category = "partner"
-      testonly = true
-
-      file_content = "target/$target_cpu/${image.sdk}"
-      meta = {
-        dest = "images/${image.sdk}-meta.json"
-        schema = "image"
-        value = {
-          type = "image"
-          name = "${image.sdk}"
-          file = {
-            if (target_cpu == "x64") {
-              x64 = file_content
-            } else if (target_cpu == "arm64") {
-              arm64 = file_content
-            } else {
-              assert(false, "Unsupported target architecture: $target_cpu")
-            }
-          }
-        }
-      }
-
-      image_sources = []
-      if (defined(image.sources)) {
-        image_sources += image.sources
-      } else {
-        foreach(label, image.deps) {
-          image_sources += get_target_outputs(label)
-        }
-      }
-
-      files = [
-        {
-          source = image_sources[0]
-          dest = "target/$target_cpu/${image.sdk}"
-        },
-      ]
-
-      non_sdk_deps = image.deps
-    }
-  }
-}
-
-sdk_molecule("images_sdk") {
-  testonly = true
-
-  deps = sdk_images
 }

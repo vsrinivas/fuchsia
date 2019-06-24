@@ -5,14 +5,9 @@
 import("//build/banjo/toolchain.gni")
 import("//build/dart/toolchain.gni")
 import("//build/fidl/toolchain.gni")
-import("//build/images/boot.gni")
 import("//build/sdk/sdk.gni")
 import("//build/sdk/sdk_documentation.gni")
 import("config.gni")
-
-declare_args() {
-  export_x64_sdk_images = false
-}
 
 # This default target should contain all public or partner SDKs.
 group("sdk") {
@@ -21,7 +16,6 @@ group("sdk") {
   public_deps = [
     ":core",
     ":ddk",
-    ":images",
     ":zircon_sysroot",
   ]
 }
@@ -145,26 +139,6 @@ sdk("e2e_testing") {
   deps = [
     "//sdk/testing/sl4f/client:client_sdk($dart_toolchain)",
   ]
-}
-
-sdk("images") {
-  # TODO(DX-1314): this id should not be necessary.
-  id = sdk_id
-
-  category = "partner"
-
-  testonly = true
-
-  deps = [
-    "//build/images:images_sdk",
-  ]
-  if (export_x64_sdk_images && !bootfs_only) {
-    deps += [
-      "//build/images:fvm.sparse.blk_sdk",
-      "//build/images:local.esp.blk_sdk",
-      "//build/images:zircon.vboot_sdk",
-    ]
-  }
 }
 
 # TODO(DX-1667): break this target down into smaller chunks.
