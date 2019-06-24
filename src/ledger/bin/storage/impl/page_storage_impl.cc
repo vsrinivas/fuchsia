@@ -1108,6 +1108,10 @@ void PageStorageImpl::GetOrDownloadPiece(
   });
 }
 
+LiveCommitTracker* PageStorageImpl::GetCommitTracker() {
+  return &commit_tracker_;
+}
+
 Status PageStorageImpl::SynchronousInit(CoroutineHandler* handler) {
   // Add the default page head if this page is empty.
   std::vector<std::pair<zx::time_utc, CommitId>> heads;
@@ -1159,7 +1163,7 @@ Status PageStorageImpl::SynchronousGetCommit(
             handler,
             [this](fit::function<void(Status, std::unique_ptr<const Commit>)>
                        callback) {
-              CommitImpl::Empty(this, std::move(callback));
+              CommitImpl::Empty(this, &commit_tracker_, std::move(callback));
             },
             &s, commit) == coroutine::ContinuationStatus::INTERRUPTED) {
       return Status::INTERRUPTED;
@@ -1171,7 +1175,8 @@ Status PageStorageImpl::SynchronousGetCommit(
   if (s != Status::OK) {
     return s;
   }
-  return CommitImpl::FromStorageBytes(commit_id, std::move(bytes), commit);
+  return CommitImpl::FromStorageBytes(&commit_tracker_, commit_id,
+                                      std::move(bytes), commit);
 }
 
 Status PageStorageImpl::SynchronousAddCommitFromLocal(
@@ -1225,8 +1230,8 @@ Status PageStorageImpl::SynchronousAddCommitsFromSync(
     }
 
     std::unique_ptr<const Commit> commit;
-    status =
-        CommitImpl::FromStorageBytes(id, std::move(storage_bytes), &commit);
+    status = CommitImpl::FromStorageBytes(&commit_tracker_, id,
+                                          std::move(storage_bytes), &commit);
     if (status != Status::OK) {
       FXL_LOG(ERROR) << "Unable to add commit. Id: " << convert::ToHex(id);
       return status;

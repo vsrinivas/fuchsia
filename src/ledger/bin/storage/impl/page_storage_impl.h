@@ -129,6 +129,10 @@ class PageStorageImpl : public PageStorage {
                                fit::function<bool(ThreeWayChange)> on_next_diff,
                                fit::function<void(Status)> on_done) override;
 
+  // Returns the LiveCommitTracker associated with this page. |PageStorageImpl|
+  // must outlive the returned pointer.
+  LiveCommitTracker* GetCommitTracker();
+
  private:
   friend class PageStorageImplAccessorForTest;
 
@@ -265,13 +269,13 @@ class PageStorageImpl : public PageStorage {
   ledger::Environment* environment_;
   encryption::EncryptionService* const encryption_service_;
   const PageId page_id_;
+  LiveCommitTracker commit_tracker_;
   std::unique_ptr<PageDb> db_;
   fxl::ObserverList<CommitWatcher> watchers_;
   callback::ManagedContainer managed_container_;
   PageSyncDelegate* page_sync_;
   bool page_is_online_ = false;
   std::unique_ptr<ObjectIdentifier> empty_node_id_ = nullptr;
-  LiveCommitTracker commit_tracker_;
 
   callback::OperationSerializer commit_serializer_;
   coroutine::CoroutineManager coroutine_manager_;

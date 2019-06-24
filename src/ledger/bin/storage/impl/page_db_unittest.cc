@@ -171,10 +171,11 @@ TEST_F(PageDbTest, Commits) {
     std::vector<std::unique_ptr<const Commit>> parents;
     parents.emplace_back(
         std::make_unique<CommitRandomImpl>(environment_.random()));
+    LiveCommitTracker tracker;
 
     std::unique_ptr<const Commit> commit = CommitImpl::FromContentAndParents(
-        environment_.clock(), RandomObjectIdentifier(environment_.random()),
-        std::move(parents));
+        &tracker, environment_.clock(),
+        RandomObjectIdentifier(environment_.random()), std::move(parents));
 
     std::string storage_bytes;
     EXPECT_EQ(Status::INTERNAL_NOT_FOUND,

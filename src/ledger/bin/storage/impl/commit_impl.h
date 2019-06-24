@@ -8,6 +8,11 @@
 #include <lib/fit/function.h>
 #include <lib/timekeeper/clock.h>
 
+#include <memory>
+#include <string>
+#include <vector>
+
+#include "src/ledger/bin/storage/impl/live_commit_tracker.h"
 #include "src/ledger/bin/storage/public/commit.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
@@ -25,23 +30,26 @@ class CommitImpl : public Commit {
   CommitImpl(Token token, CommitId id, zx::time_utc timestamp,
              uint64_t generation, ObjectIdentifier root_node_identifier,
              std::vector<CommitIdView> parent_ids,
-             fxl::RefPtr<SharedStorageBytes> storage_bytes);
+             fxl::RefPtr<SharedStorageBytes> storage_bytes,
+             LiveCommitTracker* tracker);
 
   ~CommitImpl() override;
 
   // Factory method for creating a |CommitImpl| object given its storage
   // representation. If the format is incorrect, |nullptr| will be returned.
-  static Status FromStorageBytes(CommitId id, std::string storage_bytes,
+  static Status FromStorageBytes(LiveCommitTracker* tracker, CommitId id,
+                                 std::string storage_bytes,
                                  std::unique_ptr<const Commit>* commit);
 
   static std::unique_ptr<const Commit> FromContentAndParents(
-      timekeeper::Clock* clock, ObjectIdentifier root_node_identifier,
+      LiveCommitTracker* tracker, timekeeper::Clock* clock,
+      ObjectIdentifier root_node_identifier,
       std::vector<std::unique_ptr<const Commit>> parent_commits);
 
   // Factory method for creating an empty |CommitImpl| object, i.e. without
   // parents and with empty contents.
   static void Empty(
-      PageStorage* page_storage,
+      PageStorage* page_storage, LiveCommitTracker* tracker,
       fit::function<void(Status, std::unique_ptr<const Commit>)> callback);
 
   // Commit:
@@ -66,6 +74,7 @@ class CommitImpl : public Commit {
   const ObjectIdentifier root_node_identifier_;
   const std::vector<CommitIdView> parent_ids_;
   const fxl::RefPtr<SharedStorageBytes> storage_bytes_;
+  LiveCommitTracker* const tracker_;
 };
 
 }  // namespace storage

@@ -99,20 +99,24 @@ CommitImpl::CommitImpl(Token /* token */, CommitId id, zx::time_utc timestamp,
                        uint64_t generation,
                        ObjectIdentifier root_node_identifier,
                        std::vector<CommitIdView> parent_ids,
-                       fxl::RefPtr<SharedStorageBytes> storage_bytes)
+                       fxl::RefPtr<SharedStorageBytes> storage_bytes,
+                       LiveCommitTracker* tracker)
     : id_(std::move(id)),
       timestamp_(timestamp),
       generation_(generation),
       root_node_identifier_(std::move(root_node_identifier)),
       parent_ids_(std::move(parent_ids)),
-      storage_bytes_(std::move(storage_bytes)) {
+      storage_bytes_(std::move(storage_bytes)),
+      tracker_(tracker) {
   FXL_DCHECK(id_ == kFirstPageCommitId ||
              (!parent_ids_.empty() && parent_ids_.size() <= 2));
+  tracker_->RegisterCommit(this);
 }
 
-CommitImpl::~CommitImpl() {}
+CommitImpl::~CommitImpl() { tracker_->UnregisterCommit(this); }
 
-Status CommitImpl::FromStorageBytes(CommitId id, std::string storage_bytes,
+Status CommitImpl::FromStorageBytes(LiveCommitTracker* tracker, CommitId id,
+                                    std::string storage_bytes,
                                     std::unique_ptr<const Commit>* commit) {
   FXL_DCHECK(id != kFirstPageCommitId);
 
@@ -136,12 +140,13 @@ Status CommitImpl::FromStorageBytes(CommitId id, std::string storage_bytes,
   *commit = std::make_unique<CommitImpl>(
       Token(), std::move(id), zx::time_utc(commit_storage->timestamp()),
       commit_storage->generation(), std::move(root_node_identifier), parent_ids,
-      std::move(storage_ptr));
+      std::move(storage_ptr), tracker);
   return Status::OK;
 }
 
 std::unique_ptr<const Commit> CommitImpl::FromContentAndParents(
-    timekeeper::Clock* clock, ObjectIdentifier root_node_identifier,
+    LiveCommitTracker* tracker, timekeeper::Clock* clock,
+    ObjectIdentifier root_node_identifier,
     std::vector<std::unique_ptr<const Commit>> parent_commits) {
   FXL_DCHECK(parent_commits.size() == 1 || parent_commits.size() == 2);
 
@@ -173,17 +178,17 @@ std::unique_ptr<const Commit> CommitImpl::FromContentAndParents(
   CommitId id = encryption::SHA256WithLengthHash(storage_bytes);
 
   std::unique_ptr<const Commit> commit;
-  Status status =
-      FromStorageBytes(std::move(id), std::move(storage_bytes), &commit);
+  Status status = FromStorageBytes(tracker, std::move(id),
+                                   std::move(storage_bytes), &commit);
   FXL_DCHECK(status == Status::OK);
   return commit;
 }
 
 void CommitImpl::Empty(
-    PageStorage* page_storage,
+    PageStorage* page_storage, LiveCommitTracker* tracker,
     fit::function<void(Status, std::unique_ptr<const Commit>)> callback) {
   btree::TreeNode::Empty(
-      page_storage, [callback = std::move(callback)](
+      page_storage, [tracker, callback = std::move(callback)](
                         Status s, ObjectIdentifier root_identifier) {
         if (s != Status::OK) {
           callback(s, nullptr);
@@ -197,7 +202,7 @@ void CommitImpl::Empty(
         auto ptr = std::make_unique<CommitImpl>(
             Token(), kFirstPageCommitId.ToString(), zx::time_utc(), 0,
             std::move(root_identifier), std::vector<CommitIdView>(),
-            std::move(storage_ptr));
+            std::move(storage_ptr), tracker);
         callback(Status::OK, std::move(ptr));
       });
 }
@@ -205,7 +210,7 @@ void CommitImpl::Empty(
 std::unique_ptr<const Commit> CommitImpl::Clone() const {
   return std::make_unique<CommitImpl>(Token(), id_, timestamp_, generation_,
                                       root_node_identifier_, parent_ids_,
-                                      storage_bytes_);
+                                      storage_bytes_, tracker_);
 }
 
 const CommitId& CommitImpl::GetId() const { return id_; }

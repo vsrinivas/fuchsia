@@ -168,6 +168,7 @@ source_set("unittests") {
     "journal_unittest.cc",
     "ledger_storage_unittest.cc",
     "leveldb_factory_unittest.cc",
+    "live_commit_tracker_unittest.cc",
     "object_digest_unittest.cc",
     "object_impl_unittest.cc",
     "page_db_empty_impl.cc",

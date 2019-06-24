@@ -37,12 +37,14 @@ class CommitImplTest : public StorageTest {
   bool CheckCommitStorageBytes(const std::unique_ptr<const Commit>& commit) {
     std::unique_ptr<const Commit> copy;
     Status status = CommitImpl::FromStorageBytes(
-        commit->GetId(), commit->GetStorageBytes().ToString(), &copy);
+        &tracker_, commit->GetId(), commit->GetStorageBytes().ToString(),
+        &copy);
     EXPECT_EQ(Status::OK, status);
 
     return CheckCommitEquals(*commit, *copy);
   }
 
+  LiveCommitTracker tracker_;
   fake::FakePageStorage page_storage_;
 
  private:
@@ -59,7 +61,8 @@ TEST_F(CommitImplTest, CommitStorageBytes) {
   parents.emplace_back(
       std::make_unique<CommitRandomImpl>(environment_.random()));
   std::unique_ptr<const Commit> commit = CommitImpl::FromContentAndParents(
-      environment_.clock(), root_node_identifier, std::move(parents));
+      &tracker_, environment_.clock(), root_node_identifier,
+      std::move(parents));
   EXPECT_TRUE(CheckCommitStorageBytes(commit));
 
   // A commit with two parents.
@@ -69,7 +72,8 @@ TEST_F(CommitImplTest, CommitStorageBytes) {
   parents.emplace_back(
       std::make_unique<CommitRandomImpl>(environment_.random()));
   std::unique_ptr<const Commit> commit2 = CommitImpl::FromContentAndParents(
-      environment_.clock(), root_node_identifier, std::move(parents));
+      &tracker_, environment_.clock(), root_node_identifier,
+      std::move(parents));
   EXPECT_TRUE(CheckCommitStorageBytes(commit2));
 }
 
@@ -81,10 +85,11 @@ TEST_F(CommitImplTest, CloneCommit) {
   parents.emplace_back(
       std::make_unique<CommitRandomImpl>(environment_.random()));
   std::unique_ptr<const Commit> commit = CommitImpl::FromContentAndParents(
-      environment_.clock(), root_node_identifier, std::move(parents));
+      &tracker_, environment_.clock(), root_node_identifier,
+      std::move(parents));
   std::unique_ptr<const Commit> copy;
   Status status = CommitImpl::FromStorageBytes(
-      commit->GetId(), commit->GetStorageBytes().ToString(), &copy);
+      &tracker_, commit->GetId(), commit->GetStorageBytes().ToString(), &copy);
   ASSERT_EQ(Status::OK, status);
   std::unique_ptr<const Commit> clone = commit->Clone();
   EXPECT_TRUE(CheckCommitEquals(*copy, *clone));
@@ -103,7 +108,8 @@ TEST_F(CommitImplTest, MergeCommitTimestamp) {
   auto max_timestamp =
       std::max(parents[0]->GetTimestamp(), parents[1]->GetTimestamp());
   std::unique_ptr<const Commit> commit = CommitImpl::FromContentAndParents(
-      environment_.clock(), root_node_identifier, std::move(parents));
+      &tracker_, environment_.clock(), root_node_identifier,
+      std::move(parents));
 
   EXPECT_EQ(max_timestamp, commit->GetTimestamp());
 }

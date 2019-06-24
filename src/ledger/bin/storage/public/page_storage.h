@@ -61,7 +61,8 @@ class PageStorage : public PageSyncClient {
       CommitIdView parent1_id, CommitIdView parent2_id,
       fit::function<void(Status, std::vector<CommitId>)> callback) = 0;
   // Finds the commit with the given |commit_id| and calls the given |callback|
-  // with the result.
+  // with the result. |PageStorage| must outlive any |Commit| obtained through
+  // it.
   virtual void GetCommit(
       CommitIdView commit_id,
       fit::function<void(Status, std::unique_ptr<const Commit>)> callback) = 0;
@@ -76,21 +77,24 @@ class PageStorage : public PageSyncClient {
       std::vector<CommitIdAndBytes> ids_and_bytes, ChangeSource source,
       fit::function<void(Status, std::vector<CommitId>)> callback) = 0;
   // Starts a new journal based on the commit with the given |commit_id|. The
-  // base commit must be one of the head commits.
+  // base commit must be one of the head commits. |PageStorage| must outlive any
+  // |Journal| obtained through it.
   virtual std::unique_ptr<Journal> StartCommit(
       std::unique_ptr<const Commit> commit_id) = 0;
   // Starts a new journal for a merge commit, based on the given commits.
   // |left| and |right| must both be in the set of head commits. All
   // modifications to the journal consider the |left| as the base of the new
   // commit. Merge commits are always explicit, that is in case of a crash all
-  // changes to the journal will be lost.
+  // changes to the journal will be lost. |PageStorage| must outlive any
+  // |Journal| obtained through it.
   virtual std::unique_ptr<Journal> StartMergeCommit(
       std::unique_ptr<const Commit> left,
       std::unique_ptr<const Commit> right) = 0;
 
   // Commits the given |journal| and when finished, returns the success/failure
   // status and the created Commit object through the given |callback|. If the
-  // operation is a no-op, the returned commit will be null.
+  // operation is a no-op, the returned commit will be null. |PageStorage| must
+  // outlive any |Commit| obtained through it.
   virtual void CommitJournal(
       std::unique_ptr<Journal> journal,
       fit::function<void(Status, std::unique_ptr<const Commit>)> callback) = 0;
@@ -124,7 +128,8 @@ class PageStorage : public PageSyncClient {
   // Finds the commits that have not yet been synced.
   //
   // The commits passed in the callback are sorted in a non-decreasing order of
-  // their generations.
+  // their generations. |PageStorage| must outlive any |Commit| obtained through
+  // it.
   virtual void GetUnsyncedCommits(
       fit::function<void(Status, std::vector<std::unique_ptr<const Commit>>)>
           callback) = 0;
