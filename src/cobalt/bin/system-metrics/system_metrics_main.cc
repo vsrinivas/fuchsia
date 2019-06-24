@@ -25,7 +25,7 @@ int main(int argc, const char** argv) {
 
   // Create the SystemMetricsDaemon and start it.
   SystemMetricsDaemon daemon(loop.dispatcher(), context.get());
-  FX_LOGS(INFO) << "Cobalt SystemMetricsDaemon: System metrics daemon created.";
+  FX_LOGS(INFO) << "System metrics daemon created.";
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher(),
                                               "system_metrics_daemon_provider");
   daemon.StartLogging();

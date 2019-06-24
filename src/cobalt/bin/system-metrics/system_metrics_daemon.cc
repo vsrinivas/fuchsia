@@ -156,8 +156,7 @@ std::chrono::seconds SystemMetricsDaemon::LogFuchsiaUpPing(
   // indicating that this device was "Up" during the day.
 
   if (!logger_) {
-    FX_LOGS(ERROR)
-        << "Cobalt SystemMetricsDaemon: No logger present. Reconnecting...";
+    FX_LOGS(ERROR) << "No logger present. Reconnecting...";
     InitializeLogger();
     // Something went wrong. Pause for 5 minutes.
     return std::chrono::minutes(5);
@@ -168,8 +167,7 @@ std::chrono::seconds SystemMetricsDaemon::LogFuchsiaUpPing(
   logger_->LogEvent(fuchsia_system_metrics::kFuchsiaUpPingMetricId, Uptime::Up,
                     &status);
   if (status != fuchsia::cobalt::Status::OK) {
-    FX_LOGS(ERROR) << "Cobalt SystemMetricsDaemon: LogEvent() returned status="
-                   << StatusToString(status);
+    FX_LOGS(ERROR) << "LogEvent() returned status=" << StatusToString(status);
   }
   if (uptime < std::chrono::minutes(1)) {
     // If we have been up for less than a minute, come back here after it
@@ -181,8 +179,7 @@ std::chrono::seconds SystemMetricsDaemon::LogFuchsiaUpPing(
   logger_->LogEvent(fuchsia_system_metrics::kFuchsiaUpPingMetricId,
                     Uptime::UpOneMinute, &status);
   if (status != fuchsia::cobalt::Status::OK) {
-    FX_LOGS(ERROR) << "Cobalt SystemMetricsDaemon: LogEvent() returned status="
-                   << StatusToString(status);
+    FX_LOGS(ERROR) << "LogEvent() returned status=" << StatusToString(status);
   }
   if (uptime < std::chrono::minutes(10)) {
     // If we have been up for less than 10 minutes, come back here after it
@@ -194,8 +191,7 @@ std::chrono::seconds SystemMetricsDaemon::LogFuchsiaUpPing(
   logger_->LogEvent(fuchsia_system_metrics::kFuchsiaUpPingMetricId,
                     Uptime::UpTenMinutes, &status);
   if (status != fuchsia::cobalt::Status::OK) {
-    FX_LOGS(ERROR) << "Cobalt SystemMetricsDaemon: LogEvent() returned status="
-                   << StatusToString(status);
+    FX_LOGS(ERROR) << "LogEvent() returned status=" << StatusToString(status);
   }
   if (uptime < std::chrono::hours(1)) {
     // If we have been up for less than an hour, come back here after it has
@@ -207,8 +203,7 @@ std::chrono::seconds SystemMetricsDaemon::LogFuchsiaUpPing(
   logger_->LogEvent(fuchsia_system_metrics::kFuchsiaUpPingMetricId,
                     Uptime::UpOneHour, &status);
   if (status != fuchsia::cobalt::Status::OK) {
-    FX_LOGS(ERROR) << "Cobalt SystemMetricsDaemon: LogEvent() returned status="
-                   << StatusToString(status);
+    FX_LOGS(ERROR) << "LogEvent() returned status=" << StatusToString(status);
   }
   if (uptime < std::chrono::hours(12)) {
     // If we have been up for less than 12 hours, come back here after *one*
@@ -224,8 +219,7 @@ std::chrono::seconds SystemMetricsDaemon::LogFuchsiaUpPing(
   logger_->LogEvent(fuchsia_system_metrics::kFuchsiaUpPingMetricId,
                     Uptime::UpTwelveHours, &status);
   if (status != fuchsia::cobalt::Status::OK) {
-    FX_LOGS(ERROR) << "Cobalt SystemMetricsDaemon: LogEvent() returned status="
-                   << StatusToString(status);
+    FX_LOGS(ERROR) << "LogEvent() returned status=" << StatusToString(status);
   }
   if (uptime < std::chrono::hours(24)) {
     // As above, come back in one hour.
@@ -236,8 +230,7 @@ std::chrono::seconds SystemMetricsDaemon::LogFuchsiaUpPing(
   logger_->LogEvent(fuchsia_system_metrics::kFuchsiaUpPingMetricId,
                     Uptime::UpOneDay, &status);
   if (status != fuchsia::cobalt::Status::OK) {
-    FX_LOGS(ERROR) << "Cobalt SystemMetricsDaemon: LogEvent() returned status="
-                   << StatusToString(status);
+    FX_LOGS(ERROR) << "LogEvent() returned status=" << StatusToString(status);
   }
   if (uptime < std::chrono::hours(72)) {
     return std::chrono::hours(1);
@@ -247,8 +240,7 @@ std::chrono::seconds SystemMetricsDaemon::LogFuchsiaUpPing(
   logger_->LogEvent(fuchsia_system_metrics::kFuchsiaUpPingMetricId,
                     Uptime::UpThreeDays, &status);
   if (status != fuchsia::cobalt::Status::OK) {
-    FX_LOGS(ERROR) << "Cobalt SystemMetricsDaemon: LogEvent() returned status="
-                   << StatusToString(status);
+    FX_LOGS(ERROR) << "LogEvent() returned status=" << StatusToString(status);
   }
   if (uptime < std::chrono::hours(144)) {
     return std::chrono::hours(1);
@@ -258,8 +250,7 @@ std::chrono::seconds SystemMetricsDaemon::LogFuchsiaUpPing(
   logger_->LogEvent(fuchsia_system_metrics::kFuchsiaUpPingMetricId,
                     Uptime::UpSixDays, &status);
   if (status != fuchsia::cobalt::Status::OK) {
-    FX_LOGS(ERROR) << "Cobalt SystemMetricsDaemon: LogEvent() returned status="
-                   << StatusToString(status);
+    FX_LOGS(ERROR) << "LogEvent() returned status=" << StatusToString(status);
   }
   // As above, come back in one hour.
   return std::chrono::hours(1);
@@ -268,8 +259,7 @@ std::chrono::seconds SystemMetricsDaemon::LogFuchsiaUpPing(
 std::chrono::seconds SystemMetricsDaemon::LogFuchsiaUptime() {
   std::chrono::seconds uptime = GetUpTime();
   if (!logger_) {
-    FX_LOGS(ERROR)
-        << "Cobalt SystemMetricsDaemon: No logger present. Reconnecting...";
+    FX_LOGS(ERROR) << "No logger present. Reconnecting...";
     InitializeLogger();
     // Something went wrong. Pause for 5 minutes.
     return std::chrono::minutes(5);
@@ -286,9 +276,8 @@ std::chrono::seconds SystemMetricsDaemon::LogFuchsiaUptime() {
   logger_->LogElapsedTime(fuchsia_system_metrics::kFuchsiaUptimeMetricId,
                           event_code, "", up_hours, &status);
   if (status != fuchsia::cobalt::Status::OK) {
-    FX_LOGS(ERROR)
-        << "Cobalt SystemMetricsDaemon: LogCobaltEvent() returned status="
-        << StatusToString(status);
+    FX_LOGS(ERROR) << "LogCobaltEvent() returned status="
+                   << StatusToString(status);
   }
   // Schedule a call of this function for the next multiple of an hour.
   return SecondsBeforeNextHour(uptime);
@@ -298,8 +287,7 @@ std::chrono::seconds SystemMetricsDaemon::LogFuchsiaLifetimeEvents() {
   TRACE_DURATION("system_metrics",
                  "SystemMetricsDaemon::LogFuchsiaLifetimeEvents");
   if (!logger_) {
-    FX_LOGS(ERROR)
-        << "Cobalt SystemMetricsDaemon: No logger present. Reconnecting...";
+    FX_LOGS(ERROR) << "No logger present. Reconnecting...";
     InitializeLogger();
     // Something went wrong. Pause for 5 minutes.
     return std::chrono::minutes(5);
@@ -311,9 +299,7 @@ std::chrono::seconds SystemMetricsDaemon::LogFuchsiaLifetimeEvents() {
                       FuchsiaLifetimeEventsMetricDimensionEvents::Boot,
                       &status);
     if (status != fuchsia::cobalt::Status::OK) {
-      FX_LOGS(ERROR)
-          << "Cobalt SystemMetricsDaemon: LogEvent() returned status="
-          << StatusToString(status);
+      FX_LOGS(ERROR) << "LogEvent() returned status=" << StatusToString(status);
     } else {
       boot_reported_ = true;
     }
@@ -324,8 +310,7 @@ std::chrono::seconds SystemMetricsDaemon::LogFuchsiaLifetimeEvents() {
 std::chrono::seconds SystemMetricsDaemon::LogCpuUsage() {
   TRACE_DURATION("system_metrics", "SystemMetricsDaemon::LogCpuUsage");
   if (!logger_) {
-    FX_LOGS(ERROR) << "Cobalt SystemMetricsDaemon: No logger "
-                      "present. Reconnecting...";
+    FX_LOGS(ERROR) << "No logger present. Reconnecting...";
     InitializeLogger();
     return std::chrono::minutes(1);
   }
@@ -360,8 +345,7 @@ void SystemMetricsDaemon::LogCpuPercentagesToCobalt() {
   fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
   logger_->LogCobaltEvents(std::move(events), &status);
   if (status != fuchsia::cobalt::Status::OK) {
-    FX_LOGS(ERROR) << "Cobalt SystemMetricsDaemon::LogCpuPercentagesToCobalt "
-                      "returned status="
+    FX_LOGS(ERROR) << "LogCpuPercentagesToCobalt returned status="
                    << StatusToString(status);
   }
   return;
@@ -370,8 +354,7 @@ void SystemMetricsDaemon::LogCpuPercentagesToCobalt() {
 std::chrono::seconds SystemMetricsDaemon::LogMemoryUsage() {
   TRACE_DURATION("system_metrics", "SystemMetricsDaemon::LogMemoryUsage");
   if (!logger_) {
-    FX_LOGS(ERROR) << "Cobalt SystemMetricsDaemon: No logger "
-                      "present. Reconnecting...";
+    FX_LOGS(ERROR) << "No logger present. Reconnecting...";
     InitializeLogger();
     return std::chrono::minutes(5);
   }
@@ -431,8 +414,7 @@ void SystemMetricsDaemon::LogMemoryUsageToCobalt(
   fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
   logger_->LogCobaltEvents(std::move(events), &status);
   if (status != fuchsia::cobalt::Status::OK) {
-    FX_LOGS(ERROR) << "Cobalt SystemMetricsDaemon: LogMemoryUsage() "
-                      "returned status="
+    FX_LOGS(ERROR) << "LogMemoryUsage() returned status="
                    << StatusToString(status);
   }
   return;
@@ -508,8 +490,7 @@ void SystemMetricsDaemon::LogMemoryUsageToCobalt(
   fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
   logger_->LogCobaltEvents(std::move(events), &status);
   if (status != fuchsia::cobalt::Status::OK) {
-    FX_LOGS(ERROR) << "Cobalt SystemMetricsDaemon: LogMemoryUsage() "
-                      "returned status="
+    FX_LOGS(ERROR) << "LogMemoryUsage() returned status="
                    << StatusToString(status);
   }
   return;
@@ -525,8 +506,7 @@ void SystemMetricsDaemon::InitializeLogger() {
   // Connect to the cobalt fidl service provided by the environment.
   context_->svc()->Connect(factory_.NewRequest());
   if (!factory_) {
-    FX_LOGS(ERROR)
-        << "Cobalt SystemMetricsDaemon: Unable to get LoggerFactory.";
+    FX_LOGS(ERROR) << "Unable to get LoggerFactory.";
     return;
   }
 
@@ -534,14 +514,12 @@ void SystemMetricsDaemon::InitializeLogger() {
       kProjectName, fuchsia::cobalt::ReleaseStage::DOGFOOD,
       logger_fidl_proxy_.NewRequest(), &status);
   if (status != fuchsia::cobalt::Status::OK) {
-    FX_LOGS(ERROR) << "Cobalt SystemMetricsDaemon: Unable to get Logger from "
-                      "factory. Status="
+    FX_LOGS(ERROR) << "Unable to get Logger from factory. Status="
                    << StatusToString(status);
     return;
   }
   logger_ = logger_fidl_proxy_.get();
   if (!logger_) {
-    FX_LOGS(ERROR) << "Cobalt SystemMetricsDaemon: Unable to get Logger from "
-                      "factory.";
+    FX_LOGS(ERROR) << "Unable to get Logger from factory.";
   }
 }
