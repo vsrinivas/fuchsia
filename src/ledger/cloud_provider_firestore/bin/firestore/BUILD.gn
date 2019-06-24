@@ -18,10 +18,10 @@ source_set("firestore") {
 
   public_deps = [
     "//garnet/public/lib/callback",
-    "//peridot/lib/commit_pack",
     "//sdk/fidl/fuchsia.ledger.cloud",
     "//src/ledger/cloud_provider_firestore/bin/grpc",
     "//src/ledger/cloud_provider_firestore/bin/include",
+    "//src/ledger/lib/commit_pack",
     "//src/lib/fxl",
     "//third_party/googleapis/google/firestore/v1beta1",
     "//third_party/googleapis/google/firestore/v1beta1:service",

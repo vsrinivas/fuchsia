@@ -12,7 +12,6 @@ group("lib") {
     ":peridot_lib_unittests",
     "base64url",
     "bound_set",
-    "commit_pack",
     "common",
     "convert",
     "device_info",
@@ -35,7 +34,6 @@ executable("peridot_lib_unittests") {
   testonly = true
 
   deps = [
-    "//peridot/lib/commit_pack:unittests",
     "//peridot/lib/convert:unittests",
     "//peridot/lib/fidl:unittests",
     "//peridot/lib/firebase:unittests",

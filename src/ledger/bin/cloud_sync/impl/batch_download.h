@@ -8,10 +8,10 @@
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <lib/fit/function.h>
 
-#include "peridot/lib/commit_pack/commit_pack.h"
 #include "src/ledger/bin/encryption/public/encryption_service.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
+#include "src/ledger/lib/commit_pack/commit_pack.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace cloud_sync {

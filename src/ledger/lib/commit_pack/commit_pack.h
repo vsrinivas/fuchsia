@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_LIB_COMMIT_PACK_COMMIT_PACK_H_
-#define PERIDOT_LIB_COMMIT_PACK_COMMIT_PACK_H_
+#ifndef SRC_LEDGER_LIB_COMMIT_PACK_COMMIT_PACK_H_
+#define SRC_LEDGER_LIB_COMMIT_PACK_COMMIT_PACK_H_
+
+#include <fuchsia/ledger/cloud/cpp/fidl.h>
 
 #include <string>
 #include <vector>
-
-#include <fuchsia/ledger/cloud/cpp/fidl.h>
 
 namespace cloud_provider {
 
@@ -30,4 +30,4 @@ bool DecodeCommitPack(const CommitPack& commit_pack,
 
 }  // namespace cloud_provider
 
-#endif  // PERIDOT_LIB_COMMIT_PACK_COMMIT_PACK_H_
+#endif  // SRC_LEDGER_LIB_COMMIT_PACK_COMMIT_PACK_H_

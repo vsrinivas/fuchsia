@@ -27,7 +27,6 @@ source_set("impl") {
 
   public_deps = [
     "//garnet/public/lib/backoff",
-    "//peridot/lib/commit_pack",
     "//sdk/fidl/fuchsia.ledger.cloud",
     "//src/ledger/bin/cloud_sync/public",
     "//src/ledger/bin/encryption/impl",
@@ -35,6 +34,7 @@ source_set("impl") {
     "//src/ledger/bin/environment",
     "//src/ledger/bin/fidl/include",
     "//src/ledger/bin/storage/public",
+    "//src/ledger/lib/commit_pack",
   ]
 
   deps = [

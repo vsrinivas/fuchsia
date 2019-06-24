@@ -15,7 +15,7 @@
 #include <set>
 #include <utility>
 
-#include "peridot/lib/commit_pack/commit_pack.h"
+#include "src/ledger/lib/commit_pack/commit_pack.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 

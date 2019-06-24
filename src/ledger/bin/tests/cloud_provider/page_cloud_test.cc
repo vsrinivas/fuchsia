@@ -8,10 +8,10 @@
 #include <lib/fsl/vmo/sized_vmo.h>
 #include <lib/fsl/vmo/strings.h>
 
-#include "peridot/lib/commit_pack/commit_pack.h"
 #include "src/ledger/bin/tests/cloud_provider/convert.h"
 #include "src/ledger/bin/tests/cloud_provider/types.h"
 #include "src/ledger/bin/tests/cloud_provider/validation_test.h"
+#include "src/ledger/lib/commit_pack/commit_pack.h"
 #include "src/lib/uuid/uuid.h"
 
 namespace cloud_provider {

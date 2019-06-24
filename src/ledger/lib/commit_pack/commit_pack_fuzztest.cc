@@ -4,7 +4,7 @@
 
 #include <lib/fsl/vmo/vector.h>
 
-#include "peridot/lib/commit_pack/commit_pack.h"
+#include "src/ledger/lib/commit_pack/commit_pack.h"
 
 namespace cloud_provider {
 namespace {

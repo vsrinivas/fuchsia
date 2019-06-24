@@ -9,9 +9,9 @@
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fit/function.h>
 
-#include "peridot/lib/commit_pack/commit_pack.h"
 #include "src/ledger/bin/encryption/fake/fake_encryption_service.h"
 #include "src/ledger/bin/fidl/include/types.h"
+#include "src/ledger/lib/commit_pack/commit_pack.h"
 #include "src/lib/fxl/macros.h"
 
 namespace cloud_sync {

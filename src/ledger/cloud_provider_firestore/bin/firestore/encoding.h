@@ -11,8 +11,8 @@
 
 #include <string>
 
-#include "peridot/lib/commit_pack/commit_pack.h"
 #include "src/ledger/cloud_provider_firestore/bin/include/types.h"
+#include "src/ledger/lib/commit_pack/commit_pack.h"
 #include "src/lib/fxl/strings/string_view.h"
 
 namespace cloud_provider_firestore {

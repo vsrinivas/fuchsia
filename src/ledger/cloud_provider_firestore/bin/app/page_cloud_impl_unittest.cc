@@ -17,13 +17,13 @@
 
 #include <iterator>
 
-#include "peridot/lib/commit_pack/commit_pack.h"
 #include "peridot/lib/convert/convert.h"
 #include "peridot/lib/rng/test_random.h"
 #include "src/ledger/cloud_provider_firestore/bin/app/testing/test_credentials_provider.h"
 #include "src/ledger/cloud_provider_firestore/bin/firestore/encoding.h"
 #include "src/ledger/cloud_provider_firestore/bin/firestore/testing/encoding.h"
 #include "src/ledger/cloud_provider_firestore/bin/firestore/testing/test_firestore_service.h"
+#include "src/ledger/lib/commit_pack/commit_pack.h"
 
 namespace cloud_provider_firestore {
 namespace {
