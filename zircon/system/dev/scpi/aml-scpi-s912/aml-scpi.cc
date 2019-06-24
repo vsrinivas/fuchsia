@@ -147,12 +147,16 @@ zx_status_t AmlSCPI::ScpiGetDvfsInfo(uint8_t power_domain, scpi_opp_t* out_opps)
         return ZX_OK;
     }
 
+    uint32_t power_domain_scpi = 0;
     status = ExecuteCommand(&aml_dvfs_info, sizeof(aml_dvfs_info),
-                            &power_domain, sizeof(power_domain),
+                            &power_domain_scpi, sizeof(power_domain_scpi),
                             SCPI_CMD_GET_DVFS_INFO, SCPI_CL_DVFS);
     if (status != ZX_OK) {
         return status;
     }
+
+    ZX_DEBUG_ASSERT(power_domain_scpi <= UINT8_MAX);
+    power_domain = static_cast<uint8_t>(power_domain_scpi);
 
     out_opps->count = aml_dvfs_info.operating_points;
     out_opps->latency = aml_dvfs_info.latency;
@@ -189,6 +193,7 @@ zx_status_t AmlSCPI::ScpiGetSensorValue(uint32_t sensor_id, uint32_t* sensor_val
     struct {
         uint32_t status;
         uint16_t sensor_value;
+        uint16_t padding;
     } __PACKED aml_sensor_val;
 
     if (!sensor_value) {
@@ -209,6 +214,7 @@ zx_status_t AmlSCPI::ScpiGetSensor(const char* name, uint32_t* sensor_value) {
     struct {
         uint32_t status;
         uint16_t num_sensors;
+        uint16_t padding;
     } __PACKED aml_sensor_cap;
 
     struct {

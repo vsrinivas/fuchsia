@@ -135,7 +135,7 @@ private:
 
     ddk::MailboxProtocolClient mailbox_;
     mtx_t lock_;
-    scpi_opp_t* scpi_opp[fuchsia_hardware_thermal_MAX_DVFS_DOMAINS];
+    scpi_opp_t* scpi_opp[fuchsia_hardware_thermal_MAX_DVFS_DOMAINS] = {};
 };
 
 } // namespace scpi

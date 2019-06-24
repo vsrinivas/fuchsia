@@ -58,6 +58,8 @@ zx_status_t AmlMailbox::MailboxSendCommand(const mailbox_channel_t* channel,
     aml_mailbox_block_t* tx_mailbox = &vim2_mailbox_block[channel->mailbox];
 
     if (mdata->tx_size != 0) {
+        ZX_DEBUG_ASSERT(mdata->tx_size % sizeof(uint32_t) == 0);
+
         size_t num = GetNumWords(mdata->tx_size);
         uint32_t* tx_payload = (uint32_t*)(mdata->tx_buffer);
         for (size_t i = 0; i < num; i++) {
@@ -77,6 +79,8 @@ zx_status_t AmlMailbox::MailboxSendCommand(const mailbox_channel_t* channel,
 
     // AP reads the Payload to get requested information
     if (channel->rx_size != 0) {
+        ZX_DEBUG_ASSERT(channel->rx_size % sizeof(uint32_t) == 0);
+
         size_t num = GetNumWords(channel->rx_size);
         uint32_t* rx_payload = (uint32_t*)(channel->rx_buffer);
         for (size_t i = 0; i < num; i++) {
