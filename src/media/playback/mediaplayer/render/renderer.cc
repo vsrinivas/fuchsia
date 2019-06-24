@@ -30,6 +30,8 @@ void Renderer::Dump(std::ostream& os) const {
   Node::Dump(os);
   os << fostr::NewLine
      << "timeline:              " << current_timeline_function_;
+  os << fostr::NewLine
+     << "last rendered pts:     " << AsNs(last_rendered_pts_);
   os << fostr::NewLine << "end of stream:         " << end_of_stream();
   os << fostr::NewLine << "end of stream pending: " << end_of_stream_pending();
   os << fostr::NewLine
@@ -70,13 +72,16 @@ void Renderer::SetTimelineFunction(media::TimelineFunction timeline_function,
     OnProgressStarted();
   }
 
-  UpdateTimelineAt(timeline_function.reference_time());
+  auto reference_time = timeline_function.reference_time();
+  async::PostTaskForTime(
+      dispatcher_,
+      [this, reference_time]() { ApplyPendingChanges(reference_time); },
+      zx::time(reference_time));
 }
 
 bool Renderer::end_of_stream() const {
   return end_of_stream_pts_ != Packet::kNoPts &&
-         current_timeline_function_(zx::clock::get_monotonic().get()) >=
-             end_of_stream_pts_;
+         last_rendered_pts_ >= end_of_stream_pts_;
 }
 
 void Renderer::NotifyUpdate() {
@@ -94,26 +99,22 @@ bool Renderer::Progressing() {
 void Renderer::SetEndOfStreamPts(int64_t end_of_stream_pts) {
   if (end_of_stream_pts_ != end_of_stream_pts) {
     end_of_stream_pts_ = end_of_stream_pts;
-    end_of_stream_published_ = false;
 
-    MaybeScheduleEndOfStreamPublication();
+    if (end_of_stream()) {
+      NotifyUpdate();
+    } else {
+      end_of_stream_published_ = false;
+    }
   }
 }
 
-void Renderer::UpdateTimeline(int64_t reference_time) {
-  ApplyPendingChanges(reference_time);
+void Renderer::UpdateLastRenderedPts(int64_t pts) {
+  last_rendered_pts_ = pts;
 
   if (end_of_stream() && !end_of_stream_published_) {
     end_of_stream_published_ = true;
     NotifyUpdate();
   }
-}
-
-void Renderer::UpdateTimelineAt(int64_t reference_time) {
-  // TODO(dalesat): Make sure we don't call into a deleted |this|.
-  async::PostTaskForTime(
-      dispatcher_, [this, reference_time]() { UpdateTimeline(reference_time); },
-      zx::time(reference_time));
 }
 
 void Renderer::OnTimelineTransition() {}
@@ -124,24 +125,9 @@ void Renderer::ApplyPendingChanges(int64_t reference_time) {
     return;
   }
 
-  bool was_paused = !current_timeline_function_.invertible();
-
   current_timeline_function_ = pending_timeline_function_;
   ClearPendingTimelineFunction();
   OnTimelineTransition();
-
-  if (was_paused) {
-    MaybeScheduleEndOfStreamPublication();
-  }
-}
-
-void Renderer::MaybeScheduleEndOfStreamPublication() {
-  if (!end_of_stream_published_ && end_of_stream_pts_ != Packet::kNoPts &&
-      current_timeline_function_.invertible()) {
-    // Make sure we wake up to signal end-of-stream when the time comes.
-    UpdateTimelineAt(
-        current_timeline_function_.ApplyInverse(end_of_stream_pts_));
-  }
 }
 
 void Renderer::ClearPendingTimelineFunction() {

@@ -80,9 +80,9 @@ class Renderer : public Node {
   // indicates that end-of-stream PTS isn't known.
   void SetEndOfStreamPts(int64_t end_of_stream_pts);
 
-  // Checks for timeline transitions or end-of-stream. |reference_time| is the
-  // current reference time.
-  void UpdateTimeline(int64_t reference_time);
+  // Updates the PTS of the last content known to be rendered. This value is
+  // used to determine whether end-of-stream has been reached.
+  void UpdateLastRenderedPts(int64_t pts);
 
   // Posts a task to check for timeline transitions or end-of-stream at the
   // specified reference time.
@@ -123,13 +123,6 @@ class Renderer : public Node {
   // given reference time.
   void ApplyPendingChanges(int64_t reference_time);
 
-  // If we need to signal end-of-stream in the future, and we know when that is
-  // (because we have a timeline with a non-zero rate), call |UpdateTimelineAt|
-  // so we wake up to do that. It's harmless to call |UpdateTimeline| when
-  // there's nothing to do, so there's no need to cancel this if conditions
-  // change.
-  void MaybeScheduleEndOfStreamPublication();
-
   // Clears the pending timeline function and calls its associated callback.
   void ClearPendingTimelineFunction();
 
@@ -142,6 +135,7 @@ class Renderer : public Node {
   fit::closure update_callback_;
   media::TimelineFunction current_timeline_function_;
   media::TimelineFunction pending_timeline_function_;
+  int64_t last_rendered_pts_ = Packet::kNoPts;
   int64_t end_of_stream_pts_ = Packet::kNoPts;
   bool end_of_stream_published_ = false;
   fit::closure set_timeline_function_callback_;

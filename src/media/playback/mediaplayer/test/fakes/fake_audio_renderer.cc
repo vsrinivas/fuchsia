@@ -35,8 +35,7 @@ void FakeAudioRenderer::SetStreamType(fuchsia::media::StreamType format) {
   FXL_NOTIMPLEMENTED();
 }
 
-void FakeAudioRenderer::AddPayloadBuffer(uint32_t id,
-                                         zx::vmo payload_buffer) {
+void FakeAudioRenderer::AddPayloadBuffer(uint32_t id, zx::vmo payload_buffer) {
   FXL_DCHECK(id == 0) << "Only ID 0 is currently supported.";
   vmo_mapper_.Map(std::move(payload_buffer), 0, 0, ZX_VM_PERM_READ);
 }
@@ -182,8 +181,11 @@ void FakeAudioRenderer::MaybeScheduleRetirement() {
     return;
   }
 
-  int64_t reference_time =
-      timeline_function_.ApplyInverse(packet_queue_.front().first.pts);
+  int64_t packet_pts = packet_queue_.front().first.pts;
+  int64_t reference_time = timeline_function_.ApplyInverse(packet_pts);
+  if (packet_pts == delay_packet_retirement_pts_) {
+    reference_time += ZX_SEC(1);
+  }
 
   async::PostTaskForTime(
       dispatcher_,

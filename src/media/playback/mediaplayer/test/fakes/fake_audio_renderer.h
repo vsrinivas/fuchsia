@@ -47,13 +47,19 @@ class FakeAudioRenderer : public fuchsia::media::AudioRenderer,
   bool expected() {
     return expected_ &&
            (expected_packets_info_.empty() ||
-            expected_packets_info_iter_ == expected_packets_info_.end());
+            expected_packets_info_iter_ == expected_packets_info_.end()) &&
+           (delay_packet_retirement_pts_ == fuchsia::media::NO_TIMESTAMP ||
+            packet_queue_.empty());
   }
 
   // Sets a flag indicating whether this fake renderer should retain packets
   // (true) or retire them in a timeline manner (false).
   void SetRetainPackets(bool retain_packets) {
     retain_packets_ = retain_packets;
+  }
+
+  void DelayPacketRetirement(int64_t packet_pts) {
+    delay_packet_retirement_pts_ = packet_pts;
   }
 
   // AudioRenderer implementation.
@@ -129,6 +135,7 @@ class FakeAudioRenderer : public fuchsia::media::AudioRenderer,
   media::TimelineRate pts_rate_ = media::TimelineRate::NsPerSecond;
   int64_t restart_media_time_ = fuchsia::media::NO_TIMESTAMP;
   bool retain_packets_ = false;
+  int64_t delay_packet_retirement_pts_ = fuchsia::media::NO_TIMESTAMP;
 
   // Converts Reference time in ns units to presentation time in |pts_rate_|
   // units.

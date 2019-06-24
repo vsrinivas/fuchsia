@@ -142,7 +142,7 @@ void FidlVideoRenderer::PutInputPacket(PacketPtr packet, size_t input_index) {
 
   int64_t packet_pts_ns = packet->GetPts(media::TimelineRate::NsPerSecond);
 
-  if (packet->end_of_stream()) {
+  if (!flushed_ && packet->end_of_stream()) {
     SetEndOfStreamPts(packet_pts_ns);
 
     if (prime_callback_) {
@@ -157,6 +157,18 @@ void FidlVideoRenderer::PutInputPacket(PacketPtr packet, size_t input_index) {
   // Discard packets that fall outside the program range.
   if (flushed_ || packet->payload() == nullptr || packet_pts_ns < min_pts(0) ||
       packet_pts_ns > max_pts(0)) {
+    if (packet->end_of_stream() && presented_packets_not_released_ <= 1) {
+      // This is the end-of-stream packet, and it will not be presented,
+      // probably because it has no payload. There is at most one packet
+      // in the image pipe. No more packets will be released, because the last
+      // packet is retained by the image pipe indefinitely. We update 'last
+      // renderered pts' to the end-of-stream point so that end-of-stream will
+      // be signalled. If there were more packets in the image pipe, this would
+      // wait until all but that last one was released. See |PacketReleased|
+      // below.
+      UpdateLastRenderedPts(packet_pts_ns);
+    }
+
     if (need_more_packets()) {
       RequestInputPacket();
     }
@@ -366,6 +378,18 @@ void FidlVideoRenderer::PresentBlackImage() {
 
 void FidlVideoRenderer::PacketReleased(PacketPtr packet) {
   --presented_packets_not_released_;
+
+  if (end_of_stream_pending() && presented_packets_not_released_ == 1) {
+    // End-of-stream is pending, and all packets except the last one have been
+    // released. We update 'last renderered pts' to the end-of-stream point
+    // assuming that the last packet is now being presented by the image pipe.
+    // This logic is required, because the last packet is retained by the image
+    // pipe indefinitely.
+    UpdateLastRenderedPts(end_of_stream_pts());
+  } else {
+    // Indicate that the released packet has been rendered.
+    UpdateLastRenderedPts(packet->GetPts(media::TimelineRate::NsPerSecond));
+  }
 
   MaybeCompleteFlush();
 

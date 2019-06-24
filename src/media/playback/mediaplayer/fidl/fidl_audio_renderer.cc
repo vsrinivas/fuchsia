@@ -160,7 +160,6 @@ void FidlAudioRenderer::PutInputPacket(PacketPtr packet, size_t input_index) {
   input_packet_request_outstanding_ = false;
 
   int64_t now = zx::clock::get_monotonic().get();
-  UpdateTimeline(now);
 
   if (packet->pts() == Packet::kNoPts) {
     if (!renderer_responding_) {
@@ -220,7 +219,6 @@ void FidlAudioRenderer::PutInputPacket(PacketPtr packet, size_t input_index) {
 
   if (packet->size() == 0) {
     packet.reset();
-    UpdateTimeline(zx::clock::get_monotonic().get());
   } else {
     fuchsia::media::StreamPacket audioPacket;
     audioPacket.pts = start_pts;
@@ -234,11 +232,11 @@ void FidlAudioRenderer::PutInputPacket(PacketPtr packet, size_t input_index) {
       FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
       int64_t now = zx::clock::get_monotonic().get();
 
-      UpdateTimeline(now);
-
       int64_t start_pts = packet->GetPts(pts_rate_);
       int64_t start_pts_ns = to_ns(start_pts);
       int64_t end_pts_ns = to_ns(start_pts + packet->size() / bytes_per_frame_);
+
+      UpdateLastRenderedPts(end_pts_ns);
 
       last_departed_pts_ns_ = std::max(end_pts_ns, last_departed_pts_ns_);
 
@@ -340,13 +338,6 @@ void FidlAudioRenderer::BindGainControl(
 
 void FidlAudioRenderer::OnTimelineTransition() {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
-
-  if (end_of_stream_pending() && current_timeline_function().invertible()) {
-    // Make sure we wake up to signal end-of-stream when the time comes.
-    UpdateTimelineAt(
-        current_timeline_function().ApplyInverse(end_of_stream_pts()));
-  }
-
   SignalCurrentDemand();
 }
 
