@@ -62,12 +62,10 @@ fidl("fuchsia.modular") {
 
   deps = [
     "//sdk/fidl/fuchsia.auth",
-    "//sdk/fidl/fuchsia.images",
     "//sdk/fidl/fuchsia.ledger",
     "//sdk/fidl/fuchsia.modular.auth",
     "//sdk/fidl/fuchsia.speech",
     "//sdk/fidl/fuchsia.sys",
-    "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/fidl/fuchsia.ui.views",
     "//zircon/public/fidl/fuchsia-mem",
