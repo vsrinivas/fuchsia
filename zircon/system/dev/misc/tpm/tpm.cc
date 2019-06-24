@@ -255,7 +255,7 @@ Device::~Device() {
 
 static constexpr zx_driver_ops_t driver_ops = []() {
     zx_driver_ops_t ops = {};
-    ops.version = DEVICE_OPS_VERSION;
+    ops.version = DRIVER_OPS_VERSION;
     ops.bind = tpm::Device::Create;
     return ops;
 }();
