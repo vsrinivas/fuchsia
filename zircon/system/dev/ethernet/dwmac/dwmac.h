@@ -47,6 +47,22 @@ typedef volatile struct dw_mac_regs {
     uint32_t rgmiistatus;     /*54 0xd8 */
 } __PACKED dw_mac_regs_t;
 
+// Offset of the mac management counters block
+#define DW_MAC_MMC_BASE_OFFSET (0x0100)
+
+#define DW_MAC_MMC_MMC_CNTRL        (0x00)
+#define DW_MAC_MMC_MMC_INTR_RX      (0x01)
+#define DW_MAC_MMC_MMC_INTR_TX      (0x02)
+#define DW_MAC_MMC_MMC_INTR_MASK_RX (0x03)
+#define DW_MAC_MMC_MMC_INTR_MASK_TX (0x04)
+
+#define DW_MAC_MMC_RXFRAMECOUNT_GB  (32)
+#define DW_MAC_MMC_RXOCTETCOUNT_GB  (33)
+#define DW_MAC_MMC_RXOCTETCOUNT_G   (34)
+
+#define DW_MAC_MMC_MMC_IPC_INTR_MASK_RX (64)
+#define DW_MAC_MMC_MMC_IPC_INTR_RX (66)
+
 // Offset of DMA regs into dwmac register block
 #define DW_DMA_BASE_OFFSET    (0x1000)
 
@@ -117,6 +133,7 @@ private:
 
     void UpdateLinkStatus() __TA_REQUIRES(lock_);
     void DumpRegisters();
+    void DumpStatus(uint32_t status);
     void ReleaseBuffers();
     void ProcRxBuffer(uint32_t int_status) __TA_EXCLUDES(lock_);
     uint32_t DmaRxStatus();
@@ -161,6 +178,7 @@ private:
 
     dw_mac_regs_t* dwmac_regs_ = nullptr;
     dw_dma_regs_t* dwdma_regs_ = nullptr;
+    uint32_t* dwmac_mmc_regs_ = nullptr;
 
     fbl::Mutex lock_;
     ddk::EthmacIfcProtocolClient ethmac_client_ __TA_GUARDED(lock_);

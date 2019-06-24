@@ -27,4 +27,20 @@ void DWMacDevice::DumpRegisters() {
     EthMacMdioRead(1, &temp);
     zxlogf(INFO, "MII Status = %08x\n", temp);
 }
+
+void DWMacDevice::DumpStatus(uint32_t status) {
+    uint32_t tx_state = (status >> 20) & 0x07;
+    uint32_t rx_state = (status >> 17) & 0x07;
+
+    zxlogf(INFO, "TX:%3u RX:%3u ---%s %s %s %s %s %s %s %s %s\n", tx_state, rx_state,
+        status & (1 << 13) ? "FBI" : " ",
+        status & (1 << 10) ? "ETI" : " ",
+        status & (1 <<  9) ? "RWT" : " ",
+        status & (1 <<  8) ? "RPS" : " ",
+        status & (1 <<  7) ? "RBU" : " ",
+        status & (1 <<  5) ? "TBU" : " ",
+        status & (1 <<  4) ? "RBO" : " ",
+        status & (1 <<  3) ? "TJT" : " ",
+        status & (1 <<  1) ? "TPS" : " ");
+}
 } //namespace eth
