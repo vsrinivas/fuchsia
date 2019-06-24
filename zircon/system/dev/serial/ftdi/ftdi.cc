@@ -382,13 +382,13 @@ zx_status_t FtdiDevice::Bind() {
     fbl::AutoLock lock(&mutex_);
 
     // Find our endpoints.
-    usb::InterfaceList usb_interface_list(usb_client_, true);
-    status = usb_interface_list.check();
+    std::optional<usb::InterfaceList> usb_interface_list;
+    status = usb::InterfaceList::Create(usb_client_, true, &usb_interface_list);
     if (status != ZX_OK) {
         return status;
     }
 
-    auto usb_interface = usb_interface_list.begin();
+    auto usb_interface = usb_interface_list->begin();
 
     uint8_t bulk_in_addr = 0;
     uint8_t bulk_out_addr = 0;

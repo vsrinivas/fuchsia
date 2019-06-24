@@ -11,6 +11,7 @@
 #include <zircon/hw/usb.h>
 #ifdef __cplusplus
 #include <ddktl/protocol/usb.h>
+#include <optional>
 #endif
 
 __BEGIN_CDECLS
@@ -122,157 +123,171 @@ public:
     }
 };
 
-// Usage and implementation notes
-// Interface is owned by an iterator of an InterfaceList.
-// It is possible to enumerate all USB endpoint descriptors
-// by using the standard iterator interface, or a for loop
-// such as for (auto endpoint:interface) { ... }
-// where interface is an instance of an Interface.
+// Interface is owned by an iterator of an InterfaceList.  It is possible to enumerate all USB
+// endpoint descriptors by using the standard iterator interface, or a for loop such as
+// for (auto endpoint:interface) { ... } where interface is an instance of an Interface.
 // Interfaces must not outlive their original InterfaceLists.
 class Interface {
 private:
     class iterator_impl;
 
 public:
+    using iterator = iterator_impl;
     using const_iterator = iterator_impl;
 
-    const usb_interface_descriptor_t* descriptor() const {
-        return descriptor_;
-    }
+    Interface() = delete;
 
-    const_iterator begin() const;
+    const usb_interface_descriptor_t* descriptor() const { return descriptor_; }
 
-    const const_iterator cbegin() const;
-
-    const_iterator end() const;
-
-    const const_iterator cend() const;
+    iterator begin() const;
+    const_iterator cbegin() const;
+    iterator end() const;
+    const_iterator cend() const;
 
     friend class InterfaceList;
 
 private:
+    Interface(const usb_desc_iter_t& iter, const usb_interface_descriptor_t* descriptor)
+        : iter_(iter),
+          descriptor_(descriptor) {}
+
     class iterator_impl {
     public:
-        iterator_impl(const usb_desc_iter_t& iter);
+        iterator_impl(const usb_desc_iter_t& iter, const usb_endpoint_descriptor_t* endpoint)
+            : iter_(iter),
+              endpoint_(endpoint) {}
 
-        bool operator==(const iterator_impl& other) const {
-            return endpoint_ == other.endpoint_;
+        bool operator==(const iterator_impl& other) const { return endpoint_ == other.endpoint_; }
+        bool operator!=(const iterator_impl& other) const { return !(*this == other); }
+
+        iterator_impl operator++(int) {
+            iterator_impl ret(*this);
+            ++(*this);
+            return ret;
         }
 
-        bool operator!=(const iterator_impl& other) const {
-            return endpoint_ != other.endpoint_;
+        iterator_impl& operator++() {
+            endpoint_ = usb_desc_iter_next_endpoint(&iter_);
+            return *this;
         }
 
-        iterator_impl operator++(int);
-
-        iterator_impl& operator++();
-
-        const usb_endpoint_descriptor_t* endpoint() const {
-            return endpoint_;
-        }
-
-        const usb_endpoint_descriptor_t& operator*() const {
-            return *endpoint_;
-        }
-
-        const usb_endpoint_descriptor_t* operator->() const {
-            return endpoint_;
-        }
+        const usb_endpoint_descriptor_t* endpoint() const { return endpoint_; }
+        const usb_endpoint_descriptor_t& operator*() const { return *endpoint_; }
+        const usb_endpoint_descriptor_t* operator->() const { return endpoint_; }
 
     private:
-        const usb_endpoint_descriptor_t* endpoint_;
-
         usb_desc_iter_t iter_;
+        const usb_endpoint_descriptor_t* endpoint_;
     };
 
-    Interface() {}
-
-    Interface(const usb_desc_iter_t& iter)
-        : iter_(iter), descriptor_(nullptr) {
-    }
-
+    // Advances iter_ to the next usb_interface_descriptor_t.
     void Next(bool skip_alt);
 
     usb_desc_iter_t iter_;
-
     const usb_interface_descriptor_t* descriptor_;
 };
 
-// Usage and implementation notes
-// An InterfaceList can be used for enumerating USB interfaces and endpoints.
-// It implements a standard C++ iterator interface, which can be used with a for loop.
-// such as for(interface:interface_list) { ... }
-// The InterfaceList constructor takes in a UsbProtocolClient as a parameter,
-// and a boolean skip_alt parameter.
-// The InterfaceList will enumerate interfaces in the client,
-//  and will skip any alternate interfaces if skip_alt is true.
-// (see page 268 of the USB 2.0 specification for more information)
-// The constructor may fail in the event of a memory allocation failure or other protocol error.
-// After constructing this InterfaceList,
-// it is recommended to use .check() to verify the operation succeeded.
-// If check returns an error, it is still safe to call the iteration functions,
-// but the resulting enumeration will return no values.
+// An InterfaceList can be used for enumerating USB interfaces and endpoints.  It implements a
+// standard C++ iterator interface, which can be used with a for loop. such as
+// for(interface:interface_list) { ... }.
+//
+// The InterfaceList will enumerate interfaces in the client, and will skip any alternate interfaces
+// if skip_alt is true (see page 268 of the USB 2.0 specification for more information).
+//
+// Example Usage #1:
+//     std::optional<InterfaceList> my_list;
+//     status = InterfaceList::Create(my_client, true, &my_list);
+//     if (status != ZX_OK) {
+//         ...
+//     }
+//
+//     for (auto& interface : *my_list) {
+//         for (auto& endpoint : interface) {
+//             ...
+//         }
+//     }
+//
+// Example Usage #2:
+//     std::optional<InterfaceList> my_list;
+//     status = InterfaceList::Create(my_client, true, &my_list);
+//     if (status != ZX_OK) {
+//         ...
+//     }
+//
+//     auto my_iter = my_list->begin(); // or cbegin().
+//     do {
+//         auto ep_iter = my_iter->begin();
+//         do {
+//             ...
+//         } while (++ep_iter != my_iter->end())
+//     } while (++my_iter != my_list->end())
 class InterfaceList {
 private:
     class iterator_impl;
 
 public:
+    using iterator = iterator_impl;
     using const_iterator = iterator_impl;
 
-    const_iterator begin() const;
+    InterfaceList() = delete;
 
-    const const_iterator cbegin() const;
+    InterfaceList(const usb_desc_iter_t& iter, bool skip_alt)
+        : iter_(iter),
+          skip_alt_(skip_alt) {}
 
-    const_iterator end() const;
+    InterfaceList(InterfaceList&&) = delete;
+    InterfaceList& operator=(InterfaceList&&) = delete;
 
-    const const_iterator cend() const;
+    ~InterfaceList() {
+        if (iter_.desc) {
+            usb_desc_iter_release(&iter_);
+        }
+    }
 
-    InterfaceList(const ddk::UsbProtocolClient& client, bool skip_alt = false);
+    static zx_status_t Create(const ddk::UsbProtocolClient& client, bool skip_alt,
+                              std::optional<InterfaceList>* out);
 
-    zx_status_t check() const;
-
-    ~InterfaceList();
+    iterator begin() const;
+    const_iterator cbegin() const;
+    iterator end() const;
+    const_iterator cend() const;
 
 private:
     class iterator_impl {
     public:
-        iterator_impl(const usb_desc_iter_t& iter, bool skip_alt_);
+        iterator_impl(const usb_desc_iter_t& iter, bool skip_alt,
+                      const usb_interface_descriptor_t* descriptor)
+            : skip_alt_(skip_alt),
+              interface_(iter, descriptor) {}
 
         bool operator==(const iterator_impl& other) const {
             return interface_.descriptor_ == other.interface_.descriptor_;
         }
+        bool operator!=(const iterator_impl& other) const { return !(*this == other); }
 
-        bool operator!=(const iterator_impl& other) const {
-            return interface_.descriptor_ != other.interface_.descriptor_;
+        iterator_impl operator++(int) {
+            iterator_impl ret(*this);
+            ++(*this);
+            return ret;
         }
 
-        iterator_impl operator++(int);
-
-        iterator_impl& operator++();
-
-        const Interface* get() const {
-            return &interface_;
+        iterator_impl& operator++() {
+            interface_.Next(skip_alt_);
+            return *this;
         }
 
-        const Interface& operator*() const {
-            return interface_;
-        }
-
-        const Interface* operator->() const {
-            return &interface_;
-        }
+        const Interface* get() const { return &interface_; }
+        const Interface& operator*() const { return interface_; }
+        const Interface* operator->() const { return &interface_; }
 
     private:
-        Interface interface_;
-
         const bool skip_alt_;
+        Interface interface_;
     };
 
-    const bool skip_alt_;
-
-    zx_status_t status_;
-
-    usb_desc_iter_t iter_;
+    usb_desc_iter_t iter_{};
+    bool skip_alt_;
 };
+
 } // namespace usb
 #endif

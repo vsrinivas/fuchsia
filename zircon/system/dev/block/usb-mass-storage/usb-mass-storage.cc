@@ -123,13 +123,14 @@ zx_status_t UsbMassStorageDevice::Init() {
     }
 
     // find our endpoints
-    usb::InterfaceList interfaces(usb, true);
-    if ((status = interfaces.check()) != ZX_OK) {
+    std::optional<usb::InterfaceList> interfaces;
+    status = usb::InterfaceList::Create(usb, true, &interfaces);
+    if (status != ZX_OK) {
         return status;
     }
-    auto interface = interfaces.begin();
+    auto interface = interfaces->begin();
     const usb_interface_descriptor_t* interface_descriptor = interface->descriptor();
-    if (interface == interfaces.end()) {
+    if (interface == interfaces->end()) {
         return ZX_ERR_NOT_SUPPORTED;
     }
     if (interface_descriptor->bNumEndpoints < 2) {

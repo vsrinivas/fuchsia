@@ -18,13 +18,16 @@ namespace {
 // The raw descriptor dump will be put in /data/debug
 // You can copy this to your PC with fx cp
 // and convert to an unsigned char array with your favorite conversion script.
+// clang-format off
 constexpr unsigned char kDescriptors[] = {
-    // Data from a real USB flash drive
-    9, 4, 0, 0, 2, 8, 6, 80, 0, 7, 5, 129, 2,
-    0, 4, 0, 6, 48, 3, 0, 0, 0, 7, 5, 2, 2, 0,
-    4, 0, 6, 48, 3, 0, 0, 0,
+    9, 4, 0, 0, 2, 8, 6, 80, 0, // interface
+    7, 5, 129, 2, 0, 4, 0,      // endpoint
+    6, 48, 3, 0, 0, 0,          // ss-comp
+    7, 5, 2, 2, 0, 4, 0,        // endpoint
+    6, 48, 3, 0, 0, 0,          // ss-comp
     // Synthetic data to test alternate interfaces
     9, 4, 0, 1, 2, 8, 6, 80, 0};
+// clang-format on
 
 constexpr usb_interface_descriptor_t kParsedDescriptors[] = {
     // Data from a real USB flash drive
@@ -59,10 +62,12 @@ bool InterfaceListTest() {
     ops.get_descriptors = GetDescriptors;
     usb_protocol_t proto = {};
     proto.ops = &ops;
-    usb::InterfaceList list(&proto, true);
-    ASSERT_EQ(ZX_OK, list.check(), "");
+    ddk::UsbProtocolClient client(&proto);
+
+    std::optional<usb::InterfaceList> list;
+    ASSERT_EQ(ZX_OK, usb::InterfaceList::Create(client, true, &list), "");
     size_t count = 0;
-    for (auto interface : list) {
+    for (auto interface : *list) {
         ASSERT_EQ(
             0,
             memcmp(kParsedDescriptors + count, interface.descriptor(),
@@ -82,8 +87,9 @@ bool InterfaceListTest() {
     }
     ASSERT_EQ(count, 1, "");
     count = 0;
-    usb::InterfaceList list2(&proto);
-    for (auto interface : list2) {
+    std::optional<usb::InterfaceList> list2;
+    ASSERT_EQ(ZX_OK, usb::InterfaceList::Create(client, false, &list2), "");
+    for (auto interface : *list2) {
         ASSERT_EQ(0,
                   memcmp(kParsedDescriptors + count, interface.descriptor(),
                          sizeof(usb_interface_descriptor_t)),
@@ -102,7 +108,7 @@ bool InterfaceListTest() {
     }
     ASSERT_EQ(count, 2, "");
     count = 0;
-    for (auto iter = list2.cbegin(); iter != list2.cend(); iter++) {
+    for (auto iter = list2->cbegin(); iter != list2->cend(); iter++) {
         auto interface = *iter;
         ASSERT_EQ(0, memcmp(kParsedDescriptors + count, interface.descriptor(), sizeof(usb_interface_descriptor_t)),
                   "");

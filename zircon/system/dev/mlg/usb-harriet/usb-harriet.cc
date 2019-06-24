@@ -35,14 +35,14 @@ zx_status_t Harriet::Create(zx_device_t* parent) {
         return ZX_ERR_PROTOCOL_NOT_SUPPORTED;
     }
 
-    usb::InterfaceList intfs(usb, true);
-    zx_status_t status = intfs.check();
+    std::optional<usb::InterfaceList> intfs;
+    zx_status_t status = usb::InterfaceList::Create(usb, true, &intfs);
     if (status != ZX_OK) {
         return status;
     }
-    auto intf = intfs.begin();
+    auto intf = intfs->begin();
     const usb_interface_descriptor_t* intf_desc = intf->descriptor();
-    if (intf == intfs.end()) {
+    if (intf == intfs->end()) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
