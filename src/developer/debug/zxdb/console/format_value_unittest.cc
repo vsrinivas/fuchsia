@@ -866,17 +866,33 @@ TEST_F(FormatValueTest, RustEnum) {
   FormatExprValueOptions opts;
   EXPECT_EQ("None", SyncFormatValue(none_value, opts));
 
-  // Scalar, it would be nice if this was just "Scalar(51)".
+  // Scalar.
   ExprValue scalar_value(rust_enum, {0, 0, 0, 0,    // Discriminant
                                      51, 0, 0, 0,   // Scalar value.
                                      0, 0, 0, 0});  // Unused
-  EXPECT_EQ("Scalar{__0 = 51}", SyncFormatValue(scalar_value, opts));
+  EXPECT_EQ("Scalar(51)", SyncFormatValue(scalar_value, opts));
 
   // Struct with named values.
   ExprValue point_value(rust_enum, {1, 0, 0, 0,    // Discriminant
                                     1, 0, 0, 0,    // x
                                     2, 0, 0, 0});  // y
   EXPECT_EQ("Point{x = 1, y = 2}", SyncFormatValue(point_value, opts));
+}
+
+TEST_F(FormatValueTest, RustTuple) {
+  auto tuple_two_type = MakeTestRustTuple("(int32_t, uint64_t)",
+                                          {MakeInt32Type(), MakeUint64Type()});
+  ExprValue tuple_two(tuple_two_type,
+                      {123, 0, 0, 0,               // int32_t member 0
+                       78, 0, 0, 0, 0, 0, 0, 0});  // uint64_t member 1
+  FormatExprValueOptions opts;
+  EXPECT_EQ("(123, 78)", SyncFormatValue(tuple_two, opts));
+
+  // 1-element tuple struct.
+  auto tuple_struct_one_type = MakeTestRustTuple("Some", {MakeInt32Type()});
+  ExprValue tuple_struct_one(tuple_struct_one_type,
+                             {123, 0, 0, 0});  // int32_t member 0
+  EXPECT_EQ("Some(123)", SyncFormatValue(tuple_struct_one, opts));
 }
 
 }  // namespace zxdb

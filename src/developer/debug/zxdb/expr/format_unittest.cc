@@ -520,7 +520,7 @@ TEST_F(FormatTest, RustEnum) {
   EXPECT_EQ(
       " = RustEnum, Scalar\n"
       "  Scalar = Scalar, \n"
-      "    __0 = int32_t, 51\n",
+      "    0 = int32_t, 51\n",
       SyncTreeTypeDesc(scalar_value, opts));
 
   // Point value.
@@ -533,6 +533,29 @@ TEST_F(FormatTest, RustEnum) {
       "    x = int32_t, 1\n"
       "    y = int32_t, 2\n",
       SyncTreeTypeDesc(point_value, opts));
+}
+
+TEST_F(FormatTest, RustTuple) {
+  auto tuple_two_type = MakeTestRustTuple("(int32_t, uint64_t)",
+                                          {MakeInt32Type(), MakeUint64Type()});
+  ExprValue tuple_two(tuple_two_type,
+                      {123, 0, 0, 0,               // int32_t member 0
+                       78, 0, 0, 0, 0, 0, 0, 0});  // uint64_t member 1
+  FormatExprValueOptions opts;
+  EXPECT_EQ(
+      " = (int32_t, uint64_t), \n"
+      "  0 = int32_t, 123\n"
+      "  1 = uint64_t, 78\n",
+      SyncTreeTypeDesc(tuple_two, opts));
+
+  // 1-element tuple struct.
+  auto tuple_struct_one_type = MakeTestRustTuple("Some", {MakeInt32Type()});
+  ExprValue tuple_struct_one(tuple_struct_one_type,
+                             {123, 0, 0, 0});  // int32_t member 0
+  EXPECT_EQ(
+      " = Some, \n"
+      "  0 = int32_t, 123\n",
+      SyncTreeTypeDesc(tuple_struct_one, opts));
 }
 
 }  // namespace zxdb

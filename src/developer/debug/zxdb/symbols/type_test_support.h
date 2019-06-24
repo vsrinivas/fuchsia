@@ -90,6 +90,12 @@ fxl::RefPtr<Collection> MakeRustEnum(
 // values depending on the discriminant value (should be padded to 12 total);
 fxl::RefPtr<Collection> MakeTestRustEnum();
 
+// To make a regular tuple give it a name according to the types you use in
+// parens, e.g. "(u32, Point)", to make a tuple struct, give it a word name
+// like "Foo".
+fxl::RefPtr<Collection> MakeTestRustTuple(
+    const std::string& name, const std::vector<fxl::RefPtr<Type>>& members);
+
 }  // namespace zxdb
 
 #endif  // SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_TYPE_TEST_SUPPORT_H_

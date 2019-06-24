@@ -11,6 +11,7 @@
 #include "src/developer/debug/zxdb/symbols/inherited_from.h"
 #include "src/developer/debug/zxdb/symbols/variant.h"
 #include "src/developer/debug/zxdb/symbols/variant_part.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
 
@@ -91,6 +92,15 @@ fxl::RefPtr<CompileUnit> MakeRustUnit() {
 fxl::RefPtr<Variant> MakeRustVariant(
     const std::string& name, std::optional<uint64_t> discriminant,
     const std::vector<fxl::RefPtr<DataMember>>& members) {
+  // For Rust triggering to happen the compilation unit must be set. The
+  // easiest way to do this is to set the compilation unit as the parent.
+  // This doesn't produce a strictly valid structure since the parents won't
+  // be "right" when traversing the symbol hierarcy upward, but that's not
+  // been necessary so far.
+  //
+  // TODO(brettw) have a better way to set the language for symbols.
+  auto unit = MakeRustUnit();
+
   // Pick the byte size to be the size after the last member.
   uint32_t byte_size = 0;
   if (members.size() > 0) {
@@ -102,17 +112,21 @@ fxl::RefPtr<Variant> MakeRustVariant(
   // This type holds all the members passed in.
   auto variant_member_type =
       fxl::MakeRefCounted<Collection>(DwarfTag::kStructureType, name);
+  variant_member_type->set_parent(LazySymbol(unit));
   variant_member_type->set_byte_size(byte_size);
 
   std::vector<LazySymbol> lazy_members;
-  for (const auto& member : members)
+  for (const auto& member : members) {
+    member->set_parent(LazySymbol(unit));
     lazy_members.emplace_back(member);
+  }
   variant_member_type->set_data_members(std::move(lazy_members));
 
   // This data member in the variant contains the structure above. We assume it
   // starts at offset 0 in the containing struct.
   auto variant_data =
       fxl::MakeRefCounted<DataMember>(name, LazySymbol(variant_member_type), 0);
+  variant_data->set_parent(LazySymbol(unit));
 
   auto var = fxl::MakeRefCounted<Variant>(
       discriminant, std::vector<LazySymbol>{LazySymbol(variant_data)});
@@ -123,6 +137,7 @@ fxl::RefPtr<Variant> MakeRustVariant(
 fxl::RefPtr<Collection> MakeRustEnum(
     const std::string& name, fxl::RefPtr<DataMember> discriminant,
     const std::vector<fxl::RefPtr<Variant>>& variants) {
+  auto unit = MakeRustUnit();
   uint32_t byte_size = 0;
 
   std::vector<LazySymbol> lazy_variants;
@@ -143,12 +158,13 @@ fxl::RefPtr<Collection> MakeRustEnum(
 
   auto variant_part = fxl::MakeRefCounted<VariantPart>(
       LazySymbol(discriminant), std::move(lazy_variants));
+  variant_part->set_parent(LazySymbol(unit));
 
   auto collection =
       fxl::MakeRefCounted<Collection>(DwarfTag::kStructureType, name);
   collection->set_variant_part(LazySymbol(variant_part));
   collection->set_byte_size(byte_size);
-  collection->set_parent(LazySymbol(MakeRustUnit()));
+  collection->set_parent(LazySymbol(unit));
 
   return collection;
 }
@@ -187,9 +203,30 @@ fxl::RefPtr<Collection> MakeTestRustEnum() {
 
   // Structure that contains the variants. It has a variant_part and no data.
   auto rust_enum = MakeRustEnum("RustEnum", discriminant,
-                      {none_variant, scalar_variant, point_variant});
+                                {none_variant, scalar_variant, point_variant});
   rust_enum->set_parent(LazySymbol(MakeRustUnit()));
   return rust_enum;
+}
+
+fxl::RefPtr<Collection> MakeTestRustTuple(
+    const std::string& name, const std::vector<fxl::RefPtr<Type>>& members) {
+  auto coll = fxl::MakeRefCounted<Collection>(DwarfTag::kStructureType, name);
+  coll->set_parent(LazySymbol(MakeRustUnit()));
+
+  uint32_t offset = 0;
+  std::vector<LazySymbol> data_members;
+  for (size_t i = 0; i < members.size(); i++) {
+    auto& type = members[i];
+    auto data = fxl::MakeRefCounted<DataMember>(fxl::StringPrintf("__%zu", i),
+                                                LazySymbol(type), offset);
+
+    data_members.emplace_back(std::move(data));
+    offset += type->byte_size();
+  }
+
+  coll->set_byte_size(offset);
+  coll->set_data_members(std::move(data_members));
+  return coll;
 }
 
 }  // namespace zxdb

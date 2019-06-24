@@ -237,6 +237,40 @@ void FormatRustEnum(FormatNode* node, const Collection* coll,
   node->set_description(enum_name);
 }
 
+void FormatRustTuple(FormatNode* node, const Collection* coll,
+                     const FormatExprValueOptions& options,
+                     fxl::RefPtr<EvalContext> eval_context) {
+  node->set_description_kind(FormatNode::kRustTuple);
+
+  // Rust tuple (and tuple struct) symbols have the tuple members encoded as
+  // "__0", "__1", etc.
+  for (const auto& lazy_member : coll->data_members()) {
+    const DataMember* member = lazy_member.Get()->AsDataMember();
+    if (!member)
+      continue;
+
+    ExprValue member_value;
+    Err err = ResolveMember(eval_context, node->value(), member, &member_value);
+
+    // Convert the names to indices "__0" -> 0.
+    auto name = member->GetAssignedName();
+    if (name.size() > 2 && name[0] == '_' && name[1] == '_')
+      name.erase(name.begin(), name.begin() + 2);
+
+    if (err.has_error()) {
+      // In the error case, still append a child so that the child can have
+      // the error associated with it.
+      node->children().push_back(std::make_unique<FormatNode>(name, err));
+    } else {
+      node->children().push_back(
+          std::make_unique<FormatNode>(name, member_value));
+    }
+  }
+
+  // When we have a use for the short description, this should be set to:
+  // "(<0>, <1>, ...)"
+}
+
 void FormatCollection(FormatNode* node, const Collection* coll,
                       const FormatExprValueOptions& options,
                       fxl::RefPtr<EvalContext> eval_context) {
@@ -247,11 +281,17 @@ void FormatCollection(FormatNode* node, const Collection* coll,
     return;
   }
 
-  // Special-case Rust enums which are encoded as a type of collection.
-  Collection::SpecialType special_type = coll->GetSpecialType();
-  if (special_type == Collection::kRustEnum) {
-    FormatRustEnum(node, coll, options, std::move(eval_context));
-    return;
+  // Special-cases of collections.
+  switch (coll->GetSpecialType()) {
+    case Collection::kNotSpecial:
+      break;
+    case Collection::kRustEnum:
+      FormatRustEnum(node, coll, options, std::move(eval_context));
+      return;
+    case Collection::kRustTuple:
+    case Collection::kRustTupleStruct:
+      FormatRustTuple(node, coll, options, std::move(eval_context));
+      return;
   }
 
   // Base classes.

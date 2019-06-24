@@ -361,10 +361,16 @@ void FormatValue::FormatCollection(fxl::RefPtr<EvalContext> eval_context,
     return;
   }
 
-  Collection::SpecialType special_type = coll->GetSpecialType();
-  if (special_type == Collection::kRustEnum) {
-    FormatRustEnum(eval_context, coll, value, options, output_key);
-    return;
+  switch (coll->GetSpecialType()) {
+    case Collection::kNotSpecial:
+      break;
+    case Collection::kRustEnum:
+      FormatRustEnum(eval_context, coll, value, options, output_key);
+      return;
+    case Collection::kRustTuple:
+    case Collection::kRustTupleStruct:
+      FormatRustTuple(eval_context, coll, value, options, output_key);
+      return;
   }
 
   AppendToOutputKey(output_key, OutputBuffer("{"));
@@ -926,18 +932,61 @@ void FormatValue::FormatRustEnum(fxl::RefPtr<EvalContext> eval_context,
     return;
   }
 
-  // The enum name is in the description.
-  AppendToOutputKey(output_key, node->description());
-
   // If there is a child, append it after the description with no space
   // which will end up formatting the structure like "Point{x = 1, y = 2}"
-  if (!node->children().empty()) {
+  if (node->children().empty()) {
+    // No child, just output the type name.
+    OutputKeyComplete(output_key, node->description());
+  } else {
     // This assumes there is only one child which is the case for Rust enums.
+    //
+    // Our Rust structure printing support with type names is still in-flux.
+    // If you do "EnumValue(u32)" you'll actually get a "tuple struct" and our
+    // printing knows to print them properly with the name. But the struct
+    // printing system doesn't know when to add Rust type names. So as a hack
+    // add that now if required but not if it's a tuple struct.
+    bool is_tuple_struct = false;
+    if (const Type* child_type = node->children()[0]->value().type()) {
+      if (const Collection* child_coll = child_type->AsCollection()) {
+        is_tuple_struct =
+            child_coll->GetSpecialType() == Collection::kRustTupleStruct;
+      }
+    }
+    if (!is_tuple_struct)
+      AppendToOutputKey(output_key, node->description());
+
     FormatExprValue(eval_context, node->children()[0]->value(), options, true,
                     output_key);
-  } else {
-    OutputKeyComplete(output_key);
   }
+}
+
+void FormatValue::FormatRustTuple(fxl::RefPtr<EvalContext> eval_context,
+                                  const Collection* coll,
+                                  const ExprValue& value,
+                                  const FormatExprValueOptions& options,
+                                  OutputKey output_key) {
+  auto node = std::make_unique<FormatNode>(std::string(), value);
+  FillFormatNodeDescription(node.get(), options, eval_context);
+
+  if (node->err().has_error()) {
+    OutputKeyComplete(output_key, ErrToOutput(node->err()));
+    return;
+  }
+
+  // Display tuple structs with the non-qualified type name, e.g. "Some(32)".
+  if (coll->GetSpecialType() == Collection::kRustTupleStruct)
+    AppendToOutputKey(output_key, coll->GetAssignedName() + "(");
+  else
+    AppendToOutputKey(output_key, OutputBuffer("("));
+
+  for (size_t i = 0; i < node->children().size(); i++) {
+    if (i > 0)
+      AppendToOutputKey(output_key, OutputBuffer(", "));
+    FormatExprValue(eval_context, node->children()[i]->value(), options, false,
+                    AsyncAppend(output_key));
+  }
+
+  OutputKeyComplete(output_key, OutputBuffer(")"));
 }
 
 FormatValue::OutputKey FormatValue::GetRootOutputKey() {
