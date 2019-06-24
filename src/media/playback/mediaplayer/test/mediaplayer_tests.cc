@@ -78,7 +78,7 @@ class MediaPlayerTests : public sys::testing::TestWithEnvironment {
   }
 
   // Executes queued commands with the specified timeout.
-  void Execute(zx::duration timeout = zx::sec(10)) {
+  void Execute(zx::duration timeout = zx::sec(60)) {
     commands_.Execute();
     EXPECT_FALSE(RunLoopWithTimeout(zx::duration(timeout)));
   }
@@ -494,7 +494,7 @@ TEST_F(MediaPlayerTests, RegressionTestUS544) {
 
   QuitOnEndOfStream();
 
-  Execute(zx::sec(20));
+  Execute();
   EXPECT_TRUE(fake_audio_.renderer().expected());
   EXPECT_TRUE(fake_scenic_.session().expected());
 }
@@ -515,7 +515,7 @@ TEST_F(MediaPlayerTests, RegressionTestQA539) {
   commands_.Play();
   QuitOnEndOfStream();
 
-  Execute(zx::sec(20));
+  Execute();
   EXPECT_TRUE(fake_audio_.renderer().expected());
   EXPECT_TRUE(fake_scenic_.session().expected());
 }
