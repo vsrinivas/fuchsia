@@ -1698,6 +1698,11 @@ static bool TestX86AcFlagUserCopy() {
     regs.rip = 0;
     ASSERT_EQ(thread.write_state(ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs)), ZX_OK);
 
+    // We can't catch this exception in userspace, the test requires the
+    // kernel do a usercopy from an interrupt context which only happens when
+    // the exception falls through unhandled.
+    unittest_printf_critical("Crashing a test process, the following dump is intentional\n");
+
     // Resume.
     suspend_token.reset();
 
