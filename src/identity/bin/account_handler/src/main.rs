@@ -13,6 +13,7 @@
 mod account;
 mod account_handler;
 mod auth_provider_supplier;
+mod common;
 mod persona;
 mod stored_account;
 
@@ -20,6 +21,7 @@ mod stored_account;
 mod test_util;
 
 use crate::account_handler::AccountHandler;
+use crate::common::AccountLifetime;
 use failure::{Error, ResultExt};
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
@@ -31,12 +33,25 @@ type TokenManager = token_manager::TokenManager<auth_provider_supplier::AuthProv
 
 const DATA_DIR: &str = "/data";
 
+/// This flag (prefixed with `--`) results in an in-memory ephemeral account.
+const EPHEMERAL_FLAG: &str = "ephemeral";
+
 fn main() -> Result<(), Error> {
+    let mut opts = getopts::Options::new();
+    opts.optflag("", EPHEMERAL_FLAG, "this account is an in-memory ephemeral account");
+    let args: Vec<String> = std::env::args().collect();
+    let options = opts.parse(args)?;
+    let lifetime = if options.opt_present(EPHEMERAL_FLAG) {
+        AccountLifetime::Ephemeral
+    } else {
+        AccountLifetime::Persistent { account_dir: DATA_DIR.into() }
+    };
+
     fuchsia_syslog::init_with_tags(&["auth"]).expect("Can't init logger");
     info!("Starting account handler");
 
     let mut executor = fasync::Executor::new().context("Error creating executor")?;
-    let account_handler = Arc::new(AccountHandler::new(DATA_DIR.into()));
+    let account_handler = Arc::new(AccountHandler::new(lifetime));
 
     let mut fs = ServiceFs::new();
     fs.dir("svc").add_fidl_service(move |stream| {

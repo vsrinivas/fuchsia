@@ -24,6 +24,7 @@ rustc_binary("bin") {
     "//src/identity/lib/token_manager",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:getopts",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:parking_lot",
@@ -46,6 +47,10 @@ package("account_handler") {
     {
       path = rebase_path("meta/account_handler.cmx")
       dest = "account_handler.cmx"
+    },
+    {
+      path = rebase_path("meta/account_handler_ephemeral.cmx")
+      dest = "account_handler_ephemeral.cmx"
     },
   ]
 }

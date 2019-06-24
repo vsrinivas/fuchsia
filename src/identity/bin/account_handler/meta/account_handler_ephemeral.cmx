@@ -1,0 +1,13 @@
+{
+    "program": {
+        "args": [
+            "--ephemeral"
+        ],
+        "binary": "bin/app"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

@@ -5,6 +5,7 @@
 //! This module provides common constants and helpers to assist in the unit-testing of other
 //! modules within the crate.
 
+use crate::common::AccountLifetime;
 use account_common::{LocalAccountId, LocalPersonaId};
 use fidl::endpoints::{create_endpoints, ClientEnd};
 use fidl_fuchsia_auth::AppConfig;
@@ -58,6 +59,11 @@ impl TempLocation {
     /// default.
     pub fn test_path(&self) -> PathBuf {
         self.path.join("test_path")
+    }
+
+    /// Returns a persistent AccountLifetime with the path set to this TempLocation's path.
+    pub fn to_persistent_lifetime(&self) -> AccountLifetime {
+        AccountLifetime::Persistent { account_dir: self.path.clone() }
     }
 }
 

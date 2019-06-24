@@ -6,6 +6,7 @@ extern crate serde_json;
 
 use crate::account_handler::AccountHandler;
 use crate::auth_provider_supplier::AuthProviderSupplier;
+use crate::common::AccountLifetime;
 use crate::persona::{Persona, PersonaContext};
 use crate::stored_account::StoredAccount;
 use crate::TokenManager;
@@ -26,7 +27,6 @@ use futures::prelude::*;
 use identity_common::{cancel_or, TaskGroup, TaskGroupCancel};
 use log::{error, info, warn};
 use std::fs;
-use std::path::PathBuf;
 use std::sync::Arc;
 
 /// The file name to use for a token manager database. The location is supplied
@@ -49,9 +49,8 @@ pub struct Account {
     /// A device-local identifier for this account.
     id: LocalAccountId,
 
-    /// A directory containing data about the Fuchsia account, managed exclusively by one instance
-    /// of this type. It should exist prior to constructing an Account object.
-    account_dir: PathBuf,
+    /// Lifetime for this account.
+    lifetime: Arc<AccountLifetime>,
 
     /// The default persona for this account.
     default_persona: Arc<Persona>,
@@ -73,7 +72,7 @@ impl Account {
     async fn new(
         account_id: LocalAccountId,
         persona_id: LocalPersonaId,
-        account_dir: PathBuf,
+        lifetime: AccountLifetime,
         context_proxy: AccountHandlerContextProxy,
     ) -> Result<Account, AccountManagerError> {
         let task_group = TaskGroup::new();
@@ -81,21 +80,25 @@ impl Account {
             .map_err(|_| AccountManagerError::new(Status::RemovalInProgress))?;
         let default_persona_task_group = await!(task_group.create_child())
             .map_err(|_| AccountManagerError::new(Status::RemovalInProgress))?;
-        let token_db_path = account_dir.join(TOKEN_DB);
-        let token_manager = Arc::new(
-            TokenManager::new(
-                &token_db_path,
-                AuthProviderSupplier::new(context_proxy),
-                token_manager_task_group,
-            )
-            .account_manager_status(Status::UnknownError)?,
-        );
+        let auth_provider_supplier = AuthProviderSupplier::new(context_proxy);
+        let token_manager = Arc::new(match &lifetime {
+            AccountLifetime::Ephemeral => {
+                TokenManager::new_in_memory(auth_provider_supplier, token_manager_task_group)
+            }
+            AccountLifetime::Persistent { account_dir } => {
+                let token_db_path = account_dir.join(TOKEN_DB);
+                TokenManager::new(&token_db_path, auth_provider_supplier, token_manager_task_group)
+                    .account_manager_status(Status::UnknownError)?
+            }
+        });
+        let lifetime = Arc::new(lifetime);
         Ok(Self {
             id: account_id.clone(),
-            account_dir,
+            lifetime: Arc::clone(&lifetime),
             default_persona: Arc::new(Persona::new(
                 persona_id,
                 account_id,
+                lifetime,
                 token_manager,
                 default_persona_task_group,
             )),
@@ -103,37 +106,44 @@ impl Account {
         })
     }
 
-    /// Creates a new Fuchsia account and persist it on disk.
+    /// Creates a new Fuchsia account and, if it is persistent, stores it on disk.
     pub async fn create(
         account_id: LocalAccountId,
-        account_dir: PathBuf,
+        lifetime: AccountLifetime,
         context_proxy: AccountHandlerContextProxy,
     ) -> Result<Account, AccountManagerError> {
-        if StoredAccount::path(&account_dir).exists() {
-            info!("Attempting to create account twice with local id: {:?}", account_id);
-            return Err(AccountManagerError::new(Status::InvalidRequest));
-        }
-
         let local_persona_id = LocalPersonaId::new(rand::random::<u64>());
-        let stored_account = StoredAccount::new(local_persona_id.clone());
-        match stored_account.save(&account_dir) {
-            Ok(_) => await!(Self::new(account_id, local_persona_id, account_dir, context_proxy)),
-            Err(err) => {
-                warn!("Failed to initialize new Account: {:?}", err);
-                Err(err)
+
+        if let AccountLifetime::Persistent { ref account_dir } = lifetime {
+            if StoredAccount::path(account_dir).exists() {
+                info!("Attempting to create account twice with local id: {:?}", account_id);
+                return Err(AccountManagerError::new(Status::InternalError));
             }
+            let stored_account = StoredAccount::new(local_persona_id.clone());
+            stored_account.save(account_dir)?;
         }
+        await!(Self::new(account_id, local_persona_id, lifetime, context_proxy))
     }
 
     /// Loads an existing Fuchsia account from disk.
     pub async fn load(
         account_id: LocalAccountId,
-        account_dir: PathBuf,
+        lifetime: AccountLifetime,
         context_proxy: AccountHandlerContextProxy,
     ) -> Result<Account, AccountManagerError> {
-        let stored_account = StoredAccount::load(&account_dir)?;
+        let account_dir = match lifetime {
+            AccountLifetime::Persistent { ref account_dir } => account_dir,
+            AccountLifetime::Ephemeral => {
+                warn!(concat!(
+                    "Attempting to load an ephemeral account from disk. This is not a ",
+                    "supported operation."
+                ));
+                return Err(AccountManagerError::new(Status::InternalError));
+            }
+        };
+        let stored_account = StoredAccount::load(account_dir)?;
         let local_persona_id = stored_account.get_default_persona_id().clone();
-        await!(Self::new(account_id, local_persona_id, account_dir, context_proxy))
+        await!(Self::new(account_id, local_persona_id, lifetime, context_proxy))
     }
 
     /// Removes the account from disk or returns the account and the error.
@@ -143,18 +153,23 @@ impl Account {
 
     /// Removes the account from disk.
     fn remove_inner(&self) -> Result<(), AccountManagerError> {
-        let token_db_path = &self.account_dir.join(TOKEN_DB);
-        if token_db_path.exists() {
-            fs::remove_file(token_db_path).map_err(|err| {
-                warn!("Failed to delete token db: {:?}", err);
-                AccountManagerError::new(Status::IoError).with_cause(err)
-            })?;
+        match self.lifetime.as_ref() {
+            AccountLifetime::Ephemeral => Ok(()),
+            AccountLifetime::Persistent { account_dir } => {
+                let token_db_path = &account_dir.join(TOKEN_DB);
+                if token_db_path.exists() {
+                    fs::remove_file(token_db_path).map_err(|err| {
+                        warn!("Failed to delete token db: {:?}", err);
+                        AccountManagerError::new(Status::IoError).with_cause(err)
+                    })?;
+                }
+                let to_remove = StoredAccount::path(&account_dir.clone());
+                fs::remove_file(to_remove).map_err(|err| {
+                    warn!("Failed to delete account doc: {:?}", err);
+                    AccountManagerError::new(Status::IoError).with_cause(err)
+                })
+            }
         }
-        let to_remove = StoredAccount::path(&self.account_dir.clone());
-        fs::remove_file(to_remove).map_err(|err| {
-            warn!("Failed to delete account doc: {:?}", err);
-            AccountManagerError::new(Status::IoError).with_cause(err)
-        })
     }
 
     /// Returns a task group which can be used to spawn and cancel tasks that use this instance.
@@ -197,8 +212,8 @@ impl Account {
                 responder.send(&response)?;
             }
             AccountRequest::GetLifetime { responder } => {
-                // TODO(dnordstrom): Add method
-                responder.send(Lifetime::Persistent)?;
+                let response = self.get_lifetime();
+                responder.send(response)?;
             }
             AccountRequest::GetAuthState { responder } => {
                 let mut response = self.get_auth_state();
@@ -235,6 +250,10 @@ impl Account {
             }
         }
         Ok(())
+    }
+
+    fn get_lifetime(&self) -> Lifetime {
+        Lifetime::from(self.lifetime.as_ref())
     }
 
     fn get_account_name(&self) -> String {
@@ -340,12 +359,23 @@ mod tests {
             Test { location: TempLocation::new() }
         }
 
-        async fn create_account(&self) -> Result<Account, AccountManagerError> {
+        async fn create_persistent_account(&self) -> Result<Account, AccountManagerError> {
+            let (account_handler_context_client_end, _) =
+                create_endpoints::<AccountHandlerContextMarker>().unwrap();
+            let account_dir = self.location.path.clone();
+            await!(Account::create(
+                TEST_ACCOUNT_ID.clone(),
+                AccountLifetime::Persistent { account_dir },
+                account_handler_context_client_end.into_proxy().unwrap(),
+            ))
+        }
+
+        async fn create_ephemeral_account(&self) -> Result<Account, AccountManagerError> {
             let (account_handler_context_client_end, _) =
                 create_endpoints::<AccountHandlerContextMarker>().unwrap();
             await!(Account::create(
                 TEST_ACCOUNT_ID.clone(),
-                self.location.path.clone(),
+                AccountLifetime::Ephemeral,
                 account_handler_context_client_end.into_proxy().unwrap(),
             ))
         }
@@ -355,7 +385,7 @@ mod tests {
                 create_endpoints::<AccountHandlerContextMarker>().unwrap();
             await!(Account::load(
                 TEST_ACCOUNT_ID.clone(),
-                self.location.path.clone(),
+                AccountLifetime::Persistent { account_dir: self.location.path.clone() },
                 account_handler_context_client_end.into_proxy().unwrap(),
             ))
         }
@@ -391,17 +421,35 @@ mod tests {
     async fn test_random_persona_id() {
         let mut test = Test::new();
         // Generating two accounts with the same accountID should lead to two different persona IDs
-        let account_1 = await!(test.create_account()).unwrap();
+        let account_1 = await!(test.create_persistent_account()).unwrap();
         test.location = TempLocation::new();
-        let account_2 = await!(test.create_account()).unwrap();
+        let account_2 = await!(test.create_persistent_account()).unwrap();
         assert_ne!(account_1.default_persona.id(), account_2.default_persona.id());
     }
 
     #[fasync::run_until_stalled(test)]
     async fn test_get_account_name() {
         let mut test = Test::new();
-        await!(test.run(await!(test.create_account()).unwrap(), async move |proxy| {
+        await!(test.run(await!(test.create_persistent_account()).unwrap(), async move |proxy| {
             assert_eq!(await!(proxy.get_account_name())?, Account::DEFAULT_ACCOUNT_NAME);
+            Ok(())
+        }));
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn test_get_lifetime_ephemeral() {
+        let mut test = Test::new();
+        await!(test.run(await!(test.create_ephemeral_account()).unwrap(), async move |proxy| {
+            assert_eq!(await!(proxy.get_lifetime())?, Lifetime::Ephemeral);
+            Ok(())
+        }));
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn test_get_lifetime_persistent() {
+        let mut test = Test::new();
+        await!(test.run(await!(test.create_persistent_account()).unwrap(), async move |proxy| {
+            assert_eq!(await!(proxy.get_lifetime())?, Lifetime::Persistent);
             Ok(())
         }));
     }
@@ -409,8 +457,10 @@ mod tests {
     #[fasync::run_until_stalled(test)]
     async fn test_create_and_load() {
         let test = Test::new();
-        let account_1 = await!(test.create_account()).unwrap(); // Persists the account on disk
-        let account_2 = await!(test.load_account()).unwrap(); // Reads from same location
+        // Persists the account on disk
+        let account_1 = await!(test.create_persistent_account()).unwrap();
+        // Reads from same location
+        let account_2 = await!(test.load_account()).unwrap();
 
         // Since persona ids are random, we can check that loading worked successfully here
         assert_eq!(account_1.default_persona.id(), account_2.default_persona.id());
@@ -422,17 +472,30 @@ mod tests {
         assert!(await!(test.load_account()).is_err()); // Reads from uninitialized location
     }
 
+    /// Attempting to load an ephemeral account fails.
+    #[fasync::run_until_stalled(test)]
+    async fn test_load_ephemeral() {
+        let (account_handler_context_client_end, _) =
+            create_endpoints::<AccountHandlerContextMarker>().unwrap();
+        assert!(await!(Account::load(
+            TEST_ACCOUNT_ID.clone(),
+            AccountLifetime::Ephemeral,
+            account_handler_context_client_end.into_proxy().unwrap(),
+        ))
+        .is_err());
+    }
+
     #[fasync::run_until_stalled(test)]
     async fn test_create_twice() {
         let test = Test::new();
-        assert!(await!(test.create_account()).is_ok());
-        assert!(await!(test.create_account()).is_err()); // Tries to write to same dir
+        assert!(await!(test.create_persistent_account()).is_ok());
+        assert!(await!(test.create_persistent_account()).is_err()); // Tries to write to same dir
     }
 
     #[fasync::run_until_stalled(test)]
     async fn test_get_auth_state() {
         let mut test = Test::new();
-        await!(test.run(await!(test.create_account()).unwrap(), async move |proxy| {
+        await!(test.run(await!(test.create_persistent_account()).unwrap(), async move |proxy| {
             assert_eq!(
                 await!(proxy.get_auth_state())?,
                 (Status::Ok, Some(Box::new(AccountHandler::DEFAULT_AUTH_STATE)))
@@ -444,7 +507,7 @@ mod tests {
     #[fasync::run_until_stalled(test)]
     async fn test_register_auth_listener() {
         let mut test = Test::new();
-        await!(test.run(await!(test.create_account()).unwrap(), async move |proxy| {
+        await!(test.run(await!(test.create_persistent_account()).unwrap(), async move |proxy| {
             let (auth_listener_client_end, _) = create_endpoints().unwrap();
             assert_eq!(
                 await!(proxy.register_auth_listener(
@@ -462,7 +525,7 @@ mod tests {
     async fn test_get_persona_ids() {
         let mut test = Test::new();
         // Note: Persona ID is random. Record the persona_id before starting the test.
-        let account = await!(test.create_account()).unwrap();
+        let account = await!(test.create_persistent_account()).unwrap();
         let persona_id = &account.default_persona.id().clone();
 
         await!(test.run(account, async move |proxy| {
@@ -477,7 +540,7 @@ mod tests {
     async fn test_get_default_persona() {
         let mut test = Test::new();
         // Note: Persona ID is random. Record the persona_id before starting the test.
-        let account = await!(test.create_account()).unwrap();
+        let account = await!(test.create_persistent_account()).unwrap();
         let persona_id = &account.default_persona.id().clone();
 
         await!(test.run(account, async move |account_proxy| {
@@ -492,7 +555,26 @@ mod tests {
                 await!(persona_proxy.get_auth_state())?,
                 (Status::Ok, Some(Box::new(AccountHandler::DEFAULT_AUTH_STATE)))
             );
+            assert_eq!(await!(persona_proxy.get_lifetime())?, Lifetime::Persistent);
 
+            Ok(())
+        }));
+    }
+
+    /// When an ephemeral account is created, its default persona is also ephemeral.
+    #[fasync::run_until_stalled(test)]
+    async fn test_ephemeral_account_has_ephemeral_persona() {
+        let mut test = Test::new();
+        let account = await!(test.create_ephemeral_account()).unwrap();
+        await!(test.run(account, async move |account_proxy| {
+            let (persona_client_end, persona_server_end) = create_endpoints().unwrap();
+            assert_eq!(
+                await!(account_proxy.get_default_persona(persona_server_end))?.0,
+                Status::Ok
+            );
+            let persona_proxy = persona_client_end.into_proxy().unwrap();
+
+            assert_eq!(await!(persona_proxy.get_lifetime())?, Lifetime::Ephemeral);
             Ok(())
         }));
     }
@@ -500,7 +582,7 @@ mod tests {
     #[fasync::run_until_stalled(test)]
     async fn test_get_persona_by_correct_id() {
         let mut test = Test::new();
-        let account = await!(test.create_account()).unwrap();
+        let account = await!(test.create_persistent_account()).unwrap();
         let persona_id = account.default_persona.id().clone();
 
         await!(test.run(account, async move |account_proxy| {
@@ -525,7 +607,7 @@ mod tests {
     #[fasync::run_until_stalled(test)]
     async fn test_get_persona_by_incorrect_id() {
         let mut test = Test::new();
-        let account = await!(test.create_account()).unwrap();
+        let account = await!(test.create_persistent_account()).unwrap();
         // Note: This fixed value has a 1 - 2^64 probability of not matching the randomly chosen
         // one.
         let wrong_id = LocalPersonaId::new(13);
@@ -549,7 +631,7 @@ mod tests {
             user_profile_id: "test_obfuscated_gaia_id".to_string(),
         };
 
-        await!(test.run(await!(test.create_account()).unwrap(), async move |proxy| {
+        await!(test.run(await!(test.create_persistent_account()).unwrap(), async move |proxy| {
             assert_eq!(
                 await!(proxy.set_recovery_account(&mut service_provider_account))?,
                 Status::InternalError
@@ -562,7 +644,7 @@ mod tests {
     async fn test_get_recovery_account() {
         let mut test = Test::new();
         let expectation = (Status::InternalError, None);
-        await!(test.run(await!(test.create_account()).unwrap(), async move |proxy| {
+        await!(test.run(await!(test.create_persistent_account()).unwrap(), async move |proxy| {
             assert_eq!(await!(proxy.get_recovery_account())?, expectation);
             Ok(())
         }));

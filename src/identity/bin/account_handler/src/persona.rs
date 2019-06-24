@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use crate::account_handler::AccountHandler;
+use crate::common::AccountLifetime;
 use crate::TokenManager;
 use account_common::{LocalAccountId, LocalPersonaId};
 use failure::Error;
@@ -33,12 +34,18 @@ pub struct PersonaContext {
 ///
 /// This state is only available once the Handler has been initialized to a particular account via
 /// the AccountHandlerControl channel.
+// TODO(dnordstrom): Factor out items that are accessed by both account and persona into its own
+// type so they don't need to be individually copied or Arc-wrapped. Here, `token_manager`,
+// `lifetime` and `account_id` are candidates.
 pub struct Persona {
     /// A device-local identifier for this persona.
     id: LocalPersonaId,
 
     /// The device-local identitier that this persona is a facet of.
     _account_id: LocalAccountId,
+
+    /// Lifetime for this persona's account (ephemeral or persistent with a path).
+    lifetime: Arc<AccountLifetime>,
 
     /// The token manager to be used for authentication token requests.
     token_manager: Arc<TokenManager>,
@@ -57,10 +64,11 @@ impl Persona {
     pub fn new(
         id: LocalPersonaId,
         account_id: LocalAccountId,
+        lifetime: Arc<AccountLifetime>,
         token_manager: Arc<TokenManager>,
         task_group: TaskGroup,
     ) -> Persona {
-        Self { id, _account_id: account_id, token_manager, task_group }
+        Self { id, _account_id: account_id, lifetime, token_manager, task_group }
     }
 
     /// Returns the device-local identifier for this persona.
@@ -94,8 +102,8 @@ impl Persona {
     ) -> Result<(), fidl::Error> {
         match req {
             PersonaRequest::GetLifetime { responder } => {
-                // TODO(dnordstrom): Add method
-                responder.send(Lifetime::Persistent)?;
+                let response = self.get_lifetime();
+                responder.send(response)?;
             }
             PersonaRequest::GetAuthState { responder } => {
                 let mut response = self.get_auth_state();
@@ -117,6 +125,10 @@ impl Persona {
             }
         }
         Ok(())
+    }
+
+    fn get_lifetime(&self) -> Lifetime {
+        Lifetime::from(self.lifetime.as_ref())
     }
 
     fn get_auth_state(&self) -> (Status, Option<AuthState>) {
@@ -178,6 +190,7 @@ mod tests {
     use fidl_fuchsia_auth_account::{PersonaMarker, PersonaProxy};
     use fidl_fuchsia_auth_account_internal::AccountHandlerContextMarker;
     use fuchsia_async as fasync;
+    use std::path::PathBuf;
 
     /// Type to hold the common state require during construction of test objects and execution
     /// of a test, including an async executor and a temporary location in the filesystem.
@@ -208,6 +221,17 @@ mod tests {
             Persona::new(
                 TEST_PERSONA_ID.clone(),
                 TEST_ACCOUNT_ID.clone(),
+                Arc::new(AccountLifetime::Persistent { account_dir: PathBuf::from("/nowhere") }),
+                Arc::clone(&self.token_manager),
+                TaskGroup::new(),
+            )
+        }
+
+        fn create_ephemeral_persona(&self) -> Persona {
+            Persona::new(
+                TEST_PERSONA_ID.clone(),
+                TEST_ACCOUNT_ID.clone(),
+                Arc::new(AccountLifetime::Ephemeral),
                 Arc::clone(&self.token_manager),
                 TaskGroup::new(),
             )
@@ -247,6 +271,18 @@ mod tests {
     async fn test_id() {
         let test = Test::new();
         assert_eq!(test.create_persona().id(), &*TEST_PERSONA_ID);
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn test_get_lifetime_persistent() {
+        let test = Test::new();
+        assert_eq!(test.create_persona().get_lifetime(), Lifetime::Persistent);
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn test_get_lifetime_ephemeral() {
+        let test = Test::new();
+        assert_eq!(test.create_ephemeral_persona().get_lifetime(), Lifetime::Ephemeral);
     }
 
     #[fasync::run_until_stalled(test)]
