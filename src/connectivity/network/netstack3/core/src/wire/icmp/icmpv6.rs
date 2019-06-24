@@ -6,12 +6,12 @@
 
 use std::fmt;
 
-use byteorder::{ByteOrder, NetworkEndian};
 use packet::{BufferView, ParsablePacket, ParseMetadata};
 use zerocopy::{AsBytes, ByteSlice, FromBytes, Unaligned};
 
 use crate::error::{ParseError, ParseResult};
 use crate::ip::{Ipv6, Ipv6Addr};
+use crate::wire::util::U32;
 
 use super::common::{IcmpDestUnreachable, IcmpEchoReply, IcmpEchoRequest, IcmpTimeExceeded};
 use super::{
@@ -163,14 +163,12 @@ impl_icmp_message!(
 #[derive(Copy, Clone, Debug, FromBytes, AsBytes, Unaligned)]
 #[repr(C)]
 pub(crate) struct Icmpv6PacketTooBig {
-    mtu: [u8; 4],
+    mtu: U32,
 }
 
 impl Icmpv6PacketTooBig {
     pub(crate) fn new(mtu: u32) -> Icmpv6PacketTooBig {
-        let mut buf = [0u8; 4];
-        NetworkEndian::write_u32(&mut buf[..], mtu);
-        Icmpv6PacketTooBig { mtu: buf }
+        Icmpv6PacketTooBig { mtu: U32::new(mtu) }
     }
 }
 
@@ -195,18 +193,16 @@ create_net_enum! {
 #[derive(Copy, Clone, Debug, FromBytes, AsBytes, Unaligned)]
 #[repr(C)]
 pub(crate) struct Icmpv6ParameterProblem {
-    pointer: [u8; 4],
+    pointer: U32,
 }
 
 impl Icmpv6ParameterProblem {
     pub(crate) fn new(pointer: u32) -> Icmpv6ParameterProblem {
-        let mut buf = [0u8; 4];
-        NetworkEndian::write_u32(&mut buf[..], pointer);
-        Icmpv6ParameterProblem { pointer: buf }
+        Icmpv6ParameterProblem { pointer: U32::new(pointer) }
     }
 
     pub(crate) fn pointer(self) -> u32 {
-        NetworkEndian::read_u32(&self.pointer)
+        self.pointer.get()
     }
 }
 
@@ -268,8 +264,8 @@ mod tests {
         use crate::wire::testdata::icmp_echo_v6::*;
         test_parse_and_serialize::<IcmpEchoRequest, _>(REQUEST_IP_PACKET_BYTES, |icmp| {
             assert_eq!(icmp.message_body.bytes(), ECHO_DATA);
-            assert_eq!(icmp.message().id_seq.id(), IDENTIFIER);
-            assert_eq!(icmp.message().id_seq.seq(), SEQUENCE_NUM);
+            assert_eq!(icmp.message().id_seq.id.get(), IDENTIFIER);
+            assert_eq!(icmp.message().id_seq.seq.get(), SEQUENCE_NUM);
         });
     }
 }

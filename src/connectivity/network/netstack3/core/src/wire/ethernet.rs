@@ -12,6 +12,7 @@ use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
 use crate::device::ethernet::{EtherType, Mac};
 use crate::error::{ParseError, ParseResult};
+use crate::wire::util::{U16, U32};
 
 // used in PacketBuilder impl
 pub(crate) const ETHERNET_HDR_LEN_NO_TAG: usize = 14;
@@ -50,8 +51,8 @@ const TPID_8021AD: u16 = 0x88a8;
 /// necessary.
 pub(crate) struct EthernetFrame<B> {
     hdr_prefix: LayoutVerified<B, HeaderPrefix>,
-    tag: Option<LayoutVerified<B, [u8; 4]>>,
-    ethertype: LayoutVerified<B, [u8; 2]>,
+    tag: Option<LayoutVerified<B, U32>>,
+    ethertype: LayoutVerified<B, U16>,
     body: B,
 }
 
@@ -89,17 +90,17 @@ impl<B: ByteSlice> ParsablePacket<B, ()> for EthernetFrame<B> {
         let (tag, ethertype, body) = match ethertype_or_tpid {
             self::TPID_8021Q | self::TPID_8021AD => (
                 // Infallible since we verified the buffer length above.
-                Some(buffer.take_obj_front::<[u8; 4]>().unwrap()),
-                buffer.take_obj_front::<[u8; 2]>().unwrap(),
+                Some(buffer.take_obj_front().unwrap()),
+                buffer.take_obj_front().unwrap(),
                 buffer.into_rest(),
             ),
             // Infallible since we verified the buffer length above.
-            _ => (None, buffer.take_obj_front::<[u8; 2]>().unwrap(), buffer.into_rest()),
+            _ => (None, buffer.take_obj_front().unwrap(), buffer.into_rest()),
         };
 
         let frame = EthernetFrame { hdr_prefix, tag, ethertype, body };
 
-        let et = NetworkEndian::read_u16(&*frame.ethertype);
+        let et = frame.ethertype.get();
         if (et >= ETHERNET_MIN_ILLEGAL_ETHERTYPE && et <= ETHERNET_MAX_ILLEGAL_ETHERTYPE)
             || (et < ETHERNET_MIN_ILLEGAL_ETHERTYPE && et as usize != frame.body.len())
         {
@@ -133,7 +134,7 @@ impl<B: ByteSlice> EthernetFrame<B> {
     /// some values of the EtherType header field are used to indicate the
     /// length of the frame's body. In this case, `ethertype` returns `None`.
     pub(crate) fn ethertype(&self) -> Option<EtherType> {
-        let et = NetworkEndian::read_u16(&self.ethertype[..]);
+        let et = self.ethertype.get();
         if et < ETHERNET_MIN_ILLEGAL_ETHERTYPE {
             return None;
         }
@@ -162,7 +163,7 @@ impl<B: ByteSlice> EthernetFrame<B> {
         EthernetFrameBuilder {
             src_mac: self.src_mac(),
             dst_mac: self.dst_mac(),
-            ethertype: NetworkEndian::read_u16(&self.ethertype[..]),
+            ethertype: self.ethertype.get(),
         }
     }
 }
@@ -221,7 +222,7 @@ impl PacketBuilder for EthernetFrameBuilder {
                 .take_obj_front_zero::<HeaderPrefix>()
                 .expect("too few bytes for Ethernet header");
             let ethertype =
-                header.take_obj_front_zero::<[u8; 2]>().expect("too few bytes for Ethernet header");
+                header.take_obj_front_zero().expect("too few bytes for Ethernet header");
             EthernetFrame { hdr_prefix, tag: None, ethertype, body }
         };
 
@@ -232,7 +233,7 @@ impl PacketBuilder for EthernetFrameBuilder {
 
         frame.hdr_prefix.src_mac = self.src_mac.bytes();
         frame.hdr_prefix.dst_mac = self.dst_mac.bytes();
-        NetworkEndian::write_u16(&mut frame.ethertype[..], self.ethertype);
+        *frame.ethertype = U16::new(self.ethertype);
     }
 }
 
@@ -298,11 +299,10 @@ mod tests {
             assert_eq!(frame.ethertype(), Some(EtherType::Arp));
 
             // help out with type inference
-            let tag: &[u8; 4] = frame.tag.as_ref().unwrap();
-            let got_tag = NetworkEndian::read_u32(tag);
+            let tag: &U32 = frame.tag.as_ref().unwrap();
             let want_tag =
                 u32::from(*tpid) << 16 | ((TPID_OFFSET as u32 + 2) << 8) | (TPID_OFFSET as u32 + 3);
-            assert_eq!(got_tag, want_tag);
+            assert_eq!(tag.get(), want_tag);
             // Offset by 4 since new_parse_buf returns a body on the assumption
             // that there's no tag.
             assert_eq!(frame.body(), &body[4..]);

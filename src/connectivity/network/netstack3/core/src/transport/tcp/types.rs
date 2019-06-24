@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use byteorder::{ByteOrder, NetworkEndian};
 use zerocopy::{AsBytes, FromBytes, Unaligned};
+
+use crate::wire::util::U32;
 
 /// A TCP header option.
 ///
@@ -45,24 +46,24 @@ pub(crate) enum TcpOption<'a> {
 #[derive(Copy, Clone, Default, Eq, PartialEq, Debug, FromBytes, AsBytes, Unaligned)]
 #[repr(C)]
 pub(crate) struct TcpSackBlock {
-    left_edge: [u8; 4],
-    right_edge: [u8; 4],
+    left_edge: U32,
+    right_edge: U32,
 }
 
 impl TcpSackBlock {
     pub(crate) fn left_edge(self) -> u32 {
-        NetworkEndian::read_u32(&self.left_edge)
+        self.left_edge.get()
     }
 
     pub(crate) fn right_edge(self) -> u32 {
-        NetworkEndian::read_u32(&self.right_edge)
+        self.right_edge.get()
     }
 
     pub(crate) fn set_left_edge(&mut self, left_edge: u32) {
-        NetworkEndian::write_u32(&mut self.left_edge, left_edge);
+        self.left_edge = U32::new(left_edge);
     }
 
     pub(crate) fn set_right_edge(&mut self, right_edge: u32) {
-        NetworkEndian::write_u32(&mut self.right_edge, right_edge);
+        self.right_edge = U32::new(right_edge);
     }
 }

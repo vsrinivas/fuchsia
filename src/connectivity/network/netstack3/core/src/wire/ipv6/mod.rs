@@ -9,7 +9,6 @@ pub(crate) mod ext_hdrs;
 use std::fmt::{self, Debug, Formatter};
 use std::ops::Range;
 
-use byteorder::{ByteOrder, NetworkEndian};
 use log::debug;
 use packet::{
     BufferView, BufferViewMut, PacketBuilder, ParsablePacket, ParseMetadata, SerializeBuffer,
@@ -21,6 +20,7 @@ use crate::ip::reassembly::FragmentablePacket;
 use crate::ip::{IpProto, Ipv6, Ipv6Addr, Ipv6ExtHdrType};
 use crate::wire::icmp::Icmpv6ParameterProblemCode;
 use crate::wire::util::records::Records;
+use crate::wire::util::U16;
 
 use ext_hdrs::{
     is_valid_next_header, is_valid_next_header_upper_layer, ExtensionHeaderOptionAction,
@@ -156,7 +156,7 @@ fn ext_hdr_err_fn(hdr: &FixedHeader, err: Ipv6ExtensionHeaderParsingError) -> Ip
 #[repr(C)]
 pub(crate) struct FixedHeader {
     version_tc_flowlabel: [u8; 4],
-    payload_len: [u8; 2],
+    payload_len: U16,
     next_hdr: u8,
     hop_limit: u8,
     src_ip: [u8; 16],
@@ -180,10 +180,6 @@ impl FixedHeader {
         (u32::from(self.version_tc_flowlabel[1]) & 0xF) << 16
             | u32::from(self.version_tc_flowlabel[2]) << 8
             | u32::from(self.version_tc_flowlabel[3])
-    }
-
-    fn payload_len(&self) -> u16 {
-        NetworkEndian::read_u16(&self.payload_len)
     }
 }
 
@@ -213,7 +209,7 @@ impl<B: ByteSlice> ParsablePacket<B, ()> for Ipv6Packet<B> {
             .take_obj_front::<FixedHeader>()
             .ok_or_else(debug_err_fn!(ParseError::Format, "too few bytes for header"))?;
 
-        if (fixed_hdr.payload_len() as usize) > buffer.len() {
+        if usize::from(fixed_hdr.payload_len.get()) > buffer.len() {
             return debug_err!(
                 Err(ParseError::Format.into()),
                 "Payload length greater than buffer"
@@ -264,7 +260,7 @@ impl<B: ByteSlice> ParsablePacket<B, ()> for Ipv6Packet<B> {
 
         // Make sure that the amount of bytes we used for extension headers isn't greater than the
         // number of bytes specified in the fixed header's payload length.
-        if extension_hdrs.bytes().len() > fixed_hdr.payload_len() as usize {
+        if extension_hdrs.bytes().len() > usize::from(fixed_hdr.payload_len.get()) {
             return debug_err!(
                 Err(ParseError::Format.into()),
                 "extension hdrs size more than payload length"
@@ -287,7 +283,7 @@ impl<B: ByteSlice> ParsablePacket<B, ()> for Ipv6Packet<B> {
         // check to make sure that the size of the extension headers isn't greater
         // than the payload length.
         if packet.body.len()
-            != (packet.fixed_hdr.payload_len() as usize - packet.extension_hdrs.bytes().len())
+            != usize::from(packet.fixed_hdr.payload_len.get()) - packet.extension_hdrs.bytes().len()
         {
             return debug_err!(
                 Err(ParseError::Format.into()),
@@ -617,7 +613,7 @@ impl PacketBuilder for Ipv6PacketBuilder {
         // violated their contract.
         debug_assert!(body.len() <= std::u16::MAX as usize);
         let payload_len = body.len() as u16;
-        NetworkEndian::write_u16(&mut fixed_hdr.payload_len, payload_len);
+        fixed_hdr.payload_len = U16::new(payload_len);
         fixed_hdr.next_hdr = self.next_hdr;
         fixed_hdr.hop_limit = self.hop_limit;
         fixed_hdr.src_ip = self.src_ip.ipv6_bytes();
@@ -627,10 +623,12 @@ impl PacketBuilder for Ipv6PacketBuilder {
 
 #[cfg(test)]
 mod tests {
+    use byteorder::{ByteOrder, NetworkEndian};
+    use packet::{Buf, BufferSerializer, ParseBuffer, Serializer};
+
     use super::ext_hdrs::*;
     use super::*;
     use crate::ip::Ipv6ExtHdrType;
-    use packet::{Buf, BufferSerializer, ParseBuffer, Serializer};
 
     const DEFAULT_SRC_IP: Ipv6Addr =
         Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]);
@@ -652,7 +650,7 @@ mod tests {
     fn new_fixed_hdr() -> FixedHeader {
         let mut fixed_hdr = FixedHeader::default();
         NetworkEndian::write_u32(&mut fixed_hdr.version_tc_flowlabel[..], 0x6020_0077);
-        NetworkEndian::write_u16(&mut fixed_hdr.payload_len[..], 0);
+        fixed_hdr.payload_len = U16::ZERO;
         fixed_hdr.next_hdr = IpProto::Tcp.into();
         fixed_hdr.hop_limit = 64;
         fixed_hdr.src_ip = DEFAULT_SRC_IP.ipv6_bytes();
@@ -713,10 +711,7 @@ mod tests {
         ];
         let mut fixed_hdr = new_fixed_hdr();
         fixed_hdr.next_hdr = Ipv6ExtHdrType::HopByHopOptions.into();
-        NetworkEndian::write_u16(
-            &mut fixed_hdr.payload_len[..],
-            (buf.len() - IPV6_FIXED_HDR_LEN) as u16,
-        );
+        fixed_hdr.payload_len = U16::new((buf.len() - IPV6_FIXED_HDR_LEN) as u16);
         let fixed_hdr_buf = fixed_hdr_to_bytes(fixed_hdr);
         buf[..IPV6_FIXED_HDR_LEN].copy_from_slice(&fixed_hdr_buf);
         let mut buf = &buf[..];
@@ -772,10 +767,7 @@ mod tests {
         ];
         let mut fixed_hdr = new_fixed_hdr();
         fixed_hdr.next_hdr = Ipv6ExtHdrType::HopByHopOptions.into();
-        NetworkEndian::write_u16(
-            &mut fixed_hdr.payload_len[..],
-            (buf.len() - IPV6_FIXED_HDR_LEN) as u16,
-        );
+        fixed_hdr.payload_len = U16::new((buf.len() - IPV6_FIXED_HDR_LEN) as u16);
         let fixed_hdr_buf = fixed_hdr_to_bytes(fixed_hdr);
         buf[..IPV6_FIXED_HDR_LEN].copy_from_slice(&fixed_hdr_buf);
         let mut buf = &buf[..];
@@ -813,7 +805,7 @@ mod tests {
 
         // Set the payload len to 2, even though there's no payload.
         let mut fixed_hdr = new_fixed_hdr();
-        NetworkEndian::write_u16(&mut fixed_hdr.payload_len[..], 2);
+        fixed_hdr.payload_len = U16::new(2);
         assert_eq!(
             (&fixed_hdr_to_bytes(fixed_hdr)[..]).parse::<Ipv6Packet<_>>().unwrap_err(),
             ParseError::Format.into()
@@ -880,10 +872,7 @@ mod tests {
         ];
         let mut fixed_hdr = new_fixed_hdr();
         fixed_hdr.next_hdr = Ipv6ExtHdrType::Routing.into();
-        NetworkEndian::write_u16(
-            &mut fixed_hdr.payload_len[..],
-            (buf.len() - IPV6_FIXED_HDR_LEN) as u16,
-        );
+        fixed_hdr.payload_len = U16::new((buf.len() - IPV6_FIXED_HDR_LEN) as u16);
         let fixed_hdr_buf = fixed_hdr_to_bytes(fixed_hdr);
         buf[..IPV6_FIXED_HDR_LEN].copy_from_slice(&fixed_hdr_buf);
         let mut buf = &buf[..];
@@ -922,10 +911,7 @@ mod tests {
         ];
         let mut fixed_hdr = new_fixed_hdr();
         fixed_hdr.next_hdr = Ipv6ExtHdrType::Routing.into();
-        NetworkEndian::write_u16(
-            &mut fixed_hdr.payload_len[..],
-            (buf.len() - IPV6_FIXED_HDR_LEN) as u16,
-        );
+        fixed_hdr.payload_len = U16::new((buf.len() - IPV6_FIXED_HDR_LEN) as u16);
         let fixed_hdr_buf = fixed_hdr_to_bytes(fixed_hdr);
         buf[..IPV6_FIXED_HDR_LEN].copy_from_slice(&fixed_hdr_buf);
         let mut buf = &buf[..];
@@ -1031,10 +1017,7 @@ mod tests {
         ];
         let mut fixed_hdr = new_fixed_hdr();
         fixed_hdr.next_hdr = Ipv6ExtHdrType::HopByHopOptions.into();
-        NetworkEndian::write_u16(
-            &mut fixed_hdr.payload_len[..],
-            (buf.len() - IPV6_FIXED_HDR_LEN) as u16,
-        );
+        fixed_hdr.payload_len = U16::new((buf.len() - IPV6_FIXED_HDR_LEN) as u16);
         let fixed_hdr_buf = fixed_hdr_to_bytes(fixed_hdr);
         buf[..IPV6_FIXED_HDR_LEN].copy_from_slice(&fixed_hdr_buf);
         let mut buf = &buf[..];
@@ -1071,10 +1054,7 @@ mod tests {
         ];
         let mut fixed_hdr = new_fixed_hdr();
         fixed_hdr.next_hdr = Ipv6ExtHdrType::HopByHopOptions.into();
-        NetworkEndian::write_u16(
-            &mut fixed_hdr.payload_len[..],
-            (buf.len() - IPV6_FIXED_HDR_LEN) as u16,
-        );
+        fixed_hdr.payload_len = U16::new((buf.len() - IPV6_FIXED_HDR_LEN) as u16);
         let fixed_hdr_buf = fixed_hdr_to_bytes(fixed_hdr);
         buf[..IPV6_FIXED_HDR_LEN].copy_from_slice(&fixed_hdr_buf);
         let mut buf = &buf[..];
@@ -1105,10 +1085,7 @@ mod tests {
         ];
         let mut fixed_hdr = new_fixed_hdr();
         fixed_hdr.next_hdr = Ipv6ExtHdrType::Fragment.into();
-        NetworkEndian::write_u16(
-            &mut fixed_hdr.payload_len[..],
-            (bytes.len() - IPV6_FIXED_HDR_LEN) as u16,
-        );
+        fixed_hdr.payload_len = U16::new((bytes.len() - IPV6_FIXED_HDR_LEN) as u16);
         let fixed_hdr_buf = fixed_hdr_to_bytes(fixed_hdr);
         bytes[..IPV6_FIXED_HDR_LEN].copy_from_slice(&fixed_hdr_buf);
         let mut buf = &bytes[..];
@@ -1145,10 +1122,7 @@ mod tests {
         ];
         let mut fixed_hdr = new_fixed_hdr();
         fixed_hdr.next_hdr = Ipv6ExtHdrType::HopByHopOptions.into();
-        NetworkEndian::write_u16(
-            &mut fixed_hdr.payload_len[..],
-            (bytes.len() - IPV6_FIXED_HDR_LEN) as u16,
-        );
+        fixed_hdr.payload_len = U16::new((bytes.len() - IPV6_FIXED_HDR_LEN) as u16);
         let fixed_hdr_buf = fixed_hdr_to_bytes(fixed_hdr);
         bytes[..IPV6_FIXED_HDR_LEN].copy_from_slice(&fixed_hdr_buf);
         let mut buf = &bytes[..];
@@ -1193,10 +1167,7 @@ mod tests {
         ];
         let mut fixed_hdr = new_fixed_hdr();
         fixed_hdr.next_hdr = Ipv6ExtHdrType::HopByHopOptions.into();
-        NetworkEndian::write_u16(
-            &mut fixed_hdr.payload_len[..],
-            (bytes.len() - IPV6_FIXED_HDR_LEN) as u16,
-        );
+        fixed_hdr.payload_len = U16::new((bytes.len() - IPV6_FIXED_HDR_LEN) as u16);
         let fixed_hdr_buf = fixed_hdr_to_bytes(fixed_hdr);
         bytes[..IPV6_FIXED_HDR_LEN].copy_from_slice(&fixed_hdr_buf);
         let mut buf = &bytes[..];
@@ -1234,10 +1205,7 @@ mod tests {
         ];
         let mut fixed_hdr = new_fixed_hdr();
         fixed_hdr.next_hdr = Ipv6ExtHdrType::Fragment.into();
-        NetworkEndian::write_u16(
-            &mut fixed_hdr.payload_len[..],
-            (bytes.len() - IPV6_FIXED_HDR_LEN) as u16,
-        );
+        fixed_hdr.payload_len = U16::new((bytes.len() - IPV6_FIXED_HDR_LEN) as u16);
         let fixed_hdr_buf = fixed_hdr_to_bytes(fixed_hdr);
         bytes[..IPV6_FIXED_HDR_LEN].copy_from_slice(&fixed_hdr_buf);
         let mut buf = &bytes[..];
@@ -1288,10 +1256,7 @@ mod tests {
         ];
         let mut fixed_hdr = new_fixed_hdr();
         fixed_hdr.next_hdr = Ipv6ExtHdrType::Fragment.into();
-        NetworkEndian::write_u16(
-            &mut fixed_hdr.payload_len[..],
-            (bytes.len() - IPV6_FIXED_HDR_LEN) as u16,
-        );
+        fixed_hdr.payload_len = U16::new((bytes.len() - IPV6_FIXED_HDR_LEN) as u16);
         let fixed_hdr_buf = fixed_hdr_to_bytes(fixed_hdr);
         bytes[..IPV6_FIXED_HDR_LEN].copy_from_slice(&fixed_hdr_buf);
         let mut buf = &bytes[..];
@@ -1339,10 +1304,7 @@ mod tests {
         ];
         let mut fixed_hdr = new_fixed_hdr();
         fixed_hdr.next_hdr = Ipv6ExtHdrType::HopByHopOptions.into();
-        NetworkEndian::write_u16(
-            &mut fixed_hdr.payload_len[..],
-            (bytes.len() - IPV6_FIXED_HDR_LEN) as u16,
-        );
+        fixed_hdr.payload_len = U16::new((bytes.len() - IPV6_FIXED_HDR_LEN) as u16);
         let fixed_hdr_buf = fixed_hdr_to_bytes(fixed_hdr);
         bytes[..IPV6_FIXED_HDR_LEN].copy_from_slice(&fixed_hdr_buf);
         let mut buf = &bytes[..];
@@ -1381,10 +1343,7 @@ mod tests {
         ];
         let mut fixed_hdr = new_fixed_hdr();
         fixed_hdr.next_hdr = Ipv6ExtHdrType::Fragment.into();
-        NetworkEndian::write_u16(
-            &mut fixed_hdr.payload_len[..],
-            (bytes.len() - IPV6_FIXED_HDR_LEN) as u16,
-        );
+        fixed_hdr.payload_len = U16::new((bytes.len() - IPV6_FIXED_HDR_LEN) as u16);
         let fixed_hdr_buf = fixed_hdr_to_bytes(fixed_hdr);
         bytes[..IPV6_FIXED_HDR_LEN].copy_from_slice(&fixed_hdr_buf);
         let mut buf = &bytes[..];

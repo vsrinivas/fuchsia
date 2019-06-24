@@ -6,12 +6,12 @@
 
 use std::fmt;
 
-use byteorder::{ByteOrder, NetworkEndian};
 use packet::{BufferView, ParsablePacket, ParseMetadata};
 use zerocopy::{AsBytes, ByteSlice, FromBytes, Unaligned};
 
 use crate::error::{ParseError, ParseResult};
 use crate::ip::{Ipv4, Ipv4Addr};
+use crate::wire::util::U32;
 
 use super::common::{IcmpDestUnreachable, IcmpEchoReply, IcmpEchoRequest, IcmpTimeExceeded};
 use super::{
@@ -178,35 +178,9 @@ impl_icmp_message!(Ipv4, IcmpTimeExceeded, TimeExceeded, Icmpv4TimeExceededCode,
 #[derive(Copy, Clone, Debug, FromBytes, AsBytes, Unaligned)]
 #[repr(C)]
 struct IcmpTimestampData {
-    origin_timestamp: [u8; 4],
-    recv_timestamp: [u8; 4],
-    tx_timestamp: [u8; 4],
-}
-
-impl IcmpTimestampData {
-    fn origin_timestamp(&self) -> u32 {
-        NetworkEndian::read_u32(&self.origin_timestamp)
-    }
-
-    fn recv_timestamp(&self) -> u32 {
-        NetworkEndian::read_u32(&self.recv_timestamp)
-    }
-
-    fn tx_timestamp(&self) -> u32 {
-        NetworkEndian::read_u32(&self.tx_timestamp)
-    }
-
-    fn set_origin_timestamp(&mut self, timestamp: u32) {
-        NetworkEndian::write_u32(&mut self.origin_timestamp, timestamp)
-    }
-
-    fn set_recv_timestamp(&mut self, timestamp: u32) {
-        NetworkEndian::write_u32(&mut self.recv_timestamp, timestamp)
-    }
-
-    fn set_tx_timestamp(&mut self, timestamp: u32) {
-        NetworkEndian::write_u32(&mut self.tx_timestamp, timestamp)
-    }
+    origin_timestamp: U32,
+    recv_timestamp: U32,
+    tx_timestamp: U32,
 }
 
 #[derive(Copy, Clone, Debug, FromBytes, AsBytes, Unaligned)]
@@ -310,8 +284,8 @@ mod tests {
         use crate::wire::testdata::icmp_echo::*;
         test_parse_and_serialize::<IcmpEchoRequest, _>(REQUEST_IP_PACKET_BYTES, |icmp| {
             assert_eq!(icmp.message_body.bytes(), ECHO_DATA);
-            assert_eq!(icmp.message().id_seq.id(), IDENTIFIER);
-            assert_eq!(icmp.message().id_seq.seq(), SEQUENCE_NUM);
+            assert_eq!(icmp.message().id_seq.id.get(), IDENTIFIER);
+            assert_eq!(icmp.message().id_seq.seq.get(), SEQUENCE_NUM);
         });
     }
 
@@ -320,8 +294,8 @@ mod tests {
         use crate::wire::testdata::icmp_echo::*;
         test_parse_and_serialize::<IcmpEchoReply, _>(RESPONSE_IP_PACKET_BYTES, |icmp| {
             assert_eq!(icmp.message_body.bytes(), ECHO_DATA);
-            assert_eq!(icmp.message().id_seq.id(), IDENTIFIER);
-            assert_eq!(icmp.message().id_seq.seq(), SEQUENCE_NUM);
+            assert_eq!(icmp.message().id_seq.id.get(), IDENTIFIER);
+            assert_eq!(icmp.message().id_seq.seq.get(), SEQUENCE_NUM);
         });
     }
 
@@ -329,10 +303,10 @@ mod tests {
     fn test_parse_and_serialize_timestamp_request() {
         use crate::wire::testdata::icmp_timestamp::*;
         test_parse_and_serialize::<Icmpv4TimestampRequest, _>(REQUEST_IP_PACKET_BYTES, |icmp| {
-            assert_eq!(icmp.message().0.timestamps.origin_timestamp(), ORIGIN_TIMESTAMP);
-            assert_eq!(icmp.message().0.timestamps.tx_timestamp(), RX_TX_TIMESTAMP);
-            assert_eq!(icmp.message().0.id_seq.id(), IDENTIFIER);
-            assert_eq!(icmp.message().0.id_seq.seq(), SEQUENCE_NUM);
+            assert_eq!(icmp.message().0.timestamps.origin_timestamp.get(), ORIGIN_TIMESTAMP);
+            assert_eq!(icmp.message().0.timestamps.tx_timestamp.get(), RX_TX_TIMESTAMP);
+            assert_eq!(icmp.message().0.id_seq.id.get(), IDENTIFIER);
+            assert_eq!(icmp.message().0.id_seq.seq.get(), SEQUENCE_NUM);
         });
     }
 
@@ -340,11 +314,11 @@ mod tests {
     fn test_parse_and_serialize_timestamp_reply() {
         use crate::wire::testdata::icmp_timestamp::*;
         test_parse_and_serialize::<Icmpv4TimestampReply, _>(RESPONSE_IP_PACKET_BYTES, |icmp| {
-            assert_eq!(icmp.message().0.timestamps.origin_timestamp(), ORIGIN_TIMESTAMP);
+            assert_eq!(icmp.message().0.timestamps.origin_timestamp.get(), ORIGIN_TIMESTAMP);
             // TODO: Assert other values here?
             // TODO: Check value of recv_timestamp and tx_timestamp
-            assert_eq!(icmp.message().0.id_seq.id(), IDENTIFIER);
-            assert_eq!(icmp.message().0.id_seq.seq(), SEQUENCE_NUM);
+            assert_eq!(icmp.message().0.id_seq.id.get(), IDENTIFIER);
+            assert_eq!(icmp.message().0.id_seq.seq.get(), SEQUENCE_NUM);
         });
     }
 

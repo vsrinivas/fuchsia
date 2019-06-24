@@ -3,6 +3,10 @@
 // found in the LICENSE file.
 
 //! Implementation of IGMP Messages.
+
+use packet::{BufferView, ParsablePacket, ParseMetadata};
+use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
+
 use super::{
     make_v3_possible_floating_point, parse_v3_possible_floating_point, peek_message_type,
     IgmpMessage, IgmpResponseTimeV2, IgmpResponseTimeV3,
@@ -11,9 +15,7 @@ use crate::error::ParseError;
 use crate::ip::Ipv4Addr;
 use crate::wire::igmp::MessageType;
 use crate::wire::util::records::{LimitedRecords, LimitedRecordsImpl, LimitedRecordsImplLayout};
-use byteorder::{ByteOrder, NetworkEndian};
-use packet::{BufferView, ParsablePacket, ParseMetadata};
-use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
+use crate::wire::util::U16;
 
 create_net_enum! {
     IgmpMessageType,
@@ -100,7 +102,7 @@ pub(crate) struct MembershipQueryData {
     group_address: Ipv4Addr,
     sqrv: u8,
     qqic: u8,
-    number_of_sources: [u8; 2],
+    number_of_sources: U16,
 }
 
 impl MembershipQueryData {
@@ -119,11 +121,11 @@ impl MembershipQueryData {
         std::time::Duration::from_secs(1250);
 
     pub(crate) fn number_of_sources(self) -> u16 {
-        NetworkEndian::read_u16(&self.number_of_sources)
+        self.number_of_sources.get()
     }
 
     pub(crate) fn set_number_of_sources(&mut self, val: u16) {
-        NetworkEndian::write_u16(&mut self.number_of_sources, val);
+        self.number_of_sources = U16::new(val);
     }
 
     /// Gets value of `S Flag`.
@@ -241,16 +243,16 @@ impl<B> MessageType<B> for IgmpMembershipQueryV3 {
 #[repr(C)]
 pub(crate) struct MembershipReportV3Data {
     _reserved: [u8; 2],
-    number_of_group_records: [u8; 2],
+    number_of_group_records: U16,
 }
 
 impl MembershipReportV3Data {
     pub(crate) fn number_of_group_records(self) -> u16 {
-        NetworkEndian::read_u16(&self.number_of_group_records)
+        self.number_of_group_records.get()
     }
 
     pub(crate) fn set_number_of_group_records(&mut self, val: u16) {
-        NetworkEndian::write_u16(&mut self.number_of_group_records, val);
+        self.number_of_group_records = U16::new(val);
     }
 }
 
@@ -280,17 +282,17 @@ create_net_enum! {
 pub(crate) struct GroupRecordHeader {
     record_type: u8,
     aux_data_len: u8,
-    number_of_sources: [u8; 2],
+    number_of_sources: U16,
     multicast_address: Ipv4Addr,
 }
 
 impl GroupRecordHeader {
     pub(crate) fn number_of_sources(self) -> u16 {
-        NetworkEndian::read_u16(&self.number_of_sources)
+        self.number_of_sources.get()
     }
 
     pub(crate) fn set_number_of_sources(&mut self, val: u16) {
-        NetworkEndian::write_u16(&mut self.number_of_sources, val);
+        self.number_of_sources = U16::new(val);
     }
 
     pub(crate) fn record_type(self) -> Option<IgmpGroupRecordType> {

@@ -4,3 +4,8 @@
 
 pub(crate) mod checksum;
 pub(crate) mod records;
+
+use byteorder::NetworkEndian;
+
+pub(crate) type U16 = zerocopy::U16<NetworkEndian>;
+pub(crate) type U32 = zerocopy::U32<NetworkEndian>;

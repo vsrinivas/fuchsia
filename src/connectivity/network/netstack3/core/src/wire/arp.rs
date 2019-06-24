@@ -10,7 +10,6 @@
 use std::fmt::{self, Debug, Formatter};
 use std::mem;
 
-use byteorder::{ByteOrder, NetworkEndian};
 use packet::{BufferView, BufferViewMut, InnerPacketBuilder, ParsablePacket, ParseMetadata};
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
@@ -18,6 +17,7 @@ use crate::device::arp::{ArpHardwareType, ArpOp};
 use crate::device::ethernet::{EtherType, Mac};
 use crate::error::{ParseError, ParseResult};
 use crate::ip::Ipv4Addr;
+use crate::wire::util::U16;
 
 #[cfg(test)]
 pub(crate) const ARP_HDR_LEN: usize = 8;
@@ -27,49 +27,29 @@ pub(crate) const ARP_ETHERNET_IPV4_PACKET_LEN: usize = 28;
 #[derive(Default, FromBytes, AsBytes, Unaligned)]
 #[repr(C)]
 struct Header {
-    htype: [u8; 2], // Hardware (e.g. Ethernet)
-    ptype: [u8; 2], // Protocol (e.g. IPv4)
-    hlen: u8,       // Length (in octets) of hardware address
-    plen: u8,       // Length (in octets) of protocol address
-    oper: [u8; 2],  // Operation: 1 for Req, 2 for Reply
+    htype: U16, // Hardware (e.g. Ethernet)
+    ptype: U16, // Protocol (e.g. IPv4)
+    hlen: u8,   // Length (in octets) of hardware address
+    plen: u8,   // Length (in octets) of protocol address
+    oper: U16,  // Operation: 1 for Req, 2 for Reply
 }
 
 impl Header {
-    fn hardware_protocol(&self) -> u16 {
-        NetworkEndian::read_u16(&self.htype)
-    }
-
-    fn set_hardware_protocol(&mut self, htype: ArpHardwareType, hlen: u8) -> &mut Self {
-        NetworkEndian::write_u16(&mut self.htype, htype as u16);
+    fn set_htype(&mut self, htype: ArpHardwareType, hlen: u8) -> &mut Header {
+        self.htype = U16::new(htype as u16);
         self.hlen = hlen;
         self
     }
 
-    fn network_protocol(&self) -> u16 {
-        NetworkEndian::read_u16(&self.ptype)
-    }
-
-    fn set_network_protocol(&mut self, ptype: EtherType, plen: u8) -> &mut Self {
-        NetworkEndian::write_u16(&mut self.ptype, ptype.into());
+    fn set_ptype(&mut self, ptype: EtherType, plen: u8) -> &mut Header {
+        self.ptype = U16::new(ptype.into());
         self.plen = plen;
         self
     }
 
-    fn op_code(&self) -> u16 {
-        NetworkEndian::read_u16(&self.oper)
-    }
-
-    fn set_op_code(&mut self, op: ArpOp) -> &mut Self {
-        NetworkEndian::write_u16(&mut self.oper, op as u16);
+    fn set_op(&mut self, op: ArpOp) -> &mut Header {
+        self.oper = U16::new(op as u16);
         self
-    }
-
-    fn hardware_address_len(&self) -> u8 {
-        self.hlen
-    }
-
-    fn protocol_address_len(&self) -> u8 {
-        self.plen
     }
 }
 
@@ -90,12 +70,12 @@ impl Header {
 pub(crate) fn peek_arp_types<B: ByteSlice>(bytes: B) -> ParseResult<(ArpHardwareType, EtherType)> {
     let (header, _) = LayoutVerified::<B, Header>::new_unaligned_from_prefix(bytes)
         .ok_or_else(debug_err_fn!(ParseError::Format, "too few bytes for header"))?;
-    let hw = ArpHardwareType::from_u16(header.hardware_protocol()).ok_or_else(debug_err_fn!(
+    let hw = ArpHardwareType::from_u16(header.htype.get()).ok_or_else(debug_err_fn!(
         ParseError::NotSupported,
         "unrecognized hardware protocol: {:x}",
-        header.hardware_protocol()
+        header.htype.get()
     ))?;
-    let proto = EtherType::from(header.network_protocol());
+    let proto = EtherType::from(header.ptype.get());
     let hlen = match hw {
         ArpHardwareType::Ethernet => <Mac as HType>::hlen(),
     };
@@ -109,7 +89,7 @@ pub(crate) fn peek_arp_types<B: ByteSlice>(bytes: B) -> ParseResult<(ArpHardware
             );
         }
     };
-    if header.hardware_address_len() != hlen || header.protocol_address_len() != plen {
+    if header.hlen != hlen || header.plen != plen {
         return debug_err!(
             Err(ParseError::Format),
             "unexpected hardware or protocol address length for protocol {}",
@@ -244,28 +224,26 @@ where
         // Consume any padding bytes added by the previous layer.
         buffer.take_rest_front();
 
-        if header.hardware_protocol() != <HwAddr as HType>::htype() as u16
-            || header.network_protocol() != <ProtoAddr as PType>::ptype().into()
+        if header.htype.get() != <HwAddr as HType>::htype() as u16
+            || header.ptype.get() != <ProtoAddr as PType>::ptype().into()
         {
             return debug_err!(
                 Err(ParseError::NotExpected),
                 "unexpected hardware or network protocols"
             );
         }
-        if header.hardware_address_len() != <HwAddr as HType>::hlen()
-            || header.protocol_address_len() != <ProtoAddr as PType>::plen()
-        {
+        if header.hlen != <HwAddr as HType>::hlen() || header.plen != <ProtoAddr as PType>::plen() {
             return debug_err!(
                 Err(ParseError::Format),
                 "unexpected hardware or protocol address length"
             );
         }
 
-        if ArpOp::from_u16(header.op_code()).is_none() {
+        if ArpOp::from_u16(header.oper.get()).is_none() {
             return debug_err!(
                 Err(ParseError::Format),
                 "unrecognized op code: {:x}",
-                header.op_code()
+                header.oper.get()
             );
         }
 
@@ -281,7 +259,7 @@ where
     /// The type of ARP packet
     pub(crate) fn operation(&self) -> ArpOp {
         // This is verified in `parse`, so should be safe to unwrap
-        ArpOp::from_u16(self.header.op_code()).unwrap()
+        ArpOp::from_u16(self.header.oper.get()).unwrap()
     }
 
     /// The hardware address of the ARP packet sender.
@@ -366,9 +344,9 @@ where
             .take_obj_front_zero::<Body<HwAddr, ProtoAddr>>()
             .expect("not enough bytes for an ARP packet");
         header
-            .set_hardware_protocol(<HwAddr as HType>::htype(), <HwAddr as HType>::hlen())
-            .set_network_protocol(<ProtoAddr as PType>::ptype(), <ProtoAddr as PType>::plen())
-            .set_op_code(self.op);
+            .set_htype(<HwAddr as HType>::htype(), <HwAddr as HType>::hlen())
+            .set_ptype(<ProtoAddr as PType>::ptype(), <ProtoAddr as PType>::plen())
+            .set_op(self.op);
         body.set_sha(self.sha).set_spa(self.spa).set_tha(self.tha).set_tpa(self.tpa);
     }
 }
@@ -425,9 +403,10 @@ mod tests {
     // Return a new Header for an Ethernet/IPv4 ARP request.
     fn new_header() -> Header {
         let mut header = Header::default();
-        header.set_hardware_protocol(<Mac as HType>::htype(), <Mac as HType>::hlen());
-        header.set_network_protocol(<Ipv4Addr as PType>::ptype(), <Ipv4Addr as PType>::plen());
-        header.set_op_code(ArpOp::Request);
+        header
+            .set_htype(<Mac as HType>::htype(), <Mac as HType>::hlen())
+            .set_ptype(<Ipv4Addr as PType>::ptype(), <Ipv4Addr as PType>::plen())
+            .set_op(ArpOp::Request);
         header
     }
 
@@ -441,7 +420,7 @@ mod tests {
         // Test that an invalid operation is not rejected; peek_arp_types does
         // not inspect the operation.
         let mut header = new_header();
-        NetworkEndian::write_u16(&mut header.oper[..], 3);
+        header.oper = U16::new(3);
         let (hw, proto) = peek_arp_types(&header_to_bytes(header)[..]).unwrap();
         assert_eq!(hw, ArpHardwareType::Ethernet);
         assert_eq!(proto, EtherType::Ipv4);
@@ -497,7 +476,7 @@ mod tests {
 
         // Test that an unexpected hardware protocol type is rejected.
         let mut header = new_header();
-        NetworkEndian::write_u16(&mut header.htype[..], 0);
+        header.htype = U16::ZERO;
         assert_eq!(
             peek_arp_types(&header_to_bytes(header)[..]).unwrap_err(),
             ParseError::NotSupported
@@ -505,7 +484,7 @@ mod tests {
 
         // Test that an unexpected network protocol type is rejected.
         let mut header = new_header();
-        NetworkEndian::write_u16(&mut header.ptype[..], 0);
+        header.ptype = U16::ZERO;
         assert_eq!(
             peek_arp_types(&header_to_bytes(header)[..]).unwrap_err(),
             ParseError::NotSupported
@@ -545,12 +524,12 @@ mod tests {
 
         // Test that an unexpected hardware protocol type is rejected.
         let mut header = new_header();
-        NetworkEndian::write_u16(&mut header.htype[..], 0);
+        header.htype = U16::ZERO;
         assert_header_err(header, ParseError::NotExpected);
 
         // Test that an unexpected network protocol type is rejected.
         let mut header = new_header();
-        NetworkEndian::write_u16(&mut header.ptype[..], 0);
+        header.ptype = U16::ZERO;
         assert_header_err(header, ParseError::NotExpected);
 
         // Test that an incorrect hardware address len is rejected.
@@ -565,7 +544,7 @@ mod tests {
 
         // Test that an invalid operation is rejected.
         let mut header = new_header();
-        NetworkEndian::write_u16(&mut header.oper[..], 3);
+        header.oper = U16::new(3);
         assert_header_err(header, ParseError::Format);
     }
 

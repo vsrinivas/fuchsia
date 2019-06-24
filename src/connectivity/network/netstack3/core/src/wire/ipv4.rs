@@ -18,6 +18,7 @@ use crate::ip::reassembly::FragmentablePacket;
 use crate::ip::{IpProto, Ipv4, Ipv4Addr, Ipv4Option};
 use crate::wire::util::checksum::Checksum;
 use crate::wire::util::records::options::Options;
+use crate::wire::util::U16;
 
 use self::options::Ipv4OptionsImpl;
 
@@ -52,12 +53,12 @@ pub(crate) const IPV4_CHECKSUM_OFFSET: usize = 10;
 pub(crate) struct HeaderPrefix {
     version_ihl: u8,
     dscp_ecn: u8,
-    total_len: [u8; 2],
-    id: [u8; 2],
+    total_len: U16,
+    id: U16,
     flags_frag_off: [u8; 2],
     ttl: u8,
     proto: u8,
-    hdr_checksum: [u8; 2],
+    hdr_checksum: U16,
     src_ip: [u8; 4],
     dst_ip: [u8; 4],
 }
@@ -70,14 +71,6 @@ impl HeaderPrefix {
     /// Get the Internet Header Length (IHL).
     pub(crate) fn ihl(&self) -> u8 {
         self.version_ihl & 0xF
-    }
-
-    fn total_length(&self) -> u16 {
-        NetworkEndian::read_u16(&self.total_len)
-    }
-
-    fn hdr_checksum(&self) -> u16 {
-        NetworkEndian::read_u16(&self.hdr_checksum)
     }
 }
 
@@ -129,12 +122,12 @@ impl<B: ByteSlice> ParsablePacket<B, ()> for Ipv4Packet<B> {
                 hdr_prefix.version()
             );
         }
-        let body = if (hdr_prefix.total_length() as usize) < total_len {
+        let body = if (hdr_prefix.total_len.get() as usize) < total_len {
             // Discard the padding left by the previous layer. This unwrap is
             // safe because of the check against total_len.
-            buffer.take_back(total_len - (hdr_prefix.total_length() as usize)).unwrap();
+            buffer.take_back(total_len - (hdr_prefix.total_len.get() as usize)).unwrap();
             buffer.into_rest()
-        } else if hdr_prefix.total_length() as usize == total_len {
+        } else if hdr_prefix.total_len.get() as usize == total_len {
             buffer.into_rest()
         } else {
             // we don't yet support IPv4 fragmentation
@@ -142,7 +135,7 @@ impl<B: ByteSlice> ParsablePacket<B, ()> for Ipv4Packet<B> {
         };
 
         let packet = Ipv4Packet { hdr_prefix, options, body };
-        if packet.compute_header_checksum() != packet.hdr_prefix.hdr_checksum() {
+        if packet.compute_header_checksum() != packet.hdr_prefix.hdr_checksum.get() {
             return debug_err!(Err(ParseError::Checksum.into()), "invalid checksum");
         }
         Ok(packet)
@@ -182,7 +175,7 @@ impl<B: ByteSlice> Ipv4Packet<B> {
 
     /// The identification.
     pub(crate) fn id(&self) -> u16 {
-        NetworkEndian::read_u16(&self.hdr_prefix.id)
+        self.hdr_prefix.id.get()
     }
 
     /// The Don't Fragment (DF) flag.
@@ -296,8 +289,8 @@ where
         // header.
         let old_bytes = [self.hdr_prefix.ttl, self.hdr_prefix.proto];
         let new_bytes = [ttl, self.hdr_prefix.proto];
-        let checksum = Checksum::update(self.hdr_prefix.hdr_checksum(), &old_bytes, &new_bytes);
-        NetworkEndian::write_u16(&mut self.hdr_prefix.hdr_checksum, checksum);
+        let checksum = Checksum::update(self.hdr_prefix.hdr_checksum.get(), &old_bytes, &new_bytes);
+        self.hdr_prefix.hdr_checksum = U16::new(checksum);
         self.hdr_prefix.ttl = ttl;
     }
 }
@@ -453,8 +446,8 @@ impl PacketBuilder for Ipv4PacketBuilder {
         // violated their contract.
         debug_assert!(packet.total_packet_len() <= std::u16::MAX as usize);
         let total_len = packet.total_packet_len() as u16;
-        NetworkEndian::write_u16(&mut packet.hdr_prefix.total_len, total_len);
-        NetworkEndian::write_u16(&mut packet.hdr_prefix.id, self.id);
+        packet.hdr_prefix.total_len = U16::new(total_len);
+        packet.hdr_prefix.id = U16::new(self.id);
         NetworkEndian::write_u16(
             &mut packet.hdr_prefix.flags_frag_off,
             ((u16::from(self.flags)) << 13) | self.frag_off,
@@ -464,7 +457,7 @@ impl PacketBuilder for Ipv4PacketBuilder {
         packet.hdr_prefix.src_ip = self.src_ip.ipv4_bytes();
         packet.hdr_prefix.dst_ip = self.dst_ip.ipv4_bytes();
         let checksum = packet.compute_header_checksum();
-        NetworkEndian::write_u16(&mut packet.hdr_prefix.hdr_checksum, checksum);
+        packet.hdr_prefix.hdr_checksum = U16::new(checksum);
     }
 }
 
@@ -605,13 +598,13 @@ mod tests {
     fn new_hdr_prefix() -> HeaderPrefix {
         let mut hdr_prefix = HeaderPrefix::default();
         hdr_prefix.version_ihl = (4 << 4) | 5;
-        NetworkEndian::write_u16(&mut hdr_prefix.total_len[..], 20);
-        NetworkEndian::write_u16(&mut hdr_prefix.id[..], 0x0102);
+        hdr_prefix.total_len = U16::new(20);
+        hdr_prefix.id = U16::new(0x0102);
         hdr_prefix.ttl = 0x03;
         hdr_prefix.proto = IpProto::Tcp.into();
         hdr_prefix.src_ip = DEFAULT_SRC_IP.ipv4_bytes();
         hdr_prefix.dst_ip = DEFAULT_DST_IP.ipv4_bytes();
-        hdr_prefix.hdr_checksum = [0xa6, 0xcf];
+        hdr_prefix.hdr_checksum = U16::from([0xa6, 0xcf]);
         hdr_prefix
     }
 

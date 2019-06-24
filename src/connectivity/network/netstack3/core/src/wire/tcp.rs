@@ -19,6 +19,7 @@ use crate::ip::{IpAddress, IpProto};
 use crate::transport::tcp::TcpOption;
 use crate::wire::util::checksum::compute_transport_checksum;
 use crate::wire::util::records::options::Options;
+use crate::wire::util::{U16, U32};
 
 use self::options::TcpOptionsImpl;
 
@@ -31,27 +32,19 @@ pub(crate) const TCP_MAX_HDR_LEN: usize = 60;
 #[derive(Default, FromBytes, AsBytes, Unaligned)]
 #[repr(C)]
 struct HeaderPrefix {
-    src_port: [u8; 2],
-    dst_port: [u8; 2],
-    seq_num: [u8; 4],
-    ack: [u8; 4],
-    data_offset_reserved_flags: [u8; 2],
-    window_size: [u8; 2],
-    checksum: [u8; 2],
-    urg_ptr: [u8; 2],
+    src_port: U16,
+    dst_port: U16,
+    seq_num: U32,
+    ack: U32,
+    data_offset_reserved_flags: U16,
+    window_size: U16,
+    checksum: U16,
+    urg_ptr: U16,
 }
 
 impl HeaderPrefix {
-    pub(crate) fn src_port(&self) -> u16 {
-        NetworkEndian::read_u16(&self.src_port)
-    }
-
-    pub(crate) fn dst_port(&self) -> u16 {
-        NetworkEndian::read_u16(&self.dst_port)
-    }
-
     fn data_offset(&self) -> u8 {
-        (NetworkEndian::read_u16(&self.data_offset_reserved_flags) >> 12) as u8
+        (self.data_offset_reserved_flags.get() >> 12) as u8
     }
 }
 
@@ -118,7 +111,7 @@ impl<B: ByteSlice, A: IpAddress> ParsablePacket<B, TcpParseArgs<A>> for TcpSegme
         let options = Options::parse(options).map_err(|_| ParseError::Format)?;
         let segment = TcpSegment { hdr_prefix, options, body: buffer.into_rest() };
 
-        if segment.hdr_prefix.src_port() == 0 || segment.hdr_prefix.dst_port() == 0 {
+        if segment.hdr_prefix.src_port == U16::ZERO || segment.hdr_prefix.dst_port == U16::ZERO {
             return debug_err!(Err(ParseError::Format), "zero source or destination port");
         }
 
@@ -140,18 +133,18 @@ impl<B: ByteSlice> TcpSegment<B> {
     /// The source port.
     pub(crate) fn src_port(&self) -> NonZeroU16 {
         // Infallible because this was already validated in parse
-        NonZeroU16::new(self.hdr_prefix.src_port()).unwrap()
+        NonZeroU16::new(self.hdr_prefix.src_port.get()).unwrap()
     }
 
     /// The destination port.
     pub(crate) fn dst_port(&self) -> NonZeroU16 {
         // Infallible because this was already validated in parse
-        NonZeroU16::new(self.hdr_prefix.dst_port()).unwrap()
+        NonZeroU16::new(self.hdr_prefix.dst_port.get()).unwrap()
     }
 
     /// The sequence number.
     pub(crate) fn seq_num(&self) -> u32 {
-        NetworkEndian::read_u32(&self.hdr_prefix.seq_num)
+        self.hdr_prefix.seq_num.get()
     }
 
     /// The acknowledgement number.
@@ -159,14 +152,14 @@ impl<B: ByteSlice> TcpSegment<B> {
     /// If the ACK flag is not set, `ack_num` returns `None`.
     pub(crate) fn ack_num(&self) -> Option<u32> {
         if self.get_flag(ACK_MASK) {
-            Some(NetworkEndian::read_u32(&self.hdr_prefix.ack))
+            Some(self.hdr_prefix.ack.get())
         } else {
             None
         }
     }
 
     fn get_flag(&self, mask: u16) -> bool {
-        NetworkEndian::read_u16(&self.hdr_prefix.data_offset_reserved_flags) & mask > 0
+        self.hdr_prefix.data_offset_reserved_flags.get() & mask > 0
     }
 
     /// The RST flag.
@@ -186,7 +179,7 @@ impl<B: ByteSlice> TcpSegment<B> {
 
     /// The sender's window size.
     pub(crate) fn window_size(&self) -> u16 {
-        NetworkEndian::read_u16(&self.hdr_prefix.window_size)
+        self.hdr_prefix.window_size.get()
     }
 
     // The length of the header prefix and options.
@@ -208,7 +201,7 @@ impl<B: ByteSlice> TcpSegment<B> {
             src_port: self.src_port().get(),
             dst_port: self.dst_port().get(),
             seq_num: self.seq_num(),
-            ack_num: NetworkEndian::read_u32(&self.hdr_prefix.ack),
+            ack_num: self.hdr_prefix.ack.get(),
             flags: 0,
             window_size: self.window_size(),
         };
@@ -321,22 +314,19 @@ impl<A: IpAddress> PacketBuilder for TcpSegmentBuilder<A> {
             Options::parse(&mut [][..]).expect("parsing an empty options slice should not fail");
         let mut segment = TcpSegment { hdr_prefix, options, body };
 
-        NetworkEndian::write_u16(&mut segment.hdr_prefix.src_port, self.src_port);
-        NetworkEndian::write_u16(&mut segment.hdr_prefix.dst_port, self.dst_port);
-        NetworkEndian::write_u32(&mut segment.hdr_prefix.seq_num, self.seq_num);
-        NetworkEndian::write_u32(&mut segment.hdr_prefix.ack, self.ack_num);
+        segment.hdr_prefix.src_port = U16::new(self.src_port);
+        segment.hdr_prefix.dst_port = U16::new(self.dst_port);
+        segment.hdr_prefix.seq_num = U32::new(self.seq_num);
+        segment.hdr_prefix.ack = U32::new(self.ack_num);
         // Data Offset is hard-coded to 5 until we support serializing
         // options.
-        NetworkEndian::write_u16(
-            &mut segment.hdr_prefix.data_offset_reserved_flags,
-            (5u16 << 12) | self.flags,
-        );
-        NetworkEndian::write_u16(&mut segment.hdr_prefix.window_size, self.window_size);
+        segment.hdr_prefix.data_offset_reserved_flags = U16::new((5u16 << 12) | self.flags);
+        segment.hdr_prefix.window_size = U16::new(self.window_size);
         // We don't support setting the Urgent Pointer.
-        NetworkEndian::write_u16(&mut segment.hdr_prefix.urg_ptr, 0);
+        segment.hdr_prefix.urg_ptr = U16::ZERO;
         // Initialize the checksum to 0 so that we will get the correct
         // value when we compute it below.
-        NetworkEndian::write_u16(&mut segment.hdr_prefix.checksum, 0);
+        segment.hdr_prefix.checksum = U16::ZERO;
 
         // NOTE: We stop using segment at this point so that it no longer
         // borrows the buffer, and we can use the buffer directly.
@@ -509,11 +499,11 @@ mod tests {
     // TEST_DST_IPV4).
     fn new_hdr_prefix() -> HeaderPrefix {
         let mut hdr_prefix = HeaderPrefix::default();
-        hdr_prefix.src_port = [0, 1];
-        hdr_prefix.dst_port = [0, 2];
+        hdr_prefix.src_port = U16::new(1);
+        hdr_prefix.dst_port = U16::new(2);
         // data offset of 5
-        NetworkEndian::write_u16(&mut hdr_prefix.data_offset_reserved_flags, 5u16 << 12);
-        hdr_prefix.checksum = [0x9f, 0xce];
+        hdr_prefix.data_offset_reserved_flags = U16::new(5u16 << 12);
+        hdr_prefix.checksum = U16::from([0x9f, 0xce]);
         hdr_prefix
     }
 
@@ -550,24 +540,24 @@ mod tests {
 
         // Set the source port to 0, which is illegal.
         let mut hdr_prefix = new_hdr_prefix();
-        hdr_prefix.src_port = [0, 0];
+        hdr_prefix.src_port = U16::ZERO;
         assert_header_err(hdr_prefix, ParseError::Format);
 
         // Set the destination port to 0, which is illegal.
         let mut hdr_prefix = new_hdr_prefix();
-        hdr_prefix.dst_port = [0, 0];
+        hdr_prefix.dst_port = U16::ZERO;
         assert_header_err(hdr_prefix, ParseError::Format);
 
         // Set the data offset to 4, implying a header length of 16. This is
         // smaller than the minimum of 20.
         let mut hdr_prefix = new_hdr_prefix();
-        NetworkEndian::write_u16(&mut hdr_prefix.data_offset_reserved_flags, 4u16 << 12);
+        hdr_prefix.data_offset_reserved_flags = U16::new(4u16 << 12);
         assert_header_err(hdr_prefix, ParseError::Format);
 
         // Set the data offset to 6, implying a header length of 24. This is
         // larger than the actual segment length of 20.
         let mut hdr_prefix = new_hdr_prefix();
-        NetworkEndian::write_u16(&mut hdr_prefix.data_offset_reserved_flags, 6u16 << 12);
+        hdr_prefix.data_offset_reserved_flags = U16::new(6u16 << 12);
         assert_header_err(hdr_prefix, ParseError::Format);
     }
 

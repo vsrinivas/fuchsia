@@ -15,6 +15,7 @@ use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
 use crate::error::ParseError;
 use crate::ip::{Ipv6, Ipv6Addr};
+use crate::wire::util::{U16, U32};
 
 use super::{IcmpIpExt, IcmpMessage, IcmpPacketBuilder, IcmpUnusedCode};
 use crate::wire::igmp::IgmpMessage;
@@ -43,24 +44,24 @@ impl_icmp_message!(Ipv6, RouterSolicitation, RouterSolicitation, IcmpUnusedCode,
 pub(crate) struct RouterAdvertisment {
     current_hop_limit: u8,
     configuration_mo: u8,
-    router_lifetime: [u8; 2],
-    reachable_time: [u8; 4],
-    retransmit_timer: [u8; 4],
+    router_lifetime: U16,
+    reachable_time: U32,
+    retransmit_timer: U32,
 }
 
 impl_icmp_message!(Ipv6, RouterAdvertisment, RouterAdvertisment, IcmpUnusedCode, Options<B>);
 
 impl RouterAdvertisment {
     pub(crate) fn router_lifetime(&self) -> u16 {
-        NetworkEndian::read_u16(&self.router_lifetime)
+        self.router_lifetime.get()
     }
 
     pub(crate) fn reachable_time(&self) -> u32 {
-        NetworkEndian::read_u32(&self.reachable_time)
+        self.reachable_time.get()
     }
 
     pub(crate) fn retransmit_timer(&self) -> u32 {
-        NetworkEndian::read_u32(&self.retransmit_timer)
+        self.retransmit_timer.get()
     }
 }
 
@@ -151,6 +152,7 @@ pub(crate) mod options {
     use crate::wire::util::records::options::{
         OptionsImpl, OptionsImplLayout, OptionsSerializerImpl,
     };
+    use crate::wire::util::U32;
 
     create_net_enum! {
         NdpOptionType,
@@ -166,19 +168,19 @@ pub(crate) mod options {
     pub(crate) struct PrefixInformation {
         prefix_length: u8,
         flags_la: u8,
-        valid_lifetime: [u8; 4],
-        preferred_lifetime: [u8; 4],
+        valid_lifetime: U32,
+        preferred_lifetime: U32,
         _reserved: [u8; 4],
         prefix: Ipv6Addr,
     }
 
     impl PrefixInformation {
         pub(crate) fn valid_lifetime(&self) -> u32 {
-            NetworkEndian::read_u32(&self.valid_lifetime)
+            self.valid_lifetime.get()
         }
 
         pub(crate) fn preferred_lifetime(&self) -> u32 {
-            NetworkEndian::read_u32(&self.preferred_lifetime)
+            self.preferred_lifetime.get()
         }
 
         pub(crate) fn prefix(&self) -> &Ipv6Addr {

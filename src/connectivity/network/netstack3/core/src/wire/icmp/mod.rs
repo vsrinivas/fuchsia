@@ -35,13 +35,14 @@ use crate::ip::{Ip, IpAddress, IpProto, Ipv4, Ipv6};
 use crate::wire::ipv4;
 use crate::wire::util::checksum::Checksum;
 use crate::wire::util::records::options::{Options, OptionsImpl};
+use crate::wire::util::U16;
 
 #[derive(Default, Debug, FromBytes, AsBytes, Unaligned)]
 #[repr(C)]
 struct Header {
     msg_type: u8,
     code: u8,
-    checksum: [u8; 2],
+    checksum: U16,
     /* NOTE: The "Rest of Header" field is stored in message types rather than
      * in the Header. This helps consolidate how callers access data about the
      * packet, and is consistent with ICMPv6, which treats the field as part of
@@ -51,14 +52,6 @@ struct Header {
 impl Header {
     fn set_msg_type<T: Into<u8>>(&mut self, msg_type: T) {
         self.msg_type = msg_type.into();
-    }
-
-    fn checksum(&self) -> u16 {
-        NetworkEndian::read_u16(&self.checksum)
-    }
-
-    fn set_checksum(&mut self, checksum: u16) {
-        NetworkEndian::write_u16(&mut self.checksum[..], checksum);
     }
 }
 
@@ -437,7 +430,7 @@ impl<B: ByteSlice, I: IcmpIpExt<B>, M: IcmpMessage<I, B>> ParsablePacket<B, Icmp
             "unrecognized code: {}",
             header.code
         ))?;
-        if header.checksum()
+        if header.checksum.get()
             != Self::compute_checksum(
                 &header,
                 message.bytes(),
@@ -625,7 +618,7 @@ impl<I: IcmpIpExt<B>, B: ByteSlice, M: IcmpMessage<I, B>> PacketBuilder
                 header.bytes().len() + message.bytes().len() + message_body.len(),
             )
         });
-        header.set_checksum(checksum);
+        header.checksum = U16::new(checksum);
     }
 }
 
@@ -646,32 +639,12 @@ impl Into<u8> for IcmpUnusedCode {
 #[derive(Copy, Clone, Debug, Eq, PartialEq, FromBytes, AsBytes, Unaligned)]
 #[repr(C)]
 struct IdAndSeq {
-    id: [u8; 2],
-    seq: [u8; 2],
+    id: U16,
+    seq: U16,
 }
 
 impl IdAndSeq {
     fn new(id: u16, seq: u16) -> IdAndSeq {
-        let mut id_bytes = [0; 2];
-        let mut seq_bytes = [0; 2];
-        NetworkEndian::write_u16(&mut id_bytes, id);
-        NetworkEndian::write_u16(&mut seq_bytes, seq);
-        IdAndSeq { id: id_bytes, seq: seq_bytes }
-    }
-
-    fn id(self) -> u16 {
-        NetworkEndian::read_u16(&self.id)
-    }
-
-    fn set_id(&mut self, id: u16) {
-        NetworkEndian::write_u16(&mut self.id, id);
-    }
-
-    fn seq(self) -> u16 {
-        NetworkEndian::read_u16(&self.seq)
-    }
-
-    fn set_seq(&mut self, seq: u16) {
-        NetworkEndian::write_u16(&mut self.seq, seq);
+        IdAndSeq { id: U16::new(id), seq: U16::new(seq) }
     }
 }

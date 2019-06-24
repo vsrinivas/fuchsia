@@ -18,6 +18,7 @@ use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 use crate::error::{ParseError, ParseResult};
 use crate::ip::{Ip, IpAddress, IpProto};
 use crate::wire::util::checksum::compute_transport_checksum;
+use crate::wire::util::U16;
 
 pub(crate) const HEADER_BYTES: usize = 8;
 const LENGTH_OFFSET: usize = 4;
@@ -26,36 +27,10 @@ const CHECKSUM_OFFSET: usize = 6;
 #[derive(FromBytes, AsBytes, Unaligned)]
 #[repr(C)]
 struct Header {
-    src_port: [u8; 2],
-    dst_port: [u8; 2],
-    length: [u8; 2],
-    checksum: [u8; 2],
-}
-
-impl Header {
-    fn src_port(&self) -> u16 {
-        NetworkEndian::read_u16(&self.src_port)
-    }
-
-    fn set_src_port(&mut self, src_port: u16) {
-        NetworkEndian::write_u16(&mut self.src_port, src_port);
-    }
-
-    fn dst_port(&self) -> u16 {
-        NetworkEndian::read_u16(&self.dst_port)
-    }
-
-    fn set_dst_port(&mut self, dst_port: u16) {
-        NetworkEndian::write_u16(&mut self.dst_port, dst_port);
-    }
-
-    fn length(&self) -> u16 {
-        NetworkEndian::read_u16(&self.length)
-    }
-
-    fn checksum(&self) -> u16 {
-        NetworkEndian::read_u16(&self.checksum)
-    }
+    src_port: U16,
+    dst_port: U16,
+    length: U16,
+    checksum: U16,
 }
 
 /// A UDP packet.
@@ -152,7 +127,7 @@ impl<B: ByteSlice, A: IpAddress> ParsablePacket<B, UdpParseArgs<A>> for UdpPacke
         // buf_len - real_length bytes left.
         buffer.take_back(buf_len - real_length).unwrap();
         let packet = UdpPacket { header, body: buffer.into_rest() };
-        if packet.header.dst_port() == 0 {
+        if packet.header.dst_port.get() == 0 {
             return debug_err!(Err(ParseError::Format), "zero destination port");
         }
 
@@ -170,13 +145,13 @@ impl<B: ByteSlice> UdpPacket<B> {
     ///
     /// The source port is optional, and may have been omitted by the sender.
     pub(crate) fn src_port(&self) -> Option<NonZeroU16> {
-        NonZeroU16::new(self.header.src_port())
+        NonZeroU16::new(self.header.src_port.get())
     }
 
     /// The destination UDP port.
     pub(crate) fn dst_port(&self) -> NonZeroU16 {
         // Infallible because it was validated in parse.
-        NonZeroU16::new(self.header.dst_port()).unwrap()
+        NonZeroU16::new(self.header.dst_port.get()).unwrap()
     }
 
     /// Did this packet have a checksum?
@@ -189,7 +164,7 @@ impl<B: ByteSlice> UdpPacket<B> {
     /// IPv6 requires a checksum, and so any UDP packet missing one will fail
     /// validation in `parse`.
     pub(crate) fn checksummed(&self) -> bool {
-        self.header.checksum() != 0
+        self.header.checksum != U16::ZERO
     }
 
     // The length of the header.
@@ -275,8 +250,8 @@ impl<A: IpAddress> PacketBuilder for UdpPacketBuilder<A> {
         let header = header.take_obj_front_zero::<Header>().expect("too few bytes for UDP header");
         let mut packet = UdpPacket { header, body };
 
-        packet.header.set_src_port(self.src_port.map(NonZeroU16::get).unwrap_or(0));
-        packet.header.set_dst_port(self.dst_port.get());
+        packet.header.src_port = U16::new(self.src_port.map(NonZeroU16::get).unwrap_or(0));
+        packet.header.dst_port = U16::new(self.dst_port.get());
         let total_len = packet.total_packet_len();
         let len_field = total_len.try_into().unwrap_or_else(|_| {
             if A::Version::VERSION.is_v6() {
@@ -288,10 +263,12 @@ impl<A: IpAddress> PacketBuilder for UdpPacketBuilder<A> {
                 total_len)
             }
         });
-        NetworkEndian::write_u16(&mut packet.header.length, len_field);
+        packet.header.length = U16::new(len_field);
+        // NetworkEndian::write_u16(&mut packet.header.length, len_field);
         // Initialize the checksum to 0 so that we will get the correct
         // value when we compute it below.
-        NetworkEndian::write_u16(&mut packet.header.checksum, 0);
+        packet.header.checksum = U16::ZERO;
+        // NetworkEndian::write_u16(&mut packet.header.checksum, 0);
 
         // NOTE: We stop using packet at this point so that it no longer borrows
         // the buffer, and we can use the buffer directly.

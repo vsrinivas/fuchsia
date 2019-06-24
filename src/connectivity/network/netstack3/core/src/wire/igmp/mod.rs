@@ -12,21 +12,24 @@ mod types;
 #[cfg(test)]
 mod testdata;
 
-use self::messages::IgmpMessageType;
 pub(crate) use self::types::*;
-use crate::error::ParseError;
-use crate::ip::Ipv4Addr;
-use crate::wire::ipv6::FixedHeader;
-use crate::wire::util::checksum::Checksum;
-use byteorder::{ByteOrder, NetworkEndian};
-use packet::{
-    BufferView, InnerPacketBuilder, PacketBuilder, ParsablePacket, ParseMetadata, SerializeBuffer,
-};
+
 use std::convert::TryFrom;
 use std::fmt::Debug;
 use std::marker::PhantomData;
 use std::mem;
+
+use packet::{
+    BufferView, InnerPacketBuilder, PacketBuilder, ParsablePacket, ParseMetadata, SerializeBuffer,
+};
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
+
+use self::messages::IgmpMessageType;
+use crate::error::ParseError;
+use crate::ip::Ipv4Addr;
+use crate::wire::ipv6::FixedHeader;
+use crate::wire::util::checksum::Checksum;
+use crate::wire::util::U16;
 
 /// Trait specifying serialization behavior for IGMP messages.
 ///
@@ -156,7 +159,7 @@ impl<B, M: MessageType<B>> IgmpPacketBuilder<B, M> {
         *header = self.message_header;
 
         let checksum = IgmpMessage::<B, M>::compute_checksum(&header_prefix, &header.bytes(), body);
-        header_prefix.set_checksum(checksum);
+        header_prefix.checksum = U16::new(checksum);
     }
 }
 
@@ -214,7 +217,7 @@ pub(crate) struct HeaderPrefix {
     /// a value *Max Response Time* is performed by the `MaxRespType` type in
     /// the `MessageType` trait.
     max_resp_code: u8,
-    checksum: [u8; 2],
+    checksum: U16,
 }
 
 impl HeaderPrefix {
@@ -224,14 +227,6 @@ impl HeaderPrefix {
 
     fn set_max_resp_code<T: Into<u8>>(&mut self, max_rsp_time: T) {
         self.max_resp_code = max_rsp_time.into();
-    }
-
-    fn checksum(&self) -> u16 {
-        NetworkEndian::read_u16(&self.checksum)
-    }
-
-    fn set_checksum(&mut self, checksum: u16) {
-        NetworkEndian::write_u16(&mut self.checksum[..], checksum);
     }
 }
 
@@ -286,12 +281,12 @@ impl<B: ByteSlice, M: MessageType<B>> ParsablePacket<B, ()> for IgmpMessage<B, M
             .ok_or_else(debug_err_fn!(ParseError::Format, "too few bytes for header"))?;
 
         let checksum_expect = Self::compute_checksum(&prefix, &header.bytes(), buffer.as_ref());
-        if prefix.checksum() != checksum_expect {
+        if prefix.checksum.get() != checksum_expect {
             return debug_err!(
                 Err(ParseError::Checksum),
                 "invalid checksum, expected 0x{:04x}, but got 0x{:04x}",
                 checksum_expect,
-                prefix.checksum()
+                prefix.checksum.get()
             );
         }
 
