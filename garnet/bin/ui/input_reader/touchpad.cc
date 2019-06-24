@@ -93,10 +93,10 @@ bool Touchpad::ParseTouchpadReport(const Touch::Report& touchpad,
     mouse_abs_y_ = contact->y;
   }
 
-  // The touch driver returns in units of 10^-5m, but the resolution expected
-  // by |report| is 10^-3.
-  report->mouse->rel_x = (contact->x - mouse_abs_x_) / 100;
-  report->mouse->rel_y = (contact->y - mouse_abs_y_) / 100;
+  // The touch driver returns in units of 10^-5m, but mice X and Y are
+  // unit-less. This is a 'magic' number for good sensitivity.
+  report->mouse->rel_x = (contact->x - mouse_abs_x_) / 400;
+  report->mouse->rel_y = (contact->y - mouse_abs_y_) / 400;
 
   report->mouse->pressed_buttons =
       touchpad.button ? fuchsia::ui::input::kMouseButtonPrimary : 0;

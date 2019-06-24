@@ -259,8 +259,8 @@ TEST_F(ReaderInterpreterInputTest, ParadiseTouchpad) {
   EXPECT_EQ(0, last_report_.mouse->rel_y);
 
   // Send a second touch report.
-  touch_report.fingers[0].x = 150;
-  touch_report.fingers[0].y = 300;
+  touch_report.fingers[0].x = 500;
+  touch_report.fingers[0].y = 1000;
   report = std::vector<uint8_t>(touch_report_bytes,
                                 touch_report_bytes + sizeof(touch_report));
 
@@ -272,8 +272,8 @@ TEST_F(ReaderInterpreterInputTest, ParadiseTouchpad) {
   ASSERT_TRUE(last_report_.mouse);
   // These output values were hand calculated by converting the relative x
   // and y to the units described by the paradise report.
-  EXPECT_EQ(39, last_report_.mouse->rel_x);
-  EXPECT_EQ(78, last_report_.mouse->rel_y);
+  EXPECT_EQ(78, last_report_.mouse->rel_x);
+  EXPECT_EQ(156, last_report_.mouse->rel_y);
 }
 
 TEST_F(ReaderInterpreterInputTest, SensorTest) {
