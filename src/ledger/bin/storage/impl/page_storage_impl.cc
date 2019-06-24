@@ -482,6 +482,17 @@ void PageStorageImpl::GetObjectPart(
         // disk or written to disk already.
         FXL_DCHECK(!write_callback);
 
+        // If we are reading zero bytes, bail out now.
+        if (max_size == 0) {
+          fsl::SizedVmo buffer;
+          if (!fsl::VmoFromString("", &buffer)) {
+            callback(Status::INTERNAL_ERROR, nullptr);
+            return;
+          }
+          callback(Status::OK, std::move(buffer));
+          return;
+        }
+
         ObjectDigestInfo digest_info =
             GetObjectDigestInfo(piece->GetIdentifier().object_digest());
 

@@ -1610,6 +1610,46 @@ TEST_F(PageStorageTest, GetObjectPartFromSyncStartOfChunk) {
   EXPECT_THAT(sync.object_requests, Contains(chunk_identifiers[1]));
 }
 
+TEST_F(PageStorageTest, GetObjectPartFromSyncZeroBytes) {
+  // Generates a read that falls inside a chunk but reads zero bytes.
+  std::string data_str = RandomString(environment_.random(), 2 * 65536 + 1);
+
+  FakeSyncDelegate sync;
+  ObjectIdentifier object_identifier = ForEachPiece(
+      data_str, ObjectType::BLOB, [&sync](std::unique_ptr<const Piece> piece) {
+        ObjectIdentifier object_identifier = piece->GetIdentifier();
+        ObjectDigestInfo digest_info =
+            GetObjectDigestInfo(object_identifier.object_digest());
+        if (digest_info.is_inlined()) {
+          return;
+        }
+        sync.AddObject(std::move(object_identifier),
+                       piece->GetData().ToString());
+      });
+  ASSERT_EQ(PieceType::INDEX,
+            GetObjectDigestInfo(object_identifier.object_digest()).piece_type);
+  storage_->SetSyncDelegate(&sync);
+
+  // Read zero bytes inside a chunk. This succeeds and only reads the root
+  // piece.
+  fsl::SizedVmo object_part = TryGetObjectPart(object_identifier, 12, 0,
+                                               PageStorage::Location::NETWORK);
+  std::string object_part_data;
+  ASSERT_TRUE(fsl::StringFromVmo(object_part, &object_part_data));
+  EXPECT_EQ("", convert::ToString(object_part_data));
+  EXPECT_THAT(sync.object_requests, ElementsAre(object_identifier));
+}
+
+TEST_F(PageStorageTest, GetObjectPartFromSyncZeroBytesNotFound) {
+  FakeSyncDelegate sync;
+  storage_->SetSyncDelegate(&sync);
+
+  // Reading zero bytes from non-existing objects returns an error.
+  ObjectData other_data("_Some other data_", InlineBehavior::PREVENT);
+  TryGetObjectPart(other_data.object_identifier, 1, 0,
+                   PageStorage::Location::NETWORK, Status::INTERNAL_NOT_FOUND);
+}
+
 TEST_F(PageStorageTest, GetHugeObjectPartFromSync) {
   std::string data_str = RandomString(environment_.random(), 2 * 65536 + 1);
   int64_t offset = 28672;
