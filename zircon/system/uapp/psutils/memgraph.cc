@@ -356,7 +356,7 @@ private:
             set_partial_failure(s);
         } else {
             const char* state = "<UNKNOWN>";
-            if (info.wait_exception_port_type != ZX_EXCEPTION_PORT_TYPE_NONE) {
+            if (info.wait_exception_channel_type != ZX_EXCEPTION_CHANNEL_TYPE_NONE) {
                 state = "EXCEPTION";
             } else {
                 switch (ZX_THREAD_STATE_BASIC(info.state)) {

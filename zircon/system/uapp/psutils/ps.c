@@ -146,7 +146,7 @@ static zx_status_t process_callback(void* ctx, int depth,
 
 // Return text representation of thread state.
 static const char* state_string(const zx_info_thread_t* info) {
-    if (info->wait_exception_port_type != ZX_EXCEPTION_PORT_TYPE_NONE) {
+    if (info->wait_exception_channel_type != ZX_EXCEPTION_CHANNEL_TYPE_NONE) {
         return "excp";
     } else {
         switch (ZX_THREAD_STATE_BASIC(info->state)) {
