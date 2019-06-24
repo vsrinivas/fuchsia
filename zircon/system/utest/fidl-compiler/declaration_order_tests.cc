@@ -11,6 +11,7 @@
 #include <unittest/unittest.h>
 
 #include <fidl/flat_ast.h>
+#include <fidl/names.h>
 #include <fidl/lexer.h>
 #include <fidl/parser.h>
 #include <fidl/source_file.h>
@@ -22,6 +23,9 @@
 
 #define ASSERT_DECL_NAME(D, N) \
     ASSERT_STR_EQ(N, DECL_NAME(D));
+
+#define ASSERT_DECL_FQ_NAME(D, N) \
+    ASSERT_STR_EQ(N, fidl::NameFlatName(D->name).c_str());
 
 namespace {
 
@@ -342,6 +346,46 @@ xunion #Xunion# {
     END_TEST;
 }
 
+bool decls_across_libraries() {
+    BEGIN_TEST;
+
+    for (int i = 0; i < kRepeatTestCount; i++) {
+        SharedAmongstLibraries shared;
+        TestLibrary dependency("dependency.fidl", R"FIDL(
+library dependency;
+
+struct ExampleDecl1 {};
+
+)FIDL", &shared);
+        ASSERT_TRUE(dependency.Compile());
+
+        TestLibrary library("example.fidl", R"FIDL(
+library example;
+
+using dependency;
+
+struct ExampleDecl0 {};
+struct ExampleDecl2 {};
+
+protocol ExampleDecl1 {
+  Method(dependency.ExampleDecl1 arg);
+};
+
+)FIDL", &shared);
+        ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
+        ASSERT_TRUE(library.Compile());
+
+        auto decl_order = library.declaration_order();
+        ASSERT_EQ(5, decl_order.size());
+        ASSERT_DECL_FQ_NAME(decl_order[0], "example/ExampleDecl2");
+        ASSERT_DECL_FQ_NAME(decl_order[1], "example/ExampleDecl0");
+        ASSERT_DECL_FQ_NAME(decl_order[2], "dependency/ExampleDecl1");
+        ASSERT_DECL_FQ_NAME(decl_order[3], "example/SomeLongAnonymousPrefix0");
+        ASSERT_DECL_FQ_NAME(decl_order[4], "example/ExampleDecl1");
+    }
+    END_TEST;
+}
+
 } // namespace
 
 BEGIN_TEST_CASE(declaration_order_test)
@@ -352,4 +396,5 @@ RUN_TEST(nonnullable_xunion)
 RUN_TEST(nullable_xunion)
 RUN_TEST(nonnullable_xunion_in_struct)
 RUN_TEST(nullable_xunion_in_struct)
+RUN_TEST(decls_across_libraries);
 END_TEST_CASE(declaration_order_test)

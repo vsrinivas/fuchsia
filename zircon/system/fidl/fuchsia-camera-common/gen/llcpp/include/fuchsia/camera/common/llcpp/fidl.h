@@ -33,10 +33,10 @@ enum class FrameStatus : uint32_t {
 struct FrameAvailableEvent;
 class Stream;
 struct FrameRate;
+struct VideoFormat;
 struct DeviceInfo;
 struct ArtificialStreamConfig;
 struct VirtualStreamConfig;
-struct VideoFormat;
 struct VirtualCameraConfig;
 class VirtualCameraFactory;
 
@@ -263,6 +263,21 @@ struct FrameRate {
   uint32_t frames_per_sec_denominator{};
 };
 
+extern "C" const fidl_type_t fuchsia_camera_common_VideoFormatTable;
+
+// Video format includes the image format and frame rate of frames being produced.
+struct VideoFormat {
+  static constexpr const fidl_type_t* Type = &fuchsia_camera_common_VideoFormatTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 80;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+
+  ::llcpp::fuchsia::sysmem::ImageFormat format{};
+
+  FrameRate rate{};
+};
+
 extern "C" const fidl_type_t fuchsia_camera_common_DeviceInfoTable;
 
 // Identifying information about the device.
@@ -370,21 +385,6 @@ struct VirtualStreamConfig {
   Tag ordinal_;
   FIDL_ALIGNDECL
   fidl_envelope_t envelope_;
-};
-
-extern "C" const fidl_type_t fuchsia_camera_common_VideoFormatTable;
-
-// Video format includes the image format and frame rate of frames being produced.
-struct VideoFormat {
-  static constexpr const fidl_type_t* Type = &fuchsia_camera_common_VideoFormatTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 80;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-
-  ::llcpp::fuchsia::sysmem::ImageFormat format{};
-
-  FrameRate rate{};
 };
 
 extern "C" const fidl_type_t fuchsia_camera_common_VirtualCameraConfigTable;
@@ -554,6 +554,13 @@ static_assert(offsetof(::llcpp::fuchsia::camera::common::FrameRate, frames_per_s
 static_assert(sizeof(::llcpp::fuchsia::camera::common::FrameRate) == ::llcpp::fuchsia::camera::common::FrameRate::PrimarySize);
 
 template <>
+struct IsFidlType<::llcpp::fuchsia::camera::common::VideoFormat> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::camera::common::VideoFormat>);
+static_assert(offsetof(::llcpp::fuchsia::camera::common::VideoFormat, format) == 0);
+static_assert(offsetof(::llcpp::fuchsia::camera::common::VideoFormat, rate) == 72);
+static_assert(sizeof(::llcpp::fuchsia::camera::common::VideoFormat) == ::llcpp::fuchsia::camera::common::VideoFormat::PrimarySize);
+
+template <>
 struct IsFidlType<::llcpp::fuchsia::camera::common::DeviceInfo> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::fuchsia::camera::common::DeviceInfo>);
 static_assert(offsetof(::llcpp::fuchsia::camera::common::DeviceInfo, camera_id) == 0);
@@ -572,13 +579,6 @@ static_assert(sizeof(::llcpp::fuchsia::camera::common::ArtificialStreamConfig) =
 template <>
 struct IsFidlType<::llcpp::fuchsia::camera::common::VirtualStreamConfig> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::fuchsia::camera::common::VirtualStreamConfig>);
-
-template <>
-struct IsFidlType<::llcpp::fuchsia::camera::common::VideoFormat> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::fuchsia::camera::common::VideoFormat>);
-static_assert(offsetof(::llcpp::fuchsia::camera::common::VideoFormat, format) == 0);
-static_assert(offsetof(::llcpp::fuchsia::camera::common::VideoFormat, rate) == 72);
-static_assert(sizeof(::llcpp::fuchsia::camera::common::VideoFormat) == ::llcpp::fuchsia::camera::common::VideoFormat::PrimarySize);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::camera::common::VirtualCameraConfig> : public std::true_type {};

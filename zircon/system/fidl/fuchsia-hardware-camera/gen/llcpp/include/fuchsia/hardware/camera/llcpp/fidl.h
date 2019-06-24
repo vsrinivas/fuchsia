@@ -35,10 +35,10 @@ enum class FrameStatus : uint32_t {
 struct FrameAvailableEvent;
 class Stream;
 struct FrameRate;
-struct DeviceInfo;
 struct VideoFormat;
-class ControlV2;
+struct DeviceInfo;
 class Control;
+class ControlV2;
 
 extern "C" const fidl_type_t fuchsia_hardware_camera_DeviceGetChannelRequestTable;
 
@@ -337,6 +337,20 @@ struct FrameRate {
   uint32_t frames_per_sec_denominator{};
 };
 
+extern "C" const fidl_type_t fuchsia_hardware_camera_VideoFormatTable;
+
+struct VideoFormat {
+  static constexpr const fidl_type_t* Type = &fuchsia_hardware_camera_VideoFormatTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 80;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+
+  ::llcpp::fuchsia::sysmem::ImageFormat format{};
+
+  FrameRate rate{};
+};
+
 extern "C" const fidl_type_t fuchsia_hardware_camera_DeviceInfoTable;
 
 struct DeviceInfo {
@@ -356,254 +370,6 @@ struct DeviceInfo {
   uint16_t max_stream_count{};
 
   uint32_t output_capabilities{};
-};
-
-constexpr uint32_t CAMERA_OUTPUT_UNKNOWN = 0u;
-
-constexpr uint32_t CAMERA_OUTPUT_STREAM = 4u;
-
-constexpr uint32_t CAMERA_OUTPUT_STILL_IMAGE = 1u;
-
-constexpr uint32_t CAMERA_OUTPUT_STEREO = 32u;
-
-constexpr uint32_t CAMERA_OUTPUT_HDR = 8u;
-
-constexpr uint32_t CAMERA_OUTPUT_DEPTH = 16u;
-
-constexpr uint32_t CAMERA_OUTPUT_BURST = 2u;
-
-extern "C" const fidl_type_t fuchsia_hardware_camera_VideoFormatTable;
-
-struct VideoFormat {
-  static constexpr const fidl_type_t* Type = &fuchsia_hardware_camera_VideoFormatTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 80;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-
-  ::llcpp::fuchsia::sysmem::ImageFormat format{};
-
-  FrameRate rate{};
-};
-
-extern "C" const fidl_type_t fuchsia_hardware_camera_ControlV2GetFormatsRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_camera_ControlV2GetFormatsResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_camera_ControlV2CreateStreamRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_camera_ControlV2GetDeviceInfoResponseTable;
-
-class ControlV2 final {
- public:
-
-  struct GetFormatsResponse final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    ::fidl::Array<::llcpp::fuchsia::camera::common::VideoFormat, 16> formats;
-    uint32_t total_format_count;
-    uint32_t actual_format_count;
-    int32_t status;
-
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_camera_ControlV2GetFormatsResponseTable;
-    static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 1312;
-    static constexpr uint32_t MaxOutOfLine = 0;
-  };
-  struct GetFormatsRequest final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    uint32_t index;
-
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_camera_ControlV2GetFormatsRequestTable;
-    static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    using ResponseType = GetFormatsResponse;
-  };
-
-  struct CreateStreamRequest final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    ::llcpp::fuchsia::sysmem::BufferCollectionInfo buffer_collection;
-    ::llcpp::fuchsia::camera::common::FrameRate rate;
-    ::zx::channel stream;
-    ::zx::eventpair stream_token;
-
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_camera_ControlV2CreateStreamRequestTable;
-    static constexpr uint32_t MaxNumHandles = 66;
-    static constexpr uint32_t PrimarySize = 384;
-    static constexpr uint32_t MaxOutOfLine = 0;
-  };
-
-  struct GetDeviceInfoResponse final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    DeviceInfo device_info;
-
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_camera_ControlV2GetDeviceInfoResponseTable;
-    static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 40;
-    static constexpr uint32_t MaxOutOfLine = 0;
-  };
-  using GetDeviceInfoRequest = ::fidl::AnyZeroArgMessage;
-
-
-  class SyncClient final {
-   public:
-    SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
-
-    ~SyncClient() {}
-
-    // Get the available format types for this device
-    // NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple
-    // GetFormats need to be issued until total_format_count are received.
-    // |actual_format_count| is the number of valid formats in this response.
-    // |total_format_count| is the total number of formats supported by the camera.
-    zx_status_t GetFormats(uint32_t index, ::fidl::Array<::llcpp::fuchsia::camera::common::VideoFormat, 16>* out_formats, uint32_t* out_total_format_count, uint32_t* out_actual_format_count, int32_t* out_status);
-
-    // Get the available format types for this device
-    // NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple
-    // GetFormats need to be issued until total_format_count are received.
-    // |actual_format_count| is the number of valid formats in this response.
-    // |total_format_count| is the total number of formats supported by the camera.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<GetFormatsResponse> GetFormats(::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer, ::fidl::Array<::llcpp::fuchsia::camera::common::VideoFormat, 16>* out_formats, uint32_t* out_total_format_count, uint32_t* out_actual_format_count, int32_t* out_status);
-
-    // Get the available format types for this device
-    // NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple
-    // GetFormats need to be issued until total_format_count are received.
-    // |actual_format_count| is the number of valid formats in this response.
-    // |total_format_count| is the total number of formats supported by the camera.
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<GetFormatsResponse> GetFormats(::fidl::DecodedMessage<GetFormatsRequest> params, ::fidl::BytePart response_buffer);
-
-    zx_status_t CreateStream(::llcpp::fuchsia::sysmem::BufferCollectionInfo buffer_collection, ::llcpp::fuchsia::camera::common::FrameRate rate, ::zx::channel stream, ::zx::eventpair stream_token);
-
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    zx_status_t CreateStream(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::sysmem::BufferCollectionInfo buffer_collection, ::llcpp::fuchsia::camera::common::FrameRate rate, ::zx::channel stream, ::zx::eventpair stream_token);
-
-    // Messages are encoded and decoded in-place.
-    zx_status_t CreateStream(::fidl::DecodedMessage<CreateStreamRequest> params);
-
-    zx_status_t GetDeviceInfo(DeviceInfo* out_device_info);
-
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    ::fidl::DecodeResult<GetDeviceInfoResponse> GetDeviceInfo(::fidl::BytePart _response_buffer, DeviceInfo* out_device_info);
-
-    // Messages are encoded and decoded in-place.
-    ::fidl::DecodeResult<GetDeviceInfoResponse> GetDeviceInfo(::fidl::BytePart response_buffer);
-
-   private:
-    ::zx::channel channel_;
-  };
-
-  // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
-  class Call final {
-   public:
-
-    // Get the available format types for this device
-    // NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple
-    // GetFormats need to be issued until total_format_count are received.
-    // |actual_format_count| is the number of valid formats in this response.
-    // |total_format_count| is the total number of formats supported by the camera.
-    static zx_status_t GetFormats(zx::unowned_channel _client_end, uint32_t index, ::fidl::Array<::llcpp::fuchsia::camera::common::VideoFormat, 16>* out_formats, uint32_t* out_total_format_count, uint32_t* out_actual_format_count, int32_t* out_status);
-
-    // Get the available format types for this device
-    // NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple
-    // GetFormats need to be issued until total_format_count are received.
-    // |actual_format_count| is the number of valid formats in this response.
-    // |total_format_count| is the total number of formats supported by the camera.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<GetFormatsResponse> GetFormats(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer, ::fidl::Array<::llcpp::fuchsia::camera::common::VideoFormat, 16>* out_formats, uint32_t* out_total_format_count, uint32_t* out_actual_format_count, int32_t* out_status);
-
-    // Get the available format types for this device
-    // NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple
-    // GetFormats need to be issued until total_format_count are received.
-    // |actual_format_count| is the number of valid formats in this response.
-    // |total_format_count| is the total number of formats supported by the camera.
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<GetFormatsResponse> GetFormats(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetFormatsRequest> params, ::fidl::BytePart response_buffer);
-
-    static zx_status_t CreateStream(zx::unowned_channel _client_end, ::llcpp::fuchsia::sysmem::BufferCollectionInfo buffer_collection, ::llcpp::fuchsia::camera::common::FrameRate rate, ::zx::channel stream, ::zx::eventpair stream_token);
-
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    static zx_status_t CreateStream(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::sysmem::BufferCollectionInfo buffer_collection, ::llcpp::fuchsia::camera::common::FrameRate rate, ::zx::channel stream, ::zx::eventpair stream_token);
-
-    // Messages are encoded and decoded in-place.
-    static zx_status_t CreateStream(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CreateStreamRequest> params);
-
-    static zx_status_t GetDeviceInfo(zx::unowned_channel _client_end, DeviceInfo* out_device_info);
-
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
-    static ::fidl::DecodeResult<GetDeviceInfoResponse> GetDeviceInfo(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, DeviceInfo* out_device_info);
-
-    // Messages are encoded and decoded in-place.
-    static ::fidl::DecodeResult<GetDeviceInfoResponse> GetDeviceInfo(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
-
-  };
-
-  // Pure-virtual interface to be implemented by a server.
-  class Interface {
-   public:
-    Interface() = default;
-    virtual ~Interface() = default;
-    using _Outer = ControlV2;
-    using _Base = ::fidl::CompleterBase;
-
-    class GetFormatsCompleterBase : public _Base {
-     public:
-      void Reply(::fidl::Array<::llcpp::fuchsia::camera::common::VideoFormat, 16> formats, uint32_t total_format_count, uint32_t actual_format_count, int32_t status);
-      void Reply(::fidl::BytePart _buffer, ::fidl::Array<::llcpp::fuchsia::camera::common::VideoFormat, 16> formats, uint32_t total_format_count, uint32_t actual_format_count, int32_t status);
-      void Reply(::fidl::DecodedMessage<GetFormatsResponse> params);
-
-     protected:
-      using ::fidl::CompleterBase::CompleterBase;
-    };
-
-    using GetFormatsCompleter = ::fidl::Completer<GetFormatsCompleterBase>;
-
-    virtual void GetFormats(uint32_t index, GetFormatsCompleter::Sync _completer) = 0;
-
-    using CreateStreamCompleter = ::fidl::Completer<>;
-
-    virtual void CreateStream(::llcpp::fuchsia::sysmem::BufferCollectionInfo buffer_collection, ::llcpp::fuchsia::camera::common::FrameRate rate, ::zx::channel stream, ::zx::eventpair stream_token, CreateStreamCompleter::Sync _completer) = 0;
-
-    class GetDeviceInfoCompleterBase : public _Base {
-     public:
-      void Reply(DeviceInfo device_info);
-      void Reply(::fidl::BytePart _buffer, DeviceInfo device_info);
-      void Reply(::fidl::DecodedMessage<GetDeviceInfoResponse> params);
-
-     protected:
-      using ::fidl::CompleterBase::CompleterBase;
-    };
-
-    using GetDeviceInfoCompleter = ::fidl::Completer<GetDeviceInfoCompleterBase>;
-
-    virtual void GetDeviceInfo(GetDeviceInfoCompleter::Sync _completer) = 0;
-
-  };
-
-  // Attempts to dispatch the incoming message to a handler function in the server implementation.
-  // If there is no matching handler, it returns false, leaving the message and transaction intact.
-  // In all other cases, it consumes the message and returns true.
-  // It is possible to chain multiple TryDispatch functions in this manner.
-  static bool TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
-
-  // Dispatches the incoming message to one of the handlers functions in the interface.
-  // If there is no matching handler, it closes all the handles in |msg| and closes the channel with
-  // a |ZX_ERR_NOT_SUPPORTED| epitaph, before returning false. The message should then be discarded.
-  static bool Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
-
-  // Same as |Dispatch|, but takes a |void*| instead of |Interface*|. Only used with |fidl::Bind|
-  // to reduce template expansion.
-  // Do not call this method manually. Use |Dispatch| instead.
-  static bool TypeErasedDispatch(void* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
-    return Dispatch(static_cast<Interface*>(impl), msg, txn);
-  }
-
 };
 
 extern "C" const fidl_type_t fuchsia_hardware_camera_ControlGetFormatsRequestTable;
@@ -826,6 +592,240 @@ class Control final {
 
 };
 
+constexpr uint32_t CAMERA_OUTPUT_UNKNOWN = 0u;
+
+constexpr uint32_t CAMERA_OUTPUT_STREAM = 4u;
+
+constexpr uint32_t CAMERA_OUTPUT_STILL_IMAGE = 1u;
+
+constexpr uint32_t CAMERA_OUTPUT_STEREO = 32u;
+
+constexpr uint32_t CAMERA_OUTPUT_HDR = 8u;
+
+constexpr uint32_t CAMERA_OUTPUT_DEPTH = 16u;
+
+constexpr uint32_t CAMERA_OUTPUT_BURST = 2u;
+
+extern "C" const fidl_type_t fuchsia_hardware_camera_ControlV2GetFormatsRequestTable;
+extern "C" const fidl_type_t fuchsia_hardware_camera_ControlV2GetFormatsResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_camera_ControlV2CreateStreamRequestTable;
+extern "C" const fidl_type_t fuchsia_hardware_camera_ControlV2GetDeviceInfoResponseTable;
+
+class ControlV2 final {
+ public:
+
+  struct GetFormatsResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    ::fidl::Array<::llcpp::fuchsia::camera::common::VideoFormat, 16> formats;
+    uint32_t total_format_count;
+    uint32_t actual_format_count;
+    int32_t status;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_hardware_camera_ControlV2GetFormatsResponseTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 1312;
+    static constexpr uint32_t MaxOutOfLine = 0;
+  };
+  struct GetFormatsRequest final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    uint32_t index;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_hardware_camera_ControlV2GetFormatsRequestTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    using ResponseType = GetFormatsResponse;
+  };
+
+  struct CreateStreamRequest final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    ::llcpp::fuchsia::sysmem::BufferCollectionInfo buffer_collection;
+    ::llcpp::fuchsia::camera::common::FrameRate rate;
+    ::zx::channel stream;
+    ::zx::eventpair stream_token;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_hardware_camera_ControlV2CreateStreamRequestTable;
+    static constexpr uint32_t MaxNumHandles = 66;
+    static constexpr uint32_t PrimarySize = 384;
+    static constexpr uint32_t MaxOutOfLine = 0;
+  };
+
+  struct GetDeviceInfoResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    DeviceInfo device_info;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_hardware_camera_ControlV2GetDeviceInfoResponseTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 40;
+    static constexpr uint32_t MaxOutOfLine = 0;
+  };
+  using GetDeviceInfoRequest = ::fidl::AnyZeroArgMessage;
+
+
+  class SyncClient final {
+   public:
+    SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
+
+    ~SyncClient() {}
+
+    // Get the available format types for this device
+    // NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple
+    // GetFormats need to be issued until total_format_count are received.
+    // |actual_format_count| is the number of valid formats in this response.
+    // |total_format_count| is the total number of formats supported by the camera.
+    zx_status_t GetFormats(uint32_t index, ::fidl::Array<::llcpp::fuchsia::camera::common::VideoFormat, 16>* out_formats, uint32_t* out_total_format_count, uint32_t* out_actual_format_count, int32_t* out_status);
+
+    // Get the available format types for this device
+    // NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple
+    // GetFormats need to be issued until total_format_count are received.
+    // |actual_format_count| is the number of valid formats in this response.
+    // |total_format_count| is the total number of formats supported by the camera.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<GetFormatsResponse> GetFormats(::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer, ::fidl::Array<::llcpp::fuchsia::camera::common::VideoFormat, 16>* out_formats, uint32_t* out_total_format_count, uint32_t* out_actual_format_count, int32_t* out_status);
+
+    // Get the available format types for this device
+    // NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple
+    // GetFormats need to be issued until total_format_count are received.
+    // |actual_format_count| is the number of valid formats in this response.
+    // |total_format_count| is the total number of formats supported by the camera.
+    // Messages are encoded and decoded in-place.
+    ::fidl::DecodeResult<GetFormatsResponse> GetFormats(::fidl::DecodedMessage<GetFormatsRequest> params, ::fidl::BytePart response_buffer);
+
+    zx_status_t CreateStream(::llcpp::fuchsia::sysmem::BufferCollectionInfo buffer_collection, ::llcpp::fuchsia::camera::common::FrameRate rate, ::zx::channel stream, ::zx::eventpair stream_token);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    zx_status_t CreateStream(::fidl::BytePart _request_buffer, ::llcpp::fuchsia::sysmem::BufferCollectionInfo buffer_collection, ::llcpp::fuchsia::camera::common::FrameRate rate, ::zx::channel stream, ::zx::eventpair stream_token);
+
+    // Messages are encoded and decoded in-place.
+    zx_status_t CreateStream(::fidl::DecodedMessage<CreateStreamRequest> params);
+
+    zx_status_t GetDeviceInfo(DeviceInfo* out_device_info);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    ::fidl::DecodeResult<GetDeviceInfoResponse> GetDeviceInfo(::fidl::BytePart _response_buffer, DeviceInfo* out_device_info);
+
+    // Messages are encoded and decoded in-place.
+    ::fidl::DecodeResult<GetDeviceInfoResponse> GetDeviceInfo(::fidl::BytePart response_buffer);
+
+   private:
+    ::zx::channel channel_;
+  };
+
+  // Methods to make a sync FIDL call directly on an unowned channel, avoiding setting up a client.
+  class Call final {
+   public:
+
+    // Get the available format types for this device
+    // NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple
+    // GetFormats need to be issued until total_format_count are received.
+    // |actual_format_count| is the number of valid formats in this response.
+    // |total_format_count| is the total number of formats supported by the camera.
+    static zx_status_t GetFormats(zx::unowned_channel _client_end, uint32_t index, ::fidl::Array<::llcpp::fuchsia::camera::common::VideoFormat, 16>* out_formats, uint32_t* out_total_format_count, uint32_t* out_actual_format_count, int32_t* out_status);
+
+    // Get the available format types for this device
+    // NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple
+    // GetFormats need to be issued until total_format_count are received.
+    // |actual_format_count| is the number of valid formats in this response.
+    // |total_format_count| is the total number of formats supported by the camera.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<GetFormatsResponse> GetFormats(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer, ::fidl::Array<::llcpp::fuchsia::camera::common::VideoFormat, 16>* out_formats, uint32_t* out_total_format_count, uint32_t* out_actual_format_count, int32_t* out_status);
+
+    // Get the available format types for this device
+    // NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple
+    // GetFormats need to be issued until total_format_count are received.
+    // |actual_format_count| is the number of valid formats in this response.
+    // |total_format_count| is the total number of formats supported by the camera.
+    // Messages are encoded and decoded in-place.
+    static ::fidl::DecodeResult<GetFormatsResponse> GetFormats(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetFormatsRequest> params, ::fidl::BytePart response_buffer);
+
+    static zx_status_t CreateStream(zx::unowned_channel _client_end, ::llcpp::fuchsia::sysmem::BufferCollectionInfo buffer_collection, ::llcpp::fuchsia::camera::common::FrameRate rate, ::zx::channel stream, ::zx::eventpair stream_token);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static zx_status_t CreateStream(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::llcpp::fuchsia::sysmem::BufferCollectionInfo buffer_collection, ::llcpp::fuchsia::camera::common::FrameRate rate, ::zx::channel stream, ::zx::eventpair stream_token);
+
+    // Messages are encoded and decoded in-place.
+    static zx_status_t CreateStream(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CreateStreamRequest> params);
+
+    static zx_status_t GetDeviceInfo(zx::unowned_channel _client_end, DeviceInfo* out_device_info);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
+    static ::fidl::DecodeResult<GetDeviceInfoResponse> GetDeviceInfo(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, DeviceInfo* out_device_info);
+
+    // Messages are encoded and decoded in-place.
+    static ::fidl::DecodeResult<GetDeviceInfoResponse> GetDeviceInfo(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+  };
+
+  // Pure-virtual interface to be implemented by a server.
+  class Interface {
+   public:
+    Interface() = default;
+    virtual ~Interface() = default;
+    using _Outer = ControlV2;
+    using _Base = ::fidl::CompleterBase;
+
+    class GetFormatsCompleterBase : public _Base {
+     public:
+      void Reply(::fidl::Array<::llcpp::fuchsia::camera::common::VideoFormat, 16> formats, uint32_t total_format_count, uint32_t actual_format_count, int32_t status);
+      void Reply(::fidl::BytePart _buffer, ::fidl::Array<::llcpp::fuchsia::camera::common::VideoFormat, 16> formats, uint32_t total_format_count, uint32_t actual_format_count, int32_t status);
+      void Reply(::fidl::DecodedMessage<GetFormatsResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using GetFormatsCompleter = ::fidl::Completer<GetFormatsCompleterBase>;
+
+    virtual void GetFormats(uint32_t index, GetFormatsCompleter::Sync _completer) = 0;
+
+    using CreateStreamCompleter = ::fidl::Completer<>;
+
+    virtual void CreateStream(::llcpp::fuchsia::sysmem::BufferCollectionInfo buffer_collection, ::llcpp::fuchsia::camera::common::FrameRate rate, ::zx::channel stream, ::zx::eventpair stream_token, CreateStreamCompleter::Sync _completer) = 0;
+
+    class GetDeviceInfoCompleterBase : public _Base {
+     public:
+      void Reply(DeviceInfo device_info);
+      void Reply(::fidl::BytePart _buffer, DeviceInfo device_info);
+      void Reply(::fidl::DecodedMessage<GetDeviceInfoResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using GetDeviceInfoCompleter = ::fidl::Completer<GetDeviceInfoCompleterBase>;
+
+    virtual void GetDeviceInfo(GetDeviceInfoCompleter::Sync _completer) = 0;
+
+  };
+
+  // Attempts to dispatch the incoming message to a handler function in the server implementation.
+  // If there is no matching handler, it returns false, leaving the message and transaction intact.
+  // In all other cases, it consumes the message and returns true.
+  // It is possible to chain multiple TryDispatch functions in this manner.
+  static bool TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
+
+  // Dispatches the incoming message to one of the handlers functions in the interface.
+  // If there is no matching handler, it closes all the handles in |msg| and closes the channel with
+  // a |ZX_ERR_NOT_SUPPORTED| epitaph, before returning false. The message should then be discarded.
+  static bool Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
+
+  // Same as |Dispatch|, but takes a |void*| instead of |Interface*|. Only used with |fidl::Bind|
+  // to reduce template expansion.
+  // Do not call this method manually. Use |Dispatch| instead.
+  static bool TypeErasedDispatch(void* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+    return Dispatch(static_cast<Interface*>(impl), msg, txn);
+  }
+
+};
+
 }  // namespace camera
 }  // namespace hardware
 }  // namespace fuchsia
@@ -879,6 +879,13 @@ static_assert(offsetof(::llcpp::fuchsia::hardware::camera::FrameRate, frames_per
 static_assert(sizeof(::llcpp::fuchsia::hardware::camera::FrameRate) == ::llcpp::fuchsia::hardware::camera::FrameRate::PrimarySize);
 
 template <>
+struct IsFidlType<::llcpp::fuchsia::hardware::camera::VideoFormat> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::hardware::camera::VideoFormat>);
+static_assert(offsetof(::llcpp::fuchsia::hardware::camera::VideoFormat, format) == 0);
+static_assert(offsetof(::llcpp::fuchsia::hardware::camera::VideoFormat, rate) == 72);
+static_assert(sizeof(::llcpp::fuchsia::hardware::camera::VideoFormat) == ::llcpp::fuchsia::hardware::camera::VideoFormat::PrimarySize);
+
+template <>
 struct IsFidlType<::llcpp::fuchsia::hardware::camera::DeviceInfo> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::fuchsia::hardware::camera::DeviceInfo>);
 static_assert(offsetof(::llcpp::fuchsia::hardware::camera::DeviceInfo, camera_id) == 0);
@@ -887,51 +894,6 @@ static_assert(offsetof(::llcpp::fuchsia::hardware::camera::DeviceInfo, product_i
 static_assert(offsetof(::llcpp::fuchsia::hardware::camera::DeviceInfo, max_stream_count) == 12);
 static_assert(offsetof(::llcpp::fuchsia::hardware::camera::DeviceInfo, output_capabilities) == 16);
 static_assert(sizeof(::llcpp::fuchsia::hardware::camera::DeviceInfo) == ::llcpp::fuchsia::hardware::camera::DeviceInfo::PrimarySize);
-
-template <>
-struct IsFidlType<::llcpp::fuchsia::hardware::camera::VideoFormat> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::fuchsia::hardware::camera::VideoFormat>);
-static_assert(offsetof(::llcpp::fuchsia::hardware::camera::VideoFormat, format) == 0);
-static_assert(offsetof(::llcpp::fuchsia::hardware::camera::VideoFormat, rate) == 72);
-static_assert(sizeof(::llcpp::fuchsia::hardware::camera::VideoFormat) == ::llcpp::fuchsia::hardware::camera::VideoFormat::PrimarySize);
-
-template <>
-struct IsFidlType<::llcpp::fuchsia::hardware::camera::ControlV2::GetFormatsRequest> : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::fuchsia::hardware::camera::ControlV2::GetFormatsRequest> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::hardware::camera::ControlV2::GetFormatsRequest)
-    == ::llcpp::fuchsia::hardware::camera::ControlV2::GetFormatsRequest::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::hardware::camera::ControlV2::GetFormatsRequest, index) == 16);
-
-template <>
-struct IsFidlType<::llcpp::fuchsia::hardware::camera::ControlV2::GetFormatsResponse> : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::fuchsia::hardware::camera::ControlV2::GetFormatsResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::hardware::camera::ControlV2::GetFormatsResponse)
-    == ::llcpp::fuchsia::hardware::camera::ControlV2::GetFormatsResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::hardware::camera::ControlV2::GetFormatsResponse, formats) == 16);
-static_assert(offsetof(::llcpp::fuchsia::hardware::camera::ControlV2::GetFormatsResponse, total_format_count) == 1296);
-static_assert(offsetof(::llcpp::fuchsia::hardware::camera::ControlV2::GetFormatsResponse, actual_format_count) == 1300);
-static_assert(offsetof(::llcpp::fuchsia::hardware::camera::ControlV2::GetFormatsResponse, status) == 1304);
-
-template <>
-struct IsFidlType<::llcpp::fuchsia::hardware::camera::ControlV2::CreateStreamRequest> : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::fuchsia::hardware::camera::ControlV2::CreateStreamRequest> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::hardware::camera::ControlV2::CreateStreamRequest)
-    == ::llcpp::fuchsia::hardware::camera::ControlV2::CreateStreamRequest::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::hardware::camera::ControlV2::CreateStreamRequest, buffer_collection) == 16);
-static_assert(offsetof(::llcpp::fuchsia::hardware::camera::ControlV2::CreateStreamRequest, rate) == 368);
-static_assert(offsetof(::llcpp::fuchsia::hardware::camera::ControlV2::CreateStreamRequest, stream) == 376);
-static_assert(offsetof(::llcpp::fuchsia::hardware::camera::ControlV2::CreateStreamRequest, stream_token) == 380);
-
-template <>
-struct IsFidlType<::llcpp::fuchsia::hardware::camera::ControlV2::GetDeviceInfoResponse> : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::fuchsia::hardware::camera::ControlV2::GetDeviceInfoResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::hardware::camera::ControlV2::GetDeviceInfoResponse)
-    == ::llcpp::fuchsia::hardware::camera::ControlV2::GetDeviceInfoResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::hardware::camera::ControlV2::GetDeviceInfoResponse, device_info) == 16);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::hardware::camera::Control::GetFormatsRequest> : public std::true_type {};
@@ -970,5 +932,43 @@ struct IsFidlMessage<::llcpp::fuchsia::hardware::camera::Control::GetDeviceInfoR
 static_assert(sizeof(::llcpp::fuchsia::hardware::camera::Control::GetDeviceInfoResponse)
     == ::llcpp::fuchsia::hardware::camera::Control::GetDeviceInfoResponse::PrimarySize);
 static_assert(offsetof(::llcpp::fuchsia::hardware::camera::Control::GetDeviceInfoResponse, device_info) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::hardware::camera::ControlV2::GetFormatsRequest> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::hardware::camera::ControlV2::GetFormatsRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::hardware::camera::ControlV2::GetFormatsRequest)
+    == ::llcpp::fuchsia::hardware::camera::ControlV2::GetFormatsRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::hardware::camera::ControlV2::GetFormatsRequest, index) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::hardware::camera::ControlV2::GetFormatsResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::hardware::camera::ControlV2::GetFormatsResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::hardware::camera::ControlV2::GetFormatsResponse)
+    == ::llcpp::fuchsia::hardware::camera::ControlV2::GetFormatsResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::hardware::camera::ControlV2::GetFormatsResponse, formats) == 16);
+static_assert(offsetof(::llcpp::fuchsia::hardware::camera::ControlV2::GetFormatsResponse, total_format_count) == 1296);
+static_assert(offsetof(::llcpp::fuchsia::hardware::camera::ControlV2::GetFormatsResponse, actual_format_count) == 1300);
+static_assert(offsetof(::llcpp::fuchsia::hardware::camera::ControlV2::GetFormatsResponse, status) == 1304);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::hardware::camera::ControlV2::CreateStreamRequest> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::hardware::camera::ControlV2::CreateStreamRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::hardware::camera::ControlV2::CreateStreamRequest)
+    == ::llcpp::fuchsia::hardware::camera::ControlV2::CreateStreamRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::hardware::camera::ControlV2::CreateStreamRequest, buffer_collection) == 16);
+static_assert(offsetof(::llcpp::fuchsia::hardware::camera::ControlV2::CreateStreamRequest, rate) == 368);
+static_assert(offsetof(::llcpp::fuchsia::hardware::camera::ControlV2::CreateStreamRequest, stream) == 376);
+static_assert(offsetof(::llcpp::fuchsia::hardware::camera::ControlV2::CreateStreamRequest, stream_token) == 380);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::hardware::camera::ControlV2::GetDeviceInfoResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::hardware::camera::ControlV2::GetDeviceInfoResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::hardware::camera::ControlV2::GetDeviceInfoResponse)
+    == ::llcpp::fuchsia::hardware::camera::ControlV2::GetDeviceInfoResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::hardware::camera::ControlV2::GetDeviceInfoResponse, device_info) == 16);
 
 }  // namespace fidl

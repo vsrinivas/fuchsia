@@ -2575,11 +2575,23 @@ bool Library::DeclDependencies(Decl* decl, std::set<Decl*>* out_edges) {
 }
 
 namespace {
-// To compare two Decl's in the same library, it suffices to compare the unqualified names of the Decl's.
+// Declaration comparator.
+//
+// (1) To compare two Decl's in the same library, it suffices to compare the
+//     unqualified names of the Decl's. (This is faster.)
+//
+// (2) To compare two Decl's across libraries, we rely on the fully qualified
+//     names of the Decl's. (This is slower.)
 struct CmpDeclInLibrary {
     bool operator()(const Decl* a, const Decl* b) const {
         assert(a->name != b->name || a == b);
-        return a->name < b->name;
+        const Library* a_library = a->name.library();
+        const Library* b_library = b->name.library();
+        if (a_library != b_library) {
+            return NameFlatName(a->name) < NameFlatName(b->name);
+        } else {
+            return a->name.name_part() < b->name.name_part();
+        }
     }
 };
 } // namespace
