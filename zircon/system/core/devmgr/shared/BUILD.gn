@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 source_set("shared") {
+  configs += [ "$zx/public/gn/config:visibility_hidden" ]
   visibility = [ "$zx/system/core/devmgr/*" ]
   sources = [
     "fdio.cc",
@@ -19,6 +20,7 @@ source_set("shared") {
 }
 
 source_set("env") {
+  configs += [ "$zx/public/gn/config:visibility_hidden" ]
   visibility = [ "$zx/system/core/devmgr/*" ]
   sources = [
     "env.cc",

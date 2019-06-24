@@ -1007,7 +1007,7 @@ zx_status_t devhost_start_connection(fbl::unique_ptr<DevfsConnection> conn, zx::
     return DevfsConnection::BeginWait(std::move(conn), DevhostAsyncLoop()->dispatcher());
 }
 
-__EXPORT int device_host_main(int argc, char** argv) {
+int device_host_main(int argc, char** argv) {
     devhost_io_init();
 
     log(TRACE, "devhost: main()\n");
@@ -1051,3 +1051,7 @@ __EXPORT int device_host_main(int argc, char** argv) {
 }
 
 } // namespace devmgr
+
+__EXPORT int devmgr_device_host_main(int argc, char** argv) {
+    return devmgr::device_host_main(argc, argv);
+}

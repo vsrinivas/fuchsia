@@ -4,8 +4,4 @@
 
 #pragma once
 
-namespace devmgr {
-
-int device_host_main(int argc, char** argv);
-
-} // namespace devmgr
+extern "C" int devmgr_device_host_main(int argc, char** argv);
