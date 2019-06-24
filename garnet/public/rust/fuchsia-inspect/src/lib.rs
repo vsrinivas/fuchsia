@@ -20,6 +20,7 @@ mod bitfields;
 mod block;
 mod block_type;
 mod constants;
+pub mod health;
 mod heap;
 pub mod reader;
 #[macro_use]
@@ -403,7 +404,7 @@ numeric_property!(uint, Uint, u64);
 numeric_property!(double, Double, f64);
 
 /// Utility for generating a numeric property datatype impl
-///   `name`: the readble name of the type of the function (example: double)
+///   `name`: the readable name of the type of the function (example: double)
 ///   `type`: the type of the argument of the function to generate (example: f64)
 ///   `bytes`: an expression to get the bytes of the property
 macro_rules! property {
