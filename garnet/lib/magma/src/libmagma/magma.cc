@@ -528,7 +528,25 @@ magma_status_t magma_get_buffer_format_plane_info(magma_buffer_format_descriptio
     }
     auto buffer_description =
         reinterpret_cast<magma_sysmem::PlatformBufferDescription*>(description);
-    memcpy(image_planes_out, buffer_description->planes, sizeof(buffer_description->planes));
+    if (!buffer_description->GetPlanes(0u, 0u, image_planes_out)) {
+        return DRET(MAGMA_STATUS_INVALID_ARGS);
+    }
+    return MAGMA_STATUS_OK;
+}
+
+magma_status_t
+magma_get_buffer_format_plane_info_with_size(magma_buffer_format_description_t description,
+                                             uint32_t width, uint32_t height,
+                                             magma_image_plane_t* image_planes_out)
+{
+    if (!description) {
+        return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Null description");
+    }
+    auto buffer_description =
+        reinterpret_cast<magma_sysmem::PlatformBufferDescription*>(description);
+    if (!buffer_description->GetPlanes(width, height, image_planes_out)) {
+        return DRET(MAGMA_STATUS_INVALID_ARGS);
+    }
     return MAGMA_STATUS_OK;
 }
 
@@ -541,8 +559,8 @@ magma_status_t magma_get_buffer_format_modifier(magma_buffer_format_description_
     }
     auto buffer_description =
         reinterpret_cast<magma_sysmem::PlatformBufferDescription*>(description);
-    *has_format_modifier_out = buffer_description->has_format_modifier;
-    *format_modifier_out = buffer_description->format_modifier;
+    *has_format_modifier_out = buffer_description->has_format_modifier();
+    *format_modifier_out = buffer_description->format_modifier();
     return MAGMA_STATUS_OK;
 }
 
@@ -554,7 +572,7 @@ magma_status_t magma_get_buffer_coherency_domain(magma_buffer_format_description
     }
     auto buffer_description =
         reinterpret_cast<magma_sysmem::PlatformBufferDescription*>(description);
-    *coherency_domain_out = buffer_description->coherency_domain;
+    *coherency_domain_out = buffer_description->coherency_domain();
     return MAGMA_STATUS_OK;
 }
 
@@ -566,7 +584,7 @@ magma_status_t magma_get_buffer_count(magma_buffer_format_description_t descript
     }
     auto buffer_description =
         reinterpret_cast<magma_sysmem::PlatformBufferDescription*>(description);
-    *count_out = buffer_description->count;
+    *count_out = buffer_description->count();
     return MAGMA_STATUS_OK;
 }
 
@@ -578,7 +596,7 @@ magma_status_t magma_get_buffer_is_secure(magma_buffer_format_description_t desc
     }
     auto buffer_description =
         reinterpret_cast<magma_sysmem::PlatformBufferDescription*>(description);
-    *is_secure_out = buffer_description->is_secure;
+    *is_secure_out = buffer_description->is_secure();
     return MAGMA_STATUS_OK;
 }
 

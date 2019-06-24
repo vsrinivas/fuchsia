@@ -13,13 +13,16 @@
 #include <memory>
 
 namespace magma_sysmem {
-struct PlatformBufferDescription {
-    bool is_secure = false;
-    uint32_t count = 0;
-    bool has_format_modifier = false;
-    uint64_t format_modifier = 0u;
-    uint32_t coherency_domain = MAGMA_COHERENCY_DOMAIN_CPU;
-    magma_image_plane_t planes[MAGMA_MAX_IMAGE_PLANES] = {};
+class PlatformBufferDescription {
+public:
+    virtual ~PlatformBufferDescription() = default;
+    virtual bool is_secure() const = 0;
+    virtual uint32_t count() const = 0;
+    virtual bool has_format_modifier() const = 0;
+    virtual uint64_t format_modifier() const = 0;
+    virtual uint32_t coherency_domain() const = 0;
+    virtual bool GetPlanes(uint64_t width, uint64_t height,
+                           magma_image_plane_t* planes_out) const = 0;
 };
 
 class PlatformBufferConstraints {

@@ -64,8 +64,11 @@ public:
 
         std::unique_ptr<magma_sysmem::PlatformBufferDescription> description;
         EXPECT_EQ(MAGMA_STATUS_OK, collection->GetBufferDescription(&description).get());
-        EXPECT_FALSE(description->is_secure);
-        EXPECT_EQ(1u, description->count);
+        EXPECT_FALSE(description->is_secure());
+        EXPECT_EQ(1u, description->count());
+        magma_image_plane_t planes[MAGMA_MAX_IMAGE_PLANES] = {};
+        EXPECT_TRUE(description->GetPlanes(128, 128, planes));
+        EXPECT_EQ(512u * 4, planes[0].bytes_per_row);
 
         uint32_t handle;
         uint32_t offset;
@@ -114,8 +117,8 @@ public:
         EXPECT_EQ(MAGMA_STATUS_OK, collection->SetConstraints(constraints.get()).get());
         std::unique_ptr<magma_sysmem::PlatformBufferDescription> description;
         EXPECT_EQ(MAGMA_STATUS_OK, collection->GetBufferDescription(&description).get());
-        EXPECT_TRUE(description->has_format_modifier);
-        EXPECT_EQ(MAGMA_FORMAT_MODIFIER_INTEL_X_TILED, description->format_modifier);
+        EXPECT_TRUE(description->has_format_modifier());
+        EXPECT_EQ(MAGMA_FORMAT_MODIFIER_INTEL_X_TILED, description->format_modifier());
     }
 
     static void TestBuffer()
@@ -145,8 +148,8 @@ public:
         std::unique_ptr<magma_sysmem::PlatformBufferDescription> description;
         EXPECT_EQ(MAGMA_STATUS_OK, collection->GetBufferDescription(&description).get());
 
-        EXPECT_FALSE(description->has_format_modifier);
-        EXPECT_EQ(2u, description->count);
+        EXPECT_FALSE(description->has_format_modifier());
+        EXPECT_EQ(2u, description->count());
     }
 };
 

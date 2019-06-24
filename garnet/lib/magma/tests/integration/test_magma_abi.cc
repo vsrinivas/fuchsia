@@ -268,6 +268,12 @@ public:
         EXPECT_EQ(0u, planes[0].byte_offset);
         EXPECT_EQ(256u, planes[1].bytes_per_row);
         EXPECT_EQ(256u * 64u, planes[1].byte_offset);
+        EXPECT_EQ(MAGMA_STATUS_OK,
+                  magma_get_buffer_format_plane_info_with_size(description, 128u, 64u, planes));
+        EXPECT_EQ(256u, planes[0].bytes_per_row);
+        EXPECT_EQ(0u, planes[0].byte_offset);
+        EXPECT_EQ(256u, planes[1].bytes_per_row);
+        EXPECT_EQ(256u * 64u, planes[1].byte_offset);
         magma_buffer_format_description_release(description);
         EXPECT_EQ(
             MAGMA_STATUS_INVALID_ARGS,
@@ -336,6 +342,10 @@ public:
 
         magma_image_plane_t planes[4];
         EXPECT_EQ(MAGMA_STATUS_OK, magma_get_buffer_format_plane_info(description, planes));
+        EXPECT_EQ(512 * 4u, planes[0].bytes_per_row);
+        EXPECT_EQ(0u, planes[0].byte_offset);
+        EXPECT_EQ(MAGMA_STATUS_OK,
+                  magma_get_buffer_format_plane_info_with_size(description, 512, 512, planes));
         EXPECT_EQ(512 * 4u, planes[0].bytes_per_row);
         EXPECT_EQ(0u, planes[0].byte_offset);
 

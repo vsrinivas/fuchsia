@@ -293,6 +293,14 @@ magma_status_t magma_get_buffer_format_plane_info(magma_buffer_format_descriptio
     return MAGMA_STATUS_UNIMPLEMENTED;
 }
 
+magma_status_t
+magma_get_buffer_format_plane_info_with_size(magma_buffer_format_description_t description,
+                                             uint32_t width, uint32_t height,
+                                             magma_image_plane_t* image_planes_out)
+{
+    return MAGMA_STATUS_UNIMPLEMENTED;
+}
+
 void magma_buffer_format_description_release(magma_buffer_format_description_t description) {}
 
 magma_status_t magma_get_buffer_format_modifier(magma_buffer_format_description_t description,
