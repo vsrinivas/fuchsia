@@ -20,7 +20,15 @@ void RealLoopFixture::RunLoop() {
 }
 
 bool RealLoopFixture::RunLoopWithTimeout(zx::duration timeout) {
-  zx_status_t status = loop_.Run(zx::deadline_after(timeout));
+  zx_status_t status = ZX_OK;
+
+  const zx::time timeout_deadline = zx::deadline_after(timeout);
+
+  while (zx::clock::get_monotonic() < timeout_deadline &&
+         loop_.GetState() == ASYNC_LOOP_RUNNABLE) {
+    status = loop_.Run(timeout_deadline, false);
+  }
+
   loop_.ResetQuit();
   return status == ZX_ERR_TIMED_OUT;
 }
