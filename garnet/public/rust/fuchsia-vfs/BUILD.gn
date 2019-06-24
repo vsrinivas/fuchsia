@@ -8,6 +8,7 @@ import("//build/testing/environments.gni")
 test_package("fuchsia-vfs-tests") {
   deps = [
     "fuchsia-vfs-watcher:fuchsia-vfs-watcher_test",
+    "fuchsia-watch:fuchsia-watch_test",
     "pseudo-fs:pseudo-fs_test",
     "pseudo-fs-mt:pseudo-fs-mt_test",
   ]
@@ -26,6 +27,11 @@ test_package("fuchsia-vfs-tests") {
     {
       name = "fuchsia_vfs_pseudo_fs_mt_lib_test"
       dest = "fuchsia_vfs_pseudo_fs_mt_test"
+      environments = basic_envs
+    },
+    {
+      name = "fuchsia_watch_lib_test"
+      dest = "fuchsia_watch_test"
       environments = basic_envs
     },
   ]
