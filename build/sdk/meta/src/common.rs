@@ -22,6 +22,7 @@ pub enum ElementType {
     CcPrebuiltLibrary,
     CcSourceLibrary,
     DartLibrary,
+    DeviceProfile,
     Documentation,
     FidlLibrary,
     HostTool,
