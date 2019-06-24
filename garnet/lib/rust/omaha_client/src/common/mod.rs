@@ -5,7 +5,7 @@
 //! The omaha_client::common module contains those types that are common to many parts of the
 //! library.  Many of these don't belong to a specific sub-module.
 
-use crate::protocol::{request::InstallSource, Cohort};
+use crate::protocol::{self, request::InstallSource, Cohort};
 use itertools::Itertools;
 use std::fmt;
 use std::str::FromStr;
@@ -21,6 +21,17 @@ pub enum UserCounting {
         /// Date (sent by the server) of the last contact with Omaha.
         Option<i32>,
     ),
+}
+
+/// Helper implementation to bridge from the protocol to the internal representation for tracking
+/// the data for client-regulated user counting.
+impl From<Option<protocol::response::DayStart>> for UserCounting {
+    fn from(opt_day_start: Option<protocol::response::DayStart>) -> Self {
+        match opt_day_start {
+            Some(day_start) => UserCounting::ClientRegulatedByDate(day_start.elapsed_days),
+            None => UserCounting::ClientRegulatedByDate(None),
+        }
+    }
 }
 
 /// Omaha only supports versions in the form of A.B.C.D, A.B.C, A.B or A.  This is a utility

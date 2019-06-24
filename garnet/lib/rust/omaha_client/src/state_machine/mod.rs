@@ -326,7 +326,7 @@ where
             // A succesfull, no-update, check
 
             // TODO: Report progress status (done)
-            Ok(Self::make_response(response.apps.as_slice(), update_check::Action::NoUpdate))
+            Ok(Self::make_response(response, update_check::Action::NoUpdate))
         } else {
             info!(
                 "At least one app has an update, proceeding to build and process an Install Plan"
@@ -365,7 +365,7 @@ where
 
                     // TODO: Report progress status (Deferred)
                     return Ok(Self::make_response(
-                        response.apps.as_slice(),
+                        response,
                         update_check::Action::DeferredByPolicy,
                     ));
                 }
@@ -378,10 +378,7 @@ where
                     ));
 
                     // TODO: Report progress status (Error)
-                    return Ok(Self::make_response(
-                        response.apps.as_slice(),
-                        update_check::Action::DeniedByPolicy,
-                    ));
+                    return Ok(Self::make_response(response, update_check::Action::DeniedByPolicy));
                 }
             }
 
@@ -401,7 +398,7 @@ where
                     EventErrorCode::Installation
                 ));
                 return Ok(Self::make_response(
-                    response.apps.as_slice(),
+                    response,
                     update_check::Action::InstallPlanExecutionError,
                 ));
             }
@@ -418,7 +415,7 @@ where
             await!(self.report_success_event(apps, &request_params, EventType::UpdateComplete));
 
             // TODO: Report progress status (update complete)
-            Ok(Self::make_response(response.apps.as_slice(), update_check::Action::Updated))
+            Ok(Self::make_response(response, update_check::Action::Updated))
         }
     }
 
@@ -537,15 +534,17 @@ where
     /// TODO: Change the Policy and Installer to return a set of results, one for each app ID, then
     ///       make this match that.
     fn make_response(
-        apps: &[protocol::response::App],
+        response: protocol::response::Response,
         action: update_check::Action,
     ) -> update_check::Response {
         update_check::Response {
-            app_responses: apps
+            app_responses: response
+                .apps
                 .iter()
                 .map(|app| update_check::AppResponse {
                     app_id: app.id.clone(),
                     cohort: app.cohort.clone(),
+                    user_counting: response.daystart.clone().into(),
                     result: action.clone(),
                 })
                 .collect(),
@@ -559,7 +558,7 @@ pub mod tests {
     use super::update_check::*;
     use super::*;
     use crate::{
-        common::{App, CheckOptions, ProtocolState, UpdateCheckSchedule},
+        common::{App, CheckOptions, ProtocolState, UpdateCheckSchedule, UserCounting},
         configuration::test_support::config_generator,
         http_request::mock::MockHttpRequest,
         installer::stub::StubInstaller,
@@ -938,14 +937,14 @@ pub mod tests {
             "server": "prod",
             "protocol": "3.0",
             "app": [{
-            "appid": "{00000000-0000-0000-0000-000000000001}",
-            "status": "ok",
-            "cohort": "1",
-            "cohortname": "stable-channel",
-            "updatecheck": {
+              "appid": "{00000000-0000-0000-0000-000000000001}",
+              "status": "ok",
+              "cohort": "1",
+              "cohortname": "stable-channel",
+              "updatecheck": {
                 "status": "noupdate"
-            }
-          }]
+              }
+            }]
         }});
         let response = serde_json::to_vec(&response).unwrap();
         let mut http = MockHttpRequest::new(hyper::Response::new(response.clone().into()));
@@ -991,4 +990,44 @@ pub mod tests {
         block_on(assert_request(state_machine.http, request_builder));
     }
 
+    #[test]
+    fn test_user_counting_returned() {
+        block_on(async {
+            let config = config_generator();
+            let response = json!({"response":{
+            "server": "prod",
+            "protocol": "3.0",
+            "daystart": {
+              "elapsed_days": 1234567,
+              "elapsed_seconds": 3645
+            },
+            "app": [{
+              "appid": "{00000000-0000-0000-0000-000000000001}",
+              "status": "ok",
+              "cohort": "1",
+              "cohortname": "stable-channel",
+              "updatecheck": {
+                "status": "noupdate"
+                  }
+              }]
+            }});
+            let response = serde_json::to_vec(&response).unwrap();
+            let http = MockHttpRequest::new(hyper::Response::new(response.into()));
+
+            let mut state_machine = StateMachine::new(
+                StubPolicyEngine,
+                http,
+                StubInstaller::default(),
+                &config,
+                timer::MockTimer::new(),
+            );
+            let apps = make_test_apps();
+            let response = await!(do_update_check(&mut state_machine, &apps)).unwrap();
+
+            assert_eq!(
+                UserCounting::ClientRegulatedByDate(Some(1234567)),
+                response.app_responses[0].user_counting
+            );
+        });
+    }
 }

@@ -5,7 +5,7 @@
 /// The update_check module contains the structures and functions for performing a single update
 /// check with Omaha.
 use crate::{
-    common::{ProtocolState, UpdateCheckSchedule},
+    common::{ProtocolState, UpdateCheckSchedule, UserCounting},
     protocol::Cohort,
 };
 use std::time::Duration;
@@ -43,6 +43,8 @@ pub struct AppResponse {
 
     /// Cohort data returned from Omaha
     pub cohort: Cohort,
+
+    pub user_counting: UserCounting,
 
     /// The resultant action of its update check.
     pub result: Action,
