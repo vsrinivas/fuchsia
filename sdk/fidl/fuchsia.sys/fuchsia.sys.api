@@ -6,7 +6,7 @@
   "fidl/fuchsia.sys/job_provider.fidl": "455afe28b7fad3edf3c52a14668b054a",
   "fidl/fuchsia.sys/launcher.fidl": "e6a156e1bc74016a6c01b3c828e88433",
   "fidl/fuchsia.sys/loader.fidl": "b5bd33d4c53720b644e3192e6981a36c",
-  "fidl/fuchsia.sys/runner.fidl": "dbbbb447ea8c5d951e1aebd4d74de454",
+  "fidl/fuchsia.sys/runner.fidl": "336d5973645c64df2873d24c047d4bb6",
   "fidl/fuchsia.sys/service_provider.fidl": "ae984b41aac0019c38c20464da141d20",
   "fidl/fuchsia.sys/types.fidl": "7b38887bb009a0283a3401b266dc50c5"
 }

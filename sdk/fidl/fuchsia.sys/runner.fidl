@@ -11,7 +11,7 @@ using fuchsia.mem;
 // For ELF binaries, this information is provided in the initialization message
 // given to libc by fuchsia.process.Launcher.
 struct StartupInfo {
-    // The launch info for the to start.
+    // The launch info for the component to start.
     LaunchInfo launch_info;
 
     // The namespace in which to run the component.
