@@ -20,11 +20,6 @@ pub enum ModelError {
     Unsupported { feature: String },
     #[fail(display = "component declaration invalid")]
     ComponentInvalid,
-    #[fail(display = "Hub operation failed")]
-    HubError {
-        #[fail(cause)]
-        err: HubError,
-    },
     #[fail(display = "component manifest invalid")]
     ManifestInvalid {
         url: String,
@@ -91,12 +86,6 @@ impl ModelError {
 
     pub fn add_entry_error(moniker: AbsoluteMoniker, entry_name: impl Into<String>) -> ModelError {
         ModelError::AddEntryError { moniker, entry_name: entry_name.into() }
-    }
-}
-
-impl From<HubError> for ModelError {
-    fn from(err: HubError) -> Self {
-        ModelError::HubError { err }
     }
 }
 

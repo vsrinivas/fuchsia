@@ -4,8 +4,11 @@
 
 use {
     crate::directory_broker,
-    crate::model::{self, error::ModelError},
-    failure::Fail,
+    crate::model::{
+        self,
+        addable_directory::{AddableDirectory, AddableDirectoryWithResult},
+        error::ModelError,
+    },
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{DirectoryProxy, NodeMarker},
     fuchsia_async as fasync,
@@ -32,22 +35,6 @@ struct Execution {
     pub directory: directory::controlled::Controller<'static>,
 }
 
-/// Errors produced by `Hub`.
-#[derive(Debug, Fail)]
-pub enum HubError {
-    #[fail(display = "Failed to add directory entry \"{}\" for \"{}\"", abs_moniker, entry_name)]
-    AddDirectoryEntryError { abs_moniker: model::AbsoluteMoniker, entry_name: String },
-}
-
-impl HubError {
-    pub fn add_directory_entry_error(
-        abs_moniker: model::AbsoluteMoniker,
-        entry_name: &str,
-    ) -> HubError {
-        HubError::AddDirectoryEntryError { abs_moniker, entry_name: entry_name.to_string() }
-    }
-}
-
 pub struct Hub {
     instances: Mutex<HashMap<model::AbsoluteMoniker, Instance>>,
     /// Called when Hub is dropped to drop pseudodirectory hosting the Hub.
@@ -72,9 +59,7 @@ impl Hub {
         let self_directory =
             Hub::add_instance_if_necessary(&abs_moniker, component_url, &mut instances_map)?
                 .expect("Did not create directory.");
-        root_directory
-            .add_entry("self", self_directory)
-            .map_err(|_| HubError::add_directory_entry_error(abs_moniker.clone(), "self"))?;
+        root_directory.add_node("self", self_directory, &abs_moniker)?;
 
         // Run the hub root directory forever until the component manager is terminated.
         let (abort_handle, abort_registration) = AbortHandle::new_pair();
@@ -90,28 +75,28 @@ impl Hub {
         abs_moniker: &model::AbsoluteMoniker,
         component_url: String,
         instance_map: &mut HashMap<model::AbsoluteMoniker, Instance>,
-    ) -> Result<Option<directory::controlled::Controlled<'static>>, HubError> {
+    ) -> Result<Option<directory::controlled::Controlled<'static>>, ModelError> {
         if instance_map.contains_key(&abs_moniker) {
             return Ok(None);
         }
 
-        let (controller, mut controlled) =
+        let (instance_controller, mut instance_controlled) =
             directory::controlled::controlled(directory::simple::empty());
 
         // Add a 'url' file.
-        controlled
-            .add_entry("url", {
+        instance_controlled.add_node(
+            "url",
+            {
                 let url = component_url.clone();
                 read_only(move || Ok(url.clone().into_bytes()))
-            })
-            .map_err(|_| HubError::add_directory_entry_error(abs_moniker.clone(), "url"))?;
+            },
+            &abs_moniker,
+        )?;
 
         // Add a children directory.
         let (children_controller, children_controlled) =
             directory::controlled::controlled(directory::simple::empty());
-        controlled
-            .add_entry("children", children_controlled)
-            .map_err(|_| HubError::add_directory_entry_error(abs_moniker.clone(), "children"))?;
+        instance_controlled.add_node("children", children_controlled, &abs_moniker)?;
 
         instance_map.insert(
             abs_moniker.clone(),
@@ -119,29 +104,28 @@ impl Hub {
                 abs_moniker: abs_moniker.clone(),
                 component_url,
                 execution: None,
-                directory: controller,
+                directory: instance_controller,
                 children_directory: children_controller,
             },
         );
 
-        Ok(Some(controlled))
+        Ok(Some(instance_controlled))
     }
 
     async fn add_instance_to_parent_if_necessary<'a>(
         abs_moniker: &'a model::AbsoluteMoniker,
         component_url: String,
         mut instances_map: &'a mut HashMap<model::AbsoluteMoniker, Instance>,
-    ) -> Result<(), HubError> {
+    ) -> Result<(), ModelError> {
         if let Some(controlled) =
             Hub::add_instance_if_necessary(&abs_moniker, component_url, &mut instances_map)?
         {
             if let (Some(name), Some(parent_moniker)) = (abs_moniker.name(), abs_moniker.parent()) {
-                await!(instances_map[&parent_moniker]
-                    .children_directory
-                    .add_entry_res(name.clone(), controlled))
-                .map_err(|_| {
-                    HubError::add_directory_entry_error(abs_moniker.clone(), &name.clone())
-                })?;
+                await!(instances_map[&parent_moniker].children_directory.add_node(
+                    &name,
+                    controlled,
+                    &abs_moniker
+                ))?;
             }
         }
         Ok(())
@@ -197,25 +181,25 @@ impl Hub {
 
         // If we haven't already created an execution directory, create one now.
         if instance.execution.is_none() {
-            let (controller, mut controlled) =
+            let (execution_controller, mut execution_controlled) =
                 directory::controlled::controlled(directory::simple::empty());
 
             if let Some(execution) = realm_state.execution.as_ref() {
                 let exec = Execution {
                     resolved_url: execution.resolved_url.clone(),
-                    directory: controller,
+                    directory: execution_controller,
                 };
                 instance.execution = Some(exec);
 
                 // Add a 'resolved_url' file.
-                controlled
-                    .add_entry("resolved_url", {
+                execution_controlled.add_node(
+                    "resolved_url",
+                    {
                         let resolved_url = execution.resolved_url.clone();
                         read_only(move || Ok(resolved_url.clone().into_bytes()))
-                    })
-                    .map_err(|_| {
-                        HubError::add_directory_entry_error(abs_moniker.clone(), "resolved_url")
-                    })?;
+                    },
+                    &abs_moniker,
+                )?;
 
                 // Add an 'in' directory.
                 let decl = realm_state.decl.as_ref().expect("ComponentDecl unavailable.");
@@ -227,52 +211,37 @@ impl Hub {
                 let mut in_dir = directory::simple::empty();
                 tree.install(&abs_moniker, &mut in_dir)?;
                 if let Some(pkg_dir) = execution.namespace.clone_package_dir()? {
-                    in_dir
-                        .add_entry(
-                            "pkg",
-                            directory_broker::DirectoryBroker::new(Self::route_open_fn(pkg_dir)),
-                        )
-                        .map_err(|_| {
-                            HubError::add_directory_entry_error(abs_moniker.clone(), "pkg")
-                        })?;
+                    in_dir.add_node(
+                        "pkg",
+                        directory_broker::DirectoryBroker::new(Self::route_open_fn(pkg_dir)),
+                        &abs_moniker,
+                    )?;
                 }
-                controlled
-                    .add_entry("in", in_dir)
-                    .map_err(|_| HubError::add_directory_entry_error(abs_moniker.clone(), "in"))?;
+                execution_controlled.add_node("in", in_dir, &abs_moniker)?;
 
                 // Install the out directory if we can successfully clone it.
                 // TODO(fsamuel): We should probably preserve the original error messages
                 // instead of dropping them.
                 if let Ok(out_dir) = io_util::clone_directory(&execution.outgoing_dir) {
-                    controlled
-                        .add_entry(
-                            "out",
-                            directory_broker::DirectoryBroker::new(Self::route_open_fn(out_dir)),
-                        )
-                        .map_err(|_| {
-                            HubError::add_directory_entry_error(abs_moniker.clone(), "out")
-                        })?;
+                    execution_controlled.add_node(
+                        "out",
+                        directory_broker::DirectoryBroker::new(Self::route_open_fn(out_dir)),
+                        &abs_moniker,
+                    )?;
                 }
 
                 // Install the runtime directory if we can successfully clone it.
                 // TODO(fsamuel): We should probably preserve the original error messages
                 // instead of dropping them.
                 if let Ok(runtime_dir) = io_util::clone_directory(&execution.runtime_dir) {
-                    controlled
-                        .add_entry(
-                            "runtime",
-                            directory_broker::DirectoryBroker::new(Self::route_open_fn(
-                                runtime_dir,
-                            )),
-                        )
-                        .map_err(|_| {
-                            HubError::add_directory_entry_error(abs_moniker.clone(), "runtime")
-                        })?;
+                    execution_controlled.add_node(
+                        "runtime",
+                        directory_broker::DirectoryBroker::new(Self::route_open_fn(runtime_dir)),
+                        &abs_moniker,
+                    )?;
                 }
 
-                await!(instance.directory.add_entry_res("exec", controlled)).map_err(|_| {
-                    HubError::add_directory_entry_error(abs_moniker.clone(), "exec")
-                })?;
+                await!(instance.directory.add_node("exec", execution_controlled, &abs_moniker))?;
             }
         }
 
