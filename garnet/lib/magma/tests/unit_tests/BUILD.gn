@@ -15,6 +15,7 @@ package("testing_firmware_file") {
     },
   ]
 }
+
 executable("unit_tests") {
   testonly = true
   output_name = "magma_unit_tests"
@@ -82,6 +83,7 @@ source_set("magma_platform_tests") {
     "test_platform_event.cc",
     "test_platform_futex.cc",
     "test_platform_handle.cc",
+    "test_platform_mmio.cc",
     "test_platform_port.cc",
     "test_platform_random.cc",
     "test_platform_semaphore.cc",
@@ -99,6 +101,28 @@ source_set("magma_platform_tests") {
     "$magma_build_root/src/magma_util/platform:semaphore",
     "$magma_build_root/src/magma_util/platform:sysmem_connection",
     "$magma_build_root/src/magma_util/platform:thread",
+    "$magma_build_root/tests/mock:mmio",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+# Requires hardware
+source_set("magma_platform_device_test") {
+  testonly = true
+
+  if (current_cpu == "arm64") {
+    sources = [
+      "test_platform_device.cc",
+    ]
+  } else if (current_cpu == "x64") {
+    sources = [
+      "test_platform_pci_device.cc",
+    ]
+  }
+
+  deps = [
+    "$magma_build_root/src/magma_util/platform:thread",
+    "$magma_build_root/tests/helper:platform_device_helper",
     "//third_party/googletest:gtest",
   ]
 }
@@ -108,20 +132,14 @@ source_set("magma_platform_hardware_tests") {
   testonly = true
 
   sources = [
-    "test_mmio.cc",
     "test_platform_buffer.cc",
     "test_platform_bus_mapper.cc",
     "test_platform_firmware_loader.cc",
     "test_platform_interrupt.cc",
   ]
 
-  if (target_cpu == "arm64") {
-    sources += [ "test_platform_device.cc" ]
-  } else if (target_cpu == "x64") {
-    sources += [ "test_platform_pci_device.cc" ]
-  }
-
   deps = [
+    ":magma_platform_device_test",
     "$magma_build_root/include:magma_abi",
     "$magma_build_root/src/magma_util",
     "$magma_build_root/src/magma_util/platform:buffer",
@@ -130,7 +148,6 @@ source_set("magma_platform_hardware_tests") {
     "$magma_build_root/src/magma_util/platform:firmware_loader",
     "$magma_build_root/src/magma_util/platform:thread",
     "$magma_build_root/tests/helper:platform_device_helper",
-    "$magma_build_root/tests/mock:mmio",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/zx",
   ]

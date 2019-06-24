@@ -5,30 +5,49 @@
 #include <thread>
 
 #include "helper/platform_device_helper.h"
-#include "magma_util/dlog.h"
-#include "magma_util/macros.h"
 #include "platform_device.h"
 #include "platform_thread.h"
 #include "gtest/gtest.h"
 
-TEST(MagmaUtil, PlatformDevice)
+TEST(PlatformDevice, Basic)
 {
     magma::PlatformDevice* platform_device = TestPlatformDevice::GetInstance();
-    ASSERT_NE(nullptr, platform_device);
+    ASSERT_TRUE(platform_device);
 
     auto platform_mmio =
         platform_device->CpuMapMmio(0, magma::PlatformMmio::CACHE_POLICY_UNCACHED_DEVICE);
-    EXPECT_NE(nullptr, platform_mmio.get());
+    EXPECT_TRUE(platform_mmio.get());
 }
 
-TEST(MagmaUtil, SchedulerProfile)
+TEST(PlatformDevice, MapMmio)
 {
     magma::PlatformDevice* platform_device = TestPlatformDevice::GetInstance();
-    ASSERT_NE(nullptr, platform_device);
+    ASSERT_TRUE(platform_device);
+
+    uint32_t index = 0;
+
+    // Map once
+    auto mmio = platform_device->CpuMapMmio(index, magma::PlatformMmio::CACHE_POLICY_CACHED);
+    ASSERT_TRUE(mmio);
+    EXPECT_NE(0u, mmio->physical_address());
+
+    // Map again same policy
+    auto mmio2 = platform_device->CpuMapMmio(index, magma::PlatformMmio::CACHE_POLICY_CACHED);
+    EXPECT_TRUE(mmio2);
+
+    // Map again different policy - this is now permitted though it's a bad idea.
+    auto mmio3 = platform_device->CpuMapMmio(index, magma::PlatformMmio::CACHE_POLICY_UNCACHED);
+    EXPECT_TRUE(mmio3);
+}
+
+TEST(PlatformDevice, SchedulerProfile)
+{
+    magma::PlatformDevice* platform_device = TestPlatformDevice::GetInstance();
+    ASSERT_TRUE(platform_device);
 
     auto profile = platform_device->GetSchedulerProfile(magma::PlatformDevice::kPriorityHigher,
                                                         "msd/test-profile");
-    EXPECT_NE(nullptr, profile);
+    ASSERT_TRUE(profile);
 
     std::thread test_thread(
         [&profile]() { EXPECT_TRUE(magma::PlatformThreadHelper::SetProfile(profile.get())); });

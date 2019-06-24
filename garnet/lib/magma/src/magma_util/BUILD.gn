@@ -141,6 +141,6 @@ source_set("registers") {
   ]
 
   public_deps = [
-    "platform:mmio",
+    "platform:device",
   ]
 }

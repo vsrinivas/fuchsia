@@ -69,22 +69,6 @@ source_set("interrupt") {
   ]
 }
 
-source_set("mmio") {
-  configs += [ "..:platform_include_config" ]
-
-  sources = [
-    "zircon_platform_mmio.cc",
-    "zircon_platform_mmio.h",
-  ]
-
-  public_deps = [
-    "$magma_build_root/src/magma_util",
-    "$zircon_build_root/public/lib/ddk",
-    "$zircon_build_root/public/lib/zx",
-    "..:mmio",
-  ]
-}
-
 source_set("device") {
   configs += [ "..:platform_include_config" ]
 
@@ -92,6 +76,8 @@ source_set("device") {
     "zircon_platform_device.cc",
     "zircon_platform_device.h",
     "zircon_platform_interrupt.h",
+    "zircon_platform_mmio.cc",
+    "zircon_platform_mmio.h",
     "zircon_platform_pci_device.cc",
     "zircon_platform_pci_device.h",
   ]
@@ -99,11 +85,11 @@ source_set("device") {
   deps = [
     ":bus_mapper",
     ":interrupt",
-    ":mmio",
     "$magma_build_root/src/magma_util",
     "$zircon_build_root/public/lib/ddk",
     "$zircon_build_root/public/lib/driver",
     "$zircon_build_root/public/lib/zx",
+    "..:device_header",
     "//zircon/public/banjo/ddk.protocol.pci",
     "//zircon/public/banjo/ddk.protocol.platform.device",
     "//zircon/public/lib/device-protocol-pci",
@@ -229,6 +215,7 @@ source_set("handle") {
 
   public_deps = [
     "$zircon_build_root/public/lib/zx",
+    "..:handle_header",
   ]
 
   deps = [

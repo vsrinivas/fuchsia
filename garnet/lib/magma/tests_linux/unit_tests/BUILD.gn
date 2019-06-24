@@ -69,3 +69,19 @@ compiled_action("basic_compute") {
     "${target_name}_spirv",
   ]
 }
+
+group("drm_unit_tests_linux_arm64") {
+  testonly = true
+  deps = [
+    ":drm_unit_tests(//build/toolchain:linux_arm64)",
+  ]
+}
+
+executable("drm_unit_tests") {
+  testonly = true
+
+  deps = [
+    "..:drm_test_runner",
+    "../../tests/unit_tests:magma_platform_device_test",
+  ]
+}

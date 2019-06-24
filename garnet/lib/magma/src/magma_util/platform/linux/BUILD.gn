@@ -1,0 +1,32 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//garnet/lib/magma/gnbuild/magma.gni")
+
+source_set("device") {
+  configs += [ "..:platform_include_config" ]
+
+  public_deps = [
+    "$magma_build_root/src/magma_util",
+    "..:device_header",
+  ]
+
+  sources = [
+    "linux_platform_device.cc",
+    "linux_platform_device.h",
+    "linux_platform_mmio.h",
+  ]
+}
+
+source_set("thread") {
+  configs += [ "..:platform_include_config" ]
+
+  sources = [
+    "linux_platform_thread.cc",
+  ]
+
+  deps = [
+    "..:thread_header",
+  ]
+}

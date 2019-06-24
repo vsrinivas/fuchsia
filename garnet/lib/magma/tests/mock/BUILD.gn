@@ -26,7 +26,7 @@ source_set("mmio") {
 
   public_deps = [
     "$magma_build_root/src/magma_util",
-    "$magma_build_root/src/magma_util/platform:mmio",
+    "$magma_build_root/src/magma_util/platform:mmio_header",
   ]
 
   sources = [

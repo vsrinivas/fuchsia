@@ -62,9 +62,11 @@ source_set("buffer") {
     "$magma_build_root/src/magma_util:common",
   ]
 
-  deps = [
-    "zircon:buffer",
-  ]
+  if (is_fuchsia) {
+    deps = [
+      "zircon:buffer",
+    ]
+  }
 }
 
 source_set("bus_mapper") {
@@ -87,7 +89,7 @@ source_set("bus_mapper") {
   allow_circular_includes_from = [ "zircon:bus_mapper" ]
 }
 
-source_set("handle") {
+source_set("handle_header") {
   public_configs = [ ":platform_include_config" ]
 
   public_deps = [
@@ -97,34 +99,64 @@ source_set("handle") {
   sources = [
     "platform_handle.h",
   ]
-
-  deps = [
-    "zircon:handle",
-  ]
-
-  allow_circular_includes_from = [ "zircon:handle" ]
 }
 
-source_set("device") {
+source_set("handle") {
+  public_deps = [
+    ":handle_header",
+  ]
+
+  if (is_fuchsia) {
+    deps = [
+      "zircon:handle",
+    ]
+  }
+}
+
+source_set("mmio_header") {
   public_configs = [ ":platform_include_config" ]
 
   public_deps = [
-    ":buffer",
-    ":handle",
+    "$magma_build_root/src/magma_util:common",
+  ]
+
+  sources = [
+    "platform_mmio.h",
+  ]
+}
+
+source_set("device_header") {
+  public_configs = [ ":platform_include_config" ]
+
+  public_deps = [
+    ":buffer_header",
+    ":handle_header",
+    ":mmio_header",
     "$magma_build_root/src/magma_util:common",
   ]
 
   sources = [
     "platform_device.h",
-    "platform_mmio.h",
     "platform_pci_device.h",
   ]
+}
 
-  deps = [
-    "zircon:device",
+source_set("device") {
+  public_deps = [
+    ":buffer",
+    ":device_header",
+    ":handle",
   ]
 
-  allow_circular_includes_from = [ "zircon:device" ]
+  if (is_fuchsia) {
+    deps = [
+      "zircon:device",
+    ]
+  } else if (is_linux) {
+    deps = [
+      "linux:device",
+    ]
+  }
 }
 
 source_set("firmware_loader_header") {
@@ -170,18 +202,6 @@ group("random") {
 
   deps = [
     "zircon:random",
-  ]
-}
-
-source_set("mmio") {
-  public_configs = [ ":platform_include_config" ]
-
-  public_deps = [
-    "$magma_build_root/src/magma_util:common",
-  ]
-
-  sources = [
-    "platform_mmio.h",
   ]
 }
 
@@ -249,15 +269,19 @@ source_set("thread_header") {
 }
 
 source_set("thread") {
-  public_configs = [ ":platform_include_config" ]
-
   public_deps = [
     ":thread_header",
   ]
 
-  deps = [
-    "zircon:thread",
-  ]
+  if (is_fuchsia) {
+    deps = [
+      "zircon:thread",
+    ]
+  } else if (is_linux) {
+    deps = [
+      "linux:thread",
+    ]
+  }
 }
 
 source_set("event") {
