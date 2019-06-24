@@ -267,5 +267,5 @@ RUN_TEST(mmap_PROT_EXEC_test);
 RUN_TEST(mmap_offset_test);
 RUN_TEST(mmap_prot_test);
 RUN_TEST(mmap_flags_test);
-RUN_TEST_ENABLE_CRASH_HANDLER(mprotect_test);
+RUN_TEST(mprotect_test);
 END_TEST_CASE(memory_mapping_tests)

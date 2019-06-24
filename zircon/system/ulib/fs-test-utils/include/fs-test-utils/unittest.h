@@ -42,11 +42,11 @@ namespace fs_test_utils {
         if (result == ZX_OK) {                                                            \
             RUN_NAMED_TEST_TYPE(#test_fn,                                                 \
                                 fs_test_utils::fs_test_utils_internal::RunTestWrapper,    \
-                                size, false)                                              \
+                                size)                                                     \
         } else {                                                                          \
             LOG_ERROR(result, "SetUp had errors.\n");                                     \
             RUN_NAMED_TEST_TYPE(#test_fn,                                                 \
-                                fs_test_utils::fs_test_utils_internal::Fail, size, false) \
+                                fs_test_utils::fs_test_utils_internal::Fail, size)        \
         }                                                                                 \
         result = fixture.TearDown();                                                      \
         if (result != ZX_OK) {                                                            \
@@ -56,7 +56,7 @@ namespace fs_test_utils {
     } else {                                                                              \
         LOG_ERROR(result, "SetUpTestCase had errors.\n");                                 \
         RUN_NAMED_TEST_TYPE(#test_fn,                                                     \
-                            fs_test_utils::fs_test_utils_internal::Fail, size, false)     \
+                            fs_test_utils::fs_test_utils_internal::Fail, size)            \
     }
 
 #define END_FS_TEST_CASE(name, options_fn)                \

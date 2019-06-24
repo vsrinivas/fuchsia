@@ -22,10 +22,6 @@ library("unittest") {
     libs = [ "pthread" ]
   }
   if (is_fuchsia) {
-    sources += [
-      "crash-handler.cc",
-      "crash-list.cc",
-    ]
     deps += [ "$zx/system/ulib/zx" ]
   }
 }

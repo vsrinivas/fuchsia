@@ -596,5 +596,5 @@ RUN_FOR_ALL_FILESYSTEMS(fs_mmap_tests,
     RUN_TEST_MEDIUM(TestMmapTruncateAccess)
     RUN_TEST_MEDIUM(TestMmapTruncateExtend)
     RUN_TEST_MEDIUM(TestMmapTruncateWriteExtend)
-    RUN_TEST_ENABLE_CRASH_HANDLER(TestMmapDeath)
+    RUN_TEST_MEDIUM(TestMmapDeath)
 )

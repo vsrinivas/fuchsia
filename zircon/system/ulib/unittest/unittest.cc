@@ -13,12 +13,21 @@
 
 #include <pretty/hexdump.h>
 
-#include "watchdog.h"
+#ifdef UNITTEST_DEATH_TEST_SUPPORTED
 
-#ifdef UNITTEST_CRASH_HANDLER_SUPPORTED
-#include "crash-handler.h"
-#include "crash-list.h"
-#endif // UNITTEST_CRASH_HANDLER_SUPPORTED
+#include <zircon/assert.h>
+#include <zircon/status.h>
+#include <zircon/syscalls/port.h>
+#include <thread>
+
+#include <lib/zx/channel.h>
+#include <lib/zx/exception.h>
+#include <lib/zx/port.h>
+#include <lib/zx/thread.h>
+
+#endif // UNITTEST_DEATH_TEST_SUPPORTED
+
+#include "watchdog.h"
 
 // Some strings that are used for comparison purposes can be pretty long, and
 // when printing the failure message it's important to see what the failing
@@ -176,64 +185,101 @@ int unittest_set_verbosity_level(int new_level) {
     return out;
 }
 
-#ifdef UNITTEST_CRASH_HANDLER_SUPPORTED
-void unittest_register_crash(struct test_info* current_test_info, zx_handle_t handle) {
-    crash_list_register(current_test_info->crash_list, handle);
+#ifdef UNITTEST_DEATH_TEST_SUPPORTED
+
+namespace {
+
+// Sets up an exception channel and calls |fn_to_run|.
+//
+// If setup fails, returns !ZX_OK.
+// If |fn_to_run| returns without crashing, returns ZX_OK.
+// If |fn_to_run| hits an exception, does not return but an exception
+// will be generated on |exception_channel| and signaled on |port|.
+zx_status_t RunDeathFunction(void (*fn_to_run)(void*), void* arg, const zx::port& port,
+                             zx::channel* exception_channel) {
+    zx_status_t status = zx::thread::self()->create_exception_channel(0, exception_channel);
+    if (status != ZX_OK) {
+        unittest_printf_critical("failed to create exception channel: %s\n",
+                                 zx_status_get_string(status));
+        return status;
+    }
+
+    status = exception_channel->wait_async(port, 0, ZX_CHANNEL_READABLE, 0);
+    if (status != ZX_OK) {
+        unittest_printf_critical("failed to wait_async on exception channel: %s\n",
+                                 zx_status_get_string(status));
+        return status;
+    }
+
+    fn_to_run(arg);
+    return ZX_OK;
 }
 
-bool unittest_run_death_fn(void (*fn_to_run)(void*), void* arg) {
-    test_result_t test_result;
-    zx_status_t status = run_fn_with_crash_handler(fn_to_run, arg, &test_result);
-    return status == ZX_OK && test_result == TEST_CRASHED;
+} // namespace
+
+death_test_result_t unittest_run_death_fn(void (*fn_to_run)(void*), void* arg) {
+    zx::port port;
+    zx_status_t status = zx::port::create(0, &port);
+    if (status != ZX_OK) {
+        unittest_printf_critical("failed to create port: %s\n", zx_status_get_string(status));
+        return DEATH_TEST_RESULT_INTERNAL_ERROR;
+    }
+
+    zx::unowned_thread zx_thread;
+    zx::channel exception_channel;
+    std::thread thread([&]() {
+        zx_thread = zx::thread::self();
+        zx_status_t status = RunDeathFunction(fn_to_run, arg, port, &exception_channel);
+
+        // If we get here there was either a setup failure (status != ZX_OK) or
+        // |fn_to_run| did not crash (status == ZX_OK).
+        //
+        // If we fail to queue this packet there's no way to wake the main
+        // thread back up, we just have to die.
+        zx_port_packet_t packet = {.key = 0, .type = ZX_PKT_TYPE_USER, .status = status,
+                                   .user = {}};
+        status = port.queue(&packet);
+        ZX_ASSERT_MSG(status == ZX_OK, "failed to queue death test packet: %s",
+                      zx_status_get_string(status));
+    });
+
+    zx_port_packet_t packet;
+    status = port.wait(zx::time::infinite(), &packet);
+    if (status != ZX_OK) {
+        unittest_printf_critical("failed to wait on port: %s\n", zx_status_get_string(status));
+        return DEATH_TEST_RESULT_INTERNAL_ERROR;
+    }
+
+    death_test_result_t result;
+    if (packet.type == ZX_PKT_TYPE_USER) {
+        thread.join();
+        result = (packet.status == ZX_OK) ? DEATH_TEST_RESULT_LIVED
+                                          : DEATH_TEST_RESULT_INTERNAL_ERROR;
+    } else {
+        thread.detach();
+        result = DEATH_TEST_RESULT_DIED;
+        status = zx_thread->kill();
+        if (status != ZX_OK) {
+            unittest_printf_critical("failed to kill thread: %s\n", zx_status_get_string(status));
+            result = DEATH_TEST_RESULT_INTERNAL_ERROR;
+        }
+    }
+
+    return result;
 }
 
-bool unittest_run_no_death_fn(void (*fn_to_run)(void*), void* arg) {
-    test_result_t test_result;
-    zx_status_t status = run_fn_with_crash_handler(fn_to_run, arg, &test_result);
-    return status == ZX_OK && test_result != TEST_CRASHED;
-}
-#endif // UNITTEST_CRASH_HANDLER_SUPPORTED
+#endif // UNITTEST_DEATH_TEST_SUPPORTED
 
 static void unittest_run_test(const char* name,
                               bool (*test)(),
                               struct test_info** current_test_info,
-                              bool* all_success,
-                              bool enable_crash_handler) {
+                              bool* all_success) {
     unittest_printf_critical("    %-51s [RUNNING]", name);
     nsecs_t start_time = now();
     test_info test_info = {.all_ok = true, nullptr};
     *current_test_info = &test_info;
-    // The crash handler is disabled by default. To enable, the test should
-    // be run with RUN_TEST_ENABLE_CRASH_HANDLER.
-    if (enable_crash_handler) {
-#ifdef UNITTEST_CRASH_HANDLER_SUPPORTED
-        test_info.crash_list = crash_list_new();
-
-        test_result_t test_result;
-        zx_status_t status =
-            run_test_with_crash_handler(test_info.crash_list, test, &test_result);
-        if (status != ZX_OK || test_result == TEST_FAILED) {
-            test_info.all_ok = false;
-        }
-
-        // Check if there were any processes registered to crash but didn't.
-        bool missing_crash = crash_list_delete(test_info.crash_list);
-        if (missing_crash) {
-            // TODO: display which expected crash did not occur.
-            UNITTEST_FAIL_TRACEF("Expected crash did not occur\n");
-            test_info.all_ok = false;
-        }
-#else  // UNITTEST_CRASH_HANDLER_SUPPORTED
-        UNITTEST_FAIL_TRACEF("Crash tests not supported\n");
+    if (!test()) {
         test_info.all_ok = false;
-#endif // UNITTEST_CRASH_HANDLER_SUPPORTED
-    } else if (!test()) {
-        test_info.all_ok = false;
-    }
-
-    // Recheck all_ok in case there was a failure in a C++ destructor
-    // after the "return" statement in END_TEST.
-    if (!test_info.all_ok) {
         *all_success = false;
     }
 
@@ -257,11 +303,10 @@ void run_with_watchdog(test_type_t test_type, const char* name, F fn) {
 }
 
 void unittest_run_named_test(const char* name, bool (*test)(), test_type_t test_type,
-                             struct test_info** current_test_info, bool* all_success,
-                             bool enable_crash_handler) {
+                             struct test_info** current_test_info, bool* all_success) {
     if (utest_test_type & test_type) {
         run_with_watchdog(test_type, name, [&]() {
-            unittest_run_test(name, test, current_test_info, all_success, enable_crash_handler);
+            unittest_run_test(name, test, current_test_info, all_success);
         });
     } else {
         unittest_printf_critical("    %-51s [IGNORED]\n", name);

@@ -60,7 +60,7 @@ bool divide_by_zero_test(void) {
 
 BEGIN_TEST_CASE(integer_tests)
 RUN_TEST(normal_math_test)
-RUN_TEST_ENABLE_CRASH_HANDLER(signed_overflow_test)
-RUN_TEST_ENABLE_CRASH_HANDLER(signed_underflow_test)
-RUN_TEST_ENABLE_CRASH_HANDLER(divide_by_zero_test)
+RUN_TEST(signed_overflow_test)
+RUN_TEST(signed_underflow_test)
+RUN_TEST(divide_by_zero_test)
 END_TEST_CASE(integer_tests)

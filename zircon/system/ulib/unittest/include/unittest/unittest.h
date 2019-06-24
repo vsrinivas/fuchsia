@@ -71,8 +71,7 @@
 #include <zircon/compiler.h>
 
 #ifdef __Fuchsia__
-#include <zircon/types.h>
-#define UNITTEST_CRASH_HANDLER_SUPPORTED
+#define UNITTEST_DEATH_TEST_SUPPORTED
 #endif // __Fuchsia__
 
 // The following helper function makes the "msg" argument optional in
@@ -253,13 +252,13 @@ int unittest_set_verbosity_level(int new_level);
     };                                                                  \
     DEFINE_REGISTER_TEST_CASE(case_name)
 
-#define RUN_NAMED_TEST_TYPE(name, test, test_type, enable_crash_handler)       \
+#define RUN_NAMED_TEST_TYPE(name, test, test_type)                             \
     if (!test_name_matching || strcmp(test_name_matching, name) == 0) {        \
         if (list_only) {                                                       \
             unittest_printf_critical("    %s\n", name);                        \
         } else {                                                               \
             unittest_run_named_test(name, test, test_type, &current_test_info, \
-                                    &all_success, enable_crash_handler);       \
+                                    &all_success);                             \
         }                                                                      \
     }
 
@@ -306,55 +305,19 @@ int unittest_set_verbosity_level(int new_level);
 // An example is really long running tests (ZX-2107).
 void unittest_cancel_timeout(void);
 
-#define RUN_TEST_SMALL(test) RUN_NAMED_TEST_TYPE(#test, test, TEST_SMALL, false)
-#define RUN_TEST_MEDIUM(test) RUN_NAMED_TEST_TYPE(#test, test, TEST_MEDIUM, false)
-#define RUN_TEST_LARGE(test) RUN_NAMED_TEST_TYPE(#test, test, TEST_LARGE, false)
-#define RUN_TEST_PERFORMANCE(test) RUN_NAMED_TEST_TYPE(#test, test, TEST_PERFORMANCE, false)
+#define RUN_TEST_SMALL(test) RUN_NAMED_TEST_TYPE(#test, test, TEST_SMALL)
+#define RUN_TEST_MEDIUM(test) RUN_NAMED_TEST_TYPE(#test, test, TEST_MEDIUM)
+#define RUN_TEST_LARGE(test) RUN_NAMED_TEST_TYPE(#test, test, TEST_LARGE)
+#define RUN_TEST_PERFORMANCE(test) RUN_NAMED_TEST_TYPE(#test, test, TEST_PERFORMANCE)
 
-#define RUN_NAMED_TEST_SMALL(name, test) RUN_NAMED_TEST_TYPE(name, test, TEST_SMALL, false)
-#define RUN_NAMED_TEST_MEDIUM(name, test) RUN_NAMED_TEST_TYPE(name, test, TEST_MEDIUM, false)
-#define RUN_NAMED_TEST_LARGE(name, test) RUN_NAMED_TEST_TYPE(name, test, TEST_LARGE, false)
-#define RUN_NAMED_TEST_PERFORMANCE(name, test) RUN_NAMED_TEST_TYPE(name, test, TEST_PERFORMANCE, false)
+#define RUN_NAMED_TEST_SMALL(name, test) RUN_NAMED_TEST_TYPE(name, test, TEST_SMALL)
+#define RUN_NAMED_TEST_MEDIUM(name, test) RUN_NAMED_TEST_TYPE(name, test, TEST_MEDIUM)
+#define RUN_NAMED_TEST_LARGE(name, test) RUN_NAMED_TEST_TYPE(name, test, TEST_LARGE)
+#define RUN_NAMED_TEST_PERFORMANCE(name, test) RUN_NAMED_TEST_TYPE(name, test, TEST_PERFORMANCE)
 
 // "RUN_TEST" implies the test is small
-#define RUN_TEST(test) RUN_NAMED_TEST_TYPE(#test, test, TEST_SMALL, false)
-#define RUN_NAMED_TEST(name, test) RUN_NAMED_TEST_TYPE(name, test, TEST_SMALL, false)
-
-#ifdef UNITTEST_CRASH_HANDLER_SUPPORTED
-
-#define RUN_TEST_ENABLE_CRASH_HANDLER(test) RUN_NAMED_TEST_TYPE(#test, test, TEST_SMALL, true)
-
-/**
- * Registers the process or thread as expected to crash. Tests utilizing this
- * should be run with RUN_TEST_ENABLE_CRASH_HANDLER. If a crash occurs and
- * matches a registered process or thread, it is not bubbled up to the crashlogger
- * and the test continues. If any crash was registered but did not occur,
- * the test fails.
- * Unregistered crashes will also fail the test.
- *
- * A use case could be as follows:
- *
- * static bool test_foo_process_expected_crash(void)
- * {
- *      BEGIN_TEST;
- *
- *      ...create a process...
- *      zx_handle_t process;
- *      zx_handle_t vmar;
- *      ASSERT_EQ(zx_process_create(zx_job_default(), fooName, sizeof(fooName),
- *                                  0, &process, &vmar),
- *                ZX_OK, ""));
- *      ...register the process as expected to crash...
- *      REGISTER_CRASH(process);
- *      ...trigger the crash...
- *
- *      END_TEST;
- * }
- */
-#define REGISTER_CRASH(handle) \
-    unittest_register_crash(current_test_info, handle)
-
-#endif // UNITTEST_CRASH_HANDLER_SUPPORTED
+#define RUN_TEST(test) RUN_NAMED_TEST_TYPE(#test, test, TEST_SMALL)
+#define RUN_NAMED_TEST(name, test) RUN_NAMED_TEST_TYPE(name, test, TEST_SMALL)
 
 /*
  * BEGIN_TEST and END_TEST go in a function that is called by RUN_TEST
@@ -615,7 +578,13 @@ void unittest_cancel_timeout(void);
 #define ASSERT_STR_NE(str1, str2, ...) UT_STR_NE(str1, str2, RET_FALSE, ##__VA_ARGS__)
 #define ASSERT_STR_STR(str1, str2, ...) UT_STR_STR(str1, str2, RET_FALSE, ##__VA_ARGS__)
 
-#ifdef UNITTEST_CRASH_HANDLER_SUPPORTED
+#ifdef UNITTEST_DEATH_TEST_SUPPORTED
+
+typedef enum death_test_result {
+    DEATH_TEST_RESULT_INTERNAL_ERROR,
+    DEATH_TEST_RESULT_DIED,
+    DEATH_TEST_RESULT_LIVED
+} death_test_result_t;
 
 /**
  * Runs the given function in a separate thread, and fails if the function does not crash.
@@ -636,10 +605,12 @@ void unittest_cancel_timeout(void);
  *      END_TEST;
  * }
  */
-#define ASSERT_DEATH(fn, arg, msg) ASSERT_TRUE(unittest_run_death_fn(fn, arg), msg)
-#define ASSERT_NO_DEATH(fn, arg, msg) ASSERT_TRUE(unittest_run_no_death_fn(fn, arg), msg)
+#define ASSERT_DEATH(fn, arg, msg) ASSERT_EQ((death_test_result_t)DEATH_TEST_RESULT_DIED, \
+                                             unittest_run_death_fn(fn, arg), msg)
+#define ASSERT_NO_DEATH(fn, arg, msg) ASSERT_EQ((death_test_result_t)DEATH_TEST_RESULT_LIVED, \
+                                                unittest_run_death_fn(fn, arg), msg)
 
-#endif // UNITTEST_CRASH_HANDLER_SUPPORTED
+#endif // UNITTEST_DEATH_TEST_SUPPORTED
 
 /*
  * The list of test cases is made up of these elements.
@@ -719,12 +690,10 @@ bool unittest_expect_str_str(const char* str1_value, const char* str2_value,
 void unittest_run_named_test(const char* name, bool (*test)(void),
                              test_type_t test_type,
                              struct test_info** current_test_info,
-                             bool* all_success, bool enable_crash_handler);
+                             bool* all_success);
 
-#ifdef UNITTEST_CRASH_HANDLER_SUPPORTED
-void unittest_register_crash(struct test_info* current_test_info, zx_handle_t handle);
-bool unittest_run_death_fn(void (*fn_to_run)(void*), void* arg);
-bool unittest_run_no_death_fn(void (*fn_to_run)(void*), void* arg);
-#endif // UNITTEST_CRASH_HANDLER_SUPPORTED
+#ifdef UNITTEST_DEATH_TEST_SUPPORTED
+death_test_result_t unittest_run_death_fn(void (*fn_to_run)(void*), void* arg);
+#endif // UNITTEST_DEATH_TEST_SUPPORTED
 
 __END_CDECLS
