@@ -960,6 +960,216 @@ TEST_F(ScenicPixelTest, DISABLED_ViewBoundClipping) {
   EXPECT_EQ(clipped_color2, scenic::Color(0, 0, 0, 0));
 }
 
+// This unit test verifies the behavior of view bound clipping
+// when the view exists under a node that itself has a translation
+// applied to it. There are two views with a rectangle in each.
+// The first view is under a node that is translated (display_width/2, 0,0).
+// The second view is under a node that is placed under the first transform
+// node, and then translated again by (0, display_height/2, 0,0). This means
+// that what you see on the screen should look like the following:
+//
+//  xxxxxxxxxxvvvvvvvvvv
+//  xxxxxxxxxxvvvvvvvvvv
+//  xxxxxxxxxxvvvvvvvvvv
+//  xxxxxxxxxxvvvvvvvvvv
+//  xxxxxxxxxxvvvvvvvvvv
+//  xxxxxxxxxxrrrrrrrrrr
+//  xxxxxxxxxxrrrrrrrrrr
+//  xxxxxxxxxxrrrrrrrrrr
+//  xxxxxxxxxxrrrrrrrrrr
+//  xxxxxxxxxxrrrrrrrrrr
+//
+// Where x refers to empty display pixels.
+//       v refers to pixels covered by the first view's bounds.
+//       r refers to pixels covered by the second view's bounds.
+//
+// All of the view bounds are given in local coordinates (so their min-point is
+// at (0,0) in the xy plane) which means the test would fail if the bounds were
+// not being updated properly to the correct world-space location by the
+// transform stack before rendering.
+#if SCENIC_ENFORCE_VIEW_BOUND_CLIPPING
+TEST_F(ScenicPixelTest, ViewBoundClippingWithTransforms) {
+#else
+TEST_F(ScenicPixelTest, DISABLED_ViewBoundClippingWithTransforms) {
+#endif
+  // Synchronously get display dimensions.
+  float display_width;
+  float display_height;
+  scenic_->GetDisplayInfo([this, &display_width, &display_height](
+                              fuchsia::ui::gfx::DisplayInfo display_info) {
+    display_width = static_cast<float>(display_info.width_in_px);
+    display_height = static_cast<float>(display_info.height_in_px);
+    QuitLoop();
+  });
+  RunLoop();
+
+  // Initialize session.
+  auto unique_session = std::make_unique<scenic::Session>(scenic_.get());
+  auto session = unique_session.get();
+  session->set_error_handler([this](zx_status_t status) {
+    FXL_LOG(ERROR) << "Session terminated.";
+    QuitLoop();
+  });
+
+  // Initialize second session
+  auto unique_session_2 = std::make_unique<scenic::Session>(scenic_.get());
+  auto session2 = unique_session_2.get();
+  session2->set_error_handler([this](zx_status_t status) {
+    FXL_LOG(ERROR) << "Session terminated.";
+    QuitLoop();
+  });
+
+  // Initialize third session
+  auto unique_session_3 = std::make_unique<scenic::Session>(scenic_.get());
+  auto session3 = unique_session_3.get();
+  session3->set_error_handler([this](zx_status_t status) {
+    FXL_LOG(ERROR) << "Session terminated.";
+    QuitLoop();
+  });
+
+  // Initialize components.
+  scenic::DisplayCompositor compositor(session);
+  scenic::LayerStack layer_stack(session);
+  scenic::Layer layer(session);
+  scenic::Renderer renderer(session);
+  scenic::Scene scene(session);
+  scenic::Camera camera(scene);
+
+  // Position camera at the center of the display, looking down
+  float eye_position[3] = {display_width / 2.f, display_height / 2.f, -1001};
+  float look_at[3] = {display_width / 2.f, display_height / 2.f, 1};
+  float up[3] = {0, -1, 0};
+  camera.SetTransform(eye_position, look_at, up);
+  camera.SetProjection(0);
+
+  // Setup.
+  compositor.SetLayerStack(layer_stack);
+  layer_stack.AddLayer(layer);
+  layer.SetSize(display_width, display_height);
+  layer.SetRenderer(renderer);
+  renderer.SetCamera(camera.id());
+
+  // Set up lights.
+  scenic::AmbientLight ambient_light(session);
+  scene.AddLight(ambient_light);
+  ambient_light.SetColor(1.f, 1.f, 1.f);
+
+  // Create an EntityNode to serve as the scene root.
+  scenic::EntityNode root_node(session);
+  scene.AddChild(root_node.id());
+
+  // Add a transform node anchored in the top-middle of the display
+  // along the x-axis and at the top with respect to the y-axis.
+  scenic::EntityNode transform_node(session);
+  transform_node.SetTranslation(display_width / 2, 0, 0);
+
+  // Create a second transform node and add it as a child to the first transform
+  // node.
+  scenic::EntityNode transform_node_2(session);
+  transform_node_2.SetTranslation(0, display_height / 2, 0);
+  transform_node.AddChild(transform_node_2);
+
+  // Add the transform node as a child of the root node.
+  root_node.AddChild(transform_node);
+
+  // Create two sets of view/view-holder token pairs.
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
+  auto [view_token_2, view_holder_token_2] = scenic::ViewTokenPair::New();
+
+  scenic::View view(session2, std::move(view_token), "ClipView");
+  scenic::ViewHolder view_holder(session, std::move(view_holder_token),
+                                 "ClipViewHolder");
+
+  scenic::View view2(session3, std::move(view_token_2), "ClipView2");
+  scenic::ViewHolder view_holder2(session, std::move(view_holder_token_2),
+                                  "ClipViewHolder2");
+
+  // Bounds of each view should be the size of a quarter of the display with
+  // origin at 0,0 relative to its transform node.
+  const float bmin[3] = {0.f, 0.f, -2.f};
+  const float bmax[3] = {display_width / 2, display_height / 2, 1.f};
+  const float imin[3] = {0, 0, 0};
+  const float imax[3] = {0, 0, 0};
+  view_holder.SetViewProperties(bmin, bmax, imin, imax);
+  view_holder2.SetViewProperties(bmin, bmax, imin, imax);
+
+  // Pane extends across the entire right-side of the display, even though
+  // its containing view is only in the top-right corner.
+  int32_t pane_width = display_width / 2;
+  int32_t pane_height = display_height;
+  scenic::Rectangle pane_shape(session2, pane_width, pane_height);
+  scenic::Rectangle pane_shape2(session3, pane_width, pane_height);
+
+  // Make two pane materials
+  scenic::Material pane_material(session2);
+  pane_material.SetColor(255, 0, 255, 255);  // Magenta.
+
+  scenic::Material pane_material2(session3);
+  pane_material2.SetColor(0, 255, 255, 255);  // Cyan
+
+  scenic::ShapeNode pane_node(session2);
+  pane_node.SetShape(pane_shape);
+  pane_node.SetMaterial(pane_material);
+  pane_node.SetTranslation(pane_width / 2, pane_height / 2, 0);
+
+  scenic::ShapeNode pane_node2(session3);
+  pane_node2.SetShape(pane_shape2);
+  pane_node2.SetMaterial(pane_material2);
+
+  // Pane node 2 improperly extends above view2's bounds in the y-axis,
+  // overlapping with view1, but should still be clipped.
+  pane_node2.SetTranslation(pane_width / 2, 0, 0);
+
+  // Add first view holder to the first transform.
+  transform_node.Attach(view_holder);
+  view.AddChild(pane_node);
+
+  // Add the second view holder to the second transform.
+  transform_node_2.Attach(view_holder2);
+  view2.AddChild(pane_node2);
+
+  session->Present(
+      0, [this](fuchsia::images::PresentationInfo info) { QuitLoop(); });
+  RunLoop();
+
+  session2->Present(
+      1, [this](fuchsia::images::PresentationInfo info) { QuitLoop(); });
+  RunLoop();
+
+  session3->Present(
+      2, [this](fuchsia::images::PresentationInfo info) { QuitLoop(); });
+  RunLoop();
+
+  // Take screenshot.
+  fuchsia::ui::scenic::ScreenshotData prev_screenshot = TakeScreenshot();
+  std::vector<uint8_t> data;
+  EXPECT_TRUE(fsl::VectorFromVmo(prev_screenshot.data, &data))
+      << "Failed to read screenshot";
+
+  // Lambda function for getting pixel based on normalized coordintes.
+  auto get_color = [&display_width, &display_height](
+                       std::vector<uint8_t>& pixel_data, float x,
+                       float y) -> scenic::Color {
+    auto pixels = reinterpret_cast<scenic::Color*>(pixel_data.data());
+    uint32_t index_x = x * display_width;
+    uint32_t index_y = y * display_height;
+    uint32_t index = index_y * display_width + index_x;
+    return pixels[index];
+  };
+
+  scenic::Color magenta_color = get_color(data, 0.6, 0.1);
+  scenic::Color magenta_color2 = get_color(data, 0.9, 0.4);
+  scenic::Color cyan_color = get_color(data, 0.6, 0.9);
+  scenic::Color black_color = get_color(data, 0.0, 0.5);
+
+  // Upper-right quadrant should be magenta, lower-right quadrant
+  // should be cyan. The left half of the screen should be black.
+  EXPECT_EQ(magenta_color, scenic::Color(255, 0, 255, 255));
+  EXPECT_EQ(magenta_color2, scenic::Color(255, 0, 255, 255));
+  EXPECT_EQ(cyan_color, scenic::Color(0, 255, 255, 255));
+  EXPECT_EQ(black_color, scenic::Color(0, 0, 0, 0));
+}
+
 // TODO(SCN-1375): Blocked against hardware inability
 // to provide accurate screenshots from the physical
 // display. Our "TakeScreenshot()" method only grabs
