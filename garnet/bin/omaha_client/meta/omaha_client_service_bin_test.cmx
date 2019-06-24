@@ -1,5 +1,18 @@
 {
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.stash.Store": "fuchsia-pkg://fuchsia.com/stash#meta/stash.cmx"
+            }
+        }
+    },
     "program": {
         "binary": "test/omaha_client_service_bin_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.stash.Store"
+        ]
     }
 }

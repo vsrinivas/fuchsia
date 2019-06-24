@@ -19,11 +19,13 @@ rustc_binary("bin") {
     ":fuchsia.update-rustc",
     ":mos_metrics_registry_rustlib",
     "//garnet/lib/rust/omaha_client",
+    "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-hyper",
     "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.stash:fuchsia.stash-rustc",
     "//src/lib/cobalt/rust:fuchsia-cobalt",
     "//src/sys/lib/fuchsia_url:fuchsia_url",
     "//third_party/rust_crates:failure",
@@ -31,6 +33,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:hyper",
     "//third_party/rust_crates:hyper-rustls",
     "//third_party/rust_crates:log",
+    "//third_party/rust_crates:timebomb",
     "//zircon/public/fidl/fuchsia-cobalt:fuchsia-cobalt-rustc",
   ]
 }

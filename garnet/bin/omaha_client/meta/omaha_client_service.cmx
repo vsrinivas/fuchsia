@@ -10,7 +10,8 @@
         "services": [
             "fuchsia.logger.LogSink",
             "fuchsia.net.SocketProvider",
-            "fuchsia.cobalt.LoggerFactory"
+            "fuchsia.cobalt.LoggerFactory",
+            "fuchsia.stash.Store"
         ]
     }
 }

@@ -23,6 +23,7 @@ mod http_request;
 mod install_plan;
 mod metrics;
 mod policy;
+mod storage;
 mod timer;
 
 async fn run_fidl_server(stream: IncomingServices) -> Result<(), Error> {
