@@ -19,6 +19,16 @@ union TestUnion {
   MoveOnlyStruct move_only;
 };
 
+/// Verifies that user code can manipulate these bits.
+///
+/// We use a uint8 since most bitwise operations will cast their operands to
+/// int, and therefore special casting is required to properly compile.
+bits SampleBits : uint8 {
+    B = 2;
+    D = 4;
+    E = 8;
+};
+
 protocol TestInterface {
   TestMethod(TestUnion u) -> (TestUnion u);
 };

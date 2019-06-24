@@ -23,12 +23,66 @@ class SocketControl;
 class Connectivity;
 struct NameLookup_LookupHostname_Response;
 struct MacAddress;
-enum class LookupIpOptions : uint8_t {
-  V4_ADDRS = 1u,
-  V6_ADDRS = 2u,
-  CNAME_LOOKUP = 4u,
-};
+class LookupIpOptions final {
+public:
+  constexpr LookupIpOptions() : value_(0u) {}
+  explicit constexpr LookupIpOptions(uint8_t value) : value_(value) {}
+  const static LookupIpOptions V4_ADDRS;
+  const static LookupIpOptions V6_ADDRS;
+  const static LookupIpOptions CNAME_LOOKUP;
+  const static LookupIpOptions mask;
 
+  explicit constexpr inline operator uint8_t() const { return value_; }
+  constexpr inline operator bool() const { return value_; }
+  constexpr inline LookupIpOptions operator~() const;
+  constexpr inline LookupIpOptions operator|(const LookupIpOptions& other) const;
+  constexpr inline LookupIpOptions operator&(const LookupIpOptions& other) const;
+  constexpr inline LookupIpOptions operator^(const LookupIpOptions& other) const;
+  constexpr inline void operator|=(const LookupIpOptions& other);
+  constexpr inline void operator&=(const LookupIpOptions& other);
+  constexpr inline void operator^=(const LookupIpOptions& other);
+
+private:
+  uint8_t value_;
+};
+constexpr const ::llcpp::fuchsia::net::LookupIpOptions LookupIpOptions::V4_ADDRS = ::llcpp::fuchsia::net::LookupIpOptions(1u);
+constexpr const ::llcpp::fuchsia::net::LookupIpOptions LookupIpOptions::V6_ADDRS = ::llcpp::fuchsia::net::LookupIpOptions(2u);
+constexpr const ::llcpp::fuchsia::net::LookupIpOptions LookupIpOptions::CNAME_LOOKUP = ::llcpp::fuchsia::net::LookupIpOptions(4u);
+constexpr const ::llcpp::fuchsia::net::LookupIpOptions LookupIpOptions::mask = ::llcpp::fuchsia::net::LookupIpOptions(7u);
+
+constexpr inline ::llcpp::fuchsia::net::LookupIpOptions LookupIpOptions::operator~() const {
+  return ::llcpp::fuchsia::net::LookupIpOptions(static_cast<uint8_t>(~this->value_ & mask.value_));
+}
+
+constexpr inline ::llcpp::fuchsia::net::LookupIpOptions LookupIpOptions::operator|(
+    const ::llcpp::fuchsia::net::LookupIpOptions& other) const {
+  return ::llcpp::fuchsia::net::LookupIpOptions(static_cast<uint8_t>(this->value_ | other.value_));
+}
+
+constexpr inline ::llcpp::fuchsia::net::LookupIpOptions LookupIpOptions::operator&(
+    const ::llcpp::fuchsia::net::LookupIpOptions& other) const {
+  return ::llcpp::fuchsia::net::LookupIpOptions(static_cast<uint8_t>(this->value_ & other.value_));
+}
+
+constexpr inline ::llcpp::fuchsia::net::LookupIpOptions LookupIpOptions::operator^(
+    const ::llcpp::fuchsia::net::LookupIpOptions& other) const {
+  return ::llcpp::fuchsia::net::LookupIpOptions(static_cast<uint8_t>(this->value_ ^ other.value_));
+}
+
+constexpr inline void LookupIpOptions::operator|=(
+    const ::llcpp::fuchsia::net::LookupIpOptions& other) {
+  this->value_ |= other.value_;
+}
+
+constexpr inline void LookupIpOptions::operator&=(
+    const ::llcpp::fuchsia::net::LookupIpOptions& other) {
+  this->value_ &= other.value_;
+}
+
+constexpr inline void LookupIpOptions::operator^=(
+    const ::llcpp::fuchsia::net::LookupIpOptions& other) {
+  this->value_ ^= other.value_;
+}
 
 enum class LookupError : uint32_t {
   NOT_FOUND = 1u,
@@ -1787,6 +1841,11 @@ struct IsFidlType<::llcpp::fuchsia::net::MacAddress> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::fuchsia::net::MacAddress>);
 static_assert(offsetof(::llcpp::fuchsia::net::MacAddress, octets) == 0);
 static_assert(sizeof(::llcpp::fuchsia::net::MacAddress) == ::llcpp::fuchsia::net::MacAddress::PrimarySize);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::net::LookupIpOptions> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::net::LookupIpOptions>);
+static_assert(sizeof(::llcpp::fuchsia::net::LookupIpOptions) == sizeof(uint8_t));
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::net::NameLookup_LookupHostname_Result> : public std::true_type {};

@@ -49,6 +49,7 @@ executable("fidl_llcpp_types_test_bin") {
   output_name = "fidl_llcpp_types_test"
 
   sources = [
+    "bits_test.cc",
     "union_test.cc",
   ]
 
