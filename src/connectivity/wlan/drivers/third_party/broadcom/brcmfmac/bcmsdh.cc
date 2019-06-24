@@ -599,7 +599,14 @@ zx_status_t brcmf_sdiod_ramrw(struct brcmf_sdio_dev* sdiodev, bool write, uint32
 #define MAX_XFER_SIZE 0x100 // TODO(cphoenix): Remove when SDIO bug (?) is fixed.
 
     uint packet_size = min_t(uint, MAX_XFER_SIZE, size);
-    pkt = brcmf_netbuf_allocate(packet_size);
+    uint alloc_size = packet_size;
+    if (!write) {
+        // Must round up the allocation size to match brcmf_sdiod_netbuf_read.
+        alloc_size += 3;
+        alloc_size &= (uint)~3;
+    }
+
+    pkt = brcmf_netbuf_allocate(alloc_size);
     if (!pkt) {
         brcmf_err("brcmf_netbuf_allocate failed: len %d\n", packet_size);
         return ZX_ERR_IO;
