@@ -53,8 +53,8 @@ struct LaunchInfo {
 
     /// The name to assign to the created process.
     ///
-    /// TODO(REVIEW): Define a zx.MAX_NAME_SIZE constant (i.e., 32) and limit
-    /// this string to that size.
+    // TODO(REVIEW): Define a zx.MAX_NAME_SIZE constant (i.e., 32) and limit
+    // this string to that size.
     string name;
 };
 
@@ -138,7 +138,7 @@ protocol Launcher {
 
     /// Adds the given arguments to the command-line for the process.
     ///
-    /// Calling this method multiple times concatenattes the arguments.
+    /// Calling this method multiple times concatenates the arguments.
     AddArgs(vector<vector<uint8>> args);
 
     /// Adds the given variables to the environment variables for the process.
