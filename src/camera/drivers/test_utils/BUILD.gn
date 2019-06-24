@@ -1,0 +1,19 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("test_utils") {
+  visibility = [ "../*" ]
+  sources = [
+    "fake-buffer-collection.cpp",
+  ]
+  public_deps = [
+    "//src/camera/drivers/isp/modules",
+    "//zircon/public/fidl/fuchsia-sysmem:fuchsia-sysmem_c",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/syslog",
+    "//zircon/public/lib/zircon-internal",
+  ]
+}

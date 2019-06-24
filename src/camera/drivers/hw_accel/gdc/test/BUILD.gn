@@ -13,7 +13,7 @@ executable("gdc-task") {
   ]
   deps = [
     "//src/camera/drivers/hw_accel/gdc:gdc-task",
-    "//src/camera/drivers/isp/modules",
+    "//src/camera/drivers/test_utils",
     "//zircon/public/banjo/ddk.protocol.gdc",
     "//zircon/public/banjo/ddk.protocol.platform.bus",
     "//zircon/public/banjo/ddk.protocol.platform.device",

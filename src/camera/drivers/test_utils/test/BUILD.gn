@@ -7,15 +7,13 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
-executable("modules_bin") {
+executable("test_utils_test") {
   testonly = true
   sources = [
-    "dma-format-test.cc",
-    "dma-mgr-test.cc",
+    "fake-buffer-collection-test.cpp",
   ]
   deps = [
     "//src/camera/drivers/test_utils",
-    "//zircon/public/fidl/fuchsia-camera-common:fuchsia-camera-common_c",
     "//zircon/public/fidl/fuchsia-sysmem:fuchsia-sysmem_c",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/fake-bti",

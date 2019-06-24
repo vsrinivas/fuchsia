@@ -21,6 +21,7 @@ group("tests") {
     "drivers/hw_accel/gdc/test:gdc-task",
     "drivers/isp/mali-009/test:mali_009_test",
     "drivers/isp/modules/test:modules_bin",
+    "drivers/test_utils/test:test_utils_test",
   ]
 }
 
@@ -28,6 +29,7 @@ test_package("camera_full_test") {
   deps = [
     "//src/camera/drivers/hw_accel/gdc/test:gdc-task",
     "//src/camera/drivers/isp/modules/test:modules_bin",
+    "//src/camera/drivers/test_utils/test:test_utils_test",
   ]
 
   tests = [
@@ -39,6 +41,11 @@ test_package("camera_full_test") {
     {
       name = "gdc-task"
       manifest = "drivers/hw_accel/gdc/test/meta/gdc-task.cmx"
+      environments = basic_envs
+    },
+    {
+      name = "test_utils_test"
+      manifest = "drivers/test_utils/test/meta/test_utils_test.cmx"
       environments = basic_envs
     },
 

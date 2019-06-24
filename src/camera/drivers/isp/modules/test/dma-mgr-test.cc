@@ -19,46 +19,11 @@
 #include "lib/fit/function.h"
 #include "lib/mmio/mmio.h"
 #include "lib/zx/vmo.h"
+#include "src/camera/drivers/test_utils/fake-buffer-collection.h"
 
 namespace camera {
 namespace {
 constexpr uint32_t kMagicDmaAddressValue = 0x1337BEEF;
-
-zx_status_t CreateFakeBufferCollection(
-    fuchsia_sysmem_BufferCollectionInfo* buffer_collection,
-    zx_handle_t bti_handle, uint32_t width, uint32_t height,
-    uint32_t num_buffers) {
-  buffer_collection->format.image = {
-      .width = width,
-      .height = height,
-      .layers = 2u,
-      .pixel_format =
-          {
-              .type = fuchsia_sysmem_PixelFormatType_NV12,
-              .has_format_modifier = false,
-              .format_modifier = {.value = 0},
-          },
-      .color_space =
-          {
-              .type = fuchsia_sysmem_ColorSpaceType_SRGB,
-          },
-      // The planes data is not used currently:
-      .planes = {{0, 0}, {0, 0}, {0, 0}, {0, 0}}};
-  buffer_collection->buffer_count = num_buffers;
-  // Get the image size for the vmo:
-  DmaFormat full_res_format(buffer_collection->format.image);
-  buffer_collection->vmo_size = full_res_format.GetImageSize();
-  zx_status_t status;
-  for (uint32_t i = 0; i < buffer_collection->buffer_count; ++i) {
-    status = zx_vmo_create_contiguous(bti_handle, buffer_collection->vmo_size,
-                                      0, &buffer_collection->vmos[i]);
-    if (status != ZX_OK) {
-      FX_LOG(ERROR, "", "Failed to allocate Buffer Collection");
-      return status;
-    }
-  }
-  return ZX_OK;
-}
 
 using Stream = DmaManager::Stream;
 
@@ -87,11 +52,11 @@ class DmaMgrTest : public zxtest::Test {
     ASSERT_OK(DmaManager::Create(
         *zx::unowned_bti(bti_handle_), ddk::MmioView(local_mmio_buffer, 0),
         DmaManager::Stream::Downscaled, &downscaled_dma_));
-    zx_status_t status = CreateFakeBufferCollection(
+    zx_status_t status = CreateContiguousBufferCollectionInfo(
         &full_resolution_buffer_collection_, bti_handle_, kFullResWidth,
         kFullResHeight, kFullResNumberOfBuffers);
     ASSERT_OK(status);
-    status = CreateFakeBufferCollection(
+    status = CreateContiguousBufferCollectionInfo(
         &downscaled_buffer_collection_, bti_handle_, kDownscaledWidth,
         kDownscaledHeight, kDownscaledNumberOfBuffers);
     mmio_view_.emplace(local_mmio_buffer, 0);

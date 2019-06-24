@@ -18,8 +18,8 @@
 #include <utility>
 #include <vector>
 
-#include "../../../isp/modules/dma-format.h"
 #include "../gdc.h"
+#include "src/camera/drivers/test_utils/fake-buffer-collection.h"
 
 namespace gdc {
 namespace {
@@ -31,58 +31,20 @@ constexpr uint32_t kNumberOfMmios = 3;
 constexpr uint32_t kConfigSize = 1000;
 constexpr uint32_t kMaxTasks = 10;
 
-// TODO(CAM-56): Once we have this moved to common code,
-// re-use that instead of this local API for
-// creating Fake Buffer Collection.
-zx_status_t CreateFakeBufferCollection(
-    buffer_collection_info_t* buffer_collection, zx_handle_t bti_handle,
-    uint32_t width, uint32_t height, uint32_t num_buffers) {
-  buffer_collection->format.image = {
-      .width = width,
-      .height = height,
-      .layers = 2u,
-      .pixel_format =
-          {
-              .type = fuchsia_sysmem_PixelFormatType_NV12,
-              .has_format_modifier = false,
-              .format_modifier = {.value = 0},
-          },
-      .color_space =
-          {
-              .type = fuchsia_sysmem_ColorSpaceType_SRGB,
-          },
-      // The planes data is not used currently:
-      .planes = {{0, 0}, {0, 0}, {0, 0}, {0, 0}}};
-  buffer_collection->buffer_count = num_buffers;
-  // Get the image size for the vmo:
-  camera::DmaFormat format(buffer_collection->format.image);
-  buffer_collection->vmo_size = format.GetImageSize();
-  zx_status_t status;
-  for (uint32_t i = 0; i < buffer_collection->buffer_count; ++i) {
-    status = zx_vmo_create_contiguous(bti_handle, buffer_collection->vmo_size,
-                                      0, &buffer_collection->vmos[i]);
-    if (status != ZX_OK) {
-      FX_LOG(ERROR, "", "Failed to allocate Buffer Collection");
-      return status;
-    }
-  }
-  return ZX_OK;
-}
-
 // Integration test for the driver defined in zircon/system/dev/camera/arm-isp.
 class TaskTest : public zxtest::Test {
  protected:
   void SetUpBufferCollections(uint32_t buffer_collection_count) {
     ASSERT_OK(fake_bti_create(bti_handle_.reset_and_get_address()));
 
-    zx_status_t status =
-        CreateFakeBufferCollection(&input_buffer_collection_, bti_handle_.get(),
-                                   kWidth, kHeight, buffer_collection_count);
+    zx_status_t status = camera::CreateContiguousBufferCollectionInfo(
+        &input_buffer_collection_, bti_handle_.get(), kWidth, kHeight,
+        buffer_collection_count);
     ASSERT_OK(status);
 
-    status = CreateFakeBufferCollection(&output_buffer_collection_,
-                                        bti_handle_.get(), kWidth, kHeight,
-                                        buffer_collection_count);
+    status = camera::CreateContiguousBufferCollectionInfo(
+        &output_buffer_collection_, bti_handle_.get(), kWidth, kHeight,
+        buffer_collection_count);
     ASSERT_OK(status);
 
     status = zx_vmo_create_contiguous(bti_handle_.get(), kConfigSize, 0,
@@ -159,12 +121,12 @@ TEST(TaskTest, NonContigVmoTest) {
   buffer_collection_info_t output_buffer_collection;
   ASSERT_OK(fake_bti_create(&bti_handle));
 
-  zx_status_t status = CreateFakeBufferCollection(
+  zx_status_t status = camera::CreateContiguousBufferCollectionInfo(
       &input_buffer_collection, bti_handle, kWidth, kHeight, 0);
   ASSERT_OK(status);
 
-  status = CreateFakeBufferCollection(&output_buffer_collection, bti_handle,
-                                      kWidth, kHeight, 0);
+  status = camera::CreateContiguousBufferCollectionInfo(
+      &output_buffer_collection, bti_handle, kWidth, kHeight, 0);
   ASSERT_OK(status);
 
   status = zx_vmo_create(kConfigSize, 0, &config_vmo);

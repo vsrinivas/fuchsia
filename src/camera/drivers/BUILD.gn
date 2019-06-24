@@ -9,5 +9,6 @@ group("drivers") {
     "hw_accel",
     "isp",
     "sensors",
+    "test_utils",
   ]
 }
