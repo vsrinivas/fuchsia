@@ -1,11 +1,10 @@
 # Debugging
 
-This document is a work-in-progress and provides various suggestions
-for debugging Fuchsia programs.
+## Native code debugging
 
-## The ZX debugger
+Fuchsia has a debugger for native code (C++ and Rust) called zxdb.
 
-For C/C++ code, try zxdb. See the [zxdb documentation](/docs/development/debugger/README.md) for more details.
+Please see the [zxdb documentation](../debugger/README.md) for more details.
 
 ## Backtraces
 
