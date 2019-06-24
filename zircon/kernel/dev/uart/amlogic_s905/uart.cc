@@ -133,8 +133,8 @@ static interrupt_eoi uart_irq(void* arg) {
 }
 
 static void s905_uart_init(const void* driver_data, uint32_t length) {
-    assert(s905_uart_base);
-    assert(s905_uart_irq);
+    DEBUG_ASSERT(s905_uart_base);
+    DEBUG_ASSERT(s905_uart_irq);
 
     // create circular buffer to hold received data
     cbuf_initialize(&uart_rx_buf, RXBUF_SIZE);

@@ -64,4 +64,7 @@
 #define static_assert(e, msg) _Static_assert(e, msg)
 #endif
 
+// Use DEBUG_ASSERT or ASSERT instead.
+//
+// assert() is defined only because third-party code used in the kernel expects it.
 #define assert(x) DEBUG_ASSERT(x)

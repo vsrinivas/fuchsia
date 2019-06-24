@@ -128,7 +128,7 @@ static void gic_init_percpu_early() {
     if (!(sre & 0x1)) {
         gic_write_sre(sre | 0x1);
         sre = gic_read_sre();
-        assert(sre & 0x1);
+        DEBUG_ASSERT(sre & 0x1);
     }
 
     // set priority threshold to max.
