@@ -393,6 +393,7 @@ mod tests {
                 ProtectionCfg::Eap => Some(fake_eap_rsne()),
                 _ => None,
             },
+            vendor_ies: None,
 
             rcpi_dbmh: _rcpi_dbmh,
             rsni_dbh: 0,

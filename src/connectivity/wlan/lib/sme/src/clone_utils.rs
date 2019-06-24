@@ -73,6 +73,7 @@ pub fn clone_bss_desc(d: &fidl_mlme::BssDescription) -> fidl_mlme::BssDescriptio
         country: d.country.clone(),
 
         rsn: d.rsn.clone(),
+        vendor_ies: d.vendor_ies.clone(),
 
         rcpi_dbmh: d.rcpi_dbmh,
         rsni_dbh: d.rsni_dbh,

@@ -372,6 +372,10 @@ struct BSSDescription {
     // TODO(hahnr): This field represents an IE and should thus be named RSNE.
     bytes? rsn;
 
+    /// All vendor info elements present in the beacon frame. E.g. this may include a WPA1 IE.
+    /// This slice should be a valid chain of IEs including IE headers for each element.
+    bytes? vendor_ies;
+
     int16 rcpi_dbmh; // 0.5 step dBm. Do not use encoding from IEEE Std 802.11-2016 9.4.2.38.
     int16 rsni_dbh; // 0.5 step dB.  Do not use encoding from IEEE Std 802.11-2016 9.4.2.41.
 

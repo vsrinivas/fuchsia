@@ -46,6 +46,7 @@ fn fake_bss_description(ssid: Ssid, rsn: Option<Vec<u8>>) -> fidl_mlme::BssDescr
         op_rate_set: vec![],
         country: None,
         rsn,
+        vendor_ies: None,
 
         rcpi_dbmh: 0,
         rsni_dbh: 0,
