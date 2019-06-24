@@ -144,4 +144,56 @@ TEST(DeviceControllerConnectionTestCase, PeerClosed) {
     ASSERT_OK(loop.RunUntilIdle());
 }
 
+TEST(DeviceControllerConnectionTestCase, UnbindHook) {
+    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+
+    fbl::RefPtr<zx_device> dev;
+    ASSERT_OK(zx_device::Create(&dev));
+
+    zx::channel device_local, device_remote;
+    ASSERT_OK(zx::channel::create(0, &device_local, &device_remote));
+
+    auto Unbind = [](void* raw_ctx) {
+        auto ctx = static_cast<devmgr::DevhostRpcReadContext*>(raw_ctx);
+        fbl::RefPtr<zx_device> dev = ctx->conn->dev();
+        // Set dev->flags so that we can check that the unbind hook is called in
+        // the test.
+        dev->flags = DEV_FLAG_DEAD;
+        return ZX_OK;
+    };
+    fuchsia_device_manager_DeviceController_ops_t device_ops = {};
+    device_ops.Unbind = Unbind;
+
+    std::unique_ptr<devmgr::DeviceControllerConnection> conn;
+    ASSERT_OK(devmgr::DeviceControllerConnection::Create(
+            dev, std::move(device_remote), &device_ops, &kNoDirectoryOps, &conn));
+
+    ASSERT_OK(devmgr::DeviceControllerConnection::BeginWait(std::move(conn), loop.dispatcher()));
+    ASSERT_OK(loop.RunUntilIdle());
+
+    // Create a thread to send the Unbind message.  The thread isn't strictly
+    // necessary, but is done out of convenience since the FIDL C bindings don't
+    // expose non-zx_channel_call client bindings.
+    enum {
+        INITIAL,
+        WRITE_FAILED,
+        SUCCESS,
+    } thread_status = INITIAL;
+    std::thread synchronous_call_thread([channel=device_local.get(),
+                                        &thread_status]() {
+        zx_status_t status = fuchsia_device_manager_DeviceControllerUnbind(channel);
+        if (status != ZX_OK) {
+            thread_status = WRITE_FAILED;
+            return;
+        }
+        thread_status = SUCCESS;
+    });
+
+    ASSERT_OK(loop.Run(zx::time::infinite(), true /* run_once */));
+
+    synchronous_call_thread.join();
+    ASSERT_EQ(SUCCESS, thread_status);
+    ASSERT_EQ(dev->flags, DEV_FLAG_DEAD);
+}
+
 } // namespace

@@ -76,6 +76,10 @@ protocol DeviceController {
     /// Give this device a channel to its shadow in another process.
     ConnectProxy(handle<channel> shadow);
 
+    /// Ask devhost to unbind this device. On success, the remote end of this
+    /// interface channel will close instead of returning a result.
+    Unbind();
+
     /// Ask the devhost to remove this device.  On success, the remote end of
     /// this interface channel will close instead of returning a result.
     RemoveDevice();

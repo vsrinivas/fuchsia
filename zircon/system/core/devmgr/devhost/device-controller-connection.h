@@ -42,5 +42,10 @@ private:
     const fuchsia_io_Directory_ops_t* directory_fidl_ops_;
 };
 
+struct DevhostRpcReadContext {
+    const char* path;
+    DeviceControllerConnection* conn;
+};
+
 } // namespace devmgr
 
