@@ -33,6 +33,8 @@ TEST_F(FrameSchedulerTest,
        PresentBiggerThanNextVsync_ShouldBeScheduledAfterNextVsync) {
   auto scheduler = CreateDefaultFrameScheduler();
 
+  EXPECT_EQ(Now().get(), fake_display_->GetLastVsyncTime());
+
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 0u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
 
@@ -97,6 +99,56 @@ TEST_F(FrameSchedulerTest, SinglePresent_ShouldGetSingleRenderCall) {
   EXPECT_EQ(mock_updater_->signal_successful_present_callback_count(), 1u);
 }
 
+TEST_F(FrameSchedulerTest, SinglePresent_ShouldGetSingleRenderCallExactlyOnTime) {
+  auto scheduler = CreateDefaultFrameScheduler();
+  SessionId session_id = 1;
+
+  // Set the LastVsyncTime arbitrarily in the future.
+  //
+  // We want to test our ability to schedule a frame "next time" given an arbitrary start,
+  // vs in a certain duration from Now() = 0, so this makes that distinction clear.
+  zx::time future_vsync_time = zx::time(fake_display_->GetLastVsyncTime() +
+                                        6 * fake_display_->GetVsyncInterval());
+
+  fake_display_->SetLastVsyncTime(future_vsync_time.get());
+
+  EXPECT_GT(fake_display_->GetLastVsyncTime(), Now().get());
+
+  // Start the test.
+  EXPECT_EQ(mock_updater_->update_sessions_call_count(), 0u);
+  EXPECT_EQ(mock_updater_->ratchet_present_call_count(), 0u);
+  EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
+  EXPECT_EQ(mock_updater_->signal_successful_present_callback_count(), 0u);
+
+  scheduler->ScheduleUpdateForSession(future_vsync_time.get() + fake_display_->GetVsyncInterval(), session_id);
+
+  EXPECT_EQ(mock_updater_->update_sessions_call_count(), 0u);
+  EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
+
+  // Wait for one vsync period.
+  RunLoopUntil(zx::time(future_vsync_time.get() + fake_display_->GetVsyncInterval()));
+
+  // Present should have been scheduled and handled.
+  EXPECT_EQ(mock_updater_->update_sessions_call_count(), 1u);
+  EXPECT_EQ(mock_updater_->ratchet_present_call_count(), 1u);
+  EXPECT_EQ(mock_renderer_->render_frame_call_count(), 1u);
+  EXPECT_EQ(mock_updater_->signal_successful_present_callback_count(), 0u);
+
+  // End the pending frame.
+  EXPECT_EQ(mock_renderer_->pending_frames(), 1u);
+  mock_renderer_->EndFrame(/* frame number */ 0, Now().get());
+  EXPECT_EQ(mock_renderer_->pending_frames(), 0u);
+  EXPECT_EQ(mock_updater_->signal_successful_present_callback_count(), 1u);
+
+  // Wait for a very long time.
+  RunLoopFor(zx::sec(10));
+
+  // No further render calls should have been made.
+  EXPECT_EQ(mock_updater_->update_sessions_call_count(), 1u);
+  EXPECT_EQ(mock_renderer_->render_frame_call_count(), 1u);
+  EXPECT_EQ(mock_updater_->signal_successful_present_callback_count(), 1u);
+}
+
 TEST_F(FrameSchedulerTest, PresentsForTheSameFrame_ShouldGetSingleRenderCall) {
   auto scheduler = CreateDefaultFrameScheduler();
 
@@ -137,6 +189,8 @@ TEST_F(FrameSchedulerTest, PresentsForTheSameFrame_ShouldGetSingleRenderCall) {
 TEST_F(FrameSchedulerTest,
        PresentsForDifferentFrames_ShouldGetSeparateRenderCalls) {
   auto scheduler = CreateDefaultFrameScheduler();
+
+  EXPECT_EQ(Now().get(), fake_display_->GetLastVsyncTime());
 
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 0u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
@@ -308,14 +362,18 @@ TEST_F(FrameSchedulerTest,
        NoOpUpdateWithSecondPendingUpdate_ShouldBeRescheduled) {
   auto scheduler = CreateDefaultFrameScheduler();
   SessionId session_id = 1;
+
   mock_updater_->SetUpdateSessionsReturnValue({.needs_render = false});
 
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 0u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
 
-  scheduler->ScheduleUpdateForSession(Now().get(), session_id);
+  // Schedule one update 1 vsync away.
+  scheduler->ScheduleUpdateForSession(Now().get() + fake_display_->GetVsyncInterval(), session_id);
+
+  // Schedule one update 1.5 vsyncs away.
   scheduler->ScheduleUpdateForSession(
-      Now().get() + fake_display_->GetVsyncInterval(), session_id);
+      Now().get() + (3 * fake_display_->GetVsyncInterval()) / 2, session_id);
 
   RunLoopFor(zx::duration(fake_display_->GetVsyncInterval()));
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 1u);

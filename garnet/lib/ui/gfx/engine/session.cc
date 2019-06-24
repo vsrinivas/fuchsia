@@ -181,7 +181,7 @@ Session::ApplyUpdateResult Session::ApplyScheduledUpdates(
       .success = false, .needs_render = false, .all_fences_ready = true};
 
   while (!scheduled_updates_.empty() &&
-         scheduled_updates_.front().presentation_time <
+         scheduled_updates_.front().presentation_time <=
              target_presentation_time) {
     auto& update = scheduled_updates_.front();
     FXL_DCHECK(last_applied_update_presentation_time_ <=

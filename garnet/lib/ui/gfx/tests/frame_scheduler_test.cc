@@ -36,6 +36,7 @@ void FrameSchedulerTest::SetupDefaultVsyncValues() {
   // in the frame.
   const auto vsync_interval = zx::msec(100).get();
   fake_display_->SetVsyncInterval(vsync_interval);
+  fake_display_->SetLastVsyncTime(0);
 }
 
 }  // namespace test

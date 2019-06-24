@@ -255,7 +255,7 @@ bool DefaultFrameScheduler::ApplyScheduledSessionUpdates(
 
   std::unordered_set<SessionId> sessions_to_update;
   while (!updatable_sessions_.empty() &&
-         updatable_sessions_.top().requested_presentation_time <
+         updatable_sessions_.top().requested_presentation_time <=
              presentation_time) {
     sessions_to_update.insert(updatable_sessions_.top().session_id);
     updatable_sessions_.pop();
