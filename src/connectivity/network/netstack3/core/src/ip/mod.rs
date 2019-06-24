@@ -5,7 +5,7 @@
 //! The Internet Protocol, versions 4 and 6.
 
 mod forwarding;
-mod icmp;
+pub mod icmp;
 mod igmp;
 mod ipv6;
 pub(crate) mod reassembly;
@@ -29,6 +29,7 @@ use crate::device::{DeviceId, FrameDestination};
 use crate::error::ExistsError;
 use crate::error::{IpParseError, NotFoundError};
 use crate::ip::forwarding::{Destination, ForwardingTable};
+use crate::ip::icmp::IcmpState;
 use crate::ip::ipv6::Ipv6PacketAction;
 use crate::ip::reassembly::{
     handle_reassembly_timeout, process_fragment, reassemble_packet, FragmentCacheKeyEither,
@@ -38,7 +39,7 @@ use crate::wire::icmp::{Icmpv4ParameterProblem, Icmpv6ParameterProblem};
 use crate::{Context, EventDispatcher, TimerId, TimerIdInner};
 use icmp::{
     send_icmpv4_parameter_problem, send_icmpv6_parameter_problem, should_send_icmpv4_error,
-    should_send_icmpv6_error,
+    should_send_icmpv6_error, IcmpEventDispatcher,
 };
 
 // default IPv4 TTL or IPv6 hops
@@ -64,7 +65,7 @@ impl IpStateBuilder {
         self.forward_v6 = forward;
     }
 
-    pub(crate) fn build(self) -> IpLayerState {
+    pub(crate) fn build<D: EventDispatcher>(self) -> IpLayerState<D> {
         IpLayerState {
             v4: IpLayerStateInner {
                 forward: self.forward_v4,
@@ -76,14 +77,16 @@ impl IpStateBuilder {
                 table: ForwardingTable::default(),
                 fragment_cache: IpLayerFragmentCache::new(),
             },
+            icmp: IcmpState::default(),
         }
     }
 }
 
 /// The state associated with the IP layer.
-pub(crate) struct IpLayerState {
+pub(crate) struct IpLayerState<D: EventDispatcher> {
     v4: IpLayerStateInner<Ipv4>,
     v6: IpLayerStateInner<Ipv6>,
+    icmp: IcmpState<D>,
 }
 
 struct IpLayerStateInner<I: Ip> {
@@ -91,6 +94,11 @@ struct IpLayerStateInner<I: Ip> {
     table: ForwardingTable<I>,
     fragment_cache: IpLayerFragmentCache<I>,
 }
+
+/// An event dispatcher for the IP layer.
+///
+/// See the `EventDispatcher` trait in the crate root for more details.
+pub trait IpLayerEventDispatcher: IcmpEventDispatcher {}
 
 /// The identifier for timer events in the IP layer.
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -693,7 +701,10 @@ fn forward<D: EventDispatcher, A: IpAddress>(
 
 // Look up the route to a host.
 #[specialize_ip_address]
-fn lookup_route<A: IpAddress>(state: &IpLayerState, dst_ip: A) -> Option<Destination<A::Version>> {
+pub(crate) fn lookup_route<A: IpAddress, D: EventDispatcher>(
+    state: &IpLayerState<D>,
+    dst_ip: A,
+) -> Option<Destination<A::Version>> {
     #[ipv4addr]
     return state.v4.table.lookup(dst_ip);
     #[ipv6addr]
@@ -856,7 +867,7 @@ where
 ///
 /// `send_ip_packet_from` computes a route to the destination with the
 /// restriction that the packet must originate from the source address, and must
-/// eagress over the interface associated with that source address. If this
+/// egress over the interface associated with that source address. If this
 /// restriction cannot be met, a "no route to host" error is returned.
 pub(crate) fn send_ip_packet_from<D: EventDispatcher, A, S>(
     ctx: &mut Context<D>,

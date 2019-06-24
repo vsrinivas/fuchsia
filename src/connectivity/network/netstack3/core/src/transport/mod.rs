@@ -150,28 +150,28 @@ impl<L: Eq + Hash, A: Eq + Hash> Default for ListenerAddrMap<L, A> {
 ///
 /// It differs from a `ListenerAddrMap` in that only a single address per
 /// connection is supported.
-struct ConnAddrMap<C, A> {
+pub(crate) struct ConnAddrMap<C, A> {
     conn_to_addr: HashMap<C, A>,
     addr_to_conn: HashMap<A, C>,
 }
 
 impl<C: Eq + Hash + Clone, A: Eq + Hash + Clone> ConnAddrMap<C, A> {
-    fn insert(&mut self, conn: C, addr: A) {
+    pub(crate) fn insert(&mut self, conn: C, addr: A) {
         self.addr_to_conn.insert(addr.clone(), conn.clone());
         self.conn_to_addr.insert(conn, addr);
     }
 }
 
 impl<C: Eq + Hash, A: Eq + Hash> ConnAddrMap<C, A> {
-    fn get_by_addr(&self, addr: &A) -> Option<&C> {
+    pub(crate) fn get_by_addr(&self, addr: &A) -> Option<&C> {
         self.addr_to_conn.get(addr)
     }
 
-    fn get_by_conn(&self, conn: &C) -> Option<&A> {
+    pub(crate) fn get_by_conn(&self, conn: &C) -> Option<&A> {
         self.conn_to_addr.get(conn)
     }
 
-    fn remove_by_conn(&mut self, conn: &C) -> Option<A> {
+    pub(crate) fn remove_by_conn(&mut self, conn: &C) -> Option<A> {
         let addr = self.conn_to_addr.remove(conn)?;
         self.addr_to_conn.remove(&addr).unwrap();
         Some(addr)

@@ -108,8 +108,9 @@ use log::{error, info};
 use netstack3_core::{
     add_device_route, del_device_route, get_all_routes, get_ip_addr_subnet, handle_timeout,
     receive_frame, set_ip_addr_subnet, AddrSubnet, AddrSubnetEither, Context, DeviceId,
-    DeviceLayerEventDispatcher, EntryDest, EntryEither, EventDispatcher, Mac, NetstackError,
-    StackState, Subnet, SubnetEither, TimerId, TransportLayerEventDispatcher, UdpEventDispatcher,
+    DeviceLayerEventDispatcher, EntryDest, EntryEither, EventDispatcher, IcmpEventDispatcher,
+    IpLayerEventDispatcher, Mac, NetstackError, StackState, Subnet, SubnetEither, TimerId,
+    TransportLayerEventDispatcher, UdpEventDispatcher,
 };
 
 /// The message that is sent to the main event loop to indicate that an
@@ -746,3 +747,13 @@ impl UdpEventDispatcher for EventLoopInner {
 }
 
 impl TransportLayerEventDispatcher for EventLoopInner {}
+
+impl IcmpEventDispatcher for EventLoopInner {
+    type IcmpConn = ();
+
+    fn receive_icmp_echo_reply(&mut self, conn: &Self::IcmpConn, seq_num: u16, data: &[u8]) {
+        // TODO(brunodalbo): implement icmp connections.
+    }
+}
+
+impl IpLayerEventDispatcher for EventLoopInner {}

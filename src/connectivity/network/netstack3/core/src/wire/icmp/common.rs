@@ -46,6 +46,18 @@ pub(crate) struct IcmpEchoReply {
      * message_body field in IcmpPacket */
 }
 
+impl IcmpEchoReply {
+    /// The ID of this message.
+    pub(crate) fn id(&self) -> u16 {
+        self.id_seq.id.get()
+    }
+
+    /// The sequence number of this message.
+    pub(crate) fn seq(&self) -> u16 {
+        self.id_seq.seq.get()
+    }
+}
+
 /// An ICMP Time Exceeded message.
 #[derive(Copy, Clone, Default, Debug, Eq, PartialEq, FromBytes, AsBytes, Unaligned)]
 #[repr(C)]

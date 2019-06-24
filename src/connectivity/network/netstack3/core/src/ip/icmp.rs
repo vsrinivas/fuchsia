@@ -4,26 +4,74 @@
 
 //! The Internet Control Message Protocol (ICMP).
 
+use std::hash::Hash;
 use std::mem;
 
 use log::trace;
 use packet::{BufferMut, BufferSerializer, Serializer};
-use specialize_ip_macro::specialize_ip_address;
+use specialize_ip_macro::{specialize_ip, specialize_ip_address};
 
 use crate::device::{ndp, DeviceId, FrameDestination};
+use crate::error;
 use crate::ip::{
-    send_icmp_response, send_ip_packet, IpAddress, IpProto, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr,
+    send_icmp_response, send_ip_packet, Ip, IpAddress, IpProto, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr,
     IPV6_MIN_MTU,
 };
+use crate::transport::ConnAddrMap;
 use crate::types::MulticastAddress;
 use crate::wire::icmp::{
-    peek_message_type, IcmpDestUnreachable, IcmpIpExt, IcmpMessageType, IcmpPacketBuilder,
-    IcmpParseArgs, IcmpTimeExceeded, IcmpUnusedCode, Icmpv4DestUnreachableCode, Icmpv4MessageType,
-    Icmpv4Packet, Icmpv4ParameterProblem, Icmpv4ParameterProblemCode, Icmpv4TimeExceededCode,
+    peek_message_type, IcmpDestUnreachable, IcmpEchoReply, IcmpEchoRequest, IcmpIpExt, IcmpMessage,
+    IcmpMessageType, IcmpPacket, IcmpPacketBuilder, IcmpParseArgs, IcmpTimeExceeded,
+    IcmpUnusedCode, Icmpv4DestUnreachableCode, Icmpv4MessageType, Icmpv4Packet,
+    Icmpv4ParameterProblem, Icmpv4ParameterProblemCode, Icmpv4TimeExceededCode,
     Icmpv6DestUnreachableCode, Icmpv6MessageType, Icmpv6Packet, Icmpv6PacketTooBig,
-    Icmpv6ParameterProblem, Icmpv6ParameterProblemCode, Icmpv6TimeExceededCode,
+    Icmpv6ParameterProblem, Icmpv6ParameterProblemCode, Icmpv6TimeExceededCode, MessageBody,
 };
-use crate::{Context, EventDispatcher};
+use crate::{Context, EventDispatcher, StackState};
+use zerocopy::ByteSlice;
+
+/// The state associated with the ICMP layer.
+pub struct IcmpState<D: EventDispatcher> {
+    v4_conns: ConnAddrMap<D::IcmpConn, IcmpAddr<Ipv4Addr>>,
+    v6_conns: ConnAddrMap<D::IcmpConn, IcmpAddr<Ipv6Addr>>,
+}
+
+impl<D: EventDispatcher> Default for IcmpState<D> {
+    fn default() -> IcmpState<D> {
+        IcmpState { v4_conns: ConnAddrMap::default(), v6_conns: ConnAddrMap::default() }
+    }
+}
+
+#[derive(Copy, Clone, Eq, PartialEq, Hash)]
+struct IcmpAddr<A: IpAddress> {
+    // TODO(brunodalbo) for now, ICMP connections are only bound to a remote
+    //  address and an icmp_id. This will be improved with the addition of
+    //  sockets_v2
+    remote_addr: A,
+    icmp_id: u16,
+}
+
+/// An event dispatcher for the ICMP layer.
+///
+/// See the `EventDispatcher` trait in the crate root for more details.
+pub trait IcmpEventDispatcher {
+    /// A key identifying an ICMP connection.
+    ///
+    /// An `IcmpConn` is an opaque identifier which uniquely identifies a
+    /// particular ICMP connection. When registering a new connection, a new
+    /// `IcmpConn` must be provided. When the stack invokes methods on this
+    /// trait related to a connection, the corresponding `IcmpConn` will be
+    /// provided.
+    ///
+    /// ICMP connections are disambiguated using the ICMP "ID" field. When a new
+    /// connection is registered, a new ID is allocated to that connection.
+    type IcmpConn: Clone + Eq + Hash;
+
+    /// Receive an ICMP echo reply.
+    fn receive_icmp_echo_reply(&mut self, conn: &Self::IcmpConn, seq_num: u16, data: &[u8]) {
+        log_unimplemented!((), "IcmpEventDispatcher::receive_icmp_echo_reply: not implemented");
+    }
+}
 
 /// Receive an ICMP message in an IP packet.
 #[specialize_ip_address]
@@ -67,6 +115,7 @@ pub(crate) fn receive_icmp_packet<D: EventDispatcher, A: IpAddress, B: BufferMut
             Icmpv4Packet::EchoReply(echo_reply) => {
                 increment_counter!(ctx, "receive_icmp_packet::echo_reply");
                 trace!("receive_icmp_packet: Received an EchoReply message");
+                receive_icmp_echo_reply(ctx, src_ip, dst_ip, echo_reply);
             }
             _ => log_unimplemented!(
                 (),
@@ -90,7 +139,7 @@ pub(crate) fn receive_icmp_packet<D: EventDispatcher, A: IpAddress, B: BufferMut
                 let (src_ip, dst_ip) = (dst_ip, src_ip);
                 // TODO(joshlf): Do something if send_ip_packet returns an
                 // error?
-                send_ip_packet(ctx, dst_ip, IpProto::Icmp, |src_ip| {
+                send_ip_packet(ctx, dst_ip, IpProto::Icmpv6, |src_ip| {
                     BufferSerializer::new_vec(buffer).encapsulate(
                         IcmpPacketBuilder::<Ipv6, &[u8], _>::new(src_ip, dst_ip, code, req.reply()),
                     )
@@ -99,6 +148,7 @@ pub(crate) fn receive_icmp_packet<D: EventDispatcher, A: IpAddress, B: BufferMut
             Icmpv6Packet::EchoReply(echo_reply) => {
                 increment_counter!(ctx, "receive_icmp_packet::echo_reply");
                 trace!("receive_icmp_packet: Received an EchoReply message");
+                receive_icmp_echo_reply(ctx, src_ip, dst_ip, echo_reply);
             }
             Icmpv6Packet::RouterSolicitation(_)
             | Icmpv6Packet::RouterAdvertisment(_)
@@ -644,6 +694,99 @@ fn is_icmp_error_message(proto: IpProto, buf: &[u8]) -> bool {
     }
 }
 
+/// Common logic for receiving an ICMP echo reply.
+fn receive_icmp_echo_reply<D: EventDispatcher, I: Ip, B: ByteSlice>(
+    ctx: &mut Context<D>,
+    src_ip: I::Addr,
+    dst_ip: I::Addr,
+    msg: IcmpPacket<I, B, IcmpEchoReply>,
+) where
+    IcmpEchoReply: IcmpMessage<I, B>,
+{
+    let (state, dispatcher) = ctx.state_and_dispatcher();
+    // NOTE(brunodalbo): Neither the ICMPv4 or ICMPv6 RFCs explicitly state
+    //  what to do in case we receive an "unsolicited" echo reply.
+    //  We only expose the replies if we have a registered connection for
+    //  the IcmpAddr of the incoming reply for now. Given that a reply should
+    //  only be sent in response to a request, an ICMP unreachable-type message
+    //  is probably not appropriate for unsolicited replies.
+    if let Some(conn) = get_conns::<_, I::Addr>(state)
+        .get_by_addr(&IcmpAddr { remote_addr: src_ip, icmp_id: msg.message().id() })
+    {
+        dispatcher.receive_icmp_echo_reply(conn, msg.message().seq(), msg.body().bytes());
+    }
+}
+
+/// Send an ICMP echo request on an existing connection.
+///
+/// # Panics
+///
+/// `send_icmp_echo_request` panics if `conn` is not associated with a
+/// connection for this IP version.
+#[specialize_ip]
+pub fn send_icmp_echo_request<D: EventDispatcher, I: Ip>(
+    ctx: &mut Context<D>,
+    conn: &D::IcmpConn,
+    seq_num: u16,
+    body: &[u8],
+) {
+    let conns = get_conns::<_, I::Addr>(ctx.state_mut());
+    let IcmpAddr { remote_addr, icmp_id } =
+        conns.get_by_conn(conn).expect("icmp::send_icmp_echo_request: no such conn").clone();
+
+    let req = IcmpEchoRequest::new(icmp_id, seq_num);
+
+    #[ipv4]
+    let proto = IpProto::Icmp;
+    #[ipv6]
+    let proto = IpProto::Icmpv6;
+
+    // TODO(brunodalbo) for now, ICMP connections are only bound to remote
+    //  addresses, which allow us to just send the IP packet with whatever
+    //  src ip we resolve the route to. With sockets v2, IcmpAddr will be bound
+    //  to a local address and sending this request out will be done
+    //  differently.
+    crate::ip::send_ip_packet(ctx, remote_addr, proto, |a| {
+        body.encapsulate(IcmpPacketBuilder::<I, &[u8], _>::new(a, remote_addr, IcmpUnusedCode, req))
+    });
+}
+
+/// Creates a new ICMP connection.
+///
+/// Creates a new ICMP connection with the provided parameters `local_addr`,
+/// `remote_addr` and `icmp_id`. The `conn` identifier can be used to index
+/// the created connection if it succeeds.
+///
+/// If a connection with the conflicting parameters already exists, the call
+/// fails and returns an [`error::NetstackError`].
+pub fn new_icmp_connection<D: EventDispatcher, A: IpAddress>(
+    ctx: &mut Context<D>,
+    conn: D::IcmpConn,
+    local_addr: A,
+    remote_addr: A,
+    icmp_id: u16,
+) -> Result<(), error::NetstackError> {
+    let conns = get_conns::<_, A>(ctx.state_mut());
+    // TODO(brunodalbo) icmp connections are currently only bound to the remote
+    //  address. Sockets api v2 will improve this.
+    let addr = IcmpAddr { remote_addr, icmp_id };
+    if conns.get_by_addr(&addr).is_some() {
+        return Err(error::NetstackError::Exists);
+    }
+    conns.insert(conn, addr);
+    Ok(())
+}
+
+#[specialize_ip_address]
+fn get_conns<D: EventDispatcher, A: IpAddress>(
+    state: &mut StackState<D>,
+) -> &mut ConnAddrMap<D::IcmpConn, IcmpAddr<A>> {
+    #[ipv4addr]
+    return &mut state.ip.icmp.v4_conns;
+    #[ipv6addr]
+    return &mut state.ip.icmp.v6_conns;
+}
+
 #[cfg(test)]
 mod tests {
     use packet::{Buf, BufferSerializer, Serializer};
@@ -939,5 +1082,47 @@ mod tests {
         ));
         assert!(!should_send_icmpv6_error(frame_dst, multicast_ip_2, multicast_ip_1, false));
         assert!(!should_send_icmpv6_error(frame_dst, multicast_ip_2, multicast_ip_1, true));
+    }
+
+    fn test_icmp_connections<I: Ip>() {
+        crate::testutil::set_logger_for_test();
+        let config = crate::testutil::get_dummy_config::<I::Addr>();
+        let mut net =
+            crate::testutil::new_dummy_network_from_config("alice", "bob", config.clone());
+
+        let conn = 1;
+        let icmp_id = 13;
+
+        new_icmp_connection(net.context("alice"), conn, config.local_ip, config.remote_ip, icmp_id)
+            .unwrap();
+
+        let echo_body = vec![1, 2, 3, 4];
+
+        send_icmp_echo_request::<_, I>(net.context("alice"), &conn, 7, &echo_body);
+
+        net.run_until_idle().unwrap();
+        assert_eq!(
+            *net.context("bob").state().test_counters.get("receive_icmp_packet::echo_request"),
+            1
+        );
+        assert_eq!(
+            *net.context("alice").state().test_counters.get("receive_icmp_packet::echo_reply"),
+            1
+        );
+        let replies = net.context("alice").dispatcher().take_icmp_replies(conn);
+        assert!(!replies.is_empty());
+        let (seq, body) = &replies[0];
+        assert_eq!(*seq, 7);
+        assert_eq!(*body, echo_body);
+    }
+
+    #[test]
+    fn test_icmp_connections_v4() {
+        test_icmp_connections::<Ipv4>();
+    }
+
+    #[test]
+    fn test_icmp_connections_v6() {
+        test_icmp_connections::<Ipv6>();
     }
 }

@@ -41,7 +41,8 @@ pub use crate::device::{
 };
 pub use crate::error::NetstackError;
 pub use crate::ip::{
-    AddrSubnet, AddrSubnetEither, EntryDest, EntryEither, IpStateBuilder, Subnet, SubnetEither,
+    icmp::IcmpEventDispatcher, AddrSubnet, AddrSubnetEither, EntryDest, EntryEither,
+    IpLayerEventDispatcher, IpStateBuilder, Subnet, SubnetEither,
 };
 pub use crate::transport::udp::UdpEventDispatcher;
 pub use crate::transport::TransportLayerEventDispatcher;
@@ -109,7 +110,7 @@ impl StackStateBuilder {
 /// The state associated with the network stack.
 pub struct StackState<D: EventDispatcher> {
     transport: TransportLayerState<D>,
-    ip: IpLayerState,
+    ip: IpLayerState<D>,
     device: DeviceLayerState,
     #[cfg(test)]
     test_counters: testutil::TestCounters,
@@ -263,7 +264,9 @@ impl Instant for time::Instant {
 /// provides its own event dispatcher trait which specifies the types of actions
 /// that must be supported in order to support that layer of the stack. The
 /// `EventDispatcher` trait is a sub-trait of all of these traits.
-pub trait EventDispatcher: DeviceLayerEventDispatcher + TransportLayerEventDispatcher {
+pub trait EventDispatcher:
+    DeviceLayerEventDispatcher + IpLayerEventDispatcher + TransportLayerEventDispatcher
+{
     /// The type of an instant in time.
     ///
     /// All time is measured using `Instant`s, including scheduling timeouts.
