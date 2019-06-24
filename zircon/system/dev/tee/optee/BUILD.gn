@@ -1,6 +1,7 @@
 # Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+import("$zx/public/gn/firmware.gni")
 
 driver("optee") {
   sources = [
@@ -27,7 +28,19 @@ driver("optee") {
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
   ]
+  data_deps = [
+    ":keysafe_ta",
+  ]
 
   # TODO(ZX-2863): This driver violates the allowed shlib deps policy.
   deprecated_inhibit_driver_shlib_allowlist = true
+}
+
+firmware("keysafe_ta") {
+  sources = [
+    "$firmware_dir/optee/keysafe/808032e0-fd9e-4e6f-8896-544735c98480.ta.dev",
+  ]
+  outputs = [
+    "808032e0-fd9e-4e6f-8896-544735c98480.ta",
+  ]
 }
