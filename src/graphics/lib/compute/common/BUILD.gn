@@ -11,10 +11,13 @@ config("common_public_config") {
 
 source_set("common") {
   public = [
+    "file_utils.h",
     "macros.h",
     "util.h",
   ]
   sources = [
+    "file_utils.c",
+    "file_utils.h",
     "macros.h",
     "util.c",
     "util.h",
@@ -24,6 +27,7 @@ source_set("common") {
 
 graphics_compute_unittests("common_unittests") {
   sources = [
+    "file_utils_unittest.cc",
     "util_unittests.cc",
   ]
   deps = [
