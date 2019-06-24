@@ -2,9 +2,20 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config.gni")
 import("//build/rust/rustc_binary.gni")
+import("//build/test/test_package.gni")
 
-rustc_binary("ime") {
+group("tests") {
+  testonly = true
+
+  deps = [
+    ":ime_service",
+    ":ime_test",
+  ]
+}
+
+rustc_binary("bin") {
   name = "ime_service"
   with_unit_tests = true
   edition = "2018"
@@ -25,5 +36,38 @@ rustc_binary("ime") {
     "//third_party/rust_crates:pin-utils",
     "//third_party/rust_crates:unicode-normalization",
     "//third_party/rust_crates:unicode-segmentation",
+  ]
+}
+
+package("ime_service") {
+  deps = [
+    ":bin",
+  ]
+
+  binaries = [
+    {
+      name = "ime_service"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/ime_service.cmx")
+      dest = "ime_service.cmx"
+    },
+  ]
+}
+
+test_package("ime_test") {
+  deps = [
+    ":bin_test",
+    "//garnet/bin/ui/text/test_suite:test_suite",
+  ]
+
+  tests = [
+    {
+      name = "ime_service_bin_test"
+      environments = basic_envs
+    },
   ]
 }

@@ -89,11 +89,11 @@ group("bluetooth_intel") {
 group("scenic") {
   testonly = true
   public_deps = [
-    "//garnet/bin/ui:ime_service",
     "//garnet/bin/ui:root_presenter",
     "//garnet/bin/ui:scenic",
     "//garnet/packages/prod:sysmem_connector",
     "//garnet/packages/prod:vulkan",
+    "//src/ui/bin/ime:ime_service",
   ]
 }
 

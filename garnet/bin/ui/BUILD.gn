@@ -10,15 +10,12 @@ import("//src/graphics/lib/vulkan/layers.gni")
 group("ui") {
   testonly = true
   deps = [
-    ":ime_service",
-    ":ime_service_tests",
     ":root_presenter",
     ":scenic",
     ":scenic_tests",
     ":set_renderer_params",
     "benchmarks",
     "gltf_export",
-    "ime",
     "input",
     "input_reader",
     "present_view",
@@ -31,6 +28,8 @@ group("ui") {
     "snapshot",
     "tests",
     "text",
+    "//src/ui/bin/ime:ime_service",
+    "//src/ui/bin/ime:ime_test",
   ]
 }
 
@@ -134,40 +133,6 @@ package("root_presenter") {
     {
       path = rebase_path("root_presenter/meta/root_presenter.cmx")
       dest = "root_presenter.cmx"
-    },
-  ]
-}
-
-package("ime_service") {
-  deps = [
-    "ime",
-  ]
-
-  binaries = [
-    {
-      name = "ime_service"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("ime/meta/ime_service.cmx")
-      dest = "ime_service.cmx"
-    },
-  ]
-}
-
-test_package("ime_service_tests") {
-  deps = [
-    "ime:ime_test",
-    "//garnet/bin/ui/text/test_suite:test_suite",
-  ]
-
-  tests = [
-    {
-      name = "ime_service_bin_test"
-      dest = "ime_service_unittests"
-      environments = basic_envs
     },
   ]
 }

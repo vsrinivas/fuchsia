@@ -69,15 +69,12 @@ fn adjacent_cursor_position_grapheme_left(
     let prev_boundary = get_grapheme_boundary(text, start, false);
     let offset = if let Some(offset) = prev_boundary { offset } else { return 0 };
     match traversal {
-        GraphemeTraversal::CombiningCharacters => {},
+        GraphemeTraversal::CombiningCharacters => {}
         GraphemeTraversal::WholeGrapheme => return offset,
     }
     let grapheme_str = &text[offset..start];
-    let (last_char_offset, last_char) = if let Some(x) = grapheme_str.char_indices().last() {
-        x
-    } else {
-        return offset
-    };
+    let (last_char_offset, last_char) =
+        if let Some(x) = grapheme_str.char_indices().last() { x } else { return offset };
     if unicode_normalization::char::is_combining_mark(last_char) {
         let last_char_str = &grapheme_str[last_char_offset..];
         start - last_char_str.len()
