@@ -10,7 +10,7 @@
 #include <memory>
 
 namespace gdc {
-// |GdcDeviceTester| is spawned by the driver in |gdc.cpp|
+// |GdcDeviceTester| is spawned by the driver in |gdc.cc|
 class GdcDevice;
 
 class GdcDeviceTester : public zxtest::Test {

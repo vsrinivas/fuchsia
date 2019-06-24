@@ -11,7 +11,7 @@
 #include <memory>
 
 namespace camera {
-// |Imx227Devicetester| is spawned by the driver in |imx227.cpp|
+// |Imx227Devicetester| is spawned by the driver in |imx227.cc|
 class Imx227Device;
 
 class Imx227DeviceTester : public zxtest::Test {

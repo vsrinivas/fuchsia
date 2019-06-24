@@ -10,7 +10,7 @@ import("//build/testing/environments.gni")
 executable("test_utils_test") {
   testonly = true
   sources = [
-    "fake-buffer-collection-test.cpp",
+    "fake-buffer-collection-test.cc",
   ]
   deps = [
     "//src/camera/drivers/test_utils",

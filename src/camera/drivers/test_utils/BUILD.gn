@@ -5,7 +5,7 @@
 source_set("test_utils") {
   visibility = [ "../*" ]
   sources = [
-    "fake-buffer-collection.cpp",
+    "fake-buffer-collection.cc",
   ]
   public_deps = [
     "//src/camera/drivers/isp/modules",

@@ -19,7 +19,7 @@
 #include "pingpong_regs.h"
 
 namespace camera {
-// |ArmIspDeviceTester| is spawned by the driver in |arm-isp.cpp|
+// |ArmIspDeviceTester| is spawned by the driver in |arm-isp.cc|
 // This provides the interface provided in fuchsia-camera-test/isp.fidl in
 // Zircon.
 

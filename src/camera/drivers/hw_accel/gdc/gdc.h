@@ -26,7 +26,7 @@
 
 namespace gdc {
 
-// |GdcDevice| is spawned by the driver in |gdc.cpp|
+// |GdcDevice| is spawned by the driver in |gdc.cc|
 // This provides ZX_PROTOCOL_GDC.
 class GdcDevice;
 using GdcDeviceType = ddk::Device<GdcDevice, ddk::Unbindable>;

@@ -33,7 +33,7 @@
 #include <zircon/fidl.h>
 
 namespace camera {
-// |ArmIspDevice| is spawned by the driver in |arm-isp.cpp|
+// |ArmIspDevice| is spawned by the driver in |arm-isp.cc|
 // This provides the interface provided in camera.fidl in Zircon.
 class ArmIspDevice;
 using IspDeviceType = ddk::Device<ArmIspDevice, ddk::Unbindable>;
@@ -75,7 +75,7 @@ class ArmIspDevice : public IspDeviceType,
       const frame_rate_t* rate, stream_type_t type,
       const input_stream_callback_t* stream, input_stream_protocol_t* out_s);
 
-  // ISP Init Sequences (init_sequences.cpp)
+  // ISP Init Sequences (init_sequences.cc)
   void IspLoadSeq_linear();
   void IspLoadSeq_settings();
   void IspLoadSeq_fs_lin_2exp();

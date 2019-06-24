@@ -32,17 +32,17 @@ camera
 
 With the exception of end-to-end tests, all camera tests shall be located in a
 ```test``` folder next to the code it tests.
-The test source shall be named ```<object-of-test>-test.cpp```.
+The test source shall be named ```<object-of-test>-test.cc```.
 The ```meta``` folder for the test is located in the ```test``` directory.
 
 Example:
 ```
 bar
 ├── BUILD.gn
-├── foo.cpp
+├── foo.cc
 └── foo.h
    └── test
-        ├── foo_test.cpp
+        ├── foo_test.cc
         ├── BUILD.gn
         └── meta
             └── foo_test.cmx
