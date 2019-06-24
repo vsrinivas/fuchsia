@@ -56,8 +56,19 @@ public:
         return ZX_OK;
     }
 
+    // Empties the buffer holding received reports.
+    void Reset() {
+        fbl::AutoLock lock(&reports_lock_);
+        reports_.reset();
+    }
+
     // Returns a vector containing the received reports.
     const fbl::Vector<T>& reports() { return reports_; }
+
+    size_t PendingReports() {
+      fbl::AutoLock lock(&reports_lock_);
+      return reports_.size();
+    }
 
     void HidbusIfcIoQueue(const void* buffer, size_t buf_size) {
         HidbusIfcIoQueueHelper(buffer, buf_size);

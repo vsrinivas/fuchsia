@@ -634,6 +634,8 @@ static ACPI_STATUS acpi_ns_walk_callback(ACPI_HANDLE object, uint32_t nesting_le
         pci_init(sys_root, object, info, ctx);
     } else if (!memcmp(hid, BATTERY_HID_STRING, HID_LENGTH)) {
         battery_init(acpi_root, object);
+    } else if (!memcmp(hid, LID_HID_STRING, HID_LENGTH)) {
+        lid_init(acpi_root, object);
     } else if (!memcmp(hid, PWRSRC_HID_STRING, HID_LENGTH)) {
         pwrsrc_init(acpi_root, object);
     } else if (!memcmp(hid, EC_HID_STRING, HID_LENGTH)) {

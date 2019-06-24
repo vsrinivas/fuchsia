@@ -9,6 +9,7 @@
 #include <zircon/compiler.h>
 
 #define BATTERY_HID_STRING         "PNP0C0A"
+#define LID_HID_STRING             "PNP0C0D"
 #define EC_HID_STRING              "PNP0C09"
 #define PWRSRC_HID_STRING          "ACPI0003"
 #define GOOGLE_CROS_EC_HID_STRING  "GOOG0004"
@@ -35,5 +36,6 @@ zx_status_t pwrsrc_init(zx_device_t* parent, ACPI_HANDLE acpi_handle);
 zx_status_t tbmc_init(zx_device_t* parent, ACPI_HANDLE acpi_handle);
 zx_status_t cros_ec_lpc_init(zx_device_t* parent, ACPI_HANDLE acpi_handle);
 zx_status_t thermal_init(zx_device_t* parent, ACPI_DEVICE_INFO* info, ACPI_HANDLE acpi_handle);
+zx_status_t lid_init(zx_device_t* parent, ACPI_HANDLE acpi_handle);
 
 __END_CDECLS

@@ -249,6 +249,7 @@ if (current_cpu != "") {
       deps += [
         "$zx/system/dev/board/x86:x86-battery-test",
         "$zx/system/dev/board/x86:x86-board-test",
+        "$zx/system/dev/board/x86:x86-lid-test",
         "x86-umip",
       ]
     }

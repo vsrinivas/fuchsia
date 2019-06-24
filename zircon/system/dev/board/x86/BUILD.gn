@@ -52,6 +52,8 @@ driver("platform-bus-x86") {
     "acpi-dev/dev-cros-ec/dev.cc",
     "acpi-dev/dev-cros-ec/motion.cc",
     "acpi-dev/dev-ec.c",
+    "acpi-dev/dev-lid.cc",
+    "acpi-dev/dev-lid.h",
     "acpi-dev/dev-pwrbtn.cc",
     "acpi-dev/dev-pwrsrc.c",
     "acpi-dev/dev-tbmc.cc",
@@ -95,6 +97,7 @@ driver("platform-bus-x86") {
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fit",
     "$zx/system/ulib/hid",
     "$zx/system/ulib/pci",
     "$zx/system/ulib/region-alloc",
@@ -134,6 +137,31 @@ test("x86-battery-test") {
     "$zx/system/ulib/zxtest",
     "$zx/third_party/lib/acpica",
     "$zx/third_party/ulib/chromiumos-platform-ec",
+  ]
+}
+
+test("x86-lid-test") {
+  output_name = "x86-lid-test"
+  test_group = "ddk"
+  sources = [
+    "acpi-dev/dev-lid-test.cc",
+    "acpi-dev/dev-lid.cc",
+    "acpi-dev/dev-lid.h",
+  ]
+  configs += [ ":config" ]
+  deps = [
+    "$zx/system/banjo/ddk.protocol.acpi",
+    "$zx/system/banjo/ddk.protocol.hidbus",
+    "$zx/system/dev/lib/fake_ddk",
+    "$zx/system/dev/lib/mock-hidbus-ifc",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/hid",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zxtest",
+    "$zx/third_party/lib/acpica",
   ]
 }
 
