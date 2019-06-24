@@ -2,7 +2,7 @@
 # Internal library zx
 
 The `fidlc` compiler automatically generates `library zx` (internally) into
-[//zircon/system/host/fidl/lib/library_zx.cpp](/zircon/system/host/fidl/lib/library_zx.cpp).
+[//zircon/system/host/fidl/lib/library_zx.cc](/zircon/system/host/fidl/lib/library_zx.cc).
 
 You will find content similar to the following:
 

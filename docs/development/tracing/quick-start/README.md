@@ -182,7 +182,7 @@ This tells us a few important things.
    the function executed for.
 
 > For the curious reader, you could look at
-> [//zircon/system/ulib/fs/connection.cpp][connection] and see exactly how the
+> [//zircon/system/ulib/fs/connection.cc][connection] and see exactly how the
 > tracing is done for `FileReadAt` &mdash; it's a slightly convoluted macro
 > expansion.
 
@@ -191,7 +191,7 @@ Things are even more interesting with `Blob::Read`:
 ![drawing](trace-example-blobread.png)
 
 It lives in
-[//zircon/system/ulib/blobfs/blob.cpp][blob], and is very short:
+[//zircon/system/ulib/blobfs/blob.cc][blob], and is very short:
 
 ```cpp
 zx_status_t Blob::Read(void* data,
@@ -221,6 +221,6 @@ The tracing continues, down through the layers, until you hit the last one,
 For documentation on using Chrome's trace view [see here][chrome].
 
 <!-- xrefs -->
-[blob]: /zircon/system/ulib/blobfs/blob.cpp
+[blob]: /zircon/system/ulib/blobfs/blob.cc
 [chrome]: https://www.chromium.org/developers/how-tos/trace-event-profiling-tool
-[connection]: /zircon/system/ulib/fs/connection.cpp
+[connection]: /zircon/system/ulib/fs/connection.cc
