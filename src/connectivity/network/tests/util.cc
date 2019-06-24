@@ -49,7 +49,7 @@ void StreamAcceptRead(int acptfd, std::string* out, int ntfyfd) {
     out->append(buf, n);
   }
 
-  EXPECT_EQ(0, close(connfd));
+  EXPECT_EQ(close(connfd), 0) << strerror(errno);
   NotifySuccess(ntfyfd);
 }
 
@@ -76,7 +76,7 @@ void StreamConnectRead(struct sockaddr_in* addr, std::string* out, int ntfyfd) {
     out->append(buf, n);
   }
 
-  EXPECT_EQ(close(connfd), 0);
+  EXPECT_EQ(close(connfd), 0) << strerror(errno);
   NotifySuccess(ntfyfd);
 }
 
@@ -90,7 +90,7 @@ void StreamAcceptWrite(int acptfd, const char* msg, int ntfyfd) {
 
   ASSERT_EQ((ssize_t)strlen(msg), write(connfd, msg, strlen(msg)));
 
-  EXPECT_EQ(0, close(connfd));
+  EXPECT_EQ(close(connfd), 0) << strerror(errno);
   NotifySuccess(ntfyfd);
 }
 
@@ -117,7 +117,7 @@ void PollSignal(struct sockaddr_in* addr, short events, short* revents,
     return;
   }
 
-  EXPECT_EQ(0, close(connfd));
+  EXPECT_EQ(close(connfd), 0) << strerror(errno);
   *revents = fds.revents;
   NotifySuccess(ntfyfd);
 }

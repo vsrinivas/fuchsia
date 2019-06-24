@@ -127,7 +127,7 @@ static zx_status_t fdio_zxio_set_flags(fdio_t* io, uint32_t flags) {
 
 // Generic ---------------------------------------------------------------------
 
-fdio_ops_t fdio_zxio_ops = {
+static fdio_ops_t fdio_zxio_ops = {
     .close = fdio_zxio_close,
     .open = fdio_default_open,
     .clone = fdio_zxio_clone,
@@ -587,7 +587,7 @@ static zx_status_t fdio_zxio_vmofile_get_vmo(fdio_t* io, int flags,
     }
 }
 
-fdio_ops_t fdio_zxio_vmofile_ops = {
+static fdio_ops_t fdio_zxio_vmofile_ops = {
     .close = fdio_zxio_close,
     .open = fdio_default_open,
     .clone = fdio_zxio_clone,

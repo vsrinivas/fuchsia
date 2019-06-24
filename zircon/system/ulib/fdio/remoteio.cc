@@ -13,7 +13,7 @@
 #include <zircon/device/vfs.h>
 #include <zircon/syscalls.h>
 
-#include "private.h"
+#include "private-socket.h"
 
 namespace fio = ::llcpp::fuchsia::io;
 
@@ -168,7 +168,17 @@ static zx_status_t fdio_from_socket(zx::socket socket, fdio_t** out_io) {
     }
     fdio_t* io = nullptr;
     if ((info.options & ZX_SOCKET_HAS_CONTROL) != 0) {
-        io = fdio_socket_create(std::move(socket), IOFLAG_SOCKET_CONNECTED, info);
+        zx_signals_t observed;
+        zx_status_t status = socket.wait_one(
+            ZXSIO_SIGNAL_CONNECTED, zx::time::infinite_past(), &observed);
+        if (status != ZX_OK && status != ZX_ERR_TIMED_OUT) {
+            return status;
+        }
+        if ((io = fdio_socket_create(std::move(socket), info))) {
+            if (observed & ZXSIO_SIGNAL_CONNECTED) {
+                *fdio_get_ioflag(io) |= IOFLAG_SOCKET_CONNECTED;
+            }
+        }
     } else {
         // Without a control plane, the socket is a pipe.
         io = fdio_pipe_create(std::move(socket));

@@ -10,6 +10,7 @@
 #include <errno.h>
 #include <sys/stat.h>
 
+#include "private-socket.h"
 #include "unistd.h"
 
 // checkfile, checkfileat, and checkfd let us error out if the object
@@ -83,7 +84,7 @@ static int checksocket(int fd, int sock_err, int err) {
         errno = EBADF;
         return -1;
     }
-    int32_t is_socket = *fdio_get_ioflag(io) & IOFLAG_SOCKET;
+    bool is_socket = fdio_is_socket(io);
     fdio_release(io);
     if (!is_socket) {
         errno = sock_err;
@@ -114,7 +115,7 @@ ssize_t readlink(const char* __restrict path, char* __restrict buf, size_t bufsi
 
 // creating things we don't have plumbing for yet
 __EXPORT
-int mkfifo(const char *path, mode_t mode) {
+int mkfifo(const char* path, mode_t mode) {
     errno = ENOSYS;
     return -1;
 }
@@ -126,7 +127,7 @@ int mknod(const char* path, mode_t mode, dev_t dev) {
 
 // no permissions support yet
 __EXPORT
-int chown(const char *path, uid_t owner, gid_t group) {
+int chown(const char* path, uid_t owner, gid_t group) {
     return checkfile(path, ENOSYS);
 }
 __EXPORT
@@ -134,13 +135,13 @@ int fchown(int fd, uid_t owner, gid_t group) {
     return checkfd(fd, ENOSYS);
 }
 __EXPORT
-int lchown(const char *path, uid_t owner, gid_t group) {
+int lchown(const char* path, uid_t owner, gid_t group) {
     return checkfile(path, ENOSYS);
 }
 
 // no permissions support, but treat rwx bits as don't care rather than error
 __EXPORT
-int chmod(const char *path, mode_t mode) {
+int chmod(const char* path, mode_t mode) {
     mode &= 07777; // only last 4 octals are relevant to chmod
     return checkfile(path, (mode & (~0777)) ? ENOSYS : 0);
 }

@@ -6,8 +6,7 @@
 // No network connection is required, only a running netstack binary.
 
 #include <fuchsia/net/c/fidl.h>
-#include <lib/fdio/fdio.h>
-#include <lib/fdio/unsafe.h>
+#include <lib/fdio/fd.h>
 #include <lib/sync/completion.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
@@ -17,24 +16,12 @@
 #include "gtest/gtest.h"
 #include "util.h"
 
-zx_handle_t GetHandle(int fd) {
-  fdio_t* io;
-  zx_status_t status = fdio_unbind_from_fd(fd, &io);
-  EXPECT_EQ(status, ZX_OK) << zx_status_get_string(status);
-  zx_handle_t h;
-  zx_signals_t sigs;
-  fdio_unsafe_wait_begin(io, 0, &h, &sigs);
-  EXPECT_NE(h, ZX_HANDLE_INVALID);
-  fdio_unsafe_release(io);
-  return h;
-}
-
 TEST(NetStreamTest, BlockingAcceptWriteNoClose) {
   short port = 0;  // will be assigned by the first bind.
 
   for (int j = 0; j < 2; j++) {
-    int acptfd = socket(AF_INET, SOCK_STREAM, 0);
-    ASSERT_GE(acptfd, 0);
+    int acptfd;
+    ASSERT_GE(acptfd = socket(AF_INET, SOCK_STREAM, 0), 0) << strerror(errno);
 
     struct sockaddr_in addr;
     addr.sin_family = AF_INET;
@@ -54,60 +41,68 @@ TEST(NetStreamTest, BlockingAcceptWriteNoClose) {
         break;
       }
     }
-    ASSERT_EQ(0, ret) << "bind failed: " << errno << " port: " << port;
+    ASSERT_EQ(ret, 0) << "bind failed: " << strerror(errno)
+                      << " port: " << port;
 
     socklen_t addrlen = sizeof(addr);
-    ret = getsockname(acptfd, (struct sockaddr*)&addr, &addrlen);
-    ASSERT_EQ(0, ret) << "getsockname failed: " << errno;
+    ASSERT_EQ(getsockname(acptfd, (struct sockaddr*)&addr, &addrlen), 0)
+        << strerror(errno);
+    ASSERT_EQ(addrlen, sizeof(addr));
 
     // remember the assigned port and use it for the next bind.
     port = addr.sin_port;
 
     int ntfyfd[2];
-    ASSERT_EQ(0, pipe(ntfyfd));
+    ASSERT_EQ(pipe(ntfyfd), 0) << strerror(errno);
 
-    ret = listen(acptfd, 10);
-    ASSERT_EQ(0, ret) << "listen failed: " << errno;
+    ASSERT_EQ(listen(acptfd, 10), 0) << strerror(errno);
 
     std::string out;
     std::thread thrd(StreamConnectRead, &addr, &out, ntfyfd[1]);
 
-    int connfd = accept(acptfd, nullptr, nullptr);
-    ASSERT_GE(connfd, 0) << "accept failed: " << errno;
+    int connfd;
+    ASSERT_GE(connfd = accept(acptfd, nullptr, nullptr), 0) << strerror(errno);
 
     const char* msg = "hello";
     ASSERT_EQ((ssize_t)strlen(msg), write(connfd, msg, strlen(msg)));
-    ASSERT_EQ(0, close(connfd));
+    ASSERT_EQ(close(connfd), 0) << strerror(errno);
 
-    ASSERT_EQ(true, WaitSuccess(ntfyfd[0], kTimeout));
+    ASSERT_TRUE(WaitSuccess(ntfyfd[0], kTimeout));
     thrd.join();
 
     EXPECT_STREQ(msg, out.c_str());
 
-    // Simulate unexpected process exit by closing the socket handle
+    // Simulate unexpected process exit by closing the handle
     // without sending a Close op to netstack.
-    zx_handle_close(GetHandle(acptfd));
+    zx_handle_t handle;
+    zx_status_t status = fdio_fd_transfer(acptfd, &handle);
+    ASSERT_EQ(status, ZX_OK) << zx_status_get_string(status);
+    status = zx_handle_close(handle);
+    ASSERT_EQ(status, ZX_OK) << zx_status_get_string(status);
 
-    EXPECT_EQ(0, close(ntfyfd[0]));
-    EXPECT_EQ(0, close(ntfyfd[1]));
+    EXPECT_EQ(close(ntfyfd[0]), 0) << strerror(errno);
+    EXPECT_EQ(close(ntfyfd[1]), 0) << strerror(errno);
   }
 }
 
 TEST(NetStreamTest, RaceClose) {
-  int fd = socket(AF_INET, SOCK_STREAM, 0);
-  ASSERT_GE(fd, 0) << strerror(errno);
+  int fd;
+  ASSERT_GE(fd = socket(AF_INET, SOCK_STREAM, 0), 0) << strerror(errno);
 
-  zx_handle_t h = GetHandle(fd);
+  zx_handle_t handle;
+  zx_status_t status = fdio_fd_transfer(fd, &handle);
+  ASSERT_EQ(status, ZX_OK) << zx_status_get_string(status);
 
   sync_completion_t completion;
 
   std::vector<std::thread> workers;
   for (int i = 0; i < 10; i++) {
-    workers.push_back(std::thread([&h, &completion]() {
-      ASSERT_EQ(sync_completion_wait(&completion, ZX_TIME_INFINITE), ZX_OK);
+    workers.push_back(std::thread([&handle, &completion]() {
+      zx_status_t status = sync_completion_wait(&completion, ZX_TIME_INFINITE);
+      ASSERT_EQ(status, ZX_OK) << zx_status_get_string(status);
 
       int16_t out_code;
-      zx_status_t status = fuchsia_net_SocketControlClose(h, &out_code);
+      status = fuchsia_net_SocketControlClose(handle, &out_code);
       if (status == ZX_OK) {
         EXPECT_EQ(out_code, 0) << strerror(out_code);
       } else {

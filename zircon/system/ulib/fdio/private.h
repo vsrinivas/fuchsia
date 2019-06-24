@@ -73,7 +73,6 @@ typedef struct fdio_ops {
 
 // fdio_t ioflag values
 #define IOFLAG_CLOEXEC (1 << 0)
-#define IOFLAG_SOCKET (1 << 1)
 #define IOFLAG_EPOLL (1 << 2)
 #define IOFLAG_WAITABLE (1 << 3)
 #define IOFLAG_SOCKET_CONNECTING (1 << 4)
@@ -198,9 +197,7 @@ fdio_t* fdio_vmofile_create(zx_handle_t control, zx_handle_t vmo,
                             zx_off_t offset, zx_off_t length, zx_off_t seek);
 
 // Wraps a socket with an fdio_t using socket io.
-fdio_t* fdio_socket_create(zx::socket socket,
-                           int flags,
-                           zx_info_socket_t info);
+fdio_t* fdio_socket_create(zx::socket socket, zx_info_socket_t info);
 
 // creates a message port and pair of simple io fdio_t's
 int fdio_pipe_pair(fdio_t** a, fdio_t** b);

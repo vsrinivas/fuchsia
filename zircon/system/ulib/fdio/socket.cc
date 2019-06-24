@@ -91,10 +91,6 @@ static ssize_t zxsio_sendmsg_stream(fdio_t* io, const struct msghdr* msg, int fl
 }
 
 static zx_status_t zxsio_clone(fdio_t* io, zx_handle_t* out_handle) {
-    // TODO: support unconnected sockets
-    if (!(*fdio_get_ioflag(io) & IOFLAG_SOCKET_CONNECTED)) {
-        return ZX_ERR_BAD_STATE;
-    }
     zx::socket out_socket;
     zx_status_t status = fdio_get_zxio_socket(io)->socket.socket.duplicate(
         ZX_RIGHT_SAME_RIGHTS, &out_socket);
@@ -106,10 +102,6 @@ static zx_status_t zxsio_clone(fdio_t* io, zx_handle_t* out_handle) {
 }
 
 static zx_status_t zxsio_unwrap(fdio_t* io, zx_handle_t* out_handle) {
-    // TODO: support unconnected sockets
-    if (!(*fdio_get_ioflag(io) & IOFLAG_SOCKET_CONNECTED)) {
-        return ZX_ERR_BAD_STATE;
-    }
     zxio_socket_t* sio = fdio_get_zxio_socket(io);
     *out_handle = sio->socket.socket.get();
     return ZX_OK;
@@ -382,15 +374,12 @@ static fdio_ops_t fdio_socket_dgram_ops = {
     .get_rcvtimeo = fdio_socket_get_rcvtimeo,
 };
 
-fdio_t* fdio_socket_create(zx::socket socket,
-                           int flags,
-                           zx_info_socket_t info) {
+fdio_t* fdio_socket_create(zx::socket socket, zx_info_socket_t info) {
     fdio_t* io = fdio_alloc(
         info.options & ZX_SOCKET_DATAGRAM ? &fdio_socket_dgram_ops : &fdio_socket_stream_ops);
     if (io == NULL) {
         return NULL;
     }
-    *fdio_get_ioflag(io) = IOFLAG_SOCKET | flags;
     zx_status_t status = zxio_socket_init(
         fdio_get_zxio_storage(io),
         {
@@ -404,6 +393,14 @@ fdio_t* fdio_socket_create(zx::socket socket,
     return io;
 }
 
+bool fdio_is_socket(fdio_t* io) {
+    if (!io) {
+        return false;
+    }
+    const fdio_ops_t* ops = fdio_get_ops(io);
+    return ops == &fdio_socket_dgram_ops || ops == &fdio_socket_stream_ops;
+}
+
 fdio_t* fd_to_socket(int fd, zxs_socket_t** out_socket) {
     fdio_t* io = fd_to_io(fd);
     if (io == NULL) {
@@ -411,7 +408,7 @@ fdio_t* fd_to_socket(int fd, zxs_socket_t** out_socket) {
         return NULL;
     }
 
-    if (fdio_get_ops(io) == &fdio_socket_stream_ops || fdio_get_ops(io) == &fdio_socket_dgram_ops) {
+    if (fdio_is_socket(io)) {
         zxio_socket_t* sio = fdio_get_zxio_socket(io);
         *out_socket = &sio->socket;
         return io;

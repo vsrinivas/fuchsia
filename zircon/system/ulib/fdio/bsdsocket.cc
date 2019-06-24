@@ -130,7 +130,7 @@ int socket(int domain, int type, int protocol) {
         return ERROR(status);
     }
 
-    fdio_t* io = fdio_socket_create(std::move(socket), 0, info);
+    fdio_t* io = fdio_socket_create(std::move(socket), info);
     if (io == NULL) {
         return ERROR(ZX_ERR_NO_RESOURCES);
     }
@@ -367,11 +367,12 @@ int accept4(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict len,
         return ERROR(status);
     }
 
-    fdio_t* accepted_io = fdio_socket_create(std::move(accepted), IOFLAG_SOCKET_CONNECTED, info);
+    fdio_t* accepted_io = fdio_socket_create(std::move(accepted), info);
     if (accepted_io == NULL) {
         fdio_release_reserved(nfd);
         return ERROR(ZX_ERR_NO_RESOURCES);
     }
+    *fdio_get_ioflag(accepted_io) |= IOFLAG_SOCKET_CONNECTED;
 
     if (flags & SOCK_NONBLOCK) {
         *fdio_get_ioflag(accepted_io) |= IOFLAG_NONBLOCK;
