@@ -5,13 +5,13 @@
 #ifndef SAFEMATH_SAFE_MATH_SHARED_IMPL_H_
 #define SAFEMATH_SAFE_MATH_SHARED_IMPL_H_
 
+#include <math.h>
 #include <safemath/safe_conversions.h>
 #include <stddef.h>
 #include <stdint.h>
 
 #include <cassert>
 #include <climits>
-#include <cmath>
 #include <cstdlib>
 #include <limits>
 #include <type_traits>

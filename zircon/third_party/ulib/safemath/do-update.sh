@@ -28,6 +28,11 @@ sed -i -e 's/BASE_/SAFEMATH_/g' *.h
 # Update include paths.
 sed -i -e 's/#include "base\/numerics\/\(.*\)"/#include <safemath\/\1>/g' *.h
 
+# This is some hackery because cmath isn't includable in kernel mode, so make
+# the library usable with math.h instead.
+sed -i -e 's/#include <cmath>/#include <math.h>/g' *.h
+sed -i -e 's/std::isfinite(/isfinite(/g' *.h
+
 # Update to local namespace.
 sed -i -e 's/namespace base/namespace safemath/g' *.h
 sed -i -e 's/base::/safemath::/g' *.h
