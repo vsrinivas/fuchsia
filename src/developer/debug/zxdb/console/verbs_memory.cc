@@ -15,6 +15,7 @@
 #include "src/developer/debug/zxdb/client/target.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/console/analyze_memory.h"
+#include "src/developer/debug/zxdb/console/async_output_buffer.h"
 #include "src/developer/debug/zxdb/console/command.h"
 #include "src/developer/debug/zxdb/console/command_utils.h"
 #include "src/developer/debug/zxdb/console/console.h"
@@ -182,20 +183,24 @@ Err DoStack(ConsoleContext* context, const Command& cmd) {
   else
     opts.bytes_to_read = *input_size;
 
-  AnalyzeMemory(opts, [bytes_to_read = opts.bytes_to_read](const Err& err,
-                                                           OutputBuffer output,
-                                                           uint64_t next_addr) {
+  auto async_output = fxl::MakeRefCounted<AsyncOutputBuffer>();
+  Console::get()->Output(async_output);
+
+  AnalyzeMemory(opts, [bytes_to_read = opts.bytes_to_read, async_output](
+                          const Err& err, OutputBuffer output,
+                          uint64_t next_addr) {
+    async_output->Append(std::move(output));
     if (err.has_error()) {
-      output.Append(err);
+      async_output->Append(err);
     } else {
       // Help text for continuation.
-      output.Append(
+      async_output->Append(
           Syntax::kComment,
           fxl::StringPrintf("↓ For more lines: stack -n %d 0x%" PRIx64,
                             static_cast<int>(bytes_to_read / sizeof(uint64_t)),
                             next_addr));
     }
-    Console::get()->Output(output);
+    async_output->Complete();
   });
   return Err();
 }

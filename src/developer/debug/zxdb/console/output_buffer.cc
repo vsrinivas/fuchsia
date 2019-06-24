@@ -239,6 +239,8 @@ void OutputBuffer::Append(const Err& err) {
   spans_.push_back(Span(Syntax::kNormal, err.msg()));
 }
 
+void OutputBuffer::Append(Span span) { spans_.push_back(std::move(span)); }
+
 void OutputBuffer::FormatHelp(const std::string& str) {
   for (auto line :
        fxl::SplitString(str, "\n", fxl::kKeepWhitespace, fxl::kSplitWantAll)) {

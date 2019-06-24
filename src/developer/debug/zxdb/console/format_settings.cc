@@ -109,24 +109,24 @@ OutputBuffer FormatSettingStore(const SettingStore& store) {
 
 OutputBuffer FormatSetting(const Setting& setting) {
   OutputBuffer out;
-  out.Append({Syntax::kHeading, setting.info.name});
+  out.Append(Syntax::kHeading, setting.info.name);
   out.Append(OutputBuffer("\n"));
 
   out.Append(setting.info.description);
   out.Append(OutputBuffer("\n\n"));
 
-  out.Append({Syntax::kHeading, "Type: "});
+  out.Append(Syntax::kHeading, "Type: ");
   out.Append(SettingTypeToString(setting.value.type));
   out.Append("\n\n");
 
-  out.Append({Syntax::kHeading, "Value(s):\n"});
+  out.Append(Syntax::kHeading, "Value(s):\n");
   out.Append(FormatSettingShort(setting));
 
   // List have a copy-paste value for setting the value.
   if (setting.value.is_list()) {
     out.Append("\n");
-    out.Append({Syntax::kComment,
-                "See \"help set\" about using the set value for lists.\n"});
+    out.Append(Syntax::kComment,
+               "See \"help set\" about using the set value for lists.\n");
     out.Append(fxl::StringPrintf("Set value: %s",
                                  SettingValueToString(setting.value).c_str()));
     out.Append("\n");

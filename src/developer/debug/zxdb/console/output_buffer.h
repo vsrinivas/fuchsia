@@ -88,6 +88,8 @@ const char* TextForegroundColorToString(TextForegroundColor);
 // and may want to add things like coloring in the future.
 class OutputBuffer {
  public:
+  struct Span;
+
   OutputBuffer();
 
   // Creates an output buffer with one substring in it.
@@ -105,6 +107,7 @@ class OutputBuffer {
   void Append(Syntax syntax, std::string str);
   void Append(OutputBuffer buffer);
   void Append(const Err& err);
+  void Append(Span span);
 
   // Outputs the given help string, applying help-style formatting.
   void FormatHelp(const std::string& str);
@@ -120,6 +123,9 @@ class OutputBuffer {
   size_t UnicodeCharWidth() const;
 
   void Clear();
+
+  std::vector<Span>& spans() { return spans_; }
+  const std::vector<Span>& spans() const { return spans_; }
 
   bool empty() const { return spans_.empty(); }
 
@@ -137,22 +143,22 @@ class OutputBuffer {
   bool operator==(const OutputBuffer& other) const;
 
  private:
-  struct Span {
-    Span(Syntax s, std::string t);
-    Span(std::string t, TextForegroundColor fg, TextBackgroundColor bg);
-
-    Syntax syntax = Syntax::kNormal;
-
-    // Explicit colors will only be used when Syntax is kNormal.
-    TextForegroundColor foreground = TextForegroundColor::kDefault;
-    TextBackgroundColor background = TextBackgroundColor::kDefault;
-
-    std::string text;
-  };
-
   std::vector<Span> NormalizedSpans() const;
 
   std::vector<Span> spans_;
+};
+
+struct OutputBuffer::Span {
+  Span(Syntax s, std::string t);
+  Span(std::string t, TextForegroundColor fg, TextBackgroundColor bg);
+
+  Syntax syntax = Syntax::kNormal;
+
+  // Explicit colors will only be used when Syntax is kNormal.
+  TextForegroundColor foreground = TextForegroundColor::kDefault;
+  TextBackgroundColor background = TextBackgroundColor::kDefault;
+
+  std::string text;
 };
 
 }  // namespace zxdb

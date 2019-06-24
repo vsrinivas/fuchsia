@@ -8,6 +8,8 @@ static_library("console") {
     "actions.h",
     "analyze_memory.cc",
     "analyze_memory.h",
+    "async_output_buffer.cc",
+    "async_output_buffer.h",
     "command.cc",
     "command.h",
     "command_group.h",
@@ -104,6 +106,7 @@ source_set("tests") {
   sources = [
     "actions_unittest.cc",
     "analyze_memory_unittest.cc",
+    "async_output_buffer_unittest.cc",
     "command_parser_unittest.cc",
     "command_utils_unittest.cc",
     "format_context_unittest.cc",

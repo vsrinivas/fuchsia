@@ -5,12 +5,15 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_CONSOLE_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_CONSOLE_H_
 
+#include <map>
+
 #include "src/developer/debug/zxdb/console/command.h"
 #include "src/developer/debug/zxdb/console/console_context.h"
 #include "src/lib/fxl/macros.h"
 
 namespace zxdb {
 
+class AsyncOutputBuffer;
 class OutputBuffer;
 class Session;
 
@@ -33,6 +36,10 @@ class Console {
   void Output(const std::string& s);
   void Output(const Err& err);
 
+  // Synchronously prints the output if the async buffer is complete. Otherwise
+  // adds a listener and prints the output to the console when it is complete.
+  void Output(fxl::RefPtr<AsyncOutputBuffer> output);
+
   // Clears the contents of the console.
   virtual void Clear() = 0;
 
@@ -50,6 +57,11 @@ class Console {
 
  protected:
   static Console* singleton_;
+
+  // Track all asynchronous output pending. We want to store a reference and
+  // lookup by pointer, so the object is duplicated here (RefPtr doesn't like
+  // to be put in a set).
+  std::map<AsyncOutputBuffer*, fxl::RefPtr<AsyncOutputBuffer>> async_output_;
 
   ConsoleContext context_;
 
