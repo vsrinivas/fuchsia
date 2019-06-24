@@ -48,6 +48,16 @@ std::string CommitIdToDisplayName(const storage::CommitId& commit_id);
 bool CommitDisplayNameToCommitId(const std::string& commit_display_name,
                                  storage::CommitId* commit_id);
 
+// Converts an entry's key to a string suitable to be passed to Inspect for
+// Inspect to show in its user interface and its outputs.
+std::string KeyToDisplayName(const std::string& key);
+
+// The inverse of |KeyToDisplayName|, converts a string in the form returned by
+// |KeyToDisplayName| to the |std::string| from which the display name was
+// generated and returns true. Or doesn't, because it doesn't recognize the
+// display name due to some corruption or mistake, and returns false.
+bool KeyDisplayNameToKey(const std::string& key_display_name, std::string* key);
+
 }  // namespace ledger
 
 #endif  // SRC_LEDGER_BIN_INSPECT_INSPECT_H_

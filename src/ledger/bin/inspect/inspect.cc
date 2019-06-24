@@ -8,6 +8,7 @@
 
 #include <string>
 
+#include "src/ledger/bin/app/constants.h"
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/lib/fxl/strings/string_number_conversions.h"
@@ -70,6 +71,29 @@ bool CommitDisplayNameToCommitId(const std::string& commit_display_name,
   } else {
     return FromHex(commit_display_name, commit_id);
   }
+}
+
+std::string KeyToDisplayName(const std::string& key) {
+  // NOTE(nathaniel): 48 chosen arbirarily; no particular meaning to it other
+  // than how "("<- text 24 chars wide ->") <- hex 48 chars wide ->" seems to
+  // look in a terminal.
+  if (IsStringPrintable(key) && key.size() < 48) {
+    return "(\"" + key + "\") " + convert::ToHex(key);
+  } else {
+    return convert::ToHex(key);
+  }
+}
+
+bool KeyDisplayNameToKey(const std::string& key_display_name,
+                         std::string* key) {
+  fxl::StringView hex_portion = key_display_name;
+  if (key_display_name.size() >= 5) {
+    size_t key_length = (key_display_name.size() - 5) / 3;
+    if (key_display_name[key_length + 4] == ' ') {
+      hex_portion = hex_portion.substr(key_length + 5);
+    }
+  }
+  return hex_portion.size() <= kMaxKeySize * 2 && FromHex(hex_portion, key);
 }
 
 }  // namespace ledger

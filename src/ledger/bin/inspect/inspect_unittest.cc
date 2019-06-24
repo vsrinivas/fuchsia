@@ -129,5 +129,82 @@ TEST(Inspect, CommitDisplayNameToCommitId) {
       &malformed_commit_id_of_expected_length));
 }
 
+TEST(Inspect, KeyToDisplayName) {
+  EXPECT_EQ("(\"\") ", KeyToDisplayName(""));
+
+  EXPECT_EQ(std::string(34, '0'), KeyToDisplayName(std::string(17, '\0')));
+
+  EXPECT_EQ("(\"Nuage\") 4E75616765", KeyToDisplayName("Nuage"));
+
+  EXPECT_EQ(std::string(kMaxKeySize * 2, '4'),
+            KeyToDisplayName(std::string(kMaxKeySize, 'D')));
+
+  // Taken from a real Ledger-using component!
+  EXPECT_EQ(
+      "(\"Module/nathaniel_todo_list\") "
+      "4D6F64756C652F6E617468616E69656C5F746F646F5F6C697374",
+      KeyToDisplayName("Module/nathaniel_todo_list"));
+
+  // Taken from a real Ledger-using component! ...but seems random and of no
+  // particular significance.
+  EXPECT_EQ(
+      "357C2814B45F1E83D463624E75F659B6",
+      KeyToDisplayName(
+          "\x35\x7C\x28\x14\xB4\x5F\x1E\x83\xD4\x63\x62\x4E\x75\xF6\x59\xB6"));
+}
+
+TEST(Inspect, KeyDisplayNameToKey) {
+  std::string zero_length_key;
+  EXPECT_TRUE(KeyDisplayNameToKey("", &zero_length_key));
+  EXPECT_EQ("", zero_length_key);
+
+  std::string all_zeros_key;
+  EXPECT_TRUE(
+      KeyDisplayNameToKey(std::string(kMaxKeySize * 2, '0'), &all_zeros_key));
+  EXPECT_EQ(std::string(kMaxKeySize, '\0'), all_zeros_key);
+
+  std::string max_size_key;
+  EXPECT_TRUE(
+      KeyDisplayNameToKey(std::string(kMaxKeySize * 2, '5'), &max_size_key));
+  EXPECT_EQ(std::string(kMaxKeySize, 'U'), max_size_key);
+
+  // Taken from a real Ledger-using component!
+  std::string module_nathaniel_todo_list;
+  EXPECT_TRUE(KeyDisplayNameToKey(
+      "(\"Module/nathaniel_todo_list\") "
+      "4D6F64756C652F6E617468616E69656C5F746F646F5F6C697374",
+      &module_nathaniel_todo_list));
+  EXPECT_EQ("Module/nathaniel_todo_list", module_nathaniel_todo_list);
+
+  // Taken from a real Ledger-using component! ...but seems random and of no
+  // particular significance.
+  std::string arbitrary_key;
+  EXPECT_TRUE(
+      KeyDisplayNameToKey("357C2814B45F1E83D463624E75F659B6", &arbitrary_key));
+  EXPECT_EQ("\x35\x7C\x28\x14\xB4\x5F\x1E\x83\xD4\x63\x62\x4E\x75\xF6\x59\xB6",
+            arbitrary_key);
+
+  std::string illegal_length_key;
+  EXPECT_FALSE(KeyDisplayNameToKey("A", &illegal_length_key));
+
+  std::string leading_whitespace_key;
+  EXPECT_FALSE(KeyDisplayNameToKey(" 4D", &leading_whitespace_key));
+
+  std::string junk_characters_in_hex_portion_key;
+  EXPECT_FALSE(
+      KeyDisplayNameToKey("(\" Junk characters! \") 3#D25ABC402>C71.8UF!28",
+                          &junk_characters_in_hex_portion_key));
+
+  std::string too_long_parenthesized_key;
+  EXPECT_FALSE(KeyDisplayNameToKey("(\"" + std::string(kMaxKeySize + 1, '3') +
+                                       "\") " +
+                                       std::string(kMaxKeySize * 2 + 2, '3'),
+                                   &too_long_parenthesized_key));
+
+  std::string too_long_unparenthesized_key;
+  EXPECT_FALSE(KeyDisplayNameToKey(std::string(kMaxKeySize * 2 + 2, '4'),
+                                   &too_long_unparenthesized_key));
+}
+
 }  // namespace
 }  // namespace ledger
