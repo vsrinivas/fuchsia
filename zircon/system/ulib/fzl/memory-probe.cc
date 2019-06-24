@@ -8,8 +8,8 @@
 #include <stdio.h>
 #include <zircon/assert.h>
 #include <zircon/syscalls/exception.h>
-#include <zircon/syscalls/port.h>
-#include <lib/zx/port.h>
+#include <lib/zx/channel.h>
+#include <lib/zx/exception.h>
 #include <lib/zx/process.h>
 #include <lib/zx/thread.h>
 
@@ -44,50 +44,29 @@ bool do_probe(ProbeOperation op, const void* addr) {
     alignas(16) static uint8_t thread_stack[128];
     void* stack = thread_stack + sizeof(thread_stack);
 
-    zx::port port;
-    status = zx::port::create(0, &port);
+    zx::channel exception_channel;
+    status = thread.create_exception_channel(0, &exception_channel);
     if (status != ZX_OK)
         return false;
-
-    // Cause the port to be signaled with kThreadKey when the background thread crashes or teminates without crashing.
-    constexpr uint64_t kThreadKey = 0x42;
-    if (thread.wait_async(port, kThreadKey, ZX_THREAD_TERMINATED, ZX_WAIT_ASYNC_ONCE) != ZX_OK) {
-        return false;
-    }
-    if (zx_task_bind_exception_port(thread.get(), port.get(), kThreadKey, 0) != ZX_OK) {
-        return false;
-    }
 
     thread.start(&except_thread_func, stack, static_cast<uintptr_t>(op), reinterpret_cast<uintptr_t>(addr));
 
     // Wait for crash or thread completion.
-    zx_port_packet_t packet;
-    if (port.wait(zx::time::infinite(), &packet) == ZX_OK) {
-        if (ZX_PKT_IS_EXCEPTION(packet.type)) {
-            // Thread crashed so the operation failed. The thread is now in a suspended state and
-            // needs to be explicitly terminated.
-            thread.kill();
+    zx_signals_t signals = 0;
+    status = exception_channel.wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
+                                        zx::time::infinite(), &signals);
+    if (status != ZX_OK)
+        return false;
 
-            // Wait for the kill operation to complete so we don't
-            // interrupt exception handling by closing port.
-            // TODO(ZX-4105): Reexamine once killing and exceptions have defined interactions.
-            zx_status_t status = port.wait(zx::time::infinite(), &packet);
-            ZX_DEBUG_ASSERT(status == ZX_OK
-                    && ZX_PKT_IS_SIGNAL_ONE(packet.type)
-                    && packet.key == kThreadKey
-                    && (packet.signal.observed & ZX_THREAD_TERMINATED));
-
-            return false;
-        }
-        if (ZX_PKT_IS_SIGNAL_ONE(packet.type)) {
-            if (packet.key == kThreadKey && (packet.signal.observed & ZX_THREAD_TERMINATED)) {
-                // Thread terminated normally so the memory is readable/writable.
-                return true;
-            }
-        }
+    if (signals & ZX_CHANNEL_READABLE) {
+        // Thread crashed so the operation failed. The thread is now in a suspended state and
+        // needs to be explicitly terminated.
+        thread.kill();
+        return false;
     }
 
-    return false;
+    // Thread terminated normally so the memory is readable/writable.
+    return true;
 }
 
 } // namespace
