@@ -3,6 +3,72 @@
 // found in the LICENSE file.
 
 //! fidl table validation tools.
+//!
+//! This crate's macro generates code to validate fidl tables.
+//!
+//! ## Basic Example
+//!
+//! ```
+//! // Some fidl table defined somewhere...
+//! struct FidlTable {
+//!     required: Option<usize>,
+//!     optional: Option<usize>,
+//!     has_default: Option<usize>,
+//! }
+//!
+//! #[derive(ValidFidlTable)]
+//! #[fidl_table_src(FidlHello)]
+//! struct ValidatedFidlTable {
+//!     // The default is #[fidl_field_type(required)]
+//!     required: usize,
+//!     #[fidl_field_type(optional)]
+//!     optional: Option<usize>,
+//!     #[fidl_field_type(default = 22)]
+//!     has_default: usize,
+//! }
+//! ```
+//!
+//! This code generates a [TryFrom][std::convert::TryFrom]<FidlTable> implementation for
+//! `ValidatedFidlTable`:
+//!
+//! ```
+//! pub enum FidlTableValidationError {
+//!     MissingField(FidlTableMissingFieldError)
+//! }
+//!
+//! impl TryFrom<FidlTable> for ValidatedFidlTable {
+//!     type Error = FidlTableValidationError;
+//!     fn try_from(src: FidlTable) -> Result<ValidatedFidlTable, Self::Error> { .. }
+//! }
+//! ```
+//!
+//! ## Custom Validations
+//!
+//! When tables have logical relationships between fields that must be
+//! checked, you can use a custom validator:
+//!
+//! ```
+//! struct FidlTableValidator;
+//!
+//! impl Validate<ValidatedFidlTable> for FidlTableValidator {
+//!     type Error = String; // Can be any error type.
+//!     fn validate(candidate: &ValidatedFidlTable) -> Result<(), Self::Error> {
+//!         match candidate.required {
+//!             10 => {
+//!                 Err(String::from("10 is not a valid value!"))
+//!             }
+//!             _ => Ok(())
+//!         }
+//!     }
+//! }
+//!
+//! #[fidl_table_src(FidlHello)]
+//! #[fidl_table_validator(FidlTableValidator)]
+//! struct ValidFidlTable {
+//! ...
+//! ```
+//!
+///! This adds a `Logical(YourErrorType)` variant to the generated error enum.
 
 // TODO(turnage): Infer optionality based on parsing for
 //                "Option<" in field types.
