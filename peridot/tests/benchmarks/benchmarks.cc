@@ -25,7 +25,7 @@ int main(int argc, const char** argv) {
   // Performance tests implemented in the Zircon repo.
   benchmarks_runner.AddLibPerfTestBenchmark(
       "zircon.perf_test",
-      "/pkgfs/packages/garnet_benchmarks/0/test/sys/perf-test");
+      "/pkgfs/packages/fuchsia_benchmarks/0/test/sys/perf-test");
 
   // Performance tests implemented in the Garnet repo (the name
   // "zircon_benchmarks" is now misleading).
