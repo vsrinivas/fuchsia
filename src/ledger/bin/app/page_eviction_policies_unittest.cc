@@ -7,6 +7,7 @@
 #include <lib/callback/capture.h>
 #include <lib/callback/set_when_called.h>
 
+#include "garnet/public/lib/timekeeper/test_clock.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
@@ -16,6 +17,8 @@ namespace {
 
 using ::testing::ElementsAre;
 using ::testing::IsEmpty;
+
+constexpr zx::duration kUnusedTimeLimit = zx::hour(5);
 
 // A wrapper storage::Iterator for the elements of an std::vector<T>.
 template <class T>
@@ -189,6 +192,147 @@ TEST_F(PageEvictionPoliciesTest, LeastRecentyUsedErrorWhileEvicting) {
       callback::Capture(callback::SetWhenCalled(&called), &status));
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::INTERNAL_ERROR, status);
+}
+
+TEST_F(PageEvictionPoliciesTest, AgeBased) {
+  FakePageEvictionDelegate delegate;
+  std::string ledger_name = "ledger";
+  timekeeper::TestClock test_clock;
+  zx::time_utc now = zx::time_utc(2) + kUnusedTimeLimit;
+  test_clock.Set(now);
+  std::vector<const PageInfo> pages = {
+      {ledger_name, "page1", zx::time_utc(1)},
+      {ledger_name, "page2", zx::time_utc(2)},
+      {ledger_name, "page3", zx::time_utc(3)},
+      {ledger_name, "page4", zx::time_utc(4)},
+  };
+
+  std::unique_ptr<PageEvictionPolicy> policy = NewAgeBasedPolicy(
+      environment_.coroutine_service(), &delegate, &test_clock);
+
+  // Expect to only evict the pages that were closed for |kUnusedTimeLimit| and
+  // more, i.e. "page1", "page2".
+  bool called;
+  Status status;
+  policy->SelectAndEvict(
+      std::make_unique<VectorIterator<const PageInfo>>(pages),
+      callback::Capture(callback::SetWhenCalled(&called), &status));
+  EXPECT_TRUE(called);
+  EXPECT_EQ(Status::OK, status);
+  EXPECT_THAT(delegate.GetEvictedPages(), ElementsAre("page1", "page2"));
+}
+
+TEST_F(PageEvictionPoliciesTest, AgeBasedWithOpenPages) {
+  FakePageEvictionDelegate delegate;
+  std::string ledger_name = "ledger";
+  timekeeper::TestClock test_clock;
+  zx::time_utc now = zx::time_utc(2) + kUnusedTimeLimit;
+  test_clock.Set(now);
+  std::vector<const PageInfo> pages = {
+      {ledger_name, "page1", PageInfo::kOpenedPageTimestamp},
+      {ledger_name, "page2", zx::time_utc(2)},
+      {ledger_name, "page3", zx::time_utc(3)},
+      {ledger_name, "page4", zx::time_utc(4)},
+  };
+
+  std::unique_ptr<PageEvictionPolicy> policy = NewAgeBasedPolicy(
+      environment_.coroutine_service(), &delegate, &test_clock);
+
+  // "page1" should not be evicted as it is marked as open. Expect to only evict
+  // the page closed for |kUnusedTimeLimit| and more, i.e. "page2".
+  bool called;
+  Status status;
+  policy->SelectAndEvict(
+      std::make_unique<VectorIterator<const PageInfo>>(pages),
+      callback::Capture(callback::SetWhenCalled(&called), &status));
+  EXPECT_TRUE(called);
+  EXPECT_EQ(Status::OK, status);
+  EXPECT_THAT(delegate.GetEvictedPages(), ElementsAre("page2"));
+}
+
+TEST_F(PageEvictionPoliciesTest, AgeBasedNoPagesToEvict) {
+  FakePageEvictionDelegate delegate;
+  std::string ledger_name = "ledger";
+  timekeeper::TestClock test_clock;
+  zx::time_utc now = zx::time_utc(5) + kUnusedTimeLimit;
+  test_clock.Set(now);
+  std::vector<const PageInfo> pages = {
+      {ledger_name, "page1", PageInfo::kOpenedPageTimestamp},
+      {ledger_name, "page2", zx::time_utc(2)},
+      {ledger_name, "page3", zx::time_utc(3)},
+      {ledger_name, "page4", zx::time_utc(4)},
+  };
+
+  delegate.SetPagesNotToEvict({"page2", "page3", "page4"});
+
+  std::unique_ptr<PageEvictionPolicy> policy = NewAgeBasedPolicy(
+      environment_.coroutine_service(), &delegate, &test_clock);
+
+  // "page1" is marked as open, and pages 2-4 will fail to be evicted. The
+  // returned status should be ok, and not pages will be evicted.
+  bool called;
+  Status status;
+  policy->SelectAndEvict(
+      std::make_unique<VectorIterator<const PageInfo>>(pages),
+      callback::Capture(callback::SetWhenCalled(&called), &status));
+  EXPECT_TRUE(called);
+  EXPECT_EQ(Status::OK, status);
+  EXPECT_THAT(delegate.GetEvictedPages(), IsEmpty());
+}
+
+TEST_F(PageEvictionPoliciesTest, AgeBasedErrorWhileEvicting) {
+  FakePageEvictionDelegate delegate;
+  std::string ledger_name = "ledger";
+  timekeeper::TestClock test_clock;
+  zx::time_utc now = zx::time_utc(5) + kUnusedTimeLimit;
+  test_clock.Set(now);
+  std::vector<const PageInfo> pages = {
+      {ledger_name, "page1", zx::time_utc(1)},
+      {ledger_name, "page2", zx::time_utc(2)},
+      {ledger_name, "page3", zx::time_utc(3)},
+      {ledger_name, "page4", zx::time_utc(4)},
+  };
+  delegate.SetTryEvictPageStatus(Status::INTERNAL_ERROR);
+
+  // If |TryEvictPage| fails, so should |SelectAndEvict|. Expect to find the
+  // same error status.
+  std::unique_ptr<PageEvictionPolicy> policy = NewAgeBasedPolicy(
+      environment_.coroutine_service(), &delegate, &test_clock);
+  bool called;
+  Status status;
+  policy->SelectAndEvict(
+      std::make_unique<VectorIterator<const PageInfo>>(pages),
+      callback::Capture(callback::SetWhenCalled(&called), &status));
+  EXPECT_TRUE(called);
+  EXPECT_EQ(Status::INTERNAL_ERROR, status);
+}
+
+TEST_F(PageEvictionPoliciesTest, AgeBasedWithCustomizedTimeLimit) {
+  FakePageEvictionDelegate delegate;
+  std::string ledger_name = "ledger";
+  timekeeper::TestClock test_clock;
+  test_clock.Set(zx::time_utc(2));
+  std::vector<const PageInfo> pages = {
+      {ledger_name, "page1", zx::time_utc(1)},
+      {ledger_name, "page2", zx::time_utc(2)},
+      {ledger_name, "page3", zx::time_utc(3)},
+      {ledger_name, "page4", zx::time_utc(4)},
+  };
+
+  std::unique_ptr<PageEvictionPolicy> policy =
+      NewAgeBasedPolicy(environment_.coroutine_service(), &delegate,
+                        &test_clock, zx::duration(1));
+
+  // Expect to only evict the pages that were closed for |kUnusedTimeLimit + 1|,
+  // i.e. "page1".
+  bool called;
+  Status status;
+  policy->SelectAndEvict(
+      std::make_unique<VectorIterator<const PageInfo>>(pages),
+      callback::Capture(callback::SetWhenCalled(&called), &status));
+  EXPECT_TRUE(called);
+  EXPECT_EQ(Status::OK, status);
+  EXPECT_THAT(delegate.GetEvictedPages(), ElementsAre("page1"));
 }
 
 }  // namespace

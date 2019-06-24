@@ -5,6 +5,8 @@
 #ifndef SRC_LEDGER_BIN_APP_PAGE_EVICTION_POLICIES_H_
 #define SRC_LEDGER_BIN_APP_PAGE_EVICTION_POLICIES_H_
 
+#include <lib/timekeeper/clock.h>
+
 #include "src/ledger/bin/app/types.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/storage/public/iterator.h"
@@ -75,6 +77,21 @@ class PageEvictionDelegate {
 std::unique_ptr<PageEvictionPolicy> NewLeastRecentyUsedPolicy(
     coroutine::CoroutineService* corroutine_service,
     PageEvictionDelegate* delegate);
+
+// Creates and returns a new Age-Based policy, which evicts the pages that
+// were closed and not used for at least 5 hours. The given delegate should
+// outlive the returned object.
+std::unique_ptr<PageEvictionPolicy> NewAgeBasedPolicy(
+    coroutine::CoroutineService* corroutine_service,
+    PageEvictionDelegate* delegate, timekeeper::Clock* clock);
+
+// Creates and returns a new Age-Based policy, which evicts the pages that
+// were closed and not used for at least the specified duration. The given
+// delegate should outlive the returned object.
+std::unique_ptr<PageEvictionPolicy> NewAgeBasedPolicy(
+    coroutine::CoroutineService* corroutine_service,
+    PageEvictionDelegate* delegate, timekeeper::Clock* clock,
+    zx::duration unused_time_limit);
 
 }  // namespace ledger
 
