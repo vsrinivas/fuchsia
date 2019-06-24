@@ -65,6 +65,8 @@ TEST(ChannelInternalTest, CallFinishWithoutPreviouslyCallingCallReturnsBadState)
                                                        &act_bytes, &act_handles));
 }
 
+// TODO(ZX-4422) Test is flaky
+#if 0
 // Test current behavior when transferring a channel with pending calls out of the current process.
 // TODO(ZX-4233): This test ensures that currently undefined behavior does not change
 // unexpectedly. Once the behavior is properly undefined, this test should be updated.
@@ -190,6 +192,7 @@ TEST(ChannelInternalTest, TransferChannelWithPendingCallInSourceProcess) {
         FAIL("caller_thread encountered an error on channel::call: %s", caller_error.load());
     }
 }
+#endif
 
 } // namespace
 } // namespace channel
