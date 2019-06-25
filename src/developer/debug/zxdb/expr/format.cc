@@ -425,7 +425,7 @@ void FormatReference(FormatNode* node, const FormatExprValueOptions& options,
 }  // namespace
 
 void FillFormatNodeValue(FormatNode* node, fxl::RefPtr<EvalContext> context,
-                         fit::deferred_action<fit::callback<void()>> cb) {
+                         fit::deferred_callback cb) {
   switch (node->source()) {
     case FormatNode::kValue:
       // Already has the value.
@@ -434,9 +434,7 @@ void FillFormatNodeValue(FormatNode* node, fxl::RefPtr<EvalContext> context,
       // Evaluate the expression.
       // TODO(brettw) remove this make_shared when EvalExpression takes a
       // fit::callback.
-      auto shared_cb =
-          std::make_shared<fit::deferred_action<fit::callback<void()>>>(
-              std::move(cb));
+      auto shared_cb = std::make_shared<fit::deferred_callback>(std::move(cb));
       EvalExpression(node->expression(), context, true,
                      [weak_node = node->GetWeakPtr(), shared_cb](
                          const Err& err, ExprValue value) {
@@ -462,7 +460,7 @@ void FillFormatNodeValue(FormatNode* node, fxl::RefPtr<EvalContext> context,
 void FillFormatNodeDescription(FormatNode* node,
                                const FormatExprValueOptions& options,
                                fxl::RefPtr<EvalContext> context,
-                               fit::deferred_action<fit::callback<void()>> cb) {
+                               fit::deferred_callback cb) {
   if (node->state() == FormatNode::kEmpty ||
       node->state() == FormatNode::kUnevaluated || node->err().has_error()) {
     node->set_state(FormatNode::kDescribed);

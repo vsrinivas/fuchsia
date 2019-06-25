@@ -31,22 +31,19 @@ class FormatTest : public TestWithLoop {
   void SyncFormat(FormatNode* node, const FormatExprValueOptions& opts) {
     // Populate the value.
     bool called = false;
-    FillFormatNodeValue(
-        node, eval_context_,
-        fit::deferred_action<fit::callback<void()>>([&called]() {
-          debug_ipc::MessageLoop::Current()->QuitNow();
-          called = true;
-        }));
+    FillFormatNodeValue(node, eval_context_, fit::defer_callback([&called]() {
+                          debug_ipc::MessageLoop::Current()->QuitNow();
+                          called = true;
+                        }));
     if (!called)
       loop().Run();
 
     called = false;
-    FillFormatNodeDescription(
-        node, opts, eval_context_,
-        fit::deferred_action<fit::callback<void()>>([&called]() {
-          debug_ipc::MessageLoop::Current()->QuitNow();
-          called = true;
-        }));
+    FillFormatNodeDescription(node, opts, eval_context_,
+                              fit::defer_callback([&called]() {
+                                debug_ipc::MessageLoop::Current()->QuitNow();
+                                called = true;
+                              }));
     if (!called)
       loop().Run();
   }

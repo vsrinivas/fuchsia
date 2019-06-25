@@ -163,7 +163,7 @@ class FormatNode {
   // callback will be issued (possibly from within this call stack) when the
   // value is filled.
   void FillProgramaticValue(fxl::RefPtr<EvalContext> context,
-                            fit::deferred_action<fit::callback<void()>> cb);
+                            fit::deferred_callback cb);
 
   // The value. This will be valid when the State == kHasValue. The description
   // and type might not be up-to-date, see FillFormatNodeDescription().

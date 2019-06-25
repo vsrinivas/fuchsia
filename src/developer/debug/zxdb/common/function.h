@@ -5,6 +5,10 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_COMMON_FUNCTION_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_COMMON_FUNCTION_H_
 
+#include <functional>
+
+#include "lib/fit/function.h"
+
 namespace zxdb {
 
 // Converts a fit::callback<...> to a std::function<...>.

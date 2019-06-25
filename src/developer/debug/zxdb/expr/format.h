@@ -31,7 +31,7 @@ class FormatNode;
 //
 // TODO(brettw) should this be a member of FormatNode?
 void FillFormatNodeValue(FormatNode* node, fxl::RefPtr<EvalContext> context,
-                         fit::deferred_action<fit::callback<void()>> cb);
+                         fit::deferred_callback cb);
 
 // Fills the description and children of a FormatNode based on the current
 // value().
@@ -46,7 +46,7 @@ void FillFormatNodeValue(FormatNode* node, fxl::RefPtr<EvalContext> context,
 void FillFormatNodeDescription(FormatNode* node,
                                const FormatExprValueOptions& options,
                                fxl::RefPtr<EvalContext> context,
-                               fit::deferred_action<fit::callback<void()>> cb);
+                               fit::deferred_callback cb);
 
 }  // namespace zxdb
 
