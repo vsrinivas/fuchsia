@@ -250,10 +250,10 @@ source_set("display") {
     "displays/color_transform.h",
     "displays/display.cc",
     "displays/display.h",
+    "displays/display_controller_watcher.cc",
+    "displays/display_controller_watcher.h",
     "displays/display_manager.cc",
     "displays/display_manager.h",
-    "displays/display_watcher.cc",
-    "displays/display_watcher.h",
   ]
   public_deps = [
     "//zircon/public/fidl/fuchsia-hardware-display",

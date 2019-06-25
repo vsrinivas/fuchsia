@@ -30,21 +30,21 @@ DisplayManager::~DisplayManager() {
   }
 }
 
-void DisplayManager::WaitForDefaultDisplay(fit::closure callback) {
+void DisplayManager::WaitForDefaultDisplayController(fit::closure callback) {
   FXL_DCHECK(!default_display_);
 
   display_available_cb_ = std::move(callback);
-  display_watcher_.WaitForDisplay(
-      [this](zx::channel device, zx::channel dc_handle) {
-        dc_device_ = std::move(device);
-        dc_channel_ = dc_handle.get();
-        display_controller_.Bind(std::move(dc_handle));
+  dc_watcher_.WaitForDisplayController(
+      [this](zx::channel dc_device, zx::channel dc_channel) {
+        dc_device_ = std::move(dc_device);
+        dc_channel_ = dc_channel.get();
+        display_controller_.Bind(std::move(dc_channel));
 
         // TODO(FIDL-183): Resolve this hack when synchronous interfaces
         // support events.
         auto dispatcher =
             static_cast<fuchsia::hardware::display::Controller::Proxy_*>(
-                event_dispatcher_.get());
+                dc_event_dispatcher_.get());
         dispatcher->DisplaysChanged = [this](auto added, auto removed) {
           DisplaysChanged(std::move(added), std::move(removed));
         };
@@ -69,7 +69,7 @@ void DisplayManager::OnAsync(async_dispatcher_t* dispatcher,
                              const zx_packet_signal_t* signal) {
   if (status & ZX_CHANNEL_PEER_CLOSED) {
     // TODO(SCN-244): handle this more robustly.
-    FXL_DCHECK(false) << "Display channel lost";
+    FXL_DCHECK(false) << "Display controller channel lost";
     return;
   }
 
@@ -78,7 +78,7 @@ void DisplayManager::OnAsync(async_dispatcher_t* dispatcher,
   fidl::Message msg(fidl::BytePart(byte_buffer, ZX_CHANNEL_MAX_MSG_BYTES),
                     fidl::HandlePart());
   if (msg.Read(dc_channel_, 0) != ZX_OK || !msg.has_header()) {
-    FXL_LOG(WARNING) << "Display callback read failed";
+    FXL_LOG(WARNING) << "Display controller callback read failed";
     return;
   }
   // Re-arm the wait.
@@ -87,7 +87,7 @@ void DisplayManager::OnAsync(async_dispatcher_t* dispatcher,
   // TODO(FIDL-183): Resolve this hack when synchronous interfaces
   // support events.
   static_cast<fuchsia::hardware::display::Controller::Proxy_*>(
-      event_dispatcher_.get())
+      dc_event_dispatcher_.get())
       ->Dispatch_(std::move(msg));
 }
 

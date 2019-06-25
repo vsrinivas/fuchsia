@@ -36,7 +36,7 @@ GfxSystem::GfxSystem(SystemContext context,
     return;
   }
 
-  display_manager_->WaitForDefaultDisplay(DelayedInitClosure());
+  display_manager_->WaitForDefaultDisplayController(DelayedInitClosure());
 }
 
 GfxSystem::~GfxSystem() {

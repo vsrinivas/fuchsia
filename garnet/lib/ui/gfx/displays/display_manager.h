@@ -14,7 +14,7 @@
 #include "fuchsia/hardware/display/cpp/fidl.h"
 #include "fuchsia/sysmem/cpp/fidl.h"
 #include "garnet/lib/ui/gfx/displays/display.h"
-#include "garnet/lib/ui/gfx/displays/display_watcher.h"
+#include "garnet/lib/ui/gfx/displays/display_controller_watcher.h"
 #include "lib/async/cpp/wait.h"
 #include "src/lib/fxl/macros.h"
 
@@ -32,7 +32,7 @@ class DisplayManager {
 
   // Waits for the default display to become available then invokes the
   // callback.
-  void WaitForDefaultDisplay(fit::closure callback);
+  void WaitForDefaultDisplayController(fit::closure callback);
 
   // Generates or releases an event ID that can be used with the display
   // interface. The event can be signaled even after ReleaseEvent if it was
@@ -48,7 +48,7 @@ class DisplayManager {
       fuchsia::sysmem::BufferCollectionTokenSyncPtr token);
 
   // Import a buffer collection token into the display controller so the
-  // contraints will be set on it. Returns an id that can be used to refer to
+  // constraints will be set on it. Returns an id that can be used to refer to
   // the collection.
   uint64_t ImportBufferCollection(
       fuchsia::sysmem::BufferCollectionTokenSyncPtr token);
@@ -87,15 +87,17 @@ class DisplayManager {
  private:
   void OnAsync(async_dispatcher_t* dispatcher, async::WaitBase* self,
                zx_status_t status, const zx_packet_signal_t* signal);
-  async::WaitMethod<DisplayManager, &DisplayManager::OnAsync> wait_{this};
 
   void DisplaysChanged(::std::vector<fuchsia::hardware::display::Info> added,
                        ::std::vector<uint64_t> removed);
   void ClientOwnershipChange(bool has_ownership);
 
+  async::WaitMethod<DisplayManager, &DisplayManager::OnAsync> wait_{this};
+
   zx::channel dc_device_;
   fuchsia::hardware::display::ControllerSyncPtr display_controller_;
-  fidl::InterfacePtr<fuchsia::hardware::display::Controller> event_dispatcher_;
+  fidl::InterfacePtr<fuchsia::hardware::display::Controller>
+      dc_event_dispatcher_;
   zx_handle_t dc_channel_;  // display_controller_ owns the zx::channel
 
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
@@ -104,7 +106,7 @@ class DisplayManager {
   uint64_t next_buffer_collection_id_ =
       fuchsia::hardware::display::invalidId + 1;
 
-  DisplayWatcher display_watcher_;
+  DisplayControllerWatcher dc_watcher_;
   fit::closure display_available_cb_;
   std::unique_ptr<Display> default_display_;
   // A boolean indicating whether or not we have ownership of the display

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/lib/ui/gfx/displays/display_watcher.h"
+#include "garnet/lib/ui/gfx/displays/display_controller_watcher.h"
 
 #include <fbl/unique_fd.h>
 #include <fcntl.h>
@@ -17,11 +17,12 @@ namespace gfx {
 
 static const std::string kDisplayDir = "/dev/class/display-controller";
 
-DisplayWatcher::DisplayWatcher() = default;
+DisplayControllerWatcher::DisplayControllerWatcher() = default;
 
-DisplayWatcher::~DisplayWatcher() = default;
+DisplayControllerWatcher::~DisplayControllerWatcher() = default;
 
-void DisplayWatcher::WaitForDisplay(DisplayReadyCallback callback) {
+void DisplayControllerWatcher::WaitForDisplayController(
+    DisplayControllerReadyCallback callback) {
   FXL_DCHECK(!device_watcher_);
   device_watcher_ = fsl::DeviceWatcher::Create(
       kDisplayDir, [this, callback = std::move(callback)](
@@ -30,8 +31,8 @@ void DisplayWatcher::WaitForDisplay(DisplayReadyCallback callback) {
       });
 }
 
-void DisplayWatcher::HandleDevice(DisplayReadyCallback callback, int dir_fd,
-                                  std::string filename) {
+void DisplayControllerWatcher::HandleDevice(
+    DisplayControllerReadyCallback callback, int dir_fd, std::string filename) {
   device_watcher_.reset();
 
   // Get display info.
@@ -58,7 +59,7 @@ void DisplayWatcher::HandleDevice(DisplayReadyCallback callback, int dir_fd,
   zx::channel dc_server, dc_client;
   status = zx::channel::create(0, &dc_server, &dc_client);
   if (status != ZX_OK) {
-    FXL_DLOG(ERROR) << "Failed to create controller channel: "
+    FXL_DLOG(ERROR) << "Failed to create display controller channel: "
                     << zx_status_get_string(status);
     callback(zx::channel(), zx::channel());
     return;
@@ -75,7 +76,7 @@ void DisplayWatcher::HandleDevice(DisplayReadyCallback callback, int dir_fd,
     return;
   }
   if (status != ZX_OK) {
-    FXL_DLOG(ERROR) << "Failed to open controller : "
+    FXL_DLOG(ERROR) << "Failed to open display controller : "
                     << zx_status_get_string(status);
     callback(zx::channel(), zx::channel());
     return;
