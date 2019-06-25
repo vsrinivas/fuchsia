@@ -153,19 +153,19 @@
                       "Expected " #val1 " same bytes as " #val2 ".", ##__VA_ARGS__)
 
 #define ASSERT_TRUE(val, ...)                                                                      \
-    _ASSERT_VAR(_BOOL, val, true, true, __FILE__, __LINE__, "Expected " #val " is true.",          \
+    _ASSERT_VAR(_BOOL, true, val, true, __FILE__, __LINE__, "Expected " #val " is true.",          \
                 ##__VA_ARGS__)
 
 #define ASSERT_FALSE(val, ...)                                                                     \
-    _ASSERT_VAR(_BOOL, val, false, true, __FILE__, __LINE__, "Expected " #val " is false.",        \
+    _ASSERT_VAR(_BOOL, false, val, true, __FILE__, __LINE__, "Expected " #val " is false.",        \
                 ##__VA_ARGS__)
 
 #define EXPECT_TRUE(val, ...)                                                                      \
-    _ASSERT_VAR(_BOOL, val, true, false, __FILE__, __LINE__, "Expected " #val " is true.",         \
+    _ASSERT_VAR(_BOOL, true, val, false, __FILE__, __LINE__, "Expected " #val " is true.",         \
                 ##__VA_ARGS__)
 
 #define EXPECT_FALSE(val, ...)                                                                     \
-    _ASSERT_VAR(_BOOL, val, false, false, __FILE__, __LINE__, "Expected " #val " is false.",       \
+    _ASSERT_VAR(_BOOL, false, val, false, __FILE__, __LINE__, "Expected " #val " is false.",       \
                 ##__VA_ARGS__)
 
 #define FAIL(...)                                                                                  \
