@@ -6,7 +6,8 @@ use {
     crate::models::{AddMod, Suggestion},
     failure::{bail, Error},
     fidl_fuchsia_modular::{
-        ExecuteStatus, FocusMod, PuppetMasterProxy, StoryCommand, StoryPuppetMasterMarker,
+        ExecuteStatus, FocusMod, PuppetMasterProxy, SetFocusState, StoryCommand,
+        StoryPuppetMasterMarker,
     },
     futures::future::join_all,
     std::collections::{HashMap, HashSet},
@@ -59,6 +60,7 @@ impl ModManager {
         let mut commands = vec![StoryCommand::AddMod(action.clone().into())];
 
         if focus {
+            commands.push(StoryCommand::SetFocusState(SetFocusState { focused: true }));
             commands.push(StoryCommand::FocusMod(FocusMod {
                 mod_name: vec![],
                 mod_name_transitional: Some(action.mod_name.to_string()),
@@ -105,9 +107,12 @@ mod tests {
 
         // This will be called when the suggestion is executed.
         puppet_master_fake.set_on_execute("story_name", |commands| {
-            assert_eq!(commands.len(), 2);
-            if let (StoryCommand::AddMod(add_mod), StoryCommand::FocusMod(focus_mod)) =
-                (&commands[0], &commands[1])
+            assert_eq!(commands.len(), 3);
+            if let (
+                StoryCommand::AddMod(add_mod),
+                StoryCommand::SetFocusState(set_focus),
+                StoryCommand::FocusMod(focus_mod),
+            ) = (&commands[0], &commands[1], &commands[2])
             {
                 assert_eq!(add_mod.intent.action, Some("PLAY_MUSIC".to_string()));
                 assert_eq!(
@@ -117,6 +122,7 @@ mod tests {
                         data: IntentParameterData::EntityReference("peridot-ref".to_string()),
                     },])
                 );
+                assert!(set_focus.focused);
                 assert_eq!(focus_mod.mod_name_transitional, add_mod.mod_name_transitional);
             } else {
                 assert!(false);
