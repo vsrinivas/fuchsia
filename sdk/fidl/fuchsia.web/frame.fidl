@@ -73,6 +73,8 @@ protocol Frame {
     /// If a wildcard "*" is specified in |origins|, then the script will be
     /// evaluated unconditionally.
     ///
+    /// Returns the result of executing |script|, as a JSON-encoded string.
+    ///
     /// Note that scripts share the same execution context as the document,
     /// meaning that document may modify variables, classes, or objects set by
     /// the script in arbitrary or unpredictable ways.
@@ -83,6 +85,14 @@ protocol Frame {
     ///                 values in |origins| or |origins| is an empty vector.
     // TODO(crbug.com/900391): Investigate if we can run the scripts in
     // isolated JS worlds.
+    [Transitional]
+    ExecuteJavaScript(
+        vector<Url> origins,
+        fuchsia.mem.Buffer script)
+        -> (fuchsia.mem.Buffer result) error FrameError;
+
+    /// Variant of ExecuteJavaScript() which executes the supplied script
+    /// without returning a result.
     ExecuteJavaScriptNoResult(
         vector<Url> origins,
         fuchsia.mem.Buffer script)
@@ -166,10 +176,12 @@ protocol Frame {
     SetAdditionalHeadersProvider(AdditionalHeadersProvider provider) -> ();
 };
 
+[Discoverable]
 protocol AdditionalHeadersProvider {
-    /// Returns a set of |headers| that will stay valid until |expiry|. Will be
-    /// called when the first network request is started and again every time
-    /// |expiry| elapses.
+    /// Returns a set of |headers| to include in network requests. The returned
+    /// |headers| may be cached and applied to further network requests until
+    /// |expiry|. If |expiry| is in the past then |headers| should be used once
+    /// but not cached.
     GetHeaders() -> (vector<fuchsia.net.http.Header> headers, zx.time expiry);
 };
 
