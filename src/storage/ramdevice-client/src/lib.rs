@@ -83,7 +83,8 @@ mod tests {
         fuchsia_async as fasync,
     };
 
-    #[test]
+    // #[test]
+    #[allow(dead_code)] // TODO(FLK-375): this test is flaking. re-enable once we figure out why.
     fn create_get_path_destroy() {
         // just make sure all the functions are hooked up properly.
         let ramdisk = RamdiskClient::create(512, 2048).expect("failed to create ramdisk");
@@ -91,7 +92,8 @@ mod tests {
         assert_eq!(ramdisk.destroy(), Ok(()));
     }
 
-    #[test]
+    // #[test]
+    #[allow(dead_code)] // TODO(FLK-375): this test is flaking. re-enable once we figure out why.
     fn create_write_destroy() {
         let ramdisk = RamdiskClient::create(512, 2048).expect("failed to create ramdisk");
 
