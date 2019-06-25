@@ -58,14 +58,14 @@ Please read the [CONTRIBUTING](CONTRIBUTING.md) chapter for more information.
      <language>srv-ex (the server example)
 -->
 
-[c-lang]: languages/c.md
+[c-lang]: tutorial/tutorial-c.md#reference
 [csrv-ex]: /garnet/examples/fidl/echo_server_c/
 
-[llcpp-lang]: languages/llcpp.md
+[llcpp-lang]: tutorial/bindings-llcpp.md
 [llcppcli-ex]: /garnet/examples/fidl/echo_client_llcpp/
 [llcppsrv-ex]: /garnet/examples/fidl/echo_server_llcpp/
 
-[hlcpp-lang]: languages/cpp.md
+[hlcpp-lang]: tutorial/tutorial-cpp.md#high_level-c_language-bindings
 [hlcppcli-ex]: /garnet/examples/fidl/echo_client_cpp/
 [hlcppsrv-ex]: /garnet/examples/fidl/echo_server_cpp/
 

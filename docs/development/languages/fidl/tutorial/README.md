@@ -9,6 +9,8 @@ _Audience: Beginning to intermediate FIDL developers._
 In this tutorial, we present a language-independent introduction to FIDL,
 followed by language-specific sections that develop the client
 and server sides of the examples.
+At the end of each tutorial, we present additional language-specific reference
+material.
 
 # Overview
 
@@ -446,6 +448,11 @@ Currently, tutorials are available in the following languages:
 *   [C++](tutorial-cpp.md)
 *   [Dart](tutorial-dart.md)
 *   [Rust](tutorial-rust.md)
+
+Consult the [C Family Comparison](c-family-comparison.md) document for an overview
+of the similarities and differences between the C and C++ bindings.
+
+Information on [low-level C++ bindings](bindings-llcpp.md) is available separately.
 
 <!-- xrefs -->
 [attributes]: ../reference/attributes.md

@@ -1,20 +1,13 @@
 # Low-Level C++ Language Bindings
 
-This document is a description of the low-level C++ implementation of the
-Fuchsia Interface Definition Language (FIDL), including its libraries and
-code generator.
-
-See [Overview][fidl-overview] for more information about FIDL's overall
-purpose, goals, and requirements, as well as links to related documents.
-
-This specification builds on the [C Language Bindings](c.md) and reuses many
-of its elements where appropriate.
-
-See [Comparing C, Low-Level C++, and High-Level C++ Language Bindings](
-c-family-comparison.md) for a comparative analysis of the goals and use cases
-for all the C-family language bindings.
-
 [TOC]
+
+This section builds on the [C Language Bindings](tutorial-c.md#reference) and
+reuses many of its elements where appropriate.
+
+See [Comparing C, Low-Level C++, and High-Level C++ Language
+Bindings](c-family-comparison.md) for a comparative analysis of the goals and
+use cases for all the C-family language bindings.
 
 ## Design
 
@@ -414,4 +407,3 @@ zx_status_t SayHello(const zx::channel& channel, fidl::StringView text,
 }
 ```
 
-[fidl-overview]: ../README.md

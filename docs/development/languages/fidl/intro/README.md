@@ -13,6 +13,7 @@ This document is a description of the Fuchsia Interface Definition Language
 *   [C Language Bindings]
 *   [Low-Level C++ Language Bindings]
 *   [High-Level C++ Language Bindings]
+*   [C/Low-Level/High-Level C++ Bindings Comparison]
 *   [Examples]: Some small example code used during development
 *   [Tutorial]: A tutorial on using FIDL services in several languages
 
@@ -23,10 +24,10 @@ This document is a description of the Fuchsia Interface Definition Language
 [Compiler Specification]: ../reference/compiler.md
 [API Readability / Style Guide]: ../../../api/fidl.md
 [Linter to Check API Readability / Style]: ../reference/linter.md
-[C Language Bindings]: ../languages/c.md
-[Low-Level C++ Language Bindings]: ../languages/llcpp.md
-[High-Level C++ Language Bindings]: ../languages/cpp.md
-[C/Low-Level/High-Level C++ Bindings Comparison]: ../languages/c-family-comparison.md
+[C Language Bindings]: ../tutorial/tutorial-c.md#reference
+[Low-Level C++ Language Bindings]: ../tutorial/bindings-llcpp.md
+[High-Level C++ Language Bindings]: ../tutorial/tutorial-cpp.md#high_level-c_language-bindings
+[C/Low-Level/High-Level C++ Bindings Comparison]: tutorial/c-family-comparison.md
 [Examples]: /zircon/system/host/fidl/examples
 [Tutorial]: ../tutorial/README.md
 
