@@ -10,7 +10,6 @@
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
 #include <src/lib/files/glob.h>
-#include <test/modular/test/harness/cpp/fidl.h>
 
 #include "gmock/gmock.h"
 

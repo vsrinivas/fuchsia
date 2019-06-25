@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/modular/test/harness/cpp/fidl.h>
 #include <fuchsia/modular/testing/cpp/fidl.h>
 #include <lib/fsl/vmo/strings.h>
+#include <lib/modular/testing/cpp/test_harness_builder.h>
 #include <lib/modular_test_harness/cpp/fake_component.h>
 #include <lib/modular_test_harness/cpp/fake_module.h>
-#include <lib/modular_test_harness/cpp/test_harness_builder.h>
 #include <lib/modular_test_harness/cpp/test_harness_fixture.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
 #include <rapidjson/document.h>
-#include <test/modular/test/harness/cpp/fidl.h>
 
 #include "gmock/gmock.h"
 
@@ -95,12 +95,12 @@ class TestHarnessBuilderTest : public modular::testing::TestHarnessFixture {
 };
 
 // A Pinger implementation used for testing environment services.
-class PingerImpl : public test::modular::test::harness::Pinger {
+class PingerImpl : public fuchsia::modular::test::harness::Pinger {
  public:
   bool pinged() { return pinged_; }
 
  private:
-  // |test::modular::test::harness::Pinger|
+  // |fuchsia::modular::test::harness::Pinger|
   void Ping() override { pinged_ = true; }
 
   bool pinged_ = false;
@@ -204,16 +204,16 @@ TEST_F(TestHarnessBuilderTest, InterceptSpecTest) {
 // and use it successfully.
 TEST_F(TestHarnessBuilderTest, AddService) {
   PingerImpl pinger_impl;
-  fidl::BindingSet<test::modular::test::harness::Pinger> pinger_bindings;
+  fidl::BindingSet<fuchsia::modular::test::harness::Pinger> pinger_bindings;
 
   modular::testing::TestHarnessBuilder builder;
-  builder.AddService<test::modular::test::harness::Pinger>(
+  builder.AddService<fuchsia::modular::test::harness::Pinger>(
       pinger_bindings.GetHandler(&pinger_impl));
   builder.BuildAndRun(test_harness());
 
-  test::modular::test::harness::PingerPtr pinger;
+  fuchsia::modular::test::harness::PingerPtr pinger;
   test_harness()->ConnectToEnvironmentService(
-      test::modular::test::harness::Pinger::Name_,
+      fuchsia::modular::test::harness::Pinger::Name_,
       pinger.NewRequest().TakeChannel());
 
   pinger->Ping();
@@ -225,7 +225,7 @@ TEST_F(TestHarnessBuilderTest, AddService) {
 TEST_F(TestHarnessBuilderTest, AddServiceFromComponent) {
   modular::testing::TestHarnessBuilder builder;
   auto fake_url = modular::testing::GenerateFakeUrl();
-  builder.AddServiceFromComponent<test::modular::test::harness::Pinger>(
+  builder.AddServiceFromComponent<fuchsia::modular::test::harness::Pinger>(
       fake_url);
 
   auto [spec, new_component_handler] = TakeSpecAndHandler(&builder);
@@ -233,7 +233,7 @@ TEST_F(TestHarnessBuilderTest, AddServiceFromComponent) {
   auto& services_from_components =
       spec.env_services().services_from_components();
   ASSERT_EQ(1u, services_from_components.size());
-  EXPECT_EQ(test::modular::test::harness::Pinger::Name_,
+  EXPECT_EQ(fuchsia::modular::test::harness::Pinger::Name_,
             services_from_components[0].name);
   EXPECT_EQ(fake_url, services_from_components[0].url);
 }
@@ -242,19 +242,20 @@ TEST_F(TestHarnessBuilderTest, AddServiceFromComponent) {
 // This is tested by trying to inherit and use the Pinger service.
 TEST_F(TestHarnessBuilderTest, AddServiceFromServiceDirectory) {
   PingerImpl pinger_impl;
-  fidl::BindingSet<test::modular::test::harness::Pinger> pinger_bindings;
+  fidl::BindingSet<fuchsia::modular::test::harness::Pinger> pinger_bindings;
 
-  AddEnvService<test::modular::test::harness::Pinger>(
+  AddEnvService<fuchsia::modular::test::harness::Pinger>(
       pinger_bindings.GetHandler(&pinger_impl));
 
   modular::testing::TestHarnessBuilder builder;
-  builder.AddServiceFromServiceDirectory<test::modular::test::harness::Pinger>(
-      env_service_dir());
+  builder
+      .AddServiceFromServiceDirectory<fuchsia::modular::test::harness::Pinger>(
+          env_service_dir());
   builder.BuildAndRun(test_harness());
 
-  test::modular::test::harness::PingerPtr pinger;
+  fuchsia::modular::test::harness::PingerPtr pinger;
   test_harness()->ConnectToEnvironmentService(
-      test::modular::test::harness::Pinger::Name_,
+      fuchsia::modular::test::harness::Pinger::Name_,
       pinger.NewRequest().TakeChannel());
 
   pinger->Ping();

@@ -5,9 +5,9 @@
 #include <fuchsia/modular/testing/cpp/fidl.h>
 #include <lib/app_driver/cpp/module_driver.h>
 #include <lib/component/cpp/connect.h>
+#include <lib/modular/testing/cpp/test_harness_builder.h>
 #include <lib/modular_test_harness/cpp/fake_module.h>
 #include <lib/modular_test_harness/cpp/test_harness_fixture.h>
-#include <lib/modular_test_harness/cpp/test_harness_launcher.h>
 
 #include "fuchsia/modular/session/cpp/fidl.h"
 #include "gtest/gtest.h"

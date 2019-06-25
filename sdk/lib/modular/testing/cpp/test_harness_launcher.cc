@@ -2,11 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/public/lib/modular_test_harness/cpp/test_harness_launcher.h"
-
-#include <src/lib/fxl/logging.h>
-
-#include "lib/async/cpp/task.h"
+#include <lib/async/cpp/task.h>
+#include <lib/modular/testing/cpp/test_harness_launcher.h>
 
 namespace modular {
 namespace testing {

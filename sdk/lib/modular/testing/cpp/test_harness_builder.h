@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_MODULAR_TEST_HARNESS_CPP_TEST_HARNESS_BUILDER_H_
-#define LIB_MODULAR_TEST_HARNESS_CPP_TEST_HARNESS_BUILDER_H_
+#ifndef LIB_MODULAR_TESTING_CPP_TEST_HARNESS_BUILDER_H_
+#define LIB_MODULAR_TESTING_CPP_TEST_HARNESS_BUILDER_H_
 
 #include <fuchsia/modular/testing/cpp/fidl.h>
 #include <lib/sys/cpp/component_context.h>
@@ -16,10 +16,11 @@ namespace testing {
 // |fuchsia.modular.testing.TestHarnessSpec|. This utility provides methods for
 // hosting environment services and routing intercepted components.
 //
+//
 // SAMPLE USAGE:
 //
-// #include <lib/modular_test_harness/cpp/test_harness_launcher.h>
-// #include <lib/modular_test_harness/cpp/test_harness_builder.h>
+// #include <lib/modular/testing/cpp/test_harness_launcher.h>
+// #include <lib/modular/testing/cpp/test_harness_builder.h>
 // #include <lib/modular_test_harness/cpp/fake_component.h>
 //
 // class MyTest : gtest::RealLoopFixture {};
@@ -51,7 +52,7 @@ namespace testing {
 //
 //   // ...
 // }
-class TestHarnessBuilder {
+class TestHarnessBuilder final {
  public:
   struct InterceptOptions {
     // The URL of the component to intercept. Use GenerateFakeUrl() to create a
@@ -74,16 +75,22 @@ class TestHarnessBuilder {
 
   // Builds on top of an empty |fuchsia.modular.testing.TestHarnessSpec|.
   TestHarnessBuilder();
+  TestHarnessBuilder(TestHarnessBuilder&&) = default;
 
   // Builds on top of the supplied |spec|.
-  TestHarnessBuilder(fuchsia::modular::testing::TestHarnessSpec spec);
+  explicit TestHarnessBuilder(fuchsia::modular::testing::TestHarnessSpec spec);
+
+  // Not copyable.
+  TestHarnessBuilder(const TestHarnessBuilder&) = delete;
+  TestHarnessBuilder& operator=(const TestHarnessBuilder&) = delete;
 
   // Builds the underlying TestHarnessSpec and issues a |TestHarness/Run()|.
   // Binds an OnNewComponent event handler to the supplied |test_harness| to
   // route the Intercept*() calls issued below.
   //
   // Can only be called once.
-  void BuildAndRun(fuchsia::modular::testing::TestHarnessPtr& test_harness);
+  void BuildAndRun(
+      const fuchsia::modular::testing::TestHarnessPtr& test_harness);
 
   // Amends the TestHarnessSpec to include interception instructions based on
   // |options| and stores |on_create| for use in the router function created
@@ -199,4 +206,4 @@ std::string GenerateFakeUrl(std::string name = "");
 }  // namespace testing
 }  // namespace modular
 
-#endif  // LIB_MODULAR_TEST_HARNESS_CPP_TEST_HARNESS_BUILDER_H_
+#endif  // LIB_MODULAR_TESTING_CPP_TEST_HARNESS_BUILDER_H_

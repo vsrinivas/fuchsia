@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <peridot/public/lib/modular_test_harness/cpp/test_harness_builder.h>
+#include <lib/modular/testing/cpp/test_harness_builder.h>
 
 #include <sstream>
 
@@ -94,7 +94,7 @@ TestHarnessBuilder::BuildOnNewComponentHandler() {
 }
 
 void TestHarnessBuilder::BuildAndRun(
-    fuchsia::modular::testing::TestHarnessPtr& test_harness) {
+    const fuchsia::modular::testing::TestHarnessPtr& test_harness) {
   test_harness.events().OnNewComponent = BuildOnNewComponentHandler();
   test_harness->Run(BuildSpec());
 }

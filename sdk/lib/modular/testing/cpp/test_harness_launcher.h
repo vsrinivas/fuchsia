@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_MODULAR_TEST_HARNESS_CPP_TEST_HARNESS_LAUNCHER_H_
-#define LIB_MODULAR_TEST_HARNESS_CPP_TEST_HARNESS_LAUNCHER_H_
+#ifndef LIB_MODULAR_TESTING_CPP_TEST_HARNESS_LAUNCHER_H_
+#define LIB_MODULAR_TESTING_CPP_TEST_HARNESS_LAUNCHER_H_
 
 #include <fuchsia/modular/testing/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -22,11 +22,15 @@ namespace testing {
 class TestHarnessLauncher final {
  public:
   // Launches the modular test harness component.
-  TestHarnessLauncher(fuchsia::sys::LauncherPtr launcher);
+  explicit TestHarnessLauncher(fuchsia::sys::LauncherPtr launcher);
 
   // Blocks the current thread until the modular test harness component is
   // destroyed.
   ~TestHarnessLauncher();
+
+  // Not copyable.
+  TestHarnessLauncher(const TestHarnessLauncher&) = delete;
+  TestHarnessLauncher& operator=(const TestHarnessLauncher&) = delete;
 
   fuchsia::modular::testing::TestHarnessPtr& test_harness() {
     return test_harness_;
@@ -45,4 +49,4 @@ class TestHarnessLauncher final {
 }  // namespace testing
 }  // namespace modular
 
-#endif  // LIB_MODULAR_TEST_HARNESS_CPP_TEST_HARNESS_LAUNCHER_H_
+#endif  // LIB_MODULAR_TESTING_CPP_TEST_HARNESS_LAUNCHER_H_

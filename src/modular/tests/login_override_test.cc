@@ -7,7 +7,7 @@
 #include <fuchsia/modular/testing/cpp/fidl.h>
 #include <fuchsia/setui/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
-#include <lib/modular_test_harness/cpp/test_harness_builder.h>
+#include <lib/modular/testing/cpp/test_harness_builder.h>
 #include <lib/modular_test_harness/cpp/test_harness_fixture.h>
 #include <sdk/lib/sys/cpp/testing/test_with_environment.h>
 #include <src/lib/fxl/logging.h>

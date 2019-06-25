@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/modular/test/harness/cpp/fidl.h>
+#include <lib/fidl/cpp/binding.h>
 #include <lib/gtest/real_loop_fixture.h>
-#include <lib/modular_test_harness/cpp/test_harness_launcher.h>
+#include <lib/modular/testing/cpp/test_harness_launcher.h>
 #include <lib/sys/cpp/testing/fake_launcher.h>
-#include <test/modular/test/harness/cpp/fidl.h>
+#include <zircon/assert.h>
 
 namespace {
 constexpr char kTestHarnessUrl[] =

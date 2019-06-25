@@ -6,7 +6,7 @@
 #define LIB_MODULAR_TEST_HARNESS_CPP_FAKE_COMPONENT_H_
 
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/modular_test_harness/cpp/test_harness_builder.h>
+#include <lib/modular/testing/cpp/test_harness_builder.h>
 #include <lib/sys/cpp/component_context.h>
 
 namespace modular {

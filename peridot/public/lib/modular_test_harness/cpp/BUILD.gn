@@ -15,7 +15,6 @@ group("unittests") {
   ]
 }
 
-# This library has a run-time dependency on the `modular_test_harness` package.
 source_set("test_harness_fixture") {
   testonly = true
 
@@ -37,8 +36,7 @@ source_set("test_harness_fixture") {
   ]
 
   public_deps = [
-    ":test_harness_builder",
-    ":test_harness_launcher",
+    "//sdk/lib/modular/testing/cpp",
   ]
 
   deps = [
@@ -51,82 +49,14 @@ source_set("test_harness_fixture") {
   ]
 }
 
-sdk_source_set("test_harness_builder") {
-  testonly = true
-
-  category = "partner"
-  sdk_name = "modular_testing_cpp"
-  include_base = "//sdk"
-
-  public_configs = [ "//sdk/config" ]
-
-  sources = [
-    "test_harness_builder.cc",
-    "test_harness_builder.h",
-  ]
-
-  deps = [
-    "//sdk/fidl/fuchsia.modular",
-    "//sdk/fidl/fuchsia.modular.testing",
-    "//sdk/lib/sys/cpp",
-  ]
-}
-
-sdk_source_set("test_harness_launcher") {
-  testonly = true
-
-  category = "partner"
-  sdk_name = "modular_testing_cpp"
-  include_base = "//sdk"
-
-  public_configs = [ "//sdk/config" ]
-
-  sources = [
-    "test_harness_launcher.cc",
-    "test_harness_launcher.h",
-  ]
-
-  deps = [
-    "//sdk/fidl/fuchsia.modular",
-    "//sdk/fidl/fuchsia.modular.testing",
-    "//sdk/lib/sys/cpp",
-    "//zircon/public/lib/async-loop-cpp",
-  ]
-}
-
-fidl("test.modular.test.harness") {
-  sources = [
-    "test_harness_builder.test.fidl",
-  ]
-}
-
-executable("test_harness_builder_test_bin") {
-  testonly = true
-  sources = [
-    "test_harness_builder_test.cc",
-  ]
-  deps = [
-    ":test.modular.test.harness",
-    ":test_harness_builder",
-    ":test_harness_fixture",
-    "//sdk/fidl/fuchsia.modular.testing",
-    "//sdk/fidl/fuchsia.sys",
-    "//sdk/lib/sys/cpp",
-    "//sdk/lib/sys/cpp/testing:integration",
-    "//src/lib/fxl/test:gtest_main",
-    "//third_party/googletest:gmock",
-    "//third_party/rapidjson",
-  ]
-}
-
 executable("test_harness_fixture_test_bin") {
   testonly = true
+
   sources = [
     "test_harness_fixture_test.cc",
-    "test_harness_launcher_test.cc",
   ]
+
   deps = [
-    ":test.modular.test.harness",
     ":test_harness_fixture",
     "//garnet/public/lib/fsl",
     "//sdk/fidl/fuchsia.modular.testing",
@@ -147,14 +77,9 @@ test_package("test_harness_fixture_test") {
       name = "test_harness_fixture_test_bin"
       environments = basic_envs
     },
-    {
-      name = "test_harness_builder_test_bin"
-      environments = basic_envs
-    },
   ]
 
   deps = [
-    ":test_harness_builder_test_bin",
     ":test_harness_fixture_test_bin",
   ]
 }

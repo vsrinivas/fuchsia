@@ -1,0 +1,71 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/cpp/sdk_source_set.gni")
+import("//build/fidl/fidl.gni")
+import("//build/test/test_package.gni")
+
+sdk_source_set("cpp") {
+  testonly = true
+
+  category = "partner"
+  sdk_name = "modular_testing_cpp"
+  include_base = "//sdk"
+
+  public_configs = [ "//sdk/config" ]
+
+  sources = [
+    "test_harness_builder.cc",
+    "test_harness_builder.h",
+    "test_harness_launcher.cc",
+    "test_harness_launcher.h",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular.testing",
+    "//sdk/lib/sys/cpp",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+fidl("fuchsia.modular.test.harness") {
+  sources = [
+    "test_harness_builder.test.fidl",
+  ]
+}
+
+executable("modular_testing_cpp_tests_bin") {
+  testonly = true
+  sources = [
+    "test_harness_builder_test.cc",
+    "test_harness_launcher_test.cc",
+  ]
+  deps = [
+    ":fuchsia.modular.test.harness",
+    "//garnet/public/lib/fsl",
+    "//peridot/public/lib/modular_test_harness/cpp:test_harness_fixture",
+    "//sdk/fidl/fuchsia.modular.testing",
+    "//sdk/fidl/fuchsia.sys",
+    "//sdk/lib/modular/testing/cpp",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
+    "//third_party/rapidjson",
+  ]
+}
+
+test_package("modular_testing_cpp_tests") {
+  tests = [
+    {
+      name = "modular_testing_cpp_tests_bin"
+    },
+  ]
+
+  deps = [
+    ":modular_testing_cpp_tests_bin",
+  ]
+}

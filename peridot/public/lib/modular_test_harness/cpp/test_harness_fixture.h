@@ -6,7 +6,7 @@
 #define LIB_MODULAR_TEST_HARNESS_CPP_TEST_HARNESS_FIXTURE_H_
 
 #include <fuchsia/modular/testing/cpp/fidl.h>
-#include <lib/modular_test_harness/cpp/test_harness_launcher.h>
+#include <lib/modular/testing/cpp/test_harness_launcher.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
@@ -22,7 +22,7 @@ class TestHarnessFixture : public sys::testing::TestWithEnvironment {
   TestHarnessFixture();
 
  protected:
-  fuchsia::modular::testing::TestHarnessPtr& test_harness() {
+  const fuchsia::modular::testing::TestHarnessPtr& test_harness() {
     return test_harness_launcher_.test_harness();
   }
 
