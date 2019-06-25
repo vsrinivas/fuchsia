@@ -54,6 +54,8 @@ class VirtioBlockTest : public TestWithDevice {
 
     // Start device execution.
     services_->Connect(block_.NewRequest());
+    RunLoopUntilIdle();
+
     uint64_t size;
     status = block_->Start(std::move(start_info), kVirtioBlockId,
                            fuchsia::virtualization::BlockMode::READ_WRITE,

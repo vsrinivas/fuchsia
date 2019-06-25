@@ -28,6 +28,8 @@ class VirtioInputTest : public TestWithDevice {
     // Start device execution.
     services_->Connect(view_listener_.NewRequest());
     services_->Connect(input_.NewRequest());
+    RunLoopUntilIdle();
+
     status = input_->Start(std::move(start_info));
     ASSERT_EQ(ZX_OK, status);
 

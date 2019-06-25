@@ -29,6 +29,8 @@ class VirtioConsoleTest : public TestWithDevice {
 
     // Start device execution.
     services_->Connect(console_.NewRequest());
+    RunLoopUntilIdle();
+
     status = console_->Start(std::move(start_info), std::move(remote_socket_));
     ASSERT_EQ(ZX_OK, status);
 

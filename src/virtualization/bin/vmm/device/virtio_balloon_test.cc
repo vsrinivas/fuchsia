@@ -29,6 +29,8 @@ class VirtioBalloonTest : public TestWithDevice {
 
     // Start device execution.
     services_->Connect(balloon_.NewRequest());
+    RunLoopUntilIdle();
+
     status = balloon_->Start(std::move(start_info));
     ASSERT_EQ(ZX_OK, status);
     status = balloon_->Ready(VIRTIO_BALLOON_F_STATS_VQ);

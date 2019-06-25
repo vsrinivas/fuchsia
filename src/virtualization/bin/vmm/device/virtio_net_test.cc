@@ -99,6 +99,8 @@ class VirtioNetTest : public TestWithDevice,
 
     // Start device execution.
     services_->Connect(net_.NewRequest());
+    RunLoopUntilIdle();
+
     net_->Start(std::move(start_info), [] {});
 
     // Wait for the device to call AddEthernetDevice on the netstack.
