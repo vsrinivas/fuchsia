@@ -8,6 +8,8 @@
 #include <map>
 #include <string>
 
+#include "lib/fit/defer.h"
+#include "lib/fit/function.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
@@ -81,7 +83,7 @@ class FormatNode {
   // passed to it.
   using GetProgramaticValue = std::function<void(
       fxl::RefPtr<EvalContext> context,
-      std::function<void(const Err& err, ExprValue value)> cb)>;
+      fit::callback<void(const Err& err, ExprValue value)> cb)>;
 
   // The original source or the value for this node.
   enum Source {
@@ -161,7 +163,7 @@ class FormatNode {
   // callback will be issued (possibly from within this call stack) when the
   // value is filled.
   void FillProgramaticValue(fxl::RefPtr<EvalContext> context,
-                            std::function<void()> cb);
+                            fit::deferred_action<fit::callback<void()>> cb);
 
   // The value. This will be valid when the State == kHasValue. The description
   // and type might not be up-to-date, see FillFormatNodeDescription().

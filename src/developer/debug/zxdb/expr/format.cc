@@ -4,6 +4,7 @@
 
 #include "src/developer/debug/zxdb/expr/format.h"
 
+#include "src/developer/debug/zxdb/common/function.h"
 #include "src/developer/debug/zxdb/expr/eval_context.h"
 #include "src/developer/debug/zxdb/expr/expr.h"
 #include "src/developer/debug/zxdb/expr/format_expr_value_options.h"
@@ -381,8 +382,9 @@ void FormatPointer(FormatNode* node, const FormatExprValueOptions& options,
       "*" + node->name(),
       [ptr_value = node->value()](
           fxl::RefPtr<EvalContext> context,
-          std::function<void(const Err& err, ExprValue value)> cb) {
-        ResolvePointer(context, ptr_value, std::move(cb));
+          fit::callback<void(const Err& err, ExprValue value)> cb) {
+        ResolvePointer(context, ptr_value,
+                       FitCallbackToStdFunction(std::move(cb)));
       });
   node->children().push_back(std::move(deref_node));
 }
@@ -413,8 +415,9 @@ void FormatReference(FormatNode* node, const FormatExprValueOptions& options,
       std::string(),
       [ref = node->value()](
           fxl::RefPtr<EvalContext> context,
-          std::function<void(const Err& err, ExprValue value)> cb) {
-        EnsureResolveReference(context, ref, std::move(cb));
+          fit::callback<void(const Err& err, ExprValue value)> cb) {
+        EnsureResolveReference(context, ref,
+                               FitCallbackToStdFunction(std::move(cb)));
       });
   node->children().push_back(std::move(deref_node));
 }
@@ -422,16 +425,20 @@ void FormatReference(FormatNode* node, const FormatExprValueOptions& options,
 }  // namespace
 
 void FillFormatNodeValue(FormatNode* node, fxl::RefPtr<EvalContext> context,
-                         std::function<void()> cb) {
+                         fit::deferred_action<fit::callback<void()>> cb) {
   switch (node->source()) {
     case FormatNode::kValue:
       // Already has the value.
-      cb();
       return;
-    case FormatNode::kExpression:
+    case FormatNode::kExpression: {
       // Evaluate the expression.
+      // TODO(brettw) remove this make_shared when EvalExpression takes a
+      // fit::callback.
+      auto shared_cb =
+          std::make_shared<fit::deferred_action<fit::callback<void()>>>(
+              std::move(cb));
       EvalExpression(node->expression(), context, true,
-                     [weak_node = node->GetWeakPtr(), cb = std::move(cb)](
+                     [weak_node = node->GetWeakPtr(), shared_cb](
                          const Err& err, ExprValue value) {
                        if (!weak_node)
                          return;
@@ -441,9 +448,9 @@ void FillFormatNodeValue(FormatNode* node, fxl::RefPtr<EvalContext> context,
                        } else {
                          weak_node->SetValue(std::move(value));
                        }
-                       cb();
                      });
       return;
+    }
     case FormatNode::kProgramatic:
       // Lambda provides the value.
       node->FillProgramaticValue(std::move(context), std::move(cb));
@@ -454,7 +461,8 @@ void FillFormatNodeValue(FormatNode* node, fxl::RefPtr<EvalContext> context,
 
 void FillFormatNodeDescription(FormatNode* node,
                                const FormatExprValueOptions& options,
-                               fxl::RefPtr<EvalContext> context) {
+                               fxl::RefPtr<EvalContext> context,
+                               fit::deferred_action<fit::callback<void()>> cb) {
   if (node->state() == FormatNode::kEmpty ||
       node->state() == FormatNode::kUnevaluated || node->err().has_error()) {
     node->set_state(FormatNode::kDescribed);

@@ -31,14 +31,24 @@ class FormatTest : public TestWithLoop {
   void SyncFormat(FormatNode* node, const FormatExprValueOptions& opts) {
     // Populate the value.
     bool called = false;
-    FillFormatNodeValue(node, eval_context_, [&called]() {
-      debug_ipc::MessageLoop::Current()->QuitNow();
-      called = true;
-    });
+    FillFormatNodeValue(
+        node, eval_context_,
+        fit::deferred_action<fit::callback<void()>>([&called]() {
+          debug_ipc::MessageLoop::Current()->QuitNow();
+          called = true;
+        }));
     if (!called)
       loop().Run();
 
-    FillFormatNodeDescription(node, opts, eval_context_);
+    called = false;
+    FillFormatNodeDescription(
+        node, opts, eval_context_,
+        fit::deferred_action<fit::callback<void()>>([&called]() {
+          debug_ipc::MessageLoop::Current()->QuitNow();
+          called = true;
+        }));
+    if (!called)
+      loop().Run();
   }
 
   std::unique_ptr<FormatNode> GetDescribedNode(
@@ -55,7 +65,7 @@ class FormatTest : public TestWithLoop {
     if (update_value)
       SyncFormat(node, opts);
     else
-      FillFormatNodeDescription(node, opts, eval_context_);
+      FillFormatNodeDescription(node, opts, eval_context_, {});
 
     for (auto& c : node->children())
       RecursiveSyncDescribe(c.get(), update_value, opts);

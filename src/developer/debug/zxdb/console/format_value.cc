@@ -365,7 +365,7 @@ void FormatValue::FormatCollection(fxl::RefPtr<EvalContext> eval_context,
     case Collection::kNotSpecial:
       break;
     case Collection::kRustEnum:
-      FormatRustEnum(eval_context, coll, value, options, output_key);
+      FormatRustEnum(eval_context, value, options, output_key);
       return;
     case Collection::kRustTuple:
     case Collection::kRustTupleStruct:
@@ -919,45 +919,59 @@ void FormatValue::FormatZxStatusT(const ExprValue& value,
 }
 
 void FormatValue::FormatRustEnum(fxl::RefPtr<EvalContext> eval_context,
-                                 const Collection* coll, const ExprValue& value,
+                                 const ExprValue& value,
                                  const FormatExprValueOptions& options,
                                  OutputKey output_key) {
   // This shims to the new formatting system which supports Rust enums and
   // converts to a nice string.
   auto node = std::make_unique<FormatNode>(std::string(), value);
-  FillFormatNodeDescription(node.get(), options, eval_context);
+  FormatNode* node_ptr = node.get();
+  FillFormatNodeDescription(
+      node_ptr, options, eval_context,
+      fit::deferred_action<fit::callback<void()>>(
+          [weak_this = weak_factory_.GetWeakPtr(), options, eval_context,
+           node = std::move(node), output_key]() {
+            if (!weak_this)
+              return;
 
-  if (node->err().has_error()) {
-    OutputKeyComplete(output_key, ErrToOutput(node->err()));
-    return;
-  }
+            if (node->err().has_error()) {
+              weak_this->OutputKeyComplete(output_key,
+                                           ErrToOutput(node->err()));
+              return;
+            }
 
-  // If there is a child, append it after the description with no space
-  // which will end up formatting the structure like "Point{x = 1, y = 2}"
-  if (node->children().empty()) {
-    // No child, just output the type name.
-    OutputKeyComplete(output_key, node->description());
-  } else {
-    // This assumes there is only one child which is the case for Rust enums.
-    //
-    // Our Rust structure printing support with type names is still in-flux.
-    // If you do "EnumValue(u32)" you'll actually get a "tuple struct" and our
-    // printing knows to print them properly with the name. But the struct
-    // printing system doesn't know when to add Rust type names. So as a hack
-    // add that now if required but not if it's a tuple struct.
-    bool is_tuple_struct = false;
-    if (const Type* child_type = node->children()[0]->value().type()) {
-      if (const Collection* child_coll = child_type->AsCollection()) {
-        is_tuple_struct =
-            child_coll->GetSpecialType() == Collection::kRustTupleStruct;
-      }
-    }
-    if (!is_tuple_struct)
-      AppendToOutputKey(output_key, node->description());
+            // If there is a child, append it after the description with no
+            // space which will end up formatting the structure like "Point{x =
+            // 1, y = 2}"
+            if (node->children().empty()) {
+              // No child, just output the type name.
+              weak_this->OutputKeyComplete(output_key, node->description());
+            } else {
+              // This assumes there is only one child which is the case for Rust
+              // enums.
+              //
+              // Our Rust structure printing support with type names is still
+              // in-flux. If you do "EnumValue(u32)" you'll actually get a
+              // "tuple struct" and our printing knows to print them properly
+              // with the name. But the struct printing system doesn't know when
+              // to add Rust type names. So as a hack add that now if required
+              // but not if it's a tuple struct.
+              bool is_tuple_struct = false;
+              if (const Type* child_type =
+                      node->children()[0]->value().type()) {
+                if (const Collection* child_coll = child_type->AsCollection()) {
+                  is_tuple_struct = child_coll->GetSpecialType() ==
+                                    Collection::kRustTupleStruct;
+                }
+              }
+              if (!is_tuple_struct)
+                weak_this->AppendToOutputKey(output_key, node->description());
 
-    FormatExprValue(eval_context, node->children()[0]->value(), options, true,
-                    output_key);
-  }
+              weak_this->FormatExprValue(eval_context,
+                                         node->children()[0]->value(), options,
+                                         true, output_key);
+            }
+          }));
 }
 
 void FormatValue::FormatRustTuple(fxl::RefPtr<EvalContext> eval_context,
@@ -966,27 +980,41 @@ void FormatValue::FormatRustTuple(fxl::RefPtr<EvalContext> eval_context,
                                   const FormatExprValueOptions& options,
                                   OutputKey output_key) {
   auto node = std::make_unique<FormatNode>(std::string(), value);
-  FillFormatNodeDescription(node.get(), options, eval_context);
+  FormatNode* node_ptr = node.get();
+  FillFormatNodeDescription(
+      node_ptr, options, eval_context,
+      fit::deferred_action<fit::callback<void()>>(
+          [weak_this = weak_factory_.GetWeakPtr(), node = std::move(node),
+           eval_context,
+           coll = fxl::RefPtr<Collection>(const_cast<Collection*>(coll)),
+           options, output_key]() {
+            if (!weak_this)
+              return;
 
-  if (node->err().has_error()) {
-    OutputKeyComplete(output_key, ErrToOutput(node->err()));
-    return;
-  }
+            if (node->err().has_error()) {
+              weak_this->OutputKeyComplete(output_key,
+                                           ErrToOutput(node->err()));
+              return;
+            }
 
-  // Display tuple structs with the non-qualified type name, e.g. "Some(32)".
-  if (coll->GetSpecialType() == Collection::kRustTupleStruct)
-    AppendToOutputKey(output_key, coll->GetAssignedName() + "(");
-  else
-    AppendToOutputKey(output_key, OutputBuffer("("));
+            // Display tuple structs with the non-qualified type name, e.g.
+            // "Some(32)".
+            if (coll->GetSpecialType() == Collection::kRustTupleStruct)
+              weak_this->AppendToOutputKey(output_key,
+                                           coll->GetAssignedName() + "(");
+            else
+              weak_this->AppendToOutputKey(output_key, OutputBuffer("("));
 
-  for (size_t i = 0; i < node->children().size(); i++) {
-    if (i > 0)
-      AppendToOutputKey(output_key, OutputBuffer(", "));
-    FormatExprValue(eval_context, node->children()[i]->value(), options, false,
-                    AsyncAppend(output_key));
-  }
+            for (size_t i = 0; i < node->children().size(); i++) {
+              if (i > 0)
+                weak_this->AppendToOutputKey(output_key, OutputBuffer(", "));
+              weak_this->FormatExprValue(
+                  eval_context, node->children()[i]->value(), options, false,
+                  weak_this->AsyncAppend(output_key));
+            }
 
-  OutputKeyComplete(output_key, OutputBuffer(")"));
+            weak_this->OutputKeyComplete(output_key, OutputBuffer(")"));
+          }));
 }
 
 FormatValue::OutputKey FormatValue::GetRootOutputKey() {

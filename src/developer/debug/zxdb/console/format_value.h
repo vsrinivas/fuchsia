@@ -239,7 +239,7 @@ class FormatValue : public fxl::RefCountedThreadSafe<FormatValue> {
                        const FormatExprValueOptions& options,
                        OutputKey output_key);
   void FormatRustEnum(fxl::RefPtr<EvalContext> eval_context,
-                      const Collection* coll, const ExprValue& value,
+                      const ExprValue& value,
                       const FormatExprValueOptions& options,
                       OutputKey output_key);
   void FormatRustTuple(fxl::RefPtr<EvalContext> eval_context,

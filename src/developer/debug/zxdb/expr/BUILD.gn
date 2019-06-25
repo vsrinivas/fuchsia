@@ -61,6 +61,7 @@ static_library("expr") {
     "//src/developer/debug/zxdb/common",
     "//src/developer/debug/zxdb/symbols",
     "//src/lib/fxl",
+    "//zircon/public/lib/fit",
   ]
 }
 

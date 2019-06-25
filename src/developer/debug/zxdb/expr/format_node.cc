@@ -46,8 +46,9 @@ fxl::WeakPtr<FormatNode> FormatNode::GetWeakPtr() {
   return weak_factory_.GetWeakPtr();
 }
 
-void FormatNode::FillProgramaticValue(fxl::RefPtr<EvalContext> context,
-                                      std::function<void()> cb) {
+void FormatNode::FillProgramaticValue(
+    fxl::RefPtr<EvalContext> context,
+    fit::deferred_action<fit::callback<void()>> cb) {
   FXL_DCHECK(source() == kProgramatic);
   FXL_DCHECK(get_programatic_value_);
   get_programatic_value_(std::move(context),
@@ -59,7 +60,6 @@ void FormatNode::FillProgramaticValue(fxl::RefPtr<EvalContext> context,
                                weak_node->set_err(err);
                              else
                                weak_node->SetValue(std::move(value));
-                             cb();
                            }
                          });
 }
