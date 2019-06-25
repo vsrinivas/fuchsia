@@ -75,7 +75,6 @@ group("modular_integration_tests") {
     "//peridot/bin/basemgr:auto_login_base_shell_test",
     "//peridot/packages/prod:integration_testing",
     "//peridot/tests:modular_tests",
-    "//peridot/tests/agent_services_tests:agent_services_tests",
     "//peridot/tests/component_context:component_context_test_module",
     "//peridot/tests/component_context:component_context_test_one_agent",
     "//peridot/tests/component_context:component_context_test_two_agent",

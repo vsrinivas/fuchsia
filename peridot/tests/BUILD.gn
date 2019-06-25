@@ -52,7 +52,6 @@ import("//build/testing/environments.gni")
 group("tests") {
   testonly = true
   deps = [
-    "agent_services_tests",
     "benchmarks",
     "component_context",
     "modular_config",
