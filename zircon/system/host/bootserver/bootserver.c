@@ -212,6 +212,7 @@ void usage(void) {
             "  --vbmetab <file>         use the supplied file as a AVB vbmeta_b image\n"
             "  --vbmetar <file>         use the supplied file as a AVB vbmeta_r image\n"
             "  --authorized-keys <file> use the supplied file as an authorized_keys file\n"
+            "  --fail-fast  exit on first error\n"
             "  --netboot    use the netboot protocol\n"
             "  --tftp       use the tftp protocol (default)\n"
             "  --nocolor    disable ANSI color (false)\n",
@@ -289,6 +290,7 @@ int send_reboot_command(struct sockaddr_in6* ra) {
 }
 
 int main(int argc, char** argv) {
+    bool fail_fast = false;
     struct in6_addr allowed_addr;
     struct sockaddr_in6 addr;
     char tmp[INET6_ADDRSTRLEN];
@@ -408,6 +410,8 @@ int main(int argc, char** argv) {
                 return -1;
             }
             authorized_keys = argv[1];
+        } else if (!strcmp(argv[1], "--fail-fast")) {
+            fail_fast = true;
         } else if (!strcmp(argv[1], "--boot")) {
             argc--;
             argv++;
@@ -693,7 +697,7 @@ int main(int argc, char** argv) {
         } else {
             log("Transfer ends incompletely.");
         }
-        if (once) {
+        if ((status == 0 && once) || (status != 0 && fail_fast)) {
             close(s);
             return status == 0 ? 0 : -1;
         }
