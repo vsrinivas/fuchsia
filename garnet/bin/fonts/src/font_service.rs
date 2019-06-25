@@ -123,7 +123,7 @@ struct TypefaceInfoAndCharSet {
     style: fonts::Style2,
     languages: Vec<intl::LocaleId>,
     generic_family: Option<fonts::GenericFontFamily>,
-    _char_set: font_info::CharSet, // Will be used to implement filtering in a future change
+    char_set: font_info::CharSet, // Will be used to implement filtering in a future change
 }
 
 impl TypefaceInfoAndCharSet {
@@ -144,7 +144,7 @@ impl TypefaceInfoAndCharSet {
                 .map(|lang| intl::LocaleId { id: lang.clone() })
                 .collect(),
             generic_family: typeface.generic_family,
-            _char_set: typeface.char_set.clone(),
+            char_set: typeface.char_set.clone(),
         }
     }
 }
@@ -529,10 +529,23 @@ impl FontService {
             }
         };
 
+        let code_point_predicate = |face: &TypefaceInfoAndCharSet| -> bool {
+            match query.and_then(|q| q.code_points.as_ref()) {
+                Some(points) => {
+                    match flags.contains(fonts_exp::ListTypefacesRequestFlags::AllCodePoints) {
+                        true => points.iter().all(|point| face.char_set.contains(*point)),
+                        false => points.iter().any(|point| face.char_set.contains(*point)),
+                    }
+                }
+                None => true,
+            }
+        };
+
         let total_predicate = |face: &TypefaceInfoAndCharSet| -> bool {
             // TODO(seancuff): add remaining predicates
             styles_predicate(face)
                 && lang_predicate(face)
+                && code_point_predicate(face)
         };
 
         // Filter

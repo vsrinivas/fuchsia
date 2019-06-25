@@ -843,4 +843,50 @@ mod experimental_api {
         }
         Ok(())
     }
+
+    fn code_point_query(points: Vec<u32>) -> Option<fonts_exp::ListTypefacesQuery> {
+        let query = fonts_exp::ListTypefacesQuery {
+            family: None,
+            styles: None,
+            languages: None,
+            code_points: Some(points),
+            generic_families: None,
+        };
+        Some(query)
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_list_typefaces_by_code_point() -> Result<(), Error> {
+        let (_app, font_provider) = start_provider_with_test_fonts()?;
+
+        let query = code_point_query(vec!['な' as u32]);
+        let request = fonts_exp::ListTypefacesRequest { flags: None, max_results: None, query };
+
+        let response = await!(font_provider.list_typefaces(request))?;
+        let results = response.unwrap().results.unwrap();
+
+        assert!(!results.is_empty());
+        for result in results {
+            assert!(result.family.as_ref().unwrap().name.contains("CJK"));
+        }
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_list_typefaces_by_code_point_all_flag() -> Result<(), Error> {
+        let (_app, font_provider) = start_provider_with_test_fonts()?;
+
+        let query = code_point_query(vec!['な' as u32, '워' as u32]);
+        let flags = Some(fonts_exp::ListTypefacesRequestFlags::AllCodePoints);
+        let request = fonts_exp::ListTypefacesRequest { flags, max_results: None, query };
+
+        let response = await!(font_provider.list_typefaces(request))?;
+        let results = response.unwrap().results.unwrap();
+
+        assert!(!results.is_empty());
+        for result in results {
+            assert!(result.family.as_ref().unwrap().name.contains("CJK"));
+        }
+        Ok(())
+    }
 }
