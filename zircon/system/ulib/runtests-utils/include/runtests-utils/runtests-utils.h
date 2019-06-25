@@ -54,7 +54,7 @@ struct DataSink : public fbl::SinglyLinkedListable<std::unique_ptr<DataSink>> {
 
 // Represents the result of a single test run.
 struct Result {
-    fbl::String name; // argv[0].
+    fbl::String name;
     LaunchStatus launch_status;
     int64_t return_code; // Only valid if launch_status == SUCCESS or FAILED_NONZERO_RETURN_CODE.
     using HashTable = fbl::HashTable<fbl::String, std::unique_ptr<DataSink>>;
@@ -76,9 +76,11 @@ struct Result {
 // |output_filename| is the name of the file to which the test binary's output
 //   will be written. May be nullptr, in which case the output will not be
 //   redirected.
+// |test_name| is the name of the test.
 typedef std::unique_ptr<Result> (*RunTestFn)(const char* argv[],
                                              const char* output_dir,
-                                             const char* output_filename);
+                                             const char* output_filename,
+                                             const char* test_name);
 
 // A means of measuring how long it takes to run tests.
 class Stopwatch {

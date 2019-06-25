@@ -305,7 +305,7 @@ bool RunTestSuccess() {
     fbl::String test_name = JoinPath(test_dir.path(), "succeed.sh");
     const char* argv[] = {test_name.c_str(), nullptr};
     ScopedScriptFile script(argv[0], "exit 0");
-    std::unique_ptr<Result> result = PlatformRunTest(argv, nullptr, nullptr);
+    std::unique_ptr<Result> result = PlatformRunTest(argv, nullptr, nullptr, test_name.c_str());
     EXPECT_STR_EQ(argv[0], result->name.c_str());
     EXPECT_EQ(SUCCESS, result->launch_status);
     EXPECT_EQ(0, result->return_code);
@@ -326,7 +326,7 @@ bool RunTestSuccessWithStdout() {
 
     fbl::String output_filename = JoinPath(test_dir.path(), "test.out");
     std::unique_ptr<Result> result =
-        PlatformRunTest(argv, nullptr, output_filename.c_str());
+        PlatformRunTest(argv, nullptr, output_filename.c_str(), test_name.c_str());
 
     FILE* output_file = fopen(output_filename.c_str(), "r");
     ASSERT_TRUE(output_file);
@@ -355,7 +355,7 @@ bool RunTestFailureWithStderr() {
 
     fbl::String output_filename = JoinPath(test_dir.path(), "test.out");
     std::unique_ptr<Result> result =
-        PlatformRunTest(argv, nullptr, output_filename.c_str());
+        PlatformRunTest(argv, nullptr, output_filename.c_str(), test_name.c_str());
 
     FILE* output_file = fopen(output_filename.c_str(), "r");
     ASSERT_TRUE(output_file);
@@ -376,7 +376,7 @@ bool RunTestFailureToLoadFile() {
 
     const char* argv[] = {"i/do/not/exist/", nullptr};
 
-    std::unique_ptr<Result> result = PlatformRunTest(argv, nullptr, nullptr);
+    std::unique_ptr<Result> result = PlatformRunTest(argv, nullptr, nullptr, argv[0]);
     EXPECT_STR_EQ(argv[0], result->name.c_str());
     EXPECT_EQ(FAILED_TO_LAUNCH, result->launch_status);
 

@@ -161,7 +161,7 @@ bool RunTestDontPublishData() {
     auto file = NewPublishFile(test_name);
 
     const char* argv[] = {test_name.c_str(), nullptr};
-    std::unique_ptr<Result> result = PlatformRunTest(argv, nullptr, nullptr);
+    std::unique_ptr<Result> result = PlatformRunTest(argv, nullptr, nullptr, test_name.c_str());
     EXPECT_STR_EQ(argv[0], result->name.c_str());
     EXPECT_EQ(SUCCESS, result->launch_status);
     EXPECT_EQ(0, result->return_code);
@@ -188,6 +188,30 @@ bool RunTestsPublishData() {
     EXPECT_EQ(0, num_failed);
     EXPECT_EQ(1, results.size());
     EXPECT_LE(1, results[0]->data_sinks.size());
+
+    END_TEST;
+}
+
+bool RunDuplicateTestsPublishData() {
+    BEGIN_TEST;
+
+    ScopedTestDir test_dir;
+    fbl::String test_name = JoinPath(test_dir.path(), "publish-data-helper");
+    auto file = NewPublishFile(test_name);
+    int num_failed = 0;
+    fbl::Vector<std::unique_ptr<Result>> results;
+    const signed char verbosity = 77;
+    const fbl::String output_dir = JoinPath(test_dir.path(), "output");
+    const char output_file_base_name[] = "output.txt";
+    ASSERT_EQ(0, MkDirAll(output_dir));
+    EXPECT_TRUE(RunTests(PlatformRunTest, {test_name, test_name, test_name}, {}, 1,
+                         output_dir.c_str(), output_file_base_name, verbosity,
+                         &num_failed, &results));
+    EXPECT_EQ(0, num_failed);
+    EXPECT_EQ(3, results.size());
+    EXPECT_STR_EQ(test_name.c_str(), results[0]->name.c_str());
+    EXPECT_STR_EQ(fbl::String::Concat({test_name, " (2)"}).c_str(), results[1]->name.c_str());
+    EXPECT_STR_EQ(fbl::String::Concat({test_name, " (3)"}).c_str(), results[2]->name.c_str());
 
     END_TEST;
 }
@@ -273,7 +297,7 @@ bool RunTestRootDir() {
         ScopedScriptFile script(argv[0], script_contents);
         fbl::String output_filename = JoinPath(test_dir.path(), "test.out");
         std::unique_ptr<Result> result =
-            PlatformRunTest(argv, nullptr, output_filename.c_str());
+            PlatformRunTest(argv, nullptr, output_filename.c_str(), test_name.c_str());
 
         FILE* output_file = fopen(output_filename.c_str(), "r");
         ASSERT_TRUE(output_file);
@@ -298,6 +322,7 @@ END_TEST_CASE(FuchsiaComponentInfo)
 BEGIN_TEST_CASE(PlatformRunTests)
 RUN_TEST(RunTestDontPublishData)
 RUN_TEST_MEDIUM(RunTestsPublishData)
+RUN_TEST_MEDIUM(RunDuplicateTestsPublishData)
 RUN_TEST_MEDIUM(RunAllTestsPublishData)
 RUN_TEST_MEDIUM(RunTestRootDir)
 END_TEST_CASE(PlatformRunTests)

@@ -191,7 +191,8 @@ std::unique_ptr<async::Loop> loop;
 
 std::unique_ptr<Result> FuchsiaRunTest(const char* argv[],
                                        const char* output_dir,
-                                       const char* output_filename) {
+                                       const char* output_filename,
+                                       const char* test_name) {
     // The arguments passed to fdio_spaws_etc. May be overridden.
     const char** args = argv;
     // calculate size of argv
@@ -231,7 +232,7 @@ std::unique_ptr<Result> FuchsiaRunTest(const char* argv[],
 
     fbl::Vector<fdio_spawn_action_t> fdio_actions = {
         fdio_spawn_action_t{.action = FDIO_SPAWN_ACTION_SET_NAME,
-          .name = {.data = path}},
+          .name = {.data = test_name}},
     };
 
     LoaderServiceState* state = nullptr;
@@ -250,7 +251,7 @@ std::unique_ptr<Result> FuchsiaRunTest(const char* argv[],
         state->root_dir_fd.reset(open("/", O_RDONLY | O_DIRECTORY));
         if (!state->root_dir_fd) {
             printf("FAILURE: Could not open root directory /\n");
-            return std::make_unique<Result>(path, FAILED_UNKNOWN, 0);
+            return std::make_unique<Result>(test_name, FAILED_UNKNOWN, 0);
         }
 
         if (!loop) {
@@ -258,19 +259,19 @@ std::unique_ptr<Result> FuchsiaRunTest(const char* argv[],
             if (loop->StartThread("loader-service") != ZX_OK) {
                 printf("FAILURE: cannot start message loop\n");
                 loop.reset();
-                return std::make_unique<Result>(path, FAILED_UNKNOWN, 0);
+                return std::make_unique<Result>(test_name, FAILED_UNKNOWN, 0);
             }
         }
 
         if (loader_service_create(loop->dispatcher(), &fd_ops, state, &loader_service) != ZX_OK) {
             printf("FAILURE: cannot create loader service\n");
             delete state;
-            return std::make_unique<Result>(path, FAILED_UNKNOWN, 0);
+            return std::make_unique<Result>(test_name, FAILED_UNKNOWN, 0);
         }
 
         if (loader_service_connect(loader_service, &svc_handle) != ZX_OK) {
             printf("FAILURE: cannot connect loader service\n");
-            return std::make_unique<Result>(path, FAILED_UNKNOWN, 0);
+            return std::make_unique<Result>(test_name, FAILED_UNKNOWN, 0);
         }
 
         fdio_actions.push_back(
@@ -286,7 +287,7 @@ std::unique_ptr<Result> FuchsiaRunTest(const char* argv[],
         if (pipe(temp_fds)) {
             fprintf(stderr, "FAILURE: Failed to create pipe: %s\n",
                     strerror(errno));
-            return std::make_unique<Result>(path, FAILED_TO_LAUNCH, 0);
+            return std::make_unique<Result>(test_name, FAILED_TO_LAUNCH, 0);
         }
         fds[0].reset(temp_fds[0]);
         fds[1].reset(temp_fds[1]);
@@ -303,7 +304,7 @@ std::unique_ptr<Result> FuchsiaRunTest(const char* argv[],
     status = zx::job::create(*zx::job::default_job(), 0, &test_job);
     if (status != ZX_OK) {
         fprintf(stderr, "FAILURE: zx::job::create() returned %d\n", status);
-        return std::make_unique<Result>(path, FAILED_TO_LAUNCH, 0);
+        return std::make_unique<Result>(test_name, FAILED_TO_LAUNCH, 0);
     }
     auto auto_call_kill_job =
         fbl::MakeAutoCall([&test_job]() { test_job.kill(); });
@@ -311,7 +312,7 @@ std::unique_ptr<Result> FuchsiaRunTest(const char* argv[],
         test_job.set_property(ZX_PROP_NAME, "run-test", sizeof("run-test"));
     if (status != ZX_OK) {
         fprintf(stderr, "FAILURE: set_property() returned %d\n", status);
-        return std::make_unique<Result>(path, FAILED_TO_LAUNCH, 0);
+        return std::make_unique<Result>(test_name, FAILED_TO_LAUNCH, 0);
     }
 
     // The TEST_ROOT_DIR environment variable allows tests that could be stored in
@@ -347,17 +348,18 @@ std::unique_ptr<Result> FuchsiaRunTest(const char* argv[],
                             fdio_actions.size(), fdio_actions.get(),
                             process.reset_and_get_address(), err_msg);
     if (status != ZX_OK) {
-        fprintf(stderr, "FAILURE: Failed to launch %s: %d (%s): %s\n", path,
+        fprintf(stderr, "FAILURE: Failed to launch %s: %d (%s): %s\n", test_name,
                 status, zx_status_get_string(status), err_msg);
-        return std::make_unique<Result>(path, FAILED_TO_LAUNCH, 0);
+        return std::make_unique<Result>(test_name, FAILED_TO_LAUNCH, 0);
     }
+
     // Tee output.
     if (output_filename != nullptr) {
         FILE* output_file = fopen(output_filename, "w");
         if (output_file == nullptr) {
             fprintf(stderr, "FAILURE: Could not open output file at %s: %s\n",
                     output_filename, strerror(errno));
-            return std::make_unique<Result>(path, FAILED_DURING_IO, 0);
+            return std::make_unique<Result>(test_name, FAILED_DURING_IO, 0);
         }
         char buf[1024];
         ssize_t bytes_read = 0;
@@ -371,15 +373,16 @@ std::unique_ptr<Result> FuchsiaRunTest(const char* argv[],
         if (fclose(output_file)) {
             fprintf(stderr, "FAILURE:  Could not close %s: %s", output_filename,
                     strerror(errno));
-            return std::make_unique<Result>(path, FAILED_DURING_IO, 0);
+            return std::make_unique<Result>(test_name, FAILED_DURING_IO, 0);
         }
     }
+
     status =
         process.wait_one(ZX_PROCESS_TERMINATED, zx::time::infinite(), nullptr);
     if (status != ZX_OK) {
         fprintf(stderr, "FAILURE: Failed to wait for process exiting %s: %d\n",
-                path, status);
-        return std::make_unique<Result>(path, FAILED_TO_WAIT, 0);
+                test_name, status);
+        return std::make_unique<Result>(test_name, FAILED_TO_WAIT, 0);
     }
 
     // Read the return code.
@@ -389,18 +392,18 @@ std::unique_ptr<Result> FuchsiaRunTest(const char* argv[],
 
     if (status != ZX_OK) {
         fprintf(stderr, "FAILURE: Failed to get process return code %s: %d\n",
-                path, status);
-        return std::make_unique<Result>(path, FAILED_TO_RETURN_CODE, 0);
+                test_name, status);
+        return std::make_unique<Result>(test_name, FAILED_TO_RETURN_CODE, 0);
     }
 
     std::unique_ptr<Result> result;
     if (proc_info.return_code == 0) {
-        fprintf(stderr, "PASSED: %s passed\n", path);
-        result = std::make_unique<Result>(path, SUCCESS, 0);
+        fprintf(stderr, "PASSED: %s passed\n", test_name);
+        result = std::make_unique<Result>(test_name, SUCCESS, 0);
     } else {
         fprintf(stderr, "FAILURE: %s exited with nonzero status: %" PRId64 "\n",
-                path, proc_info.return_code);
-        result = std::make_unique<Result>(path, FAILED_NONZERO_RETURN_CODE,
+                test_name, proc_info.return_code);
+        result = std::make_unique<Result>(test_name, FAILED_NONZERO_RETURN_CODE,
                                           proc_info.return_code);
     }
 

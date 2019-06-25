@@ -39,7 +39,8 @@ constexpr const char* const kAllowedEnvironmentVars[] = {
 
 std::unique_ptr<Result> PosixRunTest(const char* argv[],
                                      const char*, // output_dir
-                                     const char* output_filename) {
+                                     const char* output_filename,
+                                     const char* test_name) {
     int status;
     const char* path = argv[0];
     FILE* output_file = nullptr;
@@ -50,7 +51,7 @@ std::unique_ptr<Result> PosixRunTest(const char* argv[],
     if ((status = posix_spawn_file_actions_init(&file_actions))) {
         fprintf(stderr, "FAILURE: posix_spawn_file_actions_init failed: %s\n",
                strerror(status));
-        return std::make_unique<Result>(path, FAILED_TO_LAUNCH, 0);
+        return std::make_unique<Result>(test_name, FAILED_TO_LAUNCH, 0);
     }
 
     auto auto_tidy = fbl::MakeAutoCall([&] {
@@ -80,20 +81,20 @@ std::unique_ptr<Result> PosixRunTest(const char* argv[],
     if (output_filename != nullptr) {
         output_file = fopen(output_filename, "w");
         if (output_file == nullptr) {
-            return std::make_unique<Result>(path, FAILED_DURING_IO, 0);
+            return std::make_unique<Result>(test_name, FAILED_DURING_IO, 0);
         }
         if ((status = posix_spawn_file_actions_addopen(
                  &file_actions, STDOUT_FILENO, output_filename,
                  O_WRONLY | O_CREAT | O_TRUNC, 0644))) {
             fprintf(stderr, "FAILURE: posix_spawn_file_actions_addopen failed: %s\n",
                    strerror(status));
-            return std::make_unique<Result>(path, FAILED_TO_LAUNCH, 0);
+            return std::make_unique<Result>(test_name, FAILED_TO_LAUNCH, 0);
         }
         if ((status = posix_spawn_file_actions_adddup2(&file_actions, STDOUT_FILENO,
                                                        STDERR_FILENO))) {
             fprintf(stderr, "FAILURE: posix_spawn_file_actions_adddup2 failed: %s\n",
                    strerror(status));
-            return std::make_unique<Result>(path, FAILED_TO_LAUNCH, 0);
+            return std::make_unique<Result>(test_name, FAILED_TO_LAUNCH, 0);
         }
     }
 
@@ -103,30 +104,30 @@ std::unique_ptr<Result> PosixRunTest(const char* argv[],
                               const_cast<char**>(argv),
                               const_cast<char**>(envp)))) {
         fprintf(stderr, "FAILURE: posix_spawn failed: %s\n", strerror(status));
-        return std::make_unique<Result>(path, FAILED_TO_LAUNCH, 0);
+        return std::make_unique<Result>(test_name, FAILED_TO_LAUNCH, 0);
     }
 
     if (waitpid(test_pid, &status, WUNTRACED | WCONTINUED) == -1) {
         fprintf(stderr, "FAILURE: waitpid failed: %s\n", strerror(errno));
-        return std::make_unique<Result>(path, FAILED_TO_WAIT, 0);
+        return std::make_unique<Result>(test_name, FAILED_TO_WAIT, 0);
     }
     if (WIFEXITED(status)) {
         int return_code = WEXITSTATUS(status);
         LaunchStatus launch_status =
             return_code ? FAILED_NONZERO_RETURN_CODE : SUCCESS;
-        return std::make_unique<Result>(path, launch_status, return_code);
+        return std::make_unique<Result>(test_name, launch_status, return_code);
     }
     if (WIFSIGNALED(status)) {
         fprintf(stderr, "FAILURE: test process killed by signal %d\n", WTERMSIG(status));
-        return std::make_unique<Result>(path, FAILED_NONZERO_RETURN_CODE, 1);
+        return std::make_unique<Result>(test_name, FAILED_NONZERO_RETURN_CODE, 1);
     }
     if (WIFSTOPPED(status)) {
         fprintf(stderr, "FAILURE: test process stopped by signal %d\n", WSTOPSIG(status));
-        return std::make_unique<Result>(path, FAILED_NONZERO_RETURN_CODE, 1);
+        return std::make_unique<Result>(test_name, FAILED_NONZERO_RETURN_CODE, 1);
     }
 
     fprintf(stderr, "FAILURE: test process with unexpected status: %#x", status);
-    return std::make_unique<Result>(path, FAILED_UNKNOWN, 0);
+    return std::make_unique<Result>(test_name, FAILED_UNKNOWN, 0);
 }
 
 } // namespace runtests

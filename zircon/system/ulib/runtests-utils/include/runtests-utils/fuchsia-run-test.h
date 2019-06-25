@@ -44,7 +44,8 @@ void TestFileComponentInfo(const fbl::String& path,
 //   redirected.
 std::unique_ptr<Result> FuchsiaRunTest(const char* argv[],
                                        const char* output_dir,
-                                       const char* output_filename);
+                                       const char* output_filename,
+                                       const char* test_name);
 
 } // namespace runtests
 

@@ -18,7 +18,9 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <map>
 #include <memory>
+#include <string>
 
 #include <fbl/auto_call.h>
 #include <fbl/string.h>
@@ -326,15 +328,27 @@ bool RunTests(const RunTestFn& RunTest, const fbl::Vector<fbl::String>& test_pat
               const char* output_dir,
               const fbl::StringPiece output_file_basename, signed char verbosity, int* failed_count,
               fbl::Vector<std::unique_ptr<Result>>* results) {
+    std::map<fbl::String, int> test_name_to_count;
     for (int i = 1; i <= repeat; ++i) {
         for (const fbl::String& test_path : test_paths) {
             fbl::String output_dir_for_test_str;
             fbl::String output_filename_str;
+            fbl::String output_test_name;
+            if (test_name_to_count.find(test_path) != test_name_to_count.end()) {
+                int count = test_name_to_count[test_path];
+                count += 1;
+                output_test_name =
+                    fbl::String::Concat({test_path, " (", std::to_string(count), ")"});
+                test_name_to_count[test_path] = count;
+            } else {
+                test_name_to_count[test_path] = 1;
+                output_test_name = test_path;
+            }
             // Ensure the output directory for this test binary's output exists.
             if (output_dir != nullptr) {
                 // If output_dir was specified, ask |RunTest| to redirect stdout/stderr
                 // to a file whose name is based on the test name.
-                output_dir_for_test_str = runtests::JoinPath(output_dir, test_path);
+                output_dir_for_test_str = runtests::JoinPath(output_dir, output_test_name);
                 const int error = runtests::MkDirAll(output_dir_for_test_str);
                 if (error) {
                     fprintf(stderr, "Error: Could not create output directory %s: %s\n",
@@ -368,10 +382,10 @@ bool RunTests(const RunTestFn& RunTest, const fbl::Vector<fbl::String>& test_pat
             // Execute the test binary.
             printf("\n------------------------------------------------\n"
                    "RUNNING TEST: %s\n\n",
-                   test_path.c_str());
+                   output_test_name.c_str());
             fflush(stdout);
             std::unique_ptr<Result> result = RunTest(argv.get(), output_dir_for_test,
-                                                     output_filename);
+                                                     output_filename, output_test_name.c_str());
             if (result->launch_status != SUCCESS) {
                 *failed_count += 1;
             }
