@@ -7,7 +7,9 @@ import("//build/testing/environments.gni")
 
 group("test") {
   testonly = true
-  deps = [":memory_metrics_tests"]
+  deps = [
+    ":memory_metrics_tests",
+  ]
 }
 
 executable("memory_metrics_unittests") {
@@ -19,18 +21,21 @@ executable("memory_metrics_unittests") {
     "summary_unittest.cc",
     "test_utils.cc",
     "test_utils.h",
+    "watcher_unittest.cc",
   ]
 
   deps = [
-    "//src/developer/memory/metrics",
     "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp/testing:unit",
+    "//src/developer/memory/metrics",
     "//src/lib/fxl/test:gtest_main",
   ]
 }
 
 test_package("memory_metrics_tests") {
-  deps = [":memory_metrics_unittests"]
+  deps = [
+    ":memory_metrics_unittests",
+  ]
 
   tests = [
     {

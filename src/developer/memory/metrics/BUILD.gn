@@ -13,6 +13,8 @@ source_set("metrics") {
     "printer.h",
     "summary.cc",
     "summary.h",
+    "watcher.cc",
+    "watcher.h",
   ]
 
   deps = [
