@@ -12,12 +12,12 @@
 #include <mutex>
 #include <stdio.h>
 #include <threads.h>
-#include <unittest/unittest.h>
 #include <zircon/compiler.h>
 #include <zircon/syscalls/exception.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/port.h>
 #include <zircon/threads.h>
+#include <zxtest/zxtest.h>
 
 enum class Instruction {
     SGDT,
@@ -111,11 +111,10 @@ int isn_thread_func(void* raw_arg) {
     return 0;
 }
 
-bool test_instruction(Instruction isn) {
-    BEGIN_HELPER;
-
+void test_instruction(Instruction isn) {
     ThreadFuncArg arg;
     arg.isn = isn;
+
     zx::thread thread;
     zx::port port;
     {
@@ -156,22 +155,21 @@ bool test_instruction(Instruction isn) {
             }
         }
     }
-
-    END_HELPER;
 }
 
-template <Instruction isn>
-bool umip_test() {
-    BEGIN_TEST;
-
-    ASSERT_TRUE(test_instruction(isn));
-
-    END_TEST;
+TEST(X86UmipTestCase, Sgdt) {
+    ASSERT_NO_FAILURES(test_instruction(Instruction::SGDT));
 }
 
-bool umip_test_smsw() {
-    BEGIN_TEST;
+TEST(X86UmipTestCase, Sidt) {
+    ASSERT_NO_FAILURES(test_instruction(Instruction::SIDT));
+}
 
+TEST(X86UmipTestCase, Sldt) {
+    ASSERT_NO_FAILURES(test_instruction(Instruction::SLDT));
+}
+
+TEST(X86UmipTestCase, Smsw) {
     bool should_skip = false;
     if (is_umip_supported()) {
         // If UMIP is supported, check if we're running under KVM.  On host
@@ -187,20 +185,20 @@ bool umip_test_smsw() {
     }
 
     if (!should_skip) {
-        ASSERT_TRUE(test_instruction(Instruction::SMSW));
+        ASSERT_NO_FAILURES(test_instruction(Instruction::SMSW));
     }
-
-    END_TEST;
 }
 
+TEST(X86UmipTestCase, Str) {
+    ASSERT_NO_FAILURES(test_instruction(Instruction::STR));
 }
 
-BEGIN_TEST_CASE(x86_umip_test)
-RUN_TEST(umip_test<Instruction::SGDT>)
-RUN_TEST(umip_test<Instruction::SIDT>)
-RUN_TEST(umip_test<Instruction::SLDT>)
-RUN_TEST(umip_test_smsw)
-RUN_TEST(umip_test<Instruction::STR>)
-RUN_TEST(umip_test<Instruction::NOOP>)
-RUN_TEST(umip_test<Instruction::MOV_NONCANON>)
-END_TEST_CASE(x86_umip_test)
+TEST(X86UmipTestCase, Noop) {
+    ASSERT_NO_FAILURES(test_instruction(Instruction::NOOP));
+}
+
+TEST(X86UmipTestCase, MoveNoncanonical) {
+    ASSERT_NO_FAILURES(test_instruction(Instruction::MOV_NONCANON));
+}
+
+} // namespace
