@@ -747,8 +747,8 @@ TEST(ChannelTest, CallWrittenBytesSmallerThanZxTxIdReturnsInvalidArgs) {
 }
 
 template <auto ReplyFiller, uint32_t accumulated_messages = 0>
-void Reply(const Message& request, uint32_t message_count, zx::channel svc,
-           std::atomic<const char*>* error) {
+void ReplyAndWait(const Message& request, uint32_t message_count, zx::channel svc,
+                  std::atomic<const char*>* error, zx::event* wait_for_event) {
     std::set<zx_txid_t> live_ids;
     std::vector<Message> live_requests;
     auto cleanup = fbl::MakeAutoCall([&svc, &live_requests]() {
@@ -795,6 +795,20 @@ void Reply(const Message& request, uint32_t message_count, zx::channel svc,
             }
         }
     }
+
+    if (wait_for_event != nullptr) {
+        if (wait_for_event->wait_one(ZX_USER_SIGNAL_0, zx::time::infinite(), nullptr) != ZX_OK) {
+            *error = "Failed to wait for signal event.";
+            return;
+        }
+    }
+}
+
+template <auto ReplyFiller, uint32_t accumulated_messages = 0>
+void Reply(const Message& request, uint32_t message_count, zx::channel svc,
+           std::atomic<const char*>* error) {
+    ReplyAndWait<ReplyFiller, accumulated_messages>(request, message_count, std::move(svc), error,
+                                                    nullptr);
 }
 
 zx_channel_call_args_t MakeArgs(const Message& request, Message* reply) {
@@ -1085,10 +1099,11 @@ TEST(ChannelTest, CallDeadlineExceededReturnsTimedOut) {
     auto args = MakeArgs(request, &reply);
     {
         AutoJoinThread service_thread(
-            Reply<ReplyFiller<kReplyDataSize, kReplyHandleCount>, kAccumulatedMessages>, request,
-            kAccumulatedMessages - 1, std::move(remote), &error);
+            ReplyAndWait<ReplyFiller<kReplyDataSize, kReplyHandleCount>, kAccumulatedMessages>,
+            request, kAccumulatedMessages - 1, std::move(remote), &error, &event);
         uint32_t bc, hc;
         ASSERT_EQ(local.call(0, zx::time::infinite_past(), &args, &bc, &hc), ZX_ERR_TIMED_OUT);
+        event.signal(0, ZX_USER_SIGNAL_0);
     }
     reply.CloseHandles();
 
