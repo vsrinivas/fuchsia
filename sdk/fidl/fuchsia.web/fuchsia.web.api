@@ -1,5 +1,5 @@
 {
-  "fidl/fuchsia.web/context.fidl": "84be13e7d2d4b703a8b8a2676c1fd6e3",
+  "fidl/fuchsia.web/context.fidl": "0a3d534f532eac9a1b77cc7e551552f2",
   "fidl/fuchsia.web/cookie.fidl": "017cb7cbf9736dd78355e66fe94e9375",
   "fidl/fuchsia.web/debug.fidl": "21ed29e4411f9c0812c30c061d1f1f37",
   "fidl/fuchsia.web/frame.fidl": "8d0c4650b55b6d4f5ce3d34cc4f6d6e1",

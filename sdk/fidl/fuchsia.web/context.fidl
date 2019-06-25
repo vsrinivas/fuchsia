@@ -38,6 +38,11 @@ table CreateContextParams {
     /// specification at https://tools.ietf.org/html/rfc7231#section-5.5.3
     3: string user_agent_product;
     4: string user_agent_version;
+
+    /// Port to be used for remote debugging for connection via the DevTools
+    /// protocol. This is only for testing purposes and should not be set in
+    /// production code.
+    5: uint16 remote_debugging_port;
 };
 
 /// Manages browsing state (e.g. LocalStorage, cookies, etc) associated with

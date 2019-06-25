@@ -123,6 +123,7 @@ impl WebdriverFacadeInternal {
                 data_directory: None,
                 user_agent_product: None,
                 user_agent_version: None,
+                remote_debugging_port: None,
             },
             context_server_end,
         )?;
