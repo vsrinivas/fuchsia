@@ -1,13 +1,19 @@
 C++ style guide
 ===============
 
-The Fuchsia project follows the [Google C++ style guide][google-guide], with a
+The Fuchsia project follows the public [Google C++ style guide][google-guide], with a
 few exceptions.
 
-By policy, code should be formatted by clang-format which should handle many
-decisions.
+Using [clang-format][clang-format] is a good practice as it ensures your code is in
+compliance with the style guide. Tricium checks in Gerrit also use clang-format as a
+non-gating linter. However, you may still manually format code as long as it complies
+with these guidelines.
 
 ### Exceptions
+
+#### Line Length
+
+Fuchsia uses 100 columns instead of 80.
 
 #### Braces
 
@@ -62,6 +68,7 @@ if (x == kFoo)
 
 Rationale: [Tip of the Week #130: Namespace Naming][totw-130]
 
+[clang-format]: https://clang.llvm.org/docs/ClangFormat.html
 [google-guide]: https://google.github.io/styleguide/cppguide.html
 [totw-130]: https://abseil.io/tips/130
 

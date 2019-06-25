@@ -48,68 +48,6 @@ incomplete and will be expanded over time.
 *   Avoid changes that touch multiple modules at once if possible. Most changes
     should be to a single library, driver, app, etc.
 
-## Style
-
-* Code style mostly follows the [Google C++ Style Guide][google-style-guide], except:
-
-    - When editing existing code, match local style.  This supersedes the other style rules.
-
-    - Maximum line width is 100 characters rather than 80.
-
-    - Indentation is four spaces, not two.  Still never use tabs.  Do not leave trailing whitespace
-      on lines.  Gerrit will flag bad whitespace usage with a red background in diffs.
-
-    - Zircon declares pointers as `char* p` and **not** as `char *p;`.  The Google style guide is
-      ambivalent about this; Zircon standardized on asterisk-with-type instead of
-      asterisk-with-name.
-
-    - Inside a `switch` statement, the `case` labels are not indented.  Example:
-
-          void foo(int which) {
-              switch (which) {
-              case 0:
-                  foo_zero();
-                  break;
-              case 17:
-                  foo_seventeen();
-                  break;
-              default:
-                  panic("I don't know how to foo here (which = %d)\n", which);
-              }
-          }
-
-    - Put curly braces around the body of any loop and in any `if` statement where the body is on
-      another line (including any `if` statement that has an `else if` or `else` part). Trivial `if`
-      statements can be written on one line, like this:
-
-          if (result != ZX_OK) return result;
-
-       However, do **not** write:
-
-          if (result == ZX_OK)
-              return do_more_stuff(data);
-          else
-              return result;
-
-       and do **not** write:
-
-          while (result == ZX_OK)
-              result = do_another_step(data);
-
-      Note that this rule isn't enforced by `clang-fmt`, so please pay attention to it when writing
-      code and reviewing commits.
-
-    - Use "#pragma once" in the header file instead of using header guards. Place it right after
-      license statement and before include's.
-
-* You can run `./scripts/clang-fmt` to reformat files.  Pass in the filenames as arguments, e.g.
-
-      scripts/clang-fmt kernel/top/main.c kernel/top/init.c
-
-  The `clang-fmt` script will automatically download and run the `clang-format` binary.  This fixes
-  most style problems, except for line length (since `clang-format` is too aggressive about
-  re-wrapping modified lines).
-
 ## Documentation
 
 * Documentation is one honking great idea &mdash; let's do more of that!
@@ -125,7 +63,6 @@ incomplete and will be expanded over time.
       currently used to generate API docs for DDK.  `./scripts/make-markdown` runs `h2md` against
       all source files in the `system/` tree.
 
-[google-style-guide]: https://google.github.io/styleguide/cppguide.html
 [googlesource-docs]: https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/
 [syscall-doc]: https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls.md
 [cmdline-doc]: https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/kernel_cmdline.md

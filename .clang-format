@@ -8,3 +8,7 @@ Standard: Cpp11
 SortIncludes: true
 AllowShortIfStatementsOnASingleLine: false
 AllowShortLoopsOnASingleLine: false
+DerivePointerAlignment: true
+PointerAlignment: Left
+ColumnLimit: 100
+ForEachMacros: ['list_for_every_entry','list_for_every_entry_safe']
