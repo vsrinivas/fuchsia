@@ -1,0 +1,10 @@
+## Approximates the subset of CQ-blocking bots using only bringup.
+
+bringup.arm64 --with-base=//bundles/buildbot:bringup --variant clang
+bringup.x64 --with-base=//bundles/buildbot:bringup --variant clang
+
+bringup.arm64 --with-base=//bundles/buildbot:bringup --variant gcc
+bringup.x64 --with-base=//bundles/buildbot:bringup --variant gcc
+
+bringup.arm64 --with-base=//bundles/buildbot:bringup --variant asan
+bringup.x64 --with-base=//bundles/buildbot:bringup --variant asan

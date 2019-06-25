@@ -9,6 +9,7 @@
 .envrc
 .fx-build-dir
 .fx-metrics-config
+.fx-multi-list
 .cproject
 .DS_Store
 .gdb_history

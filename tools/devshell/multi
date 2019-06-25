@@ -1,0 +1,315 @@
+#!/bin/bash
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### Run an `fx` command across multiple build directories.
+## Usage: fx multi [add | list | remove | rm | save FILE | use FILE]
+##        fx multi [-f | --fail] COMMAND ...
+##        fx multi set {PRODUCT.BOARD | SPEC}... [SWITCHES...]
+##
+## fx multi maintains lists of build directories and runs fx commands
+## across multiple builds in sequence.
+##
+## The first form uses subcommands that maintain the current multi list:
+##
+##   add                   Adds the current build to the multi list.
+##                         e.g. `fx --dir out/foo multi add`
+##                         If the directory is already present, rotates it
+##                         to the end of the list.
+##
+##   clear                 Resets the current multi list to empty.
+##
+##   list                  Displays the current multi list.
+##                         Just `fx multi` does this too.
+##
+##   remove [-f] | rm [-f] Removes the current build from the multi list.
+##                         With -f it's not an error if it's not in the list.
+##
+##   save FILE             Saves the multi list in FILE.
+##
+##   use FILE              Resets the multi list to the one saved in FILE.
+##
+## The second form runs any other `fx` subcommand you like, several times.
+## For each build in the multi list, it runs `fx --dir <build-dir> COMMAND ...`
+## With `--fail` (or `-f`), `fx multi` exits as soon as one COMMAND fails.
+## By default, it runs each one in sequence even if the previous one failed.
+## At the end it reports which ones failed.
+##
+## The third form resets the multi list to empty and then runs several `fx set`
+## commands, adding each new build dir to the multi list (if it succeeded).
+## It's like running `fx multi clear` and then a series of:
+##
+##   fx set PRODUCT.BOARD --auto-dir SWITCHES... && fx multi add
+##
+## Arguments before SWITCHES... can be explicit PRODUCT.BOARD or can be
+## one of a fixed set of SPEC strings.  Run `fx multi set` alone to see
+## the set of available SPEC strings.  Each string corresponds to a list
+## of PRODUCT.BOARD + FIXED_SWITCHES... combinations.  The FIXED_SWITCHES...
+## are prepended to any SWITCHES... on the `fx multi set` command line.
+##
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
+
+set -e
+shopt -s nullglob
+
+readonly MULTI_LIST_FILE="${FUCHSIA_DIR}/.fx-multi-list"
+readonly MULTI_SPEC_DIRS=(
+  "${FUCHSIA_DIR}/tools/devshell/lib/multi-specs"
+  "${FUCHSIA_DIR}"/vendor/*/scripts/devshell/lib/multi-specs
+)
+
+FAIL_FAST=false
+
+MULTI_LIST=()
+
+function for-each-build {
+  local on_failure="$1"
+  shift
+  local status=0 failed=() dir
+  for dir in "${MULTI_LIST[@]}"; do
+    _FX_BUILD_DIR="$FUCHSIA_DIR/$dir" "$@" || {
+      status=$?
+      failed+=("$dir")
+      $FAIL_FAST && break
+    }
+  done
+  for dir in "${failed[@]}"; do
+    "$on_failure" "$dir" "$@"
+  done
+  return $status
+}
+
+function read-multi-list {
+  if [[ $# -eq 0 ]]; then
+     set -- "$MULTI_LIST_FILE"
+  fi
+  MULTI_LIST=()
+  if [[ -r "$1" ]]; then
+    MULTI_LIST=($(<"$1"))
+  else
+    return 1
+  fi
+}
+
+function write-multi-list {
+  if [[ $# -eq 0 ]]; then
+     set -- "$MULTI_LIST_FILE"
+  fi
+  local -r tmpfile="$(mktemp)"
+  for-each-build : list-one --quiet > "$tmpfile"
+  mv -f "$tmpfile" "$1"
+}
+
+function list {
+  if [[ ${#MULTI_LIST[@]} == 0 ]]; then
+    fx-warn "no build directories in current fx multi list; use fx multi add"
+  fi
+  for-each-build : list-one
+}
+
+function list-one {
+  echo "${_FX_BUILD_DIR#$FUCHSIA_DIR/}"
+  if [[ $# -eq 0 ]]; then
+    if [[ ! -d "$_FX_BUILD_DIR" ]]; then
+      fx-warn "build directory $_FX_BUILD_DIR does not exist"
+      return 1
+    elif [[ ! -r "$_FX_BUILD_DIR/args.gn" ]]; then
+      fx-warn "build directory $_FX_BUILD_DIR is not configured"
+      return 1
+    fi
+  fi
+}
+
+function use {
+  if [[ $# -ne 1 ]]; then
+    fx-command-help
+    return 1
+  fi
+  read-multi-list "$1"
+  write-multi-list
+}
+
+function save {
+  if [[ $# -ne 1 ]]; then
+    fx-command-help
+    return 1
+  fi
+  write-multi-list "$1"
+}
+
+function clear {
+  MULTI_LIST=()
+  write-multi-list
+}
+
+function add {
+  if [[ $# -ne 0 ]]; then
+    fx-command-help
+    return 1
+  fi
+
+  remove -f
+  MULTI_LIST+=("${FUCHSIA_BUILD_DIR#$FUCHSIA_DIR/}")
+  write-multi-list
+}
+
+function remove {
+  local check=true
+  if [[ $# -eq 1 && "$1" == "-f" ]]; then
+    check=false
+    shift
+  fi
+  if [[ $# -ne 0 ]]; then
+    fx-command-help
+    return 1
+  fi
+
+  fx-config-read
+  local new_list=() missing=true dir
+  for dir in "${MULTI_LIST[@]}"; do
+    if [[ "$FUCHSIA_DIR/$dir" == "$FUCHSIA_BUILD_DIR" ]]; then
+      missing=false
+    else
+      new_list+=("$dir")
+    fi
+  done
+
+  if $missing && $check; then
+    fx-error "build dir not in current fx multi list"
+    return 1
+  fi
+
+  MULTI_LIST=("${new_list[@]}")
+  write-multi-list
+}
+
+function execute-one {
+  # Do it in a subshell in case it exits.
+  (fx-command-run "$@")
+}
+
+function one-failed {
+  local dir="$1"
+  shift 2
+  fx-error fx --dir "$dir" "$@"
+}
+
+function find-spec-file {
+  local dir spec_file
+  for dir in "${MULTI_SPEC_DIRS[@]}"; do
+    spec_file="$dir/$1"
+    if [[ -r "$spec_file" ]]; then
+      echo "$spec_file"
+      return 0
+    fi
+  done
+  fx-error "Unrecognized SPEC string: $1"
+  fx-error 'Run `fx multi set` alone to see available SPEC strings'
+  return 1
+}
+
+function multi-set {
+  local builds=()
+  while [[ $# -gt 0 && "$1" != -* ]]; do
+    builds+=("$1")
+    shift
+  done
+
+  if [[ ${#builds[@]} == 0 ]]; then
+    fx-error "Missing PRODUCT.BOARD or SPEC goals."
+    fx-error "PRODUCT.BOARD is as for fx set, which see.  SPEC is one of:"
+    local dir spec_file
+    for dir in "${MULTI_SPEC_DIRS[@]}"; do
+      for spec_file in "$dir"/*[!~]; do
+        fx-error
+        fx-error "  ${spec_file#$dir/}  (cf ${spec_file#$FUCHSIA_DIR/})"
+        fx-error "    $(sed -n 's/^## \{0,1\}//p' "$spec_file")"
+      done
+    done
+    return 1
+  fi
+
+  clear
+
+  local status=0 failed=() build spec_file set_cmd
+  for build in "${builds[@]}"; do
+    if [[ "$build" == *.* ]]; then
+      spec_file=
+    else
+      spec_file="$(find-spec-file "$build")"
+      exec 3< "$spec_file" || {
+        fx-error "$build is not a known fx multi set SPEC"
+        return 1
+      }
+    fi
+    while [[ -z "$spec_file" ]] || {
+            read build <&3 &&
+              while [[ -z "$build" || "$build" == "#*" ]] && read build <&3; do
+                :
+              done
+          }; do
+      set_cmd=(set $build --auto-dir "${spec_switches[@]}" "$@")
+      if fx-command-run "${set_cmd[@]}" 3<&-; then
+        fx-build-dir-if-present
+        add
+      else
+        status=$?
+        failed+=("fx ${set_cmd[*]}")
+        $FAIL_FAST && break
+      fi
+      [[ -n "$spec_file" ]] || break
+    done
+  done
+  exec 3<&-
+
+  for build in "${failed[@]}"; do
+    fx-error "$build"
+  done
+
+  return $status
+}
+
+function main {
+  if [[ $# -eq 0 ]]; then
+    set -- list
+  fi
+
+  while [[ "$1" == -* ]]; do
+    case "$1" in
+      -f|--fail)
+        FAIL_FAST=true
+        ;;
+      --)
+        break
+        ;;
+      *)
+        fx-command-help
+        return 1
+        ;;
+    esac
+    shift
+  done
+
+  read-multi-list "$MULTI_LIST_FILE" || :
+
+  case "$1" in
+    add|clear|list|remove|save|use)
+      "$@"
+      ;;
+    rm)
+      shift
+      remove "$@"
+      ;;
+    set)
+      shift
+      multi-set "$@"
+      ;;
+    *)
+      for-each-build one-failed execute-one "$@"
+      ;;
+  esac
+}
+
+main "$@"
