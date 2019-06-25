@@ -820,11 +820,6 @@ zx_status_t fdio_pipe_half(int* out_fd, zx_handle_t* out_handle) {
     return r;
 }
 
-__EXPORT
-zx_status_t fdio_pipe_half2(int* out_fd, zx_handle_t* out_handle) {
-    return fdio_pipe_half(out_fd, out_handle);
-}
-
 // Debuglog --------------------------------------------------------------------
 
 fdio_t* fdio_logger_create(zx_handle_t handle) {

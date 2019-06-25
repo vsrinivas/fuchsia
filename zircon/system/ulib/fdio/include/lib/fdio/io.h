@@ -52,9 +52,6 @@ ssize_t fdio_ioctl(int fd, int op, const void* in_buf, size_t in_len, void* out_
 // ZX_ERR_NO_RESOURCES: Failed to bind to the file descriptor.
 zx_status_t fdio_pipe_half(int* out_fd, zx_handle_t* out_handle);
 
-// The same as |fdio_pipe_half|. Use |fdio_pipe_half| instead.
-zx_status_t fdio_pipe_half2(int* out_fd, zx_handle_t* out_handle);
-
 // Get a read-only VMO containing the whole contents of the file.
 // This function creates a clone of the underlying VMO when possible, falling
 // back to eagerly reading the contents into a freshly-created VMO.
