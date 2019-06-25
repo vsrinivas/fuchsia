@@ -97,4 +97,4 @@ private:
 
 } // namespace ftdi_mpsse
 
-#endif  // ZIRCON_SYSTEM_DEV_SERIAL_FTDI_FTDI_I2C_H_
+#endif // ZIRCON_SYSTEM_DEV_SERIAL_FTDI_FTDI_I2C_H_

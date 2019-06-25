@@ -43,6 +43,7 @@ __BEGIN_CDECLS
 #define PDEV_DID_CPU_TRACE          29  // CPU tracing driver
 #define PDEV_DID_DW_DSI             30  // Designware DSI
 #define PDEV_DID_USB_XHCI_COMPOSITE 31  // XHCI USB Controller, as a composite device
+#define PDEV_DID_SSD1306            32  // Oled Display
 
 // QEMU emulator
 #define PDEV_VID_QEMU               1

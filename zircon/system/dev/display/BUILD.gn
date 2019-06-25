@@ -15,6 +15,7 @@ group("display") {
     "led2472g",
     "mt8167s-display",
     "simple",
+    "ssd1306",
     "vim-display",
   ]
   if (current_cpu == "x64") {

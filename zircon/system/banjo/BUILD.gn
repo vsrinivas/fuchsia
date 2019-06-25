@@ -25,6 +25,7 @@ group("banjo") {
     "ddk.protocol.codec",
     "ddk.protocol.composite",
     "ddk.protocol.display.controller",
+    "ddk.protocol.dotmatrixdisplay",
     "ddk.protocol.dsiimpl",
     "ddk.protocol.ethernet",
     "ddk.protocol.ethernet.board",

@@ -1,0 +1,46 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library ddk.protocol.dotmatrixdisplay;
+
+using zx;
+
+/// This describes the format for each pixel in the screen.
+enum PixelFormat : uint32 {
+   /// Pixels have on or off value (0 or 1). There is one bit per pixel.
+   MONOCHROME = 0;
+};
+
+/// Describes the layout of the pixels within the screen vector.
+enum ScreenLayout : uint32 {
+    /// The vector is laid out with columns top-to-bottom. The columns
+    /// are organized into rows that go left-to-right.
+    COLUMN_TB_ROW_LR = 0;
+    /// The vector is laid out with rows left-to-right. The rows
+    /// are organized into columns that go top-to-bottom.
+    ROW_LR_COLUMN_TB = 1;
+};
+
+struct DotmatrixDisplayConfig {
+    /// The screen's width in pixels.
+    uint32 width;
+    /// The screen's height in pixels.
+    uint32 height;
+    PixelFormat format;
+    ScreenLayout layout;
+};
+
+/// Protocol for Dotmatrix display drivers. A Dotmatrix display is any
+/// externally connected display that is written to pixel by pixel. These are
+/// typically connected to over USB, I2C, or SPI, and they have a small number
+/// of pixels. The display could be monochromatic or have RGB values. This
+/// protocol is NOT for a display with lots of pixels or extra hardware like an
+/// HDMI or DP display.
+[Layout = "ddk-protocol"]
+protocol DotmatrixDisplay {
+    /// Get the configuration to display the screen.
+    GetConfig() -> (DotmatrixDisplayConfig config);
+    /// Set the screen memory. Calling this function will update the display.
+    SetScreen(vector<uint8> screen_buffer) -> (zx.status s);
+};

@@ -30,6 +30,7 @@ group("fidl") {
     "fuchsia-hardware-camera",
     "fuchsia-hardware-clock",
     "fuchsia-hardware-display",
+    "fuchsia-hardware-dotmatrixdisplay",
     "fuchsia-hardware-ethernet",
     "fuchsia-hardware-ethertap",
     "fuchsia-hardware-ftdi",
