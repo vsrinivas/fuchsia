@@ -24,7 +24,7 @@
             "fuchsia.bluetooth.control.Control"
         ],
         "system": [
-            "driver/bt-hci-fake.so"
+            "driver/bt-hci-emulator.so"
         ]
     }
 }

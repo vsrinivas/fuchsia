@@ -1,8 +1,8 @@
-The bt-hci-fake driver is a Bluetooth controller emulator that allows system
+The bt-hci-emulator driver is a Bluetooth controller emulator that allows system
 Bluetooth components to be tested in integration against the Bluetooth HCI
 procotol.
 
-bt-fake-hci provides a standard HCI interface to the rest of the system while
+bt-hci-emulator provides a standard HCI interface to the rest of the system while
 allowing its behavior to be configured using an emulator interface. It
 accomplishes this by publishing two distinct devices:
 

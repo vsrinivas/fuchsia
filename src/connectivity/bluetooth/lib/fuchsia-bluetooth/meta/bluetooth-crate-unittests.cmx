@@ -9,7 +9,7 @@
             "test/test"
         ],
         "system": [
-            "driver/bt-hci-fake.so"
+            "driver/bt-hci-emulator.so"
         ]
     }
 }

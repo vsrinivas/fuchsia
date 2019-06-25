@@ -154,7 +154,7 @@ Add the commands to `$FUCHSIA_DIR/local/kernel_cmdline.txt`, e.g. to enable full
   driver.bt_transport_usb.log=+trace,+info,+error,+warn
   ```
 
-(HCI drivers other than Intel can also be set. Other hci drivers include `bt_hci_atheros`, `bt_hci_passthrough`, and `bt_hci_fake`)
+(HCI drivers other than Intel can also be set. Other hci drivers include `bt_hci_atheros`, `bt_hci_passthrough`, and `bt_hci_emulator`)
 
 Using `fx set` writes these values into the image, so they will survive a restart.
 

@@ -6,7 +6,7 @@ group("hci") {
   testonly = true
   deps = [
     "atheros",
-    "fake",
+    "emulator",
     "intel",
     "passthrough",
   ]

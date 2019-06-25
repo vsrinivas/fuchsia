@@ -147,7 +147,7 @@ group("sl4f") {
 group("bluetooth") {
   testonly = true
   public_deps = [
-    "//src/connectivity/bluetooth/hci/fake",
+    "//src/connectivity/bluetooth/hci/emulator",
     "//src/connectivity/bluetooth/tools",
     "//src/connectivity/bluetooth/tools/bt-snoop",
   ]

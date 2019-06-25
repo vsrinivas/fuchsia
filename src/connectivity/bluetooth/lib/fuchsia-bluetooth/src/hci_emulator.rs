@@ -27,9 +27,10 @@ fn watch_timeout() -> zx::Duration {
     zx::Duration::from_seconds(10)
 }
 
-/// Represents a bt-hci device emulator. Instances of this type can be used manage the bt-hci-fake
-/// driver within the test device hierarchy. The associated driver instance gets unbound and all
-/// bt-hci and bt-emulator device instances destroyed when a Emulator goes out of scope.
+/// Represents a bt-hci device emulator. Instances of this type can be used manage the
+/// bt-hci-emulator driver within the test device hierarchy. The associated driver instance gets
+/// unbound and all bt-hci and bt-emulator device instances destroyed when a FakeHciDevice goes out
+/// of scope.
 pub struct Emulator {
     dev: TestDevice,
     emulator: HciEmulatorProxy,
@@ -131,7 +132,7 @@ impl TestDevice {
         Ok(device.destroy()?)
     }
 
-    // Bind the bt-hci-fake driver and obtain the HciEmulator protocol channel.
+    // Bind the bt-hci-emulator driver and obtain the HciEmulator protocol channel.
     async fn bind(&self) -> Result<HciEmulatorProxy, Error> {
         let channel = fdio::clone_channel(&self.0)?;
         let mut controller = ControllerSynchronousProxy::new(channel);

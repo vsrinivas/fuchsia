@@ -511,7 +511,7 @@ group("bluetooth_drivers") {
   public_deps = [
     "//src/connectivity/bluetooth/core/bt-host",
     "//src/connectivity/bluetooth/hci/atheros",
-    "//src/connectivity/bluetooth/hci/fake",
+    "//src/connectivity/bluetooth/hci/emulator",
     "//src/connectivity/bluetooth/hci/intel",
     "//src/connectivity/bluetooth/hci/passthrough",
     "//src/connectivity/bluetooth/profiles/bt-hog",

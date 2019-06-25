@@ -2,9 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "fake_device.h"
+#include "device.h"
 
-#include <ddk/debug.h>
 #include <ddk/protocol/bt/hci.h>
 #include <lib/async/cpp/task.h>
 #include <zircon/status.h>
@@ -15,6 +14,7 @@
 #include <thread>
 
 #include "src/connectivity/bluetooth/core/bt-host/testing/fake_peer.h"
+#include "src/connectivity/bluetooth/hci/emulator/log.h"
 
 namespace ftest = fuchsia::bluetooth::test;
 
@@ -22,7 +22,7 @@ using bt::DeviceAddress;
 using bt::testing::FakeController;
 using bt::testing::FakePeer;
 
-namespace bthci_fake {
+namespace bt_hci_emulator {
 namespace {
 
 const DeviceAddress kAddress0(DeviceAddress::Type::kLEPublic,
@@ -113,13 +113,13 @@ static bt_hci_protocol_ops_t hci_protocol_ops = {
 #undef DEV
 
 zx_status_t Device::Bind() {
-  zxlogf(TRACE, "bt-fake-hci: bind\n");
+  logf(TRACE, "bind\n");
 
   std::lock_guard<std::mutex> lock(device_lock_);
 
   device_add_args_t args = {
       .version = DEVICE_ADD_ARGS_VERSION,
-      .name = "bt_hci_fake_emulator",
+      .name = "bt_hci_emulator",
       .ctx = this,
       .ops = &bt_emulator_device_ops,
       .proto_id = ZX_PROTOCOL_BT_EMULATOR,
@@ -127,8 +127,8 @@ zx_status_t Device::Bind() {
   };
   zx_status_t status = device_add(parent_, &args, &emulator_dev_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "bt-hci-fake: could not add bt-emulator device: %d\n",
-           status);
+    logf(ERROR, "could not add bt-emulator device: %s\n",
+         zx_status_get_string(status));
     return status;
   }
 
@@ -163,18 +163,18 @@ zx_status_t Device::Bind() {
   peer->set_connect_response(bt::hci::StatusCode::kConnectionTimeout);
   fake_device_->AddPeer(std::move(peer));
 
-  loop_.StartThread("bt_hci_fake");
+  loop_.StartThread("bt_hci_emulator");
 
   return status;
 }
 
 void Device::Release() {
-  zxlogf(TRACE, "bt-fake-hci: release\n");
+  logf(TRACE, "release\n");
   delete this;
 }
 
 void Device::Unbind() {
-  zxlogf(TRACE, "bt-fake-hci: unbind\n");
+  logf(TRACE, "unbind\n");
 
   bool remove_hci_dev = false;
   {
@@ -193,7 +193,7 @@ void Device::Unbind() {
 
     loop_.JoinThreads();
 
-    zxlogf(TRACE, "bt-fake-hci: emulator dispatcher shut down\n");
+    logf(TRACE, "emulator dispatcher shut down\n");
 
     remove_hci_dev = (hci_dev_ != nullptr);
 
@@ -212,19 +212,19 @@ void Device::Unbind() {
 }
 
 zx_status_t Device::HciMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
-  zxlogf(TRACE, "bt-fake-hci: HciMessage\n");
+  logf(TRACE, "HciMessage\n");
   return fuchsia_hardware_bluetooth_Hci_dispatch(this, txn, msg,
                                                  &hci_fidl_ops_);
 }
 
 zx_status_t Device::EmulatorMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
-  zxlogf(TRACE, "bt-fake-hci: EmulatorMessage\n");
+  logf(TRACE, "EmulatorMessage\n");
   return fuchsia_hardware_bluetooth_Emulator_dispatch(this, txn, msg,
                                                       &emul_fidl_ops_);
 }
 
 zx_status_t Device::OpenChan(Channel chan_type, zx_handle_t in_h) {
-  zxlogf(TRACE, "bt-fake-hci: open HCI channel\n");
+  logf(TRACE, "open HCI channel\n");
 
   zx::channel in(in_h);
   std::lock_guard<std::mutex> lock(device_lock_);
@@ -255,12 +255,12 @@ zx_status_t Device::OpenChan(Channel chan_type, zx_handle_t in_h) {
 }
 
 void Device::StartEmulatorInterface(zx::channel chan) {
-  zxlogf(TRACE, "bt-fake-hci: start HciEmulator interface\n");
+  logf(TRACE, "start HciEmulator interface\n");
 
   std::lock_guard<std::mutex> lock(device_lock_);
 
   if (binding_.is_bound()) {
-    zxlogf(TRACE, "bt-fake-hci: HciEmulator channel already bound\n");
+    logf(TRACE, "HciEmulator channel already bound\n");
     return;
   }
 
@@ -270,10 +270,8 @@ void Device::StartEmulatorInterface(zx::channel chan) {
   // the FakeController's HCI channels.
   binding_.Bind(std::move(chan), loop_.dispatcher());
   binding_.set_error_handler([this](zx_status_t status) {
-    zxlogf(
-        TRACE,
-        "bt-fake-hci: emulator channel closed (status: %s); unpublish device\n",
-        zx_status_get_string(status));
+    logf(TRACE, "emulator channel closed (status: %s); unpublish device\n",
+         zx_status_get_string(status));
 
     std::lock_guard<std::mutex> lock(device_lock_);
     fake_device_->Stop();
@@ -282,7 +280,7 @@ void Device::StartEmulatorInterface(zx::channel chan) {
 
 void Device::Publish(ftest::EmulatorSettings in_settings,
                      PublishCallback callback) {
-  zxlogf(TRACE, "bt-fake-hci: HciEmulator.Publish\n");
+  logf(TRACE, "HciEmulator.Publish\n");
 
   std::lock_guard<std::mutex> lock(device_lock_);
 
@@ -299,7 +297,7 @@ void Device::Publish(ftest::EmulatorSettings in_settings,
   // Publish the bt-hci device.
   device_add_args_t args = {
       .version = DEVICE_ADD_ARGS_VERSION,
-      .name = "bt_hci_fake",
+      .name = "bt_hci_emulator",
       .ctx = this,
       .ops = &bt_hci_device_ops,
       .proto_id = ZX_PROTOCOL_BT_HCI,
@@ -356,4 +354,4 @@ zx_status_t Device::OpenEmulatorChannel(void* ctx, zx_handle_t channel) {
   return static_cast<Device*>(ctx)->OpenChan(Channel::EMULATOR, channel);
 }
 
-}  // namespace bthci_fake
+}  // namespace bt_hci_emulator

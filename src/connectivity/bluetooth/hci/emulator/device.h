@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifndef SRC_CONNECTIVITY_BLUETOOTH_HCI_EMULATOR_DEVICE_H_
+#define SRC_CONNECTIVITY_BLUETOOTH_HCI_EMULATOR_DEVICE_H_
+
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -18,7 +21,7 @@
 
 #include "src/connectivity/bluetooth/core/bt-host/testing/fake_controller.h"
 
-namespace bthci_fake {
+namespace bt_hci_emulator {
 
 enum class Channel {
   ACL,
@@ -86,4 +89,6 @@ class Device : public fuchsia::bluetooth::test::HciEmulator {
       __TA_GUARDED(device_lock_);
 };
 
-}  // namespace bthci_fake
+}  // namespace bt_hci_emulator
+
+#endif  // SRC_CONNECTIVITY_BLUETOOTH_HCI_EMULATOR_DEVICE_H_
