@@ -523,6 +523,7 @@ mod experimental_api {
         crate::FONTS_CMX,
         failure::{Error, ResultExt},
         fidl_fuchsia_fonts as fonts, fidl_fuchsia_fonts_experimental as fonts_exp,
+        fidl_fuchsia_intl::LocaleId,
         fuchsia_async as fasync,
         fuchsia_component::client::{launch, launch_with_options, launcher, App, LaunchOptions},
     };
@@ -789,6 +790,56 @@ mod experimental_api {
         assert!(results.len() >= 1, "{:?}", results);
         for result in results {
             assert_eq!(result.style.as_ref().unwrap().weight.unwrap(), 300);
+        }
+        Ok(())
+    }
+
+    fn locale(lang: &str) -> LocaleId {
+        LocaleId { id: String::from(lang) }
+    }
+
+    fn lang_query(langs: Vec<LocaleId>) -> Option<fonts_exp::ListTypefacesQuery> {
+        Some(fonts_exp::ListTypefacesQuery {
+            family: None,
+            styles: None,
+            languages: Some(langs),
+            code_points: None,
+            generic_families: None,
+        })
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_list_typefaces_by_language() -> Result<(), Error> {
+        let (_app, font_provider) = start_provider_with_test_fonts()?;
+
+        let query = lang_query(vec![locale("ja")]);
+        let request = fonts_exp::ListTypefacesRequest { flags: None, max_results: None, query };
+
+        let response = await!(font_provider.list_typefaces(request))?;
+        let results = response.unwrap().results.unwrap();
+
+        assert_eq!(results.len(), 2 , "{:?}", results);
+        for result in results {
+            assert!(result.languages.unwrap().contains(&locale("ja")));
+        }
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_list_typefaces_by_language_all_flag() -> Result<(), Error> {
+        let (_app, font_provider) = start_provider_with_test_fonts()?;
+
+        let query = lang_query(vec![locale("zh-Hant"), locale("zh-Bopo")]);
+        let flags = Some(fonts_exp::ListTypefacesRequestFlags::AllLanguages);
+        let request = fonts_exp::ListTypefacesRequest { flags, max_results: None, query };
+
+        let response = await!(font_provider.list_typefaces(request))?;
+        let results = response.unwrap().results.unwrap();
+
+        assert_eq!(results.len(), 2 , "{:?}", results);
+        for result in results {
+            assert!(result.languages.as_ref().unwrap().contains(&locale("zh-Hant")));
+            assert!(result.languages.as_ref().unwrap().contains(&locale("zh-Bopo")));
         }
         Ok(())
     }

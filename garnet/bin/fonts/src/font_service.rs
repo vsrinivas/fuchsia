@@ -515,9 +515,24 @@ impl FontService {
             }
         };
 
+        let lang_predicate = |face: &TypefaceInfoAndCharSet| -> bool {
+            match query.and_then(|q| q.languages.as_ref()) {
+                Some(langs) => {
+                    // This is O(face_langs.len() * fonts.MAX_FACE_QUERY_LANGUAGES). As of 06/2019,
+                    // MAX_FACE_QUERY_LANGAUGES == 8. face_langs.len() *should* be small as well.
+                    match flags.contains(fonts_exp::ListTypefacesRequestFlags::AllLanguages) {
+                        true => langs.iter().all(|lang| face.languages.contains(&lang)),
+                        false => langs.iter().any(|lang| face.languages.contains(&lang)),
+                    }
+                }
+                None => true,
+            }
+        };
+
         let total_predicate = |face: &TypefaceInfoAndCharSet| -> bool {
             // TODO(seancuff): add remaining predicates
             styles_predicate(face)
+                && lang_predicate(face)
         };
 
         // Filter
