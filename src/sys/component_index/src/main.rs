@@ -123,5 +123,9 @@ mod tests {
             needle = "#!/etc/bin",
             accept = false,
         }
+        test_parse_hash => {
+            needle = "package#foo.cmx",
+            accept = false,
+        }
     }
 }
