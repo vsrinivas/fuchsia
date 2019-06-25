@@ -716,7 +716,7 @@ TEST(Resampling, Linear_Interp_Rate_MicroSRC) {
 
 // This rate ratio, when translated into a step_size based on 4096 subframes,
 // equates to 3568.999909, generating a maximal fractional value [0.999909].
-// Because the callers of Mix() [standard_output_base and audio_renderer_impl]
+// Because the callers of Mix() [audio_output and audio_capturer_impl]
 // truncate, a maximal fractional value represents maximal fractional error.
 TEST(Resampling, Linear_Interp_Rate_Max_Error) {
   TestLinearInterpolation(38426, 44100);

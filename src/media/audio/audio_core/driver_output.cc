@@ -4,17 +4,11 @@
 
 #include "src/media/audio/audio_core/driver_output.h"
 
-#include <audio-proto-utils/format-utils.h>
-#include <dispatcher-pool/dispatcher-channel.h>
 #include <lib/fit/defer.h>
-#include <zircon/process.h>
 
 #include <iomanip>
-#include <optional>
 
-#include "src/lib/fxl/logging.h"
 #include "src/media/audio/audio_core/audio_device_manager.h"
-#include "src/media/audio/lib/wav_writer/wav_writer.h"
 
 constexpr bool VERBOSE_TIMING_DEBUG = false;
 
@@ -43,7 +37,7 @@ fbl::RefPtr<AudioOutput> DriverOutput::Create(zx::channel stream_channel,
 
 DriverOutput::DriverOutput(AudioDeviceManager* manager,
                            zx::channel initial_stream_channel)
-    : StandardOutputBase(manager),
+    : AudioOutput(manager),
       initial_stream_channel_(std::move(initial_stream_channel)) {}
 
 DriverOutput::~DriverOutput() { wav_writer_.Close(); }
@@ -51,7 +45,7 @@ DriverOutput::~DriverOutput() { wav_writer_.Close(); }
 zx_status_t DriverOutput::Init() {
   FXL_DCHECK(state_ == State::Uninitialized);
 
-  zx_status_t res = StandardOutputBase::Init();
+  zx_status_t res = AudioOutput::Init();
   if (res != ZX_OK) {
     return res;
   }
@@ -89,7 +83,7 @@ bool DriverOutput::StartMixJob(MixJob* job, fxl::TimePoint process_start) {
     return false;
   }
 
-  // TODO(johngro): Depending on policy, use send appropriate commands to the
+  // TODO(mpuryear): Depending on policy, use send appropriate commands to the
   // driver to control gain as well.  Some policy settings which might be useful
   // include...
   //
@@ -393,16 +387,16 @@ void DriverOutput::OnDriverConfigComplete() {
   FXL_DCHECK(rb.virt() != nullptr);
   output_producer_->FillWithSilence(rb.virt(), rb.frames());
 
-  // Set up the intermediate buffer at the StandardOutputBase level
+  // Set up the intermediate buffer at the AudioOutput level
   //
-  // TODO(johngro): The intermediate buffer probably does not need to be as
+  // TODO(mpuryear): The intermediate buffer probably does not need to be as
   // large as the entire ring buffer.  Consider limiting this to be something
   // only slightly larger than a nominal mix job.
   SetupMixBuffer(rb.frames());
 
   // Start the ring buffer running
   //
-  // TODO(johngro) : Don't actually start things up here.  We should start only
+  // TODO(mpuryear) : Don't actually start things up here.  We should start only
   // when we have clients with work to do, and we should stop when we have no
   // work to do.  See MTWN-5
   zx_status_t res = driver_->Start();
