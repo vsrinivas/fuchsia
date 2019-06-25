@@ -76,6 +76,13 @@ TEST(LibraryLoader, LoadFromOrdinal) {
   ASSERT_EQ(kDesiredInterfaceName,
             ordinal_method->enclosing_interface().name());
   ASSERT_EQ("OnDirectoryReady", ordinal_method->name());
+
+  Ordinal64 correct_old_ordinal = found_method->old_ordinal();
+  const InterfaceMethod* old_ordinal_method = loader.GetByOrdinal(correct_old_ordinal);
+  ASSERT_NE(old_ordinal_method, nullptr);
+  ASSERT_EQ(kDesiredInterfaceName,
+            old_ordinal_method->enclosing_interface().name());
+  ASSERT_EQ("OnDirectoryReady", old_ordinal_method->name());
 }
 
 }  // namespace fidlcat

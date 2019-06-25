@@ -221,8 +221,9 @@ InterfaceMethod::InterfaceMethod(const Interface& interface,
                                  const rapidjson::Value& value)
     : enclosing_interface_(interface),
       value_(value),
-      // TODO(FIDL-524): Handle two ordinals per method to soft-transition.
-      ordinal_(std::strtoll(value["ordinal"].GetString(), nullptr, 10) << 32),
+      ordinal_(std::strtoll(value["ordinal"].GetString(), nullptr, 10)),
+      // TODO(FIDL-524): Remove post-migration.
+      old_ordinal_(std::strtoll(value["generated_ordinal"].GetString(), nullptr, 10) << 32),
       name_(value["name"].GetString()) {
   if (value_["has_request"].GetBool()) {
     request_ = std::unique_ptr<Struct>(

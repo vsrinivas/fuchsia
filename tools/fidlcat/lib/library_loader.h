@@ -283,6 +283,7 @@ class InterfaceMethod {
 
   const Interface& enclosing_interface() const { return enclosing_interface_; }
   Ordinal64 ordinal() const { return ordinal_; }
+  Ordinal64 old_ordinal() const { return old_ordinal_; }
   std::string name() const { return name_; }
   Struct* request() const {
     if (request_ != nullptr) {
@@ -308,6 +309,7 @@ class InterfaceMethod {
   const Interface& enclosing_interface_;
   const rapidjson::Value& value_;
   const Ordinal64 ordinal_;
+  const Ordinal64 old_ordinal_;
   const std::string name_;
   std::unique_ptr<Struct> request_;
   std::unique_ptr<Struct> response_;
@@ -327,6 +329,7 @@ class Interface {
     for (size_t i = 0; i < interface_methods_.size(); i++) {
       const InterfaceMethod* method = interface_methods_[i].get();
       index[method->ordinal()] = method;
+      index[method->old_ordinal()] = method;
     }
   }
 
