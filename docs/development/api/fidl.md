@@ -469,11 +469,11 @@ References to FIDL protocols or their methods in comments should follow the
 pattern:
 
 ```fidl
-/// See fuchsia.library.ProtocolName/Method for more information.
+/// See fuchsia.library/ProtocolName.Method for more information.
 ```
 
 When referring to a protocol in the same library as the comment, the library
-name may be left off: `ProtocolName/Method`.
+name may be left off: `ProtocolName.Method`.
 
 Similarly, when referring to a method in the same protocol as the comment,
 the library name and protocol name may be left off: `Method`.
