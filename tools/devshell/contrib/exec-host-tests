@@ -78,7 +78,7 @@ def main():
     for test in tests:
       target = test['name']
       info_print('<< running %s >>' % target)
-      if len(test['command']) > 1:
+      if 'command' in test and len(test['command']) > 1:
         location, extra_args = test['command'][0], test['command'][1:]
       else:
         location, extra_args = test['location'], []
