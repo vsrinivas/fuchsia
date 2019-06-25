@@ -170,9 +170,7 @@ template("pm_build_package") {
     assert(defined(package_name), "A package name is required")
     assert(package_name != "", "A package name is required")
 
-    deps += [
-      invoker.manifest,
-    ]
+    deps += [ invoker.manifest ]
 
     inputs = [
       pkg_manifest_file,
@@ -823,6 +821,8 @@ template("package") {
 
     if (defined(pkg.visibility)) {
       pkg.visibility += [
+        ":$target_name",
+
         # TODO(raggi): tighten build/images visibility once we've
         # finished doing large scale cleanups.
         "//build/images:*",
@@ -945,13 +945,21 @@ template("package") {
       }
     }
   } else {
+    # A reference from a different toolchain, e.g. a variant toolchain, is
+    # just an indirect way to get the package into the system images.
+    # Redirect it as data_deps on the $target_toolchain package.  This
+    # really ought to be a pure redirect, i.e. public_deps.  But using
+    # data_deps here avoids problems in case some dependency on a package()
+    # target is not in data_deps as it (almost surely) should be.
     group(target_name) {
       forward_variables_from(invoker,
                              [
-                               "public_deps",
-                               "deps",
+                               "visibility",
                                "testonly",
                              ])
+      data_deps = [
+        ":$target_name($target_toolchain)",
+      ]
     }
 
     # Suppress unused variable warnings.
