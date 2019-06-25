@@ -23,7 +23,7 @@ function HELP {
     echo "-g                   : use graphical console"
     echo "-G <version>         : use GIC v2 or v3"
     echo "-I <interface name>  : network interface name, default is qemu."
-    echo "-k                   : use KVM"
+    echo "-k                   : use KVM (Linux host only)"
     echo "-m <memory in MB>    : memory size, default is ${MEMSIZE_DEFAULT}MB"
     echo "-n                   : run with emulated nic"
     echo "-N                   : run with emulated nic via tun/tap"
@@ -128,7 +128,13 @@ while getopts "Aa:bc:CdD:gG:I:kLlm:nNo:Pq:rs:t::u:VXz:h-:" FLAG; do
         g) GRAPHICS=1;;
         G) GIC=$OPTARG;;
         I) IFNAME=$OPTARG;;
-        k) DO_KVM=1;;
+        k)
+            if [[ "$(uname -s)" == "Darwin" ]]; then
+                echo "error: KVM option (-k) is not supported on MacOS"
+                exit 1
+            fi
+            DO_KVM=1
+            ;;
         L) VARIANT=lto BUILD_SWITCH=-L ;;
         l) VARIANT=thinlto BUILD_SWITCH=-l ;;
         m) MEMSIZE=$OPTARG;;
