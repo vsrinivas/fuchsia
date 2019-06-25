@@ -10,18 +10,18 @@ package("qmi-fake-transport") {
   testonly = true
 
   deps = [
-    ":fake_driver",
+    ":fake_qmi_driver",
   ]
 
   drivers = [
     {
-      name = "qmi-fake.so"
+      name = "qmi-fake-transport.so"
     },
   ]
 }
 
-driver_module("fake_driver") {
-  output_name = "qmi-fake"
+driver_module("fake_qmi_driver") {
+  output_name = "qmi-fake-transport"
   testonly = true
 
   sources = [
@@ -31,12 +31,16 @@ driver_module("fake_driver") {
   ]
 
   deps = [
+    "../../lib/qmi-protocol",
     "//zircon/public/banjo/ddk.protocol.test",
+    "//zircon/public/fidl/fuchsia-hardware-telephony-transport:fuchsia-hardware-telephony-transport_llcpp",
+    "//zircon/public/fidl/fuchsia-telephony-snoop:fuchsia-telephony-snoop_llcpp",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/driver",
     "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
   ]

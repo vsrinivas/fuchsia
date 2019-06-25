@@ -16,6 +16,7 @@ group("telephony") {
 group("drivers") {
   testonly = true
   public_deps = [
+    "//src/connectivity/telephony/drivers/qmi-fake-transport",
     "//src/connectivity/telephony/drivers/qmi-usb-transport",
   ]
 }
