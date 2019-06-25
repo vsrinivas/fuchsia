@@ -25,11 +25,14 @@ if (current_toolchain == default_toolchain) {
 
       # TODO: strip = true
 
-      # There isn't a GCC toolchain that supports the Windows target directly
-      # the way we use it.
-      exclude_variant_tags = [ "gcc" ]
-
       tags = [ "standalone" ]
+      exclude_variant_tags = [
+        "instrumented",
+
+        # There isn't a GCC toolchain that supports the Windows target
+        # directly the way we use it.
+        "gcc",
+      ]
     }
   }
 } else if (toolchain.environment == "efi") {

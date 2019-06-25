@@ -15,6 +15,7 @@ if (current_toolchain == default_toolchain) {
     }
     configs += standard_fuchsia_configs + [ ":physmem_config" ]
     tags = [ "standalone" ]
+    exclude_variant_tags = [ "instrumented" ]
   }
 } else {
   # This is the top config for the physmem environment.
