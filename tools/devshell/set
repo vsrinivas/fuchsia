@@ -175,7 +175,9 @@ function main {
   local gn_after_args=""
   local base=()
   local universe=()
+  local auto_dir_variants=
   local auto_dir=false
+  local is_release=false
   local build_dir=
   local variant=
   local use_goma
@@ -256,6 +258,7 @@ function main {
         ;;
       --release)
         gn_args+=" is_debug=false"
+        is_release=true
         ;;
       --variant)
         if [[ $# -lt 2 ]]; then
@@ -263,6 +266,7 @@ function main {
           return 1
         fi
         variant+="\"$2\","
+        auto_dir_variants+="-$2"
         shift
         ;;
       --fuzz-with)
@@ -326,7 +330,14 @@ function main {
       fx-error "--auto-dir and --build-dir are mutually exclusive, pick one."
       return 1
     fi
-    config_build_dir="out/${product_name}.${board_name}"
+    if [[ "$auto_dir_variants" == */* ]]; then
+      fx-error "--auto-dir only works with simple catch-all --variant switches; choose your own directory name with fx --dir for a complex configuration"
+      return 1
+    fi
+    config_build_dir="out/${product_name}.${board_name}${auto_dir_variants}"
+    if $is_release; then
+      config_build_dir+="-release"
+    fi
   else
     case "$build_dir" in
       '')
