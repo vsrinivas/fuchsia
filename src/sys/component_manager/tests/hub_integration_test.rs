@@ -19,16 +19,15 @@ use {
     fidl::endpoints::{ClientEnd, ServerEnd},
     fidl_fidl_examples_routing_echo as fecho,
     fidl_fuchsia_io::{
-        DirectoryMarker, DirectoryProxy, NodeMarker, MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+        DirectoryMarker, DirectoryProxy, NodeMarker, MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE,
+        OPEN_RIGHT_WRITABLE,
     },
     fuchsia_vfs_pseudo_fs::directory::{self, entry::DirectoryEntry},
     fuchsia_zircon as zx,
     std::{iter, path::PathBuf, sync::Arc, vec::Vec},
 };
 
-
-async fn connect_to_echo_service(hub_proxy: &DirectoryProxy,
-                            echo_service_path: String) {
+async fn connect_to_echo_service(hub_proxy: &DirectoryProxy, echo_service_path: String) {
     let node_proxy = io_util::open_node(
         &hub_proxy,
         &PathBuf::from(echo_service_path),
@@ -88,16 +87,16 @@ async fn main() -> Result<(), Error> {
         OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
     )
     .expect("Failed to open directory");
-    assert_eq!(vec!["echo_client", "echo_server"], await!(list_directory(&children_dir_proxy)));
+    assert_eq!(vec!["echo_server", "hub_client"], await!(list_directory(&children_dir_proxy)));
 
-    // These args are from echo_client.cml.
+    // These args are from hub_client.cml.
     assert_eq!(
         "Hippos",
-        await!(read_file(&hub_proxy, "self/children/echo_client/exec/runtime/args/0"))
+        await!(read_file(&hub_proxy, "self/children/hub_client/exec/runtime/args/0"))
     );
     assert_eq!(
         "rule!",
-        await!(read_file(&hub_proxy, "self/children/echo_client/exec/runtime/args/1"))
+        await!(read_file(&hub_proxy, "self/children/hub_client/exec/runtime/args/1"))
     );
 
     let echo_service_name = "fidl.examples.routing.echo.Echo";
@@ -110,7 +109,7 @@ async fn main() -> Result<(), Error> {
     .expect("Failed to open directory");
     assert_eq!(vec![echo_service_name], await!(list_directory(&expose_svc_dir_proxy)));
 
-    let in_dir = "self/children/echo_client/exec/in";
+    let in_dir = "self/children/hub_client/exec/in";
     let svc_dir = format!("{}/{}", in_dir, "svc");
     let svc_dir_proxy = io_util::open_directory(
         &hub_proxy,
@@ -120,7 +119,7 @@ async fn main() -> Result<(), Error> {
     .expect("Failed to open directory");
     assert_eq!(vec![echo_service_name], await!(list_directory(&svc_dir_proxy)));
 
-    // Verify that the 'pkg' directory is avaialble
+    // Verify that the 'pkg' directory is avaialble.
     let pkg_dir = format!("{}/{}", in_dir, "pkg");
     let pkg_dir_proxy = io_util::open_directory(
         &hub_proxy,
@@ -137,6 +136,20 @@ async fn main() -> Result<(), Error> {
     // Verify that we can connect to the echo service from the expose/svc directory.
     let expose_echo_service_path = format!("{}/{}", expose_svc_dir, echo_service_name);
     await!(connect_to_echo_service(&hub_proxy, expose_echo_service_path));
+
+    // Verify that the 'hub' directory is avaialble. The 'hub' mapped to 'hub_client''s
+    // namespace is actually mapped to the 'exec' directory of 'hub_client'.
+    let scoped_hub_dir = format!("{}/{}", in_dir, "hub");
+    let scoped_hub_dir_proxy = io_util::open_directory(
+        &hub_proxy,
+        &PathBuf::from(scoped_hub_dir),
+        OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+    )
+    .expect("Failed to open directory");
+    assert_eq!(
+        vec!["expose", "in", "out", "resolved_url", "runtime"],
+        await!(list_directory(&scoped_hub_dir_proxy))
+    );
 
     Ok(())
 }

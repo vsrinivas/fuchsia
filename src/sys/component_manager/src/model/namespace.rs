@@ -186,9 +186,12 @@ impl IncomingNamespace {
             let on_signal_fut = fasync::OnSignals::new(&server_end, zx::Signals::CHANNEL_READABLE);
             await!(on_signal_fut).unwrap();
             // Route this capability to the right component
+            let flags = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE;
             let res = await!(route_use_capability(
                 &model,
+                flags,
                 MODE_TYPE_DIRECTORY,
+                String::new(),
                 &use_,
                 abs_moniker.clone(),
                 server_end.into_zx_channel()
@@ -242,9 +245,9 @@ impl IncomingNamespace {
         };
         let use_ = use_.clone();
         let route_open_fn = Box::new(
-            move |_flags: u32,
+            move |flags: u32,
                   mode: u32,
-                  _relative_path: String,
+                  relative_path: String,
                   server_end: ServerEnd<NodeMarker>| {
                 let use_ = use_.clone();
                 let model = model.clone();
@@ -252,7 +255,9 @@ impl IncomingNamespace {
                 fasync::spawn(async move {
                     let res = await!(route_use_capability(
                         &model,
+                        flags,
                         mode,
+                        relative_path,
                         &use_,
                         abs_moniker.clone(),
                         server_end.into_channel()

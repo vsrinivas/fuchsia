@@ -4,6 +4,8 @@
 
 use {
     crate::model::*,
+    fidl::endpoints::ServerEnd,
+    fidl_fuchsia_io::NodeMarker,
     fuchsia_vfs_pseudo_fs::directory::{self, entry::DirectoryEntry},
     futures::future::BoxFuture,
 };
@@ -36,6 +38,16 @@ pub trait AddableDirectoryWithResult<'entries> {
     ) -> BoxFuture<Result<(), ModelError>>
     where
         Entry: DirectoryEntry + 'entries;
+
+    // Adds a connection to a directory. Nameed 'open_node' instead of 'open' to avoid conflicts.
+    fn open_node<'a>(
+        &'a self,
+        flags: u32,
+        mode: u32,
+        path: Vec<String>,
+        server_end: ServerEnd<NodeMarker>,
+        moniker: &'a AbsoluteMoniker,
+    ) -> BoxFuture<Result<(), ModelError>>;
 }
 
 impl<'entries> AddableDirectory<'entries> for directory::simple::Simple<'entries> {
@@ -81,6 +93,21 @@ impl<'entries> AddableDirectoryWithResult<'entries>
         Box::pin(async move {
             await!(self.add_entry_res(String::from(name), entry))
                 .map_err(|_| ModelError::add_entry_error(moniker.clone(), name))
+        })
+    }
+
+    fn open_node<'a>(
+        &'a self,
+        flags: u32,
+        mode: u32,
+        path: Vec<String>,
+        server_end: ServerEnd<NodeMarker>,
+        moniker: &'a AbsoluteMoniker,
+    ) -> BoxFuture<Result<(), ModelError>> {
+        let relative_path = path.join("/");
+        Box::pin(async move {
+            await!(self.open(flags, mode, path, server_end))
+                .map_err(|_| ModelError::open_directory_error(moniker.clone(), relative_path))
         })
     }
 }

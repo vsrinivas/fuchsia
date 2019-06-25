@@ -9,10 +9,12 @@ use {
         addable_directory::{AddableDirectory, AddableDirectoryWithResult},
         error::ModelError,
     },
+    cm_rust::Capability,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{DirectoryProxy, NodeMarker, CLONE_FLAG_SAME_RIGHTS},
     fuchsia_async as fasync,
     fuchsia_vfs_pseudo_fs::{directory, file::simple::read_only},
+    fuchsia_zircon as zx,
     futures::{
         future::{AbortHandle, Abortable, BoxFuture},
         lock::Mutex,
@@ -320,6 +322,46 @@ impl Hub {
         Ok(())
     }
 
+    async fn on_route_framework_capability_async<'a>(
+        &'a self,
+        flags: u32,
+        open_mode: u32,
+        relative_path: String,
+        abs_moniker: &'a model::AbsoluteMoniker,
+        capability: &'a Capability,
+        server_chan: &'a mut Option<zx::Channel>,
+    ) -> Result<(), ModelError> {
+        let mut dir_path = match capability {
+            Capability::Directory(source_path) => source_path.split(),
+            _ => return Ok(()),
+        };
+
+        if dir_path.is_empty() || dir_path.remove(0) != "hub" {
+            return Ok(());
+        }
+
+        let instances_map = await!(self.instances.lock());
+        if !instances_map.contains_key(abs_moniker) {
+            return Ok(());
+        }
+        dir_path.append(
+            &mut relative_path
+                .split("/")
+                .map(|s| s.to_string())
+                .filter(|s| !s.is_empty())
+                .collect::<Vec<String>>(),
+        );
+        let chan = server_chan.take().expect("Could not take channel.");
+        await!(instances_map[&abs_moniker].directory.open_node(
+            flags,
+            open_mode,
+            dir_path,
+            ServerEnd::<NodeMarker>::new(chan),
+            abs_moniker
+        ))?;
+        Ok(())
+    }
+
     // TODO(fsamuel): We should probably preserve the original error messages
     // instead of dropping them.
     fn clone_dir(dir: Option<&DirectoryProxy>) -> Option<DirectoryProxy> {
@@ -341,6 +383,25 @@ impl model::Hook for Hub {
         // TODO: Update the hub with the new child
         Box::pin(async { Ok(()) })
     }
+
+    fn on_route_framework_capability<'a>(
+        &'a self,
+        flags: u32,
+        open_mode: u32,
+        relative_path: String,
+        abs_moniker: &'a model::AbsoluteMoniker,
+        capability: &'a Capability,
+        server_chan: &'a mut Option<zx::Channel>,
+    ) -> BoxFuture<Result<(), ModelError>> {
+        Box::pin(self.on_route_framework_capability_async(
+            flags,
+            open_mode,
+            relative_path,
+            abs_moniker,
+            capability,
+            server_chan,
+        ))
+    }
 }
 
 #[cfg(test)]
@@ -353,7 +414,7 @@ mod tests {
             testing::mocks,
             testing::{
                 routing_test_helpers::default_component_decl,
-                test_utils::{dir_contains, list_directory_recursive, read_file},
+                test_utils::{dir_contains, list_directory, list_directory_recursive, read_file},
             },
         },
         cm_rust::{
@@ -590,9 +651,9 @@ mod tests {
                     }],
                     uses: vec![
                         UseDecl::Directory(UseDirectoryDecl {
-                            source: UseSource::Realm,
-                            source_path: CapabilityPath::try_from("/data/baz").unwrap(),
-                            target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                            source: UseSource::Framework,
+                            source_path: CapabilityPath::try_from("/hub/exec").unwrap(),
+                            target_path: CapabilityPath::try_from("/hub").unwrap(),
                         }),
                         UseDecl::Service(UseServiceDecl {
                             source: UseSource::Realm,
@@ -618,10 +679,16 @@ mod tests {
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
         )
         .expect("Failed to open directory");
-        assert_eq!(
-            vec!["data/bar", "data/hippo", "svc/hippo"],
-            await!(list_directory_recursive(&in_dir))
-        );
+        assert_eq!(vec!["data", "hub", "svc"], await!(list_directory(&in_dir)));
+
+        let scoped_hub_dir_proxy = io_util::open_directory(
+            &hub_proxy,
+            &Path::new("self/exec/in/hub"),
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+        )
+        .expect("Failed to open directory");
+        // There are no out or runtime directories because there is no program running.
+        assert_eq!(vec!["expose", "in", "resolved_url"], await!(list_directory(&scoped_hub_dir_proxy)));
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

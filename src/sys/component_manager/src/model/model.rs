@@ -4,7 +4,7 @@
 
 use {
     crate::model::*,
-    cm_rust::{data, CapabilityPath},
+    cm_rust::{Capability, CapabilityPath, data},
     failure::format_err,
     fidl::endpoints::{Proxy, ServerEnd},
     fidl_fuchsia_io::{
@@ -35,6 +35,18 @@ pub trait Hook {
 
     // Called when a dynamic instance is added with `realm`.
     fn on_add_dynamic_child(&self, realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>>;
+
+    // Called when the component specified by |abs_moniker| requests a capability provided
+    // by the framework.
+    fn on_route_framework_capability<'a>(
+        &'a self,
+        flags: u32,
+        open_mode: u32,
+        relative_path: String,
+        abs_moniker: &'a AbsoluteMoniker,
+        capability: &'a Capability,
+        server_chan: &'a mut Option<zx::Channel>,
+    ) -> BoxFuture<Result<(), ModelError>>;
 }
 
 pub type Hooks = Vec<Arc<dyn Hook + Send + Sync + 'static>>;

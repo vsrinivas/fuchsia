@@ -9,14 +9,13 @@
             "from": "#echo_server",
             "to": [
                 {
-                    "dest": "#echo_client",
+                    "dest": "#hub_client",
                 },
             ],
         },
     ],
-    // Two children: a server and client. "echo_client" and "echo_server" have "eager"
-    // startup so they will be started along with the realm and we can inspect their
-    // exec/ directories in the hub.
+    // Two children: a server and client. "hub_client" has "eager" startup so it
+    // will be started along with the realm.
     "children": [
         {
             "name": "echo_server",
@@ -24,8 +23,8 @@
             "startup": "eager",
         },
         {
-            "name": "echo_client",
-            "url": "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/echo_client.cm",
+            "name": "hub_client",
+            "url": "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/hub_client.cm",
             "startup": "eager",
         },
     ],

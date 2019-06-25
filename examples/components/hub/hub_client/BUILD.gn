@@ -1,0 +1,20 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_binary.gni")
+
+rustc_binary("hub_client") {
+  edition = "2018"
+  deps = [
+    "//garnet/lib/rust/files_async",
+    "//garnet/lib/rust/io_util",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//examples/components/routing/fidl:echo-rustc",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+    "//zircon/public/fidl/fuchsia-io:fuchsia-io-rustc",
+  ]
+}

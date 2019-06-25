@@ -44,7 +44,9 @@ enum CapabilitySource {
 /// applicable) using an open request with `open_mode`.
 pub async fn route_use_capability<'a>(
     model: &'a Model,
+    flags: u32,
     open_mode: u32,
+    relative_path: String,
     use_decl: &'a UseDecl,
     abs_moniker: AbsoluteMoniker,
     server_chan: zx::Channel,
@@ -59,7 +61,15 @@ pub async fn route_use_capability<'a>(
         ));
     }
     let source = await!(find_used_capability_source(model, use_decl, &abs_moniker))?;
-    await!(open_capability_at_source(model, open_mode, source, server_chan))
+    await!(open_capability_at_source(
+        model,
+        flags,
+        open_mode,
+        relative_path,
+        abs_moniker,
+        source,
+        server_chan
+    ))
 }
 
 /// Finds the source of the expose capability used at `source_path` by
@@ -75,16 +85,28 @@ pub async fn route_expose_capability<'a>(
     let mut pos = WalkPosition {
         capability: exposed_capability.clone(),
         last_child_moniker: None,
-        moniker: abs_moniker,
+        moniker: abs_moniker.clone(),
     };
     let source = await!(walk_expose_chain(model, &mut pos))?;
-    await!(open_capability_at_source(model, open_mode, source, server_chan))
+    let flags = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE;
+    await!(open_capability_at_source(
+        model,
+        flags,
+        open_mode,
+        String::new(),
+        abs_moniker,
+        source,
+        server_chan
+    ))
 }
 
 /// Open the capability at the given source, binding to its component instance if necessary.
 async fn open_capability_at_source<'a>(
     model: &'a Model,
+    flags: u32,
     open_mode: u32,
+    relative_path: String,
+    abs_moniker: AbsoluteMoniker,
     source: CapabilitySource,
     server_chan: zx::Channel,
 ) -> Result<(), ModelError> {
@@ -116,7 +138,16 @@ async fn open_capability_at_source<'a>(
             }
         }
         CapabilitySource::FrameworkCapability(capability, realm) => {
-            await!(open_framework_capability(model.clone(), realm, &capability, server_chan))?;
+            await!(open_framework_capability(
+                model.clone(),
+                flags,
+                open_mode,
+                relative_path,
+                &abs_moniker,
+                realm,
+                &capability,
+                server_chan
+            ))?;
         }
         CapabilitySource::StorageDecl(..) => {
             panic!("storage capabilities must be separately routed and opened");
@@ -125,20 +156,55 @@ async fn open_capability_at_source<'a>(
     Ok(())
 }
 
-async fn open_framework_capability(
+async fn open_framework_capability<'a>(
     model: Model,
+    flags: u32,
+    open_mode: u32,
+    relative_path: String,
+    abs_moniker: &'a AbsoluteMoniker,
     realm: Arc<Realm>,
-    capability: &Capability,
+    capability: &'a Capability,
     server_chan: zx::Channel,
 ) -> Result<(), ModelError> {
-    match capability {
-        Capability::Service(path) => {
-            await!(FrameworkServiceHost::serve(model.clone(), realm, &path, server_chan))?;
-        }
-        _ => {
-            return Err(ModelError::unsupported("Non-service framework capability"));
+    let mut server_chan = Some(server_chan);
+    // Iterate over all the hooks until one consumes |server_chan|.
+    for hook in model.hooks.iter() {
+        await!(hook.on_route_framework_capability(
+            flags,
+            open_mode,
+            relative_path.clone(),
+            &abs_moniker,
+            &capability,
+            &mut server_chan
+        ))?;
+        if server_chan.is_none() {
+            break;
         }
     }
+    if server_chan.is_none() {
+        return Ok(());
+    }
+
+    let path = FRAMEWORK_SERVICES
+        .iter()
+        .find(|p| match &capability {
+            Capability::Service(s) => **p == s,
+            _ => false,
+        })
+        .ok_or_else(|| {
+            ModelError::capability_discovery_error(format_err!(
+                "Invalid framework capability {}",
+                capability
+            ))
+        })?;
+
+    await!(FrameworkServiceHost::serve(
+        model.clone(),
+        realm,
+        &path,
+        server_chan.take().expect("Unable to take server-end of channel")
+    ))?;
+
     Ok(())
 }
 
@@ -307,33 +373,17 @@ async fn find_framework_capability<'a>(
     abs_moniker: &'a AbsoluteMoniker,
 ) -> Result<Option<CapabilitySource>, ModelError> {
     let source = match use_decl {
-        UseDecl::Service(ref s) => Some(&s.source),
-        UseDecl::Directory(ref d) => Some(&d.source),
-        UseDecl::Storage(_) => None,
+        UseDecl::Service(ref s) => &s.source,
+        UseDecl::Directory(ref d) => &d.source,
+        UseDecl::Storage(_) => &UseSource::Realm,
     };
-    match source {
-        Some(UseSource::Framework) => {
-            let used_capability = use_decl.clone().into();
-            let path = FRAMEWORK_SERVICES
-                .iter()
-                .find(|p| match &used_capability {
-                    Capability::Service(s) => **p == s,
-                    _ => false,
-                })
-                .ok_or_else(|| {
-                    ModelError::capability_discovery_error(format_err!(
-                        "Invalid framework capability {}",
-                        used_capability
-                    ))
-                })?;
-            let realm = await!(model.look_up_realm(abs_moniker))?;
-            Ok(Some(CapabilitySource::FrameworkCapability(
-                Capability::Service((*path).clone()),
-                realm,
-            )))
-        }
-        _ => Ok(None),
+
+    if *source != UseSource::Framework {
+        return Ok(None);
     }
+
+    let realm = await!(model.look_up_realm(abs_moniker))?;
+    Ok(Some(CapabilitySource::FrameworkCapability(use_decl.clone().into(), realm)))
 }
 
 /// Holds state about the current position when walking the tree.

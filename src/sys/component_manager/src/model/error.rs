@@ -53,6 +53,8 @@ pub enum ModelError {
     },
     #[fail(display = "add entry error")]
     AddEntryError { moniker: AbsoluteMoniker, entry_name: String },
+    #[fail(display = "open directory error")]
+    OpenDirectoryError { moniker: AbsoluteMoniker, relative_path: String },
 }
 
 impl ModelError {
@@ -86,6 +88,13 @@ impl ModelError {
 
     pub fn add_entry_error(moniker: AbsoluteMoniker, entry_name: impl Into<String>) -> ModelError {
         ModelError::AddEntryError { moniker, entry_name: entry_name.into() }
+    }
+
+    pub fn open_directory_error(
+        moniker: AbsoluteMoniker,
+        relative_path: impl Into<String>,
+    ) -> ModelError {
+        ModelError::OpenDirectoryError { moniker, relative_path: relative_path.into() }
     }
 }
 

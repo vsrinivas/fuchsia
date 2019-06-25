@@ -1,0 +1,14 @@
+{
+    "program": {
+        "binary": "bin/hub_client",
+        "args": ["Hippos", "rule!"],
+    },
+    "use": [
+        {
+            "directory": "/hub/exec", "from": "framework", "as": "/hub"
+        },
+        {
+            "service": "/svc/fidl.examples.routing.echo.Echo",
+        },
+    ],
+}

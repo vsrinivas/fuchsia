@@ -4,6 +4,8 @@
 
 use {
     crate::model::*,
+    cm_rust::Capability,
+    fuchsia_zircon as zx,
     futures::{executor::block_on, future::BoxFuture, lock::Mutex, prelude::*},
     std::{cmp::Eq, collections::HashMap, fmt, ops::Deref, pin::Pin, sync::Arc},
 };
@@ -158,6 +160,18 @@ impl Hook for TestHook {
 
     fn on_add_dynamic_child(&self, realm: Arc<Realm>) -> BoxFuture<Result<(), ModelError>> {
         Box::pin(self.create_instance_if_necessary(realm.abs_moniker.clone()))
+    }
+
+    fn on_route_framework_capability<'a>(
+        &'a self,
+        _flags: u32,
+        _open_mode: u32,
+        _relative_path: String,
+        _abs_moniker: &'a AbsoluteMoniker,
+        _capability: &'a Capability,
+        _server_chan: &mut Option<zx::Channel>,
+    ) -> BoxFuture<Result<(), ModelError>> {
+        Box::pin(async { Ok(()) })
     }
 }
 
