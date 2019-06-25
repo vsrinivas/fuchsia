@@ -760,4 +760,36 @@ mod experimental_api {
         }
         Ok(())
     }
+
+    fn style_query(
+        slant: Option<fonts::Slant>,
+        weight: Option<u16>,
+        width: Option<fonts::Width>,
+    ) -> Option<fonts_exp::ListTypefacesQuery> {
+        let query = fonts_exp::ListTypefacesQuery {
+            family: None,
+            styles: Some(vec![fonts::Style2 { slant, weight, width }]),
+            languages: None,
+            code_points: None,
+            generic_families: None,
+        };
+        Some(query)
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_list_typefaces_by_style() -> Result<(), Error> {
+        let (_app, font_provider) = start_provider_with_test_fonts()?;
+
+        let query = style_query(None, Some(300), None);
+        let request = fonts_exp::ListTypefacesRequest { flags: None, max_results: None, query };
+
+        let response = await!(font_provider.list_typefaces(request))?;
+        let results = response.unwrap().results.unwrap();
+
+        assert!(results.len() >= 1, "{:?}", results);
+        for result in results {
+            assert_eq!(result.style.as_ref().unwrap().weight.unwrap(), 300);
+        }
+        Ok(())
+    }
 }

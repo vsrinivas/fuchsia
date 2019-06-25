@@ -498,8 +498,31 @@ impl FontService {
         // Flatten matches into Iter<TypefaceInfoAndCharSet>
         let matched_faces = matched_families.into_iter().flat_map(|family| family.extract_faces());
 
+        let styles_predicate = |face: &TypefaceInfoAndCharSet| -> bool {
+            match query.and_then(|q| q.styles.as_ref()) {
+                Some(styles) => {
+                    // Unwraps are safe because manifest loading assigns default values if needed
+                    let face_slant = face.style.slant.as_ref().unwrap();
+                    let face_weight = face.style.weight.as_ref().unwrap();
+                    let face_width = face.style.width.as_ref().unwrap();
+                    styles.iter().any(|style| {
+                        style.slant.map_or(true, |slant| face_slant == &slant)
+                            && style.weight.map_or(true, |weight| face_weight == &weight)
+                            && style.width.map_or(true, |width| face_width == &width)
+                    })
+                }
+                None => true,
+            }
+        };
+
+        let total_predicate = |face: &TypefaceInfoAndCharSet| -> bool {
+            // TODO(seancuff): add remaining predicates
+            styles_predicate(face)
+        };
+
         // Filter
         let matched_faces = matched_faces
+            .filter(total_predicate)
             .take(max_results as usize) // TODO(seancuff): Paginate instead
             .map(|f| f.into())
             .collect();
