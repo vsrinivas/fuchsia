@@ -9,6 +9,7 @@ static_library("common") {
   public = [
     "address_range.h",
     "address_ranges.h",
+    "completion_callback.h",
     "err.h",
     "file_util.h",
     "host_util.h",
@@ -26,6 +27,7 @@ static_library("common") {
 
   public_deps = [
     "//src/lib/fxl",
+    "//zircon/public/lib/fit",
   ]
 }
 
@@ -45,6 +47,7 @@ source_set("tests") {
 
   sources = [
     "address_ranges_unittest.cc",
+    "completion_callback_unittest.cc",
     "file_util_unittest.cc",
   ]
 

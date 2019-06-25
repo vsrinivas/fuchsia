@@ -132,6 +132,7 @@ static_library("client") {
     "//src/lib/containers/cpp",
     "//src/lib/fxl",
     "//third_party/curl:libcurl",
+    "//zircon/public/lib/fit",
   ]
 
   deps = [
