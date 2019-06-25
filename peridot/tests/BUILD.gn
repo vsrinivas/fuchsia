@@ -54,7 +54,6 @@ group("tests") {
   deps = [
     "agent_services_tests",
     "benchmarks",
-    "clipboard",
     "component_context",
     "modular_config",
     "modular_login_tests",

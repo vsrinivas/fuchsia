@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/clipboard_test_module"
+        "binary": "test/clipboard_test"
     },
     "sandbox": {
         "services": [
@@ -13,7 +13,7 @@
             "fuchsia.sys.Loader",
             "fuchsia.testing.runner.TestRunner",
             "fuchsia.testing.runner.TestRunnerStore",
-            "fuchsia.tracing.provider.Registry",
+            "fuchsia.tracelink.Registry",
             "fuchsia.ui.policy.Presenter",
             "fuchsia.ui.scenic.Scenic"
         ]

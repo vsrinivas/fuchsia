@@ -5,8 +5,6 @@
 #ifndef PERIDOT_BIN_AGENTS_CLIPBOARD_CLIPBOARD_IMPL_H_
 #define PERIDOT_BIN_AGENTS_CLIPBOARD_CLIPBOARD_IMPL_H_
 
-#include <string>
-
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <src/lib/fxl/macros.h>
@@ -16,7 +14,7 @@
 namespace modular {
 
 // An agent responsible for providing the fuchsia::modular::Clipboard service.
-class ClipboardImpl : fuchsia::modular::Clipboard {
+class ClipboardImpl : public fuchsia::modular::Clipboard {
  public:
   explicit ClipboardImpl(LedgerClient* ledger_client);
   ~ClipboardImpl() override;

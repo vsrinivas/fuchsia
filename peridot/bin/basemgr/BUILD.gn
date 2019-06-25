@@ -36,6 +36,7 @@ executable_package("basemgr") {
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/json",
+    "//peridot/bin/agents/clipboard:clipboard_sources",
     "//peridot/bin/basemgr/cobalt",
     "//peridot/lib/common:async_holder",
     "//peridot/lib/common:teardown",
@@ -44,6 +45,7 @@ executable_package("basemgr") {
     "//peridot/lib/fidl:clone",
     "//peridot/lib/fidl:environment",
     "//peridot/lib/ledger_client:constants",
+    "//peridot/lib/ledger_client:page_client",
     "//peridot/lib/modular_config:modular_config",
     "//peridot/lib/rapidjson",
     "//peridot/public/lib/async/cpp:future",
@@ -90,6 +92,7 @@ source_set("wait_for_minfs") {
 
 source_set("lib") {
   sources = [
+    "noop_clipboard_impl.h",
     "presentation_container.cc",
     "presentation_container.h",
     "session_context_impl.cc",

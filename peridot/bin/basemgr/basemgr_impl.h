@@ -20,6 +20,7 @@
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fidl/cpp/string.h>
 #include <lib/fit/function.h>
+#include <lib/svc/cpp/service_namespace.h>
 #include <lib/sys/cpp/component_context.h>
 #include <src/lib/fxl/macros.h>
 
@@ -27,6 +28,7 @@
 
 #include "peridot/bin/basemgr/basemgr_settings.h"
 #include "peridot/bin/basemgr/cobalt/cobalt.h"
+#include "peridot/bin/basemgr/noop_clipboard_impl.h"
 #include "peridot/bin/basemgr/presentation_container.h"
 #include "peridot/bin/basemgr/session_provider.h"
 #include "peridot/bin/basemgr/session_user_provider_impl.h"
@@ -180,6 +182,9 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
   fuchsia::modular::BaseShellPtr base_shell_;
 
   AsyncHolder<SessionProvider> session_provider_;
+
+  std::unique_ptr<NoopClipboardImpl> noop_clipboard_;
+  component::ServiceNamespace services_;
 
   enum class State {
     // normal mode of operation
