@@ -91,7 +91,11 @@ static bool mp_hotplug_test() {
     END_TEST;
 }
 
-UNITTEST_START_TESTCASE(mp_hotplug_tests)
-UNITTEST("test unplug and hotplug cores one by one", mp_hotplug_test)
-UNITTEST_END_TESTCASE(mp_hotplug_tests, "hotplug",
-                      "Tests for unplugging and hotplugging cores");
+// The call to x86_bootstrap16_acquire() from the mp_hotplug_cpu_mask()
+// fails because the PMM doesn't support allocations to low 4GB pages (ZX-978).
+// Enable these tests once that issue is fixed.
+// See FLK-387. (Call to x86_bootstrap16_acquire() from mp_hotplug_cpu_mask()).
+// UNITTEST_START_TESTCASE(mp_hotplug_tests)
+// UNITTEST("test unplug and hotplug cores one by one", mp_hotplug_test)
+// UNITTEST_END_TESTCASE(mp_hotplug_tests, "hotplug",
+//                       "Tests for unplugging and hotplugging cores");
