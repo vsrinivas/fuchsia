@@ -171,12 +171,16 @@ zx_status_t EnclosedGuest::Start() {
   enclosing_environment_->ConnectToService(manager_.NewRequest());
   manager_->Create(env_label, realm_.NewRequest());
 
+  // Launch the guest.
+  bool launch_complete = false;
   realm_->LaunchInstance(std::move(guest_launch_info), guest_.NewRequest(),
-                         [this](uint32_t cid) {
+                         [this, &launch_complete](uint32_t cid) {
                            guest_cid_ = cid;
-                           loop_.Quit();
+                           launch_complete = true;
                          });
-  loop_.Run();
+  RunLoopUntil(
+      &loop_, [&launch_complete]() { return launch_complete; },
+      PeriodicLogger("Launching guest", zx::sec(10)));
 
   zx::socket serial_socket;
   guest_->GetSerial(
