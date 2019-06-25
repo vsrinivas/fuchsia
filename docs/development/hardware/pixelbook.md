@@ -74,8 +74,9 @@ To go back to ChromeOS you must modify the priority of the Fuchsia kernel
 partition to be lower than that of at least one of the two ChromeOS kernel
 partitions.
 
-1. Press Alt+Esc to get to a virtual console
-2. Find the disk that contains the KERN-A, KERN-B, and KERN-C partitions with
+1. Press Alt+Esc to get to a virtual console if not already on one
+2. Press Alt+Fullscreen to get to a terminal emulator on Fuchsia
+3. Find the disk that contains the KERN-A, KERN-B, and KERN-C partitions with
 the `lsblk` command. Below this is device 000, note how the device path of the
 kernel partitions is an extension of that device.
 
@@ -89,7 +90,7 @@ kernel partitions is an extension of that device.
         005   4G cros rootfs      ROOT-B                      /dev/sys/pci/00:1e.4/pci-sdhci/sdhci/sdmmc/block/part-004/block
         006  64M cros kernel      KERN-C                      /dev/sys/pci/00:1e.4/pci-sdhci/sdhci/sdmmc/block/part-005/block
         007   4G cros rootfs      ROOT-C                      /dev/sys/pci/00:1e.4/pci-sdhci/sdhci/sdmmc/block/part-006/block
-3. Use the `gpt` command to look at the device's (eg. 000) partition map.
+4. Use the `gpt` command to look at the device's (eg. 000) partition map.
 
         $ gpt dump /dev/class/block/000
         blocksize=0x200 blocks=488554496
@@ -130,12 +131,12 @@ kernel partitions is an extension of that device.
             id:   769444A7-6E13-D74D-B583-C3A9CF0DE307
             type: 3CB8E202-3B7E-47DD-8A3C-7FF2A13CFCEC
             flags: 0x0000000000000000
-4. KERN-C typically hosts the Zircon kernel. KERN-A and KERN-B typically have
+5. KERN-C typically hosts the Zircon kernel. KERN-A and KERN-B typically have
 ChromeOS kernels. To go to ChromeOS we need to lower the priority of KERN-C
 here by referencing the **partition** index on the **disk** that has that
 partition.
 
         $ gpt edit_cros 5 -P 0 /dev/class/block/000
-5. Reboot
+6. Reboot
 
 To go back to the Fuchsia kernel, just re-pave the device.
