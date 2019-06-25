@@ -83,7 +83,8 @@
 // `pub(crate) use` will prevent items from being accidentally re-exported).
 pub(crate) use self::internal::*;
 pub use self::internal::{
-    AddrSubnet, AddrSubnetEither, EntryDest, EntryEither, Ipv4Addr, Ipv6Addr, Subnet, SubnetEither,
+    AddrSubnet, AddrSubnetEither, EntryDest, EntryEither, IpAddr, Ipv4Addr, Ipv6Addr, Subnet,
+    SubnetEither,
 };
 
 mod internal {
@@ -129,6 +130,15 @@ mod internal {
             match addr {
                 net::IpAddr::V4(addr) => IpAddr::V4(addr.into()),
                 net::IpAddr::V6(addr) => IpAddr::V6(addr.into()),
+            }
+        }
+    }
+
+    impl From<IpAddr> for net::IpAddr {
+        fn from(addr: IpAddr) -> net::IpAddr {
+            match addr {
+                IpAddr::V4(addr) => net::IpAddr::V4(addr.into()),
+                IpAddr::V6(addr) => net::IpAddr::V6(addr.into()),
             }
         }
     }
@@ -456,9 +466,21 @@ mod internal {
         }
     }
 
+    impl From<[u8; 4]> for Ipv4Addr {
+        fn from(bytes: [u8; 4]) -> Self {
+            Self(bytes)
+        }
+    }
+
     impl From<net::Ipv4Addr> for Ipv4Addr {
         fn from(ip: net::Ipv4Addr) -> Self {
             Ipv4Addr::new(ip.octets())
+        }
+    }
+
+    impl From<Ipv4Addr> for net::Ipv4Addr {
+        fn from(ip: Ipv4Addr) -> Self {
+            Self::from(ip.0)
         }
     }
 
@@ -576,9 +598,21 @@ mod internal {
         }
     }
 
+    impl From<[u8; 16]> for Ipv6Addr {
+        fn from(bytes: [u8; 16]) -> Self {
+            Self(bytes)
+        }
+    }
+
     impl From<net::Ipv6Addr> for Ipv6Addr {
         fn from(ip: net::Ipv6Addr) -> Self {
             Ipv6Addr::new(ip.octets())
+        }
+    }
+
+    impl From<Ipv6Addr> for net::Ipv6Addr {
+        fn from(ip: Ipv6Addr) -> Self {
+            Self::from(ip.0)
         }
     }
 
@@ -691,13 +725,13 @@ mod internal {
         }
     }
 
-    impl<A: ext::IpAddress> Display for Subnet<A> {
+    impl<A: Display> Display for Subnet<A> {
         fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
             write!(f, "{}/{}", self.network, self.prefix)
         }
     }
 
-    impl<A: ext::IpAddress> Debug for Subnet<A> {
+    impl<A: Display> Debug for Subnet<A> {
         fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
             write!(f, "{}/{}", self.network, self.prefix)
         }
@@ -726,6 +760,14 @@ mod internal {
                 IpAddr::V4(network) => SubnetEither::V4(Subnet::new(network, prefix)?),
                 IpAddr::V6(network) => SubnetEither::V6(Subnet::new(network, prefix)?),
             })
+        }
+
+        /// Gets the network and prefix for this `SubnetEither`
+        pub fn into_net_prefix(self) -> (IpAddr, u8) {
+            match self {
+                SubnetEither::V4(v4) => (v4.network.into(), v4.prefix),
+                SubnetEither::V6(v6) => (v6.network.into(), v6.prefix),
+            }
         }
     }
 
@@ -844,12 +886,24 @@ mod internal {
         }
     }
 
+    impl<A: Display> Display for AddrSubnet<A> {
+        fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+            write!(f, "{}/{}", self.addr, self.subnet.prefix)
+        }
+    }
+
+    impl<A: Display> Debug for AddrSubnet<A> {
+        fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+            write!(f, "{}/{}", self.addr, self.subnet.prefix)
+        }
+    }
+
     /// An address and that address' subnet, either IPv4 or IPv6.
     ///
     /// `AddrSubnetEither` is an enum of `AddrSubnet<Ipv4Addr>` and
     /// `AddrSubnet<Ipv6Addr>`.
     #[allow(missing_docs)]
-    #[derive(Copy, Clone)]
+    #[derive(Copy, Clone, Eq, PartialEq, Debug)]
     pub enum AddrSubnetEither {
         V4(AddrSubnet<Ipv4Addr>),
         V6(AddrSubnet<Ipv6Addr>),
@@ -868,6 +922,22 @@ mod internal {
                 IpAddr::V4(addr) => AddrSubnetEither::V4(AddrSubnet::new(addr, prefix)?),
                 IpAddr::V6(addr) => AddrSubnetEither::V6(AddrSubnet::new(addr, prefix)?),
             })
+        }
+
+        /// Gets the contained IP address and prefix in this `AddrSubnetEither`.
+        pub fn into_addr_prefix(self) -> (IpAddr, u8) {
+            match self {
+                AddrSubnetEither::V4(v4) => (v4.addr.into(), v4.subnet.prefix),
+                AddrSubnetEither::V6(v6) => (v6.addr.into(), v6.subnet.prefix),
+            }
+        }
+
+        /// Gets the IP address and subnet in this `AddrSubnetEither`.
+        pub fn into_addr_subnet(self) -> (IpAddr, SubnetEither) {
+            match self {
+                AddrSubnetEither::V4(v4) => (v4.addr.into(), SubnetEither::V4(v4.subnet)),
+                AddrSubnetEither::V6(v6) => (v6.addr.into(), SubnetEither::V6(v6.subnet)),
+            }
         }
     }
 

@@ -73,6 +73,8 @@
 
 #![allow(unused)]
 
+mod util;
+
 use ethernet as eth;
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
@@ -88,7 +90,6 @@ use fidl_fuchsia_hardware_ethernet as fidl_ethernet;
 use fidl_fuchsia_hardware_ethernet_ext::{EthernetInfo, EthernetStatus, MacAddress};
 use fidl_fuchsia_net as fidl_net;
 use fidl_fuchsia_net::{SocketControlRequest, SocketProviderRequest};
-use fidl_fuchsia_net_ext as fidl_net_ext;
 use fidl_fuchsia_net_stack as fidl_net_stack;
 use fidl_fuchsia_net_stack::{
     AdministrativeStatus, ForwardingEntry, InterfaceAddress, InterfaceInfo, InterfaceProperties,
@@ -103,7 +104,9 @@ use futures::channel::mpsc;
 use futures::future::{AbortHandle, Abortable};
 use futures::prelude::*;
 use futures::{select, TryFutureExt, TryStreamExt};
-use log::{error, info};
+use log::{debug, error, info};
+use std::convert::TryInto;
+use util::{CoreCompatible, FidlCompatible};
 
 use netstack3_core::{
     add_device_route, del_device_route, get_all_routes, get_ip_addr_subnet, handle_timeout,
@@ -495,10 +498,7 @@ impl EventLoop {
         if let Some(device_id) = device_id {
             // TODO(wesleyac): Check for address already existing.
             // TODO(joshlf): Return an error if the address/subnet pair is invalid.
-            if let Some(addr_sub) = AddrSubnetEither::new(
-                fidl_net_ext::IpAddress::from(addr.ip_address).0.into(),
-                addr.prefix_len,
-            ) {
+            if let Ok(addr_sub) = addr.try_into_core() {
                 set_ip_addr_subnet(&mut self.ctx, device_id, addr_sub);
             }
             None
@@ -570,10 +570,7 @@ impl EventLoop {
         match entry.destination {
             fidl_net_stack::ForwardingDestination::DeviceId(id) => {
                 if let Some(device_id) = self.ctx.dispatcher().get_device_client(id).map(|x| x.id) {
-                    if let Some(subnet) = SubnetEither::new(
-                        fidl_net_ext::IpAddress::from(entry.subnet.addr).0.into(),
-                        entry.subnet.prefix_len,
-                    ) {
+                    if let Ok(subnet) = entry.subnet.try_into_core() {
                         match add_device_route(&mut self.ctx, subnet, device_id) {
                             Ok(_) => None,
                             Err(NetstackError::Exists) => {
@@ -603,10 +600,7 @@ impl EventLoop {
         &mut self,
         subnet: fidl_net::Subnet,
     ) -> Option<fidl_net_stack::Error> {
-        if let Some(subnet) = SubnetEither::new(
-            fidl_net_ext::IpAddress::from(subnet.addr).0.into(),
-            subnet.prefix_len,
-        ) {
+        if let Ok(subnet) = subnet.try_into_core() {
             match del_device_route(&mut self.ctx, subnet) {
                 Ok(_) => None,
                 Err(NetstackError::NotFound) => {
