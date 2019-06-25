@@ -7,7 +7,8 @@ the syntax for writing [component manifest source](#component-manifest-source).
 Component declarations contain:
 
 - Information about [how to run the component](#runtime).
-- The realm's [child component instances](#child-component-instances).
+- The realm's [child component instances](#child-component-instances) and
+  [component collections](#component-collections).
 - [Routing rules](#capability-routing) that describe how capabilities are used,
   exposed, and offered between components.
 - [Freeform data ("facets")](#facet-metadata) which is ignored by the component
@@ -23,7 +24,7 @@ manifest sources, and component declarations.
 A *component manifest* is a file that encodes a [component
 declaration](#component-declaration), usually distributed as part of a
 [package](/sdk/docs/packages.md). The binary format is a JSON file mapping
-one-to-one onto the FIDL representation, by convention ending in a `.cm`
+one-to-one onto the component declaration, by convention ending in a `.cm`
 extension.
 
 A [fuchsia-pkg URL](/docs/the-book/package_url.md) with a component manifest
@@ -62,9 +63,24 @@ See also: [ELF Runner](elf_runner.md)
 
 ### Child component instances
 
-The [`children`](#children) section of a component manifest may declare zero or
-more child component instances. The [`offer`](#offer) declarations determine
-which capabilities the child instances have access to (see [Routing
+A *child component instance* is a component instance that is owned by another
+component (the "parent"). Child instances may be *static* or *dynamic*. Static
+children are declared by the [`children`](#children) section of a component
+manifest. Dynamic children are created in a [collection](#component-collections)
+at runtime.
+
+The [`offer`](#offer) declarations determine which capabilities child instances
+have access to (see [Routing terminology](#routing-terminology)).
+
+### Component collections
+
+A *collection* is a container for component instances which may be created and
+destroyed at runtime using the
+[`fuchsia.sys2.Realm`](/sdk/fidl/fuchsia.sys2/realm.fidl) [framework
+service](#framework-services). Collections are declared in the
+[`collections`](#collections) section of a component manifest. When an
+[`offer`](#offer) declaration targets a collection, the offered capability is
+made available to every instance in the collection (see [Routing
 terminology](#routing-terminology)).
 
 ### Capability routing
@@ -89,10 +105,12 @@ language of capability routing consists of the following three keywords:
 - `use`: When a component `uses` a capability, the capability is installed in
   the component's namespace. A component may `use` any capability that has been
   `offered` to it.
-- `offer`: When a component `offers` a capability to one of its child component
-  instances, the child may `use` that capability or offer it to one of its own
-  children. A component may `offer` any capability that it provides itself, has
-  been `offered` to it by a parent, or has been `exposed` to it by a child.
+- `offer`: A component may `offer` a capability to a *target*, which is either a
+  [child](#child-component-instances) or [collection](#collections). When a
+  capability is offered to a child, the child instance may `use` the capability
+  or `offer` it to one of its own targets. Likewise, when a capability is offered
+  to a collection, any instance in the collection may `use` the capability or
+  `offer` it.
 - `expose`: When a component `exposes` a capability to its containing realm
   (i.e., its parent), the parent may `offer` the capability to one of its other
   children. A component may `expose` any capability that it provides, or that
@@ -111,6 +129,16 @@ component instance's namespace:
   capability that was `offered` to it, a component is not allowed to `use` a
   capability that was `exposed` to it by its child. This restriction exists to
   prevent dependency cycles between parent and child.
+
+#### Framework services
+
+A *framework service* is a service provided by the component framework. Because
+the component framework itself is the provider of the service, any component may
+`use` it without an explicit `offer`.  Fuchsia supports the following framework
+services:
+
+- [`fuchsia.sys2.Realm`](/sdk/fidl/fuchsia.sys2/realm.fidl): Allows a component to
+  manage and bind to its children. Scoped to the component's realm.
 
 #### Capability paths
 
@@ -222,6 +250,32 @@ Example:
 ],
 ```
 
+### collections
+
+The `collections` section declares collections as described in [Component
+collections](#component-collections).
+
+`collections` is an array of objects with the following properties:
+
+- `name`: The name of the component collection, which is a string of one or more
+  of the following characters: `a-z`, `0-9`, `_`, `.`, `-`.
+- `durability`: The duration of child component instances in the collection.
+    - `transient`: The instance exists until its containing realm is stopped or
+      it is explicitly destroyed.
+    - `persistent`: The instance exists until it is explicitly destroyed. This
+      mode is not yet supported.
+
+Example:
+
+```
+"collections": [
+    {
+        "name": "tests",
+        "durability": "transient",
+    },
+],
+```
+
 ### use
 
 The `use` section contains `use` declarations of child component instances as
@@ -300,8 +354,8 @@ explained in [Routing terminology](#routing-terminology).
     - `#<child-name>`: A [reference](#references) to a child component instance.
 - `to`: An array of target declarations, each of which is an object with the
   following properties:
-    - `dest`: A [reference](#references) to the child to which the capability is
-      being offered, `#<child-name>`.
+    - `dest`: A [reference](#references) to the target (child or collection) to
+      which the capability is being offered, `#<target-name>`.
     - `as` *(optional)*: The explicit [target path](#capability-paths) for the
       capability. If omitted, defaults to the source path.
 
@@ -349,6 +403,7 @@ A *reference* is a string of the form `#<reference-name>`, where
 `<reference-name>` is a string of one or more of the following characters:
 `a-z`, `0-9`, `_`, `.`, `-`.
 
-Currently, the only type of supported reference is a *child reference*, which
-refers to the [child component instance](#child-component-instances) whose
-`name` is `<reference-name>`.
+A reference may refer to:
+- A [static child instance](#child-component-instances) whose name is
+  `<reference-name>`.
+- A [collection](#component-collections) whose name is `<reference-name>`.
