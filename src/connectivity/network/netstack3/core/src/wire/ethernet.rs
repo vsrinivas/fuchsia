@@ -37,8 +37,8 @@ const ETHERNET_MAX_ILLEGAL_ETHERTYPE: u16 = 1535;
 #[derive(FromBytes, AsBytes, Unaligned)]
 #[repr(C)]
 struct HeaderPrefix {
-    dst_mac: [u8; 6],
-    src_mac: [u8; 6],
+    dst_mac: Mac,
+    src_mac: Mac,
 }
 
 const TPID_8021Q: u16 = 0x8100;
@@ -120,12 +120,12 @@ impl<B: ByteSlice> EthernetFrame<B> {
 
     /// The source MAC address.
     pub(crate) fn src_mac(&self) -> Mac {
-        Mac::new(self.hdr_prefix.src_mac)
+        self.hdr_prefix.src_mac
     }
 
     /// The destination MAC address.
     pub(crate) fn dst_mac(&self) -> Mac {
-        Mac::new(self.hdr_prefix.dst_mac)
+        self.hdr_prefix.dst_mac
     }
 
     /// The EtherType.
@@ -231,8 +231,8 @@ impl PacketBuilder for EthernetFrameBuilder {
             panic!("total frame size of {} bytes is below minimum frame size of 60", total_len);
         }
 
-        frame.hdr_prefix.src_mac = self.src_mac.bytes();
-        frame.hdr_prefix.dst_mac = self.dst_mac.bytes();
+        frame.hdr_prefix.src_mac = self.src_mac;
+        frame.hdr_prefix.dst_mac = self.dst_mac;
         *frame.ethertype = U16::new(self.ethertype);
     }
 }
@@ -275,8 +275,8 @@ mod tests {
         let (mut buf, body) = new_parse_buf();
         let mut buf = &mut buf[..];
         let frame = buf.parse::<EthernetFrame<_>>().unwrap();
-        assert_eq!(frame.hdr_prefix.dst_mac, DEFAULT_DST_MAC.bytes());
-        assert_eq!(frame.hdr_prefix.src_mac, DEFAULT_SRC_MAC.bytes());
+        assert_eq!(frame.hdr_prefix.dst_mac, DEFAULT_DST_MAC);
+        assert_eq!(frame.hdr_prefix.src_mac, DEFAULT_SRC_MAC);
         assert!(frame.tag.is_none());
         assert_eq!(frame.ethertype(), Some(EtherType::Arp));
         assert_eq!(frame.body(), &body[..]);
@@ -294,8 +294,8 @@ mod tests {
             NetworkEndian::write_u16(&mut buf[TPID_OFFSET + 4..], EtherType::Arp.into());
 
             let frame = buf.parse::<EthernetFrame<_>>().unwrap();
-            assert_eq!(frame.hdr_prefix.dst_mac, DEFAULT_DST_MAC.bytes());
-            assert_eq!(frame.hdr_prefix.src_mac, DEFAULT_SRC_MAC.bytes());
+            assert_eq!(frame.hdr_prefix.dst_mac, DEFAULT_DST_MAC);
+            assert_eq!(frame.hdr_prefix.src_mac, DEFAULT_SRC_MAC);
             assert_eq!(frame.ethertype(), Some(EtherType::Arp));
 
             // help out with type inference

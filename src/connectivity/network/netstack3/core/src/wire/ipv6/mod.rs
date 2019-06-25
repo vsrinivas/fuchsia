@@ -77,8 +77,8 @@ fn ext_hdr_err_fn(hdr: &FixedHeader, err: Ipv6ExtensionHeaderParsingError) -> Ip
             };
 
             IpParseError::ParameterProblem {
-                src_ip: Ipv6Addr::new(hdr.src_ip),
-                dst_ip: Ipv6Addr::new(hdr.dst_ip),
+                src_ip: hdr.src_ip,
+                dst_ip: hdr.dst_ip,
                 code: Icmpv6ParameterProblemCode::ErroneousHeaderField,
                 pointer,
                 must_send_icmp,
@@ -97,8 +97,8 @@ fn ext_hdr_err_fn(hdr: &FixedHeader, err: Ipv6ExtensionHeaderParsingError) -> Ip
             };
 
             IpParseError::ParameterProblem {
-                src_ip: Ipv6Addr::new(hdr.src_ip),
-                dst_ip: Ipv6Addr::new(hdr.dst_ip),
+                src_ip: hdr.src_ip,
+                dst_ip: hdr.dst_ip,
                 code: Icmpv6ParameterProblemCode::UnrecognizedNextHeaderType,
                 pointer,
                 must_send_icmp,
@@ -133,8 +133,8 @@ fn ext_hdr_err_fn(hdr: &FixedHeader, err: Ipv6ExtensionHeaderParsingError) -> Ip
             };
 
             IpParseError::ParameterProblem {
-                src_ip: Ipv6Addr::new(hdr.src_ip),
-                dst_ip: Ipv6Addr::new(hdr.dst_ip),
+                src_ip: hdr.src_ip,
+                dst_ip: hdr.dst_ip,
                 code: Icmpv6ParameterProblemCode::UnrecognizedIpv6Option,
                 pointer,
                 must_send_icmp,
@@ -159,8 +159,8 @@ pub(crate) struct FixedHeader {
     payload_len: U16,
     next_hdr: u8,
     hop_limit: u8,
-    src_ip: [u8; 16],
-    dst_ip: [u8; 16],
+    src_ip: Ipv6Addr,
+    dst_ip: Ipv6Addr,
 }
 
 impl FixedHeader {
@@ -221,8 +221,8 @@ impl<B: ByteSlice> ParsablePacket<B, ()> for Ipv6Packet<B> {
         if !is_valid_next_header(fixed_hdr.next_hdr, true) {
             return debug_err!(
                 Err(IpParseError::ParameterProblem {
-                    src_ip: Ipv6Addr::new(fixed_hdr.src_ip),
-                    dst_ip: Ipv6Addr::new(fixed_hdr.dst_ip),
+                    src_ip: fixed_hdr.src_ip,
+                    dst_ip: fixed_hdr.dst_ip,
                     code: Icmpv6ParameterProblemCode::UnrecognizedNextHeaderType,
                     pointer: NEXT_HEADER_OFFSET as u32,
                     must_send_icmp: false,
@@ -356,12 +356,12 @@ impl<B: ByteSlice> Ipv6Packet<B> {
 
     /// The source IP address.
     pub(crate) fn src_ip(&self) -> Ipv6Addr {
-        Ipv6Addr::new(self.fixed_hdr.src_ip)
+        self.fixed_hdr.src_ip
     }
 
     /// The destination IP address.
     pub(crate) fn dst_ip(&self) -> Ipv6Addr {
-        Ipv6Addr::new(self.fixed_hdr.dst_ip)
+        self.fixed_hdr.dst_ip
     }
 
     /// Return a buffer that is a copy of the header bytes in this
@@ -616,8 +616,8 @@ impl PacketBuilder for Ipv6PacketBuilder {
         fixed_hdr.payload_len = U16::new(payload_len);
         fixed_hdr.next_hdr = self.next_hdr;
         fixed_hdr.hop_limit = self.hop_limit;
-        fixed_hdr.src_ip = self.src_ip.ipv6_bytes();
-        fixed_hdr.dst_ip = self.dst_ip.ipv6_bytes();
+        fixed_hdr.src_ip = self.src_ip;
+        fixed_hdr.dst_ip = self.dst_ip;
     }
 }
 
@@ -653,8 +653,8 @@ mod tests {
         fixed_hdr.payload_len = U16::ZERO;
         fixed_hdr.next_hdr = IpProto::Tcp.into();
         fixed_hdr.hop_limit = 64;
-        fixed_hdr.src_ip = DEFAULT_SRC_IP.ipv6_bytes();
-        fixed_hdr.dst_ip = DEFAULT_DST_IP.ipv6_bytes();
+        fixed_hdr.src_ip = DEFAULT_SRC_IP;
+        fixed_hdr.dst_ip = DEFAULT_DST_IP;
         fixed_hdr
     }
 

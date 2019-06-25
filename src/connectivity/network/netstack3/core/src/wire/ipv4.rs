@@ -59,8 +59,8 @@ pub(crate) struct HeaderPrefix {
     ttl: u8,
     proto: u8,
     hdr_checksum: U16,
-    src_ip: [u8; 4],
-    dst_ip: [u8; 4],
+    src_ip: Ipv4Addr,
+    dst_ip: Ipv4Addr,
 }
 
 impl HeaderPrefix {
@@ -210,12 +210,12 @@ impl<B: ByteSlice> Ipv4Packet<B> {
 
     /// The source IP address.
     pub(crate) fn src_ip(&self) -> Ipv4Addr {
-        Ipv4Addr::new(self.hdr_prefix.src_ip)
+        self.hdr_prefix.src_ip
     }
 
     /// The destination IP address.
     pub(crate) fn dst_ip(&self) -> Ipv4Addr {
-        Ipv4Addr::new(self.hdr_prefix.dst_ip)
+        self.hdr_prefix.dst_ip
     }
 
     /// The size of the header prefix and options.
@@ -454,8 +454,8 @@ impl PacketBuilder for Ipv4PacketBuilder {
         );
         packet.hdr_prefix.ttl = self.ttl;
         packet.hdr_prefix.proto = self.proto;
-        packet.hdr_prefix.src_ip = self.src_ip.ipv4_bytes();
-        packet.hdr_prefix.dst_ip = self.dst_ip.ipv4_bytes();
+        packet.hdr_prefix.src_ip = self.src_ip;
+        packet.hdr_prefix.dst_ip = self.dst_ip;
         let checksum = packet.compute_header_checksum();
         packet.hdr_prefix.hdr_checksum = U16::new(checksum);
     }
@@ -602,8 +602,8 @@ mod tests {
         hdr_prefix.id = U16::new(0x0102);
         hdr_prefix.ttl = 0x03;
         hdr_prefix.proto = IpProto::Tcp.into();
-        hdr_prefix.src_ip = DEFAULT_SRC_IP.ipv4_bytes();
-        hdr_prefix.dst_ip = DEFAULT_DST_IP.ipv4_bytes();
+        hdr_prefix.src_ip = DEFAULT_SRC_IP;
+        hdr_prefix.dst_ip = DEFAULT_DST_IP;
         hdr_prefix.hdr_checksum = U16::from([0xa6, 0xcf]);
         hdr_prefix
     }
