@@ -24,10 +24,11 @@ namespace fidlcat {
 class SystemCallTest {
  public:
   static std::unique_ptr<SystemCallTest> ZxChannelWrite(
-      int64_t result, zx_handle_t handle, uint32_t options,
-      const uint8_t* bytes, uint32_t num_bytes, const zx_handle_t* handles,
-      uint32_t num_handles) {
-    auto value = std::make_unique<SystemCallTest>("zx_channel_write", result);
+      int64_t result, std::string_view result_name, zx_handle_t handle,
+      uint32_t options, const uint8_t* bytes, uint32_t num_bytes,
+      const zx_handle_t* handles, uint32_t num_handles) {
+    auto value = std::make_unique<SystemCallTest>("zx_channel_write", result,
+                                                  result_name);
     value->inputs_.push_back(handle);
     value->inputs_.push_back(options);
     value->inputs_.push_back(reinterpret_cast<uint64_t>(bytes));
@@ -38,10 +39,12 @@ class SystemCallTest {
   }
 
   static std::unique_ptr<SystemCallTest> ZxChannelRead(
-      int64_t result, zx_handle_t handle, uint32_t options,
-      const uint8_t* bytes, const zx_handle_t* handles, uint32_t num_bytes,
-      uint32_t num_handles, uint32_t* actual_bytes, uint32_t* actual_handles) {
-    auto value = std::make_unique<SystemCallTest>("zx_channel_read", result);
+      int64_t result, std::string_view result_name, zx_handle_t handle,
+      uint32_t options, const uint8_t* bytes, const zx_handle_t* handles,
+      uint32_t num_bytes, uint32_t num_handles, uint32_t* actual_bytes,
+      uint32_t* actual_handles) {
+    auto value = std::make_unique<SystemCallTest>("zx_channel_read", result,
+                                                  result_name);
     value->inputs_.push_back(handle);
     value->inputs_.push_back(options);
     value->inputs_.push_back(reinterpret_cast<uint64_t>(bytes));
@@ -53,16 +56,18 @@ class SystemCallTest {
     return value;
   }
 
-  SystemCallTest(const char* name, int64_t result)
-      : name_(name), result_(result) {}
+  SystemCallTest(const char* name, int64_t result, std::string_view result_name)
+      : name_(name), result_(result), result_name_(result_name) {}
 
   const std::string& name() const { return name_; }
   int64_t result() const { return result_; }
+  const std::string& result_name() const { return result_name_; }
   const std::vector<uint64_t>& inputs() const { return inputs_; }
 
  private:
   const std::string name_;
   const int64_t result_;
+  const std::string result_name_;
   std::vector<uint64_t> inputs_;
 };
 
@@ -227,9 +232,8 @@ class DataForSyscallTest {
   void CheckResult(const zxdb::Err& err, const ZxChannelParams& params) {
     if (syscall()->result() != ZX_OK) {
       ASSERT_EQ(zxdb::ErrType::kGeneral, err.type()) << "error expected";
-      std::string message = "aborted " + syscall()->name() +
-                            " (errno=" + std::to_string(syscall()->result()) +
-                            ")";
+      std::string message = "aborted " + syscall()->name() + " (" +
+                            syscall()->result_name() + ")";
       ASSERT_EQ(err.msg(), message);
       return;
     }
@@ -572,37 +576,41 @@ void InterceptionWorkflowTest::PerformTest(
   debug_ipc::MessageLoop::Current()->Run();
 }
 
-#define WRITE_TEST_CONTENT(errno)                               \
-  data().set_check_bytes();                                     \
-  data().set_check_handles();                                   \
-  PerformTest(SystemCallTest::ZxChannelWrite(                   \
-      errno, 0xcefa1db0, 0, data().bytes(), data().num_bytes(), \
+#define WRITE_TEST_CONTENT(errno, errno_name)                               \
+  data().set_check_bytes();                                                 \
+  data().set_check_handles();                                               \
+  PerformTest(SystemCallTest::ZxChannelWrite(                               \
+      errno, errno_name, 0xcefa1db0, 0, data().bytes(), data().num_bytes(), \
       data().handles(), data().num_handles()))
 
-#define WRITE_TEST(name, errno)                                            \
-  TEST_F(InterceptionWorkflowTestX64, name) { WRITE_TEST_CONTENT(errno); } \
-  TEST_F(InterceptionWorkflowTestArm, name) { WRITE_TEST_CONTENT(errno); }
+#define WRITE_TEST(name, errno)               \
+  TEST_F(InterceptionWorkflowTestX64, name) { \
+    WRITE_TEST_CONTENT(errno, #errno);        \
+  }                                           \
+  TEST_F(InterceptionWorkflowTestArm, name) { \
+    WRITE_TEST_CONTENT(errno, #errno);        \
+  }
 
 WRITE_TEST(ZxChannelWrite, ZX_OK);
 
-#define READ_TEST_CONTENT(errno, check_bytes, check_handles)           \
-  if (check_bytes)                                                     \
-    data().set_check_bytes();                                          \
-  if (check_handles)                                                   \
-    data().set_check_handles();                                        \
-  uint32_t actual_bytes = data().num_bytes();                          \
-  uint32_t actual_handles = data().num_handles();                      \
-  PerformTest(SystemCallTest::ZxChannelRead(                           \
-      errno, 0xcefa1db0, 0, data().bytes(), data().handles(), 100, 64, \
-      check_bytes ? &actual_bytes : nullptr,                           \
+#define READ_TEST_CONTENT(errno, errno_name, check_bytes, check_handles)       \
+  if (check_bytes)                                                             \
+    data().set_check_bytes();                                                  \
+  if (check_handles)                                                           \
+    data().set_check_handles();                                                \
+  uint32_t actual_bytes = data().num_bytes();                                  \
+  uint32_t actual_handles = data().num_handles();                              \
+  PerformTest(SystemCallTest::ZxChannelRead(                                   \
+      errno, errno_name, 0xcefa1db0, 0, data().bytes(), data().handles(), 100, \
+      64, check_bytes ? &actual_bytes : nullptr,                               \
       check_handles ? &actual_handles : nullptr));
 
-#define READ_TEST(name, errno, check_bytes, check_handles) \
-  TEST_F(InterceptionWorkflowTestX64, name) {              \
-    READ_TEST_CONTENT(errno, check_bytes, check_handles);  \
-  }                                                        \
-  TEST_F(InterceptionWorkflowTestArm, name) {              \
-    READ_TEST_CONTENT(errno, check_bytes, check_handles);  \
+#define READ_TEST(name, errno, check_bytes, check_handles)        \
+  TEST_F(InterceptionWorkflowTestX64, name) {                     \
+    READ_TEST_CONTENT(errno, #errno, check_bytes, check_handles); \
+  }                                                               \
+  TEST_F(InterceptionWorkflowTestArm, name) {                     \
+    READ_TEST_CONTENT(errno, #errno, check_bytes, check_handles); \
   }
 
 READ_TEST(ZxChannelRead, ZX_OK, true, true);

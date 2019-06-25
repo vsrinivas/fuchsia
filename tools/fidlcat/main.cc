@@ -57,11 +57,10 @@ void CatchSigterm() {
 }
 
 // Add the startup actions to the loop: connect, attach to pid, set breakpoints.
-void EnqueueStartup(
-    InterceptionWorkflow& workflow, LibraryLoader& loader,
-    std::map<std::tuple<zx_handle_t, uint64_t>, Direction>* handle_directions,
-    const CommandLineOptions& options, const DisplayOptions& display_options,
-    std::vector<std::string>& params) {
+void EnqueueStartup(InterceptionWorkflow& workflow,
+                    MessageDecoderDispatcher* message_decoder_dispatcher,
+                    const CommandLineOptions& options,
+                    std::vector<std::string>& params) {
   uint64_t process_koid = ULLONG_MAX;
   if (options.remote_pid) {
     const std::string& pid_str = *options.remote_pid;
@@ -78,39 +77,30 @@ void EnqueueStartup(
   // correctly set when we attach to a process but is ULLONG_MAX when we create
   // the process.
   workflow.SetZxChannelWriteCallback(
-      [loader = &loader, handle_directions, &display_options, process_koid](
+      [message_decoder_dispatcher, process_koid](
           const zxdb::Err& err, const ZxChannelParams& params) {
         if (!err.ok()) {
           FXL_LOG(INFO) << "Unable to decode zx_channel_write params: "
                         << err.msg();
           return;
         }
-        fidl::BytePart bytes(params.GetBytes().get(), params.GetNumBytes(),
-                             params.GetNumBytes());
-        fidl::HandlePart handles(params.GetHandles().get(),
-                                 params.GetNumHandles(),
-                                 params.GetNumHandles());
-        fidl::Message message(std::move(bytes), std::move(handles));
-        DecodeMessage(loader, handle_directions, display_options, process_koid,
-                      params.GetHandle(), message, /*read=*/false, std::cout);
+        message_decoder_dispatcher->DecodeMessage(
+            process_koid, params.GetHandle(), params.GetBytes().get(),
+            params.GetNumBytes(), params.GetHandles().get(),
+            params.GetNumHandles(), /*read=*/false, std::cout);
       });
-  workflow.SetZxChannelReadCallback(
-      [loader = &loader, handle_directions, &display_options, process_koid](
-          const zxdb::Err& err, const ZxChannelParams& params) {
-        if (!err.ok()) {
-          FXL_LOG(INFO) << "Unable to decode zx_channel_read params: "
-                        << err.msg();
-          return;
-        }
-        fidl::BytePart bytes(params.GetBytes().get(), params.GetNumBytes(),
-                             params.GetNumBytes());
-        fidl::HandlePart handles(params.GetHandles().get(),
-                                 params.GetNumHandles(),
-                                 params.GetNumHandles());
-        fidl::Message message(std::move(bytes), std::move(handles));
-        DecodeMessage(loader, handle_directions, display_options, process_koid,
-                      params.GetHandle(), message, /*read=*/true, std::cout);
-      });
+  workflow.SetZxChannelReadCallback([message_decoder_dispatcher, process_koid](
+                                        const zxdb::Err& err,
+                                        const ZxChannelParams& params) {
+    if (!err.ok()) {
+      FXL_LOG(INFO) << "Unable to decode zx_channel_read params: " << err.msg();
+      return;
+    }
+    message_decoder_dispatcher->DecodeMessage(
+        process_koid, params.GetHandle(), params.GetBytes().get(),
+        params.GetNumBytes(), params.GetHandles().get(), params.GetNumHandles(),
+        /*read=*/true, std::cout);
+  });
 
   std::string host;
   uint16_t port;
@@ -184,10 +174,9 @@ int ConsoleMain(int argc, const char* argv[]) {
     return 1;
   }
 
-  std::map<std::tuple<zx_handle_t, uint64_t>, Direction> handle_directions;
+  MessageDecoderDispatcher message_decoder_dispatcher(&loader, display_options);
 
-  EnqueueStartup(workflow, loader, &handle_directions, options, display_options,
-                 params);
+  EnqueueStartup(workflow, &message_decoder_dispatcher, options, params);
 
   // TODO: When the attached koid terminates normally, we should exit and call
   // QuitNow() on the MessageLoop.

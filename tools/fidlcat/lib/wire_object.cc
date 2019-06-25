@@ -22,7 +22,7 @@ const Colors WithColors(/*reset=*/"\u001b[0m", /*red=*/"\u001b[31m",
                         /*white_on_magenta=*/"\u001b[45m\u001b[37m");
 
 void Field::ExtractJson(rapidjson::Document::AllocatorType& allocator,
-                           rapidjson::Value& result) const {
+                        rapidjson::Value& result) const {
   std::stringstream ss;
   PrettyPrint(ss, WithoutColors, 0, 0, 0);
   result.SetString(ss.str(), allocator);

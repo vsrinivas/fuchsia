@@ -84,7 +84,9 @@ TEST_F(WireParserTest, ParseSingleString) {
   ASSERT_NE(method, nullptr);
   ASSERT_EQ("Grob", method->name());
   std::unique_ptr<fidlcat::Object> decoded_request;
-  fidlcat::DecodeRequest(method, message, &decoded_request);
+  fidlcat::DecodeRequest(method, message.bytes().data(), message.bytes().size(),
+                         message.handles().data(), message.handles().size(),
+                         &decoded_request);
   rapidjson::Document actual;
   if (decoded_request != nullptr) {
     decoded_request->ExtractJson(actual.GetAllocator(), actual);
@@ -122,7 +124,9 @@ TEST_F(WireParserTest, ParseSingleString) {
     ASSERT_EQ(#_iface, method->name());                                        \
                                                                                \
     std::unique_ptr<fidlcat::Object> decoded_request;                          \
-    ASSERT_TRUE(fidlcat::DecodeRequest(method, message, &decoded_request))     \
+    ASSERT_TRUE(fidlcat::DecodeRequest(                                        \
+        method, message.bytes().data(), message.bytes().size(),                \
+        message.handles().data(), message.handles().size(), &decoded_request)) \
         << "Could not decode message";                                         \
     rapidjson::Document actual;                                                \
     if (decoded_request != nullptr) {                                          \
@@ -152,17 +156,13 @@ TEST_F(WireParserTest, ParseSingleString) {
         << "expected = " << _pretty_print << " actual = " << result.str();     \
                                                                                \
     for (uint32_t actual = 0; actual < message.bytes().actual(); ++actual) {   \
-      fidl::HandlePart handles(message.handles().data(),                       \
-                               message.handles().capacity(),                   \
-                               message.handles().actual());                    \
-      fidl::BytePart bytes(message.bytes().data(), message.bytes().capacity(), \
-                           actual);                                            \
-      fidl::Message message_copy(std::move(bytes), std::move(handles));        \
-      MessageDecoder decoder(message_copy, /*output_errors=*/false);           \
+      MessageDecoder decoder(                                                  \
+          message.bytes().data(), actual, message.handles().data(),            \
+          message.handles().size(), /*output_errors=*/false);                  \
       std::unique_ptr<Object> object =                                         \
           decoder.DecodeMessage(*method->request());                           \
       ASSERT_TRUE(decoder.HasError())                                          \
-          << "expect decoding error for buffer size " << actual                \
+          << "expect decoder error for buffer size " << actual                 \
           << " instead of " << message.bytes().actual();                       \
     }                                                                          \
                                                                                \
@@ -172,11 +172,13 @@ TEST_F(WireParserTest, ParseSingleString) {
       fidl::BytePart bytes(message.bytes().data(), message.bytes().capacity(), \
                            message.bytes().actual());                          \
       fidl::Message message_copy(std::move(bytes), std::move(handles));        \
-      MessageDecoder decoder(message_copy, /*output_errors=*/false);           \
+      MessageDecoder decoder(message.bytes().data(), message.bytes().size(),   \
+                             message.handles().data(), actual,                 \
+                             /*output_errors=*/false);                         \
       std::unique_ptr<Object> object =                                         \
           decoder.DecodeMessage(*method->request());                           \
       ASSERT_TRUE(decoder.HasError())                                          \
-          << "expect decoding error for handle size " << actual                \
+          << "expect decoder error for handle size " << actual                 \
           << " instead of " << message.handles().actual();                     \
     }                                                                          \
   } while (0)
@@ -1049,7 +1051,9 @@ TEST_F(WireParserTest, BadSchemaPrintHex) {
   ASSERT_NE(method, nullptr);
 
   std::unique_ptr<fidlcat::Object> decoded_request;
-  fidlcat::DecodeRequest(method, message, &decoded_request);
+  fidlcat::DecodeRequest(method, message.bytes().data(), message.bytes().size(),
+                         message.handles().data(), message.handles().size(),
+                         &decoded_request);
   rapidjson::Document actual;
   if (decoded_request != nullptr) {
     decoded_request->ExtractJson(actual.GetAllocator(), actual);

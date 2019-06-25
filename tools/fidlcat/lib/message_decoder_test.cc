@@ -8,6 +8,7 @@
 #include <lib/async-loop/cpp/loop.h>
 
 #include <iostream>
+#include <memory>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -18,6 +19,7 @@
 #include "tools/fidlcat/lib/fidlcat_test.h"
 #include "tools/fidlcat/lib/library_loader.h"
 #include "tools/fidlcat/lib/library_loader_test_data.h"
+#include "tools/fidlcat/lib/message_decoder.h"
 #include "tools/fidlcat/lib/wire_object.h"
 #include "wire_parser.h"
 
@@ -33,28 +35,31 @@ class MessageDecoderTest : public ::testing::Test {
     ASSERT_NE(loader_, nullptr);
     display_options_.pretty_print = true;
     display_options_.columns = 80;
+    decoder_ =
+        std::make_unique<MessageDecoderDispatcher>(loader_, display_options_);
   };
   LibraryLoader* loader_;
-  std::map<std::tuple<zx_handle_t, uint64_t>, Direction> handle_directions_;
+  std::unique_ptr<MessageDecoderDispatcher> decoder_;
   DisplayOptions display_options_;
   uint64_t process_koid_ = ULLONG_MAX;
   bool read_ = true;
   std::stringstream result_;
 };
 
-#define TEST_DECODE_MESSAGE(_interface, _iface, _expected, ...)             \
-  do {                                                                      \
-    fidl::MessageBuffer buffer;                                             \
-    fidl::Message message = buffer.CreateEmptyMessage();                    \
-    zx_handle_t handle = ZX_HANDLE_INVALID;                                 \
-    InterceptRequest<_interface>(message,                                   \
-                                 [&](fidl::InterfacePtr<_interface>& ptr) { \
-                                   ptr->_iface(__VA_ARGS__);                \
-                                 });                                        \
-    DecodeMessage(loader_, &handle_directions_, display_options_,           \
-                  process_koid_, handle, message, read_, result_);          \
-    ASSERT_EQ(result_.str(), _expected)                                     \
-        << "expected = " << _expected << " actual = " << result_.str();     \
+#define TEST_DECODE_MESSAGE(_interface, _iface, _expected, ...)               \
+  do {                                                                        \
+    fidl::MessageBuffer buffer;                                               \
+    fidl::Message message = buffer.CreateEmptyMessage();                      \
+    zx_handle_t handle = ZX_HANDLE_INVALID;                                   \
+    InterceptRequest<_interface>(message,                                     \
+                                 [&](fidl::InterfacePtr<_interface>& ptr) {   \
+                                   ptr->_iface(__VA_ARGS__);                  \
+                                 });                                          \
+    decoder_->DecodeMessage(process_koid_, handle, message.bytes().data(),    \
+                            message.bytes().size(), message.handles().data(), \
+                            message.handles().size(), read_, result_);        \
+    ASSERT_EQ(result_.str(), _expected)                                       \
+        << "expected = " << _expected << " actual = " << result_.str();       \
   } while (0)
 
 TEST_F(MessageDecoderTest, TestStringLaunched) {

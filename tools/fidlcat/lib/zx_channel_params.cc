@@ -4,6 +4,7 @@
 
 #include "zx_channel_params.h"
 
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -13,6 +14,7 @@
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/step_thread_controller.h"
 #include "src/lib/fxl/logging.h"
+#include "tools/fidlcat/lib/syscall_decoder.h"
 
 namespace fidlcat {
 
@@ -631,10 +633,11 @@ void ZxChannelReadParamsBuilder::FinishChannelReadX86(
           if (stack_pointer > first_sp_) {
             int64_t result = fetcher->GetReturnValue<uint64_t>();
             if (result < 0) {
-              std::string message =
-                  "aborted zx_channel_read (errno=" + std::to_string(result) +
-                  ")";
-              err_ = zxdb::Err(zxdb::ErrType::kGeneral, message);
+              std::stringstream message;
+              message << "aborted zx_channel_read (";
+              ErrorName(result, message);
+              message << ')';
+              err_ = zxdb::Err(zxdb::ErrType::kGeneral, message.str());
               Finalize();
             } else {
               GetPerThreadState()[thread->GetKoid()] =
@@ -682,10 +685,11 @@ void ZxChannelReadParamsBuilder::FinishChannelReadArm(
 
             int64_t result = fetcher->GetReturnValue<int64_t>();
             if (result < 0) {
-              std::string message =
-                  "aborted zx_channel_read (errno=" + std::to_string(result) +
-                  ")";
-              err_ = zxdb::Err(zxdb::ErrType::kGeneral, message);
+              std::stringstream message;
+              message << "aborted zx_channel_read (";
+              ErrorName(result, message);
+              message << ')';
+              err_ = zxdb::Err(zxdb::ErrType::kGeneral, message.str());
               Finalize();
             } else {
               GetPerThreadState()[thread_koid_] =

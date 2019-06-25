@@ -51,29 +51,36 @@ namespace {
 // JSON object which represents the message. The format of the message is
 // specified by str.
 // Returns true on success, false on failure.
-bool DecodeMessage(const Struct& str, const fidl::Message& message,
+bool DecodeMessage(const Struct& str, const uint8_t* bytes, uint32_t num_bytes,
+                   const zx_handle_t* handles, uint32_t num_handles,
                    std::unique_ptr<Object>* decoded_object) {
-  MessageDecoder decoder(message);
+  MessageDecoder decoder(bytes, num_bytes, handles, num_handles);
   *decoded_object = decoder.DecodeMessage(str);
   return !decoder.HasError();
 }
 
 }  // anonymous namespace
 
-bool DecodeRequest(const InterfaceMethod* method, const fidl::Message& message,
+bool DecodeRequest(const InterfaceMethod* method, const uint8_t* bytes,
+                   uint32_t num_bytes, const zx_handle_t* handles,
+                   uint32_t num_handles,
                    std::unique_ptr<Object>* decoded_object) {
   if (method->request() == nullptr) {
     return false;
   }
-  return DecodeMessage(*method->request(), message, decoded_object);
+  return DecodeMessage(*method->request(), bytes, num_bytes, handles,
+                       num_handles, decoded_object);
 }
 
-bool DecodeResponse(const InterfaceMethod* method, const fidl::Message& message,
+bool DecodeResponse(const InterfaceMethod* method, const uint8_t* bytes,
+                    uint32_t num_bytes, const zx_handle_t* handles,
+                    uint32_t num_handles,
                     std::unique_ptr<Object>* decoded_object) {
   if (method->response() == nullptr) {
     return false;
   }
-  return DecodeMessage(*method->response(), message, decoded_object);
+  return DecodeMessage(*method->response(), bytes, num_bytes, handles,
+                       num_handles, decoded_object);
 }
 
 }  // namespace fidlcat

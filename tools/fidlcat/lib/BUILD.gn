@@ -36,11 +36,13 @@ if (current_toolchain == host_toolchain) {
   static_library("host_lib") {
     public = [
       "interception_workflow.h",
+      "syscall_decoder.h",
       "zx_channel_params.h",
     ]
 
     sources = [
       "interception_workflow.cc",
+      "syscall_decoder.cc",
       "zx_channel_params.cc",
     ]
 

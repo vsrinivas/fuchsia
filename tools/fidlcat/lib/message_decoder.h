@@ -26,10 +26,61 @@ class Type;
 
 enum class Direction { kUnknown, kClient, kServer };
 
+constexpr int kTabSize = 2;
+
+struct Colors {
+  Colors(const char* new_reset, const char* new_red, const char* new_green,
+         const char* new_blue, const char* new_white_on_magenta)
+      : reset(new_reset),
+        red(new_red),
+        green(new_green),
+        blue(new_blue),
+        white_on_magenta(new_white_on_magenta) {}
+
+  const char* const reset;
+  const char* const red;
+  const char* const green;
+  const char* const blue;
+  const char* const white_on_magenta;
+};
+
+extern const Colors WithoutColors;
+extern const Colors WithColors;
+
+// Class which is able to decode all the messages received/sent.
+class MessageDecoderDispatcher {
+ public:
+  MessageDecoderDispatcher(LibraryLoader* loader,
+                           const DisplayOptions& display_options)
+      : loader_(loader),
+        display_options_(display_options),
+        colors_(display_options.needs_colors ? WithColors : WithoutColors) {}
+
+  LibraryLoader* loader() const { return loader_; }
+  const DisplayOptions& display_options() const { return display_options_; }
+  const Colors& colors() const { return colors_; }
+  std::map<std::tuple<zx_handle_t, uint64_t>, Direction>& handle_directions() {
+    return handle_directions_;
+  }
+
+  bool DecodeMessage(uint64_t process_koid, zx_handle_t handle,
+                     const uint8_t* bytes, uint32_t num_bytes,
+                     const zx_handle_t* handles, uint32_t num_handles,
+                     bool read, std::ostream& os, int tabs = 0);
+
+ private:
+  LibraryLoader* const loader_;
+  const DisplayOptions& display_options_;
+  const Colors& colors_;
+  std::map<std::tuple<zx_handle_t, uint64_t>, Direction> handle_directions_;
+};
+
 // Helper to decode a message (request or response). It generates an Object.
 class MessageDecoder {
  public:
-  MessageDecoder(const fidl::Message& message, bool output_errors = true);
+  MessageDecoder(const uint8_t* bytes, uint32_t num_bytes,
+                 const zx_handle_t* handles, uint32_t num_handles,
+                 bool output_errors = false);
   MessageDecoder(const MessageDecoder* container, uint64_t num_bytes_remaining,
                  uint64_t num_handles_remaining);
 
@@ -123,7 +174,6 @@ class MessageDecoder {
 
   // The start of the message.
   const uint8_t* const start_byte_pos_;
-  const zx_handle_t* const start_handle_pos_;
 
   // The end of the message.
   const uint8_t* const end_byte_pos_;
@@ -161,12 +211,6 @@ bool MessageDecoder::GetValueAt(uint64_t offset, T* value) {
   *value = internal::MemoryFrom<T>(byte_pos_ + offset);
   return true;
 }
-
-void DecodeMessage(
-    LibraryLoader* loader,
-    std::map<std::tuple<zx_handle_t, uint64_t>, Direction>* handle_directions,
-    const DisplayOptions& options, uint64_t process_koid, zx_handle_t handle,
-    const fidl::Message& message, bool read, std::ostream& os);
 
 }  // namespace fidlcat
 

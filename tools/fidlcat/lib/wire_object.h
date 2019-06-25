@@ -17,27 +17,6 @@
 
 namespace fidlcat {
 
-constexpr int kTabSize = 2;
-
-struct Colors {
-  Colors(const char* new_reset, const char* new_red, const char* new_green,
-         const char* new_blue, const char* new_white_on_magenta)
-      : reset(new_reset),
-        red(new_red),
-        green(new_green),
-        blue(new_blue),
-        white_on_magenta(new_white_on_magenta) {}
-
-  const char* const reset;
-  const char* const red;
-  const char* const green;
-  const char* const blue;
-  const char* const white_on_magenta;
-};
-
-extern const Colors WithoutColors;
-extern const Colors WithColors;
-
 // Base class for all the fields we can find within a message.
 class Field {
  public:
