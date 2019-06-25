@@ -52,7 +52,6 @@ fdio_null_create
 fdio_open
 fdio_open_at
 fdio_pipe_half
-fdio_pipe_half2
 fdio_service_clone
 fdio_service_clone_to
 fdio_service_connect
