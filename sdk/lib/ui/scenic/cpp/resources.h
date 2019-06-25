@@ -203,20 +203,6 @@ class Node : public Resource {
 
   void SetTranslation(uint32_t variable_id);
 
-  // clang-format off
-  [[deprecated("(SCN-1054) Please move back to Node::SetTranslation().")]]
-  void SetTranslationRH(float tx, float ty, float tz) {
-    SetTranslation((float[3]){tx, ty, tz});
-  }
-  // clang-format on
-
-  // clang-format off
-  [[deprecated("(SCN-1054) Please move back to Node::SetTranslation().")]]
-  void SetTranslationRH(const float translation[3]) {
-    SetTranslation(translation);
-  }
-  // clang-format on
-
   void SetScale(float sx, float sy, float sz) {
     SetScale((float[3]){sx, sy, sz});
   }
