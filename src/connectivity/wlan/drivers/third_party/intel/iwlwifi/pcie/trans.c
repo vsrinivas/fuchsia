@@ -2192,40 +2192,17 @@ static void iwl_trans_pcie_set_bits_mask(struct iwl_trans* trans, uint32_t reg, 
 }
 
 static void iwl_trans_pcie_ref(struct iwl_trans* trans) {
-#if 0  // NEEDS_PORTING
-    struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
-
-    if (iwlwifi_mod_params.d0i3_disable) { return; }
-
-    pm_runtime_get(&trans_pcie->pci_dev->dev);
-
-#ifdef CONFIG_PM
-#if (defined(CONFIG_PM_RUNTIME) || LINUX_VERSION_CODE >= KERNEL_VERSION(3, 19, 0))
-    IWL_DEBUG_RPM(trans, "runtime usage count: %d\n",
-                  atomic_read(&trans_pcie->pci_dev->dev.power.usage_count));
-#endif
-#endif /* CONFIG_PM */
-#endif // NEEDS_PORTING
-    IWL_ERR(trans, "%s needs porting\n", __FUNCTION__);
+    // This function is to tell the power management core that we are going to use the device,
+    // please do not put the device into the power saving mode.
+    //
+    // TODO(WLAN-1118): supports power management in Fuchsia.
 }
 
 static void iwl_trans_pcie_unref(struct iwl_trans* trans) {
-#if 0  // NEEDS_PORTING
-    struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
-
-    if (iwlwifi_mod_params.d0i3_disable) { return; }
-
-    pm_runtime_mark_last_busy(&trans_pcie->pci_dev->dev);
-    pm_runtime_put_autosuspend(&trans_pcie->pci_dev->dev);
-
-#ifdef CONFIG_PM
-#if (defined(CONFIG_PM_RUNTIME) || LINUX_VERSION_CODE >= KERNEL_VERSION(3, 19, 0))
-    IWL_DEBUG_RPM(trans, "runtime usage count: %d\n",
-                  atomic_read(&trans_pcie->pci_dev->dev.power.usage_count));
-#endif
-#endif /* CONFIG_PM */
-#endif // NEEDS_PORTING
-    IWL_ERR(trans, "%s needs porting\n", __FUNCTION__);
+    // This function is to tell the power management core that we no longer use this device,
+    // feel free to put the device into the power saving mode.
+    //
+    // TODO(WLAN-1118): supports power management in Fuchsia.
 }
 
 #if 0  // NEEDS_PORTING
