@@ -11,7 +11,7 @@ use zerocopy::{AsBytes, ByteSlice, FromBytes, Unaligned};
 
 use crate::error::{ParseError, ParseResult};
 use crate::ip::{Ipv6, Ipv6Addr};
-use crate::wire::util::U32;
+use crate::wire::U32;
 
 use super::common::{IcmpDestUnreachable, IcmpEchoReply, IcmpEchoRequest, IcmpTimeExceeded};
 use super::{

@@ -19,8 +19,8 @@ use crate::error::{IpParseError, IpParseErrorAction, IpParseResult, ParseError};
 use crate::ip::reassembly::FragmentablePacket;
 use crate::ip::{IpProto, Ipv6, Ipv6Addr, Ipv6ExtHdrType};
 use crate::wire::icmp::Icmpv6ParameterProblemCode;
-use crate::wire::util::records::Records;
-use crate::wire::util::U16;
+use crate::wire::records::Records;
+use crate::wire::U16;
 
 use ext_hdrs::{
     is_valid_next_header, is_valid_next_header_upper_layer, ExtensionHeaderOptionAction,

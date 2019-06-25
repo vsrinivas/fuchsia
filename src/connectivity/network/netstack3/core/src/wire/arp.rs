@@ -17,7 +17,7 @@ use crate::device::arp::{ArpHardwareType, ArpOp};
 use crate::device::ethernet::{EtherType, Mac};
 use crate::error::{ParseError, ParseResult};
 use crate::ip::Ipv4Addr;
-use crate::wire::util::U16;
+use crate::wire::U16;
 
 #[cfg(test)]
 pub(crate) const ARP_HDR_LEN: usize = 8;

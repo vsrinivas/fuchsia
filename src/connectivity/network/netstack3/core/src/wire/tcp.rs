@@ -17,9 +17,9 @@ use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 use crate::error::{ParseError, ParseResult};
 use crate::ip::{IpAddress, IpProto};
 use crate::transport::tcp::TcpOption;
-use crate::wire::util::checksum::compute_transport_checksum;
-use crate::wire::util::records::options::Options;
-use crate::wire::util::{U16, U32};
+use crate::wire::compute_transport_checksum;
+use crate::wire::records::options::Options;
+use crate::wire::{U16, U32};
 
 use self::options::TcpOptionsImpl;
 
@@ -353,7 +353,7 @@ mod options {
     use zerocopy::LayoutVerified;
 
     use crate::transport::tcp::TcpOption;
-    use crate::wire::util::records::options::{OptionsImpl, OptionsImplLayout};
+    use crate::wire::records::options::{OptionsImpl, OptionsImplLayout};
 
     const OPTION_KIND_EOL: u8 = 0;
     const OPTION_KIND_NOP: u8 = 1;
@@ -375,7 +375,7 @@ mod options {
         fn parse(kind: u8, data: &'a [u8]) -> Result<Option<TcpOption>, ()> {
             match kind {
                 self::OPTION_KIND_EOL | self::OPTION_KIND_NOP => {
-                    unreachable!("wire::util::Options promises to handle EOL and NOP")
+                    unreachable!("wire::records::options::Options promises to handle EOL and NOP")
                 }
                 self::OPTION_KIND_MSS => {
                     if data.len() != 2 {

@@ -16,6 +16,7 @@ rustc_library("netstack3-core") {
     "//garnet/public/rust/packet",
     "//garnet/public/rust/zerocopy",
     "//garnet/public/rust/zerocopy/zerocopy-derive",
+    "//src/connectivity/lib/internet-checksum",
     "//src/connectivity/network/netstack3/core/specialize-ip-macro",
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:failure",

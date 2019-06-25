@@ -1132,7 +1132,7 @@ mod internal {
     /// An IPv4 header option comprises metadata about the option (which is
     /// stored in the kind byte) and the option itself. Note that all
     /// kind-byte-only options are handled by the utilities in
-    /// `wire::util::options`, so this type only supports options with
+    /// `wire::records::options`, so this type only supports options with
     /// variable-length data.
     ///
     /// See [Wikipedia] or [RFC 791] for more details.

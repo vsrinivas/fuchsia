@@ -36,6 +36,7 @@ use std::convert::TryFrom;
 use std::time::Duration;
 
 use byteorder::{ByteOrder, NetworkEndian};
+use internet_checksum::Checksum;
 use packet::{BufferViewMut, ParsablePacket};
 use specialize_ip_macro::specialize_ip;
 use zerocopy::{ByteSlice, ByteSliceMut};
@@ -45,7 +46,6 @@ use crate::wire::ipv4::{
     IPV4_CHECKSUM_BYTE_RANGE, IPV4_FRAGMENT_DATA_BYTE_RANGE, IPV4_TOTAL_LENGTH_BYTE_RANGE,
 };
 use crate::wire::ipv6::{IPV6_FIXED_HDR_LEN, IPV6_PAYLOAD_LEN_BYTE_RANGE};
-use crate::wire::util::checksum::Checksum;
 use crate::{Context, EventDispatcher};
 
 /// The maximum amount of time from receipt of the first fragment to reassembly of

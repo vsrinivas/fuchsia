@@ -12,7 +12,7 @@ use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
 use crate::device::ethernet::{EtherType, Mac};
 use crate::error::{ParseError, ParseResult};
-use crate::wire::util::{U16, U32};
+use crate::wire::{U16, U32};
 
 // used in PacketBuilder impl
 pub(crate) const ETHERNET_HDR_LEN_NO_TAG: usize = 14;

@@ -8,6 +8,7 @@ use std::fmt::{self, Debug, Formatter};
 use std::ops::Range;
 
 use byteorder::{ByteOrder, NetworkEndian};
+use internet_checksum::Checksum;
 use packet::{
     BufferView, BufferViewMut, PacketBuilder, ParsablePacket, ParseMetadata, SerializeBuffer,
 };
@@ -16,9 +17,8 @@ use zerocopy::{AsBytes, ByteSlice, ByteSliceMut, FromBytes, LayoutVerified, Unal
 use crate::error::{IpParseError, IpParseResult, ParseError};
 use crate::ip::reassembly::FragmentablePacket;
 use crate::ip::{IpProto, Ipv4, Ipv4Addr, Ipv4Option};
-use crate::wire::util::checksum::Checksum;
-use crate::wire::util::records::options::Options;
-use crate::wire::util::U16;
+use crate::wire::records::options::Options;
+use crate::wire::U16;
 
 use self::options::Ipv4OptionsImpl;
 
@@ -284,12 +284,13 @@ where
     ///
     /// Set the TTL and update the header checksum accordingly.
     pub(crate) fn set_ttl(&mut self, ttl: u8) {
-        // See the Checksum::update documentation for why we need to provide two
-        // bytes which are at an even byte offset from the beginning of the
-        // header.
+        // See the internet_checksum::update documentation for why we need to
+        // provide two bytes which are at an even byte offset from the beginning
+        // of the header.
         let old_bytes = [self.hdr_prefix.ttl, self.hdr_prefix.proto];
         let new_bytes = [ttl, self.hdr_prefix.proto];
-        let checksum = Checksum::update(self.hdr_prefix.hdr_checksum.get(), &old_bytes, &new_bytes);
+        let checksum =
+            internet_checksum::update(self.hdr_prefix.hdr_checksum.get(), &old_bytes, &new_bytes);
         self.hdr_prefix.hdr_checksum = U16::new(checksum);
         self.hdr_prefix.ttl = ttl;
     }
@@ -467,7 +468,7 @@ const MF_FLAG_OFFSET: u32 = 0;
 
 mod options {
     use crate::ip::{Ipv4Option, Ipv4OptionData};
-    use crate::wire::util::records::options::{OptionsImpl, OptionsImplLayout};
+    use crate::wire::records::options::{OptionsImpl, OptionsImplLayout};
 
     const OPTION_KIND_EOL: u8 = 0;
     const OPTION_KIND_NOP: u8 = 1;
@@ -485,7 +486,7 @@ mod options {
             let copied = kind & (1 << 7) > 0;
             match kind {
                 self::OPTION_KIND_EOL | self::OPTION_KIND_NOP => {
-                    unreachable!("wire::util::Options promises to handle EOL and NOP")
+                    unreachable!("wire::records::options::Options promises to handle EOL and NOP")
                 }
                 kind => {
                     if data.len() > 38 {

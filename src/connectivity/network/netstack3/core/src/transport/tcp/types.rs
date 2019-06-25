@@ -4,13 +4,13 @@
 
 use zerocopy::{AsBytes, FromBytes, Unaligned};
 
-use crate::wire::util::U32;
+use crate::wire::U32;
 
 /// A TCP header option.
 ///
 /// A TCP header option comprises an option kind byte, a length, and the option
 ///  data itself. While kind-byte-only options are supported, all such kinds are
-///  handled by the utilities in `wire::util::options`, so this type only
+///  handled by the utilities in `wire::records::options`, so this type only
 ///  supports options with variable-length data.
 ///
 /// See [Wikipedia] or [RFC 793] for more details.

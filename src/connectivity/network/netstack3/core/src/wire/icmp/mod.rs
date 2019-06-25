@@ -26,6 +26,7 @@ use std::mem;
 use std::ops::Deref;
 
 use byteorder::{ByteOrder, NetworkEndian};
+use internet_checksum::Checksum;
 use never::Never;
 use packet::{BufferView, PacketBuilder, ParsablePacket, ParseMetadata, SerializeBuffer};
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
@@ -33,9 +34,8 @@ use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 use crate::error::{ParseError, ParseResult};
 use crate::ip::{Ip, IpAddress, IpProto, Ipv4, Ipv6};
 use crate::wire::ipv4;
-use crate::wire::util::checksum::Checksum;
-use crate::wire::util::records::options::{Options, OptionsImpl};
-use crate::wire::util::U16;
+use crate::wire::records::options::{Options, OptionsImpl};
+use crate::wire::U16;
 
 #[derive(Default, Debug, FromBytes, AsBytes, Unaligned)]
 #[repr(C)]

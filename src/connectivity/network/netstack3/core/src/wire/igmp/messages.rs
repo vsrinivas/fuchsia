@@ -14,8 +14,8 @@ use super::{
 use crate::error::ParseError;
 use crate::ip::Ipv4Addr;
 use crate::wire::igmp::MessageType;
-use crate::wire::util::records::{LimitedRecords, LimitedRecordsImpl, LimitedRecordsImplLayout};
-use crate::wire::util::U16;
+use crate::wire::records::{LimitedRecords, LimitedRecordsImpl, LimitedRecordsImplLayout};
+use crate::wire::U16;
 
 create_net_enum! {
     IgmpMessageType,

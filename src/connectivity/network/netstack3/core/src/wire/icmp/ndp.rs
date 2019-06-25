@@ -15,14 +15,13 @@ use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
 use crate::error::ParseError;
 use crate::ip::{Ipv6, Ipv6Addr};
-use crate::wire::util::{U16, U32};
+use crate::wire::{U16, U32};
 
 use super::{IcmpIpExt, IcmpMessage, IcmpPacketBuilder, IcmpUnusedCode};
 use crate::wire::igmp::IgmpMessage;
 
-pub(crate) type Options<B> =
-    crate::wire::util::records::options::Options<B, options::NdpOptionsImpl>;
-pub(crate) type OptionsSerializer<'a, I> = crate::wire::util::records::options::OptionsSerializer<
+pub(crate) type Options<B> = crate::wire::records::options::Options<B, options::NdpOptionsImpl>;
+pub(crate) type OptionsSerializer<'a, I> = crate::wire::records::options::OptionsSerializer<
     'a,
     options::NdpOptionsImpl,
     options::NdpOption<'a>,
@@ -149,10 +148,8 @@ pub(crate) mod options {
     use zerocopy::{AsBytes, FromBytes, LayoutVerified, Unaligned};
 
     use crate::ip::Ipv6Addr;
-    use crate::wire::util::records::options::{
-        OptionsImpl, OptionsImplLayout, OptionsSerializerImpl,
-    };
-    use crate::wire::util::U32;
+    use crate::wire::records::options::{OptionsImpl, OptionsImplLayout, OptionsSerializerImpl};
+    use crate::wire::U32;
 
     create_net_enum! {
         NdpOptionType,

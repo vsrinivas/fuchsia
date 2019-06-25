@@ -11,7 +11,7 @@ use byteorder::{ByteOrder, NetworkEndian};
 use packet::BufferView;
 
 use crate::ip::{IpProto, Ipv6ExtHdrType};
-use crate::wire::util::records::{Records, RecordsContext, RecordsImpl, RecordsImplLayout};
+use crate::wire::records::{Records, RecordsContext, RecordsImpl, RecordsImplLayout};
 
 /// The length of an IPv6 Fragment Extension Header.
 pub(crate) const IPV6_FRAGMENT_EXT_HDR_LEN: usize = 8;
@@ -864,7 +864,7 @@ fn ext_hdr_opt_err_to_ext_hdr_err(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::wire::util::records::Records;
+    use crate::wire::records::Records;
 
     #[test]
     fn test_is_valid_next_header_upper_layer() {

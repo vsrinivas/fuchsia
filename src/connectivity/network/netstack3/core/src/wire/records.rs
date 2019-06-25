@@ -9,7 +9,7 @@
 //! utilities for IPv4, TCP, and NDP options parsing, provided in the
 //! [`options`] submodule.
 //!
-//! [`options`]: crate::wire::util::records::options
+//! [`options`]: crate::wire::records::options
 
 use packet::{BufferView, BufferViewMut, InnerPacketBuilder};
 use std::marker::PhantomData;
@@ -969,7 +969,7 @@ pub(crate) mod options {
     /// `Options` represents a parsed set of options from an IPv4 or TCP header
     /// or an NDP packet. `Options` uses [`Records`] below the surface.
     ///
-    /// [`Records`]: crate::wire::util::records::Records
+    /// [`Records`]: crate::wire::records::Records
     pub(crate) type Options<B, O> = Records<B, OptionsImplBridge<O>>;
 
     /// An instance of options serialization.
