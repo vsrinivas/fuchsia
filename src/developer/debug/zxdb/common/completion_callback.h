@@ -14,7 +14,7 @@ namespace zxdb {
 // Represents a completion callback function that MUST be called and takes an
 // error and an optional list of parameters.
 //
-// It is a wrapper around a fit::function that asserts if is destroyed before
+// It is a wrapper around a fit::callback that asserts if is destroyed before
 // the callback is run. When using continuations the thread of execution will
 // be lost if any step every forgets to call the completion callback.
 //
@@ -53,15 +53,15 @@ namespace zxdb {
 template <typename... Args>
 class CompletionCallback {
  public:
-  using Function = fit::function<void(const Err&, Args...)>;
+  using Callback = fit::callback<void(const Err&, Args...)>;
 
-  // These constructors are mirrors of fit::function. See that class for more.
+  // These constructors are mirrors of fit::callback. See that class for more.
   CompletionCallback() = default;
 
-  CompletionCallback(decltype(nullptr)) : function_(nullptr) {}
+  CompletionCallback(decltype(nullptr)) : callback_(nullptr) {}
 
   CompletionCallback(void (*target)(const Err& err, Args...))
-      : function_(target) {}
+      : callback_(target) {}
 
   // For functors, we need to capture the raw type but also restrict on the
   // existence of an appropriate operator () to resolve overloads and implicit
@@ -71,7 +71,7 @@ class CompletionCallback {
       typename = std::enable_if_t<std::is_convertible<
           decltype(std::declval<Callable&>()(Err(), std::declval<Args>()...)),
           void>::value>>
-  CompletionCallback(Callable target) : function_(std::move(target)) {}
+  CompletionCallback(Callable target) : callback_(std::move(target)) {}
 
   // Delete specialization for fit::callback.
   template <size_t other_inline_target_size, bool other_require_inline>
@@ -80,15 +80,15 @@ class CompletionCallback {
                            void(Args...)>) = delete;
 
   CompletionCallback(CompletionCallback&& other)
-      : function_(std::move(other.function_)) {}
+      : callback_(std::move(other.callback_)) {}
 
   ~CompletionCallback() {
-    FXL_CHECK(!function_) << "Completion callback not run before destruction.";
+    FXL_CHECK(!callback_) << "Completion callback not run before destruction.";
   }
 
-  // Assignment from a callable function. See fit::function.
+  // Assignment from a callable function. See fit::callback.
   //
-  // Unlike fit::function, this will assert if the current object has a
+  // Unlike fit::callback, this will assert if the current object has a
   // function that has not been called.
   template <
       typename Callable,
@@ -96,9 +96,9 @@ class CompletionCallback {
           decltype(std::declval<Callable&>()(Err(), std::declval<Args>()...)),
           void>::value>>
   CompletionCallback& operator=(Callable target) {
-    FXL_CHECK(!function_)
+    FXL_CHECK(!callback_)
         << "Overwriting a completion callback without calling it.";
-    function_ = std::move(target);
+    callback_ = std::move(target);
     return *this;
   }
 
@@ -107,13 +107,13 @@ class CompletionCallback {
     if (&other == this)
       return *this;
 
-    FXL_CHECK(!function_)
+    FXL_CHECK(!callback_)
         << "Overwriting a completion callback without calling it.";
-    function_ = std::move(other.function_);
+    callback_ = std::move(other.callback_);
     return *this;
   }
 
-  explicit operator bool() const { return function_; }
+  explicit operator bool() const { return callback_; }
 
   // This version takes all parameters to the callback, the "Err" first
   // parameter and all others.
@@ -123,8 +123,8 @@ class CompletionCallback {
   // other parameters.
   template <typename = std::enable_if<(sizeof...(Args) != 0)>>
   void operator()(const Err& err, Args... args) {
-    function_(err, std::forward<Args>(args)...);
-    function_ = nullptr;
+    callback_(err, std::forward<Args>(args)...);
+    callback_ = nullptr;
   }
 
   // Execute the callback with the given error.
@@ -135,19 +135,19 @@ class CompletionCallback {
   // version above that takes all parameters.
   void operator()(const Err& err) {
     FXL_CHECK(err.has_error()) << "Expected error to be set.";
-    function_(err, Args()...);
-    function_ = nullptr;
+    callback_(err, Args()...);
+    callback_ = nullptr;
   }
 
   // Executes the callback with no error. Only the callback parameters
   // following the "Err" need to be specified.
   void operator()(Args... args) {
-    function_(Err(), std::forward<Args>(args)...);
-    function_ = nullptr;
+    callback_(Err(), std::forward<Args>(args)...);
+    callback_ = nullptr;
   }
 
  private:
-  Function function_;
+  Callback callback_;
 };
 
 }  // namespace zxdb
