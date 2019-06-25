@@ -38,18 +38,21 @@ bool MBufChain::is_empty() const {
     return size_ == 0;
 }
 
-size_t MBufChain::Read(user_out_ptr<void> dst, size_t len, bool datagram) {
-    return ReadHelper(this, dst, len, datagram);
+zx_status_t MBufChain::Read(user_out_ptr<void> dst, size_t len, bool datagram, size_t* actual) {
+    return ReadHelper(this, dst, len, datagram, actual);
 }
 
-size_t MBufChain::Peek(user_out_ptr<void> dst, size_t len, bool datagram) const {
-    return ReadHelper(this, dst, len, datagram);
+zx_status_t MBufChain::Peek(user_out_ptr<void> dst, size_t len, bool datagram,
+                            size_t* actual) const {
+    return ReadHelper(this, dst, len, datagram, actual);
 }
 
 template <class T>
-size_t MBufChain::ReadHelper(T* chain, user_out_ptr<void> dst, size_t len, bool datagram) {
+zx_status_t MBufChain::ReadHelper(T* chain, user_out_ptr<void> dst, size_t len, bool datagram,
+                                  size_t* actual) {
     if (chain->size_ == 0) {
-        return 0;
+        *actual = 0;
+        return ZX_OK;
     }
 
     if (datagram && len > chain->tail_.front().pkt_len_)
@@ -60,13 +63,21 @@ size_t MBufChain::ReadHelper(T* chain, user_out_ptr<void> dst, size_t len, bool 
     while (pos < len && iter != chain->tail_.end()) {
         const char* src = iter->data_ + iter->off_;
         size_t copy_len = MIN(iter->len_, len - pos);
-        if (dst.byte_offset(pos).copy_array_to_user(src, copy_len) != ZX_OK)
-            return pos;
+        zx_status_t status = dst.byte_offset(pos).copy_array_to_user(src, copy_len);
+        if (status != ZX_OK) {
+            return status;
+        }
+
         pos += copy_len;
 
         if constexpr (std::is_const<T>::value) {
             ++iter;
         } else {
+            // TODO(ZX-4366): Note, we're advancing (consuming data) after each copy.  This means
+            // that if a subsequent copy fails (perhaps because a the write to the user buffer
+            // faults) data will be "dropped".  Consider changing this function to only advance (and
+            // free) once all data has been successfully copied.
+
             iter->off_ += static_cast<uint32_t>(copy_len);
             iter->len_ -= static_cast<uint32_t>(copy_len);
             chain->size_ -= copy_len;
@@ -94,7 +105,8 @@ size_t MBufChain::ReadHelper(T* chain, user_out_ptr<void> dst, size_t len, bool 
         }
     }
 
-    return pos;
+    *actual = pos;
+    return ZX_OK;
 }
 
 zx_status_t MBufChain::WriteDatagram(user_in_ptr<const void> src, size_t len,
@@ -172,8 +184,17 @@ zx_status_t MBufChain::WriteStream(user_in_ptr<const void> src, size_t len, size
             if (copy_len == 0)
                 break;
         }
-        if (src.byte_offset(pos).copy_array_from_user(dst, copy_len) != ZX_OK)
-            break;
+        zx_status_t status = src.byte_offset(pos).copy_array_from_user(dst, copy_len);
+        if (status != ZX_OK) {
+            // TODO(ZX-4366): Note, we're not indicating to the caller that data added so far in
+            // previous copies was written successfully.  This means the caller may try to re-send
+            // the same data again, leading to duplicate data.  Consider changing this function to
+            // report that some data was written so far, or consider not committing any of the new
+            // data until we can ensure success, or consider putting the socket in a state where it
+            // can't succeed a subsequent write.
+            return status;
+        }
+
         pos += copy_len;
         head_->len_ += static_cast<uint32_t>(copy_len);
         size_ += copy_len;

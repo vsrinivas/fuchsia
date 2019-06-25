@@ -71,18 +71,22 @@ fbl::Array<char> ReadHelper(MBufChain* chain, size_t length, MessageType message
 
     auto user_out = make_user_out_ptr(memory->out());
     bool datagram = (message_type == MessageType::kDatagram);
-    size_t result =
-        (read_type == ReadType::kRead) ? chain->Read(user_out, length, datagram)
-                                       : chain->Peek(user_out, length, datagram);
+    size_t actual;
+    zx_status_t status = (read_type == ReadType::kRead)
+                             ? chain->Read(user_out, length, datagram, &actual)
+                             : chain->Peek(user_out, length, datagram, &actual);
+    if (status != ZX_OK) {
+        return nullptr;
+    }
 
     fbl::AllocChecker ac;
-    fbl::Array<char> buffer(new (&ac) char[result], result);
+    fbl::Array<char> buffer(new (&ac) char[actual], actual);
     if (!ac.check()) {
         unittest_printf("Failed to allocate char buffer\n");
         return nullptr;
     }
 
-    if (make_user_in_ptr(memory->in()).copy_array_from_user(buffer.get(), result) != ZX_OK) {
+    if (make_user_in_ptr(memory->in()).copy_array_from_user(buffer.get(), actual) != ZX_OK) {
         unittest_printf("Failed to copy user memory bytes\n");
         return nullptr;
     }
@@ -117,7 +121,9 @@ static bool stream_read_empty() {
     auto mem_out = make_user_out_ptr(mem->out());
 
     MBufChain chain;
-    EXPECT_EQ(0U, chain.Read(mem_out, 1, false), "");
+    size_t actual;
+    EXPECT_EQ(ZX_OK, chain.Read(mem_out, 1, false, &actual), "");
+    EXPECT_EQ(0U, actual, "");
     END_TEST;
 }
 
@@ -133,7 +139,9 @@ static bool stream_read_zero() {
     ASSERT_EQ(ZX_OK, chain.WriteStream(mem_in, 1, &written), "");
     ASSERT_EQ(1U, written, "");
 
-    EXPECT_EQ(0U, chain.Read(mem_out, 0, false), "");
+    size_t actual;
+    EXPECT_EQ(ZX_OK, chain.Read(mem_out, 0, false, &actual), "");
+    EXPECT_EQ(0U, actual, "");
     END_TEST;
 }
 
@@ -167,8 +175,11 @@ static bool stream_write_basic() {
     ktl::unique_ptr<UserMemory> read_buf = UserMemory::Create(kTotalLen);
     auto read_buf_in = make_user_in_ptr(read_buf->in());
     auto read_buf_out = make_user_out_ptr(read_buf->out());
-    size_t result = chain.Read(read_buf_out, kTotalLen, false);
-    ASSERT_EQ(kTotalLen, result, "");
+
+    size_t actual;
+    zx_status_t status = chain.Read(read_buf_out, kTotalLen, false, &actual);
+    ASSERT_EQ(ZX_OK, status, "");
+    ASSERT_EQ(kTotalLen, actual, "");
     EXPECT_TRUE(chain.is_empty(), "");
     EXPECT_FALSE(chain.is_full(), "");
     EXPECT_EQ(0U, chain.size(), "");
@@ -226,9 +237,13 @@ static bool stream_write_too_much() {
     // Read it all back out and see we get back the same number of bytes we wrote.
     size_t total_read = 0;
     size_t bytes_read = 0;
-    while (!chain.is_empty() && (bytes_read = chain.Read(mem_out, kWriteLen, false)) > 0) {
+    zx_status_t status;
+    while (!chain.is_empty() &&
+           ((status = chain.Read(mem_out, kWriteLen, false, &bytes_read)) == ZX_OK) &&
+           bytes_read > 0) {
         total_read += bytes_read;
     }
+    ASSERT_EQ(ZX_OK, status, "");
     EXPECT_TRUE(chain.is_empty(), "");
     EXPECT_EQ(0U, chain.size(), "");
     EXPECT_EQ(total_written, total_read, "");
@@ -295,7 +310,9 @@ static bool datagram_read_empty() {
     auto mem_out = make_user_out_ptr(mem->out());
 
     MBufChain chain;
-    EXPECT_EQ(0U, chain.Read(mem_out, 1, true), "");
+    size_t actual;
+    ASSERT_EQ(ZX_OK, chain.Read(mem_out, 1, true, &actual), "");
+    EXPECT_EQ(0U, actual, "");
     EXPECT_TRUE(chain.is_empty(), "");
     END_TEST;
 }
@@ -311,7 +328,9 @@ static bool datagram_read_zero() {
     size_t written = 7;
     ASSERT_EQ(ZX_OK, chain.WriteDatagram(mem_in, 1, &written), "");
     ASSERT_EQ(1U, written, "");
-    EXPECT_EQ(0U, chain.Read(mem_out, 0, true), "");
+    size_t actual;
+    ASSERT_EQ(ZX_OK, chain.Read(mem_out, 0, true, &actual), "");
+    EXPECT_EQ(0U, actual, "");
     EXPECT_FALSE(chain.is_empty(), "");
     END_TEST;
 }
@@ -347,7 +366,9 @@ static bool datagram_read_buffer_too_small() {
     // truncated 'A' datagram.
     memset(buf, 0, sizeof(buf));
     ASSERT_EQ(ZX_OK, mem_out.copy_array_to_user(buf, sizeof(buf)), "");
-    EXPECT_EQ(1U, chain.Read(mem_out, 1, true), "");
+    size_t actual;
+    ASSERT_EQ(ZX_OK, chain.Read(mem_out, 1, true, &actual), "");
+    EXPECT_EQ(1U, actual, "");
     EXPECT_FALSE(chain.is_empty(), "");
     ASSERT_EQ(ZX_OK, mem_in.copy_array_from_user(buf, sizeof(buf)), "");
     EXPECT_EQ('A', buf[0], "");
@@ -357,7 +378,8 @@ static bool datagram_read_buffer_too_small() {
     EXPECT_EQ(kWriteLen, chain.size(), "");
     memset(buf, 0, kWriteLen);
     ASSERT_EQ(ZX_OK, mem_out.copy_array_to_user(buf, sizeof(buf)), "");
-    EXPECT_EQ(kWriteLen, chain.Read(mem_out, kWriteLen, true), "");
+    ASSERT_EQ(ZX_OK, chain.Read(mem_out, kWriteLen, true, &actual), "");
+    EXPECT_EQ(kWriteLen, actual, "");
     EXPECT_TRUE(chain.is_empty(), "");
     EXPECT_EQ(0U, chain.size(), "");
     ASSERT_EQ(ZX_OK, mem_in.copy_array_from_user(buf, sizeof(buf)), "");
@@ -401,8 +423,10 @@ static bool datagram_write_basic() {
         EXPECT_EQ(i, chain.size(true), "");
         char expected_buf[kMaxLength] = {0};
         memset(expected_buf, i, i);
-        size_t result = chain.Read(mem_out, i, true);
-        ASSERT_EQ(i, result, "");
+        size_t actual;
+        zx_status_t status = chain.Read(mem_out, i, true, &actual);
+        ASSERT_EQ(ZX_OK, status, "");
+        ASSERT_EQ(i, actual, "");
         char actual_buf[kMaxLength] = {0};
         ASSERT_EQ(ZX_OK, mem_in.copy_array_from_user(actual_buf, sizeof(actual_buf)), "");
         EXPECT_EQ(0, memcmp(expected_buf, actual_buf, i), "");
@@ -449,9 +473,14 @@ static bool datagram_write_too_much() {
     EXPECT_EQ(kWriteLen * num_datagrams_written, chain.size(), "");
     // Read it all back out and see that there's none left over.
     int num_datagrams_read = 0;
-    while (!chain.is_empty() && chain.Read(mem_out, kWriteLen, true) > 0) {
+    zx_status_t status;
+    size_t actual;
+    while (!chain.is_empty() &&
+           ((status = chain.Read(mem_out, kWriteLen, true, &actual)) == ZX_OK) &&
+           actual > 0) {
         ++num_datagrams_read;
     }
+    ASSERT_EQ(ZX_OK, status, "");
     EXPECT_TRUE(chain.is_empty(), "");
     EXPECT_EQ(0U, chain.size(), "");
     EXPECT_EQ(num_datagrams_written, num_datagrams_read, "");

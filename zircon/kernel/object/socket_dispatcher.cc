@@ -353,13 +353,19 @@ zx_status_t SocketDispatcher::ReadData(ReadType type, user_out_ptr<void> dst, si
         return ZX_ERR_SHOULD_WAIT;
     }
 
-    size_t st = 0;
+    size_t actual = 0;
     if (type == ReadType::kPeek) {
-        st = data_.Peek(dst, len, flags_ & ZX_SOCKET_DATAGRAM);
+        zx_status_t status = data_.Peek(dst, len, flags_ & ZX_SOCKET_DATAGRAM, &actual);
+        if (status != ZX_OK) {
+            return status;
+        }
     } else {
         bool was_full = is_full();
 
-        st = data_.Read(dst, len, flags_ & ZX_SOCKET_DATAGRAM);
+        zx_status_t status = data_.Read(dst, len, flags_ & ZX_SOCKET_DATAGRAM, &actual);
+        if (status != ZX_OK) {
+            return status;
+        }
 
         zx_signals_t clear = 0u;
         zx_signals_t set = 0u;
@@ -382,14 +388,14 @@ zx_status_t SocketDispatcher::ReadData(ReadType type, user_out_ptr<void> dst, si
             if (peer_write_threshold > 0 &&
                 ((data_.max_size() - data_.size()) >= peer_write_threshold))
                 set |= ZX_SOCKET_WRITE_THRESHOLD;
-            if (was_full && (st > 0))
+            if (was_full && (actual > 0))
                 set |= ZX_SOCKET_WRITABLE;
             if (set)
                 peer_->UpdateStateLocked(0u, set);
         }
     }
 
-    *nread = static_cast<size_t>(st);
+    *nread = actual;
     return ZX_OK;
 }
 

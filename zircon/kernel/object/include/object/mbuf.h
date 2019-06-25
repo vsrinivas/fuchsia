@@ -44,11 +44,13 @@ public:
     // call will read at most one datagram.  If |len| is too small to read a complete datagram, a
     // partial datagram is returned and its remaining bytes are discarded.
     //
-    // Returns number of bytes read.
-    size_t Read(user_out_ptr<void> dst, size_t len, bool datagram);
+    // The actual number of bytes read is returned in |actual|.
+    //
+    // Returns an error on failure.
+    zx_status_t Read(user_out_ptr<void> dst, size_t len, bool datagram, size_t* actual);
 
     // Same as Read() but leaves the bytes in the chain instead of consuming them.
-    size_t Peek(user_out_ptr<void> dst, size_t len, bool datagram) const;
+    zx_status_t Peek(user_out_ptr<void> dst, size_t len, bool datagram, size_t* actual) const;
 
     bool is_full() const;
     bool is_empty() const;
@@ -103,7 +105,8 @@ private:
     // const and non-const MBufChain objects. Const objects will peek,
     // non-const will read and consume.
     template <typename T>
-    static size_t ReadHelper(T* chain, user_out_ptr<void> dst, size_t len, bool datagram);
+    static zx_status_t ReadHelper(T* chain, user_out_ptr<void> dst, size_t len, bool datagram,
+                                  size_t* actual);
 
     fbl::SinglyLinkedList<MBuf*> freelist_;
     fbl::SinglyLinkedList<MBuf*> tail_;

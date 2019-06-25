@@ -2,9 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/zx/socket.h>
-#include <utility>
 #include <fbl/array.h>
+#include <lib/zx/socket.h>
+#include <lib/zx/vmar.h>
+#include <lib/zx/vmo.h>
+#include <utility>
 #include <zxtest/zxtest.h>
 
 namespace {
@@ -924,6 +926,73 @@ TEST(SocketTest, ZeroSize) {
     EXPECT_OK(remote.write(0, "a", 1, nullptr));
     EXPECT_OK(local.read(0, &buffer, 0, nullptr));
     EXPECT_OK(local.read(0, &buffer, 0, nullptr));
+}
+
+TEST(SocketTest, ReadIntoNullBuffer) {
+    zx::socket a, b;
+    ASSERT_OK(zx::socket::create(0, &a, &b));
+
+    ASSERT_OK(a.write(0, "A", 1, nullptr));
+
+    size_t actual;
+    EXPECT_EQ(ZX_ERR_INVALID_ARGS, b.read(0, nullptr, 1, &actual));
+}
+
+TEST(SocketTest, ReadIntoBadBuffer) {
+    zx::socket a, b;
+    ASSERT_OK(zx::socket::create(0, &a, &b));
+
+    ASSERT_OK(a.write(0, "A", 1, nullptr));
+    constexpr size_t kSize = 4096;
+    zx::vmo vmo;
+    ASSERT_OK(zx::vmo::create(kSize, 0, &vmo));
+
+    zx_vaddr_t addr;
+
+    // Note, no options means the buffer is not writable.
+    ASSERT_OK(zx::vmar::root_self()->map(0, vmo, 0, kSize, 0, &addr));
+
+    size_t actual = 99;
+    void* buffer = reinterpret_cast<void*>(addr);
+    ASSERT_NE(nullptr, buffer);
+
+    // Will fail because buffer points at memory that isn't writable.
+    EXPECT_EQ(ZX_ERR_INVALID_ARGS, b.read(0, buffer, 1, &actual));
+
+    // See that it's unmodified.
+    //
+    // N.B. this test is actually stricter than what is promised by the interface.  The contract
+    // does not explicitly promise that |actual| is unmodified on error.  If you find that this test
+    // has failed, it does not necessarily indicate a bug.
+    EXPECT_EQ(99, actual);
+}
+
+TEST(SocketTest, WriteFromNullBuffer) {
+    zx::socket a, b;
+    ASSERT_OK(zx::socket::create(0, &a, &b));
+
+    EXPECT_EQ(ZX_ERR_INVALID_ARGS, a.write(0, nullptr, 1, nullptr));
+}
+
+TEST(SocketTest, WriteFromBadBuffer) {
+    zx::socket a, b;
+    ASSERT_OK(zx::socket::create(0, &a, &b));
+
+    constexpr size_t kSize = 4096;
+    zx::vmo vmo;
+    ASSERT_OK(zx::vmo::create(kSize, 0, &vmo));
+
+    zx_vaddr_t addr;
+
+    // Note, no options means the buffer is not readable.
+    ASSERT_OK(zx::vmar::root_self()->map(0, vmo, 0, kSize, 0, &addr));
+
+    void* buffer = reinterpret_cast<void*>(addr);
+    ASSERT_NE(nullptr, buffer);
+
+    // Will fail because buffer points at memory that isn't readable.
+    size_t actual;
+    EXPECT_EQ(ZX_ERR_INVALID_ARGS, b.write(0, buffer, 1, &actual));
 }
 
 } // namespace
