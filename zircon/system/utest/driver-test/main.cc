@@ -23,7 +23,6 @@
 #include <lib/zx/channel.h>
 #include <lib/zx/socket.h>
 #include <lib/zx/time.h>
-#include <unittest/unittest.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
@@ -249,12 +248,12 @@ int main(int argc, char** argv) {
 
     thrd_join(t, NULL);
 
-    unittest_printf_critical(
+    fprintf(stderr,
             "\n====================================================\n");
-    unittest_printf_critical(
+    fprintf(stderr,
             "    CASES:  %d     SUCCESS:  %d     FAILED:  %d   ",
             final_report.test_count, final_report.success_count, final_report.failure_count);
-    unittest_printf_critical(
+    fprintf(stderr,
             "\n====================================================\n");
 
     return final_report.failure_count == 0 ? 0 : -1;
