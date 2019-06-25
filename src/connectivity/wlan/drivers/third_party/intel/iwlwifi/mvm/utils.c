@@ -33,6 +33,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *****************************************************************************/
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fuchsia_porting.h"
+
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/rs.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-csr.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-debug.h"
@@ -40,13 +42,12 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-prph.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
 
-#if 0  // NEEDS_PORTING
 /*
- * Will return 0 even if the cmd failed when RFKILL is asserted unless
+ * Will return 0 even if the cmd failed when ZX_ERR_BAD_STATE is asserted unless
  * CMD_WANT_SKB is set in cmd->flags.
  */
-int iwl_mvm_send_cmd(struct iwl_mvm* mvm, struct iwl_host_cmd* cmd) {
-    int ret;
+zx_status_t iwl_mvm_send_cmd(struct iwl_mvm* mvm, struct iwl_host_cmd* cmd) {
+    zx_status_t ret;
 
 #if defined(CPTCFG_IWLWIFI_DEBUGFS) && defined(CONFIG_PM_SLEEP)
     if (WARN_ON(mvm->d3_test_active)) { return -EIO; }
@@ -75,8 +76,8 @@ int iwl_mvm_send_cmd(struct iwl_mvm* mvm, struct iwl_host_cmd* cmd) {
      */
     if (cmd->flags & CMD_WANT_SKB) { return ret; }
 
-    /* Silently ignore failures if RFKILL is asserted */
-    if (!ret || ret == -ERFKILL) { return 0; }
+    /* Silently ignore failures if ZX_ERR_BAD_STATE is asserted */
+    if (!ret || ret == ZX_ERR_BAD_STATE) { return ZX_OK; }
     return ret;
 }
 
@@ -101,7 +102,8 @@ int iwl_mvm_send_cmd_pdu(struct iwl_mvm* mvm, uint32_t id, uint32_t flags, uint1
 /*
  * We assume that the caller set the status to the success value
  */
-int iwl_mvm_send_cmd_status(struct iwl_mvm* mvm, struct iwl_host_cmd* cmd, uint32_t* status) {
+zx_status_t iwl_mvm_send_cmd_status(struct iwl_mvm* mvm, struct iwl_host_cmd* cmd,
+                                    uint32_t* status) {
     struct iwl_rx_packet* pkt;
     struct iwl_cmd_response* resp;
     int ret, resp_len;
@@ -113,22 +115,22 @@ int iwl_mvm_send_cmd_status(struct iwl_mvm* mvm, struct iwl_host_cmd* cmd, uint3
 #endif
 
     /*
-     * Only synchronous commands can wait for status,
-     * we use WANT_SKB so the caller can't.
+     * Only synchronous commands can wait for status, we use WANT_SKB so the caller can't.
      */
-    if (WARN_ONCE(cmd->flags & (CMD_ASYNC | CMD_WANT_SKB), "cmd flags %x", cmd->flags)) {
-        return -EINVAL;
+    if (cmd->flags & (CMD_ASYNC | CMD_WANT_SKB)) {
+        IWL_WARN(mvm, "cmd flags 0x%x\n", cmd->flags);
+        return ZX_ERR_INVALID_ARGS;
     }
 
     cmd->flags |= CMD_WANT_SKB;
 
     ret = iwl_trans_send_cmd(mvm->trans, cmd);
-    if (ret == -ERFKILL) {
+    if (ret == ZX_ERR_BAD_STATE) {
         /*
-         * The command failed because of RFKILL, don't update
+         * The command failed because of ZX_ERR_BAD_STATE(RFKILL), don't update
          * the status, leave it as success and return 0.
          */
-        return 0;
+        return ZX_OK;
     } else if (ret) {
         return ret;
     }
@@ -136,8 +138,10 @@ int iwl_mvm_send_cmd_status(struct iwl_mvm* mvm, struct iwl_host_cmd* cmd, uint3
     pkt = cmd->resp_pkt;
 
     resp_len = iwl_rx_packet_payload_len(pkt);
-    if (WARN_ON_ONCE(resp_len != sizeof(*resp))) {
-        ret = -EIO;
+    if (resp_len != sizeof(*resp)) {
+        IWL_WARN(mvm, "Rx packet payload length is not expected. expected: %lu, actual: %d\n",
+                      sizeof(*resp), resp_len);
+        ret = ZX_ERR_IO;
         goto out_free_resp;
     }
 
@@ -167,7 +171,6 @@ int iwl_mvm_send_cmd_pdu_status(struct iwl_mvm* mvm, uint32_t id, uint16_t len, 
 
     return iwl_mvm_send_cmd_status(mvm, &cmd, status);
 }
-#endif  // NEEDS_PORTING
 
 #define IWL_DECLARE_RATE_INFO(r) [IWL_RATE_##r##M_INDEX] = IWL_RATE_##r##M_PLCP
 
@@ -220,7 +223,6 @@ uint8_t iwl_mvm_mac80211_idx_to_hwrate(int rate_idx) {
   return fw_rate_idx_to_plcp[rate_idx];
 }
 
-#if 0  // NEEDS_PORTING
 void iwl_mvm_rx_fw_error(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb) {
     struct iwl_rx_packet* pkt = rxb_addr(rxb);
     struct iwl_error_resp* err_resp = (void*)pkt->data;
@@ -229,7 +231,7 @@ void iwl_mvm_rx_fw_error(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb) {
             le32_to_cpu(err_resp->error_type), err_resp->cmd_id);
     IWL_ERR(mvm, "FW Error notification: seq 0x%04X service 0x%08X\n",
             le16_to_cpu(err_resp->bad_cmd_seq_num), le32_to_cpu(err_resp->error_service));
-    IWL_ERR(mvm, "FW Error notification: timestamp 0x%016llX\n", le64_to_cpu(err_resp->timestamp));
+    IWL_ERR(mvm, "FW Error notification: timestamp 0x%016lX\n", le64_to_cpu(err_resp->timestamp));
 }
 
 /*
@@ -259,10 +261,11 @@ uint8_t iwl_mvm_next_antenna(struct iwl_mvm* mvm, uint8_t valid, uint8_t last_id
         if (valid & BIT(ind)) { return ind; }
     }
 
-    WARN_ONCE(1, "Failed to toggle between antennas 0x%x", valid);
+    IWL_WARN(mvm, "Failed to toggle between antennas 0x%x\n", valid);
     return last_idx;
 }
 
+#if 0   // NEEDS_PORTING
 #define FW_SYSASSERT_CPU_MASK 0xf0000000
 static const struct {
     const char* name;
@@ -290,7 +293,7 @@ static const struct {
 };
 
 static const char* desc_lookup(uint32_t num) {
-    int i;
+    size_t i;
 
     for (i = 0; i < ARRAY_SIZE(advanced_lookup) - 1; i++)
         if (advanced_lookup[i].num == (num & ~FW_SYSASSERT_CPU_MASK)) {
@@ -300,6 +303,7 @@ static const char* desc_lookup(uint32_t num) {
     /* No entry matches 'num', so it is the last: ADVANCED_SYSASSERT */
     return advanced_lookup[i].name;
 }
+#endif  // NEEDS_PORTING
 
 /*
  * Note: This structure is read from the device with IO accesses,
@@ -431,6 +435,7 @@ struct iwl_umac_error_event_table {
 #define ERROR_ELEM_SIZE (7 * sizeof(uint32_t))
 
 static void iwl_mvm_dump_umac_error_log(struct iwl_mvm* mvm) {
+#if 0   // NEEDS_PORTING
     struct iwl_trans* trans = mvm->trans;
     struct iwl_umac_error_event_table table;
 
@@ -459,9 +464,11 @@ static void iwl_mvm_dump_umac_error_log(struct iwl_mvm* mvm) {
     IWL_ERR(mvm, "0x%08X | stack pointer\n", table.stack_pointer);
     IWL_ERR(mvm, "0x%08X | last host cmd\n", table.cmd_header);
     IWL_ERR(mvm, "0x%08X | isr status reg\n", table.nic_isr_pref);
+#endif  // NEEDS_PORTING
 }
 
 static void iwl_mvm_dump_lmac_error_log(struct iwl_mvm* mvm, uint8_t lmac_num) {
+#if 0   // NEEDS_PORTING
     struct iwl_trans* trans = mvm->trans;
     struct iwl_error_event_table table;
     uint32_t val, base = mvm->error_event_table[lmac_num];
@@ -549,6 +556,7 @@ static void iwl_mvm_dump_lmac_error_log(struct iwl_mvm* mvm, uint8_t lmac_num) {
     IWL_ERR(mvm, "0x%08X | lmpm_pmg_sel\n", table.lmpm_pmg_sel);
     IWL_ERR(mvm, "0x%08X | timestamp\n", table.u_timestamp);
     IWL_ERR(mvm, "0x%08X | flow_handler\n", table.flow_handler);
+#endif  // NEEDS_PORTING
 }
 
 void iwl_mvm_dump_nic_error_log(struct iwl_mvm* mvm) {
@@ -564,8 +572,8 @@ void iwl_mvm_dump_nic_error_log(struct iwl_mvm* mvm) {
     iwl_mvm_dump_umac_error_log(mvm);
 }
 
-int iwl_mvm_reconfig_scd(struct iwl_mvm* mvm, int queue, int fifo, int sta_id, int tid,
-                         int frame_limit, uint16_t ssn) {
+zx_status_t iwl_mvm_reconfig_scd(struct iwl_mvm* mvm, int queue, int fifo, int sta_id, int tid,
+                                 int frame_limit, uint16_t ssn) {
     struct iwl_scd_txq_cfg_cmd cmd = {
         .scd_queue = queue,
         .action = SCD_CFG_ENABLE_QUEUE,
@@ -576,19 +584,24 @@ int iwl_mvm_reconfig_scd(struct iwl_mvm* mvm, int queue, int fifo, int sta_id, i
         .aggregate = (queue >= IWL_MVM_DQA_MIN_DATA_QUEUE || queue == IWL_MVM_DQA_BSS_CLIENT_QUEUE),
         .tid = tid,
     };
-    int ret;
+    zx_status_t ret;
 
-    if (WARN_ON(iwl_mvm_has_new_tx_api(mvm))) { return -EINVAL; }
+    if (iwl_mvm_has_new_tx_api(mvm) != ZX_OK) {
+        IWL_WARN(mvm, "iwl_mvm_has_new_tx_api() returns true%s\n", "");
+        return ZX_ERR_INVALID_ARGS;
+    }
 
-    if (WARN(mvm->queue_info[queue].tid_bitmap == 0, "Trying to reconfig unallocated queue %d\n",
-             queue)) {
-        return -ENXIO;
+    if (mvm->queue_info[queue].tid_bitmap == 0) {
+        IWL_WARN(mvm, "Trying to reconfig unallocated queue %d\n", queue);
+        return ZX_ERR_BAD_HANDLE;
     }
 
     IWL_DEBUG_TX_QUEUES(mvm, "Reconfig SCD for TXQ #%d\n", queue);
 
     ret = iwl_mvm_send_cmd_pdu(mvm, SCD_QUEUE_CFG, 0, sizeof(cmd), &cmd);
-    WARN_ONCE(ret, "Failed to re-configure queue %d on FIFO %d, ret=%d\n", queue, fifo, ret);
+    if (ret != ZX_OK) {
+        IWL_WARN(mvm, "Failed to re-configure queue %d on FIFO %d, ret=%d\n", queue, fifo, ret);
+    }
 
     return ret;
 }
@@ -603,6 +616,8 @@ int iwl_mvm_reconfig_scd(struct iwl_mvm* mvm, int queue, int fifo, int sta_id, i
  * progress.
  */
 int iwl_mvm_send_lq_cmd(struct iwl_mvm* mvm, struct iwl_lq_cmd* lq, bool sync) {
+    return ZX_ERR_NOT_SUPPORTED;
+#if 0   // NEEDS_PORTING
     struct iwl_host_cmd cmd = {
         .id = LQ_CMD,
         .len =
@@ -621,6 +636,7 @@ int iwl_mvm_send_lq_cmd(struct iwl_mvm* mvm, struct iwl_lq_cmd* lq, bool sync) {
     }
 
     return iwl_mvm_send_cmd(mvm, &cmd);
+#endif  // NEEDS_PORTING
 }
 
 /**
@@ -634,6 +650,7 @@ int iwl_mvm_send_lq_cmd(struct iwl_mvm* mvm, struct iwl_lq_cmd* lq, bool sync) {
 void iwl_mvm_update_smps(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
                          enum iwl_mvm_smps_type_request req_type,
                          enum ieee80211_smps_mode smps_request) {
+#if 0   // NEEDS_PORTING
     struct iwl_mvm_vif* mvmvif;
     enum ieee80211_smps_mode smps_mode;
     int i;
@@ -662,9 +679,12 @@ void iwl_mvm_update_smps(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
     }
 
     ieee80211_request_smps(vif, smps_mode);
+#endif  // NEEDS_PORTING
 }
 
 int iwl_mvm_request_statistics(struct iwl_mvm* mvm, bool clear) {
+    return ZX_ERR_NOT_SUPPORTED;
+#if 0   // NEEDS_PORTING
     struct iwl_statistics_cmd scmd = {
         .flags = clear ? cpu_to_le32(IWL_STATISTICS_FLG_CLEAR) : 0,
     };
@@ -685,6 +705,7 @@ int iwl_mvm_request_statistics(struct iwl_mvm* mvm, bool clear) {
     if (clear) { iwl_mvm_accu_radio_stats(mvm); }
 
     return 0;
+#endif  // NEEDS_PORTING
 }
 
 void iwl_mvm_accu_radio_stats(struct iwl_mvm* mvm) {
@@ -694,6 +715,7 @@ void iwl_mvm_accu_radio_stats(struct iwl_mvm* mvm) {
     mvm->accu_radio_stats.on_time_scan += mvm->radio_stats.on_time_scan;
 }
 
+#if 0   // NEEDS_PORTING
 static void iwl_mvm_diversity_iter(void* _data, uint8_t* mac, struct ieee80211_vif* vif) {
     struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
     bool* result = _data;

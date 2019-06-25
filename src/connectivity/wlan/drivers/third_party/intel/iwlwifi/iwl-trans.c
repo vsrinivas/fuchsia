@@ -67,40 +67,35 @@ void iwl_trans_free(struct iwl_trans* trans) {
     free(trans);
 }
 
-#if 0   // NEEDS_PORTING
-int iwl_trans_send_cmd(struct iwl_trans* trans, struct iwl_host_cmd* cmd) {
-    int ret;
+zx_status_t iwl_trans_send_cmd(struct iwl_trans* trans, struct iwl_host_cmd* cmd) {
+    zx_status_t ret;
 
     if (unlikely(!(cmd->flags & CMD_SEND_IN_RFKILL) &&
                  test_bit(STATUS_RFKILL_OPMODE, &trans->status))) {
-        return -ERFKILL;
+        return ZX_ERR_BAD_STATE;
     }
 
-    if (unlikely(test_bit(STATUS_FW_ERROR, &trans->status))) { return -EIO; }
+    if (unlikely(test_bit(STATUS_FW_ERROR, &trans->status))) { return ZX_ERR_IO; }
 
     if (unlikely(trans->state != IWL_TRANS_FW_ALIVE)) {
         IWL_ERR(trans, "%s bad state = %d\n", __func__, trans->state);
-        return -EIO;
+        return ZX_ERR_IO;
     }
 
     if (WARN_ON((cmd->flags & CMD_WANT_ASYNC_CALLBACK) && !(cmd->flags & CMD_ASYNC))) {
-        return -EINVAL;
+        return ZX_ERR_IO_INVALID;
     }
-
-    if (!(cmd->flags & CMD_ASYNC)) { lock_map_acquire_read(&trans->sync_cmd_lockdep_map); }
 
     if (trans->wide_cmd_header && !iwl_cmd_groupid(cmd->id)) { cmd->id = DEF_ID(cmd->id); }
 
     ret = trans->ops->send_cmd(trans, cmd);
 
-    if (!(cmd->flags & CMD_ASYNC)) { lock_map_release(&trans->sync_cmd_lockdep_map); }
-
-    if (WARN_ON((cmd->flags & CMD_WANT_SKB) && !ret && !cmd->resp_pkt)) { return -EIO; }
+    if (WARN_ON((cmd->flags & CMD_WANT_SKB) && !ret && !cmd->resp_pkt)) { return ZX_ERR_IO; }
 
     return ret;
 }
-IWL_EXPORT_SYMBOL(iwl_trans_send_cmd);
 
+#if 0   // NEEDS_PORTING
 /* Comparator for struct iwl_hcmd_names.
  * Used in the binary search over a list of host commands.
  *

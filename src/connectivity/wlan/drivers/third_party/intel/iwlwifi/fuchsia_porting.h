@@ -42,9 +42,12 @@ typedef char* acpi_string;
 
 #define DIV_ROUND_UP(num, div) (((num) + (div)-1) / (div))
 
+#define le64_to_cpu(x) (x)
 #define le32_to_cpu(x) (x)
 #define le32_to_cpup(x) (*x)
+#define le16_to_cpu(x) (x)
 #define cpu_to_le32(x) (x)
+#define cpu_to_le16(x) (x)
 
 #define lower_32_bits(x) (x & 0xffffffff)
 #define upper_32_bits(x) (x >> 32)

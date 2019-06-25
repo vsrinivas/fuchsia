@@ -1521,14 +1521,14 @@ void iwl_mvm_get_sync_time(struct iwl_mvm* mvm, uint32_t* gp2,
                            uint64_t* boottime);
 
 /* Tx / Host Commands */
-int __must_check iwl_mvm_send_cmd(struct iwl_mvm* mvm,
-                                  struct iwl_host_cmd* cmd);
+zx_status_t __must_check iwl_mvm_send_cmd(struct iwl_mvm* mvm,
+                                          struct iwl_host_cmd* cmd);
 int __must_check iwl_mvm_send_cmd_pdu(struct iwl_mvm* mvm, uint32_t id,
                                       uint32_t flags, uint16_t len,
                                       const void* data);
-int __must_check iwl_mvm_send_cmd_status(struct iwl_mvm* mvm,
-                                         struct iwl_host_cmd* cmd,
-                                         uint32_t* status);
+zx_status_t __must_check iwl_mvm_send_cmd_status(struct iwl_mvm* mvm,
+                                                 struct iwl_host_cmd* cmd,
+                                                 uint32_t* status);
 int __must_check iwl_mvm_send_cmd_pdu_status(struct iwl_mvm* mvm, uint32_t id,
                                              uint16_t len, const void* data,
                                              uint32_t* status);
@@ -1977,8 +1977,8 @@ static inline void iwl_mvm_stop_device(struct iwl_mvm* mvm) {
 }
 
 /* Re-configure the SCD for a queue that has already been configured */
-int iwl_mvm_reconfig_scd(struct iwl_mvm* mvm, int queue, int fifo, int sta_id,
-                         int tid, int frame_limit, uint16_t ssn);
+zx_status_t iwl_mvm_reconfig_scd(struct iwl_mvm* mvm, int queue, int fifo, int sta_id,
+                                 int tid, int frame_limit, uint16_t ssn);
 
 /* Thermal management and CT-kill */
 void iwl_mvm_tt_tx_backoff(struct iwl_mvm* mvm, uint32_t backoff);

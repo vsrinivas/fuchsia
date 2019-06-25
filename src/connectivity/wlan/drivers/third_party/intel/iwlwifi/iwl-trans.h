@@ -227,11 +227,12 @@ struct iwl_host_cmd {
     uint8_t dataflags[IWL_MAX_CMD_TBS_PER_TFD];
 };
 
-#if 0   // NEEDS_PORTING
 static inline void iwl_free_resp(struct iwl_host_cmd* cmd) {
+    IWL_ERR(trans, "%s needs porting\n", __FUNCTION__);
+#if 0   // NEEDS_PORTING
     free_pages(cmd->_rx_page_addr, cmd->_rx_page_order);
-}
 #endif  // NEEDS_PORTING
+}
 
 struct iwl_rx_cmd_buffer {
     struct page* _page;
@@ -888,9 +889,13 @@ iwl_trans_alloc_tx_cmd(struct iwl_trans* trans) {
     // TODO(alexlegg): dev_cmd_pool is a cache-line aligned slab allocator in the Linux driver.
     return kmem_cache_alloc(trans->dev_cmd_pool, GFP_ATOMIC);
 }
+#endif  // NEEDS_PORTING
 
-int iwl_trans_send_cmd(struct iwl_trans* trans, struct iwl_host_cmd* cmd);
+// This function returns couple error codes. The ZX_ERR_BAD_STATE is the most special one.
+// It is called ERFKILL originally. We remap it to ZX_ERR_BAD_STATE in Fuchsia.
+zx_status_t iwl_trans_send_cmd(struct iwl_trans* trans, struct iwl_host_cmd* cmd);
 
+#if 0   // NEEDS_PORTING
 static inline void iwl_trans_free_tx_cmd(struct iwl_trans* trans,
         struct iwl_device_cmd* dev_cmd) {
     kmem_cache_free(trans->dev_cmd_pool, dev_cmd);
