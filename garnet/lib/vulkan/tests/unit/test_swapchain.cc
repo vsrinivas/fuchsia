@@ -9,7 +9,7 @@
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/zx/channel.h>
 #include <vulkan/vulkan.h>
-
+#include <chrono>
 #include <set>
 
 class TestSwapchain {
@@ -305,9 +305,9 @@ TEST_F(SwapchainFidlTest, PresentAndAcquireNoSemaphore) {
     // Run loop generates calls into FakeImagePipe::PresentImage
     RunLoopUntilIdle();
 
-    constexpr uint32_t kTimeout = 10000000ull;
+    constexpr uint64_t kTimeoutNs = std::chrono::nanoseconds(std::chrono::seconds(10)).count();
     ASSERT_EQ(VK_SUCCESS, test.acquire_next_image_khr_(
-                              test.vk_device_, swapchain, kTimeout,
+                              test.vk_device_, swapchain, kTimeoutNs,
                               VK_NULL_HANDLE, VK_NULL_HANDLE, &image_index));
     EXPECT_EQ(present_index, image_index);
 
