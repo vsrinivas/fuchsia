@@ -33,6 +33,11 @@ constexpr uint32_t kMaxTasks = 10;
 
 // Integration test for the driver defined in zircon/system/dev/camera/arm-isp.
 class TaskTest : public zxtest::Test {
+ public:
+  void ProcessFrameCallback(uint32_t output_buffer_id) {
+    callback_check_.push_back(output_buffer_id);
+  }
+
  protected:
   void SetUpBufferCollections(uint32_t buffer_collection_count) {
     ASSERT_OK(fake_bti_create(bti_handle_.reset_and_get_address()));
@@ -52,12 +57,46 @@ class TaskTest : public zxtest::Test {
     ASSERT_OK(status);
   }
 
+  void SetupForFrameProcessing() {
+    SetUpBufferCollections(kNumberOfBuffers);
+    ddk_mock::MockMmioReg fake_reg_array[kNumberOfBuffers];
+    ddk_mock::MockMmioRegRegion fake_regs(fake_reg_array, sizeof(uint32_t),
+                                          kNumberOfBuffers);
+    zx::port port;
+    ASSERT_OK(zx::port::create(ZX_PORT_BIND_TO_INTERRUPT, &port));
+    callback_.frame_ready = [](void* ctx, uint32_t idx) {
+      return static_cast<TaskTest*>(ctx)->ProcessFrameCallback(idx);
+    };
+    callback_.ctx = this;
+
+    ASSERT_OK(
+        zx::interrupt::create(zx::resource(), 0, ZX_INTERRUPT_VIRTUAL, &irq_));
+    ASSERT_OK(port.duplicate(ZX_RIGHT_SAME_RIGHTS, &port_));
+
+    gdc_device_ = std::make_unique<GdcDevice>(
+        nullptr, ddk::MmioBuffer(fake_regs.GetMmioBuffer()),
+        ddk::MmioBuffer(fake_regs.GetMmioBuffer()), std::move(irq_),
+        std::move(bti_handle_), std::move(port));
+
+    // Start the thread.
+    EXPECT_OK(gdc_device_->StartThread());
+  }
+
+  void TearDown() override {
+    if (bti_handle_ != ZX_HANDLE_INVALID) {
+      fake_bti_destroy(bti_handle_.get());
+    }
+  }
+
   zx::vmo config_vmo_;
   zx::bti bti_handle_;
+  zx::port port_;
+  zx::interrupt irq_;
   gdc_callback_t callback_;
   buffer_collection_info_t input_buffer_collection_;
   buffer_collection_info_t output_buffer_collection_;
   std::unique_ptr<GdcDevice> gdc_device_;
+  std::vector<uint32_t> callback_check_;
 };
 
 TEST_F(TaskTest, BasicCreationTest) {
@@ -113,6 +152,168 @@ TEST_F(TaskTest, InvalidVmoTest) {
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, status);
 }
 
+TEST_F(TaskTest, InitTaskTest) {
+  SetUpBufferCollections(kNumberOfBuffers);
+  ddk_mock::MockMmioReg fake_reg_array[kNumberOfMmios];
+  ddk_mock::MockMmioRegRegion fake_regs(fake_reg_array, sizeof(uint32_t),
+                                        kNumberOfMmios);
+  ASSERT_OK(zx::port::create(ZX_PORT_BIND_TO_INTERRUPT, &port_));
+
+  GdcDevice gdc_device(nullptr, ddk::MmioBuffer(fake_regs.GetMmioBuffer()),
+                       ddk::MmioBuffer(fake_regs.GetMmioBuffer()),
+                       zx::interrupt(), std::move(bti_handle_),
+                       std::move(port_));
+
+  std::vector<uint32_t> received_ids;
+  for (uint32_t i = 0; i < kMaxTasks; i++) {
+    zx::vmo config_vmo;
+    ASSERT_OK(config_vmo_.duplicate(ZX_RIGHT_SAME_RIGHTS, &config_vmo));
+
+    uint32_t task_id;
+    zx_status_t status = gdc_device.GdcInitTask(
+        &input_buffer_collection_, &output_buffer_collection_,
+        std::move(config_vmo), &callback_, &task_id);
+    EXPECT_OK(status);
+    // Checking to see if we are getting unique task ids.
+    auto entry = find(received_ids.begin(), received_ids.end(), task_id);
+    EXPECT_EQ(received_ids.end(), entry);
+    received_ids.push_back(task_id);
+  }
+}
+
+TEST_F(TaskTest, RemoveTaskTest) {
+  SetUpBufferCollections(kNumberOfBuffers);
+  ddk_mock::MockMmioReg fake_reg_array[kNumberOfMmios];
+  ddk_mock::MockMmioRegRegion fake_regs(fake_reg_array, sizeof(uint32_t),
+                                        kNumberOfMmios);
+
+  ASSERT_OK(zx::port::create(ZX_PORT_BIND_TO_INTERRUPT, &port_));
+
+  gdc_device_ = std::make_unique<GdcDevice>(
+      nullptr, ddk::MmioBuffer(fake_regs.GetMmioBuffer()),
+      ddk::MmioBuffer(fake_regs.GetMmioBuffer()), zx::interrupt(),
+      std::move(bti_handle_), std::move(port_));
+
+  uint32_t task_id;
+  zx_status_t status = gdc_device_->GdcInitTask(
+      &input_buffer_collection_, &output_buffer_collection_,
+      std::move(config_vmo_), &callback_, &task_id);
+  EXPECT_OK(status);
+
+  // Valid id.
+  ASSERT_NO_DEATH(([this, task_id]() { gdc_device_->GdcRemoveTask(task_id); }));
+
+  // Invalid id.
+  ASSERT_DEATH(
+      ([this, task_id]() { gdc_device_->GdcRemoveTask(task_id + 1); }));
+}
+
+TEST_F(TaskTest, ProcessInvalidFrameTest) {
+  SetupForFrameProcessing();
+
+  // Invalid task id.
+  zx_status_t status = gdc_device_->GdcProcessFrame(0xFF, 0);
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, status);
+
+  ASSERT_OK(gdc_device_->StopThread());
+}
+
+TEST_F(TaskTest, InvalidBufferProcessFrameTest) {
+  SetupForFrameProcessing();
+
+  uint32_t task_id;
+  zx_status_t status = gdc_device_->GdcInitTask(
+      &input_buffer_collection_, &output_buffer_collection_,
+      std::move(config_vmo_), &callback_, &task_id);
+  EXPECT_OK(status);
+
+  // Invalid buffer id.
+  status = gdc_device_->GdcProcessFrame(task_id, kNumberOfBuffers);
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, status);
+
+  ASSERT_OK(gdc_device_->StopThread());
+}
+
+TEST_F(TaskTest, ProcessFrameTest) {
+  SetupForFrameProcessing();
+
+  uint32_t task_id;
+  zx_status_t status = gdc_device_->GdcInitTask(
+      &input_buffer_collection_, &output_buffer_collection_,
+      std::move(config_vmo_), &callback_, &task_id);
+  EXPECT_OK(status);
+
+  // Valid buffer & task id.
+  status = gdc_device_->GdcProcessFrame(task_id, kNumberOfBuffers - 1);
+  EXPECT_OK(status);
+
+  // Trigger the interrupt manually.
+  zx_port_packet packet = {kPortKeyIrqMsg, ZX_PKT_TYPE_USER, ZX_OK, {}};
+  EXPECT_OK(port_.queue(&packet));
+
+  // Check if the callback was called.
+  zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
+  EXPECT_EQ(1, callback_check_.size());
+
+  ASSERT_OK(gdc_device_->StopThread());
+}
+
+TEST_F(TaskTest, MultipleProcessFrameTest) {
+  SetupForFrameProcessing();
+
+  uint32_t task_id;
+  zx_status_t status = gdc_device_->GdcInitTask(
+      &input_buffer_collection_, &output_buffer_collection_,
+      std::move(config_vmo_), &callback_, &task_id);
+
+  // Process few frames, putting them in a queue
+  status = gdc_device_->GdcProcessFrame(task_id, kNumberOfBuffers - 1);
+  EXPECT_OK(status);
+  status = gdc_device_->GdcProcessFrame(task_id, kNumberOfBuffers - 2);
+  EXPECT_OK(status);
+  status = gdc_device_->GdcProcessFrame(task_id, kNumberOfBuffers - 3);
+  EXPECT_OK(status);
+
+  // Trigger the interrupt manually.
+  zx_port_packet packet = {kPortKeyIrqMsg, ZX_PKT_TYPE_USER, ZX_OK, {}};
+  EXPECT_OK(port_.queue(&packet));
+
+  // Check if the callback was called once.
+  zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
+  EXPECT_EQ(1, callback_check_.size());
+
+  // Trigger the interrupt manually.
+  packet = {kPortKeyIrqMsg, ZX_PKT_TYPE_USER, ZX_OK, {}};
+  EXPECT_OK(port_.queue(&packet));
+
+  // Check if the callback was called one more time.
+  zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
+  EXPECT_EQ(2, callback_check_.size());
+
+  // This time adding another frame to process while its
+  // waiting for an interrupt.
+  status = gdc_device_->GdcProcessFrame(task_id, kNumberOfBuffers - 3);
+  EXPECT_OK(status);
+
+  // Trigger the interrupt manually.
+  packet = {kPortKeyIrqMsg, ZX_PKT_TYPE_USER, ZX_OK, {}};
+  EXPECT_OK(port_.queue(&packet));
+
+  // Check if the callback was called one more time.
+  zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
+  EXPECT_EQ(3, callback_check_.size());
+
+  // Trigger the interrupt manually.
+  packet = {kPortKeyIrqMsg, ZX_PKT_TYPE_USER, ZX_OK, {}};
+  EXPECT_OK(port_.queue(&packet));
+
+  // Check if the callback was called one more time.
+  zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
+  EXPECT_EQ(4, callback_check_.size());
+
+  ASSERT_OK(gdc_device_->StopThread());
+}
+
 TEST(TaskTest, NonContigVmoTest) {
   zx_handle_t bti_handle = ZX_HANDLE_INVALID;
   gdc_callback_t callback;
@@ -157,56 +358,5 @@ TEST(TaskTest, InvalidBufferCollectionTest) {
   EXPECT_NE(ZX_OK, status);
 }
 
-TEST_F(TaskTest, InitTaskTest) {
-  SetUpBufferCollections(kNumberOfBuffers);
-  ddk_mock::MockMmioReg fake_reg_array[kNumberOfMmios];
-  ddk_mock::MockMmioRegRegion fake_regs(fake_reg_array, sizeof(uint32_t),
-                                        kNumberOfMmios);
-  GdcDevice gdc_device(nullptr, ddk::MmioBuffer(fake_regs.GetMmioBuffer()),
-                       ddk::MmioBuffer(fake_regs.GetMmioBuffer()),
-                       zx::interrupt(), std::move(bti_handle_));
-
-  std::vector<uint32_t> received_ids;
-  for (uint32_t i = 0; i < kMaxTasks; i++) {
-    zx::vmo config_vmo;
-    ASSERT_OK(config_vmo_.duplicate(ZX_RIGHT_SAME_RIGHTS, &config_vmo));
-
-    uint32_t task_id;
-    zx_status_t status = gdc_device.GdcInitTask(
-        &input_buffer_collection_, &output_buffer_collection_,
-        std::move(config_vmo), &callback_, &task_id);
-    EXPECT_OK(status);
-    // Checking to see if we are getting unique task ids.
-    auto entry = find(received_ids.begin(), received_ids.end(), task_id);
-    EXPECT_EQ(received_ids.end(), entry);
-    received_ids.push_back(task_id);
-  }
-}
-
-TEST_F(TaskTest, RemoveTaskTest) {
-  SetUpBufferCollections(kNumberOfBuffers);
-  ddk_mock::MockMmioReg fake_reg_array[kNumberOfMmios];
-  ddk_mock::MockMmioRegRegion fake_regs(fake_reg_array, sizeof(uint32_t),
-                                        kNumberOfMmios);
-
-  fbl::AllocChecker ac;
-  gdc_device_ = std::make_unique<GdcDevice>(
-      nullptr, ddk::MmioBuffer(fake_regs.GetMmioBuffer()),
-      ddk::MmioBuffer(fake_regs.GetMmioBuffer()), zx::interrupt(),
-      std::move(bti_handle_));
-
-  uint32_t task_id;
-  zx_status_t status = gdc_device_->GdcInitTask(
-      &input_buffer_collection_, &output_buffer_collection_,
-      std::move(config_vmo_), &callback_, &task_id);
-  EXPECT_OK(status);
-
-  // Valid id.
-  ASSERT_NO_DEATH(([this, task_id]() { gdc_device_->GdcRemoveTask(task_id); }));
-
-  // Invalid id.
-  ASSERT_DEATH(
-      ([this, task_id]() { gdc_device_->GdcRemoveTask(task_id + 1); }));
-}
 }  // namespace
 }  // namespace gdc

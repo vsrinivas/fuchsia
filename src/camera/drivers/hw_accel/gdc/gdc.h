@@ -2,31 +2,44 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifndef SRC_CAMERA_DRIVERS_HW_ACCEL_GDC_GDC_H_
+#define SRC_CAMERA_DRIVERS_HW_ACCEL_GDC_GDC_H_
+
 #include <ddk/platform-defs.h>
+#ifndef _ALL_SOURCE
+#define _ALL_SOURCE  // Enables thrd_create_with_name in <threads.h>.
+#include <threads.h>
+#endif
 #include <ddk/protocol/platform/bus.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/gdc.h>
+#include <fbl/auto_lock.h>
+#include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>
 #include <hw/reg.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/device-protocol/platform-device.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/mmio/mmio.h>
+#include <lib/sync/completion.h>
+#include <lib/zx/event.h>
 #include <lib/zx/interrupt.h>
-#include <threads.h>
 #include <zircon/fidl.h>
 
+#include <atomic>
 #include <deque>
-#include <list>
 #include <unordered_map>
-#include <vector>
 
 #include "task.h"
 
 namespace gdc {
-
 // |GdcDevice| is spawned by the driver in |gdc.cc|
+namespace {
+
+constexpr uint64_t kPortKeyIrqMsg = 0x00;
+
+}  // namespace
 // This provides ZX_PROTOCOL_GDC.
 class GdcDevice;
 using GdcDeviceType = ddk::Device<GdcDevice, ddk::Unbindable>;
@@ -35,11 +48,11 @@ class GdcDevice : public GdcDeviceType,
                   public ddk::GdcProtocol<GdcDevice, ddk::base_protocol> {
  public:
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(GdcDevice);
-
   explicit GdcDevice(zx_device_t* parent, ddk ::MmioBuffer clk_mmio,
                      ddk ::MmioBuffer gdc_mmio, zx::interrupt gdc_irq,
-                     zx::bti bti)
+                     zx::bti bti, zx::port port)
       : GdcDeviceType(parent),
+        port_(std::move(port)),
         clock_mmio_(std::move(clk_mmio)),
         gdc_mmio_(std::move(gdc_mmio)),
         gdc_irq_(std::move(gdc_irq)),
@@ -68,6 +81,16 @@ class GdcDevice : public GdcDeviceType,
 
   // Used for unit tests.
   const ddk::MmioBuffer* gdc_mmio() const { return &gdc_mmio_; }
+  zx_status_t StartThread();
+  zx_status_t StopThread();
+
+ protected:
+  struct TaskInfo {
+    Task* task;
+    uint32_t input_buffer_index;
+  };
+
+  zx::port port_;
 
  private:
   friend class GdcDeviceTester;
@@ -75,6 +98,14 @@ class GdcDevice : public GdcDeviceType,
   // All necessary clean up is done here in ShutDown().
   void ShutDown();
   void InitClocks();
+  int FrameProcessingThread();
+  int JoinThread() { return thrd_join(processing_thread_, nullptr); }
+
+  void ProcessTask(TaskInfo& info);
+  zx_status_t WaitForInterrupt(zx_port_packet_t* packet);
+
+  // Used to access the processing queue.
+  fbl::Mutex deque_lock_;
 
   // HHI register block has the clock registers
   ddk::MmioBuffer clock_mmio_;
@@ -83,6 +114,12 @@ class GdcDevice : public GdcDeviceType,
   zx::bti bti_;
   uint32_t next_task_index_ = 0;
   std::unordered_map<uint32_t, std::unique_ptr<Task>> task_map_;
+  std::deque<TaskInfo> processing_queue_ __TA_GUARDED(deque_lock_);
+  thrd_t processing_thread_;
+  sync_completion_t frame_processing_signal_;
+  std::atomic<bool> running_;
 };
 
 }  // namespace gdc
+
+#endif  // SRC_CAMERA_DRIVERS_HW_ACCEL_GDC_GDC_H_

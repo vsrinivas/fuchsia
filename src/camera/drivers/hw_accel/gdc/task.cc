@@ -8,7 +8,6 @@
 #include <fbl/alloc_checker.h>
 #include <lib/syslog/global.h>
 #include <stdint.h>
-#include <threads.h>
 #include <zircon/types.h>
 
 #include <memory>
@@ -137,6 +136,8 @@ zx_status_t Task::Create(
   if (status != ZX_OK) {
     FX_LOG(ERROR, "%s: InitBuffers Failed\n", __func__);
   }
+
+  task->callback_ = callback;
 
   *out = std::move(task);
   return status;

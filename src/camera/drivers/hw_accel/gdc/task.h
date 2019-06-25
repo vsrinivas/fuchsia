@@ -34,14 +34,21 @@ class Task {
   zx_status_t GetInputBufferPhysAddr(uint32_t input_buffer_index,
                                      zx_paddr_t* out) const;
 
+  // Validates input buffer index.
+  bool IsInputBufferIndexValid(uint32_t input_buffer_index) const {
+    return input_buffer_index < input_buffers_.size();
+  }
+
   // Returns a |Buffer| object which is free for use as output buffer.
   std::optional<fzl::VmoPool::Buffer> GetOutputBuffer() {
     return output_buffers_.LockBufferForWrite();
   }
 
+  const gdc_callback_t* callback() { return callback_; }
+
   // Static function to create a task object.
   // |input_buffer_collection|              : Input buffer collection.
-  // |output_buffer_collection|             : Onput buffer collection.
+  // |output_buffer_collection|             : Output buffer collection.
   // |config_vmo|                           : Configuration is stored in this
   // VMO. |callback|                             : Callback function to call for
   // this task. |out|                                  : Pointer to a task
@@ -66,6 +73,7 @@ class Task {
   fzl::PinnedVmo config_vmo_pinned_;
   fzl::VmoPool output_buffers_;
   fbl::Array<fzl::PinnedVmo> input_buffers_;
+  const gdc_callback_t* callback_;
 };
 }  // namespace gdc
 
