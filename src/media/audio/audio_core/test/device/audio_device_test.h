@@ -41,6 +41,9 @@ class AudioDeviceTest : public AudioTestBase {
       std::unique_ptr<sys::ComponentContext> startup_context);
 
  protected:
+  static std::string PopulateUniqueIdStr(
+      const std::array<uint8_t, 16>& unique_id);
+
   void SetUp() override;
   void TearDown() override;
   void ExpectCallback() override;
@@ -49,6 +52,15 @@ class AudioDeviceTest : public AudioTestBase {
   void SetOnDeviceRemovedEvent();
   void SetOnDeviceGainChangedEvent();
   void SetOnDefaultDeviceChangedEvent();
+
+  // These methods wait for the four AudioDeviceEnumerator events (or error),
+  // explicitly tolerating other callbacks on the async loop before the event
+  // for the specified device is received. Each call resets the relevant "what
+  // we received" state variables to default values and handles error_occurred_.
+  void ExpectDeviceAdded(const std::array<uint8_t, 16>& unique_id);
+  void ExpectDeviceRemoved(uint64_t remove_token);
+  void ExpectDefaultChanged(uint64_t default_token);
+  void ExpectGainChanged(uint64_t gain_token);
 
   uint32_t GainFlagsFromBools(bool cur_mute, bool cur_agc, bool can_mute,
                               bool can_agc);

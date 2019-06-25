@@ -9,6 +9,7 @@
 #include <cstring>
 
 #include "src/lib/fxl/logging.h"
+#include "src/media/audio/audio_core/test/device/audio_device_test.h"
 #include "src/media/audio/audio_core/test/device/virtual_audio_device_test.h"
 
 namespace media::audio::test {
@@ -28,6 +29,7 @@ class VirtualAudioSystemGainTest : public VirtualAudioDeviceTest {
   void TearDown() override;
 
   void ExpectCallback() override;
+  void ExpectSystemGainMuteChanged();
 
   void AddDeviceForSystemGainTesting(bool is_input);
   void ChangeAndVerifySystemGain();
@@ -60,16 +62,16 @@ void VirtualAudioSystemGainTest::SetUp() {
         received_system_gain_db_ = gain_db;
         received_system_mute_ = muted;
       });
-  ExpectCallback();
+  ExpectSystemGainMuteChanged();
 
   if (received_system_gain_db_ != kInitialSystemGainDb) {
     audio_core_->SetSystemGain(kInitialSystemGainDb);
-    ExpectCallback();
+    ExpectSystemGainMuteChanged();
   }
 
   if (received_system_mute_) {
     audio_core_->SetSystemMute(false);
-    ExpectCallback();
+    ExpectSystemGainMuteChanged();
   }
   // received_system_gain_db_/received_system_mute_ now contain initial state.
 }
@@ -88,6 +90,16 @@ void VirtualAudioSystemGainTest::ExpectCallback() {
   received_system_gain_db_ = NAN;
 
   VirtualAudioDeviceTest::ExpectCallback();
+}
+
+void VirtualAudioSystemGainTest::ExpectSystemGainMuteChanged() {
+  received_system_gain_db_ = NAN;
+
+  ExpectCondition(
+      [this]() { return error_occurred_ || !isnan(received_system_gain_db_); });
+
+  ASSERT_FALSE(error_occurred_);
+  ASSERT_FALSE(isnan(received_system_gain_db_));
 }
 
 void VirtualAudioSystemGainTest::AddDeviceForSystemGainTesting(bool is_input) {
@@ -109,10 +121,9 @@ void VirtualAudioSystemGainTest::AddDeviceForSystemGainTesting(bool is_input) {
     output_->SetUniqueId(unique_id);
     output_->Add();
   }
+  ExpectDeviceAdded(unique_id);
 
-  ExpectCallback();
   uint64_t added_token = received_device_.token_id;
-  ASSERT_NE(added_token, ZX_KOID_INVALID);
 
   // If the device is different than expected, set it up as we expect.
   if ((received_device_.gain_info.gain_db != kInitialSystemGainDb) ||
@@ -127,18 +138,19 @@ void VirtualAudioSystemGainTest::AddDeviceForSystemGainTesting(bool is_input) {
                          fuchsia::media::SetAudioGainFlag_AgcValid;
     SetOnDeviceGainChangedEvent();
     audio_dev_enum_->SetDeviceGain(added_token, gain_info, set_flags);
-    ExpectCallback();
+    ExpectGainChanged(added_token);
   }
 
   if (system_gain_db != kInitialSystemGainDb) {
     audio_core_->SetSystemGain(kInitialSystemGainDb);
-    ExpectCallback();
+    ExpectSystemGainMuteChanged();
   }
   if (system_mute) {
     audio_core_->SetSystemMute(false);
-    ExpectCallback();
+    ExpectSystemGainMuteChanged();
   }
   received_device_.token_id = added_token;
+  ASSERT_NE(received_device_.token_id, ZX_KOID_INVALID);
 }
 
 void VirtualAudioSystemGainTest::ChangeAndVerifySystemGain() {
@@ -146,8 +158,8 @@ void VirtualAudioSystemGainTest::ChangeAndVerifySystemGain() {
   bool expect_mute = false;
 
   audio_core_->SetSystemGain(expect_gain_db);
+  ExpectSystemGainMuteChanged();
 
-  ExpectCallback();
   ASSERT_EQ(received_system_gain_db_, expect_gain_db);
   ASSERT_EQ(received_system_mute_, expect_mute);
 }
@@ -157,8 +169,8 @@ void VirtualAudioSystemGainTest::ChangeAndVerifySystemMute() {
   bool expect_mute = true;
 
   audio_core_->SetSystemMute(expect_mute);
+  ExpectSystemGainMuteChanged();
 
-  ExpectCallback();
   ASSERT_EQ(received_system_gain_db_, expect_gain_db);
   ASSERT_EQ(received_system_mute_, expect_mute);
 }
@@ -174,7 +186,6 @@ void VirtualAudioSystemGainTest::TestDeviceGainAfterChangeSystemGainMute(
   }
 
   AddDeviceForSystemGainTesting(is_input);
-  ASSERT_NE(received_device_.token_id, ZX_KOID_INVALID);
   uint64_t added_token = received_device_.token_id;
 
   if (set_gain) {
@@ -210,11 +221,14 @@ void VirtualAudioSystemGainTest::
 
   // First add a virtual device, and reset device & system gains.
   AddDeviceForSystemGainTesting(is_input);
-  ASSERT_NE(received_device_.token_id, ZX_KOID_INVALID);
   uint64_t added_token = received_device_.token_id;
 
   // With SystemGain and DeviceGain events set, change System Gain or Mute
   SetOnDeviceGainChangedEvent();
+  received_gain_token_ = kInvalidDeviceToken;
+  received_gain_info_ = kInvalidGainInfo;
+  received_system_gain_db_ = NAN;
+
   if (set_gain) {
     expect_gain_db = kChangedSystemGainDb;
     audio_core_->SetSystemGain(expect_gain_db);
@@ -223,41 +237,32 @@ void VirtualAudioSystemGainTest::
     audio_core_->SetSystemMute(expect_mute);
   }
 
-  // Wait for both callback events to arrive (indeterminate order).
-  fuchsia::media::AudioGainInfo gain_info = kInvalidGainInfo;
-  float system_gain_db = NAN;
-  bool system_mute = false;
-
   // SystemGain only takes effect upon Output devices
-  bool need_device_event = !is_input;
-  bool need_system_event = true;
+  if (is_input) {
+    // For inputs, we expect NO device gain callback.
+    ExpectSystemGainMuteChanged();
 
-  while (need_device_event || need_system_event) {
-    ExpectCallback();
-    if (need_device_event && (received_gain_token_ != kInvalidDeviceToken)) {
-      EXPECT_EQ(received_gain_token_, added_token);
-      gain_info = received_gain_info_;
-
-      need_device_event = false;
-    }
-    if (need_system_event && !isnan(received_system_gain_db_)) {
-      system_gain_db = received_system_gain_db_;
-      system_mute = received_system_mute_;
-
-      need_system_event = false;
-    }
-  }
-  EXPECT_EQ(expect_gain_db, system_gain_db);
-  EXPECT_EQ(expect_mute, system_mute);
-
-  // Received Output device gain/mute should equal the system gain/mute sent.
-  if (!is_input) {
-    EXPECT_EQ(expect_gain_db, gain_info.gain_db);
-    EXPECT_EQ(expect_mute, ((gain_info.flags &
-                             fuchsia::media::AudioGainInfoFlag_Mute) != 0));
+    // Give an erroneous device gain callback a chance to arrive
+    RunLoopUntilIdle();
+    EXPECT_NE(received_gain_token_, added_token);
   } else {
-    EXPECT_TRUE(isnan(gain_info.gain_db));
+    // For outputs, expect both callbacks (in indeterminate order).
+    ExpectCondition([this, added_token]() {
+      return error_occurred_ || (received_gain_token_ == added_token &&
+                                 !isnan(received_system_gain_db_));
+    });
+
+    // Verify the device gain notification
+    ASSERT_NE(received_gain_token_, kInvalidDeviceToken);
+    EXPECT_EQ(expect_gain_db, received_gain_info_.gain_db);
+    EXPECT_EQ(expect_mute, ((received_gain_info_.flags &
+                             fuchsia::media::AudioGainInfoFlag_Mute) != 0));
   }
+
+  // Verify the system gain notification
+  ASSERT_FALSE(isnan(received_system_gain_db_));
+  EXPECT_EQ(expect_gain_db, received_system_gain_db_);
+  EXPECT_EQ(expect_mute, received_system_mute_);
 }
 
 // NO-change Gain -or- NO-change Mute
