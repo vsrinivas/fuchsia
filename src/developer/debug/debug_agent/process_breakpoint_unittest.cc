@@ -213,16 +213,16 @@ TEST(ProcessBreakpoint, StepMultiple) {
   // In real life, the thread would now single-step over the breakpoint. It
   // would trigger a hardware breakpoint at the next instruction.
 
-  EXPECT_TRUE(bp.BreakpointStepHasException(
-      kThread1Koid, debug_ipc::NotifyException::Type::kSingleStep));
+  EXPECT_TRUE(bp.EndStepOver(kThread1Koid,
+                             debug_ipc::NotifyException::Type::kSingleStep));
 
   // Since one thread is still stepping, the memory should still be original.
   EXPECT_TRUE(process_delegate.mem().IsOriginal());
 
   // As soon as the second breakpoint is resolved, the breakpoint instruction
   // should be put back.
-  EXPECT_TRUE(bp.BreakpointStepHasException(
-      kThread2Koid, debug_ipc::NotifyException::Type::kSingleStep));
+  EXPECT_TRUE(bp.EndStepOver(kThread2Koid,
+                             debug_ipc::NotifyException::Type::kSingleStep));
   EXPECT_TRUE(process_delegate.mem().StartsWithBreak());
 }
 

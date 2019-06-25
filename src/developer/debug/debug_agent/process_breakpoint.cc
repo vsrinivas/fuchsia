@@ -93,7 +93,7 @@ void ProcessBreakpoint::BeginStepOver(zx_koid_t thread_koid) {
   thread_step_over_[thread_koid] = StepStatus::kCurrent;
 }
 
-bool ProcessBreakpoint::BreakpointStepHasException(
+bool ProcessBreakpoint::EndStepOver(
     zx_koid_t thread_koid, debug_ipc::NotifyException::Type exception_type) {
   auto found_thread = thread_step_over_.find(thread_koid);
   if (found_thread == thread_step_over_.end()) {

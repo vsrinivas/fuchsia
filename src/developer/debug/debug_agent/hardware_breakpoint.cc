@@ -91,11 +91,7 @@ zx_status_t HardwareBreakpoint::Install(zx_koid_t thread_koid) {
 
   // Thread needs to be suspended or on an exception (ZX-3772).
   // We make a synchronous (blocking) call.
-  auto past_state = thread->Suspend(true);
-  if (!past_state) {
-    Warn(WarningType::kInstall, thread_koid, address, ZX_ERR_BAD_STATE);
-    return ZX_ERR_BAD_STATE;
-  }
+  bool was_running = thread->Suspend(true);
 
   // Do the actual installation.
   auto& arch = arch::ArchProvider::Get();
@@ -107,7 +103,7 @@ zx_status_t HardwareBreakpoint::Install(zx_koid_t thread_koid) {
   }
 
   // If the thread was running, we need to resume it.
-  if (*past_state == DebuggedThread::State::kRunning) {
+  if (was_running) {
     debug_ipc::ResumeRequest resume;
     resume.how = debug_ipc::ResumeRequest::How::kContinue;
     thread->Resume(resume);
@@ -139,11 +135,7 @@ zx_status_t HardwareBreakpoint::Uninstall(zx_koid_t thread_koid) {
 
   // Thread needs to be suspended or on an exception (ZX-3772).
   // We make a synchronous (blocking) call.
-  auto past_state = thread->Suspend(true);
-  if (!past_state) {
-    Warn(WarningType::kInstall, thread_koid, address, ZX_ERR_BAD_STATE);
-    return ZX_ERR_BAD_STATE;
-  }
+  bool was_running = thread->Suspend(true);
 
   auto& arch = arch::ArchProvider::Get();
   zx_status_t status = arch.UninstallHWBreakpoint(&thread->thread(), address);
@@ -153,7 +145,7 @@ zx_status_t HardwareBreakpoint::Uninstall(zx_koid_t thread_koid) {
   }
 
   // If the thread was running, we need to resume it.
-  if (*past_state == DebuggedThread::State::kRunning) {
+  if (was_running) {
     debug_ipc::ResumeRequest resume;
     resume.how = debug_ipc::ResumeRequest::How::kContinue;
     thread->Resume(resume);

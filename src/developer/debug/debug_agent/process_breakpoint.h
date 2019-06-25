@@ -94,7 +94,7 @@ class ProcessBreakpoint {
   // (the one with the breakpoint) caused an exception itself (say, an access
   // violation). In either case, the breakpoint will clean up after itself from
   // a single-step.
-  bool BreakpointStepHasException(
+  bool EndStepOver(
       zx_koid_t thread_koid, debug_ipc::NotifyException::Type exception_type);
 
   bool SoftwareBreakpointInstalled() const;

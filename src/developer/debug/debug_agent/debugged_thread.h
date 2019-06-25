@@ -34,22 +34,6 @@ enum class ThreadCreationOption {
 
 class DebuggedThread {
  public:
-  // The State indicates what the debugger thinks the state of the thread is.
-  // This doesn't take into account other things on the system that may have
-  // suspended a thread. If somebody does this, the thread will be suspended but
-  // our state will be kRunning (meaning resuming it is not something the
-  // debugger can do).
-  enum class State {
-    kRunning,
-
-    // Exception from the program.
-    kException,
-
-    // The exception is suspended through a zx_task_suspend call.
-    kSuspended,
-  };
-  const char* StateToString(State);
-
   // Represents the state the client thinks this thread is in. Certain
   // operations can suspend all the threads of a process and the debugger needs
   // to know which threads should remain suspended after that operation is done.
@@ -82,7 +66,11 @@ class DebuggedThread {
 
   // Resume the thread from an exception.
   // If |exception_token_| is not valid, this will no-op.
-  void ResumeFromException();
+  void ResumeException();
+
+  // Resume the thread from a suspension.
+  // if |suspend_token_| is not valid, this will no-op.
+  void ResumeSuspension();
 
   // Pauses execution of the thread. Pausing happens asynchronously so the
   // thread will not necessarily have stopped when this returns. Set the
@@ -92,20 +80,20 @@ class DebuggedThread {
   // |new_state| represents what the new state of the client should be. If no
   // change is wanted, you can use the overload that doesn't receives that.
   //
-  // The return type determines the state the thread was in *before* the suspend
-  // operation. That means that if |kRunning| is returned, means that the thread
-  // was running and now is suspended.
+  // Returns true if the thread was running at the moment of this call being
+  // made. Returns false if it was on a suspension condition (suspended or on an
+  // exception).
   //
   // A nullopt means an error ocurred while suspending.
-  std::optional<State> Suspend(bool synchronous = false);
+  bool Suspend(bool synchronous = false);
 
   // The typical suspend deadline users should use when suspending.
   static zx::time DefaultSuspendDeadline();
 
   // Waits on a suspension token.
-  // A nullopt means an error ocurred while suspending.
-  std::optional<State> WaitForSuspension(
-      zx::time deadline = DefaultSuspendDeadline());
+  // Returns true if we could find a valid suspension condition (either
+  // suspended or on an exception). False if timeout or error.
+  bool WaitForSuspension(zx::time deadline = DefaultSuspendDeadline());
 
   // Fills the thread status record. If full_stack is set, a full backtrace
   // will be generated, otherwise a minimal one will be generated.
@@ -129,11 +117,10 @@ class DebuggedThread {
   // Notification that a ProcessBreakpoint is about to be deleted.
   void WillDeleteProcessBreakpoint(ProcessBreakpoint* bp);
 
-  State state() const { return state_; }
-
   ClientState client_state() const { return client_state_; }
   void set_client_state(ClientState cs) { client_state_ = cs; }
 
+  bool running() const { return !suspended() && !in_exception(); }
   bool suspended() const { return suspend_token_.is_valid(); }
   bool in_exception() const { return exception_token_.is_valid(); }
 
@@ -215,10 +202,8 @@ class DebuggedThread {
   uint64_t step_in_range_begin_ = 0;
   uint64_t step_in_range_end_ = 0;
 
-  // This is the reason for the thread suspend. This controls how the thread
-  // will be resumed. State::kOther implies the suspend_token_ is
-  // valid.
-  State state_ = State::kRunning;
+  // This is the state the client is considering this thread to be. This is used
+  // for internal suspension the agent can do.
   ClientState client_state_ = ClientState::kRunning;
 
   zx::suspend_token suspend_token_;
