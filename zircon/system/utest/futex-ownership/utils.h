@@ -65,7 +65,7 @@ class Thread {
     Thread() { Reset(); }
     DISALLOW_COPY_ASSIGN_AND_MOVE(Thread);
 
-    bool Start(const char* name, Thunk thunk);
+    void Start(const char* name, Thunk thunk);
     zx_status_t Stop();
     zx_status_t GetRunState(uint32_t* run_state) const;
 
@@ -106,7 +106,7 @@ public:
     ~ExternalThread() { Stop(); }
     DISALLOW_COPY_ASSIGN_AND_MOVE(ExternalThread);
 
-    bool Start();
+    void Start();
     void Stop();
 
     const zx::thread& thread() const { return external_thread_; }

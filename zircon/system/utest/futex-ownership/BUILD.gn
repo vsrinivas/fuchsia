@@ -5,15 +5,14 @@
 test("futex-ownership") {
   test_group = "sys"
   sources = [
-    "main.cc",
     "ownership.cc",
     "utils.cc",
   ]
   deps = [
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
-    "$zx/system/ulib/unittest",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
   ]
 }

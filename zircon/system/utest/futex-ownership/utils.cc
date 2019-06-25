@@ -5,9 +5,9 @@
 #include <fbl/auto_call.h>
 #include <lib/fdio/spawn.h>
 #include <lib/zx/process.h>
-#include <unittest/unittest.h>
 #include <zircon/processargs.h>
 #include <zircon/process.h>
+#include <zxtest/zxtest.h>
 
 #include "utils.h"
 
@@ -73,8 +73,7 @@ void Thread::Reset() {
     stop_evt_.Reset();
 }
 
-bool Thread::Start(const char* name, Thunk thunk) {
-    BEGIN_HELPER;
+void Thread::Start(const char* name, Thunk thunk) {
     ZX_ASSERT(static_cast<bool>(thunk_) == false);
 
     thunk_ = std::move(thunk);
@@ -111,11 +110,9 @@ bool Thread::Start(const char* name, Thunk thunk) {
 
     int res = thrd_create_with_name(&thread_, internal_thunk, this, name);
     ASSERT_EQ(res, 0);
-    ASSERT_EQ(started_evt_.Wait(THREAD_TIMEOUT), ZX_OK);
+    ASSERT_OK(started_evt_.Wait(THREAD_TIMEOUT));
     ASSERT_TRUE(handle_.is_valid());
     ASSERT_NE(koid_, ZX_KOID_INVALID);
-
-    END_HELPER;
 }
 
 zx_status_t Thread::Stop() {
@@ -184,19 +181,17 @@ int ExternalThread::DoHelperThread() {
     return (wait_res == ZX_OK) ? 0 : -__LINE__;
 }
 
-bool ExternalThread::Start() {
-    BEGIN_HELPER;
-
+void ExternalThread::Start() {
     auto on_failure = fbl::MakeAutoCall([this]() { Stop(); });
 
     // Make sure that we have a program name and have not already started.
-    ASSERT_NONNULL(program_name_);
+    ASSERT_NOT_NULL(program_name_);
     ASSERT_EQ(external_thread_.get(), ZX_HANDLE_INVALID);
     ASSERT_EQ(control_channel_.get(), ZX_HANDLE_INVALID);
 
     // Create the channel we will use for talking to our external thread.
     zx::channel local, remote;
-    ASSERT_EQ(zx::channel::create(0, &local, &remote), ZX_OK);
+    ASSERT_OK(zx::channel::create(0, &local, &remote));
 
     const char* args[] = { program_name_, helper_flag_, nullptr };
     struct fdio_spawn_action transfer_channel_action = {
@@ -215,13 +210,13 @@ bool ExternalThread::Start() {
                                      &transfer_channel_action,
                                      proc.reset_and_get_address(),
                                      err_msg_out);
-    ASSERT_EQ(res, ZX_OK, err_msg_out);
+    ASSERT_OK(res, "%s", err_msg_out);
 
     // Get our child's thread handle, but do not wait forever.
     constexpr zx::duration TIMEOUT(ZX_MSEC(2500));
     constexpr zx_signals_t WAKE_SIGS = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
     zx_signals_t sigs = 0;
-    ASSERT_EQ(local.wait_one(WAKE_SIGS, zx::deadline_after(TIMEOUT), &sigs), ZX_OK);
+    ASSERT_OK(local.wait_one(WAKE_SIGS, zx::deadline_after(TIMEOUT), &sigs));
     ASSERT_NE(sigs & ZX_CHANNEL_READABLE, 0);
 
     uint32_t rxed_handles = 0;
@@ -234,7 +229,6 @@ bool ExternalThread::Start() {
     // external thread and process to terminate.
     control_channel_ = std::move(local);
     on_failure.cancel();
-    END_HELPER;
 }
 
 void ExternalThread::Stop() {
