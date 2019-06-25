@@ -7,6 +7,8 @@
 #include <sstream>
 
 #include <fuchsia/sys/cpp/fidl.h>
+#include <fuchsia/example/fostr/cpp/fidl.h>
+#include <lib/fostr/fidl/fuchsia/example/fostr/formatting.h>
 #include <lib/async-loop/cpp/loop.h>
 
 #include "lib/fsl/handles/object_info.h"
@@ -472,6 +474,23 @@ TEST(FidlTypes, InterfaceRequest) {
   EXPECT_TRUE(is && is.eof());
   EXPECT_EQ(fsl::GetKoid(interface_request.channel().get()), koid);
   EXPECT_EQ(fsl::GetKoid(interface_ptr.channel().get()), related_koid);
+}
+
+#define EXPECT_FIDL_TO_FORMAT_AS(Value, Expected) \
+   do {                                           \
+       std::ostringstream os;                     \
+       os << (Value);                             \
+       EXPECT_EQ(Expected, os.str());             \
+   } while (0)
+
+TEST(FidlTypes, BitsFormatting) {
+  using namespace fuchsia::example::fostr;
+
+  EXPECT_FIDL_TO_FORMAT_AS(ExampleBits::A, "a");
+  EXPECT_FIDL_TO_FORMAT_AS(ExampleBits::B, "b");
+  EXPECT_FIDL_TO_FORMAT_AS(ExampleBits::C, "c");
+  EXPECT_FIDL_TO_FORMAT_AS(ExampleBits::A | ExampleBits::C, "a|c");
+  EXPECT_FIDL_TO_FORMAT_AS(~ExampleBits::C, "a|b");
 }
 
 }  // namespace
