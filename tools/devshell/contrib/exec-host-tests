@@ -78,8 +78,12 @@ def main():
     for test in tests:
       target = test['name']
       info_print('<< running %s >>' % target)
+      if len(test['command']) > 1:
+        location, extra_args = test['command'][0], test['command'][1:]
+      else:
+        location, extra_args = test['location'], []
       ret = subprocess.call(
-          [os.path.join(args.build_dir, test['location'])] + args.test_args)
+          [os.path.join(args.build_dir, location)] + extra_args + args.test_args)
       if ret != 0:
         failed.append(target)
 
