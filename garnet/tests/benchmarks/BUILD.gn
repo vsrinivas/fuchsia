@@ -46,11 +46,5 @@ package("garnet_benchmarks") {
       shell = true
       name = "garnet_benchmarks"
     },
-    {
-      # TODO(PT-175): Remove this when the infra-side config no longer refers
-      # to this script via the garnet_benchmarks package.
-      name = rebase_path("benchmarks_perfcompare.sh")
-      dest = "benchmarks_perfcompare.sh"
-    },
   ]
 }
