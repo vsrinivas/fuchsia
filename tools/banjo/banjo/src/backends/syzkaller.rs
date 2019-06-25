@@ -4,7 +4,7 @@
 
 use {
     crate::ast::{self, BanjoAst, Decl},
-    crate::backends::util::to_c_name,
+    crate::backends::util::{to_c_name, ValuedAttributes},
     crate::backends::Backend,
     failure::{format_err, Error},
     std::io,
@@ -32,8 +32,6 @@ fn ty_to_syzkaller_str(ast: &ast::BanjoAst, ty: &ast::Ty) -> Result<String, Erro
         ast::Ty::UInt32 => Ok(String::from("int32")),
         ast::Ty::UInt64 => Ok(String::from("int64")),
         ast::Ty::USize => Ok(String::from("intptr")),
-        ast::Ty::Float32 => Ok(String::from("int32")),
-        ast::Ty::Float64 => Ok(String::from("int64")),
         ast::Ty::Voidptr => Ok(String::from("int64")),
         ast::Ty::Identifier { id, .. } => {
             if id.is_base_type() {
@@ -47,36 +45,91 @@ fn ty_to_syzkaller_str(ast: &ast::BanjoAst, ty: &ast::Ty) -> Result<String, Erro
     }
 }
 
-fn get_in_params(m: &ast::Method, ast: &BanjoAst) -> Result<Vec<String>, Error> {
+fn get_in_params(
+    m: &ast::Method,
+    ast: &BanjoAst,
+    arg_types: &ValuedAttributes,
+) -> Result<Vec<String>, Error> {
     m.in_params
         .iter()
         .map(|(name, ty)| {
+            let direction = arg_types.get_arg(name);
             match ty {
-                ast::Ty::Str { .. } => {
+                ast::Ty::Str { size, nullable } => {
                     // TODO(SEC-327): handle string length dependency
-                    // TODO(SEC-326): output pointer direction also
-                    Ok(format!("{} {}", to_c_name(name), ty_to_syzkaller_str(ast, ty).unwrap()))
+                    if *nullable {
+                        panic!("string cannot be nullable");
+                    }
+                    match size {
+                        Some(_sz) => {
+                            if !direction.is_empty() {
+                                let resolved_type = format!(
+                                    "ptr[{}, string]",
+                                    to_c_name(&direction)
+                                );
+                                Ok(format!("{} {}", to_c_name(name), resolved_type))
+                            } else {
+                                panic!("missing 'arg_type' attribute: string direction must be specified")
+                            }
+                        }
+                        None => panic!("string must have fixed length"),
+                    }
                 }
-                ast::Ty::Array { .. } => {
+                ast::Ty::Array { ty, size: _ } => {
                     // TODO(SEC-327): handle array length dependency
-                    // TODO(SEC-326): output pointer direction also
-                    Ok(format!("{} {}", to_c_name(name), ty_to_syzkaller_str(ast, ty).unwrap()))
+                    if !direction.is_empty() {
+                        let resolved_type = format!(
+                            "ptr[{}, array[{}]]",
+                            to_c_name(&direction),
+                            ty_to_syzkaller_str(ast, ty).unwrap()
+                        );
+                        Ok(format!("{} {}", to_c_name(name), resolved_type))
+                    } else {
+                        panic!("missing 'arg_type' attribute: array direction must be specified")
+                    }
                 }
-                ast::Ty::Vector { .. } => Err(format_err!("unsupported: {}", ty)),
                 _ => Ok(format!("{} {}", to_c_name(name), ty_to_syzkaller_str(ast, ty).unwrap())),
             }
         })
         .collect()
 }
 
-fn get_out_params(m: &ast::Method, ast: &BanjoAst) -> Result<Vec<String>, Error> {
-    Ok(m.out_params
-        .iter()
-        .map(|(_name, ty)| {
-            // TODO(SEC-326): handle pointers
-            format!("{}", ty_to_syzkaller_str(ast, ty).unwrap())
-        })
-        .collect())
+fn is_resource(_ty: &ast::Ty) -> bool {
+    // TODO(SEC-333): Add support for syzkaller resources
+    false
+}
+
+fn get_first_param(ast: &BanjoAst, method: &ast::Method) -> Result<(bool, String), Error> {
+    if method.out_params.get(0).map_or(false, |p| p.1.is_primitive(&ast) && is_resource(&p.1)) {
+        // Return parameter if a primitive type and a resource.
+        Ok((true, ty_to_syzkaller_str(ast, &method.out_params[0].1)?))
+    } else if method.out_params.get(0).map_or(false, |p| p.1.is_primitive(&ast)) {
+        // primitive but not a resource
+        Ok((true, String::default()))
+    } else {
+        Ok((false, String::default()))
+    }
+}
+
+fn get_out_params(m: &ast::Method, ast: &BanjoAst) -> Result<(Vec<String>, String), Error> {
+    let (skip, return_param) = get_first_param(ast, m)?;
+    let skip_amt = if skip { 1 } else { 0 };
+
+    Ok((
+        m.out_params
+            .iter()
+            .skip(skip_amt)
+            .map(|(name, ty)| {
+                let resolved_type = format!(
+                    "ptr[{}, {}]",
+                    String::from("out"),
+                    ty_to_syzkaller_str(ast, ty).unwrap()
+                );
+                format!("{} {}", to_c_name(name), resolved_type)
+            })
+            .collect(),
+        return_param,
+    ))
 }
 
 impl<'a, W: io::Write> SyzkallerBackend<'a, W> {
@@ -89,17 +142,23 @@ impl<'a, W: io::Write> SyzkallerBackend<'a, W> {
             .iter()
             .map(|m| {
                 let mut accum = String::new();
-                let in_params = get_in_params(&m, ast)?.join(", ");
-                let out_params = get_out_params(&m, ast)?.join(", ");
+                let arg_types = ValuedAttributes::new(&m.attributes, "argtype");
+                let mut in_params = get_in_params(&m, ast, &arg_types)?;
+                let (out_params, return_param) = get_out_params(&m, ast)?;
+                in_params.extend(out_params);
+                let params = in_params.join(", ");
                 accum.push_str(
                     format!(
-                        "{fn_name}({in_params}) {out_params}",
+                        "{fn_name}({params})",
                         fn_name = to_c_name(m.name.as_str()),
-                        in_params = in_params,
-                        out_params = out_params
+                        params = params,
                     )
                     .as_str(),
                 );
+                if !return_param.is_empty() {
+                    accum
+                        .push_str(format!(" {return_param}", return_param = return_param).as_str());
+                }
                 Ok(accum)
             })
             .collect::<Result<Vec<_>, Error>>()

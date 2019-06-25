@@ -419,4 +419,26 @@ mod syzkaller {
         ["../zx.banjo", "banjo/syzkaller-protocol-zx.test.banjo"],
         "syzkaller/syzkaller-protocol-zx.txt"
     );
+
+    codegen_test!(
+        syzkaller_protocol_string,
+        SyzkallerBackend,
+        ["../zx.banjo", "banjo/syzkaller-protocol-string.test.banjo"],
+        "syzkaller/syzkaller-protocol-string.txt"
+    );
+
+    codegen_test!(
+        syzkaller_protocol_array,
+        SyzkallerBackend,
+        ["../zx.banjo", "banjo/syzkaller-protocol-array.test.banjo"],
+        "syzkaller/syzkaller-protocol-array.txt"
+    );
+
+    codegen_test!(
+        syzkaller_protocol_multiple_returns,
+        SyzkallerBackend,
+        ["../zx.banjo", "banjo/syzkaller-protocol-multiple-returns.test.banjo"],
+        "syzkaller/syzkaller-protocol-multiple-returns.txt"
+    );
+
 }

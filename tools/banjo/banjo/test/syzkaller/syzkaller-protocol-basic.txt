@@ -5,14 +5,13 @@
 # WARNING: THIS FILE IS MACHINE GENERATED. DO NOT EDIT.
 # Generated from the banjo.examples.syzkaller.protocol.basic banjo file
 
-bool(b bool) bool
-int8(i8 int8) int8
-int16(i16 int16) int16
-int32(i32 int32) int32
-int64(i64 int64) int64
-uint8(u8 int8) int8
-uint16(u16 int16) int16
-uint32(u32 int32) int32
-uint64(u64 int64) int64
-float32(f32 int32) int32
-float64(u64 int64) int64
+usize(sz intptr)
+bool(b bool)
+int8(i8 int8)
+int16(i16 int16)
+int32(i32 int32)
+int64(i64 int64)
+uint8(u8 int8)
+uint16(u16 int16)
+uint32(u32 int32)
+uint64(u64 int64)

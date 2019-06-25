@@ -3,18 +3,18 @@
 # found in the LICENSE file.
 
 # WARNING: THIS FILE IS MACHINE GENERATED. DO NOT EDIT.
-# Generated from the banjo.examples.abigen.protocol.zx banjo file
+# Generated from the banjo.examples.syzkaller.protocol.zx banjo file
 
-status(st int32) int32
-time(t int64) int64
-duration(d int64) int64
-clock(cid int32) int32
-koid(id int64) int64
-vaddr(va int64) int64
-paddr(pa int64) int64
-paddr32(pa32 int32) int32
-gpaddr(gpa int64) int64
-off(o int64) int64
-rights(r int32) int32
-signals(sig int32) int32
-vm_option(op int32) int32
+status(st int32)
+time(t int64)
+duration(d int64)
+clock(cid int32)
+koid(id int64)
+vaddr(va int64)
+paddr(pa int64)
+paddr32(pa32 int32)
+gpaddr(gpa int64)
+off(o int64)
+rights(r int32)
+signals(sig int32)
+vm_option(op int32)

@@ -1,0 +1,29 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# WARNING: THIS FILE IS MACHINE GENERATED. DO NOT EDIT.
+# Generated from the banjo.examples.syzkaller.protocol.array banjo file
+
+void_ptr(vptr ptr[in, array[int64]])
+void_ptr(vptr ptr[out, array[int64]])
+usize(sz ptr[in, array[intptr]])
+usize(sz ptr[out, array[intptr]])
+bool(b ptr[in, array[bool]])
+bool(b ptr[out, array[bool]])
+int8(i8 ptr[in, array[int8]])
+int8(i8 ptr[out, array[int8]])
+int16(i16 ptr[in, array[int16]])
+int16(i16 ptr[out, array[int16]])
+int32(i32 ptr[in, array[int32]])
+int32(i32 ptr[out, array[int32]])
+int64(i64 ptr[in, array[int64]])
+int64(i64 ptr[out, array[int64]])
+uint8(u8 ptr[in, array[int8]])
+uint8(u8 ptr[out, array[int8]])
+uint16(u16 ptr[in, array[int16]])
+uint16(u16 ptr[out, array[int16]])
+uint32(u32 ptr[in, array[int32]])
+uint32(u32 ptr[out, array[int32]])
+uint64(u64 ptr[in, array[int64]])
+uint64(u64 ptr[out, array[int64]])

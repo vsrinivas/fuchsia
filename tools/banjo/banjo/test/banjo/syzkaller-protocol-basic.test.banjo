@@ -5,6 +5,7 @@
 library banjo.examples.syzkaller.protocol.basic;
 
 protocol Api {
+    Usize(usize sz) -> (usize sz);
     Bool(bool b) -> (bool b);
     Int8(int8 i8) -> (int8 i8);
     Int16(int16 i16) -> (int16 i16);
@@ -14,6 +15,4 @@ protocol Api {
     Uint16(uint16 u16) -> (uint16 u16);
     Uint32(uint32 u32) -> (uint32 u32);
     Uint64(uint64 u64) -> (uint64 u64);
-    Float32(float32 f32) -> (float32 f32);
-    Float64(float64 u64) -> (float64 f64);
 };

@@ -1,0 +1,12 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library banjo.examples.syzkaller.protocol.string;
+
+protocol Api {
+    [argtype="str IN"]
+    String(string:1 str) -> (zx.status st);
+    [argtype="str OUT"]
+    String(string:1 str) -> (zx.status st);
+};
