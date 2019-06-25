@@ -11,15 +11,13 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/directory.h>
-#include <unittest/unittest.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 
-bool TestDeviceClone() {
-    BEGIN_TEST;
-
+TEST(FdioTestCase, DeviceClone) {
     fbl::unique_fd fd(open("/dev/zero", O_RDONLY));
 
     zx_handle_t handle = ZX_HANDLE_INVALID;
@@ -27,13 +25,9 @@ bool TestDeviceClone() {
     ASSERT_EQ(status, ZX_OK);
     ASSERT_NE(handle, ZX_HANDLE_INVALID);
     zx_handle_close(handle);
-
-    END_TEST;
 }
 
-bool TestDeviceTransfer() {
-    BEGIN_TEST;
-
+TEST(FdioTestCase, DeviceTransfer) {
     fbl::unique_fd fd(open("/dev/zero", O_RDONLY));
 
     zx_handle_t handle = ZX_HANDLE_INVALID;
@@ -41,13 +35,6 @@ bool TestDeviceTransfer() {
     ASSERT_EQ(status, ZX_OK);
     ASSERT_NE(handle, ZX_HANDLE_INVALID);
     zx_handle_close(handle);
-
-    END_TEST;
 }
 
 } // namespace
-
-BEGIN_TEST_CASE(fdio_tests)
-RUN_TEST(TestDeviceClone)
-RUN_TEST(TestDeviceTransfer)
-END_TEST_CASE(fdio_tests)

@@ -10,17 +10,15 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/directory.h>
 #include <lib/zx/channel.h>
-#include <unittest/unittest.h>
 #include <zircon/device/vfs.h>
 #include <zircon/syscalls.h>
+#include <zxtest/zxtest.h>
 
 #include <utility>
 
 namespace {
 
-bool OpenHelper(const zx::channel& directory, const char* path, zx::channel* response_channel) {
-    BEGIN_HELPER;
-
+void OpenHelper(const zx::channel& directory, const char* path, zx::channel* response_channel) {
     // Open the requested path from the provded directory, and wait for the open
     // response on the accompanying channel.
     zx::channel client, server;
@@ -32,18 +30,14 @@ bool OpenHelper(const zx::channel& directory, const char* path, zx::channel* res
                               &pending), ZX_OK);
     ASSERT_EQ(pending & ZX_CHANNEL_READABLE, ZX_CHANNEL_READABLE);
     *response_channel = std::move(client);
-
-    END_HELPER;
 }
 
 // Validate some size information and expected fields without fully decoding the
 // FIDL message, for opening a path from a directory where we expect to open successfully.
-bool FidlOpenValidator(const zx::channel& directory, const char* path,
+void FidlOpenValidator(const zx::channel& directory, const char* path,
                        fidl_union_tag_t expected_tag, size_t expected_handles) {
-    BEGIN_HELPER;
-
     zx::channel client;
-    ASSERT_TRUE(OpenHelper(directory, path, &client));
+    ASSERT_NO_FAILURES(OpenHelper(directory, path, &client));
 
     char buf[8192];
     zx_handle_t handles[4];
@@ -58,17 +52,13 @@ bool FidlOpenValidator(const zx::channel& directory, const char* path,
     ASSERT_EQ(response->primary.s, ZX_OK);
     ASSERT_EQ(response->extra.tag, expected_tag);
     zx_handle_close_many(handles, actual_handles);
-
-    END_HELPER;
 }
 
 // Validate some size information and expected fields without fully decoding the
 // FIDL message, for opening a path from a directory where we expect to fail.
-bool FidlOpenErrorValidator(const zx::channel& directory, const char* path) {
-    BEGIN_HELPER;
-
+void FidlOpenErrorValidator(const zx::channel& directory, const char* path) {
     zx::channel client;
-    ASSERT_TRUE(OpenHelper(directory, path, &client));
+    ASSERT_NO_FAILURES(OpenHelper(directory, path, &client));
 
     char buf[8192];
     zx_handle_t handles[4];
@@ -81,25 +71,24 @@ bool FidlOpenErrorValidator(const zx::channel& directory, const char* path) {
     auto response = reinterpret_cast<fuchsia_io_NodeOnOpenEvent*>(buf);
     ASSERT_EQ(response->hdr.ordinal, fuchsia_io_NodeOnOpenOrdinal);
     ASSERT_EQ(response->s, ZX_ERR_NOT_FOUND);
-
-    END_HELPER;
 }
 
 // Ensure that our hand-rolled FIDL messages within devfs and memfs are acting correctly
 // for open event messages (on both success and error).
-bool TestFidlOpen() {
-    BEGIN_TEST;
-
+TEST(FidlTestCase, Open) {
     {
         zx::channel dev_client, dev_server;
         ASSERT_EQ(zx::channel::create(0, &dev_client, &dev_server), ZX_OK);
         fdio_ns_t* ns;
         ASSERT_EQ(fdio_ns_get_installed(&ns), ZX_OK);
         ASSERT_EQ(fdio_ns_connect(ns, "/dev", ZX_FS_RIGHT_READABLE, dev_server.release()), ZX_OK);
-        ASSERT_TRUE(FidlOpenValidator(dev_client, "zero", fuchsia_io_NodeInfoTag_device, 1));
-        ASSERT_TRUE(FidlOpenValidator(dev_client, "class/platform-bus/000", fuchsia_io_NodeInfoTag_device, 1));
-        ASSERT_TRUE(FidlOpenErrorValidator(dev_client, "this-path-better-not-actually-exist"));
-        ASSERT_TRUE(FidlOpenErrorValidator(dev_client, "zero/this-path-better-not-actually-exist"));
+        ASSERT_NO_FAILURES(FidlOpenValidator(dev_client, "zero", fuchsia_io_NodeInfoTag_device, 1));
+        ASSERT_NO_FAILURES(FidlOpenValidator(dev_client, "class/platform-bus/000",
+                                             fuchsia_io_NodeInfoTag_device, 1));
+        ASSERT_NO_FAILURES(FidlOpenErrorValidator(dev_client,
+                                                  "this-path-better-not-actually-exist"));
+        ASSERT_NO_FAILURES(FidlOpenErrorValidator(dev_client,
+                                                  "zero/this-path-better-not-actually-exist"));
     }
 
     {
@@ -108,16 +97,14 @@ bool TestFidlOpen() {
         fdio_ns_t* ns;
         ASSERT_EQ(fdio_ns_get_installed(&ns), ZX_OK);
         ASSERT_EQ(fdio_ns_connect(ns, "/boot", ZX_FS_RIGHT_READABLE, dev_server.release()), ZX_OK);
-        ASSERT_TRUE(FidlOpenValidator(dev_client, "lib", fuchsia_io_NodeInfoTag_directory, 0));
-        ASSERT_TRUE(FidlOpenErrorValidator(dev_client, "this-path-better-not-actually-exist"));
+        ASSERT_NO_FAILURES(FidlOpenValidator(dev_client, "lib", fuchsia_io_NodeInfoTag_directory,
+                                             0));
+        ASSERT_NO_FAILURES(FidlOpenErrorValidator(dev_client,
+                                                  "this-path-better-not-actually-exist"));
     }
-
-    END_TEST;
 }
 
-bool TestFidlBasic() {
-    BEGIN_TEST;
-
+TEST(FidlTestCase, Basic) {
     fuchsia_io_NodeInfo info = {};
     {
         zx::channel client, server;
@@ -138,8 +125,6 @@ bool TestFidlBasic() {
         ASSERT_NE(info.device.event, ZX_HANDLE_INVALID);
         zx_handle_close(info.device.event);
     }
-
-    END_TEST;
 }
 
 typedef struct {
@@ -152,27 +137,25 @@ typedef struct {
     size_t size;
 } watch_buffer_t;
 
-bool CheckLocalEvent(watch_buffer_t* wb, const char** name, uint8_t* event) {
-    if (wb->ptr != nullptr) {
-        // Used a cached event
-        *event = wb->ptr[0];
-        ASSERT_LT(static_cast<size_t>(wb->ptr[1]), sizeof(wb->name_buf));
-        memcpy(wb->name_buf, wb->ptr + 2, wb->ptr[1]);
-        wb->name_buf[wb->ptr[1]] = 0;
-        *name = reinterpret_cast<const char*>(wb->name_buf);
-        wb->ptr += wb->ptr[1] + 2;
-        ASSERT_LE((uintptr_t)wb->ptr, (uintptr_t) wb->buf + wb->size);
-        if ((uintptr_t) wb->ptr == (uintptr_t) wb->buf + wb->size) {
-            wb->ptr = nullptr;
-        }
-        return true;
+void CheckLocalEvent(watch_buffer_t* wb, const char** name, uint8_t* event) {
+    ASSERT_NOT_NULL(wb->ptr);
+
+    // Used a cached event
+    *event = wb->ptr[0];
+    ASSERT_LT(static_cast<size_t>(wb->ptr[1]), sizeof(wb->name_buf));
+    memcpy(wb->name_buf, wb->ptr + 2, wb->ptr[1]);
+    wb->name_buf[wb->ptr[1]] = 0;
+    *name = reinterpret_cast<const char*>(wb->name_buf);
+    wb->ptr += wb->ptr[1] + 2;
+    ASSERT_LE((uintptr_t)wb->ptr, (uintptr_t) wb->buf + wb->size);
+    if ((uintptr_t) wb->ptr == (uintptr_t) wb->buf + wb->size) {
+        wb->ptr = nullptr;
     }
-    return false;
 }
 
 // Read the next event off the channel.  Storage for |*name| will be reused
 // between calls.
-bool ReadEvent(watch_buffer_t* wb, const zx::channel& c, const char** name,
+void ReadEvent(watch_buffer_t* wb, const zx::channel& c, const char** name,
                 uint8_t* event) {
     if (wb->ptr == nullptr) {
         zx_signals_t observed;
@@ -183,12 +166,10 @@ bool ReadEvent(watch_buffer_t* wb, const zx::channel& c, const char** name,
         wb->size = actual;
         wb->ptr = wb->buf;
     }
-    return CheckLocalEvent(wb, name, event);
+    ASSERT_NO_FAILURES(CheckLocalEvent(wb, name, event));
 }
 
-bool TestDirectoryWatcherExisting() {
-    BEGIN_TEST;
-
+TEST(FidlTestCase, DirectoryWatcherExisting) {
     // Channel pair for fuchsia.io.Directory interface
     zx::channel h, request;
     // Channel pair for directory watch events
@@ -208,7 +189,7 @@ bool TestDirectoryWatcherExisting() {
     while (1) {
         const char* name = nullptr;
         uint8_t event = 0;
-        ASSERT_TRUE(ReadEvent(&wb, watcher, &name, &event));
+        ASSERT_NO_FAILURES(ReadEvent(&wb, watcher, &name, &event));
         if (event == fuchsia_io_WATCH_EVENT_IDLE) {
             ASSERT_STR_EQ(name, "");
             break;
@@ -216,13 +197,9 @@ bool TestDirectoryWatcherExisting() {
         ASSERT_EQ(event, fuchsia_io_WATCH_EVENT_EXISTING);
         ASSERT_STR_NE(name, "");
     }
-
-    END_TEST;
 }
 
-bool TestDirectoryWatcherWithClosedHalf() {
-    BEGIN_TEST;
-
+TEST(FidlTestCase, DirectoryWatcherWithClosedHalf) {
     // Channel pair for fuchsia.io.Directory interface
     zx::channel h, request;
     // Channel pair for directory watch events
@@ -250,17 +227,8 @@ bool TestDirectoryWatcherWithClosedHalf() {
     watch_buffer_t wb = {};
     const char* name = nullptr;
     uint8_t event = 0;
-    ASSERT_TRUE(ReadEvent(&wb, watcher, &name, &event));
+    ASSERT_NO_FAILURES(ReadEvent(&wb, watcher, &name, &event));
     ASSERT_EQ(event, fuchsia_io_WATCH_EVENT_EXISTING);
-
-    END_TEST;
 }
 
 } // namespace
-
-BEGIN_TEST_CASE(fidl_tests)
-RUN_TEST(TestFidlOpen)
-RUN_TEST(TestFidlBasic)
-RUN_TEST(TestDirectoryWatcherWithClosedHalf)
-RUN_TEST(TestDirectoryWatcherExisting)
-END_TEST_CASE(fidl_tests)
