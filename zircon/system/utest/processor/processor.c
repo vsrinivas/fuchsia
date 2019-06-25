@@ -7,11 +7,11 @@
 #include <cpuid.h>
 #endif
 #include <errno.h>
-#include <zircon/syscalls.h>
-#include <unittest/unittest.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <zircon/syscalls.h>
+#include <zxtest/zxtest.h>
 
 struct desc_ptr {
     unsigned short size;
@@ -28,10 +28,9 @@ static bool is_umip_supported(void) {
 }
 #endif
 
-static bool processor_test(void) {
-    BEGIN_TEST;
-
 #if defined(__x86_64__)
+// Test that the IDT visible via SIDT has been remapped
+TEST(ProcessorTestCase, IdtRelocated) {
     if (!is_umip_supported()) {
         // Check the IDT is not in the kernel module.  Only run this check if
         // UMIP is not supported, since otherwise this will fault.
@@ -39,15 +38,8 @@ static bool processor_test(void) {
         // TODO(thgarnie) check all CPUs when sched_setaffinity is implemented
         struct desc_ptr idt;
         __asm__ ("sidt %0" : "=m" (idt));
-        unittest_printf("IDT address = %lx\n", idt.address);
         EXPECT_LT(idt.address, 0xffffffff80000000UL,
                   "Check IDT is not in the kernel module (remapped)");
     }
-#endif
-
-    END_TEST;
 }
-
-BEGIN_TEST_CASE(processor_tests)
-RUN_TEST(processor_test)
-END_TEST_CASE(processor_tests)
+#endif
