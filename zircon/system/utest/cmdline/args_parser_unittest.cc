@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <cmdline/args_parser.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 #define ASSERT_STRING_EQ(lhs, rhs, ...) \
     ASSERT_STR_EQ(                      \
@@ -17,9 +17,7 @@ namespace cmdline {
 
 namespace {
 
-bool general() {
-    BEGIN_TEST;
-
+TEST(ArgsParser, General) {
     GeneralArgsParser parser;
 
     bool bool_set = false;
@@ -61,13 +59,13 @@ string help
     std::vector<std::string> args;
     const char* no_params[1] = {"program"};
     Status status = parser.ParseGeneral(1, no_params, &args);
-    EXPECT_FALSE(status.has_error());
+    EXPECT_FALSE(status.has_error(), "%s", status.error_message().c_str());
     EXPECT_TRUE(args.empty());
 
     // One non-option parameter.
     const char* one_non_opt[2] = {"program", "param"};
     status = parser.ParseGeneral(2, one_non_opt, &args);
-    EXPECT_FALSE(status.has_error());
+    EXPECT_FALSE(status.has_error(), "%s", status.error_message().c_str());
     ASSERT_EQ(1u, args.size());
     EXPECT_STRING_EQ("param", args[0]);
     EXPECT_FALSE(bool_set);
@@ -79,7 +77,7 @@ string help
                                   "--noon-off-switch",
                                   "param", "--non-switch"};
     status = parser.ParseGeneral(6, some_params, &args);
-    EXPECT_FALSE(status.has_error(), status.error_message().c_str());
+    EXPECT_FALSE(status.has_error(), "%s", status.error_message().c_str());
     EXPECT_TRUE(bool_set);
     EXPECT_STRING_EQ("foo", string_option_val);
     EXPECT_FALSE(on_off_switch);
@@ -95,7 +93,7 @@ string help
                                      "--on-off-switch",
                                      "param"};
     status = parser.ParseGeneral(6, long_no_equals, &args);
-    EXPECT_FALSE(status.has_error(), status.error_message().c_str());
+    EXPECT_FALSE(status.has_error(), "%s", status.error_message().c_str());
     EXPECT_TRUE(bool_set);
     EXPECT_STRING_EQ("foo2", string_option_val);
     EXPECT_TRUE(on_off_switch);
@@ -110,7 +108,7 @@ string help
                                        "-o",
                                        "param"};
     status = parser.ParseGeneral(6, short_with_space, &args);
-    EXPECT_FALSE(status.has_error(), status.error_message().c_str());
+    EXPECT_FALSE(status.has_error(), "%s", status.error_message().c_str());
     EXPECT_STRING_EQ("foo3", string_option_val);
     EXPECT_TRUE(bool_set);
     EXPECT_TRUE(on_off_switch);
@@ -123,7 +121,7 @@ string help
     string_option_val.clear();
     const char* short_no_space[3] = {"program", "-sfoo4", "-o"};
     status = parser.ParseGeneral(3, short_no_space, &args);
-    EXPECT_FALSE(status.has_error(), status.error_message().c_str());
+    EXPECT_FALSE(status.has_error(), "%s", status.error_message().c_str());
     EXPECT_FALSE(bool_set);
     EXPECT_TRUE(on_off_switch);
     EXPECT_STRING_EQ("foo4", string_option_val);
@@ -137,7 +135,7 @@ string help
     string_option_val.clear();
     const char* single_hyphen[3] = {"program", "-", "foo"};
     status = parser.ParseGeneral(3, single_hyphen, &args);
-    EXPECT_FALSE(status.has_error(), status.error_message().c_str());
+    EXPECT_FALSE(status.has_error(), "%s", status.error_message().c_str());
     ASSERT_EQ(2u, args.size());
     EXPECT_STRING_EQ("-", args[0]);
     EXPECT_STRING_EQ("foo", args[1]);
@@ -179,19 +177,15 @@ string help
     string_option_val.clear();
     const char* dash_dash[4] = {"program", "--", "--str", "--bool"};
     status = parser.ParseGeneral(4, dash_dash, &args);
-    EXPECT_FALSE(status.has_error());
+    EXPECT_FALSE(status.has_error(), "%s", status.error_message().c_str());
     ASSERT_EQ(2u, args.size());
     EXPECT_STRING_EQ("--str", args[0]);
     EXPECT_TRUE(string_option_val.empty());
     EXPECT_STRING_EQ("--bool", args[1]);
     EXPECT_FALSE(bool_set);
-
-    END_TEST;
 }
 
-bool opt_struct() {
-    BEGIN_TEST;
-
+TEST(ArgsParser, OptStruct) {
     struct MyOptions {
         bool present = false;
         bool not_present = false;
@@ -239,7 +233,7 @@ bool opt_struct() {
     MyOptions options;
     std::vector<std::string> params;
     Status status = parser.Parse(4, bool_and_optional_str, &options, &params);
-    EXPECT_FALSE(status.has_error(), status.error_message().c_str());
+    EXPECT_FALSE(status.has_error(), "%s", status.error_message().c_str());
 
     EXPECT_TRUE(options.present);
     EXPECT_FALSE(options.not_present);
@@ -271,7 +265,7 @@ bool opt_struct() {
     params.clear();
     status = parser.Parse(7, off_sizet_string_optionalbool_validate, &options,
                           &params);
-    EXPECT_FALSE(status.has_error(), status.error_message().c_str());
+    EXPECT_FALSE(status.has_error(), "%s", status.error_message().c_str());
 
     EXPECT_FALSE(options.on_by_default);
     EXPECT_EQ(50u, options.size_t_val);
@@ -291,7 +285,7 @@ bool opt_struct() {
     params.clear();
     status = parser.Parse(3, optionalbool_to_false, &options,
                           &params);
-    EXPECT_FALSE(status.has_error(), status.error_message().c_str());
+    EXPECT_FALSE(status.has_error(), "%s", status.error_message().c_str());
 
     EXPECT_TRUE(options.optional_bool.has_value());
     EXPECT_FALSE(*options.optional_bool);
@@ -307,14 +301,14 @@ bool opt_struct() {
     params.clear();
     status = parser.Parse(3, invalid_format, &options,
                           &params);
-    EXPECT_TRUE(status.has_error(), status.error_message().c_str());
+    EXPECT_TRUE(status.has_error());
     EXPECT_STRING_EQ(status.error_message(), "Invalid value for --format: xml");
 
     // Invalid value
     const char* invalid_value_blank[3] = {"program", "--double", ""};
     params.clear();
     status = parser.Parse(3, invalid_value_blank, &options, &params);
-    EXPECT_TRUE(status.has_error(), status.error_message().c_str());
+    EXPECT_TRUE(status.has_error());
     EXPECT_STRING_EQ(
         "'' is invalid for --double", status.error_message());
 
@@ -322,34 +316,29 @@ bool opt_struct() {
     const char* invalid_value_trailing_decimal[2] = {"program", "--int=3.14"};
     params.clear();
     status = parser.Parse(2, invalid_value_trailing_decimal, &options, &params);
-    EXPECT_TRUE(status.has_error(), status.error_message().c_str());
+    EXPECT_TRUE(status.has_error());
     EXPECT_STRING_EQ(
-        "Invalid trailing characters '.14' for --int", status.error_message());
+        "Invalid trailing characters '.14' for --int",
+        status.error_message());
 
     // Invalid value
     const char* invalid_value_trailing_word[2] = {"program", "--int=2718 foo"};
     params.clear();
     status = parser.Parse(2, invalid_value_trailing_word, &options, &params);
-    EXPECT_TRUE(status.has_error(), status.error_message().c_str());
+    EXPECT_TRUE(status.has_error());
     EXPECT_STRING_EQ(
-        "Invalid trailing characters 'foo' for --int", status.error_message());
+        "Invalid trailing characters 'foo' for --int",
+        status.error_message());
 
     // Invalid value
     const char* invalid_value_trailing_chars[2] = {"program", "--char=hello"};
     params.clear();
     status = parser.Parse(2, invalid_value_trailing_chars, &options, &params);
-    EXPECT_TRUE(status.has_error(), status.error_message().c_str());
+    EXPECT_TRUE(status.has_error(), "%s", status.error_message().c_str());
     EXPECT_STRING_EQ(
         "Invalid trailing characters 'ello' for --char",
         status.error_message());
-
-    END_TEST;
 }
-
-BEGIN_TEST_CASE(args_parser)
-RUN_TEST(general)
-RUN_TEST(opt_struct)
-END_TEST_CASE(args_parser)
 
 } // namespace
 

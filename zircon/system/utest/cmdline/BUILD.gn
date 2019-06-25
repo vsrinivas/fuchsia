@@ -8,6 +8,6 @@ test("cmdline") {
   ]
   deps = [
     "$zx/system/ulib/cmdline",
-    "$zx/system/ulib/unittest",
+    "$zx/system/ulib/zxtest",
   ]
 }
