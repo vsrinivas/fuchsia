@@ -11,10 +11,10 @@ source_set("lib") {
     "monitor.h",
   ]
   public_deps = [
-    "//src/developer/memory/metrics",
     "//garnet/public/lib/inspect",
     "//sdk/fidl/fuchsia.memory",
     "//sdk/lib/sys/cpp",
+    "//src/developer/memory/metrics",
   ]
   deps = [
     "//garnet/public/lib/fsl",

@@ -5,11 +5,12 @@
 #ifndef SRC_DEVELOPER_MEMORY_METRICS_SUMMARY_H_
 #define SRC_DEVELOPER_MEMORY_METRICS_SUMMARY_H_
 
+#include <zircon/types.h>
+
 #include <string>
-#include <vector>
 #include <unordered_map>
 #include <unordered_set>
-#include <zircon/types.h>
+#include <vector>
 
 #include "src/developer/memory/metrics/capture.h"
 
@@ -31,16 +32,13 @@ class ProcessSummary {
   zx_koid_t koid() const { return koid_; }
   std::string name() const { return name_; }
   Sizes sizes() const { return sizes_; }
-  const std::unordered_map<std::string, Sizes>& name_to_sizes() const {
-    return name_to_sizes_;
-  }
+  const std::unordered_map<std::string, Sizes>& name_to_sizes() const { return name_to_sizes_; }
   const Sizes& GetSizes(std::string name) const;
 
  private:
   ProcessSummary(zx_koid_t koid, std::string name) : koid_(koid), name_(name) {}
-  ProcessSummary(
-      const zx_info_kmem_stats_t& kmem,
-      const std::unordered_map<zx_koid_t, const zx_info_vmo_t>& koid_to_vmo);
+  ProcessSummary(const zx_info_kmem_stats_t& kmem,
+                 const std::unordered_map<zx_koid_t, const zx_info_vmo_t>& koid_to_vmo);
 
   zx_koid_t koid_;
   std::string name_;
@@ -58,9 +56,7 @@ class Summary {
   void SortProcessSummaries();
   zx_time_t time() const { return time_; }
   const zx_info_kmem_stats_t& kstats() const { return kstats_; }
-  const std::vector<ProcessSummary>& process_summaries() const {
-    return process_summaries_;
-  }
+  const std::vector<ProcessSummary>& process_summaries() const { return process_summaries_; }
 
  private:
   zx_time_t time_;

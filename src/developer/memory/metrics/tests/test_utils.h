@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_MEMORY_METRICS_TEST_UTILS_H_
-#define SRC_DEVELOPER_MEMORY_METRICS_TEST_UTILS_H_
+#ifndef SRC_DEVELOPER_MEMORY_METRICS_TESTS_TEST_UTILS_H_
+#define SRC_DEVELOPER_MEMORY_METRICS_TESTS_TEST_UTILS_H_
 
 #include <vector>
 
@@ -61,14 +61,12 @@ class TestUtils {
   const static zx_koid_t kSelfKoid;
 
   static void CreateCapture(memory::Capture& capture, const CaptureTemplate& t);
-  static zx_status_t GetCapture(
-      Capture& capture, CaptureLevel level, const OsResponses& r);
+  static zx_status_t GetCapture(Capture& capture, CaptureLevel level, const OsResponses& r);
 
   // Sorted by koid.
-  static std::vector<ProcessSummary> GetProcessSummaries(
-      const Summary& summary);
+  static std::vector<ProcessSummary> GetProcessSummaries(const Summary& summary);
 };
 
 }  // namespace memory
 
-#endif  // SRC_DEVELOPER_MEMORY_METRICS_TEST_UTILS_H_
+#endif  // SRC_DEVELOPER_MEMORY_METRICS_TESTS_TEST_UTILS_H_

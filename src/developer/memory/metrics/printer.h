@@ -5,10 +5,11 @@
 #ifndef SRC_DEVELOPER_MEMORY_METRICS_PRINTER_H_
 #define SRC_DEVELOPER_MEMORY_METRICS_PRINTER_H_
 
-#include <iostream>
 #include <src/lib/fxl/macros.h>
-#include <string>
+
+#include <iostream>
 #include <sstream>
+#include <string>
 
 #include "src/developer/memory/metrics/capture.h"
 #include "src/developer/memory/metrics/summary.h"

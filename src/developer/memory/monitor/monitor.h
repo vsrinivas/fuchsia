@@ -11,20 +11,20 @@
 #include <lib/inspect/deprecated/object_dir.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/zx/vmo.h>
-#include <memory>
 #include <src/lib/fxl/command_line.h>
 #include <trace/observer.h>
 #include <zircon/types.h>
 
+#include <memory>
+
 #include "src/developer/memory/metrics/capture.h"
 
-namespace memory {
+namespace monitor {
 
 class Monitor : public fuchsia::memory::Monitor {
  public:
   explicit Monitor(std::unique_ptr<sys::ComponentContext> context,
-                   const fxl::CommandLine& command_line,
-                   async_dispatcher_t* dispatcher);
+                   const fxl::CommandLine& command_line, async_dispatcher_t* dispatcher);
   ~Monitor();
   void Watch(fidl::InterfaceHandle<fuchsia::memory::Watcher> watcher) override;
   static const char kTraceName[];
@@ -44,7 +44,7 @@ class Monitor : public fuchsia::memory::Monitor {
   // Alerts all watchers when an update has occurred.
   void NotifyWatchers(const zx_info_kmem_stats_t& stats);
 
-  CaptureState capture_state_;
+  ::memory::CaptureState capture_state_;
   uint64_t prealloc_size_;
   zx::vmo prealloc_vmo_;
   bool logging_;
@@ -62,6 +62,6 @@ class Monitor : public fuchsia::memory::Monitor {
   FXL_DISALLOW_COPY_AND_ASSIGN(Monitor);
 };
 
-}  // namespace memory
+}  // namespace monitor
 
 #endif  // SRC_DEVELOPER_MEMORY_MONITOR_MONITOR_H_

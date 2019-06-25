@@ -15,11 +15,7 @@ const zx_koid_t TestUtils::kSelfKoid = 3;
 class MockOS : public OS {
  public:
   MockOS(OsResponses responses)
-      : responses_(responses),
-        i_get_processes_(0),
-        i_get_property_(0),
-        i_get_info_(0),
-        clock_(0) {}
+      : responses_(responses), i_get_processes_(0), i_get_property_(0), i_get_info_(0), clock_(0) {}
 
  private:
   zx_status_t GetRootResource(zx_handle_t* root_resource) override {
@@ -27,17 +23,12 @@ class MockOS : public OS {
     return ZX_OK;
   }
 
-  zx_handle_t ProcessSelf() override {
-    return TestUtils::kSelfHandle;
-  }
+  zx_handle_t ProcessSelf() override { return TestUtils::kSelfHandle; }
 
-  zx_time_t GetMonotonic() override {
-    return clock_++;
-  }
+  zx_time_t GetMonotonic() override { return clock_++; }
 
   zx_status_t GetProcesses(
-      fit::function<zx_status_t(int, zx_handle_t, zx_koid_t, zx_koid_t)> cb)
-      override {
+      fit::function<zx_status_t(int, zx_handle_t, zx_koid_t, zx_koid_t)> cb) override {
     auto const& r = responses_.get_processes.at(i_get_processes_++);
     for (auto const& c : r.callbacks) {
       auto ret = cb(c.depth, c.handle, c.koid, c.parent_koid);
@@ -48,9 +39,8 @@ class MockOS : public OS {
     return r.ret;
   }
 
-  zx_status_t GetProperty(
-      zx_handle_t handle, uint32_t property, void* value, size_t name_len)
-     override {
+  zx_status_t GetProperty(zx_handle_t handle, uint32_t property, void* value,
+                          size_t name_len) override {
     auto const& r = responses_.get_property.at(i_get_property_++);
     EXPECT_EQ(r.handle, handle);
     EXPECT_EQ(r.property, property);
@@ -59,13 +49,8 @@ class MockOS : public OS {
     return r.ret;
   }
 
-  zx_status_t GetInfo(
-      zx_handle_t handle,
-      uint32_t topic,
-      void* buffer,
-      size_t buffer_size,
-      size_t* actual,
-      size_t* avail) override {
+  zx_status_t GetInfo(zx_handle_t handle, uint32_t topic, void* buffer, size_t buffer_size,
+                      size_t* actual, size_t* avail) override {
     auto const& r = responses_.get_info.at(i_get_info_++);
     EXPECT_EQ(r.handle, handle);
     EXPECT_EQ(r.topic, topic);
@@ -93,10 +78,9 @@ class MockOS : public OS {
 };
 
 // static.
-void TestUtils::CreateCapture(memory::Capture& capture,
-                              const CaptureTemplate& t) {
+void TestUtils::CreateCapture(memory::Capture& capture, const CaptureTemplate& t) {
   capture.time_ = t.time;
-  capture.kmem_= t.kmem;
+  capture.kmem_ = t.kmem;
   for (auto vmo : t.vmos) {
     capture.koid_to_vmo_.emplace(vmo.koid, vmo);
   }
@@ -106,16 +90,14 @@ void TestUtils::CreateCapture(memory::Capture& capture,
 }
 
 // static.
-std::vector<ProcessSummary> TestUtils::GetProcessSummaries(
-    const Summary& summary) {
+std::vector<ProcessSummary> TestUtils::GetProcessSummaries(const Summary& summary) {
   std::vector<ProcessSummary> summaries = summary.process_summaries();
   sort(summaries.begin(), summaries.end(),
-       [](ProcessSummary a, ProcessSummary b) { return a.koid() < b.koid(); } );
+       [](ProcessSummary a, ProcessSummary b) { return a.koid() < b.koid(); });
   return summaries;
 }
 
-zx_status_t TestUtils::GetCapture(
-      Capture& capture, CaptureLevel level, const OsResponses& r) {
+zx_status_t TestUtils::GetCapture(Capture& capture, CaptureLevel level, const OsResponses& r) {
   MockOS os(r);
   CaptureState state;
   zx_status_t ret = Capture::GetCaptureState(state, os);

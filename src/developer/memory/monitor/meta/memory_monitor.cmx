@@ -3,9 +3,11 @@
         "binary": "bin/app"
     },
     "sandbox": {
+        "dev": [
+            "misc/sysinfo"
+        ],
         "services": [
             "fuchsia.tracing.provider.Registry"
-        ],
-        "dev": [ "misc/sysinfo" ]
+        ]
     }
 }

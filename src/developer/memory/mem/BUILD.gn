@@ -11,9 +11,9 @@ executable("bin") {
     "main.cc",
   ]
   deps = [
+    "//sdk/lib/sys/cpp",
     "//src/developer/memory/metrics",
     "//src/lib/fxl",
-    "//sdk/lib/sys/cpp",
   ]
 }
 
@@ -28,4 +28,3 @@ package("mem") {
     },
   ]
 }
-

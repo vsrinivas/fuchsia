@@ -6,10 +6,8 @@
 
 namespace memory {
 
-Summary::Summary(const Capture& capture)
-    : time_(capture.time()), kstats_(capture.kmem()) {
-  std::unordered_map<zx_koid_t, std::unordered_set<zx_koid_t>>
-      vmo_to_processes;
+Summary::Summary(const Capture& capture) : time_(capture.time()), kstats_(capture.kmem()) {
+  std::unordered_map<zx_koid_t, std::unordered_set<zx_koid_t>> vmo_to_processes;
   auto const& koid_to_vmo = capture.koid_to_vmo();
 
   ProcessSummary kernel_summary(kstats_, koid_to_vmo);
@@ -19,7 +17,7 @@ Summary::Summary(const Capture& capture)
     auto process_koid = pair.first;
     auto& process = pair.second;
     ProcessSummary s(process_koid, process.name);
-    for (auto vmo_koid: process.vmos) {
+    for (auto vmo_koid : process.vmos) {
       do {
         vmo_to_processes[vmo_koid].insert(process_koid);
         s.vmos_.insert(vmo_koid);
@@ -34,7 +32,7 @@ Summary::Summary(const Capture& capture)
     process_summaries_.push_back(s);
   }
 
-  for (auto& s: process_summaries_) {
+  for (auto& s : process_summaries_) {
     for (auto const& v : s.vmos_) {
       auto const& vmo = capture.vmo_for_koid(v);
       auto share_count = vmo_to_processes[v].size();
@@ -65,8 +63,7 @@ ProcessSummary::ProcessSummary(
   for (const auto& pair : koid_to_vmo) {
     vmo_bytes += pair.second.committed_bytes;
   }
-  auto kmem_vmo_bytes =
-      kmem.vmo_bytes < vmo_bytes ? 0 : kmem.vmo_bytes - vmo_bytes;
+  auto kmem_vmo_bytes = kmem.vmo_bytes < vmo_bytes ? 0 : kmem.vmo_bytes - vmo_bytes;
   name_to_sizes_.emplace("heap", kmem.total_heap_bytes);
   name_to_sizes_.emplace("wired", kmem.wired_bytes);
   name_to_sizes_.emplace("mmu", kmem.mmu_overhead_bytes);
@@ -75,16 +72,10 @@ ProcessSummary::ProcessSummary(
   name_to_sizes_.emplace("vmo", kmem_vmo_bytes);
 
   sizes_.private_bytes = sizes_.scaled_bytes = sizes_.total_bytes =
-    kmem.wired_bytes +
-    kmem.total_heap_bytes +
-    kmem.mmu_overhead_bytes +
-    kmem.ipc_bytes +
-    kmem.other_bytes +
-    kmem_vmo_bytes;
+      kmem.wired_bytes + kmem.total_heap_bytes + kmem.mmu_overhead_bytes + kmem.ipc_bytes +
+      kmem.other_bytes + kmem_vmo_bytes;
 }
 
-const Sizes& ProcessSummary::GetSizes(std::string name) const {
-  return name_to_sizes_.at(name);
-}
+const Sizes& ProcessSummary::GetSizes(std::string name) const { return name_to_sizes_.at(name); }
 
 }  // namespace memory

@@ -11,11 +11,10 @@
 
 namespace memory {
 
-Watcher::Watcher(
-    zx::duration poll_frequency, uint64_t high_water_threshold,
-    async_dispatcher_t* dispatcher,
-    fit::function<zx_status_t(Capture&, CaptureLevel level)> capture_cb,
-    fit::function<void(const Capture&)> high_water_cb)
+Watcher::Watcher(zx::duration poll_frequency, uint64_t high_water_threshold,
+                 async_dispatcher_t* dispatcher,
+                 fit::function<zx_status_t(Capture&, CaptureLevel level)> capture_cb,
+                 fit::function<void(const Capture&)> high_water_cb)
     : least_free_bytes_(UINT64_MAX),
       poll_frequency_(poll_frequency),
       high_water_threshold_(high_water_threshold),

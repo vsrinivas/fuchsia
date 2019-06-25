@@ -6,13 +6,14 @@
 
 #include <fcntl.h>
 #include <fuchsia/sysinfo/c/fidl.h>
-#include <lib/zx/channel.h>
 #include <lib/fdio/fdio.h>
-#include <memory>
+#include <lib/zx/channel.h>
 #include <src/lib/fxl/logging.h>
 #include <task-utils/walker.h>
 #include <zircon/process.h>
 #include <zircon/status.h>
+
+#include <memory>
 
 namespace memory {
 
@@ -26,14 +27,13 @@ class OSImpl : public OS, public TaskEnumerator {
     }
 
     zx::channel channel;
-    zx_status_t status =
-        fdio_get_service_handle(fd, channel.reset_and_get_address());
+    zx_status_t status = fdio_get_service_handle(fd, channel.reset_and_get_address());
     if (status != ZX_OK) {
       return status;
     }
 
-    zx_status_t fidl_status = fuchsia_sysinfo_DeviceGetRootResource(
-        channel.get(), &status, root_resource);
+    zx_status_t fidl_status =
+        fuchsia_sysinfo_DeviceGetRootResource(channel.get(), &status, root_resource);
     if (fidl_status != ZX_OK) {
       return fidl_status;
     }
@@ -44,8 +44,7 @@ class OSImpl : public OS, public TaskEnumerator {
   zx_time_t GetMonotonic() override { return zx_clock_get_monotonic(); }
 
   zx_status_t GetProcesses(
-      fit::function<zx_status_t(int, zx_handle_t, zx_koid_t, zx_koid_t)> cb)
-      override {
+      fit::function<zx_status_t(int, zx_handle_t, zx_koid_t, zx_koid_t)> cb) override {
     cb_ = std::move(cb);
     return WalkRootJobTree();
   }
@@ -55,30 +54,21 @@ class OSImpl : public OS, public TaskEnumerator {
     return cb_(depth, handle, koid, parent_koid);
   }
 
-  zx_status_t GetProperty(
-      zx_handle_t handle, uint32_t property, void* value, size_t name_len)
-     override {
+  zx_status_t GetProperty(zx_handle_t handle, uint32_t property, void* value,
+                          size_t name_len) override {
     return zx_object_get_property(handle, property, value, name_len);
   }
 
-  zx_status_t GetInfo(
-      zx_handle_t handle,
-      uint32_t topic,
-      void* buffer,
-      size_t buffer_size,
-      size_t* actual,
-      size_t* avail) override {
-    return zx_object_get_info(
-        handle, topic, buffer, buffer_size, actual, avail);
+  zx_status_t GetInfo(zx_handle_t handle, uint32_t topic, void* buffer, size_t buffer_size,
+                      size_t* actual, size_t* avail) override {
+    return zx_object_get_info(handle, topic, buffer, buffer_size, actual, avail);
   }
 
   bool has_on_process() const final { return true; }
 
-  fit::function<zx_status_t(
-          int /* depth */,
-          zx_handle_t /* handle */,
-          zx_koid_t /* koid */,
-          zx_koid_t /* parent_koid */)> cb_;
+  fit::function<zx_status_t(int /* depth */, zx_handle_t /* handle */, zx_koid_t /* koid */,
+                            zx_koid_t /* parent_koid */)>
+      cb_;
 };
 
 // static.
@@ -94,8 +84,7 @@ zx_status_t Capture::GetCaptureState(CaptureState& state, OS& os) {
   }
 
   zx_info_handle_basic_t info;
-  err = os.GetInfo(os.ProcessSelf(), ZX_INFO_HANDLE_BASIC,
-                   &info, sizeof(info), nullptr, nullptr);
+  err = os.GetInfo(os.ProcessSelf(), ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
   if (err != ZX_OK) {
     return err;
   }
@@ -105,21 +94,16 @@ zx_status_t Capture::GetCaptureState(CaptureState& state, OS& os) {
 }
 
 // static.
-zx_status_t Capture::GetCapture(Capture& capture, const CaptureState& state,
-                                CaptureLevel level) {
+zx_status_t Capture::GetCapture(Capture& capture, const CaptureState& state, CaptureLevel level) {
   OSImpl osImpl;
   return GetCapture(capture, state, level, osImpl);
 }
 
-zx_status_t Capture::GetCapture(
-    Capture& capture,
-    const CaptureState& state,
-    CaptureLevel level,
-    OS& os) {
+zx_status_t Capture::GetCapture(Capture& capture, const CaptureState& state, CaptureLevel level,
+                                OS& os) {
   capture.time_ = os.GetMonotonic();
-  zx_status_t err = os.GetInfo(
-      state.root, ZX_INFO_KMEM_STATS, &capture.kmem_, sizeof(capture.kmem_),
-      nullptr, nullptr);
+  zx_status_t err = os.GetInfo(state.root, ZX_INFO_KMEM_STATS, &capture.kmem_,
+                               sizeof(capture.kmem_), nullptr, nullptr);
   if (err != ZX_OK) {
     return err;
   }
@@ -128,20 +112,15 @@ zx_status_t Capture::GetCapture(
     return ZX_OK;
   }
 
-  err = os.GetProcesses([state, &capture, level, &os](
-      int depth,
-      zx_handle_t handle,
-      zx_koid_t koid,
-      zx_koid_t parent_koid) {
-    Process process = { .koid = koid };
-    zx_status_t s = os.GetProperty(
-        handle, ZX_PROP_NAME, process.name, ZX_MAX_NAME_LEN);
+  err = os.GetProcesses([state, &capture, level, &os](int depth, zx_handle_t handle, zx_koid_t koid,
+                                                      zx_koid_t parent_koid) {
+    Process process = {.koid = koid};
+    zx_status_t s = os.GetProperty(handle, ZX_PROP_NAME, process.name, ZX_MAX_NAME_LEN);
     if (s != ZX_OK) {
       return s == ZX_ERR_BAD_STATE ? ZX_OK : s;
     }
-    s = os.GetInfo(handle, ZX_INFO_TASK_STATS,
-                   &process.stats, sizeof(process.stats),
-                   nullptr, nullptr);
+    s = os.GetInfo(handle, ZX_INFO_TASK_STATS, &process.stats, sizeof(process.stats), nullptr,
+                   nullptr);
     if (s != ZX_OK) {
       return s == ZX_ERR_BAD_STATE ? ZX_OK : s;
     }
@@ -156,15 +135,13 @@ zx_status_t Capture::GetCapture(
     }
 
     size_t num_vmos;
-    s = os.GetInfo(handle, ZX_INFO_PROCESS_VMOS,
-                   nullptr, 0, nullptr, &num_vmos);
+    s = os.GetInfo(handle, ZX_INFO_PROCESS_VMOS, nullptr, 0, nullptr, &num_vmos);
     if (s != ZX_OK) {
       return s == ZX_ERR_BAD_STATE ? ZX_OK : s;
     }
     auto vmos = new zx_info_vmo_t[num_vmos];
-    s = os.GetInfo(handle, ZX_INFO_PROCESS_VMOS,
-                   vmos, num_vmos * sizeof(zx_info_vmo_t),
-                   &num_vmos, nullptr);
+    s = os.GetInfo(handle, ZX_INFO_PROCESS_VMOS, vmos, num_vmos * sizeof(zx_info_vmo_t), &num_vmos,
+                   nullptr);
     if (s != ZX_OK) {
       delete[] vmos;
       return s == ZX_ERR_BAD_STATE ? ZX_OK : s;

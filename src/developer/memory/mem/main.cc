@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <iostream>
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/strings/string_number_conversions.h>
 #include <zircon/status.h>
 
+#include <iostream>
+
 #include "src/developer/memory/metrics/capture.h"
-#include "src/developer/memory/metrics/summary.h"
 #include "src/developer/memory/metrics/printer.h"
+#include "src/developer/memory/metrics/summary.h"
 
 using namespace memory;
 
@@ -17,20 +18,19 @@ int main(int argc, const char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
 
   if (command_line.HasOption("help")) {
-    std::cout
-        << "Usage: mem [options]\n"
-           "  Prints system-wide task and memory\n\n"
-           "  Memory numbers are triplets P,S,T\n"
-           "  P: Private bytes\n"
-           "  S: Total bytes scaled by 1/# processes sharing each byte\n"
-           "  T: Total bytes\n"
-           "     S and T are inclusive of P\n\n"
-           " Options:\n"
-           " [default] Human readable representation of process and vmo groups\n"
-           " --print   Machine readable representation of proccess and vmos\n"
-           " --output  CSV of process memory\n"
-           "           --repeat=N Runs forever, outputing every N seconds\n"
-           "           --pid=N    Output vmo groups of process pid instead\n";
+    std::cout << "Usage: mem [options]\n"
+                 "  Prints system-wide task and memory\n\n"
+                 "  Memory numbers are triplets P,S,T\n"
+                 "  P: Private bytes\n"
+                 "  S: Total bytes scaled by 1/# processes sharing each byte\n"
+                 "  T: Total bytes\n"
+                 "     S and T are inclusive of P\n\n"
+                 " Options:\n"
+                 " [default] Human readable representation of process and vmo groups\n"
+                 " --print   Machine readable representation of proccess and vmos\n"
+                 " --output  CSV of process memory\n"
+                 "           --repeat=N Runs forever, outputing every N seconds\n"
+                 "           --pid=N    Output vmo groups of process pid instead\n";
     return EXIT_SUCCESS;
   }
 

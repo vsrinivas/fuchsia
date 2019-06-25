@@ -8,17 +8,18 @@
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 
-namespace memory {
+namespace monitor {
 namespace test {
 
 using namespace fuchsia::memory;
 using namespace memory;
+using namespace monitor;
 
 class MonitorUnitTest : public gtest::TestLoopFixture {
  protected:
   MonitorUnitTest()
-      : monitor_(std::make_unique<Monitor>(context_provider_.TakeContext(),
-                                           fxl::CommandLine{}, dispatcher())) {}
+      : monitor_(std::make_unique<Monitor>(context_provider_.TakeContext(), fxl::CommandLine{},
+                                           dispatcher())) {}
 
   void TearDown() override {
     monitor_.reset();
@@ -64,4 +65,4 @@ TEST_F(MonitorUnitTest, FreeBytes) {
 }
 
 }  // namespace test
-}  // namespace memory
+}  // namespace monitor

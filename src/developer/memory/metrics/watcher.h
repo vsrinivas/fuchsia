@@ -17,7 +17,7 @@ class Watcher {
  public:
   // Constructs a new Watcher which will check memory usage at the rate
   // specified by |poll_frequency|, using the |async_dispatcher|.
-  // Each time usage increasess by at least |high_water_threshold| the 
+  // Each time usage increasess by at least |high_water_threshold| the
   // |high_water_cb| will be called.
   // |capture_cb| is used to access memory usage.
   Watcher(zx::duration poll_frequency, uint64_t high_water_threshold,
