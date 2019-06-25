@@ -21,12 +21,18 @@ use failure::Fail;
 use futures::{compat::Stream01CompatExt, prelude::*};
 use http::response::Parts;
 use log::{error, info, warn};
+use std::cell::RefCell;
+use std::fmt;
+use std::rc::Rc;
 use std::str::Utf8Error;
 use std::time::SystemTime;
 
 pub mod update_check;
 
 mod timer;
+#[cfg(test)]
+pub use timer::MockTimer;
+pub use timer::StubTimer;
 pub use timer::Timer;
 
 /// This is the core state machine for a client's update check.  It is instantiated and used to
@@ -49,6 +55,39 @@ where
     installer: IN,
 
     timer: TM,
+
+    /// Context for update check.
+    context: update_check::Context,
+
+    /// The current State of the StateMachine.
+    state: State,
+
+    /// Called whenever the state is changed.
+    state_callback: Option<Box<StateCallback>>,
+
+    /// The list of apps used for update check.
+    apps: Vec<App>,
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub enum State {
+    Idle,
+    CheckingForUpdates,
+    UpdateAvailable,
+    PerformingUpdate,
+    WaitingForReboot,
+    FinalizingUpdate,
+    EncounteredError,
+}
+
+// We need to define our own trait because we need Debug trait but FnMut doesn't implement it.
+pub trait StateCallback: FnMut(State) + 'static {}
+impl<T: FnMut(State) + 'static> StateCallback for T {}
+
+impl fmt::Debug for StateCallback {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "StateCallback")
+    }
 }
 
 /// This is the set of errors that can occur when making a request to Omaha.  This is an internal
@@ -136,11 +175,26 @@ where
     TM: Timer,
 {
     pub fn new(policy_engine: PE, http: HR, installer: IN, config: &Config, timer: TM) -> Self {
-        StateMachine { client_config: config.clone(), policy_engine, http, installer, timer }
+        StateMachine {
+            client_config: config.clone(),
+            policy_engine,
+            http,
+            installer,
+            timer,
+            context: Self::load_context(),
+            state: State::Idle,
+            state_callback: None,
+            apps: vec![],
+        }
+    }
+
+    /// Add |apps| to the list of apps the StateMachine use for update check.
+    pub fn add_apps(&mut self, mut apps: Vec<App>) {
+        self.apps.append(&mut apps);
     }
 
     /// Load and initialize update check context from persistent storage.
-    fn load_context(&mut self) -> update_check::Context {
+    fn load_context() -> update_check::Context {
         // TODO: Read last_update_time, server_dictated_poll_interval, etc from storage.
         update_check::Context {
             schedule: UpdateCheckSchedule {
@@ -152,92 +206,119 @@ where
         }
     }
 
+    /// Need to do this in a mutable method because the borrow checker isn't smart enough to know
+    /// that different fields of the same struct (even if it's not self) are separate variables and
+    /// can be borrowed at the same time.
+    async fn update_next_update_time(&mut self) {
+        self.context.schedule = await!(self.policy_engine.compute_next_update_time(
+            &self.apps,
+            &self.context.schedule,
+            &self.context.state,
+        ));
+    }
+
     /// Start the StateMachine to do periodic update check in the background. The future this
     /// function returns never finishes!
-    pub async fn start(&mut self, mut apps: Vec<App>) {
-        let mut context = self.load_context();
-
+    pub async fn start(state_machine_ref: Rc<RefCell<Self>>) {
         loop {
-            context.schedule = await!(self.policy_engine.compute_next_update_time(
-                &apps,
-                &context.schedule,
-                &context.state,
-            ));
-            // Wait if |next_update_time| is in the future.
-            if let Ok(duration) = context.schedule.next_update_time.duration_since(clock::now()) {
-                let date_time = DateTime::<Utc>::from(context.schedule.next_update_time);
-                info!("Waiting until {} for the next update check...", date_time.to_rfc3339());
+            {
+                let mut state_machine = state_machine_ref.borrow_mut();
+                await!(state_machine.update_next_update_time());
+                // Wait if |next_update_time| is in the future.
+                if let Ok(duration) =
+                    state_machine.context.schedule.next_update_time.duration_since(clock::now())
+                {
+                    let date_time =
+                        DateTime::<Utc>::from(state_machine.context.schedule.next_update_time);
+                    info!("Waiting until {} for the next update check...", date_time.to_rfc3339());
 
-                await!(self.timer.wait(duration));
+                    let fut = state_machine.timer.wait(duration);
+                    // Don't borrow the state machine while waiting for the timer, because update
+                    // check could be triggered through an API while we are waiting.
+                    drop(state_machine);
+                    await!(fut);
+                }
             }
 
             let options = CheckOptions { source: InstallSource::ScheduledTask };
-            match await!(self.perform_update_check(options, &apps, context.clone())) {
-                Ok(result) => {
-                    info!("Update check result: {:?}", result);
-                    // Update check succeeded, update |last_update_time|.
-                    context.schedule.last_update_time = clock::now();
+            let mut state_machine = state_machine_ref.borrow_mut();
+            await!(state_machine.start_update_check(options));
+        }
+    }
 
-                    // Update the service dictated poll interval (which is an Option<>, so doesn't
-                    // need to be tested for existence here).
-                    context.state.server_dictated_poll_interval =
-                        result.server_dictated_poll_interval;
+    /// Perform update check and handle the result, including updating the update check context
+    /// and cohort.
+    pub async fn start_update_check(&mut self, options: CheckOptions) {
+        match await!(self.perform_update_check(options, self.context.clone())) {
+            Ok(result) => {
+                info!("Update check result: {:?}", result);
+                // Update check succeeded, update |last_update_time|.
+                self.context.schedule.last_update_time = clock::now();
 
-                    // Increment |consecutive_failed_update_attempts| if any app failed to install,
-                    // otherwise reset it to 0.
-                    if result
-                        .app_responses
-                        .iter()
-                        .any(|app| app.result == update_check::Action::InstallPlanExecutionError)
-                    {
-                        context.state.consecutive_failed_update_attempts += 1;
-                    } else {
-                        context.state.consecutive_failed_update_attempts = 0;
-                    }
+                // Update the service dictated poll interval (which is an Option<>, so doesn't
+                // need to be tested for existence here).
+                self.context.state.server_dictated_poll_interval =
+                    result.server_dictated_poll_interval;
 
-                    // Update check succeeded, reset |consecutive_failed_update_checks| to 0.
-                    context.state.consecutive_failed_update_checks = 0;
-
-                    // Update the cohort for each app from Omaha.
-                    for app_response in result.app_responses {
-                        for app in apps.iter_mut() {
-                            if app.id == app_response.app_id {
-                                app.cohort = app_response.cohort;
-                                break;
-                            }
-                        }
-                    }
-
-                    // TODO: update consecutive_proxied_requests
+                // Increment |consecutive_failed_update_attempts| if any app failed to install,
+                // otherwise reset it to 0.
+                if result
+                    .app_responses
+                    .iter()
+                    .any(|app| app.result == update_check::Action::InstallPlanExecutionError)
+                {
+                    self.context.state.consecutive_failed_update_attempts += 1;
+                } else {
+                    self.context.state.consecutive_failed_update_attempts = 0;
                 }
-                Err(error) => {
-                    error!("Update check failed: {:?}", error);
-                    // Update check failed, increment |consecutive_failed_update_checks|.
-                    context.state.consecutive_failed_update_checks += 1;
 
-                    match error {
-                        UpdateCheckError::ResponseParser(_) | UpdateCheckError::InstallPlan(_) => {
-                            // We talked to Omaha, update |last_update_time|.
-                            context.schedule.last_update_time = clock::now();
+                // Update check succeeded, reset |consecutive_failed_update_checks| to 0.
+                self.context.state.consecutive_failed_update_checks = 0;
+
+                // Update the cohort for each app from Omaha.
+                for app_response in result.app_responses {
+                    for app in self.apps.iter_mut() {
+                        if app.id == app_response.app_id {
+                            app.cohort = app_response.cohort;
+                            break;
                         }
-                        _ => {}
                     }
+                }
+
+                // TODO: update consecutive_proxied_requests
+            }
+            Err(error) => {
+                error!("Update check failed: {:?}", error);
+                // Update check failed, increment |consecutive_failed_update_checks|.
+                self.context.state.consecutive_failed_update_checks += 1;
+
+                match error {
+                    UpdateCheckError::ResponseParser(_) | UpdateCheckError::InstallPlan(_) => {
+                        // We talked to Omaha, update |last_update_time|.
+                        self.context.schedule.last_update_time = clock::now();
+                    }
+                    _ => {}
                 }
             }
+        }
+
+        if self.state != State::WaitingForReboot {
+            self.set_state(State::Idle);
         }
     }
 
     /// This function constructs the chain of async futures needed to perform all of the async tasks
     /// that comprise an update check.
-    pub async fn perform_update_check<'a>(
-        &'a mut self,
+    pub async fn perform_update_check(
+        &mut self,
         options: CheckOptions,
-        apps: &'a [App],
         context: update_check::Context,
     ) -> Result<update_check::Response, UpdateCheckError> {
-        info!("Checking to see if an update check is allowed at this time for {:?}", apps);
+        // TODO: Move this check outside perform_update_check() so that FIDL server can know if
+        // update check is throttled.
+        info!("Checking to see if an update check is allowed at this time for {:?}", self.apps);
         let decision = await!(self.policy_engine.update_check_allowed(
-            apps,
+            &self.apps,
             &context.schedule,
             &context.state,
             &options,
@@ -267,9 +348,11 @@ where
             }
         };
 
+        self.set_state(State::CheckingForUpdates);
+
         // Construct a request for the app(s).
         let mut request_builder = RequestBuilder::new(&self.client_config, &request_params);
-        for app in apps {
+        for app in &self.apps {
             request_builder = request_builder.add_update_check(app);
         }
 
@@ -277,23 +360,23 @@ where
             Ok(res) => res,
             Err(OmahaRequestError::Json(e)) => {
                 error!("Unable to construct request body! {:?}", e);
-                // TODO:  Report progress status
+                self.set_state(State::EncounteredError);
                 return Err(UpdateCheckError::OmahaRequest(e.into()));
             }
             Err(OmahaRequestError::HttpBuilder(e)) => {
                 error!("Unable to construct HTTP request! {:?}", e);
-                // TODO:  Report progress status
+                self.set_state(State::EncounteredError);
                 return Err(UpdateCheckError::OmahaRequest(e.into()));
             }
             Err(OmahaRequestError::Hyper(e)) => {
                 warn!("Unable to contact Omaha: {:?}", e);
-                // TODO:  Report progress status
+                self.set_state(State::EncounteredError);
                 // TODO:  Parse for proper retry behavior
                 return Err(UpdateCheckError::OmahaRequest(e.into()));
             }
             Err(OmahaRequestError::HttpStatus(e)) => {
                 warn!("Unable to contact Omaha: {:?}", e);
-                // TODO:  Report progress status
+                self.set_state(State::EncounteredError);
                 // TODO:  Parse for proper retry behavior
                 return Err(UpdateCheckError::OmahaRequest(e.into()));
             }
@@ -303,12 +386,7 @@ where
             Ok(res) => res,
             Err(err) => {
                 warn!("Unable to parse Omaha response: {:?}", err);
-                await!(self.report_error_event(
-                    apps,
-                    &request_params,
-                    EventErrorCode::ParseResponse,
-                ));
-                // TODO: Report progress status (error)
+                await!(self.report_error(&request_params, EventErrorCode::ParseResponse));
                 return Err(UpdateCheckError::ResponseParser(err));
             }
         };
@@ -331,17 +409,13 @@ where
             info!(
                 "At least one app has an update, proceeding to build and process an Install Plan"
             );
+            self.set_state(State::UpdateAvailable);
 
             let install_plan = match IN::InstallPlan::try_create_from(&response) {
                 Ok(plan) => plan,
                 Err(e) => {
                     error!("Unable to construct install plan! {}", e);
-                    await!(self.report_error_event(
-                        apps,
-                        &request_params,
-                        EventErrorCode::ConstructInstallPlan
-                    ));
-                    // TODO: Report progress status (Error)
+                    await!(self.report_error(&request_params, EventErrorCode::ConstructInstallPlan));
                     return Err(UpdateCheckError::InstallPlan(e.into()));
                 }
             };
@@ -361,7 +435,7 @@ where
                         event_result: EventResult::UpdateDeferred,
                         ..Event::default()
                     };
-                    await!(self.report_omaha_event(apps, &request_params, event));
+                    await!(self.report_omaha_event(&request_params, event));
 
                     // TODO: Report progress status (Deferred)
                     return Ok(Self::make_response(
@@ -371,91 +445,67 @@ where
                 }
                 UpdateDecision::DeniedByPolicy => {
                     warn!("Install plan was denied by Policy, see Policy logs for reasoning");
-                    await!(self.report_error_event(
-                        apps,
-                        &request_params,
-                        EventErrorCode::DeniedByPolicy
-                    ));
-
-                    // TODO: Report progress status (Error)
+                    await!(self.report_error(&request_params, EventErrorCode::DeniedByPolicy));
                     return Ok(Self::make_response(response, update_check::Action::DeniedByPolicy));
                 }
             }
 
-            // TODO: Report Status (Updating)
-            await!(self.report_success_event(
-                apps,
-                &request_params,
-                EventType::UpdateDownloadStarted
-            ));
+            self.set_state(State::PerformingUpdate);
+            await!(self.report_success_event(&request_params, EventType::UpdateDownloadStarted));
 
             let install_result = await!(self.installer.perform_install(&install_plan, None));
             if let Err(e) = install_result {
                 warn!("Installation failed: {}", e);
-                await!(self.report_error_event(
-                    apps,
-                    &request_params,
-                    EventErrorCode::Installation
-                ));
+                await!(self.report_error(&request_params, EventErrorCode::Installation));
                 return Ok(Self::make_response(
                     response,
                     update_check::Action::InstallPlanExecutionError,
                 ));
             }
 
-            // TODO: Report progress status (finishing)
-            await!(self.report_success_event(
-                apps,
-                &request_params,
-                EventType::UpdateDownloadFinished
-            ));
+            await!(self.report_success_event(&request_params, EventType::UpdateDownloadFinished));
+            self.set_state(State::FinalizingUpdate);
 
             // TODO: Verify downloaded update if needed.
 
-            await!(self.report_success_event(apps, &request_params, EventType::UpdateComplete));
+            await!(self.report_success_event(&request_params, EventType::UpdateComplete));
 
-            // TODO: Report progress status (update complete)
+            self.set_state(State::WaitingForReboot);
             Ok(Self::make_response(response, update_check::Action::Updated))
         }
     }
 
-    /// Report an error event to Omaha.
-    async fn report_error_event<'a>(
+    /// Set the current state to |EncounteredError| and report the error event to Omaha.
+    async fn report_error<'a>(
         &'a mut self,
-        apps: &'a [App],
         request_params: &'a RequestParams,
         errorcode: EventErrorCode,
     ) {
-        // TODO: Report ENCOUNTERED_ERROR status
+        self.set_state(State::EncounteredError);
+
         let event = Event {
             event_type: EventType::UpdateComplete,
             errorcode: Some(errorcode),
             ..Event::default()
         };
-        await!(self.report_omaha_event(apps, &request_params, event));
+        await!(self.report_omaha_event(&request_params, event));
     }
 
     /// Report a successful event to Omaha, for example download started, download finished, etc.
     async fn report_success_event<'a>(
         &'a mut self,
-        apps: &'a [App],
         request_params: &'a RequestParams,
         event_type: EventType,
     ) {
         let event = Event { event_type, event_result: EventResult::Success, ..Event::default() };
-        await!(self.report_omaha_event(apps, &request_params, event));
+        await!(self.report_omaha_event(&request_params, event));
     }
 
     /// Report the given |event| to Omaha, errors occurred during reporting are logged but not
     /// acted on.
-    async fn report_omaha_event<'a>(
-        &'a mut self,
-        apps: &'a [App],
-        request_params: &'a RequestParams,
-        event: Event,
-    ) {
+    async fn report_omaha_event<'a>(&'a mut self, request_params: &'a RequestParams, event: Event) {
         let mut request_builder = RequestBuilder::new(&self.client_config, &request_params);
-        for app in apps {
+        for app in &self.apps {
             request_builder = request_builder.add_event(app, &event);
         }
         if let Err(e) = await!(Self::do_omaha_request(&mut self.http, request_builder)) {
@@ -551,6 +601,19 @@ where
             server_dictated_poll_interval: None,
         }
     }
+
+    /// Update the state internally and send it to the callback.
+    fn set_state(&mut self, state: State) {
+        self.state = state.clone();
+        if let Some(callback) = &mut self.state_callback {
+            callback(state);
+        }
+    }
+
+    /// Set the callback function that will be called every time state changes.
+    pub fn set_state_callback(&mut self, callback: impl StateCallback) {
+        self.state_callback = Some(Box::new(callback));
+    }
 }
 
 #[cfg(test)]
@@ -560,7 +623,7 @@ pub mod tests {
     use crate::{
         common::{App, CheckOptions, ProtocolState, UpdateCheckSchedule, UserCounting},
         configuration::test_support::config_generator,
-        http_request::mock::MockHttpRequest,
+        http_request::{mock::MockHttpRequest, StubHttpRequest},
         installer::stub::StubInstaller,
         policy::{MockPolicyEngine, StubPolicyEngine},
         protocol::Cohort,
@@ -570,13 +633,10 @@ pub mod tests {
     use log::info;
     use pretty_assertions::assert_eq;
     use serde_json::json;
-    use std::cell::RefCell;
-    use std::rc::Rc;
     use std::time::{Duration, SystemTime};
 
     async fn do_update_check<'a, PE, HR, IN, TM>(
         state_machine: &'a mut StateMachine<PE, HR, IN, TM>,
-        apps: &'a [App],
     ) -> Result<update_check::Response, UpdateCheckError>
     where
         PE: PolicyEngine,
@@ -595,7 +655,8 @@ pub mod tests {
             state: ProtocolState::default(),
         };
 
-        await!(state_machine.perform_update_check(options, &apps, context))
+        state_machine.add_apps(make_test_apps());
+        await!(state_machine.perform_update_check(options, context))
     }
 
     fn make_test_apps() -> Vec<App> {
@@ -640,10 +701,9 @@ pub mod tests {
                 http,
                 StubInstaller::default(),
                 &config,
-                timer::MockTimer::new(),
+                StubTimer,
             );
-            let apps = make_test_apps();
-            await!(do_update_check(&mut state_machine, &apps)).unwrap();
+            await!(do_update_check(&mut state_machine)).unwrap();
 
             info!("update check complete!");
         });
@@ -674,10 +734,9 @@ pub mod tests {
                 http,
                 StubInstaller::default(),
                 &config,
-                timer::MockTimer::new(),
+                StubTimer,
             );
-            let apps = make_test_apps();
-            let response = await!(do_update_check(&mut state_machine, &apps)).unwrap();
+            let response = await!(do_update_check(&mut state_machine)).unwrap();
             assert_eq!("{00000000-0000-0000-0000-000000000001}", response.app_responses[0].app_id);
             assert_eq!(Some("1".into()), response.app_responses[0].cohort.id);
             assert_eq!(Some("stable-channel".into()), response.app_responses[0].cohort.name);
@@ -697,10 +756,9 @@ pub mod tests {
                 http,
                 StubInstaller::default(),
                 &config,
-                timer::MockTimer::new(),
+                StubTimer,
             );
-            let apps = make_test_apps();
-            match await!(do_update_check(&mut state_machine, &apps)) {
+            match await!(do_update_check(&mut state_machine)) {
                 Err(UpdateCheckError::ResponseParser(_)) => {} // expected
                 result @ _ => {
                     panic!("Unexpected result from do_update_check: {:?}", result);
@@ -714,6 +772,7 @@ pub mod tests {
                 errorcode: Some(EventErrorCode::ParseResponse),
                 ..Event::default()
             };
+            let apps = make_test_apps();
             request_builder = request_builder.add_event(&apps[0], &event);
             await!(assert_request(state_machine.http, request_builder));
         });
@@ -743,10 +802,9 @@ pub mod tests {
                 http,
                 StubInstaller::default(),
                 &config,
-                timer::MockTimer::new(),
+                StubTimer,
             );
-            let apps = make_test_apps();
-            match await!(do_update_check(&mut state_machine, &apps)) {
+            match await!(do_update_check(&mut state_machine)) {
                 Err(UpdateCheckError::InstallPlan(_)) => {} // expected
                 result @ _ => {
                     panic!("Unexpected result from do_update_check: {:?}", result);
@@ -760,6 +818,7 @@ pub mod tests {
                 errorcode: Some(EventErrorCode::ConstructInstallPlan),
                 ..Event::default()
             };
+            let apps = make_test_apps();
             request_builder = request_builder.add_event(&apps[0], &event);
             await!(assert_request(state_machine.http, request_builder));
         });
@@ -792,10 +851,9 @@ pub mod tests {
                 http,
                 StubInstaller { should_fail: true },
                 &config,
-                timer::MockTimer::new(),
+                StubTimer,
             );
-            let apps = make_test_apps();
-            let response = await!(do_update_check(&mut state_machine, &apps)).unwrap();
+            let response = await!(do_update_check(&mut state_machine)).unwrap();
             assert_eq!(Action::InstallPlanExecutionError, response.app_responses[0].result);
 
             let request_params = RequestParams::default();
@@ -805,6 +863,7 @@ pub mod tests {
                 errorcode: Some(EventErrorCode::Installation),
                 ..Event::default()
             };
+            let apps = make_test_apps();
             request_builder = request_builder.add_event(&apps[0], &event);
             await!(assert_request(state_machine.http, request_builder));
         });
@@ -838,10 +897,9 @@ pub mod tests {
                 http,
                 StubInstaller::default(),
                 &config,
-                timer::MockTimer::new(),
+                StubTimer,
             );
-            let apps = make_test_apps();
-            let response = await!(do_update_check(&mut state_machine, &apps)).unwrap();
+            let response = await!(do_update_check(&mut state_machine)).unwrap();
             assert_eq!(Action::DeferredByPolicy, response.app_responses[0].result);
 
             let request_params = RequestParams::default();
@@ -851,6 +909,7 @@ pub mod tests {
                 event_result: EventResult::UpdateDeferred,
                 ..Event::default()
             };
+            let apps = make_test_apps();
             request_builder = request_builder.add_event(&apps[0], &event);
             await!(assert_request(state_machine.http, request_builder));
         });
@@ -883,10 +942,9 @@ pub mod tests {
                 http,
                 StubInstaller::default(),
                 &config,
-                timer::MockTimer::new(),
+                StubTimer,
             );
-            let apps = make_test_apps();
-            let response = await!(do_update_check(&mut state_machine, &apps)).unwrap();
+            let response = await!(do_update_check(&mut state_machine)).unwrap();
             assert_eq!(Action::DeniedByPolicy, response.app_responses[0].result);
 
             let request_params = RequestParams::default();
@@ -896,6 +954,7 @@ pub mod tests {
                 errorcode: Some(EventErrorCode::DeniedByPolicy),
                 ..Event::default()
             };
+            let apps = make_test_apps();
             request_builder = request_builder.add_event(&apps[0], &event);
             await!(assert_request(state_machine.http, request_builder));
         });
@@ -904,9 +963,8 @@ pub mod tests {
     #[test]
     fn test_wait_timer() {
         let config = config_generator();
-        let mut http = MockHttpRequest::new(hyper::Response::new("".into()));
-        http.add_response(hyper::Response::new("".into()));
-        let mut timer = timer::MockTimer::new();
+        let http = StubHttpRequest;
+        let mut timer = MockTimer::new();
         timer.expect(Duration::from_secs(111));
         let next_update_time = clock::now() + Duration::from_secs(111);
         let policy_engine = MockPolicyEngine {
@@ -920,11 +978,13 @@ pub mod tests {
 
         let mut state_machine =
             StateMachine::new(policy_engine, http, StubInstaller::default(), &config, timer);
+        state_machine.add_apps(make_test_apps());
+        let state_machine = Rc::new(RefCell::new(state_machine));
 
         let mut pool = LocalPool::new();
         pool.spawner()
             .spawn_local(async move {
-                await!(state_machine.start(make_test_apps()));
+                await!(StateMachine::start(state_machine));
             })
             .unwrap();
         pool.run_until_stalled();
@@ -949,7 +1009,7 @@ pub mod tests {
         let response = serde_json::to_vec(&response).unwrap();
         let mut http = MockHttpRequest::new(hyper::Response::new(response.clone().into()));
         http.add_response(hyper::Response::new(response.into()));
-        let mut timer = timer::MockTimer::new();
+        let mut timer = MockTimer::new();
         // Run the update check twice and then block.
         timer.expect(Duration::from_secs(111));
         timer.expect(Duration::from_secs(111));
@@ -963,8 +1023,9 @@ pub mod tests {
             ..MockPolicyEngine::default()
         };
 
-        let state_machine =
+        let mut state_machine =
             StateMachine::new(policy_engine, http, StubInstaller::default(), &config, timer);
+        state_machine.add_apps(make_test_apps());
         let state_machine = Rc::new(RefCell::new(state_machine));
 
         {
@@ -972,8 +1033,7 @@ pub mod tests {
             let mut pool = LocalPool::new();
             pool.spawner()
                 .spawn_local(async move {
-                    let mut state_machine = state_machine.borrow_mut();
-                    await!(state_machine.start(make_test_apps()));
+                    await!(StateMachine::start(state_machine));
                 })
                 .unwrap();
             pool.run_until_stalled();
@@ -1019,15 +1079,55 @@ pub mod tests {
                 http,
                 StubInstaller::default(),
                 &config,
-                timer::MockTimer::new(),
+                StubTimer,
             );
-            let apps = make_test_apps();
-            let response = await!(do_update_check(&mut state_machine, &apps)).unwrap();
+            let response = await!(do_update_check(&mut state_machine)).unwrap();
 
             assert_eq!(
                 UserCounting::ClientRegulatedByDate(Some(1234567)),
                 response.app_responses[0].user_counting
             );
         });
+    }
+
+    #[test]
+    fn test_add_apps() {
+        let config = config_generator();
+        let mut state_machine = StateMachine::new(
+            StubPolicyEngine,
+            StubHttpRequest,
+            StubInstaller::default(),
+            &config,
+            StubTimer,
+        );
+        state_machine.add_apps(make_test_apps());
+        assert_eq!(state_machine.apps, make_test_apps());
+    }
+
+    #[test]
+    fn test_state_callback() {
+        let config = config_generator();
+        let mut state_machine = StateMachine::new(
+            StubPolicyEngine,
+            StubHttpRequest,
+            StubInstaller::default(),
+            &config,
+            StubTimer,
+        );
+        state_machine.add_apps(make_test_apps());
+        let actual_states = Vec::new();
+        let actual_states = Rc::new(RefCell::new(actual_states));
+        {
+            let actual_states = actual_states.clone();
+            state_machine.set_state_callback(move |state| {
+                let mut actual_states = actual_states.borrow_mut();
+                actual_states.push(state);
+            });
+        }
+        block_on(state_machine.start_update_check(CheckOptions::default()));
+        drop(state_machine);
+        let actual_states = actual_states.borrow();
+        let expected_states = vec![State::CheckingForUpdates, State::EncounteredError, State::Idle];
+        assert_eq!(*actual_states, expected_states);
     }
 }

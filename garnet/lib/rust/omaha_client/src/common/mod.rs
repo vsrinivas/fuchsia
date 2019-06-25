@@ -15,7 +15,7 @@ use std::time::SystemTime;
 /// only recommended method is the Client Regulated - Date method.
 ///
 /// See https://github.com/google/omaha/blob/master/doc/ServerProtocolV3.md#client-regulated-counting-date-based
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum UserCounting {
     ClientRegulatedByDate(
         /// Date (sent by the server) of the last contact with Omaha.
@@ -93,7 +93,7 @@ macro_rules! impl_from {
 impl_from!(&[u32], [u32; 1], [u32; 2], [u32; 3], [u32; 4]);
 
 /// The App struct holds information about an application to perform an update check for.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct App {
     /// This is the app_id that Omaha uses to identify a given application.
     pub id: String,

@@ -9,6 +9,7 @@ use omaha_client::{
     common::{App, CheckOptions, ProtocolState, UpdateCheckSchedule},
     installer::Plan,
     policy::{CheckDecision, Policy, PolicyData, PolicyEngine, UpdateDecision},
+    protocol::request::InstallSource,
     request_builder::RequestParams,
 };
 use std::time::Duration;
@@ -48,9 +49,15 @@ impl Policy for FuchsiaPolicy {
         _protocol_state: &ProtocolState,
         check_options: &CheckOptions,
     ) -> CheckDecision {
-        if policy_data.current_time >= scheduling.next_update_time {
+        // Always allow update check initiated by a user.
+        if check_options.source == InstallSource::OnDemand {
             CheckDecision::Ok(RequestParams {
-                source: check_options.source.clone(),
+                source: InstallSource::OnDemand,
+                use_configured_proxies: true,
+            })
+        } else if policy_data.current_time >= scheduling.next_update_time {
+            CheckDecision::Ok(RequestParams {
+                source: InstallSource::ScheduledTask,
                 use_configured_proxies: true,
             })
         } else {

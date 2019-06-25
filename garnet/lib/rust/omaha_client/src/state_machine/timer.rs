@@ -3,12 +3,22 @@
 // found in the LICENSE file.
 
 use futures::future::BoxFuture;
+use futures::prelude::*;
 use std::time::Duration;
 
 /// A Timer that can block for a duration specified.
 pub trait Timer {
     /// Returns a future that will block for a duration specified by |delay|.
-    fn wait(&mut self, delay: Duration) -> BoxFuture<()>;
+    fn wait(&mut self, delay: Duration) -> BoxFuture<'static, ()>;
+}
+
+/// A stub timer that doesn't wait.
+pub struct StubTimer;
+
+impl Timer for StubTimer {
+    fn wait(&mut self, _delay: Duration) -> BoxFuture<'static, ()> {
+        future::ready(()).boxed()
+    }
 }
 
 #[cfg(test)]
@@ -18,7 +28,6 @@ pub use mock::MockTimer;
 mod mock {
     use super::*;
     use futures::executor::{block_on, LocalPool};
-    use futures::prelude::*;
     use futures::task::LocalSpawnExt;
     use std::collections::VecDeque;
 
@@ -40,7 +49,7 @@ mod mock {
     }
 
     impl Timer for MockTimer {
-        fn wait(&mut self, delay: Duration) -> BoxFuture<()> {
+        fn wait(&mut self, delay: Duration) -> BoxFuture<'static, ()> {
             if let Some(duration) = self.expected_durations.pop_front() {
                 assert_eq!(duration, delay);
                 future::ready(()).boxed()

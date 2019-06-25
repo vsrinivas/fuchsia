@@ -12,7 +12,7 @@ use std::time::Duration;
 pub struct FuchsiaTimer;
 
 impl Timer for FuchsiaTimer {
-    fn wait(&mut self, delay: Duration) -> BoxFuture<()> {
+    fn wait(&mut self, delay: Duration) -> BoxFuture<'static, ()> {
         fasync::Timer::new(zx::Time::after(delay.into())).boxed()
     }
 }
