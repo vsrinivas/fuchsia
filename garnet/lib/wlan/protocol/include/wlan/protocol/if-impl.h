@@ -432,7 +432,7 @@ typedef struct wlanif_query_info {
 
 typedef struct wlanif_counter {
     uint64_t count;
-    char* name;
+    const char* name;
 } wlanif_counter_t;
 
 typedef struct wlanif_packet_count {
