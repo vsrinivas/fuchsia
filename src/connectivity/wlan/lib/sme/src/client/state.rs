@@ -812,6 +812,7 @@ fn to_associating_state(cfg: ClientConfig, cmd: ConnectCommand, mlme_sink: &Mlme
     mlme_sink.send(MlmeRequest::Associate(fidl_mlme::AssociateRequest {
         peer_sta_address: cmd.bss.bssid.clone(),
         rsn: s_rsne_data,
+        vendor_ies: None,
     }));
     State::Associating { cfg, cmd }
 }

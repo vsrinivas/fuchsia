@@ -594,6 +594,8 @@ struct AssociateRequest {
     array<uint8>:6 peer_sta_address;
     // TODO(hahnr): This field represents an IE and should thus be named RSNE.
     bytes? rsn;
+    // Serialized list of vendor IEs to be appended after all other associate request IEs.
+    bytes? vendor_ies;
 
     // etc
 };
