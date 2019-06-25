@@ -1,0 +1,43 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/clang/clang.gni")
+
+# Extracts the list of exported symbols from a prebuilt library meant to be
+# published to the SDK.
+#
+# Parameters
+#
+#   library
+#     Location of the prebuilt library.
+#
+#   symbols
+#     Location of the output symbol list. It should fall within the output
+#     directory for the build.
+
+template("extract_public_symbols") {
+  assert(defined(invoker.library), "library must be provided")
+  assert(defined(invoker.symbols), "symbols must be provided")
+
+  action(target_name) {
+    script = "//build/cpp/extract_public_symbols.sh"
+
+    forward_variables_from(invoker, [ "deps" ])
+
+    inputs = [
+      invoker.library,
+      rebase_path("$clang_prefix/llvm-nm", ".", root_build_dir),
+    ]
+
+    outputs = [
+      invoker.symbols,
+    ]
+
+    args = [
+      "$clang_prefix/llvm-nm",
+      rebase_path(invoker.library),
+      rebase_path(invoker.symbols),
+    ]
+  }
+}

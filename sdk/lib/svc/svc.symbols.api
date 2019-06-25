@@ -1,0 +1,4 @@
+svc_dir_add_service
+svc_dir_create
+svc_dir_destroy
+svc_dir_remove_service

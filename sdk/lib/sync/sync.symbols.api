@@ -1,0 +1,15 @@
+sync_completion_reset
+sync_completion_signal
+sync_completion_signal_requeue
+sync_completion_signaled
+sync_completion_wait
+sync_completion_wait_deadline
+sync_condition_broadcast
+sync_condition_signal
+sync_condition_timedwait
+sync_condition_wait
+sync_mutex_lock
+sync_mutex_lock_with_waiter
+sync_mutex_timedlock
+sync_mutex_trylock
+sync_mutex_unlock

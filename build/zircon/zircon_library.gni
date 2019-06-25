@@ -3,7 +3,9 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/zircon.gni")
+import("//build/cpp/extract_public_symbols.gni")
 import("//build/cpp/verify_pragma_once.gni")
+import("//build/cpp/verify_public_symbols.gni")
 import("//build/sdk/sdk_atom.gni")
 
 # Define a library in //zircon/public/lib/$target_name/BUILD.gn.
@@ -158,6 +160,37 @@ template("zircon_library") {
       headers = library_headers
     }
 
+    lib_to_extract_symbols = ""
+    foreach(file, invoker.install) {
+      if (get_path_info(file.dest, "dir") == "lib") {
+        # TODO(DX-688): formulate a policy around and handle static archives
+        if (get_path_info(file.dest, "extension") != "a") {
+          assert(lib_to_extract_symbols == "",
+                 "There should be only one entry under lib")
+          lib_to_extract_symbols = file.source
+        }
+      }
+    }
+    if (lib_to_extract_symbols != "") {
+      lib_name = library
+      generated_symbols_file = "$target_gen_dir/$lib_name.symbols.api"
+      reference_symbols_file = "//sdk/lib/$lib_name/$lib_name.symbols.api"
+      extract_public_symbols("$library-extract_public_symbols") {
+        library = rebase_path(lib_to_extract_symbols, "", zircon_root_build_dir)
+
+        # No dependencies, since all of Zircon has been built
+        symbols = generated_symbols_file
+      }
+      verify_public_symbols("$library-verify_public_symbols") {
+        current = generated_symbols_file
+        reference = reference_symbols_file
+        library_name = "(zircon) ${lib_name}"
+        deps = [
+          ":$library-extract_public_symbols",
+        ]
+      }
+    }
+
     is_shared = false
     if (invoker.install != []) {
       _debug = invoker.debug
@@ -279,6 +312,9 @@ template("zircon_library") {
       }
 
       non_sdk_deps = [ ":$library-cpp_pragma" ]
+      if (lib_to_extract_symbols != "") {
+        non_sdk_deps += [ ":$library-verify_public_symbols" ]
+      }
       if (invoker.debug != []) {
         non_sdk_deps += [ ":$library-meta" ]
         file_list = "$target_out_dir/$library.debug.manifest"

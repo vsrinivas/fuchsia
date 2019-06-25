@@ -1,0 +1,57 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/clang/clang.gni")
+import("//build/sdk/config.gni")
+
+# Verifies the list of public symbols from a prebuilt library to be added to
+# the SDK against a golden file.
+# Additionally, checks that none of the symbols is a C++ symbol.
+#
+# Parameters
+#
+#   current
+#     Location of generated symbols file from the extract_public_symbols action.
+#
+#   reference
+#     Location of checked in reference symbol file.
+#
+#   library_name
+#     A human-readable library name for debugging purposes.
+
+template("verify_public_symbols") {
+  assert(defined(invoker.current), "current must be provided")
+  assert(defined(invoker.reference), "reference must be provided")
+  assert(defined(invoker.library_name), "library_name must be provided")
+
+  stamp_file = "$target_gen_dir/$target_name.public_symbols.verified.stamp"
+
+  action(target_name) {
+    script = "//build/cpp/verify_public_symbols.sh"
+
+    forward_variables_from(invoker, [ "deps" ])
+
+    inputs = [
+      invoker.current,
+      invoker.reference,
+      rebase_path("$clang_prefix/llvm-cxxfilt", ".", root_build_dir),
+    ]
+
+    outputs = [
+      stamp_file,
+    ]
+
+    args = [
+      "$clang_prefix/llvm-cxxfilt",
+      invoker.library_name,
+      rebase_path(invoker.current),
+      rebase_path(invoker.reference),
+      rebase_path(stamp_file),
+    ]
+
+    if (warn_on_sdk_changes) {
+      args += [ "--warn" ]
+    }
+  }
+}
