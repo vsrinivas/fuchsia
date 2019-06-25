@@ -38,7 +38,6 @@ library("object") {
     "profile_dispatcher.cc",
     "resource.cc",
     "resource_dispatcher.cc",
-    "semaphore.cc",
     "socket_dispatcher.cc",
     "suspend_token_dispatcher.cc",
     "thread_dispatcher.cc",
@@ -94,7 +93,6 @@ source_set("tests") {
     "job_policy_tests.cc",
     "mbuf_tests.cc",
     "message_packet_tests.cc",
-    "semaphore_tests.cc",
     "state_tracker_tests.cc",
   ]
   deps = [

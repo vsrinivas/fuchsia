@@ -4,9 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <object/semaphore.h>
-
 #include <err.h>
+#include <kernel/semaphore.h>
 #include <kernel/thread_lock.h>
 #include <zircon/compiler.h>
 

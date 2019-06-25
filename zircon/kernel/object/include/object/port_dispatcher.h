@@ -9,10 +9,10 @@
 #include <object/dispatcher.h>
 #include <object/excp_port.h>
 #include <object/handle.h>
-#include <object/semaphore.h>
 #include <object/state_observer.h>
 
 #include <zircon/rights.h>
+#include <kernel/semaphore.h>
 #include <zircon/syscalls/port.h>
 #include <zircon/types.h>
 

@@ -17,6 +17,7 @@ source_set("kernel") {
     "mutex.cc",
     "owned_wait_queue.cc",
     "percpu.cc",
+    "semaphore.cc",
     "thread.cc",
     "timer.cc",
     "wait.cc",
@@ -29,6 +30,7 @@ source_set("kernel") {
   }
 
   deps = [
+    ":tests",
     "$zx/kernel/dev/interrupt",
     "$zx/kernel/lib/console",
     "$zx/kernel/lib/counters",
@@ -41,5 +43,16 @@ source_set("kernel") {
     "$zx/kernel/vm",
     "$zx/system/ulib/explicit-memory",
     "$zx/system/ulib/zircon-internal",
+  ]
+}
+
+source_set("tests") {
+  # TODO: testonly = true
+  sources = [
+    "semaphore_tests.cc",
+  ]
+  deps = [
+    "$zx/kernel/lib/console",
+    "$zx/kernel/lib/unittest",
   ]
 }

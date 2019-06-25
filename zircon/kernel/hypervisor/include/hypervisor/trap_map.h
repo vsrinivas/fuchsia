@@ -10,8 +10,8 @@
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/ref_ptr.h>
 #include <hypervisor/state_invalidator.h>
+#include <kernel/semaphore.h>
 #include <object/port_dispatcher.h>
-#include <object/semaphore.h>
 
 namespace hypervisor {
 

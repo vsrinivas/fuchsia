@@ -6,8 +6,8 @@
 
 #include <lib/unittest/unittest.h>
 #include <lockdep/lockdep.h>
-#include <object/semaphore.h>
 #include <platform.h>
+#include <kernel/semaphore.h>
 #include <kernel/thread_lock.h>
 
 using lockdep::Guard;
