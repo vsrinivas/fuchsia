@@ -1,0 +1,13 @@
+{
+    "program": {
+        "binary": "bin/create_ssd1306"
+    },
+    "sandbox": {
+        "dev": [
+            "class/serial",
+            "class/serial-impl",
+            "class/display-led"
+        ],
+        "services": []
+    }
+}

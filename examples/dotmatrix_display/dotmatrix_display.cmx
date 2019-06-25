@@ -1,0 +1,13 @@
+{
+    "program": {
+        "binary": "bin/dotmatrix_display"
+    },
+    "sandbox": {
+        "dev": [
+            "class/serial",
+            "class/serial-impl",
+            "class/dotmatrix-display"
+        ],
+        "services": []
+    }
+}

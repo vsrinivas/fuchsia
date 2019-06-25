@@ -1,0 +1,64 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+executable("bin") {
+  output_name = "dotmatrix_display"
+
+  sources = [
+    "fuchsia_logo.cc",
+    "main.cc",
+    "space_invaders.cc",
+  ]
+
+  deps = [
+    "//zircon/public/fidl/fuchsia-hardware-dotmatrixdisplay:fuchsia-hardware-dotmatrixdisplay_c",
+    "//zircon/public/fidl/fuchsia-hardware-ftdi:fuchsia-hardware-ftdi_c",
+    "//zircon/public/lib/fdio",
+  ]
+}
+
+executable("bin2") {
+  output_name = "create_ssd1306"
+
+  sources = [
+    "create_ssd1306.cc",
+  ]
+
+  deps = [
+    "//zircon/public/fidl/fuchsia-hardware-ftdi:fuchsia-hardware-ftdi_c",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/fdio",
+  ]
+}
+
+package("dotmatrix_display") {
+  deps = [
+    ":bin",
+    ":bin2",
+  ]
+
+  binaries = [
+    {
+      name = "dotmatrix_display"
+      shell = true
+    },
+    {
+      name = "create_ssd1306"
+      shell = true
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("dotmatrix_display.cmx")
+      dest = "dotmatrix_display.cmx"
+    },
+    {
+      path = rebase_path("create_ssd1306.cmx")
+      dest = "create_ssd1306.cmx"
+    },
+  ]
+}
