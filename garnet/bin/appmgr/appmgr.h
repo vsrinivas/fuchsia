@@ -20,6 +20,7 @@ namespace component {
 
 struct AppmgrArgs {
   zx_handle_t pa_directory_request;
+  fuchsia::sys::ServiceListPtr root_realm_services;
   const std::shared_ptr<sys::ServiceDirectory> environment_services;
   std::string sysmgr_url;
   fidl::VectorPtr<std::string> sysmgr_args;

@@ -4,11 +4,7 @@
 
 #include "garnet/bin/appmgr/namespace.h"
 
-#include <fuchsia/device/manager/cpp/fidl.h>
-#include <fuchsia/kernel/cpp/fidl.h>
 #include <fuchsia/process/cpp/fidl.h>
-#include <fuchsia/scheduler/cpp/fidl.h>
-#include <fuchsia/virtualconsole/cpp/fidl.h>
 #include <lib/async/default.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
@@ -19,8 +15,8 @@
 
 #include "garnet/bin/appmgr/job_provider_impl.h"
 #include "garnet/bin/appmgr/realm.h"
-#include "garnet/bin/appmgr/util.h"
 #include "garnet/bin/appmgr/storage_watchdog.h"
+#include "garnet/bin/appmgr/util.h"
 
 namespace component {
 
@@ -31,6 +27,9 @@ Namespace::Namespace(fxl::RefPtr<Namespace> parent, Realm* realm,
       services_(fbl::AdoptRef(new ServiceProviderDirImpl(service_whitelist))),
       job_provider_(fbl::AdoptRef(new JobProviderImpl(realm))),
       realm_(realm) {
+  // WARNING! Do not add new services here! This makes services available in all
+  // component namespaces ambiently without requiring proper routing between
+  // realms, and this list should not be expanded.
   services_->AddService(
       fuchsia::sys::Environment::Name_,
       fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
@@ -62,6 +61,9 @@ Namespace::Namespace(fxl::RefPtr<Namespace> parent, Realm* realm,
                       std::move(channel)));
         return ZX_OK;
       })));
+  // WARNING! Do not add new services here! This makes services available in all
+  // component namespaces ambiently without requiring proper routing between
+  // realms, and this list should not be expanded.
 
   if (additional_services) {
     auto& names = additional_services->names;
@@ -95,46 +97,8 @@ Namespace::Namespace(fxl::RefPtr<Namespace> parent, Realm* realm,
 
   // If any of these services aren't in additional_services or the parent
   // namespace, add them here directly. (AddService skips duplicate services)
-  services_->AddService(
-      fuchsia::scheduler::ProfileProvider::Name_,
-      fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
-        realm_->environment_services()->Connect(
-            fidl::InterfaceRequest<fuchsia::scheduler::ProfileProvider>(
-                std::move(channel)));
-        return ZX_OK;
-      })));
-  services_->AddService(
-      fuchsia::kernel::DebugBroker::Name_,
-      fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
-        realm_->environment_services()->Connect(
-            fidl::InterfaceRequest<fuchsia::kernel::DebugBroker>(
-                std::move(channel)));
-        return ZX_OK;
-      })));
-  services_->AddService(
-      fuchsia::device::manager::DebugDumper::Name_,
-      fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
-        realm_->environment_services()->Connect(
-            fidl::InterfaceRequest<fuchsia::device::manager::DebugDumper>(
-                std::move(channel)));
-        return ZX_OK;
-      })));
-  services_->AddService(
-      fuchsia::device::manager::Administrator::Name_,
-      fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
-        realm_->environment_services()->Connect(
-            fidl::InterfaceRequest<fuchsia::device::manager::Administrator>(
-                std::move(channel)));
-        return ZX_OK;
-      })));
-  services_->AddService(
-      fuchsia::virtualconsole::SessionManager::Name_,
-      fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
-        realm_->environment_services()->Connect(
-            fidl::InterfaceRequest<fuchsia::virtualconsole::SessionManager>(
-                std::move(channel)));
-        return ZX_OK;
-      })));
+  // TODO: Add to RootRealmServices in main.cc instead of adding automatically
+  // to all namespaces here.
   services_->AddService(
       CacheControl::Name_,
       fbl::AdoptRef(new fs::Service([this](zx::channel channel) {

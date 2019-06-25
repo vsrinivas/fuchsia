@@ -31,6 +31,10 @@
 namespace sysmgr {
 namespace {
 
+const char kEchoServerURL[] =
+    "fuchsia-pkg://fuchsia.com/sysmgr_integration_tests#meta/"
+    "echo_server_rust.cmx";
+
 class PackageResolverMock : public fuchsia::pkg::PackageResolver {
  public:
   explicit PackageResolverMock(zx_status_t status) : status_(status) {}
@@ -157,9 +161,7 @@ TEST_F(PackageUpdatingLoaderTest, Success) {
   // by trying to use a service offered by it.
   zx::channel h1, h2;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
-  auto launch_info = CreateLaunchInfo(
-      "fuchsia-pkg://fuchsia.com/echo_server_cpp#meta/echo_server_cpp.cmx",
-      std::move(h2));
+  auto launch_info = CreateLaunchInfo(kEchoServerURL, std::move(h2));
   auto controller = env_->CreateComponent(std::move(launch_info));
   fidl::examples::echo::EchoPtr echo;
   ConnectToServiceAt(std::move(h1), echo.NewRequest());
@@ -171,7 +173,8 @@ TEST_F(PackageUpdatingLoaderTest, Success) {
   // Verify that Resolve was called with the expected arguments.
   fuchsia::pkg::UpdatePolicy policy;
   policy.fetch_if_absent = true;
-  constexpr char kResolvedUrl[] = "fuchsia-pkg://fuchsia.com/echo_server_cpp/0";
+  constexpr char kResolvedUrl[] =
+      "fuchsia-pkg://fuchsia.com/sysmgr_integration_tests/0";
   const auto& args = resolver_service.args();
   EXPECT_EQ(std::get<0>(args), std::string(kResolvedUrl));
   EXPECT_EQ(std::get<1>(args), std::vector<std::string>{});
@@ -188,9 +191,7 @@ TEST_F(PackageUpdatingLoaderTest, Failure) {
   // should succeed even though the update failed.
   zx::channel h1, h2;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
-  auto launch_info = CreateLaunchInfo(
-      "fuchsia-pkg://fuchsia.com/echo_server_cpp#meta/echo_server_cpp.cmx",
-      std::move(h2));
+  auto launch_info = CreateLaunchInfo(kEchoServerURL, std::move(h2));
   auto controller = env_->CreateComponent(std::move(launch_info));
   fidl::examples::echo::EchoPtr echo;
   ConnectToServiceAt(std::move(h1), echo.NewRequest());
@@ -206,9 +207,7 @@ TEST_F(PackageUpdatingLoaderTest, HandleResolverDisconnectCorrectly) {
   ServiceProviderMock service_provider(&resolver_service);
   Init(&service_provider);
 
-  auto launch_url =
-      "fuchsia-pkg://fuchsia.com/echo_server_cpp#meta/echo_server_cpp.cmx";
-
+  auto launch_url = kEchoServerURL;
   {
     // Launch a component in the environment, and prove it started successfully
     // by trying to use a service offered by it.

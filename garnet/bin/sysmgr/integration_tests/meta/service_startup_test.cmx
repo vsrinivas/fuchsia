@@ -1,10 +1,24 @@
 {
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fidl.examples.echo.Echo": "fuchsia-pkg://fuchsia.com/sysmgr_integration_tests#meta/echo_server_rust.cmx"
+            }
+        }
+    },
     "program": {
         "binary": "test/service_startup_test"
     },
     "sandbox": {
-        "services": [ "fuchsia.process.Launcher" ],
-        "pkgfs": [ "packages" ],
-        "system": [ "data/appmgr" ]
+        "pkgfs": [
+            "packages"
+        ],
+        "services": [
+            "fidl.examples.echo.Echo",
+            "fuchsia.process.Launcher"
+        ],
+        "system": [
+            "data/appmgr"
+        ]
     }
 }

@@ -1,4 +1,11 @@
 {
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.scheduler.ProfileProvider"
+            ]
+        }
+    },
     "program": {
         "binary": "test/input_unittests"
     },

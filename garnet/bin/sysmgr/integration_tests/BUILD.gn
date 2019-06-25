@@ -59,6 +59,7 @@ executable("service_startup_test") {
   deps = [
     ":interface",
     "//garnet/bin/appmgr:appmgr_for_test",
+    "//garnet/examples/fidl/services:echo",
     "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
@@ -126,4 +127,7 @@ test_package("integration_tests") {
       dest = "mock_resolver.cmx"
     },
   ]
+
+  components =
+      [ "//garnet/examples/fidl/echo_server_rust:echo_server_rust_component" ]
 }

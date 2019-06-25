@@ -28,13 +28,13 @@ Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
       storage_watchdog_(StorageWatchdog("/data", "/data/cache")) {
   // 0. Start storage watchdog for cache storage
   storage_watchdog_.Run(dispatcher);
+
   // 1. Create root realm.
-  RealmArgs realm_args = RealmArgs::Make(
-      nullptr, kRootLabel, "/data", "/data/cache", args.environment_services,
-      args.run_virtual_console, fuchsia::sys::EnvironmentOptions{});
-
+  RealmArgs realm_args = RealmArgs::MakeWithAdditionalServices(
+      nullptr, kRootLabel, "/data", "/data/cache",
+      std::move(args.environment_services), args.run_virtual_console,
+      std::move(args.root_realm_services), fuchsia::sys::EnvironmentOptions{});
   root_realm_ = Realm::Create(std::move(realm_args));
-
   FXL_CHECK(root_realm_) << "Cannot create root realm ";
 
   // 2. Publish outgoing directories.

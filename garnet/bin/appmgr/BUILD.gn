@@ -62,8 +62,6 @@ source_set("lib") {
     "//third_party/rapidjson",
     "//zircon/public/fidl/fuchsia-inspect",
     "//zircon/public/fidl/fuchsia-process",
-    "//zircon/public/fidl/fuchsia-scheduler",
-    "//zircon/public/fidl/fuchsia-virtualconsole",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/fs",
@@ -71,11 +69,6 @@ source_set("lib") {
     "//zircon/public/lib/loader-service",
     "//zircon/public/lib/trace-provider-with-fdio",
     "//zircon/public/lib/zx",
-  ]
-
-  deps = [
-    "//zircon/public/fidl/fuchsia-device-manager",
-    "//zircon/public/fidl/fuchsia-kernel",
   ]
 
   defines = [ "_ALL_SOURCE=1" ]
@@ -112,6 +105,10 @@ executable("bin") {
   deps = [
     ":lib",
     "//sdk/lib/sys/cpp",
+    "//zircon/public/fidl/fuchsia-device-manager",
+    "//zircon/public/fidl/fuchsia-kernel",
+    "//zircon/public/fidl/fuchsia-scheduler",
+    "//zircon/public/fidl/fuchsia-virtualconsole",
   ]
 
   # appmgr starts early in the boot sequence before shared libraries from

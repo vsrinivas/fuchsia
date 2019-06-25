@@ -111,9 +111,14 @@ App::App(Config config)
   service_list->host_directory = OpenAsDirectory();
   fuchsia::sys::EnvironmentPtr environment;
   component_context_->svc()->Connect(environment.NewRequest());
+  // Inherit services from the root appmgr realm, which includes certain
+  // services currently implemented by non-component processes that are passed
+  // through appmgr to this sys realm. Note that |service_list| will override
+  // the inherited services if it includes services also in the root realm.
+  fuchsia::sys::EnvironmentOptions options = {.inherit_parent_services = true};
   environment->CreateNestedEnvironment(
       std::move(env_request), env_controller_.NewRequest(), kDefaultLabel,
-      std::move(service_list), {});
+      std::move(service_list), std::move(options));
 
   // Connect to startup services
   for (auto& startup_service : config.TakeStartupServices()) {

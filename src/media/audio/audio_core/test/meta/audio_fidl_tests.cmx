@@ -3,7 +3,10 @@
         "fuchsia.test": {
             "injected-services": {
                 "fuchsia.media.AudioCore": "fuchsia-pkg://fuchsia.com/audio_core#meta/audio_core.cmx"
-            }
+            },
+            "system-services": [
+                "fuchsia.scheduler.ProfileProvider"
+            ]
         }
     },
     "program": {
