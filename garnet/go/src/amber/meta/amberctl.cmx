@@ -6,6 +6,7 @@
         "services": [
             "fuchsia.amber.Control",
             "fuchsia.logger.LogSink",
+            "fuchsia.net.NameLookup",
             "fuchsia.net.SocketProvider",
             "fuchsia.pkg.PackageResolver",
             "fuchsia.pkg.RepositoryManager",

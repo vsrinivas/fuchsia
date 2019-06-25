@@ -16,8 +16,9 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.sys.Launcher",
+            "fuchsia.net.NameLookup",
             "fuchsia.net.oldhttp.HttpService",
+            "fuchsia.sys.Launcher",
             "fuchsia.tracing.provider.Registry"
         ]
     }

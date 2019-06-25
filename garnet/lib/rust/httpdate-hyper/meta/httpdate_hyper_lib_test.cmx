@@ -18,6 +18,7 @@
             "build-info"
         ],
         "services": [
+            "fuchsia.net.NameLookup",
             "fuchsia.net.SocketProvider"
         ]
     }

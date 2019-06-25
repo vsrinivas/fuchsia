@@ -11,6 +11,7 @@
     },
     "sandbox": {
         "services": [
+            "fuchsia.net.NameLookup",
             "fuchsia.net.SocketProvider",
             "fuchsia.sys.Launcher"
         ]

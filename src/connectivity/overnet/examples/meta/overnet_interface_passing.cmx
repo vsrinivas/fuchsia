@@ -4,9 +4,10 @@
     },
     "sandbox": {
         "services": [
+            "fuchsia.net.NameLookup",
+            "fuchsia.net.SocketProvider",
             "fuchsia.net.mdns.Publisher",
             "fuchsia.net.mdns.Subscriber",
-            "fuchsia.net.SocketProvider",
             "fuchsia.netemul.sync.SyncManager",
             "fuchsia.overnet.Overnet"
         ]

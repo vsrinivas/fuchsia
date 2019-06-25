@@ -17,6 +17,7 @@
             "system-temp"
         ],
         "services": [
+            "fuchsia.net.NameLookup",
             "fuchsia.net.SocketProvider"
         ]
     }

@@ -4,6 +4,7 @@
     },
     "sandbox": {
         "services": [
+            "fuchsia.net.NameLookup",
             "fuchsia.net.SocketProvider"
         ]
     }

@@ -115,6 +115,7 @@ static constexpr const char* deprecated_services[] = {
     // Interface to resolve shell commands.
     "fuchsia.process.Resolver",
     ::llcpp::fuchsia::net::SocketProvider::Name_,
+    ::llcpp::fuchsia::net::NameLookup::Name_,
     // Legacy interface for netstack, defined in //garnet
     "fuchsia.netstack.Netstack",
     // New interface for netstack (WIP), defined in //zircon

@@ -4,10 +4,11 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.netconnector.NetConnector",
+            "fuchsia.cobalt.LoggerFactory",
+            "fuchsia.net.NameLookup",
             "fuchsia.net.SocketProvider",
-            "fuchsia.tracing.provider.Registry",
-            "fuchsia.cobalt.LoggerFactory"
+            "fuchsia.netconnector.NetConnector",
+            "fuchsia.tracing.provider.Registry"
         ]
     }
 }

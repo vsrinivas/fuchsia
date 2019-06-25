@@ -15,6 +15,7 @@
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.cobalt.SystemDataUpdater",
             "fuchsia.logger.LogSink",
+            "fuchsia.net.NameLookup",
             "fuchsia.net.SocketProvider",
             "fuchsia.sys.Launcher"
         ]

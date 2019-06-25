@@ -72,9 +72,10 @@
             "packages"
         ],
         "services": [
-            "fuchsia.sys.Loader",
+            "fuchsia.net.NameLookup",
             "fuchsia.net.oldhttp.HttpService",
-            "fuchsia.sys.Launcher"
+            "fuchsia.sys.Launcher",
+            "fuchsia.sys.Loader"
         ]
     }
 }

@@ -6,6 +6,7 @@
         "services": [
             "fuchsia.devicesettings.DeviceSettingsManager",
             "fuchsia.logger.LogSink",
+            "fuchsia.net.NameLookup",
             "fuchsia.net.SocketProvider"
         ]
     }

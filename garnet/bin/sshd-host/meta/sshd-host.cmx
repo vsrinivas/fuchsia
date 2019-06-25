@@ -8,8 +8,9 @@
             "deprecated-shell"
         ],
         "services": [
-            "fuchsia.process.Launcher",
-            "fuchsia.net.SocketProvider"
+            "fuchsia.net.NameLookup",
+            "fuchsia.net.SocketProvider",
+            "fuchsia.process.Launcher"
         ]
     }
 }

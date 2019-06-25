@@ -4,8 +4,9 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.net.mdns.Subscriber",
+            "fuchsia.net.NameLookup",
             "fuchsia.net.SocketProvider",
+            "fuchsia.net.mdns.Subscriber",
             "fuchsia.netconnector.NetConnector",
             "fuchsia.netstack.Netstack",
             "fuchsia.sys.Environment"

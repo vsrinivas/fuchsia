@@ -6,8 +6,13 @@
         "features": [
             "system-temp"
         ],
-        "pkgfs": [ "install", "needs", "versions" ],
+        "pkgfs": [
+            "install",
+            "needs",
+            "versions"
+        ],
         "services": [
+            "fuchsia.net.NameLookup",
             "fuchsia.net.SocketProvider"
         ]
     },

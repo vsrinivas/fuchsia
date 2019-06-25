@@ -8,10 +8,11 @@
             "root-ssl-certificates"
         ],
         "services": [
-            "fuchsia.logger.LogSink",
-            "fuchsia.net.SocketProvider",
             "fuchsia.cobalt.LoggerFactory",
-            "fuchsia.stash.Store"
+            "fuchsia.logger.LogSink",
+            "fuchsia.stash.Store",
+            "fuchsia.net.NameLookup",
+            "fuchsia.net.SocketProvider"
         ]
     }
 }

@@ -10,6 +10,7 @@
             "deprecated-shell"
         ],
         "services": [
+            "fuchsia.net.NameLookup",
             "fuchsia.net.SocketProvider"
         ]
     }

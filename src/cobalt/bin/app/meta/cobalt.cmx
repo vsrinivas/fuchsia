@@ -16,6 +16,7 @@
         ],
         "services": [
             "fuchsia.logger.LogSink",
+            "fuchsia.net.NameLookup",
             "fuchsia.net.SocketProvider",
             "fuchsia.net.oldhttp.HttpService",
             "fuchsia.tracing.provider.Registry"

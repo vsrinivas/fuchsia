@@ -15,6 +15,7 @@
         "services": [
             "fuchsia.feedback.DataProvider",
             "fuchsia.logger.LogSink",
+            "fuchsia.net.NameLookup",
             "fuchsia.net.SocketProvider"
         ]
     }

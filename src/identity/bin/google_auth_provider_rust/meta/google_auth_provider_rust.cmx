@@ -5,18 +5,19 @@
     "sandbox": {
         "services": [
             "fuchsia.fonts.Provider",
+            "fuchsia.logger.LogSink",
             "fuchsia.media.Audio",
+            "fuchsia.net.NameLookup",
             "fuchsia.net.SocketProvider",
             "fuchsia.net.oldhttp.HttpService",
             "fuchsia.netstack.Netstack",
             "fuchsia.process.Launcher",
             "fuchsia.sys.Launcher",
             "fuchsia.sysmem.Allocator",
+            "fuchsia.tracelink.Registry",
             "fuchsia.ui.input.ImeService",
             "fuchsia.ui.input.ImeVisibilityService",
             "fuchsia.ui.scenic.Scenic",
-            "fuchsia.logger.LogSink",
-            "fuchsia.tracelink.Registry",
             "fuchsia.web.ContextProvider"
         ]
     }

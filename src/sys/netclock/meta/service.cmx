@@ -5,6 +5,7 @@
     "sandbox": {
         "services": [
             "fuchsia.logger.LogSink",
+            "fuchsia.net.NameLookup",
             "fuchsia.net.SocketProvider",
             "fuchsia.time.DeprecatedNetworkSync"
         ]

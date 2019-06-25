@@ -9,6 +9,7 @@
         "services": [
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.ledger.cloud.CloudProvider",
+            "fuchsia.net.NameLookup",
             "fuchsia.net.SocketProvider",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",

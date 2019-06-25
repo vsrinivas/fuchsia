@@ -8,6 +8,7 @@
             "class/input"
         ],
         "services": [
+            "fuchsia.net.NameLookup",
             "fuchsia.net.SocketProvider",
             "fuchsia.process.Launcher"
         ]

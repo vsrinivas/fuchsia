@@ -3,8 +3,15 @@
         "binary": "bin/system_monitor_harvester"
     },
     "sandbox": {
-        "dev": [ "misc/sysinfo" ],
-        "features": [ "deprecated-shell" ],
-        "services": [ "fuchsia.net.SocketProvider" ]
+        "dev": [
+            "misc/sysinfo"
+        ],
+        "features": [
+            "deprecated-shell"
+        ],
+        "services": [
+            "fuchsia.net.NameLookup",
+            "fuchsia.net.SocketProvider"
+        ]
     }
 }
