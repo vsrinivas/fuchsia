@@ -219,7 +219,7 @@ void JobContextImpl::OnDetachReply(const Err& err, uint32_t status,
   } else {
     // Successfully detached.
     state_ = State::kNone;
-    job_.release();
+    job_.reset();
   }
 
   callback(GetWeakPtr(), issue_err);
