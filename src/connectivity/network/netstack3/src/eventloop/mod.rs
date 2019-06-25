@@ -73,6 +73,8 @@
 
 #![allow(unused)]
 
+#[cfg(test)]
+mod integration_tests;
 mod util;
 
 use ethernet as eth;
@@ -224,6 +226,13 @@ impl EventLoop {
         let (event_send, event_recv) = futures::channel::mpsc::unbounded::<Event>();
         let fidl_worker = crate::fidl_worker::FidlWorker;
         fidl_worker.spawn(event_send.clone());
+        Self::new_with_channels(event_send, event_recv)
+    }
+
+    fn new_with_channels(
+        event_send: futures::channel::mpsc::UnboundedSender<Event>,
+        event_recv: futures::channel::mpsc::UnboundedReceiver<Event>,
+    ) -> Self {
         EventLoop {
             ctx: Context::new(
                 StackState::default(),
@@ -233,62 +242,86 @@ impl EventLoop {
         }
     }
 
+    async fn handle_event<'a>(
+        &'a mut self,
+        buf: &'a mut [u8],
+        evt: Option<Event>,
+    ) -> Result<(), Error> {
+        match evt {
+            Some(Event::EthSetupEvent(setup)) => {
+                let (mut state, mut disp) = self.ctx.state_and_dispatcher();
+                let eth_id =
+                    state.add_ethernet_device(Mac::new(setup.info.mac.octets), setup.info.mtu);
+                let eth_worker = EthernetWorker::new(eth_id, setup.client.get_stream());
+                disp.devices.push(DeviceInfo {
+                    id: eth_id,
+                    path: setup.path,
+                    client: setup.client,
+                });
+                eth_worker.spawn(self.ctx.dispatcher().event_send.clone());
+                setup.responder.send(None, eth_id.id());
+            }
+            Some(Event::FidlStackEvent(req)) => {
+                await!(self.handle_fidl_stack_request(req));
+            }
+            Some(Event::FidlSocketProviderEvent(req)) => {
+                await!(self.handle_fidl_socket_provider_request(req));
+            }
+            Some(Event::FidlSocketControlEvent(req)) => {
+                await!(self.handle_fidl_socket_control_request(req));
+            }
+            Some(Event::EthEvent((id, eth::Event::StatusChanged))) => {
+                info!("device {:?} status changed", id.id());
+                // We need to call get_status even if we don't use the output, since calling it
+                // acks the message, and prevents the device from sending more status changed
+                // messages.
+                // TODO(wesleyac): Error checking on get_device_info - is a race possible?
+                await!(self
+                    .ctx
+                    .dispatcher()
+                    .get_device_client(id.id())
+                    .unwrap()
+                    .client
+                    .get_status());
+            }
+            Some(Event::EthEvent((id, eth::Event::Receive(rx, _flags)))) => {
+                // TODO(wesleyac): Check flags
+                let len = rx.read(buf);
+                receive_frame(&mut self.ctx, id, &mut buf[..len]);
+            }
+            Some(Event::TimerEvent(id)) => {
+                // cancel_timeout() should be called before handle_timeout().
+                // Suppose handle_timeout() is called first and it reinstalls
+                // the timer event, the timer event will be erroneously cancelled by the
+                // cancel_timeout() before it's being triggered.
+                // TODO(NET-2138): Create a unit test for the processing logic.
+                self.ctx.dispatcher().cancel_timeout(id);
+                handle_timeout(&mut self.ctx, id);
+            }
+            None => bail!("Stream of events ended unexpectedly"),
+        }
+        Ok(())
+    }
+
+    async fn run_until<'a, V>(
+        &'a mut self,
+        recv: &'a mut futures::channel::mpsc::UnboundedReceiver<V>,
+    ) -> Result<V, Error> {
+        let mut buf = [0; 2048];
+        loop {
+            match await!(futures::future::select(self.event_recv.next(), recv.next())) {
+                future::Either::Left((evt, _)) => await!(self.handle_event(&mut buf, evt))?,
+                future::Either::Right((Some(stop), _)) => break Ok(stop),
+                _ => continue,
+            }
+        }
+    }
+
     pub async fn run(mut self) -> Result<(), Error> {
         let mut buf = [0; 2048];
         loop {
-            match await!(self.event_recv.next()) {
-                Some(Event::EthSetupEvent(setup)) => {
-                    let (mut state, mut disp) = self.ctx.state_and_dispatcher();
-                    let eth_id =
-                        state.add_ethernet_device(Mac::new(setup.info.mac.octets), setup.info.mtu);
-                    let eth_worker = EthernetWorker::new(eth_id, setup.client.get_stream());
-                    disp.devices.push(DeviceInfo {
-                        id: eth_id,
-                        path: setup.path,
-                        client: setup.client,
-                    });
-                    eth_worker.spawn(self.ctx.dispatcher().event_send.clone());
-                    setup.responder.send(None, eth_id.id());
-                }
-                Some(Event::FidlStackEvent(req)) => {
-                    await!(self.handle_fidl_stack_request(req));
-                }
-                Some(Event::FidlSocketProviderEvent(req)) => {
-                    await!(self.handle_fidl_socket_provider_request(req));
-                }
-                Some(Event::FidlSocketControlEvent(req)) => {
-                    await!(self.handle_fidl_socket_control_request(req));
-                }
-                Some(Event::EthEvent((id, eth::Event::StatusChanged))) => {
-                    info!("device {:?} status changed", id.id());
-                    // We need to call get_status even if we don't use the output, since calling it
-                    // acks the message, and prevents the device from sending more status changed
-                    // messages.
-                    // TODO(wesleyac): Error checking on get_device_client - is a race possible?
-                    await!(self
-                        .ctx
-                        .dispatcher()
-                        .get_device_client(id.id())
-                        .unwrap()
-                        .client
-                        .get_status());
-                }
-                Some(Event::EthEvent((id, eth::Event::Receive(rx, _flags)))) => {
-                    // TODO(wesleyac): Check flags
-                    let len = rx.read(&mut buf);
-                    receive_frame(&mut self.ctx, id, &mut buf[..len]);
-                }
-                Some(Event::TimerEvent(id)) => {
-                    // cancel_timeout() should be called before handle_timeout().
-                    // Suppose handle_timeout() is called first and it reinstalls
-                    // the timer event, the timer event will be erroneously cancelled by the
-                    // cancel_timeout() before it's being triggered.
-                    // TODO(NET-2138): Create a unit test for the processing logic.
-                    self.ctx.dispatcher().cancel_timeout(id);
-                    handle_timeout(&mut self.ctx, id);
-                }
-                None => bail!("Stream of events ended unexpectedly"),
-            }
+            let evt = await!(self.event_recv.next());
+            self.handle_event(&mut buf, evt);
         }
         Ok(())
     }

@@ -32,6 +32,11 @@ rustc_binary("bin") {
     "//zircon/public/fidl/fuchsia-net:fuchsia-net-rustc",
     "//zircon/public/fidl/fuchsia-net-stack:fuchsia-net-stack-rustc",
   ]
+
+  test_deps = [
+    "//src/connectivity/network/testing/netemul/lib/fidl:sandbox-rustc",
+    "//src/connectivity/network/testing/netemul/lib/fidl:network-rustc",
+  ]
 }
 
 package("netstack3") {
