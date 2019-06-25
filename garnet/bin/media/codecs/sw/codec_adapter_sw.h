@@ -336,6 +336,9 @@ class CodecAdapterSW : public CodecAdapter {
   BlockingMpscQueue<CodecInputItem> input_queue_;
   BlockingMpscQueue<CodecPacket*> free_output_packets_;
 
+  // The order of output_buffer_pool_ and in_use_by_client_ matters, so that
+  // destruction of in_use_by_client_ happens first, because those destructing
+  // will return buffers to output_buffer_pool_.
   BufferPool output_buffer_pool_;
   std::map<CodecPacket*, LocalOutput> in_use_by_client_ FXL_GUARDED_BY(lock_);
 
