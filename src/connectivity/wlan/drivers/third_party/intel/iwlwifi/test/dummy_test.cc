@@ -1,18 +1,6 @@
-/*
- * Copyright (c) 2019 The Fuchsia Authors
- *
- * Permission to use, copy, modify, and/or distribute this software for any
- * purpose with or without fee is hereby granted, provided that the above
- * copyright notice and this permission notice appear in all copies.
- *
- * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
- * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
- * SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
- * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
- * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
- * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
- */
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
 
 // Feel free to clone this file to work on a new test.
 
@@ -24,8 +12,17 @@ extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
 }
 
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/single-ap-test.h"
+
+namespace wlan {
+namespace testing {
 namespace {
 
+// To test helper functions only.
+//
+// This is used when you only need to test some hardware-independent functions.
+// Easy to use. Just call the function you want to test.
+//
 class DummyTest : public ::testing::Test {
  public:
   DummyTest() {}
@@ -34,4 +31,20 @@ class DummyTest : public ::testing::Test {
 
 TEST_F(DummyTest, DummyTestFunction) {}
 
+// For more complicated cases that requires the simulated firmware/hardware/
+// environment.
+//
+// This example code uses the SimSingleAp class, which creates an virtual
+// AP in the environment so that we can test the client driver.
+//
+class MvmTest : public SingleApTest {
+ public:
+  MvmTest() {}
+  ~MvmTest() {}
+};
+
+TEST_F(MvmTest, MvmTestFunction) {}
+
 }  // namespace
+}  // namespace testing
+}  // namespace wlan
