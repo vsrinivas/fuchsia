@@ -200,6 +200,9 @@ template("test_package") {
 #       name (required)
 #         [string] Name of the test.
 #
+#       args (optional)
+#         [list of strings] Arguments for the test binary.
+#
 #       dest (optional)
 #         [path] Location the binary will be placed within `test/`.
 #
@@ -248,6 +251,10 @@ template("unittest_package") {
     if (defined(test.dest)) {
       test_dest = test.dest
     }
+    test_args = []
+    if (defined(test.args)) {
+      test_args = test.args
+    }
     test_manifest = "${target_gen_dir}/meta/${test_dest}.cmx"
 
     package_tests += [
@@ -267,9 +274,26 @@ template("unittest_package") {
       outputs = [
         test_manifest,
       ]
-      contents = {
-        program = {
-          binary = "test/${test_dest}"
+      # TODO(CF-879): As of today, CMX files require the args list to be either
+      # absent or of at least one element. There is a case to be made to relax
+      # this constraint, and simply allow empty lists as well. Depending on
+      # decision by CF team, the code below could be simplified to avoid
+      # conditionally building the contents.
+      # Note that given current approach, cyclomatic complexity is exponential
+      # in the number of possibly empty lists which need to be included in the
+      # generated CMX.
+      if (test_args == []) {
+        contents = {
+          program = {
+            binary = "test/${test_dest}"
+          }
+        }
+      } else {
+        contents = {
+          program = {
+            binary = "test/${test_dest}"
+            args = test_args
+          }
         }
       }
       output_conversion = "json"
