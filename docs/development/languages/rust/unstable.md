@@ -90,14 +90,6 @@ This list includes all of the unstable features currently used in Fuchsia.
       introduced by these features. There are changes planned to the implementation, but they’re
       mostly polish, performance optimizations, and a few scattered bugfixes.
     * Owner: cramertj@
-* `futures_api`
-    * Summary: This feature enables the `std::task` and `std::future` modules which provide the
-      `Future` interface for the standard library.
-    * Use in Fuchsia: Needed for `async_await`
-    * Remaining before stabilization: As in async/await, cramertj@ wrote the implementation of
-      this feature, and while its surface area is large, there aren’t significant planned
-      changes to it. cramertj@ will manage any necessary transition.
-    * Owner: cramertj@
 
 [the edition guide]: https://rust-lang-nursery.github.io/edition-guide/editions/index.html
 [Rust 2018: an early preview]: https://internals.rust-lang.org/t/rust-2018-an-early-preview/7776
