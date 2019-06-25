@@ -36,7 +36,7 @@ args=(
 # Construction of a qcow image prevents qemu from writing back to the
 # build-produced image file, which could cause timestamp issues with that file.
 # Construction of the new ZBI adds //.ssh/authorized_keys for SSH access.
-imgdir="$(mktemp -d -p ${FUCHSIA_BUILD_DIR})"
+imgdir="$(mktemp -d ${FUCHSIA_BUILD_DIR}/tmp.XXX)"
 if [[ ! -d "${imgdir}" ]]; then
   echo >&2 "Failed to create temporary directory"
   exit 1
