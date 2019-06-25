@@ -2184,15 +2184,11 @@ static int iwl_trans_pcie_wait_txqs_empty(struct iwl_trans* trans, uint32_t txq_
 
 static void iwl_trans_pcie_set_bits_mask(struct iwl_trans* trans, uint32_t reg, uint32_t mask,
                                          uint32_t value) {
-#if 0  // NEEDS_PORTING
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
-    unsigned long flags;
 
-    spin_lock_irqsave(&trans_pcie->reg_lock, flags);
+    mtx_lock(&trans_pcie->reg_lock);
     __iwl_trans_pcie_set_bits_mask(trans, reg, mask, value);
-    spin_unlock_irqrestore(&trans_pcie->reg_lock, flags);
-#endif // NEEDS_PORTING
-    IWL_ERR(trans, "%s needs porting\n", __FUNCTION__);
+    mtx_unlock(&trans_pcie->reg_lock);
 }
 
 static void iwl_trans_pcie_ref(struct iwl_trans* trans) {
