@@ -6,12 +6,15 @@
 
 #include <fuchsia/netstack/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
+#include <lib/zx/time.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/strings/string_printf.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
 
 #include <algorithm>
+#include <optional>
+#include <string>
 
 #include "src/virtualization/tests/logger.h"
 
@@ -27,15 +30,68 @@ static constexpr zx::duration kLoopConditionStep = zx::msec(10);
 static constexpr size_t kNumRetries = 40;
 static constexpr zx::duration kRetryStep = zx::msec(200);
 
-static bool RunLoopUntil(async::Loop* loop, fit::function<bool()> condition) {
+// Print a log message every |logging_interval| units of time.
+//
+// Users should periodically call |LogIfRequired|. Once |logging_interval|
+// has passed since class creation, a log message will be printed. Log
+// messages will then continue to be printed every |logging_interval|.
+class PeriodicLogger {
+ public:
+  PeriodicLogger(std::string operation, zx::duration logging_interval)
+      : start_time_(zx::clock::get_monotonic()),
+        operation_(std::move(operation)),
+        logging_interval_(logging_interval),
+        last_log_time_(start_time_) {}
+
+  ~PeriodicLogger() {
+    // Only print a final message if we already printed a progress message.
+    if (message_printed_) {
+      FXL_LOG(INFO) << operation_ << ": Finished after "
+                    << (zx::clock::get_monotonic() - start_time_).to_secs()
+                    << "s.";
+    }
+  }
+
+  // Print a log message about the current operation if enough time has passed
+  // since the operation started / since the last log message.
+  void LogIfRequired() {
+    const zx::time now = zx::clock::get_monotonic();
+    if (now - last_log_time_ >= logging_interval_) {
+      FXL_LOG(INFO) << operation_ << ": Still waiting... ("
+                    << (now - start_time_).to_secs() << "s passed)";
+      last_log_time_ = now;
+      message_printed_ = true;
+    }
+  }
+
+ private:
+  const zx::time start_time_;
+  const std::string operation_;
+  const zx::duration logging_interval_;
+  bool message_printed_ = false;
+  zx::time last_log_time_;
+};
+
+static bool RunLoopUntil(async::Loop* loop, fit::function<bool()> condition,
+                         std::optional<PeriodicLogger> logger = std::nullopt) {
   const zx::time deadline = zx::deadline_after(kLoopTimeout);
+
   while (zx::clock::get_monotonic() < deadline) {
+    // Check our condition.
     if (condition()) {
       return true;
     }
+
+    // If we have been polling for long enough, print a log message.
+    if (logger) {
+      logger->LogIfRequired();
+    }
+
+    // Wait until next polling interval.
     loop->Run(zx::deadline_after(kLoopConditionStep));
     loop->ResetQuit();
   }
+
   return condition();
 }
 
@@ -91,7 +147,8 @@ zx_status_t EnclosedGuest::Start() {
   enclosing_environment_ = sys::testing::EnclosingEnvironment::Create(
       kRealm, real_env_, std::move(services));
   bool environment_running = RunLoopUntil(
-      &loop_, [this] { return enclosing_environment_->is_running(); });
+      &loop_, [this] { return enclosing_environment_->is_running(); },
+      PeriodicLogger("Creating guest sandbox", zx::sec(10)));
   if (!environment_running) {
     FXL_LOG(ERROR)
         << "Timed out waiting for guest sandbox environment to become ready.";
@@ -124,8 +181,9 @@ zx_status_t EnclosedGuest::Start() {
   zx::socket serial_socket;
   guest_->GetSerial(
       [&serial_socket](zx::socket s) { serial_socket = std::move(s); });
-  bool socket_valid =
-      RunLoopUntil(&loop_, [&] { return serial_socket.is_valid(); });
+  bool socket_valid = RunLoopUntil(
+      &loop_, [&serial_socket] { return serial_socket.is_valid(); },
+      PeriodicLogger("Connecting to guest serial", zx::sec(10)));
   if (!socket_valid) {
     FXL_LOG(ERROR) << "Timed out waiting to connect to guest's serial.";
     return ZX_ERR_TIMED_OUT;
@@ -164,7 +222,9 @@ zx_status_t ZirconEnclosedGuest::LaunchInfo(
 }
 
 zx_status_t ZirconEnclosedGuest::WaitForSystemReady() {
+  PeriodicLogger logger{"Waiting for guest system shell", zx::sec(10)};
   for (size_t i = 0; i != kNumRetries; ++i) {
+    logger.LogIfRequired();
     std::string ps;
     zx_status_t status = Execute({"ps"}, &ps);
     if (status != ZX_OK) {
@@ -197,7 +257,9 @@ zx_status_t DebianEnclosedGuest::LaunchInfo(
 }
 
 zx_status_t DebianEnclosedGuest::WaitForSystemReady() {
+  PeriodicLogger logger{"Waiting for guest system shell", zx::sec(10)};
   for (size_t i = 0; i != kNumRetries; ++i) {
+    logger.LogIfRequired();
     std::string response;
     zx_status_t status = Execute({"echo", "guest ready"}, &response);
     if (status != ZX_OK) {
