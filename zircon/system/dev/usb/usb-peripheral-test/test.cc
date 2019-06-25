@@ -10,7 +10,7 @@
 
 #include <fbl/auto_call.h>
 #include <usbhost/usbhost.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 #include <zircon/device/usb-peripheral-test.h>
 #include <zircon/device/usb-peripheral.h>
 
@@ -42,9 +42,7 @@ void randomize() {
 }
 
 // Tests control and interrupt transfers with specified transfer size.
-bool control_interrupt_test(size_t transfer_size) {
-    BEGIN_TEST;
-
+void control_interrupt_test(size_t transfer_size) {
     randomize();
 
     // Send data to device via OUT control request.
@@ -95,40 +93,36 @@ bool control_interrupt_test(size_t transfer_size) {
     EXPECT_EQ(memcmp(send_buf, receive_buf, transfer_size), 0);
 
     usb_request_free(req);
-
-    END_TEST;
 }
 
 // Test control and interrupt requests with 8 byte transfer size.
-bool control_interrupt_test_8() {
-    return control_interrupt_test(8);
+TEST(UsbPeripheral, control_interrupt_test_8) {
+    ASSERT_NO_FATAL_FAILURES(control_interrupt_test(8));
 }
 
 // Test control and interrupt requests with 64 byte transfer size.
-bool control_interrupt_test_64() {
-    return control_interrupt_test(64);
+TEST(UsbPeripheral, control_interrupt_test_64) {
+    ASSERT_NO_FATAL_FAILURES(control_interrupt_test(64));
 }
 
 // Test control and interrupt requests with 100 byte transfer size.
-bool control_interrupt_test_100() {
-    return control_interrupt_test(100);
+TEST(UsbPeripheral, control_interrupt_test_100) {
+    ASSERT_NO_FATAL_FAILURES(control_interrupt_test(100));
 }
 
 // Test control and interrupt requests with 256 byte transfer size.
-bool control_interrupt_test_256() {
-    return control_interrupt_test(256);
+TEST(UsbPeripheral, control_interrupt_test_256) {
+    ASSERT_NO_FATAL_FAILURES(control_interrupt_test(256));
 }
 
 // Test control and interrupt requests with 1000 byte transfer size.
-bool control_interrupt_test_1000() {
-    return control_interrupt_test(1000);
+TEST(UsbPeripheral, control_interrupt_test_1000) {
+    ASSERT_NO_FATAL_FAILURES(control_interrupt_test(1000));
 }
 
 // Tests bulk OUT and IN transfers.
 // Send BUFFER_SIZE bytes to device, read back and compare.
-bool bulk_test() {
-    BEGIN_TEST;
-
+TEST(UsbPeripheral, bulk_test) {
     auto* send_req = usb_request_new(dev, bulk_out_ep);
     EXPECT_NE(send_req, nullptr);
     send_req->buffer = send_buf;
@@ -167,8 +161,6 @@ bool bulk_test() {
 
     usb_request_free(send_req);
     usb_request_free(receive_req);
-
-    END_TEST;
 }
 
 // usb_host_load() will call this for all connected USB devices.
@@ -246,15 +238,6 @@ int usb_discovery_done(void *client_data) {
 
 } // anonymous namespace
 
-BEGIN_TEST_CASE(usb_peripheral_tests)
-RUN_TEST(control_interrupt_test_8);
-RUN_TEST(control_interrupt_test_64);
-RUN_TEST(control_interrupt_test_100);
-RUN_TEST(control_interrupt_test_256);
-RUN_TEST(control_interrupt_test_1000);
-RUN_TEST(bulk_test);
-END_TEST_CASE(usb_peripheral_tests)
-
 int main(int argc, char** argv) {
     struct usb_host_context* context = usb_host_init();
     if (!context) {
@@ -276,7 +259,7 @@ int main(int argc, char** argv) {
         goto fail;
     }
 
-    ret = unittest_run_all_tests(argc, argv) ? 0 : -1;
+    ret = zxtest::RunAllTests(argc, argv) ? 0 : -1;
 
 fail:
     if (dev) {
