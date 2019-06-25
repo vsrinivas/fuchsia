@@ -7,7 +7,7 @@ description = "RFC 1071 checksum computation (the \"internet checksum\")"
 license = "BSD-3-Clause"
 repository = "https://fuchsia.googlesource.com/fuchsia/+/master/src/connectivity/lib/internet-checksum"
 categories = ["algorithms", "network-programming", "no-std"]
-keywords = ["rfc 1071", "checksum", "internet", "ipv4", "tcp"]
+keywords = ["rfc1071", "checksum", "internet", "ipv4", "tcp"]
 
 include = ["Cargo.toml", "src/*"]
 
