@@ -57,7 +57,6 @@ group("tests") {
     "component_context",
     "modular_config",
     "sessionctl",
-    "trigger",
   ]
 }
 
