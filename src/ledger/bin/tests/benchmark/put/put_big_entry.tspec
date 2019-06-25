@@ -5,6 +5,9 @@
     "--entry-count=100", "--transaction-size=0", "--key-size=100",
     "--value-size=20000", "--refs=off"
   ],
+  "environment": {
+    "name": "trace_record_environment"
+  },
   "categories": ["benchmark", "ledger"],
   "duration": 180,
   "measure": [

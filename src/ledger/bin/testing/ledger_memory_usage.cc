@@ -133,7 +133,8 @@ bool LedgerMemoryEstimator::Init() {
   zx_status_t status = walker.WalkRootJobTree();
   if (status == ZX_ERR_ALREADY_EXISTS) {
     FXL_LOG(ERROR)
-        << "More than one Ledger processes are running in this test.";
+        << "More than one Ledger processes are running in this test. Did you "
+           "set the environment name for this benchmark?";
     return false;
   }
   ledger_task_ = walker.TakeLedgerHandle();
