@@ -3134,8 +3134,8 @@ struct iwl_trans* iwl_trans_pcie_alloc(const pci_protocol_t* pci, const struct i
     trans_pcie->opmode_down = true;
 #if 0  // NEEDS_PORTING
     spin_lock_init(&trans_pcie->irq_lock);
-    spin_lock_init(&trans_pcie->reg_lock);
 #endif // NEEDS_PORTING
+    mtx_init(&trans_pcie->reg_lock, mtx_plain);
     mtx_init(&trans_pcie->mutex, mtx_plain);
 #if 0  // NEEDS_PORTING
     init_waitqueue_head(&trans_pcie->ucode_write_waitq);

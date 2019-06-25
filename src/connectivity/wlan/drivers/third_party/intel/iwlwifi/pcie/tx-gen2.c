@@ -31,21 +31,20 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *****************************************************************************/
-#if 0  // NEEDS_PORTING
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fuchsia_porting.h"
+
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/tx.h"
-#endif // NEEDS_PORTING
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-csr.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-debug.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-io.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/pcie/internal.h"
 
-#if 0  // NEEDS_PORTING
 /*
  * iwl_pcie_gen2_tx_stop - Stop all Tx DMA channels
  */
 void iwl_pcie_gen2_tx_stop(struct iwl_trans* trans) {
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
-    int txq_id;
+    size_t txq_id;
 
     /*
      * This function can be called before the op_mode disabled the
@@ -132,12 +131,14 @@ static void iwl_pcie_gen2_tfd_unmap(struct iwl_trans* trans, struct iwl_cmd_meta
 
     /* first TB is never freed - it's the bidirectional DMA data */
     for (i = 1; i < num_tbs; i++) {
+#if 0   // NEEDS_PORTING
         if (meta->tbs & BIT(i))
             dma_unmap_page(trans->dev, le64_to_cpu(tfd->tbs[i].addr),
                            le16_to_cpu(tfd->tbs[i].tb_len), DMA_TO_DEVICE);
         else
             dma_unmap_single(trans->dev, le64_to_cpu(tfd->tbs[i].addr),
                              le16_to_cpu(tfd->tbs[i].tb_len), DMA_TO_DEVICE);
+#endif  // NEEDS_PORTING
     }
 
     tfd->num_tbs = 0;
@@ -170,6 +171,7 @@ static void iwl_pcie_gen2_free_tfd(struct iwl_trans* trans, struct iwl_txq* txq)
     }
 }
 
+#if 0   // NEEDS_PORTING
 static int iwl_pcie_gen2_set_tb(struct iwl_trans* trans, struct iwl_tfh_tfd* tfd, dma_addr_t addr,
                                 uint16_t len) {
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
@@ -931,7 +933,6 @@ int iwl_trans_pcie_gen2_send_hcmd(struct iwl_trans* trans, struct iwl_host_cmd* 
     return -1;
 }
 
-#if 0  // NEEDS_PORTING
 /*
  * iwl_pcie_gen2_txq_unmap -  Unmap any remaining DMA mappings and free skb's
  */
@@ -939,25 +940,25 @@ void iwl_pcie_gen2_txq_unmap(struct iwl_trans* trans, int txq_id) {
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
     struct iwl_txq* txq = trans_pcie->txq[txq_id];
 
-    spin_lock_bh(&txq->lock);
+    mtx_lock(&txq->lock);
     while (txq->write_ptr != txq->read_ptr) {
         IWL_DEBUG_TX_REPLY(trans, "Q %d Free %d\n", txq_id, txq->read_ptr);
 
         if (txq_id != trans_pcie->cmd_queue) {
+#if 0   // NEEDS_PORTING
             int idx = iwl_pcie_get_cmd_index(txq, txq->read_ptr);
             struct sk_buff* skb = txq->entries[idx].skb;
 
             if (WARN_ON_ONCE(!skb)) { continue; }
 
             iwl_pcie_free_tso_page(trans_pcie, skb);
+#endif  // NEEDS_PORTING
         }
         iwl_pcie_gen2_free_tfd(trans, txq);
         txq->read_ptr = iwl_queue_inc_wrap(trans, txq->read_ptr);
 
         if (txq->read_ptr == txq->write_ptr) {
-            unsigned long flags;
-
-            spin_lock_irqsave(&trans_pcie->reg_lock, flags);
+            mtx_lock(&trans_pcie->reg_lock);
             if (txq_id != trans_pcie->cmd_queue) {
                 IWL_DEBUG_RPM(trans, "Q %d - last tx freed\n", txq->id);
                 iwl_trans_unref(trans);
@@ -966,22 +967,27 @@ void iwl_pcie_gen2_txq_unmap(struct iwl_trans* trans, int txq_id) {
                 IWL_DEBUG_RPM(trans, "clear ref_cmd_in_flight\n");
                 iwl_trans_unref(trans);
             }
-            spin_unlock_irqrestore(&trans_pcie->reg_lock, flags);
+            mtx_unlock(&trans_pcie->reg_lock);
         }
     }
 
+#if 0   // NEEDS_PORTING
     while (!skb_queue_empty(&txq->overflow_q)) {
         struct sk_buff* skb = __skb_dequeue(&txq->overflow_q);
 
         iwl_op_mode_free_skb(trans->op_mode, skb);
     }
+#endif  // NEEDS_PORTING
 
-    spin_unlock_bh(&txq->lock);
+    mtx_unlock(&txq->lock);
 
+#if 0   // NEEDS_PORTING
     /* just in case - this queue may have been stopped */
     iwl_wake_queue(trans, txq);
+#endif  // NEEDS_PORTING
 }
 
+#if 0   // NEEDS_PORTING
 void iwl_pcie_gen2_txq_free_memory(struct iwl_trans* trans, struct iwl_txq* txq) {
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
     struct device* dev = trans->dev;

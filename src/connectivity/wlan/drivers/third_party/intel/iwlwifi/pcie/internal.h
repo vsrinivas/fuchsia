@@ -589,9 +589,7 @@ struct iwl_trans_pcie {
     uint32_t rx_page_order;
 
     /*protect hw register */
-#if 0   // NEEDS_PORTING
-    spinlock_t reg_lock;
-#endif  // NEEDS_PORTING
+    mtx_t reg_lock;
     bool cmd_hold_nic_awake;
     bool ref_cmd_in_flight;
 
@@ -632,11 +630,11 @@ static inline void iwl_pcie_clear_irq(struct iwl_trans* trans, struct msix_entry
      */
     iwl_write32(trans, CSR_MSIX_AUTOMASK_ST_AD, BIT(entry->entry));
 }
+#endif  // NEEDS_PORTING
 
 static inline struct iwl_trans* iwl_trans_pcie_get_trans(struct iwl_trans_pcie* trans_pcie) {
-    return container_of((void*)trans_pcie, struct iwl_trans, trans_specific);
+    return containerof(trans_pcie, struct iwl_trans, trans_specific);
 }
-#endif  // NEEDS_PORTING
 
 /*
  * Convention: trans API functions: iwl_trans_pcie_XXX
@@ -862,6 +860,7 @@ static inline void iwl_enable_fw_load_int(struct iwl_trans* trans) {
         iwl_enable_fh_int_msk_msix(trans, MSIX_FH_INT_CAUSES_D2S_CH0_NUM);
     }
 }
+#endif  // NEEDS_PORTING
 
 static inline uint16_t iwl_pcie_get_cmd_index(const struct iwl_txq* q, uint32_t index) {
     return index & (q->n_window - 1);
@@ -874,9 +873,10 @@ static inline void* iwl_pcie_get_tfd(struct iwl_trans* trans, struct iwl_txq* tx
         idx = iwl_pcie_get_cmd_index(txq, idx);
     }
 
-    return txq->tfds + trans_pcie->tfd_size * idx;
+    return (char*)txq->tfds + trans_pcie->tfd_size * idx;
 }
 
+#if 0   // NEEDS_PORTING
 static inline const char* queue_name(struct device* dev, struct iwl_trans_pcie* trans_p, int i) {
     if (trans_p->shared_vec_mask) {
         int vec = trans_p->shared_vec_mask & IWL_SHARED_IRQ_FIRST_RSS ? 1 : 0;
