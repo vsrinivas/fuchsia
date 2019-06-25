@@ -22,16 +22,24 @@ struct HermeticDecompressorEngineService {
     // Reading this much is enough to identify the format.
     using Magic = uint32_t;
 
+    // These are the magic numbers for the formats GetEngine groks.  They're
+    // only here because they aren't exported by the normal public headers of
+    // the format support libraries themselves.
+    static constexpr Magic kLz4fMagic = 0x184D2204;
+    static constexpr Magic kZstdMagic = 0xFD2FB528;
+
     // This finds the appropriate decompression kernel for the magic number
     // found at the beginning of the compressed image.  It should return
     // ZX_ERR_NOT_FOUND for an unrecognized magic number.
     zx_status_t GetEngine(Magic magic, zx::unowned_vmo* vmo);
 
     // This finds the appropriate vDSO to support a decompression kernel.
-    zx_status_t GetVdso(zx::unowned_vmo* vmo) {
+    zx_status_t GetVdso(zx::unowned_vmo* vmo) const {
         *vmo = zx::unowned_vmo{HermeticComputeProcess::GetVdso()};
         return ZX_OK;
     }
+
+    auto job() const { return zx::job::default_job(); }
 };
 
 template <typename EngineService>
@@ -69,7 +77,7 @@ public:
 
         // Set up the engine.
         HermeticComputeProcess hcp;
-        status = hcp.Init(*zx::job::default_job(), "hermetic-decompressor");
+        status = hcp.Init(*engine_service_.job(), "hermetic-decompressor");
         if (status != ZX_OK) {
             return status;
         }

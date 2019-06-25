@@ -15,18 +15,15 @@
 #include <object/vm_address_region_dispatcher.h>
 #include <object/vm_object_dispatcher.h>
 
-RoDso::RoDso(const char* name, const void* image, size_t size,
-             uintptr_t code_start)
-    : name_(name), code_start_(code_start), size_(size) {
+EmbeddedVmo::EmbeddedVmo(const char* name, const void* image, size_t size) :
+    name_(name), size_(size) {
     DEBUG_ASSERT(IS_PAGE_ALIGNED(size));
-    DEBUG_ASSERT(IS_PAGE_ALIGNED(code_start));
-    DEBUG_ASSERT(code_start > 0);
-    DEBUG_ASSERT(code_start < size);
     fbl::RefPtr<Dispatcher> dispatcher;
 
     // create vmo out of ro data mapped in kernel space
     fbl::RefPtr<VmObject> vmo;
-    zx_status_t status = VmObjectPaged::CreateFromWiredPages(image, size, true, &vmo);
+    zx_status_t status =
+        VmObjectPaged::CreateFromWiredPages(image, size, true, &vmo);
     ASSERT(status == ZX_OK);
 
     // build and point a dispatcher at it
@@ -42,17 +39,17 @@ RoDso::RoDso(const char* name, const void* image, size_t size,
     vmo_rights_ |= ZX_RIGHT_EXECUTE;
 }
 
-HandleOwner RoDso::vmo_handle() const {
+HandleOwner EmbeddedVmo::vmo_handle() const {
     return Handle::Make(vmo_, vmo_rights_);
 }
 
 // Map one segment from our VM object.
-zx_status_t RoDso::MapSegment(fbl::RefPtr<VmAddressRegionDispatcher> vmar,
-                              bool code,
-                              size_t vmar_offset,
-                              size_t start_offset,
-                              size_t end_offset) const {
-
+zx_status_t EmbeddedVmo::MapSegment(
+    fbl::RefPtr<VmAddressRegionDispatcher> vmar,
+    bool code,
+    size_t vmar_offset,
+    size_t start_offset,
+    size_t end_offset) const {
     uint32_t flags = ZX_VM_SPECIFIC | ZX_VM_PERM_READ;
     if (code)
         flags |= ZX_VM_PERM_EXECUTE;
@@ -85,6 +82,6 @@ zx_status_t RoDso::Map(fbl::RefPtr<VmAddressRegionDispatcher> vmar,
     zx_status_t status = MapSegment(vmar, false, offset, 0, code_start_);
     if (status == ZX_OK)
         status = MapSegment(ktl::move(vmar), true,
-                            offset + code_start_, code_start_, size_);
+                            offset + code_start_, code_start_, size());
     return status;
 }

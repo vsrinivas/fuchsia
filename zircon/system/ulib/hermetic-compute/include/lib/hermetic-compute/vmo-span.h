@@ -32,8 +32,8 @@ public:
     VmoSpan(const zx::vmo& vmo,  uint64_t offset, size_t size) :
         vmo_(zx::unowned_vmo{vmo}), offset_(offset), size_(size) {
         if constexpr (!Leaky) {
-            ZX_ASSERT(offset % PAGE_SIZE == 0);
-            ZX_ASSERT(size % PAGE_SIZE == 0);
+            ZX_DEBUG_ASSERT(offset % PAGE_SIZE == 0);
+            ZX_DEBUG_ASSERT(size % PAGE_SIZE == 0);
         }
     }
 

@@ -20,25 +20,35 @@ if (is_hermetic) {
     visibility = [ ":*" ]
     defines = [ "HERMETIC_COMPUTE_MODULE" ]
   }
-} else {
-  # This is the library for loading and launching hermetic engine modules.
-  library("hermetic-compute") {
-    sources = [
-      "get-vdso.cc",
+}
+
+# This is the library for loading and launching hermetic engine modules.
+library("hermetic-compute") {
+  sources = []
+  public_deps = [
+    # <lib/hermetic-compute/hermetic-compute.h> -> <fbl/macros.h>
+    "$zx/system/ulib/fbl:headers",
+
+    # <lib/hermetic-compute/hermetic-compute.h> -> <lib/zx/vmar.h>
+    "$zx/system/ulib/zx:headers",
+  ]
+
+  # Just the headers can be used in the hermetic engine environment itself.
+  if (toolchain.environment != "hermetic") {
+    sources += [
       "hermetic-compute.cc",
       "launch.cc",
     ]
-    public_deps = [
-      # <lib/hermetic-compute/hermetic-compute.h> -> <fbl/macros.h>
-      "$zx/system/ulib/fbl:headers",
-
-      # <lib/hermetic-compute/hermetic-compute.h> -> <lib/zx/vmar.h>
-      "$zx/system/ulib/zx:headers",
-    ]
     deps = [
       "$zx/system/ulib/elfload",
-      "$zx/system/ulib/fdio",
       "$zx/system/ulib/zx",
     ]
+  }
+
+  # Other "hermetic" environments like userboot can use most of the
+  # library, but not this.
+  if (!is_hermetic) {
+    sources += [ "get-vdso.cc" ]
+    deps += [ "$zx/system/ulib/fdio" ]
   }
 }

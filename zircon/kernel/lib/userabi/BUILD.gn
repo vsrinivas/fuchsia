@@ -55,6 +55,11 @@ library("userabi") {
 #     and no other linking targets; see link_output_rspfile().
 #     - Type: list(label)
 #
+#   writable
+#     - Optional: Writable segments allowed (not for userboot or vDSO!).
+#     - Type: bool
+#     - Default: false
+#
 template("rodso") {
   rspfile_target = "$target_name.rsp"
   rspfile = "$target_gen_dir/$rspfile_target"
@@ -104,6 +109,11 @@ template("rodso") {
         "--depfile",
         rebase_path(depfile, root_build_dir),
         rebase_path(header, root_build_dir),
+      ]
+      if (defined(invoker.writable) && invoker.writable) {
+        args += [ "--writable" ]
+      }
+      args += [
         invoker.name,
         "@" + rebase_path(rspfile, root_build_dir),
       ]
@@ -138,11 +148,16 @@ template("rodso") {
       # on the toolchain selected.  Fortunately, we already depend on the
       # generated $header, which is always regenerated whenever the image
       # binary itself changes.  So this indirect dependency is sufficient.
+      if (defined(invoker.writable) && invoker.writable) {
+        code_or_data = "DATA"
+      } else {
+        code_or_data = "CODE"
+      }
       write_file(sources[0],
                  [
                    "#include \"rodso-asm.h\"",
                    "#include \"$header\"",
-                   "RODSO_IMAGE($rodso_name, ${invoker.name})",
+                   "RODSO_IMAGE($rodso_name, ${invoker.name}, $code_or_data)",
                  ])
     }
   } else {
@@ -249,6 +264,8 @@ if (is_kernel) {
     ]
     include_dirs = [ target_gen_dir ]
     deps = [
+      ":decompress_zbi-code.h",
+      ":decompress_zbi.image",
       ":headers",
       ":rodso",
       ":userboot-code.h",
@@ -266,5 +283,16 @@ if (is_kernel) {
     deps = [
       "userboot",
     ]
+  }
+
+  rodso("decompress_zbi") {
+    visibility = [ ":*" ]
+    name = "DECOMPRESS_ZBI"
+    deps = [
+      "$zx/system/ulib/hermetic-decompressor:decompress-lz4f",
+    ]
+
+    # It's hermetic, but it's allowed to have data and bss.
+    writable = true
   }
 }

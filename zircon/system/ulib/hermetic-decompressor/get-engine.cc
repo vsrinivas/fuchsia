@@ -41,8 +41,10 @@ struct Decompressor {
 zx::vmo cache_lz4f, cache_zstd;
 
 constexpr Decompressor kDecompressors[] = {
-    {"hermetic/decompress-lz4f.so", &cache_lz4f, 0x184D2204},
-    {"hermetic/decompress-zstd.so", &cache_zstd, 0xFD2FB528},
+    {"hermetic/decompress-lz4f.so", &cache_lz4f,
+     HermeticDecompressorEngineService::kLz4fMagic},
+    {"hermetic/decompress-zstd.so", &cache_zstd,
+     HermeticDecompressorEngineService::kZstdMagic},
 };
 
 } // namespace

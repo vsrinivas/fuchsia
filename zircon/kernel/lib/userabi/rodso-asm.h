@@ -17,7 +17,7 @@
     // that uses C syntax like 1L instead of plain integers
     // and arithmetic operations that the assembler can handle.
     .if \size % (1 << PAGE_SIZE_SHIFT)
-        .error "\name size \size is not multiple of PAGE_SIZE"
+        .error "\name size \size is not a multiple of PAGE_SIZE"
     .endif
     .section .rodata.rodso_image.\name,"a"
     .p2align PAGE_SIZE_SHIFT
@@ -25,8 +25,8 @@
 
 // The whole thing can't be just an assembler macro because a macro
 // operand cannot be a string like .incbin needs for the filename.
-#define RODSO_IMAGE(name, NAME) \
-    rodso_image_section name, NAME##_CODE_END; \
+#define RODSO_IMAGE(name, NAME, CODE_or_DATA) \
+    rodso_image_section name, NAME##_##CODE_or_DATA##_END; \
     DATA(name##_image) \
-    .incbin NAME##_FILENAME, 0, NAME##_CODE_END; \
+    .incbin NAME##_FILENAME, 0, NAME##_##CODE_or_DATA##_END; \
     END_DATA(name##_image)

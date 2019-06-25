@@ -195,7 +195,11 @@ zx_handle_t reserve_low_address_space(zx_handle_t log, zx_handle_t root_vmar) {
     // We need it to load devmgr and libc from.
     // Later bootfs sections will be processed by devmgr.
     zx::vmo bootfs_vmo{
-        bootdata_get_bootfs(log.get(), vmar_self.get(), handles[kZbi])};
+        bootdata_get_bootfs(log.get(), vmar_self.get(),
+                            handles[kRootJob],
+                            handles[kUserbootDecompressor],
+                            handles[kFirstVdso],
+                            handles[kZbi])};
 
     // TODO(mdempsky): Push further down the stack? Seems unnecessary to
     // mark the entire bootfs VMO as executable.
@@ -304,6 +308,15 @@ zx_handle_t reserve_low_address_space(zx_handle_t log, zx_handle_t root_vmar) {
                                  &handles[kThreadSelf]);
     check(log.get(), status,
           "zx_handle_duplicate failed on child thread handle");
+
+    for (const auto& h : handles) {
+        zx_info_handle_basic_t info;
+        status = zx_object_get_info(h, ZX_INFO_HANDLE_BASIC,
+                                    &info, sizeof(info), nullptr, nullptr);
+        check(log.get(), status,
+              "bad handle %d is %x",
+              (int)(&h - &handles[0]), h);
+    }
 
     // Now send the bootstrap message.  This transfers away all the handles
     // we have left except the process and thread themselves.

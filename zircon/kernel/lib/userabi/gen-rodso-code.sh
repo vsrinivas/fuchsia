@@ -17,7 +17,8 @@
 # of entries in the table.
 
 usage() {
-  echo >&2 "Usage: $0 NM READELF [--depfile DEPFILE] OUTFILE {NAME DSO}..."
+  echo >&2 "\
+Usage: $0 NM READELF [--depfile DEPFILE] [--writable] OUTFILE {NAME DSO}..."
   exit 2
 }
 
@@ -104,10 +105,14 @@ grok_segments() {
       echo "#define ${1}_CODE_START $vaddr" >> $OUTFILE
       echo "#define ${1}_CODE_END (((${1}_CODE_START + $filesz + (1 << PAGE_SIZE_SHIFT) - 1) >> PAGE_SIZE_SHIFT) << PAGE_SIZE_SHIFT)" >> $OUTFILE
       ;;
-    # Make sure there's no writable segment.
+    # Make sure there's no writable segment unless --writable allows it.
     *LOAD*W*)
-      echo >&2 "$0: writable segment: $line"
-      exit 1
+      $WRITABLE || {
+        echo >&2 "$0: writable segment: $line"
+        exit 1
+      }
+      echo "#define ${1}_DATA_START $vaddr" >> $OUTFILE
+      echo "#define ${1}_DATA_END (((${1}_DATA_START + $filesz + (1 << PAGE_SIZE_SHIFT) - 1) >> PAGE_SIZE_SHIFT) << PAGE_SIZE_SHIFT)" >> $OUTFILE
       ;;
     # Section header for .dynsym, e.g.:
     #  [ 3] .dynsym           DYNSYM          0000000000001268 001268 000018 18   A  6   1  8
@@ -146,6 +151,13 @@ find_segments() {
 trap 'rm -f "$OUTFILE" ${DEPFILE:+"$DEPFILE"}' ERR HUP INT TERM
 
 while [ $# -gt 0 ]; do
+  if [ "$1" = --writable ]; then
+    WRITABLE=true
+    shift
+  else
+    WRITABLE=false
+  fi
+
   if [ $# -lt 2 ]; then
     usage
   fi

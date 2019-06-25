@@ -20,11 +20,14 @@ if (current_toolchain == default_toolchain) {
       # can do loadable_module().
       solink = true
 
-      if (opt_level < 2) {
-        # userboot doesn't stay sufficiently pure without optimization.
-        toolchain_args = {
+      toolchain_args = {
+        if (opt_level < 2) {
+          # userboot doesn't stay sufficiently pure without optimization.
           opt_level = 2
         }
+
+        # No runtime to print asserts, so can't compile them in.
+        assert_level = 0
       }
 
       # userboot can't use any instrumentation runtimes.
@@ -77,9 +80,9 @@ if (current_toolchain == default_toolchain) {
     deps = [
       ":gen-vdso-syms-ld",
       "$zx/kernel/lib/userabi:headers",
-      "$zx/system/ulib/bootdata",
       "$zx/system/ulib/elf-psabi",
       "$zx/system/ulib/elfload",
+      "$zx/system/ulib/hermetic-decompressor",
       "$zx/system/ulib/ldmsg",
       "$zx/system/ulib/processargs",
       "$zx/system/ulib/zircon",

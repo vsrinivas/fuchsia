@@ -20,7 +20,6 @@ library("hermetic-decompressor") {
 
 template("engine_module") {
   hermetic_module(target_name) {
-    visibility = [ ":*" ]
     ldflags = [ "-Wl,-z,stack-size=4096" ]
     forward_variables_from(invoker, "*")
     deps += [

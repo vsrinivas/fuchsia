@@ -7,4 +7,6 @@
 #include <zircon/types.h>
 
 zx_handle_t bootdata_get_bootfs(zx_handle_t log, zx_handle_t vmar_self,
+                                zx_handle_t job,
+                                zx_handle_t engine_vmo, zx_handle_t vdso_vmo,
                                 zx_handle_t bootdata_vmo);

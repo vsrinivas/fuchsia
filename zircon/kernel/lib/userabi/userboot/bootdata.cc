@@ -5,12 +5,51 @@
 #include "bootdata.h"
 #include "util.h"
 
-#include <bootdata/decompress.h>
+#include <lib/hermetic-decompressor/hermetic-decompressor.h>
 #include <zircon/boot/bootdata.h>
+#include <zircon/boot/image.h>
 #include <zircon/syscalls.h>
 #include <string.h>
 
+namespace {
+
+class EngineService {
+public:
+    using Magic = HermeticDecompressorEngineService::Magic;
+    static constexpr Magic kLz4fMagic =
+        HermeticDecompressorEngineService::kLz4fMagic;
+
+    EngineService(zx_handle_t job, zx_handle_t engine, zx_handle_t vdso) :
+        job_(job), engine_(engine), vdso_(vdso) {}
+
+    auto job() const { return zx::unowned_job{*job_}; }
+
+    zx_status_t GetEngine(Magic magic, zx::unowned_vmo* vmo) {
+        if (magic == kLz4fMagic) {
+            *vmo = zx::unowned_vmo{engine_};
+            return ZX_OK;
+        }
+        return ZX_ERR_NOT_FOUND;
+    }
+
+    zx_status_t GetVdso(zx::unowned_vmo* vmo) {
+        *vmo = zx::unowned_vmo{vdso_->get()};
+        return ZX_OK;
+    }
+
+private:
+    zx::unowned_job job_;
+    zx::unowned_vmo engine_;
+    zx::unowned_vmo vdso_;
+};
+
+using Decompressor = HermeticDecompressorWithEngineService<EngineService>;
+
+}
+
 zx_handle_t bootdata_get_bootfs(zx_handle_t log, zx_handle_t vmar_self,
+                                zx_handle_t job,
+                                zx_handle_t engine_vmo, zx_handle_t vdso_vmo,
                                 zx_handle_t bootdata_vmo) {
     size_t off = 0;
     for (;;) {
@@ -32,13 +71,20 @@ zx_handle_t bootdata_get_bootfs(zx_handle_t log, zx_handle_t vmar_self,
             }
             break;
 
-        case BOOTDATA_BOOTFS_BOOT:;
-            const char* errmsg;
-            zx_handle_t bootfs_vmo;
-            status = decompress_bootdata(vmar_self, bootdata_vmo, off,
-                                         bootdata.length + sizeof(bootdata),
-                                         &bootfs_vmo, &errmsg);
-            check(log, status, "%s", errmsg);
+        case BOOTDATA_BOOTFS_BOOT: {
+            zx::vmo bootfs_vmo;
+            if (bootdata.flags & ZBI_FLAG_STORAGE_COMPRESSED) {
+                status = zx::vmo::create(bootdata.extra, 0, &bootfs_vmo);
+                check(log, status,
+                      "cannot create BOOTFS VMO (%u bytes)", bootdata.extra);
+                status = Decompressor(job, engine_vmo, vdso_vmo)
+                    (*zx::unowned_vmo{bootdata_vmo},
+                     off + sizeof(bootdata), bootdata.length,
+                     bootfs_vmo, 0, bootdata.extra);
+                check(log, status, "failed to decompress BOOTFS");
+            } else {
+                fail(log, "uncompressed BOOTFS not supported");
+            }
 
             // Signal that we've already processed this one.
             bootdata.type = BOOTDATA_BOOTFS_DISCARD;
@@ -47,7 +93,9 @@ zx_handle_t bootdata_get_bootfs(zx_handle_t log, zx_handle_t vmar_self,
                                     sizeof(bootdata.type)),
                   "zx_vmo_write failed on bootdata VMO\n");
 
-            return bootfs_vmo;
+            printl(log, "decompressed bootfs to VMO!\n");
+            return bootfs_vmo.release();
+        }
         }
 
         off += BOOTDATA_ALIGN(sizeof(bootdata) + bootdata.length);

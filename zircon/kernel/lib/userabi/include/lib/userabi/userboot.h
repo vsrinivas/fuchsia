@@ -42,11 +42,13 @@ enum HandleIndex : uint32_t {
     kFirstVdso,
     kLastVdso = kFirstVdso + static_cast<uint32_t>(VdsoVariant::COUNT) - 1,
 
+    // These get passed along to userland to be recognized by ZX_PROP_NAME.
+    // The decompressor is also used by userboot itself.
     // The remainder are VMO handles that userboot doesn't care about.
-    // They just get passed along to userland to be recognized by ZX_PROP_NAME.
-    kFirstKernelFile,
+    kUserbootDecompressor,
+    kFirstKernelFile = kUserbootDecompressor,
 
-    kCrashlog = kFirstKernelFile,
+    kCrashlog,
     kCounterNames,
     kCounters,
 #if ENABLE_ENTROPY_COLLECTOR_TEST

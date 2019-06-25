@@ -183,7 +183,7 @@ public:
         // short-circuit.  This can be called to report a failure in a
         // complex transfer.
         void Abort(zx_status_t status) {
-            ZX_ASSERT(status != ZX_OK);
+            ZX_DEBUG_ASSERT(status != ZX_OK);
             status_ = status;
         }
 

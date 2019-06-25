@@ -49,11 +49,13 @@ constexpr const char kZbiVmoName[] = "zbi";
 
 constexpr size_t stack_size = ZIRCON_DEFAULT_STACK_SIZE;
 
+#include "decompress_zbi-code.h"
 #include "userboot-code.h"
 
 // This is defined in assembly via RODSO_IMAGE (see rodso-asm.h);
 // userboot-code.h gives details about the image's size and layout.
 extern "C" const char userboot_image[];
+extern "C" const char decompress_zbi_image[];
 
 KCOUNTER(init_time, "init.userboot.time.msec")
 
@@ -168,6 +170,13 @@ zx_status_t crashlog_to_vmo(fbl::RefPtr<VmObject>* out) {
 }
 
 void bootstrap_vmos(Handle** handles) {
+    {
+        EmbeddedVmo decompress_zbi("lib/hermetic/decompress-zbi.so",
+                                   decompress_zbi_image,
+                                   DECOMPRESS_ZBI_DATA_END);
+        handles[kUserbootDecompressor] = decompress_zbi.vmo_handle().release();
+    }
+
     size_t rsize;
     void* rbase = platform_get_ramdisk(&rsize);
     if (rbase) {
