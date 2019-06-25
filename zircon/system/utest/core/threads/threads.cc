@@ -717,7 +717,7 @@ static bool TestSuspendMultiple() {
     // The thread will now be blocked on the event. Wake it up and catch the trap (undefined
     // exception).
     zx_handle_t exception_channel, exception;
-    ASSERT_EQ(zx_task_create_exception_channel(zx_process_self(), ZX_EXCEPTION_PORT_DEBUGGER,
+    ASSERT_EQ(zx_task_create_exception_channel(zx_process_self(), ZX_EXCEPTION_CHANNEL_DEBUGGER,
                                                &exception_channel),
               ZX_OK);
     ASSERT_EQ(zx_object_signal(event, 0, ZX_USER_SIGNAL_0), ZX_OK);
@@ -825,7 +825,7 @@ static bool TestKillSuspendedThread() {
 
     // Attach to debugger channel so we can see ZX_EXCP_THREAD_EXITING.
     zx_handle_t exception_channel;
-    ASSERT_EQ(zx_task_create_exception_channel(zx_process_self(), ZX_EXCEPTION_PORT_DEBUGGER,
+    ASSERT_EQ(zx_task_create_exception_channel(zx_process_self(), ZX_EXCEPTION_CHANNEL_DEBUGGER,
                                                &exception_channel),
               ZX_OK);
 
