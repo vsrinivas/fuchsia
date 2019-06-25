@@ -13,17 +13,17 @@ use fuchsia_inspect::{Property, StringProperty};
 use fuchsia_zircon as zx;
 
 pub trait NodeExt {
-    fn create_time(&self, name: &str) -> TimeProperty;
-    fn create_time_at(&self, name: &str, timestamp: zx::Time) -> TimeProperty;
+    fn create_time(&self, name: impl AsRef<str>) -> TimeProperty;
+    fn create_time_at(&self, name: impl AsRef<str>, timestamp: zx::Time) -> TimeProperty;
 }
 
 impl NodeExt for Node {
-    fn create_time(&self, name: &str) -> TimeProperty {
+    fn create_time(&self, name: impl AsRef<str>) -> TimeProperty {
         let now = zx::Time::get(zx::ClockId::Monotonic);
         self.create_time_at(name, now)
     }
 
-    fn create_time_at(&self, name: &str, timestamp: zx::Time) -> TimeProperty {
+    fn create_time_at(&self, name: impl AsRef<str>, timestamp: zx::Time) -> TimeProperty {
         TimeProperty { inner: self.create_string(name, &format_time(timestamp)) }
     }
 }
