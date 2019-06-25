@@ -485,7 +485,7 @@ zx_status_t StartSvchost(const zx::job& root_job, bool require_system,
             return status;
         }
 
-        status = fdio_service_connect_at(root_client.get(), "public", coordinator_server.release());
+        status = fdio_service_connect_at(root_client.get(), "svc", coordinator_server.release());
         if (status != ZX_OK) {
             return status;
         }
@@ -506,7 +506,7 @@ zx_status_t StartSvchost(const zx::job& root_job, bool require_system,
             return status;
         }
 
-        status = fdio_service_connect_at(g_handles.miscsvc_client.get(), "public",
+        status = fdio_service_connect_at(g_handles.miscsvc_client.get(), "svc",
                                          miscsvc_svc_req.release());
         if (status != ZX_OK) {
             return status;
@@ -612,7 +612,7 @@ zx_status_t StartSvchost(const zx::job& root_job, bool require_system,
         return status;
     }
 
-    return fdio_service_connect_at(svchost_local.get(), "public", svchost_public_remote.release());
+    return fdio_service_connect_at(svchost_local.get(), "svc", svchost_public_remote.release());
 }
 
 void fshost_start(devmgr::Coordinator* coordinator, const devmgr::DevmgrArgs& devmgr_args,

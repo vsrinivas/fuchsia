@@ -17,7 +17,7 @@ public:
     ~Outgoing();
 
     const fbl::RefPtr<fs::PseudoDir>& root_dir() const { return root_dir_; }
-    const fbl::RefPtr<fs::PseudoDir>& public_dir() const { return public_dir_; }
+    const fbl::RefPtr<fs::PseudoDir>& svc_dir() const { return svc_dir_; }
 
     // Start serving the root directory on the given channel.
     zx_status_t Serve(zx::channel dir_request);
@@ -31,7 +31,7 @@ public:
 private:
     fs::SynchronousVfs vfs_;
     fbl::RefPtr<fs::PseudoDir> root_dir_;
-    fbl::RefPtr<fs::PseudoDir> public_dir_;
+    fbl::RefPtr<fs::PseudoDir> svc_dir_;
 };
 
 } // namespace svc

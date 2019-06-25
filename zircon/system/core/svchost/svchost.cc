@@ -292,7 +292,7 @@ int main(int argc, char** argv) {
     };
 
     for (size_t i = 0; i < fbl::count_of(service_providers); ++i) {
-        status = provider_load(&service_providers[i], dispatcher, outgoing.public_dir());
+        status = provider_load(&service_providers[i], dispatcher, outgoing.svc_dir());
         if (status != ZX_OK) {
             fprintf(stderr, "svchost: error: Failed to load service provider %zu: %d (%s).\n",
                     i, status, zx_status_get_string(status));
@@ -304,7 +304,7 @@ int main(int argc, char** argv) {
     zx_service_provider_instance_t logger_service{.provider = logger_get_service_provider(),
                                                   .ctx = nullptr};
     if (!require_system) {
-        status = provider_load(&logger_service, dispatcher, outgoing.public_dir());
+        status = provider_load(&logger_service, dispatcher, outgoing.svc_dir());
         if (status != ZX_OK) {
             fprintf(stderr, "svchost: error: Failed to publish logger: %d (%s).\n",
                     status, zx_status_get_string(status));
@@ -312,15 +312,15 @@ int main(int argc, char** argv) {
         }
     }
 
-    publish_services(outgoing.public_dir(), deprecated_services, zx::unowned_channel(appmgr_svc));
-    publish_services(outgoing.public_dir(), fshost_services, zx::unowned_channel(fshost_svc));
-    publish_services(outgoing.public_dir(), miscsvc_services, zx::unowned_channel(miscsvc_svc));
-    publish_services(outgoing.public_dir(), bootsvc_services, zx::unowned_channel(bootsvc_svc));
-    publish_services(outgoing.public_dir(), devmgr_services,
+    publish_services(outgoing.svc_dir(), deprecated_services, zx::unowned_channel(appmgr_svc));
+    publish_services(outgoing.svc_dir(), fshost_services, zx::unowned_channel(fshost_svc));
+    publish_services(outgoing.svc_dir(), miscsvc_services, zx::unowned_channel(miscsvc_svc));
+    publish_services(outgoing.svc_dir(), bootsvc_services, zx::unowned_channel(bootsvc_svc));
+    publish_services(outgoing.svc_dir(), devmgr_services,
                      zx::unowned_channel(devmgr_proxy_channel));
 
     if (virtcon_proxy_channel.is_valid()) {
-        publish_proxy_service(outgoing.public_dir(),
+        publish_proxy_service(outgoing.svc_dir(),
                               fuchsia_virtualconsole_SessionManager_Name,
                               zx::unowned_channel(virtcon_proxy_channel));
     }

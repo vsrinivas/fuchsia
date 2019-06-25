@@ -99,7 +99,7 @@ int main(int argc, char** argv) {
     };
 
     for (size_t i = 0; i < fbl::count_of(service_providers); ++i) {
-        status = provider_load(&service_providers[i], dispatcher, outgoing.public_dir());
+        status = provider_load(&service_providers[i], dispatcher, outgoing.svc_dir());
         if (status != ZX_OK) {
             fprintf(stderr, "miscsvc: error: Failed to load service provider %zu: %d (%s).\n",
                     i, status, zx_status_get_string(status));

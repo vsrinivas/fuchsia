@@ -1497,7 +1497,7 @@ void Coordinator::UseFallbackDrivers() {
 }
 
 void Coordinator::InitOutgoingServices() {
-    const auto& public_dir = outgoing_services_.public_dir();
+    const auto& svc_dir = outgoing_services_.svc_dir();
 
     const auto admin = [this](zx::channel request) {
         static_assert(fuchsia_device_manager_SUSPEND_FLAG_REBOOT == DEVICE_SUSPEND_FLAG_REBOOT);
@@ -1528,8 +1528,8 @@ void Coordinator::InitOutgoingServices() {
            }
            return status;
        };
-    public_dir->AddEntry(fuchsia_device_manager_Administrator_Name,
-                         fbl::MakeRefCounted<fs::Service>(admin));
+    svc_dir->AddEntry(fuchsia_device_manager_Administrator_Name,
+                      fbl::MakeRefCounted<fs::Service>(admin));
 
     const auto debug = [this](zx::channel request) {
         static constexpr fuchsia_device_manager_DebugDumper_ops_t kOps = {
@@ -1564,8 +1564,8 @@ void Coordinator::InitOutgoingServices() {
         }
         return status;
     };
-    public_dir->AddEntry(fuchsia_device_manager_DebugDumper_Name,
-                         fbl::MakeRefCounted<fs::Service>(debug));
+    svc_dir->AddEntry(fuchsia_device_manager_DebugDumper_Name,
+                      fbl::MakeRefCounted<fs::Service>(debug));
 }
 
 void Coordinator::OnOOMEvent(async_dispatcher_t* dispatcher, async::WaitBase* wait,

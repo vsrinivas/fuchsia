@@ -1075,7 +1075,7 @@ TEST_F(MultipleDeviceTestCase, SuspendFidlMexec) {
     zx::channel channel, channel_remote;
     ASSERT_OK(zx::channel::create(0, &channel, &channel_remote));
 
-    const char* service = "public/" fuchsia_device_manager_Administrator_Name;
+    const char* service = "svc/" fuchsia_device_manager_Administrator_Name;
     ASSERT_OK(fdio_service_connect_at(services.get(), service, channel_remote.release()));
 
     bool callback_executed = false;
