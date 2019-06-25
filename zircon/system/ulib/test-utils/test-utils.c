@@ -358,6 +358,18 @@ zx_handle_t tu_exception_get_thread(zx_handle_t exception) {
     return thread;
 }
 
+void tu_resume_exception(zx_handle_t exception_handle) {
+  uint32_t state = ZX_EXCEPTION_STATE_HANDLED;
+  zx_status_t status = zx_object_set_property(exception_handle, ZX_PROP_EXCEPTION_STATE,
+                                              &state, sizeof(state));
+  if (status != ZX_OK)
+        tu_fatal(__func__, status);
+
+  status = zx_handle_close(exception_handle);
+  if (status != ZX_OK)
+        tu_fatal(__func__, status);
+}
+
 void tu_object_wait_async(zx_handle_t handle, zx_handle_t port, zx_signals_t signals)
 {
     uint64_t key = tu_get_koid(handle);

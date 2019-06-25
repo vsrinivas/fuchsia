@@ -8,6 +8,7 @@ test("debugger") {
     "crash-and-recover.h",
     "debugger.cc",
     "debugger.h",
+    "hw-breakpoint-test.cpp",
     "inferior-control.cc",
     "inferior-control.h",
     "inferior.cc",

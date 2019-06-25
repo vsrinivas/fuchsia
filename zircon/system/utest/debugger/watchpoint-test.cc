@@ -11,16 +11,15 @@
 
 #include <test-utils/test-utils.h>
 #include <unittest/unittest.h>
-#include <zircon/threads.h>
+#include <zircon/process.h>
 #include <zircon/status.h>
+#include <zircon/threads.h>
 
 #include "inferior-control.h"
 #include "inferior.h"
 #include "utils.h"
 
 namespace {
-
-constexpr uint64_t kExceptionPortKey = 0x123456;
 
 // This is the variable we set the hw watchpoint on.
 volatile int gVariableToChange = 0;
@@ -38,7 +37,7 @@ int watchpoint_function(void* user) {
 
 #if defined(__x86_64__)
 
-zx_status_t set_debug_regs(zx_handle_t thread_handle) {
+zx_status_t set_watchpoint(zx_handle_t thread_handle) {
   zx_thread_state_debug_regs_t debug_regs = {};
   // TODO(donosoc): Unify this under one public arch header.
   debug_regs.dr7 = 0b1 |          // L0 = 1 (watchpoint is active).
@@ -56,7 +55,7 @@ zx_status_t set_debug_regs(zx_handle_t thread_handle) {
 
 #elif defined(__aarch64__)
 
-zx_status_t set_debug_regs(zx_handle_t thread_handle) {
+zx_status_t set_watchpoint(zx_handle_t thread_handle) {
   zx_thread_state_debug_regs_t debug_regs = {};
   // For now the API is very simple, as zircon is not using further
   // configuration beyond simply adding a write watchpoint.
@@ -72,7 +71,7 @@ zx_status_t set_debug_regs(zx_handle_t thread_handle) {
 #error Unsupported arch.
 #endif
 
-zx_status_t unset_debug_regs(zx_handle_t thread_handle) {
+zx_status_t unset_watchpoint(zx_handle_t thread_handle) {
   zx_thread_state_debug_regs_t debug_regs = {};
   return zx_thread_write_state(thread_handle, ZX_THREAD_STATE_DEBUG_REGS,
                                &debug_regs, sizeof(debug_regs));
@@ -80,7 +79,7 @@ zx_status_t unset_debug_regs(zx_handle_t thread_handle) {
 
 }  // namespace
 
-bool test_watchpoint_impl(zx_handle_t eport) {
+bool test_watchpoint_impl(zx_handle_t excp_channel) {
     BEGIN_HELPER;
 
     gWatchpointThreadShouldContinue = true;
@@ -110,7 +109,7 @@ bool test_watchpoint_impl(zx_handle_t eport) {
 
     unittest_printf("Watchpoint: Writing debug registers.\n");
 
-    status = set_debug_regs(thread_handle);
+    status = set_watchpoint(thread_handle);
     ASSERT_EQ(status, ZX_OK);
 
     unittest_printf("Watchpoint: Resuming thread.\n");
@@ -118,37 +117,35 @@ bool test_watchpoint_impl(zx_handle_t eport) {
     zx_handle_close(suspend_token);
 
     // We wait for the exception.
-    zx_port_packet_t packet;
-    status = zx_port_wait(eport, ZX_TIME_INFINITE, &packet);
-    ASSERT_EQ(status, ZX_OK);
-    ASSERT_TRUE(ZX_PKT_IS_EXCEPTION(packet.type));
-    ASSERT_EQ(packet.key, kExceptionPortKey);
-    ASSERT_EQ(packet.type, ZX_EXCP_HW_BREAKPOINT);
+    tu_channel_wait_readable(excp_channel);
+    tu_exception_t exception = tu_read_exception(excp_channel);
+    ASSERT_EQ(exception.info.type, ZX_EXCP_HW_BREAKPOINT);
 
     // Clear the state and resume the thread.
-    status = unset_debug_regs(thread_handle);
+    status = unset_watchpoint(thread_handle);
     ASSERT_EQ(status, ZX_OK);
-
     gWatchpointThreadShouldContinue = false;
 
-    status = zx_task_resume_from_exception(thread_handle, eport, 0);
-    ASSERT_EQ(status, ZX_OK);
+    tu_resume_exception(exception.exception);
+
+    // join the thread.
+    int res = -1;
+    ASSERT_EQ(thrd_join(thread, &res), thrd_success);
+    ASSERT_EQ(res, 0);
 
     END_HELPER;
 }
 
 bool WatchpointTest() {
-  BEGIN_TEST;
+    BEGIN_TEST;
 
-  // Listen to our own exception port.
-  zx_handle_t eport = tu_io_port_create();
-  tu_set_exception_port(0, eport, kExceptionPortKey, 0);
+    zx_handle_t excp_channel = tu_create_exception_channel(zx_process_self(), 0);
 
-  EXPECT_TRUE(test_watchpoint_impl(eport));
+    EXPECT_TRUE(test_watchpoint_impl(excp_channel));
 
-  tu_unset_exception_port(0);
+    zx_handle_close(excp_channel);
 
-  END_TEST;
+    END_TEST;
 }
 
 BEGIN_TEST_CASE(watchpoint_start_tests)

@@ -161,6 +161,8 @@ tu_exception_t tu_read_exception(zx_handle_t channel);
 zx_handle_t tu_exception_get_process(zx_handle_t exception);
 zx_handle_t tu_exception_get_thread(zx_handle_t exception);
 
+void tu_resume_exception(zx_handle_t exception_handle);
+
 // Add |handle| to the list of things |port| watches.
 // When |handle| is signaled with a signal in |signals| a zx_packet_signal_t
 // packet is sent to |port| with the key being the koid of |handle|.
