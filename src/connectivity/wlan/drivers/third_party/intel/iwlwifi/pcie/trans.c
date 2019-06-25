@@ -1826,11 +1826,10 @@ static void iwl_trans_pcie_removal_wk(struct work_struct* wk) {
 #endif // NEEDS_PORTING
 
 static bool iwl_trans_pcie_grab_nic_access(struct iwl_trans* trans, unsigned long* flags) {
-#if 0  // NEEDS_PORTING
     int ret;
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 
-    spin_lock_irqsave(&trans_pcie->reg_lock, *flags);
+    mtx_lock(&trans_pcie->reg_lock);
 
     if (trans_pcie->cmd_hold_nic_awake) { goto out; }
 
@@ -1866,14 +1865,17 @@ static bool iwl_trans_pcie_grab_nic_access(struct iwl_trans* trans, unsigned lon
     if (unlikely(ret < 0)) {
         uint32_t cntrl = iwl_read32(trans, CSR_GP_CNTRL);
 
-        WARN_ONCE(1, "Timeout waiting for hardware access (CSR_GP_CNTRL 0x%08x)\n", cntrl);
+        IWL_WARN(trans, "Timeout waiting for hardware access (CSR_GP_CNTRL 0x%08x)\n", cntrl);
 
         iwl_trans_pcie_dump_regs(trans);
 
         if (iwlwifi_mod_params.remove_when_gone && cntrl == ~0U) {
-            struct iwl_trans_pcie_removal* removal;
-
             if (test_bit(STATUS_TRANS_DEAD, &trans->status)) { goto err; }
+
+            IWL_ERR(trans, "Device gone - exit!\n");
+
+#if 0   // NEEDS_PORTING
+            struct iwl_trans_pcie_removal* removal;
 
             IWL_ERR(trans, "Device gone - scheduling removal!\n");
 
@@ -1903,12 +1905,13 @@ static bool iwl_trans_pcie_grab_nic_access(struct iwl_trans* trans, unsigned lon
             INIT_WORK(&removal->work, iwl_trans_pcie_removal_wk);
             pci_dev_get(removal->pdev);
             schedule_work(&removal->work);
+#endif  // NEEDS_PORTING
         } else {
             iwl_write32(trans, CSR_RESET, CSR_RESET_REG_FLAG_FORCE_NMI);
         }
 
     err:
-        spin_unlock_irqrestore(&trans_pcie->reg_lock, *flags);
+        mtx_unlock(&trans_pcie->reg_lock);
         return false;
     }
 
@@ -1917,28 +1920,23 @@ out:
      * Fool sparse by faking we release the lock - sparse will
      * track nic_access anyway.
      */
-    __release(&trans_pcie->reg_lock);
+    mtx_unlock(&trans_pcie->reg_lock);
     return true;
-#endif // NEEDS_PORTING
-    IWL_ERR(trans, "%s needs porting\n", __FUNCTION__);
-    return false;
 }
 
 static void iwl_trans_pcie_release_nic_access(struct iwl_trans* trans, unsigned long* flags) {
-#if 0  // NEEDS_PORTING
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
-
-    lockdep_assert_held(&trans_pcie->reg_lock);
 
     /*
      * Fool sparse by faking we acquiring the lock - sparse will
      * track nic_access anyway.
      */
-    __acquire(&trans_pcie->reg_lock);
+    mtx_lock(&trans_pcie->reg_lock);
 
     if (trans_pcie->cmd_hold_nic_awake) { goto out; }
 
     __iwl_trans_pcie_clear_bit(trans, CSR_GP_CNTRL, BIT(trans->cfg->csr->flag_mac_access_req));
+#if 0   // NEEDS_PORTING
     /*
      * Above we read the CSR_GP_CNTRL register, which will flush
      * any previous writes, but we need the write that clears the
@@ -1946,10 +1944,9 @@ static void iwl_trans_pcie_release_nic_access(struct iwl_trans* trans, unsigned 
      * scheduled on different CPUs (after we drop reg_lock).
      */
     mmiowb();
+#endif  // NEEDS_PORTING
 out:
-    spin_unlock_irqrestore(&trans_pcie->reg_lock, *flags);
-#endif // NEEDS_PORTING
-    IWL_ERR(trans, "%s needs porting\n", __FUNCTION__);
+    mtx_unlock(&trans_pcie->reg_lock);
 }
 
 static int iwl_trans_pcie_read_mem(struct iwl_trans* trans, uint32_t addr, void* buf, int dwords) {
