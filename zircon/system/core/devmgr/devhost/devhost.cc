@@ -30,6 +30,7 @@
 #include <fbl/function.h>
 #include <fs/handler.h>
 #include <fuchsia/device/manager/c/fidl.h>
+#include <fuchsia/device/manager/llcpp/fidl.h>
 #include <fuchsia/io/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/receiver.h>
@@ -78,7 +79,7 @@ static zx_status_t SetupRootDevcoordinatorConnection(zx::channel ch) {
 
     conn->set_channel(std::move(ch));
     return DevhostControllerConnection::BeginWait(std::move(conn),
-                                                      DevhostAsyncLoop()->dispatcher());
+                                                  DevhostAsyncLoop()->dispatcher());
 }
 
 const char* mkdevpath(const fbl::RefPtr<zx_device_t>& dev, char* path, size_t max) {
@@ -245,71 +246,40 @@ zx_status_t dh_find_driver(fbl::StringPiece libname, zx::vmo vmo, fbl::RefPtr<zx
     return new_driver->status();
 }
 
-static zx_status_t fidl_CreateDeviceStub(void* raw_ctx, zx_handle_t raw_rpc, uint32_t protocol_id,
-                                         uint64_t device_local_id) {
-    zx::channel rpc(raw_rpc);
-    log(RPC_IN, "devhost: create device stub\n");
+void DevhostControllerConnection::CreateDevice(zx::channel rpc,
+                                               ::fidl::StringView driver_path_view,
+                                               ::zx::vmo driver_vmo,
+                                               ::zx::handle parent_proxy,
+                                               ::fidl::StringView proxy_args,
+                                               uint64_t local_device_id,
+                                               CreateDeviceCompleter::Sync completer) {
 
-    fbl::RefPtr<zx_device_t> dev;
-    zx_status_t r = zx_device::Create(&dev);
-    // TODO: dev->ops and other lifecycle bits
-    // no name means a dummy proxy device
-    if (r != ZX_OK) {
-        return r;
-    }
-    strcpy(dev->name, "proxy");
-    dev->protocol_id = protocol_id;
-    dev->ops = &device_default_ops;
-    dev->set_local_id(device_local_id);
-
-    std::unique_ptr<DeviceControllerConnection> newconn;
-    r = DeviceControllerConnection::Create(dev, std::move(rpc), &newconn);
-    if (r != ZX_OK) {
-        return r;
-    }
-
-    log(RPC_IN, "devhost: creating new stub conn=%p\n", newconn.get());
-    if ((r = DeviceControllerConnection::BeginWait(
-            std::move(newconn), DevhostAsyncLoop()->dispatcher())) != ZX_OK) {
-        return r;
-    }
-    return ZX_OK;
-}
-
-static zx_status_t fidl_CreateDevice(void* raw_ctx, zx_handle_t raw_rpc,
-                                     const char* driver_path_data, size_t driver_path_size,
-                                     zx_handle_t raw_driver_vmo, zx_handle_t raw_parent_proxy,
-                                     const char* proxy_args_data, size_t proxy_args_size,
-                                     uint64_t device_local_id) {
-    zx::channel rpc(raw_rpc);
-    zx::vmo driver_vmo(raw_driver_vmo);
-    zx::handle parent_proxy(raw_parent_proxy);
-    fbl::StringPiece driver_path(driver_path_data, driver_path_size);
-
+    fbl::StringPiece driver_path(driver_path_view.data(), driver_path_view.size());
     // This does not operate under the devhost api lock,
     // since the newly created device is not visible to
     // any API surface until a driver is bound to it.
     // (which can only happen via another message on this thread)
     log(RPC_IN, "devhost: create device drv='%.*s' args='%.*s'\n",
-        static_cast<int>(driver_path_size), driver_path_data, static_cast<int>(proxy_args_size),
-        proxy_args_data);
+        static_cast<int>(driver_path.size()), driver_path.data(), static_cast<int>(proxy_args.size()),
+        proxy_args.data());
 
     // named driver -- ask it to create the device
     fbl::RefPtr<zx_driver_t> drv;
     zx_status_t r = dh_find_driver(driver_path, std::move(driver_vmo), &drv);
     if (r != ZX_OK) {
         log(ERROR, "devhost: driver load failed: %d\n", r);
-        return r;
+        return;
     }
     if (!drv->has_create_op()) {
         log(ERROR, "devhost: driver create() not supported\n");
-        return ZX_ERR_NOT_SUPPORTED;
+        return;
     }
 
     // Create a dummy parent device for use in this call to Create
     fbl::RefPtr<zx_device> parent;
     if ((r = zx_device::Create(&parent)) != ZX_OK) {
-        return r;
+        log(ERROR, "devhost: device create() failed: %d\n", r);
+        return;
     }
     // magic cookie for device create handshake
     char dummy_name[sizeof(parent->name)] = "device_create dummy";
@@ -321,11 +291,7 @@ static zx_status_t fidl_CreateDevice(void* raw_ctx, zx_handle_t raw_rpc,
         .rpc = zx::unowned_channel(rpc),
     };
 
-    char proxy_args[fuchsia_device_manager_DEVICE_ARGS_MAX + 1];
-    memcpy(proxy_args, proxy_args_data, proxy_args_size);
-    proxy_args[proxy_args_size] = 0;
-
-    r = drv->CreateOp(&creation_context, creation_context.parent, "proxy", proxy_args,
+    r = drv->CreateOp(&creation_context, creation_context.parent, "proxy", proxy_args.data(),
                       parent_proxy.release());
 
     // Suppress a warning about dummy device being in a bad state.  The
@@ -336,57 +302,53 @@ static zx_status_t fidl_CreateDevice(void* raw_ctx, zx_handle_t raw_rpc,
 
     if (r != ZX_OK) {
         log(ERROR, "devhost: driver create() failed: %d\n", r);
-        return r;
+        return;
     }
 
     auto new_device = std::move(creation_context.child);
     if (new_device == nullptr) {
         log(ERROR, "devhost: driver create() failed to create a device!");
-        return ZX_ERR_BAD_STATE;
+        return;
     }
 
-    new_device->set_local_id(device_local_id);
+    new_device->set_local_id(local_device_id);
     std::unique_ptr<DeviceControllerConnection> newconn;
     r = DeviceControllerConnection::Create(std::move(new_device), std::move(rpc), &newconn);
     if (r != ZX_OK) {
-        return r;
+        return;
     }
 
     // TODO: inform devcoord
 
-    log(RPC_IN, "devhost: creating '%.*s' conn=%p\n", static_cast<int>(driver_path_size),
-        driver_path_data, newconn.get());
+    log(RPC_IN, "devhost: creating '%.*s' conn=%p\n", static_cast<int>(driver_path.size()),
+        driver_path.data(), newconn.get());
     if ((r = DeviceControllerConnection::BeginWait(
-            std::move(newconn), DevhostAsyncLoop()->dispatcher())) != ZX_OK) {
-        return r;
+             std::move(newconn), DevhostAsyncLoop()->dispatcher())) != ZX_OK) {
+        return;
     }
-    return ZX_OK;
 }
 
-static zx_status_t fidl_CreateCompositeDevice(void* raw_ctx, zx_handle_t raw_rpc,
-                                              const uint64_t* component_local_ids_data,
-                                              size_t component_local_ids_count,
-                                              const char* name_data, size_t name_size,
-                                              uint64_t device_local_id, fidl_txn_t* txn) {
-    zx::channel rpc(raw_rpc);
-    fbl::StringPiece name(name_data, name_size);
+void DevhostControllerConnection::CreateCompositeDevice(zx::channel rpc,
+                                                        ::fidl::VectorView<uint64_t> components,
+                                                        ::fidl::StringView name,
+                                                        uint64_t local_device_id,
+                                                        CreateCompositeDeviceCompleter::Sync completer) {
 
-    log(RPC_IN, "devhost: create composite device %.*s'\n", static_cast<int>(name_size), name_data);
+    log(RPC_IN, "devhost: create composite device %.*s'\n", static_cast<int>(name.size()), name.data());
 
     // Convert the component IDs into zx_device references
-    CompositeComponents components_list(new fbl::RefPtr<zx_device>[component_local_ids_count],
-                                        component_local_ids_count);
+    CompositeComponents components_list(new fbl::RefPtr<zx_device>[components.count()], components.count());
     {
         // Acquire the API lock so that we don't have to worry about concurrent
         // device removes
         ApiAutoLock lock;
 
-        for (size_t i = 0; i < component_local_ids_count; ++i) {
-            uint64_t local_id = component_local_ids_data[i];
+        for (size_t i = 0; i < components.count(); ++i) {
+            uint64_t local_id = components.data()[i];
             fbl::RefPtr<zx_device_t> dev = zx_device::GetDeviceFromLocalId(local_id);
             if (dev == nullptr || (dev->flags & DEV_FLAG_DEAD)) {
-                return fuchsia_device_manager_DevhostControllerCreateCompositeDevice_reply(
-                        txn, ZX_ERR_NOT_FOUND);
+                completer.Reply(ZX_ERR_NOT_FOUND);
+                return;
             }
             components_list[i] = std::move(dev);
         }
@@ -395,38 +357,67 @@ static zx_status_t fidl_CreateCompositeDevice(void* raw_ctx, zx_handle_t raw_rpc
     fbl::RefPtr<zx_device_t> dev;
     zx_status_t status = zx_device::Create(&dev);
     if (status != ZX_OK) {
-        return fuchsia_device_manager_DevhostControllerCreateCompositeDevice_reply(txn, status);
+        completer.Reply(status);
+        return;
     }
     static_assert(fuchsia_device_manager_DEVICE_NAME_MAX + 1 >= sizeof(dev->name));
-    memcpy(dev->name, name_data, name_size);
-    dev->name[name_size] = 0;
-    dev->set_local_id(device_local_id);
+    memcpy(dev->name, name.data(), name.size());
+    dev->name[name.size()] = 0;
+    dev->set_local_id(local_device_id);
 
     std::unique_ptr<DeviceControllerConnection> newconn;
     status = DeviceControllerConnection::Create(dev, std::move(rpc), &newconn);
     if (status != ZX_OK) {
-        return fuchsia_device_manager_DevhostControllerCreateCompositeDevice_reply(
-                txn, status);
+        completer.Reply(status);
+        return;
     }
 
     status = InitializeCompositeDevice(dev, std::move(components_list));
     if (status != ZX_OK) {
-        return fuchsia_device_manager_DevhostControllerCreateCompositeDevice_reply(txn, status);
+        completer.Reply(status);
+        return;
     }
 
     log(RPC_IN, "devhost: creating new composite conn=%p\n", newconn.get());
     if ((status = DeviceControllerConnection::BeginWait(
-            std::move(newconn), DevhostAsyncLoop()->dispatcher())) != ZX_OK) {
-        return fuchsia_device_manager_DevhostControllerCreateCompositeDevice_reply(txn, status);
+             std::move(newconn), DevhostAsyncLoop()->dispatcher())) != ZX_OK) {
+        completer.Reply(status);
+        return;
     }
-    return fuchsia_device_manager_DevhostControllerCreateCompositeDevice_reply(txn, ZX_OK);
+    completer.Reply(ZX_OK);
 }
 
-static fuchsia_device_manager_DevhostController_ops_t devhost_fidl_ops = {
-    .CreateDeviceStub = fidl_CreateDeviceStub,
-    .CreateDevice = fidl_CreateDevice,
-    .CreateCompositeDevice = fidl_CreateCompositeDevice,
-};
+void DevhostControllerConnection::CreateDeviceStub(zx::channel rpc,
+                                                   uint32_t protocol_id,
+                                                   uint64_t local_device_id,
+                                                   CreateDeviceStubCompleter::Sync completer) {
+
+    log(RPC_IN, "devhost: create device stub\n");
+
+    fbl::RefPtr<zx_device_t> dev;
+    zx_status_t r = zx_device::Create(&dev);
+    // TODO: dev->ops and other lifecycle bits
+    // no name means a dummy proxy device
+    if (r != ZX_OK) {
+        return;
+    }
+    strcpy(dev->name, "proxy");
+    dev->protocol_id = protocol_id;
+    dev->ops = &device_default_ops;
+    dev->set_local_id(local_device_id);
+
+    std::unique_ptr<DeviceControllerConnection> newconn;
+    r = DeviceControllerConnection::Create(dev, std::move(rpc), &newconn);
+    if (r != ZX_OK) {
+        return;
+    }
+
+    log(RPC_IN, "devhost: creating new stub conn=%p\n", newconn.get());
+    if ((r = DeviceControllerConnection::BeginWait(
+             std::move(newconn), DevhostAsyncLoop()->dispatcher())) != ZX_OK) {
+        return;
+    }
+}
 
 zx_status_t DevhostControllerConnection::HandleRead() {
     zx::unowned_channel conn = channel();
@@ -452,16 +443,16 @@ zx_status_t DevhostControllerConnection::HandleRead() {
     }
 
     auto hdr = static_cast<fidl_message_header_t*>(fidl_msg.bytes);
-    FidlTxn txn(std::move(conn), hdr->txid);
-    return fuchsia_device_manager_DevhostController_dispatch(nullptr, txn.fidl_txn(), &fidl_msg,
-                                                             &devhost_fidl_ops);
+    DevmgrFidlTxn txn(std::move(conn), hdr->txid);
+    fuchsia::device::manager::DevhostController::Dispatch(this, &fidl_msg, &txn);
+    return txn.Status();
 }
 
 // handles devcoordinator rpc
 
 void DevhostControllerConnection::HandleRpc(
-        fbl::unique_ptr<DevhostControllerConnection> conn, async_dispatcher_t* dispatcher,
-        async::WaitBase* wait, zx_status_t status, const zx_packet_signal_t* signal) {
+    fbl::unique_ptr<DevhostControllerConnection> conn, async_dispatcher_t* dispatcher,
+    async::WaitBase* wait, zx_status_t status, const zx_packet_signal_t* signal) {
     if (status != ZX_OK) {
         log(ERROR, "devhost: devcoord conn wait error: %d\n", status);
         return;
@@ -516,7 +507,6 @@ void DevfsConnection::HandleRpc(fbl::unique_ptr<DevfsConnection> conn,
     // will destroy it by letting it leave scope.
     log(TRACE, "devhost: destroying devfs conn %p\n", conn.get());
 }
-
 
 static void proxy_ios_destroy(const fbl::RefPtr<zx_device_t>& dev) {
     fbl::AutoLock guard(&dev->proxy_ios_lock);
@@ -964,7 +954,7 @@ zx_status_t devhost_device_add_composite(const fbl::RefPtr<zx_device_t>& dev,
     // types instead of vector types, to get around the SimpleLayout
     // restrictions.
     std::unique_ptr<fuchsia_device_manager_DeviceComponent[]> fidl_components(
-            new fuchsia_device_manager_DeviceComponent[fuchsia_device_manager_COMPONENTS_MAX]());
+        new fuchsia_device_manager_DeviceComponent[fuchsia_device_manager_COMPONENTS_MAX]());
     for (size_t i = 0; i < components_count; ++i) {
         auto& component = fidl_components[i];
         component.parts_count = components[i].parts_count;

@@ -2,19 +2,85 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_CORE_DEVMGR_SHARED_FIDL_TXN_H_
+#define ZIRCON_SYSTEM_CORE_DEVMGR_SHARED_FIDL_TXN_H_
 
+#include <lib/fidl/epitaph.h>
+#include <lib/fidl/llcpp/transaction.h>
 #include <lib/zx/channel.h>
 #include <zircon/fidl.h>
 
 namespace devmgr {
 
+// Manages state of a FIDL transaction for the DevMgr so we can reply to the correct message.
+// DevmgrFidlTxn must not outlive the channel it is given
+class DevmgrFidlTxn : public fidl::Transaction {
+public:
+    DevmgrFidlTxn(zx::unowned_channel channel, uint32_t txid)
+        : channel_(channel), txid_(txid), status_called_(false) {}
+    DevmgrFidlTxn(const zx::channel& channel, uint32_t txid)
+        : channel_(channel), txid_(txid), status_called_(false) {}
+
+    DevmgrFidlTxn& operator=(const DevmgrFidlTxn&) = delete;
+    DevmgrFidlTxn(const DevmgrFidlTxn&) = delete;
+
+    DevmgrFidlTxn& operator=(DevmgrFidlTxn&&) = delete;
+    DevmgrFidlTxn(DevmgrFidlTxn&&) = delete;
+
+    ~DevmgrFidlTxn() {
+        ZX_ASSERT_MSG(status_called_, "DevmgrFidlTxn must have it's Status() method used. \
+          This provides Devmgr with the correct status value.\n");
+    }
+
+    void Reply(fidl::Message message) { //const fidl_msg_t* msg) {
+        ZX_ASSERT_MSG(txid_, "DevmgrFidlTxn must have it's Status() method used.\n");
+        const fidl_msg_t msg{
+            .bytes = message.bytes().data(),
+            .handles = message.handles().data(),
+            .num_bytes = static_cast<uint32_t>(message.bytes().size()),
+            .num_handles = static_cast<uint32_t>(message.handles().size()),
+        };
+
+        auto hdr = static_cast<fidl_message_header_t*>(msg.bytes);
+        hdr->txid = txid_;
+        status_ = channel_->write(0, msg.bytes, msg.num_bytes, msg.handles, msg.num_handles);
+    }
+
+    void Close(zx_status_t close_status) final {
+      // no-op for devmgr
+    }
+
+    std::unique_ptr<Transaction> TakeOwnership() final {
+        ZX_ASSERT_MSG(false, "DevmgrFidlTxn cannot take ownership of the transaction.\n");
+    }
+
+    zx_status_t Status() __WARN_UNUSED_RESULT {
+        status_called_ = true;
+        return status_;
+    }
+
+private:
+    // Reply channel
+    const zx::unowned_channel channel_;
+
+    // Transaction id of the message we're replying to
+    const uint32_t txid_;
+
+    // Has the Status method been called?
+    bool status_called_;
+
+    // Status is OK by default since not all functions call Reply
+    zx_status_t status_ = ZX_OK;
+};
+
 // Manages state of a FIDL transaction so we can reply to the correct message.
 // FidlTxn must not outlive the channel it is given
 class FidlTxn {
 public:
-    FidlTxn(zx::unowned_channel channel, uint32_t txid) : channel_(channel), txid_(txid) {}
-    FidlTxn(const zx::channel& channel, uint32_t txid) : channel_(channel), txid_(txid) {}
+    FidlTxn(zx::unowned_channel channel, uint32_t txid)
+        : channel_(channel), txid_(txid) {}
+    FidlTxn(const zx::channel& channel, uint32_t txid)
+        : channel_(channel), txid_(txid) {}
 
     FidlTxn& operator=(const FidlTxn&) = delete;
     FidlTxn(const FidlTxn&) = delete;
@@ -48,3 +114,5 @@ private:
 };
 
 } // namespace devmgr
+
+#endif // ZIRCON_SYSTEM_CORE_DEVMGR_SHARED_FIDL_TXN_H_

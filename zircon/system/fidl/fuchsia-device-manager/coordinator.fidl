@@ -89,7 +89,6 @@ protocol DeviceController {
 };
 
 /// Protocol for controlling a devhost process from the devcoordinator
-[Layout = "Simple"]
 protocol DevhostController {
     /// Create a device in the devhost that only implements the device protocol
     /// and claims to support the given |protocol_id|.  This device will communicate
@@ -209,7 +208,6 @@ protocol Coordinator {
 
     // Special commands for implementing the dmctl device.
     // TODO(teisenbe): We should revisit how these are carried over.
-
 
     /// Perform an mexec with the given kernel and bootdata.
     /// See ZX-2069 for the thoughts on deprecating mexec.

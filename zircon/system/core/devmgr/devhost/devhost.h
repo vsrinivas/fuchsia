@@ -5,20 +5,22 @@
 #pragma once
 
 #include "../shared/async-loop-owned-rpc-handler.h"
-#include "zx-device.h"
 #include "lock.h"
+#include "zx-device.h"
 
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 
+#include <ddktl/fidl.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/string.h>
 #include <fbl/unique_ptr.h>
-#include <lib/async/cpp/wait.h>
+#include <fuchsia/device/manager/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async/cpp/wait.h>
 #include <lib/zx/channel.h>
 #include <zircon/compiler.h>
 #include <zircon/fidl.h>
@@ -29,6 +31,8 @@
 #include <threads.h>
 
 namespace devmgr {
+
+namespace fuchsia = ::llcpp::fuchsia;
 
 struct BindContext {
     fbl::RefPtr<zx_device_t> parent;
@@ -169,13 +173,20 @@ zx_status_t devhost_device_add_composite(const fbl::RefPtr<zx_device_t>& dev,
                                          size_t components_count,
                                          uint32_t coresident_device_index) REQ_DM_LOCK;
 
-struct DevhostControllerConnection : AsyncLoopOwnedRpcHandler<DevhostControllerConnection> {
+class DevhostControllerConnection : public AsyncLoopOwnedRpcHandler<DevhostControllerConnection>,
+                                    public fuchsia::device::manager::DevhostController::Interface {
+public:
     DevhostControllerConnection() = default;
 
     static void HandleRpc(fbl::unique_ptr<DevhostControllerConnection> conn,
                           async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                           const zx_packet_signal_t* signal);
     zx_status_t HandleRead();
+
+private:
+    void CreateDevice(zx::channel rpc, ::fidl::StringView driver_path, ::zx::vmo driver, ::zx::handle parent_proxy, ::fidl::StringView proxy_args, uint64_t local_device_id, CreateDeviceCompleter::Sync completer) override;
+    void CreateCompositeDevice(zx::channel rpc, ::fidl::VectorView<uint64_t> components, ::fidl::StringView name, uint64_t local_device_id, CreateCompositeDeviceCompleter::Sync completer) override;
+    void CreateDeviceStub(zx::channel rpc, uint32_t protocol_id, uint64_t local_device_id, CreateDeviceStubCompleter::Sync completer) override;
 };
 
 struct DevfsConnection : AsyncLoopOwnedRpcHandler<DevfsConnection> {

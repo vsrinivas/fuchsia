@@ -12,6 +12,7 @@ source_set("shared") {
     ":env",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fidl",
     "$zx/system/ulib/launchpad",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zircon-internal",
