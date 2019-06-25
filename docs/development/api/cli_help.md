@@ -22,7 +22,7 @@ Let's start with a full example before digging into the specifics.
 Each section of this example is described in detail later in this document.
 (Note that `blast` is not a real tool).
 
-```
+```text
 Usage: blast [-f] [-s <scribble>] <command> [<args>]
 
 Destroy the contents of <file>.
@@ -94,7 +94,8 @@ prose.
 ### Usage
 
 Usage is required and includes the "`Usage:`" header.
-```
+
+```text
 Usage: blast [-f] [-s <scribble>] <command> [<args>]
 ```
 
@@ -108,7 +109,7 @@ reduce the complexity.
 #### Usage syntax
 
 The command name is listed first. The command name is not hardcoded: it will be
-dynamically pulled from the command name, i.e. the last element on the argv[0]
+dynamically pulled from the command name, i.e. the last element on the `argv[0]`
 path. This allows a single binary to operate as multiple different tools.
 
 The name and usage text will contain portable ASCII characters only. All long
@@ -121,6 +122,7 @@ single words. When more than one word is used, separate words with a hyphen
 
 Aside from the command name there are several kinds of arguments (as described
 in [Fuchsia Tool Requirements](http://go.corp.google.com/fuchsia-tool-requirements)).
+
 - Exact text
 - Arguments
 - Options (Switches and Keys)
@@ -140,7 +142,7 @@ Arguments are enclosed in angle brackets (<>) to differentiate them from
 explicit text. In the example `Usage: copy <from> <destination>`, both `<from>`
 and `<destination>` are arguments. If an argument is optional, it will be
 enclosed in brackets (`[]`) such as: `Usage: copy <from> [<destination>]`. See
-also [Option Delimiter](#bookmark=id.j2ckxvlhnf2f).
+also [Option Delimiter](./cli.md#option_delimiter).
 
 ##### Mutually Exclusive Option Syntax
 
@@ -148,7 +150,8 @@ There are a couple choices when illustrating mutually exclusive options.
 
 If more than one usage line is provided, each will show a mutually exclusive set
 of commands. For example:
-```
+
+```text
 Usage:
   swizzle [-z] <file>
   swizzle --reset
@@ -163,7 +166,8 @@ between processes it is called a "Pipe." When used to separate options it is
 read as "Or".
 
 For example:
-```
+
+```text
 Usage: froth [-y|-z] <file>
 ```
 
@@ -216,7 +220,8 @@ the group, e.g. `[--input <file>]...` or `(--input <file>)...` respectively.
 
 Angle brackets (`<>`), brackets (`[]`), and parentheses (`()`) will not have
 spaces immediately inside.
-```
+
+```text
 [from] # correct
 <to> # correct
 (-a|-b) # correct
@@ -244,7 +249,8 @@ document.
 
 The description is required and does not include a header. I.e. the description
 area is not labeled "description". E.g.
-```
+
+```text
 Destroy the contents of <file>.
 ```
 
@@ -254,6 +260,7 @@ English grammar, spelling, and punctuation).
 Every tool should tell you what it does and this is the section to do that.
 
 The Description section should describe
+
 - what the tool does (required)
 - the platform configuration used
 - schemes, data formats, or protocols used
@@ -265,12 +272,13 @@ The Description section can also contain a "see also" referring to another tool
 by name (avoid using a URL).
 
 What not to put in the Description section
+
 - environment variables used, other than those already listed in Options
   (provide this in Options or Notes)
 - security hazards (explain these in the Notes section)
 - error codes (put those in an Error codes section)
-- copyright (don't include this in the --help)
-- author (don't include this in the --help)
+- copyright (don't include this in the `--help`)
+- author (don't include this in the `--help`)
 - how to get help on subcommands (put this in the short description for the
   `help` subcommand)
 - how to update the tool (that should be in the documentation for the tool
@@ -280,7 +288,8 @@ What not to put in the Description section
 ### Options
 
 An Options section is required if the program accepts arguments. E.g.
-```
+
+```text
 Options:
   -f              force, ignore minor errors
   -s <scribble>   write <scribble> repeatedly. Defaults to $BLAST_SCRIBBLE.
@@ -298,7 +307,7 @@ Present the list of options in alphabetical order.
 Options will list each argument, switch, and keyed option on separate lines with
 the exception of arguments that have both a short and long form. If an argument
 has both a short and long form they are listed on the same line, short form
-first, and separated by ", " (comma space), e.g. `-f, --force`.
+first, and separated by `, ` (comma space), e.g. `-f, --force`.
 
 Exact text arguments will not be listed in the Options section. They are shown
 in the Usage section.
@@ -306,7 +315,8 @@ in the Usage section.
 Text that will be typed as-is is not wrapped in brackets, while variable entries
 appear in angle brackets (`<>`) and optional entries appear in square brackets
 (`[]`). When listing options, the Key is never optional. For example:
-```
+
+```text
   -a                   a good example
   [-b]                 a bad example, to use -b it must be typed as-is
 ```
@@ -317,6 +327,7 @@ description, the Examples, or the Notes instead of creating a lengthy option
 description.
 
 What to describe
+
 - a brief reminder of what the option implies, e.g. `ignore minor errors`
 - if the option overrides another option, e.g. `-x implies -c and -p`
 - default value, e.g. `defaults to $BLAST_SCRIBBLE`
@@ -333,7 +344,8 @@ explaining how to get further help to see all of them, e.g. by passing
 
 A commands section is required if the program has subcommands. If present it
 will be labeled, "Commands:". E.g.
-```
+
+```text
 Commands:
   blow-up         explosively separate
   grind           make smaller by many small cuts
@@ -363,7 +375,8 @@ explaining how to get further help to see all of them, e.g. by passing
 
 An examples section is optional. If present it will be labeled, "Examples:".
 E.g.
-```
+
+```text
 Examples:
   Scribble 'abc' and then run |grind|.
   $ blast -s 'abc' grind old.txt taxes.cp
@@ -376,7 +389,8 @@ literally will be prefixed with a "`$ `" to mimic a command prompt.
 
 To wrap an example that is overly long, end the previous line with "`\ `" and
 begin subsequent lines with "`  `" (spaces) to indicate line continuation.
-```
+
+```text
   This example wraps onto multiple lines.
   $ blast -s 2332 some/long/path/cats.o \
     more/long/path/dogs.o more/long/path/bears.o \
@@ -395,7 +409,8 @@ than exhaustive documentation.
 ### Notes
 
 Notes are optional and begin with a "Notes:" header. E.g.
-```
+
+```text
 Notes:
   Use `blast help <command>` for details on [<args>] for a subcommand.
 ```
@@ -404,15 +419,17 @@ The notes are written in US English prose (i.e. complete sentences using US
 English grammar, spelling, and punctuation).
 
 What to put in the Notes
+
 - environment variables used, other than those already listed in Options (for
   default values)
 - security hazards
 - reminders to help the user
 
 What not to put in the Notes
+
 - error codes (put those in an Error codes section)
-- copyright (don't include this in the --help)
-- author (don't include this in the --help)
+- copyright (don't include this in the `--help`)
+- author (don't include this in the `--help`)
 - how to get help on subcommands (put this in the short description for the
   `help` subcommand)
 - how to update the tool (that should be in the documentation for the tool
@@ -423,7 +440,8 @@ What not to put in the Notes
 
 The Error codes section is required if codes other than `0` or `1` are
 generated. E.g.
-```
+
+```text
 Error codes:
   2  The blade is too dull.
   3  Out of fuel.
@@ -452,6 +470,7 @@ Do not implement a pager (something like the `more` program that pauses output
 on each screenful of text).
 
 Do not include
+
 - a copyright in the help output (put that where legal specifies)
 - release notes (put that in release notes)
 - full documentation (put that in the markdown documentation)
