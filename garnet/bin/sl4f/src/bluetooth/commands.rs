@@ -347,8 +347,10 @@ pub async fn gatt_client_method_to_fidl(
         }
         BluetoothMethod::GattcWriteDescriptorById => {
             let id = parse_u64_identifier(args.clone())?;
+            let offset_as_u64 = parse_offset(args.clone())?;
+            let offset = offset_as_u64 as u16;
             let value = parse_write_value(args)?;
-            await!(gattc_write_desc_by_id_async(&facade, id, value))
+            await!(gattc_write_desc_by_id_async(&facade, id, offset, value))
         }
         BluetoothMethod::GattcReadDescriptorById => {
             let id = parse_u64_identifier(args.clone())?;
@@ -497,9 +499,10 @@ async fn gattc_read_desc_by_id_async(facade: &GattClientFacade, id: u64) -> Resu
 async fn gattc_write_desc_by_id_async(
     facade: &GattClientFacade,
     id: u64,
+    offset: u16,
     write_value: Vec<u8>,
 ) -> Result<Value, Error> {
-    let write_desc_status = await!(facade.gattc_write_desc_by_id(id, write_value))?;
+    let write_desc_status = await!(facade.gattc_write_desc_by_id(id, offset, write_value))?;
     Ok(to_value(write_desc_status)?)
 }
 

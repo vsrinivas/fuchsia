@@ -112,6 +112,8 @@ protocol BtGattSvc {
     ReadLongCharacteristic(BtGattId id, uint16 offset, usize max_bytes)
                      -> (BtGattStatus status, BtGattId id, vector<voidptr> value);
 
+    /// Writes a characteristic with the given ID. Automatically handles long writes
+    /// if required by the mtu size.
     [Async]
     WriteCharacteristic(BtGattId id, vector<voidptr> buf) -> (BtGattStatus status, BtGattId id);
 

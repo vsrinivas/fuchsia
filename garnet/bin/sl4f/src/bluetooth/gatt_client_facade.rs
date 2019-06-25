@@ -253,11 +253,16 @@ impl GattClientFacade {
         }
     }
 
-    pub async fn gattc_write_desc_by_id(&self, id: u64, write_value: Vec<u8>) -> Result<(), Error> {
+    pub async fn gattc_write_desc_by_id(
+        &self,
+        id: u64,
+        offset: u16,
+        write_value: Vec<u8>,
+    ) -> Result<(), Error> {
         let tag = "GattClientFacade::gattc_write_desc_by_id";
 
         let write_descriptor = match &self.inner.read().active_proxy {
-            Some(proxy) => proxy.write_descriptor(id, &mut write_value.into_iter()),
+            Some(proxy) => proxy.write_descriptor(id, offset, &mut write_value.into_iter()),
             None => fx_err_and_bail!(&with_line!(tag), "Central proxy not available."),
         };
 
