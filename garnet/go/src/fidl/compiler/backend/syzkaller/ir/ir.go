@@ -199,6 +199,8 @@ var handleSubtypes = map[types.HandleSubtype]string{
 	types.Fifo:      "zx_fifo",
 	types.Guest:     "zx_guest",
 	types.Time:      "zx_timer",
+	types.Bti:       "zx_bti",
+	types.Profile:   "zx_profile",
 }
 
 func isReservedWord(str string) bool {

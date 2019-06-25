@@ -81,6 +81,41 @@ struct InStruct {
     END_TEST;
 }
 
+bool parsing_handles_in_struct_test() {
+    BEGIN_TEST;
+
+    TestLibrary library(R"FIDL(
+library example;
+
+struct Handles {
+    handle plain_handle;
+
+    handle<bti> bti_handle;
+    handle<channel> channel_handle;
+    handle<debuglog> debuglog_handle;
+    handle<event> event_handle;
+    handle<eventpair> eventpair_handle;
+    handle<fifo> fifo_handle;
+    handle<guest> guest_handle;
+    handle<interrupt> interrupt_handle;
+    handle<job> job_handle;
+    handle<process> process_handle;
+    handle<profile> profile_handle;
+    handle<port> port_handle;
+    handle<resource> resource_handle;
+    handle<socket> socket_handle;
+    handle<thread> thread_handle;
+    handle<timer> timer_handle;
+    handle<vmar> vmar_handle;
+    handle<vmo> vmo_handle;
+};
+)FIDL");
+
+    EXPECT_TRUE(library.Compile());
+
+    END_TEST;
+}
+
 // Test that otherwise reserved words can be appropriarely parsed when context
 // is clear.
 bool parsing_reserved_words_in_union_test() {
@@ -318,6 +353,7 @@ struct UseDependent {
 BEGIN_TEST_CASE(parsing_tests)
 RUN_TEST(bad_compound_identifier_test)
 RUN_TEST(parsing_reserved_words_in_struct_test)
+RUN_TEST(parsing_handles_in_struct_test);
 RUN_TEST(parsing_reserved_words_in_union_test)
 RUN_TEST(parsing_reserved_words_in_protocol_test)
 RUN_TEST(bad_char_at_sign_test)

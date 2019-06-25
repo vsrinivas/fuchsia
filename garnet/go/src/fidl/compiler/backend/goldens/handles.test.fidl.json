@@ -1,0 +1,378 @@
+{
+  "version": "0.0.1",
+  "name": "test.name",
+  "library_dependencies": [],
+  "bits_declarations": [],
+  "const_declarations": [],
+  "enum_declarations": [],
+  "interface_declarations": [],
+  "struct_declarations": [
+    {
+      "name": "test.name/Handles",
+      "location": {
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/handles.test.fidl",
+        "line": 3,
+        "column": 8
+      },
+      "anonymous": false,
+      "members": [
+        {
+          "type": {
+            "kind": "handle",
+            "subtype": "handle",
+            "nullable": false
+          },
+          "name": "plain_handle",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/handles.test.fidl",
+            "line": 4,
+            "column": 12
+          },
+          "size": 4,
+          "max_out_of_line": 0,
+          "alignment": 4,
+          "offset": 0,
+          "max_handles": 1
+        },
+        {
+          "type": {
+            "kind": "handle",
+            "subtype": "bti",
+            "nullable": false
+          },
+          "name": "bti_handle",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/handles.test.fidl",
+            "line": 6,
+            "column": 17
+          },
+          "size": 4,
+          "max_out_of_line": 0,
+          "alignment": 4,
+          "offset": 4,
+          "max_handles": 1
+        },
+        {
+          "type": {
+            "kind": "handle",
+            "subtype": "channel",
+            "nullable": false
+          },
+          "name": "channel_handle",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/handles.test.fidl",
+            "line": 7,
+            "column": 21
+          },
+          "size": 4,
+          "max_out_of_line": 0,
+          "alignment": 4,
+          "offset": 8,
+          "max_handles": 1
+        },
+        {
+          "type": {
+            "kind": "handle",
+            "subtype": "debuglog",
+            "nullable": false
+          },
+          "name": "debuglog_handle",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/handles.test.fidl",
+            "line": 8,
+            "column": 22
+          },
+          "size": 4,
+          "max_out_of_line": 0,
+          "alignment": 4,
+          "offset": 12,
+          "max_handles": 1
+        },
+        {
+          "type": {
+            "kind": "handle",
+            "subtype": "event",
+            "nullable": false
+          },
+          "name": "event_handle",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/handles.test.fidl",
+            "line": 9,
+            "column": 19
+          },
+          "size": 4,
+          "max_out_of_line": 0,
+          "alignment": 4,
+          "offset": 16,
+          "max_handles": 1
+        },
+        {
+          "type": {
+            "kind": "handle",
+            "subtype": "eventpair",
+            "nullable": false
+          },
+          "name": "eventpair_handle",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/handles.test.fidl",
+            "line": 10,
+            "column": 23
+          },
+          "size": 4,
+          "max_out_of_line": 0,
+          "alignment": 4,
+          "offset": 20,
+          "max_handles": 1
+        },
+        {
+          "type": {
+            "kind": "handle",
+            "subtype": "fifo",
+            "nullable": false
+          },
+          "name": "fifo_handle",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/handles.test.fidl",
+            "line": 11,
+            "column": 18
+          },
+          "size": 4,
+          "max_out_of_line": 0,
+          "alignment": 4,
+          "offset": 24,
+          "max_handles": 1
+        },
+        {
+          "type": {
+            "kind": "handle",
+            "subtype": "guest",
+            "nullable": false
+          },
+          "name": "guest_handle",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/handles.test.fidl",
+            "line": 12,
+            "column": 19
+          },
+          "size": 4,
+          "max_out_of_line": 0,
+          "alignment": 4,
+          "offset": 28,
+          "max_handles": 1
+        },
+        {
+          "type": {
+            "kind": "handle",
+            "subtype": "interrupt",
+            "nullable": false
+          },
+          "name": "interrupt_handle",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/handles.test.fidl",
+            "line": 13,
+            "column": 23
+          },
+          "size": 4,
+          "max_out_of_line": 0,
+          "alignment": 4,
+          "offset": 32,
+          "max_handles": 1
+        },
+        {
+          "type": {
+            "kind": "handle",
+            "subtype": "job",
+            "nullable": false
+          },
+          "name": "job_handle",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/handles.test.fidl",
+            "line": 14,
+            "column": 17
+          },
+          "size": 4,
+          "max_out_of_line": 0,
+          "alignment": 4,
+          "offset": 36,
+          "max_handles": 1
+        },
+        {
+          "type": {
+            "kind": "handle",
+            "subtype": "process",
+            "nullable": false
+          },
+          "name": "process_handle",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/handles.test.fidl",
+            "line": 15,
+            "column": 21
+          },
+          "size": 4,
+          "max_out_of_line": 0,
+          "alignment": 4,
+          "offset": 40,
+          "max_handles": 1
+        },
+        {
+          "type": {
+            "kind": "handle",
+            "subtype": "profile",
+            "nullable": false
+          },
+          "name": "profile_handle",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/handles.test.fidl",
+            "line": 16,
+            "column": 21
+          },
+          "size": 4,
+          "max_out_of_line": 0,
+          "alignment": 4,
+          "offset": 44,
+          "max_handles": 1
+        },
+        {
+          "type": {
+            "kind": "handle",
+            "subtype": "port",
+            "nullable": false
+          },
+          "name": "port_handle",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/handles.test.fidl",
+            "line": 17,
+            "column": 18
+          },
+          "size": 4,
+          "max_out_of_line": 0,
+          "alignment": 4,
+          "offset": 48,
+          "max_handles": 1
+        },
+        {
+          "type": {
+            "kind": "handle",
+            "subtype": "resource",
+            "nullable": false
+          },
+          "name": "resource_handle",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/handles.test.fidl",
+            "line": 18,
+            "column": 22
+          },
+          "size": 4,
+          "max_out_of_line": 0,
+          "alignment": 4,
+          "offset": 52,
+          "max_handles": 1
+        },
+        {
+          "type": {
+            "kind": "handle",
+            "subtype": "socket",
+            "nullable": false
+          },
+          "name": "socket_handle",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/handles.test.fidl",
+            "line": 19,
+            "column": 20
+          },
+          "size": 4,
+          "max_out_of_line": 0,
+          "alignment": 4,
+          "offset": 56,
+          "max_handles": 1
+        },
+        {
+          "type": {
+            "kind": "handle",
+            "subtype": "thread",
+            "nullable": false
+          },
+          "name": "thread_handle",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/handles.test.fidl",
+            "line": 20,
+            "column": 20
+          },
+          "size": 4,
+          "max_out_of_line": 0,
+          "alignment": 4,
+          "offset": 60,
+          "max_handles": 1
+        },
+        {
+          "type": {
+            "kind": "handle",
+            "subtype": "timer",
+            "nullable": false
+          },
+          "name": "timer_handle",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/handles.test.fidl",
+            "line": 21,
+            "column": 19
+          },
+          "size": 4,
+          "max_out_of_line": 0,
+          "alignment": 4,
+          "offset": 64,
+          "max_handles": 1
+        },
+        {
+          "type": {
+            "kind": "handle",
+            "subtype": "vmar",
+            "nullable": false
+          },
+          "name": "vmar_handle",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/handles.test.fidl",
+            "line": 22,
+            "column": 18
+          },
+          "size": 4,
+          "max_out_of_line": 0,
+          "alignment": 4,
+          "offset": 68,
+          "max_handles": 1
+        },
+        {
+          "type": {
+            "kind": "handle",
+            "subtype": "vmo",
+            "nullable": false
+          },
+          "name": "vmo_handle",
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/handles.test.fidl",
+            "line": 23,
+            "column": 17
+          },
+          "size": 4,
+          "max_out_of_line": 0,
+          "alignment": 4,
+          "offset": 72,
+          "max_handles": 1
+        }
+      ],
+      "size": 76,
+      "max_out_of_line": 0,
+      "alignment": 4,
+      "max_handles": 19,
+      "has_padding": false
+    }
+  ],
+  "table_declarations": [],
+  "union_declarations": [],
+  "xunion_declarations": [],
+  "declaration_order": [
+    "test.name/Handles"
+  ],
+  "declarations": {
+    "test.name/Handles": "struct"
+  }
+}

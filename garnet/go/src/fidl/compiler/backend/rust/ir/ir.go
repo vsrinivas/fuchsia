@@ -385,6 +385,8 @@ var handleSubtypes = map[types.HandleSubtype]string{
 	types.Fifo:      "Fifo",
 	types.Guest:     "Guest",
 	types.Time:      "Timer",
+	types.Bti:       "Bti",
+	types.Profile:   "Profile",
 }
 
 type compiler struct {

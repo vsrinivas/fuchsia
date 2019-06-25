@@ -42,6 +42,17 @@ empty_struct.test.fidl.json.overnet_internal.h.golden
 empty_struct.test.fidl.json.rs.golden
 empty_struct.test.fidl.json.syz.txt.golden
 empty_struct.test.fidl.json_test_base.h.golden
+handles.test.fidl.json
+handles.test.fidl.json.cc.golden
+handles.test.fidl.json.go.golden
+handles.test.fidl.json.h.golden
+handles.test.fidl.json.llcpp.cc.golden
+handles.test.fidl.json.llcpp.h.golden
+handles.test.fidl.json.overnet_internal.cc.golden
+handles.test.fidl.json.overnet_internal.h.golden
+handles.test.fidl.json.rs.golden
+handles.test.fidl.json.syz.txt.golden
+handles.test.fidl.json_test_base.h.golden
 ordinal_switch.test.fidl.json
 ordinal_switch.test.fidl.json.cc.golden
 ordinal_switch.test.fidl.json.go.golden

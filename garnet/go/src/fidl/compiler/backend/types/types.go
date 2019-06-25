@@ -132,6 +132,8 @@ const (
 	Fifo                    = "fifo"
 	Guest                   = "guest"
 	Time                    = "timer"
+  Bti                     = "bti"
+  Profile                 = "profile"
 )
 
 type LiteralKind string
