@@ -5,14 +5,16 @@
 
 ### start fuchsia in aemu
 
-## usage: fx aemu [-a <mode>] [-N [-I <ifname>]] [-u <path>] [-g <port> [-r <fps>]] [-e <directory>] [-w <size>] [--audio] [--headless] [--software-gpu] [--debugger]
+## usage: fx aemu [-a <mode>] [-N [-I <ifname>]] [-u <path>] [-g <port> [-r <fps>]] [-x <port> [-X <directory>]] [-e <directory>] [-w <size>] [--audio] [--headless] [--software-gpu] [--debugger]
 ##   -a <mode> acceleration mode (auto, off, kvm, hvf, hax), default is auto
 ##   -N run with emulated nic via tun/tap
 ##   -I <ifname> uses the tun/tap interface named ifname
 ##   -u <path> execute aemu if-up script, default is no script
 ##   -e <directory> location of emulator, defaults to looking in zircon/prebuilt/downloads/aemu
-##   -g <port> enable gRPC service on port to control the emulator
+##   -g <port> enable gRPC service on port to control the emulator, default is 5556 when WebRTC service is enabled
 ##   -r <fps> webrtc frame rate when using gRPC service, default is 30
+##   -x <port> enable WebRTC HTTP service on port
+##   -X <directory> location of grpcwebproxy, defaults to looking in prebuilt/third_party/grpcwebproxy
 ##   -w <size> window size, default is 1280x800
 ##   --audio run with audio hardware added to the virtual machine
 ##   --headless run in headless mode
@@ -34,10 +36,12 @@ AEMU="emulator"
 AEMU_DIR=""
 UPSCRIPT=no
 WINDOW_SIZE="1280x800"
-GRPC=0
+GRPC=
 RTCFPS="30"
 GPU="host"
 VULKAN=1
+HTTP=0
+GRPCWEBPROXY_DIR=""
 
 while [[ $# -ge 1 ]]; do
   case "$1" in
@@ -63,6 +67,14 @@ while [[ $# -ge 1 ]]; do
   -e)
     shift
     AEMU_DIR="$1"
+    ;;
+  -x)
+    shift
+    HTTP="$1"
+    ;;
+  -X)
+    shift
+    GRPCWEBPROXY_DIR="$1"
     ;;
   -g)
     shift
@@ -106,6 +118,14 @@ fi
 
 if [[ -z "$AEMU_DIR" && -d "${FUCHSIA_DIR}/zircon/prebuilt/downloads/aemu" ]]; then
   AEMU_DIR="${FUCHSIA_DIR}/zircon/prebuilt/downloads/aemu/"
+fi
+
+if [[ -z "$GRPCWEBPROXY_DIR" && -d "${FUCHSIA_DIR}/prebuilt/third_party/grpcwebproxy" ]]; then
+  if [[ "$(uname -s)" == "Darwin" ]]; then
+    GRPCWEBPROXY_DIR="${FUCHSIA_DIR}/prebuilt/third_party/grpcwebproxy/mac/"
+  else
+    GRPCWEBPROXY_DIR="${FUCHSIA_DIR}/prebuilt/third_party/grpcwebproxy/linux/"
+  fi
 fi
 
 # construct the args for aemu
@@ -167,6 +187,11 @@ if (( $DEBUGGER )); then
     OPTIONS+=("-wait-for-debugger")
 fi
 
+# use port 5556 by default
+if (( $HTTP )); then
+  GRPC="${GRPC:-5556}"
+fi
+
 if (( $GRPC )); then
   OPTIONS+=("-grpc" "$GRPC")
   OPTIONS+=("-rtcfps" "$RTCFPS")
@@ -217,7 +242,7 @@ if [[ ! -d "${img_dir}" ]]; then
   fx-error "Failed to create temporary directory"
   exit 1
 fi
-trap 'rm -rf "$img_dir"' EXIT
+trap 'rm -Rf "${img_dir}" ; [[ "${GRPCWEBPROXY_PID}" ]] && kill "${GRPCWEBPROXY_PID}"' EXIT
 
 KERNEL_ZBI="${img_dir}/fuchsia-ssh.zbi"
 "${ZIRCON_TOOLS_DIR}/zbi" -o "${KERNEL_ZBI}" "${FUCHSIA_BUILD_DIR}/${IMAGE_ZIRCONA_ZBI}" \
@@ -236,7 +261,7 @@ CMDLINE="kernel.serial=legacy "
 # argument.  This is first so that an explicit -c TERM=foo argument
 # goes into CMDLINE later and overrides this.
 if [[ -n $TERM ]]; then
-    CMDLINE+="TERM=$TERM "
+  CMDLINE+="TERM=$TERM "
 fi
 
 # Add entropy to the kernel
@@ -245,8 +270,16 @@ CMDLINE+="kernel.entropy-mixin=$(head -c 32 /dev/urandom | shasum -a 256 | awk '
 # Don't 'reboot' the emulator if the kernel crashes
 CMDLINE+="kernel.halt-on-panic=true "
 
+# Start gRPC web proxy if HTTP port is set
+if (( $HTTP )); then
+  "${GRPCWEBPROXY_DIR}"grpcwebproxy \
+      --backend_addr localhost:"$GRPC" --server_http_debug_port "$HTTP" \
+      --backend_tls=false --run_tls_server=false --allow_all_origins &
+  GRPCWEBPROXY_PID=$!
+fi
+
 # run aemu
 set -x
-exec "${AEMU_DIR}${AEMU}" "${OPTIONS[@]}" -fuchsia \
+"${AEMU_DIR}${AEMU}" "${OPTIONS[@]}" -fuchsia \
      -kernel "${FUCHSIA_BUILD_DIR}/${IMAGE_QEMU_KERNEL_RAW}" \
      -initrd "$KERNEL_ZBI" "${ARGS[@]}" -append "$CMDLINE" "$@"
