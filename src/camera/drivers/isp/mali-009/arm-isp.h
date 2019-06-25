@@ -22,6 +22,7 @@
 #include <atomic>
 
 #include "../modules/dma-mgr.h"
+#include "../modules/gamma-rgb-registers.h"
 #include "../modules/stats-mgr.h"
 #include "arm-isp-test.h"
 #include "global_regs.h"
@@ -33,6 +34,15 @@
 #include <zircon/fidl.h>
 
 namespace camera {
+
+namespace {
+
+//TODO(CAM-87): Formalize isp sub-block start address style.
+constexpr uint32_t kGammaRgbPingFrAddr = 0x1c064;
+constexpr uint32_t kGammaRgbPingDsAddr = 0x1c1d8;
+
+}  // namespace
+
 // |ArmIspDevice| is spawned by the driver in |arm-isp.cc|
 // This provides the interface provided in camera.fidl in Zircon.
 class ArmIspDevice;
@@ -59,7 +69,9 @@ class ArmIspDevice : public IspDeviceType,
         isp_mmio_local_(local_mmio, 0),
         isp_irq_(std::move(isp_irq)),
         bti_(std::move(bti)),
-        camera_sensor_(camera_sensor) {}
+        camera_sensor_(camera_sensor),
+        gamma_rgb_fr_regs_(ddk::MmioView(local_mmio, kGammaRgbPingFrAddr)),
+        gamma_rgb_ds_regs_(ddk::MmioView(local_mmio, kGammaRgbPingDsAddr)) {}
 
   ~ArmIspDevice();
 
@@ -130,6 +142,10 @@ class ArmIspDevice : public IspDeviceType,
   fbl::unique_ptr<camera::StatsManager> statsMgr_;
   fbl::unique_ptr<camera::DmaManager> full_resolution_dma_;
   fbl::unique_ptr<camera::DmaManager> downscaled_dma_;
+
+  //TODO(CAM-88): Formalize isp sub-block ownership.
+  GammaRgbRegisters gamma_rgb_fr_regs_;
+  GammaRgbRegisters gamma_rgb_ds_regs_;
 
   sync_completion_t frame_processing_signal_;
 

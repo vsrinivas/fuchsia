@@ -28,6 +28,7 @@ group("tests") {
 test_package("camera_full_test") {
   deps = [
     "//src/camera/drivers/hw_accel/gdc/test:gdc-task",
+    "//src/camera/drivers/isp/modules:gamma-rgb-registers",
     "//src/camera/drivers/isp/modules/test:modules_bin",
     "//src/camera/drivers/test_utils/test:test_utils_test",
   ]
@@ -46,6 +47,11 @@ test_package("camera_full_test") {
     {
       name = "test_utils_test"
       manifest = "drivers/test_utils/test/meta/test_utils_test.cmx"
+      environments = basic_envs
+    },
+    {
+      name = "gamma-rgb-registers"
+      manifest = "drivers/isp/modules/test/meta/gamma-rgb-registers-test.cmx"
       environments = basic_envs
     },
 

@@ -605,12 +605,6 @@ void ArmIspDevice::IspLoadSeq_settings_context() {
       .set_value(0x10a5)
       .WriteTo(&isp_mmio_local_);
 
-  ping::FullResolution::GammaRgb_Offset::Get()
-      .ReadFrom(&isp_mmio_local_)
-      .set_offset_r(0)
-      .set_offset_g(0)
-      .WriteTo(&isp_mmio_local_);
-
   ping::ColorNoiseReduction_Vmean2Threshold::Get()
       .ReadFrom(&isp_mmio_local_)
       .set_value(0)
@@ -692,11 +686,6 @@ void ArmIspDevice::IspLoadSeq_settings_context() {
       .ReadFrom(&isp_mmio_local_)
       .set_mcoff_s_max(0xdac)
       .set_mcoff_vs_max(0xdac)
-      .WriteTo(&isp_mmio_local_);
-
-  ping::DownScaled::GammaRgb_GainB::Get()
-      .ReadFrom(&isp_mmio_local_)
-      .set_value(0x100)
       .WriteTo(&isp_mmio_local_);
 
   ping::Iridix_ContextNo::Get()
@@ -1079,11 +1068,6 @@ void ArmIspDevice::IspLoadSeq_settings_context() {
       .set_value(0x10)
       .WriteTo(&isp_mmio_local_);
 
-  ping::FullResolution::GammaRgb_OffsetB::Get()
-      .ReadFrom(&isp_mmio_local_)
-      .set_value(0)
-      .WriteTo(&isp_mmio_local_);
-
   ping::Top_Bypass3::Get()
       .ReadFrom(&isp_mmio_local_)
       .set_bypass_square_be(0)
@@ -1160,21 +1144,10 @@ void ArmIspDevice::IspLoadSeq_settings_context() {
       .set_value(0xf000)
       .WriteTo(&isp_mmio_local_);
 
-  ping::DownScaled::GammaRgb_OffsetB::Get()
-      .ReadFrom(&isp_mmio_local_)
-      .set_value(0)
-      .WriteTo(&isp_mmio_local_);
-
   ping::Top_Isp::Get()
       .ReadFrom(&isp_mmio_local_)
       .set_isp_processing_fr_bypass_mode(0)
       .set_isp_raw_bypass(0)
-      .WriteTo(&isp_mmio_local_);
-
-  ping::DownScaled::GammaRgb_Offset::Get()
-      .ReadFrom(&isp_mmio_local_)
-      .set_offset_r(0)
-      .set_offset_g(0)
       .WriteTo(&isp_mmio_local_);
 
   ping::PurpleFringeCorrection_SatLow::Get()
@@ -1533,11 +1506,6 @@ void ArmIspDevice::IspLoadSeq_settings_context() {
       .set_value(0x800)
       .WriteTo(&isp_mmio_local_);
 
-  ping::FullResolution::GammaRgb_Enable::Get()
-      .ReadFrom(&isp_mmio_local_)
-      .set_value(0x1)
-      .WriteTo(&isp_mmio_local_);
-
   ping::Iridix_Config0::Get()
       .ReadFrom(&isp_mmio_local_)
       .set_variance_space(0xf)
@@ -1699,11 +1667,6 @@ void ArmIspDevice::IspLoadSeq_settings_context() {
       .set_strength_1(0xff)
       .set_strength_2(0xff)
       .set_strength_4(0xff)
-      .WriteTo(&isp_mmio_local_);
-
-  ping::DownScaled::GammaRgb_Enable::Get()
-      .ReadFrom(&isp_mmio_local_)
-      .set_value(0x1)
       .WriteTo(&isp_mmio_local_);
 
   ping::FullResolution::Primary::DmaWriter_Bank::Get()
@@ -2020,12 +1983,6 @@ void ArmIspDevice::IspLoadSeq_settings_context() {
       .set_offset_01(0)
       .WriteTo(&isp_mmio_local_);
 
-  ping::DownScaled::GammaRgb_Gain::Get()
-      .ReadFrom(&isp_mmio_local_)
-      .set_gain_r(0x100)
-      .set_gain_g(0x100)
-      .WriteTo(&isp_mmio_local_);
-
   ping::PurpleFringeCorrection_SatHigh::Get()
       .ReadFrom(&isp_mmio_local_)
       .set_sat_high_slope(0x1f4)
@@ -2080,12 +2037,6 @@ void ArmIspDevice::IspLoadSeq_settings_context() {
       .set_int_config(0xa)
       .set_nlm_en(0x1)
       .set_nonlinear_wkgen(0x1)
-      .WriteTo(&isp_mmio_local_);
-
-  ping::FullResolution::GammaRgb_Gain::Get()
-      .ReadFrom(&isp_mmio_local_)
-      .set_gain_r(0x100)
-      .set_gain_g(0x100)
       .WriteTo(&isp_mmio_local_);
 
   ping::MeteringHistAexp_NodesUsed::Get()
@@ -2170,11 +2121,6 @@ void ArmIspDevice::IspLoadSeq_settings_context() {
       .ReadFrom(&isp_mmio_local_)
       .set_mode_in(0x2)
       .set_output_select(0)
-      .WriteTo(&isp_mmio_local_);
-
-  ping::FullResolution::GammaRgb_GainB::Get()
-      .ReadFrom(&isp_mmio_local_)
-      .set_value(0x100)
       .WriteTo(&isp_mmio_local_);
 
   ping::FrameStitch_ExposureRatio::Get()

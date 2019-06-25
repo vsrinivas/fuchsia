@@ -252,6 +252,10 @@ zx_status_t ArmIspDevice::IspContextInit() {
   // Call custom_init()
   IspLoadCustomSequence();
 
+  // Initialize Gamma.
+  gamma_rgb_fr_regs_.Init();
+  gamma_rgb_ds_regs_.Init();
+
   // Input port safe start
   return SetPort(kSafeStart);
 }

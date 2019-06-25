@@ -19,6 +19,7 @@
 #include <lib/fidl-utils/bind.h>
 #include <lib/fzl/vmo-pool.h>
 
+
 namespace virtual_camera {
 
 class VirtualCameraDevice;

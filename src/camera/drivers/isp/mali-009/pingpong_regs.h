@@ -28,6 +28,11 @@ constexpr uint32_t kPingContextConfigOffset = 0x18e88;
 constexpr uint32_t kPongContextConfigOffset = 0x30E48;
 constexpr uint32_t kContextConfigSize = 0x1000;  // in 32 bit words
 
+// Creates a new register class.
+// Args:
+// |classname|: register class to inherit from.
+// |namespc|: namespace for new class.
+// |address|: register address.
 #define DEF_NAMESPACE_REG(classname, namespc, address)        \
   namespace namespc {                                         \
   class classname : public camera::classname {                \
@@ -5428,64 +5433,56 @@ DEF_NAMESPACE_REG(Scaler_VfiltCoefset, pong::DownScaled, 0x34194)
 DEF_NAMESPACE_REG(Scaler_VfiltCoefset, pong::FullResolution, 0x34020)
 
 class GammaRgb_Enable : public hwreg::RegisterBase<GammaRgb_Enable, uint32_t> {
- public:
-  // Gamma enable: 0=off 1=on
-  DEF_BIT(0, value);
-};
+public:
+    // Gamma enable: 0=off 1=on
+    DEF_BIT(0, value);
 
-DEF_NAMESPACE_REG(GammaRgb_Enable, ping::DownScaled, 0x1c1d8)
-DEF_NAMESPACE_REG(GammaRgb_Enable, ping::FullResolution, 0x1c064)
-DEF_NAMESPACE_REG(GammaRgb_Enable, pong::DownScaled, 0x34198)
-DEF_NAMESPACE_REG(GammaRgb_Enable, pong::FullResolution, 0x34024)
+    static auto Get(uint32_t addr) {
+      return hwreg::RegisterAddr<GammaRgb_Enable>(addr);
+    }
+};
 
 class GammaRgb_Gain : public hwreg::RegisterBase<GammaRgb_Gain, uint32_t> {
- public:
-  // gain applied to the R chanel in 4.8 format
-  DEF_FIELD(11, 0, gain_r);
-  // gain applied to the G chanel in 4.8 format
-  DEF_FIELD(27, 16, gain_g);
-};
+public:
+    // gain applied to the R chanel in 4.8 format
+    DEF_FIELD(11, 0, gain_r);
+    // gain applied to the G chanel in 4.8 format
+    DEF_FIELD(27, 16, gain_g);
 
-DEF_NAMESPACE_REG(GammaRgb_Gain, ping::DownScaled, 0x1c1dc)
-DEF_NAMESPACE_REG(GammaRgb_Gain, ping::FullResolution, 0x1c068)
-DEF_NAMESPACE_REG(GammaRgb_Gain, pong::DownScaled, 0x3419c)
-DEF_NAMESPACE_REG(GammaRgb_Gain, pong::FullResolution, 0x34028)
+    static auto Get(uint32_t addr) {
+      return hwreg::RegisterAddr<GammaRgb_Gain>(addr);
+    }
+};
 
 class GammaRgb_GainB : public hwreg::RegisterBase<GammaRgb_GainB, uint32_t> {
- public:
-  // gain applied to the B chanel in 4.8 format
-  DEF_FIELD(11, 0, value);
-};
+public:
+    // gain applied to the B chanel in 4.8 format
+    DEF_FIELD(11, 0, value);
 
-DEF_NAMESPACE_REG(GammaRgb_GainB, ping::DownScaled, 0x1c1e0)
-DEF_NAMESPACE_REG(GammaRgb_GainB, ping::FullResolution, 0x1c06c)
-DEF_NAMESPACE_REG(GammaRgb_GainB, pong::DownScaled, 0x341a0)
-DEF_NAMESPACE_REG(GammaRgb_GainB, pong::FullResolution, 0x3402c)
+    static auto Get(uint32_t addr) {
+      return hwreg::RegisterAddr<GammaRgb_GainB>(addr);
+    }
+};
 
 class GammaRgb_Offset : public hwreg::RegisterBase<GammaRgb_Offset, uint32_t> {
- public:
-  // Offset subtracted from the R chanel
-  DEF_FIELD(11, 0, offset_r);
-  // Offset subtracted from the G chanel
-  DEF_FIELD(27, 16, offset_g);
+public:
+    // Offset subtracted from the R chanel
+    DEF_FIELD(11, 0, offset_r);
+    // Offset subtracted from the G chanel
+    DEF_FIELD(27, 16, offset_g);
+
+    static auto Get(uint32_t addr) {
+      return hwreg::RegisterAddr<GammaRgb_Offset>(addr);
+    }
 };
 
-DEF_NAMESPACE_REG(GammaRgb_Offset, ping::DownScaled, 0x1c1e4)
-DEF_NAMESPACE_REG(GammaRgb_Offset, ping::FullResolution, 0x1c070)
-DEF_NAMESPACE_REG(GammaRgb_Offset, pong::DownScaled, 0x341a4)
-DEF_NAMESPACE_REG(GammaRgb_Offset, pong::FullResolution, 0x34030)
+class GammaRgb_OffsetB : public hwreg::RegisterBase<GammaRgb_OffsetB, uint32_t> {
+public:
+    // Offset subtracted from the B chanel
+    DEF_FIELD(11, 0, value);
 
-class GammaRgb_OffsetB
-    : public hwreg::RegisterBase<GammaRgb_OffsetB, uint32_t> {
- public:
-  // Offset subtracted from the B chanel
-  DEF_FIELD(11, 0, value);
+    static auto Get(uint32_t addr) { return hwreg::RegisterAddr<GammaRgb_OffsetB>(addr); }
 };
-
-DEF_NAMESPACE_REG(GammaRgb_OffsetB, ping::DownScaled, 0x1c1e8)
-DEF_NAMESPACE_REG(GammaRgb_OffsetB, ping::FullResolution, 0x1c074)
-DEF_NAMESPACE_REG(GammaRgb_OffsetB, pong::DownScaled, 0x341a8)
-DEF_NAMESPACE_REG(GammaRgb_OffsetB, pong::FullResolution, 0x34034)
 
 class Sharpen_Enable : public hwreg::RegisterBase<Sharpen_Enable, uint32_t> {
  public:

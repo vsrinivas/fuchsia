@@ -14,6 +14,7 @@ driver_module("mali-009-driver") {
   ]
   deps = [
     "//src/camera/drivers/isp/modules",
+    "//src/camera/drivers/isp/modules:isp-registers",
     "//zircon/public/banjo/ddk.protocol.clock",
     "//zircon/public/banjo/ddk.protocol.composite",
     "//zircon/public/banjo/ddk.protocol.gpio",
