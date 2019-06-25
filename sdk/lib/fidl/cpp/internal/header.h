@@ -60,8 +60,4 @@
 // implementation and are not ambiguous.
 #include "lib/fidl/cpp/clone.h"
 
-// This is defined temporarily to allow a soft transition for the change API
-// for table accessors. See FIDL-484.
-#define FIDL_NEW_STYLE_TABLE_MEMBER_ACCESSORS
-
 #endif  // LIB_FIDL_CPP_INTERNAL_HEADER_H_
