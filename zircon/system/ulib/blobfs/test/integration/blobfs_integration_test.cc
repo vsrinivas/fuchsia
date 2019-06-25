@@ -4,7 +4,9 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <sys/mman.h>
 
+#include <digest/digest.h>
 #include <fuchsia/io/c/fidl.h>
 #include <lib/fzl/fdio.h>
 #include <zircon/device/vfs.h>
@@ -167,96 +169,89 @@ TEST_F(BlobfsTestWithFvm, NullBlob) {
     RunNullBlobTest();
 }
 
-/*
-
-static bool TestCompressibleBlob(BlobfsTest* blobfsTest) {
-    BEGIN_HELPER;
+void RunCompressibleBlobTest(BlobfsTest* test) {
     for (size_t i = 10; i < 22; i++) {
-        fbl::unique_ptr<fs_test_utils::BlobInfo> info;
+        std::unique_ptr<fs_test_utils::BlobInfo> info;
 
         // Create blobs which are trivially compressible.
         ASSERT_TRUE(fs_test_utils::GenerateBlob([](char* data, size_t length) {
-            size_t i = 0;
-            while (i < length) {
-                size_t j = (rand() % (length - i)) + 1;
-                memset(data, (char) j, j);
-                data += j;
-                i += j;
-            }
-        }, MOUNT_PATH, 1 << i, &info));
+                        size_t i = 0;
+                        while (i < length) {
+                            size_t j = (rand() % (length - i)) + 1;
+                            memset(data, (char) j, j);
+                            data += j;
+                            i += j;
+                        }
+                    }, kMountPath, 1 << i, &info));
 
         fbl::unique_fd fd;
-        ASSERT_TRUE(MakeBlob(info.get(), &fd));
-        ASSERT_EQ(close(fd.release()), 0);
+        ASSERT_NO_FAILURES(MakeBlob(info.get(), &fd));
 
-        // We can re-open and verify the Blob as read-only
+        // We can re-open and verify the Blob as read-only.
         fd.reset(open(info->path, O_RDONLY));
         ASSERT_TRUE(fd, "Failed to-reopen blob");
         ASSERT_TRUE(fs_test_utils::VerifyContents(fd.get(), info->data.get(), info->size_data));
-        ASSERT_EQ(close(fd.release()), 0);
-
-        // We cannot re-open the blob as writable
-        fd.reset(open(info->path, O_RDWR | O_CREAT));
-        ASSERT_FALSE(fd, "Shouldn't be able to re-create blob that exists");
-        fd.reset(open(info->path, O_RDWR));
-        ASSERT_FALSE(fd, "Shouldn't be able to re-open blob as writable");
-        fd.reset(open(info->path, O_WRONLY));
-        ASSERT_FALSE(fd, "Shouldn't be able to re-open blob as writable");
 
         // Force decompression by remounting, re-accessing blob.
-        ASSERT_TRUE(blobfsTest->Remount());
+        ASSERT_NO_FAILURES(test->Remount());
         fd.reset(open(info->path, O_RDONLY));
         ASSERT_TRUE(fd, "Failed to-reopen blob");
         ASSERT_TRUE(fs_test_utils::VerifyContents(fd.get(), info->data.get(), info->size_data));
-        ASSERT_EQ(close(fd.release()), 0);
 
-        ASSERT_EQ(unlink(info->path), 0);
+        ASSERT_EQ(0, unlink(info->path));
     }
-
-    END_HELPER;
 }
 
-static bool TestMmap(BlobfsTest* blobfsTest) {
-    BEGIN_HELPER;
-    for (size_t i = 10; i < 16; i++) {
-        fbl::unique_ptr<fs_test_utils::BlobInfo> info;
-        ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(MOUNT_PATH, 1 << i, &info));
-
-        fbl::unique_fd fd;
-        ASSERT_TRUE(MakeBlob(info.get(), &fd));
-        ASSERT_EQ(close(fd.release()), 0);
-        fd.reset(open(info->path, O_RDONLY));
-        ASSERT_TRUE(fd, "Failed to-reopen blob");
-
-        void* addr = mmap(NULL, info->size_data, PROT_READ, MAP_PRIVATE,
-                          fd.get(), 0);
-        ASSERT_NE(addr, MAP_FAILED, "Could not mmap blob");
-        ASSERT_EQ(memcmp(addr, info->data.get(), info->size_data), 0, "Mmap data invalid");
-        ASSERT_EQ(munmap(addr, info->size_data), 0, "Could not unmap blob");
-        ASSERT_EQ(close(fd.release()), 0);
-        ASSERT_EQ(unlink(info->path), 0);
-    }
-    END_HELPER;
+TEST_F(BlobfsTest, CompressibleBlob) {
+    RunCompressibleBlobTest(this);
 }
 
-static bool TestMmapUseAfterClose(BlobfsTest* blobfsTest) {
-    BEGIN_HELPER;
+TEST_F(BlobfsTestWithFvm, CompressibleBlob) {
+    RunCompressibleBlobTest(this);
+}
+
+void RunMmapTest() {
     for (size_t i = 10; i < 16; i++) {
-        fbl::unique_ptr<fs_test_utils::BlobInfo> info;
-        ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(MOUNT_PATH, 1 << i, &info));
+        std::unique_ptr<fs_test_utils::BlobInfo> info;
+        ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 1 << i, &info));
 
         fbl::unique_fd fd;
-        ASSERT_TRUE(MakeBlob(info.get(), &fd));
-        ASSERT_EQ(close(fd.release()), 0);
+        ASSERT_NO_FAILURES(MakeBlob(info.get(), &fd));
         fd.reset(open(info->path, O_RDONLY));
         ASSERT_TRUE(fd, "Failed to-reopen blob");
 
         void* addr = mmap(NULL, info->size_data, PROT_READ, MAP_PRIVATE, fd.get(), 0);
         ASSERT_NE(addr, MAP_FAILED, "Could not mmap blob");
-        ASSERT_EQ(close(fd.release()), 0);
+        ASSERT_BYTES_EQ(addr, info->data.get(), info->size_data);
+        ASSERT_EQ(0, munmap(addr, info->size_data));
+        ASSERT_EQ(0, unlink(info->path));
+    }
+}
 
-        // We should be able to access the mapped data while the file is closed.
-        ASSERT_EQ(memcmp(addr, info->data.get(), info->size_data), 0, "Mmap data invalid");
+TEST_F(BlobfsTest, Mmap) {
+    RunMmapTest();
+}
+
+TEST_F(BlobfsTestWithFvm, Mmap) {
+    RunMmapTest();
+}
+
+void RunMmapUseAfterCloseTest() {
+    for (size_t i = 10; i < 16; i++) {
+        std::unique_ptr<fs_test_utils::BlobInfo> info;
+        ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 1 << i, &info));
+
+        fbl::unique_fd fd;
+        ASSERT_NO_FAILURES(MakeBlob(info.get(), &fd));
+        fd.reset(open(info->path, O_RDONLY));
+        ASSERT_TRUE(fd, "Failed to-reopen blob");
+
+        void* addr = mmap(NULL, info->size_data, PROT_READ, MAP_PRIVATE, fd.get(), 0);
+        ASSERT_NE(addr, MAP_FAILED, "Could not mmap blob");
+        fd.reset();
+
+        // We should be able to access the mapped data after the file is closed.
+        ASSERT_BYTES_EQ(addr, info->data.get(), info->size_data);
 
         // We should be able to re-open and remap the file.
         //
@@ -267,16 +262,25 @@ static bool TestMmapUseAfterClose(BlobfsTest* blobfsTest) {
         fd.reset(open(info->path, O_RDONLY));
         void* addr2 = mmap(NULL, info->size_data, PROT_READ, MAP_PRIVATE, fd.get(), 0);
         ASSERT_NE(addr2, MAP_FAILED, "Could not mmap blob");
-        ASSERT_EQ(close(fd.release()), 0);
-        ASSERT_EQ(memcmp(addr2, info->data.get(), info->size_data), 0, "Mmap data invalid");
+        fd.reset();
+        ASSERT_BYTES_EQ(addr2, info->data.get(), info->size_data);
 
         ASSERT_EQ(munmap(addr, info->size_data), 0, "Could not unmap blob");
         ASSERT_EQ(munmap(addr2, info->size_data), 0, "Could not unmap blob");
 
-        ASSERT_EQ(unlink(info->path), 0);
+        ASSERT_EQ(0, unlink(info->path));
     }
-    END_HELPER;
 }
+
+TEST_F(BlobfsTest, MmapUseAfterClose) {
+    RunMmapUseAfterCloseTest();
+}
+
+TEST_F(BlobfsTestWithFvm, MmapUseAfterClose) {
+    RunMmapUseAfterCloseTest();
+}
+
+/*
 
 static bool TestReaddir(BlobfsTest* blobfsTest) {
     BEGIN_HELPER;
@@ -2040,9 +2044,6 @@ TEST_F(LargeBlobTest, UseSecondBitmap) {
 /*
 
 BEGIN_TEST_CASE(blobfs_tests)
-RUN_TESTS(MEDIUM, TestCompressibleBlob)
-RUN_TESTS(MEDIUM, TestMmap)
-RUN_TESTS(MEDIUM, TestMmapUseAfterClose)
 RUN_TESTS(MEDIUM, TestReaddir)
 RUN_TESTS(MEDIUM, TestDiskTooSmall)
 RUN_TESTS(MEDIUM, TestGetAllocatedRegions)
