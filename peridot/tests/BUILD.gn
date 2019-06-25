@@ -56,7 +56,6 @@ group("tests") {
     "benchmarks",
     "component_context",
     "modular_config",
-    "modular_login_tests",
     "sessionctl",
     "trigger",
   ]

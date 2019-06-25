@@ -9,18 +9,17 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/modular_test_harness/cpp/test_harness_builder.h>
 #include <lib/modular_test_harness/cpp/test_harness_fixture.h>
-#include <sdk/lib/sys/cpp/service_directory.h>
 #include <sdk/lib/sys/cpp/testing/test_with_environment.h>
 #include <src/lib/fxl/logging.h>
 
 class LoginOverrideTest : public modular::testing::TestHarnessFixture {
  public:
-  LoginOverrideTest() { real_services()->Connect(setui_.NewRequest()); }
+  LoginOverrideTest() {}
 
   // Setting LoginOverride to AUTH_PROVIDER should launch the single user
   // base shell.
   void SetLoginOverride(fuchsia::setui::LoginOverride login_override,
-                        fit::function<void()> callback) {
+                        modular::testing::TestHarnessBuilder* builder) {
     fuchsia::setui::AccountMutation account_mutation;
     account_mutation.set_operation(
         fuchsia::setui::AccountOperation::SET_LOGIN_OVERRIDE);
@@ -29,10 +28,12 @@ class LoginOverrideTest : public modular::testing::TestHarnessFixture {
     fuchsia::setui::Mutation mutation;
     mutation.set_account_mutation_value(std::move(account_mutation));
 
-    setui_->Mutate(
-        fuchsia::setui::SettingType::ACCOUNT, std::move(mutation),
-        [callback = std::move(callback)](
-            fuchsia::setui::MutationResponse response) { callback(); });
+    builder->BuildAndRun(test_harness());
+
+    test_harness()->ConnectToEnvironmentService(
+        fuchsia::setui::SetUiService::Name_, setui_.NewRequest().TakeChannel());
+    setui_->Mutate(fuchsia::setui::SettingType::ACCOUNT, std::move(mutation),
+                   [](fuchsia::setui::MutationResponse response) {});
   }
 
  private:
@@ -45,13 +46,14 @@ TEST_F(LoginOverrideTest, AuthProviderOverrideLaunchesBaseShell) {
       "single_user_base_shell.cmx";
 
   modular::testing::TestHarnessBuilder builder;
-  builder.AddServiceFromServiceDirectory<fuchsia::setui::SetUiService>(
-      real_services());
+  builder.AddServiceFromComponent<fuchsia::setui::SetUiService>(
+      "fuchsia-pkg://fuchsia.com/setui_service#meta/setui_service.cmx");
+  builder.AddServiceFromComponent<fuchsia::auth::account::AccountManager>(
+      "fuchsia-pkg://fuchsia.com/account_manager#meta/account_manager.cmx");
   builder
-      .AddServiceFromServiceDirectory<fuchsia::auth::account::AccountManager>(
-          real_services());
-  builder.AddServiceFromServiceDirectory<
-      fuchsia::devicesettings::DeviceSettingsManager>(real_services());
+      .AddServiceFromComponent<fuchsia::devicesettings::DeviceSettingsManager>(
+          "fuchsia-pkg://fuchsia.com/device_settings_manager#meta/"
+          "device_settings_manager.cmx");
 
   bool intercepted = false;
   builder.InterceptBaseShell(
@@ -62,8 +64,7 @@ TEST_F(LoginOverrideTest, AuthProviderOverrideLaunchesBaseShell) {
           .url = kSingleUserBaseShellUrl});
 
   // Setting AUTH_PROVIDER should launch the configured base shell.
-  SetLoginOverride(fuchsia::setui::LoginOverride::AUTH_PROVIDER,
-                   [&] { builder.BuildAndRun(test_harness()); });
+  SetLoginOverride(fuchsia::setui::LoginOverride::AUTH_PROVIDER, &builder);
 
   RunLoopUntil([&] { return intercepted; });
 }
@@ -72,13 +73,14 @@ TEST_F(LoginOverrideTest, AuthProviderOverrideLaunchesBaseShell) {
 // launch the session shell.
 TEST_F(LoginOverrideTest, AutoLoginGuestOverrideSkipsBaseShell) {
   modular::testing::TestHarnessBuilder builder;
-  builder.AddServiceFromServiceDirectory<fuchsia::setui::SetUiService>(
-      real_services());
+  builder.AddServiceFromComponent<fuchsia::setui::SetUiService>(
+      "fuchsia-pkg://fuchsia.com/setui_service#meta/setui_service.cmx");
+  builder.AddServiceFromComponent<fuchsia::auth::account::AccountManager>(
+      "fuchsia-pkg://fuchsia.com/account_manager#meta/account_manager.cmx");
   builder
-      .AddServiceFromServiceDirectory<fuchsia::auth::account::AccountManager>(
-          real_services());
-  builder.AddServiceFromServiceDirectory<
-      fuchsia::devicesettings::DeviceSettingsManager>(real_services());
+      .AddServiceFromComponent<fuchsia::devicesettings::DeviceSettingsManager>(
+          "fuchsia-pkg://fuchsia.com/device_settings_manager#meta/"
+          "device_settings_manager.cmx");
 
   // Base shell should never be launched, so |intercepted_base_shell| should
   // remain false when the session shell launches.
@@ -94,8 +96,7 @@ TEST_F(LoginOverrideTest, AutoLoginGuestOverrideSkipsBaseShell) {
           fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent>
               component) { intercepted_session_shell = true; });
 
-  SetLoginOverride(fuchsia::setui::LoginOverride::AUTOLOGIN_GUEST,
-                   [&] { builder.BuildAndRun(test_harness()); });
+  SetLoginOverride(fuchsia::setui::LoginOverride::AUTOLOGIN_GUEST, &builder);
 
   RunLoopUntil([&] { return intercepted_session_shell; });
   EXPECT_FALSE(intercepted_base_shell);
