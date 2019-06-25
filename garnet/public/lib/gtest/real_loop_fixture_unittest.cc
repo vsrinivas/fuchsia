@@ -11,7 +11,7 @@ namespace {
 
 using RealLoopFixtureTest = RealLoopFixture;
 
-TEST_F(RealLoopFixtureTest, Timeout) {
+TEST_F(RealLoopFixtureTest, DISABLED_Timeout) {
   bool called = false;
   async::PostDelayedTask(dispatcher(), [&called] { called = true; },
                          zx::msec(100));
