@@ -39,8 +39,8 @@ class CodecRunnerApp {
             [this, codec_admission_control = codec_admission_control.get()](
                 fidl::InterfaceRequest<fuchsia::mediacodec::CodecFactory>
                     request) {
-              // This runner only expects a single Local Codec Factory to ever
-              // be requested.
+              // We RemoveService() near the end of the present lambda, so it
+              // should be impossible to receive a second CodecFactory request.
               FXL_DCHECK(!codec_factory_);
 
               fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem;
@@ -57,6 +57,9 @@ class CodecRunnerApp {
                           // Drop codec implementation and close channel on
                           // error.
                           codec_instance_.reset();
+                          // The codec_instance_ channel is the only reason for
+                          // the isolate to exist.
+                          loop_.Quit();
                         });
                         // Drop factory and close factory channel.
                         codec_factory_.reset();
@@ -65,7 +68,17 @@ class CodecRunnerApp {
                       [this](zx_status_t error) {
                         // Drop factory and close factory channel on error.
                         codec_factory_.reset();
+                        // The codec_instance_ channel is the only reason for
+                        // the isolate to exist.  If codec_instance_ wasn't
+                        // created via the codec_factory_ before this point,
+                        // it'll never be created via codec_factory_.
+                        if (!codec_instance_) {
+                          loop_.Quit();
+                        }
                       });
+              // This runner only expects a single Local Codec Factory to ever
+              // be requested.
+              //
               // This call deletes the presently-running lambda, so nothing
               // after this call can use the lambda's captures, including the
               // "this" pointer implicitly.
