@@ -264,10 +264,11 @@ impl AccountManager {
         }
     }
 
-    async fn remove_account(&self, id: LocalAccountId, force: bool) -> Status {
+    async fn remove_account(&self, account_id: LocalAccountId, force: bool) -> Status {
         let mut ids_to_handlers = await!(self.ids_to_handlers.lock());
         let account_handler =
-            match await!(self.get_handler_for_existing_account(&mut *ids_to_handlers, &id)) {
+            match await!(self.get_handler_for_existing_account(&mut *ids_to_handlers, &account_id))
+            {
                 Ok(account_handler) => account_handler,
                 Err(err) => return err.status,
             };
@@ -276,18 +277,19 @@ impl AccountManager {
             Ok(status) => return status,
             Err(_) => return Status::IoError,
         };
-        let account_ids = ids_to_handlers
-            .keys()
-            .filter(|&x| x != &id)
-            .map(|id| StoredAccountMetadata::new(id.clone()))
-            .collect();
-        if let Err(err) = StoredAccountList::new(account_ids).save(&self.data_dir) {
-            warn!("Could not save updated account list: {:?}", err);
-            return err.status;
+        // Emphemeral accounts were never included in the StoredAccountList and so it does not need
+        // to be modified when they are removed.
+        if account_handler.get_lifetime() == &Lifetime::Persistent {
+            let account_ids =
+                Self::get_persistent_account_metadata(&ids_to_handlers, Some(&account_id));
+            if let Err(err) = StoredAccountList::new(account_ids).save(&self.data_dir) {
+                warn!("Could not save updated account list: {:?}", err);
+                return err.status;
+            }
         }
-        let event = AccountEvent::AccountRemoved(id.clone());
+        let event = AccountEvent::AccountRemoved(account_id.clone());
         await!(self.event_emitter.publish(&event));
-        ids_to_handlers.remove(&id);
+        ids_to_handlers.remove(&account_id);
         let _ = self.accounts_inspect.total.set(ids_to_handlers.len() as u64);
         let _ = self.accounts_inspect.active.set(count_populated(&ids_to_handlers) as u64);
         Status::Ok
@@ -431,27 +433,49 @@ impl AccountManager {
         account_handler: Arc<AccountHandlerConnection>,
         account_id: LocalAccountId,
     ) -> Result<(), AccountManagerError> {
-        let mut ids_to_handlers_lock = await!(self.ids_to_handlers.lock());
-        if ids_to_handlers_lock.get(&account_id).is_some() {
+        let mut ids_to_handlers = await!(self.ids_to_handlers.lock());
+        if ids_to_handlers.get(&account_id).is_some() {
             // IDs are 64 bit integers that are meant to be random. Its very unlikely we'll create
             // the same one twice but not impossible.
             // TODO(dnordstrom): Avoid collision higher up the call chain.
             return Err(AccountManagerError::new(Status::UnknownError)
                 .with_cause(format_err!("Duplicate ID {:?} creating new account", &account_id)));
         }
-        let mut account_ids: Vec<StoredAccountMetadata> =
-            ids_to_handlers_lock.keys().map(|id| StoredAccountMetadata::new(id.clone())).collect();
-        account_ids.push(StoredAccountMetadata::new(account_id.clone()));
-        if let Err(err) = StoredAccountList::new(account_ids).save(&self.data_dir) {
-            // TODO(dnordstrom): When AccountHandler uses persistent storage, clean up its state.
-            return Err(err);
+        // Only persistent accounts are written to disk
+        if account_handler.get_lifetime() == &Lifetime::Persistent {
+            let mut account_ids = Self::get_persistent_account_metadata(&ids_to_handlers, None);
+            account_ids.push(StoredAccountMetadata::new(account_id.clone()));
+            if let Err(err) = StoredAccountList::new(account_ids).save(&self.data_dir) {
+                // TODO(dnordstrom): When AccountHandler uses persistent storage, clean up its state.
+                return Err(err);
+            }
         }
-        ids_to_handlers_lock.insert(account_id.clone(), Some(account_handler));
+        ids_to_handlers.insert(account_id.clone(), Some(account_handler));
         let event = AccountEvent::AccountAdded(account_id.clone());
         await!(self.event_emitter.publish(&event));
-        let _ = self.accounts_inspect.total.set(ids_to_handlers_lock.len() as u64);
-        let _ = self.accounts_inspect.active.set(count_populated(&ids_to_handlers_lock) as u64);
+        let _ = self.accounts_inspect.total.set(ids_to_handlers.len() as u64);
+        let _ = self.accounts_inspect.active.set(count_populated(&ids_to_handlers) as u64);
         Ok(())
+    }
+
+    /// Get a vector of StoredAccountMetadata for all persistent accounts in |ids_to_handlers|,
+    /// optionally excluding the provided |exclude_account_id|.
+    fn get_persistent_account_metadata<'a>(
+        ids_to_handlers: &'a AccountMap,
+        exclude_account_id: Option<&'a LocalAccountId>,
+    ) -> Vec<StoredAccountMetadata> {
+        ids_to_handlers
+            .iter()
+            .filter(|(id, handler)| {
+                // Filter out `exclude_account_id` if provided
+                exclude_account_id.map_or(true, |exclude_id| id != &exclude_id) &&
+                // Filter out accounts that are not persistent. Note that all accounts that do not
+                // have an open handler are assumed to be persistent due to the semantics of
+                // account lifetimes in this module.
+                handler.as_ref().map_or(true, |h| h.get_lifetime() == &Lifetime::Persistent)
+            })
+            .map(|(id, _)| StoredAccountMetadata::new(id.clone()))
+            .collect()
     }
 }
 
