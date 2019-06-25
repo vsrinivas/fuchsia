@@ -309,13 +309,20 @@ zx_status_t Journal::Enqueue(fbl::unique_ptr<WritebackWork> work) {
     // Create the journal entry and push it onto the work queue.
     fbl::unique_ptr<JournalEntry> entry = CreateEntry(header_index, commit_index, std::move(work));
 
-    if (entry->HasData()) {
-        // Prepare a WritebackWork to write out the entry to disk. Note that this does not
-        // fully prepare the buffer for writeback, so a ready callback is added to the work as
-        // part of this step.
-        PrepareWork(entry.get(), &work);
-        ZX_DEBUG_ASSERT(work != nullptr);
-        status = EnqueueEntryWork(std::move(work));
+    if (entry->GetStatus() == EntryStatus::kInit) {
+        // If we have a non-sync work, there is some extra preparation we need to do.
+        if (status == ZX_OK) {
+            // Prepare a WritebackWork to write out the entry to disk. Note that this does not
+            // fully prepare the buffer for writeback, so a ready callback is added to the work as
+            // part of this step.
+            PrepareWork(entry.get(), &work);
+            ZX_DEBUG_ASSERT(work != nullptr);
+            status = EnqueueEntryWork(std::move(work));
+        } else {
+            // If the status is not okay (i.e. we are in a readonly state), do no additional
+            // processing but set the entry state to error.
+            entry->SetStatus(EntryStatus::kError);
+        }
     }
 
     // Queue the entry to be processed asynchronously.
@@ -349,13 +356,25 @@ bool Journal::IsRunning() const {
 
 fbl::unique_ptr<JournalEntry> Journal::CreateEntry(uint64_t header_index, uint64_t commit_index,
                                                    fbl::unique_ptr<WritebackWork> work) {
-    return std::make_unique<JournalEntry>(this, header_index, commit_index,
-                                          std::move(work), IsReadOnly());
+    EntryStatus status = EntryStatus::kInit;
+
+    if (work->Transaction().BlkCount() == 0) {
+        // If the work has no transactions, this is a sync work - we can return early.
+        // Right now we make the assumption that if a WritebackWork has any transactions, it cannot
+        // have a corresponding sync callback. We may need to revisit this later.
+        status = EntryStatus::kSync;
+    } else if (IsReadOnly()) {
+        // If the journal is in a read only state, set the entry status to error.
+        status = EntryStatus::kError;
+    }
+
+    return std::make_unique<JournalEntry>(this, status, header_index, commit_index,
+                                          std::move(work));
 }
 
 void Journal::PrepareWork(JournalEntry* entry, fbl::unique_ptr<WritebackWork>* out) {
-    size_t header_index = entry->header_index();
-    size_t commit_index = entry->commit_index();
+    size_t header_index = entry->GetHeaderIndex();
+    size_t commit_index = entry->GetCommitIndex();
     size_t block_count = entry->BlockCount();
 
     if (block_count == 0) {
@@ -387,8 +406,8 @@ void Journal::ProcessEntryResult(zx_status_t result, JournalEntry* entry) {
 }
 
 void Journal::PrepareBuffer(JournalEntry* entry) {
-    size_t header_index = entry->header_index();
-    size_t commit_index = entry->commit_index();
+    size_t header_index = entry->GetHeaderIndex();
+    size_t commit_index = entry->GetCommitIndex();
     size_t block_count = entry->BlockCount();
 
     if (block_count == 0) {
@@ -403,7 +422,7 @@ void Journal::PrepareBuffer(JournalEntry* entry) {
     // block into the buffer before the commit block so we can generate the checksum.
     void* data = entries_->MutableData(header_index);
     memset(data, 0, kBlobfsBlockSize);
-    memcpy(data, &entry->header_block(), sizeof(HeaderBlock));
+    memcpy(data, &entry->GetHeaderBlock(), sizeof(HeaderBlock));
 
     // Now that the header block has been written to the buffer, we can calculate a checksum for
     // the header + all journaled metadata blocks and set it in the entry's commit block.
@@ -412,24 +431,13 @@ void Journal::PrepareBuffer(JournalEntry* entry) {
     // Write the commit block (now with checksum) to the journal buffer.
     data = entries_->MutableData(commit_index);
     memset(data, 0, kBlobfsBlockSize);
-    memcpy(data, &entry->commit_block(), sizeof(CommitBlock));
-}
-
-void Journal::WriteEntry(JournalEntry* entry) {
-    PrepareBuffer(entry);
-}
-
-void Journal::DeleteEntry(JournalEntry* entry) {
-    auto work = CreateWork();
-    PrepareDelete(entry, work.get());
-    processor_->AddBlocks(entry->BlockCount());
-    EnqueueEntryWork(std::move(work));  // no callback
+    memcpy(data, &entry->GetCommitBlock(), sizeof(CommitBlock));
 }
 
 void Journal::PrepareDelete(JournalEntry* entry, WritebackWork* work) {
     ZX_DEBUG_ASSERT(work != nullptr);
-    size_t header_index = entry->header_index();
-    size_t commit_index = entry->commit_index();
+    size_t header_index = entry->GetHeaderIndex();
+    size_t commit_index = entry->GetCommitIndex();
     size_t block_count = entry->BlockCount();
 
     if (block_count == 0) {
@@ -763,11 +771,14 @@ void Journal::ProcessQueues(JournalProcessor* processor) {
     // If we are not in an error state and did not process any blocks, then the
     // JournalProcessor's work should be not have been initialized. This condition will be
     // checked at the beginning of the next call to ProcessQueue.
+
+    // Since none of the methods in the kSync profile indicate that an entry should be added to
+    // the next queue, it should be fine to pass a null output queue here.
+    processor->ProcessSyncQueue();
 }
 
 void Journal::ProcessLoop() {
     JournalProcessor processor(this);
-    processor_ = &processor;
     while (true) {
         ProcessQueues(&processor);
 
@@ -796,30 +807,62 @@ void Journal::ProcessLoop() {
 }
 
 void JournalProcessor::ProcessWorkEntry(fbl::unique_ptr<JournalEntry> entry) {
-    entry->Start();
-    if (entry->HasData()) {
-        ProcessResult result = ProcessEntry(entry.get());
-        ZX_DEBUG_ASSERT(result != ProcessResult::kRemove || error_);
-    }
+    SetContext(ProcessorContext::kWork);
+    ProcessResult result = ProcessEntry(entry.get());
+    ZX_DEBUG_ASSERT(result == ProcessResult::kContinue);
 
     // Enqueue the entry into the wait_queue, even in the case of error. This is so that
     // all works contained by journal entries will be processed in the second step, even if
     // we do not plan to send them along to the writeback queue.
     wait_queue_.push(std::move(entry));
-
-    if (work_ == nullptr) {
-        work_ = journal_->CreateWork();
-    }
 }
 
 void JournalProcessor::ProcessWaitQueue() {
-    blocks_processed_ = 0;
+    SetContext(ProcessorContext::kWait);
     ProcessQueue(&wait_queue_, &delete_queue_);
 }
 
 void JournalProcessor::ProcessDeleteQueue() {
-    blocks_processed_ = 0;
-    ProcessQueue(&delete_queue_, nullptr);
+    SetContext(ProcessorContext::kDelete);
+    ProcessQueue(&delete_queue_, &sync_queue_);
+}
+void JournalProcessor::ProcessSyncQueue() {
+    SetContext(ProcessorContext::kSync);
+    ProcessQueue(&sync_queue_, nullptr);
+}
+
+void JournalProcessor::SetContext(ProcessorContext context) {
+    if (context_ != context) {
+        // If we are switching from the sync profile, sync queue must be empty.
+        ZX_DEBUG_ASSERT(context_ != ProcessorContext::kSync || sync_queue_.is_empty());
+
+        switch (context) {
+        case ProcessorContext::kDefault:
+            ZX_DEBUG_ASSERT(context_ == ProcessorContext::kSync);
+            break;
+        case ProcessorContext::kWork:
+            ZX_DEBUG_ASSERT(context_ == ProcessorContext::kDefault ||
+                            context_ == ProcessorContext::kSync);
+            break;
+        case ProcessorContext::kWait:
+            ZX_DEBUG_ASSERT(context_ != ProcessorContext::kDelete);
+            break;
+        case ProcessorContext::kDelete:
+            ZX_DEBUG_ASSERT(context_ == ProcessorContext::kWait);
+            break;
+        case ProcessorContext::kSync:
+            ZX_DEBUG_ASSERT(context_ == ProcessorContext::kDelete);
+            break;
+        default:
+            ZX_DEBUG_ASSERT(false);
+        }
+
+        // Make sure that if a WritebackWork was established,
+        // it was removed before we attempt to switch profiles.
+        ZX_DEBUG_ASSERT(work_ == nullptr);
+        blocks_processed_ = 0;
+        context_ = context;
+    }
 }
 
 void JournalProcessor::ProcessQueue(EntryQueue* in_queue, EntryQueue* out_queue) {
@@ -847,33 +890,157 @@ void JournalProcessor::ProcessQueue(EntryQueue* in_queue, EntryQueue* out_queue)
 ProcessResult JournalProcessor::ProcessEntry(JournalEntry* entry) {
     ZX_DEBUG_ASSERT(entry != nullptr);
 
-    if (entry->is_dummy()) {
-        error_ = true;
-        entry->ForceReset();
-        return ProcessResult::kRemove;
-    }
+    // Retrieve the entry status once up front so we don't have to keep atomically loading it.
+    EntryStatus entry_status = entry->GetStatus();
 
-    zx_status_t status = entry->GetStatus();
-    if (status == ZX_ERR_ASYNC) {
+    if (entry_status == EntryStatus::kWaiting) {
+        // If the entry at the front of the queue is still waiting, we are done processing this
+        // queue for the time being.
         return ProcessResult::kWait;
     }
 
-    if (status == ZX_OK) {
-        status = entry->Continue();
+    if (error_ && entry_status != EntryStatus::kSync) {
+        // If we are in an error state and the entry is not a "sync" entry,
+        // set the state to error so we do not do any unnecessary work.
+        //
+        // Since the error state takes precedence over the entry state,
+        // we do not also have to set the entry state to error.
+        entry_status = EntryStatus::kError;
     }
 
-    switch (status) {
-    case ZX_OK:
-    case ZX_ERR_ASYNC:
-        // The status was OK so the entry should move to the next queue.
-        return ProcessResult::kContinue;
-    case ZX_ERR_STOP:
-        return ProcessResult::kRemove;
-    default:
-        error_ = true;
-        entry->ForceReset();
-        return ProcessResult::kRemove;
+    if (entry_status == EntryStatus::kInit && context_ == ProcessorContext::kWork) {
+        return ProcessWorkDefault(entry);
     }
+
+    if (entry_status == EntryStatus::kPersisted) {
+        if (context_ == ProcessorContext::kWait) {
+            return ProcessWaitDefault(entry);
+        }
+
+        if (context_ == ProcessorContext::kDelete) {
+            return ProcessDeleteDefault(entry);
+        }
+    }
+
+    if (entry_status == EntryStatus::kSync) {
+        if (context_ == ProcessorContext::kSync) {
+            return ProcessSyncComplete(entry);
+        }
+
+        if (context_ != ProcessorContext::kDefault) {
+            return ProcessSyncDefault(entry);
+        }
+    }
+
+    if (entry_status == EntryStatus::kError) {
+        if (context_ == ProcessorContext::kWork) {
+            return ProcessErrorDefault();
+        }
+
+        if (context_ == ProcessorContext::kWait || context_ == ProcessorContext::kDelete) {
+            return ProcessErrorComplete(entry);
+        }
+    }
+
+    return ProcessUnsupported();
+}
+
+ProcessResult JournalProcessor::ProcessWorkDefault(JournalEntry* entry) {
+    // If the entry is in the "init" state, we can now prepare its header/commit blocks
+    // in the journal buffer.
+    journal_->PrepareBuffer(entry);
+    EntryStatus last_status = entry->SetStatus(EntryStatus::kWaiting);
+
+    if (last_status == EntryStatus::kError) {
+        // If the WritebackThread has failed and set our journal entry to an error
+        // state in the time it's taken to prepare the buffer, set error state to
+        // true. If we do not check this and continue having set the status to
+        // kWaiting, we will never get another callback for this journal entry and
+        // we will be stuck forever waiting for it to complete.
+        error_ = true;
+        entry->SetStatus(EntryStatus::kError);
+    } else {
+        ZX_DEBUG_ASSERT(last_status == EntryStatus::kInit);
+        if (work_ == nullptr) {
+            // Prepare a "dummy" work to kick off the writeback queue now that our entry is ready.
+            // This is unnecessary in the case of an error, since the writeback queue will already
+            // be failing all incoming transactions.
+            work_ = journal_->CreateWork();
+        }
+    }
+
+    return ProcessResult::kContinue;
+}
+
+ProcessResult JournalProcessor::ProcessWaitDefault(JournalEntry* entry) {
+    EntryStatus last_status = entry->SetStatus(EntryStatus::kWaiting);
+    ZX_DEBUG_ASSERT(last_status == EntryStatus::kPersisted);
+    fbl::unique_ptr<WritebackWork> work = entry->TakeWork();
+    journal_->EnqueueEntryWork(std::move(work));
+    return ProcessResult::kContinue;
+}
+
+ProcessResult JournalProcessor::ProcessDeleteDefault(JournalEntry* entry) {
+    if (work_ == nullptr) {
+        // Use this work to enqueue any "delete" transactions we may encounter,
+        // to be written after the info block is updated.
+        work_ = journal_->CreateWork();
+    }
+
+    // The entry has now been fully persisted to disk, so we can remove the entry from
+    // the journal. To ensure that it does not later get replayed unnecessarily, clear
+    // out the header and commit blocks.
+    journal_->PrepareDelete(entry, work_.get());
+
+    // Track the number of blocks that have been fully processed so we can update the buffer.
+    blocks_processed_ += entry->BlockCount();
+
+    // We have fully processed this entry - do not add it to the next queue.
+    return ProcessResult::kRemove;
+}
+
+ProcessResult JournalProcessor::ProcessSyncDefault(JournalEntry* entry) {
+    // This is a sync request. Since there is no actual data to update,
+    // we can just verify it and send it along to the next queue.
+    ZX_DEBUG_ASSERT(entry->BlockCount() == 0);
+    ZX_DEBUG_ASSERT(entry->GetHeaderIndex() == journal_->GetCapacity());
+    ZX_DEBUG_ASSERT(entry->GetCommitIndex() == journal_->GetCapacity());
+
+    // Always push the sync entry into the output queue.
+    return ProcessResult::kContinue;
+}
+
+ProcessResult JournalProcessor::ProcessSyncComplete(JournalEntry* entry) {
+    // Call the default sync method to ensure the entry matches what we expect.
+    ProcessSyncDefault(entry);
+
+    // Remove and enqueue the sync work.
+    fbl::unique_ptr<WritebackWork> work = entry->TakeWork();
+    journal_->EnqueueEntryWork(std::move(work));
+
+    // The sync entry is complete; do not re-enqueue it.
+    return ProcessResult::kRemove;
+}
+
+ProcessResult JournalProcessor::ProcessErrorDefault() {
+    error_ = true;
+    return ProcessResult::kContinue;
+}
+
+ProcessResult JournalProcessor::ProcessErrorComplete(JournalEntry* entry) {
+    // If we are in an error state, force reset the entry's work. This will remove all
+    // requests and call the sync closure (if it exists), thus completing this entry.
+    entry->ForceReset();
+    error_ = true;
+
+    // Since all work is completed for this entry, we no longer need to send it along
+    // to the next queue. Instead proceed to process the next entry.
+    return ProcessResult::kRemove;
+}
+
+ProcessResult JournalProcessor::ProcessUnsupported() {
+    ZX_ASSERT(false);
+    return ProcessResult::kRemove;
 }
 
 } // blobfs

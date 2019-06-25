@@ -21,7 +21,6 @@ test("blobfs-unit") {
     "extent-reserver-test.cc",
     "format-test.cc",
     "get-allocated-regions-test.cc",
-    "journal-entry-test.cc",
     "journal-test.cc",
     "node-populator-test.cc",
     "node-reserver-test.cc",
