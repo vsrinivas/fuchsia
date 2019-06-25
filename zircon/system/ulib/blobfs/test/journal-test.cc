@@ -12,9 +12,9 @@ namespace {
 
 // Mock journal implementation which can be used to test JournalEntry / JournalProcessor
 // functionality.
-class FakeJournal : public JournalBase {
+class FakeJournal : public JournalForProcessor {
 public:
-    FakeJournal() : readonly_(false), capacity_(0) {}
+    FakeJournal() : readonly_(false) {}
 
     ~FakeJournal() {
         // On destruction, clean up work_queue_ entries.
@@ -32,15 +32,11 @@ public:
     }
 
     fbl::unique_ptr<WritebackWork> CreateDefaultWork() {
-        return CreateWork();
-    }
-
-    fbl::unique_ptr<WritebackWork> CreateBufferedWork(size_t block_count) {
         fbl::unique_ptr<WritebackWork> work = CreateWork();
 
         zx::vmo vmo;
         ZX_ASSERT(zx::vmo::create(PAGE_SIZE, 0, &vmo) == ZX_OK);
-        work->Transaction().Enqueue(vmo, 0, 0, block_count);
+        work->Transaction().Enqueue(vmo, 0, 0, 1);
         work->Transaction().SetBuffer(2);
         return work;
     }
@@ -52,10 +48,6 @@ public:
 private:
     using WorkQueue = fs::Queue<fbl::unique_ptr<WritebackWork>>;
 
-    size_t GetCapacity() const final {
-        return capacity_;
-    }
-
     bool IsReadOnly() const final {
         return readonly_;
     }
@@ -64,10 +56,8 @@ private:
         return std::make_unique<WritebackWork>(nullptr);
     }
 
-    // The following functions are no-ops, and only exist so they can be called by the
-    // JournalProcessor.
-    void PrepareBuffer(JournalEntry* entry) final {}
-    void PrepareDelete(JournalEntry* entry, WritebackWork* work) final {}
+    void WriteEntry(JournalEntry* entry) final {}
+    void DeleteEntry(JournalEntry* entry) final {}
 
     // Stores the WritebackWork in work_queue_;
     zx_status_t EnqueueEntryWork(fbl::unique_ptr<WritebackWork> work) final {
@@ -76,7 +66,6 @@ private:
     }
 
     bool readonly_;
-    size_t capacity_;
 
     // Enqueued entry works are stored here.
     WorkQueue work_queue_;
@@ -89,15 +78,13 @@ TEST(JournalTest, JournalEntryLifetime) {
 
     // Create and process a 'work' entry.
     fbl::unique_ptr<JournalEntry> entry(
-        new JournalEntry(&journal, EntryStatus::kInit, 0, 0,
-                         journal.CreateBufferedWork(1)));
+        new JournalEntry(&journal, 0, 1, journal.CreateDefaultWork(), false));
     fbl::unique_ptr<WritebackWork> first_work = journal.CreateDefaultWork();
     first_work->SetSyncCallback(entry->CreateSyncCallback());
     processor.ProcessWorkEntry(std::move(entry));
 
     // Create and process another 'work' entry.
-    entry.reset(new JournalEntry(&journal, EntryStatus::kInit, 0, 0,
-                                 journal.CreateBufferedWork(1)));
+    entry.reset(new JournalEntry(&journal, 0, 1, journal.CreateDefaultWork(), false));
     fbl::unique_ptr<WritebackWork> second_work = journal.CreateDefaultWork();
     second_work->SetSyncCallback(entry->CreateSyncCallback());
     processor.ProcessWorkEntry(std::move(entry));
@@ -125,7 +112,6 @@ TEST(JournalTest, JournalEntryLifetime) {
     // Process the rest of the queues.
     processor.ProcessWaitQueue();
     processor.ProcessDeleteQueue();
-    processor.ProcessSyncQueue();
 }
 
 TEST(JournalTest, JournalProcessorResetsWork) {
@@ -135,14 +121,13 @@ TEST(JournalTest, JournalProcessorResetsWork) {
 
     // Create and process a 'work' entry.
     fbl::unique_ptr<JournalEntry> entry(
-        new JournalEntry(&journal, EntryStatus::kInit, 0, 1, journal.CreateBufferedWork(1)));
+        new JournalEntry(&journal, 0, 1, journal.CreateDefaultWork(), false));
     fbl::unique_ptr<WritebackWork> first_work = journal.CreateDefaultWork();
     first_work->SetSyncCallback(entry->CreateSyncCallback());
     processor.ProcessWorkEntry(std::move(entry));
 
     // Create and process another 'work' entry.
-    entry.reset(new JournalEntry(&journal, EntryStatus::kInit, 2, 3,
-                                 journal.CreateBufferedWork(1)));
+    entry.reset(new JournalEntry(&journal, 2, 3, journal.CreateDefaultWork(), false));
     fbl::unique_ptr<WritebackWork> second_work = journal.CreateDefaultWork();
     second_work->SetSyncCallback(entry->CreateSyncCallback());
     processor.ProcessWorkEntry(std::move(entry));
@@ -181,8 +166,6 @@ TEST(JournalTest, JournalProcessorResetsWork) {
     // callback but would not delete the WritebackWork, this would trigger an assertion (work_ ==
     // nullptr) when switching to the kSync context.
     processor.ResetWork();
-
-    processor.ProcessSyncQueue();
 }
 
 TEST(JournalTest, DestroyJournalWithoutTeardown) {
