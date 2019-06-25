@@ -226,6 +226,7 @@ mod test {
     use failure::Error;
     use fuchsia_async::Executor;
 
+    #[ignore]
     #[test]
     fn test_get_network_time() -> Result<(), Error> {
         let mut executor = Executor::new().expect("Error creating executor");
@@ -242,6 +243,7 @@ mod test {
         )
     }
 
+    #[ignore]
     #[test]
     fn test_far_future() -> Result<(), Error> {
         let mut executor = Executor::new().expect("Error creating executor");
