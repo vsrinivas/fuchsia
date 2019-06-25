@@ -8,7 +8,7 @@
 #include <unistd.h>
 #include <lib/fdio/private.h>
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 #define TEST_CLEAN(p1, p2, dir)                                               \
     {                                                                         \
@@ -16,24 +16,18 @@
         const char out_gold[] = (p2);                                         \
         size_t outlen;                                                        \
         bool is_dir;                                                          \
-        EXPECT_EQ(__fdio_cleanpath(in, out, &outlen, &is_dir), ZX_OK, ""); \
-        EXPECT_EQ(is_dir, dir, "");                                           \
-        char msg[PATH_MAX * 3 + 128];                                         \
-        sprintf(msg, "[%s] --> [%s], expected [%s]", in, out, out_gold);      \
-        EXPECT_EQ(strcmp(out, out_gold), 0, msg);                             \
+        EXPECT_OK(__fdio_cleanpath(in, out, &outlen, &is_dir));               \
+        EXPECT_EQ(is_dir, dir);                                               \
+        EXPECT_EQ(strcmp(out, out_gold), 0);                                  \
     }
 
-
-bool basic_test(void) {
-    BEGIN_TEST;
+TEST(PathCanonicalizationTest, Basic) {
     char out[PATH_MAX];
     TEST_CLEAN("/foo", "/foo", false);
     TEST_CLEAN("/foo/bar/baz", "/foo/bar/baz", false);
-    END_TEST;
 }
 
-bool dotdot_test(void) {
-    BEGIN_TEST;
+TEST(PathCanonicalizationTest, DotDot) {
     char out[PATH_MAX];
     TEST_CLEAN("/foo/bar/../baz", "/foo/baz", false);
     TEST_CLEAN("/foo/bar/../baz/..", "/foo", true);
@@ -41,11 +35,9 @@ bool dotdot_test(void) {
     TEST_CLEAN("../../..", "../../..", true);
     TEST_CLEAN("/../../..", "/", true);
     TEST_CLEAN("/./././../foo", "/foo", false);
-    END_TEST;
 }
 
-bool dot_test(void) {
-    BEGIN_TEST;
+TEST(PathCanonicalizationTest, Dot) {
     char out[PATH_MAX];
     TEST_CLEAN("/.", "/", true);
     TEST_CLEAN("/./././.", "/", true);
@@ -55,11 +47,9 @@ bool dot_test(void) {
     TEST_CLEAN(".", ".", true);
     TEST_CLEAN("./.", ".", true);
     TEST_CLEAN("./././../foo", "../foo", false);
-    END_TEST;
 }
 
-bool minimal_test(void) {
-    BEGIN_TEST;
+TEST(PathCanonicalizationTest, Minimal) {
     char out[PATH_MAX];
     TEST_CLEAN("", ".", true);
     TEST_CLEAN("/", "/", true);
@@ -74,12 +64,4 @@ bool minimal_test(void) {
     TEST_CLEAN(".", ".", true);
     TEST_CLEAN("..", "..", true);
     TEST_CLEAN("...", "...", false);
-    END_TEST;
 }
-
-BEGIN_TEST_CASE(fdio_path_canonicalization_test)
-RUN_TEST(basic_test);
-RUN_TEST(dotdot_test);
-RUN_TEST(dot_test);
-RUN_TEST(minimal_test);
-END_TEST_CASE(fdio_path_canonicalization_test)

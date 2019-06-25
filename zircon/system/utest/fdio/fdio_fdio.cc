@@ -14,28 +14,22 @@
 #include <unistd.h>
 #include <zircon/limits.h>
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
-static bool null_create_test() {
-    BEGIN_TEST;
-
+TEST(FDIOTest, CreateNull) {
     fdio_t* io = fdio_null_create();
     fbl::unique_fd fd(fdio_bind_to_fd(io, -1, 0));
     EXPECT_LE(0, fd.get());
     EXPECT_EQ(3, write(fd.get(), "abc", 3));
-
-    END_TEST;
 }
 
-static bool create_socket_test() {
-    BEGIN_TEST;
-
+TEST(FDIOTest, CreateSocket) {
     zx::socket s1, s2;
-    ASSERT_EQ(ZX_OK, zx::socket::create(0, &s1, &s2));
+    ASSERT_OK(zx::socket::create(0, &s1, &s2));
 
     fdio_t* io = nullptr;
-    ASSERT_EQ(ZX_OK, fdio_create(s1.release(), &io));
-    ASSERT_NE(nullptr, io);
+    ASSERT_OK(fdio_create(s1.release(), &io));
+    ASSERT_NOT_NULL(io);
 
     uint8_t buffer[1024];
     memset(buffer, 0, sizeof(buffer));
@@ -44,22 +38,18 @@ static bool create_socket_test() {
     EXPECT_LE(0, fd.get());
     EXPECT_EQ(3, write(fd.get(), "abc", 3));
     size_t actual = 0;
-    EXPECT_EQ(ZX_OK, s2.read(0, buffer, sizeof(buffer), &actual));
+    EXPECT_OK(s2.read(0, buffer, sizeof(buffer), &actual));
     EXPECT_EQ(3, actual);
     EXPECT_BYTES_EQ(reinterpret_cast<const uint8_t*>("abc"), buffer, actual, "Readback mismatch");
-
-    END_TEST;
 }
 
-static bool create_vmo_test() {
-    BEGIN_TEST;
-
+TEST(FDIOTest, CreateVMO) {
     zx::vmo vmo;
-    ASSERT_EQ(ZX_OK, zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
+    ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
 
     fdio_t* io = nullptr;
-    ASSERT_EQ(ZX_OK, fdio_create(vmo.release(), &io));
-    ASSERT_NE(nullptr, io);
+    ASSERT_OK(fdio_create(vmo.release(), &io));
+    ASSERT_NOT_NULL(io);
 
     uint8_t buffer[1024];
     memset(buffer, 0, sizeof(buffer));
@@ -70,18 +60,14 @@ static bool create_vmo_test() {
     ssize_t actual = pread(fd.get(), buffer, sizeof(buffer), 0);
     EXPECT_EQ(sizeof(buffer), actual);
     EXPECT_BYTES_EQ(reinterpret_cast<const uint8_t*>("xyz"), buffer, 3, "Readback mismatch");
-
-    END_TEST;
 }
 
-static bool bind_to_fd_again_test() {
-    BEGIN_TEST;
-
+TEST(FDIOTest, BindToFDAgain) {
     zx::socket s1, s2;
-    ASSERT_EQ(ZX_OK, zx::socket::create(0, &s1, &s2));
+    ASSERT_OK(zx::socket::create(0, &s1, &s2));
 
     fdio_t* io = nullptr;
-    ASSERT_EQ(ZX_OK, fdio_create(s1.release(), &io));
+    ASSERT_OK(fdio_create(s1.release(), &io));
 
     fbl::unique_fd fd(fdio_bind_to_fd(io, -1, 0));
     EXPECT_LE(0, fd.get());
@@ -93,10 +79,8 @@ static bool bind_to_fd_again_test() {
     (void)fd.release();
 
     zx_signals_t observed = 0;
-    ASSERT_EQ(ZX_OK, s2.wait_one(ZX_SOCKET_PEER_CLOSED, zx::time::infinite_past(), &observed));
+    ASSERT_OK(s2.wait_one(ZX_SOCKET_PEER_CLOSED, zx::time::infinite_past(), &observed));
     ASSERT_TRUE(observed & ZX_SOCKET_PEER_CLOSED);
-
-    END_TEST;
 }
 
 static bool find_unused_fd(int starting_fd, int* out_fd) {
@@ -109,9 +93,7 @@ static bool find_unused_fd(int starting_fd, int* out_fd) {
     return false;
 }
 
-static bool unbind_from_fd_test() {
-    BEGIN_TEST;
-
+TEST(FDIOTest, UnbindFromFD) {
     int unused_fd = 0;
     ASSERT_TRUE(find_unused_fd(37, &unused_fd));
     ASSERT_EQ(-1, fcntl(unused_fd, F_GETFD));
@@ -121,18 +103,14 @@ static bool unbind_from_fd_test() {
     EXPECT_EQ(unused_fd, fd.get());
     EXPECT_EQ(0, fcntl(unused_fd, F_GETFD));
     fdio_t* io2 = nullptr;
-    EXPECT_EQ(ZX_OK, fdio_unbind_from_fd(fd.get(), &io2));
+    EXPECT_OK(fdio_unbind_from_fd(fd.get(), &io2));
     EXPECT_EQ(-1, fcntl(unused_fd, F_GETFD));
     (void)fd.release();
     EXPECT_EQ(io, io2);
     fdio_unsafe_release(io2);
-
-    END_TEST;
 }
 
-static bool get_service_handle_test() {
-    BEGIN_TEST;
-
+TEST(FDIOTest, GetServiceHandle) {
     int unused_fd = 0;
     ASSERT_TRUE(find_unused_fd(37, &unused_fd));
     ASSERT_EQ(-1, fcntl(unused_fd, F_GETFD));
@@ -152,7 +130,7 @@ static bool get_service_handle_test() {
     fd.reset(open("/svc", O_DIRECTORY | O_RDONLY));
     EXPECT_LE(0, fd.get());
     EXPECT_EQ(0, fcntl(fd.get(), F_GETFD));
-    EXPECT_EQ(ZX_OK, fdio_get_service_handle(fd.get(), h1.reset_and_get_address()));
+    EXPECT_OK(fdio_get_service_handle(fd.get(), h1.reset_and_get_address()));
     EXPECT_EQ(-1, fcntl(fd.get(), F_GETFD));
     (void)fd.release();
 
@@ -169,15 +147,4 @@ static bool get_service_handle_test() {
     int raw_fd = fd2.get();
     fd2.reset();
     EXPECT_EQ(-1, fcntl(raw_fd, F_GETFD));
-
-    END_TEST;
 }
-
-BEGIN_TEST_CASE(fdio_fdio_test)
-RUN_TEST(null_create_test)
-RUN_TEST(create_socket_test)
-RUN_TEST(create_vmo_test)
-RUN_TEST(bind_to_fd_again_test)
-RUN_TEST(unbind_from_fd_test)
-RUN_TEST(get_service_handle_test)
-END_TEST_CASE(fdio_fdio_test)

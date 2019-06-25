@@ -10,7 +10,7 @@
 #include <unistd.h>
 #include <lib/fdio/private.h>
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 // These tests poke at some "global" behavior of fdio
 // that are not easily tested through filesystem tests,
@@ -19,9 +19,7 @@
 // For more comprehensive filesystem tests, refer
 // to utest/fs.
 
-bool stat_test(void) {
-    BEGIN_TEST;
-
+TEST(RootTest, Stat) {
     struct stat buf;
     ASSERT_EQ(stat("/", &buf), 0, "");
     ASSERT_EQ(stat("//", &buf), 0, "");
@@ -31,23 +29,12 @@ bool stat_test(void) {
     ASSERT_EQ(stat("./", &buf), 0, "");
     ASSERT_EQ(stat("./", &buf), 0, "");
     ASSERT_EQ(stat(".", &buf), 0, "");
-
-    END_TEST;
 }
 
-bool remove_test(void) {
-    BEGIN_TEST;
-
+TEST(RootTest, Remove) {
     ASSERT_EQ(remove("/"), -1, "");
     ASSERT_EQ(errno, EBUSY, "");
 
     ASSERT_EQ(rmdir("/"), -1, "");
     ASSERT_EQ(errno, EBUSY, "");
-
-    END_TEST;
 }
-
-BEGIN_TEST_CASE(fdio_root_test)
-RUN_TEST(stat_test)
-RUN_TEST(remove_test)
-END_TEST_CASE(fdio_root_test)

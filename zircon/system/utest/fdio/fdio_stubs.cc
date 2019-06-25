@@ -11,11 +11,9 @@
 #include <unistd.h>
 #include <zircon/syscalls.h>
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
-bool chmod_ignored_permissions_test(void) {
-    BEGIN_TEST;
-
+TEST(StubsTest, ChmodIgnoredPermissions) {
     const char * path = "/";
     int fd = open(path, O_DIRECTORY | O_RDONLY);
     ASSERT_NE(-1, fd);
@@ -25,13 +23,9 @@ bool chmod_ignored_permissions_test(void) {
     ASSERT_EQ(0, fchmod(fd, mode));
 
     close(fd);
-
-    END_TEST;
 }
 
-bool chmod_not_implemented_test(void) {
-    BEGIN_TEST;
-
+TEST(StubsTest, ChmodNotImplemented) {
     const char * path = "/";
     int fd = open(path, O_DIRECTORY | O_RDONLY);
     ASSERT_NE(-1, fd);
@@ -43,11 +37,4 @@ bool chmod_not_implemented_test(void) {
     ASSERT_EQ(ENOSYS, errno);
 
     close(fd);
-
-    END_TEST;
 }
-
-BEGIN_TEST_CASE(fdio_stubs_test)
-RUN_TEST(chmod_ignored_permissions_test)
-RUN_TEST(chmod_not_implemented_test)
-END_TEST_CASE(fdio_stubs_test)

@@ -11,11 +11,12 @@
 #include <lib/fidl-async/bind.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
-#include <unittest/unittest.h>
 #include <zircon/limits.h>
 
 #include <algorithm>
 #include <string>
+
+#include <zxtest/zxtest.h>
 
 namespace {
 
@@ -202,44 +203,42 @@ bool vmo_starts_with(const zx::vmo& vmo, const char* string) {
     return strncmp(string, buffer, length) == 0;
 }
 
-bool get_vmo_remote_test(void) {
-    BEGIN_TEST;
-
+TEST(GetVMOTest, Remote) {
     async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
-    ASSERT_EQ(ZX_OK, loop.StartThread("fake-filesystem"));
+    ASSERT_OK(loop.StartThread("fake-filesystem"));
     async_dispatcher_t* dispatcher = loop.dispatcher();
 
     zx::channel client, server;
-    ASSERT_EQ(ZX_OK, zx::channel::create(0, &client, &server));
+    ASSERT_OK(zx::channel::create(0, &client, &server));
 
     Context context = {};
     context.is_vmofile = false;
     context.content_size = 43;
     context.supports_get_buffer = true;
-    ASSERT_EQ(ZX_OK, zx::vmo::create(ZX_PAGE_SIZE, 0, &context.vmo));
-    ASSERT_EQ(ZX_OK, context.vmo.write("abcd", 0, 4));
+    ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &context.vmo));
+    ASSERT_OK(context.vmo.write("abcd", 0, 4));
 
-    ASSERT_EQ(ZX_OK, fidl_bind(dispatcher, server.release(),
+    ASSERT_OK(fidl_bind(dispatcher, server.release(),
                                reinterpret_cast<fidl_dispatch_t*>(fuchsia_io_File_dispatch),
                                &context, &kFileOps));
 
     int raw_fd = -1;
-    ASSERT_EQ(ZX_OK, fdio_fd_create(client.release(), &raw_fd));
+    ASSERT_OK(fdio_fd_create(client.release(), &raw_fd));
     fbl::unique_fd fd(raw_fd);
 
     zx::vmo received;
-    ASSERT_EQ(ZX_OK, fdio_get_vmo_exact(fd.get(), received.reset_and_get_address()));
+    ASSERT_OK(fdio_get_vmo_exact(fd.get(), received.reset_and_get_address()));
     ASSERT_EQ(get_koid(context.vmo.get()), get_koid(received.get()));
     ASSERT_EQ(fuchsia_io_VMO_FLAG_READ | fuchsia_io_VMO_FLAG_EXACT, context.last_flags);
     context.last_flags = 0;
 
-    ASSERT_EQ(ZX_OK, fdio_get_vmo_clone(fd.get(), received.reset_and_get_address()));
+    ASSERT_OK(fdio_get_vmo_clone(fd.get(), received.reset_and_get_address()));
     ASSERT_NE(get_koid(context.vmo.get()), get_koid(received.get()));
     ASSERT_EQ(fuchsia_io_VMO_FLAG_READ | fuchsia_io_VMO_FLAG_PRIVATE, context.last_flags);
     ASSERT_TRUE(vmo_starts_with(received, "abcd"));
     context.last_flags = 0;
 
-    ASSERT_EQ(ZX_OK, fdio_get_vmo_copy(fd.get(), received.reset_and_get_address()));
+    ASSERT_OK(fdio_get_vmo_copy(fd.get(), received.reset_and_get_address()));
     ASSERT_NE(get_koid(context.vmo.get()), get_koid(received.get()));
     ASSERT_EQ(fuchsia_io_VMO_FLAG_READ | fuchsia_io_VMO_FLAG_PRIVATE, context.last_flags);
     ASSERT_TRUE(vmo_starts_with(received, "abcd"));
@@ -247,92 +246,76 @@ bool get_vmo_remote_test(void) {
 
     context.supports_get_buffer = false;
     context.supports_read_at = true;
-    ASSERT_EQ(ZX_OK, fdio_get_vmo_copy(fd.get(), received.reset_and_get_address()));
+    ASSERT_OK(fdio_get_vmo_copy(fd.get(), received.reset_and_get_address()));
     ASSERT_NE(get_koid(context.vmo.get()), get_koid(received.get()));
     ASSERT_EQ(fuchsia_io_VMO_FLAG_READ | fuchsia_io_VMO_FLAG_PRIVATE, context.last_flags);
     ASSERT_TRUE(vmo_starts_with(received, "abcd"));
     context.last_flags = 0;
-
-    END_TEST;
 }
 
-bool get_vmo_vmofile_test(void) {
-    BEGIN_TEST;
-
+TEST(GetVMOTest, VMOFile) {
     async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
-    ASSERT_EQ(ZX_OK, loop.StartThread("fake-filesystem"));
+    ASSERT_OK(loop.StartThread("fake-filesystem"));
     async_dispatcher_t* dispatcher = loop.dispatcher();
 
     zx::channel client, server;
-    ASSERT_EQ(ZX_OK, zx::channel::create(0, &client, &server));
+    ASSERT_OK(zx::channel::create(0, &client, &server));
 
     Context context = {};
     context.content_size = 43;
     context.is_vmofile = true;
     context.supports_seek = true;
-    ASSERT_EQ(ZX_OK, zx::vmo::create(ZX_PAGE_SIZE, 0, &context.vmo));
-    ASSERT_EQ(ZX_OK, context.vmo.write("abcd", 0, 4));
+    ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &context.vmo));
+    ASSERT_OK(context.vmo.write("abcd", 0, 4));
 
-    ASSERT_EQ(ZX_OK, fidl_bind(dispatcher, server.release(),
+    ASSERT_OK(fidl_bind(dispatcher, server.release(),
                                reinterpret_cast<fidl_dispatch_t*>(fuchsia_io_File_dispatch),
                                &context, &kFileOps));
 
     int raw_fd = -1;
-    ASSERT_EQ(ZX_OK, fdio_fd_create(client.release(), &raw_fd));
+    ASSERT_OK(fdio_fd_create(client.release(), &raw_fd));
     fbl::unique_fd fd(raw_fd);
     context.supports_seek = false;
 
     zx::vmo received;
     ASSERT_EQ(ZX_ERR_NOT_FOUND, fdio_get_vmo_exact(fd.get(), received.reset_and_get_address()));
 
-    ASSERT_EQ(ZX_OK, fdio_get_vmo_clone(fd.get(), received.reset_and_get_address()));
+    ASSERT_OK(fdio_get_vmo_clone(fd.get(), received.reset_and_get_address()));
     ASSERT_NE(get_koid(context.vmo.get()), get_koid(received.get()));
     ASSERT_TRUE(vmo_starts_with(received, "abcd"));
 
-    ASSERT_EQ(ZX_OK, fdio_get_vmo_copy(fd.get(), received.reset_and_get_address()));
+    ASSERT_OK(fdio_get_vmo_copy(fd.get(), received.reset_and_get_address()));
     ASSERT_NE(get_koid(context.vmo.get()), get_koid(received.get()));
     ASSERT_TRUE(vmo_starts_with(received, "abcd"));
-
-    END_TEST;
 }
 
-bool get_vmo_vmofile_page_test(void) {
-    BEGIN_TEST;
-
+TEST(GetVMOTest, VMOFilePage) {
     async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
-    ASSERT_EQ(ZX_OK, loop.StartThread("fake-filesystem"));
+    ASSERT_OK(loop.StartThread("fake-filesystem"));
     async_dispatcher_t* dispatcher = loop.dispatcher();
 
     zx::channel client, server;
-    ASSERT_EQ(ZX_OK, zx::channel::create(0, &client, &server));
+    ASSERT_OK(zx::channel::create(0, &client, &server));
 
     Context context = {};
     context.content_size = ZX_PAGE_SIZE;
     context.is_vmofile = true;
     context.supports_seek = true;
-    ASSERT_EQ(ZX_OK, zx::vmo::create(ZX_PAGE_SIZE, 0, &context.vmo));
-    ASSERT_EQ(ZX_OK, context.vmo.write("abcd", 0, 4));
+    ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &context.vmo));
+    ASSERT_OK(context.vmo.write("abcd", 0, 4));
 
-    ASSERT_EQ(ZX_OK, fidl_bind(dispatcher, server.release(),
+    ASSERT_OK(fidl_bind(dispatcher, server.release(),
                                reinterpret_cast<fidl_dispatch_t*>(fuchsia_io_File_dispatch),
                                &context, &kFileOps));
 
     int raw_fd = -1;
-    ASSERT_EQ(ZX_OK, fdio_fd_create(client.release(), &raw_fd));
+    ASSERT_OK(fdio_fd_create(client.release(), &raw_fd));
     fbl::unique_fd fd(raw_fd);
     context.supports_seek = false;
 
     zx::vmo received;
-    ASSERT_EQ(ZX_OK, fdio_get_vmo_exact(fd.get(), received.reset_and_get_address()));
+    ASSERT_OK(fdio_get_vmo_exact(fd.get(), received.reset_and_get_address()));
     ASSERT_EQ(get_koid(context.vmo.get()), get_koid(received.get()));
-
-    END_TEST;
 }
-
-BEGIN_TEST_CASE(fdio_get_vmo_test)
-RUN_TEST(get_vmo_remote_test)
-RUN_TEST(get_vmo_vmofile_test)
-RUN_TEST(get_vmo_vmofile_page_test)
-END_TEST_CASE(fdio_get_vmo_test)
 
 } // namespace

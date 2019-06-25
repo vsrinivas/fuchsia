@@ -20,11 +20,9 @@
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
-bool socketpair_test(void) {
-    BEGIN_TEST;
-
+TEST(SocketpairTest, Control) {
     int fds[2];
     int status = socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
     ASSERT_EQ(status, 0, "socketpair(AF_UNIX, SOCK_STREAM, 0, fds) failed");
@@ -59,13 +57,11 @@ bool socketpair_test(void) {
 
     EXPECT_EQ(close(fds[0]), 0, "close(fds[0]) failed");
     EXPECT_EQ(close(fds[1]), 0, "close(fds[1]) failed");
-
-    END_TEST;
 }
 
 static_assert(EAGAIN == EWOULDBLOCK, "Assuming EAGAIN and EWOULDBLOCK have same value");
 
-bool socketpair_shutdown_setup(int fds[2]) {
+void socketpair_shutdown_setup(int fds[2]) {
     int status = socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
     ASSERT_EQ(status, 0, "socketpair(AF_UNIX, SOCK_STREAM, 0, fds) failed");
 
@@ -90,8 +86,6 @@ bool socketpair_shutdown_setup(int fds[2]) {
 
     EXPECT_EQ(read(fds[0], buf, sizeof(buf)), 1, "");
     EXPECT_EQ(read(fds[1], buf, sizeof(buf)), 1, "");
-
-    return true;
 }
 
 #if defined(__Fuchsia__)
@@ -100,9 +94,7 @@ bool socketpair_shutdown_setup(int fds[2]) {
 #define SEND_FLAGS MSG_NOSIGNAL
 #endif
 
-bool socketpair_shutdown_rd_test(void) {
-    BEGIN_TEST;
-
+TEST(SocketpairTest, ShutdownRead) {
     int fds[2];
     socketpair_shutdown_setup(fds);
 
@@ -128,13 +120,9 @@ bool socketpair_shutdown_rd_test(void) {
 
     EXPECT_EQ(close(fds[0]), 0, "");
     EXPECT_EQ(close(fds[1]), 0, "");
-
-    END_TEST;
 }
 
-bool socketpair_shutdown_wr_test(void) {
-    BEGIN_TEST;
-
+TEST(SocketpairTest, ShutdownWrite) {
     int fds[2];
     socketpair_shutdown_setup(fds);
 
@@ -160,13 +148,9 @@ bool socketpair_shutdown_wr_test(void) {
 
     EXPECT_EQ(close(fds[0]), 0, "");
     EXPECT_EQ(close(fds[1]), 0, "");
-
-    END_TEST;
 }
 
-bool socketpair_shutdown_rdwr_test(void) {
-    BEGIN_TEST;
-
+TEST(SocketpairTest, ShutdownReadWrite) {
     int fds[2];
     socketpair_shutdown_setup(fds);
 
@@ -184,8 +168,6 @@ bool socketpair_shutdown_rdwr_test(void) {
 
     // Reading should return no data.
     EXPECT_EQ(read(fds[0], buf, sizeof(buf)), 0, "");
-
-    END_TEST;
 }
 
 typedef struct poll_for_read_args {
@@ -214,9 +196,7 @@ int poll_for_read_with_timeout(void* arg) {
     return 0;
 }
 
-bool socketpair_shutdown_self_wr_poll_test(void) {
-    BEGIN_TEST;
-
+TEST(SocketpairTest, ShutdownSelfWritePoll) {
     int fds[2];
     socketpair_shutdown_setup(fds);
 
@@ -232,13 +212,9 @@ bool socketpair_shutdown_self_wr_poll_test(void) {
 
     EXPECT_EQ(poll_args.poll_result, 1, "poll should have one entry");
     EXPECT_LT(poll_args.poll_time, 100u * 1000 * 1000, "poll should not have timed out");
-
-    END_TEST;
 }
 
-bool socketpair_shutdown_peer_wr_poll_test(void) {
-    BEGIN_TEST;
-
+TEST(SocketpairTest, ShutdownPeerWritePoll) {
     int fds[2];
     socketpair_shutdown_setup(fds);
 
@@ -254,8 +230,6 @@ bool socketpair_shutdown_peer_wr_poll_test(void) {
 
     EXPECT_EQ(poll_args.poll_result, 1, "poll should have one entry");
     EXPECT_LT(poll_args.poll_time, 100u * 1000 * 1000, "poll should not have timed out");
-
-    END_TEST;
 }
 
 #define BUF_SIZE 256
@@ -277,9 +251,7 @@ int recv_thread(void* arg) {
     return 0;
 }
 
-bool socketpair_shutdown_self_rd_during_recv_test(void) {
-    BEGIN_TEST;
-
+TEST(SocketpairTest, ShutdownSelfReadDuringRecv) {
     int fds[2];
     int status = socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
     ASSERT_EQ(status, 0, "socketpair(AF_UNIX, SOCK_STREAM, 0, fds) failed");
@@ -296,13 +268,9 @@ bool socketpair_shutdown_self_rd_during_recv_test(void) {
 
     EXPECT_EQ(recv_args.recv_result, 0, "recv should have returned 0");
     EXPECT_EQ(recv_args.recv_errno, 0, "recv should have left errno alone");
-
-    END_TEST;
 }
 
-bool socketpair_shutdown_peer_wr_during_recv_test(void) {
-    BEGIN_TEST;
-
+TEST(SocketpairTest, ShutdownSelfWriteDuringRecv) {
     int fds[2];
     int status = socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
     ASSERT_EQ(status, 0, "socketpair(AF_UNIX, SOCK_STREAM, 0, fds) failed");
@@ -319,7 +287,6 @@ bool socketpair_shutdown_peer_wr_during_recv_test(void) {
 
     EXPECT_EQ(recv_args.recv_result, 0, "recv should have returned 0");
     EXPECT_EQ(recv_args.recv_errno, 0, "recv should have left errno alone");
-    END_TEST;
 }
 
 typedef struct send_args {
@@ -339,9 +306,7 @@ int send_thread(void* arg) {
     return 0;
 }
 
-bool socketpair_shutdown_self_wr_during_send_test(void) {
-    BEGIN_TEST;
-
+TEST(SocketpairTest, ShutdownSelfWriteDuringSend) {
     int fds[2];
     int status = socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
     ASSERT_EQ(status, 0, "socketpair(AF_UNIX, SOCK_STREAM, 0, fds) failed");
@@ -368,13 +333,9 @@ bool socketpair_shutdown_self_wr_during_send_test(void) {
 
     EXPECT_EQ(send_args.send_result, -1, "send should have returned -1");
     EXPECT_EQ(send_args.send_errno, EPIPE, "send should have set errno to EPIPE");
-
-    END_TEST;
 }
 
-bool socketpair_shutdown_peer_rd_during_send_test(void) {
-    BEGIN_TEST;
-
+TEST(SocketpairTest, ShutdownPeerReadDuringSend) {
     int fds[2];
     int status = socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
     ASSERT_EQ(status, 0, "socketpair(AF_UNIX, SOCK_STREAM, 0, fds) failed");
@@ -400,13 +361,9 @@ bool socketpair_shutdown_peer_rd_during_send_test(void) {
 
     EXPECT_EQ(send_args.send_result, -1, "send should have returned -1");
     EXPECT_EQ(send_args.send_errno, EPIPE, "send should have set errno to EPIPE");
-
-    END_TEST;
 }
 
-bool socketpair_clone_or_unwrap_and_wrap_test(void) {
-    BEGIN_TEST;
-
+TEST(SocketpairTest, CloneOrUnwrapAndWrap) {
     int fds[2];
     int status = socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
     ASSERT_EQ(status, 0, "socketpair(AF_UNIX, SOCK_STREAM, 0, fds) failed");
@@ -434,8 +391,6 @@ bool socketpair_clone_or_unwrap_and_wrap_test(void) {
         ASSERT_EQ(close(cloned_fd), 0, "Failed to close cloned_fd");
     if (transferred_fd != -1)
         ASSERT_EQ(close(transferred_fd), 0, "Failed to close transferred_fd");
-
-    END_TEST;
 }
 
 // Verify scenario, where multi-segment recvmsg is requested, but the socket has
@@ -443,9 +398,7 @@ bool socketpair_clone_or_unwrap_and_wrap_test(void) {
 // In this scenario, an attempt to read data for the next segment immediately
 // fails with ZX_ERR_SHOULD_WAIT; at this point recvmsg should report total
 // number of bytes read, instead of failing with EAGAIN.
-bool socketpair_recvmsg_nonblock_boundary_test(void) {
-    BEGIN_TEST;
-
+TEST(SocketpairTest, RecvmsgNonblockBoundary) {
     int fds[2];
     int status = socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
     ASSERT_EQ(status, 0, "socketpair(AF_UNIX, SOCK_STREAM, 0, fds) failed");
@@ -484,8 +437,6 @@ bool socketpair_recvmsg_nonblock_boundary_test(void) {
 
     close(fds[0]);
     close(fds[1]);
-
-    END_TEST;
 }
 
 // Verify scenario, where multi-segment sendmsg is requested, but the socket has
@@ -493,9 +444,7 @@ bool socketpair_recvmsg_nonblock_boundary_test(void) {
 // In this scenario, an attempt to send second segment should immediately fail
 // with ZX_ERR_SHOULD_WAIT, but the sendmsg should report first segment length
 // rather than failing with EAGAIN.
-bool socketpair_sendmsg_nonblock_boundary_test(void) {
-    BEGIN_TEST;
-
+TEST(SocketpairTest, SendmsgNonblockBoundary) {
     const ssize_t memlength = 65536;
     void* memchunk = malloc(memlength);
 
@@ -536,12 +485,9 @@ bool socketpair_sendmsg_nonblock_boundary_test(void) {
     close(fds[1]);
 
     free(memchunk);
-    END_TEST;
 }
 
-bool socketpair_wait_begin_end(void) {
-    BEGIN_TEST;
-
+TEST(SocketpairTest, WaitBeginEnd) {
     int fds[2];
     int status = socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
     ASSERT_EQ(status, 0, "socketpair(AF_UNIX, SOCK_STREAM, 0, fds) failed");
@@ -593,8 +539,6 @@ bool socketpair_wait_begin_end(void) {
     fdio_unsafe_release(io);
     close(fds[0]);
     close(fds[1]);
-
-    END_TEST;
 }
 
 #define WRITE_DATA_SIZE 1024*1024
@@ -622,9 +566,7 @@ int full_read_thread(void *arg) {
     return progress;
 }
 
-bool socketpair_partial_write_test(void) {
-    BEGIN_TEST;
-
+TEST(SocketpairTest, PartialWrite) {
     int fds[2];
     int status = socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
     ASSERT_EQ(status, 0, "socketpair(AF_UNIX, SOCK_STREAM, 0, fds) failed");
@@ -646,24 +588,4 @@ bool socketpair_partial_write_test(void) {
     int size_read;
     ASSERT_EQ(thrd_join(t, &size_read), 0, "join reading thread");
     ASSERT_EQ(size_read, WRITE_DATA_SIZE, "other thread did not read everything");
-
-    END_TEST;
 }
-
-BEGIN_TEST_CASE(fdio_socketpair_test)
-RUN_TEST(socketpair_test);
-RUN_TEST(socketpair_shutdown_rd_test);
-RUN_TEST(socketpair_shutdown_wr_test);
-RUN_TEST(socketpair_shutdown_rdwr_test);
-RUN_TEST(socketpair_shutdown_self_wr_poll_test);
-RUN_TEST(socketpair_shutdown_peer_wr_poll_test);
-RUN_TEST(socketpair_shutdown_self_rd_during_recv_test);
-RUN_TEST(socketpair_shutdown_peer_wr_during_recv_test);
-RUN_TEST(socketpair_shutdown_self_wr_during_send_test);
-RUN_TEST(socketpair_shutdown_peer_rd_during_send_test);
-RUN_TEST(socketpair_clone_or_unwrap_and_wrap_test);
-RUN_TEST(socketpair_recvmsg_nonblock_boundary_test);
-RUN_TEST(socketpair_sendmsg_nonblock_boundary_test);
-RUN_TEST(socketpair_wait_begin_end);
-RUN_TEST_MEDIUM(socketpair_partial_write_test)
-END_TEST_CASE(fdio_socketpair_test)

@@ -6,22 +6,20 @@
 #include <lib/zx/process.h>
 #include <lib/zx/time.h>
 #include <stdlib.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 #include <string>
 
 static int64_t join(const zx::process& process) {
     zx_status_t status = process.wait_one(ZX_TASK_TERMINATED, zx::time::infinite(), nullptr);
-    ASSERT_EQ(ZX_OK, status);
+    EXPECT_OK(status);
     zx_info_process_t proc_info{};
     status = process.get_info(ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), nullptr, nullptr);
-    ASSERT_EQ(ZX_OK, status);
+    EXPECT_OK(status);
     return proc_info.return_code;
 }
 
-static bool null_namespace_test(void) {
-    BEGIN_TEST;
-
+TEST(NullNamespaceTest, NullNamespace) {
     zx::process process;
     zx_status_t status;
 
@@ -34,12 +32,6 @@ static bool null_namespace_test(void) {
     status = fdio_spawn(ZX_HANDLE_INVALID,
                         FDIO_SPAWN_CLONE_STDIO | FDIO_SPAWN_DEFAULT_LDSVC,
                         argv[0], argv, process.reset_and_get_address());
-    ASSERT_EQ(ZX_OK, status);
+    ASSERT_OK(status);
     EXPECT_EQ(0, join(process));
-
-    END_TEST;
 }
-
-BEGIN_TEST_CASE(fdio_null_namespace_test)
-RUN_TEST(null_namespace_test)
-END_TEST_CASE(fdio_null_namespace_test)

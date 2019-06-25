@@ -17,15 +17,14 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/directory.h>
-#include <unittest/unittest.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 
-bool close_test(void) {
-    BEGIN_TEST;
+#include <zxtest/zxtest.h>
 
+TEST(HandleFDTest, Close) {
     zx_handle_t h = ZX_HANDLE_INVALID;
-    ASSERT_EQ(ZX_OK, zx_event_create(0u, &h), "zx_event_create() failed");
+    ASSERT_OK(zx_event_create(0u, &h), "zx_event_create() failed");
     ASSERT_NE(h, ZX_HANDLE_INVALID, "");
 
     // fdio_handle_fd() with shared_handle = true
@@ -35,7 +34,7 @@ bool close_test(void) {
     close(fd);
 
     // close(fd) has not closed the wrapped handle
-    EXPECT_EQ(ZX_OK, zx_object_signal(h, 0, ZX_USER_SIGNAL_0),
+    EXPECT_OK(zx_object_signal(h, 0, ZX_USER_SIGNAL_0),
               "zx_object_signal() should succeed");
 
     // fdio_handle_fd() with shared_handle = false
@@ -47,13 +46,9 @@ bool close_test(void) {
     // close(fd) has closed the wrapped handle
     EXPECT_EQ(ZX_ERR_BAD_HANDLE, zx_object_signal(h, 0, ZX_USER_SIGNAL_0),
               "zx_object_signal() should fail");
-
-    END_TEST;
 }
 
-bool pipe_test(void) {
-    BEGIN_TEST;
-
+TEST(HandleFDTest, Pipe) {
     int fds[2];
     int status = pipe(fds);
     ASSERT_EQ(status, 0, "pipe() failed");
@@ -94,8 +89,6 @@ bool pipe_test(void) {
 
     EXPECT_EQ(read_message[0], message[0], "read() read wrong value");
     EXPECT_EQ(read_message[1], message[1], "read() read wrong value");
-
-    END_TEST;
 }
 
 int write_thread(void* arg) {
@@ -103,15 +96,13 @@ int write_thread(void* arg) {
     zx_nanosleep(ZX_MSEC(5));
     int message[2] = {-6, 1};
     ssize_t written = write(*(int*)arg, message, sizeof(message));
-    ASSERT_GE(written, 0, "write() failed");
-    ASSERT_EQ((uint32_t)written, sizeof(message),
+    EXPECT_GE(written, 0, "write() failed");
+    EXPECT_EQ((uint32_t)written, sizeof(message),
               "write() should have written the whole message.");
     return 0;
 }
 
-bool ppoll_test_handler(struct timespec* timeout) {
-    BEGIN_TEST;
-
+void ppoll_test_handler(struct timespec* timeout) {
     int fds[2];
     int status = pipe(fds);
     ASSERT_EQ(status, 0, "pipe() failed");
@@ -126,28 +117,24 @@ bool ppoll_test_handler(struct timespec* timeout) {
     EXPECT_EQ(1, ppoll_result, "didn't read anything");
 
     ASSERT_EQ(thrd_join(t, NULL), thrd_success, "join blocking send thread");
-
-    END_TEST;
 }
 
-bool ppoll_negative_test(void) {
+TEST(HandleFDTest, PPollNegative) {
     struct timespec timeout_ts = {-1, -1};
-    return ppoll_test_handler(&timeout_ts);
+    ppoll_test_handler(&timeout_ts);
 }
 
-bool ppoll_null_test(void) {
-    return ppoll_test_handler(NULL);
+TEST(HandleFDTest, PPollNull) {
+    ppoll_test_handler(NULL);
 }
 
-bool ppoll_overflow_test(void) {
+TEST(HandleFDTest, Overflow) {
     unsigned int nanoseconds_in_seconds = 1000000000;
     struct timespec timeout_ts = {UINT64_MAX / nanoseconds_in_seconds, UINT64_MAX % nanoseconds_in_seconds};
-    return ppoll_test_handler(&timeout_ts);
+    ppoll_test_handler(&timeout_ts);
 }
 
-bool ppoll_immediate_timeout_test(void) {
-    BEGIN_TEST;
-
+TEST(HandleFDTest, PPollImmediateTimeout) {
     int fds[2];
     int status = pipe(fds);
     ASSERT_EQ(status, 0, "pipe() failed");
@@ -157,13 +144,9 @@ bool ppoll_immediate_timeout_test(void) {
     int ppoll_result = ppoll(poll_fds, 1, &timeout, NULL);
 
     EXPECT_EQ(0, ppoll_result, "no fds should be readable");
-
-    END_TEST;
 }
 
-bool transfer_fd_test(void) {
-    BEGIN_TEST;
-
+TEST(HandleFDTest, TransferFD) {
     int fds[2];
     int status = pipe(fds);
     ASSERT_EQ(status, 0, "pipe() failed");
@@ -197,13 +180,9 @@ bool transfer_fd_test(void) {
 
     EXPECT_EQ(read_message[0], message[0], "read() read wrong value");
     EXPECT_EQ(read_message[1], message[1], "read() read wrong value");
-
-    END_TEST;
 }
 
-bool transfer_device_test(void) {
-    BEGIN_TEST;
-
+TEST(HandleFDTest, TransferDevice) {
     int fd = open("/dev/zero", O_RDONLY);
     ASSERT_GE(fd, 0, "Failed to open /dev/zero");
 
@@ -217,23 +196,19 @@ bool transfer_device_test(void) {
               "failed to transfer handles to fds");
 
     ASSERT_EQ(close(fd), 0, "Failed to close fd");
-
-    END_TEST;
 }
 
-bool create_fd_from_connected_socket(void) {
-    BEGIN_TEST;
-
+TEST(HandleFDTest, CreateFDFromConnectedSocket) {
     int fd;
     zx_handle_t h1, h2;
-    ASSERT_EQ(ZX_OK, zx_socket_create(ZX_SOCKET_STREAM, &h1, &h2),
+    ASSERT_OK(zx_socket_create(ZX_SOCKET_STREAM, &h1, &h2),
               "failed to create socket pair");
-    ASSERT_EQ(ZX_OK, fdio_fd_create(h1, &fd),
+    ASSERT_OK(fdio_fd_create(h1, &fd),
               "failed to create FD for socket handle");
 
     int message[2] = {0xab, 0x1234};
     size_t written;
-    ASSERT_EQ(ZX_OK, zx_socket_write(h2, 0, message, sizeof(message), &written),
+    ASSERT_OK(zx_socket_write(h2, 0, message, sizeof(message), &written),
               "failed to write to socket handle");
     ASSERT_EQ(sizeof(message), written,
               "failed to write full message to socket handle");
@@ -254,14 +229,11 @@ bool create_fd_from_connected_socket(void) {
     ASSERT_EQ(-1, read(fd, read_message, sizeof(read_message)),
               "failed to read from socket with O_NONBLOCK");
     ASSERT_EQ(EAGAIN, errno, "errno incorrect");
-    END_TEST;
 }
 
-static bool bind_to_fd_invalid_tests(void) {
-    BEGIN_TEST;
-
+TEST(HandleFDTest, BindToFDInvalid) {
     fdio_t* fdio = fdio_null_create();
-    EXPECT_NONNULL(fdio, "");
+    EXPECT_NOT_NULL(fdio, "");
 
     // When binding and not providing a specific |fd|, the
     // |starting_fd| must be nonnegative.
@@ -276,20 +248,4 @@ static bool bind_to_fd_invalid_tests(void) {
     err = errno;
     EXPECT_LT(fd, 0, "");
     EXPECT_EQ(err, EMFILE, "");
-
-    END_TEST;
 }
-
-BEGIN_TEST_CASE(fdio_handle_fd_test)
-RUN_TEST(close_test);
-RUN_TEST(pipe_test);
-RUN_TEST(ppoll_negative_test);
-RUN_TEST(ppoll_null_test);
-RUN_TEST(ppoll_overflow_test);
-RUN_TEST(ppoll_immediate_timeout_test);
-RUN_TEST(transfer_fd_test);
-RUN_TEST(transfer_device_test);
-RUN_TEST(create_fd_from_connected_socket);
-RUN_TEST(bind_to_fd_invalid_tests);
-
-END_TEST_CASE(fdio_handle_fd_test)

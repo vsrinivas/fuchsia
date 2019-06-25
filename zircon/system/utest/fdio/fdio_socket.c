@@ -11,37 +11,34 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
-static bool create_socket_fdio_pair(zx_handle_t* socket_out, int* fd_out) {
+static void create_socket_fdio_pair(zx_handle_t* socket_out, int* fd_out) {
     // Create new socket pair.
     zx_handle_t s1, s2;
-    ASSERT_EQ(ZX_OK, zx_socket_create(ZX_SOCKET_STREAM | ZX_SOCKET_HAS_CONTROL, &s1, &s2), "Socket create failed");
+    ASSERT_OK(zx_socket_create(ZX_SOCKET_STREAM | ZX_SOCKET_HAS_CONTROL, &s1, &s2), "Socket create failed");
 
     // We need the FDIO to act like it's connected.
     // ZXSIO_SIGNAL_CONNECTED is private, but we know the value.
     zx_status_t status = zx_object_signal(s2, 0, ZX_USER_SIGNAL_3);
-    ASSERT_EQ(status, ZX_OK, zx_status_get_string(status));
+    ASSERT_EQ(status, ZX_OK);
 
     // Convert one socket to FDIO
     int fd = -1;
-    ASSERT_EQ(ZX_OK, fdio_fd_create(s2, &fd), "Socket from handle failed");
+    ASSERT_OK(fdio_fd_create(s2, &fd), "Socket from handle failed");
 
     *fd_out = fd;
     *socket_out = s1;
-
-    return true;
 }
 
-static bool set_nonblocking_io(int fd) {
+static void set_nonblocking_io(int fd) {
     int flags = fcntl(fd, F_GETFL);
     EXPECT_NE(-1, flags, "fcntl failed");
     EXPECT_NE(-1, fcntl(fd, F_SETFL, flags | O_NONBLOCK), "Set NONBLOCK failed");
-    return true;
 }
 
 // Verify scenario, where multi-segment recvmsg is requested, but the socket has
@@ -49,20 +46,17 @@ static bool set_nonblocking_io(int fd) {
 // In this scenario, an attempt to read data for the next segment immediately
 // fails with ZX_ERR_SHOULD_WAIT, and this may lead to bogus EAGAIN even if some
 // data has actually been read.
-bool socket_recvmsg_nonblock_boundary_test(void) {
-    BEGIN_TEST;
-
+TEST(SocketTest, RecvmsgNonblockBoundary) {
     zx_handle_t s;
     int fd;
 
-    if (!create_socket_fdio_pair(&s, &fd) || !set_nonblocking_io(fd)) {
-        return false;
-    }
+    create_socket_fdio_pair(&s, &fd);
+    set_nonblocking_io(fd);
 
     // Write 4 bytes of data to socket.
     size_t actual;
     const uint32_t data_out = 0x12345678;
-    EXPECT_EQ(ZX_OK, zx_socket_write(s, 0, &data_out, sizeof(data_out), &actual), "Socket write failed");
+    EXPECT_OK(zx_socket_write(s, 0, &data_out, sizeof(data_out), &actual), "Socket write failed");
     EXPECT_EQ(sizeof(data_out), actual, "Socket write length mismatch");
 
     uint32_t data_in1, data_in2;
@@ -87,11 +81,10 @@ bool socket_recvmsg_nonblock_boundary_test(void) {
     msg.msg_flags = 0;
 
     actual = recvmsg(fd, &msg, 0);
-    EXPECT_EQ(4u, actual, strerror(errno));
+    EXPECT_EQ(4u, actual);
 
     zx_handle_close(s);
     close(fd);
-    END_TEST;
 }
 
 // Verify scenario, where multi-segment sendmsg is requested, but the socket has
@@ -99,9 +92,7 @@ bool socket_recvmsg_nonblock_boundary_test(void) {
 // In this scenario, an attempt to send second segment should immediately fail
 // with ZX_ERR_SHOULD_WAIT, but the sendmsg should report first segment length
 // rather than failing with EAGAIN.
-bool socket_sendmsg_nonblock_boundary_test(void) {
-    BEGIN_TEST;
-
+TEST(SocketTest, SendmsgNonblockBoundary) {
     const size_t memlength = 65536;
     void* memchunk = malloc(memlength);
 
@@ -114,9 +105,8 @@ bool socket_sendmsg_nonblock_boundary_test(void) {
     zx_handle_t s;
     int fd;
 
-    if (!create_socket_fdio_pair(&s, &fd) || !set_nonblocking_io(fd)) {
-        return false;
-    }
+    create_socket_fdio_pair(&s, &fd);
+    set_nonblocking_io(fd);
 
     struct msghdr msg;
     msg.msg_name = NULL;
@@ -135,24 +125,19 @@ bool socket_sendmsg_nonblock_boundary_test(void) {
                 break;
             }
         }
-        EXPECT_GE(count, 0, strerror(errno));
+        EXPECT_GE(count, 0);
     }
 
     // 2. Consume one segment of the data
     size_t actual = 0;
     zx_status_t status = zx_socket_read(s, 0, memchunk, memlength, &actual);
-    EXPECT_EQ(memlength, actual, zx_status_get_string(status));
+    EXPECT_EQ(memlength, actual);
+    EXPECT_OK(status);
 
     // 3. Push again 2 packets of <memlength> bytes, observe only one sent.
-    EXPECT_EQ((ssize_t)memlength, sendmsg(fd, &msg, 0), strerror(errno));
+    EXPECT_EQ((ssize_t)memlength, sendmsg(fd, &msg, 0));
 
     zx_handle_close(s);
     close(fd);
     free(memchunk);
-    END_TEST;
 }
-
-BEGIN_TEST_CASE(newsocket_tests)
-RUN_TEST(socket_recvmsg_nonblock_boundary_test)
-RUN_TEST(socket_sendmsg_nonblock_boundary_test)
-END_TEST_CASE(newsocket_tests)
