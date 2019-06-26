@@ -10,6 +10,7 @@ function usage {
     echo "usage: $0 [options] [-- <symbolizer args>]"
     echo "-a <arch>           : arm64, or x64"
     echo "-C                  : use Clang build"
+    echo "-G                  : use GCC build"
     echo "-A                  : use ASan build"
     echo "-P                  : use profile build"
     echo "-L                  : use LTO build"
@@ -24,6 +25,7 @@ function usage {
 
 ARCH=x64
 CLANG=0
+GCC=0
 ASAN=0
 BUILDDIR=
 IDSTXT=
@@ -41,11 +43,12 @@ fi
 readonly SYMBOLIZE="${PREBUILT_DIR}/symbolize"
 
 
-while getopts "a:CAPLlXo:i:h" FLAG
+while getopts "a:CGAPLlXo:i:h" FLAG
 do
     case $FLAG in
         a)   ARCH=$OPTARG;;
         C)   CLANG=1;;
+        G)   GCC=1;;
         A)   ASAN=1;;
         P)   PROFILE=1;;
         L)   LTO=1;;
@@ -62,11 +65,13 @@ shift $((OPTIND-1))
 
 if [[ -z "$IDSTXT" ]]; then
     if [[ -z "$BUILDDIR" ]]; then
-        VARIANT=gcc
+        VARIANT=clang
         if (( $ASAN )); then
             VARIANT=asan
         elif (( $CLANG )); then
             VARIANT=clang
+        elif (( $GCC )); then
+            VARIANT=gcc
         elif (( $LTO )); then
             VARIANT=lto
         elif (( $THINLTO )); then
