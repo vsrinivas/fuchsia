@@ -17,14 +17,11 @@ namespace testing {
 //
 class SingleApTest : public ::testing::Test {
  public:
-  SingleApTest() : ap_(kApAddr, kSsid, kSsidLen, kChannel), fw_(&env_) {
-    env_.AddAp(&ap_);
-  }
+  SingleApTest() : ap_(kApAddr, kSsid, kSsidLen, kChannel), fw_(&env_) { env_.AddAp(&ap_); }
   ~SingleApTest() {}
 
  protected:
-  static constexpr uint8_t kApAddr[ETH_ALEN] = {0x12, 0x34, 0x56,
-                                                0x78, 0x9a, 0xbc};
+  static constexpr uint8_t kApAddr[ETH_ALEN] = {0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc};
   static constexpr uint8_t kSsid[] = "MySSID";
   static constexpr size_t kSsidLen = 6;  // The length of 'ssid' above.
   static constexpr uint8_t kChannel = 11;

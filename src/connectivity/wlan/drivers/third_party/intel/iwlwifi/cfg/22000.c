@@ -34,6 +34,7 @@
 
 #include <linux/module.h>
 #include <linux/stringify.h>
+
 #include "iwl-config.h"
 
 /* Highest firmware API version supported */
@@ -69,11 +70,11 @@
 #define IWL_22000_HR_MODULE_FIRMWARE(api) IWL_22000_HR_FW_PRE __stringify(api) ".ucode"
 #define IWL_22000_JF_MODULE_FIRMWARE(api) IWL_22000_JF_FW_PRE __stringify(api) ".ucode"
 #define IWL_22000_HR_A_F0_QNJ_MODULE_FIRMWARE(api) \
-    IWL_22000_HR_A_F0_FW_PRE __stringify(api) ".ucode"
+  IWL_22000_HR_A_F0_FW_PRE __stringify(api) ".ucode"
 #define IWL_22000_HR_B_F0_QNJ_MODULE_FIRMWARE(api) \
-    IWL_22000_HR_B_F0_FW_PRE __stringify(api) ".ucode"
+  IWL_22000_HR_B_F0_FW_PRE __stringify(api) ".ucode"
 #define IWL_22000_QU_B_HR_B_MODULE_FIRMWARE(api) \
-    IWL_22000_QU_B_HR_B_FW_PRE __stringify(api) ".ucode"
+  IWL_22000_QU_B_HR_B_FW_PRE __stringify(api) ".ucode"
 #define IWL_22000_HR_B_QNJ_MODULE_FIRMWARE(api) IWL_22000_HR_B_FW_PRE __stringify(api) ".ucode"
 #define IWL_22000_JF_B0_QNJ_MODULE_FIRMWARE(api) IWL_22000_JF_B0_FW_PRE __stringify(api) ".ucode"
 #define IWL_22000_HR_A0_QNJ_MODULE_FIRMWARE(api) IWL_22000_HR_A0_FW_PRE __stringify(api) ".ucode"
@@ -111,27 +112,27 @@ static const struct iwl_ht_params iwl_22000_ht_params = {
     .ht40_bands = BIT(NL80211_BAND_2GHZ) | BIT(NL80211_BAND_5GHZ),
 };
 
-#define IWL_DEVICE_22000_COMMON                                                          \
-    .ucode_api_max = IWL_22000_UCODE_API_MAX, .ucode_api_min = IWL_22000_UCODE_API_MIN,  \
-    .led_mode = IWL_LED_RF_STATE, .nvm_hw_section_num = 10, .non_shared_ant = ANT_B,     \
-    .dccm_offset = IWL_22000_DCCM_OFFSET, .dccm_len = IWL_22000_DCCM_LEN,                \
-    .dccm2_offset = IWL_22000_DCCM2_OFFSET, .dccm2_len = IWL_22000_DCCM2_LEN,            \
-    .smem_offset = IWL_22000_SMEM_OFFSET, .smem_len = IWL_22000_SMEM_LEN,                \
-    .features = IWL_TX_CSUM_NETIF_FLAGS | NETIF_F_RXCSUM, .apmg_not_supported = true,    \
-    .mq_rx_supported = true, .vht_mu_mimo_supported = true, .mac_addr_from_csr = true,   \
-    .ht_params = &iwl_22000_ht_params, .nvm_ver = IWL_22000_NVM_VERSION,                 \
-    .max_ht_ampdu_exponent = IEEE80211_HT_MAX_AMPDU_64K, .use_tfh = true, .rf_id = true, \
-    .gen2 = true, .nvm_type = IWL_NVM_EXT, .dbgc_supported = true,                       \
-    .min_umac_error_event_table = 0x400000, .d3_debug_data_base_addr = 0x401000,         \
-    .d3_debug_data_length = 60 * 1024
+#define IWL_DEVICE_22000_COMMON                                                        \
+  .ucode_api_max = IWL_22000_UCODE_API_MAX, .ucode_api_min = IWL_22000_UCODE_API_MIN,  \
+  .led_mode = IWL_LED_RF_STATE, .nvm_hw_section_num = 10, .non_shared_ant = ANT_B,     \
+  .dccm_offset = IWL_22000_DCCM_OFFSET, .dccm_len = IWL_22000_DCCM_LEN,                \
+  .dccm2_offset = IWL_22000_DCCM2_OFFSET, .dccm2_len = IWL_22000_DCCM2_LEN,            \
+  .smem_offset = IWL_22000_SMEM_OFFSET, .smem_len = IWL_22000_SMEM_LEN,                \
+  .features = IWL_TX_CSUM_NETIF_FLAGS | NETIF_F_RXCSUM, .apmg_not_supported = true,    \
+  .mq_rx_supported = true, .vht_mu_mimo_supported = true, .mac_addr_from_csr = true,   \
+  .ht_params = &iwl_22000_ht_params, .nvm_ver = IWL_22000_NVM_VERSION,                 \
+  .max_ht_ampdu_exponent = IEEE80211_HT_MAX_AMPDU_64K, .use_tfh = true, .rf_id = true, \
+  .gen2 = true, .nvm_type = IWL_NVM_EXT, .dbgc_supported = true,                       \
+  .min_umac_error_event_table = 0x400000, .d3_debug_data_base_addr = 0x401000,         \
+  .d3_debug_data_length = 60 * 1024
 
-#define IWL_DEVICE_22500                                               \
-    IWL_DEVICE_22000_COMMON, .device_family = IWL_DEVICE_FAMILY_22000, \
-                             .base_params = &iwl_22000_base_params, .csr = &iwl_csr_v1
+#define IWL_DEVICE_22500                                             \
+  IWL_DEVICE_22000_COMMON, .device_family = IWL_DEVICE_FAMILY_22000, \
+                           .base_params = &iwl_22000_base_params, .csr = &iwl_csr_v1
 
-#define IWL_DEVICE_22560                                               \
-    IWL_DEVICE_22000_COMMON, .device_family = IWL_DEVICE_FAMILY_22560, \
-                             .base_params = &iwl_22560_base_params, .csr = &iwl_csr_v2
+#define IWL_DEVICE_22560                                             \
+  IWL_DEVICE_22000_COMMON, .device_family = IWL_DEVICE_FAMILY_22560, \
+                           .base_params = &iwl_22560_base_params, .csr = &iwl_csr_v2
 
 const struct iwl_cfg iwl22000_2ac_cfg_hr = {
     .name = "Intel(R) Dual Band Wireless AC 22000",

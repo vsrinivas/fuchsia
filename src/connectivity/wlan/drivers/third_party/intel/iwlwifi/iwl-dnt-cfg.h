@@ -48,21 +48,21 @@
 #define BUS_TYPE_SDIO "sdio"
 
 #define GET_RX_PACKET_SIZE(pkt) \
-    ((le32_to_cpu(pkt->len_n_flags) & FH_RSCSR_FRAME_SIZE_MSK) - sizeof(struct iwl_cmd_header))
+  ((le32_to_cpu(pkt->len_n_flags) & FH_RSCSR_FRAME_SIZE_MSK) - sizeof(struct iwl_cmd_header))
 
 #define MONITOR_INPUT_MODE_MASK 0x01
 #define UCODE_MSGS_INPUT_MODE_MASK 0x02
 
 /* DnT status */
 enum {
-    IWL_DNT_STATUS_MON_CONFIGURED = BIT(0),
-    IWL_DNT_STATUS_UCODE_MSGS_CONFIGURED = BIT(1),
-    IWL_DNT_STATUS_DMA_BUFFER_ALLOCATED = BIT(2),
-    IWL_DNT_STATUS_FAILED_TO_ALLOCATE_DMA = BIT(3),
-    IWL_DNT_STATUS_FAILED_START_MONITOR = BIT(4),
-    IWL_DNT_STATUS_INVALID_MONITOR_CONF = BIT(5),
-    IWL_DNT_STATUS_FAILED_TO_ALLOCATE_DB = BIT(6),
-    IWL_DNT_STATUS_FW_CRASH = BIT(7),
+  IWL_DNT_STATUS_MON_CONFIGURED = BIT(0),
+  IWL_DNT_STATUS_UCODE_MSGS_CONFIGURED = BIT(1),
+  IWL_DNT_STATUS_DMA_BUFFER_ALLOCATED = BIT(2),
+  IWL_DNT_STATUS_FAILED_TO_ALLOCATE_DMA = BIT(3),
+  IWL_DNT_STATUS_FAILED_START_MONITOR = BIT(4),
+  IWL_DNT_STATUS_INVALID_MONITOR_CONF = BIT(5),
+  IWL_DNT_STATUS_FAILED_TO_ALLOCATE_DB = BIT(6),
+  IWL_DNT_STATUS_FW_CRASH = BIT(7),
 };
 
 /* input modes */
@@ -73,13 +73,13 @@ enum { NETLINK = BIT(0), DEBUGFS = BIT(1), FTRACE = BIT(2) };
 
 /* monitor types */
 enum {
-    NO_MONITOR = 0,
-    MIPI = BIT(0),
-    INTERFACE = BIT(1),
-    DMA = BIT(2),
-    MARBH_ADC = BIT(3),
-    MARBH_DBG = BIT(4),
-    SMEM = BIT(5)
+  NO_MONITOR = 0,
+  MIPI = BIT(0),
+  INTERFACE = BIT(1),
+  DMA = BIT(2),
+  MARBH_ADC = BIT(3),
+  MARBH_DBG = BIT(4),
+  SMEM = BIT(5)
 };
 
 /* monitor modes */
@@ -93,17 +93,17 @@ enum { NO_OUT, PUSH, PULL };
 
 /* crash data */
 enum {
-    NONE = 0,
-    SRAM = BIT(0),
-    DBGM = BIT(1),
-    TX_FIFO = BIT(2),
-    RX_FIFO = BIT(3),
-    PERIPHERY = BIT(4)
+  NONE = 0,
+  SRAM = BIT(0),
+  DBGM = BIT(1),
+  TX_FIFO = BIT(2),
+  RX_FIFO = BIT(3),
+  PERIPHERY = BIT(4)
 };
 
 struct dnt_collect_entry {
-    uint8_t* data;
-    uint32_t size;
+  uint8_t* data;
+  uint32_t size;
 };
 
 /**
@@ -113,11 +113,11 @@ struct dnt_collect_entry {
  * @db_lock: lock for the list
  */
 struct dnt_collect_db {
-    struct dnt_collect_entry collect_array[IWL_DNT_ARRAY_SIZE];
-    unsigned int read_ptr;
-    unsigned int wr_ptr;
-    wait_queue_head_t waitq;
-    spinlock_t db_lock; /*locks the array */
+  struct dnt_collect_entry collect_array[IWL_DNT_ARRAY_SIZE];
+  unsigned int read_ptr;
+  unsigned int wr_ptr;
+  wait_queue_head_t waitq;
+  spinlock_t db_lock; /*locks the array */
 };
 
 /**
@@ -129,16 +129,16 @@ struct dnt_collect_db {
  * @periph: periphery registers data pointer
  */
 struct dnt_crash_data {
-    uint8_t* sram;
-    uint32_t sram_buf_size;
-    uint8_t* dbgm;
-    uint32_t dbgm_buf_size;
-    uint8_t* rx;
-    uint32_t rx_buf_size;
-    uint8_t* tx;
-    uint32_t tx_buf_size;
-    uint8_t* periph;
-    uint32_t periph_buf_size;
+  uint8_t* sram;
+  uint32_t sram_buf_size;
+  uint8_t* dbgm;
+  uint32_t dbgm_buf_size;
+  uint8_t* rx;
+  uint32_t rx_buf_size;
+  uint8_t* tx;
+  uint32_t tx_buf_size;
+  uint8_t* periph;
+  uint32_t periph_buf_size;
 };
 
 /**
@@ -150,20 +150,20 @@ struct dnt_crash_data {
  * @um_list: uCodeMessages link list
  */
 struct iwl_dnt_dispatch {
-    uint32_t mon_in_mode;
-    uint32_t mon_out_mode;
-    uint32_t mon_output;
+  uint32_t mon_in_mode;
+  uint32_t mon_out_mode;
+  uint32_t mon_output;
 
-    uint32_t ucode_msgs_in_mode;
-    uint32_t ucode_msgs_out_mode;
-    uint32_t ucode_msgs_output;
+  uint32_t ucode_msgs_in_mode;
+  uint32_t ucode_msgs_out_mode;
+  uint32_t ucode_msgs_output;
 
-    uint32_t crash_out_mode;
+  uint32_t crash_out_mode;
 
-    struct dnt_collect_db* dbgm_db;
-    struct dnt_collect_db* um_db;
+  struct dnt_collect_db* dbgm_db;
+  struct dnt_collect_db* um_db;
 
-    struct dnt_crash_data crash;
+  struct dnt_crash_data crash;
 };
 
 /**
@@ -186,27 +186,27 @@ struct iwl_dnt_dispatch {
  * @dispatch: a pointer to dispatch
  */
 struct iwl_dnt {
-    struct device* dev;
-    const struct fw_img* image;
+  struct device* dev;
+  const struct fw_img* image;
 
-    uint32_t iwl_dnt_status;
-    bool is_configuration_valid;
-    uint8_t cur_input_mask;
-    uint8_t cur_output_mask;
+  uint32_t iwl_dnt_status;
+  bool is_configuration_valid;
+  uint8_t cur_input_mask;
+  uint8_t cur_output_mask;
 
-    uint32_t cur_mon_type;
-    uint8_t* mon_buf_cpu_addr;
-    dma_addr_t mon_dma_addr;
-    uint64_t mon_base_addr;
-    uint64_t mon_end_addr;
-    uint32_t mon_buf_size;
-    uint32_t cur_mon_mode;
+  uint32_t cur_mon_type;
+  uint8_t* mon_buf_cpu_addr;
+  dma_addr_t mon_dma_addr;
+  uint64_t mon_base_addr;
+  uint64_t mon_end_addr;
+  uint32_t mon_buf_size;
+  uint32_t cur_mon_mode;
 
-    struct iwl_dnt_dispatch dispatch;
+  struct iwl_dnt_dispatch dispatch;
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
-    uint8_t debugfs_counter;
-    wait_queue_head_t debugfs_waitq;
-    struct dentry* debugfs_entry;
+  uint8_t debugfs_counter;
+  wait_queue_head_t debugfs_waitq;
+  struct dentry* debugfs_entry;
 #endif
 };
 

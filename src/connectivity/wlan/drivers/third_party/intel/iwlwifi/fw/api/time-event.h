@@ -40,35 +40,35 @@
 
 /* Time Event types, according to MAC type */
 enum iwl_time_event_type {
-    /* BSS Station Events */
-    TE_BSS_STA_AGGRESSIVE_ASSOC,
-    TE_BSS_STA_ASSOC,
-    TE_BSS_EAP_DHCP_PROT,
-    TE_BSS_QUIET_PERIOD,
+  /* BSS Station Events */
+  TE_BSS_STA_AGGRESSIVE_ASSOC,
+  TE_BSS_STA_ASSOC,
+  TE_BSS_EAP_DHCP_PROT,
+  TE_BSS_QUIET_PERIOD,
 
-    /* P2P Device Events */
-    TE_P2P_DEVICE_DISCOVERABLE,
-    TE_P2P_DEVICE_LISTEN,
-    TE_P2P_DEVICE_ACTION_SCAN,
-    TE_P2P_DEVICE_FULL_SCAN,
+  /* P2P Device Events */
+  TE_P2P_DEVICE_DISCOVERABLE,
+  TE_P2P_DEVICE_LISTEN,
+  TE_P2P_DEVICE_ACTION_SCAN,
+  TE_P2P_DEVICE_FULL_SCAN,
 
-    /* P2P Client Events */
-    TE_P2P_CLIENT_AGGRESSIVE_ASSOC,
-    TE_P2P_CLIENT_ASSOC,
-    TE_P2P_CLIENT_QUIET_PERIOD,
+  /* P2P Client Events */
+  TE_P2P_CLIENT_AGGRESSIVE_ASSOC,
+  TE_P2P_CLIENT_ASSOC,
+  TE_P2P_CLIENT_QUIET_PERIOD,
 
-    /* P2P GO Events */
-    TE_P2P_GO_ASSOC_PROT,
-    TE_P2P_GO_REPETITIVET_NOA,
-    TE_P2P_GO_CT_WINDOW,
+  /* P2P GO Events */
+  TE_P2P_GO_ASSOC_PROT,
+  TE_P2P_GO_REPETITIVET_NOA,
+  TE_P2P_GO_CT_WINDOW,
 
-    /* WiDi Sync Events */
-    TE_WIDI_TX_SYNC,
+  /* WiDi Sync Events */
+  TE_WIDI_TX_SYNC,
 
-    /* Channel Switch NoA */
-    TE_CHANNEL_SWITCH_PERIOD,
+  /* Channel Switch NoA */
+  TE_CHANNEL_SWITCH_PERIOD,
 
-    TE_MAX
+  TE_MAX
 }; /* MAC_EVENT_TYPE_API_E_VER_1 */
 
 /* Time event - defines for command API v1 */
@@ -87,10 +87,10 @@ enum iwl_time_event_type {
  * scheduled.
  */
 enum {
-    TE_V1_FRAG_NONE = 0,
-    TE_V1_FRAG_SINGLE = 1,
-    TE_V1_FRAG_DUAL = 2,
-    TE_V1_FRAG_ENDLESS = 0xffffffff
+  TE_V1_FRAG_NONE = 0,
+  TE_V1_FRAG_SINGLE = 1,
+  TE_V1_FRAG_DUAL = 2,
+  TE_V1_FRAG_ENDLESS = 0xffffffff
 };
 
 /* If a Time Event can be fragmented, this is the max number of fragments */
@@ -102,10 +102,10 @@ enum {
 
 /* Time Event dependencies: none, on another TE, or in a specific time */
 enum {
-    TE_V1_INDEPENDENT = 0,
-    TE_V1_DEP_OTHER = BIT(0),
-    TE_V1_DEP_TSF = BIT(1),
-    TE_V1_EVENT_SOCIOPATHIC = BIT(2),
+  TE_V1_INDEPENDENT = 0,
+  TE_V1_DEP_OTHER = BIT(0),
+  TE_V1_DEP_TSF = BIT(1),
+  TE_V1_EVENT_SOCIOPATHIC = BIT(2),
 }; /* MAC_EVENT_DEPENDENCY_POLICY_API_E_VER_2 */
 
 /*
@@ -126,15 +126,15 @@ enum {
  * notification for monolithic events.
  */
 enum {
-    TE_V1_NOTIF_NONE = 0,
-    TE_V1_NOTIF_HOST_EVENT_START = BIT(0),
-    TE_V1_NOTIF_HOST_EVENT_END = BIT(1),
-    TE_V1_NOTIF_INTERNAL_EVENT_START = BIT(2),
-    TE_V1_NOTIF_INTERNAL_EVENT_END = BIT(3),
-    TE_V1_NOTIF_HOST_FRAG_START = BIT(4),
-    TE_V1_NOTIF_HOST_FRAG_END = BIT(5),
-    TE_V1_NOTIF_INTERNAL_FRAG_START = BIT(6),
-    TE_V1_NOTIF_INTERNAL_FRAG_END = BIT(7),
+  TE_V1_NOTIF_NONE = 0,
+  TE_V1_NOTIF_HOST_EVENT_START = BIT(0),
+  TE_V1_NOTIF_HOST_EVENT_END = BIT(1),
+  TE_V1_NOTIF_INTERNAL_EVENT_START = BIT(2),
+  TE_V1_NOTIF_INTERNAL_EVENT_END = BIT(3),
+  TE_V1_NOTIF_HOST_FRAG_START = BIT(4),
+  TE_V1_NOTIF_HOST_FRAG_END = BIT(5),
+  TE_V1_NOTIF_INTERNAL_FRAG_START = BIT(6),
+  TE_V1_NOTIF_INTERNAL_FRAG_END = BIT(7),
 }; /* MAC_EVENT_ACTION_API_E_VER_2 */
 
 /* Time event - defines for command API */
@@ -153,11 +153,11 @@ enum {
  * scheduled.
  */
 enum {
-    TE_V2_FRAG_NONE = 0,
-    TE_V2_FRAG_SINGLE = 1,
-    TE_V2_FRAG_DUAL = 2,
-    TE_V2_FRAG_MAX = 0xfe,
-    TE_V2_FRAG_ENDLESS = 0xff
+  TE_V2_FRAG_NONE = 0,
+  TE_V2_FRAG_SINGLE = 1,
+  TE_V2_FRAG_DUAL = 2,
+  TE_V2_FRAG_MAX = 0xfe,
+  TE_V2_FRAG_ENDLESS = 0xff
 };
 
 /* Repeat the time event endlessly (until removed) */
@@ -191,27 +191,27 @@ enum {
  * @TE_V2_ABSENCE: are we present or absent during the Time Event.
  */
 enum iwl_time_event_policy {
-    TE_V2_DEFAULT_POLICY = 0x0,
+  TE_V2_DEFAULT_POLICY = 0x0,
 
-    /* notifications (event start/stop, fragment start/stop) */
-    TE_V2_NOTIF_HOST_EVENT_START = BIT(0),
-    TE_V2_NOTIF_HOST_EVENT_END = BIT(1),
-    TE_V2_NOTIF_INTERNAL_EVENT_START = BIT(2),
-    TE_V2_NOTIF_INTERNAL_EVENT_END = BIT(3),
+  /* notifications (event start/stop, fragment start/stop) */
+  TE_V2_NOTIF_HOST_EVENT_START = BIT(0),
+  TE_V2_NOTIF_HOST_EVENT_END = BIT(1),
+  TE_V2_NOTIF_INTERNAL_EVENT_START = BIT(2),
+  TE_V2_NOTIF_INTERNAL_EVENT_END = BIT(3),
 
-    TE_V2_NOTIF_HOST_FRAG_START = BIT(4),
-    TE_V2_NOTIF_HOST_FRAG_END = BIT(5),
-    TE_V2_NOTIF_INTERNAL_FRAG_START = BIT(6),
-    TE_V2_NOTIF_INTERNAL_FRAG_END = BIT(7),
-    TE_V2_START_IMMEDIATELY = BIT(11),
+  TE_V2_NOTIF_HOST_FRAG_START = BIT(4),
+  TE_V2_NOTIF_HOST_FRAG_END = BIT(5),
+  TE_V2_NOTIF_INTERNAL_FRAG_START = BIT(6),
+  TE_V2_NOTIF_INTERNAL_FRAG_END = BIT(7),
+  TE_V2_START_IMMEDIATELY = BIT(11),
 
-    /* placement characteristics */
-    TE_V2_DEP_OTHER = BIT(TE_V2_PLACEMENT_POS),
-    TE_V2_DEP_TSF = BIT(TE_V2_PLACEMENT_POS + 1),
-    TE_V2_EVENT_SOCIOPATHIC = BIT(TE_V2_PLACEMENT_POS + 2),
+  /* placement characteristics */
+  TE_V2_DEP_OTHER = BIT(TE_V2_PLACEMENT_POS),
+  TE_V2_DEP_TSF = BIT(TE_V2_PLACEMENT_POS + 1),
+  TE_V2_EVENT_SOCIOPATHIC = BIT(TE_V2_PLACEMENT_POS + 2),
 
-    /* are we present or absent during the Time Event. */
-    TE_V2_ABSENCE = BIT(TE_V2_ABSENCE_POS),
+  /* are we present or absent during the Time Event. */
+  TE_V2_ABSENCE = BIT(TE_V2_ABSENCE_POS),
 };
 
 /**
@@ -241,19 +241,19 @@ enum iwl_time_event_policy {
  *  &enum iwl_time_event_policy
  */
 struct iwl_time_event_cmd {
-    /* COMMON_INDEX_HDR_API_S_VER_1 */
-    __le32 id_and_color;
-    __le32 action;
-    __le32 id;
-    /* MAC_TIME_EVENT_DATA_API_S_VER_2 */
-    __le32 apply_time;
-    __le32 max_delay;
-    __le32 depends_on;
-    __le32 interval;
-    __le32 duration;
-    uint8_t repeat;
-    uint8_t max_frags;
-    __le16 policy;
+  /* COMMON_INDEX_HDR_API_S_VER_1 */
+  __le32 id_and_color;
+  __le32 action;
+  __le32 id;
+  /* MAC_TIME_EVENT_DATA_API_S_VER_2 */
+  __le32 apply_time;
+  __le32 max_delay;
+  __le32 depends_on;
+  __le32 interval;
+  __le32 duration;
+  uint8_t repeat;
+  uint8_t max_frags;
+  __le16 policy;
 } __packed; /* MAC_TIME_EVENT_CMD_API_S_VER_2 */
 
 /**
@@ -265,10 +265,10 @@ struct iwl_time_event_cmd {
  *  &enum iwl_ctxt_id_and_color
  */
 struct iwl_time_event_resp {
-    __le32 status;
-    __le32 id;
-    __le32 unique_id;
-    __le32 id_and_color;
+  __le32 status;
+  __le32 id;
+  __le32 unique_id;
+  __le32 id_and_color;
 } __packed; /* MAC_TIME_EVENT_RSP_API_S_VER_1 */
 
 /**
@@ -282,12 +282,12 @@ struct iwl_time_event_resp {
  * @status: true if scheduled, false otherwise (not executed)
  */
 struct iwl_time_event_notif {
-    __le32 timestamp;
-    __le32 session_id;
-    __le32 unique_id;
-    __le32 id_and_color;
-    __le32 action;
-    __le32 status;
+  __le32 timestamp;
+  __le32 session_id;
+  __le32 unique_id;
+  __le32 id_and_color;
+  __le32 action;
+  __le32 status;
 } __packed; /* MAC_TIME_EVENT_NTFY_API_S_VER_1 */
 
 /*
@@ -318,26 +318,26 @@ struct iwl_time_event_notif {
  *  timeEventDuration = min(duration, remainingQuota)
  */
 struct iwl_hs20_roc_req {
-    /* COMMON_INDEX_HDR_API_S_VER_1 hdr */
-    __le32 id_and_color;
-    __le32 action;
-    __le32 event_unique_id;
-    __le32 sta_id_and_color;
-    struct iwl_fw_channel_info channel_info;
-    uint8_t node_addr[ETH_ALEN];
-    __le16 reserved;
-    __le32 apply_time;
-    __le32 apply_time_max_delay;
-    __le32 duration;
+  /* COMMON_INDEX_HDR_API_S_VER_1 hdr */
+  __le32 id_and_color;
+  __le32 action;
+  __le32 event_unique_id;
+  __le32 sta_id_and_color;
+  struct iwl_fw_channel_info channel_info;
+  uint8_t node_addr[ETH_ALEN];
+  __le16 reserved;
+  __le32 apply_time;
+  __le32 apply_time_max_delay;
+  __le32 duration;
 } __packed; /* HOT_SPOT_CMD_API_S_VER_1 */
 
 /*
  * values for AUX ROC result values
  */
 enum iwl_mvm_hot_spot {
-    HOT_SPOT_RSP_STATUS_OK,
-    HOT_SPOT_RSP_STATUS_TOO_MANY_EVENTS,
-    HOT_SPOT_MAX_NUM_OF_SESSIONS,
+  HOT_SPOT_RSP_STATUS_OK,
+  HOT_SPOT_RSP_STATUS_TOO_MANY_EVENTS,
+  HOT_SPOT_MAX_NUM_OF_SESSIONS,
 };
 
 /*
@@ -352,8 +352,8 @@ enum iwl_mvm_hot_spot {
  * @status: Return status 0 is success, all the rest used for specific errors
  */
 struct iwl_hs20_roc_res {
-    __le32 event_unique_id;
-    __le32 status;
+  __le32 event_unique_id;
+  __le32 status;
 } __packed; /* HOT_SPOT_RSP_API_S_VER_1 */
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_TIME_EVENT_H_

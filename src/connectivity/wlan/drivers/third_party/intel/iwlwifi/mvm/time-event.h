@@ -36,7 +36,6 @@
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_TIME_EVENT_H_
 
 #include "fw-api.h"
-
 #include "mvm.h"
 
 /**
@@ -201,9 +200,11 @@ int iwl_mvm_schedule_csa_period(struct iwl_mvm* mvm, struct ieee80211_vif* vif, 
  * This function returns true iff this TE is added to the fw.
  */
 static inline bool iwl_mvm_te_scheduled(struct iwl_mvm_time_event_data* te_data) {
-    if (!te_data) { return false; }
+  if (!te_data) {
+    return false;
+  }
 
-    return !!te_data->uid;
+  return !!te_data->uid;
 }
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_TIME_EVENT_H_

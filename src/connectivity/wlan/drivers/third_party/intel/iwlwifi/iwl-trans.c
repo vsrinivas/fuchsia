@@ -32,67 +32,72 @@
  *
  *****************************************************************************/
 
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
+
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-constants.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-drv.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-fh.h"
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
 
 struct iwl_trans* iwl_trans_alloc(unsigned int priv_size, const struct iwl_cfg* cfg,
                                   const struct iwl_trans_ops* ops) {
-    struct iwl_trans* trans;
+  struct iwl_trans* trans;
 #ifdef CONFIG_LOCKDEP
-    static struct lock_class_key __key;
+  static struct lock_class_key __key;
 #endif
 
-    trans = calloc(1, sizeof(*trans) + priv_size);
-    if (!trans) {
-        IWL_ERR(trans, "Failed to allocate transport\n");
-        return NULL;
-    }
+  trans = calloc(1, sizeof(*trans) + priv_size);
+  if (!trans) {
+    IWL_ERR(trans, "Failed to allocate transport\n");
+    return NULL;
+  }
 
 #ifdef CONFIG_LOCKDEP
-    lockdep_init_map(&trans->sync_cmd_lockdep_map, "sync_cmd_lockdep_map", &__key, 0);
+  lockdep_init_map(&trans->sync_cmd_lockdep_map, "sync_cmd_lockdep_map", &__key, 0);
 #endif
 
-    trans->cfg = cfg;
-    trans->ops = ops;
-    trans->num_rx_queues = 1;
+  trans->cfg = cfg;
+  trans->ops = ops;
+  trans->num_rx_queues = 1;
 
-    WARN_ON(!ops->wait_txq_empty && !ops->wait_tx_queues_empty);
+  WARN_ON(!ops->wait_txq_empty && !ops->wait_tx_queues_empty);
 
-    return trans;
+  return trans;
 }
 
-void iwl_trans_free(struct iwl_trans* trans) {
-    free(trans);
-}
+void iwl_trans_free(struct iwl_trans* trans) { free(trans); }
 
 zx_status_t iwl_trans_send_cmd(struct iwl_trans* trans, struct iwl_host_cmd* cmd) {
-    zx_status_t ret;
+  zx_status_t ret;
 
-    if (unlikely(!(cmd->flags & CMD_SEND_IN_RFKILL) &&
-                 test_bit(STATUS_RFKILL_OPMODE, &trans->status))) {
-        return ZX_ERR_BAD_STATE;
-    }
+  if (unlikely(!(cmd->flags & CMD_SEND_IN_RFKILL) &&
+               test_bit(STATUS_RFKILL_OPMODE, &trans->status))) {
+    return ZX_ERR_BAD_STATE;
+  }
 
-    if (unlikely(test_bit(STATUS_FW_ERROR, &trans->status))) { return ZX_ERR_IO; }
+  if (unlikely(test_bit(STATUS_FW_ERROR, &trans->status))) {
+    return ZX_ERR_IO;
+  }
 
-    if (unlikely(trans->state != IWL_TRANS_FW_ALIVE)) {
-        IWL_ERR(trans, "%s bad state = %d\n", __func__, trans->state);
-        return ZX_ERR_IO;
-    }
+  if (unlikely(trans->state != IWL_TRANS_FW_ALIVE)) {
+    IWL_ERR(trans, "%s bad state = %d\n", __func__, trans->state);
+    return ZX_ERR_IO;
+  }
 
-    if (WARN_ON((cmd->flags & CMD_WANT_ASYNC_CALLBACK) && !(cmd->flags & CMD_ASYNC))) {
-        return ZX_ERR_IO_INVALID;
-    }
+  if (WARN_ON((cmd->flags & CMD_WANT_ASYNC_CALLBACK) && !(cmd->flags & CMD_ASYNC))) {
+    return ZX_ERR_IO_INVALID;
+  }
 
-    if (trans->wide_cmd_header && !iwl_cmd_groupid(cmd->id)) { cmd->id = DEF_ID(cmd->id); }
+  if (trans->wide_cmd_header && !iwl_cmd_groupid(cmd->id)) {
+    cmd->id = DEF_ID(cmd->id);
+  }
 
-    ret = trans->ops->send_cmd(trans, cmd);
+  ret = trans->ops->send_cmd(trans, cmd);
 
-    if (WARN_ON((cmd->flags & CMD_WANT_SKB) && !ret && !cmd->resp_pkt)) { return ZX_ERR_IO; }
+  if (WARN_ON((cmd->flags & CMD_WANT_SKB) && !ret && !cmd->resp_pkt)) {
+    return ZX_ERR_IO;
+  }
 
-    return ret;
+  return ret;
 }
 
 #if 0   // NEEDS_PORTING
@@ -149,9 +154,13 @@ IWL_EXPORT_SYMBOL(iwl_cmd_groups_verify_sorted);
 #endif  // NEEDS_PORTING
 
 void iwl_trans_ref(struct iwl_trans* trans) {
-    if (trans->ops->ref) { trans->ops->ref(trans); }
+  if (trans->ops->ref) {
+    trans->ops->ref(trans);
+  }
 }
 
 void iwl_trans_unref(struct iwl_trans* trans) {
-    if (trans->ops->unref) { trans->ops->unref(trans); }
+  if (trans->ops->unref) {
+    trans->ops->unref(trans);
+  }
 }

@@ -74,10 +74,10 @@
  * @ctrl channel: PHY_[VHT|LEGACY]_CTRL_*
  */
 struct iwl_fw_channel_info {
-    uint8_t band;
-    uint8_t channel;
-    uint8_t width;
-    uint8_t ctrl_pos;
+  uint8_t band;
+  uint8_t channel;
+  uint8_t width;
+  uint8_t ctrl_pos;
 } __packed;
 
 #define PHY_RX_CHAIN_DRIVER_FORCE_POS (0)
@@ -114,17 +114,17 @@ struct iwl_fw_channel_info {
  * @dsp_cfg_flags: set to 0
  */
 struct iwl_phy_context_cmd {
-    /* COMMON_INDEX_HDR_API_S_VER_1 */
-    __le32 id_and_color;
-    __le32 action;
-    /* PHY_CONTEXT_DATA_API_S_VER_1 */
-    __le32 apply_time;
-    __le32 tx_param_color;
-    struct iwl_fw_channel_info ci;
-    __le32 txchain_info;
-    __le32 rxchain_info;
-    __le32 acquisition_data;
-    __le32 dsp_cfg_flags;
+  /* COMMON_INDEX_HDR_API_S_VER_1 */
+  __le32 id_and_color;
+  __le32 action;
+  /* PHY_CONTEXT_DATA_API_S_VER_1 */
+  __le32 apply_time;
+  __le32 tx_param_color;
+  struct iwl_fw_channel_info ci;
+  __le32 txchain_info;
+  __le32 rxchain_info;
+  __le32 acquisition_data;
+  __le32 dsp_cfg_flags;
 } __packed; /* PHY_CONTEXT_CMD_API_VER_1 */
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_PHY_CTXT_H_

@@ -34,15 +34,14 @@
  *
  *****************************************************************************/
 
-#include <stdlib.h>
-
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <lib/device-protocol/pci.h>
 #include <ddk/protocol/pci.h>
 #include <ddk/protocol/wlanphyimpl.h>
+#include <lib/device-protocol/pci.h>
+#include <stdlib.h>
 #include <wlan/protocol/mac.h>
 #include <zircon/status.h>
 
@@ -54,13 +53,13 @@
 #endif  // NEEDS_PORTING
 
 struct iwl_pci_device {
-    uint16_t device_id;
-    uint16_t subsystem_device_id;
-    const struct iwl_cfg* config;
+  uint16_t device_id;
+  uint16_t subsystem_device_id;
+  const struct iwl_cfg* config;
 };
 
 #define IWL_PCI_DEVICE(dev, subdev, cfg) \
-    .device_id = (dev), .subsystem_device_id = (subdev), .config = &(cfg)
+  .device_id = (dev), .subsystem_device_id = (subdev), .config = &(cfg)
 
 /* Hardware specific file defines the PCI IDs table for that hardware module */
 static const struct iwl_pci_device iwl_devices[] = {
@@ -949,25 +948,25 @@ static const struct iwl_pci_device iwl_devices[] = {
 
 static zx_status_t iwl_pci_config(uint16_t device_id, uint16_t subsystem_device_id,
                                   const struct iwl_cfg** out_cfg) {
-    const struct iwl_pci_device* device = iwl_devices;
-    for (size_t i = 0; i != ARRAY_SIZE(iwl_devices); ++i) {
-        if (iwl_devices[i].device_id == device_id &&
-            iwl_devices[i].subsystem_device_id == subsystem_device_id) {
-            *out_cfg = iwl_devices[i].config;
-            return ZX_OK;
-        }
-        device++;
+  const struct iwl_pci_device* device = iwl_devices;
+  for (size_t i = 0; i != ARRAY_SIZE(iwl_devices); ++i) {
+    if (iwl_devices[i].device_id == device_id &&
+        iwl_devices[i].subsystem_device_id == subsystem_device_id) {
+      *out_cfg = iwl_devices[i].config;
+      return ZX_OK;
     }
-    return ZX_ERR_NOT_FOUND;
+    device++;
+  }
+  return ZX_ERR_NOT_FOUND;
 }
 
 static void iwl_pci_unbind(void* ctx) {
-    struct iwl_trans* trans = (struct iwl_trans*)ctx;
-    device_remove(trans->zxdev);
+  struct iwl_trans* trans = (struct iwl_trans*)ctx;
+  device_remove(trans->zxdev);
 }
 
 static void iwl_pci_release(void* ctx) {
-    struct iwl_trans* trans = (struct iwl_trans*)ctx;
+  struct iwl_trans* trans = (struct iwl_trans*)ctx;
 
 #if 0   // NEEDS_PORTING
     /* if RTPM was in use, restore it to the state before probe */
@@ -980,12 +979,12 @@ static void iwl_pci_release(void* ctx) {
     }
 #endif  // NEEDS_PORTING
 
-    iwl_drv_stop(trans->drv);
+  iwl_drv_stop(trans->drv);
 
 #if 0   // NEEDS_PORTING
     iwl_trans_pcie_free(trans);
 #endif  // NEEDS_PORTING
-    free(trans);
+  free(trans);
 }
 
 static zx_protocol_device_t device_ops = {
@@ -1001,68 +1000,68 @@ static wlanphy_impl_protocol_ops_t wlanphy_ops = {
 };
 
 static zx_status_t iwl_pci_bind(void* ctx, zx_device_t* dev) {
-    struct iwl_trans* iwl_trans;
-    zx_status_t status;
+  struct iwl_trans* iwl_trans;
+  zx_status_t status;
 
-    pci_protocol_t pci;
-    status = device_get_protocol(dev, ZX_PROTOCOL_PCI, &pci);
-    if (status != ZX_OK) {
-        return status;
-    }
+  pci_protocol_t pci;
+  status = device_get_protocol(dev, ZX_PROTOCOL_PCI, &pci);
+  if (status != ZX_OK) {
+    return status;
+  }
 
-    zx_pcie_device_info_t pci_info;
-    status = pci_get_device_info(&pci, &pci_info);
-    if (status != ZX_OK) {
-        return status;
-    }
+  zx_pcie_device_info_t pci_info;
+  status = pci_get_device_info(&pci, &pci_info);
+  if (status != ZX_OK) {
+    return status;
+  }
 
-    uint16_t subsystem_device_id;
-    status = pci_config_read16(&pci, PCI_CFG_SUBSYSTEM_ID, &subsystem_device_id);
-    if (status != ZX_OK) {
-        IWL_ERR(iwl_trans, "Failed to read PCI subsystem device ID: %s\n",
-                zx_status_get_string(status));
-        return status;
-    }
+  uint16_t subsystem_device_id;
+  status = pci_config_read16(&pci, PCI_CFG_SUBSYSTEM_ID, &subsystem_device_id);
+  if (status != ZX_OK) {
+    IWL_ERR(iwl_trans, "Failed to read PCI subsystem device ID: %s\n",
+            zx_status_get_string(status));
+    return status;
+  }
 
-    IWL_INFO(iwl_trans, "Device ID: %04x Subsystem Device ID: %04x\n", pci_info.device_id,
-             subsystem_device_id);
+  IWL_INFO(iwl_trans, "Device ID: %04x Subsystem Device ID: %04x\n", pci_info.device_id,
+           subsystem_device_id);
 
-    const struct iwl_cfg* cfg;
-    status = iwl_pci_config(pci_info.device_id, subsystem_device_id, &cfg);
-    if (status != ZX_OK) {
-        IWL_ERR(iwl_trans, "Failed to find PCI config: %s\n", zx_status_get_string(status));
-        return ZX_ERR_NOT_SUPPORTED;
-    }
+  const struct iwl_cfg* cfg;
+  status = iwl_pci_config(pci_info.device_id, subsystem_device_id, &cfg);
+  if (status != ZX_OK) {
+    IWL_ERR(iwl_trans, "Failed to find PCI config: %s\n", zx_status_get_string(status));
+    return ZX_ERR_NOT_SUPPORTED;
+  }
 
-    iwl_trans = iwl_trans_pcie_alloc(&pci, cfg);
-    if (!iwl_trans) {
-        IWL_ERR(iwl_trans, "Failed to allocate PCIE transport: %s\n", zx_status_get_string(status));
-        return ZX_ERR_NO_MEMORY;
-    }
+  iwl_trans = iwl_trans_pcie_alloc(&pci, cfg);
+  if (!iwl_trans) {
+    IWL_ERR(iwl_trans, "Failed to allocate PCIE transport: %s\n", zx_status_get_string(status));
+    return ZX_ERR_NO_MEMORY;
+  }
 
-    if (!iwl_trans->cfg->csr) {
-        IWL_ERR(iwl_trans, "CSR addresses aren't configured\n");
-        return ZX_ERR_BAD_STATE;
-    }
+  if (!iwl_trans->cfg->csr) {
+    IWL_ERR(iwl_trans, "CSR addresses aren't configured\n");
+    return ZX_ERR_BAD_STATE;
+  }
 
-    /*
-     * special-case 7265D, it has the same PCI IDs.
-     *
-     * Note that because we already pass the cfg to the transport above,
-     * all the parameters that the transport uses must, until that is
-     * changed, be identical to the ones in the 7265D configuration.
-     */
-    const struct iwl_cfg* cfg_7265d = NULL;
-    if (iwl_trans->cfg == &iwl7265_2ac_cfg) {
-        cfg_7265d = &iwl7265d_2ac_cfg;
-    } else if (iwl_trans->cfg == &iwl7265_2n_cfg) {
-        cfg_7265d = &iwl7265d_2n_cfg;
-    } else if (iwl_trans->cfg == &iwl7265_n_cfg) {
-        cfg_7265d = &iwl7265d_n_cfg;
-    }
-    if (cfg_7265d && (iwl_trans->hw_rev & CSR_HW_REV_TYPE_MSK) == CSR_HW_REV_TYPE_7265D) {
-        iwl_trans->cfg = cfg_7265d;
-    }
+  /*
+   * special-case 7265D, it has the same PCI IDs.
+   *
+   * Note that because we already pass the cfg to the transport above,
+   * all the parameters that the transport uses must, until that is
+   * changed, be identical to the ones in the 7265D configuration.
+   */
+  const struct iwl_cfg* cfg_7265d = NULL;
+  if (iwl_trans->cfg == &iwl7265_2ac_cfg) {
+    cfg_7265d = &iwl7265d_2ac_cfg;
+  } else if (iwl_trans->cfg == &iwl7265_2n_cfg) {
+    cfg_7265d = &iwl7265d_2n_cfg;
+  } else if (iwl_trans->cfg == &iwl7265_n_cfg) {
+    cfg_7265d = &iwl7265d_n_cfg;
+  }
+  if (cfg_7265d && (iwl_trans->hw_rev & CSR_HW_REV_TYPE_MSK) == CSR_HW_REV_TYPE_7265D) {
+    iwl_trans->cfg = cfg_7265d;
+  }
 
 #if 0  // NEEDS_PORTING
 #if CPTCFG_IWLMVM || CPTCFG_IWLFMAC
@@ -1093,35 +1092,35 @@ static zx_status_t iwl_pci_bind(void* ctx, zx_device_t* dev) {
 #endif  // CPTCFG_IWLMVM || CPTCFG_IWLFMAC
 #endif  // NEEDS_PORTING
 
-    device_add_args_t args = {
-        .version = DEVICE_ADD_ARGS_VERSION,
-        .name = "iwlwifi-wlanphy",
-        .ctx = iwl_trans,
-        .ops = &device_ops,
-        .proto_id = ZX_PROTOCOL_WLANPHY_IMPL,
-        .proto_ops = &wlanphy_ops,
-        .flags = DEVICE_ADD_INVISIBLE,
-    };
+  device_add_args_t args = {
+      .version = DEVICE_ADD_ARGS_VERSION,
+      .name = "iwlwifi-wlanphy",
+      .ctx = iwl_trans,
+      .ops = &device_ops,
+      .proto_id = ZX_PROTOCOL_WLANPHY_IMPL,
+      .proto_ops = &wlanphy_ops,
+      .flags = DEVICE_ADD_INVISIBLE,
+  };
 
-    status = device_add(dev, &args, &iwl_trans->zxdev);
-    if (status != ZX_OK) {
-        IWL_ERR(iwl_trans, "Failed to create device: %s\n", zx_status_get_string(status));
-        free(iwl_trans);
-        return status;
-    }
+  status = device_add(dev, &args, &iwl_trans->zxdev);
+  if (status != ZX_OK) {
+    IWL_ERR(iwl_trans, "Failed to create device: %s\n", zx_status_get_string(status));
+    free(iwl_trans);
+    return status;
+  }
 
-    status = iwl_drv_start(iwl_trans);
-    if (status != ZX_OK) {
-        IWL_ERR(iwl_trans, "Failed to start driver: %s\n", zx_status_get_string(status));
-        goto fail_remove_device;
-    }
+  status = iwl_drv_start(iwl_trans);
+  if (status != ZX_OK) {
+    IWL_ERR(iwl_trans, "Failed to start driver: %s\n", zx_status_get_string(status));
+    goto fail_remove_device;
+  }
 
-    /* register transport layer debugfs here */
-    status = iwl_trans_pcie_dbgfs_register(iwl_trans);
-    if (status != ZX_OK) {
-        IWL_ERR(iwl_trans, "Failed to register debugfs: %s\n", zx_status_get_string(status));
-        goto fail_stop_device;
-    }
+  /* register transport layer debugfs here */
+  status = iwl_trans_pcie_dbgfs_register(iwl_trans);
+  if (status != ZX_OK) {
+    IWL_ERR(iwl_trans, "Failed to register debugfs: %s\n", zx_status_get_string(status));
+    goto fail_stop_device;
+  }
 
 #if 0   // NEEDS_PORTING
     /* if RTPM is in use, enable it in our device */
@@ -1144,13 +1143,13 @@ static zx_status_t iwl_pci_bind(void* ctx, zx_device_t* dev) {
     }
 #endif  // NEEDS_PORTING
 
-    return ZX_OK;
+  return ZX_OK;
 
 fail_stop_device:
-    iwl_drv_stop(iwl_trans->drv);
+  iwl_drv_stop(iwl_trans->drv);
 fail_remove_device:
-    device_remove(iwl_trans->zxdev);
-    return status;
+  device_remove(iwl_trans->zxdev);
+  return status;
 }
 
 static zx_driver_ops_t iwlwifi_pci_driver_ops = {

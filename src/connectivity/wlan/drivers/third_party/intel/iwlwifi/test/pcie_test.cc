@@ -34,7 +34,7 @@ struct iwl_trans_pcie_wrapper {
 void write32_wrapper(struct iwl_trans* trans, uint32_t ofs, uint32_t val);
 
 class TransOps {
-public:
+ public:
   virtual void write32(uint32_t ofs, uint32_t val) = 0;
 };
 
@@ -48,9 +48,7 @@ class PcieTest : public ::testing::Test, TransOps {
     trans_pcie_ = &wrapper->trans_pcie;
   }
 
-  ~PcieTest() {
-    iwl_trans_free(trans_);
-  }
+  ~PcieTest() { iwl_trans_free(trans_); }
 
   MOCK_METHOD2(write32, void(uint32_t ofs, uint32_t val));
 

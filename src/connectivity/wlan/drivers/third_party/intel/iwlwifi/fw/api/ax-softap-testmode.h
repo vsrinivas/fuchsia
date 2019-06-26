@@ -55,18 +55,18 @@
  * @reserved: reserved for DW alignment
  */
 struct trig_frame_common_softap_testmode {
-    __le16 cmn_lsig_len;
-    uint8_t cmn_cascade_indication;
-    uint8_t cmn_carrier_sense_req;
-    uint8_t cmn_gi_ltf;
-    uint8_t cmn_mu_mimo_ltf;
-    uint8_t cmn_he_ltf_num;
-    uint8_t cmn_ldpc_ext_sym;
-    uint8_t cmn_packet_extension;
-    __le16 cmn_spatial_reuse;
-    uint8_t cmn_doppler;
-    __le16 cmn_res_he_sig_a;
-    __le16 reserved;
+  __le16 cmn_lsig_len;
+  uint8_t cmn_cascade_indication;
+  uint8_t cmn_carrier_sense_req;
+  uint8_t cmn_gi_ltf;
+  uint8_t cmn_mu_mimo_ltf;
+  uint8_t cmn_he_ltf_num;
+  uint8_t cmn_ldpc_ext_sym;
+  uint8_t cmn_packet_extension;
+  __le16 cmn_spatial_reuse;
+  uint8_t cmn_doppler;
+  __le16 cmn_res_he_sig_a;
+  __le16 reserved;
 } __packed; /* TRIG_FRAME_COMMON_SOFTAP_TESTMODE_API_S_VER_1 */
 
 /**
@@ -84,13 +84,13 @@ struct trig_frame_common_softap_testmode {
  * @usr_target_rssi: Target RSSI
  */
 struct trig_frame_user_softap_testmode {
-    __le16 usr_assoc_id;
-    uint8_t usr_rsrc_unit_alloc;
-    uint8_t usr_coding_type;
-    uint8_t usr_mcs;
-    uint8_t usr_dcm;
-    uint8_t usr_ss_allocation;
-    uint8_t usr_target_rssi;
+  __le16 usr_assoc_id;
+  uint8_t usr_rsrc_unit_alloc;
+  uint8_t usr_coding_type;
+  uint8_t usr_mcs;
+  uint8_t usr_dcm;
+  uint8_t usr_ss_allocation;
+  uint8_t usr_target_rssi;
 } __packed; /* TRIG_FRAME_USER_SOFTAP_TESTMODE_API_S_VER_1 */
 
 /**
@@ -105,10 +105,10 @@ struct trig_frame_user_softap_testmode {
  * @preferred_ac: Preferred AC
  */
 struct trig_frame_user_basic_softap_testmode {
-    uint8_t usr_space_factor;
-    uint8_t tid_agg_limit;
-    uint8_t preferred_ac_enabled;
-    uint8_t preferred_ac;
+  uint8_t usr_space_factor;
+  uint8_t tid_agg_limit;
+  uint8_t preferred_ac_enabled;
+  uint8_t preferred_ac;
 } __packed; /* TRIG_FRAME_USER_BASIC_SOFTAP_TESTMODE_API_S_VER_1 */
 
 /**
@@ -126,13 +126,13 @@ struct trig_frame_user_basic_softap_testmode {
  * @reserved_for_addr2: addr data type in FW is aligned to 8 bytes
  */
 struct trig_frame_softap_testmode {
-    __le16 pad_byte_count;
-    uint8_t per_user_count;
-    uint8_t reserved;
-    uint8_t addr1[6];
-    __le16 reserved_for_addr1;
-    uint8_t addr2[6];
-    __le16 reserved_for_addr2;
+  __le16 pad_byte_count;
+  uint8_t per_user_count;
+  uint8_t reserved;
+  uint8_t addr1[6];
+  __le16 reserved_for_addr1;
+  uint8_t addr2[6];
+  __le16 reserved_for_addr2;
 } __packed; /* TRIG_FRAME_SOFTAP_TESTMODE_API_S_VER_1 */
 
 /**
@@ -154,10 +154,10 @@ struct trig_frame_softap_testmode {
  *          for each trigger frame
  */
 struct trig_frame_ax_softap_dl_basic {
-    struct trig_frame_softap_testmode frame_params;
-    struct trig_frame_common_softap_testmode common;
-    struct trig_frame_user_softap_testmode per_user[3];
-    struct trig_frame_user_basic_softap_testmode per_user_basic[3];
+  struct trig_frame_softap_testmode frame_params;
+  struct trig_frame_common_softap_testmode common;
+  struct trig_frame_user_softap_testmode per_user[3];
+  struct trig_frame_user_basic_softap_testmode per_user_basic[3];
 } __packed; /* TRIG_FRAME_SOFTAP_TESTMODE_DL_BASIC_API_S_VER_1 */
 
 /**
@@ -174,11 +174,11 @@ struct trig_frame_ax_softap_dl_basic {
  *      be configured
  */
 struct ax_softap_testmode_dl_basic_cmd {
-    uint8_t enable;
-    uint8_t txop_duration_disable;
-    uint8_t configured_frames_count;
-    uint8_t reserved;
-    struct trig_frame_ax_softap_dl_basic frames[3];
+  uint8_t enable;
+  uint8_t txop_duration_disable;
+  uint8_t configured_frames_count;
+  uint8_t reserved;
+  struct trig_frame_ax_softap_dl_basic frames[3];
 } __packed; /* AX_SOFTAP_TESTMODE_DL_BASIC_API_S_VER_1 */
 
 /**
@@ -192,9 +192,9 @@ struct ax_softap_testmode_dl_basic_cmd {
  * @reserved: reserved for DW alignment
  */
 struct trig_frame_bar_tid_ax_softap_testmode_dl_mu_bar {
-    __le16 association_id;
-    uint8_t ba_ssn_bitmap_size;
-    uint8_t reserved;
+  __le16 association_id;
+  uint8_t ba_ssn_bitmap_size;
+  uint8_t reserved;
 } __packed; /* TRIG_FRAME_BAR_TID_SOFTAP_TESTMODE_DL_MU_BAR_API_S_VER_1 */
 
 /**
@@ -211,11 +211,11 @@ struct trig_frame_bar_tid_ax_softap_testmode_dl_mu_bar {
  * @per_tid: MU-BAR trigger frame configuration per TID
  */
 struct trig_frame_bar_ax_softap_testmode_dl_mu_bar {
-    uint8_t block_ack_policy;
-    uint8_t block_ack_type;
-    uint8_t tid_count;
-    uint8_t reserved;
-    struct trig_frame_bar_tid_ax_softap_testmode_dl_mu_bar per_tid[3];
+  uint8_t block_ack_policy;
+  uint8_t block_ack_type;
+  uint8_t tid_count;
+  uint8_t reserved;
+  struct trig_frame_bar_tid_ax_softap_testmode_dl_mu_bar per_tid[3];
 } __packed; /* TRIG_FRAME_BAR_SOFTAP_TESTMODE_DL_MU_BAR_API_S_VER_1 */
 
 /**
@@ -236,10 +236,10 @@ struct trig_frame_bar_ax_softap_testmode_dl_mu_bar {
  *   per user sections can be configured in this mode for each trigger frame
  */
 struct trig_frame_ax_softap_dl_mu_bar {
-    struct trig_frame_softap_testmode frame_params;
-    struct trig_frame_common_softap_testmode common;
-    struct trig_frame_user_softap_testmode per_user[3];
-    struct trig_frame_bar_ax_softap_testmode_dl_mu_bar bar[3];
+  struct trig_frame_softap_testmode frame_params;
+  struct trig_frame_common_softap_testmode common;
+  struct trig_frame_user_softap_testmode per_user[3];
+  struct trig_frame_bar_ax_softap_testmode_dl_mu_bar bar[3];
 } __packed; /* TRIG_FRAME_SOFTAP_TESTMODE_DL_MU_BAR_API_S_VER_1 */
 
 /**
@@ -252,11 +252,11 @@ struct trig_frame_ax_softap_dl_mu_bar {
  * @frame: the trigger frame content
  */
 struct ax_softap_testmode_dl_mu_bar_cmd {
-    uint8_t enable;
-    __le16 reserved1;
-    uint8_t reserved2;
-    __le32 rate_n_flags;
-    struct trig_frame_ax_softap_dl_mu_bar frame;
+  uint8_t enable;
+  __le16 reserved1;
+  uint8_t reserved2;
+  __le32 rate_n_flags;
+  struct trig_frame_ax_softap_dl_mu_bar frame;
 } __packed; /* AX_SOFTAP_TESTMODE_DL_MU_BAR_API_S_VER_1 */
 
 /**
@@ -271,11 +271,11 @@ struct ax_softap_testmode_dl_mu_bar_cmd {
  * @rate_n_flags: rate for TX operation of the configured trigger frame
  */
 struct per_trig_params_ax_softap_ul {
-    __le16 assoc_id;
-    __le16 duration;
-    uint8_t addr1[6];
-    __le16 reserved_for_addr1;
-    __le32 rate_n_flags;
+  __le16 assoc_id;
+  __le16 duration;
+  uint8_t addr1[6];
+  __le16 reserved_for_addr1;
+  __le32 rate_n_flags;
 } __packed; /* PER_TRIG_PARAMS_SOFTAP_TESTMODE_UL_API_S_VER_1 */
 
 /**
@@ -297,10 +297,10 @@ struct per_trig_params_ax_softap_ul {
  *          mode for each trigger frame
  */
 struct trig_frame_ax_softap_ul {
-    struct trig_frame_softap_testmode frame_params;
-    struct trig_frame_common_softap_testmode common;
-    struct trig_frame_user_softap_testmode per_user[3];
-    struct trig_frame_user_basic_softap_testmode per_user_basic[3];
+  struct trig_frame_softap_testmode frame_params;
+  struct trig_frame_common_softap_testmode common;
+  struct trig_frame_user_softap_testmode per_user[3];
+  struct trig_frame_user_basic_softap_testmode per_user_basic[3];
 } __packed; /* TRIG_FRAME_SOFTAP_TESTMODE_UL_API_S_VER_1 */
 
 /**
@@ -315,12 +315,12 @@ struct trig_frame_ax_softap_ul {
  * @per_trigger: params to override config for each trigger in a sequence
  */
 struct ax_softap_testmode_ul_cmd {
-    uint8_t enable;
-    uint8_t trig_frame_periodic_msec;
-    __le16 reserved;
-    struct trig_frame_ax_softap_ul frame;
-    __le32 number_of_triggers_in_sequence;
-    struct per_trig_params_ax_softap_ul per_trigger[4];
+  uint8_t enable;
+  uint8_t trig_frame_periodic_msec;
+  __le16 reserved;
+  struct trig_frame_ax_softap_ul frame;
+  __le32 number_of_triggers_in_sequence;
+  struct per_trig_params_ax_softap_ul per_trigger[4];
 } __packed; /* AX_SOFTAP_TESTMODE_UL_API_S_VER_2 */
 
 /**
@@ -331,9 +331,9 @@ struct ax_softap_testmode_ul_cmd {
  * @reserved2: reserved for DW alignment
  */
 struct ax_softap_client_testmode_cmd {
-    uint8_t enable;
-    uint8_t reserved1;
-    __le16 reserved2;
+  uint8_t enable;
+  uint8_t reserved1;
+  __le16 reserved2;
 } __packed; /* AX_SOFTAP_CLIENT_TESTMODE_API_S_VER_1 */
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_AX_SOFTAP_TESTMODE_H_

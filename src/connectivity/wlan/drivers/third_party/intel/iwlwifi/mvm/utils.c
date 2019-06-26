@@ -34,7 +34,6 @@
  *
  *****************************************************************************/
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fuchsia_porting.h"
-
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/rs.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-csr.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-debug.h"
@@ -47,56 +46,64 @@
  * CMD_WANT_SKB is set in cmd->flags.
  */
 zx_status_t iwl_mvm_send_cmd(struct iwl_mvm* mvm, struct iwl_host_cmd* cmd) {
-    zx_status_t ret;
+  zx_status_t ret;
 
 #if defined(CPTCFG_IWLWIFI_DEBUGFS) && defined(CONFIG_PM_SLEEP)
-    if (WARN_ON(mvm->d3_test_active)) { return -EIO; }
+  if (WARN_ON(mvm->d3_test_active)) {
+    return -EIO;
+  }
 #endif
 
-    /*
-     * Synchronous commands from this op-mode must hold
-     * the mutex, this ensures we don't try to send two
-     * (or more) synchronous commands at a time.
-     */
-    if (!(cmd->flags & CMD_ASYNC)) {
-        lockdep_assert_held(&mvm->mutex);
-        if (!(cmd->flags & CMD_SEND_IN_IDLE)) { iwl_mvm_ref(mvm, IWL_MVM_REF_SENDING_CMD); }
+  /*
+   * Synchronous commands from this op-mode must hold
+   * the mutex, this ensures we don't try to send two
+   * (or more) synchronous commands at a time.
+   */
+  if (!(cmd->flags & CMD_ASYNC)) {
+    lockdep_assert_held(&mvm->mutex);
+    if (!(cmd->flags & CMD_SEND_IN_IDLE)) {
+      iwl_mvm_ref(mvm, IWL_MVM_REF_SENDING_CMD);
     }
+  }
 
-    ret = iwl_trans_send_cmd(mvm->trans, cmd);
+  ret = iwl_trans_send_cmd(mvm->trans, cmd);
 
-    if (!(cmd->flags & (CMD_ASYNC | CMD_SEND_IN_IDLE))) {
-        iwl_mvm_unref(mvm, IWL_MVM_REF_SENDING_CMD);
-    }
+  if (!(cmd->flags & (CMD_ASYNC | CMD_SEND_IN_IDLE))) {
+    iwl_mvm_unref(mvm, IWL_MVM_REF_SENDING_CMD);
+  }
 
-    /*
-     * If the caller wants the SKB, then don't hide any problems, the
-     * caller might access the response buffer which will be NULL if
-     * the command failed.
-     */
-    if (cmd->flags & CMD_WANT_SKB) { return ret; }
-
-    /* Silently ignore failures if ZX_ERR_BAD_STATE is asserted */
-    if (!ret || ret == ZX_ERR_BAD_STATE) { return ZX_OK; }
+  /*
+   * If the caller wants the SKB, then don't hide any problems, the
+   * caller might access the response buffer which will be NULL if
+   * the command failed.
+   */
+  if (cmd->flags & CMD_WANT_SKB) {
     return ret;
+  }
+
+  /* Silently ignore failures if ZX_ERR_BAD_STATE is asserted */
+  if (!ret || ret == ZX_ERR_BAD_STATE) {
+    return ZX_OK;
+  }
+  return ret;
 }
 
 int iwl_mvm_send_cmd_pdu(struct iwl_mvm* mvm, uint32_t id, uint32_t flags, uint16_t len,
                          const void* data) {
-    struct iwl_host_cmd cmd = {
-        .id = id,
-        .len =
-            {
-                len,
-            },
-        .data =
-            {
-                data,
-            },
-        .flags = flags,
-    };
+  struct iwl_host_cmd cmd = {
+      .id = id,
+      .len =
+          {
+              len,
+          },
+      .data =
+          {
+              data,
+          },
+      .flags = flags,
+  };
 
-    return iwl_mvm_send_cmd(mvm, &cmd);
+  return iwl_mvm_send_cmd(mvm, &cmd);
 }
 
 /*
@@ -104,52 +111,54 @@ int iwl_mvm_send_cmd_pdu(struct iwl_mvm* mvm, uint32_t id, uint32_t flags, uint1
  */
 zx_status_t iwl_mvm_send_cmd_status(struct iwl_mvm* mvm, struct iwl_host_cmd* cmd,
                                     uint32_t* status) {
-    struct iwl_rx_packet* pkt;
-    struct iwl_cmd_response* resp;
-    int ret, resp_len;
+  struct iwl_rx_packet* pkt;
+  struct iwl_cmd_response* resp;
+  int ret, resp_len;
 
-    lockdep_assert_held(&mvm->mutex);
+  lockdep_assert_held(&mvm->mutex);
 
 #if defined(CPTCFG_IWLWIFI_DEBUGFS) && defined(CONFIG_PM_SLEEP)
-    if (WARN_ON(mvm->d3_test_active)) { return -EIO; }
+  if (WARN_ON(mvm->d3_test_active)) {
+    return -EIO;
+  }
 #endif
 
+  /*
+   * Only synchronous commands can wait for status, we use WANT_SKB so the caller can't.
+   */
+  if (cmd->flags & (CMD_ASYNC | CMD_WANT_SKB)) {
+    IWL_WARN(mvm, "cmd flags 0x%x\n", cmd->flags);
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  cmd->flags |= CMD_WANT_SKB;
+
+  ret = iwl_trans_send_cmd(mvm->trans, cmd);
+  if (ret == ZX_ERR_BAD_STATE) {
     /*
-     * Only synchronous commands can wait for status, we use WANT_SKB so the caller can't.
+     * The command failed because of ZX_ERR_BAD_STATE(RFKILL), don't update
+     * the status, leave it as success and return 0.
      */
-    if (cmd->flags & (CMD_ASYNC | CMD_WANT_SKB)) {
-        IWL_WARN(mvm, "cmd flags 0x%x\n", cmd->flags);
-        return ZX_ERR_INVALID_ARGS;
-    }
-
-    cmd->flags |= CMD_WANT_SKB;
-
-    ret = iwl_trans_send_cmd(mvm->trans, cmd);
-    if (ret == ZX_ERR_BAD_STATE) {
-        /*
-         * The command failed because of ZX_ERR_BAD_STATE(RFKILL), don't update
-         * the status, leave it as success and return 0.
-         */
-        return ZX_OK;
-    } else if (ret) {
-        return ret;
-    }
-
-    pkt = cmd->resp_pkt;
-
-    resp_len = iwl_rx_packet_payload_len(pkt);
-    if (resp_len != sizeof(*resp)) {
-        IWL_WARN(mvm, "Rx packet payload length is not expected. expected: %lu, actual: %d\n",
-                      sizeof(*resp), resp_len);
-        ret = ZX_ERR_IO;
-        goto out_free_resp;
-    }
-
-    resp = (void*)pkt->data;
-    *status = le32_to_cpu(resp->status);
-out_free_resp:
-    iwl_free_resp(cmd);
+    return ZX_OK;
+  } else if (ret) {
     return ret;
+  }
+
+  pkt = cmd->resp_pkt;
+
+  resp_len = iwl_rx_packet_payload_len(pkt);
+  if (resp_len != sizeof(*resp)) {
+    IWL_WARN(mvm, "Rx packet payload length is not expected. expected: %lu, actual: %d\n",
+             sizeof(*resp), resp_len);
+    ret = ZX_ERR_IO;
+    goto out_free_resp;
+  }
+
+  resp = (void*)pkt->data;
+  *status = le32_to_cpu(resp->status);
+out_free_resp:
+  iwl_free_resp(cmd);
+  return ret;
 }
 
 /*
@@ -157,19 +166,19 @@ out_free_resp:
  */
 int iwl_mvm_send_cmd_pdu_status(struct iwl_mvm* mvm, uint32_t id, uint16_t len, const void* data,
                                 uint32_t* status) {
-    struct iwl_host_cmd cmd = {
-        .id = id,
-        .len =
-            {
-                len,
-            },
-        .data =
-            {
-                data,
-            },
-    };
+  struct iwl_host_cmd cmd = {
+      .id = id,
+      .len =
+          {
+              len,
+          },
+      .data =
+          {
+              data,
+          },
+  };
 
-    return iwl_mvm_send_cmd_status(mvm, &cmd, status);
+  return iwl_mvm_send_cmd_status(mvm, &cmd, status);
 }
 
 #define IWL_DECLARE_RATE_INFO(r) [IWL_RATE_##r##M_INDEX] = IWL_RATE_##r##M_PLCP
@@ -178,16 +187,13 @@ int iwl_mvm_send_cmd_pdu_status(struct iwl_mvm* mvm, uint32_t id, uint16_t len, 
  * Translate from fw_rate_index (IWL_RATE_XXM_INDEX) to PLCP
  */
 static const uint8_t fw_rate_idx_to_plcp[IWL_RATE_COUNT] = {
-    IWL_DECLARE_RATE_INFO(1),  IWL_DECLARE_RATE_INFO(2),
-    IWL_DECLARE_RATE_INFO(5),  IWL_DECLARE_RATE_INFO(11),
-    IWL_DECLARE_RATE_INFO(6),  IWL_DECLARE_RATE_INFO(9),
-    IWL_DECLARE_RATE_INFO(12), IWL_DECLARE_RATE_INFO(18),
-    IWL_DECLARE_RATE_INFO(24), IWL_DECLARE_RATE_INFO(36),
-    IWL_DECLARE_RATE_INFO(48), IWL_DECLARE_RATE_INFO(54),
+    IWL_DECLARE_RATE_INFO(1),  IWL_DECLARE_RATE_INFO(2),  IWL_DECLARE_RATE_INFO(5),
+    IWL_DECLARE_RATE_INFO(11), IWL_DECLARE_RATE_INFO(6),  IWL_DECLARE_RATE_INFO(9),
+    IWL_DECLARE_RATE_INFO(12), IWL_DECLARE_RATE_INFO(18), IWL_DECLARE_RATE_INFO(24),
+    IWL_DECLARE_RATE_INFO(36), IWL_DECLARE_RATE_INFO(48), IWL_DECLARE_RATE_INFO(54),
 };
 
-zx_status_t iwl_mvm_legacy_rate_to_mac80211_idx(uint32_t rate_n_flags,
-                                                enum nl80211_band band,
+zx_status_t iwl_mvm_legacy_rate_to_mac80211_idx(uint32_t rate_n_flags, enum nl80211_band band,
                                                 int* ptr_idx) {
   int rate = rate_n_flags & RATE_LEGACY_RATE_MSK;
   int idx;
@@ -224,14 +230,14 @@ uint8_t iwl_mvm_mac80211_idx_to_hwrate(int rate_idx) {
 }
 
 void iwl_mvm_rx_fw_error(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb) {
-    struct iwl_rx_packet* pkt = rxb_addr(rxb);
-    struct iwl_error_resp* err_resp = (void*)pkt->data;
+  struct iwl_rx_packet* pkt = rxb_addr(rxb);
+  struct iwl_error_resp* err_resp = (void*)pkt->data;
 
-    IWL_ERR(mvm, "FW Error notification: type 0x%08X cmd_id 0x%02X\n",
-            le32_to_cpu(err_resp->error_type), err_resp->cmd_id);
-    IWL_ERR(mvm, "FW Error notification: seq 0x%04X service 0x%08X\n",
-            le16_to_cpu(err_resp->bad_cmd_seq_num), le32_to_cpu(err_resp->error_service));
-    IWL_ERR(mvm, "FW Error notification: timestamp 0x%016lX\n", le64_to_cpu(err_resp->timestamp));
+  IWL_ERR(mvm, "FW Error notification: type 0x%08X cmd_id 0x%02X\n",
+          le32_to_cpu(err_resp->error_type), err_resp->cmd_id);
+  IWL_ERR(mvm, "FW Error notification: seq 0x%04X service 0x%08X\n",
+          le16_to_cpu(err_resp->bad_cmd_seq_num), le32_to_cpu(err_resp->error_service));
+  IWL_ERR(mvm, "FW Error notification: timestamp 0x%016lX\n", le64_to_cpu(err_resp->timestamp));
 }
 
 /*
@@ -239,11 +245,11 @@ void iwl_mvm_rx_fw_error(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb) {
  * The parameter should also be a combination of ANT_[ABC].
  */
 uint8_t first_antenna(uint8_t mask) {
-    BUILD_BUG_ON(ANT_A != BIT(0)); /* using ffs is wrong if not */
-    if (WARN_ON_ONCE(!mask)) {     /* ffs will return 0 if mask is zeroed */
-        return BIT(0);
-    }
-    return BIT(ffs(mask) - 1);
+  BUILD_BUG_ON(ANT_A != BIT(0)); /* using ffs is wrong if not */
+  if (WARN_ON_ONCE(!mask)) {     /* ffs will return 0 if mask is zeroed */
+    return BIT(0);
+  }
+  return BIT(ffs(mask) - 1);
 }
 
 /*
@@ -253,19 +259,21 @@ uint8_t first_antenna(uint8_t mask) {
  * In order to set it in the tx_cmd, must do BIT(idx).
  */
 uint8_t iwl_mvm_next_antenna(struct iwl_mvm* mvm, uint8_t valid, uint8_t last_idx) {
-    uint8_t ind = last_idx;
-    int i;
+  uint8_t ind = last_idx;
+  int i;
 
-    for (i = 0; i < MAX_ANT_NUM; i++) {
-        ind = (ind + 1) % MAX_ANT_NUM;
-        if (valid & BIT(ind)) { return ind; }
+  for (i = 0; i < MAX_ANT_NUM; i++) {
+    ind = (ind + 1) % MAX_ANT_NUM;
+    if (valid & BIT(ind)) {
+      return ind;
     }
+  }
 
-    IWL_WARN(mvm, "Failed to toggle between antennas 0x%x\n", valid);
-    return last_idx;
+  IWL_WARN(mvm, "Failed to toggle between antennas 0x%x\n", valid);
+  return last_idx;
 }
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
 #define FW_SYSASSERT_CPU_MASK 0xf0000000
 static const struct {
     const char* name;
@@ -312,98 +320,98 @@ static const char* desc_lookup(uint32_t num) {
  * need to be ordered correctly though!
  */
 struct iwl_error_event_table_v1 {
-    uint32_t valid;          /* (nonzero) valid, (0) log is empty */
-    uint32_t error_id;       /* type of error */
-    uint32_t pc;             /* program counter */
-    uint32_t blink1;         /* branch link */
-    uint32_t blink2;         /* branch link */
-    uint32_t ilink1;         /* interrupt link */
-    uint32_t ilink2;         /* interrupt link */
-    uint32_t data1;          /* error-specific data */
-    uint32_t data2;          /* error-specific data */
-    uint32_t data3;          /* error-specific data */
-    uint32_t bcon_time;      /* beacon timer */
-    uint32_t tsf_low;        /* network timestamp function timer */
-    uint32_t tsf_hi;         /* network timestamp function timer */
-    uint32_t gp1;            /* GP1 timer register */
-    uint32_t gp2;            /* GP2 timer register */
-    uint32_t gp3;            /* GP3 timer register */
-    uint32_t ucode_ver;      /* uCode version */
-    uint32_t hw_ver;         /* HW Silicon version */
-    uint32_t brd_ver;        /* HW board version */
-    uint32_t log_pc;         /* log program counter */
-    uint32_t frame_ptr;      /* frame pointer */
-    uint32_t stack_ptr;      /* stack pointer */
-    uint32_t hcmd;           /* last host command header */
-    uint32_t isr0;           /* isr status register LMPM_NIC_ISR0:
-                              * rxtx_flag */
-    uint32_t isr1;           /* isr status register LMPM_NIC_ISR1:
-                              * host_flag */
-    uint32_t isr2;           /* isr status register LMPM_NIC_ISR2:
-                              * enc_flag */
-    uint32_t isr3;           /* isr status register LMPM_NIC_ISR3:
-                              * time_flag */
-    uint32_t isr4;           /* isr status register LMPM_NIC_ISR4:
-                              * wico interrupt */
-    uint32_t isr_pref;       /* isr status register LMPM_NIC_PREF_STAT */
-    uint32_t wait_event;     /* wait event() caller address */
-    uint32_t l2p_control;    /* L2pControlField */
-    uint32_t l2p_duration;   /* L2pDurationField */
-    uint32_t l2p_mhvalid;    /* L2pMhValidBits */
-    uint32_t l2p_addr_match; /* L2pAddrMatchStat */
-    uint32_t lmpm_pmg_sel;   /* indicate which clocks are turned on
-                              * (LMPM_PMG_SEL) */
-    uint32_t u_timestamp;    /* indicate when the date and time of the
-                              * compilation */
-    uint32_t flow_handler;   /* FH read/write pointers, RX credit */
+  uint32_t valid;          /* (nonzero) valid, (0) log is empty */
+  uint32_t error_id;       /* type of error */
+  uint32_t pc;             /* program counter */
+  uint32_t blink1;         /* branch link */
+  uint32_t blink2;         /* branch link */
+  uint32_t ilink1;         /* interrupt link */
+  uint32_t ilink2;         /* interrupt link */
+  uint32_t data1;          /* error-specific data */
+  uint32_t data2;          /* error-specific data */
+  uint32_t data3;          /* error-specific data */
+  uint32_t bcon_time;      /* beacon timer */
+  uint32_t tsf_low;        /* network timestamp function timer */
+  uint32_t tsf_hi;         /* network timestamp function timer */
+  uint32_t gp1;            /* GP1 timer register */
+  uint32_t gp2;            /* GP2 timer register */
+  uint32_t gp3;            /* GP3 timer register */
+  uint32_t ucode_ver;      /* uCode version */
+  uint32_t hw_ver;         /* HW Silicon version */
+  uint32_t brd_ver;        /* HW board version */
+  uint32_t log_pc;         /* log program counter */
+  uint32_t frame_ptr;      /* frame pointer */
+  uint32_t stack_ptr;      /* stack pointer */
+  uint32_t hcmd;           /* last host command header */
+  uint32_t isr0;           /* isr status register LMPM_NIC_ISR0:
+                            * rxtx_flag */
+  uint32_t isr1;           /* isr status register LMPM_NIC_ISR1:
+                            * host_flag */
+  uint32_t isr2;           /* isr status register LMPM_NIC_ISR2:
+                            * enc_flag */
+  uint32_t isr3;           /* isr status register LMPM_NIC_ISR3:
+                            * time_flag */
+  uint32_t isr4;           /* isr status register LMPM_NIC_ISR4:
+                            * wico interrupt */
+  uint32_t isr_pref;       /* isr status register LMPM_NIC_PREF_STAT */
+  uint32_t wait_event;     /* wait event() caller address */
+  uint32_t l2p_control;    /* L2pControlField */
+  uint32_t l2p_duration;   /* L2pDurationField */
+  uint32_t l2p_mhvalid;    /* L2pMhValidBits */
+  uint32_t l2p_addr_match; /* L2pAddrMatchStat */
+  uint32_t lmpm_pmg_sel;   /* indicate which clocks are turned on
+                            * (LMPM_PMG_SEL) */
+  uint32_t u_timestamp;    /* indicate when the date and time of the
+                            * compilation */
+  uint32_t flow_handler;   /* FH read/write pointers, RX credit */
 } __packed /* LOG_ERROR_TABLE_API_S_VER_1 */;
 
 struct iwl_error_event_table {
-    uint32_t valid;          /* (nonzero) valid, (0) log is empty */
-    uint32_t error_id;       /* type of error */
-    uint32_t trm_hw_status0; /* TRM HW status */
-    uint32_t trm_hw_status1; /* TRM HW status */
-    uint32_t blink2;         /* branch link */
-    uint32_t ilink1;         /* interrupt link */
-    uint32_t ilink2;         /* interrupt link */
-    uint32_t data1;          /* error-specific data */
-    uint32_t data2;          /* error-specific data */
-    uint32_t data3;          /* error-specific data */
-    uint32_t bcon_time;      /* beacon timer */
-    uint32_t tsf_low;        /* network timestamp function timer */
-    uint32_t tsf_hi;         /* network timestamp function timer */
-    uint32_t gp1;            /* GP1 timer register */
-    uint32_t gp2;            /* GP2 timer register */
-    uint32_t fw_rev_type;    /* firmware revision type */
-    uint32_t major;          /* uCode version major */
-    uint32_t minor;          /* uCode version minor */
-    uint32_t hw_ver;         /* HW Silicon version */
-    uint32_t brd_ver;        /* HW board version */
-    uint32_t log_pc;         /* log program counter */
-    uint32_t frame_ptr;      /* frame pointer */
-    uint32_t stack_ptr;      /* stack pointer */
-    uint32_t hcmd;           /* last host command header */
-    uint32_t isr0;           /* isr status register LMPM_NIC_ISR0:
-                              * rxtx_flag */
-    uint32_t isr1;           /* isr status register LMPM_NIC_ISR1:
-                              * host_flag */
-    uint32_t isr2;           /* isr status register LMPM_NIC_ISR2:
-                              * enc_flag */
-    uint32_t isr3;           /* isr status register LMPM_NIC_ISR3:
-                              * time_flag */
-    uint32_t isr4;           /* isr status register LMPM_NIC_ISR4:
-                              * wico interrupt */
-    uint32_t last_cmd_id;    /* last HCMD id handled by the firmware */
-    uint32_t wait_event;     /* wait event() caller address */
-    uint32_t l2p_control;    /* L2pControlField */
-    uint32_t l2p_duration;   /* L2pDurationField */
-    uint32_t l2p_mhvalid;    /* L2pMhValidBits */
-    uint32_t l2p_addr_match; /* L2pAddrMatchStat */
-    uint32_t lmpm_pmg_sel;   /* indicate which clocks are turned on
-                              * (LMPM_PMG_SEL) */
-    uint32_t u_timestamp;    /* indicate when the date and time of the
-                              * compilation */
-    uint32_t flow_handler;   /* FH read/write pointers, RX credit */
+  uint32_t valid;          /* (nonzero) valid, (0) log is empty */
+  uint32_t error_id;       /* type of error */
+  uint32_t trm_hw_status0; /* TRM HW status */
+  uint32_t trm_hw_status1; /* TRM HW status */
+  uint32_t blink2;         /* branch link */
+  uint32_t ilink1;         /* interrupt link */
+  uint32_t ilink2;         /* interrupt link */
+  uint32_t data1;          /* error-specific data */
+  uint32_t data2;          /* error-specific data */
+  uint32_t data3;          /* error-specific data */
+  uint32_t bcon_time;      /* beacon timer */
+  uint32_t tsf_low;        /* network timestamp function timer */
+  uint32_t tsf_hi;         /* network timestamp function timer */
+  uint32_t gp1;            /* GP1 timer register */
+  uint32_t gp2;            /* GP2 timer register */
+  uint32_t fw_rev_type;    /* firmware revision type */
+  uint32_t major;          /* uCode version major */
+  uint32_t minor;          /* uCode version minor */
+  uint32_t hw_ver;         /* HW Silicon version */
+  uint32_t brd_ver;        /* HW board version */
+  uint32_t log_pc;         /* log program counter */
+  uint32_t frame_ptr;      /* frame pointer */
+  uint32_t stack_ptr;      /* stack pointer */
+  uint32_t hcmd;           /* last host command header */
+  uint32_t isr0;           /* isr status register LMPM_NIC_ISR0:
+                            * rxtx_flag */
+  uint32_t isr1;           /* isr status register LMPM_NIC_ISR1:
+                            * host_flag */
+  uint32_t isr2;           /* isr status register LMPM_NIC_ISR2:
+                            * enc_flag */
+  uint32_t isr3;           /* isr status register LMPM_NIC_ISR3:
+                            * time_flag */
+  uint32_t isr4;           /* isr status register LMPM_NIC_ISR4:
+                            * wico interrupt */
+  uint32_t last_cmd_id;    /* last HCMD id handled by the firmware */
+  uint32_t wait_event;     /* wait event() caller address */
+  uint32_t l2p_control;    /* L2pControlField */
+  uint32_t l2p_duration;   /* L2pDurationField */
+  uint32_t l2p_mhvalid;    /* L2pMhValidBits */
+  uint32_t l2p_addr_match; /* L2pAddrMatchStat */
+  uint32_t lmpm_pmg_sel;   /* indicate which clocks are turned on
+                            * (LMPM_PMG_SEL) */
+  uint32_t u_timestamp;    /* indicate when the date and time of the
+                            * compilation */
+  uint32_t flow_handler;   /* FH read/write pointers, RX credit */
 } __packed /* LOG_ERROR_TABLE_API_S_VER_3 */;
 
 /*
@@ -414,21 +422,21 @@ struct iwl_error_event_table {
  * need to be ordered correctly though!
  */
 struct iwl_umac_error_event_table {
-    uint32_t valid;    /* (nonzero) valid, (0) log is empty */
-    uint32_t error_id; /* type of error */
-    uint32_t blink1;   /* branch link */
-    uint32_t blink2;   /* branch link */
-    uint32_t ilink1;   /* interrupt link */
-    uint32_t ilink2;   /* interrupt link */
-    uint32_t data1;    /* error-specific data */
-    uint32_t data2;    /* error-specific data */
-    uint32_t data3;    /* error-specific data */
-    uint32_t umac_major;
-    uint32_t umac_minor;
-    uint32_t frame_pointer; /* core register 27*/
-    uint32_t stack_pointer; /* core register 28 */
-    uint32_t cmd_header;    /* latest host cmd sent to UMAC */
-    uint32_t nic_isr_pref;  /* ISR status register */
+  uint32_t valid;    /* (nonzero) valid, (0) log is empty */
+  uint32_t error_id; /* type of error */
+  uint32_t blink1;   /* branch link */
+  uint32_t blink2;   /* branch link */
+  uint32_t ilink1;   /* interrupt link */
+  uint32_t ilink2;   /* interrupt link */
+  uint32_t data1;    /* error-specific data */
+  uint32_t data2;    /* error-specific data */
+  uint32_t data3;    /* error-specific data */
+  uint32_t umac_major;
+  uint32_t umac_minor;
+  uint32_t frame_pointer; /* core register 27*/
+  uint32_t stack_pointer; /* core register 28 */
+  uint32_t cmd_header;    /* latest host cmd sent to UMAC */
+  uint32_t nic_isr_pref;  /* ISR status register */
 } __packed;
 
 #define ERROR_START_OFFSET (1 * sizeof(uint32_t))
@@ -560,50 +568,52 @@ static void iwl_mvm_dump_lmac_error_log(struct iwl_mvm* mvm, uint8_t lmac_num) {
 }
 
 void iwl_mvm_dump_nic_error_log(struct iwl_mvm* mvm) {
-    if (!test_bit(STATUS_DEVICE_ENABLED, &mvm->trans->status)) {
-        IWL_ERR(mvm, "DEVICE_ENABLED bit is not set. Aborting dump.\n");
-        return;
-    }
+  if (!test_bit(STATUS_DEVICE_ENABLED, &mvm->trans->status)) {
+    IWL_ERR(mvm, "DEVICE_ENABLED bit is not set. Aborting dump.\n");
+    return;
+  }
 
-    iwl_mvm_dump_lmac_error_log(mvm, 0);
+  iwl_mvm_dump_lmac_error_log(mvm, 0);
 
-    if (mvm->error_event_table[1]) { iwl_mvm_dump_lmac_error_log(mvm, 1); }
+  if (mvm->error_event_table[1]) {
+    iwl_mvm_dump_lmac_error_log(mvm, 1);
+  }
 
-    iwl_mvm_dump_umac_error_log(mvm);
+  iwl_mvm_dump_umac_error_log(mvm);
 }
 
 zx_status_t iwl_mvm_reconfig_scd(struct iwl_mvm* mvm, int queue, int fifo, int sta_id, int tid,
                                  int frame_limit, uint16_t ssn) {
-    struct iwl_scd_txq_cfg_cmd cmd = {
-        .scd_queue = queue,
-        .action = SCD_CFG_ENABLE_QUEUE,
-        .window = frame_limit,
-        .sta_id = sta_id,
-        .ssn = cpu_to_le16(ssn),
-        .tx_fifo = fifo,
-        .aggregate = (queue >= IWL_MVM_DQA_MIN_DATA_QUEUE || queue == IWL_MVM_DQA_BSS_CLIENT_QUEUE),
-        .tid = tid,
-    };
-    zx_status_t ret;
+  struct iwl_scd_txq_cfg_cmd cmd = {
+      .scd_queue = queue,
+      .action = SCD_CFG_ENABLE_QUEUE,
+      .window = frame_limit,
+      .sta_id = sta_id,
+      .ssn = cpu_to_le16(ssn),
+      .tx_fifo = fifo,
+      .aggregate = (queue >= IWL_MVM_DQA_MIN_DATA_QUEUE || queue == IWL_MVM_DQA_BSS_CLIENT_QUEUE),
+      .tid = tid,
+  };
+  zx_status_t ret;
 
-    if (iwl_mvm_has_new_tx_api(mvm) != ZX_OK) {
-        IWL_WARN(mvm, "iwl_mvm_has_new_tx_api() returns true%s\n", "");
-        return ZX_ERR_INVALID_ARGS;
-    }
+  if (iwl_mvm_has_new_tx_api(mvm) != ZX_OK) {
+    IWL_WARN(mvm, "iwl_mvm_has_new_tx_api() returns true%s\n", "");
+    return ZX_ERR_INVALID_ARGS;
+  }
 
-    if (mvm->queue_info[queue].tid_bitmap == 0) {
-        IWL_WARN(mvm, "Trying to reconfig unallocated queue %d\n", queue);
-        return ZX_ERR_BAD_HANDLE;
-    }
+  if (mvm->queue_info[queue].tid_bitmap == 0) {
+    IWL_WARN(mvm, "Trying to reconfig unallocated queue %d\n", queue);
+    return ZX_ERR_BAD_HANDLE;
+  }
 
-    IWL_DEBUG_TX_QUEUES(mvm, "Reconfig SCD for TXQ #%d\n", queue);
+  IWL_DEBUG_TX_QUEUES(mvm, "Reconfig SCD for TXQ #%d\n", queue);
 
-    ret = iwl_mvm_send_cmd_pdu(mvm, SCD_QUEUE_CFG, 0, sizeof(cmd), &cmd);
-    if (ret != ZX_OK) {
-        IWL_WARN(mvm, "Failed to re-configure queue %d on FIFO %d, ret=%d\n", queue, fifo, ret);
-    }
+  ret = iwl_mvm_send_cmd_pdu(mvm, SCD_QUEUE_CFG, 0, sizeof(cmd), &cmd);
+  if (ret != ZX_OK) {
+    IWL_WARN(mvm, "Failed to re-configure queue %d on FIFO %d, ret=%d\n", queue, fifo, ret);
+  }
 
-    return ret;
+  return ret;
 }
 
 /**
@@ -616,7 +626,7 @@ zx_status_t iwl_mvm_reconfig_scd(struct iwl_mvm* mvm, int queue, int fifo, int s
  * progress.
  */
 int iwl_mvm_send_lq_cmd(struct iwl_mvm* mvm, struct iwl_lq_cmd* lq, bool sync) {
-    return ZX_ERR_NOT_SUPPORTED;
+  return ZX_ERR_NOT_SUPPORTED;
 #if 0   // NEEDS_PORTING
     struct iwl_host_cmd cmd = {
         .id = LQ_CMD,
@@ -683,7 +693,7 @@ void iwl_mvm_update_smps(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
 }
 
 int iwl_mvm_request_statistics(struct iwl_mvm* mvm, bool clear) {
-    return ZX_ERR_NOT_SUPPORTED;
+  return ZX_ERR_NOT_SUPPORTED;
 #if 0   // NEEDS_PORTING
     struct iwl_statistics_cmd scmd = {
         .flags = clear ? cpu_to_le32(IWL_STATISTICS_FLG_CLEAR) : 0,
@@ -709,13 +719,13 @@ int iwl_mvm_request_statistics(struct iwl_mvm* mvm, bool clear) {
 }
 
 void iwl_mvm_accu_radio_stats(struct iwl_mvm* mvm) {
-    mvm->accu_radio_stats.rx_time += mvm->radio_stats.rx_time;
-    mvm->accu_radio_stats.tx_time += mvm->radio_stats.tx_time;
-    mvm->accu_radio_stats.on_time_rf += mvm->radio_stats.on_time_rf;
-    mvm->accu_radio_stats.on_time_scan += mvm->radio_stats.on_time_scan;
+  mvm->accu_radio_stats.rx_time += mvm->radio_stats.rx_time;
+  mvm->accu_radio_stats.tx_time += mvm->radio_stats.tx_time;
+  mvm->accu_radio_stats.on_time_rf += mvm->radio_stats.on_time_rf;
+  mvm->accu_radio_stats.on_time_scan += mvm->radio_stats.on_time_scan;
 }
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
 static void iwl_mvm_diversity_iter(void* _data, uint8_t* mac, struct ieee80211_vif* vif) {
     struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
     bool* result = _data;

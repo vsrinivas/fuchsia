@@ -55,11 +55,11 @@
  *  256 bit key. Otherwise 128 bit key is used.
  */
 enum iwl_fips_test_vector_flags {
-    IWL_FIPS_TEST_VECTOR_FLAGS_AES = BIT(0),
-    IWL_FIPS_TEST_VECTOR_FLAGS_CCM = BIT(1),
-    IWL_FIPS_TEST_VECTOR_FLAGS_GCM = BIT(2),
-    IWL_FIPS_TEST_VECTOR_FLAGS_ENC = BIT(3),
-    IWL_FIPS_TEST_VECTOR_FLAGS_KEY_256 = BIT(5),
+  IWL_FIPS_TEST_VECTOR_FLAGS_AES = BIT(0),
+  IWL_FIPS_TEST_VECTOR_FLAGS_CCM = BIT(1),
+  IWL_FIPS_TEST_VECTOR_FLAGS_GCM = BIT(2),
+  IWL_FIPS_TEST_VECTOR_FLAGS_ENC = BIT(3),
+  IWL_FIPS_TEST_VECTOR_FLAGS_KEY_256 = BIT(5),
 };
 
 /**
@@ -77,15 +77,15 @@ enum iwl_fips_test_vector_flags {
  * @payload: the plaintext to encrypt or the cipher text to decrypt + MIC.
  */
 struct iwl_fips_test_cmd {
-    __le32 flags;
-    __le32 payload_len;
-    __le32 aad_len;
-    uint8_t key[FIPS_MAX_KEY_LEN];
-    uint8_t aad[FIPS_MAX_AAD_LEN];
-    __le16 reserved;
-    uint8_t nonce[FIPS_MAX_NONCE_LEN];
-    uint8_t reserved2[3];
-    uint8_t payload[0];
+  __le32 flags;
+  __le32 payload_len;
+  __le32 aad_len;
+  uint8_t key[FIPS_MAX_KEY_LEN];
+  uint8_t aad[FIPS_MAX_AAD_LEN];
+  __le16 reserved;
+  uint8_t nonce[FIPS_MAX_NONCE_LEN];
+  uint8_t reserved2[3];
+  uint8_t payload[0];
 } __packed; /* AES_SEC_TEST_VECTOR_HDR_API_S_VER_1 */
 
 /**
@@ -95,8 +95,8 @@ struct iwl_fips_test_cmd {
  *  successfully. The result buffer is valid.
  */
 enum iwl_fips_test_status {
-    IWL_FIPS_TEST_STATUS_FAILURE,
-    IWL_FIPS_TEST_STATUS_SUCCESS,
+  IWL_FIPS_TEST_STATUS_FAILURE,
+  IWL_FIPS_TEST_STATUS_SUCCESS,
 };
 
 /**
@@ -106,8 +106,8 @@ enum iwl_fips_test_status {
  *  &enum iwl_fips_test_status).
  */
 struct iwl_fips_test_resp {
-    __le32 len;
-    uint8_t payload[0];
+  __le32 len;
+  uint8_t payload[0];
 } __packed; /* AES_SEC_TEST_VECTOR_RESP_API_S_VER_1 */
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_TESTING_H_

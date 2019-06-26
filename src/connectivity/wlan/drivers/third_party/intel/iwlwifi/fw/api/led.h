@@ -40,7 +40,7 @@
  * @status: LED status (on/off)
  */
 struct iwl_led_cmd {
-    __le32 status;
+  __le32 status;
 } __packed; /* LEDS_CMD_API_S_VER_2 */
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_LED_H_

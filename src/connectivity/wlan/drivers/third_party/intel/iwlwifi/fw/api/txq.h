@@ -60,38 +60,38 @@
  * @IWL_MVM_DQA_MAX_DATA_QUEUE: last TXQ in pool for DATA frames
  */
 enum iwl_mvm_dqa_txq {
-    IWL_MVM_DQA_CMD_QUEUE = 0,
-    IWL_MVM_DQA_AUX_QUEUE = 1,
-    IWL_MVM_DQA_P2P_DEVICE_QUEUE = 2,
-    IWL_MVM_DQA_INJECT_MONITOR_QUEUE = 2,
-    IWL_MVM_DQA_GCAST_QUEUE = 3,
-    IWL_MVM_DQA_BSS_CLIENT_QUEUE = 4,
-    IWL_MVM_DQA_MIN_MGMT_QUEUE = 5,
-    IWL_MVM_DQA_MAX_MGMT_QUEUE = 8,
-    IWL_MVM_DQA_AP_PROBE_RESP_QUEUE = 9,
-    IWL_MVM_DQA_MIN_DATA_QUEUE = 10,
-    IWL_MVM_DQA_MAX_DATA_QUEUE = 31,
+  IWL_MVM_DQA_CMD_QUEUE = 0,
+  IWL_MVM_DQA_AUX_QUEUE = 1,
+  IWL_MVM_DQA_P2P_DEVICE_QUEUE = 2,
+  IWL_MVM_DQA_INJECT_MONITOR_QUEUE = 2,
+  IWL_MVM_DQA_GCAST_QUEUE = 3,
+  IWL_MVM_DQA_BSS_CLIENT_QUEUE = 4,
+  IWL_MVM_DQA_MIN_MGMT_QUEUE = 5,
+  IWL_MVM_DQA_MAX_MGMT_QUEUE = 8,
+  IWL_MVM_DQA_AP_PROBE_RESP_QUEUE = 9,
+  IWL_MVM_DQA_MIN_DATA_QUEUE = 10,
+  IWL_MVM_DQA_MAX_DATA_QUEUE = 31,
 };
 
 enum iwl_mvm_tx_fifo {
-    IWL_MVM_TX_FIFO_BK = 0,
-    IWL_MVM_TX_FIFO_BE,
-    IWL_MVM_TX_FIFO_VI,
-    IWL_MVM_TX_FIFO_VO,
-    IWL_MVM_TX_FIFO_MCAST = 5,
-    IWL_MVM_TX_FIFO_CMD = 7,
+  IWL_MVM_TX_FIFO_BK = 0,
+  IWL_MVM_TX_FIFO_BE,
+  IWL_MVM_TX_FIFO_VI,
+  IWL_MVM_TX_FIFO_VO,
+  IWL_MVM_TX_FIFO_MCAST = 5,
+  IWL_MVM_TX_FIFO_CMD = 7,
 };
 
 enum iwl_gen2_tx_fifo {
-    IWL_GEN2_TX_FIFO_CMD = 0,
-    IWL_GEN2_EDCA_TX_FIFO_BK,
-    IWL_GEN2_EDCA_TX_FIFO_BE,
-    IWL_GEN2_EDCA_TX_FIFO_VI,
-    IWL_GEN2_EDCA_TX_FIFO_VO,
-    IWL_GEN2_TRIG_TX_FIFO_BK,
-    IWL_GEN2_TRIG_TX_FIFO_BE,
-    IWL_GEN2_TRIG_TX_FIFO_VI,
-    IWL_GEN2_TRIG_TX_FIFO_VO,
+  IWL_GEN2_TX_FIFO_CMD = 0,
+  IWL_GEN2_EDCA_TX_FIFO_BK,
+  IWL_GEN2_EDCA_TX_FIFO_BE,
+  IWL_GEN2_EDCA_TX_FIFO_VI,
+  IWL_GEN2_EDCA_TX_FIFO_VO,
+  IWL_GEN2_TRIG_TX_FIFO_BK,
+  IWL_GEN2_TRIG_TX_FIFO_BE,
+  IWL_GEN2_TRIG_TX_FIFO_VI,
+  IWL_GEN2_TRIG_TX_FIFO_VO,
 };
 
 /**
@@ -100,8 +100,8 @@ enum iwl_gen2_tx_fifo {
  * @TX_QUEUE_CFG_TFD_SHORT_FORMAT: use short TFD format
  */
 enum iwl_tx_queue_cfg_actions {
-    TX_QUEUE_CFG_ENABLE_QUEUE = BIT(0),
-    TX_QUEUE_CFG_TFD_SHORT_FORMAT = BIT(1),
+  TX_QUEUE_CFG_ENABLE_QUEUE = BIT(0),
+  TX_QUEUE_CFG_TFD_SHORT_FORMAT = BIT(1),
 };
 
 #define IWL_DEFAULT_QUEUE_SIZE 256
@@ -117,12 +117,12 @@ enum iwl_tx_queue_cfg_actions {
  * @tfdq_addr: address of TFD circular buffer
  */
 struct iwl_tx_queue_cfg_cmd {
-    uint8_t sta_id;
-    uint8_t tid;
-    __le16 flags;
-    __le32 cb_size;
-    __le64 byte_cnt_addr;
-    __le64 tfdq_addr;
+  uint8_t sta_id;
+  uint8_t tid;
+  __le16 flags;
+  __le32 cb_size;
+  __le64 byte_cnt_addr;
+  __le64 tfdq_addr;
 } __packed; /* TX_QUEUE_CFG_CMD_API_S_VER_2 */
 
 /**
@@ -133,10 +133,10 @@ struct iwl_tx_queue_cfg_cmd {
  * @reserved: reserved
  */
 struct iwl_tx_queue_cfg_rsp {
-    __le16 queue_number;
-    __le16 flags;
-    __le16 write_pointer;
-    __le16 reserved;
+  __le16 queue_number;
+  __le16 flags;
+  __le16 write_pointer;
+  __le16 reserved;
 } __packed; /* TX_QUEUE_CFG_RSP_API_S_VER_2 */
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_TXQ_H_

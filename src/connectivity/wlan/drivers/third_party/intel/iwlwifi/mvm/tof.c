@@ -31,12 +31,13 @@
  *
  *****************************************************************************/
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/tof.h"
+
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
 
 #define IWL_MVM_TOF_RANGE_REQ_MAX_ID 256
 
 void iwl_mvm_tof_init(struct iwl_mvm* mvm) {
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
     struct iwl_mvm_tof_data* tof_data = &mvm->tof_data;
 
     if (!fw_has_capa(&mvm->fw->ucode_capa, IWL_UCODE_TLV_CAPA_TOF_SUPPORT)) { return; }
@@ -65,19 +66,19 @@ void iwl_mvm_tof_init(struct iwl_mvm* mvm) {
 }
 
 void iwl_mvm_tof_clean(struct iwl_mvm* mvm) {
-    struct iwl_mvm_tof_data* tof_data = &mvm->tof_data;
+  struct iwl_mvm_tof_data* tof_data = &mvm->tof_data;
 
-    if (!fw_has_capa(&mvm->fw->ucode_capa, IWL_UCODE_TLV_CAPA_TOF_SUPPORT) ||
-        !(mvm->init_status & IWL_MVM_INIT_STATUS_TOF_INIT_COMPLETE)) {
-        return;
-    }
+  if (!fw_has_capa(&mvm->fw->ucode_capa, IWL_UCODE_TLV_CAPA_TOF_SUPPORT) ||
+      !(mvm->init_status & IWL_MVM_INIT_STATUS_TOF_INIT_COMPLETE)) {
+    return;
+  }
 
-    memset(tof_data, 0, sizeof(*tof_data));
-    mvm->tof_data.active_range_request = IWL_MVM_TOF_RANGE_REQ_MAX_ID;
-    mvm->init_status &= ~IWL_MVM_INIT_STATUS_TOF_INIT_COMPLETE;
+  memset(tof_data, 0, sizeof(*tof_data));
+  mvm->tof_data.active_range_request = IWL_MVM_TOF_RANGE_REQ_MAX_ID;
+  mvm->init_status &= ~IWL_MVM_INIT_STATUS_TOF_INIT_COMPLETE;
 }
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
 static void iwl_tof_iterator(void* _data, uint8_t* mac, struct ieee80211_vif* vif) {
     bool* enabled = _data;
 

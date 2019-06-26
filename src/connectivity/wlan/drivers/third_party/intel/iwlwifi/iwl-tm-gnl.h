@@ -40,15 +40,15 @@
 #include "fw/testmode.h"
 
 struct iwl_test_trace {
-    uint32_t size;
-    uint8_t* cpu_addr;
-    dma_addr_t dma_addr;
-    bool enabled;
+  uint32_t size;
+  uint8_t* cpu_addr;
+  dma_addr_t dma_addr;
+  bool enabled;
 };
 
 struct iwl_test {
-    struct iwl_test_trace trace;
-    bool notify;
+  struct iwl_test_trace trace;
+  bool notify;
 };
 
 /**
@@ -62,12 +62,12 @@ struct iwl_test {
  * Device identifier it's name.
  */
 struct iwl_tm_gnl_dev {
-    struct list_head list;
-    struct iwl_test tst;
-    struct iwl_dnt* dnt;
-    struct iwl_trans* trans;
-    const char* dev_name;
-    uint32_t nl_events_portid;
+  struct list_head list;
+  struct iwl_test tst;
+  struct iwl_dnt* dnt;
+  struct iwl_trans* trans;
+  const char* dev_name;
+  uint32_t nl_events_portid;
 };
 
 int iwl_tm_gnl_send_msg(struct iwl_trans* trans, uint32_t cmd, bool check_notify, void* data_out,

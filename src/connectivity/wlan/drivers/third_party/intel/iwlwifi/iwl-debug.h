@@ -96,10 +96,9 @@ struct device;
 #define __iwl_dbg(dev, level, limit, function, fmt, args...) \
   zxlogf(DEBUG1, "iwlwifi (%s): " fmt, function, ##args)
 
-#define iwl_print_hex_error(m, p, len)                                        \
-  do {                                                                        \
-    print_hex_dump(KERN_ERR, "iwl data: ", DUMP_PREFIX_OFFSET, 16, 1, p, len, \
-                   1);                                                        \
+#define iwl_print_hex_error(m, p, len)                                            \
+  do {                                                                            \
+    print_hex_dump(KERN_ERR, "iwl data: ", DUMP_PREFIX_OFFSET, 16, 1, p, len, 1); \
   } while (0)
 
 #define __IWL_DEBUG_DEV(dev, level, limit, fmt, args...) \
@@ -107,19 +106,15 @@ struct device;
     CHECK_FOR_NEWLINE(fmt);                              \
     __iwl_dbg(dev, level, limit, __func__, fmt, ##args); \
   } while (0)
-#define IWL_DEBUG(m, level, fmt, args...) \
-  __IWL_DEBUG_DEV((m)->dev, level, false, fmt, ##args)
-#define IWL_DEBUG_DEV(dev, level, fmt, args...) \
-  __IWL_DEBUG_DEV(dev, level, false, fmt, ##args)
-#define IWL_DEBUG_LIMIT(m, level, fmt, args...) \
-  __IWL_DEBUG_DEV((m)->dev, level, true, fmt, ##args)
+#define IWL_DEBUG(m, level, fmt, args...) __IWL_DEBUG_DEV((m)->dev, level, false, fmt, ##args)
+#define IWL_DEBUG_DEV(dev, level, fmt, args...) __IWL_DEBUG_DEV(dev, level, false, fmt, ##args)
+#define IWL_DEBUG_LIMIT(m, level, fmt, args...) __IWL_DEBUG_DEV((m)->dev, level, true, fmt, ##args)
 
 #ifdef CPTCFG_IWLWIFI_DEBUG
-#define iwl_print_hex_dump(m, level, p, len)                                 \
-  do {                                                                       \
-    if (iwl_have_debug_level(level))                                         \
-      print_hex_dump(KERN_DEBUG, "iwl data: ", DUMP_PREFIX_OFFSET, 16, 1, p, \
-                     len, 1);                                                \
+#define iwl_print_hex_dump(m, level, p, len)                                          \
+  do {                                                                                \
+    if (iwl_have_debug_level(level))                                                  \
+      print_hex_dump(KERN_DEBUG, "iwl data: ", DUMP_PREFIX_OFFSET, 16, 1, p, len, 1); \
   } while (0)
 #else
 #define iwl_print_hex_dump(m, level, p, len)
@@ -214,14 +209,11 @@ struct device;
 #define IWL_DEBUG_COEX(p, f, a...) IWL_DEBUG(p, IWL_DL_COEX, f, ##a)
 #define IWL_DEBUG_RATE(p, f, a...) IWL_DEBUG(p, IWL_DL_RATE, f, ##a)
 #define IWL_DEBUG_RATE_LIMIT(p, f, a...) IWL_DEBUG_LIMIT(p, IWL_DL_RATE, f, ##a)
-#define IWL_DEBUG_ASSOC(p, f, a...) \
-  IWL_DEBUG(p, IWL_DL_ASSOC | IWL_DL_INFO, f, ##a)
-#define IWL_DEBUG_ASSOC_LIMIT(p, f, a...) \
-  IWL_DEBUG_LIMIT(p, IWL_DL_ASSOC | IWL_DL_INFO, f, ##a)
+#define IWL_DEBUG_ASSOC(p, f, a...) IWL_DEBUG(p, IWL_DL_ASSOC | IWL_DL_INFO, f, ##a)
+#define IWL_DEBUG_ASSOC_LIMIT(p, f, a...) IWL_DEBUG_LIMIT(p, IWL_DL_ASSOC | IWL_DL_INFO, f, ##a)
 #define IWL_DEBUG_HT(p, f, a...) IWL_DEBUG(p, IWL_DL_HT, f, ##a)
 #define IWL_DEBUG_STATS(p, f, a...) IWL_DEBUG(p, IWL_DL_STATS, f, ##a)
-#define IWL_DEBUG_STATS_LIMIT(p, f, a...) \
-  IWL_DEBUG_LIMIT(p, IWL_DL_STATS, f, ##a)
+#define IWL_DEBUG_STATS_LIMIT(p, f, a...) IWL_DEBUG_LIMIT(p, IWL_DL_STATS, f, ##a)
 #define IWL_DEBUG_TX_REPLY(p, f, a...) IWL_DEBUG(p, IWL_DL_TX_REPLY, f, ##a)
 #define IWL_DEBUG_TX_QUEUES(p, f, a...) IWL_DEBUG(p, IWL_DL_TX_QUEUES, f, ##a)
 #define IWL_DEBUG_RADIO(p, f, a...) IWL_DEBUG(p, IWL_DL_RADIO, f, ##a)

@@ -33,7 +33,11 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *****************************************************************************/
+
+// This file must be included before all header files.
+// clang-format off
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fuchsia_porting.h"
+// clang-format on
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/error-dump.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-eeprom-parse.h"
@@ -56,7 +60,7 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/nan.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/tof.h"
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
 static const struct ieee80211_iface_limit iwl_mvm_limits[] = {
     {
         .max = CPTCFG_IWLWIFI_NUM_STA_INTERFACES,
@@ -184,27 +188,31 @@ static const struct iwl_fw_bcast_filter iwl_mvm_default_bcast_filters[] = {
 #endif  // NEEDS_PORTING
 
 void iwl_mvm_ref(struct iwl_mvm* mvm, enum iwl_mvm_ref_type ref_type) {
-    if (!iwl_mvm_is_d0i3_supported(mvm)) { return; }
+  if (!iwl_mvm_is_d0i3_supported(mvm)) {
+    return;
+  }
 
-    IWL_DEBUG_RPM(mvm, "Take mvm reference - type %d\n", ref_type);
-    mtx_lock(&mvm->refs_lock);
-    mvm->refs[ref_type]++;
-    mtx_unlock(&mvm->refs_lock);
-    iwl_trans_ref(mvm->trans);
+  IWL_DEBUG_RPM(mvm, "Take mvm reference - type %d\n", ref_type);
+  mtx_lock(&mvm->refs_lock);
+  mvm->refs[ref_type]++;
+  mtx_unlock(&mvm->refs_lock);
+  iwl_trans_ref(mvm->trans);
 }
 
 void iwl_mvm_unref(struct iwl_mvm* mvm, enum iwl_mvm_ref_type ref_type) {
-    if (!iwl_mvm_is_d0i3_supported(mvm)) { return; }
+  if (!iwl_mvm_is_d0i3_supported(mvm)) {
+    return;
+  }
 
-    IWL_DEBUG_RPM(mvm, "Leave mvm reference - type %d\n", ref_type);
-    mtx_lock(&mvm->refs_lock);
-    if (WARN_ON(!mvm->refs[ref_type])) {
-        mtx_unlock(&mvm->refs_lock);
-        return;
-    }
-    mvm->refs[ref_type]--;
+  IWL_DEBUG_RPM(mvm, "Leave mvm reference - type %d\n", ref_type);
+  mtx_lock(&mvm->refs_lock);
+  if (WARN_ON(!mvm->refs[ref_type])) {
     mtx_unlock(&mvm->refs_lock);
-    iwl_trans_unref(mvm->trans);
+    return;
+  }
+  mvm->refs[ref_type]--;
+  mtx_unlock(&mvm->refs_lock);
+  iwl_trans_unref(mvm->trans);
 }
 
 #if 0   // NEEDS_PORTING
@@ -228,25 +236,27 @@ static void iwl_mvm_unref_all_except(struct iwl_mvm* mvm, enum iwl_mvm_ref_type 
 #endif  // NEEDS_PORTING
 
 bool iwl_mvm_ref_taken(struct iwl_mvm* mvm) {
-    int i;
-    bool taken = false;
+  int i;
+  bool taken = false;
 
-    if (!iwl_mvm_is_d0i3_supported(mvm)) { return true; }
+  if (!iwl_mvm_is_d0i3_supported(mvm)) {
+    return true;
+  }
 
-    mtx_lock(&mvm->refs_lock);
-    for (i = 0; i < IWL_MVM_REF_COUNT; i++) {
-        if (mvm->refs[i]) {
-            taken = true;
-            break;
-        }
+  mtx_lock(&mvm->refs_lock);
+  for (i = 0; i < IWL_MVM_REF_COUNT; i++) {
+    if (mvm->refs[i]) {
+      taken = true;
+      break;
     }
-    mtx_unlock(&mvm->refs_lock);
+  }
+  mtx_unlock(&mvm->refs_lock);
 
-    return taken;
+  return taken;
 }
 
 zx_status_t iwl_mvm_ref_sync(struct iwl_mvm* mvm, enum iwl_mvm_ref_type ref_type) {
-    iwl_mvm_ref(mvm, ref_type);
+  iwl_mvm_ref(mvm, ref_type);
 
 #if 0   // NEEDS_PORTING
     if (!wait_event_timeout(mvm->d0i3_exit_waitq, !test_bit(IWL_MVM_STATUS_IN_D0I3, &mvm->status),
@@ -257,10 +267,10 @@ zx_status_t iwl_mvm_ref_sync(struct iwl_mvm* mvm, enum iwl_mvm_ref_type ref_type
     }
 #endif  // NEEDS_PORTING
 
-    return ZX_OK;
+  return ZX_OK;
 }
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
 static void iwl_mvm_reset_phy_ctxts(struct iwl_mvm* mvm) {
     int i;
 
@@ -395,13 +405,13 @@ const static struct wiphy_iftype_ext_capab he_iftypes_ext_capa[] = {
         .extended_capabilities_mask = he_if_types_ext_capa_ap,
         .extended_capabilities_len = sizeof(he_if_types_ext_capa_ap),
     },
-#endif /* CPTCFG_IWLMVM_AX_SOFTAP_TESTMODE */
+#endif  /* CPTCFG_IWLMVM_AX_SOFTAP_TESTMODE */
 };
 #endif  // NEEDS_PORTING
 
 zx_status_t iwl_mvm_mac_setup_register(struct iwl_mvm* mvm) {
-    return ZX_OK;
-#if 0   // NEEDS_PORTING
+  return ZX_OK;
+#if 0  // NEEDS_PORTING
     struct ieee80211_hw* hw = mvm->hw;
     int num_mac, ret, i;
     static const uint32_t mvm_ciphers[] = {
@@ -854,7 +864,7 @@ void iwl_mvm_mac_itxq_xmit(struct ieee80211_hw* hw, struct ieee80211_txq* txq) {
 #endif  // NEEDS_PORTING
 }
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
 static void iwl_mvm_mac_wake_tx_queue(struct ieee80211_hw* hw, struct ieee80211_txq* txq) {
     struct iwl_mvm* mvm = IWL_MAC80211_GET_MVM(hw);
     struct iwl_mvm_txq* mvmtxq = iwl_mvm_txq_from_mac80211(txq);
@@ -909,10 +919,11 @@ static inline bool iwl_enable_tx_ampdu(const struct iwl_cfg* cfg) {
 }
 
 #define CHECK_BA_TRIGGER(_mvm, _trig, _tid_bm, _tid, _fmt...) \
-    do {                                                      \
-        if (!(le16_to_cpu(_tid_bm) & BIT(_tid))) break;       \
-        iwl_fw_dbg_collect_trig(&(_mvm)->fwrt, _trig, _fmt);  \
-    } while (0)
+  do {                                                        \
+    if (!(le16_to_cpu(_tid_bm) & BIT(_tid)))                  \
+      break;                                                  \
+    iwl_fw_dbg_collect_trig(&(_mvm)->fwrt, _trig, _fmt);      \
+  } while (0)
 
 static void iwl_mvm_ampdu_check_trigger(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
                                         struct ieee80211_sta* sta, uint16_t tid, uint16_t rx_ba_ssn,
@@ -4228,11 +4239,12 @@ unlock:
 
 static void iwl_mvm_event_mlme_callback(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
                                         const struct ieee80211_event* event) {
-#define CHECK_MLME_TRIGGER(_cnt, _fmt...)                    \
-    do {                                                     \
-        if ((trig_mlme->_cnt) && --(trig_mlme->_cnt)) break; \
-        iwl_fw_dbg_collect_trig(&(mvm)->fwrt, trig, _fmt);   \
-    } while (0)
+#define CHECK_MLME_TRIGGER(_cnt, _fmt...)              \
+  do {                                                 \
+    if ((trig_mlme->_cnt) && --(trig_mlme->_cnt))      \
+      break;                                           \
+    iwl_fw_dbg_collect_trig(&(mvm)->fwrt, trig, _fmt); \
+  } while (0)
 
     struct iwl_fw_dbg_trigger_tlv* trig;
     struct iwl_fw_dbg_trigger_mlme* trig_mlme;
@@ -4584,7 +4596,7 @@ static bool iwl_mvm_mac_can_aggregate(struct ieee80211_hw* hw, struct sk_buff* h
 #endif  // NEEDS_PORTING
 
 const struct ieee80211_ops iwl_mvm_hw_ops = {
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
     .tx = iwl_mvm_mac_tx,
     .wake_tx_queue = iwl_mvm_mac_wake_tx_queue,
     .ampdu_action = iwl_mvm_mac_ampdu_action,

@@ -43,9 +43,9 @@
 
 /* Type of TDLS request */
 enum iwl_tdls_channel_switch_type {
-    TDLS_SEND_CHAN_SW_REQ = 0,
-    TDLS_SEND_CHAN_SW_RESP_AND_MOVE_CH,
-    TDLS_MOVE_CH,
+  TDLS_SEND_CHAN_SW_REQ = 0,
+  TDLS_SEND_CHAN_SW_RESP_AND_MOVE_CH,
+  TDLS_MOVE_CH,
 }; /* TDLS_STA_CHANNEL_SWITCH_CMD_TYPE_API_E_VER_1 */
 
 /**
@@ -60,11 +60,11 @@ enum iwl_tdls_channel_switch_type {
  * @switch_timeout: switch timeout the peer sent in its channel switch timing IE
  */
 struct iwl_tdls_channel_switch_timing {
-    __le32 frame_timestamp;      /* GP2 time of peer packet Rx */
-    __le32 max_offchan_duration; /* given in micro-seconds */
-    __le32 switch_time;          /* given in micro-seconds */
-    __le32 switch_timeout;       /* given in micro-seconds */
-} __packed;                      /* TDLS_STA_CHANNEL_SWITCH_TIMING_DATA_API_S_VER_1 */
+  __le32 frame_timestamp;      /* GP2 time of peer packet Rx */
+  __le32 max_offchan_duration; /* given in micro-seconds */
+  __le32 switch_time;          /* given in micro-seconds */
+  __le32 switch_timeout;       /* given in micro-seconds */
+} __packed;                    /* TDLS_STA_CHANNEL_SWITCH_TIMING_DATA_API_S_VER_1 */
 
 #define IWL_TDLS_CH_SW_FRAME_MAX_SIZE 200
 
@@ -78,9 +78,9 @@ struct iwl_tdls_channel_switch_timing {
  * @data: frame data
  */
 struct iwl_tdls_channel_switch_frame {
-    __le32 switch_time_offset;
-    struct iwl_tx_cmd tx_cmd;
-    uint8_t data[IWL_TDLS_CH_SW_FRAME_MAX_SIZE];
+  __le32 switch_time_offset;
+  struct iwl_tx_cmd tx_cmd;
+  uint8_t data[IWL_TDLS_CH_SW_FRAME_MAX_SIZE];
 } __packed; /* TDLS_STA_CHANNEL_SWITCH_FRAME_API_S_VER_1 */
 
 /**
@@ -96,11 +96,11 @@ struct iwl_tdls_channel_switch_frame {
  * @frame: channel-switch request/response template, depending to switch_type
  */
 struct iwl_tdls_channel_switch_cmd {
-    uint8_t switch_type;
-    __le32 peer_sta_id;
-    struct iwl_fw_channel_info ci;
-    struct iwl_tdls_channel_switch_timing timing;
-    struct iwl_tdls_channel_switch_frame frame;
+  uint8_t switch_type;
+  __le32 peer_sta_id;
+  struct iwl_fw_channel_info ci;
+  struct iwl_tdls_channel_switch_timing timing;
+  struct iwl_tdls_channel_switch_frame frame;
 } __packed; /* TDLS_STA_CHANNEL_SWITCH_CMD_API_S_VER_1 */
 
 /**
@@ -111,9 +111,9 @@ struct iwl_tdls_channel_switch_cmd {
  * @sta_id: peer currently performing the channel-switch with
  */
 struct iwl_tdls_channel_switch_notif {
-    __le32 status;
-    __le32 offchannel_duration;
-    __le32 sta_id;
+  __le32 status;
+  __le32 offchannel_duration;
+  __le32 sta_id;
 } __packed; /* TDLS_STA_CHANNEL_SWITCH_NTFY_API_S_VER_1 */
 
 /**
@@ -125,10 +125,10 @@ struct iwl_tdls_channel_switch_notif {
  * @is_initiator: 1 if the peer is the TDLS link initiator, 0 otherwise
  */
 struct iwl_tdls_sta_info {
-    uint8_t sta_id;
-    uint8_t tx_to_peer_tid;
-    __le16 tx_to_peer_ssn;
-    __le32 is_initiator;
+  uint8_t sta_id;
+  uint8_t tx_to_peer_tid;
+  __le16 tx_to_peer_ssn;
+  __le32 is_initiator;
 } __packed; /* TDLS_STA_INFO_VER_1 */
 
 /**
@@ -144,15 +144,15 @@ struct iwl_tdls_sta_info {
  * @pti_req_template: PTI request template data
  */
 struct iwl_tdls_config_cmd {
-    __le32 id_and_color; /* mac id and color */
-    uint8_t tdls_peer_count;
-    uint8_t tx_to_ap_tid;
-    __le16 tx_to_ap_ssn;
-    struct iwl_tdls_sta_info sta_info[IWL_MVM_TDLS_STA_COUNT];
+  __le32 id_and_color; /* mac id and color */
+  uint8_t tdls_peer_count;
+  uint8_t tx_to_ap_tid;
+  __le16 tx_to_ap_ssn;
+  struct iwl_tdls_sta_info sta_info[IWL_MVM_TDLS_STA_COUNT];
 
-    __le32 pti_req_data_offset;
-    struct iwl_tx_cmd pti_req_tx_cmd;
-    uint8_t pti_req_template[0];
+  __le32 pti_req_data_offset;
+  struct iwl_tx_cmd pti_req_tx_cmd;
+  uint8_t pti_req_template[0];
 } __packed; /* TDLS_CONFIG_CMD_API_S_VER_1 */
 
 /**
@@ -163,8 +163,8 @@ struct iwl_tdls_config_cmd {
  *  the peer
  */
 struct iwl_tdls_config_sta_info_res {
-    __le16 sta_id;
-    __le16 tx_to_peer_last_seq;
+  __le16 sta_id;
+  __le16 tx_to_peer_last_seq;
 } __packed; /* TDLS_STA_INFO_RSP_VER_1 */
 
 /**
@@ -174,8 +174,8 @@ struct iwl_tdls_config_sta_info_res {
  * @sta_info: per-station TDLS config information
  */
 struct iwl_tdls_config_res {
-    __le32 tx_to_ap_last_seq;
-    struct iwl_tdls_config_sta_info_res sta_info[IWL_MVM_TDLS_STA_COUNT];
+  __le32 tx_to_ap_last_seq;
+  struct iwl_tdls_config_sta_info_res sta_info[IWL_MVM_TDLS_STA_COUNT];
 } __packed; /* TDLS_CONFIG_RSP_API_S_VER_1 */
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_TDLS_H_

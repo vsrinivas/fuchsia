@@ -52,11 +52,11 @@
  *                      streams
  */
 enum iwl_tlc_mng_cfg_flags {
-    IWL_TLC_MNG_CFG_FLAGS_STBC_MSK = BIT(0),
-    IWL_TLC_MNG_CFG_FLAGS_LDPC_MSK = BIT(1),
-    IWL_TLC_MNG_CFG_FLAGS_HE_STBC_160MHZ_MSK = BIT(2),
-    IWL_TLC_MNG_CFG_FLAGS_HE_DCM_NSS_1_MSK = BIT(3),
-    IWL_TLC_MNG_CFG_FLAGS_HE_DCM_NSS_2_MSK = BIT(4),
+  IWL_TLC_MNG_CFG_FLAGS_STBC_MSK = BIT(0),
+  IWL_TLC_MNG_CFG_FLAGS_LDPC_MSK = BIT(1),
+  IWL_TLC_MNG_CFG_FLAGS_HE_STBC_160MHZ_MSK = BIT(2),
+  IWL_TLC_MNG_CFG_FLAGS_HE_DCM_NSS_1_MSK = BIT(3),
+  IWL_TLC_MNG_CFG_FLAGS_HE_DCM_NSS_2_MSK = BIT(4),
 };
 
 /**
@@ -68,11 +68,11 @@ enum iwl_tlc_mng_cfg_flags {
  * @IWL_TLC_MNG_CH_WIDTH_LAST: maximum value
  */
 enum iwl_tlc_mng_cfg_cw {
-    IWL_TLC_MNG_CH_WIDTH_20MHZ,
-    IWL_TLC_MNG_CH_WIDTH_40MHZ,
-    IWL_TLC_MNG_CH_WIDTH_80MHZ,
-    IWL_TLC_MNG_CH_WIDTH_160MHZ,
-    IWL_TLC_MNG_CH_WIDTH_LAST = IWL_TLC_MNG_CH_WIDTH_160MHZ,
+  IWL_TLC_MNG_CH_WIDTH_20MHZ,
+  IWL_TLC_MNG_CH_WIDTH_40MHZ,
+  IWL_TLC_MNG_CH_WIDTH_80MHZ,
+  IWL_TLC_MNG_CH_WIDTH_160MHZ,
+  IWL_TLC_MNG_CH_WIDTH_LAST = IWL_TLC_MNG_CH_WIDTH_160MHZ,
 };
 
 /**
@@ -81,8 +81,8 @@ enum iwl_tlc_mng_cfg_cw {
  * @IWL_TLC_MNG_CHAIN_B_MSK: chain B
  */
 enum iwl_tlc_mng_cfg_chains {
-    IWL_TLC_MNG_CHAIN_A_MSK = BIT(0),
-    IWL_TLC_MNG_CHAIN_B_MSK = BIT(1),
+  IWL_TLC_MNG_CHAIN_A_MSK = BIT(0),
+  IWL_TLC_MNG_CHAIN_B_MSK = BIT(1),
 };
 
 /**
@@ -97,14 +97,14 @@ enum iwl_tlc_mng_cfg_chains {
  * @IWL_TLC_MNG_MODE_NUM: a count of possible modes
  */
 enum iwl_tlc_mng_cfg_mode {
-    IWL_TLC_MNG_MODE_CCK = 0,
-    IWL_TLC_MNG_MODE_OFDM_NON_HT = IWL_TLC_MNG_MODE_CCK,
-    IWL_TLC_MNG_MODE_NON_HT = IWL_TLC_MNG_MODE_CCK,
-    IWL_TLC_MNG_MODE_HT,
-    IWL_TLC_MNG_MODE_VHT,
-    IWL_TLC_MNG_MODE_HE,
-    IWL_TLC_MNG_MODE_INVALID,
-    IWL_TLC_MNG_MODE_NUM = IWL_TLC_MNG_MODE_INVALID,
+  IWL_TLC_MNG_MODE_CCK = 0,
+  IWL_TLC_MNG_MODE_OFDM_NON_HT = IWL_TLC_MNG_MODE_CCK,
+  IWL_TLC_MNG_MODE_NON_HT = IWL_TLC_MNG_MODE_CCK,
+  IWL_TLC_MNG_MODE_HT,
+  IWL_TLC_MNG_MODE_VHT,
+  IWL_TLC_MNG_MODE_HE,
+  IWL_TLC_MNG_MODE_INVALID,
+  IWL_TLC_MNG_MODE_NUM = IWL_TLC_MNG_MODE_INVALID,
 };
 
 /**
@@ -124,19 +124,19 @@ enum iwl_tlc_mng_cfg_mode {
  * @IWL_TLC_MNG_HT_RATE_MAX: maximal rate for HT/VHT
  */
 enum iwl_tlc_mng_ht_rates {
-    IWL_TLC_MNG_HT_RATE_MCS0 = 0,
-    IWL_TLC_MNG_HT_RATE_MCS1,
-    IWL_TLC_MNG_HT_RATE_MCS2,
-    IWL_TLC_MNG_HT_RATE_MCS3,
-    IWL_TLC_MNG_HT_RATE_MCS4,
-    IWL_TLC_MNG_HT_RATE_MCS5,
-    IWL_TLC_MNG_HT_RATE_MCS6,
-    IWL_TLC_MNG_HT_RATE_MCS7,
-    IWL_TLC_MNG_HT_RATE_MCS8,
-    IWL_TLC_MNG_HT_RATE_MCS9,
-    IWL_TLC_MNG_HT_RATE_MCS10,
-    IWL_TLC_MNG_HT_RATE_MCS11,
-    IWL_TLC_MNG_HT_RATE_MAX = IWL_TLC_MNG_HT_RATE_MCS11,
+  IWL_TLC_MNG_HT_RATE_MCS0 = 0,
+  IWL_TLC_MNG_HT_RATE_MCS1,
+  IWL_TLC_MNG_HT_RATE_MCS2,
+  IWL_TLC_MNG_HT_RATE_MCS3,
+  IWL_TLC_MNG_HT_RATE_MCS4,
+  IWL_TLC_MNG_HT_RATE_MCS5,
+  IWL_TLC_MNG_HT_RATE_MCS6,
+  IWL_TLC_MNG_HT_RATE_MCS7,
+  IWL_TLC_MNG_HT_RATE_MCS8,
+  IWL_TLC_MNG_HT_RATE_MCS9,
+  IWL_TLC_MNG_HT_RATE_MCS10,
+  IWL_TLC_MNG_HT_RATE_MCS11,
+  IWL_TLC_MNG_HT_RATE_MAX = IWL_TLC_MNG_HT_RATE_MCS11,
 };
 
 /* Maximum supported tx antennas number */
@@ -160,18 +160,18 @@ enum iwl_tlc_mng_ht_rates {
  * @reserved2: reserved
  */
 struct iwl_tlc_config_cmd {
-    uint8_t sta_id;
-    uint8_t reserved1[3];
-    uint8_t max_ch_width;
-    uint8_t mode;
-    uint8_t chains;
-    uint8_t amsdu;
-    __le16 flags;
-    __le16 non_ht_rates;
-    __le16 ht_rates[MAX_NSS][2];
-    __le16 max_mpdu_len;
-    uint8_t sgi_ch_width_supp;
-    uint8_t reserved2[1];
+  uint8_t sta_id;
+  uint8_t reserved1[3];
+  uint8_t max_ch_width;
+  uint8_t mode;
+  uint8_t chains;
+  uint8_t amsdu;
+  __le16 flags;
+  __le16 non_ht_rates;
+  __le16 ht_rates[MAX_NSS][2];
+  __le16 max_mpdu_len;
+  uint8_t sgi_ch_width_supp;
+  uint8_t reserved2[1];
 } __packed; /* TLC_MNG_CONFIG_CMD_API_S_VER_2 */
 
 /**
@@ -180,8 +180,8 @@ struct iwl_tlc_config_cmd {
  * @IWL_TLC_NOTIF_FLAG_AMSDU: umsdu parameters update
  */
 enum iwl_tlc_update_flags {
-    IWL_TLC_NOTIF_FLAG_RATE = BIT(0),
-    IWL_TLC_NOTIF_FLAG_AMSDU = BIT(1),
+  IWL_TLC_NOTIF_FLAG_RATE = BIT(0),
+  IWL_TLC_NOTIF_FLAG_AMSDU = BIT(1),
 };
 
 /**
@@ -194,12 +194,12 @@ enum iwl_tlc_update_flags {
  * @amsdu_enabled: bitmap for per-TID AMSDU enablement
  */
 struct iwl_tlc_update_notif {
-    uint8_t sta_id;
-    uint8_t reserved[3];
-    __le32 flags;
-    __le32 rate;
-    __le32 amsdu_size;
-    __le32 amsdu_enabled;
+  uint8_t sta_id;
+  uint8_t reserved[3];
+  __le32 flags;
+  __le32 rate;
+  __le32 amsdu_size;
+  __le32 amsdu_enabled;
 } __packed; /* TLC_MNG_UPDATE_NTFY_API_S_VER_2 */
 
 #ifdef CPTCFG_IWLWIFI_DEBUG_HOST_CMD_ENABLED
@@ -214,13 +214,13 @@ struct iwl_tlc_update_notif {
  * @IWL_TLC_DEBUG_TPC_STATS: get number of frames Tx'ed in each tpc step
  */
 enum iwl_tlc_debug_flags {
-    IWL_TLC_DEBUG_FIXED_RATE,
-    IWL_TLC_DEBUG_AGG_DURATION_LIM,
-    IWL_TLC_DEBUG_AGG_FRAME_CNT_LIM,
-    IWL_TLC_DEBUG_TPC_ENABLED,
-    IWL_TLC_DEBUG_TPC_STATS,
+  IWL_TLC_DEBUG_FIXED_RATE,
+  IWL_TLC_DEBUG_AGG_DURATION_LIM,
+  IWL_TLC_DEBUG_AGG_FRAME_CNT_LIM,
+  IWL_TLC_DEBUG_TPC_ENABLED,
+  IWL_TLC_DEBUG_TPC_STATS,
 
-    IWL_TLC_DEBUG_FLAGS_NUM,
+  IWL_TLC_DEBUG_FLAGS_NUM,
 }; /* TLC_MNG_DEBUG_FLAGS_API_E */
 
 /**
@@ -231,10 +231,10 @@ enum iwl_tlc_debug_flags {
  * @data: for each bit i set in te %flags, data[i] holds the corresponding data
  */
 struct iwl_dhc_tlc_cmd {
-    uint8_t sta_id;
-    uint8_t reserved1[3];
-    __le32 flags;
-    __le32 data[IWL_TLC_DEBUG_FLAGS_NUM];
+  uint8_t sta_id;
+  uint8_t reserved1[3];
+  __le32 flags;
+  __le32 data[IWL_TLC_DEBUG_FLAGS_NUM];
 } __packed; /* TLC_MNG_DEBUG_CMD_S */
 
 /**
@@ -245,8 +245,8 @@ struct iwl_dhc_tlc_cmd {
  *        reduction)
  */
 struct iwl_tpc_stats {
-    __le32 no_tpc;
-    __le32 step[5];
+  __le32 no_tpc;
+  __le32 step[5];
 } __packed;
 #endif /* CPTCFG_IWLWIFI_DEBUG_HOST_CMD_ENABLED */
 
@@ -256,61 +256,61 @@ struct iwl_tpc_stats {
  * TODO: avoid overlap between legacy and HT rates
  */
 enum {
-    IWL_RATE_1M_INDEX = 0,
-    IWL_FIRST_CCK_RATE = IWL_RATE_1M_INDEX,
-    IWL_RATE_2M_INDEX,
-    IWL_RATE_5M_INDEX,
-    IWL_RATE_11M_INDEX,
-    IWL_LAST_CCK_RATE = IWL_RATE_11M_INDEX,
-    IWL_RATE_6M_INDEX,
-    IWL_FIRST_OFDM_RATE = IWL_RATE_6M_INDEX,
-    IWL_RATE_MCS_0_INDEX = IWL_RATE_6M_INDEX,
-    IWL_FIRST_HT_RATE = IWL_RATE_MCS_0_INDEX,
-    IWL_FIRST_VHT_RATE = IWL_RATE_MCS_0_INDEX,
-    IWL_RATE_9M_INDEX,
-    IWL_RATE_12M_INDEX,
-    IWL_RATE_MCS_1_INDEX = IWL_RATE_12M_INDEX,
-    IWL_RATE_18M_INDEX,
-    IWL_RATE_MCS_2_INDEX = IWL_RATE_18M_INDEX,
-    IWL_RATE_24M_INDEX,
-    IWL_RATE_MCS_3_INDEX = IWL_RATE_24M_INDEX,
-    IWL_RATE_36M_INDEX,
-    IWL_RATE_MCS_4_INDEX = IWL_RATE_36M_INDEX,
-    IWL_RATE_48M_INDEX,
-    IWL_RATE_MCS_5_INDEX = IWL_RATE_48M_INDEX,
-    IWL_RATE_54M_INDEX,
-    IWL_RATE_MCS_6_INDEX = IWL_RATE_54M_INDEX,
-    IWL_LAST_NON_HT_RATE = IWL_RATE_54M_INDEX,
-    IWL_RATE_60M_INDEX,
-    IWL_RATE_MCS_7_INDEX = IWL_RATE_60M_INDEX,
-    IWL_LAST_HT_RATE = IWL_RATE_MCS_7_INDEX,
-    IWL_RATE_MCS_8_INDEX,
-    IWL_RATE_MCS_9_INDEX,
-    IWL_LAST_VHT_RATE = IWL_RATE_MCS_9_INDEX,
-    IWL_RATE_MCS_10_INDEX,
-    IWL_RATE_MCS_11_INDEX,
-    IWL_LAST_HE_RATE = IWL_RATE_MCS_11_INDEX,
-    IWL_RATE_COUNT_LEGACY = IWL_LAST_NON_HT_RATE + 1,
-    IWL_RATE_COUNT = IWL_LAST_HE_RATE + 1,
+  IWL_RATE_1M_INDEX = 0,
+  IWL_FIRST_CCK_RATE = IWL_RATE_1M_INDEX,
+  IWL_RATE_2M_INDEX,
+  IWL_RATE_5M_INDEX,
+  IWL_RATE_11M_INDEX,
+  IWL_LAST_CCK_RATE = IWL_RATE_11M_INDEX,
+  IWL_RATE_6M_INDEX,
+  IWL_FIRST_OFDM_RATE = IWL_RATE_6M_INDEX,
+  IWL_RATE_MCS_0_INDEX = IWL_RATE_6M_INDEX,
+  IWL_FIRST_HT_RATE = IWL_RATE_MCS_0_INDEX,
+  IWL_FIRST_VHT_RATE = IWL_RATE_MCS_0_INDEX,
+  IWL_RATE_9M_INDEX,
+  IWL_RATE_12M_INDEX,
+  IWL_RATE_MCS_1_INDEX = IWL_RATE_12M_INDEX,
+  IWL_RATE_18M_INDEX,
+  IWL_RATE_MCS_2_INDEX = IWL_RATE_18M_INDEX,
+  IWL_RATE_24M_INDEX,
+  IWL_RATE_MCS_3_INDEX = IWL_RATE_24M_INDEX,
+  IWL_RATE_36M_INDEX,
+  IWL_RATE_MCS_4_INDEX = IWL_RATE_36M_INDEX,
+  IWL_RATE_48M_INDEX,
+  IWL_RATE_MCS_5_INDEX = IWL_RATE_48M_INDEX,
+  IWL_RATE_54M_INDEX,
+  IWL_RATE_MCS_6_INDEX = IWL_RATE_54M_INDEX,
+  IWL_LAST_NON_HT_RATE = IWL_RATE_54M_INDEX,
+  IWL_RATE_60M_INDEX,
+  IWL_RATE_MCS_7_INDEX = IWL_RATE_60M_INDEX,
+  IWL_LAST_HT_RATE = IWL_RATE_MCS_7_INDEX,
+  IWL_RATE_MCS_8_INDEX,
+  IWL_RATE_MCS_9_INDEX,
+  IWL_LAST_VHT_RATE = IWL_RATE_MCS_9_INDEX,
+  IWL_RATE_MCS_10_INDEX,
+  IWL_RATE_MCS_11_INDEX,
+  IWL_LAST_HE_RATE = IWL_RATE_MCS_11_INDEX,
+  IWL_RATE_COUNT_LEGACY = IWL_LAST_NON_HT_RATE + 1,
+  IWL_RATE_COUNT = IWL_LAST_HE_RATE + 1,
 };
 
 #define IWL_RATE_BIT_MSK(r) BIT(IWL_RATE_##r##M_INDEX)
 
 /* fw API values for legacy bit rates, both OFDM and CCK */
 enum {
-    IWL_RATE_6M_PLCP = 13,
-    IWL_RATE_9M_PLCP = 15,
-    IWL_RATE_12M_PLCP = 5,
-    IWL_RATE_18M_PLCP = 7,
-    IWL_RATE_24M_PLCP = 9,
-    IWL_RATE_36M_PLCP = 11,
-    IWL_RATE_48M_PLCP = 1,
-    IWL_RATE_54M_PLCP = 3,
-    IWL_RATE_1M_PLCP = 10,
-    IWL_RATE_2M_PLCP = 20,
-    IWL_RATE_5M_PLCP = 55,
-    IWL_RATE_11M_PLCP = 110,
-    IWL_RATE_INVM_PLCP = -1,
+  IWL_RATE_6M_PLCP = 13,
+  IWL_RATE_9M_PLCP = 15,
+  IWL_RATE_12M_PLCP = 5,
+  IWL_RATE_18M_PLCP = 7,
+  IWL_RATE_24M_PLCP = 9,
+  IWL_RATE_36M_PLCP = 11,
+  IWL_RATE_48M_PLCP = 1,
+  IWL_RATE_54M_PLCP = 3,
+  IWL_RATE_1M_PLCP = 10,
+  IWL_RATE_2M_PLCP = 20,
+  IWL_RATE_5M_PLCP = 55,
+  IWL_RATE_11M_PLCP = 110,
+  IWL_RATE_INVM_PLCP = -1,
 };
 
 /*
@@ -593,22 +593,22 @@ enum {
  * @ss_params: single stream features. declare whether STBC or BFER are allowed.
  */
 struct iwl_lq_cmd {
-    uint8_t sta_id;
-    uint8_t reduced_tpc;
-    __le16 control;
-    /* LINK_QUAL_GENERAL_PARAMS_API_S_VER_1 */
-    uint8_t flags;
-    uint8_t mimo_delim;
-    uint8_t single_stream_ant_msk;
-    uint8_t dual_stream_ant_msk;
-    uint8_t initial_rate_index[AC_NUM];
-    /* LINK_QUAL_AGG_PARAMS_API_S_VER_1 */
-    __le16 agg_time_limit;
-    uint8_t agg_disable_start_th;
-    uint8_t agg_frame_cnt_limit;
-    __le32 reserved2;
-    __le32 rs_table[LQ_MAX_RETRY_NUM];
-    __le32 ss_params;
+  uint8_t sta_id;
+  uint8_t reduced_tpc;
+  __le16 control;
+  /* LINK_QUAL_GENERAL_PARAMS_API_S_VER_1 */
+  uint8_t flags;
+  uint8_t mimo_delim;
+  uint8_t single_stream_ant_msk;
+  uint8_t dual_stream_ant_msk;
+  uint8_t initial_rate_index[AC_NUM];
+  /* LINK_QUAL_AGG_PARAMS_API_S_VER_1 */
+  __le16 agg_time_limit;
+  uint8_t agg_disable_start_th;
+  uint8_t agg_frame_cnt_limit;
+  __le32 reserved2;
+  __le32 rs_table[LQ_MAX_RETRY_NUM];
+  __le32 ss_params;
 }; /* LINK_QUALITY_CMD_API_S_VER_1 */
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_RS_H_

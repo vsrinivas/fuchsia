@@ -38,7 +38,6 @@
 #include <stdint.h>
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fuchsia_porting.h"
-
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/phy-ctxt.h"
 
 /* TODO: read it from tlv */
@@ -48,42 +47,42 @@
  * enum iwl_nan_subcmd_ids - Neighbor Awareness Networking (NaN) commands IDS
  */
 enum iwl_nan_subcmd_ids {
-    /**
-     * @NAN_CONFIG_CMD:
-     * &struct iwl_nan_cfg_cmd_v2 or &struct iwl_nan_cfg_cmd
-     */
-    NAN_CONFIG_CMD = 0,
+  /**
+   * @NAN_CONFIG_CMD:
+   * &struct iwl_nan_cfg_cmd_v2 or &struct iwl_nan_cfg_cmd
+   */
+  NAN_CONFIG_CMD = 0,
 
-    /**
-     * @NAN_DISCOVERY_FUNC_CMD:
-     * &struct iwl_nan_add_func_cmd or &struct iwl_nan_add_func_cmd_v2
-     */
-    NAN_DISCOVERY_FUNC_CMD = 0x1,
+  /**
+   * @NAN_DISCOVERY_FUNC_CMD:
+   * &struct iwl_nan_add_func_cmd or &struct iwl_nan_add_func_cmd_v2
+   */
+  NAN_DISCOVERY_FUNC_CMD = 0x1,
 
-    /**
-     * @NAN_FAW_CONFIG_CMD:
-     * &struct iwl_nan_faw_config
-     */
-    NAN_FAW_CONFIG_CMD = 0x2,
+  /**
+   * @NAN_FAW_CONFIG_CMD:
+   * &struct iwl_nan_faw_config
+   */
+  NAN_FAW_CONFIG_CMD = 0x2,
 
-    /**
-     * @NAN_DISCOVERY_EVENT_NOTIF:
-     * &struct iwl_nan_disc_evt_notify_v1 or
-     * &struct iwl_nan_disc_evt_notify_v2
-     */
-    NAN_DISCOVERY_EVENT_NOTIF = 0xFD,
+  /**
+   * @NAN_DISCOVERY_EVENT_NOTIF:
+   * &struct iwl_nan_disc_evt_notify_v1 or
+   * &struct iwl_nan_disc_evt_notify_v2
+   */
+  NAN_DISCOVERY_EVENT_NOTIF = 0xFD,
 
-    /**
-     * @NAN_DISCOVERY_TERMINATE_NOTIF:
-     * &struct iwl_nan_de_term
-     */
-    NAN_DISCOVERY_TERMINATE_NOTIF = 0xFE,
+  /**
+   * @NAN_DISCOVERY_TERMINATE_NOTIF:
+   * &struct iwl_nan_de_term
+   */
+  NAN_DISCOVERY_TERMINATE_NOTIF = 0xFE,
 
-    /**
-     * @NAN_FAW_START_NOTIF:
-     * Further availability window started.
-     */
-    NAN_FAW_START_NOTIF = 0xFF,
+  /**
+   * @NAN_FAW_START_NOTIF:
+   * Further availability window started.
+   */
+  NAN_FAW_START_NOTIF = 0xFF,
 };
 
 /**
@@ -93,8 +92,8 @@ enum iwl_nan_subcmd_ids {
  * @chan_bitmap: channel bitmap
  */
 struct iwl_fw_chan_avail {
-    uint8_t op_class;
-    __le16 chan_bitmap;
+  uint8_t op_class;
+  __le16 chan_bitmap;
 } __packed;
 
 /**
@@ -112,16 +111,16 @@ struct iwl_fw_chan_avail {
  * @beacon_template_id: beacon template id for NAN
  */
 struct iwl_nan_umac_cfg {
-    __le32 action;
-    __le32 tsf_id;
-    __le32 sta_id;
-    uint8_t node_addr[6];
-    __le16 reserved1;
-    uint8_t master_pref;
-    uint8_t master_rand;
-    __le16 cluster_id;
-    __le32 dual_band;
-    __le32 beacon_template_id;
+  __le32 action;
+  __le32 tsf_id;
+  __le32 sta_id;
+  uint8_t node_addr[6];
+  __le16 reserved1;
+  uint8_t master_pref;
+  uint8_t master_rand;
+  __le16 cluster_id;
+  __le32 dual_band;
+  __le32 beacon_template_id;
 } __packed; /* _NAN_UMAC_CONFIG_CMD_API_S_VER_1 */
 
 /**
@@ -136,13 +135,13 @@ struct iwl_nan_umac_cfg {
  * @action_delay: usecs to delay SDFs (DEBUG)
  */
 struct iwl_nan_testbed_cfg {
-    uint8_t chan24;
-    uint8_t chan52;
-    uint8_t hop_count;
-    uint8_t op_bands;
-    __le32 warmup_timer;
-    __le64 custom_tsf;
-    __le32 action_delay;
+  uint8_t chan24;
+  uint8_t chan52;
+  uint8_t hop_count;
+  uint8_t op_bands;
+  __le32 warmup_timer;
+  __le64 custom_tsf;
+  __le32 action_delay;
 } __packed; /* NAN_TEST_BED_SPECIFIC_CONFIG_S_VER_1 */
 
 /*
@@ -154,10 +153,10 @@ struct iwl_nan_testbed_cfg {
  * @pot_avail: potential availability per op. class (NAN2)
  */
 struct iwl_nan_nan2_cfg {
-    __le16 cdw;
-    uint8_t op_mode;
-    uint8_t pot_avail_len;
-    struct iwl_fw_chan_avail pot_avail[20];
+  __le16 cdw;
+  uint8_t op_mode;
+  uint8_t pot_avail_len;
+  struct iwl_fw_chan_avail pot_avail[20];
 } __packed; /* NAN_CONFIG_CMD_API_S_VER_1 */
 
 /**
@@ -170,10 +169,10 @@ struct iwl_nan_nan2_cfg {
  * @nan2_cfg: nan2 specific configuration
  */
 struct iwl_nan_cfg_cmd {
-    struct iwl_nan_umac_cfg umac_cfg;
-    struct iwl_nan_testbed_cfg tb_cfg;
-    /* NAN 2 specific configuration */
-    struct iwl_nan_nan2_cfg nan2_cfg;
+  struct iwl_nan_umac_cfg umac_cfg;
+  struct iwl_nan_testbed_cfg tb_cfg;
+  /* NAN 2 specific configuration */
+  struct iwl_nan_nan2_cfg nan2_cfg;
 } __packed; /* NAN_CONFIG_CMD_API_S_VER_1 */
 
 /**
@@ -188,33 +187,33 @@ struct iwl_nan_cfg_cmd {
  * @nan2_cfg: nan2 specific configuration
  */
 struct iwl_nan_cfg_cmd_v2 {
-    struct iwl_nan_umac_cfg umac_cfg;
-    struct iwl_nan_testbed_cfg tb_cfg;
-    __le32 unavailable_slots;
-    /* NAN 2 specific configuration */
-    struct iwl_nan_nan2_cfg nan2_cfg;
+  struct iwl_nan_umac_cfg umac_cfg;
+  struct iwl_nan_testbed_cfg tb_cfg;
+  __le32 unavailable_slots;
+  /* NAN 2 specific configuration */
+  struct iwl_nan_nan2_cfg nan2_cfg;
 } __packed; /* NAN_CONFIG_CMD_API_S_VER_2 */
 
 /* NAN DE function type */
 enum iwl_fw_nan_func_type {
-    IWL_NAN_DE_FUNC_PUBLISH = 0,
-    IWL_NAN_DE_FUNC_SUBSCRIBE = 1,
-    IWL_NAN_DE_FUNC_FOLLOW_UP = 2,
+  IWL_NAN_DE_FUNC_PUBLISH = 0,
+  IWL_NAN_DE_FUNC_SUBSCRIBE = 1,
+  IWL_NAN_DE_FUNC_FOLLOW_UP = 2,
 
-    /* keep last */
-    IWL_NAN_DE_FUNC_NOT_VALID,
+  /* keep last */
+  IWL_NAN_DE_FUNC_NOT_VALID,
 };
 
 /* NAN DE function flags */
 enum iwl_fw_nan_func_flags {
-    IWL_NAN_DE_FUNC_FLAG_UNSOLICITED_OR_ACTIVE = BIT(0),
-    IWL_NAN_DE_FUNC_FLAG_SOLICITED = BIT(1),
-    IWL_NAN_DE_FUNC_FLAG_UNICAST = BIT(2),
-    IWL_NAN_DE_FUNC_FLAG_CLOSE_RANGE = BIT(3),
-    IWL_NAN_DE_FUNC_FLAG_FAW_PRESENT = BIT(4),
-    IWL_NAN_DE_FUNC_FLAG_FAW_TYPE = BIT(5),
-    IWL_NAN_DE_FUNC_FLAG_FAW_NOTIFY = BIT(6),
-    IWL_NAN_DE_FUNC_FLAG_RAISE_EVENTS = BIT(7),
+  IWL_NAN_DE_FUNC_FLAG_UNSOLICITED_OR_ACTIVE = BIT(0),
+  IWL_NAN_DE_FUNC_FLAG_SOLICITED = BIT(1),
+  IWL_NAN_DE_FUNC_FLAG_UNICAST = BIT(2),
+  IWL_NAN_DE_FUNC_FLAG_CLOSE_RANGE = BIT(3),
+  IWL_NAN_DE_FUNC_FLAG_FAW_PRESENT = BIT(4),
+  IWL_NAN_DE_FUNC_FLAG_FAW_TYPE = BIT(5),
+  IWL_NAN_DE_FUNC_FLAG_FAW_NOTIFY = BIT(6),
+  IWL_NAN_DE_FUNC_FLAG_RAISE_EVENTS = BIT(7),
 };
 
 /**
@@ -239,23 +238,23 @@ enum iwl_fw_nan_func_flags {
  * @dw_interval: awake dw interval
  */
 struct iwl_nan_add_func_common {
-    __le32 action;
-    uint8_t instance_id;
-    uint8_t type;
-    uint8_t service_id[6];
-    __le16 flags;
-    uint8_t flw_up_id;
-    uint8_t flw_up_req_id;
-    uint8_t flw_up_addr[6];
-    __le16 reserved1;
-    __le32 ttl;
-    struct iwl_fw_channel_info faw_ci;
-    uint8_t faw_attrtype;
-    uint8_t serv_info_len;
-    uint8_t srf_len;
-    uint8_t rx_filter_len;
-    uint8_t tx_filter_len;
-    uint8_t dw_interval;
+  __le32 action;
+  uint8_t instance_id;
+  uint8_t type;
+  uint8_t service_id[6];
+  __le16 flags;
+  uint8_t flw_up_id;
+  uint8_t flw_up_req_id;
+  uint8_t flw_up_addr[6];
+  __le16 reserved1;
+  __le32 ttl;
+  struct iwl_fw_channel_info faw_ci;
+  uint8_t faw_attrtype;
+  uint8_t serv_info_len;
+  uint8_t srf_len;
+  uint8_t rx_filter_len;
+  uint8_t tx_filter_len;
+  uint8_t dw_interval;
 } __packed; /* NAN_DISCO_FUNC_FIXED_CMD_API_S_VER_1 */
 
 /**
@@ -270,12 +269,12 @@ struct iwl_nan_add_func_common {
  *  security_ctx
  */
 struct iwl_nan_add_func_cmd_v2 {
-    struct iwl_nan_add_func_common cmn;
-    uint8_t cipher_capa;
-    uint8_t cipher_suite_id;
-    __le16 security_ctx_len;
-    __le16 sdea_ctrl;
-    uint8_t data[0];
+  struct iwl_nan_add_func_common cmn;
+  uint8_t cipher_capa;
+  uint8_t cipher_suite_id;
+  __le16 security_ctx_len;
+  __le16 sdea_ctrl;
+  uint8_t data[0];
 } __packed; /* NAN_DISCO_FUNC_FIXED_CMD_API_S_VER_2 */
 
 /**
@@ -286,17 +285,17 @@ struct iwl_nan_add_func_cmd_v2 {
  * @data: dw aligned fields -service_info, srf, rxFilter, txFilter
  */
 struct iwl_nan_add_func_cmd {
-    struct iwl_nan_add_func_common cmn;
-    uint8_t reserved[2];
-    uint8_t data[0];
+  struct iwl_nan_add_func_common cmn;
+  uint8_t reserved[2];
+  uint8_t data[0];
 } __packed; /* NAN_DISCO_FUNC_FIXED_CMD_API_S_VER_1 */
 
 enum iwl_nan_add_func_resp_status {
-    IWL_NAN_DE_FUNC_STATUS_SUCCESSFUL,
-    IWL_NAN_DE_FUNC_STATUS_INSUFFICIENT_ENTRIES,
-    IWL_NAN_DE_FUNC_STATUS_INSUFFICIENT_MEMORY,
-    IWL_NAN_DE_FUNC_STATUS_INVALID_INSTANCE,
-    IWL_NAN_DE_FUNC_STATUS_UNSPECIFIED,
+  IWL_NAN_DE_FUNC_STATUS_SUCCESSFUL,
+  IWL_NAN_DE_FUNC_STATUS_INSUFFICIENT_ENTRIES,
+  IWL_NAN_DE_FUNC_STATUS_INSUFFICIENT_MEMORY,
+  IWL_NAN_DE_FUNC_STATUS_INVALID_INSTANCE,
+  IWL_NAN_DE_FUNC_STATUS_UNSPECIFIED,
 };
 
 /**
@@ -307,9 +306,9 @@ enum iwl_nan_add_func_resp_status {
  * @reserved: reserved
  */
 struct iwl_nan_add_func_res {
-    uint8_t instance_id;
-    uint8_t status;
-    __le16 reserved;
+  uint8_t instance_id;
+  uint8_t status;
+  __le16 reserved;
 } __packed; /* NAN_DISCO_FUNC_CMD_API_S_VER_1 */
 
 /* Shared key cipher suite with CCMP with a 128 bit TK */
@@ -334,14 +333,14 @@ struct iwl_nan_add_func_res {
  *     to the service
  */
 enum iwl_nan_de_func_sdea_flags {
-    IWL_NAN_DE_FUNC_SDEA_FSD_REQ = BIT(0),
-    IWL_NAN_DE_FUNC_SDEA_FSD_GAS = BIT(1),
-    IWL_NAN_DE_FUNC_SDEA_DP_REQ = BIT(2),
-    IWL_NAN_DE_FUNC_SDEA_DP_MCAST = BIT(3),
-    IWL_NAN_DE_FUNC_SDEA_DP_MCAST_M_TO_M = BIT(4),
-    IWL_NAN_DE_FUNC_SDEA_QOS_REQ = BIT(5),
-    IWL_NAN_DE_FUNC_SDEA_SEC_REQ = BIT(6),
-    IWL_NAN_DE_FUNC_SDEA_RANGIGN_REQ = BIT(7),
+  IWL_NAN_DE_FUNC_SDEA_FSD_REQ = BIT(0),
+  IWL_NAN_DE_FUNC_SDEA_FSD_GAS = BIT(1),
+  IWL_NAN_DE_FUNC_SDEA_DP_REQ = BIT(2),
+  IWL_NAN_DE_FUNC_SDEA_DP_MCAST = BIT(3),
+  IWL_NAN_DE_FUNC_SDEA_DP_MCAST_M_TO_M = BIT(4),
+  IWL_NAN_DE_FUNC_SDEA_QOS_REQ = BIT(5),
+  IWL_NAN_DE_FUNC_SDEA_SEC_REQ = BIT(6),
+  IWL_NAN_DE_FUNC_SDEA_RANGIGN_REQ = BIT(7),
 };
 
 /**
@@ -357,14 +356,14 @@ enum iwl_nan_de_func_sdea_flags {
  * @buf: service specific information followed by attributes
  */
 struct iwl_nan_disc_evt_notify_v1 {
-    uint8_t peer_mac_addr[6];
-    __le16 reserved1;
-    uint8_t type;
-    uint8_t instance_id;
-    uint8_t peer_instance;
-    uint8_t service_info_len;
-    __le32 attrs_len;
-    uint8_t buf[0];
+  uint8_t peer_mac_addr[6];
+  __le16 reserved1;
+  uint8_t type;
+  uint8_t instance_id;
+  uint8_t peer_instance;
+  uint8_t service_info_len;
+  __le32 attrs_len;
+  uint8_t buf[0];
 } __packed; /* NAN_DISCO_EVENT_NTFY_API_S_VER_1 */
 
 /**
@@ -376,10 +375,10 @@ struct iwl_nan_disc_evt_notify_v1 {
  * @buf: security context data
  */
 struct iwl_nan_sec_ctxt_info {
-    uint8_t type;
-    uint8_t reserved;
-    __le16 len;
-    uint8_t buf[0];
+  uint8_t type;
+  uint8_t reserved;
+  __le16 len;
+  uint8_t buf[0];
 } __packed; /* NAN_DISCO_SEC_CTXT_ID_API_S_VER_1 */
 
 /**
@@ -399,16 +398,16 @@ struct iwl_nan_sec_ctxt_info {
  *     more iwl_nan_sec_ctxt_info entries.
  */
 struct iwl_nan_disc_info {
-    uint8_t type;
-    uint8_t instance_id;
-    uint8_t peer_instance;
-    uint8_t service_info_len;
-    __le16 sdea_control;
-    __le16 sdea_service_info_len;
-    __le16 sec_ctxt_len;
-    uint8_t cipher_suite_ids;
-    uint8_t sdea_update_indicator;
-    uint8_t buf[0];
+  uint8_t type;
+  uint8_t instance_id;
+  uint8_t peer_instance;
+  uint8_t service_info_len;
+  __le16 sdea_control;
+  __le16 sdea_service_info_len;
+  __le16 sec_ctxt_len;
+  uint8_t cipher_suite_ids;
+  uint8_t sdea_update_indicator;
+  uint8_t buf[0];
 } __packed; /* NAN_DISCO_INFO_API_S_VER_1 */
 
 /**
@@ -424,18 +423,18 @@ struct iwl_nan_disc_info {
  *     dword aligned address.
  */
 struct iwl_nan_disc_evt_notify_v2 {
-    uint8_t peer_mac_addr[6];
-    __le16 reserved1;
-    __le32 match_len;
-    __le32 avail_attrs_len;
-    uint8_t buf[0];
+  uint8_t peer_mac_addr[6];
+  __le16 reserved1;
+  __le32 match_len;
+  __le32 avail_attrs_len;
+  uint8_t buf[0];
 } __packed; /* NAN_DISCO_EVENT_NTFY_API_S_VER_2 */
 
 /* NAN function termination reasons */
 enum iwl_fw_nan_de_term_reason {
-    IWL_NAN_DE_TERM_FAILURE = 0,
-    IWL_NAN_DE_TERM_TTL_REACHED,
-    IWL_NAN_DE_TERM_USER_REQUEST,
+  IWL_NAN_DE_TERM_FAILURE = 0,
+  IWL_NAN_DE_TERM_TTL_REACHED,
+  IWL_NAN_DE_TERM_USER_REQUEST,
 };
 
 /**
@@ -447,22 +446,22 @@ enum iwl_fw_nan_de_term_reason {
  * @reserved1: reserved
  */
 struct iwl_nan_de_term {
-    uint8_t type;
-    uint8_t instance_id;
-    uint8_t reason;
-    uint8_t reserved1;
+  uint8_t type;
+  uint8_t instance_id;
+  uint8_t reason;
+  uint8_t reserved1;
 } __packed; /* NAN_DISCO_TERM_NTFY_API_S_VER_1 */
 
 enum iwl_fw_post_nan_type {
-    IWL_NAN_POST_NAN_ATTR_WLAN = 0,
-    IWL_NAN_POST_NAN_ATTR_P2P,
-    IWL_NAN_POST_NAN_ATTR_IBSS,
-    IWL_NAN_POST_NAN_ATTR_MESH,
-    IWL_NAN_POST_NAN_ATTR_FURTHER_NAN,
+  IWL_NAN_POST_NAN_ATTR_WLAN = 0,
+  IWL_NAN_POST_NAN_ATTR_P2P,
+  IWL_NAN_POST_NAN_ATTR_IBSS,
+  IWL_NAN_POST_NAN_ATTR_MESH,
+  IWL_NAN_POST_NAN_ATTR_FURTHER_NAN,
 };
 
 enum iwl_fw_config_flags {
-    NAN_FAW_FLAG_NOTIFY_HOST = BIT(0),
+  NAN_FAW_FLAG_NOTIFY_HOST = BIT(0),
 };
 
 /**
@@ -476,12 +475,12 @@ enum iwl_fw_config_flags {
  * @op_class: operating class which corresponds to faw_ci
  */
 struct iwl_nan_faw_config {
-    __le32 id_n_color;
-    struct iwl_fw_channel_info faw_ci;
-    uint8_t type;
-    uint8_t slots;
-    uint8_t flags;
-    uint8_t op_class;
+  __le32 id_n_color;
+  struct iwl_fw_channel_info faw_ci;
+  uint8_t type;
+  uint8_t slots;
+  uint8_t flags;
+  uint8_t op_class;
 } __packed; /* _NAN_DISCO_FAW_CMD_API_S_VER_1 */
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_NAN_H_

@@ -46,12 +46,12 @@
  */
 static inline int iwl_xvt_user_send_notif(struct iwl_xvt* xvt, uint32_t cmd, void* data,
                                           uint32_t size, gfp_t flags) {
-    int err;
-    IWL_DEBUG_INFO(xvt, "send user notification: cmd=0x%x, size=%d\n", cmd, size);
-    err = iwl_tm_gnl_send_msg(xvt->trans, cmd, false, data, size, flags);
+  int err;
+  IWL_DEBUG_INFO(xvt, "send user notification: cmd=0x%x, size=%d\n", cmd, size);
+  err = iwl_tm_gnl_send_msg(xvt->trans, cmd, false, data, size, flags);
 
-    WARN_ONCE(err, "failed to send notification to user, err %d\n", err);
-    return err;
+  WARN_ONCE(err, "failed to send notification to user, err %d\n", err);
+  return err;
 }
 
 void iwl_xvt_send_user_rx_notif(struct iwl_xvt* xvt, struct iwl_rx_cmd_buffer* rxb);

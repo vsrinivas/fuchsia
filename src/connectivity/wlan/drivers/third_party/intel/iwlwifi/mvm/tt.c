@@ -34,10 +34,9 @@
  *****************************************************************************/
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fuchsia_porting.h"
-
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
 #define IWL_MVM_TEMP_NOTIF_WAIT_TIMEOUT HZ
 
 void iwl_mvm_enter_ctkill(struct iwl_mvm* mvm) {
@@ -744,11 +743,11 @@ static void iwl_mvm_cooling_device_unregister(struct iwl_mvm* mvm) {
         mvm->cooling_dev.cdev = NULL;
     }
 }
-#endif /* CONFIG_THERMAL */
+#endif  /* CONFIG_THERMAL */
 #endif  // NEEDS_PORTING
 
 void iwl_mvm_thermal_initialize(struct iwl_mvm* mvm, uint32_t min_backoff) {
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
     struct iwl_mvm_tt_mgmt* tt = &mvm->thermal_throttle;
 
     IWL_DEBUG_TEMP(mvm, "Initialize Thermal Throttling\n");
@@ -773,7 +772,9 @@ void iwl_mvm_thermal_initialize(struct iwl_mvm* mvm, uint32_t min_backoff) {
 }
 
 void iwl_mvm_thermal_exit(struct iwl_mvm* mvm) {
-    if (!(mvm->init_status & IWL_MVM_INIT_STATUS_THERMAL_INIT_COMPLETE)) { return; }
+  if (!(mvm->init_status & IWL_MVM_INIT_STATUS_THERMAL_INIT_COMPLETE)) {
+    return;
+  }
 
 #if 0   // NEEDS_PORTING
     cancel_delayed_work_sync(&mvm->thermal_throttle.ct_kill_exit);
@@ -781,8 +782,8 @@ void iwl_mvm_thermal_exit(struct iwl_mvm* mvm) {
 #endif  // NEEDS_PORTING
 
 #ifdef CONFIG_THERMAL
-    iwl_mvm_cooling_device_unregister(mvm);
-    iwl_mvm_thermal_zone_unregister(mvm);
+  iwl_mvm_cooling_device_unregister(mvm);
+  iwl_mvm_thermal_zone_unregister(mvm);
 #endif
-    mvm->init_status &= ~IWL_MVM_INIT_STATUS_THERMAL_INIT_COMPLETE;
+  mvm->init_status &= ~IWL_MVM_INIT_STATUS_THERMAL_INIT_COMPLETE;
 }

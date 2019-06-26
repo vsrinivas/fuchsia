@@ -36,7 +36,7 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/fw-api.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
 static inline int iwl_mvm_check_pn(struct iwl_mvm* mvm, struct sk_buff* skb, int queue,
                                    struct ieee80211_sta* sta) {
     struct iwl_mvm_sta* mvmsta;
@@ -541,7 +541,7 @@ void iwl_mvm_rx_queue_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb, 
 #endif  // NEEDS_PORTING
 }
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
 /*
  * Returns true if the MPDU was buffered\dropped, false if it should be passed
  * to upper layer.
@@ -859,9 +859,9 @@ static void iwl_mvm_decode_he_phy_ru_alloc(struct iwl_mvm_rx_phy_data* phy_data,
     }
 
     if (he_mu) {
-#define CHECK_BW(bw)                                                           \
-    BUILD_BUG_ON(IEEE80211_RADIOTAP_HE_MU_FLAGS2_BW_FROM_SIG_A_BW_##bw##MHZ != \
-                 RATE_MCS_CHAN_WIDTH_##bw >> RATE_MCS_CHAN_WIDTH_POS)
+#define CHECK_BW(bw)                                                         \
+  BUILD_BUG_ON(IEEE80211_RADIOTAP_HE_MU_FLAGS2_BW_FROM_SIG_A_BW_##bw##MHZ != \
+               RATE_MCS_CHAN_WIDTH_##bw >> RATE_MCS_CHAN_WIDTH_POS)
         CHECK_BW(20);
         CHECK_BW(40);
         CHECK_BW(80);
@@ -1065,9 +1065,9 @@ static void iwl_mvm_rx_he(struct iwl_mvm* mvm, struct sk_buff* skb,
 
     rx_status->he_dcm = !!(rate_n_flags & RATE_HE_DUAL_CARRIER_MODE_MSK);
 
-#define CHECK_TYPE(F)                                      \
-    BUILD_BUG_ON(IEEE80211_RADIOTAP_HE_DATA1_FORMAT_##F != \
-                 (RATE_MCS_HE_TYPE_##F >> RATE_MCS_HE_TYPE_POS))
+#define CHECK_TYPE(F)                                    \
+  BUILD_BUG_ON(IEEE80211_RADIOTAP_HE_DATA1_FORMAT_##F != \
+               (RATE_MCS_HE_TYPE_##F >> RATE_MCS_HE_TYPE_POS))
 
     CHECK_TYPE(SU);
     CHECK_TYPE(EXT_SU);
@@ -1151,7 +1151,7 @@ static void iwl_mvm_decode_lsig(struct sk_buff* skb, struct iwl_mvm_rx_phy_data*
 
 void iwl_mvm_rx_mpdu_mq(struct iwl_mvm* mvm, struct napi_struct* napi,
                         struct iwl_rx_cmd_buffer* rxb, int queue) {
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
     struct ieee80211_rx_status* rx_status;
     struct iwl_rx_packet* pkt = rxb_addr(rxb);
     struct iwl_rx_mpdu_desc* desc = (void*)pkt->data;
@@ -1362,7 +1362,7 @@ void iwl_mvm_rx_mpdu_mq(struct iwl_mvm* mvm, struct napi_struct* napi,
          * In both cases an existing station.
          */
         iwl_mvm_tdls_peer_cache_pkt(mvm, hdr, len, queue);
-#endif /* CPTCFG_IWLMVM_TDLS_PEER_CACHE */
+#endif  /* CPTCFG_IWLMVM_TDLS_PEER_CACHE */
 
         if (iwl_mvm_is_dup(sta, queue, rx_status, hdr, desc)) {
             kfree_skb(skb);

@@ -37,7 +37,6 @@
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_IMG_H_
 
 #include "api/dbg-tlv.h"
-
 #include "error-dump.h"
 #include "file.h"
 
@@ -52,11 +51,11 @@
  * @IWL_UCODE_REGULAR_USNIFFER: Normal runtime ucode when using usniffer image
  */
 enum iwl_ucode_type {
-    IWL_UCODE_REGULAR,
-    IWL_UCODE_INIT,
-    IWL_UCODE_WOWLAN,
-    IWL_UCODE_REGULAR_USNIFFER,
-    IWL_UCODE_TYPE_MAX,
+  IWL_UCODE_REGULAR,
+  IWL_UCODE_INIT,
+  IWL_UCODE_WOWLAN,
+  IWL_UCODE_REGULAR_USNIFFER,
+  IWL_UCODE_TYPE_MAX,
 };
 
 /*
@@ -67,46 +66,46 @@ enum iwl_ucode_type {
  * some debugging code accesses that.
  */
 enum iwl_ucode_sec {
-    IWL_UCODE_SECTION_DATA,
-    IWL_UCODE_SECTION_INST,
+  IWL_UCODE_SECTION_DATA,
+  IWL_UCODE_SECTION_INST,
 };
 
 struct iwl_ucode_capabilities {
-    uint32_t max_probe_length;
-    uint32_t n_scan_channels;
-    uint32_t standard_phy_calibration_size;
-    uint32_t flags;
+  uint32_t max_probe_length;
+  uint32_t n_scan_channels;
+  uint32_t standard_phy_calibration_size;
+  uint32_t flags;
 #if IS_ENABLED(CPTCFG_IWLFMAC)
-    uint32_t fmac_api_version;
-    uint32_t fmac_error_log_addr;
-    uint32_t fmac_error_log_size;
+  uint32_t fmac_api_version;
+  uint32_t fmac_error_log_addr;
+  uint32_t fmac_error_log_size;
 #endif
-    unsigned long _api[BITS_TO_LONGS(NUM_IWL_UCODE_TLV_API)];
-    unsigned long _capa[BITS_TO_LONGS(NUM_IWL_UCODE_TLV_CAPA)];
+  unsigned long _api[BITS_TO_LONGS(NUM_IWL_UCODE_TLV_API)];
+  unsigned long _capa[BITS_TO_LONGS(NUM_IWL_UCODE_TLV_CAPA)];
 };
 
 static inline bool fw_has_api(const struct iwl_ucode_capabilities* capabilities,
                               iwl_ucode_tlv_api_t api) {
-    return test_bit((__force long)api, capabilities->_api);
+  return test_bit((__force long)api, capabilities->_api);
 }
 
 static inline bool fw_has_capa(const struct iwl_ucode_capabilities* capabilities,
                                iwl_ucode_tlv_capa_t capa) {
-    return test_bit((__force long)capa, capabilities->_capa);
+  return test_bit((__force long)capa, capabilities->_capa);
 }
 
 /* one for each uCode image (inst/data, init/runtime/wowlan) */
 struct fw_desc {
-    const void* data; /* vmalloc'ed data */
-    uint32_t len;     /* size in bytes */
-    uint32_t offset;  /* offset in the device */
+  const void* data; /* vmalloc'ed data */
+  uint32_t len;     /* size in bytes */
+  uint32_t offset;  /* offset in the device */
 };
 
 struct fw_img {
-    struct fw_desc* sec;
-    int num_sec;
-    bool is_dual_cpus;
-    uint32_t paging_mem_size;
+  struct fw_desc* sec;
+  int num_sec;
+  bool is_dual_cpus;
+  uint32_t paging_mem_size;
 };
 
 /*
@@ -146,9 +145,9 @@ struct fw_img {
  * @fw_paging_size: page size
  */
 struct iwl_fw_paging {
-    dma_addr_t fw_paging_phys;
-    struct page* fw_paging_block;
-    uint32_t fw_paging_size;
+  dma_addr_t fw_paging_phys;
+  struct page* fw_paging_block;
+  uint32_t fw_paging_size;
 };
 
 /**
@@ -157,8 +156,8 @@ struct iwl_fw_paging {
  * @cs: cipher scheme entries
  */
 struct iwl_fw_cscheme_list {
-    uint8_t size;
-    struct iwl_fw_cipher_scheme cs[];
+  uint8_t size;
+  struct iwl_fw_cipher_scheme cs[];
 } __packed;
 
 /**
@@ -167,10 +166,10 @@ struct iwl_fw_cscheme_list {
  * @IWL_FW_MVM: MVM firmware
  */
 enum iwl_fw_type {
-    IWL_FW_DVM,
-    IWL_FW_MVM,
+  IWL_FW_DVM,
+  IWL_FW_MVM,
 #if IS_ENABLED(CPTCFG_IWLFMAC)
-    IWL_FW_FMAC,
+  IWL_FW_FMAC,
 #endif
 };
 
@@ -187,14 +186,14 @@ enum iwl_fw_type {
  * @dump_mask: bitmask of dump regions
  */
 struct iwl_fw_dbg {
-    struct iwl_fw_dbg_dest_tlv_v1* dest_tlv;
-    uint8_t n_dest_reg;
-    struct iwl_fw_dbg_conf_tlv* conf_tlv[FW_DBG_CONF_MAX];
-    struct iwl_fw_dbg_trigger_tlv* trigger_tlv[FW_DBG_TRIGGER_MAX];
-    size_t trigger_tlv_len[FW_DBG_TRIGGER_MAX];
-    struct iwl_fw_dbg_mem_seg_tlv* mem_tlv;
-    size_t n_mem_tlv;
-    uint32_t dump_mask;
+  struct iwl_fw_dbg_dest_tlv_v1* dest_tlv;
+  uint8_t n_dest_reg;
+  struct iwl_fw_dbg_conf_tlv* conf_tlv[FW_DBG_CONF_MAX];
+  struct iwl_fw_dbg_trigger_tlv* trigger_tlv[FW_DBG_TRIGGER_MAX];
+  size_t trigger_tlv_len[FW_DBG_TRIGGER_MAX];
+  struct iwl_fw_dbg_mem_seg_tlv* mem_tlv;
+  size_t n_mem_tlv;
+  uint32_t dump_mask;
 };
 
 /**
@@ -205,10 +204,10 @@ struct iwl_fw_dbg {
  * @conf_ext: second trigger, contains extra regions to dump
  */
 struct iwl_fw_ini_active_triggers {
-    bool active;
-    enum iwl_fw_ini_apply_point apply_point;
-    struct iwl_fw_ini_trigger* conf;
-    struct iwl_fw_ini_trigger* conf_ext;
+  bool active;
+  enum iwl_fw_ini_apply_point apply_point;
+  struct iwl_fw_ini_trigger* conf;
+  struct iwl_fw_ini_trigger* conf_ext;
 };
 
 /**
@@ -217,8 +216,8 @@ struct iwl_fw_ini_active_triggers {
  * @apply_point: apply point where it became active
  */
 struct iwl_fw_ini_active_regs {
-    struct iwl_fw_ini_region_cfg* reg;
-    enum iwl_fw_ini_apply_point apply_point;
+  struct iwl_fw_ini_region_cfg* reg;
+  enum iwl_fw_ini_apply_point apply_point;
 };
 
 /**
@@ -243,62 +242,66 @@ struct iwl_fw_ini_active_regs {
  *  we get the ALIVE from the uCode
  */
 struct iwl_fw {
-    uint32_t ucode_ver;
+  uint32_t ucode_ver;
 
-    char fw_version[ETHTOOL_FWVERS_LEN];
+  char fw_version[ETHTOOL_FWVERS_LEN];
 
-    /* ucode images */
-    struct fw_img img[IWL_UCODE_TYPE_MAX];
-    size_t iml_len;
-    uint8_t* iml;
+  /* ucode images */
+  struct fw_img img[IWL_UCODE_TYPE_MAX];
+  size_t iml_len;
+  uint8_t* iml;
 
-    struct iwl_ucode_capabilities ucode_capa;
-    bool enhance_sensitivity_table;
+  struct iwl_ucode_capabilities ucode_capa;
+  bool enhance_sensitivity_table;
 
-    uint32_t init_evtlog_ptr, init_evtlog_size, init_errlog_ptr;
-    uint32_t inst_evtlog_ptr, inst_evtlog_size, inst_errlog_ptr;
+  uint32_t init_evtlog_ptr, init_evtlog_size, init_errlog_ptr;
+  uint32_t inst_evtlog_ptr, inst_evtlog_size, inst_errlog_ptr;
 
-    struct iwl_tlv_calib_ctrl default_calib[IWL_UCODE_TYPE_MAX];
-    uint32_t phy_config;
-    uint8_t valid_tx_ant;
-    uint8_t valid_rx_ant;
+  struct iwl_tlv_calib_ctrl default_calib[IWL_UCODE_TYPE_MAX];
+  uint32_t phy_config;
+  uint8_t valid_tx_ant;
+  uint8_t valid_rx_ant;
 
-    enum iwl_fw_type type;
+  enum iwl_fw_type type;
 
-    struct iwl_fw_cipher_scheme cs[IWL_UCODE_MAX_CS];
-    uint8_t human_readable[FW_VER_HUMAN_READABLE_SZ];
+  struct iwl_fw_cipher_scheme cs[IWL_UCODE_MAX_CS];
+  uint8_t human_readable[FW_VER_HUMAN_READABLE_SZ];
 
-    struct iwl_fw_dbg dbg;
+  struct iwl_fw_dbg dbg;
 };
 
 static inline const char* get_fw_dbg_mode_string(int mode) {
-    switch (mode) {
+  switch (mode) {
     case SMEM_MODE:
-        return "SMEM";
+      return "SMEM";
     case EXTERNAL_MODE:
-        return "EXTERNAL_DRAM";
+      return "EXTERNAL_DRAM";
     case MARBH_MODE:
-        return "MARBH";
+      return "MARBH";
     case MIPI_MODE:
-        return "MIPI";
+      return "MIPI";
     default:
-        return "UNKNOWN";
-    }
+      return "UNKNOWN";
+  }
 }
 
 static inline bool iwl_fw_dbg_conf_usniffer(const struct iwl_fw* fw, uint8_t id) {
-    const struct iwl_fw_dbg_conf_tlv* conf_tlv = fw->dbg.conf_tlv[id];
+  const struct iwl_fw_dbg_conf_tlv* conf_tlv = fw->dbg.conf_tlv[id];
 
-    if (!conf_tlv) { return false; }
+  if (!conf_tlv) {
+    return false;
+  }
 
-    return conf_tlv->usniffer;
+  return conf_tlv->usniffer;
 }
 
 static inline const struct fw_img* iwl_get_ucode_image(const struct iwl_fw* fw,
                                                        enum iwl_ucode_type ucode_type) {
-    if (ucode_type >= IWL_UCODE_TYPE_MAX) { return NULL; }
+  if (ucode_type >= IWL_UCODE_TYPE_MAX) {
+    return NULL;
+  }
 
-    return &fw->img[ucode_type];
+  return &fw->img[ucode_type];
 }
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_IMG_H_

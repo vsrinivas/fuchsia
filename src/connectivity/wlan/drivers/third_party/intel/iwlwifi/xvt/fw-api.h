@@ -55,63 +55,63 @@
 #define XVT_LMAC_1_ID 1
 
 enum {
-    APMG_PD_SV_CMD = 0x43,
+  APMG_PD_SV_CMD = 0x43,
 
-    /* ToF */
-    LOCATION_GROUP_NOTIFICATION = 0x11,
+  /* ToF */
+  LOCATION_GROUP_NOTIFICATION = 0x11,
 
-    NVM_COMMIT_COMPLETE_NOTIFICATION = 0xad,
-    GET_SET_PHY_DB_CMD = 0x8f,
+  NVM_COMMIT_COMPLETE_NOTIFICATION = 0xad,
+  GET_SET_PHY_DB_CMD = 0x8f,
 
-    /* BFE */
-    REPLY_HD_PARAMS_CMD = 0xa6,
+  /* BFE */
+  REPLY_HD_PARAMS_CMD = 0xa6,
 
-    REPLY_RX_DSP_EXT_INFO = 0xc4,
+  REPLY_RX_DSP_EXT_INFO = 0xc4,
 
-    REPLY_DEBUG_XVT_CMD = 0xf3,
+  REPLY_DEBUG_XVT_CMD = 0xf3,
 };
 
 struct xvt_alive_resp_ver2 {
-    __le16 status;
-    __le16 flags;
-    uint8_t ucode_minor;
-    uint8_t ucode_major;
-    __le16 id;
-    uint8_t api_minor;
-    uint8_t api_major;
-    uint8_t ver_subtype;
-    uint8_t ver_type;
-    uint8_t mac;
-    uint8_t opt;
-    __le16 reserved2;
-    __le32 timestamp;
-    __le32 error_event_table_ptr; /* SRAM address for error log */
-    __le32 log_event_table_ptr;   /* SRAM address for LMAC event log */
-    __le32 cpu_register_ptr;
-    __le32 dbgm_config_ptr;
-    __le32 alive_counter_ptr;
-    __le32 scd_base_ptr; /* SRAM address for SCD */
-    __le32 st_fwrd_addr; /* pointer to Store and forward */
-    __le32 st_fwrd_size;
-    uint8_t umac_minor;     /* UMAC version: minor */
-    uint8_t umac_major;     /* UMAC version: major */
-    __le16 umac_id;         /* UMAC version: id */
-    __le32 error_info_addr; /* SRAM address for UMAC error log */
-    __le32 dbg_print_buff_addr;
+  __le16 status;
+  __le16 flags;
+  uint8_t ucode_minor;
+  uint8_t ucode_major;
+  __le16 id;
+  uint8_t api_minor;
+  uint8_t api_major;
+  uint8_t ver_subtype;
+  uint8_t ver_type;
+  uint8_t mac;
+  uint8_t opt;
+  __le16 reserved2;
+  __le32 timestamp;
+  __le32 error_event_table_ptr; /* SRAM address for error log */
+  __le32 log_event_table_ptr;   /* SRAM address for LMAC event log */
+  __le32 cpu_register_ptr;
+  __le32 dbgm_config_ptr;
+  __le32 alive_counter_ptr;
+  __le32 scd_base_ptr; /* SRAM address for SCD */
+  __le32 st_fwrd_addr; /* pointer to Store and forward */
+  __le32 st_fwrd_size;
+  uint8_t umac_minor;     /* UMAC version: minor */
+  uint8_t umac_major;     /* UMAC version: major */
+  __le16 umac_id;         /* UMAC version: id */
+  __le32 error_info_addr; /* SRAM address for UMAC error log */
+  __le32 dbg_print_buff_addr;
 } __packed; /* ALIVE_RES_API_S_VER_2 */
 
 enum {
-    XVT_DBG_GET_SVDROP_VER_OP = 0x01,
+  XVT_DBG_GET_SVDROP_VER_OP = 0x01,
 };
 
 struct xvt_debug_cmd {
-    __le32 opcode;
-    __le32 dw_num;
+  __le32 opcode;
+  __le32 dw_num;
 }; /* DEBUG_XVT_CMD_API_S_VER_1 */
 
 struct xvt_debug_res {
-    __le32 dw_num;
-    __le32 data[0];
+  __le32 dw_num;
+  __le32 data[0];
 }; /* DEBUG_XVT_RES_API_S_VER_1 */
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_XVT_FW_API_H_

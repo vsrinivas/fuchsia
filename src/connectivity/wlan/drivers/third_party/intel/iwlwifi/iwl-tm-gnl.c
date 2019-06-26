@@ -35,8 +35,10 @@
  *****************************************************************************/
 
 #include "iwl-tm-gnl.h"
+
 #include <linux/export.h>
 #include <net/genetlink.h>
+
 #include "iwl-csr.h"
 #include "iwl-dnt-cfg.h"
 #include "iwl-dnt-dispatch.h"
@@ -54,17 +56,21 @@
  *
  */
 static int iwl_tm_validate_fw_cmd(struct iwl_tm_data* data_in) {
-    struct iwl_tm_cmd_request* cmd_req;
-    uint32_t data_buf_size;
+  struct iwl_tm_cmd_request* cmd_req;
+  uint32_t data_buf_size;
 
-    if (!data_in->data || (data_in->len < sizeof(struct iwl_tm_cmd_request))) { return -EINVAL; }
+  if (!data_in->data || (data_in->len < sizeof(struct iwl_tm_cmd_request))) {
+    return -EINVAL;
+  }
 
-    cmd_req = (struct iwl_tm_cmd_request*)data_in->data;
+  cmd_req = (struct iwl_tm_cmd_request*)data_in->data;
 
-    data_buf_size = data_in->len - sizeof(struct iwl_tm_cmd_request);
-    if (data_buf_size < cmd_req->len) { return -EINVAL; }
+  data_buf_size = data_in->len - sizeof(struct iwl_tm_cmd_request);
+  if (data_buf_size < cmd_req->len) {
+    return -EINVAL;
+  }
 
-    return 0;
+  return 0;
 }
 
 /**
@@ -73,35 +79,43 @@ static int iwl_tm_validate_fw_cmd(struct iwl_tm_data* data_in) {
  *      the size of the request struct in bytes.
  */
 static int iwl_tm_validate_reg_ops(struct iwl_tm_data* data_in) {
-    struct iwl_tm_regs_request* request;
-    uint32_t request_size;
-    uint32_t idx;
+  struct iwl_tm_regs_request* request;
+  uint32_t request_size;
+  uint32_t idx;
 
-    if (!data_in->data || (data_in->len < sizeof(struct iwl_tm_regs_request))) { return -EINVAL; }
+  if (!data_in->data || (data_in->len < sizeof(struct iwl_tm_regs_request))) {
+    return -EINVAL;
+  }
 
-    request = (struct iwl_tm_regs_request*)(data_in->data);
-    request_size = sizeof(struct iwl_tm_regs_request) + request->num * sizeof(struct iwl_tm_reg_op);
-    if (data_in->len < request_size) { return -EINVAL; }
+  request = (struct iwl_tm_regs_request*)(data_in->data);
+  request_size = sizeof(struct iwl_tm_regs_request) + request->num * sizeof(struct iwl_tm_reg_op);
+  if (data_in->len < request_size) {
+    return -EINVAL;
+  }
 
-    /*
-     * Calculate result size - result is returned only for read ops
-     * Also, verifying inputs
-     */
-    for (idx = 0; idx < request->num; idx++) {
-        if (request->reg_ops[idx].op_type >= IWL_TM_REG_OP_MAX) { return -EINVAL; }
-
-        /*
-         * Allow access only to FH/CSR/HBUS in direct mode.
-         * Since we don't have the upper bounds for the CSR
-         * and HBUS segments, we will use only the upper
-         * bound of FH for sanity check.
-         */
-        if (!IS_AL_ADDR(request->reg_ops[idx].address)) {
-            if (request->reg_ops[idx].address >= FH_MEM_UPPER_BOUND) { return -EINVAL; }
-        }
+  /*
+   * Calculate result size - result is returned only for read ops
+   * Also, verifying inputs
+   */
+  for (idx = 0; idx < request->num; idx++) {
+    if (request->reg_ops[idx].op_type >= IWL_TM_REG_OP_MAX) {
+      return -EINVAL;
     }
 
-    return 0;
+    /*
+     * Allow access only to FH/CSR/HBUS in direct mode.
+     * Since we don't have the upper bounds for the CSR
+     * and HBUS segments, we will use only the upper
+     * bound of FH for sanity check.
+     */
+    if (!IS_AL_ADDR(request->reg_ops[idx].address)) {
+      if (request->reg_ops[idx].address >= FH_MEM_UPPER_BOUND) {
+        return -EINVAL;
+      }
+    }
+  }
+
+  return 0;
 }
 
 /**
@@ -109,17 +123,19 @@ static int iwl_tm_validate_reg_ops(struct iwl_tm_data* data_in) {
  * @dev: testmode device struct
  */
 static int iwl_tm_trace_end(struct iwl_tm_gnl_dev* dev) {
-    struct iwl_trans* trans = dev->trans;
-    struct iwl_test_trace* trace = &dev->tst.trace;
+  struct iwl_trans* trans = dev->trans;
+  struct iwl_test_trace* trace = &dev->tst.trace;
 
-    if (!trace->enabled) { return -EILSEQ; }
+  if (!trace->enabled) {
+    return -EILSEQ;
+  }
 
-    if (trace->cpu_addr && trace->dma_addr) {
-        dma_free_coherent(trans->dev, trace->size, trace->cpu_addr, trace->dma_addr);
-    }
-    memset(trace, 0, sizeof(struct iwl_test_trace));
+  if (trace->cpu_addr && trace->dma_addr) {
+    dma_free_coherent(trans->dev, trace->size, trace->cpu_addr, trace->dma_addr);
+  }
+  memset(trace, 0, sizeof(struct iwl_test_trace));
 
-    return 0;
+  return 0;
 }
 
 /**
@@ -130,37 +146,41 @@ static int iwl_tm_trace_end(struct iwl_tm_gnl_dev* dev) {
  */
 static int iwl_tm_trace_begin(struct iwl_tm_gnl_dev* dev, struct iwl_tm_data* data_in,
                               struct iwl_tm_data* data_out) {
-    struct iwl_tm_trace_request* req = data_in->data;
-    struct iwl_tm_trace_request* resp;
+  struct iwl_tm_trace_request* req = data_in->data;
+  struct iwl_tm_trace_request* resp;
 
-    if (!data_in->data || data_in->len < sizeof(struct iwl_tm_trace_request)) { return -EINVAL; }
+  if (!data_in->data || data_in->len < sizeof(struct iwl_tm_trace_request)) {
+    return -EINVAL;
+  }
 
-    req = data_in->data;
+  req = data_in->data;
 
-    /* size zero means use the default */
-    if (!req->size) {
-        req->size = TRACE_BUFF_SIZE_DEF;
-    } else if (req->size < TRACE_BUFF_SIZE_MIN || req->size > TRACE_BUFF_SIZE_MAX) {
-        return -EINVAL;
-    } else if (!dev->dnt->mon_buf_cpu_addr) {
-        return -ENOMEM;
-    }
+  /* size zero means use the default */
+  if (!req->size) {
+    req->size = TRACE_BUFF_SIZE_DEF;
+  } else if (req->size < TRACE_BUFF_SIZE_MIN || req->size > TRACE_BUFF_SIZE_MAX) {
+    return -EINVAL;
+  } else if (!dev->dnt->mon_buf_cpu_addr) {
+    return -ENOMEM;
+  }
 
-    resp = kmalloc(sizeof(*resp), GFP_KERNEL);
-    if (!resp) { return -ENOMEM; }
-    resp->size = dev->dnt->mon_buf_size;
-    /* Casting to avoid compilation warnings when DMA address is 32bit */
-    resp->addr = (uint64_t)dev->dnt->mon_base_addr;
+  resp = kmalloc(sizeof(*resp), GFP_KERNEL);
+  if (!resp) {
+    return -ENOMEM;
+  }
+  resp->size = dev->dnt->mon_buf_size;
+  /* Casting to avoid compilation warnings when DMA address is 32bit */
+  resp->addr = (uint64_t)dev->dnt->mon_base_addr;
 
-    data_out->data = resp;
-    data_out->len = sizeof(*resp);
+  data_out->data = resp;
+  data_out->len = sizeof(*resp);
 
-    return 0;
+  return 0;
 }
 
 static bool iwl_tm_gnl_valid_hw_addr(uint32_t addr) {
-    /* TODO need to implement */
-    return true;
+  /* TODO need to implement */
+  return true;
 }
 
 /**
@@ -169,31 +189,34 @@ static bool iwl_tm_gnl_valid_hw_addr(uint32_t addr) {
  * @data_in:    SRAM access request
  */
 static int iwl_tm_validate_sram_write_req(struct iwl_tm_gnl_dev* dev, struct iwl_tm_data* data_in) {
-    struct iwl_tm_sram_write_request* cmd_in;
-    uint32_t data_buf_size;
+  struct iwl_tm_sram_write_request* cmd_in;
+  uint32_t data_buf_size;
 
-    if (!dev->trans->op_mode) {
-        IWL_ERR(dev->trans, "No op_mode!\n");
-        return -ENODEV;
-    }
+  if (!dev->trans->op_mode) {
+    IWL_ERR(dev->trans, "No op_mode!\n");
+    return -ENODEV;
+  }
 
-    if (!data_in->data || data_in->len < sizeof(struct iwl_tm_sram_write_request)) {
-        return -EINVAL;
-    }
-
-    cmd_in = data_in->data;
-
-    data_buf_size = data_in->len - sizeof(struct iwl_tm_sram_write_request);
-    if (data_buf_size < cmd_in->len) { return -EINVAL; }
-
-    if (iwl_tm_gnl_valid_hw_addr(cmd_in->offset)) { return 0; }
-
-    if ((cmd_in->offset < IWL_ABS_PRPH_START) &&
-        (cmd_in->offset >= IWL_ABS_PRPH_START + PRPH_END)) {
-        return 0;
-    }
-
+  if (!data_in->data || data_in->len < sizeof(struct iwl_tm_sram_write_request)) {
     return -EINVAL;
+  }
+
+  cmd_in = data_in->data;
+
+  data_buf_size = data_in->len - sizeof(struct iwl_tm_sram_write_request);
+  if (data_buf_size < cmd_in->len) {
+    return -EINVAL;
+  }
+
+  if (iwl_tm_gnl_valid_hw_addr(cmd_in->offset)) {
+    return 0;
+  }
+
+  if ((cmd_in->offset < IWL_ABS_PRPH_START) && (cmd_in->offset >= IWL_ABS_PRPH_START + PRPH_END)) {
+    return 0;
+  }
+
+  return -EINVAL;
 }
 
 /**
@@ -202,27 +225,28 @@ static int iwl_tm_validate_sram_write_req(struct iwl_tm_gnl_dev* dev, struct iwl
  * @data_in:    SRAM access request
  */
 static int iwl_tm_validate_sram_read_req(struct iwl_tm_gnl_dev* dev, struct iwl_tm_data* data_in) {
-    struct iwl_tm_sram_read_request* cmd_in;
+  struct iwl_tm_sram_read_request* cmd_in;
 
-    if (!dev->trans->op_mode) {
-        IWL_ERR(dev->trans, "No op_mode!\n");
-        return -ENODEV;
-    }
+  if (!dev->trans->op_mode) {
+    IWL_ERR(dev->trans, "No op_mode!\n");
+    return -ENODEV;
+  }
 
-    if (!data_in->data || data_in->len < sizeof(struct iwl_tm_sram_read_request)) {
-        return -EINVAL;
-    }
-
-    cmd_in = data_in->data;
-
-    if (iwl_tm_gnl_valid_hw_addr(cmd_in->offset)) { return 0; }
-
-    if ((cmd_in->offset < IWL_ABS_PRPH_START) &&
-        (cmd_in->offset >= IWL_ABS_PRPH_START + PRPH_END)) {
-        return 0;
-    }
-
+  if (!data_in->data || data_in->len < sizeof(struct iwl_tm_sram_read_request)) {
     return -EINVAL;
+  }
+
+  cmd_in = data_in->data;
+
+  if (iwl_tm_gnl_valid_hw_addr(cmd_in->offset)) {
+    return 0;
+  }
+
+  if ((cmd_in->offset < IWL_ABS_PRPH_START) && (cmd_in->offset >= IWL_ABS_PRPH_START + PRPH_END)) {
+    return 0;
+  }
+
+  return -EINVAL;
 }
 
 /**
@@ -231,18 +255,20 @@ static int iwl_tm_validate_sram_read_req(struct iwl_tm_gnl_dev* dev, struct iwl_
  * @data_in:    uint32_t notification (flag)
  */
 static int iwl_tm_notifications_en(struct iwl_test* tst, struct iwl_tm_data* data_in) {
-    uint32_t notification_en;
+  uint32_t notification_en;
 
-    if (!data_in->data || (data_in->len != sizeof(uint32_t))) { return -EINVAL; }
+  if (!data_in->data || (data_in->len != sizeof(uint32_t))) {
+    return -EINVAL;
+  }
 
-    notification_en = *(uint32_t*)data_in->data;
-    if ((notification_en != NOTIFICATIONS_ENABLE) && (notification_en != NOTIFICATIONS_DISABLE)) {
-        return -EINVAL;
-    }
+  notification_en = *(uint32_t*)data_in->data;
+  if ((notification_en != NOTIFICATIONS_ENABLE) && (notification_en != NOTIFICATIONS_DISABLE)) {
+    return -EINVAL;
+  }
 
-    tst->notify = notification_en == NOTIFICATIONS_ENABLE;
+  tst->notify = notification_en == NOTIFICATIONS_ENABLE;
 
-    return 0;
+  return 0;
 }
 
 /**
@@ -251,19 +277,25 @@ static int iwl_tm_notifications_en(struct iwl_test* tst, struct iwl_tm_data* dat
  *
  */
 static int iwl_tm_validate_tx_cmd(struct iwl_tm_data* data_in) {
-    struct iwl_tm_mod_tx_request* cmd_req;
-    uint32_t data_buf_size;
+  struct iwl_tm_mod_tx_request* cmd_req;
+  uint32_t data_buf_size;
 
-    if (!data_in->data || (data_in->len < sizeof(struct iwl_tm_mod_tx_request))) { return -EINVAL; }
+  if (!data_in->data || (data_in->len < sizeof(struct iwl_tm_mod_tx_request))) {
+    return -EINVAL;
+  }
 
-    cmd_req = (struct iwl_tm_mod_tx_request*)data_in->data;
+  cmd_req = (struct iwl_tm_mod_tx_request*)data_in->data;
 
-    data_buf_size = data_in->len - sizeof(struct iwl_tm_mod_tx_request);
-    if (data_buf_size < cmd_req->len) { return -EINVAL; }
+  data_buf_size = data_in->len - sizeof(struct iwl_tm_mod_tx_request);
+  if (data_buf_size < cmd_req->len) {
+    return -EINVAL;
+  }
 
-    if (cmd_req->sta_id >= IWL_TM_STATION_COUNT) { return -EINVAL; }
+  if (cmd_req->sta_id >= IWL_TM_STATION_COUNT) {
+    return -EINVAL;
+  }
 
-    return 0;
+  return 0;
 }
 
 /**
@@ -272,16 +304,14 @@ static int iwl_tm_validate_tx_cmd(struct iwl_tm_data* data_in) {
  *
  */
 static int iwl_tm_validate_rx_hdrs_mode_req(struct iwl_tm_data* data_in) {
-    if (!data_in->data || (data_in->len < sizeof(struct iwl_xvt_rx_hdrs_mode_request))) {
-        return -EINVAL;
-    }
+  if (!data_in->data || (data_in->len < sizeof(struct iwl_xvt_rx_hdrs_mode_request))) {
+    return -EINVAL;
+  }
 
-    return 0;
+  return 0;
 }
 
-static int iwl_tm_validate_get_chip_id(struct iwl_trans* trans) {
-    return 0;
-}
+static int iwl_tm_validate_get_chip_id(struct iwl_trans* trans) { return 0; }
 
 /**
  * iwl_tm_validate_apmg_pd_mode_req() - Validates apmg rx mode request
@@ -289,112 +319,123 @@ static int iwl_tm_validate_get_chip_id(struct iwl_trans* trans) {
  *
  */
 static int iwl_tm_validate_apmg_pd_mode_req(struct iwl_tm_data* data_in) {
-    if (!data_in->data || (data_in->len != sizeof(struct iwl_xvt_apmg_pd_mode_request))) {
-        return -EINVAL;
-    }
+  if (!data_in->data || (data_in->len != sizeof(struct iwl_xvt_apmg_pd_mode_request))) {
+    return -EINVAL;
+  }
 
-    return 0;
+  return 0;
 }
 
 static int iwl_tm_get_device_status(struct iwl_tm_gnl_dev* dev, struct iwl_tm_data* data_in,
                                     struct iwl_tm_data* data_out) {
-    __u32* status;
+  __u32* status;
 
-    status = kmalloc(sizeof(__u32), GFP_KERNEL);
-    if (!status) { return -ENOMEM; }
+  status = kmalloc(sizeof(__u32), GFP_KERNEL);
+  if (!status) {
+    return -ENOMEM;
+  }
 
-    *status = dev->dnt->iwl_dnt_status;
+  *status = dev->dnt->iwl_dnt_status;
 
-    data_out->data = status;
-    data_out->len = sizeof(__u32);
+  data_out->data = status;
+  data_out->len = sizeof(__u32);
 
-    return 0;
+  return 0;
 }
 
 #if IS_ENABLED(CPTCFG_IWLXVT)
 static int iwl_tm_switch_op_mode(struct iwl_tm_gnl_dev* dev, struct iwl_tm_data* data_in) {
-    struct iwl_switch_op_mode* switch_cmd = data_in->data;
-    struct iwl_drv* drv;
-    int ret = 0;
+  struct iwl_switch_op_mode* switch_cmd = data_in->data;
+  struct iwl_drv* drv;
+  int ret = 0;
 
-    if (data_in->len < sizeof(*switch_cmd)) { return -EINVAL; }
+  if (data_in->len < sizeof(*switch_cmd)) {
+    return -EINVAL;
+  }
 
-    drv = iwl_drv_get_dev_container(dev->trans->dev);
-    if (!drv) {
-        IWL_ERR(dev->trans, "Couldn't retrieve device information\n");
-        return -ENODEV;
-    }
+  drv = iwl_drv_get_dev_container(dev->trans->dev);
+  if (!drv) {
+    IWL_ERR(dev->trans, "Couldn't retrieve device information\n");
+    return -ENODEV;
+  }
 
-    /* Executing switch command */
-    ret = iwl_drv_switch_op_mode(drv, switch_cmd->new_op_mode);
+  /* Executing switch command */
+  ret = iwl_drv_switch_op_mode(drv, switch_cmd->new_op_mode);
 
-    if (ret < 0)
-        IWL_ERR(dev->trans, "Failed to switch op mode to %s (err:%d)\n", switch_cmd->new_op_mode,
-                ret);
+  if (ret < 0)
+    IWL_ERR(dev->trans, "Failed to switch op mode to %s (err:%d)\n", switch_cmd->new_op_mode, ret);
 
-    return ret;
+  return ret;
 }
 #endif
 
 static int iwl_tm_gnl_get_sil_step(struct iwl_trans* trans, struct iwl_tm_data* data_out) {
-    struct iwl_sil_step* resp;
-    data_out->data = kmalloc(sizeof(struct iwl_sil_step), GFP_KERNEL);
-    if (!data_out->data) { return -ENOMEM; }
-    data_out->len = sizeof(struct iwl_sil_step);
-    resp = (struct iwl_sil_step*)data_out->data;
-    resp->silicon_step = CSR_HW_REV_STEP(trans->hw_rev);
-    return 0;
+  struct iwl_sil_step* resp;
+  data_out->data = kmalloc(sizeof(struct iwl_sil_step), GFP_KERNEL);
+  if (!data_out->data) {
+    return -ENOMEM;
+  }
+  data_out->len = sizeof(struct iwl_sil_step);
+  resp = (struct iwl_sil_step*)data_out->data;
+  resp->silicon_step = CSR_HW_REV_STEP(trans->hw_rev);
+  return 0;
 }
 
 static int iwl_tm_gnl_get_build_info(struct iwl_trans* trans, struct iwl_tm_data* data_out) {
-    struct iwl_tm_build_info* resp;
+  struct iwl_tm_build_info* resp;
 
-    data_out->data = kmalloc(sizeof(*resp), GFP_KERNEL);
-    if (!data_out->data) { return -ENOMEM; }
-    data_out->len = sizeof(struct iwl_tm_build_info);
-    resp = (struct iwl_tm_build_info*)data_out->data;
+  data_out->data = kmalloc(sizeof(*resp), GFP_KERNEL);
+  if (!data_out->data) {
+    return -ENOMEM;
+  }
+  data_out->len = sizeof(struct iwl_tm_build_info);
+  resp = (struct iwl_tm_build_info*)data_out->data;
 
-    memset(resp, 0, sizeof(*resp));
-    strncpy(resp->driver_version, BACKPORTS_GIT_TRACKED, sizeof(resp->driver_version));
+  memset(resp, 0, sizeof(*resp));
+  strncpy(resp->driver_version, BACKPORTS_GIT_TRACKED, sizeof(resp->driver_version));
 #ifdef BACKPORTS_BRANCH_TSTAMP
-    strncpy(resp->branch_time, BACKPORTS_BRANCH_TSTAMP, sizeof(resp->branch_time));
+  strncpy(resp->branch_time, BACKPORTS_BRANCH_TSTAMP, sizeof(resp->branch_time));
 #endif
-    strncpy(resp->build_time, BACKPORTS_BUILD_TSTAMP, sizeof(resp->build_time));
+  strncpy(resp->build_time, BACKPORTS_BUILD_TSTAMP, sizeof(resp->build_time));
 
-    return 0;
+  return 0;
 }
 
 static int iwl_tm_gnl_get_sil_type(struct iwl_trans* trans, struct iwl_tm_data* data_out) {
-    struct iwl_tm_sil_type* resp;
+  struct iwl_tm_sil_type* resp;
 
-    resp = kzalloc(sizeof(*resp), GFP_KERNEL);
-    if (!resp) { return -ENOMEM; }
+  resp = kzalloc(sizeof(*resp), GFP_KERNEL);
+  if (!resp) {
+    return -ENOMEM;
+  }
 
-    resp->silicon_type = CSR_HW_REV_TYPE(trans->hw_rev);
+  resp->silicon_type = CSR_HW_REV_TYPE(trans->hw_rev);
 
-    data_out->data = resp;
-    data_out->len = sizeof(*resp);
+  data_out->data = resp;
+  data_out->len = sizeof(*resp);
 
-    return 0;
+  return 0;
 }
 
 static int iwl_tm_gnl_get_rfid(struct iwl_trans* trans, struct iwl_tm_data* data_out) {
-    struct iwl_tm_rfid* resp;
+  struct iwl_tm_rfid* resp;
 
-    resp = kzalloc(sizeof(*resp), GFP_KERNEL);
-    if (!resp) { return -ENOMEM; }
+  resp = kzalloc(sizeof(*resp), GFP_KERNEL);
+  if (!resp) {
+    return -ENOMEM;
+  }
 
-    IWL_DEBUG_INFO(trans, "HW RFID=0x08%X\n", trans->hw_rf_id);
+  IWL_DEBUG_INFO(trans, "HW RFID=0x08%X\n", trans->hw_rf_id);
 
-    resp->flavor = CSR_HW_RFID_FLAVOR(trans->hw_rf_id);
-    resp->dash = CSR_HW_RFID_DASH(trans->hw_rf_id);
-    resp->step = CSR_HW_RFID_STEP(trans->hw_rf_id);
-    resp->type = CSR_HW_RFID_TYPE(trans->hw_rf_id);
+  resp->flavor = CSR_HW_RFID_FLAVOR(trans->hw_rf_id);
+  resp->dash = CSR_HW_RFID_DASH(trans->hw_rf_id);
+  resp->step = CSR_HW_RFID_STEP(trans->hw_rf_id);
+  resp->type = CSR_HW_RFID_TYPE(trans->hw_rf_id);
 
-    data_out->data = resp;
-    data_out->len = sizeof(*resp);
+  data_out->data = resp;
+  data_out->len = sizeof(*resp);
 
-    return 0;
+  return 0;
 }
 
 /*
@@ -418,10 +459,10 @@ static int iwl_tm_gnl_get_rfid(struct iwl_trans* trans, struct iwl_tm_data* data
  *      command is done.
  */
 struct iwl_tm_gnl_cmd {
-    const char* dev_name;
-    uint32_t cmd;
-    struct iwl_tm_data data_in;
-    struct iwl_tm_data data_out;
+  const char* dev_name;
+  uint32_t cmd;
+  struct iwl_tm_data data_in;
+  struct iwl_tm_data data_out;
 };
 
 static struct list_head dev_list; /* protected by mutex or RCU */
@@ -429,11 +470,11 @@ static struct mutex dev_list_mtx;
 
 /* Testmode GNL family command attributes  */
 enum iwl_tm_gnl_cmd_attr_t {
-    IWL_TM_GNL_MSG_ATTR_INVALID = 0,
-    IWL_TM_GNL_MSG_ATTR_DEVNAME,
-    IWL_TM_GNL_MSG_ATTR_CMD,
-    IWL_TM_GNL_MSG_ATTR_DATA,
-    IWL_TM_GNL_MSG_ATTR_MAX
+  IWL_TM_GNL_MSG_ATTR_INVALID = 0,
+  IWL_TM_GNL_MSG_ATTR_DEVNAME,
+  IWL_TM_GNL_MSG_ATTR_CMD,
+  IWL_TM_GNL_MSG_ATTR_DATA,
+  IWL_TM_GNL_MSG_ATTR_MAX
 };
 
 /* TM GNL family definition */
@@ -466,18 +507,18 @@ static const struct nla_policy iwl_tm_gnl_msg_policy[IWL_TM_GNL_MSG_ATTR_MAX] = 
  * locked inside the function to allow code flexibility)
  */
 static struct iwl_tm_gnl_dev* iwl_tm_gnl_get_dev(const char* dev_name) {
-    struct iwl_tm_gnl_dev *dev_itr, *dev = NULL;
+  struct iwl_tm_gnl_dev *dev_itr, *dev = NULL;
 
-    lockdep_assert_held(&dev_list_mtx);
+  lockdep_assert_held(&dev_list_mtx);
 
-    list_for_each_entry(dev_itr, &dev_list, list) {
-        if (!strcmp(dev_itr->dev_name, dev_name)) {
-            dev = dev_itr;
-            break;
-        }
+  list_for_each_entry(dev_itr, &dev_list, list) {
+    if (!strcmp(dev_itr->dev_name, dev_name)) {
+      dev = dev_itr;
+      break;
     }
+  }
 
-    return dev;
+  return dev;
 }
 
 /**
@@ -489,35 +530,47 @@ static struct iwl_tm_gnl_dev* iwl_tm_gnl_get_dev(const char* dev_name) {
  */
 static struct sk_buff* iwl_tm_gnl_create_msg(uint32_t pid, uint32_t seq,
                                              struct iwl_tm_gnl_cmd cmd_data, gfp_t flags) {
-    void* nlmsg_head;
-    struct sk_buff* skb;
-    int ret;
+  void* nlmsg_head;
+  struct sk_buff* skb;
+  int ret;
 
-    skb = genlmsg_new(NLMSG_GOODSIZE, flags);
-    if (!skb) { goto send_msg_err; }
+  skb = genlmsg_new(NLMSG_GOODSIZE, flags);
+  if (!skb) {
+    goto send_msg_err;
+  }
 
-    nlmsg_head = genlmsg_put(skb, pid, seq, &iwl_tm_gnl_family, 0, IWL_TM_GNL_CMD_EXECUTE);
-    if (!nlmsg_head) { goto send_msg_err; }
+  nlmsg_head = genlmsg_put(skb, pid, seq, &iwl_tm_gnl_family, 0, IWL_TM_GNL_CMD_EXECUTE);
+  if (!nlmsg_head) {
+    goto send_msg_err;
+  }
 
-    ret = nla_put_string(skb, IWL_TM_GNL_MSG_ATTR_DEVNAME, cmd_data.dev_name);
-    if (ret) { goto send_msg_err; }
+  ret = nla_put_string(skb, IWL_TM_GNL_MSG_ATTR_DEVNAME, cmd_data.dev_name);
+  if (ret) {
+    goto send_msg_err;
+  }
 
-    ret = nla_put_u32(skb, IWL_TM_GNL_MSG_ATTR_CMD, cmd_data.cmd);
-    if (ret) { goto send_msg_err; }
+  ret = nla_put_u32(skb, IWL_TM_GNL_MSG_ATTR_CMD, cmd_data.cmd);
+  if (ret) {
+    goto send_msg_err;
+  }
 
-    if (cmd_data.data_out.len && cmd_data.data_out.data) {
-        ret = nla_put(skb, IWL_TM_GNL_MSG_ATTR_DATA, cmd_data.data_out.len, cmd_data.data_out.data);
-        if (ret) { goto send_msg_err; }
+  if (cmd_data.data_out.len && cmd_data.data_out.data) {
+    ret = nla_put(skb, IWL_TM_GNL_MSG_ATTR_DATA, cmd_data.data_out.len, cmd_data.data_out.data);
+    if (ret) {
+      goto send_msg_err;
     }
+  }
 
-    genlmsg_end(skb, nlmsg_head);
+  genlmsg_end(skb, nlmsg_head);
 
-    return skb;
+  return skb;
 
 send_msg_err:
-    if (skb) { kfree_skb(skb); }
+  if (skb) {
+    kfree_skb(skb);
+  }
 
-    return NULL;
+  return NULL;
 }
 
 /**
@@ -533,31 +586,41 @@ send_msg_err:
  */
 int iwl_tm_gnl_send_msg(struct iwl_trans* trans, uint32_t cmd, bool check_notify, void* data_out,
                         uint32_t data_len, gfp_t flags) {
-    struct iwl_tm_gnl_dev* dev;
-    struct iwl_tm_gnl_cmd cmd_data;
-    struct sk_buff* skb;
-    uint32_t nlportid;
+  struct iwl_tm_gnl_dev* dev;
+  struct iwl_tm_gnl_cmd cmd_data;
+  struct sk_buff* skb;
+  uint32_t nlportid;
 
-    if (WARN_ON_ONCE(!trans)) { return -EINVAL; }
+  if (WARN_ON_ONCE(!trans)) {
+    return -EINVAL;
+  }
 
-    if (!trans->tmdev) { return 0; }
-    dev = trans->tmdev;
+  if (!trans->tmdev) {
+    return 0;
+  }
+  dev = trans->tmdev;
 
-    nlportid = READ_ONCE(dev->nl_events_portid);
+  nlportid = READ_ONCE(dev->nl_events_portid);
 
-    if (check_notify && !dev->tst.notify) { return 0; }
+  if (check_notify && !dev->tst.notify) {
+    return 0;
+  }
 
-    memset(&cmd_data, 0, sizeof(struct iwl_tm_gnl_cmd));
-    cmd_data.dev_name = dev_name(trans->dev);
-    cmd_data.cmd = cmd;
-    cmd_data.data_out.data = data_out;
-    cmd_data.data_out.len = data_len;
+  memset(&cmd_data, 0, sizeof(struct iwl_tm_gnl_cmd));
+  cmd_data.dev_name = dev_name(trans->dev);
+  cmd_data.cmd = cmd;
+  cmd_data.data_out.data = data_out;
+  cmd_data.data_out.len = data_len;
 
-    skb = iwl_tm_gnl_create_msg(nlportid, 0, cmd_data, flags);
-    if (!skb) { return -EINVAL; }
+  skb = iwl_tm_gnl_create_msg(nlportid, 0, cmd_data, flags);
+  if (!skb) {
+    return -EINVAL;
+  }
 
-    if (nlportid) { return genlmsg_unicast(&init_net, skb, nlportid); }
-    return genlmsg_multicast(&iwl_tm_gnl_family, skb, 0, 0, flags);
+  if (nlportid) {
+    return genlmsg_unicast(&init_net, skb, nlportid);
+  }
+  return genlmsg_multicast(&iwl_tm_gnl_family, skb, 0, 0, flags);
 }
 IWL_EXPORT_SYMBOL(iwl_tm_gnl_send_msg);
 
@@ -567,12 +630,14 @@ IWL_EXPORT_SYMBOL(iwl_tm_gnl_send_msg);
  * @cmd_data:   Data of command to be responded
  */
 static int iwl_tm_gnl_reply(struct genl_info* info, struct iwl_tm_gnl_cmd cmd_data) {
-    struct sk_buff* skb;
+  struct sk_buff* skb;
 
-    skb = iwl_tm_gnl_create_msg(genl_info_snd_portid(info), info->snd_seq, cmd_data, GFP_KERNEL);
-    if (!skb) { return -EINVAL; }
+  skb = iwl_tm_gnl_create_msg(genl_info_snd_portid(info), info->snd_seq, cmd_data, GFP_KERNEL);
+  if (!skb) {
+    return -EINVAL;
+  }
 
-    return genlmsg_reply(skb, info);
+  return genlmsg_reply(skb, info);
 }
 
 /**
@@ -580,104 +645,106 @@ static int iwl_tm_gnl_reply(struct genl_info* info, struct iwl_tm_gnl_cmd cmd_da
  * @cmd_data:   Pointer to the data of command to be executed
  */
 static int iwl_tm_gnl_cmd_execute(struct iwl_tm_gnl_cmd* cmd_data) {
-    struct iwl_tm_gnl_dev* dev;
-    bool common_op = false;
-    int ret = 0;
-    mutex_lock(&dev_list_mtx);
-    dev = iwl_tm_gnl_get_dev(cmd_data->dev_name);
-    mutex_unlock(&dev_list_mtx);
-    if (!dev) { return -ENODEV; }
+  struct iwl_tm_gnl_dev* dev;
+  bool common_op = false;
+  int ret = 0;
+  mutex_lock(&dev_list_mtx);
+  dev = iwl_tm_gnl_get_dev(cmd_data->dev_name);
+  mutex_unlock(&dev_list_mtx);
+  if (!dev) {
+    return -ENODEV;
+  }
 
-    IWL_DEBUG_INFO(dev->trans, "%s cmd=0x%X\n", __func__, cmd_data->cmd);
-    switch (cmd_data->cmd) {
+  IWL_DEBUG_INFO(dev->trans, "%s cmd=0x%X\n", __func__, cmd_data->cmd);
+  switch (cmd_data->cmd) {
     case IWL_TM_USER_CMD_HCMD:
-        ret = iwl_tm_validate_fw_cmd(&cmd_data->data_in);
-        break;
+      ret = iwl_tm_validate_fw_cmd(&cmd_data->data_in);
+      break;
 
     case IWL_TM_USER_CMD_REG_ACCESS:
-        ret = iwl_tm_validate_reg_ops(&cmd_data->data_in);
-        break;
+      ret = iwl_tm_validate_reg_ops(&cmd_data->data_in);
+      break;
 
     case IWL_TM_USER_CMD_SRAM_WRITE:
-        ret = iwl_tm_validate_sram_write_req(dev, &cmd_data->data_in);
-        break;
+      ret = iwl_tm_validate_sram_write_req(dev, &cmd_data->data_in);
+      break;
 
     case IWL_TM_USER_CMD_BEGIN_TRACE:
-        ret = iwl_tm_trace_begin(dev, &cmd_data->data_in, &cmd_data->data_out);
-        common_op = true;
-        break;
+      ret = iwl_tm_trace_begin(dev, &cmd_data->data_in, &cmd_data->data_out);
+      common_op = true;
+      break;
 
     case IWL_TM_USER_CMD_END_TRACE:
-        ret = iwl_tm_trace_end(dev);
-        common_op = true;
-        break;
+      ret = iwl_tm_trace_end(dev);
+      common_op = true;
+      break;
 
     case IWL_XVT_CMD_MOD_TX:
-        ret = iwl_tm_validate_tx_cmd(&cmd_data->data_in);
-        break;
+      ret = iwl_tm_validate_tx_cmd(&cmd_data->data_in);
+      break;
 
     case IWL_XVT_CMD_RX_HDRS_MODE:
-        ret = iwl_tm_validate_rx_hdrs_mode_req(&cmd_data->data_in);
-        break;
+      ret = iwl_tm_validate_rx_hdrs_mode_req(&cmd_data->data_in);
+      break;
 
     case IWL_XVT_CMD_APMG_PD_MODE:
-        ret = iwl_tm_validate_apmg_pd_mode_req(&cmd_data->data_in);
-        break;
+      ret = iwl_tm_validate_apmg_pd_mode_req(&cmd_data->data_in);
+      break;
 
     case IWL_TM_USER_CMD_NOTIFICATIONS:
-        ret = iwl_tm_notifications_en(&dev->tst, &cmd_data->data_in);
-        common_op = true;
-        break;
+      ret = iwl_tm_notifications_en(&dev->tst, &cmd_data->data_in);
+      common_op = true;
+      break;
 
     case IWL_TM_USER_CMD_GET_DEVICE_STATUS:
-        ret = iwl_tm_get_device_status(dev, &cmd_data->data_in, &cmd_data->data_out);
-        common_op = true;
-        break;
+      ret = iwl_tm_get_device_status(dev, &cmd_data->data_in, &cmd_data->data_out);
+      common_op = true;
+      break;
 #if IS_ENABLED(CPTCFG_IWLXVT)
     case IWL_TM_USER_CMD_SWITCH_OP_MODE:
-        ret = iwl_tm_switch_op_mode(dev, &cmd_data->data_in);
-        common_op = true;
-        break;
+      ret = iwl_tm_switch_op_mode(dev, &cmd_data->data_in);
+      common_op = true;
+      break;
 #endif
     case IWL_XVT_CMD_GET_CHIP_ID:
-        ret = iwl_tm_validate_get_chip_id(dev->trans);
-        break;
+      ret = iwl_tm_validate_get_chip_id(dev->trans);
+      break;
 
     case IWL_TM_USER_CMD_GET_SIL_STEP:
-        ret = iwl_tm_gnl_get_sil_step(dev->trans, &cmd_data->data_out);
-        common_op = true;
-        break;
+      ret = iwl_tm_gnl_get_sil_step(dev->trans, &cmd_data->data_out);
+      common_op = true;
+      break;
 
     case IWL_TM_USER_CMD_GET_DRIVER_BUILD_INFO:
-        ret = iwl_tm_gnl_get_build_info(dev->trans, &cmd_data->data_out);
-        common_op = true;
-        break;
+      ret = iwl_tm_gnl_get_build_info(dev->trans, &cmd_data->data_out);
+      common_op = true;
+      break;
 
     case IWL_TM_USER_CMD_GET_SIL_TYPE:
-        ret = iwl_tm_gnl_get_sil_type(dev->trans, &cmd_data->data_out);
-        common_op = true;
-        break;
+      ret = iwl_tm_gnl_get_sil_type(dev->trans, &cmd_data->data_out);
+      common_op = true;
+      break;
 
     case IWL_TM_USER_CMD_GET_RFID:
-        ret = iwl_tm_gnl_get_rfid(dev->trans, &cmd_data->data_out);
-        common_op = true;
-        break;
-    }
-    if (ret) {
-        IWL_ERR(dev->trans, "%s Error=%d\n", __func__, ret);
-        return ret;
-    }
-
-    if (!common_op)
-        ret = iwl_tm_execute_cmd(&dev->trans->testmode, cmd_data->cmd, &cmd_data->data_in,
-                                 &cmd_data->data_out);
-
-    if (ret) {
-        IWL_ERR(dev->trans, "%s ret=%d\n", __func__, ret);
-    } else {
-        IWL_DEBUG_INFO(dev->trans, "%s ended Ok\n", __func__);
-    }
+      ret = iwl_tm_gnl_get_rfid(dev->trans, &cmd_data->data_out);
+      common_op = true;
+      break;
+  }
+  if (ret) {
+    IWL_ERR(dev->trans, "%s Error=%d\n", __func__, ret);
     return ret;
+  }
+
+  if (!common_op)
+    ret = iwl_tm_execute_cmd(&dev->trans->testmode, cmd_data->cmd, &cmd_data->data_in,
+                             &cmd_data->data_out);
+
+  if (ret) {
+    IWL_ERR(dev->trans, "%s ret=%d\n", __func__, ret);
+  } else {
+    IWL_DEBUG_INFO(dev->trans, "%s ended Ok\n", __func__);
+  }
+  return ret;
 }
 
 /**
@@ -688,12 +755,14 @@ static int iwl_tm_gnl_cmd_execute(struct iwl_tm_gnl_cmd* cmd_data) {
  */
 static int iwl_tm_mem_dump(struct iwl_tm_gnl_dev* dev, struct iwl_tm_data* data_in,
                            struct iwl_tm_data* data_out) {
-    int ret;
+  int ret;
 
-    ret = iwl_tm_validate_sram_read_req(dev, data_in);
-    if (ret) { return ret; }
+  ret = iwl_tm_validate_sram_read_req(dev, data_in);
+  if (ret) {
+    return ret;
+  }
 
-    return iwl_tm_execute_cmd(&dev->trans->testmode, IWL_TM_USER_CMD_SRAM_READ, data_in, data_out);
+  return iwl_tm_execute_cmd(&dev->trans->testmode, IWL_TM_USER_CMD_SRAM_READ, data_in, data_out);
 }
 
 /**
@@ -702,31 +771,33 @@ static int iwl_tm_mem_dump(struct iwl_tm_gnl_dev* dev, struct iwl_tm_data* data_
  * @data_out:   Dump data
  */
 static int iwl_tm_trace_dump(struct iwl_tm_gnl_dev* dev, struct iwl_tm_data* data_out) {
-    int ret;
-    uint32_t buf_size;
+  int ret;
+  uint32_t buf_size;
 
-    if (!(dev->dnt->iwl_dnt_status & IWL_DNT_STATUS_MON_CONFIGURED)) {
-        IWL_ERR(dev->trans, "Invalid monitor status\n");
-        return -EINVAL;
-    }
+  if (!(dev->dnt->iwl_dnt_status & IWL_DNT_STATUS_MON_CONFIGURED)) {
+    IWL_ERR(dev->trans, "Invalid monitor status\n");
+    return -EINVAL;
+  }
 
-    if (dev->dnt->mon_buf_size == 0) {
-        IWL_ERR(dev->trans, "No available monitor buffer\n");
-        return -ENOMEM;
-    }
+  if (dev->dnt->mon_buf_size == 0) {
+    IWL_ERR(dev->trans, "No available monitor buffer\n");
+    return -ENOMEM;
+  }
 
-    buf_size = dev->dnt->mon_buf_size;
-    data_out->data = kmalloc(buf_size, GFP_KERNEL);
-    if (!data_out->data) { return -ENOMEM; }
+  buf_size = dev->dnt->mon_buf_size;
+  data_out->data = kmalloc(buf_size, GFP_KERNEL);
+  if (!data_out->data) {
+    return -ENOMEM;
+  }
 
-    ret = iwl_dnt_dispatch_pull(dev->trans, data_out->data, buf_size, MONITOR);
-    if (ret < 0) {
-        kfree(data_out->data);
-        return ret;
-    }
-    data_out->len = ret;
+  ret = iwl_dnt_dispatch_pull(dev->trans, data_out->data, buf_size, MONITOR);
+  if (ret < 0) {
+    kfree(data_out->data);
+    return ret;
+  }
+  data_out->len = ret;
 
-    return 0;
+  return 0;
 }
 
 /**
@@ -736,28 +807,30 @@ static int iwl_tm_trace_dump(struct iwl_tm_gnl_dev* dev, struct iwl_tm_data* dat
  *      Data out is the start address of the buffer, and it's size.
  */
 static int iwl_tm_gnl_command_dump(struct iwl_tm_gnl_cmd* cmd_data) {
-    struct iwl_tm_gnl_dev* dev;
-    int ret = 0;
+  struct iwl_tm_gnl_dev* dev;
+  int ret = 0;
 
-    mutex_lock(&dev_list_mtx);
-    dev = iwl_tm_gnl_get_dev(cmd_data->dev_name);
-    mutex_unlock(&dev_list_mtx);
-    if (!dev) { return -ENODEV; }
+  mutex_lock(&dev_list_mtx);
+  dev = iwl_tm_gnl_get_dev(cmd_data->dev_name);
+  mutex_unlock(&dev_list_mtx);
+  if (!dev) {
+    return -ENODEV;
+  }
 
-    switch (cmd_data->cmd) {
+  switch (cmd_data->cmd) {
     case IWL_TM_USER_CMD_TRACE_DUMP:
-        ret = iwl_tm_trace_dump(dev, &cmd_data->data_out);
-        break;
+      ret = iwl_tm_trace_dump(dev, &cmd_data->data_out);
+      break;
 
     case IWL_TM_USER_CMD_SRAM_READ:
-        ret = iwl_tm_mem_dump(dev, &cmd_data->data_in, &cmd_data->data_out);
-        break;
+      ret = iwl_tm_mem_dump(dev, &cmd_data->data_in, &cmd_data->data_out);
+      break;
 
     default:
-        return -EOPNOTSUPP;
-    }
+      return -EOPNOTSUPP;
+  }
 
-    return ret;
+  return ret;
 }
 
 /**
@@ -766,43 +839,47 @@ static int iwl_tm_gnl_command_dump(struct iwl_tm_gnl_cmd* cmd_data) {
  * @cmd_data:   Command
  */
 static int iwl_tm_gnl_parse_msg(struct nlattr** attrs, struct iwl_tm_gnl_cmd* cmd_data) {
-    memset(cmd_data, 0, sizeof(struct iwl_tm_gnl_cmd));
+  memset(cmd_data, 0, sizeof(struct iwl_tm_gnl_cmd));
 
-    if (!attrs[IWL_TM_GNL_MSG_ATTR_DEVNAME] || !attrs[IWL_TM_GNL_MSG_ATTR_CMD]) { return -EINVAL; }
+  if (!attrs[IWL_TM_GNL_MSG_ATTR_DEVNAME] || !attrs[IWL_TM_GNL_MSG_ATTR_CMD]) {
+    return -EINVAL;
+  }
 
-    cmd_data->dev_name = nla_data(attrs[IWL_TM_GNL_MSG_ATTR_DEVNAME]);
-    cmd_data->cmd = nla_get_u32(attrs[IWL_TM_GNL_MSG_ATTR_CMD]);
+  cmd_data->dev_name = nla_data(attrs[IWL_TM_GNL_MSG_ATTR_DEVNAME]);
+  cmd_data->cmd = nla_get_u32(attrs[IWL_TM_GNL_MSG_ATTR_CMD]);
 
-    if (attrs[IWL_TM_GNL_MSG_ATTR_DATA]) {
-        cmd_data->data_in.data = nla_data(attrs[IWL_TM_GNL_MSG_ATTR_DATA]);
-        cmd_data->data_in.len = nla_len(attrs[IWL_TM_GNL_MSG_ATTR_DATA]);
-    }
+  if (attrs[IWL_TM_GNL_MSG_ATTR_DATA]) {
+    cmd_data->data_in.data = nla_data(attrs[IWL_TM_GNL_MSG_ATTR_DATA]);
+    cmd_data->data_in.len = nla_len(attrs[IWL_TM_GNL_MSG_ATTR_DATA]);
+  }
 
-    return 0;
+  return 0;
 }
 
 /**
  * iwl_tm_gnl_cmd_do() - Executes IWL testmode GNL command
  */
 static int iwl_tm_gnl_cmd_do(struct sk_buff* skb, struct genl_info* info) {
-    struct iwl_tm_gnl_cmd cmd_data;
-    int ret;
+  struct iwl_tm_gnl_cmd cmd_data;
+  int ret;
 
-    ret = iwl_tm_gnl_parse_msg(info->attrs, &cmd_data);
-    if (ret) { return ret; }
-
-    ret = iwl_tm_gnl_cmd_execute(&cmd_data);
-    if (!ret && cmd_data.data_out.len) {
-        ret = iwl_tm_gnl_reply(info, cmd_data);
-        /*
-         * In this case, data out should be allocated in
-         * iwl_tm_gnl_cmd_execute so it should be freed
-         * here
-         */
-        kfree(cmd_data.data_out.data);
-    }
-
+  ret = iwl_tm_gnl_parse_msg(info->attrs, &cmd_data);
+  if (ret) {
     return ret;
+  }
+
+  ret = iwl_tm_gnl_cmd_execute(&cmd_data);
+  if (!ret && cmd_data.data_out.len) {
+    ret = iwl_tm_gnl_reply(info, cmd_data);
+    /*
+     * In this case, data out should be allocated in
+     * iwl_tm_gnl_cmd_execute so it should be freed
+     * here
+     */
+    kfree(cmd_data.data_out.data);
+  }
+
+  return ret;
 }
 
 /**
@@ -815,112 +892,126 @@ static int iwl_tm_gnl_cmd_do(struct sk_buff* skb, struct genl_info* info) {
  * cb->args[3]: Buffer offset from where to dump in the next round
  */
 static int iwl_tm_gnl_dump(struct sk_buff* skb, struct netlink_callback* cb) {
-    struct iwl_tm_gnl_cmd cmd_data;
-    void* nlmsg_head = NULL;
-    struct nlattr* attrs[IWL_TM_GNL_MSG_ATTR_MAX];
-    void* dump_addr;
-    unsigned long dump_offset;
-    int dump_size, chunk_size, ret;
+  struct iwl_tm_gnl_cmd cmd_data;
+  void* nlmsg_head = NULL;
+  struct nlattr* attrs[IWL_TM_GNL_MSG_ATTR_MAX];
+  void* dump_addr;
+  unsigned long dump_offset;
+  int dump_size, chunk_size, ret;
 
-    if (!cb->args[0]) {
-        /*
-         * This is the first part of the dump - Parse dump data
-         * out of the data in the netlink header and set up the
-         * dump in cb->args[].
-         */
-        ret = nlmsg_parse(cb->nlh, GENL_HDRLEN, attrs, IWL_TM_GNL_MSG_ATTR_MAX - 1,
-                          iwl_tm_gnl_msg_policy, NULL);
-        if (ret) { return ret; }
-
-        ret = iwl_tm_gnl_parse_msg(attrs, &cmd_data);
-        if (ret) { return ret; }
-
-        ret = iwl_tm_gnl_command_dump(&cmd_data);
-        if (ret) { return ret; }
-
-        /* Incrementing command since command number may be zero */
-        cb->args[0] = cmd_data.cmd + 1;
-        cb->args[1] = (unsigned long)cmd_data.data_out.data;
-        cb->args[2] = cmd_data.data_out.len;
-        cb->args[3] = 0;
-
-        if (!cb->args[2]) { return -ENODATA; }
-    }
-
-    dump_addr = (uint8_t*)cb->args[1];
-    dump_size = cb->args[2];
-    dump_offset = cb->args[3];
-
-    nlmsg_head = genlmsg_put(skb, NETLINK_CB_PORTID(cb->skb), cb->nlh->nlmsg_seq,
-                             &iwl_tm_gnl_family, NLM_F_MULTI, IWL_TM_GNL_CMD_EXECUTE);
-
+  if (!cb->args[0]) {
     /*
-     * Reserve some room for NL attribute header,
-     * 16 bytes should be enough.
+     * This is the first part of the dump - Parse dump data
+     * out of the data in the netlink header and set up the
+     * dump in cb->args[].
      */
-    chunk_size = skb_tailroom(skb) - 16;
-    if (chunk_size <= 0) {
-        ret = -ENOMEM;
-        goto dump_err;
+    ret = nlmsg_parse(cb->nlh, GENL_HDRLEN, attrs, IWL_TM_GNL_MSG_ATTR_MAX - 1,
+                      iwl_tm_gnl_msg_policy, NULL);
+    if (ret) {
+      return ret;
     }
 
-    if (chunk_size > dump_size - dump_offset) { chunk_size = dump_size - dump_offset; }
-
-    if (chunk_size) {
-        ret = nla_put(skb, IWL_TM_GNL_MSG_ATTR_DATA, chunk_size, dump_addr + dump_offset);
-        if (ret) { goto dump_err; }
+    ret = iwl_tm_gnl_parse_msg(attrs, &cmd_data);
+    if (ret) {
+      return ret;
     }
 
-    genlmsg_end(skb, nlmsg_head);
+    ret = iwl_tm_gnl_command_dump(&cmd_data);
+    if (ret) {
+      return ret;
+    }
 
-    /* move offset */
-    cb->args[3] += chunk_size;
+    /* Incrementing command since command number may be zero */
+    cb->args[0] = cmd_data.cmd + 1;
+    cb->args[1] = (unsigned long)cmd_data.data_out.data;
+    cb->args[2] = cmd_data.data_out.len;
+    cb->args[3] = 0;
 
-    return cb->args[2] - cb->args[3];
+    if (!cb->args[2]) {
+      return -ENODATA;
+    }
+  }
+
+  dump_addr = (uint8_t*)cb->args[1];
+  dump_size = cb->args[2];
+  dump_offset = cb->args[3];
+
+  nlmsg_head = genlmsg_put(skb, NETLINK_CB_PORTID(cb->skb), cb->nlh->nlmsg_seq, &iwl_tm_gnl_family,
+                           NLM_F_MULTI, IWL_TM_GNL_CMD_EXECUTE);
+
+  /*
+   * Reserve some room for NL attribute header,
+   * 16 bytes should be enough.
+   */
+  chunk_size = skb_tailroom(skb) - 16;
+  if (chunk_size <= 0) {
+    ret = -ENOMEM;
+    goto dump_err;
+  }
+
+  if (chunk_size > dump_size - dump_offset) {
+    chunk_size = dump_size - dump_offset;
+  }
+
+  if (chunk_size) {
+    ret = nla_put(skb, IWL_TM_GNL_MSG_ATTR_DATA, chunk_size, dump_addr + dump_offset);
+    if (ret) {
+      goto dump_err;
+    }
+  }
+
+  genlmsg_end(skb, nlmsg_head);
+
+  /* move offset */
+  cb->args[3] += chunk_size;
+
+  return cb->args[2] - cb->args[3];
 
 dump_err:
-    genlmsg_cancel(skb, nlmsg_head);
-    return ret;
+  genlmsg_cancel(skb, nlmsg_head);
+  return ret;
 }
 
 static int iwl_tm_gnl_done(struct netlink_callback* cb) {
-    switch (cb->args[0] - 1) {
+  switch (cb->args[0] - 1) {
     case IWL_TM_USER_CMD_SRAM_READ:
     case IWL_TM_USER_CMD_TRACE_DUMP:
-        kfree((void*)cb->args[1]);
-        return 0;
-    }
+      kfree((void*)cb->args[1]);
+      return 0;
+  }
 
-    return -EOPNOTSUPP;
+  return -EOPNOTSUPP;
 }
 
 static int iwl_tm_gnl_cmd_subscribe(struct sk_buff* skb, struct genl_info* info) {
-    struct iwl_tm_gnl_dev* dev;
-    const char* dev_name;
-    int ret;
+  struct iwl_tm_gnl_dev* dev;
+  const char* dev_name;
+  int ret;
 
-    if (!info->attrs[IWL_TM_GNL_MSG_ATTR_DEVNAME]) { return -EINVAL; }
+  if (!info->attrs[IWL_TM_GNL_MSG_ATTR_DEVNAME]) {
+    return -EINVAL;
+  }
 
-    dev_name = nla_data(info->attrs[IWL_TM_GNL_MSG_ATTR_DEVNAME]);
+  dev_name = nla_data(info->attrs[IWL_TM_GNL_MSG_ATTR_DEVNAME]);
 
-    mutex_lock(&dev_list_mtx);
-    dev = iwl_tm_gnl_get_dev(dev_name);
-    if (!dev) {
-        ret = -ENODEV;
-        goto unlock;
-    }
+  mutex_lock(&dev_list_mtx);
+  dev = iwl_tm_gnl_get_dev(dev_name);
+  if (!dev) {
+    ret = -ENODEV;
+    goto unlock;
+  }
 
-    if (dev->nl_events_portid) {
-        ret = -EBUSY;
-        goto unlock;
-    }
+  if (dev->nl_events_portid) {
+    ret = -EBUSY;
+    goto unlock;
+  }
 
-    dev->nl_events_portid = genl_info_snd_portid(info);
-    ret = 0;
+  dev->nl_events_portid = genl_info_snd_portid(info);
+  ret = 0;
 
 unlock:
-    mutex_unlock(&dev_list_mtx);
-    return ret;
+  mutex_unlock(&dev_list_mtx);
+  return ret;
 }
 
 /*
@@ -960,26 +1051,34 @@ static struct genl_family iwl_tm_gnl_family __genl_ro_after_init = {
  * @trans:  transport struct for the device to register for
  */
 void iwl_tm_gnl_add(struct iwl_trans* trans) {
-    struct iwl_tm_gnl_dev* dev;
+  struct iwl_tm_gnl_dev* dev;
 
-    if (!trans) { return; }
+  if (!trans) {
+    return;
+  }
 
-    if (trans->tmdev) { return; }
+  if (trans->tmdev) {
+    return;
+  }
 
-    mutex_lock(&dev_list_mtx);
+  mutex_lock(&dev_list_mtx);
 
-    if (iwl_tm_gnl_get_dev(dev_name(trans->dev))) { goto unlock; }
+  if (iwl_tm_gnl_get_dev(dev_name(trans->dev))) {
+    goto unlock;
+  }
 
-    dev = kzalloc(sizeof(*dev), GFP_KERNEL);
-    if (!dev) { goto unlock; }
+  dev = kzalloc(sizeof(*dev), GFP_KERNEL);
+  if (!dev) {
+    goto unlock;
+  }
 
-    dev->dev_name = dev_name(trans->dev);
-    trans->tmdev = dev;
-    dev->trans = trans;
-    list_add_tail_rcu(&dev->list, &dev_list);
+  dev->dev_name = dev_name(trans->dev);
+  trans->tmdev = dev;
+  dev->trans = trans;
+  list_add_tail_rcu(&dev->list, &dev_list);
 
 unlock:
-    mutex_unlock(&dev_list_mtx);
+  mutex_unlock(&dev_list_mtx);
 }
 
 /**
@@ -987,41 +1086,45 @@ unlock:
  * @trans:  transport struct for the device
  */
 void iwl_tm_gnl_remove(struct iwl_trans* trans) {
-    struct iwl_tm_gnl_dev *dev_itr, *tmp;
+  struct iwl_tm_gnl_dev *dev_itr, *tmp;
 
-    if (WARN_ON_ONCE(!trans)) { return; }
+  if (WARN_ON_ONCE(!trans)) {
+    return;
+  }
 
-    /* Searching for operation mode in list */
-    mutex_lock(&dev_list_mtx);
-    list_for_each_entry_safe(dev_itr, tmp, &dev_list, list) {
-        if (dev_itr->trans == trans) {
-            /*
-             * Device found. Removing it from list
-             * and releasing it's resources
-             */
-            list_del_rcu(&dev_itr->list);
-            synchronize_rcu();
-            kfree(dev_itr);
-            break;
-        }
+  /* Searching for operation mode in list */
+  mutex_lock(&dev_list_mtx);
+  list_for_each_entry_safe(dev_itr, tmp, &dev_list, list) {
+    if (dev_itr->trans == trans) {
+      /*
+       * Device found. Removing it from list
+       * and releasing it's resources
+       */
+      list_del_rcu(&dev_itr->list);
+      synchronize_rcu();
+      kfree(dev_itr);
+      break;
     }
+  }
 
-    trans->tmdev = NULL;
-    mutex_unlock(&dev_list_mtx);
+  trans->tmdev = NULL;
+  mutex_unlock(&dev_list_mtx);
 }
 
 static int iwl_tm_gnl_netlink_notify(struct notifier_block* nb, unsigned long state,
                                      void* _notify) {
-    struct netlink_notify* notify = _notify;
-    struct iwl_tm_gnl_dev* dev;
+  struct netlink_notify* notify = _notify;
+  struct iwl_tm_gnl_dev* dev;
 
-    rcu_read_lock();
-    list_for_each_entry_rcu(dev, &dev_list, list) {
-        if (dev->nl_events_portid == netlink_notify_portid(notify)) { dev->nl_events_portid = 0; }
+  rcu_read_lock();
+  list_for_each_entry_rcu(dev, &dev_list, list) {
+    if (dev->nl_events_portid == netlink_notify_portid(notify)) {
+      dev->nl_events_portid = 0;
     }
-    rcu_read_unlock();
+  }
+  rcu_read_unlock();
 
-    return NOTIFY_OK;
+  return NOTIFY_OK;
 }
 
 static struct notifier_block iwl_tm_gnl_netlink_notifier = {
@@ -1035,24 +1138,28 @@ static struct notifier_block iwl_tm_gnl_netlink_notifier = {
  * TM GNL global variables
  */
 int iwl_tm_gnl_init(void) {
-    int ret;
+  int ret;
 
-    INIT_LIST_HEAD(&dev_list);
-    mutex_init(&dev_list_mtx);
+  INIT_LIST_HEAD(&dev_list);
+  mutex_init(&dev_list_mtx);
 
-    ret = genl_register_family(&iwl_tm_gnl_family);
-    if (ret) { return ret; }
-    ret = netlink_register_notifier(&iwl_tm_gnl_netlink_notifier);
-    if (ret) { genl_unregister_family(&iwl_tm_gnl_family); }
+  ret = genl_register_family(&iwl_tm_gnl_family);
+  if (ret) {
     return ret;
+  }
+  ret = netlink_register_notifier(&iwl_tm_gnl_netlink_notifier);
+  if (ret) {
+    genl_unregister_family(&iwl_tm_gnl_family);
+  }
+  return ret;
 }
 
 /**
  * iwl_tm_gnl_exit() - Unregisters Testmode GNL family
  */
 int iwl_tm_gnl_exit(void) {
-    netlink_unregister_notifier(&iwl_tm_gnl_netlink_notifier);
-    return genl_unregister_family(&iwl_tm_gnl_family);
+  netlink_unregister_notifier(&iwl_tm_gnl_netlink_notifier);
+  return genl_unregister_family(&iwl_tm_gnl_family);
 }
 
 /**
@@ -1061,13 +1168,13 @@ int iwl_tm_gnl_exit(void) {
  * @rxb:    Contains rx packet to be sent
  */
 void iwl_tm_gnl_send_rx(struct iwl_trans* trans, struct iwl_rx_cmd_buffer* rxb) {
-    struct iwl_rx_packet* pkt = rxb_addr(rxb);
-    int length = iwl_rx_packet_len(pkt);
+  struct iwl_rx_packet* pkt = rxb_addr(rxb);
+  int length = iwl_rx_packet_len(pkt);
 
-    /* the length doesn't include len_n_flags field, so add it manually */
-    length += sizeof(__le32);
+  /* the length doesn't include len_n_flags field, so add it manually */
+  length += sizeof(__le32);
 
-    iwl_tm_gnl_send_msg(trans, IWL_TM_USER_CMD_NOTIF_UCODE_RX_PKT, true, (void*)pkt, length,
-                        GFP_ATOMIC);
+  iwl_tm_gnl_send_msg(trans, IWL_TM_USER_CMD_NOTIF_UCODE_RX_PKT, true, (void*)pkt, length,
+                      GFP_ATOMIC);
 }
 IWL_EXPORT_SYMBOL(iwl_tm_gnl_send_rx);

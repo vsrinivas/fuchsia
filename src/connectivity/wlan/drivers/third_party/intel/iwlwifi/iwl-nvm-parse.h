@@ -43,8 +43,8 @@
  * @IWL_NVM_SBANDS_FLAGS_NO_WIDE_IN_5GHZ: disallow 40, 80 and 160MHz on 5GHz
  */
 enum iwl_nvm_sbands_flags {
-    IWL_NVM_SBANDS_FLAGS_LAR = BIT(0),
-    IWL_NVM_SBANDS_FLAGS_NO_WIDE_IN_5GHZ = BIT(1),
+  IWL_NVM_SBANDS_FLAGS_LAR = BIT(0),
+  IWL_NVM_SBANDS_FLAGS_NO_WIDE_IN_5GHZ = BIT(1),
 };
 
 /**
@@ -84,8 +84,8 @@ struct ieee80211_regdomain* iwl_parse_nvm_mcc_info(struct device* dev, const str
  * this way, only the needed ones.
  */
 struct iwl_nvm_section {
-    uint16_t length;
-    const uint8_t* data;
+  uint16_t length;
+  const uint8_t* data;
 };
 
 /**

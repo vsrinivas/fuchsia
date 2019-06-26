@@ -49,12 +49,12 @@
  * @DHC_TABLE_MAX: maximal id value
  */
 enum iwl_dhc_table_id {
-    DHC_TABLE_TOOLS = 0,
-    DHC_TABLE_AUTOMATION = 1 << DHC_TABLE_MASK_POS,
-    DHC_TABLE_INTEGRATION = 2 << DHC_TABLE_MASK_POS,
-    DHC_TABLE_DEVELOPMENT = 3 << DHC_TABLE_MASK_POS,
-    DHC_TABLE_UT = 4 << DHC_TABLE_MASK_POS,
-    DHC_TABLE_MAX = DHC_TABLE_UT,
+  DHC_TABLE_TOOLS = 0,
+  DHC_TABLE_AUTOMATION = 1 << DHC_TABLE_MASK_POS,
+  DHC_TABLE_INTEGRATION = 2 << DHC_TABLE_MASK_POS,
+  DHC_TABLE_DEVELOPMENT = 3 << DHC_TABLE_MASK_POS,
+  DHC_TABLE_UT = 4 << DHC_TABLE_MASK_POS,
+  DHC_TABLE_MAX = DHC_TABLE_UT,
 };
 
 /**
@@ -63,7 +63,7 @@ enum iwl_dhc_table_id {
  *  1 DW param - bitmask of tx fifos to disable interrupts for
  */
 enum iwl_dhc_lmac_tools_table {
-    DHC_TOOLS_LMAC_TXF_FIFO_DISABLE = 6,
+  DHC_TOOLS_LMAC_TXF_FIFO_DISABLE = 6,
 };
 
 /**
@@ -78,13 +78,13 @@ enum iwl_dhc_lmac_tools_table {
  * @DHC_MAX_AUTO_LMAC_REQUEST: the size of the Automation table in lmac
  */
 enum iwl_dhc_lmac_automation_table {
-    DHC_AUTO_LMAC_PHY_GET_STAT = 0,
-    DHC_AUTO_LMAC_CONFIG_DEBUG_EBS = 1,
-    DHC_AUTO_LMAC_PHY_ENABLE_CRC_CHECK = 2,
-    DHC_AUTO_LMAC_SAD_RETURN_PREF_ANTS = 3,
-    DHC_AUTO_LMAC_PYFI_TIMING = 4,
-    DHC_AUTO_LMAC_REPORT_POWER_STATISTICS = 5,
-    DHC_MAX_AUTO_LMAC_REQUEST = 6,
+  DHC_AUTO_LMAC_PHY_GET_STAT = 0,
+  DHC_AUTO_LMAC_CONFIG_DEBUG_EBS = 1,
+  DHC_AUTO_LMAC_PHY_ENABLE_CRC_CHECK = 2,
+  DHC_AUTO_LMAC_SAD_RETURN_PREF_ANTS = 3,
+  DHC_AUTO_LMAC_PYFI_TIMING = 4,
+  DHC_AUTO_LMAC_REPORT_POWER_STATISTICS = 5,
+  DHC_MAX_AUTO_LMAC_REQUEST = 6,
 };
 
 /**
@@ -101,13 +101,13 @@ enum iwl_dhc_lmac_automation_table {
  * @DHC_MAX_AUTO_UMAC_REQUEST: the size of the Automation table in umac
  */
 enum iwl_dhc_umac_automation_table {
-    DHC_AUTO_UMAC_SET_PROFILING_REPORT_CONF = 0,
-    DHC_AUTO_UMAC_REPORT_PROFILING = 1,
-    DHC_AUTO_UMAC_SCAN_CHANNEL_DWELL_ENABLE_REPORT = 2,
-    DHC_AUTO_UMAC_ADAPTIVE_DWELL_SCAN_FINE_TUNE_ENABLE_REPORT = 3,
-    DHC_AUTO_UMAC_CONFIGURE_POWER_FLAGS = 4,
-    DHC_AUTO_UMAC_REPORT_POWER_STATISTICS = 5,
-    DHC_MAX_AUTO_UMAC_REQUEST = 6,
+  DHC_AUTO_UMAC_SET_PROFILING_REPORT_CONF = 0,
+  DHC_AUTO_UMAC_REPORT_PROFILING = 1,
+  DHC_AUTO_UMAC_SCAN_CHANNEL_DWELL_ENABLE_REPORT = 2,
+  DHC_AUTO_UMAC_ADAPTIVE_DWELL_SCAN_FINE_TUNE_ENABLE_REPORT = 3,
+  DHC_AUTO_UMAC_CONFIGURE_POWER_FLAGS = 4,
+  DHC_AUTO_UMAC_REPORT_POWER_STATISTICS = 5,
+  DHC_MAX_AUTO_UMAC_REQUEST = 6,
 };
 
 /**
@@ -120,12 +120,12 @@ enum iwl_dhc_umac_automation_table {
  * @DHC_INTEGRATION_MAX: Maximum UMAC integration table entries
  */
 enum iwl_dhc_umac_integration_table {
-    DHC_INTEGRATION_POWER_FLAGS,
-    DHC_INTEGRATION_TLC_DEBUG_CONFIG,
-    DHC_INTEGRATION_QUOTA_ENFORCE,
-    DHC_INT_UMAC_BT_COEX_USER_OVERRIDES,
-    DHC_INT_UMAC_TWT_OPERATION,
-    DHC_INTEGRATION_MAX
+  DHC_INTEGRATION_POWER_FLAGS,
+  DHC_INTEGRATION_TLC_DEBUG_CONFIG,
+  DHC_INTEGRATION_QUOTA_ENFORCE,
+  DHC_INT_UMAC_BT_COEX_USER_OVERRIDES,
+  DHC_INT_UMAC_TWT_OPERATION,
+  DHC_INTEGRATION_MAX
 };
 
 #define DHC_TARGET_UMAC BIT(27)
@@ -148,9 +148,9 @@ enum iwl_dhc_umac_integration_table {
  * @data: the concatenated data.
  */
 struct iwl_dhc_cmd {
-    __le32 length;
-    __le32 index_and_mask;
-    __le32 data[0];
+  __le32 length;
+  __le32 index_and_mask;
+  __le32 data[0];
 } __packed; /* DHC_CMD_API_S */
 
 /**
@@ -159,8 +159,8 @@ struct iwl_dhc_cmd {
  * @data: the response data
  */
 struct iwl_dhc_cmd_resp {
-    __le32 status;
-    __le32 data[0];
+  __le32 status;
+  __le32 data[0];
 } __packed;
 
 /**
@@ -179,85 +179,85 @@ struct iwl_dhc_cmd_resp {
  *  bit 5 - fifos_metric
  */
 struct iwl_dhc_profile_cmd {
-    __le32 period;
-    __le32 reset;
-    __le32 enabled_metrics;
+  __le32 period;
+  __le32 reset;
+  __le32 enabled_metrics;
 } __packed;
 
 enum iwl_profiling_context_id {
-    PROFILING_CONTEXT_PS_THREAD,
-    PROFILING_CONTEXT_FMAC_THREAD,
-    PROFILING_CONTEXT_MAIN_THREAD,
-    PROFILING_CONTEXT_AIRTIME_THREAD,
-    PROFILING_CONTEXT_MPAPD_THREAD,
-    PROFILING_CONTEXT_TIMER_IRQ,
-    PROFILING_CONTEXT_RXF2_IRQ,
-    PROFILING_CONTEXT_CMD_IRQ,
-    PROFILING_CONTEXT_MAX_NUM
+  PROFILING_CONTEXT_PS_THREAD,
+  PROFILING_CONTEXT_FMAC_THREAD,
+  PROFILING_CONTEXT_MAIN_THREAD,
+  PROFILING_CONTEXT_AIRTIME_THREAD,
+  PROFILING_CONTEXT_MPAPD_THREAD,
+  PROFILING_CONTEXT_TIMER_IRQ,
+  PROFILING_CONTEXT_RXF2_IRQ,
+  PROFILING_CONTEXT_CMD_IRQ,
+  PROFILING_CONTEXT_MAX_NUM
 }; /* PROFILING_CONTEXT_ID_API_E */
 
 enum iwl_profiling_tasks_id {
-    PROFILING_MAIN_INIT_TASK,
-    PROFILING_FMAC_INIT_TASK,
-    PROFILING_ELOOP_TASK,
-    PROFILING_UMAC_TO_FMAC_EVENT_TASK,
-    PROFILING_LMAC_RXF_TASK,
-    PROFILING_MPAPD_TASK,
-    PROFILING_TASKS_MAX_NUM
+  PROFILING_MAIN_INIT_TASK,
+  PROFILING_FMAC_INIT_TASK,
+  PROFILING_ELOOP_TASK,
+  PROFILING_UMAC_TO_FMAC_EVENT_TASK,
+  PROFILING_LMAC_RXF_TASK,
+  PROFILING_MPAPD_TASK,
+  PROFILING_TASKS_MAX_NUM
 }; /* PROFILING_TASKS_ID_API_E */
 
 enum iwl_profiling_flow_id {
-    PROFILING_HANDLING_PRB_RQST_UMAC_FLOW,
-    PROFILING_UMAC_BCN_HANDLING_FLOW,
-    PROFILING_UMAC_NON_TKIP_HANDLING_FLOW,
-    PROFILING_UMAC_TKIP_HANDLING_FLOW,
-    PROFILING_UMAC_LMAC_NOTIFICATION_THREAD_HANDLING,
-    PROFILING_UMAC_RXF2_DROPPABLE_FRAME_ISR_HANDLING,
-    PROFILING_UMAC_OTHER_FRAMES_HANDLING_FLOW,
-    PROFILING_AIRTIME_CONTEXT_GET_FLOW,
-    PROFILING_AIRTIME_CONTEXT_LOSE_FLOW,
-    PROFILING_MAC_CONTEXT_LOSE_FLOW,
-    PROFILING_AUX_CONTEXT_GET_FLOW,
-    PROFILING_AUX_CONTEXT_CLEAR_FLOW,
-    PROFILING_AUX_CONTEXT_SET_FLOW,
-    PROFILING_AIRTIME_SCHEDULER_SESSION_CALC_FLOW,
-    PROFILING_TLC_STATISTICS_HANDLING_FLOW,
-    PROFILING_CHANNEL_SWITCH_FLOW,
-    PROFILING_THREAD_CONTEXT_SWITCH_FLOW,
-    PROFILING_SYSTEM_POWER_DOWN_FLOW,
-    PROFILING_FLOW_MAX_NUM
+  PROFILING_HANDLING_PRB_RQST_UMAC_FLOW,
+  PROFILING_UMAC_BCN_HANDLING_FLOW,
+  PROFILING_UMAC_NON_TKIP_HANDLING_FLOW,
+  PROFILING_UMAC_TKIP_HANDLING_FLOW,
+  PROFILING_UMAC_LMAC_NOTIFICATION_THREAD_HANDLING,
+  PROFILING_UMAC_RXF2_DROPPABLE_FRAME_ISR_HANDLING,
+  PROFILING_UMAC_OTHER_FRAMES_HANDLING_FLOW,
+  PROFILING_AIRTIME_CONTEXT_GET_FLOW,
+  PROFILING_AIRTIME_CONTEXT_LOSE_FLOW,
+  PROFILING_MAC_CONTEXT_LOSE_FLOW,
+  PROFILING_AUX_CONTEXT_GET_FLOW,
+  PROFILING_AUX_CONTEXT_CLEAR_FLOW,
+  PROFILING_AUX_CONTEXT_SET_FLOW,
+  PROFILING_AIRTIME_SCHEDULER_SESSION_CALC_FLOW,
+  PROFILING_TLC_STATISTICS_HANDLING_FLOW,
+  PROFILING_CHANNEL_SWITCH_FLOW,
+  PROFILING_THREAD_CONTEXT_SWITCH_FLOW,
+  PROFILING_SYSTEM_POWER_DOWN_FLOW,
+  PROFILING_FLOW_MAX_NUM
 }; /* PROFILING_FLOW_ID_API_E */
 
 enum iwl_profiling_fifo_id {
-    PROFILING_FIFO_UMAC_TO_LMAC1,
-    PROFILING_FIFO_UMAC_TO_LMAC2,
-    PROFILING_FIFO_LMAC1_TO_UMAC,
-    PROFILING_FIFO_LMAC2_TO_UMAC,
-    PROFILING_FIFO_RXF2,
-    PROFILING_FIFO_MAX_NUM
+  PROFILING_FIFO_UMAC_TO_LMAC1,
+  PROFILING_FIFO_UMAC_TO_LMAC2,
+  PROFILING_FIFO_LMAC1_TO_UMAC,
+  PROFILING_FIFO_LMAC2_TO_UMAC,
+  PROFILING_FIFO_RXF2,
+  PROFILING_FIFO_MAX_NUM
 }; /* PROFILING_FIFO_ID_API_E */
 
 enum iwl_profiling_pool_id {
-    PROFILING_POOL_MGMT_FRAME,
-    PROFILING_POOL_MPDU_FRWK_1,
-    PROFILING_POOL_MPDU_FRWK_2,
-    PROFILING_POOL_MSG_QUEUE_AIRTIME,
-    PROFILING_POOL_MSG_QUEUE_MAIN,
-    PROFILING_POOL_MSG_QUEUE_BACKGROUND,
-    PROFILING_POOL_MSG_QUEUE_MPAPD,
-    PROFILING_POOL_MSG_QUEUE_FMAC,
-    PROFILING_POOL_BLOCK_MSG_QUEUE_AIRTIME_BIG,
-    PROFILING_POOL_BLOCK_MSG_QUEUE_AIRTIME_SMALL,
-    PROFILING_POOL_BLOCK_MSG_QUEUE_MAIN_BIG,
-    PROFILING_POOL_BLOCK_MSG_QUEUE_MAIN_SMALL,
-    PROFILING_POOL_BLOCK_MSG_QUEUE_FMAC_BIG,
-    PROFILING_POOL_BLOCK_MSG_QUEUE_FMAC_SMALL,
-    PROFILING_POOL_INTERNAL_TX,
-    PROFILING_POOL_CYCLIC_LMAC_RX,
-    PROFILING_POOL_CYCLIC_UMAC_2_FMAC,
-    PROFILING_POOL_BYTE_UMAC_TX,
-    PROFILING_POOL_BYTE_UMAC_OS,
-    PROFILING_POOL_MAX_NUM
+  PROFILING_POOL_MGMT_FRAME,
+  PROFILING_POOL_MPDU_FRWK_1,
+  PROFILING_POOL_MPDU_FRWK_2,
+  PROFILING_POOL_MSG_QUEUE_AIRTIME,
+  PROFILING_POOL_MSG_QUEUE_MAIN,
+  PROFILING_POOL_MSG_QUEUE_BACKGROUND,
+  PROFILING_POOL_MSG_QUEUE_MPAPD,
+  PROFILING_POOL_MSG_QUEUE_FMAC,
+  PROFILING_POOL_BLOCK_MSG_QUEUE_AIRTIME_BIG,
+  PROFILING_POOL_BLOCK_MSG_QUEUE_AIRTIME_SMALL,
+  PROFILING_POOL_BLOCK_MSG_QUEUE_MAIN_BIG,
+  PROFILING_POOL_BLOCK_MSG_QUEUE_MAIN_SMALL,
+  PROFILING_POOL_BLOCK_MSG_QUEUE_FMAC_BIG,
+  PROFILING_POOL_BLOCK_MSG_QUEUE_FMAC_SMALL,
+  PROFILING_POOL_INTERNAL_TX,
+  PROFILING_POOL_CYCLIC_LMAC_RX,
+  PROFILING_POOL_CYCLIC_UMAC_2_FMAC,
+  PROFILING_POOL_BYTE_UMAC_TX,
+  PROFILING_POOL_BYTE_UMAC_OS,
+  PROFILING_POOL_MAX_NUM
 }; /* PROFILING_POOL_ID_API_E */
 
 /**
@@ -268,9 +268,9 @@ enum iwl_profiling_pool_id {
  * @enabled_metrics: Enabled metrics bitmap
  */
 struct iwl_profiling_configuration {
-    __le32 time_since_last_metrics_reset;
-    __le32 current_system_time;
-    __le32 enabled_metrics;
+  __le32 time_since_last_metrics_reset;
+  __le32 current_system_time;
+  __le32 enabled_metrics;
 } __packed; /* PROFILING_CONFIGURATION_API_S */
 
 /**
@@ -323,28 +323,28 @@ struct iwl_profiling_configuration {
  * @stack_max_usage_task: Task ID that used the max stack space
  */
 struct iwl_profiling_umac_cpu_usage {
-    __le32 context_id;
-    __le32 run_time;
-    __le32 enabled_metrics;
-    __le32 max_processing_time;
-    __le32 num_of_page_faults_dl;
-    __le32 num_of_page_faults_dl_up;
-    __le32 max_processing_time_task;
-    __le32 max_block_time;
-    __le16 max_pf_handle_time_dl;
-    __le16 max_pf_handle_time_dl_up;
-    __le16 min_pf_handle_time_dl;
-    __le16 min_pf_handle_time_dl_up;
-    __le32 sum_pf_handle_time_dl;
-    __le32 sum_pf_handle_time_dl_up;
-    __le16 p_fHandle_time_bucket1;
-    __le16 p_fHandle_time_bucket2;
-    __le16 p_fHandle_time_bucket3;
-    __le16 p_fHandle_time_bucket4;
-    __le16 p_fHandle_time_bucket5;
-    __le16 stack_size;
-    __le16 stack_max_usage;
-    __le32 stack_max_usage_task;
+  __le32 context_id;
+  __le32 run_time;
+  __le32 enabled_metrics;
+  __le32 max_processing_time;
+  __le32 num_of_page_faults_dl;
+  __le32 num_of_page_faults_dl_up;
+  __le32 max_processing_time_task;
+  __le32 max_block_time;
+  __le16 max_pf_handle_time_dl;
+  __le16 max_pf_handle_time_dl_up;
+  __le16 min_pf_handle_time_dl;
+  __le16 min_pf_handle_time_dl_up;
+  __le32 sum_pf_handle_time_dl;
+  __le32 sum_pf_handle_time_dl_up;
+  __le16 p_fHandle_time_bucket1;
+  __le16 p_fHandle_time_bucket2;
+  __le16 p_fHandle_time_bucket3;
+  __le16 p_fHandle_time_bucket4;
+  __le16 p_fHandle_time_bucket5;
+  __le16 stack_size;
+  __le16 stack_max_usage;
+  __le32 stack_max_usage_task;
 
 } __packed; /* PROFILING_UMAC_CPU_USAGE_API_S */
 
@@ -373,14 +373,14 @@ struct iwl_profiling_umac_cpu_usage {
  *  encountered (measured each time a PF is queued to be handled).
  */
 struct iwl_profiling_umac_general_paging {
-    __le32 num_of_page_faults;
-    __le32 inter_page_fault_time_bucket1;
-    __le32 inter_page_fault_time_bucket2;
-    __le32 inter_page_fault_time_bucket3;
-    __le32 inter_page_fault_time_bucket4;
-    __le32 inter_page_fault_time_bucket5;
-    __le16 max_page_fault_wait_time;
-    __le16 max_num_of_pending_pfs;
+  __le32 num_of_page_faults;
+  __le32 inter_page_fault_time_bucket1;
+  __le32 inter_page_fault_time_bucket2;
+  __le32 inter_page_fault_time_bucket3;
+  __le32 inter_page_fault_time_bucket4;
+  __le32 inter_page_fault_time_bucket5;
+  __le16 max_page_fault_wait_time;
+  __le16 max_num_of_pending_pfs;
 } __packed; /* PROFILING_UMAC_GENERAL_PAGING_API_S */
 
 /**
@@ -393,11 +393,11 @@ struct iwl_profiling_umac_general_paging {
  * @min_run_time: Minimal time this flow was timed running
  */
 struct iwl_profiling_umac_flow_timing {
-    __le32 flow_id;
-    __le32 num_of_runs;
-    __le32 total_run_time;
-    __le32 max_run_time;
-    __le32 min_run_time;
+  __le32 flow_id;
+  __le32 num_of_runs;
+  __le32 total_run_time;
+  __le32 max_run_time;
+  __le32 min_run_time;
 } __packed; /* PROFILING_UMAC_FLOW_TIMING_API_S */
 
 /**
@@ -405,7 +405,7 @@ struct iwl_profiling_umac_flow_timing {
  * @max_critical_section_time: Maximal length of time of all critical sections
  */
 struct iwl_profiling_umac_critical_section {
-    __le32 max_critical_section_time;
+  __le32 max_critical_section_time;
 } __packed; /* PROFILING_UMAC_CRITICAL_SECTION_API_S */
 
 /**
@@ -418,9 +418,9 @@ struct iwl_profiling_umac_critical_section {
  *  fragmentation
  */
 struct iwl_profiling_umac_memory_pools {
-    __le32 pool_id;
-    __le32 min_free_space;
-    __le32 largest_allocated_size;
+  __le32 pool_id;
+  __le32 min_free_space;
+  __le32 largest_allocated_size;
 } __packed; /* PROFILING_UMAC_MEMORY_POOLS_API_S */
 
 /**
@@ -431,8 +431,8 @@ struct iwl_profiling_umac_memory_pools {
  *  reset
  */
 struct iwl_profiling_umac_fifos {
-    __le32 fifo_id;
-    __le32 min_free_bytes;
+  __le32 fifo_id;
+  __le32 min_free_bytes;
 } __packed; /* PROFILING_UMAC_FIFOS_API_S */
 
 /**
@@ -448,13 +448,13 @@ struct iwl_profiling_umac_fifos {
  * @umac_fifos_arr: UMAC FIFOs (provided for each enumerated FIFO)
  */
 struct iwl_profiling_umac_metrics_report {
-    struct iwl_profiling_configuration configuration;
-    struct iwl_profiling_umac_cpu_usage umac_cpu_usage_ctx[PROFILING_CONTEXT_MAX_NUM];
-    struct iwl_profiling_umac_general_paging umac_general_paging;
-    struct iwl_profiling_umac_flow_timing umac_flows_timing[PROFILING_FLOW_MAX_NUM];
-    struct iwl_profiling_umac_critical_section umac_critical_section;
-    struct iwl_profiling_umac_memory_pools umac_memory_pools[PROFILING_POOL_MAX_NUM];
-    struct iwl_profiling_umac_fifos umac_fifos_arr[PROFILING_FIFO_MAX_NUM];
+  struct iwl_profiling_configuration configuration;
+  struct iwl_profiling_umac_cpu_usage umac_cpu_usage_ctx[PROFILING_CONTEXT_MAX_NUM];
+  struct iwl_profiling_umac_general_paging umac_general_paging;
+  struct iwl_profiling_umac_flow_timing umac_flows_timing[PROFILING_FLOW_MAX_NUM];
+  struct iwl_profiling_umac_critical_section umac_critical_section;
+  struct iwl_profiling_umac_memory_pools umac_memory_pools[PROFILING_POOL_MAX_NUM];
+  struct iwl_profiling_umac_fifos umac_fifos_arr[PROFILING_FIFO_MAX_NUM];
 } __packed; /* PROFILING_UMAC_METRICS_REPORT_API_S */
 
 /**
@@ -471,13 +471,13 @@ struct iwl_profiling_umac_metrics_report {
  *      apply.
  */
 struct iwl_ps_report {
-    __le32 sleep_allowed_count;
-    __le32 sleep_time;
-    __le32 max_sleep_time;
-    __le32 missed_beacon_count;
-    __le32 missed_3_consecutive_beacon_count;
-    __le32 ps_flags;
-    __le32 max_active_duration;
+  __le32 sleep_allowed_count;
+  __le32 sleep_time;
+  __le32 max_sleep_time;
+  __le32 missed_beacon_count;
+  __le32 missed_3_consecutive_beacon_count;
+  __le32 ps_flags;
+  __le32 max_active_duration;
 } __packed; /* PS_REPORT_API_S */
 
 /**
@@ -494,8 +494,8 @@ struct iwl_ps_report {
  *  bits 0-25 is a specific entry index in the table specified in bits 28-30
  */
 struct iwl_dhn_hdr {
-    __le32 length;
-    __le32 index_and_mask;
+  __le32 length;
+  __le32 index_and_mask;
 } __packed; /* DHC_NOTIFICATION_API_S */
 
 /**
@@ -504,8 +504,8 @@ struct iwl_dhn_hdr {
  * @profiling_metrics: the profiling metrics
  */
 struct iwl_profiling_notification {
-    struct iwl_dhn_hdr header;
-    struct iwl_profiling_umac_metrics_report profiling_metrics;
+  struct iwl_dhn_hdr header;
+  struct iwl_profiling_umac_metrics_report profiling_metrics;
 } __packed; /* DHC_NOTIFICATION_API_S */
 
 /**
@@ -521,10 +521,10 @@ struct iwl_profiling_notification {
  * @dwell_time: requested dwell time
  */
 struct iwl_channel_dwell_report {
-    struct iwl_dhn_hdr header;
-    __le32 channel_num;
-    __le32 dwell_tsf;
-    __le32 dwell_time;
+  struct iwl_dhn_hdr header;
+  __le32 channel_num;
+  __le32 dwell_tsf;
+  __le32 dwell_time;
 } __packed; /* SCAN_CHANNEL_DWELL_REPORT_API_S */
 
 /**
@@ -539,10 +539,10 @@ struct iwl_channel_dwell_report {
  * @success_counter: fine tune success counter
  */
 struct iwl_adwell_fine_tune_metrics_report {
-    struct iwl_dhn_hdr header;
-    int8_t index[IWL_SCAN_MAX_NUM_OF_CHANNELS];
-    uint8_t scan_counter[IWL_SCAN_MAX_NUM_OF_CHANNELS];
-    uint8_t success_counter[IWL_SCAN_MAX_NUM_OF_CHANNELS];
+  struct iwl_dhn_hdr header;
+  int8_t index[IWL_SCAN_MAX_NUM_OF_CHANNELS];
+  uint8_t scan_counter[IWL_SCAN_MAX_NUM_OF_CHANNELS];
+  uint8_t success_counter[IWL_SCAN_MAX_NUM_OF_CHANNELS];
 } __packed; /* ADAPTIVE_DWELL_SCAN_FINE_TUNE_METRICS_REPORT_API_S */
 
 /**
@@ -552,8 +552,8 @@ struct iwl_adwell_fine_tune_metrics_report {
  * @QUOTA_ENFORCE_TYPE_LIMITATION: Enforce maximum quota.
  */
 enum iwl_dhc_quota_enforce_type {
-    QUOTA_ENFORCE_TYPE_RESERVATION,
-    QUOTA_ENFORCE_TYPE_LIMITATION,
+  QUOTA_ENFORCE_TYPE_RESERVATION,
+  QUOTA_ENFORCE_TYPE_LIMITATION,
 }; /* DHC_QUOTA_ENFORCE_TYPE_API_E */
 
 /**
@@ -565,10 +565,10 @@ enum iwl_dhc_quota_enforce_type {
  * @quota_percentage: quota to enforce as percentage [0 - 100]
  */
 struct iwl_dhc_quota_enforce {
-    uint8_t macs;
-    uint8_t quota_enforce_type;
-    __le16 reserved;
-    __le32 quota_percentage[MAC_INDEX_AUX];
+  uint8_t macs;
+  uint8_t quota_enforce_type;
+  __le16 reserved;
+  __le32 quota_percentage[MAC_INDEX_AUX];
 } __packed; /* DHC_QUOTA_ENFORCE_API_S */
 
 /**
@@ -585,15 +585,15 @@ struct iwl_dhc_quota_enforce {
  * @DHC_TWT_TEARDOWN: Send a TearDown TWT command
  */
 enum iwl_dhc_twt_operation_type {
-    DHC_TWT_REQUEST,
-    DHC_TWT_SUGGEST,
-    DHC_TWT_DEMAND,
-    DHC_TWT_GROUPING,
-    DHC_TWT_ACCEPT,
-    DHC_TWT_ALTERNATE,
-    DHC_TWT_DICTATE,
-    DHC_TWT_REJECT,
-    DHC_TWT_TEARDOWN,
+  DHC_TWT_REQUEST,
+  DHC_TWT_SUGGEST,
+  DHC_TWT_DEMAND,
+  DHC_TWT_GROUPING,
+  DHC_TWT_ACCEPT,
+  DHC_TWT_ALTERNATE,
+  DHC_TWT_DICTATE,
+  DHC_TWT_REJECT,
+  DHC_TWT_TEARDOWN,
 }; /* DHC_TWT_OPERATION_TYPE_E */
 
 /**
@@ -619,24 +619,24 @@ enum iwl_dhc_twt_operation_type {
  * @reserved: reserved
  */
 struct iwl_dhc_twt_operation {
-    __le32 mac_id;
-    __le32 twt_operation;
-    __le64 target_wake_time;
-    __le32 interval_exp;
-    __le32 interval_mantissa;
-    __le32 min_wake_duration;
-    uint8_t trigger;
-    uint8_t flow_type;
-    uint8_t flow_id;
-    uint8_t protection;
-    uint8_t ndo_paging_indicator;
-    uint8_t responder_pm_mode;
-    uint8_t negotiation_type;
-    uint8_t twt_request;
-    uint8_t implicit;
-    uint8_t twt_group_assignment;
-    uint8_t twt_channel;
-    uint8_t reserved;
+  __le32 mac_id;
+  __le32 twt_operation;
+  __le64 target_wake_time;
+  __le32 interval_exp;
+  __le32 interval_mantissa;
+  __le32 min_wake_duration;
+  uint8_t trigger;
+  uint8_t flow_type;
+  uint8_t flow_id;
+  uint8_t protection;
+  uint8_t ndo_paging_indicator;
+  uint8_t responder_pm_mode;
+  uint8_t negotiation_type;
+  uint8_t twt_request;
+  uint8_t implicit;
+  uint8_t twt_group_assignment;
+  uint8_t twt_channel;
+  uint8_t reserved;
 }; /* DHC_TWT_OPERATION_API_S */
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_DHC_H_

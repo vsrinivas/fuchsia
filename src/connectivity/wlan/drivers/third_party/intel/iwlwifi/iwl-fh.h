@@ -94,14 +94,18 @@
 
 /* Find TFD CB base pointer for given queue */
 static inline unsigned int FH_MEM_CBBC_QUEUE(struct iwl_trans* trans, unsigned int chnl) {
-    if (trans->cfg->use_tfh) {
-        WARN_ON_ONCE(chnl >= 64);
-        return TFH_TFDQ_CBB_TABLE + 8 * chnl;
-    }
-    if (chnl < 16) { return FH_MEM_CBBC_0_15_LOWER_BOUND + 4 * chnl; }
-    if (chnl < 20) { return FH_MEM_CBBC_16_19_LOWER_BOUND + 4 * (chnl - 16); }
-    WARN_ON_ONCE(chnl >= 32);
-    return FH_MEM_CBBC_20_31_LOWER_BOUND + 4 * (chnl - 20);
+  if (trans->cfg->use_tfh) {
+    WARN_ON_ONCE(chnl >= 64);
+    return TFH_TFDQ_CBB_TABLE + 8 * chnl;
+  }
+  if (chnl < 16) {
+    return FH_MEM_CBBC_0_15_LOWER_BOUND + 4 * chnl;
+  }
+  if (chnl < 20) {
+    return FH_MEM_CBBC_16_19_LOWER_BOUND + 4 * (chnl - 16);
+  }
+  WARN_ON_ONCE(chnl >= 32);
+  return FH_MEM_CBBC_20_31_LOWER_BOUND + 4 * (chnl - 20);
 }
 
 /* 22000 configuration registers */
@@ -575,7 +579,7 @@ static inline unsigned int FH_MEM_CBBC_QUEUE(struct iwl_trans* trans, unsigned i
 #define MQ_RX_TABLE_MASK (MQ_RX_TABLE_SIZE - 1)
 #define MQ_RX_NUM_RBDS (MQ_RX_TABLE_SIZE - 1)
 #define RX_POOL_SIZE \
-    (MQ_RX_NUM_RBDS + IWL_MAX_RX_HW_QUEUES * (RX_CLAIM_REQ_ALLOC - RX_POST_REQ_ALLOC))
+  (MQ_RX_NUM_RBDS + IWL_MAX_RX_HW_QUEUES * (RX_CLAIM_REQ_ALLOC - RX_POST_REQ_ALLOC))
 /* cb size is the exponent */
 #define RX_QUEUE_CB_SIZE(x) ilog2(x)
 
@@ -594,11 +598,11 @@ static inline unsigned int FH_MEM_CBBC_QUEUE(struct iwl_trans* trans, unsigned i
  *  which was transferred
  */
 struct iwl_rb_status {
-    __le16 closed_rb_num;
-    __le16 closed_fr_num;
-    __le16 finished_rb_num;
-    __le16 finished_fr_nam;
-    __le32 __unused;
+  __le16 closed_rb_num;
+  __le16 closed_fr_num;
+  __le16 finished_rb_num;
+  __le16 finished_fr_nam;
+  __le32 __unused;
 } __packed;
 
 #define TFD_QUEUE_SIZE_MAX (256)
@@ -613,7 +617,7 @@ struct iwl_rb_status {
 #define IWL_TFH_NUM_TBS 25
 
 static inline uint8_t iwl_get_dma_hi_addr(dma_addr_t addr) {
-    return (sizeof(addr) > sizeof(uint32_t) ? (uint32_t)(addr >> 32) : 0) & 0xF;
+  return (sizeof(addr) > sizeof(uint32_t) ? (uint32_t)(addr >> 32) : 0) & 0xF;
 }
 
 /**
@@ -622,8 +626,8 @@ static inline uint8_t iwl_get_dma_hi_addr(dma_addr_t addr) {
  * @TB_HI_N_LEN_LEN_MSK: length of the TB
  */
 enum iwl_tfd_tb_hi_n_len {
-    TB_HI_N_LEN_ADDR_HI_MSK = 0xf,
-    TB_HI_N_LEN_LEN_MSK = 0xfff0,
+  TB_HI_N_LEN_ADDR_HI_MSK = 0xf,
+  TB_HI_N_LEN_LEN_MSK = 0xfff0,
 };
 
 /**
@@ -636,8 +640,8 @@ enum iwl_tfd_tb_hi_n_len {
  * @hi_n_len: &enum iwl_tfd_tb_hi_n_len
  */
 struct iwl_tfd_tb {
-    __le32 lo;
-    __le16 hi_n_len;
+  __le32 lo;
+  __le16 hi_n_len;
 } __packed;
 
 /**
@@ -649,8 +653,8 @@ struct iwl_tfd_tb {
  * @addr 64 bits dma address
  */
 struct iwl_tfh_tb {
-    __le16 tb_len;
-    __le64 addr;
+  __le16 tb_len;
+  __le64 addr;
 } __packed;
 
 /**
@@ -683,10 +687,10 @@ struct iwl_tfh_tb {
  * @ __pad  padding
  */
 struct iwl_tfd {
-    uint8_t __reserved1[3];
-    uint8_t num_tbs;
-    struct iwl_tfd_tb tbs[IWL_NUM_OF_TBS];
-    __le32 __pad;
+  uint8_t __reserved1[3];
+  uint8_t num_tbs;
+  struct iwl_tfd_tb tbs[IWL_NUM_OF_TBS];
+  __le32 __pad;
 } __packed;
 
 /**
@@ -697,9 +701,9 @@ struct iwl_tfd {
  * @ __pad  padding
  */
 struct iwl_tfh_tfd {
-    __le16 num_tbs;
-    struct iwl_tfh_tb tbs[IWL_TFH_NUM_TBS];
-    __le32 __pad;
+  __le16 num_tbs;
+  struct iwl_tfh_tb tbs[IWL_TFH_NUM_TBS];
+  __le32 __pad;
 } __packed;
 
 /* Keep Warm Size */
@@ -719,7 +723,7 @@ struct iwl_tfh_tfd {
  *      14-16 - reserved
  */
 struct iwlagn_scd_bc_tbl {
-    __le16 tfd_offset[TFD_QUEUE_BC_SIZE];
+  __le16 tfd_offset[TFD_QUEUE_BC_SIZE];
 } __packed;
 
 /**
@@ -730,7 +734,7 @@ struct iwlagn_scd_bc_tbl {
  *      14-16 - reserved
  */
 struct iwl_gen3_bc_tbl {
-    __le16 tfd_offset[TFD_QUEUE_BC_SIZE_GEN3];
+  __le16 tfd_offset[TFD_QUEUE_BC_SIZE_GEN3];
 } __packed;
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_FH_H_

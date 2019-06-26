@@ -51,12 +51,12 @@
  *  &enum iwl_ctxt_id_and_color
  */
 struct iwl_binding_cmd_v1 {
-    /* COMMON_INDEX_HDR_API_S_VER_1 */
-    __le32 id_and_color;
-    __le32 action;
-    /* BINDING_DATA_API_S_VER_1 */
-    __le32 macs[MAX_MACS_IN_BINDING];
-    __le32 phy;
+  /* COMMON_INDEX_HDR_API_S_VER_1 */
+  __le32 id_and_color;
+  __le32 action;
+  /* BINDING_DATA_API_S_VER_1 */
+  __le32 macs[MAX_MACS_IN_BINDING];
+  __le32 phy;
 } __packed; /* BINDING_CMD_API_S_VER_1 */
 
 /**
@@ -72,13 +72,13 @@ struct iwl_binding_cmd_v1 {
  * @lmac_id: the lmac id the binding belongs to
  */
 struct iwl_binding_cmd {
-    /* COMMON_INDEX_HDR_API_S_VER_1 */
-    __le32 id_and_color;
-    __le32 action;
-    /* BINDING_DATA_API_S_VER_1 */
-    __le32 macs[MAX_MACS_IN_BINDING];
-    __le32 phy;
-    __le32 lmac_id;
+  /* COMMON_INDEX_HDR_API_S_VER_1 */
+  __le32 id_and_color;
+  __le32 action;
+  /* BINDING_DATA_API_S_VER_1 */
+  __le32 macs[MAX_MACS_IN_BINDING];
+  __le32 phy;
+  __le32 lmac_id;
 } __packed; /* BINDING_CMD_API_S_VER_2 */
 
 #define IWL_BINDING_CMD_SIZE_V1 sizeof(struct iwl_binding_cmd_v1)
@@ -97,9 +97,9 @@ struct iwl_binding_cmd {
  * @max_duration: max uninterrupted context duration in TU
  */
 struct iwl_time_quota_data_v1 {
-    __le32 id_and_color;
-    __le32 quota;
-    __le32 max_duration;
+  __le32 id_and_color;
+  __le32 quota;
+  __le32 max_duration;
 } __packed; /* TIME_QUOTA_DATA_API_S_VER_1 */
 
 /**
@@ -111,14 +111,14 @@ struct iwl_time_quota_data_v1 {
  *  On CDB the fourth one is a regular binding.
  */
 struct iwl_time_quota_cmd_v1 {
-    struct iwl_time_quota_data_v1 quotas[MAX_BINDINGS];
+  struct iwl_time_quota_data_v1 quotas[MAX_BINDINGS];
 } __packed; /* TIME_QUOTA_ALLOCATION_CMD_API_S_VER_1 */
 
 enum iwl_quota_low_latency {
-    IWL_QUOTA_LOW_LATENCY_NONE = 0,
-    IWL_QUOTA_LOW_LATENCY_TX = BIT(0),
-    IWL_QUOTA_LOW_LATENCY_RX = BIT(1),
-    IWL_QUOTA_LOW_LATENCY_TX_RX = IWL_QUOTA_LOW_LATENCY_TX | IWL_QUOTA_LOW_LATENCY_RX,
+  IWL_QUOTA_LOW_LATENCY_NONE = 0,
+  IWL_QUOTA_LOW_LATENCY_TX = BIT(0),
+  IWL_QUOTA_LOW_LATENCY_RX = BIT(1),
+  IWL_QUOTA_LOW_LATENCY_TX_RX = IWL_QUOTA_LOW_LATENCY_TX | IWL_QUOTA_LOW_LATENCY_RX,
 };
 
 /**
@@ -130,10 +130,10 @@ enum iwl_quota_low_latency {
  * @low_latency: low latency status, &enum iwl_quota_low_latency
  */
 struct iwl_time_quota_data {
-    __le32 id_and_color;
-    __le32 quota;
-    __le32 max_duration;
-    __le32 low_latency;
+  __le32 id_and_color;
+  __le32 quota;
+  __le32 max_duration;
+  __le32 low_latency;
 } __packed; /* TIME_QUOTA_DATA_API_S_VER_2 */
 
 /**
@@ -145,7 +145,7 @@ struct iwl_time_quota_data {
  * @quotas: allocations per binding
  */
 struct iwl_time_quota_cmd {
-    struct iwl_time_quota_data quotas[MAX_BINDINGS];
+  struct iwl_time_quota_data quotas[MAX_BINDINGS];
 } __packed; /* TIME_QUOTA_ALLOCATION_CMD_API_S_VER_2 */
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_BINDING_H_

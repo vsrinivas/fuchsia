@@ -48,10 +48,10 @@
  * @device_phy_addr: virtual addresses from device side
  */
 struct iwl_fw_paging_cmd {
-    __le32 flags;
-    __le32 block_size;
-    __le32 block_num;
-    __le32 device_phy_addr[NUM_OF_FW_PAGING_BLOCKS];
+  __le32 flags;
+  __le32 block_size;
+  __le32 block_num;
+  __le32 device_phy_addr[NUM_OF_FW_PAGING_BLOCKS];
 } __packed; /* FW_PAGING_BLOCK_CMD_API_S_VER_1 */
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_PAGING_H_

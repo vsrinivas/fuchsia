@@ -35,6 +35,7 @@
  *****************************************************************************/
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/scan.h"
+
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-io.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
 
@@ -57,8 +58,8 @@
 #define IWL_SCAN_ADWELL_DEFAULT_N_APS_SOCIAL 10
 
 struct iwl_mvm_scan_timing_params {
-    uint32_t suspend_time;
-    uint32_t max_out_time;
+  uint32_t suspend_time;
+  uint32_t max_out_time;
 };
 
 #if 0   // NEEDS_PORTING
@@ -92,28 +93,28 @@ static struct iwl_mvm_scan_timing_params scan_timing[] = {
 #endif  // NEEDS_PORTING
 
 struct iwl_mvm_scan_params {
-    /* For CDB this is low band scan type, for non-CDB - type. */
-    enum iwl_mvm_scan_type type;
-    enum iwl_mvm_scan_type hb_type;
-    uint32_t n_channels;
-    uint16_t delay;
-    int n_ssids;
-    struct cfg80211_ssid* ssids;
-    struct ieee80211_channel** channels;
-    uint32_t flags;
-    uint8_t* mac_addr;
-    uint8_t* mac_addr_mask;
-    bool no_cck;
-    bool pass_all;
-    int n_match_sets;
-    struct iwl_scan_probe_req preq;
-    struct cfg80211_match_set* match_sets;
-    int n_scan_plans;
-    struct cfg80211_sched_scan_plan* scan_plans;
-    uint32_t measurement_dwell;
+  /* For CDB this is low band scan type, for non-CDB - type. */
+  enum iwl_mvm_scan_type type;
+  enum iwl_mvm_scan_type hb_type;
+  uint32_t n_channels;
+  uint16_t delay;
+  int n_ssids;
+  struct cfg80211_ssid* ssids;
+  struct ieee80211_channel** channels;
+  uint32_t flags;
+  uint8_t* mac_addr;
+  uint8_t* mac_addr_mask;
+  bool no_cck;
+  bool pass_all;
+  int n_match_sets;
+  struct iwl_scan_probe_req preq;
+  struct cfg80211_match_set* match_sets;
+  int n_scan_plans;
+  struct cfg80211_sched_scan_plan* scan_plans;
+  uint32_t measurement_dwell;
 };
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
 static inline void* iwl_mvm_get_scan_req_umac_data(struct iwl_mvm* mvm) {
     struct iwl_scan_req_umac* cmd = mvm->scan_cmd;
 
@@ -1714,24 +1715,24 @@ static int iwl_mvm_scan_stop_wait(struct iwl_mvm* mvm, int type) {
 #endif  // NEEDS_PORTING
 
 int iwl_mvm_scan_size(struct iwl_mvm* mvm) {
-    int base_size = IWL_SCAN_REQ_UMAC_SIZE_V1;
+  int base_size = IWL_SCAN_REQ_UMAC_SIZE_V1;
 
-    if (iwl_mvm_is_adaptive_dwell_v2_supported(mvm)) {
-        base_size = IWL_SCAN_REQ_UMAC_SIZE_V8;
-    } else if (iwl_mvm_is_adaptive_dwell_supported(mvm)) {
-        base_size = IWL_SCAN_REQ_UMAC_SIZE_V7;
-    } else if (iwl_mvm_cdb_scan_api(mvm)) {
-        base_size = IWL_SCAN_REQ_UMAC_SIZE_V6;
-    }
+  if (iwl_mvm_is_adaptive_dwell_v2_supported(mvm)) {
+    base_size = IWL_SCAN_REQ_UMAC_SIZE_V8;
+  } else if (iwl_mvm_is_adaptive_dwell_supported(mvm)) {
+    base_size = IWL_SCAN_REQ_UMAC_SIZE_V7;
+  } else if (iwl_mvm_cdb_scan_api(mvm)) {
+    base_size = IWL_SCAN_REQ_UMAC_SIZE_V6;
+  }
 
-    if (fw_has_capa(&mvm->fw->ucode_capa, IWL_UCODE_TLV_CAPA_UMAC_SCAN))
-        return base_size +
-               sizeof(struct iwl_scan_channel_cfg_umac) * mvm->fw->ucode_capa.n_scan_channels +
-               sizeof(struct iwl_scan_req_umac_tail);
+  if (fw_has_capa(&mvm->fw->ucode_capa, IWL_UCODE_TLV_CAPA_UMAC_SCAN))
+    return base_size +
+           sizeof(struct iwl_scan_channel_cfg_umac) * mvm->fw->ucode_capa.n_scan_channels +
+           sizeof(struct iwl_scan_req_umac_tail);
 
-    return sizeof(struct iwl_scan_req_lmac) +
-           sizeof(struct iwl_scan_channel_cfg_lmac) * mvm->fw->ucode_capa.n_scan_channels +
-           sizeof(struct iwl_scan_probe_req);
+  return sizeof(struct iwl_scan_req_lmac) +
+         sizeof(struct iwl_scan_channel_cfg_lmac) * mvm->fw->ucode_capa.n_scan_channels +
+         sizeof(struct iwl_scan_probe_req);
 }
 
 #if 0   // NEEDS_PORTING

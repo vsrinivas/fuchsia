@@ -39,7 +39,7 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/sta.h"
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
 static void iwl_mvm_bar_check_trigger(struct iwl_mvm* mvm, const uint8_t* addr, uint16_t tid,
                                       uint16_t ssn) {
     struct iwl_fw_dbg_trigger_tlv* trig;
@@ -1153,12 +1153,12 @@ static void iwl_mvm_check_ratid_empty(struct iwl_mvm* mvm, struct ieee80211_sta*
 
 #ifdef CPTCFG_IWLWIFI_DEBUG
 const char* iwl_mvm_get_tx_fail_reason(uint32_t status) {
-#define TX_STATUS_FAIL(x)    \
-    case TX_STATUS_FAIL_##x: \
-        return #x
-#define TX_STATUS_POSTPONE(x)    \
-    case TX_STATUS_POSTPONE_##x: \
-        return #x
+#define TX_STATUS_FAIL(x)  \
+  case TX_STATUS_FAIL_##x: \
+    return #x
+#define TX_STATUS_POSTPONE(x)  \
+  case TX_STATUS_POSTPONE_##x: \
+    return #x
 
     switch (status & TX_STATUS_MSK) {
     case TX_STATUS_SUCCESS:
@@ -1289,7 +1289,7 @@ static inline uint32_t iwl_mvm_get_scd_ssn(struct iwl_mvm* mvm, struct iwl_mvm_t
 #endif  // NEEDS_PORTING
 
 static void iwl_mvm_rx_tx_cmd_single(struct iwl_mvm* mvm, struct iwl_rx_packet* pkt) {
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
     struct ieee80211_sta* sta;
     uint16_t sequence = le16_to_cpu(pkt->hdr.sequence);
     int txq_id = SEQ_TO_QUEUE(sequence);
@@ -1413,7 +1413,7 @@ static void iwl_mvm_rx_tx_cmd_single(struct iwl_mvm* mvm, struct iwl_rx_packet* 
         if (info->flags & IEEE80211_TX_STAT_ACK) {
             iwl_mvm_tdls_peer_cache_pkt(mvm, (void*)skb->data, skb->len, -1);
         }
-#endif /* CPTCFG_IWLMVM_TDLS_PEER_CACHE */
+#endif  /* CPTCFG_IWLMVM_TDLS_PEER_CACHE */
 
         ieee80211_tx_status(mvm->hw, skb);
     }
@@ -1516,11 +1516,11 @@ out:
 #endif  // NEEDS_PORTING
 }
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
 #ifdef CPTCFG_IWLWIFI_DEBUG
-#define AGG_TX_STATE_(x)   \
-    case AGG_TX_STATE_##x: \
-        return #x
+#define AGG_TX_STATE_(x) \
+  case AGG_TX_STATE_##x: \
+    return #x
 static const char* iwl_get_agg_tx_status(uint16_t status) {
     switch (status & AGG_TX_STATE_STATUS_MSK) {
         AGG_TX_STATE_(TRANSMITTED);
@@ -1557,7 +1557,7 @@ static void iwl_mvm_rx_tx_cmd_agg_dbg(struct iwl_mvm* mvm, struct iwl_rx_packet*
 }
 #else
 static void iwl_mvm_rx_tx_cmd_agg_dbg(struct iwl_mvm* mvm, struct iwl_rx_packet* pkt) {}
-#endif /* CPTCFG_IWLWIFI_DEBUG */
+#endif  /* CPTCFG_IWLWIFI_DEBUG */
 #endif  // NEEDS_PORTING
 
 static void iwl_mvm_rx_tx_cmd_agg(struct iwl_mvm* mvm, struct iwl_rx_packet* pkt) {
@@ -1599,17 +1599,17 @@ static void iwl_mvm_rx_tx_cmd_agg(struct iwl_mvm* mvm, struct iwl_rx_packet* pkt
 }
 
 void iwl_mvm_rx_tx_cmd(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb) {
-    struct iwl_rx_packet* pkt = rxb_addr(rxb);
-    struct iwl_mvm_tx_resp* tx_resp = (void*)pkt->data;
+  struct iwl_rx_packet* pkt = rxb_addr(rxb);
+  struct iwl_mvm_tx_resp* tx_resp = (void*)pkt->data;
 
-    if (tx_resp->frame_count == 1) {
-        iwl_mvm_rx_tx_cmd_single(mvm, pkt);
-    } else {
-        iwl_mvm_rx_tx_cmd_agg(mvm, pkt);
-    }
+  if (tx_resp->frame_count == 1) {
+    iwl_mvm_rx_tx_cmd_single(mvm, pkt);
+  } else {
+    iwl_mvm_rx_tx_cmd_agg(mvm, pkt);
+  }
 }
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
 static void iwl_mvm_tx_reclaim(struct iwl_mvm* mvm, int sta_id, int tid, int txq, int index,
                                struct ieee80211_tx_info* ba_info, uint32_t rate) {
     struct sk_buff_head reclaimed_skbs;
@@ -1689,7 +1689,7 @@ static void iwl_mvm_tx_reclaim(struct iwl_mvm* mvm, int sta_id, int tid, int txq
 
 #ifdef CPTCFG_IWLMVM_TDLS_PEER_CACHE
         iwl_mvm_tdls_peer_cache_pkt(mvm, hdr, skb->len, -1);
-#endif /* CPTCFG_IWLMVM_TDLS_PEER_CACHE */
+#endif  /* CPTCFG_IWLMVM_TDLS_PEER_CACHE */
 
         /* this is the first skb we deliver in this batch */
         /* put the rate scaling data there */

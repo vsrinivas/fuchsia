@@ -31,17 +31,18 @@
  *
  *****************************************************************************/
 
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-phy-db.h"
+
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-debug.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-drv.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-op-mode.h"
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-phy-db.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
 
 #define CHANNEL_NUM_SIZE 4 /* num of channels in calib_ch size */
 
 struct iwl_phy_db_entry {
-    uint16_t size;
-    uint8_t* data;
+  uint16_t size;
+  uint8_t* data;
 };
 
 /**
@@ -56,45 +57,47 @@ struct iwl_phy_db_entry {
  * @calib_ch_group_txp: calibration data related to tx power chanel group.
  */
 struct iwl_phy_db {
-    struct iwl_phy_db_entry cfg;
-    struct iwl_phy_db_entry calib_nch;
-    int n_group_papd;
-    struct iwl_phy_db_entry* calib_ch_group_papd;
-    int n_group_txp;
-    struct iwl_phy_db_entry* calib_ch_group_txp;
+  struct iwl_phy_db_entry cfg;
+  struct iwl_phy_db_entry calib_nch;
+  int n_group_papd;
+  struct iwl_phy_db_entry* calib_ch_group_papd;
+  int n_group_txp;
+  struct iwl_phy_db_entry* calib_ch_group_txp;
 
-    struct iwl_trans* trans;
+  struct iwl_trans* trans;
 };
 
 enum iwl_phy_db_section_type {
-    IWL_PHY_DB_CFG = 1,
-    IWL_PHY_DB_CALIB_NCH,
-    IWL_PHY_DB_UNUSED,
-    IWL_PHY_DB_CALIB_CHG_PAPD,
-    IWL_PHY_DB_CALIB_CHG_TXP,
-    IWL_PHY_DB_MAX
+  IWL_PHY_DB_CFG = 1,
+  IWL_PHY_DB_CALIB_NCH,
+  IWL_PHY_DB_UNUSED,
+  IWL_PHY_DB_CALIB_CHG_PAPD,
+  IWL_PHY_DB_CALIB_CHG_TXP,
+  IWL_PHY_DB_MAX
 };
 
 #define PHY_DB_CMD 0x6c
 
 /* for parsing of tx power channel group data that comes from the firmware*/
 struct iwl_phy_db_chg_txp {
-    __le32 space;
-    __le16 max_channel_idx;
+  __le32 space;
+  __le16 max_channel_idx;
 } __packed;
 
 struct iwl_phy_db* iwl_phy_db_init(struct iwl_trans* trans) {
-    struct iwl_phy_db* phy_db = calloc(1, sizeof(struct iwl_phy_db));
+  struct iwl_phy_db* phy_db = calloc(1, sizeof(struct iwl_phy_db));
 
-    if (!phy_db) { return phy_db; }
-
-    phy_db->trans = trans;
-
-    phy_db->n_group_txp = -1;
-    phy_db->n_group_papd = -1;
-
-    /* TODO: add default values of the phy db. */
+  if (!phy_db) {
     return phy_db;
+  }
+
+  phy_db->trans = trans;
+
+  phy_db->n_group_txp = -1;
+  phy_db->n_group_papd = -1;
+
+  /* TODO: add default values of the phy db. */
+  return phy_db;
 }
 
 /*
@@ -104,57 +107,67 @@ struct iwl_phy_db* iwl_phy_db_init(struct iwl_trans* trans) {
 static struct iwl_phy_db_entry* iwl_phy_db_get_section(struct iwl_phy_db* phy_db,
                                                        enum iwl_phy_db_section_type type,
                                                        uint16_t chg_id) {
-    if (!phy_db || type >= IWL_PHY_DB_MAX) { return NULL; }
-
-    switch (type) {
-    case IWL_PHY_DB_CFG:
-        return &phy_db->cfg;
-    case IWL_PHY_DB_CALIB_NCH:
-        return &phy_db->calib_nch;
-    case IWL_PHY_DB_CALIB_CHG_PAPD:
-        if (chg_id >= phy_db->n_group_papd) { return NULL; }
-        return &phy_db->calib_ch_group_papd[chg_id];
-    case IWL_PHY_DB_CALIB_CHG_TXP:
-        if (chg_id >= phy_db->n_group_txp) { return NULL; }
-        return &phy_db->calib_ch_group_txp[chg_id];
-    default:
-        return NULL;
-    }
+  if (!phy_db || type >= IWL_PHY_DB_MAX) {
     return NULL;
+  }
+
+  switch (type) {
+    case IWL_PHY_DB_CFG:
+      return &phy_db->cfg;
+    case IWL_PHY_DB_CALIB_NCH:
+      return &phy_db->calib_nch;
+    case IWL_PHY_DB_CALIB_CHG_PAPD:
+      if (chg_id >= phy_db->n_group_papd) {
+        return NULL;
+      }
+      return &phy_db->calib_ch_group_papd[chg_id];
+    case IWL_PHY_DB_CALIB_CHG_TXP:
+      if (chg_id >= phy_db->n_group_txp) {
+        return NULL;
+      }
+      return &phy_db->calib_ch_group_txp[chg_id];
+    default:
+      return NULL;
+  }
+  return NULL;
 }
 
 static void iwl_phy_db_free_section(struct iwl_phy_db* phy_db, enum iwl_phy_db_section_type type,
                                     uint16_t chg_id) {
-    struct iwl_phy_db_entry* entry = iwl_phy_db_get_section(phy_db, type, chg_id);
-    if (!entry) { return; }
+  struct iwl_phy_db_entry* entry = iwl_phy_db_get_section(phy_db, type, chg_id);
+  if (!entry) {
+    return;
+  }
 
-    kfree(entry->data);
-    entry->data = NULL;
-    entry->size = 0;
+  kfree(entry->data);
+  entry->data = NULL;
+  entry->size = 0;
 }
 
 void iwl_phy_db_free(struct iwl_phy_db* phy_db) {
-    int i;
+  int i;
 
-    if (!phy_db) { return; }
+  if (!phy_db) {
+    return;
+  }
 
-    iwl_phy_db_free_section(phy_db, IWL_PHY_DB_CFG, 0);
-    iwl_phy_db_free_section(phy_db, IWL_PHY_DB_CALIB_NCH, 0);
+  iwl_phy_db_free_section(phy_db, IWL_PHY_DB_CFG, 0);
+  iwl_phy_db_free_section(phy_db, IWL_PHY_DB_CALIB_NCH, 0);
 
-    for (i = 0; i < phy_db->n_group_papd; i++) {
-        iwl_phy_db_free_section(phy_db, IWL_PHY_DB_CALIB_CHG_PAPD, i);
-    }
-    kfree(phy_db->calib_ch_group_papd);
+  for (i = 0; i < phy_db->n_group_papd; i++) {
+    iwl_phy_db_free_section(phy_db, IWL_PHY_DB_CALIB_CHG_PAPD, i);
+  }
+  kfree(phy_db->calib_ch_group_papd);
 
-    for (i = 0; i < phy_db->n_group_txp; i++) {
-        iwl_phy_db_free_section(phy_db, IWL_PHY_DB_CALIB_CHG_TXP, i);
-    }
-    kfree(phy_db->calib_ch_group_txp);
+  for (i = 0; i < phy_db->n_group_txp; i++) {
+    iwl_phy_db_free_section(phy_db, IWL_PHY_DB_CALIB_CHG_TXP, i);
+  }
+  kfree(phy_db->calib_ch_group_txp);
 
-    kfree(phy_db);
+  kfree(phy_db);
 }
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
 int iwl_phy_db_set_section(struct iwl_phy_db* phy_db, struct iwl_rx_packet* pkt) {
     struct iwl_calib_res_notif_phy_db* phy_db_notif = (struct iwl_calib_res_notif_phy_db*)pkt->data;
     enum iwl_phy_db_section_type type = le16_to_cpu(phy_db_notif->type);

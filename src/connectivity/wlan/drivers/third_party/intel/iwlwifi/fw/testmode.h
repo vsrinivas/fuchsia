@@ -48,14 +48,14 @@
  * @IWL_TM_ATTR_MAX: max amount of attributes
  */
 enum iwl_testmode_attrs {
-    IWL_TM_ATTR_UNSPEC,
-    IWL_TM_ATTR_CMD,
-    IWL_TM_ATTR_NOA_DURATION,
-    IWL_TM_ATTR_BEACON_FILTER_STATE,
+  IWL_TM_ATTR_UNSPEC,
+  IWL_TM_ATTR_CMD,
+  IWL_TM_ATTR_NOA_DURATION,
+  IWL_TM_ATTR_BEACON_FILTER_STATE,
 
-    /* keep last */
-    NUM_IWL_TM_ATTRS,
-    IWL_TM_ATTR_MAX = NUM_IWL_TM_ATTRS - 1,
+  /* keep last */
+  NUM_IWL_TM_ATTRS,
+  IWL_TM_ATTR_MAX = NUM_IWL_TM_ATTRS - 1,
 };
 
 /**
@@ -64,8 +64,8 @@ enum iwl_testmode_attrs {
  * @IWL_TM_CMD_SET_BEACON_FILTER: turn beacon filtering off/on
  */
 enum iwl_testmode_commands {
-    IWL_TM_CMD_SET_NOA,
-    IWL_TM_CMD_SET_BEACON_FILTER,
+  IWL_TM_CMD_SET_NOA,
+  IWL_TM_CMD_SET_BEACON_FILTER,
 };
 #endif
 
@@ -74,14 +74,14 @@ struct iwl_host_cmd;
 struct iwl_rx_cmd_buffer;
 
 struct iwl_testmode {
-    struct iwl_trans* trans;
-    const struct iwl_fw* fw;
-    /* the mutex of the op_mode */
-    struct mutex* mutex;
-    void* op_mode;
-    int (*send_hcmd)(void* op_mode, struct iwl_host_cmd* host_cmd);
-    uint32_t fw_major_ver;
-    uint32_t fw_minor_ver;
+  struct iwl_trans* trans;
+  const struct iwl_fw* fw;
+  /* the mutex of the op_mode */
+  struct mutex* mutex;
+  void* op_mode;
+  int (*send_hcmd)(void* op_mode, struct iwl_host_cmd* host_cmd);
+  uint32_t fw_major_ver;
+  uint32_t fw_minor_ver;
 };
 
 /**
@@ -94,8 +94,8 @@ struct iwl_testmode {
  * between internal testmode interfaces
  */
 struct iwl_tm_data {
-    void* data;
-    uint32_t len;
+  void* data;
+  uint32_t len;
 };
 
 void iwl_tm_init(struct iwl_trans* trans, const struct iwl_fw* fw, struct mutex* mutex,

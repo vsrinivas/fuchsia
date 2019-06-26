@@ -411,11 +411,9 @@ struct iwl_mvm_sta {
   uint8_t tx_ant;
 };
 
-uint16_t iwl_mvm_tid_queued(struct iwl_mvm* mvm,
-                            struct iwl_mvm_tid_data* tid_data);
+uint16_t iwl_mvm_tid_queued(struct iwl_mvm* mvm, struct iwl_mvm_tid_data* tid_data);
 
-static inline struct iwl_mvm_sta* iwl_mvm_sta_from_mac80211(
-    struct ieee80211_sta* sta) {
+static inline struct iwl_mvm_sta* iwl_mvm_sta_from_mac80211(struct ieee80211_sta* sta) {
   return (struct iwl_mvm_sta*)sta->drv_priv;
 }
 
@@ -442,54 +440,43 @@ struct iwl_mvm_int_sta {
  * @flags: if update==true, this marks what is being changed via ORs of values
  *  from enum iwl_sta_modify_flag. Otherwise, this is ignored.
  */
-int iwl_mvm_sta_send_to_fw(struct iwl_mvm* mvm, struct ieee80211_sta* sta,
-                           bool update, unsigned int flags);
-int iwl_mvm_add_sta(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
-                    struct ieee80211_sta* sta);
+int iwl_mvm_sta_send_to_fw(struct iwl_mvm* mvm, struct ieee80211_sta* sta, bool update,
+                           unsigned int flags);
+int iwl_mvm_add_sta(struct iwl_mvm* mvm, struct ieee80211_vif* vif, struct ieee80211_sta* sta);
 
-static inline int iwl_mvm_update_sta(struct iwl_mvm* mvm,
-                                     struct ieee80211_vif* vif,
+static inline int iwl_mvm_update_sta(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
                                      struct ieee80211_sta* sta) {
   return iwl_mvm_sta_send_to_fw(mvm, sta, true, 0);
 }
 
-int iwl_mvm_wait_sta_queues_empty(struct iwl_mvm* mvm,
-                                  struct iwl_mvm_sta* mvm_sta);
-int iwl_mvm_rm_sta(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
-                   struct ieee80211_sta* sta);
-int iwl_mvm_rm_sta_id(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
-                      uint8_t sta_id);
-int iwl_mvm_set_sta_key(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
-                        struct ieee80211_sta* sta,
+int iwl_mvm_wait_sta_queues_empty(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvm_sta);
+int iwl_mvm_rm_sta(struct iwl_mvm* mvm, struct ieee80211_vif* vif, struct ieee80211_sta* sta);
+int iwl_mvm_rm_sta_id(struct iwl_mvm* mvm, struct ieee80211_vif* vif, uint8_t sta_id);
+int iwl_mvm_set_sta_key(struct iwl_mvm* mvm, struct ieee80211_vif* vif, struct ieee80211_sta* sta,
                         struct ieee80211_key_conf* keyconf, uint8_t key_offset);
 int iwl_mvm_remove_sta_key(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
-                           struct ieee80211_sta* sta,
-                           struct ieee80211_key_conf* keyconf);
+                           struct ieee80211_sta* sta, struct ieee80211_key_conf* keyconf);
 
 void iwl_mvm_update_tkip_key(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
-                             struct ieee80211_key_conf* keyconf,
-                             struct ieee80211_sta* sta, uint32_t iv32,
-                             uint16_t* phase1key);
+                             struct ieee80211_key_conf* keyconf, struct ieee80211_sta* sta,
+                             uint32_t iv32, uint16_t* phase1key);
 
 void iwl_mvm_rx_eosp_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb);
 
 /* AMPDU */
-int iwl_mvm_sta_rx_agg(struct iwl_mvm* mvm, struct ieee80211_sta* sta, int tid,
-                       uint16_t ssn, bool start, uint16_t buf_size,
-                       uint16_t timeout);
+int iwl_mvm_sta_rx_agg(struct iwl_mvm* mvm, struct ieee80211_sta* sta, int tid, uint16_t ssn,
+                       bool start, uint16_t buf_size, uint16_t timeout);
 int iwl_mvm_sta_tx_agg_start(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
-                             struct ieee80211_sta* sta, uint16_t tid,
-                             uint16_t* ssn);
+                             struct ieee80211_sta* sta, uint16_t tid, uint16_t* ssn);
 int iwl_mvm_sta_tx_agg_oper(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
-                            struct ieee80211_sta* sta, uint16_t tid,
-                            uint16_t buf_size, bool amsdu);
+                            struct ieee80211_sta* sta, uint16_t tid, uint16_t buf_size, bool amsdu);
 int iwl_mvm_sta_tx_agg_stop(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
                             struct ieee80211_sta* sta, uint16_t tid);
 int iwl_mvm_sta_tx_agg_flush(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
                              struct ieee80211_sta* sta, uint16_t tid);
 
-int iwl_mvm_sta_tx_agg(struct iwl_mvm* mvm, struct ieee80211_sta* sta, int tid,
-                       uint8_t queue, bool start);
+int iwl_mvm_sta_tx_agg(struct iwl_mvm* mvm, struct ieee80211_sta* sta, int tid, uint8_t queue,
+                       bool start);
 
 int iwl_mvm_add_aux_sta(struct iwl_mvm* mvm);
 void iwl_mvm_del_aux_sta(struct iwl_mvm* mvm);
@@ -501,9 +488,8 @@ int iwl_mvm_send_rm_bcast_sta(struct iwl_mvm* mvm, struct ieee80211_vif* vif);
 int iwl_mvm_rm_p2p_bcast_sta(struct iwl_mvm* mvm, struct ieee80211_vif* vif);
 int iwl_mvm_add_mcast_sta(struct iwl_mvm* mvm, struct ieee80211_vif* vif);
 int iwl_mvm_rm_mcast_sta(struct iwl_mvm* mvm, struct ieee80211_vif* vif);
-int iwl_mvm_allocate_int_sta(struct iwl_mvm* mvm, struct iwl_mvm_int_sta* sta,
-                             uint32_t qmask, enum nl80211_iftype iftype,
-                             enum iwl_sta_type type);
+int iwl_mvm_allocate_int_sta(struct iwl_mvm* mvm, struct iwl_mvm_int_sta* sta, uint32_t qmask,
+                             enum nl80211_iftype iftype, enum iwl_sta_type type);
 void iwl_mvm_dealloc_bcast_sta(struct iwl_mvm* mvm, struct ieee80211_vif* vif);
 void iwl_mvm_dealloc_int_sta(struct iwl_mvm* mvm, struct iwl_mvm_int_sta* sta);
 int iwl_mvm_add_snif_sta(struct iwl_mvm* mvm, struct ieee80211_vif* vif);
@@ -511,19 +497,13 @@ int iwl_mvm_rm_snif_sta(struct iwl_mvm* mvm, struct ieee80211_vif* vif);
 void iwl_mvm_dealloc_snif_sta(struct iwl_mvm* mvm);
 
 void iwl_mvm_sta_modify_ps_wake(struct iwl_mvm* mvm, struct ieee80211_sta* sta);
-void iwl_mvm_sta_modify_sleep_tx_count(struct iwl_mvm* mvm,
-                                       struct ieee80211_sta* sta,
-                                       enum ieee80211_frame_release_type reason,
-                                       uint16_t cnt, uint16_t tids,
-                                       bool more_data, bool single_sta_queue);
-int iwl_mvm_drain_sta(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvmsta,
-                      bool drain);
-void iwl_mvm_sta_modify_disable_tx(struct iwl_mvm* mvm,
-                                   struct iwl_mvm_sta* mvmsta, bool disable);
-void iwl_mvm_sta_modify_disable_tx_ap(struct iwl_mvm* mvm,
-                                      struct ieee80211_sta* sta, bool disable);
-void iwl_mvm_modify_all_sta_disable_tx(struct iwl_mvm* mvm,
-                                       struct iwl_mvm_vif* mvmvif,
+void iwl_mvm_sta_modify_sleep_tx_count(struct iwl_mvm* mvm, struct ieee80211_sta* sta,
+                                       enum ieee80211_frame_release_type reason, uint16_t cnt,
+                                       uint16_t tids, bool more_data, bool single_sta_queue);
+int iwl_mvm_drain_sta(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvmsta, bool drain);
+void iwl_mvm_sta_modify_disable_tx(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvmsta, bool disable);
+void iwl_mvm_sta_modify_disable_tx_ap(struct iwl_mvm* mvm, struct ieee80211_sta* sta, bool disable);
+void iwl_mvm_modify_all_sta_disable_tx(struct iwl_mvm* mvm, struct iwl_mvm_vif* mvmvif,
                                        bool disable);
 void iwl_mvm_csa_client_absent(struct iwl_mvm* mvm, struct ieee80211_vif* vif);
 void iwl_mvm_add_new_dqa_stream_wk(struct work_struct* wk);

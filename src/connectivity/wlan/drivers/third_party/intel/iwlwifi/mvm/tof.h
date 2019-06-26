@@ -34,19 +34,18 @@
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_TOF_H_
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fuchsia_porting.h"
-
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/tof.h"
 
 struct iwl_mvm_tof_data {
-    struct iwl_tof_config_cmd tof_cfg;
-    struct iwl_tof_range_req_cmd range_req;
-    struct iwl_tof_range_req_ext_cmd range_req_ext;
+  struct iwl_tof_config_cmd tof_cfg;
+  struct iwl_tof_range_req_cmd range_req;
+  struct iwl_tof_range_req_ext_cmd range_req_ext;
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
-    struct iwl_tof_responder_config_cmd responder_cfg;
+  struct iwl_tof_responder_config_cmd responder_cfg;
 #endif
-    struct iwl_tof_range_rsp_ntfy range_resp;
-    uint8_t last_abort_id;
-    uint16_t active_range_request;
+  struct iwl_tof_range_rsp_ntfy range_resp;
+  uint8_t last_abort_id;
+  uint16_t active_range_request;
 };
 
 void iwl_mvm_tof_init(struct iwl_mvm* mvm);

@@ -55,20 +55,14 @@
  * the command id, the group id and the version of the command
  * and vice versa
  */
-static inline uint8_t iwl_cmd_opcode(uint32_t cmdid) {
-    return cmdid & 0xFF;
-}
+static inline uint8_t iwl_cmd_opcode(uint32_t cmdid) { return cmdid & 0xFF; }
 
-static inline uint8_t iwl_cmd_groupid(uint32_t cmdid) {
-    return ((cmdid & 0xFF00) >> 8);
-}
+static inline uint8_t iwl_cmd_groupid(uint32_t cmdid) { return ((cmdid & 0xFF00) >> 8); }
 
-static inline uint8_t iwl_cmd_version(uint32_t cmdid) {
-    return ((cmdid & 0xFF0000) >> 16);
-}
+static inline uint8_t iwl_cmd_version(uint32_t cmdid) { return ((cmdid & 0xFF0000) >> 16); }
 
 static inline uint32_t iwl_cmd_id(uint8_t opcode, uint8_t groupid, uint8_t version) {
-    return opcode + (groupid << 8) + (version << 16);
+  return opcode + (groupid << 8) + (version << 16);
 }
 
 /* make uint16_t wide id out of uint8_t group and opcode */
@@ -87,38 +81,38 @@ static inline uint32_t iwl_cmd_id(uint8_t opcode, uint8_t groupid, uint8_t versi
  * driver, and each response/notification received from uCode.
  */
 struct iwl_cmd_header {
-    /**
-     * @cmd: Command ID: REPLY_RXON, etc.
-     */
-    uint8_t cmd;
-    /**
-     * @group_id: group ID, for commands with groups
-     */
-    uint8_t group_id;
-    /**
-     * @sequence:
-     * Sequence number for the command.
-     *
-     * The driver sets up the sequence number to values of its choosing.
-     * uCode does not use this value, but passes it back to the driver
-     * when sending the response to each driver-originated command, so
-     * the driver can match the response to the command.  Since the values
-     * don't get used by uCode, the driver may set up an arbitrary format.
-     *
-     * There is one exception:  uCode sets bit 15 when it originates
-     * the response/notification, i.e. when the response/notification
-     * is not a direct response to a command sent by the driver.  For
-     * example, uCode issues REPLY_RX when it sends a received frame
-     * to the driver; it is not a direct response to any driver command.
-     *
-     * The Linux driver uses the following format:
-     *
-     *  0:7     tfd index - position within TX queue
-     *  8:12    TX queue id
-     *  13:14   reserved
-     *  15      unsolicited RX or uCode-originated notification
-     */
-    __le16 sequence;
+  /**
+   * @cmd: Command ID: REPLY_RXON, etc.
+   */
+  uint8_t cmd;
+  /**
+   * @group_id: group ID, for commands with groups
+   */
+  uint8_t group_id;
+  /**
+   * @sequence:
+   * Sequence number for the command.
+   *
+   * The driver sets up the sequence number to values of its choosing.
+   * uCode does not use this value, but passes it back to the driver
+   * when sending the response to each driver-originated command, so
+   * the driver can match the response to the command.  Since the values
+   * don't get used by uCode, the driver may set up an arbitrary format.
+   *
+   * There is one exception:  uCode sets bit 15 when it originates
+   * the response/notification, i.e. when the response/notification
+   * is not a direct response to a command sent by the driver.  For
+   * example, uCode issues REPLY_RX when it sends a received frame
+   * to the driver; it is not a direct response to any driver command.
+   *
+   * The Linux driver uses the following format:
+   *
+   *  0:7     tfd index - position within TX queue
+   *  8:12    TX queue id
+   *  13:14   reserved
+   *  15      unsolicited RX or uCode-originated notification
+   */
+  __le16 sequence;
 } __packed;
 
 /**
@@ -137,12 +131,12 @@ struct iwl_cmd_header {
  * @version: command version
  */
 struct iwl_cmd_header_wide {
-    uint8_t cmd;
-    uint8_t group_id;
-    __le16 sequence;
-    __le16 length;
-    uint8_t reserved;
-    uint8_t version;
+  uint8_t cmd;
+  uint8_t group_id;
+  __le16 sequence;
+  __le16 length;
+  uint8_t reserved;
+  uint8_t version;
 } __packed;
 
 /**
@@ -152,9 +146,9 @@ struct iwl_cmd_header_wide {
  * @data: data, length in @length
  */
 struct iwl_calib_res_notif_phy_db {
-    __le16 type;
-    __le16 length;
-    uint8_t data[];
+  __le16 type;
+  __le16 length;
+  uint8_t data[];
 } __packed;
 
 /**
@@ -164,9 +158,9 @@ struct iwl_calib_res_notif_phy_db {
  * @data: data, length in @length
  */
 struct iwl_phy_db_cmd {
-    __le16 type;
-    __le16 length;
-    uint8_t data[];
+  __le16 type;
+  __le16 length;
+  uint8_t data[];
 } __packed;
 
 /**
@@ -174,7 +168,7 @@ struct iwl_phy_db_cmd {
  * @status: status of the command asked, changes for each one
  */
 struct iwl_cmd_response {
-    __le32 status;
+  __le32 status;
 };
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_CMDHDR_H_

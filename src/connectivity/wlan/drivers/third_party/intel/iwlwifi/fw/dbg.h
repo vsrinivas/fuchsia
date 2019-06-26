@@ -51,9 +51,9 @@
  * @trig_desc: the description of the dump
  */
 struct iwl_fw_dump_desc {
-    size_t len;
-    /* must be last */
-    struct iwl_fw_error_dump_trigger_desc trig_desc;
+  size_t len;
+  /* must be last */
+  struct iwl_fw_error_dump_trigger_desc trig_desc;
 };
 
 /**
@@ -62,18 +62,22 @@ struct iwl_fw_dump_desc {
  * @out_ctrl: DBGC_OUT_CTRL value
  */
 struct iwl_fw_dbg_params {
-    uint32_t in_sample;
-    uint32_t out_ctrl;
+  uint32_t in_sample;
+  uint32_t out_ctrl;
 };
 
 extern const struct iwl_fw_dump_desc iwl_dump_desc_assert;
 
 static inline void iwl_fw_free_dump_desc(struct iwl_fw_runtime* fwrt) {
-    if (fwrt->dump.desc != &iwl_dump_desc_assert) { kfree((void*)fwrt->dump.desc); }
-    fwrt->dump.desc = NULL;
-    fwrt->dump.lmac_err_id[0] = 0;
-    if (fwrt->smem_cfg.num_lmacs > 1) { fwrt->dump.lmac_err_id[1] = 0; }
-    fwrt->dump.umac_err_id = 0;
+  if (fwrt->dump.desc != &iwl_dump_desc_assert) {
+    kfree((void*)fwrt->dump.desc);
+  }
+  fwrt->dump.desc = NULL;
+  fwrt->dump.lmac_err_id[0] = 0;
+  if (fwrt->smem_cfg.num_lmacs > 1) {
+    fwrt->dump.lmac_err_id[1] = 0;
+  }
+  fwrt->dump.umac_err_id = 0;
 }
 
 void iwl_fw_error_dump(struct iwl_fw_runtime* fwrt);
@@ -86,39 +90,39 @@ int iwl_fw_dbg_collect_trig(struct iwl_fw_runtime* fwrt, struct iwl_fw_dbg_trigg
                             const char* fmt, ...);
 int iwl_fw_start_dbg_conf(struct iwl_fw_runtime* fwrt, uint8_t id);
 
-#define iwl_fw_dbg_trigger_enabled(fw, id)                 \
-    ({                                                     \
-        void* __dbg_trigger = (fw)->dbg.trigger_tlv[(id)]; \
-        unlikely(__dbg_trigger);                           \
-    })
+#define iwl_fw_dbg_trigger_enabled(fw, id)             \
+  ({                                                   \
+    void* __dbg_trigger = (fw)->dbg.trigger_tlv[(id)]; \
+    unlikely(__dbg_trigger);                           \
+  })
 
 static inline struct iwl_fw_dbg_trigger_tlv* _iwl_fw_dbg_get_trigger(const struct iwl_fw* fw,
                                                                      enum iwl_fw_dbg_trigger id) {
-    return fw->dbg.trigger_tlv[id];
+  return fw->dbg.trigger_tlv[id];
 }
 
-#define iwl_fw_dbg_get_trigger(fw, id)            \
-    ({                                            \
-        BUILD_BUG_ON(!__builtin_constant_p(id));  \
-        BUILD_BUG_ON((id) >= FW_DBG_TRIGGER_MAX); \
-        _iwl_fw_dbg_get_trigger((fw), (id));      \
-    })
+#define iwl_fw_dbg_get_trigger(fw, id)        \
+  ({                                          \
+    BUILD_BUG_ON(!__builtin_constant_p(id));  \
+    BUILD_BUG_ON((id) >= FW_DBG_TRIGGER_MAX); \
+    _iwl_fw_dbg_get_trigger((fw), (id));      \
+  })
 
 static inline bool iwl_fw_dbg_trigger_vif_match(struct iwl_fw_dbg_trigger_tlv* trig,
                                                 struct wireless_dev* wdev) {
-    uint32_t trig_vif = le32_to_cpu(trig->vif_type);
+  uint32_t trig_vif = le32_to_cpu(trig->vif_type);
 
-    return trig_vif == IWL_FW_DBG_CONF_VIF_ANY || wdev->iftype == trig_vif;
+  return trig_vif == IWL_FW_DBG_CONF_VIF_ANY || wdev->iftype == trig_vif;
 }
 
 static inline bool iwl_fw_dbg_trigger_stop_conf_match(struct iwl_fw_runtime* fwrt,
                                                       struct iwl_fw_dbg_trigger_tlv* trig) {
-    return ((trig->mode & IWL_FW_DBG_TRIGGER_STOP) &&
-            (fwrt->dump.conf == FW_DBG_INVALID ||
-             (BIT(fwrt->dump.conf) & le32_to_cpu(trig->stop_conf_ids))));
+  return ((trig->mode & IWL_FW_DBG_TRIGGER_STOP) &&
+          (fwrt->dump.conf == FW_DBG_INVALID ||
+           (BIT(fwrt->dump.conf) & le32_to_cpu(trig->stop_conf_ids))));
 }
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
 static inline bool iwl_fw_dbg_no_trig_window(struct iwl_fw_runtime* fwrt, uint32_t id,
                                              uint32_t dis_ms) {
     unsigned long wind_jiff = msecs_to_jiffies(dis_ms);
@@ -161,12 +165,12 @@ static inline struct iwl_fw_dbg_trigger_tlv* _iwl_fw_dbg_trigger_on(
     return trig;
 }
 
-#define iwl_fw_dbg_trigger_on(fwrt, wdev, id)         \
-    ({                                                \
-        BUILD_BUG_ON(!__builtin_constant_p(id));      \
-        BUILD_BUG_ON((id) >= FW_DBG_TRIGGER_MAX);     \
-        _iwl_fw_dbg_trigger_on((fwrt), (wdev), (id)); \
-    })
+#define iwl_fw_dbg_trigger_on(fwrt, wdev, id)     \
+  ({                                              \
+    BUILD_BUG_ON(!__builtin_constant_p(id));      \
+    BUILD_BUG_ON((id) >= FW_DBG_TRIGGER_MAX);     \
+    _iwl_fw_dbg_trigger_on((fwrt), (wdev), (id)); \
+  })
 
 static inline bool _iwl_fw_ini_trigger_on(struct iwl_fw_runtime* fwrt,
                                           const enum iwl_fw_dbg_trigger id) {
@@ -188,12 +192,12 @@ static inline bool _iwl_fw_ini_trigger_on(struct iwl_fw_runtime* fwrt,
     return true;
 }
 
-#define iwl_fw_ini_trigger_on(fwrt, wdev, id)         \
-    ({                                                \
-        BUILD_BUG_ON(!__builtin_constant_p(id));      \
-        BUILD_BUG_ON((id) >= IWL_FW_TRIGGER_ID_NUM);  \
-        _iwl_fw_ini_trigger_on((fwrt), (wdev), (id)); \
-    })
+#define iwl_fw_ini_trigger_on(fwrt, wdev, id)     \
+  ({                                              \
+    BUILD_BUG_ON(!__builtin_constant_p(id));      \
+    BUILD_BUG_ON((id) >= IWL_FW_TRIGGER_ID_NUM);  \
+    _iwl_fw_ini_trigger_on((fwrt), (wdev), (id)); \
+  })
 
 static inline void _iwl_fw_dbg_trigger_simple_stop(struct iwl_fw_runtime* fwrt,
                                                    struct wireless_dev* wdev,
@@ -206,7 +210,7 @@ static inline void _iwl_fw_dbg_trigger_simple_stop(struct iwl_fw_runtime* fwrt,
 }
 
 #define iwl_fw_dbg_trigger_simple_stop(fwrt, wdev, trig) \
-    _iwl_fw_dbg_trigger_simple_stop((fwrt), (wdev), iwl_fw_dbg_get_trigger((fwrt)->fw, (trig)))
+  _iwl_fw_dbg_trigger_simple_stop((fwrt), (wdev), iwl_fw_dbg_get_trigger((fwrt)->fw, (trig)))
 
 static int iwl_fw_dbg_start_stop_hcmd(struct iwl_fw_runtime* fwrt, bool start) {
     struct iwl_continuous_record_cmd cont_rec = {};
@@ -289,7 +293,7 @@ static inline void iwl_fw_dbg_restart_recording(struct iwl_fw_runtime* fwrt,
 #endif  // NEEDS_PORTING
 
 static inline void iwl_fw_dump_conf_clear(struct iwl_fw_runtime* fwrt) {
-    fwrt->dump.conf = FW_DBG_INVALID;
+  fwrt->dump.conf = FW_DBG_INVALID;
 }
 
 #if 0   // NEEDS_PORTING
@@ -301,7 +305,7 @@ static inline bool iwl_fw_dbg_type_on(struct iwl_fw_runtime* fwrt, uint32_t type
 #endif  // NEEDS_PORTING
 
 static inline bool iwl_fw_dbg_is_d3_debug_enabled(struct iwl_fw_runtime* fwrt) {
-    return false;
+  return false;
 #if 0   // NEEDS_PORTING
     return fw_has_capa(&fwrt->fw->ucode_capa, IWL_UCODE_TLV_CAPA_D3_DEBUG) &&
            fwrt->trans->cfg->d3_debug_data_length &&
@@ -328,20 +332,22 @@ static inline void iwl_fw_cancel_dump(struct iwl_fw_runtime* fwrt) {
 
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
 static inline void iwl_fw_cancel_timestamp(struct iwl_fw_runtime* fwrt) {
-    fwrt->timestamp.delay = 0;
-    cancel_delayed_work_sync(&fwrt->timestamp.wk);
+  fwrt->timestamp.delay = 0;
+  cancel_delayed_work_sync(&fwrt->timestamp.wk);
 }
 
 void iwl_fw_trigger_timestamp(struct iwl_fw_runtime* fwrt, uint32_t delay);
 
 static inline void iwl_fw_suspend_timestamp(struct iwl_fw_runtime* fwrt) {
-    cancel_delayed_work_sync(&fwrt->timestamp.wk);
+  cancel_delayed_work_sync(&fwrt->timestamp.wk);
 }
 
 static inline void iwl_fw_resume_timestamp(struct iwl_fw_runtime* fwrt) {
-    if (!fwrt->timestamp.delay) { return; }
+  if (!fwrt->timestamp.delay) {
+    return;
+  }
 
-    schedule_delayed_work(&fwrt->timestamp.wk, round_jiffies_relative(fwrt->timestamp.delay));
+  schedule_delayed_work(&fwrt->timestamp.wk, round_jiffies_relative(fwrt->timestamp.delay));
 }
 
 #else

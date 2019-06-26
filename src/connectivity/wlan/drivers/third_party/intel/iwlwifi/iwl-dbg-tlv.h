@@ -40,9 +40,9 @@
  * @offset: current offset of the copied data
  */
 struct iwl_apply_point_data {
-    void* data;
-    int size;
-    int offset;
+  void* data;
+  int size;
+  int offset;
 };
 
 struct iwl_trans;

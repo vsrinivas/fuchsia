@@ -38,21 +38,21 @@
 
 /* Smart Fifo state */
 enum iwl_sf_state {
-    SF_LONG_DELAY_ON = 0, /* should never be called by driver */
-    SF_FULL_ON,
-    SF_UNINIT,
-    SF_INIT_OFF,
-    SF_HW_NUM_STATES
+  SF_LONG_DELAY_ON = 0, /* should never be called by driver */
+  SF_FULL_ON,
+  SF_UNINIT,
+  SF_INIT_OFF,
+  SF_HW_NUM_STATES
 };
 
 /* Smart Fifo possible scenario */
 enum iwl_sf_scenario {
-    SF_SCENARIO_SINGLE_UNICAST,
-    SF_SCENARIO_AGG_UNICAST,
-    SF_SCENARIO_MULTICAST,
-    SF_SCENARIO_BA_RESP,
-    SF_SCENARIO_TX_RESP,
-    SF_NUM_SCENARIO
+  SF_SCENARIO_SINGLE_UNICAST,
+  SF_SCENARIO_AGG_UNICAST,
+  SF_SCENARIO_MULTICAST,
+  SF_SCENARIO_BA_RESP,
+  SF_SCENARIO_TX_RESP,
+  SF_NUM_SCENARIO
 };
 
 #define SF_TRANSIENT_STATES_NUMBER 2 /* SF_LONG_DELAY_ON and SF_FULL_ON */
@@ -102,10 +102,10 @@ enum iwl_sf_scenario {
  * @full_on_timeouts: timer values for each scenario in full on state.
  */
 struct iwl_sf_cfg_cmd {
-    __le32 state;
-    __le32 watermark[SF_TRANSIENT_STATES_NUMBER];
-    __le32 long_delay_timeouts[SF_NUM_SCENARIO][SF_NUM_TIMEOUT_TYPES];
-    __le32 full_on_timeouts[SF_NUM_SCENARIO][SF_NUM_TIMEOUT_TYPES];
+  __le32 state;
+  __le32 watermark[SF_TRANSIENT_STATES_NUMBER];
+  __le32 long_delay_timeouts[SF_NUM_SCENARIO][SF_NUM_TIMEOUT_TYPES];
+  __le32 full_on_timeouts[SF_NUM_SCENARIO][SF_NUM_TIMEOUT_TYPES];
 } __packed; /* SF_CFG_API_S_VER_2 */
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_SF_H_

@@ -55,14 +55,14 @@
  *  idle timeout
  */
 enum iwl_ltr_config_flags {
-    LTR_CFG_FLAG_FEATURE_ENABLE = BIT(0),
-    LTR_CFG_FLAG_HW_DIS_ON_SHADOW_REG_ACCESS = BIT(1),
-    LTR_CFG_FLAG_HW_EN_SHRT_WR_THROUGH = BIT(2),
-    LTR_CFG_FLAG_HW_DIS_ON_D0_2_D3 = BIT(3),
-    LTR_CFG_FLAG_SW_SET_SHORT = BIT(4),
-    LTR_CFG_FLAG_SW_SET_LONG = BIT(5),
-    LTR_CFG_FLAG_DENIE_C10_ON_PD = BIT(6),
-    LTR_CFG_FLAG_UPDATE_VALUES = BIT(7),
+  LTR_CFG_FLAG_FEATURE_ENABLE = BIT(0),
+  LTR_CFG_FLAG_HW_DIS_ON_SHADOW_REG_ACCESS = BIT(1),
+  LTR_CFG_FLAG_HW_EN_SHRT_WR_THROUGH = BIT(2),
+  LTR_CFG_FLAG_HW_DIS_ON_D0_2_D3 = BIT(3),
+  LTR_CFG_FLAG_SW_SET_SHORT = BIT(4),
+  LTR_CFG_FLAG_SW_SET_LONG = BIT(5),
+  LTR_CFG_FLAG_DENIE_C10_ON_PD = BIT(6),
+  LTR_CFG_FLAG_UPDATE_VALUES = BIT(7),
 };
 
 /**
@@ -72,9 +72,9 @@ enum iwl_ltr_config_flags {
  * @static_short: static LTR Short register value.
  */
 struct iwl_ltr_config_cmd_v1 {
-    __le32 flags;
-    __le32 static_long;
-    __le32 static_short;
+  __le32 flags;
+  __le32 static_long;
+  __le32 static_short;
 } __packed; /* LTR_CAPABLE_API_S_VER_1 */
 
 #define LTR_VALID_STATES_NUM 4
@@ -91,11 +91,11 @@ struct iwl_ltr_config_cmd_v1 {
  *  %LTR_CFG_FLAG_UPDATE_VALUES is set.
  */
 struct iwl_ltr_config_cmd {
-    __le32 flags;
-    __le32 static_long;
-    __le32 static_short;
-    __le32 ltr_cfg_values[LTR_VALID_STATES_NUM];
-    __le32 ltr_short_idle_timeout;
+  __le32 flags;
+  __le32 static_long;
+  __le32 static_short;
+  __le32 ltr_cfg_values[LTR_VALID_STATES_NUM];
+  __le32 ltr_short_idle_timeout;
 } __packed; /* LTR_CAPABLE_API_S_VER_2 */
 
 /* Radio LP RX Energy Threshold measured in dBm */
@@ -121,14 +121,14 @@ struct iwl_ltr_config_cmd {
  *      detection enablement
  */
 enum iwl_power_flags {
-    POWER_FLAGS_POWER_SAVE_ENA_MSK = BIT(0),
-    POWER_FLAGS_POWER_MANAGEMENT_ENA_MSK = BIT(1),
-    POWER_FLAGS_SKIP_OVER_DTIM_MSK = BIT(2),
-    POWER_FLAGS_SNOOZE_ENA_MSK = BIT(5),
-    POWER_FLAGS_BT_SCO_ENA = BIT(8),
-    POWER_FLAGS_ADVANCE_PM_ENA_MSK = BIT(9),
-    POWER_FLAGS_LPRX_ENA_MSK = BIT(11),
-    POWER_FLAGS_UAPSD_MISBEHAVING_ENA_MSK = BIT(12),
+  POWER_FLAGS_POWER_SAVE_ENA_MSK = BIT(0),
+  POWER_FLAGS_POWER_MANAGEMENT_ENA_MSK = BIT(1),
+  POWER_FLAGS_SKIP_OVER_DTIM_MSK = BIT(2),
+  POWER_FLAGS_SNOOZE_ENA_MSK = BIT(5),
+  POWER_FLAGS_BT_SCO_ENA = BIT(8),
+  POWER_FLAGS_ADVANCE_PM_ENA_MSK = BIT(9),
+  POWER_FLAGS_LPRX_ENA_MSK = BIT(11),
+  POWER_FLAGS_UAPSD_MISBEHAVING_ENA_MSK = BIT(12),
 };
 
 #define IWL_POWER_VEC_SIZE 5
@@ -156,15 +156,15 @@ enum iwl_power_flags {
  *          Default: 80dbm
  */
 struct iwl_powertable_cmd {
-    /* PM_POWER_TABLE_CMD_API_S_VER_6 */
-    __le16 flags;
-    uint8_t keep_alive_seconds;
-    uint8_t debug_flags;
-    __le32 rx_data_timeout;
-    __le32 tx_data_timeout;
-    __le32 sleep_interval[IWL_POWER_VEC_SIZE];
-    __le32 skip_dtim_periods;
-    __le32 lprx_rssi_threshold;
+  /* PM_POWER_TABLE_CMD_API_S_VER_6 */
+  __le16 flags;
+  uint8_t keep_alive_seconds;
+  uint8_t debug_flags;
+  __le32 rx_data_timeout;
+  __le32 tx_data_timeout;
+  __le32 sleep_interval[IWL_POWER_VEC_SIZE];
+  __le32 skip_dtim_periods;
+  __le32 lprx_rssi_threshold;
 } __packed;
 
 /**
@@ -174,7 +174,7 @@ struct iwl_powertable_cmd {
  *  receiver and transmitter. '0' - does not allow.
  */
 enum iwl_device_power_flags {
-    DEVICE_POWER_FLAGS_POWER_SAVE_ENA_MSK = BIT(0),
+  DEVICE_POWER_FLAGS_POWER_SAVE_ENA_MSK = BIT(0),
 };
 
 /**
@@ -185,9 +185,9 @@ enum iwl_device_power_flags {
  * @reserved: reserved (padding)
  */
 struct iwl_device_power_cmd {
-    /* PM_POWER_TABLE_CMD_API_S_VER_6 */
-    __le16 flags;
-    __le16 reserved;
+  /* PM_POWER_TABLE_CMD_API_S_VER_6 */
+  __le16 flags;
+  __le16 reserved;
 } __packed;
 
 /**
@@ -233,30 +233,30 @@ struct iwl_device_power_cmd {
  * @reserved: reserved (padding)
  */
 struct iwl_mac_power_cmd {
-    /* CONTEXT_DESC_API_T_VER_1 */
-    __le32 id_and_color;
+  /* CONTEXT_DESC_API_T_VER_1 */
+  __le32 id_and_color;
 
-    /* CLIENT_PM_POWER_TABLE_S_VER_1 */
-    __le16 flags;
-    __le16 keep_alive_seconds;
-    __le32 rx_data_timeout;
-    __le32 tx_data_timeout;
-    __le32 rx_data_timeout_uapsd;
-    __le32 tx_data_timeout_uapsd;
-    uint8_t lprx_rssi_threshold;
-    uint8_t skip_dtim_periods;
-    __le16 snooze_interval;
-    __le16 snooze_window;
-    uint8_t snooze_step;
-    uint8_t qndp_tid;
-    uint8_t uapsd_ac_flags;
-    uint8_t uapsd_max_sp;
-    uint8_t heavy_tx_thld_packets;
-    uint8_t heavy_rx_thld_packets;
-    uint8_t heavy_tx_thld_percentage;
-    uint8_t heavy_rx_thld_percentage;
-    uint8_t limited_ps_threshold;
-    uint8_t reserved;
+  /* CLIENT_PM_POWER_TABLE_S_VER_1 */
+  __le16 flags;
+  __le16 keep_alive_seconds;
+  __le32 rx_data_timeout;
+  __le32 tx_data_timeout;
+  __le32 rx_data_timeout_uapsd;
+  __le32 tx_data_timeout_uapsd;
+  uint8_t lprx_rssi_threshold;
+  uint8_t skip_dtim_periods;
+  __le16 snooze_interval;
+  __le16 snooze_window;
+  uint8_t snooze_step;
+  uint8_t qndp_tid;
+  uint8_t uapsd_ac_flags;
+  uint8_t uapsd_max_sp;
+  uint8_t heavy_tx_thld_packets;
+  uint8_t heavy_rx_thld_packets;
+  uint8_t heavy_tx_thld_percentage;
+  uint8_t heavy_rx_thld_percentage;
+  uint8_t limited_ps_threshold;
+  uint8_t reserved;
 } __packed;
 
 /*
@@ -267,9 +267,9 @@ struct iwl_mac_power_cmd {
  *      this context.
  */
 struct iwl_uapsd_misbehaving_ap_notif {
-    __le32 sta_id;
-    uint8_t mac_id;
-    uint8_t reserved[3];
+  __le32 sta_id;
+  uint8_t mac_id;
+  uint8_t reserved[3];
 } __packed;
 
 /**
@@ -280,18 +280,18 @@ struct iwl_uapsd_misbehaving_ap_notif {
  * @pwr_restriction: TX power restriction in dBms.
  */
 struct iwl_reduce_tx_power_cmd {
-    uint8_t flags;
-    uint8_t mac_context_id;
-    __le16 pwr_restriction;
+  uint8_t flags;
+  uint8_t mac_context_id;
+  __le16 pwr_restriction;
 } __packed; /* TX_REDUCED_POWER_API_S_VER_1 */
 
 enum iwl_dev_tx_power_cmd_mode {
-    IWL_TX_POWER_MODE_SET_MAC = 0,
-    IWL_TX_POWER_MODE_SET_DEVICE = 1,
-    IWL_TX_POWER_MODE_SET_CHAINS = 2,
-    IWL_TX_POWER_MODE_SET_ACK = 3,
-    IWL_TX_POWER_MODE_SET_SAR_TIMER = 4,
-    IWL_TX_POWER_MODE_SET_SAR_TIMER_DEFAULT_TABLE = 5,
+  IWL_TX_POWER_MODE_SET_MAC = 0,
+  IWL_TX_POWER_MODE_SET_DEVICE = 1,
+  IWL_TX_POWER_MODE_SET_CHAINS = 2,
+  IWL_TX_POWER_MODE_SET_ACK = 3,
+  IWL_TX_POWER_MODE_SET_SAR_TIMER = 4,
+  IWL_TX_POWER_MODE_SET_SAR_TIMER_DEFAULT_TABLE = 5,
 }; /* TX_POWER_REDUCED_FLAGS_TYPE_API_E_VER_5 */
 ;
 
@@ -309,13 +309,13 @@ enum iwl_dev_tx_power_cmd_mode {
  * @per_chain_restriction: per chain restrictions
  */
 struct iwl_dev_tx_power_cmd_v3 {
-    __le32 set_mode;
-    __le32 mac_context_id;
-    __le16 pwr_restriction;
-    __le16 dev_24;
-    __le16 dev_52_low;
-    __le16 dev_52_high;
-    __le16 per_chain_restriction[IWL_NUM_CHAIN_LIMITS][IWL_NUM_SUB_BANDS];
+  __le32 set_mode;
+  __le32 mac_context_id;
+  __le16 pwr_restriction;
+  __le16 dev_24;
+  __le16 dev_52_low;
+  __le16 dev_52_high;
+  __le16 per_chain_restriction[IWL_NUM_CHAIN_LIMITS][IWL_NUM_SUB_BANDS];
 } __packed; /* TX_REDUCED_POWER_API_S_VER_3 */
 
 #define IWL_DEV_MAX_TX_POWER 0x7FFF
@@ -328,10 +328,10 @@ struct iwl_dev_tx_power_cmd_v3 {
  * @reserved: reserved (padding)
  */
 struct iwl_dev_tx_power_cmd_v4 {
-    /* v4 is just an extension of v3 - keep this here */
-    struct iwl_dev_tx_power_cmd_v3 v3;
-    uint8_t enable_ack_reduction;
-    uint8_t reserved[3];
+  /* v4 is just an extension of v3 - keep this here */
+  struct iwl_dev_tx_power_cmd_v3 v3;
+  uint8_t enable_ack_reduction;
+  uint8_t reserved[3];
 } __packed; /* TX_REDUCED_POWER_API_S_VER_4 */
 
 /**
@@ -348,12 +348,12 @@ struct iwl_dev_tx_power_cmd_v4 {
  *  BIOS values. relevant if setMode is IWL_TX_POWER_MODE_SET_SAR_TIMER
  */
 struct iwl_dev_tx_power_cmd {
-    /* v5 is just an extension of v3 - keep this here */
-    struct iwl_dev_tx_power_cmd_v3 v3;
-    uint8_t enable_ack_reduction;
-    uint8_t per_chain_restriction_changed;
-    uint8_t reserved[2];
-    __le32 timer_period;
+  /* v5 is just an extension of v3 - keep this here */
+  struct iwl_dev_tx_power_cmd_v3 v3;
+  uint8_t enable_ack_reduction;
+  uint8_t per_chain_restriction_changed;
+  uint8_t reserved[2];
+  __le32 timer_period;
 } __packed; /* TX_REDUCED_POWER_API_S_VER_5 */
 
 #define IWL_NUM_GEO_PROFILES 3
@@ -364,8 +364,8 @@ struct iwl_dev_tx_power_cmd {
  * @IWL_PER_CHAIN_OFFSET_GET_CURRENT_TABLE: retrieve the last configured table.
  */
 enum iwl_geo_per_chain_offset_operation {
-    IWL_PER_CHAIN_OFFSET_SET_TABLES,
-    IWL_PER_CHAIN_OFFSET_GET_CURRENT_TABLE,
+  IWL_PER_CHAIN_OFFSET_SET_TABLES,
+  IWL_PER_CHAIN_OFFSET_GET_CURRENT_TABLE,
 }; /* GEO_TX_POWER_LIMIT FLAGS TYPE */
 
 /**
@@ -375,14 +375,14 @@ enum iwl_geo_per_chain_offset_operation {
  * @chain_b: tx power offset for chain b.
  */
 struct iwl_per_chain_offset {
-    __le16 max_tx_power;
-    uint8_t chain_a;
-    uint8_t chain_b;
+  __le16 max_tx_power;
+  uint8_t chain_a;
+  uint8_t chain_b;
 } __packed; /* PER_CHAIN_LIMIT_OFFSET_PER_CHAIN_S_VER_1 */
 
 struct iwl_per_chain_offset_group {
-    struct iwl_per_chain_offset lb;
-    struct iwl_per_chain_offset hb;
+  struct iwl_per_chain_offset lb;
+  struct iwl_per_chain_offset hb;
 } __packed; /* PER_CHAIN_LIMIT_OFFSET_GROUP_S_VER_1 */
 
 /**
@@ -391,8 +391,8 @@ struct iwl_per_chain_offset_group {
  * @table: offset profile per band.
  */
 struct iwl_geo_tx_power_profiles_cmd {
-    __le32 ops;
-    struct iwl_per_chain_offset_group table[IWL_NUM_GEO_PROFILES];
+  __le32 ops;
+  struct iwl_per_chain_offset_group table[IWL_NUM_GEO_PROFILES];
 } __packed; /* GEO_TX_POWER_LIMIT */
 
 /**
@@ -400,7 +400,7 @@ struct iwl_geo_tx_power_profiles_cmd {
  * @profile_idx: current geo profile in use
  */
 struct iwl_geo_tx_power_profiles_resp {
-    __le32 profile_idx;
+  __le32 profile_idx;
 } __packed; /* GEO_TX_POWER_LIMIT_RESP */
 
 /**
@@ -445,17 +445,17 @@ struct iwl_geo_tx_power_profiles_resp {
  * @ba_enable_beacon_abort: 1, beacon abort is enabled; 0, disabled.
  */
 struct iwl_beacon_filter_cmd {
-    __le32 bf_energy_delta;
-    __le32 bf_roaming_energy_delta;
-    __le32 bf_roaming_state;
-    __le32 bf_temp_threshold;
-    __le32 bf_temp_fast_filter;
-    __le32 bf_temp_slow_filter;
-    __le32 bf_enable_beacon_filter;
-    __le32 bf_debug_flag;
-    __le32 bf_escape_timer;
-    __le32 ba_escape_timer;
-    __le32 ba_enable_beacon_abort;
+  __le32 bf_energy_delta;
+  __le32 bf_roaming_energy_delta;
+  __le32 bf_roaming_state;
+  __le32 bf_temp_threshold;
+  __le32 bf_temp_fast_filter;
+  __le32 bf_temp_slow_filter;
+  __le32 bf_enable_beacon_filter;
+  __le32 bf_debug_flag;
+  __le32 bf_escape_timer;
+  __le32 ba_escape_timer;
+  __le32 ba_enable_beacon_abort;
 } __packed;
 
 /* Beacon filtering and beacon abort */
@@ -507,16 +507,16 @@ struct iwl_beacon_filter_cmd {
 
 #define IWL_BA_ENABLE_BEACON_ABORT_DEFAULT 1
 
-#define IWL_BF_CMD_CONFIG(mode)                                                \
-    .bf_energy_delta = cpu_to_le32(IWL_BF_ENERGY_DELTA##mode),                 \
-    .bf_roaming_energy_delta = cpu_to_le32(IWL_BF_ROAMING_ENERGY_DELTA##mode), \
-    .bf_roaming_state = cpu_to_le32(IWL_BF_ROAMING_STATE##mode),               \
-    .bf_temp_threshold = cpu_to_le32(IWL_BF_TEMP_THRESHOLD##mode),             \
-    .bf_temp_fast_filter = cpu_to_le32(IWL_BF_TEMP_FAST_FILTER##mode),         \
-    .bf_temp_slow_filter = cpu_to_le32(IWL_BF_TEMP_SLOW_FILTER##mode),         \
-    .bf_debug_flag = cpu_to_le32(IWL_BF_DEBUG_FLAG##mode),                     \
-    .bf_escape_timer = cpu_to_le32(IWL_BF_ESCAPE_TIMER##mode),                 \
-    .ba_escape_timer = cpu_to_le32(IWL_BA_ESCAPE_TIMER##mode)
+#define IWL_BF_CMD_CONFIG(mode)                                              \
+  .bf_energy_delta = cpu_to_le32(IWL_BF_ENERGY_DELTA##mode),                 \
+  .bf_roaming_energy_delta = cpu_to_le32(IWL_BF_ROAMING_ENERGY_DELTA##mode), \
+  .bf_roaming_state = cpu_to_le32(IWL_BF_ROAMING_STATE##mode),               \
+  .bf_temp_threshold = cpu_to_le32(IWL_BF_TEMP_THRESHOLD##mode),             \
+  .bf_temp_fast_filter = cpu_to_le32(IWL_BF_TEMP_FAST_FILTER##mode),         \
+  .bf_temp_slow_filter = cpu_to_le32(IWL_BF_TEMP_SLOW_FILTER##mode),         \
+  .bf_debug_flag = cpu_to_le32(IWL_BF_DEBUG_FLAG##mode),                     \
+  .bf_escape_timer = cpu_to_le32(IWL_BF_ESCAPE_TIMER##mode),                 \
+  .ba_escape_timer = cpu_to_le32(IWL_BA_ESCAPE_TIMER##mode)
 
 #define IWL_BF_CMD_CONFIG_DEFAULTS IWL_BF_CMD_CONFIG(_DEFAULT)
 #define IWL_BF_CMD_CONFIG_D0I3 IWL_BF_CMD_CONFIG(_D0I3)

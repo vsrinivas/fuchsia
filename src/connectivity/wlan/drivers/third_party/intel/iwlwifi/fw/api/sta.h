@@ -79,46 +79,46 @@
  * @STA_FLG_AGG_MPDU_DENS_16US: A-MPDU density (16 usec gap)
  */
 enum iwl_sta_flags {
-    STA_FLG_REDUCED_TX_PWR_CTRL = BIT(3),
-    STA_FLG_REDUCED_TX_PWR_DATA = BIT(6),
+  STA_FLG_REDUCED_TX_PWR_CTRL = BIT(3),
+  STA_FLG_REDUCED_TX_PWR_DATA = BIT(6),
 
-    STA_FLG_DISABLE_TX = BIT(4),
+  STA_FLG_DISABLE_TX = BIT(4),
 
-    STA_FLG_PS = BIT(8),
-    STA_FLG_DRAIN_FLOW = BIT(12),
-    STA_FLG_PAN = BIT(13),
-    STA_FLG_CLASS_AUTH = BIT(14),
-    STA_FLG_CLASS_ASSOC = BIT(15),
-    STA_FLG_RTS_MIMO_PROT = BIT(17),
+  STA_FLG_PS = BIT(8),
+  STA_FLG_DRAIN_FLOW = BIT(12),
+  STA_FLG_PAN = BIT(13),
+  STA_FLG_CLASS_AUTH = BIT(14),
+  STA_FLG_CLASS_ASSOC = BIT(15),
+  STA_FLG_RTS_MIMO_PROT = BIT(17),
 
-    STA_FLG_MAX_AGG_SIZE_SHIFT = 19,
-    STA_FLG_MAX_AGG_SIZE_8K = (0 << STA_FLG_MAX_AGG_SIZE_SHIFT),
-    STA_FLG_MAX_AGG_SIZE_16K = (1 << STA_FLG_MAX_AGG_SIZE_SHIFT),
-    STA_FLG_MAX_AGG_SIZE_32K = (2 << STA_FLG_MAX_AGG_SIZE_SHIFT),
-    STA_FLG_MAX_AGG_SIZE_64K = (3 << STA_FLG_MAX_AGG_SIZE_SHIFT),
-    STA_FLG_MAX_AGG_SIZE_128K = (4 << STA_FLG_MAX_AGG_SIZE_SHIFT),
-    STA_FLG_MAX_AGG_SIZE_256K = (5 << STA_FLG_MAX_AGG_SIZE_SHIFT),
-    STA_FLG_MAX_AGG_SIZE_512K = (6 << STA_FLG_MAX_AGG_SIZE_SHIFT),
-    STA_FLG_MAX_AGG_SIZE_1024K = (7 << STA_FLG_MAX_AGG_SIZE_SHIFT),
-    STA_FLG_MAX_AGG_SIZE_MSK = (7 << STA_FLG_MAX_AGG_SIZE_SHIFT),
+  STA_FLG_MAX_AGG_SIZE_SHIFT = 19,
+  STA_FLG_MAX_AGG_SIZE_8K = (0 << STA_FLG_MAX_AGG_SIZE_SHIFT),
+  STA_FLG_MAX_AGG_SIZE_16K = (1 << STA_FLG_MAX_AGG_SIZE_SHIFT),
+  STA_FLG_MAX_AGG_SIZE_32K = (2 << STA_FLG_MAX_AGG_SIZE_SHIFT),
+  STA_FLG_MAX_AGG_SIZE_64K = (3 << STA_FLG_MAX_AGG_SIZE_SHIFT),
+  STA_FLG_MAX_AGG_SIZE_128K = (4 << STA_FLG_MAX_AGG_SIZE_SHIFT),
+  STA_FLG_MAX_AGG_SIZE_256K = (5 << STA_FLG_MAX_AGG_SIZE_SHIFT),
+  STA_FLG_MAX_AGG_SIZE_512K = (6 << STA_FLG_MAX_AGG_SIZE_SHIFT),
+  STA_FLG_MAX_AGG_SIZE_1024K = (7 << STA_FLG_MAX_AGG_SIZE_SHIFT),
+  STA_FLG_MAX_AGG_SIZE_MSK = (7 << STA_FLG_MAX_AGG_SIZE_SHIFT),
 
-    STA_FLG_AGG_MPDU_DENS_SHIFT = 23,
-    STA_FLG_AGG_MPDU_DENS_2US = (4 << STA_FLG_AGG_MPDU_DENS_SHIFT),
-    STA_FLG_AGG_MPDU_DENS_4US = (5 << STA_FLG_AGG_MPDU_DENS_SHIFT),
-    STA_FLG_AGG_MPDU_DENS_8US = (6 << STA_FLG_AGG_MPDU_DENS_SHIFT),
-    STA_FLG_AGG_MPDU_DENS_16US = (7 << STA_FLG_AGG_MPDU_DENS_SHIFT),
-    STA_FLG_AGG_MPDU_DENS_MSK = (7 << STA_FLG_AGG_MPDU_DENS_SHIFT),
+  STA_FLG_AGG_MPDU_DENS_SHIFT = 23,
+  STA_FLG_AGG_MPDU_DENS_2US = (4 << STA_FLG_AGG_MPDU_DENS_SHIFT),
+  STA_FLG_AGG_MPDU_DENS_4US = (5 << STA_FLG_AGG_MPDU_DENS_SHIFT),
+  STA_FLG_AGG_MPDU_DENS_8US = (6 << STA_FLG_AGG_MPDU_DENS_SHIFT),
+  STA_FLG_AGG_MPDU_DENS_16US = (7 << STA_FLG_AGG_MPDU_DENS_SHIFT),
+  STA_FLG_AGG_MPDU_DENS_MSK = (7 << STA_FLG_AGG_MPDU_DENS_SHIFT),
 
-    STA_FLG_FAT_EN_20MHZ = (0 << 26),
-    STA_FLG_FAT_EN_40MHZ = (1 << 26),
-    STA_FLG_FAT_EN_80MHZ = (2 << 26),
-    STA_FLG_FAT_EN_160MHZ = (3 << 26),
-    STA_FLG_FAT_EN_MSK = (3 << 26),
+  STA_FLG_FAT_EN_20MHZ = (0 << 26),
+  STA_FLG_FAT_EN_40MHZ = (1 << 26),
+  STA_FLG_FAT_EN_80MHZ = (2 << 26),
+  STA_FLG_FAT_EN_160MHZ = (3 << 26),
+  STA_FLG_FAT_EN_MSK = (3 << 26),
 
-    STA_FLG_MIMO_EN_SISO = (0 << 28),
-    STA_FLG_MIMO_EN_MIMO2 = (1 << 28),
-    STA_FLG_MIMO_EN_MIMO3 = (2 << 28),
-    STA_FLG_MIMO_EN_MSK = (3 << 28),
+  STA_FLG_MIMO_EN_SISO = (0 << 28),
+  STA_FLG_MIMO_EN_MIMO2 = (1 << 28),
+  STA_FLG_MIMO_EN_MIMO3 = (2 << 28),
+  STA_FLG_MIMO_EN_MSK = (3 << 28),
 };
 
 /**
@@ -143,24 +143,24 @@ enum iwl_sta_flags {
  * @STA_KEY_MFP: key is used for Management Frame Protection
  */
 enum iwl_sta_key_flag {
-    STA_KEY_FLG_NO_ENC = (0 << 0),
-    STA_KEY_FLG_WEP = (1 << 0),
-    STA_KEY_FLG_CCM = (2 << 0),
-    STA_KEY_FLG_TKIP = (3 << 0),
-    STA_KEY_FLG_EXT = (4 << 0),
-    STA_KEY_FLG_GCMP = (5 << 0),
-    STA_KEY_FLG_CMAC = (6 << 0),
-    STA_KEY_FLG_ENC_UNKNOWN = (7 << 0),
-    STA_KEY_FLG_EN_MSK = (7 << 0),
+  STA_KEY_FLG_NO_ENC = (0 << 0),
+  STA_KEY_FLG_WEP = (1 << 0),
+  STA_KEY_FLG_CCM = (2 << 0),
+  STA_KEY_FLG_TKIP = (3 << 0),
+  STA_KEY_FLG_EXT = (4 << 0),
+  STA_KEY_FLG_GCMP = (5 << 0),
+  STA_KEY_FLG_CMAC = (6 << 0),
+  STA_KEY_FLG_ENC_UNKNOWN = (7 << 0),
+  STA_KEY_FLG_EN_MSK = (7 << 0),
 
-    STA_KEY_FLG_WEP_KEY_MAP = BIT(3),
-    STA_KEY_FLG_KEYID_POS = 8,
-    STA_KEY_FLG_KEYID_MSK = (3 << STA_KEY_FLG_KEYID_POS),
-    STA_KEY_NOT_VALID = BIT(11),
-    STA_KEY_FLG_WEP_13BYTES = BIT(12),
-    STA_KEY_FLG_KEY_32BYTES = BIT(12),
-    STA_KEY_MULTICAST = BIT(14),
-    STA_KEY_MFP = BIT(15),
+  STA_KEY_FLG_WEP_KEY_MAP = BIT(3),
+  STA_KEY_FLG_KEYID_POS = 8,
+  STA_KEY_FLG_KEYID_MSK = (3 << STA_KEY_FLG_KEYID_POS),
+  STA_KEY_NOT_VALID = BIT(11),
+  STA_KEY_FLG_WEP_13BYTES = BIT(12),
+  STA_KEY_FLG_KEY_32BYTES = BIT(12),
+  STA_KEY_MULTICAST = BIT(14),
+  STA_KEY_MFP = BIT(15),
 };
 
 /**
@@ -175,14 +175,14 @@ enum iwl_sta_key_flag {
  * @STA_MODIFY_QUEUES: modify the queues used by this station
  */
 enum iwl_sta_modify_flag {
-    STA_MODIFY_QUEUE_REMOVAL = BIT(0),
-    STA_MODIFY_TID_DISABLE_TX = BIT(1),
-    STA_MODIFY_UAPSD_ACS = BIT(2),
-    STA_MODIFY_ADD_BA_TID = BIT(3),
-    STA_MODIFY_REMOVE_BA_TID = BIT(4),
-    STA_MODIFY_SLEEPING_STA_TX_COUNT = BIT(5),
-    STA_MODIFY_PROT_TH = BIT(6),
-    STA_MODIFY_QUEUES = BIT(7),
+  STA_MODIFY_QUEUE_REMOVAL = BIT(0),
+  STA_MODIFY_TID_DISABLE_TX = BIT(1),
+  STA_MODIFY_UAPSD_ACS = BIT(2),
+  STA_MODIFY_ADD_BA_TID = BIT(3),
+  STA_MODIFY_REMOVE_BA_TID = BIT(4),
+  STA_MODIFY_SLEEPING_STA_TX_COUNT = BIT(5),
+  STA_MODIFY_PROT_TH = BIT(6),
+  STA_MODIFY_QUEUES = BIT(7),
 };
 
 /**
@@ -191,8 +191,8 @@ enum iwl_sta_modify_flag {
  * @STA_MODE_MODIFY: modify the station
  */
 enum iwl_sta_mode {
-    STA_MODE_ADD = 0,
-    STA_MODE_MODIFY = 1,
+  STA_MODE_ADD = 0,
+  STA_MODE_MODIFY = 1,
 };
 
 /**
@@ -204,10 +204,10 @@ enum iwl_sta_mode {
  *  (last) released frame
  */
 enum iwl_sta_sleep_flag {
-    STA_SLEEP_STATE_AWAKE = 0,
-    STA_SLEEP_STATE_PS_POLL = BIT(0),
-    STA_SLEEP_STATE_UAPSD = BIT(1),
-    STA_SLEEP_STATE_MOREDATA = BIT(2),
+  STA_SLEEP_STATE_AWAKE = 0,
+  STA_SLEEP_STATE_PS_POLL = BIT(0),
+  STA_SLEEP_STATE_UAPSD = BIT(1),
+  STA_SLEEP_STATE_MOREDATA = BIT(2),
 };
 
 #define STA_KEY_MAX_NUM (16)
@@ -231,16 +231,16 @@ enum iwl_sta_sleep_flag {
  * @hw_tkip_mic_tx_key: byte: MIC Tx Key - used for TKIP only
  */
 struct iwl_mvm_keyinfo {
-    __le16 key_flags;
-    uint8_t tkip_rx_tsc_byte2;
-    uint8_t reserved1;
-    __le16 tkip_rx_ttak[5];
-    uint8_t key_offset;
-    uint8_t reserved2;
-    uint8_t key[16];
-    __le64 tx_secur_seq_cnt;
-    __le64 hw_tkip_mic_rx_key;
-    __le64 hw_tkip_mic_tx_key;
+  __le16 key_flags;
+  uint8_t tkip_rx_tsc_byte2;
+  uint8_t reserved1;
+  __le16 tkip_rx_ttak[5];
+  uint8_t key_offset;
+  uint8_t reserved2;
+  uint8_t key[16];
+  __le64 tx_secur_seq_cnt;
+  __le64 hw_tkip_mic_rx_key;
+  __le64 hw_tkip_mic_tx_key;
 } __packed;
 
 #define IWL_ADD_STA_STATUS_MASK 0xFF
@@ -290,25 +290,25 @@ struct iwl_mvm_keyinfo {
  * entry, or modifying a pre-existing one.
  */
 struct iwl_mvm_add_sta_cmd_v7 {
-    uint8_t add_modify;
-    uint8_t awake_acs;
-    __le16 tid_disable_tx;
-    __le32 mac_id_n_color;
-    uint8_t addr[ETH_ALEN]; /* _STA_ID_MODIFY_INFO_API_S_VER_1 */
-    __le16 reserved2;
-    uint8_t sta_id;
-    uint8_t modify_mask;
-    __le16 reserved3;
-    __le32 station_flags;
-    __le32 station_flags_msk;
-    uint8_t add_immediate_ba_tid;
-    uint8_t remove_immediate_ba_tid;
-    __le16 add_immediate_ba_ssn;
-    __le16 sleep_tx_count;
-    __le16 sleep_state_flags;
-    __le16 assoc_id;
-    __le16 beamform_flags;
-    __le32 tfd_queue_msk;
+  uint8_t add_modify;
+  uint8_t awake_acs;
+  __le16 tid_disable_tx;
+  __le32 mac_id_n_color;
+  uint8_t addr[ETH_ALEN]; /* _STA_ID_MODIFY_INFO_API_S_VER_1 */
+  __le16 reserved2;
+  uint8_t sta_id;
+  uint8_t modify_mask;
+  __le16 reserved3;
+  __le32 station_flags;
+  __le32 station_flags_msk;
+  uint8_t add_immediate_ba_tid;
+  uint8_t remove_immediate_ba_tid;
+  __le16 add_immediate_ba_ssn;
+  __le16 sleep_tx_count;
+  __le16 sleep_state_flags;
+  __le16 assoc_id;
+  __le16 beamform_flags;
+  __le32 tfd_queue_msk;
 } __packed; /* ADD_STA_CMD_API_S_VER_7 */
 
 /**
@@ -322,11 +322,11 @@ struct iwl_mvm_add_sta_cmd_v7 {
  * @IWL_STA_AUX_ACTIVITY: auxilary station (scan, ROC and so on).
  */
 enum iwl_sta_type {
-    IWL_STA_LINK,
-    IWL_STA_GENERAL_PURPOSE,
-    IWL_STA_MULTICAST,
-    IWL_STA_TDLS_LINK,
-    IWL_STA_AUX_ACTIVITY,
+  IWL_STA_LINK,
+  IWL_STA_GENERAL_PURPOSE,
+  IWL_STA_MULTICAST,
+  IWL_STA_TDLS_LINK,
+  IWL_STA_AUX_ACTIVITY,
 };
 
 /**
@@ -377,29 +377,29 @@ enum iwl_sta_type {
  * entry, or modifying a pre-existing one.
  */
 struct iwl_mvm_add_sta_cmd {
-    uint8_t add_modify;
-    uint8_t awake_acs;
-    __le16 tid_disable_tx;
-    __le32 mac_id_n_color;
-    uint8_t addr[ETH_ALEN]; /* _STA_ID_MODIFY_INFO_API_S_VER_1 */
-    __le16 reserved2;
-    uint8_t sta_id;
-    uint8_t modify_mask;
-    __le16 reserved3;
-    __le32 station_flags;
-    __le32 station_flags_msk;
-    uint8_t add_immediate_ba_tid;
-    uint8_t remove_immediate_ba_tid;
-    __le16 add_immediate_ba_ssn;
-    __le16 sleep_tx_count;
-    uint8_t sleep_state_flags;
-    uint8_t station_type;
-    __le16 assoc_id;
-    __le16 beamform_flags;
-    __le32 tfd_queue_msk;
-    __le16 rx_ba_window;
-    uint8_t sp_length;
-    uint8_t uapsd_acs;
+  uint8_t add_modify;
+  uint8_t awake_acs;
+  __le16 tid_disable_tx;
+  __le32 mac_id_n_color;
+  uint8_t addr[ETH_ALEN]; /* _STA_ID_MODIFY_INFO_API_S_VER_1 */
+  __le16 reserved2;
+  uint8_t sta_id;
+  uint8_t modify_mask;
+  __le16 reserved3;
+  __le32 station_flags;
+  __le32 station_flags_msk;
+  uint8_t add_immediate_ba_tid;
+  uint8_t remove_immediate_ba_tid;
+  __le16 add_immediate_ba_ssn;
+  __le16 sleep_tx_count;
+  uint8_t sleep_state_flags;
+  uint8_t station_type;
+  __le16 assoc_id;
+  __le16 beamform_flags;
+  __le32 tfd_queue_msk;
+  __le16 rx_ba_window;
+  uint8_t sp_length;
+  uint8_t uapsd_acs;
 } __packed; /* ADD_STA_CMD_API_S_VER_10 */
 
 /**
@@ -412,11 +412,11 @@ struct iwl_mvm_add_sta_cmd {
  * @rx_secur_seq_cnt: RX security sequence counter for the key
  */
 struct iwl_mvm_add_sta_key_common {
-    uint8_t sta_id;
-    uint8_t key_offset;
-    __le16 key_flags;
-    uint8_t key[32];
-    uint8_t rx_secur_seq_cnt[16];
+  uint8_t sta_id;
+  uint8_t key_offset;
+  __le16 key_flags;
+  uint8_t key[32];
+  uint8_t rx_secur_seq_cnt[16];
 } __packed;
 
 /**
@@ -427,10 +427,10 @@ struct iwl_mvm_add_sta_key_common {
  * @tkip_rx_ttak: 10-byte unicast TKIP TTAK for Rx
  */
 struct iwl_mvm_add_sta_key_cmd_v1 {
-    struct iwl_mvm_add_sta_key_common common;
-    uint8_t tkip_rx_tsc_byte2;
-    uint8_t reserved;
-    __le16 tkip_rx_ttak[5];
+  struct iwl_mvm_add_sta_key_common common;
+  uint8_t tkip_rx_tsc_byte2;
+  uint8_t reserved;
+  __le16 tkip_rx_ttak[5];
 } __packed; /* ADD_MODIFY_STA_KEY_API_S_VER_1 */
 
 /**
@@ -441,10 +441,10 @@ struct iwl_mvm_add_sta_key_cmd_v1 {
  * @transmit_seq_cnt: TSC, transmit packet number
  */
 struct iwl_mvm_add_sta_key_cmd {
-    struct iwl_mvm_add_sta_key_common common;
-    __le64 rx_mic_key;
-    __le64 tx_mic_key;
-    __le64 transmit_seq_cnt;
+  struct iwl_mvm_add_sta_key_common common;
+  __le64 rx_mic_key;
+  __le64 tx_mic_key;
+  __le64 transmit_seq_cnt;
 } __packed; /* ADD_MODIFY_STA_KEY_API_S_VER_2 */
 
 /**
@@ -456,10 +456,10 @@ struct iwl_mvm_add_sta_key_cmd {
  *  doesn't exist.
  */
 enum iwl_mvm_add_sta_rsp_status {
-    ADD_STA_SUCCESS = 0x1,
-    ADD_STA_STATIONS_OVERLOAD = 0x2,
-    ADD_STA_IMMEDIATE_BA_FAILURE = 0x4,
-    ADD_STA_MODIFY_NON_EXISTING_STA = 0x8,
+  ADD_STA_SUCCESS = 0x1,
+  ADD_STA_STATIONS_OVERLOAD = 0x2,
+  ADD_STA_IMMEDIATE_BA_FAILURE = 0x4,
+  ADD_STA_MODIFY_NON_EXISTING_STA = 0x8,
 };
 
 /**
@@ -469,8 +469,8 @@ enum iwl_mvm_add_sta_rsp_status {
  * @reserved: reserved
  */
 struct iwl_mvm_rm_sta_cmd {
-    uint8_t sta_id;
-    uint8_t reserved[3];
+  uint8_t sta_id;
+  uint8_t reserved[3];
 } __packed; /* REMOVE_STA_CMD_API_S_VER_2 */
 
 /**
@@ -485,13 +485,13 @@ struct iwl_mvm_rm_sta_cmd {
  * @receive_seq_cnt: initial RSC/PN needed for replay check
  */
 struct iwl_mvm_mgmt_mcast_key_cmd_v1 {
-    __le32 ctrl_flags;
-    uint8_t igtk[16];
-    uint8_t k1[16];
-    uint8_t k2[16];
-    __le32 key_id;
-    __le32 sta_id;
-    __le64 receive_seq_cnt;
+  __le32 ctrl_flags;
+  uint8_t igtk[16];
+  uint8_t k1[16];
+  uint8_t k2[16];
+  __le32 key_id;
+  __le32 sta_id;
+  __le64 receive_seq_cnt;
 } __packed; /* SEC_MGMT_MULTICAST_KEY_CMD_API_S_VER_1 */
 
 /**
@@ -504,29 +504,29 @@ struct iwl_mvm_mgmt_mcast_key_cmd_v1 {
  * @receive_seq_cnt: initial RSC/PN needed for replay check
  */
 struct iwl_mvm_mgmt_mcast_key_cmd {
-    __le32 ctrl_flags;
-    uint8_t igtk[32];
-    __le32 key_id;
-    __le32 sta_id;
-    __le64 receive_seq_cnt;
+  __le32 ctrl_flags;
+  uint8_t igtk[32];
+  __le32 key_id;
+  __le32 sta_id;
+  __le64 receive_seq_cnt;
 } __packed; /* SEC_MGMT_MULTICAST_KEY_CMD_API_S_VER_2 */
 
 struct iwl_mvm_wep_key {
-    uint8_t key_index;
-    uint8_t key_offset;
-    __le16 reserved1;
-    uint8_t key_size;
-    uint8_t reserved2[3];
-    uint8_t key[16];
+  uint8_t key_index;
+  uint8_t key_offset;
+  __le16 reserved1;
+  uint8_t key_size;
+  uint8_t reserved2[3];
+  uint8_t key[16];
 } __packed;
 
 struct iwl_mvm_wep_key_cmd {
-    __le32 mac_id_n_color;
-    uint8_t num_keys;
-    uint8_t decryption_type;
-    uint8_t flags;
-    uint8_t reserved;
-    struct iwl_mvm_wep_key wep_key[0];
+  __le32 mac_id_n_color;
+  uint8_t num_keys;
+  uint8_t decryption_type;
+  uint8_t flags;
+  uint8_t reserved;
+  struct iwl_mvm_wep_key wep_key[0];
 } __packed; /* SEC_CURR_WEP_KEY_CMD_API_S_VER_2 */
 
 /**
@@ -536,8 +536,8 @@ struct iwl_mvm_wep_key_cmd {
  * @sta_id: station ID
  */
 struct iwl_mvm_eosp_notification {
-    __le32 remain_frame_count;
-    __le32 sta_id;
+  __le32 remain_frame_count;
+  __le32 sta_id;
 } __packed; /* UAPSD_EOSP_NTFY_API_S_VER_1 */
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_STA_H_

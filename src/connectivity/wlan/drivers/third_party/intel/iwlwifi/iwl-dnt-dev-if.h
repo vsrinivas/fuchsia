@@ -49,8 +49,8 @@ struct iwl_dnt;
 
 /* marbh access types */
 enum {
-    ACCESS_TYPE_DIRECT = 0,
-    ACCESS_TYPE_INDIRECT,
+  ACCESS_TYPE_DIRECT = 0,
+  ACCESS_TYPE_INDIRECT,
 };
 
 /**

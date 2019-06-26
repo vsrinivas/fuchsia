@@ -192,8 +192,8 @@ struct ieee80211_vif {
   void* drv_priv;
 };
 
-static inline struct ieee80211_hw* ieee80211_alloc_hw(
-    size_t priv_data_len, const struct ieee80211_ops* ops) {
+static inline struct ieee80211_hw* ieee80211_alloc_hw(size_t priv_data_len,
+                                                      const struct ieee80211_ops* ops) {
   return NULL;  // NEEDS_PORTING
 }
 

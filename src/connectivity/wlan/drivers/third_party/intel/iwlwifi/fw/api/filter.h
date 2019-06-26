@@ -56,13 +56,13 @@
  *      IMPORTANT: add padding if necessary to ensure DWORD alignment.
  */
 struct iwl_mcast_filter_cmd {
-    uint8_t filter_own;
-    uint8_t port_id;
-    uint8_t count;
-    uint8_t pass_all;
-    uint8_t bssid[6];
-    uint8_t reserved[2];
-    uint8_t addr_list[0];
+  uint8_t filter_own;
+  uint8_t port_id;
+  uint8_t count;
+  uint8_t pass_all;
+  uint8_t bssid[6];
+  uint8_t reserved[2];
+  uint8_t addr_list[0];
 } __packed; /* MCAST_FILTERING_CMD_API_S_VER_1 */
 
 #define MAX_BCAST_FILTERS 8
@@ -75,8 +75,8 @@ struct iwl_mcast_filter_cmd {
  *  start of ip payload).
  */
 enum iwl_mvm_bcast_filter_attr_offset {
-    BCAST_FILTER_OFFSET_PAYLOAD_START = 0,
-    BCAST_FILTER_OFFSET_IP_END = 1,
+  BCAST_FILTER_OFFSET_PAYLOAD_START = 0,
+  BCAST_FILTER_OFFSET_IP_END = 1,
 };
 
 /**
@@ -89,11 +89,11 @@ enum iwl_mvm_bcast_filter_attr_offset {
  * @mask:   mask to match (big endian).
  */
 struct iwl_fw_bcast_filter_attr {
-    uint8_t offset_type;
-    uint8_t offset;
-    __le16 reserved1;
-    __be32 val;
-    __be32 mask;
+  uint8_t offset_type;
+  uint8_t offset;
+  __le16 reserved1;
+  __be32 val;
+  __be32 mask;
 } __packed; /* BCAST_FILTER_ATT_S_VER_1 */
 
 /**
@@ -102,8 +102,8 @@ struct iwl_fw_bcast_filter_attr {
  * @BCAST_FILTER_FRAME_TYPE_IPV4: consider only ipv4 frames
  */
 enum iwl_mvm_bcast_filter_frame_type {
-    BCAST_FILTER_FRAME_TYPE_ALL = 0,
-    BCAST_FILTER_FRAME_TYPE_IPV4 = 1,
+  BCAST_FILTER_FRAME_TYPE_ALL = 0,
+  BCAST_FILTER_FRAME_TYPE_IPV4 = 1,
 };
 
 /**
@@ -116,11 +116,11 @@ enum iwl_mvm_bcast_filter_frame_type {
  *  only when all its attributes are matched (i.e. AND relationship)
  */
 struct iwl_fw_bcast_filter {
-    uint8_t discard;
-    uint8_t frame_type;
-    uint8_t num_attrs;
-    uint8_t reserved1;
-    struct iwl_fw_bcast_filter_attr attrs[MAX_BCAST_FILTER_ATTRS];
+  uint8_t discard;
+  uint8_t frame_type;
+  uint8_t num_attrs;
+  uint8_t reserved1;
+  struct iwl_fw_bcast_filter_attr attrs[MAX_BCAST_FILTER_ATTRS];
 } __packed; /* BCAST_FILTER_S_VER_1 */
 
 /**
@@ -130,9 +130,9 @@ struct iwl_fw_bcast_filter {
  * @attached_filters: bitmap of relevant filters for this mac.
  */
 struct iwl_fw_bcast_mac {
-    uint8_t default_discard;
-    uint8_t reserved1;
-    __le16 attached_filters;
+  uint8_t default_discard;
+  uint8_t reserved1;
+  __le16 attached_filters;
 } __packed; /* BCAST_MAC_CONTEXT_S_VER_1 */
 
 /**
@@ -145,12 +145,12 @@ struct iwl_fw_bcast_mac {
  * @macs: broadcast filtering configuration per-mac
  */
 struct iwl_bcast_filter_cmd {
-    uint8_t disable;
-    uint8_t max_bcast_filters;
-    uint8_t max_macs;
-    uint8_t reserved1;
-    struct iwl_fw_bcast_filter filters[MAX_BCAST_FILTERS];
-    struct iwl_fw_bcast_mac macs[NUM_MAC_INDEX_DRIVER];
+  uint8_t disable;
+  uint8_t max_bcast_filters;
+  uint8_t max_macs;
+  uint8_t reserved1;
+  struct iwl_fw_bcast_filter filters[MAX_BCAST_FILTERS];
+  struct iwl_fw_bcast_mac macs[NUM_MAC_INDEX_DRIVER];
 } __packed; /* BCAST_FILTERING_HCMD_API_S_VER_1 */
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_FILTER_H_

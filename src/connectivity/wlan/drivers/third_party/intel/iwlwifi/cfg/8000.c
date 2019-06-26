@@ -35,6 +35,7 @@
 
 #include <linux/module.h>
 #include <linux/stringify.h>
+
 #include "iwl-config.h"
 
 /* Highest firmware API version supported */
@@ -104,27 +105,27 @@ static const struct iwl_tt_params iwl8000_tt_params = {
     .support_tx_backoff = true,
 };
 
-#define IWL_DEVICE_8000_COMMON                                                                 \
-    .device_family = IWL_DEVICE_FAMILY_8000, .base_params = &iwl8000_base_params,              \
-    .led_mode = IWL_LED_RF_STATE, .nvm_hw_section_num = 10, .features = NETIF_F_RXCSUM,        \
-    .non_shared_ant = ANT_A, .dccm_offset = IWL8260_DCCM_OFFSET, .dccm_len = IWL8260_DCCM_LEN, \
-    .dccm2_offset = IWL8260_DCCM2_OFFSET, .dccm2_len = IWL8260_DCCM2_LEN,                      \
-    .smem_offset = IWL8260_SMEM_OFFSET, .smem_len = IWL8260_SMEM_LEN,                          \
-    .default_nvm_file_C_step = DEFAULT_NVM_FILE_FAMILY_8000C,                                  \
-    .thermal_params = &iwl8000_tt_params, .apmg_not_supported = true, .nvm_type = IWL_NVM_EXT, \
-    .dbgc_supported = true, .min_umac_error_event_table = 0x800000, .csr = &iwl_csr_v1
+#define IWL_DEVICE_8000_COMMON                                                                    \
+  .device_family = IWL_DEVICE_FAMILY_8000, .base_params = &iwl8000_base_params,                   \
+  .led_mode = IWL_LED_RF_STATE, .nvm_hw_section_num = 10, .features = NETIF_F_RXCSUM,             \
+  .non_shared_ant = ANT_A, .dccm_offset = IWL8260_DCCM_OFFSET, .dccm_len = IWL8260_DCCM_LEN,      \
+  .dccm2_offset = IWL8260_DCCM2_OFFSET, .dccm2_len = IWL8260_DCCM2_LEN,                           \
+  .smem_offset = IWL8260_SMEM_OFFSET, .smem_len = IWL8260_SMEM_LEN,                               \
+  .default_nvm_file_C_step = DEFAULT_NVM_FILE_FAMILY_8000C, .thermal_params = &iwl8000_tt_params, \
+  .apmg_not_supported = true, .nvm_type = IWL_NVM_EXT, .dbgc_supported = true,                    \
+  .min_umac_error_event_table = 0x800000, .csr = &iwl_csr_v1
 
-#define IWL_DEVICE_8000                                             \
-    IWL_DEVICE_8000_COMMON, .ucode_api_max = IWL8000_UCODE_API_MAX, \
-                            .ucode_api_min = IWL8000_UCODE_API_MIN
+#define IWL_DEVICE_8000                                           \
+  IWL_DEVICE_8000_COMMON, .ucode_api_max = IWL8000_UCODE_API_MAX, \
+                          .ucode_api_min = IWL8000_UCODE_API_MIN
 
-#define IWL_DEVICE_8260                                             \
-    IWL_DEVICE_8000_COMMON, .ucode_api_max = IWL8000_UCODE_API_MAX, \
-                            .ucode_api_min = IWL8000_UCODE_API_MIN
+#define IWL_DEVICE_8260                                           \
+  IWL_DEVICE_8000_COMMON, .ucode_api_max = IWL8000_UCODE_API_MAX, \
+                          .ucode_api_min = IWL8000_UCODE_API_MIN
 
-#define IWL_DEVICE_8265                                             \
-    IWL_DEVICE_8000_COMMON, .ucode_api_max = IWL8265_UCODE_API_MAX, \
-                            .ucode_api_min = IWL8265_UCODE_API_MIN
+#define IWL_DEVICE_8265                                           \
+  IWL_DEVICE_8000_COMMON, .ucode_api_max = IWL8265_UCODE_API_MAX, \
+                          .ucode_api_min = IWL8265_UCODE_API_MIN
 
 const struct iwl_cfg iwl8260_2n_cfg = {
     .name = "Intel(R) Dual Band Wireless N 8260",

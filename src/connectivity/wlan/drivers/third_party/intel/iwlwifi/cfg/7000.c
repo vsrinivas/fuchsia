@@ -118,27 +118,27 @@ static const struct iwl_ht_params iwl7000_ht_params = {
     .ht40_bands = BIT(NL80211_BAND_2GHZ) | BIT(NL80211_BAND_5GHZ),
 };
 
-#define IWL_DEVICE_7000_COMMON                                                               \
-    .device_family = IWL_DEVICE_FAMILY_7000, .base_params = &iwl7000_base_params,            \
-    .led_mode = IWL_LED_RF_STATE, .nvm_hw_section_num = 0, .non_shared_ant = ANT_A,          \
-    .max_ht_ampdu_exponent = IEEE80211_HT_MAX_AMPDU_64K, .dccm_offset = IWL7000_DCCM_OFFSET, \
-    .csr = &iwl_csr_v1
+#define IWL_DEVICE_7000_COMMON                                                             \
+  .device_family = IWL_DEVICE_FAMILY_7000, .base_params = &iwl7000_base_params,            \
+  .led_mode = IWL_LED_RF_STATE, .nvm_hw_section_num = 0, .non_shared_ant = ANT_A,          \
+  .max_ht_ampdu_exponent = IEEE80211_HT_MAX_AMPDU_64K, .dccm_offset = IWL7000_DCCM_OFFSET, \
+  .csr = &iwl_csr_v1
 
-#define IWL_DEVICE_7000                                             \
-    IWL_DEVICE_7000_COMMON, .ucode_api_max = IWL7260_UCODE_API_MAX, \
-                            .ucode_api_min = IWL7260_UCODE_API_MIN
+#define IWL_DEVICE_7000                                           \
+  IWL_DEVICE_7000_COMMON, .ucode_api_max = IWL7260_UCODE_API_MAX, \
+                          .ucode_api_min = IWL7260_UCODE_API_MIN
 
-#define IWL_DEVICE_7005                                             \
-    IWL_DEVICE_7000_COMMON, .ucode_api_max = IWL7265_UCODE_API_MAX, \
-                            .ucode_api_min = IWL7265_UCODE_API_MIN
+#define IWL_DEVICE_7005                                           \
+  IWL_DEVICE_7000_COMMON, .ucode_api_max = IWL7265_UCODE_API_MAX, \
+                          .ucode_api_min = IWL7265_UCODE_API_MIN
 
-#define IWL_DEVICE_3008                                             \
-    IWL_DEVICE_7000_COMMON, .ucode_api_max = IWL3168_UCODE_API_MAX, \
-                            .ucode_api_min = IWL3168_UCODE_API_MIN
+#define IWL_DEVICE_3008                                           \
+  IWL_DEVICE_7000_COMMON, .ucode_api_max = IWL3168_UCODE_API_MAX, \
+                          .ucode_api_min = IWL3168_UCODE_API_MIN
 
-#define IWL_DEVICE_7005D                                             \
-    IWL_DEVICE_7000_COMMON, .ucode_api_max = IWL7265D_UCODE_API_MAX, \
-                            .ucode_api_min = IWL7265D_UCODE_API_MIN
+#define IWL_DEVICE_7005D                                           \
+  IWL_DEVICE_7000_COMMON, .ucode_api_max = IWL7265D_UCODE_API_MAX, \
+                          .ucode_api_min = IWL7265D_UCODE_API_MIN
 
 const struct iwl_cfg iwl7260_2ac_cfg = {
     .name = "Intel(R) Dual Band Wireless AC 7260",

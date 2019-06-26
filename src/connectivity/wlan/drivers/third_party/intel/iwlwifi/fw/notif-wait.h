@@ -41,8 +41,8 @@
 // NEEDS_PORTING: seems that this is exactly what sync_completion_t is doing.
 
 struct iwl_notif_wait_data {
-    struct list_node notif_waits;
-    mtx_t notif_wait_lock;
+  struct list_node notif_waits;
+  mtx_t notif_wait_lock;
 #if 0   // NEEDS_PORTING
     wait_queue_head_t notif_waitq;
 #endif  // NEEDS_PORTING
@@ -75,14 +75,14 @@ struct iwl_notif_wait_data {
  * the code for them.
  */
 struct iwl_notification_wait {
-    list_node_t list;
+  list_node_t list;
 
-    bool (*fn)(struct iwl_notif_wait_data* notif_data, struct iwl_rx_packet* pkt, void* data);
-    void* fn_data;
+  bool (*fn)(struct iwl_notif_wait_data* notif_data, struct iwl_rx_packet* pkt, void* data);
+  void* fn_data;
 
-    uint16_t cmds[MAX_NOTIF_CMDS];
-    uint8_t n_cmds;
-    bool triggered, aborted;
+  uint16_t cmds[MAX_NOTIF_CMDS];
+  uint8_t n_cmds;
+  bool triggered, aborted;
 };
 
 /* caller functions */

@@ -69,70 +69,77 @@ static struct dentry* fm_debug_dir;
 
 static ssize_t iwl_mvm_fm_debug_mitigate_write(struct file* file, const char __user* user_buf,
                                                size_t count, loff_t* ppos) {
-    struct iui_fm_mitigation mitigation;
-    struct iui_fm_wlan_mitigation wm;
-    char buf[128];
-    size_t buf_size = sizeof(buf);
-    int mitigate_2g;
-    int ret;
-    int mitigate_dcdc;
+  struct iui_fm_mitigation mitigation;
+  struct iui_fm_wlan_mitigation wm;
+  char buf[128];
+  size_t buf_size = sizeof(buf);
+  int mitigate_2g;
+  int ret;
+  int mitigate_dcdc;
 
-    mitigation.info.wlan_mitigation = &wm;
-    mitigation.type = IUI_FM_MITIGATION_TYPE_WLAN;
+  mitigation.info.wlan_mitigation = &wm;
+  mitigation.type = IUI_FM_MITIGATION_TYPE_WLAN;
 
-    if (copy_from_user(buf, user_buf, buf_size)) { return -EFAULT; }
+  if (copy_from_user(buf, user_buf, buf_size)) {
+    return -EFAULT;
+  }
 
-    /* All platforms that are not xmm6321 & SOFIA 3G */
-    if (IUI_FM_WLAN_MAX_CHANNELS == 4) {
-        if (sscanf(buf, "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d", &wm.num_channels,
-                   &wm.channel_tx_pwr[0].frequency, &wm.channel_tx_pwr[0].max_tx_pwr,
-                   &wm.channel_tx_pwr[1].frequency, &wm.channel_tx_pwr[1].max_tx_pwr,
-                   &wm.channel_tx_pwr[2].frequency, &wm.channel_tx_pwr[2].max_tx_pwr,
-                   &wm.channel_tx_pwr[3].frequency, &wm.channel_tx_pwr[3].max_tx_pwr,
-                   &mitigate_dcdc, &wm.dcdc_div0, &wm.dcdc_div1, &mitigate_2g,
-                   &wm.wlan_2g_coex_enable) != 14) {
-            return -EINVAL;
-        }
-    } else if (sscanf(buf, "%d,%d,%d,%d,%d", &wm.num_channels, &wm.channel_tx_pwr[0].frequency,
-                      &wm.channel_tx_pwr[0].max_tx_pwr, &wm.channel_tx_pwr[1].frequency,
-                      &wm.channel_tx_pwr[1].max_tx_pwr) != 5) {
-        return -EINVAL;
+  /* All platforms that are not xmm6321 & SOFIA 3G */
+  if (IUI_FM_WLAN_MAX_CHANNELS == 4) {
+    if (sscanf(buf, "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d", &wm.num_channels,
+               &wm.channel_tx_pwr[0].frequency, &wm.channel_tx_pwr[0].max_tx_pwr,
+               &wm.channel_tx_pwr[1].frequency, &wm.channel_tx_pwr[1].max_tx_pwr,
+               &wm.channel_tx_pwr[2].frequency, &wm.channel_tx_pwr[2].max_tx_pwr,
+               &wm.channel_tx_pwr[3].frequency, &wm.channel_tx_pwr[3].max_tx_pwr, &mitigate_dcdc,
+               &wm.dcdc_div0, &wm.dcdc_div1, &mitigate_2g, &wm.wlan_2g_coex_enable) != 14) {
+      return -EINVAL;
     }
+  } else if (sscanf(buf, "%d,%d,%d,%d,%d", &wm.num_channels, &wm.channel_tx_pwr[0].frequency,
+                    &wm.channel_tx_pwr[0].max_tx_pwr, &wm.channel_tx_pwr[1].frequency,
+                    &wm.channel_tx_pwr[1].max_tx_pwr) != 5) {
+    return -EINVAL;
+  }
 
-    if (IUI_FM_WLAN_MAX_CHANNELS < wm.num_channels) { return -EINVAL; }
+  if (IUI_FM_WLAN_MAX_CHANNELS < wm.num_channels) {
+    return -EINVAL;
+  }
 
-    wm.wlan_adc_dac_freq = 0;
-    wm.rx_gain_behavior = IUI_FM_WLAN_RX_GAIN_NORMAL;
+  wm.wlan_adc_dac_freq = 0;
+  wm.rx_gain_behavior = IUI_FM_WLAN_RX_GAIN_NORMAL;
 
-    wm.bitmask = 0;
+  wm.bitmask = 0;
 
-    /* Set bit bitmask to indicate the required mitigations */
-    if (wm.num_channels || mitigate_2g) { wm.bitmask |= WLAN_MITI; }
-    if (mitigate_dcdc) { wm.bitmask |= DCDC_MITI; }
+  /* Set bit bitmask to indicate the required mitigations */
+  if (wm.num_channels || mitigate_2g) {
+    wm.bitmask |= WLAN_MITI;
+  }
+  if (mitigate_dcdc) {
+    wm.bitmask |= DCDC_MITI;
+  }
 
-    ret = fm_callback(IUI_FM_MACRO_ID_WLAN, &mitigation, 0);
-    pr_info("FM[test-mode]: mitigation callback %s (bitmask = 0x%x)\n",
-            ret ? "failed" : "succeeded", wm.bitmask);
+  ret = fm_callback(IUI_FM_MACRO_ID_WLAN, &mitigation, 0);
+  pr_info("FM[test-mode]: mitigation callback %s (bitmask = 0x%x)\n", ret ? "failed" : "succeeded",
+          wm.bitmask);
 
-    return count;
+  return count;
 }
 
 static ssize_t iwl_mvm_fm_debug_notify_read(struct file* file, char __user* userbuf, size_t count,
                                             loff_t* ppos) {
-    char buf[512];
-    int bufsz = sizeof(buf);
-    int pos = 0;
-    uint8_t i;
+  char buf[512];
+  int bufsz = sizeof(buf);
+  int pos = 0;
+  uint8_t i;
 
-    pos += scnprintf(buf + pos, bufsz - pos, "num_channels=%d\n", fm_notif.num_channels);
-    for (i = 0; i < fm_notif.num_channels; i++)
-        pos += scnprintf(buf + pos, bufsz - pos, "channel=%d, bandwidth=%d\n",
-                         fm_notif.channel_info[i].frequency, fm_notif.channel_info[i].bandwidth);
+  pos += scnprintf(buf + pos, bufsz - pos, "num_channels=%d\n", fm_notif.num_channels);
+  for (i = 0; i < fm_notif.num_channels; i++)
+    pos += scnprintf(buf + pos, bufsz - pos, "channel=%d, bandwidth=%d\n",
+                     fm_notif.channel_info[i].frequency, fm_notif.channel_info[i].bandwidth);
 
-    pos += scnprintf(buf + pos, bufsz - pos, "dcdc_div0=%d\n", fm_notif.dcdc_div0);
-    pos += scnprintf(buf + pos, bufsz - pos, "dcdc_div1=%d\n", fm_notif.dcdc_div1);
+  pos += scnprintf(buf + pos, bufsz - pos, "dcdc_div0=%d\n", fm_notif.dcdc_div0);
+  pos += scnprintf(buf + pos, bufsz - pos, "dcdc_div1=%d\n", fm_notif.dcdc_div1);
 
-    return simple_read_from_buffer(userbuf, count, ppos, buf, pos);
+  return simple_read_from_buffer(userbuf, count, ppos, buf, pos);
 }
 
 static const struct file_operations fm_debug_mitigate_ops = {
@@ -148,57 +155,62 @@ static const struct file_operations fm_debug_notify_ops = {
 };
 
 static int iwl_mvm_fm_create_debugfs(void) {
-    struct dentry* entry;
+  struct dentry* entry;
 
-    fm_debug_dir = debugfs_create_dir("frq_mgr", NULL);
+  fm_debug_dir = debugfs_create_dir("frq_mgr", NULL);
 
-    if (!fm_debug_dir) { goto err; }
+  if (!fm_debug_dir) {
+    goto err;
+  }
 
-    entry = debugfs_create_file("mitigate", S_IWUSR, fm_debug_dir, NULL, &fm_debug_mitigate_ops);
-    if (!entry) { goto err; }
+  entry = debugfs_create_file("mitigate", S_IWUSR, fm_debug_dir, NULL, &fm_debug_mitigate_ops);
+  if (!entry) {
+    goto err;
+  }
 
-    entry = debugfs_create_file("notify", S_IRUSR, fm_debug_dir, NULL, &fm_debug_notify_ops);
-    if (!entry) { goto err; }
+  entry = debugfs_create_file("notify", S_IRUSR, fm_debug_dir, NULL, &fm_debug_notify_ops);
+  if (!entry) {
+    goto err;
+  }
 
-    return 0;
+  return 0;
 err:
-    pr_info("FM: Could not create debugfs entries\n");
-    debugfs_remove_recursive(fm_debug_dir);
-    return -1;
+  pr_info("FM: Could not create debugfs entries\n");
+  debugfs_remove_recursive(fm_debug_dir);
+  return -1;
 }
 
 int32_t iwl_mvm_fm_test_register_callback(const enum iui_fm_macro_id macro_id,
                                           const iui_fm_mitigation_cb mitigation_cb) {
-    int ret = 0;
+  int ret = 0;
 
-    fm_callback = mitigation_cb;
+  fm_callback = mitigation_cb;
 
-    /* Unregister fm callback */
-    if (!mitigation_cb) {
-        debugfs_remove_recursive(fm_debug_dir);
-        goto end;
-    }
+  /* Unregister fm callback */
+  if (!mitigation_cb) {
+    debugfs_remove_recursive(fm_debug_dir);
+    goto end;
+  }
 
-    /* Register fm callback */
-    if (iwl_mvm_fm_create_debugfs()) {
-        ret = -1;
-        goto end;
-    }
+  /* Register fm callback */
+  if (iwl_mvm_fm_create_debugfs()) {
+    ret = -1;
+    goto end;
+  }
 
 end:
-    pr_info("FM[test-mode]: %sregistering fm callback function (fail = %d)\n", ret ? "un" : "",
-            ret);
-    return ret;
+  pr_info("FM[test-mode]: %sregistering fm callback function (fail = %d)\n", ret ? "un" : "", ret);
+  return ret;
 }
 
 int32_t iwl_mvm_fm_test_notify_frequency(
     const enum iui_fm_macro_id macro_id,
     const struct iui_fm_freq_notification* const notification) {
-    /* Platform does not have a FM or test mode was requested */
-    memcpy(&fm_notif, notification->info.wlan_info, sizeof(struct iui_fm_wlan_info));
+  /* Platform does not have a FM or test mode was requested */
+  memcpy(&fm_notif, notification->info.wlan_info, sizeof(struct iui_fm_wlan_info));
 
-    pr_info("FM[test-mode]: notifying fm about change (mask = 0x%x)\n",
-            notification->info.wlan_info->bitmask);
+  pr_info("FM[test-mode]: notifying fm about change (mask = 0x%x)\n",
+          notification->info.wlan_info->bitmask);
 
-    return 0;
+  return 0;
 }

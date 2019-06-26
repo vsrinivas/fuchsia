@@ -34,7 +34,7 @@
 
 #include <zircon/types.h>
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-devtrace.h"
 #endif  // NEEDS_PORTING
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
@@ -45,17 +45,16 @@ void iwl_write64(struct iwl_trans* trans, uint64_t ofs, uint64_t val);
 uint32_t iwl_read32(struct iwl_trans* trans, uint32_t ofs);
 
 static inline void iwl_set_bit(struct iwl_trans* trans, uint32_t reg, uint32_t mask) {
-    iwl_trans_set_bits_mask(trans, reg, mask, mask);
+  iwl_trans_set_bits_mask(trans, reg, mask, mask);
 }
 
 static inline void iwl_clear_bit(struct iwl_trans* trans, uint32_t reg, uint32_t mask) {
-    iwl_trans_set_bits_mask(trans, reg, mask, 0);
+  iwl_trans_set_bits_mask(trans, reg, mask, 0);
 }
 
 zx_status_t iwl_poll_bit(struct iwl_trans* trans, uint32_t addr, uint32_t bits, uint32_t mask,
                          int timeout);
-zx_status_t iwl_poll_direct_bit(struct iwl_trans* trans, uint32_t addr, uint32_t mask,
-                         int timeout);
+zx_status_t iwl_poll_direct_bit(struct iwl_trans* trans, uint32_t addr, uint32_t mask, int timeout);
 
 uint32_t iwl_read_direct32(struct iwl_trans* trans, uint32_t reg);
 void iwl_write_direct32(struct iwl_trans* trans, uint32_t reg, uint32_t value);

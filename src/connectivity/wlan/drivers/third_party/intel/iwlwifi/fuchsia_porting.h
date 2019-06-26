@@ -85,8 +85,7 @@ typedef char* acpi_string;
 #define WARN_ON_ONCE(x) (false)
 #define BUILD_BUG_ON(x) (false)
 
-#define offsetofend(type, member) \
-  (offsetof(type, member) + sizeof(((type*)NULL)->member))
+#define offsetofend(type, member) (offsetof(type, member) + sizeof(((type*)NULL)->member))
 
 // NEEDS_PORTING: need to be generic
 // clang-format off
@@ -220,8 +219,6 @@ static inline bool IS_ERR_OR_NULL(const void* ptr) {
   return !ptr || (((unsigned long)ptr) >= (unsigned long)-4095);
 }
 
-static inline void* page_address(const struct page* page) {
-  return page->virtual_addr;
-}
+static inline void* page_address(const struct page* page) { return page->virtual_addr; }
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FUCHSIA_PORTING_H_

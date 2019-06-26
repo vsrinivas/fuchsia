@@ -197,10 +197,10 @@
 #define CSR_INT_BIT_WAKEUP (1 << 1)       /* NIC controller waking up (pwr mgmt) */
 #define CSR_INT_BIT_ALIVE (1 << 0)        /* uCode interrupts once it initializes */
 
-#define CSR_INI_SET_MASK                                                                \
-    (CSR_INT_BIT_FH_RX | CSR_INT_BIT_HW_ERR | CSR_INT_BIT_FH_TX | CSR_INT_BIT_SW_ERR |  \
-     CSR_INT_BIT_RF_KILL | CSR_INT_BIT_SW_RX | CSR_INT_BIT_WAKEUP | CSR_INT_BIT_ALIVE | \
-     CSR_INT_BIT_RX_PERIODIC)
+#define CSR_INI_SET_MASK                                                              \
+  (CSR_INT_BIT_FH_RX | CSR_INT_BIT_HW_ERR | CSR_INT_BIT_FH_TX | CSR_INT_BIT_SW_ERR |  \
+   CSR_INT_BIT_RF_KILL | CSR_INT_BIT_SW_RX | CSR_INT_BIT_WAKEUP | CSR_INT_BIT_ALIVE | \
+   CSR_INT_BIT_RX_PERIODIC)
 
 /* interrupt flags in FH (flow handler) (PCI busmaster DMA) */
 #define CSR_FH_INT_BIT_ERR (1 << 31)      /* Error */
@@ -211,7 +211,7 @@
 #define CSR_FH_INT_BIT_TX_CHNL0 (1 << 0)  /* Tx channel 0 */
 
 #define CSR_FH_INT_RX_MASK \
-    (CSR_FH_INT_BIT_HI_PRIOR | CSR_FH_INT_BIT_RX_CHNL1 | CSR_FH_INT_BIT_RX_CHNL0)
+  (CSR_FH_INT_BIT_HI_PRIOR | CSR_FH_INT_BIT_RX_CHNL1 | CSR_FH_INT_BIT_RX_CHNL0)
 
 #define CSR_FH_INT_TX_MASK (CSR_FH_INT_BIT_TX_CHNL1 | CSR_FH_INT_BIT_TX_CHNL0)
 
@@ -268,9 +268,9 @@
  *  hw_rev values
  */
 enum {
-    SILICON_A_STEP = 0,
-    SILICON_B_STEP,
-    SILICON_C_STEP,
+  SILICON_A_STEP = 0,
+  SILICON_B_STEP,
+  SILICON_C_STEP,
 };
 
 #define CSR_HW_REV_TYPE_MSK (0x000FFF0)
@@ -510,17 +510,17 @@ enum {
 
 /* Diode Results Register Structure: */
 enum dtd_diode_reg {
-    DTS_DIODE_REG_DIG_VAL = 0x000000FF,   /* bits [7:0] */
-    DTS_DIODE_REG_VREF_LOW = 0x0000FF00,  /* bits [15:8] */
-    DTS_DIODE_REG_VREF_HIGH = 0x00FF0000, /* bits [23:16] */
-    DTS_DIODE_REG_VREF_ID = 0x03000000,   /* bits [25:24] */
-    DTS_DIODE_REG_PASS_ONCE = 0x80000000, /* bits [31:31] */
-    DTS_DIODE_REG_FLAGS_MSK = 0xFF000000, /* bits [31:24] */
-    /* Those are the masks INSIDE the flags bit-field: */
-    DTS_DIODE_REG_FLAGS_VREFS_ID_POS = 0,
-    DTS_DIODE_REG_FLAGS_VREFS_ID = 0x00000003, /* bits [1:0] */
-    DTS_DIODE_REG_FLAGS_PASS_ONCE_POS = 7,
-    DTS_DIODE_REG_FLAGS_PASS_ONCE = 0x00000080, /* bits [7:7] */
+  DTS_DIODE_REG_DIG_VAL = 0x000000FF,   /* bits [7:0] */
+  DTS_DIODE_REG_VREF_LOW = 0x0000FF00,  /* bits [15:8] */
+  DTS_DIODE_REG_VREF_HIGH = 0x00FF0000, /* bits [23:16] */
+  DTS_DIODE_REG_VREF_ID = 0x03000000,   /* bits [25:24] */
+  DTS_DIODE_REG_PASS_ONCE = 0x80000000, /* bits [31:31] */
+  DTS_DIODE_REG_FLAGS_MSK = 0xFF000000, /* bits [31:24] */
+  /* Those are the masks INSIDE the flags bit-field: */
+  DTS_DIODE_REG_FLAGS_VREFS_ID_POS = 0,
+  DTS_DIODE_REG_FLAGS_VREFS_ID = 0x00000003, /* bits [1:0] */
+  DTS_DIODE_REG_FLAGS_PASS_ONCE_POS = 7,
+  DTS_DIODE_REG_FLAGS_PASS_ONCE = 0x00000080, /* bits [7:7] */
 };
 
 /*****************************************************************************
@@ -545,30 +545,30 @@ enum dtd_diode_reg {
  * Causes for the FH register interrupts
  */
 enum msix_fh_int_causes {
-    MSIX_FH_INT_CAUSES_Q0 = BIT(0),
-    MSIX_FH_INT_CAUSES_Q1 = BIT(1),
-    MSIX_FH_INT_CAUSES_D2S_CH0_NUM = BIT(16),
-    MSIX_FH_INT_CAUSES_D2S_CH1_NUM = BIT(17),
-    MSIX_FH_INT_CAUSES_S2D = BIT(19),
-    MSIX_FH_INT_CAUSES_FH_ERR = BIT(21),
+  MSIX_FH_INT_CAUSES_Q0 = BIT(0),
+  MSIX_FH_INT_CAUSES_Q1 = BIT(1),
+  MSIX_FH_INT_CAUSES_D2S_CH0_NUM = BIT(16),
+  MSIX_FH_INT_CAUSES_D2S_CH1_NUM = BIT(17),
+  MSIX_FH_INT_CAUSES_S2D = BIT(19),
+  MSIX_FH_INT_CAUSES_FH_ERR = BIT(21),
 };
 
 /*
  * Causes for the HW register interrupts
  */
 enum msix_hw_int_causes {
-    MSIX_HW_INT_CAUSES_REG_ALIVE = BIT(0),
-    MSIX_HW_INT_CAUSES_REG_WAKEUP = BIT(1),
-    MSIX_HW_INT_CAUSES_REG_IPC = BIT(1),
-    MSIX_HW_INT_CAUSES_REG_SW_ERR_V2 = BIT(5),
-    MSIX_HW_INT_CAUSES_REG_CT_KILL = BIT(6),
-    MSIX_HW_INT_CAUSES_REG_RF_KILL = BIT(7),
-    MSIX_HW_INT_CAUSES_REG_PERIODIC = BIT(8),
-    MSIX_HW_INT_CAUSES_REG_SW_ERR = BIT(25),
-    MSIX_HW_INT_CAUSES_REG_SCD = BIT(26),
-    MSIX_HW_INT_CAUSES_REG_FH_TX = BIT(27),
-    MSIX_HW_INT_CAUSES_REG_HW_ERR = BIT(29),
-    MSIX_HW_INT_CAUSES_REG_HAP = BIT(30),
+  MSIX_HW_INT_CAUSES_REG_ALIVE = BIT(0),
+  MSIX_HW_INT_CAUSES_REG_WAKEUP = BIT(1),
+  MSIX_HW_INT_CAUSES_REG_IPC = BIT(1),
+  MSIX_HW_INT_CAUSES_REG_SW_ERR_V2 = BIT(5),
+  MSIX_HW_INT_CAUSES_REG_CT_KILL = BIT(6),
+  MSIX_HW_INT_CAUSES_REG_RF_KILL = BIT(7),
+  MSIX_HW_INT_CAUSES_REG_PERIODIC = BIT(8),
+  MSIX_HW_INT_CAUSES_REG_SW_ERR = BIT(25),
+  MSIX_HW_INT_CAUSES_REG_SCD = BIT(26),
+  MSIX_HW_INT_CAUSES_REG_FH_TX = BIT(27),
+  MSIX_HW_INT_CAUSES_REG_HW_ERR = BIT(29),
+  MSIX_HW_INT_CAUSES_REG_HAP = BIT(30),
 };
 
 #define MSIX_MIN_INTERRUPT_VECTORS 2

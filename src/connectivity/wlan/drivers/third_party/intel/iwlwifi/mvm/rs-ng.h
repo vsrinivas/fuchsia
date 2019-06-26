@@ -58,33 +58,33 @@
 
 #define RS_DRV_DATA_LQ_COLOR_POS (8)
 #define RS_DRV_DATA_PACK(lq_color, reduced_txp) \
-    ((void*)(((lq_color) << RS_DRV_DATA_LQ_COLOR_POS) | ((uintptr_t)reduced_txp)))
+  ((void*)(((lq_color) << RS_DRV_DATA_LQ_COLOR_POS) | ((uintptr_t)reduced_txp)))
 
 struct iwl_mvm;
 struct iwl_mvm_sta;
 
 struct iwl_lq_sta_rs_fw_pers {
-    struct iwl_mvm* drv;
-    uint32_t sta_id;
-    uint8_t chains;
-    int8_t chain_signal[IEEE80211_MAX_CHAINS];
-    int8_t last_rssi;
+  struct iwl_mvm* drv;
+  uint32_t sta_id;
+  uint8_t chains;
+  int8_t chain_signal[IEEE80211_MAX_CHAINS];
+  int8_t last_rssi;
 #ifdef CPTCFG_MAC80211_DEBUGFS
-    uint32_t dbg_fixed_rate;
-    uint32_t dbg_agg_frame_count_lim;
+  uint32_t dbg_fixed_rate;
+  uint32_t dbg_agg_frame_count_lim;
 #endif
 };
 
 struct iwl_lq_sta_rs_fw {
-    uint32_t last_rate_n_flags;
+  uint32_t last_rate_n_flags;
 
-    struct iwl_lq_sta_rs_fw_pers pers;
+  struct iwl_lq_sta_rs_fw_pers pers;
 };
 
 struct iwl_lq_sta {
-    struct iwl_lq_cmd lq;
+  struct iwl_lq_cmd lq;
 
-    RS_MNG_STA_INFO_S pers;
+  RS_MNG_STA_INFO_S pers;
 };
 
 int iwl_mvm_rate_control_register(void);

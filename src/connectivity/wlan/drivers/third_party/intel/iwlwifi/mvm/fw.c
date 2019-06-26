@@ -34,18 +34,17 @@
  *
  *****************************************************************************/
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/acpi.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/dbg.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/img.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-csr.h" /* for iwl_mvm_rx_card_state_notif */
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-debug.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-io.h" /* for iwl_mvm_rx_card_state_notif */
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-op-mode.h"
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-prph.h"
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
-
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/dbg.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-modparams.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-nvm-parse.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-op-mode.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-phy-db.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-prph.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
 #ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/testmode.h"
@@ -58,11 +57,11 @@
 #define UCODE_VALID_OK cpu_to_le32(0x1)
 
 struct iwl_mvm_alive_data {
-    bool valid;
-    uint32_t scd_base_addr;
+  bool valid;
+  uint32_t scd_base_addr;
 };
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
 /* set device type and latency */
 static int iwl_set_soc_latency(struct iwl_mvm* mvm) {
     struct iwl_soc_configuration_cmd cmd;
@@ -494,8 +493,8 @@ static int iwl_send_phy_cfg_cmd(struct iwl_mvm* mvm) {
 #endif  // NEEDS_PORTING
 
 zx_status_t iwl_run_init_mvm_ucode(struct iwl_mvm* mvm, bool read_nvm) {
-    return ZX_ERR_NOT_SUPPORTED;
-#if 0   // NEEDS_PORTING
+  return ZX_ERR_NOT_SUPPORTED;
+#if 0  // NEEDS_PORTING
     struct iwl_notification_wait calib_wait;
     static const uint16_t init_complete[] = {INIT_COMPLETE_NOTIF, CALIB_RES_NOTIF_PHY_DB};
     int ret;
@@ -598,7 +597,7 @@ out:
 #endif  // NEEDS_PORTING
 }
 
-#if 0   // NEEDS_PORTING
+#if 0  // NEEDS_PORTING
 static int iwl_mvm_config_ltr(struct iwl_mvm* mvm) {
     struct iwl_ltr_config_cmd cmd = {
         .flags = cpu_to_le32(LTR_CFG_FLAG_FEATURE_ENABLE),

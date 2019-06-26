@@ -41,19 +41,19 @@
  * enum iwl_mac_conf_subcmd_ids - mac configuration command IDs
  */
 enum iwl_mac_conf_subcmd_ids {
-    /**
-     * @LOW_LATENCY_CMD: &struct iwl_mac_low_latency_cmd
-     */
-    LOW_LATENCY_CMD = 0x3,
-    /**
-     * @PROBE_RESPONSE_DATA_NOTIF: &struct iwl_probe_resp_data_notif
-     */
-    PROBE_RESPONSE_DATA_NOTIF = 0xFC,
+  /**
+   * @LOW_LATENCY_CMD: &struct iwl_mac_low_latency_cmd
+   */
+  LOW_LATENCY_CMD = 0x3,
+  /**
+   * @PROBE_RESPONSE_DATA_NOTIF: &struct iwl_probe_resp_data_notif
+   */
+  PROBE_RESPONSE_DATA_NOTIF = 0xFC,
 
-    /**
-     * @CHANNEL_SWITCH_NOA_NOTIF: &struct iwl_channel_switch_noa_notif
-     */
-    CHANNEL_SWITCH_NOA_NOTIF = 0xFF,
+  /**
+   * @CHANNEL_SWITCH_NOA_NOTIF: &struct iwl_channel_switch_noa_notif
+   */
+  CHANNEL_SWITCH_NOA_NOTIF = 0xFF,
 };
 
 #define IWL_P2P_NOA_DESC_COUNT (2)
@@ -70,13 +70,13 @@ enum iwl_mac_conf_subcmd_ids {
  * @reserved: reserved for alignment purposes
  */
 struct iwl_p2p_noa_attr {
-    uint8_t id;
-    uint8_t len_low;
-    uint8_t len_high;
-    uint8_t idx;
-    uint8_t ctwin;
-    struct ieee80211_p2p_noa_desc desc[IWL_P2P_NOA_DESC_COUNT];
-    uint8_t reserved;
+  uint8_t id;
+  uint8_t len_low;
+  uint8_t len_high;
+  uint8_t idx;
+  uint8_t ctwin;
+  struct ieee80211_p2p_noa_desc desc[IWL_P2P_NOA_DESC_COUNT];
+  uint8_t reserved;
 } __packed;
 
 #define IWL_PROBE_RESP_DATA_NO_CSA (0xff)
@@ -91,11 +91,11 @@ struct iwl_p2p_noa_attr {
  * @reserved: reserved for alignment purposes
  */
 struct iwl_probe_resp_data_notif {
-    __le32 mac_id;
-    __le32 noa_active;
-    struct iwl_p2p_noa_attr noa_attr;
-    uint8_t csa_counter;
-    uint8_t reserved[3];
+  __le32 mac_id;
+  __le32 noa_active;
+  struct iwl_p2p_noa_attr noa_attr;
+  uint8_t csa_counter;
+  uint8_t reserved[3];
 } __packed; /* PROBE_RESPONSE_DATA_NTFY_API_S_VER_1 */
 
 /**
@@ -104,7 +104,7 @@ struct iwl_probe_resp_data_notif {
  * @id_and_color: ID and color of the MAC
  */
 struct iwl_channel_switch_noa_notif {
-    __le32 id_and_color;
+  __le32 id_and_color;
 } __packed; /* CHANNEL_SWITCH_START_NTFY_API_S_VER_1 */
 
 /**
@@ -116,10 +116,10 @@ struct iwl_channel_switch_noa_notif {
  * @reserved: reserved for alignment purposes
  */
 struct iwl_mac_low_latency_cmd {
-    __le32 mac_id;
-    uint8_t low_latency_rx;
-    uint8_t low_latency_tx;
-    __le16 reserved;
+  __le32 mac_id;
+  uint8_t low_latency_rx;
+  uint8_t low_latency_tx;
+  __le16 reserved;
 } __packed; /* MAC_LOW_LATENCY_API_S_VER_1 */
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_MAC_CFG_H_

@@ -34,25 +34,26 @@
  *****************************************************************************/
 
 #include <net/mac80211.h>
+
 #include "fw-api.h"
 #include "mvm.h"
 
 /* Maps the driver specific channel width definition to the fw values */
 uint8_t iwl_mvm_get_channel_width(struct cfg80211_chan_def* chandef) {
-    switch (chandef->width) {
+  switch (chandef->width) {
     case NL80211_CHAN_WIDTH_20_NOHT:
     case NL80211_CHAN_WIDTH_20:
-        return PHY_VHT_CHANNEL_MODE20;
+      return PHY_VHT_CHANNEL_MODE20;
     case NL80211_CHAN_WIDTH_40:
-        return PHY_VHT_CHANNEL_MODE40;
+      return PHY_VHT_CHANNEL_MODE40;
     case NL80211_CHAN_WIDTH_80:
-        return PHY_VHT_CHANNEL_MODE80;
+      return PHY_VHT_CHANNEL_MODE80;
     case NL80211_CHAN_WIDTH_160:
-        return PHY_VHT_CHANNEL_MODE160;
+      return PHY_VHT_CHANNEL_MODE160;
     default:
-        WARN(1, "Invalid channel width=%u", chandef->width);
-        return PHY_VHT_CHANNEL_MODE20;
-    }
+      WARN(1, "Invalid channel width=%u", chandef->width);
+      return PHY_VHT_CHANNEL_MODE20;
+  }
 }
 
 /*
@@ -60,33 +61,33 @@ uint8_t iwl_mvm_get_channel_width(struct cfg80211_chan_def* chandef) {
  * freq) definitions to the the fw values
  */
 uint8_t iwl_mvm_get_ctrl_pos(struct cfg80211_chan_def* chandef) {
-    switch (chandef->chan->center_freq - chandef->center_freq1) {
+  switch (chandef->chan->center_freq - chandef->center_freq1) {
     case -70:
-        return PHY_VHT_CTRL_POS_4_BELOW;
+      return PHY_VHT_CTRL_POS_4_BELOW;
     case -50:
-        return PHY_VHT_CTRL_POS_3_BELOW;
+      return PHY_VHT_CTRL_POS_3_BELOW;
     case -30:
-        return PHY_VHT_CTRL_POS_2_BELOW;
+      return PHY_VHT_CTRL_POS_2_BELOW;
     case -10:
-        return PHY_VHT_CTRL_POS_1_BELOW;
+      return PHY_VHT_CTRL_POS_1_BELOW;
     case 10:
-        return PHY_VHT_CTRL_POS_1_ABOVE;
+      return PHY_VHT_CTRL_POS_1_ABOVE;
     case 30:
-        return PHY_VHT_CTRL_POS_2_ABOVE;
+      return PHY_VHT_CTRL_POS_2_ABOVE;
     case 50:
-        return PHY_VHT_CTRL_POS_3_ABOVE;
+      return PHY_VHT_CTRL_POS_3_ABOVE;
     case 70:
-        return PHY_VHT_CTRL_POS_4_ABOVE;
+      return PHY_VHT_CTRL_POS_4_ABOVE;
     default:
-        WARN(1, "Invalid channel definition");
+      WARN(1, "Invalid channel definition");
     case 0:
-        /*
-         * The FW is expected to check the control channel position only
-         * when in HT/VHT and the channel width is not 20MHz. Return
-         * this value as the default one.
-         */
-        return PHY_VHT_CTRL_POS_1_BELOW;
-    }
+      /*
+       * The FW is expected to check the control channel position only
+       * when in HT/VHT and the channel width is not 20MHz. Return
+       * this value as the default one.
+       */
+      return PHY_VHT_CTRL_POS_1_BELOW;
+  }
 }
 
 /*
@@ -94,11 +95,11 @@ uint8_t iwl_mvm_get_ctrl_pos(struct cfg80211_chan_def* chandef) {
  */
 static void iwl_mvm_phy_ctxt_cmd_hdr(struct iwl_mvm_phy_ctxt* ctxt, struct iwl_phy_context_cmd* cmd,
                                      uint32_t action, uint32_t apply_time) {
-    memset(cmd, 0, sizeof(struct iwl_phy_context_cmd));
+  memset(cmd, 0, sizeof(struct iwl_phy_context_cmd));
 
-    cmd->id_and_color = cpu_to_le32(FW_CMD_ID_AND_COLOR(ctxt->id, ctxt->color));
-    cmd->action = cpu_to_le32(action);
-    cmd->apply_time = cpu_to_le32(apply_time);
+  cmd->id_and_color = cpu_to_le32(FW_CMD_ID_AND_COLOR(ctxt->id, ctxt->color));
+  cmd->action = cpu_to_le32(action);
+  cmd->apply_time = cpu_to_le32(apply_time);
 }
 
 /*
@@ -107,39 +108,41 @@ static void iwl_mvm_phy_ctxt_cmd_hdr(struct iwl_mvm_phy_ctxt* ctxt, struct iwl_p
 static void iwl_mvm_phy_ctxt_cmd_data(struct iwl_mvm* mvm, struct iwl_phy_context_cmd* cmd,
                                       struct cfg80211_chan_def* chandef, uint8_t chains_static,
                                       uint8_t chains_dynamic) {
-    uint8_t active_cnt, idle_cnt;
+  uint8_t active_cnt, idle_cnt;
 
-    /* Set the channel info data */
-    cmd->ci.band = (chandef->chan->band == NL80211_BAND_2GHZ ? PHY_BAND_24 : PHY_BAND_5);
+  /* Set the channel info data */
+  cmd->ci.band = (chandef->chan->band == NL80211_BAND_2GHZ ? PHY_BAND_24 : PHY_BAND_5);
 
-    cmd->ci.channel = chandef->chan->hw_value;
-    cmd->ci.width = iwl_mvm_get_channel_width(chandef);
-    cmd->ci.ctrl_pos = iwl_mvm_get_ctrl_pos(chandef);
+  cmd->ci.channel = chandef->chan->hw_value;
+  cmd->ci.width = iwl_mvm_get_channel_width(chandef);
+  cmd->ci.ctrl_pos = iwl_mvm_get_ctrl_pos(chandef);
 
-    /* Set rx the chains */
-    idle_cnt = chains_static;
-    active_cnt = chains_dynamic;
+  /* Set rx the chains */
+  idle_cnt = chains_static;
+  active_cnt = chains_dynamic;
 
-    /* In scenarios where we only ever use a single-stream rates,
-     * i.e. legacy 11b/g/a associations, single-stream APs or even
-     * static SMPS, enable both chains to get diversity, improving
-     * the case where we're far enough from the AP that attenuation
-     * between the two antennas is sufficiently different to impact
-     * performance.
-     */
-    if (active_cnt == 1 && iwl_mvm_rx_diversity_allowed(mvm)) {
-        idle_cnt = 2;
-        active_cnt = 2;
-    }
+  /* In scenarios where we only ever use a single-stream rates,
+   * i.e. legacy 11b/g/a associations, single-stream APs or even
+   * static SMPS, enable both chains to get diversity, improving
+   * the case where we're far enough from the AP that attenuation
+   * between the two antennas is sufficiently different to impact
+   * performance.
+   */
+  if (active_cnt == 1 && iwl_mvm_rx_diversity_allowed(mvm)) {
+    idle_cnt = 2;
+    active_cnt = 2;
+  }
 
-    cmd->rxchain_info = cpu_to_le32(iwl_mvm_get_valid_rx_ant(mvm) << PHY_RX_CHAIN_VALID_POS);
-    cmd->rxchain_info |= cpu_to_le32(idle_cnt << PHY_RX_CHAIN_CNT_POS);
-    cmd->rxchain_info |= cpu_to_le32(active_cnt << PHY_RX_CHAIN_MIMO_CNT_POS);
+  cmd->rxchain_info = cpu_to_le32(iwl_mvm_get_valid_rx_ant(mvm) << PHY_RX_CHAIN_VALID_POS);
+  cmd->rxchain_info |= cpu_to_le32(idle_cnt << PHY_RX_CHAIN_CNT_POS);
+  cmd->rxchain_info |= cpu_to_le32(active_cnt << PHY_RX_CHAIN_MIMO_CNT_POS);
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
-    if (unlikely(mvm->dbgfs_rx_phyinfo)) { cmd->rxchain_info = cpu_to_le32(mvm->dbgfs_rx_phyinfo); }
+  if (unlikely(mvm->dbgfs_rx_phyinfo)) {
+    cmd->rxchain_info = cpu_to_le32(mvm->dbgfs_rx_phyinfo);
+  }
 #endif
 
-    cmd->txchain_info = cpu_to_le32(iwl_mvm_get_valid_tx_ant(mvm));
+  cmd->txchain_info = cpu_to_le32(iwl_mvm_get_valid_tx_ant(mvm));
 }
 
 /*
@@ -151,18 +154,20 @@ static void iwl_mvm_phy_ctxt_cmd_data(struct iwl_mvm* mvm, struct iwl_phy_contex
 static int iwl_mvm_phy_ctxt_apply(struct iwl_mvm* mvm, struct iwl_mvm_phy_ctxt* ctxt,
                                   struct cfg80211_chan_def* chandef, uint8_t chains_static,
                                   uint8_t chains_dynamic, uint32_t action, uint32_t apply_time) {
-    struct iwl_phy_context_cmd cmd;
-    int ret;
+  struct iwl_phy_context_cmd cmd;
+  int ret;
 
-    /* Set the command header fields */
-    iwl_mvm_phy_ctxt_cmd_hdr(ctxt, &cmd, action, apply_time);
+  /* Set the command header fields */
+  iwl_mvm_phy_ctxt_cmd_hdr(ctxt, &cmd, action, apply_time);
 
-    /* Set the command data */
-    iwl_mvm_phy_ctxt_cmd_data(mvm, &cmd, chandef, chains_static, chains_dynamic);
+  /* Set the command data */
+  iwl_mvm_phy_ctxt_cmd_data(mvm, &cmd, chandef, chains_static, chains_dynamic);
 
-    ret = iwl_mvm_send_cmd_pdu(mvm, PHY_CONTEXT_CMD, 0, sizeof(struct iwl_phy_context_cmd), &cmd);
-    if (ret) { IWL_ERR(mvm, "PHY ctxt cmd error. ret=%d\n", ret); }
-    return ret;
+  ret = iwl_mvm_send_cmd_pdu(mvm, PHY_CONTEXT_CMD, 0, sizeof(struct iwl_phy_context_cmd), &cmd);
+  if (ret) {
+    IWL_ERR(mvm, "PHY ctxt cmd error. ret=%d\n", ret);
+  }
+  return ret;
 }
 
 /*
@@ -171,17 +176,17 @@ static int iwl_mvm_phy_ctxt_apply(struct iwl_mvm* mvm, struct iwl_mvm_phy_ctxt* 
 int iwl_mvm_phy_ctxt_add(struct iwl_mvm* mvm, struct iwl_mvm_phy_ctxt* ctxt,
                          struct cfg80211_chan_def* chandef, uint8_t chains_static,
                          uint8_t chains_dynamic) {
-    WARN_ON(!test_bit(IWL_MVM_STATUS_IN_HW_RESTART, &mvm->status) && ctxt->ref);
-    lockdep_assert_held(&mvm->mutex);
+  WARN_ON(!test_bit(IWL_MVM_STATUS_IN_HW_RESTART, &mvm->status) && ctxt->ref);
+  lockdep_assert_held(&mvm->mutex);
 
-    ctxt->channel = chandef->chan;
+  ctxt->channel = chandef->chan;
 
 #ifdef CPTCFG_IWLWIFI_FRQ_MGR
-    ctxt->fm_tx_power_limit = IWL_DEFAULT_MAX_TX_POWER;
+  ctxt->fm_tx_power_limit = IWL_DEFAULT_MAX_TX_POWER;
 #endif
 
-    return iwl_mvm_phy_ctxt_apply(mvm, ctxt, chandef, chains_static, chains_dynamic,
-                                  FW_CTXT_ACTION_ADD, 0);
+  return iwl_mvm_phy_ctxt_apply(mvm, ctxt, chandef, chains_static, chains_dynamic,
+                                FW_CTXT_ACTION_ADD, 0);
 }
 
 /*
@@ -189,8 +194,8 @@ int iwl_mvm_phy_ctxt_add(struct iwl_mvm* mvm, struct iwl_mvm_phy_ctxt* ctxt,
  * in case the PHY context was already created, i.e., its reference count > 0.
  */
 void iwl_mvm_phy_ctxt_ref(struct iwl_mvm* mvm, struct iwl_mvm_phy_ctxt* ctxt) {
-    lockdep_assert_held(&mvm->mutex);
-    ctxt->ref++;
+  lockdep_assert_held(&mvm->mutex);
+  ctxt->ref++;
 }
 
 /*
@@ -201,66 +206,72 @@ void iwl_mvm_phy_ctxt_ref(struct iwl_mvm* mvm, struct iwl_mvm_phy_ctxt* ctxt) {
 int iwl_mvm_phy_ctxt_changed(struct iwl_mvm* mvm, struct iwl_mvm_phy_ctxt* ctxt,
                              struct cfg80211_chan_def* chandef, uint8_t chains_static,
                              uint8_t chains_dynamic) {
-    enum iwl_ctxt_action action = FW_CTXT_ACTION_MODIFY;
+  enum iwl_ctxt_action action = FW_CTXT_ACTION_MODIFY;
 
-    lockdep_assert_held(&mvm->mutex);
+  lockdep_assert_held(&mvm->mutex);
 
-    if (fw_has_capa(&mvm->fw->ucode_capa, IWL_UCODE_TLV_CAPA_BINDING_CDB_SUPPORT) &&
-        ctxt->channel->band != chandef->chan->band) {
-        int ret;
+  if (fw_has_capa(&mvm->fw->ucode_capa, IWL_UCODE_TLV_CAPA_BINDING_CDB_SUPPORT) &&
+      ctxt->channel->band != chandef->chan->band) {
+    int ret;
 
-        /* ... remove it here ...*/
-        ret = iwl_mvm_phy_ctxt_apply(mvm, ctxt, chandef, chains_static, chains_dynamic,
-                                     FW_CTXT_ACTION_REMOVE, 0);
-        if (ret) { return ret; }
-
-        /* ... and proceed to add it again */
-        action = FW_CTXT_ACTION_ADD;
+    /* ... remove it here ...*/
+    ret = iwl_mvm_phy_ctxt_apply(mvm, ctxt, chandef, chains_static, chains_dynamic,
+                                 FW_CTXT_ACTION_REMOVE, 0);
+    if (ret) {
+      return ret;
     }
 
-    ctxt->channel = chandef->chan;
-    ctxt->width = chandef->width;
-    return iwl_mvm_phy_ctxt_apply(mvm, ctxt, chandef, chains_static, chains_dynamic, action, 0);
+    /* ... and proceed to add it again */
+    action = FW_CTXT_ACTION_ADD;
+  }
+
+  ctxt->channel = chandef->chan;
+  ctxt->width = chandef->width;
+  return iwl_mvm_phy_ctxt_apply(mvm, ctxt, chandef, chains_static, chains_dynamic, action, 0);
 }
 
 void iwl_mvm_phy_ctxt_unref(struct iwl_mvm* mvm, struct iwl_mvm_phy_ctxt* ctxt) {
-    lockdep_assert_held(&mvm->mutex);
+  lockdep_assert_held(&mvm->mutex);
 
-    if (WARN_ON_ONCE(!ctxt)) { return; }
+  if (WARN_ON_ONCE(!ctxt)) {
+    return;
+  }
 
-    ctxt->ref--;
+  ctxt->ref--;
 
-    /*
-     * Move unused phy's to a default channel. When the phy is moved the,
-     * fw will cleanup immediate quiet bit if it was previously set,
-     * otherwise we might not be able to reuse this phy.
-     */
-    if (ctxt->ref == 0) {
-        struct ieee80211_channel* chan;
-        struct cfg80211_chan_def chandef;
+  /*
+   * Move unused phy's to a default channel. When the phy is moved the,
+   * fw will cleanup immediate quiet bit if it was previously set,
+   * otherwise we might not be able to reuse this phy.
+   */
+  if (ctxt->ref == 0) {
+    struct ieee80211_channel* chan;
+    struct cfg80211_chan_def chandef;
 
-        chan = &mvm->hw->wiphy->bands[NL80211_BAND_2GHZ]->channels[0];
-        cfg80211_chandef_create(&chandef, chan, NL80211_CHAN_NO_HT);
-        iwl_mvm_phy_ctxt_changed(mvm, ctxt, &chandef, 1, 1);
-    }
+    chan = &mvm->hw->wiphy->bands[NL80211_BAND_2GHZ]->channels[0];
+    cfg80211_chandef_create(&chandef, chan, NL80211_CHAN_NO_HT);
+    iwl_mvm_phy_ctxt_changed(mvm, ctxt, &chandef, 1, 1);
+  }
 }
 
 static void iwl_mvm_binding_iterator(void* _data, uint8_t* mac, struct ieee80211_vif* vif) {
-    unsigned long* data = _data;
-    struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
+  unsigned long* data = _data;
+  struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
 
-    if (!mvmvif->phy_ctxt) { return; }
+  if (!mvmvif->phy_ctxt) {
+    return;
+  }
 
-    if (vif->type == NL80211_IFTYPE_STATION || vif->type == NL80211_IFTYPE_AP) {
-        __set_bit(mvmvif->phy_ctxt->id, data);
-    }
+  if (vif->type == NL80211_IFTYPE_STATION || vif->type == NL80211_IFTYPE_AP) {
+    __set_bit(mvmvif->phy_ctxt->id, data);
+  }
 }
 
 int iwl_mvm_phy_ctx_count(struct iwl_mvm* mvm) {
-    unsigned long phy_ctxt_counter = 0;
+  unsigned long phy_ctxt_counter = 0;
 
-    ieee80211_iterate_active_interfaces_atomic(mvm->hw, IEEE80211_IFACE_ITER_NORMAL,
-                                               iwl_mvm_binding_iterator, &phy_ctxt_counter);
+  ieee80211_iterate_active_interfaces_atomic(mvm->hw, IEEE80211_IFACE_ITER_NORMAL,
+                                             iwl_mvm_binding_iterator, &phy_ctxt_counter);
 
-    return hweight8(phy_ctxt_counter);
+  return hweight8(phy_ctxt_counter);
 }

@@ -65,21 +65,21 @@
  *****************************************************************************/
 
 typedef enum _TLC_MNG_NSS_E {
-    TLC_MNG_NSS_1,
-    TLC_MNG_NSS_2,
+  TLC_MNG_NSS_1,
+  TLC_MNG_NSS_2,
 
-    TLC_MNG_NSS_MAX,
+  TLC_MNG_NSS_MAX,
 } TLC_MNG_NSS_E;
 
 typedef enum _TLC_MNG_MODE_E {
-    TLC_MNG_MODE_CCK = 0,
-    TLC_MNG_MODE_OFDM_LEGACY = TLC_MNG_MODE_CCK,
-    TLC_MNG_MODE_LEGACY = TLC_MNG_MODE_CCK,
-    TLC_MNG_MODE_HT,
-    TLC_MNG_MODE_VHT,
-    TLC_MNG_MODE_HE,
-    TLC_MNG_MODE_INVALID,  // keep last
-    TLC_MNG_MODE_NUM = TLC_MNG_MODE_INVALID,
+  TLC_MNG_MODE_CCK = 0,
+  TLC_MNG_MODE_OFDM_LEGACY = TLC_MNG_MODE_CCK,
+  TLC_MNG_MODE_LEGACY = TLC_MNG_MODE_CCK,
+  TLC_MNG_MODE_HT,
+  TLC_MNG_MODE_VHT,
+  TLC_MNG_MODE_HE,
+  TLC_MNG_MODE_INVALID,  // keep last
+  TLC_MNG_MODE_NUM = TLC_MNG_MODE_INVALID,
 } TLC_MNG_MODE_E;
 
 // TLC_MNG_CONFIG_FLAGS - set the bit when the feature is enabled
@@ -124,11 +124,11 @@ typedef enum _TLC_MNG_MODE_E {
 #define TLC_MNG_CONFIG_FLAGS_HE_BLOCK_2X_LTF_MSK BIT(15)
 
 typedef enum _TLC_MNG_CH_WIDTH_E {
-    TLC_MNG_CH_WIDTH_20MHZ,
-    TLC_MNG_CH_WIDTH_40MHZ,
-    TLC_MNG_CH_WIDTH_80MHZ,
-    TLC_MNG_CH_WIDTH_160MHZ,
-    TLC_MNG_CH_WIDTH_MAX,
+  TLC_MNG_CH_WIDTH_20MHZ,
+  TLC_MNG_CH_WIDTH_40MHZ,
+  TLC_MNG_CH_WIDTH_80MHZ,
+  TLC_MNG_CH_WIDTH_160MHZ,
+  TLC_MNG_CH_WIDTH_MAX,
 } TLC_MNG_CH_WIDTH_E;
 
 #define TLC_MNG_CHAIN_A_MSK BIT(0)
@@ -138,40 +138,40 @@ typedef enum _TLC_MNG_CH_WIDTH_E {
 #define TLC_AMSDU_SUPPORTED 1
 
 typedef struct _TLC_MNG_CONFIG_PARAMS_CMD_API_S_VER_2 {
-    U08 maxChWidth;      // one of TLC_MNG_CH_WIDTH_E
-    U08 bestSuppMode;    // best mode supported - as defined above in TLC_MNG_MODE_E
-    U08 chainsEnabled;   // bitmask of TLC_MNG_CHAIN_[A/B]_MSK
-    U08 amsduSupported;  // TX AMSDU transmission is supported
-    // Use TLC_AMSDU_[NOT_]SUPPORTED
-    U16 configFlags;  // bitmask of TLC_MNG_CONFIG_FLAGS_*
-    U16 nonHt;        // bitmap of supported non-HT CCK and OFDM rates
-    /* bit   | rate
-       -------|--------
-       0    | R_1M   CCK
-       1    | R_2M   CCK
-       2    | R_5_5M CCK
-       3    | R_11M  CCK
-       4    | R_6M   OFDM
-       5    | R_9M   OFDM
-       6    | R_12M  OFDM
-       7    | R_18M  OFDM
-       8    | R_24M  OFDM
-       9    | R_36M  OFDM
-       10   | R_48M  OFDM
-       11   | R_54M  OFDM
-       */
-    U16 mcs[TLC_MNG_NSS_MAX][2];  // supported HT/VHT/HE rates per nss. [0] for 80mhz width
-    // and lower, [1] for 160mhz.
-    // This is done in order to conform with HE capabilites.
-    U16 maxMpduLen;  // Max length of MPDU, in bytes.
-    // Used to calculate allowed A-MSDU sizes.
-    U08 sgiChWidthSupport;  // bitmap of SGI support per channel width.
-    // use 1 << BIT(TLC_MNG_CH_WIDTH_*) to indicate sgi support
-    // for that channel width.
-    // unused for HE.
-    U08 reserved1[1];
+  U08 maxChWidth;      // one of TLC_MNG_CH_WIDTH_E
+  U08 bestSuppMode;    // best mode supported - as defined above in TLC_MNG_MODE_E
+  U08 chainsEnabled;   // bitmask of TLC_MNG_CHAIN_[A/B]_MSK
+  U08 amsduSupported;  // TX AMSDU transmission is supported
+  // Use TLC_AMSDU_[NOT_]SUPPORTED
+  U16 configFlags;  // bitmask of TLC_MNG_CONFIG_FLAGS_*
+  U16 nonHt;        // bitmap of supported non-HT CCK and OFDM rates
+  /* bit   | rate
+     -------|--------
+     0    | R_1M   CCK
+     1    | R_2M   CCK
+     2    | R_5_5M CCK
+     3    | R_11M  CCK
+     4    | R_6M   OFDM
+     5    | R_9M   OFDM
+     6    | R_12M  OFDM
+     7    | R_18M  OFDM
+     8    | R_24M  OFDM
+     9    | R_36M  OFDM
+     10   | R_48M  OFDM
+     11   | R_54M  OFDM
+     */
+  U16 mcs[TLC_MNG_NSS_MAX][2];  // supported HT/VHT/HE rates per nss. [0] for 80mhz width
+  // and lower, [1] for 160mhz.
+  // This is done in order to conform with HE capabilites.
+  U16 maxMpduLen;  // Max length of MPDU, in bytes.
+  // Used to calculate allowed A-MSDU sizes.
+  U08 sgiChWidthSupport;  // bitmap of SGI support per channel width.
+  // use 1 << BIT(TLC_MNG_CH_WIDTH_*) to indicate sgi support
+  // for that channel width.
+  // unused for HE.
+  U08 reserved1[1];
 
-    enum nl80211_band band;
+  enum nl80211_band band;
 } TLC_MNG_CONFIG_PARAMS_CMD_API_S_VER_2;
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_APIGROUPDATAPATH_H_

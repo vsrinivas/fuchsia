@@ -84,23 +84,21 @@ uint64_t iwl_acpi_get_pwr_limit(struct device* dev);
 #else /* CONFIG_ACPI */
 
 static inline void* iwl_acpi_get_object(struct device* dev, acpi_string method) {
-    // NEEDS_PORTING return ERR_PTR(-ENOENT);
-    return NULL;
+  // NEEDS_PORTING return ERR_PTR(-ENOENT);
+  return NULL;
 }
 
 static inline union acpi_object* iwl_acpi_get_wifi_pkg(struct device* dev, union acpi_object* data,
                                                        int data_size) {
-    // NEEDS_PORTING return ERR_PTR(-ENOENT);
-    return NULL;
+  // NEEDS_PORTING return ERR_PTR(-ENOENT);
+  return NULL;
 }
 
 static inline zx_status_t iwl_acpi_get_mcc(struct device* dev, char* mcc) {
-    return ZX_ERR_NOT_FOUND;
+  return ZX_ERR_NOT_FOUND;
 }
 
-static inline uint64_t iwl_acpi_get_pwr_limit(struct device* dev) {
-    return 0;
-}
+static inline uint64_t iwl_acpi_get_pwr_limit(struct device* dev) { return 0; }
 
 #endif  /* CONFIG_ACPI */
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_ACPI_H_

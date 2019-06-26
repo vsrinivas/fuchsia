@@ -38,26 +38,26 @@
 
 /* v1/v2 uCode file layout */
 struct iwl_ucode_header {
-    __le32 ver; /* major/minor/API/serial */
-    union {
-        struct {
-            __le32 inst_size;      /* bytes of runtime code */
-            __le32 data_size;      /* bytes of runtime data */
-            __le32 init_size;      /* bytes of init code */
-            __le32 init_data_size; /* bytes of init data */
-            __le32 boot_size;      /* bytes of bootstrap code */
-            uint8_t data[0];       /* in same order as sizes */
-        } v1;
-        struct {
-            __le32 build;          /* build number */
-            __le32 inst_size;      /* bytes of runtime code */
-            __le32 data_size;      /* bytes of runtime data */
-            __le32 init_size;      /* bytes of init code */
-            __le32 init_data_size; /* bytes of init data */
-            __le32 boot_size;      /* bytes of bootstrap code */
-            uint8_t data[0];       /* in same order as sizes */
-        } v2;
-    } u;
+  __le32 ver; /* major/minor/API/serial */
+  union {
+    struct {
+      __le32 inst_size;      /* bytes of runtime code */
+      __le32 data_size;      /* bytes of runtime data */
+      __le32 init_size;      /* bytes of init code */
+      __le32 init_data_size; /* bytes of init data */
+      __le32 boot_size;      /* bytes of bootstrap code */
+      uint8_t data[0];       /* in same order as sizes */
+    } v1;
+    struct {
+      __le32 build;          /* build number */
+      __le32 inst_size;      /* bytes of runtime code */
+      __le32 data_size;      /* bytes of runtime data */
+      __le32 init_size;      /* bytes of init code */
+      __le32 init_data_size; /* bytes of init data */
+      __le32 boot_size;      /* bytes of bootstrap code */
+      uint8_t data[0];       /* in same order as sizes */
+    } v2;
+  } u;
 };
 
 #define IWL_UCODE_INI_TLV_GROUP BIT(24)
@@ -70,64 +70,64 @@ struct iwl_ucode_header {
  */
 
 enum iwl_ucode_tlv_type {
-    IWL_UCODE_TLV_INVALID = 0, /* unused */
-    IWL_UCODE_TLV_INST = 1,
-    IWL_UCODE_TLV_DATA = 2,
-    IWL_UCODE_TLV_INIT = 3,
-    IWL_UCODE_TLV_INIT_DATA = 4,
-    IWL_UCODE_TLV_BOOT = 5,
-    IWL_UCODE_TLV_PROBE_MAX_LEN = 6, /* a uint32_t value */
-    IWL_UCODE_TLV_PAN = 7,
-    IWL_UCODE_TLV_RUNT_EVTLOG_PTR = 8,
-    IWL_UCODE_TLV_RUNT_EVTLOG_SIZE = 9,
-    IWL_UCODE_TLV_RUNT_ERRLOG_PTR = 10,
-    IWL_UCODE_TLV_INIT_EVTLOG_PTR = 11,
-    IWL_UCODE_TLV_INIT_EVTLOG_SIZE = 12,
-    IWL_UCODE_TLV_INIT_ERRLOG_PTR = 13,
-    IWL_UCODE_TLV_ENHANCE_SENS_TBL = 14,
-    IWL_UCODE_TLV_PHY_CALIBRATION_SIZE = 15,
-    IWL_UCODE_TLV_WOWLAN_INST = 16,
-    IWL_UCODE_TLV_WOWLAN_DATA = 17,
-    IWL_UCODE_TLV_FLAGS = 18,
-    IWL_UCODE_TLV_SEC_RT = 19,
-    IWL_UCODE_TLV_SEC_INIT = 20,
-    IWL_UCODE_TLV_SEC_WOWLAN = 21,
-    IWL_UCODE_TLV_DEF_CALIB = 22,
-    IWL_UCODE_TLV_PHY_SKU = 23,
-    IWL_UCODE_TLV_SECURE_SEC_RT = 24,
-    IWL_UCODE_TLV_SECURE_SEC_INIT = 25,
-    IWL_UCODE_TLV_SECURE_SEC_WOWLAN = 26,
-    IWL_UCODE_TLV_NUM_OF_CPU = 27,
-    IWL_UCODE_TLV_CSCHEME = 28,
-    IWL_UCODE_TLV_API_CHANGES_SET = 29,
-    IWL_UCODE_TLV_ENABLED_CAPABILITIES = 30,
-    IWL_UCODE_TLV_N_SCAN_CHANNELS = 31,
-    IWL_UCODE_TLV_PAGING = 32,
-    IWL_UCODE_TLV_SEC_RT_USNIFFER = 34,
-    /* 35 is unused */
-    IWL_UCODE_TLV_FW_VERSION = 36,
-    IWL_UCODE_TLV_FW_DBG_DEST = 38,
-    IWL_UCODE_TLV_FW_DBG_CONF = 39,
-    IWL_UCODE_TLV_FW_DBG_TRIGGER = 40,
-    IWL_UCODE_TLV_FW_GSCAN_CAPA = 50,
-    IWL_UCODE_TLV_FW_MEM_SEG = 51,
-    IWL_UCODE_TLV_IML = 52,
-    IWL_UCODE_TLV_FW_FMAC_API_VERSION = 53,
-    IWL_UCODE_TLV_FW_FMAC_RECOVERY_INFO = 59,
-    IWL_UCODE_TLV_TYPE_BUFFER_ALLOCATION = IWL_UCODE_INI_TLV_GROUP | 0x1,
-    IWL_UCODE_TLV_TYPE_HCMD = IWL_UCODE_INI_TLV_GROUP | 0x2,
-    IWL_UCODE_TLV_TYPE_REGIONS = IWL_UCODE_INI_TLV_GROUP | 0x3,
-    IWL_UCODE_TLV_TYPE_TRIGGERS = IWL_UCODE_INI_TLV_GROUP | 0x4,
-    IWL_UCODE_TLV_TYPE_DEBUG_FLOW = IWL_UCODE_INI_TLV_GROUP | 0x5,
+  IWL_UCODE_TLV_INVALID = 0, /* unused */
+  IWL_UCODE_TLV_INST = 1,
+  IWL_UCODE_TLV_DATA = 2,
+  IWL_UCODE_TLV_INIT = 3,
+  IWL_UCODE_TLV_INIT_DATA = 4,
+  IWL_UCODE_TLV_BOOT = 5,
+  IWL_UCODE_TLV_PROBE_MAX_LEN = 6, /* a uint32_t value */
+  IWL_UCODE_TLV_PAN = 7,
+  IWL_UCODE_TLV_RUNT_EVTLOG_PTR = 8,
+  IWL_UCODE_TLV_RUNT_EVTLOG_SIZE = 9,
+  IWL_UCODE_TLV_RUNT_ERRLOG_PTR = 10,
+  IWL_UCODE_TLV_INIT_EVTLOG_PTR = 11,
+  IWL_UCODE_TLV_INIT_EVTLOG_SIZE = 12,
+  IWL_UCODE_TLV_INIT_ERRLOG_PTR = 13,
+  IWL_UCODE_TLV_ENHANCE_SENS_TBL = 14,
+  IWL_UCODE_TLV_PHY_CALIBRATION_SIZE = 15,
+  IWL_UCODE_TLV_WOWLAN_INST = 16,
+  IWL_UCODE_TLV_WOWLAN_DATA = 17,
+  IWL_UCODE_TLV_FLAGS = 18,
+  IWL_UCODE_TLV_SEC_RT = 19,
+  IWL_UCODE_TLV_SEC_INIT = 20,
+  IWL_UCODE_TLV_SEC_WOWLAN = 21,
+  IWL_UCODE_TLV_DEF_CALIB = 22,
+  IWL_UCODE_TLV_PHY_SKU = 23,
+  IWL_UCODE_TLV_SECURE_SEC_RT = 24,
+  IWL_UCODE_TLV_SECURE_SEC_INIT = 25,
+  IWL_UCODE_TLV_SECURE_SEC_WOWLAN = 26,
+  IWL_UCODE_TLV_NUM_OF_CPU = 27,
+  IWL_UCODE_TLV_CSCHEME = 28,
+  IWL_UCODE_TLV_API_CHANGES_SET = 29,
+  IWL_UCODE_TLV_ENABLED_CAPABILITIES = 30,
+  IWL_UCODE_TLV_N_SCAN_CHANNELS = 31,
+  IWL_UCODE_TLV_PAGING = 32,
+  IWL_UCODE_TLV_SEC_RT_USNIFFER = 34,
+  /* 35 is unused */
+  IWL_UCODE_TLV_FW_VERSION = 36,
+  IWL_UCODE_TLV_FW_DBG_DEST = 38,
+  IWL_UCODE_TLV_FW_DBG_CONF = 39,
+  IWL_UCODE_TLV_FW_DBG_TRIGGER = 40,
+  IWL_UCODE_TLV_FW_GSCAN_CAPA = 50,
+  IWL_UCODE_TLV_FW_MEM_SEG = 51,
+  IWL_UCODE_TLV_IML = 52,
+  IWL_UCODE_TLV_FW_FMAC_API_VERSION = 53,
+  IWL_UCODE_TLV_FW_FMAC_RECOVERY_INFO = 59,
+  IWL_UCODE_TLV_TYPE_BUFFER_ALLOCATION = IWL_UCODE_INI_TLV_GROUP | 0x1,
+  IWL_UCODE_TLV_TYPE_HCMD = IWL_UCODE_INI_TLV_GROUP | 0x2,
+  IWL_UCODE_TLV_TYPE_REGIONS = IWL_UCODE_INI_TLV_GROUP | 0x3,
+  IWL_UCODE_TLV_TYPE_TRIGGERS = IWL_UCODE_INI_TLV_GROUP | 0x4,
+  IWL_UCODE_TLV_TYPE_DEBUG_FLOW = IWL_UCODE_INI_TLV_GROUP | 0x5,
 
-    /* TLVs 0x1000-0x2000 are for internal driver usage */
-    IWL_UCODE_TLV_FW_DBG_DUMP_LST = 0x1000,
+  /* TLVs 0x1000-0x2000 are for internal driver usage */
+  IWL_UCODE_TLV_FW_DBG_DUMP_LST = 0x1000,
 };
 
 struct iwl_ucode_tlv {
-    __le32 type;   /* see above */
-    __le32 length; /* not including type/length fields */
-    uint8_t data[0];
+  __le32 type;   /* see above */
+  __le32 length; /* not including type/length fields */
+  uint8_t data[0];
 };
 
 #define IWL_TLV_FW_DBG_MAGIC 0xb5221389
@@ -135,26 +135,26 @@ struct iwl_ucode_tlv {
 #define FW_VER_HUMAN_READABLE_SZ 64
 
 struct iwl_tlv_ucode_header {
-    /*
-     * The TLV style ucode header is distinguished from
-     * the v1/v2 style header by first four bytes being
-     * zero, as such is an invalid combination of
-     * major/minor/API/serial versions.
-     */
-    __le32 zero;
-    __le32 magic;
-    uint8_t human_readable[FW_VER_HUMAN_READABLE_SZ];
-    /* major/minor/API/serial or major in new format */
-    __le32 ver;
-    __le32 build;
-    __le64 ignore;
-    /*
-     * The data contained herein has a TLV layout,
-     * see above for the TLV header and types.
-     * Note that each TLV is padded to a length
-     * that is a multiple of 4 for alignment.
-     */
-    uint8_t data[0];
+  /*
+   * The TLV style ucode header is distinguished from
+   * the v1/v2 style header by first four bytes being
+   * zero, as such is an invalid combination of
+   * major/minor/API/serial versions.
+   */
+  __le32 zero;
+  __le32 magic;
+  uint8_t human_readable[FW_VER_HUMAN_READABLE_SZ];
+  /* major/minor/API/serial or major in new format */
+  __le32 ver;
+  __le32 build;
+  __le64 ignore;
+  /*
+   * The data contained herein has a TLV layout,
+   * see above for the TLV header and types.
+   * Note that each TLV is padded to a length
+   * that is a multiple of 4 for alignment.
+   */
+  uint8_t data[0];
 };
 
 /*
@@ -163,13 +163,13 @@ struct iwl_tlv_ucode_header {
  * ability to get extension for: flags & capabilities from ucode binaries files
  */
 struct iwl_ucode_api {
-    __le32 api_index;
-    __le32 api_flags;
+  __le32 api_index;
+  __le32 api_flags;
 } __packed;
 
 struct iwl_ucode_capa {
-    __le32 api_index;
-    __le32 api_capa;
+  __le32 api_index;
+  __le32 api_capa;
 } __packed;
 
 /**
@@ -194,20 +194,20 @@ struct iwl_ucode_capa {
  * @IWL_UCODE_TLV_FLAGS_EBS_SUPPORT: this uCode image supports EBS.
  */
 enum iwl_ucode_tlv_flag {
-    IWL_UCODE_TLV_FLAGS_PAN = BIT(0),
-    IWL_UCODE_TLV_FLAGS_NEWSCAN = BIT(1),
-    IWL_UCODE_TLV_FLAGS_MFP = BIT(2),
-    IWL_UCODE_TLV_FLAGS_SHORT_BL = BIT(7),
-    IWL_UCODE_TLV_FLAGS_D3_6_IPV6_ADDRS = BIT(10),
-    IWL_UCODE_TLV_FLAGS_NO_BASIC_SSID = BIT(12),
-    IWL_UCODE_TLV_FLAGS_NEW_NSOFFL_SMALL = BIT(15),
-    IWL_UCODE_TLV_FLAGS_NEW_NSOFFL_LARGE = BIT(16),
-    IWL_UCODE_TLV_FLAGS_UAPSD_SUPPORT = BIT(24),
-    IWL_UCODE_TLV_FLAGS_EBS_SUPPORT = BIT(25),
-    IWL_UCODE_TLV_FLAGS_P2P_PS_UAPSD = BIT(26),
-    IWL_UCODE_TLV_FLAGS_BCAST_FILTERING = BIT(29),
+  IWL_UCODE_TLV_FLAGS_PAN = BIT(0),
+  IWL_UCODE_TLV_FLAGS_NEWSCAN = BIT(1),
+  IWL_UCODE_TLV_FLAGS_MFP = BIT(2),
+  IWL_UCODE_TLV_FLAGS_SHORT_BL = BIT(7),
+  IWL_UCODE_TLV_FLAGS_D3_6_IPV6_ADDRS = BIT(10),
+  IWL_UCODE_TLV_FLAGS_NO_BASIC_SSID = BIT(12),
+  IWL_UCODE_TLV_FLAGS_NEW_NSOFFL_SMALL = BIT(15),
+  IWL_UCODE_TLV_FLAGS_NEW_NSOFFL_LARGE = BIT(16),
+  IWL_UCODE_TLV_FLAGS_UAPSD_SUPPORT = BIT(24),
+  IWL_UCODE_TLV_FLAGS_EBS_SUPPORT = BIT(25),
+  IWL_UCODE_TLV_FLAGS_P2P_PS_UAPSD = BIT(26),
+  IWL_UCODE_TLV_FLAGS_BCAST_FILTERING = BIT(29),
 #ifdef CPTCFG_IWLWIFI_LTE_COEX
-    IWL_UCODE_TLV_FLAGS_LTE_COEX = BIT(31),
+  IWL_UCODE_TLV_FLAGS_LTE_COEX = BIT(31),
 #endif
 };
 
@@ -244,32 +244,32 @@ typedef unsigned int __bitwise iwl_ucode_tlv_api_t;
  * @NUM_IWL_UCODE_TLV_API: number of bits used
  */
 enum iwl_ucode_tlv_api {
-    /* API Set 0 */
-    IWL_UCODE_TLV_API_FRAGMENTED_SCAN = (__force iwl_ucode_tlv_api_t)8,
-    IWL_UCODE_TLV_API_WIFI_MCC_UPDATE = (__force iwl_ucode_tlv_api_t)9,
-    IWL_UCODE_TLV_API_LQ_SS_PARAMS = (__force iwl_ucode_tlv_api_t)18,
-    IWL_UCODE_TLV_API_NEW_VERSION = (__force iwl_ucode_tlv_api_t)20,
-    IWL_UCODE_TLV_API_SCAN_TSF_REPORT = (__force iwl_ucode_tlv_api_t)28,
-    IWL_UCODE_TLV_API_TKIP_MIC_KEYS = (__force iwl_ucode_tlv_api_t)29,
-    IWL_UCODE_TLV_API_STA_TYPE = (__force iwl_ucode_tlv_api_t)30,
-    IWL_UCODE_TLV_API_NAN2_VER2 = (__force iwl_ucode_tlv_api_t)31,
-    /* API Set 1 */
-    IWL_UCODE_TLV_API_ADAPTIVE_DWELL = (__force iwl_ucode_tlv_api_t)32,
-    IWL_UCODE_TLV_API_OCE = (__force iwl_ucode_tlv_api_t)33,
-    IWL_UCODE_TLV_API_NEW_BEACON_TEMPLATE = (__force iwl_ucode_tlv_api_t)34,
-    IWL_UCODE_TLV_API_NEW_RX_STATS = (__force iwl_ucode_tlv_api_t)35,
-    IWL_UCODE_TLV_API_WOWLAN_KEY_MATERIAL = (__force iwl_ucode_tlv_api_t)36,
-    IWL_UCODE_TLV_API_QUOTA_LOW_LATENCY = (__force iwl_ucode_tlv_api_t)38,
-    IWL_UCODE_TLV_API_DEPRECATE_TTAK = (__force iwl_ucode_tlv_api_t)41,
-    IWL_UCODE_TLV_API_ADAPTIVE_DWELL_V2 = (__force iwl_ucode_tlv_api_t)42,
-    IWL_UCODE_TLV_API_NAN_NOTIF_V2 = (__force iwl_ucode_tlv_api_t)43,
-    IWL_UCODE_TLV_API_FRAG_EBS = (__force iwl_ucode_tlv_api_t)44,
-    IWL_UCODE_TLV_API_REDUCE_TX_POWER = (__force iwl_ucode_tlv_api_t)45,
+  /* API Set 0 */
+  IWL_UCODE_TLV_API_FRAGMENTED_SCAN = (__force iwl_ucode_tlv_api_t)8,
+  IWL_UCODE_TLV_API_WIFI_MCC_UPDATE = (__force iwl_ucode_tlv_api_t)9,
+  IWL_UCODE_TLV_API_LQ_SS_PARAMS = (__force iwl_ucode_tlv_api_t)18,
+  IWL_UCODE_TLV_API_NEW_VERSION = (__force iwl_ucode_tlv_api_t)20,
+  IWL_UCODE_TLV_API_SCAN_TSF_REPORT = (__force iwl_ucode_tlv_api_t)28,
+  IWL_UCODE_TLV_API_TKIP_MIC_KEYS = (__force iwl_ucode_tlv_api_t)29,
+  IWL_UCODE_TLV_API_STA_TYPE = (__force iwl_ucode_tlv_api_t)30,
+  IWL_UCODE_TLV_API_NAN2_VER2 = (__force iwl_ucode_tlv_api_t)31,
+  /* API Set 1 */
+  IWL_UCODE_TLV_API_ADAPTIVE_DWELL = (__force iwl_ucode_tlv_api_t)32,
+  IWL_UCODE_TLV_API_OCE = (__force iwl_ucode_tlv_api_t)33,
+  IWL_UCODE_TLV_API_NEW_BEACON_TEMPLATE = (__force iwl_ucode_tlv_api_t)34,
+  IWL_UCODE_TLV_API_NEW_RX_STATS = (__force iwl_ucode_tlv_api_t)35,
+  IWL_UCODE_TLV_API_WOWLAN_KEY_MATERIAL = (__force iwl_ucode_tlv_api_t)36,
+  IWL_UCODE_TLV_API_QUOTA_LOW_LATENCY = (__force iwl_ucode_tlv_api_t)38,
+  IWL_UCODE_TLV_API_DEPRECATE_TTAK = (__force iwl_ucode_tlv_api_t)41,
+  IWL_UCODE_TLV_API_ADAPTIVE_DWELL_V2 = (__force iwl_ucode_tlv_api_t)42,
+  IWL_UCODE_TLV_API_NAN_NOTIF_V2 = (__force iwl_ucode_tlv_api_t)43,
+  IWL_UCODE_TLV_API_FRAG_EBS = (__force iwl_ucode_tlv_api_t)44,
+  IWL_UCODE_TLV_API_REDUCE_TX_POWER = (__force iwl_ucode_tlv_api_t)45,
 
-    NUM_IWL_UCODE_TLV_API
+  NUM_IWL_UCODE_TLV_API
 #ifdef __CHECKER__
-    /* sparse says it cannot increment the previous enum member */
-    = 128
+  /* sparse says it cannot increment the previous enum member */
+  = 128
 #endif
 };
 
@@ -357,68 +357,68 @@ typedef unsigned int __bitwise iwl_ucode_tlv_capa_t;
  * @NUM_IWL_UCODE_TLV_CAPA: number of bits used
  */
 enum iwl_ucode_tlv_capa {
-    IWL_UCODE_TLV_CAPA_D0I3_SUPPORT = (__force iwl_ucode_tlv_capa_t)0,
-    IWL_UCODE_TLV_CAPA_LAR_SUPPORT = (__force iwl_ucode_tlv_capa_t)1,
-    IWL_UCODE_TLV_CAPA_UMAC_SCAN = (__force iwl_ucode_tlv_capa_t)2,
-    IWL_UCODE_TLV_CAPA_BEAMFORMER = (__force iwl_ucode_tlv_capa_t)3,
-    IWL_UCODE_TLV_CAPA_TOF_SUPPORT = (__force iwl_ucode_tlv_capa_t)5,
-    IWL_UCODE_TLV_CAPA_TDLS_SUPPORT = (__force iwl_ucode_tlv_capa_t)6,
-    IWL_UCODE_TLV_CAPA_TXPOWER_INSERTION_SUPPORT = (__force iwl_ucode_tlv_capa_t)8,
-    IWL_UCODE_TLV_CAPA_DS_PARAM_SET_IE_SUPPORT = (__force iwl_ucode_tlv_capa_t)9,
-    IWL_UCODE_TLV_CAPA_WFA_TPC_REP_IE_SUPPORT = (__force iwl_ucode_tlv_capa_t)10,
-    IWL_UCODE_TLV_CAPA_QUIET_PERIOD_SUPPORT = (__force iwl_ucode_tlv_capa_t)11,
-    IWL_UCODE_TLV_CAPA_DQA_SUPPORT = (__force iwl_ucode_tlv_capa_t)12,
-    IWL_UCODE_TLV_CAPA_TDLS_CHANNEL_SWITCH = (__force iwl_ucode_tlv_capa_t)13,
-    IWL_UCODE_TLV_CAPA_CNSLDTD_D3_D0_IMG = (__force iwl_ucode_tlv_capa_t)17,
-    IWL_UCODE_TLV_CAPA_HOTSPOT_SUPPORT = (__force iwl_ucode_tlv_capa_t)18,
-    IWL_UCODE_TLV_CAPA_DC2DC_CONFIG_SUPPORT = (__force iwl_ucode_tlv_capa_t)19,
-    IWL_UCODE_TLV_CAPA_2G_COEX_SUPPORT = (__force iwl_ucode_tlv_capa_t)20,
-    IWL_UCODE_TLV_CAPA_CSUM_SUPPORT = (__force iwl_ucode_tlv_capa_t)21,
-    IWL_UCODE_TLV_CAPA_RADIO_BEACON_STATS = (__force iwl_ucode_tlv_capa_t)22,
-    IWL_UCODE_TLV_CAPA_P2P_SCM_UAPSD = (__force iwl_ucode_tlv_capa_t)26,
-    IWL_UCODE_TLV_CAPA_BT_COEX_PLCR = (__force iwl_ucode_tlv_capa_t)28,
-    IWL_UCODE_TLV_CAPA_LAR_MULTI_MCC = (__force iwl_ucode_tlv_capa_t)29,
-    IWL_UCODE_TLV_CAPA_BT_COEX_RRC = (__force iwl_ucode_tlv_capa_t)30,
-    IWL_UCODE_TLV_CAPA_GSCAN_SUPPORT = (__force iwl_ucode_tlv_capa_t)31,
-    IWL_UCODE_TLV_CAPA_NAN_SUPPORT = (__force iwl_ucode_tlv_capa_t)34,
-    IWL_UCODE_TLV_CAPA_UMAC_UPLOAD = (__force iwl_ucode_tlv_capa_t)35,
-    IWL_UCODE_TLV_CAPA_SOC_LATENCY_SUPPORT = (__force iwl_ucode_tlv_capa_t)37,
-    IWL_UCODE_TLV_CAPA_STA_PM_NOTIF = (__force iwl_ucode_tlv_capa_t)38,
-    IWL_UCODE_TLV_CAPA_BINDING_CDB_SUPPORT = (__force iwl_ucode_tlv_capa_t)39,
-    IWL_UCODE_TLV_CAPA_CDB_SUPPORT = (__force iwl_ucode_tlv_capa_t)40,
-    IWL_UCODE_TLV_CAPA_D0I3_END_FIRST = (__force iwl_ucode_tlv_capa_t)41,
-    IWL_UCODE_TLV_CAPA_TLC_OFFLOAD = (__force iwl_ucode_tlv_capa_t)43,
-    IWL_UCODE_TLV_CAPA_DYNAMIC_QUOTA = (__force iwl_ucode_tlv_capa_t)44,
-    IWL_UCODE_TLV_CAPA_COEX_SCHEMA_2 = (__force iwl_ucode_tlv_capa_t)45,
-    IWL_UCODE_TLV_CAPA_EXTENDED_DTS_MEASURE = (__force iwl_ucode_tlv_capa_t)64,
-    IWL_UCODE_TLV_CAPA_SHORT_PM_TIMEOUTS = (__force iwl_ucode_tlv_capa_t)65,
-    IWL_UCODE_TLV_CAPA_BT_MPLUT_SUPPORT = (__force iwl_ucode_tlv_capa_t)67,
-    IWL_UCODE_TLV_CAPA_MULTI_QUEUE_RX_SUPPORT = (__force iwl_ucode_tlv_capa_t)68,
-    IWL_UCODE_TLV_CAPA_CSA_AND_TBTT_OFFLOAD = (__force iwl_ucode_tlv_capa_t)70,
-    IWL_UCODE_TLV_CAPA_BEACON_ANT_SELECTION = (__force iwl_ucode_tlv_capa_t)71,
-    IWL_UCODE_TLV_CAPA_BEACON_STORING = (__force iwl_ucode_tlv_capa_t)72,
-    IWL_UCODE_TLV_CAPA_LAR_SUPPORT_V3 = (__force iwl_ucode_tlv_capa_t)73,
-    IWL_UCODE_TLV_CAPA_CT_KILL_BY_FW = (__force iwl_ucode_tlv_capa_t)74,
-    IWL_UCODE_TLV_CAPA_TEMP_THS_REPORT_SUPPORT = (__force iwl_ucode_tlv_capa_t)75,
-    IWL_UCODE_TLV_CAPA_CTDP_SUPPORT = (__force iwl_ucode_tlv_capa_t)76,
-    IWL_UCODE_TLV_CAPA_USNIFFER_UNIFIED = (__force iwl_ucode_tlv_capa_t)77,
-    IWL_UCODE_TLV_CAPA_LMAC_UPLOAD = (__force iwl_ucode_tlv_capa_t)79,
-    IWL_UCODE_TLV_CAPA_EXTEND_SHARED_MEM_CFG = (__force iwl_ucode_tlv_capa_t)80,
-    IWL_UCODE_TLV_CAPA_LQM_SUPPORT = (__force iwl_ucode_tlv_capa_t)81,
-    IWL_UCODE_TLV_CAPA_TX_POWER_ACK = (__force iwl_ucode_tlv_capa_t)84,
+  IWL_UCODE_TLV_CAPA_D0I3_SUPPORT = (__force iwl_ucode_tlv_capa_t)0,
+  IWL_UCODE_TLV_CAPA_LAR_SUPPORT = (__force iwl_ucode_tlv_capa_t)1,
+  IWL_UCODE_TLV_CAPA_UMAC_SCAN = (__force iwl_ucode_tlv_capa_t)2,
+  IWL_UCODE_TLV_CAPA_BEAMFORMER = (__force iwl_ucode_tlv_capa_t)3,
+  IWL_UCODE_TLV_CAPA_TOF_SUPPORT = (__force iwl_ucode_tlv_capa_t)5,
+  IWL_UCODE_TLV_CAPA_TDLS_SUPPORT = (__force iwl_ucode_tlv_capa_t)6,
+  IWL_UCODE_TLV_CAPA_TXPOWER_INSERTION_SUPPORT = (__force iwl_ucode_tlv_capa_t)8,
+  IWL_UCODE_TLV_CAPA_DS_PARAM_SET_IE_SUPPORT = (__force iwl_ucode_tlv_capa_t)9,
+  IWL_UCODE_TLV_CAPA_WFA_TPC_REP_IE_SUPPORT = (__force iwl_ucode_tlv_capa_t)10,
+  IWL_UCODE_TLV_CAPA_QUIET_PERIOD_SUPPORT = (__force iwl_ucode_tlv_capa_t)11,
+  IWL_UCODE_TLV_CAPA_DQA_SUPPORT = (__force iwl_ucode_tlv_capa_t)12,
+  IWL_UCODE_TLV_CAPA_TDLS_CHANNEL_SWITCH = (__force iwl_ucode_tlv_capa_t)13,
+  IWL_UCODE_TLV_CAPA_CNSLDTD_D3_D0_IMG = (__force iwl_ucode_tlv_capa_t)17,
+  IWL_UCODE_TLV_CAPA_HOTSPOT_SUPPORT = (__force iwl_ucode_tlv_capa_t)18,
+  IWL_UCODE_TLV_CAPA_DC2DC_CONFIG_SUPPORT = (__force iwl_ucode_tlv_capa_t)19,
+  IWL_UCODE_TLV_CAPA_2G_COEX_SUPPORT = (__force iwl_ucode_tlv_capa_t)20,
+  IWL_UCODE_TLV_CAPA_CSUM_SUPPORT = (__force iwl_ucode_tlv_capa_t)21,
+  IWL_UCODE_TLV_CAPA_RADIO_BEACON_STATS = (__force iwl_ucode_tlv_capa_t)22,
+  IWL_UCODE_TLV_CAPA_P2P_SCM_UAPSD = (__force iwl_ucode_tlv_capa_t)26,
+  IWL_UCODE_TLV_CAPA_BT_COEX_PLCR = (__force iwl_ucode_tlv_capa_t)28,
+  IWL_UCODE_TLV_CAPA_LAR_MULTI_MCC = (__force iwl_ucode_tlv_capa_t)29,
+  IWL_UCODE_TLV_CAPA_BT_COEX_RRC = (__force iwl_ucode_tlv_capa_t)30,
+  IWL_UCODE_TLV_CAPA_GSCAN_SUPPORT = (__force iwl_ucode_tlv_capa_t)31,
+  IWL_UCODE_TLV_CAPA_NAN_SUPPORT = (__force iwl_ucode_tlv_capa_t)34,
+  IWL_UCODE_TLV_CAPA_UMAC_UPLOAD = (__force iwl_ucode_tlv_capa_t)35,
+  IWL_UCODE_TLV_CAPA_SOC_LATENCY_SUPPORT = (__force iwl_ucode_tlv_capa_t)37,
+  IWL_UCODE_TLV_CAPA_STA_PM_NOTIF = (__force iwl_ucode_tlv_capa_t)38,
+  IWL_UCODE_TLV_CAPA_BINDING_CDB_SUPPORT = (__force iwl_ucode_tlv_capa_t)39,
+  IWL_UCODE_TLV_CAPA_CDB_SUPPORT = (__force iwl_ucode_tlv_capa_t)40,
+  IWL_UCODE_TLV_CAPA_D0I3_END_FIRST = (__force iwl_ucode_tlv_capa_t)41,
+  IWL_UCODE_TLV_CAPA_TLC_OFFLOAD = (__force iwl_ucode_tlv_capa_t)43,
+  IWL_UCODE_TLV_CAPA_DYNAMIC_QUOTA = (__force iwl_ucode_tlv_capa_t)44,
+  IWL_UCODE_TLV_CAPA_COEX_SCHEMA_2 = (__force iwl_ucode_tlv_capa_t)45,
+  IWL_UCODE_TLV_CAPA_EXTENDED_DTS_MEASURE = (__force iwl_ucode_tlv_capa_t)64,
+  IWL_UCODE_TLV_CAPA_SHORT_PM_TIMEOUTS = (__force iwl_ucode_tlv_capa_t)65,
+  IWL_UCODE_TLV_CAPA_BT_MPLUT_SUPPORT = (__force iwl_ucode_tlv_capa_t)67,
+  IWL_UCODE_TLV_CAPA_MULTI_QUEUE_RX_SUPPORT = (__force iwl_ucode_tlv_capa_t)68,
+  IWL_UCODE_TLV_CAPA_CSA_AND_TBTT_OFFLOAD = (__force iwl_ucode_tlv_capa_t)70,
+  IWL_UCODE_TLV_CAPA_BEACON_ANT_SELECTION = (__force iwl_ucode_tlv_capa_t)71,
+  IWL_UCODE_TLV_CAPA_BEACON_STORING = (__force iwl_ucode_tlv_capa_t)72,
+  IWL_UCODE_TLV_CAPA_LAR_SUPPORT_V3 = (__force iwl_ucode_tlv_capa_t)73,
+  IWL_UCODE_TLV_CAPA_CT_KILL_BY_FW = (__force iwl_ucode_tlv_capa_t)74,
+  IWL_UCODE_TLV_CAPA_TEMP_THS_REPORT_SUPPORT = (__force iwl_ucode_tlv_capa_t)75,
+  IWL_UCODE_TLV_CAPA_CTDP_SUPPORT = (__force iwl_ucode_tlv_capa_t)76,
+  IWL_UCODE_TLV_CAPA_USNIFFER_UNIFIED = (__force iwl_ucode_tlv_capa_t)77,
+  IWL_UCODE_TLV_CAPA_LMAC_UPLOAD = (__force iwl_ucode_tlv_capa_t)79,
+  IWL_UCODE_TLV_CAPA_EXTEND_SHARED_MEM_CFG = (__force iwl_ucode_tlv_capa_t)80,
+  IWL_UCODE_TLV_CAPA_LQM_SUPPORT = (__force iwl_ucode_tlv_capa_t)81,
+  IWL_UCODE_TLV_CAPA_TX_POWER_ACK = (__force iwl_ucode_tlv_capa_t)84,
 #ifdef CPTCFG_IWLMVM_AX_SOFTAP_TESTMODE
-    IWL_UCODE_TLV_CAPA_AX_SAP_TM = (__force iwl_ucode_tlv_capa_t)85,
-    IWL_UCODE_TLV_CAPA_AX_SAP_TM_V2 = (__force iwl_ucode_tlv_capa_t)86,
+  IWL_UCODE_TLV_CAPA_AX_SAP_TM = (__force iwl_ucode_tlv_capa_t)85,
+  IWL_UCODE_TLV_CAPA_AX_SAP_TM_V2 = (__force iwl_ucode_tlv_capa_t)86,
 #endif
-    IWL_UCODE_TLV_CAPA_D3_DEBUG = (__force iwl_ucode_tlv_capa_t)87,
-    IWL_UCODE_TLV_CAPA_LED_CMD_SUPPORT = (__force iwl_ucode_tlv_capa_t)88,
-    IWL_UCODE_TLV_CAPA_MCC_UPDATE_11AX_SUPPORT = (__force iwl_ucode_tlv_capa_t)89,
-    IWL_UCODE_TLV_CAPA_MLME_OFFLOAD = (__force iwl_ucode_tlv_capa_t)96,
+  IWL_UCODE_TLV_CAPA_D3_DEBUG = (__force iwl_ucode_tlv_capa_t)87,
+  IWL_UCODE_TLV_CAPA_LED_CMD_SUPPORT = (__force iwl_ucode_tlv_capa_t)88,
+  IWL_UCODE_TLV_CAPA_MCC_UPDATE_11AX_SUPPORT = (__force iwl_ucode_tlv_capa_t)89,
+  IWL_UCODE_TLV_CAPA_MLME_OFFLOAD = (__force iwl_ucode_tlv_capa_t)96,
 
-    NUM_IWL_UCODE_TLV_CAPA
+  NUM_IWL_UCODE_TLV_CAPA
 #ifdef __CHECKER__
-    /* sparse says it cannot increment the previous enum member */
-    = 128
+  /* sparse says it cannot increment the previous enum member */
+  = 128
 #endif
 };
 
@@ -452,22 +452,22 @@ enum iwl_ucode_tlv_capa {
  *      event triggers.
  */
 struct iwl_tlv_calib_ctrl {
-    __le32 flow_trigger;
-    __le32 event_trigger;
+  __le32 flow_trigger;
+  __le32 event_trigger;
 } __packed;
 
 enum iwl_fw_phy_cfg {
-    FW_PHY_CFG_RADIO_TYPE_POS = 0,
-    FW_PHY_CFG_RADIO_TYPE = 0x3 << FW_PHY_CFG_RADIO_TYPE_POS,
-    FW_PHY_CFG_RADIO_STEP_POS = 2,
-    FW_PHY_CFG_RADIO_STEP = 0x3 << FW_PHY_CFG_RADIO_STEP_POS,
-    FW_PHY_CFG_RADIO_DASH_POS = 4,
-    FW_PHY_CFG_RADIO_DASH = 0x3 << FW_PHY_CFG_RADIO_DASH_POS,
-    FW_PHY_CFG_TX_CHAIN_POS = 16,
-    FW_PHY_CFG_TX_CHAIN = 0xf << FW_PHY_CFG_TX_CHAIN_POS,
-    FW_PHY_CFG_RX_CHAIN_POS = 20,
-    FW_PHY_CFG_RX_CHAIN = 0xf << FW_PHY_CFG_RX_CHAIN_POS,
-    FW_PHY_CFG_SHARED_CLK = BIT(31),
+  FW_PHY_CFG_RADIO_TYPE_POS = 0,
+  FW_PHY_CFG_RADIO_TYPE = 0x3 << FW_PHY_CFG_RADIO_TYPE_POS,
+  FW_PHY_CFG_RADIO_STEP_POS = 2,
+  FW_PHY_CFG_RADIO_STEP = 0x3 << FW_PHY_CFG_RADIO_STEP_POS,
+  FW_PHY_CFG_RADIO_DASH_POS = 4,
+  FW_PHY_CFG_RADIO_DASH = 0x3 << FW_PHY_CFG_RADIO_DASH_POS,
+  FW_PHY_CFG_TX_CHAIN_POS = 16,
+  FW_PHY_CFG_TX_CHAIN = 0xf << FW_PHY_CFG_TX_CHAIN_POS,
+  FW_PHY_CFG_RX_CHAIN_POS = 20,
+  FW_PHY_CFG_RX_CHAIN = 0xf << FW_PHY_CFG_RX_CHAIN_POS,
+  FW_PHY_CFG_SHARED_CLK = BIT(31),
 };
 
 #define IWL_UCODE_MAX_CS 1
@@ -486,32 +486,32 @@ enum iwl_fw_phy_cfg {
  * @hw_cipher: a HW cipher index used in host commands
  */
 struct iwl_fw_cipher_scheme {
-    __le32 cipher;
-    uint8_t flags;
-    uint8_t hdr_len;
-    uint8_t pn_len;
-    uint8_t pn_off;
-    uint8_t key_idx_off;
-    uint8_t key_idx_mask;
-    uint8_t key_idx_shift;
-    uint8_t mic_len;
-    uint8_t hw_cipher;
+  __le32 cipher;
+  uint8_t flags;
+  uint8_t hdr_len;
+  uint8_t pn_len;
+  uint8_t pn_off;
+  uint8_t key_idx_off;
+  uint8_t key_idx_mask;
+  uint8_t key_idx_shift;
+  uint8_t mic_len;
+  uint8_t hw_cipher;
 } __packed;
 
 enum iwl_fw_dbg_reg_operator {
-    CSR_ASSIGN,
-    CSR_SETBIT,
-    CSR_CLEARBIT,
+  CSR_ASSIGN,
+  CSR_SETBIT,
+  CSR_CLEARBIT,
 
-    PRPH_ASSIGN,
-    PRPH_SETBIT,
-    PRPH_CLEARBIT,
+  PRPH_ASSIGN,
+  PRPH_SETBIT,
+  PRPH_CLEARBIT,
 
-    INDIRECT_ASSIGN,
-    INDIRECT_SETBIT,
-    INDIRECT_CLEARBIT,
+  INDIRECT_ASSIGN,
+  INDIRECT_SETBIT,
+  INDIRECT_CLEARBIT,
 
-    PRPH_BLOCKBIT,
+  PRPH_BLOCKBIT,
 };
 
 /**
@@ -522,10 +522,10 @@ enum iwl_fw_dbg_reg_operator {
  * @val: value
  */
 struct iwl_fw_dbg_reg_op {
-    uint8_t op;
-    uint8_t reserved[3];
-    __le32 addr;
-    __le32 val;
+  uint8_t op;
+  uint8_t reserved[3];
+  __le32 addr;
+  __le32 val;
 } __packed;
 
 /**
@@ -537,10 +537,10 @@ struct iwl_fw_dbg_reg_op {
  * @MIPI_MODE: monitor outputs the data through the MIPI interface
  */
 enum iwl_fw_dbg_monitor_mode {
-    SMEM_MODE = 0,
-    EXTERNAL_MODE = 1,
-    MARBH_MODE = 2,
-    MIPI_MODE = 3,
+  SMEM_MODE = 0,
+  EXTERNAL_MODE = 1,
+  MARBH_MODE = 2,
+  MIPI_MODE = 3,
 };
 
 /**
@@ -553,9 +553,9 @@ enum iwl_fw_dbg_monitor_mode {
  * This parses IWL_UCODE_TLV_FW_MEM_SEG
  */
 struct iwl_fw_dbg_mem_seg_tlv {
-    __le32 data_type;
-    __le32 ofs;
-    __le32 len;
+  __le32 data_type;
+  __le32 ofs;
+  __le32 len;
 } __packed;
 
 /**
@@ -575,17 +575,17 @@ struct iwl_fw_dbg_mem_seg_tlv {
  * This parses IWL_UCODE_TLV_FW_DBG_DEST
  */
 struct iwl_fw_dbg_dest_tlv_v1 {
-    uint8_t version;
-    uint8_t monitor_mode;
-    uint8_t size_power;
-    uint8_t reserved;
-    __le32 base_reg;
-    __le32 end_reg;
-    __le32 write_ptr_reg;
-    __le32 wrap_count;
-    uint8_t base_shift;
-    uint8_t end_shift;
-    struct iwl_fw_dbg_reg_op reg_ops[0];
+  uint8_t version;
+  uint8_t monitor_mode;
+  uint8_t size_power;
+  uint8_t reserved;
+  __le32 base_reg;
+  __le32 end_reg;
+  __le32 write_ptr_reg;
+  __le32 wrap_count;
+  uint8_t base_shift;
+  uint8_t end_shift;
+  struct iwl_fw_dbg_reg_op reg_ops[0];
 } __packed;
 
 /* Mask of the register for defining the LDBG MAC2SMEM buffer SMEM size */
@@ -596,23 +596,23 @@ struct iwl_fw_dbg_dest_tlv_v1 {
 #define IWL_M2S_UNIT_SIZE 0x100
 
 struct iwl_fw_dbg_dest_tlv {
-    uint8_t version;
-    uint8_t monitor_mode;
-    uint8_t size_power;
-    uint8_t reserved;
-    __le32 cfg_reg;
-    __le32 write_ptr_reg;
-    __le32 wrap_count;
-    uint8_t base_shift;
-    uint8_t size_shift;
-    struct iwl_fw_dbg_reg_op reg_ops[0];
+  uint8_t version;
+  uint8_t monitor_mode;
+  uint8_t size_power;
+  uint8_t reserved;
+  __le32 cfg_reg;
+  __le32 write_ptr_reg;
+  __le32 wrap_count;
+  uint8_t base_shift;
+  uint8_t size_shift;
+  struct iwl_fw_dbg_reg_op reg_ops[0];
 } __packed;
 
 struct iwl_fw_dbg_conf_hcmd {
-    uint8_t id;
-    uint8_t reserved;
-    __le16 len;
-    uint8_t data[0];
+  uint8_t id;
+  uint8_t reserved;
+  __le16 len;
+  uint8_t data[0];
 } __packed;
 
 /**
@@ -624,9 +624,9 @@ struct iwl_fw_dbg_conf_hcmd {
  *  collect only monitor data
  */
 enum iwl_fw_dbg_trigger_mode {
-    IWL_FW_DBG_TRIGGER_START = BIT(0),
-    IWL_FW_DBG_TRIGGER_STOP = BIT(1),
-    IWL_FW_DBG_TRIGGER_MONITOR_ONLY = BIT(2),
+  IWL_FW_DBG_TRIGGER_START = BIT(0),
+  IWL_FW_DBG_TRIGGER_STOP = BIT(1),
+  IWL_FW_DBG_TRIGGER_MONITOR_ONLY = BIT(2),
 };
 
 /**
@@ -634,7 +634,7 @@ enum iwl_fw_dbg_trigger_mode {
  * @IWL_FW_DBG_FORCE_RESTART: force a firmware restart
  */
 enum iwl_fw_dbg_trigger_flags {
-    IWL_FW_DBG_FORCE_RESTART = BIT(0),
+  IWL_FW_DBG_FORCE_RESTART = BIT(0),
 };
 
 /**
@@ -649,14 +649,14 @@ enum iwl_fw_dbg_trigger_flags {
  * @IWL_FW_DBG_CONF_VIF_NAN: NAN device
  */
 enum iwl_fw_dbg_trigger_vif_type {
-    IWL_FW_DBG_CONF_VIF_ANY = NL80211_IFTYPE_UNSPECIFIED,
-    IWL_FW_DBG_CONF_VIF_IBSS = NL80211_IFTYPE_ADHOC,
-    IWL_FW_DBG_CONF_VIF_STATION = NL80211_IFTYPE_STATION,
-    IWL_FW_DBG_CONF_VIF_AP = NL80211_IFTYPE_AP,
-    IWL_FW_DBG_CONF_VIF_P2P_CLIENT = NL80211_IFTYPE_P2P_CLIENT,
-    IWL_FW_DBG_CONF_VIF_P2P_GO = NL80211_IFTYPE_P2P_GO,
-    IWL_FW_DBG_CONF_VIF_P2P_DEVICE = NL80211_IFTYPE_P2P_DEVICE,
-    IWL_FW_DBG_CONF_VIF_NAN = NL80211_IFTYPE_NAN,
+  IWL_FW_DBG_CONF_VIF_ANY = NL80211_IFTYPE_UNSPECIFIED,
+  IWL_FW_DBG_CONF_VIF_IBSS = NL80211_IFTYPE_ADHOC,
+  IWL_FW_DBG_CONF_VIF_STATION = NL80211_IFTYPE_STATION,
+  IWL_FW_DBG_CONF_VIF_AP = NL80211_IFTYPE_AP,
+  IWL_FW_DBG_CONF_VIF_P2P_CLIENT = NL80211_IFTYPE_P2P_CLIENT,
+  IWL_FW_DBG_CONF_VIF_P2P_GO = NL80211_IFTYPE_P2P_GO,
+  IWL_FW_DBG_CONF_VIF_P2P_DEVICE = NL80211_IFTYPE_P2P_DEVICE,
+  IWL_FW_DBG_CONF_VIF_NAN = NL80211_IFTYPE_NAN,
 };
 
 /**
@@ -678,18 +678,18 @@ enum iwl_fw_dbg_trigger_vif_type {
  * @flags: &enum iwl_fw_dbg_trigger_flags
  */
 struct iwl_fw_dbg_trigger_tlv {
-    __le32 id;
-    __le32 vif_type;
-    __le32 stop_conf_ids;
-    __le32 stop_delay;
-    uint8_t mode;
-    uint8_t start_conf_id;
-    __le16 occurrences;
-    __le16 trig_dis_ms;
-    uint8_t flags;
-    uint8_t reserved[5];
+  __le32 id;
+  __le32 vif_type;
+  __le32 stop_conf_ids;
+  __le32 stop_delay;
+  uint8_t mode;
+  uint8_t start_conf_id;
+  __le16 occurrences;
+  __le16 trig_dis_ms;
+  uint8_t flags;
+  uint8_t reserved[5];
 
-    uint8_t data[0];
+  uint8_t data[0];
 } __packed;
 
 #define FW_DBG_START_FROM_ALIVE 0
@@ -706,12 +706,12 @@ struct iwl_fw_dbg_trigger_tlv {
  * @reserved2: reserved
  */
 struct iwl_fw_dbg_trigger_missed_bcon {
-    __le32 stop_consec_missed_bcon;
-    __le32 stop_consec_missed_bcon_since_rx;
-    __le32 reserved2[2];
-    __le32 start_consec_missed_bcon;
-    __le32 start_consec_missed_bcon_since_rx;
-    __le32 reserved1[2];
+  __le32 stop_consec_missed_bcon;
+  __le32 stop_consec_missed_bcon_since_rx;
+  __le32 reserved2[2];
+  __le32 start_consec_missed_bcon;
+  __le32 start_consec_missed_bcon_since_rx;
+  __le32 reserved1[2];
 } __packed;
 
 /**
@@ -719,10 +719,10 @@ struct iwl_fw_dbg_trigger_missed_bcon {
  * cmds: the list of commands to trigger the collection on
  */
 struct iwl_fw_dbg_trigger_cmd {
-    struct cmd {
-        uint8_t cmd_id;
-        uint8_t group_id;
-    } __packed cmds[16];
+  struct cmd {
+    uint8_t cmd_id;
+    uint8_t group_id;
+  } __packed cmds[16];
 } __packed;
 
 /**
@@ -733,10 +733,10 @@ struct iwl_fw_dbg_trigger_cmd {
  * @start_threshold: the threshold above which to start recording
  */
 struct iwl_fw_dbg_trigger_stats {
-    __le32 stop_offset;
-    __le32 stop_threshold;
-    __le32 start_offset;
-    __le32 start_threshold;
+  __le32 stop_offset;
+  __le32 stop_threshold;
+  __le32 start_offset;
+  __le32 start_threshold;
 } __packed;
 
 /**
@@ -744,7 +744,7 @@ struct iwl_fw_dbg_trigger_stats {
  * @rssi: RSSI value to trigger at
  */
 struct iwl_fw_dbg_trigger_low_rssi {
-    __le32 rssi;
+  __le32 rssi;
 } __packed;
 
 /**
@@ -765,25 +765,25 @@ struct iwl_fw_dbg_trigger_low_rssi {
  * @start_connection_loss: number of connection loss to start recording
  */
 struct iwl_fw_dbg_trigger_mlme {
-    uint8_t stop_auth_denied;
-    uint8_t stop_auth_timeout;
-    uint8_t stop_rx_deauth;
-    uint8_t stop_tx_deauth;
+  uint8_t stop_auth_denied;
+  uint8_t stop_auth_timeout;
+  uint8_t stop_rx_deauth;
+  uint8_t stop_tx_deauth;
 
-    uint8_t stop_assoc_denied;
-    uint8_t stop_assoc_timeout;
-    uint8_t stop_connection_loss;
-    uint8_t reserved;
+  uint8_t stop_assoc_denied;
+  uint8_t stop_assoc_timeout;
+  uint8_t stop_connection_loss;
+  uint8_t reserved;
 
-    uint8_t start_auth_denied;
-    uint8_t start_auth_timeout;
-    uint8_t start_rx_deauth;
-    uint8_t start_tx_deauth;
+  uint8_t start_auth_denied;
+  uint8_t start_auth_timeout;
+  uint8_t start_rx_deauth;
+  uint8_t start_tx_deauth;
 
-    uint8_t start_assoc_denied;
-    uint8_t start_assoc_timeout;
-    uint8_t start_connection_loss;
-    uint8_t reserved2;
+  uint8_t start_assoc_denied;
+  uint8_t start_assoc_timeout;
+  uint8_t start_connection_loss;
+  uint8_t reserved2;
 } __packed;
 
 /**
@@ -798,15 +798,15 @@ struct iwl_fw_dbg_trigger_mlme {
  * @tdls: timeout for the queues of a TDLS station in ms
  */
 struct iwl_fw_dbg_trigger_txq_timer {
-    __le32 command_queue;
-    __le32 bss;
-    __le32 softap;
-    __le32 p2p_go;
-    __le32 p2p_client;
-    __le32 p2p_device;
-    __le32 ibss;
-    __le32 tdls;
-    __le32 reserved[4];
+  __le32 command_queue;
+  __le32 bss;
+  __le32 softap;
+  __le32 p2p_go;
+  __le32 p2p_client;
+  __le32 p2p_device;
+  __le32 ibss;
+  __le32 tdls;
+  __le32 reserved[4];
 } __packed;
 
 /**
@@ -818,11 +818,11 @@ struct iwl_fw_dbg_trigger_txq_timer {
  *
  */
 struct iwl_fw_dbg_trigger_time_event {
-    struct {
-        __le32 id;
-        __le32 action_bitmap;
-        __le32 status_bitmap;
-    } __packed time_events[16];
+  struct {
+    __le32 id;
+    __le32 action_bitmap;
+    __le32 status_bitmap;
+  } __packed time_events[16];
 } __packed;
 
 /**
@@ -843,13 +843,13 @@ struct iwl_fw_dbg_trigger_time_event {
  *  when a frame times out in the reodering buffer.
  */
 struct iwl_fw_dbg_trigger_ba {
-    __le16 rx_ba_start;
-    __le16 rx_ba_stop;
-    __le16 tx_ba_start;
-    __le16 tx_ba_stop;
-    __le16 rx_bar;
-    __le16 tx_bar;
-    __le16 frame_timeout;
+  __le16 rx_ba_start;
+  __le16 rx_ba_stop;
+  __le16 tx_ba_start;
+  __le16 tx_ba_stop;
+  __le16 rx_bar;
+  __le16 tx_bar;
+  __le16 frame_timeout;
 } __packed;
 
 #ifdef CPTCFG_MAC80211_LATENCY_MEASUREMENTS
@@ -862,11 +862,11 @@ struct iwl_fw_dbg_trigger_ba {
  * @reserved: reserved.
  */
 struct iwl_fw_dbg_trigger_tx_latency {
-    __le32 thrshold;
-    __le16 tid_bitmap;
-    __le16 mode;
-    __le32 window;
-    __le32 reserved[4];
+  __le32 thrshold;
+  __le16 tid_bitmap;
+  __le16 mode;
+  __le32 window;
+  __le32 reserved[4];
 } __packed;
 #endif /* CPTCFG_MAC80211_LATENCY_MEASUREMENTS */
 
@@ -877,10 +877,10 @@ struct iwl_fw_dbg_trigger_tx_latency {
  * @peer: the TDLS peer to trigger the collection on
  */
 struct iwl_fw_dbg_trigger_tdls {
-    uint8_t action_bitmap;
-    uint8_t peer_mode;
-    uint8_t peer[ETH_ALEN];
-    uint8_t reserved[4];
+  uint8_t action_bitmap;
+  uint8_t peer_mode;
+  uint8_t peer[ETH_ALEN];
+  uint8_t reserved[4];
 } __packed;
 
 /**
@@ -889,11 +889,11 @@ struct iwl_fw_dbg_trigger_tdls {
  * @statuses: the list of statuses to trigger the collection on
  */
 struct iwl_fw_dbg_trigger_tx_status {
-    struct tx_status {
-        uint8_t status;
-        uint8_t reserved[3];
-    } __packed statuses[16];
-    __le32 reserved[2];
+  struct tx_status {
+    uint8_t status;
+    uint8_t reserved[3];
+  } __packed statuses[16];
+  __le32 reserved[2];
 } __packed;
 
 /**
@@ -908,11 +908,11 @@ struct iwl_fw_dbg_trigger_tx_status {
  * %FW_DBG_CONF_MAX configuration per run.
  */
 struct iwl_fw_dbg_conf_tlv {
-    uint8_t id;
-    uint8_t usniffer;
-    uint8_t reserved;
-    uint8_t num_of_hcmds;
-    struct iwl_fw_dbg_conf_hcmd hcmd;
+  uint8_t id;
+  uint8_t usniffer;
+  uint8_t reserved;
+  uint8_t num_of_hcmds;
+  struct iwl_fw_dbg_conf_hcmd hcmd;
 } __packed;
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_FILE_H_

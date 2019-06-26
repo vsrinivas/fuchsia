@@ -43,28 +43,28 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
 
 struct iwl_fw_runtime_ops {
-    int (*dump_start)(void* ctx);
-    void (*dump_end)(void* ctx);
-    bool (*fw_running)(void* ctx);
-    int (*send_hcmd)(void* ctx, struct iwl_host_cmd* host_cmd);
+  int (*dump_start)(void* ctx);
+  void (*dump_end)(void* ctx);
+  bool (*fw_running)(void* ctx);
+  int (*send_hcmd)(void* ctx, struct iwl_host_cmd* host_cmd);
 };
 
 #define MAX_NUM_LMAC 2
 struct iwl_fwrt_shared_mem_cfg {
-    int num_lmacs;
-    int num_txfifo_entries;
-    struct {
-        uint32_t txfifo_size[TX_FIFO_MAX_NUM];
-        uint32_t rxfifo1_size;
-    } lmac[MAX_NUM_LMAC];
-    uint32_t rxfifo2_size;
-    uint32_t internal_txfifo_addr;
-    uint32_t internal_txfifo_size[TX_FIFO_INTERNAL_MAX_NUM];
+  int num_lmacs;
+  int num_txfifo_entries;
+  struct {
+    uint32_t txfifo_size[TX_FIFO_MAX_NUM];
+    uint32_t rxfifo1_size;
+  } lmac[MAX_NUM_LMAC];
+  uint32_t rxfifo2_size;
+  uint32_t internal_txfifo_addr;
+  uint32_t internal_txfifo_size[TX_FIFO_INTERNAL_MAX_NUM];
 };
 
 enum iwl_fw_runtime_status {
-    IWL_FWRT_STATUS_DUMPING = 0,
-    IWL_FWRT_STATUS_WAIT_ALIVE,
+  IWL_FWRT_STATUS_DUMPING = 0,
+  IWL_FWRT_STATUS_WAIT_ALIVE,
 };
 
 /**
@@ -84,48 +84,48 @@ enum iwl_fw_runtime_status {
  * @dump: debug dump data
  */
 struct iwl_fw_runtime {
-    struct iwl_trans* trans;
-    const struct iwl_fw* fw;
-    struct device* dev;
+  struct iwl_trans* trans;
+  const struct iwl_fw* fw;
+  struct device* dev;
 
-    const struct iwl_fw_runtime_ops* ops;
-    void* ops_ctx;
+  const struct iwl_fw_runtime_ops* ops;
+  void* ops_ctx;
 
-    unsigned long status;
+  unsigned long status;
 
-    /* Paging */
-    struct iwl_fw_paging fw_paging_db[NUM_OF_FW_PAGING_BLOCKS];
-    uint16_t num_of_paging_blk;
-    uint16_t num_of_pages_in_last_blk;
+  /* Paging */
+  struct iwl_fw_paging fw_paging_db[NUM_OF_FW_PAGING_BLOCKS];
+  uint16_t num_of_paging_blk;
+  uint16_t num_of_pages_in_last_blk;
 
-    enum iwl_ucode_type cur_fw_img;
+  enum iwl_ucode_type cur_fw_img;
 
-    /* memory configuration */
-    struct iwl_fwrt_shared_mem_cfg smem_cfg;
+  /* memory configuration */
+  struct iwl_fwrt_shared_mem_cfg smem_cfg;
 
-    /* debug */
-    struct {
-        const struct iwl_fw_dump_desc* desc;
-        bool monitor_only;
-        struct delayed_work wk;
+  /* debug */
+  struct {
+    const struct iwl_fw_dump_desc* desc;
+    bool monitor_only;
+    struct delayed_work wk;
 
-        uint8_t conf;
+    uint8_t conf;
 
-        /* ts of the beginning of a non-collect fw dbg data period */
-        unsigned long non_collect_ts_start[IWL_FW_TRIGGER_ID_NUM - 1];
-        uint32_t* d3_debug_data;
-        struct iwl_fw_ini_active_regs active_regs[IWL_FW_INI_MAX_REGION_ID];
-        struct iwl_fw_ini_active_triggers active_trigs[IWL_FW_TRIGGER_ID_NUM];
-        uint32_t lmac_err_id[MAX_NUM_LMAC];
-        uint32_t umac_err_id;
-    } dump;
+    /* ts of the beginning of a non-collect fw dbg data period */
+    unsigned long non_collect_ts_start[IWL_FW_TRIGGER_ID_NUM - 1];
+    uint32_t* d3_debug_data;
+    struct iwl_fw_ini_active_regs active_regs[IWL_FW_INI_MAX_REGION_ID];
+    struct iwl_fw_ini_active_triggers active_trigs[IWL_FW_TRIGGER_ID_NUM];
+    uint32_t lmac_err_id[MAX_NUM_LMAC];
+    uint32_t umac_err_id;
+  } dump;
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
-    struct {
-        struct delayed_work wk;
-        uint32_t delay;
-        uint64_t seq;
-    } timestamp;
-    bool tpc_enabled;
+  struct {
+    struct delayed_work wk;
+    uint32_t delay;
+    uint64_t seq;
+  } timestamp;
+  bool tpc_enabled;
 #endif /* CPTCFG_IWLWIFI_DEBUGFS */
 };
 
@@ -134,8 +134,8 @@ void iwl_fw_runtime_init(struct iwl_fw_runtime* fwrt, struct iwl_trans* trans,
                          void* ops_ctx, struct dentry* dbgfs_dir);
 
 static inline void iwl_fw_runtime_free(struct iwl_fw_runtime* fwrt) {
-    kfree(fwrt->dump.d3_debug_data);
-    fwrt->dump.d3_debug_data = NULL;
+  kfree(fwrt->dump.d3_debug_data);
+  fwrt->dump.d3_debug_data = NULL;
 }
 
 void iwl_fw_runtime_suspend(struct iwl_fw_runtime* fwrt);
@@ -144,7 +144,7 @@ void iwl_fw_runtime_resume(struct iwl_fw_runtime* fwrt);
 
 static inline void iwl_fw_set_current_image(struct iwl_fw_runtime* fwrt,
                                             enum iwl_ucode_type cur_fw_img) {
-    fwrt->cur_fw_img = cur_fw_img;
+  fwrt->cur_fw_img = cur_fw_img;
 }
 
 int iwl_init_paging(struct iwl_fw_runtime* fwrt, enum iwl_ucode_type type);

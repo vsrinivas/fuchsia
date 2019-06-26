@@ -37,39 +37,39 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
 
 struct iwl_nvm_data {
-    int n_hw_addrs;
-    uint8_t hw_addr[ETH_ALEN];
+  int n_hw_addrs;
+  uint8_t hw_addr[ETH_ALEN];
 
-    uint8_t calib_version;
-    __le16 calib_voltage;
+  uint8_t calib_version;
+  __le16 calib_voltage;
 
-    __le16 raw_temperature;
-    __le16 kelvin_temperature;
-    __le16 kelvin_voltage;
-    __le16 xtal_calib[2];
+  __le16 raw_temperature;
+  __le16 kelvin_temperature;
+  __le16 kelvin_voltage;
+  __le16 xtal_calib[2];
 
-    bool sku_cap_band_24ghz_enable;
-    bool sku_cap_band_52ghz_enable;
-    bool sku_cap_11n_enable;
-    bool sku_cap_11ac_enable;
-    bool sku_cap_11ax_enable;
-    bool sku_cap_amt_enable;
-    bool sku_cap_ipan_enable;
-    bool sku_cap_mimo_disabled;
+  bool sku_cap_band_24ghz_enable;
+  bool sku_cap_band_52ghz_enable;
+  bool sku_cap_11n_enable;
+  bool sku_cap_11ac_enable;
+  bool sku_cap_11ax_enable;
+  bool sku_cap_amt_enable;
+  bool sku_cap_ipan_enable;
+  bool sku_cap_mimo_disabled;
 
-    uint16_t radio_cfg_type;
-    uint8_t radio_cfg_step;
-    uint8_t radio_cfg_dash;
-    uint8_t radio_cfg_pnum;
-    uint8_t valid_tx_ant, valid_rx_ant;
+  uint16_t radio_cfg_type;
+  uint8_t radio_cfg_step;
+  uint8_t radio_cfg_dash;
+  uint8_t radio_cfg_pnum;
+  uint8_t valid_tx_ant, valid_rx_ant;
 
-    uint32_t nvm_version;
-    int8_t max_tx_pwr_half_dbm;
+  uint32_t nvm_version;
+  int8_t max_tx_pwr_half_dbm;
 
-    bool lar_enabled;
-    bool vht160_supported;
-    struct ieee80211_supported_band bands[NUM_NL80211_BANDS];
-    struct ieee80211_channel channels[];
+  bool lar_enabled;
+  bool vht160_supported;
+  struct ieee80211_supported_band bands[NUM_NL80211_BANDS];
+  struct ieee80211_channel channels[];
 };
 
 /**
