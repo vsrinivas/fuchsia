@@ -5,11 +5,13 @@
     "sandbox": {
         "dev": [
             "misc",
-            "misc/sysinfo"
+            "misc/sysinfo",
+            "class/thermal"
         ],
         "services": [
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.logger.LogSink",
+            "fuchsia.tracelink.Registry",
             "fuchsia.tracing.provider.Registry"
         ]
     }

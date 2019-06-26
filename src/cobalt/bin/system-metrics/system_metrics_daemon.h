@@ -15,11 +15,13 @@
 #include <chrono>
 #include <memory>
 #include <thread>
+#include <unordered_map>
 #include <vector>
 
 #include "src/cobalt/bin/system-metrics/cpu_stats_fetcher.h"
 #include "src/cobalt/bin/system-metrics/memory_stats_fetcher.h"
 #include "src/cobalt/bin/system-metrics/metrics_registry.cb.h"
+#include "src/cobalt/bin/system-metrics/temperature_fetcher.h"
 #include "src/cobalt/bin/utils/clock.h"
 
 // A daemon to send system metrics to Cobalt.
@@ -39,8 +41,7 @@ class SystemMetricsDaemon {
   // |dispatcher|. This is used to schedule future work.
   //
   // |context|. The Cobalt LoggerFactory interface is fetched from this context.
-  SystemMetricsDaemon(async_dispatcher_t* dispatcher,
-                      sys::ComponentContext* context);
+  SystemMetricsDaemon(async_dispatcher_t* dispatcher, sys::ComponentContext* context);
 
   // Starts asynchronously logging all system metrics.
   void StartLogging();
@@ -51,12 +52,12 @@ class SystemMetricsDaemon {
   // This private constructor is intended for use in tests. |context| may
   // be null because InitializeLogger() will not be invoked. Instead,
   // pass a non-null |logger| which may be a local mock that does not use FIDL.
-  SystemMetricsDaemon(
-      async_dispatcher_t* dispatcher, sys::ComponentContext* context,
-      fuchsia::cobalt::Logger_Sync* logger,
-      std::unique_ptr<cobalt::SteadyClock> clock,
-      std::unique_ptr<cobalt::MemoryStatsFetcher> memory_stats_fetcher,
-      std::unique_ptr<cobalt::CpuStatsFetcher> cpu_stats_fetcher);
+  SystemMetricsDaemon(async_dispatcher_t* dispatcher, sys::ComponentContext* context,
+                      fuchsia::cobalt::Logger_Sync* logger,
+                      std::unique_ptr<cobalt::SteadyClock> clock,
+                      std::unique_ptr<cobalt::MemoryStatsFetcher> memory_stats_fetcher,
+                      std::unique_ptr<cobalt::CpuStatsFetcher> cpu_stats_fetcher,
+                      std::unique_ptr<cobalt::TemperatureFetcher> temperature_fetcher);
 
   void InitializeLogger();
 
@@ -80,6 +81,11 @@ class SystemMetricsDaemon {
   // then uses the |dispatcher| passed to the constructor to schedule
   // the next round.
   void RepeatedlyLogCpuUsage();
+
+  // Calls LogTemperature,
+  // then uses the |dispatcher| passed to the constructor to schedule
+  // the next round.
+  void RepeatedlyLogTemperature();
 
   // Returns the amount of time since SystemMetricsDaemon started.
   std::chrono::seconds GetUpTime();
@@ -131,8 +137,8 @@ class SystemMetricsDaemon {
 
   // Helper function to translate uptime in seconds to
   // corresponding cobalt event code.
-  fuchsia_system_metrics::FuchsiaMemoryExperimental2MetricDimensionTimeSinceBoot
-  GetUpTimeEventCode(const std::chrono::seconds& uptime);
+  fuchsia_system_metrics::FuchsiaMemoryExperimental2MetricDimensionTimeSinceBoot GetUpTimeEventCode(
+      const std::chrono::seconds& uptime);
 
   // TODO(PT-128) To be removed after we start populating
   // fuchsia_memory_experimental_2.
@@ -149,6 +155,15 @@ class SystemMetricsDaemon {
   // a vector of cpu percentages taken in one minute into Cobalt.
   void LogCpuPercentagesToCobalt();
 
+  // Fetches and logs device temperature.
+  //
+  // Returns the amount of time before this method needs to be invoked again.
+  std::chrono::seconds LogTemperature();
+
+  // Helper function to call Cobalt logger's LogIntHistogram to log
+  // a vector of temperature readings taken in one minute into Cobalt.
+  void LogTemperatureToCobalt();
+
   bool boot_reported_ = false;
   async_dispatcher_t* const dispatcher_;
   sys::ComponentContext* context_;
@@ -159,7 +174,10 @@ class SystemMetricsDaemon {
   std::unique_ptr<cobalt::SteadyClock> clock_;
   std::unique_ptr<cobalt::MemoryStatsFetcher> memory_stats_fetcher_;
   std::unique_ptr<cobalt::CpuStatsFetcher> cpu_stats_fetcher_;
+  std::unique_ptr<cobalt::TemperatureFetcher> temperature_fetcher_;
   std::vector<double> cpu_percentages_;
+  std::unordered_map<uint32_t, uint64_t> temperature_map_;
+  uint32_t temperature_map_size_ = 0;
 };
 
 #endif  // SRC_COBALT_BIN_SYSTEM_METRICS_SYSTEM_METRICS_DAEMON_H_

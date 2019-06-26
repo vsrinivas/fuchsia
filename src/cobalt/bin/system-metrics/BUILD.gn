@@ -23,6 +23,9 @@ source_set("system_metrics_daemon_lib") {
     "memory_stats_fetcher_impl.h",
     "system_metrics_daemon.cc",
     "system_metrics_daemon.h",
+    "temperature_fetcher.h",
+    "temperature_fetcher_impl.cc",
+    "temperature_fetcher_impl.h",
   ]
 
   public_deps = [
@@ -33,6 +36,7 @@ source_set("system_metrics_daemon_lib") {
     "//src/cobalt/bin/utils:clock",
     "//src/lib/cobalt/cpp:cobalt_event_builder",
     "//zircon/public/fidl/fuchsia-cobalt",
+    "//zircon/public/fidl/fuchsia-hardware-thermal:fuchsia-hardware-thermal_c",
     "//zircon/public/fidl/fuchsia-sysinfo:fuchsia-sysinfo_c",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/trace",
@@ -77,6 +81,8 @@ executable("cobalt_system_metrics_unittests") {
     "fake_cpu_stats_fetcher.h",
     "fake_memory_stats_fetcher.cc",
     "fake_memory_stats_fetcher.h",
+    "fake_temperature_fetcher.cc",
+    "fake_temperature_fetcher.h",
     "system_metrics_daemon_test.cc",
   ]
 
