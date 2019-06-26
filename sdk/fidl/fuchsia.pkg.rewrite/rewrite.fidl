@@ -83,9 +83,8 @@ xunion Rule {
 /// Manages fuchsia-pkg:// rewrite rules.
 ///
 /// When a package resolver is asked to resolve a fuchsia-pkg URL, it must first
-/// iterate through its sequence of rewrite rules (given by
-/// `Engine::List`). The rewrite engine will rewrite the given URL with
-/// the first rule that:
+/// iterate through its sequence of rewrite rules (given by [`List`]). The
+/// rewrite engine will rewrite the given URL with the first rule that:
 /// * matches the given URL
 /// * produces a valid URL when applied to the given URL
 /// If no rules match, the URL is resolved as-is.
@@ -99,17 +98,32 @@ protocol Engine {
 
     /// Return an iterator over all rewrite rules.
     ///
-    /// Arguments:
-    /// `iterator` is a request for an iterator.
+    /// + request `iterator` is a request for an iterator.
     List(request<RuleIterator> iterator);
 
     /// Return an iterator over all static (immutable) rewrite rules. These
     /// rules are handled as lower priority than dynamic rules and cannot be
-    /// modified (although they can be overridden) by `EditTransaction`s.
+    /// modified (although they can be overridden) by [`EditTransaction`]s.
     ///
-    /// Arguments:
-    /// `iterator` is a request for an iterator.
+    /// + request `iterator` is a request for an iterator.
     ListStatic(request<RuleIterator> iterator);
+
+    /// Rewrite the given `url` with the current rewrite rule set, returning the
+    /// `rewritten` url.  If no rules match or a rule matches but performs an
+    /// identity transformation, this API returns `url` unchanged.
+    ///
+    /// This API is intended only for reflecting on rule side effects. Using
+    /// this API to pre-apply the rules, then passing the result to
+    /// [`fuchsia.pkg/PackageResolver.Resolve`] would apply the rules twice.
+    ///
+    /// + request `url` the url to rewrite.
+    /// - response `rewritten` the rewritten url.
+    /// * error `ZX_ERR_INVALID_ARGS` If `url` is not a valid `fuchsia-pkg://`
+    ///    URL. See [`fuchsia-pkg URL`].
+    ///
+    /// [`fuchsia-pkg URL`]:
+    ///    https://fuchsia.googlesource.com/fuchsia/+/master/docs/the-book/package_url.md
+    TestApply(string url) -> (string rewritten) error zx.status;
 };
 
 protocol EditTransaction {
@@ -117,8 +131,7 @@ protocol EditTransaction {
     /// iterator will reflect any changes made to the rewrite rules so far in
     /// this transaction.
     ///
-    /// Arguments:
-    /// `iterator` is a request for an iterator.
+    /// + request `iterator` is a request for an iterator.
     ListDynamic(request<RuleIterator> iterator);
 
     /// Removes all dynamically configured rewrite rules, leaving only any
@@ -128,30 +141,30 @@ protocol EditTransaction {
     /// Add a rewrite rule with highest priority. If `rule` already exists, this
     /// API will prioritize it over other rules.
     ///
-    /// Arguments:
-    /// * `rule` the rewrite rule to persist.
+    /// + request `rule` the rewrite rule to persist.
     ///
-    /// Return Values:
-    /// * `ZX_OK` if the rule was staged to be added.
-    /// * `ZX_ERR_INVALID_ARGS` if the `rule` is malformed.
+    /// * status `ZX_OK` if the rule was staged to be added.
+    /// * status `ZX_ERR_INVALID_ARGS` If `url` is not a valid `fuchsia-pkg://`
+    ///    URL. See [`fuchsia-pkg URL`].
+    ///
+    /// [`fuchsia-pkg URL`]:
+    ///    https://fuchsia.googlesource.com/fuchsia/+/master/docs/the-book/package_url.md
     Add(Rule rule) -> (zx.status status);
 
     /// Commit this transaction, or detect another transaction that committed
     /// before this one.
     ///
-    /// Return Values:
-    /// * `ZX_OK` the staged edits were successfully committed.
-    /// * `ZX_ERR_UNAVAILABLE`  another transaction committed before this one.
+    /// * status `ZX_OK` the staged edits were successfully committed.
+    /// * status `ZX_ERR_UNAVAILABLE` another transaction committed before this one.
     Commit() -> (zx.status status);
 
 };
 
-/// The iterator over all the rewrite rules defined in a `Engine`.
+/// The iterator over all the rewrite rules defined in a [`Engine`].
 protocol RuleIterator {
     /// Advance the iterator and return the next batch of rules.
     ///
-    /// Return Values:
-    /// * a vector of `Rule` rules. Will return an empty vector when
-    ///   there are no more rules.
+    /// - response `rules` a vector of [`Rule`] rules. Will return an empty
+    ///    vector when there are no more rules.
     Next() -> (vector<Rule> rules);
 };

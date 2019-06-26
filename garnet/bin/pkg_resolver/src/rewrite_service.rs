@@ -14,6 +14,7 @@ use {
     },
     fuchsia_async as fasync,
     fuchsia_syslog::fx_log_err,
+    fuchsia_url::pkg_url::PkgUrl,
     fuchsia_url_rewrite::Rule,
     fuchsia_zircon::Status,
     futures::prelude::*,
@@ -58,10 +59,28 @@ where
                     let transaction = transaction.into_stream()?;
                     self.serve_edit_transaction(transaction);
                 }
+                EngineRequest::TestApply { url, responder } => {
+                    responder.send(
+                        &mut self
+                            .handle_test_apply(url.as_str())
+                            .map(|url| url.to_string())
+                            .map_err(|e| e.into_raw()),
+                    )?;
+                }
             }
         }
 
         Ok(())
+    }
+
+    pub(self) fn handle_test_apply(&self, url: &str) -> Result<PkgUrl, Status> {
+        let url = url.parse().map_err(|e| {
+            fx_log_err!("client provided invalid URL ({:?}): {:?}", url, e);
+            Status::INVALID_ARGS
+        })?;
+
+        let rewritten = self.state.read().rewrite(url);
+        Ok(rewritten)
     }
 
     pub(self) fn serve_list(&mut self, stream: RuleIteratorRequestStream) {
@@ -487,6 +506,91 @@ mod tests {
         assert_eq!(
             amber.take_events(),
             vec![AmberSourceEvent::EnableSource("devhost.fuchsia.com".to_owned())]
+        );
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn test_rewrite() {
+        let inspector = fuchsia_inspect::Inspector::new();
+        let node = inspector.root().create_child("rewrite-manager");
+        let dynamic_config = make_rule_config(vec![]);
+        let static_rules = vec![
+            rule!("fuchsia.com" => "fuchsia.com", "/old/" => "/new/"),
+            rule!("fuchsia.com" => "devhost", "/rolldice" => "/rolldice"),
+            rule!("fuchsia.com" => "fuchsia.com", "/identity" => "/identity"),
+        ];
+        let state = Arc::new(RwLock::new(
+            RewriteManagerBuilder::new(node, &dynamic_config)
+                .unwrap()
+                .static_rules(static_rules.clone())
+                .build(),
+        ));
+        let service = RewriteService::new(state.clone(), UnreachableAmberSourceSelector);
+
+        for (url, rewritten) in &[
+            ("fuchsia-pkg://fuchsia.com/old/a", "fuchsia-pkg://fuchsia.com/new/a"),
+            ("fuchsia-pkg://fuchsia.com/rolldice", "fuchsia-pkg://devhost/rolldice"),
+            ("fuchsia-pkg://fuchsia.com/identity", "fuchsia-pkg://fuchsia.com/identity"),
+        ] {
+            assert_eq!(service.handle_test_apply(url), Ok(rewritten.parse().unwrap()));
+        }
+
+        for url in &[
+            "fuchsia-pkg://subdomain.fuchsia.com/unmatcheddomain",
+            "fuchsia-pkg://devhost/unmatcheddomain",
+            "fuchsia-pkg://fuchsia.com/new/unmatcheddir",
+        ] {
+            assert_eq!(service.handle_test_apply(url), Ok(url.parse().unwrap()));
+        }
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn test_rewrite_rejects_invalid_inputs() {
+        let inspector = fuchsia_inspect::Inspector::new();
+        let node = inspector.root().create_child("rewrite-manager");
+        let dynamic_config = make_rule_config(vec![]);
+        let state = Arc::new(RwLock::new(
+            RewriteManagerBuilder::new(node, &dynamic_config).unwrap().build(),
+        ));
+        let service = RewriteService::new(state.clone(), UnreachableAmberSourceSelector);
+
+        for url in &["not-fuchsia-pkg://fuchsia.com/test", "fuchsia-pkg://fuchsia.com/a*"] {
+            assert_eq!(service.handle_test_apply(url), Err(Status::INVALID_ARGS));
+        }
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn test_concurrent_rewrite_and_edit() {
+        let inspector = fuchsia_inspect::Inspector::new();
+        let node = inspector.root().create_child("rewrite-manager");
+        let dynamic_config =
+            make_rule_config(vec![rule!("fuchsia.com" => "fuchsia.com", "/a" => "/b")]);
+        let state = Arc::new(RwLock::new(
+            RewriteManagerBuilder::new(node, &dynamic_config).unwrap().build(),
+        ));
+        let mut service = RewriteService::new(state.clone(), UnreachableAmberSourceSelector);
+
+        let (edit_client, request_stream) =
+            create_proxy_and_stream::<EditTransactionMarker>().unwrap();
+        service.serve_edit_transaction(request_stream);
+
+        let replacement_rule = rule!("fuchsia.com" => "fuchsia.com", "/a" => "/c");
+
+        edit_client.reset_all().unwrap();
+        assert_yields_status!(edit_client.add(&mut replacement_rule.into()), Status::OK);
+
+        // Pending transaction does not affect apply call.
+        assert_eq!(
+            service.handle_test_apply("fuchsia-pkg://fuchsia.com/a"),
+            Ok("fuchsia-pkg://fuchsia.com/b".parse().unwrap())
+        );
+
+        assert_yields_status!(edit_client.commit(), Status::OK);
+
+        // New rule set now applies.
+        assert_eq!(
+            service.handle_test_apply("fuchsia-pkg://fuchsia.com/a"),
+            Ok("fuchsia-pkg://fuchsia.com/c".parse().unwrap())
         );
     }
 
