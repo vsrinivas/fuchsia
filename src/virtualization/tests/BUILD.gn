@@ -85,10 +85,15 @@ executable("bin") {
     "mock_netstack.h",
     "virtio_block_tests.cc",
     "virtio_gpu_tests.cc",
-    "virtio_input_tests.cc",
     "virtio_net_tests.cc",
     "virtio_vsock_tests.cc",
   ]
+
+  # Architecture-specific tests.
+  if (target_cpu != "arm64") {
+    # TODO(MAC-256): Input tests don't currently work on the ARM Linux images.
+    sources += [ "virtio_input_tests.cc" ]
+  }
 
   deps = [
     ":guest_console",
