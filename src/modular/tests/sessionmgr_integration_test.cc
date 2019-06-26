@@ -14,8 +14,7 @@
 
 namespace {
 
-class SessionmgrIntegrationTest : public modular::testing::TestHarnessFixture {
-};
+class SessionmgrIntegrationTest : public modular::testing::TestHarnessFixture {};
 
 class MockAdmin : public fuchsia::device::manager::Administrator {
  public:
@@ -34,15 +33,11 @@ class MockAdmin : public fuchsia::device::manager::Administrator {
 
 class TestSessionShell : public modular::testing::FakeComponent {
  public:
-  TestSessionShell(fit::function<void()> on_created,
-                   fit::function<void()> on_destroyed)
-      : on_created_(std::move(on_created)),
-        on_destroyed_(std::move(on_destroyed)) {}
+  TestSessionShell(fit::function<void()> on_created, fit::function<void()> on_destroyed)
+      : on_created_(std::move(on_created)), on_destroyed_(std::move(on_destroyed)) {}
 
  protected:
-  void OnCreate(fuchsia::sys::StartupInfo startup_info) override {
-    on_created_();
-  }
+  void OnCreate(fuchsia::sys::StartupInfo startup_info) override { on_created_(); }
 
   void OnDestroy() override { on_destroyed_(); }
 
@@ -50,8 +45,7 @@ class TestSessionShell : public modular::testing::FakeComponent {
   fit::function<void()> on_destroyed_;
 };
 
-TEST_F(SessionmgrIntegrationTest,
-       RebootCalledIfSessionmgrCrashNumberReachesRetryLimit) {
+TEST_F(SessionmgrIntegrationTest, DISABLED_RebootCalledIfSessionmgrCrashNumberReachesRetryLimit) {
   MockAdmin mock_admin;
   fidl::BindingSet<fuchsia::device::manager::Administrator> admin_bindings;
 
