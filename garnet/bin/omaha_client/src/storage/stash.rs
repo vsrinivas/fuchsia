@@ -58,6 +58,12 @@ impl Stash {
         Ok(Stash { proxy })
     }
 
+    #[cfg(test)]
+    fn new_mock() -> (Self, fidl_fuchsia_stash::StoreAccessorRequestStream) {
+        let (proxy, server_end) = create_proxy::<StoreAccessorMarker>().unwrap();
+        (Stash { proxy }, server_end.into_stream().unwrap())
+    }
+
     async fn get_value<'a>(&'a self, key: &'a str) -> Option<Box<Value>> {
         let result = await!(self.proxy.get_value(key));
         match result {
@@ -163,6 +169,7 @@ impl Storage for Stash {
 #[cfg(test)]
 pub mod tests {
     use super::*;
+    use fidl_fuchsia_stash::StoreAccessorRequest;
     use fuchsia_async as fasync;
     use omaha_client::storage::tests::*;
 
@@ -197,4 +204,13 @@ pub mod tests {
         await!(do_ensure_no_error_remove_nonexistent_key(&mut storage));
     }
 
+    #[fasync::run_singlethreaded(test)]
+    async fn test_commit() {
+        let (mut storage, mut stream) = Stash::new_mock();
+        await!(storage.commit()).unwrap();
+        match await!(stream.next()).unwrap() {
+            Ok(StoreAccessorRequest::Commit { .. }) => {} // expected
+            request => panic!("Unexpected request: {:?}", request),
+        }
+    }
 }
