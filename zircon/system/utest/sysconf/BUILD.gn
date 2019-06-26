@@ -4,10 +4,10 @@
 
 test("sysconf") {
   sources = [
-    "sysconf.c",
+    "sysconf.cc",
   ]
   deps = [
     "$zx/system/ulib/fdio",
-    "$zx/system/ulib/unittest",
+    "$zx/system/ulib/zxtest",
   ]
 }
