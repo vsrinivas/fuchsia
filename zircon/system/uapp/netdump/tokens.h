@@ -180,7 +180,7 @@ public:
     // Fields that can be matched against. `tag` is type of field, if different types exist.
     const TokenPtr ETHER = keyword("ether");
     const TokenPtr PROTO = keyword("proto");
-    const TokenPtr HOST = keyword("host", AddressFieldType::SRC_ADDR);
+    const TokenPtr HOST = keyword("host", AddressFieldType::EITHER_ADDR);
     const TokenPtr SRC = keyword("src", AddressFieldType::SRC_ADDR);
     const TokenPtr DST = keyword("dst", AddressFieldType::DST_ADDR);
     const TokenPtr PORT = keyword("port", "portrange", PortFieldType::EITHER_PORT);

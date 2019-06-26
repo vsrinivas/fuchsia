@@ -31,6 +31,7 @@ test("netdump-test") {
   output_name = "netdump-test"
   sources = [
     "filter.cc",
+    "test/filter_builder_test.cc",
     "test/filter_test.cc",
     "test/parser_test.cc",
     "test/tokens_test.cc",
