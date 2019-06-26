@@ -19,8 +19,21 @@ use sdk_metadata::JsonObject;
 
 use crate::app::{Error, Result};
 
+/// A trait for types representing tarball contents.
+pub trait TarballContent {
+    /// Returns true if this piece of content is identical to a given piece of content.
+    fn is_identical(&self, other: &Self) -> Result<bool>;
+}
+
+impl TarballContent for File {
+    fn is_identical(&self, other: &File) -> Result<bool> {
+        // Compare file sizes to avoid reading the full file contents.
+        Ok(self.metadata()?.len() == other.metadata()?.len())
+    }
+}
+
 /// A tarball that can be read from.
-pub trait InputTarball<F> {
+pub trait InputTarball<F: TarballContent> {
     /// Reads a file from the tarball.
     fn get_file<R>(&self, path: &str, reader: R) -> Result<()>
     where
@@ -73,7 +86,7 @@ impl InputTarball<File> for SourceTarball {
 }
 
 /// A tarball that can be written into.
-pub trait OutputTarball<F> {
+pub trait OutputTarball<F: TarballContent> {
     /// Writes the given content to the given path in the tarball.
     ///
     /// It is an error to write to the same path twice.

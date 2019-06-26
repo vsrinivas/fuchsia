@@ -4,11 +4,11 @@
 
 use std::collections::HashMap;
 
-use sdk_metadata::{HostTool, TargetArchitecture};
+use sdk_metadata::{HostTool, JsonObject, TargetArchitecture};
 
 use crate::app::Result;
-use crate::file_provider::FileProvider;
-use crate::tarball::{InputTarball, OutputTarball};
+use crate::file_provider::{merge_files, FileProvider};
+use crate::tarball::{InputTarball, OutputTarball, TarballContent};
 
 impl FileProvider for HostTool {
     fn get_common_files(&self) -> Vec<String> {
@@ -26,13 +26,14 @@ impl FileProvider for HostTool {
     }
 }
 
-pub fn merge_host_tool<F>(
+pub fn merge_host_tool<F: TarballContent>(
     meta_path: &str, base: &impl InputTarball<F>, complement: &impl InputTarball<F>,
     output: &mut impl OutputTarball<F>,
 ) -> Result<()> {
-    // TODO(DX-495): verify that common files are the same.
     let base_meta: HostTool = base.get_metadata(meta_path)?;
     let complement_meta: HostTool = complement.get_metadata(meta_path)?;
+    merge_files(&base_meta, base, &complement_meta, complement, output)?;
+
     let mut meta = base_meta.clone();
     if let Some(complement_target_files) = &complement_meta.target_files {
         if let Some(meta_target_files) = &mut meta.target_files {
@@ -43,16 +44,9 @@ pub fn merge_host_tool<F>(
             meta.target_files = complement_meta.target_files.clone();
         }
     }
-
-    for path in &base_meta.get_all_files() {
-        base.get_file(path, |file| output.write_file(path, file))?;
-    }
-    for (_, files) in &complement_meta.get_arch_files() {
-        for path in files {
-            complement.get_file(path, |file| output.write_file(path, file))?;
-        }
-    }
+    meta.validate()?;
     output.write_json(meta_path, &meta)?;
+
     Ok(())
 }
 
@@ -125,5 +119,11 @@ mod tests {
         output.assert_has_file(meta);
         output.assert_has_file("tools/foobar_x64");
         output.assert_has_file("tools/foobar_arm64");
+        let data = HostTool::new(output.get_content(meta).as_bytes()).unwrap();
+        assert!(data.target_files.is_some());
+        assert!(
+            data.target_files.unwrap().len() == 2,
+            "Invalid number of architectures"
+        );
     }
 }

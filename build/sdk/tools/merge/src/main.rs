@@ -8,11 +8,14 @@ use std::iter::{FromIterator, Iterator};
 
 use structopt::StructOpt;
 
-use sdk_metadata::{DartLibrary, ElementType, HostTool, JsonObject, Manifest, Part};
+use sdk_metadata::{
+    CcPrebuiltLibrary, DartLibrary, ElementType, HostTool, JsonObject, Manifest, Part,
+};
 
 mod app;
 mod file_provider;
 mod flags;
+mod merge_cc_prebuilt_library;
 mod merge_dart_library;
 mod merge_host_tool;
 mod tarball;
@@ -21,9 +24,10 @@ mod testing;
 
 use crate::app::{Error, Result};
 use crate::file_provider::FileProvider;
+use crate::merge_cc_prebuilt_library::merge_cc_prebuilt_library;
 use crate::merge_dart_library::merge_dart_library;
 use crate::merge_host_tool::merge_host_tool;
-use crate::tarball::{InputTarball, OutputTarball, ResultTarball, SourceTarball};
+use crate::tarball::{InputTarball, OutputTarball, ResultTarball, SourceTarball, TarballContent};
 
 const MANIFEST_PATH: &str = "meta/manifest.json";
 
@@ -109,13 +113,14 @@ fn merge_manifests(base: &Manifest, complement: &Manifest) -> Result<Manifest> {
 // TODO(DX-1056): delete when all types are supported.
 fn is_kind_supported(kind: &ElementType) -> bool {
     match kind {
+        ElementType::CcPrebuiltLibrary => true,
         ElementType::DartLibrary => true,
         ElementType::HostTool => true,
         _ => false,
     }
 }
 
-fn merge_common_part<F>(
+fn merge_common_part<F: TarballContent>(
     part: &Part, base: &impl InputTarball<F>, complement: &impl InputTarball<F>,
     output: &mut impl OutputTarball<F>,
 ) -> Result<()> {
@@ -124,13 +129,16 @@ fn merge_common_part<F>(
         return Ok(());
     }
     match part.kind {
+        ElementType::CcPrebuiltLibrary => {
+            merge_cc_prebuilt_library(&part.meta, base, complement, output)
+        }
         ElementType::DartLibrary => merge_dart_library(&part.meta, base, complement, output),
         ElementType::HostTool => merge_host_tool(&part.meta, base, complement, output),
         _ => unreachable!("Type should have been skipped over: {:?}", part.kind),
     }
 }
 
-fn copy_part_as_is<F>(
+fn copy_part_as_is<F: TarballContent>(
     part: &Part, source: &impl InputTarball<F>, output: &mut impl OutputTarball<F>,
 ) -> Result<()> {
     if !is_kind_supported(&part.kind) {
@@ -139,6 +147,9 @@ fn copy_part_as_is<F>(
     }
     println!("Copying {}", part);
     let provider: Box<dyn FileProvider> = match part.kind {
+        ElementType::CcPrebuiltLibrary => {
+            Box::new(source.get_metadata::<CcPrebuiltLibrary>(&part.meta)?)
+        }
         ElementType::DartLibrary => Box::new(source.get_metadata::<DartLibrary>(&part.meta)?),
         ElementType::HostTool => Box::new(source.get_metadata::<HostTool>(&part.meta)?),
         _ => unreachable!("Type should have been skipped over: {:?}", part.kind),

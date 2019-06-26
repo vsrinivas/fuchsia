@@ -8,6 +8,8 @@ pub type File = String;
 
 pub type FidlLibraryName = String;
 
+pub type CcLibraryName = String;
+
 #[derive(Serialize, Deserialize, Debug, Hash, Clone, PartialOrd, Ord, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum TargetArchitecture {

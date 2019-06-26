@@ -6,6 +6,7 @@ use failure::Fail;
 use serde::{Deserialize, Serialize};
 use serde_json::{from_reader, from_str, to_string, to_value};
 use std::io::Read;
+use valico::common::error::ValicoError;
 use valico::json_schema;
 
 /// The various types of errors raised by this module.
@@ -24,6 +25,26 @@ impl From<valico::json_schema::schema::SchemaError> for Error {
     fn from(err: valico::json_schema::schema::SchemaError) -> Self {
         Error::SchemaInvalid(err)
     }
+}
+
+/// Generates user-friendly messages for validation errors.
+fn format_valico_error(error: &Box<dyn ValicoError>) -> String {
+    // $title[at $path][: $detail] ($code)
+    let mut result = String::new();
+    result.push_str(error.get_title());
+    let path = error.get_path();
+    if !path.is_empty() {
+        result.push_str(" at ");
+        result.push_str(path);
+    }
+    if let Some(detail) = error.get_detail() {
+        result.push_str(": ");
+        result.push_str(detail);
+    }
+    result.push_str(" (");
+    result.push_str(error.get_code());
+    result.push_str(")");
+    result
 }
 
 /// Augments metadata representations with utility methods to serialize/deserialize and validate
@@ -54,11 +75,8 @@ pub trait JsonObject: for<'a> Deserialize<'a> + Serialize + Sized {
         let value = to_value(self)?;
         let result = validator.validate(&value);
         if !result.is_valid() {
-            let mut error_messages: Vec<String> = result
-                .errors
-                .iter()
-                .map(|e| format!("{} at {}", e.get_title(), e.get_path()))
-                .collect();
+            let mut error_messages: Vec<String> =
+                result.errors.iter().map(format_valico_error).collect();
             error_messages.sort_unstable();
             return Err(Error::JsonFileInvalid {
                 errors: error_messages.join(", "),

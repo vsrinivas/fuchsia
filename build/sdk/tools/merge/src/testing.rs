@@ -8,7 +8,13 @@ use std::collections::HashMap;
 use sdk_metadata::JsonObject;
 
 use crate::app::{Error, Result};
-use crate::tarball::{InputTarball, OutputTarball};
+use crate::tarball::{InputTarball, OutputTarball, TarballContent};
+
+impl TarballContent for String {
+    fn is_identical(&self, other: &String) -> Result<bool> {
+        Ok(self == other)
+    }
+}
 
 pub struct MockInputTarball {
     files: RefCell<HashMap<String, String>>,
@@ -72,6 +78,11 @@ impl MockOutputTarball {
             self.files.contains_key(path),
             format!("File not found: {}", path)
         );
+    }
+
+    pub fn get_content(&self, path: &str) -> &String {
+        self.assert_has_file(path);
+        self.files.get(path).unwrap()
     }
 }
 

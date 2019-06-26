@@ -5,8 +5,8 @@
 use sdk_metadata::DartLibrary;
 
 use crate::app::Result;
-use crate::file_provider::FileProvider;
-use crate::tarball::{InputTarball, OutputTarball};
+use crate::file_provider::{merge_files, FileProvider};
+use crate::tarball::{InputTarball, OutputTarball, TarballContent};
 
 impl FileProvider for DartLibrary {
     fn get_common_files(&self) -> Vec<String> {
@@ -14,24 +14,23 @@ impl FileProvider for DartLibrary {
     }
 }
 
-pub fn merge_dart_library<F>(
-    meta_path: &str, base: &impl InputTarball<F>, _complement: &impl InputTarball<F>,
+pub fn merge_dart_library<F: TarballContent>(
+    meta_path: &str, base: &impl InputTarball<F>, complement: &impl InputTarball<F>,
     output: &mut impl OutputTarball<F>,
 ) -> Result<()> {
-    // For now, just copy the base version.
-    // TODO(DX-495): verify that contents are the exact same.
-    let meta = base.get_metadata::<DartLibrary>(meta_path)?;
-    let mut paths = meta.get_all_files();
-    paths.push(meta_path.to_owned());
-    for path in &paths {
-        base.get_file(path, |file| output.write_file(path, file))?;
-    }
+    let base_meta: DartLibrary = base.get_metadata(meta_path)?;
+    let complement_meta: DartLibrary = complement.get_metadata(meta_path)?;
+    merge_files(&base_meta, base, &complement_meta, complement, output)?;
+
+    output.write_json(meta_path, &base_meta)?;
     Ok(())
 }
 
 #[cfg(test)]
 mod tests {
     use crate::testing::{MockInputTarball, MockOutputTarball};
+
+    use sdk_metadata::JsonObject;
 
     use super::*;
 
@@ -65,5 +64,7 @@ mod tests {
         output.assert_has_file(meta);
         output.assert_has_file("dart/foobar/lib/one.dart");
         output.assert_has_file("dart/foobar/lib/two.dart");
+        let out_data = DartLibrary::new(output.get_content(meta).as_bytes()).unwrap();
+        assert!(out_data.sources.len() == 2);
     }
 }
