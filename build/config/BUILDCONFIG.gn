@@ -6,6 +6,10 @@
 # in place of // to refer to the root of the flutter source tree.
 flutter_root = "//third_party/flutter"
 
+# The GN files in //third_party/cobalt all use $cobalt_root/
+# in place of // to refer to the root of the cobalt source tree.
+cobalt_root = "//third_party/cobalt"
+
 declare_args() {
   # Debug build.
   is_debug = true
