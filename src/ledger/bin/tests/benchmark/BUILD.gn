@@ -349,6 +349,11 @@ package("ledger_benchmarks") {
       path = rebase_path("stories_simulation/stories_wait_cached.tspec")
       dest = "stories_wait_cached.tspec"
     },
+
+    {
+      path = rebase_path("stories_simulation/stories_memory.tspec")
+      dest = "stories_memory.tspec"
+    },
   ]
 
   if (ledger_sync_credentials_file != "") {

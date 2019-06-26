@@ -176,6 +176,7 @@ class StoriesBenchmark {
 
   scoped_tmpfs::ScopedTmpFS tmp_fs_;
   std::unique_ptr<sys::ComponentContext> component_context_;
+  LedgerMemoryEstimator memory_estimator_;
 
   // Input arguments.
   const int story_count_;
@@ -224,6 +225,7 @@ void StoriesBenchmark::Run() {
   if (QuitOnError(QuitLoopClosure(), status, "GetLedger")) {
     return;
   }
+  FXL_CHECK(memory_estimator_.Init());
 
   InitializeDefaultPages();
 }
@@ -299,6 +301,12 @@ void StoriesBenchmark::RunSingle(int i) {
 
   waiter->Finalize([this, i] {
     TRACE_ASYNC_END("benchmark", "story_lifetime", i);
+
+    // Measure memory before the cleanup.
+    uint64_t memory;
+    FXL_CHECK(memory_estimator_.GetLedgerMemoryUsage(&memory));
+    TRACE_COUNTER("benchmark", "memory_stories", i, "memory", TA_UINT64(memory));
+
     MaybeCleanup(i, [this, i] { RunSingle(i + 1); });
   });
 }
