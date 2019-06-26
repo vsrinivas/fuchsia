@@ -15,31 +15,41 @@ group("harvester") {
   ]
 }
 
-executable("bin") {
-  output_name = "system_monitor_harvester"
-
+source_set("lib") {
   sources = [
     "dockyard_proxy.h",
-    "dockyard_proxy_grpc.cc",
-    "dockyard_proxy_grpc.h",
-    "dockyard_proxy_local.cc",
-    "dockyard_proxy_local.h",
     "harvester.cc",
     "harvester.h",
-    "harvester_main.cc",
+    "root_resource.cc",
+    "root_resource.h",
   ]
 
-  deps = [
+  public_deps = [
     "//garnet/lib/system_monitor/dockyard:lib",
     "//garnet/lib/system_monitor/dockyard:protos",
     "//garnet/public/lib/inspect/query",
     "//src/lib/fxl",
-    "//third_party/grpc:grpc++",
     "//zircon/public/fidl/fuchsia-sysinfo:fuchsia-sysinfo_c",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/fdio",
     "//zircon/public/lib/task-utils",
+  ]
+}
+
+executable("bin") {
+  output_name = "system_monitor_harvester"
+
+  sources = [
+    "dockyard_proxy_grpc.cc",
+    "dockyard_proxy_grpc.h",
+    "dockyard_proxy_local.cc",
+    "dockyard_proxy_local.h",
+    "harvester_main.cc",
+  ]
+
+  deps = [
+    ":lib",
+    "//third_party/grpc:grpc++",
   ]
 }
 
@@ -68,26 +78,17 @@ executable("system_monitor_harvester_test") {
   testonly = true
 
   sources = [
-    "dockyard_proxy.h",
     "dockyard_proxy_fake.cc",
     "dockyard_proxy_fake.h",
-    "harvester.cc",
-    "harvester.h",
     "harvester_test.cc",
+    "root_resource_test.cc",
   ]
 
   deps = [
-    "//garnet/lib/system_monitor/dockyard:lib",
-    "//garnet/lib/system_monitor/dockyard:protos",
+    ":lib",
     "//garnet/public/lib/gtest",
-    "//garnet/public/lib/inspect/query",
     "//sdk/lib/sys/cpp/testing:unit",
-    "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
-    "//third_party/grpc:grpc++",
-    "//zircon/public/fidl/fuchsia-sysinfo:fuchsia-sysinfo_c",
-    "//zircon/public/lib/task-utils",
-    "//zircon/public/lib/zx",
   ]
 }
 
