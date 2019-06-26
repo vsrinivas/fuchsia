@@ -12,6 +12,7 @@
 #include <fbl/unique_ptr.h>
 #include <hw/reg.h>
 #include <stdint.h>
+#include <zircon/assert.h>
 #include <zircon/threads.h>
 #include <zircon/types.h>
 
@@ -80,11 +81,16 @@ void GdcDevice::ProcessTask(TaskInfo& info) {
 
   zx_port_packet_t packet;
   ZX_ASSERT(ZX_OK == WaitForInterrupt(&packet));
-  gdc_irq_.ack();
 
-  // Currently there is only type of event coming in at this port.
-  // We could possibly add more, like one to terminate the process.
+  // Only Assert on ACK failure if its an actual HW interrupt.
+  // Currently we are injecting packets on the same ports for tests to
+  // fake an actual HW interrupt to test the callback functionality.
+  // This causes the IRQ object to be in a bad state when ACK'd.
   if (packet.key == kPortKeyIrqMsg) {
+    ZX_ASSERT(gdc_irq_.ack());
+  }
+
+  if (packet.key == kPortKeyDebugFakeInterrupt || packet.key == kPortKeyIrqMsg) {
     // Invoke the callback function and tell about the output buffer index
     // which is ready to be used.
     // TODO(CAM-33): pass actual output buffer index instead of

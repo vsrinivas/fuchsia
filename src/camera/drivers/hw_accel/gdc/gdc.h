@@ -38,6 +38,7 @@ namespace gdc {
 namespace {
 
 constexpr uint64_t kPortKeyIrqMsg = 0x00;
+constexpr uint64_t kPortKeyDebugFakeInterrupt = 0x01;
 
 }  // namespace
 // This provides ZX_PROTOCOL_GDC.

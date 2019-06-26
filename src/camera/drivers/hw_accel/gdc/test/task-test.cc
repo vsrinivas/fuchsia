@@ -223,7 +223,7 @@ TEST_F(TaskTest, ProcessFrameTest) {
   EXPECT_OK(status);
 
   // Trigger the interrupt manually.
-  zx_port_packet packet = {kPortKeyIrqMsg, ZX_PKT_TYPE_USER, ZX_OK, {}};
+  zx_port_packet packet = {kPortKeyDebugFakeInterrupt, ZX_PKT_TYPE_USER, ZX_OK, {}};
   EXPECT_OK(port_.queue(&packet));
 
   // Check if the callback was called.
@@ -245,7 +245,7 @@ TEST_F(TaskTest, MultipleProcessFrameTest) {
   EXPECT_OK(status);
 
   // Trigger the interrupt manually.
-  zx_port_packet packet = {kPortKeyIrqMsg, ZX_PKT_TYPE_USER, ZX_OK, {}};
+  zx_port_packet packet = {kPortKeyDebugFakeInterrupt, ZX_PKT_TYPE_USER, ZX_OK, {}};
   EXPECT_OK(port_.queue(&packet));
 
   // Check if the callback was called once.
@@ -253,7 +253,7 @@ TEST_F(TaskTest, MultipleProcessFrameTest) {
   EXPECT_EQ(1, callback_check_.size());
 
   // Trigger the interrupt manually.
-  packet = {kPortKeyIrqMsg, ZX_PKT_TYPE_USER, ZX_OK, {}};
+  packet = {kPortKeyDebugFakeInterrupt, ZX_PKT_TYPE_USER, ZX_OK, {}};
   EXPECT_OK(port_.queue(&packet));
 
   // Check if the callback was called one more time.
@@ -266,7 +266,7 @@ TEST_F(TaskTest, MultipleProcessFrameTest) {
   EXPECT_OK(status);
 
   // Trigger the interrupt manually.
-  packet = {kPortKeyIrqMsg, ZX_PKT_TYPE_USER, ZX_OK, {}};
+  packet = {kPortKeyDebugFakeInterrupt, ZX_PKT_TYPE_USER, ZX_OK, {}};
   EXPECT_OK(port_.queue(&packet));
 
   // Check if the callback was called one more time.
@@ -274,7 +274,7 @@ TEST_F(TaskTest, MultipleProcessFrameTest) {
   EXPECT_EQ(3, callback_check_.size());
 
   // Trigger the interrupt manually.
-  packet = {kPortKeyIrqMsg, ZX_PKT_TYPE_USER, ZX_OK, {}};
+  packet = {kPortKeyDebugFakeInterrupt, ZX_PKT_TYPE_USER, ZX_OK, {}};
   EXPECT_OK(port_.queue(&packet));
 
   // Check if the callback was called one more time.
