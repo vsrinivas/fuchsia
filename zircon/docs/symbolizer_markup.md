@@ -363,14 +363,17 @@ raw logging stream, accumulating context and massaging text as it goes.
   This element represents a so called "module". A "module" is a single
   linked binary, such as a loaded ELF file. Usually each module occupies
   a contiguous range of memory (always does on Zircon).
- 
-  Here `%i` is the Module ID which is used by other contextual elements
-  to refer to this module. The first `%s` is a human-readable identifier
-  for the module, such as an ELF `DT_SONAME` string or a file name; but
-  it might be empty. It's only for casual information. The Module ID
-  will be exclusivelly used to refer to this module in other contextual
-  elements. The second `%s` is the module type and it determines what
-  the remaining fields are. The following module types are supported:
+
+  Here `%i` is the module ID which is used by other contextual elements to
+  refer to this module.  The first `%s` is a human-readable identifier for
+  the module, such as an ELF `DT_SONAME` string or a file name; but it
+  might be empty.  It's only for casual information.  Only the module ID is
+  used to refer to this module in other contextual elements, never the `%s`
+  string.  The `module` element defining a module ID must always be emitted
+  before any other elements that refer to that module ID, so that a filter
+  never needs to keep track of dangling references.  The second `%s` is the
+  module type and it determines what the remaining fields are.  The
+  following module types are supported:
 
   * `elf:%x`
 
