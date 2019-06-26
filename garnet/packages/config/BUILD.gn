@@ -40,7 +40,7 @@ group("netconnector") {
 group("openssh_keys") {
   testonly = true
   public_deps = [
-    "//third_party/openssh-portable/fuchsia/developer-keys",
+    "//third_party/openssh-portable/fuchsia/developer-keys:ssh_config",
   ]
 }
 
