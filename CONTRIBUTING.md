@@ -59,6 +59,7 @@ Gerrit will flag your change with
 `Needs Label: Commit-Message-has-tags` if these are missing.
 
 Example:
+
 ```
 # Ready to submit
 [parent][component] Update component in Topaz.
@@ -115,7 +116,7 @@ Usually, this means the action will happen when the commit is merged to
 master, but note that it will also happen if a change is uploaded to a private
 branch.
 
-*Note*: Fuchsia's issue tracker is not open to external contributors at this
+Note: Fuchsia's issue tracker is not open to external contributors at this
 time.
 
 ## Cross-repo changes
@@ -124,7 +125,9 @@ Changes in two or more separate repos will be automatically tracked for you by
 Gerrit if you use the same topic.
 
 ### Using jiri upload
+
 Create branch with same name on all repos and upload the changes
+
 ```
 # make and commit the first change
 cd examples/fortune
