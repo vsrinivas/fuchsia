@@ -372,6 +372,7 @@ foreach(cpu, standard_fuchsia_cpus) {
     testonly = true
     cpu = cpu
     environment_label = "$zx/public/gn/toolchain:user"
+    shlib = true
     exclude_variant_tags = [ "instrumented" ]
     deps = [
       "$zx/system/ulib",

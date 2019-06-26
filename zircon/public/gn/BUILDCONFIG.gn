@@ -403,8 +403,7 @@ template("library") {
 
   # TODO(BLD-353): temporary hacks
   if (sdk != false && toolchain.environment == "user" &&
-      current_toolchain == toolchain.shlib ==
-      (sdk == "shared" || (shared && sdk == "source"))) {
+      current_toolchain == toolchain.shlib) {
     sdk_deps = []
     if (defined(invoker.public_deps)) {
       foreach(label, invoker.public_deps) {
