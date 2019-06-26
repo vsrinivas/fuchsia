@@ -89,35 +89,39 @@ rustc_binary("test_util") {
   ]
 }
 
-config("no-dynamic-linker") {
-  ldflags = [ "-Wl,-no-dynamic-linker" ]
+config("static-pie-config") {
+  visibility = [ ":*" ]
+  cflags = [
+    "-fno-sanitize=all",
+    "-fno-stack-protector",
+  ]
+  ldflags = [
+    "-nostdlib",
+    "-Wl,-no-dynamic-linker",
+  ]
 }
 
-# This is used to test the library's handling of statically linked PIE executables.
-# Warning: Don't copy this unless you know what you're doing.
+# This is used to test the library's handling of statically linked PIE
+# executables.  Warning: Don't copy this unless you know what you're doing.
 executable("static_pie_test_util") {
   testonly = true
   sources = [
     "test/static_pie_test_util.c",
   ]
+  configs += [ ":static-pie-config" ]
 
-  cflags = [
-    "-fno-sanitize=safe-stack",
-    "-fno-stack-protector",
-  ]
-  ldflags = [ "-nostdlib" ]
-  configs += [ ":no-dynamic-linker" ]
+  # Profiling instrumentation needs to be disabled too, but
+  # is not covered by `-fno-sanitize=all`.
+  if (toolchain_variant.name == "profile") {
+    configs -= [ "//build/config/profile" ]
+  }
 }
 
 test_package("process_builder_tests") {
   deps = [
     ":process_builder_test",
     ":root_job_test_runner",
-
-    # We don't want to use any instrumentation for static_pie_test_util, so we
-    # explicitly select the default_toolchain.
-    ":static_pie_test_util($default_toolchain)",
-
+    ":static_pie_test_util",
     ":test_util",
   ]
 
