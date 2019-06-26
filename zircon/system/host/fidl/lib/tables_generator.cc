@@ -104,6 +104,17 @@ void Emit(std::ostream* file, types::Nullability nullability) {
     }
 }
 
+void Emit(std::ostream* file, types::Strictness strictness) {
+    switch (strictness) {
+    case types::Strictness::kFlexible:
+        Emit(file, "::fidl::kFlexible");
+        break;
+    case types::Strictness::kStrict:
+        Emit(file, "::fidl::kStrict");
+        break;
+    }
+}
+
 } // namespace
 
 void TablesGenerator::GenerateInclude(std::string_view filename) {
@@ -252,7 +263,9 @@ void TablesGenerator::Generate(const coded::XUnionType& xunion_type) {
     Emit(&tables_file_, xunion_type.nullability);
     Emit(&tables_file_, ", \"");
     Emit(&tables_file_, xunion_type.qname);
-    Emit(&tables_file_, "\"));\n\n");
+    Emit(&tables_file_, "\", ");
+    Emit(&tables_file_, xunion_type.strictness);
+    Emit(&tables_file_, "));\n\n");
 }
 
 void TablesGenerator::Generate(const coded::PointerType& pointer) {

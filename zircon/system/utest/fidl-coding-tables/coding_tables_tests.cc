@@ -40,18 +40,49 @@ TEST(MyXUnion, CodingTableWhenNullable) {
     const fidl_type& my_xunion_type = *my_xunion_field.type;
     ASSERT_EQ(fidl::FidlTypeTag::kFidlTypeXUnion, my_xunion_type.type_tag);
     const fidl::FidlCodedXUnion& my_xunion_table = my_xunion_type.coded_xunion;
-    ASSERT_STR_EQ("fidl.test.example.codingtables/MyXUnion", my_xunion_table.name);
+
+    // Please keep these assertions in the same order as FidlCodedXUnion's member variables.
+
     ASSERT_EQ(2, my_xunion_table.field_count);
 
-    // The |MyXUnion? x| parameter was defined to be nullable.
+    // The ordering in the coding table is |bar| followed by |foo|, due to sorting.
+    ASSERT_EQ(&fidl::internal::kInt32Table, my_xunion_table.fields[0].type);
+    ASSERT_EQ(&fidl::internal::kBoolTable, my_xunion_table.fields[1].type);
+
     ASSERT_EQ(fidl::kNullable, my_xunion_table.nullable);
 
-    // The ordering in the coding table is |bar| followed by |foo|, due to sorting.
-    const fidl::FidlXUnionField& field_0 = my_xunion_table.fields[0];
-    ASSERT_EQ(&fidl::internal::kInt32Table, field_0.type);
+    ASSERT_STR_EQ("fidl.test.example.codingtables/MyXUnion", my_xunion_table.name);
 
-    const fidl::FidlXUnionField& field_1 = my_xunion_table.fields[1];
-    ASSERT_EQ(&fidl::internal::kBoolTable, field_1.type);
+    ASSERT_EQ(fidl::kFlexible, my_xunion_type.coded_xunion.strictness);
+}
+
+TEST(MyStrictXUnion, CodingTableWhenNullable) {
+    const fidl_type& type = fidl_test_example_codingtables_CodingMyStrictXUnionRequestTable;
+    ASSERT_EQ(fidl::FidlTypeTag::kFidlTypeStruct, type.type_tag);
+    const fidl::FidlCodedStruct& request_struct = type.coded_struct;
+    ASSERT_EQ(1, request_struct.field_count);
+    ASSERT_STR_EQ("fidl.test.example.codingtables/CodingMyStrictXUnionRequest", request_struct.name);
+    const fidl::FidlStructField& my_strict_xunion_field = request_struct.fields[0];
+    ASSERT_EQ(16, my_strict_xunion_field.offset);
+
+    const fidl_type& my_strict_xunion_type = *my_strict_xunion_field.type;
+    ASSERT_EQ(fidl::FidlTypeTag::kFidlTypeXUnion, my_strict_xunion_type.type_tag);
+    const fidl::FidlCodedXUnion& my_strict_xunion_table = my_strict_xunion_type.coded_xunion;
+
+    // Please keep these assertions in the same order as FidlCodedXUnion's member variables.
+
+    ASSERT_EQ(2, my_strict_xunion_table.field_count);
+
+    // The ordering in the coding table is |bar| followed by |foo|, due to sorting.
+    ASSERT_EQ(&fidl::internal::kInt32Table, my_strict_xunion_table.fields[0].type);
+    ASSERT_EQ(&fidl::internal::kBoolTable, my_strict_xunion_table.fields[1].type);
+
+    ASSERT_EQ(fidl::kNullable, my_strict_xunion_table.nullable);
+
+    ASSERT_STR_EQ("fidl.test.example.codingtables/MyStrictXUnion", my_strict_xunion_table.name);
+
+    ASSERT_EQ(fidl::kStrict, my_strict_xunion_type.coded_xunion.strictness);
+
 }
 
 TEST(MyTable, CodingTable) {
@@ -108,8 +139,31 @@ TEST(MyXUnion, CodingTableWhenNonnullable) {
     ASSERT_EQ(fidl::FidlTypeTag::kFidlTypeXUnion, xunion_type.type_tag);
     const fidl::FidlCodedXUnion& coded_xunion = xunion_type.coded_xunion;
 
-    // The xunion in vector<MyXUnion> is not nullable.
     ASSERT_EQ(fidl::kNonnullable, coded_xunion.nullable);
+
+    ASSERT_EQ(fidl::kFlexible, coded_xunion.strictness);
+}
+
+TEST(MyStrictXUnion, CodingTableWhenNonnullable) {
+    const fidl_type& type = fidl_test_example_codingtables_CodingVectorOfMyStrictXUnionRequestTable;
+    ASSERT_EQ(fidl::FidlTypeTag::kFidlTypeStruct, type.type_tag);
+    const fidl::FidlCodedStruct& request_struct = type.coded_struct;
+    ASSERT_EQ(1, request_struct.field_count);
+    ASSERT_STR_EQ("fidl.test.example.codingtables/CodingVectorOfMyStrictXUnionRequest",
+                  request_struct.name);
+    const fidl::FidlStructField& vector_of_my_xunion_field = request_struct.fields[0];
+    ASSERT_EQ(16, vector_of_my_xunion_field.offset);
+    const fidl_type& vector_of_my_xunion_type = *vector_of_my_xunion_field.type;
+    ASSERT_EQ(fidl::FidlTypeTag::kFidlTypeVector, vector_of_my_xunion_type.type_tag);
+    const fidl::FidlCodedVector& xunion_vector = vector_of_my_xunion_type.coded_vector;
+
+    const fidl_type& xunion_type = *xunion_vector.element;
+    ASSERT_EQ(fidl::FidlTypeTag::kFidlTypeXUnion, xunion_type.type_tag);
+    const fidl::FidlCodedXUnion& coded_xunion = xunion_type.coded_xunion;
+
+    ASSERT_EQ(fidl::kNonnullable, coded_xunion.nullable);
+
+    ASSERT_EQ(fidl::kStrict, coded_xunion.strictness);
 }
 
 TEST(MyBits, CodingTable) {

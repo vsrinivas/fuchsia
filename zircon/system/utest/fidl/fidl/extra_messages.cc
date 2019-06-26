@@ -64,7 +64,7 @@ static const ::fidl::FidlXUnionField fidl_test_coding_SampleXUnionNullableRefFie
     ::fidl::FidlXUnionField(&fidl_test_coding_IntStructTable,376675050u),
     ::fidl::FidlXUnionField(&fidl_test_coding_SimpleTableTable,586453270u)
 };
-const fidl_type_t fidl_test_coding_SampleXUnionNullableRefTable = fidl_type_t(::fidl::FidlCodedXUnion(3u, fidl_test_coding_SampleXUnionNullableRefFields, ::fidl::kNullable, "fidl.test.coding/SampleXUnion"));
+const fidl_type_t fidl_test_coding_SampleXUnionNullableRefTable = fidl_type_t(::fidl::FidlCodedXUnion(3u, fidl_test_coding_SampleXUnionNullableRefFields, ::fidl::kNullable, "fidl.test.coding/SampleXUnion", ::fidl::kFlexible));
 
 
 static constexpr bool EnumValidatorFor_fidl_test_coding_Uint8Enum(uint64_t v) { return (v == 0ul) || (v == 255ul) || (v == 42ul) || false; }
@@ -136,7 +136,7 @@ static const ::fidl::FidlXUnionField fidl_test_coding_SampleXUnionFields[] = {
     ::fidl::FidlXUnionField(&fidl_test_coding_IntStructTable,376675050u),
     ::fidl::FidlXUnionField(&fidl_test_coding_SimpleTableTable,586453270u)
 };
-const fidl_type_t fidl_test_coding_SampleXUnionTable = fidl_type_t(::fidl::FidlCodedXUnion(3u, fidl_test_coding_SampleXUnionFields, ::fidl::kNonnullable, "fidl.test.coding/SampleXUnion"));
+const fidl_type_t fidl_test_coding_SampleXUnionTable = fidl_type_t(::fidl::FidlCodedXUnion(3u, fidl_test_coding_SampleXUnionFields, ::fidl::kNonnullable, "fidl.test.coding/SampleXUnion", ::fidl::kFlexible));
 
 static const ::fidl::FidlStructField fidl_test_coding_SampleXUnionStructFields[] = {
     ::fidl::FidlStructField(&fidl_test_coding_SampleXUnionTable, 0u, 0u)

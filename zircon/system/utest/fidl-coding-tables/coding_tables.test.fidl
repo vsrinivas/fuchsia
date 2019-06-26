@@ -14,6 +14,11 @@ xunion MyXUnion {
     int32 bar;
 };
 
+strict xunion MyStrictXUnion {
+    bool foo;
+    int32 bar;
+};
+
 table MyTable {
     1: bool foo;
     2: int32 bar;
@@ -37,14 +42,19 @@ enum MyEnum : uint32 {
 // for request message types, by defining dummy methods which take a single desired argument.
 protocol Coding {
     SomeStruct(SomeStruct s);
+
     // Various trickery to avoid directly refering a xunion/table inline,
     // which is not supported in the C bindings.
     MyXUnion(MyXUnion? x);
+    MyStrictXUnion(MyStrictXUnion? x);
 
     // Ensuring support for multiple uses of the same nullable type.
     MyXUnion2(MyXUnion? x);
+    MyStrictXUnion2(MyStrictXUnion? x);
+
     VectorOfMyTable(vector<MyTable> t);
     VectorOfMyXUnion(vector<MyXUnion> x);
+    VectorOfMyStrictXUnion(vector<MyStrictXUnion> x);
 
     MyBits(MyBits b);
     MyEnum(MyEnum e);
