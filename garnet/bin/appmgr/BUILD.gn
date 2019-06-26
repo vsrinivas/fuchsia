@@ -9,6 +9,8 @@ import("//build/testing/environments.gni")
 
 source_set("lib") {
   sources = [
+    "cache_control.cc",
+    "cache_control.h",
     "component_controller_impl.cc",
     "component_controller_impl.h",
     "debug_info_retriever.cc",

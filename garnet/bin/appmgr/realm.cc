@@ -311,6 +311,7 @@ Realm::Realm(RealmArgs args, zx::job job)
     return ZX_OK;
   })));
 
+  // Add default services hosted by appmgr for the root realm only.
   if (!parent_) {
     // Set up Loader service for root realm.
     package_loader_.reset(new component::PackageLoader);
@@ -319,6 +320,17 @@ Realm::Realm(RealmArgs args, zx::job job)
         fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
           package_loader_->AddBinding(
               fidl::InterfaceRequest<fuchsia::sys::Loader>(std::move(channel)));
+          return ZX_OK;
+        })));
+
+    // Set up CacheControl service for root realm.
+    cache_control_.reset(new component::CacheControl);
+    default_namespace_->services()->AddService(
+        fuchsia::sys::test::CacheControl::Name_,
+        fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
+          cache_control_->AddBinding(
+              fidl::InterfaceRequest<fuchsia::sys::test::CacheControl>(
+                  std::move(channel)));
           return ZX_OK;
         })));
   }

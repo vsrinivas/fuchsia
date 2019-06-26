@@ -8,6 +8,7 @@
 #include <fuchsia/net/stack/cpp/fidl.h>
 #include <fuchsia/netstack/cpp/fidl.h>
 #include <fuchsia/scheduler/cpp/fidl.h>
+#include <fuchsia/sys/test/cpp/fidl.h>
 
 #include <unordered_set>
 
@@ -28,6 +29,7 @@ const std::unordered_set<std::string> kAllowedSystemServices = {
     fuchsia::net::stack::Stack::Name_,
     fuchsia::netstack::Netstack::Name_,
     fuchsia::scheduler::ProfileProvider::Name_,
+    fuchsia::sys::test::CacheControl::Name_,
     fuchsia::ui::scenic::Scenic::Name_,
     fuchsia::ui::policy::Presenter::Name_};
 }  // namespace

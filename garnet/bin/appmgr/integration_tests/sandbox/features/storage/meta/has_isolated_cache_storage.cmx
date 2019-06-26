@@ -1,4 +1,11 @@
 {
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.sys.test.CacheControl"
+            ]
+        }
+    },
     "program": {
         "binary": "test/has_isolated_cache_storage"
     },
@@ -13,4 +20,3 @@
         ]
     }
 }
-

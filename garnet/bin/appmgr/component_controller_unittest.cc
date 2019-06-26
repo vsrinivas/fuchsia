@@ -67,7 +67,6 @@ std::vector<std::string> GetDefaultNamespaceServiceEntries() {
       fuchsia::process::Launcher::Name_,
       fuchsia::process::Resolver::Name_,
       fuchsia::sys::Environment::Name_,
-      fuchsia::sys::test::CacheControl::Name_,
   };
 }
 

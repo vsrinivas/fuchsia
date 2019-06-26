@@ -21,6 +21,7 @@
 #include <string>
 #include <unordered_map>
 
+#include "garnet/bin/appmgr/cache_control.h"
 #include "garnet/bin/appmgr/component_container.h"
 #include "garnet/bin/appmgr/component_controller_impl.h"
 #include "garnet/bin/appmgr/environment_controller_impl.h"
@@ -171,6 +172,7 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
   std::string koid_;
   const bool run_virtual_console_;
   std::unique_ptr<component::PackageLoader> package_loader_;
+  std::unique_ptr<component::CacheControl> cache_control_;
 
   zx::job job_;
 
