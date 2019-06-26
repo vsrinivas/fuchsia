@@ -150,7 +150,6 @@ TYPED_TEST(VirtioGpuTest, TextInputChangesConsole) {
   zx::time test_start = zx::clock::get_monotonic();
   zx::duration wait_time = zx::msec(1);
   do {
-    FXL_LOG(INFO) << "Capturing...";
     zx::nanosleep(zx::deadline_after(wait_time));
     wait_time *= 2;
     status = this->GetEnclosedGuest()->GetScenic()->CaptureScreenshot(&screenshot2);
