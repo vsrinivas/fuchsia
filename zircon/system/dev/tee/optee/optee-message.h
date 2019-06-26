@@ -154,13 +154,6 @@ public:
 
     zx_paddr_t paddr() const { return memory_->paddr(); }
 
-    // TODO(godtamit): Move this to protected once all usages of it outside are removed
-    // TODO(rjascani): Change this to return a reference to make ownership rules clearer
-    MessageParamList params() const {
-        return MessageParamList(reinterpret_cast<MessageParam*>(header() + 1),
-                                header()->num_params);
-    }
-
 protected:
     static constexpr size_t CalculateSize(size_t num_params) {
         return sizeof(MessageHeader) + (sizeof(MessageParam) * num_params);
@@ -185,6 +178,12 @@ protected:
 
     MessageHeader* header() const {
         return reinterpret_cast<MessageHeader*>(memory_->vaddr());
+    }
+
+    // TODO(rjascani): Change this to return a reference to make ownership rules clearer
+    MessageParamList params() const {
+        return MessageParamList(reinterpret_cast<MessageParam*>(header() + 1),
+                                header()->num_params);
     }
 
     SharedMemoryPtr memory_;
