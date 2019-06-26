@@ -23,7 +23,7 @@
 
 #include "src/developer/crashpad_agent/config.h"
 #include "src/developer/crashpad_agent/crash_server.h"
-#include "src/developer/crashpad_agent/feedback_data_provider.h"
+#include "src/developer/crashpad_agent/feedback_data_provider_ptr.h"
 #include "src/lib/fxl/macros.h"
 #include "third_party/crashpad/client/crash_report_database.h"
 #include "third_party/crashpad/util/misc/uuid.h"

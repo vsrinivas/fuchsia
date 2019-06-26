@@ -20,8 +20,8 @@
 #include <string>
 #include <vector>
 
-#include "src/developer/feedback_agent/inspect.h"
-#include "src/developer/feedback_agent/log_listener.h"
+#include "src/developer/feedback_agent/inspect_ptr.h"
+#include "src/developer/feedback_agent/log_listener_ptr.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace fuchsia {

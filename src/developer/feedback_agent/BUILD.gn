@@ -82,10 +82,10 @@ source_set("src") {
     "data_provider.h",
     "image_conversion.cc",
     "image_conversion.h",
-    "inspect.cc",
-    "inspect.h",
-    "log_listener.cc",
-    "log_listener.h",
+    "inspect_ptr.cc",
+    "inspect_ptr.h",
+    "log_listener_ptr.cc",
+    "log_listener_ptr.h",
   ]
 
   public_deps = [

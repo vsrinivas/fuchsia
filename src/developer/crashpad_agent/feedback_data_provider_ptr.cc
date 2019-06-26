@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/crashpad_agent/feedback_data_provider.h"
+#include "src/developer/crashpad_agent/feedback_data_provider_ptr.h"
 
 #include <lib/async/cpp/task.h>
 #include <lib/syslog/cpp/logger.h>

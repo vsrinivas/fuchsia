@@ -16,7 +16,7 @@ test_package("feedback_agent_tests") {
       name = "data_provider_config_unittest"
     },
     {
-      name = "log_listener_unittest"
+      name = "log_listener_ptr_unittest"
     },
     {
       name = "feedback_agent_integration_test"
@@ -83,7 +83,7 @@ test_package("feedback_agent_tests") {
     ":data_provider_unittest",
     ":feedback_agent_integration_test",
     ":inspect_exe",
-    ":log_listener_unittest",
+    ":log_listener_ptr_unittest",
   ]
 }
 
@@ -155,11 +155,11 @@ executable("inspect_exe") {
   ]
 }
 
-executable("log_listener_unittest") {
+executable("log_listener_ptr_unittest") {
   testonly = true
 
   sources = [
-    "log_listener_unittest.cc",
+    "log_listener_ptr_unittest.cc",
   ]
 
   deps = [

@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/log_listener_unittest"
+        "binary": "test/log_listener_ptr_unittest"
     },
     "sandbox": {
         "services": [

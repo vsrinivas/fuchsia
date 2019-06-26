@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/feedback_agent/log_listener.h"
+#include "src/developer/feedback_agent/log_listener_ptr.h"
 
 #include <fuchsia/mem/cpp/fidl.h>
 #include <inttypes.h>
