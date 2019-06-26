@@ -5,7 +5,7 @@
 group("drivers") {
   testonly = true
   deps = [
-    "common",
+    "bus",
     "hw_accel",
     "isp",
     "sensors",
