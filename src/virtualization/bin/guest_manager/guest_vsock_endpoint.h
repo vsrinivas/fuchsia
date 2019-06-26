@@ -14,15 +14,13 @@
 // and accepting all inbound connections.
 class GuestVsockEndpoint : public fuchsia::virtualization::GuestVsockAcceptor {
  public:
-  GuestVsockEndpoint(
-      uint32_t cid,
-      fuchsia::virtualization::GuestVsockEndpointPtr guest_endpoint,
-      fuchsia::virtualization::HostVsockConnector* connector);
+  GuestVsockEndpoint(uint32_t cid, fuchsia::virtualization::GuestVsockEndpointPtr guest_endpoint,
+                     fuchsia::virtualization::HostVsockConnector* connector);
 
  private:
   // |fuchsia::virtualization::GuestVsockAcceptor|
-  void Accept(uint32_t src_cid, uint32_t src_port, uint32_t port,
-              zx::handle handle, AcceptCallback callback) override;
+  void Accept(uint32_t src_cid, uint32_t src_port, uint32_t port, zx::handle handle,
+              AcceptCallback callback) override;
 
   fidl::Binding<fuchsia::virtualization::HostVsockConnector> connector_binding_;
   fuchsia::virtualization::GuestVsockAcceptorPtr acceptor_;

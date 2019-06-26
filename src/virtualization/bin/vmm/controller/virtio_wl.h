@@ -16,15 +16,14 @@
 #define VIRTWL_QUEUE_COUNT 4
 
 // Virtio wayland device.
-class VirtioWl : public VirtioComponentDevice<VIRTIO_ID_WL, VIRTWL_QUEUE_COUNT,
-                                              virtio_wl_config_t> {
+class VirtioWl
+    : public VirtioComponentDevice<VIRTIO_ID_WL, VIRTWL_QUEUE_COUNT, virtio_wl_config_t> {
  public:
   explicit VirtioWl(const PhysMem& phys_mem);
 
   zx_status_t Start(
       const zx::guest& guest, zx::vmar vmar,
-      fidl::InterfaceHandle<fuchsia::virtualization::WaylandDispatcher>
-          dispatch_handle,
+      fidl::InterfaceHandle<fuchsia::virtualization::WaylandDispatcher> dispatch_handle,
       fuchsia::sys::Launcher* launcher, async_dispatcher_t* dispatcher);
 
  private:
@@ -32,8 +31,8 @@ class VirtioWl : public VirtioComponentDevice<VIRTIO_ID_WL, VIRTWL_QUEUE_COUNT,
   // Use a sync pointer for consistency of virtual machine execution.
   fuchsia::virtualization::hardware::VirtioWaylandSyncPtr wayland_;
 
-  zx_status_t ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc,
-                             zx_gpaddr_t avail, zx_gpaddr_t used);
+  zx_status_t ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc, zx_gpaddr_t avail,
+                             zx_gpaddr_t used);
   zx_status_t Ready(uint32_t negotiated_features);
 };
 

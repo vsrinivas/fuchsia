@@ -42,8 +42,7 @@ class GicDistributor : public IoHandler, public PlatformDevice {
   GicDistributor(Guest* guest);
 
   zx_status_t Init(uint8_t num_cpus,
-                   const std::vector<InterruptSpec>& interrupts)
-      __TA_NO_THREAD_SAFETY_ANALYSIS;
+                   const std::vector<InterruptSpec>& interrupts) __TA_NO_THREAD_SAFETY_ANALYSIS;
 
   zx_status_t Interrupt(uint32_t vector);
 
@@ -75,8 +74,7 @@ class GicDistributor : public IoHandler, public PlatformDevice {
   std::vector<GicRedistributor> __TA_GUARDED(mutex_) redistributors_;
 
   // Tracks whether SPIs are enabled.
-  uint8_t enabled_[(kNumInterrupts - kSpiBase) / CHAR_BIT] __TA_GUARDED(
-      mutex_) = {};
+  uint8_t enabled_[(kNumInterrupts - kSpiBase) / CHAR_BIT] __TA_GUARDED(mutex_) = {};
 
   // SPI routing uses these CPU masks.
   uint8_t cpu_masks_[kNumInterrupts - kSpiBase] __TA_GUARDED(mutex_) = {};

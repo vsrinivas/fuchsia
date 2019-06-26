@@ -17,13 +17,12 @@
 // If you need to dispatch RPCs to the service, consider using
 // |NewGrpcVsockStub| instead.
 fit::promise<zx::socket, zx_status_t> ConnectToGrpcVsockService(
-    const fuchsia::virtualization::HostVsockEndpointPtr& socket_endpoint,
-    uint32_t cid, uint32_t port);
+    const fuchsia::virtualization::HostVsockEndpointPtr& socket_endpoint, uint32_t cid,
+    uint32_t port);
 
 // Creates a new gRPC stub backed by a zx::socket.
 template <typename T>
-fit::result<std::unique_ptr<typename T::Stub>, zx_status_t> NewGrpcStub(
-    zx::socket socket) {
+fit::result<std::unique_ptr<typename T::Stub>, zx_status_t> NewGrpcStub(zx::socket socket) {
   auto fd = ConvertSocketToNonBlockingFd(std::move(socket));
   if (fd < 0) {
     return fit::error(ZX_ERR_IO);
@@ -36,12 +35,10 @@ fit::result<std::unique_ptr<typename T::Stub>, zx_status_t> NewGrpcStub(
 // to the server.
 template <typename T>
 fit::promise<std::unique_ptr<typename T::Stub>, zx_status_t> NewGrpcVsockStub(
-    const fuchsia::virtualization::HostVsockEndpointPtr& socket_endpoint,
-    uint32_t cid, uint32_t port) {
+    const fuchsia::virtualization::HostVsockEndpointPtr& socket_endpoint, uint32_t cid,
+    uint32_t port) {
   return ConnectToGrpcVsockService(socket_endpoint, cid, port)
-      .and_then([](zx::socket& socket) mutable {
-        return NewGrpcStub<T>(std::move(socket));
-      });
+      .and_then([](zx::socket& socket) mutable { return NewGrpcStub<T>(std::move(socket)); });
 }
 
 #endif  // SRC_VIRTUALIZATION_LIB_GRPC_GRPC_VSOCK_STUB_H_

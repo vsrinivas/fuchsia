@@ -4,13 +4,10 @@
 
 #include "src/virtualization/bin/vmm/device/virtio_queue_fake.h"
 
-static size_t desc_size(uint16_t queue_size) {
-  return sizeof(*VirtioRing::desc) * queue_size;
-}
+static size_t desc_size(uint16_t queue_size) { return sizeof(*VirtioRing::desc) * queue_size; }
 
 static size_t avail_size(uint16_t queue_size) {
-  return sizeof(*VirtioRing::avail) +
-         (sizeof(*vring_avail::ring) * queue_size) +
+  return sizeof(*VirtioRing::avail) + (sizeof(*vring_avail::ring) * queue_size) +
          sizeof(*VirtioRing::used_event);
 }
 
@@ -19,8 +16,7 @@ static size_t used_size(uint16_t queue_size) {
          sizeof(*VirtioRing::avail_event);
 }
 
-VirtioQueueFake::VirtioQueueFake(const PhysMem& phys_mem, zx_gpaddr_t addr,
-                                 uint16_t size)
+VirtioQueueFake::VirtioQueueFake(const PhysMem& phys_mem, zx_gpaddr_t addr, uint16_t size)
     : phys_mem_(phys_mem),
       desc_(addr),
       avail_(desc_ + desc_size(size)),
@@ -35,8 +31,7 @@ void VirtioQueueFake::Configure(zx_gpaddr_t data_addr, size_t data_len) {
   ring_.desc = phys_mem_.as<vring_desc>(desc_, avail_ - desc_);
 
   // Configure the available ring.
-  ring_.avail =
-      phys_mem_.as<vring_avail>(avail_, used_ - sizeof(uint16_t) - avail_);
+  ring_.avail = phys_mem_.as<vring_avail>(avail_, used_ - sizeof(uint16_t) - avail_);
   ring_.used_event = phys_mem_.as<uint16_t>(used_ - sizeof(uint16_t));
 
   // Configure the used ring.
@@ -100,8 +95,8 @@ std::optional<VirtioQueueFake::UsedElement> VirtioQueueFake::NextUsed() {
 DescriptorChainBuilder::DescriptorChainBuilder(VirtioQueueFake& queue_fake)
     : queue_fake_(queue_fake) {}
 
-DescriptorChainBuilder& DescriptorChainBuilder::AppendDescriptor(
-    void** buf, uint32_t len, uint16_t flags) {
+DescriptorChainBuilder& DescriptorChainBuilder::AppendDescriptor(void** buf, uint32_t len,
+                                                                 uint16_t flags) {
   if (status_ != ZX_OK) {
     return *this;
   }
@@ -119,13 +114,12 @@ DescriptorChainBuilder& DescriptorChainBuilder::AppendDescriptor(
   return *this;
 }
 
-DescriptorChainBuilder& DescriptorChainBuilder::AppendReadableDescriptor(
-    const void* buf, uint32_t len) {
+DescriptorChainBuilder& DescriptorChainBuilder::AppendReadableDescriptor(const void* buf,
+                                                                         uint32_t len) {
   return AppendDescriptor(const_cast<void**>(&buf), len, 0);
 }
 
-DescriptorChainBuilder& DescriptorChainBuilder::AppendWritableDescriptor(
-    void** buf, uint32_t len) {
+DescriptorChainBuilder& DescriptorChainBuilder::AppendWritableDescriptor(void** buf, uint32_t len) {
   return AppendDescriptor(buf, len, VRING_DESC_F_WRITE);
 }
 

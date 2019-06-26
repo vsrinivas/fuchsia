@@ -86,9 +86,8 @@ struct VirtioDeviceConfig {
   const uint16_t num_queues = 0;
 
   // Invoked when the driver has made a change to the queue configuration.
-  using ConfigQueueFn =
-      fit::function<zx_status_t(uint16_t queue, uint16_t size, zx_gpaddr_t desc,
-                                zx_gpaddr_t avail, zx_gpaddr_t used)>;
+  using ConfigQueueFn = fit::function<zx_status_t(uint16_t queue, uint16_t size, zx_gpaddr_t desc,
+                                                  zx_gpaddr_t avail, zx_gpaddr_t used)>;
   const ConfigQueueFn config_queue;
 
   // Invoked when the driver sends notifications on a queue to the device.
@@ -98,8 +97,7 @@ struct VirtioDeviceConfig {
   const NotifyQueueFn notify_queue;
 
   // Invoked when the driver has made a change to the device configuration.
-  using ConfigDeviceFn =
-      fit::function<zx_status_t(uint64_t addr, const IoValue& value)>;
+  using ConfigDeviceFn = fit::function<zx_status_t(uint64_t addr, const IoValue& value)>;
   const ConfigDeviceFn config_device;
 
   // Invoked when the driver has accepted features and set the device into a
@@ -107,8 +105,7 @@ struct VirtioDeviceConfig {
   //
   // Devices can place logic here that depends on the set of negotiated
   // features with the driver.
-  using ReadyDeviceFn =
-      fit::function<zx_status_t(uint32_t negotiated_features)>;
+  using ReadyDeviceFn = fit::function<zx_status_t(uint32_t negotiated_features)>;
   const ReadyDeviceFn ready_device;
 };
 
@@ -118,11 +115,9 @@ class VirtioPci : public PciDevice {
   explicit VirtioPci(VirtioDeviceConfig* device_config);
 
   // Read a value at |bar| and |offset| from this device.
-  zx_status_t ReadBar(uint8_t bar, uint64_t offset,
-                      IoValue* value) const override;
+  zx_status_t ReadBar(uint8_t bar, uint64_t offset, IoValue* value) const override;
   // Write a value at |bar| and |offset| to this device.
-  zx_status_t WriteBar(uint8_t bar, uint64_t offset,
-                       const IoValue& value) override;
+  zx_status_t WriteBar(uint8_t bar, uint64_t offset, const IoValue& value) override;
 
   // ISR flag values.
   enum IsrFlags : uint8_t {
@@ -150,8 +145,7 @@ class VirtioPci : public PciDevice {
   // Returns true if the set of features have been negotiated to be enabled.
   bool has_negotiated_features(uint32_t features) const {
     std::lock_guard<std::mutex> lock(mutex_);
-    return (device_config_->device_features & driver_features_ & features) ==
-           features;
+    return (device_config_->device_features & driver_features_ & features) == features;
   }
 
  private:

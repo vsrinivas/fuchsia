@@ -5,9 +5,8 @@
 #include "src/virtualization/bin/vmm/pci.h"
 
 #include <endian.h>
-#include <stdio.h>
-
 #include <hw/pci.h>
+#include <stdio.h>
 #include <zircon/assert.h>
 
 __BEGIN_CDECLS;
@@ -15,21 +14,13 @@ __BEGIN_CDECLS;
 __END_CDECLS;
 
 // PCI ECAM address manipulation.
-constexpr uint8_t pci_ecam_bus(uint64_t addr) {
-  return bits_shift(addr, 27, 20);
-}
+constexpr uint8_t pci_ecam_bus(uint64_t addr) { return bits_shift(addr, 27, 20); }
 
-constexpr uint8_t pci_ecam_device(uint64_t addr) {
-  return bits_shift(addr, 19, 15);
-}
+constexpr uint8_t pci_ecam_device(uint64_t addr) { return bits_shift(addr, 19, 15); }
 
-constexpr uint8_t pci_ecam_function(uint64_t addr) {
-  return bits_shift(addr, 14, 12);
-}
+constexpr uint8_t pci_ecam_function(uint64_t addr) { return bits_shift(addr, 14, 12); }
 
-constexpr uint16_t pci_ecam_register_etc(uint64_t addr) {
-  return bits_shift(addr, 11, 0);
-}
+constexpr uint16_t pci_ecam_register_etc(uint64_t addr) { return bits_shift(addr, 11, 0); }
 
 // The size of an ECAM region depends on values in the MCFG ACPI table. For
 // each ECAM region there is a defined physical base address as well as a bus
@@ -37,8 +28,7 @@ constexpr uint16_t pci_ecam_register_etc(uint64_t addr) {
 //
 // When creating an ECAM address for a PCI configuration register, the bus
 // value must be relative to the starting bus number for that ECAM region.
-static inline constexpr uint64_t pci_ecam_size(uint64_t start_bus,
-                                               uint64_t end_bus) {
+static inline constexpr uint64_t pci_ecam_size(uint64_t start_bus, uint64_t end_bus) {
   return (end_bus - start_bus) << 20;
 }
 
@@ -178,17 +168,16 @@ zx_status_t PciBus::Init(async_dispatcher_t* dispatcher) {
   }
 
   // Setup ECAM trap for a single bus.
-  status = guest_->CreateMapping(TrapType::MMIO_SYNC, kPciEcamPhysBase,
-                                 kPciEcamSize, 0, &ecam_handler_, dispatcher);
+  status = guest_->CreateMapping(TrapType::MMIO_SYNC, kPciEcamPhysBase, kPciEcamSize, 0,
+                                 &ecam_handler_, dispatcher);
   if (status != ZX_OK) {
     return status;
   }
 
 #if __x86_64__
   // Setup PIO trap.
-  status =
-      guest_->CreateMapping(TrapType::PIO_SYNC, kPciConfigPortBase,
-                            kPciConfigPortSize, 0, &port_handler_, dispatcher);
+  status = guest_->CreateMapping(TrapType::PIO_SYNC, kPciConfigPortBase, kPciConfigPortSize, 0,
+                                 &port_handler_, dispatcher);
   if (status != ZX_OK) {
     return status;
   }
@@ -207,8 +196,7 @@ void PciBus::set_config_addr(uint32_t addr) {
   config_addr_ = addr;
 }
 
-zx_status_t PciBus::Connect(PciDevice* device, async_dispatcher_t* dispatcher,
-                            bool skip_bell) {
+zx_status_t PciBus::Connect(PciDevice* device, async_dispatcher_t* dispatcher, bool skip_bell) {
   if (next_open_slot_ >= kPciMaxDevices) {
     FXL_LOG(ERROR) << "No PCI device slots available";
     return ZX_ERR_OUT_OF_RANGE;
@@ -269,8 +257,7 @@ static inline zx_status_t pci_read_unimplemented_device(IoValue* value) {
 zx_status_t PciBus::ReadEcam(uint64_t addr, IoValue* value) const {
   const uint8_t device = pci_ecam_device(addr);
   const uint16_t reg = pci_ecam_register_etc(addr);
-  const bool valid =
-      is_addr_valid(pci_ecam_bus(addr), device, pci_ecam_function(addr));
+  const bool valid = is_addr_valid(pci_ecam_bus(addr), device, pci_ecam_function(addr));
   if (!valid) {
     return pci_read_unimplemented_device(value);
   }
@@ -281,8 +268,7 @@ zx_status_t PciBus::ReadEcam(uint64_t addr, IoValue* value) const {
 zx_status_t PciBus::WriteEcam(uint64_t addr, const IoValue& value) {
   const uint8_t device = pci_ecam_device(addr);
   const uint16_t reg = pci_ecam_register_etc(addr);
-  const bool valid =
-      is_addr_valid(pci_ecam_bus(addr), device, pci_ecam_function(addr));
+  const bool valid = is_addr_valid(pci_ecam_bus(addr), device, pci_ecam_function(addr));
   if (!valid) {
     return pci_write_unimplemented_device();
   }
@@ -307,8 +293,7 @@ zx_status_t PciBus::ReadIoPort(uint64_t port, IoValue* value) const {
       {
         std::lock_guard<std::mutex> lock(mutex_);
         addr = config_addr_;
-        if (!is_addr_valid(pci_type1_bus(addr), pci_type1_device(addr),
-                           pci_type1_function(addr))) {
+        if (!is_addr_valid(pci_type1_bus(addr), pci_type1_device(addr), pci_type1_function(addr))) {
           return pci_read_unimplemented_device(value);
         }
       }
@@ -346,8 +331,7 @@ zx_status_t PciBus::WriteIoPort(uint64_t port, const IoValue& value) {
         std::lock_guard<std::mutex> lock(mutex_);
         addr = config_addr_;
 
-        if (!is_addr_valid(pci_type1_bus(addr), pci_type1_device(addr),
-                           pci_type1_function(addr))) {
+        if (!is_addr_valid(pci_type1_bus(addr), pci_type1_device(addr), pci_type1_function(addr))) {
           return pci_write_unimplemented_device();
         }
 
@@ -367,8 +351,7 @@ zx_status_t PciBus::Interrupt(PciDevice& device) const {
 
 zx_status_t PciBus::ConfigureDtb(void* dtb) const {
   uint64_t reg_val[2] = {htobe64(kPciEcamPhysBase), htobe64(kPciEcamSize)};
-  int node_off =
-      fdt_node_offset_by_prop_value(dtb, -1, "reg", reg_val, sizeof(reg_val));
+  int node_off = fdt_node_offset_by_prop_value(dtb, -1, "reg", reg_val, sizeof(reg_val));
   if (node_off < 0) {
     FXL_LOG(ERROR) << "Failed to find PCI in DTB";
     return ZX_ERR_INTERNAL;
@@ -382,9 +365,7 @@ zx_status_t PciBus::ConfigureDtb(void* dtb) const {
 }
 
 // PCI Local Bus Spec v3.0 Section 6.7: Each capability must be DWORD aligned.
-static inline uint8_t pci_cap_len(const pci_cap_t* cap) {
-  return align(cap->len, 4);
-}
+static inline uint8_t pci_cap_len(const pci_cap_t* cap) { return align(cap->len, 4); }
 
 PciDevice::PciDevice(const Attributes attrs) : attrs_(attrs) {}
 
@@ -617,8 +598,7 @@ zx_status_t PciDevice::WriteConfig(uint64_t reg, const IoValue& value) {
   }
 }
 
-zx_status_t PciDevice::SetupBarTraps(Guest* guest, bool skip_bell,
-                                     async_dispatcher_t* dispatcher) {
+zx_status_t PciDevice::SetupBarTraps(Guest* guest, bool skip_bell, async_dispatcher_t* dispatcher) {
   for (uint8_t i = 0; i < kPciMaxBars; ++i) {
     PciBar* bar = &bar_[i];
     if (!is_bar_implemented(i)) {
@@ -629,8 +609,8 @@ zx_status_t PciDevice::SetupBarTraps(Guest* guest, bool skip_bell,
 
     bar->n = i;
     bar->device = this;
-    zx_status_t status = guest->CreateMapping(bar->trap_type, bar->base(),
-                                              bar->size, 0, bar, dispatcher);
+    zx_status_t status =
+        guest->CreateMapping(bar->trap_type, bar->base(), bar->size, 0, bar, dispatcher);
     if (status != ZX_OK) {
       return status;
     }

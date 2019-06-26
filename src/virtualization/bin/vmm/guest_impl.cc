@@ -24,6 +24,4 @@ zx_status_t GuestImpl::AddPublicService(component::StartupContext* context) {
 
 zx::socket GuestImpl::SerialSocket() { return duplicate(socket_); }
 
-void GuestImpl::GetSerial(GetSerialCallback callback) {
-  callback(duplicate(remote_socket_));
-}
+void GuestImpl::GetSerial(GetSerialCallback callback) { callback(duplicate(remote_socket_)); }

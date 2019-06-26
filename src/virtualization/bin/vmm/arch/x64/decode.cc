@@ -5,7 +5,6 @@
 #include "src/virtualization/bin/vmm/arch/x64/decode.h"
 
 #include <string.h>
-
 #include <zircon/syscalls/hypervisor.h>
 #include <zircon/syscalls/port.h>
 
@@ -42,8 +41,7 @@ static uint8_t displacement_size(uint8_t mod_rm, uint8_t sib) {
   }
 }
 
-static uint8_t operand_size(bool h66, bool rex_w, bool w,
-                            uint8_t default_operand_size) {
+static uint8_t operand_size(bool h66, bool rex_w, bool w, uint8_t default_operand_size) {
   if (!w) {
     return 1;
   } else if (rex_w) {
@@ -75,12 +73,10 @@ static uint8_t register_id(uint8_t mod_rm, bool rex_r) {
 // Registers 4-7 (typically referring to SP,BP,SI,DI) instead refer to the
 // high byte registers (AH,CH,DH,BH) when using 1 byte registers and no rex
 // prefix is provided.
-static inline bool is_high_byte(uint8_t size, bool rex) {
-  return size == 1 && !rex;
-}
+static inline bool is_high_byte(uint8_t size, bool rex) { return size == 1 && !rex; }
 
-static uint64_t* select_register(zx_vcpu_state_t* vcpu_state,
-                                 uint8_t register_id, uint8_t size, bool rex) {
+static uint64_t* select_register(zx_vcpu_state_t* vcpu_state, uint8_t register_id, uint8_t size,
+                                 bool rex) {
   // From Intel Volume 2, Section 2.1.
   switch (register_id) {
     // From Intel Volume 2, Section 2.1.5.
@@ -133,9 +129,8 @@ static uint64_t* select_register(zx_vcpu_state_t* vcpu_state,
   }
 }
 
-static zx_status_t deconstruct_instruction(const uint8_t* inst_buf,
-                                           uint32_t inst_len, uint16_t* opcode,
-                                           uint8_t* mod_rm, uint8_t* sib) {
+static zx_status_t deconstruct_instruction(const uint8_t* inst_buf, uint32_t inst_len,
+                                           uint16_t* opcode, uint8_t* mod_rm, uint8_t* sib) {
   if (inst_len == 0) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -175,8 +170,7 @@ static zx_status_t deconstruct_instruction(const uint8_t* inst_buf,
 // Decode an instruction used in a memory access to determine the register used
 // as a source or destination. There's no need to decode memory operands because
 // the faulting address is already known.
-zx_status_t inst_decode(const uint8_t* inst_buf, uint32_t inst_len,
-                        uint8_t default_operand_size,
+zx_status_t inst_decode(const uint8_t* inst_buf, uint32_t inst_len, uint8_t default_operand_size,
                         zx_vcpu_state_t* vcpu_state, Instruction* inst) {
   if (inst_len == 0) {
     return ZX_ERR_BAD_STATE;
@@ -223,8 +217,7 @@ zx_status_t inst_decode(const uint8_t* inst_buf, uint32_t inst_len,
   uint16_t opcode;
   uint8_t mod_rm;
   uint8_t sib;
-  zx_status_t status =
-      deconstruct_instruction(inst_buf, inst_len, &opcode, &mod_rm, &sib);
+  zx_status_t status = deconstruct_instruction(inst_buf, inst_len, &opcode, &mod_rm, &sib);
   if (status != ZX_OK) {
     return status;
   }
@@ -243,8 +236,7 @@ zx_status_t inst_decode(const uint8_t* inst_buf, uint32_t inst_len,
       inst->type = INST_MOV_WRITE;
       inst->access_size = operand_size(h66, rex_w, w, default_operand_size);
       inst->imm = 0;
-      inst->reg = select_register(vcpu_state, register_id(mod_rm, rex_r),
-                                  inst->access_size, rex);
+      inst->reg = select_register(vcpu_state, register_id(mod_rm, rex_r), inst->access_size, rex);
       inst->flags = NULL;
       return inst->reg == NULL ? ZX_ERR_NOT_SUPPORTED : ZX_OK;
     }
@@ -259,8 +251,7 @@ zx_status_t inst_decode(const uint8_t* inst_buf, uint32_t inst_len,
       inst->type = INST_MOV_READ;
       inst->access_size = operand_size(h66, rex_w, w, default_operand_size);
       inst->imm = 0;
-      inst->reg = select_register(vcpu_state, register_id(mod_rm, rex_r),
-                                  inst->access_size, rex);
+      inst->reg = select_register(vcpu_state, register_id(mod_rm, rex_r), inst->access_size, rex);
       inst->flags = NULL;
       return inst->reg == NULL ? ZX_ERR_NOT_SUPPORTED : ZX_OK;
     }
@@ -301,13 +292,11 @@ zx_status_t inst_decode(const uint8_t* inst_buf, uint32_t inst_len,
       // memory while the h66/rex_w bits and default operand size are used to
       // select the destination register size.
       const uint8_t access_size = w ? 2 : 1;
-      const uint8_t reg_size =
-          operand_size(h66, rex_w, true, default_operand_size);
+      const uint8_t reg_size = operand_size(h66, rex_w, true, default_operand_size);
       inst->type = INST_MOV_READ;
       inst->access_size = access_size;
       inst->imm = 0;
-      inst->reg = select_register(vcpu_state, register_id(mod_rm, rex_r),
-                                  reg_size, rex);
+      inst->reg = select_register(vcpu_state, register_id(mod_rm, rex_r), reg_size, rex);
       inst->flags = NULL;
       return inst->reg == NULL ? ZX_ERR_NOT_SUPPORTED : ZX_OK;
     }

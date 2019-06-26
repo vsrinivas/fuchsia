@@ -29,12 +29,11 @@ std::pair<int, int> init_tty(void) {
     fdio_t* io = fdio_unsafe_fd_to_io(STDIN_FILENO);
     fuchsia_hardware_pty_WindowSize wsz;
     zx_status_t status;
-    zx_status_t call_status = fuchsia_hardware_pty_DeviceGetWindowSize(
-        fdio_unsafe_borrow_channel(io), &status, &wsz);
+    zx_status_t call_status =
+        fuchsia_hardware_pty_DeviceGetWindowSize(fdio_unsafe_borrow_channel(io), &status, &wsz);
 
     if (call_status != ZX_OK || status != ZX_OK) {
-      FXL_LOG(WARNING)
-          << "Unable to determine shell geometry, defaulting to 80x24";
+      FXL_LOG(WARNING) << "Unable to determine shell geometry, defaulting to 80x24";
     } else {
       cols = wsz.width;
       rows = wsz.height;
@@ -45,12 +44,10 @@ std::pair<int, int> init_tty(void) {
     // (instead of closing the client side).
     uint32_t feature;
     call_status = fuchsia_hardware_pty_DeviceClrSetFeature(
-        fdio_unsafe_borrow_channel(io), 0, fuchsia_hardware_pty_FEATURE_RAW,
-        &status, &feature);
+        fdio_unsafe_borrow_channel(io), 0, fuchsia_hardware_pty_FEATURE_RAW, &status, &feature);
 
     if (call_status != ZX_OK || status != ZX_OK) {
-      FXL_LOG(ERROR)
-          << "Failed to set FEATURE_RAW, some features may not work.";
+      FXL_LOG(ERROR) << "Failed to set FEATURE_RAW, some features may not work.";
     }
 
     fdio_unsafe_release(io);
@@ -65,8 +62,7 @@ void reset_tty(void) {
     uint32_t feature;
     zx_status_t status;
     zx_status_t call_status = fuchsia_hardware_pty_DeviceClrSetFeature(
-        fdio_unsafe_borrow_channel(io), fuchsia_hardware_pty_FEATURE_RAW, 0,
-        &status, &feature);
+        fdio_unsafe_borrow_channel(io), fuchsia_hardware_pty_FEATURE_RAW, 0, &status, &feature);
 
     if (call_status != ZX_OK || status != ZX_OK) {
       FXL_LOG(ERROR) << "Failed to reset FEATURE_RAW";
@@ -84,8 +80,7 @@ class ConsoleIn {
 
   bool Start(void) {
     if (fcntl(STDIN_FILENO, F_GETFD) != -1) {
-      fd_waiter_.Wait(fit::bind_member(this, &ConsoleIn::HandleStdin),
-                      STDIN_FILENO, POLLIN);
+      fd_waiter_.Wait(fit::bind_member(this, &ConsoleIn::HandleStdin), STDIN_FILENO, POLLIN);
     } else {
       FXL_LOG(ERROR) << "Unable to start the async output loop";
       return false;
@@ -111,8 +106,7 @@ class ConsoleIn {
       return;
     }
 
-    fd_waiter_.Wait(fit::bind_member(this, &ConsoleIn::HandleStdin),
-                    STDIN_FILENO, POLLIN);
+    fd_waiter_.Wait(fit::bind_member(this, &ConsoleIn::HandleStdin), STDIN_FILENO, POLLIN);
   }
 
  private:
@@ -142,8 +136,8 @@ class ConsoleOut {
     return true;
   }
 
-  void HandleTtyOutput(async_dispatcher_t* dispatcher, async::WaitBase* wait,
-                       zx_status_t status, const zx_packet_signal_t* signal) {
+  void HandleTtyOutput(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
+                       const zx_packet_signal_t* signal) {
     if (status != ZX_OK && status != ZX_ERR_SHOULD_WAIT) {
       loop_->Shutdown();
       loop_->Quit();
@@ -171,8 +165,7 @@ class ConsoleOut {
           << "Message size of " << msg_size_ << " exceeds kMaxMessageSize";
 
     } else if (bytes_left_ == 0 && !reading_size_) {
-      FXL_CHECK(msg_in.ParseFromArray(buf_, msg_size_))
-          << "Failed to parse incoming message.";
+      FXL_CHECK(msg_in.ParseFromArray(buf_, msg_size_)) << "Failed to parse incoming message.";
 
       reading_size_ = true;
       msg_size_ = sizeof(uint32_t);
@@ -248,8 +241,7 @@ static bool init_shell(const zx::socket& usock) {
   // No use setting up the async message handling if we haven't even
   // connected properly. Block on connection response.
   if (!vsh::RecvMessage(usock, &conn_resp)) {
-    FXL_LOG(ERROR)
-        << "Failed to receive response from vshd, giving up after one try";
+    FXL_LOG(ERROR) << "Failed to receive response from vshd, giving up after one try";
     return false;
   }
 
@@ -274,8 +266,7 @@ static bool init_shell(const zx::socket& usock) {
 }
 
 void handle_vsh(std::optional<uint32_t> o_env_id, std::optional<uint32_t> o_cid,
-                std::optional<uint32_t> o_port, async::Loop* loop,
-                sys::ComponentContext* context) {
+                std::optional<uint32_t> o_port, async::Loop* loop, sys::ComponentContext* context) {
   uint32_t env_id, cid, port = o_port.value_or(vsh::kVshPort);
 
   fuchsia::virtualization::ManagerSyncPtr manager;
@@ -299,17 +290,14 @@ void handle_vsh(std::optional<uint32_t> o_env_id, std::optional<uint32_t> o_cid,
   cid = o_cid.value_or(instances[0].cid);
 
   // Verify the environment and instance specified exist
-  if (std::find_if(env_infos.begin(), env_infos.end(), [env_id](auto ei) {
-        return ei.id == env_id;
-      }) == env_infos.end()) {
+  if (std::find_if(env_infos.begin(), env_infos.end(),
+                   [env_id](auto ei) { return ei.id == env_id; }) == env_infos.end()) {
     FXL_LOG(ERROR) << "No existing environment with id " << env_id;
     return;
   }
-  if (std::find_if(instances.begin(), instances.end(), [cid](auto in) {
-        return in.cid == cid;
-      }) == instances.end()) {
-    FXL_LOG(ERROR) << "No existing instances in env " << env_id << " with cid "
-                   << cid;
+  if (std::find_if(instances.begin(), instances.end(), [cid](auto in) { return in.cid == cid; }) ==
+      instances.end()) {
+    FXL_LOG(ERROR) << "No existing instances in env " << env_id << " with cid " << cid;
     return;
   }
 
@@ -318,11 +306,9 @@ void handle_vsh(std::optional<uint32_t> o_env_id, std::optional<uint32_t> o_cid,
 
   // Open a socket to the guest's vsock port where vshd should be listening
   zx::socket socket, remote_socket;
-  zx_status_t status =
-      zx::socket::create(ZX_SOCKET_STREAM, &socket, &remote_socket);
+  zx_status_t status = zx::socket::create(ZX_SOCKET_STREAM, &socket, &remote_socket);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to create socket: "
-                   << zx_status_get_string(status);
+    FXL_LOG(ERROR) << "Failed to create socket: " << zx_status_get_string(status);
     return;
   }
   vsock_endpoint->Connect(cid, port, std::move(remote_socket), &status);

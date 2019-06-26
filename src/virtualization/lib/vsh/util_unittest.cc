@@ -15,8 +15,7 @@ class VshUtilTest : public gtest::TestLoopFixture {};
 // Test sending and receiving messages by simulating a simple vsh session.
 TEST_F(VshUtilTest, SendRecv) {
   zx::socket client_end, server_end;
-  ASSERT_EQ(ZX_OK,
-            zx::socket::create(ZX_SOCKET_STREAM, &client_end, &server_end));
+  ASSERT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_STREAM, &client_end, &server_end));
 
   {  // Client sends ConnectionSetupRequest
     vm_tools::vsh::SetupConnectionRequest request;

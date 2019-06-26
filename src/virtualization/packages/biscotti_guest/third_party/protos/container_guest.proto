@@ -217,7 +217,9 @@ message AppSearchRequest {
 // Response for AppSearch containing packages that match the searched
 // search query and are not installed.
 message AppSearchResponse {
-  message AppSearchResult { string package_name = 1; }
+  message AppSearchResult {
+    string package_name = 1;
+  }
   // List of valid packages matching the search query.
   repeated AppSearchResult packages = 1;
 }
@@ -225,8 +227,7 @@ message AppSearchResponse {
 // Implemented by garcon inside of the container.
 service Garcon {
   // Called to launch an application in a container.
-  rpc LaunchApplication(LaunchApplicationRequest)
-      returns (LaunchApplicationResponse);
+  rpc LaunchApplication(LaunchApplicationRequest) returns (LaunchApplicationResponse);
 
   // Get an application icon from the container.
   rpc GetIcon(IconRequest) returns (IconResponse);
@@ -235,12 +236,10 @@ service Garcon {
   rpc LaunchVshd(LaunchVshdRequest) returns (LaunchVshdResponse);
 
   // Gets information about a Linux package file in the container.
-  rpc GetLinuxPackageInfo(LinuxPackageInfoRequest)
-      returns (LinuxPackageInfoResponse);
+  rpc GetLinuxPackageInfo(LinuxPackageInfoRequest) returns (LinuxPackageInfoResponse);
 
   // Install a Linux package file in the container.
-  rpc InstallLinuxPackage(InstallLinuxPackageRequest)
-      returns (InstallLinuxPackageResponse);
+  rpc InstallLinuxPackage(InstallLinuxPackageRequest) returns (InstallLinuxPackageResponse);
 
   // Uninstalls the package that owns the specified file. Results are in
   // signals.
@@ -248,8 +247,7 @@ service Garcon {
       returns (UninstallPackageOwningFileResponse);
 
   // Get debug information about container state.
-  rpc GetDebugInformation(GetDebugInformationRequest)
-      returns (GetDebugInformationResponse);
+  rpc GetDebugInformation(GetDebugInformationRequest) returns (GetDebugInformationResponse);
 
   // Search for and return not installed apps matching passed query.
   rpc AppSearch(AppSearchRequest) returns (AppSearchResponse);

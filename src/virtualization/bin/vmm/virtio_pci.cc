@@ -4,9 +4,8 @@
 
 #include "src/virtualization/bin/vmm/virtio_pci.h"
 
-#include <stdio.h>
-
 #include <src/lib/fxl/logging.h>
+#include <stdio.h>
 #include <trace/event.h>
 #include <virtio/virtio_ids.h>
 
@@ -39,8 +38,7 @@ static_assert(is_aligned(kVirtioPciNotifyCfgBase, 2),
 // Interrupt status configuration.
 static constexpr size_t kVirtioPciIsrCfgBase = 0x38;
 static constexpr size_t kVirtioPciIsrCfgSize = 1;
-static constexpr size_t kVirtioPciIsrCfgTop =
-    kVirtioPciIsrCfgBase + kVirtioPciIsrCfgSize - 1;
+static constexpr size_t kVirtioPciIsrCfgTop = kVirtioPciIsrCfgBase + kVirtioPciIsrCfgSize - 1;
 // Virtio 1.0 Section 4.1.4.5: The offset for the ISR status has no alignment
 // requirements.
 
@@ -100,10 +98,9 @@ VirtioPci::VirtioPci(VirtioDeviceConfig* device_config)
   SetupCaps();
 }
 
-zx_status_t VirtioPci::ReadBar(uint8_t bar, uint64_t offset,
-                               IoValue* value) const {
-  TRACE_DURATION("machina", "pci_readbar", "bar", bar, "offset", offset,
-                 "access_size", value->access_size);
+zx_status_t VirtioPci::ReadBar(uint8_t bar, uint64_t offset, IoValue* value) const {
+  TRACE_DURATION("machina", "pci_readbar", "bar", bar, "offset", offset, "access_size",
+                 value->access_size);
   switch (bar) {
     case kVirtioPciBar:
       return ConfigBarRead(offset, value);
@@ -112,10 +109,9 @@ zx_status_t VirtioPci::ReadBar(uint8_t bar, uint64_t offset,
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t VirtioPci::WriteBar(uint8_t bar, uint64_t offset,
-                                const IoValue& value) {
-  TRACE_DURATION("machina", "pci_writebar", "bar", bar, "offset", offset,
-                 "access_size", value.access_size);
+zx_status_t VirtioPci::WriteBar(uint8_t bar, uint64_t offset, const IoValue& value) {
+  TRACE_DURATION("machina", "pci_writebar", "bar", bar, "offset", offset, "access_size",
+                 value.access_size);
   switch (bar) {
     case kVirtioPciBar:
       return ConfigBarWrite(offset, value);
@@ -172,8 +168,7 @@ zx_status_t VirtioPci::CommonCfgRead(uint64_t addr, IoValue* value) const {
         return ZX_OK;
       }
 
-      value->u32 =
-          device_features_sel_ > 0 ? 0 : device_config_->device_features;
+      value->u32 = device_features_sel_ > 0 ? 0 : device_config_->device_features;
       return ZX_OK;
     }
     case VIRTIO_PCI_COMMON_CFG_NUM_QUEUES: {
@@ -219,8 +214,7 @@ zx_status_t VirtioPci::CommonCfgRead(uint64_t addr, IoValue* value) const {
       if (idx >= device_config_->num_queues) {
         return ZX_ERR_BAD_STATE;
       }
-      size_t word =
-          (addr - VIRTIO_PCI_COMMON_CFG_QUEUE_DESC_LOW) / sizeof(uint32_t);
+      size_t word = (addr - VIRTIO_PCI_COMMON_CFG_QUEUE_DESC_LOW) / sizeof(uint32_t);
 
       {
         std::lock_guard<std::mutex> lock(device_config_->mutex);
@@ -268,8 +262,7 @@ zx_status_t VirtioPci::ConfigBarRead(uint64_t addr, IoValue* value) const {
       return ZX_OK;
   }
 
-  size_t device_config_top =
-      kVirtioPciDeviceCfgBase + device_config_->config_size;
+  size_t device_config_top = kVirtioPciDeviceCfgBase + device_config_->config_size;
   if (addr >= kVirtioPciDeviceCfgBase && addr < device_config_top) {
     uint64_t cfg_addr = addr - kVirtioPciDeviceCfgBase;
     std::lock_guard<std::mutex> lock(device_config_->mutex);
@@ -338,8 +331,7 @@ zx_status_t VirtioPci::CommonCfgWrite(uint64_t addr, const IoValue& value) {
       {
         std::lock_guard<std::mutex> lock(mutex_);
         status_ = value.u8;
-        negotiated_features =
-            device_config_->device_features & driver_features_;
+        negotiated_features = device_config_->device_features & driver_features_;
       }
 
       if (value.u8 & VIRTIO_STATUS_DRIVER_OK) {
@@ -381,8 +373,7 @@ zx_status_t VirtioPci::CommonCfgWrite(uint64_t addr, const IoValue& value) {
       if (idx >= device_config_->num_queues) {
         return ZX_ERR_BAD_STATE;
       }
-      size_t word =
-          (addr - VIRTIO_PCI_COMMON_CFG_QUEUE_DESC_LOW) / sizeof(uint32_t);
+      size_t word = (addr - VIRTIO_PCI_COMMON_CFG_QUEUE_DESC_LOW) / sizeof(uint32_t);
 
       // Update the configuration words for the queue.
       std::lock_guard<std::mutex> lock(device_config_->mutex);
@@ -405,8 +396,7 @@ zx_status_t VirtioPci::CommonCfgWrite(uint64_t addr, const IoValue& value) {
       // Configure the queue now that its enabled.
       std::lock_guard<std::mutex> lock(device_config_->mutex);
       VirtioQueueConfig* cfg = &device_config_->queue_configs[idx];
-      return device_config_->config_queue(idx, cfg->size, cfg->desc, cfg->avail,
-                                          cfg->used);
+      return device_config_->config_queue(idx, cfg->size, cfg->desc, cfg->avail, cfg->used);
     }
     // Not implemented registers.
     case VIRTIO_PCI_COMMON_CFG_QUEUE_MSIX_VECTOR:
@@ -424,8 +414,8 @@ zx_status_t VirtioPci::CommonCfgWrite(uint64_t addr, const IoValue& value) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-static zx_status_t write_device_config(VirtioDeviceConfig* device_config,
-                                       uint64_t addr, const IoValue& value) {
+static zx_status_t write_device_config(VirtioDeviceConfig* device_config, uint64_t addr,
+                                       const IoValue& value) {
   switch (value.access_size) {
     case 1: {
       std::lock_guard<std::mutex> lock(device_config->mutex);
@@ -457,8 +447,7 @@ zx_status_t VirtioPci::ConfigBarWrite(uint64_t addr, const IoValue& value) {
     }
   }
 
-  size_t device_config_top =
-      kVirtioPciDeviceCfgBase + device_config_->config_size;
+  size_t device_config_top = kVirtioPciDeviceCfgBase + device_config_->config_size;
   if (addr >= kVirtioPciDeviceCfgBase && addr < device_config_top) {
     uint64_t cfg_addr = addr - kVirtioPciDeviceCfgBase;
     zx_status_t status = write_device_config(device_config_, cfg_addr, value);
@@ -470,9 +459,8 @@ zx_status_t VirtioPci::ConfigBarWrite(uint64_t addr, const IoValue& value) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-void setup_cap(pci_cap_t* cap, virtio_pci_cap_t* virtio_cap, uint8_t cfg_type,
-               size_t cap_len, size_t data_length, uint8_t bar,
-               size_t bar_offset) {
+void setup_cap(pci_cap_t* cap, virtio_pci_cap_t* virtio_cap, uint8_t cfg_type, size_t cap_len,
+               size_t data_length, uint8_t bar, size_t bar_offset) {
   virtio_cap->cfg_type = cfg_type;
   virtio_cap->bar = bar * kPciBar64BitMultiplier;
   virtio_cap->offset = static_cast<uint32_t>(bar_offset);
@@ -485,39 +473,33 @@ void setup_cap(pci_cap_t* cap, virtio_pci_cap_t* virtio_cap, uint8_t cfg_type,
 
 void VirtioPci::SetupCaps() {
   // Common configuration.
-  setup_cap(&capabilities_[0], &common_cfg_cap_, VIRTIO_PCI_CAP_COMMON_CFG,
-            sizeof(common_cfg_cap_), kVirtioPciCommonCfgSize, kVirtioPciBar,
-            kVirtioPciCommonCfgBase);
+  setup_cap(&capabilities_[0], &common_cfg_cap_, VIRTIO_PCI_CAP_COMMON_CFG, sizeof(common_cfg_cap_),
+            kVirtioPciCommonCfgSize, kVirtioPciBar, kVirtioPciCommonCfgBase);
 
   // Notify configuration.
   notify_cfg_cap_.notify_off_multiplier = kQueueNotifyMultiplier;
   size_t notify_size = device_config_->num_queues * kQueueNotifyMultiplier;
   setup_cap(&capabilities_[1], &notify_cfg_cap_.cap, VIRTIO_PCI_CAP_NOTIFY_CFG,
-            sizeof(notify_cfg_cap_), notify_size, kVirtioPciNotifyBar,
-            kVirtioPciNotifyCfgBase);
+            sizeof(notify_cfg_cap_), notify_size, kVirtioPciNotifyBar, kVirtioPciNotifyCfgBase);
   bar_[kVirtioPciNotifyBar].size = notify_size;
   bar_[kVirtioPciNotifyBar].trap_type = TrapType::MMIO_BELL;
 
   // ISR configuration.
-  setup_cap(&capabilities_[2], &isr_cfg_cap_, VIRTIO_PCI_CAP_ISR_CFG,
-            sizeof(isr_cfg_cap_), kVirtioPciIsrCfgSize, kVirtioPciBar,
-            kVirtioPciIsrCfgBase);
+  setup_cap(&capabilities_[2], &isr_cfg_cap_, VIRTIO_PCI_CAP_ISR_CFG, sizeof(isr_cfg_cap_),
+            kVirtioPciIsrCfgSize, kVirtioPciBar, kVirtioPciIsrCfgBase);
 
   // Device-specific configuration.
-  setup_cap(&capabilities_[3], &device_cfg_cap_, VIRTIO_PCI_CAP_DEVICE_CFG,
-            sizeof(device_cfg_cap_), device_config_->config_size, kVirtioPciBar,
-            kVirtioPciDeviceCfgBase);
+  setup_cap(&capabilities_[3], &device_cfg_cap_, VIRTIO_PCI_CAP_DEVICE_CFG, sizeof(device_cfg_cap_),
+            device_config_->config_size, kVirtioPciBar, kVirtioPciDeviceCfgBase);
 
   // Note VIRTIO_PCI_CAP_PCI_CFG is not implemented.
   // This one is more complex since it is writable and doesn't seem to be
   // used by Linux or Zircon.
 
-  static_assert(kVirtioPciNumCapabilities == 4,
-                "Incorrect number of capabilities");
+  static_assert(kVirtioPciNumCapabilities == 4, "Incorrect number of capabilities");
   set_capabilities(capabilities_, kVirtioPciNumCapabilities);
 
-  bar_[kVirtioPciBar].size =
-      kVirtioPciDeviceCfgBase + device_config_->config_size;
+  bar_[kVirtioPciBar].size = kVirtioPciDeviceCfgBase + device_config_->config_size;
   bar_[kVirtioPciBar].trap_type = TrapType::MMIO_SYNC;
 }
 

@@ -180,8 +180,7 @@ service ContainerListener {
 
   // Called by a container to update the list of applications installed within
   // the container.
-  rpc UpdateApplicationList(UpdateApplicationListRequest)
-      returns (EmptyMessage);
+  rpc UpdateApplicationList(UpdateApplicationListRequest) returns (EmptyMessage);
 
   // Called by a container to open the specified URL with the browser in the
   // host.
@@ -189,11 +188,9 @@ service ContainerListener {
 
   // Called by a container during a Linux package install to update on progress
   // and completion/failure.
-  rpc InstallLinuxPackageProgress(InstallLinuxPackageProgressInfo)
-      returns (EmptyMessage);
+  rpc InstallLinuxPackageProgress(InstallLinuxPackageProgressInfo) returns (EmptyMessage);
 
-  rpc UninstallPackageProgress(UninstallPackageProgressInfo)
-      returns (EmptyMessage);
+  rpc UninstallPackageProgress(UninstallPackageProgressInfo) returns (EmptyMessage);
 
   // Called by a container to have the host open a new terminal that is
   // connected to the container.

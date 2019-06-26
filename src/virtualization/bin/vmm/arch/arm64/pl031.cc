@@ -24,8 +24,7 @@ static constexpr uint64_t kPl031PhysBase = 0x808301000;
 static constexpr uint64_t kPl031Size = 0x1000;
 
 zx_status_t Pl031::Init(Guest* guest) {
-  return guest->CreateMapping(TrapType::MMIO_SYNC, kPl031PhysBase, kPl031Size,
-                              0, this);
+  return guest->CreateMapping(TrapType::MMIO_SYNC, kPl031PhysBase, kPl031Size, 0, this);
 }
 
 zx_status_t Pl031::Read(uint64_t addr, IoValue* value) const {
@@ -49,8 +48,7 @@ zx_status_t Pl031::Write(uint64_t addr, const IoValue& value) {
 
 zx_status_t Pl031::ConfigureDtb(void* dtb) const {
   uint64_t reg_val[2] = {htobe64(kPl031PhysBase), htobe64(kPl031Size)};
-  int node_off =
-      fdt_node_offset_by_prop_value(dtb, -1, "reg", reg_val, sizeof(reg_val));
+  int node_off = fdt_node_offset_by_prop_value(dtb, -1, "reg", reg_val, sizeof(reg_val));
   if (node_off < 0) {
     FXL_LOG(ERROR) << "Failed to find PL031 in DTB";
     return ZX_ERR_INTERNAL;

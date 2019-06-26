@@ -39,15 +39,13 @@ class Vcpu {
 
   // Guest packet handlers
   zx_status_t HandlePacketLocked(const zx_port_packet_t& packet);
-  zx_status_t HandleMemLocked(const zx_packet_guest_mem_t& mem,
-                              uint64_t trap_key);
+  zx_status_t HandleMemLocked(const zx_packet_guest_mem_t& mem, uint64_t trap_key);
 #if __x86_64__
   zx_status_t HandleInput(const zx_packet_guest_io_t& io, uint64_t trap_key);
   zx_status_t HandleOutput(const zx_packet_guest_io_t& io, uint64_t trap_key);
   zx_status_t HandleIo(const zx_packet_guest_io_t& io, uint64_t trap_key);
 #endif
-  zx_status_t HandleVcpu(const zx_packet_guest_vcpu_t& packet,
-                         uint64_t trap_key);
+  zx_status_t HandleVcpu(const zx_packet_guest_vcpu_t& packet, uint64_t trap_key);
 
   const uint64_t id_;
   Guest* guest_;

@@ -27,8 +27,7 @@ class PhysMem {
   template <typename T>
   zx_vaddr_t offset(T* ptr, size_t len = sizeof(T)) const {
     zx_vaddr_t off = reinterpret_cast<zx_vaddr_t>(ptr);
-    FXL_CHECK(off + len >= off && off + len >= addr_ &&
-              (off + len - addr_ <= vmo_size_))
+    FXL_CHECK(off + len >= off && off + len >= addr_ && (off + len - addr_ <= vmo_size_))
         << "Pointer is not contained within guest physical memory";
     return off - addr_;
   }

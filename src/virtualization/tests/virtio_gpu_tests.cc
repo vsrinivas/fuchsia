@@ -39,8 +39,7 @@ TYPED_TEST_SUITE(VirtioGpuTest, GuestTypes);
 // compiled in.
 void SaveScreenshot(const std::string& prefix, const Screenshot& screenshot) {
   if (kSaveScreenshot) {
-    std::string filename =
-        fxl::StringPrintf(kScreenshotSaveLocation, prefix.c_str());
+    std::string filename = fxl::StringPrintf(kScreenshotSaveLocation, prefix.c_str());
     FXL_LOG(INFO) << fxl::StringPrintf(
         "Saving screenshot to '%s'. Copy from the device using:\n"
         "#  fx scp \"[$(fx get-device-addr)]\":%s data.raw\n"
@@ -49,12 +48,11 @@ void SaveScreenshot(const std::string& prefix, const Screenshot& screenshot) {
         "#  display -size %dx%d -depth 8 RGBO:data.raw\n"
         "Fuchsia guests:\n"
         "#  display -size %dx%d -depth 8 RGBA:data.raw\n",
-        filename.c_str(), filename.c_str(), screenshot.width, screenshot.height,
-        screenshot.width, screenshot.height);
+        filename.c_str(), filename.c_str(), screenshot.width, screenshot.height, screenshot.width,
+        screenshot.height);
     std::ofstream output;
     output.open(filename);
-    output.write(reinterpret_cast<const char*>(screenshot.data.data()),
-                 screenshot.data.size());
+    output.write(reinterpret_cast<const char*>(screenshot.data.data()), screenshot.data.size());
     output.close();
   }
 }
@@ -104,21 +102,18 @@ bool ScreenshotsSame(const Screenshot& a, const Screenshot& b) {
 TYPED_TEST(VirtioGpuTest, ScreenNotBlack) {
   // Take a screenshot.
   Screenshot screenshot;
-  zx_status_t status =
-      this->GetEnclosedGuest()->GetScenic()->CaptureScreenshot(&screenshot);
+  zx_status_t status = this->GetEnclosedGuest()->GetScenic()->CaptureScreenshot(&screenshot);
   ASSERT_EQ(status, ZX_OK) << "Error capturing screenshot.";
   SaveScreenshot("screen-not-black", screenshot);
 
   // Ensure that at least 1 pixel is not black.
-  EXPECT_TRUE(HasNonBlackPixel(screenshot))
-      << "All pixels in the captured screenshot were black.";
+  EXPECT_TRUE(HasNonBlackPixel(screenshot)) << "All pixels in the captured screenshot were black.";
 }
 
 TYPED_TEST(VirtioGpuTest, ScreenDataLooksValid) {
   // Take a screenshot.
   Screenshot screenshot;
-  zx_status_t status =
-      this->GetEnclosedGuest()->GetScenic()->CaptureScreenshot(&screenshot);
+  zx_status_t status = this->GetEnclosedGuest()->GetScenic()->CaptureScreenshot(&screenshot);
   ASSERT_EQ(status, ZX_OK) << "Error capturing screenshot.";
   SaveScreenshot("unique-colors", screenshot);
 
@@ -140,14 +135,12 @@ TYPED_TEST(VirtioGpuTest, ScreenDataLooksValid) {
 TYPED_TEST(VirtioGpuTest, TextInputChangesConsole) {
   // Take a screenshot.
   Screenshot screenshot1;
-  zx_status_t status =
-      this->GetEnclosedGuest()->GetScenic()->CaptureScreenshot(&screenshot1);
+  zx_status_t status = this->GetEnclosedGuest()->GetScenic()->CaptureScreenshot(&screenshot1);
   ASSERT_EQ(status, ZX_OK) << "Error capturing screenshot.";
   SaveScreenshot("input-state1", screenshot1);
 
   // Type a key, which should update the display.
-  this->GetEnclosedGuest()->GetScenic()->SendKeyPress(
-      KeyboardEventHidUsage::KEY_A);
+  this->GetEnclosedGuest()->GetScenic()->SendKeyPress(KeyboardEventHidUsage::KEY_A);
 
   // Take another screenshot.
   //
@@ -160,8 +153,7 @@ TYPED_TEST(VirtioGpuTest, TextInputChangesConsole) {
     FXL_LOG(INFO) << "Capturing...";
     zx::nanosleep(zx::deadline_after(wait_time));
     wait_time *= 2;
-    status =
-        this->GetEnclosedGuest()->GetScenic()->CaptureScreenshot(&screenshot2);
+    status = this->GetEnclosedGuest()->GetScenic()->CaptureScreenshot(&screenshot2);
     ASSERT_EQ(status, ZX_OK) << "Error capturing screenshot.";
   } while (ScreenshotsSame(screenshot1, screenshot2) &&
            zx::clock::get_monotonic() - test_start < kGpuTestTimeout);

@@ -4,15 +4,14 @@
 
 #include "src/virtualization/bin/vmm/zircon.h"
 
+#include <fbl/unique_fd.h>
 #include <fcntl.h>
+#include <libzbi/zbi.h>
 #include <limits.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
-
-#include <fbl/unique_fd.h>
-#include <libzbi/zbi.h>
 #include <zircon/assert.h>
 #include <zircon/boot/driver-config.h>
 #include <zircon/boot/e820.h>
@@ -53,8 +52,7 @@ static inline bool is_within(uintptr_t x, uintptr_t addr, uintptr_t size) {
   return x >= addr && x < addr + size;
 }
 
-zx_status_t read_unified_zbi(const std::string& zbi_path,
-                             const uintptr_t kernel_off,
+zx_status_t read_unified_zbi(const std::string& zbi_path, const uintptr_t kernel_off,
                              const uintptr_t zbi_off, const PhysMem& phys_mem,
                              uintptr_t* guest_ip) {
   fbl::unique_fd fd(open(zbi_path.c_str(), O_RDONLY));
@@ -102,35 +100,31 @@ zx_status_t read_unified_zbi(const std::string& zbi_path,
                                  kernel_hdr->hdr_kernel.length +
                                  kernel_hdr->data_kernel.reserve_memory_size;
   if (kernel_off + reserved_size > phys_mem.size()) {
-    FXL_LOG(ERROR)
-        << "Zircon kernel memory reservation exceeds guest physical memory";
+    FXL_LOG(ERROR) << "Zircon kernel memory reservation exceeds guest physical memory";
     return ZX_ERR_OUT_OF_RANGE;
   }
 
   // Check that the kernel's total memory reservation does not overlap the
   // ramdisk.
   if (is_within(zbi_off, kernel_off, reserved_size)) {
-    FXL_LOG(ERROR)
-        << "Kernel reservation memory reservation overlaps RAM disk location";
+    FXL_LOG(ERROR) << "Kernel reservation memory reservation overlaps RAM disk location";
     return ZX_ERR_OUT_OF_RANGE;
   }
 
   // Read the kernel payload.
-  const uint32_t kernel_payload_len =
-      kernel_hdr->hdr_kernel.length - sizeof(zbi_kernel_t);
-  ret = read(fd.get(),
-             phys_mem.as<void>(kernel_off + offsetof(zircon_kernel_t, contents),
-                               kernel_payload_len),
-             kernel_payload_len);
+  const uint32_t kernel_payload_len = kernel_hdr->hdr_kernel.length - sizeof(zbi_kernel_t);
+  ret =
+      read(fd.get(),
+           phys_mem.as<void>(kernel_off + offsetof(zircon_kernel_t, contents), kernel_payload_len),
+           kernel_payload_len);
   if (ret != kernel_payload_len) {
     FXL_LOG(ERROR) << "Failed to read kernel payload";
     return ZX_ERR_IO;
   }
 
   // Update the kernel ZBI container header and check that it is valid.
-  kernel_hdr->hdr_file =
-      ZBI_CONTAINER_HEADER(kernel_hdr->hdr_kernel.length +
-                           static_cast<uint32_t>(sizeof(zbi_header_t)));
+  kernel_hdr->hdr_file = ZBI_CONTAINER_HEADER(kernel_hdr->hdr_kernel.length +
+                                              static_cast<uint32_t>(sizeof(zbi_header_t)));
   zbi_result_t res = zbi_check(kernel_hdr, nullptr);
   if (res != ZBI_RESULT_OK) {
     FXL_LOG(ERROR) << "Invalid kernel ZBI " << res;
@@ -151,8 +145,7 @@ zx_status_t read_unified_zbi(const std::string& zbi_path,
       offsetof(zircon_kernel_t, data_kernel) + kernel_hdr->hdr_kernel.length;
   if (file_len > kernel_end) {
     const uint32_t items_len = file_len - kernel_end;
-    const uintptr_t data_off =
-        zbi_off + sizeof(zbi_header_t) + container_hdr->length;
+    const uintptr_t data_off = zbi_off + sizeof(zbi_header_t) + container_hdr->length;
     ret = read(fd.get(), phys_mem.as<void>(data_off, items_len), items_len);
     container_hdr->length += ZBI_ALIGN(items_len);
   }
@@ -168,18 +161,16 @@ zx_status_t read_unified_zbi(const std::string& zbi_path,
   return ZX_OK;
 }
 
-static zx_status_t build_data_zbi(const GuestConfig& cfg,
-                                  const PhysMem& phys_mem,
+static zx_status_t build_data_zbi(const GuestConfig& cfg, const PhysMem& phys_mem,
                                   const DevMem& dev_mem,
-                                  const std::vector<PlatformDevice*>& devices,
-                                  uintptr_t zbi_off) {
+                                  const std::vector<PlatformDevice*>& devices, uintptr_t zbi_off) {
   auto container_hdr = phys_mem.as<zbi_header_t>(zbi_off);
   const size_t zbi_max = phys_mem.size() - zbi_off;
 
   // Command line.
   zbi_result_t res;
-  res = zbi_append_section(container_hdr, zbi_max, cfg.cmdline().size() + 1,
-                           ZBI_TYPE_CMDLINE, 0, 0, cfg.cmdline().c_str());
+  res = zbi_append_section(container_hdr, zbi_max, cfg.cmdline().size() + 1, ZBI_TYPE_CMDLINE, 0, 0,
+                           cfg.cmdline().c_str());
   if (res != ZBI_RESULT_OK) {
     return ZX_ERR_INTERNAL;
   }
@@ -198,8 +189,8 @@ static zx_status_t build_data_zbi(const GuestConfig& cfg,
   auto cpu_config = reinterpret_cast<zbi_cpu_config_t*>(cpu_buffer);
   cpu_config->cluster_count = 1;
   cpu_config->clusters[0].cpu_count = cfg.cpus();
-  res = zbi_append_section(container_hdr, zbi_max, sizeof(cpu_buffer),
-                           ZBI_TYPE_CPU_CONFIG, 0, 0, cpu_buffer);
+  res = zbi_append_section(container_hdr, zbi_max, sizeof(cpu_buffer), ZBI_TYPE_CPU_CONFIG, 0, 0,
+                           cpu_buffer);
   if (res != ZBI_RESULT_OK) {
     return ZX_ERR_INTERNAL;
   }
@@ -222,8 +213,7 @@ static zx_status_t build_data_zbi(const GuestConfig& cfg,
   // Zircon only supports a limited number of peripheral ranges so for any
   // dev_mem ranges that are not in the RAM range we will build a single
   // peripheral range to cover all of them.
-  zbi_mem_range_t periph_range = {
-      .paddr = 0, .length = 0, .type = ZBI_MEM_RANGE_PERIPHERAL};
+  zbi_mem_range_t periph_range = {.paddr = 0, .length = 0, .type = ZBI_MEM_RANGE_PERIPHERAL};
   for (const auto& range : dev_mem) {
     if (range.addr < phys_mem.size()) {
       mem_config.emplace_back(zbi_mem_range_t{
@@ -241,36 +231,33 @@ static zx_status_t build_data_zbi(const GuestConfig& cfg,
   if (periph_range.length != 0) {
     mem_config.emplace_back(std::move(periph_range));
   }
-  res = zbi_append_section(container_hdr, zbi_max,
-                           sizeof(zbi_mem_range_t) * mem_config.size(),
+  res = zbi_append_section(container_hdr, zbi_max, sizeof(zbi_mem_range_t) * mem_config.size(),
                            ZBI_TYPE_MEM_CONFIG, 0, 0, &mem_config[0]);
   if (res != ZBI_RESULT_OK) {
     return ZX_ERR_INTERNAL;
   }
   // Platform ID.
-  res = zbi_append_section(container_hdr, zbi_max, sizeof(kPlatformId),
-                           ZBI_TYPE_PLATFORM_ID, 0, 0, &kPlatformId);
+  res = zbi_append_section(container_hdr, zbi_max, sizeof(kPlatformId), ZBI_TYPE_PLATFORM_ID, 0, 0,
+                           &kPlatformId);
   if (res != ZBI_RESULT_OK) {
     return ZX_ERR_INTERNAL;
   }
   // PSCI driver.
-  res = zbi_append_section(container_hdr, zbi_max, sizeof(kPsciDriver),
-                           ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_PSCI, 0,
-                           &kPsciDriver);
+  res = zbi_append_section(container_hdr, zbi_max, sizeof(kPsciDriver), ZBI_TYPE_KERNEL_DRIVER,
+                           KDRV_ARM_PSCI, 0, &kPsciDriver);
   if (res != ZBI_RESULT_OK) {
     return ZX_ERR_INTERNAL;
   }
   // Timer driver.
-  res = zbi_append_section(container_hdr, zbi_max, sizeof(kTimerDriver),
-                           ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_GENERIC_TIMER, 0,
-                           &kTimerDriver);
+  res = zbi_append_section(container_hdr, zbi_max, sizeof(kTimerDriver), ZBI_TYPE_KERNEL_DRIVER,
+                           KDRV_ARM_GENERIC_TIMER, 0, &kTimerDriver);
   if (res != ZBI_RESULT_OK) {
     return ZX_ERR_INTERNAL;
   }
 #elif __x86_64__
   // ACPI root table pointer.
-  res = zbi_append_section(container_hdr, zbi_max, sizeof(uint64_t),
-                           ZBI_TYPE_ACPI_RSDP, 0, 0, &kAcpiOffset);
+  res = zbi_append_section(container_hdr, zbi_max, sizeof(uint64_t), ZBI_TYPE_ACPI_RSDP, 0, 0,
+                           &kAcpiOffset);
   if (res != ZBI_RESULT_OK) {
     return ZX_ERR_INTERNAL;
   }
@@ -281,8 +268,8 @@ static zx_status_t build_data_zbi(const GuestConfig& cfg,
   }
   const size_t e820_size = e820_map.size() * sizeof(e820entry_t);
   void* e820_addr = nullptr;
-  res = zbi_create_section(container_hdr, zbi_max, e820_size,
-                           ZBI_TYPE_E820_TABLE, 0, 0, &e820_addr);
+  res =
+      zbi_create_section(container_hdr, zbi_max, e820_size, ZBI_TYPE_E820_TABLE, 0, 0, &e820_addr);
   if (res != ZBI_RESULT_OK) {
     return ZX_ERR_INTERNAL;
   }
@@ -298,12 +285,11 @@ static zx_status_t build_data_zbi(const GuestConfig& cfg,
   return ZX_OK;
 }
 
-zx_status_t setup_zircon(const GuestConfig& cfg, const PhysMem& phys_mem,
-                         const DevMem& dev_mem,
-                         const std::vector<PlatformDevice*>& devices,
-                         uintptr_t* guest_ip, uintptr_t* boot_ptr) {
-  zx_status_t status = read_unified_zbi(cfg.kernel_path(), kKernelOffset,
-                                        kRamdiskOffset, phys_mem, guest_ip);
+zx_status_t setup_zircon(const GuestConfig& cfg, const PhysMem& phys_mem, const DevMem& dev_mem,
+                         const std::vector<PlatformDevice*>& devices, uintptr_t* guest_ip,
+                         uintptr_t* boot_ptr) {
+  zx_status_t status =
+      read_unified_zbi(cfg.kernel_path(), kKernelOffset, kRamdiskOffset, phys_mem, guest_ip);
 
   if (status != ZX_OK) {
     return status;

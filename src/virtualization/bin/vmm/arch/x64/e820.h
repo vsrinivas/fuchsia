@@ -34,9 +34,7 @@ class E820Map {
 
   size_t size() const { return entries.size(); }
 
-  void copy(e820entry_t *dest) {
-    std::copy(entries.begin(), entries.end(), dest);
-  }
+  void copy(e820entry_t *dest) { std::copy(entries.begin(), entries.end(), dest); }
 
  private:
   std::vector<e820entry_t> entries;

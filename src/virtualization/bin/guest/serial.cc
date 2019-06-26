@@ -5,14 +5,13 @@
 #include "src/virtualization/bin/guest/serial.h"
 
 #include <fcntl.h>
-#include <poll.h>
-
 #include <fuchsia/virtualization/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fit/function.h>
+#include <poll.h>
 
 #include "lib/fsl/socket/socket_drainer.h"
 #include "lib/fsl/tasks/fd_waiter.h"
@@ -26,16 +25,14 @@ class InputReader {
   void Start(zx::unowned_socket socket) {
     socket_ = std::move(socket);
     wait_.set_object(socket_->get());
-    wait_.set_trigger(ZX_SOCKET_WRITABLE | ZX_SOCKET_WRITE_DISABLED |
-                      ZX_SOCKET_PEER_CLOSED);
+    wait_.set_trigger(ZX_SOCKET_WRITABLE | ZX_SOCKET_WRITE_DISABLED | ZX_SOCKET_PEER_CLOSED);
     WaitForKeystroke();
   }
 
  private:
   void WaitForKeystroke() {
     if (fcntl(STDIN_FILENO, F_GETFD) != -1) {
-      fd_waiter_.Wait(fit::bind_member(this, &InputReader::HandleKeystroke),
-                      STDIN_FILENO, POLLIN);
+      fd_waiter_.Wait(fit::bind_member(this, &InputReader::HandleKeystroke), STDIN_FILENO, POLLIN);
     }
   }
 
@@ -70,8 +67,8 @@ class InputReader {
     SendKeyToGuest();
   }
 
-  void OnSocketReady(async_dispatcher_t* dispatcher, async::WaitBase* wait,
-                     zx_status_t status, const zx_packet_signal_t* signal) {
+  void OnSocketReady(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
+                     const zx_packet_signal_t* signal) {
     if (status != ZX_OK) {
       return;
     }

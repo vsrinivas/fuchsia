@@ -5,8 +5,7 @@
 #include "src/virtualization/bin/vmm/device/test_with_device.h"
 #include "src/virtualization/bin/vmm/device/virtio_queue_fake.h"
 
-static constexpr char kVirtioRngUrl[] =
-    "fuchsia-pkg://fuchsia.com/virtio_rng#meta/virtio_rng.cmx";
+static constexpr char kVirtioRngUrl[] = "fuchsia-pkg://fuchsia.com/virtio_rng#meta/virtio_rng.cmx";
 static constexpr uint16_t kQueueSize = 16;
 
 class VirtioRngTest : public TestWithDevice {
@@ -28,8 +27,7 @@ class VirtioRngTest : public TestWithDevice {
 
     // Configure device queues.
     queue_.Configure(PAGE_SIZE * 0, PAGE_SIZE);
-    status = rng_->ConfigureQueue(0, queue_.size(), queue_.desc(),
-                                  queue_.avail(), queue_.used());
+    status = rng_->ConfigureQueue(0, queue_.size(), queue_.desc(), queue_.avail(), queue_.used());
     ASSERT_EQ(ZX_OK, status);
   }
 

@@ -26,8 +26,7 @@ class LinuxRunner : public fuchsia::sys::Runner {
   // |fuchsia::sys::Runner|
   void StartComponent(
       fuchsia::sys::Package application, fuchsia::sys::StartupInfo startup_info,
-      ::fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller)
-      override;
+      ::fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller) override;
 
   std::unique_ptr<sys::ComponentContext> context_;
   fidl::BindingSet<fuchsia::sys::Runner> bindings_;

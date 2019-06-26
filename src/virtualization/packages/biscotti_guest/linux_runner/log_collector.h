@@ -15,8 +15,7 @@ class LogCollector : public vm_tools::LogCollector::Service {
   grpc::Status CollectKernelLogs(grpc::ServerContext* context,
                                  const ::vm_tools::LogRequest* request,
                                  vm_tools::EmptyMessage* response) override;
-  grpc::Status CollectUserLogs(grpc::ServerContext* context,
-                               const ::vm_tools::LogRequest* request,
+  grpc::Status CollectUserLogs(grpc::ServerContext* context, const ::vm_tools::LogRequest* request,
                                vm_tools::EmptyMessage* response) override;
 
   grpc::Status CollectLogs(const vm_tools::LogRequest* request);

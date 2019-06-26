@@ -12,12 +12,10 @@ static constexpr zx::duration kTestTimeout = zx::sec(300);
 
 class MockNetstack : public fuchsia::netstack::Netstack {
  public:
-  void GetPortForService(std::string service,
-                         fuchsia::netstack::Protocol protocol,
+  void GetPortForService(std::string service, fuchsia::netstack::Protocol protocol,
                          GetPortForServiceCallback callback) override {}
 
-  void GetAddress(std::string address, uint16_t port,
-                  GetAddressCallback callback) override {}
+  void GetAddress(std::string address, uint16_t port, GetAddressCallback callback) override {}
 
   void GetInterfaces(GetInterfacesCallback callback) override {}
   void GetInterfaces2(GetInterfaces2Callback callback) override {}
@@ -27,18 +25,15 @@ class MockNetstack : public fuchsia::netstack::Netstack {
 
   void GetStats(uint32_t nicid, GetStatsCallback callback) override {}
 
-  void GetAggregateStats(
-      ::fidl::InterfaceRequest<::fuchsia::io::Node> object) override {}
+  void GetAggregateStats(::fidl::InterfaceRequest<::fuchsia::io::Node> object) override {}
 
   void SetInterfaceStatus(uint32_t nicid, bool enabled) override {}
 
-  void SetInterfaceAddress(uint32_t nicid, fuchsia::net::IpAddress addr,
-                           uint8_t prefixLen,
+  void SetInterfaceAddress(uint32_t nicid, fuchsia::net::IpAddress addr, uint8_t prefixLen,
                            SetInterfaceAddressCallback callback) override;
 
-  void RemoveInterfaceAddress(
-      uint32_t nicid, fuchsia::net::IpAddress addr, uint8_t prefixLen,
-      RemoveInterfaceAddressCallback callback) override {}
+  void RemoveInterfaceAddress(uint32_t nicid, fuchsia::net::IpAddress addr, uint8_t prefixLen,
+                              RemoveInterfaceAddressCallback callback) override {}
 
   void SetInterfaceMetric(uint32_t nicid, uint32_t metric,
                           SetInterfaceMetricCallback callback) override {}
@@ -46,18 +41,15 @@ class MockNetstack : public fuchsia::netstack::Netstack {
   void SetDhcpClientStatus(uint32_t nicid, bool enabled,
                            SetDhcpClientStatusCallback callback) override {}
 
-  void BridgeInterfaces(std::vector<uint32_t> nicids,
-                        BridgeInterfacesCallback callback) override {}
+  void BridgeInterfaces(std::vector<uint32_t> nicids, BridgeInterfacesCallback callback) override {}
 
-  void AddEthernetDevice(
-      std::string topological_path,
-      fuchsia::netstack::InterfaceConfig interfaceConfig,
-      ::fidl::InterfaceHandle<::fuchsia::hardware::ethernet::Device> device,
-      AddEthernetDeviceCallback callback) override;
+  void AddEthernetDevice(std::string topological_path,
+                         fuchsia::netstack::InterfaceConfig interfaceConfig,
+                         ::fidl::InterfaceHandle<::fuchsia::hardware::ethernet::Device> device,
+                         AddEthernetDeviceCallback callback) override;
 
   void StartRouteTableTransaction(
-      ::fidl::InterfaceRequest<fuchsia::netstack::RouteTableTransaction>
-          routeTableTransaction,
+      ::fidl::InterfaceRequest<fuchsia::netstack::RouteTableTransaction> routeTableTransaction,
       StartRouteTableTransactionCallback callback) override {}
 
   fidl::InterfaceRequestHandler<fuchsia::netstack::Netstack> GetHandler() {

@@ -4,22 +4,17 @@
 
 #include "src/virtualization/bin/vmm/io.h"
 
+#include <lib/zx/port.h>
 #include <src/lib/fxl/logging.h>
 #include <zircon/syscalls/hypervisor.h>
-#include <lib/zx/port.h>
 
 #include "src/virtualization/bin/vmm/guest.h"
 
 static constexpr IoValue kBellValue = {};
 
-IoMapping::IoMapping(uint32_t kind, zx_gpaddr_t base, size_t size,
-                     zx_gpaddr_t off, IoHandler* handler)
-    : kind_(kind),
-      base_(base),
-      size_(size),
-      off_(off),
-      handler_(handler),
-      async_trap_(this) {}
+IoMapping::IoMapping(uint32_t kind, zx_gpaddr_t base, size_t size, zx_gpaddr_t off,
+                     IoHandler* handler)
+    : kind_(kind), base_(base), size_(size), off_(off), handler_(handler), async_trap_(this) {}
 
 zx_status_t IoMapping::SetTrap(Guest* guest, async_dispatcher_t* dispatcher) {
   if (kind_ == ZX_GUEST_TRAP_BELL) {
@@ -30,10 +25,7 @@ zx_status_t IoMapping::SetTrap(Guest* guest, async_dispatcher_t* dispatcher) {
   }
 }
 
-void IoMapping::CallIoHandlerAsync(async_dispatcher_t* dispatcher,
-                                   async::GuestBellTrapBase* trap,
-                                   zx_status_t status,
-                                   const zx_packet_guest_bell_t* bell) {
-  FXL_CHECK(Write(bell->addr, kBellValue) == ZX_OK)
-      << "Failed to handle async IO";
+void IoMapping::CallIoHandlerAsync(async_dispatcher_t* dispatcher, async::GuestBellTrapBase* trap,
+                                   zx_status_t status, const zx_packet_guest_bell_t* bell) {
+  FXL_CHECK(Write(bell->addr, kBellValue) == ZX_OK) << "Failed to handle async IO";
 }

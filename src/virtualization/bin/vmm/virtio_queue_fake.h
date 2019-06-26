@@ -26,20 +26,12 @@ class DescBuilder {
   }
 
   // Adds a buffer to the chain that is flagged as device writable.
-  DescBuilder& AppendWritable(void* addr, size_t size) {
-    return Append(addr, size, true);
-  }
-  DescBuilder& AppendWritable(uintptr_t addr, size_t size) {
-    return Append(addr, size, true);
-  }
+  DescBuilder& AppendWritable(void* addr, size_t size) { return Append(addr, size, true); }
+  DescBuilder& AppendWritable(uintptr_t addr, size_t size) { return Append(addr, size, true); }
 
   // Adds a buffer to the chain that is flagged as device readable.
-  DescBuilder& AppendReadable(void* addr, size_t size) {
-    return Append(addr, size, false);
-  }
-  DescBuilder& AppendReadable(uintptr_t addr, size_t size) {
-    return Append(addr, size, false);
-  }
+  DescBuilder& AppendReadable(void* addr, size_t size) { return Append(addr, size, false); }
+  DescBuilder& AppendReadable(uintptr_t addr, size_t size) { return Append(addr, size, false); }
 
   // Make this descriptor chain visible to the device by writing the head
   // index to the available ring and incrementing the available index.
@@ -81,8 +73,7 @@ class VirtioQueueFake {
   // to write to more than descriptors than the queue was initialized with.
   // ZX_ERR_NO_MEMORY is returned if the pool of available descriptors has
   // been exhausted.
-  zx_status_t WriteDescriptor(void* addr, size_t len, uint16_t flags,
-                              uint16_t* desc);
+  zx_status_t WriteDescriptor(void* addr, size_t len, uint16_t flags, uint16_t* desc);
 
   // Write to |desc| that it is continued via |next|.
   //

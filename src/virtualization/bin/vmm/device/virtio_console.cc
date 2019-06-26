@@ -22,8 +22,7 @@ class ConsoleStream : public StreamBase {
  public:
   ConsoleStream(VirtioConsoleImpl* impl) : wait_(impl) {}
 
-  void Init(const zx::socket& socket, const PhysMem& phys_mem,
-            VirtioQueue::InterruptFn interrupt) {
+  void Init(const zx::socket& socket, const PhysMem& phys_mem, VirtioQueue::InterruptFn interrupt) {
     wait_.set_object(socket.get());
     wait_.set_trigger(Trigger);
     StreamBase::Init(phys_mem, std::move(interrupt));
@@ -67,9 +66,8 @@ class ConsoleStream : public StreamBase {
 };
 
 // Implementation of a virtio-console device.
-class VirtioConsoleImpl
-    : public DeviceBase<VirtioConsoleImpl>,
-      public fuchsia::virtualization::hardware::VirtioConsole {
+class VirtioConsoleImpl : public DeviceBase<VirtioConsoleImpl>,
+                          public fuchsia::virtualization::hardware::VirtioConsole {
  public:
   VirtioConsoleImpl(component::StartupContext* context) : DeviceBase(context) {}
 
@@ -90,23 +88,20 @@ class VirtioConsoleImpl
 
  private:
   // |fuchsia::virtualization::hardware::VirtioConsole|
-  void Start(fuchsia::virtualization::hardware::StartInfo start_info,
-             zx::socket socket, StartCallback callback) override {
+  void Start(fuchsia::virtualization::hardware::StartInfo start_info, zx::socket socket,
+             StartCallback callback) override {
     auto deferred = fit::defer(std::move(callback));
     PrepStart(std::move(start_info));
     socket_ = std::move(socket);
     rx_stream_.Init(socket_, phys_mem_,
-                    fit::bind_member<zx_status_t, DeviceBase>(
-                        this, &VirtioConsoleImpl::Interrupt));
+                    fit::bind_member<zx_status_t, DeviceBase>(this, &VirtioConsoleImpl::Interrupt));
     tx_stream_.Init(socket_, phys_mem_,
-                    fit::bind_member<zx_status_t, DeviceBase>(
-                        this, &VirtioConsoleImpl::Interrupt));
+                    fit::bind_member<zx_status_t, DeviceBase>(this, &VirtioConsoleImpl::Interrupt));
   }
 
   // |fuchsia::virtualization::hardware::VirtioDevice|
-  void ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc,
-                      zx_gpaddr_t avail, zx_gpaddr_t used,
-                      ConfigureQueueCallback callback) override {
+  void ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc, zx_gpaddr_t avail,
+                      zx_gpaddr_t used, ConfigureQueueCallback callback) override {
     auto deferred = fit::defer(std::move(callback));
     switch (static_cast<Queue>(queue)) {
       case Queue::RECEIVE:
@@ -122,12 +117,10 @@ class VirtioConsoleImpl
   }
 
   // |fuchsia::virtualization::hardware::VirtioDevice|
-  void Ready(uint32_t negotiated_features, ReadyCallback callback) override {
-    callback();
-  }
+  void Ready(uint32_t negotiated_features, ReadyCallback callback) override { callback(); }
 
-  void OnSocketReadable(async_dispatcher_t* dispatcher, async::WaitBase* wait,
-                        zx_status_t status, const zx_packet_signal_t* signal) {
+  void OnSocketReadable(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
+                        const zx_packet_signal_t* signal) {
     FXL_CHECK(status == ZX_OK) << "Wait for socket readable failed " << status;
     rx_stream_.OnSocketReady(dispatcher, wait, [this](auto desc) {
       FXL_CHECK(desc->writable) << "Descriptor is not writable";
@@ -138,8 +131,8 @@ class VirtioConsoleImpl
     });
   }
 
-  void OnSocketWritable(async_dispatcher_t* dispatcher, async::WaitBase* wait,
-                        zx_status_t status, const zx_packet_signal_t* signal) {
+  void OnSocketWritable(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
+                        const zx_packet_signal_t* signal) {
     FXL_CHECK(status == ZX_OK) << "Wait for socket writable failed " << status;
     tx_stream_.OnSocketReady(dispatcher, wait, [this](auto desc) {
       FXL_CHECK(!desc->writable) << "Descriptor is not readable";
@@ -158,10 +151,8 @@ class VirtioConsoleImpl
   }
 
   zx::socket socket_;
-  ConsoleStream<ZX_SOCKET_READABLE, &VirtioConsoleImpl::OnSocketReadable>
-      rx_stream_{this};
-  ConsoleStream<ZX_SOCKET_WRITABLE, &VirtioConsoleImpl::OnSocketWritable>
-      tx_stream_{this};
+  ConsoleStream<ZX_SOCKET_READABLE, &VirtioConsoleImpl::OnSocketReadable> rx_stream_{this};
+  ConsoleStream<ZX_SOCKET_WRITABLE, &VirtioConsoleImpl::OnSocketWritable> tx_stream_{this};
 };
 
 int main(int argc, char** argv) {

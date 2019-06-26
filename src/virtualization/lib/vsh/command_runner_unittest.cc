@@ -25,8 +25,7 @@ namespace {
 // simulate vshd by reading/writing messages to the socket.
 struct FakeVshd {
   zx_status_t Listen(guest::testing::FakeGuestVsock* guest_vsock) {
-    return guest_vsock->Listen(
-        vsh::kVshPort, fit::bind_member(this, &FakeVshd::OnNewConnection));
+    return guest_vsock->Listen(vsh::kVshPort, fit::bind_member(this, &FakeVshd::OnNewConnection));
   }
 
   zx::socket TakeConnection() {
@@ -53,8 +52,7 @@ struct BlockingCommandRunnerParams {
 };
 
 int RunBlockingCommand(void* arg) {
-  BlockingCommandRunnerParams* params =
-      static_cast<BlockingCommandRunnerParams*>(arg);
+  BlockingCommandRunnerParams* params = static_cast<BlockingCommandRunnerParams*>(arg);
   params->result = params->runner.Execute(std::move(params->command));
   return 0;
 }
@@ -65,8 +63,7 @@ class VshCommandRunnerTest : public gtest::TestLoopFixture {
     TestLoopFixture::SetUp();
     // Setup a fake guest realm that we can use to connect to a
     // HostVsockEndpoint.
-    provider_.service_directory_provider()->AddService(
-        fake_guest_manager_.GetHandler());
+    provider_.service_directory_provider()->AddService(fake_guest_manager_.GetHandler());
     fuchsia::virtualization::ManagerPtr manager;
     provider_.context()->svc()->Connect(manager.NewRequest());
     manager->Create("test realm", realm_.NewRequest());
@@ -84,8 +81,7 @@ class VshCommandRunnerTest : public gtest::TestLoopFixture {
   void SendStderr(const zx::socket& socket, const std::string& data) {
     SendStdio(socket, data, vm_tools::vsh::StdioStream::STDERR_STREAM);
   }
-  void SendStdio(const zx::socket& socket, std::string data,
-                 vm_tools::vsh::StdioStream stream) {
+  void SendStdio(const zx::socket& socket, std::string data, vm_tools::vsh::StdioStream stream) {
     vm_tools::vsh::HostMessage host_message;
     auto data_message = host_message.mutable_data_message();
     data_message->set_stream(stream);
@@ -101,8 +97,7 @@ class VshCommandRunnerTest : public gtest::TestLoopFixture {
   }
 
   // Connects to the |HostVsockEnpoint| for the realm.
-  fidl::InterfaceHandle<fuchsia::virtualization::HostVsockEndpoint>
-  GetHostVsockEndpoint() {
+  fidl::InterfaceHandle<fuchsia::virtualization::HostVsockEndpoint> GetHostVsockEndpoint() {
     fuchsia::virtualization::HostVsockEndpointPtr result;
     realm_->GetHostVsockEndpoint(result.NewRequest());
     RunLoopUntilIdle();
@@ -118,8 +113,7 @@ class VshCommandRunnerTest : public gtest::TestLoopFixture {
   // call to |CloseConnectionsAndWaitForThreadJoin|.
   zx::socket StartBlockingCommandOnThread(BlockingCommandRunnerParams* params) {
     FXL_CHECK(!thread_running_);
-    FXL_CHECK(thrd_create(&thread_, RunBlockingCommand, params) ==
-              thrd_success);
+    FXL_CHECK(thrd_create(&thread_, RunBlockingCommand, params) == thrd_success);
     thread_running_ = true;
 
     // Ensure the command runner is connected before continuing.

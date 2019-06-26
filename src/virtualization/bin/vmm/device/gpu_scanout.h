@@ -24,8 +24,7 @@ class GpuScanout {
   // command from the guest (e.g. resulting from a manual mode change), the
   // handler will be called with the new source dimensions from the VirtioGpu
   // device thread.
-  void SetUpdateSourceHandler(
-      fit::function<void(uint32_t, uint32_t)> update_source_handler);
+  void SetUpdateSourceHandler(fit::function<void(uint32_t, uint32_t)> update_source_handler);
 
   // Set a flush handler for this scanout. On receiving a Flush command from
   // the guest, the handler will be called with the flushed subrect from the
@@ -38,24 +37,21 @@ class GpuScanout {
   // target. The target will be written using the native pixel format of the
   // guest driver.
   // TODO(MAC-168): expose pixel format to scanout clients
-  zx_status_t SetFlushTarget(zx::vmo vmo, uint64_t size, uint32_t width,
-                             uint32_t height, uint32_t stride);
+  zx_status_t SetFlushTarget(zx::vmo vmo, uint64_t size, uint32_t width, uint32_t height,
+                             uint32_t stride);
 
   // Called in response to VIRTIO_GPU_CMD_SET_SCANOUT. This command associates
   // a particular GpuResource and subrect with the scanout.
-  void OnSetScanout(const GpuResource* source_resource,
-                    const virtio_gpu_rect_t& source_rect);
+  void OnSetScanout(const GpuResource* source_resource, const virtio_gpu_rect_t& source_rect);
 
   // Called in response to VIRTIO_GPU_CMD_RESOURCE_FLUSH. This command notifies
   // the device that the resource's contents should be flushed to any attached
   // scanouts whose source rect overlaps the flushed rect.
-  void OnResourceFlush(const GpuResource* resource,
-                       const virtio_gpu_rect_t& rect);
+  void OnResourceFlush(const GpuResource* resource, const virtio_gpu_rect_t& rect);
 
   // Called in response to VIRTIO_GPU_CMD_UPDATE_CURSOR. This command
   // associates a particular cursor GpuResource metadata with the scanout.
-  void OnUpdateCursor(const GpuResource* cursor_resource, uint32_t hot_x,
-                      uint32_t hot_y);
+  void OnUpdateCursor(const GpuResource* cursor_resource, uint32_t hot_x, uint32_t hot_y);
 
   // Called in response to VIRTIO_GPU_CMD_MOVE_CURSOR. This command notifies
   // the device that the cursor resource position should be updated. Also

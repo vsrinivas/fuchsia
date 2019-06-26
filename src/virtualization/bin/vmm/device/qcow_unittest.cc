@@ -28,14 +28,12 @@ class FdBlockDispatcher : public BlockDispatcher {
     callback(ret < 0 ? ZX_ERR_IO : ZX_OK);
   }
 
-  void ReadAt(void* data, uint64_t size, uint64_t off,
-              Callback callback) override {
+  void ReadAt(void* data, uint64_t size, uint64_t off, Callback callback) override {
     int ret = pread(fd_, data, size, off);
     callback(ret < 0 ? ZX_ERR_IO : ZX_OK);
   }
 
-  void WriteAt(const void* data, uint64_t size, uint64_t off,
-               Callback callback) override {
+  void WriteAt(const void* data, uint64_t size, uint64_t off, Callback callback) override {
     int ret = pwrite(fd_, data, size, off);
     callback(ret < 0 ? ZX_ERR_IO : ZX_OK);
   }
@@ -55,9 +53,8 @@ class QcowTest : public testing::Test {
   void VerifyPaddingClustersAreEmpty() {
     uint8_t cluster[kClusterSize];
     for (size_t i = 0; i < arraysize(kPaddingClusterOffsets); ++i) {
-      ASSERT_EQ(
-          static_cast<int>(kClusterSize),
-          pread(fd_.get(), cluster, kClusterSize, kPaddingClusterOffsets[i]));
+      ASSERT_EQ(static_cast<int>(kClusterSize),
+                pread(fd_.get(), cluster, kClusterSize, kPaddingClusterOffsets[i]));
       ASSERT_EQ(0, memcmp(cluster, kZeroCluster, kClusterSize));
     }
   }
@@ -78,8 +75,7 @@ class QcowTest : public testing::Test {
     }
 
     // Write L1 table.
-    WriteAt(be_table, arraysize(kL2TableClusterOffsets),
-            header_.l1_table_offset);
+    WriteAt(be_table, arraysize(kL2TableClusterOffsets), header_.l1_table_offset);
 
     // Initialize empty L2 tables.
     for (size_t i = 0; i < arraysize(kL2TableClusterOffsets); ++i) {
@@ -91,32 +87,27 @@ class QcowTest : public testing::Test {
     // Convert entries to big-endian
     uint64_t be_table[arraysize(kRefcountBlockClusterOffsets)];
     for (size_t i = 0; i < arraysize(kRefcountBlockClusterOffsets); ++i) {
-      be_table[i] =
-          HostToBigEndianTraits::Convert(kRefcountBlockClusterOffsets[i]);
+      be_table[i] = HostToBigEndianTraits::Convert(kRefcountBlockClusterOffsets[i]);
     }
 
     // Write refcount table
-    WriteAt(be_table, arraysize(kRefcountBlockClusterOffsets),
-            header_.refcount_table_offset);
+    WriteAt(be_table, arraysize(kRefcountBlockClusterOffsets), header_.refcount_table_offset);
 
     // Initialize empty refcount blocks.
     for (size_t i = 0; i < arraysize(kRefcountBlockClusterOffsets); ++i) {
-      WriteAt(kZeroCluster, sizeof(kZeroCluster),
-              kRefcountBlockClusterOffsets[i]);
+      WriteAt(kZeroCluster, sizeof(kZeroCluster), kRefcountBlockClusterOffsets[i]);
     }
   }
 
   template <typename T>
   void WriteAt(const T* ptr, off_t off) {
-    ASSERT_EQ(static_cast<ssize_t>(sizeof(T)),
-              pwrite(fd_.get(), ptr, sizeof(T), off));
+    ASSERT_EQ(static_cast<ssize_t>(sizeof(T)), pwrite(fd_.get(), ptr, sizeof(T), off));
   }
 
   // Writes an array of T values at the current file location.
   template <typename T>
   void WriteAt(const T* ptr, size_t len, off_t off) {
-    ASSERT_EQ(static_cast<ssize_t>(len * sizeof(T)),
-              pwrite(fd_.get(), ptr, len * sizeof(T), off));
+    ASSERT_EQ(static_cast<ssize_t>(len * sizeof(T)), pwrite(fd_.get(), ptr, len * sizeof(T), off));
   }
 
   zx_status_t Load() {
@@ -129,8 +120,7 @@ class QcowTest : public testing::Test {
   zx_status_t ReadAt(void* data, uint64_t size) {
     FdBlockDispatcher disp(fd_.get());
     zx_status_t status;
-    file_.ReadAt(&disp, data, size, 0,
-                 [&status](zx_status_t s) { status = s; });
+    file_.ReadAt(&disp, data, size, 0, [&status](zx_status_t s) { status = s; });
     return status;
   }
 
@@ -230,8 +220,8 @@ TEST_F(QcowTest, RejectCompressedCluster) {
   // Write L2 entry
   uint64_t l2_offset = kL2TableClusterOffsets[0];
   uint64_t data_cluster_offset = ClusterOffset(kFirstDataCluster);
-  uint64_t l2_entry = HostToBigEndianTraits::Convert(data_cluster_offset |
-                                                     kTableEntryCompressedBit);
+  uint64_t l2_entry =
+      HostToBigEndianTraits::Convert(data_cluster_offset | kTableEntryCompressedBit);
   WriteAt(&l2_entry, l2_offset);
 
   // Write data to cluster.

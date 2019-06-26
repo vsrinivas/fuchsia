@@ -17,8 +17,7 @@ static constexpr uint16_t kVirtioRngNumQueues = 1;
 struct virtio_rng_config_t {};
 
 class VirtioRng
-    : public VirtioComponentDevice<VIRTIO_ID_RNG, kVirtioRngNumQueues,
-                                   virtio_rng_config_t> {
+    : public VirtioComponentDevice<VIRTIO_ID_RNG, kVirtioRngNumQueues, virtio_rng_config_t> {
  public:
   explicit VirtioRng(const PhysMem& phys_mem);
 
@@ -30,8 +29,8 @@ class VirtioRng
   // Use a sync pointer for consistency of virtual machine execution.
   fuchsia::virtualization::hardware::VirtioRngSyncPtr rng_;
 
-  zx_status_t ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc,
-                             zx_gpaddr_t avail, zx_gpaddr_t used);
+  zx_status_t ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc, zx_gpaddr_t avail,
+                             zx_gpaddr_t used);
   zx_status_t Ready(uint32_t negotiated_features);
 };
 

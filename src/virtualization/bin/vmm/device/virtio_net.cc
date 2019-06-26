@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <memory>
-#include <queue>
-
 #include <fuchsia/netstack/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async_promise/executor.h>
@@ -17,10 +14,12 @@
 #include <virtio/net.h>
 #include <zircon/device/ethernet.h>
 
-#include "src/virtualization/bin/vmm/device/device_base.h"
-#include "src/virtualization/bin/vmm/device/stream_base.h"
+#include <memory>
+#include <queue>
 
 #include "guest_ethernet.h"
+#include "src/virtualization/bin/vmm/device/device_base.h"
+#include "src/virtualization/bin/vmm/device/stream_base.h"
 
 static constexpr char kInterfacePath[] = "/dev/class/ethernet/virtio";
 static constexpr char kInterfaceName[] = "ethv0";
@@ -42,8 +41,7 @@ class RxStream : public StreamBase {
   }
 
   void Notify() {
-    for (; !packet_queue_.empty() && queue_.NextChain(&chain_);
-         chain_.Return()) {
+    for (; !packet_queue_.empty() && queue_.NextChain(&chain_); chain_.Return()) {
       Packet pkt = packet_queue_.front();
       chain_.NextDescriptor(&desc_);
       if (desc_.len < sizeof(virtio_net_hdr_t)) {
@@ -79,8 +77,7 @@ class RxStream : public StreamBase {
         FXL_LOG(ERROR) << "Dropping packet that's too large for the descriptor";
         continue;
       }
-      memcpy(phys_mem_->as<void>(offset, length),
-             reinterpret_cast<void*>(pkt.addr), pkt.length);
+      memcpy(phys_mem_->as<void>(offset, length), reinterpret_cast<void*>(pkt.addr), pkt.length);
       *chain_.Used() = pkt.length + sizeof(*header);
       pkt.entry.flags = ETH_FIFO_TX_OK;
       guest_ethernet_->Complete(pkt.entry);
@@ -122,8 +119,7 @@ class TxStream : public StreamBase {
         static bool warned = false;
         if (!warned) {
           warned = true;
-          FXL_LOG(ERROR)
-              << "Transmit packet and header must be on a single descriptor";
+          FXL_LOG(ERROR) << "Transmit packet and header must be on a single descriptor";
         }
         continue;
       }
@@ -147,10 +143,8 @@ class VirtioNetImpl : public DeviceBase<VirtioNetImpl>,
                       public fuchsia::virtualization::hardware::VirtioNet,
                       public GuestEthernetReceiver {
  public:
-  VirtioNetImpl(component::StartupContext* context)
-      : DeviceBase(context), context_(*context) {
-    netstack_ =
-        context_.ConnectToEnvironmentService<fuchsia::netstack::Netstack>();
+  VirtioNetImpl(component::StartupContext* context) : DeviceBase(context), context_(*context) {
+    netstack_ = context_.ConnectToEnvironmentService<fuchsia::netstack::Netstack>();
   }
 
   // |fuchsia::virtualization::hardware::VirtioDevice|
@@ -170,8 +164,7 @@ class VirtioNetImpl : public DeviceBase<VirtioNetImpl>,
 
   // Called by GuestEthernet to notify us when the netstack is trying to send a
   // packet to the guest.
-  void Receive(uintptr_t addr, size_t length,
-               const eth_fifo_entry_t& entry) override {
+  void Receive(uintptr_t addr, size_t length, const eth_fifo_entry_t& entry) override {
     rx_stream_.Receive(addr, length, entry);
   }
 
@@ -203,48 +196,42 @@ class VirtioNetImpl : public DeviceBase<VirtioNetImpl>,
             .and_then([this](const uint32_t& nic_id) mutable {
               netstack_->SetInterfaceStatus(nic_id, true);
             })
-            .or_else([]() mutable {
-              FXL_CHECK(false) << "Failed to set ethernet IP address.";
-            })
+            .or_else([]() mutable { FXL_CHECK(false) << "Failed to set ethernet IP address."; })
             .and_then([this]() {
-              rx_stream_.Init(&guest_ethernet_, phys_mem_,
-                              fit::bind_member<zx_status_t, DeviceBase>(
-                                  this, &VirtioNetImpl::Interrupt));
-              tx_stream_.Init(&guest_ethernet_, phys_mem_,
-                              fit::bind_member<zx_status_t, DeviceBase>(
-                                  this, &VirtioNetImpl::Interrupt));
+              rx_stream_.Init(
+                  &guest_ethernet_, phys_mem_,
+                  fit::bind_member<zx_status_t, DeviceBase>(this, &VirtioNetImpl::Interrupt));
+              tx_stream_.Init(
+                  &guest_ethernet_, phys_mem_,
+                  fit::bind_member<zx_status_t, DeviceBase>(this, &VirtioNetImpl::Interrupt));
             })
             .and_then(std::move(callback))
             .wrap_with(scope_));
   }
 
-  fit::promise<uint32_t> AddEthernetDevice(
-      const char* interface_path, fuchsia::netstack::InterfaceConfig config) {
+  fit::promise<uint32_t> AddEthernetDevice(const char* interface_path,
+                                           fuchsia::netstack::InterfaceConfig config) {
     fit::bridge<uint32_t> bridge;
 
-    netstack_->AddEthernetDevice(
-        interface_path, std::move(config), device_binding_.NewBinding(),
-        [completer = std::move(bridge.completer)](uint32_t id) mutable {
-          completer.complete_ok(id);
-        });
+    netstack_->AddEthernetDevice(interface_path, std::move(config), device_binding_.NewBinding(),
+                                 [completer = std::move(bridge.completer)](uint32_t id) mutable {
+                                   completer.complete_ok(id);
+                                 });
 
     return bridge.consumer.promise();
   }
 
-  fit::promise<uint32_t> SetInterfaceAddress(uint32_t nic_id,
-                                             fuchsia::net::IpAddress addr) {
+  fit::promise<uint32_t> SetInterfaceAddress(uint32_t nic_id, fuchsia::net::IpAddress addr) {
     fit::bridge<uint32_t> bridge;
 
     netstack_->SetInterfaceAddress(
         nic_id, std::move(addr), kPrefixLength,
-        [nic_id, completer = std::move(bridge.completer)](
-            fuchsia::netstack::NetErr err) mutable {
+        [nic_id, completer = std::move(bridge.completer)](fuchsia::netstack::NetErr err) mutable {
           if (err.status == fuchsia::netstack::Status::OK) {
             completer.complete_ok(nic_id);
           } else {
             FXL_LOG(ERROR) << "Failed to set interface address with "
-                           << static_cast<uint32_t>(err.status) << " "
-                           << err.message;
+                           << static_cast<uint32_t>(err.status) << " " << err.message;
             completer.complete_error();
           }
         });
@@ -252,9 +239,8 @@ class VirtioNetImpl : public DeviceBase<VirtioNetImpl>,
   }
 
   // |fuchsia::virtualization::hardware::VirtioDevice|
-  void ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc,
-                      zx_gpaddr_t avail, zx_gpaddr_t used,
-                      ConfigureQueueCallback callback) override {
+  void ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc, zx_gpaddr_t avail,
+                      zx_gpaddr_t used, ConfigureQueueCallback callback) override {
     auto deferred = fit::defer(std::move(callback));
     switch (static_cast<Queue>(queue)) {
       case Queue::RECEIVE:

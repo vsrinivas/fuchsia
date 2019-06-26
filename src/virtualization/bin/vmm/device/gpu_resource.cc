@@ -6,8 +6,7 @@
 
 #include <src/lib/fxl/logging.h>
 
-GpuResource::GpuResource(const PhysMem& phys_mem, uint32_t format,
-                         uint32_t width, uint32_t height)
+GpuResource::GpuResource(const PhysMem& phys_mem, uint32_t format, uint32_t width, uint32_t height)
     : phys_mem_(&phys_mem),
       format_(format),
       width_(width),
@@ -15,8 +14,7 @@ GpuResource::GpuResource(const PhysMem& phys_mem, uint32_t format,
       host_backing_size_(width * height * kPixelSizeInBytes),
       host_backing_(std::make_unique<uint8_t[]>(host_backing_size_)) {}
 
-void GpuResource::AttachBacking(const virtio_gpu_mem_entry_t* mem_entries,
-                                uint32_t num_entries) {
+void GpuResource::AttachBacking(const virtio_gpu_mem_entry_t* mem_entries, uint32_t num_entries) {
   // NOTE: it is valid for driver to leave regions of the image without backing,
   // so long as a transfer is never requested for them.
   guest_backing_.resize(num_entries);
@@ -30,8 +28,7 @@ void GpuResource::AttachBacking(const virtio_gpu_mem_entry_t* mem_entries,
 
 void GpuResource::DetachBacking() { guest_backing_.clear(); }
 
-virtio_gpu_ctrl_type GpuResource::TransferToHost2d(
-    const virtio_gpu_rect_t& rect, uint64_t off) {
+virtio_gpu_ctrl_type GpuResource::TransferToHost2d(const virtio_gpu_rect_t& rect, uint64_t off) {
   if (rect.x + rect.width > width_ || rect.y + rect.height > height_ ||
       (rect.y * width_ + rect.x) * kPixelSizeInBytes != off) {
     FXL_LOG(WARNING) << "Driver requested transfer of invalid resource region";
@@ -48,8 +45,7 @@ virtio_gpu_ctrl_type GpuResource::TransferToHost2d(
     }
     while (entry_off + entry.len > off && transfer_bytes_remaining > 0) {
       // Current entry covers requested content.
-      size_t copy_size =
-          std::min((entry_off + entry.len) - off, transfer_bytes_remaining);
+      size_t copy_size = std::min((entry_off + entry.len) - off, transfer_bytes_remaining);
       uint64_t off_next = off + copy_size;
 
       // If the copy rect width does not match the resource width, additional
@@ -59,8 +55,7 @@ virtio_gpu_ctrl_type GpuResource::TransferToHost2d(
           // Clamp the copy size to the rect row size.
           copy_size = rect_row_bytes_remaining;
           // Set the next offset to the start of the next image row.
-          off_next = (off + image_row_bytes + rect_row_bytes_remaining) -
-                     rect_row_bytes;
+          off_next = (off + image_row_bytes + rect_row_bytes_remaining) - rect_row_bytes;
           // Reset remaining bytes in the rect row.
           rect_row_bytes_remaining = rect_row_bytes;
         } else {
@@ -69,8 +64,7 @@ virtio_gpu_ctrl_type GpuResource::TransferToHost2d(
       }
 
       zx_vaddr_t src_vaddr = entry.addr + off - entry_off;
-      memcpy(&host_backing_[off], phys_mem_->as<void>(src_vaddr, copy_size),
-             copy_size);
+      memcpy(&host_backing_[off], phys_mem_->as<void>(src_vaddr, copy_size), copy_size);
       transfer_bytes_remaining -= copy_size;
       off = off_next;
     }

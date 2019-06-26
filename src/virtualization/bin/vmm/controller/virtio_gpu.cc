@@ -4,8 +4,7 @@
 
 #include "src/virtualization/bin/vmm/controller/virtio_gpu.h"
 
-static constexpr char kVirtioGpuUrl[] =
-    "fuchsia-pkg://fuchsia.com/virtio_gpu#meta/virtio_gpu.cmx";
+static constexpr char kVirtioGpuUrl[] = "fuchsia-pkg://fuchsia.com/virtio_gpu#meta/virtio_gpu.cmx";
 
 VirtioGpu::VirtioGpu(const PhysMem& phys_mem)
     : VirtioComponentDevice(phys_mem, 0 /* device_features */,
@@ -16,8 +15,7 @@ VirtioGpu::VirtioGpu(const PhysMem& phys_mem)
 
 zx_status_t VirtioGpu::Start(
     const zx::guest& guest,
-    fidl::InterfaceHandle<fuchsia::virtualization::hardware::ViewListener>
-        view_listener,
+    fidl::InterfaceHandle<fuchsia::virtualization::hardware::ViewListener> view_listener,
     fuchsia::sys::Launcher* launcher, async_dispatcher_t* dispatcher) {
   fuchsia::sys::LaunchInfo launch_info{
       .url = kVirtioGpuUrl,
@@ -26,8 +24,7 @@ zx_status_t VirtioGpu::Start(
   launcher->CreateComponent(std::move(launch_info), controller_.NewRequest());
   services_.ConnectToService(gpu_.NewRequest());
   services_.ConnectToService(events_.NewRequest());
-  events_.events().OnConfigChanged =
-      fit::bind_member(this, &VirtioGpu::OnConfigChanged);
+  events_.events().OnConfigChanged = fit::bind_member(this, &VirtioGpu::OnConfigChanged);
 
   fuchsia::virtualization::hardware::StartInfo start_info;
   zx_status_t status = PrepStart(guest, dispatcher, &start_info);
@@ -37,9 +34,8 @@ zx_status_t VirtioGpu::Start(
   return gpu_->Start(std::move(start_info), std::move(view_listener));
 }
 
-zx_status_t VirtioGpu::ConfigureQueue(uint16_t queue, uint16_t size,
-                                      zx_gpaddr_t desc, zx_gpaddr_t avail,
-                                      zx_gpaddr_t used) {
+zx_status_t VirtioGpu::ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc,
+                                      zx_gpaddr_t avail, zx_gpaddr_t used) {
   return gpu_->ConfigureQueue(queue, size, desc, avail, used);
 }
 
@@ -62,8 +58,7 @@ void VirtioGpu::OnConfigChanged() {
     config_.events_read |= VIRTIO_GPU_EVENT_DISPLAY;
   }
   // Send a config change interrupt to the guest.
-  zx_status_t status =
-      Interrupt(VirtioQueue::SET_CONFIG | VirtioQueue::TRY_INTERRUPT);
+  zx_status_t status = Interrupt(VirtioQueue::SET_CONFIG | VirtioQueue::TRY_INTERRUPT);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to generate configuration interrupt " << status;
   }

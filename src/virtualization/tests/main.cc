@@ -20,8 +20,7 @@ static constexpr size_t kVirtioConsoleMessageCount = 100;
 static constexpr size_t kVirtioBalloonPageCount = 256;
 
 class SingleCpuZirconEnclosedGuest : public ZirconEnclosedGuest {
-  zx_status_t LaunchInfo(
-      fuchsia::virtualization::LaunchInfo* launch_info) override {
+  zx_status_t LaunchInfo(fuchsia::virtualization::LaunchInfo* launch_info) override {
     launch_info->url = kZirconGuestUrl;
     launch_info->args.push_back("--virtio-gpu=false");
     launch_info->args.push_back("--cpus=1");
@@ -31,8 +30,7 @@ class SingleCpuZirconEnclosedGuest : public ZirconEnclosedGuest {
 };
 
 class SingleCpuDebianEnclosedGuest : public DebianEnclosedGuest {
-  zx_status_t LaunchInfo(
-      fuchsia::virtualization::LaunchInfo* launch_info) override {
+  zx_status_t LaunchInfo(fuchsia::virtualization::LaunchInfo* launch_info) override {
     launch_info->url = kDebianGuestUrl;
     launch_info->args.push_back("--virtio-gpu=false");
     launch_info->args.push_back("--cpus=1");
@@ -40,9 +38,8 @@ class SingleCpuDebianEnclosedGuest : public DebianEnclosedGuest {
   }
 };
 
-using GuestTypes =
-    ::testing::Types<ZirconEnclosedGuest, SingleCpuZirconEnclosedGuest,
-                     DebianEnclosedGuest, SingleCpuDebianEnclosedGuest>;
+using GuestTypes = ::testing::Types<ZirconEnclosedGuest, SingleCpuZirconEnclosedGuest,
+                                    DebianEnclosedGuest, SingleCpuDebianEnclosedGuest>;
 TYPED_TEST_SUITE(GuestTest, GuestTypes);
 
 TYPED_TEST(GuestTest, LaunchGuest) {
@@ -91,8 +88,7 @@ TEST_F(VirtioBalloonGuestTest, VirtioBalloon) {
   ASSERT_EQ(status, ZX_OK);
 
   // Request an increase to the number of pages in the balloon.
-  status = balloon_controller->RequestNumPages(initial_num_pages +
-                                               kVirtioBalloonPageCount);
+  status = balloon_controller->RequestNumPages(initial_num_pages + kVirtioBalloonPageCount);
   ASSERT_EQ(status, ZX_OK);
 
   // Verify that the number of pages eventually equals the requested number. The

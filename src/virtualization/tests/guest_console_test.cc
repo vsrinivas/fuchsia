@@ -13,12 +13,9 @@ namespace {
 
 class FakeSocket : public SocketInterface {
  public:
-  explicit FakeSocket(std::vector<std::string> responses)
-      : responses_(std::move(responses)) {}
+  explicit FakeSocket(std::vector<std::string> responses) : responses_(std::move(responses)) {}
 
-  zx_status_t Send(zx::time deadline, const std::string& message) override {
-    return ZX_OK;
-  }
+  zx_status_t Send(zx::time deadline, const std::string& message) override { return ZX_OK; }
 
   zx_status_t Receive(zx::time deadline, std::string* result) override {
     if (reads_performed_ >= responses_.size()) {
@@ -48,8 +45,7 @@ TEST(GuestConsole, WaitForMarkerEmpty) {
 }
 
 TEST(GuestConsole, WaitForMarkerSimple) {
-  auto socket =
-      std::make_unique<FakeSocket>(std::vector<std::string>{"marker"});
+  auto socket = std::make_unique<FakeSocket>(std::vector<std::string>{"marker"});
   GuestConsole console(std::move(socket));
 
   std::string result;
@@ -58,8 +54,7 @@ TEST(GuestConsole, WaitForMarkerSimple) {
 }
 
 TEST(GuestConsole, WaitForMarkerContentBefore) {
-  auto socket =
-      std::make_unique<FakeSocket>(std::vector<std::string>{"xxxmarker"});
+  auto socket = std::make_unique<FakeSocket>(std::vector<std::string>{"xxxmarker"});
   GuestConsole console(std::move(socket));
 
   std::string result;
@@ -68,8 +63,7 @@ TEST(GuestConsole, WaitForMarkerContentBefore) {
 }
 
 TEST(GuestConsole, WaitForMarkerContentAfterPreserved) {
-  auto socket = std::make_unique<FakeSocket>(
-      std::vector<std::string>{"xxxmarkeryyy", "second"});
+  auto socket = std::make_unique<FakeSocket>(std::vector<std::string>{"xxxmarkeryyy", "second"});
   GuestConsole console(std::move(socket));
 
   std::string result;

@@ -35,21 +35,13 @@ static constexpr uint64_t kPciBarMmioType64Bit = 0b10 << 1;
 static constexpr uint64_t kPciBarMmioAddrMask = ~bit_mask<uint64_t>(4);
 
 // PCI type 1 address manipulation.
-constexpr uint8_t pci_type1_bus(uint64_t addr) {
-  return bits_shift(addr, 23, 16);
-}
+constexpr uint8_t pci_type1_bus(uint64_t addr) { return bits_shift(addr, 23, 16); }
 
-constexpr uint8_t pci_type1_device(uint64_t addr) {
-  return bits_shift(addr, 15, 11);
-}
+constexpr uint8_t pci_type1_device(uint64_t addr) { return bits_shift(addr, 15, 11); }
 
-constexpr uint8_t pci_type1_function(uint64_t addr) {
-  return bits_shift(addr, 10, 8);
-}
+constexpr uint8_t pci_type1_function(uint64_t addr) { return bits_shift(addr, 10, 8); }
 
-constexpr uint8_t pci_type1_register(uint64_t addr) {
-  return bits_shift(addr, 7, 2) << 2;
-}
+constexpr uint8_t pci_type1_register(uint64_t addr) { return bits_shift(addr, 7, 2) << 2; }
 
 class PciBus;
 class PciDevice;
@@ -108,14 +100,12 @@ class PciDevice {
   };
 
   // Read from a region mapped by a BAR register.
-  virtual zx_status_t ReadBar(uint8_t bar, uint64_t addr,
-                              IoValue* value) const {
+  virtual zx_status_t ReadBar(uint8_t bar, uint64_t addr, IoValue* value) const {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   // Write to a region mapped by a BAR register.
-  virtual zx_status_t WriteBar(uint8_t bar, uint64_t addr,
-                               const IoValue& value) {
+  virtual zx_status_t WriteBar(uint8_t bar, uint64_t addr, const IoValue& value) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -129,16 +119,12 @@ class PciDevice {
 
   // Determines if the given base address register is implemented for this
   // device.
-  bool is_bar_implemented(size_t bar) const {
-    return bar < kPciMaxBars && bar_[bar].size > 0;
-  }
+  bool is_bar_implemented(size_t bar) const { return bar < kPciMaxBars && bar_[bar].size > 0; }
 
   // Returns a pointer to a base address register for this device.
   //
   // Returns nullptr if the register is not implemented.
-  const PciBar* bar(size_t n) const {
-    return is_bar_implemented(n) ? &bar_[n] : nullptr;
-  }
+  const PciBar* bar(size_t n) const { return is_bar_implemented(n) ? &bar_[n] : nullptr; }
 
   // Install a capability list.
   void set_capabilities(const pci_cap_t* caps, size_t num_caps) {
@@ -157,15 +143,13 @@ class PciDevice {
   friend class PciBus;
 
   // Setup traps and handlers for accesses to BAR regions.
-  zx_status_t SetupBarTraps(Guest* guest, bool skip_bell,
-                            async_dispatcher_t* dispatcher);
+  zx_status_t SetupBarTraps(Guest* guest, bool skip_bell, async_dispatcher_t* dispatcher);
 
   zx_status_t ReadConfigWord(uint8_t reg, uint32_t* value) const;
 
   zx_status_t ReadCapability(uint8_t addr, uint32_t* out) const;
 
-  const pci_cap_t* FindCapability(uint8_t addr, uint8_t* cap_index,
-                                  uint32_t* cap_base) const;
+  const pci_cap_t* FindCapability(uint8_t addr, uint8_t* cap_index, uint32_t* cap_base) const;
 
   // Returns true when an interrupt is active.
   virtual bool HasPendingInterrupt() const = 0;
@@ -246,8 +230,7 @@ class PciBus : public PlatformDevice {
   // Returns true if |bus|, |device|, |function| corresponds to a valid
   // device address.
   bool is_addr_valid(uint8_t bus, uint8_t device, uint8_t function) const {
-    return bus == 0 && device < kPciMaxDevices && function == 0 &&
-           device_[device];
+    return bus == 0 && device < kPciMaxDevices && function == 0 && device_[device];
   }
 
   // Current config address selected by the 0xcf8 IO port.

@@ -40,23 +40,20 @@ class VirtioRngImpl : public DeviceBase<VirtioRngImpl>,
              StartCallback callback) override {
     auto deferred = fit::defer(std::move(callback));
     PrepStart(std::move(start_info));
-    queue_.Init(phys_mem_, fit::bind_member<zx_status_t, DeviceBase>(
-                               this, &VirtioRngImpl::Interrupt));
+    queue_.Init(phys_mem_,
+                fit::bind_member<zx_status_t, DeviceBase>(this, &VirtioRngImpl::Interrupt));
   }
 
   // |fuchsia::virtualization::hardware::VirtioDevice|
-  void ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc,
-                      zx_gpaddr_t avail, zx_gpaddr_t used,
-                      ConfigureQueueCallback callback) override {
+  void ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc, zx_gpaddr_t avail,
+                      zx_gpaddr_t used, ConfigureQueueCallback callback) override {
     auto deferred = fit::defer(std::move(callback));
     FXL_CHECK(queue == 0) << "Queue index " << queue << " out of range";
     queue_.Configure(size, desc, avail, used);
   }
 
   // |fuchsia::virtualization::hardware::VirtioDevice|
-  void Ready(uint32_t negotiated_features, ReadyCallback callback) override {
-    callback();
-  }
+  void Ready(uint32_t negotiated_features, ReadyCallback callback) override { callback(); }
 
   RngStream queue_;
 };

@@ -4,10 +4,11 @@
 
 #include "src/virtualization/bin/guest_manager/guest_component.h"
 
-GuestComponent::GuestComponent(
-    const std::string& label, std::unique_ptr<GuestVsockEndpoint> endpoint,
-    component::Services services, std::unique_ptr<GuestServices> guest_services,
-    fuchsia::sys::ComponentControllerPtr component_controller)
+GuestComponent::GuestComponent(const std::string& label,
+                               std::unique_ptr<GuestVsockEndpoint> endpoint,
+                               component::Services services,
+                               std::unique_ptr<GuestServices> guest_services,
+                               fuchsia::sys::ComponentControllerPtr component_controller)
     : label_(label),
       endpoint_(std::move(endpoint)),
       services_(std::move(services)),
@@ -20,7 +21,6 @@ void GuestComponent::ConnectToInstance(
 }
 
 void GuestComponent::ConnectToBalloon(
-    fidl::InterfaceRequest<fuchsia::virtualization::BalloonController>
-        request) {
+    fidl::InterfaceRequest<fuchsia::virtualization::BalloonController> request) {
   services_.ConnectToService(std::move(request));
 }

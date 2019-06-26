@@ -452,7 +452,6 @@ message ImportContainerResponse {
 
   // Details relating to the failure state.
   string failure_reason = 2;
-
 }
 
 // Sent by tremplin to update the host on the import progress of a container.
@@ -511,11 +510,9 @@ service Tremplin {
   rpc CreateContainer(CreateContainerRequest) returns (CreateContainerResponse);
   rpc DeleteContainer(DeleteContainerRequest) returns (DeleteContainerResponse);
   rpc StartContainer(StartContainerRequest) returns (StartContainerResponse);
-  rpc GetContainerUsername(GetContainerUsernameRequest)
-      returns (GetContainerUsernameResponse);
+  rpc GetContainerUsername(GetContainerUsernameRequest) returns (GetContainerUsernameResponse);
   rpc SetUpUser(SetUpUserRequest) returns (SetUpUserResponse);
-  rpc GetContainerInfo(GetContainerInfoRequest)
-      returns (GetContainerInfoResponse);
+  rpc GetContainerInfo(GetContainerInfoRequest) returns (GetContainerInfoResponse);
   rpc SetTimezone(SetTimezoneRequest) returns (SetTimezoneResponse);
   rpc ExportContainer(ExportContainerRequest) returns (ExportContainerResponse);
   rpc ImportContainer(ImportContainerRequest) returns (ImportContainerResponse);

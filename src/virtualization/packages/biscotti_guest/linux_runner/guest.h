@@ -51,12 +51,10 @@ class Guest : public vm_tools::StartupListener::Service,
               public vm_tools::container::ContainerListener::Service {
  public:
   // Creates a new |Guest|
-  static zx_status_t CreateAndStart(sys::ComponentContext* context,
-                                    GuestConfig config,
+  static zx_status_t CreateAndStart(sys::ComponentContext* context, GuestConfig config,
                                     std::unique_ptr<Guest>* guest);
 
-  Guest(sys::ComponentContext* context, GuestConfig config,
-        fuchsia::virtualization::RealmPtr env);
+  Guest(sys::ComponentContext* context, GuestConfig config, fuchsia::virtualization::RealmPtr env);
   ~Guest();
 
   void Launch(AppLaunchRequest request);
@@ -75,49 +73,39 @@ class Guest : public vm_tools::StartupListener::Service,
   void DumpContainerDebugInfo();
 
   // |vm_tools::StartupListener::Service|
-  grpc::Status VmReady(grpc::ServerContext* context,
-                       const vm_tools::EmptyMessage* request,
+  grpc::Status VmReady(grpc::ServerContext* context, const vm_tools::EmptyMessage* request,
                        vm_tools::EmptyMessage* response) override;
 
   // |vm_tools::tremplin::TremplinListener::Service|
-  grpc::Status TremplinReady(
-      grpc::ServerContext* context,
-      const ::vm_tools::tremplin::TremplinStartupInfo* request,
-      vm_tools::tremplin::EmptyMessage* response) override;
-  grpc::Status UpdateCreateStatus(
-      grpc::ServerContext* context,
-      const vm_tools::tremplin::ContainerCreationProgress* request,
-      vm_tools::tremplin::EmptyMessage* response) override;
-  grpc::Status UpdateDeletionStatus(
-      ::grpc::ServerContext* context,
-      const ::vm_tools::tremplin::ContainerDeletionProgress* request,
-      ::vm_tools::tremplin::EmptyMessage* response) override;
-  grpc::Status UpdateStartStatus(
-      ::grpc::ServerContext* context,
-      const ::vm_tools::tremplin::ContainerStartProgress* request,
-      ::vm_tools::tremplin::EmptyMessage* response) override;
-  grpc::Status UpdateExportStatus(
-      ::grpc::ServerContext* context,
-      const ::vm_tools::tremplin::ContainerExportProgress* request,
-      ::vm_tools::tremplin::EmptyMessage* response) override;
-  grpc::Status UpdateImportStatus(
-      ::grpc::ServerContext* context,
-      const ::vm_tools::tremplin::ContainerImportProgress* request,
-      ::vm_tools::tremplin::EmptyMessage* response) override;
-  grpc::Status ContainerShutdown(
-      ::grpc::ServerContext* context,
-      const ::vm_tools::tremplin::ContainerShutdownInfo* request,
-      ::vm_tools::tremplin::EmptyMessage* response) override;
+  grpc::Status TremplinReady(grpc::ServerContext* context,
+                             const ::vm_tools::tremplin::TremplinStartupInfo* request,
+                             vm_tools::tremplin::EmptyMessage* response) override;
+  grpc::Status UpdateCreateStatus(grpc::ServerContext* context,
+                                  const vm_tools::tremplin::ContainerCreationProgress* request,
+                                  vm_tools::tremplin::EmptyMessage* response) override;
+  grpc::Status UpdateDeletionStatus(::grpc::ServerContext* context,
+                                    const ::vm_tools::tremplin::ContainerDeletionProgress* request,
+                                    ::vm_tools::tremplin::EmptyMessage* response) override;
+  grpc::Status UpdateStartStatus(::grpc::ServerContext* context,
+                                 const ::vm_tools::tremplin::ContainerStartProgress* request,
+                                 ::vm_tools::tremplin::EmptyMessage* response) override;
+  grpc::Status UpdateExportStatus(::grpc::ServerContext* context,
+                                  const ::vm_tools::tremplin::ContainerExportProgress* request,
+                                  ::vm_tools::tremplin::EmptyMessage* response) override;
+  grpc::Status UpdateImportStatus(::grpc::ServerContext* context,
+                                  const ::vm_tools::tremplin::ContainerImportProgress* request,
+                                  ::vm_tools::tremplin::EmptyMessage* response) override;
+  grpc::Status ContainerShutdown(::grpc::ServerContext* context,
+                                 const ::vm_tools::tremplin::ContainerShutdownInfo* request,
+                                 ::vm_tools::tremplin::EmptyMessage* response) override;
 
   // |vm_tools::container::ContainerListener::Service|
-  grpc::Status ContainerReady(
-      grpc::ServerContext* context,
-      const vm_tools::container::ContainerStartupInfo* request,
-      vm_tools::EmptyMessage* response) override;
-  grpc::Status ContainerShutdown(
-      grpc::ServerContext* context,
-      const vm_tools::container::ContainerShutdownInfo* request,
-      vm_tools::EmptyMessage* response) override;
+  grpc::Status ContainerReady(grpc::ServerContext* context,
+                              const vm_tools::container::ContainerStartupInfo* request,
+                              vm_tools::EmptyMessage* response) override;
+  grpc::Status ContainerShutdown(grpc::ServerContext* context,
+                                 const vm_tools::container::ContainerShutdownInfo* request,
+                                 vm_tools::EmptyMessage* response) override;
   grpc::Status UpdateApplicationList(
       grpc::ServerContext* context,
       const vm_tools::container::UpdateApplicationListRequest* request,
@@ -133,20 +121,17 @@ class Guest : public vm_tools::StartupListener::Service,
       grpc::ServerContext* context,
       const vm_tools::container::UninstallPackageProgressInfo* request,
       vm_tools::EmptyMessage* response) override;
-  grpc::Status OpenTerminal(
-      grpc::ServerContext* context,
-      const vm_tools::container::OpenTerminalRequest* request,
-      vm_tools::EmptyMessage* response) override;
-  grpc::Status UpdateMimeTypes(
-      grpc::ServerContext* context,
-      const vm_tools::container::UpdateMimeTypesRequest* request,
-      vm_tools::EmptyMessage* response) override;
+  grpc::Status OpenTerminal(grpc::ServerContext* context,
+                            const vm_tools::container::OpenTerminalRequest* request,
+                            vm_tools::EmptyMessage* response) override;
+  grpc::Status UpdateMimeTypes(grpc::ServerContext* context,
+                               const vm_tools::container::UpdateMimeTypesRequest* request,
+                               vm_tools::EmptyMessage* response) override;
 
   void LaunchApplication(AppLaunchRequest request);
   void OnNewView(fidl::InterfaceHandle<fuchsia::ui::app::ViewProvider> view);
-  void CreateComponent(
-      AppLaunchRequest request,
-      fidl::InterfaceHandle<fuchsia::ui::app::ViewProvider> view);
+  void CreateComponent(AppLaunchRequest request,
+                       fidl::InterfaceHandle<fuchsia::ui::app::ViewProvider> view);
   void OnComponentTerminated(const LinuxComponent* component);
 
   async_dispatcher_t* async_;
@@ -169,10 +154,8 @@ class Guest : public vm_tools::StartupListener::Service,
   std::deque<AppLaunchRequest> pending_views_;
   // Views launched in the background (ex: not using garcon). These can be
   // returned by requesting a null app URI (linux://).
-  std::deque<fidl::InterfaceHandle<fuchsia::ui::app::ViewProvider>>
-      background_views_;
-  std::unordered_map<const LinuxComponent*, std::unique_ptr<LinuxComponent>>
-      components_;
+  std::deque<fidl::InterfaceHandle<fuchsia::ui::app::ViewProvider>> background_views_;
+  std::unordered_map<const LinuxComponent*, std::unique_ptr<LinuxComponent>> components_;
 
   // A flow ID used to track the time from the time the VM is created until
   // the time the guest has reported itself as ready via the VmReady RPC in the

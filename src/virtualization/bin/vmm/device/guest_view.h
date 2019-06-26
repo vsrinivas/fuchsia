@@ -12,11 +12,9 @@
 
 class GuestView : public scenic::BaseView {
  public:
-  GuestView(
-      scenic::ViewContext view_context,
-      fidl::InterfaceHandle<fuchsia::virtualization::hardware::ViewListener>
-          view_listener,
-      GpuScanout* scanout);
+  GuestView(scenic::ViewContext view_context,
+            fidl::InterfaceHandle<fuchsia::virtualization::hardware::ViewListener> view_listener,
+            GpuScanout* scanout);
 
  private:
   scenic::ShapeNode background_;
@@ -30,10 +28,8 @@ class GuestView : public scenic::BaseView {
   fuchsia::virtualization::hardware::ViewListenerPtr view_listener_;
 
   // |scenic::BaseView|
-  void OnSceneInvalidated(
-      fuchsia::images::PresentationInfo presentation_info) override;
-  void OnPropertiesChanged(
-      fuchsia::ui::gfx::ViewProperties old_properties) override;
+  void OnSceneInvalidated(fuchsia::images::PresentationInfo presentation_info) override;
+  void OnPropertiesChanged(fuchsia::ui::gfx::ViewProperties old_properties) override;
   void OnInputEvent(fuchsia::ui::input::InputEvent event) override;
 
   // |fuchsia::ui::scenic::SessionListener|

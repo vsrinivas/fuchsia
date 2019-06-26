@@ -12,17 +12,15 @@
 
 // Interface for GuestEthernet to send a packet to the guest.
 struct GuestEthernetReceiver {
-  virtual void Receive(uintptr_t addr, size_t length,
-                       const eth_fifo_entry_t& entry) = 0;
+  virtual void Receive(uintptr_t addr, size_t length, const eth_fifo_entry_t& entry) = 0;
 };
 
 class GuestEthernet : public fuchsia::hardware::ethernet::Device {
  public:
-  using QueueTxFn = fit::function<zx_status_t(uintptr_t addr, size_t length,
-                                              const eth_fifo_entry_t& entry)>;
+  using QueueTxFn =
+      fit::function<zx_status_t(uintptr_t addr, size_t length, const eth_fifo_entry_t& entry)>;
 
-  GuestEthernet(GuestEthernetReceiver* receiver)
-      : tx_fifo_wait_(this), receiver_(receiver) {}
+  GuestEthernet(GuestEthernetReceiver* receiver) : tx_fifo_wait_(this), receiver_(receiver) {}
 
   // Interface for the virtio-net device to send a received packet to the host
   // netstack.
@@ -32,8 +30,8 @@ class GuestEthernet : public fuchsia::hardware::ethernet::Device {
   // has finished being transmitted.
   void Complete(const eth_fifo_entry_t& entry);
 
-  void OnTxFifoReadable(async_dispatcher_t* dispatcher, async::WaitBase* wait,
-                        zx_status_t status, const zx_packet_signal_t* signal);
+  void OnTxFifoReadable(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
+                        const zx_packet_signal_t* signal);
 
   // |fuchsia::hardware::ethernet::Device|
   void GetInfo(GetInfoCallback callback) override;
@@ -63,26 +61,22 @@ class GuestEthernet : public fuchsia::hardware::ethernet::Device {
   void GetStatus(GetStatusCallback callback) override;
 
   // |fuchsia::hardware::ethernet::Device|
-  void SetPromiscuousMode(bool enabled,
-                          SetPromiscuousModeCallback callback) override;
+  void SetPromiscuousMode(bool enabled, SetPromiscuousModeCallback callback) override;
 
   // |fuchsia::hardware::ethernet::Device|
   void ConfigMulticastAddMac(fuchsia::hardware::ethernet::MacAddress addr,
                              ConfigMulticastAddMacCallback callback) override;
 
   // |fuchsia::hardware::ethernet::Device|
-  void ConfigMulticastDeleteMac(
-      fuchsia::hardware::ethernet::MacAddress addr,
-      ConfigMulticastDeleteMacCallback callback) override;
+  void ConfigMulticastDeleteMac(fuchsia::hardware::ethernet::MacAddress addr,
+                                ConfigMulticastDeleteMacCallback callback) override;
 
   // |fuchsia::hardware::ethernet::Device|
   void ConfigMulticastSetPromiscuousMode(
-      bool enabled,
-      ConfigMulticastSetPromiscuousModeCallback callback) override;
+      bool enabled, ConfigMulticastSetPromiscuousModeCallback callback) override;
 
   // |fuchsia::hardware::ethernet::Device|
-  void ConfigMulticastTestFilter(
-      ConfigMulticastTestFilterCallback callback) override;
+  void ConfigMulticastTestFilter(ConfigMulticastTestFilterCallback callback) override;
 
   // |fuchsia::hardware::ethernet::Device|
   void DumpRegisters(DumpRegistersCallback callback) override;
@@ -96,12 +90,10 @@ class GuestEthernet : public fuchsia::hardware::ethernet::Device {
   uintptr_t io_addr_;
   size_t io_size_;
 
-  std::vector<eth_fifo_entry_t> rx_entries_ =
-      std::vector<eth_fifo_entry_t>(kVirtioNetQueueSize);
+  std::vector<eth_fifo_entry_t> rx_entries_ = std::vector<eth_fifo_entry_t>(kVirtioNetQueueSize);
   size_t rx_entries_count_ = 0;
 
-  async::WaitMethod<GuestEthernet, &GuestEthernet::OnTxFifoReadable>
-      tx_fifo_wait_;
+  async::WaitMethod<GuestEthernet, &GuestEthernet::OnTxFifoReadable> tx_fifo_wait_;
 
   GuestEthernetReceiver* receiver_;
 };

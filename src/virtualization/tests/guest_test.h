@@ -33,13 +33,11 @@ class GuestTest : public ::testing::Test {
     ASSERT_TRUE(enclosed_guest_->Ready()) << "Guest setup failed";
   }
 
-  static zx_status_t Execute(const std::vector<std::string>& argv,
-                             std::string* result = nullptr) {
+  static zx_status_t Execute(const std::vector<std::string>& argv, std::string* result = nullptr) {
     return enclosed_guest_->Execute(argv, result);
   }
 
-  static zx_status_t RunUtil(const std::string& util,
-                             const std::vector<std::string>& argv,
+  static zx_status_t RunUtil(const std::string& util, const std::vector<std::string>& argv,
                              std::string* result = nullptr) {
     return enclosed_guest_->RunUtil(util, argv, result);
   }
@@ -49,14 +47,12 @@ class GuestTest : public ::testing::Test {
   uint32_t GetGuestCid() { return enclosed_guest_->GetGuestCid(); }
 
   void GetHostVsockEndpoint(
-      fidl::InterfaceRequest<fuchsia::virtualization::HostVsockEndpoint>
-          endpoint) {
+      fidl::InterfaceRequest<fuchsia::virtualization::HostVsockEndpoint> endpoint) {
     enclosed_guest_->GetHostVsockEndpoint(std::move(endpoint));
   }
 
   void ConnectToBalloon(
-      fidl::InterfaceRequest<fuchsia::virtualization::BalloonController>
-          balloon_controller) {
+      fidl::InterfaceRequest<fuchsia::virtualization::BalloonController> balloon_controller) {
     enclosed_guest_->ConnectToBalloon(std::move(balloon_controller));
   }
 

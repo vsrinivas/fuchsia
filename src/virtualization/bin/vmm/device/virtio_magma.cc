@@ -19,14 +19,14 @@ zx_status_t VirtioMagma::Init(const zx::vmar& vmar) {
   static constexpr const char* kDevicePath = "/dev/class/gpu/000";
   device_fd_ = fbl::unique_fd(open(kDevicePath, O_RDONLY));
   if (!device_fd_.is_valid()) {
-    FXL_LOG(ERROR) << "Failed to open device at " << kDevicePath << ": "
-                   << strerror(errno);
+    FXL_LOG(ERROR) << "Failed to open device at " << kDevicePath << ": " << strerror(errno);
     return ZX_ERR_INTERNAL;
   }
 
   zx_status_t status = vmar.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmar_);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to duplicate device vmar for magma - " << zx_status_get_string(status);
+    FXL_LOG(ERROR) << "Failed to duplicate device vmar for magma - "
+                   << zx_status_get_string(status);
     return status;
   }
 
@@ -46,32 +46,29 @@ void VirtioMagma::OnCommandAvailable() {
 
 void VirtioMagma::OnQueueReady() {}
 
-zx_status_t VirtioMagma::Handle_query(
-  const virtio_magma_query_ctrl_t* request,
-  virtio_magma_query_resp_t* response) {
+zx_status_t VirtioMagma::Handle_query(const virtio_magma_query_ctrl_t* request,
+                                      virtio_magma_query_resp_t* response) {
   auto modified = *request;
   modified.file_descriptor = device_fd_.get();
   return VirtioMagmaGeneric::Handle_query(&modified, response);
 }
 
 zx_status_t VirtioMagma::Handle_create_connection(
-  const virtio_magma_create_connection_ctrl_t* request,
-  virtio_magma_create_connection_resp_t* response) {
+    const virtio_magma_create_connection_ctrl_t* request,
+    virtio_magma_create_connection_resp_t* response) {
   auto modified = *request;
   modified.file_descriptor = device_fd_.get();
   return VirtioMagmaGeneric::Handle_create_connection(&modified, response);
 }
 
-zx_status_t VirtioMagma::Handle_map_aligned(
-  const virtio_magma_map_aligned_ctrl_t* request,
-  virtio_magma_map_aligned_resp_t* response) {
+zx_status_t VirtioMagma::Handle_map_aligned(const virtio_magma_map_aligned_ctrl_t* request,
+                                            virtio_magma_map_aligned_resp_t* response) {
   FXL_LOG(ERROR) << "Specialized map calls should be converted by the driver into generic ones";
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t VirtioMagma::Handle_map_specific(
-  const virtio_magma_map_specific_ctrl_t* request,
-  virtio_magma_map_specific_resp_t* response) {
+zx_status_t VirtioMagma::Handle_map_specific(const virtio_magma_map_specific_ctrl_t* request,
+                                             virtio_magma_map_specific_resp_t* response) {
   FXL_LOG(ERROR) << "Specialized map calls should be converted by the driver into generic ones";
   return ZX_ERR_NOT_SUPPORTED;
 }

@@ -18,13 +18,11 @@
 #include "src/virtualization/bin/vmm/device/guest_view.h"
 #include "src/virtualization/bin/vmm/device/stream_base.h"
 
-#define CHECK_LEN_OR_CONTINUE(request_type, response_type)         \
-  if (request_len < sizeof(request_type) ||                        \
-      response_len < sizeof(response_type)) {                      \
-    FXL_LOG(ERROR) << "Invalid GPU control command 0x" << std::hex \
-                   << request->type;                               \
-    continue;                                                      \
-  }                                                                \
+#define CHECK_LEN_OR_CONTINUE(request_type, response_type)                           \
+  if (request_len < sizeof(request_type) || response_len < sizeof(response_type)) {  \
+    FXL_LOG(ERROR) << "Invalid GPU control command 0x" << std::hex << request->type; \
+    continue;                                                                        \
+  }                                                                                  \
   *Used() += sizeof(response_type)
 
 #define GET_RESOURCE_OR_RETURN(resource)                      \
@@ -86,66 +84,44 @@ class ControlStream : public StreamBase {
 
       switch (request->type) {
         case VIRTIO_GPU_CMD_GET_DISPLAY_INFO:
-          CHECK_LEN_OR_CONTINUE(virtio_gpu_ctrl_hdr_t,
-                                virtio_gpu_resp_display_info_t);
-          GetDisplayInfo(
-              request,
-              reinterpret_cast<virtio_gpu_resp_display_info_t*>(response));
+          CHECK_LEN_OR_CONTINUE(virtio_gpu_ctrl_hdr_t, virtio_gpu_resp_display_info_t);
+          GetDisplayInfo(request, reinterpret_cast<virtio_gpu_resp_display_info_t*>(response));
           break;
         case VIRTIO_GPU_CMD_RESOURCE_CREATE_2D:
-          CHECK_LEN_OR_CONTINUE(virtio_gpu_resource_create_2d_t,
-                                virtio_gpu_ctrl_hdr_t);
-          ResourceCreate2d(
-              reinterpret_cast<const virtio_gpu_resource_create_2d_t*>(request),
-              response);
+          CHECK_LEN_OR_CONTINUE(virtio_gpu_resource_create_2d_t, virtio_gpu_ctrl_hdr_t);
+          ResourceCreate2d(reinterpret_cast<const virtio_gpu_resource_create_2d_t*>(request),
+                           response);
           break;
         case VIRTIO_GPU_CMD_RESOURCE_UNREF:
-          CHECK_LEN_OR_CONTINUE(virtio_gpu_resource_unref_t,
-                                virtio_gpu_ctrl_hdr_t);
-          ResourceUnref(
-              reinterpret_cast<const virtio_gpu_resource_unref_t*>(request),
-              response);
+          CHECK_LEN_OR_CONTINUE(virtio_gpu_resource_unref_t, virtio_gpu_ctrl_hdr_t);
+          ResourceUnref(reinterpret_cast<const virtio_gpu_resource_unref_t*>(request), response);
           break;
         case VIRTIO_GPU_CMD_SET_SCANOUT:
-          CHECK_LEN_OR_CONTINUE(virtio_gpu_set_scanout_t,
-                                virtio_gpu_ctrl_hdr_t);
-          SetScanout(reinterpret_cast<const virtio_gpu_set_scanout_t*>(request),
-                     response);
+          CHECK_LEN_OR_CONTINUE(virtio_gpu_set_scanout_t, virtio_gpu_ctrl_hdr_t);
+          SetScanout(reinterpret_cast<const virtio_gpu_set_scanout_t*>(request), response);
           break;
         case VIRTIO_GPU_CMD_RESOURCE_FLUSH:
-          CHECK_LEN_OR_CONTINUE(virtio_gpu_resource_flush_t,
-                                virtio_gpu_ctrl_hdr_t);
-          ResourceFlush(
-              reinterpret_cast<const virtio_gpu_resource_flush_t*>(request),
-              response);
+          CHECK_LEN_OR_CONTINUE(virtio_gpu_resource_flush_t, virtio_gpu_ctrl_hdr_t);
+          ResourceFlush(reinterpret_cast<const virtio_gpu_resource_flush_t*>(request), response);
           break;
         case VIRTIO_GPU_CMD_TRANSFER_TO_HOST_2D:
-          CHECK_LEN_OR_CONTINUE(virtio_gpu_transfer_to_host_2d_t,
-                                virtio_gpu_ctrl_hdr_t);
-          TransferToHost2d(
-              reinterpret_cast<const virtio_gpu_transfer_to_host_2d_t*>(
-                  request),
-              response);
+          CHECK_LEN_OR_CONTINUE(virtio_gpu_transfer_to_host_2d_t, virtio_gpu_ctrl_hdr_t);
+          TransferToHost2d(reinterpret_cast<const virtio_gpu_transfer_to_host_2d_t*>(request),
+                           response);
           break;
         case VIRTIO_GPU_CMD_RESOURCE_ATTACH_BACKING:
-          CHECK_LEN_OR_CONTINUE(virtio_gpu_resource_attach_backing_t,
-                                virtio_gpu_ctrl_hdr_t);
+          CHECK_LEN_OR_CONTINUE(virtio_gpu_resource_attach_backing_t, virtio_gpu_ctrl_hdr_t);
           ResourceAttachBacking(
-              reinterpret_cast<const virtio_gpu_resource_attach_backing_t*>(
-                  request),
-              response, request_len - sizeof(virtio_gpu_ctrl_hdr_t));
+              reinterpret_cast<const virtio_gpu_resource_attach_backing_t*>(request), response,
+              request_len - sizeof(virtio_gpu_ctrl_hdr_t));
           break;
         case VIRTIO_GPU_CMD_RESOURCE_DETACH_BACKING:
-          CHECK_LEN_OR_CONTINUE(virtio_gpu_resource_detach_backing_t,
-                                virtio_gpu_ctrl_hdr_t);
+          CHECK_LEN_OR_CONTINUE(virtio_gpu_resource_detach_backing_t, virtio_gpu_ctrl_hdr_t);
           ResourceDetachBacking(
-              reinterpret_cast<const virtio_gpu_resource_detach_backing_t*>(
-                  request),
-              response);
+              reinterpret_cast<const virtio_gpu_resource_detach_backing_t*>(request), response);
           break;
         default:
-          FXL_LOG(ERROR) << "Unknown GPU control command 0x" << std::hex
-                         << request->type;
+          FXL_LOG(ERROR) << "Unknown GPU control command 0x" << std::hex << request->type;
           *Used() += sizeof(*response);
           response->type = VIRTIO_GPU_RESP_ERR_UNSPEC;
           break;
@@ -171,14 +147,12 @@ class ControlStream : public StreamBase {
 
   void ResourceCreate2d(const virtio_gpu_resource_create_2d_t* request,
                         virtio_gpu_ctrl_hdr_t* response) {
-    GpuResource resource(*phys_mem_, request->format, request->width,
-                         request->height);
+    GpuResource resource(*phys_mem_, request->format, request->width, request->height);
     resources_.insert_or_assign(request->resource_id, std::move(resource));
     response->type = VIRTIO_GPU_RESP_OK_NODATA;
   }
 
-  void ResourceUnref(const virtio_gpu_resource_unref_t* request,
-                     virtio_gpu_ctrl_hdr_t* response) {
+  void ResourceUnref(const virtio_gpu_resource_unref_t* request, virtio_gpu_ctrl_hdr_t* response) {
     size_t num_erased = resources_.erase(request->resource_id);
     if (num_erased == 0) {
       response->type = VIRTIO_GPU_RESP_ERR_INVALID_RESOURCE_ID;
@@ -187,8 +161,7 @@ class ControlStream : public StreamBase {
     response->type = VIRTIO_GPU_RESP_OK_NODATA;
   }
 
-  void SetScanout(const virtio_gpu_set_scanout_t* request,
-                  virtio_gpu_ctrl_hdr_t* response) {
+  void SetScanout(const virtio_gpu_set_scanout_t* request, virtio_gpu_ctrl_hdr_t* response) {
     if (request->resource_id == 0) {
       // Resource ID 0 is a special case and means the provided scanout should
       // be disabled.
@@ -206,8 +179,7 @@ class ControlStream : public StreamBase {
     response->type = VIRTIO_GPU_RESP_OK_NODATA;
   }
 
-  void ResourceFlush(const virtio_gpu_resource_flush_t* request,
-                     virtio_gpu_ctrl_hdr_t* response) {
+  void ResourceFlush(const virtio_gpu_resource_flush_t* request, virtio_gpu_ctrl_hdr_t* response) {
     GET_RESOURCE_OR_RETURN(resource);
     scanout_.OnResourceFlush(&resource, request->r);
     response->type = VIRTIO_GPU_RESP_OK_NODATA;
@@ -220,18 +192,15 @@ class ControlStream : public StreamBase {
     response->type = VIRTIO_GPU_RESP_OK_NODATA;
   }
 
-  void ResourceAttachBacking(
-      const virtio_gpu_resource_attach_backing_t* request,
-      virtio_gpu_ctrl_hdr_t* response, uint32_t extra_len) {
+  void ResourceAttachBacking(const virtio_gpu_resource_attach_backing_t* request,
+                             virtio_gpu_ctrl_hdr_t* response, uint32_t extra_len) {
     // Entries may be stored in the next descriptor.
     const virtio_gpu_mem_entry_t* mem_entries;
     if (chain_.NextDescriptor(&desc_)) {
       mem_entries = reinterpret_cast<const virtio_gpu_mem_entry_t*>(response);
       response = static_cast<virtio_gpu_ctrl_hdr_t*>(desc_.addr);
-    } else if (extra_len >=
-               request->nr_entries * sizeof(virtio_gpu_mem_entry_t)) {
-      mem_entries =
-          reinterpret_cast<const virtio_gpu_mem_entry_t*>(request + 1);
+    } else if (extra_len >= request->nr_entries * sizeof(virtio_gpu_mem_entry_t)) {
+      mem_entries = reinterpret_cast<const virtio_gpu_mem_entry_t*>(request + 1);
     } else {
       FXL_LOG(ERROR) << "Invalid GPU memory entries command";
       response->type = VIRTIO_GPU_RESP_ERR_INVALID_PARAMETER;
@@ -243,9 +212,8 @@ class ControlStream : public StreamBase {
     response->type = VIRTIO_GPU_RESP_OK_NODATA;
   }
 
-  void ResourceDetachBacking(
-      const virtio_gpu_resource_detach_backing_t* request,
-      virtio_gpu_ctrl_hdr_t* response) {
+  void ResourceDetachBacking(const virtio_gpu_resource_detach_backing_t* request,
+                             virtio_gpu_ctrl_hdr_t* response) {
     GET_RESOURCE_OR_RETURN(resource);
     resource.DetachBacking();
     response->type = VIRTIO_GPU_RESP_OK_NODATA;
@@ -260,8 +228,7 @@ class CursorStream : public StreamBase {
 
   void DoCursor() {
     for (; queue_.NextChain(&chain_); chain_.Return()) {
-      if (!chain_.NextDescriptor(&desc_) ||
-          desc_.len != sizeof(virtio_gpu_ctrl_hdr_t)) {
+      if (!chain_.NextDescriptor(&desc_) || desc_.len != sizeof(virtio_gpu_ctrl_hdr_t)) {
         continue;
       }
       // In the Linux driver, cursor commands do not send a response.
@@ -269,16 +236,13 @@ class CursorStream : public StreamBase {
 
       switch (request->type) {
         case VIRTIO_GPU_CMD_UPDATE_CURSOR:
-          UpdateCursor(
-              reinterpret_cast<const virtio_gpu_update_cursor_t*>(request));
+          UpdateCursor(reinterpret_cast<const virtio_gpu_update_cursor_t*>(request));
           // fall-through
         case VIRTIO_GPU_CMD_MOVE_CURSOR:
-          MoveCursor(
-              reinterpret_cast<const virtio_gpu_update_cursor_t*>(request));
+          MoveCursor(reinterpret_cast<const virtio_gpu_update_cursor_t*>(request));
           break;
         default:
-          FXL_LOG(ERROR) << "Unknown GPU cursor command 0x" << std::hex
-                         << request->type;
+          FXL_LOG(ERROR) << "Unknown GPU cursor command 0x" << std::hex << request->type;
           break;
       }
     }
@@ -314,10 +278,8 @@ class CursorStream : public StreamBase {
 class VirtioGpuImpl : public DeviceBase<VirtioGpuImpl>,
                       public fuchsia::virtualization::hardware::VirtioGpu {
  public:
-  VirtioGpuImpl(component::StartupContext* context)
-      : DeviceBase(context), context_(*context) {
-    scanout_.SetConfigChangedHandler(
-        fit::bind_member(this, &VirtioGpuImpl::OnConfigChanged));
+  VirtioGpuImpl(component::StartupContext* context) : DeviceBase(context), context_(*context) {
+    scanout_.SetConfigChangedHandler(fit::bind_member(this, &VirtioGpuImpl::OnConfigChanged));
   }
 
   // |fuchsia::virtualization::hardware::VirtioDevice|
@@ -337,11 +299,9 @@ class VirtioGpuImpl : public DeviceBase<VirtioGpuImpl>,
 
  private:
   // |fuchsia::virtualization::hardware::VirtioGpu|
-  void Start(
-      fuchsia::virtualization::hardware::StartInfo start_info,
-      fidl::InterfaceHandle<fuchsia::virtualization::hardware::ViewListener>
-          view_listener,
-      StartCallback callback) override {
+  void Start(fuchsia::virtualization::hardware::StartInfo start_info,
+             fidl::InterfaceHandle<fuchsia::virtualization::hardware::ViewListener> view_listener,
+             StartCallback callback) override {
     auto deferred = fit::defer(std::move(callback));
     PrepStart(std::move(start_info));
 
@@ -349,36 +309,32 @@ class VirtioGpuImpl : public DeviceBase<VirtioGpuImpl>,
       auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
       // Create view.
-      auto scenic =
-          context_.ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
+      auto scenic = context_.ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
       scenic::ViewContext view_context = {
           .session_and_listener_request =
               scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
           .view_token = std::move(view_token),
           .startup_context = &context_,
       };
-      view_ = std::make_unique<GuestView>(std::move(view_context),
-                                          std::move(view_listener), &scanout_);
+      view_ =
+          std::make_unique<GuestView>(std::move(view_context), std::move(view_listener), &scanout_);
       view_->SetReleaseHandler([this](zx_status_t status) { view_.reset(); });
 
       // Present view.
-      auto presenter =
-          context_
-              .ConnectToEnvironmentService<fuchsia::ui::policy::Presenter>();
+      auto presenter = context_.ConnectToEnvironmentService<fuchsia::ui::policy::Presenter>();
       presenter->PresentView(std::move(view_holder_token), nullptr);
     }
 
     // Initialize streams.
-    control_stream_.Init(phys_mem_, fit::bind_member<zx_status_t, DeviceBase>(
-                                        this, &VirtioGpuImpl::Interrupt));
-    cursor_stream_.Init(phys_mem_, fit::bind_member<zx_status_t, DeviceBase>(
-                                       this, &VirtioGpuImpl::Interrupt));
+    control_stream_.Init(
+        phys_mem_, fit::bind_member<zx_status_t, DeviceBase>(this, &VirtioGpuImpl::Interrupt));
+    cursor_stream_.Init(phys_mem_,
+                        fit::bind_member<zx_status_t, DeviceBase>(this, &VirtioGpuImpl::Interrupt));
   }
 
   // |fuchsia::virtualization::hardware::VirtioDevice|
-  void ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc,
-                      zx_gpaddr_t avail, zx_gpaddr_t used,
-                      ConfigureQueueCallback callback) override {
+  void ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc, zx_gpaddr_t avail,
+                      zx_gpaddr_t used, ConfigureQueueCallback callback) override {
     auto deferred = fit::defer(std::move(callback));
     switch (static_cast<Queue>(queue)) {
       case Queue::CONTROL:
@@ -394,9 +350,7 @@ class VirtioGpuImpl : public DeviceBase<VirtioGpuImpl>,
   }
 
   // |fuchsia::virtualization::hardware::VirtioDevice|
-  void Ready(uint32_t negotiated_features, ReadyCallback callback) override {
-    callback();
-  }
+  void Ready(uint32_t negotiated_features, ReadyCallback callback) override { callback(); }
 
   void OnConfigChanged() {
     for (auto& binding : bindings_.bindings()) {

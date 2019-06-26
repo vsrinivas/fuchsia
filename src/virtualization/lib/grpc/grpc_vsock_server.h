@@ -25,19 +25,15 @@ class GrpcVsockServer : public fuchsia::virtualization::HostVsockAcceptor {
  protected:
   friend class GrpcVsockServerBuilder;
 
-  fidl::InterfaceHandle<fuchsia::virtualization::HostVsockAcceptor>
-  NewBinding() {
+  fidl::InterfaceHandle<fuchsia::virtualization::HostVsockAcceptor> NewBinding() {
     return bindings_.AddBinding(this);
   }
 
-  void SetServerImpl(std::unique_ptr<grpc::Server> server) {
-    server_ = std::move(server);
-  }
+  void SetServerImpl(std::unique_ptr<grpc::Server> server) { server_ = std::move(server); }
 
  private:
   // |fuchsia::virtualization::HostVsockAcceptor|
-  void Accept(uint32_t src_cid, uint32_t src_port, uint32_t port,
-              AcceptCallback callback) override;
+  void Accept(uint32_t src_cid, uint32_t src_port, uint32_t port, AcceptCallback callback) override;
 
   fidl::BindingSet<fuchsia::virtualization::HostVsockAcceptor> bindings_;
   std::unique_ptr<grpc::Server> server_;
@@ -47,11 +43,9 @@ class GrpcVsockServer : public fuchsia::virtualization::HostVsockAcceptor {
 // ports with the |HostVsockEndpoint|.
 class GrpcVsockServerBuilder {
  public:
-  GrpcVsockServerBuilder(
-      fuchsia::virtualization::HostVsockEndpointPtr socket_endpoint)
-      : socket_endpoint_(
-            std::make_shared<fuchsia::virtualization::HostVsockEndpointPtr>(
-                std::move(socket_endpoint))),
+  GrpcVsockServerBuilder(fuchsia::virtualization::HostVsockEndpointPtr socket_endpoint)
+      : socket_endpoint_(std::make_shared<fuchsia::virtualization::HostVsockEndpointPtr>(
+            std::move(socket_endpoint))),
         builder_(new grpc::ServerBuilder()),
         server_(new GrpcVsockServer()) {}
 
@@ -75,8 +69,7 @@ class GrpcVsockServerBuilder {
 
  private:
   std::vector<fit::promise<void, zx_status_t>> service_promises_;
-  std::shared_ptr<fuchsia::virtualization::HostVsockEndpointPtr>
-      socket_endpoint_;
+  std::shared_ptr<fuchsia::virtualization::HostVsockEndpointPtr> socket_endpoint_;
   std::unique_ptr<grpc::ServerBuilder> builder_;
   std::unique_ptr<GrpcVsockServer> server_;
 };

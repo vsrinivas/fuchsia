@@ -18,15 +18,13 @@
 static constexpr uint16_t kVirtioGpuNumQueues = 2;
 
 class VirtioGpu
-    : public VirtioComponentDevice<VIRTIO_ID_GPU, kVirtioGpuNumQueues,
-                                   virtio_gpu_config_t> {
+    : public VirtioComponentDevice<VIRTIO_ID_GPU, kVirtioGpuNumQueues, virtio_gpu_config_t> {
  public:
   explicit VirtioGpu(const PhysMem& phys_mem);
 
   zx_status_t Start(
       const zx::guest& guest,
-      fidl::InterfaceHandle<fuchsia::virtualization::hardware::ViewListener>
-          view_listener,
+      fidl::InterfaceHandle<fuchsia::virtualization::hardware::ViewListener> view_listener,
       fuchsia::sys::Launcher* launcher, async_dispatcher_t* dispatcher);
 
  private:
@@ -41,8 +39,8 @@ class VirtioGpu
   fuchsia::virtualization::hardware::VirtioGpuSyncPtr gpu_;
   fuchsia::virtualization::hardware::VirtioGpuPtr events_;
 
-  zx_status_t ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc,
-                             zx_gpaddr_t avail, zx_gpaddr_t used);
+  zx_status_t ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc, zx_gpaddr_t avail,
+                             zx_gpaddr_t used);
   zx_status_t Ready(uint32_t negotiated_features);
 
   void OnConfigChanged();

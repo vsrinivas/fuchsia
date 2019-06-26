@@ -15,24 +15,21 @@ static bool read_only(fuchsia::virtualization::BlockMode mode) {
   return mode == fuchsia::virtualization::BlockMode::READ_ONLY;
 }
 
-VirtioBlock::VirtioBlock(fuchsia::virtualization::BlockMode mode,
-                         const PhysMem& phys_mem)
+VirtioBlock::VirtioBlock(fuchsia::virtualization::BlockMode mode, const PhysMem& phys_mem)
     : VirtioComponentDevice(
           phys_mem,
           // From Virtio 1.0, Section 5.2.5.2: Devices SHOULD always offer
           // VIRTIO_BLK_F_FLUSH.
           //
           // VIRTIO_BLK_F_BLK_SIZE is required by Zircon guests.
-          VIRTIO_BLK_F_FLUSH | VIRTIO_BLK_F_BLK_SIZE |
-              (read_only(mode) ? VIRTIO_BLK_F_RO : 0),
+          VIRTIO_BLK_F_FLUSH | VIRTIO_BLK_F_BLK_SIZE | (read_only(mode) ? VIRTIO_BLK_F_RO : 0),
           fit::bind_member(this, &VirtioBlock::ConfigureQueue),
           fit::bind_member(this, &VirtioBlock::Ready)),
       mode_(mode) {}
 
 zx_status_t VirtioBlock::Start(const zx::guest& guest, const std::string& id,
                                fuchsia::virtualization::BlockFormat format,
-                               fuchsia::io::FilePtr file,
-                               fuchsia::sys::Launcher* launcher,
+                               fuchsia::io::FilePtr file, fuchsia::sys::Launcher* launcher,
                                async_dispatcher_t* dispatcher) {
   component::Services services;
   fuchsia::sys::LaunchInfo launch_info{
@@ -48,8 +45,7 @@ zx_status_t VirtioBlock::Start(const zx::guest& guest, const std::string& id,
     return status;
   }
   uint64_t size;
-  status = block_->Start(std::move(start_info), id, mode_, format,
-                         std::move(file), &size);
+  status = block_->Start(std::move(start_info), id, mode_, format, std::move(file), &size);
   if (status != ZX_OK) {
     return status;
   }
@@ -60,9 +56,8 @@ zx_status_t VirtioBlock::Start(const zx::guest& guest, const std::string& id,
   return ZX_OK;
 }
 
-zx_status_t VirtioBlock::ConfigureQueue(uint16_t queue, uint16_t size,
-                                        zx_gpaddr_t desc, zx_gpaddr_t avail,
-                                        zx_gpaddr_t used) {
+zx_status_t VirtioBlock::ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc,
+                                        zx_gpaddr_t avail, zx_gpaddr_t used) {
   return block_->ConfigureQueue(queue, size, desc, avail, used);
 }
 

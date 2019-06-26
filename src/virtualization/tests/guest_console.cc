@@ -36,8 +36,7 @@ static std::string normalize_new_lines(const std::string& s) {
   return result;
 }
 
-GuestConsole::GuestConsole(std::unique_ptr<SocketInterface> socket)
-    : socket_(std::move(socket)) {}
+GuestConsole::GuestConsole(std::unique_ptr<SocketInterface> socket) : socket_(std::move(socket)) {}
 
 zx_status_t GuestConsole::Start() {
   zx_status_t status;
@@ -68,15 +67,13 @@ zx_status_t GuestConsole::Start() {
 // header and footer before and after the command. Then we wait for the command
 // to be written back to the serial, then the header, then finally we capture
 // everything until the footer.
-zx_status_t GuestConsole::ExecuteBlocking(const std::string& command,
-                                          const std::string& prompt,
+zx_status_t GuestConsole::ExecuteBlocking(const std::string& command, const std::string& prompt,
                                           std::string* result) {
   std::string header = command_hash(command);
   std::string footer = header;
   std::reverse(footer.begin(), footer.end());
 
-  std::string full_command =
-      "echo " + header + "; " + command + "; echo " + footer;
+  std::string full_command = "echo " + header + "; " + command + "; echo " + footer;
   if (full_command.size() > kMaximumLineLength) {
     FXL_LOG(ERROR) << "Command is too long";
     return ZX_ERR_OUT_OF_RANGE;
@@ -119,8 +116,7 @@ zx_status_t GuestConsole::SendBlocking(const std::string& message) {
   return socket_->Send(zx::deadline_after(kTestTimeout), message);
 }
 
-zx_status_t GuestConsole::WaitForMarker(const std::string& marker,
-                                        std::string* result) {
+zx_status_t GuestConsole::WaitForMarker(const std::string& marker, std::string* result) {
   std::string output = buffer_;
   buffer_.erase();
   while (true) {
@@ -142,8 +138,7 @@ zx_status_t GuestConsole::WaitForMarker(const std::string& marker,
 
     // Marker is not present: read some more data into the buffer.
     std::string buff;
-    zx_status_t status =
-        socket_->Receive(zx::deadline_after(kTestTimeout), &buff);
+    zx_status_t status = socket_->Receive(zx::deadline_after(kTestTimeout), &buff);
     if (status != ZX_OK) {
       return status;
     }

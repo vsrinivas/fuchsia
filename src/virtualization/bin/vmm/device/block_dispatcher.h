@@ -14,10 +14,8 @@ struct BlockDispatcher {
 
   using Callback = fit::function<void(zx_status_t)>;
   virtual void Sync(Callback callback) = 0;
-  virtual void ReadAt(void* data, uint64_t size, uint64_t off,
-                      Callback callback) = 0;
-  virtual void WriteAt(const void* data, uint64_t size, uint64_t off,
-                       Callback callback) = 0;
+  virtual void ReadAt(void* data, uint64_t size, uint64_t off, Callback callback) = 0;
+  virtual void WriteAt(const void* data, uint64_t size, uint64_t off, Callback callback) = 0;
 };
 
 // Guards an IO operation.
@@ -26,8 +24,7 @@ struct BlockDispatcher {
 // and can be used to wait for mutliple IO operations to complete.
 class IoGuard : public fbl::RefCounted<IoGuard> {
  public:
-  explicit IoGuard(BlockDispatcher::Callback callback)
-      : callback_(std::move(callback)) {}
+  explicit IoGuard(BlockDispatcher::Callback callback) : callback_(std::move(callback)) {}
   ~IoGuard() { callback_(status_); }
 
   void SetStatus(zx_status_t status) { status_ = status; }
@@ -57,8 +54,7 @@ void CreateRawBlockDispatcher(fuchsia::io::FilePtr file, uint32_t vmo_flags,
 
 // Creates a BlockDispatcher based on another BlockDispatcher, but stores writes
 // in memory.
-void CreateVolatileWriteBlockDispatcher(size_t vmo_size,
-                                        std::unique_ptr<BlockDispatcher> base,
+void CreateVolatileWriteBlockDispatcher(size_t vmo_size, std::unique_ptr<BlockDispatcher> base,
                                         NestedBlockDispatcherCallback callback);
 
 // Creates a BlockDispatcher based on another BlockDispatcher that is a QCOW

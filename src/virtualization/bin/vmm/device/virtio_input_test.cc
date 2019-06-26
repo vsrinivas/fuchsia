@@ -15,14 +15,12 @@ static constexpr uint16_t kQueueSize = 16;
 
 class VirtioInputTest : public TestWithDevice {
  protected:
-  VirtioInputTest()
-      : event_queue_(phys_mem_, PAGE_SIZE * kNumQueues, kQueueSize) {}
+  VirtioInputTest() : event_queue_(phys_mem_, PAGE_SIZE * kNumQueues, kQueueSize) {}
 
   void SetUp() override {
     // Launch device process.
     fuchsia::virtualization::hardware::StartInfo start_info;
-    zx_status_t status =
-        LaunchDevice(kVirtioInputUrl, event_queue_.end(), &start_info);
+    zx_status_t status = LaunchDevice(kVirtioInputUrl, event_queue_.end(), &start_info);
     ASSERT_EQ(ZX_OK, status);
 
     // Start device execution.
@@ -38,8 +36,7 @@ class VirtioInputTest : public TestWithDevice {
     for (size_t i = 0; i < kNumQueues; i++) {
       auto q = queues[i];
       q->Configure(PAGE_SIZE * i, PAGE_SIZE);
-      status = input_->ConfigureQueue(i, q->size(), q->desc(), q->avail(),
-                                      q->used());
+      status = input_->ConfigureQueue(i, q->size(), q->desc(), q->avail(), q->used());
       ASSERT_EQ(ZX_OK, status);
     }
   }

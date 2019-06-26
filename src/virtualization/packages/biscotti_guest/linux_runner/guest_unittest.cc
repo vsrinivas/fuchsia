@@ -60,8 +60,7 @@ class ScopedMemfs {
     return ZX_OK;
   }
 
-  ScopedMemfs(memfs_filesystem_t* fs, const char* path)
-      : fs_(fs), path_(path) {}
+  ScopedMemfs(memfs_filesystem_t* fs, const char* path) : fs_(fs), path_(path) {}
 
   ~ScopedMemfs() {
     fdio_ns_t* ns;
@@ -69,10 +68,8 @@ class ScopedMemfs {
     memfs_free_filesystem(fs_, &completion);
     FXL_CHECK(sync_completion_wait(&completion, ZX_TIME_INFINITE) == ZX_OK)
         << "Failed to unmount memfs";
-    FXL_CHECK(fdio_ns_get_installed(&ns) == ZX_OK)
-        << "Failed to read namespaces";
-    FXL_CHECK(fdio_ns_unbind(ns, path_) == ZX_OK)
-        << "Failed to unbind memfs filesystem";
+    FXL_CHECK(fdio_ns_get_installed(&ns) == ZX_OK) << "Failed to read namespaces";
+    FXL_CHECK(fdio_ns_unbind(ns, path_) == ZX_OK) << "Failed to unbind memfs filesystem";
   }
 
  private:
@@ -87,13 +84,11 @@ class LinuxRunnerGuestTest : public gtest::TestLoopFixture {
 
     // Install memfs on a different async loop thread to resolve some deadlock
     // when doing blocking file operations on our test loop.
-    FXL_CHECK(ScopedMemfs::InstallAt("/data", memfs_loop_.dispatcher(),
-                                     &data_) == ZX_OK);
+    FXL_CHECK(ScopedMemfs::InstallAt("/data", memfs_loop_.dispatcher(), &data_) == ZX_OK);
     memfs_loop_.StartThread();
 
     // Add a fake guest Manager to the components context.
-    provider_.service_directory_provider()->AddService(
-        fake_guest_manager_.GetHandler());
+    provider_.service_directory_provider()->AddService(fake_guest_manager_.GetHandler());
   }
 
   void TearDown() override {
@@ -126,8 +121,7 @@ TEST_F(LinuxRunnerGuestTest, ConnectToStartupListener) {
   zx::handle handle;
   zx_status_t status = guest_manager()->GuestVsock()->ConnectToHost(
       kStartupListenerPort, [&handle](zx::handle h) { handle = std::move(h); });
-  ASSERT_EQ(ZX_OK, status)
-      << "linux_runner is not listening on StartupListener port";
+  ASSERT_EQ(ZX_OK, status) << "linux_runner is not listening on StartupListener port";
   RunLoopUntilIdle();
 
   // We've estabished a VSOCK connection to the host. This is how the guest
@@ -140,8 +134,7 @@ TEST_F(LinuxRunnerGuestTest, ConnectToStartupListener) {
 TEST_F(LinuxRunnerGuestTest, CreateEmptyStatefulPartition) {
   // Verify no image exists.
   struct stat st = {};
-  ASSERT_EQ(-1, stat(kStatefulImagePath, &st))
-      << "Stateful image already exists";
+  ASSERT_EQ(-1, stat(kStatefulImagePath, &st)) << "Stateful image already exists";
   ASSERT_EQ(ENOENT, errno);
 
   StartGuest();
@@ -164,8 +157,7 @@ TEST_F(LinuxRunnerGuestTest, ReuseExistingStatefulParition) {
   for (size_t i = 0; i < image_size; ++i) {
     expected[i] = static_cast<uint8_t>(i & UINT8_MAX);
   }
-  ASSERT_EQ(write(fd, expected, sizeof(expected)),
-            static_cast<int>(sizeof(expected)))
+  ASSERT_EQ(write(fd, expected, sizeof(expected)), static_cast<int>(sizeof(expected)))
       << "Failed to write test data to disk image";
   close(fd);
 
@@ -179,8 +171,7 @@ TEST_F(LinuxRunnerGuestTest, ReuseExistingStatefulParition) {
   static_assert(sizeof(actual) == sizeof(expected));
   ASSERT_EQ(read(fd, actual, sizeof(actual)), static_cast<int>(sizeof(actual)))
       << "Failed to read back disk image";
-  ASSERT_EQ(0, memcmp(actual, expected, sizeof(actual)))
-      << "Disk image has changed";
+  ASSERT_EQ(0, memcmp(actual, expected, sizeof(actual))) << "Disk image has changed";
 }
 
 }  // namespace

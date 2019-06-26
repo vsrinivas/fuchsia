@@ -15,8 +15,7 @@ class StreamBase {
     queue_.set_interrupt(std::move(interrupt));
   }
 
-  void Configure(uint16_t size, zx_gpaddr_t desc, zx_gpaddr_t avail,
-                 zx_gpaddr_t used) {
+  void Configure(uint16_t size, zx_gpaddr_t desc, zx_gpaddr_t avail, zx_gpaddr_t used) {
     queue_.Configure(size, desc, avail, used);
   }
 

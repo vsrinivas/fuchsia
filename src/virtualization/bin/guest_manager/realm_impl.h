@@ -23,8 +23,7 @@ static constexpr uint32_t kFirstGuestCid = 3;
 
 class RealmImpl : public fuchsia::virtualization::Realm {
  public:
-  RealmImpl(uint32_t id, const std::string& label,
-            component::StartupContext* context,
+  RealmImpl(uint32_t id, const std::string& label, component::StartupContext* context,
             fidl::InterfaceRequest<fuchsia::virtualization::Realm> request);
 
   RealmImpl(const RealmImpl&) = delete;
@@ -41,24 +40,19 @@ class RealmImpl : public fuchsia::virtualization::Realm {
 
  private:
   // |fuchsia::virtualization::Realm|
-  void LaunchInstance(
-      fuchsia::virtualization::LaunchInfo launch_info,
-      fidl::InterfaceRequest<fuchsia::virtualization::Guest> controller,
-      LaunchInstanceCallback callback) override;
+  void LaunchInstance(fuchsia::virtualization::LaunchInfo launch_info,
+                      fidl::InterfaceRequest<fuchsia::virtualization::Guest> controller,
+                      LaunchInstanceCallback callback) override;
   void ListInstances(ListInstancesCallback callback) override;
-  void ConnectToInstance(uint32_t id,
-                         fidl::InterfaceRequest<fuchsia::virtualization::Guest>
-                             controller) override;
+  void ConnectToInstance(
+      uint32_t id, fidl::InterfaceRequest<fuchsia::virtualization::Guest> controller) override;
   void ConnectToBalloon(
       uint32_t id,
-      fidl::InterfaceRequest<fuchsia::virtualization::BalloonController>
-          controller) override;
+      fidl::InterfaceRequest<fuchsia::virtualization::BalloonController> controller) override;
   void GetHostVsockEndpoint(
-      fidl::InterfaceRequest<fuchsia::virtualization::HostVsockEndpoint>
-          endpoint) override;
+      fidl::InterfaceRequest<fuchsia::virtualization::HostVsockEndpoint> endpoint) override;
 
-  void OnVsockShutdown(uint32_t src_cid, uint32_t src_port, uint32_t dst_cid,
-                       uint32_t dst_port);
+  void OnVsockShutdown(uint32_t src_cid, uint32_t src_port, uint32_t dst_cid, uint32_t dst_port);
 
   fuchsia::virtualization::GuestVsockAcceptor* GetAcceptor(uint32_t cid);
 

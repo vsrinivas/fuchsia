@@ -19,6 +19,4 @@ void Logger::Write(const char* s, size_t count) {
   }
 }
 
-void Logger::Write(const std::string& buffer) {
-  Write(buffer.data(), buffer.size());
-}
+void Logger::Write(const std::string& buffer) { Write(buffer.data(), buffer.size()); }

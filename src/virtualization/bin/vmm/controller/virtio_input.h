@@ -15,15 +15,13 @@ static constexpr uint16_t kVirtioInputNumQueues = 2;
 
 // Virtio input device.
 class VirtioInput
-    : public VirtioComponentDevice<VIRTIO_ID_INPUT, kVirtioInputNumQueues,
-                                   virtio_input_config_t> {
+    : public VirtioComponentDevice<VIRTIO_ID_INPUT, kVirtioInputNumQueues, virtio_input_config_t> {
  public:
   explicit VirtioInput(const PhysMem& phys_mem);
 
   zx_status_t Start(
       const zx::guest& guest,
-      fidl::InterfaceRequest<fuchsia::virtualization::hardware::ViewListener>
-          view_listener_request,
+      fidl::InterfaceRequest<fuchsia::virtualization::hardware::ViewListener> view_listener_request,
       fuchsia::sys::Launcher* launcher, async_dispatcher_t* dispatcher);
 
  private:
@@ -31,8 +29,8 @@ class VirtioInput
   // Use a sync pointer for consistency of virtual machine execution.
   fuchsia::virtualization::hardware::VirtioInputSyncPtr input_;
 
-  zx_status_t ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc,
-                             zx_gpaddr_t avail, zx_gpaddr_t used);
+  zx_status_t ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc, zx_gpaddr_t avail,
+                             zx_gpaddr_t used);
   zx_status_t Ready(uint32_t negotiated_features);
 
   zx_status_t ConfigureDevice(uint64_t addr, const IoValue& value);

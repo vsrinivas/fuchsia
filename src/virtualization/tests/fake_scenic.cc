@@ -43,8 +43,7 @@ FakeSession::FakeSession(fidl::InterfaceRequest<Session> request,
 
 void FakeSession::Present(uint64_t /*presentation_time*/,
                           std::vector<::zx::event> /*acquire_fences*/,
-                          std::vector<::zx::event> /*release_fences*/,
-                          PresentCallback callback) {
+                          std::vector<::zx::event> /*release_fences*/, PresentCallback callback) {
   callback({});
 }
 
@@ -72,21 +71,18 @@ void FakeSession::HandleCreateView(uint32_t id) {
   auto& changed_event = response.view_properties_changed();
   changed_event.view_id = id;
   changed_event.properties.bounding_box.min = {0.0F, 0.0F, 0.0F};
-  changed_event.properties.bounding_box.max = {kScreenWidthPixels,
-                                               kScreenHeightPixels, 1.0F};
+  changed_event.properties.bounding_box.max = {kScreenWidthPixels, kScreenHeightPixels, 1.0F};
   SendGfxEvent(std::move(response));
 }
 
-void FakeSession::HandleGfxCreateResource(
-    fuchsia::ui::gfx::CreateResourceCmd cmd) {
+void FakeSession::HandleGfxCreateResource(fuchsia::ui::gfx::CreateResourceCmd cmd) {
   const uint32_t id = cmd.id;
   const ResourceArgs::Tag type = cmd.resource.Which();
 
   // Track the resource, ensuring another resource with the same
   // ID doesn't already exist.
   auto [_, inserted] = resources_.insert({id, std::move(cmd)});
-  FXL_CHECK(inserted) << "Resource ID " << id
-                      << " already used by another resource.";
+  FXL_CHECK(inserted) << "Resource ID " << id << " already used by another resource.";
 
   // If the resource is a View, we need to send information to the user
   // about it.
@@ -95,19 +91,15 @@ void FakeSession::HandleGfxCreateResource(
   }
 }
 
-void FakeSession::HandleGfxReleaseResource(
-    const fuchsia::ui::gfx::ReleaseResourceCmd& cmd) {
+void FakeSession::HandleGfxReleaseResource(const fuchsia::ui::gfx::ReleaseResourceCmd& cmd) {
   auto it = resources_.find(cmd.id);
-  FXL_CHECK(it != resources_.end())
-      << "Attempting to release unknown resource ID " << cmd.id;
+  FXL_CHECK(it != resources_.end()) << "Attempting to release unknown resource ID " << cmd.id;
   resources_.erase(it);
 }
 
-void FakeSession::HandleSetEventMask(
-    const fuchsia::ui::gfx::SetEventMaskCmd& cmd) {
+void FakeSession::HandleSetEventMask(const fuchsia::ui::gfx::SetEventMaskCmd& cmd) {
   // Ensure the request is asking about a resource the client has installed.
-  FXL_CHECK(resources_.find(cmd.id) != resources_.end())
-      << "Unknown resource ID " << cmd.id;
+  FXL_CHECK(resources_.find(cmd.id) != resources_.end()) << "Unknown resource ID " << cmd.id;
 
   // Send scaling factors client should apply when generating textures.
   //
@@ -150,8 +142,8 @@ void FakeSession::SendEvent(Event event) {
 
 void FakeSession::NotImplemented_(const std::string& name) {}
 
-std::vector<const fuchsia::ui::gfx::CreateResourceCmd*>
-FakeSession::FindResourceByType(ResourceArgs::Tag type) {
+std::vector<const fuchsia::ui::gfx::CreateResourceCmd*> FakeSession::FindResourceByType(
+    ResourceArgs::Tag type) {
   std::vector<const fuchsia::ui::gfx::CreateResourceCmd*> results;
   for (const auto& item : resources_) {
     if (item.second.resource.Which() == type) {
@@ -181,8 +173,7 @@ zx_status_t FakeSession::CaptureScreenshot(Screenshot* output) {
 
   // Read from the VMO into memory.
   std::vector<std::byte> image(args.allocation_size);
-  if (zx_status_t status = args.vmo.read(image.data(), 0, image.size());
-      status != ZX_OK) {
+  if (zx_status_t status = args.vmo.read(image.data(), 0, image.size()); status != ZX_OK) {
     return status;
   }
 
@@ -193,8 +184,7 @@ zx_status_t FakeSession::CaptureScreenshot(Screenshot* output) {
   return ZX_OK;
 }
 
-void FakeSession::set_error_handler(
-    fit::function<void(zx_status_t)> error_handler) {
+void FakeSession::set_error_handler(fit::function<void(zx_status_t)> error_handler) {
   binding_.set_error_handler(std::move(error_handler));
 }
 
@@ -232,21 +222,18 @@ zx_status_t FakeScenic::CaptureScreenshot(Screenshot* output) {
   return session_->CaptureScreenshot(output);
 }
 
-void FakeScenic::CreateSession(
-    fidl::InterfaceRequest<Session> session_request,
-    fidl::InterfaceHandle<SessionListener> listener) {
+void FakeScenic::CreateSession(fidl::InterfaceRequest<Session> session_request,
+                               fidl::InterfaceHandle<SessionListener> listener) {
   // Ensure we don't already have a session open.
   if (session_.has_value()) {
-    FXL_LOG(WARNING)
-        << "Attempt to create a second session on FakeScenic was rejected.";
+    FXL_LOG(WARNING) << "Attempt to create a second session on FakeScenic was rejected.";
     session_request.Close(ZX_ERR_NO_RESOURCES);
     return;
   }
 
   // Create a new session.
   session_.emplace(std::move(session_request), std::move(listener));
-  session_->set_error_handler(
-      [this](zx_status_t /*error*/) { session_.reset(); });
+  session_->set_error_handler([this](zx_status_t /*error*/) { session_.reset(); });
 }
 
 void FakeScenic::NotImplemented_(const std::string& name) {}

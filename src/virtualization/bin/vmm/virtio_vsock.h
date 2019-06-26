@@ -22,13 +22,11 @@
 static constexpr uint16_t kVirtioVsockNumQueues = 3;
 
 class VirtioVsock
-    : public VirtioInprocessDevice<VIRTIO_ID_VSOCK, kVirtioVsockNumQueues,
-                                   virtio_vsock_config_t>,
+    : public VirtioInprocessDevice<VIRTIO_ID_VSOCK, kVirtioVsockNumQueues, virtio_vsock_config_t>,
       public fuchsia::virtualization::GuestVsockEndpoint,
       public fuchsia::virtualization::GuestVsockAcceptor {
  public:
-  VirtioVsock(component::StartupContext* context, const PhysMem&,
-              async_dispatcher_t* dispatcher);
+  VirtioVsock(component::StartupContext* context, const PhysMem&, async_dispatcher_t* dispatcher);
 
   uint32_t guest_cid() const;
 
@@ -36,8 +34,7 @@ class VirtioVsock
   // tuple, local_cid/local_port, and a remote tuple, guest_cid/remote_port. The
   // local tuple identifies the host-side of the connection, and the remote
   // tuple identifies the guest-side of the connection.
-  bool HasConnection(uint32_t local_cid, uint32_t local_port,
-                     uint32_t remote_port) const;
+  bool HasConnection(uint32_t local_cid, uint32_t local_port, uint32_t remote_port) const;
 
   VirtioQueue* rx_queue() { return queue(0); }
   VirtioQueue* tx_queue() { return queue(1); }
@@ -68,16 +65,14 @@ class VirtioVsock
     }
   };
   using ConnectionMap =
-      std::unordered_map<ConnectionKey, std::unique_ptr<Connection>,
-                         ConnectionHash>;
+      std::unordered_map<ConnectionKey, std::unique_ptr<Connection>, ConnectionHash>;
   using ConnectionSet = std::unordered_set<ConnectionKey, ConnectionHash>;
 
   using StreamFunc = void (VirtioVsock::*)(zx_status_t, uint16_t);
   template <StreamFunc F>
   class Stream {
    public:
-    Stream(async_dispatcher_t* dispatcher, VirtioQueue* queue,
-           VirtioVsock* device);
+    Stream(async_dispatcher_t* dispatcher, VirtioQueue* queue, VirtioVsock* device);
 
     zx_status_t WaitOnQueue();
 
@@ -87,25 +82,18 @@ class VirtioVsock
 
   // |fuchsia::virtualization::GuestVsockEndpoint|
   void SetContextId(
-      uint32_t cid,
-      fidl::InterfaceHandle<fuchsia::virtualization::HostVsockConnector>
-          connector,
-      fidl::InterfaceRequest<fuchsia::virtualization::GuestVsockAcceptor>
-          acceptor) override;
+      uint32_t cid, fidl::InterfaceHandle<fuchsia::virtualization::HostVsockConnector> connector,
+      fidl::InterfaceRequest<fuchsia::virtualization::GuestVsockAcceptor> acceptor) override;
   // |fuchsia::virtualization::GuestVsockAcceptor|
-  void Accept(uint32_t src_cid, uint32_t src_port, uint32_t port,
-              zx::handle handle,
-              fuchsia::virtualization::GuestVsockAcceptor::AcceptCallback
-                  callback) override;
-  void ConnectCallback(ConnectionKey key, zx_status_t status, zx::handle handle,
-                       uint32_t buf_alloc, uint32_t fwd_cnt);
+  void Accept(uint32_t src_cid, uint32_t src_port, uint32_t port, zx::handle handle,
+              fuchsia::virtualization::GuestVsockAcceptor::AcceptCallback callback) override;
+  void ConnectCallback(ConnectionKey key, zx_status_t status, zx::handle handle, uint32_t buf_alloc,
+                       uint32_t fwd_cnt);
 
-  zx_status_t AddConnectionLocked(ConnectionKey key,
-                                  std::unique_ptr<Connection> conn)
+  zx_status_t AddConnectionLocked(ConnectionKey key, std::unique_ptr<Connection> conn)
       __TA_REQUIRES(mutex_);
   Connection* GetConnectionLocked(ConnectionKey key) __TA_REQUIRES(mutex_);
-  bool EraseOnErrorLocked(ConnectionKey key, zx_status_t status)
-      __TA_REQUIRES(mutex_);
+  bool EraseOnErrorLocked(ConnectionKey key, zx_status_t status) __TA_REQUIRES(mutex_);
   void WaitOnQueueLocked(ConnectionKey key) __TA_REQUIRES(mutex_);
 
   void Mux(zx_status_t status, uint16_t index);
@@ -121,18 +109,15 @@ class VirtioVsock
   ConnectionSet readable_ __TA_GUARDED(mutex_);
   // NOTE(abdulla): We ignore the event queue, as we don't support VM migration.
 
-  fidl::BindingSet<fuchsia::virtualization::GuestVsockEndpoint>
-      endpoint_bindings_;
-  fidl::BindingSet<fuchsia::virtualization::GuestVsockAcceptor>
-      acceptor_bindings_;
+  fidl::BindingSet<fuchsia::virtualization::GuestVsockEndpoint> endpoint_bindings_;
+  fidl::BindingSet<fuchsia::virtualization::GuestVsockAcceptor> acceptor_bindings_;
   fuchsia::virtualization::HostVsockConnectorPtr connector_;
 };
 
 class VirtioVsock::Connection {
  public:
   Connection(async_dispatcher_t* dispatcher,
-             fuchsia::virtualization::GuestVsockAcceptor::AcceptCallback
-                 accept_callback,
+             fuchsia::virtualization::GuestVsockAcceptor::AcceptCallback accept_callback,
              fit::closure queue_callback);
   virtual ~Connection();
   virtual zx_status_t Init() = 0;
@@ -158,8 +143,8 @@ class VirtioVsock::Connection {
   virtual zx_status_t WriteCredit(virtio_vsock_hdr_t* header) = 0;
 
   virtual zx_status_t Shutdown(uint32_t flags) = 0;
-  virtual zx_status_t Read(VirtioQueue* queue, virtio_vsock_hdr_t* header,
-                           VirtioDescriptor* desc, uint32_t* used) = 0;
+  virtual zx_status_t Read(VirtioQueue* queue, virtio_vsock_hdr_t* header, VirtioDescriptor* desc,
+                           uint32_t* used) = 0;
   virtual zx_status_t Write(VirtioQueue* queue, virtio_vsock_hdr_t* header,
                             VirtioDescriptor* desc) = 0;
 
@@ -198,8 +183,8 @@ class VirtioVsock::NullConnection final : public VirtioVsock::Connection {
   zx_status_t WriteCredit(virtio_vsock_hdr_t* header) override { return ZX_OK; }
 
   zx_status_t Shutdown(uint32_t flags) override { return ZX_ERR_NOT_SUPPORTED; }
-  zx_status_t Read(VirtioQueue* queue, virtio_vsock_hdr_t* header,
-                   VirtioDescriptor* desc, uint32_t* used) override {
+  zx_status_t Read(VirtioQueue* queue, virtio_vsock_hdr_t* header, VirtioDescriptor* desc,
+                   uint32_t* used) override {
     return ZX_ERR_NOT_SUPPORTED;
   }
   zx_status_t Write(VirtioQueue* queue, virtio_vsock_hdr_t* header,
@@ -211,8 +196,7 @@ class VirtioVsock::NullConnection final : public VirtioVsock::Connection {
 class VirtioVsock::SocketConnection final : public VirtioVsock::Connection {
  public:
   SocketConnection(zx::handle handle, async_dispatcher_t* dispatcher,
-                   fuchsia::virtualization::GuestVsockAcceptor::AcceptCallback
-                       accept_callback,
+                   fuchsia::virtualization::GuestVsockAcceptor::AcceptCallback accept_callback,
                    fit::closure queue_callback);
   ~SocketConnection() override;
 
@@ -220,8 +204,8 @@ class VirtioVsock::SocketConnection final : public VirtioVsock::Connection {
   zx_status_t WriteCredit(virtio_vsock_hdr_t* header) override;
 
   zx_status_t Shutdown(uint32_t flags) override;
-  zx_status_t Read(VirtioQueue* queue, virtio_vsock_hdr_t* header,
-                   VirtioDescriptor* desc, uint32_t* used) override;
+  zx_status_t Read(VirtioQueue* queue, virtio_vsock_hdr_t* header, VirtioDescriptor* desc,
+                   uint32_t* used) override;
   zx_status_t Write(VirtioQueue* queue, virtio_vsock_hdr_t* header,
                     VirtioDescriptor* desc) override;
 
@@ -242,8 +226,7 @@ class VirtioVsock::SocketConnection final : public VirtioVsock::Connection {
 class VirtioVsock::ChannelConnection final : public VirtioVsock::Connection {
  public:
   ChannelConnection(zx::handle handle, async_dispatcher_t* dispatcher,
-                    fuchsia::virtualization::GuestVsockAcceptor::AcceptCallback
-                        accept_callback,
+                    fuchsia::virtualization::GuestVsockAcceptor::AcceptCallback accept_callback,
                     fit::closure queue_callback);
   ~ChannelConnection() override;
 
@@ -251,8 +234,8 @@ class VirtioVsock::ChannelConnection final : public VirtioVsock::Connection {
   zx_status_t WriteCredit(virtio_vsock_hdr_t* header) override;
 
   zx_status_t Shutdown(uint32_t flags) override;
-  zx_status_t Read(VirtioQueue* queue, virtio_vsock_hdr_t* header,
-                   VirtioDescriptor* desc, uint32_t* used) override;
+  zx_status_t Read(VirtioQueue* queue, virtio_vsock_hdr_t* header, VirtioDescriptor* desc,
+                   uint32_t* used) override;
   zx_status_t Write(VirtioQueue* queue, virtio_vsock_hdr_t* header,
                     VirtioDescriptor* desc) override;
 

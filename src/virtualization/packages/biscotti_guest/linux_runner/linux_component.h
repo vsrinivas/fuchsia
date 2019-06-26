@@ -38,22 +38,19 @@ class LinuxComponent : public fuchsia::sys::ComponentController,
   fidl::BindingSet<fuchsia::ui::app::ViewProvider> view_bindings_;
   fuchsia::ui::app::ViewProviderPtr remote_view_provider_;
 
-  LinuxComponent(
-      TerminationCallback termination_callback, fuchsia::sys::Package package,
-      fuchsia::sys::StartupInfo startup_info,
-      fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller,
-      fuchsia::ui::app::ViewProviderPtr remote_view_provider);
+  LinuxComponent(TerminationCallback termination_callback, fuchsia::sys::Package package,
+                 fuchsia::sys::StartupInfo startup_info,
+                 fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller,
+                 fuchsia::ui::app::ViewProviderPtr remote_view_provider);
 
   // |fuchsia::sys::ComponentController|
   void Kill() override;
   void Detach() override;
 
   // |fuchsia::ui::app::ViewProvider|
-  void CreateView(
-      zx::eventpair view_token,
-      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services,
-      fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> outgoing_services)
-      override;
+  void CreateView(zx::eventpair view_token,
+                  fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services,
+                  fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> outgoing_services) override;
 };
 
 }  // namespace linux_runner

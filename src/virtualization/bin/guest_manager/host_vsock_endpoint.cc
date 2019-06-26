@@ -12,8 +12,7 @@ HostVsockEndpoint::HostVsockEndpoint(AcceptorProvider acceptor_provider)
     : acceptor_provider_(std::move(acceptor_provider)) {}
 
 void HostVsockEndpoint::AddBinding(
-    fidl::InterfaceRequest<fuchsia::virtualization::HostVsockEndpoint>
-        request) {
+    fidl::InterfaceRequest<fuchsia::virtualization::HostVsockEndpoint> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 
@@ -30,8 +29,7 @@ void HostVsockEndpoint::Connect(
     it->second->Accept(src_cid, src_port, port, std::move(callback));
   } else {
     // Guest to guest connection.
-    fuchsia::virtualization::GuestVsockAcceptor* acceptor =
-        acceptor_provider_(cid);
+    fuchsia::virtualization::GuestVsockAcceptor* acceptor = acceptor_provider_(cid);
     if (acceptor == nullptr) {
       callback(ZX_ERR_CONNECTION_REFUSED, zx::handle());
       return;
@@ -43,16 +41,14 @@ void HostVsockEndpoint::Connect(
       callback(ZX_ERR_CONNECTION_REFUSED, zx::handle());
       return;
     }
-    acceptor->Accept(
-        src_cid, src_port, port, std::move(h1),
-        [callback = std::move(callback), h2 = std::move(h2)](
-            zx_status_t status) mutable { callback(status, std::move(h2)); });
+    acceptor->Accept(src_cid, src_port, port, std::move(h1),
+                     [callback = std::move(callback), h2 = std::move(h2)](
+                         zx_status_t status) mutable { callback(status, std::move(h2)); });
   }
 }
 
 void HostVsockEndpoint::Listen(
-    uint32_t port,
-    fidl::InterfaceHandle<fuchsia::virtualization::HostVsockAcceptor> acceptor,
+    uint32_t port, fidl::InterfaceHandle<fuchsia::virtualization::HostVsockAcceptor> acceptor,
     ListenCallback callback) {
   if (port_bitmap_.GetOne(port)) {
     callback(ZX_ERR_ALREADY_BOUND);
@@ -64,8 +60,7 @@ void HostVsockEndpoint::Listen(
     port_bitmap_.ClearOne(port);
     listeners_.erase(port);
   });
-  std::tie(std::ignore, inserted) =
-      listeners_.emplace(port, std::move(acceptor_ptr));
+  std::tie(std::ignore, inserted) = listeners_.emplace(port, std::move(acceptor_ptr));
   if (!inserted) {
     callback(ZX_ERR_ALREADY_BOUND);
     return;
@@ -82,8 +77,7 @@ void HostVsockEndpoint::Connect(
     callback(ZX_ERR_CONNECTION_REFUSED);
     return;
   }
-  fuchsia::virtualization::GuestVsockAcceptor* acceptor =
-      acceptor_provider_(cid);
+  fuchsia::virtualization::GuestVsockAcceptor* acceptor = acceptor_provider_(cid);
   if (acceptor == nullptr) {
     callback(ZX_ERR_CONNECTION_REFUSED);
     return;
@@ -95,12 +89,10 @@ void HostVsockEndpoint::Connect(
     return;
   }
   // Get access to the guests.
-  acceptor->Accept(
-      fuchsia::virtualization::HOST_CID, src_port, port, std::move(handle),
-      [this, src_port,
-       callback = std::move(callback)](zx_status_t status) mutable {
-        ConnectCallback(status, src_port, std::move(callback));
-      });
+  acceptor->Accept(fuchsia::virtualization::HOST_CID, src_port, port, std::move(handle),
+                   [this, src_port, callback = std::move(callback)](zx_status_t status) mutable {
+                     ConnectCallback(status, src_port, std::move(callback));
+                   });
 }
 
 void HostVsockEndpoint::ConnectCallback(
@@ -122,8 +114,7 @@ void HostVsockEndpoint::OnShutdown(uint32_t port) {
 
 zx_status_t HostVsockEndpoint::AllocEphemeralPort(uint32_t* port) {
   size_t value;
-  zx_status_t status = port_bitmap_.Find(false, kFirstEphemeralPort,
-                                         kLastEphemeralPort, 1, &value);
+  zx_status_t status = port_bitmap_.Find(false, kFirstEphemeralPort, kLastEphemeralPort, 1, &value);
   if (status != ZX_OK) {
     return ZX_ERR_NO_RESOURCES;
   }

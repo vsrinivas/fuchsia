@@ -5,6 +5,7 @@
 #include "src/virtualization/bin/guest/list.h"
 
 #include <fuchsia/virtualization/cpp/fidl.h>
+
 #include <iostream>
 
 void handle_list(sys::ComponentContext* context) {
@@ -21,8 +22,7 @@ void handle_list(sys::ComponentContext* context) {
       printf(" no guest instances\n");
     }
     for (const auto& instance_info : env_info.instances) {
-      printf(" guest:%-4u       %s\n", instance_info.cid,
-             instance_info.label.c_str());
+      printf(" guest:%-4u       %s\n", instance_info.cid, instance_info.label.c_str());
     }
   }
 }

@@ -107,8 +107,7 @@ class VirtioQueue {
   zx_handle_t event() const { return event_.get(); }
 
   // Configure the queue using a set of addresses, and set the queue size.
-  void Configure(uint16_t size, zx_gpaddr_t desc, zx_gpaddr_t avail,
-                 zx_gpaddr_t used);
+  void Configure(uint16_t size, zx_gpaddr_t desc, zx_gpaddr_t avail, zx_gpaddr_t used);
 
   bool NextChain(VirtioChain* chain);
 
@@ -142,16 +141,14 @@ class VirtioQueue {
   // if (for example) the device is returning several descriptors sequentially.
   // The |SEND_INTERRUPT| flag will still respect any requirements enforced by
   // the bus regarding interrupt suppression.
-  zx_status_t Return(uint16_t index, uint32_t len,
-                     uint8_t actions = SET_QUEUE | TRY_INTERRUPT);
+  zx_status_t Return(uint16_t index, uint32_t len, uint8_t actions = SET_QUEUE | TRY_INTERRUPT);
 
   // Reads a single descriptor from the queue.
   //
   // This method should only be called using descriptor indices acquired with
   // virtio_queue_next_avail (including any chained descriptors) and before
   // they've been released with virtio_queue_return.
-  __WARN_UNUSED_RESULT zx_status_t ReadDesc(uint16_t index,
-                                            VirtioDescriptor* desc);
+  __WARN_UNUSED_RESULT zx_status_t ReadDesc(uint16_t index, VirtioDescriptor* desc);
 
  private:
   zx_status_t NextAvailLocked(uint16_t* index) __TA_REQUIRES(mutex_);

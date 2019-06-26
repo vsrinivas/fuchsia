@@ -5,14 +5,14 @@
 #include "src/virtualization/bin/vmm/guest_config.h"
 
 #include <libgen.h>
-#include <unistd.h>
-#include <iostream>
-
+#include <rapidjson/document.h>
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/strings/string_number_conversions.h>
-#include <rapidjson/document.h>
+#include <unistd.h>
 #include <zircon/device/block.h>
+
+#include <iostream>
 
 static void print_usage(fxl::CommandLine& cl) {
   // clang-format off
@@ -68,8 +68,7 @@ static void print_usage(fxl::CommandLine& cl) {
 static GuestConfigParser::OptionHandler set_option(std::string* out) {
   return [out](const std::string& key, const std::string& value) {
     if (value.empty()) {
-      FXL_LOG(ERROR) << "Option: '" << key << "' expects a value (--" << key
-                     << "=<value>)";
+      FXL_LOG(ERROR) << "Option: '" << key << "' expects a value (--" << key << "=<value>)";
       return ZX_ERR_INVALID_ARGS;
     }
     *out = value;
@@ -83,12 +82,10 @@ using OptionParser = std::function<zx_status_t(const std::string& arg, T* out)>;
 
 // Handles an option by parsing the value and adding it to a container.
 template <typename T, typename C>
-static GuestConfigParser::OptionHandler add_option(C* out,
-                                                   OptionParser<T> parse) {
+static GuestConfigParser::OptionHandler add_option(C* out, OptionParser<T> parse) {
   return [out, parse](const std::string& key, const std::string& value) {
     if (value.empty()) {
-      FXL_LOG(ERROR) << "Option: '" << key << "' expects a value (--" << key
-                     << "=<value>)";
+      FXL_LOG(ERROR) << "Option: '" << key << "' expects a value (--" << key << "=<value>)";
       return ZX_ERR_INVALID_ARGS;
     }
     T t;
@@ -102,12 +99,10 @@ static GuestConfigParser::OptionHandler add_option(C* out,
   };
 }
 
-static GuestConfigParser::OptionHandler add_string(std::string* out,
-                                                   const char* delim) {
+static GuestConfigParser::OptionHandler add_string(std::string* out, const char* delim) {
   return [out, delim](const std::string& key, const std::string& value) {
     if (value.empty()) {
-      FXL_LOG(ERROR) << "Option: '" << key << "' expects a value (--" << key
-                     << "=<value>)";
+      FXL_LOG(ERROR) << "Option: '" << key << "' expects a value (--" << key << "=<value>)";
       return ZX_ERR_INVALID_ARGS;
     }
     out->append(delim);
@@ -117,8 +112,7 @@ static GuestConfigParser::OptionHandler add_string(std::string* out,
 }
 
 template <typename NumberType>
-static zx_status_t parse_number(const std::string& value, NumberType* out,
-                                fxl::Base base) {
+static zx_status_t parse_number(const std::string& value, NumberType* out, fxl::Base base) {
   if (!fxl::StringToNumberWithError(value, out, base)) {
     FXL_LOG(ERROR) << "Unable to convert '" << value << "' into a number";
     return ZX_ERR_INVALID_ARGS;
@@ -130,8 +124,7 @@ template <typename NumberType>
 static GuestConfigParser::OptionHandler set_number(NumberType* out) {
   return [out](const std::string& key, const std::string& value) {
     if (value.empty()) {
-      FXL_LOG(ERROR) << "Option: '" << key << "' expects a value (--" << key
-                     << "=<value>)";
+      FXL_LOG(ERROR) << "Option: '" << key << "' expects a value (--" << key << "=<value>)";
       return ZX_ERR_INVALID_ARGS;
     }
     return parse_number(value, out, fxl::Base::k10);
@@ -141,10 +134,8 @@ static GuestConfigParser::OptionHandler set_number(NumberType* out) {
 // Create an |OptionHandler| that sets |out| to a boolean flag. This can be
 // specified not only as '--foo=true' or '--foo=false', but also as '--foo', in
 // which case |out| will take the value of |default_flag_value|.
-static GuestConfigParser::OptionHandler set_flag(bool* out,
-                                                 bool default_flag_value) {
-  return [out, default_flag_value](const std::string& key,
-                                   const std::string& option_value) {
+static GuestConfigParser::OptionHandler set_flag(bool* out, bool default_flag_value) {
+  return [out, default_flag_value](const std::string& key, const std::string& option_value) {
     bool flag_value = default_flag_value;
     if (!option_value.empty()) {
       if (option_value == "true") {
@@ -152,8 +143,7 @@ static GuestConfigParser::OptionHandler set_flag(bool* out,
       } else if (option_value == "false") {
         flag_value = !default_flag_value;
       } else {
-        FXL_LOG(ERROR) << "Option: '" << key
-                       << "' expects either 'true' or 'false'; received '"
+        FXL_LOG(ERROR) << "Option: '" << key << "' expects either 'true' or 'false'; received '"
                        << option_value << "'";
 
         return ZX_ERR_INVALID_ARGS;
@@ -198,8 +188,7 @@ static std::vector<std::string> split(const std::string& spec, char delim) {
   return tokens;
 }
 
-static zx_status_t parse_interrupt_spec(const std::string& spec,
-                                        InterruptSpec* out) {
+static zx_status_t parse_interrupt_spec(const std::string& spec, InterruptSpec* out) {
   std::vector<std::string> tokens = split(spec, ',');
   if (tokens.size() != 2) {
     return ZX_ERR_INVALID_ARGS;
@@ -271,11 +260,9 @@ static zx_status_t parse_memory_spec(const std::string& spec, MemorySpec* out) {
   return ZX_OK;
 }
 
-static GuestConfigParser::OptionHandler set_kernel(std::string* out,
-                                                   Kernel* kernel,
+static GuestConfigParser::OptionHandler set_kernel(std::string* out, Kernel* kernel,
                                                    Kernel set_kernel) {
-  return [out, kernel, set_kernel](const std::string& key,
-                                   const std::string& value) {
+  return [out, kernel, set_kernel](const std::string& key, const std::string& value) {
     zx_status_t status = set_option(out)(key, value);
     if (status == ZX_OK) {
       *kernel = set_kernel;
@@ -287,16 +274,13 @@ static GuestConfigParser::OptionHandler set_kernel(std::string* out,
 GuestConfigParser::GuestConfigParser(GuestConfig* cfg)
     : cfg_(cfg),
       opts_{
-          {"block",
-           add_option<BlockSpec>(&cfg_->block_devices_, parse_block_spec)},
+          {"block", add_option<BlockSpec>(&cfg_->block_devices_, parse_block_spec)},
           {"cmdline-add", add_string(&cfg_->cmdline_, " ")},
           {"cmdline", set_option(&cfg_->cmdline_)},
           {"cpus", set_number(&cfg_->cpus_)},
           {"dtb-overlay", set_option(&cfg_->dtb_overlay_path_)},
-          {"interrupt",
-           add_option<InterruptSpec>(&cfg_->interrupts_, parse_interrupt_spec)},
-          {"linux",
-           set_kernel(&cfg_->kernel_path_, &cfg_->kernel_, Kernel::LINUX)},
+          {"interrupt", add_option<InterruptSpec>(&cfg_->interrupts_, parse_interrupt_spec)},
+          {"linux", set_kernel(&cfg_->kernel_path_, &cfg_->kernel_, Kernel::LINUX)},
           {"memory", add_option<MemorySpec>(&cfg_->memory_, parse_memory_spec)},
           {"ramdisk", set_option(&cfg_->ramdisk_path_)},
           {"virtio-balloon", set_flag(&cfg_->virtio_balloon_, true)},
@@ -305,8 +289,7 @@ GuestConfigParser::GuestConfigParser(GuestConfig* cfg)
           {"virtio-net", set_flag(&cfg_->virtio_net_, true)},
           {"virtio-rng", set_flag(&cfg_->virtio_rng_, true)},
           {"virtio-vsock", set_flag(&cfg_->virtio_vsock_, true)},
-          {"zircon",
-           set_kernel(&cfg_->kernel_path_, &cfg_->kernel_, Kernel::ZIRCON)},
+          {"zircon", set_kernel(&cfg_->kernel_path_, &cfg_->kernel_, Kernel::ZIRCON)},
       } {}
 
 void GuestConfigParser::SetDefaults() {
@@ -351,15 +334,13 @@ zx_status_t GuestConfigParser::ParseConfig(const std::string& data) {
   for (auto& member : document.GetObject()) {
     auto entry = opts_.find(member.name.GetString());
     if (entry == opts_.end()) {
-      FXL_LOG(ERROR) << "Unknown field in configuration object: "
-                     << member.name.GetString();
+      FXL_LOG(ERROR) << "Unknown field in configuration object: " << member.name.GetString();
       return ZX_ERR_INVALID_ARGS;
     }
 
     // For string members, invoke the handler directly on the value.
     if (member.value.IsString()) {
-      zx_status_t status =
-          entry->second(member.name.GetString(), member.value.GetString());
+      zx_status_t status = entry->second(member.name.GetString(), member.value.GetString());
       if (status != ZX_OK) {
         return ZX_ERR_INVALID_ARGS;
       }
@@ -374,8 +355,7 @@ zx_status_t GuestConfigParser::ParseConfig(const std::string& data) {
                          << member.name.GetString();
           return ZX_ERR_INVALID_ARGS;
         }
-        zx_status_t status =
-            entry->second(member.name.GetString(), array_member.GetString());
+        zx_status_t status = entry->second(member.name.GetString(), array_member.GetString());
         if (status != ZX_OK) {
           return ZX_ERR_INVALID_ARGS;
         }

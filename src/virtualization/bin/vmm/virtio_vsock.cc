@@ -10,8 +10,8 @@
 #include <zircon/types.h>
 
 template <VirtioVsock::StreamFunc F>
-VirtioVsock::Stream<F>::Stream(async_dispatcher_t* dispatcher,
-                               VirtioQueue* queue, VirtioVsock* vsock)
+VirtioVsock::Stream<F>::Stream(async_dispatcher_t* dispatcher, VirtioQueue* queue,
+                               VirtioVsock* vsock)
     : waiter_(dispatcher, queue, fit::bind_member(vsock, F)) {}
 
 template <VirtioVsock::StreamFunc F>
@@ -144,8 +144,7 @@ void VirtioVsock::Connection::SetCredit(uint32_t buf_alloc, uint32_t fwd_cnt) {
   peer_fwd_cnt_ = fwd_cnt;
 }
 
-static zx_status_t wait(async_dispatcher_t* dispatcher, async::Wait* wait,
-                        zx_status_t status) {
+static zx_status_t wait(async_dispatcher_t* dispatcher, async::Wait* wait, zx_status_t status) {
   if (status == ZX_ERR_SHOULD_WAIT) {
     status = ZX_OK;
   }
@@ -177,8 +176,7 @@ VirtioVsock::SocketConnection::SocketConnection(
     zx::handle handle, async_dispatcher_t* dispatcher,
     fuchsia::virtualization::GuestVsockAcceptor::AcceptCallback accept_callback,
     fit::closure queue_callback)
-    : Connection(dispatcher, std::move(accept_callback),
-                 std::move(queue_callback)),
+    : Connection(dispatcher, std::move(accept_callback), std::move(queue_callback)),
       socket_(std::move(handle)) {}
 
 VirtioVsock::SocketConnection::~SocketConnection() {
@@ -191,23 +189,18 @@ zx_status_t VirtioVsock::SocketConnection::Init() {
   rx_wait_.set_object(socket_.get());
   rx_wait_.set_trigger(ZX_SOCKET_READABLE | ZX_SOCKET_PEER_WRITE_DISABLED |
                        ZX_SOCKET_WRITE_DISABLED | ZX_SOCKET_PEER_CLOSED);
-  rx_wait_.set_handler(
-      [this](async_dispatcher_t* dispatcher, async::Wait* wait,
-             zx_status_t status,
-             const zx_packet_signal_t* signal) { OnReady(status, signal); });
+  rx_wait_.set_handler([this](async_dispatcher_t* dispatcher, async::Wait* wait, zx_status_t status,
+                              const zx_packet_signal_t* signal) { OnReady(status, signal); });
 
   tx_wait_.set_object(socket_.get());
   tx_wait_.set_trigger(ZX_SOCKET_WRITABLE);
-  tx_wait_.set_handler(
-      [this](async_dispatcher_t* dispatcher, async::Wait* wait,
-             zx_status_t status,
-             const zx_packet_signal_t* signal) { OnReady(status, signal); });
+  tx_wait_.set_handler([this](async_dispatcher_t* dispatcher, async::Wait* wait, zx_status_t status,
+                              const zx_packet_signal_t* signal) { OnReady(status, signal); });
 
   return WaitOnReceive(ZX_OK);
 }
 
-void VirtioVsock::SocketConnection::OnReady(zx_status_t status,
-                                            const zx_packet_signal_t* signal) {
+void VirtioVsock::SocketConnection::OnReady(zx_status_t status, const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed while waiting on socket " << status;
     return;
@@ -223,8 +216,8 @@ void VirtioVsock::SocketConnection::OnReady(zx_status_t status,
 
   // If the socket has been partially or fully closed, wait on the Virtio
   // receive queue.
-  if (signal->observed & (ZX_SOCKET_PEER_CLOSED | ZX_SOCKET_PEER_WRITE_DISABLED |
-                          ZX_SOCKET_WRITE_DISABLED)) {
+  if (signal->observed &
+      (ZX_SOCKET_PEER_CLOSED | ZX_SOCKET_PEER_WRITE_DISABLED | ZX_SOCKET_WRITE_DISABLED)) {
     zx_signals_t signals = rx_wait_.trigger();
     if (signal->observed & ZX_SOCKET_PEER_CLOSED) {
       // The peer closed the socket, therefore we move to sending a full
@@ -263,11 +256,9 @@ void VirtioVsock::SocketConnection::OnReady(zx_status_t status,
   }
 }
 
-zx_status_t VirtioVsock::SocketConnection::WriteCredit(
-    virtio_vsock_hdr_t* header) {
+zx_status_t VirtioVsock::SocketConnection::WriteCredit(virtio_vsock_hdr_t* header) {
   zx_info_socket_t info;
-  zx_status_t status =
-      socket_.get_info(ZX_INFO_SOCKET, &info, sizeof(info), nullptr, nullptr);
+  zx_status_t status = socket_.get_info(ZX_INFO_SOCKET, &info, sizeof(info), nullptr, nullptr);
   if (status != ZX_OK) {
     return status;
   }
@@ -285,8 +276,7 @@ zx_status_t VirtioVsock::SocketConnection::Shutdown(uint32_t flags) {
   return socket_.shutdown(shutdown_flags);
 }
 
-static zx_status_t setup_desc_chain(VirtioQueue* queue,
-                                    virtio_vsock_hdr_t* header,
+static zx_status_t setup_desc_chain(VirtioQueue* queue, virtio_vsock_hdr_t* header,
                                     VirtioDescriptor* desc) {
   desc->addr = header + 1;
   desc->len -= sizeof(*header);
@@ -298,10 +288,8 @@ static zx_status_t setup_desc_chain(VirtioQueue* queue,
   return ZX_OK;
 }
 
-zx_status_t VirtioVsock::SocketConnection::Read(VirtioQueue* queue,
-                                                virtio_vsock_hdr_t* header,
-                                                VirtioDescriptor* desc,
-                                                uint32_t* used) {
+zx_status_t VirtioVsock::SocketConnection::Read(VirtioQueue* queue, virtio_vsock_hdr_t* header,
+                                                VirtioDescriptor* desc, uint32_t* used) {
   zx_status_t status = setup_desc_chain(queue, header, desc);
   while (status == ZX_OK) {
     size_t len = std::min(desc->len, PeerFree());
@@ -323,8 +311,7 @@ zx_status_t VirtioVsock::SocketConnection::Read(VirtioQueue* queue,
   return status;
 }
 
-zx_status_t VirtioVsock::SocketConnection::Write(VirtioQueue* queue,
-                                                 virtio_vsock_hdr_t* header,
+zx_status_t VirtioVsock::SocketConnection::Write(VirtioQueue* queue, virtio_vsock_hdr_t* header,
                                                  VirtioDescriptor* desc) {
   zx_status_t status = setup_desc_chain(queue, header, desc);
   while (status == ZX_OK) {
@@ -357,8 +344,7 @@ VirtioVsock::ChannelConnection::ChannelConnection(
     zx::handle handle, async_dispatcher_t* dispatcher,
     fuchsia::virtualization::GuestVsockAcceptor::AcceptCallback accept_callback,
     fit::closure queue_callback)
-    : Connection(dispatcher, std::move(accept_callback),
-                 std::move(queue_callback)),
+    : Connection(dispatcher, std::move(accept_callback), std::move(queue_callback)),
       channel_(std::move(handle)) {}
 
 VirtioVsock::ChannelConnection::~ChannelConnection() {
@@ -370,23 +356,18 @@ VirtioVsock::ChannelConnection::~ChannelConnection() {
 zx_status_t VirtioVsock::ChannelConnection::Init() {
   rx_wait_.set_object(channel_.get());
   rx_wait_.set_trigger(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED);
-  rx_wait_.set_handler(
-      [this](async_dispatcher_t* dispatcher, async::Wait* wait,
-             zx_status_t status,
-             const zx_packet_signal_t* signal) { OnReady(status, signal); });
+  rx_wait_.set_handler([this](async_dispatcher_t* dispatcher, async::Wait* wait, zx_status_t status,
+                              const zx_packet_signal_t* signal) { OnReady(status, signal); });
 
   tx_wait_.set_object(channel_.get());
   tx_wait_.set_trigger(ZX_CHANNEL_WRITABLE);
-  tx_wait_.set_handler(
-      [this](async_dispatcher_t* dispatcher, async::Wait* wait,
-             zx_status_t status,
-             const zx_packet_signal_t* signal) { OnReady(status, signal); });
+  tx_wait_.set_handler([this](async_dispatcher_t* dispatcher, async::Wait* wait, zx_status_t status,
+                              const zx_packet_signal_t* signal) { OnReady(status, signal); });
 
   return WaitOnReceive(ZX_OK);
 }
 
-void VirtioVsock::ChannelConnection::OnReady(zx_status_t status,
-                                             const zx_packet_signal_t* signal) {
+void VirtioVsock::ChannelConnection::OnReady(zx_status_t status, const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed while waiting on channel " << status;
     return;
@@ -411,8 +392,7 @@ void VirtioVsock::ChannelConnection::OnReady(zx_status_t status,
   }
 }
 
-zx_status_t VirtioVsock::ChannelConnection::WriteCredit(
-    virtio_vsock_hdr_t* header) {
+zx_status_t VirtioVsock::ChannelConnection::WriteCredit(virtio_vsock_hdr_t* header) {
   // TODO(PD-171): Once channel back-pressure has been implemented, we should
   // implement credit handling.
   constexpr size_t max = ZX_CHANNEL_MAX_MSG_BYTES;
@@ -423,14 +403,10 @@ zx_status_t VirtioVsock::ChannelConnection::WriteCredit(
   return ZX_OK;
 }
 
-zx_status_t VirtioVsock::ChannelConnection::Shutdown(uint32_t flags) {
-  return ZX_OK;
-}
+zx_status_t VirtioVsock::ChannelConnection::Shutdown(uint32_t flags) { return ZX_OK; }
 
-zx_status_t VirtioVsock::ChannelConnection::Read(VirtioQueue* queue,
-                                                 virtio_vsock_hdr_t* header,
-                                                 VirtioDescriptor* desc,
-                                                 uint32_t* used) {
+zx_status_t VirtioVsock::ChannelConnection::Read(VirtioQueue* queue, virtio_vsock_hdr_t* header,
+                                                 VirtioDescriptor* desc, uint32_t* used) {
   zx_status_t status = setup_desc_chain(queue, header, desc);
   while (status == ZX_OK) {
     size_t len = std::min(desc->len, PeerFree());
@@ -468,8 +444,7 @@ zx_status_t VirtioVsock::ChannelConnection::Read(VirtioQueue* queue,
   return status;
 }
 
-zx_status_t VirtioVsock::ChannelConnection::Write(VirtioQueue* queue,
-                                                  virtio_vsock_hdr_t* header,
+zx_status_t VirtioVsock::ChannelConnection::Write(VirtioQueue* queue, virtio_vsock_hdr_t* header,
                                                   VirtioDescriptor* desc) {
   zx_status_t status = setup_desc_chain(queue, header, desc);
   while (status == ZX_OK) {
@@ -491,8 +466,7 @@ zx_status_t VirtioVsock::ChannelConnection::Write(VirtioQueue* queue,
   return status;
 }
 
-VirtioVsock::VirtioVsock(component::StartupContext* context,
-                         const PhysMem& phys_mem,
+VirtioVsock::VirtioVsock(component::StartupContext* context, const PhysMem& phys_mem,
                          async_dispatcher_t* dispatcher)
     : VirtioInprocessDevice(phys_mem, 0 /* device_features */),
       dispatcher_(dispatcher),
@@ -500,8 +474,7 @@ VirtioVsock::VirtioVsock(component::StartupContext* context,
       tx_stream_(dispatcher, tx_queue(), this) {
   config_.guest_cid = 0;
   if (context) {
-    context->outgoing().AddPublicService(
-        endpoint_bindings_.GetHandler(this, dispatcher));
+    context->outgoing().AddPublicService(endpoint_bindings_.GetHandler(this, dispatcher));
   }
 }
 
@@ -510,19 +483,15 @@ uint32_t VirtioVsock::guest_cid() const {
   return config_.guest_cid;
 }
 
-bool VirtioVsock::HasConnection(uint32_t src_cid, uint32_t src_port,
-                                uint32_t dst_port) const {
+bool VirtioVsock::HasConnection(uint32_t src_cid, uint32_t src_port, uint32_t dst_port) const {
   ConnectionKey key{src_cid, src_port, dst_port};
   std::lock_guard<std::mutex> lock(mutex_);
   return connections_.find(key) != connections_.end();
 }
 
 void VirtioVsock::SetContextId(
-    uint32_t cid,
-    fidl::InterfaceHandle<fuchsia::virtualization::HostVsockConnector>
-        connector,
-    fidl::InterfaceRequest<fuchsia::virtualization::GuestVsockAcceptor>
-        acceptor) {
+    uint32_t cid, fidl::InterfaceHandle<fuchsia::virtualization::HostVsockConnector> connector,
+    fidl::InterfaceRequest<fuchsia::virtualization::GuestVsockAcceptor> acceptor) {
   {
     std::lock_guard<std::mutex> lock(device_config_.mutex);
     config_.guest_cid = cid;
@@ -540,31 +509,27 @@ static std::unique_ptr<VirtioVsock::Connection> create_connection(
   switch (type) {
     case zx::socket::TYPE:
       return std::make_unique<VirtioVsock::SocketConnection>(
-          std::move(handle), dispatcher, std::move(accept_callback),
-          std::move(queue_callback));
+          std::move(handle), dispatcher, std::move(accept_callback), std::move(queue_callback));
     case zx::channel::TYPE:
       return std::make_unique<VirtioVsock::ChannelConnection>(
-          std::move(handle), dispatcher, std::move(accept_callback),
-          std::move(queue_callback));
+          std::move(handle), dispatcher, std::move(accept_callback), std::move(queue_callback));
     default:
       FXL_LOG(ERROR) << "Unexpected handle type " << type;
       return nullptr;
   }
 }
 
-void VirtioVsock::Accept(
-    uint32_t src_cid, uint32_t src_port, uint32_t port, zx::handle handle,
-    fuchsia::virtualization::GuestVsockAcceptor::AcceptCallback callback) {
+void VirtioVsock::Accept(uint32_t src_cid, uint32_t src_port, uint32_t port, zx::handle handle,
+                         fuchsia::virtualization::GuestVsockAcceptor::AcceptCallback callback) {
   if (HasConnection(src_cid, src_port, port)) {
     callback(ZX_ERR_ALREADY_BOUND);
     return;
   }
   ConnectionKey key{src_cid, src_port, port};
-  auto conn = create_connection(std::move(handle), dispatcher_,
-                                std::move(callback), [this, key] {
-                                  std::lock_guard<std::mutex> lock(mutex_);
-                                  WaitOnQueueLocked(key);
-                                });
+  auto conn = create_connection(std::move(handle), dispatcher_, std::move(callback), [this, key] {
+    std::lock_guard<std::mutex> lock(mutex_);
+    WaitOnQueueLocked(key);
+  });
   if (!conn) {
     callback(ZX_ERR_CONNECTION_REFUSED);
     return;
@@ -583,14 +548,12 @@ void VirtioVsock::Accept(
   AddConnectionLocked(key, std::move(conn));
 }
 
-void VirtioVsock::ConnectCallback(ConnectionKey key, zx_status_t status,
-                                  zx::handle handle, uint32_t buf_alloc,
-                                  uint32_t fwd_cnt) {
-  auto new_conn =
-      create_connection(std::move(handle), dispatcher_, nullptr, [this, key] {
-        std::lock_guard<std::mutex> lock(mutex_);
-        WaitOnQueueLocked(key);
-      });
+void VirtioVsock::ConnectCallback(ConnectionKey key, zx_status_t status, zx::handle handle,
+                                  uint32_t buf_alloc, uint32_t fwd_cnt) {
+  auto new_conn = create_connection(std::move(handle), dispatcher_, nullptr, [this, key] {
+    std::lock_guard<std::mutex> lock(mutex_);
+    WaitOnQueueLocked(key);
+  });
   if (!new_conn) {
     new_conn = std::make_unique<NullConnection>();
   }
@@ -617,8 +580,7 @@ void VirtioVsock::ConnectCallback(ConnectionKey key, zx_status_t status,
   conn->SetCredit(buf_alloc, fwd_cnt);
 }
 
-zx_status_t VirtioVsock::AddConnectionLocked(ConnectionKey key,
-                                             std::unique_ptr<Connection> conn) {
+zx_status_t VirtioVsock::AddConnectionLocked(ConnectionKey key, std::unique_ptr<Connection> conn) {
   bool inserted;
   std::tie(std::ignore, inserted) = connections_.emplace(key, std::move(conn));
   if (!inserted) {
@@ -637,8 +599,7 @@ VirtioVsock::Connection* VirtioVsock::GetConnectionLocked(ConnectionKey key) {
 bool VirtioVsock::EraseOnErrorLocked(ConnectionKey key, zx_status_t status) {
   if (status != ZX_OK) {
     for (auto& binding : endpoint_bindings_.bindings()) {
-      binding->events().OnShutdown(key.local_cid, key.local_port, guest_cid(),
-                                   key.remote_port);
+      binding->events().OnShutdown(key.local_cid, key.local_port, guest_cid(), key.remote_port);
     }
     connections_.erase(key);
   }
@@ -654,16 +615,15 @@ void VirtioVsock::WaitOnQueueLocked(ConnectionKey key) {
   readable_.insert(key);
 }
 
-static virtio_vsock_hdr_t* get_header(VirtioQueue* queue, uint16_t index,
-                                      VirtioDescriptor* desc, bool writable) {
+static virtio_vsock_hdr_t* get_header(VirtioQueue* queue, uint16_t index, VirtioDescriptor* desc,
+                                      bool writable) {
   zx_status_t status = queue->ReadDesc(index, desc);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to read descriptor from queue " << status;
     return nullptr;
   }
   if (desc->writable != writable) {
-    FXL_LOG(ERROR) << "Descriptor is not "
-                   << (writable ? "writable" : "readable");
+    FXL_LOG(ERROR) << "Descriptor is not " << (writable ? "writable" : "readable");
     return nullptr;
   }
   if (desc->len < sizeof(virtio_vsock_hdr_t)) {
@@ -674,8 +634,7 @@ static virtio_vsock_hdr_t* get_header(VirtioQueue* queue, uint16_t index,
 }
 
 static zx_status_t transmit(VirtioVsock::Connection* conn, VirtioQueue* queue,
-                            virtio_vsock_hdr_t* header, VirtioDescriptor* desc,
-                            uint32_t* used) {
+                            virtio_vsock_hdr_t* header, VirtioDescriptor* desc, uint32_t* used) {
   switch (conn->op()) {
     case VIRTIO_VSOCK_OP_REQUEST:
       // We are sending a connection request, therefore we move to waiting
@@ -719,8 +678,7 @@ void VirtioVsock::Mux(zx_status_t status, uint16_t index) {
   bool index_valid = true;
   VirtioDescriptor desc;
   std::lock_guard<std::mutex> lock(mutex_);
-  for (auto i = readable_.begin(), end = readable_.end(); i != end;
-       i = readable_.erase(i)) {
+  for (auto i = readable_.begin(), end = readable_.end(); i != end; i = readable_.erase(i)) {
     Connection* conn = GetConnectionLocked(*i);
     if (conn == nullptr) {
       continue;
@@ -747,8 +705,7 @@ void VirtioVsock::Mux(zx_status_t status, uint16_t index) {
 
     // If reading was shutdown, but we're still receiving a read request, send
     // a connection reset.
-    if (conn->op() == VIRTIO_VSOCK_OP_RW &&
-        conn->flags() & VIRTIO_VSOCK_FLAG_SHUTDOWN_RECV) {
+    if (conn->op() == VIRTIO_VSOCK_OP_RW && conn->flags() & VIRTIO_VSOCK_FLAG_SHUTDOWN_RECV) {
       conn->UpdateOp(VIRTIO_VSOCK_OP_RST);
       FXL_LOG(ERROR) << "Receive was shutdown";
     }
@@ -835,8 +792,7 @@ void VirtioVsock::Demux(zx_status_t status, uint16_t index) {
   VirtioDescriptor desc;
   std::lock_guard<std::mutex> lock(mutex_);
   do {
-    auto free_desc =
-        fit::defer([this, index]() { tx_queue()->Return(index, 0); });
+    auto free_desc = fit::defer([this, index]() { tx_queue()->Return(index, 0); });
     auto header = get_header(tx_queue(), index, &desc, false);
     if (header == nullptr) {
       FXL_LOG(ERROR) << "Failed to get header from write queue";
@@ -869,14 +825,11 @@ void VirtioVsock::Demux(zx_status_t status, uint16_t index) {
         // If we don't have a connector then implicitly just refuse any outbound
         // connections. Otherwise send out a request for a connection to the
         // remote CID.
-        connector_->Connect(
-            header->src_cid, header->src_port, header->dst_cid,
-            header->dst_port,
-            [this, key, buf_alloc = header->buf_alloc,
-             fwd_cnt = header->fwd_cnt](zx_status_t status, zx::handle handle) {
-              ConnectCallback(key, status, std::move(handle), buf_alloc,
-                              fwd_cnt);
-            });
+        connector_->Connect(header->src_cid, header->src_port, header->dst_cid, header->dst_port,
+                            [this, key, buf_alloc = header->buf_alloc, fwd_cnt = header->fwd_cnt](
+                                zx_status_t status, zx::handle handle) {
+                              ConnectCallback(key, status, std::move(handle), buf_alloc, fwd_cnt);
+                            });
         continue;
       }
     }

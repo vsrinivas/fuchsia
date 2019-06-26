@@ -17,13 +17,11 @@ void GpuScanout::SetUpdateSourceHandler(
   update_source_handler_ = std::move(update_source_handler);
 }
 
-void GpuScanout::SetFlushHandler(
-    fit::function<void(virtio_gpu_rect_t)> flush_handler) {
+void GpuScanout::SetFlushHandler(fit::function<void(virtio_gpu_rect_t)> flush_handler) {
   flush_handler_ = std::move(flush_handler);
 }
 
-zx_status_t GpuScanout::SetFlushTarget(zx::vmo vmo, uint64_t size,
-                                       uint32_t width, uint32_t height,
+zx_status_t GpuScanout::SetFlushTarget(zx::vmo vmo, uint64_t size, uint32_t width, uint32_t height,
                                        uint32_t stride) {
   // Bind the target and map its memory into our process.
   target_vmo_ = std::move(vmo);
@@ -32,8 +30,7 @@ zx_status_t GpuScanout::SetFlushTarget(zx::vmo vmo, uint64_t size,
   target_height_ = height;
   target_stride_ = stride;
   zx_status_t status = zx::vmar::root_self()->map(
-      0, target_vmo_, 0, target_size_, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
-      &target_vmo_addr_);
+      0, target_vmo_, 0, target_size_, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &target_vmo_addr_);
   if (status != ZX_OK) {
     return status;
   }
@@ -93,8 +90,7 @@ static virtio_gpu_rect_t clip(virtio_gpu_rect_t rect, virtio_gpu_rect_t clip) {
   return rect;
 }
 
-void GpuScanout::OnResourceFlush(const GpuResource* resource,
-                                 const virtio_gpu_rect_t& rect) {
+void GpuScanout::OnResourceFlush(const GpuResource* resource, const virtio_gpu_rect_t& rect) {
   if (resource != source_resource_ || !overlaps(rect, source_rect_)) {
     return;
   }
@@ -102,17 +98,13 @@ void GpuScanout::OnResourceFlush(const GpuResource* resource,
   if (target_vmo_) {
     // Copy the flushed region to the target.
     uint32_t row_begin = flush_rect.y;
-    uint32_t row_end =
-        std::min(flush_rect.y + flush_rect.height, target_height_);
+    uint32_t row_end = std::min(flush_rect.y + flush_rect.height, target_height_);
     uint32_t row_bytes =
-        std::min(flush_rect.width, target_width_ - flush_rect.x) *
-        resource->pixel_size();
+        std::min(flush_rect.width, target_width_ - flush_rect.x) * resource->pixel_size();
     for (uint32_t row = row_begin; row < row_end; ++row) {
-      uint8_t* dest = reinterpret_cast<uint8_t*>(target_vmo_addr_) +
-                      target_stride_ * row +
+      uint8_t* dest = reinterpret_cast<uint8_t*>(target_vmo_addr_) + target_stride_ * row +
                       flush_rect.x * resource->pixel_size();
-      const uint8_t* src = source_resource_->data() +
-                           source_resource_->stride() * row +
+      const uint8_t* src = source_resource_->data() + source_resource_->stride() * row +
                            flush_rect.x * resource->pixel_size();
       memcpy(dest, src, row_bytes);
     }
@@ -122,8 +114,8 @@ void GpuScanout::OnResourceFlush(const GpuResource* resource,
   }
 }
 
-void GpuScanout::OnUpdateCursor(const GpuResource* cursor_resource,
-                                uint32_t hot_x, uint32_t hot_y) {
+void GpuScanout::OnUpdateCursor(const GpuResource* cursor_resource, uint32_t hot_x,
+                                uint32_t hot_y) {
   cursor_resource_ = cursor_resource;
   cursor_hot_x_ = hot_x;
   cursor_hot_y_ = hot_y;

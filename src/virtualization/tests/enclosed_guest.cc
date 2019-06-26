@@ -47,8 +47,7 @@ class PeriodicLogger {
     // Only print a final message if we already printed a progress message.
     if (message_printed_) {
       FXL_LOG(INFO) << operation_ << ": Finished after "
-                    << (zx::clock::get_monotonic() - start_time_).to_secs()
-                    << "s.";
+                    << (zx::clock::get_monotonic() - start_time_).to_secs() << "s.";
     }
   }
 
@@ -57,8 +56,8 @@ class PeriodicLogger {
   void LogIfRequired() {
     const zx::time now = zx::clock::get_monotonic();
     if (now - last_log_time_ >= logging_interval_) {
-      FXL_LOG(INFO) << operation_ << ": Still waiting... ("
-                    << (now - start_time_).to_secs() << "s passed)";
+      FXL_LOG(INFO) << operation_ << ": Still waiting... (" << (now - start_time_).to_secs()
+                    << "s passed)";
       last_log_time_ = now;
       message_printed_ = true;
     }
@@ -105,8 +104,7 @@ static std::string JoinArgVector(const std::vector<std::string>& argv) {
 }
 
 // Execute |command| on the guest serial and wait for the |result|.
-zx_status_t EnclosedGuest::Execute(const std::vector<std::string>& argv,
-                                   std::string* result) {
+zx_status_t EnclosedGuest::Execute(const std::vector<std::string>& argv, std::string* result) {
   auto command = JoinArgVector(argv);
   return console_->ExecuteBlocking(command, ShellPrompt(), result);
 }
@@ -115,51 +113,43 @@ zx_status_t EnclosedGuest::Start() {
   Logger::Get().Reset();
 
   real_services_->Connect(real_env_.NewRequest());
-  auto services =
-      sys::testing::EnvironmentServices::Create(real_env_, loop_.dispatcher());
+  auto services = sys::testing::EnvironmentServices::Create(real_env_, loop_.dispatcher());
 
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = kGuestManagerUrl;
-  zx_status_t status = services->AddServiceWithLaunchInfo(
-      std::move(launch_info), fuchsia::virtualization::Manager::Name_);
+  zx_status_t status = services->AddServiceWithLaunchInfo(std::move(launch_info),
+                                                          fuchsia::virtualization::Manager::Name_);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failure launching virtualization manager: "
-                   << zx_status_get_string(status);
+    FXL_LOG(ERROR) << "Failure launching virtualization manager: " << zx_status_get_string(status);
     return status;
   }
 
-  status = services->AddService(mock_netstack_.GetHandler(),
-                                fuchsia::netstack::Netstack::Name_);
+  status = services->AddService(mock_netstack_.GetHandler(), fuchsia::netstack::Netstack::Name_);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failure launching mock netstack: "
-                   << zx_status_get_string(status);
+    FXL_LOG(ERROR) << "Failure launching mock netstack: " << zx_status_get_string(status);
     return status;
   }
 
-  status = services->AddService(fake_scenic_.GetHandler(),
-                                fuchsia::ui::scenic::Scenic::Name_);
+  status = services->AddService(fake_scenic_.GetHandler(), fuchsia::ui::scenic::Scenic::Name_);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failure launching fake scenic service: "
-                   << zx_status_get_string(status);
+    FXL_LOG(ERROR) << "Failure launching fake scenic service: " << zx_status_get_string(status);
     return status;
   }
 
-  enclosing_environment_ = sys::testing::EnclosingEnvironment::Create(
-      kRealm, real_env_, std::move(services));
+  enclosing_environment_ =
+      sys::testing::EnclosingEnvironment::Create(kRealm, real_env_, std::move(services));
   bool environment_running = RunLoopUntil(
       &loop_, [this] { return enclosing_environment_->is_running(); },
       PeriodicLogger("Creating guest sandbox", zx::sec(10)));
   if (!environment_running) {
-    FXL_LOG(ERROR)
-        << "Timed out waiting for guest sandbox environment to become ready.";
+    FXL_LOG(ERROR) << "Timed out waiting for guest sandbox environment to become ready.";
     return ZX_ERR_TIMED_OUT;
   }
 
   fuchsia::virtualization::LaunchInfo guest_launch_info;
   status = LaunchInfo(&guest_launch_info);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failure launching guest image: "
-                   << zx_status_get_string(status);
+    FXL_LOG(ERROR) << "Failure launching guest image: " << zx_status_get_string(status);
     return status;
   }
 
@@ -183,8 +173,7 @@ zx_status_t EnclosedGuest::Start() {
       PeriodicLogger("Launching guest", zx::sec(10)));
 
   zx::socket serial_socket;
-  guest_->GetSerial(
-      [&serial_socket](zx::socket s) { serial_socket = std::move(s); });
+  guest_->GetSerial([&serial_socket](zx::socket s) { serial_socket = std::move(s); });
   bool socket_valid = RunLoopUntil(
       &loop_, [&serial_socket] { return serial_socket.is_valid(); },
       PeriodicLogger("Connecting to guest serial", zx::sec(10)));
@@ -192,12 +181,10 @@ zx_status_t EnclosedGuest::Start() {
     FXL_LOG(ERROR) << "Timed out waiting to connect to guest's serial.";
     return ZX_ERR_TIMED_OUT;
   }
-  console_ = std::make_unique<GuestConsole>(
-      std::make_unique<ZxSocket>(std::move(serial_socket)));
+  console_ = std::make_unique<GuestConsole>(std::make_unique<ZxSocket>(std::move(serial_socket)));
   status = console_->Start();
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Error connecting to guest's console: "
-                   << zx_status_get_string(status);
+    FXL_LOG(ERROR) << "Error connecting to guest's console: " << zx_status_get_string(status);
     return status;
   }
 
@@ -212,14 +199,12 @@ zx_status_t EnclosedGuest::Start() {
   return ZX_OK;
 }
 
-zx_status_t EnclosedGuest::RunUtil(const std::string& util,
-                                   const std::vector<std::string>& argv,
+zx_status_t EnclosedGuest::RunUtil(const std::string& util, const std::vector<std::string>& argv,
                                    std::string* result) {
   return Execute(GetTestUtilCommand(util, argv), result);
 }
 
-zx_status_t ZirconEnclosedGuest::LaunchInfo(
-    fuchsia::virtualization::LaunchInfo* launch_info) {
+zx_status_t ZirconEnclosedGuest::LaunchInfo(fuchsia::virtualization::LaunchInfo* launch_info) {
   launch_info->url = kZirconGuestUrl;
   launch_info->args.push_back("--cmdline-add=kernel.serial=none");
   return ZX_OK;
@@ -247,15 +232,13 @@ zx_status_t ZirconEnclosedGuest::WaitForSystemReady() {
 
 std::vector<std::string> ZirconEnclosedGuest::GetTestUtilCommand(
     const std::string& util, const std::vector<std::string>& argv) {
-  std::string fuchsia_url =
-      fxl::StringPrintf("%s#meta/%s.cmx", kFuchsiaTestUtilsUrl, util.c_str());
+  std::string fuchsia_url = fxl::StringPrintf("%s#meta/%s.cmx", kFuchsiaTestUtilsUrl, util.c_str());
   std::vector<std::string> exec_argv = {"/bin/run", fuchsia_url};
   exec_argv.insert(exec_argv.end(), argv.begin(), argv.end());
   return exec_argv;
 }
 
-zx_status_t DebianEnclosedGuest::LaunchInfo(
-    fuchsia::virtualization::LaunchInfo* launch_info) {
+zx_status_t DebianEnclosedGuest::LaunchInfo(fuchsia::virtualization::LaunchInfo* launch_info) {
   launch_info->url = kDebianGuestUrl;
   return ZX_OK;
 }
@@ -282,8 +265,7 @@ zx_status_t DebianEnclosedGuest::WaitForSystemReady() {
 
 std::vector<std::string> DebianEnclosedGuest::GetTestUtilCommand(
     const std::string& util, const std::vector<std::string>& argv) {
-  std::string bin_path =
-      fxl::StringPrintf("%s/%s", kDebianTestUtilDir, util.c_str());
+  std::string bin_path = fxl::StringPrintf("%s/%s", kDebianTestUtilDir, util.c_str());
 
   std::vector<std::string> exec_argv = {bin_path};
   exec_argv.insert(exec_argv.end(), argv.begin(), argv.end());

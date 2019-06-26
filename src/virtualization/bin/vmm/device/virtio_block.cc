@@ -66,8 +66,8 @@ class Request : public fbl::RefCounted<Request> {
 // Stream for request queue.
 class RequestStream : public StreamBase {
  public:
-  void Init(std::unique_ptr<BlockDispatcher> disp, const std::string& id,
-            const PhysMem& phys_mem, VirtioQueue::InterruptFn interrupt) {
+  void Init(std::unique_ptr<BlockDispatcher> disp, const std::string& id, const PhysMem& phys_mem,
+            VirtioQueue::InterruptFn interrupt) {
     dispatcher_ = std::move(disp);
     id_ = id;
     StreamBase::Init(phys_mem, std::move(interrupt));
@@ -144,8 +144,7 @@ class RequestStream : public StreamBase {
         request->AddUsed(size);
         TRACE_FLOW_END("machina", "block:read-at", nonce);
       };
-      TRACE_FLOW_BEGIN("machina", "block:read-at", nonce, "size", size, "off",
-                       off);
+      TRACE_FLOW_BEGIN("machina", "block:read-at", nonce, "size", size, "off", off);
       dispatcher_->ReadAt(desc_.addr, size, off, callback);
       off += size;
     }
@@ -167,8 +166,7 @@ class RequestStream : public StreamBase {
         }
         TRACE_FLOW_END("machina", "block:write-at", nonce);
       };
-      TRACE_FLOW_BEGIN("machina", "block:write-at", nonce, "size", size, "off",
-                       off);
+      TRACE_FLOW_BEGIN("machina", "block:write-at", nonce, "size", size, "off", off);
       dispatcher_->WriteAt(desc_.addr, size, off, callback);
       off += size;
     }
@@ -233,34 +231,31 @@ class VirtioBlockImpl : public DeviceBase<VirtioBlockImpl>,
 
  private:
   // |fuchsia::virtualization::hardware::VirtioBlock|
-  void Start(fuchsia::virtualization::hardware::StartInfo start_info,
-             std::string id, fuchsia::virtualization::BlockMode mode,
-             fuchsia::virtualization::BlockFormat format,
-             fidl::InterfaceHandle<fuchsia::io::File> file,
-             StartCallback callback) override {
+  void Start(fuchsia::virtualization::hardware::StartInfo start_info, std::string id,
+             fuchsia::virtualization::BlockMode mode, fuchsia::virtualization::BlockFormat format,
+             fidl::InterfaceHandle<fuchsia::io::File> file, StartCallback callback) override {
     read_only_ = mode == fuchsia::virtualization::BlockMode::READ_ONLY;
     PrepStart(std::move(start_info));
 
-    NestedBlockDispatcherCallback nested =
-        [this, id = std::move(id), callback = std::move(callback)](
-            size_t size, std::unique_ptr<BlockDispatcher> disp) {
-          request_stream_.Init(std::move(disp), id, phys_mem_,
-                               fit::bind_member<zx_status_t, DeviceBase>(
-                                   this, &VirtioBlockImpl::Interrupt));
-          callback(size);
-        };
+    NestedBlockDispatcherCallback nested = [this, id = std::move(id),
+                                            callback = std::move(callback)](
+                                               size_t size, std::unique_ptr<BlockDispatcher> disp) {
+      request_stream_.Init(
+          std::move(disp), id, phys_mem_,
+          fit::bind_member<zx_status_t, DeviceBase>(this, &VirtioBlockImpl::Interrupt));
+      callback(size);
+    };
 
     if (mode == fuchsia::virtualization::BlockMode::VOLATILE_WRITE) {
-      nested = [nested = std::move(nested)](
-                   size_t size, std::unique_ptr<BlockDispatcher> disp) mutable {
-        CreateVolatileWriteBlockDispatcher(size, std::move(disp),
-                                           std::move(nested));
+      nested = [nested = std::move(nested)](size_t size,
+                                            std::unique_ptr<BlockDispatcher> disp) mutable {
+        CreateVolatileWriteBlockDispatcher(size, std::move(disp), std::move(nested));
       };
     }
 
     if (format == fuchsia::virtualization::BlockFormat::QCOW) {
-      nested = [nested = std::move(nested)](
-                   size_t size, std::unique_ptr<BlockDispatcher> disp) mutable {
+      nested = [nested = std::move(nested)](size_t size,
+                                            std::unique_ptr<BlockDispatcher> disp) mutable {
         CreateQcowBlockDispatcher(std::move(disp), std::move(nested));
       };
     }
@@ -273,9 +268,8 @@ class VirtioBlockImpl : public DeviceBase<VirtioBlockImpl>,
   }
 
   // |fuchsia::virtualization::hardware::VirtioDevice|
-  void ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc,
-                      zx_gpaddr_t avail, zx_gpaddr_t used,
-                      ConfigureQueueCallback callback) override {
+  void ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc, zx_gpaddr_t avail,
+                      zx_gpaddr_t used, ConfigureQueueCallback callback) override {
     auto deferred = fit::defer(std::move(callback));
     switch (static_cast<Queue>(queue)) {
       case Queue::REQUEST:
@@ -288,9 +282,7 @@ class VirtioBlockImpl : public DeviceBase<VirtioBlockImpl>,
   }
 
   // |fuchsia::virtualization::hardware::VirtioDevice|
-  void Ready(uint32_t negotiated_features, ReadyCallback callback) override {
-    callback();
-  }
+  void Ready(uint32_t negotiated_features, ReadyCallback callback) override { callback(); }
 
   bool read_only_;
   RequestStream request_stream_;

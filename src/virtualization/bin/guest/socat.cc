@@ -16,8 +16,7 @@
 
 class HostVsockAcceptor : public fuchsia::virtualization::HostVsockAcceptor {
  public:
-  HostVsockAcceptor(uint32_t port, async::Loop* loop)
-      : port_(port), console_(loop) {}
+  HostVsockAcceptor(uint32_t port, async::Loop* loop) : port_(port), console_(loop) {}
 
   // |fuchsia::virtualization::HostVsockAcceptor|
   void Accept(uint32_t src_cid, uint32_t src_port, uint32_t port,
@@ -28,8 +27,7 @@ class HostVsockAcceptor : public fuchsia::virtualization::HostVsockAcceptor {
       return;
     }
     zx::socket socket, remote_socket;
-    zx_status_t status =
-        zx::socket::create(ZX_SOCKET_STREAM, &socket, &remote_socket);
+    zx_status_t status = zx::socket::create(ZX_SOCKET_STREAM, &socket, &remote_socket);
     if (status != ZX_OK) {
       std::cerr << "Failed to create socket " << status << "\n";
       callback(ZX_ERR_CONNECTION_REFUSED, zx::handle());
@@ -65,8 +63,8 @@ void handle_socat_listen(uint32_t env_id, uint32_t port, async::Loop* loop,
   loop->Run();
 }
 
-void handle_socat_connect(uint32_t env_id, uint32_t cid, uint32_t port,
-                          async::Loop* loop, sys::ComponentContext* context) {
+void handle_socat_connect(uint32_t env_id, uint32_t cid, uint32_t port, async::Loop* loop,
+                          sys::ComponentContext* context) {
   fuchsia::virtualization::ManagerSyncPtr manager;
   context->svc()->Connect(manager.NewRequest());
   fuchsia::virtualization::RealmSyncPtr realm;
@@ -75,8 +73,7 @@ void handle_socat_connect(uint32_t env_id, uint32_t cid, uint32_t port,
   realm->GetHostVsockEndpoint(vsock_endpoint.NewRequest());
 
   zx::socket socket, remote_socket;
-  zx_status_t status =
-      zx::socket::create(ZX_SOCKET_STREAM, &socket, &remote_socket);
+  zx_status_t status = zx::socket::create(ZX_SOCKET_STREAM, &socket, &remote_socket);
   if (status != ZX_OK) {
     std::cerr << "Failed to create socket " << status << "\n";
     return;

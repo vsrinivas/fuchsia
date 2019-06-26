@@ -16,10 +16,8 @@
 
 struct BlockSpec {
   std::string path;
-  fuchsia::virtualization::BlockFormat format =
-      fuchsia::virtualization::BlockFormat::RAW;
-  fuchsia::virtualization::BlockMode mode =
-      fuchsia::virtualization::BlockMode::READ_WRITE;
+  fuchsia::virtualization::BlockFormat format = fuchsia::virtualization::BlockFormat::RAW;
+  fuchsia::virtualization::BlockMode mode = fuchsia::virtualization::BlockMode::READ_WRITE;
 };
 
 enum class MemoryPolicy {
@@ -88,8 +86,8 @@ class GuestConfig {
 
 class GuestConfigParser {
  public:
-  using OptionHandler = std::function<zx_status_t(const std::string& name,
-                                                  const std::string& value)>;
+  using OptionHandler =
+      std::function<zx_status_t(const std::string& name, const std::string& value)>;
   GuestConfigParser(GuestConfig* config);
 
   zx_status_t ParseArgcArgv(int argc, char** argv);

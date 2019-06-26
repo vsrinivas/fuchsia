@@ -28,23 +28,21 @@ class TestVsockAcceptorBase : public T {
 
   fidl::InterfaceHandle<T> NewBinding() { return binding_.NewBinding(); }
 
-  std::vector<ConnectionRequest> TakeRequests() {
-    return std::move(connection_requests_);
-  }
+  std::vector<ConnectionRequest> TakeRequests() { return std::move(connection_requests_); }
 
  protected:
   fidl::Binding<T> binding_{this};
   std::vector<ConnectionRequest> connection_requests_;
 };
 
-class TestVsockAcceptor : public TestVsockAcceptorBase<
-                              fuchsia::virtualization::GuestVsockAcceptor> {
+class TestVsockAcceptor
+    : public TestVsockAcceptorBase<fuchsia::virtualization::GuestVsockAcceptor> {
  private:
   // |fuchsia::virtualization::GuestVsockAcceptor|
-  void Accept(uint32_t src_cid, uint32_t src_port, uint32_t port,
-              zx::handle handle, AcceptCallback callback) override {
-    connection_requests_.emplace_back(ConnectionRequest{
-        src_cid, src_port, port, std::move(handle), std::move(callback)});
+  void Accept(uint32_t src_cid, uint32_t src_port, uint32_t port, zx::handle handle,
+              AcceptCallback callback) override {
+    connection_requests_.emplace_back(
+        ConnectionRequest{src_cid, src_port, port, std::move(handle), std::move(callback)});
   }
 };
 
@@ -54,8 +52,8 @@ class TestHostVsockAcceptor
   // |fuchsia::virtualization::HostVsockAcceptor|
   void Accept(uint32_t src_cid, uint32_t src_port, uint32_t port,
               AcceptCallback callback) override {
-    connection_requests_.emplace_back(ConnectionRequest{
-        src_cid, src_port, port, zx::handle(), std::move(callback)});
+    connection_requests_.emplace_back(
+        ConnectionRequest{src_cid, src_port, port, zx::handle(), std::move(callback)});
   }
 };
 
@@ -83,8 +81,7 @@ static void NoOpCallback(zx_status_t status) {}
 
 class HostVsockEndpointTest : public ::gtest::TestLoopFixture {
  protected:
-  HostVsockEndpoint host_endpoint_{
-      fit::bind_member(this, &HostVsockEndpointTest::GetAcceptor)};
+  HostVsockEndpoint host_endpoint_{fit::bind_member(this, &HostVsockEndpointTest::GetAcceptor)};
   TestVsockAcceptor guest_acceptor_;
 
  private:
@@ -95,8 +92,7 @@ class HostVsockEndpointTest : public ::gtest::TestLoopFixture {
 
 TEST_F(HostVsockEndpointTest, ConnectGuestToGuest) {
   TestConnectorConnection connection;
-  host_endpoint_.Connect(kOtherGuestCid, 1022, kGuestCid, 22,
-                         connection.callback());
+  host_endpoint_.Connect(kOtherGuestCid, 1022, kGuestCid, 22, connection.callback());
 
   auto requests = guest_acceptor_.TakeRequests();
   ASSERT_EQ(1u, requests.size());
@@ -170,8 +166,7 @@ TEST_F(HostVsockEndpointTest, ConnectHostToHost) {
 
 TEST_F(HostVsockEndpointTest, ConnectGuestToGuestNoAcceptor) {
   TestConnectorConnection connection;
-  host_endpoint_.Connect(kOtherGuestCid, 1022, kGuestCid + 1000, 22,
-                         connection.callback());
+  host_endpoint_.Connect(kOtherGuestCid, 1022, kGuestCid + 1000, 22, connection.callback());
 
   auto requests = guest_acceptor_.TakeRequests();
   ASSERT_EQ(0u, requests.size());
@@ -194,8 +189,7 @@ TEST_F(HostVsockEndpointTest, ConnectHostToGuestNoAcceptor) {
   ASSERT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_STREAM, &h1, &h2));
 
   TestEndpointConnection connection;
-  host_endpoint_.Connect(kGuestCid + 1000, 22, std::move(h1),
-                         connection.callback());
+  host_endpoint_.Connect(kGuestCid + 1000, 22, std::move(h1), connection.callback());
 
   EXPECT_EQ(ZX_ERR_CONNECTION_REFUSED, connection.status);
 }
@@ -268,8 +262,7 @@ TEST_F(HostVsockEndpointTest, ConnectHostToGuestFreeEphemeralPort) {
   RunLoopUntilIdle();
 
   // Connect again and verify that the port is reused.
-  ASSERT_EQ(ZX_OK,
-            zx::socket::create(ZX_SOCKET_STREAM, &handles[0], &handles[1]));
+  ASSERT_EQ(ZX_OK, zx::socket::create(ZX_SOCKET_STREAM, &handles[0], &handles[1]));
 
   host_endpoint_.Connect(kGuestCid, 22, std::move(handles[1]), NoOpCallback);
 

@@ -25,8 +25,7 @@ namespace vsh {
 class BlockingCommandRunner {
  public:
   BlockingCommandRunner(
-      fidl::InterfaceHandle<fuchsia::virtualization::HostVsockEndpoint>
-          socket_endpoint,
+      fidl::InterfaceHandle<fuchsia::virtualization::HostVsockEndpoint> socket_endpoint,
       uint32_t cid, uint32_t port = 9001);
 
   struct Command {

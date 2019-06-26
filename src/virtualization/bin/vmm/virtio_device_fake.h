@@ -12,8 +12,7 @@
 typedef struct test_config {
 } test_config_t;
 
-class VirtioDeviceFake
-    : public VirtioInprocessDevice<UINT8_MAX, 1, test_config_t> {
+class VirtioDeviceFake : public VirtioInprocessDevice<UINT8_MAX, 1, test_config_t> {
  public:
   VirtioDeviceFake()
       : VirtioInprocessDevice(phys_mem_, 0 /* device_features */),

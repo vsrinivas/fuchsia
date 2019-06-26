@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <array>
-#include <iomanip>
-
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fit/defer.h>
 #include <trace-provider/provider.h>
 #include <virtio/input.h>
+
+#include <array>
+#include <iomanip>
 
 #include "src/virtualization/bin/vmm/device/device_base.h"
 #include "src/virtualization/bin/vmm/device/input.h"
@@ -148,10 +148,9 @@ static constexpr std::array<uint8_t, 232> kKeyMap{
     114,  // Volume Down
 
     // Skip some more esoteric keys that have no obvious evdev counterparts.
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 
     29,   // Left Ctrl
     42,   // Left Shift
@@ -169,9 +168,8 @@ enum class Queue : uint16_t {
 };
 
 static uint16_t key_or_repeat(fuchsia::ui::input::KeyboardEventPhase phase) {
-  return phase == fuchsia::ui::input::KeyboardEventPhase::REPEAT
-             ? VIRTIO_INPUT_EV_REP
-             : VIRTIO_INPUT_EV_KEY;
+  return phase == fuchsia::ui::input::KeyboardEventPhase::REPEAT ? VIRTIO_INPUT_EV_REP
+                                                                 : VIRTIO_INPUT_EV_KEY;
 }
 
 static uint32_t press_or_release(fuchsia::ui::input::KeyboardEventPhase phase) {
@@ -182,9 +180,8 @@ static uint32_t press_or_release(fuchsia::ui::input::KeyboardEventPhase phase) {
 }
 
 static uint32_t press_or_release(fuchsia::ui::input::PointerEventPhase phase) {
-  return phase == fuchsia::ui::input::PointerEventPhase::DOWN
-             ? VIRTIO_INPUT_EV_KEY_PRESSED
-             : VIRTIO_INPUT_EV_KEY_RELEASED;
+  return phase == fuchsia::ui::input::PointerEventPhase::DOWN ? VIRTIO_INPUT_EV_KEY_PRESSED
+                                                              : VIRTIO_INPUT_EV_KEY_RELEASED;
 }
 
 // Retrieves the position of a pointer event and translates it into the
@@ -195,8 +192,8 @@ static uint32_t press_or_release(fuchsia::ui::input::PointerEventPhase phase) {
 // TODO(SCN-921): pointer event positions outside view boundaries.
 static uint32_t x_coordinate(float x, float width) {
   if (x < 0.0f || x > width) {
-    FXL_LOG(WARNING) << "PointerEvent::x out of range (" << std::fixed
-                     << std::setprecision(7) << x << ")";
+    FXL_LOG(WARNING) << "PointerEvent::x out of range (" << std::fixed << std::setprecision(7) << x
+                     << ")";
     x = std::clamp(x, 0.0f, width);
   }
   return static_cast<uint32_t>(x * kInputAbsMaxX / width + 0.5f);
@@ -204,20 +201,18 @@ static uint32_t x_coordinate(float x, float width) {
 
 static uint32_t y_coordinate(float y, float height) {
   if (y < 0.0f || y > height) {
-    FXL_LOG(WARNING) << "PointerEvent::y out of range (" << std::fixed
-                     << std::setprecision(7) << y << ")";
+    FXL_LOG(WARNING) << "PointerEvent::y out of range (" << std::fixed << std::setprecision(7) << y
+                     << ")";
     y = std::clamp(y, 0.0f, height);
   }
   return static_cast<uint32_t>(y * kInputAbsMaxY / height + 0.5f);
 }
 
 // Stream for event queue.
-class EventStream : public StreamBase,
-                    public fuchsia::virtualization::hardware::ViewListener {
+class EventStream : public StreamBase, public fuchsia::virtualization::hardware::ViewListener {
  public:
   EventStream(component::StartupContext* context) {
-    context->outgoing().AddPublicService(
-        view_listener_bindings_.GetHandler(this));
+    context->outgoing().AddPublicService(view_listener_bindings_.GetHandler(this));
   }
 
   void DoEvent() {
@@ -335,9 +330,7 @@ class EventStream : public StreamBase,
   }
 
   // |fuchsia::virtualization::hardware::ViewListener|
-  void OnSizeChanged(fuchsia::ui::gfx::vec3 size) override {
-    view_size_ = size;
-  }
+  void OnSizeChanged(fuchsia::ui::gfx::vec3 size) override { view_size_ = size; }
 
   template <size_t N>
   bool EnqueueEvents(virtio_input_event_t (&events)[N]) {
@@ -388,14 +381,13 @@ class VirtioInputImpl : public DeviceBase<VirtioInputImpl>,
              StartCallback callback) override {
     auto deferred = fit::defer(std::move(callback));
     PrepStart(std::move(start_info));
-    event_stream_.Init(phys_mem_, fit::bind_member<zx_status_t, DeviceBase>(
-                                      this, &VirtioInputImpl::Interrupt));
+    event_stream_.Init(
+        phys_mem_, fit::bind_member<zx_status_t, DeviceBase>(this, &VirtioInputImpl::Interrupt));
   }
 
   // |fuchsia::virtualization::hardware::VirtioDevice|
-  void ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc,
-                      zx_gpaddr_t avail, zx_gpaddr_t used,
-                      ConfigureQueueCallback callback) override {
+  void ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc, zx_gpaddr_t avail,
+                      zx_gpaddr_t used, ConfigureQueueCallback callback) override {
     auto deferred = fit::defer(std::move(callback));
     switch (static_cast<Queue>(queue)) {
       case Queue::EVENT:
@@ -410,9 +402,7 @@ class VirtioInputImpl : public DeviceBase<VirtioInputImpl>,
   }
 
   // |fuchsia::virtualization::hardware::VirtioDevice|
-  void Ready(uint32_t negotiated_features, ReadyCallback callback) override {
-    callback();
-  }
+  void Ready(uint32_t negotiated_features, ReadyCallback callback) override { callback(); }
 
   EventStream event_stream_;
 };

@@ -4,25 +4,22 @@
 
 #include "src/virtualization/bin/vmm/controller/virtio_balloon.h"
 
-#include <src/lib/fxl/logging.h>
 #include <lib/svc/cpp/services.h>
+#include <src/lib/fxl/logging.h>
 
 static constexpr char kVirtioBalloonUrl[] =
     "fuchsia-pkg://fuchsia.com/virtio_balloon#meta/virtio_balloon.cmx";
 
 VirtioBalloon::VirtioBalloon(const PhysMem& phys_mem)
-    : VirtioComponentDevice(
-          phys_mem, VIRTIO_BALLOON_F_STATS_VQ | VIRTIO_BALLOON_F_DEFLATE_ON_OOM,
-          fit::bind_member(this, &VirtioBalloon::ConfigureQueue),
-          fit::bind_member(this, &VirtioBalloon::Ready)) {}
+    : VirtioComponentDevice(phys_mem, VIRTIO_BALLOON_F_STATS_VQ | VIRTIO_BALLOON_F_DEFLATE_ON_OOM,
+                            fit::bind_member(this, &VirtioBalloon::ConfigureQueue),
+                            fit::bind_member(this, &VirtioBalloon::Ready)) {}
 
-zx_status_t VirtioBalloon::AddPublicService(
-    component::StartupContext* context) {
+zx_status_t VirtioBalloon::AddPublicService(component::StartupContext* context) {
   return context->outgoing().AddPublicService(bindings_.GetHandler(this));
 }
 
-zx_status_t VirtioBalloon::Start(const zx::guest& guest,
-                                 fuchsia::sys::Launcher* launcher,
+zx_status_t VirtioBalloon::Start(const zx::guest& guest, fuchsia::sys::Launcher* launcher,
                                  async_dispatcher_t* dispatcher) {
   component::Services services;
   fuchsia::sys::LaunchInfo launch_info{
@@ -41,9 +38,8 @@ zx_status_t VirtioBalloon::Start(const zx::guest& guest,
   return balloon_->Start(std::move(start_info));
 }
 
-zx_status_t VirtioBalloon::ConfigureQueue(uint16_t queue, uint16_t size,
-                                          zx_gpaddr_t desc, zx_gpaddr_t avail,
-                                          zx_gpaddr_t used) {
+zx_status_t VirtioBalloon::ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc,
+                                          zx_gpaddr_t avail, zx_gpaddr_t used) {
   return balloon_->ConfigureQueue(queue, size, desc, avail, used);
 }
 
@@ -66,8 +62,7 @@ void VirtioBalloon::RequestNumPages(uint32_t num_pages) {
     config_.num_pages = num_pages;
   }
   // Send a config change interrupt to the guest.
-  zx_status_t status =
-      Interrupt(VirtioQueue::SET_CONFIG | VirtioQueue::TRY_INTERRUPT);
+  zx_status_t status = Interrupt(VirtioQueue::SET_CONFIG | VirtioQueue::TRY_INTERRUPT);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to generate configuration interrupt " << status;
   }

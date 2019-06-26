@@ -17,8 +17,7 @@ static constexpr uint32_t kQcowMagic = 0x514649fb;
 // table. For L2 table entries, this is the physical offset of the cluster.
 static constexpr uint64_t kTableEntryCopiedBit = 1ul << 63;
 static constexpr uint64_t kTableEntryCompressedBit = 1ul << 62;
-static constexpr uint64_t kTableOffsetMask =
-    ~(kTableEntryCopiedBit | kTableEntryCompressedBit);
+static constexpr uint64_t kTableOffsetMask = ~(kTableEntryCopiedBit | kTableEntryCompressedBit);
 
 struct BigToHostEndianTraits {
   static uint16_t Convert(uint16_t val) { return be16toh(val); }
@@ -57,14 +56,10 @@ struct QcowHeader {
   uint32_t cluster_size() const { return 1u << cluster_bits; }
 
   // Return a new header that has been converted from host-endian to big-endian.
-  QcowHeader HostToBigEndian() const {
-    return ByteSwap<HostToBigEndianTraits>();
-  }
+  QcowHeader HostToBigEndian() const { return ByteSwap<HostToBigEndianTraits>(); }
 
   // Return a new header that has been converted from big-endian to host-endian.
-  QcowHeader BigToHostEndian() const {
-    return ByteSwap<BigToHostEndianTraits>();
-  }
+  QcowHeader BigToHostEndian() const { return ByteSwap<BigToHostEndianTraits>(); }
 
  private:
   // Byte-swaps the members of the header using the desired scheme.
@@ -80,14 +75,11 @@ struct QcowHeader {
         .crypt_method = ByteOrderTraits::Convert(crypt_method),
         .l1_size = ByteOrderTraits::Convert(l1_size),
         .l1_table_offset = ByteOrderTraits::Convert(l1_table_offset),
-        .refcount_table_offset =
-            ByteOrderTraits::Convert(refcount_table_offset),
-        .refcount_table_clusters =
-            ByteOrderTraits::Convert(refcount_table_clusters),
+        .refcount_table_offset = ByteOrderTraits::Convert(refcount_table_offset),
+        .refcount_table_clusters = ByteOrderTraits::Convert(refcount_table_clusters),
         .nb_snapshots = ByteOrderTraits::Convert(nb_snapshots),
         .snapshots_offset = ByteOrderTraits::Convert(snapshots_offset),
-        .incompatible_features =
-            ByteOrderTraits::Convert(incompatible_features),
+        .incompatible_features = ByteOrderTraits::Convert(incompatible_features),
         .compatible_features = ByteOrderTraits::Convert(compatible_features),
         .autoclear_features = ByteOrderTraits::Convert(autoclear_features),
         .refcount_order = ByteOrderTraits::Convert(refcount_order),
@@ -133,8 +125,7 @@ class QcowFile {
   class LookupTable;
   std::unique_ptr<LookupTable> lookup_table_;
 
-  void LoadLookupTable(BlockDispatcher* disp,
-                       BlockDispatcher::Callback callback);
+  void LoadLookupTable(BlockDispatcher* disp, BlockDispatcher::Callback callback);
 };
 
 #endif  // SRC_VIRTUALIZATION_BIN_VMM_DEVICE_QCOW_H_

@@ -26,12 +26,10 @@ constexpr size_t kMaxMessageSize = 4096;
 constexpr char kVmShell[] = "/vm_shell";
 
 // Sends a protobuf MessageLite to the given socket.
-bool SendMessage(const zx::socket& socket,
-                 const google::protobuf::MessageLite& message);
+bool SendMessage(const zx::socket& socket, const google::protobuf::MessageLite& message);
 
 // Receives a protobuf MessageLite from the given socket.
-bool RecvMessage(const zx::socket& socket,
-                 google::protobuf::MessageLite* message);
+bool RecvMessage(const zx::socket& socket, google::protobuf::MessageLite* message);
 
 }  // namespace vsh
 

@@ -29,8 +29,7 @@ static constexpr size_t kHeadersSize = 42;
 
 class VirtioNetZirconGuest : public ZirconEnclosedGuest {
  public:
-  zx_status_t LaunchInfo(
-      fuchsia::virtualization::LaunchInfo* launch_info) override {
+  zx_status_t LaunchInfo(fuchsia::virtualization::LaunchInfo* launch_info) override {
     launch_info->url = kZirconGuestUrl;
     launch_info->args.push_back("--virtio-gpu=false");
     launch_info->args.push_back("--virtio-net=true");
@@ -43,8 +42,7 @@ class VirtioNetZirconGuest : public ZirconEnclosedGuest {
 
 class VirtioNetDebianGuest : public DebianEnclosedGuest {
  public:
-  zx_status_t LaunchInfo(
-      fuchsia::virtualization::LaunchInfo* launch_info) override {
+  zx_status_t LaunchInfo(fuchsia::virtualization::LaunchInfo* launch_info) override {
     launch_info->url = kDebianGuestUrl;
     launch_info->args.push_back("--virtio-gpu=false");
     launch_info->args.push_back("--virtio-net=true");
@@ -52,8 +50,8 @@ class VirtioNetDebianGuest : public DebianEnclosedGuest {
   }
 };
 
-static void TestThread(const MockNetstack& netstack, uint8_t receive_byte,
-                       uint8_t send_byte, bool use_raw_packets) {
+static void TestThread(const MockNetstack& netstack, uint8_t receive_byte, uint8_t send_byte,
+                       bool use_raw_packets) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
   // This thread will loop indefinitely until it receives the correct packet.
@@ -125,8 +123,7 @@ TEST_F(VirtioNetDebianGuestTest, ReceiveAndSend) {
   EXPECT_EQ(this->Execute({"ifconfig", "enp0s5", "192.168.0.10"}), ZX_OK);
 
   // Manually add a route to the host.
-  EXPECT_EQ(this->Execute({"arp", "-s", "192.168.0.1", "02:1a:11:00:00:00"}),
-            ZX_OK);
+  EXPECT_EQ(this->Execute({"arp", "-s", "192.168.0.1", "02:1a:11:00:00:00"}), ZX_OK);
 
   std::string result;
   EXPECT_EQ(this->RunUtil(kVirtioNetUtil,

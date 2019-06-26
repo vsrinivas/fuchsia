@@ -18,8 +18,7 @@ static constexpr uint32_t kPageSize = 4096;
 // of memory by requests for memory statistics.
 static constexpr size_t kCallbackLimit = 8;
 
-using GetMemStatsCallback =
-    fuchsia::virtualization::hardware::VirtioBalloon::GetMemStatsCallback;
+using GetMemStatsCallback = fuchsia::virtualization::hardware::VirtioBalloon::GetMemStatsCallback;
 
 enum class Queue : uint16_t {
   INFLATE = 0,
@@ -70,8 +69,7 @@ class BalloonStream : public StreamBase {
           continue;
         }
         // We have completed a run, so process it before starting a new run.
-        zx_status_t status =
-            vmo.op_range(op, base * kPageSize, run * kPageSize, nullptr, 0);
+        zx_status_t status = vmo.op_range(op, base * kPageSize, run * kPageSize, nullptr, 0);
         if (status != ZX_OK) {
           return status;
         }
@@ -141,9 +139,8 @@ class StatsStream : public StreamBase {
 };
 
 // Implementation of a virtio-balloon device.
-class VirtioBalloonImpl
-    : public DeviceBase<VirtioBalloonImpl>,
-      public fuchsia::virtualization::hardware::VirtioBalloon {
+class VirtioBalloonImpl : public DeviceBase<VirtioBalloonImpl>,
+                          public fuchsia::virtualization::hardware::VirtioBalloon {
  public:
   VirtioBalloonImpl(component::StartupContext* context) : DeviceBase(context) {}
 
@@ -171,12 +168,12 @@ class VirtioBalloonImpl
              StartCallback callback) override {
     auto deferred = fit::defer(std::move(callback));
     PrepStart(std::move(start_info));
-    inflate_stream_.Init(phys_mem_, fit::bind_member<zx_status_t, DeviceBase>(
-                                        this, &VirtioBalloonImpl::Interrupt));
-    deflate_stream_.Init(phys_mem_, fit::bind_member<zx_status_t, DeviceBase>(
-                                        this, &VirtioBalloonImpl::Interrupt));
-    stats_stream_.Init(phys_mem_, fit::bind_member<zx_status_t, DeviceBase>(
-                                      this, &VirtioBalloonImpl::Interrupt));
+    inflate_stream_.Init(
+        phys_mem_, fit::bind_member<zx_status_t, DeviceBase>(this, &VirtioBalloonImpl::Interrupt));
+    deflate_stream_.Init(
+        phys_mem_, fit::bind_member<zx_status_t, DeviceBase>(this, &VirtioBalloonImpl::Interrupt));
+    stats_stream_.Init(
+        phys_mem_, fit::bind_member<zx_status_t, DeviceBase>(this, &VirtioBalloonImpl::Interrupt));
   }
 
   // |fuchsia::virtualization::hardware::VirtioBalloon|
@@ -190,9 +187,8 @@ class VirtioBalloonImpl
   }
 
   // |fuchsia::virtualization::hardware::VirtioDevice|
-  void ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc,
-                      zx_gpaddr_t avail, zx_gpaddr_t used,
-                      ConfigureQueueCallback callback) override {
+  void ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc, zx_gpaddr_t avail,
+                      zx_gpaddr_t used, ConfigureQueueCallback callback) override {
     auto deferred = fit::defer(std::move(callback));
     switch (static_cast<Queue>(queue)) {
       case Queue::INFLATE:

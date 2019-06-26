@@ -4,9 +4,8 @@
 
 #include "src/virtualization/bin/vmm/arch/x64/io_apic.h"
 
-#include <string.h>
-
 #include <src/lib/fxl/logging.h>
+#include <string.h>
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/hypervisor.h>
@@ -44,8 +43,7 @@ static constexpr uint64_t kMemSize = 0x1000;
 IoApic::IoApic(Guest* guest) : guest_(guest) {}
 
 zx_status_t IoApic::Init() {
-  return guest_->CreateMapping(TrapType::MMIO_SYNC, kPhysBase, kMemSize, 0,
-                               this);
+  return guest_->CreateMapping(TrapType::MMIO_SYNC, kPhysBase, kMemSize, 0, this);
 }
 
 zx_status_t IoApic::SetRedirect(uint32_t global_irq, RedirectEntry& redirect) {
@@ -142,8 +140,7 @@ zx_status_t IoApic::Write(uint64_t addr, const IoValue& value) {
   }
 }
 
-zx_status_t IoApic::ReadRegister(uint32_t select_register,
-                                 IoValue* value) const {
+zx_status_t IoApic::ReadRegister(uint32_t select_register, IoValue* value) const {
   switch (select_register) {
     case IO_APIC_REGISTER_ID: {
       std::lock_guard<std::mutex> lock(mutex_);
@@ -166,20 +163,17 @@ zx_status_t IoApic::ReadRegister(uint32_t select_register,
       std::lock_guard<std::mutex> lock(mutex_);
       uint32_t redirect_offset = select_ - FIRST_REDIRECT_OFFSET;
       const RedirectEntry& entry = redirect_[redirect_offset / 2];
-      uint32_t redirect_register =
-          redirect_offset % 2 == 0 ? entry.lower : entry.upper;
+      uint32_t redirect_register = redirect_offset % 2 == 0 ? entry.lower : entry.upper;
       value->u32 = redirect_register;
       return ZX_OK;
     }
     default:
-      FXL_LOG(ERROR) << "Unhandled IO APIC register read 0x" << std::hex
-                     << select_register;
+      FXL_LOG(ERROR) << "Unhandled IO APIC register read 0x" << std::hex << select_register;
       return ZX_ERR_NOT_SUPPORTED;
   }
 }
 
-zx_status_t IoApic::WriteRegister(uint32_t select_register,
-                                  const IoValue& value) {
+zx_status_t IoApic::WriteRegister(uint32_t select_register, const IoValue& value) {
   switch (select_register) {
     case IO_APIC_REGISTER_ID: {
       std::lock_guard<std::mutex> lock(mutex_);
@@ -190,8 +184,7 @@ zx_status_t IoApic::WriteRegister(uint32_t select_register,
       std::lock_guard<std::mutex> lock(mutex_);
       uint32_t redirect_offset = select_ - FIRST_REDIRECT_OFFSET;
       RedirectEntry& entry = redirect_[redirect_offset / 2];
-      uint32_t* redirect_register =
-          redirect_offset % 2 == 0 ? &entry.lower : &entry.upper;
+      uint32_t* redirect_register = redirect_offset % 2 == 0 ? &entry.lower : &entry.upper;
       *redirect_register = value.u32;
       return ZX_OK;
     }
@@ -200,8 +193,7 @@ zx_status_t IoApic::WriteRegister(uint32_t select_register,
       // Read-only, ignore writes.
       return ZX_OK;
     default:
-      FXL_LOG(ERROR) << "Unhandled IO APIC register write 0x" << std::hex
-                     << select_register;
+      FXL_LOG(ERROR) << "Unhandled IO APIC register write 0x" << std::hex << select_register;
       return ZX_ERR_NOT_SUPPORTED;
   }
 }

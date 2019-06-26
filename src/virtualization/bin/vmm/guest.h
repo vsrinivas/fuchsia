@@ -36,9 +36,8 @@ class Guest {
   const zx::guest& object() { return guest_; }
 
   // Setup a trap to delegate accesses to an IO region to |handler|.
-  zx_status_t CreateMapping(TrapType type, uint64_t addr, size_t size,
-                            uint64_t offset, IoHandler* handler,
-                            async_dispatcher_t* dispatcher = nullptr);
+  zx_status_t CreateMapping(TrapType type, uint64_t addr, size_t size, uint64_t offset,
+                            IoHandler* handler, async_dispatcher_t* dispatcher = nullptr);
 
   // Creates a VMAR for a specific region of guest memory.
   zx_status_t CreateSubVmar(uint64_t addr, size_t size, zx::vmar* vmar);

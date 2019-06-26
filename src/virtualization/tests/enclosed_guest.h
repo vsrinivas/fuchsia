@@ -44,32 +44,28 @@ class EnclosedGuest {
   bool Ready() const { return ready_; }
 
   // Execute |command| on the guest serial and wait for the |result|.
-  virtual zx_status_t Execute(const std::vector<std::string>& argv,
-                              std::string* result = nullptr);
+  virtual zx_status_t Execute(const std::vector<std::string>& argv, std::string* result = nullptr);
 
   // Run a test util named |util| with |argv| in the guest and wait for the
   // |result|.
-  zx_status_t RunUtil(const std::string& util,
-                      const std::vector<std::string>& argv,
+  zx_status_t RunUtil(const std::string& util, const std::vector<std::string>& argv,
                       std::string* result = nullptr);
 
   // Return a shell command for a test utility named |util| with the given
   // |argv| in the guest. The result may be passed directly to |Execute|
   // to actually run the command.
-  virtual std::vector<std::string> GetTestUtilCommand(
-      const std::string& util, const std::vector<std::string>& argv) = 0;
+  virtual std::vector<std::string> GetTestUtilCommand(const std::string& util,
+                                                      const std::vector<std::string>& argv) = 0;
 
   virtual GuestKernel GetGuestKernel() = 0;
 
   void GetHostVsockEndpoint(
-      fidl::InterfaceRequest<fuchsia::virtualization::HostVsockEndpoint>
-          endpoint) {
+      fidl::InterfaceRequest<fuchsia::virtualization::HostVsockEndpoint> endpoint) {
     realm_->GetHostVsockEndpoint(std::move(endpoint));
   }
 
   void ConnectToBalloon(
-      fidl::InterfaceRequest<fuchsia::virtualization::BalloonController>
-          balloon_controller) {
+      fidl::InterfaceRequest<fuchsia::virtualization::BalloonController> balloon_controller) {
     realm_->ConnectToBalloon(guest_cid_, std::move(balloon_controller));
   }
 
@@ -83,8 +79,7 @@ class EnclosedGuest {
 
  protected:
   // Provides guest specific |launch_info|, called by Start.
-  virtual zx_status_t LaunchInfo(
-      fuchsia::virtualization::LaunchInfo* launch_info) = 0;
+  virtual zx_status_t LaunchInfo(fuchsia::virtualization::LaunchInfo* launch_info) = 0;
 
   // Waits until the guest is ready to run test utilities, called by Start.
   virtual zx_status_t WaitForSystemReady() = 0;
@@ -108,28 +103,26 @@ class EnclosedGuest {
 
 class ZirconEnclosedGuest : public EnclosedGuest {
  public:
-  std::vector<std::string> GetTestUtilCommand(
-      const std::string& util, const std::vector<std::string>& argv) override;
+  std::vector<std::string> GetTestUtilCommand(const std::string& util,
+                                              const std::vector<std::string>& argv) override;
 
   GuestKernel GetGuestKernel() override { return GuestKernel::ZIRCON; }
 
  protected:
-  zx_status_t LaunchInfo(
-      fuchsia::virtualization::LaunchInfo* launch_info) override;
+  zx_status_t LaunchInfo(fuchsia::virtualization::LaunchInfo* launch_info) override;
   zx_status_t WaitForSystemReady() override;
   std::string ShellPrompt() override { return "$ "; }
 };
 
 class DebianEnclosedGuest : public EnclosedGuest {
  public:
-  std::vector<std::string> GetTestUtilCommand(
-      const std::string& util, const std::vector<std::string>& argv) override;
+  std::vector<std::string> GetTestUtilCommand(const std::string& util,
+                                              const std::vector<std::string>& argv) override;
 
   GuestKernel GetGuestKernel() override { return GuestKernel::LINUX; }
 
  protected:
-  zx_status_t LaunchInfo(
-      fuchsia::virtualization::LaunchInfo* launch_info) override;
+  zx_status_t LaunchInfo(fuchsia::virtualization::LaunchInfo* launch_info) override;
   zx_status_t WaitForSystemReady() override;
   std::string ShellPrompt() override { return "$ "; }
 };

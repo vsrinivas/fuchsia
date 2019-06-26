@@ -4,20 +4,17 @@
 
 #include "src/virtualization/bin/vmm/virtio_queue_fake.h"
 
-#include <string.h>
-
 #include <src/lib/fxl/logging.h>
+#include <string.h>
 
 VirtioQueueFake::VirtioQueueFake(VirtioQueue* queue, uint16_t queue_size)
     : queue_(queue),
       ring_(&queue_->ring_),
       queue_size_(queue_size),
       desc_buf_(sizeof(*VirtioRing::desc) * queue_size),
-      avail_buf_(sizeof(*VirtioRing::avail) +
-                 (sizeof(*vring_avail::ring) * queue_size) +
+      avail_buf_(sizeof(*VirtioRing::avail) + (sizeof(*vring_avail::ring) * queue_size) +
                  sizeof(*VirtioRing::used_event)),
-      used_buf_(sizeof(*VirtioRing::used) +
-                (sizeof(*vring_used::ring) * queue_size) +
+      used_buf_(sizeof(*VirtioRing::used) + (sizeof(*vring_used::ring) * queue_size) +
                 sizeof(*VirtioRing::avail_event)) {
   std::fill(desc_buf_.begin(), desc_buf_.end(), 0);
   std::fill(avail_buf_.begin(), avail_buf_.end(), 0);
@@ -47,8 +44,7 @@ zx_status_t VirtioQueueFake::SetNext(uint16_t desc_index, uint16_t next_index) {
   return ZX_OK;
 }
 
-zx_status_t VirtioQueueFake::WriteDescriptor(void* buf, size_t len,
-                                             uint16_t flags,
+zx_status_t VirtioQueueFake::WriteDescriptor(void* buf, size_t len, uint16_t flags,
                                              uint16_t* desc_out) {
   uint16_t desc_index = next_free_desc_;
   if (desc_index >= queue_size_) {
@@ -84,8 +80,7 @@ bool VirtioQueueFake::HasUsed() const {
 struct vring_used_elem VirtioQueueFake::NextUsed() {
   FXL_DCHECK(HasUsed());
   std::lock_guard<std::mutex> lock(queue_->mutex_);
-  return const_cast<struct vring_used_elem&>(
-      ring_->used->ring[used_index_++ % queue_size_]);
+  return const_cast<struct vring_used_elem&>(ring_->used->ring[used_index_++ % queue_size_]);
 }
 
 zx_status_t DescBuilder::Build(uint16_t* desc) {

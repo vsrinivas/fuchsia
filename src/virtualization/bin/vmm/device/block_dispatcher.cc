@@ -5,8 +5,8 @@
 #include "src/virtualization/bin/vmm/device/block_dispatcher.h"
 
 #include <bitmap/rle-bitmap.h>
-#include <src/lib/fxl/logging.h>
 #include <lib/zx/vmo.h>
+#include <src/lib/fxl/logging.h>
 #include <trace/event.h>
 
 #include "src/virtualization/bin/vmm/device/block.h"
@@ -14,14 +14,12 @@
 
 static_assert(fuchsia::io::MAX_BUF % kBlockSectorSize == 0,
               "Maximum buffer size is not a multiple of sector size");
-static constexpr size_t kMaxBufSectors =
-    fuchsia::io::MAX_BUF / kBlockSectorSize;
+static constexpr size_t kMaxBufSectors = fuchsia::io::MAX_BUF / kBlockSectorSize;
 
 // Dispatcher that fulfills block requests using Fuchsia IO.
 class RawBlockDispatcher : public BlockDispatcher {
  public:
-  explicit RawBlockDispatcher(fuchsia::io::FilePtr file)
-      : file_(std::move(file)) {}
+  explicit RawBlockDispatcher(fuchsia::io::FilePtr file) : file_(std::move(file)) {}
 
  private:
   fuchsia::io::FilePtr file_;
@@ -31,16 +29,13 @@ class RawBlockDispatcher : public BlockDispatcher {
     file_->Sync(std::move(callback));
   }
 
-  void ReadAt(void* data, uint64_t size, uint64_t off,
-              Callback callback) override {
-    TRACE_DURATION("machina", "RawBlockDispatcher::ReadAt", "size", size, "off",
-                   off);
+  void ReadAt(void* data, uint64_t size, uint64_t off, Callback callback) override {
+    TRACE_DURATION("machina", "RawBlockDispatcher::ReadAt", "size", size, "off", off);
     auto io_guard = fbl::MakeRefCounted<IoGuard>(std::move(callback));
     auto addr = static_cast<uint8_t*>(data);
     for (uint64_t at = 0; at < size; at += fuchsia::io::MAX_BUF) {
       auto len = std::min<uint64_t>(size - at, fuchsia::io::MAX_BUF);
-      auto read = [io_guard, len, begin = addr + at](zx_status_t status,
-                                                     std::vector<uint8_t> buf) {
+      auto read = [io_guard, len, begin = addr + at](zx_status_t status, std::vector<uint8_t> buf) {
         if (status != ZX_OK) {
           io_guard->SetStatus(status);
         } else if (buf.size() != len) {
@@ -53,10 +48,8 @@ class RawBlockDispatcher : public BlockDispatcher {
     }
   }
 
-  void WriteAt(const void* data, uint64_t size, uint64_t off,
-               Callback callback) override {
-    TRACE_DURATION("machina", "RawBlockDispatcher::WriteAt", "size", size,
-                   "off", off);
+  void WriteAt(const void* data, uint64_t size, uint64_t off, Callback callback) override {
+    TRACE_DURATION("machina", "RawBlockDispatcher::WriteAt", "size", size, "off", off);
     auto io_guard = fbl::MakeRefCounted<IoGuard>(std::move(callback));
     auto addr = static_cast<const uint8_t*>(data);
     for (uint64_t at = 0; at < size; at += fuchsia::io::MAX_BUF) {
@@ -79,12 +72,8 @@ class RawBlockDispatcher : public BlockDispatcher {
 // Dispatcher that fulfills block requests using Fuchsia IO and a VMO.
 class VmoBlockDispatcher : public BlockDispatcher {
  public:
-  VmoBlockDispatcher(fuchsia::io::FilePtr file, zx::vmo vmo, size_t vmo_size,
-                     uintptr_t vmar_addr)
-      : file_(std::move(file)),
-        vmo_(std::move(vmo)),
-        vmo_size_(vmo_size),
-        vmar_addr_(vmar_addr) {}
+  VmoBlockDispatcher(fuchsia::io::FilePtr file, zx::vmo vmo, size_t vmo_size, uintptr_t vmar_addr)
+      : file_(std::move(file)), vmo_(std::move(vmo)), vmo_size_(vmo_size), vmar_addr_(vmar_addr) {}
 
  private:
   fuchsia::io::FilePtr file_;
@@ -97,10 +86,8 @@ class VmoBlockDispatcher : public BlockDispatcher {
     file_->Sync(std::move(callback));
   }
 
-  void ReadAt(void* data, uint64_t size, uint64_t off,
-              Callback callback) override {
-    TRACE_DURATION("machina", "VmoBlockDispatcher::ReadAt", "size", size, "off",
-                   off);
+  void ReadAt(void* data, uint64_t size, uint64_t off, Callback callback) override {
+    TRACE_DURATION("machina", "VmoBlockDispatcher::ReadAt", "size", size, "off", off);
     if (size + off < size || size + off > vmo_size_) {
       callback(ZX_ERR_OUT_OF_RANGE);
       return;
@@ -109,10 +96,8 @@ class VmoBlockDispatcher : public BlockDispatcher {
     callback(ZX_OK);
   }
 
-  void WriteAt(const void* data, uint64_t size, uint64_t off,
-               Callback callback) override {
-    TRACE_DURATION("machina", "VmoBlockDispatcher::WriteAt", "size", size,
-                   "off", off);
+  void WriteAt(const void* data, uint64_t size, uint64_t off, Callback callback) override {
+    TRACE_DURATION("machina", "VmoBlockDispatcher::WriteAt", "size", size, "off", off);
     if (size + off < size || size + off > vmo_size_) {
       callback(ZX_ERR_OUT_OF_RANGE);
       return;
@@ -124,46 +109,39 @@ class VmoBlockDispatcher : public BlockDispatcher {
 
 void CreateRawBlockDispatcher(fuchsia::io::FilePtr file, uint32_t vmo_flags,
                               NestedBlockDispatcherCallback callback) {
-  auto make_disp = [vmo_flags, callback = std::move(callback)](
-                       fuchsia::io::FilePtr file, size_t size) mutable {
-    file->GetBuffer(vmo_flags, [file = std::move(file), vmo_flags, size,
-                                callback = std::move(callback)](
-                                   zx_status_t status,
-                                   fuchsia::mem::BufferPtr buffer) mutable {
-      if (status != ZX_OK) {
-        auto disp = std::make_unique<RawBlockDispatcher>(std::move(file));
-        callback(size, std::move(disp));
-        return;
-      }
-      uintptr_t addr;
-      // TODO: Use the |buffer->size| rather than calling |GetAttr|.
-      status =
-          zx::vmar::root_self()->map(0, buffer->vmo, 0, size, vmo_flags, &addr);
-      FXL_CHECK(status == ZX_OK) << "Failed to map VMO " << status;
-      auto disp = std::make_unique<VmoBlockDispatcher>(
-          std::move(file), std::move(buffer->vmo), size, addr);
-      callback(size, std::move(disp));
-    });
+  auto make_disp = [vmo_flags, callback = std::move(callback)](fuchsia::io::FilePtr file,
+                                                               size_t size) mutable {
+    file->GetBuffer(
+        vmo_flags, [file = std::move(file), vmo_flags, size, callback = std::move(callback)](
+                       zx_status_t status, fuchsia::mem::BufferPtr buffer) mutable {
+          if (status != ZX_OK) {
+            auto disp = std::make_unique<RawBlockDispatcher>(std::move(file));
+            callback(size, std::move(disp));
+            return;
+          }
+          uintptr_t addr;
+          // TODO: Use the |buffer->size| rather than calling |GetAttr|.
+          status = zx::vmar::root_self()->map(0, buffer->vmo, 0, size, vmo_flags, &addr);
+          FXL_CHECK(status == ZX_OK) << "Failed to map VMO " << status;
+          auto disp = std::make_unique<VmoBlockDispatcher>(std::move(file), std::move(buffer->vmo),
+                                                           size, addr);
+          callback(size, std::move(disp));
+        });
   };
-  file->GetAttr(
-      [file = std::move(file), make_disp = std::move(make_disp)](
-          zx_status_t status, fuchsia::io::NodeAttributes attrs) mutable {
-        FXL_CHECK(status == ZX_OK) << "Failed to get attributes " << status;
-        make_disp(std::move(file), attrs.content_size);
-      });
+  file->GetAttr([file = std::move(file), make_disp = std::move(make_disp)](
+                    zx_status_t status, fuchsia::io::NodeAttributes attrs) mutable {
+    FXL_CHECK(status == ZX_OK) << "Failed to get attributes " << status;
+    make_disp(std::move(file), attrs.content_size);
+  });
 }
 
 // Dispatcher that retains writes in-memory and delegates reads to another
 // dispatcher.
 class VolatileWriteBlockDispatcher : public BlockDispatcher {
  public:
-  VolatileWriteBlockDispatcher(std::unique_ptr<BlockDispatcher> disp,
-                               zx::vmo vmo, size_t vmo_size,
+  VolatileWriteBlockDispatcher(std::unique_ptr<BlockDispatcher> disp, zx::vmo vmo, size_t vmo_size,
                                uintptr_t vmar_addr)
-      : disp_(std::move(disp)),
-        vmo_(std::move(vmo)),
-        vmo_size_(vmo_size),
-        vmar_addr_(vmar_addr) {}
+      : disp_(std::move(disp)), vmo_(std::move(vmo)), vmo_size_(vmo_size), vmar_addr_(vmar_addr) {}
 
   ~VolatileWriteBlockDispatcher() override {
     zx_status_t status = zx::vmar::root_self()->unmap(vmar_addr_, vmo_size_);
@@ -176,10 +154,8 @@ class VolatileWriteBlockDispatcher : public BlockDispatcher {
     callback(ZX_OK);
   }
 
-  void ReadAt(void* data, uint64_t size, uint64_t off,
-              Callback callback) override {
-    TRACE_DURATION("machina", "VolatileWriteBlockDispatcher::ReadAt", "size",
-                   size, "off", off);
+  void ReadAt(void* data, uint64_t size, uint64_t off, Callback callback) override {
+    TRACE_DURATION("machina", "VolatileWriteBlockDispatcher::ReadAt", "size", size, "off", off);
     if (!IsAccessValid(size, off)) {
       callback(ZX_ERR_INVALID_ARGS);
       return;
@@ -221,10 +197,8 @@ class VolatileWriteBlockDispatcher : public BlockDispatcher {
     }
   }
 
-  void WriteAt(const void* data, uint64_t size, uint64_t off,
-               Callback callback) override {
-    TRACE_DURATION("machina", "VolatileWriteBlockDispatcher::WriteAt", "size",
-                   size, "off", off);
+  void WriteAt(const void* data, uint64_t size, uint64_t off, Callback callback) override {
+    TRACE_DURATION("machina", "VolatileWriteBlockDispatcher::WriteAt", "size", size, "off", off);
     if (!IsAccessValid(size, off)) {
       callback(ZX_ERR_INVALID_ARGS);
       return;
@@ -251,14 +225,13 @@ class VolatileWriteBlockDispatcher : public BlockDispatcher {
   bitmap::RleBitmap bitmap_;
 
   bool IsAccessValid(uint64_t size, uint64_t off) {
-    return size % kBlockSectorSize == 0 && off % kBlockSectorSize == 0 &&
-           off < vmo_size_ && size <= vmo_size_ - off;
+    return size % kBlockSectorSize == 0 && off % kBlockSectorSize == 0 && off < vmo_size_ &&
+           size <= vmo_size_ - off;
   }
 };
 
-void CreateVolatileWriteBlockDispatcher(
-    size_t vmo_size, std::unique_ptr<BlockDispatcher> base,
-    NestedBlockDispatcherCallback callback) {
+void CreateVolatileWriteBlockDispatcher(size_t vmo_size, std::unique_ptr<BlockDispatcher> base,
+                                        NestedBlockDispatcherCallback callback) {
   zx::vmo vmo;
   zx_status_t status = zx::vmo::create(vmo_size, 0, &vmo);
   FXL_CHECK(status == ZX_OK) << "Failed to create VMO " << status;
@@ -271,20 +244,18 @@ void CreateVolatileWriteBlockDispatcher(
 
   uintptr_t addr;
   status = zx::vmar::root_self()->map(
-      0, vmo, 0, vmo_size,
-      ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_REQUIRE_NON_RESIZABLE, &addr);
+      0, vmo, 0, vmo_size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_REQUIRE_NON_RESIZABLE, &addr);
   FXL_CHECK(status == ZX_OK) << "Failed to map VMO " << status;
 
-  auto disp = std::make_unique<VolatileWriteBlockDispatcher>(
-      std::move(base), std::move(vmo), vmo_size, addr);
+  auto disp = std::make_unique<VolatileWriteBlockDispatcher>(std::move(base), std::move(vmo),
+                                                             vmo_size, addr);
   callback(vmo_size, std::move(disp));
 }
 
 // Dispatcher that reads from a QCOW image.
 class QcowBlockDispatcher : public BlockDispatcher {
  public:
-  QcowBlockDispatcher(std::unique_ptr<BlockDispatcher> disp,
-                      std::unique_ptr<QcowFile> file)
+  QcowBlockDispatcher(std::unique_ptr<BlockDispatcher> disp, std::unique_ptr<QcowFile> file)
       : disp_(std::move(disp)), file_(std::move(file)) {}
 
  private:
@@ -297,17 +268,13 @@ class QcowBlockDispatcher : public BlockDispatcher {
     callback(ZX_OK);
   }
 
-  void ReadAt(void* data, uint64_t size, uint64_t off,
-              Callback callback) override {
-    TRACE_DURATION("machina", "QcowBlockDispatcher::ReadAt", "size", size,
-                   "off", off);
+  void ReadAt(void* data, uint64_t size, uint64_t off, Callback callback) override {
+    TRACE_DURATION("machina", "QcowBlockDispatcher::ReadAt", "size", size, "off", off);
     file_->ReadAt(disp_.get(), data, size, off, std::move(callback));
   }
 
-  void WriteAt(const void* data, uint64_t size, uint64_t off,
-               Callback callback) override {
-    TRACE_DURATION("machina", "QcowBlockDispatcher::WriteAt", "size", size,
-                   "off", off);
+  void WriteAt(const void* data, uint64_t size, uint64_t off, Callback callback) override {
+    TRACE_DURATION("machina", "QcowBlockDispatcher::WriteAt", "size", size, "off", off);
     callback(ZX_ERR_NOT_SUPPORTED);
   }
 };
@@ -320,8 +287,7 @@ void CreateQcowBlockDispatcher(std::unique_ptr<BlockDispatcher> base,
   auto load = [base = std::move(base), file = std::move(file),
                callback = std::move(callback)](zx_status_t status) mutable {
     size_t size = file->size();
-    auto disp =
-        std::make_unique<QcowBlockDispatcher>(std::move(base), std::move(file));
+    auto disp = std::make_unique<QcowBlockDispatcher>(std::move(base), std::move(file));
     callback(size, std::move(disp));
   };
   file_ptr->Load(base_ptr, std::move(load));

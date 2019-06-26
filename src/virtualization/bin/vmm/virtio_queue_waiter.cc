@@ -6,8 +6,8 @@
 
 #include <src/lib/fxl/logging.h>
 
-VirtioQueueWaiter::VirtioQueueWaiter(async_dispatcher_t* dispatcher,
-                                     VirtioQueue* queue, Handler handler)
+VirtioQueueWaiter::VirtioQueueWaiter(async_dispatcher_t* dispatcher, VirtioQueue* queue,
+                                     Handler handler)
     : wait_(this, queue->event(), VirtioQueue::SIGNAL_QUEUE_AVAIL),
       dispatcher_(dispatcher),
       queue_(queue),
@@ -36,9 +36,8 @@ void VirtioQueueWaiter::Cancel() {
   }
 }
 
-void VirtioQueueWaiter::WaitHandler(async_dispatcher_t* dispatcher,
-                                    async::WaitBase* wait, zx_status_t status,
-                                    const zx_packet_signal_t* signal) {
+void VirtioQueueWaiter::WaitHandler(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                                    zx_status_t status, const zx_packet_signal_t* signal) {
   uint16_t index = 0;
   {
     std::lock_guard<std::mutex> lock(mutex_);

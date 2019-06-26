@@ -4,9 +4,8 @@
 
 #include "src/virtualization/bin/vmm/arch/x64/io_port.h"
 
-#include <time.h>
-
 #include <src/lib/fxl/logging.h>
+#include <time.h>
 
 #include "src/virtualization/bin/vmm/bits.h"
 #include "src/virtualization/bin/vmm/guest.h"
@@ -108,31 +107,23 @@ zx_status_t PicHandler::Read(uint64_t addr, IoValue* value) const {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t PicHandler::Write(uint64_t addr, const IoValue& value) {
-  return ZX_OK;
-}
+zx_status_t PicHandler::Write(uint64_t addr, const IoValue& value) { return ZX_OK; }
 
 zx_status_t PitHandler::Init(Guest* guest) {
   return guest->CreateMapping(TrapType::PIO_SYNC, kPitBase, kPitSize, 0, this);
 }
 
-zx_status_t PitHandler::Read(uint64_t addr, IoValue* value) const {
-  return ZX_ERR_NOT_SUPPORTED;
-}
+zx_status_t PitHandler::Read(uint64_t addr, IoValue* value) const { return ZX_ERR_NOT_SUPPORTED; }
 
-zx_status_t PitHandler::Write(uint64_t addr, const IoValue& value) {
-  return ZX_OK;
-}
+zx_status_t PitHandler::Write(uint64_t addr, const IoValue& value) { return ZX_OK; }
 
 zx_status_t Pm1Handler::Init(Guest* guest) {
   // Map 2 distinct register blocks for event and control registers.
-  zx_status_t status = guest->CreateMapping(TrapType::PIO_SYNC, kPm1EventPort,
-                                            kPm1Size, 0, this);
+  zx_status_t status = guest->CreateMapping(TrapType::PIO_SYNC, kPm1EventPort, kPm1Size, 0, this);
   if (status != ZX_OK) {
     return status;
   }
-  return guest->CreateMapping(TrapType::PIO_SYNC, kPm1ControlPort, kPm1Size,
-                              kPm1ControlPort, this);
+  return guest->CreateMapping(TrapType::PIO_SYNC, kPm1ControlPort, kPm1Size, kPm1ControlPort, this);
 }
 
 zx_status_t Pm1Handler::Read(uint64_t addr, IoValue* value) const {
@@ -188,8 +179,7 @@ static uint8_t to_bcd(int binary) {
 }
 
 zx_status_t CmosHandler::Init(Guest* guest) {
-  return guest->CreateMapping(TrapType::PIO_SYNC, kCmosBase, kCmosSize, 0,
-                              this);
+  return guest->CreateMapping(TrapType::PIO_SYNC, kCmosBase, kCmosSize, 0, this);
 }
 
 zx_status_t CmosHandler::Read(uint64_t addr, IoValue* value) const {
@@ -231,8 +221,7 @@ zx_status_t CmosHandler::Write(uint64_t addr, const IoValue& value) {
   }
 }
 
-zx_status_t CmosHandler::ReadCmosRegister(uint8_t cmos_index,
-                                          uint8_t* value) const {
+zx_status_t CmosHandler::ReadCmosRegister(uint8_t cmos_index, uint8_t* value) const {
   time_t now = rtc_time();
   struct tm tm;
   if (localtime_r(&now, &tm) == nullptr) {
@@ -316,14 +305,13 @@ zx_status_t CmosHandler::WriteCmosRegister(uint8_t cmos_index, uint8_t value) {
 }
 
 zx_status_t I8042Handler::Init(Guest* guest) {
-  zx_status_t status = guest->CreateMapping(
-      TrapType::PIO_SYNC, kI8042Base + kI8042DataPort, 1, kI8042DataPort, this);
+  zx_status_t status = guest->CreateMapping(TrapType::PIO_SYNC, kI8042Base + kI8042DataPort, 1,
+                                            kI8042DataPort, this);
   if (status != ZX_OK) {
     return status;
   }
 
-  return guest->CreateMapping(TrapType::PIO_SYNC,
-                              kI8042Base + kI8042CommandPort, 1,
+  return guest->CreateMapping(TrapType::PIO_SYNC, kI8042Base + kI8042CommandPort, 1,
                               kI8042CommandPort, this);
 }
 
@@ -363,8 +351,8 @@ zx_status_t I8042Handler::Write(uint64_t port, const IoValue& value) {
 }
 
 zx_status_t I8237Handler::Init(Guest* guest) {
-  return guest->CreateMapping(TrapType::PIO_SYNC, kI8237Base + kI8237DmaPage0,
-                              1, kI8237DmaPage0, this);
+  return guest->CreateMapping(TrapType::PIO_SYNC, kI8237Base + kI8237DmaPage0, 1, kI8237DmaPage0,
+                              this);
 }
 
 zx_status_t I8237Handler::Read(uint64_t port, IoValue* value) const {
@@ -388,12 +376,11 @@ constexpr uint8_t kNmiStatusControlPort = 0x61;
 constexpr uint8_t kNmiStatusControlOffset = 0;
 
 zx_status_t ProcessorInterfaceHandler::Init(Guest* guest) {
-  return guest->CreateMapping(TrapType::PIO_SYNC, kNmiStatusControlPort, 1,
-                              kNmiStatusControlOffset, this);
+  return guest->CreateMapping(TrapType::PIO_SYNC, kNmiStatusControlPort, 1, kNmiStatusControlOffset,
+                              this);
 }
 
-zx_status_t ProcessorInterfaceHandler::Read(uint64_t addr,
-                                            IoValue* value) const {
+zx_status_t ProcessorInterfaceHandler::Read(uint64_t addr, IoValue* value) const {
   switch (addr) {
     case kNmiStatusControlOffset:
       value->u8 = nmi_sc_;
@@ -403,8 +390,7 @@ zx_status_t ProcessorInterfaceHandler::Read(uint64_t addr,
   }
 }
 
-zx_status_t ProcessorInterfaceHandler::Write(uint64_t addr,
-                                             const IoValue& value) {
+zx_status_t ProcessorInterfaceHandler::Write(uint64_t addr, const IoValue& value) {
   switch (addr) {
     case kNmiStatusControlOffset:
       // The upper 4 bits are all read-only to the guest.

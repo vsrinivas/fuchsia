@@ -11,9 +11,7 @@ namespace qcow_test_data {
 
 static constexpr size_t kClusterBits = 16;
 static constexpr uint64_t kClusterSize = 1u << kClusterBits;
-static constexpr uint64_t ClusterOffset(uint64_t cluster) {
-  return cluster * kClusterSize;
-}
+static constexpr uint64_t ClusterOffset(uint64_t cluster) { return cluster * kClusterSize; }
 // Allocate L1 table on cluster 1, L2 tables immediately following, then
 // refcount tables and finally data clusters.
 //

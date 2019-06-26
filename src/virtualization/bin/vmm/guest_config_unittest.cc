@@ -48,11 +48,9 @@ TEST_F(GuestConfigParserTest, ParseConfig) {
 }
 
 TEST_F(GuestConfigParserTest, ParseArgs) {
-  const char* argv[] = {
-      "exe_name", "--linux=linux_path",           "--ramdisk=ramdisk_path",
-      "--cpus=4", "--block=/pkg/data/block_path", "--cmdline=kernel_cmdline"};
-  ASSERT_EQ(ZX_OK,
-            parser_.ParseArgcArgv(arraysize(argv), const_cast<char**>(argv)));
+  const char* argv[] = {"exe_name", "--linux=linux_path",           "--ramdisk=ramdisk_path",
+                        "--cpus=4", "--block=/pkg/data/block_path", "--cmdline=kernel_cmdline"};
+  ASSERT_EQ(ZX_OK, parser_.ParseArgcArgv(arraysize(argv), const_cast<char**>(argv)));
   ASSERT_EQ(Kernel::LINUX, config_.kernel());
   ASSERT_EQ("linux_path", config_.kernel_path());
   ASSERT_EQ("ramdisk_path", config_.ramdisk_path());
@@ -64,34 +62,29 @@ TEST_F(GuestConfigParserTest, ParseArgs) {
 
 TEST_F(GuestConfigParserTest, UnknownArgument) {
   const char* argv[] = {"exe_name", "--invalid-arg"};
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS,
-            parser_.ParseArgcArgv(arraysize(argv), const_cast<char**>(argv)));
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, parser_.ParseArgcArgv(arraysize(argv), const_cast<char**>(argv)));
 }
 
 TEST_F(GuestConfigParserTest, BooleanFlag) {
   const char* argv_false[] = {"exe_name", "--virtio-net=false"};
-  ASSERT_EQ(ZX_OK, parser_.ParseArgcArgv(arraysize(argv_false),
-                                         const_cast<char**>(argv_false)));
+  ASSERT_EQ(ZX_OK, parser_.ParseArgcArgv(arraysize(argv_false), const_cast<char**>(argv_false)));
   ASSERT_FALSE(config_.virtio_net());
 
   const char* argv_true[] = {"exe_name", "--virtio-net=true"};
-  ASSERT_EQ(ZX_OK, parser_.ParseArgcArgv(arraysize(argv_true),
-                                         const_cast<char**>(argv_true)));
+  ASSERT_EQ(ZX_OK, parser_.ParseArgcArgv(arraysize(argv_true), const_cast<char**>(argv_true)));
   ASSERT_TRUE(config_.virtio_net());
 }
 
 TEST_F(GuestConfigParserTest, CommandLineAppend) {
   const char* argv[] = {"exe_name", "--cmdline=foo bar", "--cmdline-add=baz"};
-  ASSERT_EQ(ZX_OK,
-            parser_.ParseArgcArgv(arraysize(argv), const_cast<char**>(argv)));
+  ASSERT_EQ(ZX_OK, parser_.ParseArgcArgv(arraysize(argv), const_cast<char**>(argv)));
   ASSERT_EQ("foo bar baz", config_.cmdline());
 }
 
 TEST_F(GuestConfigParserTest, BlockSpecArg) {
   const char* argv[] = {"exe_name", "--block=/pkg/data/foo,ro,fdio",
                         "--block=/dev/class/block/001,rw,fdio"};
-  ASSERT_EQ(ZX_OK,
-            parser_.ParseArgcArgv(arraysize(argv), const_cast<char**>(argv)));
+  ASSERT_EQ(ZX_OK, parser_.ParseArgcArgv(arraysize(argv), const_cast<char**>(argv)));
   ASSERT_EQ(2ul, config_.block_devices().size());
 
   const BlockSpec& spec0 = config_.block_devices()[0];
@@ -128,8 +121,7 @@ TEST_F(GuestConfigParserTest, BlockSpecJson) {
 
 TEST_F(GuestConfigParserTest, InterruptSpecArg) {
   const char* argv[] = {"exe_name", "--interrupt=32,2", "--interrupt=33,4"};
-  ASSERT_EQ(ZX_OK,
-            parser_.ParseArgcArgv(arraysize(argv), const_cast<char**>(argv)));
+  ASSERT_EQ(ZX_OK, parser_.ParseArgcArgv(arraysize(argv), const_cast<char**>(argv)));
   ASSERT_EQ(2ul, config_.interrupts().size());
 
   const InterruptSpec& spec0 = config_.interrupts()[0];
@@ -215,10 +207,8 @@ TEST_F(GuestConfigParserTest, Memory_HostDevice) {
 }
 
 TEST_F(GuestConfigParserTest, Memory_MultipleEntries) {
-  const char* argv[] = {"exe_name", "--memory=f0000000,1M",
-                        "--memory=ffffffff,2M"};
-  ASSERT_EQ(ZX_OK,
-            parser_.ParseArgcArgv(arraysize(argv), const_cast<char**>(argv)));
+  const char* argv[] = {"exe_name", "--memory=f0000000,1M", "--memory=ffffffff,2M"};
+  ASSERT_EQ(ZX_OK, parser_.ParseArgcArgv(arraysize(argv), const_cast<char**>(argv)));
   const auto& memory = config_.memory();
   EXPECT_EQ(2ul, memory.size());
   EXPECT_EQ(0xf0000000ul, memory[0].base);
@@ -242,14 +232,12 @@ TEST_F(GuestConfigParserTest, VirtioGpu) {
   GuestConfigParser parser(&config);
 
   const char* virtio_gpu_true_argv[] = {"exe_name", "--virtio-gpu=true"};
-  ASSERT_EQ(ZX_OK,
-            parser_.ParseArgcArgv(arraysize(virtio_gpu_true_argv),
-                                  const_cast<char**>(virtio_gpu_true_argv)));
+  ASSERT_EQ(ZX_OK, parser_.ParseArgcArgv(arraysize(virtio_gpu_true_argv),
+                                         const_cast<char**>(virtio_gpu_true_argv)));
   ASSERT_TRUE(config_.virtio_gpu());
 
   const char* virtio_gpu_false_argv[] = {"exe_name", "--virtio-gpu=false"};
-  ASSERT_EQ(ZX_OK,
-            parser_.ParseArgcArgv(arraysize(virtio_gpu_false_argv),
-                                  const_cast<char**>(virtio_gpu_false_argv)));
+  ASSERT_EQ(ZX_OK, parser_.ParseArgcArgv(arraysize(virtio_gpu_false_argv),
+                                         const_cast<char**>(virtio_gpu_false_argv)));
   ASSERT_FALSE(config_.virtio_gpu());
 }

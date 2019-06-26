@@ -22,8 +22,7 @@ class GuestServices : public fuchsia::virtualization::vmm::LaunchInfoProvider {
   void GetLaunchInfo(GetLaunchInfoCallback callback) override;
 
   component::ServiceProviderBridge services_;
-  fidl::Binding<fuchsia::virtualization::vmm::LaunchInfoProvider> binding_{
-      this};
+  fidl::Binding<fuchsia::virtualization::vmm::LaunchInfoProvider> binding_{this};
   fuchsia::virtualization::LaunchInfo launch_info_;
 };
 

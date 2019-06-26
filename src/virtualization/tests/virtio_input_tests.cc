@@ -18,10 +18,9 @@ using VirtioInputDebianGuestTest = GuestTest<DebianEnclosedGuest>;
 TEST_F(VirtioInputDebianGuestTest, Input) {
   // Start the test.
   auto* guest_console = this->GetEnclosedGuest()->GetConsole();
-  EXPECT_EQ(
-      guest_console->SendBlocking(
-          "/test_utils/virtio_input_test_util keyboard /dev/input/event*\n"),
-      ZX_OK);
+  EXPECT_EQ(guest_console->SendBlocking(
+                "/test_utils/virtio_input_test_util keyboard /dev/input/event*\n"),
+            ZX_OK);
 
   // Wait for the test utility to print its string ("type ..."), and then
   // send keystrokes.

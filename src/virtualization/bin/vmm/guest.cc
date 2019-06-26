@@ -5,17 +5,16 @@
 #include "src/virtualization/bin/vmm/guest.h"
 
 #include <fcntl.h>
-#include <limits.h>
-#include <string.h>
-#include <unistd.h>
-
 #include <fuchsia/sysinfo/c/fidl.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
+#include <lib/zx/channel.h>
+#include <limits.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/strings/string_printf.h>
-#include <lib/zx/channel.h>
+#include <string.h>
+#include <unistd.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/hypervisor.h>
@@ -38,8 +37,8 @@ static constexpr uint32_t trap_kind(TrapType type) {
   }
 }
 
-static zx_status_t get_hypervisor_resource(
-    const fuchsia::sysinfo::DeviceSyncPtr& sysinfo, zx::resource* resource) {
+static zx_status_t get_hypervisor_resource(const fuchsia::sysinfo::DeviceSyncPtr& sysinfo,
+                                           zx::resource* resource) {
   zx_status_t fidl_status;
   zx_status_t status = sysinfo->GetHypervisorResource(&fidl_status, resource);
   if (status != ZX_OK) {
@@ -91,8 +90,7 @@ zx_status_t Guest::Init(const std::vector<MemorySpec>& memory) {
             return status;
           }
         }
-        status =
-            zx::vmo::create_physical(root_resource, spec.base, spec.size, &vmo);
+        status = zx::vmo::create_physical(root_resource, spec.base, spec.size, &vmo);
         if (status != ZX_OK) {
           FXL_LOG(ERROR) << "Failed to create physical VMO " << status;
           return status;
@@ -104,8 +102,7 @@ zx_status_t Guest::Init(const std::vector<MemorySpec>& memory) {
         }
         break;
       default:
-        FXL_LOG(ERROR) << "Unknown memory policy "
-                       << static_cast<uint32_t>(spec.policy);
+        FXL_LOG(ERROR) << "Unknown memory policy " << static_cast<uint32_t>(spec.policy);
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -117,8 +114,8 @@ zx_status_t Guest::Init(const std::vector<MemorySpec>& memory) {
 
     zx_gpaddr_t addr;
     status = vmar_.map(spec.base, vmo, 0, spec.size,
-                       ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_PERM_EXECUTE |
-                           ZX_VM_SPECIFIC | ZX_VM_REQUIRE_NON_RESIZABLE,
+                       ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_PERM_EXECUTE | ZX_VM_SPECIFIC |
+                           ZX_VM_REQUIRE_NON_RESIZABLE,
                        &addr);
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "Failed to map guest physical memory " << status;
@@ -127,8 +124,7 @@ zx_status_t Guest::Init(const std::vector<MemorySpec>& memory) {
     if (!phys_mem_.vmo()) {
       status = phys_mem_.Init(std::move(vmo));
       if (status != ZX_OK) {
-        FXL_LOG(ERROR) << "Failed to initialize guest physical memory "
-                       << status;
+        FXL_LOG(ERROR) << "Failed to initialize guest physical memory " << status;
         return status;
       }
     }
@@ -137,9 +133,8 @@ zx_status_t Guest::Init(const std::vector<MemorySpec>& memory) {
   return ZX_OK;
 }
 
-zx_status_t Guest::CreateMapping(TrapType type, uint64_t addr, size_t size,
-                                 uint64_t offset, IoHandler* handler,
-                                 async_dispatcher_t* dispatcher) {
+zx_status_t Guest::CreateMapping(TrapType type, uint64_t addr, size_t size, uint64_t offset,
+                                 IoHandler* handler, async_dispatcher_t* dispatcher) {
   uint32_t kind = trap_kind(type);
   mappings_.emplace_front(kind, addr, size, offset, handler);
   zx_status_t status = mappings_.front().SetTrap(this, dispatcher);
@@ -152,13 +147,11 @@ zx_status_t Guest::CreateMapping(TrapType type, uint64_t addr, size_t size,
 
 zx_status_t Guest::CreateSubVmar(uint64_t addr, size_t size, zx::vmar* vmar) {
   uintptr_t guest_addr;
-  return vmar_.allocate(
-      addr, size, ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_SPECIFIC,
-      vmar, &guest_addr);
+  return vmar_.allocate(addr, size, ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_SPECIFIC, vmar,
+                        &guest_addr);
 }
 
-zx_status_t Guest::StartVcpu(uint64_t id, zx_gpaddr_t entry,
-                             zx_gpaddr_t boot_ptr) {
+zx_status_t Guest::StartVcpu(uint64_t id, zx_gpaddr_t entry, zx_gpaddr_t boot_ptr) {
   if (id >= kMaxVcpus) {
     FXL_LOG(ERROR) << "Failed to start VCPU-" << id << ", up to " << kMaxVcpus
                    << " VCPUs are supported";

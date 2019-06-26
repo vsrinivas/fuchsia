@@ -11,9 +11,8 @@
 
 class GuestConfig;
 
-zx_status_t setup_zircon(const GuestConfig& cfg, const PhysMem& phys_mem,
-                         const DevMem& dev_mem,
-                         const std::vector<PlatformDevice*>& devices,
-                         uintptr_t* guest_ip, uintptr_t* boot_ptr);
+zx_status_t setup_zircon(const GuestConfig& cfg, const PhysMem& phys_mem, const DevMem& dev_mem,
+                         const std::vector<PlatformDevice*>& devices, uintptr_t* guest_ip,
+                         uintptr_t* boot_ptr);
 
 #endif  // SRC_VIRTUALIZATION_BIN_VMM_ZIRCON_H_

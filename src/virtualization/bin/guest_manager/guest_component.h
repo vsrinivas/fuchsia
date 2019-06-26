@@ -16,20 +16,15 @@
 // lifetime of the guest.
 class GuestComponent {
  public:
-  GuestComponent(const std::string& label,
-                 std::unique_ptr<GuestVsockEndpoint> endpoint,
-                 component::Services services,
-                 std::unique_ptr<GuestServices> guest_services,
+  GuestComponent(const std::string& label, std::unique_ptr<GuestVsockEndpoint> endpoint,
+                 component::Services services, std::unique_ptr<GuestServices> guest_services,
                  fuchsia::sys::ComponentControllerPtr component_controller);
 
   const std::string& label() const { return label_; }
   GuestVsockEndpoint* endpoint() const { return endpoint_.get(); }
 
-  void ConnectToInstance(
-      fidl::InterfaceRequest<fuchsia::virtualization::Guest> request);
-  void ConnectToBalloon(
-      fidl::InterfaceRequest<fuchsia::virtualization::BalloonController>
-          request);
+  void ConnectToInstance(fidl::InterfaceRequest<fuchsia::virtualization::Guest> request);
+  void ConnectToBalloon(fidl::InterfaceRequest<fuchsia::virtualization::BalloonController> request);
 
  private:
   const std::string label_;

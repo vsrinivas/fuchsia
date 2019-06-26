@@ -10,13 +10,12 @@
 namespace vsh {
 
 BlockingCommandRunner::BlockingCommandRunner(
-    fidl::InterfaceHandle<fuchsia::virtualization::HostVsockEndpoint>
-        socket_endpoint,
-    uint32_t cid, uint32_t port)
+    fidl::InterfaceHandle<fuchsia::virtualization::HostVsockEndpoint> socket_endpoint, uint32_t cid,
+    uint32_t port)
     : socket_endpoint_(socket_endpoint.BindSync()), cid_(cid), port_(port) {}
 
-fit::result<vsh::BlockingCommandRunner::CommandResult, zx_status_t>
-BlockingCommandRunner::Execute(Command command) {
+fit::result<vsh::BlockingCommandRunner::CommandResult, zx_status_t> BlockingCommandRunner::Execute(
+    Command command) {
   auto client_result = BlockingClient::Connect(socket_endpoint_, cid_, port_);
   if (client_result.is_error()) {
     return fit::error(client_result.error());
@@ -38,8 +37,7 @@ BlockingCommandRunner::Execute(Command command) {
   std::string err;
   int32_t return_code;
   while (client.status() == vm_tools::vsh::ConnectionStatus::READY) {
-    fit::result<vm_tools::vsh::HostMessage, zx_status_t> message_result =
-        client.NextMessage();
+    fit::result<vm_tools::vsh::HostMessage, zx_status_t> message_result = client.NextMessage();
     if (message_result.is_error()) {
       break;
     }

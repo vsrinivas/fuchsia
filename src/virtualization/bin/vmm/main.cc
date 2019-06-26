@@ -4,19 +4,9 @@
 
 #include <dirent.h>
 #include <fcntl.h>
-#include <inttypes.h>
-#include <limits.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#include <atomic>
-#include <unordered_map>
-#include <vector>
-
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/virtualization/vmm/cpp/fidl.h>
+#include <inttypes.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/component/cpp/startup_context.h>
@@ -24,11 +14,21 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/namespace.h>
+#include <limits.h>
 #include <src/lib/fxl/strings/string_printf.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
 #include <trace-provider/provider.h>
+#include <unistd.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/hypervisor.h>
+
+#include <atomic>
+#include <unordered_map>
+#include <vector>
 
 #include "src/lib/files/file.h"
 #include "src/virtualization/bin/vmm/controller/virtio_balloon.h"
@@ -67,8 +67,7 @@ static constexpr char kMcfgPath[] = "/pkg/data/mcfg.aml";
 // allocator that starts fairly high in the guest physical address space.
 static constexpr zx_gpaddr_t kFirstDynamicDeviceAddr = 0xc00000000;
 
-static zx_status_t read_guest_cfg(const char* cfg_path, int argc, char** argv,
-                                  GuestConfig* cfg) {
+static zx_status_t read_guest_cfg(const char* cfg_path, int argc, char** argv, GuestConfig* cfg) {
   GuestConfigParser parser(cfg);
   std::string cfg_str;
   if (files::ReadFileToString(cfg_path, &cfg_str)) {
@@ -124,15 +123,12 @@ int main(int argc, char** argv) {
   for (const MemorySpec& spec : cfg.memory()) {
     // Avoid a collision between static and dynamic address assignment.
     if (spec.base + spec.size > kFirstDynamicDeviceAddr) {
-      FXL_LOG(ERROR) << "Requested memory should be less than "
-                     << kFirstDynamicDeviceAddr;
+      FXL_LOG(ERROR) << "Requested memory should be less than " << kFirstDynamicDeviceAddr;
       return ZX_ERR_INVALID_ARGS;
     }
     // Add device memory range.
-    if (spec.policy == MemoryPolicy::HOST_DEVICE &&
-        !dev_mem.AddRange(spec.base, spec.size)) {
-      FXL_LOG(ERROR) << "Failed to add device memory at 0x" << std::hex
-                     << spec.base;
+    if (spec.policy == MemoryPolicy::HOST_DEVICE && !dev_mem.AddRange(spec.base, spec.size)) {
+      FXL_LOG(ERROR) << "Failed to add device memory at 0x" << std::hex << spec.base;
       return ZX_ERR_INTERNAL;
     }
   }
@@ -201,8 +197,7 @@ int main(int argc, char** argv) {
     if (status != ZX_OK) {
       return status;
     }
-    status =
-        balloon.Start(guest.object(), launcher.get(), device_loop.dispatcher());
+    status = balloon.Start(guest.object(), launcher.get(), device_loop.dispatcher());
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "Failed to start balloon device " << status;
       return status;
@@ -225,8 +220,7 @@ int main(int argc, char** argv) {
       flags |= ZX_FS_RIGHT_WRITABLE;
     }
     fidl::InterfaceHandle<fuchsia::io::File> file;
-    status = fdio_open(block_spec.path.c_str(), flags,
-                       file.NewRequest().TakeChannel().release());
+    status = fdio_open(block_spec.path.c_str(), flags, file.NewRequest().TakeChannel().release());
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "Failed to open " << block_spec.path << " " << status;
       return status;
@@ -239,24 +233,21 @@ int main(int argc, char** argv) {
     });
   }
   if (launch_info.block_devices) {
-    block_infos.insert(
-        block_infos.end(),
-        std::make_move_iterator(launch_info.block_devices->begin()),
-        std::make_move_iterator(launch_info.block_devices->end()));
+    block_infos.insert(block_infos.end(),
+                       std::make_move_iterator(launch_info.block_devices->begin()),
+                       std::make_move_iterator(launch_info.block_devices->end()));
   }
 
   // Create a new VirtioBlock device for each device requested.
   std::vector<std::unique_ptr<VirtioBlock>> block_devices;
   for (auto& block_device : block_infos) {
-    auto block =
-        std::make_unique<VirtioBlock>(block_device.mode, guest.phys_mem());
+    auto block = std::make_unique<VirtioBlock>(block_device.mode, guest.phys_mem());
     status = bus.Connect(block->pci_device(), device_loop.dispatcher(), true);
     if (status != ZX_OK) {
       return status;
     }
-    status = block->Start(guest.object(), std::move(block_device.id),
-                          block_device.format, block_device.file.Bind(),
-                          launcher.get(), device_loop.dispatcher());
+    status = block->Start(guest.object(), std::move(block_device.id), block_device.format,
+                          block_device.file.Bind(), launcher.get(), device_loop.dispatcher());
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "Failed to start block device " << status;
       return status;
@@ -271,8 +262,8 @@ int main(int argc, char** argv) {
     if (status != ZX_OK) {
       return status;
     }
-    status = console.Start(guest.object(), guest_controller.SerialSocket(),
-                           launcher.get(), device_loop.dispatcher());
+    status = console.Start(guest.object(), guest_controller.SerialSocket(), launcher.get(),
+                           device_loop.dispatcher());
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "Failed to start console device " << status;
       return status;
@@ -287,10 +278,9 @@ int main(int argc, char** argv) {
     if (status != ZX_OK) {
       return status;
     }
-    fidl::InterfaceHandle<fuchsia::virtualization::hardware::ViewListener>
-        view_listener;
-    status = input.Start(guest.object(), view_listener.NewRequest(),
-                         launcher.get(), device_loop.dispatcher());
+    fidl::InterfaceHandle<fuchsia::virtualization::hardware::ViewListener> view_listener;
+    status = input.Start(guest.object(), view_listener.NewRequest(), launcher.get(),
+                         device_loop.dispatcher());
     if (status != ZX_OK) {
       return status;
     }
@@ -314,8 +304,7 @@ int main(int argc, char** argv) {
     if (status != ZX_OK) {
       return status;
     }
-    status =
-        net.Start(guest.object(), launcher.get(), device_loop.dispatcher());
+    status = net.Start(guest.object(), launcher.get(), device_loop.dispatcher());
     if (status != ZX_OK) {
       FXL_LOG(INFO) << "Could not open Ethernet device";
       return status;
@@ -329,8 +318,7 @@ int main(int argc, char** argv) {
     if (status != ZX_OK) {
       return status;
     }
-    status =
-        rng.Start(guest.object(), launcher.get(), device_loop.dispatcher());
+    status = rng.Start(guest.object(), launcher.get(), device_loop.dispatcher());
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "Failed to start RNG device" << status;
       return status;
@@ -359,8 +347,7 @@ int main(int argc, char** argv) {
     size_t wl_dev_mem_size = launch_info.wayland_device->memory;
     zx_gpaddr_t wl_dev_mem_offset = alloc_device_addr(wl_dev_mem_size);
     if (!dev_mem.AddRange(wl_dev_mem_offset, wl_dev_mem_size)) {
-      FXL_LOG(INFO)
-          << "Could not reserve device memory range for wayland device";
+      FXL_LOG(INFO) << "Could not reserve device memory range for wayland device";
       return status;
     }
     zx::vmar wl_vmar;
@@ -375,8 +362,8 @@ int main(int argc, char** argv) {
       return status;
     }
     status = wl.Start(guest.object(), std::move(wl_vmar),
-                      std::move(launch_info.wayland_device->dispatcher),
-                      launcher.get(), device_loop.dispatcher());
+                      std::move(launch_info.wayland_device->dispatcher), launcher.get(),
+                      device_loop.dispatcher());
     if (status != ZX_OK) {
       FXL_LOG(INFO) << "Could not start wayland device";
       return status;
@@ -405,8 +392,7 @@ int main(int argc, char** argv) {
 
   // Add any trap ranges as device memory.
   for (const IoMapping& mapping : guest.mappings()) {
-    if ((mapping.kind() == ZX_GUEST_TRAP_MEM ||
-         mapping.kind() == ZX_GUEST_TRAP_BELL) &&
+    if ((mapping.kind() == ZX_GUEST_TRAP_MEM || mapping.kind() == ZX_GUEST_TRAP_BELL) &&
         !dev_mem.AddRange(mapping.base(), mapping.size())) {
       FXL_LOG(ERROR) << "Failed to add trap range as device memory";
       return ZX_ERR_INTERNAL;
@@ -418,20 +404,17 @@ int main(int argc, char** argv) {
   uintptr_t boot_ptr = 0;
   switch (cfg.kernel()) {
     case Kernel::ZIRCON:
-      status = setup_zircon(cfg, guest.phys_mem(), dev_mem, platform_devices,
-                            &entry, &boot_ptr);
+      status = setup_zircon(cfg, guest.phys_mem(), dev_mem, platform_devices, &entry, &boot_ptr);
       break;
     case Kernel::LINUX:
-      status = setup_linux(cfg, guest.phys_mem(), dev_mem, platform_devices,
-                           &entry, &boot_ptr);
+      status = setup_linux(cfg, guest.phys_mem(), dev_mem, platform_devices, &entry, &boot_ptr);
       break;
     default:
       FXL_LOG(ERROR) << "Unknown kernel";
       return ZX_ERR_INVALID_ARGS;
   }
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to load kernel " << cfg.kernel_path() << " "
-                   << status;
+    FXL_LOG(ERROR) << "Failed to load kernel " << cfg.kernel_path() << " " << status;
     return status;
   }
 

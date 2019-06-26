@@ -15,11 +15,10 @@ using VirtioQueueWaiterTest = ::gtest::TestLoopFixture;
 TEST_F(VirtioQueueWaiterTest, Wait) {
   bool wait_complete = false;
   VirtioDeviceFake device;
-  VirtioQueueWaiter waiter(dispatcher(), device.queue(),
-                           [&](zx_status_t status, uint32_t events) {
-                             EXPECT_EQ(ZX_OK, status);
-                             wait_complete = true;
-                           });
+  VirtioQueueWaiter waiter(dispatcher(), device.queue(), [&](zx_status_t status, uint32_t events) {
+    EXPECT_EQ(ZX_OK, status);
+    wait_complete = true;
+  });
 
   EXPECT_EQ(ZX_OK, waiter.Begin());
 
@@ -33,11 +32,7 @@ TEST_F(VirtioQueueWaiterTest, Wait) {
 
   // Add a descriptor and signal again. This should invoke the waiter.
   uint8_t buf[8];
-  ASSERT_EQ(device.queue_fake()
-                ->BuildDescriptor()
-                .AppendReadable(buf, sizeof(buf))
-                .Build(),
-            ZX_OK);
+  ASSERT_EQ(device.queue_fake()->BuildDescriptor().AppendReadable(buf, sizeof(buf)).Build(), ZX_OK);
   device.queue()->Notify();
   RunLoopUntilIdle();
   EXPECT_TRUE(wait_complete);

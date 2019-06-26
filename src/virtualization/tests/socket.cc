@@ -23,8 +23,7 @@ zx_status_t ZxSocket::Send(zx::time deadline, const std::string& message) {
     // deadline has passed.
     zx_status_t status;
     zx_signals_t pending = 0;
-    status = socket_.wait_one(ZX_SOCKET_WRITABLE | ZX_SOCKET_PEER_CLOSED,
-                              deadline, &pending);
+    status = socket_.wait_one(ZX_SOCKET_WRITABLE | ZX_SOCKET_PEER_CLOSED, deadline, &pending);
     if (status != ZX_OK) {
       return status;
     }
@@ -62,8 +61,7 @@ zx_status_t ZxSocket::Receive(zx::time deadline, std::string* result) {
     // Note "wait_one" returns ZX_OK if already signalled, even if the
     // deadline has passed.
     zx_signals_t pending = 0;
-    status = socket_.wait_one(ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED,
-                              deadline, &pending);
+    status = socket_.wait_one(ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED, deadline, &pending);
     if (status != ZX_OK) {
       return status;
     }

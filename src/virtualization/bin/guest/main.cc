@@ -9,14 +9,14 @@
 #include <iostream>
 #include <optional>
 
+#include "lib/sys/cpp/component_context.h"
+#include "src/lib/fxl/strings/string_number_conversions.h"
 #include "src/virtualization/bin/guest/balloon.h"
 #include "src/virtualization/bin/guest/launch.h"
 #include "src/virtualization/bin/guest/list.h"
 #include "src/virtualization/bin/guest/serial.h"
 #include "src/virtualization/bin/guest/socat.h"
 #include "src/virtualization/bin/guest/vshc.h"
-#include "lib/sys/cpp/component_context.h"
-#include "src/lib/fxl/strings/string_number_conversions.h"
 
 static void usage() {
   std::cerr << "Usage: guest <command> <package> <command-args>...\n"
@@ -68,13 +68,9 @@ static bool parse_args(int argc, const char** argv, async::Loop* loop,
     } else if (!parse_number(argv[2], "context ID", &cid)) {
       return false;
     }
-    *func = [env_id, cid, context]() {
-      handle_balloon_stats(env_id, cid, context);
-    };
+    *func = [env_id, cid, context]() { handle_balloon_stats(env_id, cid, context); };
   } else if (cmd_view == "launch" && argc >= 2) {
-    *func = [argc, argv, loop, context]() {
-      handle_launch(argc - 1, argv + 1, loop, context);
-    };
+    *func = [argc, argv, loop, context]() { handle_launch(argc - 1, argv + 1, loop, context); };
   } else if (cmd_view == "list") {
     *func = [context]() { handle_list(context); };
   } else if (cmd_view == "serial" && argc == 3) {
@@ -84,9 +80,7 @@ static bool parse_args(int argc, const char** argv, async::Loop* loop,
     } else if (!parse_number(argv[2], "context ID", &cid)) {
       return false;
     }
-    *func = [env_id, cid, loop, context]() {
-      handle_serial(env_id, cid, loop, context);
-    };
+    *func = [env_id, cid, loop, context]() { handle_serial(env_id, cid, loop, context); };
   } else if (cmd_view == "socat" && argc == 4) {
     uint32_t env_id, cid, port;
     if (!parse_number(argv[1], "environment ID", &env_id)) {
@@ -133,9 +127,7 @@ static bool parse_args(int argc, const char** argv, async::Loop* loop,
       return false;
     }
 
-    *func = [env_id, cid, port, loop, context]() {
-      handle_vsh(env_id, cid, port, loop, context);
-    };
+    *func = [env_id, cid, port, loop, context]() { handle_vsh(env_id, cid, port, loop, context); };
   } else {
     return false;
   }

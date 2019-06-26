@@ -27,8 +27,7 @@ class GuestConsole {
   // ensure the command finished executing and to capture output. Blocks on the
   // serial socket being writable and readable at various points and on the
   // command completing.
-  zx_status_t ExecuteBlocking(const std::string& command,
-                              const std::string& prompt,
+  zx_status_t ExecuteBlocking(const std::string& command, const std::string& prompt,
                               std::string* result = nullptr);
 
   // Sends a message to the guest's serial. Blocks until the entire message is
@@ -50,8 +49,7 @@ class GuestConsole {
   //
   // then a call `WaitForMarker("marker", &result)` will return `xxx` in
   // |result|, and consume the buffer so that only `yyy` remains.
-  zx_status_t WaitForMarker(const std::string& marker,
-                            std::string* result = nullptr);
+  zx_status_t WaitForMarker(const std::string& marker, std::string* result = nullptr);
 
  private:
   // Waits for something to be written to the socket and drains it.

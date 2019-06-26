@@ -21,8 +21,7 @@ class GrpcVsockTest : public gtest::TestLoopFixture {
     TestLoopFixture::SetUp();
     // Setup a fake guest realm that we can use to connect to a
     // HostVsockEndpoint.
-    provider_.service_directory_provider()->AddService(
-        fake_guest_manager_.GetHandler());
+    provider_.service_directory_provider()->AddService(fake_guest_manager_.GetHandler());
     fuchsia::virtualization::ManagerPtr manager;
     provider_.context()->svc()->Connect(manager.NewRequest());
     manager->Create("test realm", realm_.NewRequest());
@@ -40,9 +39,7 @@ class GrpcVsockTest : public gtest::TestLoopFixture {
 
   // Access the |FakeGuestVsock|. This can be used to simulate guest
   // interactions over virtio-vsock.
-  guest::testing::FakeGuestVsock* guest_vsock() {
-    return fake_guest_manager_.GuestVsock();
-  }
+  guest::testing::FakeGuestVsock* guest_vsock() { return fake_guest_manager_.GuestVsock(); }
 
   async::Executor* executor() { return &executor_; }
 
@@ -57,8 +54,7 @@ class GrpcVsockTest : public gtest::TestLoopFixture {
 // Simple gRPC service that echos messages back to the client.
 class TestEchoServer : public vsock_test::Echo::Service {
  private:
-  grpc::Status Echo(grpc::ServerContext* context,
-                    const vsock_test::EchoMessage* request,
+  grpc::Status Echo(grpc::ServerContext* context, const vsock_test::EchoMessage* request,
                     vsock_test::EchoMessage* response) override {
     response->mutable_echo_message()->assign(request->echo_message());
     return grpc::Status::OK;
@@ -74,8 +70,9 @@ TEST_F(GrpcVsockTest, Echo) {
   server_builder.RegisterService(&server_impl);
   fit::result<std::unique_ptr<GrpcVsockServer>, zx_status_t> result;
   auto p = server_builder.Build().then(
-      [&result](fit::result<std::unique_ptr<GrpcVsockServer>, zx_status_t>&
-                    r) mutable { result = std::move(r); });
+      [&result](fit::result<std::unique_ptr<GrpcVsockServer>, zx_status_t>& r) mutable {
+        result = std::move(r);
+      });
   executor()->schedule_task(std::move(p));
   RunLoopUntilIdle();
 
@@ -88,14 +85,14 @@ TEST_F(GrpcVsockTest, Echo) {
 
   // Connect to the service using the guest vsock endpoint.
   zx::handle guest_handle;
-  guest_vsock()->ConnectToHost(
-      kTestServicePort, [&](auto handle) { guest_handle = std::move(handle); });
+  guest_vsock()->ConnectToHost(kTestServicePort,
+                               [&](auto handle) { guest_handle = std::move(handle); });
   RunLoopUntilIdle();
   ASSERT_TRUE(guest_handle);
   // The gRPC server will always use socket as a transport.
   zx_info_handle_basic_t info;
-  ASSERT_EQ(ZX_OK, guest_handle.get_info(ZX_INFO_HANDLE_BASIC, &info,
-                                         sizeof(info), nullptr, nullptr));
+  ASSERT_EQ(ZX_OK,
+            guest_handle.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr));
   ASSERT_EQ(zx::socket::TYPE, info.type);
   zx::socket guest_socket(std::move(guest_handle));
 

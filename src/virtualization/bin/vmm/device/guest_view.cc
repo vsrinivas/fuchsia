@@ -4,13 +4,12 @@
 
 #include "src/virtualization/bin/vmm/device/guest_view.h"
 
-#include <src/lib/fxl/logging.h>
 #include <lib/images/cpp/images.h>
+#include <src/lib/fxl/logging.h>
 
 GuestView::GuestView(
     scenic::ViewContext view_context,
-    fidl::InterfaceHandle<fuchsia::virtualization::hardware::ViewListener>
-        view_listener,
+    fidl::InterfaceHandle<fuchsia::virtualization::hardware::ViewListener> view_listener,
     GpuScanout* scanout)
     : BaseView(std::move(view_context), "Guest"),
       background_(session()),
@@ -25,8 +24,7 @@ GuestView::GuestView(
   command.set_set_hard_keyboard_delivery({.delivery_request = true});
   session()->Enqueue(std::move(command));
 
-  scanout_.SetFlushHandler(
-      [this](virtio_gpu_rect_t rect) { InvalidateScene(); });
+  scanout_.SetFlushHandler([this](virtio_gpu_rect_t rect) { InvalidateScene(); });
   scanout_.SetUpdateSourceHandler([this](uint32_t width, uint32_t height) {
     scanout_source_width_ = width;
     scanout_source_height_ = height;
@@ -34,8 +32,7 @@ GuestView::GuestView(
   });
 }
 
-void GuestView::OnSceneInvalidated(
-    fuchsia::images::PresentationInfo presentation_info) {
+void GuestView::OnSceneInvalidated(fuchsia::images::PresentationInfo presentation_info) {
   if (!has_logical_size() || !has_physical_size()) {
     return;
   }
@@ -50,19 +47,15 @@ void GuestView::OnSceneInvalidated(
     zx::vmo scanout_vmo;
     auto vmo_size = images::ImageSize(image_info_);
     zx_status_t status = zx::vmo::create(vmo_size, 0, &scanout_vmo);
-    FXL_CHECK(status == ZX_OK)
-        << "Scanout target VMO creation failed " << status;
+    FXL_CHECK(status == ZX_OK) << "Scanout target VMO creation failed " << status;
     zx::vmo scenic_vmo;
     status = scanout_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &scenic_vmo);
-    FXL_CHECK(status == ZX_OK)
-        << "Scanout target VMO duplication failed " << status;
-    memory_ = std::make_unique<scenic::Memory>(
-        session(), std::move(scenic_vmo), vmo_size,
-        fuchsia::images::MemoryType::HOST_MEMORY);
+    FXL_CHECK(status == ZX_OK) << "Scanout target VMO duplication failed " << status;
+    memory_ = std::make_unique<scenic::Memory>(session(), std::move(scenic_vmo), vmo_size,
+                                               fuchsia::images::MemoryType::HOST_MEMORY);
 
-    status = scanout_.SetFlushTarget(std::move(scanout_vmo), vmo_size,
-                                     image_info_.width, image_info_.height,
-                                     image_info_.stride);
+    status = scanout_.SetFlushTarget(std::move(scanout_vmo), vmo_size, image_info_.width,
+                                     image_info_.height, image_info_.stride);
     FXL_CHECK(status == ZX_OK) << "Scanout target VMO flush failed " << status;
   }
 
@@ -72,10 +65,8 @@ void GuestView::OnSceneInvalidated(
   background_.SetShape(shape);
   const float center_x = width * .5f;
   const float center_y = height * .5f;
-  const float scale_x =
-      static_cast<float>(image_info_.width) / scanout_source_width_;
-  const float scale_y =
-      static_cast<float>(image_info_.height) / scanout_source_height_;
+  const float scale_x = static_cast<float>(image_info_.width) / scanout_source_width_;
+  const float scale_y = static_cast<float>(image_info_.height) / scanout_source_height_;
 
   // Scale the background node such that the scanout resource sub-region
   // matches the image size. Ideally, this would just be a scale transform of
@@ -89,8 +80,7 @@ void GuestView::OnSceneInvalidated(
   material_.SetTexture(image);
 }
 
-void GuestView::OnPropertiesChanged(
-    fuchsia::ui::gfx::ViewProperties old_properties) {
+void GuestView::OnPropertiesChanged(fuchsia::ui::gfx::ViewProperties old_properties) {
   view_listener_->OnSizeChanged(logical_size());
 }
 

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_VIRTUALIZATION_TESTS_FAKE_INPUT_ONLY_SCENIC_H_
-#define SRC_VIRTUALIZATION_TESTS_FAKE_INPUT_ONLY_SCENIC_H_
+#ifndef SRC_VIRTUALIZATION_TESTS_FAKE_SCENIC_H_
+#define SRC_VIRTUALIZATION_TESTS_FAKE_SCENIC_H_
 
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
@@ -65,9 +65,8 @@ struct Screenshot {
 
 class FakeSession : public fuchsia::ui::scenic::testing::Session_TestBase {
  public:
-  FakeSession(
-      fidl::InterfaceRequest<fuchsia::ui::scenic::Session> request,
-      fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener);
+  FakeSession(fidl::InterfaceRequest<fuchsia::ui::scenic::Session> request,
+              fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener);
 
   // Send an event or list of events to any attached listener.
   void SendEvent(fuchsia::ui::scenic::Event events);
@@ -87,10 +86,8 @@ class FakeSession : public fuchsia::ui::scenic::testing::Session_TestBase {
 
  protected:
   // |fuchsia::ui::scenic::Session|
-  void Present(uint64_t presentation_time,
-               ::std::vector<::zx::event> acquire_fences,
-               ::std::vector<::zx::event> release_fences,
-               PresentCallback callback) override;
+  void Present(uint64_t presentation_time, ::std::vector<::zx::event> acquire_fences,
+               ::std::vector<::zx::event> release_fences, PresentCallback callback) override;
 
   // |fuchsia::ui::scenic::Session|
   void Enqueue(std::vector<fuchsia::ui::scenic::Command> cmds) override;
@@ -106,8 +103,7 @@ class FakeSession : public fuchsia::ui::scenic::testing::Session_TestBase {
   // Handler client events.
   void HandleGfxCommand(fuchsia::ui::gfx::Command cmd);
   void HandleGfxCreateResource(fuchsia::ui::gfx::CreateResourceCmd cmd);
-  void HandleGfxReleaseResource(
-      const fuchsia::ui::gfx::ReleaseResourceCmd& cmd);
+  void HandleGfxReleaseResource(const fuchsia::ui::gfx::ReleaseResourceCmd& cmd);
   void HandleSetEventMask(const fuchsia::ui::gfx::SetEventMaskCmd& cmd);
   void HandleCreateView(uint32_t id);
 
@@ -132,8 +128,7 @@ class FakeScenic : public fuchsia::ui::scenic::testing::Scenic_TestBase {
   void SendEvent(fuchsia::ui::scenic::Event event);
 
   // Send a keyboard events to any attached listener.
-  void SendKeyEvent(KeyboardEventHidUsage usage,
-                    fuchsia::ui::input::KeyboardEventPhase phase);
+  void SendKeyEvent(KeyboardEventHidUsage usage, fuchsia::ui::input::KeyboardEventPhase phase);
 
   // Send a keyboard "PRESS" and "RELEASE" event for the given key to any
   // attached listener.
@@ -147,10 +142,8 @@ class FakeScenic : public fuchsia::ui::scenic::testing::Scenic_TestBase {
 
  protected:
   // |fuchsia::ui::scenic::Scenic|
-  void CreateSession(
-      fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session_request,
-      fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener)
-      override;
+  void CreateSession(fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session_request,
+                     fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener) override;
 
   // |fuchsia::ui::scenic::testing::Scenic_TestBase|
   void NotImplemented_(const std::string& name) final;
@@ -163,4 +156,4 @@ class FakeScenic : public fuchsia::ui::scenic::testing::Scenic_TestBase {
   fidl::BindingSet<fuchsia::ui::scenic::Scenic> bindings_;
 };
 
-#endif  // SRC_VIRTUALIZATION_TESTS_FAKE_INPUT_ONLY_SCENIC_H_
+#endif  // SRC_VIRTUALIZATION_TESTS_FAKE_SCENIC_H_

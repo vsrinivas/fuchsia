@@ -23,8 +23,7 @@ class VirtioBalloonTest : public TestWithDevice {
   void SetUp() override {
     // Launch device process.
     fuchsia::virtualization::hardware::StartInfo start_info;
-    zx_status_t status =
-        LaunchDevice(kVirtioBalloonUrl, stats_queue_.end(), &start_info);
+    zx_status_t status = LaunchDevice(kVirtioBalloonUrl, stats_queue_.end(), &start_info);
     ASSERT_EQ(ZX_OK, status);
 
     // Start device execution.
@@ -37,13 +36,11 @@ class VirtioBalloonTest : public TestWithDevice {
     ASSERT_EQ(ZX_OK, status);
 
     // Configure device queues.
-    VirtioQueueFake* queues[kNumQueues] = {&inflate_queue_, &deflate_queue_,
-                                           &stats_queue_};
+    VirtioQueueFake* queues[kNumQueues] = {&inflate_queue_, &deflate_queue_, &stats_queue_};
     for (size_t i = 0; i < kNumQueues; i++) {
       auto q = queues[i];
       q->Configure(PAGE_SIZE * i, PAGE_SIZE);
-      status = balloon_->ConfigureQueue(i, q->size(), q->desc(), q->avail(),
-                                        q->used());
+      status = balloon_->ConfigureQueue(i, q->size(), q->desc(), q->avail(), q->used());
       ASSERT_EQ(ZX_OK, status);
     }
   }
@@ -58,9 +55,8 @@ class VirtioBalloonTest : public TestWithDevice {
 
 TEST_F(VirtioBalloonTest, Inflate) {
   uint32_t pfns[] = {0, 1, 2};
-  zx_status_t status = DescriptorChainBuilder(inflate_queue_)
-                           .AppendReadableDescriptor(pfns, sizeof(pfns))
-                           .Build();
+  zx_status_t status =
+      DescriptorChainBuilder(inflate_queue_).AppendReadableDescriptor(pfns, sizeof(pfns)).Build();
   ASSERT_EQ(ZX_OK, status);
 
   status = balloon_->NotifyQueue(0);
@@ -71,9 +67,8 @@ TEST_F(VirtioBalloonTest, Inflate) {
 
 TEST_F(VirtioBalloonTest, Deflate) {
   uint32_t pfns[] = {2, 1, 0};
-  zx_status_t status = DescriptorChainBuilder(deflate_queue_)
-                           .AppendReadableDescriptor(pfns, sizeof(pfns))
-                           .Build();
+  zx_status_t status =
+      DescriptorChainBuilder(deflate_queue_).AppendReadableDescriptor(pfns, sizeof(pfns)).Build();
   ASSERT_EQ(ZX_OK, status);
 
   status = balloon_->NotifyQueue(1);
@@ -83,9 +78,8 @@ TEST_F(VirtioBalloonTest, Deflate) {
 }
 
 TEST_F(VirtioBalloonTest, Stats) {
-  zx_status_t status = DescriptorChainBuilder(stats_queue_)
-                           .AppendReadableDescriptor(nullptr, 0)
-                           .Build();
+  zx_status_t status =
+      DescriptorChainBuilder(stats_queue_).AppendReadableDescriptor(nullptr, 0).Build();
   ASSERT_EQ(ZX_OK, status);
 
   auto entry = [](void* arg) {

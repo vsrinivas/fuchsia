@@ -14,10 +14,8 @@ namespace {
 static constexpr uint16_t kPciConfigAddrPortBase = 0;
 static constexpr uint16_t kPciConfigDataPortBase = 4;
 
-constexpr uint64_t pci_type1_addr(uint8_t bus, uint8_t device, uint8_t function,
-                                  uint8_t reg) {
-  return 0x80000000 | (bus << 16) | (device << 11) | (function << 8) |
-         pci_type1_register(reg);
+constexpr uint64_t pci_type1_addr(uint8_t bus, uint8_t device, uint8_t function, uint8_t reg) {
+  return 0x80000000 | (bus << 16) | (device << 11) | (function << 8) | pci_type1_register(reg);
 }
 
 // Test we can read multiple fields in 1 32-bit word.
@@ -41,8 +39,7 @@ TEST(PciDeviceTest, ReadConfigRegisterBytewise) {
   bus.Init(async_get_default_dispatcher());
   PciDevice* device = bus.root_complex();
 
-  uint32_t expected_device_vendor =
-      PCI_VENDOR_ID_INTEL | (PCI_DEVICE_ID_INTEL_Q35 << 16);
+  uint32_t expected_device_vendor = PCI_VENDOR_ID_INTEL | (PCI_DEVICE_ID_INTEL_Q35 << 16);
   for (int i = 0; i < 4; ++i) {
     uint16_t reg = static_cast<uint16_t>(PCI_CONFIG_VENDOR_ID + i);
     IoValue value = {};
@@ -101,8 +98,7 @@ TEST(PciDeviceTest, ReadBarSize) {
   EXPECT_EQ(device->ReadConfig(PCI_CONFIG_BASE_ADDRESSES + 4, &value), ZX_OK);
   reg |= static_cast<uint64_t>(value.u32) << 32;
 
-  EXPECT_EQ(reg & ~kPciBarMmioAddrMask,
-            kPciBarMmioType64Bit | kPciBarMmioAccessSpace);
+  EXPECT_EQ(reg & ~kPciBarMmioAddrMask, kPciBarMmioType64Bit | kPciBarMmioAccessSpace);
   const PciBar* bar = device->bar(0);
   EXPECT_TRUE(bar != nullptr);
   EXPECT_EQ(~(reg & kPciBarMmioAddrMask) + 1, bar->size);
@@ -302,8 +298,7 @@ TEST(PciBusTest, ReadConfigDataPort) {
   // Verify we're using a 4b aligned register address.
   EXPECT_EQ(bus.config_addr() & bit_mask<uint32_t>(2), 0u);
   // Add the register offset to the data port base address.
-  EXPECT_EQ(bus.ReadIoPort(kPciConfigDataPortBase +
-                               (PCI_CONFIG_DEVICE_ID & bit_mask<uint32_t>(2)),
+  EXPECT_EQ(bus.ReadIoPort(kPciConfigDataPortBase + (PCI_CONFIG_DEVICE_ID & bit_mask<uint32_t>(2)),
                            &value),
             ZX_OK);
   EXPECT_EQ(value.access_size, 2);

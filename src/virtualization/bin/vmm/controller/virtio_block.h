@@ -15,15 +15,13 @@
 static constexpr uint16_t kVirtioBlockNumQueues = 1;
 
 class VirtioBlock
-    : public VirtioComponentDevice<VIRTIO_ID_BLOCK, kVirtioBlockNumQueues,
-                                   virtio_blk_config_t> {
+    : public VirtioComponentDevice<VIRTIO_ID_BLOCK, kVirtioBlockNumQueues, virtio_blk_config_t> {
  public:
   VirtioBlock(fuchsia::virtualization::BlockMode mode, const PhysMem& phys_mem);
 
   zx_status_t Start(const zx::guest& guest, const std::string& id,
-                    fuchsia::virtualization::BlockFormat format,
-                    fuchsia::io::FilePtr file, fuchsia::sys::Launcher* launcher,
-                    async_dispatcher_t* dispatcher);
+                    fuchsia::virtualization::BlockFormat format, fuchsia::io::FilePtr file,
+                    fuchsia::sys::Launcher* launcher, async_dispatcher_t* dispatcher);
 
  private:
   fuchsia::virtualization::BlockMode mode_;
@@ -31,8 +29,8 @@ class VirtioBlock
   // Use a sync pointer for consistency of virtual machine execution.
   fuchsia::virtualization::hardware::VirtioBlockSyncPtr block_;
 
-  zx_status_t ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc,
-                             zx_gpaddr_t avail, zx_gpaddr_t used);
+  zx_status_t ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc, zx_gpaddr_t avail,
+                             zx_gpaddr_t used);
   zx_status_t Ready(uint32_t negotiated_features);
 };
 

@@ -20,7 +20,6 @@ struct AcpiConfig {
   size_t cpus;
 };
 
-zx_status_t create_acpi_table(const struct AcpiConfig& cfg,
-                              const PhysMem& phys_mem);
+zx_status_t create_acpi_table(const struct AcpiConfig& cfg, const PhysMem& phys_mem);
 
 #endif  // SRC_VIRTUALIZATION_BIN_VMM_ARCH_X64_ACPI_H_

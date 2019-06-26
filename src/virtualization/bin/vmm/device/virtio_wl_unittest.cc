@@ -2,15 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <string.h>
-
+#include <fbl/algorithm.h>
 #include <fuchsia/virtualization/cpp/fidl.h>
 #include <fuchsia/virtualization/hardware/cpp/fidl.h>
-#include <virtio/wl.h>
-
-#include <fbl/algorithm.h>
-#include <src/lib/fxl/arraysize.h>
 #include <lib/zx/socket.h>
+#include <src/lib/fxl/arraysize.h>
+#include <string.h>
+#include <virtio/wl.h>
 
 #include "src/virtualization/bin/vmm/device/test_with_device.h"
 #include "src/virtualization/bin/vmm/device/virtio_queue_fake.h"
@@ -23,16 +21,13 @@ namespace {
 #define VIRTWL_VQ_MAGMA_OUT 3
 #define VIRTWL_NEXT_VFD_ID_BASE 0x40000000
 
-static constexpr char kVirtioWlUrl[] =
-    "fuchsia-pkg://fuchsia.com/virtio_wl#meta/virtio_wl.cmx";
+static constexpr char kVirtioWlUrl[] = "fuchsia-pkg://fuchsia.com/virtio_wl#meta/virtio_wl.cmx";
 static constexpr uint16_t kNumQueues = 2;
 static constexpr uint16_t kQueueSize = 32;
 static constexpr uint32_t kVirtioWlVmarSize = 1 << 16;
-static constexpr uint32_t kAllocateFlags =
-    ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE;
+static constexpr uint32_t kAllocateFlags = ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE;
 
-class TestWaylandDispatcher
-    : public fuchsia::virtualization::WaylandDispatcher {
+class TestWaylandDispatcher : public fuchsia::virtualization::WaylandDispatcher {
  public:
   TestWaylandDispatcher(fit::function<void(zx::channel)> callback)
       : callback_(std::move(callback)) {}
@@ -51,21 +46,18 @@ class TestWaylandDispatcher
 class VirtioWlTest : public TestWithDevice {
  public:
   VirtioWlTest()
-      : wl_dispatcher_([this](zx::channel channel) {
-          channels_.emplace_back(std::move(channel));
-        }),
+      : wl_dispatcher_([this](zx::channel channel) { channels_.emplace_back(std::move(channel)); }),
         in_queue_(phys_mem_, PAGE_SIZE * kNumQueues, kQueueSize),
         out_queue_(phys_mem_, in_queue_.end(), kQueueSize) {}
 
   void SetUp() override {
     uintptr_t vmar_addr;
     zx::vmar vmar;
-    ASSERT_EQ(zx::vmar::root_self()->allocate(
-                  0u, kVirtioWlVmarSize, kAllocateFlags, &vmar, &vmar_addr),
-              ZX_OK);
+    ASSERT_EQ(
+        zx::vmar::root_self()->allocate(0u, kVirtioWlVmarSize, kAllocateFlags, &vmar, &vmar_addr),
+        ZX_OK);
     fuchsia::virtualization::hardware::StartInfo start_info;
-    zx_status_t status =
-        LaunchDevice(kVirtioWlUrl, out_queue_.end(), &start_info);
+    zx_status_t status = LaunchDevice(kVirtioWlUrl, out_queue_.end(), &start_info);
     ASSERT_EQ(ZX_OK, status);
 
     // Start device execution.
@@ -80,8 +72,7 @@ class VirtioWlTest : public TestWithDevice {
     for (size_t i = 0; i < kNumQueues; i++) {
       auto q = queues[i];
       q->Configure(PAGE_SIZE * i, PAGE_SIZE);
-      status =
-          wl_->ConfigureQueue(i, q->size(), q->desc(), q->avail(), q->used());
+      status = wl_->ConfigureQueue(i, q->size(), q->desc(), q->avail(), q->used());
       ASSERT_EQ(ZX_OK, status);
     }
   }
@@ -93,11 +84,10 @@ class VirtioWlTest : public TestWithDevice {
     request.size = PAGE_SIZE;
     virtio_wl_ctrl_vfd_new_t* response;
     uint16_t descriptor_id;
-    zx_status_t status =
-        DescriptorChainBuilder(out_queue_)
-            .AppendReadableDescriptor(&request, sizeof(request))
-            .AppendWritableDescriptor(&response, sizeof(*response))
-            .Build(&descriptor_id);
+    zx_status_t status = DescriptorChainBuilder(out_queue_)
+                             .AppendReadableDescriptor(&request, sizeof(request))
+                             .AppendWritableDescriptor(&response, sizeof(*response))
+                             .Build(&descriptor_id);
     if (status != ZX_OK) {
       return status;
     }
@@ -111,8 +101,7 @@ class VirtioWlTest : public TestWithDevice {
     }
 
     auto used_elem = NextUsed(&out_queue_);
-    if (!used_elem || used_elem->id != descriptor_id ||
-        used_elem->len != sizeof(*response) ||
+    if (!used_elem || used_elem->id != descriptor_id || used_elem->len != sizeof(*response) ||
         response->hdr.type != VIRTIO_WL_RESP_VFD_NEW || !response->pfn ||
         response->size != PAGE_SIZE) {
       return ZX_ERR_INTERNAL;
@@ -128,11 +117,10 @@ class VirtioWlTest : public TestWithDevice {
     request.vfd_id = vfd_id;
     virtio_wl_ctrl_vfd_new_t* response;
     uint16_t descriptor_id;
-    zx_status_t status =
-        DescriptorChainBuilder(out_queue_)
-            .AppendReadableDescriptor(&request, sizeof(request))
-            .AppendWritableDescriptor(&response, sizeof(*response))
-            .Build(&descriptor_id);
+    zx_status_t status = DescriptorChainBuilder(out_queue_)
+                             .AppendReadableDescriptor(&request, sizeof(request))
+                             .AppendWritableDescriptor(&response, sizeof(*response))
+                             .Build(&descriptor_id);
     if (status != ZX_OK) {
       return status;
     }
@@ -146,8 +134,7 @@ class VirtioWlTest : public TestWithDevice {
     }
 
     auto used_elem = NextUsed(&out_queue_);
-    return (used_elem && used_elem->id == descriptor_id &&
-            used_elem->len == sizeof(*response) &&
+    return (used_elem && used_elem->id == descriptor_id && used_elem->len == sizeof(*response) &&
             response->hdr.type == VIRTIO_WL_RESP_VFD_NEW)
                ? ZX_OK
                : ZX_ERR_INTERNAL;
@@ -160,11 +147,10 @@ class VirtioWlTest : public TestWithDevice {
     request.flags = VIRTIO_WL_VFD_READ;
     virtio_wl_ctrl_vfd_new_t* response;
     uint16_t descriptor_id;
-    zx_status_t status =
-        DescriptorChainBuilder(out_queue_)
-            .AppendReadableDescriptor(&request, sizeof(request))
-            .AppendWritableDescriptor(&response, sizeof(*response))
-            .Build(&descriptor_id);
+    zx_status_t status = DescriptorChainBuilder(out_queue_)
+                             .AppendReadableDescriptor(&request, sizeof(request))
+                             .AppendWritableDescriptor(&response, sizeof(*response))
+                             .Build(&descriptor_id);
     if (status != ZX_OK) {
       return status;
     }
@@ -178,8 +164,7 @@ class VirtioWlTest : public TestWithDevice {
     }
 
     auto used_elem = NextUsed(&out_queue_);
-    return (used_elem && used_elem->id == descriptor_id &&
-            used_elem->len == sizeof(*response) &&
+    return (used_elem && used_elem->id == descriptor_id && used_elem->len == sizeof(*response) &&
             response->hdr.type == VIRTIO_WL_RESP_VFD_NEW)
                ? ZX_OK
                : ZX_ERR_INTERNAL;
@@ -223,8 +208,7 @@ TEST_F(VirtioWlTest, HandleNew) {
   EXPECT_EQ(response->hdr.type, VIRTIO_WL_RESP_VFD_NEW);
   EXPECT_EQ(response->hdr.flags, 0u);
   EXPECT_EQ(response->vfd_id, 1u);
-  EXPECT_EQ(response->flags,
-            static_cast<uint32_t>(VIRTIO_WL_VFD_READ | VIRTIO_WL_VFD_WRITE));
+  EXPECT_EQ(response->flags, static_cast<uint32_t>(VIRTIO_WL_VFD_READ | VIRTIO_WL_VFD_WRITE));
   EXPECT_GT(response->pfn, 0u);
   EXPECT_EQ(response->size, static_cast<uint32_t>(PAGE_SIZE));
   memset(reinterpret_cast<void*>(response->pfn * PAGE_SIZE), 0xff, 4000u);
@@ -272,8 +256,7 @@ TEST_F(VirtioWlTest, HandleNewCtx) {
   EXPECT_EQ(response->hdr.type, VIRTIO_WL_RESP_VFD_NEW);
   EXPECT_EQ(response->hdr.flags, 0u);
   EXPECT_EQ(response->vfd_id, 1u);
-  EXPECT_EQ(response->flags,
-            static_cast<uint32_t>(VIRTIO_WL_VFD_READ | VIRTIO_WL_VFD_WRITE));
+  EXPECT_EQ(response->flags, static_cast<uint32_t>(VIRTIO_WL_VFD_READ | VIRTIO_WL_VFD_WRITE));
 
   RunLoopUntilIdle();
   EXPECT_EQ(channels_.size(), 1u);
@@ -327,8 +310,7 @@ TEST_F(VirtioWlTest, HandleDmabuf) {
   EXPECT_EQ(response->hdr.type, VIRTIO_WL_RESP_VFD_NEW_DMABUF);
   EXPECT_EQ(response->hdr.flags, 0u);
   EXPECT_EQ(response->vfd_id, 1u);
-  EXPECT_EQ(response->flags,
-            static_cast<uint32_t>(VIRTIO_WL_VFD_READ | VIRTIO_WL_VFD_WRITE));
+  EXPECT_EQ(response->flags, static_cast<uint32_t>(VIRTIO_WL_VFD_READ | VIRTIO_WL_VFD_WRITE));
   EXPECT_GT(response->pfn, 0u);
   EXPECT_GT(response->size, 0u);
 }
@@ -342,8 +324,7 @@ TEST_F(VirtioWlTest, HandleSend) {
   ASSERT_EQ(channels_.size(), 1u);
 
   uint8_t request[sizeof(virtio_wl_ctrl_vfd_send_t) + sizeof(uint32_t) * 3];
-  virtio_wl_ctrl_vfd_send_t* header =
-      reinterpret_cast<virtio_wl_ctrl_vfd_send_t*>(request);
+  virtio_wl_ctrl_vfd_send_t* header = reinterpret_cast<virtio_wl_ctrl_vfd_send_t*>(request);
   header->hdr.type = VIRTIO_WL_CMD_VFD_SEND;
   header->vfd_id = 3u;
   header->vfd_count = 2u;
@@ -369,8 +350,8 @@ TEST_F(VirtioWlTest, HandleSend) {
   uint32_t data;
   zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
   uint32_t actual_bytes, actual_handles;
-  ASSERT_EQ(zx_channel_read(channels_[0].get(), 0, &data, handles, sizeof(data),
-                            arraysize(handles), &actual_bytes, &actual_handles),
+  ASSERT_EQ(zx_channel_read(channels_[0].get(), 0, &data, handles, sizeof(data), arraysize(handles),
+                            &actual_bytes, &actual_handles),
             ZX_OK);
   EXPECT_EQ(actual_handles, 2u);
   EXPECT_EQ(actual_bytes, sizeof(data));
@@ -382,8 +363,7 @@ TEST_F(VirtioWlTest, HandleSend) {
   // Verify data transfer using shared memory.
   uintptr_t addr;
   ASSERT_EQ(
-      zx::vmar::root_self()->map(0, vmo, 0, PAGE_SIZE,
-                                 ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &addr),
+      zx::vmar::root_self()->map(0, vmo, 0, PAGE_SIZE, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &addr),
       ZX_OK);
   EXPECT_EQ(*reinterpret_cast<uint8_t*>(addr), 0xaa);
   ASSERT_EQ(zx::vmar::root_self()->unmap(addr, PAGE_SIZE), ZX_OK);
@@ -400,8 +380,7 @@ TEST_F(VirtioWlTest, HandleSend) {
                 .AppendWritableDescriptor(&buffer, buffer_size)
                 .Build(&descriptor_id),
             ZX_OK);
-  virtio_wl_ctrl_vfd_recv_t* recv_header =
-      reinterpret_cast<virtio_wl_ctrl_vfd_recv_t*>(buffer);
+  virtio_wl_ctrl_vfd_recv_t* recv_header = reinterpret_cast<virtio_wl_ctrl_vfd_recv_t*>(buffer);
 
   ASSERT_EQ(wl_->NotifyQueue(VIRTWL_VQ_IN), ZX_OK);
   used_elem = NextUsed(&in_queue_);
@@ -426,8 +405,7 @@ TEST_F(VirtioWlTest, Recv) {
   ASSERT_EQ(zx::vmo::create(PAGE_SIZE, 0, &vmo), ZX_OK);
   uintptr_t addr;
   ASSERT_EQ(
-      zx::vmar::root_self()->map(0, vmo, 0, PAGE_SIZE,
-                                 ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &addr),
+      zx::vmar::root_self()->map(0, vmo, 0, PAGE_SIZE, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &addr),
       ZX_OK);
   memset(reinterpret_cast<void*>(addr), 0xaa, PAGE_SIZE);
   ASSERT_EQ(zx::vmar::root_self()->unmap(addr, PAGE_SIZE), ZX_OK);
@@ -437,14 +415,14 @@ TEST_F(VirtioWlTest, Recv) {
 
   uint32_t data = 1234u;
   zx_handle_t handles[] = {vmo.release(), remote_socket.release()};
-  ASSERT_EQ(zx_channel_write(channels_[0].get(), 0, &data, sizeof(data),
-                             handles, fbl::count_of(handles)),
-            ZX_OK);
+  ASSERT_EQ(
+      zx_channel_write(channels_[0].get(), 0, &data, sizeof(data), handles, fbl::count_of(handles)),
+      ZX_OK);
   RunLoopUntilIdle();
 
   virtio_wl_ctrl_vfd_new_t* new_vfd_cmd[2];
-  size_t buffer_size = sizeof(virtio_wl_ctrl_vfd_recv_t) +
-                       sizeof(uint32_t) * fbl::count_of(handles) + sizeof(data);
+  size_t buffer_size =
+      sizeof(virtio_wl_ctrl_vfd_recv_t) + sizeof(uint32_t) * fbl::count_of(handles) + sizeof(data);
   uint8_t* buffer;
   uint16_t descriptor_id[3];
   ASSERT_EQ(DescriptorChainBuilder(in_queue_)
@@ -452,17 +430,14 @@ TEST_F(VirtioWlTest, Recv) {
                 .Build(&descriptor_id[0]),
             ZX_OK);
   ASSERT_EQ(DescriptorChainBuilder(in_queue_)
-                .AppendWritableDescriptor(&new_vfd_cmd[0],
-                                          sizeof(virtio_wl_ctrl_vfd_new_t))
+                .AppendWritableDescriptor(&new_vfd_cmd[0], sizeof(virtio_wl_ctrl_vfd_new_t))
                 .Build(&descriptor_id[1]),
             ZX_OK);
   ASSERT_EQ(DescriptorChainBuilder(in_queue_)
-                .AppendWritableDescriptor(&new_vfd_cmd[1],
-                                          sizeof(virtio_wl_ctrl_vfd_new_t))
+                .AppendWritableDescriptor(&new_vfd_cmd[1], sizeof(virtio_wl_ctrl_vfd_new_t))
                 .Build(&descriptor_id[2]),
             ZX_OK);
-  virtio_wl_ctrl_vfd_recv_t* header =
-      reinterpret_cast<virtio_wl_ctrl_vfd_recv_t*>(buffer);
+  virtio_wl_ctrl_vfd_recv_t* header = reinterpret_cast<virtio_wl_ctrl_vfd_recv_t*>(buffer);
   uint32_t* vfds = reinterpret_cast<uint32_t*>(header + 1);
   ASSERT_EQ(wl_->NotifyQueue(VIRTWL_VQ_IN), ZX_OK);
 
@@ -494,20 +469,16 @@ TEST_F(VirtioWlTest, Recv) {
 
   EXPECT_EQ(new_vfd_cmd[0]->hdr.type, VIRTIO_WL_CMD_VFD_NEW);
   EXPECT_EQ(new_vfd_cmd[0]->hdr.flags, 0u);
-  EXPECT_EQ(new_vfd_cmd[0]->vfd_id,
-            static_cast<uint32_t>(VIRTWL_NEXT_VFD_ID_BASE));
-  EXPECT_EQ(new_vfd_cmd[0]->flags,
-            static_cast<uint32_t>(VIRTIO_WL_VFD_READ | VIRTIO_WL_VFD_WRITE));
+  EXPECT_EQ(new_vfd_cmd[0]->vfd_id, static_cast<uint32_t>(VIRTWL_NEXT_VFD_ID_BASE));
+  EXPECT_EQ(new_vfd_cmd[0]->flags, static_cast<uint32_t>(VIRTIO_WL_VFD_READ | VIRTIO_WL_VFD_WRITE));
   EXPECT_GT(new_vfd_cmd[0]->pfn, 0u);
   EXPECT_EQ(new_vfd_cmd[0]->size, static_cast<uint32_t>(PAGE_SIZE));
   EXPECT_EQ(*reinterpret_cast<uint8_t*>(new_vfd_cmd[0]->pfn * PAGE_SIZE), 0xaa);
 
   EXPECT_EQ(new_vfd_cmd[1]->hdr.type, VIRTIO_WL_CMD_VFD_NEW_PIPE);
   EXPECT_EQ(new_vfd_cmd[1]->hdr.flags, 0u);
-  EXPECT_EQ(new_vfd_cmd[1]->vfd_id,
-            static_cast<uint32_t>(VIRTWL_NEXT_VFD_ID_BASE + 1));
-  EXPECT_EQ(new_vfd_cmd[1]->flags,
-            static_cast<uint32_t>(VIRTIO_WL_VFD_READ | VIRTIO_WL_VFD_WRITE));
+  EXPECT_EQ(new_vfd_cmd[1]->vfd_id, static_cast<uint32_t>(VIRTWL_NEXT_VFD_ID_BASE + 1));
+  EXPECT_EQ(new_vfd_cmd[1]->flags, static_cast<uint32_t>(VIRTIO_WL_VFD_READ | VIRTIO_WL_VFD_WRITE));
 
   EXPECT_EQ(header->hdr.type, VIRTIO_WL_CMD_VFD_RECV);
   EXPECT_EQ(header->hdr.flags, 0u);
@@ -547,12 +518,11 @@ TEST_F(VirtioWlTest, Recv) {
     send_header->vfd_count = 0;
     *reinterpret_cast<uint32_t*>(send_header + 1) = 1234u;  // payload
     virtio_wl_ctrl_hdr_t* send_response;
-    ASSERT_EQ(
-        DescriptorChainBuilder(out_queue_)
-            .AppendReadableDescriptor(&send_request, sizeof(send_request))
-            .AppendWritableDescriptor(&send_response, sizeof(*send_response))
-            .Build(&descriptor_id),
-        ZX_OK);
+    ASSERT_EQ(DescriptorChainBuilder(out_queue_)
+                  .AppendReadableDescriptor(&send_request, sizeof(send_request))
+                  .AppendWritableDescriptor(&send_response, sizeof(*send_response))
+                  .Build(&descriptor_id),
+              ZX_OK);
 
     ASSERT_EQ(wl_->NotifyQueue(VIRTWL_VQ_OUT), ZX_OK);
     used_elem = NextUsed(&out_queue_);
@@ -563,8 +533,7 @@ TEST_F(VirtioWlTest, Recv) {
 
     uint32_t pipe_data;
     size_t actual_bytes;
-    ASSERT_EQ(socket.read(0, &pipe_data, sizeof(pipe_data), &actual_bytes),
-              ZX_OK);
+    ASSERT_EQ(socket.read(0, &pipe_data, sizeof(pipe_data), &actual_bytes), ZX_OK);
     EXPECT_EQ(actual_bytes, sizeof(pipe_data));
     EXPECT_EQ(pipe_data, 1234u);
   }

@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <limits.h>
-#include <stdlib.h>
-#include <cinttypes>
+#include "src/virtualization/bin/vmm/arch/x64/page_table.h"
 
 #include <gtest/gtest.h>
+#include <limits.h>
+#include <stdlib.h>
 
-#include "src/virtualization/bin/vmm/arch/x64/page_table.h"
+#include <cinttypes>
+
 #include "src/virtualization/bin/vmm/phys_mem_fake.h"
 
 #define ROUNDUP(a, b) (((a) + ((b)-1)) & ~((b)-1))
@@ -48,8 +49,7 @@ static void hexdump_ex(const void* ptr, size_t len, uint64_t disp_addr) {
     size_t s = ROUNDUP(MIN(len - count, 16), 4);
     size_t i;
 
-    printf(((disp_addr + len) > 0xFFFFFFFF) ? "0x%016" PRIx64 ": "
-                                            : "0x%08" PRIx64 ": ",
+    printf(((disp_addr + len) > 0xFFFFFFFF) ? "0x%016" PRIx64 ": " : "0x%08" PRIx64 ": ",
            disp_addr + count);
 
     for (i = 0; i < s / 4; i++) {
@@ -129,8 +129,7 @@ TEST(PageTableTest, 4kb) {
   page_table actual[4] = INITIALIZE_PAGE_TABLE;
   page_table expected[4] = INITIALIZE_PAGE_TABLE;
 
-  ASSERT_EQ(create_page_table(PhysMemFake((uintptr_t)actual, 4 * 4 << 10)),
-            ZX_OK);
+  ASSERT_EQ(create_page_table(PhysMemFake((uintptr_t)actual, 4 * 4 << 10)), ZX_OK);
 
   // pml4
   expected[0].entries[0] = PAGE_SIZE | X86_PTE_P | X86_PTE_RW;
@@ -150,9 +149,7 @@ TEST(PageTableTest, MixedPages) {
   page_table actual[4] = INITIALIZE_PAGE_TABLE;
   page_table expected[4] = INITIALIZE_PAGE_TABLE;
 
-  ASSERT_EQ(
-      create_page_table(PhysMemFake((uintptr_t)actual, (2 << 20) + (4 << 10))),
-      ZX_OK);
+  ASSERT_EQ(create_page_table(PhysMemFake((uintptr_t)actual, (2 << 20) + (4 << 10))), ZX_OK);
 
   // pml4
   expected[0].entries[0] = PAGE_SIZE | X86_PTE_P | X86_PTE_RW;
@@ -188,8 +185,7 @@ TEST(PageTableTest, Complex) {
   //
   // PT
   // >  264 mapped pages
-  ASSERT_EQ(create_page_table(PhysMemFake((uintptr_t)actual, 0x87B08000)),
-            ZX_OK);
+  ASSERT_EQ(create_page_table(PhysMemFake((uintptr_t)actual, 0x87B08000)), ZX_OK);
 
   // pml4
   expected[0].entries[0] = PAGE_SIZE | X86_PTE_P | X86_PTE_RW;
@@ -202,8 +198,7 @@ TEST(PageTableTest, Complex) {
   // pd - starts at 2GB
   const uint64_t pdp_offset = 2l << 30;
   for (int i = 0; i < 62; ++i) {
-    expected[2].entries[i] =
-        (pdp_offset + (i << 21)) | X86_PTE_P | X86_PTE_RW | X86_PTE_PS;
+    expected[2].entries[i] = (pdp_offset + (i << 21)) | X86_PTE_P | X86_PTE_RW | X86_PTE_PS;
   }
   expected[2].entries[61] = PAGE_SIZE * 3 | X86_PTE_P | X86_PTE_RW;
 

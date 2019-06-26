@@ -19,8 +19,7 @@ class VirtioConsoleTest : public TestWithDevice {
   void SetUp() override {
     // Launch device process.
     fuchsia::virtualization::hardware::StartInfo start_info;
-    zx_status_t status =
-        LaunchDevice(kVirtioConsoleUrl, tx_queue_.end(), &start_info);
+    zx_status_t status = LaunchDevice(kVirtioConsoleUrl, tx_queue_.end(), &start_info);
     ASSERT_EQ(ZX_OK, status);
 
     // Setup console socket.
@@ -39,8 +38,7 @@ class VirtioConsoleTest : public TestWithDevice {
     for (size_t i = 0; i < kNumQueues; i++) {
       auto q = queues[i];
       q->Configure(PAGE_SIZE * i, PAGE_SIZE);
-      status = console_->ConfigureQueue(i, q->size(), q->desc(), q->avail(),
-                                        q->used());
+      status = console_->ConfigureQueue(i, q->size(), q->desc(), q->avail(), q->used());
       ASSERT_EQ(ZX_OK, status);
     }
   }
@@ -77,11 +75,10 @@ TEST_F(VirtioConsoleTest, Receive) {
 }
 
 TEST_F(VirtioConsoleTest, Transmit) {
-  zx_status_t status =
-      DescriptorChainBuilder(tx_queue_)
-          .AppendReadableDescriptor("hello ", sizeof("hello ") - 1)
-          .AppendReadableDescriptor("world", sizeof("world"))
-          .Build();
+  zx_status_t status = DescriptorChainBuilder(tx_queue_)
+                           .AppendReadableDescriptor("hello ", sizeof("hello ") - 1)
+                           .AppendReadableDescriptor("world", sizeof("world"))
+                           .Build();
   ASSERT_EQ(ZX_OK, status);
 
   status = console_->NotifyQueue(1);

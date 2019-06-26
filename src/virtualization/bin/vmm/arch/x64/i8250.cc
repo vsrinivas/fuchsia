@@ -148,7 +148,7 @@ zx_status_t I8250Group::ConfigureZbi(void* zbi_base, size_t zbi_max) const {
       .type = ZBI_UART_PC_PORT,
       .irq = 4,
   };
-  zbi_result_t res = zbi_append_section(zbi_base, zbi_max, sizeof(zbi_uart),
-                                        ZBI_TYPE_DEBUG_UART, 0, 0, &zbi_uart);
+  zbi_result_t res =
+      zbi_append_section(zbi_base, zbi_max, sizeof(zbi_uart), ZBI_TYPE_DEBUG_UART, 0, 0, &zbi_uart);
   return res == ZBI_RESULT_OK ? ZX_OK : ZX_ERR_INTERNAL;
 }

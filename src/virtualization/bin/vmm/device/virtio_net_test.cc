@@ -2,32 +2,27 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/virtualization/bin/vmm/device/test_with_device.h"
-#include "src/virtualization/bin/vmm/device/virtio_queue_fake.h"
-
 #include <fuchsia/netstack/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <trace-provider/provider.h>
+#include <virtio/net.h>
 #include <zircon/device/ethernet.h>
 
-#include <virtio/net.h>
+#include "src/virtualization/bin/vmm/device/test_with_device.h"
+#include "src/virtualization/bin/vmm/device/virtio_queue_fake.h"
 
-static constexpr char kVirtioNetUrl[] =
-    "fuchsia-pkg://fuchsia.com/virtio_net#meta/virtio_net.cmx";
+static constexpr char kVirtioNetUrl[] = "fuchsia-pkg://fuchsia.com/virtio_net#meta/virtio_net.cmx";
 static constexpr size_t kNumQueues = 2;
 static constexpr uint16_t kQueueSize = 16;
 static constexpr size_t kVmoSize = 1024;
 static constexpr uint16_t kFakeInterfaceId = 0;
 
-class VirtioNetTest : public TestWithDevice,
-                      public fuchsia::netstack::Netstack {
+class VirtioNetTest : public TestWithDevice, public fuchsia::netstack::Netstack {
  public:
-  void GetPortForService(::std::string service,
-                         fuchsia::netstack::Protocol protocol,
+  void GetPortForService(::std::string service, fuchsia::netstack::Protocol protocol,
                          GetPortForServiceCallback callback) override {}
 
-  void GetAddress(::std::string address, uint16_t port,
-                  GetAddressCallback callback) override {}
+  void GetAddress(::std::string address, uint16_t port, GetAddressCallback callback) override {}
 
   void GetInterfaces(GetInterfacesCallback callback) override {}
   void GetInterfaces2(GetInterfaces2Callback callback) override {}
@@ -37,13 +32,11 @@ class VirtioNetTest : public TestWithDevice,
 
   void GetStats(uint32_t nicid, GetStatsCallback callback) override {}
 
-  void GetAggregateStats(
-      ::fidl::InterfaceRequest<::fuchsia::io::Node> object) override {}
+  void GetAggregateStats(::fidl::InterfaceRequest<::fuchsia::io::Node> object) override {}
 
   void SetInterfaceStatus(uint32_t nicid, bool enabled) override {}
 
-  void SetInterfaceAddress(uint32_t nicid, fuchsia::net::IpAddress addr,
-                           uint8_t prefixLen,
+  void SetInterfaceAddress(uint32_t nicid, fuchsia::net::IpAddress addr, uint8_t prefixLen,
                            SetInterfaceAddressCallback callback) override {
     fuchsia::netstack::NetErr err{
         .status = fuchsia::netstack::Status::OK,
@@ -52,9 +45,8 @@ class VirtioNetTest : public TestWithDevice,
     callback(err);
   }
 
-  void RemoveInterfaceAddress(
-      uint32_t nicid, fuchsia::net::IpAddress addr, uint8_t prefixLen,
-      RemoveInterfaceAddressCallback callback) override {}
+  void RemoveInterfaceAddress(uint32_t nicid, fuchsia::net::IpAddress addr, uint8_t prefixLen,
+                              RemoveInterfaceAddressCallback callback) override {}
 
   void SetInterfaceMetric(uint32_t nicid, uint32_t metric,
                           SetInterfaceMetricCallback callback) override {}
@@ -65,19 +57,17 @@ class VirtioNetTest : public TestWithDevice,
   void BridgeInterfaces(::std::vector<uint32_t> nicids,
                         BridgeInterfacesCallback callback) override {}
 
-  void AddEthernetDevice(
-      ::std::string topological_path,
-      fuchsia::netstack::InterfaceConfig interfaceConfig,
-      ::fidl::InterfaceHandle<::fuchsia::hardware::ethernet::Device> device,
-      AddEthernetDeviceCallback callback) override {
+  void AddEthernetDevice(::std::string topological_path,
+                         fuchsia::netstack::InterfaceConfig interfaceConfig,
+                         ::fidl::InterfaceHandle<::fuchsia::hardware::ethernet::Device> device,
+                         AddEthernetDeviceCallback callback) override {
     eth_device_ = device.Bind();
     eth_device_added_ = true;
     callback(kFakeInterfaceId);
   }
 
   void StartRouteTableTransaction(
-      ::fidl::InterfaceRequest<fuchsia::netstack::RouteTableTransaction>
-          routeTableTransaction,
+      ::fidl::InterfaceRequest<fuchsia::netstack::RouteTableTransaction> routeTableTransaction,
       StartRouteTableTransactionCallback callback) override {}
 
  protected:
@@ -93,8 +83,8 @@ class VirtioNetTest : public TestWithDevice,
 
     // Launch device process.
     fuchsia::virtualization::hardware::StartInfo start_info;
-    zx_status_t status = LaunchDevice(kVirtioNetUrl, tx_queue_.end(),
-                                      &start_info, std::move(env_services));
+    zx_status_t status =
+        LaunchDevice(kVirtioNetUrl, tx_queue_.end(), &start_info, std::move(env_services));
     ASSERT_EQ(ZX_OK, status);
 
     // Start device execution.
@@ -104,27 +94,23 @@ class VirtioNetTest : public TestWithDevice,
     net_->Start(std::move(start_info), [] {});
 
     // Wait for the device to call AddEthernetDevice on the netstack.
-    ASSERT_TRUE(RunLoopWithTimeoutOrUntil([this] { return eth_device_added_; },
-                                          zx::sec(5)));
+    ASSERT_TRUE(RunLoopWithTimeoutOrUntil([this] { return eth_device_added_; }, zx::sec(5)));
 
     // Get fifos.
     eth_device_->GetFifos(
-        [this](zx_status_t status,
-               std::unique_ptr<fuchsia::hardware::ethernet::Fifos> fifos) {
+        [this](zx_status_t status, std::unique_ptr<fuchsia::hardware::ethernet::Fifos> fifos) {
           ASSERT_EQ(status, ZX_OK);
           rx_ = std::move(fifos->rx);
           tx_ = std::move(fifos->tx);
         });
-    ASSERT_TRUE(
-        RunLoopWithTimeoutOrUntil([this] { return (rx_ && tx_); }, zx::sec(5)));
+    ASSERT_TRUE(RunLoopWithTimeoutOrUntil([this] { return (rx_ && tx_); }, zx::sec(5)));
 
     size_t vmo_size = kVmoSize;
     status = zx::vmo::create(vmo_size, 0, &vmo_);
     ASSERT_EQ(status, ZX_OK);
 
     zx::vmo vmo_dup;
-    status = vmo_.duplicate(ZX_RIGHTS_IO | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER,
-                            &vmo_dup);
+    status = vmo_.duplicate(ZX_RIGHTS_IO | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER, &vmo_dup);
     ASSERT_EQ(status, ZX_OK);
 
     eth_device_->SetIOBuffer(std::move(vmo_dup), [](zx_status_t status) {
@@ -136,8 +122,7 @@ class VirtioNetTest : public TestWithDevice,
     for (size_t i = 0; i < kNumQueues; i++) {
       auto q = queues[i];
       q->Configure(PAGE_SIZE * i, PAGE_SIZE);
-      net_->ConfigureQueue(i, q->size(), q->desc(), q->avail(), q->used(),
-                           [] {});
+      net_->ConfigureQueue(i, q->size(), q->desc(), q->avail(), q->used(), [] {});
     }
 
     eth_device_->Start([](zx_status_t status) { ASSERT_EQ(ZX_OK, status); });
@@ -159,15 +144,13 @@ TEST_F(VirtioNetTest, SendToGuest) {
   const size_t packet_size = 10;
   uint8_t* data;
   zx_status_t status = DescriptorChainBuilder(rx_queue_)
-                           .AppendWritableDescriptor(
-                               &data, sizeof(virtio_net_hdr_t) + packet_size)
+                           .AppendWritableDescriptor(&data, sizeof(virtio_net_hdr_t) + packet_size)
                            .Build();
   ASSERT_EQ(status, ZX_OK);
 
   const uint8_t expected_packet[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
   ASSERT_EQ(packet_size, sizeof(expected_packet));
-  vmo_.write(static_cast<const void*>(&expected_packet), 0,
-             sizeof(expected_packet));
+  vmo_.write(static_cast<const void*>(&expected_packet), 0, sizeof(expected_packet));
 
   eth_fifo_entry_t entry{
       .offset = 0,
@@ -177,8 +160,8 @@ TEST_F(VirtioNetTest, SendToGuest) {
   };
 
   zx_signals_t pending = 0;
-  status = tx_.wait_one(ZX_FIFO_WRITABLE | ZX_FIFO_PEER_CLOSED,
-                        zx::deadline_after(zx::sec(5)), &pending);
+  status = tx_.wait_one(ZX_FIFO_WRITABLE | ZX_FIFO_PEER_CLOSED, zx::deadline_after(zx::sec(5)),
+                        &pending);
   ASSERT_EQ(status, ZX_OK);
 
   status = tx_.write(sizeof(entry), static_cast<void*>(&entry), 1, nullptr);
@@ -188,8 +171,8 @@ TEST_F(VirtioNetTest, SendToGuest) {
 
   RunLoopUntilIdle();
 
-  status = tx_.wait_one(ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED,
-                        zx::deadline_after(zx::sec(5)), &pending);
+  status = tx_.wait_one(ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED, zx::deadline_after(zx::sec(5)),
+                        &pending);
   ASSERT_EQ(status, ZX_OK);
 
   status = tx_.read(sizeof(entry), static_cast<void*>(&entry), 1, nullptr);
@@ -218,8 +201,7 @@ TEST_F(VirtioNetTest, ReceiveFromGuest) {
   const size_t packet_size = 10;
   uint8_t data[packet_size + sizeof(virtio_net_hdr_t)];
   zx_status_t status = DescriptorChainBuilder(tx_queue_)
-                           .AppendReadableDescriptor(
-                               &data, sizeof(virtio_net_hdr_t) + packet_size)
+                           .AppendReadableDescriptor(&data, sizeof(virtio_net_hdr_t) + packet_size)
                            .Build();
   ASSERT_EQ(status, ZX_OK);
 
@@ -234,8 +216,8 @@ TEST_F(VirtioNetTest, ReceiveFromGuest) {
   };
 
   zx_signals_t pending = 0;
-  status = rx_.wait_one(ZX_FIFO_WRITABLE | ZX_FIFO_PEER_CLOSED,
-                        zx::deadline_after(zx::sec(5)), &pending);
+  status = rx_.wait_one(ZX_FIFO_WRITABLE | ZX_FIFO_PEER_CLOSED, zx::deadline_after(zx::sec(5)),
+                        &pending);
   ASSERT_EQ(status, ZX_OK);
 
   status = rx_.write(sizeof(entry), static_cast<void*>(&entry), 1, nullptr);
@@ -247,8 +229,8 @@ TEST_F(VirtioNetTest, ReceiveFromGuest) {
 
   RunLoopUntilIdle();
 
-  status = rx_.wait_one(ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED,
-                        zx::deadline_after(zx::sec(5)), &pending);
+  status = rx_.wait_one(ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED, zx::deadline_after(zx::sec(5)),
+                        &pending);
   ASSERT_EQ(status, ZX_OK);
 
   status = rx_.read(sizeof(entry), static_cast<void*>(&entry), 1, nullptr);

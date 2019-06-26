@@ -8,17 +8,14 @@
 
 static uint32_t g_next_env_id = 0;
 
-ManagerImpl::ManagerImpl()
-    : context_(component::StartupContext::CreateFromStartupInfo()) {
+ManagerImpl::ManagerImpl() : context_(component::StartupContext::CreateFromStartupInfo()) {
   context_->outgoing().AddPublicService(bindings_.GetHandler(this));
 }
 
-void ManagerImpl::Create(
-    fidl::StringPtr label,
-    fidl::InterfaceRequest<fuchsia::virtualization::Realm> request) {
+void ManagerImpl::Create(fidl::StringPtr label,
+                         fidl::InterfaceRequest<fuchsia::virtualization::Realm> request) {
   uint32_t env_id = g_next_env_id++;
-  auto env = std::make_unique<RealmImpl>(env_id, label, context_.get(),
-                                         std::move(request));
+  auto env = std::make_unique<RealmImpl>(env_id, label, context_.get(), std::move(request));
   env->set_unbound_handler([this, env_id]() { environments_.erase(env_id); });
   environments_.insert({env_id, std::move(env)});
 }
@@ -38,9 +35,8 @@ void ManagerImpl::List(ListCallback callback) {
   callback(std::move(env_infos));
 }
 
-void ManagerImpl::Connect(
-    uint32_t id,
-    fidl::InterfaceRequest<fuchsia::virtualization::Realm> request) {
+void ManagerImpl::Connect(uint32_t id,
+                          fidl::InterfaceRequest<fuchsia::virtualization::Realm> request) {
   const auto& it = environments_.find(id);
   if (it != environments_.end()) {
     it->second->AddBinding(std::move(request));

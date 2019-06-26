@@ -4,14 +4,14 @@
 
 #include "src/virtualization/bin/vmm/device/virtio_wl.h"
 
-#include <vector>
-
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fit/defer.h>
-#include <src/lib/fxl/logging.h>
 #include <lib/zx/socket.h>
+#include <src/lib/fxl/logging.h>
 #include <trace-provider/provider.h>
 #include <trace/event.h>
+
+#include <vector>
 
 #include "src/virtualization/bin/vmm/bits.h"
 
@@ -31,8 +31,7 @@ class Memory : public VirtioWl::Vfd {
 
   // Create a memory instance by mapping |vmo| into |vmar|. Returns a valid
   // instance on success.
-  static std::unique_ptr<Memory> Create(zx::vmo vmo, zx::vmar* vmar,
-                                        uint32_t map_flags) {
+  static std::unique_ptr<Memory> Create(zx::vmo vmo, zx::vmar* vmar, uint32_t map_flags) {
     TRACE_DURATION("machina", "Memory::Create");
     // Get the VMO size that has been rounded up to the next page size boundary.
     uint64_t size;
@@ -74,33 +73,27 @@ class Connection : public VirtioWl::Vfd {
  public:
   Connection(zx::channel channel, async::Wait::Handler handler)
       : channel_(std::move(channel)),
-        wait_(channel_.get(), ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
-              std::move(handler)) {}
+        wait_(channel_.get(), ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, std::move(handler)) {}
   ~Connection() override { wait_.Cancel(); }
 
   // |VirtioWl::Vfd|
-  zx_status_t BeginWaitOnData() override {
-    return wait_.Begin(async_get_default_dispatcher());
-  }
+  zx_status_t BeginWaitOnData() override { return wait_.Begin(async_get_default_dispatcher()); }
   zx_status_t AvailableForRead(uint32_t* bytes, uint32_t* handles) override {
     TRACE_DURATION("machina", "Connection::AvailableForRead");
-    zx_status_t status =
-        channel_.read(0, nullptr, nullptr, 0u, 0u, bytes, handles);
+    zx_status_t status = channel_.read(0, nullptr, nullptr, 0u, 0u, bytes, handles);
     return status == ZX_ERR_BUFFER_TOO_SMALL ? ZX_OK : status;
   }
-  zx_status_t Read(void* bytes, zx_handle_info_t* handles, uint32_t num_bytes,
-                   uint32_t num_handles, uint32_t* actual_bytes,
-                   uint32_t* actual_handles) override {
+  zx_status_t Read(void* bytes, zx_handle_info_t* handles, uint32_t num_bytes, uint32_t num_handles,
+                   uint32_t* actual_bytes, uint32_t* actual_handles) override {
     TRACE_DURATION("machina", "Connection::Read");
     if (bytes == nullptr) {
       return ZX_ERR_INVALID_ARGS;
     }
-    return channel_.read_etc(0, bytes, handles, num_bytes, num_handles,
-                             actual_bytes, actual_handles);
+    return channel_.read_etc(0, bytes, handles, num_bytes, num_handles, actual_bytes,
+                             actual_handles);
   }
-  zx_status_t Write(const void* bytes, uint32_t num_bytes,
-                    const zx_handle_t* handles, uint32_t num_handles,
-                    size_t* actual_bytes) override {
+  zx_status_t Write(const void* bytes, uint32_t num_bytes, const zx_handle_t* handles,
+                    uint32_t num_handles, size_t* actual_bytes) override {
     TRACE_DURATION("machina", "Connection::Write");
     // All bytes are always writting to the channel.
     *actual_bytes = num_bytes;
@@ -115,12 +108,11 @@ class Connection : public VirtioWl::Vfd {
 // Vfd type that holds a socket for data transfers.
 class Pipe : public VirtioWl::Vfd {
  public:
-  Pipe(zx::socket socket, zx::socket remote_socket,
-       async::Wait::Handler rx_handler, async::Wait::Handler tx_handler)
+  Pipe(zx::socket socket, zx::socket remote_socket, async::Wait::Handler rx_handler,
+       async::Wait::Handler tx_handler)
       : socket_(std::move(socket)),
         remote_socket_(std::move(remote_socket)),
-        rx_wait_(socket_.get(), ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED,
-                 std::move(rx_handler)),
+        rx_wait_(socket_.get(), ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED, std::move(rx_handler)),
         tx_wait_(socket_.get(), ZX_SOCKET_WRITABLE, std::move(tx_handler)) {}
   ~Pipe() override {
     rx_wait_.Cancel();
@@ -128,15 +120,12 @@ class Pipe : public VirtioWl::Vfd {
   }
 
   // |VirtioWl::Vfd|
-  zx_status_t BeginWaitOnData() override {
-    return rx_wait_.Begin(async_get_default_dispatcher());
-  }
+  zx_status_t BeginWaitOnData() override { return rx_wait_.Begin(async_get_default_dispatcher()); }
 
   zx_status_t AvailableForRead(uint32_t* bytes, uint32_t* handles) override {
     TRACE_DURATION("machina", "Pipe::AvailableForRead");
     zx_info_socket_t info = {};
-    zx_status_t status =
-        socket_.get_info(ZX_INFO_SOCKET, &info, sizeof(info), nullptr, nullptr);
+    zx_status_t status = socket_.get_info(ZX_INFO_SOCKET, &info, sizeof(info), nullptr, nullptr);
     if (status != ZX_OK) {
       return status;
     }
@@ -149,9 +138,8 @@ class Pipe : public VirtioWl::Vfd {
     return ZX_OK;
   }
 
-  zx_status_t Read(void* bytes, zx_handle_info_t* handles, uint32_t num_bytes,
-                   uint32_t num_handles, uint32_t* actual_bytes,
-                   uint32_t* actual_handles) override {
+  zx_status_t Read(void* bytes, zx_handle_info_t* handles, uint32_t num_bytes, uint32_t num_handles,
+                   uint32_t* actual_bytes, uint32_t* actual_handles) override {
     TRACE_DURATION("machina", "Pipe::Read");
     size_t actual;
     zx_status_t status = socket_.read(0, bytes, num_bytes, &actual);
@@ -169,9 +157,8 @@ class Pipe : public VirtioWl::Vfd {
   zx_status_t BeginWaitOnWritable() override {
     return tx_wait_.Begin(async_get_default_dispatcher());
   }
-  zx_status_t Write(const void* bytes, uint32_t num_bytes,
-                    const zx_handle_t* handles, uint32_t num_handles,
-                    size_t* actual_bytes) override {
+  zx_status_t Write(const void* bytes, uint32_t num_bytes, const zx_handle_t* handles,
+                    uint32_t num_handles, size_t* actual_bytes) override {
     TRACE_DURATION("machina", "Pipe::Write");
     // Handles can't be sent over sockets.
     if (num_handles) {
@@ -184,8 +171,7 @@ class Pipe : public VirtioWl::Vfd {
   }
   zx_status_t Duplicate(zx::handle* handle) override {
     zx_handle_t h = ZX_HANDLE_INVALID;
-    zx_status_t status =
-        zx_handle_duplicate(remote_socket_.get(), ZX_RIGHT_SAME_RIGHTS, &h);
+    zx_status_t status = zx_handle_duplicate(remote_socket_.get(), ZX_RIGHT_SAME_RIGHTS, &h);
     handle->reset(h);
     return status;
   }
@@ -199,10 +185,9 @@ class Pipe : public VirtioWl::Vfd {
 
 VirtioWl::VirtioWl(component::StartupContext* context) : DeviceBase(context) {}
 
-void VirtioWl::Start(
-    fuchsia::virtualization::hardware::StartInfo start_info, zx::vmar vmar,
-    fidl::InterfaceHandle<fuchsia::virtualization::WaylandDispatcher>
-        dispatcher, StartCallback callback) {
+void VirtioWl::Start(fuchsia::virtualization::hardware::StartInfo start_info, zx::vmar vmar,
+                     fidl::InterfaceHandle<fuchsia::virtualization::WaylandDispatcher> dispatcher,
+                     StartCallback callback) {
   auto deferred = fit::defer(std::move(callback));
   PrepStart(std::move(start_info));
   vmar_ = std::move(vmar);
@@ -211,8 +196,7 @@ void VirtioWl::Start(
   // Configure device queues.
   for (auto& queue : queues_) {
     queue.set_phys_mem(&phys_mem_);
-    queue.set_interrupt(
-        fit::bind_member<zx_status_t, DeviceBase>(this, &VirtioWl::Interrupt));
+    queue.set_interrupt(fit::bind_member<zx_status_t, DeviceBase>(this, &VirtioWl::Interrupt));
   }
 }
 
@@ -230,9 +214,8 @@ void VirtioWl::Ready(uint32_t negotiated_features, ReadyCallback callback) {
   }
 }
 
-void VirtioWl::ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc,
-                              zx_gpaddr_t avail, zx_gpaddr_t used,
-                              ConfigureQueueCallback callback) {
+void VirtioWl::ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc, zx_gpaddr_t avail,
+                              zx_gpaddr_t used, ConfigureQueueCallback callback) {
   TRACE_DURATION("machina", "VirtioWl::ConfigureQueue");
   auto deferred = fit::defer(std::move(callback));
   switch (queue) {
@@ -273,8 +256,7 @@ void VirtioWl::HandleCommand(VirtioChain* chain) {
     FXL_LOG(ERROR) << "Failed to read descriptor";
     return;
   }
-  const auto request_header =
-      reinterpret_cast<virtio_wl_ctrl_hdr_t*>(request_desc.addr);
+  const auto request_header = reinterpret_cast<virtio_wl_ctrl_hdr_t*>(request_desc.addr);
   const uint32_t command_type = request_header->type;
 
   TRACE_DURATION("machina", "VirtioWl::HandleCommand", "type", command_type);
@@ -293,25 +275,20 @@ void VirtioWl::HandleCommand(VirtioChain* chain) {
 
   switch (command_type) {
     case VIRTIO_WL_CMD_VFD_NEW: {
-      auto request =
-          reinterpret_cast<virtio_wl_ctrl_vfd_new_t*>(request_desc.addr);
-      auto response =
-          reinterpret_cast<virtio_wl_ctrl_vfd_new_t*>(response_desc.addr);
+      auto request = reinterpret_cast<virtio_wl_ctrl_vfd_new_t*>(request_desc.addr);
+      auto response = reinterpret_cast<virtio_wl_ctrl_vfd_new_t*>(response_desc.addr);
       HandleNew(request, response);
       *chain->Used() = sizeof(*response);
     } break;
     case VIRTIO_WL_CMD_VFD_CLOSE: {
       auto request = reinterpret_cast<virtio_wl_ctrl_vfd_t*>(request_desc.addr);
-      auto response =
-          reinterpret_cast<virtio_wl_ctrl_hdr_t*>(response_desc.addr);
+      auto response = reinterpret_cast<virtio_wl_ctrl_hdr_t*>(response_desc.addr);
       HandleClose(request, response);
       *chain->Used() = sizeof(*response);
     } break;
     case VIRTIO_WL_CMD_VFD_SEND: {
-      auto request =
-          reinterpret_cast<virtio_wl_ctrl_vfd_send_t*>(request_desc.addr);
-      auto response =
-          reinterpret_cast<virtio_wl_ctrl_hdr_t*>(response_desc.addr);
+      auto request = reinterpret_cast<virtio_wl_ctrl_vfd_send_t*>(request_desc.addr);
+      auto response = reinterpret_cast<virtio_wl_ctrl_hdr_t*>(response_desc.addr);
       zx_status_t status = HandleSend(request, request_desc.len, response);
       // HandleSend returns ZX_ERR_SHOULD_WAIT if asynchronous wait is needed
       // to complete. Return early here instead of writing response to guest.
@@ -325,42 +302,33 @@ void VirtioWl::HandleCommand(VirtioChain* chain) {
       *chain->Used() = sizeof(*response);
     } break;
     case VIRTIO_WL_CMD_VFD_NEW_CTX: {
-      auto request =
-          reinterpret_cast<virtio_wl_ctrl_vfd_new_t*>(request_desc.addr);
-      auto response =
-          reinterpret_cast<virtio_wl_ctrl_vfd_new_t*>(response_desc.addr);
+      auto request = reinterpret_cast<virtio_wl_ctrl_vfd_new_t*>(request_desc.addr);
+      auto response = reinterpret_cast<virtio_wl_ctrl_vfd_new_t*>(response_desc.addr);
       HandleNewCtx(request, response);
       *chain->Used() = sizeof(*response);
     } break;
     case VIRTIO_WL_CMD_VFD_NEW_PIPE: {
-      auto request =
-          reinterpret_cast<virtio_wl_ctrl_vfd_new_t*>(request_desc.addr);
-      auto response =
-          reinterpret_cast<virtio_wl_ctrl_vfd_new_t*>(response_desc.addr);
+      auto request = reinterpret_cast<virtio_wl_ctrl_vfd_new_t*>(request_desc.addr);
+      auto response = reinterpret_cast<virtio_wl_ctrl_vfd_new_t*>(response_desc.addr);
       HandleNewPipe(request, response);
       *chain->Used() = sizeof(*response);
     } break;
     case VIRTIO_WL_CMD_VFD_NEW_DMABUF: {
-      auto request =
-          reinterpret_cast<virtio_wl_ctrl_vfd_new_t*>(request_desc.addr);
-      auto response =
-          reinterpret_cast<virtio_wl_ctrl_vfd_new_t*>(response_desc.addr);
+      auto request = reinterpret_cast<virtio_wl_ctrl_vfd_new_t*>(request_desc.addr);
+      auto response = reinterpret_cast<virtio_wl_ctrl_vfd_new_t*>(response_desc.addr);
       HandleNewDmabuf(request, response);
       *chain->Used() = sizeof(*response);
     } break;
     case VIRTIO_WL_CMD_VFD_DMABUF_SYNC: {
-      auto request = reinterpret_cast<virtio_wl_ctrl_vfd_dmabuf_sync_t*>(
-          request_desc.addr);
-      auto response =
-          reinterpret_cast<virtio_wl_ctrl_hdr_t*>(response_desc.addr);
+      auto request = reinterpret_cast<virtio_wl_ctrl_vfd_dmabuf_sync_t*>(request_desc.addr);
+      auto response = reinterpret_cast<virtio_wl_ctrl_hdr_t*>(response_desc.addr);
       HandleDmabufSync(request, response);
       *chain->Used() = sizeof(*response);
     } break;
     default: {
       FXL_LOG(ERROR) << "Unsupported WL command "
                      << "(" << command_type << ")";
-      auto response =
-          reinterpret_cast<virtio_wl_ctrl_hdr_t*>(response_desc.addr);
+      auto response = reinterpret_cast<virtio_wl_ctrl_hdr_t*>(response_desc.addr);
       response->type = VIRTIO_WL_RESP_INVALID_CMD;
       *chain->Used() = sizeof(*response);
       break;
@@ -382,14 +350,13 @@ void VirtioWl::HandleNew(const virtio_wl_ctrl_vfd_new_t* request,
   zx::vmo vmo;
   zx_status_t status = zx::vmo::create(request->size, 0, &vmo);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to allocate VMO (size=" << request->size
-                   << "): " << status;
+    FXL_LOG(ERROR) << "Failed to allocate VMO (size=" << request->size << "): " << status;
     response->hdr.type = VIRTIO_WL_RESP_OUT_OF_MEMORY;
     return;
   }
 
-  std::unique_ptr<Memory> vfd = Memory::Create(
-      std::move(vmo), &vmar_, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
+  std::unique_ptr<Memory> vfd =
+      Memory::Create(std::move(vmo), &vmar_, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
   if (!vfd) {
     response->hdr.type = VIRTIO_WL_RESP_OUT_OF_MEMORY;
     return;
@@ -399,8 +366,7 @@ void VirtioWl::HandleNew(const virtio_wl_ctrl_vfd_new_t* request,
   uint64_t size = vfd->size();
 
   bool inserted;
-  std::tie(std::ignore, inserted) =
-      vfds_.insert({request->vfd_id, std::move(vfd)});
+  std::tie(std::ignore, inserted) = vfds_.insert({request->vfd_id, std::move(vfd)});
   if (!inserted) {
     response->hdr.type = VIRTIO_WL_RESP_INVALID_ID;
     return;
@@ -414,8 +380,7 @@ void VirtioWl::HandleNew(const virtio_wl_ctrl_vfd_new_t* request,
   response->size = size;
 }
 
-void VirtioWl::HandleClose(const virtio_wl_ctrl_vfd_t* request,
-                           virtio_wl_ctrl_hdr_t* response) {
+void VirtioWl::HandleClose(const virtio_wl_ctrl_vfd_t* request, virtio_wl_ctrl_hdr_t* response) {
   TRACE_DURATION("machina", "VirtioWl::HandleClose");
 
   if (vfds_.erase(request->vfd_id)) {
@@ -425,8 +390,7 @@ void VirtioWl::HandleClose(const virtio_wl_ctrl_vfd_t* request,
   }
 }
 
-zx_status_t VirtioWl::HandleSend(const virtio_wl_ctrl_vfd_send_t* request,
-                                 uint32_t request_len,
+zx_status_t VirtioWl::HandleSend(const virtio_wl_ctrl_vfd_send_t* request, uint32_t request_len,
                                  virtio_wl_ctrl_hdr_t* response) {
   TRACE_DURATION("machina", "VirtioWl::HandleSend");
 
@@ -445,16 +409,14 @@ zx_status_t VirtioWl::HandleSend(const virtio_wl_ctrl_vfd_send_t* request,
   }
   num_bytes -= request->vfd_count * sizeof(*vfds);
   if (num_bytes > ZX_CHANNEL_MAX_MSG_BYTES) {
-    FXL_LOG(ERROR) << "Message too large for channel (size=" << num_bytes
-                   << ")";
+    FXL_LOG(ERROR) << "Message too large for channel (size=" << num_bytes << ")";
     response->type = VIRTIO_WL_RESP_ERR;
     return ZX_OK;
   }
   auto bytes = reinterpret_cast<const uint8_t*>(vfds + request->vfd_count);
 
   if (request->vfd_count > ZX_CHANNEL_MAX_MSG_HANDLES) {
-    FXL_LOG(ERROR) << "Too many VFDs for message (vfds=" << request->vfd_count
-                   << ")";
+    FXL_LOG(ERROR) << "Too many VFDs for message (vfds=" << request->vfd_count << ")";
     response->type = VIRTIO_WL_RESP_ERR;
     return ZX_OK;
   }
@@ -482,10 +444,9 @@ zx_status_t VirtioWl::HandleSend(const virtio_wl_ctrl_vfd_send_t* request,
       raw_handles[i] = handles[i].release();
     }
     size_t actual_bytes = 0;
-    zx_status_t status =
-        it->second->Write(bytes + bytes_written_for_send_request_,
-                          num_bytes - bytes_written_for_send_request_,
-                          raw_handles, request->vfd_count, &actual_bytes);
+    zx_status_t status = it->second->Write(bytes + bytes_written_for_send_request_,
+                                           num_bytes - bytes_written_for_send_request_, raw_handles,
+                                           request->vfd_count, &actual_bytes);
     if (status == ZX_OK) {
       // Increment |bytes_written_for_send_request_|. Note: It is safe to use
       // this device global variable for this as we never process more than
@@ -519,8 +480,7 @@ void VirtioWl::HandleNewCtx(const virtio_wl_ctrl_vfd_new_t* request,
   }
 
   zx::channel channel, remote_channel;
-  zx_status_t status =
-      zx::channel::create(ZX_SOCKET_STREAM, &channel, &remote_channel);
+  zx_status_t status = zx::channel::create(ZX_SOCKET_STREAM, &channel, &remote_channel);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to create channel: " << status;
     response->hdr.type = VIRTIO_WL_RESP_OUT_OF_MEMORY;
@@ -529,9 +489,8 @@ void VirtioWl::HandleNewCtx(const virtio_wl_ctrl_vfd_new_t* request,
 
   uint32_t vfd_id = request->vfd_id;
   auto vfd = std::make_unique<Connection>(
-      std::move(channel),
-      [this, vfd_id](async_dispatcher_t* dispatcher, async::Wait* wait,
-                     zx_status_t status, const zx_packet_signal_t* signal) {
+      std::move(channel), [this, vfd_id](async_dispatcher_t* dispatcher, async::Wait* wait,
+                                         zx_status_t status, const zx_packet_signal_t* signal) {
         OnDataAvailable(vfd_id, wait, status, signal);
       });
   if (!vfd) {
@@ -573,8 +532,7 @@ void VirtioWl::HandleNewPipe(const virtio_wl_ctrl_vfd_new_t* request,
   }
 
   zx::socket socket, remote_socket;
-  zx_status_t status =
-      zx::socket::create(ZX_SOCKET_STREAM, &socket, &remote_socket);
+  zx_status_t status = zx::socket::create(ZX_SOCKET_STREAM, &socket, &remote_socket);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to create socket: " << status;
     response->hdr.type = VIRTIO_WL_RESP_OUT_OF_MEMORY;
@@ -584,8 +542,8 @@ void VirtioWl::HandleNewPipe(const virtio_wl_ctrl_vfd_new_t* request,
   uint32_t vfd_id = request->vfd_id;
   auto vfd = std::make_unique<Pipe>(
       std::move(socket), std::move(remote_socket),
-      [this, vfd_id](async_dispatcher_t* dispatcher, async::Wait* wait,
-                     zx_status_t status, const zx_packet_signal_t* signal) {
+      [this, vfd_id](async_dispatcher_t* dispatcher, async::Wait* wait, zx_status_t status,
+                     const zx_packet_signal_t* signal) {
         OnDataAvailable(vfd_id, wait, status, signal);
       },
       fit::bind_member(this, &VirtioWl::OnCanWrite));
@@ -648,14 +606,13 @@ void VirtioWl::HandleNewDmabuf(const virtio_wl_ctrl_vfd_new_t* request,
   zx::vmo vmo;
   zx_status_t status = zx::vmo::create(total_size, 0, &vmo);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to allocate VMO (size=" << total_size
-                   << "): " << status;
+    FXL_LOG(ERROR) << "Failed to allocate VMO (size=" << total_size << "): " << status;
     response->hdr.type = VIRTIO_WL_RESP_OUT_OF_MEMORY;
     return;
   }
 
-  std::unique_ptr<Memory> vfd = Memory::Create(
-      std::move(vmo), &vmar_, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
+  std::unique_ptr<Memory> vfd =
+      Memory::Create(std::move(vmo), &vmar_, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
   if (!vfd) {
     FXL_LOG(ERROR) << "Failed to create memory instance";
     response->hdr.type = VIRTIO_WL_RESP_OUT_OF_MEMORY;
@@ -666,8 +623,7 @@ void VirtioWl::HandleNewDmabuf(const virtio_wl_ctrl_vfd_new_t* request,
   uint64_t size = vfd->size();
 
   bool inserted;
-  std::tie(std::ignore, inserted) =
-      vfds_.insert({request->vfd_id, std::move(vfd)});
+  std::tie(std::ignore, inserted) = vfds_.insert({request->vfd_id, std::move(vfd)});
   if (!inserted) {
     response->hdr.type = VIRTIO_WL_RESP_INVALID_ID;
     return;
@@ -708,8 +664,7 @@ void VirtioWl::OnCommandAvailable() {
   }
 }
 
-void VirtioWl::OnDataAvailable(uint32_t vfd_id, async::Wait* wait,
-                               zx_status_t status,
+void VirtioWl::OnDataAvailable(uint32_t vfd_id, async::Wait* wait, zx_status_t status,
                                const zx_packet_signal_t* signal) {
   TRACE_DURATION("machina", "VirtioWl::OnDataAvailable");
 
@@ -726,8 +681,7 @@ void VirtioWl::OnDataAvailable(uint32_t vfd_id, async::Wait* wait,
   DispatchPendingEvents();
 }
 
-void VirtioWl::OnCanWrite(async_dispatcher_t* dispatcher, async::Wait* wait,
-                          zx_status_t status,
+void VirtioWl::OnCanWrite(async_dispatcher_t* dispatcher, async::Wait* wait, zx_status_t status,
                           const zx_packet_signal_t* signal) {
   TRACE_DURATION("machina", "VirtioWl::OnCanWrite");
 
@@ -811,8 +765,8 @@ void VirtioWl::DispatchPendingEvents() {
       }
       // Total message size is NEW commands for each handle, the RECV header,
       // the ID of each VFD and the data.
-      size_t message_size = sizeof(virtio_wl_ctrl_vfd_recv_t) +
-                            sizeof(uint32_t) * actual_handles + actual_bytes;
+      size_t message_size =
+          sizeof(virtio_wl_ctrl_vfd_recv_t) + sizeof(uint32_t) * actual_handles + actual_bytes;
       if (desc.len < message_size) {
         FXL_LOG(ERROR) << "Descriptor is too small for message";
         break;
@@ -829,9 +783,8 @@ void VirtioWl::DispatchPendingEvents() {
 
       // Retrieve handles and read data into queue.
       zx_handle_info_t handle_infos[ZX_CHANNEL_MAX_MSG_HANDLES];
-      status = vfd_it->second->Read(vfd_ids + actual_handles, handle_infos,
-                                    actual_bytes, actual_handles, &actual_bytes,
-                                    &actual_handles);
+      status = vfd_it->second->Read(vfd_ids + actual_handles, handle_infos, actual_bytes,
+                                    actual_handles, &actual_bytes, &actual_handles);
       if (status != ZX_OK) {
         FXL_LOG(ERROR) << "Failed to read message: " << status;
         break;
@@ -877,8 +830,7 @@ void VirtioWl::DispatchPendingEvents() {
 bool VirtioWl::CreatePendingVfds() {
   TRACE_DURATION("machina", "VirtioWl::CreatePendingVfds");
   // Consume handles by creating a VFD for each handle.
-  for (auto it = pending_vfds_.begin(); it != pending_vfds_.end();
-       it = pending_vfds_.erase(it)) {
+  for (auto it = pending_vfds_.begin(); it != pending_vfds_.end(); it = pending_vfds_.erase(it)) {
     VirtioChain chain;
     VirtioDescriptor desc;
     if (!AcquireWritableDescriptor(in_queue(), &chain, &desc)) {
@@ -921,8 +873,7 @@ bool VirtioWl::CreatePendingVfds() {
       case ZX_OBJ_TYPE_SOCKET: {
         auto vfd = std::make_unique<Pipe>(
             zx::socket(it->handle_info.handle), zx::socket(),
-            [this, vfd_id](async_dispatcher_t* dispatcher, async::Wait* wait,
-                           zx_status_t status,
+            [this, vfd_id](async_dispatcher_t* dispatcher, async::Wait* wait, zx_status_t status,
                            const zx_packet_signal_t* signal) {
               OnDataAvailable(vfd_id, wait, status, signal);
             },
@@ -957,8 +908,7 @@ bool VirtioWl::CreatePendingVfds() {
 
 bool VirtioWl::AcquireWritableDescriptor(VirtioQueue* queue, VirtioChain* chain,
                                          VirtioDescriptor* descriptor) {
-  return queue->NextChain(chain) && chain->NextDescriptor(descriptor) &&
-         descriptor->writable;
+  return queue->NextChain(chain) && chain->NextDescriptor(descriptor) && descriptor->writable;
 }
 
 int main(int argc, char** argv) {

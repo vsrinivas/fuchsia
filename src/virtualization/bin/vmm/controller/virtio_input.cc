@@ -4,8 +4,8 @@
 
 #include "src/virtualization/bin/vmm/controller/virtio_input.h"
 
-#include <src/lib/fxl/logging.h>
 #include <lib/svc/cpp/services.h>
+#include <src/lib/fxl/logging.h>
 
 #include "src/virtualization/bin/vmm/device/input.h"
 
@@ -27,32 +27,26 @@ static constexpr uint32_t kATKeyboardFirstCode = 0;
 static constexpr uint32_t kATKeyboardLastCode = 255;
 static constexpr uint32_t kMediaKeyboardFirstCode = 0x160;
 static constexpr uint32_t kMediaKeyboardLastCode = 0x2bf;
-static_assert(kATKeyboardFirstCode % 8 == 0,
-              "First scan code must be byte aligned.");
+static_assert(kATKeyboardFirstCode % 8 == 0, "First scan code must be byte aligned.");
 static_assert((kATKeyboardLastCode + 1 - kATKeyboardFirstCode) % 8 == 0,
               "Scan code range must be byte aligned.");
-static_assert(kMediaKeyboardFirstCode % 8 == 0,
-              "First scan code must be byte aligned.");
+static_assert(kMediaKeyboardFirstCode % 8 == 0, "First scan code must be byte aligned.");
 static_assert((kMediaKeyboardLastCode + 1 - kMediaKeyboardFirstCode) % 8 == 0,
               "Scan code range must be byte aligned.");
-static_assert((kATKeyboardLastCode + 7) / 8 <
-                  sizeof(virtio_input_config_t().u.bitmap),
+static_assert((kATKeyboardLastCode + 7) / 8 < sizeof(virtio_input_config_t().u.bitmap),
               "Last scan code cannot exceed allowed range.");
-static_assert((kMediaKeyboardLastCode + 7) / 8 <
-                  sizeof(virtio_input_config_t().u.bitmap),
+static_assert((kMediaKeyboardLastCode + 7) / 8 < sizeof(virtio_input_config_t().u.bitmap),
               "Last scan code cannot exceed allowed range.");
 
 VirtioInput::VirtioInput(const PhysMem& phys_mem)
-    : VirtioComponentDevice(
-          phys_mem, 0 /* device_features */,
-          fit::bind_member(this, &VirtioInput::ConfigureQueue),
-          fit::bind_member(this, &VirtioInput::ConfigureDevice),
-          fit::bind_member(this, &VirtioInput::Ready)) {}
+    : VirtioComponentDevice(phys_mem, 0 /* device_features */,
+                            fit::bind_member(this, &VirtioInput::ConfigureQueue),
+                            fit::bind_member(this, &VirtioInput::ConfigureDevice),
+                            fit::bind_member(this, &VirtioInput::Ready)) {}
 
 zx_status_t VirtioInput::Start(
     const zx::guest& guest,
-    fidl::InterfaceRequest<fuchsia::virtualization::hardware::ViewListener>
-        view_listener_request,
+    fidl::InterfaceRequest<fuchsia::virtualization::hardware::ViewListener> view_listener_request,
     fuchsia::sys::Launcher* launcher, async_dispatcher_t* dispatcher) {
   component::Services services;
   fuchsia::sys::LaunchInfo launch_info{
@@ -71,9 +65,8 @@ zx_status_t VirtioInput::Start(
   return input_->Start(std::move(start_info));
 }
 
-zx_status_t VirtioInput::ConfigureQueue(uint16_t queue, uint16_t size,
-                                        zx_gpaddr_t desc, zx_gpaddr_t avail,
-                                        zx_gpaddr_t used) {
+zx_status_t VirtioInput::ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc,
+                                        zx_gpaddr_t avail, zx_gpaddr_t used) {
   return input_->ConfigureQueue(queue, size, desc, avail, used);
 }
 

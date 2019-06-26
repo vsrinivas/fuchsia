@@ -33,11 +33,8 @@ void RunnerImpl::StartComponent(
   fbl::RefPtr<fs::PseudoDir> dir = fbl::AdoptRef(new fs::PseudoDir());
   fuchsia::io::DirectoryPtr public_dir;
   launch_info.directory_request = public_dir.NewRequest().TakeChannel();
-  dir->AddEntry(
-      "svc",
-      fbl::AdoptRef(new fs::RemoteDir(public_dir.Unbind().TakeChannel())));
-  vfs_.ServeDirectory(std::move(dir),
-                      std::move(startup_info.launch_info.directory_request));
+  dir->AddEntry("svc", fbl::AdoptRef(new fs::RemoteDir(public_dir.Unbind().TakeChannel())));
+  vfs_.ServeDirectory(std::move(dir), std::move(startup_info.launch_info.directory_request));
 
   // Pass-through some arguments directly to the vmm package.
   launch_info.url = "fuchsia-pkg://fuchsia.com/vmm#meta/vmm.cmx";
@@ -73,10 +70,8 @@ void RunnerImpl::StartComponent(
       // This must list every service the vmm depends on. We don't provide
       // any implementations here since the ServiceProviderBridge takes care
       // of that for us via the backing_dir, which is the above /svc directory.
-      service_list->names.push_back(
-          fuchsia::virtualization::vmm::LaunchInfoProvider::Name_);
-      bridge->set_backing_dir(
-          std::move(startup_info.flat_namespace.directories[i]));
+      service_list->names.push_back(fuchsia::virtualization::vmm::LaunchInfoProvider::Name_);
+      bridge->set_backing_dir(std::move(startup_info.flat_namespace.directories[i]));
       service_list->provider = bridge->AddBinding();
       launch_info.additional_services = std::move(service_list);
     }

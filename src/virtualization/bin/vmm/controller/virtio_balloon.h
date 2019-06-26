@@ -16,10 +16,9 @@
 
 static constexpr uint16_t kVirtioBalloonNumQueues = 3;
 
-class VirtioBalloon
-    : public VirtioComponentDevice<VIRTIO_ID_BALLOON, kVirtioBalloonNumQueues,
-                                   virtio_balloon_config_t>,
-      public fuchsia::virtualization::BalloonController {
+class VirtioBalloon : public VirtioComponentDevice<VIRTIO_ID_BALLOON, kVirtioBalloonNumQueues,
+                                                   virtio_balloon_config_t>,
+                      public fuchsia::virtualization::BalloonController {
  public:
   explicit VirtioBalloon(const PhysMem& phys_mem);
 
@@ -35,8 +34,8 @@ class VirtioBalloon
   fuchsia::virtualization::hardware::VirtioBalloonSyncPtr balloon_;
   fuchsia::virtualization::hardware::VirtioBalloonPtr stats_;
 
-  zx_status_t ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc,
-                             zx_gpaddr_t avail, zx_gpaddr_t used);
+  zx_status_t ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc, zx_gpaddr_t avail,
+                             zx_gpaddr_t used);
   zx_status_t Ready(uint32_t negotiated_features);
 
   // |fuchsia::virtualization::BalloonController|

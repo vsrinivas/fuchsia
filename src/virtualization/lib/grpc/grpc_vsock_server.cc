@@ -23,8 +23,7 @@ void GrpcVsockServerBuilder::AddListenPort(uint32_t vsock_port) {
                // don't do this, the underlying channel may be closed if the
                // builder is free'd after a call to Build().
                [socket_endpoint = socket_endpoint_,
-                completer =
-                    std::move(bridge.completer)](zx_status_t status) mutable {
+                completer = std::move(bridge.completer)](zx_status_t status) mutable {
                  if (status != ZX_OK) {
                    completer.complete_error(status);
                  } else {
@@ -34,21 +33,17 @@ void GrpcVsockServerBuilder::AddListenPort(uint32_t vsock_port) {
   service_promises_.push_back(bridge.consumer.promise());
 }
 
-fit::promise<std::unique_ptr<GrpcVsockServer>, zx_status_t>
-GrpcVsockServerBuilder::Build() {
+fit::promise<std::unique_ptr<GrpcVsockServer>, zx_status_t> GrpcVsockServerBuilder::Build() {
   return fit::join_promise_vector(std::move(service_promises_))
       .then([builder = std::move(builder_)](
-                const fit::result<std::vector<fit::result<void, zx_status_t>>>&
-                    result) mutable
+                const fit::result<std::vector<fit::result<void, zx_status_t>>>& result) mutable
             -> fit::result<std::unique_ptr<grpc::Server>, zx_status_t> {
         // join_promise_vector should never fail, but instead return a vector
         // of results.
-        FXL_CHECK(result.is_ok())
-            << "fit::join_promise_vector returns fit::error";
+        FXL_CHECK(result.is_ok()) << "fit::join_promise_vector returns fit::error";
         for (const auto& result : result.value()) {
           if (result.is_error()) {
-            FXL_CHECK(false)
-                << "Failed to listen on vsock port: " << result.error();
+            FXL_CHECK(false) << "Failed to listen on vsock port: " << result.error();
             return fit::error(result.error());
           }
         }
@@ -56,8 +51,7 @@ GrpcVsockServerBuilder::Build() {
         // server.
         return fit::ok(builder->BuildAndStart());
       })
-      .and_then([server = std::move(server_)](
-                    std::unique_ptr<grpc::Server>& server_impl) mutable {
+      .and_then([server = std::move(server_)](std::unique_ptr<grpc::Server>& server_impl) mutable {
         server->SetServerImpl(std::move(server_impl));
         return fit::ok(std::move(server));
       });

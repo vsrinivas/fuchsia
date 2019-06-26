@@ -24,9 +24,7 @@ TEST(VirtioQueueTest, HandleOverflow) {
 
   uint16_t expected_desc;
   uint32_t data = 0x12345678;
-  ASSERT_EQ(queue_fake->BuildDescriptor()
-                .AppendReadable(&data, sizeof(data))
-                .Build(&expected_desc),
+  ASSERT_EQ(queue_fake->BuildDescriptor().AppendReadable(&data, sizeof(data)).Build(&expected_desc),
             ZX_OK);
 
   uint16_t desc;

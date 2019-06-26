@@ -7,8 +7,7 @@
 
 #include <zircon/types.h>
 
-static constexpr zx_signals_t kDeviceInterruptShift =
-    __builtin_ctz(ZX_USER_SIGNAL_ALL);
+static constexpr zx_signals_t kDeviceInterruptShift = __builtin_ctz(ZX_USER_SIGNAL_ALL);
 
 // Virtio 1.0 Section 4.1.4.4: notify_off_multiplier is combined with the
 // queue_notify_off to derive the Queue Notify address within a BAR for a

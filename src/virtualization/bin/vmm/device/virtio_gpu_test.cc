@@ -8,8 +8,7 @@
 #include "src/virtualization/bin/vmm/device/test_with_device.h"
 #include "src/virtualization/bin/vmm/device/virtio_queue_fake.h"
 
-static constexpr char kVirtioGpuUrl[] =
-    "fuchsia-pkg://fuchsia.com/virtio_gpu#meta/virtio_gpu.cmx";
+static constexpr char kVirtioGpuUrl[] = "fuchsia-pkg://fuchsia.com/virtio_gpu#meta/virtio_gpu.cmx";
 static constexpr uint16_t kNumQueues = 2;
 static constexpr uint16_t kQueueSize = 16;
 
@@ -26,8 +25,7 @@ class VirtioGpuTest : public TestWithDevice {
   void SetUp() override {
     // Launch device process.
     fuchsia::virtualization::hardware::StartInfo start_info;
-    zx_status_t status =
-        LaunchDevice(kVirtioGpuUrl, cursor_queue_.end(), &start_info);
+    zx_status_t status = LaunchDevice(kVirtioGpuUrl, cursor_queue_.end(), &start_info);
     ASSERT_EQ(ZX_OK, status);
 
     // Start device execution.
@@ -42,8 +40,7 @@ class VirtioGpuTest : public TestWithDevice {
     for (size_t i = 0; i < kNumQueues; i++) {
       auto q = queues[i];
       q->Configure(PAGE_SIZE * i, PAGE_SIZE);
-      status =
-          gpu_->ConfigureQueue(i, q->size(), q->desc(), q->avail(), q->used());
+      status = gpu_->ConfigureQueue(i, q->size(), q->desc(), q->avail(), q->used());
       ASSERT_EQ(ZX_OK, status);
     }
   }
@@ -57,11 +54,10 @@ class VirtioGpuTest : public TestWithDevice {
         .height = kGpuStartupHeight,
     };
     virtio_gpu_ctrl_hdr_t* response;
-    zx_status_t status =
-        DescriptorChainBuilder(control_queue_)
-            .AppendReadableDescriptor(&request, sizeof(request))
-            .AppendWritableDescriptor(&response, sizeof(*response))
-            .Build();
+    zx_status_t status = DescriptorChainBuilder(control_queue_)
+                             .AppendReadableDescriptor(&request, sizeof(request))
+                             .AppendWritableDescriptor(&response, sizeof(*response))
+                             .Build();
     ASSERT_EQ(ZX_OK, status);
 
     status = gpu_->NotifyQueue(0);
@@ -79,11 +75,10 @@ class VirtioGpuTest : public TestWithDevice {
         .nr_entries = 0,
     };
     virtio_gpu_ctrl_hdr_t* response;
-    zx_status_t status =
-        DescriptorChainBuilder(control_queue_)
-            .AppendReadableDescriptor(&request, sizeof(request))
-            .AppendWritableDescriptor(&response, sizeof(*response))
-            .Build();
+    zx_status_t status = DescriptorChainBuilder(control_queue_)
+                             .AppendReadableDescriptor(&request, sizeof(request))
+                             .AppendWritableDescriptor(&response, sizeof(*response))
+                             .Build();
     ASSERT_EQ(ZX_OK, status);
 
     status = gpu_->NotifyQueue(0);
@@ -99,17 +94,13 @@ class VirtioGpuTest : public TestWithDevice {
         .hdr = {.type = VIRTIO_GPU_CMD_SET_SCANOUT},
         .resource_id = resource_id,
         .scanout_id = kScanoutId,
-        .r = {.x = 0,
-              .y = 0,
-              .width = kGpuStartupWidth,
-              .height = kGpuStartupHeight},
+        .r = {.x = 0, .y = 0, .width = kGpuStartupWidth, .height = kGpuStartupHeight},
     };
     virtio_gpu_ctrl_hdr_t* response;
-    zx_status_t status =
-        DescriptorChainBuilder(control_queue_)
-            .AppendReadableDescriptor(&request, sizeof(request))
-            .AppendWritableDescriptor(&response, sizeof(*response))
-            .Build();
+    zx_status_t status = DescriptorChainBuilder(control_queue_)
+                             .AppendReadableDescriptor(&request, sizeof(request))
+                             .AppendWritableDescriptor(&response, sizeof(*response))
+                             .Build();
     ASSERT_EQ(ZX_OK, status);
 
     status = gpu_->NotifyQueue(0);
@@ -130,11 +121,10 @@ TEST_F(VirtioGpuTest, GetDisplayInfo) {
       .type = VIRTIO_GPU_CMD_GET_DISPLAY_INFO,
   };
   virtio_gpu_resp_display_info_t* response;
-  zx_status_t status =
-      DescriptorChainBuilder(control_queue_)
-          .AppendReadableDescriptor(&request, sizeof(request))
-          .AppendWritableDescriptor(&response, sizeof(*response))
-          .Build();
+  zx_status_t status = DescriptorChainBuilder(control_queue_)
+                           .AppendReadableDescriptor(&request, sizeof(request))
+                           .AppendWritableDescriptor(&response, sizeof(*response))
+                           .Build();
   ASSERT_EQ(ZX_OK, status);
 
   status = gpu_->NotifyQueue(0);

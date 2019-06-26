@@ -22,13 +22,10 @@ class ManagerImpl : public fuchsia::virtualization::Manager {
 
  private:
   // |fuchsia::virtualization::Manager|
-  void Create(
-      fidl::StringPtr label,
-      fidl::InterfaceRequest<fuchsia::virtualization::Realm> env) override;
+  void Create(fidl::StringPtr label,
+              fidl::InterfaceRequest<fuchsia::virtualization::Realm> env) override;
   void List(ListCallback callback) override;
-  void Connect(
-      uint32_t id,
-      fidl::InterfaceRequest<fuchsia::virtualization::Realm> env) override;
+  void Connect(uint32_t id, fidl::InterfaceRequest<fuchsia::virtualization::Realm> env) override;
 
   std::unique_ptr<component::StartupContext> context_;
   std::unordered_map<uint32_t, std::unique_ptr<RealmImpl>> environments_;

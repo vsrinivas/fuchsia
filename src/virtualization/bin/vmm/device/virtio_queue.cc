@@ -7,12 +7,9 @@
 #include <src/lib/fxl/logging.h>
 #include <virtio/virtio_ring.h>
 
-VirtioQueue::VirtioQueue() {
-  FXL_CHECK(zx::event::create(0, &event_) == ZX_OK);
-}
+VirtioQueue::VirtioQueue() { FXL_CHECK(zx::event::create(0, &event_) == ZX_OK); }
 
-void VirtioQueue::Configure(uint16_t size, zx_gpaddr_t desc, zx_gpaddr_t avail,
-                            zx_gpaddr_t used) {
+void VirtioQueue::Configure(uint16_t size, zx_gpaddr_t desc, zx_gpaddr_t avail, zx_gpaddr_t used) {
   std::lock_guard<std::mutex> lock(mutex_);
 
   // Configure the ring size.
@@ -23,16 +20,14 @@ void VirtioQueue::Configure(uint16_t size, zx_gpaddr_t desc, zx_gpaddr_t avail,
   ring_.desc = phys_mem_->as<vring_desc>(desc, desc_size);
 
   // Configure the available ring.
-  const uintptr_t avail_size =
-      sizeof(*ring_.avail) + (ring_.size * sizeof(ring_.avail->ring[0]));
+  const uintptr_t avail_size = sizeof(*ring_.avail) + (ring_.size * sizeof(ring_.avail->ring[0]));
   ring_.avail = phys_mem_->as<vring_avail>(avail, avail_size);
 
   const uintptr_t used_event_addr = avail + avail_size;
   ring_.used_event = phys_mem_->as<uint16_t>(used_event_addr);
 
   // Configure the used ring.
-  const uintptr_t used_size =
-      sizeof(*ring_.used) + (ring_.size * sizeof(ring_.used->ring[0]));
+  const uintptr_t used_size = sizeof(*ring_.used) + (ring_.size * sizeof(ring_.used->ring[0]));
   ring_.used = phys_mem_->as<vring_used>(used, used_size);
 
   const uintptr_t avail_event_addr = used + used_size;
@@ -76,12 +71,11 @@ bool VirtioQueue::HasAvailLocked() const {
   // idx with at least release semantics after filling in the descriptor information, so by
   // doing an acquire we ensure that the load of any descriptor information is forced to happen
   // after this point and cannot be cached or read earlier.
-  return ring_.avail != nullptr && __atomic_load_n(&ring_.avail->idx, __ATOMIC_ACQUIRE) != ring_.index;
+  return ring_.avail != nullptr &&
+         __atomic_load_n(&ring_.avail->idx, __ATOMIC_ACQUIRE) != ring_.index;
 }
 
-uint32_t VirtioQueue::RingIndexLocked(uint32_t index) const {
-  return index % ring_.size;
-}
+uint32_t VirtioQueue::RingIndexLocked(uint32_t index) const { return index % ring_.size; }
 
 zx_status_t VirtioQueue::Notify() {
   std::lock_guard<std::mutex> lock(mutex_);
@@ -112,8 +106,7 @@ zx_status_t VirtioQueue::Return(uint16_t index, uint32_t len, uint8_t actions) {
   bool needs_interrupt = false;
   {
     std::lock_guard<std::mutex> lock(mutex_);
-    volatile struct vring_used_elem* used =
-        &ring_.used->ring[RingIndexLocked(ring_.used->idx)];
+    volatile struct vring_used_elem* used = &ring_.used->ring[RingIndexLocked(ring_.used->idx)];
 
     used->id = index;
     used->len = len;
@@ -157,17 +150,12 @@ VirtioChain::VirtioChain(VirtioQueue* queue, uint16_t head)
 VirtioChain::~VirtioChain() { FXL_CHECK(!IsValid()) << "Descriptor chain leak."; }
 
 VirtioChain::VirtioChain(VirtioChain&& o)
-    : queue_(o.queue_),
-      used_(o.used_),
-      head_(o.head_),
-      next_(o.next_),
-      has_next_(o.has_next_) {
+    : queue_(o.queue_), used_(o.used_), head_(o.head_), next_(o.next_), has_next_(o.has_next_) {
   o.Reset();
 }
 
 VirtioChain& VirtioChain::operator=(VirtioChain&& o) {
-  FXL_CHECK(!IsValid())
-      << "Moving into valid chain. This would leak a descriptor chain.";
+  FXL_CHECK(!IsValid()) << "Moving into valid chain. This would leak a descriptor chain.";
 
   queue_ = o.queue_;
   used_ = o.used_;

@@ -51,8 +51,7 @@ class VirtioQueueFake {
   uint16_t next_desc_ = 0;
   uint16_t used_index_ = 0;
 
-  zx_status_t WriteDesc(void** buf, uint32_t len, uint16_t flags,
-                        uint16_t* desc_idx);
+  zx_status_t WriteDesc(void** buf, uint32_t len, uint16_t flags, uint16_t* desc_idx);
   void WriteAvail(uint16_t head_idx);
   zx_status_t SetNext(uint16_t desc_idx, uint16_t next_idx);
 
@@ -64,8 +63,7 @@ class DescriptorChainBuilder {
  public:
   DescriptorChainBuilder(VirtioQueueFake& queue_fake);
 
-  DescriptorChainBuilder& AppendReadableDescriptor(const void* buf,
-                                                   uint32_t len);
+  DescriptorChainBuilder& AppendReadableDescriptor(const void* buf, uint32_t len);
   DescriptorChainBuilder& AppendWritableDescriptor(void** buf, uint32_t len);
 
   template <typename T>
@@ -86,8 +84,7 @@ class DescriptorChainBuilder {
   uint16_t head_idx_ = 0;
   zx_status_t status_ = ZX_OK;
 
-  DescriptorChainBuilder& AppendDescriptor(void** buf, uint32_t len,
-                                           uint16_t flags);
+  DescriptorChainBuilder& AppendDescriptor(void** buf, uint32_t len, uint16_t flags);
 };
 
 #endif  // SRC_VIRTUALIZATION_BIN_VMM_DEVICE_VIRTIO_QUEUE_FAKE_H_

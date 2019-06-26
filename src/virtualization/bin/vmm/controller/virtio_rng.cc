@@ -6,16 +6,14 @@
 
 #include <lib/svc/cpp/services.h>
 
-static constexpr char kVirtioRngUrl[] =
-    "fuchsia-pkg://fuchsia.com/virtio_rng#meta/virtio_rng.cmx";
+static constexpr char kVirtioRngUrl[] = "fuchsia-pkg://fuchsia.com/virtio_rng#meta/virtio_rng.cmx";
 
 VirtioRng::VirtioRng(const PhysMem& phys_mem)
     : VirtioComponentDevice(phys_mem, 0 /* device_features */,
                             fit::bind_member(this, &VirtioRng::ConfigureQueue),
                             fit::bind_member(this, &VirtioRng::Ready)) {}
 
-zx_status_t VirtioRng::Start(const zx::guest& guest,
-                             fuchsia::sys::Launcher* launcher,
+zx_status_t VirtioRng::Start(const zx::guest& guest, fuchsia::sys::Launcher* launcher,
                              async_dispatcher_t* dispatcher) {
   component::Services services;
   fuchsia::sys::LaunchInfo launch_info{
@@ -33,9 +31,8 @@ zx_status_t VirtioRng::Start(const zx::guest& guest,
   return rng_->Start(std::move(start_info));
 }
 
-zx_status_t VirtioRng::ConfigureQueue(uint16_t queue, uint16_t size,
-                                      zx_gpaddr_t desc, zx_gpaddr_t avail,
-                                      zx_gpaddr_t used) {
+zx_status_t VirtioRng::ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc,
+                                      zx_gpaddr_t avail, zx_gpaddr_t used) {
   return rng_->ConfigureQueue(queue, size, desc, avail, used);
 }
 

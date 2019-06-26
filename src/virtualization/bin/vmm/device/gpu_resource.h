@@ -15,8 +15,7 @@
 // A 2D GPU resource encapsulating guest and host memory.
 class GpuResource {
  public:
-  GpuResource(const PhysMem& phys_mem, uint32_t format, uint32_t width,
-              uint32_t height);
+  GpuResource(const PhysMem& phys_mem, uint32_t format, uint32_t width, uint32_t height);
   GpuResource(GpuResource&&) = default;
   GpuResource& operator=(GpuResource&&) = default;
 
@@ -31,8 +30,7 @@ class GpuResource {
 
   // Called in response to VIRTIO_GPU_CMD_RESOURCE_ATTACH_BACKING. This command
   // associates a set of guest memory pages with the resource.
-  void AttachBacking(const virtio_gpu_mem_entry_t* mem_entries,
-                     uint32_t num_entries);
+  void AttachBacking(const virtio_gpu_mem_entry_t* mem_entries, uint32_t num_entries);
 
   // Called in response to VIRTIO_GPU_CMD_RESOURCE_DETACH_BACKING. This command
   // clears guest memory associations with the resource.
@@ -41,8 +39,7 @@ class GpuResource {
   // Called in response to VIRTIO_GPU_CMD_TRANSFER_TO_HOST_2D. This command
   // notifies the device that it should walk the set of guest backing pages and
   // copy the requested content region to host memory.
-  virtio_gpu_ctrl_type TransferToHost2d(const virtio_gpu_rect_t& rect,
-                                        uint64_t off);
+  virtio_gpu_ctrl_type TransferToHost2d(const virtio_gpu_rect_t& rect, uint64_t off);
 
  private:
   static constexpr uint32_t kPixelSizeInBytes = 4;

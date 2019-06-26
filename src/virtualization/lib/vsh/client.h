@@ -19,8 +19,8 @@ namespace vsh {
 class BlockingClient {
  public:
   static fit::result<BlockingClient, zx_status_t> Connect(
-      const fuchsia::virtualization::HostVsockEndpointSyncPtr& socket_endpoint,
-      uint32_t cid, uint32_t port = 9001);
+      const fuchsia::virtualization::HostVsockEndpointSyncPtr& socket_endpoint, uint32_t cid,
+      uint32_t port = 9001);
 
   vm_tools::vsh::ConnectionStatus status() const { return status_; }
 
@@ -33,8 +33,7 @@ class BlockingClient {
   BlockingClient(zx::socket socket);
 
   zx::socket vsock_;
-  vm_tools::vsh::ConnectionStatus status_ =
-      vm_tools::vsh::ConnectionStatus::UNKNOWN;
+  vm_tools::vsh::ConnectionStatus status_ = vm_tools::vsh::ConnectionStatus::UNKNOWN;
 };
 
 }  // namespace vsh

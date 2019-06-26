@@ -12,10 +12,9 @@
 
 class TestWithDevice : public sys::testing::TestWithEnvironment {
  protected:
-  zx_status_t LaunchDevice(
-      const std::string& url, size_t phys_mem_size,
-      fuchsia::virtualization::hardware::StartInfo* start_info,
-      std::unique_ptr<sys::testing::EnvironmentServices> services = nullptr);
+  zx_status_t LaunchDevice(const std::string& url, size_t phys_mem_size,
+                           fuchsia::virtualization::hardware::StartInfo* start_info,
+                           std::unique_ptr<sys::testing::EnvironmentServices> services = nullptr);
   zx_status_t WaitOnInterrupt();
 
   std::unique_ptr<sys::testing::EnclosingEnvironment> enclosing_environment_;

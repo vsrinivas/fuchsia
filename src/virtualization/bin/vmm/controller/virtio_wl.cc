@@ -5,25 +5,22 @@
 #include "src/virtualization/bin/vmm/controller/virtio_wl.h"
 
 #include <lib/fit/function.h>
-#include <src/lib/fxl/logging.h>
 #include <lib/svc/cpp/services.h>
+#include <src/lib/fxl/logging.h>
 
-static constexpr char kVirtioWlUrl[] =
-    "fuchsia-pkg://fuchsia.com/virtio_wl#meta/virtio_wl.cmx";
+static constexpr char kVirtioWlUrl[] = "fuchsia-pkg://fuchsia.com/virtio_wl#meta/virtio_wl.cmx";
 
 // TODO(MAC-228): move feature flag to common location
 #define VIRTIO_WL_F_MAGMA_FLAGS (1u << 2)
 
 VirtioWl::VirtioWl(const PhysMem& phys_mem)
-    : VirtioComponentDevice(phys_mem,
-                            VIRTIO_WL_F_TRANS_FLAGS | VIRTIO_WL_F_MAGMA_FLAGS,
+    : VirtioComponentDevice(phys_mem, VIRTIO_WL_F_TRANS_FLAGS | VIRTIO_WL_F_MAGMA_FLAGS,
                             fit::bind_member(this, &VirtioWl::ConfigureQueue),
                             fit::bind_member(this, &VirtioWl::Ready)) {}
 
 zx_status_t VirtioWl::Start(
     const zx::guest& guest, zx::vmar vmar,
-    fidl::InterfaceHandle<fuchsia::virtualization::WaylandDispatcher>
-        dispatch_handle,
+    fidl::InterfaceHandle<fuchsia::virtualization::WaylandDispatcher> dispatch_handle,
     fuchsia::sys::Launcher* launcher, async_dispatcher_t* dispatcher) {
   component::Services services;
   fuchsia::sys::LaunchInfo launch_info{
@@ -37,15 +34,12 @@ zx_status_t VirtioWl::Start(
   if (status != ZX_OK) {
     return status;
   }
-  status =
-      wayland_->Start(std::move(start_info), std::move(vmar),
-                      std::move(dispatch_handle));
+  status = wayland_->Start(std::move(start_info), std::move(vmar), std::move(dispatch_handle));
   return status;
 }
 
-zx_status_t VirtioWl::ConfigureQueue(uint16_t queue, uint16_t size,
-                                     zx_gpaddr_t desc, zx_gpaddr_t avail,
-                                     zx_gpaddr_t used) {
+zx_status_t VirtioWl::ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc,
+                                     zx_gpaddr_t avail, zx_gpaddr_t used) {
   return wayland_->ConfigureQueue(queue, size, desc, avail, used);
 }
 

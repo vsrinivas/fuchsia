@@ -8,15 +8,15 @@
 
 namespace linux_runner {
 
-grpc::Status LogCollector::CollectKernelLogs(
-    grpc::ServerContext* context, const ::vm_tools::LogRequest* request,
-    vm_tools::EmptyMessage* response) {
+grpc::Status LogCollector::CollectKernelLogs(grpc::ServerContext* context,
+                                             const ::vm_tools::LogRequest* request,
+                                             vm_tools::EmptyMessage* response) {
   return CollectLogs(request);
 }
 
-grpc::Status LogCollector::CollectUserLogs(
-    grpc::ServerContext* context, const ::vm_tools::LogRequest* request,
-    vm_tools::EmptyMessage* response) {
+grpc::Status LogCollector::CollectUserLogs(grpc::ServerContext* context,
+                                           const ::vm_tools::LogRequest* request,
+                                           vm_tools::EmptyMessage* response) {
   return CollectLogs(request);
 }
 
