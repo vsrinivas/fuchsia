@@ -4,7 +4,7 @@
 
 #include <usb/usb.h>
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 
@@ -55,8 +55,7 @@ static size_t GetDescriptorsLength(void* context) {
     return sizeof(kDescriptors);
 }
 
-bool InterfaceListTest() {
-    BEGIN_TEST;
+TEST(UsbWrapperTest, InterfaceListTest) {
     usb_protocol_ops_t ops;
     ops.get_descriptors_length = GetDescriptorsLength;
     ops.get_descriptors = GetDescriptors;
@@ -65,7 +64,7 @@ bool InterfaceListTest() {
     ddk::UsbProtocolClient client(&proto);
 
     std::optional<usb::InterfaceList> list;
-    ASSERT_EQ(ZX_OK, usb::InterfaceList::Create(client, true, &list), "");
+    ASSERT_OK(usb::InterfaceList::Create(client, true, &list), "");
     size_t count = 0;
     for (auto interface : *list) {
         ASSERT_EQ(
@@ -123,10 +122,5 @@ bool InterfaceListTest() {
         ASSERT_EQ(count ? 0U : 2U, endpoint_count, "");
         count++;
     }
-    END_TEST;
 }
 } // namespace
-
-BEGIN_TEST_CASE(usb_wrapper_tests)
-RUN_NAMED_TEST("InterfaceList test", InterfaceListTest)
-END_TEST_CASE(usb_wrapper_tests)

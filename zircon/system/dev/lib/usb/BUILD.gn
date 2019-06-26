@@ -44,7 +44,7 @@ test("usb-wrapper-legacy-test") {
     "$zx/system/ulib/driver",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
-    "$zx/system/ulib/unittest",
+    "$zx/system/ulib/zxtest",
     "$zx/system/ulib/zircon",
   ]
 }
