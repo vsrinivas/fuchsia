@@ -65,8 +65,20 @@ TEST(ChannelInternalTest, CallFinishWithoutPreviouslyCallingCallReturnsBadState)
                                                        &act_bytes, &act_handles));
 }
 
-// TODO(ZX-4422) Test is flaky
-#if 0
+void WaitForThreadState(zx_handle_t thread_handle, zx_thread_state_t state) {
+    // Make sure the original thread is still blocked.
+    // It is safe to read from caller_thread_handle since this is set before
+    // the read happends, and we waited until the remote endpoint became readable.
+    zx_info_thread_t info = {};
+    while (info.state != state) {
+        uint64_t actual = 0;
+        uint64_t actual_2 = 0;
+        ASSERT_OK(zx_object_get_info(thread_handle, ZX_INFO_THREAD, &info, sizeof(info), &actual,
+                                     &actual_2));
+    }
+    return;
+}
+
 // Test current behavior when transferring a channel with pending calls out of the current process.
 // TODO(ZX-4233): This test ensures that currently undefined behavior does not change
 // unexpectedly. Once the behavior is properly undefined, this test should be updated.
@@ -127,6 +139,8 @@ TEST(ChannelInternalTest, TransferChannelWithPendingCallInSourceProcess) {
         });
 
         ASSERT_OK(remote.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), nullptr));
+        ASSERT_NO_FATAL_FAILURES(
+            WaitForThreadState(caller_thread_handle.load(), ZX_THREAD_STATE_BLOCKED_CHANNEL));
 
         // Read the message from the test thread.
         Message request = {};
@@ -150,9 +164,8 @@ TEST(ChannelInternalTest, TransferChannelWithPendingCallInSourceProcess) {
         ASSERT_EQ(zx::thread::create(proc, "mini-p-channel-test-thrd", 2u, 0u, &thread), ZX_OK);
 
         zx::channel cmd_channel;
-        ASSERT_OK(start_mini_process_etc(proc.get(), thread.get(), vmar.get(),
-                                         local.release(), true,
-                                         cmd_channel.reset_and_get_address()));
+        ASSERT_OK(start_mini_process_etc(proc.get(), thread.get(), vmar.get(), local.release(),
+                                         true, cmd_channel.reset_and_get_address()));
 
         auto cleanup = fbl::MakeAutoCall([&cmd_channel]() {
             ASSERT_EQ(mini_process_cmd(cmd_channel.get(), MINIP_CMD_EXIT_NORMAL, nullptr),
@@ -176,9 +189,8 @@ TEST(ChannelInternalTest, TransferChannelWithPendingCallInSourceProcess) {
         zx_info_thread_t info = {};
         uint64_t actual = 0;
         uint64_t actual_2 = 0;
-        ASSERT_EQ(zx_object_get_info(caller_thread_handle.load(), ZX_INFO_THREAD, &info,
-                                     sizeof(info), &actual, &actual_2),
-                  ZX_OK);
+        ASSERT_OK(zx_object_get_info(caller_thread_handle.load(), ZX_INFO_THREAD, &info,
+                                     sizeof(info), &actual, &actual_2));
         EXPECT_EQ(info.state, ZX_THREAD_STATE_BLOCKED_CHANNEL);
 
         // Write a response to the original call after we know the endpoint has been
@@ -192,7 +204,6 @@ TEST(ChannelInternalTest, TransferChannelWithPendingCallInSourceProcess) {
         FAIL("caller_thread encountered an error on channel::call: %s", caller_error.load());
     }
 }
-#endif
 
 } // namespace
 } // namespace channel
