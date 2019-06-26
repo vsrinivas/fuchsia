@@ -1,11 +1,10 @@
 # Fuchsia Endian Policy and Recommendations
 
-[TOC]
-
 ## Background
 
 Although we only expect Fuchsia to run on little endian (LE) CPU architectures,
 we still need to consider big endian (BE) issues. This doc explains:
+
  * Where endian issues arise
  * How to handle them
  * Why we made these choices
@@ -40,11 +39,13 @@ Many modules do not need to do anything about endian issues; their data will onl
 For those which might be ported to other OS's, or whose data might be exported by any channel:
 
 Suggested style in C or C++ is to add
+
 ```
 #include <endian.h>
 ...
 static_assert(__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__);
 ```
+
 either in every file, or accompanied by a comment explaining which files are
 not BE compatible.
 
@@ -61,6 +62,7 @@ self-documenting code. Of course big-endian data should always use the macros.
 
 Best style is to use the LE16 .. BE64 macros from endian.h, which should be
 available everywhere including DDK.
+
 ```
 #include <endian.h>
 ...

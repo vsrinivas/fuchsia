@@ -32,16 +32,17 @@ create an Entity on one device, but dereference it on another device to get the
 data out.
 
 C++ example snippet of an Agent creating an entity.
-```
-  auto component_context = sys::ComponentContext::Create();
-  auto agent_ctx = component_context->svc()
-        ->Connect<fuchsia::modular::AgentContext>();
 
-  fuchsia::modular::EntityReferenceFactory factory;
-  agent_ctx->GetEntityReferenceFactory(factory.NewRequest());
-  factory->CreateReference("iamaperson@google.com", [] (std::string entity_reference) {
-    // Pass the |entity_reference| to a Module or Agent for consumption.
-  });
+```
+auto component_context = sys::ComponentContext::Create();
+auto agent_ctx = component_context->svc()
+      ->Connect<fuchsia::modular::AgentContext>();
+
+fuchsia::modular::EntityReferenceFactory factory;
+agent_ctx->GetEntityReferenceFactory(factory.NewRequest());
+factory->CreateReference("iamaperson@google.com", [] (std::string entity_reference) {
+  // Pass the |entity_reference| to a Module or Agent for consumption.
+});
 ```
 
 ## How does a Module make an Entity?
@@ -51,17 +52,18 @@ is valid for the duration for the Story; once the Story is deleted, all
 entity references manufactured by its modules also become invalid.
 
 C++ example snippet of a Module creating an entity.
-```
-  auto component_context = sys::ComponentContext::Create();
-  auto module_ctx = component_context->svc()
-        ->Connect<fuchsia::modular::ModuleContext>();
 
-  fuchsia::mem::Buffer data;
-  fsl::StringFromVmo("iamaperson@google.com", &data);
-  module_ctx->CreateEntity("com.fuchsia.Contact", std::move(data).ToTransport(),
-                           entity.NewRequest(), [] (std::string entity_reference) {
-    // Pass the |entity_reference| to a Module or Agent for consumption.
-  });
+```
+auto component_context = sys::ComponentContext::Create();
+auto module_ctx = component_context->svc()
+      ->Connect<fuchsia::modular::ModuleContext>();
+
+fuchsia::mem::Buffer data;
+fsl::StringFromVmo("iamaperson@google.com", &data);
+module_ctx->CreateEntity("com.fuchsia.Contact", std::move(data).ToTransport(),
+                          entity.NewRequest(), [] (std::string entity_reference) {
+  // Pass the |entity_reference| to a Module or Agent for consumption.
+});
 ```
 
 ## How does a Module or Agent get data out of an Entity?
@@ -73,19 +75,20 @@ data out of the Entity by calling `Entity.GetTypes()` or
 `Entity.GetData(typename)`, respectively.
 
 C++ Example snippet getting data out of an `entity_reference`:
+
 ```
-  auto component_context = sys::ComponentContext::Create();
-  auto component_ctx = component_context->svc()
-        ->Connect<fuchsia::modular::ComponentContext>();
+auto component_context = sys::ComponentContext::Create();
+auto component_ctx = component_context->svc()
+      ->Connect<fuchsia::modular::ComponentContext>();
 
-  fuchsia::modular::EntityResolverPtr resolver;
-  fuchsia::modular::EntityPtr entity;
-  component_ctx->GetEntityResolver(resolver.NewRequest());
+fuchsia::modular::EntityResolverPtr resolver;
+fuchsia::modular::EntityPtr entity;
+component_ctx->GetEntityResolver(resolver.NewRequest());
 
-  resolver->ResolveEntity(entity_reference, entity.NewRequest());
-  entity->GetData("com.fuchsia.Contact", [] (fuchsia::mem::BufferPtr data) {
-      // ...
-  });
+resolver->ResolveEntity(entity_reference, entity.NewRequest());
+entity->GetData("com.fuchsia.Contact", [] (fuchsia::mem::BufferPtr data) {
+    // ...
+});
 ```
 
 ## How does an Agent provide data for an Entity?

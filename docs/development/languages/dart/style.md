@@ -23,6 +23,7 @@ code tends to be hard to read. Adding the trailing commas allows `dartfmt`
 to do its job correctly.
 
 #### Without trailing commas:
+
 ``` dart
 children.add(Expanded(
   child: Center(
@@ -32,6 +33,7 @@ children.add(Expanded(
 ```
 
 #### With trailing commas:
+
 ``` dart
 children.add(Expanded(
   child: Center(
@@ -62,6 +64,7 @@ truncate the line.
 
 ### DO prefix library names in `/lib` and `/public/lib` with `lib.`
 #### Example:
+
 ```
 Dart_library("lib.settings") {
   package_name = "lib.settings"
@@ -84,6 +87,7 @@ visibility using the `show` keyword.
 This also helps minimize the publicly visible surface.
 
 Example:
+
 ``` dart
 /// In src/apple.dart
 class Apple {}
@@ -117,20 +121,22 @@ This does not apply to external libraries, as only the absolute path can be
 used.
 
 #### Good:
+
 ``` dart
 import 'access_point.dart';
 ```
 
 #### Bad:
+
 ``` dart
 import 'package:wifi/access_point.dart';
 ```
 
 ### DO use namespacing when you import FIDL packages.
 
-This adds clarity and readability. FIDL namespaces (library statements) are not 
-respected in Dart (e.g. `fuchsia.io.Node` becomes `Node`). 
-Because of tight namespaces, people tend to use more generic names in FIDL 
+This adds clarity and readability. FIDL namespaces (library statements) are not
+respected in Dart (e.g. `fuchsia.io.Node` becomes `Node`).
+Because of tight namespaces, people tend to use more generic names in FIDL
 (Error, File, Node, etc.), which result in more collisions/ambiguity in Dart.
 
 #### Good:
@@ -218,6 +224,7 @@ This guidance will eventually be part of Effective Dart due to the changes for
 Dart 2.
 
 #### Good:
+
 ``` dart
 final foo = Foo();
 const foo = Foo();
@@ -226,12 +233,12 @@ const Foo(): bar = Bar();
 ```
 
 #### Bad:
+
 ``` dart
 final foo = new Foo();
 const foo = const Foo();
 foo = const [const A(), const B()];
 const Foo(): bar = const Bar();
-
 ```
 
 ### DON'T do useful work in assert statements.
@@ -276,11 +283,13 @@ A `StatefulWidget` should contain only internal widget state that can be lost
 without any consequences.
 
 Examples of stuff to store in a `ScopedModel`:
+
 * User selections
 * App state
 * Anything that needs to be shared by widgets
 
 Examples of stuff to store in a `StatefulWidget`'s `State`:
+
 * Animation state that doesn't need to be controlled
 
 ### AVOID mixing named and positional parameters.
@@ -298,6 +307,7 @@ In the Fuchsia repository, positional parameters should be reserved for simple
 operational functions with only a few parameters.
 
 #### Good:
+
 ``` dart
 int add(int a, int b);
 int addNumbers(int a, [int b, int c, int d]);
@@ -313,6 +323,7 @@ Widget buildButton({
 ```
 
 #### Bad:
+
 ``` dart
 int add({int a, int b});
 Foo fromJson({@required String json});

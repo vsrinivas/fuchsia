@@ -41,6 +41,7 @@ loop.Run();
 This sets up an async loop, creates a `ComponentContext` wrapping handles provided by the runtime, and then runs that loop following some other initialization work.
 
 **Change your initialization code to look like the following:**
+
 ```
 async::Loop loop(&kAsyncLoopConfigAttachToThread);
 auto component_context = sys::ComponentContext::Create();
@@ -54,6 +55,7 @@ loop.Run();
 > Note: You will need to `#include <lib/inspect/component.h>`
 
 You are now using Inspect! To add some data and see it in action, try adding the following:
+
 ```
 // Important: Make sure to hold on to hello_world_property and don't let it go out of scope.
 auto hello_world_property = root_node.CreateStringProperty("hello", "world");
@@ -73,6 +75,7 @@ Read on to learn how Inspect is meant to be used in C++.
 
 Certain features, such as LazyProperty, LazyMetric, and ChildrenCallback are deprecated, but a replacement is on the way (CF-761). If you determine that you need one of these data types, you may use the deprecated API by replacing the setup code with the following:
 ```
+
 // Legacy work required to expose an inspect hierarchy over FIDL.
 auto root = component::ObjectDir::Make("root");
 fidl::BindingSet<fuchsia::inspect::Inspect> inspect_bindings_;
@@ -292,6 +295,7 @@ that you started running your component. We will use the name
 ## Find your Inspect endpoint
 
 Try the following:
+
 ```
 # This prints all Inspect endpoints on the system.
 $ iquery --find /hub

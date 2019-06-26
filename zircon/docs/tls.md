@@ -161,16 +161,16 @@ The following gives an example of how the compiler might emit code for this
 access model:
 
 ```
-
 static thread_local char buf[buf_cap];
 static thread_local size_t buf_size = 0;
 while(*str && buf_size < buf_cap) {
   buf[buf_size++] = *str++;
 }
 ```
-might be lowered to
-```
 
+might be lowered to
+
+```
 // GOT_module[0] is the module ID of this module
 // GOT_module[1] is just 0
 // <X> denotes the offset of X in this module's TLS block
@@ -204,16 +204,16 @@ model. It does so using a single GOT entry which we'll denote `GOT_s` for symbol
 `s` which the compiler emits relocations for to ensure that
 
 ```
-
 extern thread_local int a;
 extern thread_local int b;
 int main() {
   return a + b;
 }
 ```
-would be lowered to something like the following
-```
 
+would be lowered to something like the following
+
+```
 int main() {
   return *(int*)($tp + GOT[a]) + *(int*)($tp + GOT[b]);
 }
@@ -238,6 +238,7 @@ The precise details of how this offset is computed changes a bit
 from architecture to architecture.
 
 example code:
+
 ```
 static thread_local int a;
 static thread_local int b;
@@ -246,7 +247,9 @@ int main() {
   return a + b;
 }
 ```
+
 would be lowered to
+
 ```
 int main() {
   return (int*)($tp+TPOFF_a) + (int*)($tp+TPOFF_b));
@@ -279,6 +282,7 @@ of this space to point to the DTV. At first `tcb` points to `dtv` as shown in
 the below diagrams but after a dlopen this can change.
 
 arm64:
+
 ```
 *------------------------------------------------------------------------------*
 | thread | tcb | X | tls1 | ... | tlsN | ... | tls_cnt | dtv[1] | ... | dtv[N] |
@@ -296,6 +300,7 @@ executable's `PT_TLS` segment's `p_align` value then `tls1 - $tp` will be
 for the ABI TCB (denoted `tcb` in the diagram above).
 
 x86:
+
 ```
 *-----------------------------------------------------------------------------*
 | tls_cnt | dtv[1] | ... | dtv[N] | ... | tlsN | ... | tls1 | tcb |  thread   |
@@ -318,6 +323,7 @@ first checks to see if `tls_cnt` is such that the module ID (given by `GOT_s[0]`
 ) is within the `dtv`. If it is then it simply looks up `dtv[GOT_s[0]] + GOT_s[1]`
 but if it isn't something more complicated happens. See the implementation of
 `__tls_get_new` in [dynlink.c](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/third_party/ulib/musl/ldso/dynlink.c).
+
 In a nutshell a sufficiently large space was already allocated for a larger `dtv`
 on a call to `dlopen`. It is an invariant of the system that sufficient space
 will always exist somewhere already allocated. The larger space is then setup to

@@ -17,12 +17,14 @@ See instructions on [`rust-lang/rust.vim`](https://github.com/rust-lang/rust.vim
 The VS Code plugin uses the RLS (Rust language server) so you'll need to first
 [install rustup](https://rustup.rs/). Next, install [this VSCode plugin].
 You'll also have to tell `rustup` to use the Fuchsia Rust toolchain:
+
 ```sh
 rustup toolchain link fuchsia /<your Fuchsia root>/buildtools/<platform>/rust
 rustup default fuchsia
 ```
 
 Next open File -> Preferences -> Settings (or type Ctrl+Comma). Add the following settings:
+
 ```javascript
 {
   "rust.target": "x86_64-fuchsia",

@@ -18,13 +18,13 @@ points.
 When defining an asynchronous task, there must be solutions for the following
 problems:
 
-1) **Expressing the flow of control**: how is the *sequence* of synchronous
+1. **Expressing the flow of control**: how is the *sequence* of synchronous
    blocks and how data flows between them expressed? How is this done in an
    understandable way?
-2) **Management of state & resources**: what intermediate state is needed to
+
+2. **Management of state & resources**: what intermediate state is needed to
    support task execution, and what external resources must be captured? How is
    this expressed and how is it done safely?
-
 
 ## Terminology
 * `fit::promise<>` is a move-only object made up of a collection of lambdas or
@@ -112,6 +112,7 @@ achieved through different combinators, such as:
   execute task 1 then task 2, regardless of task 1's status. The prior task's
   result is received through an argument of type `fit::result<ValueType,
   ErrorType>&` or `const fit::result<ValueType, ErrorType>&`.
+
 ```cpp
 auto execute_task_1_then_task_2 =
     fit::make_promise([]() -> fit::result<ValueType, ErrorType> {
@@ -128,6 +129,7 @@ auto execute_task_1_then_task_2 =
 * `fit::promise::and_then()` becomes useful for defining task dependency only
   in the case of task 1's success. The prior task's result is received through
   an argument of type `ValueType&` or `ValueType&`.
+
 ```cpp
 auto execute_task_1_then_task_2 =
     fit::make_promise([]() { ... }).and_then([](ValueType& success_value) {
@@ -138,6 +140,7 @@ auto execute_task_1_then_task_2 =
 * `fit::promise::or_else()` becomes useful for defining task dependency only in
   the case of task 1's failure. The prior task's result is received through an
   argument of type `ErrorType&` or `const ErrorType&`.
+
 ```cpp
 auto execute_task_1_then_task_2 =
     fit::make_promise([]() { ... }).or_else([](ErrorType& failure_value) {
@@ -156,6 +159,7 @@ on the results of multiple promises.
 `fit::join_promises()` supports heterogeneous promise types. The prior tasks'
 results are received through an argument of type `std::tuple<...>&` or `const
 std::tuple<...>&`.
+
 ```cpp
 auto DoImportantThingsInParallel() {
   auto promise1 = FetchStringFromDbAsync("foo");
@@ -174,6 +178,7 @@ auto DoImportantThingsInParallel() {
 homogeneous (be of the same type). The prior tasks' results are received
 through an argument of type `std::vector<fit::result<ValueType, ErrorType>>&`
 or `const std::vector<fit::result<ValueType, ErrorType>>&`.
+
 ```cpp
 auto ConcatenateImportantThingsDoneInParallel() {
   std::vector<fit::promise<std::string>> promises;
@@ -302,6 +307,7 @@ void main() {
   // out-of-scope resources.
 }
 ```
+
 ### `fit::sequencer`: Blocking a promise on a separate promise's completion
 
 TODO: you can .wrap_with(sequencer) to block this promise on the completion of
@@ -311,6 +317,7 @@ the last promise wrapped with the same sequencer object
 #include <lib/fit/sequencer.h>
 // TODO
 ```
+
 ### `fit::bridge`: integrating with callback-based async functions
 
 TODO: fit::bridge is useful to chain continuation off a callback-based async
@@ -320,6 +327,7 @@ function
 #include <lib/fit/bridge.h>
 // TODO
 ```
+
 ### `fit::bridge`: decoupling execution of a single chain of continuation
 
 TODO: fit::bridge is also useful to decouple one chain of continuation into two
@@ -342,6 +350,7 @@ result and produce a new result of the desired type.
 
 The following example does not compile because the error type returned by the
 the last `and_then` handler is incompatible with the prior handler's result.
+
 ```cpp
 auto a = fit::make_promise([] {
   // returns fit::result<int, void>
@@ -373,8 +382,7 @@ auto a = fit::make_promise([] {
 }
 ```
 
-### Handlers / continuation functions can return fit::result<> or a new
-fit::promise<>, not both
+### Handlers / continuation functions can return `fit::result<>` or a new `fit::promise<>`, not both
 
 You may wish to write a handler which return a `fit::promise<>` in one
 conditional branch and a `fit::ok()` or `fit::error()` in another. This is
