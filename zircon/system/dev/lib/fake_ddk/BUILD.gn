@@ -30,10 +30,11 @@ library("fake_ddk") {
     "$zx/system/ulib/async-loop:async-loop-cpp",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
     "$zx/system/ulib/fidl-async:fidl-async",
-    "$zx/system/ulib/unittest",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
   ]
   public_deps = [
     # <lib/fake_ddk/fidl-helper.h> has #include <lib/async-loop/cpp/loop.h>.

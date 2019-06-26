@@ -8,9 +8,9 @@
 #include <utility>
 
 #include <lib/fake_ddk/fake_ddk.h>
-#include <unittest/unittest.h>
 #include <zircon/assert.h>
 #include <zircon/syscalls/log.h>
+#include <zxtest/zxtest.h>
 
 namespace fake_ddk {
 
@@ -25,12 +25,12 @@ Bind::Bind() {
 }
 
 bool Bind::Ok() {
-    BEGIN_HELPER;
     EXPECT_TRUE(add_called_);
     EXPECT_TRUE(remove_called_);
     EXPECT_FALSE(bad_parent_);
     EXPECT_FALSE(bad_device_);
-    END_HELPER;
+    // TODO(ZX-4568): Remove and make void once all dependent tests migrate to zxtest.
+    return !zxtest::Runner::GetInstance()->CurrentTestHasFailures();
 }
 
 void Bind::ExpectMetadata(const void* data, size_t data_length) {
@@ -92,7 +92,7 @@ zx_status_t Bind::DeviceAddMetadata(zx_device_t* device, uint32_t type, const vo
 
     if (metadata_) {
         if (length != metadata_length_ || memcmp(data, metadata_, length) != 0) {
-            unittest_printf_critical("Unexpected metadata\n");
+            fprintf(stderr, "Unexpected metadata\n");
             return ZX_ERR_BAD_STATE;
         }
     } else {
