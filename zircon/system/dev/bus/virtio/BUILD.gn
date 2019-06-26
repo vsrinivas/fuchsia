@@ -69,5 +69,6 @@ test("virtio-test") {
     "$zx/system/dev/lib/fake_ddk",
     "$zx/system/ulib/driver",
     "$zx/system/ulib/unittest",
+    "$zx/system/ulib/zxtest",
   ]
 }

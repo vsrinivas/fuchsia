@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/fake_ddk/fake_ddk.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 #include "backends/fake.h"
 #include "scsi.h"
@@ -31,19 +31,16 @@ class FakeBackendForScsi : public virtio::FakeBackend {
     }
 };
 
-bool InitTest() {
-    BEGIN_TEST;
+TEST(ScsiTest, Init) {
     fbl::unique_ptr<virtio::Backend> backend = std::make_unique<FakeBackendForScsi>();
     zx::bti bti(ZX_HANDLE_INVALID);
 
     virtio::ScsiDevice scsi(/*parent=*/nullptr, std::move(bti), std::move(backend));
     auto status = scsi.Init();
     EXPECT_NE(status, ZX_OK);
-    END_TEST;
 }
 
-bool EncodeLunTest() {
-    BEGIN_TEST;
+TEST(ScsiTest, EncodeLun) {
     // Test that the virtio-scsi device correctly encodes single-level LUN structures.
 
     // Test encoding of target=1, LUN=1.
@@ -71,13 +68,6 @@ bool EncodeLunTest() {
     EXPECT_EQ(req.lun[1], 0);
     EXPECT_EQ(req.lun[2], 0x40 | 0x3F);
     EXPECT_EQ(req.lun[3], 0xFF);
-
-    END_TEST;
 }
 
 }  // anonymous namespace
-
-BEGIN_TEST_CASE(ScsiDriverTests)
-RUN_TEST_SMALL(InitTest)
-RUN_TEST_SMALL(EncodeLunTest)
-END_TEST_CASE(ScsiDriverTests)

@@ -9,7 +9,7 @@
 #include <map>
 #include <set>
 #include <utility>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 #include "backend.h"
 
 namespace virtio {
@@ -42,24 +42,18 @@ class FakeBackend : public Backend {
         state_ = State::DEVICE_RESET;
     }
     void ReadDeviceConfig(uint16_t offset, uint8_t* value) override {
-        char message[80] = {};
-        snprintf(message, sizeof(message), "offset-%xh/8", offset);
         auto shifted_offset = static_cast<uint16_t>(offset + kISRStatus + 1);
-        EXPECT_GT(registers8_.count(shifted_offset), 0, message);
+        EXPECT_GT(registers8_.count(shifted_offset), 0, "offset-%xh/8", offset);
         *value = registers8_[shifted_offset];
     }
     void ReadDeviceConfig(uint16_t offset, uint16_t* value) override {
-        char message[80] = {};
-        snprintf(message, sizeof(message), "offset-%xh/16", offset);
         auto shifted_offset = static_cast<uint16_t>(offset + kISRStatus + 1);
-        EXPECT_GT(registers16_.count(shifted_offset), 0, message);
+        EXPECT_GT(registers16_.count(shifted_offset), 0, "offset-%xh/16", offset);
         *value = registers16_[shifted_offset];
     }
     void ReadDeviceConfig(uint16_t offset, uint32_t* value) override {
-        char message[80] = {};
-        snprintf(message, sizeof(message), "offset-%xh/32", offset);
         auto shifted_offset = static_cast<uint16_t>(offset + kISRStatus + 1);
-        EXPECT_GT(registers32_.count(shifted_offset), 0, message);
+        EXPECT_GT(registers32_.count(shifted_offset), 0, "offset-%xh/32", offset);
         *value = registers32_[shifted_offset];
     }
     void ReadDeviceConfig(uint16_t offset, uint64_t* value) override {
