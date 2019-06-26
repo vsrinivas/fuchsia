@@ -52,7 +52,8 @@ bytes written to *buffer* is undefined.
 
 ## ERRORS
 
-**ZX_ERR_ACCESS_DENIED**  *handle* does not have the **ZX_RIGHT_WRITE** right.
+**ZX_ERR_ACCESS_DENIED**  *handle* does not have the **ZX_RIGHT_WRITE** right or
+the address range to write falls into a protected area like the vDSO.
 
 **ZX_ERR_BAD_HANDLE**  *handle* is not a valid handle.
 

@@ -5,6 +5,7 @@
 # Each subdirectory just provides an eponymous source_set().
 core_tests = [
   "bad-syscall",
+  "debug",
   "c11-condvar",
   "c11-mutex",
   "c11-thread",

@@ -124,6 +124,7 @@ if (is_kernel) {
       "$zx/kernel/lib/mtrace",
       "$zx/kernel/lib/pci",
       "$zx/kernel/lib/user_copy",
+      "$zx/kernel/lib/userabi:headers",
       "$zx/kernel/object",
       "$zx/system/ulib/explicit-memory",
       "$zx/system/ulib/libzbi",
