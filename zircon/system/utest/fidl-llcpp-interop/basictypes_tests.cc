@@ -14,10 +14,10 @@
 #include <lib/zx/time.h>
 #include <memory>
 #include <string.h>
-#include <unittest/unittest.h>
 #include <utility>
 #include <zircon/fidl.h>
 #include <zircon/syscalls.h>
+#include <zxtest/zxtest.h>
 
 // Interface under test
 #include "generated/fidl_llcpp_basictypes.h"
@@ -52,7 +52,7 @@ constexpr uint32_t ArrayCount(T const (&array)[N]) {
     return N;
 }
 
-}
+}  // namespace
 
 // C server implementation
 namespace internal_c {
@@ -121,9 +121,7 @@ zx_status_t ServerDispatch(void* ctx,
 // LLCPP client tests: interop between C server and LLCPP client
 namespace {
 
-bool SpinUpAsyncCServerHelper(zx::channel server, async_loop_t** out_loop) {
-    BEGIN_HELPER;
-
+void SpinUpAsyncCServerHelper(zx::channel server, async_loop_t** out_loop) {
     async_loop_t* loop = nullptr;
     ASSERT_EQ(ZX_OK, async_loop_create(&kAsyncLoopConfigNoAttachToThread, &loop), "");
     ASSERT_EQ(ZX_OK, async_loop_start_thread(loop, "basictypes-dispatcher", NULL), "");
@@ -135,22 +133,20 @@ bool SpinUpAsyncCServerHelper(zx::channel server, async_loop_t** out_loop) {
               NULL,
               &internal_c::kOps);
     *out_loop = loop;
-
-    END_HELPER;
 }
 
 void TearDownAsyncCServerHelper(async_loop_t* loop) {
     async_loop_destroy(loop);
 }
 
-bool RawChannelCallStructTest() {
-    BEGIN_TEST;
+}  // namespace
 
+TEST(BasicTypesTest, RawChannelCallStruct) {
     zx::channel client, server;
     ASSERT_EQ(zx::channel::create(0, &client, &server), ZX_OK);
 
     async_loop_t* loop = nullptr;
-    ASSERT_TRUE(SpinUpAsyncCServerHelper(std::move(server), &loop));
+    ASSERT_NO_FATAL_FAILURES(SpinUpAsyncCServerHelper(std::move(server), &loop));
 
     // manually call the server using generated message definitions
     FIDL_ALIGNDECL uint8_t storage[512] = {};
@@ -199,18 +195,14 @@ bool RawChannelCallStructTest() {
     ASSERT_EQ(decode_result.message.message()->field, 123);
 
     TearDownAsyncCServerHelper(loop);
-
-    END_TEST;
 }
 
-bool RawChannelCallUnionTest() {
-    BEGIN_TEST;
-
+TEST(BasicTypesTest, RawChannelCallUnion) {
     zx::channel client, server;
     ASSERT_EQ(zx::channel::create(0, &client, &server), ZX_OK);
 
     async_loop_t* loop = nullptr;
-    ASSERT_TRUE(SpinUpAsyncCServerHelper(std::move(server), &loop));
+    ASSERT_NO_FATAL_FAILURES(SpinUpAsyncCServerHelper(std::move(server), &loop));
 
     // manually call the server using generated message definitions
     FIDL_ALIGNDECL uint8_t storage[512] = {};
@@ -237,18 +229,14 @@ bool RawChannelCallUnionTest() {
     ASSERT_EQ(decode_result.message.message()->field, 456);
 
     TearDownAsyncCServerHelper(loop);
-
-    END_TEST;
 }
 
-bool SyncCallStructTest() {
-    BEGIN_TEST;
-
+TEST(BasicTypesTest, SyncCallStruct) {
     zx::channel client, server;
     ASSERT_EQ(zx::channel::create(0, &client, &server), ZX_OK);
 
     async_loop_t* loop = nullptr;
-    ASSERT_TRUE(SpinUpAsyncCServerHelper(std::move(server), &loop));
+    ASSERT_NO_FATAL_FAILURES(SpinUpAsyncCServerHelper(std::move(server), &loop));
 
     // generated interface API
     basictypes::TestInterface::SyncClient test(std::move(client));
@@ -290,18 +278,14 @@ bool SyncCallStructTest() {
     ASSERT_EQ(out_field, 123);
 
     TearDownAsyncCServerHelper(loop);
-
-    END_TEST;
 }
 
-bool SyncCallerAllocateCallStructTest() {
-    BEGIN_TEST;
-
+TEST(BasicTypesTest, SyncCallerAllocateCallStruct) {
     zx::channel client, server;
     ASSERT_EQ(zx::channel::create(0, &client, &server), ZX_OK);
 
     async_loop_t* loop = nullptr;
-    ASSERT_TRUE(SpinUpAsyncCServerHelper(std::move(server), &loop));
+    ASSERT_NO_FATAL_FAILURES(SpinUpAsyncCServerHelper(std::move(server), &loop));
 
     // generated interface API
     basictypes::TestInterface::SyncClient test(std::move(client));
@@ -344,23 +328,19 @@ bool SyncCallerAllocateCallStructTest() {
                                                           sizeof(response_buf)),
                                            &out_status, &out_field);
     ASSERT_EQ(result.status, ZX_OK);
-    ASSERT_NULL(result.error, result.error);
+    ASSERT_NULL(result.error, "%s", result.error);
     ASSERT_EQ(out_status, ZX_OK);
     ASSERT_EQ(out_field, 123);
 
     TearDownAsyncCServerHelper(loop);
-
-    END_TEST;
 }
 
-bool SyncCallUnionTest() {
-    BEGIN_TEST;
-
+TEST(BasicTypesTest, SyncCallUnion) {
     zx::channel client, server;
     ASSERT_EQ(zx::channel::create(0, &client, &server), ZX_OK);
 
     async_loop_t* loop = nullptr;
-    ASSERT_TRUE(SpinUpAsyncCServerHelper(std::move(server), &loop));
+    ASSERT_NO_FATAL_FAILURES(SpinUpAsyncCServerHelper(std::move(server), &loop));
 
     // generated interface API
     basictypes::TestInterface::SyncClient test(std::move(client));
@@ -377,18 +357,14 @@ bool SyncCallUnionTest() {
     ASSERT_EQ(out_field, 456);
 
     TearDownAsyncCServerHelper(loop);
-
-    END_TEST;
 }
 
-bool SyncCallerAllocateCallUnionTest() {
-    BEGIN_TEST;
-
+TEST(BasicTypesTest, SyncCallerAllocateCallUnion) {
     zx::channel client, server;
     ASSERT_EQ(zx::channel::create(0, &client, &server), ZX_OK);
 
     async_loop_t* loop = nullptr;
-    ASSERT_TRUE(SpinUpAsyncCServerHelper(std::move(server), &loop));
+    ASSERT_NO_FATAL_FAILURES(SpinUpAsyncCServerHelper(std::move(server), &loop));
 
     // generated interface API
     basictypes::TestInterface::SyncClient test(std::move(client));
@@ -406,15 +382,11 @@ bool SyncCallerAllocateCallUnionTest() {
                                           fidl::BytePart(response_buf, sizeof(response_buf)),
                                           &out_index, &out_field);
     ASSERT_EQ(result.status, ZX_OK);
-    ASSERT_NULL(result.error, result.error);
+    ASSERT_NULL(result.error, "%s", result.error);
     ASSERT_EQ(out_index, 1);
     ASSERT_EQ(out_field, 456);
 
     TearDownAsyncCServerHelper(loop);
-
-    END_TEST;
-}
-
 }
 
 // LLCPP sync server tests: interop between C client and LLCPP server
@@ -464,9 +436,9 @@ private:
     std::atomic<uint64_t> num_union_calls_ = 0;
 };
 
-bool SpinUp(zx::channel server, Server* impl, std::unique_ptr<async::Loop> *out_loop) {
-    BEGIN_HELPER;
+}  // namespace
 
+void SpinUp(zx::channel server, Server* impl, std::unique_ptr<async::Loop> *out_loop) {
     auto loop = std::make_unique<async::Loop>(&kAsyncLoopConfigAttachToThread);
     zx_status_t status = fidl::Bind(loop->dispatcher(),
                                     std::move(server),
@@ -474,18 +446,14 @@ bool SpinUp(zx::channel server, Server* impl, std::unique_ptr<async::Loop> *out_
     ASSERT_EQ(status, ZX_OK);
     ASSERT_EQ(loop->StartThread("test_llcpp_basictypes_server"), ZX_OK);
     *out_loop = std::move(loop);
-
-    END_HELPER;
 }
 
-bool ServerUnionTest() {
-    BEGIN_TEST;
-
+TEST(BasicTypesTest, ServerUnion) {
     Server server_impl;
     zx::channel client_chan, server_chan;
     ASSERT_EQ(zx::channel::create(0, &client_chan, &server_chan), ZX_OK);
     std::unique_ptr<async::Loop> loop;
-    ASSERT_TRUE(SpinUp(std::move(server_chan), &server_impl, &loop));
+    ASSERT_NO_FATAL_FAILURES(SpinUp(std::move(server_chan), &server_impl, &loop));
 
     constexpr uint32_t kNumIterations = 100;
     for (uint32_t i = 0; i < kNumIterations; i++) {
@@ -506,18 +474,14 @@ bool ServerUnionTest() {
         ASSERT_EQ(field, 5);
     }
     ASSERT_EQ(server_impl.num_union_calls(), kNumIterations);
-
-    END_TEST;
 }
 
-bool ServerStructTest() {
-    BEGIN_TEST;
-
+TEST(BasicTypesTest, ServerStruct) {
     Server server_impl;
     zx::channel client_chan, server_chan;
     ASSERT_EQ(zx::channel::create(0, &client_chan, &server_chan), ZX_OK);
     std::unique_ptr<async::Loop> loop;
-    ASSERT_TRUE(SpinUp(std::move(server_chan), &server_impl, &loop));
+    ASSERT_NO_FATAL_FAILURES(SpinUp(std::move(server_chan), &server_impl, &loop));
 
     fidl_test_llcpp_basictypes_SimpleStruct simple_struct = {};
     simple_struct.field = 123;
@@ -556,21 +520,4 @@ bool ServerStructTest() {
     ASSERT_EQ(out_field, 123);
     ASSERT_EQ(server_impl.num_struct_calls(), 1);
     ASSERT_EQ(server_impl.num_union_calls(), 0);
-
-    END_TEST;
 }
-
-}
-
-BEGIN_TEST_CASE(llcpp_basictypes_tests)
-RUN_NAMED_TEST_SMALL("client: raw channel call (passing struct)", RawChannelCallStructTest)
-RUN_NAMED_TEST_SMALL("client: raw channel call (passing union)", RawChannelCallUnionTest)
-RUN_NAMED_TEST_SMALL("client: generated binding (passing struct)", SyncCallStructTest)
-RUN_NAMED_TEST_SMALL("client: generated binding (passing union)", SyncCallUnionTest)
-RUN_NAMED_TEST_SMALL("client: generated binding (passing struct, caller allocating)",
-                     SyncCallerAllocateCallStructTest)
-RUN_NAMED_TEST_SMALL("client: generated binding (passing union, caller allocating)",
-                     SyncCallerAllocateCallUnionTest)
-RUN_NAMED_TEST_SMALL("server: passing union", ServerUnionTest)
-RUN_NAMED_TEST_SMALL("server: passing struct", ServerStructTest)
-END_TEST_CASE(llcpp_basictypes_tests)

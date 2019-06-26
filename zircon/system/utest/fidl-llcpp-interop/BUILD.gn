@@ -32,9 +32,9 @@ if (current_toolchain != default_toolchain) {
       "$zx/system/ulib/fidl-async",
       "$zx/system/ulib/fidl-async:fidl-async-cpp",
       "$zx/system/ulib/fidl-utils",
-      "$zx/system/ulib/unittest",
       "$zx/system/ulib/zircon",
       "$zx/system/ulib/zx",
+      "$zx/system/ulib/zxtest",
     ]
   }
 }

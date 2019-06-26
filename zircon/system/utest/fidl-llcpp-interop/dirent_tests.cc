@@ -4,6 +4,10 @@
 
 #include <atomic>
 #include <cstdlib>
+#include <cstring>
+#include <memory>
+#include <utility>
+
 #include <fidl/test/llcpp/dirent/c/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -14,12 +18,9 @@
 #include <lib/zx/channel.h>
 #include <lib/zx/eventpair.h>
 #include <lib/zx/time.h>
-#include <memory>
-#include <string.h>
-#include <unittest/unittest.h>
-#include <utility>
 #include <zircon/fidl.h>
 #include <zircon/syscalls.h>
+#include <zxtest/zxtest.h>
 
 // Interface under test.
 #include "generated/fidl_llcpp_dirent.h"
@@ -163,7 +164,7 @@ private:
     ) {
         one_way_dirents_num_calls_.fetch_add(1);
         EXPECT_EQ(decoded.message()->dirents.count(), 3);
-        EXPECT_EQ(decoded.message()->ep.signal_peer(0, ZX_EVENTPAIR_SIGNALED), ZX_OK);
+        EXPECT_OK(decoded.message()->ep.signal_peer(0, ZX_EVENTPAIR_SIGNALED));
         // No response required for one-way calls.
         return ZX_OK;
     }
@@ -310,7 +311,7 @@ public:
                               OneWayDirentsCompleter::Sync txn) override {
         one_way_dirents_num_calls_.fetch_add(1);
         EXPECT_EQ(dirents.count(), 3);
-        EXPECT_EQ(ep.signal_peer(0, ZX_EVENTPAIR_SIGNALED), ZX_OK);
+        EXPECT_OK(ep.signal_peer(0, ZX_EVENTPAIR_SIGNALED));
         // No response required for one-way calls.
     }
 };
@@ -453,7 +454,8 @@ namespace {
 
 class Random {
 public:
-    Random(unsigned int seed = static_cast<unsigned int>(zx_ticks_get()))
+    Random(unsigned int seed = static_cast<unsigned int>(
+               zxtest::Runner::GetInstance()->random_seed()))
         : seed_(seed) {}
 
     unsigned int seed() const { return seed_; }
@@ -468,10 +470,8 @@ private:
 };
 
 template <size_t kNumDirents>
-fidl::Array<gen::DirEnt, kNumDirents> RandomlyFillDirEnt(char* name,
-                                                         char* seed_description) {
+fidl::Array<gen::DirEnt, kNumDirents> RandomlyFillDirEnt(char* name) {
     Random random;
-    sprintf(seed_description, "Seed: %d", random.seed());
     fidl::Array<gen::DirEnt, kNumDirents> dirents;
     for (size_t i = 0; i < kNumDirents; i++) {
         int str_len = random.UpTo(gen::TEST_MAX_PATH) + 1;
@@ -487,13 +487,11 @@ fidl::Array<gen::DirEnt, kNumDirents> RandomlyFillDirEnt(char* name,
 }
 
 template <typename Server>
-bool SimpleCountNumDirectories() {
-    BEGIN_TEST;
-
+void SimpleCountNumDirectories() {
     zx::channel client_chan, server_chan;
-    ASSERT_EQ(zx::channel::create(0, &client_chan, &server_chan), ZX_OK);
+    ASSERT_OK(zx::channel::create(0, &client_chan, &server_chan));
     Server server(std::move(server_chan));
-    ASSERT_EQ(server.Start(), ZX_OK);
+    ASSERT_OK(server.Start());
     gen::DirEntTestInterface::SyncClient client(std::move(client_chan));
 
     constexpr size_t kNumDirents = 80;
@@ -505,8 +503,7 @@ bool SimpleCountNumDirectories() {
     constexpr uint64_t kNumIterations = 100;
     // Stress test linearizing dirents
     for (uint64_t iter = 0; iter < kNumIterations; iter++) {
-        char seed_description[100] = {};
-        auto dirents = RandomlyFillDirEnt<kNumDirents>(name.get(), seed_description);
+        auto dirents = RandomlyFillDirEnt<kNumDirents>(name.get());
         int64_t num_dir;
         zx_status_t status = client.CountNumDirectories(fidl::VectorView<gen::DirEnt> {
                                                             static_cast<uint64_t>(dirents.size()),
@@ -519,22 +516,18 @@ bool SimpleCountNumDirectories() {
                 expected_num_dir++;
             }
         }
-        ASSERT_EQ(status, ZX_OK, seed_description);
-        ASSERT_EQ(expected_num_dir, num_dir, seed_description);
+        ASSERT_OK(status);
+        ASSERT_EQ(expected_num_dir, num_dir);
     }
     ASSERT_EQ(server.CountNumDirectoriesNumCalls(), kNumIterations);
-
-    END_TEST;
 }
 
 template <typename Server>
-bool CallerAllocateCountNumDirectories() {
-    BEGIN_TEST;
-
+void CallerAllocateCountNumDirectories() {
     zx::channel client_chan, server_chan;
-    ASSERT_EQ(zx::channel::create(0, &client_chan, &server_chan), ZX_OK);
+    ASSERT_OK(zx::channel::create(0, &client_chan, &server_chan));
     Server server(std::move(server_chan));
-    ASSERT_EQ(server.Start(), ZX_OK);
+    ASSERT_OK(server.Start());
     gen::DirEntTestInterface::SyncClient client(std::move(client_chan));
 
     Random random;
@@ -547,8 +540,7 @@ bool CallerAllocateCountNumDirectories() {
     constexpr uint64_t kNumIterations = 100;
     // Stress test linearizing dirents
     for (uint64_t iter = 0; iter < kNumIterations; iter++) {
-        char seed_description[100] = {};
-        auto dirents = RandomlyFillDirEnt<kNumDirents>(name.get(), seed_description);
+        auto dirents = RandomlyFillDirEnt<kNumDirents>(name.get());
         int64_t num_dir;
         std::unique_ptr<uint8_t[]> request_buf(new uint8_t[ZX_CHANNEL_MAX_MSG_BYTES]);
         FIDL_ALIGNDECL uint8_t response_buf[128];
@@ -567,23 +559,19 @@ bool CallerAllocateCountNumDirectories() {
                 expected_num_dir++;
             }
         }
-        ASSERT_EQ(result.status, ZX_OK, seed_description);
-        ASSERT_NULL(result.error, seed_description);
-        ASSERT_EQ(expected_num_dir, num_dir, seed_description);
+        ASSERT_OK(result.status);
+        ASSERT_NULL(result.error);
+        ASSERT_EQ(expected_num_dir, num_dir);
     }
     ASSERT_EQ(server.CountNumDirectoriesNumCalls(), kNumIterations);
-
-    END_TEST;
 }
 
 template <typename Server>
-bool CallerAllocateReadDir() {
-    BEGIN_TEST;
-
+void CallerAllocateReadDir() {
     zx::channel client_chan, server_chan;
-    ASSERT_EQ(zx::channel::create(0, &client_chan, &server_chan), ZX_OK);
+    ASSERT_OK(zx::channel::create(0, &client_chan, &server_chan));
     Server server(std::move(server_chan));
-    ASSERT_EQ(server.Start(), ZX_OK);
+    ASSERT_OK(server.Start());
     gen::DirEntTestInterface::SyncClient client(std::move(client_chan));
 
     ASSERT_EQ(server.ReadDirNumCalls(), 0);
@@ -594,8 +582,8 @@ bool CallerAllocateReadDir() {
         fidl::VectorView<gen::DirEnt> dirents;
         auto result = client.ReadDir(fidl::BytePart(response_buf.get(), ZX_CHANNEL_MAX_MSG_BYTES),
                                      &dirents);
-        ASSERT_EQ(result.status, ZX_OK);
-        ASSERT_NULL(result.error, result.error);
+        ASSERT_OK(result.status);
+        ASSERT_NULL(result.error, "%s", result.error);
         ASSERT_EQ(dirents.count(), golden_dirents.count());
         for (uint64_t i = 0; i < dirents.count(); i++) {
             auto actual = dirents[i];
@@ -610,18 +598,14 @@ bool CallerAllocateReadDir() {
         }
     }
     ASSERT_EQ(server.ReadDirNumCalls(), kNumIterations);
-
-    END_TEST;
 }
 
 template <typename Server>
-bool InPlaceReadDir() {
-    BEGIN_TEST;
-
+void InPlaceReadDir() {
     zx::channel client_chan, server_chan;
-    ASSERT_EQ(zx::channel::create(0, &client_chan, &server_chan), ZX_OK);
+    ASSERT_OK(zx::channel::create(0, &client_chan, &server_chan));
     Server server(std::move(server_chan));
-    ASSERT_EQ(server.Start(), ZX_OK);
+    ASSERT_OK(server.Start());
     gen::DirEntTestInterface::SyncClient client(std::move(client_chan));
 
     ASSERT_EQ(server.ReadDirNumCalls(), 0);
@@ -630,7 +614,7 @@ bool InPlaceReadDir() {
     for (uint64_t iter = 0; iter < kNumIterations; iter++) {
         std::unique_ptr<uint8_t[]> response_buf(new uint8_t[ZX_CHANNEL_MAX_MSG_BYTES]);
         auto result = client.ReadDir(fidl::BytePart(response_buf.get(), ZX_CHANNEL_MAX_MSG_BYTES));
-        ASSERT_EQ(result.status, ZX_OK);
+        ASSERT_OK(result.status);
         const auto& dirents = result.message.message()->dirents;
         ASSERT_EQ(dirents.count(), golden_dirents.count());
         for (uint64_t i = 0; i < dirents.count(); i++) {
@@ -646,35 +630,27 @@ bool InPlaceReadDir() {
         }
     }
     ASSERT_EQ(server.ReadDirNumCalls(), kNumIterations);
-
-    END_TEST;
 }
 
 template <typename Server>
-bool SimpleConsumeDirectories() {
-    BEGIN_TEST;
-
+void SimpleConsumeDirectories() {
     zx::channel client_chan, server_chan;
-    ASSERT_EQ(zx::channel::create(0, &client_chan, &server_chan), ZX_OK);
+    ASSERT_OK(zx::channel::create(0, &client_chan, &server_chan));
     Server server(std::move(server_chan));
-    ASSERT_EQ(server.Start(), ZX_OK);
+    ASSERT_OK(server.Start());
     gen::DirEntTestInterface::SyncClient client(std::move(client_chan));
 
     ASSERT_EQ(server.ConsumeDirectoriesNumCalls(), 0);
-    ASSERT_EQ(client.ConsumeDirectories(golden_dirents), ZX_OK);
+    ASSERT_OK(client.ConsumeDirectories(golden_dirents));
     ASSERT_EQ(server.ConsumeDirectoriesNumCalls(), 1);
-
-    END_TEST;
 }
 
 template <typename Server>
-bool CallerAllocateConsumeDirectories() {
-    BEGIN_TEST;
-
+void CallerAllocateConsumeDirectories() {
     zx::channel client_chan, server_chan;
-    ASSERT_EQ(zx::channel::create(0, &client_chan, &server_chan), ZX_OK);
+    ASSERT_OK(zx::channel::create(0, &client_chan, &server_chan));
     Server server(std::move(server_chan));
-    ASSERT_EQ(server.Start(), ZX_OK);
+    ASSERT_OK(server.Start());
     gen::DirEntTestInterface::SyncClient client(std::move(client_chan));
 
     ASSERT_EQ(server.ConsumeDirectoriesNumCalls(), 0);
@@ -682,21 +658,17 @@ bool CallerAllocateConsumeDirectories() {
     auto result = client.ConsumeDirectories(fidl::BytePart(request_buf.get(),
                                                            ZX_CHANNEL_MAX_MSG_BYTES),
                                             golden_dirents);
-    ASSERT_EQ(result.status, ZX_OK);
-    ASSERT_NULL(result.error, result.error);
+    ASSERT_OK(result.status);
+    ASSERT_NULL(result.error, "%s", result.error);
     ASSERT_EQ(server.ConsumeDirectoriesNumCalls(), 1);
-
-    END_TEST;
 }
 
 template <typename Server>
-bool InPlaceConsumeDirectories() {
-    BEGIN_TEST;
-
+void InPlaceConsumeDirectories() {
     zx::channel client_chan, server_chan;
-    ASSERT_EQ(zx::channel::create(0, &client_chan, &server_chan), ZX_OK);
+    ASSERT_OK(zx::channel::create(0, &client_chan, &server_chan));
     Server server(std::move(server_chan));
-    ASSERT_EQ(server.Start(), ZX_OK);
+    ASSERT_OK(server.Start());
     gen::DirEntTestInterface::SyncClient client(std::move(client_chan));
 
     ASSERT_EQ(server.ConsumeDirectoriesNumCalls(), 0);
@@ -706,74 +678,61 @@ bool InPlaceConsumeDirectories() {
     auto linearize_result = fidl::Linearize(&request,
                                             fidl::BytePart(request_buf.get(),
                                                            ZX_CHANNEL_MAX_MSG_BYTES));
-    ASSERT_EQ(linearize_result.status, ZX_OK);
-    ASSERT_EQ(client.ConsumeDirectories(std::move(linearize_result.message)), ZX_OK);
+    ASSERT_OK(linearize_result.status);
+    ASSERT_OK(client.ConsumeDirectories(std::move(linearize_result.message)));
     ASSERT_EQ(server.ConsumeDirectoriesNumCalls(), 1);
-
-    END_TEST;
 }
 
 template <typename Server>
-bool SimpleOneWayDirents() {
-    BEGIN_TEST;
-
+void SimpleOneWayDirents() {
     zx::channel client_chan, server_chan;
-    ASSERT_EQ(zx::channel::create(0, &client_chan, &server_chan), ZX_OK);
+    ASSERT_OK(zx::channel::create(0, &client_chan, &server_chan));
     Server server(std::move(server_chan));
-    ASSERT_EQ(server.Start(), ZX_OK);
+    ASSERT_OK(server.Start());
     gen::DirEntTestInterface::SyncClient client(std::move(client_chan));
 
     zx::eventpair client_ep, server_ep;
-    ASSERT_EQ(zx::eventpair::create(0, &client_ep, &server_ep), ZX_OK);
+    ASSERT_OK(zx::eventpair::create(0, &client_ep, &server_ep));
     ASSERT_EQ(server.OneWayDirentsNumCalls(), 0);
-    ASSERT_EQ(client.OneWayDirents(golden_dirents, std::move(server_ep)), ZX_OK);
+    ASSERT_OK(client.OneWayDirents(golden_dirents, std::move(server_ep)));
     zx_signals_t signals = 0;
     client_ep.wait_one(ZX_EVENTPAIR_SIGNALED, zx::time::infinite(), &signals);
     ASSERT_EQ(signals & ZX_EVENTPAIR_SIGNALED, ZX_EVENTPAIR_SIGNALED);
     ASSERT_EQ(server.OneWayDirentsNumCalls(), 1);
-
-    END_TEST;
 }
 
 template <typename Server>
-bool CallerAllocateOneWayDirents() {
-    BEGIN_TEST;
-
+void CallerAllocateOneWayDirents() {
     zx::channel client_chan, server_chan;
-    ASSERT_EQ(zx::channel::create(0, &client_chan, &server_chan), ZX_OK);
+    ASSERT_OK(zx::channel::create(0, &client_chan, &server_chan));
     Server server(std::move(server_chan));
-    ASSERT_EQ(server.Start(), ZX_OK);
+    ASSERT_OK(server.Start());
     gen::DirEntTestInterface::SyncClient client(std::move(client_chan));
 
     zx::eventpair client_ep, server_ep;
-    ASSERT_EQ(zx::eventpair::create(0, &client_ep, &server_ep), ZX_OK);
+    ASSERT_OK(zx::eventpair::create(0, &client_ep, &server_ep));
     ASSERT_EQ(server.OneWayDirentsNumCalls(), 0);
     uint8_t request_buf[512];
-    ASSERT_EQ(client.OneWayDirents(fidl::BytePart(request_buf, sizeof(request_buf)),
-                                   golden_dirents, std::move(server_ep)),
-              ZX_OK);
+    ASSERT_OK(client.OneWayDirents(fidl::BytePart(request_buf, sizeof(request_buf)),
+                                   golden_dirents, std::move(server_ep)));
     zx_signals_t signals = 0;
     client_ep.wait_one(ZX_EVENTPAIR_SIGNALED, zx::time::infinite(), &signals);
     ASSERT_EQ(signals & ZX_EVENTPAIR_SIGNALED, ZX_EVENTPAIR_SIGNALED);
     ASSERT_EQ(server.OneWayDirentsNumCalls(), 1);
-
-    END_TEST;
 }
 
 template <typename Server>
-bool InPlaceOneWayDirents() {
-    BEGIN_TEST;
-
+void InPlaceOneWayDirents() {
     zx::channel client_chan, server_chan;
-    ASSERT_EQ(zx::channel::create(0, &client_chan, &server_chan), ZX_OK);
+    ASSERT_OK(zx::channel::create(0, &client_chan, &server_chan));
     Server server(std::move(server_chan));
-    ASSERT_EQ(server.Start(), ZX_OK);
+    ASSERT_OK(server.Start());
     gen::DirEntTestInterface::SyncClient client(std::move(client_chan));
 
     constexpr uint64_t kNumIterations = 100;
     for (uint64_t iter = 0; iter < kNumIterations; iter++) {
         zx::eventpair client_ep, server_ep;
-        ASSERT_EQ(zx::eventpair::create(0, &client_ep, &server_ep), ZX_OK);
+        ASSERT_OK(zx::eventpair::create(0, &client_ep, &server_ep));
         ASSERT_EQ(server.OneWayDirentsNumCalls(), iter);
         std::unique_ptr<uint8_t[]> request_buf(new uint8_t[ZX_CHANNEL_MAX_MSG_BYTES]);
         gen::DirEntTestInterface::OneWayDirentsRequest request = {};
@@ -782,83 +741,75 @@ bool InPlaceOneWayDirents() {
         auto linearize_result = fidl::Linearize(&request,
                                                 fidl::BytePart(request_buf.get(),
                                                                ZX_CHANNEL_MAX_MSG_BYTES));
-        ASSERT_EQ(linearize_result.status, ZX_OK);
-        ASSERT_EQ(client.OneWayDirents(std::move(linearize_result.message)), ZX_OK);
+        ASSERT_OK(linearize_result.status);
+        ASSERT_OK(client.OneWayDirents(std::move(linearize_result.message)));
         zx_signals_t signals = 0;
         client_ep.wait_one(ZX_EVENTPAIR_SIGNALED, zx::time::infinite(), &signals);
         ASSERT_EQ(signals & ZX_EVENTPAIR_SIGNALED, ZX_EVENTPAIR_SIGNALED);
         ASSERT_EQ(server.OneWayDirentsNumCalls(), iter + 1);
     }
-
-    END_TEST;
 }
 
 template <typename DirentArray>
-bool AssertReadOnDirentsEvent(zx::channel chan, const DirentArray& expected_dirents) {
-    BEGIN_HELPER;
-
+void AssertReadOnDirentsEvent(zx::channel chan, const DirentArray& expected_dirents) {
     gen::DirEntTestInterface::SyncClient client(std::move(chan));
-    bool ok = client.HandleEvents(gen::DirEntTestInterface::EventHandlers {
+    zx_status_t status = client.HandleEvents(gen::DirEntTestInterface::EventHandlers {
         .on_dirents = [&](::fidl::VectorView<gen::DirEnt> dirents) {
-            ASSERT_EQ(dirents.count(), expected_dirents.size());
+            EXPECT_EQ(dirents.count(), expected_dirents.size());
+            if (dirents.count() != expected_dirents.size()) {
+                return ZX_ERR_INVALID_ARGS;
+            }
             for (uint64_t i = 0; i < dirents.count(); i++) {
-                ASSERT_EQ(dirents[i].is_dir, expected_dirents[i].is_dir);
-                ASSERT_EQ(dirents[i].some_flags, expected_dirents[i].some_flags);
-                ASSERT_EQ(dirents[i].name.size(), expected_dirents[i].name.size());
-                ASSERT_BYTES_EQ(reinterpret_cast<const uint8_t*>(dirents[i].name.data()),
+                EXPECT_EQ(dirents[i].is_dir, expected_dirents[i].is_dir);
+                EXPECT_EQ(dirents[i].some_flags, expected_dirents[i].some_flags);
+                EXPECT_EQ(dirents[i].name.size(), expected_dirents[i].name.size());
+                EXPECT_BYTES_EQ(reinterpret_cast<const uint8_t*>(dirents[i].name.data()),
                                 reinterpret_cast<const uint8_t*>(expected_dirents[i].name.data()),
                                 dirents[i].name.size(),
                                 "dirent name mismatch");
             }
-            return true;
+            return ZX_OK;
         },
         .unknown = [&]() {
-            ASSERT_FALSE(true, "unknown event received; expected OnDirents");
+            ADD_FAILURE("unknown event received; expected OnDirents");
+            return ZX_ERR_INVALID_ARGS;
         }
     });
-    ASSERT_TRUE(ok);
-
-    END_HELPER;
+    ASSERT_OK(status);
 }
 
-bool CFlavorSendOnDirents() {
-    BEGIN_TEST;
+} // namespace
 
+TEST(DirentServerTest, CFlavorSendOnDirents) {
     zx::channel client_chan, server_chan;
-    ASSERT_EQ(zx::channel::create(0, &client_chan, &server_chan), ZX_OK);
+    ASSERT_OK(zx::channel::create(0, &client_chan, &server_chan));
 
     constexpr size_t kNumDirents = 80;
     std::unique_ptr<char[]> name(new char[gen::TEST_MAX_PATH]);
     for (uint32_t i = 0; i < gen::TEST_MAX_PATH; i++) {
         name[i] = 'A';
     }
-    char seed_description[100] = {};
-    auto dirents = RandomlyFillDirEnt<kNumDirents>(name.get(), seed_description);
+    auto dirents = RandomlyFillDirEnt<kNumDirents>(name.get());
     auto status = gen::DirEntTestInterface::SendOnDirentsEvent(zx::unowned_channel(server_chan),
                                                                fidl::VectorView<gen::DirEnt> {
                                                                    static_cast<uint64_t>(
                                                                        dirents.size()),
                                                                    dirents.data()
                                                                });
-    ASSERT_EQ(status, ZX_OK, seed_description);
-    ASSERT_TRUE(AssertReadOnDirentsEvent(std::move(client_chan), dirents), seed_description);
-
-    END_TEST;
+    ASSERT_OK(status);
+    ASSERT_NO_FATAL_FAILURES(AssertReadOnDirentsEvent(std::move(client_chan), dirents));
 }
 
-bool CallerAllocateSendOnDirents() {
-    BEGIN_TEST;
-
+TEST(DirentServerTest, CallerAllocateSendOnDirents) {
     zx::channel client_chan, server_chan;
-    ASSERT_EQ(zx::channel::create(0, &client_chan, &server_chan), ZX_OK);
+    ASSERT_OK(zx::channel::create(0, &client_chan, &server_chan));
 
     constexpr size_t kNumDirents = 80;
     std::unique_ptr<char[]> name(new char[gen::TEST_MAX_PATH]);
     for (uint32_t i = 0; i < gen::TEST_MAX_PATH; i++) {
         name[i] = 'B';
     }
-    char seed_description[100] = {};
-    auto dirents = RandomlyFillDirEnt<kNumDirents>(name.get(), seed_description);
+    auto dirents = RandomlyFillDirEnt<kNumDirents>(name.get());
     auto storage = std::make_unique<uint8_t[]>(ZX_CHANNEL_MAX_MSG_BYTES);
     ::fidl::BytePart bytes(storage.get(), ZX_CHANNEL_MAX_MSG_BYTES);
     auto status = gen::DirEntTestInterface::SendOnDirentsEvent(zx::unowned_channel(server_chan),
@@ -868,25 +819,20 @@ bool CallerAllocateSendOnDirents() {
                                                                        dirents.size()),
                                                                    dirents.data()
                                                                });
-    ASSERT_EQ(status, ZX_OK, seed_description);
-    ASSERT_TRUE(AssertReadOnDirentsEvent(std::move(client_chan), dirents), seed_description);
-
-    END_TEST;
+    ASSERT_OK(status);
+    ASSERT_NO_FATAL_FAILURES(AssertReadOnDirentsEvent(std::move(client_chan), dirents));
 }
 
-bool InPlaceSendOnDirents() {
-    BEGIN_TEST;
-
+TEST(DirentServerTest, InPlaceSendOnDirents) {
     zx::channel client_chan, server_chan;
-    ASSERT_EQ(zx::channel::create(0, &client_chan, &server_chan), ZX_OK);
+    ASSERT_OK(zx::channel::create(0, &client_chan, &server_chan));
 
     constexpr size_t kNumDirents = 80;
     std::unique_ptr<char[]> name(new char[gen::TEST_MAX_PATH]);
     for (uint32_t i = 0; i < gen::TEST_MAX_PATH; i++) {
         name[i] = 'C';
     }
-    char seed_description[100] = {};
-    auto dirents = RandomlyFillDirEnt<kNumDirents>(name.get(), seed_description);
+    auto dirents = RandomlyFillDirEnt<kNumDirents>(name.get());
     auto storage = std::make_unique<uint8_t[]>(ZX_CHANNEL_MAX_MSG_BYTES);
     ::gen::DirEntTestInterface::OnDirentsResponse event = {};
     event.dirents = fidl::VectorView<gen::DirEnt> {
@@ -897,66 +843,95 @@ bool InPlaceSendOnDirents() {
     auto linearize_result = ::fidl::Linearize(&event,
                                               ::fidl::BytePart(storage.get(),
                                                                ZX_CHANNEL_MAX_MSG_BYTES));
-    ASSERT_EQ(linearize_result.status, ZX_OK, linearize_result.error);
+    ASSERT_OK(linearize_result.status, "%s", linearize_result.error);
     auto status = gen::DirEntTestInterface::SendOnDirentsEvent(zx::unowned_channel(server_chan),
                                                                std::move(linearize_result.message));
-    ASSERT_EQ(status, ZX_OK, seed_description);
-    ASSERT_TRUE(AssertReadOnDirentsEvent(std::move(client_chan), dirents), seed_description);
-
-    END_TEST;
+    ASSERT_OK(status);
+    ASSERT_NO_FATAL_FAILURES(AssertReadOnDirentsEvent(std::move(client_chan), dirents));
 }
 
-} // namespace
+// Parameterized tests
 
-BEGIN_TEST_CASE(llcpp_interface_dirent_tests)
-RUN_NAMED_TEST_SMALL("client: CountNumDirectories, C-flavor",
-                     SimpleCountNumDirectories<manual_server::Server>)
-RUN_NAMED_TEST_SMALL("client: CountNumDirectories, caller-allocating",
-                     CallerAllocateCountNumDirectories<manual_server::Server>)
-RUN_NAMED_TEST_SMALL("client: ReadDir, caller-allocating",
-                     CallerAllocateReadDir<manual_server::Server>)
-RUN_NAMED_TEST_SMALL("client: ReadDir, in-place",
-                     InPlaceReadDir<manual_server::Server>)
-RUN_NAMED_TEST_SMALL("client: ConsumeDirectories, C-flavor",
-                     SimpleConsumeDirectories<manual_server::Server>)
-RUN_NAMED_TEST_SMALL("client: ConsumeDirectories, caller-allocating",
-                     CallerAllocateConsumeDirectories<manual_server::Server>)
-RUN_NAMED_TEST_SMALL("client: ConsumeDirectories, in-place",
-                     InPlaceConsumeDirectories<manual_server::Server>)
-RUN_NAMED_TEST_SMALL("client: OneWayDirents, C-flavor",
-                     SimpleOneWayDirents<manual_server::Server>)
-RUN_NAMED_TEST_SMALL("client: OneWayDirents, caller-allocating",
-                     CallerAllocateOneWayDirents<manual_server::Server>)
-RUN_NAMED_TEST_SMALL("client: OneWayDirents, in-place",
-                     InPlaceOneWayDirents<manual_server::Server>)
+TEST(DirentClientTest, SimpleCountNumDirectories) {
+    SimpleCountNumDirectories<manual_server::Server>();
+}
 
-RUN_NAMED_TEST_SMALL("server: CountNumDirectories, C-flavor",
-                     SimpleCountNumDirectories<llcpp_server::CFlavorServer>)
-RUN_NAMED_TEST_SMALL("server: CountNumDirectories, caller-allocating",
-                     SimpleCountNumDirectories<llcpp_server::CallerAllocateServer>)
-RUN_NAMED_TEST_SMALL("server: CountNumDirectories, in-place",
-                     SimpleCountNumDirectories<llcpp_server::InPlaceServer>)
-RUN_NAMED_TEST_SMALL("server: CountNumDirectories, async",
-                     SimpleCountNumDirectories<llcpp_server::AsyncReplyServer>)
-RUN_NAMED_TEST_SMALL("server: ReadDir, C-flavor",
-                     InPlaceReadDir<llcpp_server::CFlavorServer>)
-RUN_NAMED_TEST_SMALL("server: ReadDir, caller-allocating",
-                     InPlaceReadDir<llcpp_server::CallerAllocateServer>)
-RUN_NAMED_TEST_SMALL("server: ReadDir, in-place",
-                     InPlaceReadDir<llcpp_server::InPlaceServer>)
-RUN_NAMED_TEST_SMALL("server: ReadDir, async",
-                     InPlaceReadDir<llcpp_server::AsyncReplyServer>)
-RUN_NAMED_TEST_SMALL("server: ConsumeDirectories, C-flavor",
-                     SimpleConsumeDirectories<llcpp_server::CFlavorServer>)
-RUN_NAMED_TEST_SMALL("server: ConsumeDirectories, async",
-                     SimpleConsumeDirectories<llcpp_server::AsyncReplyServer>)
-RUN_NAMED_TEST_SMALL("server: OneWayDirents, C-flavor",
-                     SimpleOneWayDirents<llcpp_server::CFlavorServer>)
+TEST(DirentClientTest, CallerAllocateCountNumDirectories) {
+    CallerAllocateCountNumDirectories<manual_server::Server>();
+}
 
-RUN_NAMED_TEST_SMALL("server: Send OnDirents event, C-flavor",
-                     CFlavorSendOnDirents)
-RUN_NAMED_TEST_SMALL("server: Send OnDirents event, caller-allocating",
-                     CallerAllocateSendOnDirents)
-RUN_NAMED_TEST_SMALL("server: Send OnDirents event, in-place",
-                     InPlaceSendOnDirents)
-END_TEST_CASE(llcpp_interface_dirent_tests)
+TEST(DirentClientTest, CallerAllocateReadDir) {
+    CallerAllocateReadDir<manual_server::Server>();
+}
+
+TEST(DirentClientTest, InPlaceReadDir) {
+    InPlaceReadDir<manual_server::Server>();
+}
+
+TEST(DirentClientTest, SimpleConsumeDirectories) {
+    SimpleConsumeDirectories<manual_server::Server>();
+}
+
+TEST(DirentClientTest, CallerAllocateConsumeDirectories) {
+    CallerAllocateConsumeDirectories<manual_server::Server>();
+}
+
+TEST(DirentClientTest, InPlaceConsumeDirectories) {
+    InPlaceConsumeDirectories<manual_server::Server>();
+}
+
+TEST(DirentClientTest, SimpleOneWayDirents) {
+    SimpleOneWayDirents<manual_server::Server>();
+}
+
+TEST(DirentClientTest, CallerAllocateOneWayDirents) {
+    CallerAllocateOneWayDirents<manual_server::Server>();
+}
+
+TEST(DirentClientTest, InPlaceOneWayDirents) {
+    InPlaceOneWayDirents<manual_server::Server>();
+}
+
+TEST(DirentServerTest, SimpleCountNumDirectoriesWithCFlavorServer) {
+    SimpleCountNumDirectories<llcpp_server::CFlavorServer>();
+}
+
+TEST(DirentServerTest, SimpleCountNumDirectoriesWithCallerAllocateServer) {
+    SimpleCountNumDirectories<llcpp_server::CallerAllocateServer>();
+}
+
+TEST(DirentServerTest, SimpleCountNumDirectoriesWithInPlaceServer) {
+    SimpleCountNumDirectories<llcpp_server::InPlaceServer>();
+}
+
+TEST(DirentServerTest, SimpleCountNumDirectoriesWithAsyncReplyServer) {
+    SimpleCountNumDirectories<llcpp_server::AsyncReplyServer>();
+}
+
+TEST(DirentServerTest, InPlaceReadDirWithCFlavorServer) {
+    InPlaceReadDir<llcpp_server::CFlavorServer>();
+}
+
+TEST(DirentServerTest, InPlaceReadDirWithCallerAllocateServer) {
+    InPlaceReadDir<llcpp_server::CallerAllocateServer>();
+}
+
+TEST(DirentServerTest, InPlaceReadDirWithInPlaceServer) {
+    InPlaceReadDir<llcpp_server::InPlaceServer>();
+}
+
+TEST(DirentServerTest, InPlaceReadDirWithAsyncReplyServer) {
+    InPlaceReadDir<llcpp_server::AsyncReplyServer>();
+}
+
+TEST(DirentServerTest, SimpleConsumeDirectoriesWithCFlavorServer) {
+    SimpleConsumeDirectories<llcpp_server::CFlavorServer>();
+}
+
+TEST(DirentServerTest, SimpleConsumeDirectoriesWithAsyncReplyServer) {
+    SimpleConsumeDirectories<llcpp_server::AsyncReplyServer>();
+}
+
+TEST(DirentServerTest, SimpleOneWayDirentsWithCFlavorServer) {
+    SimpleOneWayDirents<llcpp_server::CFlavorServer>();
+}

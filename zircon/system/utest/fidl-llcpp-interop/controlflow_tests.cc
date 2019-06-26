@@ -17,10 +17,10 @@
 #include <lib/zx/time.h>
 #include <memory>
 #include <string.h>
-#include <unittest/unittest.h>
 #include <utility>
 #include <zircon/fidl.h>
 #include <zircon/syscalls.h>
+#include <zxtest/zxtest.h>
 
 // Interface under test
 #include "generated/fidl_llcpp_controlflow.h"
@@ -46,39 +46,31 @@ public:
     }
 };
 
-bool SpinUp(zx::channel server, Server* impl, async::Loop* loop) {
-    BEGIN_HELPER;
-
+void SpinUp(zx::channel server, Server* impl, async::Loop* loop) {
     zx_status_t status = fidl::Bind(loop->dispatcher(),
                                     std::move(server),
                                     impl);
     ASSERT_EQ(status, ZX_OK);
-
-    END_HELPER;
 }
 
 // Block until the next dispatcher iteration.
 // Due to an |async::Loop| dispatcher being used, once this task is handled,
 // the server must have processed the return value from the handler.
-bool WaitUntilNextIteration(async_dispatcher_t* dispatcher) {
-    BEGIN_HELPER;
-
+void WaitUntilNextIteration(async_dispatcher_t* dispatcher) {
     zx::eventpair ep0, ep1;
     ASSERT_EQ(zx::eventpair::create(0, &ep0, &ep1), ZX_OK);
-    async::PostTask(dispatcher, [ep = std::move(ep1), &current_test_info] () {
+    async::PostTask(dispatcher, [ep = std::move(ep1)] () {
         EXPECT_EQ(ep.signal_peer(0, ZX_EVENTPAIR_SIGNALED), ZX_OK);
     });
 
     zx_signals_t signals = 0;
     ep0.wait_one(ZX_EVENTPAIR_SIGNALED, zx::time::infinite(), &signals);
     ASSERT_EQ(signals & ZX_EVENTPAIR_SIGNALED, ZX_EVENTPAIR_SIGNALED);
-
-    END_HELPER;
 }
 
-bool ServerShutdownTest() {
-    BEGIN_TEST;
+}  // namespace
 
+TEST(ControlFlowTest, ServerShutdown) {
     auto loop = std::make_unique<async::Loop>(&kAsyncLoopConfigAttachToThread);
     ASSERT_EQ(loop->StartThread("test_llcpp_controlflow_server"), ZX_OK);
     Server server_impl;
@@ -87,12 +79,12 @@ bool ServerShutdownTest() {
     for (uint32_t i = 0; i < kNumIterations; i++) {
         zx::channel client_chan, server_chan;
         ASSERT_EQ(zx::channel::create(0, &client_chan, &server_chan), ZX_OK);
-        ASSERT_TRUE(SpinUp(std::move(server_chan), &server_impl, loop.get()));
+        ASSERT_NO_FATAL_FAILURES(SpinUp(std::move(server_chan), &server_impl, loop.get()));
 
         // Send the shutdown message
         ASSERT_EQ(fidl_test_llcpp_controlflow_ControlFlowShutdown(client_chan.get()), ZX_OK);
 
-        ASSERT_TRUE(WaitUntilNextIteration(loop->dispatcher()));
+        ASSERT_NO_FATAL_FAILURES(WaitUntilNextIteration(loop->dispatcher()));
 
         // Read-out the epitaph and check that epitaph error code is ZX_OK
         {
@@ -121,13 +113,10 @@ bool ServerShutdownTest() {
             ASSERT_EQ(out_handles, 0);
         }
     }
-
-    END_TEST;
 }
 
-bool NoReplyMustSendEpitaphTest() {
-    BEGIN_TEST;
-
+TEST(ControlFlowTest, NoReplyMustSendEpitaph) {
+    // Send epitaph from a call with no reply.
     auto loop = std::make_unique<async::Loop>(&kAsyncLoopConfigAttachToThread);
     ASSERT_EQ(loop->StartThread("test_llcpp_controlflow_server"), ZX_OK);
     Server server_impl;
@@ -136,13 +125,13 @@ bool NoReplyMustSendEpitaphTest() {
     for (uint32_t i = 0; i < kNumIterations; i++) {
         zx::channel client_chan, server_chan;
         ASSERT_EQ(zx::channel::create(0, &client_chan, &server_chan), ZX_OK);
-        ASSERT_TRUE(SpinUp(std::move(server_chan), &server_impl, loop.get()));
+        ASSERT_NO_FATAL_FAILURES(SpinUp(std::move(server_chan), &server_impl, loop.get()));
 
         // Send the epitaph request message
         ASSERT_EQ(fidl_test_llcpp_controlflow_ControlFlowNoReplyMustSendAccessDeniedEpitaph(
             client_chan.get()), ZX_OK);
 
-        ASSERT_TRUE(WaitUntilNextIteration(loop->dispatcher()));
+        ASSERT_NO_FATAL_FAILURES(WaitUntilNextIteration(loop->dispatcher()));
 
         // Read-out the epitaph and check the error code
         {
@@ -171,13 +160,10 @@ bool NoReplyMustSendEpitaphTest() {
             ASSERT_EQ(out_handles, 0);
         }
     }
-
-    END_TEST;
 }
 
-bool MustSendEpitaphTest() {
-    BEGIN_TEST;
-
+TEST(ControlFlowTest, MustSendEpitaph) {
+    // Send epitaph from a call with reply.
     auto loop = std::make_unique<async::Loop>(&kAsyncLoopConfigAttachToThread);
     ASSERT_EQ(loop->StartThread("test_llcpp_controlflow_server"), ZX_OK);
     Server server_impl;
@@ -186,7 +172,7 @@ bool MustSendEpitaphTest() {
     for (uint32_t i = 0; i < kNumIterations; i++) {
         zx::channel client_chan, server_chan;
         ASSERT_EQ(zx::channel::create(0, &client_chan, &server_chan), ZX_OK);
-        ASSERT_TRUE(SpinUp(std::move(server_chan), &server_impl, loop.get()));
+        ASSERT_NO_FATAL_FAILURES(SpinUp(std::move(server_chan), &server_impl, loop.get()));
 
         // Manually write the epitaph request message, since the epitaph will cause the C bindings
         // to fail.
@@ -195,7 +181,7 @@ bool MustSendEpitaphTest() {
             fidl_test_llcpp_controlflow_ControlFlowMustSendAccessDeniedEpitaphOrdinal;
         ASSERT_EQ(client_chan.write(0, &request, sizeof(request), nullptr, 0), ZX_OK);
 
-        ASSERT_TRUE(WaitUntilNextIteration(loop->dispatcher()));
+        ASSERT_NO_FATAL_FAILURES(WaitUntilNextIteration(loop->dispatcher()));
 
         // Read-out the epitaph and check the error code
         {
@@ -224,16 +210,4 @@ bool MustSendEpitaphTest() {
             ASSERT_EQ(out_handles, 0);
         }
     }
-
-    END_TEST;
 }
-
-}
-
-BEGIN_TEST_CASE(llcpp_controlflow_tests)
-RUN_NAMED_TEST_SMALL("shutdown", ServerShutdownTest)
-RUN_NAMED_TEST_SMALL("send epitaph from a call with no reply",
-                     NoReplyMustSendEpitaphTest)
-RUN_NAMED_TEST_SMALL("send epitaph from a call with reply",
-                     MustSendEpitaphTest)
-END_TEST_CASE(llcpp_controlflow_tests)
