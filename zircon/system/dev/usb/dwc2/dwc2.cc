@@ -79,26 +79,17 @@ void Dwc2::HandleReset() {
         .set_devaddr(0)
         .WriteTo(mmio);
 
-    if (dci_intf_) {
-        dci_intf_->SetConnected(true);
-    }
-    if (usb_phy_) {
-        usb_phy_->ConnectStatusChanged(false);
-    }
+    SetConnected(false);
 }
 
 // Handler for usbsuspend interrupt.
 void Dwc2::HandleSuspend() {
-    if (dci_intf_) {
-        dci_intf_->SetConnected(false);
-    }
+    SetConnected(false);
 }
 
 // Handler for enumdone interrupt.
 void Dwc2::HandleEnumDone() {
-    if (usb_phy_) {
-        usb_phy_->ConnectStatusChanged(true);
-    }
+    SetConnected(true);
 
     auto* mmio = get_mmio();
 
@@ -230,7 +221,7 @@ void Dwc2::HandleOutEpInterrupt() {
 
     uint8_t ep_num = DWC_EP0_OUT;
 
-    // Read bits indicating which endpoints have inepintr active
+    // Read bits indicating which endpoints have outepintr active
     auto ep_bits = DAINT::Get().ReadFrom(mmio).reg_value();
     auto ep_mask = DAINTMSK::Get().ReadFrom(mmio).reg_value();
     ep_bits &= ep_mask;
@@ -385,7 +376,7 @@ void Dwc2::SetAddress(uint8_t address) {
 // Reads number of bytes transfered on specified endpoint
 uint32_t Dwc2::ReadTransfered(Endpoint* ep) {
     auto* mmio = get_mmio();
-    return ep->req_xfersize -  DEPTSIZ::Get(ep->ep_num).ReadFrom(mmio).xfersize();
+    return ep->req_xfersize - DEPTSIZ::Get(ep->ep_num).ReadFrom(mmio).xfersize();
 }
 
 // Prepares to receive next control request on endpoint zero.
@@ -510,19 +501,6 @@ void Dwc2::FlushTxFifo(uint32_t fifo_num) {
     } while (grstctl.txfflsh() == 1);
 
     zx::nanosleep(zx::deadline_after(zx::usec(1)));
-
-    grstctl.set_reg_value(0)
-        .set_rxfflsh(1)
-        .WriteTo(mmio);
-
-    count = 0;
-    do {
-        grstctl.ReadFrom(mmio);
-        if (++count > 10000)
-            break;
-    } while (grstctl.rxfflsh() == 1);
-
-    zx::nanosleep(zx::deadline_after(zx::usec(1)));
 }
 
 void Dwc2::FlushRxFifo() {
@@ -533,19 +511,6 @@ void Dwc2::FlushRxFifo() {
         .WriteTo(mmio);
 
     uint32_t count = 0;
-    do {
-        grstctl.ReadFrom(mmio);
-        if (++count > 10000)
-            break;
-    } while (grstctl.rxfflsh() == 1);
-
-    zx::nanosleep(zx::deadline_after(zx::usec(1)));
-
-    grstctl.set_reg_value(0)
-        .set_rxfflsh(1)
-        .WriteTo(mmio);
-
-    count = 0;
     do {
         grstctl.ReadFrom(mmio);
         if (++count > 10000)
@@ -741,6 +706,12 @@ zx_status_t Dwc2::InitController() {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
+    auto ghwcfg4 = GHWCFG4::Get().ReadFrom(mmio);
+    if (!ghwcfg4.ded_fifo_en()) {
+        zxlogf(ERROR, "DWC2 driver requires dedicated FIFO support\n");
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
     auto grstctl = GRSTCTL::Get();
     while (grstctl.ReadFrom(mmio).ahbidle() == 0) {
         zx::nanosleep(zx::deadline_after(zx::msec(1)));
@@ -767,16 +738,7 @@ zx_status_t Dwc2::InitController() {
 
     zx::nanosleep(zx::deadline_after(zx::msec(10)));
 
-    // Configure controller for device mode, enable DMA
-    GUSBCFG::Get()
-        .ReadFrom(mmio)
-        .set_force_dev_mode(1)
-        .set_srpcap(0)
-        .set_hnpcap(0)
-        .set_ulpi_utmi_sel(1)
-        .set_phyif(0)
-        .set_ddrsel(0)
-        .WriteTo(mmio);
+    // Enable DMA
     GAHBCFG::Get()
         .FromValue(0)
         .set_dmaenable(1)
@@ -812,7 +774,7 @@ zx_status_t Dwc2::InitController() {
         .FromValue(0)
         .WriteTo(mmio);
 
-    // Set RX and non-periodic TX fifo sizes based on metadata.
+    // Set fifo sizes based on metadata.
     GRXFSIZ::Get()
         .FromValue(0)
         .set_size(metadata_.rx_fifo_size)
@@ -823,16 +785,24 @@ zx_status_t Dwc2::InitController() {
         .set_startaddr(metadata_.rx_fifo_size)
         .WriteTo(mmio);
 
+    auto fifo_base = metadata_.rx_fifo_size + metadata_.nptx_fifo_size;
+    auto dfifo_end = GHWCFG3::Get().ReadFrom(mmio).dfifo_depth();
 
-    // Reset dynamic FIFO values for periodic endpoints.
-    next_dfifo_ = 1;
-    dfifo_base_ = metadata_.rx_fifo_size + metadata_.nptx_fifo_size;
-    dfifo_end_ = GHWCFG3::Get().ReadFrom(mmio).dfifo_depth();
+    for (uint32_t i = 0; i < fbl::count_of(metadata_.tx_fifo_sizes); i++) {
+        auto fifo_size = metadata_.tx_fifo_sizes[i];
+
+        DTXFSIZ::Get(i + 1)
+            .FromValue(0)
+            .set_startaddr(fifo_base)
+            .set_depth(fifo_size)
+            .WriteTo(mmio);
+        fifo_base += fifo_size;
+    }
 
     GDFIFOCFG::Get()
         .FromValue(0)
-        .set_gdfifocfg(dfifo_end_)
-        .set_epinfobase(dfifo_base_)
+        .set_gdfifocfg(dfifo_end)
+        .set_epinfobase(fifo_base)
         .WriteTo(mmio);
 
     // Flush all FIFOs
@@ -883,7 +853,7 @@ zx_status_t Dwc2::InitController() {
         .set_inepintr(1)
         .set_outepintr(1)
         .set_usbsuspend(1)
-        .set_modemismatch(1)
+        .set_erlysuspend(1)
         .WriteTo(mmio);
 
     // Enable global interrupts
@@ -893,6 +863,47 @@ zx_status_t Dwc2::InitController() {
         .WriteTo(mmio);
 
     return ZX_OK;
+}
+
+void Dwc2::SetConnected(bool connected) {
+    if (connected == connected_) {
+        return;
+    }
+
+    if (dci_intf_) {
+        dci_intf_->SetConnected(connected);
+    }
+    if (usb_phy_) {
+        usb_phy_->ConnectStatusChanged(connected);
+    }
+
+
+    if (!connected) {
+        // Complete any pending requests
+        RequestQueue complete_reqs;
+
+        for (uint8_t i = 0; i < fbl::count_of(endpoints_); i++) {
+            auto* ep = &endpoints_[i];
+
+            fbl::AutoLock lock(&ep->lock);
+            if (ep->current_req) {
+                complete_reqs.push(Request(ep->current_req, sizeof(usb_request_t)));
+                ep->current_req = nullptr;
+            }
+            for (auto req = ep->queued_reqs.pop(); req; req = ep->queued_reqs.pop()) {
+                complete_reqs.push(std::move(*req));
+            }
+
+            ep->enabled = false;
+        }
+
+        // Requests must be completed outside of the lock.
+        for (auto req = complete_reqs.pop(); req; req = complete_reqs.pop()) {
+            req->Complete(ZX_ERR_IO_NOT_PRESENT, 0);
+        }
+    }
+
+    connected_ = connected;
 }
 
 zx_status_t Dwc2::Create(void* ctx, zx_device_t* parent) {
@@ -1005,7 +1016,9 @@ int Dwc2::IrqThread() {
 
     while (1) {
         auto wait_res = irq_.wait(nullptr);
-        if (wait_res != ZX_OK) {
+        if (wait_res == ZX_ERR_CANCELED) {
+            break;
+        } else if (wait_res != ZX_OK) {
             zxlogf(ERROR, "dwc_usb: irq wait failed, retcode = %d\n", wait_res);
         }
 
@@ -1024,7 +1037,7 @@ int Dwc2::IrqThread() {
             if (gintsts.usbreset()) {
                 HandleReset();
             }
-            if (gintsts.usbsuspend()) {
+            if (gintsts.usbsuspend() || gintsts.erlysuspend()) {
                 HandleSuspend();
             }
             if (gintsts.enumdone()) {
@@ -1064,8 +1077,7 @@ void Dwc2::UsbDciRequestQueue(usb_request_t* req, const usb_request_complete_t* 
     auto* ep = &endpoints_[ep_num];
 
     if (!ep->enabled) {
-        zxlogf(ERROR, "Dwc2::UsbDciRequestQueue: endpoint 0x%02X not enabled\n",
-               req->header.ep_address);
+        usb_request_complete(req, ZX_ERR_BAD_STATE, 0, cb);
         return;
     }
 
@@ -1126,36 +1138,6 @@ zx_status_t Dwc2::UsbDciSetInterface(const usb_dci_interface_protocol_t* interfa
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    uint32_t txfnum = 0;
-    // Allocate FIFO space for periodic IN endpoints
-    if (is_in && ep_type != USB_ENDPOINT_BULK) {
-        fbl::AutoLock lock(&lock_);
-
-        // FIFO is in 4 byte word units
-        uint32_t fifo_size = max_packet_size / 4;
-        if (fifo_size > dfifo_end_ - dfifo_base_) {
-            zxlogf(ERROR, "Dwc2::UsbDciConfigEp: out of fifo memory\n");
-            return ZX_ERR_NO_RESOURCES;
-        }
-
-        txfnum = next_dfifo_++;
-
-        DTXFSIZ::Get(txfnum)
-            .FromValue(0)
-            .set_startaddr(dfifo_base_)
-            .set_depth(fifo_size)
-            .WriteTo(mmio);
-        dfifo_base_ += fifo_size;
-        GDFIFOCFG::Get()
-            .FromValue(0)
-            .set_gdfifocfg(dfifo_end_)
-            .set_epinfobase(dfifo_base_)
-            .WriteTo(mmio);
-
-        // Flush all TX fifos
-        FlushTxFifo(0x10);
-    }
-
     auto* ep = &endpoints_[ep_num];
     fbl::AutoLock lock(&ep->lock);
 
@@ -1168,7 +1150,7 @@ zx_status_t Dwc2::UsbDciSetInterface(const usb_dci_interface_protocol_t* interfa
         .set_mps(ep->max_packet_size)
         .set_eptype(ep_type)
         .set_setd0pid(1)
-        .set_txfnum(txfnum)
+        .set_txfnum(is_in ? ep_num : 0)
         .set_usbactep(1)
         .WriteTo(mmio);
 

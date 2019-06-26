@@ -94,7 +94,7 @@ private:
     void FlushTxFifo(uint32_t fifo_num);
     void FlushRxFifo();
     zx_status_t InitController();
-    zx_status_t Start();
+    void SetConnected(bool connected);
     void StartEp0();
     void StartEndpoints();
     void HandleEp0Setup();
@@ -146,14 +146,8 @@ private:
     thrd_t irq_thread_;
 
     dwc2_metadata_t metadata_;
+    bool connected_ = false;
     bool configured_ = false;
-
-    // FIFO number for next periodic IN endpoint
-    uint32_t next_dfifo_;
-    // FIFO offset for next periodic IN endpoint
-    uint32_t dfifo_base_;
-    // End of dynamic FIFO space for periodic IN endpoints
-    uint32_t dfifo_end_;
 };
 
 } // namespace dwc2

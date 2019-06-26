@@ -49,8 +49,14 @@ static const char kSerial[] = "0123456789ABCDEF";
 static const dwc2_metadata_t dwc2_metadata = {
     .dma_burst_len = DWC2_DMA_BURST_INCR8,
     .usb_turnaround_time = 9,
-    .rx_fifo_size = 256,
-    .nptx_fifo_size = 256,
+    .rx_fifo_size = 256,    // for all OUT endpoints.
+    .nptx_fifo_size = 32,   // for endpoint zero IN direction.
+    .tx_fifo_sizes = {
+        128,    // for CDC ethernet bulk IN.
+        4,      // for CDC ethernet interrupt IN.
+        128,    // for test function bulk IN.
+        16,     // for test function interrupt IN.
+    },
 };
 
 static pbus_metadata_t usb_metadata[] = {

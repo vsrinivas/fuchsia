@@ -393,12 +393,16 @@ void AmlUsbPhy::UsbPhyConnectStatusChanged(bool connected) {
 
     auto* mmio = &*usbphy21_mmio_;
 
-     PLL_REGISTER::Get(0x38)
-        .FromValue(connected ? pll_settings_[7] : 0)
-        .WriteTo(mmio);
-     PLL_REGISTER::Get(0x34)
-        .FromValue(pll_settings_[5])
-        .WriteTo(mmio);
+    if (connected) {
+         PLL_REGISTER::Get(0x38)
+            .FromValue(pll_settings_[7])
+            .WriteTo(mmio);
+         PLL_REGISTER::Get(0x34)
+            .FromValue(pll_settings_[5])
+            .WriteTo(mmio);
+    } else {
+        InitPll(mmio);
+    }
 
     dwc2_connected_ = connected;
 }

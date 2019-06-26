@@ -48,11 +48,19 @@ constexpr char kSerial[] = "0123456789ABCDEF";
 
 // Metadata for DWC2 driver.
 constexpr dwc2_metadata_t dwc2_metadata = {
-    .dma_burst_len = DWC2_DMA_BURST_INCR8, // should be DWC2_DMA_BURST_INCR16?
-    .usb_turnaround_time = 5, // Is this correct?
-    // Total fifo size is 2648 words.
-    .rx_fifo_size = 512,
-    .nptx_fifo_size = 512,
+    .dma_burst_len = DWC2_DMA_BURST_INCR8,
+    .usb_turnaround_time = 5,
+
+    // Total fifo size is 2648 words, so we can afford to make our FIFO sizes
+    // larger than the minimum requirements.
+    .rx_fifo_size = 1024,   // for all OUT endpoints.
+    .nptx_fifo_size = 256,  // for endpoint zero IN direction.
+    .tx_fifo_sizes = {
+        512,    // for CDC ethernet bulk IN.
+        4,      // for CDC ethernet interrupt IN.
+        512,    // for test function bulk IN.
+        16,     // for test function interrupt IN.
+    },
 };
 
 // Statically assigned dummy MAC address.
