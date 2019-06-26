@@ -24,7 +24,7 @@ namespace testing {
 //
 // test_harness().events().OnNewComponent =
 //     builder.BuildOnNewComponentHandler();
-// test_harness()->Run(builder.BuildSpec());
+// builder.BuildAndRun(test_harness()));
 //
 // // Wait for the session shell to be intercepted.
 // RunLoopUntil([&] { return fake_story_shell.is_running(); });
