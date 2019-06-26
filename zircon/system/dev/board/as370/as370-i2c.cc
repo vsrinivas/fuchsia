@@ -58,7 +58,16 @@ zx_status_t As370::I2cInit() {
         },
     };
 
-    constexpr i2c_channel_t i2c_channels[] = {};
+    constexpr i2c_channel_t i2c_channels[] = {
+        // For audio out
+        {
+            .bus_id = 0,
+            .address = 0x31,
+            .vid = 0,
+            .pid = 0,
+            .did = 0,
+        },
+    };
 
     const pbus_metadata_t i2c_metadata[] = {
         {

@@ -26,6 +26,7 @@ if (current_cpu != "") {
       "$zx/system/core/netsvc:netsvc-test",
       "$zx/system/core/svchost:crashsvc-test",
       "$zx/system/core/virtcon:virtual-console-test",
+      "$zx/system/dev/audio/codecs/max98373:max98373-test",
       "$zx/system/dev/audio/codecs/tas5782:tas5782-test",
       "$zx/system/dev/audio/codecs/tas5805:tas5805-test",
       "$zx/system/dev/audio/intel-hda/test",

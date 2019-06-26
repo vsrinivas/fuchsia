@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 #include <ddk/debug.h>
+#include <ddk/metadata.h>
+#include <ddk/metadata/gpio.h>
 #include <ddk/platform-defs.h>
 #include <soc/as370/as370-gpio.h>
 
@@ -26,6 +28,17 @@ zx_status_t As370::GpioInit() {
         },
     };
 
+    const gpio_pin_t gpio_pins[] = {
+        {17}, // AMP_EN.
+    };
+
+    const pbus_metadata_t gpio_metadata[] = {
+        {
+            .type = DEVICE_METADATA_GPIO_PINS,
+            .data_buffer = &gpio_pins,
+            .data_size = sizeof(gpio_pins),
+        }};
+
     pbus_dev_t gpio_dev = {};
     gpio_dev.name = "gpio";
     gpio_dev.vid = PDEV_VID_SYNAPTICS;
@@ -33,13 +46,19 @@ zx_status_t As370::GpioInit() {
     gpio_dev.did = PDEV_DID_SYNAPTICS_GPIO;
     gpio_dev.mmio_list = gpio_mmios;
     gpio_dev.mmio_count = countof(gpio_mmios);
+    gpio_dev.metadata_list = gpio_metadata;
+    gpio_dev.metadata_count = countof(gpio_metadata);
 
-    zx_status_t status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_GPIO_IMPL, &gpio_dev);
+    auto status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_GPIO_IMPL, &gpio_dev);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: ProtocolDeviceAdd failed: %d\n", __func__, status);
         return status;
     }
-
+    gpio_impl_ = ddk::GpioImplProtocolClient(parent());
+    if (!gpio_impl_.is_valid()) {
+        zxlogf(ERROR, "%s: device_get_protocol failed\n", __func__);
+        return ZX_ERR_INTERNAL;
+    }
     return ZX_OK;
 }
 

@@ -10,9 +10,9 @@
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
-#include <ddk/protocol/i2c.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/codec.h>
+#include <ddktl/protocol/gpio.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <lib/device-protocol/i2c-channel.h>
@@ -20,16 +20,17 @@
 
 namespace audio {
 
-class Tas5805;
-using DeviceType = ddk::Device<Tas5805, ddk::Unbindable>;
+class Max98373;
+using DeviceType = ddk::Device<Max98373, ddk::Unbindable>;
 
-class Tas5805 : public DeviceType, // Not final for unit tests.
-                public ddk::CodecProtocol<Tas5805, ddk::base_protocol> {
+class Max98373 : public DeviceType, // Not final for unit tests.
+                 public ddk::CodecProtocol<Max98373, ddk::base_protocol> {
 public:
     static zx_status_t Create(zx_device_t* parent);
 
-    explicit Tas5805(zx_device_t* device, const ddk::I2cChannel& i2c)
-        : DeviceType(device), i2c_(i2c) {}
+    explicit Max98373(zx_device_t* device, const ddk::I2cChannel& i2c,
+                      const ddk::GpioProtocolClient& codec_reset)
+        : DeviceType(device), i2c_(i2c), codec_reset_(codec_reset) {}
     zx_status_t Bind();
 
     void DdkRelease() {
@@ -44,6 +45,7 @@ public:
         return ZX_OK;
     }
 
+    // Codec protocol.
     void CodecReset(codec_reset_callback callback, void* cookie);
     void CodecGetInfo(codec_get_info_callback callback, void* cookie);
     void CodecIsBridgeable(codec_is_bridgeable_callback callback, void* cookie);
@@ -58,21 +60,20 @@ public:
                            void* cookie);
     void CodecGetPlugState(codec_get_plug_state_callback callback, void* cookie);
 
-    zx_status_t ResetAndInitialize();
-
 protected:
+    zx_status_t SoftwareResetAndInitialize(); // Protected for unit tests.
+    zx_status_t HardwareReset();              // Protected for unit tests.
+
     std::atomic<bool> initialized_ = false; // Protected for unit tests.
 
 private:
-    static constexpr float kMaxGain = 24.0;
-    static constexpr float kMinGain = -103.0;
-    static constexpr float kGainStep = 0.5;
-
-    zx_status_t WriteReg(uint8_t reg, uint8_t value) TA_REQ(lock_);
+    zx_status_t WriteReg(uint16_t reg, uint8_t value) TA_REQ(lock_);
+    zx_status_t ReadReg(uint16_t reg, uint8_t* value) TA_REQ(lock_);
     void Shutdown();
+    int Thread();
 
     ddk::I2cChannel i2c_;
-    float current_gain_ = 0;
+    ddk::GpioProtocolClient codec_reset_;
     thrd_t thread_;
     fbl::Mutex lock_;
 };

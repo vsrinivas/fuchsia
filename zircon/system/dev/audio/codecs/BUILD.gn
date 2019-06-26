@@ -4,6 +4,7 @@
 
 group("codecs") {
   deps = [
+    "max98373",
     "tas5782",
     "tas5805",
   ]

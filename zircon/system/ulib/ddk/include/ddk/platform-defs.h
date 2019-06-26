@@ -184,6 +184,7 @@ __BEGIN_CDECLS
 #define PDEV_DID_TI_BACKLIGHT       1
 #define PDEV_DID_TI_TAS5805         2
 #define PDEV_DID_TI_TAS5782         3
+#define PDEV_DID_TI_TAS2770         4
 
 // Test
 #define PDEV_VID_TEST               17
@@ -234,6 +235,12 @@ __BEGIN_CDECLS
 #define PDEV_PID_SYNAPTICS_AS370     1
 #define PDEV_DID_SYNAPTICS_GPIO      1
 #define PDEV_DID_AS370_USB_PHY       2
+#define PDEV_DID_AS370_AUDIO_OUT     3
+#define PDEV_DID_AS370_AUDIO_IN      4
+
+// Maxim
+#define PDEV_VID_MAXIM              21
+#define PDEV_DID_MAXIM_MAX98373      1
 
 __END_CDECLS
 

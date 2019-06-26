@@ -13,7 +13,7 @@
   "pkg/ddk/include/ddk/mmio-buffer.h": "0de8e8ec7ad6d3213921007f9c4e7945",
   "pkg/ddk/include/ddk/phys-iter.h": "75211477516a5773ce5567c976209288",
   "pkg/ddk/include/ddk/physiter.h": "2226a43dfaeb7229463ace48538c30e7",
-  "pkg/ddk/include/ddk/platform-defs.h": "f946f87b57d8508ef068be185e2ae857",
+  "pkg/ddk/include/ddk/platform-defs.h": "eea5a1f7f3b680e150369565aa34345c",
   "pkg/ddk/include/ddk/protocol/auxdata.h": "c0215a4b08d7fb2e85cf21fe3306c2e0",
   "pkg/ddk/include/ddk/protodefs.h": "19d1bed82527c3325b2f0159a0186e32",
   "pkg/ddk/include/ddk/trace/event.h": "c17a7b65c0ce6b0c5ae56241222dec6b",

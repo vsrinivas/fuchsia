@@ -1,0 +1,30 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+driver("as370-tdm-output") {
+  sources = [
+    "audio-stream-out.cc",
+    "codec.cc",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk.protocol.codec",
+    "$zx/system/banjo/ddk.protocol.composite",
+    "$zx/system/banjo/ddk.protocol.platform.device",
+    "$zx/system/dev/audio/lib/codec-interface",
+    "$zx/system/dev/audio/lib/simple-audio-stream",
+    "$zx/system/dev/lib/as370",
+    "$zx/system/dev/lib/device-protocol-i2c-channel",
+    "$zx/system/dev/lib/device-protocol-pdev",
+    "$zx/system/dev/lib/mmio",
+    "$zx/system/ulib/audio-driver-proto",
+    "$zx/system/ulib/audio-proto-utils",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/hwreg",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+  ]
+}

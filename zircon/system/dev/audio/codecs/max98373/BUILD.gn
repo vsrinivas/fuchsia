@@ -1,0 +1,47 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+driver("max98373") {
+  sources = [
+    "max98373.cc",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk.protocol.codec",
+    "$zx/system/banjo/ddk.protocol.composite",
+    "$zx/system/banjo/ddk.protocol.gpio",
+    "$zx/system/banjo/ddk.protocol.i2c",
+    "$zx/system/banjo/ddk.protocol.platform.device",
+    "$zx/system/dev/lib/device-protocol-i2c-channel",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+  ]
+}
+
+test("max98373-test") {
+  output_name = "max98373-test"
+  sources = [
+    "max98373-test.cc",
+    "max98373.cc",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk.protocol.codec",
+    "$zx/system/banjo/ddk.protocol.composite",
+    "$zx/system/banjo/ddk.protocol.gpio",
+    "$zx/system/dev/lib/device-protocol-i2c-channel",
+    "$zx/system/dev/lib/fake_ddk",
+    "$zx/system/dev/lib/mock-i2c",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/driver",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/mock-function",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
+  ]
+}

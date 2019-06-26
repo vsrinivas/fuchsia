@@ -68,6 +68,10 @@ int As370::Thread() {
     if (UsbInit() != ZX_OK) {
         zxlogf(ERROR, "%s: UsbInit() failed\n", __func__);
     }
+    if (AudioInit() != ZX_OK) {
+        zxlogf(ERROR, "%s: AudioInit() failed\n", __func__);
+        // In case of error report it and keep going.
+    }
 
     return 0;
 }

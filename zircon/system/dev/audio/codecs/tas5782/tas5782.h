@@ -12,9 +12,12 @@
 #include <ddk/device.h>
 #include <ddk/protocol/i2c.h>
 #include <ddktl/device.h>
-#include <lib/device-protocol/i2c-channel.h>
 #include <ddktl/protocol/codec.h>
 #include <ddktl/protocol/gpio.h>
+#include <fbl/auto_lock.h>
+#include <fbl/mutex.h>
+#include <lib/device-protocol/i2c-channel.h>
+#include <zircon/thread_annotations.h>
 
 namespace audio {
 
@@ -68,7 +71,7 @@ private:
     static constexpr float kMinGain = -103.0;
     static constexpr float kGainStep = 0.5;
 
-    zx_status_t WriteReg(uint8_t reg, uint8_t value);
+    zx_status_t WriteReg(uint8_t reg, uint8_t value) TA_REQ(lock_);
     void Shutdown();
 
     ddk::I2cChannel i2c_;
@@ -76,5 +79,6 @@ private:
     ddk::GpioProtocolClient codec_mute_;
     float current_gain_ = 0;
     thrd_t thread_;
+    fbl::Mutex lock_;
 };
 } // namespace audio

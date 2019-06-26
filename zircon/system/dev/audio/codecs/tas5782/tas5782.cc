@@ -10,10 +10,10 @@
 #include <ddk/binding.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/composite.h>
-#include <lib/device-protocol/i2c.h>
 #include <ddk/protocol/i2c.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
+#include <lib/device-protocol/i2c.h>
 
 namespace {
 // TODO(andresoportus): Add handling for the other formats supported by this codec.
@@ -50,6 +50,7 @@ enum {
 namespace audio {
 
 zx_status_t Tas5782::ResetAndInitialize() {
+    fbl::AutoLock lock(&lock_);
     if (codec_mute_.is_valid()) {
         codec_mute_.Write(0); // Set to "mute".
     }
@@ -142,10 +143,7 @@ zx_status_t Tas5782::Create(zx_device_t* parent) {
 }
 
 void Tas5782::CodecReset(codec_reset_callback callback, void* cookie) {
-    if (!initialized_) {
-        callback(cookie, ZX_ERR_UNAVAILABLE);
-        return;
-    }
+    fbl::AutoLock lock(&lock_);
     auto status = ResetAndInitialize();
     callback(cookie, status);
 }
@@ -241,7 +239,9 @@ void Tas5782::CodecSetGainState(const gain_state_t* gain_state,
     if (!initialized_) {
         zxlogf(ERROR, "%s Couldn't set gain, not initialized yet\n", __FILE__);
         callback(cookie);
+        return;
     }
+    fbl::AutoLock lock(&lock_);
     float gain = std::clamp(gain_state->gain, kMinGain, kMaxGain);
     uint8_t gain_reg = static_cast<uint8_t>(48 - gain * 2);
     auto status = WriteReg(0x3d, gain_reg); // Left gain.
@@ -318,4 +318,3 @@ ZIRCON_DRIVER_BEGIN(ti_tas5782, audio::driver_ops, "zircon", "0.1", 3)
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_TI_TAS5782),
 ZIRCON_DRIVER_END(ti_tas5782)
 // clang-format on
-

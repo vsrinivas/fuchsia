@@ -10,10 +10,10 @@
 #include <ddk/binding.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/composite.h>
-#include <lib/device-protocol/i2c.h>
 #include <ddk/protocol/i2c.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
+#include <lib/device-protocol/i2c.h>
 
 namespace {
 // clang-format off
@@ -68,6 +68,7 @@ enum {
 namespace audio {
 
 zx_status_t Tas5805::ResetAndInitialize() {
+    fbl::AutoLock lock(&lock_);
     // From the reference manual:
     // "9.5.3.1 Startup Procedures
     // 1. Configure ADR/FAULT pin with proper settings for I2C device address.
@@ -166,10 +167,6 @@ zx_status_t Tas5805::Create(zx_device_t* parent) {
 }
 
 void Tas5805::CodecReset(codec_reset_callback callback, void* cookie) {
-    if (!initialized_) {
-        callback(cookie, ZX_ERR_UNAVAILABLE);
-        return;
-    }
     auto status = ResetAndInitialize();
     callback(cookie, status);
 }
@@ -253,6 +250,8 @@ void Tas5805::CodecSetDaiFormat(const dai_format_t* format, codec_set_dai_format
     }
     uint8_t reg_value =
         format->bits_per_sample == 32 ? kRegSapCtrl1Bits32bits : kRegSapCtrl1Bits16bits;
+
+    fbl::AutoLock lock(&lock_);
     auto status = WriteReg(kRegSapCtrl1, reg_value);
     if (status != ZX_OK) {
         callback(cookie, ZX_ERR_INTERNAL);
@@ -276,6 +275,7 @@ void Tas5805::CodecSetGainState(const gain_state_t* gain_state,
         zxlogf(ERROR, "%s Couldn't set gain, not initialized yet\n", __FILE__);
         callback(cookie);
     }
+    fbl::AutoLock lock(&lock_);
     float gain = std::clamp(gain_state->gain, kMinGain, kMaxGain);
     uint8_t gain_reg = static_cast<uint8_t>(48 - gain * 2);
     zx_status_t status = WriteReg(kRegDigitalVol, gain_reg);
