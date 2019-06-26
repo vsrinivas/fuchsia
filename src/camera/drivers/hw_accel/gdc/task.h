@@ -18,33 +18,27 @@ namespace gdc {
 // output buffer collections.
 class Task {
  public:
-  Task() {}
+  Task() = default;
 
-  ~Task() {}
-
-  // Returns the physical address for the config VMO.
-  zx_paddr_t GetConigVmoPhysAddr() const {
-    return config_vmo_pinned_.region(0).phys_addr;
-  }
+  ~Task() = default;
 
   // Returns the physical address for the config VMO.
-  uint64_t GetConigVmoPhysSize() const {
-    return config_vmo_pinned_.region(0).size;
-  }
+  zx_paddr_t GetConigVmoPhysAddr() const { return config_vmo_pinned_.region(0).phys_addr; }
+
+  // Returns the physical address for the config VMO.
+  uint64_t GetConigVmoPhysSize() const { return config_vmo_pinned_.region(0).size; }
 
   // Returns the physical address for the input buffer.
   // |input_buffer_index| : Index of the input buffer for which the address is
   // requested. |out| : Returns the physical address if the index provided is
   // valid.
-  zx_status_t GetInputBufferPhysAddr(uint32_t input_buffer_index,
-                                     zx_paddr_t* out) const;
+  zx_status_t GetInputBufferPhysAddr(uint32_t input_buffer_index, zx_paddr_t* out) const;
 
   // Returns the size of the input buffer.
   // |input_buffer_index| : Index of the input buffer for which the address is
   // requested. |out| : Returns the size if the index provided is
   // valid.
-  zx_status_t GetInputBufferPhysSize(uint32_t input_buffer_index,
-                                     uint64_t* out) const;
+  zx_status_t GetInputBufferPhysSize(uint32_t input_buffer_index, uint64_t* out) const;
 
   // Validates input buffer index.
   bool IsInputBufferIndexValid(uint32_t input_buffer_index) const {
@@ -67,19 +61,17 @@ class Task {
   // VMO. |callback|                             : Callback function to call for
   // this task. |out|                                  : Pointer to a task
   // object returned to the caller.
-  static zx_status_t Create(
-      const buffer_collection_info_t* input_buffer_collection,
-      const buffer_collection_info_t* output_buffer_collection,
-      const zx::vmo& config_vmo, const gdc_callback_t* callback,
-      const zx::bti& bti, std::unique_ptr<Task>* out);
+  static zx_status_t Create(const buffer_collection_info_t* input_buffer_collection,
+                            const buffer_collection_info_t* output_buffer_collection,
+                            const zx::vmo& config_vmo, const gdc_callback_t* callback,
+                            const zx::bti& bti, std::unique_ptr<Task>* out);
 
  private:
   // Initializes a VMO pool from buffer collection for output buffer collection.
   // Pins the input buffer collection.
-  zx_status_t InitBuffers(
-      const buffer_collection_info_t* input_buffer_collection,
-      const buffer_collection_info_t* output_buffer_collection,
-      const zx::vmo& config_vmo, const zx::bti& bti);
+  zx_status_t InitBuffers(const buffer_collection_info_t* input_buffer_collection,
+                          const buffer_collection_info_t* output_buffer_collection,
+                          const zx::vmo& config_vmo, const zx::bti& bti);
 
   fzl::PinnedVmo config_vmo_pinned_;
   fzl::VmoPool output_buffers_;

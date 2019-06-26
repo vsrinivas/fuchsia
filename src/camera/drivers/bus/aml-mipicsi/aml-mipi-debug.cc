@@ -15,24 +15,21 @@ namespace camera {
 void AmlMipiDevice::DumpCsiPhyRegs() {
   zxlogf(INFO, "%s: MIPI CSI PHY REGS VALUES\n", __FUNCTION__);
   for (int i = 0; i < 27; i++) {
-    zxlogf(INFO, "0x%x  ---> 0x%x \n", (0xFF650000 + i * 4),
-           csi_phy0_mmio_->Read32(i * 4));
+    zxlogf(INFO, "0x%x  ---> 0x%x \n", (0xFF650000 + i * 4), csi_phy0_mmio_->Read32(i * 4));
   }
 }
 
 void AmlMipiDevice::DumpAPhyRegs() {
   zxlogf(INFO, "%s: MIPI APHY REGS VALUES\n", __FUNCTION__);
   for (int i = 0x13; i < 0x17; i++) {
-    zxlogf(INFO, "0x%x  ---> 0x%x \n", (0xFF63c300 + i * 4),
-           aphy0_mmio_->Read32(i * 4));
+    zxlogf(INFO, "0x%x  ---> 0x%x \n", (0xFF63c300 + i * 4), aphy0_mmio_->Read32(i * 4));
   }
 }
 
 void AmlMipiDevice::DumpHostRegs() {
   zxlogf(INFO, "%s: MIPI HOST REGS VALUES\n", __FUNCTION__);
   for (int i = 0; i < 8; i++) {
-    zxlogf(INFO, "0x%x  ---> 0x%x \n", (0xff654000 + i * 4),
-           csi_host0_mmio_->Read32(i * 4));
+    zxlogf(INFO, "0x%x  ---> 0x%x \n", (0xff654000 + i * 4), csi_host0_mmio_->Read32(i * 4));
   }
 }
 
@@ -40,8 +37,7 @@ void AmlMipiDevice::DumpFrontEndRegs() {
   zxlogf(INFO, "%s: MIPI ADAP FRONTEND REGS VALUES\n", __FUNCTION__);
   auto frontend_reg = mipi_adap_mmio_->View(FRONTEND_BASE, 0x400);
   for (int i = 0; i < 21; i++) {
-    printf("0x%x  ---> 0x%x \n", (0xFF654800 + i * 4),
-           frontend_reg.Read32(i * 4));
+    printf("0x%x  ---> 0x%x \n", (0xFF654800 + i * 4), frontend_reg.Read32(i * 4));
   }
 }
 
@@ -49,8 +45,7 @@ void AmlMipiDevice::DumpReaderRegs() {
   zxlogf(INFO, "%s: MIPI ADAP READER REGS VALUES\n", __FUNCTION__);
   auto reader_reg = mipi_adap_mmio_->View(RD_BASE, 0x100);
   for (int i = 0; i < 8; i++) {
-    printf("0x%x  ---> 0x%x \n", (0xFF655000 + i * 4),
-           reader_reg.Read32(i * 4));
+    printf("0x%x  ---> 0x%x \n", (0xFF655000 + i * 4), reader_reg.Read32(i * 4));
   }
 }
 

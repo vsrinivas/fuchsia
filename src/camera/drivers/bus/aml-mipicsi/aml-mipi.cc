@@ -44,8 +44,7 @@ void AmlMipiDevice::InitMipiClock() {
   hiu_mmio_->ClearBits32(kClkMuxMask, HHI_MIPI_CSI_PHY_CLK_CNTL);
   // set the divisor = 2 (writing (2-1) to div field)
   // source for the unused mux = S905D2_FCLK_DIV5   = 6 // 400 MHz
-  hiu_mmio_->SetBits32(((1 << kClockEnableShift) | 6 << 9 | 1),
-                       HHI_MIPI_CSI_PHY_CLK_CNTL);
+  hiu_mmio_->SetBits32(((1 << kClockEnableShift) | 6 << 9 | 1), HHI_MIPI_CSI_PHY_CLK_CNTL);
   // TODO(braval@) Double check to look into if
   // this sleep is really necessary.
   zx_nanosleep(zx_deadline_after(ZX_USEC(10)));
@@ -96,8 +95,7 @@ zx_status_t AmlMipiDevice::InitPdev(zx_device_t* parent) {
   // Get adapter interrupt.
   status = pdev_.GetInterrupt(0, &adap_irq_);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: could not obtain adapter interrupt %d\n", __func__,
-           status);
+    zxlogf(ERROR, "%s: could not obtain adapter interrupt %d\n", __func__, status);
     return status;
   }
 
@@ -152,8 +150,7 @@ void AmlMipiDevice::MipiPhyInit(const mipi_info_t* info) {
   csi_phy0_mmio_->Write32(0x400000, MIPI_PHY_TWD_HS);
   csi_phy0_mmio_->Write32(0x0, MIPI_PHY_DATA_LANE_CTRL);
   // enable data lanes pipe line and hs sync bit err.
-  csi_phy0_mmio_->Write32((0x3 | (0x1f << 2) | (0x3 << 7)),
-                          MIPI_PHY_DATA_LANE_CTRL1);
+  csi_phy0_mmio_->Write32((0x3 | (0x1f << 2) | (0x3 << 7)), MIPI_PHY_DATA_LANE_CTRL1);
   csi_phy0_mmio_->Write32(0x00000123, MIPI_PHY_MUX_CTRL0);
   csi_phy0_mmio_->Write32(0x00000123, MIPI_PHY_MUX_CTRL1);
 
@@ -214,8 +211,7 @@ void AmlMipiDevice::DdkRelease() { delete this; }
 // static
 zx_status_t AmlMipiDevice::Create(zx_device_t* parent) {
   fbl::AllocChecker ac;
-  auto mipi_device =
-      std::unique_ptr<AmlMipiDevice>(new (&ac) AmlMipiDevice(parent));
+  auto mipi_device = std::unique_ptr<AmlMipiDevice>(new (&ac) AmlMipiDevice(parent));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }

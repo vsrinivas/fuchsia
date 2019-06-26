@@ -30,11 +30,7 @@ constexpr uint32_t kGdc = 1;
 
 void GdcDevice::InitClocks() {
   // First reset the clocks.
-  GdcClkCntl::Get()
-      .ReadFrom(&clock_mmio_)
-      .reset_axi()
-      .reset_core()
-      .WriteTo(&clock_mmio_);
+  GdcClkCntl::Get().ReadFrom(&clock_mmio_).reset_axi().reset_core().WriteTo(&clock_mmio_);
 
   // Set the clocks to 8Mhz
   // Source XTAL
@@ -50,25 +46,20 @@ void GdcDevice::InitClocks() {
       .WriteTo(&clock_mmio_);
 
   // Enable GDC Power domain.
-  GdcMemPowerDomain::Get()
-      .ReadFrom(&clock_mmio_)
-      .set_gdc_pd(0)
-      .WriteTo(&clock_mmio_);
+  GdcMemPowerDomain::Get().ReadFrom(&clock_mmio_).set_gdc_pd(0).WriteTo(&clock_mmio_);
 }
 
-zx_status_t GdcDevice::GdcInitTask(
-    const buffer_collection_info_t* input_buffer_collection,
-    const buffer_collection_info_t* output_buffer_collection,
-    zx::vmo config_vmo, const gdc_callback_t* callback,
-    uint32_t* out_task_index) {
+zx_status_t GdcDevice::GdcInitTask(const buffer_collection_info_t* input_buffer_collection,
+                                   const buffer_collection_info_t* output_buffer_collection,
+                                   zx::vmo config_vmo, const gdc_callback_t* callback,
+                                   uint32_t* out_task_index) {
   if (out_task_index == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
 
   std::unique_ptr<Task> task;
-  zx_status_t status =
-      gdc::Task::Create(input_buffer_collection, output_buffer_collection,
-                        config_vmo, callback, bti_, &task);
+  zx_status_t status = gdc::Task::Create(input_buffer_collection, output_buffer_collection,
+                                         config_vmo, callback, bti_, &task);
   if (status != ZX_OK) {
     FX_LOGF(ERROR, "%s: Task Creation Failed %d\n", __func__, status);
     return status;
@@ -132,8 +123,7 @@ int GdcDevice::FrameProcessingThread() {
   return 0;
 }
 
-zx_status_t GdcDevice::GdcProcessFrame(uint32_t task_index,
-                                       uint32_t input_buffer_index) {
+zx_status_t GdcDevice::GdcProcessFrame(uint32_t task_index, uint32_t input_buffer_index) {
   // Find the entry in hashmap.
   auto task_entry = task_map_.find(task_index);
   if (task_entry == task_map_.end()) {
@@ -160,9 +150,7 @@ zx_status_t GdcDevice::StartThread() {
   running_.store(true);
   return thrd_status_to_zx_status(thrd_create_with_name(
       &processing_thread_,
-      [](void* arg) -> int {
-        return reinterpret_cast<GdcDevice*>(arg)->FrameProcessingThread();
-      },
+      [](void* arg) -> int { return reinterpret_cast<GdcDevice*>(arg)->FrameProcessingThread(); },
       this, "gdc-processing-thread"));
 }
 
@@ -193,8 +181,7 @@ void GdcDevice::GdcReleaseFrame(uint32_t task_index, uint32_t buffer_index) {
 }
 
 // static
-zx_status_t GdcDevice::Setup(void* ctx, zx_device_t* parent,
-                             std::unique_ptr<GdcDevice>* out) {
+zx_status_t GdcDevice::Setup(void* /*ctx*/, zx_device_t* parent, std::unique_ptr<GdcDevice>* out) {
   ddk::PDev pdev(parent);
   if (!pdev.is_valid()) {
     FX_LOGF(ERROR, "", "%s: ZX_PROTOCOL_PDEV not available\n", __func__);
@@ -244,8 +231,8 @@ zx_status_t GdcDevice::Setup(void* ctx, zx_device_t* parent,
 
   fbl::AllocChecker ac;
   auto gdc_device = std::unique_ptr<GdcDevice>(
-      new (&ac) GdcDevice(parent, std::move(*clk_mmio), std::move(*gdc_mmio),
-                          std::move(gdc_irq), std::move(bti), std::move(port)));
+      new (&ac) GdcDevice(parent, std::move(*clk_mmio), std::move(*gdc_mmio), std::move(gdc_irq),
+                          std::move(bti), std::move(port)));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -296,9 +283,9 @@ zx_status_t GdcBind(void* ctx, zx_device_t* device) {
   if (status != ZX_OK) {
     FX_LOGF(ERROR, "%s: Could not add gdc device: %d\n", __func__, status);
     return status;
-  } else {
-    FX_LOGF(INFO, "", "%s: gdc driver added\n", __func__);
   }
+
+  FX_LOGF(INFO, "", "%s: gdc driver added\n", __func__);
 
   // gdc device intentionally leaked as it is now held by DevMgr.
   __UNUSED auto* dev = gdc_device.release();

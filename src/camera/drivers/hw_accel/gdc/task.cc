@@ -15,27 +15,23 @@
 namespace gdc {
 
 // Validates the buffer collection.
-static bool IsBufferCollectionValid(
-    const buffer_collection_info_t* buffer_collection) {
-  return !(buffer_collection == nullptr ||
-           buffer_collection->buffer_count == 0 ||
+static bool IsBufferCollectionValid(const buffer_collection_info_t* buffer_collection) {
+  return !(buffer_collection == nullptr || buffer_collection->buffer_count == 0 ||
            buffer_collection->buffer_count > countof(buffer_collection->vmos) ||
            buffer_collection->format.image.pixel_format.type !=
                fuchsia_sysmem_PixelFormatType_NV12);
 }
 
-zx_status_t Task::GetInputBufferPhysAddr(uint32_t input_buffer_index,
-                                         zx_paddr_t* out) const {
+zx_status_t Task::GetInputBufferPhysAddr(uint32_t input_buffer_index, zx_paddr_t* out) const {
   if (input_buffer_index >= input_buffers_.size() || out == nullptr) {
     return ZX_ERR_INVALID_ARGS;
-  } else {
-    *out = input_buffers_[input_buffer_index].region(0).phys_addr;
   }
+  *out = input_buffers_[input_buffer_index].region(0).phys_addr;
+
   return ZX_OK;
 }
 
-zx_status_t Task::GetInputBufferPhysSize(uint32_t input_buffer_index,
-                                         uint64_t* out) const {
+zx_status_t Task::GetInputBufferPhysSize(uint32_t input_buffer_index, uint64_t* out) const {
   if (input_buffer_index >= input_buffers_.size() || out == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -43,10 +39,9 @@ zx_status_t Task::GetInputBufferPhysSize(uint32_t input_buffer_index,
   return ZX_OK;
 }
 
-zx_status_t Task::InitBuffers(
-    const buffer_collection_info_t* input_buffer_collection,
-    const buffer_collection_info_t* output_buffer_collection,
-    const zx::vmo& config_vmo, const zx::bti& bti) {
+zx_status_t Task::InitBuffers(const buffer_collection_info_t* input_buffer_collection,
+                              const buffer_collection_info_t* output_buffer_collection,
+                              const zx::vmo& config_vmo, const zx::bti& bti) {
   if (!IsBufferCollectionValid(input_buffer_collection) ||
       !IsBufferCollectionValid(output_buffer_collection)) {
     return ZX_ERR_INVALID_ARGS;
@@ -58,8 +53,7 @@ zx_status_t Task::InitBuffers(
     output_vmos[i] = zx::vmo(output_buffer_collection->vmos[i]);
   }
 
-  zx_status_t status =
-      output_buffers_.Init(output_vmos, output_buffer_collection->buffer_count);
+  zx_status_t status = output_buffers_.Init(output_vmos, output_buffer_collection->buffer_count);
   if (status != ZX_OK) {
     FX_LOG(ERROR, "%s: Unable to Init VmoPool \n", __func__);
     return status;
@@ -81,17 +75,16 @@ zx_status_t Task::InitBuffers(
 
   // Pin the input buffers.
   fbl::AllocChecker ac;
-  input_buffers_ = fbl ::Array<fzl::PinnedVmo>(
-      new (&ac) fzl::PinnedVmo[input_buffer_collection->buffer_count],
-      input_buffer_collection->buffer_count);
+  input_buffers_ =
+      fbl ::Array<fzl::PinnedVmo>(new (&ac) fzl::PinnedVmo[input_buffer_collection->buffer_count],
+                                  input_buffer_collection->buffer_count);
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
 
   for (uint32_t i = 0; i < input_buffer_collection->buffer_count; ++i) {
     zx::vmo vmo(input_buffer_collection->vmos[i]);
-    status =
-        input_buffers_[i].Pin(vmo, bti, ZX_BTI_CONTIGUOUS | ZX_VM_PERM_READ);
+    status = input_buffers_[i].Pin(vmo, bti, ZX_BTI_CONTIGUOUS | ZX_VM_PERM_READ);
 
     // Release the vmos so that the buffer collection could be reused.
     // input_buffer_collection already has the handle so its okay to discard
@@ -109,8 +102,7 @@ zx_status_t Task::InitBuffers(
   }
 
   // Pin the Config VMO.
-  status = config_vmo_pinned_.Pin(config_vmo, bti,
-                                  ZX_BTI_CONTIGUOUS | ZX_VM_PERM_READ);
+  status = config_vmo_pinned_.Pin(config_vmo, bti, ZX_BTI_CONTIGUOUS | ZX_VM_PERM_READ);
   if (status != ZX_OK) {
     FX_LOG(ERROR, "%s: Failed to pin config VMO\n", __func__);
     return status;
@@ -123,11 +115,10 @@ zx_status_t Task::InitBuffers(
 }
 
 // static
-zx_status_t Task::Create(
-    const buffer_collection_info_t* input_buffer_collection,
-    const buffer_collection_info_t* output_buffer_collection,
-    const zx::vmo& config_vmo, const gdc_callback_t* callback,
-    const zx::bti& bti, std::unique_ptr<Task>* out) {
+zx_status_t Task::Create(const buffer_collection_info_t* input_buffer_collection,
+                         const buffer_collection_info_t* output_buffer_collection,
+                         const zx::vmo& config_vmo, const gdc_callback_t* callback,
+                         const zx::bti& bti, std::unique_ptr<Task>* out) {
   if (callback == nullptr || out == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -138,8 +129,8 @@ zx_status_t Task::Create(
     return ZX_ERR_NO_MEMORY;
   }
 
-  zx_status_t status = task->InitBuffers(
-      input_buffer_collection, output_buffer_collection, config_vmo, bti);
+  zx_status_t status =
+      task->InitBuffers(input_buffer_collection, output_buffer_collection, config_vmo, bti);
   if (status != ZX_OK) {
     FX_LOG(ERROR, "%s: InitBuffers Failed\n", __func__);
     return status;

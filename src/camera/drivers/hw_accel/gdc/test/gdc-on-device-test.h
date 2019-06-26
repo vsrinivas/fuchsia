@@ -19,8 +19,8 @@ class GdcDeviceTester : public zxtest::Test {
 
  protected:
   // Setup & TearDown
-  void SetUp();
-  void TearDown();
+  void SetUp() override;
+  void TearDown() override;
 };
 
 }  // namespace gdc

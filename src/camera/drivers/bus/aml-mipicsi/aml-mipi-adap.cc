@@ -62,19 +62,16 @@ uint32_t AmlMipiDevice::AdapGetDepth(const mipi_adap_info_t* info) {
   return depth;
 }
 
-zx_status_t AmlMipiDevice::InitBuffer(const mipi_adap_info_t* info,
-                                      size_t size) {
+zx_status_t AmlMipiDevice::InitBuffer(const mipi_adap_info_t* info, size_t size) {
   // Create a VMO for the ring buffer.
-  zx_status_t status = zx_vmo_create_contiguous(
-      bti_.get(), size, 0, ring_buffer_vmo_.reset_and_get_address());
+  zx_status_t status =
+      zx_vmo_create_contiguous(bti_.get(), size, 0, ring_buffer_vmo_.reset_and_get_address());
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to allocate ring buffer vmo - %d\n", __func__,
-           status);
+    zxlogf(ERROR, "%s failed to allocate ring buffer vmo - %d\n", __func__, status);
     return status;
   }
   // Pin the ring buffer.
-  status = pinned_ring_buffer_.Pin(ring_buffer_vmo_, bti_,
-                                   ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
+  status = pinned_ring_buffer_.Pin(ring_buffer_vmo_, bti_, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s failed to pin ring buffer vmo - %d\n", __func__, status);
     return status;
@@ -123,9 +120,8 @@ zx_status_t AmlMipiDevice::AdapFrontendInit(const mipi_adap_info_t* info) {
 
   if (info->mode == MIPI_MODES_DDR_MODE) {
     // config ddr_buf[0] address
-    frontend_reg.ModifyBits32(
-        static_cast<uint32_t>(pinned_ring_buffer_.region(0).phys_addr), 0, 32,
-        CSI2_DDR_START_PIX);
+    frontend_reg.ModifyBits32(static_cast<uint32_t>(pinned_ring_buffer_.region(0).phys_addr), 0, 32,
+                              CSI2_DDR_START_PIX);
   } else if (info->mode == MIPI_MODES_DOL_MODE) {
     // TODO(braval):    Add support for DOL_MODE.
   }
@@ -155,8 +151,7 @@ void AmlMipiDevice::AdapFrontEndStart(const mipi_adap_info_t* info) {
   // This register information is missing in the datasheet.
   // Best assumption is that theunit of values programmed in the register is
   // 128bit.
-  val = static_cast<uint32_t>(
-      ceil((width * depth) / static_cast<double>((8 * 16))));
+  val = static_cast<uint32_t>(ceil((width * depth) / static_cast<double>((8 * 16))));
   frontend_reg.ModifyBits32(val, 4, 28, CSI2_DDR_STRIDE_PIX);
 }
 
@@ -177,9 +172,8 @@ zx_status_t AmlMipiDevice::AdapReaderInit(const mipi_adap_info_t* info) {
   } else if (info->mode == MIPI_MODES_DDR_MODE) {
     reader_reg.Write32(0x02d00078, MIPI_ADAPT_DDR_RD0_CNTL1);
     // ddr mode config frame address
-    reader_reg.ModifyBits32(
-        static_cast<uint32_t>(pinned_ring_buffer_.region(0).phys_addr), 0, 32,
-        MIPI_ADAPT_DDR_RD0_CNTL2);
+    reader_reg.ModifyBits32(static_cast<uint32_t>(pinned_ring_buffer_.region(0).phys_addr), 0, 32,
+                            MIPI_ADAPT_DDR_RD0_CNTL2);
     reader_reg.Write32(0x70000001, MIPI_ADAPT_DDR_RD0_CNTL0);
   } else {
     zxlogf(ERROR, "%s, unsupported mode.\n", __func__);
@@ -236,8 +230,7 @@ void AmlMipiDevice::AdapPixelStart(const mipi_adap_info_t* info) {
   auto pixel_reg = mipi_adap_mmio_->View(PIXEL_BASE, kPixelSize);
 
   pixel_reg.ModifyBits32(info->format, 13, 3, MIPI_ADAPT_PIXEL0_CNTL0);
-  pixel_reg.ModifyBits32(info->resolution.width, 0, 13,
-                         MIPI_ADAPT_PIXEL0_CNTL0);
+  pixel_reg.ModifyBits32(info->resolution.width, 0, 13, MIPI_ADAPT_PIXEL0_CNTL0);
 
   // TODO(braval):    Add support for DOL_MODE
   pixel_reg.SetBits32(1 << 31, MIPI_ADAPT_PIXEL0_CNTL1);
@@ -258,7 +251,7 @@ zx_status_t AmlMipiDevice::AdapAlignInit(const mipi_adap_info_t* info) {
   } else {
     // default width 1280, height 720
     align_reg.Write32(0x02f80528,
-                      MIPI_ADAPT_ALIG_CNTL0);  // associate width and height
+                      MIPI_ADAPT_ALIG_CNTL0);              // associate width and height
     align_reg.Write32(0x05000000, MIPI_ADAPT_ALIG_CNTL1);  // associate width
     align_reg.Write32(0x02d00000, MIPI_ADAPT_ALIG_CNTL2);  // associate height
   }
@@ -332,8 +325,7 @@ zx_status_t AmlMipiDevice::MipiAdapInit(const mipi_adap_info_t* info) {
 
     running_.store(true);
 
-    int rc = thrd_create_with_name(&irq_thread_, start_thread, this,
-                                   "adapter_irq_thread");
+    int rc = thrd_create_with_name(&irq_thread_, start_thread, this, "adapter_irq_thread");
     if (rc != thrd_success) {
       return ZX_ERR_INTERNAL;
     }

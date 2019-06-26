@@ -29,14 +29,12 @@ namespace camera {
 class AmlMipiDevice;
 using DeviceType = ddk::Device<AmlMipiDevice, ddk::Unbindable>;
 
-class AmlMipiDevice
-    : public DeviceType,
-      public ddk::MipiCsiProtocol<AmlMipiDevice, ddk::base_protocol> {
+class AmlMipiDevice : public DeviceType,
+                      public ddk::MipiCsiProtocol<AmlMipiDevice, ddk::base_protocol> {
  public:
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AmlMipiDevice);
 
-  explicit AmlMipiDevice(zx_device_t* parent)
-      : DeviceType(parent), pdev_(parent) {}
+  explicit AmlMipiDevice(zx_device_t* parent) : DeviceType(parent), pdev_(parent) {}
 
   static zx_status_t Create(zx_device_t* parent);
 
@@ -47,8 +45,7 @@ class AmlMipiDevice
   void DdkUnbind();
 
   // Methods for ZX_PROTOCOL_MIPI_CSI.
-  zx_status_t MipiCsiInit(const mipi_info_t* mipi_info,
-                          const mipi_adap_info_t* adap_info);
+  zx_status_t MipiCsiInit(const mipi_info_t* mipi_info, const mipi_adap_info_t* adap_info);
   zx_status_t MipiCsiDeInit();
 
  private:
