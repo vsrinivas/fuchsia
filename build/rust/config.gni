@@ -17,7 +17,7 @@ declare_args() {
   rustc_prefix = "//buildtools/${host_platform}/rust/bin"
 
   # Sets the default LTO type for rustc bulids.
-  rust_lto = "unset"
+  rust_lto = ""
 
   # Sets the fuchsia toolchain target triple suffix (after arch)
   rust_toolchain_triple_suffix = "fuchsia"
@@ -25,6 +25,16 @@ declare_args() {
   # Sets whether Rust compiler warnings cause errors or not.
   # "deny" will make all warnings into errors, while "allow" will ignore warnings
   rust_warnings = "deny"
+
+  # Overrides the optimization level for all Rust builds, regardless of
+  # debug/release flags or the `force_opt` arg to the rustc_ templates.
+  # Valid values are 0-3, o, and z.
+  rust_override_opt = ""
+
+  # Overrides the LTO setting for all Rust builds, regardless of
+  # debug/release flags or the `with_lto` arg to the rustc_ templates.
+  # Valid values are "none", "thin", and "fat".
+  rust_override_lto = ""
 }
 
 _sysroot = sysroot

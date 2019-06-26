@@ -63,7 +63,9 @@ action("build-third-party") {
   deps = rust_build_deps
   inputs += rust_build_inputs
 
-  if (is_debug) {
+  if (rust_override_opt != "") {
+    rust_opt_level = rust_override_opt
+  } else if (is_debug) {
     rust_opt_level = "0"
   } else {
     rust_opt_level = "z"

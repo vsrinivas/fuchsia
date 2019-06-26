@@ -194,7 +194,12 @@ template("rustc_artifact") {
 
   group_deps = []
 
-  if (defined(invoker.force_opt)) {
+  if (rust_override_opt != "") {
+    rust_opt_level = rust_override_opt
+    if (defined(invoker.force_opt)) {
+      not_needed(invoker, ["force_opt"])
+    }
+  } else if (defined(invoker.force_opt)) {
     rust_opt_level = invoker.force_opt
   } else {
     if (is_debug) {
@@ -205,9 +210,14 @@ template("rustc_artifact") {
   }
 
   if (type == "bin") {
-    if (defined(invoker.with_lto)) {
+    if (rust_override_lto != "") {
+      with_lto = rust_override_lto
+      if (defined(invoker.with_lto)) {
+        not_needed(invoker, ["with_lto"])
+      }
+    } else if (defined(invoker.with_lto)) {
       with_lto = invoker.with_lto
-    } else if (rust_lto != "unset") {
+    } else if (rust_lto != "") {
       with_lto = rust_lto
     } else if (is_debug) {
       with_lto = "none"
