@@ -6,6 +6,7 @@ our repos and organizations, mailing lists, blog content, IRC channel and any
 other Fuchsia-supported communication group, as well as any private
 communication initiated in the context of these spaces.
 Simply put, community discussions should be
+
  * respectful and kind;
  * about Fuchsia;
  * about features and code, not the individuals involved.
@@ -57,6 +58,7 @@ conduct.
 
 Consequences for failing to comply with this policy may include, at the sole
 discretion of the Fuchsia community managers:
+
  * a request for an apology;
  * a private or public warning or reprimand;
  * a temporary ban from the mailing list, blog, Fuchsia repository or

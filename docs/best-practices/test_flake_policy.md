@@ -16,12 +16,12 @@ Flaky tests are bad because they:
 This document is specific to *test flakes*, not infrastructure flakes.
 
 ## Requirements: Goals for flaky tests
-1) **Flakes should be removed from the critical path of CQ as quickly as
+1. **Flakes should be removed from the critical path of CQ as quickly as
 possible**.
-2) Since flakes present themselves as a failing test, **flakes
+2. Since flakes present themselves as a failing test, **flakes
 should not be ignored** once taken off of CQ. They represent a real problem
 that should be fixed.
-3) Tests may flake at any time, and as a consequence,
+3. Tests may flake at any time, and as a consequence,
 the observer of these bugs may not necessarily be the person best equipped to
 fix it. **The process for reporting bugs must be fast, easy, and decoupled from
 diagnosis and patching.**
@@ -91,6 +91,7 @@ to re-land, they can re-land safely.
 Ongoing efforts to improve tooling surrounding flake are currently in progress.
 
 These include:
+
 - Automatically filing flake bugs, removing the "Observer" role from the path
 to identify flakes.
 - Automatically assigning flake bugs, based information present in OWNERs files.

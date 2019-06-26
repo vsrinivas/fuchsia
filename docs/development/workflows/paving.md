@@ -57,6 +57,7 @@ device's boot settings may need to be changed to boot from the USB device and
 this is typically device-specific. For the guides listed below, **only** go
 through the steps to set the boot device, don't continue with any instructions on
 creating install media.
+
 * [Acer Switch Alpha 12](/zircon/docs/targets/acer12.md)
 * [Intel NUC](/zircon/docs/targets/nuc.md)
 * [Google Pixelbook](/docs/development/hardware/pixelbook.md)

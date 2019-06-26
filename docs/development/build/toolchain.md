@@ -189,15 +189,14 @@ checkout (on Linux):
 CLANG_TOOLCHAIN_PREFIX=${FUCHSIA}/buildtools/linux-x64/clang/bin/
 ```
 
-*** note
-**Note:** that Fuchsia Clang installation only contains static libc++
+Note: Fuchsia Clang installation only contains static libc++
 host library (on Linux), so you will need the following two flags to
 avoid linker errors:
+
 ```bash
   -DCMAKE_EXE_LINKER_FLAGS="-ldl -lpthread" \
   -DCMAKE_SHARED_LINKER_FLAGS="-ldl -lpthread"
 ```
-***
 
 ### Sanitizers
 
