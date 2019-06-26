@@ -6,7 +6,12 @@ import 'dart:collection';
 import 'package:flutter/foundation.dart';
 
 import 'package:fidl_fuchsia_modular/fidl_async.dart'
-    show StoryInfo, StoryController, StoryState, StoryVisibilityState;
+    show
+        ModuleData,
+        StoryInfo,
+        StoryController,
+        StoryState,
+        StoryVisibilityState;
 import 'package:fuchsia_modular_flutter/session_shell.dart'
     show SessionShell, Story;
 import 'package:fuchsia_modular_flutter/story_shell.dart'
@@ -38,6 +43,12 @@ class ErmineStory implements Story, StoryShell {
 
   @override
   String get id => info.id;
+
+  ValueNotifier<String> nameNotifier = ValueNotifier(null);
+
+  String get name => nameNotifier.value ?? id;
+
+  set name(String value) => nameNotifier.value = value;
 
   ValueNotifier<ChildViewConnection> childViewConnectionNotifier =
       ValueNotifier(null);
@@ -95,6 +106,19 @@ class ErmineStory implements Story, StoryShell {
 
   bool get useInProcessStoryShell => clustersModel.useInProcessStoryShell;
 
+  // Holds the [ModuleData] mapped by its path.
+  final _modules = <String, ModuleData>{};
+
+  /// Callback when a module is added.
+  @override
+  void onModuleAdded(ModuleData moduleData) {
+    _modules[moduleData.modulePath.last] = moduleData;
+  }
+
+  /// Callback when a module is focused.
+  @override
+  void onModuleFocused(List<String> modulePath) {}
+
   ValueNotifier<bool> editStateNotifier = ValueNotifier(false);
   void edit() => editStateNotifier.value = !editStateNotifier.value;
 
@@ -113,15 +137,45 @@ class ErmineStory implements Story, StoryShell {
   }
 
   @override
-  void onSurfaceFocusChange(Surface surface, {bool focus = false}) {}
+  void onSurfaceFocusChange(Surface surface, {bool focus = false}) {
+    // Lookup the module from the surface id.
+    final surfaceId = _sanitizeSurfaceId(surface.id.replaceAll('\\', ''));
+    if (_modules.containsKey(surfaceId)) {
+      name = _extractPackageName(_modules[surfaceId].moduleUrl);
+    }
+  }
 
   @override
   void onSurfaceRemoved(Surface surface) {
     _surfaces.remove(surface);
+    _modules.remove(_sanitizeSurfaceId(surface.id));
     layoutManager.removeSurface([surface.id]);
   }
 
   @override
   // TODO: implement surfaces
   Iterable<Surface> get surfaces => _surfaces;
+}
+
+String _sanitizeSurfaceId(String surfaceId) => surfaceId.replaceAll('\\', '');
+
+String _extractPackageName(String packageUrl) {
+  // Try and parse package Urls that look like:
+  // fuchsia-pkg://fuchsia.com/<package-name>#meta/<component-name>.cmx
+  final uri = Uri.tryParse(packageUrl);
+  if (uri == null) {
+    return packageUrl;
+  }
+  // If path (/<package-name>) is contained in fragment (meta/<component-name)
+  // like in: fuchsia-pkg://fuchsia.com/settings#meta/settings.cmx
+  // then return the bare package name.
+  if (uri.fragment.contains(uri.path)) {
+    // skip the '/' at the start.
+    if (uri.path[0] == '/') {
+      return uri.path.substring(1);
+    } else {
+      return uri.path;
+    }
+  }
+  return packageUrl;
 }
