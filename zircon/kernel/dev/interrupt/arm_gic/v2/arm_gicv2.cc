@@ -5,6 +5,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include "arm_gicv2.h"
+
 #include <arch/arm64/hypervisor/gic/gicv2.h>
 #include <arch/arm64/periphmap.h>
 #include <arch/ops.h>
@@ -21,6 +23,7 @@
 #include <kernel/stats.h>
 #include <kernel/thread.h>
 #include <lib/ktrace.h>
+#include <lib/system-topology.h>
 #include <lk/init.h>
 #include <pdev/driver.h>
 #include <pdev/interrupt.h>
@@ -48,6 +51,8 @@ static uint32_t ipi_base = 0;
 
 static uint max_irqs = 0;
 
+static arm_gicv2::CpuMaskTranslator mask_translator;
+
 static zx_status_t arm_gic_init();
 
 static zx_status_t gic_configure_interrupt(unsigned int vector,
@@ -55,6 +60,34 @@ static zx_status_t gic_configure_interrupt(unsigned int vector,
                                            enum interrupt_polarity pol);
 
 static void suspend_resume_fiq(bool resume_gicc, bool resume_gicd) {
+}
+
+static uint32_t read_gicd_targetsr(int target_reg) {
+    return GICREG(0, GICD_ITARGETSR(target_reg));
+}
+
+uint8_t gic_determine_local_mask(fbl::Function<uint32_t(int)> fetch_gicd_targetsr_reg) {
+    union {
+        char bytes[4];
+        uint32_t value;
+    } decoder;
+
+    // The first 7 GICD_ITARGETSR registers only return values that apply to the
+    // calling CPU. These are interrupt target registers so each byte is a cpu_mask
+    // of what cpus are targeted by their cpu_mask from GIC's perspective. The
+    // upside is that we can scan these target regsiters to determine what our
+    // cpu_mask is from the GIC's perspective.
+    for (int target_reg = 0; target_reg < 8; target_reg++) {
+        decoder.value = fetch_gicd_targetsr_reg(target_reg);
+        for (int i = 0; i < 4; i++) {
+            if (decoder.bytes[i] != 0) {
+                return decoder.bytes[i];
+            }
+        }
+    }
+
+    printf("GICv2: unable to determine local GIC mask!\n");
+    return 0;
 }
 
 static bool gic_is_valid_interrupt(uint vector, uint32_t flags) {
@@ -280,11 +313,11 @@ static void gic_handle_fiq(iframe_short_t* frame) {
     PANIC_UNIMPLEMENTED;
 }
 
-static zx_status_t gic_send_ipi(cpu_mask_t target, mp_ipi_t ipi) {
+static zx_status_t gic_send_ipi(cpu_mask_t logical_target, mp_ipi_t ipi) {
+    const cpu_mask_t target = mask_translator.LogicalMaskToGic(logical_target);
+
     uint gic_ipi_num = ipi + ipi_base;
 
-    // filter out targets outside of the range of cpus we care about
-    target &= ((1UL << SMP_MAX_CPUS) - 1);
     if (target != 0) {
         LTRACEF("target 0x%x, gic_ipi %u\n", target, gic_ipi_num);
         arm_gic_sgi(gic_ipi_num, ARM_GIC_SGI_FLAG_NS, target);
@@ -309,6 +342,32 @@ static void gic_init_percpu() {
     unmask_interrupt(MP_IPI_RESCHEDULE + ipi_base);
     unmask_interrupt(MP_IPI_INTERRUPT + ipi_base);
     unmask_interrupt(MP_IPI_HALT + ipi_base);
+
+    const cpu_num_t logical_num = arch_curr_cpu_num();
+
+    system_topology::Node* node = nullptr;
+    auto status = system_topology::Graph::GetSystemTopology().ProcessorByLogicalId(logical_num,
+                                                                                   &node);
+    if (status == ZX_OK) {
+        DEBUG_ASSERT(node->entity_type == ZBI_TOPOLOGY_ENTITY_PROCESSOR &&
+                     node->entity.processor.architecture == ZBI_TOPOLOGY_ARCH_ARM);
+        mask_translator.SetGicIdForLogicalId(logical_num,
+                                             node->entity.processor.architecture_info.arm.gic_id);
+    } else {
+        printf("arm_gicv2: unable to get logical processor %u in topology, status: %d\n",
+               logical_num, status);
+    }
+
+    // Lookup the gic_mask for this processor via GIC registers and compare it
+    // to what we were told by the bootloader, warn if there is a mismatch.
+    const cpu_mask_t gic_mask = gic_determine_local_mask(read_gicd_targetsr);
+    const cpu_mask_t assigned_gic_mask = mask_translator.GetGicMask(logical_num);
+    if (gic_mask != assigned_gic_mask) {
+        printf("arm_gicv2: WARNING assigned gic_id of %u does not match processor's gic_id of %u."
+               "Successful operation is unlikely!", assigned_gic_mask, gic_mask);
+    }
+    LTRACEF("logical_cpu_mask: %u programmatic_gic_mask: %u assigned_gic_mask: %u\n",
+            cpu_num_to_mask(arch_curr_cpu_num()), gic_mask, assigned_gic_mask);
 }
 
 static void gic_shutdown() {

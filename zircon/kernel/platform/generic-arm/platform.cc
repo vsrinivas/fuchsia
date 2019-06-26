@@ -406,11 +406,13 @@ static zbi_result_t process_zbi_item_late(zbi_header_t* item,
                 node.entity_type = ZBI_TOPOLOGY_ENTITY_PROCESSOR;
                 node.parent_index = static_cast<uint16_t>(cluster_index);
                 node.entity.processor.logical_id_count = 1;
-                node.entity.processor.logical_ids[0] = logical_id++;
+                node.entity.processor.logical_ids[0] = logical_id;
                 node.entity.processor.architecture = ZBI_TOPOLOGY_ARCH_ARM;
                 node.entity.processor.architecture_info.arm.cluster_1_id =
                         static_cast<uint8_t>(cluster);
                 node.entity.processor.architecture_info.arm.cpu_id = static_cast<uint8_t>(i);
+                node.entity.processor.architecture_info.arm.gic_id =
+                        static_cast<uint8_t>(logical_id++);
             }
         }
         DEBUG_ASSERT(flat_index == node_count);

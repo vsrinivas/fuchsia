@@ -11,11 +11,26 @@ library("v2") {
     "arm_gicv2m_pcie.cc",
   ]
   deps = [
+    ":test",
     "$zx/kernel/dev/interrupt",
     "$zx/kernel/dev/interrupt/arm_gic/common",
     "$zx/kernel/dev/pcie",
     "$zx/kernel/dev/pdev",
     "$zx/kernel/dev/pdev/interrupt",
+    "$zx/kernel/lib/fbl",
     "$zx/kernel/lib/pow2_range_allocator",
+    "$zx/kernel/lib/topology",
+  ]
+}
+
+source_set("test") {
+  # TODO: testonly = true
+  sources = [
+    "arm_gicv2_test.cpp",
+  ]
+  include_dirs = [ "include" ]
+  deps = [
+    "$zx/kernel/lib/fbl",
+    "$zx/kernel/lib/unittest",
   ]
 }

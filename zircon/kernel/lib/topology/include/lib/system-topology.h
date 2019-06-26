@@ -7,6 +7,7 @@
 
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
+#include <kernel/cpu.h>
 #include <ktl/move.h>
 #include <lib/lazy_init/lazy_init.h>
 #include <zircon/boot/image.h>
@@ -104,7 +105,7 @@ public:
 
     // Finds the processor node that is assigned the given logical id.
     // Sets processor to point to that node. If it wasn't found, returns ZX_ERR_NOT_FOUND.
-    zx_status_t ProcessorByLogicalId(uint16_t id, Node** processor) const {
+    zx_status_t ProcessorByLogicalId(cpu_num_t id, Node** processor) const {
         if (id > processors_by_logical_id_.size()) {
             return ZX_ERR_NOT_FOUND;
         }
