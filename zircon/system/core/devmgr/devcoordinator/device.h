@@ -369,6 +369,9 @@ struct Device : public fbl::RefCounted<Device>, public AsyncLoopRefCountedRpcHan
     void set_test_time(zx::duration& test_time) {
         test_time_ = test_time;
     }
+    void set_test_reply_required(bool required) {
+        test_reply_required_ = required;
+    }
     zx::duration& test_time() {
         return test_time_;
     }
@@ -440,10 +443,14 @@ private:
     // For attaching as an open connection to the proxy device,
     // or once the device becomes visible.
     zx::channel client_remote_;
+
+    // For compatibility tests.
     fbl::Mutex test_state_lock_;
     TestStateMachine test_state_ __TA_GUARDED(test_state_lock_) = TestStateMachine::kTestNotStarted;
     zx::event test_event_;
     zx::duration test_time_;
+    fuchsia_device_manager_CompatibilityTestStatus test_status_;
+    bool test_reply_required_ = false;
 };
 
 } // namespace devmgr

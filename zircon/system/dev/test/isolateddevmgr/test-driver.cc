@@ -94,4 +94,4 @@ ZIRCON_DRIVER_BEGIN(metadataTest, isolateddevmgr_test_driver_ops, "zircon", "0.1
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_TEST_CHILD_1),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_TEST_CHILD_2),
 ZIRCON_DRIVER_END(metadataTest)
-    // clang-format on
+// clang-format on

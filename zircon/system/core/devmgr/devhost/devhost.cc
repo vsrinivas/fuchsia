@@ -797,6 +797,23 @@ zx_status_t devhost_device_bind(const fbl::RefPtr<zx_device_t>& dev, const char*
   return call_status;
 }
 
+zx_status_t devhost_device_run_compatibility_tests(const fbl::RefPtr<zx_device_t>& dev,
+                                                   int64_t hook_wait_time) {
+    const zx::channel& rpc = *dev->rpc;
+    if (!rpc.is_valid()) {
+        return ZX_ERR_IO_REFUSED;
+    }
+    log_rpc(dev, "run-compatibility-test");
+    zx_status_t call_status;
+    zx_status_t status = fuchsia_device_manager_CoordinatorRunCompatibilityTests(
+                          rpc.get(), hook_wait_time, &call_status);
+    log_rpc_result("run-compatibility-test", status, call_status);
+    if (status != ZX_OK) {
+        return status;
+    }
+    return call_status;
+}
+
 zx_status_t devhost_load_firmware(const fbl::RefPtr<zx_device_t>& dev, const char* path,
                                   zx_handle_t* vmo, size_t* size) {
   if ((vmo == nullptr) || (size == nullptr)) {

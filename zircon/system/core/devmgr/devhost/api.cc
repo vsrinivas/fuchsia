@@ -214,6 +214,12 @@ zx_status_t device_unbind(const fbl::RefPtr<zx_device_t>& dev) {
   return devhost_device_unbind(dev);
 }
 
+zx_status_t device_run_compatibility_tests(const fbl::RefPtr<zx_device_t>& dev,
+                                           int64_t hook_wait_time) {
+    ApiAutoLock lock;
+    return devhost_device_run_compatibility_tests(dev, hook_wait_time);
+}
+
 zx_status_t device_open(const fbl::RefPtr<zx_device_t>& dev, fbl::RefPtr<zx_device_t>* out,
                         uint32_t flags) {
   ApiAutoLock lock;

@@ -7,6 +7,7 @@
 #include <ddk/driver.h>
 #include <fbl/auto_call.h>
 #include <lib/fidl/coding.h>
+#include <fuchsia/device/manager/c/fidl.h>
 #include "../shared/fidl_txn.h"
 #include "../shared/log.h"
 #include "coordinator.h"
@@ -290,6 +291,7 @@ static zx_status_t fidl_AddDeviceInvisible(void* ctx, zx_handle_t raw_rpc,
                                            fidl_txn_t* txn);
 static zx_status_t fidl_RemoveDevice(void* ctx, fidl_txn_t* txn);
 static zx_status_t fidl_MakeVisible(void* ctx, fidl_txn_t* txn);
+static zx_status_t fidl_RunCompatibilityTests(void* ctx, int64_t hook_wait_time, fidl_txn_t* txn);
 static zx_status_t fidl_BindDevice(void* ctx, const char* driver_path_data, size_t driver_path_size,
                                    fidl_txn_t* txn);
 static zx_status_t fidl_GetTopologicalPath(void* ctx, fidl_txn_t* txn);
@@ -324,6 +326,7 @@ static const fuchsia_device_manager_Coordinator_ops_t fidl_ops = {
 
     .DmMexec = fidl_DmMexec,
     .DirectoryWatch = fidl_DirectoryWatch,
+    .RunCompatibilityTests = fidl_RunCompatibilityTests,
 };
 
 zx_status_t Device::HandleRead() {
@@ -503,6 +506,10 @@ zx_status_t Device::DriverCompatibiltyTest() {
         log(ERROR,
             "Driver Compatibility test failed for %s: "
             "Thread creation failed\n", GetTestDriverName());
+        if (test_reply_required_) {
+            dh_send_complete_compatibility_tests(this,
+                                    fuchsia_device_manager_CompatibilityTestStatus_ERR_INTERNAL);
+        }
         return ZX_ERR_NO_RESOURCES;
     }
     thrd_detach(t);
@@ -512,13 +519,22 @@ zx_status_t Device::DriverCompatibiltyTest() {
 int Device::RunCompatibilityTests() {
     const char* test_driver_name = GetTestDriverName();
     log(INFO, "%s: Running ddk compatibility test for driver %s \n", __func__, test_driver_name);
+    auto cleanup = fbl::MakeAutoCall([this]() {
+        if (test_reply_required_) {
+            dh_send_complete_compatibility_tests(this, test_status_);
+        }
+        test_event().reset();
+        set_test_state(Device::TestStateMachine::kTestDone);
+        set_test_reply_required(false);
+    });
     // Device should be bound for test to work
     if (!(flags & DEV_CTX_BOUND) || children().is_empty()) {
         log(ERROR,
             "devcoordinator: Driver Compatibility test failed for %s: "
             "Parent Device not bound\n",
             test_driver_name);
-        return ZX_ERR_INTERNAL;
+        test_status_ = fuchsia_device_manager_CompatibilityTestStatus_ERR_BIND_NO_DDKADD;
+        return -1;
     }
     zx_status_t status = zx::event::create(0, &test_event());
     if (status != ZX_OK) {
@@ -526,13 +542,9 @@ int Device::RunCompatibilityTests() {
             "devcoordinator: Driver Compatibility test failed for %s: "
             "Event creation failed : %d\n",
             test_driver_name, status);
-        return ZX_ERR_NO_RESOURCES;
+        test_status_ = fuchsia_device_manager_CompatibilityTestStatus_ERR_INTERNAL;
+        return -1;
     }
-
-    auto cleanup = fbl::MakeAutoCall([this]() {
-        test_event().reset();
-        set_test_state(Device::TestStateMachine::kTestDone);
-    });
 
     // Issue unbind on all its children.
     for (auto itr = children().begin(); itr != children().end();) {
@@ -547,7 +559,8 @@ int Device::RunCompatibilityTests() {
                 "devcoordinator: Driver Compatibility test failed for %s: "
                 "Sending unbind to %s failed\n",
                 test_driver_name, child.name().data());
-            return ZX_ERR_INTERNAL;
+            test_status_ = fuchsia_device_manager_CompatibilityTestStatus_ERR_INTERNAL;
+            return -1;
         }
     }
 
@@ -563,13 +576,15 @@ int Device::RunCompatibilityTests() {
                 "Timed out waiting for device to be removed. Check if device_remove was "
                 "called in the unbind routine of the driver: %d\n",
                 test_driver_name, status);
+            test_status_ = fuchsia_device_manager_CompatibilityTestStatus_ERR_UNBIND_TIMEOUT;
         } else {
             log(ERROR,
                 "devcoordinator: Driver Compatibility test failed for %s: "
                 "Error waiting for device to be removed.\n",
                 test_driver_name);
+            test_status_ = fuchsia_device_manager_CompatibilityTestStatus_ERR_INTERNAL;
         }
-        return ZX_ERR_BAD_STATE;
+        return -1;
     }
     this->set_test_state(Device::TestStateMachine::kTestBindSent);
     this->coordinator->HandleNewDevice(fbl::WrapRefPtr(this));
@@ -585,27 +600,29 @@ int Device::RunCompatibilityTests() {
                  "Timed out waiting for driver to be bound. Check if Bind routine "
                  "of the driver is doing blocking I/O: %d\n",
                  test_driver_name, status);
+             test_status_ = fuchsia_device_manager_CompatibilityTestStatus_ERR_BIND_TIMEOUT;
          } else {
              log(ERROR,
                     "devcoordinator: Driver Compatibility test failed for %s: "
                     "Error waiting for driver to be bound: %d\n",
                     test_driver_name, status);
+             test_status_ = fuchsia_device_manager_CompatibilityTestStatus_ERR_INTERNAL;
          }
-         return ZX_ERR_BAD_STATE;
+         return -1;
     }
     this->set_test_state(Device::TestStateMachine::kTestBindDone);
     if (this->children().is_empty()) {
-       log(ERROR,
+        log(ERROR,
            "devcoordinator: Driver Compatibility test failed for %s: "
            "Driver Bind routine did not add a child. Check if Bind routine "
            "Called DdkAdd() at the end.\n", test_driver_name);
-       return -1;
+        test_status_ = fuchsia_device_manager_CompatibilityTestStatus_ERR_BIND_NO_DDKADD;
+        return -1;
     }
+    log(ERROR, "devcoordinator: Driver Compatibility test succeeded for %s\n", test_driver_name);
     // TODO(ravoorir): Test Suspend and Resume hooks
-    log(ERROR, "%s: Driver Compatibility test %s for %s\n", __func__,
-        this->test_state() == Device::TestStateMachine::kTestBindDone ? "Succeeded" : "Failed",
-        test_driver_name);
-    return ZX_OK;
+    test_status_ = fuchsia_device_manager_CompatibilityTestStatus_OK;
+    return 0;
 }
 
 // Handlers for the messages from devices
@@ -698,6 +715,20 @@ static zx_status_t fidl_BindDevice(void* ctx, const char* driver_path_data, size
     log(ERROR, "devcoordinator: rpc: bind-device '%s'\n", dev->name().data());
     zx_status_t status = dev->coordinator->BindDevice(dev, driver_path, false /* new device */);
     return fuchsia_device_manager_CoordinatorBindDevice_reply(txn, status);
+}
+
+static zx_status_t fidl_RunCompatibilityTests(void* ctx, int64_t hook_wait_time, fidl_txn_t* txn) {
+    auto dev = fbl::WrapRefPtr(static_cast<Device*>(ctx));
+    fbl::RefPtr<Device>& real_parent = dev;
+    zx_status_t status = ZX_OK;
+    if (dev->flags & DEV_CTX_PROXY) {
+        real_parent = dev->parent();
+    }
+    zx::duration test_time = zx::nsec(hook_wait_time);
+    real_parent->set_test_time(test_time);
+    real_parent->set_test_reply_required(true);
+    status = real_parent->DriverCompatibiltyTest();
+    return fuchsia_device_manager_CoordinatorRunCompatibilityTests_reply(txn, status);
 }
 
 static zx_status_t fidl_GetTopologicalPath(void* ctx, fidl_txn_t* txn) {

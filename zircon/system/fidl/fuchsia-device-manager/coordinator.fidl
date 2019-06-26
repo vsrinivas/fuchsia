@@ -64,6 +64,17 @@ struct DeviceComponent {
     array<DeviceComponentPart>:DEVICE_COMPONENT_PARTS_MAX parts;
 };
 
+/// A enum of CompatibilityTestStatus
+enum CompatibilityTestStatus : uint32 {
+    OK = 1;
+    ERR_BIND_NO_DDKADD = 2;
+    ERR_BIND_TIMEOUT = 3;
+    ERR_UNBIND_NO_DDKREMOVE = 4;
+    ERR_UNBIND_TIMEOUT = 5;
+    ERR_SUSPEND_DDKREMOVE = 6;
+    ERR_INTERNAL = 7;
+};
+
 /// Protocol for controlling devices in a devhost process from the devcoordinator
 [Layout = "Simple"]
 protocol DeviceController {
@@ -86,6 +97,13 @@ protocol DeviceController {
 
     /// Ask devhost to suspend this device, using the target state indicated by `flags`.
     Suspend(uint32 flags) -> (zx.status status);
+
+    /// Inform devhost about the compatibility test status when compatibility tests
+    /// fail or complete successfully.
+    // TODO(ravoorir) : This should be an asynchronous call from devhost to
+    // devcoordinator as a reply to RunCompatibilityTests, when llcpp can support
+    // making an asynchronous fidl call.
+    CompleteCompatibilityTests(CompatibilityTestStatus status);
 };
 
 /// Protocol for controlling a devhost process from the devcoordinator
@@ -218,4 +236,11 @@ protocol Coordinator {
     /// See fuchsia.io.Directory for more information.
     DirectoryWatch(uint32 mask, uint32 options, handle<channel> watcher)
         -> (zx.status s);
+
+    /// Run Compatibility tests for the driver that binds to this device.
+    /// The hook_wait_time is the time that the driver expects to take for
+    /// each device hook in nanoseconds.
+    /// Returns whether the compatibility tests started, and does not convey
+    /// anything about the status of the test.
+    RunCompatibilityTests(int64 hook_wait_time) -> (zx.status status);
 };

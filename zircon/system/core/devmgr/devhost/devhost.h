@@ -139,6 +139,8 @@ zx_status_t devhost_device_bind(const fbl::RefPtr<zx_device_t>& dev,
                                 const char* drv_libname) REQ_DM_LOCK;
 zx_status_t devhost_device_rebind(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK;
 zx_status_t devhost_device_unbind(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK;
+zx_status_t devhost_device_run_compatibility_tests(const fbl::RefPtr<zx_device_t>& dev,
+                                                   int64_t hook_wait_time) REQ_DM_LOCK;
 zx_status_t devhost_device_create(zx_driver_t* drv, const char* name, void* ctx,
                                   const zx_protocol_device_t* ops,
                                   fbl::RefPtr<zx_device_t>* out) REQ_DM_LOCK;

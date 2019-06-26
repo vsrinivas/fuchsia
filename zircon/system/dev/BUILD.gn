@@ -39,6 +39,8 @@ group("dev") {
     "tee",
 
     # test/ allows drivers to be used by IsolateDevmgr
+    "test/ddk-runcompatibilityhook:ddk-runcompatibilityhook-test",
+    "test/ddk-runcompatibilityhook:ddk-runcompatibilityhook-test-child",
     "test/fidl-llcpp-driver",
     "test/isolateddevmgr:isolateddevmgr-test",
     "test/mock-device",

@@ -62,4 +62,10 @@ protocol Controller {
     DebugSuspend() -> (zx.status status);
     /// Debug command: execute the device's resume hook
     DebugResume() -> (zx.status status);
+
+    /// RunCompatibilityTests: Runs compatibility tests for the driver that binds to this device.
+    /// The |hook_wait_time| is the time that the driver expects to take for each device hook in
+    /// nanoseconds.
+    /// Returns whether the driver passed the compatibility check.
+    RunCompatibilityTests(int64 hook_wait_time) -> (uint32 status);
 };

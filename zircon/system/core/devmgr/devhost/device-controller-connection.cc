@@ -82,6 +82,18 @@ zx_status_t fidl_BindDriver(void* raw_ctx, const char* driver_path_data, size_t 
   return BindReply(dev, txn, ZX_ERR_NOT_SUPPORTED);
 }
 
+zx_status_t fidl_CompleteCompatibilityTests(void* raw_ctx,
+                                fuchsia_device_manager_CompatibilityTestStatus test_status) {
+    auto ctx = static_cast<DevhostRpcReadContext*>(raw_ctx);
+    const auto& dev = ctx->conn->dev();
+    fs::FidlConnection conn(fidl_txn_t{}, ZX_HANDLE_INVALID, 0);
+    if (dev->PopTestCompatibilityConn(&conn)) {
+        fuchsia_device_ControllerRunCompatibilityTests_reply(conn.Txn(), test_status);
+    }
+
+    return ZX_OK;
+}
+
 zx_status_t fidl_ConnectProxy(void* raw_ctx, zx_handle_t raw_shadow) {
   auto ctx = static_cast<DevhostRpcReadContext*>(raw_ctx);
   zx::channel shadow(raw_shadow);
@@ -139,6 +151,7 @@ const fuchsia_device_manager_DeviceController_ops_t kDefaultDeviceOps = {
     .Unbind = fidl_Unbind,
     .RemoveDevice = fidl_RemoveDevice,
     .Suspend = fidl_Suspend,
+    .CompleteCompatibilityTests = fidl_CompleteCompatibilityTests,
 };
 
 const fuchsia_io_Directory_ops_t kDefaultDirectoryOps = []() {
