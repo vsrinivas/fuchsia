@@ -5,32 +5,32 @@
 library fuchsia.ui.gfx;
 
 /// Token that uniquely identifies an attachment point for a subgraph in the
-/// global scene graph.  Each |ImportToken| has exactly one corresponding
-/// |ExportToken|.
+/// global scene graph.  Each `ImportToken` has exactly one corresponding
+/// `ExportToken`.
 ///
 /// A Scenic client can reference contents from another client by creating a
 /// typed resource using this token.  The other client must also create a
-/// correspondingly typed resource using the corresponding |ExportToken|.
+/// correspondingly typed resource using the corresponding `ExportToken`.
 ///
 /// The exact nature of the inter-client reference depends on the specific
-/// resources created from the tokens.  For example, creating a |ViewHolder|
-/// resource from this token allows a client to embed another client's |View|.
+/// resources created from the tokens.  For example, creating a `ViewHolder`
+/// resource from this token allows a client to embed another client's `View`.
 struct ImportToken {
     handle<eventpair> value;
 };
 
 /// Token that uniquely identifies a root point for a subgraph in the global
-/// scene graph. Each |ExportToken| has exactly one corresponding |ImportToken|.
+/// scene graph. Each `ExportToken` has exactly one corresponding `ImportToken`.
 ///
 /// A Scenic client can have its contents referenced from another client by
 /// creating a typed resource using this token.  The other client must also
 /// create a correspondingly typed resource using the corresponding
-/// |ImportToken|.
+/// `ImportToken`.
 ///
 /// The exact nature of the inter-client reference depends on the specific
-/// resources created from the tokens.  For example, creating a |View|
-/// resource from this token allows everything attached to the |View| to be
-/// embedded in another clients |ViewHolder|.
+/// resources created from the tokens.  For example, creating a `View`
+/// resource from this token allows everything attached to the `View` to be
+/// embedded in another clients `ViewHolder`.
 struct ExportToken {
     handle<eventpair> value;
 };

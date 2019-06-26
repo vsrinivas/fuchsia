@@ -114,10 +114,10 @@ struct Vmofile {
   // The VMO which backs this file.
   ::zx::vmo vmo{};
 
-  // The index into |vmo| which represents the first byte of the file.
+  // The index into `vmo` which represents the first byte of the file.
   uint64_t offset{};
 
-  // The number of bytes, starting at |offset|, which may be used to represent this file.
+  // The number of bytes, starting at `offset`, which may be used to represent this file.
   uint64_t length{};
 };
 
@@ -312,8 +312,8 @@ constexpr uint32_t OPEN_FLAG_NOT_DIRECTORY = 33554432u;
 // otherwise an error is returned.
 // If an object is opened or cloned using this method, the resulting connection does not carry
 // any permission flags.
-// The resulting node allows a limited set of operations: |GetAttr|, |Clone|, |Close|, |Describe|,
-// and, if the node is a file, these extra operations: |GetFlags|, |SetFlags|.
+// The resulting node allows a limited set of operations: `GetAttr`, `Clone`, `Close`, `Describe`,
+// and, if the node is a file, these extra operations: `GetFlags`, `SetFlags`.
 constexpr uint32_t OPEN_FLAG_NODE_REFERENCE = 4194304u;
 
 // Assert that the object to be opened is a directory.
@@ -518,7 +518,7 @@ extern "C" const fidl_type_t fuchsia_io_NodeInfoTable;
 // Describes how the connection to an should be handled, as well as
 // how to interpret the optional handle.
 //
-// Refer to |Node::Describe()| and |Node::OnOpen()| for usage.
+// Refer to `Node::Describe()` and `Node::OnOpen()` for usage.
 struct NodeInfo {
   enum class Tag : fidl_union_tag_t {
     kService = 0,
@@ -839,11 +839,11 @@ class Node final {
 
 
   struct EventHandlers {
-    // An event produced eagerly by a FIDL server if requested by |OPEN_FLAG_DESCRIBE|.
+    // An event produced eagerly by a FIDL server if requested by `OPEN_FLAG_DESCRIBE`.
     //
     // Indicates the success or failure of the open operation, and optionally describes the
-    // object. If the status is |ZX_OK|, |info| contains descriptive information about the object
-    // (the same as would be returned by |Describe|).
+    // object. If the status is `ZX_OK`, `info` contains descriptive information about the object
+    // (the same as would be returned by `Describe`).
     fit::function<zx_status_t(int32_t s, NodeInfo* info)> on_open;
 
     // Fallback handler when an unknown ordinal is received.
@@ -859,7 +859,7 @@ class Node final {
 
     // Create another connection to the same remote object.
     //
-    // |flags| may be any of:
+    // `flags` may be any of:
     // - OPEN_RIGHT_*
     // - OPEN_FLAG_APPEND
     // - OPEN_FLAG_NO_REMOTE
@@ -868,7 +868,7 @@ class Node final {
     //
     // All other flags are ignored.
     //
-    // The OPEN_RIGHT_* bits in |flags| request corresponding rights over the resulting
+    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
     // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
@@ -877,7 +877,7 @@ class Node final {
 
     // Create another connection to the same remote object.
     //
-    // |flags| may be any of:
+    // `flags` may be any of:
     // - OPEN_RIGHT_*
     // - OPEN_FLAG_APPEND
     // - OPEN_FLAG_NO_REMOTE
@@ -886,7 +886,7 @@ class Node final {
     //
     // All other flags are ignored.
     //
-    // The OPEN_RIGHT_* bits in |flags| request corresponding rights over the resulting
+    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
     // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
@@ -896,7 +896,7 @@ class Node final {
 
     // Create another connection to the same remote object.
     //
-    // |flags| may be any of:
+    // `flags` may be any of:
     // - OPEN_RIGHT_*
     // - OPEN_FLAG_APPEND
     // - OPEN_FLAG_NO_REMOTE
@@ -905,7 +905,7 @@ class Node final {
     //
     // All other flags are ignored.
     //
-    // The OPEN_RIGHT_* bits in |flags| request corresponding rights over the resulting
+    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
     // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
@@ -932,13 +932,13 @@ class Node final {
     ::fidl::DecodeResult<CloseResponse> Close(::fidl::BytePart response_buffer);
 
     // Returns extra information about the type of the object.
-    // If the |Describe| operation fails, the connection is closed.
+    // If the `Describe` operation fails, the connection is closed.
     //
     // This method does not require any rights.
     zx_status_t Describe(NodeInfo* out_info);
 
     // Returns extra information about the type of the object.
-    // If the |Describe| operation fails, the connection is closed.
+    // If the `Describe` operation fails, the connection is closed.
     //
     // This method does not require any rights.
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -946,7 +946,7 @@ class Node final {
     ::fidl::DecodeResult<DescribeResponse> Describe(::fidl::BytePart _response_buffer, NodeInfo* out_info);
 
     // Returns extra information about the type of the object.
-    // If the |Describe| operation fails, the connection is closed.
+    // If the `Describe` operation fails, the connection is closed.
     //
     // This method does not require any rights.
     // Messages are encoded and decoded in-place.
@@ -989,13 +989,13 @@ class Node final {
     ::fidl::DecodeResult<GetAttrResponse> GetAttr(::fidl::BytePart response_buffer);
 
     // Updates information about the node.
-    // |flags| may be any of NODE_ATTRIBUTE_FLAG_*.
+    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
     zx_status_t SetAttr(uint32_t flags, NodeAttributes attributes, int32_t* out_s);
 
     // Updates information about the node.
-    // |flags| may be any of NODE_ATTRIBUTE_FLAG_*.
+    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -1003,7 +1003,7 @@ class Node final {
     ::fidl::DecodeResult<SetAttrResponse> SetAttr(::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Updates information about the node.
-    // |flags| may be any of NODE_ATTRIBUTE_FLAG_*.
+    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
     // Messages are encoded and decoded in-place.
@@ -1034,7 +1034,7 @@ class Node final {
 
     // Create another connection to the same remote object.
     //
-    // |flags| may be any of:
+    // `flags` may be any of:
     // - OPEN_RIGHT_*
     // - OPEN_FLAG_APPEND
     // - OPEN_FLAG_NO_REMOTE
@@ -1043,7 +1043,7 @@ class Node final {
     //
     // All other flags are ignored.
     //
-    // The OPEN_RIGHT_* bits in |flags| request corresponding rights over the resulting
+    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
     // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
@@ -1052,7 +1052,7 @@ class Node final {
 
     // Create another connection to the same remote object.
     //
-    // |flags| may be any of:
+    // `flags` may be any of:
     // - OPEN_RIGHT_*
     // - OPEN_FLAG_APPEND
     // - OPEN_FLAG_NO_REMOTE
@@ -1061,7 +1061,7 @@ class Node final {
     //
     // All other flags are ignored.
     //
-    // The OPEN_RIGHT_* bits in |flags| request corresponding rights over the resulting
+    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
     // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
@@ -1071,7 +1071,7 @@ class Node final {
 
     // Create another connection to the same remote object.
     //
-    // |flags| may be any of:
+    // `flags` may be any of:
     // - OPEN_RIGHT_*
     // - OPEN_FLAG_APPEND
     // - OPEN_FLAG_NO_REMOTE
@@ -1080,7 +1080,7 @@ class Node final {
     //
     // All other flags are ignored.
     //
-    // The OPEN_RIGHT_* bits in |flags| request corresponding rights over the resulting
+    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
     // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
@@ -1107,13 +1107,13 @@ class Node final {
     static ::fidl::DecodeResult<CloseResponse> Close(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Returns extra information about the type of the object.
-    // If the |Describe| operation fails, the connection is closed.
+    // If the `Describe` operation fails, the connection is closed.
     //
     // This method does not require any rights.
     static zx_status_t Describe(zx::unowned_channel _client_end, NodeInfo* out_info);
 
     // Returns extra information about the type of the object.
-    // If the |Describe| operation fails, the connection is closed.
+    // If the `Describe` operation fails, the connection is closed.
     //
     // This method does not require any rights.
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -1121,7 +1121,7 @@ class Node final {
     static ::fidl::DecodeResult<DescribeResponse> Describe(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, NodeInfo* out_info);
 
     // Returns extra information about the type of the object.
-    // If the |Describe| operation fails, the connection is closed.
+    // If the `Describe` operation fails, the connection is closed.
     //
     // This method does not require any rights.
     // Messages are encoded and decoded in-place.
@@ -1164,13 +1164,13 @@ class Node final {
     static ::fidl::DecodeResult<GetAttrResponse> GetAttr(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Updates information about the node.
-    // |flags| may be any of NODE_ATTRIBUTE_FLAG_*.
+    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
     static zx_status_t SetAttr(zx::unowned_channel _client_end, uint32_t flags, NodeAttributes attributes, int32_t* out_s);
 
     // Updates information about the node.
-    // |flags| may be any of NODE_ATTRIBUTE_FLAG_*.
+    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -1178,7 +1178,7 @@ class Node final {
     static ::fidl::DecodeResult<SetAttrResponse> SetAttr(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Updates information about the node.
-    // |flags| may be any of NODE_ATTRIBUTE_FLAG_*.
+    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
     // Messages are encoded and decoded in-place.
@@ -1317,26 +1317,26 @@ class Node final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
-  // An event produced eagerly by a FIDL server if requested by |OPEN_FLAG_DESCRIBE|.
+  // An event produced eagerly by a FIDL server if requested by `OPEN_FLAG_DESCRIBE`.
   //
   // Indicates the success or failure of the open operation, and optionally describes the
-  // object. If the status is |ZX_OK|, |info| contains descriptive information about the object
-  // (the same as would be returned by |Describe|).
+  // object. If the status is `ZX_OK`, `info` contains descriptive information about the object
+  // (the same as would be returned by `Describe`).
   static zx_status_t SendOnOpenEvent(::zx::unowned_channel _chan, int32_t s, NodeInfo* info);
 
-  // An event produced eagerly by a FIDL server if requested by |OPEN_FLAG_DESCRIBE|.
+  // An event produced eagerly by a FIDL server if requested by `OPEN_FLAG_DESCRIBE`.
   //
   // Indicates the success or failure of the open operation, and optionally describes the
-  // object. If the status is |ZX_OK|, |info| contains descriptive information about the object
-  // (the same as would be returned by |Describe|).
+  // object. If the status is `ZX_OK`, `info` contains descriptive information about the object
+  // (the same as would be returned by `Describe`).
   // Caller provides the backing storage for FIDL message via response buffers.
   static zx_status_t SendOnOpenEvent(::zx::unowned_channel _chan, ::fidl::BytePart _buffer, int32_t s, NodeInfo* info);
 
-  // An event produced eagerly by a FIDL server if requested by |OPEN_FLAG_DESCRIBE|.
+  // An event produced eagerly by a FIDL server if requested by `OPEN_FLAG_DESCRIBE`.
   //
   // Indicates the success or failure of the open operation, and optionally describes the
-  // object. If the status is |ZX_OK|, |info| contains descriptive information about the object
-  // (the same as would be returned by |Describe|).
+  // object. If the status is `ZX_OK`, `info` contains descriptive information about the object
+  // (the same as would be returned by `Describe`).
   // Messages are encoded in-place.
   static zx_status_t SendOnOpenEvent(::zx::unowned_channel _chan, ::fidl::DecodedMessage<OnOpenResponse> params);
 
@@ -1692,11 +1692,11 @@ class File final {
 
 
   struct EventHandlers {
-    // An event produced eagerly by a FIDL server if requested by |OPEN_FLAG_DESCRIBE|.
+    // An event produced eagerly by a FIDL server if requested by `OPEN_FLAG_DESCRIBE`.
     //
     // Indicates the success or failure of the open operation, and optionally describes the
-    // object. If the status is |ZX_OK|, |info| contains descriptive information about the object
-    // (the same as would be returned by |Describe|).
+    // object. If the status is `ZX_OK`, `info` contains descriptive information about the object
+    // (the same as would be returned by `Describe`).
     fit::function<zx_status_t(int32_t s, NodeInfo* info)> on_open;
 
     // Fallback handler when an unknown ordinal is received.
@@ -1712,7 +1712,7 @@ class File final {
 
     // Create another connection to the same remote object.
     //
-    // |flags| may be any of:
+    // `flags` may be any of:
     // - OPEN_RIGHT_*
     // - OPEN_FLAG_APPEND
     // - OPEN_FLAG_NO_REMOTE
@@ -1721,7 +1721,7 @@ class File final {
     //
     // All other flags are ignored.
     //
-    // The OPEN_RIGHT_* bits in |flags| request corresponding rights over the resulting
+    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
     // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
@@ -1730,7 +1730,7 @@ class File final {
 
     // Create another connection to the same remote object.
     //
-    // |flags| may be any of:
+    // `flags` may be any of:
     // - OPEN_RIGHT_*
     // - OPEN_FLAG_APPEND
     // - OPEN_FLAG_NO_REMOTE
@@ -1739,7 +1739,7 @@ class File final {
     //
     // All other flags are ignored.
     //
-    // The OPEN_RIGHT_* bits in |flags| request corresponding rights over the resulting
+    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
     // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
@@ -1749,7 +1749,7 @@ class File final {
 
     // Create another connection to the same remote object.
     //
-    // |flags| may be any of:
+    // `flags` may be any of:
     // - OPEN_RIGHT_*
     // - OPEN_FLAG_APPEND
     // - OPEN_FLAG_NO_REMOTE
@@ -1758,7 +1758,7 @@ class File final {
     //
     // All other flags are ignored.
     //
-    // The OPEN_RIGHT_* bits in |flags| request corresponding rights over the resulting
+    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
     // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
@@ -1785,13 +1785,13 @@ class File final {
     ::fidl::DecodeResult<CloseResponse> Close(::fidl::BytePart response_buffer);
 
     // Returns extra information about the type of the object.
-    // If the |Describe| operation fails, the connection is closed.
+    // If the `Describe` operation fails, the connection is closed.
     //
     // This method does not require any rights.
     zx_status_t Describe(NodeInfo* out_info);
 
     // Returns extra information about the type of the object.
-    // If the |Describe| operation fails, the connection is closed.
+    // If the `Describe` operation fails, the connection is closed.
     //
     // This method does not require any rights.
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -1799,7 +1799,7 @@ class File final {
     ::fidl::DecodeResult<DescribeResponse> Describe(::fidl::BytePart _response_buffer, NodeInfo* out_info);
 
     // Returns extra information about the type of the object.
-    // If the |Describe| operation fails, the connection is closed.
+    // If the `Describe` operation fails, the connection is closed.
     //
     // This method does not require any rights.
     // Messages are encoded and decoded in-place.
@@ -1842,13 +1842,13 @@ class File final {
     ::fidl::DecodeResult<GetAttrResponse> GetAttr(::fidl::BytePart response_buffer);
 
     // Updates information about the node.
-    // |flags| may be any of NODE_ATTRIBUTE_FLAG_*.
+    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
     zx_status_t SetAttr(uint32_t flags, NodeAttributes attributes, int32_t* out_s);
 
     // Updates information about the node.
-    // |flags| may be any of NODE_ATTRIBUTE_FLAG_*.
+    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -1856,7 +1856,7 @@ class File final {
     ::fidl::DecodeResult<SetAttrResponse> SetAttr(::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Updates information about the node.
-    // |flags| may be any of NODE_ATTRIBUTE_FLAG_*.
+    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
     // Messages are encoded and decoded in-place.
@@ -1946,13 +1946,13 @@ class File final {
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<WriteAtResponse> WriteAt(::fidl::DecodedMessage<WriteAtRequest> params, ::fidl::BytePart response_buffer);
 
-    // Moves the offset at which the next invocation of |Read()| or |Write()| will
+    // Moves the offset at which the next invocation of `Read()` or `Write()` will
     // occur.
     //
     // This method does not require any rights.
     zx_status_t Seek(int64_t offset, SeekOrigin start, int32_t* out_s, uint64_t* out_offset);
 
-    // Moves the offset at which the next invocation of |Read()| or |Write()| will
+    // Moves the offset at which the next invocation of `Read()` or `Write()` will
     // occur.
     //
     // This method does not require any rights.
@@ -1960,7 +1960,7 @@ class File final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<SeekResponse> Seek(::fidl::BytePart _request_buffer, int64_t offset, SeekOrigin start, ::fidl::BytePart _response_buffer, int32_t* out_s, uint64_t* out_offset);
 
-    // Moves the offset at which the next invocation of |Read()| or |Write()| will
+    // Moves the offset at which the next invocation of `Read()` or `Write()` will
     // occur.
     //
     // This method does not require any rights.
@@ -2031,11 +2031,11 @@ class File final {
     // Acquires a buffer representing this file, if there is one, with the
     // requested access rights.
     //
-    // |flags| may be any of VMO_FLAG_*.
+    // `flags` may be any of VMO_FLAG_*.
     //
     // This method requires following rights:
-    // - OPEN_RIGHT_WRITABLE if |flags| includes VMO_FLAG_WRITE.
-    // - OPEN_RIGHT_READABLE if |flags| includes VMO_FLAG_READ or VMO_FLAG_EXEC.
+    // - OPEN_RIGHT_WRITABLE if `flags` includes VMO_FLAG_WRITE.
+    // - OPEN_RIGHT_READABLE if `flags` includes VMO_FLAG_READ or VMO_FLAG_EXEC.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<GetBufferResponse> GetBuffer(::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer, int32_t* out_s, ::llcpp::fuchsia::mem::Buffer** out_buffer);
@@ -2043,11 +2043,11 @@ class File final {
     // Acquires a buffer representing this file, if there is one, with the
     // requested access rights.
     //
-    // |flags| may be any of VMO_FLAG_*.
+    // `flags` may be any of VMO_FLAG_*.
     //
     // This method requires following rights:
-    // - OPEN_RIGHT_WRITABLE if |flags| includes VMO_FLAG_WRITE.
-    // - OPEN_RIGHT_READABLE if |flags| includes VMO_FLAG_READ or VMO_FLAG_EXEC.
+    // - OPEN_RIGHT_WRITABLE if `flags` includes VMO_FLAG_WRITE.
+    // - OPEN_RIGHT_READABLE if `flags` includes VMO_FLAG_READ or VMO_FLAG_EXEC.
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<GetBufferResponse> GetBuffer(::fidl::DecodedMessage<GetBufferRequest> params, ::fidl::BytePart response_buffer);
 
@@ -2066,7 +2066,7 @@ class File final {
 
     // Create another connection to the same remote object.
     //
-    // |flags| may be any of:
+    // `flags` may be any of:
     // - OPEN_RIGHT_*
     // - OPEN_FLAG_APPEND
     // - OPEN_FLAG_NO_REMOTE
@@ -2075,7 +2075,7 @@ class File final {
     //
     // All other flags are ignored.
     //
-    // The OPEN_RIGHT_* bits in |flags| request corresponding rights over the resulting
+    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
     // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
@@ -2084,7 +2084,7 @@ class File final {
 
     // Create another connection to the same remote object.
     //
-    // |flags| may be any of:
+    // `flags` may be any of:
     // - OPEN_RIGHT_*
     // - OPEN_FLAG_APPEND
     // - OPEN_FLAG_NO_REMOTE
@@ -2093,7 +2093,7 @@ class File final {
     //
     // All other flags are ignored.
     //
-    // The OPEN_RIGHT_* bits in |flags| request corresponding rights over the resulting
+    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
     // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
@@ -2103,7 +2103,7 @@ class File final {
 
     // Create another connection to the same remote object.
     //
-    // |flags| may be any of:
+    // `flags` may be any of:
     // - OPEN_RIGHT_*
     // - OPEN_FLAG_APPEND
     // - OPEN_FLAG_NO_REMOTE
@@ -2112,7 +2112,7 @@ class File final {
     //
     // All other flags are ignored.
     //
-    // The OPEN_RIGHT_* bits in |flags| request corresponding rights over the resulting
+    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
     // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
@@ -2139,13 +2139,13 @@ class File final {
     static ::fidl::DecodeResult<CloseResponse> Close(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Returns extra information about the type of the object.
-    // If the |Describe| operation fails, the connection is closed.
+    // If the `Describe` operation fails, the connection is closed.
     //
     // This method does not require any rights.
     static zx_status_t Describe(zx::unowned_channel _client_end, NodeInfo* out_info);
 
     // Returns extra information about the type of the object.
-    // If the |Describe| operation fails, the connection is closed.
+    // If the `Describe` operation fails, the connection is closed.
     //
     // This method does not require any rights.
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -2153,7 +2153,7 @@ class File final {
     static ::fidl::DecodeResult<DescribeResponse> Describe(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, NodeInfo* out_info);
 
     // Returns extra information about the type of the object.
-    // If the |Describe| operation fails, the connection is closed.
+    // If the `Describe` operation fails, the connection is closed.
     //
     // This method does not require any rights.
     // Messages are encoded and decoded in-place.
@@ -2196,13 +2196,13 @@ class File final {
     static ::fidl::DecodeResult<GetAttrResponse> GetAttr(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Updates information about the node.
-    // |flags| may be any of NODE_ATTRIBUTE_FLAG_*.
+    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
     static zx_status_t SetAttr(zx::unowned_channel _client_end, uint32_t flags, NodeAttributes attributes, int32_t* out_s);
 
     // Updates information about the node.
-    // |flags| may be any of NODE_ATTRIBUTE_FLAG_*.
+    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -2210,7 +2210,7 @@ class File final {
     static ::fidl::DecodeResult<SetAttrResponse> SetAttr(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Updates information about the node.
-    // |flags| may be any of NODE_ATTRIBUTE_FLAG_*.
+    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
     // Messages are encoded and decoded in-place.
@@ -2300,13 +2300,13 @@ class File final {
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<WriteAtResponse> WriteAt(zx::unowned_channel _client_end, ::fidl::DecodedMessage<WriteAtRequest> params, ::fidl::BytePart response_buffer);
 
-    // Moves the offset at which the next invocation of |Read()| or |Write()| will
+    // Moves the offset at which the next invocation of `Read()` or `Write()` will
     // occur.
     //
     // This method does not require any rights.
     static zx_status_t Seek(zx::unowned_channel _client_end, int64_t offset, SeekOrigin start, int32_t* out_s, uint64_t* out_offset);
 
-    // Moves the offset at which the next invocation of |Read()| or |Write()| will
+    // Moves the offset at which the next invocation of `Read()` or `Write()` will
     // occur.
     //
     // This method does not require any rights.
@@ -2314,7 +2314,7 @@ class File final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<SeekResponse> Seek(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int64_t offset, SeekOrigin start, ::fidl::BytePart _response_buffer, int32_t* out_s, uint64_t* out_offset);
 
-    // Moves the offset at which the next invocation of |Read()| or |Write()| will
+    // Moves the offset at which the next invocation of `Read()` or `Write()` will
     // occur.
     //
     // This method does not require any rights.
@@ -2385,11 +2385,11 @@ class File final {
     // Acquires a buffer representing this file, if there is one, with the
     // requested access rights.
     //
-    // |flags| may be any of VMO_FLAG_*.
+    // `flags` may be any of VMO_FLAG_*.
     //
     // This method requires following rights:
-    // - OPEN_RIGHT_WRITABLE if |flags| includes VMO_FLAG_WRITE.
-    // - OPEN_RIGHT_READABLE if |flags| includes VMO_FLAG_READ or VMO_FLAG_EXEC.
+    // - OPEN_RIGHT_WRITABLE if `flags` includes VMO_FLAG_WRITE.
+    // - OPEN_RIGHT_READABLE if `flags` includes VMO_FLAG_READ or VMO_FLAG_EXEC.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<GetBufferResponse> GetBuffer(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, ::fidl::BytePart _response_buffer, int32_t* out_s, ::llcpp::fuchsia::mem::Buffer** out_buffer);
@@ -2397,11 +2397,11 @@ class File final {
     // Acquires a buffer representing this file, if there is one, with the
     // requested access rights.
     //
-    // |flags| may be any of VMO_FLAG_*.
+    // `flags` may be any of VMO_FLAG_*.
     //
     // This method requires following rights:
-    // - OPEN_RIGHT_WRITABLE if |flags| includes VMO_FLAG_WRITE.
-    // - OPEN_RIGHT_READABLE if |flags| includes VMO_FLAG_READ or VMO_FLAG_EXEC.
+    // - OPEN_RIGHT_WRITABLE if `flags` includes VMO_FLAG_WRITE.
+    // - OPEN_RIGHT_READABLE if `flags` includes VMO_FLAG_READ or VMO_FLAG_EXEC.
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<GetBufferResponse> GetBuffer(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetBufferRequest> params, ::fidl::BytePart response_buffer);
 
@@ -2654,26 +2654,26 @@ class File final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
-  // An event produced eagerly by a FIDL server if requested by |OPEN_FLAG_DESCRIBE|.
+  // An event produced eagerly by a FIDL server if requested by `OPEN_FLAG_DESCRIBE`.
   //
   // Indicates the success or failure of the open operation, and optionally describes the
-  // object. If the status is |ZX_OK|, |info| contains descriptive information about the object
-  // (the same as would be returned by |Describe|).
+  // object. If the status is `ZX_OK`, `info` contains descriptive information about the object
+  // (the same as would be returned by `Describe`).
   static zx_status_t SendOnOpenEvent(::zx::unowned_channel _chan, int32_t s, NodeInfo* info);
 
-  // An event produced eagerly by a FIDL server if requested by |OPEN_FLAG_DESCRIBE|.
+  // An event produced eagerly by a FIDL server if requested by `OPEN_FLAG_DESCRIBE`.
   //
   // Indicates the success or failure of the open operation, and optionally describes the
-  // object. If the status is |ZX_OK|, |info| contains descriptive information about the object
-  // (the same as would be returned by |Describe|).
+  // object. If the status is `ZX_OK`, `info` contains descriptive information about the object
+  // (the same as would be returned by `Describe`).
   // Caller provides the backing storage for FIDL message via response buffers.
   static zx_status_t SendOnOpenEvent(::zx::unowned_channel _chan, ::fidl::BytePart _buffer, int32_t s, NodeInfo* info);
 
-  // An event produced eagerly by a FIDL server if requested by |OPEN_FLAG_DESCRIBE|.
+  // An event produced eagerly by a FIDL server if requested by `OPEN_FLAG_DESCRIBE`.
   //
   // Indicates the success or failure of the open operation, and optionally describes the
-  // object. If the status is |ZX_OK|, |info| contains descriptive information about the object
-  // (the same as would be returned by |Describe|).
+  // object. If the status is `ZX_OK`, `info` contains descriptive information about the object
+  // (the same as would be returned by `Describe`).
   // Messages are encoded in-place.
   static zx_status_t SendOnOpenEvent(::zx::unowned_channel _chan, ::fidl::DecodedMessage<OnOpenResponse> params);
 
@@ -2986,11 +2986,11 @@ class Directory final {
 
 
   struct EventHandlers {
-    // An event produced eagerly by a FIDL server if requested by |OPEN_FLAG_DESCRIBE|.
+    // An event produced eagerly by a FIDL server if requested by `OPEN_FLAG_DESCRIBE`.
     //
     // Indicates the success or failure of the open operation, and optionally describes the
-    // object. If the status is |ZX_OK|, |info| contains descriptive information about the object
-    // (the same as would be returned by |Describe|).
+    // object. If the status is `ZX_OK`, `info` contains descriptive information about the object
+    // (the same as would be returned by `Describe`).
     fit::function<zx_status_t(int32_t s, NodeInfo* info)> on_open;
 
     // Fallback handler when an unknown ordinal is received.
@@ -3006,7 +3006,7 @@ class Directory final {
 
     // Create another connection to the same remote object.
     //
-    // |flags| may be any of:
+    // `flags` may be any of:
     // - OPEN_RIGHT_*
     // - OPEN_FLAG_APPEND
     // - OPEN_FLAG_NO_REMOTE
@@ -3015,7 +3015,7 @@ class Directory final {
     //
     // All other flags are ignored.
     //
-    // The OPEN_RIGHT_* bits in |flags| request corresponding rights over the resulting
+    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
     // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
@@ -3024,7 +3024,7 @@ class Directory final {
 
     // Create another connection to the same remote object.
     //
-    // |flags| may be any of:
+    // `flags` may be any of:
     // - OPEN_RIGHT_*
     // - OPEN_FLAG_APPEND
     // - OPEN_FLAG_NO_REMOTE
@@ -3033,7 +3033,7 @@ class Directory final {
     //
     // All other flags are ignored.
     //
-    // The OPEN_RIGHT_* bits in |flags| request corresponding rights over the resulting
+    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
     // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
@@ -3043,7 +3043,7 @@ class Directory final {
 
     // Create another connection to the same remote object.
     //
-    // |flags| may be any of:
+    // `flags` may be any of:
     // - OPEN_RIGHT_*
     // - OPEN_FLAG_APPEND
     // - OPEN_FLAG_NO_REMOTE
@@ -3052,7 +3052,7 @@ class Directory final {
     //
     // All other flags are ignored.
     //
-    // The OPEN_RIGHT_* bits in |flags| request corresponding rights over the resulting
+    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
     // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
@@ -3079,13 +3079,13 @@ class Directory final {
     ::fidl::DecodeResult<CloseResponse> Close(::fidl::BytePart response_buffer);
 
     // Returns extra information about the type of the object.
-    // If the |Describe| operation fails, the connection is closed.
+    // If the `Describe` operation fails, the connection is closed.
     //
     // This method does not require any rights.
     zx_status_t Describe(NodeInfo* out_info);
 
     // Returns extra information about the type of the object.
-    // If the |Describe| operation fails, the connection is closed.
+    // If the `Describe` operation fails, the connection is closed.
     //
     // This method does not require any rights.
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -3093,7 +3093,7 @@ class Directory final {
     ::fidl::DecodeResult<DescribeResponse> Describe(::fidl::BytePart _response_buffer, NodeInfo* out_info);
 
     // Returns extra information about the type of the object.
-    // If the |Describe| operation fails, the connection is closed.
+    // If the `Describe` operation fails, the connection is closed.
     //
     // This method does not require any rights.
     // Messages are encoded and decoded in-place.
@@ -3136,13 +3136,13 @@ class Directory final {
     ::fidl::DecodeResult<GetAttrResponse> GetAttr(::fidl::BytePart response_buffer);
 
     // Updates information about the node.
-    // |flags| may be any of NODE_ATTRIBUTE_FLAG_*.
+    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
     zx_status_t SetAttr(uint32_t flags, NodeAttributes attributes, int32_t* out_s);
 
     // Updates information about the node.
-    // |flags| may be any of NODE_ATTRIBUTE_FLAG_*.
+    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -3150,7 +3150,7 @@ class Directory final {
     ::fidl::DecodeResult<SetAttrResponse> SetAttr(::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Updates information about the node.
-    // |flags| may be any of NODE_ATTRIBUTE_FLAG_*.
+    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
     // Messages are encoded and decoded in-place.
@@ -3168,23 +3168,23 @@ class Directory final {
 
     // Opens a new object relative to this directory object.
     //
-    // |path| may contain multiple segments, separated by "/" characters,
+    // `path` may contain multiple segments, separated by "/" characters,
     // and should never be empty i.e. "" is an invalid path.
     //
-    // |flags| may be any of the OPEN_FLAG_* and OPEN_RIGHT_* values, bitwise ORed together.
-    // The OPEN_FLAG_DESCRIBE flag may cause an |OnOpen| event to be transmitted
-    // on the |object| handle, indicating the type of object opened.
+    // `flags` may be any of the OPEN_FLAG_* and OPEN_RIGHT_* values, bitwise ORed together.
+    // The OPEN_FLAG_DESCRIBE flag may cause an `OnOpen` event to be transmitted
+    // on the `object` handle, indicating the type of object opened.
     //
     // If an unknown value is sent for either flags or mode, the connection should
     // be closed.
     //
-    // OPEN_RIGHTS_* flags provided in |flags| will restrict access rights on the |object| channel
+    // OPEN_RIGHTS_* flags provided in `flags` will restrict access rights on the `object` channel
     // which will be connected to the opened entity.
     //
     // Rights are never increased. When you open a nested entity within a directory, you may only
     // request the same rights as what the directory connection already has, or a subset of those.
     // Exceeding those rights causes an access denied error to be transmitted in the
-    // |OnOpen| event if applicable, and the |object| connection closed.
+    // `OnOpen` event if applicable, and the `object` connection closed.
     //
     // The caller must specify either one or more of the OPEN_RIGHT_* flags, or
     // the OPEN_FLAG_NODE_REFERENCE flag.
@@ -3192,23 +3192,23 @@ class Directory final {
 
     // Opens a new object relative to this directory object.
     //
-    // |path| may contain multiple segments, separated by "/" characters,
+    // `path` may contain multiple segments, separated by "/" characters,
     // and should never be empty i.e. "" is an invalid path.
     //
-    // |flags| may be any of the OPEN_FLAG_* and OPEN_RIGHT_* values, bitwise ORed together.
-    // The OPEN_FLAG_DESCRIBE flag may cause an |OnOpen| event to be transmitted
-    // on the |object| handle, indicating the type of object opened.
+    // `flags` may be any of the OPEN_FLAG_* and OPEN_RIGHT_* values, bitwise ORed together.
+    // The OPEN_FLAG_DESCRIBE flag may cause an `OnOpen` event to be transmitted
+    // on the `object` handle, indicating the type of object opened.
     //
     // If an unknown value is sent for either flags or mode, the connection should
     // be closed.
     //
-    // OPEN_RIGHTS_* flags provided in |flags| will restrict access rights on the |object| channel
+    // OPEN_RIGHTS_* flags provided in `flags` will restrict access rights on the `object` channel
     // which will be connected to the opened entity.
     //
     // Rights are never increased. When you open a nested entity within a directory, you may only
     // request the same rights as what the directory connection already has, or a subset of those.
     // Exceeding those rights causes an access denied error to be transmitted in the
-    // |OnOpen| event if applicable, and the |object| connection closed.
+    // `OnOpen` event if applicable, and the `object` connection closed.
     //
     // The caller must specify either one or more of the OPEN_RIGHT_* flags, or
     // the OPEN_FLAG_NODE_REFERENCE flag.
@@ -3217,23 +3217,23 @@ class Directory final {
 
     // Opens a new object relative to this directory object.
     //
-    // |path| may contain multiple segments, separated by "/" characters,
+    // `path` may contain multiple segments, separated by "/" characters,
     // and should never be empty i.e. "" is an invalid path.
     //
-    // |flags| may be any of the OPEN_FLAG_* and OPEN_RIGHT_* values, bitwise ORed together.
-    // The OPEN_FLAG_DESCRIBE flag may cause an |OnOpen| event to be transmitted
-    // on the |object| handle, indicating the type of object opened.
+    // `flags` may be any of the OPEN_FLAG_* and OPEN_RIGHT_* values, bitwise ORed together.
+    // The OPEN_FLAG_DESCRIBE flag may cause an `OnOpen` event to be transmitted
+    // on the `object` handle, indicating the type of object opened.
     //
     // If an unknown value is sent for either flags or mode, the connection should
     // be closed.
     //
-    // OPEN_RIGHTS_* flags provided in |flags| will restrict access rights on the |object| channel
+    // OPEN_RIGHTS_* flags provided in `flags` will restrict access rights on the `object` channel
     // which will be connected to the opened entity.
     //
     // Rights are never increased. When you open a nested entity within a directory, you may only
     // request the same rights as what the directory connection already has, or a subset of those.
     // Exceeding those rights causes an access denied error to be transmitted in the
-    // |OnOpen| event if applicable, and the |object| connection closed.
+    // `OnOpen` event if applicable, and the `object` connection closed.
     //
     // The caller must specify either one or more of the OPEN_RIGHT_* flags, or
     // the OPEN_FLAG_NODE_REFERENCE flag.
@@ -3251,18 +3251,18 @@ class Directory final {
     // it must become read-only, preventing new entries from being created
     // until all references close and the directory is destroyed.
     //
-    // |path| identifies the file which should be detached.
-    // If |path| contains multiple segments, separated by "/" characters,
+    // `path` identifies the file which should be detached.
+    // If `path` contains multiple segments, separated by "/" characters,
     // then the directory is traversed, one segment at a time, relative to the
     // originally accessed Directory.
     //
     // Returns:
     //   ZX_ERR_ACCESS_DENIED if the connection (or the underlying filesystem) does not
     //     allow writable access.
-    //   ZX_ERR_INVALID_ARGS if |path| contains ".." segments.
-    //   ZX_ERR_NOT_EMPTY if |path| refers to a non-empty directory.
-    //   ZX_ERR_UNAVAILABLE if |path| refers to a mount point, containing a remote channel.
-    //   ZX_ERR_UNAVAILABLE if |path| is ".".
+    //   ZX_ERR_INVALID_ARGS if `path` contains ".." segments.
+    //   ZX_ERR_NOT_EMPTY if `path` refers to a non-empty directory.
+    //   ZX_ERR_UNAVAILABLE if `path` refers to a mount point, containing a remote channel.
+    //   ZX_ERR_UNAVAILABLE if `path` is ".".
     //
     // Other errors may be returned for filesystem-specific reasons.
     //
@@ -3280,18 +3280,18 @@ class Directory final {
     // it must become read-only, preventing new entries from being created
     // until all references close and the directory is destroyed.
     //
-    // |path| identifies the file which should be detached.
-    // If |path| contains multiple segments, separated by "/" characters,
+    // `path` identifies the file which should be detached.
+    // If `path` contains multiple segments, separated by "/" characters,
     // then the directory is traversed, one segment at a time, relative to the
     // originally accessed Directory.
     //
     // Returns:
     //   ZX_ERR_ACCESS_DENIED if the connection (or the underlying filesystem) does not
     //     allow writable access.
-    //   ZX_ERR_INVALID_ARGS if |path| contains ".." segments.
-    //   ZX_ERR_NOT_EMPTY if |path| refers to a non-empty directory.
-    //   ZX_ERR_UNAVAILABLE if |path| refers to a mount point, containing a remote channel.
-    //   ZX_ERR_UNAVAILABLE if |path| is ".".
+    //   ZX_ERR_INVALID_ARGS if `path` contains ".." segments.
+    //   ZX_ERR_NOT_EMPTY if `path` refers to a non-empty directory.
+    //   ZX_ERR_UNAVAILABLE if `path` refers to a mount point, containing a remote channel.
+    //   ZX_ERR_UNAVAILABLE if `path` is ".".
     //
     // Other errors may be returned for filesystem-specific reasons.
     //
@@ -3311,18 +3311,18 @@ class Directory final {
     // it must become read-only, preventing new entries from being created
     // until all references close and the directory is destroyed.
     //
-    // |path| identifies the file which should be detached.
-    // If |path| contains multiple segments, separated by "/" characters,
+    // `path` identifies the file which should be detached.
+    // If `path` contains multiple segments, separated by "/" characters,
     // then the directory is traversed, one segment at a time, relative to the
     // originally accessed Directory.
     //
     // Returns:
     //   ZX_ERR_ACCESS_DENIED if the connection (or the underlying filesystem) does not
     //     allow writable access.
-    //   ZX_ERR_INVALID_ARGS if |path| contains ".." segments.
-    //   ZX_ERR_NOT_EMPTY if |path| refers to a non-empty directory.
-    //   ZX_ERR_UNAVAILABLE if |path| refers to a mount point, containing a remote channel.
-    //   ZX_ERR_UNAVAILABLE if |path| is ".".
+    //   ZX_ERR_INVALID_ARGS if `path` contains ".." segments.
+    //   ZX_ERR_NOT_EMPTY if `path` refers to a non-empty directory.
+    //   ZX_ERR_UNAVAILABLE if `path` refers to a mount point, containing a remote channel.
+    //   ZX_ERR_UNAVAILABLE if `path` is ".".
     //
     // Other errors may be returned for filesystem-specific reasons.
     //
@@ -3419,7 +3419,7 @@ class Directory final {
 
     // Renames an object named src to the name dst, in a directory represented by token.
     //
-    // |src/dst| must be resolved object names. Including "/" in any position
+    // `src/dst` must be resolved object names. Including "/" in any position
     // other than the end of the string will return ZX_ERR_INVALID_ARGS.
     // Returning "/" at the end of either string implies that it must be a
     // directory, or else ZX_ERR_NOT_DIR should be returned.
@@ -3429,7 +3429,7 @@ class Directory final {
 
     // Renames an object named src to the name dst, in a directory represented by token.
     //
-    // |src/dst| must be resolved object names. Including "/" in any position
+    // `src/dst` must be resolved object names. Including "/" in any position
     // other than the end of the string will return ZX_ERR_INVALID_ARGS.
     // Returning "/" at the end of either string implies that it must be a
     // directory, or else ZX_ERR_NOT_DIR should be returned.
@@ -3441,7 +3441,7 @@ class Directory final {
 
     // Renames an object named src to the name dst, in a directory represented by token.
     //
-    // |src/dst| must be resolved object names. Including "/" in any position
+    // `src/dst` must be resolved object names. Including "/" in any position
     // other than the end of the string will return ZX_ERR_INVALID_ARGS.
     // Returning "/" at the end of either string implies that it must be a
     // directory, or else ZX_ERR_NOT_DIR should be returned.
@@ -3453,10 +3453,10 @@ class Directory final {
     // Creates a link to an object named src by the name dst, within a directory represented by
     // token.
     //
-    // |src| must be a resolved object name. Including "/" in the string will
+    // `src` must be a resolved object name. Including "/" in the string will
     // return ZX_ERR_INVALID_ARGS.
     //
-    // |dst| must be a resolved object name. Including "/" in the string will
+    // `dst` must be a resolved object name. Including "/" in the string will
     // return ZX_ERR_INVALID_ARGS.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
@@ -3465,10 +3465,10 @@ class Directory final {
     // Creates a link to an object named src by the name dst, within a directory represented by
     // token.
     //
-    // |src| must be a resolved object name. Including "/" in the string will
+    // `src` must be a resolved object name. Including "/" in the string will
     // return ZX_ERR_INVALID_ARGS.
     //
-    // |dst| must be a resolved object name. Including "/" in the string will
+    // `dst` must be a resolved object name. Including "/" in the string will
     // return ZX_ERR_INVALID_ARGS.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
@@ -3479,10 +3479,10 @@ class Directory final {
     // Creates a link to an object named src by the name dst, within a directory represented by
     // token.
     //
-    // |src| must be a resolved object name. Including "/" in the string will
+    // `src` must be a resolved object name. Including "/" in the string will
     // return ZX_ERR_INVALID_ARGS.
     //
-    // |dst| must be a resolved object name. Including "/" in the string will
+    // `dst` must be a resolved object name. Including "/" in the string will
     // return ZX_ERR_INVALID_ARGS.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
@@ -3564,7 +3564,7 @@ class Directory final {
 
     // Create another connection to the same remote object.
     //
-    // |flags| may be any of:
+    // `flags` may be any of:
     // - OPEN_RIGHT_*
     // - OPEN_FLAG_APPEND
     // - OPEN_FLAG_NO_REMOTE
@@ -3573,7 +3573,7 @@ class Directory final {
     //
     // All other flags are ignored.
     //
-    // The OPEN_RIGHT_* bits in |flags| request corresponding rights over the resulting
+    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
     // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
@@ -3582,7 +3582,7 @@ class Directory final {
 
     // Create another connection to the same remote object.
     //
-    // |flags| may be any of:
+    // `flags` may be any of:
     // - OPEN_RIGHT_*
     // - OPEN_FLAG_APPEND
     // - OPEN_FLAG_NO_REMOTE
@@ -3591,7 +3591,7 @@ class Directory final {
     //
     // All other flags are ignored.
     //
-    // The OPEN_RIGHT_* bits in |flags| request corresponding rights over the resulting
+    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
     // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
@@ -3601,7 +3601,7 @@ class Directory final {
 
     // Create another connection to the same remote object.
     //
-    // |flags| may be any of:
+    // `flags` may be any of:
     // - OPEN_RIGHT_*
     // - OPEN_FLAG_APPEND
     // - OPEN_FLAG_NO_REMOTE
@@ -3610,7 +3610,7 @@ class Directory final {
     //
     // All other flags are ignored.
     //
-    // The OPEN_RIGHT_* bits in |flags| request corresponding rights over the resulting
+    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
     // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
@@ -3637,13 +3637,13 @@ class Directory final {
     static ::fidl::DecodeResult<CloseResponse> Close(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Returns extra information about the type of the object.
-    // If the |Describe| operation fails, the connection is closed.
+    // If the `Describe` operation fails, the connection is closed.
     //
     // This method does not require any rights.
     static zx_status_t Describe(zx::unowned_channel _client_end, NodeInfo* out_info);
 
     // Returns extra information about the type of the object.
-    // If the |Describe| operation fails, the connection is closed.
+    // If the `Describe` operation fails, the connection is closed.
     //
     // This method does not require any rights.
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -3651,7 +3651,7 @@ class Directory final {
     static ::fidl::DecodeResult<DescribeResponse> Describe(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, NodeInfo* out_info);
 
     // Returns extra information about the type of the object.
-    // If the |Describe| operation fails, the connection is closed.
+    // If the `Describe` operation fails, the connection is closed.
     //
     // This method does not require any rights.
     // Messages are encoded and decoded in-place.
@@ -3694,13 +3694,13 @@ class Directory final {
     static ::fidl::DecodeResult<GetAttrResponse> GetAttr(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Updates information about the node.
-    // |flags| may be any of NODE_ATTRIBUTE_FLAG_*.
+    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
     static zx_status_t SetAttr(zx::unowned_channel _client_end, uint32_t flags, NodeAttributes attributes, int32_t* out_s);
 
     // Updates information about the node.
-    // |flags| may be any of NODE_ATTRIBUTE_FLAG_*.
+    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -3708,7 +3708,7 @@ class Directory final {
     static ::fidl::DecodeResult<SetAttrResponse> SetAttr(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Updates information about the node.
-    // |flags| may be any of NODE_ATTRIBUTE_FLAG_*.
+    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
     // Messages are encoded and decoded in-place.
@@ -3726,23 +3726,23 @@ class Directory final {
 
     // Opens a new object relative to this directory object.
     //
-    // |path| may contain multiple segments, separated by "/" characters,
+    // `path` may contain multiple segments, separated by "/" characters,
     // and should never be empty i.e. "" is an invalid path.
     //
-    // |flags| may be any of the OPEN_FLAG_* and OPEN_RIGHT_* values, bitwise ORed together.
-    // The OPEN_FLAG_DESCRIBE flag may cause an |OnOpen| event to be transmitted
-    // on the |object| handle, indicating the type of object opened.
+    // `flags` may be any of the OPEN_FLAG_* and OPEN_RIGHT_* values, bitwise ORed together.
+    // The OPEN_FLAG_DESCRIBE flag may cause an `OnOpen` event to be transmitted
+    // on the `object` handle, indicating the type of object opened.
     //
     // If an unknown value is sent for either flags or mode, the connection should
     // be closed.
     //
-    // OPEN_RIGHTS_* flags provided in |flags| will restrict access rights on the |object| channel
+    // OPEN_RIGHTS_* flags provided in `flags` will restrict access rights on the `object` channel
     // which will be connected to the opened entity.
     //
     // Rights are never increased. When you open a nested entity within a directory, you may only
     // request the same rights as what the directory connection already has, or a subset of those.
     // Exceeding those rights causes an access denied error to be transmitted in the
-    // |OnOpen| event if applicable, and the |object| connection closed.
+    // `OnOpen` event if applicable, and the `object` connection closed.
     //
     // The caller must specify either one or more of the OPEN_RIGHT_* flags, or
     // the OPEN_FLAG_NODE_REFERENCE flag.
@@ -3750,23 +3750,23 @@ class Directory final {
 
     // Opens a new object relative to this directory object.
     //
-    // |path| may contain multiple segments, separated by "/" characters,
+    // `path` may contain multiple segments, separated by "/" characters,
     // and should never be empty i.e. "" is an invalid path.
     //
-    // |flags| may be any of the OPEN_FLAG_* and OPEN_RIGHT_* values, bitwise ORed together.
-    // The OPEN_FLAG_DESCRIBE flag may cause an |OnOpen| event to be transmitted
-    // on the |object| handle, indicating the type of object opened.
+    // `flags` may be any of the OPEN_FLAG_* and OPEN_RIGHT_* values, bitwise ORed together.
+    // The OPEN_FLAG_DESCRIBE flag may cause an `OnOpen` event to be transmitted
+    // on the `object` handle, indicating the type of object opened.
     //
     // If an unknown value is sent for either flags or mode, the connection should
     // be closed.
     //
-    // OPEN_RIGHTS_* flags provided in |flags| will restrict access rights on the |object| channel
+    // OPEN_RIGHTS_* flags provided in `flags` will restrict access rights on the `object` channel
     // which will be connected to the opened entity.
     //
     // Rights are never increased. When you open a nested entity within a directory, you may only
     // request the same rights as what the directory connection already has, or a subset of those.
     // Exceeding those rights causes an access denied error to be transmitted in the
-    // |OnOpen| event if applicable, and the |object| connection closed.
+    // `OnOpen` event if applicable, and the `object` connection closed.
     //
     // The caller must specify either one or more of the OPEN_RIGHT_* flags, or
     // the OPEN_FLAG_NODE_REFERENCE flag.
@@ -3775,23 +3775,23 @@ class Directory final {
 
     // Opens a new object relative to this directory object.
     //
-    // |path| may contain multiple segments, separated by "/" characters,
+    // `path` may contain multiple segments, separated by "/" characters,
     // and should never be empty i.e. "" is an invalid path.
     //
-    // |flags| may be any of the OPEN_FLAG_* and OPEN_RIGHT_* values, bitwise ORed together.
-    // The OPEN_FLAG_DESCRIBE flag may cause an |OnOpen| event to be transmitted
-    // on the |object| handle, indicating the type of object opened.
+    // `flags` may be any of the OPEN_FLAG_* and OPEN_RIGHT_* values, bitwise ORed together.
+    // The OPEN_FLAG_DESCRIBE flag may cause an `OnOpen` event to be transmitted
+    // on the `object` handle, indicating the type of object opened.
     //
     // If an unknown value is sent for either flags or mode, the connection should
     // be closed.
     //
-    // OPEN_RIGHTS_* flags provided in |flags| will restrict access rights on the |object| channel
+    // OPEN_RIGHTS_* flags provided in `flags` will restrict access rights on the `object` channel
     // which will be connected to the opened entity.
     //
     // Rights are never increased. When you open a nested entity within a directory, you may only
     // request the same rights as what the directory connection already has, or a subset of those.
     // Exceeding those rights causes an access denied error to be transmitted in the
-    // |OnOpen| event if applicable, and the |object| connection closed.
+    // `OnOpen` event if applicable, and the `object` connection closed.
     //
     // The caller must specify either one or more of the OPEN_RIGHT_* flags, or
     // the OPEN_FLAG_NODE_REFERENCE flag.
@@ -3809,18 +3809,18 @@ class Directory final {
     // it must become read-only, preventing new entries from being created
     // until all references close and the directory is destroyed.
     //
-    // |path| identifies the file which should be detached.
-    // If |path| contains multiple segments, separated by "/" characters,
+    // `path` identifies the file which should be detached.
+    // If `path` contains multiple segments, separated by "/" characters,
     // then the directory is traversed, one segment at a time, relative to the
     // originally accessed Directory.
     //
     // Returns:
     //   ZX_ERR_ACCESS_DENIED if the connection (or the underlying filesystem) does not
     //     allow writable access.
-    //   ZX_ERR_INVALID_ARGS if |path| contains ".." segments.
-    //   ZX_ERR_NOT_EMPTY if |path| refers to a non-empty directory.
-    //   ZX_ERR_UNAVAILABLE if |path| refers to a mount point, containing a remote channel.
-    //   ZX_ERR_UNAVAILABLE if |path| is ".".
+    //   ZX_ERR_INVALID_ARGS if `path` contains ".." segments.
+    //   ZX_ERR_NOT_EMPTY if `path` refers to a non-empty directory.
+    //   ZX_ERR_UNAVAILABLE if `path` refers to a mount point, containing a remote channel.
+    //   ZX_ERR_UNAVAILABLE if `path` is ".".
     //
     // Other errors may be returned for filesystem-specific reasons.
     //
@@ -3838,18 +3838,18 @@ class Directory final {
     // it must become read-only, preventing new entries from being created
     // until all references close and the directory is destroyed.
     //
-    // |path| identifies the file which should be detached.
-    // If |path| contains multiple segments, separated by "/" characters,
+    // `path` identifies the file which should be detached.
+    // If `path` contains multiple segments, separated by "/" characters,
     // then the directory is traversed, one segment at a time, relative to the
     // originally accessed Directory.
     //
     // Returns:
     //   ZX_ERR_ACCESS_DENIED if the connection (or the underlying filesystem) does not
     //     allow writable access.
-    //   ZX_ERR_INVALID_ARGS if |path| contains ".." segments.
-    //   ZX_ERR_NOT_EMPTY if |path| refers to a non-empty directory.
-    //   ZX_ERR_UNAVAILABLE if |path| refers to a mount point, containing a remote channel.
-    //   ZX_ERR_UNAVAILABLE if |path| is ".".
+    //   ZX_ERR_INVALID_ARGS if `path` contains ".." segments.
+    //   ZX_ERR_NOT_EMPTY if `path` refers to a non-empty directory.
+    //   ZX_ERR_UNAVAILABLE if `path` refers to a mount point, containing a remote channel.
+    //   ZX_ERR_UNAVAILABLE if `path` is ".".
     //
     // Other errors may be returned for filesystem-specific reasons.
     //
@@ -3869,18 +3869,18 @@ class Directory final {
     // it must become read-only, preventing new entries from being created
     // until all references close and the directory is destroyed.
     //
-    // |path| identifies the file which should be detached.
-    // If |path| contains multiple segments, separated by "/" characters,
+    // `path` identifies the file which should be detached.
+    // If `path` contains multiple segments, separated by "/" characters,
     // then the directory is traversed, one segment at a time, relative to the
     // originally accessed Directory.
     //
     // Returns:
     //   ZX_ERR_ACCESS_DENIED if the connection (or the underlying filesystem) does not
     //     allow writable access.
-    //   ZX_ERR_INVALID_ARGS if |path| contains ".." segments.
-    //   ZX_ERR_NOT_EMPTY if |path| refers to a non-empty directory.
-    //   ZX_ERR_UNAVAILABLE if |path| refers to a mount point, containing a remote channel.
-    //   ZX_ERR_UNAVAILABLE if |path| is ".".
+    //   ZX_ERR_INVALID_ARGS if `path` contains ".." segments.
+    //   ZX_ERR_NOT_EMPTY if `path` refers to a non-empty directory.
+    //   ZX_ERR_UNAVAILABLE if `path` refers to a mount point, containing a remote channel.
+    //   ZX_ERR_UNAVAILABLE if `path` is ".".
     //
     // Other errors may be returned for filesystem-specific reasons.
     //
@@ -3977,7 +3977,7 @@ class Directory final {
 
     // Renames an object named src to the name dst, in a directory represented by token.
     //
-    // |src/dst| must be resolved object names. Including "/" in any position
+    // `src/dst` must be resolved object names. Including "/" in any position
     // other than the end of the string will return ZX_ERR_INVALID_ARGS.
     // Returning "/" at the end of either string implies that it must be a
     // directory, or else ZX_ERR_NOT_DIR should be returned.
@@ -3987,7 +3987,7 @@ class Directory final {
 
     // Renames an object named src to the name dst, in a directory represented by token.
     //
-    // |src/dst| must be resolved object names. Including "/" in any position
+    // `src/dst` must be resolved object names. Including "/" in any position
     // other than the end of the string will return ZX_ERR_INVALID_ARGS.
     // Returning "/" at the end of either string implies that it must be a
     // directory, or else ZX_ERR_NOT_DIR should be returned.
@@ -3999,7 +3999,7 @@ class Directory final {
 
     // Renames an object named src to the name dst, in a directory represented by token.
     //
-    // |src/dst| must be resolved object names. Including "/" in any position
+    // `src/dst` must be resolved object names. Including "/" in any position
     // other than the end of the string will return ZX_ERR_INVALID_ARGS.
     // Returning "/" at the end of either string implies that it must be a
     // directory, or else ZX_ERR_NOT_DIR should be returned.
@@ -4011,10 +4011,10 @@ class Directory final {
     // Creates a link to an object named src by the name dst, within a directory represented by
     // token.
     //
-    // |src| must be a resolved object name. Including "/" in the string will
+    // `src` must be a resolved object name. Including "/" in the string will
     // return ZX_ERR_INVALID_ARGS.
     //
-    // |dst| must be a resolved object name. Including "/" in the string will
+    // `dst` must be a resolved object name. Including "/" in the string will
     // return ZX_ERR_INVALID_ARGS.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
@@ -4023,10 +4023,10 @@ class Directory final {
     // Creates a link to an object named src by the name dst, within a directory represented by
     // token.
     //
-    // |src| must be a resolved object name. Including "/" in the string will
+    // `src` must be a resolved object name. Including "/" in the string will
     // return ZX_ERR_INVALID_ARGS.
     //
-    // |dst| must be a resolved object name. Including "/" in the string will
+    // `dst` must be a resolved object name. Including "/" in the string will
     // return ZX_ERR_INVALID_ARGS.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
@@ -4037,10 +4037,10 @@ class Directory final {
     // Creates a link to an object named src by the name dst, within a directory represented by
     // token.
     //
-    // |src| must be a resolved object name. Including "/" in the string will
+    // `src` must be a resolved object name. Including "/" in the string will
     // return ZX_ERR_INVALID_ARGS.
     //
-    // |dst| must be a resolved object name. Including "/" in the string will
+    // `dst` must be a resolved object name. Including "/" in the string will
     // return ZX_ERR_INVALID_ARGS.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
@@ -4332,26 +4332,26 @@ class Directory final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
-  // An event produced eagerly by a FIDL server if requested by |OPEN_FLAG_DESCRIBE|.
+  // An event produced eagerly by a FIDL server if requested by `OPEN_FLAG_DESCRIBE`.
   //
   // Indicates the success or failure of the open operation, and optionally describes the
-  // object. If the status is |ZX_OK|, |info| contains descriptive information about the object
-  // (the same as would be returned by |Describe|).
+  // object. If the status is `ZX_OK`, `info` contains descriptive information about the object
+  // (the same as would be returned by `Describe`).
   static zx_status_t SendOnOpenEvent(::zx::unowned_channel _chan, int32_t s, NodeInfo* info);
 
-  // An event produced eagerly by a FIDL server if requested by |OPEN_FLAG_DESCRIBE|.
+  // An event produced eagerly by a FIDL server if requested by `OPEN_FLAG_DESCRIBE`.
   //
   // Indicates the success or failure of the open operation, and optionally describes the
-  // object. If the status is |ZX_OK|, |info| contains descriptive information about the object
-  // (the same as would be returned by |Describe|).
+  // object. If the status is `ZX_OK`, `info` contains descriptive information about the object
+  // (the same as would be returned by `Describe`).
   // Caller provides the backing storage for FIDL message via response buffers.
   static zx_status_t SendOnOpenEvent(::zx::unowned_channel _chan, ::fidl::BytePart _buffer, int32_t s, NodeInfo* info);
 
-  // An event produced eagerly by a FIDL server if requested by |OPEN_FLAG_DESCRIBE|.
+  // An event produced eagerly by a FIDL server if requested by `OPEN_FLAG_DESCRIBE`.
   //
   // Indicates the success or failure of the open operation, and optionally describes the
-  // object. If the status is |ZX_OK|, |info| contains descriptive information about the object
-  // (the same as would be returned by |Describe|).
+  // object. If the status is `ZX_OK`, `info` contains descriptive information about the object
+  // (the same as would be returned by `Describe`).
   // Messages are encoded in-place.
   static zx_status_t SendOnOpenEvent(::zx::unowned_channel _chan, ::fidl::DecodedMessage<OnOpenResponse> params);
 
@@ -4770,11 +4770,11 @@ class DirectoryAdmin final {
 
 
   struct EventHandlers {
-    // An event produced eagerly by a FIDL server if requested by |OPEN_FLAG_DESCRIBE|.
+    // An event produced eagerly by a FIDL server if requested by `OPEN_FLAG_DESCRIBE`.
     //
     // Indicates the success or failure of the open operation, and optionally describes the
-    // object. If the status is |ZX_OK|, |info| contains descriptive information about the object
-    // (the same as would be returned by |Describe|).
+    // object. If the status is `ZX_OK`, `info` contains descriptive information about the object
+    // (the same as would be returned by `Describe`).
     fit::function<zx_status_t(int32_t s, NodeInfo* info)> on_open;
 
     // Fallback handler when an unknown ordinal is received.
@@ -4790,7 +4790,7 @@ class DirectoryAdmin final {
 
     // Create another connection to the same remote object.
     //
-    // |flags| may be any of:
+    // `flags` may be any of:
     // - OPEN_RIGHT_*
     // - OPEN_FLAG_APPEND
     // - OPEN_FLAG_NO_REMOTE
@@ -4799,7 +4799,7 @@ class DirectoryAdmin final {
     //
     // All other flags are ignored.
     //
-    // The OPEN_RIGHT_* bits in |flags| request corresponding rights over the resulting
+    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
     // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
@@ -4808,7 +4808,7 @@ class DirectoryAdmin final {
 
     // Create another connection to the same remote object.
     //
-    // |flags| may be any of:
+    // `flags` may be any of:
     // - OPEN_RIGHT_*
     // - OPEN_FLAG_APPEND
     // - OPEN_FLAG_NO_REMOTE
@@ -4817,7 +4817,7 @@ class DirectoryAdmin final {
     //
     // All other flags are ignored.
     //
-    // The OPEN_RIGHT_* bits in |flags| request corresponding rights over the resulting
+    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
     // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
@@ -4827,7 +4827,7 @@ class DirectoryAdmin final {
 
     // Create another connection to the same remote object.
     //
-    // |flags| may be any of:
+    // `flags` may be any of:
     // - OPEN_RIGHT_*
     // - OPEN_FLAG_APPEND
     // - OPEN_FLAG_NO_REMOTE
@@ -4836,7 +4836,7 @@ class DirectoryAdmin final {
     //
     // All other flags are ignored.
     //
-    // The OPEN_RIGHT_* bits in |flags| request corresponding rights over the resulting
+    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
     // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
@@ -4863,13 +4863,13 @@ class DirectoryAdmin final {
     ::fidl::DecodeResult<CloseResponse> Close(::fidl::BytePart response_buffer);
 
     // Returns extra information about the type of the object.
-    // If the |Describe| operation fails, the connection is closed.
+    // If the `Describe` operation fails, the connection is closed.
     //
     // This method does not require any rights.
     zx_status_t Describe(NodeInfo* out_info);
 
     // Returns extra information about the type of the object.
-    // If the |Describe| operation fails, the connection is closed.
+    // If the `Describe` operation fails, the connection is closed.
     //
     // This method does not require any rights.
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -4877,7 +4877,7 @@ class DirectoryAdmin final {
     ::fidl::DecodeResult<DescribeResponse> Describe(::fidl::BytePart _response_buffer, NodeInfo* out_info);
 
     // Returns extra information about the type of the object.
-    // If the |Describe| operation fails, the connection is closed.
+    // If the `Describe` operation fails, the connection is closed.
     //
     // This method does not require any rights.
     // Messages are encoded and decoded in-place.
@@ -4920,13 +4920,13 @@ class DirectoryAdmin final {
     ::fidl::DecodeResult<GetAttrResponse> GetAttr(::fidl::BytePart response_buffer);
 
     // Updates information about the node.
-    // |flags| may be any of NODE_ATTRIBUTE_FLAG_*.
+    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
     zx_status_t SetAttr(uint32_t flags, NodeAttributes attributes, int32_t* out_s);
 
     // Updates information about the node.
-    // |flags| may be any of NODE_ATTRIBUTE_FLAG_*.
+    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -4934,7 +4934,7 @@ class DirectoryAdmin final {
     ::fidl::DecodeResult<SetAttrResponse> SetAttr(::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Updates information about the node.
-    // |flags| may be any of NODE_ATTRIBUTE_FLAG_*.
+    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
     // Messages are encoded and decoded in-place.
@@ -4952,23 +4952,23 @@ class DirectoryAdmin final {
 
     // Opens a new object relative to this directory object.
     //
-    // |path| may contain multiple segments, separated by "/" characters,
+    // `path` may contain multiple segments, separated by "/" characters,
     // and should never be empty i.e. "" is an invalid path.
     //
-    // |flags| may be any of the OPEN_FLAG_* and OPEN_RIGHT_* values, bitwise ORed together.
-    // The OPEN_FLAG_DESCRIBE flag may cause an |OnOpen| event to be transmitted
-    // on the |object| handle, indicating the type of object opened.
+    // `flags` may be any of the OPEN_FLAG_* and OPEN_RIGHT_* values, bitwise ORed together.
+    // The OPEN_FLAG_DESCRIBE flag may cause an `OnOpen` event to be transmitted
+    // on the `object` handle, indicating the type of object opened.
     //
     // If an unknown value is sent for either flags or mode, the connection should
     // be closed.
     //
-    // OPEN_RIGHTS_* flags provided in |flags| will restrict access rights on the |object| channel
+    // OPEN_RIGHTS_* flags provided in `flags` will restrict access rights on the `object` channel
     // which will be connected to the opened entity.
     //
     // Rights are never increased. When you open a nested entity within a directory, you may only
     // request the same rights as what the directory connection already has, or a subset of those.
     // Exceeding those rights causes an access denied error to be transmitted in the
-    // |OnOpen| event if applicable, and the |object| connection closed.
+    // `OnOpen` event if applicable, and the `object` connection closed.
     //
     // The caller must specify either one or more of the OPEN_RIGHT_* flags, or
     // the OPEN_FLAG_NODE_REFERENCE flag.
@@ -4976,23 +4976,23 @@ class DirectoryAdmin final {
 
     // Opens a new object relative to this directory object.
     //
-    // |path| may contain multiple segments, separated by "/" characters,
+    // `path` may contain multiple segments, separated by "/" characters,
     // and should never be empty i.e. "" is an invalid path.
     //
-    // |flags| may be any of the OPEN_FLAG_* and OPEN_RIGHT_* values, bitwise ORed together.
-    // The OPEN_FLAG_DESCRIBE flag may cause an |OnOpen| event to be transmitted
-    // on the |object| handle, indicating the type of object opened.
+    // `flags` may be any of the OPEN_FLAG_* and OPEN_RIGHT_* values, bitwise ORed together.
+    // The OPEN_FLAG_DESCRIBE flag may cause an `OnOpen` event to be transmitted
+    // on the `object` handle, indicating the type of object opened.
     //
     // If an unknown value is sent for either flags or mode, the connection should
     // be closed.
     //
-    // OPEN_RIGHTS_* flags provided in |flags| will restrict access rights on the |object| channel
+    // OPEN_RIGHTS_* flags provided in `flags` will restrict access rights on the `object` channel
     // which will be connected to the opened entity.
     //
     // Rights are never increased. When you open a nested entity within a directory, you may only
     // request the same rights as what the directory connection already has, or a subset of those.
     // Exceeding those rights causes an access denied error to be transmitted in the
-    // |OnOpen| event if applicable, and the |object| connection closed.
+    // `OnOpen` event if applicable, and the `object` connection closed.
     //
     // The caller must specify either one or more of the OPEN_RIGHT_* flags, or
     // the OPEN_FLAG_NODE_REFERENCE flag.
@@ -5001,23 +5001,23 @@ class DirectoryAdmin final {
 
     // Opens a new object relative to this directory object.
     //
-    // |path| may contain multiple segments, separated by "/" characters,
+    // `path` may contain multiple segments, separated by "/" characters,
     // and should never be empty i.e. "" is an invalid path.
     //
-    // |flags| may be any of the OPEN_FLAG_* and OPEN_RIGHT_* values, bitwise ORed together.
-    // The OPEN_FLAG_DESCRIBE flag may cause an |OnOpen| event to be transmitted
-    // on the |object| handle, indicating the type of object opened.
+    // `flags` may be any of the OPEN_FLAG_* and OPEN_RIGHT_* values, bitwise ORed together.
+    // The OPEN_FLAG_DESCRIBE flag may cause an `OnOpen` event to be transmitted
+    // on the `object` handle, indicating the type of object opened.
     //
     // If an unknown value is sent for either flags or mode, the connection should
     // be closed.
     //
-    // OPEN_RIGHTS_* flags provided in |flags| will restrict access rights on the |object| channel
+    // OPEN_RIGHTS_* flags provided in `flags` will restrict access rights on the `object` channel
     // which will be connected to the opened entity.
     //
     // Rights are never increased. When you open a nested entity within a directory, you may only
     // request the same rights as what the directory connection already has, or a subset of those.
     // Exceeding those rights causes an access denied error to be transmitted in the
-    // |OnOpen| event if applicable, and the |object| connection closed.
+    // `OnOpen` event if applicable, and the `object` connection closed.
     //
     // The caller must specify either one or more of the OPEN_RIGHT_* flags, or
     // the OPEN_FLAG_NODE_REFERENCE flag.
@@ -5035,18 +5035,18 @@ class DirectoryAdmin final {
     // it must become read-only, preventing new entries from being created
     // until all references close and the directory is destroyed.
     //
-    // |path| identifies the file which should be detached.
-    // If |path| contains multiple segments, separated by "/" characters,
+    // `path` identifies the file which should be detached.
+    // If `path` contains multiple segments, separated by "/" characters,
     // then the directory is traversed, one segment at a time, relative to the
     // originally accessed Directory.
     //
     // Returns:
     //   ZX_ERR_ACCESS_DENIED if the connection (or the underlying filesystem) does not
     //     allow writable access.
-    //   ZX_ERR_INVALID_ARGS if |path| contains ".." segments.
-    //   ZX_ERR_NOT_EMPTY if |path| refers to a non-empty directory.
-    //   ZX_ERR_UNAVAILABLE if |path| refers to a mount point, containing a remote channel.
-    //   ZX_ERR_UNAVAILABLE if |path| is ".".
+    //   ZX_ERR_INVALID_ARGS if `path` contains ".." segments.
+    //   ZX_ERR_NOT_EMPTY if `path` refers to a non-empty directory.
+    //   ZX_ERR_UNAVAILABLE if `path` refers to a mount point, containing a remote channel.
+    //   ZX_ERR_UNAVAILABLE if `path` is ".".
     //
     // Other errors may be returned for filesystem-specific reasons.
     //
@@ -5064,18 +5064,18 @@ class DirectoryAdmin final {
     // it must become read-only, preventing new entries from being created
     // until all references close and the directory is destroyed.
     //
-    // |path| identifies the file which should be detached.
-    // If |path| contains multiple segments, separated by "/" characters,
+    // `path` identifies the file which should be detached.
+    // If `path` contains multiple segments, separated by "/" characters,
     // then the directory is traversed, one segment at a time, relative to the
     // originally accessed Directory.
     //
     // Returns:
     //   ZX_ERR_ACCESS_DENIED if the connection (or the underlying filesystem) does not
     //     allow writable access.
-    //   ZX_ERR_INVALID_ARGS if |path| contains ".." segments.
-    //   ZX_ERR_NOT_EMPTY if |path| refers to a non-empty directory.
-    //   ZX_ERR_UNAVAILABLE if |path| refers to a mount point, containing a remote channel.
-    //   ZX_ERR_UNAVAILABLE if |path| is ".".
+    //   ZX_ERR_INVALID_ARGS if `path` contains ".." segments.
+    //   ZX_ERR_NOT_EMPTY if `path` refers to a non-empty directory.
+    //   ZX_ERR_UNAVAILABLE if `path` refers to a mount point, containing a remote channel.
+    //   ZX_ERR_UNAVAILABLE if `path` is ".".
     //
     // Other errors may be returned for filesystem-specific reasons.
     //
@@ -5095,18 +5095,18 @@ class DirectoryAdmin final {
     // it must become read-only, preventing new entries from being created
     // until all references close and the directory is destroyed.
     //
-    // |path| identifies the file which should be detached.
-    // If |path| contains multiple segments, separated by "/" characters,
+    // `path` identifies the file which should be detached.
+    // If `path` contains multiple segments, separated by "/" characters,
     // then the directory is traversed, one segment at a time, relative to the
     // originally accessed Directory.
     //
     // Returns:
     //   ZX_ERR_ACCESS_DENIED if the connection (or the underlying filesystem) does not
     //     allow writable access.
-    //   ZX_ERR_INVALID_ARGS if |path| contains ".." segments.
-    //   ZX_ERR_NOT_EMPTY if |path| refers to a non-empty directory.
-    //   ZX_ERR_UNAVAILABLE if |path| refers to a mount point, containing a remote channel.
-    //   ZX_ERR_UNAVAILABLE if |path| is ".".
+    //   ZX_ERR_INVALID_ARGS if `path` contains ".." segments.
+    //   ZX_ERR_NOT_EMPTY if `path` refers to a non-empty directory.
+    //   ZX_ERR_UNAVAILABLE if `path` refers to a mount point, containing a remote channel.
+    //   ZX_ERR_UNAVAILABLE if `path` is ".".
     //
     // Other errors may be returned for filesystem-specific reasons.
     //
@@ -5203,7 +5203,7 @@ class DirectoryAdmin final {
 
     // Renames an object named src to the name dst, in a directory represented by token.
     //
-    // |src/dst| must be resolved object names. Including "/" in any position
+    // `src/dst` must be resolved object names. Including "/" in any position
     // other than the end of the string will return ZX_ERR_INVALID_ARGS.
     // Returning "/" at the end of either string implies that it must be a
     // directory, or else ZX_ERR_NOT_DIR should be returned.
@@ -5213,7 +5213,7 @@ class DirectoryAdmin final {
 
     // Renames an object named src to the name dst, in a directory represented by token.
     //
-    // |src/dst| must be resolved object names. Including "/" in any position
+    // `src/dst` must be resolved object names. Including "/" in any position
     // other than the end of the string will return ZX_ERR_INVALID_ARGS.
     // Returning "/" at the end of either string implies that it must be a
     // directory, or else ZX_ERR_NOT_DIR should be returned.
@@ -5225,7 +5225,7 @@ class DirectoryAdmin final {
 
     // Renames an object named src to the name dst, in a directory represented by token.
     //
-    // |src/dst| must be resolved object names. Including "/" in any position
+    // `src/dst` must be resolved object names. Including "/" in any position
     // other than the end of the string will return ZX_ERR_INVALID_ARGS.
     // Returning "/" at the end of either string implies that it must be a
     // directory, or else ZX_ERR_NOT_DIR should be returned.
@@ -5237,10 +5237,10 @@ class DirectoryAdmin final {
     // Creates a link to an object named src by the name dst, within a directory represented by
     // token.
     //
-    // |src| must be a resolved object name. Including "/" in the string will
+    // `src` must be a resolved object name. Including "/" in the string will
     // return ZX_ERR_INVALID_ARGS.
     //
-    // |dst| must be a resolved object name. Including "/" in the string will
+    // `dst` must be a resolved object name. Including "/" in the string will
     // return ZX_ERR_INVALID_ARGS.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
@@ -5249,10 +5249,10 @@ class DirectoryAdmin final {
     // Creates a link to an object named src by the name dst, within a directory represented by
     // token.
     //
-    // |src| must be a resolved object name. Including "/" in the string will
+    // `src` must be a resolved object name. Including "/" in the string will
     // return ZX_ERR_INVALID_ARGS.
     //
-    // |dst| must be a resolved object name. Including "/" in the string will
+    // `dst` must be a resolved object name. Including "/" in the string will
     // return ZX_ERR_INVALID_ARGS.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
@@ -5263,10 +5263,10 @@ class DirectoryAdmin final {
     // Creates a link to an object named src by the name dst, within a directory represented by
     // token.
     //
-    // |src| must be a resolved object name. Including "/" in the string will
+    // `src` must be a resolved object name. Including "/" in the string will
     // return ZX_ERR_INVALID_ARGS.
     //
-    // |dst| must be a resolved object name. Including "/" in the string will
+    // `dst` must be a resolved object name. Including "/" in the string will
     // return ZX_ERR_INVALID_ARGS.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
@@ -5434,7 +5434,7 @@ class DirectoryAdmin final {
 
     // Create another connection to the same remote object.
     //
-    // |flags| may be any of:
+    // `flags` may be any of:
     // - OPEN_RIGHT_*
     // - OPEN_FLAG_APPEND
     // - OPEN_FLAG_NO_REMOTE
@@ -5443,7 +5443,7 @@ class DirectoryAdmin final {
     //
     // All other flags are ignored.
     //
-    // The OPEN_RIGHT_* bits in |flags| request corresponding rights over the resulting
+    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
     // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
@@ -5452,7 +5452,7 @@ class DirectoryAdmin final {
 
     // Create another connection to the same remote object.
     //
-    // |flags| may be any of:
+    // `flags` may be any of:
     // - OPEN_RIGHT_*
     // - OPEN_FLAG_APPEND
     // - OPEN_FLAG_NO_REMOTE
@@ -5461,7 +5461,7 @@ class DirectoryAdmin final {
     //
     // All other flags are ignored.
     //
-    // The OPEN_RIGHT_* bits in |flags| request corresponding rights over the resulting
+    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
     // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
@@ -5471,7 +5471,7 @@ class DirectoryAdmin final {
 
     // Create another connection to the same remote object.
     //
-    // |flags| may be any of:
+    // `flags` may be any of:
     // - OPEN_RIGHT_*
     // - OPEN_FLAG_APPEND
     // - OPEN_FLAG_NO_REMOTE
@@ -5480,7 +5480,7 @@ class DirectoryAdmin final {
     //
     // All other flags are ignored.
     //
-    // The OPEN_RIGHT_* bits in |flags| request corresponding rights over the resulting
+    // The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
     // cloned object.
     // The cloned object must have rights less than or equal to the original object.
     // Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
@@ -5507,13 +5507,13 @@ class DirectoryAdmin final {
     static ::fidl::DecodeResult<CloseResponse> Close(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Returns extra information about the type of the object.
-    // If the |Describe| operation fails, the connection is closed.
+    // If the `Describe` operation fails, the connection is closed.
     //
     // This method does not require any rights.
     static zx_status_t Describe(zx::unowned_channel _client_end, NodeInfo* out_info);
 
     // Returns extra information about the type of the object.
-    // If the |Describe| operation fails, the connection is closed.
+    // If the `Describe` operation fails, the connection is closed.
     //
     // This method does not require any rights.
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -5521,7 +5521,7 @@ class DirectoryAdmin final {
     static ::fidl::DecodeResult<DescribeResponse> Describe(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer, NodeInfo* out_info);
 
     // Returns extra information about the type of the object.
-    // If the |Describe| operation fails, the connection is closed.
+    // If the `Describe` operation fails, the connection is closed.
     //
     // This method does not require any rights.
     // Messages are encoded and decoded in-place.
@@ -5564,13 +5564,13 @@ class DirectoryAdmin final {
     static ::fidl::DecodeResult<GetAttrResponse> GetAttr(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Updates information about the node.
-    // |flags| may be any of NODE_ATTRIBUTE_FLAG_*.
+    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
     static zx_status_t SetAttr(zx::unowned_channel _client_end, uint32_t flags, NodeAttributes attributes, int32_t* out_s);
 
     // Updates information about the node.
-    // |flags| may be any of NODE_ATTRIBUTE_FLAG_*.
+    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -5578,7 +5578,7 @@ class DirectoryAdmin final {
     static ::fidl::DecodeResult<SetAttrResponse> SetAttr(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t flags, NodeAttributes attributes, ::fidl::BytePart _response_buffer, int32_t* out_s);
 
     // Updates information about the node.
-    // |flags| may be any of NODE_ATTRIBUTE_FLAG_*.
+    // `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
     // Messages are encoded and decoded in-place.
@@ -5596,23 +5596,23 @@ class DirectoryAdmin final {
 
     // Opens a new object relative to this directory object.
     //
-    // |path| may contain multiple segments, separated by "/" characters,
+    // `path` may contain multiple segments, separated by "/" characters,
     // and should never be empty i.e. "" is an invalid path.
     //
-    // |flags| may be any of the OPEN_FLAG_* and OPEN_RIGHT_* values, bitwise ORed together.
-    // The OPEN_FLAG_DESCRIBE flag may cause an |OnOpen| event to be transmitted
-    // on the |object| handle, indicating the type of object opened.
+    // `flags` may be any of the OPEN_FLAG_* and OPEN_RIGHT_* values, bitwise ORed together.
+    // The OPEN_FLAG_DESCRIBE flag may cause an `OnOpen` event to be transmitted
+    // on the `object` handle, indicating the type of object opened.
     //
     // If an unknown value is sent for either flags or mode, the connection should
     // be closed.
     //
-    // OPEN_RIGHTS_* flags provided in |flags| will restrict access rights on the |object| channel
+    // OPEN_RIGHTS_* flags provided in `flags` will restrict access rights on the `object` channel
     // which will be connected to the opened entity.
     //
     // Rights are never increased. When you open a nested entity within a directory, you may only
     // request the same rights as what the directory connection already has, or a subset of those.
     // Exceeding those rights causes an access denied error to be transmitted in the
-    // |OnOpen| event if applicable, and the |object| connection closed.
+    // `OnOpen` event if applicable, and the `object` connection closed.
     //
     // The caller must specify either one or more of the OPEN_RIGHT_* flags, or
     // the OPEN_FLAG_NODE_REFERENCE flag.
@@ -5620,23 +5620,23 @@ class DirectoryAdmin final {
 
     // Opens a new object relative to this directory object.
     //
-    // |path| may contain multiple segments, separated by "/" characters,
+    // `path` may contain multiple segments, separated by "/" characters,
     // and should never be empty i.e. "" is an invalid path.
     //
-    // |flags| may be any of the OPEN_FLAG_* and OPEN_RIGHT_* values, bitwise ORed together.
-    // The OPEN_FLAG_DESCRIBE flag may cause an |OnOpen| event to be transmitted
-    // on the |object| handle, indicating the type of object opened.
+    // `flags` may be any of the OPEN_FLAG_* and OPEN_RIGHT_* values, bitwise ORed together.
+    // The OPEN_FLAG_DESCRIBE flag may cause an `OnOpen` event to be transmitted
+    // on the `object` handle, indicating the type of object opened.
     //
     // If an unknown value is sent for either flags or mode, the connection should
     // be closed.
     //
-    // OPEN_RIGHTS_* flags provided in |flags| will restrict access rights on the |object| channel
+    // OPEN_RIGHTS_* flags provided in `flags` will restrict access rights on the `object` channel
     // which will be connected to the opened entity.
     //
     // Rights are never increased. When you open a nested entity within a directory, you may only
     // request the same rights as what the directory connection already has, or a subset of those.
     // Exceeding those rights causes an access denied error to be transmitted in the
-    // |OnOpen| event if applicable, and the |object| connection closed.
+    // `OnOpen` event if applicable, and the `object` connection closed.
     //
     // The caller must specify either one or more of the OPEN_RIGHT_* flags, or
     // the OPEN_FLAG_NODE_REFERENCE flag.
@@ -5645,23 +5645,23 @@ class DirectoryAdmin final {
 
     // Opens a new object relative to this directory object.
     //
-    // |path| may contain multiple segments, separated by "/" characters,
+    // `path` may contain multiple segments, separated by "/" characters,
     // and should never be empty i.e. "" is an invalid path.
     //
-    // |flags| may be any of the OPEN_FLAG_* and OPEN_RIGHT_* values, bitwise ORed together.
-    // The OPEN_FLAG_DESCRIBE flag may cause an |OnOpen| event to be transmitted
-    // on the |object| handle, indicating the type of object opened.
+    // `flags` may be any of the OPEN_FLAG_* and OPEN_RIGHT_* values, bitwise ORed together.
+    // The OPEN_FLAG_DESCRIBE flag may cause an `OnOpen` event to be transmitted
+    // on the `object` handle, indicating the type of object opened.
     //
     // If an unknown value is sent for either flags or mode, the connection should
     // be closed.
     //
-    // OPEN_RIGHTS_* flags provided in |flags| will restrict access rights on the |object| channel
+    // OPEN_RIGHTS_* flags provided in `flags` will restrict access rights on the `object` channel
     // which will be connected to the opened entity.
     //
     // Rights are never increased. When you open a nested entity within a directory, you may only
     // request the same rights as what the directory connection already has, or a subset of those.
     // Exceeding those rights causes an access denied error to be transmitted in the
-    // |OnOpen| event if applicable, and the |object| connection closed.
+    // `OnOpen` event if applicable, and the `object` connection closed.
     //
     // The caller must specify either one or more of the OPEN_RIGHT_* flags, or
     // the OPEN_FLAG_NODE_REFERENCE flag.
@@ -5679,18 +5679,18 @@ class DirectoryAdmin final {
     // it must become read-only, preventing new entries from being created
     // until all references close and the directory is destroyed.
     //
-    // |path| identifies the file which should be detached.
-    // If |path| contains multiple segments, separated by "/" characters,
+    // `path` identifies the file which should be detached.
+    // If `path` contains multiple segments, separated by "/" characters,
     // then the directory is traversed, one segment at a time, relative to the
     // originally accessed Directory.
     //
     // Returns:
     //   ZX_ERR_ACCESS_DENIED if the connection (or the underlying filesystem) does not
     //     allow writable access.
-    //   ZX_ERR_INVALID_ARGS if |path| contains ".." segments.
-    //   ZX_ERR_NOT_EMPTY if |path| refers to a non-empty directory.
-    //   ZX_ERR_UNAVAILABLE if |path| refers to a mount point, containing a remote channel.
-    //   ZX_ERR_UNAVAILABLE if |path| is ".".
+    //   ZX_ERR_INVALID_ARGS if `path` contains ".." segments.
+    //   ZX_ERR_NOT_EMPTY if `path` refers to a non-empty directory.
+    //   ZX_ERR_UNAVAILABLE if `path` refers to a mount point, containing a remote channel.
+    //   ZX_ERR_UNAVAILABLE if `path` is ".".
     //
     // Other errors may be returned for filesystem-specific reasons.
     //
@@ -5708,18 +5708,18 @@ class DirectoryAdmin final {
     // it must become read-only, preventing new entries from being created
     // until all references close and the directory is destroyed.
     //
-    // |path| identifies the file which should be detached.
-    // If |path| contains multiple segments, separated by "/" characters,
+    // `path` identifies the file which should be detached.
+    // If `path` contains multiple segments, separated by "/" characters,
     // then the directory is traversed, one segment at a time, relative to the
     // originally accessed Directory.
     //
     // Returns:
     //   ZX_ERR_ACCESS_DENIED if the connection (or the underlying filesystem) does not
     //     allow writable access.
-    //   ZX_ERR_INVALID_ARGS if |path| contains ".." segments.
-    //   ZX_ERR_NOT_EMPTY if |path| refers to a non-empty directory.
-    //   ZX_ERR_UNAVAILABLE if |path| refers to a mount point, containing a remote channel.
-    //   ZX_ERR_UNAVAILABLE if |path| is ".".
+    //   ZX_ERR_INVALID_ARGS if `path` contains ".." segments.
+    //   ZX_ERR_NOT_EMPTY if `path` refers to a non-empty directory.
+    //   ZX_ERR_UNAVAILABLE if `path` refers to a mount point, containing a remote channel.
+    //   ZX_ERR_UNAVAILABLE if `path` is ".".
     //
     // Other errors may be returned for filesystem-specific reasons.
     //
@@ -5739,18 +5739,18 @@ class DirectoryAdmin final {
     // it must become read-only, preventing new entries from being created
     // until all references close and the directory is destroyed.
     //
-    // |path| identifies the file which should be detached.
-    // If |path| contains multiple segments, separated by "/" characters,
+    // `path` identifies the file which should be detached.
+    // If `path` contains multiple segments, separated by "/" characters,
     // then the directory is traversed, one segment at a time, relative to the
     // originally accessed Directory.
     //
     // Returns:
     //   ZX_ERR_ACCESS_DENIED if the connection (or the underlying filesystem) does not
     //     allow writable access.
-    //   ZX_ERR_INVALID_ARGS if |path| contains ".." segments.
-    //   ZX_ERR_NOT_EMPTY if |path| refers to a non-empty directory.
-    //   ZX_ERR_UNAVAILABLE if |path| refers to a mount point, containing a remote channel.
-    //   ZX_ERR_UNAVAILABLE if |path| is ".".
+    //   ZX_ERR_INVALID_ARGS if `path` contains ".." segments.
+    //   ZX_ERR_NOT_EMPTY if `path` refers to a non-empty directory.
+    //   ZX_ERR_UNAVAILABLE if `path` refers to a mount point, containing a remote channel.
+    //   ZX_ERR_UNAVAILABLE if `path` is ".".
     //
     // Other errors may be returned for filesystem-specific reasons.
     //
@@ -5847,7 +5847,7 @@ class DirectoryAdmin final {
 
     // Renames an object named src to the name dst, in a directory represented by token.
     //
-    // |src/dst| must be resolved object names. Including "/" in any position
+    // `src/dst` must be resolved object names. Including "/" in any position
     // other than the end of the string will return ZX_ERR_INVALID_ARGS.
     // Returning "/" at the end of either string implies that it must be a
     // directory, or else ZX_ERR_NOT_DIR should be returned.
@@ -5857,7 +5857,7 @@ class DirectoryAdmin final {
 
     // Renames an object named src to the name dst, in a directory represented by token.
     //
-    // |src/dst| must be resolved object names. Including "/" in any position
+    // `src/dst` must be resolved object names. Including "/" in any position
     // other than the end of the string will return ZX_ERR_INVALID_ARGS.
     // Returning "/" at the end of either string implies that it must be a
     // directory, or else ZX_ERR_NOT_DIR should be returned.
@@ -5869,7 +5869,7 @@ class DirectoryAdmin final {
 
     // Renames an object named src to the name dst, in a directory represented by token.
     //
-    // |src/dst| must be resolved object names. Including "/" in any position
+    // `src/dst` must be resolved object names. Including "/" in any position
     // other than the end of the string will return ZX_ERR_INVALID_ARGS.
     // Returning "/" at the end of either string implies that it must be a
     // directory, or else ZX_ERR_NOT_DIR should be returned.
@@ -5881,10 +5881,10 @@ class DirectoryAdmin final {
     // Creates a link to an object named src by the name dst, within a directory represented by
     // token.
     //
-    // |src| must be a resolved object name. Including "/" in the string will
+    // `src` must be a resolved object name. Including "/" in the string will
     // return ZX_ERR_INVALID_ARGS.
     //
-    // |dst| must be a resolved object name. Including "/" in the string will
+    // `dst` must be a resolved object name. Including "/" in the string will
     // return ZX_ERR_INVALID_ARGS.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
@@ -5893,10 +5893,10 @@ class DirectoryAdmin final {
     // Creates a link to an object named src by the name dst, within a directory represented by
     // token.
     //
-    // |src| must be a resolved object name. Including "/" in the string will
+    // `src` must be a resolved object name. Including "/" in the string will
     // return ZX_ERR_INVALID_ARGS.
     //
-    // |dst| must be a resolved object name. Including "/" in the string will
+    // `dst` must be a resolved object name. Including "/" in the string will
     // return ZX_ERR_INVALID_ARGS.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
@@ -5907,10 +5907,10 @@ class DirectoryAdmin final {
     // Creates a link to an object named src by the name dst, within a directory represented by
     // token.
     //
-    // |src| must be a resolved object name. Including "/" in the string will
+    // `src` must be a resolved object name. Including "/" in the string will
     // return ZX_ERR_INVALID_ARGS.
     //
-    // |dst| must be a resolved object name. Including "/" in the string will
+    // `dst` must be a resolved object name. Including "/" in the string will
     // return ZX_ERR_INVALID_ARGS.
     //
     // This method requires following rights: OPEN_RIGHT_WRITABLE.
@@ -6372,26 +6372,26 @@ class DirectoryAdmin final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
-  // An event produced eagerly by a FIDL server if requested by |OPEN_FLAG_DESCRIBE|.
+  // An event produced eagerly by a FIDL server if requested by `OPEN_FLAG_DESCRIBE`.
   //
   // Indicates the success or failure of the open operation, and optionally describes the
-  // object. If the status is |ZX_OK|, |info| contains descriptive information about the object
-  // (the same as would be returned by |Describe|).
+  // object. If the status is `ZX_OK`, `info` contains descriptive information about the object
+  // (the same as would be returned by `Describe`).
   static zx_status_t SendOnOpenEvent(::zx::unowned_channel _chan, int32_t s, NodeInfo* info);
 
-  // An event produced eagerly by a FIDL server if requested by |OPEN_FLAG_DESCRIBE|.
+  // An event produced eagerly by a FIDL server if requested by `OPEN_FLAG_DESCRIBE`.
   //
   // Indicates the success or failure of the open operation, and optionally describes the
-  // object. If the status is |ZX_OK|, |info| contains descriptive information about the object
-  // (the same as would be returned by |Describe|).
+  // object. If the status is `ZX_OK`, `info` contains descriptive information about the object
+  // (the same as would be returned by `Describe`).
   // Caller provides the backing storage for FIDL message via response buffers.
   static zx_status_t SendOnOpenEvent(::zx::unowned_channel _chan, ::fidl::BytePart _buffer, int32_t s, NodeInfo* info);
 
-  // An event produced eagerly by a FIDL server if requested by |OPEN_FLAG_DESCRIBE|.
+  // An event produced eagerly by a FIDL server if requested by `OPEN_FLAG_DESCRIBE`.
   //
   // Indicates the success or failure of the open operation, and optionally describes the
-  // object. If the status is |ZX_OK|, |info| contains descriptive information about the object
-  // (the same as would be returned by |Describe|).
+  // object. If the status is `ZX_OK`, `info` contains descriptive information about the object
+  // (the same as would be returned by `Describe`).
   // Messages are encoded in-place.
   static zx_status_t SendOnOpenEvent(::zx::unowned_channel _chan, ::fidl::DecodedMessage<OnOpenResponse> params);
 

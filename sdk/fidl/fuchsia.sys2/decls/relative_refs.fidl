@@ -22,12 +22,12 @@ table SelfRef {};
 
 /// A reference to one of the component's child instances.
 table ChildRef {
-    /// The name assigned to the child by its parent. If |collection| is set,
-    /// |name| is scoped to |collection| and the child is a dynamic instance.
+    /// The name assigned to the child by its parent. If `collection` is set,
+    /// `name` is scoped to `collection` and the child is a dynamic instance.
     /// Required.
     1: child_name name;
-    /// The collection |name| belongs to. If omitted, |name| references a static
-    /// instance. This field must be omitted if the |ChildRef| is being used in
+    /// The collection `name` belongs to. If omitted, `name` references a static
+    /// instance. This field must be omitted if the `ChildRef` is being used in
     /// a component declaration. Optional.
     2: collection_name collection;
 };

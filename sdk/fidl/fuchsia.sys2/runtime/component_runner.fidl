@@ -21,11 +21,11 @@ using fuchsia.io;
 // interface.
 [Discoverable]
 protocol ComponentRunner {
-    // Starts running a new component instance described by |start_info|.
+    // Starts running a new component instance described by `start_info`.
     //
     // The caller of this method takes responsibility for binding client
     // connections and controlling the lifetime of the newly started
-    // component instance through the requested |controller|.
+    // component instance through the requested `controller`.
     Start(ComponentStartInfo start_info,
           request<ComponentController> controller);
 };
@@ -38,7 +38,7 @@ table ComponentStartInfo {
     1: string resolved_url;
 
     // The component's program declaration.
-    // This information originates from |ComponentDecl.program|.
+    // This information originates from `ComponentDecl.program`.
     2: fuchsia.data.Dictionary program;
 
     // The namespace to provide to the component instance.
@@ -53,13 +53,13 @@ table ComponentStartInfo {
 };
 
 // An interface for binding client connections and controlling the lifetime
-// of a component instance started using |ComponentRunner.Start()|.
+// of a component instance started using `ComponentRunner.Start()`.
 //
 // Closing the client endpoint of the controller interface implicitly stops the
-// controlled component instance exactly as if |Stop()| had been called.
+// controlled component instance exactly as if `Stop()` had been called.
 //
 // When the controlled component instance terminates or becomes inaccessible
-// for any reason, the server invokes |OnEpitaph()| and closes its endpoint
+// for any reason, the server invokes `OnEpitaph()` and closes its endpoint
 // of the controller interface.
 //
 // EPITAPH
@@ -69,14 +69,14 @@ table ComponentStartInfo {
 //
 // The following epitaph status codes have particular significance:
 //
-// - |ZX_OK|: The component instance was successfully terminated in response
-//   to |Stop()| and its runtime resources have been fully released.
-// - |ZX_ERR_UNAVAILABLE|: The runner was unable to start the component
+// - `ZX_OK`: The component instance was successfully terminated in response
+//   to `Stop()` and its runtime resources have been fully released.
+// - `ZX_ERR_UNAVAILABLE`: The runner was unable to start the component
 //   instance.  e.g. The runner could not retrieve the component's assets.
-// - |ERR_COMPONENT_DIED|: The component instance was started but
+// - `ERR_COMPONENT_DIED`: The component instance was started but
 //   subsequently terminated unexpectedly.
 //
-// Other status codes (e.g. |ZX_ERR_PEER_CLOSED|) may indicate a failure
+// Other status codes (e.g. `ZX_ERR_PEER_CLOSED`) may indicate a failure
 // of the component runner itself.  The component manager may respond to such
 // failures by terminating the component runner's job to ensure system
 // stability.
@@ -87,10 +87,10 @@ protocol ComponentController {
     // an epitaph then close its endpoint of the controller interface.
     Stop();
 
-    // Binds a client to the component instance's |exports| directory
+    // Binds a client to the component instance's `exports` directory
     // if it has one.  If the instance does not offer exports, then the
-    // controller should close the |exports| interface request.
+    // controller should close the `exports` interface request.
     //
-    // The |client_moniker| identifies the client to the component instance.
+    // The `client_moniker` identifies the client to the component instance.
     Bind(Moniker client_moniker, request<fuchsia.io.Directory> exports);
 };

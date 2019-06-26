@@ -15,17 +15,17 @@ struct Config {
     // API key to use when authenticating with Firebase Auth.
     string api_key;
 
-    // The user profile id to use with the |token_manager|.
+    // The user profile id to use with the `token_manager`.
     string user_profile_id;
 };
 
 [Discoverable]
 protocol Factory {
-    // Creates a cloud provider instance using the given |config|.
+    // Creates a cloud provider instance using the given `config`.
     //
     // Parameters:
-    // |config| configuration
-    // |token_manager| is used to get the appropriate auth tokens
+    // `config` configuration
+    // `token_manager` is used to get the appropriate auth tokens
     //     associated with user for whom the cloud provider is running.
     GetCloudProvider(
         Config config,

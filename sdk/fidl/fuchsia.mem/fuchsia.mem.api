@@ -1,4 +1,4 @@
 {
-  "fidl/fuchsia.mem/buffer.fidl": "49383fc211f9d628ed9b066d9e634d5f",
-  "fidl/fuchsia.mem/range.fidl": "e4e70172dbf87ef4dd7654182b15b386"
+  "fidl/fuchsia.mem/buffer.fidl": "a16d2cf9dfe0731dd9ad41a82a88263e",
+  "fidl/fuchsia.mem/range.fidl": "77f85bc6a3ab4bd4d146d18c855d9ffe"
 }

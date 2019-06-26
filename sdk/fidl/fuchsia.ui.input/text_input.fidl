@@ -49,7 +49,7 @@ protocol InputMethodEditor {
     Hide();
 };
 
-/// An interface to receive information from |TextInputService|.
+/// An interface to receive information from `TextInputService`.
 protocol InputMethodEditorClient {
     DidUpdateState(TextInputState state, InputEvent? event);
     OnAction(InputMethodAction action);

@@ -10,7 +10,7 @@ using zx;
 /// Describes how the connection to an should be handled, as well as
 /// how to interpret the optional handle.
 ///
-/// Refer to |Node::Describe()| and |Node::OnOpen()| for usage.
+/// Refer to `Node::Describe()` and `Node::OnOpen()` for usage.
 union NodeInfo {
     Service service;
     FileObject file;
@@ -58,9 +58,9 @@ struct Pipe {
 struct Vmofile {
     /// The VMO which backs this file.
     handle<vmo> vmo;
-    /// The index into |vmo| which represents the first byte of the file.
+    /// The index into `vmo` which represents the first byte of the file.
     uint64 offset;
-    /// The number of bytes, starting at |offset|, which may be used to represent this file.
+    /// The number of bytes, starting at `offset`, which may be used to represent this file.
     uint64 length;
 };
 
@@ -116,8 +116,8 @@ const uint32 OPEN_FLAG_NO_REMOTE = 0x00200000;
 /// otherwise an error is returned.
 /// If an object is opened or cloned using this method, the resulting connection does not carry
 /// any permission flags.
-/// The resulting node allows a limited set of operations: |GetAttr|, |Clone|, |Close|, |Describe|,
-/// and, if the node is a file, these extra operations: |GetFlags|, |SetFlags|.
+/// The resulting node allows a limited set of operations: `GetAttr`, `Clone`, `Close`, `Describe`,
+/// and, if the node is a file, these extra operations: `GetFlags`, `SetFlags`.
 const uint32 OPEN_FLAG_NODE_REFERENCE = 0x00400000;
 /// Binary OR of OPEN_FLAG_DIRECTORY, OPEN_FLAG_NOT_DIRECTORY, OPEN_FLAG_DESCRIBE, and
 /// OPEN_FLAG_NODE_REFERENCE. Flags used when opening a node reference must fall within this mask.
@@ -155,7 +155,7 @@ const uint32 CLONE_FLAG_SAME_RIGHTS = 0x04000000;
 protocol Node {
     /// Create another connection to the same remote object.
     ///
-    /// |flags| may be any of:
+    /// `flags` may be any of:
     /// - OPEN_RIGHT_*
     /// - OPEN_FLAG_APPEND
     /// - OPEN_FLAG_NO_REMOTE
@@ -164,7 +164,7 @@ protocol Node {
     ///
     /// All other flags are ignored.
     ///
-    /// The OPEN_RIGHT_* bits in |flags| request corresponding rights over the resulting
+    /// The OPEN_RIGHT_* bits in `flags` request corresponding rights over the resulting
     /// cloned object.
     /// The cloned object must have rights less than or equal to the original object.
     /// Alternatively, pass CLONE_FLAG_SAME_RIGHTS to inherit the rights on the source connection.
@@ -177,16 +177,16 @@ protocol Node {
     Close() -> (zx.status s);
 
     /// Returns extra information about the type of the object.
-    /// If the |Describe| operation fails, the connection is closed.
+    /// If the `Describe` operation fails, the connection is closed.
     ///
     /// This method does not require any rights.
     Describe() -> (NodeInfo info);
 
-    /// An event produced eagerly by a FIDL server if requested by |OPEN_FLAG_DESCRIBE|.
+    /// An event produced eagerly by a FIDL server if requested by `OPEN_FLAG_DESCRIBE`.
     ///
     /// Indicates the success or failure of the open operation, and optionally describes the
-    /// object. If the status is |ZX_OK|, |info| contains descriptive information about the object
-    /// (the same as would be returned by |Describe|).
+    /// object. If the status is `ZX_OK`, `info` contains descriptive information about the object
+    /// (the same as would be returned by `Describe`).
     -> OnOpen(zx.status s, NodeInfo? info);
 
     /// Synchronizes updates to the node to the underlying media, if it exists.
@@ -200,7 +200,7 @@ protocol Node {
     GetAttr() -> (zx.status s, NodeAttributes attributes);
 
     /// Updates information about the node.
-    /// |flags| may be any of NODE_ATTRIBUTE_FLAG_*.
+    /// `flags` may be any of NODE_ATTRIBUTE_FLAG_*.
     ///
     /// This method requires following rights: OPEN_RIGHT_WRITABLE.
     SetAttr(uint32 flags, NodeAttributes attributes) -> (zx.status s);
@@ -319,7 +319,7 @@ protocol File {
     /// This method requires following rights: OPEN_RIGHT_WRITABLE.
     WriteAt(vector<uint8>:MAX_BUF data, uint64 offset) -> (zx.status s, uint64 actual);
 
-    /// Moves the offset at which the next invocation of |Read()| or |Write()| will
+    /// Moves the offset at which the next invocation of `Read()` or `Write()` will
     /// occur.
     ///
     /// This method does not require any rights.
@@ -345,11 +345,11 @@ protocol File {
     /// Acquires a buffer representing this file, if there is one, with the
     /// requested access rights.
     ///
-    /// |flags| may be any of VMO_FLAG_*.
+    /// `flags` may be any of VMO_FLAG_*.
     ///
     /// This method requires following rights:
-    /// - OPEN_RIGHT_WRITABLE if |flags| includes VMO_FLAG_WRITE.
-    /// - OPEN_RIGHT_READABLE if |flags| includes VMO_FLAG_READ or VMO_FLAG_EXEC.
+    /// - OPEN_RIGHT_WRITABLE if `flags` includes VMO_FLAG_WRITE.
+    /// - OPEN_RIGHT_READABLE if `flags` includes VMO_FLAG_READ or VMO_FLAG_EXEC.
     GetBuffer(uint32 flags) -> (zx.status s, fuchsia.mem.Buffer? buffer);
 };
 
@@ -423,23 +423,23 @@ protocol Directory {
 
     /// Opens a new object relative to this directory object.
     ///
-    /// |path| may contain multiple segments, separated by "/" characters,
+    /// `path` may contain multiple segments, separated by "/" characters,
     /// and should never be empty i.e. "" is an invalid path.
     ///
-    /// |flags| may be any of the OPEN_FLAG_* and OPEN_RIGHT_* values, bitwise ORed together.
-    /// The OPEN_FLAG_DESCRIBE flag may cause an |OnOpen| event to be transmitted
-    /// on the |object| handle, indicating the type of object opened.
+    /// `flags` may be any of the OPEN_FLAG_* and OPEN_RIGHT_* values, bitwise ORed together.
+    /// The OPEN_FLAG_DESCRIBE flag may cause an `OnOpen` event to be transmitted
+    /// on the `object` handle, indicating the type of object opened.
     ///
     /// If an unknown value is sent for either flags or mode, the connection should
     /// be closed.
     ///
-    /// OPEN_RIGHTS_* flags provided in |flags| will restrict access rights on the |object| channel
+    /// OPEN_RIGHTS_* flags provided in `flags` will restrict access rights on the `object` channel
     /// which will be connected to the opened entity.
     ///
     /// Rights are never increased. When you open a nested entity within a directory, you may only
     /// request the same rights as what the directory connection already has, or a subset of those.
     /// Exceeding those rights causes an access denied error to be transmitted in the
-    /// |OnOpen| event if applicable, and the |object| connection closed.
+    /// `OnOpen` event if applicable, and the `object` connection closed.
     ///
     /// The caller must specify either one or more of the OPEN_RIGHT_* flags, or
     /// the OPEN_FLAG_NODE_REFERENCE flag.
@@ -457,18 +457,18 @@ protocol Directory {
     /// it must become read-only, preventing new entries from being created
     /// until all references close and the directory is destroyed.
     ///
-    /// |path| identifies the file which should be detached.
-    /// If |path| contains multiple segments, separated by "/" characters,
+    /// `path` identifies the file which should be detached.
+    /// If `path` contains multiple segments, separated by "/" characters,
     /// then the directory is traversed, one segment at a time, relative to the
     /// originally accessed Directory.
     ///
     /// Returns:
     ///   ZX_ERR_ACCESS_DENIED if the connection (or the underlying filesystem) does not
     ///     allow writable access.
-    ///   ZX_ERR_INVALID_ARGS if |path| contains ".." segments.
-    ///   ZX_ERR_NOT_EMPTY if |path| refers to a non-empty directory.
-    ///   ZX_ERR_UNAVAILABLE if |path| refers to a mount point, containing a remote channel.
-    ///   ZX_ERR_UNAVAILABLE if |path| is ".".
+    ///   ZX_ERR_INVALID_ARGS if `path` contains ".." segments.
+    ///   ZX_ERR_NOT_EMPTY if `path` refers to a non-empty directory.
+    ///   ZX_ERR_UNAVAILABLE if `path` refers to a mount point, containing a remote channel.
+    ///   ZX_ERR_UNAVAILABLE if `path` is ".".
     ///
     /// Other errors may be returned for filesystem-specific reasons.
     ///
@@ -514,7 +514,7 @@ protocol Directory {
 
     /// Renames an object named src to the name dst, in a directory represented by token.
     ///
-    /// |src/dst| must be resolved object names. Including "/" in any position
+    /// `src/dst` must be resolved object names. Including "/" in any position
     /// other than the end of the string will return ZX_ERR_INVALID_ARGS.
     /// Returning "/" at the end of either string implies that it must be a
     /// directory, or else ZX_ERR_NOT_DIR should be returned.
@@ -525,10 +525,10 @@ protocol Directory {
     /// Creates a link to an object named src by the name dst, within a directory represented by
     /// token.
     ///
-    /// |src| must be a resolved object name. Including "/" in the string will
+    /// `src` must be a resolved object name. Including "/" in the string will
     /// return ZX_ERR_INVALID_ARGS.
     ///
-    /// |dst| must be a resolved object name. Including "/" in the string will
+    /// `dst` must be a resolved object name. Including "/" in the string will
     /// return ZX_ERR_INVALID_ARGS.
     ///
     /// This method requires following rights: OPEN_RIGHT_WRITABLE.

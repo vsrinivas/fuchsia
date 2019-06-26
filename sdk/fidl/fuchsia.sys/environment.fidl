@@ -33,27 +33,27 @@ protocol Environment {
     // Creates a new environment nested inside this environment.
     //
     // When applications are created inside the nested environment using the
-    // environment's |Launcher|, the environment requests the
-    // environment services from |host_directory| before passing those services to
-    // the newly created application in its |StartupInfo|.
+    // environment's `Launcher`, the environment requests the
+    // environment services from `host_directory` before passing those services to
+    // the newly created application in its `StartupInfo`.
     //
-    // The |controller| can be used to control the lifecycle of the created
+    // The `controller` can be used to control the lifecycle of the created
     // environment. Note that by default the environment will be killed
-    // automatically when the |EnvironmentController|'s interface is closed. You
-    // can use |EnvironmentController.Detach| to disable this behavior.
+    // automatically when the `EnvironmentController`'s interface is closed. You
+    // can use `EnvironmentController.Detach` to disable this behavior.
     //
-    // |label| defines the new environment's label/name. It must be unique within
+    // `label` defines the new environment's label/name. It must be unique within
     // the parent environment (though not globally) and is used for isolating
     // separate environments. It can also be used for diagnostic purposes. The
-    // label will be truncated if it is longer than |kLabelMaxLength|.
+    // label will be truncated if it is longer than `kLabelMaxLength`.
     //
-    // |additional_services|, which may be empty, contains a list of services
+    // `additional_services`, which may be empty, contains a list of services
     // that the environment provides, which are hosted by
-    // |additional_services.host_directory|. If |options.inherit_parent_services|
-    // is false, |host_directory| must provide a |Loader| service if it wishes to
+    // `additional_services.host_directory`. If `options.inherit_parent_services`
+    // is false, `host_directory` must provide a `Loader` service if it wishes to
     // allow new components to be loaded in the new environment.
     //
-    // |options| provides additional options, see |EnvironmentOptions| for
+    // `options` provides additional options, see `EnvironmentOptions` for
     // details.
     CreateNestedEnvironment(request<Environment> environment,
                             request<EnvironmentController> controller,
@@ -64,14 +64,14 @@ protocol Environment {
     // Gets the Launcher associated with this environment.
     //
     // Applications created using this application launcher will be given the
-    // environment services provided by this environment's |host_directory|.
+    // environment services provided by this environment's `host_directory`.
     GetLauncher(request<Launcher> launcher);
 
     // Gets a superset of services provided by this environment's
-    // |host_directory|.
+    // `host_directory`.
     GetServices(request<ServiceProvider> services);
 
     // Gets a superset of services provided by this environment's
-    // |host_directory|.
+    // `host_directory`.
     GetDirectory(handle<channel> directory_request);
 };

@@ -4,12 +4,12 @@
 
 library fuchsia.modular;
 
-// This interface is given to all components in their |ComponentContext|. Any
-// component can resolve an entity reference into an |Entity|.
+// This interface is given to all components in their `ComponentContext`. Any
+// component can resolve an entity reference into an `Entity`.
 [Discoverable]
 protocol EntityResolver {
-    // Finds and binds |entity_request| to an Entity handle for the Entity
-    // referenced by |entity_reference|. If an error occurs, |entity_request|
+    // Finds and binds `entity_request` to an Entity handle for the Entity
+    // referenced by `entity_reference`. If an error occurs, `entity_request`
     // will be closed.
     //
     // This method is called by any component who wants to use an Entity using an

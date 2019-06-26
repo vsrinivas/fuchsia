@@ -10,14 +10,14 @@ using fuchsia.modular.auth;
 using fuchsia.ui.policy;
 using fuchsia.ui.views;
 
-// The basemgr application (there is no |Basemgr| service) requests
-// an instance of this service in order to launch and display a |Sessionmgr|.
+// The basemgr application (there is no `Basemgr` service) requests
+// an instance of this service in order to launch and display a `Sessionmgr`.
 [Discoverable] // Created by sessionmgr application.
 protocol Sessionmgr {
     // Launches a sessionmgr instance identified by a unique device-local
-    // |session_id|. The uniqueness of |session_id| must be guaranteed by the
-    // caller, because |sessionmgr| creates an Environment namespace with the
-    // given |session_id|, and this will crash if we try to create an
+    // `session_id`. The uniqueness of `session_id` must be guaranteed by the
+    // caller, because `sessionmgr` creates an Environment namespace with the
+    // given `session_id`, and this will crash if we try to create an
     // environment with a pre-existing name, because the services sessionmgr
     // tries to access won't be available.
     //
@@ -36,7 +36,7 @@ protocol Sessionmgr {
     SwapSessionShell(fuchsia.modular.AppConfig session_shell) -> ();
 };
 
-// This interface is provided by basemgr to |Sessionmgr|.
+// This interface is provided by basemgr to `Sessionmgr`.
 protocol SessionContext {
     // See detailed comments in SessionShellContext.Logout(). Logs out all the
     // users in this session, then shut down the sessionmgr process.

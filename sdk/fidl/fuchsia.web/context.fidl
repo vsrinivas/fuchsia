@@ -15,7 +15,7 @@ protocol ContextProvider {
     /// Creates a new browser Context whose state is wholly independent and
     /// isolated from other Contexts.
     ///
-    /// |context|: An interface request which will receive a bound Context
+    /// `context`: An interface request which will receive a bound Context
     ///            service.
     Create(CreateContextParams params, request<Context> context);
 };
@@ -28,9 +28,9 @@ table CreateContextParams {
     /// Handle to the directory that will contain the Context's
     /// persistent data. If it is left unset, then the created Context will be
     /// stateless, with all of its data discarded upon Context destruction.
-    /// If set, |data_directory| must not be shared with any other Context.
+    /// If set, `data_directory` must not be shared with any other Context.
     // TODO(WEB-28): Provide an API to inform the caller when the
-    // |data_directory| can be safely removed.
+    // `data_directory` can be safely removed.
     2: fuchsia.io.Directory data_directory;
 
     /// Optional suffix to append to the UserAgent string, to describe the
@@ -53,7 +53,7 @@ protocol Context {
     /// transferred to another component but cannot be shared across multiple
     /// components.
     ///
-    /// |frame|: An interface request that will be bound to the created Frame.
+    /// `frame`: An interface request that will be bound to the created Frame.
     CreateFrame(request<Frame> frame);
 
     /// Used to observe cookies for sites hosted under this Context.

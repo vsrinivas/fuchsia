@@ -51,12 +51,12 @@ struct LocalesMutation {
   vector<string> locales;
 };
 
-/// Mutation that changes the |HourCycle|.
+/// Mutation that changes the `HourCycle`.
 struct HourCycleMutation {
     HourCycle hour_cycle;
 };
 
-/// Mutation that changes the |TemperatureUnit|.
+/// Mutation that changes the `TemperatureUnit`.
 struct TemperatureUnitMutation {
     TemperatureUnit temperature_unit;
 };

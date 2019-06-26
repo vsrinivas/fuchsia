@@ -4,15 +4,15 @@
 
 library fuchsia.modular;
 
-// StoryShellFactory creates or returns an existing |StoryShell| for a particular story.
+// StoryShellFactory creates or returns an existing `StoryShell` for a particular story.
 // This is intended to be implemented by session shells that want to implement
 // StoryShell functionality themselves.
 [Discoverable]
 protocol StoryShellFactory {
-    // Requests a StoryShell for the story with the given |story_id|.
+    // Requests a StoryShell for the story with the given `story_id`.
     AttachStory(string story_id, request<StoryShell> story_shell);
 
-    // Instructs the session shell to teardown the story shell with the given |story_id|.
+    // Instructs the session shell to teardown the story shell with the given `story_id`.
     // This will be called before the story is stopped.
     DetachStory(string story_id) -> ();
 };

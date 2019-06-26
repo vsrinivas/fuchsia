@@ -1,4 +1,4 @@
 {
-  "fidl/fuchsia.intl/intl.fidl": "818d2febbe8eaafb5dc3cf38455df4ee",
-  "fidl/fuchsia.intl/property_provider.fidl": "d075eb262f0ea0762d211ce6897c1248"
+  "fidl/fuchsia.intl/intl.fidl": "8c19614747730e56db1084135bd4dc20",
+  "fidl/fuchsia.intl/property_provider.fidl": "84627fabc05b9caeee73156b20784e1b"
 }

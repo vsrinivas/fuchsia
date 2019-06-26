@@ -17,17 +17,17 @@ using fuchsia.sys;
 //
 // LIFECYCLE
 //
-// Use |ViewManager.CreateView()| to create a view.  The application
-// uses the |View| interface to manage the view's content and implements
-// the |ViewListener| interface to handle events.
+// Use `ViewManager.CreateView()` to create a view.  The application
+// uses the `View` interface to manage the view's content and implements
+// the `ViewListener` interface to handle events.
 //
-// To destroy a view, simply close the |View| channel.
+// To destroy a view, simply close the `View` channel.
 //
 // ADDING CHILD VIEWS
 //
-// Use |GetContainer()| to obtain an interface for manipulating child views.
+// Use `GetContainer()` to obtain an interface for manipulating child views.
 //
-// See |ViewContainer| for more information.
+// See `ViewContainer` for more information.
 protocol View {
     // Gets a service provider to access services which are associated with
     // the view.
@@ -41,7 +41,7 @@ protocol View {
     // In particular this should be used to let know which view is implementing
     // the ability to show an IME
     //
-    // |service_names| should contain a list of service names as defined with the
+    // `service_names` should contain a list of service names as defined with the
     // FIDL syntax [Discoverable]
     //
     // The list of services will be used by the compositor to filter service

@@ -60,14 +60,14 @@ enum CacheMode {
 // Buffering the response can be more efficient if the response body is in cache
 // and the cache entry can be directly mapped into the resulting buffer.
 enum ResponseBodyMode {
-    // The complete response body should be returned in the |buffer| field of
+    // The complete response body should be returned in the `buffer` field of
     // the response body.
     //
     // The loader MAY abort the transation if the buffer size exceeds an
     // implementation-defined limit.
     BUFFER = 0;
 
-    // The response body should be streamed through the |stream| field of the
+    // The response body should be streamed through the `stream` field of the
     // response body.
     STREAM = 1;
 };
@@ -158,26 +158,26 @@ protocol Loader {
     //
     // The loader will follow redirects (up to an implementation-defined limit)
     // and return the final response as a reply to this message. To cancel the
-    // request, either close the loader interface or close the peer to the |event|
-    // included in the |request|.
+    // request, either close the loader interface or close the peer to the `event`
+    // included in the `request`.
     Fetch(Request request) -> (Response response);
 
     // Initiate the given HTTP request and return all intermediate responses to
     // the given client.
     //
-    // Unlike |Fetch|, |Start| does not automatically follow all redirects.
+    // Unlike `Fetch`, `Start` does not automatically follow all redirects.
     // Instead, each individual response along the redirect chain is delivered to
-    // the |LoaderClient|.
+    // the `LoaderClient`.
     Start(Request request, LoaderClient client);
 };
 
-// A client interface used with |Loader.Start|.
+// A client interface used with `Loader.Start`.
 //
 // Closing the underlying channel will cancel the associated HTTP transaction.
 protocol LoaderClient {
     // Called by the loader when the loader receives an HTTP response.
     //
-    // If the server has requested a redirect, then |redirect| will be non-null
+    // If the server has requested a redirect, then `redirect` will be non-null
     // and describe the target the server requested. To follow the redirect, reply
     // to this message. To not follow the redirect, close the underlying channel.
     OnResponse(Response response, RedirectTarget? redirect) -> ();

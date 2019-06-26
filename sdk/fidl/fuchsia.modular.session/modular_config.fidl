@@ -132,7 +132,7 @@ table SessionmgrConfig {
 
     /// A list of supported services and the URL of the agent known to provide
     /// that service. Used by the Session Manager to implement
-    /// |ComponentContext| method ConnectToAgentService().
+    /// `ComponentContext` method ConnectToAgentService().
     10: vector<AgentServiceIndexEntry> agent_service_index;
 };
 

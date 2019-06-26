@@ -37,7 +37,7 @@ table PointerEvent {
     6: fuchsia.math.PointF global_point;
     /// The viewref koid of the top most view hit for this pointer event.
     /// This field is set to ZX_KOID_INVALID when there is no view hit and
-    /// |local_point| is undefined.
+    /// `local_point` is undefined.
     7: zx.koid viewref_koid;
     /// The point of this pointer event in local view coordinates.
     8: fuchsia.math.PointF local_point;
@@ -58,8 +58,8 @@ protocol PointerEventRegistry {
 protocol PointerEventListener {
     /// Sends a PointerEvent to an accessibility service. A callback is return
     /// to indicate whether the pointer event was consumed / rejected for a
-    /// particular stream of pointer events related to a |device_id| and a
-    /// |pointer_id|.
+    /// particular stream of pointer events related to a `device_id` and a
+    /// `pointer_id`.
     OnEvent(PointerEvent pointer_event)
         -> (uint32 device_id, uint32 pointer_id, EventHandling handled);
 };

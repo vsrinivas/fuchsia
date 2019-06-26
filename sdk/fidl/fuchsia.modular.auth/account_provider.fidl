@@ -39,11 +39,11 @@ enum Status {
 };
 
 // An interface that allows the Framework to talk to the token manager service
-// to add new accounts and be able to mint the corresponding |TokenManager|
+// to add new accounts and be able to mint the corresponding `TokenManager`
 // specialized instances for thid party agents and first party ledger client.
 //
 // This is only meant to be used by the Framework and will be replaced with
-// |AccountManager| in the near future.
+// `AccountManager` in the near future.
 [Discoverable]
 protocol AccountProvider {
     // Adds a new user account. This involves talking to the identity provider and
@@ -58,17 +58,17 @@ protocol AccountProvider {
     // TODO(ukode): Modify this api to take account_id and IDP as input once the
     // Account struct is cleaned up.
     //
-    // If |revoke_all| is set to true, then all device credentials are revoked
+    // If `revoke_all` is set to true, then all device credentials are revoked
     // both locally and remotely on the backend server and user is logged out from
-    // all devices. If |revoke_all| is set to false, then credentials stored
+    // all devices. If `revoke_all` is set to false, then credentials stored
     // locally are wiped. This includes cached tokens such as access/id and
     // firebase tokens and the locally persisted refresh token. By default,
-    // |revoke_all| is set to false and deletes account only from that given
+    // `revoke_all` is set to false and deletes account only from that given
     // device.
     RemoveAccount(Account account, bool revoke_all) -> (AuthErr status);
 
-    // This signals |AccountProvider| to teardown itself. After the
+    // This signals `AccountProvider` to teardown itself. After the
     // AccountProvider responds by closing its handle, the caller may terminate
-    // the |AccountProvider| application if it hasn't already exited.
+    // the `AccountProvider` application if it hasn't already exited.
     Terminate();
 };

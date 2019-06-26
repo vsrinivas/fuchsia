@@ -17,7 +17,7 @@ struct CreateModuleParameterMapEntry {
 
 union CreateModuleParameterInfo {
     // Instructs parameter map initialization to either use an existing Link
-    // (|link_path| is set) or create a new Link (|create_link| is set).
+    // (`link_path` is set) or create a new Link (`create_link` is set).
     LinkPath link_path;
     CreateLinkInfo create_link;
 };

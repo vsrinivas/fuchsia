@@ -7,12 +7,12 @@ library fuchsia.tracing.controller;
 // The controller interface used by the trace tool to start/stop tracing.
 [Discoverable]
 protocol Controller {
-    // Requests to start tracing with the specified |options|.
+    // Requests to start tracing with the specified `options`.
     //
     // The trace controller acknowledges the request when all
-    // registered providers have been started or after |options.start_timeout_milliseconds| milliseconds.
+    // registered providers have been started or after `options.start_timeout_milliseconds` milliseconds.
     //
-    // The trace controller emits trace data to |output| as a sequence of
+    // The trace controller emits trace data to `output` as a sequence of
     // binary formatted trace records.  Traces obtained from different providers
     // are delimited by metadata records within the stream.
     //
@@ -64,7 +64,7 @@ table TraceOptions {
     // TODO(FIDL-609): Default to 4.
     2: uint32 buffer_size_megabytes_hint;
 
-    /// Acknowledge start request after at most |start_timeout_milliseconds|.
+    /// Acknowledge start request after at most `start_timeout_milliseconds`.
     // TODO(FIDL-609): Default to 5000.
     3: uint64 start_timeout_milliseconds;
 

@@ -15,7 +15,7 @@ using fuchsia.mem;
 //       operations to watchers of a story (through SessionWatcher) as are used
 //       to control a story.
 union StoryCommand {
-    // Sets the focus state of the story to |set_focus_state.focused|.
+    // Sets the focus state of the story to `set_focus_state.focused`.
     SetFocusState set_focus_state;
 
     // Adds a Mod.
@@ -38,8 +38,8 @@ struct SetFocusState {
     bool focused;
 };
 
-// Adds a mod described by |intent| to the story with name |mod_name|. If
-// |mod_name| already exists in the story, the mod is updated.
+// Adds a mod described by `intent` to the story with name `mod_name`. If
+// `mod_name` already exists in the story, the mod is updated.
 struct AddMod {
     // The name of the mod within the story. The mod's name acts as the unique
     // ID of the mod, scoped to the story in which it is contained. Since
@@ -48,64 +48,64 @@ struct AddMod {
     //
     // Clients should treat the full vector as a single opaque value.
     //
-    // Clients should provide |mod_name_transitional| instead.
-    // If both are provided, |mod_name| is ignored.
+    // Clients should provide `mod_name_transitional` instead.
+    // If both are provided, `mod_name` is ignored.
     //
     // TODO(MF-148): Convert to string
     vector<string> mod_name;
 
     // The name of the mod within the story. This should be used instead of
-    // |mod_name|. If provided, it is equivalent to passing |mod_name| with
-    // a single item. If both are provided, |mod_name| is ignored.
+    // `mod_name`. If provided, it is equivalent to passing `mod_name` with
+    // a single item. If both are provided, `mod_name` is ignored.
     //
     // TODO(MF-148): Remove
     string? mod_name_transitional;
 
     Intent intent;
 
-    // |surface_relation| defines the visual relationship between this mod and the
-    // mod at |surface_parent_mod_name|.
+    // `surface_relation` defines the visual relationship between this mod and the
+    // mod at `surface_parent_mod_name`.
     SurfaceRelation surface_relation;
     vector<string>? surface_parent_mod_name;
 };
 
-// Removes the mod under |mod_name| from the story.
+// Removes the mod under `mod_name` from the story.
 struct RemoveMod {
     // The name of the mod within the story.
     //
-    // Clients should provide |mod_name_transitional| instead.
-    // If both are provided, |mod_name| is ignored.
+    // Clients should provide `mod_name_transitional` instead.
+    // If both are provided, `mod_name` is ignored.
     //
     // TODO(MF-148): Convert to string
     vector<string> mod_name;
 
     // The name of the mod within the story. This should be used instead of
-    // |mod_name|. If provided, it is equivalent to passing |mod_name| with
-    // a single item. If both are provided, |mod_name| is ignored.
+    // `mod_name`. If provided, it is equivalent to passing `mod_name` with
+    // a single item. If both are provided, `mod_name` is ignored.
     //
     // TODO(MF-148): Remove
     string? mod_name_transitional;
 };
 
-// Sets the value of link at |path| to |value|.
+// Sets the value of link at `path` to `value`.
 struct SetLinkValue {
     LinkPath path;
     fuchsia.mem.Buffer? value;
 };
 
-// Instructs the session shell to focus the mod under |mod_name|.
+// Instructs the session shell to focus the mod under `mod_name`.
 struct FocusMod {
     // The name of the mod within the story.
     //
-    // Clients should provide |mod_name_transitional| instead.
-    // If both are provided, |mod_name| is ignored.
+    // Clients should provide `mod_name_transitional` instead.
+    // If both are provided, `mod_name` is ignored.
     //
     // TODO(MF-148): Convert to string
     vector<string> mod_name;
 
     // The name of the mod within the story. This should be used instead of
-    // |mod_name|. If provided, it is equivalent to passing |mod_name| with
-    // a single item. If both are provided, |mod_name| is ignored.
+    // `mod_name`. If provided, it is equivalent to passing `mod_name` with
+    // a single item. If both are provided, `mod_name` is ignored.
     //
     // TODO(MF-148): Remove
     string? mod_name_transitional;

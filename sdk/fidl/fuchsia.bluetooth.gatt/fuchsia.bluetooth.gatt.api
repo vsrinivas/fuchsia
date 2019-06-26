@@ -1,6 +1,6 @@
 {
-  "fidl/fuchsia.bluetooth.gatt/client.fidl": "457510d838a93f0881b0052e971f5bf9",
+  "fidl/fuchsia.bluetooth.gatt/client.fidl": "16b95618e5212e09111a0f063d33c035",
   "fidl/fuchsia.bluetooth.gatt/constants.fidl": "f603294e3d589578aa236dd79e99df78",
-  "fidl/fuchsia.bluetooth.gatt/server.fidl": "46e4b632eec6eb4a38b87dec5cdb571b",
-  "fidl/fuchsia.bluetooth.gatt/types.fidl": "23dfe8481efd3b74570a088106bb18a5"
+  "fidl/fuchsia.bluetooth.gatt/server.fidl": "c2e53809ba228db0d25d6970c45814bb",
+  "fidl/fuchsia.bluetooth.gatt/types.fidl": "e25c5aacd6b9d436c8bc0e24c7195f4e"
 }

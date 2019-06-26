@@ -11,9 +11,9 @@ using fuchsia.net.http;
 protocol NavigationEventListener {
     /// Called when user-visible navigation state has changed since Frame
     /// creation or the last acknowledgement callback, whichever occurred last.
-    /// |change| will contain all the differences in navigation state since the
+    /// `change` will contain all the differences in navigation state since the
     /// last acknowledgement. Any unchanged properties will be left unset in
-    /// |change|.
+    /// `change`.
     /// Implementer must call the acknowledgement callback to receive new
     /// navigation events.
     OnNavigationStateChanged(NavigationState change) -> ();
@@ -28,14 +28,14 @@ enum NavigationControllerError : int32 {
 /// Provides methods for controlling and querying the navigation state
 /// of a Frame.
 protocol NavigationController {
-    /// Tells the Frame to navigate to a |url|.
+    /// Tells the Frame to navigate to a `url`.
     ///
-    /// |url|:    The address to navigate to.
-    /// |params|: Additional parameters that affect how the resource will be
+    /// `url`:    The address to navigate to.
+    /// `params`: Additional parameters that affect how the resource will be
     ///           loaded (e.g. cookies, HTTP headers, etc.)
     ///
     /// If an error occured, the NavigationControllerError will be set:
-    /// INVALID_URL: The |url| parameter is invalid.
+    /// INVALID_URL: The `url` parameter is invalid.
     LoadUrl(Url url, LoadUrlParams params)
         -> () error NavigationControllerError;
 

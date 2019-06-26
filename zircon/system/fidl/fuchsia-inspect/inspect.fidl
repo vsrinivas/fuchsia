@@ -9,7 +9,7 @@ union PropertyValue {
     vector<uint8> bytes;
 };
 
-// A string property on an |Object|. Consisting of a key and value.
+// A string property on an `Object`. Consisting of a key and value.
 struct Property {
     string key;
     PropertyValue value;
@@ -28,14 +28,14 @@ struct Metric {
     MetricValue value;
 };
 
-// An |Object| has a name and 0 or more properties and metrics.
+// An `Object` has a name and 0 or more properties and metrics.
 struct Object {
     string name;
     vector<Property>? properties;
     vector<Metric>? metrics;
 };
 
-// The |Inspect| interface provides a point for Components to expose
+// The `Inspect` interface provides a point for Components to expose
 // structured Objects for inspection. An Object may have 0 or more children.
 [Discoverable]
 protocol Inspect {

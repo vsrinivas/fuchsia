@@ -91,7 +91,7 @@ struct LaunchInfo {
 };
 
 protocol Realm {
-    // Launch a new guest instance into this environment. The |cid| of the
+    // Launch a new guest instance into this environment. The `cid` of the
     // instance is returned so that it can be uniquely identified.
     LaunchInstance(LaunchInfo launch_info,
                    request<Guest> controller)
@@ -100,13 +100,13 @@ protocol Realm {
     // Query for guests running in this environment.
     ListInstances() -> (vector<InstanceInfo> instances);
 
-    // Connect to a currently running guest instance identified by |cid|. The
-    // |cid| can be found via the return value of |LaunchInstance| or a call to
-    // |ListInstances|.
+    // Connect to a currently running guest instance identified by `cid`. The
+    // `cid` can be found via the return value of `LaunchInstance` or a call to
+    // `ListInstances`.
     ConnectToInstance(uint32 cid, request<Guest> controller);
 
     // Connect to the memory balloon of a currently running guest instance
-    // identified by |cid|.
+    // identified by `cid`.
     ConnectToBalloon(uint32 cid, request<BalloonController> controller);
 
     // Returns an interface that can be used to access the host vsock endpoint.

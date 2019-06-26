@@ -18,27 +18,27 @@ protocol Central {
 
     // Returns information about a single peripheral that is known to the system from previous scan,
     // connection, and/or bonding procedures based on its unique identifier. Returns null if
-    // |identifier| is not recognized.
+    // `identifier` is not recognized.
     GetPeripheral(string identifier) -> (RemoteDevice? peripheral);
 
     // Initiates a scan session for nearby peripherals and broadcasters. Discovered devices will be
     // reported via CentralDelegate.OnDeviceDiscovered(). If a scan session is already in progress,
-    // |filter| will replace the existing session's filter.
+    // `filter` will replace the existing session's filter.
     //
-    // If |filter| is null or empty (i.e. none of its fields has been populated) then the delegate
+    // If `filter` is null or empty (i.e. none of its fields has been populated) then the delegate
     // will be notified for all discoverable devices that are found. This is not recommended; clients
-    // should generally filter results by at least one of |filter.service_uuids|,
-    // |filter.service_data|, and/or |filter.manufacturer_identifier|.
+    // should generally filter results by at least one of `filter.service_uuids`,
+    // `filter.service_data`, and/or `filter.manufacturer_identifier`.
     StartScan(ScanFilter? filter) -> (fuchsia.bluetooth.Status status);
 
     // Terminate a previously started scan session.
     StopScan();
 
     // Creates a connection to the peripheral device with the given identifier.
-    // Returns the status of the operation in |status|.
+    // Returns the status of the operation in `status`.
     //
-    // On success, |gatt_client| will be bound and can be used for GATT client
-    // role procedures. On failure, |gatt_client| will be closed and |status| will
+    // On success, `gatt_client` will be bound and can be used for GATT client
+    // role procedures. On failure, `gatt_client` will be closed and `status` will
     // indicate an error.
     ConnectPeripheral(string identifier, request<fuchsia.bluetooth.gatt.Client> gatt_client) -> (fuchsia.bluetooth.Status status);
 
@@ -49,7 +49,7 @@ protocol Central {
     // Central.StopScan() or another unexpected condition.
     -> OnScanStateChanged(bool scanning);
 
-    // Called for each peripheral/broadcaster that is discovered during a scan session. |rssi|
+    // Called for each peripheral/broadcaster that is discovered during a scan session. `rssi`
     // contains the received signal strength of the advertising packet that generated this event, if
     // available.
     -> OnDeviceDiscovered(RemoteDevice device);

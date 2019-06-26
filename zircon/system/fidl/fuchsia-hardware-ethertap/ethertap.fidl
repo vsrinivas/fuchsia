@@ -38,7 +38,7 @@ struct Config {
 };
 
 /// Provides control over the created tap device. The lifetime of the device itself is tied to the
-/// channel over which this protocol is served, closing a |TapDevice| channel will trigger the
+/// channel over which this protocol is served, closing a `TapDevice` channel will trigger the
 /// destruction and deallocation of the underlying tap device.
 [Layout = "Simple"]
 protocol TapDevice {
@@ -49,7 +49,7 @@ protocol TapDevice {
     -> OnFrame(vector<uint8>:MAX_MTU data);
     /// Sets online status of ethertap device.
     SetOnline(bool online);
-    /// If |OPT_REPORT_PARAM| is set on |options|, calls to EthmacSetParam will be routed to this
+    /// If `OPT_REPORT_PARAM` is set on `options`, calls to EthmacSetParam will be routed to this
     /// event, containing the set parameters request arguments.
     -> OnReportParams(uint32 param, int32 value, vector<uint8>:MAX_PARAM_DATA? data);
 };
@@ -57,9 +57,9 @@ protocol TapDevice {
 /// Ethertap driver interface.
 [Layout = "Simple"]
 protocol TapControl {
-    /// Opens a named device with given |name| and |config|.
-    /// |name| is only used for debugging purposes.
-    /// If |config| is not valid or the tap device could not be created, an error status is returned
-    /// and no |device| is created.
+    /// Opens a named device with given `name` and `config`.
+    /// `name` is only used for debugging purposes.
+    /// If `config` is not valid or the tap device could not be created, an error status is returned
+    /// and no `device` is created.
     OpenDevice(string:MAX_NAME_LENGTH name, Config config, request<TapDevice> device) -> (zx.status s);
 };

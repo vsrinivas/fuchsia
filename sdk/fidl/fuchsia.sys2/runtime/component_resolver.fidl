@@ -22,15 +22,15 @@ using zx;
 protocol ComponentResolver {
     // Resolves a component with the given URL.
     //
-    // |component_url| is the unescaped URL of the component to resolve.
+    // `component_url` is the unescaped URL of the component to resolve.
     //
-    // If successful, returns |ZX_OK| and information about the component
+    // If successful, returns `ZX_OK` and information about the component
     // that was resolved.
     //
-    // On failure, returns null |info| and...
-    // - |ZX_ERR_INVALID_ARGS|: The component's URL was malformed.
-    // - |ZX_ERR_NOT_FOUND|: The component does not exist.
-    // - |ZX_ERR_UNAVAILABLE|: The resolver was unable to retrieve or parse
+    // On failure, returns null `info` and...
+    // - `ZX_ERR_INVALID_ARGS`: The component's URL was malformed.
+    // - `ZX_ERR_NOT_FOUND`: The component does not exist.
+    // - `ZX_ERR_UNAVAILABLE`: The resolver was unable to retrieve or parse
     //   the component's resources.
     Resolve(string component_url)
         -> (zx.status status, Component component);

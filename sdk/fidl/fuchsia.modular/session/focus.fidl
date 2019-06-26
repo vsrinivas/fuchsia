@@ -45,7 +45,7 @@ protocol FocusProvider {
     /// Requests session shell to change focus on this device. If session shell
     /// responds to this request, focus shall be taken away from
     /// previously focused story and an update will be sent on
-    /// FocusWatcher.OnFocusChange(). If |story_id| is NULL, the timeline
+    /// FocusWatcher.OnFocusChange(). If `story_id` is NULL, the timeline
     /// is brought back into focus.
     ///
     // TODO(alhaad): Consider making this available for remote devices as
@@ -67,8 +67,8 @@ struct FocusInfo {
     /// The id of the focused story.  If null, no stories are focused.
     string? focused_story_id;
 
-    /// The time the focused story on the device |device_id| was last
-    /// changed. 0 if no focus has ever been set for device |device_id|.
+    /// The time the focused story on the device `device_id` was last
+    /// changed. 0 if no focus has ever been set for device `device_id`.
     uint64 last_focus_change_timestamp;
 };
 

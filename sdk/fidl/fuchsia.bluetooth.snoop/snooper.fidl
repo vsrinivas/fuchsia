@@ -8,11 +8,11 @@ using fuchsia.bluetooth;
 
 /// Timestamp represents the number of seconds and nanoseconds since the Unix epoch.
 struct Timestamp {
-    /// Valid values for |subsec_nanos| can be greater than 10^9-1. Therefore the total
-    /// seconds elapsed since the epoch is defined by the value of |seconds| plus
-    /// |subsec_nanos| / 10^9 - the value of |seconds| alone may not be sufficient.
+    /// Valid values for `subsec_nanos` can be greater than 10^9-1. Therefore the total
+    /// seconds elapsed since the epoch is defined by the value of `seconds` plus
+    /// `subsec_nanos` / 10^9 - the value of `seconds` alone may not be sufficient.
     ///
-    /// It is invalid for the carry from |subsec_nanos| to overflow the |seconds| field.
+    /// It is invalid for the carry from `subsec_nanos` to overflow the `seconds` field.
     /// A client or server should reject such data as malformed.
     uint32 subsec_nanos;
     uint64 seconds;
@@ -42,27 +42,27 @@ struct SnoopPacket {
 };
 
 /// Interface to receive packets recorded as received or transmitted for a Bluetooth host.
-/// Packets are received by the client as datagrams through the fidl channel as |OnPacket|
+/// Packets are received by the client as datagrams through the fidl channel as `OnPacket`
 /// events.
 [Discoverable]
 protocol Snoop {
     /// Subscribe to receive packets from the server. Packets that have been recorded are sent
     /// first.
     ///
-    /// If |follow| is true, the channel stays open and packets are sent to the client as
-    /// the snoop server receives them. If |follow| is false, the channel is closed by the server
+    /// If `follow` is true, the channel stays open and packets are sent to the client as
+    /// the snoop server receives them. If `follow` is false, the channel is closed by the server
     /// when all recorded packets have been sent.
     ///
-    /// A |host_device| name may be provided; if so, only events from that host are sent to the client.
-    /// If |host_device| is absent, the client is sent events from all host devices.
+    /// A `host_device` name may be provided; if so, only events from that host are sent to the client.
+    /// If `host_device` is absent, the client is sent events from all host devices.
     ///
     /// Errors:
-    ///   |Start| can only be called once per connection. After the first request, subsequent requests
+    ///   `Start` can only be called once per connection. After the first request, subsequent requests
     ///   always return an error.
-    ///   |host_device| values that are not recognized by the server return an error.
+    ///   `host_device` values that are not recognized by the server return an error.
     Start(bool follow, string? host_device) -> (fuchsia.bluetooth.Status status);
 
     /// An event containing a packet that the client has registered interest in receiving and the
-    /// |host_device| which generated the packet.
+    /// `host_device` which generated the packet.
     -> OnPacket(string host_device, SnoopPacket packet);
 };

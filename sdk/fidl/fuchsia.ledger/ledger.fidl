@@ -27,11 +27,11 @@ struct PageId {
 /// Base interface for all services offered by the Ledger.
 ///
 /// In case of an unexpected error on one of the service offered by the Ledger,
-/// the service will close the connected channel, sending a |zx.status| as an epitaph.
+/// the service will close the connected channel, sending a `zx.status` as an epitaph.
 ///
 /// If a client needs to ensure a sequence of operation has been processed by
-/// the service, it can issue a |Sync| command. The response will be send once
-/// all request started before the |Sync| request has been processed by the
+/// the service, it can issue a `Sync` command. The response will be send once
+/// all request started before the `Sync` request has been processed by the
 /// service.
 [FragileBase]
 protocol Syncable {
@@ -43,11 +43,11 @@ protocol Ledger {
     compose Syncable;
 
     /// Retrieves the page with the given identifier, creating it if needed, and binds
-    /// |page_request| to it. A |null| identifier can be passed to create a new page with a random
+    /// `page_request` to it. A `null` identifier can be passed to create a new page with a random
     /// unique identifier. It is allowed to connect to the same page concurrently multiple times.
     ///
     /// Parameters:
-    /// |id| the identifier of the page, or |null| to create a new page with a random identifier.
+    /// `id` the identifier of the page, or `null` to create a new page with a random identifier.
     GetPage(PageId? id, request<Page> page_request);
 
     /// Gets the page with identifier
@@ -56,7 +56,7 @@ protocol Ledger {
     /// GetPage([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], page_request).
     GetRootPage(request<Page> page_request);
 
-    /// Sets the |ConflictResolverFactory| to use for resolving conflicts on pages.
+    /// Sets the `ConflictResolverFactory` to use for resolving conflicts on pages.
     /// If this method has never been called, a last-one-wins policy will be used
     /// for every page. If this method is called multiple times, the factories are
     /// kept and conflict resolver requests are sent to one of the connected
@@ -79,7 +79,7 @@ struct Token {
 };
 
 /// The result of a wait for conflict resolution. See
-/// |Page.WaitForConflictResolution| for details.
+/// `Page.WaitForConflictResolution` for details.
 enum ConflictResolutionWaitStatus {
     /// No conflict was observed when the callback was registered.
     NO_CONFLICTS = 0;
@@ -96,13 +96,13 @@ protocol Page {
     GetId() -> (PageId id);
 
     /// Creates a snapshot of the page, allowing the client app to read a
-    /// consistent view of the content of the page. If |key_prefix| is provided,
+    /// consistent view of the content of the page. If `key_prefix` is provided,
     /// the resulting snapshot includes only the entries with matching keys.
     ///
-    /// If |watcher| is provided, it will receive notifications for changes of the
+    /// If `watcher` is provided, it will receive notifications for changes of the
     /// page state on this page connection newer than the resulting snapshot.
-    /// Change notifications will only contain the entries matching |key_prefix|.
-    /// To receive all changes, use an empty |key_prefix|.
+    /// Change notifications will only contain the entries matching `key_prefix`.
+    /// To receive all changes, use an empty `key_prefix`.
     GetSnapshot(request<PageSnapshot> snapshot_request,
                 Key key_prefix, PageWatcher? watcher);
 
@@ -113,19 +113,19 @@ protocol Page {
     /// progress, the list of mutations bundled together is tied to the current
     /// transaction. If no transaction is in progress, mutations will be bundled
     /// with the following rules:
-    /// - A call to either |GetSnapshot()| or |StartTransaction()| will
+    /// - A call to either `GetSnapshot()` or `StartTransaction()` will
     ///   commit any pending mutations.
     /// - All pending mutations will regularly be bundled together and committed.
     ///   They are guaranteed to be persisted as soon as the client receives a
     ///   successful status.
-    /// |Put()| and |PutWithPriority()| can be used for small values that
+    /// `Put()` and `PutWithPriority()` can be used for small values that
     /// fit inside a FIDL message. If the value is bigger, a reference must be
-    /// first created using |CreateReferenceFromSocket()| or
-    /// |CreateReferenceFromBuffer()| and then |PutReference()| can be used.
-    /// |PutWithPriority()| and |PutReference()| have an additional |priority|
-    /// parameter managing the synchronization policy for this value. |Put()| uses
-    /// a default priority of |Priority.EAGER|. For the list of available
-    /// priorities and their definition, see |Priority|.
+    /// first created using `CreateReferenceFromSocket()` or
+    /// `CreateReferenceFromBuffer()` and then `PutReference()` can be used.
+    /// `PutWithPriority()` and `PutReference()` have an additional `priority`
+    /// parameter managing the synchronization policy for this value. `Put()` uses
+    /// a default priority of `Priority.EAGER`. For the list of available
+    /// priorities and their definition, see `Priority`.
     Put(Key key, bytes value);
     PutWithPriority(Key key, bytes value,
                     Priority priority);
@@ -144,13 +144,13 @@ protocol Page {
 
     // References.
     /// Creates a new reference. The object is not part of any commit. It must be
-    /// associated with a key using |PutReference()|. The content of the reference
+    /// associated with a key using `PutReference()`. The content of the reference
     /// will be the content of the socket. The content size must be equal to
-    /// |size|, otherwise the call will fail.
+    /// `size`, otherwise the call will fail.
     CreateReferenceFromSocket(uint64 size, handle<socket> data)
         -> (Reference reference) error zx.status;
     /// Creates a new reference. The object is not part of any commit. It must be
-    /// associated with a key using |PutReference()|. The content of the reference
+    /// associated with a key using `PutReference()`. The content of the reference
     /// will be the content of the buffer.
     CreateReferenceFromBuffer(fuchsia.mem.Buffer buffer)
         -> (Reference reference) error zx.status;
@@ -159,20 +159,20 @@ protocol Page {
 
     /// Transactions allow the client to ensures changes are seen atomically by
     /// observers of this page. Once a transaction is started with
-    /// |StartTransaction()|, every call to |Put(...)| and |Delete(...)| will not
-    /// be visible until either |Commit()| is called, and all changes are applied
-    /// in a single commit, or |Rollback()| is called and all changes are
+    /// `StartTransaction()`, every call to `Put(...)` and `Delete(...)` will not
+    /// be visible until either `Commit()` is called, and all changes are applied
+    /// in a single commit, or `Rollback()` is called and all changes are
     /// discarded.
     ///
     /// Parallel transactions on the same *page connection* are not allowed, and
-    /// calling |StartTransaction()| when a transaction is already in progress
+    /// calling `StartTransaction()` when a transaction is already in progress
     /// returns an error. However, a client is free to connect to the same page
     /// multiple times, and run parallel transactions on the same page using
     /// separate connections. In this case, committing each transaction creates
     /// divergent commits, which are later subject to conflict resolution.
     ///
     /// When a transaction is in progress, the page content visible *on this page
-    /// connection* is pinned to the state from when |StartTransaction()| was
+    /// connection* is pinned to the state from when `StartTransaction()` was
     /// called. In particular, no watch notifications are delivered, and the
     /// conflict resolution is not invoked while the transaction is in progress. If
     /// conflicting changes are made or synced while the transaction is in
@@ -219,7 +219,7 @@ enum Priority {
 /// A pair of key and value.
 struct Entry {
     Key key;
-    /// |value| is null if the value requested has the LAZY priority and is not
+    /// `value` is null if the value requested has the LAZY priority and is not
     /// present on the device. Clients must use a Fetch call to retrieve the
     /// contents.
     fuchsia.mem.Buffer? value;
@@ -234,7 +234,7 @@ struct InlinedValue {
 /// A pair of key and an inlined value.
 struct InlinedEntry {
     Key key;
-    /// |value| is null if the value requested has the LAZY priority and is not
+    /// `value` is null if the value requested has the LAZY priority and is not
     /// present on the device. Clients must use a Fetch call to retrieve the
     /// contents.
     InlinedValue? inlined_value;
@@ -248,67 +248,67 @@ enum Error {
     NETWORK_ERROR = 3;
 };
 
-/// The content of a page at a given time. Closing the connection to a |Page|
-/// interface closes all |PageSnapshot| interfaces it created. The contents
+/// The content of a page at a given time. Closing the connection to a `Page`
+/// interface closes all `PageSnapshot` interfaces it created. The contents
 /// provided by this interface are limited to the prefix provided to the
 /// Page.GetSnapshot() call.
 protocol PageSnapshot {
     compose Syncable;
 
-    /// Returns the entries in the page with keys greater or equal to |key_start|
-    /// using the lexicographic order. If |key_start| is empty, all entries are
-    /// returned. If the result fits in a single fidl message, |next_token| will
-    /// be equal to NULL. Otherwise, |next_token| will have a non-NULL value. To
-    /// retrieve the remaining results, another call to |GetEntries| should be
-    /// made, initializing the optional |token| argument with the value of
-    /// |next_token| returned in the previous call. |next_token| will not be
+    /// Returns the entries in the page with keys greater or equal to `key_start`
+    /// using the lexicographic order. If `key_start` is empty, all entries are
+    /// returned. If the result fits in a single fidl message, `next_token` will
+    /// be equal to NULL. Otherwise, `next_token` will have a non-NULL value. To
+    /// retrieve the remaining results, another call to `GetEntries` should be
+    /// made, initializing the optional `token` argument with the value of
+    /// `next_token` returned in the previous call. `next_token` will not be
     /// NULL as long as there are more results and NULL once finished.
-    /// Only |EAGER| values are guaranteed to be returned inside |entries|.
-    /// Missing |LAZY| values can be retrieved over the network using Fetch().
-    /// The returned |entries| are sorted by |key|.
+    /// Only `EAGER` values are guaranteed to be returned inside `entries`.
+    /// Missing `LAZY` values can be retrieved over the network using Fetch().
+    /// The returned `entries` are sorted by `key`.
     GetEntries(Key key_start, Token? token)
         -> (vector<Entry>:NO_LINT entries, Token? next_token);
 
-    /// Same as |GetEntries()|. The connection will be closed with a
+    /// Same as `GetEntries()`. The connection will be closed with a
     /// ZX_ERR_BAD_STATE epitaph if a value does not fit in a FIDL message.
     [Deprecated]
     GetEntriesInline(Key key_start, Token? token)
         -> (vector<InlinedEntry>:NO_LINT entries, Token? next_token);
 
     /// Returns the keys of all entries in the page which are greater or equal to
-    /// |key_start| using the lexicographic order. If |key_start| is empty, all
-    /// keys are returned. The returned |keys| are sorted. If the result fits in
-    /// a single fidl message, |next_token| will be equal to NULL. Otherwise,
-    /// |next_token| will have a non-NULL value. To retrieve the remaining
-    /// results, another call to |GetKeys| should be made, initializing the
-    /// optional |token| argument with the value of |next_token| returned in the
-    /// previous call. |next_token| will not be NULL as long as there are more
+    /// `key_start` using the lexicographic order. If `key_start` is empty, all
+    /// keys are returned. The returned `keys` are sorted. If the result fits in
+    /// a single fidl message, `next_token` will be equal to NULL. Otherwise,
+    /// `next_token` will have a non-NULL value. To retrieve the remaining
+    /// results, another call to `GetKeys` should be made, initializing the
+    /// optional `token` argument with the value of `next_token` returned in the
+    /// previous call. `next_token` will not be NULL as long as there are more
     /// results and NULL once finished.
     GetKeys(Key key_start, Token? token)
         -> (vector<Key>:NO_LINT keys, Token? next_token);
 
     /// Returns the value of a given key.
-    /// Only |EAGER| values are guaranteed to be returned. Calls when the value is
-    /// |LAZY| and not available will return a |NEEDS_FETCH| status. The value can
+    /// Only `EAGER` values are guaranteed to be returned. Calls when the value is
+    /// `LAZY` and not available will return a `NEEDS_FETCH` status. The value can
     /// be retrieved over the network using a Fetch() call.
     Get(Key key) -> (fuchsia.mem.Buffer buffer) error Error;
 
     /// Returns the value of a given key if it fits in a FIDL message.
     /// The connection will be closed with a ZX_ERR_BAD_STATE epitaph if the
     /// value does not fit in a FIDL message.
-    /// See |Get()| for additional information.
+    /// See `Get()` for additional information.
     GetInline(Key key) -> (InlinedValue value) error Error;
 
     /// Fetches the value of a given key, over the network if not already present
-    /// locally. |NETWORK_ERROR| is returned if the download fails (e.g.: network
+    /// locally. `NETWORK_ERROR` is returned if the download fails (e.g.: network
     /// is not available).
     Fetch(Key key) -> (fuchsia.mem.Buffer buffer) error Error;
 
     /// Fetches the value of a given key, over the network if not already present
     /// locally, and returns a shared handle of a part of the value of a given
-    /// key, starting at the position that is specified by |offset|. If |offset|
-    /// is less than 0, starts at |-offset| from the end of the value.
-    /// Returns at most |max_size| bytes. If |max_size| is less than 0, returns
+    /// key, starting at the position that is specified by `offset`. If `offset`
+    /// is less than 0, starts at `-offset` from the end of the value.
+    /// Returns at most `max_size` bytes. If `max_size` is less than 0, returns
     /// everything.
     FetchPartial(Key key, int64 offset, int64 max_size)
         -> (fuchsia.mem.Buffer buffer) error Error;
@@ -326,9 +326,9 @@ struct PageChange {
     /// since Unix epoch (i.e., since "1970-01-01 00:00 UTC", ignoring leap
     /// seconds). This value is set by the device that created the change and is
     /// not synchronized across devices. In particular, there is no guarantee that
-    /// the |timestamp| of a follow up change is greater than this one's.
+    /// the `timestamp` of a follow up change is greater than this one's.
     zx.time timestamp;
-    /// List of new and modified entries. |changed_entries| are sorted by |key|.
+    /// List of new and modified entries. `changed_entries` are sorted by `key`.
     vector<Entry>:NO_LINT changed_entries;
     /// List of deleted keys, in sorted order.
     vector<Key>:NO_LINT deleted_keys;
@@ -340,10 +340,10 @@ struct PageChange {
 /// the contents of multiple transactions may be merged into one OnChange() call.
 protocol PageWatcher {
     /// Called for changes made on the page. If the result fits in a single fidl
-    /// message, |result_state| will be |COMPLETED|. Otherwise, OnChange will be
-    /// called multiple times and |result_state| will be |PARTIAL_STARTED| the
-    /// first time, |PARTIAL_CONTINUED| the following ones and finally
-    /// |PARTIAL_COMPLETED| on the last call. No new OnChange() call will be made
+    /// message, `result_state` will be `COMPLETED`. Otherwise, OnChange will be
+    /// called multiple times and `result_state` will be `PARTIAL_STARTED` the
+    /// first time, `PARTIAL_CONTINUED` the following ones and finally
+    /// `PARTIAL_COMPLETED` on the last call. No new OnChange() call will be made
     /// while the previous one is still active. If clients are interested in the
     /// full content of the page at the time of the change, they can request a
     /// PageSnapshot in the callback. This request is optional and can be requested
@@ -365,9 +365,9 @@ protocol PageWatcher {
 protocol ConflictResolverFactory {
     /// Returns the conflict resolution policy for the given page.
     GetPolicy(PageId page_id) -> (MergePolicy policy);
-    /// Returns a |ConflictResolver| to use for the given page. This will only be
-    /// called if |GetPolicy| for the same page returned |AUTOMATIC_WITH_FALLBACK|
-    /// or |CUSTOM|.
+    /// Returns a `ConflictResolver` to use for the given page. This will only be
+    /// called if `GetPolicy` for the same page returned `AUTOMATIC_WITH_FALLBACK`
+    /// or `CUSTOM`.
     NewConflictResolver(PageId page_id, request<ConflictResolver> resolver);
 };
 
@@ -380,18 +380,18 @@ enum MergePolicy {
     LAST_ONE_WINS = 0;
     /// Commits are automatically merged when no key has been modified on both
     /// sides. When a key has been modified by both commits, conflict resolution is
-    /// delegated to a user-provided |ConflictResolver| that is created by calling
-    /// |ConflictResolverFactory.NewConflictResolver|. A single |ConflictResolver|
-    /// is created for each page. When the |ConflictResolver| is disconnected, a
+    /// delegated to a user-provided `ConflictResolver` that is created by calling
+    /// `ConflictResolverFactory.NewConflictResolver`. A single `ConflictResolver`
+    /// is created for each page. When the `ConflictResolver` is disconnected, a
     /// new one is requested.
     AUTOMATIC_WITH_FALLBACK = 1;
-    /// All merges are resolved by a user-provided |ConflictResolver| as described
+    /// All merges are resolved by a user-provided `ConflictResolver` as described
     /// above, even when commits to be merged change a disjoined set of keys.
     CUSTOM = 2;
 };
 
-/// A value that is either small enough to be directly embedded in |bytes| or
-/// that is referenced by |reference|.
+/// A value that is either small enough to be directly embedded in `bytes` or
+/// that is referenced by `reference`.
 union BytesOrReference {
     bytes bytes;
     Reference reference;
@@ -399,18 +399,18 @@ union BytesOrReference {
 
 /// Source of the value used to resolve a conflict.
 ///
-/// |DELETE| deletes the key; |NEW| creates a new value; |RIGHT|
+/// `DELETE` deletes the key; `NEW` creates a new value; `RIGHT`
 /// selects the value from the right branch. If no value is sent, the left
 /// branch is selected.
-/// Used by |MergedValue|.
+/// Used by `MergedValue`.
 enum ValueSource {
     RIGHT = 0;
     NEW = 1;
     DELETE = 2;
 };
 
-/// A change in the page. If |source| is set to |NEW|, |new_value| must be set
-/// to the new value. If |source| is not |NEW|, |new_value| and |priority| are
+/// A change in the page. If `source` is set to `NEW`, `new_value` must be set
+/// to the new value. If `source` is not `NEW`, `new_value` and `priority` are
 /// ignored.
 struct MergedValue {
     Key key;
@@ -419,9 +419,9 @@ struct MergedValue {
     Priority priority;
 };
 
-/// An entry in a diff, as returned by |MergeResultProvider|.
+/// An entry in a diff, as returned by `MergeResultProvider`.
 ///
-/// If |base|, |left| or |right| are NULL, this means that the corresponding key
+/// If `base`, `left` or `right` are NULL, this means that the corresponding key
 /// was not present in the base, left or right (respectively) branch of the
 /// page.
 struct DiffEntry {
@@ -434,90 +434,90 @@ struct DiffEntry {
 
 /// A value in a DiffEntry.
 ///
-/// If the value is LAZY and is not present locally, |value| will be NULL. The
-/// value can be retrieved using a |Fetch()| call on a corresponding snapshot.
+/// If the value is LAZY and is not present locally, `value` will be NULL. The
+/// value can be retrieved using a `Fetch()` call on a corresponding snapshot.
 struct Value {
     fuchsia.mem.Buffer? value;
     Priority priority;
 };
 
-/// A merge result provider, obtained from |ConflictResolver.Resolve()|. Can be
+/// A merge result provider, obtained from `ConflictResolver.Resolve()`. Can be
 /// used to retrieve data about the conflict, and provide the merge result. When
-/// all changes have been sent, |Done()| should be called to mark the end of
+/// all changes have been sent, `Done()` should be called to mark the end of
 /// incoming merge changes.
 protocol MergeResultProvider {
     compose Syncable;
 
-    /// |GetFullDiff| returns the set of all key/value pairs (entries) that
+    /// `GetFullDiff` returns the set of all key/value pairs (entries) that
     /// have been modified between the common ancestor (see
-    /// |ConflictResolver.Resolve()|) and the left and right branches.
+    /// `ConflictResolver.Resolve()`) and the left and right branches.
     ///
-    /// Values of |LAZY| keys may not be present on the device. In that case, the
-    /// corresponding Value objects within DiffEntry will have a NULL |value|
-    /// field. If needed, |left| and |right|, provided by the
-    /// |ConflictResolver.Resolve()| method can be used by clients to Fetch these
+    /// Values of `LAZY` keys may not be present on the device. In that case, the
+    /// corresponding Value objects within DiffEntry will have a NULL `value`
+    /// field. If needed, `left` and `right`, provided by the
+    /// `ConflictResolver.Resolve()` method can be used by clients to Fetch these
     /// values. If a key is not present at all in one of the branches, its
     /// corresponding Value object will be NULL.
     ///
-    /// The first call to get the |DiffEntry|s should be done using a NULL
-    /// token. If the result does not fit in a single fidl message, |next_token|
+    /// The first call to get the `DiffEntry`s should be done using a NULL
+    /// token. If the result does not fit in a single fidl message, `next_token`
     /// will have a non-NULL value, which can be used to retrieve the rest of
-    /// the results by calling |GetFullDiff()| with that token.
+    /// the results by calling `GetFullDiff()` with that token.
     GetFullDiff(Token? token)
         -> (vector<DiffEntry>:NO_LINT changes, Token? next_token);
 
-    /// |GetConflictingDiff| returns the set of all key/value pairs that were
+    /// `GetConflictingDiff` returns the set of all key/value pairs that were
     /// modified on both sides to different values, or deleted on one side and
     /// modified on the other.
     ///
-    /// It behaves like |GetFullDiff| otherwise.
+    /// It behaves like `GetFullDiff` otherwise.
     [Deprecated]
     GetConflictingDiff(Token? token)
         -> (vector<DiffEntry>:NO_LINT changes, Token? next_token);
 
-    /// Once the result of the merge has been computed |Merge()| can be called with
+    /// Once the result of the merge has been computed `Merge()` can be called with
     /// all changes that resolve this conflict. If the result does not fit in a
-    /// single fidl message, |Merge()| can be called multiple times. If any of the
-    /// |Merge()| calls fails, i.e. |status| is not |OK|, all following calls will
+    /// single fidl message, `Merge()` can be called multiple times. If any of the
+    /// `Merge()` calls fails, i.e. `status` is not `OK`, all following calls will
     /// fail with the same error.
     ///
-    /// If a key/value pair is sent multiple times in one or several |Merge()|
+    /// If a key/value pair is sent multiple times in one or several `Merge()`
     /// call, only the last pair is taken into account.
     ///
     /// For all keys for which no merged value has been set (either here or
-    /// through |MergeNonConflictingEntries()| below), the left value will be
-    /// used. It is thus not necessary to send a MergedValue with a |LEFT| value
+    /// through `MergeNonConflictingEntries()` below), the left value will be
+    /// used. It is thus not necessary to send a MergedValue with a `LEFT` value
     /// source, unless to overwrite a previous MergedValue.
     Merge(vector<MergedValue>:NO_LINT merge_changes);
 
     /// Automatically merges all non conflicting entries (entries that are
     /// modified on one side only or identical on both sides). This is equivalent
-    /// to sending, through |Merge()|, a MergedValue with a |RIGHT| ValueSource
+    /// to sending, through `Merge()`, a MergedValue with a `RIGHT` ValueSource
     /// for all non-conflicting keys modified on the right side. Conflicting
-    /// entries can still be merged using the |Merge()| method.
+    /// entries can still be merged using the `Merge()` method.
     MergeNonConflictingEntries();
 
-    /// Marks the end of merge changes to resolve this conflict. After |Done()| is
-    /// called |MergeResultProvider| interface cannot be used any more.
+    /// Marks the end of merge changes to resolve this conflict. After `Done()` is
+    /// called `MergeResultProvider` interface cannot be used any more.
     Done();
 };
 
-/// Custom conflict resolver. If a |ConflictResolverFactory| is registered, and
-/// |ConflictResolverFactory.GetPolicy()| returns |AUTOMATIC_WITH_FALLBACK| or
-/// |CUSTOM| when called for a given page, the |NewConflictResolver| method will
-/// be called and will provide a |ConflictResolver|. Each time a custom conflict
+/// Custom conflict resolver. If a `ConflictResolverFactory` is registered, and
+/// `ConflictResolverFactory.GetPolicy()` returns `AUTOMATIC_WITH_FALLBACK` or
+/// `CUSTOM` when called for a given page, the `NewConflictResolver` method will
+/// be called and will provide a `ConflictResolver`. Each time a custom conflict
 /// resolution is needed according to the chosen policy, the method
-/// |ConflictResolver.Resolve()| will be called, and the client will resolve the
+/// `ConflictResolver.Resolve()` will be called, and the client will resolve the
 /// conflict by returning the final value for all conflicting keys as well as
 /// values for any other key that the client wants to change.
 protocol ConflictResolver {
-    /// Method called when a conflict needs to be resolved. |left| and |right|
-    /// contain the snapshots of the two branches and |common_version| that of the
-    /// lowest common ancestor. |common_version| can be NULL if this version is no
+    /// Method called when a conflict needs to be resolved. `left` and `right`
+    /// contain the snapshots of the two branches and `common_version` that of the
+    /// lowest common ancestor. `common_version` can be NULL if this version is no
     /// longer available. The result of the merge can be given through the
-    /// |result_provider|, using the left branch as the base of the merge commit,
+    /// `result_provider`, using the left branch as the base of the merge commit,
     /// i.e. only key/value pairs that are different from the left version of the
-    /// page should be sent. |result_provider| can also be used to retrieve the set
+    /// page should be sent. `result_provider` can also be used to retrieve the set
     /// of differences, i.e. conflicting keys, between the two versions.
     Resolve(PageSnapshot left, PageSnapshot right, PageSnapshot? common_version,
             MergeResultProvider new_result_provider);

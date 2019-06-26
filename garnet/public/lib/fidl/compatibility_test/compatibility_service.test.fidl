@@ -534,10 +534,10 @@ xunion AllTypesXunion {
 
 [Discoverable]
 protocol Echo {
-    // If |forward_to_server| is empty, just returns |value|.
-    // If |forward_to_server| is not empty, it is treated as the URL of a server
+    // If `forward_to_server` is empty, just returns `value`.
+    // If `forward_to_server` is not empty, it is treated as the URL of a server
     // which implements this interface. The server that recieves the non-empty
-    // |forward_to_server| arg acts as a proxy for that other server.
+    // `forward_to_server` arg acts as a proxy for that other server.
     EchoStruct(Struct value, string forward_to_server) -> (Struct value);
 
     // Same as the above, but the server should use the event to return the

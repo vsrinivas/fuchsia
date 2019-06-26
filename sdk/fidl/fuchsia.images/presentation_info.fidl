@@ -4,16 +4,16 @@
 
 library fuchsia.images;
 
-// Information returned by methods such as |ImagePipe.PresentImage()| and
-// |Session.Present()|, when the consumer begins preparing the first frame
+// Information returned by methods such as `ImagePipe.PresentImage()` and
+// `Session.Present()`, when the consumer begins preparing the first frame
 // which includes the presented content.
 struct PresentationInfo {
   // The actual time at which the enqueued operations are anticipated to take
-  // visible effect, expressed in nanoseconds in the |CLOCK_MONOTONIC|
+  // visible effect, expressed in nanoseconds in the `CLOCK_MONOTONIC`
   // timebase.
   //
   // This value increases monotonically with each new frame, typically in
-  // increments of the |presentation_interval|.
+  // increments of the `presentation_interval`.
   uint64 presentation_time;
 
   // The nominal amount of time which is anticipated to elapse between

@@ -7,15 +7,15 @@ library fuchsia.ui.input;
 // Descriptors are used to describe the capabilities of an input device.
 //
 // Devices can have multiple descriptors of multiple kinds, for example:
-// |KeyboardDescriptor|, |MouseDescriptor|, |StylusDescriptor|,
-// |TouchscreenDescriptor| and |SensorDescriptor|
+// `KeyboardDescriptor`, `MouseDescriptor`, `StylusDescriptor`,
+// `TouchscreenDescriptor` and `SensorDescriptor`
 //
-// An input device will generate |InputReport| corresponding to the
+// An input device will generate `InputReport` corresponding to the
 // capabilities of that device listed in its descriptor.
-// For instance a input device with a |KeyboardDescriptor| will generate
-// |KeyboardReport| when a key is pressed on the keyboard.
+// For instance a input device with a `KeyboardDescriptor` will generate
+// `KeyboardReport` when a key is pressed on the keyboard.
 
-// Describe a |Range| of values
+// Describe a `Range` of values
 struct Range {
     int32 min;
     int32 max;
@@ -31,7 +31,7 @@ enum AxisScale {
     LOGARITHMIC = 1;
 };
 
-// An |Axis| is defined as a |range| and |resolution|.
+// An `Axis` is defined as a `range` and `resolution`.
 struct Axis {
     Range range;
     int32 resolution = 1;
@@ -44,7 +44,7 @@ struct AxisF {
     AxisScale scale = LINEAR;
 };
 
-// |MediaButtonsDescriptor| describes the media buttons.
+// `MediaButtonsDescriptor` describes the media buttons.
 struct MediaButtonsDescriptor {
     // A bitmask that represents the list of media buttons available.
     // The mask bit values are located in usages.fidl.
@@ -53,22 +53,22 @@ struct MediaButtonsDescriptor {
 
 // Keyboards
 
-// |KeyboardDescriptor| describes the capabilities of a keyboard.
+// `KeyboardDescriptor` describes the capabilities of a keyboard.
 struct KeyboardDescriptor {
     // The list of HID keyboard usages that this keyboard can generate.
     vector<uint32> keys;
 };
 
-// |KeyboardReport| lists the keys currently pressed down.
+// `KeyboardReport` lists the keys currently pressed down.
 struct KeyboardReport {
-    // |pressed_keys| is the list of HID usage that are currently pressed down on
+    // `pressed_keys` is the list of HID usage that are currently pressed down on
     // the keyboard.
     vector<uint32> pressed_keys;
 };
 
 // Mouse
 
-// |MouseDescriptor| describes the capabilities of a mouse.
+// `MouseDescriptor` describes the capabilities of a mouse.
 struct MouseDescriptor {
     // The range of relative X and Y movement which can be described by a mouse
     // report.
@@ -84,7 +84,7 @@ struct MouseDescriptor {
     uint32 buttons;
 };
 
-// |MouseReport| gives the relative mouvement of the mouse and currently
+// `MouseReport` gives the relative mouvement of the mouse and currently
 // pressed buttons.
 struct MouseReport {
     // Relative X and Y positional displacement.
@@ -101,9 +101,9 @@ struct MouseReport {
 
 // Stylus
 
-// |Stylus| describes the capabilities of a stylus.
+// `Stylus` describes the capabilities of a stylus.
 struct StylusDescriptor {
-    // Ranges for the |x| and |y| axis of the stylus.
+    // Ranges for the `x` and `y` axis of the stylus.
     Axis x;
     Axis y;
 
@@ -116,10 +116,10 @@ struct StylusDescriptor {
     uint32 buttons;
 };
 
-// |StylusReport| describes the current state of the stylus.
+// `StylusReport` describes the current state of the stylus.
 struct StylusReport {
     // Current position of the stylus within the range described in
-    // |StylusDescriptor|
+    // `StylusDescriptor`
     int32 x;
     int32 y;
 
@@ -129,7 +129,7 @@ struct StylusReport {
     // Whether the stylus has made contact with the surface.
     bool is_in_contact;
 
-    // Whether the stylus is within range. If |is_in_contact| is false, then the stylus
+    // Whether the stylus is within range. If `is_in_contact` is false, then the stylus
     // is hovering.
     bool in_range;
 
@@ -142,23 +142,23 @@ struct StylusReport {
 
 // Touchscreen
 
-// |TouchscreenDescriptor| describes the capabilities of a touchscreen.
+// `TouchscreenDescriptor` describes the capabilities of a touchscreen.
 struct TouchscreenDescriptor {
-    // Ranges of the |x| and |y| axis.
+    // Ranges of the `x` and `y` axis.
     Axis x;
     Axis y;
     uint32 max_finger_id;
 };
 
-// |Touch| describes one touch on a touchscreen, which should correspond to
+// `Touch` describes one touch on a touchscreen, which should correspond to
 // one finger.
 struct Touch {
     // Identifier for a finger that is down.
-    // Note: |finger_id| might not be sequential and will range from 0 to
-    // |max_finger_id|
+    // Note: `finger_id` might not be sequential and will range from 0 to
+    // `max_finger_id`
     uint32 finger_id;
 
-    // Location within the axis defined in |TouchscreenDescriptor|
+    // Location within the axis defined in `TouchscreenDescriptor`
     int32 x;
     int32 y;
 
@@ -167,8 +167,8 @@ struct Touch {
     uint32 height;
 };
 
-// |TouchscreenReport| describes the current touches recorded by the touchscreen
-// and holds a |Touch| per finger down.
+// `TouchscreenReport` describes the current touches recorded by the touchscreen
+// and holds a `Touch` per finger down.
 struct TouchscreenReport {
     vector<Touch> touches;
 };
@@ -191,7 +191,7 @@ enum SensorLocation {
     LID = 2;
 };
 
-// |SensorDescriptor| describes the capabilities of a sensor device.  It does
+// `SensorDescriptor` describes the capabilities of a sensor device.  It does
 // not capture properties that can be changed after initialization, such as the
 // current sampling frequency.
 struct SensorDescriptor {
@@ -213,13 +213,13 @@ struct SensorDescriptor {
     int32 phys_max;
 };
 
-// |SensorReport| describes the sensor event delivered from the event stream.
+// `SensorReport` describes the sensor event delivered from the event stream.
 union SensorReport {
     array<int16>:3 vector;
     uint16 scalar;
 };
 
-/// |MediaButtonsReport| describes the media buttons event delivered from the event stream.
+/// `MediaButtonsReport` describes the media buttons event delivered from the event stream.
 /// Each bool in the report represents a single button where true means the button
 /// is being pressed. A single report should be sent on every state change.
 struct MediaButtonsReport {
@@ -238,7 +238,7 @@ struct DeviceInfo {
     string name;
 };
 
-// |DeviceDescriptor| describes one input device.
+// `DeviceDescriptor` describes one input device.
 struct DeviceDescriptor {
     DeviceInfo? device_info;
     KeyboardDescriptor? keyboard;
@@ -249,9 +249,9 @@ struct DeviceDescriptor {
     SensorDescriptor? sensor;
 };
 
-// |InputReport| is an input |report| triggered by an input device.
+// `InputReport` is an input `report` triggered by an input device.
 struct InputReport {
-    // |event_time| is in nanoseconds when the event was recorded.
+    // `event_time` is in nanoseconds when the event was recorded.
     uint64 event_time;
 
     KeyboardReport? keyboard;

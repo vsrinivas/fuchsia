@@ -5,8 +5,8 @@
 library fuchsia.modular;
 
 /// Addresses a Link within a story. A LinkPath struct should be treated as an
-/// opaque unique identifier of a link instance.  The |module_path| and
-/// |link_name| components are leftovers from legacy code and have no external
+/// opaque unique identifier of a link instance.  The `module_path` and
+/// `link_name` components are leftovers from legacy code and have no external
 /// meaning.
 /// TODO(thatguy,lindkvist): Replace this structure with a vector<>. MI4-1021
 struct LinkPath {

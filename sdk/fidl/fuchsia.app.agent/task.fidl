@@ -23,18 +23,18 @@ table TaskInfo {
 /// Describes the condition that needs to be met for a task to become scheduled.
 /// This is not yet complete and will be extended or changed.
 xunion ScheduleCondition {
-    /// Triggers when a new message arrives on the queue named by |message_queue_message|.
+    /// Triggers when a new message arrives on the queue named by `message_queue_message`.
     fuchsia.app.MessageQueueName message_on_message_queue;
 
-    /// Triggers when a the message queue named by |message_queue_deleted| is deleted.
+    /// Triggers when a the message queue named by `message_queue_deleted` is deleted.
     ///
-    /// |queue_deleted| is the token for the message queue that is to be watched.
+    /// `queue_deleted` is the token for the message queue that is to be watched.
     /// This allows both message queue readers and writers to watch for queue
     /// deletions.
     fuchsia.app.MessageQueueName message_queue_deleted;
 
-    /// Triggers the task approximately every time |repeating_timer| elapses.
-    /// Once a task with |repeating_timer| is scheduled, it will trigger at
+    /// Triggers the task approximately every time `repeating_timer` elapses.
+    /// Once a task with `repeating_timer` is scheduled, it will trigger at
     /// approximately |now + repeating_timer|.
     zx.duration repeating_timer;
 };

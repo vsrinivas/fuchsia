@@ -19,15 +19,15 @@ using fuchsia.sys;
 /// This FIDL interface should be implemented by a component that is meant to be
 /// run as an Agent.
 ///
-/// When an agent application implements the |Lifecycle| interface, it can
+/// When an agent application implements the `Lifecycle` interface, it can
 /// receive a signal for when it should stop. An agent may be stopped for the
 /// following reasons:
 ///
-/// (1) All |AgentController| connections associated with this agent are closed.
+/// (1) All `AgentController` connections associated with this agent are closed.
 ///
 /// (2) The system wants to optimize for resources.
 ///
-/// Once the framework delivers a |Lifecycle.Terminate()|, the agent application
+/// Once the framework delivers a `Lifecycle.Terminate()`, the agent application
 /// may exit itself, or is killed by framework after a timeout.
 ///
 /// For more info see:
@@ -36,15 +36,15 @@ using fuchsia.sys;
 /// - fuchsia.modular.Lifecycle for how Components get lifecycle events.
 [Discoverable] // Created by each agent.
 protocol Agent {
-    /// Called when some component tries to connect to this agent. |requestor_url|
+    /// Called when some component tries to connect to this agent. `requestor_url`
     /// identifies the requesting client. Different client roles are identified differently:
-    ///    * For Module clients in the general case, |requestor_url| will be the name provided at
+    ///    * For Module clients in the general case, `requestor_url` will be the name provided at
     ///      Module create time (ie, in calls to StoryPuppetMaster's StoryCommand.AddMod/mod_name)
     ///      with :'s escaped (see below for a complete explanation).
-    ///    * For all other clients (Agents and Shells), |requestor_url| is set to the requesting
+    ///    * For all other clients (Agents and Shells), `requestor_url` is set to the requesting
     ///      component's URL.
     ///
-    /// |services| must be connected to an implementation of fuchsia.sys.ServiceProvider offering
+    /// `services` must be connected to an implementation of fuchsia.sys.ServiceProvider offering
     /// services specific to the requesting client.
     ///
     /// Details on module naming: modules are named hierarchically based on what client created
@@ -56,13 +56,13 @@ protocol Agent {
     /// path is the concatenation of StoryCommand.AddMod/mod_name and
     /// StoryCommand.AddMod/surface_relation_parent.
     ///
-    /// The full path is encoded into |requestor_url| as escape_colons(module_path).join(':').
+    /// The full path is encoded into `requestor_url` as escape_colons(module_path).join(':').
     Connect(string requestor_url, request<fuchsia.sys.ServiceProvider> services);
 
-    /// Called when some task identified by |task_id| is scheduled to run. The task
-    /// was first posted by this Agent using |AgentContext.ScheduleTask()|. The
+    /// Called when some task identified by `task_id` is scheduled to run. The task
+    /// was first posted by this Agent using `AgentContext.ScheduleTask()`. The
     /// return callback is called by this Agent when all work related to this task
-    /// is completed. Note that the framework may call |Lifecycle.Terminate()|
+    /// is completed. Note that the framework may call `Lifecycle.Terminate()`
     /// before RunTask returns.
     ///
     /// TODO(alhaad): The current implementation allows the Agent to run a task

@@ -1,7 +1,7 @@
 {
-  "fidl/fuchsia.web/context.fidl": "0a3d534f532eac9a1b77cc7e551552f2",
-  "fidl/fuchsia.web/cookie.fidl": "017cb7cbf9736dd78355e66fe94e9375",
-  "fidl/fuchsia.web/debug.fidl": "21ed29e4411f9c0812c30c061d1f1f37",
-  "fidl/fuchsia.web/frame.fidl": "8d0c4650b55b6d4f5ce3d34cc4f6d6e1",
-  "fidl/fuchsia.web/navigation.fidl": "981f1af652b6a2aa10c7ffa44d34a667"
+  "fidl/fuchsia.web/context.fidl": "74123c5b3c619c19f40275c91fd6dfa7",
+  "fidl/fuchsia.web/cookie.fidl": "83b532b960044905d05ecc92939f6219",
+  "fidl/fuchsia.web/debug.fidl": "a5f00329a4c99475aec80f11927fa777",
+  "fidl/fuchsia.web/frame.fidl": "5518e060c591e3cdb9be672c49e1a4df",
+  "fidl/fuchsia.web/navigation.fidl": "7916d0e05a5330de2b2dd1ac8e836b13"
 }

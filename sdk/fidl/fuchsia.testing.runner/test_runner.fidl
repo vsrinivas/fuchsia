@@ -26,13 +26,13 @@ protocol TestRunner {
     ReportResult(TestResult result);
 
     // Tells the test runner that a particular test case failed, with the supplied
-    // message. May be called multiple times. When |Teardown()| is called, the
+    // message. May be called multiple times. When `Teardown()` is called, the
     // test program ends as a failure.
     //
-    // |Fail()| is deprecated in favor of |ReportResult|.
+    // `Fail()` is deprecated in favor of `ReportResult`.
     Fail(string log_message);
 
-    // Either this method, |Teardown()| or |WillTerminate()| must be invoked
+    // Either this method, `Teardown()` or `WillTerminate()` must be invoked
     // before closing the connection to this interface; otherwise the TestRunner
     // service will assume that the connection broke due to the test crashing.
     // The test runner will send a reply back as an acknowledgement when it starts
@@ -40,15 +40,15 @@ protocol TestRunner {
     Done() -> ();
 
     // Signals that the test program is complete and the entire test harness
-    // should be torn down. The test will be declared a failure if |Fail()| was
-    // ever called, or if |ReportResult()| was ever called where |failed| is true.
+    // should be torn down. The test will be declared a failure if `Fail()` was
+    // ever called, or if `ReportResult()` was ever called where `failed` is true.
     // Otherwise the test will be declared successful. The test runner will send a
     // reply back as an acknowledgement when it starts processing this method.
     Teardown() -> ();
 
     // Signals that this process expects to be terminated within the time
     // specified. If it is not killed that is a failure. A test that calls this
-    // should not call |Done()| or |Teardown()|.
+    // should not call `Done()` or `Teardown()`.
     WillTerminate(float64 withinSeconds);
 
     // Declare how many test points this test is expected to pass to complete.
@@ -77,11 +77,11 @@ protocol TestRunner {
 // assert that it was able to connect to the right agent.
 [Discoverable]
 protocol TestRunnerStore {
-    // This will store |key| with value |value| and respond back. Subsequent
-    // Put()s to |key| are queued up until they are read by a |Get()|.
+    // This will store `key` with value `value` and respond back. Subsequent
+    // Put()s to `key` are queued up until they are read by a `Get()`.
     Put(string key, string value) -> ();
 
-    // Get() will return the next queued value associated with the |key|. If there
+    // Get() will return the next queued value associated with the `key`. If there
     // are no values queued for key, this method will not return until one has
     // been Put().
     Get(string key) -> (string value);

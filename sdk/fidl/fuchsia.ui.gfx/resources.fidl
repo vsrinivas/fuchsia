@@ -8,7 +8,7 @@ using fuchsia.images;
 using fuchsia.ui.views;
 
 /// These are all of the types of resources that can be created within a
-/// |Session|.
+/// `Session`.
 union ResourceArgs {
     // Memory resources.
     MemoryArgs memory;
@@ -66,14 +66,14 @@ struct ImagePipeArgs {
     request<fuchsia.images.ImagePipe> image_pipe_request;
 };
 
-/// |Memory| is a |Resource| that wraps a client-provided Zircon vmo to register
+/// `Memory` is a `Resource` that wraps a client-provided Zircon vmo to register
 /// it with Scenic.
 // TODO: specify resizing behavior.  Who can resize?  Client/Scenic/both/none?
 struct MemoryArgs {
     // The VMO which backs this memory.
     handle<vmo> vmo;
 
-    // The amount of memory from |vmo| that should be utilized.
+    // The amount of memory from `vmo` that should be utilized.
     uint64 allocation_size;
 
     // The type of memory stored in the VMO, namely whether it's GPU memory or
@@ -81,31 +81,31 @@ struct MemoryArgs {
     fuchsia.images.MemoryType memory_type;
 };
 
-/// An image mapped to a range of a |Memory| resource.
+/// An image mapped to a range of a `Memory` resource.
 // TODO: more precise and extensive docs.
 struct ImageArgs {
     fuchsia.images.ImageInfo info;
 
-    uint32 memory_id; // id of a |Memory| resource
-    uint32 memory_offset; // byte offset of image within |Memory| resource
+    uint32 memory_id; // id of a `Memory` resource
+    uint32 memory_offset; // byte offset of image within `Memory` resource
 };
 
-/// A buffer mapped to a range of |Memory|.
+/// A buffer mapped to a range of `Memory`.
 struct BufferArgs {
-    uint32 memory_id; // id of a |Memory| resource
-    uint32 memory_offset; // byte offset of buffer within |Memory| resource
+    uint32 memory_id; // id of a `Memory` resource
+    uint32 memory_offset; // byte offset of buffer within `Memory` resource
     uint32 num_bytes;
 };
 
 /// Represents the root of a subgraph within a larger scene graph.  Nodes can be
-/// attached to the |View| as children, and these Nodes will have the |View|s'
+/// attached to the `View` as children, and these Nodes will have the `View`s'
 /// coordinate transform applied to their own, in addition to being clipped to
-/// the |View|s' bounding box.
-/// See |ViewProperties|.
+/// the `View`s' bounding box.
+/// See `ViewProperties`.
 ///
-/// Each |View| is linked to a paired |ViewHolder| via a shared token pair.
+/// Each `View` is linked to a paired `ViewHolder` via a shared token pair.
 ///
-/// Usually the |View| and its associated |ViewHolder| exist in separate
+/// Usually the `View` and its associated `ViewHolder` exist in separate
 /// processes.  By combining them, the UI for an entire system can be built
 /// using content contributed from many different processes.
 struct ViewArgs {
@@ -119,12 +119,12 @@ struct ViewArgs2 {
 };
 
 /// Represents an attachment point for a subgraph within a larger scene graph.
-/// The |ViewHolder| can be attached to a Node as a child, and the contents of
-/// the linked |View| will become a child of the Node as well.
+/// The `ViewHolder` can be attached to a Node as a child, and the contents of
+/// the linked `View` will become a child of the Node as well.
 ///
-/// Each |ViewHolder| is linked to a paired |View| via a shared token pair.
+/// Each `ViewHolder` is linked to a paired `View` via a shared token pair.
 ///
-/// Usually the |ViewHolder| and its associated |View| exist in separate
+/// Usually the `ViewHolder` and its associated `View` exist in separate
 /// processes.  By combining them, the UI for an entire system can be built
 /// using content contributed from many different processes.
 struct ViewHolderArgs {
@@ -137,22 +137,22 @@ struct ViewHolderArgs2 {
     string? debug_name;
 };
 
-/// A Compositor draws its |LayerStack| into a framebuffer provided by its
-/// attached |Display|, if any.  If no display is attached, nothing is rendered.
+/// A Compositor draws its `LayerStack` into a framebuffer provided by its
+/// attached `Display`, if any.  If no display is attached, nothing is rendered.
 // TODO(SCN-452): there is currently no way to create/attach a display.
 struct CompositorArgs {
     // TODO(SCN-694): Clean up dummy args.
     uint32 dummy = 0;
 };
 
-/// A DisplayCompositor draws its attached |LayerStack| into an image that is
+/// A DisplayCompositor draws its attached `LayerStack` into an image that is
 /// presented on a display.
 struct DisplayCompositorArgs {
     // TODO(SCN-694): Clean up dummy args.
     uint32 dummy = 0;
 };
 
-/// An ImagePipeCompositor draws its attached |LayerStack| into an image that is
+/// An ImagePipeCompositor draws its attached `LayerStack` into an image that is
 /// presented on an image-pipe.
 struct ImagePipeCompositorArgs {
     fuchsia.images.ImagePipe target;

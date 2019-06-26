@@ -12,11 +12,11 @@ library fuchsia.modular;
 // services.
 //
 // Any time the framework receives an intent which is to be handled by a specific
-// module its |IntentHandler| will be called with the intent it is meant to handle.
+// module its `IntentHandler` will be called with the intent it is meant to handle.
 [Discoverable]
 protocol IntentHandler {
     // Handles the provided intent. Any links referenced in the intent parameters
     // will be in the namespace of the handling component, and can be retrieved via
-    // |ModuleContext.GetLink|.
+    // `ModuleContext.GetLink`.
     HandleIntent(Intent intent);
 };

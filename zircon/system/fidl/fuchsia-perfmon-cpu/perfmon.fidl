@@ -6,7 +6,7 @@ library fuchsia.perfmon.cpu;
 
 using zx;
 
-// The type of the |rate| field of EventConfig.
+// The type of the `rate` field of EventConfig.
 using EventRate = uint32;
 
 // Trace buffer space is expensive, we want to keep records small.
@@ -112,7 +112,7 @@ struct EventConfig {
     EventConfigFlags flags;
 };
 
-/// Passed to |StageConfig()| to select the data to be collected.
+/// Passed to `StageConfig()` to select the data to be collected.
 struct Config {
     /// Events to collect data for.
     array<EventConfig>:MAX_NUM_EVENTS events;
@@ -139,7 +139,7 @@ protocol Controller {
     /// Create a trace, allocating the needed trace buffers and other resources.
     /// "other resources" is basically a catch-all for other things that will
     /// be needed. This does not include reserving the events, that is done
-    /// later by |StageConfig()|.
+    /// later by `StageConfig()`.
     Initialize(Allocation allocation) -> () error zx.status;
 
     /// Free all trace buffers and any other resources allocated for the trace.
@@ -152,28 +152,28 @@ protocol Controller {
     GetAllocation() -> (Allocation? allocation);
 
     /// Stage performance monitor specification for a cpu.
-    /// Must be called with data collection off and after |Initialize()|.
+    /// Must be called with data collection off and after `Initialize()`.
     /// Note: This doesn't actually configure the h/w, this just stages
-    /// the values for subsequent use by |Start()|.
+    /// the values for subsequent use by `Start()`.
     StageConfig(Config config) -> () error zx.status;
 
     /// Fetch performance monitor specification for a cpu, if it exists.
-    /// Must be called with data collection off and after |StageConfig()|.
+    /// Must be called with data collection off and after `StageConfig()`.
     GetConfig() -> (Config? config);
 
-    /// Return a handle of a trace buffer, if it exists, and if |descriptor|
+    /// Return a handle of a trace buffer, if it exists, and if `descriptor`
     /// is valid.
-    /// |descriptor| is (0, 1, 2, ..., |num_buffers|-1)
+    /// `descriptor` is (0, 1, 2, ..., `num_buffers`-1)
     GetBufferHandle(uint32 descriptor) -> (handle<vmo>? vmo);
 
     /// Turn on data collection.
-    /// Must be called after |Initialize()| + |StageConfig()| and with data
+    /// Must be called after `Initialize()` + `StageConfig()` and with data
     /// collection off.
     Start() -> () error zx.status;
 
     /// Turn off data collection.
-    /// May be called any time after |Initialize()| has been called and before
-    // |Terminate()|. If called at other times the call is ignored.
+    /// May be called any time after `Initialize()` has been called and before
+    // `Terminate()`. If called at other times the call is ignored.
     /// May be called multiple times.
     Stop() -> ();
 };

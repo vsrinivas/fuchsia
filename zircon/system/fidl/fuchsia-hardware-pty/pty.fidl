@@ -5,9 +5,9 @@
 /// A PTY (pseudoterminal) emulates terminal devices, with a "server" side
 /// (which represents the keyboard+monitor side of the terminal and is obtained
 /// by opening /dev/misc/ptmx) and a number of "client" sides which are obtained
-/// by calling |OpenClient|.
+/// by calling `OpenClient`.
 ///
-/// Client PTYs are identified by the |id| used in the |OpenClient| call. The
+/// Client PTYs are identified by the `id` used in the `OpenClient` call. The
 /// first Client PTY *must* be 0, and it is the only Client PTY that is allowed
 /// to create additional Client PTYs, receive Events, etc. It is the
 /// Controlling PTY.
@@ -38,15 +38,15 @@ const uint32 SIGNAL_EVENT = 0x02000000; // DEVICE_SIGNAL_OOB
 
 [Layout = "Simple"]
 protocol Device {
-    /// Open a client PTY device with a unique |id|. |client| should be a handle
+    /// Open a client PTY device with a unique `id`. `client` should be a handle
     /// to one endpoint of a channel that (on success) will become an open
     /// connection to the newly created device. On failure, the channel will be
     /// closed. Closing the channel will close the connection and release the
-    /// device. If the provided |id| is 0, then the new client is a controlling
+    /// device. If the provided `id` is 0, then the new client is a controlling
     /// client and has the capability to open additional clients. If the
     /// current device is not a controlling client, ZX_ERR_ACCESS_DENIED will be
-    /// returned. If |id| is not unique, ZX_ERR_INVALID_ARGS will be returned.
-    /// Otherwise the status code from |device_add| is passed on.
+    /// returned. If `id` is not unique, ZX_ERR_INVALID_ARGS will be returned.
+    /// Otherwise the status code from `device_add` is passed on.
     OpenClient(uint32 id, handle<channel> client) -> (zx.status s);
 
     /// allowed on Client PTYs

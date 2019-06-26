@@ -15,9 +15,9 @@ protocol DataProvider {
     /// separately.
     GetData() -> (Data data) error zx.status;
 
-    /// Returns an image of the current view encoded in the provided |encoding|.
+    /// Returns an image of the current view encoded in the provided `encoding`.
     ///
-    /// |screenshot| may be null if the encoding is not supported, the device
+    /// `screenshot` may be null if the encoding is not supported, the device
     /// does not have a display, or there is not enough memory to allocate the
     /// screenshot image.
     ///
@@ -69,7 +69,7 @@ struct Screenshot {
 
   // While all encoded images contain their dimensions in their headers, some
   // clients still expect to receive the width and height separately, so we
-  // also provide it separately so clients don't need to decode |image|.
+  // also provide it separately so clients don't need to decode `image`.
   fuchsia.math.Size dimensions_in_px;
 };
 

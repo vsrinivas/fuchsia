@@ -10,8 +10,8 @@ enum PixelFormat {
   //
   // A 32-bit four-component unsigned integer format.
   // Byte order: B, G, R, A (little-endian ARGB packed 32-bit word).
-  // Equivalent to Skia |kBGRA_8888_SkColorType| color type.
-  // Equivalent to Zircon |ARGB_8888| pixel format on little-endian arch.
+  // Equivalent to Skia `kBGRA_8888_SkColorType` color type.
+  // Equivalent to Zircon `ARGB_8888` pixel format on little-endian arch.
   BGRA_8 = 0;
 
   // YUY2
@@ -78,11 +78,11 @@ enum ColorSpace {
 // Specifies how pixels are arranged in memory.
 enum Tiling {
   // Pixels are packed linearly.
-  // Equivalent to |VK_IMAGE_TILING_LINEAR|.
+  // Equivalent to `VK_IMAGE_TILING_LINEAR`.
   LINEAR = 0;
 
   // Pixels are packed in a GPU-dependent optimal format.
-  // Equivalent to |VK_IMAGE_TILING_OPTIMAL|.
+  // Equivalent to `VK_IMAGE_TILING_OPTIMAL`.
   GPU_OPTIMAL = 1;
 };
 

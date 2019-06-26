@@ -21,10 +21,10 @@ enum AttestationSignerStatus {
 };
 
 protocol AttestationSigner {
-    // Cryptographically signs the |plaintext| data sent in request using a
+    // Cryptographically signs the `plaintext` data sent in request using a
     // crypto key configured at initialization.
     //
-    // Returns the raw bytes of the |signature| string on success. Otherwise,
+    // Returns the raw bytes of the `signature` string on success. Otherwise,
     // an error status is returned.
     SignData(bytes plaintext)
         -> (AttestationSignerStatus status, bytes? signature);

@@ -1,14 +1,14 @@
 {
-  "fidl/fuchsia.ui.input/commands.fidl": "66fd3d5b92903e407ffe12542234cb4b",
+  "fidl/fuchsia.ui.input/commands.fidl": "7bae493bdcbc47b6043b9a30d4d765ab",
   "fidl/fuchsia.ui.input/events.fidl": "42a1702318b043dede9e38395d906ff0",
   "fidl/fuchsia.ui.input/ime_service.fidl": "9875f1e495431b58ceb1eb59ed0710da",
-  "fidl/fuchsia.ui.input/input_device_registry.fidl": "ff558c9cf03f193f68d41f1dede6549c",
+  "fidl/fuchsia.ui.input/input_device_registry.fidl": "a5a38046f1e881108ef42db2be1a0ac7",
   "fidl/fuchsia.ui.input/input_event_constants.fidl": "70bf9747cd5d98cae29ff8e269533245",
-  "fidl/fuchsia.ui.input/input_events.fidl": "7492136d527b5757b691a98c26c26e84",
-  "fidl/fuchsia.ui.input/input_reports.fidl": "ae8ec9f28505ff9bcca3168520b8cc77",
+  "fidl/fuchsia.ui.input/input_events.fidl": "8859a4696ae6cbfe78e064f5e9779047",
+  "fidl/fuchsia.ui.input/input_reports.fidl": "6f75358be2df4a8d1de9fe87ecb1f419",
   "fidl/fuchsia.ui.input/keys.fidl": "9e72ce2248e1dea05b6fd56831e29788",
   "fidl/fuchsia.ui.input/modifiers.fidl": "1545e8a3bdc8f59e12d483219a8751d1",
-  "fidl/fuchsia.ui.input/text_editing.fidl": "b74c57aea4c32932c45dd038bc9647b9",
-  "fidl/fuchsia.ui.input/text_input.fidl": "3eb489bd31c40258c7a4c8b0fd65cd69",
+  "fidl/fuchsia.ui.input/text_editing.fidl": "2f30fa555f068969a62ab324922a9902",
+  "fidl/fuchsia.ui.input/text_input.fidl": "7a330e651015bbfc6edd5b287f74c2ee",
   "fidl/fuchsia.ui.input/usages.fidl": "cbadc21ecf1d39c2ba08711534aa88c5"
 }

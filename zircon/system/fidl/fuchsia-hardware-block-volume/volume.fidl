@@ -31,10 +31,10 @@ const uint32 AllocatePartitionFlagInactive = 0x00000001;
 protocol VolumeManager {
     // Allocates a virtual partition with the requested features.
     //
-    // |slice_count| is the number of slices initially allocated to the partition, at
+    // `slice_count` is the number of slices initially allocated to the partition, at
     // offset zero. The number of slices allocated to a new partition must be at least one.
-    // |type| and |value| indicate type and instance GUIDs for the partition, respectively.
-    // |name| indicates the name of the new partition.
+    // `type` and `value` indicate type and instance GUIDs for the partition, respectively.
+    // `name` indicates the name of the new partition.
     AllocatePartition(uint64 slice_count, partition.GUID type,
                       partition.GUID instance, string:partition.NAME_LENGTH name,
                       uint32 flags) -> (zx.status status);
@@ -48,7 +48,7 @@ protocol VolumeManager {
     // If the "old" partition does not exist, the GUID is ignored.
     // If the "old" partition is the same as the "new" partition, the "old"
     // GUID is ignored.
-    // If the "new" partition does not exist, |ZX_ERR_NOT_FOUND| is returned.
+    // If the "new" partition does not exist, `ZX_ERR_NOT_FOUND` is returned.
     //
     // This function does not destroy the "old" partition, it just marks it as
     // inactive -- to reclaim that space, the "old" partition must be explicitly
@@ -94,7 +94,7 @@ protocol Volume {
     // Extends the mapping of this partition.
     Extend(uint64 start_slice, uint64 slice_count) -> (zx.status status);
 
-    // Shrinks a virtual partition. Returns |ZX_OK| if ANY slices are
+    // Shrinks a virtual partition. Returns `ZX_OK` if ANY slices are
     // freed, even if part of the requested range contains unallocated slices.
     Shrink(uint64 start_slice, uint64 slice_count) -> (zx.status status);
 

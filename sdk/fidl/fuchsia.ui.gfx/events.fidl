@@ -9,8 +9,8 @@ library fuchsia.ui.gfx;
 const uint32 kMetricsEventMask = 1;
 const uint32 kSizeChangeHintEventMask = 2;
 
-// These are all of the types of events which can be reported by a |Session|.
-// Use |SetEventMaskCmd| to enable event delivery for a resource.
+// These are all of the types of events which can be reported by a `Session`.
+// Use `SetEventMaskCmd` to enable event delivery for a resource.
 union Event {
     // Events which are controlled by a mask.
     MetricsEvent metrics;
@@ -32,10 +32,10 @@ union Event {
 // Provides rendering target metrics information about the specified node.
 //
 // This event is delivered when the following conditions are true:
-// - The node is a descendant of a |Scene|.
-// - The node has |kMetricsEventMask| set to an enabled state.
+// - The node is a descendant of a `Scene`.
+// - The node has `kMetricsEventMask` set to an enabled state.
 // - The node's metrics have changed since they were last delivered, or since
-//   |kMetricsEventMask| transitioned from a disabled state to an enabled state.
+//   `kMetricsEventMask` transitioned from a disabled state to an enabled state.
 //
 // Subscribe to this event to receive information about the scale factors you
 // should apply when generating textures for your nodes.
@@ -48,7 +48,7 @@ struct MetricsEvent {
 // (SendSizeChangeHintCmd).
 //
 // This event is delivered when the following conditions are true:
-// - The node has |kSizeChangeEventMask| set to an enabled state.
+// - The node has `kSizeChangeEventMask` set to an enabled state.
 // - A parent node has sent a SendSizeChangeHintCmd.
 //
 // Subscribe to this event to receive information about how large textures you

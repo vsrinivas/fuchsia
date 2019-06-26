@@ -38,7 +38,7 @@ struct Range {
   // The offset of the first byte within the range relative to the start of
   // the VMO.
   //
-  // For example, if |offset| is zero, then the first byte in the range is
+  // For example, if `offset` is zero, then the first byte in the range is
   // the first byte in the VMO.
   uint64_t offset{};
 
@@ -59,7 +59,7 @@ extern "C" const fidl_type_t fuchsia_mem_BufferTable;
 //
 // VMO objects have a physical size that is always a multiple of the page
 // size. As such, VMO alone cannot serve as a buffer for arbitrarly sized
-// data. |fuchsia.mem.Buffer| is a standard struct that aggregate the VMO
+// data. `fuchsia.mem.Buffer` is a standard struct that aggregate the VMO
 // and its size.
 struct Buffer {
   static constexpr const fidl_type_t* Type = &fuchsia_mem_BufferTable;
@@ -74,8 +74,8 @@ struct Buffer {
   // The number of bytes in the buffer.
   //
   // The content of the buffer begin at the start of the VMO and continue
-  // for |size| bytes. To specify a range of bytes that do not start at
-  // the beginning of the VMO, use |Range| rather than buffer.
+  // for `size` bytes. To specify a range of bytes that do not start at
+  // the beginning of the VMO, use `Range` rather than buffer.
   //
   // This size must not be greater than the physical size of the VMO.
   uint64_t size{};
@@ -87,8 +87,8 @@ extern "C" const fidl_type_t fuchsia_mem_DataTable;
 //
 // Useful for performance-sensitive protocols that sometimes receive small
 // amounts of binary data (i.e., which is more efficient to provide using
-// |bytes|) but also need to support arbitrary amounts of data (i.e., which
-// need to be provided out-of-line in a |Buffer|).
+// `bytes`) but also need to support arbitrary amounts of data (i.e., which
+// need to be provided out-of-line in a `Buffer`).
 struct Data {
   Data() : ordinal_(Tag::kUnknown), envelope_{} {}
 
@@ -114,13 +114,13 @@ struct Data {
 
   bool is_buffer() const { return ordinal_ == Tag::kBuffer; }
 
-  // The binary data provided out-of-line in a |Buffer|.
+  // The binary data provided out-of-line in a `Buffer`.
   void set_buffer(Buffer* elem) {
     ordinal_ = Tag::kBuffer;
     envelope_.data = static_cast<void*>(elem);
   }
 
-  // The binary data provided out-of-line in a |Buffer|.
+  // The binary data provided out-of-line in a `Buffer`.
   Buffer& buffer() const {
     ZX_ASSERT(ordinal_ == Tag::kBuffer);
     return *static_cast<Buffer*>(envelope_.data);

@@ -12,23 +12,23 @@ using zx;
 /// may originate from other local clients, or from the same session running on a different device.
 [Discoverable]
 protocol SessionController {
-    /// Requests a story controller for the story identified by |id|. |id| may be any
-    /// client-supplied value. A previously unused |id|, or one identifying a story that has been
+    /// Requests a story controller for the story identified by `id`. `id` may be any
+    /// client-supplied value. A previously unused `id`, or one identifying a story that has been
     /// deleted (using DeleteStory()) will create a new story record.
     ///
-    /// |id|s are scoped to the requesting client's Component URL: two different clients
-    /// which use the same |id| will be controlling different story instances.
+    /// `id`s are scoped to the requesting client's Component URL: two different clients
+    /// which use the same `id` will be controlling different story instances.
     ///
     /// In some system configurations, the results of mutating a story's state are durable across
     /// reboots and devices.
     ///
-    /// |request| is closed if control cannot be granted, or when DeleteStory() is called for the
-    /// same |id| on any device.
+    /// `request` is closed if control cannot be granted, or when DeleteStory() is called for the
+    /// same `id` on any device.
     //
-    // TODO(MF-322): Enforce the above |id| isolation.
+    // TODO(MF-322): Enforce the above `id` isolation.
     GetStoryController(fuchsia.app.StoryId id, request<StoryController> request);
 
-    /// Permanently deletes the story identified by |id|. Any StoryControllers
+    /// Permanently deletes the story identified by `id`. Any StoryControllers
     /// obtained through GetStoryController() will be closed.
     DeleteStory(fuchsia.app.StoryId id);
 

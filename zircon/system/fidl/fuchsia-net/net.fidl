@@ -36,7 +36,7 @@ struct Endpoint {
 /// Subnet describes an IP subnetwork, where all host IP addresses share the same most significant
 /// bits.
 struct Subnet {
-    /// The Ipv4 or Ipv6 address. Only the |prefix_len| most significant bits may be set in |addr|;
+    /// The Ipv4 or Ipv6 address. Only the `prefix_len` most significant bits may be set in `addr`;
     /// all bits in the host portion of the address must be zero.
     IpAddress addr;
 

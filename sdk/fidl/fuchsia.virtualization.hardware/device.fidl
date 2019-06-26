@@ -52,15 +52,15 @@ struct StartInfo {
 
 [FragileBase]
 protocol VirtioDevice {
-    // Configure a |queue| for the device. This specifies the |size| and the
-    // guest physical addresses of the queue: |desc|, |avail|, and |used|.
+    // Configure a `queue` for the device. This specifies the `size` and the
+    // guest physical addresses of the queue: `desc`, `avail`, and `used`.
     ConfigureQueue(uint16 queue, uint16 size, zx.gpaddr desc, zx.gpaddr avail,
                    zx.gpaddr used) -> ();
 
-    // Notify a |queue| for the device. Primarily used for black-box testing.
+    // Notify a `queue` for the device. Primarily used for black-box testing.
     NotifyQueue(uint16 queue);
 
-    // Ready a device. This provides the set of |negotiated_features| that the
+    // Ready a device. This provides the set of `negotiated_features` that the
     // driver and device have agreed upon.
     Ready(uint32 negotiated_features) -> ();
 };
@@ -92,7 +92,7 @@ protocol VirtioBlock {
 protocol VirtioConsole {
     compose VirtioDevice;
 
-    // Start the console device. This uses |socket| to handle input and output.
+    // Start the console device. This uses `socket` to handle input and output.
     Start(StartInfo start_info, handle<socket> socket) -> ();
 };
 

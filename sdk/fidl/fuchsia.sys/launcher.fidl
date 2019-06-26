@@ -42,7 +42,7 @@ struct LaunchInfo {
     FileDescriptor? err;
 
     // The interface request for a Directory that is passed through to the
-    // component and arrives in the component as its |directory_request|
+    // component and arrives in the component as its `directory_request`
     // interface request.
     handle<channel>? directory_request;
 
@@ -59,32 +59,32 @@ struct LaunchInfo {
 };
 
 struct ServiceList {
-    // A list of services that can be requested from |provider|.
+    // A list of services that can be requested from `provider`.
     vector<string> names;
 
-    // A service provider to get the services listed in |names| from.
+    // A service provider to get the services listed in `names` from.
     ServiceProvider? provider;
 
-    // A channel to the directory hosting the services in |names|.
-    // TODO(CP-124): Support |host_directory| for CreateComponent and deprecate
-    // |provider|.
+    // A channel to the directory hosting the services in `names`.
+    // TODO(CP-124): Support `host_directory` for CreateComponent and deprecate
+    // `provider`.
     handle<channel>? host_directory;
 };
 
 // An interface for creating component instances.
 //
-// Typically obtained via |Environment.GetLauncher|.
+// Typically obtained via `Environment.GetLauncher`.
 [Discoverable]
 protocol Launcher {
-    // Creates a new instance of the component described by |launch_info|.
+    // Creates a new instance of the component described by `launch_info`.
     //
-    // The component instance is created in the |Environment|
-    // associated with this |Launcher|. When creating the component,
+    // The component instance is created in the `Environment`
+    // associated with this `Launcher`. When creating the component,
     // the environment requests the environment services for this component from
-    // its |EnvironmentHost|.
+    // its `EnvironmentHost`.
     //
-    // The |controller| can be used to control the lifecycle of the created
-    // component instance. If an |ComponentController|'s interface is
+    // The `controller` can be used to control the lifecycle of the created
+    // component instance. If an `ComponentController`'s interface is
     // requested, the component instance is killed when the interface is closed.
     CreateComponent(LaunchInfo launch_info,
                     request<ComponentController>? controller);

@@ -19,7 +19,7 @@ using fuchsia.ui.gfx;
 // data to these shaders.
 //
 // This interface does not concern itself with how to display the images
-// rendered by the GLSL code; this is the responsibility of |ShadertoyFactory|,
+// rendered by the GLSL code; this is the responsibility of `ShadertoyFactory`,
 // which is used to create Shadertoy instances.
 protocol Shadertoy {
     // Set whether rendering is paused or not.
@@ -43,7 +43,7 @@ protocol Shadertoy {
     SetMouse(fuchsia.ui.gfx.vec4 i_mouse);
 
     // Corresponds to Shadertoy's 'iChannel0..3' parameters.  Currently only 2D
-    // samplers are supported (no cubemaps).  |channel| must be one of 0, 1, 2, 3.
+    // samplers are supported (no cubemaps).  `channel` must be one of 0, 1, 2, 3.
     // TODO: implement cubemap support.
     SetImage(uint32 channel, request<fuchsia.images.ImagePipe> image_pipe);
 };

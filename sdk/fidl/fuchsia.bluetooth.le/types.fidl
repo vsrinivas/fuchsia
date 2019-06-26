@@ -67,7 +67,7 @@ struct RemoteDevice {
 // ignored.
 struct ScanFilter {
     // Filter based on advertised service UUIDs. A peripheral that advertises at least one of the
-    // entries in |service_uuids| will satisfy this filter.
+    // entries in `service_uuids` will satisfy this filter.
     vector<string>? service_uuids;
 
     // Filter based on service data containing one of the given UUIDs.
@@ -90,6 +90,6 @@ struct ScanFilter {
     // satisfy the following:
     //   1. Radio transmission power level and received signal strength must be available for the path
     //      loss calculation;
-    //   2. The calculated path loss value must be less than, or equal to, |max_path_loss|.
+    //   2. The calculated path loss value must be less than, or equal to, `max_path_loss`.
     fuchsia.bluetooth.Int8? max_path_loss;
 };

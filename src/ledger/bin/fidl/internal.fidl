@@ -14,22 +14,22 @@ using fuchsia.ledger.cloud;
 protocol LedgerRepositoryFactory {
     compose fuchsia.ledger.Syncable;
 
-    // Binds to the directory referenced by |repository|. If this is called
+    // Binds to the directory referenced by `repository`. If this is called
     // multiple times for the same directory, only the first instance of
-    // |server_id| / |cloud_provider| will be used. Any subsequent ones will
+    // `server_id` / `cloud_provider` will be used. Any subsequent ones will
     // simply be ignored.
     //
     // Parameters:
-    // |repository_directory| channel pointing to the disk directory where the
+    // `repository_directory` channel pointing to the disk directory where the
     //     repository is stored. At any given time, at most one repository
     //     instance backed by the same disk directory can be running
     //     concurrently.
-    //     If this channel closes, |LedgerRepository| will close immediately.
+    //     If this channel closes, `LedgerRepository` will close immediately.
     //     TODO(qsr): Use typed channel when remoteio has been migrated to FIDL2.
-    // |cloud_provider| is used by Ledger to synchronize data through the
-    //     cloud. If |cloud_provider| is disconnected, Ledger shuts down the
+    // `cloud_provider` is used by Ledger to synchronize data through the
+    //     cloud. If `cloud_provider` is disconnected, Ledger shuts down the
     //     repository and disconnects all clients.
-    // |user_id| is a unique, not device local, user identifier. It will be
+    // `user_id` is a unique, not device local, user identifier. It will be
     //     used to enable Peer to Peer over NetConnector, and will be removed
     //     once Ledger uses Overnet for Peer to Peer communication. If it is
     //     empty, Ledger will not synchronize using Peer to Peer communication.
@@ -49,7 +49,7 @@ protocol LedgerController {
 protocol LedgerRepository {
     compose fuchsia.ledger.Syncable;
 
-    // Creates a new Ledger for the given |ledger_name| if it doesn't already
+    // Creates a new Ledger for the given `ledger_name` if it doesn't already
     // exist.
     GetLedger(vector<uint8> ledger_name, request<fuchsia.ledger.Ledger> ledger);
 
@@ -69,7 +69,7 @@ protocol LedgerRepository {
     // connection once all connections to sub-objects (Ledgers, Pages,
     // PageSnapshots, pending Merges) are closed.
     // It is invalid to call any other method on LedgerRepository after
-    // |Close()| is called.
+    // `Close()` is called.
     // Once the LedgerRepository connection is closed, it is guaranteed that
     // no access to the underlying storage will be made.
     Close();

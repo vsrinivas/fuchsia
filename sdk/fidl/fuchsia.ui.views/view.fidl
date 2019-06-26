@@ -16,16 +16,16 @@ library fuchsia.ui.views;
 ///
 /// # Offering a View
 ///
-/// A component that wishes to offer a |View| can do so in one of two ways:
+/// A component that wishes to offer a `View` can do so in one of two ways:
 ///
-/// 1. Expose a |View| interface as a service. This is usually done by components
+/// 1. Expose a `View` interface as a service. This is usually done by components
 ///    that provide a single view, or have a clearly defined "main" view.
 ///    In this case, the component may obtain relevant properties for configuring
 ///    the view using services that may be available in its namespace, such as:
-///    - |fuchsia.intl.PropertyProvider|
-///    - |fuchsia.accessibility.PropertyProvider|
+///    - `fuchsia.intl.PropertyProvider`
+///    - `fuchsia.accessibility.PropertyProvider`
 ///
-/// 2. Offer a domain-specific interface that provides |View|s using a
+/// 2. Offer a domain-specific interface that provides `View`s using a
 ///    `request<View>` parameter.  In this case, the component may obtain relevant
 ///    properties for configuring the view using services that may be provided by its
 ///    client as part of the request.
@@ -42,56 +42,56 @@ library fuchsia.ui.views;
 ///
 /// # Presenting a View
 ///
-/// A client of the |View| interface will:
+/// A client of the `View` interface will:
 ///
 /// 1. Launch (or bind to) the component that provides the interface.
-/// 2. Connect to the component's |View| interface.
-/// 3. Call |Present()| to give the |View| an attachment point into the scene graph
-///    via the |view_token|.  Subsequent calls to |Present()| will generate an error
+/// 2. Connect to the component's `View` interface.
+/// 3. Call `Present()` to give the `View` an attachment point into the scene graph
+///    via the `view_token`.  Subsequent calls to `Present()` will generate an error
 ///    and cause the connection to be closed.
 ///
 /// When the client no longer needs the View, it should disconnect from the
 /// interface.
 ///
-/// NOTE: The client owns the |View| instance and must retain it for the
-/// lifetime of the UI that it displays. If the |View| instance is destroyed,
+/// NOTE: The client owns the `View` instance and must retain it for the
+/// lifetime of the UI that it displays. If the `View` instance is destroyed,
 /// the connection will be dropped and all UI content will be destroyed.
 ///
 /// # Implementing a View
 ///
-/// On the implementation side, a component that exposes the |View| interface
+/// On the implementation side, a component that exposes the `View` interface
 /// has the following responsibilities:
 ///
-/// * When |Present()| is called, create a root for the |View|'s content in the
-///   Scenic scene graph by passing the provided |view_token|.
+/// * When `Present()` is called, create a root for the `View`'s content in the
+///   Scenic scene graph by passing the provided `view_token`.
 /// * Provide graphical content for the view and attach it to the root.
 /// * Adjust the appearance and/or contents of the view's content based on
 ///   relevant internationalization and/or accessibility properties as described
 ///   above.
 /// * Handle user interface events such as touches, key presses, and
-///   |fuchsia.ui.gfx.ViewProperty| changes using other Scenic interfaces such
-///   as |fuchsia.ui.Scenic| and |fuchsia.ui.SessionListener|.
+///   `fuchsia.ui.gfx.ViewProperty` changes using other Scenic interfaces such
+///   as `fuchsia.ui.Scenic` and `fuchsia.ui.SessionListener`.
 ///
-/// See also: |fuchsia.intl.PropertyProvider|, |fuchsia.accessibility.PropertyProvider|.
+/// See also: `fuchsia.intl.PropertyProvider`, `fuchsia.accessibility.PropertyProvider`.
 ///
-/// TODO(SCN-1198): Migrate all implementations of |ViewProvider| to use |View|.
+/// TODO(SCN-1198): Migrate all implementations of `ViewProvider` to use `View`.
 [Discoverable]
 protocol View {
 
     /// Provides the View with an attachment point to Scenic's scene graph.
     ///
-    /// When |Present()| is called the View's implementation should create a
-    /// View resource within Scenic by providing it with the |view_token| (using
-    /// a |fuchsia.ui.gfx.CreateResourceCmd| and |fuchsia.ui.gfx.ViewArgs|).
+    /// When `Present()` is called the View's implementation should create a
+    /// View resource within Scenic by providing it with the `view_token` (using
+    /// a `fuchsia.ui.gfx.CreateResourceCmd` and `fuchsia.ui.gfx.ViewArgs`).
     ///
     /// Then the implementation should attach its graphical content to the
-    /// newly-created View resource using a |fuchsia.ui.gfx.AddChildCmd|.
+    /// newly-created View resource using a `fuchsia.ui.gfx.AddChildCmd`.
     ///
-    /// If the implementation already owns a View resource (because |Present()|
+    /// If the implementation already owns a View resource (because `Present()`
     /// had already been called before), then it should terminate the connection
     /// with an error.
     ///
-    /// TODO(SCN-1271): Allow re-parenting |View|s with a new |Present()| call.
+    /// TODO(SCN-1271): Allow re-parenting `View`s with a new `Present()` call.
     [Transitional]
     Present(ViewToken view_token);
 };
@@ -121,7 +121,7 @@ struct ViewRef {
     handle<eventpair> reference;
 };
 
-/// A ViewRefControl is the peer to a ViewRef. Their |reference|s are linked.
+/// A ViewRefControl is the peer to a ViewRef. Their `reference`s are linked.
 ///
 /// Like ViewRef, a ViewRefControl is a typed handle to an eventpair.  Unlike
 /// ViewRef, a ViewRefControl's handle is unique. Scenic uses this property

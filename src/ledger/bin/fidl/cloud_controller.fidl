@@ -34,7 +34,7 @@ protocol CloudController {
     /// Sets the network state of the CloudProvider.
     ///
     /// After this returns, all requests on the CloudProviders created from this
-    /// controller are guaranteed to see the network state |state|.
+    /// controller are guaranteed to see the network state `state`.
     SetNetworkState(NetworkState state) -> ();
 
     /// Creates a new CloudProvider managed by this controller.

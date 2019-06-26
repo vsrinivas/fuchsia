@@ -8,16 +8,16 @@ using fuchsia.mem;
 
 /// A multi-typed data entity.
 protocol Entity {
-    /// Returns the types associated with this entity. Each entry in |types|
+    /// Returns the types associated with this entity. Each entry in `types`
     /// references a well-known content type.
     GetTypes() -> (vector<string> types);
 
-    /// Given one of the types returned from |GetTypes()| above, returns
+    /// Given one of the types returned from `GetTypes()` above, returns
     /// associated short-form data, or null if the type is absent from
-    /// |GetTypes()|.
+    /// `GetTypes()`.
     GetData(string type) -> (fuchsia.mem.Buffer? data);
 
-    /// Sets the data for a particular type. This will precipitate an |OnUpdated|
+    /// Sets the data for a particular type. This will precipitate an `OnUpdated`
     /// event with the associated type.
     WriteData(string type, fuchsia.mem.Buffer data)
         -> (EntityWriteStatus status);
@@ -28,15 +28,15 @@ protocol Entity {
     GetReference() -> (string entity_reference);
 
     /// Begins watching for data changes on a particular type. The watcher
-    /// immediately fires |OnUpdated| with the current value for the requested
-    /// type (or null if the type is not present). Closing the |Entity| interface
+    /// immediately fires `OnUpdated` with the current value for the requested
+    /// type (or null if the type is not present). Closing the `Entity` interface
     /// does not close the watcher.
     Watch(string type, EntityWatcher watcher);
 };
 
 protocol EntityWatcher {
     /// Fires on data updates for a particular type. If the type is initially not
-    /// present, a null |data| pointer is produced. The type may only transition
+    /// present, a null `data` pointer is produced. The type may only transition
     /// from absent to present at most once, as there is no deletion.
     ///
     /// No deduplication is performed.

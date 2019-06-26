@@ -30,17 +30,17 @@ using fuchsia.io;
 protocol Agent {
     /// Called when a client of this agent wishes to acquire a service directory from this agent.
     ///
-    /// |client| describes the identity of the client component. See ClientIdentity below.
+    /// `client` describes the identity of the client component. See ClientIdentity below.
     ///
-    /// |directory_request| should be bound to a fuchsia.io.Directory implementation or closed
-    /// if services are denied. The Agent implementation should keep |directory_request| bound
+    /// `directory_request` should be bound to a fuchsia.io.Directory implementation or closed
+    /// if services are denied. The Agent implementation should keep `directory_request` bound
     /// and available until the client closes it. At this point, it must NOT assume that
     /// the client itself is gone, but rather that the client no longer wishes to open new
     /// services connections.
     AcceptConnection(ClientIdentity client, request<fuchsia.io.Directory> directory_request);
 
-    /// Called when a task identified by |task| is scheduled to run. Tasks are scheduled run when
-    /// the conditions described in |task.type| become true. Tasks are scheduled using
+    /// Called when a task identified by `task` is scheduled to run. Tasks are scheduled run when
+    /// the conditions described in `task.type` become true. Tasks are scheduled using
     /// fuchsia.app.agent.Context/ScheduleTask().
     ///
     /// Agents must return from RunTask() when the task has finished. The Agent may be asked to

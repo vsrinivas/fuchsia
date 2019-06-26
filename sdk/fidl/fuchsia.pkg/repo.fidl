@@ -15,12 +15,12 @@ protocol RepositoryManager {
     /// Add a repository. This will overwrite the repository if it already exists.
     ///
     /// Arguments:
-    /// * |repo| is repository to add to the resolver.
+    /// * `repo` is repository to add to the resolver.
     ///
     /// Return Values:
-    /// * |ZX_OK| if the repository was added.
-    /// * |ZX_ERR_ALREADY_EXISTS| if the repository already exists.
-    /// * |ZX_ERR_INVALID_ARGS| if the repository is malformed.
+    /// * `ZX_OK` if the repository was added.
+    /// * `ZX_ERR_ALREADY_EXISTS` if the repository already exists.
+    /// * `ZX_ERR_INVALID_ARGS` if the repository is malformed.
     Add(RepositoryConfig repo) -> (zx.status status);
 
     /// Remove a repository.
@@ -29,25 +29,25 @@ protocol RepositoryManager {
     /// but in-flight downloads may not be interrupted.
     ///
     /// Arguments:
-    /// * |repo_url| is the URL of the repository we want to remove.
+    /// * `repo_url` is the URL of the repository we want to remove.
     ///
     /// Return Values:
-    /// * Returns |ZX_OK| if the repository was removed.
-    /// * Returns |ZX_ERR_INVALID_ARGS| if the |repo_url| is malformed.
-    /// * Returns |ZX_ERR_NOT_FOUND| if the repository does not exist.
+    /// * Returns `ZX_OK` if the repository was removed.
+    /// * Returns `ZX_ERR_INVALID_ARGS` if the `repo_url` is malformed.
+    /// * Returns `ZX_ERR_NOT_FOUND` if the repository does not exist.
     Remove(string repo_url) -> (zx.status status);
 
     /// Add a mirror to a repository. This will overwrite the mirror if it already exists.
     ///
     /// Arguments:
-    /// * |repo_url| is repository that corresponds with this mirror.
-    /// * |mirror_url| is mirror URL to add to the resolver.
+    /// * `repo_url` is repository that corresponds with this mirror.
+    /// * `mirror_url` is mirror URL to add to the resolver.
     ///
     /// Return Values:
-    /// * |ZX_OK| if the mirror was removed.
-    /// * |ZX_ERR_ALREADY_EXISTS| if the mirror for this repository already exists.
-    /// * |ZX_ERR_INVALID_ARGS| if the |repo_url| or the |mirror| is malformed.
-    /// * |ZX_ERR_NOT_FOUND| if the repository does not exist.
+    /// * `ZX_OK` if the mirror was removed.
+    /// * `ZX_ERR_ALREADY_EXISTS` if the mirror for this repository already exists.
+    /// * `ZX_ERR_INVALID_ARGS` if the `repo_url` or the `mirror` is malformed.
+    /// * `ZX_ERR_NOT_FOUND` if the repository does not exist.
     AddMirror(string repo_url, MirrorConfig mirror) -> (zx.status status);
 
     /// Remove a mirror from a repository.
@@ -56,19 +56,19 @@ protocol RepositoryManager {
     /// in-flight downloads may not be interrupted.
     ///
     /// Arguments:
-    /// * |repo_url| the URL of the mirror's repository.
-    /// * |mirror_url| the URL of the mirror we want to remove.
+    /// * `repo_url` the URL of the mirror's repository.
+    /// * `mirror_url` the URL of the mirror we want to remove.
     ///
     /// Return Values:
-    /// * |ZX_OK| if the mirror was removed.
-    /// * |ZX_ERR_INVALID_ARGS| if the |repo_url| or the |mirror_url| is malformed.
-    /// * |ZX_ERR_NOT_FOUND| if the repository or mirror does not exist.
+    /// * `ZX_OK` if the mirror was removed.
+    /// * `ZX_ERR_INVALID_ARGS` if the `repo_url` or the `mirror_url` is malformed.
+    /// * `ZX_ERR_NOT_FOUND` if the repository or mirror does not exist.
     RemoveMirror(string repo_url, string mirror_url) -> (zx.status status);
 
     /// Return an iterator over all repositories.
     ///
     /// Arguments:
-    /// |iterator| is a request for an iterator.
+    /// `iterator` is a request for an iterator.
     List(request<RepositoryIterator> iterator);
 };
 
@@ -121,12 +121,12 @@ table MirrorConfig {
     3: RepositoryBlobKey blob_key;
 };
 
-/// The iterator over all the repositories defined in a |PackageResolver|.
+/// The iterator over all the repositories defined in a `PackageResolver`.
 protocol RepositoryIterator {
     /// Advance the iterator and return the next batch of repositories.
     ///
     /// Return Values:
-    /// * a vector of |RepositoryConfig| repositories. Will return an empty vector when there are
+    /// * a vector of `RepositoryConfig` repositories. Will return an empty vector when there are
     ///   no more repositories.
     Next() -> (vector<RepositoryConfig> repos);
 };

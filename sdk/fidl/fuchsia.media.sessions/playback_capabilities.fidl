@@ -6,31 +6,31 @@ library fuchsia.media.sessions;
 
 using zx;
 bits PlaybackCapabilityFlags:uint32 {
-    /// If set, the player can |Play()|.
+    /// If set, the player can `Play()`.
     PLAY = 0x1;
-    /// If set, the player can |Stop()|.
+    /// If set, the player can `Stop()`.
     STOP = 0x2;
-    /// If set, the player can |Pause()|.
+    /// If set, the player can `Pause()`.
     PAUSE = 0x4;
-    /// If set, the player can |SeekToPosition()|.
+    /// If set, the player can `SeekToPosition()`.
     SEEK_TO_POSITION = 0x8;
-    /// If set, the player can |SkipForward()| on |supported_skip_intervals|.
+    /// If set, the player can `SkipForward()` on `supported_skip_intervals`.
     SKIP_FORWARD = 0x10;
-    /// If set, the player can |SkipReverse()| on |supported_skip_intervals|.
+    /// If set, the player can `SkipReverse()` on `supported_skip_intervals`.
     SKIP_REVERSE = 0x20;
     /// The intervals on which skipping can be performed in the media.
     SHUFFLE = 0x40;
-    // If set, the player can |NextItem()| if there is a next item.
+    // If set, the player can `NextItem()` if there is a next item.
     CHANGE_TO_NEXT_ITEM = 0x80;
-    // If set, the player can |PrevItem()| if there is a previous item.
+    // If set, the player can `PrevItem()` if there is a previous item.
     CHANGE_TO_PREV_ITEM = 0x100;
-    /// If set, the player can |BindGainControl()|.
+    /// If set, the player can `BindGainControl()`.
     HAS_GAIN_CONTROL = 0x200;
     /// If set, the player can provide bitmaps of its artwork.
     PROVIDE_BITMAPS = 0x400;
 };
 
-/// |PlaybackCapabilities| enumerates the capabilities of the player backing
+/// `PlaybackCapabilities` enumerates the capabilities of the player backing
 /// the media session, and correspond to the control commands they can execute.
 table PlaybackCapabilities {
     1: PlaybackCapabilityFlags flags;
@@ -38,7 +38,7 @@ table PlaybackCapabilities {
     2: vector<zx.duration> supported_skip_intervals;
     /// The playback rates supported by the media.
     3: vector<float32> supported_playback_rates;
-    /// Supported repeat modes that can be set with |SetRepeatMode()|.
+    /// Supported repeat modes that can be set with `SetRepeatMode()`.
     4: vector<RepeatMode> supported_repeat_modes;
     /// A set of names of custom extensions the player advertises.
     5: vector<string> custom_extensions;

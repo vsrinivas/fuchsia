@@ -7,12 +7,12 @@ library fuchsia.examples.intl.manager;
 using fuchsia.intl;
 
 /// For toy examples, defines the setter counterpart to the getter in
-/// |fuchsia.intl.PropertyProvider|, allowing the internationalization |Profile| to be set via FIDL,
+/// `fuchsia.intl.PropertyProvider`, allowing the internationalization `Profile` to be set via FIDL,
 /// and hence passed on to additional recipients.
 ///
-/// Note that in production scenarios, a |fuchsia.intl.PropertyProvider| would like be reading the
-/// user's internationalization preferences from a preferences service and generating a |Profile|,
-/// rather than allowing a |Profile| to be set directly.
+/// Note that in production scenarios, a `fuchsia.intl.PropertyProvider` would like be reading the
+/// user's internationalization preferences from a preferences service and generating a `Profile`,
+/// rather than allowing a `Profile` to be set directly.
 [Discoverable]
 protocol PropertyManager {
     /// Set the internationalization profile that is served by this provider.

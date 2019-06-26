@@ -15,7 +15,7 @@ xunion ExposeDecl {
 /// service exposed by the component or one of its children at runtime.
 table ExposeServiceDecl {
     /// The provider of the capability relative to the component itself. Must
-    /// be |self| or |child|.
+    /// be `self` or `child`.
     1: Ref source;
 
     /// Path identifying the service, by which it was presented to this
@@ -36,7 +36,7 @@ table ExposeDirectoryDecl {
     1: string:MAX_PATH_LENGTH source_path;
 
     /// The provider of the capability relative to the component itself. Must
-    /// be |self| or |child|.
+    /// be `self` or `child`.
     2: Ref source;
 
     /// The path by which the capability is being exposed.

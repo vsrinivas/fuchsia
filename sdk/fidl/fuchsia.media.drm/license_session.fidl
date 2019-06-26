@@ -50,7 +50,7 @@ struct LicenseMessage {
 
 /// LicenseServerMessage is for messages originating from the license server
 /// that the caller must provide to the LicenseSession via
-/// |ProcessLicenseServerMessage|.
+/// `ProcessLicenseServerMessage`.
 struct LicenseServerMessage {
     fuchsia.mem.Buffer message;
 };
@@ -69,17 +69,17 @@ table DecryptorParams {
 };
 
 protocol LicenseSession {
-    /// Generate a license request for a session based on the |init_data|. When
-    /// the LicenseMessage has been created, the |OnLicenseMessageGenerated|
+    /// Generate a license request for a session based on the `init_data`. When
+    /// the LicenseMessage has been created, the `OnLicenseMessageGenerated`
     /// event will be triggered with the message to be sent to the license
     /// server.
     GenerateLicenseRequest(LicenseInitData init_data);
 
     /// Inititiate the release process for the license session. This will cause
     /// the CDM to generate a LicenseMessage through the
-    /// |OnLicenseMessageGenerated| event. The client must route that message
+    /// `OnLicenseMessageGenerated` event. The client must route that message
     /// to the license server and the server's response to
-    /// |ProcessLicenseServerMessage|. Once the LicenseSession has received the
+    /// `ProcessLicenseServerMessage`. Once the LicenseSession has received the
     /// license server's reply, it will close the LicenseSession channel as this
     /// session will no longer be usable.
     GenerateLicenseRelease();

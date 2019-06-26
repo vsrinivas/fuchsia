@@ -58,7 +58,7 @@ protocol Paver {
 
     /// Updates persistent metadata identifying which configuration should be selected as 'primary'
     /// for booting purposes. Should only be called after `KERNEL` as well as optional
-    /// `VERIFIED_BOOT_METADATA` assets for specified |configuration| were written successfully.
+    /// `VERIFIED_BOOT_METADATA` assets for specified `configuration` were written successfully.
     SetActiveConfiguration(Configuration configuration) -> (zx.status status);
 
     /// Updates persistent metadata identifying that active configuration is stable. Used to signal
@@ -70,21 +70,21 @@ protocol Paver {
     /// subsequent boots.
     ForceRecoveryConfiguration() -> (zx.status status);
 
-    /// Writes partition corresponding to |configuration| and |asset| with data from |payload|.
-    /// Will zero out rest of the partition if |payload| is smaller than the size of the partition
+    /// Writes partition corresponding to `configuration` and `asset` with data from `payload`.
+    /// Will zero out rest of the partition if `payload` is smaller than the size of the partition
     /// being written.
     ///
-    /// Returns ZX_ERR_INVALID_ARGS if |configuration| specifies active configuration.
+    /// Returns ZX_ERR_INVALID_ARGS if `configuration` specifies active configuration.
     WriteAsset(Configuration configuration, Asset asset, fuchsia.mem.Buffer payload) -> (zx.status status);
 
-    /// Writes FVM with data from streamed via |payload|. This potentially affects all
+    /// Writes FVM with data from streamed via `payload`. This potentially affects all
     /// configurations.
     WriteVolumes(request<PayloadStream> payload) -> (zx.status status);
 
-    /// Writes bootloader partition with data from |payload|.
+    /// Writes bootloader partition with data from `payload`.
     WriteBootloader(fuchsia.mem.Buffer payload) -> (zx.status status);
 
-    /// Writes /data/|filename| with data from |payload|. Overwrites file if it already exists.
+    /// Writes /data/`filename` with data from `payload`. Overwrites file if it already exists.
     WriteDataFile(string:fuchsia.io.MAX_PATH filename, fuchsia.mem.Buffer payload) -> (zx.status status);
 
     /// Wipes the FVM partition from the device. Should not be confused with factory reset, which

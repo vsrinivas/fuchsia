@@ -9,17 +9,17 @@ using zx;
 /// Dumps text debug information.
 ///
 /// All methods dump ascii text into a VMO, this allows the caller the flexibility to decide
-/// how much data they want. Use the returned |written| value to read the data, no string
+/// how much data they want. Use the returned `written` value to read the data, no string
 /// termination is guaranteed.
 [Discoverable, Layout = "Simple"]
 protocol DebugDumper {
-    /// Print device tree into |output|, returns bytes |written| and bytes |available| to write.
+    /// Print device tree into `output`, returns bytes `written` and bytes `available` to write.
     DumpTree(handle<vmo> output) -> (zx.status status, uint64 written, uint64 available);
 
-    /// Print information about all drivers into |output|, returns bytes |written| and bytes |available| to write.
+    /// Print information about all drivers into `output`, returns bytes `written` and bytes `available` to write.
     DumpDrivers(handle<vmo> output) -> (zx.status status, uint64 written, uint64 available);
 
-    /// Print all devices and their binding properties into |output|, returns bytes |written|
-    /// and bytes |available| to write.
+    /// Print all devices and their binding properties into `output`, returns bytes `written`
+    /// and bytes `available` to write.
     DumpBindingProperties(handle<vmo> output) -> (zx.status status, uint64 written, uint64 available);
 };

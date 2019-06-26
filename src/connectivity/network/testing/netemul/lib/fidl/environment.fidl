@@ -30,12 +30,12 @@ struct VirtualDevice {
 table LoggerOptions {
     /// Enable printing logs.
     1: bool enabled;
-    /// Enable kernel logs (no effect if |enabled| is false).
+    /// Enable kernel logs (no effect if `enabled` is false).
     2: bool klogs_enabled;
     /// LogFilter Options straight from fuchsia.logger.LogFilter.
-    /// The LogFilterOptions will be passed directly to the |Listen|
+    /// The LogFilterOptions will be passed directly to the `Listen`
     /// function of the fuchsia.logger.Log service without any
-    /// modification. If none provided, assume null. See |Listen| of
+    /// modification. If none provided, assume null. See `Listen` of
     /// fuchsia.logger.Log for more information.
     3: fuchsia.logger.LogFilterOptions filter_options;
     /// Use the parent environment's syslog for output, only enriching
@@ -74,10 +74,10 @@ protocol ManagedEnvironment {
     GetLauncher(request<fuchsia.sys.Launcher> launcher);
     /// Creates a nested managed environment.
     CreateChildEnvironment(request<ManagedEnvironment> child_env, EnvironmentOptions options);
-    /// Connects to a service named |name| provided by this environment.
+    /// Connects to a service named `name` provided by this environment.
     ConnectToService(string name, handle<channel> req);
-    /// Exposes new virtual device |device| for all components within this environment
+    /// Exposes new virtual device `device` for all components within this environment
     AddDevice(VirtualDevice device);
-    /// Removes virtual device mounted at |path| (relative to /vdev)
+    /// Removes virtual device mounted at `path` (relative to /vdev)
     RemoveDevice(string path);
 };

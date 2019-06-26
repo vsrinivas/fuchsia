@@ -28,11 +28,11 @@ enum TerminationReason {
 // An interface for controlling components.
 //
 // Closing this interface implicitly kills the controlled component unless
-// the |Detach| method has been called.
+// the `Detach` method has been called.
 //
 // If the component exits, this interface will be closed.
 //
-// Typically obtained via |Launcher.CreateComponent|.
+// Typically obtained via `Launcher.CreateComponent`.
 protocol ComponentController {
     // Terminates the component.
     //
@@ -42,7 +42,7 @@ protocol ComponentController {
 
     // Decouples the lifetime of the component from this controller.
     //
-    // After calling |Detach|, the component will not be implicitly killed when
+    // After calling `Detach`, the component will not be implicitly killed when
     // this interface is closed.
     Detach();
 

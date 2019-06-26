@@ -7,9 +7,9 @@ library fuchsia.update;
 [Discoverable]
 protocol Manager {
     /// Immediately check for an update.
-    ///  |options|:  Did a user initiate this request? (USER_INITIATED) This changes
+    ///  `options`:  Did a user initiate this request? (USER_INITIATED) This changes
     ///              some parameters about aggressiveness of retries and throttling.
-    ///  |monitor|:  An interface on which to receive the status events for this update check.
+    ///  `monitor`:  An interface on which to receive the status events for this update check.
     ///               It's only valid for a single update check, after that it won't receive any
     ///               more events.
     ///
@@ -81,52 +81,52 @@ enum ManagerState {
     /// The Manager is currently idle (in between updates).
     ///
     /// Next states:
-    /// * |CHECKING_FOR_UPDATES|
+    /// * `CHECKING_FOR_UPDATES`
     IDLE = 0;
     /// The Manager is currently checking for an update.
     ///
     /// Next states:
-    /// * |IDLE| update is not available
-    /// * |UPDATE_AVAILABLE| update is available but not allowed by policy
-    /// * |PERFORMING_UPDATE| update is available and allowed by policy
-    /// * |ENCOUNTERED_ERROR| on error
+    /// * `IDLE` update is not available
+    /// * `UPDATE_AVAILABLE` update is available but not allowed by policy
+    /// * `PERFORMING_UPDATE` update is available and allowed by policy
+    /// * `ENCOUNTERED_ERROR` on error
     CHECKING_FOR_UPDATES = 1;
     /// The Manager has found an available update but is not allowed to update
     /// due to policy.
     ///
     /// Next states:
-    /// * |CHECKING_FOR_UPDATES| when CheckNow() is called or a background update starts
+    /// * `CHECKING_FOR_UPDATES` when CheckNow() is called or a background update starts
     UPDATE_AVAILABLE = 2;
     /// The Manager has started the available update.
     ///
     /// Next states:
-    /// * |WAITING_FOR_REBOOT| on success
-    /// * |ENCOUNTERED_ERROR| on error
+    /// * `WAITING_FOR_REBOOT` on success
+    /// * `ENCOUNTERED_ERROR` on error
     PERFORMING_UPDATE = 3;
     /// The update has been performed, and the device is waiting to be rebooted.
     ///
     /// Next states:
-    /// * |FINALIZING_UPDATE| after device reboot
-    /// * |ENCOUNTERED_ERROR| on error
+    /// * `FINALIZING_UPDATE` after device reboot
+    /// * `ENCOUNTERED_ERROR` on error
     WAITING_FOR_REBOOT = 4;
     /// The update is being finalized after reboot.
     ///
     /// Next states:
-    /// * |IDLE| on success
-    /// * |ENCOUNTERED_ERROR| on error
+    /// * `IDLE` on success
+    /// * `ENCOUNTERED_ERROR` on error
     FINALIZING_UPDATE = 5;
     /// The Manager is reporting to Omaha that an error has occurred during the
     /// update.
     ///
     /// Next states:
-    /// * |IDLE|
+    /// * `IDLE`
     ENCOUNTERED_ERROR = 6;
 };
 
 enum CheckStartedResult {
     /// The update check has been started.
     STARTED = 0;
-    /// The update check was not started, as an update is already in progress, |monitor| is
+    /// The update check was not started, as an update is already in progress, `monitor` is
     /// attached to that update and will immediately get a OnState() call on current state.
     IN_PROGRESS = 1;
     /// The update check was not started, because too many requests to check have
@@ -138,7 +138,7 @@ table State {
     /// The current state of the Manager. Always present.
     1: ManagerState state;
 
-    /// The version available from Omaha. Will be present in |UPDATE_AVAILABLE| or starting
-    /// from |PERFORMING_UPDATE|.
+    /// The version available from Omaha. Will be present in `UPDATE_AVAILABLE` or starting
+    /// from `PERFORMING_UPDATE`.
     2: string version_available;
 };

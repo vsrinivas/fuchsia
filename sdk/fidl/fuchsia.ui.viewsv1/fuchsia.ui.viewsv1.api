@@ -1,10 +1,10 @@
 {
-  "fidl/fuchsia.ui.viewsv1/view_containers.fidl": "4a2e93e648c4b34144a8c56dce10a3ab",
-  "fidl/fuchsia.ui.viewsv1/view_manager.fidl": "29c663bfc2a6d899dd689294df131432",
-  "fidl/fuchsia.ui.viewsv1/view_properties.fidl": "1d7ab5621bf135075279113cad3feba9",
-  "fidl/fuchsia.ui.viewsv1/view_provider.fidl": "8d4832f34b877218b368cba39a644c2b",
-  "fidl/fuchsia.ui.viewsv1/view_snapshot.fidl": "2da50e137e7acb9e11a93b4472092331",
+  "fidl/fuchsia.ui.viewsv1/view_containers.fidl": "8ea78becd0dce0a5095c883cff8767fb",
+  "fidl/fuchsia.ui.viewsv1/view_manager.fidl": "d4a9dbacb335b94a81f36268ee349dd0",
+  "fidl/fuchsia.ui.viewsv1/view_properties.fidl": "1d018954180f820f8e6a591599e6de2a",
+  "fidl/fuchsia.ui.viewsv1/view_provider.fidl": "e083dcbdab8ef4df92313f33c4a2fdcf",
+  "fidl/fuchsia.ui.viewsv1/view_snapshot.fidl": "64581f10bed0ce91b71070f234301261",
   "fidl/fuchsia.ui.viewsv1/view_tree_token.fidl": "657596ac1f44a82cb3f70bc735ccac09",
-  "fidl/fuchsia.ui.viewsv1/view_trees.fidl": "d2012b50429523d6eb6ad3abc21bca2d",
-  "fidl/fuchsia.ui.viewsv1/views.fidl": "431365690b5d7b68ff0314ae584b7b02"
+  "fidl/fuchsia.ui.viewsv1/view_trees.fidl": "59fd2bcdc87c19877f903d8d25f6f69c",
+  "fidl/fuchsia.ui.viewsv1/views.fidl": "7961ed662293fe180882287067016aba"
 }

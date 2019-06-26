@@ -8,7 +8,7 @@ using fuchsia.bluetooth;
 
 [Discoverable]
 protocol Avrcp {
-    /// Returns a client to a remote target (TG) service at the address specified by |device_id|.
+    /// Returns a client to a remote target (TG) service at the address specified by `device_id`.
     /// TODO (BT-305): change device_id to int.
     GetControllerForTarget(string device_id, request<Controller> client) -> (fuchsia.bluetooth.Status status);
 };
@@ -35,7 +35,7 @@ protocol Controller {
     /// Infrom target of the controller's battery level.
     InformBatteryStatus(BatteryStatus battery_status) -> (fuchsia.bluetooth.Status status);
 
-    /// Register for the notification specified by |event|.
+    /// Register for the notification specified by `event`.
     /// Some events may not be supported depending on TG AVRCP version.
     RegisterNotification(TargetEvent event) -> (fuchsia.bluetooth.Status status);
 
@@ -60,7 +60,7 @@ protocol Controller {
     /// Incoming AV\C NOTIFY. EVENT_VOLUME_CHANGED
     -> VolumeChanged(uint8 volume);
 
-    /// Changes the addressed |player_id| on the target when multiple are supported.
+    /// Changes the addressed `player_id` on the target when multiple are supported.
     SetAddressedPlayer(uint16 player_id) -> (fuchsia.bluetooth.Status status);
 
     /// Send an AV\C passthrough key command. Sends both a key down and key up event.

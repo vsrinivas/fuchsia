@@ -14,12 +14,12 @@ using fuchsia.app;
 protocol Context {
     compose fuchsia.app.Context;
 
-    /// Schedules the task described in |task_info|. When this task is scheduled to
+    /// Schedules the task described in `task_info`. When this task is scheduled to
     /// run, Agent.RunTask() is called.
     ///
     /// TODO(MF-40): Add a callback to task scheduling.
     ScheduleTask(TaskInfo task_info);
 
-    /// Deletes the task |name| (see TaskInfo.name), meaning no new runs of this task will be scheduled.
+    /// Deletes the task `name` (see TaskInfo.name), meaning no new runs of this task will be scheduled.
     DeleteTask(TaskName name);
 };

@@ -25,7 +25,7 @@ table Component {
     //
     // This is null if the component is not represented as a package.
     // In that case, it is the runner's responsibility to load the component's
-    // resource from the |resolved_url|.  This mechanism is used for web
+    // resource from the `resolved_url`.  This mechanism is used for web
     // applications.
     //
     // TODO(CP-154): It might be better to return a package loader interface

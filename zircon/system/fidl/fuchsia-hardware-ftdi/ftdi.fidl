@@ -27,7 +27,7 @@ struct I2cBusLayout {
 
 [Layout = "Simple"]
 protocol Device {
-    /// Create an I2c bus on the FTDI device with a given |layout| and
-    /// with |device| attached to it.
+    /// Create an I2c bus on the FTDI device with a given `layout` and
+    /// with `device` attached to it.
     CreateI2C(I2cBusLayout layout, I2cDevice device);
 };

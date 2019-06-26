@@ -22,7 +22,7 @@ struct CustomFocusBehavior {
 // Provides layout constraints for a view.
 //
 // TODO(jeffbrown): Decide how measurement should be performed.  Perhaps
-// bring back |BoxConstraints| or introduce some other protocol just for
+// bring back `BoxConstraints` or introduce some other protocol just for
 // measurement.
 struct ViewLayout {
     // The size of the view in logical pixels.

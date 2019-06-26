@@ -14,11 +14,11 @@ protocol MockComponent {
     Kill(uint64 errorcode);
     ConnectToService(string service_name, handle<channel> channel);
 
-    // Set backend service directory which can be used by |PublishService| to
+    // Set backend service directory which can be used by `PublishService` to
     // publish mock services.
     SetServiceDirectory(handle<channel> channel);
 
-    // Publishes |service_name| and connects to |backend service directory| when
+    // Publishes `service_name` and connects to |backend service directory| when
     // request comes in.
     PublishService(string service_name) -> ();
 };

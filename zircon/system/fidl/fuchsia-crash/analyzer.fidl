@@ -12,7 +12,7 @@ using zx;
 [Discoverable, Layout = "Simple"]
 protocol Analyzer {
     /// Requests that the crash analyzer handles the exception thrown by the
-    /// given |thread| in |process|.
+    /// given `thread` in `process`.
     ///
     /// A typical implementation might print a crash dump to the system log or
     /// upload a crash report to a server.
@@ -23,11 +23,11 @@ protocol Analyzer {
     /// Requests that the crash analyzer handles the exception thrown in the
     /// managed runtime.
     ///
-    /// |component_url| is the full Fuchsia URL of the component that crashed.
+    /// `component_url` is the full Fuchsia URL of the component that crashed.
     ///
     /// A typical implementation might print the exception message and stack
     /// trace to the system log or upload a crash report to a server.
-    // The type of |component_url| will be changed to some component-specific
+    // The type of `component_url` will be changed to some component-specific
     // FIDL struct eventually.
     OnManagedRuntimeException(string:1024 component_url,
                               ManagedRuntimeException exception)

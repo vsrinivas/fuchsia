@@ -22,10 +22,10 @@ enum CacheMode {
 
 // Specify the mechanism used to return the response body.
 enum ResponseBodyMode {
-  // The complete response body should be returned in the |buffer| field of
+  // The complete response body should be returned in the `buffer` field of
   // the response body.
   BUFFER = 0;
-  // The response body should be streamed through the |stream| field of the
+  // The response body should be streamed through the `stream` field of the
   // response body.
   STREAM = 1;
   // The response body may be returned as a buffer or stream.
@@ -47,7 +47,7 @@ struct URLRequest {
   // header will automatically be added.
   URLBody? body;
 
-  // The buffer size of the socket returned in URLResponse's |body| member.
+  // The buffer size of the socket returned in URLResponse's `body` member.
   // A value of 0 indicates that the default buffer size should be used.  This
   // value is just a suggestion. The URLLoader may choose to ignore this value.
   uint32 response_body_buffer_size = 0;

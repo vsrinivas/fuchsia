@@ -46,14 +46,14 @@ struct LiteralRule {
     /// The exact hostname to match.
     string host_match;
 
-    /// The new hostname to replace the matched |host_match| with.
+    /// The new hostname to replace the matched `host_match` with.
     string host_replacement;
 
     /// The absolute path to a package or directory to match against.
     ///
-    /// If |path_prefix_match| ends with '/', it will match any packages or
+    /// If `path_prefix_match` ends with '/', it will match any packages or
     /// subdirectories below the matched path.
-    /// If |path_prefix_match| does not end with '/', it will be interpreted as
+    /// If `path_prefix_match` does not end with '/', it will be interpreted as
     /// as an exact match.
     ///
     /// # Examples
@@ -67,9 +67,9 @@ struct LiteralRule {
     string path_prefix_match;
 
     /// The absolute path to a single package or a directory to replace the
-    /// matched |path_prefix_match| with.
+    /// matched `path_prefix_match` with.
     ///
-    /// |path_prefix_match| and |path_prefix_replacement| must both match
+    /// `path_prefix_match` and `path_prefix_replacement` must both match
     /// directories or both match exact packages. Mixing the two forms is not
     /// allowed.
     string path_prefix_replacement;
@@ -84,7 +84,7 @@ xunion Rule {
 ///
 /// When a package resolver is asked to resolve a fuchsia-pkg URL, it must first
 /// iterate through its sequence of rewrite rules (given by
-/// |Engine::List|). The rewrite engine will rewrite the given URL with
+/// `Engine::List`). The rewrite engine will rewrite the given URL with
 /// the first rule that:
 /// * matches the given URL
 /// * produces a valid URL when applied to the given URL
@@ -100,15 +100,15 @@ protocol Engine {
     /// Return an iterator over all rewrite rules.
     ///
     /// Arguments:
-    /// |iterator| is a request for an iterator.
+    /// `iterator` is a request for an iterator.
     List(request<RuleIterator> iterator);
 
     /// Return an iterator over all static (immutable) rewrite rules. These
     /// rules are handled as lower priority than dynamic rules and cannot be
-    /// modified (although they can be overridden) by |EditTransaction|s.
+    /// modified (although they can be overridden) by `EditTransaction`s.
     ///
     /// Arguments:
-    /// |iterator| is a request for an iterator.
+    /// `iterator` is a request for an iterator.
     ListStatic(request<RuleIterator> iterator);
 };
 
@@ -118,40 +118,40 @@ protocol EditTransaction {
     /// this transaction.
     ///
     /// Arguments:
-    /// |iterator| is a request for an iterator.
+    /// `iterator` is a request for an iterator.
     ListDynamic(request<RuleIterator> iterator);
 
     /// Removes all dynamically configured rewrite rules, leaving only any
     /// statically configured rules.
     ResetAll();
 
-    /// Add a rewrite rule with highest priority. If |rule| already exists, this
+    /// Add a rewrite rule with highest priority. If `rule` already exists, this
     /// API will prioritize it over other rules.
     ///
     /// Arguments:
-    /// * |rule| the rewrite rule to persist.
+    /// * `rule` the rewrite rule to persist.
     ///
     /// Return Values:
-    /// * |ZX_OK| if the rule was staged to be added.
-    /// * |ZX_ERR_INVALID_ARGS| if the |rule| is malformed.
+    /// * `ZX_OK` if the rule was staged to be added.
+    /// * `ZX_ERR_INVALID_ARGS` if the `rule` is malformed.
     Add(Rule rule) -> (zx.status status);
 
     /// Commit this transaction, or detect another transaction that committed
     /// before this one.
     ///
     /// Return Values:
-    /// * |ZX_OK| the staged edits were successfully committed.
-    /// * |ZX_ERR_UNAVAILABLE|  another transaction committed before this one.
+    /// * `ZX_OK` the staged edits were successfully committed.
+    /// * `ZX_ERR_UNAVAILABLE`  another transaction committed before this one.
     Commit() -> (zx.status status);
 
 };
 
-/// The iterator over all the rewrite rules defined in a |Engine|.
+/// The iterator over all the rewrite rules defined in a `Engine`.
 protocol RuleIterator {
     /// Advance the iterator and return the next batch of rules.
     ///
     /// Return Values:
-    /// * a vector of |Rule| rules. Will return an empty vector when
+    /// * a vector of `Rule` rules. Will return an empty vector when
     ///   there are no more rules.
     Next() -> (vector<Rule> rules);
 };

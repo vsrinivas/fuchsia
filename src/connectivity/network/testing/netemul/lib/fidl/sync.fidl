@@ -30,16 +30,16 @@ protocol Bus {
     -> OnClientAttached(string client);
     /// Notifies a client was detached.
     -> OnClientDetached(string client);
-    /// Waits for up to |timeout| (nsec) for all the clients in |clients|.
+    /// Waits for up to `timeout` (nsec) for all the clients in `clients`.
     /// Returns true if all clients are present on the bus before timeout expired.
-    /// If |result| is false, |absent| will contain the entries in |clients| that still weren't
+    /// If `result` is false, `absent` will contain the entries in `clients` that still weren't
     /// present on the bus when the timout expired.
-    /// Use |timeout| <= 0 for indefinite wait.
+    /// Use `timeout` <= 0 for indefinite wait.
     WaitForClients(vector<string> clients, zx.duration timeout) -> (bool result, vector<string>? absent);
-    /// Waits for up to |timeout| (nsec) for an event that matches |data|.
-    /// Event equality is performed by comparing *all* set fields in |data|.
+    /// Waits for up to `timeout` (nsec) for an event that matches `data`.
+    /// Event equality is performed by comparing *all* set fields in `data`.
     /// Returns true if event was received before timeout expired.
-    /// Use |timeout| <= 0 for indefinite wait.
+    /// Use `timeout` <= 0 for indefinite wait.
     WaitForEvent(Event data, zx.duration timeout) -> (bool result);
 };
 
@@ -51,9 +51,9 @@ protocol SyncManager {
     /// Subscribes to bus 'busName' with a given client name.
     /// Duplicate client names are disallowed and will cause the request to return unfulfilled.
     BusSubscribe(string busName, string clientName, request<Bus> bus);
-    /// Waits on a named counter barrier with name |barrierName|.
+    /// Waits on a named counter barrier with name `barrierName`.
     /// Functon will return true if the number of waits pending on the barrier matches or exceeds
-    /// |threshold| before  |timeout| (nsec) expires.
-    /// Use |timeout| <= 0 for indefinite wait.
+    /// `threshold` before  `timeout` (nsec) expires.
+    /// Use `timeout` <= 0 for indefinite wait.
     WaitForBarrierThreshold(string barrierName, uint32 threshold, zx.duration timeout) -> (bool result);
 };

@@ -11,7 +11,7 @@ library fuchsia.intl;
 /// may choose to pass along the service that it received from its parent to its own children, or to
 /// override it and apply additional customizations.
 ///
-/// See also |fuchsia.ui.views.View|.
+/// See also `fuchsia.ui.views.View`.
 [Discoverable]
 protocol PropertyProvider {
     /// Gets the user's internationalization profile.

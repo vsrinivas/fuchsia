@@ -32,12 +32,12 @@ enum TextAffinity {
 struct TextRange {
   /// The index of the first UTF-16 code unit in the range.
   ///
-  /// If |start| and |end| are both -1, the text range is empty.
+  /// If `start` and `end` are both -1, the text range is empty.
   int64 start = -1;
 
   /// The next index after the last UTF-16 code unit in this range.
   ///
-  /// If |start| and |end| are both -1, the text range is empty.
+  /// If `start` and `end` are both -1, the text range is empty.
   int64 end = -1;
 };
 

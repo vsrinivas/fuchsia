@@ -13,7 +13,7 @@ using fuchsia.ui.views;
 [Discoverable]
 protocol Presenter {
     // Request that the View's contents be displayed on the screen as a
-    // |Presentation|.
+    // `Presentation`.
     PresentView(fuchsia.ui.views.ViewHolderToken view_holder_token, request<Presentation>? presentation_request);
 
     // Sets new default renderer params and forces them on for the duration of the

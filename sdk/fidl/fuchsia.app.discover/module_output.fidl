@@ -6,7 +6,7 @@ library fuchsia.app.discover;
 
 [Discoverable]
 protocol ModuleOutputWriter {
-    /// Writes the |entity_reference| to the module's |output_parameter_name|
+    /// Writes the `entity_reference` to the module's `output_parameter_name`
     /// output. If no entity is provided, the output will be unset.
     /// Return happens upon completion of a successful write.
     Write(string output_name, string? entity_reference) -> () error OutputError;

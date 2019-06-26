@@ -28,15 +28,15 @@ struct LogFilterOptions {
     uint64 tid;
 
     // If more than zero, logs would be filtered based on verbosity and
-    // |min_severity| would be ignored.
+    // `min_severity` would be ignored.
     uint8 verbosity;
 
     LogLevelFilter min_severity;
 
     // If non-empty, return all messages which contain at least one specified
     // tag.  If empty, messages will not be filtered by tag.
-    // Passed tags should not be more than |MAX_TAG_LEN_BYTES| bytes in length
-    // and max tags can be |MAX_TAGS|.
+    // Passed tags should not be more than `MAX_TAG_LEN_BYTES` bytes in length
+    // and max tags can be `MAX_TAGS`.
     // Listener would be discarded if the limit is not followed.
     vector<string>:MAX_TAGS tags;
 };
@@ -63,13 +63,13 @@ struct LogMessage {
 // Interface for LogListener to register to listen to logs.
 [Discoverable]
 protocol Log {
-    // Listens to new log entries by calling Log() on |log_listener|.
-    // A null |options| indicates no filtering is requested.
+    // Listens to new log entries by calling Log() on `log_listener`.
+    // A null `options` indicates no filtering is requested.
     Listen(LogListener log_listener, LogFilterOptions? options);
 
     // Dumps all cached logs by calling LogMany() followed by Done() on
-    // |log_listener|.
-    // A null |options| indicates no filtering is requested.
+    // `log_listener`.
+    // A null `options` indicates no filtering is requested.
     DumpLogs(LogListener log_listener, LogFilterOptions? options);
 };
 
@@ -86,11 +86,11 @@ protocol LogListener {
     // Called for single messages.
     Log(LogMessage log);
 
-    // Called when |Log| service is serving cached logs.
-    // Max logs size per call is |MAX_LOG_MANY_SIZE_BYTES| bytes.
+    // Called when `Log` service is serving cached logs.
+    // Max logs size per call is `MAX_LOG_MANY_SIZE_BYTES` bytes.
     LogMany(vector<LogMessage> log);
 
-    // Called in the case |DumpLogs()| function of |Log| service was called and
+    // Called in the case `DumpLogs()` function of `Log` service was called and
     // all cached logs have been dispatched to this listener.
     Done();
 };

@@ -22,27 +22,27 @@ protocol ComponentContext {
                    request<fuchsia.sys.ServiceProvider> incoming_services,
                    request<AgentController> controller);
 
-    // Connects to an agent that provides the given |request.service_name|, and
-    // then connects the given |request.channel| to that service.
-    // |request.agent_controller| must be kept alive until the service is no
+    // Connects to an agent that provides the given `request.service_name`, and
+    // then connects the given `request.channel` to that service.
+    // `request.agent_controller` must be kept alive until the service is no
     // longer required.
     //
-    // If an error is encountered, the |request.channel| will be closed with
+    // If an error is encountered, the `request.channel` will be closed with
     // a status code, such as:
-    //   * ZX_ERR_NOT_FOUND -- if a |request.handler| agent URL is not
-    //     specified, and an agent for the |request.service_name| is not found
-    //   * ZX_ERR_PEER_CLOSED -- if |request.service_name| is not available from
+    //   * ZX_ERR_NOT_FOUND -- if a `request.handler` agent URL is not
+    //     specified, and an agent for the `request.service_name` is not found
+    //   * ZX_ERR_PEER_CLOSED -- if `request.service_name` is not available from
     //     the agent (either specified or discovered)
     [Transitional]
     ConnectToAgentService(AgentServiceRequest request);
 
     // Used to create or delete a message queue or retrieve an existing queue
-    // identified by |name|. |name| is local to the calling component instance.
+    // identified by `name`. `name` is local to the calling component instance.
     ObtainMessageQueue(string name, request<MessageQueue> queue);
     DeleteMessageQueue(string name);
 
     // Gets a MessageSender service that can be used to send a message to a queue
-    // identified by |queue_token|. Token for a MessageQueue is obtained from its
+    // identified by `queue_token`. Token for a MessageQueue is obtained from its
     // GetToken() method. The token is unique within the scope of the user, i.e.
     // it can be used by other component instances than the one that created the
     // message queue.
@@ -52,7 +52,7 @@ protocol ComponentContext {
     // reference to an Entity interface.
     GetEntityResolver(request<EntityResolver> request);
 
-    // Creates a new entity from |type_to_data| such that duplicate types are
+    // Creates a new entity from `type_to_data` such that duplicate types are
     // overriden by subsequent entries.
     //
     // This is a useful way to represent small immutable entities without having

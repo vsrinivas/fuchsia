@@ -9,29 +9,29 @@ using fuchsia.bluetooth;
 [Discoverable]
 protocol Peripheral {
     // Starts sending advertisements based on the given parameters.
-    //   - |advertising_data|: The advertising data that should be included in the payload.
-    //   - |scan_result|: The scan result that will be returned when the advertisement is
+    //   - `advertising_data`: The advertising data that should be included in the payload.
+    //   - `scan_result`: The scan result that will be returned when the advertisement is
     //                    scanned.  Setting this will mark the advertisement set as scannable.
-    //   - |connectable|: when true, this advertisement will be marked as connectable.
+    //   - `connectable`: when true, this advertisement will be marked as connectable.
     //                 NOTE: connections can be made to a GATT server even if this is not set.
-    //   - |interval_ms|: The requested interval to advertise this set at in milliseconds.
+    //   - `interval_ms`: The requested interval to advertise this set at in milliseconds.
     //                    minimum 20, maximum 10,000,000 (almost 3 hours). A reasonable
     //                    default is 1 second (1000).
-    //   - |anonymous|: if true, the address of this device will not be included
+    //   - `anonymous`: if true, the address of this device will not be included
     //
-    // If the |tx_power_level| is set in either AdvertisingData, it will be replaced with
+    // If the `tx_power_level` is set in either AdvertisingData, it will be replaced with
     // the actual TX Power level reported by the adapter, or included in the extended header
     // of the Advertising PDU to save advertising space.
     //
-    // If |scan_result| and |advertising_data| are both set, legacy advertising will be used,
+    // If `scan_result` and `advertising_data` are both set, legacy advertising will be used,
     // which limits the size of the advertising data.
     //
     // This request will fail if:
-    //   - The |service_uuids| field of |advertising_data| contains a UUID that does not match
+    //   - The `service_uuids` field of `advertising_data` contains a UUID that does not match
     //     a GATT service that was previously registered by this application;
     //   - If the provided advertising data cannot fit within the advertising payload MTU that
     //     is supported on the current platform and parameters.
-    //   - If |anonymous| advertising is requested but the controller cannot support it.
+    //   - If `anonymous` advertising is requested but the controller cannot support it.
     StartAdvertising(AdvertisingData advertising_data, AdvertisingData? scan_result,
                      bool connectable, uint32 interval_ms, bool anonymous)
         -> (fuchsia.bluetooth.Status status, string? advertisement_id);

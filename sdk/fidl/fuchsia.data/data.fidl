@@ -26,7 +26,7 @@ struct Dictionary {
     vector<Entry> entries;
 };
 
-// A key/value pair in a |Dictionary|.
+// A key/value pair in a `Dictionary`.
 struct Entry {
     string key;
     Value? value;

@@ -90,8 +90,8 @@ protocol SettingsManager {
 /// Interface to update Accessibility Settings. Various Accessibility Settings can be
 /// modified individually.
 protocol SettingsProvider {
-    // Enables or disables magnification depending on |magnification_enabled|.
-    // When |magnification_enabled| is different from the existing setting,
+    // Enables or disables magnification depending on `magnification_enabled`.
+    // When `magnification_enabled` is different from the existing setting,
     // the zoom factor is reset to 1.0.
     SetMagnificationEnabled(bool magnification_enabled)
         -> (SettingsManagerStatus status);

@@ -80,73 +80,73 @@ union Value {
     uint32 variable_id;
 };
 
-// A value that is specified explicitly by |value| if |variable_id| is zero,
-// or is the value produced by the resource identified by |variable_id|, e.g.
+// A value that is specified explicitly by `value` if `variable_id` is zero,
+// or is the value produced by the resource identified by `variable_id`, e.g.
 // an animation or expression.  In the latter case, the value produced by the
-// resource must be a float32, and |value| is ignored.
+// resource must be a float32, and `value` is ignored.
 struct FloatValue {
     float32 value;
     uint32 variable_id;
 };
 
-// A value that is specified explicitly by |value| if |variable_id| is zero,
-// or is the value produced by the resource identified by |variable_id|, e.g.
+// A value that is specified explicitly by `value` if `variable_id` is zero,
+// or is the value produced by the resource identified by `variable_id`, e.g.
 // an animation or expression.  In the latter case, the value produced by the
-// resource must be a vec2, and |value| is ignored.
+// resource must be a vec2, and `value` is ignored.
 struct Vector2Value {
     vec2 value;
     uint32 variable_id;
 };
 
-// A value that is specified explicitly by |value| if |variable_id| is zero,
-// or is the value produced by the resource identified by |variable_id|, e.g.
+// A value that is specified explicitly by `value` if `variable_id` is zero,
+// or is the value produced by the resource identified by `variable_id`, e.g.
 // an animation or expression.  In the latter case, the value produced by the
-// resource must be a vec3, and |value| is ignored.
+// resource must be a vec3, and `value` is ignored.
 struct Vector3Value {
     vec3 value;
     uint32 variable_id;
 };
 
-// A value that is specified explicitly by |value| if |variable_id| is zero,
-// or is the value produced by the resource identified by |variable_id|, e.g.
+// A value that is specified explicitly by `value` if `variable_id` is zero,
+// or is the value produced by the resource identified by `variable_id`, e.g.
 // an animation or expression.  In the latter case, the value produced by the
-// resource must be a vec4, and |value| is ignored.
+// resource must be a vec4, and `value` is ignored.
 struct Vector4Value {
     vec4 value;
     uint32 variable_id;
 };
 
-// A value that is specified explicitly by |value| if |variable_id| is zero,
-// or is the value produced by the resource identified by |variable_id|, e.g.
+// A value that is specified explicitly by `value` if `variable_id` is zero,
+// or is the value produced by the resource identified by `variable_id`, e.g.
 // an animation or expression.  In the latter case, the value produced by the
-// resource must be a vec4, and |value| is ignored.
+// resource must be a vec4, and `value` is ignored.
 struct Matrix4Value {
     mat4 value;
     uint32 variable_id;
 };
 
-// A value that is specified explicitly by |value| if |variable_id| is zero,
-// or is the value produced by the resource identified by |variable_id|, e.g.
+// A value that is specified explicitly by `value` if `variable_id` is zero,
+// or is the value produced by the resource identified by `variable_id`, e.g.
 // an animation or expression.  In the latter case, the value produced by the
-// resource must be a ColorRgb, and |value| is ignored.
+// resource must be a ColorRgb, and `value` is ignored.
 struct ColorRgbValue {
     ColorRgb value;
     uint32 variable_id;
 };
 
-// A value that is specified explicitly by |value| if |variable_id| is zero,
-// or is the value produced by the resource identified by |variable_id|, e.g.
+// A value that is specified explicitly by `value` if `variable_id` is zero,
+// or is the value produced by the resource identified by `variable_id`, e.g.
 // an animation or expression.  In the latter case, the value produced by the
-// resource must be a ColorRgba, and |value| is ignored.
+// resource must be a ColorRgba, and `value` is ignored.
 struct ColorRgbaValue {
     ColorRgba value;
     uint32 variable_id;
 };
 
-// A value that is specified explicitly by |value| if |variable_id| is zero,
-// or is the value produced by the resource identified by |variable_id|, e.g.
+// A value that is specified explicitly by `value` if `variable_id` is zero,
+// or is the value produced by the resource identified by `variable_id`, e.g.
 // an animation or expression.  In the latter case, the value produced by the
-// resource must be a Quaternion, and |value| is ignored.
+// resource must be a Quaternion, and `value` is ignored.
 struct QuaternionValue {
     Quaternion value;
     uint32 variable_id;
@@ -175,7 +175,7 @@ enum HitTestBehavior {
 };
 
 // Rendering target metrics associated with a node.
-// See also |MetricsEvent|.
+// See also `MetricsEvent`.
 struct Metrics {
     // The ratio between the size of one logical pixel within the node's local
     // coordinate system and the size of one physical pixel of the rendering
@@ -219,7 +219,7 @@ struct ViewProperties {
     // with a potentially non-zero min?
     BoundingBox bounding_box;
 
-    // |insets_from_min| and |insets_from_max| specify the distances between the
+    // `insets_from_min` and `insets_from_max` specify the distances between the
     // view's bounding box and that of its parent.
     vec3 inset_from_min;
     vec3 inset_from_max;

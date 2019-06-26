@@ -12,22 +12,22 @@ library fuchsia.modular;
 [Discoverable]
 protocol ContextReader {
     // When any conditions that would cause the resulting set of context values
-    // selected by |query| to change, a ContextUpdate is sent to |listener|.
+    // selected by `query` to change, a ContextUpdate is sent to `listener`.
     //
-    // The current state of values selected by |query| are sent to |listener|
+    // The current state of values selected by `query` are sent to `listener`
     // immediately.
     //
-    // The subscription will continue to stay active as long as the |listener|
+    // The subscription will continue to stay active as long as the `listener`
     // handle is not closed.
     Subscribe(ContextQuery query, ContextListener listener);
 
-    // Returns the current context state matching |query|.
+    // Returns the current context state matching `query`.
     Get(ContextQuery query) -> (ContextUpdate update);
 };
 
 struct ContextQuery {
     // A map of ContextSelector structs. The keys are specified by the client.
-    // Each key gets a corresponding entry in |ContextUpdate.values| when it is
+    // Each key gets a corresponding entry in `ContextUpdate.values` when it is
     // generated in response to this query.
     vector<ContextQueryEntry> selector;
 };
@@ -38,11 +38,11 @@ struct ContextQueryEntry {
 };
 
 struct ContextSelector {
-    // A partial metadata struct. Any metadata value given in |meta| restricts
+    // A partial metadata struct. Any metadata value given in `meta` restricts
     // the set of values in the eventual ContextUpdate to include only those
     // whose metadata match values given.
     //
-    // A null |meta| will match any value of the given |type|. Use this sparingly
+    // A null `meta` will match any value of the given `type`. Use this sparingly
     // as a full update could become quite large.
     // TODO(thatguy): Find users of this and eliminate them if it becomes a
     // scaling problem.
@@ -62,7 +62,7 @@ protocol ContextListener {
     // used in the subscription for this listener.
     //
     // TODO(thatguy): A broad ContextQuery will result in a large
-    // |ContextUpdate|, which may exceed the FIDL max message size. In this case
+    // `ContextUpdate`, which may exceed the FIDL max message size. In this case
     // updates would not be propagated. If this becomes an issue, allowing
     // clients to opt for delta-updates instead of state snapshots would suffice,
     // albeit also add some complexity to client implementations.
@@ -70,7 +70,7 @@ protocol ContextListener {
 };
 
 struct ContextUpdate {
-    // A list of ContextValue for each key in |ContextQuery.selector|. An empty
+    // A list of ContextValue for each key in `ContextQuery.selector`. An empty
     // list means no values matched the given ContextSelector.
     vector<ContextUpdateEntry> values;
 };

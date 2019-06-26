@@ -8,13 +8,13 @@ protocol ControlFlow {
     Shutdown();
 
     /// Calling this method generates no reply and a epitaph with error set to
-    /// |ZX_ERR_ACCESS_DENIED|. The channel will then be closed.
+    /// `ZX_ERR_ACCESS_DENIED`. The channel will then be closed.
     /// This tests sending an epitaph from the one-way method call handler.
     NoReplyMustSendAccessDeniedEpitaph();
 
     /// Despite the fact that a reply was defined in the method signature,
     /// Calling this method generates no reply and a epitaph with error set to
-    /// |ZX_ERR_ACCESS_DENIED|. The channel will then be closed.
+    /// `ZX_ERR_ACCESS_DENIED`. The channel will then be closed.
     /// This tests sending an epitaph from a normal (two-way) method call handler.
     MustSendAccessDeniedEpitaph() -> (int32 reply);
 };

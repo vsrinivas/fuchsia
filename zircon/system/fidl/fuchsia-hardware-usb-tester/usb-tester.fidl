@@ -41,9 +41,9 @@ struct IsochTestParams {
     /// Optional array of additional options for the OUT packets.
     // TODO(jocelyndang): A vector would break the current requirement for a simple C binding.
     array<PacketOptions>:MAX_PACKETS packet_opts;
-    /// Number of entries in |packet_opts|. This can be less than |num_packets|,
+    /// Number of entries in `packet_opts`. This can be less than `num_packets`,
     /// in which case defaults will be chosen for the remaining packets.
-    /// Any entries provided after |num_packets| will be ignored.
+    /// Any entries provided after `num_packets` will be ignored.
     uint64 packet_opts_len;
 };
 

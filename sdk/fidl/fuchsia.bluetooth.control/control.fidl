@@ -20,7 +20,7 @@ struct AdapterInfo {
 
     /// The current adapter state. This field is only present when an AdapterInfo
     /// is obtained via the Control and ControlDelegate interfaces. If present,
-    /// all optional members of |state| will also be present.
+    /// all optional members of `state` will also be present.
     AdapterState? state;
 };
 
@@ -58,31 +58,31 @@ protocol Control {
     IsBluetoothAvailable() -> (bool available);
 
     /// Registers a delegate to handle pairing requests.
-    /// Indicate the capability type of the PairingDelegate using |in| and |out|.
+    /// Indicate the capability type of the PairingDelegate using `in` and `out`.
     /// If your input/output capability is variable, call this function when it
     /// changes to update.
     /// Setting a pairing delegate closes the previously assigned pairing Delegate.
     ///
-    /// To disable pairing, set |delegate| to null.
+    /// To disable pairing, set `delegate` to null.
     SetPairingDelegate(PairingDelegate? delegate) -> (bool success);
 
     /// Returns information about all local adapters that are known to the system.
     GetAdapters() -> (vector<AdapterInfo>? adapters);
 
-    /// Sets the local adapter with the given |identifier| to act as the backing
+    /// Sets the local adapter with the given `identifier` to act as the backing
     /// adapter for all Bluetooth interfaces.
     SetActiveAdapter(string identifier) -> (fuchsia.bluetooth.Status status);
 
     /// Returns information on the current active adapter, if it exists.
     GetActiveAdapterInfo() -> (AdapterInfo? adapter);
 
-    /// If |discovery| is true, active discovery is requested.
+    /// If `discovery` is true, active discovery is requested.
     /// When requesting discovery, general discovery for BR/EDR and LE will be
     /// active and newly discovered devices will be reported via
     /// RemoteDeviceDelegate.OnDeviceUpdate().
     ///
     /// Discovery may be active when not reqested.
-    /// If an error occurs when starting discovery, it is reflected in |status|.
+    /// If an error occurs when starting discovery, it is reflected in `status`.
     RequestDiscovery(bool discovery) -> (fuchsia.bluetooth.Status status);
 
     /// Retrieve the set of known remote devices.
@@ -90,7 +90,7 @@ protocol Control {
     GetKnownRemoteDevices() -> (vector<RemoteDevice> devices);
 
     /// Sets the public Bluetooth name for this device, or resets to the default
-    /// name if |name| is not present.
+    /// name if `name` is not present.
     SetName(string? name) -> (fuchsia.bluetooth.Status status);
 
     /// Set the Device Class for the active Bluetooth adapter.
@@ -101,14 +101,14 @@ protocol Control {
     /// Set the discoverability of this device.
     SetDiscoverable(bool discoverable) -> (fuchsia.bluetooth.Status status);
 
-    /// Attempt to connect to the remote |device_id|.
+    /// Attempt to connect to the remote `device_id`.
     Connect(string device_id) -> (fuchsia.bluetooth.Status status);
 
     /// Disconnect a previously-connected device.
     /// Note: This does not remove a device bond, see Control::Forget.
     Disconnect(string device_id) -> (fuchsia.bluetooth.Status status);
 
-    /// Forgets |device_id| completely, removing all bonding information.
+    /// Forgets `device_id` completely, removing all bonding information.
     /// This will disconnect a device if it is connected.
     Forget(string device_id) -> (fuchsia.bluetooth.Status status);
 
@@ -117,14 +117,14 @@ protocol Control {
 
     // Events
 
-    /// Sent when the active adapter has been updated. If |active_adapter| is
+    /// Sent when the active adapter has been updated. If `active_adapter` is
     /// null, then no adapter is currently active.
     -> OnActiveAdapterChanged(AdapterInfo? adapter);
 
     /// Sent when an adapter has been updated.
     -> OnAdapterUpdated(AdapterInfo adapter);
 
-    /// Sent when an adapter with the given |identifier| has been removed from
+    /// Sent when an adapter with the given `identifier` has been removed from
     /// the system.
     -> OnAdapterRemoved(string identifier);
 

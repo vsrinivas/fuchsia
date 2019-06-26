@@ -24,7 +24,7 @@ protocol DeviceManager {
     /// the correct key for this slot, then the device node responding to this
     /// protocol will create an unsealed zxcrypt device as a child of itself in
     /// the device tree before returning success.
-    /// Returns ZX_ERR_INVALID_ARGS if |slot| is invalid.
+    /// Returns ZX_ERR_INVALID_ARGS if `slot` is invalid.
     /// Returns ZX_ERR_BAD_STATE and keeps the device open if the device is already unsealed.
     /// Returns other errors if operations on the underlying block device return errors.
     /// Returns ZX_OK on success.

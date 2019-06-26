@@ -89,8 +89,8 @@ protocol Control {
     /// Get the available format types for this device
     /// NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple
     /// GetFormats need to be issued until total_format_count are received.
-    /// |actual_format_count| is the number of valid formats in this response.
-    /// |total_format_count| is the total number of formats supported by the camera.
+    /// `actual_format_count` is the number of valid formats in this response.
+    /// `total_format_count` is the total number of formats supported by the camera.
     GetFormats(uint32 index)
         -> (array<VideoFormat>:MAX_FORMATS_PER_RESPONSE formats, uint32 total_format_count,
             uint32 actual_format_count, zx.status status);
@@ -113,8 +113,8 @@ protocol ControlV2 {
     /// Get the available format types for this device
     /// NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple
     /// GetFormats need to be issued until total_format_count are received.
-    /// |actual_format_count| is the number of valid formats in this response.
-    /// |total_format_count| is the total number of formats supported by the camera.
+    /// `actual_format_count` is the number of valid formats in this response.
+    /// `total_format_count` is the total number of formats supported by the camera.
     GetFormats(uint32 index)
         -> (array<fuchsia.camera.common.VideoFormat>:MAX_FORMATS_PER_RESPONSE formats,
         uint32 total_format_count, uint32 actual_format_count, zx.status status);

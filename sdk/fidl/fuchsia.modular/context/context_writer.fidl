@@ -6,9 +6,9 @@ library fuchsia.modular;
 
 [Discoverable]
 protocol ContextWriter {
-    // Creates and returns a ContextValueWriter for a future value of |type|,
+    // Creates and returns a ContextValueWriter for a future value of `type`,
     // allowing the client to set and update the contents at a later time.  The
-    // value is removed from the Context service when |value_writer| is closed or
+    // value is removed from the Context service when `value_writer` is closed or
     // a connection error occurs.
     CreateValue(request<ContextValueWriter> value_writer, ContextValueType type);
 
@@ -16,10 +16,10 @@ protocol ContextWriter {
     // publishing to CreateValue() easier and will be removed eventually.
     // Internally, calls CreateValue() with type = ContextValueType.ENTITY,
     // and sets metadata.entity.topic = topic, unless WriteEntityTopic() was
-    // called already on this instance with the same |topic| value. In that case,
+    // called already on this instance with the same `topic` value. In that case,
     // performs an upate instead of adding a new value.
     //
-    // Leaving |value| null removes the topic value from the Context service.
+    // Leaving `value` null removes the topic value from the Context service.
     //
     // TODO(thatguy): Remove this method and replace its behavior with
     // client-side library methods.
@@ -34,7 +34,7 @@ protocol ContextValueWriter {
     // Ie, does removing the parent remove all its children?
     CreateChildValue(request<ContextValueWriter> value_writer, ContextValueType type);
 
-    // Updates the content and/or metadata of this value. If either |content| or
-    // |metadata| are left null, the existing values will remain.
+    // Updates the content and/or metadata of this value. If either `content` or
+    // `metadata` are left null, the existing values will remain.
     Set(string? content, ContextMetadata? metadata);
 };

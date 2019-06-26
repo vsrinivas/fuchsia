@@ -47,30 +47,30 @@ using fuchsia.mem;
 //
 // No service name: returned from ModuleContext.GetLink().
 protocol Link {
-    // Gets the value at the given |path|, which is represented using the JSON
+    // Gets the value at the given `path`, which is represented using the JSON
     // Pointer specification (https://tools.ietf.org/html/rfc6901).
     //
-    // |json_data| is a UTF8 encoded string representing valid JSON.
+    // `json_data` is a UTF8 encoded string representing valid JSON.
     //
-    // Returns null if |path| does not exist. Returns the entire JSON object
-    // if |path| is either null or an empty array. Returns the string "null" if
+    // Returns null if `path` does not exist. Returns the entire JSON object
+    // if `path` is either null or an empty array. Returns the string "null" if
     // the link is empty.
     Get(vector<string>? path) -> (fuchsia.mem.Buffer? json_data);
 
-    // Set() overwrites the value/object/array at the given |path|. Set also
-    // overwrites any values or arrays as necessary to ensure that |path| exists.
-    // The |json_data| parameter must be a UTF8 encoded JSON string.
+    // Set() overwrites the value/object/array at the given `path`. Set also
+    // overwrites any values or arrays as necessary to ensure that `path` exists.
+    // The `json_data` parameter must be a UTF8 encoded JSON string.
     // Either pass "null" to set the value to null, or use Erase to
     // completely remove a member of an object. To replace the root, pass null for
-    // |path|.
+    // `path`.
     //
     // This call notifies Watchers, although this may be skipped if nothing
     // changed.
     Set(vector<string>? path, fuchsia.mem.Buffer json_data);
 
-    // Erases the object member at the given |path|. If the path is not found or
+    // Erases the object member at the given `path`. If the path is not found or
     // does not match the current structure of the JSON, the path will not be
-    // created and the call is ignored. The |path| parameter cannot be null or
+    // created and the call is ignored. The `path` parameter cannot be null or
     // zero length because the root is a value, not a key. This call notifies
     // Watchers, although this may be skipped if nothing changed.
     Erase(vector<string> path);
@@ -79,8 +79,8 @@ protocol Link {
     // present, returns a null fidl string.
     GetEntity() -> (string? entity_reference);
 
-    // Sets this to be an Entity Link with the given |entity_reference|. The
-    // existing value of the link is overwritten. If |entity_reference| is null,
+    // Sets this to be an Entity Link with the given `entity_reference`. The
+    // existing value of the link is overwritten. If `entity_reference` is null,
     // then any existing value in the link is overwritten with the JSON string
     // "null".
     SetEntity(string? entity_reference);
@@ -112,7 +112,7 @@ protocol Link {
 //
 // The Notify() method is invoked whenever the Link changes. The entire JSON
 // string in the Link will be sent. In other words, this isn't an incremental
-// notification. |json| cannot be null because an empty Link is the valid JSON
+// notification. `json` cannot be null because an empty Link is the valid JSON
 // document "null".
 //
 // No service name: created by Module.

@@ -22,10 +22,10 @@ library fuchsia.images;
 //
 // The producer performs the following sequence of steps to present content:
 // - Allocate and add some number of images (often 2 or 3) to the image pipe
-//   to establish a pool using |AddImage()|.
+//   to establish a pool using `AddImage()`.
 // - Obtain the next available image from the pool.
 // - Ask the consumer to enqueue an image for presentation and provide fences
-//   using |PresentImage()|.
+//   using `PresentImage()`.
 // - Start rendering the image.
 // - Signal the image's acquire fence when rendering is complete.
 // - Loop to present more image, listen for signals on release fences to recycle
@@ -44,7 +44,7 @@ library fuchsia.images;
 // If the producer wants to close the image pipe, it should:
 // - Close its side of the connection.
 // - Wait on all release fences for buffers that it has submitted with
-//   |PresentImage()|.
+//   `PresentImage()`.
 // - Proceed with resource cleanup.
 //
 // When the consumer detects the image pipe has closed, it should:
@@ -64,27 +64,27 @@ library fuchsia.images;
 protocol ImagePipe {
     // Adds an image resource to image pipe.
     //
-    // The |memory| is the handle of a memory object which contains the image
+    // The `memory` is the handle of a memory object which contains the image
     // data.  It is valid to create multiple images backed by the same memory
     // object; they may even overlap.  Consumers must detect this and handle
-    // it accordingly.  The |offset_bytes| indicates the offset within the
-    // memory object at which the image data begins.  The |size_bytes|
-    // indicates the amount of memory from |memory| that should be utilized.
-    // The type of memory stored in the VMO is |memory_type| (e.g. GPU memory,
+    // it accordingly.  The `offset_bytes` indicates the offset within the
+    // memory object at which the image data begins.  The `size_bytes`
+    // indicates the amount of memory from `memory` that should be utilized.
+    // The type of memory stored in the VMO is `memory_type` (e.g. GPU memory,
     // host memory).
     //
     // The following errors will cause the connection to be closed:
-    // - |image_id| is already registered
-    // - |image_info| represents a format not supported by the consumer
-    // - |memory| is not a handle for a readable VMO
-    // - the image data expected at |offset_bytes| according to the |image_info|
+    // - `image_id` is already registered
+    // - `image_info` represents a format not supported by the consumer
+    // - `memory` is not a handle for a readable VMO
+    // - the image data expected at `offset_bytes` according to the `image_info`
     //   exceeds the memory object's bounds
     AddImage(uint32 image_id, ImageInfo image_info,
              handle<vmo> memory, uint64 offset_bytes, uint64 size_bytes, MemoryType memory_type);
 
     // Removes an image resource from the pipe.
     //
-    // The |image_id| is detached from the image resource and is free to be
+    // The `image_id` is detached from the image resource and is free to be
     // reused to add a new image resource.
     //
     // Removing an image from the image pipe does not affect the presentation
@@ -95,26 +95,26 @@ protocol ImagePipe {
     // the image may still be in use in the presentation queue.
     //
     // The following errors will cause the connection to be closed:
-    // - |image_id| does not reference a currently registered image resource
+    // - `image_id` does not reference a currently registered image resource
     RemoveImage(uint32 image_id);
 
     // Enqueues the specified image for presentation by the consumer.
     //
-    // The |acquire_fences| are a set of fences which must all be signaled by the
+    // The `acquire_fences` are a set of fences which must all be signaled by the
     // producer before the consumer presents the image.
-    // The |release_fences| are set of fences which must all be signaled by the
+    // The `release_fences` are set of fences which must all be signaled by the
     // consumer before it is safe for the producer to free or modify the image.
-    // |presentation_time| specifies the time on or after which the
+    // `presentation_time` specifies the time on or after which the
     // client would like the enqueued operations should take visible effect
     // (light up pixels on the screen), expressed in nanoseconds in the
-    // |CLOCK_MONOTONIC| timebase.  Desired presentation times must be
+    // `CLOCK_MONOTONIC` timebase.  Desired presentation times must be
     // monotonically non-decreasing.
     //
-    // |presentation_info| returns timing information about the submitted frame
+    // `presentation_info` returns timing information about the submitted frame
     // and future frames (see presentation_info.fidl).
     //
     // The following errors will cause the connection to be closed:
-    // - |image_id| does not reference a currently registered image resource
+    // - `image_id` does not reference a currently registered image resource
     PresentImage(uint32 image_id, uint64 presentation_time,
                  vector<handle<event>> acquire_fences, vector<handle<event>> release_fences)
         -> (PresentationInfo presentation_info);

@@ -13,7 +13,7 @@ const uint32 SUSPEND_FLAG_POWEROFF = 0xdcdc0200;
 /// Provides administration services for the device manager service and the device tree it controls.
 [Discoverable, Layout = "Simple"]
 protocol Administrator {
-    /// Ask all devices to enter the suspend state indicated by |flags|. Flags should be some
+    /// Ask all devices to enter the suspend state indicated by `flags`. Flags should be some
     /// combination of DEVICE_SUSPEND_FLAG_* from the DDK.
     Suspend(uint32 flags) -> (zx.status status);
 };

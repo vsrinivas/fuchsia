@@ -1,7 +1,7 @@
 {
   "fidl/fuchsia.images/encoded_image.fidl": "42d393a9097e98d673200aa427c235df",
-  "fidl/fuchsia.images/image_info.fidl": "c8785809d02ca9706919f11551a25780",
-  "fidl/fuchsia.images/image_pipe.fidl": "5ea262864e1586bb7cd2db74fa0912b6",
+  "fidl/fuchsia.images/image_info.fidl": "8ab08230878baac9ad278f573adbfa42",
+  "fidl/fuchsia.images/image_pipe.fidl": "6828a405d7a50d6e823b8fa91989f2da",
   "fidl/fuchsia.images/memory_type.fidl": "1aacdd9fa2dfa69f1c5fc11723205ffa",
-  "fidl/fuchsia.images/presentation_info.fidl": "e8a4a719676bbe1347b7aad99da71112"
+  "fidl/fuchsia.images/presentation_info.fidl": "eca3a9f232851ce99cb286a3d8f6585c"
 }

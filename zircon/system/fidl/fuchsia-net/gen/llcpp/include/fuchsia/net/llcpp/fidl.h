@@ -138,7 +138,7 @@ extern "C" const fidl_type_t fuchsia_net_SocketControlIoctlRequestTable;
 extern "C" const fidl_type_t fuchsia_net_SocketControlIoctlResponseTable;
 
 // The control plane for a network socket. Once a socket has been retrieved from a
-// |SocketProvider|, this interface is then used to further configure and use the socket.
+// `SocketProvider`, this interface is then used to further configure and use the socket.
 // This interface is essentially POSIX. Its implementation must support Linux-specific arguments
 // to {Get,Set}SockOpt.
 class SocketControl final {
@@ -373,17 +373,17 @@ class SocketControl final {
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<ConnectResponse> Connect(::fidl::DecodedMessage<ConnectRequest> params, ::fidl::BytePart response_buffer);
 
-    // Begin listening for new connections from network endpoints. At most |backlog| connections
+    // Begin listening for new connections from network endpoints. At most `backlog` connections
     // will be buffered.
     zx_status_t Listen(int16_t backlog, int16_t* out_code);
 
-    // Begin listening for new connections from network endpoints. At most |backlog| connections
+    // Begin listening for new connections from network endpoints. At most `backlog` connections
     // will be buffered.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<ListenResponse> Listen(::fidl::BytePart _request_buffer, int16_t backlog, ::fidl::BytePart _response_buffer, int16_t* out_code);
 
-    // Begin listening for new connections from network endpoints. At most |backlog| connections
+    // Begin listening for new connections from network endpoints. At most `backlog` connections
     // will be buffered.
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<ListenResponse> Listen(::fidl::DecodedMessage<ListenRequest> params, ::fidl::BytePart response_buffer);
@@ -498,17 +498,17 @@ class SocketControl final {
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<ConnectResponse> Connect(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ConnectRequest> params, ::fidl::BytePart response_buffer);
 
-    // Begin listening for new connections from network endpoints. At most |backlog| connections
+    // Begin listening for new connections from network endpoints. At most `backlog` connections
     // will be buffered.
     static zx_status_t Listen(zx::unowned_channel _client_end, int16_t backlog, int16_t* out_code);
 
-    // Begin listening for new connections from network endpoints. At most |backlog| connections
+    // Begin listening for new connections from network endpoints. At most `backlog` connections
     // will be buffered.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<ListenResponse> Listen(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int16_t backlog, ::fidl::BytePart _response_buffer, int16_t* out_code);
 
-    // Begin listening for new connections from network endpoints. At most |backlog| connections
+    // Begin listening for new connections from network endpoints. At most `backlog` connections
     // will be buffered.
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<ListenResponse> Listen(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ListenRequest> params, ::fidl::BytePart response_buffer);
@@ -782,7 +782,7 @@ class Connectivity final {
 
   struct EventHandlers {
     // This is triggered on a state change in network reachability. Clients
-    // should expect that network requests will succeed when |reachable| is
+    // should expect that network requests will succeed when `reachable` is
     // true.
     fit::function<zx_status_t(bool reachable)> on_network_reachable;
 
@@ -846,18 +846,18 @@ class Connectivity final {
   }
 
   // This is triggered on a state change in network reachability. Clients
-  // should expect that network requests will succeed when |reachable| is
+  // should expect that network requests will succeed when `reachable` is
   // true.
   static zx_status_t SendOnNetworkReachableEvent(::zx::unowned_channel _chan, bool reachable);
 
   // This is triggered on a state change in network reachability. Clients
-  // should expect that network requests will succeed when |reachable| is
+  // should expect that network requests will succeed when `reachable` is
   // true.
   // Caller provides the backing storage for FIDL message via response buffers.
   static zx_status_t SendOnNetworkReachableEvent(::zx::unowned_channel _chan, ::fidl::BytePart _buffer, bool reachable);
 
   // This is triggered on a state change in network reachability. Clients
-  // should expect that network requests will succeed when |reachable| is
+  // should expect that network requests will succeed when `reachable` is
   // true.
   // Messages are encoded in-place.
   static zx_status_t SendOnNetworkReachableEvent(::zx::unowned_channel _chan, ::fidl::DecodedMessage<OnNetworkReachableResponse> params);
@@ -1215,7 +1215,7 @@ struct Subnet {
   [[maybe_unused]]
   static constexpr uint32_t MaxOutOfLine = 0;
 
-  // The Ipv4 or Ipv6 address. Only the |prefix_len| most significant bits may be set in |addr|;
+  // The Ipv4 or Ipv6 address. Only the `prefix_len` most significant bits may be set in `addr`;
   // all bits in the host portion of the address must be zero.
   IpAddress addr{};
 
@@ -1290,14 +1290,14 @@ class NameLookup final {
 
     // Look up a list of IP addresses by hostname.
     //
-    // If |hostname| is an Internationalized Domain Name, it must be encoded as per RFC 3490.
+    // If `hostname` is an Internationalized Domain Name, it must be encoded as per RFC 3490.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<LookupIpResponse> LookupIp(::fidl::BytePart _request_buffer, ::fidl::StringView hostname, LookupIpOptions options, ::fidl::BytePart _response_buffer, NameLookup_LookupIp_Result* out_result);
 
     // Look up a list of IP addresses by hostname.
     //
-    // If |hostname| is an Internationalized Domain Name, it must be encoded as per RFC 3490.
+    // If `hostname` is an Internationalized Domain Name, it must be encoded as per RFC 3490.
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<LookupIpResponse> LookupIp(::fidl::DecodedMessage<LookupIpRequest> params, ::fidl::BytePart response_buffer);
 
@@ -1322,14 +1322,14 @@ class NameLookup final {
 
     // Look up a list of IP addresses by hostname.
     //
-    // If |hostname| is an Internationalized Domain Name, it must be encoded as per RFC 3490.
+    // If `hostname` is an Internationalized Domain Name, it must be encoded as per RFC 3490.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<LookupIpResponse> LookupIp(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView hostname, LookupIpOptions options, ::fidl::BytePart _response_buffer, NameLookup_LookupIp_Result* out_result);
 
     // Look up a list of IP addresses by hostname.
     //
-    // If |hostname| is an Internationalized Domain Name, it must be encoded as per RFC 3490.
+    // If `hostname` is an Internationalized Domain Name, it must be encoded as per RFC 3490.
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<LookupIpResponse> LookupIp(zx::unowned_channel _client_end, ::fidl::DecodedMessage<LookupIpRequest> params, ::fidl::BytePart response_buffer);
 
@@ -1526,33 +1526,33 @@ class SocketProvider final {
 
     ~SyncClient() {}
 
-    // Requests a socket with the specified parameters. Values for |code| are defined in
+    // Requests a socket with the specified parameters. Values for `code` are defined in
     // errno.h.
     zx_status_t Socket(int16_t domain, int16_t type, int16_t protocol, int16_t* out_code, ::zx::socket* out_s);
 
-    // Requests a socket with the specified parameters. Values for |code| are defined in
+    // Requests a socket with the specified parameters. Values for `code` are defined in
     // errno.h.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<SocketResponse> Socket(::fidl::BytePart _request_buffer, int16_t domain, int16_t type, int16_t protocol, ::fidl::BytePart _response_buffer, int16_t* out_code, ::zx::socket* out_s);
 
-    // Requests a socket with the specified parameters. Values for |code| are defined in
+    // Requests a socket with the specified parameters. Values for `code` are defined in
     // errno.h.
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<SocketResponse> Socket(::fidl::DecodedMessage<SocketRequest> params, ::fidl::BytePart response_buffer);
 
     // Retrieves information about the address of a node and/or service. The number of valid
-    // results in |res| is given by the |count| return value.
+    // results in `res` is given by the `count` return value.
     zx_status_t GetAddrInfo(::fidl::StringView node, ::fidl::StringView service, AddrInfoHints* hints, AddrInfoStatus* out_status, uint32_t* out_nres, ::fidl::Array<AddrInfo, 4>* out_res);
 
     // Retrieves information about the address of a node and/or service. The number of valid
-    // results in |res| is given by the |count| return value.
+    // results in `res` is given by the `count` return value.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<GetAddrInfoResponse> GetAddrInfo(::fidl::BytePart _request_buffer, ::fidl::StringView node, ::fidl::StringView service, AddrInfoHints* hints, ::fidl::BytePart _response_buffer, AddrInfoStatus* out_status, uint32_t* out_nres, ::fidl::Array<AddrInfo, 4>* out_res);
 
     // Retrieves information about the address of a node and/or service. The number of valid
-    // results in |res| is given by the |count| return value.
+    // results in `res` is given by the `count` return value.
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<GetAddrInfoResponse> GetAddrInfo(::fidl::DecodedMessage<GetAddrInfoRequest> params, ::fidl::BytePart response_buffer);
 
@@ -1564,33 +1564,33 @@ class SocketProvider final {
   class Call final {
    public:
 
-    // Requests a socket with the specified parameters. Values for |code| are defined in
+    // Requests a socket with the specified parameters. Values for `code` are defined in
     // errno.h.
     static zx_status_t Socket(zx::unowned_channel _client_end, int16_t domain, int16_t type, int16_t protocol, int16_t* out_code, ::zx::socket* out_s);
 
-    // Requests a socket with the specified parameters. Values for |code| are defined in
+    // Requests a socket with the specified parameters. Values for `code` are defined in
     // errno.h.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<SocketResponse> Socket(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, int16_t domain, int16_t type, int16_t protocol, ::fidl::BytePart _response_buffer, int16_t* out_code, ::zx::socket* out_s);
 
-    // Requests a socket with the specified parameters. Values for |code| are defined in
+    // Requests a socket with the specified parameters. Values for `code` are defined in
     // errno.h.
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<SocketResponse> Socket(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SocketRequest> params, ::fidl::BytePart response_buffer);
 
     // Retrieves information about the address of a node and/or service. The number of valid
-    // results in |res| is given by the |count| return value.
+    // results in `res` is given by the `count` return value.
     static zx_status_t GetAddrInfo(zx::unowned_channel _client_end, ::fidl::StringView node, ::fidl::StringView service, AddrInfoHints* hints, AddrInfoStatus* out_status, uint32_t* out_nres, ::fidl::Array<AddrInfo, 4>* out_res);
 
     // Retrieves information about the address of a node and/or service. The number of valid
-    // results in |res| is given by the |count| return value.
+    // results in `res` is given by the `count` return value.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<GetAddrInfoResponse> GetAddrInfo(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::StringView node, ::fidl::StringView service, AddrInfoHints* hints, ::fidl::BytePart _response_buffer, AddrInfoStatus* out_status, uint32_t* out_nres, ::fidl::Array<AddrInfo, 4>* out_res);
 
     // Retrieves information about the address of a node and/or service. The number of valid
-    // results in |res| is given by the |count| return value.
+    // results in `res` is given by the `count` return value.
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<GetAddrInfoResponse> GetAddrInfo(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetAddrInfoRequest> params, ::fidl::BytePart response_buffer);
 

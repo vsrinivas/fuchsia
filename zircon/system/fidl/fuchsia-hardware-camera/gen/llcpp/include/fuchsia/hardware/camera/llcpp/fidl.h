@@ -441,15 +441,15 @@ class Control final {
     // Get the available format types for this device
     // NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple
     // GetFormats need to be issued until total_format_count are received.
-    // |actual_format_count| is the number of valid formats in this response.
-    // |total_format_count| is the total number of formats supported by the camera.
+    // `actual_format_count` is the number of valid formats in this response.
+    // `total_format_count` is the total number of formats supported by the camera.
     zx_status_t GetFormats(uint32_t index, ::fidl::Array<VideoFormat, 16>* out_formats, uint32_t* out_total_format_count, uint32_t* out_actual_format_count, int32_t* out_status);
 
     // Get the available format types for this device
     // NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple
     // GetFormats need to be issued until total_format_count are received.
-    // |actual_format_count| is the number of valid formats in this response.
-    // |total_format_count| is the total number of formats supported by the camera.
+    // `actual_format_count` is the number of valid formats in this response.
+    // `total_format_count` is the total number of formats supported by the camera.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<GetFormatsResponse> GetFormats(::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer, ::fidl::Array<VideoFormat, 16>* out_formats, uint32_t* out_total_format_count, uint32_t* out_actual_format_count, int32_t* out_status);
@@ -457,8 +457,8 @@ class Control final {
     // Get the available format types for this device
     // NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple
     // GetFormats need to be issued until total_format_count are received.
-    // |actual_format_count| is the number of valid formats in this response.
-    // |total_format_count| is the total number of formats supported by the camera.
+    // `actual_format_count` is the number of valid formats in this response.
+    // `total_format_count` is the total number of formats supported by the camera.
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<GetFormatsResponse> GetFormats(::fidl::DecodedMessage<GetFormatsRequest> params, ::fidl::BytePart response_buffer);
 
@@ -490,15 +490,15 @@ class Control final {
     // Get the available format types for this device
     // NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple
     // GetFormats need to be issued until total_format_count are received.
-    // |actual_format_count| is the number of valid formats in this response.
-    // |total_format_count| is the total number of formats supported by the camera.
+    // `actual_format_count` is the number of valid formats in this response.
+    // `total_format_count` is the total number of formats supported by the camera.
     static zx_status_t GetFormats(zx::unowned_channel _client_end, uint32_t index, ::fidl::Array<VideoFormat, 16>* out_formats, uint32_t* out_total_format_count, uint32_t* out_actual_format_count, int32_t* out_status);
 
     // Get the available format types for this device
     // NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple
     // GetFormats need to be issued until total_format_count are received.
-    // |actual_format_count| is the number of valid formats in this response.
-    // |total_format_count| is the total number of formats supported by the camera.
+    // `actual_format_count` is the number of valid formats in this response.
+    // `total_format_count` is the total number of formats supported by the camera.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<GetFormatsResponse> GetFormats(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer, ::fidl::Array<VideoFormat, 16>* out_formats, uint32_t* out_total_format_count, uint32_t* out_actual_format_count, int32_t* out_status);
@@ -506,8 +506,8 @@ class Control final {
     // Get the available format types for this device
     // NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple
     // GetFormats need to be issued until total_format_count are received.
-    // |actual_format_count| is the number of valid formats in this response.
-    // |total_format_count| is the total number of formats supported by the camera.
+    // `actual_format_count` is the number of valid formats in this response.
+    // `total_format_count` is the total number of formats supported by the camera.
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<GetFormatsResponse> GetFormats(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetFormatsRequest> params, ::fidl::BytePart response_buffer);
 
@@ -675,15 +675,15 @@ class ControlV2 final {
     // Get the available format types for this device
     // NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple
     // GetFormats need to be issued until total_format_count are received.
-    // |actual_format_count| is the number of valid formats in this response.
-    // |total_format_count| is the total number of formats supported by the camera.
+    // `actual_format_count` is the number of valid formats in this response.
+    // `total_format_count` is the total number of formats supported by the camera.
     zx_status_t GetFormats(uint32_t index, ::fidl::Array<::llcpp::fuchsia::camera::common::VideoFormat, 16>* out_formats, uint32_t* out_total_format_count, uint32_t* out_actual_format_count, int32_t* out_status);
 
     // Get the available format types for this device
     // NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple
     // GetFormats need to be issued until total_format_count are received.
-    // |actual_format_count| is the number of valid formats in this response.
-    // |total_format_count| is the total number of formats supported by the camera.
+    // `actual_format_count` is the number of valid formats in this response.
+    // `total_format_count` is the total number of formats supported by the camera.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<GetFormatsResponse> GetFormats(::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer, ::fidl::Array<::llcpp::fuchsia::camera::common::VideoFormat, 16>* out_formats, uint32_t* out_total_format_count, uint32_t* out_actual_format_count, int32_t* out_status);
@@ -691,8 +691,8 @@ class ControlV2 final {
     // Get the available format types for this device
     // NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple
     // GetFormats need to be issued until total_format_count are received.
-    // |actual_format_count| is the number of valid formats in this response.
-    // |total_format_count| is the total number of formats supported by the camera.
+    // `actual_format_count` is the number of valid formats in this response.
+    // `total_format_count` is the total number of formats supported by the camera.
     // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<GetFormatsResponse> GetFormats(::fidl::DecodedMessage<GetFormatsRequest> params, ::fidl::BytePart response_buffer);
 
@@ -724,15 +724,15 @@ class ControlV2 final {
     // Get the available format types for this device
     // NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple
     // GetFormats need to be issued until total_format_count are received.
-    // |actual_format_count| is the number of valid formats in this response.
-    // |total_format_count| is the total number of formats supported by the camera.
+    // `actual_format_count` is the number of valid formats in this response.
+    // `total_format_count` is the total number of formats supported by the camera.
     static zx_status_t GetFormats(zx::unowned_channel _client_end, uint32_t index, ::fidl::Array<::llcpp::fuchsia::camera::common::VideoFormat, 16>* out_formats, uint32_t* out_total_format_count, uint32_t* out_actual_format_count, int32_t* out_status);
 
     // Get the available format types for this device
     // NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple
     // GetFormats need to be issued until total_format_count are received.
-    // |actual_format_count| is the number of valid formats in this response.
-    // |total_format_count| is the total number of formats supported by the camera.
+    // `actual_format_count` is the number of valid formats in this response.
+    // `total_format_count` is the total number of formats supported by the camera.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<GetFormatsResponse> GetFormats(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t index, ::fidl::BytePart _response_buffer, ::fidl::Array<::llcpp::fuchsia::camera::common::VideoFormat, 16>* out_formats, uint32_t* out_total_format_count, uint32_t* out_actual_format_count, int32_t* out_status);
@@ -740,8 +740,8 @@ class ControlV2 final {
     // Get the available format types for this device
     // NOTE: The formats are paginated to MAX_FORMATS_PER_RESPONSE, multiple
     // GetFormats need to be issued until total_format_count are received.
-    // |actual_format_count| is the number of valid formats in this response.
-    // |total_format_count| is the total number of formats supported by the camera.
+    // `actual_format_count` is the number of valid formats in this response.
+    // `total_format_count` is the total number of formats supported by the camera.
     // Messages are encoded and decoded in-place.
     static ::fidl::DecodeResult<GetFormatsResponse> GetFormats(zx::unowned_channel _client_end, ::fidl::DecodedMessage<GetFormatsRequest> params, ::fidl::BytePart response_buffer);
 

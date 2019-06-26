@@ -7,11 +7,11 @@ library fuchsia.modular;
 [Discoverable]
 protocol ModuleResolver {
     // Finds Modules (contained in Fuchsia packages) that satisfy the constraints
-    // specified in |query|. Module resolution is done by matching the requested
-    // |query.action| and |query.parameter_constraints| (with both names and
+    // specified in `query`. Module resolution is done by matching the requested
+    // `query.action` and `query.parameter_constraints` (with both names and
     // types) against actions and constraints specified in module manifests.
     //
-    // If no results could be found, |response.results| will be empty.
+    // If no results could be found, `response.results` will be empty.
     //
     // For detailed information on the resolution process, see
     // docs/modular/module_resolution.md.
@@ -43,7 +43,7 @@ struct FindModulesParameterConstraint {
 enum FindModulesStatus {
     // A search was successfully conducted.
     SUCCESS = 0;
-    // |FindModulesQuery.handler| was specified but the resolver doesn't know
+    // `FindModulesQuery.handler` was specified but the resolver doesn't know
     // about it.
     UNKNOWN_HANDLER = 1;
 };

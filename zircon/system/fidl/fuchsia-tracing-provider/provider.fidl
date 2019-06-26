@@ -16,18 +16,18 @@ const uint32 MAX_NUM_CATEGORIES = 100;
 const uint32 MAX_CATEGORY_NAME_LENGTH = 100;
 
 /// The provider interface which applications must implement and register
-/// with the |TraceRegistry| to participate in tracing.
+/// with the `TraceRegistry` to participate in tracing.
 ///
 /// See //zircon/system/ulib/trace-provider/ for a C++ implementation of
 /// this interface which can easily be configured by an application.
 protocol Provider {
     /// Initialize tracing and prepare for writing trace records for events in
-    /// the specified |categories| into |buffer| using |fifo| for signaling.
-    /// Tracing hasn't started yet, a |Start()| call is still required.
+    /// the specified `categories` into `buffer` using `fifo` for signaling.
+    /// Tracing hasn't started yet, a `Start()` call is still required.
     ///
     ///
-    /// At most one trace can be active at a time. Subsequent |Initialize()|
-    /// requests received prior to a |Terminate()| call must be ignored.
+    /// At most one trace can be active at a time. Subsequent `Initialize()`
+    /// requests received prior to a `Terminate()` call must be ignored.
     Initialize(ProviderConfig config);
 
     /// Begin tracing.
@@ -35,7 +35,7 @@ protocol Provider {
     /// If tracing has already started the provider must ignore the request.
     ///
     /// There is no result. The provider must send a TRACE_PROVIDER_STARTED
-    /// packet on |fifo| to indicate success/failure of starting.
+    /// packet on `fifo` to indicate success/failure of starting.
     Start(StartOptions options);
 
     /// Stop tracing.
@@ -43,16 +43,16 @@ protocol Provider {
     /// If tracing has already stopped the provider must ignore the request.
     ///
     /// Once the provider has finished writing any final events to the trace
-    /// buffer, it must send a TRACE_PROVIDER_STOPPED packet on |fifo|.
-    /// Note that multiple |Start,Stop| requests can be received between
-    /// |Initialize,Terminate|.
+    /// buffer, it must send a TRACE_PROVIDER_STOPPED packet on `fifo`.
+    /// Note that multiple `Start,Stop` requests can be received between
+    /// `Initialize,Terminate`.
     Stop();
 
     /// Terminate tracing.
     ///
     /// Tracing is stopped first if not already stopped.
     /// After tracing has fully terminated the provider must close both
-    /// |buffer| and |fifo| to indicate to the trace manager that tracing is
+    /// `buffer` and `fifo` to indicate to the trace manager that tracing is
     /// finished.
     Terminate();
 };
@@ -67,18 +67,18 @@ protocol Registry {
     /// Note: Registration is asynchronous, it's only at some point after this
     /// returns that the provider is actually registered.
     /// To unregister, simply close the Provider pipe.
-    /// |pid| is the process id of the provider, |name| is the name of the
+    /// `pid` is the process id of the provider, `name` is the name of the
     /// provider. Both of these are used in logging and diagnostic messages.
     RegisterProvider(Provider provider, zx.koid pid, string:MAX_PROVIDER_NAME_LENGTH name);
 
     /// Registers the trace provider synchronously. The call doesn't return
     /// until the provider is registered.
-    /// On return |s| is ZX_OK if registration was successful.
-    /// |started| is true if tracing has already started, which is a hint to
+    /// On return `s` is ZX_OK if registration was successful.
+    /// `started` is true if tracing has already started, which is a hint to
     /// the provider to wait for the Start() message before continuing if it
     /// wishes to not drop trace records before Start() is received.
     /// To unregister, simply close the Provider pipe.
-    /// |pid| is the process id of the provider, |name| is the name of the
+    /// `pid` is the process id of the provider, `name` is the name of the
     /// provider. Both of these are used in logging and diagnostic messages.
     RegisterProviderSynchronously(Provider provider, zx.koid pid, string:MAX_PROVIDER_NAME_LENGTH name) -> (zx.status s, bool started);
 };
@@ -111,14 +111,14 @@ enum BufferingMode : uint8 {
 // introduce ABI compatibility issues, this will be switched to a table when
 // tables are ready for use in zircon.
 struct ProviderConfig {
-    /// |buffering_mode| specifies what happens when the buffer fills.
+    /// `buffering_mode` specifies what happens when the buffer fills.
     BufferingMode buffering_mode;
 
     /// The buffer to write trace records into.
     handle<vmo> buffer;
 
-    /// When the trace provider observes |ZX_FIFO_PEER_CLOSED| on |fifo|, it
-    /// must assume the trace manager has terminated abnormally (since |Stop|
+    /// When the trace provider observes `ZX_FIFO_PEER_CLOSED` on `fifo`, it
+    /// must assume the trace manager has terminated abnormally (since `Stop`
     /// was not received as usual) and stop tracing automatically, discarding
     /// any in-flight trace data.
     handle<fifo> fifo;
@@ -168,6 +168,6 @@ struct StartOptions {
     BufferDisposition buffer_disposition;
 
     /// The trace categories to add to the initial set provided in
-    /// |ProviderConfig|.
+    /// `ProviderConfig`.
     vector<string:MAX_CATEGORY_NAME_LENGTH>:MAX_NUM_CATEGORIES additional_categories;
 };

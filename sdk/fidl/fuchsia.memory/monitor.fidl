@@ -24,12 +24,12 @@ struct Stats {
     // The amount of memory allocated to the kernel heap.
     uint64 total_heap_bytes;
 
-    // The portion of |total_heap_bytes| that is not in use.
+    // The portion of `total_heap_bytes` that is not in use.
     uint64 free_heap_bytes;
 
     // The amount of memory committed to VMOs, both kernel and user.
     // A superset of all userspace memory.
-    // Does not include certain VMOs that fall under |wired_bytes|.
+    // Does not include certain VMOs that fall under `wired_bytes`.
     uint64 vmo_bytes;
 
     // The amount of memory used for architecture-specific MMU metadata

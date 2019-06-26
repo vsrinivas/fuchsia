@@ -4,14 +4,14 @@
 
 library fuchsia.ui.gfx;
 
-// These are the types of nodes that can be created within a Scenic |Session|.
+// These are the types of nodes that can be created within a Scenic `Session`.
 //
 // All nodes have an associated transform, which distinguishes them from mere
 // resources.  Nodes may also have one or more node Characteristics:
 //
-// These are characteristics that each type of |Node| either has or doesn't.
+// These are characteristics that each type of `Node` either has or doesn't.
 // These constrain operations that reference nodes; violations will cause the
-// |Session| connection to be closed.  For example, |NodeAddChildOp| must target
+// `Session` connection to be closed.  For example, `NodeAddChildOp` must target
 // a node with the "has_children" characteristic.  These characteristics are not
 // explicitly reflected in the Session API; instead, they must be enforced by
 // implementations of the API.

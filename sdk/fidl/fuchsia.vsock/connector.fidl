@@ -9,10 +9,10 @@ using fuchsia.hardware.vsock;
 
 /// Collection of objects that represent an open connection.
 struct ConnectionTransport {
-    /// |data| socket that is ultimately given to the underlying vsock driver and
+    /// `data` socket that is ultimately given to the underlying vsock driver and
     /// is where all incoming data can be received from.
     handle<socket> data;
-    /// |Connection| interface that is retained by a vsock service that can be
+    /// `Connection` interface that is retained by a vsock service that can be
     /// used to manipulate the state of a connection or perform more complex
     /// operations than just sending and receiving on a socket.
     request<Connection> con;
@@ -31,7 +31,7 @@ protocol Connection {
 
 /// Interface presented by a listener to accept or reject connections
 protocol Acceptor {
-    /// The response is either a |ConnectionTransport| to indicate that the connection
+    /// The response is either a `ConnectionTransport` to indicate that the connection
     /// is accepted, or none to indicate that it should be rejected.
     Accept(fuchsia.hardware.vsock.Addr addr) -> (ConnectionTransport? con);
 };

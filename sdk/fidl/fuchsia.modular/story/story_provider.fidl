@@ -8,11 +8,11 @@ library fuchsia.modular;
 // operate on stories for the user. It is also passed to other services that
 // monitor or manipulate stories, specifically the maxwell services.
 //
-// Closing a |StoryProvider| connection has no effect on the state of the
+// Closing a `StoryProvider` connection has no effect on the state of the
 // framework.
 [Discoverable]
 protocol StoryProvider {
-    // Returns a list of existing stories. If |watcher| is provided, the client will
+    // Returns a list of existing stories. If `watcher` is provided, the client will
     // be notified of story changes (new stories, deleted stories, runtime
     // state changes).
     GetStories(StoryProviderWatcher? watcher) -> (vector<StoryInfo> story_infos);
@@ -65,11 +65,11 @@ protocol StoryProviderWatcher {
     //
     // The ID of the story the notifications are about are part of StoryInfo.
     //
-    // |story_state| is STOPPED if the story was just created or just became known
+    // `story_state` is STOPPED if the story was just created or just became known
     // on this device and was not yet started on the current device. It's RUNNING
     // when the story is started on the current device.
     //
-    // |story_visibility_state| is DEFAULT until a mod on the current device
+    // `story_visibility_state` is DEFAULT until a mod on the current device
     // requests for the visibility state to be changed.
     OnChange(StoryInfo story_info, StoryState story_state,
              StoryVisibilityState story_visibility_state);
@@ -83,14 +83,14 @@ protocol StoryProviderWatcher {
 };
 
 // Implemented by clients of StoryProvider in order to inform them about ongoing
-// activities in stories. |activities| is the entire list of ongoing activities
-// (represented by its type) within the story by the given |story_id|. If
-// |activities| is empty, it means that there is no ongoing activity within the
+// activities in stories. `activities` is the entire list of ongoing activities
+// (represented by its type) within the story by the given `story_id`. If
+// `activities` is empty, it means that there is no ongoing activity within the
 // story.
 //
 // Clients can expect this event whenever there is a newly started/stopped
 // ongoing activity, as well as when the client first registers for updates
-// via StoryProvider.WatchActivity(). |activities| can contain duplicate
+// via StoryProvider.WatchActivity(). `activities` can contain duplicate
 // OngoingActivityType's, ex. if a story is playing 2 videos at once.
 protocol StoryActivityWatcher {
     OnStoryActivityChange(string story_id,

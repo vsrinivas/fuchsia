@@ -47,7 +47,7 @@ struct BatteryInfo {
     // and warning capacities
     uint32 capacity_granularity_warning_full;
 
-    // below fields are in units specified the |unit| field.
+    // below fields are in units specified the `unit` field.
     // charging/discharging rate in the capacity unit. positive is charging,
     // negative is discharging
     int32 present_rate;
@@ -62,7 +62,7 @@ protocol Source {
 
     // Get an event to receive state change notifications on. ZX_USER_SIGNAL_0 is
     // asserted when power_info_t.state is changed. It is deasserted when the
-    // state is read via |GetPowerInfo|.
+    // state is read via `GetPowerInfo`.
     GetStateChangeEvent() -> (zx.status status, handle<event> handle);
 
     // Get battery info. Only supported if type == PowerType::BATTERY.

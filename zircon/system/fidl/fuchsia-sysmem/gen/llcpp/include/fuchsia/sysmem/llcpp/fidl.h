@@ -721,7 +721,7 @@ class Heap final {
 
     ~SyncClient() {}
 
-    // Request a new memory allocation of |size| on heap.
+    // Request a new memory allocation of `size` on heap.
     // For heaps which don't permit CPU access to the buffer data, this
     // will create a VMO with an official size, but which never has any
     // physical pages.  For such heaps, the VMO is effectively used as
@@ -737,7 +737,7 @@ class Heap final {
     // to the returned VMO or any associated child VMO being used.
     zx_status_t AllocateVmo(uint64_t size, int32_t* out_s, ::zx::vmo* out_vmo);
 
-    // Request a new memory allocation of |size| on heap.
+    // Request a new memory allocation of `size` on heap.
     // For heaps which don't permit CPU access to the buffer data, this
     // will create a VMO with an official size, but which never has any
     // physical pages.  For such heaps, the VMO is effectively used as
@@ -755,7 +755,7 @@ class Heap final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     ::fidl::DecodeResult<AllocateVmoResponse> AllocateVmo(::fidl::BytePart _request_buffer, uint64_t size, ::fidl::BytePart _response_buffer, int32_t* out_s, ::zx::vmo* out_vmo);
 
-    // Request a new memory allocation of |size| on heap.
+    // Request a new memory allocation of `size` on heap.
     // For heaps which don't permit CPU access to the buffer data, this
     // will create a VMO with an official size, but which never has any
     // physical pages.  For such heaps, the VMO is effectively used as
@@ -774,7 +774,7 @@ class Heap final {
 
     // Create resources and associate heap-specific resources with the
     // passed-in VMO. Resources can be hardware specific and their
-    // lifetime don't have to be tied to |vmo|. |vmo| must be a VMO
+    // lifetime don't have to be tied to `vmo`. `vmo` must be a VMO
     // (or a direct or indirect child of a VMO) acquired through a call
     // to AllocateVmo method above.  If the passed-in vmo is a child VMO,
     // its size must match the size of the parent VMO created by
@@ -796,7 +796,7 @@ class Heap final {
 
     // Create resources and associate heap-specific resources with the
     // passed-in VMO. Resources can be hardware specific and their
-    // lifetime don't have to be tied to |vmo|. |vmo| must be a VMO
+    // lifetime don't have to be tied to `vmo`. `vmo` must be a VMO
     // (or a direct or indirect child of a VMO) acquired through a call
     // to AllocateVmo method above.  If the passed-in vmo is a child VMO,
     // its size must match the size of the parent VMO created by
@@ -820,7 +820,7 @@ class Heap final {
 
     // Create resources and associate heap-specific resources with the
     // passed-in VMO. Resources can be hardware specific and their
-    // lifetime don't have to be tied to |vmo|. |vmo| must be a VMO
+    // lifetime don't have to be tied to `vmo`. `vmo` must be a VMO
     // (or a direct or indirect child of a VMO) acquired through a call
     // to AllocateVmo method above.  If the passed-in vmo is a child VMO,
     // its size must match the size of the parent VMO created by
@@ -861,7 +861,7 @@ class Heap final {
   class Call final {
    public:
 
-    // Request a new memory allocation of |size| on heap.
+    // Request a new memory allocation of `size` on heap.
     // For heaps which don't permit CPU access to the buffer data, this
     // will create a VMO with an official size, but which never has any
     // physical pages.  For such heaps, the VMO is effectively used as
@@ -877,7 +877,7 @@ class Heap final {
     // to the returned VMO or any associated child VMO being used.
     static zx_status_t AllocateVmo(zx::unowned_channel _client_end, uint64_t size, int32_t* out_s, ::zx::vmo* out_vmo);
 
-    // Request a new memory allocation of |size| on heap.
+    // Request a new memory allocation of `size` on heap.
     // For heaps which don't permit CPU access to the buffer data, this
     // will create a VMO with an official size, but which never has any
     // physical pages.  For such heaps, the VMO is effectively used as
@@ -895,7 +895,7 @@ class Heap final {
     // The lifetime of handles in the response, unless moved, is tied to the returned RAII object.
     static ::fidl::DecodeResult<AllocateVmoResponse> AllocateVmo(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t size, ::fidl::BytePart _response_buffer, int32_t* out_s, ::zx::vmo* out_vmo);
 
-    // Request a new memory allocation of |size| on heap.
+    // Request a new memory allocation of `size` on heap.
     // For heaps which don't permit CPU access to the buffer data, this
     // will create a VMO with an official size, but which never has any
     // physical pages.  For such heaps, the VMO is effectively used as
@@ -914,7 +914,7 @@ class Heap final {
 
     // Create resources and associate heap-specific resources with the
     // passed-in VMO. Resources can be hardware specific and their
-    // lifetime don't have to be tied to |vmo|. |vmo| must be a VMO
+    // lifetime don't have to be tied to `vmo`. `vmo` must be a VMO
     // (or a direct or indirect child of a VMO) acquired through a call
     // to AllocateVmo method above.  If the passed-in vmo is a child VMO,
     // its size must match the size of the parent VMO created by
@@ -936,7 +936,7 @@ class Heap final {
 
     // Create resources and associate heap-specific resources with the
     // passed-in VMO. Resources can be hardware specific and their
-    // lifetime don't have to be tied to |vmo|. |vmo| must be a VMO
+    // lifetime don't have to be tied to `vmo`. `vmo` must be a VMO
     // (or a direct or indirect child of a VMO) acquired through a call
     // to AllocateVmo method above.  If the passed-in vmo is a child VMO,
     // its size must match the size of the parent VMO created by
@@ -960,7 +960,7 @@ class Heap final {
 
     // Create resources and associate heap-specific resources with the
     // passed-in VMO. Resources can be hardware specific and their
-    // lifetime don't have to be tied to |vmo|. |vmo| must be a VMO
+    // lifetime don't have to be tied to `vmo`. `vmo` must be a VMO
     // (or a direct or indirect child of a VMO) acquired through a call
     // to AllocateVmo method above.  If the passed-in vmo is a child VMO,
     // its size must match the size of the parent VMO created by
@@ -2207,7 +2207,7 @@ struct BufferCollectionInfo {
   // VMO handles for each buffer in the collection.
   // The VMOs are only present when the buffers are backed by VMOs.
   //
-  // If present, all the VMOs after |buffer_count| are invalid handles.
+  // If present, all the VMOs after `buffer_count` are invalid handles.
   // All buffer VMO handles have identical size and access rights.
   // The VMO access rights are determined based on the usages which the
   // client specified when allocating the buffer collection.  For example,
@@ -2303,7 +2303,7 @@ struct BufferCollectionInfo_2 {
   // VMO handles (and vmo_usable_start offset) for each buffer in the
   // collection.
   //
-  // If present, all the VMOs at or after index |buffer_count| are invalid (0)
+  // If present, all the VMOs at or after index `buffer_count` are invalid (0)
   // handles.
   //
   // All buffer VMO handles have identical size and access rights.  The size

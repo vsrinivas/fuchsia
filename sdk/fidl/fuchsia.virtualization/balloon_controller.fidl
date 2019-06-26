@@ -12,7 +12,7 @@ struct MemStat {
     uint64 val;
 };
 
-// A |BalloonController| controls a guest instance's memory balloon.
+// A `BalloonController` controls a guest instance's memory balloon.
 [Discoverable]
 protocol BalloonController {
     // Get the number of pages in the memory balloon.
@@ -20,8 +20,8 @@ protocol BalloonController {
 
     // Request a number of pages to be supplied to the memory balloon.
     //
-    // If |num_pages| is greater than the current value, the guest instance will
-    // provide additional pages to the memory balloon. If |num_pages| is less
+    // If `num_pages` is greater than the current value, the guest instance will
+    // provide additional pages to the memory balloon. If `num_pages` is less
     // than the current value, the guest instance is free to reclaim pages from
     // the memory balloon.
     RequestNumPages(uint32 num_pages);

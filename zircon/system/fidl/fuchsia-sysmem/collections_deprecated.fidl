@@ -17,7 +17,7 @@ struct BufferCollectionInfo {
     /// VMO handles for each buffer in the collection.
     /// The VMOs are only present when the buffers are backed by VMOs.
     ///
-    /// If present, all the VMOs after |buffer_count| are invalid handles.
+    /// If present, all the VMOs after `buffer_count` are invalid handles.
     /// All buffer VMO handles have identical size and access rights.
     /// The VMO access rights are determined based on the usages which the
     /// client specified when allocating the buffer collection.  For example,

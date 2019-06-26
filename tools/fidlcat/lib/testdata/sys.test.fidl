@@ -12,7 +12,7 @@ library test.fidlcat.sys;
 ///
 /// VMO objects have a physical size that is always a multiple of the page
 /// size. As such, VMO alone cannot serve as a buffer for arbitrarly sized
-/// data. |fuchsia.mem.Buffer| is a standard struct that aggregate the VMO
+/// data. `fuchsia.mem.Buffer` is a standard struct that aggregate the VMO
 /// and its size.
 struct Buffer {
     /// The vmo.
@@ -47,11 +47,11 @@ enum TerminationReason {
 // An interface for controlling components.
 //
 // Closing this interface implicitly kills the controlled component unless
-// the |Detach| method has been called.
+// the `Detach` method has been called.
 //
 // If the component exits, this interface will be closed.
 //
-// Typically obtained via |Launcher.CreateComponent|.
+// Typically obtained via `Launcher.CreateComponent`.
 protocol ComponentController {
     // Terminates the component.
     //
@@ -61,7 +61,7 @@ protocol ComponentController {
 
     // Decouples the lifetime of the component from this controller.
     //
-    // After calling |Detach|, the component will not be implicitly killed when
+    // After calling `Detach`, the component will not be implicitly killed when
     // this interface is closed.
     Detach();
 
@@ -86,22 +86,22 @@ protocol ComponentController {
 // An interface for controlling an environment.
 //
 // Closing this interface implicitly kills the controlled environment unless
-// the |Detach| method has been called.
+// the `Detach` method has been called.
 //
 // If the environment is destroyed, this interface will be closed.
 //
-// Typically obtained via |Environment.CreateNestedEnvironment|.
+// Typically obtained via `Environment.CreateNestedEnvironment`.
 protocol EnvironmentController {
     // Terminates the environment.
     //
-    // When an |Environment| is terminated, all applications launched
+    // When an `Environment` is terminated, all applications launched
     // in the environment (and in all transitively nested environments) are also
     // killed.
     Kill() -> ();
 
     // Decouples the lifetime of the environment from this controller.
     //
-    // After calling |Detach|, the environment will not be implicitly killed when
+    // After calling `Detach`, the environment will not be implicitly killed when
     // this interface is closed.
     Detach();
 
@@ -138,27 +138,27 @@ protocol Environment {
     // Creates a new environment nested inside this environment.
     //
     // When applications are created inside the nested environment using the
-    // environment's |Launcher|, the environment requests the
-    // environment services from |host_directory| before passing those services to
-    // the newly created application in its |StartupInfo|.
+    // environment's `Launcher`, the environment requests the
+    // environment services from `host_directory` before passing those services to
+    // the newly created application in its `StartupInfo`.
     //
-    // The |controller| can be used to control the lifecycle of the created
+    // The `controller` can be used to control the lifecycle of the created
     // environment. Note that by default the environment will be killed
-    // automatically when the |EnvironmentController|'s interface is closed. You
-    // can use |EnvironmentController.Detach| to disable this behavior.
+    // automatically when the `EnvironmentController`'s interface is closed. You
+    // can use `EnvironmentController.Detach` to disable this behavior.
     //
-    // |label| defines the new environment's label/name. It must be unique within
+    // `label` defines the new environment's label/name. It must be unique within
     // the parent environment (though not globally) and is used for isolating
     // separate environments. It can also be used for diagnostic purposes. The
-    // label will be truncated if it is longer than |kLabelMaxLength|.
+    // label will be truncated if it is longer than `kLabelMaxLength`.
     //
-    // |additional_services|, which may be empty, contains a list of services
+    // `additional_services`, which may be empty, contains a list of services
     // that the environment provides, which are hosted by
-    // |additional_services.host_directory|. If |options.inherit_parent_services|
-    // is false, |host_directory| must provide a |Loader| service if it wishes to
+    // `additional_services.host_directory`. If `options.inherit_parent_services`
+    // is false, `host_directory` must provide a `Loader` service if it wishes to
     // allow new components to be loaded in the new environment.
     //
-    // |options| provides additional options, see |EnvironmentOptions| for
+    // `options` provides additional options, see `EnvironmentOptions` for
     // details.
     CreateNestedEnvironment(request<Environment> environment,
                             request<EnvironmentController> controller,
@@ -169,15 +169,15 @@ protocol Environment {
     // Gets the Launcher associated with this environment.
     //
     // Applications created using this application launcher will be given the
-    // environment services provided by this environment's |host_directory|.
+    // environment services provided by this environment's `host_directory`.
     GetLauncher(request<Launcher> launcher);
 
     // Gets a superset of services provided by this environment's
-    // |host_directory|.
+    // `host_directory`.
     GetServices(request<ServiceProvider> services);
 
     // Gets a superset of services provided by this environment's
-    // |host_directory|.
+    // `host_directory`.
     GetDirectory(handle<channel> directory_request);
 };
 
@@ -238,7 +238,7 @@ struct LaunchInfo {
     FileDescriptor? err;
 
     // The interface request for a Directory that is passed through to the
-    // component and arrives in the component as its |directory_request|
+    // component and arrives in the component as its `directory_request`
     // interface request.
     handle<channel>? directory_request;
 
@@ -255,32 +255,32 @@ struct LaunchInfo {
 };
 
 struct ServiceList {
-    // A list of services that can be requested from |provider|.
+    // A list of services that can be requested from `provider`.
     vector<string> names;
 
-    // A service provider to get the services listed in |names| from.
+    // A service provider to get the services listed in `names` from.
     ServiceProvider? provider;
 
-    // A channel to the directory hosting the services in |names|.
-    // TODO(CP-124): Support |host_directory| for CreateComponent and deprecate
-    // |provider|.
+    // A channel to the directory hosting the services in `names`.
+    // TODO(CP-124): Support `host_directory` for CreateComponent and deprecate
+    // `provider`.
     handle<channel>? host_directory;
 };
 
 // An interface for creating component instances.
 //
-// Typically obtained via |Environment.GetLauncher|.
+// Typically obtained via `Environment.GetLauncher`.
 [Discoverable]
 protocol Launcher {
-    // Creates a new instance of the component described by |launch_info|.
+    // Creates a new instance of the component described by `launch_info`.
     //
-    // The component instance is created in the |Environment|
-    // associated with this |Launcher|. When creating the component,
+    // The component instance is created in the `Environment`
+    // associated with this `Launcher`. When creating the component,
     // the environment requests the environment services for this component from
-    // its |EnvironmentHost|.
+    // its `EnvironmentHost`.
     //
-    // The |controller| can be used to control the lifecycle of the created
-    // component instance. If an |ComponentController|'s interface is
+    // The `controller` can be used to control the lifecycle of the created
+    // component instance. If an `ComponentController`'s interface is
     // requested, the component instance is killed when the interface is closed.
     CreateComponent(LaunchInfo launch_info,
                     request<ComponentController>? controller);
@@ -325,7 +325,7 @@ struct ProgramMetadata {
 
 // A binary representation of a component.
 //
-// Typically provided to |Runner.StartComponent| when starting a
+// Typically provided to `Runner.StartComponent` when starting a
 // component.
 struct Package {
     // A read-only binary representation of the component. For example, if the
@@ -353,11 +353,11 @@ protocol Runner {
     // Execute the given component.
     //
     // Upon startup, the component is to be given the information in
-    // |startup_info|, but the mechanism by which the component receives that
+    // `startup_info`, but the mechanism by which the component receives that
     // information is up to the component runner.
     //
-    // The |controller| interface request typically originates from the
-    // |Launcher.CreateComponent| message that caused this
+    // The `controller` interface request typically originates from the
+    // `Launcher.CreateComponent` message that caused this
     // component to be started.
     StartComponent(Package package,
                    StartupInfo startup_info,
@@ -373,8 +373,8 @@ protocol Runner {
 // entries instead, just like files.
 // TODO(ZX-1358): Point to the FIDL interface for file I/O once RIO is migrated.
 protocol ServiceProvider {
-    // Asks the host to provide the service identified by |service_name| through
-    // the |channel| endpoint supplied by the caller. If the host is not willing
-    // or able to provide the requested service, it should close the |channel|.
+    // Asks the host to provide the service identified by `service_name` through
+    // the `channel` endpoint supplied by the caller. If the host is not willing
+    // or able to provide the requested service, it should close the `channel`.
     ConnectToService(string service_name, handle<channel> channel);
 };

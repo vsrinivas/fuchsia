@@ -24,7 +24,7 @@ protocol SessionObserver {
 table StorySummary {
     /// The ID, unique to the session and assigned by the framework, for this story.
     ///
-    /// NOTE: the value of |id| is different from that provided by session
+    /// NOTE: the value of `id` is different from that provided by session
     /// controllers through fuchsia.app.sessioncontrol.SessionController.
     1 : fuchsia.app.StoryId id;
 

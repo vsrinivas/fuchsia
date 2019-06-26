@@ -55,7 +55,7 @@ protocol KeyManager {
     // Seal data to an encrypted form.
     //
     // Seal data to an encrypted form. The sealed data can only be unsealed by the same KMS instance
-    // by using UnsealData. |plain_text| needs to be less than MAX_DATA_SIZE bytes.
+    // by using UnsealData. `plain_text` needs to be less than MAX_DATA_SIZE bytes.
     SealData(mem.Buffer plain_text) -> (Status status, mem.Buffer? cipher_text);
 
     // Unseal sealed data.
@@ -65,8 +65,8 @@ protocol KeyManager {
 
     // Generate an asymmetric key.
     //
-    // Generate an asymmetric key using |key_name| as the unique name. |key| is the generated
-    // asymmetric key interface request. If the |key_name| is not unique, you would get
+    // Generate an asymmetric key using `key_name` as the unique name. `key` is the generated
+    // asymmetric key interface request. If the `key_name` is not unique, you would get
     // KEY_ALREADY_EXISTS. The generated key can be used to sign data. The algorithm used for
     // generating asymmetric key is ECDSA_SHA512_P521.
     GenerateAsymmetricKey(
@@ -75,8 +75,8 @@ protocol KeyManager {
 
     // Generate an asymmetric key with a specific algorithm.
     //
-    // Generate an asymmetric key using |key_name| as the unique name and |key_algorithm| as
-    // algorithm. |key| is the generated asymmetric key interface request. If the |key_name| is not
+    // Generate an asymmetric key using `key_name` as the unique name and `key_algorithm` as
+    // algorithm. `key` is the generated asymmetric key interface request. If the `key_name` is not
     // unique, you would get KEY_ALREADY_EXISTS.
     GenerateAsymmetricKeyWithAlgorithm(
         string:MAX_KEY_NAME_SIZE key_name,
@@ -85,9 +85,9 @@ protocol KeyManager {
 
     // Import an asymmetric private key with a specific algorithm.
     //
-    // Import an asymmetric private key using |key_name| as the unique name, |key_algorithm| as
-    // algorithm and |data| as key data. |key| is imported asymmetric key interface request. Key
-    // data should be in asn.1 encoded DER format. If the |key_name| is not unique, you would get
+    // Import an asymmetric private key using `key_name` as the unique name, `key_algorithm` as
+    // algorithm and `data` as key data. `key` is imported asymmetric key interface request. Key
+    // data should be in asn.1 encoded DER format. If the `key_name` is not unique, you would get
     // KEY_ALREADY_EXISTS.
     ImportAsymmetricPrivateKey(
         bytes data,
@@ -97,7 +97,7 @@ protocol KeyManager {
 
     // Get an asymmetric private key handle.
     //
-    // Get an asymmetric private key handle using the |key_name|. If such key is not found, would
+    // Get an asymmetric private key handle using the `key_name`. If such key is not found, would
     // return KEY_NOT_FOUND.
     GetAsymmetricPrivateKey(
         string:MAX_KEY_NAME_SIZE key_name,
@@ -105,7 +105,7 @@ protocol KeyManager {
 
     // Delete a key.
     //
-    // Delete a key for |key_name|.  For all the current handle to the deleted key, they would
+    // Delete a key for `key_name`.  For all the current handle to the deleted key, they would
     // become invalid and all following requests on those handles would return KEY_NOT_FOUND, user
     // should close the invalid handles once get KEY_NOT_FOUND Status.
     DeleteKey(string:MAX_KEY_NAME_SIZE key_name) -> (Status status);
@@ -120,7 +120,7 @@ protocol Key {
 protocol AsymmetricPrivateKey {
     compose Key;
 
-    // Sign |data| using the current key. |data| needs to be less than MAX_DATA_SIZE bytes.
+    // Sign `data` using the current key. `data` needs to be less than MAX_DATA_SIZE bytes.
     Sign(mem.Buffer data) -> (Status status, Signature? signature);
     // Get the DER format public key for the current private key.
     GetPublicKey() -> (Status status, PublicKey? public_key);

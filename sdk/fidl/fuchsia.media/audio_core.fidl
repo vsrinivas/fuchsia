@@ -43,7 +43,7 @@ protocol AudioCore {
     // other. Similarly, one's value does not restrict the other's possible
     // values in any way.
     //
-    // Sets the system-wide gain in decibels. |db| values are clamped to the
+    // Sets the system-wide gain in decibels. `db` values are clamped to the
     // range -160db to 0db, inclusive. This setting is applied to all audio
     // output devices. Audio input devices are unaffected. System Gain changes
     // do not affect the System Mute state.

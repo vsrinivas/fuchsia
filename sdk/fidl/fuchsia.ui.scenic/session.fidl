@@ -17,10 +17,10 @@ protocol Session {
     //
     // SCHEDULING PRESENTATION
     //
-    // |presentation_time| specifies the time on or after which the
+    // `presentation_time` specifies the time on or after which the
     // client would like the enqueued operations should take visible effect
     // (light up pixels on the screen), expressed in nanoseconds in the
-    // |CLOCK_MONOTONIC| timebase.  Desired presentation times must be
+    // `CLOCK_MONOTONIC` timebase.  Desired presentation times must be
     // monotonically non-decreasing.
     //
     // Using a desired presentation time in the present or past (such as 0)
@@ -33,25 +33,25 @@ protocol Session {
     //
     // Each rendered frame has a target presentation time.  Before rendering
     // a frame, the scene manager applies all enqueued operations associated
-    // with all prior calls to |Present()| whose desired presentation time
+    // with all prior calls to `Present()` whose desired presentation time
     // is on or before the frame's target presentation time.
     //
-    // The |Present()| method does not return until the scene manager begins
+    // The `Present()` method does not return until the scene manager begins
     // preparing the first frame which includes its presented content.
-    // Upon return, the |PresentationInfo| provides timing information for the
+    // Upon return, the `PresentationInfo` provides timing information for the
     // frame which includes the presented content.
     //
-    // To present new content on each successive frame, wait for |Present()|
-    // to return before calling |Present()| again with content for the next
+    // To present new content on each successive frame, wait for `Present()`
+    // to return before calling `Present()` again with content for the next
     // frame.
     //
     // It is also possible to enqueue and present successive frames of content
     // all at once with increasing desired presentation times, incrementing by
-    // |PresentationInfo.presentation_interval| for each one.
+    // `PresentationInfo.presentation_interval` for each one.
     //
     // Animation updates are also coordinated in terms of presentation time.
     //
-    // TODO(jeffbrown): Defining presentation time in terms of |CLOCK_MONOTONIC|
+    // TODO(jeffbrown): Defining presentation time in terms of `CLOCK_MONOTONIC`
     // simplifies synchronization across subsystems but it might be too simple.
     // We should consider using a synthetic timebase and describing its relation
     // to other clocks separately.  That would make it possible to present
@@ -60,7 +60,7 @@ protocol Session {
     //
     // SYNCHRONIZATION
     //
-    // |acquire_fences| are used by Scenic to wait until all of the session's
+    // `acquire_fences` are used by Scenic to wait until all of the session's
     // resources are ready to render (or to allow downstream components, such as
     // the Vulkan driver, to wait for these resources).
     //
@@ -68,16 +68,16 @@ protocol Session {
     // from a VkSemaphore.  This allows a Scenic client to submit a Vulkan command
     // buffer to generate images/meshes/etc., and instructing Vulkan to signal a
     // VkSemaphore when it is done.  By inserting the zx::event corresponding to
-    // this semaphore into |acquire_fences|, the client allows Scenic to submit work
+    // this semaphore into `acquire_fences`, the client allows Scenic to submit work
     // to the Vulkan driver without waiting on the CPU for the event to be
     // signalled.
     //
-    // |release_fences| is a list of events that will be signalled by Scenic when
+    // `release_fences` is a list of events that will be signalled by Scenic when
     // the updated session state has been fully committed: future frames will be
     // rendered using this state, and all frames generated using previous session
     // states have been fully-rendered and presented to the display.
     //
-    // Together, |acquire_fences| and |release_fences| are intended to allow clients
+    // Together, `acquire_fences` and `release_fences` are intended to allow clients
     // to implement strategies such as double-buffering.  For example, a client
     // might do the following in the Scenic subsystem:
     //   1) create two Image with resource IDs #1 and #2.
@@ -112,11 +112,11 @@ protocol Session {
     // would signal a separate semaphore, and therefore require an additional
     // acquire-fence.
     //
-    // Note: |acquire_fences| and |release_fences| are only necessary to synchronize
+    // Note: `acquire_fences` and `release_fences` are only necessary to synchronize
     // access to memory (and other external resources).  Any modification to
     // resources made via the Session API are automatically synchronized.
     //
-    // TODO(SCN-400): document invariants that apply to |presentation_info|.  Is it
+    // TODO(SCN-400): document invariants that apply to `presentation_info`.  Is it
     // strong enough to guarantee that receiving the response means that all
     // previously-enqueued Commands have been applied?  Or does it need to be stronger,
     // e.g. that all frames based on previous presentations are completely done,
@@ -137,6 +137,6 @@ protocol SessionListener {
     OnScenicError(string error);
 
     // Called to deliver a batch of one or more events to the listener.
-    // Use |SetEventMaskCmd| to enable event delivery for a resource.
+    // Use `SetEventMaskCmd` to enable event delivery for a resource.
     OnScenicEvent(vector<Event> events);
 };

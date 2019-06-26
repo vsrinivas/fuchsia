@@ -10,7 +10,7 @@ using fuchsia.app;
 /// requests that require module scoping.
 [Discoverable]
 protocol DiscoverRegistry {
-    /// Retrieves a module output writer for the module identified by |module|.
+    /// Retrieves a module output writer for the module identified by `module`.
     RegisterModuleOutputWriter(ModuleIdentifier module, request<ModuleOutputWriter> request);
 };
 

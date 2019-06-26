@@ -60,7 +60,7 @@ struct LaunchInfo {
 
 /// The information required to start a process.
 ///
-/// To start the process, call |zx_process_start| with the arguments provided.
+/// To start the process, call `zx_process_start` with the arguments provided.
 struct ProcessStartData {
     /// The process that was created.
     handle<process> process;
@@ -72,27 +72,27 @@ struct ProcessStartData {
 
     /// The initial thread for the process.
     ///
-    /// Should be passed to |zx_process_start| when starting the process.
+    /// Should be passed to `zx_process_start` when starting the process.
     handle<thread> thread;
 
     /// The address of the initial entry point in the process.
     ///
-    /// Should be passed to |zx_process_start| when starting the process.
+    /// Should be passed to `zx_process_start` when starting the process.
     zx.vaddr entry;
 
     /// The stack pointer value for the initial thread of the process.
     ///
-    /// Should be passed to |zx_process_start| when starting the process.
+    /// Should be passed to `zx_process_start` when starting the process.
     zx.vaddr stack;
 
     /// The bootstrap channel to pass to the process on startup.
     ///
-    /// Should be passed to |zx_process_start| when starting the process.
+    /// Should be passed to `zx_process_start` when starting the process.
     handle<channel> bootstrap;
 
     /// The base address of the vDSO to pass to the process on startup.
     ///
-    /// Should be passed to |zx_process_start| when starting the process.
+    /// Should be passed to `zx_process_start` when starting the process.
     zx.vaddr vdso_base;
 
     /// The base load address of the ELF file loaded.
@@ -106,33 +106,33 @@ struct ProcessStartData {
 /// This interface is used for manually assembling a process. The caller supplies
 /// all the capabilities for the newly created process.
 ///
-/// That create processes typically use |fdio_spawn| or |fdio_spawn_etc| rather
-/// than using this interface directly. The |fdio_spawn| and |fdio_spawn_etc|
+/// That create processes typically use `fdio_spawn` or `fdio_spawn_etc` rather
+/// than using this interface directly. The `fdio_spawn` and `fdio_spawn_etc`
 /// functions are implemented using this interface.
 ///
 /// Debuggers and other clients that need to create processes in a suspended
 /// state often use this interface directly. These clients use the
-/// |CreateWithoutStarting| method to create the process without actually
+/// `CreateWithoutStarting` method to create the process without actually
 /// starting it.
 [Discoverable]
 protocol Launcher {
-    /// Creates and starts the process described by |info|.
+    /// Creates and starts the process described by `info`.
     ///
-    /// After processing this message, the |Launcher| is reset to its initial
+    /// After processing this message, the `Launcher` is reset to its initial
     /// state and is ready to launch another process.
     ///
-    /// |process| is present if, and only if, |status| is ZX_OK.
+    /// `process` is present if, and only if, `status` is ZX_OK.
     Launch(LaunchInfo info) -> (zx.status status, handle<process>? process);
 
-    /// Creates the process described by |info| but does not start it.
+    /// Creates the process described by `info` but does not start it.
     ///
-    /// After processing this message, the |Launcher| is reset to its initial
+    /// After processing this message, the `Launcher` is reset to its initial
     /// state and is ready to launch another process.
     ///
-    /// The caller is responsible for calling |zx_process_start| using the data
-    /// in |ProcessStartData| to actually start the process.
+    /// The caller is responsible for calling `zx_process_start` using the data
+    /// in `ProcessStartData` to actually start the process.
     ///
-    /// |data| is present if, and only if, |status| is ZX_OK.
+    /// `data` is present if, and only if, `status` is ZX_OK.
     CreateWithoutStarting(LaunchInfo info) -> (zx.status status,
                                                ProcessStartData? data);
 

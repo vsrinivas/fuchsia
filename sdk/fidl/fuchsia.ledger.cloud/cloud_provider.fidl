@@ -52,7 +52,7 @@ protocol DeviceSet {
     /// Adds the device fingerprint to the list of devices in the cloud.
     SetFingerprint(bytes fingerprint) -> (Status status);
 
-    /// Watches the given |fingerprint| in the cloud so that |watcher| is notified
+    /// Watches the given `fingerprint` in the cloud so that `watcher` is notified
     /// when the fingerprint is erased.
     ///
     /// At most one watcher can be set at any given time. If more than one watcher
@@ -145,15 +145,15 @@ protocol PageCloud {
 
     /// Retrieves commits from the cloud.
     ///
-    /// All commits newer than |min_position_token| are guaranteed to be returned.
+    /// All commits newer than `min_position_token` are guaranteed to be returned.
     /// In addition to that, the response may include additional commits older
-    /// than or at |min_position_token|. Passing null |min_position_token|
+    /// than or at `min_position_token`. Passing null `min_position_token`
     /// retrieves all commits.
     ///
-    /// If the resulting |status| is |OK|, |commits| contains all matching commits
-    /// (might be empty) and |position_token| contains the position token of the
-    /// most recent of the |commits| (equivalent to |min_position_token| if
-    /// |commits| is empty).
+    /// If the resulting `status` is `OK`, `commits` contains all matching commits
+    /// (might be empty) and `position_token` contains the position token of the
+    /// most recent of the `commits` (equivalent to `min_position_token` if
+    /// `commits` is empty).
     GetCommits(PositionToken? min_position_token)
         -> (Status status, CommitPack? commits, PositionToken? position_token);
 
@@ -165,8 +165,8 @@ protocol PageCloud {
 
     /// Retrieves the object of the given id from the cloud.
     ///
-    /// If the resulting |status| is |OK|, |buffer| will contain the object
-    /// content. If the resulting |status| is not |OK|, |buffer| will be null.
+    /// If the resulting `status` is `OK`, `buffer` will contain the object
+    /// content. If the resulting `status` is not `OK`, `buffer` will be null.
     GetObject(bytes id)
         -> (Status status, fuchsia.mem.Buffer? buffer);
 
@@ -175,10 +175,10 @@ protocol PageCloud {
     /// At most one watcher can be set at any given time. If more than one watcher
     /// is set, only the one set most recently receives notifications.
     ///
-    /// All commits newer than |min_position_token| added to the cloud before or
-    /// after making this call are guaranteed to be delivered to |watcher|. In
-    /// addition to that, additional commits older than or at |min_position_token|
-    /// may be delivered to. If |min_position_token| is null, notifications for
+    /// All commits newer than `min_position_token` added to the cloud before or
+    /// after making this call are guaranteed to be delivered to `watcher`. In
+    /// addition to that, additional commits older than or at `min_position_token`
+    /// may be delivered to. If `min_position_token` is null, notifications for
     /// all commits are delivered.
     SetWatcher(PositionToken? min_position_token, PageCloudWatcher watcher)
         -> (Status status);
@@ -188,7 +188,7 @@ protocol PageCloud {
 protocol PageCloudWatcher {
     /// Called when new commits are added to the commit log in the cloud.
     ///
-    /// The method takes the list of new |commits| along with the |position_token|
+    /// The method takes the list of new `commits` along with the `position_token`
     /// of the most recent of them.
     ///
     /// No subsequent calls are made until the client calls the callback of the
@@ -197,7 +197,7 @@ protocol PageCloudWatcher {
 
     /// Called when a new object is added to the cloud.
     ///
-    /// The method takes the |id| and the content of the new object.
+    /// The method takes the `id` and the content of the new object.
     ///
     /// No subsequent calls are made until the client calls the callback of the
     /// previous one.

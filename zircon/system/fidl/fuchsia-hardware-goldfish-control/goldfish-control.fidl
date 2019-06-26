@@ -15,7 +15,7 @@ enum FormatType : uint32 {
 [Layout = "Simple"]
 protocol Device {
     /// Create shared color buffer. Color buffer is automatically freed when
-    /// all references to |vmo| have been closed. Fails if VMO is not
+    /// all references to `vmo` have been closed. Fails if VMO is not
     /// associated with goldfish heap memory.
     CreateColorBuffer(handle<vmo> vmo,
                       uint32 width,

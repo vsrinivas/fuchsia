@@ -9,6 +9,6 @@ library fuchsia.boot;
 /// TODO(ZX-4072): Do not use this without first consulting the Zircon team.
 [Discoverable, Layout = "Simple"]
 protocol RootJob {
-    /// Get the root |job|.
+    /// Get the root `job`.
     Get() -> (handle<job> job);
 };

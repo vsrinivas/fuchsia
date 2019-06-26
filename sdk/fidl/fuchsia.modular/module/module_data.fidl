@@ -22,7 +22,7 @@ struct ModuleData {
     /// from outside the story (i.e. by suggestion from an agent - EXTERNAL).
     ModuleSource module_source;
 
-    /// The |surface_relation| that was used to start this Module instance with.
+    /// The `surface_relation` that was used to start this Module instance with.
     /// The same is used when re-inflating the Module instance when the story is
     /// resumed. A SurfaceRelation value of null represents an embedded Module
     /// instance (started by EmbedModule()) that is not managed by the story shell.

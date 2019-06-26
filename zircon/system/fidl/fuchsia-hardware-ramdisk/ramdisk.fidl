@@ -22,7 +22,7 @@ struct BlockWriteCounts {
 // The interface for interacting with a instance of a ramdisk.
 [Layout = "Simple"]
 protocol Ramdisk {
-    // Sets any of the |RAMDISK_FLAG_*| flags.
+    // Sets any of the `RAMDISK_FLAG_*` flags.
     SetFlags(uint32 flags) -> (zx.status s);
 
     // Wakes a ramdisk, if it was sleeping.
@@ -30,8 +30,8 @@ protocol Ramdisk {
     // Resets the block counts being stored by the ramdisk.
     Wake() -> (zx.status s);
 
-    // Causes the ramdisk to sleep after |count| blocks are written successfully.
-    // After |count| blocks are written, requests either wait for the ramdisk to
+    // Causes the ramdisk to sleep after `count` blocks are written successfully.
+    // After `count` blocks are written, requests either wait for the ramdisk to
     // be awoken (if RESUME_ON_WAKE has been set), or begin failing immediately.
     //
     // Resets the block counts being stored by the ramdisk.
@@ -41,9 +41,9 @@ protocol Ramdisk {
     // "SleepAfter" or "Wake".
     GetBlockCounts() -> (zx.status s, BlockWriteCounts? counts);
 
-    // Causes the ramdisk size to grow to |required_size| in bytes.
-    // If |required_size| is smaller than the current size an error will be
-    // returned. |required_size| must be a multiple of |block_size|.
+    // Causes the ramdisk size to grow to `required_size` in bytes.
+    // If `required_size` is smaller than the current size an error will be
+    // returned. `required_size` must be a multiple of `block_size`.
     Grow(uint64 new_size) -> (zx.status s);
 };
 
@@ -63,10 +63,10 @@ const uint32 MAX_NAME_LENGTH = 32;
 [Layout = "Simple"]
 protocol RamdiskController {
     // Initializes a new Ramdisk instance with the provided block size and block count.
-    // Takes an optional |type_guid|, which may be queried from the ramdisk instance.
+    // Takes an optional `type_guid`, which may be queried from the ramdisk instance.
     Create(uint64 block_size, uint64 block_count, GUID? type_guid) -> (zx.status s, string:MAX_NAME_LENGTH? name);
 
-    // Initializes a new Ramdisk instance from a VMO. Uses a block size of |PAGE_SIZE|,
+    // Initializes a new Ramdisk instance from a VMO. Uses a block size of `PAGE_SIZE`,
     // and derives the block count from the size of the VMO.
     CreateFromVmo(handle<vmo> vmo) -> (zx.status s, string:MAX_NAME_LENGTH? name);
 };

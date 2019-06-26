@@ -27,8 +27,8 @@ protocol Scenic {
     // when display ownership changes.
     GetDisplayOwnershipEvent() -> (handle<event> ownership_event);
 
-    // Take a screenshot and return the data in |img_data|. |img_data| will
-    // not contain BGRA data if |success| is false.
+    // Take a screenshot and return the data in `img_data`. `img_data` will
+    // not contain BGRA data if `success` is false.
     // TODO(SCN-678): The permissions here are too wide (anyone can take a
     // screenshot), we should narrow them.
     TakeScreenshot() -> (ScreenshotData img_data, bool success);

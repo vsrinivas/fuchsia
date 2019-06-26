@@ -53,18 +53,18 @@ const uint64 MAX_BUFFER = 900;
 /// SocketProvider implements the POSIX sockets API.
 [Discoverable, Layout = "Simple"]
 protocol SocketProvider {
-    /// Requests a socket with the specified parameters. Values for |code| are defined in
+    /// Requests a socket with the specified parameters. Values for `code` are defined in
     /// errno.h.
     Socket(int16 domain, int16 type, int16 protocol) -> (int16 code, handle<socket>? s);
     /// Retrieves information about the address of a node and/or service. The number of valid
-    /// results in |res| is given by the |count| return value.
+    /// results in `res` is given by the `count` return value.
     // TODO(FIDL-323): use vector<AddInfo>:4.
     GetAddrInfo(string:256? node, string:256? service, AddrInfoHints? hints)
         -> (AddrInfoStatus status, uint32 nres, array<AddrInfo>:4 res);
 };
 
 /// The control plane for a network socket. Once a socket has been retrieved from a
-/// |SocketProvider|, this interface is then used to further configure and use the socket.
+/// `SocketProvider`, this interface is then used to further configure and use the socket.
 /// This interface is essentially POSIX. Its implementation must support Linux-specific arguments
 /// to {Get,Set}SockOpt.
 [Transport = "SocketControl", Layout = "Simple"]
@@ -73,7 +73,7 @@ protocol SocketControl {
     Bind(vector<uint8>:MAX_ADDR addr) -> (int16 code);
     /// Initiates a connection to a network endpoint.
     Connect(vector<uint8>:MAX_ADDR addr) -> (int16 code);
-    /// Begin listening for new connections from network endpoints. At most |backlog| connections
+    /// Begin listening for new connections from network endpoints. At most `backlog` connections
     /// will be buffered.
     Listen(int16 backlog) -> (int16 code);
     /// Accepts an incoming connection from a network endpoint.

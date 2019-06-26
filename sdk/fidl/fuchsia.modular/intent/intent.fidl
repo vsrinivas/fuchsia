@@ -19,7 +19,7 @@ struct Intent {
     // module.
     string? handler;
 
-    // The parameters that will be passed to the handler of |action|.
+    // The parameters that will be passed to the handler of `action`.
     vector<IntentParameter>? parameters;
 };
 
@@ -27,7 +27,7 @@ struct Intent {
 // Action.
 struct IntentParameter {
     // The name of the parameter. The handler (i.e. selected mod) will be provided
-    // with the data for this parameter under a link called |name|.
+    // with the data for this parameter under a link called `name`.
     string? name;
 
     // The data that will be passed to the intent handler.
@@ -45,7 +45,7 @@ union IntentParameterData {
     // We need to decide if we want to keep this in place, or deprecate this
     // eventually and move entirely to using Entity references.
     //
-    // DEPRECATED: Use |entity_reference|.
+    // DEPRECATED: Use `entity_reference`.
     fuchsia.mem.Buffer json;
 
     // Set this if you want to explicitly define this noun's allowed types. This
@@ -54,7 +54,7 @@ union IntentParameterData {
     // (see docs/modular/manifests/action_template.md for a definition of
     // 'direction').
     //
-    // Only one entry in |entity_type| must match the constraint specified by
+    // Only one entry in `entity_type` must match the constraint specified by
     // the Module for the constraint to be considered satisfied.
     vector<string> entity_type;
 };

@@ -177,26 +177,26 @@ struct ClientCompositionOp {
 /// client.
 [Layout = "Simple"]
 protocol Provider {
-    /// Open a virtcon client. |device| should be a handle to one endpoint of a
+    /// Open a virtcon client. `device` should be a handle to one endpoint of a
     /// channel that (on success) will become an open connection to a new
-    /// instance of a display client device. A protocol request |controller|
+    /// instance of a display client device. A protocol request `controller`
     /// provides an interface to the Controller for the new device. Closing the
-    /// connection to |device| will also close the |controller| interface. If
+    /// connection to `device` will also close the `controller` interface. If
     /// the display device already has a virtcon controller then this method
     /// will return ZX_ERR_ALREADY_BOUND.
-    // TODO(ZX-3889): Once llcpp is supported in Zircon, unify |device| and
-    // |controller|.
+    // TODO(ZX-3889): Once llcpp is supported in Zircon, unify `device` and
+    // `controller`.
     OpenVirtconController(handle<channel> device, request<Controller> controller) -> (zx.status s);
 
-    /// Open a primary client. |device| should be a handle to one endpoint of a
+    /// Open a primary client. `device` should be a handle to one endpoint of a
     /// channel that (on success) will become an open connection to a new
-    /// instance of a display client device. A protocol request |controller|
+    /// instance of a display client device. A protocol request `controller`
     /// provides an interface to the Controller for the new device. Closing the
-    /// connection to |device| will also close the |controller| interface. If
+    /// connection to `device` will also close the `controller` interface. If
     /// the display device already has a primary controller then this method
     /// will return ZX_ERR_ALREADY_BOUND.
-    // TODO(ZX-3889): Once llcpp is supported in Zircon, unify |device| and
-    // |controller|.
+    // TODO(ZX-3889): Once llcpp is supported in Zircon, unify `device` and
+    // `controller`.
     OpenController(handle<channel> device, request<Controller> controller) -> (zx.status s);
 };
 
@@ -284,7 +284,7 @@ protocol Controller {
     //
     // where pixel is a column vector consisting of the pixel's 3 components.
     //
-    // |coefficients| is passed in row-major order. If the first entry of an
+    // `coefficients` is passed in row-major order. If the first entry of an
     // array is NaN, the array is treated as the identity element for the relevant
     // operation.
     SetDisplayColorConversion(uint64 display_id,
@@ -312,8 +312,8 @@ protocol Controller {
 
     // Sets the layer transform, scaling, and positioning.
     //
-    // |src_frame| must be non-empty and must fit entirely within the source
-    // image. |dest_frame| must be non-empty and must fit entirely within the
+    // `src_frame` must be non-empty and must fit entirely within the source
+    // image. `dest_frame` must be non-empty and must fit entirely within the
     // composed output. CheckConfig will return INVALID_CONFIG if any of these
     // conditions is violated.
     //
@@ -323,18 +323,18 @@ protocol Controller {
 
     // Sets the alpha mode of the plane.
     //
-    // If |mode| == DISABLED, the layer is opaque and |val| is ignored.
+    // If `mode` == DISABLED, the layer is opaque and `val` is ignored.
     //
-    // If |mode| == PREMULTIPLIED or HW_MULTIPLY and |val| is NaN, the alpha
+    // If `mode` == PREMULTIPLIED or HW_MULTIPLY and `val` is NaN, the alpha
     // used when blending is determined by the per-pixel alpha channel.
     //
-    // If |mode| == PREMULTIPLIED or HW_MULTIPLY and |val| is not NaN, the
-    // alpha used when blending is the product of |val| and any per-pixel
-    // alpha. Additionally, if |mode| == PREMULTIPLIED, then the hardware
-    // premultiplies the color channel with |val| before blending.
+    // If `mode` == PREMULTIPLIED or HW_MULTIPLY and `val` is not NaN, the
+    // alpha used when blending is the product of `val` and any per-pixel
+    // alpha. Additionally, if `mode` == PREMULTIPLIED, then the hardware
+    // premultiplies the color channel with `val` before blending.
     //
     // It is illegal to call this on a non-primary layer, to pass an
-    // invalid mode, or to pass a value of |val| which is not NaN or
+    // invalid mode, or to pass a value of `val` which is not NaN or
     // in the range [0, 1].
     SetLayerPrimaryAlpha(uint64 layer_id, AlphaMode mode, float32 val);
 
@@ -448,7 +448,7 @@ protocol Controller {
     // TODO: move this into a separate video buffer management system.
     AllocateVmo(uint64 size) -> (zx.status res, handle<vmo>? vmo);
 
-    // Import a sysmem buffer collection token. |collection_id| must not
+    // Import a sysmem buffer collection token. `collection_id` must not
     // already be in use.
     ImportBufferCollection(uint64 collection_id,
                            fuchsia.sysmem.BufferCollectionToken collection_token)

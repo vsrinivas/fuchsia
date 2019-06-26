@@ -19,26 +19,26 @@ protocol Loader {
     // Cleanly shutdown the connection to the Loader service.
     Done();
 
-    // The dynamic linker sends |object_name| and gets back a VMO
+    // The dynamic linker sends `object_name` and gets back a VMO
     // handle containing the file.
     LoadObject(string:1024 object_name) -> (zx.status rv, handle<vmo>? object);
 
-    // The program loader sends the script |interpreter_name| from
+    // The program loader sends the script `interpreter_name` from
     // hashbang and gets back a VMO to execute in place of the script.
     LoadScriptInterpreter(string:1024 interpreter_name) -> (zx.status rv, handle<vmo>? object);
 
-    // The dynamic linker sends a |config| identifying its load
+    // The dynamic linker sends a `config` identifying its load
     // configuration.  This is intended to affect how later
-    // |LoadObject| requests decide what particular implementation
+    // `LoadObject` requests decide what particular implementation
     // file to supply for a given name.
     Config(string:1024 config) -> (zx.status rv);
 
     // Obtain a new loader service connection.
     Clone(request<Loader> loader) -> (zx.status rv);
 
-    // The program runtime sends a string naming a |data_sink| and
-    // transfers the sole handle to a VMO containing the |data| it
-    // wants published there.  The |data_sink| string identifies a
+    // The program runtime sends a string naming a `data_sink` and
+    // transfers the sole handle to a VMO containing the `data` it
+    // wants published there.  The `data_sink` string identifies a
     // type of data, and the VMO's object name can specifically
     // identify the data set in this VMO.  The client must transfer
     // the only handle to the VMO (which prevents the VMO being
@@ -51,7 +51,7 @@ protocol Loader {
     // not ordinarily be available in production runs.
     DebugPublishDataSink(string:1024 data_sink, handle<vmo> data) -> (zx.status rv);
 
-    // The program runtime names a |config_name| referring to a debug
+    // The program runtime names a `config_name` referring to a debug
     // configuration of some kind and gets back a VMO to read
     // configuration data from.  The sanitizer runtimes use this to
     // allow large options text to be stored in a file rather than

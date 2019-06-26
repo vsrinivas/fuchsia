@@ -8,7 +8,7 @@ using fuchsia.ui.views;
 
 /// A FocusChain tracks the status of the View hierarchy as View focus changes.
 ///
-/// Description. The |focus_chain| is a vector of ViewRefs in order of
+/// Description. The `focus_chain` is a vector of ViewRefs in order of
 /// dominance in the View hierarchy; each pair of elements represents a
 /// parent-child relationship.  The root View is always present and occupies
 /// slot 0.  The newly-focused View receives a fuchsia.ui.input.FocusEvent and

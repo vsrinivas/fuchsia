@@ -12,7 +12,7 @@ protocol ViewSnapshot {
     // TODO(SCN-1019): Use zx::eventpair instead of koid.
     // Takes a snapshot of a view and returns it in a callback.
     //
-    // The |view_koid| identifies the view whose snapshot needs to be taken.
+    // The `view_koid` identifies the view whose snapshot needs to be taken.
     //
     // The callback is invoked with the VMO buffer containing the snapshot.
     // If successful, the buffer size is non-zero, otherwise it is 0.

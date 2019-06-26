@@ -7,20 +7,20 @@ library fuchsia.ui.policy;
 using fuchsia.ui.gfx;
 using fuchsia.ui.input;
 
-// |Presentation.CaptureKeyboardEvent| will consume this listener interface and
-// call |OnEvent| when the registered keyboard event occurs.
+// `Presentation.CaptureKeyboardEvent` will consume this listener interface and
+// call `OnEvent` when the registered keyboard event occurs.
 protocol KeyboardCaptureListenerHACK {
     OnEvent(fuchsia.ui.input.KeyboardEvent event);
 };
 
-// |Presentation.CapturePointerEvent| will consume this listener interface and
-// call |OnEvent| when a pointer event occurs.
+// `Presentation.CapturePointerEvent` will consume this listener interface and
+// call `OnEvent` when a pointer event occurs.
 protocol PointerCaptureListenerHACK {
     OnPointerEvent(fuchsia.ui.input.PointerEvent event);
 };
 
-// |Presentation.RegisterMediaButtonsListener| will consume this listener interface
-// and call |OnMediaButtonsEvent| when the registered media buttons event occurs.
+// `Presentation.RegisterMediaButtonsListener` will consume this listener interface
+// and call `OnMediaButtonsEvent` when the registered media buttons event occurs.
 protocol MediaButtonsListener {
     OnMediaButtonsEvent(fuchsia.ui.input.MediaButtonsEvent event);
 };
@@ -55,7 +55,7 @@ protocol Presentation {
     // things with it (e.g., switch a session shell). Phase and modifiers are always
     // matched, and valid (non-zero) code points are matched. If there is no
     // valid code point, the filter will match against the hid usage value.
-    // The full KeyboardEvent is supplied to |listener|'s OnEvent.
+    // The full KeyboardEvent is supplied to `listener`'s OnEvent.
     // TODO: Figure out the feasibility of this feature and the best place to put
     // it.
     CaptureKeyboardEventHACK(fuchsia.ui.input.KeyboardEvent event_to_capture,

@@ -85,7 +85,7 @@ struct LocalPersonaId {
     uint64 id;
 };
 
-// An |AuthState| along with the account that it applies to.
+// An `AuthState` along with the account that it applies to.
 struct AccountAuthState {
     LocalAccountId account_id;
     fuchsia.auth.AuthState auth_state;
@@ -114,13 +114,13 @@ protocol AccountManager {
     // Connects an interface to read properties of and perform operations on
     // one account.
     //
-    // |id| The account's identifier as returned by GetAccountIds()
-    // |context_provider| An |AuthenticationContextProvider| capable of
+    // `id` The account's identifier as returned by GetAccountIds()
+    // `context_provider` An `AuthenticationContextProvider` capable of
     //                    supplying UI contexts used for interactive
     //                    authentication on this account
-    // |account| The server end of an |Account| channel
+    // `account` The server end of an `Account` channel
     //
-    // Returns: |status| A |Status| indicating whether the operation was
+    // Returns: `status` A `Status` indicating whether the operation was
     //                   successful
     GetAccount(
         LocalAccountId id,
@@ -133,11 +133,11 @@ protocol AccountManager {
     // also receive the initial set of accounts and authentication states onto
     // which changes may be applied.
     //
-    // |listener| The client end of an |AccountListener| channel
-    // |options| An |AccountListenerOptions| that defines the set of events to
+    // `listener` The client end of an `AccountListener` channel
+    // `options` An `AccountListenerOptions` that defines the set of events to
     //           be sent to the listener.
     //
-    // Returns: |status| A |Status| indicating whether the operation was
+    // Returns: `status` A `Status` indicating whether the operation was
     //                   successful
     RegisterAccountListener(
         AccountListener listener,
@@ -154,13 +154,13 @@ protocol AccountManager {
     // Removes a provisioned Fuchsia account from the current device, revoking
     // any credentials that are held for the account.
     //
-    // |id| The account's identifier as returned by GetAccountIds()
-    // |force| If true, continues removing the account even if revocation of
+    // `id` The account's identifier as returned by GetAccountIds()
+    // `force` If true, continues removing the account even if revocation of
     //         credentials fails. If false, any revocation failure will result
     //         in an error and the account will remain. In this case, a subset
     //         of the credentials may have been deleted.
     //
-    // Returns: |status| A |Status| indicating whether the operation was
+    // Returns: `status` A `Status` indicating whether the operation was
     //                   successful
     RemoveAccount(LocalAccountId id, bool force) -> (Status status);
 
@@ -170,17 +170,17 @@ protocol AccountManager {
     // account will be created with its recovery account set to the service
     // provider account.
     //
-    // |auth_context_provider| An |AuthenticationContextProvider| capable of
+    // `auth_context_provider` An `AuthenticationContextProvider` capable of
     //                         supplying UI contexts used for interactive
     //                         authentication
-    // |auth_provider_type| A unique identifier for an installed |AuthProvider|
+    // `auth_provider_type` A unique identifier for an installed `AuthProvider`
     //                      that should be used to authenticate with the service
     //                      provider
-    // |lifetime| The lifetime of the account.
+    // `lifetime` The lifetime of the account.
     //
-    // Returns: |status| A |Status| indicating whether the operation was
+    // Returns: `status` A `Status` indicating whether the operation was
     //                   successful
-    //          |account_id| The identifier of the newly added account, if the
+    //          `account_id` The identifier of the newly added account, if the
     //                       operation was successful.
     ProvisionFromAuthProvider(
         fuchsia.auth.AuthenticationContextProvider auth_context_provider,
@@ -190,11 +190,11 @@ protocol AccountManager {
 
     // Adds a new, initially empty, Fuchsia account to the current device.
     //
-    // |lifetime| The lifetime of the account.
+    // `lifetime` The lifetime of the account.
     //
-    // Returns: |status| A |Status| indicating whether the operation was
+    // Returns: `status` A `Status` indicating whether the operation was
     //                   successful
-    //          |account_id| The identifier of the newly added account, if the
+    //          `account_id` The identifier of the newly added account, if the
     //                       operation was successful.
     ProvisionNewAccount(Lifetime lifetime)
         -> (Status status, LocalAccountId? account_id);
@@ -216,7 +216,7 @@ struct AccountListenerOptions {
     bool add_account;
     // If true, the listener will receive events.
     bool remove_account;
-    // An |AuthChangeGranularity| expressing the magnitude of change in
+    // An `AuthChangeGranularity` expressing the magnitude of change in
     // authentication state that will lead to AuthStateChange events.
     fuchsia.auth.AuthChangeGranularity granularity;
 };
@@ -261,7 +261,7 @@ protocol AccountListener {
 // An interface to receive events when the authentication state of an account
 // changes.
 //
-// AuthListeners may be registered through the |AuthTarget| interface and this
+// AuthListeners may be registered through the `AuthTarget` interface and this
 // registration also defines the types of authentication state changes that
 // should be sent to the listener.
 //
@@ -284,21 +284,21 @@ protocol AuthListener {
 // state of an entity and to request changes in that authentication state.
 [FragileBase]
 protocol AuthTarget {
-    // Returns the current |AuthState| of the target.
+    // Returns the current `AuthState` of the target.
     GetAuthState()
         -> (Status status, fuchsia.auth.AuthState? auth_state);
 
     // Connects an interface that will receive changes in the authentication
     // state of the target.
     //
-    // |listener| The client end of an |AuthListener| channel
-    // |initial_state| If true, the listener will receive the initial auth state
+    // `listener` The client end of an `AuthListener` channel
+    // `initial_state` If true, the listener will receive the initial auth state
     //                 in addition to any changes.
-    // |granularity| An |AuthChangeGranularity| expressing the magnitude of
+    // `granularity` An `AuthChangeGranularity` expressing the magnitude of
     //               change in authentication state than should lead to a
     //               callback
     //
-    // Returns: |status| A |Status| indicating whether the operation was
+    // Returns: `status` A `Status` indicating whether the operation was
     //                   successful
     RegisterAuthListener(
         AuthListener listener,
@@ -338,11 +338,11 @@ protocol Account {
     // Connects an interface to read properties of and access tokens for
     // the default persona for the account.
     //
-    // |persona| The client end of a |Persona| channel
+    // `persona` The client end of a `Persona` channel
     //
-    // Returns: |status| A |Status| indicating whether the operation was
+    // Returns: `status` A `Status` indicating whether the operation was
     //                   successful
-    //          |id| The identifier for the default persona if the operation
+    //          `id` The identifier for the default persona if the operation
     //               was successful
     GetDefaultPersona(request<Persona> persona)
         -> (Status status, LocalPersonaId? id);
@@ -350,10 +350,10 @@ protocol Account {
     // Connects an interface to read properties of and access tokens for
     // one of the personae for the account.
     //
-    // |id| The persona's identifier as returned by GetPersonaIds()
-    // |persona| The client end of a |Persona| channel
+    // `id` The persona's identifier as returned by GetPersonaIds()
+    // `persona` The client end of a `Persona` channel
     //
-    // Returns: |status| A |Status| indicating whether the operation was
+    // Returns: `status` A `Status` indicating whether the operation was
     //                   successful
     GetPersona(LocalPersonaId id, request<Persona> persona)
         -> (Status status);
@@ -364,9 +364,9 @@ protocol Account {
     // Fuchsia account if more direct methods of authentication are not
     // available, provided such an account exists.
     //
-    // Returns: |status| A |Status| indicating whether the operation was
+    // Returns: `status` A `Status` indicating whether the operation was
     //                   successful
-    //          The |ServiceProviderAccount| used for recovery if the operation
+    //          The `ServiceProviderAccount` used for recovery if the operation
     //          was successful and a recovery account exists.
     GetRecoveryAccount()
         -> (Status status, fuchsia.auth.ServiceProviderAccount? account);
@@ -374,11 +374,11 @@ protocol Account {
     // Sets the service provider account that can be used to access the Fuchsia
     // account if more direct methods of authentication are not available.
     //
-    // |account| The |ServiceProviderAccount| to use as the recovery account.
+    // `account` The `ServiceProviderAccount` to use as the recovery account.
     //           This must be an existing account that has already been
     //           provisioned on the current device using TokenManager.
     //
-    // Returns: |status| A |Status| indicating whether the operation was
+    // Returns: `status` A `Status` indicating whether the operation was
     //                   successful
     SetRecoveryAccount(fuchsia.auth.ServiceProviderAccount account)
         -> (Status status);
@@ -403,12 +403,12 @@ protocol Persona {
     // service provider (aka cloud service) accounts that are visible through
     // this persona.
     //
-    // |application_url| A url for the Fuchsia agent that this interface will be
+    // `application_url` A url for the Fuchsia agent that this interface will be
     //                   used by. Applications are only allowed to access tokens
     //                   that they created.
-    // |token_manager| The client end of a |Persona| channel
+    // `token_manager` The client end of a `Persona` channel
     //
-    // Returns: |status| A |Status| indicating whether the operation was
+    // Returns: `status` A `Status` indicating whether the operation was
     //                   successful
     GetTokenManager(
         // TODO(jsankey): Migrate token manager to a more appropriate form

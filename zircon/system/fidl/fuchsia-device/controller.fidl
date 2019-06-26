@@ -54,8 +54,8 @@ protocol Controller {
     /// Return the current logging flags for this device's driver
     GetDriverLogFlags() -> (zx.status status, uint32 flags);
     /// Set the logging flags for this device's driver.
-    /// Each set bit in |clear_flags| will be cleared in the log flags state.
-    /// Each set bit in |set_flags| will then be set in the log flags state.
+    /// Each set bit in `clear_flags` will be cleared in the log flags state.
+    /// Each set bit in `set_flags` will then be set in the log flags state.
     SetDriverLogFlags(uint32 clear_flags, uint32 set_flags) -> (zx.status status);
 
     /// Debug command: execute the device's suspend hook

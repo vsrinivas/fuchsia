@@ -175,7 +175,7 @@ class SkipBlock final {
     // Erases and writes the specified blocks from the provided vmo.
     //
     // In the event that bad block is grown, the partition will shrink and
-    // |bad_block_grown| will be set to true. Since this causes the logical to
+    // `bad_block_grown` will be set to true. Since this causes the logical to
     // physical block map to change, all previously written blocks at logical
     // addresses after the section being written should be considered corrupted,
     // and rewritten if applicable.
@@ -184,7 +184,7 @@ class SkipBlock final {
     // Erases and writes the specified blocks from the provided vmo.
     //
     // In the event that bad block is grown, the partition will shrink and
-    // |bad_block_grown| will be set to true. Since this causes the logical to
+    // `bad_block_grown` will be set to true. Since this causes the logical to
     // physical block map to change, all previously written blocks at logical
     // addresses after the section being written should be considered corrupted,
     // and rewritten if applicable.
@@ -195,7 +195,7 @@ class SkipBlock final {
     // Erases and writes the specified blocks from the provided vmo.
     //
     // In the event that bad block is grown, the partition will shrink and
-    // |bad_block_grown| will be set to true. Since this causes the logical to
+    // `bad_block_grown` will be set to true. Since this causes the logical to
     // physical block map to change, all previously written blocks at logical
     // addresses after the section being written should be considered corrupted,
     // and rewritten if applicable.
@@ -246,7 +246,7 @@ class SkipBlock final {
     // Erases and writes the specified blocks from the provided vmo.
     //
     // In the event that bad block is grown, the partition will shrink and
-    // |bad_block_grown| will be set to true. Since this causes the logical to
+    // `bad_block_grown` will be set to true. Since this causes the logical to
     // physical block map to change, all previously written blocks at logical
     // addresses after the section being written should be considered corrupted,
     // and rewritten if applicable.
@@ -255,7 +255,7 @@ class SkipBlock final {
     // Erases and writes the specified blocks from the provided vmo.
     //
     // In the event that bad block is grown, the partition will shrink and
-    // |bad_block_grown| will be set to true. Since this causes the logical to
+    // `bad_block_grown` will be set to true. Since this causes the logical to
     // physical block map to change, all previously written blocks at logical
     // addresses after the section being written should be considered corrupted,
     // and rewritten if applicable.
@@ -266,7 +266,7 @@ class SkipBlock final {
     // Erases and writes the specified blocks from the provided vmo.
     //
     // In the event that bad block is grown, the partition will shrink and
-    // |bad_block_grown| will be set to true. Since this causes the logical to
+    // `bad_block_grown` will be set to true. Since this causes the logical to
     // physical block map to change, all previously written blocks at logical
     // addresses after the section being written should be considered corrupted,
     // and rewritten if applicable.

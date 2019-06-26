@@ -3,7 +3,7 @@
   "fidl/fuchsia.net.oldhttp/http_header.fidl": "08671394bee65ccc6fb35dde88930249",
   "fidl/fuchsia.net.oldhttp/http_service.fidl": "b1d4eb07ee19bd531d15383b4738de12",
   "fidl/fuchsia.net.oldhttp/url_body.fidl": "a9bd8825ca4763be2dc254e6e9e59e9b",
-  "fidl/fuchsia.net.oldhttp/url_loader.fidl": "5b94a2e322af4c3d2b3b6f6233e401d3",
-  "fidl/fuchsia.net.oldhttp/url_request.fidl": "cfb7f55dc29dffbd2e7d4e35d83a22c6",
-  "fidl/fuchsia.net.oldhttp/url_response.fidl": "efd6013a3b54be3dfd42b58da6a3d432"
+  "fidl/fuchsia.net.oldhttp/url_loader.fidl": "20ef6e43a6b3a5fe9cf8459a12c9cac4",
+  "fidl/fuchsia.net.oldhttp/url_request.fidl": "69467736d6862d42bb882856b5c557e0",
+  "fidl/fuchsia.net.oldhttp/url_response.fidl": "457c148412a1aa496b093afdea6f71c6"
 }

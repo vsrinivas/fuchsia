@@ -9,53 +9,53 @@ library fuchsia.ui.app;
 /// which, when rendered, might display a graphical user interface, such
 /// as a module, shell, or on-screen keyboard.
 ///
-/// A client of the |View| interface will:
+/// A client of the `View` interface will:
 ///
 /// 1. Launch (or bind to) the component that provides the interface.
-/// 2. Connect to the component's |View| interface.
-/// 3. Call |SetConfig()| at least once to configure the view's presentation
+/// 2. Connect to the component's `View` interface.
+/// 3. Call `SetConfig()` at least once to configure the view's presentation
 ///    parameters.
-/// 4. Call |AttachView()| to ask the |View| to attach its graphical
-///    content to the Scenic scene graph using the provided |view_token|.
-/// 5. Optionally, while the View is attached, call |SetConfig()| again to
+/// 4. Call `AttachView()` to ask the `View` to attach its graphical
+///    content to the Scenic scene graph using the provided `view_token`.
+/// 5. Optionally, while the View is attached, call `SetConfig()` again to
 ///    modify any presentation parameters as needed.
 ///
 /// When the client no longer needs the View, it should disconnect from
 /// the interface and terminate (or unbind) from the component.
 ///
-/// NOTE: Unlike with |ViewProvider|, the client owns the |View| instance and
-/// must retain it for the lifetime of the UI that it displays. If the |View|
+/// NOTE: Unlike with `ViewProvider`, the client owns the `View` instance and
+/// must retain it for the lifetime of the UI that it displays. If the `View`
 /// instance is destroyed, the connection will be dropped.
 ///
 /// On the implementation side, a component that exposes the
-/// |View| interface has the following responsibilities:
+/// `View` interface has the following responsibilities:
 ///
 /// * Initialize and attach the View's content to the Scenic scene graph
-///   using the |fuchsia.ui.view.CreateViewCmd| and passing the provided
-///   |view_token|.
+///   using the `fuchsia.ui.view.CreateViewCmd` and passing the provided
+///   `view_token`.
 /// * Adjust the appearance and/or contents of the view's content whenever
-///   its |ViewConfig| changes.
+///   its `ViewConfig` changes.
 /// * Provide graphical content for the view and handle user interface
-///   events such as touches, key presses, and |fuchsia.ui.view.ViewProperty|
-///   changes using other Scenic interfaces such as |fuchsia.ui.Scenic|
-///   and |fuchsia.ui.SessionListener|.
+///   events such as touches, key presses, and `fuchsia.ui.view.ViewProperty`
+///   changes using other Scenic interfaces such as `fuchsia.ui.Scenic`
+///   and `fuchsia.ui.SessionListener`.
 ///
-///  TODO(SCN-1198): Migrate all implementations of |ViewProvider| to use |View|.
+///  TODO(SCN-1198): Migrate all implementations of `ViewProvider` to use `View`.
 [Discoverable]
 protocol View {
     /// Updates the View's configuration.
     ///
     /// To prevent triggering UI changes shortly after a client starts up, the
     /// View's client should set the configuration prior to calling
-    /// |AttachView()| unless the default is adequate.
+    /// `AttachView()` unless the default is adequate.
     ///
     /// May be called again at any time to modify the view's configuration.
     SetConfig(ViewConfig config);
 
     /// Attaches the View to Scenic's scene graph. Must only be called once per
-    /// |View| lifetime.
+    /// `View` lifetime.
     ///
-    /// The View's implementation should pass the |view_token| to Scenic
-    /// using a |fuchsia.ui.view.CreateViewCmd|.
+    /// The View's implementation should pass the `view_token` to Scenic
+    /// using a `fuchsia.ui.view.CreateViewCmd`.
     Attach(handle<eventpair> view_token);
 };

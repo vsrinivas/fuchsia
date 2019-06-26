@@ -14,26 +14,26 @@ using fuchsia.io;
 [Discoverable]
 protocol Realm {
     /// Binds to a child component instance, causing it to start running if it
-    /// is not already. When this function successfully returns, |child| is
-    /// running and |exposed_capabilities| is bound to a directory that contains
+    /// is not already. When this function successfully returns, `child` is
+    /// running and `exposed_capabilities` is bound to a directory that contains
     /// the capabilities which the child exposed to its realm via
-    /// |ComponentDecl.exposes| (specified via "expose" declarations in the
+    /// `ComponentDecl.exposes` (specified via "expose" declarations in the
     /// component’s manifest).
     ///
-    /// |exposed_capabilities| is a valid channel as long as |child| is running.
-    /// |child| will remain running until it either stops on its own, or
-    /// |DestroyChild| causes the child instance to be destroyed.
+    /// `exposed_capabilities` is a valid channel as long as `child` is running.
+    /// `child` will remain running until it either stops on its own, or
+    /// `DestroyChild` causes the child instance to be destroyed.
     ///
     /// For example, if the child exposes a service `/svc/example.Echo` then
-    /// |exposed_capabilities| will contain that service at that path.
+    /// `exposed_capabilities` will contain that service at that path.
     ///
-    /// NOTE: |BindChild| does not support pipelining with |CreateChild|. If
-    /// |BindChild| is called on an instance before |CreateChild| successfully
-    /// returns, it may return |INSTANCE_NOT_FOUND|.
+    /// NOTE: `BindChild` does not support pipelining with `CreateChild`. If
+    /// `BindChild` is called on an instance before `CreateChild` successfully
+    /// returns, it may return `INSTANCE_NOT_FOUND`.
     ///
     /// Errors:
-    /// - INVALID_ARGUMENTS: |child| is not a valid child reference.  -
-    /// - INSTANCE_NOT_FOUND: |child| does not exist.
+    /// - INVALID_ARGUMENTS: `child` is not a valid child reference.  -
+    /// - INSTANCE_NOT_FOUND: `child` does not exist.
     /// - INSTANCE_CANNOT_START: Instance was not running and there was an error
     ///   starting it.
     BindChild(ChildRef child, request<fuchsia.io.Directory>
@@ -43,10 +43,10 @@ protocol Realm {
     /// returns successfully, the instance exists, but it may not be running.
     ///
     /// Errors:
-    /// - INVALID_ARGUMENTS: |collection| is not a valid reference or |child|
+    /// - INVALID_ARGUMENTS: `collection` is not a valid reference or `child`
     ///   is not a valid declaration.
-    /// - COLLECTION_NOT_FOUND: |collection| does not exist.
-    /// - INSTANCE_ALREADY_EXISTS: |decl.name| already exists in |collection|.
+    /// - COLLECTION_NOT_FOUND: `collection` does not exist.
+    /// - INSTANCE_ALREADY_EXISTS: `decl.name` already exists in `collection`.
     /// - NO_SPACE: Could not allocate storage for the new instance.
     CreateChild(CollectionRef collection, ChildDecl decl) -> () error Error;
 
@@ -57,10 +57,10 @@ protocol Realm {
     /// function returns.
     ///
     /// Errors:
-    /// - INVALID_ARGUMENTS: |child| is not a valid reference or does not refer
+    /// - INVALID_ARGUMENTS: `child` is not a valid reference or does not refer
     ///   to a dynamic instance.
-    /// - INSTANCE_NOT_FOUND: |child| does not exist.
-    /// - COLLECTION_NOT_FOUND: |collection| does not exist.
+    /// - INSTANCE_NOT_FOUND: `child` does not exist.
+    /// - COLLECTION_NOT_FOUND: `collection` does not exist.
     DestroyChild(ChildRef child) -> () error Error;
 
     /// Returns an iterator that lists all instances in a collection.
@@ -70,8 +70,8 @@ protocol Realm {
     /// won't be observed by the iterator after this method returns.
     ///
     /// Errors:
-    /// - INVALID_ARGUMENTS: |collection| is not a valid reference.
-    /// - COLLECTION_NOT_FOUND: |collection| does not exist.
+    /// - INVALID_ARGUMENTS: `collection` is not a valid reference.
+    /// - COLLECTION_NOT_FOUND: `collection` does not exist.
     ListChildren(CollectionRef collection, request<ChildIterator> iter) -> ()
         error Error;
 };
@@ -80,7 +80,7 @@ protocol Realm {
 protocol ChildIterator {
     /// Advance the iterator and return the next batch of children.
     ///
-    /// Returns a vector of |ChildRef|. Returns an empty vector when there are
+    /// Returns a vector of `ChildRef`. Returns an empty vector when there are
     /// no more children.
     Next() -> (vector<ChildRef> children);
 };

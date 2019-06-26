@@ -25,8 +25,8 @@ protocol StoryShell {
     // StoryShell. More context that allows the story shell to decide how
     // to layout will be added later. Also, interface to influence life cycle and
     // focus is obviously missing.
-    // |view_connection| the new view and the associated Surface ID.
-    // |surface_info| metadata relating to the Surface.
+    // `view_connection` the new view and the associated Surface ID.
+    // `surface_info` metadata relating to the Surface.
     [Transitional]
     AddSurface(ViewConnection view_connection, SurfaceInfo surface_info);
     // DEPRECATED.  For transition purposes only.
@@ -75,7 +75,7 @@ protocol StoryShell {
     // shell via addSurface, and then disconnected. A ViewTokenPair is created
     // and the View token is given to the child view.  The ViewHolder token
     // is notified if the View is destroyed before it is connected.  Once the
-    // ViewHolder has been created using a Scenic |Session|, the Session will be
+    // ViewHolder has been created using a Scenic `Session`, the Session will be
     // notified when the view is available, if it becomes unavailable, or if
     // it is disconnected.
     // If a surface with a disconnected view is to be shown again, ReconnectView
@@ -92,7 +92,7 @@ protocol StoryShell {
     // This is called when the intent is to update the surface metadata in the
     // story graph in place. Any fields, except for the surface_id can be
     // updated. If no value or null is passed for a field it remains unchanged.
-    // This includes the |view_holder_token| inside the connection.
+    // This includes the `view_holder_token` inside the connection.
     //
     // E.g called when an intent resolves to a module that is known by the
     // caller to already be running, to update associated metadata.
@@ -103,7 +103,7 @@ protocol StoryShell {
     UpdateSurface2(ViewConnection2 view_connection, SurfaceInfo surface_info);
 };
 
-// A pair mapping a surface ID to a view (via |view_holder_token|).
+// A pair mapping a surface ID to a view (via `view_holder_token`).
 struct ViewConnection {
     // The ID for the surface
     string surface_id;
@@ -146,7 +146,7 @@ struct ContainerView {
     string node_name;
 
     // Token for embedding the new view.  The view is resolved from the intent
-    // corresponding to |node_name|.
+    // corresponding to `node_name`.
     fuchsia.ui.views.ViewHolderToken view_holder_token;
 };
 
@@ -157,7 +157,7 @@ struct ContainerView2 {
     string node_name;
 
     // Token for embedding the new view.  The view is resolved from the intent
-    // corresponding to |node_name|.
+    // corresponding to `node_name`.
     fuchsia.ui.views.ViewHolderToken view_holder_token;
 };
 
@@ -176,7 +176,7 @@ protocol StoryShellContext {
     GetLink(request<Link> request);
 
     // Requests a view for a Surface.
-    // Requests that a view for |surface_id| is provided through
+    // Requests that a view for `surface_id` is provided through
     // StoryShell.ReconnectView().
     RequestView(string surface_id);
 

@@ -4,24 +4,24 @@
 
 library fuchsia.ui.views;
 
-/// Token that uniquely identifies an attachment point for a |View| in the
-/// global scene graph.  Each |ViewHolderToken| has exactly one corresponding
-/// |ViewToken|.
+/// Token that uniquely identifies an attachment point for a `View` in the
+/// global scene graph.  Each `ViewHolderToken` has exactly one corresponding
+/// `ViewToken`.
 ///
 /// A Scenic client can reference contents from another client by creating a
-/// |ViewHolder| resource using this token.  The other client must also create
-/// a |View| resource using the corresponding |ViewToken|.
+/// `ViewHolder` resource using this token.  The other client must also create
+/// a `View` resource using the corresponding `ViewToken`.
 struct ViewHolderToken {
     handle<eventpair> value;
 };
 
-/// Token that uniquely identifies a |View|, which is the root point for a
-/// subgraph in the global scene graph. Each |ViewToken| has exactly one
-/// corresponding |ViewHolderToken|.
+/// Token that uniquely identifies a `View`, which is the root point for a
+/// subgraph in the global scene graph. Each `ViewToken` has exactly one
+/// corresponding `ViewHolderToken`.
 ///
 /// A Scenic client can have its contents referenced from another client by
-/// creating a |View| resource using this token.  The other client must also
-/// create a |ViewHolder| resource using the corresponding |ViewHolderToken|.
+/// creating a `View` resource using this token.  The other client must also
+/// create a `ViewHolder` resource using the corresponding `ViewHolderToken`.
 struct ViewToken {
     handle<eventpair> value;
 };

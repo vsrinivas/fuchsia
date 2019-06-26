@@ -19,29 +19,29 @@ using fuchsia.sys;
 //
 // LIFECYCLE
 //
-// Use |ViewManager.CreateViewTree()| to create a view tree.  The client
-// uses the |ViewTree| interface to manage the view tree's content
-// and implements the |ViewTreeListener| interface to handle events.
+// Use `ViewManager.CreateViewTree()` to create a view tree.  The client
+// uses the `ViewTree` interface to manage the view tree's content
+// and implements the `ViewTreeListener` interface to handle events.
 //
-// To destroy a view tree, simply close the |ViewTree| channel.
+// To destroy a view tree, simply close the `ViewTree` channel.
 //
 // SETTING A ROOT VIEW
 //
-// Use |GetContainer()| to obtain an interface for manipulating the root view.
+// Use `GetContainer()` to obtain an interface for manipulating the root view.
 //
-// See |ViewContainer| for more information.
+// See `ViewContainer` for more information.
 //
 // GETTING SERVICES
 //
-// The view tree's |fuchsia::sys::ServiceProvider| offers access to many services
-// which are not directly expressed by the |ViewTree| interface itself, such
+// The view tree's `fuchsia::sys::ServiceProvider` offers access to many services
+// which are not directly expressed by the `ViewTree` interface itself, such
 // as input, accessiblity, and editing capabilities.
 //
 // For example, perform the following actions to dispatch input events:
 //
-// 1. Call |GetServiceProvider()| to obtain the view's service provider.
+// 1. Call `GetServiceProvider()` to obtain the view's service provider.
 //
-// 2. Ask the service provider for its |InputDispatcher|.
+// 2. Ask the service provider for its `InputDispatcher`.
 //
 // 3. Send input events to the dispatcher for delivery to views.
 protocol ViewTree {
@@ -53,7 +53,7 @@ protocol ViewTree {
     // The view tree service provider is private to the view tree and should
     // not be shared with anyone else.
     //
-    // See |InputDispatcher|.
+    // See `InputDispatcher`.
     GetServiceProvider(request<fuchsia.sys.ServiceProvider> service_provider);
 
     // Gets an interface for managing the view tree's root.

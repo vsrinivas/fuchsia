@@ -58,13 +58,13 @@ protocol PairingDelegate {
     // this is returned as well.
     //
     // Any response from this method will be ignored if the OnPairingComplete
-    // event has already been sent for |device|.
+    // event has already been sent for `device`.
     OnPairingRequest(RemoteDevice device, PairingMethod method, string? displayed_passkey)
         -> (bool accept, string? entered_passkey);
 
     // Called if the pairing procedure for the device with the given ID is completed.
     // This can be due to successful completion or an error (e.g. due to cancellation
-    // by the peer, a timeout, or disconnection) which is indicated by |status|.
+    // by the peer, a timeout, or disconnection) which is indicated by `status`.
     OnPairingComplete(string device_id, fuchsia.bluetooth.Status status);
 
     // Called to notify keypresses from the peer device during pairing using

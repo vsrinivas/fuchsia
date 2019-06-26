@@ -8,7 +8,7 @@ library fuchsia.fonts;
 
 using fuchsia.mem;
 
-/// Deprecated. See |GenericFontFamily|.
+/// Deprecated. See `GenericFontFamily`.
 [Transitional]
 enum FallbackGroup {
     NONE = 0;
@@ -19,22 +19,22 @@ enum FallbackGroup {
     FANTASY = 5;
 };
 
-/// Deprecated. See |FaceRequestFlags|.
+/// Deprecated. See `FaceRequestFlags`.
 /// Disables font fallback. The service won't try to search fallback font set if
 /// there is no requested font family or if it doesn't contain requested
 /// character.
 const uint32 REQUEST_FLAG_NO_FALLBACK = 1;
 
-/// Deprecated. See |FaceRequestFlags|.
+/// Deprecated. See `FaceRequestFlags`.
 /// Disables approximate style matching. The service will only return font that
 /// matches the requested style exactly.
 const uint32 REQUEST_FLAG_EXACT_MATCH = 2;
 
-/// Deprecated. See |FaceRequest|.
+/// Deprecated. See `FaceRequest`.
 struct Request {
     /// Desired font family name, e.g. "Roboto". Font family search is
     /// case-insensitive. In case when there is no specified family or the
-    /// specified family doesn't have glyph for the requested |character| then
+    /// specified family doesn't have glyph for the requested `character` then
     /// a font from another family may be returned. This behavior can be disabled
     /// using REQUEST_FLAG_NO_FALLBACK.
     string:MAX_FAMILY_NAME_LENGTH? family;
@@ -81,14 +81,14 @@ struct Response {
 };
 
 /// Deprecated.
-/// See |Style2|.
+/// See `Style2`.
 struct Style {
     uint32 weight;
     uint32 width;
     Slant slant;
 };
 
-/// Deprecated. See |FontFamilyInfo|.
+/// Deprecated. See `FontFamilyInfo`.
 ///
 /// Information about font family that can be requested using GetFamilyInfo().
 struct FamilyInfo {
@@ -108,12 +108,12 @@ struct FamilyInfo {
 [Discoverable]
 protocol Provider {
 
-    /// Deprecated. See |GetTypeface|.
+    /// Deprecated. See `GetTypeface`.
     ///
-    /// Returns font that matches specified |request|.
+    /// Returns font that matches specified `request`.
     GetFont(Request request) -> (Response? response);
 
-    /// Deprecated. See |GetFontFamilyInfo|.
+    /// Deprecated. See `GetFontFamilyInfo`.
     ///
     /// Returns information for the specified font family or null if there is
     /// no family with the specified name. This function respects family name
@@ -121,8 +121,8 @@ protocol Provider {
     /// FamilyInfo for "Roboto Slab".
     GetFamilyInfo(string:MAX_FAMILY_NAME_LENGTH family) -> (FamilyInfo? family_info);
 
-    /// Returns a typeface that matches the specified |request|, or an empty table if no matching
-    /// face is found. (The latter is more likely to happen if |TypefaceRequestFlags.EXACT_FAMILY|
+    /// Returns a typeface that matches the specified `request`, or an empty table if no matching
+    /// face is found. (The latter is more likely to happen if `TypefaceRequestFlags.EXACT_FAMILY`
     /// is used to disable fallbacks.)
     GetTypeface(TypefaceRequest request) -> (TypefaceResponse response);
 
@@ -131,6 +131,6 @@ protocol Provider {
     ///
     /// This function respects family name aliases and ignores case. For example, "RobotoSlab" is an
     /// alias for the canonical name "Roboto Slab". A request for "robotoSLAB" would return the
-    /// |FontFamilyInfo| for "Roboto Slab" due to the case-insensitivity and alias resolution.
+    /// `FontFamilyInfo` for "Roboto Slab" due to the case-insensitivity and alias resolution.
     GetFontFamilyInfo(FamilyName family) -> (FontFamilyInfo family_info);
 };

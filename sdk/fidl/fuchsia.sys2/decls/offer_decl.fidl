@@ -18,13 +18,13 @@ xunion OfferDecl {
 /// or one of its other children.
 table OfferServiceDecl {
     /// The provider of the capability relative to the component itself. Must be
-    /// |realm|, |self|, or |child|.
+    /// `realm`, `self`, or `child`.
     1: Ref source;
 
     /// Path identifying the service being offered.
     2: string:MAX_PATH_LENGTH source_path;
 
-    /// Reference to the target. Must be |child| or |collection|.
+    /// Reference to the target. Must be `child` or `collection`.
     3: Ref target;
 
     /// The path under which the capability is being offered.
@@ -38,14 +38,14 @@ table OfferServiceDecl {
 /// or one of its other children.
 table OfferDirectoryDecl {
     /// The provider of the capability relative to the component itself. Must be
-    /// |realm|, |self|, or |child|.
+    /// `realm`, `self`, or `child`.
     1: Ref source;
 
     /// Path identifying the directory being offered.
     2: string:MAX_PATH_LENGTH source_path;
 
-    /// Reference to the target of the capability. Must be |child| or
-    /// |collection|.
+    /// Reference to the target of the capability. Must be `child` or
+    /// `collection`.
     3: Ref target;
 
     /// The path under which the capability is being offered.
@@ -61,10 +61,10 @@ table OfferStorageDecl {
     /// The type of storage being offered.
     1: StorageType type;
 
-    /// The source of the storage capability. Must be |realm| or |storage|.
+    /// The source of the storage capability. Must be `realm` or `storage`.
     2: Ref source;
 
-    /// Reference to the target of the capability. Must be |child| or
-    /// |collection|.
+    /// Reference to the target of the capability. Must be `child` or
+    /// `collection`.
     3: Ref target;
 };

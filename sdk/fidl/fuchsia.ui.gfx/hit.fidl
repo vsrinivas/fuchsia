@@ -9,7 +9,7 @@ library fuchsia.ui.gfx;
 //
 // To compute the point of intersection within the node's local coordinate
 // system, perform the following calculation using the ray which was
-// originally passed to |Session.HitTest()|.
+// originally passed to `Session.HitTest()`.
 //
 //   hit_point = ray.origin + (hit.distance * ray.direction)
 //   local_point = hit.inverse_transform * hit_point

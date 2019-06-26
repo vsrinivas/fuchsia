@@ -13,14 +13,14 @@ struct CreateLinkInfo {
     // module.
     fuchsia.mem.Buffer initial_data;
 
-    // If |allowed_types| is null, the Link contains JSON. No schema validation
+    // If `allowed_types` is null, the Link contains JSON. No schema validation
     // is performed.
     LinkAllowedTypes? allowed_types;
 };
 
 struct LinkAllowedTypes {
     // The Link must contain an Entity (see Link.SetEntity()) that has at least
-    // one of |allowed_entity_types| in its |Entity.GetTypes()| return value.
+    // one of `allowed_entity_types` in its `Entity.GetTypes()` return value.
     //
     // If empty, allows any Entity type.
     vector<string> allowed_entity_types;

@@ -12,7 +12,7 @@ struct Range {
     /// The offset of the first byte within the range relative to the start of
     /// the VMO.
     ///
-    /// For example, if |offset| is zero, then the first byte in the range is
+    /// For example, if `offset` is zero, then the first byte in the range is
     /// the first byte in the VMO.
     uint64 offset;
 

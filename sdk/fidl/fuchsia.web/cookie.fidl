@@ -8,18 +8,18 @@ using CookieName = string;
 
 /// Provides methods for monitoring and accessing browser cookie state.
 protocol CookieManager {
-    /// Observe changes to all cookies named |name| that would be sent in a
-    /// request to |url|.
-    /// |url| may be un-set to observe changes across all URLs,
-    /// Similarly, |name| may be un-set to observe changes across all cookie
+    /// Observe changes to all cookies named `name` that would be sent in a
+    /// request to `url`.
+    /// `url` may be un-set to observe changes across all URLs,
+    /// Similarly, `name` may be un-set to observe changes across all cookie
     /// names.
     StartObservingChanges(
         Url? url,
         CookieName? name,
         CookieChangeListener listener);
 
-    /// Returns a list of Cookies whose CookieIds match |ids|.
-    /// Entries in |cookies| will be omitted for any CookieIds which can't be
+    /// Returns a list of Cookies whose CookieIds match `ids`.
+    /// Entries in `cookies` will be omitted for any CookieIds which can't be
     /// found.
     GetCookies(vector<CookieId> ids) -> (vector<Cookie> cookies);
 };
@@ -27,7 +27,7 @@ protocol CookieManager {
 /// Receives notifications about changes in a context's cookie store.
 protocol CookieChangeListener {
     /// Notifies the observer whenever cookies are added, changed, or removed
-    /// for observed URLs. |changes| is populated with information about the
+    /// for observed URLs. `changes` is populated with information about the
     /// cookies that were changed, and how they were changed.
     /// Cookies' data can be accessed by calling GetCookie() with the CookieId.
     /// Future cookie change events will be buffered until the acknowledgement

@@ -16,8 +16,8 @@ struct WlantapPhyConfig {
 };
 
 /// Instruct the wlantap-ctl device to creates a fake wlantap-phy device based on the
-/// |WlantapPhyConfig| passed in. The newly created wlantap-phy device will use the channel to
-/// allow a |WlantapPhy| client to observe and control its behavior
+/// `WlantapPhyConfig` passed in. The newly created wlantap-phy device will use the channel to
+/// allow a `WlantapPhy` client to observe and control its behavior
 protocol WlantapCtl {
     CreatePhy(WlantapPhyConfig config, request<WlantapPhy> proxy) -> (zx.status status);
 };

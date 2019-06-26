@@ -14,9 +14,9 @@ using fuchsia.modular;
 // that process. Clients will typically construct these indirectly using convenience methods on the
 // `StoryMutator` class.
 union StoryModelMutation {
-  // Sets the value of |StoryModel.visibility_state|.
+  // Sets the value of `StoryModel.visibility_state`.
   fuchsia.modular.StoryVisibilityState set_visibility_state;
 
-  // Sets the value of |StoryModel.runtime_state|.
+  // Sets the value of `StoryModel.runtime_state`.
   fuchsia.modular.StoryState set_runtime_state;
 };

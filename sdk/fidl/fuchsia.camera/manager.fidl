@@ -50,13 +50,13 @@ protocol Manager {
     GetDevices() -> (vector<DeviceInfo> descriptions);
 
     // Get all the available formats for a camera.
-    // |camera_id| is obtained from a DeviceInfo returned by GetDevices.
+    // `camera_id` is obtained from a DeviceInfo returned by GetDevices.
     GetFormats(uint64 camera_id, uint32 index)
         -> (vector<VideoFormat> formats, uint32 total_format_count);
 
     // Create a Stream with the specified access rights.  This may not succeed.
     // If it does succeed, the Stream will have the rights indicated.
-    // |buffer_info| contains a set of buffers to be used with the Stream.
+    // `buffer_info` contains a set of buffers to be used with the Stream.
     // This is being deprecated - please use CreateStreamV2.
     CreateStream(VideoStream request,
                  fuchsia.sysmem.BufferCollectionInfo buffer_info,
@@ -64,7 +64,7 @@ protocol Manager {
 
     // Create a Stream with the specified access rights.  This may not succeed.
     // If it does succeed, the Stream will have the rights indicated.
-    // |buffer_info| contains a set of buffers to be used with the Stream.
+    // `buffer_info` contains a set of buffers to be used with the Stream.
     [Transitional="This is meant to replace CreateStream"]
     CreateStreamV2(VideoStreamV2 request,
                    fuchsia.sysmem.BufferCollectionInfo buffer_info,

@@ -9,26 +9,26 @@ using fuchsia.ui.views;
 // Used by the clients of StoryProvider (SessionShell) to interact with a single
 // story. Created by StoryProvider.
 //
-// If |StoryController| is closed, the |StoryState| associated with this story
+// If `StoryController` is closed, the `StoryState` associated with this story
 // does not change.
 protocol StoryController {
     // Gets information associated with the story.
     GetInfo() -> (StoryInfo info, StoryState state);
 
-    // Requests to run the story controlled by this |StoryController| instance.
+    // Requests to run the story controlled by this `StoryController` instance.
     // When the story starts, if not yet running, the view of the newly started
     // story shell will be passed in a call to SessionShell.AttachView().
     RequestStart();
 
-    // Requests to stop the story controlled by this |StoryController|. If Start()
+    // Requests to stop the story controlled by this `StoryController`. If Start()
     // requests are pending when this request is issued, the request is queued
     // until the Start() requests complete. Before stopping the story, a snapshot
     // of the story will be taken and saved. Returns when the story is stopped.
     Stop() -> ();
 
-    // Creates a new view with the given |view_owner| request to display
+    // Creates a new view with the given `view_owner` request to display
     // snapshots. Takes a snapshot for the story controlled by this
-    // |StoryController| and then loads the snapshot to the created view such that
+    // `StoryController` and then loads the snapshot to the created view such that
     // it is rendered. The callback will be invoked once the view has been created
     // and the snapshot has been loaded.
     TakeAndLoadSnapshot(fuchsia.ui.views.ViewToken view_token) -> ();

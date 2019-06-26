@@ -33,24 +33,24 @@ enum Error {
 /// Any invalid calls to methods on StoryController result in the StoryController channel closing
 /// with ZX_ERR_INVALID_ARGS.
 protocol StoryController {
-    /// Assigns the module identified by |id| to handle |intent|. Modules within a story are
-    /// a set: calling AddModule() with the same |id| updates the module in place, while calling
-    /// with new |id| results in a brand new module. Callers wishing to add a new module on every
-    /// call should assign a GUID for |id|.
+    /// Assigns the module identified by `id` to handle `intent`. Modules within a story are
+    /// a set: calling AddModule() with the same `id` updates the module in place, while calling
+    /// with new `id` results in a brand new module. Callers wishing to add a new module on every
+    /// call should assign a GUID for `id`.
     ///
-    /// |intent| describes both the module to add, either explicitly through |intent.handler| or
-    /// indirectly through |intent.action|, as well as the module's input model. The latest
-    /// |intent| is always delivered to modules through their fuchsia.app.module.IntentHandler
+    /// `intent` describes both the module to add, either explicitly through `intent.handler` or
+    /// indirectly through `intent.action`, as well as the module's input model. The latest
+    /// `intent` is always delivered to modules through their fuchsia.app.module.IntentHandler
     /// service, either during the module's initialization or during its execution, depending on
     /// the lifecycle state of the module.
     ///
-    /// At least one of |intent.handler| or |intent.action| are required.  |composition|, if not
-    /// provided, uses the default (|composition.arrangement| is set to SurfaceArrangement.NONE).
+    /// At least one of `intent.handler` or `intent.action` are required.  `composition`, if not
+    /// provided, uses the default (`composition.arrangement` is set to SurfaceArrangement.NONE).
     ///
     /// Returns Error.ERR_NO_MODULE_FOUND on error.
     AddModule(ModuleId id, fuchsia.app.Intent intent, ModuleCompositionSettings composition) -> () error Error;
 
-    /// Permanently removes the module identified by |id|. Calling for a module that doesn't exist,
+    /// Permanently removes the module identified by `id`. Calling for a module that doesn't exist,
     /// or was already removed either by this agent or by an agent on another device, is a no-op.
     ///
     /// Returns Error.ERR_MODULE_ID_NOT_FOUND on error.
@@ -72,7 +72,7 @@ table ModuleCompositionSettings {
     // 1: fuchsia.modular.SurfaceRelation relation;
     1: int32 placeholder;
 
-    /// Specifies the module relative to which the instruction in |relation| applies. |relative_to|
+    /// Specifies the module relative to which the instruction in `relation` applies. `relative_to`
     /// must identify a module previously added through calls to StoryController/AddModule()
     /// and not since removed.
     2: ModuleId relative_to;

@@ -10,7 +10,7 @@ enum ExecuteStatus {
     // Encountered an invalid command.
     INVALID_COMMAND = 1;
 
-    // The |story_id| provided does not exist or is not visible
+    // The `story_id` provided does not exist or is not visible
     // to this client.
     INVALID_STORY_ID = 2;
 
@@ -59,12 +59,12 @@ protocol PuppetMaster {
     // identifiers to stories. Clients wishing to guarantee a new story is
     // created should generate a UUIDv4 or similar.
     //
-    // |request| is closed if control cannot be granted.
+    // `request` is closed if control cannot be granted.
     //
     // TODO(thatguy): We want story names to be scoped to the client's namespace.
     ControlStory(string story_name, request<StoryPuppetMaster> request);
 
-    // Deletes a story associated to |story_name|.
+    // Deletes a story associated to `story_name`.
     DeleteStory(string story_name) -> ();
 
     // Returns a list of all the names of stories in the session.
@@ -75,7 +75,7 @@ struct WatchSessionOptions {
 };
 
 protocol StoryPuppetMaster {
-    // Enqueues the given |commands| in the order they are given.
+    // Enqueues the given `commands` in the order they are given.
     // Can be called as many times as necessary to specify the full
     // set of changes to the story.
     //
@@ -86,7 +86,7 @@ protocol StoryPuppetMaster {
     // a batch: no other commands from other clients will be interleaved.
     //
     // If an error occurs, execution is stopped and an error code
-    // and message are returned in |result|.
+    // and message are returned in `result`.
     Execute() -> (ExecuteResult result);
 
     // If this story is new, sets the options for its creation. Must be called
@@ -96,7 +96,7 @@ protocol StoryPuppetMaster {
     // See story_command.fidl for details.
     SetCreateOptions(StoryOptions story_options);
 
-    // Set the |StoryInfo| extra field for a story that is to be
+    // Set the `StoryInfo` extra field for a story that is to be
     // created. This should be called before the first call to Execute().
     // Any subsequent calls (either on the same channel or on a new
     // StoryPuppetMaster for an existing story) are ignored.

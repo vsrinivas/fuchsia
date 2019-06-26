@@ -79,9 +79,9 @@ struct RemoteDevice {
     string identifier;
 
     // Bluetooth device address that identifies this remote device. Clients
-    // should display this field to the user when |name| is not available.
+    // should display this field to the user when `name` is not available.
     //
-    // NOTE: Clients should use the |identifier| field to distinguish between
+    // NOTE: Clients should use the `identifier` field to distinguish between
     // remote devices instead of using their address.
     string address;
 

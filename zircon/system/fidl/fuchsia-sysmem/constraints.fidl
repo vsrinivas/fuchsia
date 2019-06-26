@@ -136,7 +136,7 @@ struct BufferCollectionInfo_2 {
     /// VMO handles (and vmo_usable_start offset) for each buffer in the
     /// collection.
     ///
-    /// If present, all the VMOs at or after index |buffer_count| are invalid (0)
+    /// If present, all the VMOs at or after index `buffer_count` are invalid (0)
     /// handles.
     ///
     /// All buffer VMO handles have identical size and access rights.  The size

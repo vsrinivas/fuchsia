@@ -7,6 +7,6 @@ library fuchsia.boot;
 /// Protocol for providing the kernel log.
 [Discoverable, Layout = "Simple"]
 protocol Log {
-    /// Get the kernel |log|.
+    /// Get the kernel `log`.
     Get() -> (handle<debuglog> log);
 };

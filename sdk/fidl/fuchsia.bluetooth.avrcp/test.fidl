@@ -14,7 +14,7 @@ protocol AvrcpTest {
     /// dispatch to the MediaSession service. This should only be used for debug and testing.
     RegisterIncomingTargetHandler(TargetHandler handler);
 
-    /// Returns a test client to a remote target service at the address specified by |device_id|.
+    /// Returns a test client to a remote target service at the address specified by `device_id`.
     /// This client is to be used in conjunction the non test client from the primary Avrcp service.
     /// The test client provides additional methods not exposed by normal client to be used
     /// for debugging and testing purposes.
@@ -25,7 +25,7 @@ protocol AvrcpTest {
 /// An implementation of this interface is registered with the AvrcpTest service to handle
 /// incoming connections.
 protocol TargetHandler {
-    /// Called when an incoming target is connected. |delegate| should be fulfilled with an
+    /// Called when an incoming target is connected. `delegate` should be fulfilled with an
     /// interface that will be used to handle commands from the connected Controller.
     /// TODO (BT-305): change device_id to int.
     ControllerConnected(string device_id, request<TargetDelegate> delegate);

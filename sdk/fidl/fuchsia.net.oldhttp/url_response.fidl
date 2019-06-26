@@ -30,7 +30,7 @@ struct URLResponse {
   string? charset;
 
   // These fields are set to non-NULL if this response corresponds to a
-  // redirect.  Call the |FollowRedirect| method on the URLLoader instance to
+  // redirect.  Call the `FollowRedirect` method on the URLLoader instance to
   // follow this redirect.
   string? redirect_method;
   string? redirect_url;

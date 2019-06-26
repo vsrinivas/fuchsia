@@ -45,7 +45,7 @@ struct AuthState {
 // An expression of the types of changes an auth state that should be reported
 // over listener interfaces. By default no changes will be reported.
 struct AuthChangeGranularity {
-    // If true, any changes in the |AuthStateSummary| enumeration will be
+    // If true, any changes in the `AuthStateSummary` enumeration will be
     // reported.
     bool summary_changes;
 

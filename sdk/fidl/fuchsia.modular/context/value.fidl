@@ -8,14 +8,14 @@ struct ContextValue {
     // The type of value this describes.
     ContextValueType type;
 
-    // If |type| == ContextType.ENTITY, contains the JSON encoded representation
+    // If `type` == ContextType.ENTITY, contains the JSON encoded representation
     // of the Entity's content.
     // TODO(thatguy): When Entities are handles we can pass around, make this
     // a FIDL handle to the entity.
     string? content;
 
     // All metadata for the node. When this ContextValue is included in a
-    // ContextUpdate, |meta| will contain a merged view of metadata that is
+    // ContextUpdate, `meta` will contain a merged view of metadata that is
     // inclusive of all of this value node's ancestors.
     ContextMetadata meta;
 };

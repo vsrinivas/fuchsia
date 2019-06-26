@@ -26,7 +26,7 @@ protocol Callbacks {
     // established from Device.SendRequest.
     Response(Addr addr);
     // Indicates a 'rst' op was received from the host, and that the driver has
-    // has freed the resources for any potential connection relating to |addr|.
+    // has freed the resources for any potential connection relating to `addr`.
     Rst(Addr addr);
     // Indicates a 'shutdown' op was received from the host.
     Shutdown(Addr addr);
@@ -50,22 +50,22 @@ protocol Device {
     // will stop if it detects the other end of the Callbacks channel has closed.
     Start(Callbacks cb) -> (zx.status status);
     // Will send a request to open a connection with the remote specified in the
-    // |addr|. The |data| socket is stored and will be used for data transmission
+    // `addr`. The `data` socket is stored and will be used for data transmission
     // should the connection get established successfully, otherwise it will close
-    // the handle. The |status| returned indicates whether the request was sent
+    // the handle. The `status` returned indicates whether the request was sent
     // successfully. Callbacks.Response or Callbacks.Rst will be called to indicate
     // if the connection was successfully established or not.
     SendRequest(Addr addr, handle<socket> data) -> (zx.status status);
-    // Request a shutdown to begin for the connection indicated by the given |addr|.
+    // Request a shutdown to begin for the connection indicated by the given `addr`.
     // This immediately stops any data from being sent on the connection, although
     // data may still be received up until Callbacks.Rst is called to indicate the
     // shutdown has complete. This is only valid on a connection established with
     // SendRequest or SendResponse.
     SendShutdown(Addr addr) -> (zx.status status);
     // Request a rst be sent to the host. The device will also release the resources
-    // for any connection that may exist for |addr|.
+    // for any connection that may exist for `addr`.
     SendRst(Addr addr) -> (zx.status status);
-    // Causes a 'response' to get sent to the host, gives the driver a |data| socket
+    // Causes a 'response' to get sent to the host, gives the driver a `data` socket
     // to use for sending and receiving data on the established connection. It is
     // only correct to use this in response to a Callbacks.Request.
     SendResponse(Addr addr, handle<socket> data) -> (zx.status status);
@@ -77,7 +77,7 @@ protocol Device {
     // Send the contents of a vmo over an already established connection. A
     // connection may only have a single outstanding vmo at a time, and trying
     // to send whilst one is already in progress will generate an error. If there
-    // is pending data to transmit in the |data| socket of a connection and there
+    // is pending data to transmit in the `data` socket of a connection and there
     // is a vmo pending then it is undefined which one will be sent. Once the vmo
     // contents have finished sending Callbacks.SendVmoComplete will be called.
     SendVmo(Addr addr, handle<vmo> vmo, uint64 off, uint64 len) -> (zx.status status);

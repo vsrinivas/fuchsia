@@ -73,7 +73,7 @@ const uint32 MAX_WRITE_BYTES = 16384;
 /// Any method that returns a list of actions is interpreted as requesting the corresponding hook
 /// to perform that list of actions in order.
 protocol MockDevice {
-    /// |record.device_id| corresponds to the parent here.
+    /// `record.device_id` corresponds to the parent here.
     Bind(HookInvocation record) -> (vector<Action>:MAX_ACTIONS actions);
 
     Release(HookInvocation record);
