@@ -35,12 +35,13 @@ if (is_fuchsia) {
     testonly = true
     visibility = [ ":*" ]
     sources = [
-      "helper/publish-data-helper.c",
+      "helper/publish-data-helper.cc",
     ]
     deps = [
       "$zx/system/ulib/fdio",
-      "$zx/system/ulib/unittest",
       "$zx/system/ulib/zircon",
+      "$zx/system/ulib/zx",
+      "$zx/system/ulib/zxtest",
     ]
 
     # TODO: Don't instrument the helper until we have a way to route sinks
@@ -56,4 +57,3 @@ if (is_fuchsia) {
     ]
   }
 }
-
