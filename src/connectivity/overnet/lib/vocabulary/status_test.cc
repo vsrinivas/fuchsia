@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 #include "src/connectivity/overnet/lib/vocabulary/status.h"
+
 #include <memory>
+
 #include "gtest/gtest.h"
 
 namespace overnet {
@@ -61,7 +63,7 @@ TEST(Status, Arbitrary) {
   EXPECT_EQ(StatusCode::DATA_LOSS, blah.code());
   EXPECT_EQ("The bits got old", blah.reason());
 
-  Status other_blah = Status(StatusCode::FAILED_PRECONDITION, "Something");
+  Status other_blah = Status::FailedPrecondition("Something");
   EXPECT_TRUE(other_blah.is_error());
   EXPECT_FALSE(other_blah.is_ok());
   EXPECT_EQ(StatusCode::FAILED_PRECONDITION, other_blah.code());

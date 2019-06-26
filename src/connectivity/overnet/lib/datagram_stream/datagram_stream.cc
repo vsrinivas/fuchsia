@@ -325,7 +325,7 @@ void DatagramStream::SendPacket(SeqNum seq, LazySlice data) {
 }
 
 void DatagramStream::NoConnectivity() {
-  stream_state_.ForceClose(Status(StatusCode::UNAVAILABLE, "No connectivity"));
+  stream_state_.ForceClose(Status::Unavailable("No connectivity"));
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -376,7 +376,7 @@ void DatagramStream::SendOp::Close(const Status& status) {
     std::ostringstream out;
     out << "Insufficient bytes for message presented: expected "
         << payload_length_ << " but got " << push_offset_;
-    SetClosed(Status(StatusCode::INVALID_ARGUMENT, out.str()));
+    SetClosed(Status::InvalidArgument(out.str()));
   } else {
     SetClosed(status);
   }
@@ -413,8 +413,7 @@ void DatagramStream::SendOp::Push(Slice item, Callback<void> started) {
                        << " end_byte=" << end_byte
                        << " payload_length=" << payload_length_;
   if (end_byte > payload_length_) {
-    Close(Status(StatusCode::INVALID_ARGUMENT,
-                 "Exceeded message payload length"));
+    Close(Status::InvalidArgument("Exceeded message payload length"));
     return;
   }
   push_offset_ += chunk_length;

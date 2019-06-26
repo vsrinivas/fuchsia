@@ -176,9 +176,9 @@ RouterEndpoint::Stream::Stream(NewStream introduction)
   auto it = introduction.creator_->connection_streams_.find(introduction.peer_);
   if (it == introduction.creator_->connection_streams_.end()) {
     OVERNET_TRACE(DEBUG) << "Failed to find connection " << introduction.peer_;
-    Close(Status(StatusCode::FAILED_PRECONDITION,
-                 "Connection closed before stream creation"),
-          Callback<void>::Ignored());
+    Close(
+        Status::FailedPrecondition("Connection closed before stream creation"),
+        Callback<void>::Ignored());
   } else {
     connection_stream_ = &it->second;
     connection_stream_->forked_streams_.PushBack(this);
@@ -363,8 +363,7 @@ void RouterEndpoint::ConnectionStream::Stub::ConnectToService(
       it != connection_stream_->endpoint_->services_.end()) {
     it->second->AcceptStream(std::move(*new_stream));
   } else {
-    new_stream->Fail(
-        Status(StatusCode::INVALID_ARGUMENT, "Service not supported"));
+    new_stream->Fail(Status::InvalidArgument("Service not supported"));
   }
 }
 
@@ -385,9 +384,9 @@ void RouterEndpoint::ConnectionStream::Stub::UpdateNodeStatus(
   auto* const endpoint = connection_stream_->endpoint_;
   OVERNET_TRACE(DEBUG) << "Got: UpdateNodeStatus " << status;
   if (status.id == endpoint->node_id()) {
-    connection_stream_->Close(Status(StatusCode::INVALID_ARGUMENT,
-                                     "Attempt to set this nodes status"),
-                              Callback<void>::Ignored());
+    connection_stream_->Close(
+        Status::InvalidArgument("Attempt to set this nodes status"),
+        Callback<void>::Ignored());
     return;
   }
   connection_stream_->endpoint_->RegisterPeer(NodeId(status.id));
@@ -399,9 +398,9 @@ void RouterEndpoint::ConnectionStream::Stub::UpdateLinkStatus(
   auto* const endpoint = connection_stream_->endpoint_;
   OVERNET_TRACE(DEBUG) << "Got: UpdateLinkStatus " << status;
   if (status.from == endpoint->node_id()) {
-    connection_stream_->Close(Status(StatusCode::INVALID_ARGUMENT,
-                                     "Attempt to set this nodes link status"),
-                              Callback<void>::Ignored());
+    connection_stream_->Close(
+        Status::InvalidArgument("Attempt to set this nodes link status"),
+        Callback<void>::Ignored());
     return;
   }
   endpoint->ApplyGossipUpdate(std::move(status));

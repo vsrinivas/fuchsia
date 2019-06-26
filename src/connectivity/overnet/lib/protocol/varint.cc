@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "src/connectivity/overnet/lib/protocol/varint.h"
+
 #include <assert.h>
 
 namespace overnet {

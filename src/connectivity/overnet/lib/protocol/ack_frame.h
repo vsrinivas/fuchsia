@@ -5,8 +5,10 @@
 #pragma once
 
 #include <assert.h>
+
 #include <tuple>
 #include <vector>
+
 #include "src/connectivity/overnet/lib/environment/trace.h"
 #include "src/connectivity/overnet/lib/protocol/varint.h"
 #include "src/connectivity/overnet/lib/vocabulary/slice.h"

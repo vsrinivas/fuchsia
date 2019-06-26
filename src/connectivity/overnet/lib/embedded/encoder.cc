@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "src/connectivity/overnet/lib/embedded/encoder.h"
+
 #include "src/connectivity/overnet/lib/embedded/fidl_channel.h"
 
 namespace overnet {

@@ -5,8 +5,10 @@
 #pragma once
 
 #include <assert.h>
+
 #include <list>
 #include <vector>
+
 #include "src/connectivity/overnet/lib/vocabulary/internal_list.h"
 
 namespace overnet {

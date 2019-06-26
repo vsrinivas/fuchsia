@@ -21,7 +21,7 @@ Omdp::Omdp(uint64_t own_node_id, Timer* timer, std::function<uint64_t()> rng)
 
 Status Omdp::Process(IpAddr from_addr, Slice slice) {
   if (InBlockList(from_addr)) {
-    return Status(StatusCode::FAILED_PRECONDITION, "In block list");
+    return Status::FailedPrecondition("In block list");
   }
 
   auto parse_status = Decode<fuchsia::overnet::omdp::Beacon>(slice);

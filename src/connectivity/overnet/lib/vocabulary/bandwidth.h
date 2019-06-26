@@ -5,7 +5,9 @@
 #pragma once
 
 #include <stdint.h>
+
 #include <ostream>
+
 #include "src/connectivity/overnet/lib/vocabulary/time.h"
 
 namespace overnet {

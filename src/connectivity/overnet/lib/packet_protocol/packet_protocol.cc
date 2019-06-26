@@ -717,7 +717,7 @@ Status PacketProtocol::OutstandingMessages::ValidateAck(
     msg << "Ack packet past sending sequence: ack_seq=" << ack.ack_to_seq()
         << " max_sent=" << (send_tip_ + outstanding_.size() - 1)
         << " outstanding_window=" << outstanding_.size();
-    return Status(StatusCode::INVALID_ARGUMENT, msg.str());
+    return Status::InvalidArgument(msg.str());
   }
   for (auto nack_seq : ack.nack_seqs()) {
     if (nack_seq < send_tip_) {
@@ -726,14 +726,13 @@ Status PacketProtocol::OutstandingMessages::ValidateAck(
     const OutstandingPacket& pkt = outstanding_[nack_seq - send_tip_];
     if (std::holds_alternative<OutstandingPacket::Acked>(pkt.state)) {
       // Previously acked packet becomes nacked: this is an error.
-      return Status(StatusCode::INVALID_ARGUMENT,
-                    "Previously acked packet becomes nacked");
+      return Status::InvalidArgument("Previously acked packet becomes nacked");
     }
   }
   for (size_t i = 0; i < ack.ack_to_seq() - send_tip_; i++) {
     if (std::holds_alternative<OutstandingPacket::Pending>(
             outstanding_[i].state)) {
-      return Status(StatusCode::INVALID_ARGUMENT, "Ack/nack unsent sequence");
+      return Status::InvalidArgument("Ack/nack unsent sequence");
     }
   }
   return Status::Ok();

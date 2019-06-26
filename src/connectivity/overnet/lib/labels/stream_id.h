@@ -6,8 +6,10 @@
 
 #include <fuchsia/overnet/protocol/cpp/fidl.h>
 #include <stdint.h>
+
 #include <functional>
 #include <iosfwd>
+
 #include "src/connectivity/overnet/lib/protocol/varint.h"
 
 namespace overnet {

@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 #include "src/connectivity/overnet/lib/vocabulary/callback.h"
+
 #include <memory>
+
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 

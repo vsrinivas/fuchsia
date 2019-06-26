@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 #include "src/connectivity/overnet/lib/vocabulary/optional.h"
+
 #include <memory>
+
 #include "gtest/gtest.h"
 
 namespace overnet {

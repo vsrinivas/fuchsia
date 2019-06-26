@@ -5,9 +5,11 @@
 #pragma once
 
 #include <stdint.h>
+
 #include <limits>
 #include <ostream>
 #include <type_traits>
+
 #include "src/connectivity/overnet/lib/vocabulary/callback.h"
 #include "src/connectivity/overnet/lib/vocabulary/optional.h"
 #include "src/connectivity/overnet/lib/vocabulary/time.h"

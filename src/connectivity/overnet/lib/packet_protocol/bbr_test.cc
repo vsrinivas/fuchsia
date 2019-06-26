@@ -3,10 +3,12 @@
 // found in the LICENSE file.
 
 #include "src/connectivity/overnet/lib/packet_protocol/bbr.h"
+
 #include <fstream>
 #include <functional>
 #include <queue>
 #include <random>
+
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/connectivity/overnet/lib/environment/trace_cout.h"

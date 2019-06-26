@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "src/connectivity/overnet/lib/protocol/coding.h"
+
 #include <snappy.h>
 
 namespace overnet {
@@ -83,8 +84,8 @@ StatusOr<Slice> SnappyDecode(Slice slice) {
   if (!snappy::GetUncompressedLength(
           reinterpret_cast<const char*>(slice.begin()), slice.length(),
           &uncompressed_length)) {
-    return Status(StatusCode::INVALID_ARGUMENT,
-                  "Cannot determine uncompressed length from Snappy buffer");
+    return Status::InvalidArgument(
+        "Cannot determine uncompressed length from Snappy buffer");
   }
   // If expansion is large, verify that it's a valid buffer before trying to
   // uncompress.
@@ -92,7 +93,7 @@ StatusOr<Slice> SnappyDecode(Slice slice) {
       uncompressed_length > 10 * slice.length()) {
     if (!snappy::IsValidCompressedBuffer(
             reinterpret_cast<const char*>(slice.begin()), slice.length())) {
-      return Status(StatusCode::INVALID_ARGUMENT, "Invalid Snappy data");
+      return Status::InvalidArgument("Invalid Snappy data");
     }
   }
   bool ok;
@@ -103,8 +104,7 @@ StatusOr<Slice> SnappyDecode(Slice slice) {
                                    reinterpret_cast<char*>(buffer));
       });
   if (!ok) {
-    return Status(StatusCode::INVALID_ARGUMENT,
-                  "Failed to decompress Snappy data");
+    return Status::InvalidArgument("Failed to decompress Snappy data");
   }
   return output;
 }

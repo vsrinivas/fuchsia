@@ -270,7 +270,7 @@ Status Router::RegisterStream(NodeId peer, StreamId stream_id,
                        << " at " << stream_handler
                        << " shutting_down=" << shutting_down_;
   if (shutting_down_) {
-    return Status(StatusCode::FAILED_PRECONDITION, "Router shutting down");
+    return Status::FailedPrecondition("Router shutting down");
   }
   return stream_holder(peer, stream_id)->SetHandler(stream_handler);
 }
@@ -283,7 +283,7 @@ Status Router::UnregisterStream(NodeId peer, StreamId stream_id,
                        << " shutting_down=" << shutting_down_;
   auto it = streams_.find(LocalStreamId{peer, stream_id});
   if (it == streams_.end()) {
-    return Status(StatusCode::FAILED_PRECONDITION, "Stream not registered");
+    return Status::FailedPrecondition("Stream not registered");
   }
   Status status = it->second.ClearHandler(stream_handler);
   streams_.erase(it);
@@ -356,7 +356,7 @@ bool Router::StreamHolder::HandleMessage(SeqNum seq, TimeStamp received,
 
 Status Router::StreamHolder::SetHandler(StreamHandler* handler) {
   if (handler_ != nullptr) {
-    return Status(StatusCode::FAILED_PRECONDITION, "Handler already set");
+    return Status::FailedPrecondition("Handler already set");
   }
   handler_ = handler;
   if (buffered_) {
@@ -368,7 +368,7 @@ Status Router::StreamHolder::SetHandler(StreamHandler* handler) {
 
 Status Router::StreamHolder::ClearHandler(StreamHandler* handler) {
   if (handler_ != handler) {
-    return Status(StatusCode::FAILED_PRECONDITION, "Invalid clear handler");
+    return Status::FailedPrecondition("Invalid clear handler");
   }
   handler_ = nullptr;
   return Status::Ok();

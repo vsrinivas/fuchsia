@@ -69,16 +69,16 @@ void ReliableUnordered::Begin(uint64_t seq, BeginCallback ready) {
     return;
   }
   if (seq < tip_) {
-    ready(Status(StatusCode::CANCELLED, "Old sequence received"));
+    ready(Status::Cancelled("Old sequence received"));
     return;
   }
   if (seq >= tip_ + kLookaheadWindow) {
-    ready(Status(StatusCode::CANCELLED, "Sequence too far in the future"));
+    ready(Status::Cancelled("Sequence too far in the future"));
     return;
   }
   auto idx = seq - tip_;
   if (in_progress_.test(idx)) {
-    ready(Status(StatusCode::CANCELLED, "Already reading sequence"));
+    ready(Status::Cancelled("Already reading sequence"));
     return;
   }
   in_progress_.set(idx);

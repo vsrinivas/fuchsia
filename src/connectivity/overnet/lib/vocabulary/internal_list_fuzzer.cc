@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 #include <stdint.h>
+
 #include <vector>
+
 #include "src/connectivity/overnet/lib/vocabulary/internal_list_fuzzer_helpers.h"
 
 using namespace overnet;

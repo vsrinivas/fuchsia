@@ -5,7 +5,9 @@
 #pragma once
 
 #include <stdint.h>
+
 #include <iosfwd>
+
 #include "src/connectivity/overnet/lib/vocabulary/status.h"
 
 namespace overnet {

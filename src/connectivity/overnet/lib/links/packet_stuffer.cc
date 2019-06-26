@@ -133,13 +133,11 @@ Status PacketStuffer::ParseAndForwardTo(TimeStamp received, Slice packet,
 
     uint64_t serialized_length;
     if (!varint::Read(&p, end, &serialized_length)) {
-      return Status(StatusCode::INVALID_ARGUMENT,
-                    "Failed to parse segment length");
+      return Status::InvalidArgument("Failed to parse segment length");
     }
     assert(end >= p);
     if (static_cast<uint64_t>(end - p) < serialized_length) {
-      return Status(StatusCode::INVALID_ARGUMENT,
-                    "Message body extends past end of packet");
+      return Status::InvalidArgument("Message body extends past end of packet");
     }
     packet.TrimBegin(p - begin);
     auto msg_status = RoutableMessage::Parse(

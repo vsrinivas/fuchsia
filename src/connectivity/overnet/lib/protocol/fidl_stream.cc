@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "src/connectivity/overnet/lib/protocol/fidl_stream.h"
+
 #include <zircon/assert.h>
 
 namespace overnet {

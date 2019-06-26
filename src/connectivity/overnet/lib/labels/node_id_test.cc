@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 #include "src/connectivity/overnet/lib/labels/node_id.h"
+
 #include <random>
+
 #include "gtest/gtest.h"
 
 namespace overnet {

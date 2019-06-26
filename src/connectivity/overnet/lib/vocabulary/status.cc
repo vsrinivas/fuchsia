@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 #include "src/connectivity/overnet/lib/vocabulary/status.h"
+
 #include <zircon/types.h>
+
 #include <sstream>
 
 #ifdef __Fuchsia__
@@ -91,7 +93,7 @@ Status Status::FromZx(zx_status_t status, const char* desc) {
     case ZX_OK:
       return Status::Ok();
     case ZX_ERR_CANCELED:
-      return Status(StatusCode::CANCELLED, desc);
+      return Status::Cancelled(desc);
     default: {
       std::ostringstream out;
       out << "zx_status:" << ZxStatusWrapper{status} << " '" << desc << "'";

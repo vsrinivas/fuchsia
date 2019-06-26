@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "src/connectivity/overnet/lib/labels/node_id.h"
+
 #include <iomanip>
 #include <sstream>
 
@@ -35,17 +36,17 @@ StatusOr<NodeId> NodeId::FromString(const std::string& s) {
   const auto end = s.end();
   uint64_t node_value = 0;
   auto short_string = []() {
-    return Status(StatusCode::INVALID_ARGUMENT, "String too short for node");
+    return Status::InvalidArgument("String too short for node");
   };
   auto expected = [](char c, char got) {
     std::ostringstream tmp;
     tmp << "Expected '" << c << "' but got '" << got << "'";
-    return Status(StatusCode::INVALID_ARGUMENT, tmp.str());
+    return Status::InvalidArgument(tmp.str());
   };
   auto expect_eos = [&]() {
     if (ch == end)
       return Status::Ok();
-    return Status(StatusCode::INVALID_ARGUMENT, "Expected end of string");
+    return Status::InvalidArgument("Expected end of string");
   };
   auto expect = [&](char c) {
     if (ch == end)
@@ -78,7 +79,7 @@ StatusOr<NodeId> NodeId::FromString(const std::string& s) {
     }
     std::ostringstream tmp;
     tmp << "Expected a hex character but got '" << *ch << "'";
-    return Status(StatusCode::INVALID_ARGUMENT, tmp.str());
+    return Status::InvalidArgument(tmp.str());
   };
   auto hex_group = [&](int orig_shift) {
     return hex_digit(orig_shift + 12)

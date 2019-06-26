@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "src/connectivity/overnet/lib/vocabulary/slice.h"
+
 #include "gtest/gtest.h"
 
 namespace overnet {

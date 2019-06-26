@@ -20,8 +20,7 @@ Status StreamClientBase::Start() {
         RegisterStreamSocketLink(
             root(), std::move(socket), CreateFramer(), true,
             TimeDelta::PositiveInf(), [app = root()] {
-              app->Exit(Status(StatusCode::UNAVAILABLE,
-                               "Stream server disconnected"));
+              app->Exit(Status::Unavailable("Stream server disconnected"));
             });
         return Status::Ok();
       });

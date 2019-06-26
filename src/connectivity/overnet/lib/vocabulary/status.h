@@ -6,6 +6,7 @@
 
 #include <assert.h>
 #include <stdint.h>
+
 #include <atomic>
 #include <ostream>
 #include <sstream>
@@ -191,6 +192,70 @@ class [[nodiscard]] Status final {
   static const Status& Ok() { return Static<>::Ok; }
   static const Status& Cancelled() { return Static<>::Cancelled; }
   static const Status& Unavailable() { return Static<>::Unavailable; }
+
+  static Status Cancelled(std::string reason) {
+    return Status(StatusCode::CANCELLED, reason);
+  }
+
+  static Status Unknown(std::string reason) {
+    return Status(StatusCode::UNKNOWN, reason);
+  }
+
+  static Status InvalidArgument(std::string reason) {
+    return Status(StatusCode::INVALID_ARGUMENT, reason);
+  }
+
+  static Status DeadlineExceeded(std::string reason) {
+    return Status(StatusCode::DEADLINE_EXCEEDED, reason);
+  }
+
+  static Status NotFound(std::string reason) {
+    return Status(StatusCode::NOT_FOUND, reason);
+  }
+
+  static Status AlreadyExists(std::string reason) {
+    return Status(StatusCode::ALREADY_EXISTS, reason);
+  }
+
+  static Status PermissionDenied(std::string reason) {
+    return Status(StatusCode::PERMISSION_DENIED, reason);
+  }
+
+  static Status Unauthenticated(std::string reason) {
+    return Status(StatusCode::UNAUTHENTICATED, reason);
+  }
+
+  static Status ResourceExhausted(std::string reason) {
+    return Status(StatusCode::RESOURCE_EXHAUSTED, reason);
+  }
+
+  static Status FailedPrecondition(std::string reason) {
+    return Status(StatusCode::FAILED_PRECONDITION, reason);
+  }
+
+  static Status Aborted(std::string reason) {
+    return Status(StatusCode::ABORTED, reason);
+  }
+
+  static Status OutOfRange(std::string reason) {
+    return Status(StatusCode::OUT_OF_RANGE, reason);
+  }
+
+  static Status Unimplemented(std::string reason) {
+    return Status(StatusCode::UNIMPLEMENTED, reason);
+  }
+
+  static Status Internal(std::string reason) {
+    return Status(StatusCode::INTERNAL, reason);
+  }
+
+  static Status Unavailable(std::string reason) {
+    return Status(StatusCode::UNAVAILABLE, reason);
+  }
+
+  static Status DataLoss(std::string reason) {
+    return Status(StatusCode::DATA_LOSS, reason);
+  }
 
   const Status& OrCancelled() const {
     if (is_ok())

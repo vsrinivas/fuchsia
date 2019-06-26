@@ -90,7 +90,7 @@ Status UdpNub::Bind() {
     return StatusFromErrno("Failed to getsockname() for new socket");
   }
   if (addr.addr.sa_family != AF_INET6) {
-    return Status(StatusCode::UNKNOWN, "Expected IPV6 address");
+    return Status::Unknown("Expected IPV6 address");
   }
   port_ = ntohs(addr.ipv6.sin6_port);
 

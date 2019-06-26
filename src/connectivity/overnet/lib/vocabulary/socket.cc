@@ -25,8 +25,7 @@ Status Socket::Create(int family, int type, int option) {
     std::ostringstream msg;
     msg << "Creating socket family=" << family << " type=" << type
         << " option=" << option;
-    return Status(StatusCode::UNKNOWN, strerror(errno))
-        .WithContext(msg.str().c_str());
+    return Status::Unknown(strerror(errno)).WithContext(msg.str().c_str());
   }
   return Status::Ok();
 }
@@ -38,27 +37,25 @@ Status Socket::SetOptReusePort(bool reuse) {
 
 Status Socket::SetOpt(int level, int opt, void* value, size_t value_size) {
   if (!IsValid()) {
-    return Status(StatusCode::INVALID_ARGUMENT, "Invalid socket");
+    return Status::InvalidArgument("Invalid socket");
   }
   if (setsockopt(socket_, level, opt, value, value_size) < 0) {
-    return Status(StatusCode::UNKNOWN, strerror(errno));
+    return Status::Unknown(strerror(errno));
   }
   return Status::Ok();
 }
 
 Status Socket::MutateFlags(std::function<int(int)> mut) {
   if (!IsValid()) {
-    return Status(StatusCode::INVALID_ARGUMENT, "Invalid socket");
+    return Status::InvalidArgument("Invalid socket");
   }
   int flags = fcntl(socket_, F_GETFL);
   if (flags == -1) {
-    return Status(StatusCode::UNKNOWN, strerror(errno))
-        .WithContext("fcntl(F_GETFL)");
+    return Status::Unknown(strerror(errno)).WithContext("fcntl(F_GETFL)");
   }
   flags = mut(flags);
   if (0 != fcntl(socket_, F_SETFL, flags)) {
-    return Status(StatusCode::UNKNOWN, strerror(errno))
-        .WithContext("fcntl(F_SETFL)");
+    return Status::Unknown(strerror(errno)).WithContext("fcntl(F_SETFL)");
   }
   return Status::Ok();
 }
@@ -73,7 +70,7 @@ Status Socket::SetNonBlocking(bool non_blocking) {
 
 Status Socket::Bind(IpAddr addr) {
   if (!IsValid()) {
-    return Status(StatusCode::INVALID_ARGUMENT, "Invalid socket");
+    return Status::InvalidArgument("Invalid socket");
   }
 #ifndef __Fuchsia__
   // If we're using unix domain sockets, newest process always gets to handle
@@ -83,7 +80,7 @@ Status Socket::Bind(IpAddr addr) {
   }
 #endif
   if (bind(socket_, addr.get(), addr.length()) < 0) {
-    return Status(StatusCode::UNKNOWN, strerror(errno)).WithLazyContext([&] {
+    return Status::Unknown(strerror(errno)).WithLazyContext([&] {
       std::ostringstream out;
       out << "bind(" << addr << ")";
       return out.str();
@@ -94,10 +91,10 @@ Status Socket::Bind(IpAddr addr) {
 
 Status Socket::Connect(IpAddr addr) {
   if (!IsValid()) {
-    return Status(StatusCode::INVALID_ARGUMENT, "Invalid socket");
+    return Status::InvalidArgument("Invalid socket");
   }
   if (0 != connect(socket_, addr.get(), addr.length())) {
-    return Status(StatusCode::UNKNOWN, strerror(errno)).WithLazyContext([&] {
+    return Status::Unknown(strerror(errno)).WithLazyContext([&] {
       std::ostringstream out;
       out << "connect(" << addr << ")";
       return out.str();
@@ -110,11 +107,10 @@ Status Socket::SendTo(Slice data, int flags, IpAddr dest) {
   const auto result = sendto(socket_, data.begin(), data.length(), flags,
                              dest.get(), dest.length());
   if (result < 0) {
-    return Status(StatusCode::UNKNOWN, strerror(errno))
-        .WithContext("sendto failed");
+    return Status::Unknown(strerror(errno)).WithContext("sendto failed");
   }
   if (size_t(result) != data.length()) {
-    return Status(StatusCode::UNKNOWN, "Partial sendto");
+    return Status::Unknown("Partial sendto");
   }
   return Status::Ok();
 }
@@ -129,8 +125,7 @@ StatusOr<Socket::DataAndAddr> Socket::RecvFrom(size_t maximum_packet_size,
       recvfrom(socket_, const_cast<uint8_t*>(msg.begin()), msg.length(), 0,
                &source_address.addr, &source_address_length);
   if (result < 0) {
-    return Status(StatusCode::UNKNOWN, strerror(errno))
-        .WithContext("recvfrom failed");
+    return Status::Unknown(strerror(errno)).WithContext("recvfrom failed");
   }
   msg.TrimEnd(msg.length() - result);
   assert(msg.length() == (size_t)result);
@@ -143,7 +138,7 @@ Status Socket::Listen() {
   } else if (errno == EINTR) {
     return Listen();
   } else {
-    return Status(StatusCode::UNKNOWN, strerror(errno)).WithContext("listen");
+    return Status::Unknown(strerror(errno)).WithContext("listen");
   }
 }
 
@@ -156,7 +151,7 @@ StatusOr<Socket> Socket::Accept() {
   } else if (errno == EINTR) {
     return Accept();
   } else {
-    return Status(StatusCode::UNKNOWN, strerror(errno)).WithContext("accept");
+    return Status::Unknown(strerror(errno)).WithContext("accept");
   }
 }
 
@@ -168,7 +163,7 @@ StatusOr<Slice> Socket::Write(Slice slice) {
   } else if (errno == EINTR) {
     return Write(std::move(slice));
   } else {
-    return Status(StatusCode::UNKNOWN, strerror(errno)).WithContext("write");
+    return Status::Unknown(strerror(errno)).WithContext("write");
   }
 }
 
@@ -186,7 +181,7 @@ StatusOr<Optional<Slice>> Socket::Read(size_t maximum_read_size) {
     } else if (errno == EINTR) {
       continue;
     } else {
-      return Status(StatusCode::UNKNOWN, strerror(errno)).WithContext("read");
+      return Status::Unknown(strerror(errno)).WithContext("read");
     }
     abort();
   }

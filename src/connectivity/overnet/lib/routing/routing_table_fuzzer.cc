@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/overnet/routingtablefuzzer/cpp/fidl.h>
+
 #include "garnet/public/lib/fostr/fidl/fuchsia/overnet/protocol/formatting.h"
 #include "src/connectivity/overnet/lib/environment/trace_cout.h"
 #include "src/connectivity/overnet/lib/protocol/fidl.h"

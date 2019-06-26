@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 #include "src/connectivity/overnet/lib/labels/seq_num.h"
+
 #include <string.h>
+
 #include <iomanip>
 #include <sstream>
 

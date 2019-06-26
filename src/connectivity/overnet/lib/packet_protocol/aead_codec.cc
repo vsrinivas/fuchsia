@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "src/connectivity/overnet/lib/packet_protocol/aead_codec.h"
+
 #include <openssl/err.h>
 
 namespace overnet {
@@ -62,7 +63,7 @@ Status AEADCodec::PopError() {
   std::ostringstream msg;
   msg << "SSL_error:" << err << " from " << file << ":" << line << ": "
       << ERR_reason_error_string(err);
-  return Status(StatusCode::UNKNOWN, msg.str());
+  return Status::Unknown(msg.str());
 }
 
 }  // namespace overnet

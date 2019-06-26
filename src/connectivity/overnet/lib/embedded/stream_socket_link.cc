@@ -190,7 +190,7 @@ class Handshake {
         return;
       }
       if (!read->has_value()) {
-        DoneReading(Status(StatusCode::UNKNOWN, "End of file handshaking"));
+        DoneReading(Status::Unknown("End of file handshaking"));
         return;
       }
 
@@ -233,19 +233,19 @@ class Handshake {
     }
 
     if (!decoded->has_magic_string()) {
-      DoneReading(Status(StatusCode::INVALID_ARGUMENT, "No magic string"));
+      DoneReading(Status::InvalidArgument("No magic string"));
       return true;
     }
     if (decoded->magic_string() != kGreetingString) {
-      DoneReading(Status(StatusCode::INVALID_ARGUMENT, "Bad magic string"));
+      DoneReading(Status::InvalidArgument("Bad magic string"));
       return true;
     }
     if (!decoded->has_node_id()) {
-      DoneReading(Status(StatusCode::INVALID_ARGUMENT, "No node id"));
+      DoneReading(Status::InvalidArgument("No node id"));
       return true;
     }
     if (!decoded->has_local_link_id()) {
-      DoneReading(Status(StatusCode::INVALID_ARGUMENT, "No local link id"));
+      DoneReading(Status::InvalidArgument("No local link id"));
       return true;
     }
     validated_args_.Reset(

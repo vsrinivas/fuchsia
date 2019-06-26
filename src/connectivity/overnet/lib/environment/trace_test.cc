@@ -3,8 +3,10 @@
 // found in the LICENSE file.
 
 #include "src/connectivity/overnet/lib/environment/trace.h"
+
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+
 #include "src/connectivity/overnet/lib/vocabulary/optional.h"
 
 using testing::Field;
