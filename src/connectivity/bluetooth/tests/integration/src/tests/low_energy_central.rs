@@ -15,7 +15,7 @@ use crate::harness::low_energy_central::CentralHarness;
 mod central_expectation {
     use crate::harness::low_energy_central::{CentralState, ScanStateChange};
     use fuchsia_bluetooth::expectation::Predicate;
-    use fuchsia_bluetooth::le::RemoteDevice;
+    use fuchsia_bluetooth::types::le::RemoteDevice;
 
     pub fn scan_enabled() -> Predicate<CentralState> {
         Predicate::new(

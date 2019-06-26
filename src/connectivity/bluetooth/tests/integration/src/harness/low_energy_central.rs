@@ -8,7 +8,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_bluetooth::{
         expectation::asynchronous::{ExpectableState, ExpectationHarness},
-        le::RemoteDevice,
+        types::le::RemoteDevice,
     },
     futures::{Future, TryFutureExt, TryStreamExt},
 };

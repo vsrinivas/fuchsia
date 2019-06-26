@@ -18,8 +18,6 @@ pub mod expectation;
 pub mod hci_emulator;
 /// Bluetooth host API
 pub mod host;
-/// Bluetooth LowEnergy types
-pub mod le;
 /// Common Bluetooth type extensions
 pub mod types;
 /// Frequently Used Functions
