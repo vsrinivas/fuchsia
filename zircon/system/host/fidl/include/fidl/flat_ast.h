@@ -135,7 +135,7 @@ protected:
 };
 
 template <typename ValueType>
-struct NumericConstantValue : ConstantValue {
+struct NumericConstantValue final : ConstantValue {
     static_assert(std::is_arithmetic<ValueType>::value && !std::is_same<ValueType, bool>::value,
                   "NumericConstantValue can only be used with a numeric ValueType!");
 
@@ -324,7 +324,7 @@ private:
 
 using Size = NumericConstantValue<uint32_t>;
 
-struct BoolConstantValue : ConstantValue {
+struct BoolConstantValue final : ConstantValue {
     BoolConstantValue(bool value)
         : ConstantValue(ConstantValue::Kind::kBool), value(value) {}
 
@@ -357,7 +357,7 @@ struct BoolConstantValue : ConstantValue {
     bool value;
 };
 
-struct StringConstantValue : ConstantValue {
+struct StringConstantValue final : ConstantValue {
     explicit StringConstantValue(std::string_view value)
         : ConstantValue(ConstantValue::Kind::kString), value(value) {}
 
@@ -411,21 +411,21 @@ protected:
     std::unique_ptr<ConstantValue> value_;
 };
 
-struct IdentifierConstant : Constant {
+struct IdentifierConstant final : Constant {
     explicit IdentifierConstant(Name name)
         : Constant(Kind::kIdentifier), name(std::move(name)) {}
 
-    Name name;
+    const Name name;
 };
 
-struct LiteralConstant : Constant {
+struct LiteralConstant final : Constant {
     explicit LiteralConstant(std::unique_ptr<raw::Literal> literal)
         : Constant(Kind::kLiteral), literal(std::move(literal)) {}
 
     std::unique_ptr<raw::Literal> literal;
 };
 
-struct SynthesizedConstant : Constant {
+struct SynthesizedConstant final : Constant {
     explicit SynthesizedConstant(std::unique_ptr<ConstantValue> value)
         : Constant(Kind::kSynthesized) {
         ResolveTo(std::move(value));
@@ -531,7 +531,7 @@ struct Type {
     }
 };
 
-struct ArrayType : public Type {
+struct ArrayType final : public Type {
     ArrayType(const Type* element_type, const Size* element_count)
         : Type(
               Kind::kArray,
@@ -552,7 +552,7 @@ struct ArrayType : public Type {
     static TypeShape Shape(TypeShape element, uint32_t count);
 };
 
-struct VectorType : public Type {
+struct VectorType final : public Type {
     VectorType(const Type* element_type, const Size* element_count, types::Nullability nullability)
         : Type(Kind::kVector, nullability, Shape(element_type->shape, element_count->value)),
           element_type(element_type), element_count(element_count) {}
@@ -570,7 +570,7 @@ struct VectorType : public Type {
     static TypeShape Shape(TypeShape element, uint32_t max_element_count);
 };
 
-struct StringType : public Type {
+struct StringType final : public Type {
     StringType(const Size* max_size, types::Nullability nullability)
         : Type(Kind::kString, nullability, Shape(max_size->value)), max_size(max_size) {}
 
@@ -585,7 +585,7 @@ struct StringType : public Type {
     static TypeShape Shape(uint32_t max_length);
 };
 
-struct HandleType : public Type {
+struct HandleType final : public Type {
     HandleType(types::HandleSubtype subtype, types::Nullability nullability)
         : Type(Kind::kHandle, nullability, Shape()),
           subtype(subtype) {}
@@ -601,7 +601,7 @@ struct HandleType : public Type {
     static TypeShape Shape();
 };
 
-struct PrimitiveType : public Type {
+struct PrimitiveType final : public Type {
 
     explicit PrimitiveType(types::PrimitiveSubtype subtype)
         : Type(
@@ -622,7 +622,7 @@ struct PrimitiveType : public Type {
     static uint32_t SubtypeSize(types::PrimitiveSubtype subtype);
 };
 
-struct IdentifierType : public Type {
+struct IdentifierType final : public Type {
     IdentifierType(Name name, types::Nullability nullability, const TypeDecl* type_decl, TypeShape shape)
         : Type(Kind::kIdentifier, nullability, shape),
           name(std::move(name)), type_decl(type_decl) {}
@@ -637,7 +637,7 @@ struct IdentifierType : public Type {
     }
 };
 
-struct RequestHandleType : public Type {
+struct RequestHandleType final : public Type {
     RequestHandleType(const IdentifierType* protocol_type, types::Nullability nullability)
         : Type(Kind::kRequestHandle, nullability, HandleType::Shape()),
           protocol_type(protocol_type) {}
@@ -651,7 +651,7 @@ struct RequestHandleType : public Type {
     }
 };
 
-struct TypeConstructor {
+struct TypeConstructor final {
     TypeConstructor(Name name, std::unique_ptr<TypeConstructor> maybe_arg_type_ctor,
                     std::optional<types::HandleSubtype> handle_subtype,
                     std::unique_ptr<Constant> maybe_size, types::Nullability nullability)
@@ -672,7 +672,7 @@ struct TypeConstructor {
     const Type* type = nullptr;
 };
 
-struct Using {
+struct Using final {
     Using(Name name, const PrimitiveType* type)
         : name(std::move(name)), type(type) {}
 
@@ -680,7 +680,7 @@ struct Using {
     const PrimitiveType* type;
 };
 
-struct Const : public Decl {
+struct Const final : public Decl {
     Const(std::unique_ptr<raw::AttributeList> attributes, Name name,
           std::unique_ptr<TypeConstructor> type_ctor,
           std::unique_ptr<Constant> value)
@@ -690,7 +690,7 @@ struct Const : public Decl {
     std::unique_ptr<Constant> value;
 };
 
-struct Enum : public TypeDecl {
+struct Enum final : public TypeDecl {
     struct Member {
         Member(SourceLocation name, std::unique_ptr<Constant> value, std::unique_ptr<raw::AttributeList> attributes)
             : name(name), value(std::move(value)), attributes(std::move(attributes)) {}
@@ -714,7 +714,7 @@ struct Enum : public TypeDecl {
     const PrimitiveType* type = nullptr;
 };
 
-struct Bits : public TypeDecl {
+struct Bits final : public TypeDecl {
     struct Member {
         Member(SourceLocation name, std::unique_ptr<Constant> value, std::unique_ptr<raw::AttributeList> attributes)
             : name(name), value(std::move(value)), attributes(std::move(attributes)) {}
@@ -738,7 +738,7 @@ struct Bits : public TypeDecl {
     uint64_t mask = 0;
 };
 
-struct Struct : public TypeDecl {
+struct Struct final : public TypeDecl {
     struct Member {
         Member(std::unique_ptr<TypeConstructor> type_ctor, SourceLocation name,
                std::unique_ptr<Constant> maybe_default_value,
@@ -765,7 +765,7 @@ struct Struct : public TypeDecl {
     static TypeShape Shape(std::vector<FieldShape*>* fields, uint32_t extra_handles = 0u);
 };
 
-struct Table : public TypeDecl {
+struct Table final : public TypeDecl {
     struct Member {
         Member(std::unique_ptr<raw::Ordinal32> ordinal, std::unique_ptr<TypeConstructor> type,
                SourceLocation name,
@@ -806,7 +806,7 @@ struct Table : public TypeDecl {
     static TypeShape Shape(std::vector<TypeShape*>* fields, uint32_t extra_handles = 0u);
 };
 
-struct Union : public TypeDecl {
+struct Union final : public TypeDecl {
     struct Member {
         Member(std::unique_ptr<TypeConstructor> type_ctor, SourceLocation name,
                std::unique_ptr<raw::AttributeList> attributes)
@@ -830,7 +830,7 @@ struct Union : public TypeDecl {
     static TypeShape Shape(std::vector<FieldShape*>* fields);
 };
 
-struct XUnion : public TypeDecl {
+struct XUnion final : public TypeDecl {
     struct Member {
         Member(std::unique_ptr<raw::Ordinal32> ordinal, std::unique_ptr<TypeConstructor> type_ctor,
                SourceLocation name, std::unique_ptr<raw::AttributeList> attributes)
@@ -854,7 +854,7 @@ struct XUnion : public TypeDecl {
     static TypeShape Shape(std::vector<FieldShape*>* fields, uint32_t extra_handles = 0u);
 };
 
-struct Protocol : public TypeDecl {
+struct Protocol final : public TypeDecl {
     struct Method {
         Method(Method&&) = default;
         Method& operator=(Method&&) = default;
