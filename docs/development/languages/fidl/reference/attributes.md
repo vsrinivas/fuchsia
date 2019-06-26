@@ -44,7 +44,7 @@ Illustrates both aspects:
 * the `Transport` attribute has two values, `SocketControl` and
   `OvernetEmbedded`.
 
-## `[Deprecated]` {:#deprecated}
+## `[Deprecated]` {#deprecated}
 
 **USAGE**: `[Deprecated]`
 
@@ -53,7 +53,7 @@ See [FTP-013].
 
 > Note: not yet implemented.
 
-## `[Discoverable]` {:#discoverable}
+## `[Discoverable]` {#discoverable}
 
 **USAGE**: `[Discoverable]`
 
@@ -63,7 +63,7 @@ A service with a `[Discoverable]` attribute can be found at run-time.
 That is to say, you can "request" this service, and zircon will locate it
 and provide access to it.
 
-## `[Doc]` {:#doc}
+## `[Doc]` {#doc}
 
 **USAGE**: `[Doc = "`_string_`"]`
 
@@ -95,7 +95,7 @@ the target language.
 > Technically, to be identical, the `[Doc]` version would be
 > `[Doc = " Foo\n"]`; note the space before the "Foo" and the line-feed "`\n`".
 
-## `[FragileBase]` {:#fragilebase}
+## `[FragileBase]` {#fragilebase}
 
 **USAGE**: `[FragileBase]`
 
@@ -103,7 +103,7 @@ the target language.
 Denotes that the interface can be composed, otherwise it cannot.
 See also [Protocol Composition][composition].
 
-## `[Internal]` {:#internal}
+## `[Internal]` {#internal}
 
 **USAGE**: `[Internal]`
 
@@ -111,7 +111,7 @@ See also [Protocol Composition][composition].
 This marks internal libraries, such as library `zx`.
 It should be used only by Fuchsia developers.
 
-## `[Layout]` {:#layout}
+## `[Layout]` {#layout}
 
 **USAGE**: `[Layout = "`_layout_`"]`
 
@@ -139,7 +139,7 @@ integers called `inputs`, with a maximum bound of 1024 elements.
 The benefit of `[Layout = "Simple"]` is that the data can be directly
 mapped without having to be copied and assembled.
 
-## `[MaxBytes]` {:#maxbytes}
+## `[MaxBytes]` {#maxbytes}
 
 **USAGE**: `[MaxBytes = "`_number_`"]`
 
@@ -148,7 +148,7 @@ This attribute is used to limit the number of bytes that can be transferred
 in a message.
 The compiler will issue an error if the number of bytes exceeds this limit.
 
-## `[MaxHandles]` {:#maxhandles}
+## `[MaxHandles]` {#maxhandles}
 
 **USAGE**: `[MaxHandles = "`_number_`"]`
 
@@ -157,7 +157,7 @@ This attribute is used to limit the number of handles that can be
 transferred in a message.
 The compiler will issue an error if the number of handles exceeds this limit.
 
-## `[Selector]` {:#selector}
+## `[Selector]` {#selector}
 
 **USAGE**: `[Selector = "`_selector_`"]`
 
@@ -178,7 +178,7 @@ interface Science {
 It can also be used for `xunion` variants to keep ABI compatibility in the
 same way.
 
-## `[Transitional]` {:#transitional}
+## `[Transitional]` {#transitional}
 
 **USAGE**: `[Transitional = "`_description_`"]`
 
@@ -187,7 +187,7 @@ Instructs bindings to generate code that will successfully build, regardless of
 whether the method is implemented or not.
 [FTP-021] contains more details.
 
-## `[Transport]` {:#transport}
+## `[Transport]` {#transport}
 
 **USAGE**: `[Transport = "`_tranport_list_`"]`
 
