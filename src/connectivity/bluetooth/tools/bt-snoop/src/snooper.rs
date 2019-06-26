@@ -5,12 +5,12 @@
 use {
     failure::{err_msg, Error},
     fidl_fuchsia_bluetooth_snoop::{PacketType, SnoopPacket, Timestamp},
+    fidl_fuchsia_hardware_bluetooth::HciSynchronousProxy,
     fuchsia_async as fasync,
-    fuchsia_bluetooth::hci,
     fuchsia_zircon::{Channel, MessageBuf},
     futures::{task::Context, Poll, Stream},
     std::{
-        fs::OpenOptions,
+        fs::{File, OpenOptions},
         marker::Unpin,
         path::PathBuf,
         pin::Pin,
@@ -57,7 +57,7 @@ impl Snooper {
     #[allow(dead_code)] // used in future
     pub fn new(device_path: PathBuf) -> Result<Snooper, Error> {
         let hci_device = OpenOptions::new().read(true).write(true).open(&device_path)?;
-        let channel = hci::open_snoop_channel(&hci_device)?;
+        let channel = open_snoop_channel(&hci_device)?;
         Snooper::from_channel(channel, device_path)
     }
 
@@ -114,6 +114,15 @@ impl Stream for Snooper {
             Poll::Pending => Poll::Pending,
         }
     }
+}
+
+// TODO (belgum) use asynchronous client
+pub fn open_snoop_channel(device: &File) -> Result<Channel, Error> {
+    let hci_channel = fdio::clone_channel(device)?;
+    let mut interface = HciSynchronousProxy::new(hci_channel);
+    let (ours, theirs) = Channel::create()?;
+    interface.open_snoop_channel(theirs)?;
+    Ok(ours)
 }
 
 #[cfg(test)]

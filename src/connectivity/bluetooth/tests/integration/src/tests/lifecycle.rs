@@ -11,7 +11,6 @@ use {
     fuchsia_bluetooth::{
         constants::HOST_DEVICE_DIR,
         device_watcher::{DeviceWatcher, WatchFilter},
-        hci,
         hci_emulator::Emulator,
         host,
     },
@@ -35,18 +34,14 @@ pub async fn lifecycle_test(_: ()) -> Result<(), Error> {
         le_acl_buffer_settings: None,
     };
 
-    let fake_hci = await!(Emulator::create("bt-hci-integration-lifecycle"))?;
-    let hci_topo = PathBuf::from(fdio::device_get_topo_path(fake_hci.file())?);
+    let emulator = await!(Emulator::create("bt-hci-integration-lifecycle"))?;
+    let hci_topo = PathBuf::from(fdio::device_get_topo_path(emulator.file())?);
 
     // Publish the bt-hci device and verify that a bt-host appears under its topology within a
     // reasonable timeout.
     let mut watcher = DeviceWatcher::new(HOST_DEVICE_DIR, timeout())?;
-    let _ = await!(fake_hci.publish(settings))?;
+    let _ = await!(emulator.publish(settings))?;
     let bthost = await!(watcher.watch_new(&hci_topo, WatchFilter::AddedOnly))?;
-
-    // Check the right driver is bound to the device
-    let driver_name = hci::get_device_driver_name(bthost.file())?;
-    assert_eq!("bt_host", driver_name);
 
     // Open a host channel using a fidl call and check the device is responsive
     let handle = host::open_host_channel(bthost.file())?;
@@ -58,7 +53,7 @@ pub async fn lifecycle_test(_: ()) -> Result<(), Error> {
     assert_eq!(addr_str, info.address);
 
     // Remove the bt-hci device
-    drop(fake_hci);
+    drop(emulator);
 
     // Check that the bt-host device is also destroyed.
     await!(watcher.watch_removed(bthost.path()))

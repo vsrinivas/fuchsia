@@ -6,6 +6,7 @@ use {
     crate::{
         constants::{EMULATOR_DEVICE_DIR, EMULATOR_DRIVER_PATH, HOST_DEVICE_DIR},
         device_watcher::{DeviceFile, DeviceWatcher, WatchFilter},
+        util::open_rdwr,
     },
     failure::{bail, format_err, Error},
     fidl_fuchsia_bluetooth_test::{EmulatorSettings, HciEmulatorProxy},
@@ -17,10 +18,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_syslog::fx_log_err,
     fuchsia_zircon as zx,
-    std::{
-        fs::{File, OpenOptions},
-        path::{Path, PathBuf},
-    },
+    std::{fs::File, path::PathBuf},
 };
 
 fn watch_timeout() -> zx::Duration {
@@ -164,10 +162,6 @@ impl Drop for TestDevice {
             fx_log_err!("error while destroying test device: {:?}", e);
         }
     }
-}
-
-fn open_rdwr<P: AsRef<Path>>(path: P) -> Result<File, Error> {
-    OpenOptions::new().read(true).write(true).open(path).map_err(|e| e.into())
 }
 
 #[cfg(test)]

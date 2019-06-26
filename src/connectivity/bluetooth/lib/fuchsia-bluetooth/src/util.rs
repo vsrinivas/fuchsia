@@ -3,10 +3,15 @@
 // found in the LICENSE file.
 
 use {
+    failure::Error,
     fidl_fuchsia_bluetooth::{self, Int8},
     fidl_fuchsia_bluetooth_control::{
         AdapterInfo, AdapterState, BondingData, BredrData, HostData, LeConnectionParameters,
         LeData, LocalKey, Ltk, RemoteDevice, RemoteKey, SecurityProperties,
+    },
+    std::{
+        fs::{File, OpenOptions},
+        path::Path,
     },
 };
 
@@ -41,8 +46,13 @@ macro_rules! bt_fidl_status {
     };
 }
 
-// The following functions allow FIDL types to be cloned. These are currently necessary as the
-// auto-generated binding types do not derive `Clone`.
+/// Open a file with read and write permissions.
+pub fn open_rdwr<P: AsRef<Path>>(path: P) -> Result<File, Error> {
+    OpenOptions::new().read(true).write(true).open(path).map_err(|e| e.into())
+}
+
+/// The following functions allow FIDL types to be cloned. These are currently necessary as the
+/// auto-generated binding types do not derive `Clone`.
 
 /// Clone Adapter Info
 pub fn clone_host_info(a: &AdapterInfo) -> AdapterInfo {

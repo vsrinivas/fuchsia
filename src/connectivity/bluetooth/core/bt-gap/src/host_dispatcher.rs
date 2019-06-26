@@ -490,7 +490,7 @@ impl HostDispatcher {
     /// Adds an adapter to the host dispatcher. Called by the watch_hosts device
     /// watcher
     pub async fn add_adapter(self, host_path: &Path) -> Result<(), Error> {
-        let host_dev = bt::hci::open_rdwr(host_path)?;
+        let host_dev = bt::util::open_rdwr(host_path)?;
         let device_topo = fdio::device_get_topo_path(&host_dev)?;
         fx_log_info!("Adding Adapter: {:?} (topology: {:?})", host_path, device_topo);
         let host_device = await!(init_host(host_path))?;

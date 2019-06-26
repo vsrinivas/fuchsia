@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::util::open_rdwr,
     failure::{format_err, Error},
     fuchsia_async::TimeoutExt,
     fuchsia_syslog::fx_log_info,
@@ -10,7 +11,7 @@ use {
     fuchsia_zircon as zx,
     futures::{Future, TryStreamExt},
     std::{
-        fs::{File, OpenOptions},
+        fs::File,
         path::{Path, PathBuf},
     },
 };
@@ -178,10 +179,6 @@ impl DeviceWatcher {
         }
         unreachable!();
     }
-}
-
-fn open_rdwr<P: AsRef<Path>>(path: P) -> Result<File, Error> {
-    OpenOptions::new().read(true).write(true).open(path).map_err(|e| e.into())
 }
 
 #[cfg(test)]

@@ -12,7 +12,7 @@ package("bluetooth-tools") {
   deps = [
     "bt-avrcp-controller",
     "bt-cli",
-    "bt-fake-hci",
+    "bt-hci-emulator",
     "bt-hci-tool",
     "bt-intel-tool",
     "bt-le-central",
@@ -38,8 +38,8 @@ package("bluetooth-tools") {
       shell = true
     },
     {
-      name = "bt_fake_hci"
-      dest = "bt-fake-hci"
+      name = "bt_hci_emulator"
+      dest = "bt-hci-emulator"
       shell = true
     },
     {
