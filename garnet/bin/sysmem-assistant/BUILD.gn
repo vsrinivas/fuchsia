@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/cipd.gni")
 import("//build/config.gni")
 import("//build/package.gni")
 
@@ -38,24 +39,6 @@ package("sysmem-assistant") {
   ]
 }
 
-declare_args() {
-  # The secmem TA must be obtained elsewhere and put into the firmware
-  # directory.
-  have_secmem_ta = false
-}
-
-package("ta-image") {
-  deprecated_system_image = true
-
-  secmem_ta_uuid = "2c1a33c0-44cc-11e5-bc3b-0002a5d5c51b"
-  libraries = [
-    {
-      source = rebase_path("firmware/$secmem_ta_uuid.ta")
-      name = "firmware/$secmem_ta_uuid.ta"
-    },
-  ]
-}
-
 config_data("config") {
   for_pkg = "sysmgr"
   sources = [
@@ -63,9 +46,12 @@ config_data("config") {
   ]
 }
 
-# Don't launch without a TA to use.
 group("secmem-ta") {
-  if (have_secmem_ta) {
-    data_deps = [":ta-image", ":config"]
+  # TA firmware is provided to the OPTEE in zircon. If the firmware isn't available, don't try
+  # launching this.
+  if (internal_access) {
+    data_deps = [
+      ":config",
+    ]
   }
 }
