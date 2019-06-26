@@ -20,6 +20,53 @@ namespace debug_agent {
 
 // ProcessBreakpoint Implementation --------------------------------------------
 
+namespace {
+
+void LogThreadsSteppingOver(const std::set<zx_koid_t>& thread_koids) {
+  if (!debug_ipc::IsDebugModeActive())
+    return;
+
+  std::stringstream ss;
+  ss << "Current threads stepping over: ";
+  int count = 0;
+  for (zx_koid_t thread_koid : thread_koids) {
+    if (count++ > 0)
+      ss << ", ";
+    ss << thread_koid;
+  }
+
+  DEBUG_LOG(Breakpoint) << ss.str();
+}
+
+void SuspendAllOtherNonSteppingOverThreads(DebuggedProcess* process,
+                                           zx_koid_t thread_koid) {
+  std::vector<DebuggedThread*> suspended_threads;
+  for (DebuggedThread* thread : process->GetThreads()) {
+    if (thread->stepping_over_breakpoint()) {
+      DEBUG_LOG(Breakpoint)
+          << "Thread " << thread->koid() << " is currently stepping over.";
+      continue;
+    }
+
+    // We async suspend all the threads and then wait for all of them to signal.
+    if (thread->IsSuspended()) {
+      DEBUG_LOG(Breakpoint)
+          << "Thread " << thread->koid() << " is already suspended.";
+      continue;
+    }
+
+    thread->Suspend(false);   // Async suspend.
+  }
+
+  // We wait on all the suspend signals to trigger.
+  for (DebuggedThread* thread : suspended_threads) {
+    bool suspended = thread->WaitForSuspension();
+    FXL_DCHECK(suspended) << "Thread " << thread_koid;
+  }
+}
+
+}  // namespace
+
 ProcessBreakpoint::ProcessBreakpoint(Breakpoint* breakpoint,
                                      DebuggedProcess* process,
                                      ProcessMemoryAccessor* memory_accessor,
@@ -82,37 +129,59 @@ void ProcessBreakpoint::OnHit(
 }
 
 void ProcessBreakpoint::BeginStepOver(zx_koid_t thread_koid) {
-  // Shouldn't be recursively stepping over a breakpoint from the same thread.
-  FXL_DCHECK(thread_step_over_.find(thread_koid) == thread_step_over_.end());
 
-  if (!CurrentlySteppingOver()) {
-    // This is the first thread to attempt to step over the breakpoint (there
-    // could theoretically be more than one).
+  FXL_DCHECK(!CurrentlySteppingOver(thread_koid));
+  DebuggedThread* thread = process_->GetThread(thread_koid);
+  FXL_DCHECK(thread);
+  FXL_DCHECK(!thread->stepping_over_breakpoint());
+  thread->set_stepping_over_breakpoint(true);
+
+  DEBUG_LOG(Breakpoint) << "Thread " << thread_koid << " is stepping over.";
+
+  auto [_, inserted] = threads_stepping_over_.insert(thread_koid);
+  FXL_DCHECK(inserted);
+
+  LogThreadsSteppingOver(threads_stepping_over_);
+
+  SuspendAllOtherNonSteppingOverThreads(process_, thread_koid);
+
+  // If this is the first thread attempting to step over, we uninstall it.
+  if (threads_stepping_over_.size() == 1u)
     Uninstall();
-  }
-  thread_step_over_[thread_koid] = StepStatus::kCurrent;
+
+  // This thread now has to continue running.
+  thread->ResumeException();
+  thread->ResumeSuspension();
 }
 
-bool ProcessBreakpoint::EndStepOver(
-    zx_koid_t thread_koid, debug_ipc::NotifyException::Type exception_type) {
-  auto found_thread = thread_step_over_.find(thread_koid);
-  if (found_thread == thread_step_over_.end()) {
-    // Shouldn't be getting these notifications from a thread not currently
-    // doing a step-over.
-    FXL_NOTREACHED();
-    return false;
-  }
-  StepStatus step_status = found_thread->second;
-  thread_step_over_.erase(found_thread);
+void ProcessBreakpoint::EndStepOver(zx_koid_t thread_koid) {
+  FXL_DCHECK(CurrentlySteppingOver(thread_koid));
+  DebuggedThread* thread = process_->GetThread(thread_koid);
+  FXL_DCHECK(thread);
+  FXL_DCHECK(thread->stepping_over_breakpoint());
+  thread->set_stepping_over_breakpoint(false);
 
-  // When the last thread is done stepping over, put the breakpoint back.
-  if (step_status == StepStatus::kCurrent && !CurrentlySteppingOver())
+  threads_stepping_over_.erase(thread_koid);
+
+  DEBUG_LOG(Breakpoint) << "Thread " << thread_koid << "ending step over.";
+  LogThreadsSteppingOver(threads_stepping_over_);
+
+
+  // If all the threads have stepped over, we reinstall the breakpoint and
+  // resume all threads.
+  if (!CurrentlySteppingOver()) {
+    DEBUG_LOG(Breakpoint) << "No more threads left. Resuming.";
     Update();
+    for (DebuggedThread* thread : process_->GetThreads()) {
+      thread->ResumeForRunMode();
+    }
 
-  // Now check if this exception was likely caused by successfully stepping
-  // over the breakpoint, or something else (the stepped
-  // instruction crashed or something).
-  return exception_type == debug_ipc::NotifyException::Type::kSingleStep;
+    return;
+  }
+
+  // Otherwise this thread needs to wait until all other threads are done
+  // stepping over.
+  thread->Suspend();
 }
 
 bool ProcessBreakpoint::SoftwareBreakpointInstalled() const {
@@ -124,12 +193,12 @@ bool ProcessBreakpoint::HardwareBreakpointInstalled() const {
          !hardware_breakpoint_->installed_threads().empty();
 }
 
-bool ProcessBreakpoint::CurrentlySteppingOver() const {
-  for (const auto& pair : thread_step_over_) {
-    if (pair.second == StepStatus::kCurrent)
-      return true;
-  }
-  return false;
+bool ProcessBreakpoint::CurrentlySteppingOver(zx_koid_t thread_koid) const {
+  if (thread_koid == 0)
+    return !threads_stepping_over_.empty();
+
+  auto it = threads_stepping_over_.find(thread_koid);
+  return it != threads_stepping_over_.end();
 }
 
 zx_status_t ProcessBreakpoint::Update() {

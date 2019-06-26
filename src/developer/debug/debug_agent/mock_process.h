@@ -16,7 +16,7 @@ class MockProcess : public DebuggedProcess {
   MockProcess(zx_koid_t koid);
   ~MockProcess();
 
-  void AddThread(zx_koid_t koid);
+  DebuggedThread* AddThread(zx_koid_t koid);
 
   DebuggedThread* GetThread(zx_koid_t koid) const override;
 

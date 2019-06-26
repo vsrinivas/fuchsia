@@ -138,29 +138,19 @@ void DebuggedThread::OnException(zx::exception exception_token,
 void DebuggedThread::HandleSingleStep(debug_ipc::NotifyException* exception,
                                       zx_thread_state_general_regs* regs) {
   if (current_breakpoint_) {
-    // The current breakpoint is set only when stopped at a breakpoint or when
-    // single-stepping over one. We're not going to get an exception for a
-    // thread when stopped, so hitting this exception means the breakpoint is
-    // done being stepped over. The breakpoint will tell us if the exception
-    // was from a normal completion of the breakpoint step, or whether
-    // something else went wrong while stepping.
-    bool completes_bp_step =
-        current_breakpoint_->EndStepOver(koid_, exception->type);
+    // Getting here means that the thread is done stepping over a breakpoint.
+    // Depending on whether others threads are stepping over the breakpoints, this thread might be
+    // suspended (waiting for other threads to step over).
+    // This means that we cannot resume from suspension here, as the breakpoint is owning the
+    // thread "run-lifetime".
+    //
+    // We can, though, resume from the exception, as effectivelly we already handled the single-step
+    // exception, so there is no more need to keep the thread in an excepted state. The suspend
+    // handle will take care of keeping the thread stopped.
+    current_breakpoint_->EndStepOver(koid_);
     current_breakpoint_ = nullptr;
-    if (completes_bp_step &&
-        run_mode_ == debug_ipc::ResumeRequest::How::kContinue) {
-      // This step was an internal thing to step over the breakpoint in
-      // service of continuing from a breakpoint. Transparently resume the
-      // thread since the client didn't request the step. The step
-      // (non-continue) cases will be handled below in the normal flow since
-      // we just finished a step.
-      ResumeForRunMode();
-      return;
-    }
-    // Something else went wrong while stepping (the instruction with the
-    // breakpoint could have crashed). Fall through to dispatching the
-    // exception to the client.
-    current_breakpoint_ = nullptr;
+    ResumeException();
+    return;
   }
 
   if (run_mode_ == debug_ipc::ResumeRequest::How::kContinue) {
@@ -274,7 +264,7 @@ bool DebuggedThread::Suspend(bool synchronous) {
   // Subsequent suspend calls should return immediatelly. Note that this does
   // not mean that the thread is in that state, but rather that that operation
   // was sent to the kernel.
-  if (suspended() || in_exception())
+  if (IsSuspended() || IsInException())
     return false;
 
   DEBUG_LOG(Thread) << ThreadPreamble(this) << "Suspending thread.";
@@ -664,34 +654,29 @@ void DebuggedThread::UpdateForWatchpointHit(
 }
 
 void DebuggedThread::ResumeForRunMode() {
-  // If we jumped, once we resume we reset the status.
-  if (in_exception()) {
-    // Note: we could have a valid suspend token here in addition to the
-    // exception if the suspension races with the delivery of the exception.
-    if (current_breakpoint_) {
-      // Going over a breakpoint always requires a single-step first. Then we
-      // continue according to run_mode_.
-      DEBUG_LOG(Thread) << ThreadPreamble(this) << "Stepping over thread.";
-      SetSingleStep(true);
-      current_breakpoint_->BeginStepOver(koid_);
-    } else {
-      // All non-continue resumptions require single stepping.
-      SetSingleStep(run_mode_ != debug_ipc::ResumeRequest::How::kContinue);
-    }
+  // We check if we're set to currently step over a breakpoint. If so we need to do some special
+  // handling, as going over a breakpoint is always a single-step opearation.
+  // After that we can continue according to the set run-mode.
+  if (IsInException() && current_breakpoint_) {
+    DEBUG_LOG(Thread) << ThreadPreamble(this) << "Stepping over thread.";
+    SetSingleStep(true);
+    current_breakpoint_->BeginStepOver(koid_);
 
-    ResumeException();
-  } else if (suspended()) {
-    // A breakpoint should only be current when it was hit which will be
-    // caused by an exception.
-    FXL_DCHECK(!current_breakpoint_);
-
-    // All non-continue resumptions require single stepping.
-    SetSingleStep(run_mode_ != debug_ipc::ResumeRequest::How::kContinue);
-
-    // The suspend token is holding the thread suspended, releasing it will
-    // resume (if nobody else has the thread suspended).
-    ResumeSuspension();
+    // In this case, the breakpoint takes control of the thread lifetime and has already set the
+    // thread to resume.
+    return;
   }
+
+  // We're not handling the special "step over a breakpoint case". This is the normal resume case.
+  // This could've been triggered by an internal resume (eg. triggered by a breakpoint), so we need
+  // to check if the client actually wants this thread to resume.
+  if (client_state_ == ClientState::kPaused)
+    return;
+
+  // All non-continue resumptions require single stepping.
+  SetSingleStep(run_mode_ != debug_ipc::ResumeRequest::How::kContinue);
+  ResumeException();
+  ResumeSuspension();
 }
 
 void DebuggedThread::SetSingleStep(bool single_step) {

@@ -147,6 +147,8 @@ executable("unit_tests") {
     "mock_arch_provider.h",
     "mock_process.cc",
     "mock_process.h",
+    "mock_thread.cc",
+    "mock_thread.h",
     "process_breakpoint_unittest.cc",
     "process_watchpoint_unittest.cc",
     "system_info_unittests.cc",

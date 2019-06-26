@@ -4,7 +4,7 @@
 
 #include "src/developer/debug/debug_agent/mock_process.h"
 
-#include "src/developer/debug/debug_agent/debugged_thread.h"
+#include "src/developer/debug/debug_agent/mock_thread.h"
 
 namespace debug_agent {
 
@@ -13,10 +13,11 @@ MockProcess::MockProcess(zx_koid_t koid)
 
 MockProcess::~MockProcess() = default;
 
-void MockProcess::AddThread(zx_koid_t koid) {
-  threads_[koid] = std::make_unique<DebuggedThread>(
-      this, zx::thread(), koid, zx::exception(),
-      ThreadCreationOption::kSuspendedKeepSuspended);
+DebuggedThread* MockProcess::AddThread(zx_koid_t thread_koid) {
+  auto mock_thread = std::make_unique<MockThread>(this, thread_koid);
+  DebuggedThread* thread_ptr = mock_thread.get();
+  threads_[thread_koid] = std::move(mock_thread);
+  return thread_ptr;
 }
 
 DebuggedThread* MockProcess::GetThread(zx_koid_t koid) const {

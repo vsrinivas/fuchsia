@@ -64,13 +64,16 @@ class DebuggedThread {
   // stopped state. If it's not stopped, this will be ignored.
   void Resume(const debug_ipc::ResumeRequest& request);
 
+  // Resumes the thread according to the current run mode.
+  void ResumeForRunMode();
+
   // Resume the thread from an exception.
   // If |exception_token_| is not valid, this will no-op.
-  void ResumeException();
+  virtual void ResumeException();
 
   // Resume the thread from a suspension.
   // if |suspend_token_| is not valid, this will no-op.
-  void ResumeSuspension();
+  virtual void ResumeSuspension();
 
   // Pauses execution of the thread. Pausing happens asynchronously so the
   // thread will not necessarily have stopped when this returns. Set the
@@ -85,7 +88,7 @@ class DebuggedThread {
   // exception).
   //
   // A nullopt means an error ocurred while suspending.
-  bool Suspend(bool synchronous = false);
+  virtual bool Suspend(bool synchronous = false);
 
   // The typical suspend deadline users should use when suspending.
   static zx::time DefaultSuspendDeadline();
@@ -93,7 +96,7 @@ class DebuggedThread {
   // Waits on a suspension token.
   // Returns true if we could find a valid suspension condition (either
   // suspended or on an exception). False if timeout or error.
-  bool WaitForSuspension(zx::time deadline = DefaultSuspendDeadline());
+  virtual bool WaitForSuspension(zx::time deadline = DefaultSuspendDeadline());
 
   // Fills the thread status record. If full_stack is set, a full backtrace
   // will be generated, otherwise a minimal one will be generated.
@@ -120,9 +123,13 @@ class DebuggedThread {
   ClientState client_state() const { return client_state_; }
   void set_client_state(ClientState cs) { client_state_ = cs; }
 
-  bool running() const { return !suspended() && !in_exception(); }
-  bool suspended() const { return suspend_token_.is_valid(); }
-  bool in_exception() const { return exception_token_.is_valid(); }
+  bool running() const { return !IsSuspended() && !IsInException(); }
+
+  virtual bool IsSuspended() const { return suspend_token_.is_valid(); }
+  virtual bool IsInException() const { return exception_token_.is_valid(); }
+
+  bool stepping_over_breakpoint() const { return stepping_over_breakpoint_;  }
+  void set_stepping_over_breakpoint(bool so) { stepping_over_breakpoint_ = so; }
 
  private:
   enum class OnStop {
@@ -182,9 +189,6 @@ class DebuggedThread {
       ProcessWatchpoint*, zx_thread_state_general_regs* regs,
       std::vector<debug_ipc::BreakpointStats>* hit_breakpoints);
 
-  // Resumes the thread according to the current run mode.
-  void ResumeForRunMode();
-
   // Sets or clears the single step bit on the thread.
   void SetSingleStep(bool single_step);
 
@@ -206,8 +210,14 @@ class DebuggedThread {
   // for internal suspension the agent can do.
   ClientState client_state_ = ClientState::kRunning;
 
+  // Active if the thread is suspended (by the debugger).
   zx::suspend_token suspend_token_;
+
+  // Active if the thread is currently on an exception.
   zx::exception exception_token_;
+
+  // Whether this thread is currently stepping over.
+  bool stepping_over_breakpoint_ = false;
 
   // This can be set in two cases:
   // - When suspended after hitting a breakpoint, this will be the breakpoint

@@ -4,15 +4,16 @@
 
 #include "src/developer/debug/debug_agent/process_breakpoint.h"
 
+#include <gtest/gtest.h>
 #include <string.h>
 #include <zircon/syscalls/exception.h>
 
-#include "gtest/gtest.h"
 #include "src/developer/debug/debug_agent/breakpoint.h"
 #include "src/developer/debug/debug_agent/debugged_thread.h"
 #include "src/developer/debug/debug_agent/mock_arch_provider.h"
 #include "src/developer/debug/debug_agent/mock_process.h"
 #include "src/developer/debug/debug_agent/process_memory_accessor.h"
+#include "src/developer/debug/shared/logging/debug.h"
 
 namespace debug_agent {
 
@@ -191,8 +192,29 @@ TEST(ProcessBreakpoint, StepMultiple) {
   Breakpoint main_breakpoint(&process_delegate);
   main_breakpoint.set_type(debug_ipc::BreakpointType::kSoftware);
 
-  zx_koid_t process_koid = 0x1234;
+  constexpr zx_koid_t process_koid = 0x1234;
   MockProcess process(process_koid);
+
+  // The step over strategy is as follows:
+  // Thread 1, 2, 3 will hit the breakpoint and attempt a step over.
+  // Thread 4 will remain oblivious to the breakpoint, as will 5.
+  // Thread 5 is IsSuspended from the client, so it should not be resumed by the
+  // agent during step over.
+
+  constexpr zx_koid_t kThread1Koid = 1;
+  constexpr zx_koid_t kThread2Koid = 2;
+  constexpr zx_koid_t kThread3Koid = 3;
+  constexpr zx_koid_t kThread4Koid = 4;
+  constexpr zx_koid_t kThread5Koid = 5;
+  DebuggedThread* mock_thread1 = process.AddThread(kThread1Koid);
+  DebuggedThread* mock_thread2 = process.AddThread(kThread2Koid);
+  DebuggedThread* mock_thread3 = process.AddThread(kThread3Koid);
+  DebuggedThread* mock_thread4 = process.AddThread(kThread4Koid);
+  DebuggedThread* mock_thread5 = process.AddThread(kThread5Koid);
+
+  mock_thread5->set_client_state(DebuggedThread::ClientState::kPaused);
+  mock_thread5->Suspend();
+
   ProcessBreakpoint bp(&main_breakpoint, &process,
                        process_delegate.mem().memory(),
                        BreakpointFakeMemory::kAddress);
@@ -201,29 +223,122 @@ TEST(ProcessBreakpoint, StepMultiple) {
   // The breakpoint should be installed.
   EXPECT_TRUE(process_delegate.mem().StartsWithBreak());
 
-  // Begin stepping over the breakpoint from two threads at the same time.
-  // The memory should be back to original.
-  zx_koid_t kThread1Koid = 1;
+  // Begin stepping over the first thread.
+  // This should remove the breakpoint and suspend all the threads except 1,
+  // which should be stepping over.
   bp.BeginStepOver(kThread1Koid);
+  // Breakpoint should be removed.
   EXPECT_TRUE(process_delegate.mem().IsOriginal());
-  zx_koid_t kThread2Koid = 2;
+
+  // Only thread 1 should be still running. The rest should be IsSuspended.
+  EXPECT_TRUE(mock_thread1->running());
+  EXPECT_TRUE(mock_thread2->IsSuspended());
+  EXPECT_TRUE(mock_thread3->IsSuspended());
+  EXPECT_TRUE(mock_thread4->IsSuspended());
+  EXPECT_TRUE(mock_thread5->IsSuspended());
+
+  // Only thread 1 should be stepping over.
+  EXPECT_TRUE(mock_thread1->stepping_over_breakpoint());
+  EXPECT_FALSE(mock_thread2->stepping_over_breakpoint());
+  EXPECT_FALSE(mock_thread3->stepping_over_breakpoint());
+  EXPECT_FALSE(mock_thread4->stepping_over_breakpoint());
+  EXPECT_FALSE(mock_thread5->stepping_over_breakpoint());
+
+  // Now the second thread gets the exception.
+  // Breakpoint should still remain removed.
   bp.BeginStepOver(kThread2Koid);
   EXPECT_TRUE(process_delegate.mem().IsOriginal());
 
-  // In real life, the thread would now single-step over the breakpoint. It
-  // would trigger a hardware breakpoint at the next instruction.
+  // Thread 1 and 2 should remain running.
+  EXPECT_TRUE(mock_thread1->running());
+  EXPECT_TRUE(mock_thread2->running());
+  EXPECT_TRUE(mock_thread3->IsSuspended());
+  EXPECT_TRUE(mock_thread4->IsSuspended());
+  EXPECT_TRUE(mock_thread5->IsSuspended());
 
-  EXPECT_TRUE(bp.EndStepOver(kThread1Koid,
-                             debug_ipc::NotifyException::Type::kSingleStep));
+  // Thread 1 and 2 should be stepping over.
+  EXPECT_TRUE(mock_thread1->stepping_over_breakpoint());
+  EXPECT_TRUE(mock_thread2->stepping_over_breakpoint());
+  EXPECT_FALSE(mock_thread3->stepping_over_breakpoint());
+  EXPECT_FALSE(mock_thread4->stepping_over_breakpoint());
+  EXPECT_FALSE(mock_thread5->stepping_over_breakpoint());
 
-  // Since one thread is still stepping, the memory should still be original.
+  // Now thread 1 stops stepping over (somehow before thread 3).
+  // Breakpoint should still remain removed, as there are threads stepping over.
+  bp.EndStepOver(kThread1Koid);
   EXPECT_TRUE(process_delegate.mem().IsOriginal());
 
-  // As soon as the second breakpoint is resolved, the breakpoint instruction
-  // should be put back.
-  EXPECT_TRUE(bp.EndStepOver(kThread2Koid,
-                             debug_ipc::NotifyException::Type::kSingleStep));
+  // Only thread 2 should be running. Thread 1 will be IsSuspended as we have to
+  // wait for *all* the threads to step over before resuming the threads.
+  EXPECT_TRUE(mock_thread1->IsSuspended());
+  EXPECT_TRUE(mock_thread2->running());
+  EXPECT_TRUE(mock_thread3->IsSuspended());
+  EXPECT_TRUE(mock_thread4->IsSuspended());
+  EXPECT_TRUE(mock_thread5->IsSuspended());
+
+  // Only thread 2 should be stepping over right now.
+  EXPECT_FALSE(mock_thread1->stepping_over_breakpoint());
+  EXPECT_TRUE(mock_thread2->stepping_over_breakpoint());
+  EXPECT_FALSE(mock_thread3->stepping_over_breakpoint());
+  EXPECT_FALSE(mock_thread4->stepping_over_breakpoint());
+  EXPECT_FALSE(mock_thread5->stepping_over_breakpoint());
+
+  // Now thread 3 gets the exception that it hit this breakpoint.
+  // Breakpoint should still remain removed, as there are threads stepping over.
+  bp.BeginStepOver(kThread3Koid);
+  EXPECT_TRUE(process_delegate.mem().IsOriginal());
+
+  // Only thread 2 and 3 should be running.
+  EXPECT_TRUE(mock_thread1->IsSuspended());
+  EXPECT_TRUE(mock_thread2->running());
+  EXPECT_TRUE(mock_thread3->running());
+  EXPECT_TRUE(mock_thread4->IsSuspended());
+  EXPECT_TRUE(mock_thread5->IsSuspended());
+
+  // Only thread 2 and 3 should be stepping over right now.
+  EXPECT_FALSE(mock_thread1->stepping_over_breakpoint());
+  EXPECT_TRUE(mock_thread2->stepping_over_breakpoint());
+  EXPECT_TRUE(mock_thread3->stepping_over_breakpoint());
+  EXPECT_FALSE(mock_thread4->stepping_over_breakpoint());
+  EXPECT_FALSE(mock_thread5->stepping_over_breakpoint());
+
+  // Now thread 3 stops stepping over.
+  // The breakpoint shoudl remain removed.
+  bp.EndStepOver(kThread3Koid);
+  EXPECT_TRUE(process_delegate.mem().IsOriginal());
+
+  // Only thread 2 should be running, as it's the only one stepping over.
+  EXPECT_TRUE(mock_thread1->IsSuspended());
+  EXPECT_TRUE(mock_thread2->running());
+  EXPECT_TRUE(mock_thread3->IsSuspended());
+  EXPECT_TRUE(mock_thread4->IsSuspended());
+  EXPECT_TRUE(mock_thread5->IsSuspended());
+
+  // Only thread 2 should be stepping over right now.
+  EXPECT_FALSE(mock_thread1->stepping_over_breakpoint());
+  EXPECT_TRUE(mock_thread2->stepping_over_breakpoint());
+  EXPECT_FALSE(mock_thread3->stepping_over_breakpoint());
+  EXPECT_FALSE(mock_thread4->stepping_over_breakpoint());
+  EXPECT_FALSE(mock_thread5->stepping_over_breakpoint());
+
+  // Now thread 2 finally ends the step over.
+  // The breakpoint should be installed once again.
+  bp.EndStepOver(kThread2Koid);
   EXPECT_TRUE(process_delegate.mem().StartsWithBreak());
+
+  // All threads should be resumed except 5, which was paused by the client.
+  EXPECT_TRUE(mock_thread1->running());
+  EXPECT_TRUE(mock_thread2->running());
+  EXPECT_TRUE(mock_thread3->running());
+  EXPECT_TRUE(mock_thread4->running());
+  EXPECT_TRUE(mock_thread5->IsSuspended());
+
+  // No thread should be stepping over.
+  EXPECT_FALSE(mock_thread1->stepping_over_breakpoint());
+  EXPECT_FALSE(mock_thread2->stepping_over_breakpoint());
+  EXPECT_FALSE(mock_thread3->stepping_over_breakpoint());
+  EXPECT_FALSE(mock_thread4->stepping_over_breakpoint());
+  EXPECT_FALSE(mock_thread5->stepping_over_breakpoint());
 }
 
 // This also tests registration and unregistration of ProcessBreakpoints via

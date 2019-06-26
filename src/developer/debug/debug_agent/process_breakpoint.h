@@ -5,7 +5,7 @@
 #ifndef SRC_DEVELOPER_DEBUG_DEBUG_AGENT_PROCESS_BREAKPOINT_H_
 #define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_PROCESS_BREAKPOINT_H_
 
-#include <map>
+#include <set>
 
 #include "src/developer/debug/debug_agent/arch.h"
 #include "src/developer/debug/debug_agent/debugged_process.h"
@@ -82,20 +82,21 @@ class ProcessBreakpoint {
   //
   // The thread must be put into single-step mode by the caller when this
   // function is called.
+  //
+  // NOTE: From this moment, the breakpoint "takes over" the "run-lifetime" of
+  //       the thread. This means that it will suspend and resume it according
+  //       to what threads are stepping over it.
   void BeginStepOver(zx_koid_t thread_koid);
 
-  // When a thread has a "current breakpoint" its handling, exceptions will be
-  // routed here first. A thread has a current breakpoint when it's either
-  // suspended (can not generate exceptions), or when stepping over the
-  // breakpoint.
+  // When a thread has a "current breakpoint" its handling and gets a single
+  // step exception, it means that it's done stepping over it and calls this
+  // in order to resolve the stepping.
   //
-  // This function will return true if the exception was from successfully
-  // stepping over this breakpoint. Otherwise, the stepped-over instruction
-  // (the one with the breakpoint) caused an exception itself (say, an access
-  // violation). In either case, the breakpoint will clean up after itself from
-  // a single-step.
-  bool EndStepOver(
-      zx_koid_t thread_koid, debug_ipc::NotifyException::Type exception_type);
+  // NOTE: Even though the thread is done stepping over, the breakpoint still
+  //       holds the step "run-lifetime". This is because other threads could
+  //       still be stepping over, so the thread cannot be resumed just yet.
+  //       The breakpoint will do this once all threads are done stepping over.
+  void EndStepOver(zx_koid_t thread_koid);
 
   bool SoftwareBreakpointInstalled() const;
   bool HardwareBreakpointInstalled() const;
@@ -109,9 +110,9 @@ class ProcessBreakpoint {
     kObsolete  // Breakpoint was removed while single-stepping over.
   };
 
-  // Returns true if the breakpoint is temporarily disabled as one or more
-  // threads step over it.
-  bool CurrentlySteppingOver() const;
+  // Returns true if |thread_koid| is currently stepping over the breakpoint.
+  // Passing 0 as argument will ask if *any* thread is currently stepping over.
+  bool CurrentlySteppingOver(zx_koid_t thread_koid = 0) const;
 
   // Install or uninstall this breakpoint.
   zx_status_t Update();  // Will add/remove breakpoints as needed/
@@ -150,18 +151,12 @@ class ProcessBreakpoint {
   //
   // A step is executed by putting back the original instruction, stepping the
   // thread, and then re-inserting the breakpoint instruction. The breakpoint
-  // instruction can't be put back until there are no more "kCurrent" threads
-  // in this map.
+  // instruction can't be put back until there are no more threads in this map.
   //
   // This could be a simple refcount, but is a set so we can more robustly
   // check for mistakes. CurrentlySteppingOver() checks this list to see if
   // the breakpoint is disabled due to stepping.
-  //
-  // TODO(brettw) disabling the breakpoint opens a window where another thread
-  // can execute and miss the breakpoint. To avoid this, we need to implement
-  // something similar to GDB's "displaced step" to execute the instruction
-  // without ever removing the breakpoint instruction.
-  std::map<zx_koid_t, StepStatus> thread_step_over_;
+  std::set<zx_koid_t> threads_stepping_over_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ProcessBreakpoint);
 };
