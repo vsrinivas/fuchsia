@@ -30,10 +30,10 @@ there are different loader environments (see "A note about launcher
 environments" below).
 
 The only want to reliably debug all types of processes is to create a filter on
-the process name and start it the normal way you would start that process. The
-process name is usually the name of the build target that generates it. To
-check what this is, use "ps" (either in the debugger or from a system shell)
-with it running.
+the process name via "attach" and start it the normal way you would start that
+process. The process name is usually the name of the build target that
+generates it. To check what this is, use "ps" (either in the debugger or from a
+system shell) with it running.
 
 > Note: only the first 32 bytes of the name are included in the Zircon process
 > description. Sometimes the number of path components can cause the name to be
@@ -45,9 +45,8 @@ stop at the beginning of execution, and waits for a process called "my_app" to
 start:
 
 ```
-[zxdb] set filters my_app
-Set value(s) for job 1:
-• my_app
+[zxdb] attach my_app
+Waiting for process matching "my_app"
 
 [zxdb] break main
 Breakpoint 1 (Software) on Global, Enabled, stop=All, @ main
@@ -98,7 +97,7 @@ command that always works.
 ### Launching simple command-line processes
 
 Minimal console apps including some unit tests can be launched directly from
-within the debugger which avoids the "set filters" dance:
+within the debugger which avoids the "attach" dance:
 
 ```
 [zxdb] break @main

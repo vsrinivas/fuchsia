@@ -95,22 +95,22 @@ TEST_F(NounsTest, FilterTest) {
   console.ProcessInputLine("attach foobar");
   event = console.GetOutputEvent();
   ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
-  ASSERT_EQ("Waiting for process matching /foobar/", event.output.AsString());
+  ASSERT_EQ("Waiting for process matching \"foobar\"", event.output.AsString());
 
   console.ProcessInputLine("job 1 attach boofar");
   event = console.GetOutputEvent();
   ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
-  ASSERT_EQ("Waiting for process matching /boofar/", event.output.AsString());
+  ASSERT_EQ("Waiting for process matching \"boofar\"", event.output.AsString());
 
   console.ProcessInputLine("filter attach hoodar");
   event = console.GetOutputEvent();
   ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
-  ASSERT_EQ("Waiting for process matching /hoodar/", event.output.AsString());
+  ASSERT_EQ("Waiting for process matching \"hoodar\"", event.output.AsString());
 
   console.ProcessInputLine("filter 1 attach newcar");
   event = console.GetOutputEvent();
   ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
-  ASSERT_EQ("Waiting for process matching /newcar/", event.output.AsString());
+  ASSERT_EQ("Waiting for process matching \"newcar\"", event.output.AsString());
 
   console.ProcessInputLine("filter");
   event = console.GetOutputEvent();

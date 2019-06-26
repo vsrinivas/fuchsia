@@ -160,9 +160,8 @@ Why "run" is usually wrong
 
     # Register for the process name. Use the name that appears in "ps" for
     # the process:
-    [zxdb] set filters my_app_name
-    Set value(s) for job 1:
-    • my_app_name
+    [zxdb] attach my_app_name
+    Waiting for process matching "my_app_name"
 
     # Set a pending breakpoint to stop where you want:
     [zxdb] break main
@@ -411,7 +410,7 @@ Err DoAttachFilter(ConsoleContext* context, const Command& cmd,
 
   filter->SetPattern(cmd.args()[0]);
 
-  Console::get()->Output("Waiting for process matching /" + cmd.args()[0] + "/");
+  Console::get()->Output("Waiting for process matching \"" + cmd.args()[0] + "\"");
   return Err();
 }
 

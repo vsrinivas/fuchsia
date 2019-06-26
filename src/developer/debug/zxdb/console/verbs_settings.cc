@@ -535,6 +535,36 @@ Err DoSet(ConsoleContext* context, const Command& cmd) {
   Err err;
   const std::string& setting_name = cmd.args()[0];
 
+  // Manually warn on this legacy setting name. This code can be removed after ~Aug 1, 2019.
+  if (setting_name == "filters") {
+    // Try to write the setting name the user typed. We don't bother handling all of the syntax if
+    // they did something more complex.
+    std::string setting_content = "<my_process>";
+    if (cmd.args().size() == 2)
+      setting_content = cmd.args()[1];
+
+    OutputBuffer out;
+    out.Append(Syntax::kError, "========================================\n");
+    out.Append(Syntax::kHeading, "The process filter interface has changed\n");
+    out.Append(Syntax::kError, "========================================\n");
+    out.Append(
+        fxl::StringPrintf("\n"
+                          "The old way:\n"
+                          "\n"
+                          "  set filters %s\n"
+                          "\n"
+                          "has now changed to\n"
+                          "\n",
+                          setting_content.c_str()));
+    out.Append(Syntax::kHeading, fxl::StringPrintf("  attach %s\n", setting_content.c_str()));
+    out.Append(
+        "\n"
+        "The semantics have not changed (it will attach to processes launched in the\n"
+        "future with that name). To see the current filters, type \"filter\" by itself.");
+    Console::get()->Output(out);
+    return Err();
+  }
+
   // See where this setting would be stored.
   SetContext set_context;
   err = GetSetContext(cmd, setting_name, &set_context);

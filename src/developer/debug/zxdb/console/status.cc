@@ -64,7 +64,8 @@ OutputBuffer GetJobStatus(ConsoleContext* context) {
   result.Append(
       fxl::StringPrintf("  Attached to %d job(s) (jobs are nodes in the Zircon process tree). "
                         "Processes\n  launched in attached jobs can be caught and debugged via "
-                        "filters.\n  See \"help job\". The debugger has these:\n",
+                        "\"attach\" filters.\n  See \"help job\" and \"help attach\". The "
+                        "debugger has these:\n",
                         attached_count));
   result.Append(FormatJobList(context, 2));
 

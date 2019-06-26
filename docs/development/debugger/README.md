@@ -296,7 +296,7 @@ feature. This is done frequently by the debugger team. See the
 fx debug
 
 // * Within zxdb.
-[zxdb] set filters debug_agent
+[zxdb] attach debug_agent
 
 // Launch another debug agent manually
 // * Within the target (requires another port).

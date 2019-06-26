@@ -339,7 +339,9 @@ const char kJobHelp[] =
 
   Alias: "j"
 
-  Selects or lists job contexts.
+  Selects or lists job contexts. A job context is attached to a Zircon job (a
+  node in the process tree) and watches for processes launched inside of it.
+  See "help attach" on how to automatically attach to these processes.
 
   By itself, "job" will list available job contexts with their IDs. New
   job contexts can be created with the "new" command. This list of debugger
