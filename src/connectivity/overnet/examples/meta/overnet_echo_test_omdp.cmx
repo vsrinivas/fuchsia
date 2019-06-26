@@ -43,7 +43,8 @@
                             "--modules=udp,omdp"
                         ],
                         "url": "fuchsia-pkg://fuchsia.com/overnetstack#meta/overnetstack.cmx"
-                    }
+                    },
+                    "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx"
                 },
                 "setup": [
                     {

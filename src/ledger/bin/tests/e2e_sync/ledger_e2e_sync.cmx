@@ -5,6 +5,7 @@
                 "fuchsia.net.oldhttp.HttpService": "fuchsia-pkg://fuchsia.com/http#meta/http.cmx"
             },
             "system-services": [
+                "fuchsia.posix.socket.Provider",
                 "fuchsia.net.SocketProvider",
                 "fuchsia.netstack.Netstack",
                 "fuchsia.net.stack.Stack"

@@ -1,0 +1,45 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.posix.socket;
+
+using fuchsia.io;
+
+/// The control plane for a network socket. Once a socket has been retrieved from a
+/// `Provider`, this interface is then used to further configure and use the socket.
+/// This interface is essentially POSIX. Its implementation must support Linux-specific arguments
+/// to {Get,Set}SockOpt.
+protocol Control {
+    compose fuchsia.io.Node;
+
+    /// Sets the local address used for the socket.
+    Bind(vector<uint8> addr) -> (int16 code);
+    /// Initiates a connection to a network endpoint.
+    Connect(vector<uint8> addr) -> (int16 code);
+    /// Begin listening for new connections from network endpoints. At most `backlog` connections
+    /// will be buffered.
+    Listen(int16 backlog) -> (int16 code);
+    /// Accepts an incoming connection from a network endpoint.
+    Accept(int16 flags) -> (int16 code, Control? s);
+    /// Retrieves the local socket address.
+    GetSockName() -> (int16 code, vector<uint8> addr);
+    /// Retrieves the remote socket address.
+    GetPeerName() -> (int16 code, vector<uint8> addr);
+    /// Sets a socket option. TODO(NET-1699): link to description of supported socket options.
+    SetSockOpt(int16 level, int16 optname, vector<uint8> optval) -> (int16 code);
+    /// Retrieves the current value of a socket option.
+    // TODO(NET-1699): link to description of supported socket options.
+    GetSockOpt(int16 level, int16 optname) -> (int16 code, vector<uint8> optval);
+    /// Runs operations (e.g., get the receive timestamp of the last packet) on the socket.
+    // Not named `Ioctl` to avoid collision with composed protocols.
+    IoctlPOSIX(int16 req, vector<uint8> in) -> (int16 code, vector<uint8> out);
+};
+
+/// Provider implements the POSIX sockets API.
+[Discoverable]
+protocol Provider {
+    /// Requests a socket with the specified parameters. Values for `code` are defined in
+    /// errno.h.
+    Socket(int16 domain, int16 type, int16 protocol) -> (int16 code, Control? s);
+};

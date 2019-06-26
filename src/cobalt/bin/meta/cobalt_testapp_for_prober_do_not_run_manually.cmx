@@ -6,6 +6,7 @@
             },
             "system-services": [
                 "fuchsia.net.Connectivity",
+                "fuchsia.posix.socket.Provider",
                 "fuchsia.net.SocketProvider",
                 "fuchsia.net.stack.Stack",
                 "fuchsia.netstack.Netstack"
@@ -23,6 +24,7 @@
         "services": [
             "fuchsia.logger.LogSink",
             "fuchsia.net.NameLookup",
+            "fuchsia.posix.socket.Provider",
             "fuchsia.net.SocketProvider",
             "fuchsia.net.oldhttp",
             "fuchsia.sys.Launcher"

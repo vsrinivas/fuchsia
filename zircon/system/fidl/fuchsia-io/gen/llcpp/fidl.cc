@@ -144,6 +144,9 @@ void ::llcpp::fuchsia::io::NodeInfo::Destroy() {
   case Tag::kTty:
     tty_.~Tty();
     break;
+  case Tag::kSocket:
+    socket_.~Socket();
+    break;
   default:
     break;
   }
@@ -173,6 +176,9 @@ void ::llcpp::fuchsia::io::NodeInfo::MoveImpl_(NodeInfo&& other) {
   case Tag::kTty:
     mutable_tty() = std::move(other.mutable_tty());
     break;
+  case Tag::kSocket:
+    mutable_socket() = std::move(other.mutable_socket());
+    break;
   default:
     break;
   }
@@ -187,6 +193,7 @@ void ::llcpp::fuchsia::io::NodeInfo::SizeAndOffsetAssertionHelper() {
   static_assert(offsetof(::llcpp::fuchsia::io::NodeInfo, vmofile_) == 8);
   static_assert(offsetof(::llcpp::fuchsia::io::NodeInfo, device_) == 8);
   static_assert(offsetof(::llcpp::fuchsia::io::NodeInfo, tty_) == 8);
+  static_assert(offsetof(::llcpp::fuchsia::io::NodeInfo, socket_) == 8);
   static_assert(sizeof(::llcpp::fuchsia::io::NodeInfo) == ::llcpp::fuchsia::io::NodeInfo::PrimarySize);
 }
 
@@ -252,6 +259,15 @@ Tty& ::llcpp::fuchsia::io::NodeInfo::mutable_tty() {
   }
   tag_ = Tag::kTty;
   return tty_;
+}
+
+Socket& ::llcpp::fuchsia::io::NodeInfo::mutable_socket() {
+  if (which() != Tag::kSocket) {
+    Destroy();
+    new (&socket_) Socket;
+  }
+  tag_ = Tag::kSocket;
+  return socket_;
 }
 
 

@@ -6,6 +6,7 @@
         "services": [
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.net.NameLookup",
+            "fuchsia.posix.socket.Provider",
             "fuchsia.net.SocketProvider",
             "fuchsia.netconnector.NetConnector",
             "fuchsia.tracing.provider.Registry"

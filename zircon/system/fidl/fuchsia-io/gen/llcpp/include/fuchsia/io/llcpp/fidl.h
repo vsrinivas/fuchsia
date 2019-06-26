@@ -28,6 +28,7 @@ struct WatchedEvent;
 struct Vmofile;
 struct Tty;
 class DirectoryWatcher;
+struct Socket;
 struct Service;
 enum class SeekOrigin : uint32_t {
   START = 0u,
@@ -238,6 +239,19 @@ class DirectoryWatcher final {
     return Dispatch(static_cast<Interface*>(impl), msg, txn);
   }
 
+};
+
+extern "C" const fidl_type_t fuchsia_io_SocketTable;
+
+// The object is accompanied by a socket.
+struct Socket {
+  static constexpr const fidl_type_t* Type = &fuchsia_io_SocketTable;
+  static constexpr uint32_t MaxNumHandles = 1;
+  static constexpr uint32_t PrimarySize = 4;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+
+  ::zx::socket socket{};
 };
 
 
@@ -528,6 +542,7 @@ struct NodeInfo {
     kVmofile = 4,
     kDevice = 5,
     kTty = 6,
+    kSocket = 7,
     Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
@@ -676,6 +691,24 @@ struct NodeInfo {
 
   Tty const & tty() const { return tty_; }
 
+  bool is_socket() const { return tag_ == Tag::kSocket; }
+
+  Socket& mutable_socket();
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, Socket>::value && std::is_copy_assignable<T>::value>
+  set_socket(const T& v) {
+    mutable_socket() = v;
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, Socket>::value && std::is_move_assignable<T>::value>
+  set_socket(T&& v) {
+    mutable_socket() = std::move(v);
+  }
+
+  Socket const & socket() const { return socket_; }
+
   Tag which() const { return tag_; }
 
   static constexpr const fidl_type_t* Type = &fuchsia_io_NodeInfoTable;
@@ -697,6 +730,7 @@ struct NodeInfo {
     Vmofile vmofile_;
     Device device_;
     Tty tty_;
+    Socket socket_;
   };
 };
 
@@ -6470,6 +6504,12 @@ struct IsFidlMessage<::llcpp::fuchsia::io::DirectoryWatcher::OnEventRequest> : p
 static_assert(sizeof(::llcpp::fuchsia::io::DirectoryWatcher::OnEventRequest)
     == ::llcpp::fuchsia::io::DirectoryWatcher::OnEventRequest::PrimarySize);
 static_assert(offsetof(::llcpp::fuchsia::io::DirectoryWatcher::OnEventRequest, events) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::io::Socket> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::io::Socket>);
+static_assert(offsetof(::llcpp::fuchsia::io::Socket, socket) == 0);
+static_assert(sizeof(::llcpp::fuchsia::io::Socket) == ::llcpp::fuchsia::io::Socket::PrimarySize);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::io::Service> : public std::true_type {};
