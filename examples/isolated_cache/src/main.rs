@@ -2,6 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//! This file demonstrates how one can use the `fuchsia.sys.test.CacheControl` protocol to test
+//! code that uses the `isolated-cache-storage` feature to store data on disk. This file doubles as
+//! an integration test for appmgr, as the example and test are identical. Take care when changing
+//! this file to not accidentally reduce test coverage of appmgr.
+
 #![feature(async_await, await_macro)]
 
 use std::{fs, io};
