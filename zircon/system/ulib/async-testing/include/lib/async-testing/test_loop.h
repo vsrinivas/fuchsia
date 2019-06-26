@@ -8,16 +8,23 @@
 #include <memory>
 #include <vector>
 
-#include <lib/async-testing/test_loop_dispatcher.h>
+#include <lib/async-testing/test_subloop.h>
 #include <lib/async/dispatcher.h>
+#include <lib/zx/time.h>
 
 namespace async {
 
-// A minimal, abstract message loop interface.
+// A minimal, abstract async dispatcher-based message loop interface.
 class LoopInterface {
 public:
     virtual ~LoopInterface() = default;
     virtual async_dispatcher_t* dispatcher() = 0;
+};
+
+// A registration token for a subloop of the test loop.
+class SubloopToken {
+public:
+    virtual ~SubloopToken() = default;
 };
 
 // A message loop with a fake clock, to be controlled within a test setting.
@@ -41,9 +48,16 @@ public:
     async_dispatcher_t* dispatcher();
 
     // Returns a loop interface simulating the starting up of a new message
-    // loop. The lifetime of the 'loop' is tied to the returned interface.
-    // Each successive calls to this method corresponds to a new loop.
+    // loop. Each successive call to this method corresponds to a new
+    // subloop. The subloop is unregistered and destructed when the returned
+    // interface is destructed. The returned interface must not outlive the test
+    // loop.
     std::unique_ptr<LoopInterface> StartNewLoop();
+
+    // Registers a new loop. The test loop takes ownership of the subloop. The
+    // subloop is unregistered and finalized when the returned registration
+    // token is destructed. The token must not outlive the test loop.
+    std::unique_ptr<SubloopToken> RegisterLoop(async_test_subloop_t* loop);
 
     // Returns the current fake clock time.
     zx::time Now() const;
@@ -80,20 +94,33 @@ private:
     // An implementation of LoopInterface.
     class TestLoopInterface;
 
-    // A TimeKeeper implementation that manages the test loop's fake clock time
-    // and fake timers.
-    class TestLoopTimeKeeper;
+    // An implementation of LoopToken.
+    class TestSubloopToken;
+
+    // Wraps a subloop in a friendly interface.
+    class TestSubloop;
 
     // Whether there are any due tasks or waits across |dispatchers_|.
     bool HasPendingWork();
 
     // Returns the next due task time across |dispatchers_|.
-    zx::time GetNextTaskDueTime() const;
+    zx::time GetNextTaskDueTime();
 
-    std::unique_ptr<TestLoopTimeKeeper> time_keeper_;
+    // Advances the time to |time| and notifies the subloops.
+    void AdvanceTimeTo(zx::time time);
 
-    // Encapsulation of the async_dispatcher_t dispatch methods.
-    std::vector<std::unique_ptr<TestLoopDispatcher>> dispatchers_;
+    // The current time. Invariant: all subloops have been notified of the
+    // current time.
+    zx::time current_time_;
+
+    // The interface to the loop associated with the default async dispatcher.
+    std::unique_ptr<LoopInterface> default_loop_;
+
+    // The default async dispatcher.
+    async_dispatcher_t* default_dispatcher_;
+
+    // The dispatchers running in this test loop.
+    std::vector<TestSubloop> subloops_;
 
     // The seed of a pseudo-random number used to determinisitically determine the
     // dispatching order across |dispatchers_|.

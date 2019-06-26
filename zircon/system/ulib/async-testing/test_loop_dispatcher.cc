@@ -4,6 +4,18 @@
 
 #include <lib/async-testing/test_loop_dispatcher.h>
 
+#include <list>
+#include <memory>
+#include <set>
+
+#include <lib/async-testing/dispatcher_stub.h>
+#include <lib/async/default.h>
+#include <lib/async/dispatcher.h>
+#include <lib/async/task.h>
+#include <lib/async/wait.h>
+#include <lib/zx/port.h>
+#include <lib/zx/time.h>
+
 #include <zircon/assert.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
@@ -11,6 +23,82 @@
 #include <zircon/syscalls/port.h>
 
 namespace async {
+namespace {
+
+// An asynchronous dispatcher with an abstracted sense of time, controlled by an
+// external time-keeping object, for use in testing.
+class TestLoopDispatcher : public DispatcherStub, public async_test_subloop_t {
+public:
+    TestLoopDispatcher();
+    ~TestLoopDispatcher();
+    TestLoopDispatcher(const TestLoopDispatcher&) = delete;
+    TestLoopDispatcher& operator=(const TestLoopDispatcher&) = delete;
+
+    // async_dispatcher_t operation implementations.
+    zx::time Now() override;
+    zx_status_t BeginWait(async_wait_t* wait) override;
+    zx_status_t CancelWait(async_wait_t* wait) override;
+    zx_status_t PostTask(async_task_t* task) override;
+    zx_status_t CancelTask(async_task_t* task) override;
+
+    // async_test_loop_provider_t operations implementations.
+    static void AdvanceTimeTo(async_test_subloop_t* subloop, zx_time_t time);
+    static uint8_t DispatchNextDueMessage(async_test_subloop_t* subloop);
+    static uint8_t HasPendingWork(async_test_subloop_t* subloop);
+    static zx_time_t GetNextTaskDueTime(async_test_subloop_t* subloop);
+    static void Finalize(async_test_subloop_t* subloop);
+
+private:
+    class Activated;
+    class TaskActivated;
+    class WaitActivated;
+
+    class AsyncTaskComparator {
+    public:
+        bool operator()(async_task_t* t1, async_task_t* t2) const { return t1->deadline < t2->deadline; }
+    };
+
+    // async_test_loop_provider_t operations implementations.
+    void AdvanceTimeTo(zx::time time);
+    bool DispatchNextDueMessage();
+    bool HasPendingWork();
+    zx::time GetNextTaskDueTime();
+
+    // Extracts activated tasks and waits to |activated_|.
+    void ExtractActivated();
+
+    // Removes the given task or wait from |activables_| and |activated_|.
+    zx_status_t CancelActivatedTaskOrWait(void* task_or_wait);
+
+    // Dispatches all remaining posted waits and tasks, invoking their handlers
+    // with status ZX_ERR_CANCELED.
+    void Shutdown();
+
+    // The current time.
+    zx::time now_ = zx::time::infinite_past();
+
+    // Whether the loop is shutting down.
+    bool in_shutdown_ = false;
+    // Pending tasks activable in the future.
+    // The ordering of the set is based on the task timeline. Multiple tasks
+    // with the same deadline will be equivalent, and be ordered by order of
+    // insertion.
+    std::multiset<async_task_t*, AsyncTaskComparator> future_tasks_;
+    // Pending waits.
+    std::set<async_wait_t*> pending_waits_;
+    // Activated elements, ready to be dispatched.
+    std::list<std::unique_ptr<Activated>> activated_;
+    // Port used to register waits.
+    zx::port port_;
+};
+
+const async_test_subloop_ops_t subloop_ops = {
+    TestLoopDispatcher::AdvanceTimeTo,
+    TestLoopDispatcher::DispatchNextDueMessage,
+    TestLoopDispatcher::HasPendingWork,
+    TestLoopDispatcher::GetNextTaskDueTime,
+    TestLoopDispatcher::Finalize,
+};
 
 // An element in the loop that can be activated. It is either a task or a wait.
 class TestLoopDispatcher::Activated {
@@ -80,9 +168,8 @@ private:
     zx_port_packet_t const packet_;
 };
 
-TestLoopDispatcher::TestLoopDispatcher(TimeKeeper* time_keeper)
-    : time_keeper_(time_keeper) {
-    ZX_DEBUG_ASSERT(time_keeper_);
+TestLoopDispatcher::TestLoopDispatcher()
+    : async_test_subloop_t{&subloop_ops} {
     zx_status_t status = zx::port::create(0u, &port_);
     ZX_ASSERT_MSG(status == ZX_OK,
                   "zx_port_create: %s",
@@ -94,7 +181,7 @@ TestLoopDispatcher::~TestLoopDispatcher() {
 }
 
 zx::time TestLoopDispatcher::Now() {
-    return time_keeper_->Now();
+    return now_;
 }
 
 zx_status_t TestLoopDispatcher::BeginWait(async_wait_t* wait) {
@@ -155,6 +242,11 @@ zx_status_t TestLoopDispatcher::CancelTask(async_task_t* task) {
     }
 
     return CancelActivatedTaskOrWait(task);
+}
+
+void TestLoopDispatcher::AdvanceTimeTo(zx::time time) {
+    ZX_DEBUG_ASSERT(now_ <= time);
+    now_ = time;
 }
 
 zx::time TestLoopDispatcher::GetNextTaskDueTime() {
@@ -232,6 +324,38 @@ zx_status_t TestLoopDispatcher::CancelActivatedTaskOrWait(void* task_or_wait) {
     }
 
     return ZX_ERR_NOT_FOUND;
+}
+
+void TestLoopDispatcher::AdvanceTimeTo(async_test_subloop_t* subloop, zx_time_t time) {
+    TestLoopDispatcher* self = static_cast<TestLoopDispatcher*>(subloop);
+    return self->AdvanceTimeTo(zx::time(time));
+}
+
+uint8_t TestLoopDispatcher::DispatchNextDueMessage(async_test_subloop_t* subloop) {
+    TestLoopDispatcher* self = static_cast<TestLoopDispatcher*>(subloop);
+    return self->DispatchNextDueMessage();
+}
+
+uint8_t TestLoopDispatcher::HasPendingWork(async_test_subloop_t* subloop) {
+    TestLoopDispatcher* self = static_cast<TestLoopDispatcher*>(subloop);
+    return self->HasPendingWork();
+}
+
+zx_time_t TestLoopDispatcher::GetNextTaskDueTime(async_test_subloop_t* subloop) {
+    TestLoopDispatcher* self = static_cast<TestLoopDispatcher*>(subloop);
+    return self->GetNextTaskDueTime().get();
+}
+
+void TestLoopDispatcher::Finalize(async_test_subloop_t* subloop) {
+    auto self = std::unique_ptr<TestLoopDispatcher>(static_cast<TestLoopDispatcher*>(subloop));
+}
+
+} // namespace
+
+void NewTestLoopDispatcher(async_dispatcher_t** dispatcher, async_test_subloop_t** loop) {
+    auto dispatcher_loop = std::make_unique<TestLoopDispatcher>();
+    *dispatcher = dispatcher_loop.get();
+    *loop = dispatcher_loop.release();
 }
 
 } // namespace async

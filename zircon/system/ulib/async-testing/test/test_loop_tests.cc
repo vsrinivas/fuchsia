@@ -11,6 +11,7 @@
 #include <lib/zx/event.h>
 #include <lib/zx/time.h>
 #include <unittest/unittest.h>
+#include <zircon/assert.h>
 #include <zircon/syscalls.h>
 
 #include <array>
@@ -668,6 +669,115 @@ bool DispatchOrderIsDeterministic() {
     END_TEST;
 }
 
+// Test that non-async-dispatcher loops run fine.
+struct ExternalLoop : async_test_subloop_t {
+    ExternalLoop() {
+        ops = &kOps;
+    }
+
+    // The loop keeps a state, that is repeatedly incremented.
+    // 0: advance to 1
+    // 1: wait until |time_ >= kState1Deadline|, advance to 2
+    // 2: advance to 3
+    // 3: blocked, needs to be manually advanced
+    // 4: advance to 5
+    // 5: done, do not increment
+    // 6: finalized
+    int state_ = 0;
+
+    // The current time, according to the TestLoop.
+    zx_time_t time_ = ZX_TIME_INFINITE_PAST;
+
+    constexpr static zx_time_t kState1Deadline = 1000;
+    constexpr static int kStateFinalized = 6;
+
+    // Returns the minimum time for the next transition starting from |state|.
+    // If |ZX_TIME_INFINITE| is returned, the state should not be advanced.
+    static zx_time_t NextTransitionTime(int state) {
+        switch (state) {
+        case 0:
+        case 2:
+        case 4:
+            // Advance immediately.
+            return ZX_TIME_INFINITE_PAST;
+        case 1:
+            return kState1Deadline;
+        case 3:
+        case 5:
+            return ZX_TIME_INFINITE;
+        default:
+            ZX_ASSERT(false);
+        }
+    }
+
+    static void advance_time_to(async_test_subloop_t* self_generic, zx_time_t time) {
+        ExternalLoop* self = static_cast<ExternalLoop*>(self_generic);
+        ZX_ASSERT(self->state_ != kStateFinalized);
+        static_cast<ExternalLoop*>(self)->time_ = time;
+    }
+
+    static uint8_t dispatch_next_due_message(async_test_subloop_t* self_generic) {
+        ExternalLoop* self = static_cast<ExternalLoop*>(self_generic);
+        ZX_ASSERT(self->state_ != kStateFinalized);
+        zx_time_t transition_time = NextTransitionTime(self->state_);
+        if (transition_time != ZX_TIME_INFINITE && transition_time <= self->time_) {
+            self->state_++;
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    static uint8_t has_pending_work(async_test_subloop_t* self_generic) {
+        ExternalLoop* self = static_cast<ExternalLoop*>(self_generic);
+        ZX_ASSERT(self->state_ != kStateFinalized);
+        zx_time_t transition_time = NextTransitionTime(self->state_);
+        return (transition_time != ZX_TIME_INFINITE && transition_time <= self->time_);
+    }
+
+    static zx_time_t get_next_task_due_time(async_test_subloop_t* self_generic) {
+        ExternalLoop* self = static_cast<ExternalLoop*>(self_generic);
+        ZX_ASSERT(self->state_ != kStateFinalized);
+        return NextTransitionTime(self->state_);
+    }
+
+    static void finalize(async_test_subloop_t* self_generic) {
+        ExternalLoop* self = static_cast<ExternalLoop*>(self_generic);
+        ZX_ASSERT(self->state_ != kStateFinalized);
+        self->state_ = kStateFinalized;
+    }
+
+    constexpr static async_test_subloop_ops_t kOps = {
+        advance_time_to,
+        dispatch_next_due_message,
+        has_pending_work,
+        get_next_task_due_time,
+        finalize};
+};
+
+bool ExternalLoopIsRunAndFinalized() {
+    BEGIN_TEST;
+
+    auto loop = std::make_unique<async::TestLoop>();
+    ExternalLoop subloop;
+    auto token = loop->RegisterLoop(&subloop);
+    EXPECT_TRUE(loop->RunUntilIdle());
+    EXPECT_EQ(1, subloop.state_);
+
+    EXPECT_TRUE(loop->RunUntil(zx::time(subloop.kState1Deadline)));
+    EXPECT_EQ(3, subloop.state_);
+    EXPECT_LE(subloop.kState1Deadline, subloop.time_);
+
+    subloop.state_ = 4;
+    EXPECT_TRUE(loop->RunUntilIdle());
+    EXPECT_EQ(5, subloop.state_);
+
+    token.reset();
+    EXPECT_EQ(subloop.kStateFinalized, subloop.state_);
+
+    END_TEST;
+}
+
 } // namespace
 
 BEGIN_TEST_CASE(SingleLoopTests)
@@ -684,6 +794,7 @@ RUN_TEST(WaitsAreDispatched)
 RUN_TEST(NestedWaitsAreDispatched)
 RUN_TEST(WaitsAreCanceled)
 RUN_TEST(NestedTasksAndWaitsAreDispatched)
+RUN_TEST(ExternalLoopIsRunAndFinalized)
 END_TEST_CASE(SingleLoopTests)
 
 BEGIN_TEST_CASE(MultiLoopTests)

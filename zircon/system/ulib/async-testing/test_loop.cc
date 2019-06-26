@@ -10,7 +10,7 @@
 
 #include <algorithm>
 
-#include <lib/async-testing/time_keeper.h>
+#include <lib/async-testing/test_loop_dispatcher.h>
 #include <lib/async/default.h>
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>
@@ -52,55 +52,83 @@ uint32_t GetRandomSeed() {
 
 } // namespace
 
-class TestLoop::TestLoopTimeKeeper : public TimeKeeper {
+class TestLoop::TestSubloop {
 public:
-    TestLoopTimeKeeper() = default;
-    ~TestLoopTimeKeeper() = default;
-
-    zx::time Now() const override { return current_time_; }
+    explicit TestSubloop(async_test_subloop_t* subloop)
+        : subloop_(subloop) {}
 
     void AdvanceTimeTo(zx::time time) {
-        if (time < current_time_) {
-            return;
-        }
-        current_time_ = time;
+        return subloop_->ops->advance_time_to(subloop_.get(), time.get());
+    }
+
+    bool DispatchNextDueMessage() {
+        return subloop_->ops->dispatch_next_due_message(subloop_.get());
+    }
+
+    bool HasPendingWork() {
+        return subloop_->ops->has_pending_work(subloop_.get());
+    }
+
+    zx::time GetNextTaskDueTime() {
+        return zx::time(subloop_->ops->get_next_task_due_time(subloop_.get()));
+    }
+
+    async_test_subloop_t* get() {
+        return subloop_.get();
     }
 
 private:
-    zx::time current_time_;
+    struct SubloopDeleter {
+        void operator()(async_test_subloop_t* loop) {
+            loop->ops->finalize(loop);
+        }
+    };
+
+    std::unique_ptr<async_test_subloop_t, SubloopDeleter> subloop_;
+};
+
+class TestLoop::TestSubloopToken : public SubloopToken {
+public:
+    TestSubloopToken(TestLoop* loop, async_test_subloop_t* subloop)
+        : loop_(loop), subloop_(subloop) {}
+
+    ~TestSubloopToken() override {
+        auto& subloops = loop_->subloops_;
+        for (auto iterator = subloops.begin(); iterator != subloops.end(); iterator++) {
+            if (iterator->get() == subloop_) {
+                subloops.erase(iterator);
+                break;
+            }
+        }
+    }
+
+private:
+    TestLoop* const loop_;
+    async_test_subloop_t* subloop_;
 };
 
 class TestLoop::TestLoopInterface : public LoopInterface {
 public:
-    TestLoopInterface(TestLoop* loop, TestLoopDispatcher* dispatcher)
-        : loop_(loop), dispatcher_(dispatcher) {}
+    TestLoopInterface(std::unique_ptr<SubloopToken> token, async_dispatcher_t* dispatcher)
+        : token_(std::move(token)), dispatcher_(dispatcher) {}
 
-    ~TestLoopInterface() override {
-        auto& dispatchers = loop_->dispatchers_;
-        for (auto iterator = dispatchers.begin(); iterator != dispatchers.end(); ++iterator) {
-            if (iterator->get() == dispatcher_) {
-                dispatchers.erase(iterator);
-                break;
-            }
-        }
-        dispatcher_ = nullptr;
-    }
+    ~TestLoopInterface() override = default;
 
     async_dispatcher_t* dispatcher() override { return dispatcher_; }
 
 private:
-    TestLoop* const loop_;
-    TestLoopDispatcher* dispatcher_;
+    std::unique_ptr<SubloopToken> token_;
+    async_dispatcher_t* dispatcher_;
 };
 
 TestLoop::TestLoop()
     : TestLoop(0) {}
 
 TestLoop::TestLoop(uint32_t state)
-    : time_keeper_(new TestLoopTimeKeeper()),
-      initial_state_((state != 0) ? state : GetRandomSeed()), state_(initial_state_) {
-    dispatchers_.push_back(std::make_unique<TestLoopDispatcher>(time_keeper_.get()));
-    async_set_default_dispatcher(dispatchers_[0].get());
+    : initial_state_((state != 0) ? state : GetRandomSeed()), state_(initial_state_) {
+    default_loop_ = StartNewLoop();
+    default_dispatcher_ = default_loop_->dispatcher();
+    async_set_default_dispatcher(default_dispatcher_);
 
     printf("\nTEST_LOOP_RANDOM_SEED=\"%u\"\n", initial_state_);
 }
@@ -110,17 +138,25 @@ TestLoop::~TestLoop() {
 }
 
 async_dispatcher_t* TestLoop::dispatcher() {
-    return dispatchers_[0].get();
+    return default_dispatcher_;
 }
 
 std::unique_ptr<LoopInterface> TestLoop::StartNewLoop() {
-    dispatchers_.push_back(std::make_unique<TestLoopDispatcher>(time_keeper_.get()));
-    auto* new_dispatcher = dispatchers_[dispatchers_.size() - 1].get();
-    return std::make_unique<TestLoopInterface>(this, new_dispatcher);
+    async_dispatcher_t* dispatcher_interface;
+    async_test_subloop_t* subloop;
+    NewTestLoopDispatcher(&dispatcher_interface, &subloop);
+    return std::make_unique<TestLoopInterface>(RegisterLoop(subloop), dispatcher_interface);
+}
+
+std::unique_ptr<SubloopToken> TestLoop::RegisterLoop(async_test_subloop_t* subloop) {
+    TestSubloop wrapped_subloop{subloop};
+    wrapped_subloop.AdvanceTimeTo(Now());
+    subloops_.push_back(std::move(wrapped_subloop));
+    return std::make_unique<TestSubloopToken>(this, subloop);
 }
 
 zx::time TestLoop::Now() const {
-    return time_keeper_->Now();
+    return current_time_;
 }
 
 void TestLoop::Quit() {
@@ -128,7 +164,7 @@ void TestLoop::Quit() {
 }
 
 void TestLoop::AdvanceTimeByEpsilon() {
-    time_keeper_->AdvanceTimeTo(Now() + zx::duration(1));
+    AdvanceTimeTo(Now() + zx::duration(1));
 }
 
 bool TestLoop::RunUntil(zx::time deadline) {
@@ -139,23 +175,31 @@ bool TestLoop::RunUntil(zx::time deadline) {
         if (!HasPendingWork()) {
             zx::time next_due_time = GetNextTaskDueTime();
             if (next_due_time > deadline) {
-                time_keeper_->AdvanceTimeTo(deadline);
+                AdvanceTimeTo(deadline);
                 break;
             }
-            time_keeper_->AdvanceTimeTo(next_due_time);
+            AdvanceTimeTo(next_due_time);
         }
 
         Randomize(&state_);
-        size_t current_index = state_ % dispatchers_.size();
-        auto& current_dispatcher = dispatchers_[current_index];
+        size_t current_index = state_ % subloops_.size();
+        auto& current_subloop = subloops_[current_index];
 
-        async_set_default_dispatcher(current_dispatcher.get());
-        did_work |= current_dispatcher->DispatchNextDueMessage();
-        async_set_default_dispatcher(dispatchers_[0].get());
+        did_work |= current_subloop.DispatchNextDueMessage();
+        async_set_default_dispatcher(default_dispatcher_);
     }
     is_running_ = false;
     has_quit_ = false;
     return did_work;
+}
+
+void TestLoop::AdvanceTimeTo(zx::time time) {
+    if (current_time_ < time) {
+        current_time_ = time;
+        for (auto& subloop : subloops_) {
+            subloop.AdvanceTimeTo(time);
+        }
+    }
 }
 
 bool TestLoop::RunFor(zx::duration duration) {
@@ -167,19 +211,19 @@ bool TestLoop::RunUntilIdle() {
 }
 
 bool TestLoop::HasPendingWork() {
-    for (auto& dispatcher : dispatchers_) {
-        if (dispatcher->HasPendingWork()) {
+    for (auto& subloop : subloops_) {
+        if (subloop.HasPendingWork()) {
             return true;
         }
     }
     return false;
 }
 
-zx::time TestLoop::GetNextTaskDueTime() const {
+zx::time TestLoop::GetNextTaskDueTime() {
     zx::time next_due_time = zx::time::infinite();
-    for (auto& dispatcher : dispatchers_) {
+    for (auto& subloop : subloops_) {
         next_due_time =
-            std::min<zx::time>(next_due_time, dispatcher->GetNextTaskDueTime());
+            std::min<zx::time>(next_due_time, subloop.GetNextTaskDueTime());
     }
     return next_due_time;
 }
