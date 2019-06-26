@@ -71,7 +71,7 @@ pub fn make_mlme_set_keys_request(peer: [u8; 6], key: &Key) -> fidl_mlme::SetKey
             key: key.to_vec(),
             key_id: 0,
             address: peer,
-            cipher_suite_oui: OUI,
+            cipher_suite_oui: OUI.into(),
             cipher_suite_type: key.cipher_suite_type(),
             rsc: 0,
         }],

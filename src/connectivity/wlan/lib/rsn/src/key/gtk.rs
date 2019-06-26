@@ -99,7 +99,6 @@ impl Gtk {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use bytes::Bytes;
     use std::collections::HashSet;
     use wlan_common::ie::rsn::{cipher, suite_selector::OUI};
 
@@ -107,11 +106,8 @@ mod tests {
     fn test_gtk_generation() {
         let mut gtks = HashSet::new();
         for _ in 0..10000 {
-            let provider = GtkProvider::new(Cipher {
-                oui: Bytes::from(&OUI[..]),
-                suite_type: cipher::CCMP_128,
-            })
-            .expect("failed creating GTK Provider");
+            let provider = GtkProvider::new(Cipher { oui: OUI, suite_type: cipher::CCMP_128 })
+                .expect("failed creating GTK Provider");
             let gtk = provider.get_gtk().expect("could not read GTK").tk().to_vec();
             assert!(gtk.iter().any(|&x| x != 0));
             assert!(!gtks.contains(&gtk));

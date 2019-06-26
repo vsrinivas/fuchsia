@@ -55,14 +55,17 @@ mod tests {
 
     #[test]
     pub fn empty_body() {
-        let elems: Vec<_> = Reader::new(&[7, 0][..]).collect();
-        assert_eq!(&[(Id(7), &[][..])], &elems[..]);
+        let elems: Vec<_> = Reader::new(&[0, 0][..]).collect();
+        assert_eq!(&[(Id::SSID, &[][..])], &elems[..]);
     }
 
     #[test]
     pub fn two_elements() {
         let bytes = vec![0, 2, 10, 20, 1, 3, 11, 22, 33];
         let elems: Vec<_> = Reader::new(&bytes[..]).collect();
-        assert_eq!(&[(Id(0), &[10, 20][..]), (Id(1), &[11, 22, 33][..])], &elems[..]);
+        assert_eq!(
+            &[(Id::SSID, &[10, 20][..]), (Id::SUPPORTED_RATES, &[11, 22, 33][..])],
+            &elems[..]
+        );
     }
 }

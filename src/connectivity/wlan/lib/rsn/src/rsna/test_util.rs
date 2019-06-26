@@ -15,7 +15,6 @@ use crate::keywrap::keywrap_algorithm;
 use crate::psk;
 use crate::rsna::{Dot11VerifiedKeyFrame, NegotiatedRsne, SecAssocUpdate};
 use crate::{Authenticator, Supplicant};
-use bytes::Bytes;
 use eapol::KeyFrameTx;
 use hex::FromHex;
 use std::sync::{Arc, Mutex};
@@ -32,13 +31,10 @@ pub const A_ADDR: [u8; 6] = [0x1D, 0xE3, 0xFD, 0xDF, 0xCB, 0xD3];
 
 pub fn get_a_rsne() -> Rsne {
     let mut rsne = Rsne::new();
-    rsne.group_data_cipher_suite =
-        Some(Cipher { oui: Bytes::from(&OUI[..]), suite_type: cipher::CCMP_128 });
-    rsne.pairwise_cipher_suites
-        .push(Cipher { oui: Bytes::from(&OUI[..]), suite_type: cipher::CCMP_128 });
-    rsne.pairwise_cipher_suites
-        .push(Cipher { oui: Bytes::from(&OUI[..]), suite_type: cipher::TKIP });
-    rsne.akm_suites.push(Akm { oui: Bytes::from(&OUI[..]), suite_type: akm::PSK });
+    rsne.group_data_cipher_suite = Some(Cipher { oui: OUI, suite_type: cipher::CCMP_128 });
+    rsne.pairwise_cipher_suites.push(Cipher { oui: OUI, suite_type: cipher::CCMP_128 });
+    rsne.pairwise_cipher_suites.push(Cipher { oui: OUI, suite_type: cipher::TKIP });
+    rsne.akm_suites.push(Akm { oui: OUI, suite_type: akm::PSK });
     rsne
 }
 
@@ -50,11 +46,9 @@ pub fn get_rsne_bytes(rsne: &Rsne) -> Vec<u8> {
 
 pub fn get_s_rsne() -> Rsne {
     let mut rsne = Rsne::new();
-    rsne.group_data_cipher_suite =
-        Some(Cipher { oui: Bytes::from(&OUI[..]), suite_type: cipher::CCMP_128 });
-    rsne.pairwise_cipher_suites
-        .push(Cipher { oui: Bytes::from(&OUI[..]), suite_type: cipher::CCMP_128 });
-    rsne.akm_suites.push(Akm { oui: Bytes::from(&OUI[..]), suite_type: akm::PSK });
+    rsne.group_data_cipher_suite = Some(Cipher { oui: OUI, suite_type: cipher::CCMP_128 });
+    rsne.pairwise_cipher_suites.push(Cipher { oui: OUI, suite_type: cipher::CCMP_128 });
+    rsne.akm_suites.push(Akm { oui: OUI, suite_type: akm::PSK });
     rsne
 }
 
@@ -74,9 +68,8 @@ pub fn get_supplicant() -> Supplicant {
 }
 
 pub fn get_authenticator() -> Authenticator {
-    let gtk_provider =
-        GtkProvider::new(Cipher { oui: Bytes::from(&OUI[..]), suite_type: cipher::CCMP_128 })
-            .expect("error creating GtkProvider");
+    let gtk_provider = GtkProvider::new(Cipher { oui: OUI, suite_type: cipher::CCMP_128 })
+        .expect("error creating GtkProvider");
     let nonce_rdr = NonceReader::new(&S_ADDR[..]).expect("error creating Reader");
     let psk = psk::compute("ThisIsAPassword".as_bytes(), "ThisIsASSID".as_bytes())
         .expect("error computing PSK");
@@ -218,9 +211,8 @@ pub fn is_zero(slice: &[u8]) -> bool {
 }
 
 pub fn make_fourway_cfg(role: Role) -> fourway::Config {
-    let gtk_provider =
-        GtkProvider::new(Cipher { oui: Bytes::from(&OUI[..]), suite_type: cipher::CCMP_128 })
-            .expect("error creating GtkProvider");
+    let gtk_provider = GtkProvider::new(Cipher { oui: OUI, suite_type: cipher::CCMP_128 })
+        .expect("error creating GtkProvider");
     let nonce_rdr = NonceReader::new(&S_ADDR[..]).expect("error creating Reader");
     fourway::Config::new(
         role,

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    super::{constants::*, fields::*, id},
+    super::{constants::*, fields::*, id::Id},
     crate::{
         appendable::Appendable,
         error::FrameWriteError,
@@ -29,7 +29,7 @@ macro_rules! write_ie {
             if !$buf.can_append(2 + body_len) {
                 return Err(FrameWriteError::BufferTooSmall);
             }
-            $buf.append_byte($id.raw())
+            $buf.append_value(&$id)
                     .expect("expected enough room in the buffer for element id");
             $buf.append_byte(body_len as u8)
                     .expect("expected enough room in the buffer for element length");
@@ -49,7 +49,7 @@ pub fn write_ssid<B: Appendable>(buf: &mut B, ssid: &[u8]) -> Result<(), FrameWr
         SSID_MAX_LEN,
         ssid.len()
     );
-    write_ie!(buf, id::SSID, ssid)
+    write_ie!(buf, Id::SSID, ssid)
 }
 
 pub fn write_supported_rates<B: Appendable>(
@@ -63,7 +63,7 @@ pub fn write_supported_rates<B: Appendable>(
         SUPPORTED_RATES_MAX_LEN,
         rates.len()
     );
-    write_ie!(buf, id::SUPPORTED_RATES, rates)
+    write_ie!(buf, Id::SUPPORTED_RATES, rates)
 }
 
 pub fn write_ext_supported_rates<B: Appendable>(
@@ -71,14 +71,14 @@ pub fn write_ext_supported_rates<B: Appendable>(
     rates: &[u8],
 ) -> Result<(), FrameWriteError> {
     validate!(!rates.is_empty(), "List of Extended Supported Rates is empty");
-    write_ie!(buf, id::EXT_SUPPORTED_RATES, rates)
+    write_ie!(buf, Id::EXT_SUPPORTED_RATES, rates)
 }
 
 pub fn write_dsss_param_set<B: Appendable>(
     buf: &mut B,
     dsss: &DsssParamSet,
 ) -> Result<(), FrameWriteError> {
-    write_ie!(buf, id::DSSS_PARAM_SET, dsss)
+    write_ie!(buf, Id::DSSS_PARAM_SET, dsss)
 }
 
 pub fn write_tim<B: Appendable>(
@@ -93,7 +93,7 @@ pub fn write_tim<B: Appendable>(
         TIM_MAX_BITMAP_LEN,
         bitmap.len()
     );
-    write_ie!(buf, id::TIM, header, bitmap)
+    write_ie!(buf, Id::TIM, header, bitmap)
 }
 
 pub fn write_mpm_open<B: Appendable>(
@@ -101,7 +101,7 @@ pub fn write_mpm_open<B: Appendable>(
     header: &MpmHeader,
     pmk: Option<&MpmPmk>,
 ) -> Result<(), FrameWriteError> {
-    write_ie!(buf, id::MESH_PEERING_MGMT, header, option_as_bytes(pmk))
+    write_ie!(buf, Id::MESH_PEERING_MGMT, header, option_as_bytes(pmk))
 }
 
 pub fn write_mpm_confirm<B: Appendable>(
@@ -110,7 +110,7 @@ pub fn write_mpm_confirm<B: Appendable>(
     peer_link_id: u16,
     pmk: Option<&MpmPmk>,
 ) -> Result<(), FrameWriteError> {
-    write_ie!(buf, id::MESH_PEERING_MGMT, header, &peer_link_id, option_as_bytes(pmk))
+    write_ie!(buf, Id::MESH_PEERING_MGMT, header, &peer_link_id, option_as_bytes(pmk))
 }
 
 pub fn write_mpm_close<B: Appendable>(
@@ -122,7 +122,7 @@ pub fn write_mpm_close<B: Appendable>(
 ) -> Result<(), FrameWriteError> {
     write_ie!(
         buf,
-        id::MESH_PEERING_MGMT,
+        Id::MESH_PEERING_MGMT,
         header,
         option_as_bytes(peer_link_id.as_ref()),
         &reason_code,
@@ -154,7 +154,7 @@ pub fn write_preq<B: Appendable>(
         middle.target_count,
         targets.len()
     );
-    write_ie!(buf, id::PREQ, header, option_as_bytes(originator_external_addr), middle, targets)
+    write_ie!(buf, Id::PREQ, header, option_as_bytes(originator_external_addr), middle, targets)
 }
 
 pub fn write_prep<B: Appendable>(
@@ -174,7 +174,7 @@ pub fn write_prep<B: Appendable>(
             "External address is present but address extension flag is not set in PREP"
         );
     }
-    write_ie!(buf, id::PREP, header, option_as_bytes(target_external_addr), tail)
+    write_ie!(buf, Id::PREP, header, option_as_bytes(target_external_addr), tail)
 }
 
 /// Note that this does not write a full PERR IE, but only a single destination.
@@ -233,7 +233,7 @@ pub fn write_perr<B: Appendable>(
     header: &PerrHeader,
     destinations: &[u8],
 ) -> Result<(), FrameWriteError> {
-    write_ie!(buf, id::PERR, header, destinations)
+    write_ie!(buf, Id::PERR, header, destinations)
 }
 
 fn option_as_bytes<T: AsBytes>(opt: Option<&T>) -> &[u8] {
@@ -247,7 +247,7 @@ mod tests {
     #[test]
     pub fn write_ie_body_too_long() {
         let mut buf = vec![];
-        let mut f = || write_ie!(&mut buf, id::SSID, &[0u8; 256][..]);
+        let mut f = || write_ie!(&mut buf, Id::SSID, &[0u8; 256][..]);
         assert_eq!(
             Err(FrameWriteError::new_invalid_data(
                 "Element body length 256 exceeds max of 255".to_string()
@@ -260,7 +260,7 @@ mod tests {
     pub fn write_ie_buffer_too_small() {
         let mut buf = [7u8; 5];
         let mut writer = BufferWriter::new(&mut buf[..]);
-        let mut f = || write_ie!(&mut writer, id::SSID, &[1u8, 2, 3, 4][..]);
+        let mut f = || write_ie!(&mut writer, Id::SSID, &[1u8, 2, 3, 4][..]);
         assert_eq!(Err(FrameWriteError::BufferTooSmall), f());
         // Expect the buffer to be left untouched
         assert_eq!(&[7, 7, 7, 7, 7], &buf[..]);
@@ -270,7 +270,7 @@ mod tests {
     pub fn write_ie_buffer_exactly_long_enough() {
         let mut buf = [0u8; 5];
         let mut writer = BufferWriter::new(&mut buf[..]);
-        let mut f = || write_ie!(&mut writer, id::SSID, &[1u8, 2, 3][..]);
+        let mut f = || write_ie!(&mut writer, Id::SSID, &[1u8, 2, 3][..]);
         assert_eq!(Ok(()), f());
         assert_eq!(&[0, 3, 1, 2, 3], &buf[..]);
     }

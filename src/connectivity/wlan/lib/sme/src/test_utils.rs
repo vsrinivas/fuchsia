@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use crate::{DeviceInfo, MacAddr};
-use bytes::Bytes;
 use fidl_fuchsia_wlan_common as fidl_common;
 use fidl_fuchsia_wlan_mlme as fidl_mlme;
 use wlan_common::ie::rsn::{
@@ -48,11 +47,11 @@ pub fn rsne_as_bytes(s_rsne: Rsne) -> Vec<u8> {
 }
 
 fn make_cipher(suite_type: u8) -> cipher::Cipher {
-    cipher::Cipher { oui: Bytes::from(&OUI[..]), suite_type }
+    cipher::Cipher { oui: OUI, suite_type }
 }
 
 fn make_akm(suite_type: u8) -> akm::Akm {
-    akm::Akm { oui: Bytes::from(&OUI[..]), suite_type }
+    akm::Akm { oui: OUI, suite_type }
 }
 
 pub fn eapol_key_frame() -> eapol::KeyFrameBuf {
@@ -101,11 +100,11 @@ pub fn gtk() -> Gtk {
 }
 
 pub fn akm() -> Akm {
-    Akm { oui: Bytes::from(&OUI[..]), suite_type: akm::PSK }
+    Akm { oui: OUI, suite_type: akm::PSK }
 }
 
 pub fn cipher() -> Cipher {
-    Cipher { oui: Bytes::from(&OUI[..]), suite_type: cipher::CCMP_128 }
+    Cipher { oui: OUI, suite_type: cipher::CCMP_128 }
 }
 
 pub fn fake_ht_cap_chanwidth(chanwidth: fidl_mlme::ChanWidthSet) -> fidl_mlme::HtCapabilities {

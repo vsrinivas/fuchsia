@@ -64,6 +64,7 @@ pub fn extract_elements(key_data: &[u8]) -> Result<Vec<Element>, failure::Error>
 #[cfg(test)]
 mod tests {
     use super::*;
+    use wlan_common::organization::Oui;
 
     #[test]
     fn test_complex_key_data() {
@@ -109,7 +110,7 @@ mod tests {
                     assert_eq!(pos, 0);
                     assert_eq!(hdr.type_, 0xDD);
                     assert_eq!(hdr.len, 14);
-                    assert_eq!(hdr.oui, kde::IEEE_80211_OUI);
+                    assert_eq!(hdr.oui, Oui::DOT11);
                     assert_eq!(hdr.data_type, 1);
                     assert_eq!(kde.info.value(), 5);
                     assert_eq!(kde.gtk, vec![1, 2, 3, 4, 5, 6, 7, 8]);
@@ -132,8 +133,8 @@ mod tests {
                         assert!(rsne.group_data_cipher_suite.is_some());
                         let cipher = rsne.group_data_cipher_suite.unwrap();
                         assert_eq!(cipher.suite_type, 4);
-                        let oui = vec![1, 2, 3];
-                        assert_eq!(cipher.oui, &oui[..]);
+                        let oui = Oui::new([1, 2, 3]);
+                        assert_eq!(cipher.oui, oui);
                     }
                     4 => {
                         assert_eq!(rsne.len(), 8);
@@ -141,7 +142,7 @@ mod tests {
                         assert!(rsne.group_data_cipher_suite.is_some());
                         let cipher = rsne.group_data_cipher_suite.unwrap();
                         assert_eq!(cipher.suite_type, 1);
-                        assert_eq!(cipher.oui, &kde::IEEE_80211_OUI[..]);
+                        assert_eq!(cipher.oui, Oui::DOT11);
                     }
                     _ => assert!(false),
                 },
@@ -149,8 +150,8 @@ mod tests {
                     assert_eq!(pos, 3);
                     assert_eq!(hdr.type_, 0xDD);
                     assert_eq!(hdr.len, 14);
-                    let oui = vec![0x01, 0x0F, 0xAC];
-                    assert_eq!(hdr.oui, &oui[..]);
+                    let oui = Oui::new([0x01, 0x0F, 0xAC]);
+                    assert_eq!(hdr.oui, oui);
                     assert_eq!(hdr.data_type, 1);
                 }
                 Element::Padding => assert_eq!(pos, 6),
@@ -277,7 +278,7 @@ mod tests {
                 Element::Gtk(hdr, kde) => {
                     assert_eq!(hdr.type_, 0xDD);
                     assert_eq!(hdr.len, 14);
-                    assert_eq!(hdr.oui, kde::IEEE_80211_OUI);
+                    assert_eq!(hdr.oui, Oui::DOT11);
                     assert_eq!(hdr.data_type, 1);
                     assert_eq!(kde.info.value(), 5);
                     assert_eq!(kde.gtk, vec![1, 2, 3, 4, 5, 6, 7, 8]);
@@ -311,7 +312,7 @@ mod tests {
                 Element::Gtk(hdr, kde) => {
                     assert_eq!(hdr.type_, 0xDD);
                     assert_eq!(hdr.len, 22);
-                    assert_eq!(hdr.oui, kde::IEEE_80211_OUI);
+                    assert_eq!(hdr.oui, Oui::DOT11);
                     assert_eq!(hdr.data_type, 1);
                     assert_eq!(kde.info.value(), 200);
                     assert_eq!(

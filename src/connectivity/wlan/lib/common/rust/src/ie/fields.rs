@@ -4,7 +4,8 @@
 
 use {
     crate::{
-        buffer_reader::BufferReader, mac::MacAddr, mac::ReasonCode, unaligned_view::UnalignedView,
+        buffer_reader::BufferReader, mac::MacAddr, mac::ReasonCode, organization::Oui,
+        unaligned_view::UnalignedView,
     },
     std::mem::size_of,
     wlan_bitfield::bitfield,
@@ -689,6 +690,17 @@ impl<B: ByteSlice> PerrDestinationIter<B> {
     pub fn bytes_remaining(&self) -> usize {
         self.0.bytes_remaining()
     }
+}
+
+// This enum represents all vendor IEs we know how to parse, plus an Unknown option for all other
+// vendor IEs.
+#[derive(Debug)]
+pub enum VendorIe<B: ByteSlice> {
+    // This does not contain the first byte of the IE body, since this byte identifies the IE as
+    // WPA rather than another MSFT vendor IE.
+    MsftLegacyWpa(B),
+    // IEEE Std 802.11-2016, 9.4.2.26
+    Unknown { oui: Oui, body: B },
 }
 
 // IEEE Std 802.11-2016, 9.4.2.57

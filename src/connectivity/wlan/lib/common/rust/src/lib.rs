@@ -17,6 +17,7 @@ pub mod format;
 pub mod ie;
 pub mod mac;
 pub mod mgmt_writer;
+pub mod organization;
 pub mod sequence;
 pub mod test_utils;
 pub mod tim;

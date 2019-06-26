@@ -3,10 +3,8 @@
 // found in the LICENSE file.
 
 use super::suite_selector;
-use super::Error;
 use crate::ie::rsn::suite_selector::OUI;
-use bytes::Bytes;
-use failure::{self, ensure};
+use crate::organization::Oui;
 use std::fmt;
 
 macro_rules! return_none_if_unknown_algo {
@@ -34,9 +32,9 @@ pub const EAP_SUITEB_SHA384: u8 = 12;
 pub const FT_EAP_SHA384: u8 = 13;
 // 14-255 - Reserved.
 
-#[derive(PartialOrd, PartialEq, Clone)]
+#[derive(PartialOrd, PartialEq, Eq, Clone)]
 pub struct Akm {
-    pub oui: Bytes,
+    pub oui: Oui,
     pub suite_type: u8,
 }
 
@@ -44,7 +42,7 @@ impl Akm {
     /// Creates a new AKM instance for 802.11 specified AKMs.
     /// See IEEE Std 802.11-2016, 9.4.2.25.3, Table 9-133.
     pub fn new_dot11(suite_type: u8) -> Self {
-        Akm { oui: Bytes::from(&OUI[..]), suite_type }
+        Akm { oui: OUI, suite_type }
     }
 
     /// Only AKMs specified in IEEE 802.11-2016, 9.4.2.25.4, Table 9-133 have known algorithms.
@@ -58,7 +56,7 @@ impl Akm {
 
     pub fn is_vendor_specific(&self) -> bool {
         // IEEE 802.11-2016, 9.4.2.25.4, Table 9-133
-        !&self.oui[..].eq(&suite_selector::OUI)
+        !self.oui.eq(&OUI)
     }
 
     pub fn is_reserved(&self) -> bool {
@@ -150,9 +148,8 @@ impl Akm {
 impl suite_selector::Factory for Akm {
     type Suite = Akm;
 
-    fn new(oui: Bytes, suite_type: u8) -> Result<Self::Suite, failure::Error> {
-        ensure!(oui.len() == 3, Error::InvalidOuiLength(oui.len()));
-        Ok(Akm { oui, suite_type })
+    fn new(oui: Oui, suite_type: u8) -> Self::Suite {
+        Akm { oui, suite_type }
     }
 }
 

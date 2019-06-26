@@ -7,7 +7,7 @@ use std::cmp::Ordering;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::hash::Hash;
-use wlan_common::ie::rsn::rsne;
+use wlan_common::ie::{self, rsn::rsne, Id, Reader, VendorIe};
 
 use super::rsn::is_rsn_compatible;
 use crate::client::Standard;
@@ -51,6 +51,7 @@ impl ClientConfig {
         match get_protection(bss) {
             Protection::Open => true,
             Protection::Wep => self.0.wep_supported,
+            Protection::Wpa1 => false,
             // If the BSS is an RSN, require the privacy bit to be set and verify the RSNE's
             // compatiblity.
             Protection::Rsna => match bss.rsn.as_ref() {
@@ -104,7 +105,8 @@ pub struct EssInfo {
 pub enum Protection {
     Open = 0,
     Wep = 1,
-    Rsna = 2,
+    Wpa1 = 2,
+    Rsna = 3,
 }
 
 fn get_rx_dbm(bss: &BssDescription) -> i8 {
@@ -117,19 +119,25 @@ fn get_rx_dbm(bss: &BssDescription) -> i8 {
     }
 }
 
+fn find_wpa_ie(bss: &BssDescription) -> Option<&[u8]> {
+    let ies = bss.vendor_ies.as_ref()?;
+    Reader::new(&ies[..])
+        .filter_map(|(id, ie)| match id {
+            Id::VENDOR_SPECIFIC => match ie::parse_vendor_ie(ie) {
+                Ok(VendorIe::MsftLegacyWpa(body)) => Some(&body[..]),
+                _ => None,
+            },
+            _ => None,
+        })
+        .next()
+}
+
 pub fn get_protection(bss: &BssDescription) -> Protection {
     match bss.rsn.as_ref() {
         Some(_) => Protection::Rsna,
-        None => {
-            if bss.cap.privacy {
-                // TODO(WLAN-1107): Fuchsia does not support the vendor specific WPA1 IE.
-                // Thus, the assumption that the BSS is using WEP is a simplification and not quite
-                // correct.
-                Protection::Wep
-            } else {
-                Protection::Open
-            }
-        }
+        None if !bss.cap.privacy => Protection::Open,
+        None if find_wpa_ie(bss).is_some() => Protection::Wpa1,
+        None => Protection::Wep,
     }
 }
 
@@ -186,6 +194,7 @@ mod tests {
         Open,
         Wep,
         Wpa1,
+        Wpa2Legacy,
         Wpa2,
         Wpa3,
         Wpa2NoPrivacy,
@@ -205,6 +214,11 @@ mod tests {
             )
         );
         // Compatibility takes priority over everything else
+        assert_bss_cmp(
+            &cfg,
+            &bss(-10, -10, ProtectionCfg::Wpa1),
+            &bss(-50, -50, ProtectionCfg::Wpa2),
+        );
         assert_bss_cmp(
             &cfg,
             &bss(-10, -10, ProtectionCfg::Wpa1),
@@ -234,6 +248,12 @@ mod tests {
     #[test]
     fn compare_wep() {
         let cfg = ClientConfig::from_config(Config::with_wep_support());
+        // Wep is supported, so currently better than wpa1.
+        assert_bss_cmp(
+            &cfg,
+            &bss(-10, -10, ProtectionCfg::Wpa1),
+            &bss(-50, -50, ProtectionCfg::Wep),
+        );
         assert_bss_cmp(
             &cfg,
             &bss(-10, -10, ProtectionCfg::Wep),
@@ -261,6 +281,7 @@ mod tests {
     fn test_get_protection() {
         assert_eq!(Protection::Open, get_protection(&bss(-30, -10, ProtectionCfg::Open)));
         assert_eq!(Protection::Wep, get_protection(&bss(-30, -10, ProtectionCfg::Wep)));
+        assert_eq!(Protection::Wpa1, get_protection(&bss(-30, -10, ProtectionCfg::Wpa1)));
         assert_eq!(Protection::Rsna, get_protection(&bss(-30, -10, ProtectionCfg::Wpa2)));
         assert_eq!(
             Protection::Rsna,
@@ -280,12 +301,12 @@ mod tests {
 
         // Not compatible:
         assert!(!cfg.is_bss_compatible(&bss(-30, -10, ProtectionCfg::Wpa1)));
+        assert!(!cfg.is_bss_compatible(&bss(-30, -10, ProtectionCfg::Wpa2Legacy)));
         assert!(!cfg.is_bss_compatible(&bss(-30, -10, ProtectionCfg::Wpa2NoPrivacy)));
         assert!(!cfg.is_bss_compatible(&bss(-30, -10, ProtectionCfg::Wpa3)));
         assert!(!cfg.is_bss_compatible(&bss(-30, -10, ProtectionCfg::Eap)));
 
         // WEP support is configurable to be on or off:
-        assert!(!cfg.is_bss_compatible(&bss(-30, -10, ProtectionCfg::Wep)));
         let cfg = ClientConfig::from_config(Config::with_wep_support());
         assert!(cfg.is_bss_compatible(&bss(-30, -10, ProtectionCfg::Wep)));
     }
@@ -386,14 +407,17 @@ mod tests {
             op_rate_set: vec![],
             country: None,
             rsn: match protection {
-                ProtectionCfg::Wpa1 => Some(fake_wpa1_rsne()),
+                ProtectionCfg::Wpa2Legacy => Some(fake_wpa2_legacy_rsne()),
                 ProtectionCfg::Wpa2 | ProtectionCfg::Wpa2NoPrivacy => Some(fake_wpa2_rsne()),
                 ProtectionCfg::Wpa3 => Some(fake_wpa3_rsne()),
                 ProtectionCfg::Wpa2Wpa3MixedMode => Some(fake_wpa2_wpa3_mixed_mode_rsne()),
                 ProtectionCfg::Eap => Some(fake_eap_rsne()),
                 _ => None,
             },
-            vendor_ies: None,
+            vendor_ies: match protection {
+                ProtectionCfg::Wpa1 => Some(fake_wpa1_ie()),
+                _ => None,
+            },
 
             rcpi_dbmh: _rcpi_dbmh,
             rsni_dbh: 0,
@@ -413,7 +437,17 @@ mod tests {
         ret
     }
 
-    fn fake_wpa1_rsne() -> Vec<u8> {
+    fn fake_wpa1_ie() -> Vec<u8> {
+        vec![
+            0xdd, 0x16, 0x00, 0x50, 0xf2, // IE header
+            0x01, 0x01, 0x00, // WPA IE header
+            0x00, 0x50, 0xf2, 0x02, // multicast cipher: AKM
+            0x01, 0x00, 0x00, 0x50, 0xf2, 0x02, // 1 unicast cipher: TKIP
+            0x01, 0x00, 0x00, 0x50, 0xf2, 0x02, // 1 AKM: PSK
+        ]
+    }
+
+    fn fake_wpa2_legacy_rsne() -> Vec<u8> {
         vec![
             // Element header
             48, 18, // Version

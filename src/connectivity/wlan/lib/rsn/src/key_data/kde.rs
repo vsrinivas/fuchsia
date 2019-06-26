@@ -8,9 +8,8 @@ use nom::IResult::{Done, Incomplete};
 use nom::{call, do_parse, eof, error_position, map, named, named_args, take, try_parse};
 use nom::{le_u8, IResult, Needed};
 use wlan_common::appendable::{Appendable, BufferTooSmall};
-use wlan_common::ie::rsn::rsne::Rsne;
+use wlan_common::{ie::rsn::rsne::Rsne, organization::Oui};
 
-pub const IEEE_80211_OUI: [u8; 3] = [0x00, 0x0F, 0xAC];
 pub const TYPE: u8 = 0xDD;
 const PADDING_DATA_LEN: u8 = 0;
 const HDR_LEN: usize = 6;
@@ -27,15 +26,15 @@ const GTK_FIXED_LEN: usize = 2;
 pub struct Header {
     pub type_: u8,
     pub len: u8,
-    pub oui: [u8; 3],
+    pub oui: Oui,
     pub data_type: u8,
 }
 
 impl Header {
     pub fn new(type_: u8, len: u8, oui: &[u8], data_type: u8) -> Header {
-        let mut hdr = Header { type_, len, data_type, ..Default::default() };
-        hdr.oui.copy_from_slice(oui);
-        hdr
+        let mut oui_buf = [0u8; 3];
+        oui_buf.copy_from_slice(oui);
+        Header { type_, len, data_type, oui: Oui::new(oui_buf), ..Default::default() }
     }
 
     pub fn new_dot11(data_type: u8, data_len: usize) -> Header {
@@ -43,7 +42,7 @@ impl Header {
             type_: TYPE,
             len: (HDR_OUI_TYPE_LEN + data_len) as u8,
             data_type,
-            oui: IEEE_80211_OUI,
+            oui: Oui::DOT11,
         }
     }
 
@@ -116,7 +115,7 @@ pub fn parse(i0: &[u8]) -> IResult<&[u8], Element> {
     // Read the KDE Header first.
     let (i1, hdr) = try_parse!(i0, call!(parse_header));
     let (i2, bytes) = try_parse!(i1, take!(hdr.data_len()));
-    if hdr.oui != IEEE_80211_OUI {
+    if hdr.oui != Oui::DOT11 {
         return Done(i2, Element::UnsupportedKde(hdr));
     }
 
@@ -321,7 +320,7 @@ mod tests {
 
         match elements.remove(0) {
             Element::Gtk(hdr, kde) => {
-                assert_eq!(hdr, Header { type_: 0xDD, len: 11, oui: IEEE_80211_OUI, data_type: 1 });
+                assert_eq!(hdr, Header { type_: 0xDD, len: 11, oui: Oui::DOT11, data_type: 1 });
                 assert_eq!(kde, Gtk { info: GtkInfo(6), gtk: vec![24; 5] });
             }
             other => panic!("unexpected KDE: {:?}", other),

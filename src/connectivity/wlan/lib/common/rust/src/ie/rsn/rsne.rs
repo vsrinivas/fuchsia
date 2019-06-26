@@ -5,6 +5,7 @@
 use super::{akm, cipher, pmkid, suite_selector};
 
 use crate::appendable::{Appendable, BufferTooSmall};
+use crate::organization::Oui;
 use bytes::Bytes;
 use nom::{
     call, cond, count, do_parse, eof, error_position, expr_res, named, named_attr, take, try_parse,
@@ -153,9 +154,8 @@ where
     T: suite_selector::Factory<Suite = T>,
 {
     let (i1, bytes) = try_parse!(input, take!(4));
-    let oui = Bytes::from(&bytes[0..3]);
-    let (i2, ctor_result) = try_parse!(i1, expr_res!(T::new(oui, bytes[3])));
-    return IResult::Done(i2, ctor_result);
+    let oui = Oui::new([bytes[0], bytes[1], bytes[2]]);
+    return IResult::Done(i1, T::new(oui, bytes[3]));
 }
 
 fn read_pmkid(input: &[u8]) -> IResult<&[u8], pmkid::Pmkid> {
@@ -277,14 +277,13 @@ mod tests {
         assert_eq!(rsne.version, 1);
         assert_eq!(rsne.len(), 0x2a + 2);
 
-        let oui: &[u8] = &[0x00, 0x0f, 0xac];
         assert!(rsne.group_data_cipher_suite.is_some());
         assert_eq!(
             rsne.group_data_cipher_suite,
-            Some(cipher::Cipher { oui: Bytes::from(oui), suite_type: cipher::CCMP_128 })
+            Some(cipher::Cipher { oui: Oui::DOT11, suite_type: cipher::CCMP_128 })
         );
         assert_eq!(rsne.pairwise_cipher_suites.len(), 1);
-        assert_eq!(rsne.pairwise_cipher_suites[0].oui, Bytes::from(oui));
+        assert_eq!(rsne.pairwise_cipher_suites[0].oui, Oui::DOT11);
         assert_eq!(rsne.pairwise_cipher_suites[0].suite_type, cipher::CCMP_128);
         assert_eq!(rsne.akm_suites.len(), 1);
         assert_eq!(rsne.akm_suites[0].suite_type, akm::PSK);
@@ -314,7 +313,7 @@ mod tests {
 
         assert_eq!(
             rsne.group_mgmt_cipher_suite,
-            Some(cipher::Cipher { oui: Bytes::from(oui), suite_type: cipher::CCMP_128 })
+            Some(cipher::Cipher { oui: Oui::DOT11, suite_type: cipher::CCMP_128 })
         );
     }
 

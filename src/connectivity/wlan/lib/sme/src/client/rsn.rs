@@ -1,4 +1,3 @@
-use bytes::Bytes;
 use eapol;
 use failure::{bail, ensure, format_err};
 use fidl_fuchsia_wlan_mlme::BssDescription;
@@ -137,10 +136,9 @@ fn derive_s_rsne(a_rsne: &Rsne) -> Result<Rsne, failure::Error> {
     // If Authenticator's RSNE is supported, construct Supplicant's RSNE.
     let mut s_rsne = Rsne::new();
     s_rsne.group_data_cipher_suite = a_rsne.group_data_cipher_suite.clone();
-    let pairwise_cipher =
-        cipher::Cipher { oui: Bytes::from(&OUI[..]), suite_type: cipher::CCMP_128 };
+    let pairwise_cipher = cipher::Cipher { oui: OUI, suite_type: cipher::CCMP_128 };
     s_rsne.pairwise_cipher_suites.push(pairwise_cipher);
-    let akm = akm::Akm { oui: Bytes::from(&OUI[..]), suite_type: akm::PSK };
+    let akm = akm::Akm { oui: OUI, suite_type: akm::PSK };
     s_rsne.akm_suites.push(akm);
     s_rsne.rsn_capabilities = a_rsne.rsn_capabilities.clone();
     Ok(s_rsne)

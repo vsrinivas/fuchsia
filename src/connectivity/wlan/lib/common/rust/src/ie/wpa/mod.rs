@@ -5,21 +5,17 @@
 use super::rsn::{akm, cipher, suite_selector};
 
 use crate::appendable::{Appendable, BufferTooSmall};
-use bytes::Bytes;
-use nom::{
-    call, count, do_parse, eof, error_position, expr_res, named, named_attr, take, try_parse,
-};
-use nom::{le_u16, le_u8, IResult};
+use crate::organization::Oui;
+use nom::{call, count, do_parse, eof, error_position, named, named_attr, take, try_parse};
+use nom::{le_u16, IResult};
 
-// IEEE 802.11-2016, 9.4.2.26 (Vendor specific IE)
 // The WPA1 IE is not fully specified by IEEE. This format was derived from pcap.
-// (1B) Element ID
-pub const ID: u8 = 221; // IEEE 802.11-2016, 9.4.2.1 table 9-77
-                        // (1B) Length
-                        // (3B) OUI
-pub const OUI: [u8; 3] = [0x00, 0x50, 0xf2];
-// (1B) OUI-specific element ID
-pub const VENDOR_ELEMENT_ID: u8 = 1;
+// Note that this file only parses fields specific to WPA -- IE headers and MSFT-specific fields
+// are omitted.
+// (3B) OUI
+pub const OUI: Oui = Oui::MSFT;
+// (1B) OUI-specific element type
+pub const VENDOR_SPECIFIC_TYPE: u8 = 1;
 // (2B) WPA type
 pub const WPA_TYPE: u16 = 1;
 // (4B) multicast cipher
@@ -29,7 +25,7 @@ pub const WPA_TYPE: u16 = 1;
 // (4B x N) unicast cipher list
 // (2B) AKM count
 // (4B x N) AKM list
-#[derive(Debug, PartialOrd, PartialEq, Clone)]
+#[derive(Debug, PartialOrd, PartialEq, Eq, Clone)]
 pub struct WpaIe {
     pub multicast_cipher: cipher::Cipher,
     pub unicast_cipher_list: Vec<cipher::Cipher>,
@@ -39,10 +35,7 @@ pub struct WpaIe {
 impl Default for WpaIe {
     fn default() -> Self {
         WpaIe {
-            multicast_cipher: cipher::Cipher {
-                oui: Bytes::from_static(&OUI[..]),
-                suite_type: cipher::TKIP,
-            },
+            multicast_cipher: cipher::Cipher { oui: OUI, suite_type: cipher::TKIP },
             unicast_cipher_list: vec![],
             akm_list: vec![],
         }
@@ -50,7 +43,7 @@ impl Default for WpaIe {
 }
 
 impl WpaIe {
-    const FIXED_FIELDS_LENGTH: usize = 16;
+    const FIXED_FIELDS_LENGTH: usize = 10;
     pub fn len(&self) -> usize {
         Self::FIXED_FIELDS_LENGTH + self.unicast_cipher_list.len() * 4 + self.akm_list.len() * 4
     }
@@ -59,12 +52,6 @@ impl WpaIe {
         if !buf.can_append(self.len()) {
             return Err(BufferTooSmall);
         }
-
-        // Vendor specific element header
-        buf.append_value(&ID)?;
-        buf.append_value(&((self.len() - 2) as u8))?;
-        buf.append_bytes(&OUI[..])?;
-        buf.append_value(&VENDOR_ELEMENT_ID)?;
 
         buf.append_value(&WPA_TYPE)?;
 
@@ -92,9 +79,8 @@ where
     T: suite_selector::Factory<Suite = T>,
 {
     let (i1, bytes) = try_parse!(input, take!(4));
-    let oui = Bytes::from(&bytes[0..3]);
-    let (i2, ctor_result) = try_parse!(i1, expr_res!(T::new(oui, bytes[3])));
-    return IResult::Done(i2, ctor_result);
+    let oui = Oui::new([bytes[0], bytes[1], bytes[2]]);
+    return IResult::Done(i1, T::new(oui, bytes[3]));
 }
 
 named!(parse_akm<&[u8], akm::Akm>, call!(read_suite_selector::<akm::Akm>));
@@ -105,10 +91,6 @@ named_attr!(
     , // comma ends the attribute list to named_attr
     pub from_bytes<&[u8], WpaIe>,
       do_parse!(
-          _element_id: le_u8 >>
-          _length: le_u8 >>
-          _oui: take!(3) >>
-          _vendor_element_id: le_u8 >>
           _wpa_type: le_u16 >>
           multicast_cipher: parse_cipher >>
           unicast_cipher_count: le_u16 >>
@@ -129,11 +111,9 @@ mod tests {
     use super::*;
 
     #[rustfmt::skip]
-    const DEFAULT_FRAME: [u8; 24] = [
-        // IE header
-        0xdd, 0x16, 0x00, 0x50, 0xf2,
-        // WPA IE header
-        0x01, 0x01, 0x00,
+    const DEFAULT_FRAME: [u8; 18] = [
+        // WPA version
+        0x01, 0x00,
         // Multicast cipher
         0x00, 0x50, 0xf2, 0x02,
         // Unicast cipher list
@@ -145,15 +125,9 @@ mod tests {
     #[test]
     fn test_write_into() {
         let wpa_frame = WpaIe {
-            multicast_cipher: cipher::Cipher {
-                oui: Bytes::from(&OUI[..]),
-                suite_type: cipher::TKIP,
-            },
-            unicast_cipher_list: vec![cipher::Cipher {
-                oui: Bytes::from(&OUI[..]),
-                suite_type: cipher::TKIP,
-            }],
-            akm_list: vec![akm::Akm { oui: Bytes::from(&OUI[..]), suite_type: akm::PSK }],
+            multicast_cipher: cipher::Cipher { oui: OUI, suite_type: cipher::TKIP },
+            unicast_cipher_list: vec![cipher::Cipher { oui: OUI, suite_type: cipher::TKIP }],
+            akm_list: vec![akm::Akm { oui: OUI, suite_type: akm::PSK }],
         };
 
         let mut wpa_frame_bytes = vec![];
@@ -178,26 +152,21 @@ mod tests {
         let wpa_frame = wpa_frame.unwrap().1;
         assert_eq!(
             wpa_frame.multicast_cipher,
-            cipher::Cipher { oui: Bytes::from(&OUI[..]), suite_type: cipher::TKIP }
+            cipher::Cipher { oui: OUI, suite_type: cipher::TKIP }
         );
         assert_eq!(
             wpa_frame.unicast_cipher_list,
-            vec![cipher::Cipher { oui: Bytes::from(&OUI[..]), suite_type: cipher::TKIP }]
+            vec![cipher::Cipher { oui: OUI, suite_type: cipher::TKIP }]
         );
-        assert_eq!(
-            wpa_frame.akm_list,
-            vec![akm::Akm { oui: Bytes::from(&OUI[..]), suite_type: akm::PSK }]
-        );
+        assert_eq!(wpa_frame.akm_list, vec![akm::Akm { oui: OUI, suite_type: akm::PSK }]);
     }
 
     #[test]
     fn test_parse_bad_frame() {
         #[rustfmt::skip]
-        const BAD_FRAME: [u8; 24] = [
-            // IE header
-            0xdd, 0x16, 0x00, 0x50, 0xf2,
-            // WPA IE header
-            0x01, 0x01, 0x00,
+        let bad_frame: Vec<u8> = vec![
+            // WPA version
+            0x01, 0x00,
             // Multicast cipher
             0x00, 0x50, 0xf2, 0x02,
             // Unicast cipher list (count is incorrect)
@@ -205,22 +174,20 @@ mod tests {
             // AKM list
             0x01, 0x00, 0x00, 0x50, 0xf2, 0x02,
         ];
-        let wpa_frame = from_bytes(&BAD_FRAME[..]);
+        let wpa_frame = from_bytes(&bad_frame[..]);
         assert!(!wpa_frame.is_done());
     }
 
     #[test]
     fn test_truncated_frame() {
         #[rustfmt::skip]
-        const BAD_FRAME: [u8; 10] = [
-            // IE header
-            0xdd, 0x16, 0x00, 0x50, 0xf2,
-            // WPA IE header
-            0x01, 0x01, 0x00,
-            // Multicast cipher (truncated)
+        let bad_frame: Vec<u8> = vec![
+            // WPA version
+            0x01, 0x00,
+            // Multicast ciph... truncated frame.
             0x00, 0x50
         ];
-        let wpa_frame = from_bytes(&BAD_FRAME[..]);
+        let wpa_frame = from_bytes(&bad_frame[..]);
         assert!(!wpa_frame.is_done());
     }
 }

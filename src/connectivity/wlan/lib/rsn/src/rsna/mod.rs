@@ -379,7 +379,6 @@ pub type UpdateSink = Vec<SecAssocUpdate>;
 mod tests {
     use super::*;
     use crate::rsna::{test_util, NegotiatedRsne, Role};
-    use bytes::Bytes;
     use wlan_common::ie::rsn::{akm, cipher, rsne::Rsne, suite_selector::OUI};
 
     #[test]
@@ -459,11 +458,11 @@ mod tests {
     }
 
     fn make_cipher(suite_type: u8) -> cipher::Cipher {
-        cipher::Cipher { oui: Bytes::from(&OUI[..]), suite_type }
+        cipher::Cipher { oui: OUI, suite_type }
     }
 
     fn make_akm(suite_type: u8) -> akm::Akm {
-        akm::Akm { oui: Bytes::from(&OUI[..]), suite_type }
+        akm::Akm { oui: OUI, suite_type }
     }
 
     fn make_rsne(data: Option<u8>, pairwise: Vec<u8>, akms: Vec<u8>) -> Rsne {

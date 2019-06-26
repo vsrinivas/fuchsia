@@ -3,10 +3,8 @@
 // found in the LICENSE file.
 
 use super::suite_selector;
-use super::Error;
 use crate::ie::rsn::suite_selector::OUI;
-use bytes::Bytes;
-use failure::{self, ensure};
+use crate::organization::Oui;
 use std::fmt;
 
 macro_rules! return_none_if_unknown_usage {
@@ -36,7 +34,7 @@ pub const BIP_CMAC_256: u8 = 13;
 
 #[derive(PartialOrd, PartialEq, Eq, Clone, Hash)]
 pub struct Cipher {
-    pub oui: Bytes,
+    pub oui: Oui,
     pub suite_type: u8,
 }
 
@@ -44,7 +42,7 @@ impl Cipher {
     /// Creates a new AKM instance for 802.11 specified AKMs.
     /// See IEEE Std 802.11-2016, 9.4.2.25.2, Table 9-131
     pub fn new_dot11(suite_type: u8) -> Self {
-        Cipher { oui: Bytes::from(&OUI[..]), suite_type }
+        Cipher { oui: OUI, suite_type }
     }
 
     /// Reserved and vendor specific cipher suites have no known usage and require special
@@ -55,7 +53,7 @@ impl Cipher {
 
     pub fn is_vendor_specific(&self) -> bool {
         // IEEE 802.11-2016, 9.4.2.25.2, Table 9-131
-        !&self.oui[..].eq(&suite_selector::OUI)
+        !self.oui.eq(&OUI)
     }
 
     pub fn is_reserved(&self) -> bool {
@@ -141,9 +139,8 @@ impl Cipher {
 impl suite_selector::Factory for Cipher {
     type Suite = Cipher;
 
-    fn new(oui: Bytes, suite_type: u8) -> Result<Self::Suite, failure::Error> {
-        ensure!(oui.len() == 3, Error::InvalidOuiLength(oui.len()));
-        Ok(Cipher { oui, suite_type })
+    fn new(oui: Oui, suite_type: u8) -> Self::Suite {
+        Cipher { oui, suite_type }
     }
 }
 

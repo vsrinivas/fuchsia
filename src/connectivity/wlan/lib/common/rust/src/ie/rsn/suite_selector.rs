@@ -2,13 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use bytes::Bytes;
-use failure;
+use crate::organization::Oui;
 
-pub const OUI: [u8; 3] = [0x00, 0x0F, 0xAC];
+pub const OUI: Oui = Oui::DOT11;
 
 pub trait Factory {
     type Suite;
 
-    fn new(oui: Bytes, suite_type: u8) -> Result<Self::Suite, failure::Error>;
+    fn new(oui: Oui, suite_type: u8) -> Self::Suite;
 }

@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use bytes::Bytes;
 use failure::bail;
 use wlan_common::ie::rsn::{
     akm, cipher,
@@ -12,11 +11,11 @@ use wlan_common::ie::rsn::{
 use wlan_rsn::NegotiatedRsne;
 
 fn make_cipher(suite_type: u8) -> cipher::Cipher {
-    cipher::Cipher { oui: Bytes::from(&OUI[..]), suite_type }
+    cipher::Cipher { oui: OUI, suite_type }
 }
 
 fn make_akm(suite_type: u8) -> akm::Akm {
-    akm::Akm { oui: Bytes::from(&OUI[..]), suite_type }
+    akm::Akm { oui: OUI, suite_type }
 }
 
 fn make_rsne(data: Option<u8>, pairwise: Vec<u8>, akms: Vec<u8>) -> Rsne {

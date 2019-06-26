@@ -446,6 +446,7 @@ pub fn get_protection(
                 .map_err(|e| format_err!("error deriving WEP key from input: {}", e)),
             _ => bail!("unsupported credential type"),
         },
+        bss::Protection::Wpa1 => bail!("WPA1 not supported"),
         bss::Protection::Rsna => get_rsna(device_info, credential, bss),
     }
 }

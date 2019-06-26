@@ -7,6 +7,7 @@ use {
     crate::{
         buffer_reader::BufferReader,
         error::{FrameParseError, FrameParseResult},
+        organization::Oui,
     },
     std::mem::size_of,
     zerocopy::{ByteSlice, LayoutVerified},
@@ -189,6 +190,33 @@ pub fn parse_vht_operation<B: ByteSlice>(
 ) -> FrameParseResult<LayoutVerified<B, VhtOperation>> {
     LayoutVerified::new(raw_body)
         .ok_or(FrameParseError::new("Invalid length of VHT Operation element"))
+}
+
+pub fn parse_wpa_ie<B: ByteSlice>(raw_body: B) -> FrameParseResult<wpa::WpaIe> {
+    wpa::from_bytes(&raw_body[..])
+        .to_full_result()
+        .map_err(|_| FrameParseError::new("Failed to parse WPA IE"))
+}
+
+pub fn parse_vendor_ie<B: ByteSlice>(raw_body: B) -> FrameParseResult<VendorIe<B>> {
+    let mut reader = BufferReader::new(raw_body);
+    let oui = *reader.read::<Oui>().ok_or(FrameParseError::new("Failed to read vendor OUI"))?;
+    let vendor_ie = match oui {
+        Oui::MSFT => {
+            let ie_type = reader.peek_byte();
+            match ie_type {
+                Some(wpa::VENDOR_SPECIFIC_TYPE) => {
+                    // We already know from our peek_byte that at least one byte remains, so this
+                    // split will not panic.
+                    let (_type, body) = reader.into_remaining().split_at(1);
+                    VendorIe::MsftLegacyWpa(body)
+                }
+                _ => VendorIe::Unknown { oui, body: reader.into_remaining() },
+            }
+        }
+        _ => VendorIe::Unknown { oui, body: reader.into_remaining() },
+    };
+    Ok(vendor_ie)
 }
 
 #[cfg(test)]
@@ -888,5 +916,68 @@ mod tests {
         assert_eq!(231, vht_op.vht_cbw.0);
         assert_eq!(232, vht_op.center_freq_seg0);
         assert_eq!(233, vht_op.center_freq_seg1);
+    }
+
+    #[test]
+    fn parse_wpa_ie_ok() {
+        let raw_body: Vec<u8> = vec![
+            0x00, 0x50, 0xf2, // MSFT OUI
+            0x01, 0x01, 0x00, // WPA IE header
+            0x00, 0x50, 0xf2, 0x02, // multicast cipher: AKM
+            0x01, 0x00, 0x00, 0x50, 0xf2, 0x02, // 1 unicast cipher: TKIP
+            0x01, 0x00, 0x00, 0x50, 0xf2, 0x02, // 1 AKM: PSK
+        ];
+        let wpa_ie = parse_vendor_ie(&raw_body[..]).expect("failed to parse wpa vendor ie");
+        match wpa_ie {
+            VendorIe::MsftLegacyWpa(wpa_body) => {
+                parse_wpa_ie(&wpa_body[..]).expect("failed to parse wpa vendor ie")
+            }
+            _ => panic!("parsed wpa ie as wrong type"),
+        };
+    }
+
+    #[test]
+    fn parse_bad_wpa_ie() {
+        let raw_body: Vec<u8> = vec![
+            0x00, 0x50, 0xf2, // MSFT OUI
+            0x01, 0x01, 0x00, // WPA IE header
+            0x00, 0x50, 0xf2, 0x02, // multicast cipher: AKM
+                  // truncated
+        ];
+        // parse_vendor_ie does not validate the actual wpa ie body, so this
+        // succeeds.
+        let wpa_ie = parse_vendor_ie(&raw_body[..]).expect("failed to parse wpa vendor ie");
+        match wpa_ie {
+            VendorIe::MsftLegacyWpa(wpa_body) => {
+                parse_wpa_ie(&wpa_body[..]).expect_err("parsed truncated wpa ie")
+            }
+            _ => panic!("parsed wpa ie as wrong type"),
+        };
+    }
+
+    #[test]
+    fn parse_unknown_msft_ie() {
+        let raw_body: Vec<u8> = vec![
+            0x00, 0x50, 0xf2, // MSFT OUI
+            0xff, 0x01, 0x00, // header with unknown vendor specific IE type
+            0x00, 0x50, 0xf2, 0x02, // multicast cipher: AKM
+            0x01, 0x00, 0x00, 0x50, 0xf2, 0x02, // 1 unicast cipher: TKIP
+            0x01, 0x00, 0x00, 0x50, 0xf2, 0x02, // 1 AKM: PSK
+        ];
+        let ie = parse_vendor_ie(&raw_body[..]).expect("failed to parse ie");
+        match ie {
+            VendorIe::Unknown { .. } => (),
+            _ => panic!("parsed unknown msft as wrong type"),
+        }
+    }
+
+    #[test]
+    fn parse_unknown_vendor_ie() {
+        let raw_body: Vec<u8> = vec![0x00, 0x12, 0x34]; // Made up OUI
+        let ie = parse_vendor_ie(&raw_body[..]).expect("failed to parse wpa vendor ie");
+        match ie {
+            VendorIe::Unknown { .. } => (),
+            _ => panic!("parsed unknown msft as wrong type"),
+        }
     }
 }
