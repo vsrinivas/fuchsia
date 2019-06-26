@@ -449,127 +449,146 @@ InvokeCommandMessage::TryCreate(SharedMemoryManager::DriverMemoryPool* message_p
     return fit::ok(std::move(message));
 }
 
-bool RpcMessage::TryInitializeMembers() {
-    size_t memory_size = memory_->size();
+fit::result<RpcMessage, zx_status_t> RpcMessage::CreateFromSharedMemory(SharedMemory* memory) {
+    size_t memory_size = memory->size();
     if (memory_size < sizeof(MessageHeader)) {
         zxlogf(ERROR,
                "optee: shared memory region passed into RPC command could not be parsed into a "
                "valid message!\n");
-        return false;
+        return fit::error(ZX_ERR_INVALID_ARGS);
     }
 
-    if (memory_size < CalculateSize(header()->num_params)) {
+    // The header portion is at least valid, so create an `RpcMessage` in order to access and
+    // validate the header.
+    RpcMessage message(memory);
+
+    if (memory_size < CalculateSize(message.header()->num_params)) {
         zxlogf(ERROR,
                "optee: shared memory region passed into RPC command could not be parsed into a "
                "valid message!\n");
-        // Can at least write error code to the header since that has been checked already
-        header()->return_origin = TEEC_ORIGIN_COMMS;
-        header()->return_code = TEEC_ERROR_BAD_PARAMETERS;
-        return false;
+        message.header()->return_origin = TEEC_ORIGIN_COMMS;
+        message.header()->return_code = TEEC_ERROR_BAD_PARAMETERS;
+        return fit::error(ZX_ERR_INVALID_ARGS);
     }
 
-    return true;
+    return fit::ok(std::move(message));
 }
 
-bool LoadTaRpcMessage::TryInitializeMembers() {
-    if (header()->num_params != kNumParams) {
+fit::result<LoadTaRpcMessage, zx_status_t>
+LoadTaRpcMessage::CreateFromRpcMessage(RpcMessage&& rpc_message) {
+    ZX_DEBUG_ASSERT(rpc_message.command() == RpcMessage::Command::kLoadTa);
+
+    LoadTaRpcMessage result_message(std::move(rpc_message));
+    if (result_message.header()->num_params != kNumParams) {
         zxlogf(ERROR,
-               "optee: RPC command to load trusted app received unexpected number of parameters!"
-               "\n");
-        set_return_origin(TEEC_ORIGIN_COMMS);
-        set_return_code(TEEC_ERROR_BAD_PARAMETERS);
-        return false;
+               "optee: RPC command to load trusted app received unexpected number of parameters! "
+               "(%u)\n",
+               result_message.header()->num_params);
+        result_message.set_return_origin(TEEC_ORIGIN_COMMS);
+        result_message.set_return_code(TEEC_ERROR_BAD_PARAMETERS);
+        return fit::error(ZX_ERR_INVALID_ARGS);
     }
 
     // Parse the UUID of the trusted application from the parameters
-    MessageParam& uuid_param = params()[kUuidParamIndex];
+    MessageParam& uuid_param = result_message.params()[kUuidParamIndex];
     switch (uuid_param.attribute) {
     case MessageParam::kAttributeTypeValueInput:
     case MessageParam::kAttributeTypeValueInOut:
-        ConvertMessageParamToUuid(uuid_param.payload.value, &ta_uuid_);
+        ConvertMessageParamToUuid(uuid_param.payload.value, &result_message.ta_uuid_);
         break;
     default:
         zxlogf(ERROR,
                "optee: RPC command to load trusted app received unexpected first parameter!\n");
-        set_return_origin(TEEC_ORIGIN_COMMS);
-        set_return_code(TEEC_ERROR_BAD_PARAMETERS);
-        return false;
+        result_message.set_return_origin(TEEC_ORIGIN_COMMS);
+        result_message.set_return_code(TEEC_ERROR_BAD_PARAMETERS);
+        return fit::error(ZX_ERR_INVALID_ARGS);
     }
 
     // Parse where in memory to write the trusted application
-    MessageParam& memory_reference_param = params()[kMemoryReferenceParamIndex];
+    MessageParam& memory_reference_param = result_message.params()[kMemoryReferenceParamIndex];
     switch (memory_reference_param.attribute) {
     case MessageParam::kAttributeTypeTempMemOutput:
     case MessageParam::kAttributeTypeTempMemInOut: {
         MessageParam::TemporaryMemory& temp_mem = memory_reference_param.payload.temporary_memory;
-        mem_id_ = temp_mem.shared_memory_reference;
-        mem_size_ = static_cast<size_t>(temp_mem.size);
-        mem_paddr_ = static_cast<zx_paddr_t>(temp_mem.buffer);
-        out_ta_size_ = &temp_mem.size;
+        result_message.mem_id_ = temp_mem.shared_memory_reference;
+        result_message.mem_size_ = static_cast<size_t>(temp_mem.size);
+        result_message.mem_paddr_ = static_cast<zx_paddr_t>(temp_mem.buffer);
+        result_message.out_ta_size_ = &temp_mem.size;
         break;
     }
     case MessageParam::kAttributeTypeRegMemOutput:
     case MessageParam::kAttributeTypeRegMemInOut:
         zxlogf(ERROR,
                "optee: received unsupported registered memory parameter!\n");
-        set_return_origin(TEEC_ORIGIN_COMMS);
-        set_return_code(TEEC_ERROR_NOT_IMPLEMENTED);
-        return false;
+        result_message.set_return_origin(TEEC_ORIGIN_COMMS);
+        result_message.set_return_code(TEEC_ERROR_NOT_IMPLEMENTED);
+        return fit::error(ZX_ERR_NOT_SUPPORTED);
     default:
         zxlogf(ERROR,
                "optee: RPC command to load trusted app received unexpected second parameter!\n");
-        set_return_origin(TEEC_ORIGIN_COMMS);
-        set_return_code(TEEC_ERROR_BAD_PARAMETERS);
-        return false;
+        result_message.set_return_origin(TEEC_ORIGIN_COMMS);
+        result_message.set_return_code(TEEC_ERROR_BAD_PARAMETERS);
+        return fit::error(ZX_ERR_INVALID_ARGS);
     }
 
-    return true;
+    return fit::ok(std::move(result_message));
 }
 
-bool GetTimeRpcMessage::TryInitializeMembers() {
-    if (header()->num_params != kNumParams) {
+fit::result<GetTimeRpcMessage, zx_status_t>
+GetTimeRpcMessage::CreateFromRpcMessage(RpcMessage&& rpc_message) {
+    ZX_DEBUG_ASSERT(rpc_message.command() == RpcMessage::Command::kGetTime);
+
+    GetTimeRpcMessage result_message(std::move(rpc_message));
+    if (result_message.header()->num_params != kNumParams) {
         zxlogf(ERROR,
-               "optee: RPC command to get current time received unexpected number of parameters!"
-               "\n");
-        set_return_origin(TEEC_ORIGIN_COMMS);
-        set_return_code(TEEC_ERROR_BAD_PARAMETERS);
-        return false;
+               "optee: RPC command to get current time received unexpected number of parameters! "
+               "(%u)\n",
+               result_message.header()->num_params);
+        result_message.set_return_origin(TEEC_ORIGIN_COMMS);
+        result_message.set_return_code(TEEC_ERROR_BAD_PARAMETERS);
+        return fit::error(ZX_ERR_INVALID_ARGS);
     }
 
     // Parse the output time parameter
-    MessageParam& time_param = params()[kTimeParamIndex];
+    MessageParam& time_param = result_message.params()[kTimeParamIndex];
     if (time_param.attribute != MessageParam::kAttributeTypeValueOutput) {
         zxlogf(ERROR,
                "optee: RPC command to get current time received unexpected first parameter!\n");
-        set_return_origin(TEEC_ORIGIN_COMMS);
-        set_return_code(TEEC_ERROR_BAD_PARAMETERS);
+        result_message.set_return_origin(TEEC_ORIGIN_COMMS);
+        result_message.set_return_code(TEEC_ERROR_BAD_PARAMETERS);
+        return fit::error(ZX_ERR_INVALID_ARGS);
     }
 
-    out_secs_ = &time_param.payload.value.get_time_specs.seconds;
-    out_nanosecs_ = &time_param.payload.value.get_time_specs.nanoseconds;
+    result_message.out_secs_ = &time_param.payload.value.get_time_specs.seconds;
+    result_message.out_nanosecs_ = &time_param.payload.value.get_time_specs.nanoseconds;
 
-    return true;
+    return fit::ok(std::move(result_message));
 }
 
-bool AllocateMemoryRpcMessage::TryInitializeMembers() {
-    if (header()->num_params != kNumParams) {
+fit::result<AllocateMemoryRpcMessage, zx_status_t>
+AllocateMemoryRpcMessage::CreateFromRpcMessage(RpcMessage&& rpc_message) {
+    ZX_DEBUG_ASSERT(rpc_message.command() == RpcMessage::Command::kAllocateMemory);
+
+    AllocateMemoryRpcMessage result_message(std::move(rpc_message));
+    if (result_message.header()->num_params != kNumParams) {
         zxlogf(ERROR,
                "optee: RPC command to allocate shared memory received unexpected number of "
-               "parameters!\n");
-        set_return_origin(TEEC_ORIGIN_COMMS);
-        set_return_code(TEEC_ERROR_BAD_PARAMETERS);
-        return false;
+               "parameters (%u)!\n",
+               result_message.header()->num_params);
+        result_message.set_return_origin(TEEC_ORIGIN_COMMS);
+        result_message.set_return_code(TEEC_ERROR_BAD_PARAMETERS);
+        return fit::error(ZX_ERR_INVALID_ARGS);
     }
 
     // Parse the memory specifications parameter
-    MessageParam& value_param = params()[kMemorySpecsParamIndex];
+    MessageParam& value_param = result_message.params()[kMemorySpecsParamIndex];
     if (value_param.attribute != MessageParam::kAttributeTypeValueInput) {
         zxlogf(ERROR,
                "optee: RPC command to allocate shared memory received unexpected first parameter!"
                "\n");
-        set_return_origin(TEEC_ORIGIN_COMMS);
-        set_return_code(TEEC_ERROR_BAD_PARAMETERS);
-        return false;
+        result_message.set_return_origin(TEEC_ORIGIN_COMMS);
+        result_message.set_return_code(TEEC_ERROR_BAD_PARAMETERS);
+        return fit::error(ZX_ERR_INVALID_ARGS);
     }
 
     auto& memory_specs_param = value_param.payload.value.allocate_memory_specs;
@@ -578,48 +597,53 @@ bool AllocateMemoryRpcMessage::TryInitializeMembers() {
     case SharedMemoryType::kApplication:
     case SharedMemoryType::kKernel:
     case SharedMemoryType::kGlobal:
-        memory_type_ = static_cast<SharedMemoryType>(memory_specs_param.memory_type);
+        result_message.memory_type_ = static_cast<SharedMemoryType>(memory_specs_param.memory_type);
         break;
     default:
         zxlogf(ERROR,
                "optee: received unknown memory type %" PRIu64 " to allocate\n",
                memory_specs_param.memory_type);
-        set_return_code(TEEC_ERROR_BAD_PARAMETERS);
-        return false;
+        result_message.set_return_origin(TEEC_ORIGIN_COMMS);
+        result_message.set_return_code(TEEC_ERROR_BAD_PARAMETERS);
+        return fit::error(ZX_ERR_INVALID_ARGS);
     }
 
-    memory_size_ = static_cast<size_t>(memory_specs_param.memory_size);
+    result_message.memory_size_ = static_cast<size_t>(memory_specs_param.memory_size);
 
     // Set up the memory output parameter
-    MessageParam& out_param = params()[kOutputTemporaryMemoryParamIndex];
+    MessageParam& out_param = result_message.params()[kOutputTemporaryMemoryParamIndex];
     out_param.attribute = MessageParam::AttributeType::kAttributeTypeTempMemOutput;
     MessageParam::TemporaryMemory& out_temp_mem_param = out_param.payload.temporary_memory;
-    out_memory_size_ = &out_temp_mem_param.size;
-    out_memory_buffer_ = &out_temp_mem_param.buffer;
-    out_memory_id_ = &out_temp_mem_param.shared_memory_reference;
+    result_message.out_memory_size_ = &out_temp_mem_param.size;
+    result_message.out_memory_buffer_ = &out_temp_mem_param.buffer;
+    result_message.out_memory_id_ = &out_temp_mem_param.shared_memory_reference;
 
-    return true;
+    return fit::ok(std::move(result_message));
 }
 
-bool FreeMemoryRpcMessage::TryInitializeMembers() {
-    if (header()->num_params != kNumParams) {
+fit::result<FreeMemoryRpcMessage, zx_status_t>
+FreeMemoryRpcMessage::CreateFromRpcMessage(RpcMessage&& rpc_message) {
+    ZX_DEBUG_ASSERT(rpc_message.command() == RpcMessage::Command::kFreeMemory);
+
+    FreeMemoryRpcMessage result_message(std::move(rpc_message));
+    if (result_message.header()->num_params != kNumParams) {
         zxlogf(ERROR,
                "optee: RPC command to free shared memory received unexpected number of parameters!"
-               "\n");
-        set_return_origin(TEEC_ORIGIN_COMMS);
-        set_return_code(TEEC_ERROR_BAD_PARAMETERS);
-        return false;
+               "(%u)\n",
+               result_message.header()->num_params);
+        result_message.set_return_origin(TEEC_ORIGIN_COMMS);
+        result_message.set_return_code(TEEC_ERROR_BAD_PARAMETERS);
+        return fit::error(ZX_ERR_INVALID_ARGS);
     }
 
     // Parse the memory specifications parameter
-    MessageParam& value_param = params()[kMemorySpecsParamIndex];
+    MessageParam& value_param = result_message.params()[kMemorySpecsParamIndex];
     if (value_param.attribute != MessageParam::kAttributeTypeValueInput) {
         zxlogf(ERROR,
-               "optee: RPC command to free shared memory received unexpected first parameter!"
-               "\n");
-        set_return_origin(TEEC_ORIGIN_COMMS);
-        set_return_code(TEEC_ERROR_BAD_PARAMETERS);
-        return false;
+               "optee: RPC command to free shared memory received unexpected first parameter!\n");
+        result_message.set_return_origin(TEEC_ORIGIN_COMMS);
+        result_message.set_return_code(TEEC_ERROR_BAD_PARAMETERS);
+        return fit::error(ZX_ERR_INVALID_ARGS);
     }
 
     auto& memory_specs_param = value_param.payload.value.free_memory_specs;
@@ -628,33 +652,37 @@ bool FreeMemoryRpcMessage::TryInitializeMembers() {
     case SharedMemoryType::kApplication:
     case SharedMemoryType::kKernel:
     case SharedMemoryType::kGlobal:
-        memory_type_ = static_cast<SharedMemoryType>(memory_specs_param.memory_type);
+        result_message.memory_type_ = static_cast<SharedMemoryType>(memory_specs_param.memory_type);
         break;
     default:
         zxlogf(ERROR,
                "optee: received unknown memory type %" PRIu64 " to free\n",
                memory_specs_param.memory_type);
-        set_return_code(TEEC_ERROR_BAD_PARAMETERS);
-        return false;
+        result_message.set_return_code(TEEC_ERROR_BAD_PARAMETERS);
+        return fit::error(ZX_ERR_INVALID_ARGS);
     }
 
-    memory_id_ = memory_specs_param.memory_id;
-    return true;
+    result_message.memory_id_ = memory_specs_param.memory_id;
+    return fit::ok(std::move(result_message));
 }
 
-bool FileSystemRpcMessage::TryInitializeMembers() {
-    if (header()->num_params < kMinNumParams) {
+fit::result<FileSystemRpcMessage, zx_status_t>
+FileSystemRpcMessage::CreateFromRpcMessage(RpcMessage&& rpc_message) {
+    ZX_DEBUG_ASSERT(rpc_message.command() == RpcMessage::Command::kAccessFileSystem);
+
+    FileSystemRpcMessage result_message(std::move(rpc_message));
+    if (result_message.header()->num_params < kMinNumParams) {
         zxlogf(ERROR,
                "optee: RPC command to access file system received unexpected number of parameters "
                "(%u)\n",
-               header()->num_params);
-        set_return_origin(TEEC_ORIGIN_COMMS);
-        set_return_code(TEEC_ERROR_BAD_PARAMETERS);
-        return false;
+               result_message.header()->num_params);
+        result_message.set_return_origin(TEEC_ORIGIN_COMMS);
+        result_message.set_return_code(TEEC_ERROR_BAD_PARAMETERS);
+        return fit::error(ZX_ERR_INVALID_ARGS);
     }
 
     // Parse the file system command parameter
-    MessageParam& command_param = params()[kFileSystemCommandParamIndex];
+    MessageParam& command_param = result_message.params()[kFileSystemCommandParamIndex];
     switch (command_param.attribute) {
     case MessageParam::kAttributeTypeValueInput:
     case MessageParam::kAttributeTypeValueInOut:
@@ -662,363 +690,399 @@ bool FileSystemRpcMessage::TryInitializeMembers() {
     default:
         zxlogf(ERROR,
                "optee: RPC command to access file system received unexpected first parameter!\n");
-        set_return_origin(TEEC_ORIGIN_COMMS);
-        set_return_code(TEEC_ERROR_BAD_PARAMETERS);
-        return false;
+        result_message.set_return_origin(TEEC_ORIGIN_COMMS);
+        result_message.set_return_code(TEEC_ERROR_BAD_PARAMETERS);
+        return fit::error(ZX_ERR_INVALID_ARGS);
     }
 
     uint64_t command_num = command_param.payload.value.file_system_command.command_number;
     if (command_num >= kNumFileSystemCommands) {
         zxlogf(ERROR, "optee: received unknown file system command %" PRIu64 "\n", command_num);
-        set_return_code(TEEC_ERROR_NOT_SUPPORTED);
-        return false;
+        result_message.set_return_code(TEEC_ERROR_NOT_SUPPORTED);
+        return fit::error(ZX_ERR_NOT_SUPPORTED);
     }
 
-    fs_command_ = static_cast<FileSystemCommand>(command_num);
-    return true;
+    result_message.fs_command_ = static_cast<FileSystemCommand>(command_num);
+    return fit::ok(std::move(result_message));
 }
 
-bool OpenFileFileSystemRpcMessage::TryInitializeMembers() {
-    if (header()->num_params != kNumParams) {
+fit::result<OpenFileFileSystemRpcMessage, zx_status_t>
+OpenFileFileSystemRpcMessage::CreateFromFsRpcMessage(FileSystemRpcMessage&& fs_message) {
+    ZX_DEBUG_ASSERT(fs_message.file_system_command() == FileSystemCommand::kOpenFile);
+
+    OpenFileFileSystemRpcMessage result_message(std::move(fs_message));
+    if (result_message.header()->num_params != kNumParams) {
         zxlogf(ERROR,
                "optee: RPC command to open file received unexpected number of parameters (%u)\n",
-               header()->num_params);
-        set_return_origin(TEEC_ORIGIN_COMMS);
-        set_return_code(TEEC_ERROR_BAD_PARAMETERS);
-        return false;
+               result_message.header()->num_params);
+        result_message.set_return_origin(TEEC_ORIGIN_COMMS);
+        result_message.set_return_code(TEEC_ERROR_BAD_PARAMETERS);
+        return fit::error(ZX_ERR_INVALID_ARGS);
     }
 
     // Parse the file name parameter
-    MessageParam& path_param = params()[kPathParamIndex];
+    MessageParam& path_param = result_message.params()[kPathParamIndex];
     switch (path_param.attribute) {
     case MessageParam::kAttributeTypeTempMemInput: {
         MessageParam::TemporaryMemory& temp_mem = path_param.payload.temporary_memory;
-        path_mem_id_ = temp_mem.shared_memory_reference;
-        path_mem_size_ = temp_mem.size;
-        path_mem_paddr_ = static_cast<zx_paddr_t>(temp_mem.buffer);
+        result_message.path_mem_id_ = temp_mem.shared_memory_reference;
+        result_message.path_mem_size_ = temp_mem.size;
+        result_message.path_mem_paddr_ = static_cast<zx_paddr_t>(temp_mem.buffer);
         break;
     }
     case MessageParam::kAttributeTypeRegMemInput:
         zxlogf(ERROR,
                "optee: received unsupported registered memory parameter\n");
-        set_return_origin(TEEC_ORIGIN_COMMS);
-        set_return_code(TEEC_ERROR_NOT_IMPLEMENTED);
-        return false;
+        result_message.set_return_origin(TEEC_ORIGIN_COMMS);
+        result_message.set_return_code(TEEC_ERROR_NOT_IMPLEMENTED);
+        return fit::error(ZX_ERR_NOT_SUPPORTED);
     default:
         zxlogf(ERROR,
                "optee: RPC command to open file received unexpected second parameter\n");
-        set_return_origin(TEEC_ORIGIN_COMMS);
-        set_return_code(TEEC_ERROR_BAD_PARAMETERS);
-        return false;
+        result_message.set_return_origin(TEEC_ORIGIN_COMMS);
+        result_message.set_return_code(TEEC_ERROR_BAD_PARAMETERS);
+        return fit::error(ZX_ERR_INVALID_ARGS);
     }
 
     // Parse the output file identifier parameter
-    MessageParam& out_fs_object_id_param = params()[kOutFileSystemObjectIdParamIndex];
+    MessageParam& out_fs_object_id_param = result_message.params()[kOutFileSystemObjectIdParamIndex];
     if (out_fs_object_id_param.attribute != MessageParam::kAttributeTypeValueOutput) {
         zxlogf(ERROR,
                "optee: RPC command to open file received unexpected third parameter\n");
-        set_return_origin(TEEC_ORIGIN_COMMS);
-        set_return_code(TEEC_ERROR_BAD_PARAMETERS);
-        return false;
+        result_message.set_return_origin(TEEC_ORIGIN_COMMS);
+        result_message.set_return_code(TEEC_ERROR_BAD_PARAMETERS);
+        return fit::error(ZX_ERR_INVALID_ARGS);
     }
 
-    out_fs_object_id_ = &out_fs_object_id_param.payload.value.file_system_object.identifier;
+    result_message.out_fs_object_id_ =
+        &out_fs_object_id_param.payload.value.file_system_object.identifier;
 
-    return true;
+    return fit::ok(std::move(result_message));
 }
 
-bool CreateFileFileSystemRpcMessage::TryInitializeMembers() {
-    if (header()->num_params != kNumParams) {
+fit::result<CreateFileFileSystemRpcMessage, zx_status_t>
+CreateFileFileSystemRpcMessage::CreateFromFsRpcMessage(FileSystemRpcMessage&& fs_message) {
+    ZX_DEBUG_ASSERT(fs_message.file_system_command() == FileSystemCommand::kCreateFile);
+
+    CreateFileFileSystemRpcMessage result_message(std::move(fs_message));
+    if (result_message.header()->num_params != kNumParams) {
         zxlogf(ERROR,
                "optee: RPC command to create file received unexpected number of parameters (%u)\n",
-               header()->num_params);
-        set_return_origin(TEEC_ORIGIN_COMMS);
-        set_return_code(TEEC_ERROR_BAD_PARAMETERS);
-        return false;
+               result_message.header()->num_params);
+        result_message.set_return_origin(TEEC_ORIGIN_COMMS);
+        result_message.set_return_code(TEEC_ERROR_BAD_PARAMETERS);
+        return fit::error(ZX_ERR_INVALID_ARGS);
     }
 
     // Parse the file name parameter
-    MessageParam& path_param = params()[kPathParamIndex];
+    MessageParam& path_param = result_message.params()[kPathParamIndex];
     switch (path_param.attribute) {
     case MessageParam::kAttributeTypeTempMemInput: {
         MessageParam::TemporaryMemory& temp_mem = path_param.payload.temporary_memory;
-        path_mem_id_ = temp_mem.shared_memory_reference;
-        path_mem_size_ = temp_mem.size;
-        path_mem_paddr_ = static_cast<zx_paddr_t>(temp_mem.buffer);
+        result_message.path_mem_id_ = temp_mem.shared_memory_reference;
+        result_message.path_mem_size_ = temp_mem.size;
+        result_message.path_mem_paddr_ = static_cast<zx_paddr_t>(temp_mem.buffer);
         break;
     }
     case MessageParam::kAttributeTypeRegMemInput:
         zxlogf(ERROR,
                "optee: received unsupported registered memory parameter\n");
-        set_return_origin(TEEC_ORIGIN_COMMS);
-        set_return_code(TEEC_ERROR_NOT_IMPLEMENTED);
-        return false;
+        result_message.set_return_origin(TEEC_ORIGIN_COMMS);
+        result_message.set_return_code(TEEC_ERROR_NOT_IMPLEMENTED);
+        return fit::error(ZX_ERR_NOT_SUPPORTED);
     default:
         zxlogf(ERROR,
                "optee: RPC command to create file received unexpected second parameter\n");
-        set_return_origin(TEEC_ORIGIN_COMMS);
-        set_return_code(TEEC_ERROR_BAD_PARAMETERS);
-        return false;
+        result_message.set_return_origin(TEEC_ORIGIN_COMMS);
+        result_message.set_return_code(TEEC_ERROR_BAD_PARAMETERS);
+        return fit::error(ZX_ERR_INVALID_ARGS);
     }
 
     // Parse the output file identifier parameter
-    MessageParam& out_fs_object_param = params()[kOutFileSystemObjectIdParamIndex];
+    MessageParam& out_fs_object_param = result_message.params()[kOutFileSystemObjectIdParamIndex];
     if (out_fs_object_param.attribute != MessageParam::kAttributeTypeValueOutput) {
         zxlogf(ERROR,
                "optee: RPC command to create file received unexpected third parameter\n");
-        set_return_origin(TEEC_ORIGIN_COMMS);
-        set_return_code(TEEC_ERROR_BAD_PARAMETERS);
-        return false;
+        result_message.set_return_origin(TEEC_ORIGIN_COMMS);
+        result_message.set_return_code(TEEC_ERROR_BAD_PARAMETERS);
+        return fit::error(ZX_ERR_INVALID_ARGS);
     }
 
-    out_fs_object_id_ = &out_fs_object_param.payload.value.file_system_object.identifier;
+    result_message.out_fs_object_id_ =
+        &out_fs_object_param.payload.value.file_system_object.identifier;
 
-    return true;
+    return fit::ok(std::move(result_message));
 }
 
-bool CloseFileFileSystemRpcMessage::TryInitializeMembers() {
-    if (header()->num_params != kNumParams) {
+fit::result<CloseFileFileSystemRpcMessage, zx_status_t>
+CloseFileFileSystemRpcMessage::CreateFromFsRpcMessage(FileSystemRpcMessage&& fs_message) {
+    ZX_DEBUG_ASSERT(fs_message.file_system_command() == FileSystemCommand::kCloseFile);
+
+    CloseFileFileSystemRpcMessage result_message(std::move(fs_message));
+    if (result_message.header()->num_params != kNumParams) {
         zxlogf(ERROR,
                "optee: RPC command to close file received unexpected number of parameters (%u)\n",
-               header()->num_params);
-        set_return_origin(TEEC_ORIGIN_COMMS);
-        set_return_code(TEEC_ERROR_BAD_PARAMETERS);
-        return false;
+               result_message.header()->num_params);
+        result_message.set_return_origin(TEEC_ORIGIN_COMMS);
+        result_message.set_return_code(TEEC_ERROR_BAD_PARAMETERS);
+        return fit::error(ZX_ERR_INVALID_ARGS);
     }
 
     // Parse the file name parameter
-    MessageParam& command_param = params()[kFileSystemCommandParamIndex];
+    MessageParam& command_param = result_message.params()[kFileSystemCommandParamIndex];
 
     // The attribute was already validated by FileSystemRpcMessage
     ZX_DEBUG_ASSERT(command_param.attribute == MessageParam::kAttributeTypeValueInput ||
                     command_param.attribute == MessageParam::kAttributeTypeValueInOut);
 
-    fs_object_id_ = command_param.payload.value.file_system_command.object_identifier;
+    result_message.fs_object_id_ = command_param.payload.value.file_system_command.object_identifier;
 
-    return true;
+    return fit::ok(std::move(result_message));
 }
 
-bool ReadFileFileSystemRpcMessage::TryInitializeMembers() {
-    if (header()->num_params != kNumParams) {
+fit::result<ReadFileFileSystemRpcMessage, zx_status_t>
+ReadFileFileSystemRpcMessage::CreateFromFsRpcMessage(FileSystemRpcMessage&& fs_message) {
+    ZX_DEBUG_ASSERT(fs_message.file_system_command() == FileSystemCommand::kReadFile);
+
+    ReadFileFileSystemRpcMessage result_message(std::move(fs_message));
+    if (result_message.header()->num_params != kNumParams) {
         zxlogf(ERROR,
                "optee: RPC command to read file received unexpected number of parameters (%u)\n",
-               header()->num_params);
-        set_return_origin(TEEC_ORIGIN_COMMS);
-        set_return_code(TEEC_ERROR_BAD_PARAMETERS);
-        return false;
+               result_message.header()->num_params);
+        result_message.set_return_origin(TEEC_ORIGIN_COMMS);
+        result_message.set_return_code(TEEC_ERROR_BAD_PARAMETERS);
+        return fit::error(ZX_ERR_INVALID_ARGS);
     }
 
     // Parse the file name parameter
-    MessageParam& command_param = params()[kFileSystemCommandParamIndex];
+    MessageParam& command_param = result_message.params()[kFileSystemCommandParamIndex];
 
     // The attribute was already validated by FileSystemRpcMessage
     ZX_DEBUG_ASSERT(command_param.attribute == MessageParam::kAttributeTypeValueInput ||
                     command_param.attribute == MessageParam::kAttributeTypeValueInOut);
 
-    fs_object_id_ = command_param.payload.value.file_system_command.object_identifier;
-    file_offset_ = command_param.payload.value.file_system_command.object_offset;
+    result_message.fs_object_id_ =
+        command_param.payload.value.file_system_command.object_identifier;
+    result_message.file_offset_ = command_param.payload.value.file_system_command.object_offset;
 
     // Parse the output memory parameter
-    MessageParam& out_mem_param = params()[kOutReadBufferMemoryParamIndex];
+    MessageParam& out_mem_param = result_message.params()[kOutReadBufferMemoryParamIndex];
     switch (out_mem_param.attribute) {
     case MessageParam::kAttributeTypeTempMemOutput: {
         MessageParam::TemporaryMemory& temp_mem = out_mem_param.payload.temporary_memory;
-        file_contents_memory_identifier_ = temp_mem.shared_memory_reference;
-        file_contents_memory_size_ = static_cast<size_t>(temp_mem.size);
-        file_contents_memory_paddr_ = static_cast<zx_paddr_t>(temp_mem.buffer);
-        out_file_contents_size_ = &temp_mem.size;
+        result_message.file_contents_mem_id_ = temp_mem.shared_memory_reference;
+        result_message.file_contents_mem_size_ = static_cast<size_t>(temp_mem.size);
+        result_message.file_contents_mem_paddr_ = static_cast<zx_paddr_t>(temp_mem.buffer);
+        result_message.out_file_contents_size_ = &temp_mem.size;
         break;
     }
     case MessageParam::kAttributeTypeRegMemInput:
         zxlogf(ERROR,
                "optee: received unsupported registered memory parameter\n");
-        set_return_origin(TEEC_ORIGIN_COMMS);
-        set_return_code(TEEC_ERROR_NOT_IMPLEMENTED);
-        return false;
+        result_message.set_return_origin(TEEC_ORIGIN_COMMS);
+        result_message.set_return_code(TEEC_ERROR_NOT_IMPLEMENTED);
+        return fit::error(ZX_ERR_NOT_SUPPORTED);
     default:
         zxlogf(ERROR,
                "optee: RPC command to read file received unexpected second parameter\n");
-        set_return_origin(TEEC_ORIGIN_COMMS);
-        set_return_code(TEEC_ERROR_BAD_PARAMETERS);
-        return false;
+        result_message.set_return_origin(TEEC_ORIGIN_COMMS);
+        result_message.set_return_code(TEEC_ERROR_BAD_PARAMETERS);
+        return fit::error(ZX_ERR_NOT_SUPPORTED);
     }
 
-    return true;
+    return fit::ok(std::move(result_message));
 }
 
-bool WriteFileFileSystemRpcMessage::TryInitializeMembers() {
-    if (header()->num_params != kNumParams) {
+fit::result<WriteFileFileSystemRpcMessage, zx_status_t>
+WriteFileFileSystemRpcMessage::CreateFromFsRpcMessage(FileSystemRpcMessage&& fs_message) {
+    ZX_DEBUG_ASSERT(fs_message.file_system_command() == FileSystemCommand::kWriteFile);
+
+    WriteFileFileSystemRpcMessage result_message(std::move(fs_message));
+    if (result_message.header()->num_params != kNumParams) {
         zxlogf(ERROR,
                "optee: RPC command to write file received unexpected number of parameters (%u)\n",
-               header()->num_params);
-        set_return_origin(TEEC_ORIGIN_COMMS);
-        set_return_code(TEEC_ERROR_BAD_PARAMETERS);
-        return false;
+               result_message.header()->num_params);
+        result_message.set_return_origin(TEEC_ORIGIN_COMMS);
+        result_message.set_return_code(TEEC_ERROR_BAD_PARAMETERS);
+        return fit::error(ZX_ERR_INVALID_ARGS);
     }
 
     // Parse the file name parameter
-    MessageParam& command_param = params()[kFileSystemCommandParamIndex];
+    MessageParam& command_param = result_message.params()[kFileSystemCommandParamIndex];
 
     // The attribute was already validated by FileSystemRpcMessage
     ZX_DEBUG_ASSERT(command_param.attribute == MessageParam::kAttributeTypeValueInput ||
                     command_param.attribute == MessageParam::kAttributeTypeValueInOut);
 
-    fs_object_id_ = command_param.payload.value.file_system_command.object_identifier;
-    file_offset_ = command_param.payload.value.file_system_command.object_offset;
+    result_message.fs_object_id_ = command_param.payload.value.file_system_command.object_identifier;
+    result_message.file_offset_ = command_param.payload.value.file_system_command.object_offset;
 
     // Parse the write memory parameter
-    MessageParam& mem_param = params()[kWriteBufferMemoryParam];
+    MessageParam& mem_param = result_message.params()[kWriteBufferMemoryParam];
     switch (mem_param.attribute) {
     case MessageParam::kAttributeTypeTempMemInput: {
         MessageParam::TemporaryMemory& temp_mem = mem_param.payload.temporary_memory;
-        file_contents_memory_identifier_ = temp_mem.shared_memory_reference;
-        file_contents_memory_size_ = static_cast<size_t>(temp_mem.size);
-        file_contents_memory_paddr_ = static_cast<zx_paddr_t>(temp_mem.buffer);
+        result_message.file_contents_mem_id_ = temp_mem.shared_memory_reference;
+        result_message.file_contents_mem_size_ = static_cast<size_t>(temp_mem.size);
+        result_message.file_contents_mem_paddr_ = static_cast<zx_paddr_t>(temp_mem.buffer);
         break;
     }
     case MessageParam::kAttributeTypeRegMemInput:
         zxlogf(ERROR,
                "optee: received unsupported registered memory parameter\n");
-        set_return_origin(TEEC_ORIGIN_COMMS);
-        set_return_code(TEEC_ERROR_NOT_IMPLEMENTED);
-        return false;
+        result_message.set_return_origin(TEEC_ORIGIN_COMMS);
+        result_message.set_return_code(TEEC_ERROR_NOT_IMPLEMENTED);
+        return fit::error(ZX_ERR_NOT_SUPPORTED);
     default:
         zxlogf(ERROR,
                "optee: RPC command to write file received unexpected second parameter\n");
-        set_return_origin(TEEC_ORIGIN_COMMS);
-        set_return_code(TEEC_ERROR_BAD_PARAMETERS);
-        return false;
+        result_message.set_return_origin(TEEC_ORIGIN_COMMS);
+        result_message.set_return_code(TEEC_ERROR_BAD_PARAMETERS);
+        return fit::error(ZX_ERR_INVALID_ARGS);
     }
 
-    return true;
+    return fit::ok(std::move(result_message));
 }
 
-bool TruncateFileFileSystemRpcMessage::TryInitializeMembers() {
-    if (header()->num_params != kNumParams) {
+fit::result<TruncateFileFileSystemRpcMessage, zx_status_t>
+TruncateFileFileSystemRpcMessage::CreateFromFsRpcMessage(FileSystemRpcMessage&& fs_message) {
+    ZX_DEBUG_ASSERT(fs_message.file_system_command() == FileSystemCommand::kTruncateFile);
+
+    TruncateFileFileSystemRpcMessage result_message(std::move(fs_message));
+    if (result_message.header()->num_params != kNumParams) {
         zxlogf(ERROR,
                "optee: RPC command to truncate file received unexpected number of parameters "
                "(%u)\n",
-               header()->num_params);
-        set_return_origin(TEEC_ORIGIN_COMMS);
-        set_return_code(TEEC_ERROR_BAD_PARAMETERS);
-        return false;
+               result_message.header()->num_params);
+        result_message.set_return_origin(TEEC_ORIGIN_COMMS);
+        result_message.set_return_code(TEEC_ERROR_BAD_PARAMETERS);
+        return fit::error(ZX_ERR_INVALID_ARGS);
     }
 
     // Parse the file command parameter
-    MessageParam& command_param = params()[kFileSystemCommandParamIndex];
+    MessageParam& command_param = result_message.params()[kFileSystemCommandParamIndex];
 
     // The attribute was already validated by FileSystemRpcMessage
     ZX_DEBUG_ASSERT(command_param.attribute == MessageParam::kAttributeTypeValueInput ||
                     command_param.attribute == MessageParam::kAttributeTypeValueInOut);
 
-    fs_object_id_ = command_param.payload.value.file_system_command.object_identifier;
-    target_file_size_ = command_param.payload.value.file_system_command.object_offset;
+    result_message.fs_object_id_ =
+        command_param.payload.value.file_system_command.object_identifier;
+    result_message.target_file_size_ =
+        command_param.payload.value.file_system_command.object_offset;
 
-    return true;
+    return fit::ok(std::move(result_message));
 }
 
-bool RemoveFileFileSystemRpcMessage::TryInitializeMembers() {
-    if (header()->num_params != kNumParams) {
+fit::result<RemoveFileFileSystemRpcMessage, zx_status_t>
+RemoveFileFileSystemRpcMessage::CreateFromFsRpcMessage(FileSystemRpcMessage&& fs_message) {
+    ZX_DEBUG_ASSERT(fs_message.file_system_command() == FileSystemCommand::kRemoveFile);
+
+    RemoveFileFileSystemRpcMessage result_message(std::move(fs_message));
+    if (result_message.header()->num_params != kNumParams) {
         zxlogf(ERROR,
                "optee: RPC command to remove file received unexpected number of parameters (%u)\n",
-               header()->num_params);
-        set_return_origin(TEEC_ORIGIN_COMMS);
-        set_return_code(TEEC_ERROR_BAD_PARAMETERS);
-        return false;
+               result_message.header()->num_params);
+        result_message.set_return_origin(TEEC_ORIGIN_COMMS);
+        result_message.set_return_code(TEEC_ERROR_BAD_PARAMETERS);
+        return fit::error(ZX_ERR_INVALID_ARGS);
     }
 
     // Parse the file name parameter
-    MessageParam& path_param = params()[kFileNameParamIndex];
+    MessageParam& path_param = result_message.params()[kFileNameParamIndex];
     switch (path_param.attribute) {
     case MessageParam::kAttributeTypeTempMemInput: {
         MessageParam::TemporaryMemory& temp_mem = path_param.payload.temporary_memory;
-        path_mem_id_ = temp_mem.shared_memory_reference;
-        path_mem_size_ = temp_mem.size;
-        path_mem_paddr_ = static_cast<zx_paddr_t>(temp_mem.buffer);
+        result_message.path_mem_id_ = temp_mem.shared_memory_reference;
+        result_message.path_mem_size_ = temp_mem.size;
+        result_message.path_mem_paddr_ = static_cast<zx_paddr_t>(temp_mem.buffer);
         break;
     }
     case MessageParam::kAttributeTypeRegMemInput:
-        zxlogf(ERROR,
-               "optee: received unsupported registered memory parameter\n");
-        set_return_origin(TEEC_ORIGIN_COMMS);
-        set_return_code(TEEC_ERROR_NOT_IMPLEMENTED);
-        return false;
+        zxlogf(ERROR, "optee: received unsupported registered memory parameter\n");
+        result_message.set_return_origin(TEEC_ORIGIN_COMMS);
+        result_message.set_return_code(TEEC_ERROR_NOT_IMPLEMENTED);
+        return fit::error(ZX_ERR_NOT_SUPPORTED);
     default:
         zxlogf(ERROR,
                "optee: RPC command to remove file received unexpected second parameter\n");
-        set_return_origin(TEEC_ORIGIN_COMMS);
-        set_return_code(TEEC_ERROR_BAD_PARAMETERS);
-        return false;
+        result_message.set_return_origin(TEEC_ORIGIN_COMMS);
+        result_message.set_return_code(TEEC_ERROR_BAD_PARAMETERS);
+        return fit::error(ZX_ERR_INVALID_ARGS);
     }
 
-    return true;
+    return fit::ok(std::move(result_message));
 }
 
-bool RenameFileFileSystemRpcMessage::TryInitializeMembers() {
-    if (header()->num_params != kNumParams) {
+fit::result<RenameFileFileSystemRpcMessage, zx_status_t>
+RenameFileFileSystemRpcMessage::CreateFromFsRpcMessage(FileSystemRpcMessage&& fs_message) {
+    ZX_DEBUG_ASSERT(fs_message.file_system_command() == FileSystemCommand::kRenameFile);
+
+    RenameFileFileSystemRpcMessage result_message(std::move(fs_message));
+    if (result_message.header()->num_params != kNumParams) {
         zxlogf(ERROR,
                "optee: RPC command to rename file received unexpected number of parameters (%u)\n",
-               header()->num_params);
-        set_return_origin(TEEC_ORIGIN_COMMS);
-        set_return_code(TEEC_ERROR_BAD_PARAMETERS);
-        return false;
+               result_message.header()->num_params);
+        result_message.set_return_origin(TEEC_ORIGIN_COMMS);
+        result_message.set_return_code(TEEC_ERROR_BAD_PARAMETERS);
+        return fit::error(ZX_ERR_INVALID_ARGS);
     }
 
     // Parse the overwrite value
-    MessageParam& command_param = params()[kFileSystemCommandParamIndex];
+    MessageParam& command_param = result_message.params()[kFileSystemCommandParamIndex];
 
     // The attribute was already validated by FileSystemRpcMessage
     ZX_DEBUG_ASSERT(command_param.attribute == MessageParam::kAttributeTypeValueInput ||
                     command_param.attribute == MessageParam::kAttributeTypeValueInOut);
 
-    should_overwrite_ = (command_param.payload.value.generic.b != 0);
+    result_message.should_overwrite_ = (command_param.payload.value.generic.b != 0);
 
     // Parse the old file name parameter
-    MessageParam& old_file_name_param = params()[kOldFileNameParamIndex];
+    MessageParam& old_file_name_param = result_message.params()[kOldFileNameParamIndex];
     switch (old_file_name_param.attribute) {
     case MessageParam::kAttributeTypeTempMemInput: {
         MessageParam::TemporaryMemory& temp_mem = old_file_name_param.payload.temporary_memory;
-        old_file_name_mem_id_ = temp_mem.shared_memory_reference;
-        old_file_name_mem_size_ = temp_mem.size;
-        old_file_name_mem_paddr_ = static_cast<zx_paddr_t>(temp_mem.buffer);
+        result_message.old_file_name_mem_id_ = temp_mem.shared_memory_reference;
+        result_message.old_file_name_mem_size_ = temp_mem.size;
+        result_message.old_file_name_mem_paddr_ = static_cast<zx_paddr_t>(temp_mem.buffer);
         break;
     }
     case MessageParam::kAttributeTypeRegMemInput:
         zxlogf(ERROR, "optee: received unsupported registered memory parameter\n");
-        set_return_origin(TEEC_ORIGIN_COMMS);
-        set_return_code(TEEC_ERROR_NOT_IMPLEMENTED);
-        return false;
+        result_message.set_return_origin(TEEC_ORIGIN_COMMS);
+        result_message.set_return_code(TEEC_ERROR_NOT_IMPLEMENTED);
+        return fit::error(ZX_ERR_NOT_SUPPORTED);
     default:
         zxlogf(ERROR,
                "optee: RPC command to rename file received unexpected second parameter\n");
-        set_return_origin(TEEC_ORIGIN_COMMS);
-        set_return_code(TEEC_ERROR_BAD_PARAMETERS);
-        return false;
+        result_message.set_return_origin(TEEC_ORIGIN_COMMS);
+        result_message.set_return_code(TEEC_ERROR_BAD_PARAMETERS);
+        return fit::error(ZX_ERR_INVALID_ARGS);
     }
 
     // Parse the new file name parameter
-    MessageParam& new_file_name_param = params()[kNewFileNameParamIndex];
+    MessageParam& new_file_name_param = result_message.params()[kNewFileNameParamIndex];
     switch (new_file_name_param.attribute) {
     case MessageParam::kAttributeTypeTempMemInput: {
         MessageParam::TemporaryMemory& temp_mem = new_file_name_param.payload.temporary_memory;
-        new_file_name_mem_id_ = temp_mem.shared_memory_reference;
-        new_file_name_mem_size_ = temp_mem.size;
-        new_file_name_mem_paddr_ = static_cast<zx_paddr_t>(temp_mem.buffer);
+        result_message.new_file_name_mem_id_ = temp_mem.shared_memory_reference;
+        result_message.new_file_name_mem_size_ = temp_mem.size;
+        result_message.new_file_name_mem_paddr_ = static_cast<zx_paddr_t>(temp_mem.buffer);
         break;
     }
     case MessageParam::kAttributeTypeRegMemInput:
         zxlogf(ERROR, "optee: received unsupported registered memory parameter\n");
-        set_return_origin(TEEC_ORIGIN_COMMS);
-        set_return_code(TEEC_ERROR_NOT_IMPLEMENTED);
-        return false;
+        result_message.set_return_origin(TEEC_ORIGIN_COMMS);
+        result_message.set_return_code(TEEC_ERROR_NOT_IMPLEMENTED);
+        return fit::error(ZX_ERR_NOT_SUPPORTED);
     default:
         zxlogf(ERROR, "optee: RPC command to rename file received unexpected third parameter\n");
-        set_return_origin(TEEC_ORIGIN_COMMS);
-        set_return_code(TEEC_ERROR_BAD_PARAMETERS);
-        return false;
+        result_message.set_return_origin(TEEC_ORIGIN_COMMS);
+        result_message.set_return_code(TEEC_ERROR_BAD_PARAMETERS);
+        return fit::error(ZX_ERR_INVALID_ARGS);
     }
 
-    return true;
+    return fit::ok(std::move(result_message));
 }
 
 } // namespace optee

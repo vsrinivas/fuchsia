@@ -769,35 +769,36 @@ zx_status_t OpteeClient::HandleRpcCommand(const RpcFunctionExecuteCommandsArgs& 
 
     // Read message header from shared memory
     SharedMemory& msg_mem = *mem_iter;
-    RpcMessage message(&msg_mem);
-    if (!message.is_valid()) {
-        return ZX_ERR_INVALID_ARGS;
+    auto message_result = RpcMessage::CreateFromSharedMemory(&msg_mem);
+    if (!message_result.is_ok()) {
+        return message_result.error();
     }
+    RpcMessage message = message_result.take_value();
 
     // Mark that the return code will originate from driver
     message.set_return_origin(TEEC_ORIGIN_COMMS);
 
     switch (message.command()) {
     case RpcMessage::Command::kLoadTa: {
-        LoadTaRpcMessage load_ta_msg(std::move(message));
-        if (!load_ta_msg.is_valid()) {
-            return ZX_ERR_INVALID_ARGS;
+        auto load_ta_result = LoadTaRpcMessage::CreateFromRpcMessage(std::move(message));
+        if (!load_ta_result.is_ok()) {
+            return load_ta_result.error();
         }
-        return HandleRpcCommandLoadTa(&load_ta_msg);
+        return HandleRpcCommandLoadTa(&load_ta_result.value());
     }
     case RpcMessage::Command::kAccessFileSystem: {
-        FileSystemRpcMessage fs_msg(std::move(message));
-        if (!fs_msg.is_valid()) {
-            return ZX_ERR_INVALID_ARGS;
+        auto fs_result = FileSystemRpcMessage::CreateFromRpcMessage(std::move(message));
+        if (!fs_result.is_ok()) {
+            return fs_result.error();
         }
-        return HandleRpcCommandFileSystem(std::move(fs_msg));
+        return HandleRpcCommandFileSystem(fs_result.take_value());
     }
     case RpcMessage::Command::kGetTime: {
-        GetTimeRpcMessage get_time_msg(std::move(message));
-        if (!get_time_msg.is_valid()) {
-            return ZX_ERR_INVALID_ARGS;
+        auto get_time_result = GetTimeRpcMessage::CreateFromRpcMessage(std::move(message));
+        if (!get_time_result.is_ok()) {
+            return get_time_result.error();
         }
-        return HandleRpcCommandGetTime(&get_time_msg);
+        return HandleRpcCommandGetTime(&get_time_result.value());
     }
     case RpcMessage::Command::kWaitQueue:
         zxlogf(ERROR, "optee: RPC command wait queue recognized but not implemented\n");
@@ -806,18 +807,18 @@ zx_status_t OpteeClient::HandleRpcCommand(const RpcFunctionExecuteCommandsArgs& 
         zxlogf(ERROR, "optee: RPC command to suspend recognized but not implemented\n");
         return ZX_ERR_NOT_SUPPORTED;
     case RpcMessage::Command::kAllocateMemory: {
-        AllocateMemoryRpcMessage alloc_mem_msg(std::move(message));
-        if (!alloc_mem_msg.is_valid()) {
-            return ZX_ERR_INVALID_ARGS;
+        auto alloc_mem_result = AllocateMemoryRpcMessage::CreateFromRpcMessage(std::move(message));
+        if (!alloc_mem_result.is_ok()) {
+            return alloc_mem_result.error();
         }
-        return HandleRpcCommandAllocateMemory(&alloc_mem_msg);
+        return HandleRpcCommandAllocateMemory(&alloc_mem_result.value());
     }
     case RpcMessage::Command::kFreeMemory: {
-        FreeMemoryRpcMessage free_mem_msg(std::move(message));
-        if (!free_mem_msg.is_valid()) {
-            return ZX_ERR_INVALID_ARGS;
+        auto free_mem_result = FreeMemoryRpcMessage::CreateFromRpcMessage(std::move(message));
+        if (!free_mem_result.is_ok()) {
+            return free_mem_result.error();
         }
-        return HandleRpcCommandFreeMemory(&free_mem_msg);
+        return HandleRpcCommandFreeMemory(&free_mem_result.value());
     }
     case RpcMessage::Command::kPerformSocketIo:
         zxlogf(ERROR, "optee: RPC command to perform socket IO recognized but not implemented\n");
@@ -840,7 +841,6 @@ zx_status_t OpteeClient::HandleRpcCommand(const RpcFunctionExecuteCommandsArgs& 
 
 zx_status_t OpteeClient::HandleRpcCommandLoadTa(LoadTaRpcMessage* message) {
     ZX_DEBUG_ASSERT(message != nullptr);
-    ZX_DEBUG_ASSERT(message->is_valid());
 
     // Try to find the SharedMemory based on the memory id
     std::optional<SharedMemoryView> out_ta_mem; // Where to write the TA in memory
@@ -916,8 +916,6 @@ zx_status_t OpteeClient::HandleRpcCommandLoadTa(LoadTaRpcMessage* message) {
 }
 
 zx_status_t OpteeClient::HandleRpcCommandGetTime(GetTimeRpcMessage* message) {
-    ZX_DEBUG_ASSERT(message->is_valid());
-
     // Mark that the return code will originate from driver
     message->set_return_origin(TEEC_ORIGIN_COMMS);
 
@@ -944,7 +942,6 @@ zx_status_t OpteeClient::HandleRpcCommandGetTime(GetTimeRpcMessage* message) {
 
 zx_status_t OpteeClient::HandleRpcCommandAllocateMemory(AllocateMemoryRpcMessage* message) {
     ZX_DEBUG_ASSERT(message != nullptr);
-    ZX_DEBUG_ASSERT(message->is_valid());
 
     if (message->memory_type() == SharedMemoryType::kGlobal) {
         zxlogf(ERROR, "optee: implementation currently does not support global shared memory!\n");
@@ -977,7 +974,6 @@ zx_status_t OpteeClient::HandleRpcCommandAllocateMemory(AllocateMemoryRpcMessage
 
 zx_status_t OpteeClient::HandleRpcCommandFreeMemory(FreeMemoryRpcMessage* message) {
     ZX_DEBUG_ASSERT(message != nullptr);
-    ZX_DEBUG_ASSERT(message->is_valid());
 
     if (message->memory_type() == SharedMemoryType::kGlobal) {
         zxlogf(ERROR, "optee: implementation currently does not support global shared memory!\n");
@@ -1001,8 +997,6 @@ zx_status_t OpteeClient::HandleRpcCommandFreeMemory(FreeMemoryRpcMessage* messag
 }
 
 zx_status_t OpteeClient::HandleRpcCommandFileSystem(FileSystemRpcMessage&& message) {
-    ZX_DEBUG_ASSERT(message.is_valid());
-
     // Mark that the return code will originate from driver
     message.set_return_origin(TEEC_ORIGIN_COMMS);
 
@@ -1014,60 +1008,60 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystem(FileSystemRpcMessage&& messa
 
     switch (message.file_system_command()) {
     case FileSystemRpcMessage::FileSystemCommand::kOpenFile: {
-        OpenFileFileSystemRpcMessage open_file_msg(std::move(message));
-        if (!open_file_msg.is_valid()) {
-            return ZX_ERR_INVALID_ARGS;
+        auto result = OpenFileFileSystemRpcMessage::CreateFromFsRpcMessage(std::move(message));
+        if (!result.is_ok()) {
+            return result.error();
         }
-        return HandleRpcCommandFileSystemOpenFile(&open_file_msg);
+        return HandleRpcCommandFileSystemOpenFile(&result.value());
     }
     case FileSystemRpcMessage::FileSystemCommand::kCreateFile: {
-        CreateFileFileSystemRpcMessage create_file_msg(std::move(message));
-        if (!create_file_msg.is_valid()) {
-            return ZX_ERR_INVALID_ARGS;
+        auto result = CreateFileFileSystemRpcMessage::CreateFromFsRpcMessage(std::move(message));
+        if (!result.is_ok()) {
+            return result.error();
         }
-        return HandleRpcCommandFileSystemCreateFile(&create_file_msg);
+        return HandleRpcCommandFileSystemCreateFile(&result.value());
     }
     case FileSystemRpcMessage::FileSystemCommand::kCloseFile: {
-        CloseFileFileSystemRpcMessage close_file_msg(std::move(message));
-        if (!close_file_msg.is_valid()) {
-            return ZX_ERR_INVALID_ARGS;
+        auto result = CloseFileFileSystemRpcMessage::CreateFromFsRpcMessage(std::move(message));
+        if (!result.is_ok()) {
+            return result.error();
         }
-        return HandleRpcCommandFileSystemCloseFile(&close_file_msg);
+        return HandleRpcCommandFileSystemCloseFile(&result.value());
     }
     case FileSystemRpcMessage::FileSystemCommand::kReadFile: {
-        ReadFileFileSystemRpcMessage read_file_msg(std::move(message));
-        if (!read_file_msg.is_valid()) {
-            return ZX_ERR_INVALID_ARGS;
+        auto result = ReadFileFileSystemRpcMessage::CreateFromFsRpcMessage(std::move(message));
+        if (!result.is_ok()) {
+            return result.error();
         }
-        return HandleRpcCommandFileSystemReadFile(&read_file_msg);
+        return HandleRpcCommandFileSystemReadFile(&result.value());
     }
     case FileSystemRpcMessage::FileSystemCommand::kWriteFile: {
-        WriteFileFileSystemRpcMessage write_file_msg(std::move(message));
-        if (!write_file_msg.is_valid()) {
-            return ZX_ERR_INVALID_ARGS;
+        auto result = WriteFileFileSystemRpcMessage::CreateFromFsRpcMessage(std::move(message));
+        if (!result.is_ok()) {
+            return result.error();
         }
-        return HandleRpcCommandFileSystemWriteFile(&write_file_msg);
+        return HandleRpcCommandFileSystemWriteFile(&result.value());
     }
     case FileSystemRpcMessage::FileSystemCommand::kTruncateFile: {
-        TruncateFileFileSystemRpcMessage truncate_file_msg(std::move(message));
-        if (!truncate_file_msg.is_valid()) {
-            return ZX_ERR_INVALID_ARGS;
+        auto result = TruncateFileFileSystemRpcMessage::CreateFromFsRpcMessage(std::move(message));
+        if (!result.is_ok()) {
+            return result.error();
         }
-        return HandleRpcCommandFileSystemTruncateFile(&truncate_file_msg);
+        return HandleRpcCommandFileSystemTruncateFile(&result.value());
     }
     case FileSystemRpcMessage::FileSystemCommand::kRemoveFile: {
-        RemoveFileFileSystemRpcMessage remove_file_msg(std::move(message));
-        if (!remove_file_msg.is_valid()) {
-            return ZX_ERR_INVALID_ARGS;
+        auto result = RemoveFileFileSystemRpcMessage::CreateFromFsRpcMessage(std::move(message));
+        if (!result.is_ok()) {
+            return result.error();
         }
-        return HandleRpcCommandFileSystemRemoveFile(&remove_file_msg);
+        return HandleRpcCommandFileSystemRemoveFile(&result.value());
     }
     case FileSystemRpcMessage::FileSystemCommand::kRenameFile: {
-        RenameFileFileSystemRpcMessage rename_file_msg(std::move(message));
-        if (!rename_file_msg.is_valid()) {
-            return ZX_ERR_INVALID_ARGS;
+        auto result = RenameFileFileSystemRpcMessage::CreateFromFsRpcMessage(std::move(message));
+        if (!result.is_ok()) {
+            return result.error();
         }
-        return HandleRpcCommandFileSystemRenameFile(&rename_file_msg);
+        return HandleRpcCommandFileSystemRenameFile(&result.value());
     }
     case FileSystemRpcMessage::FileSystemCommand::kOpenDirectory:
         zxlogf(ERROR, "optee: RPC command to open directory recognized but not implemented\n");
@@ -1087,7 +1081,6 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystem(FileSystemRpcMessage&& messa
 
 zx_status_t OpteeClient::HandleRpcCommandFileSystemOpenFile(OpenFileFileSystemRpcMessage* message) {
     ZX_DEBUG_ASSERT(message != nullptr);
-    ZX_DEBUG_ASSERT(message->is_valid());
     ZX_DEBUG_ASSERT(service_provider_channel_.is_valid());
 
     zxlogf(SPEW, "optee: received RPC to open file\n");
@@ -1136,7 +1129,6 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemOpenFile(OpenFileFileSystemRp
 zx_status_t OpteeClient::HandleRpcCommandFileSystemCreateFile(
     CreateFileFileSystemRpcMessage* message) {
     ZX_DEBUG_ASSERT(message != nullptr);
-    ZX_DEBUG_ASSERT(message->is_valid());
 
     zxlogf(SPEW, "optee: received RPC to create file\n");
 
@@ -1186,7 +1178,6 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemCreateFile(
 zx_status_t OpteeClient::HandleRpcCommandFileSystemCloseFile(
     CloseFileFileSystemRpcMessage* message) {
     ZX_DEBUG_ASSERT(message != nullptr);
-    ZX_DEBUG_ASSERT(message->is_valid());
 
     zxlogf(SPEW, "optee: received RPC to close file\n");
 
@@ -1202,7 +1193,6 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemCloseFile(
 
 zx_status_t OpteeClient::HandleRpcCommandFileSystemReadFile(ReadFileFileSystemRpcMessage* message) {
     ZX_DEBUG_ASSERT(message != nullptr);
-    ZX_DEBUG_ASSERT(message->is_valid());
 
     zxlogf(SPEW, "optee: received RPC to read from file\n");
 
@@ -1264,7 +1254,6 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemReadFile(ReadFileFileSystemRp
 zx_status_t OpteeClient::HandleRpcCommandFileSystemWriteFile(
     WriteFileFileSystemRpcMessage* message) {
     ZX_DEBUG_ASSERT(message != nullptr);
-    ZX_DEBUG_ASSERT(message->is_valid());
 
     zxlogf(SPEW, "optee: received RPC to write file\n");
 
@@ -1318,7 +1307,6 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemWriteFile(
 zx_status_t OpteeClient::HandleRpcCommandFileSystemTruncateFile(
     TruncateFileFileSystemRpcMessage* message) {
     ZX_DEBUG_ASSERT(message != nullptr);
-    ZX_DEBUG_ASSERT(message->is_valid());
 
     zxlogf(SPEW, "optee: received RPC to truncate file\n");
 
@@ -1348,7 +1336,6 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemTruncateFile(
 zx_status_t OpteeClient::HandleRpcCommandFileSystemRemoveFile(
     RemoveFileFileSystemRpcMessage* message) {
     ZX_DEBUG_ASSERT(message != nullptr);
-    ZX_DEBUG_ASSERT(message->is_valid());
 
     zxlogf(SPEW, "optee: received RPC to remove file\n");
 
@@ -1392,7 +1379,6 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemRemoveFile(
 zx_status_t OpteeClient::HandleRpcCommandFileSystemRenameFile(
     RenameFileFileSystemRpcMessage* message) {
     ZX_DEBUG_ASSERT(message != nullptr);
-    ZX_DEBUG_ASSERT(message->is_valid());
 
     zxlogf(SPEW, "optee: received RPC to rename file\n");
 
