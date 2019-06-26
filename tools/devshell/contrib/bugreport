@@ -16,19 +16,29 @@
 ## Each element will be separated in its own report file within a supplied
 ## directory. If no directory is supplied, a unique one will be generated.
 ##
-## Usage: fx bugreport [(--output-directory|-o) <DIRECTORY>]
+## Usage: fx bugreport [(--output-directory|-o)] <DIRECTORY>] -- <TARGET ARGS>
 ##
-##     --output-directory  (Optional) Directory where the files will be stored.
-##                         Must be an existing directory.
+##    --output-directory    (Optional) Directory where the files will be stored.
+##                          Must be an existing directory.
+##    --serial              (Optional) Use serial channel instead of ssh.
 ##
+##    <TARGET ARGS>         Arguments to be passed to the bugreport client within
+##                          the target.
+##
+## NOTE: For the serial report to work correctly, it requires a clean channel
+##       (no other output). While this is often true, it is not assured. This
+##       means that the serial report is best effort only. If it fails, try
+##       running it again or use minimal.
 
 # Load environment helpers.
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../contrib/lib/serial.sh || exit $?
 fx-config-read
 
 # Flag Parsing.
 output_dir=
 is_output_dir_provided=false
+use_serial=
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -41,8 +51,15 @@ while [[ $# -gt 0 ]]; do
       output_dir="$1"
       is_output_dir_provided=true
       ;;
+    --serial)
+      use_serial=true
+      ;;
+    --)
+      shift
+      break   # Remaining flags are passed on to the target.
+      ;;
     *)
-      echo "Invalid flag $1"
+      fx-error "Invalid flag $1"
       exit 1
   esac
   shift
@@ -51,21 +68,23 @@ done
 # Check the validity of the output file.
 if [[ "${is_output_dir_provided}" == "true" ]]; then
   if [[ -z "${output_dir}" ]]; then
-    echo "No output directory provided."
+    fx-error "No output directory provided."
     exit 1
   fi
 
   if [[ ! -d "${output_dir}" ]]; then
-    echo "Path provided is not a directory."
+    fx-error "Path provided is not a directory."
     exit 1
   fi
 fi
 
-# Verify that we can obtain the target.
-target=$(get-fuchsia-device-addr)
-if [[ -z "${target}" ]]; then
-  echo "Could not obtain target name."
-  exit 1
+# Verify that we can obtain the target (ssh only).
+if [[ -z "${use_serial}" ]]; then
+  target=$(get-fuchsia-device-addr)
+  if [[ -z "${target}" ]]; then
+    fx-error "Could not obtain target name."
+    exit 1
+  fi
 fi
 
 # If no output directory is supplied, generate a unique one according to time.
@@ -77,20 +96,52 @@ if [[ -z "${output_dir}" ]]; then
   mkdir -p "${output_dir}"
   if [[ "$?" -ne 0 ]]; then
     rm -rf "${output_dir}"  # Just in case.
-    echo "Failed to create output directory ${output_dir}."
-    echo "Check errors or provide your own with --output-directory. See --help for more details."
+    fx-error "Failed to create output directory ${output_dir}."
+    fx-error "Check errors or provide your own with --output-directory. See --help for more details."
     exit 1
   fi
 fi
 
 # At this point, we know that we have a valid output directory.
 
-# Obtain the bug report and store it in a temporary location.
+error_bringing_report=
 tempfile="/tmp/__bugreport_temp"
-fx-command-run "ssh" "${target}" "bugreport" > "${tempfile}"
-if [ "$?" -ne 0 ]; then
-  echo "Could not obtain bugreport from target."
+if [[ -z "${use_serial}" ]]; then
+  # USING SSH.
+  # Obtain the bug report and store it in a temporary location.
+  fx-command-run "ssh" "${target}" "bugreport ${@}" > "${tempfile}"
+  if [ "$?" -ne 0 ]; then
+    fx-error "Could not obtain bugreport from target."
+    error_bringing_report=true
+  fi
+else
+  # USING SERIAL.
+  get_serial_device
+  if [[ -z "${DEVICE}" ]]; then
+    fx-error "Could not obtain a serial device."
+    error_bringing_report=true
+  elif serial_port_unavailable "${DEVICE}"; then
+    fx-error "${DEVICE} is unavailable."
+    error_bringing_report=true
+  else
+    echo "Transfering data to host..."
+    send_serial_command "${DEVICE}" "${tempfile}" "run bugreport.cmx ${@}"
 
+    if [[ "$?" -ne 0 ]]; then
+      fx-error "Could not obtain bugreport from target."
+      error_bringing_report=true
+    else
+      # Do the adhoc serial cleanup.
+      # This is needed because the report file will have all the serial output,
+      # including the prompt and the actual "run bugreport.cmx" command.
+      # In order to have our process tool work, we need to clear it to be just the
+      # json content.
+      sed -e "1,2d" -e "$ s/.*/}/" -i "${tempfile}"
+    fi
+  fi
+fi
+
+if [[ ! -z "${error_bringing_report}" ]]; then
   # Do error cleanup.
   rm -f "${tempfile}"
   if [[ "${is_output_dir_provided}" == "false" ]]; then
@@ -102,8 +153,8 @@ fi
 # Process the bugreport.
 "${FUCHSIA_BUILD_DIR}/tools/bugreport" "${output_dir}" < "${tempfile}"
 if [ "$?" -ne 0 ]; then
-  echo "Error processing bugreport."
-  echo "Downloaded unprocessed report is in ${tempfile}."
+  fx-error "Error processing bugreport."
+  fx-error "Downloaded unprocessed report is in ${tempfile}."
 
   # Clean up temp directory.
   if [[ "${is_output_dir_provided}" == "false" ]]; then
