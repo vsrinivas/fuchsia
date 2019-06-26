@@ -95,6 +95,7 @@ impl MarkdownTemplate {
             ("eq", crate::templates::eq),
             ("pl", crate::templates::package_link),
             ("rpf", crate::templates::remove_parent_folders),
+            ("sl", crate::templates::source_link),
         ];
         for &(name, helper) in helpers {
             handlebars.register_helper(name, Box::new(helper));

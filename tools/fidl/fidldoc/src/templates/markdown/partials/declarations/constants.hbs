@@ -7,7 +7,7 @@
     <tr><th>Name</th><th>Value</th><th>Type</th></tr>
     {{~ #each const_declarations ~}}
         <tr>
-            <td><a href="{{@root.config.source.baseUrl}}{{rpf location.filename}}{{@root.config.source.line}}{{location.line}}">{{rpn name}}</a></td>
+            <td><a href="{{sl @root location}}">{{rpn name}}</a></td>
             {{#if (eq type.kind "primitive") ~}}
                 <td>
                     <code>

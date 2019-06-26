@@ -5,7 +5,7 @@
         "href": "https://fuchsia.googlesource.com"
     }],
     "source": {
-        "baseUrl": "https://fuchsia.googlesource.com/fuchsia/+/master/",
+        "baseUrl": "https://fuchsia.googlesource.com/fuchsia/+/",
         "package": "/",
         "line": "#"
     }

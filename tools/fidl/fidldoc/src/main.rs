@@ -43,6 +43,9 @@ struct Opt {
     /// Path to a configuration file to provide additional options
     #[structopt(short = "c", long = "config", default_value = "./fidldoc.config.json")]
     config: String,
+    /// Current commit hash, useful to coordinate doc generation with a specific source code revision
+    #[structopt(long = "tag", default_value = "master")]
+    tag: String,
     //// Set the input file(s) to use
     #[structopt(parse(from_os_str), raw(required = "true"))]
     input: Vec<PathBuf>,
@@ -141,6 +144,7 @@ fn run(opt: Opt) -> Result<(), Error> {
             "table_of_contents": table_of_contents,
             "fidldoc_version": FIDLDOC_VERSION,
             "config": fidl_config,
+            "tag": &opt.tag,
             "search": declarations,
             "url_path": url_path,
         });

@@ -146,9 +146,47 @@ fn rpf(path: &str) -> String {
     RE.replace_all(&path, "").into_owned()
 }
 
+fn source_link(
+    h: &Helper,
+    _: &Handlebars,
+    _: &Context,
+    _: &mut RenderContext,
+    out: &mut Output,
+) -> Result<(), RenderError> {
+    let fidl_json =
+        h.param(0).ok_or_else(|| RenderError::new("Param 0 is required for sl helper"))?;
+    let location = h.param(1).ok_or_else(|| RenderError::new("Param 1 is required for sl helper"))?;
+    debug!("source_link called on {} and {}", fidl_json.value().to_string(), location.value().to_string());
+    out.write(&sl(&fidl_json.value(), &location.value()))?;
+    Ok(())
+}
+
+fn sl(fidl_json: &Value, location: &Value) -> String {
+    if location["line"].as_str().is_some() {
+        // Output source link with line number
+        format!(
+            "{baseUrl}{tag}/{filename}{linePrefix}{lineNo}",
+            baseUrl = fidl_json["config"]["source"]["baseUrl"].as_str().unwrap(),
+            tag = fidl_json["tag"].as_str().unwrap(),
+            filename = rpn(location["filename"].as_str().unwrap()),
+            linePrefix = fidl_json["config"]["source"]["line"].as_str().unwrap(),
+            lineNo = location["line"].as_str().unwrap()
+        )
+    } else {
+        // Output general source link, without line number
+        format!(
+            "{baseUrl}{tag}/{filename}",
+            baseUrl = fidl_json["config"]["source"]["baseUrl"].as_str().unwrap(),
+            tag = fidl_json["tag"].as_str().unwrap(),
+            filename = rpn(location["filename"].as_str().unwrap())
+        )
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
+    use serde_json::json;
 
     #[test]
     fn sanitize_name_test() {
@@ -185,5 +223,37 @@ mod test {
 
         let path = "../../sdk/fidl/../fuchsia-web/frame.fidl";
         assert_eq!(rpf(path), "sdk/fidl/../fuchsia-web/frame.fidl");
+    }
+
+    #[test]
+    fn sl_test() {
+        let fidl_json = json!({
+            "tag": "master",
+            "config": json!({
+                "source": json!({
+                    "baseUrl": "https://example.com/",
+                    "line": "#"
+                })
+            })
+        });
+
+        let location_line = json!({
+            "filename": "sample.fidl",
+            "line": "42"
+        });
+
+        assert_eq!(
+            sl(&fidl_json, &location_line),
+            "https://example.com/master/sample.fidl#42"
+        );
+
+        let location_no_line = json!({
+            "filename": "foobar.fidl"
+        });
+
+        assert_eq!(
+            sl(&fidl_json, &location_no_line),
+            "https://example.com/master/foobar.fidl"
+        );
     }
 }
