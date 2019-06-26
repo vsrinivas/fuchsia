@@ -13,6 +13,7 @@
 #include <queue>
 
 #include "garnet/lib/ui/gfx/engine/frame_scheduler.h"
+#include "garnet/lib/ui/gfx/engine/frame_predictor.h"
 #include "garnet/lib/ui/gfx/id.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
@@ -28,6 +29,7 @@ class Display;
 class DefaultFrameScheduler : public FrameScheduler {
  public:
   explicit DefaultFrameScheduler(const Display* display,
+                                 std::unique_ptr<FramePredictor> predictor,
                                  inspect::Node inspect_node = inspect::Node());
   ~DefaultFrameScheduler();
 
@@ -49,6 +51,9 @@ class DefaultFrameScheduler : public FrameScheduler {
   // ImagePipe with a new Image to present.
   void ScheduleUpdateForSession(zx_time_t presentation_time,
                                 scenic_impl::SessionId session) override;
+
+  constexpr static zx::duration kInitialRenderDuration = zx::msec(5);
+  constexpr static zx::duration kInitialUpdateDuration = zx::msec(1);
 
   // Public for testing.
   constexpr static size_t kMaxOutstandingFrames = 2;
@@ -80,9 +85,6 @@ class DefaultFrameScheduler : public FrameScheduler {
   ComputePresentationAndWakeupTimesForTargetTime(
       zx_time_t requested_presentation_time) const;
 
-  // Return the predicted amount of time required to render a frame.
-  zx_time_t PredictRequiredFrameRenderTime() const;
-
   // Executes updates that are scheduled up to and including a given
   // presentation time. Returns true if rendering is needed.
   bool ApplyScheduledSessionUpdates(zx_time_t presentation_time);
@@ -100,6 +102,7 @@ class DefaultFrameScheduler : public FrameScheduler {
   bool render_pending_ = false;
   zx_time_t wakeup_time_;
   zx_time_t next_presentation_time_;
+  std::unique_ptr<FramePredictor> frame_predictor_;
 
   // The async task that wakes up to start rendering.
   async::TaskMethod<DefaultFrameScheduler,

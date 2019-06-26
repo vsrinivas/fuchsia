@@ -75,8 +75,11 @@ TEST_F(FramePredictorTest, PredictionsAfterUpdating_ShouldBeMoreReasonable) {
 TEST_F(FramePredictorTest,
        OneExpensiveTime_ShouldNotPredictForFutureVsyncIntervals) {
   const zx::duration update_duration = zx::msec(4);
-  const zx::duration render_duration = zx::msec(10);
-  const zx::duration vsync_interval = zx::msec(10);
+  const zx::duration render_duration = zx::msec(30);
+
+  const zx::duration vsync_interval = zx::msec(20);
+
+  EXPECT_GT(render_duration + update_duration, vsync_interval);
 
   predictor_->ReportRenderDuration(render_duration);
   predictor_->ReportUpdateDuration(update_duration);
@@ -88,8 +91,8 @@ TEST_F(FramePredictorTest,
   auto prediction = predictor_->GetPrediction(request);
 
   EXPECT_GE(prediction.latch_point_time, request.now);
-  EXPECT_LE(prediction.presentation_time,
-            request.last_vsync_time + request.vsync_interval);
+  EXPECT_LE(prediction.presentation_time.get(),
+            request.last_vsync_time.get() + vsync_interval.get());
 }
 
 TEST_F(FramePredictorTest,
@@ -114,8 +117,8 @@ TEST_F(FramePredictorTest,
             request.last_vsync_time + request.vsync_interval);
   EXPECT_LE(prediction.presentation_time,
             request.last_vsync_time + request.vsync_interval * 2);
-  EXPECT_LE(prediction.latch_point_time,
-            prediction.presentation_time - request.vsync_interval);
+  EXPECT_LE(prediction.latch_point_time.get(),
+            prediction.presentation_time.get() - request.vsync_interval.get());
 }
 
 TEST_F(FramePredictorTest, ManyFramesOfPredictions_ShouldBeReasonable) {
@@ -198,17 +201,21 @@ TEST_F(FramePredictorTest, MissedPresentRequest_ShouldTargetNextVsync) {
             prediction.presentation_time - vsync_interval);
 }
 
-TEST_F(FramePredictorTest, AttemptsToBeLowLatent_ShouldBePossible) {
+TEST_F(FramePredictorTest, AttemptsToBeLowLatency_ShouldBePossible) {
   const zx::duration update_duration = zx::msec(1);
   const zx::duration render_duration = zx::msec(3);
-  predictor_->ReportRenderDuration(render_duration);
-  predictor_->ReportUpdateDuration(update_duration);
+
+  // Fill the window size.
+  for (int i = 0; i < 10; ++i) {
+    predictor_->ReportRenderDuration(render_duration);
+    predictor_->ReportUpdateDuration(update_duration);
+  }
 
   const zx::duration vsync_interval = zx::msec(10);
   zx::time last_vsync_time = ms_to_time(10);
   zx::time requested_present = last_vsync_time + vsync_interval;
   zx::time now =
-      requested_present - update_duration - render_duration - zx::msec(1);
+      requested_present - update_duration - render_duration - zx::usec(1500);
   EXPECT_GT(now, last_vsync_time);
 
   PredictionRequest request = {.now = now,
@@ -218,8 +225,8 @@ TEST_F(FramePredictorTest, AttemptsToBeLowLatent_ShouldBePossible) {
   auto prediction = predictor_->GetPrediction(request);
 
   // The prediction should be for the next vsync.
-  EXPECT_LE(prediction.presentation_time, last_vsync_time + vsync_interval);
-  EXPECT_GE(prediction.latch_point_time, now);
+  EXPECT_LE(prediction.presentation_time.get(), last_vsync_time.get() + vsync_interval.get());
+  EXPECT_GE(prediction.latch_point_time.get(), now.get());
 }
 
 }  // namespace test

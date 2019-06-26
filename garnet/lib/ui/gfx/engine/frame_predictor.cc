@@ -30,17 +30,21 @@ void FramePredictor::ReportUpdateDuration(zx::duration time_to_update) {
 }
 
 zx::duration FramePredictor::PredictTotalRequiredDuration() const {
+    TRACE_DURATION("gfx", "FramePredictor::PredictTotalRequiredDuration");
   const zx::duration predicted_time_to_update =
       update_duration_predictor_.GetPrediction();
   const zx::duration predicted_time_to_render =
       render_duration_predictor_.GetPrediction();
 
   const zx::duration predicted_frame_duration =
-      predicted_time_to_update + predicted_time_to_render + kHardcodedMargin;
+      std::min(kMaxFrameTime, predicted_time_to_update + predicted_time_to_render + kHardcodedMargin);
 
+  // Pretty print the times in milliseconds.
   TRACE_INSTANT("gfx", "FramePredictor::PredictRequiredFrameRenderTime",
-                TRACE_SCOPE_THREAD, "Predicted frame duration",
-                predicted_frame_duration.get());
+                TRACE_SCOPE_PROCESS, "Predicted frame duration(ms)",
+                static_cast<double>(predicted_frame_duration.to_usecs())/1000,
+                "Render time(ms)", static_cast<double>(predicted_time_to_render.to_usecs())/1000,
+                "Update time(ms)", static_cast<double>(predicted_time_to_update.to_usecs())/1000);
 
   return predicted_frame_duration;
 }

@@ -40,6 +40,10 @@ class FrameTimings : public escher::Reffable {
   static constexpr zx_time_t kTimeDropped = ZX_TIME_INFINITE;
 
   // Timestamps of all points managed by FrameTimings.
+  //
+  // Note that there potentially can be multiple times a frame was updated before
+  // it was finally rendered, and |update_done_time| tracks the last of those
+  // updates. See SCN-1482 for more details.
   struct Timestamps {
     zx_time_t latch_point_time;
     zx_time_t update_done_time;

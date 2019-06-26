@@ -5,6 +5,7 @@
 #include "garnet/lib/ui/gfx/tests/mocks.h"
 
 #include "garnet/lib/ui/gfx/engine/default_frame_scheduler.h"
+#include "garnet/lib/ui/gfx/engine/frame_predictor.h"
 #include "garnet/lib/ui/gfx/tests/session_test.h"
 #include "garnet/lib/ui/scenic/command_dispatcher.h"
 
@@ -79,7 +80,7 @@ EngineForTest::EngineForTest(sys::ComponentContext* component_context,
                              ErrorReporter* error_reporter)
     : Engine(component_context,
              std::make_unique<DefaultFrameScheduler>(
-                 display_manager->default_display()),
+                 display_manager->default_display(), std::make_unique<FramePredictor>(DefaultFrameScheduler::kInitialRenderDuration, DefaultFrameScheduler::kInitialUpdateDuration)),
              display_manager, std::move(r),
              std::make_unique<SessionManagerForTest>(event_reporter,
                                                      error_reporter),

@@ -13,7 +13,7 @@ namespace scenic_impl {
 namespace gfx {
 
 // Class for predicting future durations based on previous measurements. Uses an
-// optimistic approach that determines the "most optimistic duration" based on
+// pessmistic approach that determines the "most pessmistic duration" based on
 // the last N measurements, where N is a range of values set by the client.
 //
 // TODO(SCN-1415) When Scenic has priority gpu vk queues, revisit this
@@ -23,7 +23,7 @@ namespace gfx {
 // work Scenic is doing.
 class DurationPredictor {
  public:
-  DurationPredictor(size_t optimism_window_size,
+  DurationPredictor(size_t window_size,
                     zx::duration initial_prediction);
   ~DurationPredictor() = default;
 
@@ -35,7 +35,7 @@ class DurationPredictor {
   const size_t kWindowSize;
   std::deque<zx::duration> window_;  // Ring buffer.
 
-  size_t current_minimum_duration_index_ = 0;
+  size_t current_maximum_duration_index_ = 0;
 };
 
 }  // namespace gfx

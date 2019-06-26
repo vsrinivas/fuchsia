@@ -25,7 +25,6 @@ TEST(DurationPredictor, PredictionAfterWindowFlushIsMeasurement) {
   const zx::duration measurement = zx::msec(5);
   EXPECT_GT(measurement, kInitialPrediction);
   predictor.InsertNewMeasurement(measurement);
-  EXPECT_EQ(predictor.GetPrediction(), kInitialPrediction);
 
   for (size_t i = 0; i < kWindowSize - 1; ++i) {
     predictor.InsertNewMeasurement(measurement);
@@ -33,38 +32,38 @@ TEST(DurationPredictor, PredictionAfterWindowFlushIsMeasurement) {
   EXPECT_EQ(predictor.GetPrediction(), measurement);
 }
 
-TEST(DurationPredictor, PredictionIsSmallestInWindowAsMeasurementsIncrease) {
+TEST(DurationPredictor, PredictionIsLargestInWindowAsMeasurementsIncrease) {
   size_t window_size = 10;
   DurationPredictor predictor(window_size, /* initial prediction */ zx::usec(0));
 
   for (size_t i = 1; i <= window_size; ++i) {
     predictor.InsertNewMeasurement(zx::msec(i));
+    EXPECT_EQ(predictor.GetPrediction(), zx::msec(i));
   }
-  EXPECT_EQ(predictor.GetPrediction(), zx::msec(1));
 }
 
-TEST(DurationPredictor, PredictionIsSmallestInWindowAsMeasurementsDecrease) {
+TEST(DurationPredictor, PredictionIsLargestInWindowAsMeasurementsDecrease) {
   size_t window_size = 10;
   DurationPredictor predictor(window_size, /* initial prediction */ zx::usec(0));
 
   for (size_t i = window_size; i > 0; --i) {
     predictor.InsertNewMeasurement(zx::msec(i));
+    EXPECT_EQ(predictor.GetPrediction(), zx::msec(window_size));
   }
-  EXPECT_EQ(predictor.GetPrediction(), zx::msec(1));
 }
 
-TEST(DurationPredictor, PredictionIsSmallestInWindow) {
+TEST(DurationPredictor, PredictionIsLargestInWindow) {
   size_t window_size = 10;
   DurationPredictor predictor(window_size, /* initial prediction */ zx::usec(0));
 
-  const std::vector<zx_duration_t> measurements{12, 4, 5, 2, 8, 55, 13, 6, 8, 9};
+  const std::vector<zx_duration_t> measurements{12, 4, 5, 2, 8, 15, 13, 6, 8, 9};
   for (size_t i = 0; i < measurements.size(); ++i) {
     predictor.InsertNewMeasurement(zx::msec(measurements[i]));
   }
-  EXPECT_EQ(predictor.GetPrediction(), zx::msec(2));
+  EXPECT_EQ(predictor.GetPrediction(), zx::msec(15));
 }
 
-TEST(DurationPredictor, MinIsResetWhenSmallestIsOutOfWindow) {
+TEST(DurationPredictor, MaxIsResetWhenLargestIsOutOfWindow) {
   size_t window_size = 4;
   DurationPredictor predictor(window_size, /* initial prediction */ zx::usec(0));
 
@@ -72,7 +71,7 @@ TEST(DurationPredictor, MinIsResetWhenSmallestIsOutOfWindow) {
   for (size_t i = 0; i < measurements.size(); ++i) {
     predictor.InsertNewMeasurement(zx::msec(measurements[i]));
   }
-  EXPECT_EQ(predictor.GetPrediction(), zx::msec(6));
+  EXPECT_EQ(predictor.GetPrediction(), zx::msec(13));
 }
 
 TEST(DurationPredictor, WindowSizeOfOneWorks) {

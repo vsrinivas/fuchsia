@@ -10,6 +10,7 @@
 #include <zircon/assert.h>
 
 #include "garnet/lib/ui/gfx/engine/default_frame_scheduler.h"
+#include "garnet/lib/ui/gfx/engine/frame_predictor.h"
 #include "garnet/lib/ui/gfx/engine/session_handler.h"
 #include "garnet/lib/ui/gfx/screenshotter.h"
 #include "garnet/lib/ui/scenic/scenic.h"
@@ -62,6 +63,8 @@ std::unique_ptr<Engine> GfxSystem::InitializeEngine() {
       context()->app_context(),
       std::make_unique<DefaultFrameScheduler>(
           display_manager_->default_display(),
+          std::make_unique<FramePredictor>(DefaultFrameScheduler::kInitialRenderDuration,
+                                           DefaultFrameScheduler::kInitialUpdateDuration),
           context()->inspect_node()->CreateChild("FrameScheduler")),
       std::make_unique<SessionManager>(
           context()->inspect_node()->CreateChild("SessionManager")),

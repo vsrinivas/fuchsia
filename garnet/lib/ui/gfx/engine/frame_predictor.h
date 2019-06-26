@@ -72,9 +72,14 @@ class FramePredictor {
   zx::duration PredictTotalRequiredDuration() const;
 
   // Safety margin added to prediction time to reduce impact of noise and
-  // misprediction. Unfortunately means minimum possible latency is increased
-  // by the same amount.
-  const zx::duration kHardcodedMargin = zx::usec(500);  // 0.5ms
+  // misprediction. Unfortunately this means minimum possible latency is
+  // increased by the same amount.
+  const zx::duration kHardcodedMargin = zx::msec(1);  // 1ms
+
+  // Rarely, it is possible for abnormally long GPU contexts to occur, and
+  // when they occur we do not want them to mess up future predictions by
+  // too much. We therefore clamp RenderDurations by this much.
+  const zx::duration kMaxFrameTime = zx::usec(16'666); // 16.66ms
 
   // Render time prediction.
   const size_t kRenderPredictionWindowSize = 3;

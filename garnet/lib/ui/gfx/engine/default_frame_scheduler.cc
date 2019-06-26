@@ -18,9 +18,11 @@ namespace scenic_impl {
 namespace gfx {
 
 DefaultFrameScheduler::DefaultFrameScheduler(const Display* display,
+                                             std::unique_ptr<FramePredictor> predictor,
                                              inspect::Node inspect_node)
     : dispatcher_(async_get_default_dispatcher()),
       display_(display),
+      frame_predictor_(std::move(predictor)),
       inspect_node_(std::move(inspect_node)),
       weak_factory_(this) {
   outstanding_frames_.reserve(kMaxOutstandingFrames);
@@ -40,6 +42,18 @@ void DefaultFrameScheduler::OnFrameRendered(const FrameTimings& timings) {
                 TRACE_SCOPE_PROCESS, "Timestamp",
                 timings.GetTimestamps().render_done_time, "frame_number",
                 timings.frame_number());
+
+  auto current_timestamps = timings.GetTimestamps();
+
+  if (current_timestamps.render_done_time == FrameTimings::kTimeDropped) {
+    return;
+  }
+
+  zx_duration_t duration = current_timestamps.render_done_time
+                            - current_timestamps.render_start_time;
+  FXL_DCHECK(duration > 0);
+
+  frame_predictor_->ReportRenderDuration(zx::duration(duration));
 }
 
 void DefaultFrameScheduler::SetRenderContinuously(bool render_continuously) {
@@ -49,61 +63,22 @@ void DefaultFrameScheduler::SetRenderContinuously(bool render_continuously) {
   }
 }
 
-zx_time_t DefaultFrameScheduler::PredictRequiredFrameRenderTime() const {
-  // TODO(SCN-400): more sophisticated prediction.  This might require more
-  // info, e.g. about how many compositors will be rendering scenes, at what
-  // resolutions, etc.
-  constexpr zx_time_t kHardcodedPrediction = 8'000'000;  // 8ms
-  return kHardcodedPrediction;
-}
-
 std::pair<zx_time_t, zx_time_t>
 DefaultFrameScheduler::ComputePresentationAndWakeupTimesForTargetTime(
     const zx_time_t requested_presentation_time) const {
   const zx_time_t last_vsync_time = display_->GetLastVsyncTime();
   const zx_duration_t vsync_interval = display_->GetVsyncInterval();
   const zx_time_t now = async_now(dispatcher_);
-  const zx_duration_t required_render_time = PredictRequiredFrameRenderTime();
 
-  // Compute the number of full vsync intervals between the last vsync and the
-  // requested presentation time.  Notes:
-  //   - The requested time might be earlier than the last vsync time,
-  //     for example when client content is a bit late.
-  //   - We subtract a nanosecond before computing the number of intervals, to
-  //     avoid an off-by-one error in the common case where a client computes a
-  //     a desired presentation time based on a previously-received actual
-  //     presentation time.
-  uint64_t num_intervals =
-      1 + (requested_presentation_time <= last_vsync_time
-               ? 0
-               : (requested_presentation_time - last_vsync_time - 1) /
-                     vsync_interval);
+  //TODO(SCN-1467): Standardize zx::time/zx_time_t use.
+  PredictedTimes times = frame_predictor_->GetPrediction(
+          {.now = zx::time(now),
+           .requested_presentation_time = zx::time(requested_presentation_time),
+           .last_vsync_time = zx::time(last_vsync_time),
+           .vsync_interval = zx::duration(vsync_interval)
+           });
 
-  // Compute the target vsync/presentation time, and the time we would need to
-  // start rendering to meet the target.
-  zx_time_t target_presentation_time =
-      last_vsync_time + (num_intervals * vsync_interval);
-  zx_time_t wakeup_time = target_presentation_time - required_render_time;
-  // Handle startup-time corner case: since monotonic clock starts at 0, there
-  // will be underflow when required_render_time > target_presentation_time,
-  // resulting in a *very* late wakeup time.
-  while (required_render_time > target_presentation_time) {
-    target_presentation_time += vsync_interval;
-    wakeup_time = target_presentation_time - required_render_time;
-  }
-
-  // If it's too late to start rendering, delay a frame until there is enough
-  // time.
-  while (wakeup_time <= now) {
-    target_presentation_time += vsync_interval;
-    wakeup_time += vsync_interval;
-  }
-
-#if SCENIC_IGNORE_VSYNC
-  return std::make_pair(now, now);
-#else
-  return std::make_pair(target_presentation_time, wakeup_time);
-#endif
+  return std::make_pair(times.presentation_time.get(), times.latch_point_time.get());
 }
 
 void DefaultFrameScheduler::RequestFrame() {
@@ -162,6 +137,10 @@ void DefaultFrameScheduler::MaybeRenderFrame(async_dispatcher_t*,
     inspect_last_successful_update_start_time_.Set(update_start_time);
   }
 
+  // TODO(SCN-1482) Revisit how we do this.
+  const zx_time_t update_end_time = async_now(dispatcher_);
+  frame_predictor_->ReportUpdateDuration(zx::duration(update_end_time - update_start_time));
+
   if (!any_updates_were_applied && !render_pending_ && !render_continuously_) {
     // If necessary, schedule another frame.
     if (!updatable_sessions_.empty()) {
@@ -201,6 +180,9 @@ void DefaultFrameScheduler::MaybeRenderFrame(async_dispatcher_t*,
   auto frame_timings =
       fxl::MakeRefCounted<FrameTimings>(this, frame_number_, presentation_time,
                                         wakeup_time_, frame_render_start_time);
+  // TODO(SCN-1482) Revisit how we do this.
+  frame_timings->OnFrameUpdated(update_end_time);
+
   inspect_frame_number_.Set(frame_number_);
 
   // Render the frame.

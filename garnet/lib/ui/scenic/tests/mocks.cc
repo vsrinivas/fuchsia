@@ -26,7 +26,8 @@ EngineForTest::EngineForTest(
     escher::EscherWeakPtr escher)
     : gfx::Engine(component_context,
                   std::make_unique<gfx::DefaultFrameScheduler>(
-                      display_manager->default_display()),
+                      display_manager->default_display(),
+                      std::make_unique<gfx::FramePredictor>(gfx::DefaultFrameScheduler::kInitialRenderDuration, gfx::DefaultFrameScheduler::kInitialUpdateDuration)),
                   display_manager, std::move(release_signaler),
                   std::make_unique<gfx::SessionManager>(), std::move(escher)) {}
 

@@ -17,7 +17,9 @@ void SessionTest::SetUp() {
   display_manager_->SetDefaultDisplayForTests(std::make_unique<Display>(
       /*id*/ 0, /*px-width*/ 0, /*px-height*/ 0));
   frame_scheduler_ = std::make_unique<DefaultFrameScheduler>(
-      display_manager_->default_display());
+      display_manager_->default_display(),
+      std::make_unique<FramePredictor>(DefaultFrameScheduler::kInitialRenderDuration,
+                                       DefaultFrameScheduler::kInitialUpdateDuration));
 
   session_context_ = CreateSessionContext();
   session_ = CreateSession();
