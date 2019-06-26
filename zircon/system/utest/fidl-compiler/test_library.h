@@ -142,6 +142,15 @@ public:
         return nullptr;
     }
 
+    const fidl::flat::Enum* LookupEnum(const std::string& name) {
+        for (const auto& enum_decl : library_->enum_declarations_) {
+            if (enum_decl->GetName() == name) {
+                return enum_decl.get();
+            }
+        }
+        return nullptr;
+    }
+
     const fidl::flat::Struct* LookupStruct(const std::string& name) {
         for (const auto& struct_decl : library_->struct_declarations_) {
             if (struct_decl->GetName() == name) {

@@ -13,6 +13,121 @@
 
 namespace {
 
+bool placement_of_attributes() {
+    BEGIN_TEST;
+
+    SharedAmongstLibraries shared;
+    TestLibrary dependency("exampleusing.fidl", R"FIDL(
+library exampleusing;
+
+struct Empty {};
+
+)FIDL", &shared);
+    ASSERT_TRUE(dependency.Compile());
+
+    TestLibrary library("example.fidl", R"FIDL(
+[OnLibrary]
+library example;
+
+// TODO: Support placement of an attribute on using.
+using exampleusing;
+
+[OnBits]
+bits ExampleBits {
+    [OnBitsMember]
+    MEMBER = 1;
+};
+
+[OnConst]
+const uint32 EXAMPLE_CONST = 0;
+
+[OnEnum]
+enum ExampleEnum {
+    [OnEnumMember]
+    MEMBER = 1;
+};
+
+[OnProtocol]
+protocol ExampleProtocol {
+    [OnMethod]
+    Method(exampleusing.Empty arg);
+};
+
+[OnStruct]
+struct ExampleStruct {
+    [OnStructMember]
+    uint32 member;
+};
+
+[OnTable]
+table ExampleTable {
+    [OnTableMember]
+    1: uint32 member;
+};
+
+// TODO: Support placement of an attribute on type alias.
+using TypeAlias = uint32;
+
+[OnUnion]
+union ExampleUnion {
+    [OnUnionMember]
+    uint32 variant;
+};
+
+[OnXUnion]
+xunion ExampleXUnion {
+    [OnXUnionMember]
+    uint32 variant;
+};
+
+)FIDL", &shared);
+    ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
+    ASSERT_TRUE(library.Compile());
+
+    EXPECT_TRUE(library.library()->HasAttribute("OnLibrary"));
+
+    auto example_bits = library.LookupBits("ExampleBits");
+    ASSERT_NONNULL(example_bits);
+    EXPECT_TRUE(example_bits->attributes->HasAttribute("OnBits"));
+    EXPECT_TRUE(example_bits->members.front().attributes->HasAttribute("OnBitsMember"));
+
+    auto example_const = library.LookupConstant("EXAMPLE_CONST");
+    ASSERT_NONNULL(example_const);
+    EXPECT_TRUE(example_const->attributes->HasAttribute("OnConst"));
+
+    auto example_enum = library.LookupEnum("ExampleEnum");
+    ASSERT_NONNULL(example_enum);
+    EXPECT_TRUE(example_enum->attributes->HasAttribute("OnEnum"));
+    EXPECT_TRUE(example_enum->members.front().attributes->HasAttribute("OnEnumMember"));
+
+    auto example_protocol = library.LookupProtocol("ExampleProtocol");
+    ASSERT_NONNULL(example_protocol);
+    EXPECT_TRUE(example_protocol->attributes->HasAttribute("OnProtocol"));
+    EXPECT_TRUE(example_protocol->methods.front().attributes->HasAttribute("OnMethod"));
+
+    auto example_struct = library.LookupStruct("ExampleStruct");
+    ASSERT_NONNULL(example_struct);
+    EXPECT_TRUE(example_struct->attributes->HasAttribute("OnStruct"));
+    EXPECT_TRUE(example_struct->members.front().attributes->HasAttribute("OnStructMember"));
+
+    auto example_table = library.LookupTable("ExampleTable");
+    ASSERT_NONNULL(example_table);
+    EXPECT_TRUE(example_table->attributes->HasAttribute("OnTable"));
+    EXPECT_TRUE(example_table->members.front().maybe_used->attributes->HasAttribute("OnTableMember"));
+
+    auto example_union = library.LookupUnion("ExampleUnion");
+    ASSERT_NONNULL(example_union);
+    EXPECT_TRUE(example_union->attributes->HasAttribute("OnUnion"));
+    EXPECT_TRUE(example_union->members.front().attributes->HasAttribute("OnUnionMember"));
+
+    auto example_xunion = library.LookupXUnion("ExampleXUnion");
+    ASSERT_NONNULL(example_xunion);
+    EXPECT_TRUE(example_xunion->attributes->HasAttribute("OnXUnion"));
+    EXPECT_TRUE(example_xunion->members.front().attributes->HasAttribute("OnXUnionMember"));
+
+    END_TEST;
+}
+
 // Test that a duplicate attribute is caught, and nicely reported.
 bool no_two_same_attribute_test() {
     BEGIN_TEST;
@@ -461,6 +576,7 @@ union MyUnion {
 } // namespace
 
 BEGIN_TEST_CASE(attributes_tests)
+RUN_TEST(placement_of_attributes)
 RUN_TEST(no_two_same_attribute_test)
 RUN_TEST(no_two_same_doc_attribute_test)
 RUN_TEST(no_two_same_attribute_on_library_test)

@@ -86,7 +86,7 @@ fidlc tests are at:
 ```sh
 # build & run fidlc tests
 fx build zircon/system/utest:host
-$FUCHSIA_DIR/out/default.zircon/host_tests/fidl-compiler-test.debug
+$FUCHSIA_DIR/out/default.zircon/host-x64-linux-clang/obj/system/utest/fidl-compiler/fidl-compiler-test.debug
 
 # build & run fidl-coding-tables tests
 # --with-base puts all zircon tests under /boot with the bringup.x64 target, or /system when using the core.x64 target

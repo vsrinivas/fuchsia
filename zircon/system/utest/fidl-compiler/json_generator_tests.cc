@@ -2277,6 +2277,460 @@ protocol Top {
     END_TEST;
 }
 
+bool json_generator_placement_of_attributes() {
+    BEGIN_TEST;
+
+    for (int i = 0; i < kRepeatTestCount; i++) {
+        SharedAmongstLibraries shared;
+        TestLibrary dependency("exampleusing.fidl", R"FIDL(
+library exampleusing;
+
+struct Empty {};
+
+)FIDL", &shared);
+        ASSERT_TRUE(dependency.Compile());
+
+        TestLibrary library("example.fidl", R"FIDL(
+[OnLibrary]
+library example;
+
+// TODO: Support placement of an attribute on using.
+using exampleusing;
+
+[OnBits]
+bits ExampleBits {
+    [OnBitsMember]
+    MEMBER = 1;
+};
+
+[OnConst]
+const uint32 EXAMPLE_CONST = 0;
+
+[OnEnum]
+enum ExampleEnum {
+    [OnEnumMember]
+    MEMBER = 1;
+};
+
+[OnProtocol]
+protocol ExampleProtocol {
+    [OnMethod]
+    Method(exampleusing.Empty arg);
+};
+
+[OnStruct]
+struct ExampleStruct {
+    [OnStructMember]
+    uint32 member;
+};
+
+[OnTable]
+table ExampleTable {
+    [OnTableMember]
+    1: uint32 member;
+};
+
+// TODO: Support placement of an attribute on type alias.
+using TypeAlias = uint32;
+
+[OnUnion]
+union ExampleUnion {
+    [OnUnionMember]
+    uint32 variant;
+};
+
+[OnXUnion]
+xunion ExampleXUnion {
+    [OnXUnionMember]
+    uint32 variant;
+};
+
+)FIDL", &shared);
+        ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
+        EXPECT_TRUE(checkJSONGenerator(std::move(library),
+                                       R"JSON({
+  "version": "0.0.1",
+  "name": "example",
+  "library_dependencies": [
+    {
+      "name": "exampleusing",
+      "declarations": {
+        "exampleusing/Empty": "struct"
+      }
+    }
+  ],
+  "bits_declarations": [
+    {
+      "name": "example/ExampleBits",
+      "maybe_attributes": [
+        {
+          "name": "OnBits",
+          "value": ""
+        }
+      ],
+      "type": {
+        "kind": "primitive",
+        "subtype": "uint32"
+      },
+      "mask": "1",
+      "members": [
+        {
+          "name": "MEMBER",
+          "value": {
+            "kind": "literal",
+            "literal": {
+              "kind": "numeric",
+              "value": "1",
+              "expression": "1"
+            }
+          },
+          "maybe_attributes": [
+            {
+              "name": "OnBitsMember",
+              "value": ""
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "const_declarations": [
+    {
+      "name": "example/EXAMPLE_CONST",
+      "location": {
+        "filename": "example.fidl",
+        "line": 15,
+        "column": 14
+      },
+      "maybe_attributes": [
+        {
+          "name": "OnConst",
+          "value": ""
+        }
+      ],
+      "type": {
+        "kind": "primitive",
+        "subtype": "uint32"
+      },
+      "value": {
+        "kind": "literal",
+        "literal": {
+          "kind": "numeric",
+          "value": "0",
+          "expression": "0"
+        }
+      }
+    }
+  ],
+  "enum_declarations": [
+    {
+      "name": "example/ExampleEnum",
+      "location": {
+        "filename": "example.fidl",
+        "line": 18,
+        "column": 6
+      },
+      "maybe_attributes": [
+        {
+          "name": "OnEnum",
+          "value": ""
+        }
+      ],
+      "type": "uint32",
+      "members": [
+        {
+          "name": "MEMBER",
+          "location": {
+            "filename": "example.fidl",
+            "line": 20,
+            "column": 5
+          },
+          "value": {
+            "kind": "literal",
+            "literal": {
+              "kind": "numeric",
+              "value": "1",
+              "expression": "1"
+            }
+          },
+          "maybe_attributes": [
+            {
+              "name": "OnEnumMember",
+              "value": ""
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "interface_declarations": [
+    {
+      "name": "example/ExampleProtocol",
+      "location": {
+        "filename": "example.fidl",
+        "line": 24,
+        "column": 10
+      },
+      "maybe_attributes": [
+        {
+          "name": "OnProtocol",
+          "value": ""
+        }
+      ],
+      "methods": [
+        {
+          "ordinal": 1123904027,
+          "generated_ordinal": 1123904027,
+          "name": "Method",
+          "location": {
+            "filename": "example.fidl",
+            "line": 26,
+            "column": 5
+          },
+          "has_request": true,
+          "maybe_attributes": [
+            {
+              "name": "OnMethod",
+              "value": ""
+            }
+          ],
+          "maybe_request": [
+            {
+              "type": {
+                "kind": "identifier",
+                "identifier": "exampleusing/Empty",
+                "nullable": false
+              },
+              "name": "arg",
+              "location": {
+                "filename": "example.fidl",
+                "line": 26,
+                "column": 31
+              },
+              "size": 1,
+              "max_out_of_line": 0,
+              "alignment": 1,
+              "offset": 16,
+              "max_handles": 0
+            }
+          ],
+          "maybe_request_size": 24,
+          "maybe_request_alignment": 8,
+          "maybe_request_has_padding": true,
+          "has_response": false
+        }
+      ]
+    }
+  ],
+  "struct_declarations": [
+    {
+      "name": "example/ExampleStruct",
+      "location": {
+        "filename": "example.fidl",
+        "line": 30,
+        "column": 8
+      },
+      "anonymous": false,
+      "maybe_attributes": [
+        {
+          "name": "OnStruct",
+          "value": ""
+        }
+      ],
+      "members": [
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint32"
+          },
+          "name": "member",
+          "location": {
+            "filename": "example.fidl",
+            "line": 32,
+            "column": 12
+          },
+          "maybe_attributes": [
+            {
+              "name": "OnStructMember",
+              "value": ""
+            }
+          ],
+          "size": 4,
+          "max_out_of_line": 0,
+          "alignment": 4,
+          "offset": 0,
+          "max_handles": 0
+        }
+      ],
+      "size": 4,
+      "max_out_of_line": 0,
+      "alignment": 4,
+      "max_handles": 0,
+      "has_padding": false
+    }
+  ],
+  "table_declarations": [
+    {
+      "name": "example/ExampleTable",
+      "location": {
+        "filename": "example.fidl",
+        "line": 36,
+        "column": 7
+      },
+      "maybe_attributes": [
+        {
+          "name": "OnTable",
+          "value": ""
+        }
+      ],
+      "members": [
+        {
+          "ordinal": 1,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint32"
+          },
+          "name": "member",
+          "location": {
+            "filename": "example.fidl",
+            "line": 38,
+            "column": 15
+          },
+          "maybe_attributes": [
+            {
+              "name": "OnTableMember",
+              "value": ""
+            }
+          ],
+          "size": 4,
+          "max_out_of_line": 0,
+          "alignment": 4,
+          "max_handles": 0
+        }
+      ],
+      "size": 16,
+      "max_out_of_line": 24,
+      "alignment": 8,
+      "max_handles": 0
+    }
+  ],
+  "union_declarations": [
+    {
+      "name": "example/ExampleUnion",
+      "location": {
+        "filename": "example.fidl",
+        "line": 45,
+        "column": 7
+      },
+      "maybe_attributes": [
+        {
+          "name": "OnUnion",
+          "value": ""
+        }
+      ],
+      "members": [
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint32"
+          },
+          "name": "variant",
+          "location": {
+            "filename": "example.fidl",
+            "line": 47,
+            "column": 12
+          },
+          "maybe_attributes": [
+            {
+              "name": "OnUnionMember",
+              "value": ""
+            }
+          ],
+          "size": 4,
+          "max_out_of_line": 0,
+          "alignment": 4,
+          "offset": 4
+        }
+      ],
+      "size": 8,
+      "max_out_of_line": 0,
+      "alignment": 4,
+      "max_handles": 0
+    }
+  ],
+  "xunion_declarations": [
+    {
+      "name": "example/ExampleXUnion",
+      "location": {
+        "filename": "example.fidl",
+        "line": 51,
+        "column": 8
+      },
+      "maybe_attributes": [
+        {
+          "name": "OnXUnion",
+          "value": ""
+        }
+      ],
+      "members": [
+        {
+          "ordinal": 1300389554,
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint32"
+          },
+          "name": "variant",
+          "location": {
+            "filename": "example.fidl",
+            "line": 53,
+            "column": 12
+          },
+          "maybe_attributes": [
+            {
+              "name": "OnXUnionMember",
+              "value": ""
+            }
+          ],
+          "size": 4,
+          "max_out_of_line": 0,
+          "alignment": 4,
+          "offset": 0
+        }
+      ],
+      "size": 24,
+      "max_out_of_line": 8,
+      "alignment": 8,
+      "max_handles": 0,
+      "strict": false
+    }
+  ],
+  "declaration_order": [
+    "example/ExampleProtocol",
+    "example/ExampleXUnion",
+    "example/ExampleUnion",
+    "example/ExampleTable",
+    "example/ExampleStruct",
+    "example/ExampleEnum",
+    "example/ExampleBits",
+    "example/EXAMPLE_CONST"
+  ],
+  "declarations": {
+    "example/ExampleBits": "bits",
+    "example/EXAMPLE_CONST": "const",
+    "example/ExampleEnum": "enum",
+    "example/ExampleProtocol": "interface",
+    "example/ExampleStruct": "struct",
+    "example/ExampleTable": "table",
+    "example/ExampleUnion": "union",
+    "example/ExampleXUnion": "xunion"
+  }
+})JSON"));
+    }
+
+    END_TEST;
+}
+
 } // namespace
 
 BEGIN_TEST_CASE(json_generator_tests)
@@ -2294,4 +2748,5 @@ RUN_TEST(json_generator_check_escaping)
 RUN_TEST(json_generator_constants)
 RUN_TEST(json_generator_transitive_dependencies)
 RUN_TEST(json_generator_transitive_dependencies_compose)
+RUN_TEST(json_generator_placement_of_attributes)
 END_TEST_CASE(json_generator_tests)
