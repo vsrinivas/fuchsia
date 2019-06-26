@@ -18,19 +18,18 @@ mod subscriber;
 #[cfg(test)]
 mod test;
 
-use self::{
-    active_session_queue::ActiveSessionQueue, publisher::Publisher, registry::Registry,
-    session_list::SessionList,
-};
+use self::{publisher::Publisher, registry::Registry};
 use failure::Error;
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
 use fuchsia_zircon as zx;
 use futures::{lock::Mutex, Future, StreamExt, TryFutureExt};
-use std::sync::Arc;
+use std::rc::Rc;
 use zx::AsHandleRef;
 
 type Result<T> = std::result::Result<T, Error>;
+
+type Ref<T> = Rc<Mutex<T>>;
 
 const CHANNEL_BUFFER_SIZE: usize = 100;
 
@@ -48,14 +47,14 @@ fn clone_session_id_handle(session_id_handle: &zx::Event) -> Result<zx::Event> {
     Ok(session_id_handle.as_handle_ref().duplicate(session_id_rights())?.into())
 }
 
-fn spawn_log_error(fut: impl Future<Output = Result<()>> + Send + 'static) {
-    fasync::spawn(fut.unwrap_or_else(|e| eprintln!("{}", e)))
+fn spawn_log_error(fut: impl Future<Output = Result<()>> + 'static) {
+    fasync::spawn_local(fut.unwrap_or_else(|e| eprintln!("{}", e)))
 }
 
 #[fasync::run_singlethreaded]
 async fn main() {
-    let session_list = Arc::new(Mutex::new(SessionList::default()));
-    let active_session_queue = Arc::new(Mutex::new(ActiveSessionQueue::default()));
+    let session_list = Ref::default();
+    let active_session_queue = Ref::default();
     let (active_session_sink, active_session_stream) = mpmc::channel(CHANNEL_BUFFER_SIZE);
     let (collection_event_sink, collection_event_stream) = mpmc::channel(CHANNEL_BUFFER_SIZE);
 
@@ -72,7 +71,7 @@ async fn main() {
         collection_event_stream,
     );
 
-    let mut server = ServiceFs::new();
+    let mut server = ServiceFs::new_local();
     server
         .dir("svc")
         .add_fidl_service(|request_stream| spawn_log_error(publisher.clone().serve(request_stream)))

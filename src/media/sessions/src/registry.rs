@@ -4,7 +4,7 @@
 
 use crate::{
     active_session_queue::ActiveSessionQueue, clone_session_id_handle, mpmc,
-    session_list::SessionList, session_proxy::*, subscriber::Subscriber, Result,
+    session_list::SessionList, session_proxy::*, subscriber::Subscriber, Ref, Result,
 };
 use fidl::endpoints::RequestStream;
 use fidl_fuchsia_media_sessions::{
@@ -12,22 +12,22 @@ use fidl_fuchsia_media_sessions::{
     SessionEntry, SessionsChange,
 };
 use fuchsia_zircon::AsHandleRef;
-use futures::{lock::Mutex, StreamExt};
-use std::{ops::Deref, sync::Arc};
+use futures::StreamExt;
+use std::ops::Deref;
 
 /// `Registry` implements `fuchsia.media.session.Registry`.
 #[derive(Clone)]
 pub struct Registry {
-    session_list: Arc<Mutex<SessionList>>,
-    active_session_queue: Arc<Mutex<ActiveSessionQueue>>,
+    session_list: Ref<SessionList>,
+    active_session_queue: Ref<ActiveSessionQueue>,
     collection_event_stream: mpmc::Receiver<(SessionRegistration, SessionCollectionEvent)>,
     active_session_stream: mpmc::Receiver<Option<SessionRegistration>>,
 }
 
 impl Registry {
     pub fn new(
-        session_list: Arc<Mutex<SessionList>>,
-        active_session_queue: Arc<Mutex<ActiveSessionQueue>>,
+        session_list: Ref<SessionList>,
+        active_session_queue: Ref<ActiveSessionQueue>,
         collection_event_stream: mpmc::Receiver<(SessionRegistration, SessionCollectionEvent)>,
         active_session_stream: mpmc::Receiver<Option<SessionRegistration>>,
     ) -> Registry {

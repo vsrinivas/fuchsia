@@ -4,7 +4,7 @@
 
 use crate::{
     active_session_queue::ActiveSessionQueue, fidl_clones::*, log_error::log_error_discard_result,
-    mpmc, session_list::SessionList, Result, CHANNEL_BUFFER_SIZE,
+    mpmc, session_list::SessionList, Ref, Result, CHANNEL_BUFFER_SIZE,
 };
 use fidl::encoding::OutOfLine;
 use fidl::endpoints::*;
@@ -12,16 +12,16 @@ use fidl_fuchsia_media::Metadata;
 use fidl_fuchsia_media_sessions::*;
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
-use futures::{future::try_join, lock::Mutex, Future, FutureExt, StreamExt, TryStreamExt};
+use futures::{future::try_join, Future, FutureExt, StreamExt, TryStreamExt};
 use std::{
     collections::HashMap,
     ops::{Deref, DerefMut},
-    sync::Arc,
+    rc::Rc,
 };
 
 #[derive(Clone, Debug)]
 pub struct SessionRegistration {
-    pub id: Arc<zx::Event>,
+    pub id: Rc<zx::Event>,
     pub koid: zx::Koid,
     pub is_local: bool,
 }
@@ -29,8 +29,8 @@ pub struct SessionRegistration {
 /// `Session` is the in-process proxy to a media session.
 #[derive(Clone)]
 pub struct Session {
-    proxy: Arc<SessionProxy>,
-    state: Arc<Mutex<SessionState>>,
+    proxy: Rc<SessionProxy>,
+    state: Ref<SessionState>,
     events: mpmc::Receiver<Clonable<SessionEvent>>,
     cancel_signal: mpmc::Receiver<()>,
 }
@@ -45,8 +45,8 @@ impl Session {
     pub async fn serve(
         client_end: ClientEnd<SessionMarker>,
         registration: SessionRegistration,
-        active_session_queue: Arc<Mutex<ActiveSessionQueue>>,
-        session_list: Arc<Mutex<SessionList>>,
+        active_session_queue: Ref<ActiveSessionQueue>,
+        session_list: Ref<SessionList>,
         mut collection_event_sink: mpmc::Sender<(SessionRegistration, SessionCollectionEvent)>,
         mut active_session_sink: mpmc::Sender<Option<SessionRegistration>>,
     ) -> Result<Self> {
@@ -54,14 +54,14 @@ impl Session {
         let mut event_stream = proxy.take_event_stream();
         let (mut event_sender, event_receiver) = mpmc::channel(CHANNEL_BUFFER_SIZE);
         let (mut cancel_signaller, cancel_signal) = mpmc::channel(1);
-        let state = Arc::new(Mutex::new(SessionState::default()));
+        let state = Ref::default();
         let session = Session {
-            proxy: Arc::new(proxy),
+            proxy: Rc::new(proxy),
             events: event_receiver,
             state: state.clone(),
             cancel_signal,
         };
-        fasync::spawn(async move {
+        fasync::spawn_local(async move {
             while let Ok(Some(event)) = await!(event_stream.try_next()) {
                 if is_active_status(&event) && registration.is_local {
                     let ref mut queue = await!(active_session_queue.lock());
@@ -93,7 +93,7 @@ impl Session {
             }
         }
 
-        fasync::spawn(
+        fasync::spawn_local(
             try_join(self.request_forwarder(request_stream), self.event_forwarder(control_handle))
                 .map(log_error_discard_result),
         );

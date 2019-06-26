@@ -7,29 +7,29 @@ use crate::{
     clone_session_id_handle, mpmc,
     session_list::SessionList,
     session_proxy::{Session, SessionCollectionEvent, SessionRegistration},
-    Result,
+    Ref, Result,
 };
 use failure::ResultExt;
 use fidl::endpoints::ClientEnd;
 use fidl_fuchsia_media_sessions::{PublisherRequest, PublisherRequestStream, SessionMarker};
 use fuchsia_zircon as zx;
-use futures::{lock::Mutex, TryStreamExt};
-use std::{ops::DerefMut, sync::Arc};
+use futures::TryStreamExt;
+use std::{ops::DerefMut, rc::Rc};
 use zx::AsHandleRef;
 
 /// `Publisher` implements fuchsia.media.session.Publisher.
 #[derive(Clone)]
 pub struct Publisher {
-    session_list: Arc<Mutex<SessionList>>,
-    active_session_queue: Arc<Mutex<ActiveSessionQueue>>,
+    session_list: Ref<SessionList>,
+    active_session_queue: Ref<ActiveSessionQueue>,
     collection_event_sink: mpmc::Sender<(SessionRegistration, SessionCollectionEvent)>,
     active_session_sink: mpmc::Sender<Option<SessionRegistration>>,
 }
 
 impl Publisher {
     pub fn new(
-        session_list: Arc<Mutex<SessionList>>,
-        active_session_queue: Arc<Mutex<ActiveSessionQueue>>,
+        session_list: Ref<SessionList>,
+        active_session_queue: Ref<ActiveSessionQueue>,
         collection_event_sink: mpmc::Sender<(SessionRegistration, SessionCollectionEvent)>,
         active_session_sink: mpmc::Sender<Option<SessionRegistration>>,
     ) -> Publisher {
@@ -64,7 +64,7 @@ impl Publisher {
         let session_id_handle = zx::Event::create()?;
         let koid = session_id_handle.as_handle_ref().get_koid()?;
         let handle_for_client = clone_session_id_handle(&session_id_handle)?;
-        let registration = SessionRegistration { id: Arc::new(session_id_handle), koid, is_local };
+        let registration = SessionRegistration { id: Rc::new(session_id_handle), koid, is_local };
         await!(self.session_list.lock()).deref_mut().push(
             registration.clone(),
             await!(Session::serve(

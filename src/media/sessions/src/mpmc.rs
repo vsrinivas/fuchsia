@@ -4,20 +4,17 @@
 
 use crossbeam::queue::MsQueue;
 use futures::{channel::mpsc, lock::Mutex, stream::FusedStream, task::Context, Poll, Stream};
-use std::{ops::DerefMut, pin::Pin, sync::Arc};
+use std::{ops::DerefMut, pin::Pin, rc::Rc};
 
 #[derive(Clone)]
 struct SenderSet<T> {
-    inner: Arc<Mutex<Vec<mpsc::Sender<T>>>>,
-    pending_senders: Arc<MsQueue<mpsc::Sender<T>>>,
+    inner: Rc<Mutex<Vec<mpsc::Sender<T>>>>,
+    pending_senders: Rc<MsQueue<mpsc::Sender<T>>>,
 }
 
 impl<T> SenderSet<T> {
     fn new(sender: mpsc::Sender<T>) -> Self {
-        Self {
-            inner: Arc::new(Mutex::new(vec![sender])),
-            pending_senders: Arc::new(MsQueue::new()),
-        }
+        Self { inner: Rc::new(Mutex::new(vec![sender])), pending_senders: Rc::new(MsQueue::new()) }
     }
 
     fn enqueue_sender(&self, new_sender: mpsc::Sender<T>) {
