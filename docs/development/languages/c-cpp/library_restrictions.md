@@ -11,10 +11,8 @@ synchronization primitives on Fuchsia.
 
 ## third_party/googletest
 
-*** aside
-Note that the googletest library includes both the former gtest and gmock
+Note: The googletest library includes both the former gtest and gmock
 projects.
-***
 
 ### Gtest
 

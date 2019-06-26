@@ -411,10 +411,12 @@ file an infra ticket to request access to run led jobs.
 ## Additional Resources
 
 Documentation:
+
 * [Getting Started with the LLVM System](http://llvm.org/docs/GettingStarted.html)
 * [Building LLVM with CMake](http://llvm.org/docs/CMake.html)
 * [Advanced Build Configurations](http://llvm.org/docs/AdvancedBuilds.html)
 
 Talks:
+
 * [2016 LLVM Developers’ Meeting: C. Bieneman "Developing and Shipping LLVM and Clang with CMake"](https://www.youtube.com/watch?v=StF77Cx7pz8)
 * [2017 LLVM Developers’ Meeting: Petr Hosek "Compiling cross-toolchains with CMake and runtimes build"](https://www.youtube.com/watch?v=OCQGpUzXDsY)

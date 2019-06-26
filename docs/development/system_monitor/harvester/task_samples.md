@@ -100,6 +100,7 @@ A UTF-8 string label for the job. May not be unique.
 ##### koid:\*:thread_state
 Whether the thread is running, waiting, etc.
 The current (when this was written) thread states are:
+
 ```
 Basic thread states, in zx_info_thread_t.state.
     ZX_THREAD_STATE_NEW                 0x0000
