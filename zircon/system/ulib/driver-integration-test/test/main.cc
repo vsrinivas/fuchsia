@@ -15,13 +15,13 @@
 #include <ddk/platform-defs.h>
 #include <lib/devmgr-integration-test/fixture.h>
 #include <lib/driver-integration-test/fixture.h>
-#include <unittest/unittest.h>
 #include <zircon/status.h>
-
-using driver_integration_test::IsolatedDevmgr;
-using devmgr_integration_test::RecursiveWaitForFile;
+#include <zxtest/zxtest.h>
 
 namespace {
+
+using devmgr_integration_test::RecursiveWaitForFile;
+using driver_integration_test::IsolatedDevmgr;
 
 const board_test::DeviceEntry kDeviceEntry = []() {
     board_test::DeviceEntry entry = {};
@@ -32,31 +32,20 @@ const board_test::DeviceEntry kDeviceEntry = []() {
     return entry;
 }();
 
-bool enumeration_test() {
-    BEGIN_TEST;
-
+TEST(DriverIntegrationTest, EnumerationTest) {
     IsolatedDevmgr::Args args;
     args.driver_search_paths.push_back("/boot/driver");
     args.device_list.push_back(kDeviceEntry);
 
     IsolatedDevmgr devmgr;
-    ASSERT_EQ(IsolatedDevmgr::Create(&args, &devmgr), ZX_OK);
+    ASSERT_OK(IsolatedDevmgr::Create(&args, &devmgr));
 
     fbl::unique_fd fd;
-    ASSERT_EQ(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform", &fd),
-              ZX_OK);
+    ASSERT_OK(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform", &fd));
 
-    EXPECT_EQ(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/test-board", &fd),
-              ZX_OK);
+    EXPECT_OK(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/test-board", &fd));
 
-    EXPECT_EQ(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/00:00:f/fallback-rtc", &fd),
-              ZX_OK);
-
-    END_TEST;
+    EXPECT_OK(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/00:00:f/fallback-rtc", &fd));
 }
 
 } // namespace
-
-BEGIN_TEST_CASE(driver_integration_tests)
-RUN_TEST(enumeration_test)
-END_TEST_CASE(driver_integration_tests)
