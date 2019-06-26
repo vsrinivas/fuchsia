@@ -90,7 +90,7 @@ void brcmf_free_net_device(struct net_device* dev) {
 }
 
 void brcmf_enable_tx(struct net_device* dev) {
-    brcmf_dbg(INFO, " * * NOTE: brcmf_enable_tx called. Enable TX. (Was netif_wake_queue)");
+    BRCMF_DBG(INFO, " * * NOTE: brcmf_enable_tx called. Enable TX. (Was netif_wake_queue)");
 }
 
 // This is a kill-flies-with-sledgehammers, just-get-it-working version; TODO(WLAN-730) for

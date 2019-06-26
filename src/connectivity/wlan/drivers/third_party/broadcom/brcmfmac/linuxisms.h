@@ -217,9 +217,9 @@ LINUX_FUNCVI(dma_map_single) // PCI only
 LINUX_FUNCVI(dma_mapping_error) // PCI only
 LINUX_FUNCVI(dma_unmap_single) // PCI only
 
-#define netdev_for_each_mc_addr(a, b) for (({brcmf_err("Calling netdev_for_each_mc_addr"); \
+#define netdev_for_each_mc_addr(a, b) for (({BRCMF_ERR("Calling netdev_for_each_mc_addr"); \
                                              a = nullptr;});1;)
-#define for_each_set_bit(a, b, c) for (({brcmf_err("Calling for_each_set_bit"); a = 0;});1;)
+#define for_each_set_bit(a, b, c) for (({BRCMF_ERR("Calling for_each_set_bit"); a = 0;});1;)
 
 #define DEBUG                         // Turns on struct members that debug.c needs
 

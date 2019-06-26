@@ -91,14 +91,14 @@ void workqueue_flush(struct workqueue_struct* workqueue) {
     zx_status_t result;
     result = zx_event_create(0, &work.signaler);
     if (result != ZX_OK) {
-        brcmf_err("Failed to create signal (work not canceled)");
+        BRCMF_ERR("Failed to create signal (work not canceled)");
         return;
     }
     workqueue_schedule(workqueue, &work);
     zx_signals_t observed;
     result = zx_object_wait_one(work.signaler, WORKQUEUE_SIGNAL, ZX_TIME_INFINITE, &observed);
     if (result != ZX_OK || (observed & WORKQUEUE_SIGNAL) == 0) {
-        brcmf_err("Bad return from wait (work likely not flushed): result %d, observed %x",
+        BRCMF_ERR("Bad return from wait (work likely not flushed): result %d, observed %x",
                     result, observed);
     }
     zx_handle_close(work.signaler);
@@ -123,13 +123,13 @@ void workqueue_cancel_work(struct work_struct* work) {
         result = zx_event_create(0, &work->signaler);
         mtx_unlock(&workqueue->lock);
         if (result != ZX_OK) {
-            brcmf_err("Failed to create signal (work not canceled)");
+            BRCMF_ERR("Failed to create signal (work not canceled)");
             return;
         }
         zx_signals_t observed;
         result = zx_object_wait_one(work->signaler, WORKQUEUE_SIGNAL, ZX_TIME_INFINITE, &observed);
         if (result != ZX_OK || (observed & WORKQUEUE_SIGNAL) == 0) {
-            brcmf_err("Bad return from wait (work likely not canceled): result %d, observed %x",
+            BRCMF_ERR("Bad return from wait (work likely not canceled): result %d, observed %x",
                       result, observed);
         }
         mtx_lock(&workqueue->lock);
@@ -148,7 +148,7 @@ void workqueue_cancel_work(struct work_struct* work) {
             }
         }
         mtx_unlock(&workqueue->lock);
-        brcmf_dbg(TEMP, "Work to be canceled not found");
+        BRCMF_DBG(TEMP, "Work to be canceled not found");
     }
 }
 

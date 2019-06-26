@@ -26,7 +26,7 @@
 zx_status_t brcmf_proto_attach(struct brcmf_pub* drvr) {
     struct brcmf_proto* proto;
 
-    brcmf_dbg(TRACE, "Enter\n");
+    BRCMF_DBG(TRACE, "Enter\n");
 
     proto = static_cast<decltype(proto)>(calloc(1, sizeof(*proto)));
     if (!proto) {
@@ -41,7 +41,7 @@ zx_status_t brcmf_proto_attach(struct brcmf_pub* drvr) {
     if (!proto->tx_queue_data || (proto->hdrpull == NULL) || (proto->query_dcmd == NULL) ||
             (proto->set_dcmd == NULL) || (proto->configure_addr_mode == NULL) ||
             (proto->delete_peer == NULL) || (proto->add_tdls_peer == NULL)) {
-        brcmf_err("Not all proto handlers have been installed\n");
+        BRCMF_ERR("Not all proto handlers have been installed\n");
         goto fail;
     }
     return ZX_OK;
@@ -53,7 +53,7 @@ fail:
 }
 
 void brcmf_proto_detach(struct brcmf_pub* drvr) {
-    brcmf_dbg(TRACE, "Enter\n");
+    BRCMF_DBG(TRACE, "Enter\n");
 
     if (drvr->proto) {
         brcmf_proto_bcdc_detach(drvr);

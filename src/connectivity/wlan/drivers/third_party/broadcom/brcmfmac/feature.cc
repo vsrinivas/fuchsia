@@ -100,10 +100,10 @@ static void brcmf_feat_iovar_int_get(struct brcmf_if* ifp, enum brcmf_feat_id id
 
     err = brcmf_fil_iovar_int_get(ifp, name, &data, &fw_err);
     if (err == ZX_OK) {
-        brcmf_dbg(INFO, "enabling feature: %s\n", brcmf_feat_names[id]);
+        BRCMF_DBG(INFO, "enabling feature: %s\n", brcmf_feat_names[id]);
         ifp->drvr->feat_flags |= BIT(id);
     } else {
-        brcmf_dbg(TRACE, "%s feature check failed: %s, fw err %s\n", brcmf_feat_names[id],
+        BRCMF_DBG(TRACE, "%s feature check failed: %s, fw err %s\n", brcmf_feat_names[id],
                   zx_status_get_string(err), brcmf_fil_get_errstr(fw_err));
     }
 }
@@ -114,7 +114,7 @@ static void brcmf_feat_iovar_data_set(struct brcmf_if* ifp, enum brcmf_feat_id i
 
     err = brcmf_fil_iovar_data_set(ifp, name, data, len, fwerr_ptr);
     if (err == ZX_OK) {
-        brcmf_dbg(INFO, "enabling feature: %s\n", brcmf_feat_names[id]);
+        BRCMF_DBG(INFO, "enabling feature: %s\n", brcmf_feat_names[id]);
         ifp->drvr->feat_flags |= BIT(id);
     } else if (err == ZX_ERR_NOT_SUPPORTED) {
         // brcmf_fil_iovar_data_set() returns the result of brcmf_fil_cmd_data, which returned
@@ -122,10 +122,10 @@ static void brcmf_feat_iovar_data_set(struct brcmf_if* ifp, enum brcmf_feat_id i
         // original error check was "(err != -BRCMF_FW_UNSUPPORTED)" which meant that if the
         // firmware reported BRCMF_FW_UNSUPPORTED, this logic would see -EBADE and think all
         // was well.
-        brcmf_dbg(INFO, " * * NOT enabling feature %s, though the Linux driver would have",
+        BRCMF_DBG(INFO, " * * NOT enabling feature %s, though the Linux driver would have",
             brcmf_feat_names[id]);
     } else {
-        brcmf_dbg(TRACE, "%s feature check failed: %d\n", brcmf_feat_names[id], err);
+        BRCMF_DBG(TRACE, "%s feature check failed: %d\n", brcmf_feat_names[id], err);
     }
 }
 
@@ -139,18 +139,18 @@ static void brcmf_feat_firmware_capabilities(struct brcmf_if* ifp) {
 
     err = brcmf_fil_iovar_data_get(ifp, "cap", caps, sizeof(caps), &fw_err);
     if (err != ZX_OK) {
-        brcmf_err("could not get firmware cap: %s, fw err %s\n", zx_status_get_string(err),
+        BRCMF_ERR("could not get firmware cap: %s, fw err %s\n", zx_status_get_string(err),
                   brcmf_fil_get_errstr(fw_err));
         return;
     }
 
     caps[sizeof(caps)-1] = 0;
-    brcmf_dbg(INFO, "[ %s]\n", caps);
+    BRCMF_DBG(INFO, "[ %s]\n", caps);
 
     for (i = 0; i < (int)countof(brcmf_fwcap_map); i++) {
         if (strstr(caps, brcmf_fwcap_map[i].fwcap_id)) {
             id = brcmf_fwcap_map[i].feature;
-            brcmf_dbg(INFO, "enabling feature: %s\n", brcmf_feat_names[id]);
+            BRCMF_DBG(INFO, "enabling feature: %s\n", brcmf_feat_names[id]);
             ifp->drvr->feat_flags |= BIT(id);
         }
     }
@@ -199,7 +199,7 @@ void brcmf_feat_attach(struct brcmf_pub* drvr) {
     }
 
     if (drvr->settings->feature_disable) {
-        brcmf_dbg(INFO, "Features: 0x%02x, disable: 0x%02x\n", ifp->drvr->feat_flags,
+        BRCMF_DBG(INFO, "Features: 0x%02x, disable: 0x%02x\n", ifp->drvr->feat_flags,
                   drvr->settings->feature_disable);
         ifp->drvr->feat_flags &= ~drvr->settings->feature_disable;
     }

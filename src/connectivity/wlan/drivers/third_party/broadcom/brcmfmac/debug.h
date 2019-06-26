@@ -62,12 +62,12 @@
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
 __PRINTFLIKE(2, 3) void __brcmf_err(const char* func, const char* fmt, ...);
-#define brcmf_err(fmt, ...) __brcmf_err(__func__, fmt, ##__VA_ARGS__)
+#define BRCMF_ERR(fmt, ...) __brcmf_err(__func__, fmt, ##__VA_ARGS__)
 
 #if defined(DEBUG) || defined(CONFIG_BRCMFMAC_DBG)
 
 __PRINTFLIKE(3, 4) void __brcmf_dbg(uint32_t filter, const char* func, const char* fmt, ...);
-#define brcmf_dbg(filter, fmt, ...)                                      \
+#define BRCMF_DBG(filter, fmt, ...)                                      \
     do {                                                                 \
         __brcmf_dbg(BRCMF_##filter##_VAL, __func__, fmt, ##__VA_ARGS__); \
     } while (0)
@@ -80,39 +80,19 @@ __PRINTFLIKE(3, 4) void __brcmf_dbg(uint32_t filter, const char* func, const cha
 
 // clang-format off
 
-#define BRCMF_DATA_ON()  (brcmf_msg_filter & BRCMF_DATA_VAL)
-#define BRCMF_CTL_ON()   (brcmf_msg_filter & BRCMF_CTL_VAL)
-#define BRCMF_HDRS_ON()  (brcmf_msg_filter & BRCMF_HDRS_VAL)
-#define BRCMF_BYTES_ON() (brcmf_msg_filter & BRCMF_BYTES_VAL)
-#define BRCMF_GLOM_ON()  (brcmf_msg_filter & BRCMF_GLOM_VAL)
-#define BRCMF_EVENT_ON() (brcmf_msg_filter & BRCMF_EVENT_VAL)
-#define BRCMF_FIL_ON()   (brcmf_msg_filter & BRCMF_FIL_VAL)
-#define BRCMF_FWCON_ON() (brcmf_msg_filter & BRCMF_FWCON_VAL)
-#define BRCMF_SCAN_ON()  (brcmf_msg_filter & BRCMF_SCAN_VAL)
-#define BRCMF_CONN_ON()  (brcmf_msg_filter & BRCMF_CONN_VAL)
-#define BRCMF_INFO_ON()  (brcmf_msg_filter & BRCMF_INFO_VAL)
+#define BRCMF_IS_ON(filter) (brcmf_msg_filter & BRCMF_##filter##_VAL)
 
 #else /* defined(DEBUG) || defined(CONFIG_BRCMFMAC_DBG) */
 
-#define brcmf_dbg(level, fmt, ...)
+#define BRCMF_DBG(level, fmt, ...)
 
-#define BRCMF_DATA_ON()  0
-#define BRCMF_CTL_ON()   0
-#define BRCMF_HDRS_ON()  0
-#define BRCMF_BYTES_ON() 0
-#define BRCMF_GLOM_ON()  0
-#define BRCMF_EVENT_ON() 0
-#define BRCMF_FIL_ON()   0
-#define BRCMF_FWCON_ON() 0
-#define BRCMF_SCAN_ON()  0
-#define BRCMF_CONN_ON()  0
-#define BRCMF_INFO_ON()  0
+#define BRCMF_IS_ON(filter) 0
 
 // clang-format on
 
 #endif /* defined(DEBUG) || defined(CONFIG_BRCMFMAC_DBG) */
 
-#define brcmf_dbg_hex_dump(test, data, len, fmt, ...)                \
+#define BRCMF_DBG_HEX_DUMP(test, data, len, fmt, ...)                \
     do {                                                             \
         if (test) {                                                  \
             BRCMF_LOGF(INFO, "brcmfmac: " fmt, ##__VA_ARGS__);       \
@@ -125,7 +105,7 @@ bool brcm_dbg_has_err();
 
 void brcmf_hexdump(const void* buf, size_t len);
 
-void brcmf_alphadump(const void* buf, size_t len);
+void BRCMF_DBG_STRING_DUMP(const void* buf, size_t len);
 
 extern uint32_t brcmf_msg_filter;
 

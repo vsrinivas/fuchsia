@@ -40,7 +40,7 @@ zx_status_t brcmf_sim_register(zx_device_t* zxdev) {
     auto simdev = new brcmf_simdev {};
     struct brcmf_bus* bus_if = &simdev->bus_if;
 
-    brcmf_dbg(SIM, "Registering simulator target\n");
+    BRCMF_DBG(SIM, "Registering simulator target\n");
 
     simdev->sim_fw = std::make_unique<SimFirmware>();
 
@@ -51,7 +51,7 @@ zx_status_t brcmf_sim_register(zx_device_t* zxdev) {
 
     status = brcmf_sim_probe(simdev);
     if (status != ZX_OK) {
-        brcmf_err("sim_probe failed: %s\n", zx_status_get_string(status));
+        BRCMF_ERR("sim_probe failed: %s\n", zx_status_get_string(status));
         dev->zxdev = nullptr;
         dev->bus = nullptr;
         delete simdev;

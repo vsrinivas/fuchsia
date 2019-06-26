@@ -109,9 +109,9 @@ void brcmf_hexdump(const void* buf, size_t len) {
     }
 }
 
-void brcmf_alphadump(const void* buf, size_t len) {
+void BRCMF_DBG_STRING_DUMP(const void* buf, size_t len) {
     if (len == 0) {
-        brcmf_dbg(INFO, "Empty alphadump %p", buf);
+        BRCMF_DBG(INFO, "Empty alphadump %p", buf);
         return;
     }
     char output[140];
@@ -144,7 +144,7 @@ void brcmf_alphadump(const void* buf, size_t len) {
         next += sprintf(next, ">etc<");
     }
     sprintf(next, "\"\n");
-    brcmf_dbg(ALL, "%s", output);
+    BRCMF_DBG(ALL, "%s", output);
 }
 
 zx_status_t brcmf_debug_create_memdump(struct brcmf_bus* bus, const void* data, size_t len) {

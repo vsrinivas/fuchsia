@@ -47,7 +47,7 @@ void brcmf_of_probe(struct brcmf_device* dev, enum brcmf_bus_type bus_type,
 
     irq = irq_of_parse_and_map(np, 0);
     if (!irq) {
-        brcmf_err("interrupt could not be mapped\n");
+        BRCMF_ERR("interrupt could not be mapped\n");
         return;
     }
     irqf = irqd_get_trigger_type(irq_get_irq_data(irq));

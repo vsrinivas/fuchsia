@@ -25,7 +25,7 @@
 #include <hw/pci.h>
 
 zx_status_t brcmfmac_bind(void* ctx, zx_device_t* device) {
-    brcmf_dbg(TRACE, "Enter");
+    BRCMF_DBG(TRACE, "Enter");
     return brcmfmac_module_init(device);
 }
 

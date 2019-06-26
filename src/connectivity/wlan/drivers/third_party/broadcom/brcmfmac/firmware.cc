@@ -103,7 +103,7 @@ static enum nvram_parser_state brcmf_nvram_handle_idle(struct nvram_parser* nvp)
         nvp->entry = nvp->pos;
         return KEY;
     }
-    brcmf_dbg(INFO, "warning: ln=%d:col=%d: ignoring invalid character\n", nvp->line, nvp->column);
+    BRCMF_DBG(INFO, "warning: ln=%d:col=%d: ignoring invalid character\n", nvp->line, nvp->column);
 proceed:
     nvp->column++;
     nvp->pos++;
@@ -132,7 +132,7 @@ static enum nvram_parser_state brcmf_nvram_handle_key(struct nvram_parser* nvp) 
             nvp->boardrev_found = true;
         }
     } else if (!is_nvram_char(c) || c == ' ') {
-        brcmf_dbg(INFO, "warning: ln=%d:col=%d: '=' expected, skip invalid key entry\n", nvp->line,
+        BRCMF_DBG(INFO, "warning: ln=%d:col=%d: '=' expected, skip invalid key entry\n", nvp->line,
                   nvp->column);
         return COMMENT;
     }
@@ -453,7 +453,7 @@ static zx_status_t brcmf_fw_request_nvram_done(const struct brcmf_firmware* fw, 
     size_t data_len;
     bool raw_nvram;
 
-    brcmf_dbg(TRACE, "enter: dev=%s\n", device_get_name(fwctx->dev->zxdev));
+    BRCMF_DBG(TRACE, "enter: dev=%s\n", device_get_name(fwctx->dev->zxdev));
     if (fw && fw->data) {
         data = (uint8_t*)fw->data;
         data_len = fw->size;
@@ -482,7 +482,7 @@ static zx_status_t brcmf_fw_request_nvram_done(const struct brcmf_firmware* fw, 
     return ZX_OK;
 
 fail:
-    brcmf_dbg(TRACE, "failed: dev=%s\n", device_get_name(fwctx->dev->zxdev));
+    BRCMF_DBG(TRACE, "failed: dev=%s\n", device_get_name(fwctx->dev->zxdev));
     fwctx->done(fwctx->dev, ZX_ERR_NOT_FOUND, NULL, NULL, 0);
     free(fwctx);
     return ZX_ERR_NO_RESOURCES;
@@ -497,7 +497,7 @@ zx_status_t request_firmware_nowait(bool b, const char* name, struct brcmf_devic
     struct brcmf_firmware fw;
 
     result = load_firmware(dev->zxdev, name, &fw_vmo, &fw.size);
-    brcmf_dbg(TEMP, "load_firmware of '%s' -> ret %d, size %ld", name, result, fw.size);
+    BRCMF_DBG(TEMP, "load_firmware of '%s' -> ret %d, size %ld", name, result, fw.size);
     if (result != ZX_OK) {
         return result;
     }
@@ -525,7 +525,7 @@ static zx_status_t brcmf_fw_request_code_done(const struct brcmf_firmware* fw, v
     struct brcmf_fw* fwctx = static_cast<decltype(fwctx)>(ctx);
     zx_status_t result = ZX_OK;
 
-    brcmf_dbg(TRACE, "enter: dev=%s\n", device_get_name(fwctx->dev->zxdev));
+    BRCMF_DBG(TRACE, "enter: dev=%s\n", device_get_name(fwctx->dev->zxdev));
     if (!fw) {
         result = ZX_ERR_INVALID_ARGS;
         goto fail;
@@ -546,7 +546,7 @@ static zx_status_t brcmf_fw_request_code_done(const struct brcmf_firmware* fw, v
     return result;
 
 fail:
-    brcmf_dbg(TRACE, "failed: dev=%s\n", device_get_name(fwctx->dev->zxdev));
+    BRCMF_DBG(TRACE, "failed: dev=%s\n", device_get_name(fwctx->dev->zxdev));
 done:
     fwctx->done(fwctx->dev, result, fw, NULL, 0);
     free(fwctx);
@@ -561,7 +561,7 @@ zx_status_t brcmf_fw_get_firmwares_pcie(struct brcmf_device* dev, uint16_t flags
                                         uint16_t domain_nr, uint16_t bus_nr) {
     struct brcmf_fw* fwctx;
 
-    brcmf_dbg(TRACE, "enter: dev=%s\n", device_get_name(dev->zxdev));
+    BRCMF_DBG(TRACE, "enter: dev=%s\n", device_get_name(dev->zxdev));
     if (!fw_cb || !code) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -609,7 +609,7 @@ zx_status_t brcmf_fw_map_chip_to_name(uint32_t chip, uint32_t chiprev,
     }
 
     if (i == table_size) {
-        brcmf_err("Unknown chipid %d [%d]\n", chip, chiprev);
+        BRCMF_ERR("Unknown chipid %d [%d]\n", chip, chiprev);
         return ZX_ERR_NOT_FOUND;
     }
 
@@ -633,7 +633,7 @@ zx_status_t brcmf_fw_map_chip_to_name(uint32_t chip, uint32_t chiprev,
         strlcat(nvram_name, mapping_table[i].nvram, BRCMF_FW_NAME_LEN);
     }
 
-    brcmf_dbg(TEMP, "using %s for chip %#08x(%d) rev %#08x\n", fw_name, chip, chip, chiprev);
+    BRCMF_DBG(TEMP, "using %s for chip %#08x(%d) rev %#08x\n", fw_name, chip, chip, chiprev);
 
     return ZX_OK;
 }

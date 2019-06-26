@@ -105,7 +105,7 @@ static zx_status_t brcmf_fil_cmd_data(struct brcmf_if* ifp, uint32_t cmd, void* 
     int32_t fwerr = 0;
 
     if (drvr->bus_if->state != BRCMF_BUS_UP) {
-        brcmf_err("bus is down. we have nothing to do.\n");
+        BRCMF_ERR("bus is down. we have nothing to do.\n");
         return ZX_ERR_IO;
     }
 
@@ -119,9 +119,9 @@ static zx_status_t brcmf_fil_cmd_data(struct brcmf_if* ifp, uint32_t cmd, void* 
     }
 
     if (err != ZX_OK) {
-        brcmf_dbg(FIL, "Failed: %s\n", zx_status_get_string(err));
+        BRCMF_DBG(FIL, "Failed: %s\n", zx_status_get_string(err));
     } else if (fwerr != 0) {
-        brcmf_dbg(FIL, "Firmware error: %s (%d)\n", brcmf_fil_get_errstr(fwerr), fwerr);
+        BRCMF_DBG(FIL, "Firmware error: %s (%d)\n", brcmf_fil_get_errstr(fwerr), fwerr);
         if (fwerr == BRCMF_ERR_FIRMWARE_UNSUPPORTED) {
             err = ZX_ERR_NOT_SUPPORTED;
         } else {
@@ -143,8 +143,8 @@ zx_status_t brcmf_fil_cmd_data_set(struct brcmf_if* ifp, uint32_t cmd, void* dat
 
     mtx_lock(&ifp->drvr->proto_block);
 
-    brcmf_dbg(FIL, "ifidx=%d, cmd=%d, len=%d\n", ifp->ifidx, cmd, len);
-    brcmf_dbg_hex_dump(BRCMF_FIL_ON(), data, min_t(uint, len, MAX_HEX_DUMP_LEN), "data\n");
+    BRCMF_DBG(FIL, "ifidx=%d, cmd=%d, len=%d\n", ifp->ifidx, cmd, len);
+    BRCMF_DBG_HEX_DUMP(BRCMF_IS_ON(FIL), data, min_t(uint, len, MAX_HEX_DUMP_LEN), "data\n");
 
     err = brcmf_fil_cmd_data(ifp, cmd, data, len, true, fwerr_ptr);
     mtx_unlock(&ifp->drvr->proto_block);
@@ -159,8 +159,8 @@ zx_status_t brcmf_fil_cmd_data_get(struct brcmf_if* ifp, uint32_t cmd, void* dat
     mtx_lock(&ifp->drvr->proto_block);
     err = brcmf_fil_cmd_data(ifp, cmd, data, len, false, fwerr_ptr);
 
-    brcmf_dbg(FIL, "ifidx=%d, cmd=%d, len=%d\n", ifp->ifidx, cmd, len);
-    brcmf_dbg_hex_dump(BRCMF_FIL_ON(), data, min_t(uint, len, MAX_HEX_DUMP_LEN), "data\n");
+    BRCMF_DBG(FIL, "ifidx=%d, cmd=%d, len=%d\n", ifp->ifidx, cmd, len);
+    BRCMF_DBG_HEX_DUMP(BRCMF_IS_ON(FIL), data, min_t(uint, len, MAX_HEX_DUMP_LEN), "data\n");
 
     mtx_unlock(&ifp->drvr->proto_block);
 
@@ -173,7 +173,7 @@ zx_status_t brcmf_fil_cmd_int_set(struct brcmf_if* ifp, uint32_t cmd, uint32_t d
     uint32_t data_le = data;
 
     mtx_lock(&ifp->drvr->proto_block);
-    brcmf_dbg(FIL, "ifidx=%d, cmd=%d, value=%d\n", ifp->ifidx, cmd, data);
+    BRCMF_DBG(FIL, "ifidx=%d, cmd=%d, value=%d\n", ifp->ifidx, cmd, data);
     err = brcmf_fil_cmd_data(ifp, cmd, &data_le, sizeof(data_le), true, fwerr_ptr);
     mtx_unlock(&ifp->drvr->proto_block);
 
@@ -189,7 +189,7 @@ zx_status_t brcmf_fil_cmd_int_get(struct brcmf_if* ifp, uint32_t cmd, uint32_t* 
     err = brcmf_fil_cmd_data(ifp, cmd, &data_le, sizeof(data_le), false, fwerr_ptr);
     mtx_unlock(&ifp->drvr->proto_block);
     *data = data_le;
-    brcmf_dbg(FIL, "ifidx=%d, cmd=%d, value=%d\n", ifp->ifidx, cmd, *data);
+    BRCMF_DBG(FIL, "ifidx=%d, cmd=%d, value=%d\n", ifp->ifidx, cmd, *data);
 
     return err;
 }
@@ -222,15 +222,15 @@ zx_status_t brcmf_fil_iovar_data_set(struct brcmf_if* ifp, const char* name, con
 
     mtx_lock(&drvr->proto_block);
 
-    brcmf_dbg(FIL, "ifidx=%d, name=%s, len=%d\n", ifp->ifidx, name, len);
-    brcmf_dbg_hex_dump(BRCMF_FIL_ON(), data, min_t(uint, len, MAX_HEX_DUMP_LEN), "data\n");
+    BRCMF_DBG(FIL, "ifidx=%d, name=%s, len=%d\n", ifp->ifidx, name, len);
+    BRCMF_DBG_HEX_DUMP(BRCMF_IS_ON(FIL), data, min_t(uint, len, MAX_HEX_DUMP_LEN), "data\n");
 
     buflen = brcmf_create_iovar(name, data, len, (char*)drvr->proto_buf, sizeof(drvr->proto_buf));
     if (buflen) {
         err = brcmf_fil_cmd_data(ifp, BRCMF_C_SET_VAR, drvr->proto_buf, buflen, true, fwerr_ptr);
     } else {
         err = ZX_ERR_BUFFER_TOO_SMALL;
-        brcmf_err("Creating iovar failed\n");
+        BRCMF_ERR("Creating iovar failed\n");
     }
 
     mtx_unlock(&drvr->proto_block);
@@ -253,11 +253,11 @@ zx_status_t brcmf_fil_iovar_data_get(struct brcmf_if* ifp, const char* name, voi
         }
     } else {
         err = ZX_ERR_BUFFER_TOO_SMALL;
-        brcmf_err("Creating iovar %s failed", name);
+        BRCMF_ERR("Creating iovar %s failed", name);
     }
 
-    brcmf_dbg(FIL, "ifidx=%d, name=%s, len=%d\n", ifp->ifidx, name, len);
-    brcmf_dbg_hex_dump(BRCMF_FIL_ON(), data, min_t(uint, len, MAX_HEX_DUMP_LEN), "data\n");
+    BRCMF_DBG(FIL, "ifidx=%d, name=%s, len=%d\n", ifp->ifidx, name, len);
+    BRCMF_DBG_HEX_DUMP(BRCMF_IS_ON(FIL), data, min_t(uint, len, MAX_HEX_DUMP_LEN), "data\n");
 
     mtx_unlock(&drvr->proto_block);
     return err;
@@ -300,7 +300,7 @@ static uint32_t brcmf_create_bsscfg(int32_t bsscfgidx, const char* name, const v
     iolen = prefixlen + namelen + sizeof(bsscfgidx_le) + datalen;
 
     if (buflen < iolen) {
-        brcmf_err("buffer is too short\n");
+        BRCMF_ERR("buffer is too short\n");
         return 0;
     }
 
@@ -335,9 +335,9 @@ zx_status_t brcmf_fil_bsscfg_data_set(struct brcmf_if* ifp, const char* name, co
 
     mtx_lock(&drvr->proto_block);
 
-    brcmf_dbg(FIL, "ifidx=%d, bsscfgidx=%d, name=%s, len=%d\n", ifp->ifidx, ifp->bsscfgidx, name,
+    BRCMF_DBG(FIL, "ifidx=%d, bsscfgidx=%d, name=%s, len=%d\n", ifp->ifidx, ifp->bsscfgidx, name,
               len);
-    brcmf_dbg_hex_dump(BRCMF_FIL_ON(), data, min_t(uint, len, MAX_HEX_DUMP_LEN), "data\n");
+    BRCMF_DBG_HEX_DUMP(BRCMF_IS_ON(FIL), data, min_t(uint, len, MAX_HEX_DUMP_LEN), "data\n");
 
     buflen = brcmf_create_bsscfg(ifp->bsscfgidx, name, data, len, (char*)drvr->proto_buf,
                                  sizeof(drvr->proto_buf));
@@ -345,7 +345,7 @@ zx_status_t brcmf_fil_bsscfg_data_set(struct brcmf_if* ifp, const char* name, co
         err = brcmf_fil_cmd_data(ifp, BRCMF_C_SET_VAR, drvr->proto_buf, buflen, true, nullptr);
     } else {
         err = ZX_ERR_BUFFER_TOO_SMALL;
-        brcmf_err("Creating bsscfg failed\n");
+        BRCMF_ERR("Creating bsscfg failed\n");
     }
 
     mtx_unlock(&drvr->proto_block);
@@ -369,11 +369,11 @@ zx_status_t brcmf_fil_bsscfg_data_get(struct brcmf_if* ifp, const char* name, vo
         }
     } else {
         err = ZX_ERR_BUFFER_TOO_SMALL;
-        brcmf_err("Creating bsscfg failed\n");
+        BRCMF_ERR("Creating bsscfg failed\n");
     }
-    brcmf_dbg(FIL, "ifidx=%d, bsscfgidx=%d, name=%s, len=%d\n", ifp->ifidx, ifp->bsscfgidx, name,
+    BRCMF_DBG(FIL, "ifidx=%d, bsscfgidx=%d, name=%s, len=%d\n", ifp->ifidx, ifp->bsscfgidx, name,
               len);
-    brcmf_dbg_hex_dump(BRCMF_FIL_ON(), data, min_t(uint, len, MAX_HEX_DUMP_LEN), "data\n");
+    BRCMF_DBG_HEX_DUMP(BRCMF_IS_ON(FIL), data, min_t(uint, len, MAX_HEX_DUMP_LEN), "data\n");
 
     mtx_unlock(&drvr->proto_block);
     return err;
