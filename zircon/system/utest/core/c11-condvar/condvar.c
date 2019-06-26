@@ -6,57 +6,59 @@
 #include <sched.h>
 #include <threads.h>
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
-static mtx_t mutex = MTX_INIT;
-static cnd_t cond = CND_INIT;
-static int threads_waked;
-static int threads_started;
-static int threads_woke_first_barrier;
+typedef struct cond_thread_args {
+    mtx_t mutex;
+    cnd_t cond;
+    int threads_woken;
+    int threads_started;
+    int threads_woke_first_barrier;
+} cond_thread_args_t;
 
 static int cond_thread(void* arg) {
-    mtx_lock(&mutex);
-    threads_started++;
-    cnd_wait(&cond, &mutex);
-    threads_woke_first_barrier++;
-    cnd_wait(&cond, &mutex);
-    threads_waked++;
-    mtx_unlock(&mutex);
+    cond_thread_args_t* args = (cond_thread_args_t*)(arg);
+
+    mtx_lock(&args->mutex);
+    args->threads_started++;
+    cnd_wait(&args->cond, &args->mutex);
+    args->threads_woke_first_barrier++;
+    cnd_wait(&args->cond, &args->mutex);
+    args->threads_woken++;
+    mtx_unlock(&args->mutex);
     return 0;
 }
 
-bool cnd_test(void) {
-    BEGIN_TEST;
+TEST(ConditionalVariableTest, BroadcastSignalWait) {
+    cond_thread_args_t args = {};
 
-    threads_waked = 0;
-    threads_started = 0;
-    threads_woke_first_barrier = 0;
+    ASSERT_EQ(mtx_init(&args.mutex, mtx_plain), thrd_success);
+    ASSERT_EQ(cnd_init(&args.cond), thrd_success);
 
     thrd_t thread1, thread2, thread3;
 
-    thrd_create(&thread1, cond_thread, (void*)(uintptr_t)0);
-    thrd_create(&thread2, cond_thread, (void*)(uintptr_t)1);
-    thrd_create(&thread3, cond_thread, (void*)(uintptr_t)2);
+    ASSERT_EQ(thrd_create(&thread1, cond_thread, &args), thrd_success);
+    ASSERT_EQ(thrd_create(&thread2, cond_thread, &args), thrd_success);
+    ASSERT_EQ(thrd_create(&thread3, cond_thread, &args), thrd_success);
 
     // Wait for all the threads to report that they've started.
     while (true) {
-        mtx_lock(&mutex);
-        int threads = threads_started;
-        mtx_unlock(&mutex);
+        mtx_lock(&args.mutex);
+        int threads = args.threads_started;
+        mtx_unlock(&args.mutex);
         if (threads == 3) {
             break;
         }
         sched_yield();
     }
 
-    int result = cnd_broadcast(&cond);
-    EXPECT_EQ(result, thrd_success, "Failed to broadcast");
+    ASSERT_EQ(cnd_broadcast(&args.cond), thrd_success);
 
     // Wait for all the threads to report that they were woken.
     while (true) {
-        mtx_lock(&mutex);
-        int threads = threads_woke_first_barrier;
-        mtx_unlock(&mutex);
+        mtx_lock(&args.mutex);
+        int threads = args.threads_woke_first_barrier;
+        mtx_unlock(&args.mutex);
         if (threads == 3) {
             break;
         }
@@ -64,14 +66,13 @@ bool cnd_test(void) {
     }
 
     for (int iteration = 0; iteration < 3; iteration++) {
-        result = cnd_signal(&cond);
-        EXPECT_EQ(result, thrd_success, "Failed to signal");
+        EXPECT_EQ(cnd_signal(&args.cond), thrd_success);
 
         // Wait for one thread to report that it was woken.
         while (true) {
-            mtx_lock(&mutex);
-            int threads = threads_waked;
-            mtx_unlock(&mutex);
+            mtx_lock(&args.mutex);
+            int threads = args.threads_woken;
+            mtx_unlock(&args.mutex);
             if (threads == iteration + 1) {
                 break;
             }
@@ -79,11 +80,9 @@ bool cnd_test(void) {
         }
     }
 
-    thrd_join(thread1, NULL);
-    thrd_join(thread2, NULL);
-    thrd_join(thread3, NULL);
-
-    END_TEST;
+    EXPECT_EQ(thrd_join(thread1, NULL), thrd_success);
+    EXPECT_EQ(thrd_join(thread2, NULL), thrd_success);
+    EXPECT_EQ(thrd_join(thread3, NULL), thrd_success);
 }
 
 static void time_add_nsec(struct timespec* ts, int nsec) {
@@ -96,9 +95,7 @@ static void time_add_nsec(struct timespec* ts, int nsec) {
     }
 }
 
-bool cnd_timedwait_timeout_test(void) {
-    BEGIN_TEST;
-
+TEST(ConditionalVariableTest, ConditionalVariablesTimeout) {
     cnd_t cond = CND_INIT;
     mtx_t mutex = MTX_INIT;
 
@@ -109,12 +106,5 @@ bool cnd_timedwait_timeout_test(void) {
     int result = cnd_timedwait(&cond, &mutex, &delay);
     mtx_unlock(&mutex);
 
-    EXPECT_EQ(result, thrd_timedout, "Lock should have timeout");
-
-    END_TEST;
+    EXPECT_EQ(result, thrd_timedout, "Lock should have timedout");
 }
-
-BEGIN_TEST_CASE(cnd_tests)
-RUN_TEST(cnd_test)
-RUN_TEST(cnd_timedwait_timeout_test)
-END_TEST_CASE(cnd_tests)
