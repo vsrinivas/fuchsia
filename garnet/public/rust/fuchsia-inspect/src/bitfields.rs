@@ -48,6 +48,11 @@ bitfield! {
 
     // Only for HEADER block
     pub header_generation_count, set_header_generation_count: 63, 0;
+
+    // Only for ARRAY_VALUE blocks.
+    pub u8, array_entry_type, set_array_entry_type: 3, 0;
+    pub u8, array_flags, set_array_flags: 7, 4;
+    pub u8, array_slots_count, set_array_slots_count: 15, 8;
 }
 
 #[cfg(test)]

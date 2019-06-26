@@ -43,3 +43,5 @@ pub const DEFAULT_VMO_SIZE_BYTES: usize = 256 * 1024;
 
 /// Minimum size for the VMO: 4K
 pub const MINIMUM_VMO_SIZE_BYTES: usize = 4 * 1024;
+
+pub const ARRAY_PAYLOAD_METADATA_SIZE_BYTES: usize = 8;

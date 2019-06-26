@@ -38,6 +38,9 @@ pub enum BlockType {
 
     // A deleted object
     Tombstone = 10,
+
+    // An array value
+    ArrayValue = 11,
 }
 
 impl fmt::Display for BlockType {
@@ -54,6 +57,7 @@ impl fmt::Display for BlockType {
             BlockType::Extent => write!(f, "EXTENT"),
             BlockType::Name => write!(f, "NAME"),
             BlockType::Tombstone => write!(f, "TOMBSTONE"),
+            BlockType::ArrayValue => write!(f, "ARRAY_VALUE"),
         }
     }
 }
@@ -65,7 +69,15 @@ impl BlockType {
             | BlockType::IntValue
             | BlockType::UintValue
             | BlockType::DoubleValue
-            | BlockType::PropertyValue => true,
+            | BlockType::PropertyValue
+            | BlockType::ArrayValue => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_numeric_value(&self) -> bool {
+        match *self {
+            BlockType::IntValue | BlockType::UintValue | BlockType::DoubleValue => true,
             _ => false,
         }
     }
@@ -78,7 +90,7 @@ impl BlockType {
     }
 
     #[cfg(test)]
-    pub fn all() -> [BlockType; 11] {
+    pub fn all() -> [BlockType; 12] {
         [
             BlockType::Free,
             BlockType::Reserved,
@@ -91,6 +103,7 @@ impl BlockType {
             BlockType::Extent,
             BlockType::Name,
             BlockType::Tombstone,
+            BlockType::ArrayValue,
         ]
     }
 }

@@ -5,7 +5,11 @@
 #![feature(async_await)]
 
 use {
-    crate::{block::PropertyFormat, heap::Heap, state::State},
+    crate::{
+        block::{ArrayFormat, PropertyFormat},
+        heap::Heap,
+        state::State,
+    },
     failure::{format_err, Error},
     fuchsia_component::server::{ServiceFs, ServiceObjTrait},
     fuchsia_syslog::macros::*,
@@ -143,6 +147,7 @@ macro_rules! inspect_type_impl {
 
             #[cfg(test)]
             impl $name {
+                #[allow(dead_code)]
                 fn get_block(&self) -> Option<crate::block::Block<Arc<Mapping>>> {
                     self.inner.as_ref().and_then(|inner| {
                         inner.state.lock().heap.get_block(inner.block_index).ok()
@@ -200,6 +205,7 @@ macro_rules! inspect_type_impl {
 
 /// Utility for generating functions to create a numeric property.
 ///   `name`: identifier for the name (example: double)
+///   `name_cap`: identifier for the name capitalized (example: Double)
 ///   `type`: the type of the numeric property (example: f64)
 macro_rules! create_numeric_property_fn {
     ($name:ident, $name_cap:ident, $type:ident) => {
@@ -216,6 +222,30 @@ macro_rules! create_numeric_property_fn {
                             .ok()
                     })
                     .unwrap_or([<$name_cap Property>]::new_no_op())
+            }
+        }
+    };
+}
+
+/// Utility for generating functions to create an array property.
+///   `name`: identifier for the name (example: double)
+///   `name_cap`: identifier for the name capitalized (example: Double)
+///   `type`: the type of the numeric property (example: f64)
+macro_rules! create_array_property_fn {
+    ($name:ident, $name_cap:ident, $type:ident) => {
+        paste::item! {
+            pub fn [<create_ $name _array>](&self, name: impl AsRef<str>, slots: u8)
+                -> [<$name_cap ArrayProperty>] {
+                    self.inner.as_ref().and_then(|inner| {
+                        inner.state
+                            .lock()
+                            .[<create_ $name _array>](name.as_ref(), slots, ArrayFormat::Default, inner.block_index)
+                            .map(|block| {
+                                [<$name_cap ArrayProperty>]::new(inner.state.clone(), block.index())
+                            })
+                            .ok()
+                    })
+                    .unwrap_or([<$name_cap ArrayProperty>]::new_no_op())
             }
         }
     };
@@ -256,6 +286,12 @@ impl Node {
     create_numeric_property_fn!(int, Int, i64);
     create_numeric_property_fn!(uint, Uint, u64);
     create_numeric_property_fn!(double, Double, f64);
+
+    /// Add an array property to this node: create_int_array, create_double_array,
+    /// create_uint_array.
+    create_array_property_fn!(int, Int, i64);
+    create_array_property_fn!(uint, Uint, u64);
+    create_array_property_fn!(double, Double, f64);
 
     /// Add a string property to this node.
     pub fn create_string(&self, name: impl AsRef<str>, value: impl AsRef<str>) -> StringProperty {
@@ -354,6 +390,24 @@ macro_rules! numeric_property_fn {
     };
 }
 
+/// Utility for generting a Drop implementation for numeric and array properties.
+///     `name`: the name of the struct of the property for which Drop will be implemented.
+macro_rules! drop_value_impl {
+    ($name:ident) => {
+        impl Drop for $name {
+            fn drop(&mut self) {
+                self.inner.as_ref().map(|inner| {
+                    inner
+                        .state
+                        .lock()
+                        .free_value(inner.block_index)
+                        .expect(&format!("Failed to free property index={}", inner.block_index));
+                });
+            }
+        }
+    };
+}
+
 /// Utility for generating a numeric property datatype impl
 ///   `name`: the readble name of the type of the function (example: double)
 ///   `type`: the type of the argument of the function to generate (example: f64)
@@ -385,16 +439,7 @@ macro_rules! numeric_property {
                 }
             }
 
-            impl Drop for [<$name_cap Property>] {
-                fn drop(&mut self) {
-                    self.inner.as_ref().map(|inner| {
-                        inner.state
-                            .lock()
-                            .free_value(inner.block_index)
-                            .expect(&format!("Failed to free property index={}", inner.block_index));
-                    });
-                }
-            }
+            drop_value_impl!([<$name_cap Property>]);
         }
     };
 }
@@ -451,6 +496,66 @@ macro_rules! property {
 
 property!(String, str, value.as_bytes());
 property!(Bytes, [u8], value);
+
+pub trait ArrayProperty {
+    type Type;
+
+    /// Set the array value to |value| at the given |index|.
+    fn set(&self, index: usize, value: Self::Type);
+
+    /// Add the given |value| to the property current value at the given |index|.
+    fn add(&self, index: usize, value: Self::Type);
+
+    /// Subtract the given |value| to the property current value at the given |index|.
+    fn subtract(&self, index: usize, value: Self::Type);
+}
+
+/// Utility for generating array property functions (example: set, add, subtract)
+///   `fn_name`: the name of the function to generate (example: set)
+///   `type`: the type of the argument of the function to generate (example: f64)
+///   `name`: the readble name of the type of the function (example: double)
+macro_rules! array_property_fn {
+    ($fn_name:ident, $type:ident, $name:ident) => {
+        paste::item! {
+            fn $fn_name(&self, index: usize, value: $type) {
+                if let Some(ref inner) = self.inner {
+                    inner.state.lock().[<$fn_name _array_ $name _slot>](inner.block_index, index, value)
+                        .unwrap_or_else(|e| {
+                            fx_log_err!("Failed to {} property. Error: {:?}", stringify!($fn_name), e);
+                        });
+                }
+            }
+        }
+    };
+}
+
+/// Utility for generating a numeric property datatype impl
+///   `name`: the readble name of the type of the function (example: double)
+///   `type`: the type of the argument of the function to generate (example: f64)
+macro_rules! array_property {
+    ($name:ident, $name_cap:ident, $type:ident) => {
+        paste::item! {
+            inspect_type_impl!(
+                /// Inspect API Array Property data type.
+                struct [<$name_cap ArrayProperty>]
+            );
+
+            impl ArrayProperty for [<$name_cap ArrayProperty>] {
+                type Type = $type;
+
+                array_property_fn!(set, $type, $name);
+                array_property_fn!(add, $type, $name);
+                array_property_fn!(subtract, $type, $name);
+            }
+
+            drop_value_impl!([<$name_cap ArrayProperty>]);
+        }
+    };
+}
+
+array_property!(int, Int, i64);
+array_property!(uint, Uint, u64);
+array_property!(double, Double, f64);
 
 #[cfg(test)]
 mod tests {
@@ -662,6 +767,36 @@ mod tests {
             assert_eq!(property_block.property_total_length().unwrap(), 8);
         }
         assert_eq!(node_block.child_count().unwrap(), 0);
+    }
+
+    #[test]
+    fn test_array() {
+        let inspector = Inspector::new();
+        let root = inspector.root();
+        let root_block = root.get_block().unwrap();
+        {
+            let array = root.create_double_array("array_property", 5);
+            let array_block = array.get_block().unwrap();
+
+            array.set(0, 5.0);
+            assert_eq!(array_block.array_get_double_slot(0).unwrap(), 5.0);
+
+            array.add(0, 5.3);
+            assert_eq!(array_block.array_get_double_slot(0).unwrap(), 10.3);
+
+            array.subtract(0, 3.4);
+            assert_eq!(array_block.array_get_double_slot(0).unwrap(), 6.9);
+
+            array.set(1, 2.5);
+            array.set(3, -3.1);
+
+            for (i, value) in [6.9, 2.5, 0.0, -3.1, 0.0].into_iter().enumerate() {
+                assert_eq!(array_block.array_get_double_slot(i).unwrap(), *value);
+            }
+
+            assert_eq!(root_block.child_count().unwrap(), 1);
+        }
+        assert_eq!(root_block.child_count().unwrap(), 0);
     }
 
     #[test]

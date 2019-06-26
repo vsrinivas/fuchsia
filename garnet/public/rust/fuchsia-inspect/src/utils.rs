@@ -44,3 +44,11 @@ pub fn block_size_for_payload(payload_size: usize) -> usize {
 pub fn payload_size_for_order(order: usize) -> usize {
     order_to_size(order) - constants::HEADER_SIZE_BYTES
 }
+
+/// Get the array capacity size for the given |order|.
+pub fn array_capacity(order: usize) -> usize {
+    (order_to_size(order)
+        - constants::HEADER_SIZE_BYTES
+        - constants::ARRAY_PAYLOAD_METADATA_SIZE_BYTES)
+        / std::mem::size_of::<u64>()
+}

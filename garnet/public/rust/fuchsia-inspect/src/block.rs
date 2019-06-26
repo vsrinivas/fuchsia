@@ -34,6 +34,30 @@ pub struct Block<T> {
     container: T,
 }
 
+/// Format in which the array will be read.
+#[derive(Debug, PartialEq, Eq, FromPrimitive, ToPrimitive)]
+pub enum ArrayFormat {
+    /// Regular array, it stores N values in N slots.
+    Default = 0,
+
+    /// The array is a linear histogram with N buckets and N+4 slots, which are:
+    /// - param_floor_value
+    /// - param_step_size
+    /// - underflow_bucket
+    /// - ...N buckets...
+    /// - overflow_bucket
+    LinearHistogram = 1,
+
+    /// The array is an exponential histogram with N buckets and N+5 slots, which are:
+    /// - param_floor_value
+    /// - param_initial_step
+    /// - param_step_multiplier
+    /// - underflow_bucket
+    /// - ...N buckets...
+    /// - overflow_bucket
+    ExponentialHistogram = 2,
+}
+
 pub trait ReadableBlockContainer {
     fn read_bytes(&self, offset: usize, bytes: &mut [u8]) -> usize;
 }
@@ -178,6 +202,70 @@ impl<T: ReadableBlockContainer> Block<T> {
     pub fn name_index(&self) -> Result<u32, Error> {
         self.check_any_value()?;
         Ok(self.read_header().value_name_index())
+    }
+
+    /// Gets the format of an ARRAY_VALUE block.
+    pub fn array_format(&self) -> Result<ArrayFormat, Error> {
+        self.check_type(BlockType::ArrayValue)?;
+        Ok(ArrayFormat::from_u8(self.read_payload().array_flags()).unwrap())
+    }
+
+    /// Gets the number of slots in an ARRAY_VALUE block.
+    pub fn array_slots(&self) -> Result<u8, Error> {
+        self.check_type(BlockType::ArrayValue)?;
+        Ok(self.read_payload().array_slots_count())
+    }
+
+    /// Gets the type of each slot in an ARRAY_VALUE block.
+    pub fn array_entry_type(&self) -> Result<BlockType, Error> {
+        self.check_type(BlockType::ArrayValue)?;
+        Ok(BlockType::from_u8(self.read_payload().array_entry_type()).unwrap())
+    }
+
+    /// Sets the value of an int ARRAY_VALUE block.
+    pub fn array_get_int_slot(&self, slot_index: usize) -> Result<i64, Error> {
+        self.check_array_entry_type(BlockType::IntValue)?;
+        if slot_index > utils::array_capacity(self.order()) {
+            bail!("Index out of bounds: {}", slot_index);
+        }
+        let mut bytes = [0u8; 8];
+        self.container
+            .read_bytes(utils::offset_for_index(self.index + 1) + slot_index * 8, &mut bytes);
+        Ok(i64::from_le_bytes(bytes))
+    }
+
+    /// Sets the value of a double ARRAY_VALUE block.
+    pub fn array_get_double_slot(&self, slot_index: usize) -> Result<f64, Error> {
+        self.check_array_entry_type(BlockType::DoubleValue)?;
+        if slot_index > utils::array_capacity(self.order()) {
+            bail!("Index out of bounds: {}", slot_index);
+        }
+        let mut bytes = [0u8; 8];
+        self.container
+            .read_bytes(utils::offset_for_index(self.index + 1) + slot_index * 8, &mut bytes);
+        Ok(f64::from_bits(u64::from_le_bytes(bytes)))
+    }
+
+    /// Sets the value of a uint ARRAY_VALUE block.
+    pub fn array_get_uint_slot(&self, slot_index: usize) -> Result<u64, Error> {
+        self.check_array_entry_type(BlockType::UintValue)?;
+        if slot_index > utils::array_capacity(self.order()) {
+            bail!("Index out of bounds: {}", slot_index);
+        }
+        let mut bytes = [0u8; 8];
+        self.container
+            .read_bytes(utils::offset_for_index(self.index + 1) + slot_index * 8, &mut bytes);
+        Ok(u64::from_le_bytes(bytes))
+    }
+
+    /// Ensures the value of the array is the expected one.
+    fn check_array_entry_type(&self, expected: BlockType) -> Result<(), Error> {
+        let actual = self.array_entry_type()?;
+        if actual == expected {
+            Ok(())
+        } else {
+            bail!("Invalid array entry type. Expected: {}, got: {}", expected, actual);
+        }
     }
 
     /// Get the parent block index of a *_VALUE block.
@@ -374,6 +462,66 @@ impl<T: ReadableBlockContainer + WritableBlockContainer + BlockContainerEq> Bloc
         header.set_block_type(BlockType::Free.to_u8().unwrap());
         header.set_free_next_index(next);
         self.write_header(header);
+    }
+
+    /// Converts a block to an *_ARRAY_VALUE block
+    pub fn become_array_value(
+        &self,
+        slots: u8,
+        format: ArrayFormat,
+        entry_type: BlockType,
+        name_index: u32,
+        parent_index: u32,
+    ) -> Result<(), Error> {
+        if !entry_type.is_numeric_value() {
+            bail!("Invalid entry type");
+        }
+        self.write_value_header(BlockType::ArrayValue, name_index, parent_index)?;
+        let mut payload = Payload(0);
+        payload.set_array_entry_type(entry_type.to_u8().unwrap());
+        payload.set_array_flags(format.to_u8().unwrap());
+        payload.set_array_slots_count(slots);
+        self.write_payload(payload);
+        Ok(())
+    }
+
+    /// Sets the value of an int ARRAY_VALUE block.
+    pub fn array_set_int_slot(&self, slot_index: usize, value: i64) -> Result<(), Error> {
+        self.check_array_entry_type(BlockType::IntValue)?;
+        if slot_index > utils::array_capacity(self.order()) {
+            bail!("Index out of bounds: {}", slot_index);
+        }
+        self.container.write_bytes(
+            utils::offset_for_index(self.index + 1) + slot_index * 8,
+            &value.to_le_bytes(),
+        );
+        Ok(())
+    }
+
+    /// Sets the value of a double ARRAY_VALUE block.
+    pub fn array_set_double_slot(&self, slot_index: usize, value: f64) -> Result<(), Error> {
+        self.check_array_entry_type(BlockType::DoubleValue)?;
+        if slot_index > utils::array_capacity(self.order()) {
+            bail!("Index out of bounds: {}", slot_index);
+        }
+        self.container.write_bytes(
+            utils::offset_for_index(self.index + 1) + slot_index * 8,
+            &value.to_bits().to_le_bytes(),
+        );
+        Ok(())
+    }
+
+    /// Sets the value of a uint ARRAY_VALUE block.
+    pub fn array_set_uint_slot(&self, slot_index: usize, value: u64) -> Result<(), Error> {
+        self.check_array_entry_type(BlockType::UintValue)?;
+        if slot_index > utils::array_capacity(self.order()) {
+            bail!("Index out of bounds: {}", slot_index);
+        }
+        self.container.write_bytes(
+            utils::offset_for_index(self.index + 1) + slot_index * 8,
+            &value.to_le_bytes(),
+        );
+        Ok(())
     }
 
     /// Converts a block to an EXTENT block.
@@ -867,6 +1015,7 @@ mod tests {
             BlockType::UintValue,
             BlockType::NodeValue,
             BlockType::PropertyValue,
+            BlockType::ArrayValue,
         ]);
         test_ok_types(move |b| b.name_index(), &any_value);
         test_ok_types(move |b| b.parent_index(), &any_value);
@@ -1016,6 +1165,52 @@ mod tests {
         test_ok_types(move |b| b.name_contents(), &types);
         test_ok_types(
             move |b| b.become_name("test"),
+            &BTreeSet::from_iter(vec![BlockType::Reserved]),
+        );
+    }
+
+    #[test]
+    fn uint_array_value() {
+        let container = [0u8; constants::MIN_ORDER_SIZE * 4];
+        let block = Block::new_free(&container[..], 0, 2, 0).unwrap();
+        assert!(block.become_reserved().is_ok());
+        assert!(block
+            .become_array_value(4, ArrayFormat::LinearHistogram, BlockType::UintValue, 3, 2)
+            .is_ok());
+
+        assert_eq!(block.block_type(), BlockType::ArrayValue);
+        assert_eq!(block.parent_index().unwrap(), 2);
+        assert_eq!(block.name_index().unwrap(), 3);
+        assert_eq!(block.array_format().unwrap(), ArrayFormat::LinearHistogram);
+        assert_eq!(block.array_slots().unwrap(), 4);
+        assert_eq!(block.array_entry_type().unwrap(), BlockType::UintValue);
+
+        for i in 0..6 {
+            assert!(block.array_set_uint_slot(i, (i as u64 + 1) * 5).is_ok());
+        }
+        assert!(block.array_set_uint_slot(7, 5).is_err());
+        assert_eq!(container[..8], [0xb2, 0x02, 0x00, 0x00, 0x30, 0x00, 0x00, 0x00]);
+        assert_eq!(container[8..16], [0x15, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+        for i in 0..6 {
+            assert_eq!(
+                container[8 * (i + 2)..8 * (i + 3)],
+                [(i as u8 + 1) * 5, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
+            );
+        }
+
+        for i in 0..6 {
+            assert_eq!(block.array_get_uint_slot(i).unwrap(), (i as u64 + 1) * 5);
+        }
+
+        let types = BTreeSet::from_iter(vec![BlockType::ArrayValue]);
+        test_ok_types(move |b| b.array_format(), &types);
+        test_ok_types(move |b| b.array_slots(), &types);
+        test_ok_types(
+            move |b| {
+                b.become_array_value(5, ArrayFormat::Default, BlockType::UintValue, 1, 2)?;
+                b.array_set_uint_slot(0, 3)?;
+                b.array_get_uint_slot(0)
+            },
             &BTreeSet::from_iter(vec![BlockType::Reserved]),
         );
     }
