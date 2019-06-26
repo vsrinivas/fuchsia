@@ -12,7 +12,7 @@ library("fake-bti") {
   ]
   deps = [
     "$zx/system/ulib/fbl",
-    "$zx/system/ulib/unittest",
+    "$zx/system/ulib/fdio",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
   ]
