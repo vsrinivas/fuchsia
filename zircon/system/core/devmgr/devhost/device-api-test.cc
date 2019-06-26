@@ -5,22 +5,23 @@
 #include <fbl/auto_lock.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <zxtest/zxtest.h>
+
 #include "proxy-iostate.h"
 #include "zx-device.h"
 
 namespace {
 
 TEST(DeviceApiTest, OpsNotImplemented) {
-    fbl::RefPtr<zx_device> dev;
-    ASSERT_OK(zx_device::Create(&dev));
+  fbl::RefPtr<zx_device> dev;
+  ASSERT_OK(zx_device::Create(&dev));
 
-    zx_protocol_device_t ops = {};
-    dev->ops = &ops;
+  zx_protocol_device_t ops = {};
+  dev->ops = &ops;
 
-    EXPECT_EQ(device_get_protocol(dev.get(), 0, nullptr), ZX_ERR_NOT_SUPPORTED);
-    EXPECT_EQ(device_get_size(dev.get()), 0);
-    EXPECT_EQ(device_read(dev.get(), nullptr, 0, 0, nullptr), ZX_ERR_NOT_SUPPORTED);
-    EXPECT_EQ(device_write(dev.get(), nullptr, 0, 0, nullptr), ZX_ERR_NOT_SUPPORTED);
+  EXPECT_EQ(device_get_protocol(dev.get(), 0, nullptr), ZX_ERR_NOT_SUPPORTED);
+  EXPECT_EQ(device_get_size(dev.get()), 0);
+  EXPECT_EQ(device_read(dev.get(), nullptr, 0, 0, nullptr), ZX_ERR_NOT_SUPPORTED);
+  EXPECT_EQ(device_write(dev.get(), nullptr, 0, 0, nullptr), ZX_ERR_NOT_SUPPORTED);
 }
 
 uint64_t test_ctx = 0xabcdef;
@@ -59,60 +60,60 @@ zx_status_t test_write(void* ctx, const void* buf, size_t count, zx_off_t off, s
 }
 
 TEST(DeviceApiTest, GetProtocol) {
-    fbl::RefPtr<zx_device> dev;
-    ASSERT_OK(zx_device::Create(&dev));
+  fbl::RefPtr<zx_device> dev;
+  ASSERT_OK(zx_device::Create(&dev));
 
-    zx_protocol_device_t ops = {};
-    ops.get_protocol = test_get_protocol;
-    dev->ops = &ops;
-    dev->ctx = &test_ctx;
+  zx_protocol_device_t ops = {};
+  ops.get_protocol = test_get_protocol;
+  dev->ops = &ops;
+  dev->ctx = &test_ctx;
 
-    uint8_t out = 0;
-    ASSERT_OK(device_get_protocol(dev.get(), 42, &out));
-    EXPECT_EQ(out, 0xab);
+  uint8_t out = 0;
+  ASSERT_OK(device_get_protocol(dev.get(), 42, &out));
+  EXPECT_EQ(out, 0xab);
 }
 
 TEST(DeviceApiTest, GetSize) {
-    fbl::RefPtr<zx_device> dev;
-    ASSERT_OK(zx_device::Create(&dev));
+  fbl::RefPtr<zx_device> dev;
+  ASSERT_OK(zx_device::Create(&dev));
 
-    zx_protocol_device_t ops = {};
-    ops.get_size = test_get_size;
-    dev->ops = &ops;
-    dev->ctx = &test_ctx;
+  zx_protocol_device_t ops = {};
+  ops.get_size = test_get_size;
+  dev->ops = &ops;
+  dev->ctx = &test_ctx;
 
-    ASSERT_EQ(device_get_size(dev.get()), 42ul);
+  ASSERT_EQ(device_get_size(dev.get()), 42ul);
 }
 
 TEST(DeviceApiTest, Read) {
-    fbl::RefPtr<zx_device> dev;
-    ASSERT_OK(zx_device::Create(&dev));
+  fbl::RefPtr<zx_device> dev;
+  ASSERT_OK(zx_device::Create(&dev));
 
-    zx_protocol_device_t ops = {};
-    ops.read = test_read;
-    dev->ops = &ops;
-    dev->ctx = &test_ctx;
+  zx_protocol_device_t ops = {};
+  ops.read = test_read;
+  dev->ops = &ops;
+  dev->ctx = &test_ctx;
 
-    uint8_t buf = 0;
-    size_t actual = 0;
-    ASSERT_OK(device_read(dev.get(), &buf, 1, 2, &actual));
-    EXPECT_EQ(buf, 0xab);
-    EXPECT_EQ(actual, 3);
+  uint8_t buf = 0;
+  size_t actual = 0;
+  ASSERT_OK(device_read(dev.get(), &buf, 1, 2, &actual));
+  EXPECT_EQ(buf, 0xab);
+  EXPECT_EQ(actual, 3);
 }
 
 TEST(DeviceApiTest, Write) {
-    fbl::RefPtr<zx_device> dev;
-    ASSERT_OK(zx_device::Create(&dev));
+  fbl::RefPtr<zx_device> dev;
+  ASSERT_OK(zx_device::Create(&dev));
 
-    zx_protocol_device_t ops = {};
-    ops.write = test_write;
-    dev->ops = &ops;
-    dev->ctx = &test_ctx;
+  zx_protocol_device_t ops = {};
+  ops.write = test_write;
+  dev->ops = &ops;
+  dev->ctx = &test_ctx;
 
-    uint8_t buf = 0xab;
-    size_t actual = 0;
-    ASSERT_OK(device_write(dev.get(), &buf, 1, 2, &actual));
-    EXPECT_EQ(actual, 3);
+  uint8_t buf = 0xab;
+  size_t actual = 0;
+  ASSERT_OK(device_write(dev.get(), &buf, 1, 2, &actual));
+  EXPECT_EQ(actual, 3);
 }
 
-} // namespace
+}  // namespace

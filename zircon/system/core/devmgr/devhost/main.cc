@@ -8,9 +8,7 @@
 
 __BEGIN_CDECLS
 
-int main(int argc, char** argv) {
-    devmgr_device_host_main(argc, argv);
-}
+int main(int argc, char** argv) { devmgr_device_host_main(argc, argv); }
 
 // All drivers have a pure C ABI.  But each individual driver might statically
 // link in its own copy of some C++ library code.  Since no C++ language
@@ -25,9 +23,7 @@ int main(int argc, char** argv) {
 // caught either.
 #if __has_feature(address_sanitizer)
 #include <sanitizer/asan_interface.h>
-const char* __asan_default_options() {
-    return "detect_odr_violation=0";
-}
+const char* __asan_default_options() { return "detect_odr_violation=0"; }
 #endif
 
 __END_CDECLS

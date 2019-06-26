@@ -2,12 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_CORE_DEVMGR_DEVHOST_COMPOSITE_DEVICE_H_
+#define ZIRCON_SYSTEM_CORE_DEVMGR_DEVHOST_COMPOSITE_DEVICE_H_
 
 #include <ddk/driver.h>
 #include <fbl/array.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
+
 #include "zx-device.h"
 
 namespace devmgr {
@@ -23,12 +25,15 @@ zx_status_t InitializeCompositeDevice(const fbl::RefPtr<zx_device>& device,
 // enables one of them (the first to try) to begin teardown of the composite
 // device.  This is used for implementing unbind.
 class CompositeDevice : public fbl::RefCounted<CompositeDevice> {
-public:
-    explicit CompositeDevice(fbl::RefPtr<zx_device> device) : device_(std::move(device)) {}
-    ~CompositeDevice();
-    fbl::RefPtr<zx_device> Detach() { return std::move(device_); }
-private:
-    fbl::RefPtr<zx_device> device_;
+ public:
+  explicit CompositeDevice(fbl::RefPtr<zx_device> device) : device_(std::move(device)) {}
+  ~CompositeDevice();
+  fbl::RefPtr<zx_device> Detach() { return std::move(device_); }
+
+ private:
+  fbl::RefPtr<zx_device> device_;
 };
 
-} // namespace devmgr
+}  // namespace devmgr
+
+#endif  // ZIRCON_SYSTEM_CORE_DEVMGR_DEVHOST_COMPOSITE_DEVICE_H_

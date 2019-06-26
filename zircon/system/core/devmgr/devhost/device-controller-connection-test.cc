@@ -2,13 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "device-controller-connection.h"
+
 #include <fbl/auto_lock.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/zx/vmo.h>
-#include <thread>
 #include <zxtest/zxtest.h>
+
+#include <thread>
+
 #include "connection-destroyer.h"
-#include "device-controller-connection.h"
 #include "zx-device.h"
 
 namespace {
@@ -17,86 +20,85 @@ const fuchsia_device_manager_DeviceController_ops_t kNoDeviceOps = {};
 const fuchsia_io_Directory_ops_t kNoDirectoryOps = {};
 
 TEST(DeviceControllerConnectionTestCase, Creation) {
-    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
 
-    fbl::RefPtr<zx_device> dev;
-    ASSERT_OK(zx_device::Create(&dev));
+  fbl::RefPtr<zx_device> dev;
+  ASSERT_OK(zx_device::Create(&dev));
 
-    zx::channel device_local, device_remote;
-    ASSERT_OK(zx::channel::create(0, &device_local, &device_remote));
+  zx::channel device_local, device_remote;
+  ASSERT_OK(zx::channel::create(0, &device_local, &device_remote));
 
-    std::unique_ptr<devmgr::DeviceControllerConnection> conn;
+  std::unique_ptr<devmgr::DeviceControllerConnection> conn;
 
-    ASSERT_NULL(dev->conn.load());
-    ASSERT_OK(devmgr::DeviceControllerConnection::Create(
-            dev, std::move(device_remote), &kNoDeviceOps, &kNoDirectoryOps, &conn));
-    ASSERT_NOT_NULL(dev->conn.load());
+  ASSERT_NULL(dev->conn.load());
+  ASSERT_OK(devmgr::DeviceControllerConnection::Create(dev, std::move(device_remote), &kNoDeviceOps,
+                                                       &kNoDirectoryOps, &conn));
+  ASSERT_NOT_NULL(dev->conn.load());
 
-    ASSERT_OK(devmgr::DeviceControllerConnection::BeginWait(std::move(conn), loop.dispatcher()));
-    ASSERT_OK(loop.RunUntilIdle());
+  ASSERT_OK(devmgr::DeviceControllerConnection::BeginWait(std::move(conn), loop.dispatcher()));
+  ASSERT_OK(loop.RunUntilIdle());
 }
 
 TEST(DeviceControllerConnectionTestCase, PeerClosedDuringReply) {
-    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
 
+  fbl::RefPtr<zx_device> dev;
+  ASSERT_OK(zx_device::Create(&dev));
+
+  zx::channel device_local, device_remote;
+  ASSERT_OK(zx::channel::create(0, &device_local, &device_remote));
+
+  // This is static so we can access it from bind_driver().  The
+  // existing structure of the code makes it difficult to plumb access to it
+  // through to the callback.
+  static struct {
     fbl::RefPtr<zx_device> dev;
-    ASSERT_OK(zx_device::Create(&dev));
+    zx::channel local;
+    async_dispatcher_t* dispatcher;
+  } bind_driver_closure;
 
-    zx::channel device_local, device_remote;
-    ASSERT_OK(zx::channel::create(0, &device_local, &device_remote));
+  bind_driver_closure.dev = dev;
+  bind_driver_closure.local = std::move(device_local);
+  bind_driver_closure.dispatcher = loop.dispatcher();
 
-    // This is static so we can access it from bind_driver().  The
-    // existing structure of the code makes it difficult to plumb access to it
-    // through to the callback.
-    static struct {
-        fbl::RefPtr<zx_device> dev;
-        zx::channel local;
-        async_dispatcher_t* dispatcher;
-    } bind_driver_closure;
+  auto bind_driver = [](void* ctx, const char* driver_path_data, size_t driver_path_size,
+                        zx_handle_t raw_driver_vmo, fidl_txn_t* txn) {
+    // Pretend that a device closure happened right before we began
+    // processing BindDriver.  Close the other half of the channel, so the reply below will fail
+    // from ZX_ERR_PEER_CLOSED.
+    auto conn = bind_driver_closure.dev->conn.exchange(nullptr);
+    devmgr::ConnectionDestroyer::Get()->QueueDeviceControllerConnection(
+        bind_driver_closure.dispatcher, conn);
+    bind_driver_closure.local.reset();
 
-    bind_driver_closure.dev = dev;
-    bind_driver_closure.local = std::move(device_local);
-    bind_driver_closure.dispatcher = loop.dispatcher();
+    return fuchsia_device_manager_DeviceControllerBindDriver_reply(txn, ZX_OK);
+  };
+  fuchsia_device_manager_DeviceController_ops_t device_ops = {};
+  device_ops.BindDriver = bind_driver;
 
-    auto bind_driver = [](void* ctx, const char* driver_path_data,
-                          size_t driver_path_size, zx_handle_t raw_driver_vmo,
-                          fidl_txn_t* txn) {
-        // Pretend that a device closure happened right before we began
-        // processing BindDriver.  Close the other half of the channel, so the reply below will fail
-        // from ZX_ERR_PEER_CLOSED.
-        auto conn = bind_driver_closure.dev->conn.exchange(nullptr);
-        devmgr::ConnectionDestroyer::Get()->QueueDeviceControllerConnection(
-                bind_driver_closure.dispatcher, conn);
-        bind_driver_closure.local.reset();
+  std::unique_ptr<devmgr::DeviceControllerConnection> conn;
+  ASSERT_OK(devmgr::DeviceControllerConnection::Create(dev, std::move(device_remote), &device_ops,
+                                                       &kNoDirectoryOps, &conn));
 
-        return fuchsia_device_manager_DeviceControllerBindDriver_reply(txn, ZX_OK);
-    };
-    fuchsia_device_manager_DeviceController_ops_t device_ops = {};
-    device_ops.BindDriver = bind_driver;
+  ASSERT_OK(devmgr::DeviceControllerConnection::BeginWait(std::move(conn), loop.dispatcher()));
+  ASSERT_OK(loop.RunUntilIdle());
 
-    std::unique_ptr<devmgr::DeviceControllerConnection> conn;
-    ASSERT_OK(devmgr::DeviceControllerConnection::Create(
-            dev, std::move(device_remote), &device_ops, &kNoDirectoryOps, &conn));
-
-    ASSERT_OK(devmgr::DeviceControllerConnection::BeginWait(std::move(conn), loop.dispatcher()));
-    ASSERT_OK(loop.RunUntilIdle());
-
-    // Create a thread to send a BindDriver message.  The thread isn't strictly
-    // necessary, but is done out of convenience since the FIDL C bindings don't
-    // expose non-zx_channel_call client bindings.
-    enum {
-        INITIAL,
-        VMO_CREATE_FAILED,
-        WRONG_CALL_STATUS,
-        SUCCESS,
-    } thread_status = INITIAL;
-    std::thread synchronous_call_thread([channel=bind_driver_closure.local.get(),
-                                        &thread_status]() {
+  // Create a thread to send a BindDriver message.  The thread isn't strictly
+  // necessary, but is done out of convenience since the FIDL C bindings don't
+  // expose non-zx_channel_call client bindings.
+  enum {
+    INITIAL,
+    VMO_CREATE_FAILED,
+    WRONG_CALL_STATUS,
+    SUCCESS,
+  } thread_status = INITIAL;
+  std::thread synchronous_call_thread(
+      [channel = bind_driver_closure.local.get(), &thread_status]() {
         zx::vmo vmo;
         zx_status_t status = zx::vmo::create(0, 0, &vmo);
         if (status != ZX_OK) {
-            thread_status = VMO_CREATE_FAILED;
-            return;
+          thread_status = VMO_CREATE_FAILED;
+          return;
         }
         zx_status_t call_status;
         status = fuchsia_device_manager_DeviceControllerBindDriver(channel, "", 0, vmo.release(),
@@ -104,96 +106,94 @@ TEST(DeviceControllerConnectionTestCase, PeerClosedDuringReply) {
         // zx_channel_call() returns this when the handle is closed during the
         // call.
         if (status != ZX_ERR_CANCELED) {
-            thread_status = WRONG_CALL_STATUS;
-            return;
+          thread_status = WRONG_CALL_STATUS;
+          return;
         }
         thread_status = SUCCESS;
-    });
+      });
 
-    ASSERT_OK(loop.Run(zx::time::infinite(), true /* run_once */));
+  ASSERT_OK(loop.Run(zx::time::infinite(), true /* run_once */));
 
-    synchronous_call_thread.join();
-    ASSERT_EQ(SUCCESS, thread_status);
-    ASSERT_FALSE(bind_driver_closure.local.is_valid());
+  synchronous_call_thread.join();
+  ASSERT_EQ(SUCCESS, thread_status);
+  ASSERT_FALSE(bind_driver_closure.local.is_valid());
 }
 
 // Verify we do not abort when an expected PEER_CLOSED comes in.
 TEST(DeviceControllerConnectionTestCase, PeerClosed) {
-    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
 
-    fbl::RefPtr<zx_device> dev;
-    ASSERT_OK(zx_device::Create(&dev));
+  fbl::RefPtr<zx_device> dev;
+  ASSERT_OK(zx_device::Create(&dev));
 
-    zx::channel device_local, device_remote;
-    ASSERT_OK(zx::channel::create(0, &device_local, &device_remote));
+  zx::channel device_local, device_remote;
+  ASSERT_OK(zx::channel::create(0, &device_local, &device_remote));
 
-    std::unique_ptr<devmgr::DeviceControllerConnection> conn;
-    ASSERT_OK(devmgr::DeviceControllerConnection::Create(
-            dev, std::move(device_remote), &kNoDeviceOps, &kNoDirectoryOps, &conn));
+  std::unique_ptr<devmgr::DeviceControllerConnection> conn;
+  ASSERT_OK(devmgr::DeviceControllerConnection::Create(dev, std::move(device_remote), &kNoDeviceOps,
+                                                       &kNoDirectoryOps, &conn));
 
-    ASSERT_OK(devmgr::DeviceControllerConnection::BeginWait(std::move(conn), loop.dispatcher()));
-    ASSERT_OK(loop.RunUntilIdle());
+  ASSERT_OK(devmgr::DeviceControllerConnection::BeginWait(std::move(conn), loop.dispatcher()));
+  ASSERT_OK(loop.RunUntilIdle());
 
-    // Perform the device shutdown protocol, since otherwise the devhost code
-    // will assert, since it is unable to handle unexpected connection closures.
-    auto dev_conn = dev->conn.exchange(nullptr);
-    devmgr::ConnectionDestroyer::Get()->QueueDeviceControllerConnection(loop.dispatcher(),
-                                                                        dev_conn);
-    device_local.reset();
+  // Perform the device shutdown protocol, since otherwise the devhost code
+  // will assert, since it is unable to handle unexpected connection closures.
+  auto dev_conn = dev->conn.exchange(nullptr);
+  devmgr::ConnectionDestroyer::Get()->QueueDeviceControllerConnection(loop.dispatcher(), dev_conn);
+  device_local.reset();
 
-    ASSERT_OK(loop.RunUntilIdle());
+  ASSERT_OK(loop.RunUntilIdle());
 }
 
 TEST(DeviceControllerConnectionTestCase, UnbindHook) {
-    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
 
-    fbl::RefPtr<zx_device> dev;
-    ASSERT_OK(zx_device::Create(&dev));
+  fbl::RefPtr<zx_device> dev;
+  ASSERT_OK(zx_device::Create(&dev));
 
-    zx::channel device_local, device_remote;
-    ASSERT_OK(zx::channel::create(0, &device_local, &device_remote));
+  zx::channel device_local, device_remote;
+  ASSERT_OK(zx::channel::create(0, &device_local, &device_remote));
 
-    auto Unbind = [](void* raw_ctx) {
-        auto ctx = static_cast<devmgr::DevhostRpcReadContext*>(raw_ctx);
-        fbl::RefPtr<zx_device> dev = ctx->conn->dev();
-        // Set dev->flags so that we can check that the unbind hook is called in
-        // the test.
-        dev->flags = DEV_FLAG_DEAD;
-        return ZX_OK;
-    };
-    fuchsia_device_manager_DeviceController_ops_t device_ops = {};
-    device_ops.Unbind = Unbind;
+  auto Unbind = [](void* raw_ctx) {
+    auto ctx = static_cast<devmgr::DevhostRpcReadContext*>(raw_ctx);
+    fbl::RefPtr<zx_device> dev = ctx->conn->dev();
+    // Set dev->flags so that we can check that the unbind hook is called in
+    // the test.
+    dev->flags = DEV_FLAG_DEAD;
+    return ZX_OK;
+  };
+  fuchsia_device_manager_DeviceController_ops_t device_ops = {};
+  device_ops.Unbind = Unbind;
 
-    std::unique_ptr<devmgr::DeviceControllerConnection> conn;
-    ASSERT_OK(devmgr::DeviceControllerConnection::Create(
-            dev, std::move(device_remote), &device_ops, &kNoDirectoryOps, &conn));
+  std::unique_ptr<devmgr::DeviceControllerConnection> conn;
+  ASSERT_OK(devmgr::DeviceControllerConnection::Create(dev, std::move(device_remote), &device_ops,
+                                                       &kNoDirectoryOps, &conn));
 
-    ASSERT_OK(devmgr::DeviceControllerConnection::BeginWait(std::move(conn), loop.dispatcher()));
-    ASSERT_OK(loop.RunUntilIdle());
+  ASSERT_OK(devmgr::DeviceControllerConnection::BeginWait(std::move(conn), loop.dispatcher()));
+  ASSERT_OK(loop.RunUntilIdle());
 
-    // Create a thread to send the Unbind message.  The thread isn't strictly
-    // necessary, but is done out of convenience since the FIDL C bindings don't
-    // expose non-zx_channel_call client bindings.
-    enum {
-        INITIAL,
-        WRITE_FAILED,
-        SUCCESS,
-    } thread_status = INITIAL;
-    std::thread synchronous_call_thread([channel=device_local.get(),
-                                        &thread_status]() {
-        zx_status_t status = fuchsia_device_manager_DeviceControllerUnbind(channel);
-        if (status != ZX_OK) {
-            thread_status = WRITE_FAILED;
-            return;
-        }
-        thread_status = SUCCESS;
-    });
+  // Create a thread to send the Unbind message.  The thread isn't strictly
+  // necessary, but is done out of convenience since the FIDL C bindings don't
+  // expose non-zx_channel_call client bindings.
+  enum {
+    INITIAL,
+    WRITE_FAILED,
+    SUCCESS,
+  } thread_status = INITIAL;
+  std::thread synchronous_call_thread([channel = device_local.get(), &thread_status]() {
+    zx_status_t status = fuchsia_device_manager_DeviceControllerUnbind(channel);
+    if (status != ZX_OK) {
+      thread_status = WRITE_FAILED;
+      return;
+    }
+    thread_status = SUCCESS;
+  });
 
-    ASSERT_OK(loop.Run(zx::time::infinite(), true /* run_once */));
+  ASSERT_OK(loop.Run(zx::time::infinite(), true /* run_once */));
 
-    synchronous_call_thread.join();
-    ASSERT_EQ(SUCCESS, thread_status);
-    ASSERT_EQ(dev->flags, DEV_FLAG_DEAD);
+  synchronous_call_thread.join();
+  ASSERT_EQ(SUCCESS, thread_status);
+  ASSERT_EQ(dev->flags, DEV_FLAG_DEAD);
 }
 
-} // namespace
+}  // namespace
