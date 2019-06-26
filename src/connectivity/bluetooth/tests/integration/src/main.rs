@@ -34,12 +34,7 @@ mod tests;
 /// Collect a Vector of Results into a Result of a Vector. If all results are
 /// `Ok`, then return `Ok` of the results. Otherwise return the first `Err`.
 fn collect_results<T, E>(results: Vec<Result<T, E>>) -> Result<Vec<T>, E> {
-    let result : Result<Vec<T>, E> = results.into_iter().collect();
-    // TODO(FLK-360): fix flakiness and return `result` directly.
-    if !result.is_ok() {
-        println!("Ignoring error, test is flaky. See: FLK-360");
-    }
-    Ok(vec![])
+    results.into_iter().collect()
 }
 
 fn main() -> Result<(), Error> {
