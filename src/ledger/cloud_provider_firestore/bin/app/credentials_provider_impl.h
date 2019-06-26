@@ -19,13 +19,11 @@ namespace cloud_provider_firestore {
 
 class CredentialsProviderImpl : public CredentialsProvider {
  public:
-  explicit CredentialsProviderImpl(
-      std::unique_ptr<firebase_auth::FirebaseAuth> firebase_auth);
+  explicit CredentialsProviderImpl(std::unique_ptr<firebase_auth::FirebaseAuth> firebase_auth);
   ~CredentialsProviderImpl() override;
 
   void GetCredentials(
-      fit::function<void(std::shared_ptr<grpc::CallCredentials>)> callback)
-      override;
+      fit::function<void(std::shared_ptr<grpc::CallCredentials>)> callback) override;
 
  private:
   std::unique_ptr<firebase_auth::FirebaseAuth> firebase_auth_;

@@ -27,11 +27,10 @@ namespace cloud_provider_firestore {
 // closed.
 class CloudProviderImpl : public cloud_provider::CloudProvider {
  public:
-  CloudProviderImpl(
-      rng::Random* random, std::string user_id,
-      std::unique_ptr<firebase_auth::FirebaseAuth> firebase_auth,
-      std::unique_ptr<FirestoreService> firestore_service,
-      fidl::InterfaceRequest<cloud_provider::CloudProvider> request);
+  CloudProviderImpl(rng::Random* random, std::string user_id,
+                    std::unique_ptr<firebase_auth::FirebaseAuth> firebase_auth,
+                    std::unique_ptr<FirestoreService> firestore_service,
+                    fidl::InterfaceRequest<cloud_provider::CloudProvider> request);
   ~CloudProviderImpl() override;
 
   void set_on_empty(fit::closure on_empty) { on_empty_ = std::move(on_empty); }
@@ -42,14 +41,12 @@ class CloudProviderImpl : public cloud_provider::CloudProvider {
   void ShutDownAndReportEmpty();
 
  private:
-  void GetDeviceSet(
-      fidl::InterfaceRequest<cloud_provider::DeviceSet> device_set,
-      GetDeviceSetCallback callback) override;
+  void GetDeviceSet(fidl::InterfaceRequest<cloud_provider::DeviceSet> device_set,
+                    GetDeviceSetCallback callback) override;
 
-  void GetPageCloud(
-      std::vector<uint8_t> app_id, std::vector<uint8_t> page_id,
-      fidl::InterfaceRequest<cloud_provider::PageCloud> page_cloud,
-      GetPageCloudCallback callback) override;
+  void GetPageCloud(std::vector<uint8_t> app_id, std::vector<uint8_t> page_id,
+                    fidl::InterfaceRequest<cloud_provider::PageCloud> page_cloud,
+                    GetPageCloudCallback callback) override;
 
   // Makes a best-effort attempt to create a placeholder document at the given
   // location.
@@ -58,12 +55,10 @@ class CloudProviderImpl : public cloud_provider::CloudProvider {
   // data under this path is visible when querying the parent collection. This
   // works around limitations of the web client API for purposes of the
   // development cloud dashboard, see LE-522.
-  void CreatePlaceholderDocument(std::string parent_document_path,
-                                 std::string collection_id,
+  void CreatePlaceholderDocument(std::string parent_document_path, std::string collection_id,
                                  std::string document_id);
 
-  void ScopedGetCredentials(
-      fit::function<void(std::shared_ptr<grpc::CallCredentials>)> callback);
+  void ScopedGetCredentials(fit::function<void(std::shared_ptr<grpc::CallCredentials>)> callback);
 
   rng::Random* const random_;
   const std::string user_id_;

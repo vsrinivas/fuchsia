@@ -20,8 +20,7 @@ namespace ledger {
 
 class LastOneWinsMergeStrategy::LastOneWinsMerger {
  public:
-  LastOneWinsMerger(storage::PageStorage* storage,
-                    std::unique_ptr<const storage::Commit> left,
+  LastOneWinsMerger(storage::PageStorage* storage, std::unique_ptr<const storage::Commit> left,
                     std::unique_ptr<const storage::Commit> right,
                     std::unique_ptr<const storage::Commit> ancestor,
                     fit::function<void(Status)> callback);
@@ -51,8 +50,7 @@ class LastOneWinsMergeStrategy::LastOneWinsMerger {
 
 LastOneWinsMergeStrategy::LastOneWinsMerger::LastOneWinsMerger(
     storage::PageStorage* storage, std::unique_ptr<const storage::Commit> left,
-    std::unique_ptr<const storage::Commit> right,
-    std::unique_ptr<const storage::Commit> ancestor,
+    std::unique_ptr<const storage::Commit> right, std::unique_ptr<const storage::Commit> ancestor,
     fit::function<void(Status)> callback)
     : storage_(storage),
       left_(std::move(left)),
@@ -84,8 +82,7 @@ void LastOneWinsMergeStrategy::LastOneWinsMerger::Done(Status status) {
 }
 
 void LastOneWinsMergeStrategy::LastOneWinsMerger::BuildAndCommitJournal() {
-  auto on_next = [weak_this =
-                      weak_factory_.GetWeakPtr()](storage::EntryChange change) {
+  auto on_next = [weak_this = weak_factory_.GetWeakPtr()](storage::EntryChange change) {
     if (!weak_this || weak_this->cancelled_) {
       // No need to call Done, as it will be called in the on_done callback.
       return false;
@@ -94,8 +91,7 @@ void LastOneWinsMergeStrategy::LastOneWinsMerger::BuildAndCommitJournal() {
     if (change.deleted) {
       weak_this->journal_->Delete(key);
     } else {
-      weak_this->journal_->Put(key, change.entry.object_identifier,
-                               change.entry.priority);
+      weak_this->journal_->Put(key, change.entry.object_identifier, change.entry.priority);
     }
     return true;
   };
@@ -125,8 +121,8 @@ void LastOneWinsMergeStrategy::LastOneWinsMerger::BuildAndCommitJournal() {
           }
         });
   };
-  storage_->GetCommitContentsDiff(*(ancestor_), *(right_), "",
-                                  std::move(on_next), std::move(on_diff_done));
+  storage_->GetCommitContentsDiff(*(ancestor_), *(right_), "", std::move(on_next),
+                                  std::move(on_diff_done));
 }
 
 LastOneWinsMergeStrategy::LastOneWinsMergeStrategy() {}
@@ -135,22 +131,21 @@ LastOneWinsMergeStrategy::~LastOneWinsMergeStrategy() {}
 
 void LastOneWinsMergeStrategy::SetOnError(fit::function<void()> /*on_error*/) {}
 
-void LastOneWinsMergeStrategy::Merge(
-    storage::PageStorage* storage, ActivePageManager* /*page_manager*/,
-    std::unique_ptr<const storage::Commit> head_1,
-    std::unique_ptr<const storage::Commit> head_2,
-    std::unique_ptr<const storage::Commit> ancestor,
-    fit::function<void(Status)> callback) {
+void LastOneWinsMergeStrategy::Merge(storage::PageStorage* storage,
+                                     ActivePageManager* /*page_manager*/,
+                                     std::unique_ptr<const storage::Commit> head_1,
+                                     std::unique_ptr<const storage::Commit> head_2,
+                                     std::unique_ptr<const storage::Commit> ancestor,
+                                     fit::function<void(Status)> callback) {
   FXL_DCHECK(!in_progress_merge_);
   FXL_DCHECK(storage::Commit::TimestampOrdered(head_1, head_2));
 
-  in_progress_merge_ =
-      std::make_unique<LastOneWinsMergeStrategy::LastOneWinsMerger>(
-          storage, std::move(head_1), std::move(head_2), std::move(ancestor),
-          [this, callback = std::move(callback)](Status status) {
-            in_progress_merge_.reset();
-            callback(status);
-          });
+  in_progress_merge_ = std::make_unique<LastOneWinsMergeStrategy::LastOneWinsMerger>(
+      storage, std::move(head_1), std::move(head_2), std::move(ancestor),
+      [this, callback = std::move(callback)](Status status) {
+        in_progress_merge_.reset();
+        callback(status);
+      });
 
   in_progress_merge_->Start();
 }

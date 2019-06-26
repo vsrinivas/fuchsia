@@ -21,15 +21,14 @@
 
 namespace cloud_provider_firestore {
 
-using ListenStream = grpc::ClientAsyncReaderWriterInterface<
-    google::firestore::v1beta1::ListenRequest,
-    google::firestore::v1beta1::ListenResponse>;
+using ListenStream =
+    grpc::ClientAsyncReaderWriterInterface<google::firestore::v1beta1::ListenRequest,
+                                           google::firestore::v1beta1::ListenResponse>;
 
 class ListenCall {
  public:
   // Creates a new instance.
-  ListenCall(ListenCallClient* client,
-             std::unique_ptr<grpc::ClientContext> context,
+  ListenCall(ListenCallClient* client, std::unique_ptr<grpc::ClientContext> context,
              std::unique_ptr<ListenStream> stream);
   ~ListenCall();
 
@@ -63,10 +62,8 @@ class ListenCall {
   std::unique_ptr<ListenStream> stream_;
 
   StreamController<ListenStream> stream_controller_;
-  StreamReader<ListenStream, google::firestore::v1beta1::ListenResponse>
-      stream_reader_;
-  StreamWriter<ListenStream, google::firestore::v1beta1::ListenRequest>
-      stream_writer_;
+  StreamReader<ListenStream, google::firestore::v1beta1::ListenResponse> stream_reader_;
+  StreamWriter<ListenStream, google::firestore::v1beta1::ListenRequest> stream_writer_;
 
   fit::closure on_empty_;
 

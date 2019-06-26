@@ -34,8 +34,7 @@ TEST(CredentialsTest, Clone) {
   EXPECT_EQ(config->client_email(), cloned_config->client_email());
   EXPECT_EQ(config->client_id(), cloned_config->client_id());
 
-  EXPECT_EQ(1, EVP_PKEY_cmp(config->private_key().get(),
-                            cloned_config->private_key().get()));
+  EXPECT_EQ(1, EVP_PKEY_cmp(config->private_key().get(), cloned_config->private_key().get()));
 }
 
 }  // namespace

@@ -20,12 +20,9 @@
 namespace ledger {
 class BranchTracker::PageWatcherContainer {
  public:
-  PageWatcherContainer(coroutine::CoroutineService* coroutine_service,
-                       PageWatcherPtr watcher,
-                       ActivePageManager* active_page_manager,
-                       storage::PageStorage* storage,
-                       std::unique_ptr<const storage::Commit> base_commit,
-                       std::string key_prefix)
+  PageWatcherContainer(coroutine::CoroutineService* coroutine_service, PageWatcherPtr watcher,
+                       ActivePageManager* active_page_manager, storage::PageStorage* storage,
+                       std::unique_ptr<const storage::Commit> base_commit, std::string key_prefix)
       : change_in_flight_(false),
         last_commit_(std::move(base_commit)),
         coroutine_service_(coroutine_service),
@@ -89,10 +86,7 @@ class BranchTracker::PageWatcherContainer {
  private:
   // Returns true if all changes have been sent to the watcher client, false
   // otherwise.
-  bool Drained() {
-    return !current_commit_ ||
-           last_commit_->GetId() == current_commit_->GetId();
-  }
+  bool Drained() { return !current_commit_ || last_commit_->GetId() == current_commit_->GetId(); }
 
   std::vector<PageChange> PaginateChanges(PageChangePtr change) {
     std::vector<PageChange> changes;
@@ -105,19 +99,14 @@ class BranchTracker::PageWatcherContainer {
     auto deletions = std::move(change->deleted_keys);
     for (size_t i = 0, j = 0; i < entries.size() || j < deletions.size();) {
       bool add_entry = i < entries.size() &&
-                       (j == deletions.size() ||
-                        convert::ExtendedStringView(entries.at(i).key) <
-                            convert::ExtendedStringView(deletions.at(j)));
-      size_t entry_size =
-          add_entry
-              ? fidl_serialization::GetEntrySize(entries.at(i).key.size())
-              : fidl_serialization::GetByteVectorSize(deletions.at(j).size());
+                       (j == deletions.size() || convert::ExtendedStringView(entries.at(i).key) <
+                                                     convert::ExtendedStringView(deletions.at(j)));
+      size_t entry_size = add_entry ? fidl_serialization::GetEntrySize(entries.at(i).key.size())
+                                    : fidl_serialization::GetByteVectorSize(deletions.at(j).size());
       size_t entry_handle_count = add_entry ? 1 : 0;
 
-      if (changes.empty() ||
-          fidl_size + entry_size > fidl_serialization::kMaxInlineDataSize ||
-          handle_count + entry_handle_count >
-              fidl_serialization::kMaxMessageHandles) {
+      if (changes.empty() || fidl_size + entry_size > fidl_serialization::kMaxInlineDataSize ||
+          handle_count + entry_handle_count > fidl_serialization::kMaxMessageHandles) {
         PageChange change;
         change.timestamp = timestamp;
         change.changed_entries.resize(0);
@@ -140,19 +129,16 @@ class BranchTracker::PageWatcherContainer {
   }
 
   void SendChange(PageChange page_change, ResultState state,
-                  std::unique_ptr<const storage::Commit> new_commit,
-                  fit::closure on_done) {
+                  std::unique_ptr<const storage::Commit> new_commit, fit::closure on_done) {
     interface_->OnChange(
         std::move(page_change), state,
-        [this, state, new_commit = std::move(new_commit),
-         on_done = std::move(on_done)](
+        [this, state, new_commit = std::move(new_commit), on_done = std::move(on_done)](
             fidl::InterfaceRequest<PageSnapshot> snapshot_request) mutable {
           if (snapshot_request) {
-            active_page_manager_->BindPageSnapshot(
-                new_commit->Clone(), std::move(snapshot_request), key_prefix_);
+            active_page_manager_->BindPageSnapshot(new_commit->Clone(), std::move(snapshot_request),
+                                                   key_prefix_);
           }
-          if (state != ResultState::COMPLETED &&
-              state != ResultState::PARTIAL_COMPLETED) {
+          if (state != ResultState::COMPLETED && state != ResultState::PARTIAL_COMPLETED) {
             on_done();
             return;
           }
@@ -188,14 +174,12 @@ class BranchTracker::PageWatcherContainer {
         callback::MakeScoped(
             weak_factory_.GetWeakPtr(),
             [this, new_commit = std::move(current_commit_)](
-                Status status,
-                std::pair<PageChangePtr, std::string> page_change_ptr) mutable {
+                Status status, std::pair<PageChangePtr, std::string> page_change_ptr) mutable {
               if (status != Status::OK) {
                 // This change notification is abandonned. At the next commit,
                 // we will try again (but not before). The next notification
                 // will cover both this change and the next.
-                FXL_LOG(ERROR)
-                    << "Unable to compute PageChange for Watch update.";
+                FXL_LOG(ERROR) << "Unable to compute PageChange for Watch update.";
                 change_in_flight_ = false;
                 return;
               }
@@ -209,41 +193,35 @@ class BranchTracker::PageWatcherContainer {
               std::vector<PageChange> paginated_changes =
                   PaginateChanges(std::move(page_change_ptr.first));
               if (paginated_changes.size() == 1) {
-                SendChange(std::move(paginated_changes[0]),
-                           ResultState::COMPLETED, std::move(new_commit),
-                           [] {});
+                SendChange(std::move(paginated_changes[0]), ResultState::COMPLETED,
+                           std::move(new_commit), [] {});
                 return;
               }
-              coroutine_service_->StartCoroutine(
-                  [this, new_commit = std::move(new_commit),
-                   paginated_changes = std::move(paginated_changes)](
-                      coroutine::CoroutineHandler* handler) mutable {
-                    auto guard = fit::defer([this] { handler_ = nullptr; });
-                    FXL_DCHECK(!handler_);
-                    handler_ = handler;
-                    for (size_t i = 0; i < paginated_changes.size(); ++i) {
-                      ResultState state;
-                      if (i == 0) {
-                        state = ResultState::PARTIAL_STARTED;
-                      } else if (i == paginated_changes.size() - 1) {
-                        state = ResultState::PARTIAL_COMPLETED;
-                      } else {
-                        state = ResultState::PARTIAL_CONTINUED;
-                      }
-                      if (coroutine::SyncCall(
-                              handler,
-                              [this, change = std::move(paginated_changes[i]),
-                               state, new_commit = new_commit->Clone()](
-                                  fit::closure on_done) mutable {
-                                SendChange(std::move(change), state,
-                                           std::move(new_commit),
-                                           std::move(on_done));
-                              }) ==
-                          coroutine::ContinuationStatus::INTERRUPTED) {
-                        return;
-                      }
-                    }
-                  });
+              coroutine_service_->StartCoroutine([this, new_commit = std::move(new_commit),
+                                                  paginated_changes = std::move(paginated_changes)](
+                                                     coroutine::CoroutineHandler* handler) mutable {
+                auto guard = fit::defer([this] { handler_ = nullptr; });
+                FXL_DCHECK(!handler_);
+                handler_ = handler;
+                for (size_t i = 0; i < paginated_changes.size(); ++i) {
+                  ResultState state;
+                  if (i == 0) {
+                    state = ResultState::PARTIAL_STARTED;
+                  } else if (i == paginated_changes.size() - 1) {
+                    state = ResultState::PARTIAL_COMPLETED;
+                  } else {
+                    state = ResultState::PARTIAL_CONTINUED;
+                  }
+                  if (coroutine::SyncCall(handler, [this, change = std::move(paginated_changes[i]),
+                                                    state, new_commit = new_commit->Clone()](
+                                                       fit::closure on_done) mutable {
+                        SendChange(std::move(change), state, std::move(new_commit),
+                                   std::move(on_done));
+                      }) == coroutine::ContinuationStatus::INTERRUPTED) {
+                    return;
+                  }
+                }
+              });
             }));
   }
 
@@ -266,8 +244,7 @@ class BranchTracker::PageWatcherContainer {
 };
 
 BranchTracker::BranchTracker(coroutine::CoroutineService* coroutine_service,
-                             ActivePageManager* manager,
-                             storage::PageStorage* storage)
+                             ActivePageManager* manager, storage::PageStorage* storage)
     : coroutine_service_(coroutine_service),
       manager_(manager),
       storage_(storage),
@@ -303,13 +280,11 @@ std::unique_ptr<const storage::Commit> BranchTracker::GetBranchHead() {
   return current_commit_->Clone();
 }
 
-void BranchTracker::OnNewCommits(
-    const std::vector<std::unique_ptr<const storage::Commit>>& commits,
-    storage::ChangeSource /*source*/) {
+void BranchTracker::OnNewCommits(const std::vector<std::unique_ptr<const storage::Commit>>& commits,
+                                 storage::ChangeSource /*source*/) {
   FXL_DCHECK(current_commit_);
   bool changed = false;
-  const std::unique_ptr<const storage::Commit>* new_current_commit =
-      &current_commit_;
+  const std::unique_ptr<const storage::Commit>* new_current_commit = &current_commit_;
   for (const auto& commit : commits) {
     if (commit->GetId() == (*new_current_commit)->GetId()) {
       continue;
@@ -318,8 +293,8 @@ void BranchTracker::OnNewCommits(
     // doesn't have current_commit_ as a parent it is not part of this branch
     // and should be ignored.
     std::vector<storage::CommitIdView> parent_ids = commit->GetParentIds();
-    if (std::find(parent_ids.begin(), parent_ids.end(),
-                  (*new_current_commit)->GetId()) == parent_ids.end()) {
+    if (std::find(parent_ids.begin(), parent_ids.end(), (*new_current_commit)->GetId()) ==
+        parent_ids.end()) {
       continue;
     }
     changed = true;
@@ -348,8 +323,7 @@ void BranchTracker::StartTransaction(fit::closure watchers_drained_callback) {
   waiter->Finalize(std::move(watchers_drained_callback));
 }
 
-void BranchTracker::StopTransaction(
-    std::unique_ptr<const storage::Commit> commit) {
+void BranchTracker::StopTransaction(std::unique_ptr<const storage::Commit> commit) {
   FXL_DCHECK(transaction_in_progress_ || !commit);
 
   if (!transaction_in_progress_) {
@@ -367,12 +341,11 @@ void BranchTracker::StopTransaction(
   }
 }
 
-void BranchTracker::RegisterPageWatcher(
-    PageWatcherPtr page_watcher_ptr,
-    std::unique_ptr<const storage::Commit> base_commit,
-    std::string key_prefix) {
-  watchers_.emplace(coroutine_service_, std::move(page_watcher_ptr), manager_,
-                    storage_, std::move(base_commit), std::move(key_prefix));
+void BranchTracker::RegisterPageWatcher(PageWatcherPtr page_watcher_ptr,
+                                        std::unique_ptr<const storage::Commit> base_commit,
+                                        std::string key_prefix) {
+  watchers_.emplace(coroutine_service_, std::move(page_watcher_ptr), manager_, storage_,
+                    std::move(base_commit), std::move(key_prefix));
 }
 
 bool BranchTracker::IsEmpty() { return watchers_.empty(); }

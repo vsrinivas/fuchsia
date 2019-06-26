@@ -16,8 +16,7 @@
 namespace cloud_sync {
 class TestCloudProvider : public cloud_provider::CloudProvider {
  public:
-  explicit TestCloudProvider(
-      fidl::InterfaceRequest<cloud_provider::CloudProvider> request);
+  explicit TestCloudProvider(fidl::InterfaceRequest<cloud_provider::CloudProvider> request);
   ~TestCloudProvider() override;
 
   TestDeviceSet device_set;
@@ -27,10 +26,9 @@ class TestCloudProvider : public cloud_provider::CloudProvider {
   void GetDeviceSet(fidl::InterfaceRequest<cloud_provider::DeviceSet> request,
                     GetDeviceSetCallback callback) override;
 
-  void GetPageCloud(
-      std::vector<uint8_t> app_id, std::vector<uint8_t> page_id,
-      fidl::InterfaceRequest<cloud_provider::PageCloud> page_cloud,
-      GetPageCloudCallback callback) override;
+  void GetPageCloud(std::vector<uint8_t> app_id, std::vector<uint8_t> page_id,
+                    fidl::InterfaceRequest<cloud_provider::PageCloud> page_cloud,
+                    GetPageCloudCallback callback) override;
 
   fidl::Binding<cloud_provider::CloudProvider> binding_;
   fidl::Binding<cloud_provider::DeviceSet> device_set_binding_;

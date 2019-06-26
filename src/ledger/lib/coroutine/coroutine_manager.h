@@ -41,29 +41,28 @@ class CoroutineManager {
   // |runnable|'s callback.
   template <typename Callback, typename Runnable>
   void StartCoroutine(Callback callback, Runnable runnable) {
-    service_->StartCoroutine(
-        [this, callback = std::move(callback),
-         runnable = std::move(runnable)](CoroutineHandler* handler) mutable {
-          bool callback_called = false;
-          auto iter = handlers_.insert(handlers_.cend(), handler);
-          auto final_callback = [this, &callback_called, iter,
-                                 callback = std::move(callback)](auto... args) {
-            // Remove the handler before calling the final callback. Otherwise
-            // the handler might be unnecessarily interrupted, if this object
-            // destructor is called in the callback.
-            handlers_.erase(iter);
-            callback_called = true;
-            if (!in_deletion_) {
-              callback(std::move(args)...);
-            }
-          };
+    service_->StartCoroutine([this, callback = std::move(callback),
+                              runnable = std::move(runnable)](CoroutineHandler* handler) mutable {
+      bool callback_called = false;
+      auto iter = handlers_.insert(handlers_.cend(), handler);
+      auto final_callback = [this, &callback_called, iter,
+                             callback = std::move(callback)](auto... args) {
+        // Remove the handler before calling the final callback. Otherwise
+        // the handler might be unnecessarily interrupted, if this object
+        // destructor is called in the callback.
+        handlers_.erase(iter);
+        callback_called = true;
+        if (!in_deletion_) {
+          callback(std::move(args)...);
+        }
+      };
 
-          runnable(handler, std::move(final_callback));
+      runnable(handler, std::move(final_callback));
 
-          // Verify that the handler is correctly unregistered. It would be a
-          // bug otherwise.
-          FXL_DCHECK(callback_called);
-        });
+      // Verify that the handler is correctly unregistered. It would be a
+      // bug otherwise.
+      FXL_DCHECK(callback_called);
+    });
   }
 
   // Starts a managed coroutine. This coroutine will be automatically
@@ -73,12 +72,12 @@ class CoroutineManager {
   //   void(CoroutineHandler*)
   template <typename Runnable>
   void StartCoroutine(Runnable runnable) {
-    service_->StartCoroutine([this, runnable = std::move(runnable)](
-                                 CoroutineHandler* handler) mutable {
-      auto iter = handlers_.insert(handlers_.cend(), handler);
-      runnable(handler);
-      handlers_.erase(iter);
-    });
+    service_->StartCoroutine(
+        [this, runnable = std::move(runnable)](CoroutineHandler* handler) mutable {
+          auto iter = handlers_.insert(handlers_.cend(), handler);
+          runnable(handler);
+          handlers_.erase(iter);
+        });
   }
 
  private:

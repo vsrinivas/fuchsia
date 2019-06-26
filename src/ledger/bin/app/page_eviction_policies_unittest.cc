@@ -61,8 +61,7 @@ class FakePageEvictionDelegate : public PageEvictionDelegate {
       callback(try_evict_page_status_, PageWasEvicted(false));
       return;
     }
-    if (pages_not_to_evict_.find(page_id.ToString()) !=
-        pages_not_to_evict_.end()) {
+    if (pages_not_to_evict_.find(page_id.ToString()) != pages_not_to_evict_.end()) {
       callback(Status::OK, PageWasEvicted(false));
       return;
     }
@@ -70,9 +69,7 @@ class FakePageEvictionDelegate : public PageEvictionDelegate {
     callback(Status::OK, PageWasEvicted(true));
   }
 
-  const std::vector<storage::PageId>& GetEvictedPages() {
-    return evicted_pages_;
-  }
+  const std::vector<storage::PageId>& GetEvictedPages() { return evicted_pages_; }
 
   void SetPagesNotToEvict(std::set<storage::PageId> pages_not_to_evict) {
     pages_not_to_evict_ = std::move(pages_not_to_evict);
@@ -110,9 +107,8 @@ TEST_F(PageEvictionPoliciesTest, LeastRecentyUsed) {
   // Expect to only evict the least recently used page, i.e. "page1".
   bool called;
   Status status;
-  policy->SelectAndEvict(
-      std::make_unique<VectorIterator<const PageInfo>>(pages),
-      callback::Capture(callback::SetWhenCalled(&called), &status));
+  policy->SelectAndEvict(std::make_unique<VectorIterator<const PageInfo>>(pages),
+                         callback::Capture(callback::SetWhenCalled(&called), &status));
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
   EXPECT_THAT(delegate.GetEvictedPages(), ElementsAre("page1"));
@@ -135,9 +131,8 @@ TEST_F(PageEvictionPoliciesTest, LeastRecentyUsedWithOpenPages) {
   // the least recently used page, i.e. "page2".
   bool called;
   Status status;
-  policy->SelectAndEvict(
-      std::make_unique<VectorIterator<const PageInfo>>(pages),
-      callback::Capture(callback::SetWhenCalled(&called), &status));
+  policy->SelectAndEvict(std::make_unique<VectorIterator<const PageInfo>>(pages),
+                         callback::Capture(callback::SetWhenCalled(&called), &status));
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
   EXPECT_THAT(delegate.GetEvictedPages(), ElementsAre("page2"));
@@ -162,9 +157,8 @@ TEST_F(PageEvictionPoliciesTest, LeastRecentyUsedNoPagesToEvict) {
   // returned status should be ok, and not pages will be evicted.
   bool called;
   Status status;
-  policy->SelectAndEvict(
-      std::make_unique<VectorIterator<const PageInfo>>(pages),
-      callback::Capture(callback::SetWhenCalled(&called), &status));
+  policy->SelectAndEvict(std::make_unique<VectorIterator<const PageInfo>>(pages),
+                         callback::Capture(callback::SetWhenCalled(&called), &status));
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
   EXPECT_THAT(delegate.GetEvictedPages(), IsEmpty());
@@ -187,9 +181,8 @@ TEST_F(PageEvictionPoliciesTest, LeastRecentyUsedErrorWhileEvicting) {
       NewLeastRecentyUsedPolicy(environment_.coroutine_service(), &delegate);
   bool called;
   Status status;
-  policy->SelectAndEvict(
-      std::make_unique<VectorIterator<const PageInfo>>(pages),
-      callback::Capture(callback::SetWhenCalled(&called), &status));
+  policy->SelectAndEvict(std::make_unique<VectorIterator<const PageInfo>>(pages),
+                         callback::Capture(callback::SetWhenCalled(&called), &status));
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::INTERNAL_ERROR, status);
 }
@@ -207,16 +200,15 @@ TEST_F(PageEvictionPoliciesTest, AgeBased) {
       {ledger_name, "page4", zx::time_utc(4)},
   };
 
-  std::unique_ptr<PageEvictionPolicy> policy = NewAgeBasedPolicy(
-      environment_.coroutine_service(), &delegate, &test_clock);
+  std::unique_ptr<PageEvictionPolicy> policy =
+      NewAgeBasedPolicy(environment_.coroutine_service(), &delegate, &test_clock);
 
   // Expect to only evict the pages that were closed for |kUnusedTimeLimit| and
   // more, i.e. "page1", "page2".
   bool called;
   Status status;
-  policy->SelectAndEvict(
-      std::make_unique<VectorIterator<const PageInfo>>(pages),
-      callback::Capture(callback::SetWhenCalled(&called), &status));
+  policy->SelectAndEvict(std::make_unique<VectorIterator<const PageInfo>>(pages),
+                         callback::Capture(callback::SetWhenCalled(&called), &status));
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
   EXPECT_THAT(delegate.GetEvictedPages(), ElementsAre("page1", "page2"));
@@ -235,16 +227,15 @@ TEST_F(PageEvictionPoliciesTest, AgeBasedWithOpenPages) {
       {ledger_name, "page4", zx::time_utc(4)},
   };
 
-  std::unique_ptr<PageEvictionPolicy> policy = NewAgeBasedPolicy(
-      environment_.coroutine_service(), &delegate, &test_clock);
+  std::unique_ptr<PageEvictionPolicy> policy =
+      NewAgeBasedPolicy(environment_.coroutine_service(), &delegate, &test_clock);
 
   // "page1" should not be evicted as it is marked as open. Expect to only evict
   // the page closed for |kUnusedTimeLimit| and more, i.e. "page2".
   bool called;
   Status status;
-  policy->SelectAndEvict(
-      std::make_unique<VectorIterator<const PageInfo>>(pages),
-      callback::Capture(callback::SetWhenCalled(&called), &status));
+  policy->SelectAndEvict(std::make_unique<VectorIterator<const PageInfo>>(pages),
+                         callback::Capture(callback::SetWhenCalled(&called), &status));
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
   EXPECT_THAT(delegate.GetEvictedPages(), ElementsAre("page2"));
@@ -265,16 +256,15 @@ TEST_F(PageEvictionPoliciesTest, AgeBasedNoPagesToEvict) {
 
   delegate.SetPagesNotToEvict({"page2", "page3", "page4"});
 
-  std::unique_ptr<PageEvictionPolicy> policy = NewAgeBasedPolicy(
-      environment_.coroutine_service(), &delegate, &test_clock);
+  std::unique_ptr<PageEvictionPolicy> policy =
+      NewAgeBasedPolicy(environment_.coroutine_service(), &delegate, &test_clock);
 
   // "page1" is marked as open, and pages 2-4 will fail to be evicted. The
   // returned status should be ok, and not pages will be evicted.
   bool called;
   Status status;
-  policy->SelectAndEvict(
-      std::make_unique<VectorIterator<const PageInfo>>(pages),
-      callback::Capture(callback::SetWhenCalled(&called), &status));
+  policy->SelectAndEvict(std::make_unique<VectorIterator<const PageInfo>>(pages),
+                         callback::Capture(callback::SetWhenCalled(&called), &status));
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
   EXPECT_THAT(delegate.GetEvictedPages(), IsEmpty());
@@ -296,13 +286,12 @@ TEST_F(PageEvictionPoliciesTest, AgeBasedErrorWhileEvicting) {
 
   // If |TryEvictPage| fails, so should |SelectAndEvict|. Expect to find the
   // same error status.
-  std::unique_ptr<PageEvictionPolicy> policy = NewAgeBasedPolicy(
-      environment_.coroutine_service(), &delegate, &test_clock);
+  std::unique_ptr<PageEvictionPolicy> policy =
+      NewAgeBasedPolicy(environment_.coroutine_service(), &delegate, &test_clock);
   bool called;
   Status status;
-  policy->SelectAndEvict(
-      std::make_unique<VectorIterator<const PageInfo>>(pages),
-      callback::Capture(callback::SetWhenCalled(&called), &status));
+  policy->SelectAndEvict(std::make_unique<VectorIterator<const PageInfo>>(pages),
+                         callback::Capture(callback::SetWhenCalled(&called), &status));
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::INTERNAL_ERROR, status);
 }
@@ -320,16 +309,14 @@ TEST_F(PageEvictionPoliciesTest, AgeBasedWithCustomizedTimeLimit) {
   };
 
   std::unique_ptr<PageEvictionPolicy> policy =
-      NewAgeBasedPolicy(environment_.coroutine_service(), &delegate,
-                        &test_clock, zx::duration(1));
+      NewAgeBasedPolicy(environment_.coroutine_service(), &delegate, &test_clock, zx::duration(1));
 
   // Expect to only evict the pages that were closed for |kUnusedTimeLimit + 1|,
   // i.e. "page1".
   bool called;
   Status status;
-  policy->SelectAndEvict(
-      std::make_unique<VectorIterator<const PageInfo>>(pages),
-      callback::Capture(callback::SetWhenCalled(&called), &status));
+  policy->SelectAndEvict(std::make_unique<VectorIterator<const PageInfo>>(pages),
+                         callback::Capture(callback::SetWhenCalled(&called), &status));
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
   EXPECT_THAT(delegate.GetEvictedPages(), ElementsAre("page1"));

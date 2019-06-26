@@ -28,11 +28,10 @@ enum class IterationStatus {
 // |ObjectIdentifier| to use to reference the given content id. The piece is
 // then passed to |callback|, along with a status of |IN_PROGRESS|, except for
 // the last piece which has a status of |DONE|.
-void SplitDataSource(
-    DataSource* source, ObjectType type,
-    fit::function<ObjectIdentifier(ObjectDigest)> make_object_identifier,
-    fit::function<uint64_t(uint64_t)> chunk_permutation,
-    fit::function<void(IterationStatus, std::unique_ptr<Piece>)> callback);
+void SplitDataSource(DataSource* source, ObjectType type,
+                     fit::function<ObjectIdentifier(ObjectDigest)> make_object_identifier,
+                     fit::function<uint64_t(uint64_t)> chunk_permutation,
+                     fit::function<void(IterationStatus, std::unique_ptr<Piece>)> callback);
 
 // Iterates over the children of an index object.
 Status ForEachIndexChild(fxl::StringView index_content,
@@ -43,8 +42,7 @@ Status ForEachIndexChild(fxl::StringView index_content,
 // |callback| returned true for the given id.
 void CollectPieces(
     ObjectIdentifier root,
-    fit::function<void(ObjectIdentifier,
-                       fit::function<void(Status, fxl::StringView)>)>
+    fit::function<void(ObjectIdentifier, fit::function<void(Status, fxl::StringView)>)>
         data_accessor,
     fit::function<bool(IterationStatus, ObjectIdentifier)> callback);
 

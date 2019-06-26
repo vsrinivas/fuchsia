@@ -39,8 +39,7 @@ class LedgerImpl : public fuchsia::ledger::LedgerSyncableDelegate {
     Delegate() {}
     virtual ~Delegate() = default;
 
-    virtual void GetPage(convert::ExtendedStringView page_id,
-                         PageState page_state,
+    virtual void GetPage(convert::ExtendedStringView page_id, PageState page_state,
                          fidl::InterfaceRequest<Page> page_request,
                          fit::function<void(Status)> callback) = 0;
 
@@ -61,9 +60,8 @@ class LedgerImpl : public fuchsia::ledger::LedgerSyncableDelegate {
                    fit::function<void(Status)> callback) override;
   void GetPage(PageIdPtr id, fidl::InterfaceRequest<Page> page_request,
                fit::function<void(Status)> callback) override;
-  void SetConflictResolverFactory(
-      fidl::InterfaceHandle<ConflictResolverFactory> factory,
-      fit::function<void(Status)> callback) override;
+  void SetConflictResolverFactory(fidl::InterfaceHandle<ConflictResolverFactory> factory,
+                                  fit::function<void(Status)> callback) override;
 
   Environment* const environment_;
   Delegate* const delegate_;

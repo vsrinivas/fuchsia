@@ -24,18 +24,16 @@
 namespace ledger {
 namespace {
 // Encodes opaque bytes in a way that is usable as a directory name.
-std::string GetDirectoryName(fxl::StringView bytes) {
-  return base64url::Base64UrlEncode(bytes);
-}
+std::string GetDirectoryName(fxl::StringView bytes) { return base64url::Base64UrlEncode(bytes); }
 }  // namespace
 
-LedgerRepositoryImpl::LedgerRepositoryImpl(
-    DetachedPath content_path, Environment* environment,
-    std::unique_ptr<storage::DbFactory> db_factory,
-    std::unique_ptr<SyncWatcherSet> watchers,
-    std::unique_ptr<sync_coordinator::UserSync> user_sync,
-    std::unique_ptr<DiskCleanupManager> disk_cleanup_manager,
-    PageUsageListener* page_usage_listener, inspect::Node inspect_node)
+LedgerRepositoryImpl::LedgerRepositoryImpl(DetachedPath content_path, Environment* environment,
+                                           std::unique_ptr<storage::DbFactory> db_factory,
+                                           std::unique_ptr<SyncWatcherSet> watchers,
+                                           std::unique_ptr<sync_coordinator::UserSync> user_sync,
+                                           std::unique_ptr<DiskCleanupManager> disk_cleanup_manager,
+                                           PageUsageListener* page_usage_listener,
+                                           inspect::Node inspect_node)
     : content_path_(std::move(content_path)),
       environment_(environment),
       db_factory_(std::move(db_factory)),
@@ -45,10 +43,9 @@ LedgerRepositoryImpl::LedgerRepositoryImpl(
       page_usage_listener_(page_usage_listener),
       disk_cleanup_manager_(std::move(disk_cleanup_manager)),
       inspect_node_(std::move(inspect_node)),
-      requests_metric_(inspect_node_.CreateUIntMetric(
-          kRequestsInspectPathComponent.ToString(), 0UL)),
-      ledgers_inspect_node_(
-          inspect_node_.CreateChild(kLedgersInspectPathComponent.ToString())) {
+      requests_metric_(
+          inspect_node_.CreateUIntMetric(kRequestsInspectPathComponent.ToString(), 0UL)),
+      ledgers_inspect_node_(inspect_node_.CreateChild(kLedgersInspectPathComponent.ToString())) {
   bindings_.set_on_empty([this] { CheckEmpty(); });
   ledger_managers_.set_on_empty([this] { CheckEmpty(); });
   disk_cleanup_manager_->set_on_empty([this] { CheckEmpty(); });
@@ -67,8 +64,7 @@ LedgerRepositoryImpl::~LedgerRepositoryImpl() {
 }
 
 void LedgerRepositoryImpl::BindRepository(
-    fidl::InterfaceRequest<ledger_internal::LedgerRepository>
-        repository_request) {
+    fidl::InterfaceRequest<ledger_internal::LedgerRepository> repository_request) {
   bindings_.emplace(this, std::move(repository_request));
   requests_metric_.Add(1);
 }
@@ -108,9 +104,9 @@ void LedgerRepositoryImpl::PageIsClosedOfflineAndEmpty(
   ledger_manager->PageIsClosedOfflineAndEmpty(page_id, std::move(callback));
 }
 
-void LedgerRepositoryImpl::DeletePageStorage(
-    fxl::StringView ledger_name, storage::PageIdView page_id,
-    fit::function<void(Status)> callback) {
+void LedgerRepositoryImpl::DeletePageStorage(fxl::StringView ledger_name,
+                                             storage::PageIdView page_id,
+                                             fit::function<void(Status)> callback) {
   LedgerManager* ledger_manager;
   Status status = GetLedgerManager(ledger_name, &ledger_manager);
   if (status != Status::OK) {
@@ -123,25 +119,22 @@ void LedgerRepositoryImpl::DeletePageStorage(
 
 // TODO(https://fuchsia.atlassian.net/browse/LE-792): The disk scan should be
 // made to happen either asynchronously or not on the main thread.
-void LedgerRepositoryImpl::GetNames(
-    fit::function<void(std::vector<std::string>)> callback) {
+void LedgerRepositoryImpl::GetNames(fit::function<void(std::vector<std::string>)> callback) {
   std::vector<std::string> child_names;
-  ledger::GetDirectoryEntries(
-      content_path_, [&child_names](fxl::StringView entry) {
-        std::string decoded;
-        if (base64url::Base64UrlDecode(entry, &decoded)) {
-          child_names.push_back(decoded);
-          return true;
-        } else {
-          // NOTE(nathaniel): The ChildrenManager API does not currently have a
-          // means to indicate errors; our response to an error here is to
-          // simply log and refrain from telling Inspect that the problematic
-          // child exists.
-          FXL_LOG(ERROR) << "Failed to decode encoded ledger name \"" << entry
-                         << "\"!";
-          return false;
-        }
-      });
+  ledger::GetDirectoryEntries(content_path_, [&child_names](fxl::StringView entry) {
+    std::string decoded;
+    if (base64url::Base64UrlDecode(entry, &decoded)) {
+      child_names.push_back(decoded);
+      return true;
+    } else {
+      // NOTE(nathaniel): The ChildrenManager API does not currently have a
+      // means to indicate errors; our response to an error here is to
+      // simply log and refrain from telling Inspect that the problematic
+      // child exists.
+      FXL_LOG(ERROR) << "Failed to decode encoded ledger name \"" << entry << "\"!";
+      return false;
+    }
+  });
   callback(child_names);
 };
 
@@ -162,8 +155,7 @@ void LedgerRepositoryImpl::Attach(std::string ledger_name,
 
 std::vector<fidl::InterfaceRequest<ledger_internal::LedgerRepository>>
 LedgerRepositoryImpl::Unbind() {
-  std::vector<fidl::InterfaceRequest<ledger_internal::LedgerRepository>>
-      handles;
+  std::vector<fidl::InterfaceRequest<ledger_internal::LedgerRepository>> handles;
   for (auto& binding : bindings_) {
     handles.push_back(binding.Unbind());
   }
@@ -171,8 +163,8 @@ LedgerRepositoryImpl::Unbind() {
   return handles;
 }
 
-Status LedgerRepositoryImpl::GetLedgerManager(
-    convert::ExtendedStringView ledger_name, LedgerManager** ledger_manager) {
+Status LedgerRepositoryImpl::GetLedgerManager(convert::ExtendedStringView ledger_name,
+                                              LedgerManager** ledger_manager) {
   FXL_DCHECK(!ledger_name.empty());
 
   // If the Ledger instance is already open return it directly.
@@ -186,33 +178,29 @@ Status LedgerRepositoryImpl::GetLedgerManager(
   std::unique_ptr<encryption::EncryptionService> encryption_service =
       encryption_service_factory_.MakeEncryptionService(name_as_string);
   auto ledger_storage = std::make_unique<storage::LedgerStorageImpl>(
-      environment_, encryption_service.get(), db_factory_.get(),
-      GetPathFor(name_as_string));
+      environment_, encryption_service.get(), db_factory_.get(), GetPathFor(name_as_string));
   Status status = ledger_storage->Init();
   if (status != Status::OK) {
     return status;
   }
   std::unique_ptr<sync_coordinator::LedgerSync> ledger_sync;
   if (user_sync_) {
-    ledger_sync =
-        user_sync_->CreateLedgerSync(name_as_string, encryption_service.get());
+    ledger_sync = user_sync_->CreateLedgerSync(name_as_string, encryption_service.get());
   }
   auto result = ledger_managers_.emplace(
       std::piecewise_construct, std::forward_as_tuple(name_as_string),
       std::forward_as_tuple(environment_, name_as_string,
                             ledgers_inspect_node_.CreateChild(name_as_string),
-                            std::move(encryption_service),
-                            std::move(ledger_storage), std::move(ledger_sync),
-                            page_usage_listener_));
+                            std::move(encryption_service), std::move(ledger_storage),
+                            std::move(ledger_sync), page_usage_listener_));
   FXL_DCHECK(result.second);
   *ledger_manager = &(result.first->second);
   return Status::OK;
 }
 
-void LedgerRepositoryImpl::GetLedger(
-    std::vector<uint8_t> ledger_name,
-    fidl::InterfaceRequest<Ledger> ledger_request,
-    fit::function<void(Status)> callback) {
+void LedgerRepositoryImpl::GetLedger(std::vector<uint8_t> ledger_name,
+                                     fidl::InterfaceRequest<Ledger> ledger_request,
+                                     fit::function<void(Status)> callback) {
   TRACE_DURATION("ledger", "repository_get_ledger");
 
   if (close_callback_) {
@@ -252,9 +240,8 @@ void LedgerRepositoryImpl::Duplicate(
   callback(Status::OK);
 }
 
-void LedgerRepositoryImpl::SetSyncStateWatcher(
-    fidl::InterfaceHandle<SyncWatcher> watcher,
-    fit::function<void(Status)> callback) {
+void LedgerRepositoryImpl::SetSyncStateWatcher(fidl::InterfaceHandle<SyncWatcher> watcher,
+                                               fit::function<void(Status)> callback) {
   if (close_callback_) {
     // Attempting to call a method on LedgerRepository while closing it is
     // illegal.

@@ -16,16 +16,12 @@ class TestListenStream : public ListenStream {
   ~TestListenStream() override {}
 
   // ListenStream:
-  void StartCall(void* tag) override {
-    connect_tag = static_cast<fit::function<void(bool)>*>(tag);
-  }
+  void StartCall(void* tag) override { connect_tag = static_cast<fit::function<void(bool)>*>(tag); }
   void ReadInitialMetadata(void* /*tag*/) override {}
-  void Read(google::firestore::v1beta1::ListenResponse* /*response*/,
-            void* tag) override {
+  void Read(google::firestore::v1beta1::ListenResponse* /*response*/, void* tag) override {
     read_tag = static_cast<fit::function<void(bool)>*>(tag);
   }
-  void Write(const google::firestore::v1beta1::ListenRequest& /*request*/,
-             void* tag) override {
+  void Write(const google::firestore::v1beta1::ListenRequest& /*request*/, void* tag) override {
     write_tag = static_cast<fit::function<void(bool)>*>(tag);
   }
   void Write(const google::firestore::v1beta1::ListenRequest& /*request*/,
@@ -50,8 +46,7 @@ class ListenCallTest : public ::testing::Test, public ListenCallClient {
     auto stream = std::make_unique<TestListenStream>();
     auto context = std::make_unique<grpc::ClientContext>();
     stream_ = stream.get();
-    call_ = std::make_unique<ListenCall>(this, std::move(context),
-                                         std::move(stream));
+    call_ = std::make_unique<ListenCall>(this, std::move(context), std::move(stream));
     call_->set_on_empty([this] { on_empty_calls_++; });
   }
   ~ListenCallTest() override {}
@@ -59,8 +54,7 @@ class ListenCallTest : public ::testing::Test, public ListenCallClient {
   // ListenCallClient:
   void OnConnected() override { on_connected_calls_++; }
 
-  void OnResponse(
-      google::firestore::v1beta1::ListenResponse /*response*/) override {
+  void OnResponse(google::firestore::v1beta1::ListenResponse /*response*/) override {
     on_response_calls_++;
   }
 

@@ -14,23 +14,18 @@
 namespace encryption {
 
 namespace {
-std::string Encode(fxl::StringView content) {
-  return "_" + content.ToString() + "_";
-}
+std::string Encode(fxl::StringView content) { return "_" + content.ToString() + "_"; }
 
 std::string Decode(fxl::StringView encrypted_content) {
   return encrypted_content.substr(1, encrypted_content.size() - 2).ToString();
 }
 }  // namespace
 
-storage::ObjectIdentifier MakeDefaultObjectIdentifier(
-    storage::ObjectDigest digest) {
+storage::ObjectIdentifier MakeDefaultObjectIdentifier(storage::ObjectDigest digest) {
   return {1u, 1u, std::move(digest)};
 }
 
-uint64_t DefaultPermutation(uint64_t chunk_window_hash) {
-  return 1 + chunk_window_hash;
-}
+uint64_t DefaultPermutation(uint64_t chunk_window_hash) { return 1 + chunk_window_hash; }
 
 FakeEncryptionService::FakeEncryptionService(async_dispatcher_t* dispatcher)
     : dispatcher_(dispatcher) {}
@@ -42,9 +37,8 @@ storage::ObjectIdentifier FakeEncryptionService::MakeObjectIdentifier(
   return MakeDefaultObjectIdentifier(std::move(digest));
 }
 
-void FakeEncryptionService::EncryptCommit(
-    std::string commit_storage,
-    fit::function<void(Status, std::string)> callback) {
+void FakeEncryptionService::EncryptCommit(std::string commit_storage,
+                                          fit::function<void(Status, std::string)> callback) {
   std::string encrypted_commit = EncryptCommitSynchronous(commit_storage);
   async::PostTask(dispatcher_, [encrypted_commit = std::move(encrypted_commit),
                                 callback = std::move(callback)]() mutable {
@@ -52,48 +46,45 @@ void FakeEncryptionService::EncryptCommit(
   });
 }
 
-void FakeEncryptionService::DecryptCommit(
-    convert::ExtendedStringView storage_bytes,
-    fit::function<void(Status, std::string)> callback) {
+void FakeEncryptionService::DecryptCommit(convert::ExtendedStringView storage_bytes,
+                                          fit::function<void(Status, std::string)> callback) {
   std::string commit = DecryptCommitSynchronous(storage_bytes);
-  async::PostTask(dispatcher_, [commit = std::move(commit),
-                                callback = std::move(callback)]() mutable {
-    callback(Status::OK, std::move(commit));
-  });
+  async::PostTask(dispatcher_,
+                  [commit = std::move(commit), callback = std::move(callback)]() mutable {
+                    callback(Status::OK, std::move(commit));
+                  });
 }
 
-void FakeEncryptionService::GetObjectName(
-    storage::ObjectIdentifier object_identifier,
-    fit::function<void(Status, std::string)> callback) {
+void FakeEncryptionService::GetObjectName(storage::ObjectIdentifier object_identifier,
+                                          fit::function<void(Status, std::string)> callback) {
   std::string result = GetObjectNameSynchronous(object_identifier);
-  async::PostTask(dispatcher_, [callback = std::move(callback),
-                                result = std::move(result)]() mutable {
-    callback(Status::OK, std::move(result));
-  });
+  async::PostTask(dispatcher_,
+                  [callback = std::move(callback), result = std::move(result)]() mutable {
+                    callback(Status::OK, std::move(result));
+                  });
 }
 
-void FakeEncryptionService::EncryptObject(
-    storage::ObjectIdentifier /*object_identifier*/, fxl::StringView content,
-    fit::function<void(Status, std::string)> callback) {
+void FakeEncryptionService::EncryptObject(storage::ObjectIdentifier /*object_identifier*/,
+                                          fxl::StringView content,
+                                          fit::function<void(Status, std::string)> callback) {
   std::string result = EncryptObjectSynchronous(content.ToString());
-  async::PostTask(dispatcher_, [callback = std::move(callback),
-                                result = std::move(result)]() mutable {
-    callback(Status::OK, std::move(result));
-  });
+  async::PostTask(dispatcher_,
+                  [callback = std::move(callback), result = std::move(result)]() mutable {
+                    callback(Status::OK, std::move(result));
+                  });
 }
 
-void FakeEncryptionService::DecryptObject(
-    storage::ObjectIdentifier /*object_identifier*/, std::string encrypted_data,
-    fit::function<void(Status, std::string)> callback) {
+void FakeEncryptionService::DecryptObject(storage::ObjectIdentifier /*object_identifier*/,
+                                          std::string encrypted_data,
+                                          fit::function<void(Status, std::string)> callback) {
   std::string result = DecryptObjectSynchronous(encrypted_data);
-  async::PostTask(dispatcher_, [callback = std::move(callback),
-                                result = std::move(result)]() mutable {
-    callback(Status::OK, std::move(result));
-  });
+  async::PostTask(dispatcher_,
+                  [callback = std::move(callback), result = std::move(result)]() mutable {
+                    callback(Status::OK, std::move(result));
+                  });
 }
 
-uint64_t FakeEncryptionService::ChunkingPermutation(
-    uint64_t chunk_window_hash) {
+uint64_t FakeEncryptionService::ChunkingPermutation(uint64_t chunk_window_hash) {
   return DefaultPermutation(chunk_window_hash);
 }
 

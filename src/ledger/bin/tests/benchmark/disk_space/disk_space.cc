@@ -80,10 +80,9 @@ void PrintUsage() {
 //   --value-size=<int> size of a value for each entry.
 class DiskSpaceBenchmark {
  public:
-  DiskSpaceBenchmark(async::Loop* loop,
-                     std::unique_ptr<sys::ComponentContext> component_context,
-                     size_t page_count, size_t unique_key_count,
-                     size_t commit_count, size_t key_size, size_t value_size);
+  DiskSpaceBenchmark(async::Loop* loop, std::unique_ptr<sys::ComponentContext> component_context,
+                     size_t page_count, size_t unique_key_count, size_t commit_count,
+                     size_t key_size, size_t value_size);
 
   void Run();
 
@@ -110,10 +109,10 @@ class DiskSpaceBenchmark {
   FXL_DISALLOW_COPY_AND_ASSIGN(DiskSpaceBenchmark);
 };
 
-DiskSpaceBenchmark::DiskSpaceBenchmark(
-    async::Loop* loop, std::unique_ptr<sys::ComponentContext> component_context,
-    size_t page_count, size_t unique_key_count, size_t commit_count,
-    size_t key_size, size_t value_size)
+DiskSpaceBenchmark::DiskSpaceBenchmark(async::Loop* loop,
+                                       std::unique_ptr<sys::ComponentContext> component_context,
+                                       size_t page_count, size_t unique_key_count,
+                                       size_t commit_count, size_t key_size, size_t value_size)
     : loop_(loop),
       random_(0),
       tmp_dir_(kStoragePath),
@@ -134,23 +133,21 @@ DiskSpaceBenchmark::DiskSpaceBenchmark(
 }
 
 void DiskSpaceBenchmark::Run() {
-  Status status = GetLedger(
-      component_context_.get(), component_controller_.NewRequest(), nullptr, "",
-      "disk_space", DetachedPath(tmp_dir_.path()), QuitLoopClosure(), &ledger_);
+  Status status =
+      GetLedger(component_context_.get(), component_controller_.NewRequest(), nullptr, "",
+                "disk_space", DetachedPath(tmp_dir_.path()), QuitLoopClosure(), &ledger_);
   if (QuitOnError(QuitLoopClosure(), status, "GetLedger")) {
     return;
   }
 
-  auto waiter =
-      fxl::MakeRefCounted<callback::Waiter<Status, PagePtr>>(Status::OK);
+  auto waiter = fxl::MakeRefCounted<callback::Waiter<Status, PagePtr>>(Status::OK);
 
   for (size_t page_number = 0; page_number < page_count_; page_number++) {
-    GetPageEnsureInitialized(&ledger_, nullptr, DelayCallback::YES,
-                             QuitLoopClosure(),
-                             [callback = waiter->NewCallback()](
-                                 Status status, PagePtr page, PageId id) {
-                               callback(status, std::move(page));
-                             });
+    GetPageEnsureInitialized(
+        &ledger_, nullptr, DelayCallback::YES, QuitLoopClosure(),
+        [callback = waiter->NewCallback()](Status status, PagePtr page, PageId id) {
+          callback(status, std::move(page));
+        });
   }
 
   waiter->Finalize([this](Status status, std::vector<PagePtr> pages) {
@@ -167,18 +164,17 @@ void DiskSpaceBenchmark::Run() {
 }
 
 void DiskSpaceBenchmark::Populate() {
-  int transaction_size = static_cast<int>(
-      ceil(static_cast<double>(unique_key_count_) / commit_count_));
+  int transaction_size =
+      static_cast<int>(ceil(static_cast<double>(unique_key_count_) / commit_count_));
   int insertions = std::max(unique_key_count_, commit_count_);
-  FXL_LOG(INFO) << "Transaction size: " << transaction_size
-                << ", insertions: " << insertions << ".";
+  FXL_LOG(INFO) << "Transaction size: " << transaction_size << ", insertions: " << insertions
+                << ".";
   auto waiter = fxl::MakeRefCounted<callback::StatusWaiter<Status>>(Status::OK);
   for (auto& page : pages_) {
     auto keys = generator_.MakeKeys(insertions, key_size_, unique_key_count_);
-    page_data_generator_.Populate(
-        &page, std::move(keys), value_size_, transaction_size,
-        PageDataGenerator::ReferenceStrategy::REFERENCE, Priority::EAGER,
-        waiter->NewCallback());
+    page_data_generator_.Populate(&page, std::move(keys), value_size_, transaction_size,
+                                  PageDataGenerator::ReferenceStrategy::REFERENCE, Priority::EAGER,
+                                  waiter->NewCallback());
   }
   waiter->Finalize([this](Status status) {
     if (QuitOnError(QuitLoopClosure(), status, "PageGenerator::Populate")) {
@@ -193,10 +189,8 @@ void DiskSpaceBenchmark::ShutDownAndRecord() {
   loop_->Quit();
 
   uint64_t tmp_dir_size = 0;
-  FXL_CHECK(
-      GetDirectoryContentSize(DetachedPath(tmp_dir_.path()), &tmp_dir_size));
-  TRACE_COUNTER("benchmark", "ledger_directory_size", 0, "directory_size",
-                TA_UINT64(tmp_dir_size));
+  FXL_CHECK(GetDirectoryContentSize(DetachedPath(tmp_dir_.path()), &tmp_dir_size));
+  TRACE_COUNTER("benchmark", "ledger_directory_size", 0, "directory_size", TA_UINT64(tmp_dir_size));
 }
 
 fit::closure DiskSpaceBenchmark::QuitLoopClosure() {
@@ -218,27 +212,22 @@ int Main(int argc, const char** argv) {
   size_t key_size;
   std::string value_size_str;
   size_t value_size;
-  if (!command_line.GetOptionValue(kPageCountFlag.ToString(),
-                                   &page_count_str) ||
+  if (!command_line.GetOptionValue(kPageCountFlag.ToString(), &page_count_str) ||
       !fxl::StringToNumberWithError(page_count_str, &page_count) ||
-      !command_line.GetOptionValue(kUniqueKeyCountFlag.ToString(),
-                                   &unique_key_count_str) ||
+      !command_line.GetOptionValue(kUniqueKeyCountFlag.ToString(), &unique_key_count_str) ||
       !fxl::StringToNumberWithError(unique_key_count_str, &unique_key_count) ||
-      !command_line.GetOptionValue(kCommitCountFlag.ToString(),
-                                   &commit_count_str) ||
+      !command_line.GetOptionValue(kCommitCountFlag.ToString(), &commit_count_str) ||
       !fxl::StringToNumberWithError(commit_count_str, &commit_count) ||
       !command_line.GetOptionValue(kKeySizeFlag.ToString(), &key_size_str) ||
       !fxl::StringToNumberWithError(key_size_str, &key_size) || key_size == 0 ||
-      !command_line.GetOptionValue(kValueSizeFlag.ToString(),
-                                   &value_size_str) ||
-      !fxl::StringToNumberWithError(value_size_str, &value_size) ||
-      value_size == 0) {
+      !command_line.GetOptionValue(kValueSizeFlag.ToString(), &value_size_str) ||
+      !fxl::StringToNumberWithError(value_size_str, &value_size) || value_size == 0) {
     PrintUsage();
     return -1;
   }
 
-  DiskSpaceBenchmark app(&loop, std::move(component_context), page_count,
-                         unique_key_count, commit_count, key_size, value_size);
+  DiskSpaceBenchmark app(&loop, std::move(component_context), page_count, unique_key_count,
+                         commit_count, key_size, value_size);
 
   return RunWithTracing(&loop, [&app] { app.Run(); });
 }

@@ -33,8 +33,7 @@ constexpr fxl::StringView kServiceAccountConfigurationSchema = R"({
 })";
 }  // namespace
 
-Credentials::Credentials(std::string project_id, std::string client_email,
-                         std::string client_id,
+Credentials::Credentials(std::string project_id, std::string client_email, std::string client_id,
                          bssl::UniquePtr<EVP_PKEY> private_key)
     : project_id_(std::move(project_id)),
       client_email_(std::move(client_email)),
@@ -66,8 +65,8 @@ std::unique_ptr<Credentials> Credentials::Parse(const rapidjson::Value& json) {
   auto client_email = json["client_email"].GetString();
   auto client_id = json["client_id"].GetString();
 
-  bssl::UniquePtr<BIO> bio(BIO_new_mem_buf(
-      json["private_key"].GetString(), json["private_key"].GetStringLength()));
+  bssl::UniquePtr<BIO> bio(
+      BIO_new_mem_buf(json["private_key"].GetString(), json["private_key"].GetStringLength()));
   bssl::UniquePtr<EVP_PKEY> private_key(
       PEM_read_bio_PrivateKey(bio.get(), nullptr, nullptr, nullptr));
 
@@ -76,9 +75,8 @@ std::unique_ptr<Credentials> Credentials::Parse(const rapidjson::Value& json) {
     return nullptr;
   }
 
-  return std::make_unique<Credentials>(
-      std::move(project_id), std::move(client_email), std::move(client_id),
-      std::move(private_key));
+  return std::make_unique<Credentials>(std::move(project_id), std::move(client_email),
+                                       std::move(client_id), std::move(private_key));
 }
 
 std::unique_ptr<Credentials> Credentials::Clone() {

@@ -32,12 +32,10 @@ enum class InlineBehavior {
 // provides accessor to transform into a data source and data chunks.
 class ObjectData {
  public:
-  explicit ObjectData(std::string value)
-      : ObjectData(value, InlineBehavior::ALLOW) {}
+  explicit ObjectData(std::string value) : ObjectData(value, InlineBehavior::ALLOW) {}
   explicit ObjectData(std::string value, InlineBehavior inline_behavior)
       : ObjectData(value, ObjectType::BLOB, inline_behavior) {}
-  explicit ObjectData(std::string value, ObjectType object_type,
-                      InlineBehavior inline_behavior);
+  explicit ObjectData(std::string value, ObjectType object_type, InlineBehavior inline_behavior);
   std::unique_ptr<DataSource> ToDataSource();
   std::unique_ptr<DataSource::DataChunk> ToChunk();
   std::unique_ptr<Piece> ToPiece();
@@ -49,21 +47,18 @@ class ObjectData {
 
 // Computes the object digest for the given content. If |inline_behavior| is
 // InlineBehavior::PREVENT, resize |content| so that it cannot be inlined.
-ObjectDigest MakeObjectDigest(
-    std::string content,
-    InlineBehavior inline_behavior = InlineBehavior::ALLOW);
+ObjectDigest MakeObjectDigest(std::string content,
+                              InlineBehavior inline_behavior = InlineBehavior::ALLOW);
 
 // Computes the object identifier for the given content. If |inline_behavior| is
 // InlineBehavior::PREVENT, resize |content| so that it cannot be inlined.
-ObjectIdentifier MakeObjectIdentifier(
-    std::string content,
-    InlineBehavior inline_behavior = InlineBehavior::ALLOW);
+ObjectIdentifier MakeObjectIdentifier(std::string content,
+                                      InlineBehavior inline_behavior = InlineBehavior::ALLOW);
 
 // Splits the given content in chunks and calls the callback on each of them.
 // Returns the object identifier for the root piece.
-ObjectIdentifier ForEachPiece(
-    std::string content, ObjectType type,
-    fit::function<void(std::unique_ptr<const Piece>)> callback);
+ObjectIdentifier ForEachPiece(std::string content, ObjectType type,
+                              fit::function<void(std::unique_ptr<const Piece>)> callback);
 
 // Returns a random string of the given length.
 std::string RandomString(rng::Random* random, size_t size);
@@ -79,8 +74,7 @@ ObjectIdentifier RandomObjectIdentifier(rng::Random* random);
 
 // Creates and returns a new EntryChange adding or updating the entry with the
 // given information.
-EntryChange NewEntryChange(std::string key, std::string object_digest,
-                           KeyPriority priority);
+EntryChange NewEntryChange(std::string key, std::string object_digest, KeyPriority priority);
 
 // Creates and returns a new EntryChange removing the entry with the given key.
 EntryChange NewRemoveEntryChange(std::string key);
@@ -102,60 +96,52 @@ class StorageTest : public ledger::TestWithEnvironment {
 
   // Adds a new BLOB object with the given value in the page storage and updates
   // |object| with the new value.
-  ::testing::AssertionResult AddObject(std::string value,
-                                       std::unique_ptr<const Object>* object);
+  ::testing::AssertionResult AddObject(std::string value, std::unique_ptr<const Object>* object);
 
   // Creates a vector of entries, each of which has a key from "key00" to
   // "keyXX" where XX is |size-1|. A new value is created for each entry and the
   // corresponding object_digest is set on the entry. |entries| vector will be
   // swapped with the result.
-  ::testing::AssertionResult CreateEntries(size_t size,
-                                           std::vector<Entry>* entries);
+  ::testing::AssertionResult CreateEntries(size_t size, std::vector<Entry>* entries);
 
   // Creates a vector of entries, each of which has a key "keyXX", were "XX" is
   // taken from the |values| vector. A new value is created for each entry and
   // the corresponding object_digest is set on the entry. |entries| vector will
   // be swapped with the result.
-  ::testing::AssertionResult CreateEntries(std::vector<size_t> values,
-                                           std::vector<Entry>* entries);
+  ::testing::AssertionResult CreateEntries(std::vector<size_t> values, std::vector<Entry>* entries);
 
   // Creates a vector of entry changes adding or updating the given number of
   // entries. See |CreateEntries| for information on the created entries.
   // |changes| vector will be swapped with the result.
-  ::testing::AssertionResult CreateEntryChanges(
-      size_t size, std::vector<EntryChange>* changes);
+  ::testing::AssertionResult CreateEntryChanges(size_t size, std::vector<EntryChange>* changes);
 
   // Creates a vector of entry changes adding or updating the given number of
   // entries. See |CreateEntries| for information on the created entries.
   // |changes| vector will be swapped with the result. If |deletion| is true,
   // the changes will be deletions, otherwise the changes will be updates.
-  ::testing::AssertionResult CreateEntryChanges(
-      std::vector<size_t> values, std::vector<EntryChange>* changes,
-      bool deletion = false);
+  ::testing::AssertionResult CreateEntryChanges(std::vector<size_t> values,
+                                                std::vector<EntryChange>* changes,
+                                                bool deletion = false);
 
   // Creates an empty tree node and updates |empty_node_identifier| with the
   // result.
-  ::testing::AssertionResult GetEmptyNodeIdentifier(
-      ObjectIdentifier* empty_node_identifier);
+  ::testing::AssertionResult GetEmptyNodeIdentifier(ObjectIdentifier* empty_node_identifier);
 
   // Returns the tree node corresponding to the given id.
-  ::testing::AssertionResult CreateNodeFromIdentifier(
-      ObjectIdentifier identifier,
-      std::unique_ptr<const btree::TreeNode>* node);
+  ::testing::AssertionResult CreateNodeFromIdentifier(ObjectIdentifier identifier,
+                                                      std::unique_ptr<const btree::TreeNode>* node);
 
   // Creates a new tree node from the given entries and children and updates
   // |node| with the result.
   ::testing::AssertionResult CreateNodeFromEntries(
-      const std::vector<Entry>& entries,
-      const std::map<size_t, ObjectIdentifier>& children,
+      const std::vector<Entry>& entries, const std::map<size_t, ObjectIdentifier>& children,
       std::unique_ptr<const btree::TreeNode>* node);
 
   // Creates a BTree applying changes from the base node and gives back the
   // digest of its new root node.
-  ::testing::AssertionResult CreateTreeFromChanges(
-      const ObjectIdentifier& base_node_identifier,
-      const std::vector<EntryChange>& entries,
-      ObjectIdentifier* new_root_identifier);
+  ::testing::AssertionResult CreateTreeFromChanges(const ObjectIdentifier& base_node_identifier,
+                                                   const std::vector<EntryChange>& entries,
+                                                   ObjectIdentifier* new_root_identifier);
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(StorageTest);

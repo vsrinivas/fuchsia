@@ -2,10 +2,10 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
-                "fuchsia.tracing.provider.Registry": [
+                "fuchsia.tracing.controller.Controller": [
                     "fuchsia-pkg://fuchsia.com/trace_manager#meta/trace_manager.cmx"
                 ],
-                "fuchsia.tracing.controller.Controller": [
+                "fuchsia.tracing.provider.Registry": [
                     "fuchsia-pkg://fuchsia.com/trace_manager#meta/trace_manager.cmx"
                 ]
             }
@@ -15,7 +15,9 @@
         "binary": "test/ledger_unittests"
     },
     "sandbox": {
-        "dev": [ "misc/sysinfo" ],
+        "dev": [
+            "misc/sysinfo"
+        ],
         "features": [
             "isolated-persistent-storage"
         ],

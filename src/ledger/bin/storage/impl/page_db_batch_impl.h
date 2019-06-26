@@ -19,16 +19,13 @@ class PageDbBatchImpl : public PageDb::Batch {
   // Heads.
   Status AddHead(coroutine::CoroutineHandler* handler, CommitIdView head,
                  zx::time_utc timestamp) override;
-  Status RemoveHead(coroutine::CoroutineHandler* handler,
-                    CommitIdView head) override;
+  Status RemoveHead(coroutine::CoroutineHandler* handler, CommitIdView head) override;
 
   // Merges.
   Status AddMerge(coroutine::CoroutineHandler* handler, CommitIdView parent1_id,
-                  CommitIdView parent2_id,
-                  CommitIdView merge_commit_id) override;
+                  CommitIdView parent2_id, CommitIdView merge_commit_id) override;
   // Commits.
-  Status AddCommitStorageBytes(coroutine::CoroutineHandler* handler,
-                               const CommitId& commit_id,
+  Status AddCommitStorageBytes(coroutine::CoroutineHandler* handler, const CommitId& commit_id,
                                const ObjectIdentifier& root_node,
                                fxl::StringView storage_bytes) override;
 
@@ -43,13 +40,12 @@ class PageDbBatchImpl : public PageDb::Batch {
   // Commit sync metadata.
   Status MarkCommitIdSynced(coroutine::CoroutineHandler* handler,
                             const CommitId& commit_id) override;
-  Status MarkCommitIdUnsynced(coroutine::CoroutineHandler* handler,
-                              const CommitId& commit_id,
+  Status MarkCommitIdUnsynced(coroutine::CoroutineHandler* handler, const CommitId& commit_id,
                               uint64_t generation) override;
 
   // Object sync metadata.
-  Status SetSyncMetadata(coroutine::CoroutineHandler* handler,
-                         fxl::StringView key, fxl::StringView value) override;
+  Status SetSyncMetadata(coroutine::CoroutineHandler* handler, fxl::StringView key,
+                         fxl::StringView value) override;
 
   // Page online state.
   Status MarkPageOnline(coroutine::CoroutineHandler* handler) override;
@@ -57,8 +53,7 @@ class PageDbBatchImpl : public PageDb::Batch {
   Status Execute(coroutine::CoroutineHandler* handler) override;
 
  private:
-  Status DCheckHasObject(coroutine::CoroutineHandler* handler,
-                         const ObjectIdentifier& key);
+  Status DCheckHasObject(coroutine::CoroutineHandler* handler, const ObjectIdentifier& key);
 
   std::unique_ptr<Db::Batch> batch_;
   PageDb* const db_;

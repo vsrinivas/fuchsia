@@ -6,13 +6,11 @@
 
 namespace p2p_provider {
 
-StaticUserIdProvider::StaticUserIdProvider(std::string user_id)
-    : user_id_(user_id) {}
+StaticUserIdProvider::StaticUserIdProvider(std::string user_id) : user_id_(user_id) {}
 
 StaticUserIdProvider::~StaticUserIdProvider() = default;
 
-void StaticUserIdProvider::GetUserId(
-    fit::function<void(Status, std::string)> callback) {
+void StaticUserIdProvider::GetUserId(fit::function<void(Status, std::string)> callback) {
   callback(Status::OK, user_id_);
 }
 

@@ -84,8 +84,7 @@ enum class KeyPriority {
 class ObjectIdentifier {
  public:
   ObjectIdentifier();
-  ObjectIdentifier(uint32_t key_index, uint32_t deletion_scope_id,
-                   ObjectDigest object_digest);
+  ObjectIdentifier(uint32_t key_index, uint32_t deletion_scope_id, ObjectDigest object_digest);
 
   ObjectIdentifier(const ObjectIdentifier&);
   ObjectIdentifier& operator=(const ObjectIdentifier&);
@@ -114,8 +113,7 @@ std::ostream& operator<<(std::ostream& os, const ObjectIdentifier& e);
 // For a given object |A|, contains a pair (|B|, |priority|) for every reference
 // from |A| to |B| with the associated |priority|. Object digests must never
 // represent inline pieces.
-using ObjectReferencesAndPriority =
-    std::set<std::pair<ObjectDigest, KeyPriority>>;
+using ObjectReferencesAndPriority = std::set<std::pair<ObjectDigest, KeyPriority>>;
 
 // An entry in a commit.
 struct Entry {

@@ -39,17 +39,15 @@ Status ToLedgerStatus(zx_status_t status) {
 }  // namespace
 
 Status GetLedger(sys::ComponentContext* context,
-                 fidl::InterfaceRequest<fuchsia::sys::ComponentController>
-                     controller_request,
-                 cloud_provider::CloudProviderPtr cloud_provider,
-                 std::string user_id, std::string ledger_name,
-                 const DetachedPath& ledger_repository_path,
+                 fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller_request,
+                 cloud_provider::CloudProviderPtr cloud_provider, std::string user_id,
+                 std::string ledger_name, const DetachedPath& ledger_repository_path,
                  fit::function<void()> error_handler, LedgerPtr* ledger) {
-  fxl::UniqueFD dir(openat(ledger_repository_path.root_fd(),
-                           ledger_repository_path.path().c_str(), O_RDONLY));
+  fxl::UniqueFD dir(
+      openat(ledger_repository_path.root_fd(), ledger_repository_path.path().c_str(), O_RDONLY));
   if (!dir.is_valid()) {
-    FXL_LOG(ERROR) << "Unable to open directory at "
-                   << ledger_repository_path.path() << ". errno: " << errno;
+    FXL_LOG(ERROR) << "Unable to open directory at " << ledger_repository_path.path()
+                   << ". errno: " << errno;
     return Status::IO_ERROR;
   }
 
@@ -62,21 +60,19 @@ Status GetLedger(sys::ComponentContext* context,
   launch_info.arguments.push_back("--disable_reporting");
   fuchsia::sys::LauncherPtr launcher;
   context->svc()->Connect(launcher.NewRequest());
-  launcher->CreateComponent(std::move(launch_info),
-                            std::move(controller_request));
+  launcher->CreateComponent(std::move(launch_info), std::move(controller_request));
   child_services.ConnectToService(repository_factory.NewRequest());
 
   fuchsia::ledger::internal::LedgerRepositorySyncPtr repository;
 
-  repository_factory->GetRepository(
-      fsl::CloneChannelFromFileDescriptor(dir.get()), std::move(cloud_provider),
-      std::move(user_id), repository.NewRequest());
+  repository_factory->GetRepository(fsl::CloneChannelFromFileDescriptor(dir.get()),
+                                    std::move(cloud_provider), std::move(user_id),
+                                    repository.NewRequest());
 
-  (*ledger).set_error_handler(
-      [error_handler = std::move(error_handler)](zx_status_t status) {
-        FXL_LOG(ERROR) << "The ledger connection was closed, quitting.";
-        error_handler();
-      });
+  (*ledger).set_error_handler([error_handler = std::move(error_handler)](zx_status_t status) {
+    FXL_LOG(ERROR) << "The ledger connection was closed, quitting.";
+    error_handler();
+  });
   repository->GetLedger(convert::ToArray(ledger_name), ledger->NewRequest());
   return ToLedgerStatus(repository->Sync());
 }
@@ -85,8 +81,7 @@ void KillLedgerProcess(fuchsia::sys::ComponentControllerPtr* controller) {
   (*controller)->Kill();
   auto channel = controller->Unbind().TakeChannel();
   zx_signals_t observed;
-  channel.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::deadline_after(zx::sec(5)),
-                   &observed);
+  channel.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::deadline_after(zx::sec(5)), &observed);
 }
 
 }  // namespace ledger

@@ -12,21 +12,18 @@
 namespace storage {
 
 // Converts a |ObjectIdentifierStorage| to an |ObjectIdentifier|.
-ObjectIdentifier ToObjectIdentifier(
-    const ObjectIdentifierStorage* object_identifier_storage);
+ObjectIdentifier ToObjectIdentifier(const ObjectIdentifierStorage* object_identifier_storage);
 
 // Converts a |ObjectIdentifier| to an |ObjectIdentifierStorage|.
 flatbuffers::Offset<ObjectIdentifierStorage> ToObjectIdentifierStorage(
-    flatbuffers::FlatBufferBuilder* builder,
-    const ObjectIdentifier& object_identifier);
+    flatbuffers::FlatBufferBuilder* builder, const ObjectIdentifier& object_identifier);
 
 // Encode an ObjectIdentifier into a string.
 std::string EncodeObjectIdentifier(const ObjectIdentifier& object_identifier);
 
 // Decode an ObjectIdentifier from a string. Return |true| in case of success,
 // |false| otherwise.
-bool DecodeObjectIdentifier(fxl::StringView data,
-                            ObjectIdentifier* object_identifier);
+bool DecodeObjectIdentifier(fxl::StringView data, ObjectIdentifier* object_identifier);
 
 // Returns whether a |ObjectIdentifierStorage| obtained from flatbuffer is
 // valid.

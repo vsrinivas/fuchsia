@@ -19,8 +19,7 @@ class FakePiece : public Piece {
 
   fxl::StringView GetData() const override;
   ObjectIdentifier GetIdentifier() const override;
-  Status AppendReferences(
-      ObjectReferencesAndPriority* references) const override;
+  Status AppendReferences(ObjectReferencesAndPriority* references) const override;
 
  private:
   ObjectIdentifier identifier_;
@@ -34,8 +33,7 @@ class FakeObject : public Object {
 
   ObjectIdentifier GetIdentifier() const override;
   Status GetData(fxl::StringView* data) const override;
-  Status AppendReferences(
-      ObjectReferencesAndPriority* references) const override;
+  Status AppendReferences(ObjectReferencesAndPriority* references) const override;
 
  private:
   std::unique_ptr<const Piece> piece_;

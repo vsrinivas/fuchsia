@@ -12,22 +12,17 @@ namespace sync_coordinator {
 
 void PageSyncEmptyImpl::Start() { FXL_NOTIMPLEMENTED(); }
 
-void PageSyncEmptyImpl::SetOnIdle(fit::closure /*on_idle_callback*/) {
-  FXL_NOTIMPLEMENTED();
-}
+void PageSyncEmptyImpl::SetOnIdle(fit::closure /*on_idle_callback*/) { FXL_NOTIMPLEMENTED(); }
 
 bool PageSyncEmptyImpl::IsIdle() {
   FXL_NOTIMPLEMENTED();
   return true;
 }
 
-void PageSyncEmptyImpl::SetOnBacklogDownloaded(
-    fit::closure /*on_backlog_downloaded_callback*/) {
+void PageSyncEmptyImpl::SetOnBacklogDownloaded(fit::closure /*on_backlog_downloaded_callback*/) {
   FXL_NOTIMPLEMENTED();
 }
 
-void PageSyncEmptyImpl::SetSyncWatcher(SyncStateWatcher* /*watcher*/) {
-  FXL_NOTIMPLEMENTED();
-}
+void PageSyncEmptyImpl::SetSyncWatcher(SyncStateWatcher* /*watcher*/) { FXL_NOTIMPLEMENTED(); }
 
 }  // namespace sync_coordinator

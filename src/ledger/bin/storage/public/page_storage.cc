@@ -11,8 +11,7 @@ PageStorage::CommitIdAndBytes::CommitIdAndBytes() {}
 PageStorage::CommitIdAndBytes::CommitIdAndBytes(CommitId id, std::string bytes)
     : id(std::move(id)), bytes(std::move(bytes)) {}
 
-PageStorage::CommitIdAndBytes::CommitIdAndBytes(
-    CommitIdAndBytes&& other) noexcept = default;
+PageStorage::CommitIdAndBytes::CommitIdAndBytes(CommitIdAndBytes&& other) noexcept = default;
 
 PageStorage::CommitIdAndBytes& PageStorage::CommitIdAndBytes::operator=(
     CommitIdAndBytes&& other) noexcept = default;

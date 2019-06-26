@@ -17,18 +17,17 @@ cobalt::CobaltLogger* g_cobalt_logger = nullptr;
 
 }  // namespace
 
-fit::deferred_action<fit::closure> InitializeCobalt(
-    async_dispatcher_t* dispatcher, sys::ComponentContext* context) {
+fit::deferred_action<fit::closure> InitializeCobalt(async_dispatcher_t* dispatcher,
+                                                    sys::ComponentContext* context) {
   std::unique_ptr<cobalt::CobaltLogger> cobalt_logger;
   FXL_DCHECK(!g_cobalt_logger);
 
-  cobalt_logger = cobalt::NewCobaltLoggerFromProjectName(
-      dispatcher, context, cobalt_registry::kProjectName);
+  cobalt_logger =
+      cobalt::NewCobaltLoggerFromProjectName(dispatcher, context, cobalt_registry::kProjectName);
 
   g_cobalt_logger = cobalt_logger.get();
-  return fit::defer<fit::closure>([cobalt_logger = std::move(cobalt_logger)] {
-    g_cobalt_logger = nullptr;
-  });
+  return fit::defer<fit::closure>(
+      [cobalt_logger = std::move(cobalt_logger)] { g_cobalt_logger = nullptr; });
 }
 
 void ReportEvent(CobaltEvent event) {

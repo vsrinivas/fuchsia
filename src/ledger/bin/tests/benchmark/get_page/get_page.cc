@@ -68,10 +68,8 @@ void PrintUsage() {
 //   to precache an empty new page.
 class GetPageBenchmark {
  public:
-  GetPageBenchmark(async::Loop* loop,
-                   std::unique_ptr<sys::ComponentContext> component_context,
-                   size_t requests_count, bool reuse, bool wait_for_cached_page,
-                   bool clear_pages);
+  GetPageBenchmark(async::Loop* loop, std::unique_ptr<sys::ComponentContext> component_context,
+                   size_t requests_count, bool reuse, bool wait_for_cached_page, bool clear_pages);
 
   void Run();
 
@@ -98,10 +96,10 @@ class GetPageBenchmark {
   FXL_DISALLOW_COPY_AND_ASSIGN(GetPageBenchmark);
 };
 
-GetPageBenchmark::GetPageBenchmark(
-    async::Loop* loop, std::unique_ptr<sys::ComponentContext> component_context,
-    size_t requests_count, bool reuse, bool wait_for_cached_page,
-    bool clear_pages)
+GetPageBenchmark::GetPageBenchmark(async::Loop* loop,
+                                   std::unique_ptr<sys::ComponentContext> component_context,
+                                   size_t requests_count, bool reuse, bool wait_for_cached_page,
+                                   bool clear_pages)
     : loop_(loop),
       random_(0),
       tmp_dir_(kStoragePath),
@@ -117,9 +115,9 @@ GetPageBenchmark::GetPageBenchmark(
 }
 
 void GetPageBenchmark::Run() {
-  Status status = GetLedger(
-      component_context_.get(), component_controller_.NewRequest(), nullptr, "",
-      "get_page", DetachedPath(tmp_dir_.path()), QuitLoopClosure(), &ledger_);
+  Status status =
+      GetLedger(component_context_.get(), component_controller_.NewRequest(), nullptr, "",
+                "get_page", DetachedPath(tmp_dir_.path()), QuitLoopClosure(), &ledger_);
 
   if (QuitOnError(QuitLoopClosure(), status, "GetLedger")) {
     return;
@@ -141,26 +139,23 @@ void GetPageBenchmark::RunSingle(size_t request_number) {
 
   auto waiter = fxl::MakeRefCounted<callback::CompletionWaiter>();
   TRACE_ASYNC_BEGIN("benchmark", "get_page", request_number);
-  ledger_->GetPage(reuse_ ? fidl::Clone(page_id_) : nullptr,
-                   pages_[request_number].NewRequest());
-  ledger_->Sync(
-      [this, callback = waiter->NewCallback(), request_number]() mutable {
-        TRACE_ASYNC_END("benchmark", "get_page", request_number);
-        if (!clear_pages_) {
-          callback();
-          return;
-        }
-        // Make sure there is something written on disk before clearing the
-        // page. This will test the behavior of actually clearing a page (vs.
-        // just closing an always empty page).
-        PopulateAndClearPage(request_number, std::move(callback));
-      });
+  ledger_->GetPage(reuse_ ? fidl::Clone(page_id_) : nullptr, pages_[request_number].NewRequest());
+  ledger_->Sync([this, callback = waiter->NewCallback(), request_number]() mutable {
+    TRACE_ASYNC_END("benchmark", "get_page", request_number);
+    if (!clear_pages_) {
+      callback();
+      return;
+    }
+    // Make sure there is something written on disk before clearing the
+    // page. This will test the behavior of actually clearing a page (vs.
+    // just closing an always empty page).
+    PopulateAndClearPage(request_number, std::move(callback));
+  });
 
-  auto get_id_callback =
-      TRACE_CALLBACK(waiter->NewCallback(), "benchmark", "get_page_id");
+  auto get_id_callback = TRACE_CALLBACK(waiter->NewCallback(), "benchmark", "get_page_id");
   // Request the page id without waiting for the GetPage callback to be called.
-  pages_[request_number]->GetId([callback = std::move(get_id_callback)](
-                                    PageId found_page_id) { callback(); });
+  pages_[request_number]->GetId(
+      [callback = std::move(get_id_callback)](PageId found_page_id) { callback(); });
 
   // Wait for both GetPage and GetId to finish, before starting the next run.
   waiter->Finalize([this, request_number]() {
@@ -172,8 +167,7 @@ void GetPageBenchmark::RunSingle(size_t request_number) {
   });
 }
 
-void GetPageBenchmark::PopulateAndClearPage(size_t page_index,
-                                            fit::closure callback) {
+void GetPageBenchmark::PopulateAndClearPage(size_t page_index, fit::closure callback) {
   pages_[page_index]->Put(generator_.MakeKey(page_index, kKeySize),
                           generator_.MakeValue(kValueSize));
   pages_[page_index]->Clear();
@@ -200,10 +194,8 @@ int Main(int argc, const char** argv) {
 
   std::string requests_count_str;
   size_t requests_count;
-  if (!command_line.GetOptionValue(kPageCountFlag.ToString(),
-                                   &requests_count_str) ||
-      !fxl::StringToNumberWithError(requests_count_str, &requests_count) ||
-      requests_count == 0) {
+  if (!command_line.GetOptionValue(kPageCountFlag.ToString(), &requests_count_str) ||
+      !fxl::StringToNumberWithError(requests_count_str, &requests_count) || requests_count == 0) {
     PrintUsage();
     return EXIT_FAILURE;
   }
@@ -211,8 +203,8 @@ int Main(int argc, const char** argv) {
   bool wait_for_cached_page = command_line.HasOption(kWaitForCachedPageFlag);
   bool clear_pages = command_line.HasOption(kClearPagesFlag);
 
-  GetPageBenchmark app(&loop, std::move(component_context), requests_count,
-                       reuse, wait_for_cached_page, clear_pages);
+  GetPageBenchmark app(&loop, std::move(component_context), requests_count, reuse,
+                       wait_for_cached_page, clear_pages);
 
   return RunWithTracing(&loop, [&app] { app.Run(); });
 }

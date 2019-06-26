@@ -13,8 +13,7 @@ namespace ledger {
 DetachedPath::DetachedPath(int root_fd, std::string path)
     : root_fd_(root_fd), path_(std::move(path)) {}
 
-DetachedPath::DetachedPath(std::string path)
-    : root_fd_(AT_FDCWD), path_(std::move(path)) {}
+DetachedPath::DetachedPath(std::string path) : root_fd_(AT_FDCWD), path_(std::move(path)) {}
 
 DetachedPath::~DetachedPath() {}
 
@@ -30,8 +29,7 @@ DetachedPath DetachedPath::SubPath(fxl::StringView path) const {
   return DetachedPath(root_fd_, fxl::Concatenate({path_, "/", path}));
 }
 
-DetachedPath DetachedPath::SubPath(
-    std::initializer_list<fxl::StringView> components) const {
+DetachedPath DetachedPath::SubPath(std::initializer_list<fxl::StringView> components) const {
   std::string end_path = path_;
   for (const auto& component : components) {
     end_path.push_back('/');

@@ -41,8 +41,7 @@ class ConflictResolverClientTest : public TestWithPageStorage {
     page_storage_ = page_storage.get();
 
     std::unique_ptr<MergeResolver> resolver = std::make_unique<MergeResolver>(
-        [] {}, &environment_, page_storage_,
-        std::make_unique<backoff::TestBackoff>());
+        [] {}, &environment_, page_storage_, std::make_unique<backoff::TestBackoff>());
     resolver->SetMergeStrategy(nullptr);
     resolver->set_on_empty(QuitLoopClosure());
     merge_resolver_ = resolver.get();
@@ -52,27 +51,23 @@ class ConflictResolverClientTest : public TestWithPageStorage {
         ActivePageManager::PageStorageState::NEEDS_SYNC);
   }
 
-  storage::CommitId CreateCommit(
-      storage::CommitIdView parent_id,
-      fit::function<void(storage::Journal*)> contents) {
+  storage::CommitId CreateCommit(storage::CommitIdView parent_id,
+                                 fit::function<void(storage::Journal*)> contents) {
     Status status;
     bool called;
     std::unique_ptr<const storage::Commit> base;
-    page_storage_->GetCommit(
-        parent_id,
-        callback::Capture(callback::SetWhenCalled(&called), &status, &base));
+    page_storage_->GetCommit(parent_id,
+                             callback::Capture(callback::SetWhenCalled(&called), &status, &base));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
     EXPECT_EQ(Status::OK, status);
 
-    std::unique_ptr<storage::Journal> journal =
-        page_storage_->StartCommit(std::move(base));
+    std::unique_ptr<storage::Journal> journal = page_storage_->StartCommit(std::move(base));
 
     contents(journal.get());
     std::unique_ptr<const storage::Commit> commit;
     page_storage_->CommitJournal(
-        std::move(journal),
-        callback::Capture(callback::SetWhenCalled(&called), &status, &commit));
+        std::move(journal), callback::Capture(callback::SetWhenCalled(&called), &status, &commit));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
     EXPECT_EQ(Status::OK, status);
@@ -90,13 +85,10 @@ class ConflictResolverClientTest : public TestWithPageStorage {
 
 class ConflictResolverImpl : public ConflictResolver {
  public:
-  explicit ConflictResolverImpl(
-      fidl::InterfaceRequest<ConflictResolver> request,
-      fit::closure quit_callback)
-      : binding_(this, std::move(request)),
-        quit_callback_(std::move(quit_callback)) {
-    binding_.set_error_handler(
-        [this](zx_status_t status) { this->disconnected = true; });
+  explicit ConflictResolverImpl(fidl::InterfaceRequest<ConflictResolver> request,
+                                fit::closure quit_callback)
+      : binding_(this, std::move(request)), quit_callback_(std::move(quit_callback)) {
+    binding_.set_error_handler([this](zx_status_t status) { this->disconnected = true; });
   }
   ~ConflictResolverImpl() override {}
 
@@ -117,8 +109,7 @@ class ConflictResolverImpl : public ConflictResolver {
           common_version(std::move(common_version)),
           result_provider_ptr(result_provider.Bind()) {
       result_provider_ptr.set_error_handler(callback::Capture(
-          callback::SetWhenCalled(&result_provider_disconnected),
-          &result_provider_status));
+          callback::SetWhenCalled(&result_provider_disconnected), &result_provider_status));
     }
   };
 
@@ -127,14 +118,13 @@ class ConflictResolverImpl : public ConflictResolver {
 
  private:
   // ConflictResolver:
-  void Resolve(
-      fidl::InterfaceHandle<PageSnapshot> left_version,
-      fidl::InterfaceHandle<PageSnapshot> right_version,
-      fidl::InterfaceHandle<PageSnapshot> common_version,
-      fidl::InterfaceHandle<MergeResultProvider> result_provider) override {
-    requests.push_back(std::make_unique<ResolveRequest>(
-        std::move(left_version), std::move(right_version),
-        std::move(common_version), std::move(result_provider)));
+  void Resolve(fidl::InterfaceHandle<PageSnapshot> left_version,
+               fidl::InterfaceHandle<PageSnapshot> right_version,
+               fidl::InterfaceHandle<PageSnapshot> common_version,
+               fidl::InterfaceHandle<MergeResultProvider> result_provider) override {
+    requests.push_back(
+        std::make_unique<ResolveRequest>(std::move(left_version), std::move(right_version),
+                                         std::move(common_version), std::move(result_provider)));
     quit_callback_();
   }
 
@@ -144,15 +134,13 @@ class ConflictResolverImpl : public ConflictResolver {
 
 TEST_F(ConflictResolverClientTest, Error) {
   // Set up conflict.
-  CreateCommit(storage::kFirstPageCommitId,
-               AddKeyValueToJournal("key1", "value1"));
-  CreateCommit(storage::kFirstPageCommitId,
-               AddKeyValueToJournal("key2", "value2"));
+  CreateCommit(storage::kFirstPageCommitId, AddKeyValueToJournal("key1", "value1"));
+  CreateCommit(storage::kFirstPageCommitId, AddKeyValueToJournal("key2", "value2"));
 
   // Set the resolver.
   ConflictResolverPtr conflict_resolver_ptr;
-  ConflictResolverImpl conflict_resolver_impl(
-      conflict_resolver_ptr.NewRequest(), QuitLoopClosure());
+  ConflictResolverImpl conflict_resolver_impl(conflict_resolver_ptr.NewRequest(),
+                                              QuitLoopClosure());
   std::unique_ptr<CustomMergeStrategy> custom_merge_strategy =
       std::make_unique<CustomMergeStrategy>(std::move(conflict_resolver_ptr));
 
@@ -182,26 +170,22 @@ TEST_F(ConflictResolverClientTest, Error) {
     merged_values.push_back(std::move(merged_value));
   }
 
-  conflict_resolver_impl.requests[0]->result_provider_ptr->Merge(
-      std::move(merged_values));
+  conflict_resolver_impl.requests[0]->result_provider_ptr->Merge(std::move(merged_values));
   RunLoopUntilIdle();
 
-  EXPECT_EQ(ZX_ERR_INVALID_ARGS,
-            conflict_resolver_impl.requests[0]->result_provider_status);
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, conflict_resolver_impl.requests[0]->result_provider_status);
   EXPECT_EQ(2u, conflict_resolver_impl.requests.size());
 }
 
 TEST_F(ConflictResolverClientTest, MergeNonConflicting) {
   // Set up conflict.
-  CreateCommit(storage::kFirstPageCommitId,
-               AddKeyValueToJournal("key1", "value1"));
-  CreateCommit(storage::kFirstPageCommitId,
-               AddKeyValueToJournal("key2", "value2"));
+  CreateCommit(storage::kFirstPageCommitId, AddKeyValueToJournal("key1", "value1"));
+  CreateCommit(storage::kFirstPageCommitId, AddKeyValueToJournal("key2", "value2"));
 
   // Set the resolver.
   ConflictResolverPtr conflict_resolver_ptr;
-  ConflictResolverImpl conflict_resolver_impl(
-      conflict_resolver_ptr.NewRequest(), QuitLoopClosure());
+  ConflictResolverImpl conflict_resolver_impl(conflict_resolver_ptr.NewRequest(),
+                                              QuitLoopClosure());
   std::unique_ptr<CustomMergeStrategy> custom_merge_strategy =
       std::make_unique<CustomMergeStrategy>(std::move(conflict_resolver_ptr));
 
@@ -212,8 +196,7 @@ TEST_F(ConflictResolverClientTest, MergeNonConflicting) {
   EXPECT_FALSE(merge_resolver_->IsEmpty());
   EXPECT_EQ(1u, conflict_resolver_impl.requests.size());
 
-  conflict_resolver_impl.requests[0]
-      ->result_provider_ptr->MergeNonConflictingEntries();
+  conflict_resolver_impl.requests[0]->result_provider_ptr->MergeNonConflictingEntries();
   conflict_resolver_impl.requests[0]->result_provider_ptr->Done();
   RunLoopUntilIdle();
   ASSERT_TRUE(conflict_resolver_impl.requests[0]->result_provider_disconnected);
@@ -232,16 +215,14 @@ TEST_F(ConflictResolverClientTest, MergeNonConflicting) {
   storage::Entry key1_entry, key2_entry;
   page_storage_->GetEntryFromCommit(
       *commit, "key1",
-      callback::Capture(callback::SetWhenCalled(&called), &storage_status,
-                        &key1_entry));
+      callback::Capture(callback::SetWhenCalled(&called), &storage_status, &key1_entry));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, storage_status);
 
   page_storage_->GetEntryFromCommit(
       *commit, "key2",
-      callback::Capture(callback::SetWhenCalled(&called), &storage_status,
-                        &key2_entry));
+      callback::Capture(callback::SetWhenCalled(&called), &storage_status, &key2_entry));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, storage_status);
@@ -255,15 +236,15 @@ TEST_F(ConflictResolverClientTest, MergeNonConflicting) {
 
 TEST_F(ConflictResolverClientTest, MergeNonConflictingOrdering) {
   // Set up conflict.
-  storage::CommitId base_id = CreateCommit(
-      storage::kFirstPageCommitId, AddKeyValueToJournal("key1", "value1"));
+  storage::CommitId base_id =
+      CreateCommit(storage::kFirstPageCommitId, AddKeyValueToJournal("key1", "value1"));
   CreateCommit(base_id, AddKeyValueToJournal("key2", "value2"));
   CreateCommit(base_id, AddKeyValueToJournal("key1", "value1bis"));
 
   // Set the resolver.
   ConflictResolverPtr conflict_resolver_ptr;
-  ConflictResolverImpl conflict_resolver_impl(
-      conflict_resolver_ptr.NewRequest(), QuitLoopClosure());
+  ConflictResolverImpl conflict_resolver_impl(conflict_resolver_ptr.NewRequest(),
+                                              QuitLoopClosure());
   std::unique_ptr<CustomMergeStrategy> custom_merge_strategy =
       std::make_unique<CustomMergeStrategy>(std::move(conflict_resolver_ptr));
 
@@ -282,10 +263,8 @@ TEST_F(ConflictResolverClientTest, MergeNonConflictingOrdering) {
     merged_values.push_back(std::move(merged_value));
   }
 
-  conflict_resolver_impl.requests[0]->result_provider_ptr->Merge(
-      std::move(merged_values));
-  conflict_resolver_impl.requests[0]
-      ->result_provider_ptr->MergeNonConflictingEntries();
+  conflict_resolver_impl.requests[0]->result_provider_ptr->Merge(std::move(merged_values));
+  conflict_resolver_impl.requests[0]->result_provider_ptr->MergeNonConflictingEntries();
   conflict_resolver_impl.requests[0]->result_provider_ptr->Done();
   RunLoopUntilIdle();
   ASSERT_TRUE(conflict_resolver_impl.requests[0]->result_provider_disconnected);
@@ -303,16 +282,14 @@ TEST_F(ConflictResolverClientTest, MergeNonConflictingOrdering) {
   storage::Entry key1_entry, key2_entry;
   page_storage_->GetEntryFromCommit(
       *commit, "key1",
-      callback::Capture(callback::SetWhenCalled(&called), &storage_status,
-                        &key1_entry));
+      callback::Capture(callback::SetWhenCalled(&called), &storage_status, &key1_entry));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, storage_status);
 
   page_storage_->GetEntryFromCommit(
       *commit, "key2",
-      callback::Capture(callback::SetWhenCalled(&called), &storage_status,
-                        &key2_entry));
+      callback::Capture(callback::SetWhenCalled(&called), &storage_status, &key2_entry));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, storage_status);

@@ -29,18 +29,16 @@ constexpr size_t kFirestoreMaxDocumentSize = 1'000'000;
 // be needed.
 constexpr size_t kMaxObjectSize = kFirestoreMaxDocumentSize / 2;
 
-std::string GetObjectPath(fxl::StringView page_path,
-                          fxl::StringView object_id) {
+std::string GetObjectPath(fxl::StringView page_path, fxl::StringView object_id) {
   std::string encoded_object_id = EncodeKey(object_id);
-  return fxl::Concatenate({page_path, kSeparator, kObjectCollection, kSeparator,
-                           encoded_object_id});
+  return fxl::Concatenate(
+      {page_path, kSeparator, kObjectCollection, kSeparator, encoded_object_id});
 }
 
-std::string GetCommitBatchPath(fxl::StringView page_path,
-                               fxl::StringView batch_id) {
+std::string GetCommitBatchPath(fxl::StringView page_path, fxl::StringView batch_id) {
   std::string encoded_batch_id = EncodeKey(batch_id);
-  return fxl::Concatenate({page_path, kSeparator, kCommitLogCollection,
-                           kSeparator, encoded_batch_id});
+  return fxl::Concatenate(
+      {page_path, kSeparator, kCommitLogCollection, kSeparator, encoded_batch_id});
 }
 
 google::firestore::v1beta1::StructuredQuery MakeCommitQuery(
@@ -48,40 +46,34 @@ google::firestore::v1beta1::StructuredQuery MakeCommitQuery(
   google::firestore::v1beta1::StructuredQuery query;
 
   // Sub-collections to be queried.
-  google::firestore::v1beta1::StructuredQuery::CollectionSelector& selector =
-      *query.add_from();
+  google::firestore::v1beta1::StructuredQuery::CollectionSelector& selector = *query.add_from();
   selector.set_collection_id(kCommitLogCollection);
   selector.set_all_descendants(false);
 
   // Ordering.
-  google::firestore::v1beta1::StructuredQuery::Order& order_by =
-      *query.add_order_by();
+  google::firestore::v1beta1::StructuredQuery::Order& order_by = *query.add_order_by();
   order_by.mutable_field()->set_field_path(kTimestampField);
 
   // Filtering.
   if (timestamp_or_null) {
-    google::firestore::v1beta1::StructuredQuery::Filter& filter =
-        *query.mutable_where();
+    google::firestore::v1beta1::StructuredQuery::Filter& filter = *query.mutable_where();
     google::firestore::v1beta1::StructuredQuery::FieldFilter& field_filter =
         *filter.mutable_field_filter();
 
     field_filter.mutable_field()->set_field_path(kTimestampField);
     field_filter.set_op(
-        google::firestore::v1beta1::
-            StructuredQuery_FieldFilter_Operator_GREATER_THAN_OR_EQUAL);
-    field_filter.mutable_value()->mutable_timestamp_value()->Swap(
-        timestamp_or_null.get());
+        google::firestore::v1beta1::StructuredQuery_FieldFilter_Operator_GREATER_THAN_OR_EQUAL);
+    field_filter.mutable_value()->mutable_timestamp_value()->Swap(timestamp_or_null.get());
   }
   return query;
 }
 
 }  // namespace
 
-PageCloudImpl::PageCloudImpl(
-    std::string page_path, rng::Random* random,
-    CredentialsProvider* credentials_provider,
-    FirestoreService* firestore_service,
-    fidl::InterfaceRequest<cloud_provider::PageCloud> request)
+PageCloudImpl::PageCloudImpl(std::string page_path, rng::Random* random,
+                             CredentialsProvider* credentials_provider,
+                             FirestoreService* firestore_service,
+                             fidl::InterfaceRequest<cloud_provider::PageCloud> request)
     : page_path_(std::move(page_path)),
       random_(random),
       credentials_provider_(credentials_provider),
@@ -100,12 +92,11 @@ PageCloudImpl::~PageCloudImpl() {}
 
 void PageCloudImpl::ScopedGetCredentials(
     fit::function<void(std::shared_ptr<grpc::CallCredentials>)> callback) {
-  credentials_provider_->GetCredentials(callback::MakeScoped(
-      weak_ptr_factory_.GetWeakPtr(), std::move(callback)));
+  credentials_provider_->GetCredentials(
+      callback::MakeScoped(weak_ptr_factory_.GetWeakPtr(), std::move(callback)));
 }
 
-void PageCloudImpl::AddCommits(cloud_provider::CommitPack commits,
-                               AddCommitsCallback callback) {
+void PageCloudImpl::AddCommits(cloud_provider::CommitPack commits, AddCommitsCallback callback) {
   std::vector<cloud_provider::CommitPackEntry> commit_pack_entries;
   if (!cloud_provider::DecodeCommitPack(commits, &commit_pack_entries)) {
     callback(cloud_provider::Status::ARGUMENT_ERROR);
@@ -117,8 +108,8 @@ void PageCloudImpl::AddCommits(cloud_provider::CommitPack commits,
 
   // Set the document name to a new UUID. Firestore Commit() API doesn't allow
   // to request the ID to be assigned by the server.
-  const std::string document_name = GetCommitBatchPath(
-      page_path_, convert::ToHex(random_->RandomUniqueBytes()));
+  const std::string document_name =
+      GetCommitBatchPath(page_path_, convert::ToHex(random_->RandomUniqueBytes()));
 
   // The commit batch is added in a single commit containing multiple writes.
   //
@@ -131,41 +122,34 @@ void PageCloudImpl::AddCommits(cloud_provider::CommitPack commits,
 
   // The second write sets the timestamp field to the server-side request
   // timestamp.
-  google::firestore::v1beta1::Write& set_timestamp_write =
-      *(request.add_writes());
-  (*set_timestamp_write.mutable_transform()->mutable_document()) =
-      document_name;
+  google::firestore::v1beta1::Write& set_timestamp_write = *(request.add_writes());
+  (*set_timestamp_write.mutable_transform()->mutable_document()) = document_name;
 
   google::firestore::v1beta1::DocumentTransform_FieldTransform& transform =
       *(set_timestamp_write.mutable_transform()->add_field_transforms());
   *(transform.mutable_field_path()) = kTimestampField;
   transform.set_set_to_server_value(
-      google::firestore::v1beta1::
-          DocumentTransform_FieldTransform_ServerValue_REQUEST_TIME);
+      google::firestore::v1beta1::DocumentTransform_FieldTransform_ServerValue_REQUEST_TIME);
 
-  ScopedGetCredentials(
-      [this, request = std::move(request),
-       callback = std::move(callback)](auto call_credentials) mutable {
-        firestore_service_->Commit(
-            std::move(request), std::move(call_credentials),
-            [callback = std::move(callback)](auto status, auto result) {
-              if (LogGrpcRequestError(status)) {
-                callback(ConvertGrpcStatus(status.error_code()));
-                return;
-              }
-              callback(cloud_provider::Status::OK);
-            });
-      });
+  ScopedGetCredentials([this, request = std::move(request),
+                        callback = std::move(callback)](auto call_credentials) mutable {
+    firestore_service_->Commit(std::move(request), std::move(call_credentials),
+                               [callback = std::move(callback)](auto status, auto result) {
+                                 if (LogGrpcRequestError(status)) {
+                                   callback(ConvertGrpcStatus(status.error_code()));
+                                   return;
+                                 }
+                                 callback(cloud_provider::Status::OK);
+                               });
+  });
 }
 
-void PageCloudImpl::GetCommits(
-    std::unique_ptr<cloud_provider::PositionToken> min_position_token,
-    GetCommitsCallback callback) {
+void PageCloudImpl::GetCommits(std::unique_ptr<cloud_provider::PositionToken> min_position_token,
+                               GetCommitsCallback callback) {
   std::unique_ptr<google::protobuf::Timestamp> timestamp_or_null;
   if (min_position_token) {
     timestamp_or_null = std::make_unique<google::protobuf::Timestamp>();
-    if (!timestamp_or_null->ParseFromString(
-            convert::ToString(min_position_token->opaque_id))) {
+    if (!timestamp_or_null->ParseFromString(convert::ToString(min_position_token->opaque_id))) {
       callback(cloud_provider::Status::ARGUMENT_ERROR, nullptr, nullptr);
       return;
     }
@@ -177,8 +161,7 @@ void PageCloudImpl::GetCommits(
   request.mutable_structured_query()->Swap(&query);
 
   ScopedGetCredentials([this, request = std::move(request),
-                        callback = std::move(callback)](
-                           auto call_credentials) mutable {
+                        callback = std::move(callback)](auto call_credentials) mutable {
     firestore_service_->RunQuery(
         std::move(request), std::move(call_credentials),
         [callback = std::move(callback)](auto status, auto result) {
@@ -196,8 +179,7 @@ void PageCloudImpl::GetCommits(
             }
 
             std::vector<cloud_provider::CommitPackEntry> batch_entries;
-            if (!DecodeCommitBatch(response.document(), &batch_entries,
-                                   &timestamp)) {
+            if (!DecodeCommitBatch(response.document(), &batch_entries, &timestamp)) {
               callback(cloud_provider::Status::PARSE_ERROR, nullptr, nullptr);
               return;
             }
@@ -217,21 +199,18 @@ void PageCloudImpl::GetCommits(
             token = std::make_unique<cloud_provider::PositionToken>();
             token->opaque_id = convert::ToArray(timestamp);
           }
-          callback(cloud_provider::Status::OK,
-                   fidl::MakeOptional(std::move(commit_pack)),
+          callback(cloud_provider::Status::OK, fidl::MakeOptional(std::move(commit_pack)),
                    std::move(token));
         });
   });
 }
 
-void PageCloudImpl::AddObject(std::vector<uint8_t> id,
-                              fuchsia::mem::Buffer data,
+void PageCloudImpl::AddObject(std::vector<uint8_t> id, fuchsia::mem::Buffer data,
                               cloud_provider::ReferencePack /*references*/,
                               AddObjectCallback callback) {
   std::string data_str;
   fsl::SizedVmo vmo;
-  if (!fsl::StringFromVmo(data, &data_str) ||
-      data_str.size() > kMaxObjectSize) {
+  if (!fsl::StringFromVmo(data, &data_str) || data_str.size() > kMaxObjectSize) {
     callback(cloud_provider::Status::ARGUMENT_ERROR);
     return;
   }
@@ -241,73 +220,63 @@ void PageCloudImpl::AddObject(std::vector<uint8_t> id,
   request.set_collection_id(kObjectCollection);
   google::firestore::v1beta1::Document* document = request.mutable_document();
   request.set_document_id(EncodeKey(convert::ToString(id)));
-  *((*document->mutable_fields())[kDataKey].mutable_bytes_value()) =
-      std::move(data_str);
+  *((*document->mutable_fields())[kDataKey].mutable_bytes_value()) = std::move(data_str);
 
-  ScopedGetCredentials(
-      [this, request = std::move(request),
-       callback = std::move(callback)](auto call_credentials) mutable {
-        firestore_service_->CreateDocument(
-            std::move(request), std::move(call_credentials),
-            [callback = std::move(callback)](auto status, auto result) {
-              if (status.error_code() == grpc::ALREADY_EXISTS) {
-                callback(cloud_provider::Status::OK);
-                return;
-              }
-              if (LogGrpcRequestError(status)) {
-                callback(ConvertGrpcStatus(status.error_code()));
-                return;
-              }
-              callback(cloud_provider::Status::OK);
-            });
-      });
+  ScopedGetCredentials([this, request = std::move(request),
+                        callback = std::move(callback)](auto call_credentials) mutable {
+    firestore_service_->CreateDocument(std::move(request), std::move(call_credentials),
+                                       [callback = std::move(callback)](auto status, auto result) {
+                                         if (status.error_code() == grpc::ALREADY_EXISTS) {
+                                           callback(cloud_provider::Status::OK);
+                                           return;
+                                         }
+                                         if (LogGrpcRequestError(status)) {
+                                           callback(ConvertGrpcStatus(status.error_code()));
+                                           return;
+                                         }
+                                         callback(cloud_provider::Status::OK);
+                                       });
+  });
 }
 
-void PageCloudImpl::GetObject(std::vector<uint8_t> id,
-                              GetObjectCallback callback) {
+void PageCloudImpl::GetObject(std::vector<uint8_t> id, GetObjectCallback callback) {
   auto request = google::firestore::v1beta1::GetDocumentRequest();
   request.set_name(GetObjectPath(page_path_, convert::ToString(id)));
 
-  ScopedGetCredentials(
-      [this, request = std::move(request),
-       callback = std::move(callback)](auto call_credentials) mutable {
-        firestore_service_->GetDocument(
-            std::move(request), std::move(call_credentials),
-            [callback = std::move(callback)](auto status, auto result) {
-              if (LogGrpcRequestError(status)) {
-                callback(ConvertGrpcStatus(status.error_code()), nullptr);
-                return;
-              }
+  ScopedGetCredentials([this, request = std::move(request),
+                        callback = std::move(callback)](auto call_credentials) mutable {
+    firestore_service_->GetDocument(
+        std::move(request), std::move(call_credentials),
+        [callback = std::move(callback)](auto status, auto result) {
+          if (LogGrpcRequestError(status)) {
+            callback(ConvertGrpcStatus(status.error_code()), nullptr);
+            return;
+          }
 
-              if (result.fields().count(kDataKey) != 1) {
-                FXL_LOG(ERROR)
-                    << "Incorrect format of the retrieved object document";
-                callback(cloud_provider::Status::PARSE_ERROR, nullptr);
-                return;
-              }
+          if (result.fields().count(kDataKey) != 1) {
+            FXL_LOG(ERROR) << "Incorrect format of the retrieved object document";
+            callback(cloud_provider::Status::PARSE_ERROR, nullptr);
+            return;
+          }
 
-              const std::string& bytes =
-                  result.fields().at(kDataKey).bytes_value();
-              ::fuchsia::mem::Buffer buffer;
-              if (!fsl::VmoFromString(bytes, &buffer)) {
-                callback(cloud_provider::Status::INTERNAL_ERROR, nullptr);
-                return;
-              }
-              callback(cloud_provider::Status::OK,
-                       fidl::MakeOptional(std::move(buffer)));
-            });
-      });
+          const std::string& bytes = result.fields().at(kDataKey).bytes_value();
+          ::fuchsia::mem::Buffer buffer;
+          if (!fsl::VmoFromString(bytes, &buffer)) {
+            callback(cloud_provider::Status::INTERNAL_ERROR, nullptr);
+            return;
+          }
+          callback(cloud_provider::Status::OK, fidl::MakeOptional(std::move(buffer)));
+        });
+  });
 }
 
-void PageCloudImpl::SetWatcher(
-    std::unique_ptr<cloud_provider::PositionToken> min_position_token,
-    fidl::InterfaceHandle<cloud_provider::PageCloudWatcher> watcher,
-    SetWatcherCallback callback) {
+void PageCloudImpl::SetWatcher(std::unique_ptr<cloud_provider::PositionToken> min_position_token,
+                               fidl::InterfaceHandle<cloud_provider::PageCloudWatcher> watcher,
+                               SetWatcherCallback callback) {
   std::unique_ptr<google::protobuf::Timestamp> timestamp_or_null;
   if (min_position_token) {
     timestamp_or_null = std::make_unique<google::protobuf::Timestamp>();
-    if (!timestamp_or_null->ParseFromString(
-            convert::ToString(min_position_token->opaque_id))) {
+    if (!timestamp_or_null->ParseFromString(convert::ToString(min_position_token->opaque_id))) {
       callback(cloud_provider::Status::ARGUMENT_ERROR);
       return;
     }
@@ -321,8 +290,7 @@ void PageCloudImpl::SetWatcher(
   ScopedGetCredentials([this](auto call_credentials) mutable {
     // Initiate the listen RPC. We will receive a call on OnConnected() when the
     // listen stream is ready.
-    listen_call_handler_ =
-        firestore_service_->Listen(std::move(call_credentials), this);
+    listen_call_handler_ = firestore_service_->Listen(std::move(call_credentials), this);
   });
 }
 
@@ -337,8 +305,7 @@ void PageCloudImpl::OnConnected() {
   listen_call_handler_->Write(std::move(request));
 }
 
-void PageCloudImpl::OnResponse(
-    google::firestore::v1beta1::ListenResponse response) {
+void PageCloudImpl::OnResponse(google::firestore::v1beta1::ListenResponse response) {
   if (response.has_target_change()) {
     if (response.target_change().target_change_type() ==
         google::firestore::v1beta1::TargetChange_TargetChangeType_CURRENT) {
@@ -354,8 +321,7 @@ void PageCloudImpl::OnResponse(
     std::string timestamp;
 
     std::vector<cloud_provider::CommitPackEntry> commit_entries;
-    if (!DecodeCommitBatch(response.document_change().document(),
-                           &commit_entries, &timestamp)) {
+    if (!DecodeCommitBatch(response.document_change().document(), &commit_entries, &timestamp)) {
       watcher_->OnError(cloud_provider::Status::PARSE_ERROR);
       ShutDownWatcher();
     }
@@ -367,8 +333,7 @@ void PageCloudImpl::OnResponse(
 }
 
 void PageCloudImpl::OnFinished(grpc::Status status) {
-  if (status.error_code() == grpc::UNAVAILABLE ||
-      status.error_code() == grpc::UNAUTHENTICATED) {
+  if (status.error_code() == grpc::UNAVAILABLE || status.error_code() == grpc::UNAUTHENTICATED) {
     if (watcher_) {
       watcher_->OnError(cloud_provider::Status::NETWORK_ERROR);
     }
@@ -378,9 +343,8 @@ void PageCloudImpl::OnFinished(grpc::Status status) {
   watcher_.Unbind();
 }
 
-void PageCloudImpl::HandleCommits(
-    std::vector<cloud_provider::CommitPackEntry> commit_entries,
-    cloud_provider::PositionToken token) {
+void PageCloudImpl::HandleCommits(std::vector<cloud_provider::CommitPackEntry> commit_entries,
+                                  cloud_provider::PositionToken token) {
   std::move(commit_entries.begin(), commit_entries.end(),
             std::back_inserter(commits_waiting_for_ack_));
   token_for_waiting_commits_ = std::move(token);
@@ -395,8 +359,7 @@ void PageCloudImpl::SendWaitingCommits() {
   FXL_DCHECK(!commits_waiting_for_ack_.empty());
   cloud_provider::PositionToken token = std::move(token_for_waiting_commits_);
   cloud_provider::CommitPack commit_pack;
-  if (!cloud_provider::EncodeCommitPack(commits_waiting_for_ack_,
-                                        &commit_pack)) {
+  if (!cloud_provider::EncodeCommitPack(commits_waiting_for_ack_, &commit_pack)) {
     watcher_->OnError(cloud_provider::Status::INTERNAL_ERROR);
     ShutDownWatcher();
     return;

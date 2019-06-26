@@ -12,26 +12,19 @@ namespace cloud_sync {
 
 void PageSyncEmptyImpl::Start() { FXL_NOTIMPLEMENTED(); }
 
-void PageSyncEmptyImpl::SetOnIdle(fit::closure /*on_idle_callback*/) {
-  FXL_NOTIMPLEMENTED();
-}
+void PageSyncEmptyImpl::SetOnIdle(fit::closure /*on_idle_callback*/) { FXL_NOTIMPLEMENTED(); }
 
 bool PageSyncEmptyImpl::IsIdle() {
   FXL_NOTIMPLEMENTED();
   return true;
 }
 
-void PageSyncEmptyImpl::SetOnBacklogDownloaded(
-    fit::closure /*on_backlog_downloaded_callback*/) {
+void PageSyncEmptyImpl::SetOnBacklogDownloaded(fit::closure /*on_backlog_downloaded_callback*/) {
   FXL_NOTIMPLEMENTED();
 }
 
-void PageSyncEmptyImpl::SetSyncWatcher(SyncStateWatcher* /*watcher*/) {
-  FXL_NOTIMPLEMENTED();
-}
+void PageSyncEmptyImpl::SetSyncWatcher(SyncStateWatcher* /*watcher*/) { FXL_NOTIMPLEMENTED(); }
 
-void PageSyncEmptyImpl::SetOnUnrecoverableError(fit::closure /*on_error*/) {
-  FXL_NOTIMPLEMENTED();
-}
+void PageSyncEmptyImpl::SetOnUnrecoverableError(fit::closure /*on_error*/) { FXL_NOTIMPLEMENTED(); }
 
 }  // namespace cloud_sync

@@ -21,9 +21,7 @@ CommitRandomImpl::CommitRandomImpl(rng::Random* random)
 
 CommitRandomImpl::~CommitRandomImpl() = default;
 
-CommitRandomImpl::CommitRandomImpl(const CommitRandomImpl& other) {
-  *this = other;
-}
+CommitRandomImpl::CommitRandomImpl(const CommitRandomImpl& other) { *this = other; }
 
 CommitRandomImpl& CommitRandomImpl::operator=(const CommitRandomImpl& other) {
   id_ = other.id_;
@@ -42,20 +40,14 @@ std::unique_ptr<const Commit> CommitRandomImpl::Clone() const {
 
 const CommitId& CommitRandomImpl::GetId() const { return id_; }
 
-std::vector<CommitIdView> CommitRandomImpl::GetParentIds() const {
-  return parent_ids_views_;
-}
+std::vector<CommitIdView> CommitRandomImpl::GetParentIds() const { return parent_ids_views_; }
 
 zx::time_utc CommitRandomImpl::GetTimestamp() const { return timestamp_; }
 
 uint64_t CommitRandomImpl::GetGeneration() const { return generation_; }
 
-ObjectIdentifier CommitRandomImpl::GetRootIdentifier() const {
-  return root_node_identifier_;
-}
+ObjectIdentifier CommitRandomImpl::GetRootIdentifier() const { return root_node_identifier_; }
 
-fxl::StringView CommitRandomImpl::GetStorageBytes() const {
-  return storage_bytes_;
-}
+fxl::StringView CommitRandomImpl::GetStorageBytes() const { return storage_bytes_; }
 
 }  // namespace storage

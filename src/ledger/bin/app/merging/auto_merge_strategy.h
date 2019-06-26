@@ -25,8 +25,7 @@ class AutoMergeStrategy : public MergeStrategy {
   // MergeStrategy:
   void SetOnError(fit::closure on_error) override;
 
-  void Merge(storage::PageStorage* storage,
-             ActivePageManager* active_page_manager,
+  void Merge(storage::PageStorage* storage, ActivePageManager* active_page_manager,
              std::unique_ptr<const storage::Commit> head_1,
              std::unique_ptr<const storage::Commit> head_2,
              std::unique_ptr<const storage::Commit> ancestor,

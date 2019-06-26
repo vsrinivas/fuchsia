@@ -22,8 +22,7 @@ namespace btree {
 // asynchronous calls look like synchronous ones.
 class SynchronousStorage {
  public:
-  SynchronousStorage(PageStorage* page_storage,
-                     coroutine::CoroutineHandler* handler);
+  SynchronousStorage(PageStorage* page_storage, coroutine::CoroutineHandler* handler);
 
   PageStorage* page_storage() { return page_storage_; }
   coroutine::CoroutineHandler* handler() { return handler_; }
@@ -31,9 +30,8 @@ class SynchronousStorage {
   Status TreeNodeFromIdentifier(ObjectIdentifier object_identifier,
                                 std::unique_ptr<const TreeNode>* result);
 
-  Status TreeNodesFromIdentifiers(
-      std::vector<ObjectIdentifier> object_identifiers,
-      std::vector<std::unique_ptr<const TreeNode>>* result);
+  Status TreeNodesFromIdentifiers(std::vector<ObjectIdentifier> object_identifiers,
+                                  std::vector<std::unique_ptr<const TreeNode>>* result);
 
   Status TreeNodeFromEntries(uint8_t level, const std::vector<Entry>& entries,
                              const std::map<size_t, ObjectIdentifier>& children,

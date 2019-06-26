@@ -42,11 +42,11 @@ enum class CommitComparison : int {
 // the list of ancestors is empty and the comparison result is set to the
 // appropriate value. Otherwise, the comparison result is set to
 // UNCOMPARABLE.
-Status FindCommonAncestors(
-    coroutine::CoroutineHandler* handler, storage::PageStorage* storage,
-    std::unique_ptr<const storage::Commit> left,
-    std::unique_ptr<const storage::Commit> right, CommitComparison* comparison,
-    std::vector<std::unique_ptr<const storage::Commit>>* ancestors);
+Status FindCommonAncestors(coroutine::CoroutineHandler* handler, storage::PageStorage* storage,
+                           std::unique_ptr<const storage::Commit> left,
+                           std::unique_ptr<const storage::Commit> right,
+                           CommitComparison* comparison,
+                           std::vector<std::unique_ptr<const storage::Commit>>* ancestors);
 
 }  // namespace ledger
 

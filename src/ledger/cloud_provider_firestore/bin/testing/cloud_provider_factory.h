@@ -47,21 +47,18 @@ class CloudProviderFactory {
     std::string user_id_;
   };
 
-  CloudProviderFactory(
-      sys::ComponentContext* component_context, rng::Random* random,
-      std::string api_key,
-      std::unique_ptr<service_account::Credentials> credentials);
+  CloudProviderFactory(sys::ComponentContext* component_context, rng::Random* random,
+                       std::string api_key,
+                       std::unique_ptr<service_account::Credentials> credentials);
   ~CloudProviderFactory();
 
   void Init();
 
-  void MakeCloudProvider(
-      UserId user_id,
-      fidl::InterfaceRequest<cloud_provider::CloudProvider> request);
+  void MakeCloudProvider(UserId user_id,
+                         fidl::InterfaceRequest<cloud_provider::CloudProvider> request);
 
-  void MakeTokenManager(
-      UserId user_id,
-      fidl::InterfaceRequest<fuchsia::auth::TokenManager> request);
+  void MakeTokenManager(UserId user_id,
+                        fidl::InterfaceRequest<fuchsia::auth::TokenManager> request);
 
  private:
   class TokenManagerContainer;

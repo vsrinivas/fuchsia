@@ -24,20 +24,17 @@
 
 namespace ledger {
 
-testing::AssertionResult Inspect(inspect::Node* top_level_node,
-                                 async::TestLoop* test_loop,
+testing::AssertionResult Inspect(inspect::Node* top_level_node, async::TestLoop* test_loop,
                                  inspect::ObjectHierarchy* hierarchy) {
   bool callback_called;
   bool success;
   fidl::InterfaceHandle<fuchsia::inspect::Inspect> inspect_handle;
   top_level_node->object_dir().object()->OpenChild(
-      kSystemUnderTestAttachmentPointPathComponent.ToString(),
-      inspect_handle.NewRequest(),
+      kSystemUnderTestAttachmentPointPathComponent.ToString(), inspect_handle.NewRequest(),
       callback::Capture(callback::SetWhenCalled(&callback_called), &success));
   test_loop->RunUntilIdle();
   if (!callback_called) {
-    return ::testing::AssertionFailure()
-           << "Callback passed to OpenChild not called!";
+    return ::testing::AssertionFailure() << "Callback passed to OpenChild not called!";
   }
   if (!success) {
     return ::testing::AssertionFailure() << "OpenChild not successful!";
@@ -47,8 +44,7 @@ testing::AssertionResult Inspect(inspect::Node* top_level_node,
   fit::result<inspect::ObjectHierarchy> hierarchy_result;
   auto hierarchy_promise =
       inspect::ReadFromFidl(inspect::ObjectReader(std::move(inspect_handle)))
-          .then([&](fit::result<inspect::ObjectHierarchy>&
-                        then_hierarchy_result) {
+          .then([&](fit::result<inspect::ObjectHierarchy>& then_hierarchy_result) {
             hierarchy_result = std::move(then_hierarchy_result);
           });
   executor.schedule_task(std::move(hierarchy_promise));

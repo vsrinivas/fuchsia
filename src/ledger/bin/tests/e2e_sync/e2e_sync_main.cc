@@ -40,8 +40,7 @@ int Main(int argc, char** argv) {
     async::Loop loop(&kAsyncLoopConfigAttachToThread);
     auto component_context = sys::ComponentContext::Create();
 
-    if (!ParseSyncParamsFromCommandLine(command_line, component_context.get(),
-                                        &sync_params)) {
+    if (!ParseSyncParamsFromCommandLine(command_line, component_context.get(), &sync_params)) {
       std::cerr << GetSyncParamsUsage();
       return -1;
     }
@@ -54,11 +53,9 @@ int Main(int argc, char** argv) {
 
 }  // namespace
 
-std::vector<const LedgerAppInstanceFactoryBuilder*>
-GetLedgerAppInstanceFactoryBuilders() {
+std::vector<const LedgerAppInstanceFactoryBuilder*> GetLedgerAppInstanceFactoryBuilders() {
   static auto static_builder = FactoryBuilderE2eImpl();
-  std::vector<const LedgerAppInstanceFactoryBuilder*> builders = {
-      &static_builder};
+  std::vector<const LedgerAppInstanceFactoryBuilder*> builders = {&static_builder};
   return builders;
 }
 

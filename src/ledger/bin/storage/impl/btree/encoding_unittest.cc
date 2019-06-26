@@ -18,9 +18,7 @@ namespace {
 
 // Allows to create correct std::strings with \0 bytes inside from C-style
 // string constants.
-std::string operator"" _s(const char* str, size_t size) {
-  return std::string(str, size);
-}
+std::string operator"" _s(const char* str, size_t size) { return std::string(str, size); }
 
 TEST(EncodingTest, EmptyData) {
   uint8_t level = 0u;
@@ -40,11 +38,9 @@ TEST(EncodingTest, EmptyData) {
 
 TEST(EncodingTest, SingleEntry) {
   uint8_t level = 1u;
-  std::vector<Entry> entries = {
-      {"key", MakeObjectIdentifier("object_digest"), KeyPriority::EAGER}};
-  std::map<size_t, ObjectIdentifier> children = {
-      {0u, MakeObjectIdentifier("child_1")},
-      {1u, MakeObjectIdentifier("child_2")}};
+  std::vector<Entry> entries = {{"key", MakeObjectIdentifier("object_digest"), KeyPriority::EAGER}};
+  std::map<size_t, ObjectIdentifier> children = {{0u, MakeObjectIdentifier("child_1")},
+                                                 {1u, MakeObjectIdentifier("child_2")}};
 
   std::string bytes = EncodeNode(level, entries, children);
 
@@ -59,17 +55,15 @@ TEST(EncodingTest, SingleEntry) {
 
 TEST(EncodingTest, MoreEntries) {
   uint8_t level = 5;
-  std::vector<Entry> entries = {
-      {"key1", MakeObjectIdentifier("abc"), KeyPriority::EAGER},
-      {"key2", MakeObjectIdentifier("def"), KeyPriority::LAZY},
-      {"key3", MakeObjectIdentifier("geh"), KeyPriority::EAGER},
-      {"key4", MakeObjectIdentifier("ijk"), KeyPriority::LAZY}};
-  std::map<size_t, ObjectIdentifier> children = {
-      {0, MakeObjectIdentifier("child_1")},
-      {1, MakeObjectIdentifier("child_2")},
-      {2, MakeObjectIdentifier("child_3")},
-      {3, MakeObjectIdentifier("child_4")},
-      {4, MakeObjectIdentifier("child_5")}};
+  std::vector<Entry> entries = {{"key1", MakeObjectIdentifier("abc"), KeyPriority::EAGER},
+                                {"key2", MakeObjectIdentifier("def"), KeyPriority::LAZY},
+                                {"key3", MakeObjectIdentifier("geh"), KeyPriority::EAGER},
+                                {"key4", MakeObjectIdentifier("ijk"), KeyPriority::LAZY}};
+  std::map<size_t, ObjectIdentifier> children = {{0, MakeObjectIdentifier("child_1")},
+                                                 {1, MakeObjectIdentifier("child_2")},
+                                                 {2, MakeObjectIdentifier("child_3")},
+                                                 {3, MakeObjectIdentifier("child_4")},
+                                                 {4, MakeObjectIdentifier("child_5")}};
 
   std::string bytes = EncodeNode(level, entries, children);
 
@@ -84,15 +78,13 @@ TEST(EncodingTest, MoreEntries) {
 
 TEST(EncodingTest, SparsedEntriesWithBeginAndEnd) {
   uint8_t level = 5;
-  std::vector<Entry> entries = {
-      {"key1", MakeObjectIdentifier("abc"), KeyPriority::EAGER},
-      {"key2", MakeObjectIdentifier("def"), KeyPriority::LAZY},
-      {"key3", MakeObjectIdentifier("geh"), KeyPriority::EAGER},
-      {"key4", MakeObjectIdentifier("ijk"), KeyPriority::LAZY}};
-  std::map<size_t, ObjectIdentifier> children = {
-      {0, MakeObjectIdentifier("child_1")},
-      {2, MakeObjectIdentifier("child_2")},
-      {4, MakeObjectIdentifier("child_3")}};
+  std::vector<Entry> entries = {{"key1", MakeObjectIdentifier("abc"), KeyPriority::EAGER},
+                                {"key2", MakeObjectIdentifier("def"), KeyPriority::LAZY},
+                                {"key3", MakeObjectIdentifier("geh"), KeyPriority::EAGER},
+                                {"key4", MakeObjectIdentifier("ijk"), KeyPriority::LAZY}};
+  std::map<size_t, ObjectIdentifier> children = {{0, MakeObjectIdentifier("child_1")},
+                                                 {2, MakeObjectIdentifier("child_2")},
+                                                 {4, MakeObjectIdentifier("child_3")}};
 
   std::string bytes = EncodeNode(level, entries, children);
 
@@ -107,14 +99,12 @@ TEST(EncodingTest, SparsedEntriesWithBeginAndEnd) {
 
 TEST(EncodingTest, SparsedEntriesWithoutBeginAndEnd) {
   uint8_t level = 5;
-  std::vector<Entry> entries = {
-      {"key1", MakeObjectIdentifier("abc"), KeyPriority::EAGER},
-      {"key2", MakeObjectIdentifier("def"), KeyPriority::LAZY},
-      {"key3", MakeObjectIdentifier("geh"), KeyPriority::EAGER},
-      {"key4", MakeObjectIdentifier("ijk"), KeyPriority::LAZY}};
-  std::map<size_t, ObjectIdentifier> children = {
-      {1, MakeObjectIdentifier("child_1")},
-      {3, MakeObjectIdentifier("child_2")}};
+  std::vector<Entry> entries = {{"key1", MakeObjectIdentifier("abc"), KeyPriority::EAGER},
+                                {"key2", MakeObjectIdentifier("def"), KeyPriority::LAZY},
+                                {"key3", MakeObjectIdentifier("geh"), KeyPriority::EAGER},
+                                {"key4", MakeObjectIdentifier("ijk"), KeyPriority::LAZY}};
+  std::map<size_t, ObjectIdentifier> children = {{1, MakeObjectIdentifier("child_1")},
+                                                 {3, MakeObjectIdentifier("child_2")}};
 
   std::string bytes = EncodeNode(level, entries, children);
 
@@ -129,11 +119,9 @@ TEST(EncodingTest, SparsedEntriesWithoutBeginAndEnd) {
 
 TEST(EncodingTest, ZeroByte) {
   uint8_t level = 13;
-  std::vector<Entry> entries = {
-      {"k\0ey"_s, MakeObjectIdentifier("\0a\0\0"_s), KeyPriority::EAGER}};
-  std::map<size_t, ObjectIdentifier> children = {
-      {0u, MakeObjectIdentifier("ch\0ld_1"_s)},
-      {1u, MakeObjectIdentifier("child_\0"_s)}};
+  std::vector<Entry> entries = {{"k\0ey"_s, MakeObjectIdentifier("\0a\0\0"_s), KeyPriority::EAGER}};
+  std::map<size_t, ObjectIdentifier> children = {{0u, MakeObjectIdentifier("ch\0ld_1"_s)},
+                                                 {1u, MakeObjectIdentifier("child_\0"_s)}};
 
   std::string bytes = EncodeNode(level, entries, children);
 
@@ -160,8 +148,7 @@ TEST(EncodingTest, Errors) {
     for (size_t i = 0; i < size; ++i) {
       children.push_back(CreateChildStorage(
           builder, 1,
-          ToObjectIdentifierStorage(
-              &builder, MakeObjectIdentifier(fxl::StringPrintf("c%lu", i)))));
+          ToObjectIdentifierStorage(&builder, MakeObjectIdentifier(fxl::StringPrintf("c%lu", i)))));
     }
     return builder.CreateVector(children);
   };
@@ -171,16 +158,14 @@ TEST(EncodingTest, Errors) {
 
   // 2 children without entries is not a valid serialization.
   builder.Finish(CreateTreeNodeStorage(
-      builder,
-      builder.CreateVector(std::vector<flatbuffers::Offset<EntryStorage>>()),
+      builder, builder.CreateVector(std::vector<flatbuffers::Offset<EntryStorage>>()),
       create_children(2)));
   EXPECT_FALSE(CheckValidTreeNodeSerialization(ToString(&builder)));
 
   // A single child with index 1 is not a valid serialization.
   builder.Clear();
   builder.Finish(CreateTreeNodeStorage(
-      builder,
-      builder.CreateVector(std::vector<flatbuffers::Offset<EntryStorage>>()),
+      builder, builder.CreateVector(std::vector<flatbuffers::Offset<EntryStorage>>()),
       create_children(1)));
   EXPECT_FALSE(CheckValidTreeNodeSerialization(ToString(&builder)));
 
@@ -189,15 +174,12 @@ TEST(EncodingTest, Errors) {
   builder.Finish(CreateTreeNodeStorage(
       builder,
       builder.CreateVector(
-          1,
-          static_cast<std::function<flatbuffers::Offset<EntryStorage>(size_t)>>(
-              [&](size_t i) {
-                return CreateEntryStorage(
-                    builder, convert::ToFlatBufferVector(&builder, "hello"),
-                    ToObjectIdentifierStorage(&builder,
-                                              MakeObjectIdentifier("world")),
-                    KeyPriorityStorage::KeyPriorityStorage_EAGER);
-              })),
+          1, static_cast<std::function<flatbuffers::Offset<EntryStorage>(size_t)>>([&](size_t i) {
+            return CreateEntryStorage(
+                builder, convert::ToFlatBufferVector(&builder, "hello"),
+                ToObjectIdentifierStorage(&builder, MakeObjectIdentifier("world")),
+                KeyPriorityStorage::KeyPriorityStorage_EAGER);
+          })),
       create_children(2)));
   EXPECT_FALSE(CheckValidTreeNodeSerialization(ToString(&builder)));
 
@@ -206,15 +188,12 @@ TEST(EncodingTest, Errors) {
   builder.Finish(CreateTreeNodeStorage(
       builder,
       builder.CreateVector(
-          2,
-          static_cast<std::function<flatbuffers::Offset<EntryStorage>(size_t)>>(
-              [&](size_t i) {
-                return CreateEntryStorage(
-                    builder, convert::ToFlatBufferVector(&builder, "hello"),
-                    ToObjectIdentifierStorage(&builder,
-                                              MakeObjectIdentifier("world")),
-                    KeyPriorityStorage::KeyPriorityStorage_EAGER);
-              })),
+          2, static_cast<std::function<flatbuffers::Offset<EntryStorage>(size_t)>>([&](size_t i) {
+            return CreateEntryStorage(
+                builder, convert::ToFlatBufferVector(&builder, "hello"),
+                ToObjectIdentifierStorage(&builder, MakeObjectIdentifier("world")),
+                KeyPriorityStorage::KeyPriorityStorage_EAGER);
+          })),
       create_children(0)));
   EXPECT_FALSE(CheckValidTreeNodeSerialization(ToString(&builder)));
 }

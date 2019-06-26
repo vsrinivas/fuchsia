@@ -18,11 +18,9 @@ class P2PProvider {
     // OnDeviceChange is called for every new connection and
     // disconnection to devices from the mesh, including the ones already
     // participating in the mesh when we connect to it.
-    virtual void OnDeviceChange(fxl::StringView device_name,
-                                DeviceChangeType change_type) = 0;
+    virtual void OnDeviceChange(fxl::StringView device_name, DeviceChangeType change_type) = 0;
     // OnNewMessage is called for every message sent to this device.
-    virtual void OnNewMessage(fxl::StringView device_name,
-                              fxl::StringView message) = 0;
+    virtual void OnNewMessage(fxl::StringView device_name, fxl::StringView message) = 0;
   };
 
   P2PProvider() {}
@@ -33,8 +31,7 @@ class P2PProvider {
   virtual void Start(Client* client) = 0;
   // Sends the provided message |data| to |destination|. Returns true if the
   // message was sent, false if the destination is not available.
-  virtual bool SendMessage(fxl::StringView destination,
-                           fxl::StringView data) = 0;
+  virtual bool SendMessage(fxl::StringView destination, fxl::StringView data) = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(P2PProvider);

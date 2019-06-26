@@ -22,8 +22,7 @@ class TestCredentialsProvider : public CredentialsProvider {
   ~TestCredentialsProvider() override;
 
   void GetCredentials(
-      fit::function<void(std::shared_ptr<grpc::CallCredentials>)> callback)
-      override;
+      fit::function<void(std::shared_ptr<grpc::CallCredentials>)> callback) override;
 
  private:
   // Must be the last member.

@@ -36,8 +36,7 @@ class LRUCache {
   //   callback to returns its result. It must return |ok_status| as a status
   //   when the request is successful. Any other return value is considered a
   //   failure.
-  LRUCache(size_t size, S ok_status,
-           fit::function<void(K, fit::function<void(S, V)>)> generator)
+  LRUCache(size_t size, S ok_status, fit::function<void(K, fit::function<void(S, V)>)> generator)
       : size_(size), ok_status_(ok_status), generator_(std::move(generator)) {}
 
   // Retrieves the value for |key| and returns it to |callback|.

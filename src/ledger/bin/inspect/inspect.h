@@ -34,8 +34,7 @@ std::string PageIdToDisplayName(const storage::PageId& page_id);
 // by |PageIdToDisplayName| to the |PageId| from which the display name was
 // generated and returns true. Or doesn't, because it doesn't recognize the
 // display name due to some corruption or mistake, and returns false.
-bool PageDisplayNameToPageId(const std::string& page_display_name,
-                             storage::PageId* page_id);
+bool PageDisplayNameToPageId(const std::string& page_display_name, storage::PageId* page_id);
 
 // Converts a |CommitId| to a string suitable to be passed to Inspect for
 // Inspect to show in its user interface and its outputs.

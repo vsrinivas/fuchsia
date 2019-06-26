@@ -28,10 +28,8 @@ union Hash {
   HashSliceType slices[sizeof(HashResultType) / sizeof(HashSliceType)];
 };
 
-static_assert(sizeof(Hash::slices) == sizeof(Hash::hash),
-              "Hash size is incorrect.");
-static_assert(sizeof(HashSliceType) < std::numeric_limits<uint8_t>::max(),
-              "Hash size is too big.");
+static_assert(sizeof(Hash::slices) == sizeof(Hash::hash), "Hash size is incorrect.");
+static_assert(sizeof(HashSliceType) < std::numeric_limits<uint8_t>::max(), "Hash size is too big.");
 
 Hash FastHash(convert::ExtendedStringView value) {
   return {.hash = murmurhash(value.data(), value.size(), kMurmurHashSeed)};
@@ -59,8 +57,7 @@ constexpr NodeLevelCalculator kDefaultNodeLevelCalculator = {&GetNodeLevel};
 class NodeBuilder {
  public:
   // Creates a NodeBuilder from the id of a tree node.
-  static Status FromIdentifier(SynchronousStorage* page_storage,
-                               ObjectIdentifier object_identifier,
+  static Status FromIdentifier(SynchronousStorage* page_storage, ObjectIdentifier object_identifier,
                                NodeBuilder* node_builder);
 
   // Creates a null builder.
@@ -74,14 +71,12 @@ class NodeBuilder {
   explicit operator bool() const { return type_ != BuilderType::NULL_NODE; }
 
   // Apply the given mutation on |node_builder|.
-  Status Apply(const NodeLevelCalculator* node_level_calculator,
-               SynchronousStorage* page_storage, EntryChange change,
-               bool* did_mutate);
+  Status Apply(const NodeLevelCalculator* node_level_calculator, SynchronousStorage* page_storage,
+               EntryChange change, bool* did_mutate);
 
   // Build the tree node represented by the builder |node_builder| in the
   // storage.
-  Status Build(SynchronousStorage* page_storage,
-               ObjectIdentifier* object_identifier,
+  Status Build(SynchronousStorage* page_storage, ObjectIdentifier* object_identifier,
                std::set<ObjectIdentifier>* new_identifiers);
 
  private:
@@ -91,10 +86,8 @@ class NodeBuilder {
     NULL_NODE,
   };
 
-  static NodeBuilder CreateExistingBuilder(uint8_t level,
-                                           ObjectIdentifier object_identifier) {
-    return NodeBuilder(BuilderType::EXISTING_NODE, level,
-                       std::move(object_identifier), {}, {});
+  static NodeBuilder CreateExistingBuilder(uint8_t level, ObjectIdentifier object_identifier) {
+    return NodeBuilder(BuilderType::EXISTING_NODE, level, std::move(object_identifier), {}, {});
   }
 
   static NodeBuilder CreateNewBuilder(uint8_t level, std::vector<Entry> entries,
@@ -102,13 +95,11 @@ class NodeBuilder {
     if (entries.empty() && !children[0]) {
       return NodeBuilder();
     }
-    return NodeBuilder(BuilderType::NEW_NODE, level, {}, std::move(entries),
-                       std::move(children));
+    return NodeBuilder(BuilderType::NEW_NODE, level, {}, std::move(entries), std::move(children));
   }
 
-  NodeBuilder(BuilderType type, uint8_t level,
-              ObjectIdentifier object_identifier, std::vector<Entry> entries,
-              std::vector<NodeBuilder> children)
+  NodeBuilder(BuilderType type, uint8_t level, ObjectIdentifier object_identifier,
+              std::vector<Entry> entries, std::vector<NodeBuilder> children)
       : type_(type),
         level_(level),
         object_identifier_(std::move(object_identifier)),
@@ -122,20 +113,19 @@ class NodeBuilder {
 
   // Delete the value with the given |key| from the builder. |key_level| must be
   // greater or equal then the node level.
-  Status Delete(SynchronousStorage* page_storage, uint8_t key_level,
-                std::string key, bool* did_mutate);
+  Status Delete(SynchronousStorage* page_storage, uint8_t key_level, std::string key,
+                bool* did_mutate);
 
   // Update the tree by adding |entry| (or modifying the value associated to
   // |entry.key| with |entry.value| if |key| is already in the tree).
   // |change_level| must be greater or equal than the node level.
-  Status Update(SynchronousStorage* page_storage, uint8_t change_level,
-                Entry entry, bool* did_mutate);
+  Status Update(SynchronousStorage* page_storage, uint8_t change_level, Entry entry,
+                bool* did_mutate);
 
   // Split the current tree in 2 according to |key|. This method expects that
   // |key| is not in the tree. After the call, the left tree will be in the
   // current builder, and the right tree in |right|.
-  Status Split(SynchronousStorage* page_storage, std::string key,
-               NodeBuilder* right);
+  Status Split(SynchronousStorage* page_storage, std::string key, NodeBuilder* right);
 
   // Merge this tree with |other|. This expects all elements of |other| to be
   // greather than elements in |this|.
@@ -147,19 +137,16 @@ class NodeBuilder {
 
   // Validate that the content of this builder follows the expected constraints.
   bool Validate() {
-    if (type_ == BuilderType::NULL_NODE &&
-        object_identifier_.object_digest().IsValid()) {
+    if (type_ == BuilderType::NULL_NODE && object_identifier_.object_digest().IsValid()) {
       return false;
     }
-    if (type_ == BuilderType::EXISTING_NODE &&
-        !object_identifier_.object_digest().IsValid()) {
+    if (type_ == BuilderType::EXISTING_NODE && !object_identifier_.object_digest().IsValid()) {
       return false;
     }
     if (type_ == BuilderType::NEW_NODE && children_.empty()) {
       return false;
     }
-    if ((!children_.empty() || !entries_.empty()) &&
-        children_.size() != entries_.size() + 1) {
+    if ((!children_.empty() || !entries_.empty()) && children_.size() != entries_.size() + 1) {
       return false;
     }
     if (type_ == BuilderType::NEW_NODE && entries_.empty() && !children_[0]) {
@@ -177,8 +164,7 @@ class NodeBuilder {
     while (level_ < target_level) {
       std::vector<NodeBuilder> children;
       children.push_back(std::move(*this));
-      *this =
-          NodeBuilder::CreateNewBuilder(level_ + 1, {}, std::move(children));
+      *this = NodeBuilder::CreateNewBuilder(level_ + 1, {}, std::move(children));
     }
     return *this;
   }
@@ -211,25 +197,22 @@ class NodeBuilder {
 };
 
 Status NodeBuilder::FromIdentifier(SynchronousStorage* page_storage,
-                                   ObjectIdentifier object_identifier,
-                                   NodeBuilder* node_builder) {
+                                   ObjectIdentifier object_identifier, NodeBuilder* node_builder) {
   std::unique_ptr<const TreeNode> node;
-  RETURN_ON_ERROR(
-      page_storage->TreeNodeFromIdentifier(object_identifier, &node));
+  RETURN_ON_ERROR(page_storage->TreeNodeFromIdentifier(object_identifier, &node));
   FXL_DCHECK(node);
 
   std::vector<Entry> entries;
   std::vector<NodeBuilder> children;
   ExtractContent(*node, &entries, &children);
-  *node_builder = NodeBuilder(BuilderType::EXISTING_NODE, node->level(),
-                              std::move(object_identifier), std::move(entries),
-                              std::move(children));
+  *node_builder =
+      NodeBuilder(BuilderType::EXISTING_NODE, node->level(), std::move(object_identifier),
+                  std::move(entries), std::move(children));
   return Status::OK;
 }
 
 Status NodeBuilder::Apply(const NodeLevelCalculator* node_level_calculator,
-                          SynchronousStorage* page_storage, EntryChange change,
-                          bool* did_mutate) {
+                          SynchronousStorage* page_storage, EntryChange change, bool* did_mutate) {
   if (!*this) {
     // If the change is a deletion, and the tree is null, the result is still
     // null.
@@ -242,8 +225,7 @@ Status NodeBuilder::Apply(const NodeLevelCalculator* node_level_calculator,
     std::vector<Entry> entries;
     uint8_t level = node_level_calculator->GetNodeLevel(change.entry.key);
     entries.push_back(std::move(change.entry));
-    *this = NodeBuilder::CreateNewBuilder(level, std::move(entries),
-                                          std::vector<NodeBuilder>(2));
+    *this = NodeBuilder::CreateNewBuilder(level, std::move(entries), std::vector<NodeBuilder>(2));
     *did_mutate = true;
     return Status::OK;
   }
@@ -256,12 +238,11 @@ Status NodeBuilder::Apply(const NodeLevelCalculator* node_level_calculator,
     RETURN_ON_ERROR(ComputeContent(page_storage));
 
     size_t index = GetEntryOrChildIndex(entries_, change.entry.key);
-    FXL_DCHECK(index == entries_.size() ||
-               entries_[index].key != change.entry.key);
+    FXL_DCHECK(index == entries_.size() || entries_[index].key != change.entry.key);
 
     NodeBuilder& child = children_[index];
-    RETURN_ON_ERROR(child.Apply(node_level_calculator, page_storage,
-                                std::move(change), did_mutate));
+    RETURN_ON_ERROR(
+        child.Apply(node_level_calculator, page_storage, std::move(change), did_mutate));
     // Suppress warning that |did_mutate| might not be initialized.
     if (!*did_mutate) {  // NOLINT
       return Status::OK;
@@ -277,20 +258,16 @@ Status NodeBuilder::Apply(const NodeLevelCalculator* node_level_calculator,
   }
 
   if (change.deleted) {
-    return Delete(page_storage, change_level, std::move(change.entry.key),
-                  did_mutate);
+    return Delete(page_storage, change_level, std::move(change.entry.key), did_mutate);
   }
 
-  return Update(page_storage, change_level, std::move(change.entry),
-                did_mutate);
+  return Update(page_storage, change_level, std::move(change.entry), did_mutate);
 }
 
-Status NodeBuilder::Build(SynchronousStorage* page_storage,
-                          ObjectIdentifier* object_identifier,
+Status NodeBuilder::Build(SynchronousStorage* page_storage, ObjectIdentifier* object_identifier,
                           std::set<ObjectIdentifier>* new_identifiers) {
   if (!*this) {
-    RETURN_ON_ERROR(
-        page_storage->TreeNodeFromEntries(0, {}, {}, &object_identifier_));
+    RETURN_ON_ERROR(page_storage->TreeNodeFromEntries(0, {}, {}, &object_identifier_));
 
     *object_identifier = object_identifier_;
     new_identifiers->insert(object_identifier_);
@@ -304,8 +281,7 @@ Status NodeBuilder::Build(SynchronousStorage* page_storage,
 
   std::vector<NodeBuilder*> to_build;
   while (CollectNodesToBuild(&to_build)) {
-    auto waiter =
-        fxl::MakeRefCounted<callback::StatusWaiter<Status>>(Status::OK);
+    auto waiter = fxl::MakeRefCounted<callback::StatusWaiter<Status>>(Status::OK);
     for (NodeBuilder* child : to_build) {
       std::map<size_t, ObjectIdentifier> children;
       for (size_t index = 0; index < child->children_.size(); ++index) {
@@ -315,18 +291,16 @@ Status NodeBuilder::Build(SynchronousStorage* page_storage,
           children[index] = sub_child.object_identifier_;
         }
       }
-      TreeNode::FromEntries(
-          page_storage->page_storage(), child->level_, child->entries_,
-          children,
-          [new_identifiers, child, callback = waiter->NewCallback()](
-              Status status, ObjectIdentifier object_identifier) {
-            if (status == Status::OK) {
-              child->type_ = BuilderType::EXISTING_NODE;
-              child->object_identifier_ = object_identifier;
-              new_identifiers->insert(child->object_identifier_);
-            }
-            callback(status);
-          });
+      TreeNode::FromEntries(page_storage->page_storage(), child->level_, child->entries_, children,
+                            [new_identifiers, child, callback = waiter->NewCallback()](
+                                Status status, ObjectIdentifier object_identifier) {
+                              if (status == Status::OK) {
+                                child->type_ = BuilderType::EXISTING_NODE;
+                                child->object_identifier_ = object_identifier;
+                                new_identifiers->insert(child->object_identifier_);
+                              }
+                              callback(status);
+                            });
     }
     Status status;
 
@@ -356,16 +330,15 @@ Status NodeBuilder::ComputeContent(SynchronousStorage* page_storage) {
   FXL_DCHECK(type_ == BuilderType::EXISTING_NODE);
 
   std::unique_ptr<const TreeNode> node;
-  RETURN_ON_ERROR(
-      page_storage->TreeNodeFromIdentifier(object_identifier_, &node));
+  RETURN_ON_ERROR(page_storage->TreeNodeFromIdentifier(object_identifier_, &node));
   FXL_DCHECK(node);
 
   ExtractContent(*node, &entries_, &children_);
   return Status::OK;
 }
 
-Status NodeBuilder::Delete(SynchronousStorage* page_storage, uint8_t key_level,
-                           std::string key, bool* did_mutate) {
+Status NodeBuilder::Delete(SynchronousStorage* page_storage, uint8_t key_level, std::string key,
+                           bool* did_mutate) {
   FXL_DCHECK(*this);
   FXL_DCHECK(key_level >= level_);
 
@@ -386,8 +359,7 @@ Status NodeBuilder::Delete(SynchronousStorage* page_storage, uint8_t key_level,
   }
 
   // Element at |index| must be removed.
-  RETURN_ON_ERROR(
-      children_[index].Merge(page_storage, std::move(children_[index + 1])));
+  RETURN_ON_ERROR(children_[index].Merge(page_storage, std::move(children_[index + 1])));
 
   type_ = BuilderType::NEW_NODE;
   *did_mutate = true;
@@ -402,8 +374,7 @@ Status NodeBuilder::Delete(SynchronousStorage* page_storage, uint8_t key_level,
   return Status::OK;
 }
 
-Status NodeBuilder::Update(SynchronousStorage* page_storage,
-                           uint8_t change_level, Entry entry,
+Status NodeBuilder::Update(SynchronousStorage* page_storage, uint8_t change_level, Entry entry,
                            bool* did_mutate) {
   FXL_DCHECK(*this);
   FXL_DCHECK(change_level >= level_);
@@ -420,8 +391,7 @@ Status NodeBuilder::Update(SynchronousStorage* page_storage,
     std::vector<NodeBuilder> children;
     children.push_back(std::move(this->ToLevel(change_level - 1)));
     children.push_back(std::move(right.ToLevel(change_level - 1)));
-    *this = NodeBuilder::CreateNewBuilder(change_level, std::move(entries),
-                                          std::move(children));
+    *this = NodeBuilder::CreateNewBuilder(change_level, std::move(entries), std::move(children));
     *did_mutate = true;
     return Status::OK;
   }
@@ -445,8 +415,7 @@ Status NodeBuilder::Update(SynchronousStorage* page_storage,
 
     type_ = BuilderType::NEW_NODE;
     *did_mutate = true;
-    entries_[split_index].object_identifier =
-        std::move(entry.object_identifier);
+    entries_[split_index].object_identifier = std::move(entry.object_identifier);
     entries_[split_index].priority = entry.priority;
     return Status::OK;
   }
@@ -456,8 +425,7 @@ Status NodeBuilder::Update(SynchronousStorage* page_storage,
 
   // Split the child that encompass |entry.key|.
   NodeBuilder right;
-  RETURN_ON_ERROR(
-      children_[split_index].Split(page_storage, entry.key, &right));
+  RETURN_ON_ERROR(children_[split_index].Split(page_storage, entry.key, &right));
 
   // Add |entry| to the list of entries of the result node.
   entries_.insert(entries_.begin() + split_index, std::move(entry));
@@ -466,8 +434,7 @@ Status NodeBuilder::Update(SynchronousStorage* page_storage,
   return Status::OK;
 }
 
-Status NodeBuilder::Split(SynchronousStorage* page_storage, std::string key,
-                          NodeBuilder* right) {
+Status NodeBuilder::Split(SynchronousStorage* page_storage, std::string key, NodeBuilder* right) {
   if (!*this) {
     *right = NodeBuilder();
     return Status::OK;
@@ -479,8 +446,7 @@ Status NodeBuilder::Split(SynchronousStorage* page_storage, std::string key,
   size_t split_index = GetEntryOrChildIndex(entries_, key);
 
   // Ensure that |key| is not part of the entries.
-  FXL_DCHECK(split_index == entries_.size() ||
-             entries_[split_index].key != key);
+  FXL_DCHECK(split_index == entries_.size() || entries_[split_index].key != key);
 
   auto& child_to_split = children_[split_index];
 
@@ -499,26 +465,23 @@ Status NodeBuilder::Split(SynchronousStorage* page_storage, std::string key,
 
   // Recursively call |Split| on the child.
   NodeBuilder sub_right;
-  RETURN_ON_ERROR(
-      child_to_split.Split(page_storage, std::move(key), &sub_right));
+  RETURN_ON_ERROR(child_to_split.Split(page_storage, std::move(key), &sub_right));
 
   std::vector<Entry> right_entries;
 
   right_entries.reserve(entries_.size() - split_index);
-  right_entries.insert(right_entries.end(),
-                       std::make_move_iterator(entries_.begin() + split_index),
+  right_entries.insert(right_entries.end(), std::make_move_iterator(entries_.begin() + split_index),
                        std::make_move_iterator(entries_.end()));
 
   std::vector<NodeBuilder> right_children;
   right_children.reserve(children_.size() - split_index);
   right_children.push_back(std::move(sub_right));
-  right_children.insert(
-      right_children.end(),
-      std::make_move_iterator(children_.begin() + split_index + 1),
-      std::make_move_iterator(children_.end()));
+  right_children.insert(right_children.end(),
+                        std::make_move_iterator(children_.begin() + split_index + 1),
+                        std::make_move_iterator(children_.end()));
 
-  *right = NodeBuilder::CreateNewBuilder(level_, std::move(right_entries),
-                                         std::move(right_children));
+  *right =
+      NodeBuilder::CreateNewBuilder(level_, std::move(right_entries), std::move(right_children));
 
   entries_.erase(entries_.begin() + split_index, entries_.end());
   children_.erase(children_.begin() + split_index + 1, children_.end());
@@ -552,23 +515,19 @@ Status NodeBuilder::Merge(SynchronousStorage* page_storage, NodeBuilder other) {
 
   // Merge the right-most child from |left| with the left-most child
   // from |right|.
-  RETURN_ON_ERROR(
-      children_.back().Merge(page_storage, std::move(other.children_.front())));
+  RETURN_ON_ERROR(children_.back().Merge(page_storage, std::move(other.children_.front())));
 
   // Concatenate entries.
-  entries_.insert(entries_.end(),
-                  std::make_move_iterator(other.entries_.begin()),
+  entries_.insert(entries_.end(), std::make_move_iterator(other.entries_.begin()),
                   std::make_move_iterator(other.entries_.end()));
 
   // Concatenate children, skipping the first child from other.
-  children_.insert(children_.end(),
-                   std::make_move_iterator(other.children_.begin() + 1),
+  children_.insert(children_.end(), std::make_move_iterator(other.children_.begin() + 1),
                    std::make_move_iterator(other.children_.end()));
   return Status::OK;
 }
 
-void NodeBuilder::ExtractContent(const TreeNode& node,
-                                 std::vector<Entry>* entries,
+void NodeBuilder::ExtractContent(const TreeNode& node, std::vector<Entry>* entries,
                                  std::vector<NodeBuilder>* children) {
   FXL_DCHECK(entries);
   FXL_DCHECK(children);
@@ -579,8 +538,7 @@ void NodeBuilder::ExtractContent(const TreeNode& node,
     for (; next_index < child.first; ++next_index) {
       children->push_back(NodeBuilder());
     }
-    children->push_back(
-        NodeBuilder::CreateExistingBuilder(node.level() - 1, child.second));
+    children->push_back(NodeBuilder::CreateExistingBuilder(node.level() - 1, child.second));
     ++next_index;
   }
   for (; next_index <= entries->size(); ++next_index) {
@@ -592,14 +550,12 @@ void NodeBuilder::ExtractContent(const TreeNode& node,
 // valid anymore. At this point, build is called on |root|.
 Status ApplyChangesOnRoot(const NodeLevelCalculator* node_level_calculator,
                           SynchronousStorage* page_storage, NodeBuilder root,
-                          std::vector<EntryChange> changes,
-                          ObjectIdentifier* object_identifier,
+                          std::vector<EntryChange> changes, ObjectIdentifier* object_identifier,
                           std::set<ObjectIdentifier>* new_identifiers) {
   Status status;
   for (auto& change : changes) {
     bool did_mutate;
-    status = root.Apply(node_level_calculator, page_storage, std::move(change),
-                        &did_mutate);
+    status = root.Apply(node_level_calculator, page_storage, std::move(change), &did_mutate);
     if (status != Status::OK) {
       return status;
     }
@@ -609,13 +565,10 @@ Status ApplyChangesOnRoot(const NodeLevelCalculator* node_level_calculator,
 
 }  // namespace
 
-const NodeLevelCalculator* GetDefaultNodeLevelCalculator() {
-  return &kDefaultNodeLevelCalculator;
-}
+const NodeLevelCalculator* GetDefaultNodeLevelCalculator() { return &kDefaultNodeLevelCalculator; }
 
-Status ApplyChanges(coroutine::CoroutineHandler* handler,
-                    PageStorage* page_storage, ObjectIdentifier root_identifier,
-                    std::vector<EntryChange> changes,
+Status ApplyChanges(coroutine::CoroutineHandler* handler, PageStorage* page_storage,
+                    ObjectIdentifier root_identifier, std::vector<EntryChange> changes,
                     ObjectIdentifier* new_root_identifier,
                     std::set<ObjectIdentifier>* new_identifiers,
                     const NodeLevelCalculator* node_level_calculator) {
@@ -623,11 +576,9 @@ Status ApplyChanges(coroutine::CoroutineHandler* handler,
   SynchronousStorage storage(page_storage, handler);
   new_identifiers->clear();
   NodeBuilder root;
-  RETURN_ON_ERROR(
-      NodeBuilder::FromIdentifier(&storage, std::move(root_identifier), &root));
-  RETURN_ON_ERROR(ApplyChangesOnRoot(node_level_calculator, &storage,
-                                     std::move(root), std::move(changes),
-                                     new_root_identifier, new_identifiers));
+  RETURN_ON_ERROR(NodeBuilder::FromIdentifier(&storage, std::move(root_identifier), &root));
+  RETURN_ON_ERROR(ApplyChangesOnRoot(node_level_calculator, &storage, std::move(root),
+                                     std::move(changes), new_root_identifier, new_identifiers));
 
   FXL_CHECK(new_root_identifier->object_digest().IsValid());
   return Status::OK;

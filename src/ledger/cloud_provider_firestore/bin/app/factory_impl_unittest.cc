@@ -48,10 +48,9 @@ TEST_F(FactoryImplTest, GetCloudProvider) {
   Config config;
   config.server_id = "some server id";
   config.api_key = "some api key";
-  factory_->GetCloudProvider(
-      std::move(config), token_manager_binding_.NewBinding(),
-      cloud_provider.NewRequest(),
-      callback::Capture(callback::SetWhenCalled(&callback_called), &status));
+  factory_->GetCloudProvider(std::move(config), token_manager_binding_.NewBinding(),
+                             cloud_provider.NewRequest(),
+                             callback::Capture(callback::SetWhenCalled(&callback_called), &status));
   RunLoopUntilIdle();
   EXPECT_TRUE(callback_called);
   EXPECT_EQ(cloud_provider::Status::OK, status);

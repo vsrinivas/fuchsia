@@ -16,8 +16,7 @@
 
 namespace ledger {
 
-class FakeDiskCleanupManager : public DiskCleanupManager,
-                               public PageUsageListener {
+class FakeDiskCleanupManager : public DiskCleanupManager, public PageUsageListener {
  public:
   FakeDiskCleanupManager() = default;
   ~FakeDiskCleanupManager() override = default;
@@ -34,18 +33,15 @@ class FakeDiskCleanupManager : public DiskCleanupManager,
     // Do not call the callback directly.
     cleanup_callback = std::move(callback);
   }
-  void OnPageOpened(fxl::StringView /*ledger_name*/,
-                    storage::PageIdView /*page_id*/) override {
+  void OnPageOpened(fxl::StringView /*ledger_name*/, storage::PageIdView /*page_id*/) override {
     ++page_opened_count;
   }
 
-  void OnPageClosed(fxl::StringView /*ledger_name*/,
-                    storage::PageIdView /*page_id*/) override {
+  void OnPageClosed(fxl::StringView /*ledger_name*/, storage::PageIdView /*page_id*/) override {
     ++page_closed_count;
   }
 
-  void OnPageUnused(fxl::StringView /*ledger_name*/,
-                    storage::PageIdView /*page_id*/) override {
+  void OnPageUnused(fxl::StringView /*ledger_name*/, storage::PageIdView /*page_id*/) override {
     ++page_unused_count;
     if (on_OnPageUnused_callback_) {
       on_OnPageUnused_callback_();

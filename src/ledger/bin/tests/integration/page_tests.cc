@@ -41,8 +41,7 @@ class PageIntegrationTest : public IntegrationTest {
 TEST_P(PageIntegrationTest, LedgerRepositoryDuplicate) {
   auto instance = NewLedgerAppInstance();
 
-  ledger_internal::LedgerRepositoryPtr repository =
-      instance->GetTestLedgerRepository();
+  ledger_internal::LedgerRepositoryPtr repository = instance->GetTestLedgerRepository();
 
   ledger_internal::LedgerRepositoryPtr duplicated_repository;
   repository->Duplicate(duplicated_repository.NewRequest());
@@ -98,9 +97,8 @@ TEST_P(PageIntegrationTest, MultiplePageConnections) {
   EXPECT_EQ(page_id_1.id, page_id_2.id);
 }
 
-INSTANTIATE_TEST_SUITE_P(
-    PageIntegrationTest, PageIntegrationTest,
-    ::testing::ValuesIn(GetLedgerAppInstanceFactoryBuilders()));
+INSTANTIATE_TEST_SUITE_P(PageIntegrationTest, PageIntegrationTest,
+                         ::testing::ValuesIn(GetLedgerAppInstanceFactoryBuilders()));
 
 }  // namespace
 }  // namespace ledger

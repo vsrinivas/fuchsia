@@ -13,8 +13,7 @@ namespace http = ::fuchsia::net::oldhttp;
 
 std::string GetSuccessResponseBodyForTest(std::string token, size_t expiration);
 
-http::URLResponse GetResponseForTest(http::HttpErrorPtr error, uint32_t status,
-                                     std::string body);
+http::URLResponse GetResponseForTest(http::HttpErrorPtr error, uint32_t status, std::string body);
 
 }  // namespace service_account
 

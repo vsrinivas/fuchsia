@@ -18,8 +18,7 @@ class TestDeviceSet : public cloud_provider::DeviceSet {
   ~TestDeviceSet() override;
 
   cloud_provider::Status status_to_return = cloud_provider::Status::OK;
-  cloud_provider::Status set_watcher_status_to_return =
-      cloud_provider::Status::OK;
+  cloud_provider::Status set_watcher_status_to_return = cloud_provider::Status::OK;
   std::string checked_fingerprint;
   std::string set_fingerprint;
 
@@ -32,13 +31,11 @@ class TestDeviceSet : public cloud_provider::DeviceSet {
   void CheckFingerprint(std::vector<uint8_t> fingerprint,
                         CheckFingerprintCallback callback) override;
 
-  void SetFingerprint(std::vector<uint8_t> fingerprint,
-                      SetFingerprintCallback callback) override;
+  void SetFingerprint(std::vector<uint8_t> fingerprint, SetFingerprintCallback callback) override;
 
-  void SetWatcher(
-      std::vector<uint8_t> fingerprint,
-      fidl::InterfaceHandle<cloud_provider::DeviceSetWatcher> watcher,
-      SetWatcherCallback callback) override;
+  void SetWatcher(std::vector<uint8_t> fingerprint,
+                  fidl::InterfaceHandle<cloud_provider::DeviceSetWatcher> watcher,
+                  SetWatcherCallback callback) override;
 
   void Erase(EraseCallback callback) override;
 

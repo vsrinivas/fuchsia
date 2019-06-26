@@ -21,11 +21,9 @@ namespace btree {
 // Returning false from |on_next| will immediately stop the iteration. |on_done|
 // is called once, upon successfull completion, i.e. when there are no more
 // differences or iteration was interrupted, or if an error occurs.
-void ForEachDiff(coroutine::CoroutineService* coroutine_service,
-                 PageStorage* page_storage,
-                 ObjectIdentifier base_root_identifier,
-                 ObjectIdentifier other_root_identifier, std::string min_key,
-                 fit::function<bool(EntryChange)> on_next,
+void ForEachDiff(coroutine::CoroutineService* coroutine_service, PageStorage* page_storage,
+                 ObjectIdentifier base_root_identifier, ObjectIdentifier other_root_identifier,
+                 std::string min_key, fit::function<bool(EntryChange)> on_next,
                  fit::function<void(Status)> on_done);
 
 // Iterates through the differences between three trees given their root ids and
@@ -33,12 +31,10 @@ void ForEachDiff(coroutine::CoroutineService* coroutine_service,
 // Returning false from |on_next| will immediately stop the iteration. |on_done|
 // is called once, upon successful completion, i.e. when there are no more
 // differences or iteration was interrupted, or if an error occurs.
-void ForEachThreeWayDiff(coroutine::CoroutineService* coroutine_service,
-                         PageStorage* page_storage,
+void ForEachThreeWayDiff(coroutine::CoroutineService* coroutine_service, PageStorage* page_storage,
                          ObjectIdentifier base_root_identifier,
                          ObjectIdentifier left_root_identifier,
-                         ObjectIdentifier right_root_identifier,
-                         std::string min_key,
+                         ObjectIdentifier right_root_identifier, std::string min_key,
                          fit::function<bool(ThreeWayChange)> on_next,
                          fit::function<void(Status)> on_done);
 

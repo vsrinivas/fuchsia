@@ -3,7 +3,9 @@
         "binary": "bin/ledger_benchmark_put"
     },
     "sandbox": {
-        "dev": [ "misc/sysinfo" ],
+        "dev": [
+            "misc/sysinfo"
+        ],
         "features": [
             "isolated-persistent-storage"
         ],

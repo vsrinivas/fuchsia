@@ -11,23 +11,19 @@
 namespace p2p_sync {
 namespace {
 
-bool IsValidCommitRequest(flatbuffers::Verifier& verifier,
-                          const CommitRequest* request) {
+bool IsValidCommitRequest(flatbuffers::Verifier& verifier, const CommitRequest* request) {
   return request && request->Verify(verifier) && request->commit_ids();
 }
 
-bool IsValidObjectRequest(flatbuffers::Verifier& verifier,
-                          const ObjectRequest* request) {
+bool IsValidObjectRequest(flatbuffers::Verifier& verifier, const ObjectRequest* request) {
   return request && request->Verify(verifier) && request->object_ids();
 }
 
-bool IsValidWatchStartRequest(flatbuffers::Verifier& verifier,
-                              const WatchStartRequest* request) {
+bool IsValidWatchStartRequest(flatbuffers::Verifier& verifier, const WatchStartRequest* request) {
   return request && request->Verify(verifier);
 }
 
-bool IsValidWatchStopRequest(flatbuffers::Verifier& verifier,
-                             const WatchStopRequest* request) {
+bool IsValidWatchStopRequest(flatbuffers::Verifier& verifier, const WatchStopRequest* request) {
   return request && request->Verify(verifier);
 }
 
@@ -49,22 +45,19 @@ bool IsValidRequest(flatbuffers::Verifier& verifier, const Request* request) {
     case RequestMessage_NONE:
       return false;
     case RequestMessage_CommitRequest:
-      return IsValidCommitRequest(
-          verifier, static_cast<const CommitRequest*>(request->request()));
+      return IsValidCommitRequest(verifier, static_cast<const CommitRequest*>(request->request()));
     case RequestMessage_ObjectRequest:
-      return IsValidObjectRequest(
-          verifier, static_cast<const ObjectRequest*>(request->request()));
+      return IsValidObjectRequest(verifier, static_cast<const ObjectRequest*>(request->request()));
     case RequestMessage_WatchStartRequest:
-      return IsValidWatchStartRequest(
-          verifier, static_cast<const WatchStartRequest*>(request->request()));
+      return IsValidWatchStartRequest(verifier,
+                                      static_cast<const WatchStartRequest*>(request->request()));
     case RequestMessage_WatchStopRequest:
-      return IsValidWatchStopRequest(
-          verifier, static_cast<const WatchStopRequest*>(request->request()));
+      return IsValidWatchStopRequest(verifier,
+                                     static_cast<const WatchStopRequest*>(request->request()));
   }
 }
 
-bool IsValidCommitResponse(flatbuffers::Verifier& verifier,
-                           const CommitResponse* response) {
+bool IsValidCommitResponse(flatbuffers::Verifier& verifier, const CommitResponse* response) {
   if (!response || !response->Verify(verifier)) {
     return false;
   }
@@ -92,8 +85,7 @@ bool IsValidCommitResponse(flatbuffers::Verifier& verifier,
   return true;
 }
 
-bool IsValidObjectResponse(flatbuffers::Verifier& verifier,
-                           const ObjectResponse* response) {
+bool IsValidObjectResponse(flatbuffers::Verifier& verifier, const ObjectResponse* response) {
   if (!response || !response->Verify(verifier)) {
     return false;
   }
@@ -122,8 +114,7 @@ bool IsValidObjectResponse(flatbuffers::Verifier& verifier,
   return true;
 }
 
-bool IsValidResponse(flatbuffers::Verifier& verifier,
-                     const Response* response) {
+bool IsValidResponse(flatbuffers::Verifier& verifier, const Response* response) {
   if (!response) {
     return false;
   }
@@ -146,19 +137,18 @@ bool IsValidResponse(flatbuffers::Verifier& verifier,
       // Response returned in case of unknown namespace or page.
       return true;
     case ResponseMessage_CommitResponse:
-      return IsValidCommitResponse(
-          verifier, static_cast<const CommitResponse*>(response->response()));
+      return IsValidCommitResponse(verifier,
+                                   static_cast<const CommitResponse*>(response->response()));
     case ResponseMessage_ObjectResponse:
-      return IsValidObjectResponse(
-          verifier, static_cast<const ObjectResponse*>(response->response()));
+      return IsValidObjectResponse(verifier,
+                                   static_cast<const ObjectResponse*>(response->response()));
   }
 }
 
 }  // namespace
 
 const Message* ParseMessage(convert::ExtendedStringView data) {
-  flatbuffers::Verifier verifier(
-      reinterpret_cast<const unsigned char*>(data.data()), data.size());
+  flatbuffers::Verifier verifier(reinterpret_cast<const unsigned char*>(data.data()), data.size());
 
   if (!VerifyMessageBuffer(verifier)) {
     return nullptr;
@@ -174,14 +164,12 @@ const Message* ParseMessage(convert::ExtendedStringView data) {
     case MessageUnion_NONE:
       return nullptr;
     case MessageUnion_Request:
-      if (!IsValidRequest(verifier,
-                          static_cast<const Request*>(message->message()))) {
+      if (!IsValidRequest(verifier, static_cast<const Request*>(message->message()))) {
         return nullptr;
       }
       break;
     case MessageUnion_Response:
-      if (!IsValidResponse(verifier,
-                           static_cast<const Response*>(message->message()))) {
+      if (!IsValidResponse(verifier, static_cast<const Response*>(message->message()))) {
         return nullptr;
       }
       break;

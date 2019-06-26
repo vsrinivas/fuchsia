@@ -10,16 +10,12 @@
 
 namespace ledger {
 
-void PageAvailabilityManager::MarkPageBusy(
-    convert::ExtendedStringView page_id) {
-  auto result =
-      busy_pages_.emplace(page_id.ToString(), std::vector<fit::closure>());
-  FXL_DCHECK(result.second)
-      << "Page " << convert::ToHex(page_id) << " is already busy.";
+void PageAvailabilityManager::MarkPageBusy(convert::ExtendedStringView page_id) {
+  auto result = busy_pages_.emplace(page_id.ToString(), std::vector<fit::closure>());
+  FXL_DCHECK(result.second) << "Page " << convert::ToHex(page_id) << " is already busy.";
 }
 
-void PageAvailabilityManager::MarkPageAvailable(
-    convert::ExtendedStringView page_id) {
+void PageAvailabilityManager::MarkPageAvailable(convert::ExtendedStringView page_id) {
   auto it = busy_pages_.find(page_id.ToString());
   if (it == busy_pages_.end()) {
     return;
@@ -32,8 +28,8 @@ void PageAvailabilityManager::MarkPageAvailable(
   CheckEmpty();
 }
 
-void PageAvailabilityManager::OnPageAvailable(
-    convert::ExtendedStringView page_id, fit::closure on_page_available) {
+void PageAvailabilityManager::OnPageAvailable(convert::ExtendedStringView page_id,
+                                              fit::closure on_page_available) {
   auto it = busy_pages_.find(page_id.ToString());
   if (it == busy_pages_.end()) {
     on_page_available();

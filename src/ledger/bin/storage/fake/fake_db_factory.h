@@ -13,16 +13,13 @@ namespace fake {
 // A fake implementation of the DbFactory.
 class FakeDbFactory : public DbFactory {
  public:
-  explicit FakeDbFactory(async_dispatcher_t* dispatcher)
-      : dispatcher_(dispatcher) {}
+  explicit FakeDbFactory(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
 
-  void GetOrCreateDb(
-      ledger::DetachedPath db_path, DbFactory::OnDbNotFound on_db_not_found,
-      fit::function<void(Status, std::unique_ptr<Db>)> callback) override;
+  void GetOrCreateDb(ledger::DetachedPath db_path, DbFactory::OnDbNotFound on_db_not_found,
+                     fit::function<void(Status, std::unique_ptr<Db>)> callback) override;
 
  private:
-  void CreateInitializedDb(
-      fit::function<void(Status, std::unique_ptr<Db>)> callback);
+  void CreateInitializedDb(fit::function<void(Status, std::unique_ptr<Db>)> callback);
 
   async_dispatcher_t* dispatcher_;
 };

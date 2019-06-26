@@ -28,12 +28,10 @@ class SyncableTestSyncableDelegateImpl
   void NoResponse(fit::function<void(Status)> callback) override {
     NoResponseWithParameter(1, std::move(callback));
   }
-  void NoResponseWithParameter(int8_t input,
-                               fit::function<void(Status)> callback) override {
+  void NoResponseWithParameter(int8_t input, fit::function<void(Status)> callback) override {
     parameter_received_ = input;
     ++no_reponse_count_;
-    delayed_callback_ = [callback = std::move(callback),
-                         status_to_return = status_to_return_] {
+    delayed_callback_ = [callback = std::move(callback), status_to_return = status_to_return_] {
       callback(status_to_return);
     };
     if (!delay_callback_) {
@@ -43,12 +41,10 @@ class SyncableTestSyncableDelegateImpl
   void EmptyResponse(fit::function<void(Status)> callback) override {
     EmptyResponseWithParameter(2, std::move(callback));
   }
-  void EmptyResponseWithParameter(
-      int8_t input, fit::function<void(Status)> callback) override {
+  void EmptyResponseWithParameter(int8_t input, fit::function<void(Status)> callback) override {
     parameter_received_ = input;
     ++empty_reponse_count_;
-    delayed_callback_ = [callback = std::move(callback),
-                         status_to_return = status_to_return_] {
+    delayed_callback_ = [callback = std::move(callback), status_to_return = status_to_return_] {
       callback(status_to_return);
     };
     if (!delay_callback_) {
@@ -56,16 +52,14 @@ class SyncableTestSyncableDelegateImpl
     }
   }
 
-  void NotEmptyResponse(
-      ::fit::function<void(Status, int8_t)> callback) override {
+  void NotEmptyResponse(::fit::function<void(Status, int8_t)> callback) override {
     NotEmptyResponseWithParameter(3, std::move(callback));
   }
-  void NotEmptyResponseWithParameter(
-      int8_t input, fit::function<void(Status, int8_t)> callback) override {
+  void NotEmptyResponseWithParameter(int8_t input,
+                                     fit::function<void(Status, int8_t)> callback) override {
     parameter_received_ = input;
     ++not_empty_reponse_count_;
-    delayed_callback_ = [callback = std::move(callback),
-                         status_to_return = status_to_return_] {
+    delayed_callback_ = [callback = std::move(callback), status_to_return = status_to_return_] {
       callback(status_to_return, 1);
     };
     if (!delay_callback_) {
@@ -88,16 +82,14 @@ class SyncableTest : public gtest::TestLoopFixture {
 
   SyncableTestSyncableDelegateImpl impl_;
   fuchsia::ledger::syncabletest::SyncableTestPtr ptr_;
-  SyncableBinding<fuchsia::ledger::syncabletest::SyncableTestSyncableDelegate>
-      binding_;
+  SyncableBinding<fuchsia::ledger::syncabletest::SyncableTestSyncableDelegate> binding_;
 };
 
 TEST_F(SyncableTest, NoResponse) {
   zx_status_t status;
   bool error_called;
 
-  ptr_.set_error_handler(
-      callback::Capture(callback::SetWhenCalled(&error_called), &status));
+  ptr_.set_error_handler(callback::Capture(callback::SetWhenCalled(&error_called), &status));
 
   ptr_->NoResponse();
   RunLoopUntilIdle();
@@ -141,8 +133,7 @@ TEST_F(SyncableTest, EmptyResponse) {
   bool error_called;
   bool callback_called;
 
-  ptr_.set_error_handler(
-      callback::Capture(callback::SetWhenCalled(&error_called), &status));
+  ptr_.set_error_handler(callback::Capture(callback::SetWhenCalled(&error_called), &status));
 
   ptr_->EmptyResponse(callback::SetWhenCalled(&callback_called));
   RunLoopUntilIdle();
@@ -164,8 +155,7 @@ TEST_F(SyncableTest, EmptyResponse) {
 TEST_F(SyncableTest, EmptyResponseWithParameter) {
   bool callback_called;
 
-  ptr_->EmptyResponseWithParameter(42,
-                                   callback::SetWhenCalled(&callback_called));
+  ptr_->EmptyResponseWithParameter(42, callback::SetWhenCalled(&callback_called));
   RunLoopUntilIdle();
   EXPECT_EQ(1, impl_.empty_reponse_count());
   EXPECT_EQ(42, impl_.parameter_received());
@@ -196,11 +186,10 @@ TEST_F(SyncableTest, NotEmptyResponse) {
   bool callback_called;
   int callback_value;
 
-  ptr_.set_error_handler(
-      callback::Capture(callback::SetWhenCalled(&error_called), &status));
+  ptr_.set_error_handler(callback::Capture(callback::SetWhenCalled(&error_called), &status));
 
-  ptr_->NotEmptyResponse(callback::Capture(
-      callback::SetWhenCalled(&callback_called), &callback_value));
+  ptr_->NotEmptyResponse(
+      callback::Capture(callback::SetWhenCalled(&callback_called), &callback_value));
   RunLoopUntilIdle();
   EXPECT_EQ(1, impl_.not_empty_reponse_count());
   EXPECT_TRUE(callback_called);
@@ -209,8 +198,8 @@ TEST_F(SyncableTest, NotEmptyResponse) {
   EXPECT_FALSE(error_called);
 
   impl_.status_to_return() = Status::IO_ERROR;
-  ptr_->NotEmptyResponse(callback::Capture(
-      callback::SetWhenCalled(&callback_called), &std::ignore));
+  ptr_->NotEmptyResponse(
+      callback::Capture(callback::SetWhenCalled(&callback_called), &std::ignore));
   RunLoopUntilIdle();
   EXPECT_EQ(2, impl_.not_empty_reponse_count());
   EXPECT_FALSE(callback_called);
@@ -224,8 +213,7 @@ TEST_F(SyncableTest, NotEmptyResponseWithParameter) {
   int callback_value;
 
   ptr_->NotEmptyResponseWithParameter(
-      42, callback::Capture(callback::SetWhenCalled(&callback_called),
-                            &callback_value));
+      42, callback::Capture(callback::SetWhenCalled(&callback_called), &callback_value));
   RunLoopUntilIdle();
   EXPECT_EQ(1, impl_.not_empty_reponse_count());
   EXPECT_EQ(42, impl_.parameter_received());
@@ -238,8 +226,8 @@ TEST_F(SyncableTest, NotEmptyResponseSync) {
 
   bool callback_called;
   bool sync_called;
-  ptr_->NotEmptyResponse(callback::Capture(
-      callback::SetWhenCalled(&callback_called), &std::ignore));
+  ptr_->NotEmptyResponse(
+      callback::Capture(callback::SetWhenCalled(&callback_called), &std::ignore));
   ptr_->Sync(callback::SetWhenCalled(&sync_called));
 
   RunLoopUntilIdle();

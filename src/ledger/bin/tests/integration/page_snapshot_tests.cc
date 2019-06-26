@@ -36,8 +36,7 @@ class PageSnapshotIntegrationTest : public IntegrationTest {
 
   // Returns a snapshot of |page|, checking success.
   PageSnapshotPtr PageGetSnapshot(
-      PagePtr* page,
-      fidl::VectorPtr<uint8_t> prefix = fidl::VectorPtr<uint8_t>::New(0)) {
+      PagePtr* page, fidl::VectorPtr<uint8_t> prefix = fidl::VectorPtr<uint8_t>::New(0)) {
     PageSnapshotPtr snapshot;
     (*page)->GetSnapshot(snapshot.NewRequest(), std::move(prefix), nullptr);
     return snapshot;
@@ -46,8 +45,7 @@ class PageSnapshotIntegrationTest : public IntegrationTest {
   // Returns all keys from |snapshot|, starting at |start|. If |num_queries| is
   // not null, stores the number of calls to GetKeys.
   std::vector<std::vector<uint8_t>> SnapshotGetKeys(
-      PageSnapshotPtr* snapshot,
-      std::vector<uint8_t> start = std::vector<uint8_t>(),
+      PageSnapshotPtr* snapshot, std::vector<uint8_t> start = std::vector<uint8_t>(),
       int* num_queries = nullptr) {
     std::vector<std::vector<uint8_t>> result;
     std::unique_ptr<Token> token;
@@ -57,9 +55,8 @@ class PageSnapshotIntegrationTest : public IntegrationTest {
     do {
       std::vector<std::vector<uint8_t>> keys;
       auto waiter = NewWaiter();
-      (*snapshot)->GetKeys(
-          start, std::move(token),
-          callback::Capture(waiter->GetCallback(), &keys, &token));
+      (*snapshot)->GetKeys(start, std::move(token),
+                           callback::Capture(waiter->GetCallback(), &keys, &token));
       if (!waiter->RunUntilCalled()) {
         ADD_FAILURE() << "|GetKeys| failed to call back.";
         return {};
@@ -74,22 +71,19 @@ class PageSnapshotIntegrationTest : public IntegrationTest {
     return result;
   }
 
-  std::string SnapshotFetchPartial(PageSnapshotPtr* snapshot,
-                                   std::vector<uint8_t> key, int64_t offset,
-                                   int64_t max_size) {
+  std::string SnapshotFetchPartial(PageSnapshotPtr* snapshot, std::vector<uint8_t> key,
+                                   int64_t offset, int64_t max_size) {
     fuchsia::ledger::PageSnapshot_FetchPartial_Result result;
     auto waiter = NewWaiter();
-    (*snapshot)->FetchPartial(
-        std::move(key), offset, max_size,
-        callback::Capture(waiter->GetCallback(), &result));
+    (*snapshot)->FetchPartial(std::move(key), offset, max_size,
+                              callback::Capture(waiter->GetCallback(), &result));
     if (!waiter->RunUntilCalled()) {
       ADD_FAILURE() << "|FetchPartial| failed to call back.";
       return {};
     }
     EXPECT_TRUE(result.is_response());
     std::string result_as_string;
-    EXPECT_TRUE(
-        fsl::StringFromVmo(result.response().buffer, &result_as_string));
+    EXPECT_TRUE(fsl::StringFromVmo(result.response().buffer, &result_as_string));
     return result_as_string;
   }
 
@@ -105,8 +99,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGet) {
   PageSnapshotPtr snapshot = PageGetSnapshot(&page);
   fuchsia::ledger::PageSnapshot_Get_Result result;
   auto waiter = NewWaiter();
-  snapshot->Get(convert::ToArray("name"),
-                callback::Capture(waiter->GetCallback(), &result));
+  snapshot->Get(convert::ToArray("name"), callback::Capture(waiter->GetCallback(), &result));
   ASSERT_TRUE(waiter->RunUntilCalled());
   ASSERT_THAT(result, MatchesString("Alice"));
 
@@ -130,8 +123,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetPipeline) {
   PageSnapshotPtr snapshot = PageGetSnapshot(&page);
   fuchsia::ledger::PageSnapshot_Get_Result result;
   auto waiter = NewWaiter();
-  snapshot->Get(convert::ToArray("name"),
-                callback::Capture(waiter->GetCallback(), &result));
+  snapshot->Get(convert::ToArray("name"), callback::Capture(waiter->GetCallback(), &result));
   ASSERT_TRUE(waiter->RunUntilCalled());
   ASSERT_THAT(result, MatchesString(expected_value));
 }
@@ -150,8 +142,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotPutOrder) {
   PageSnapshotPtr snapshot = PageGetSnapshot(&page);
   fuchsia::ledger::PageSnapshot_Get_Result result;
   auto waiter = NewWaiter();
-  snapshot->Get(convert::ToArray("name"),
-                callback::Capture(waiter->GetCallback(), &result));
+  snapshot->Get(convert::ToArray("name"), callback::Capture(waiter->GetCallback(), &result));
   ASSERT_TRUE(waiter->RunUntilCalled());
   ASSERT_THAT(result, MatchesString(value2));
 }
@@ -162,28 +153,18 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotFetchPartial) {
   page->Put(convert::ToArray("name"), convert::ToArray("Alice"));
 
   PageSnapshotPtr snapshot = PageGetSnapshot(&page);
-  EXPECT_EQ("Alice",
-            SnapshotFetchPartial(&snapshot, convert::ToArray("name"), 0, -1));
-  EXPECT_EQ("e",
-            SnapshotFetchPartial(&snapshot, convert::ToArray("name"), 4, -1));
-  EXPECT_EQ("",
-            SnapshotFetchPartial(&snapshot, convert::ToArray("name"), 5, -1));
-  EXPECT_EQ("",
-            SnapshotFetchPartial(&snapshot, convert::ToArray("name"), 6, -1));
-  EXPECT_EQ("i",
-            SnapshotFetchPartial(&snapshot, convert::ToArray("name"), 2, 1));
-  EXPECT_EQ("",
-            SnapshotFetchPartial(&snapshot, convert::ToArray("name"), 2, 0));
+  EXPECT_EQ("Alice", SnapshotFetchPartial(&snapshot, convert::ToArray("name"), 0, -1));
+  EXPECT_EQ("e", SnapshotFetchPartial(&snapshot, convert::ToArray("name"), 4, -1));
+  EXPECT_EQ("", SnapshotFetchPartial(&snapshot, convert::ToArray("name"), 5, -1));
+  EXPECT_EQ("", SnapshotFetchPartial(&snapshot, convert::ToArray("name"), 6, -1));
+  EXPECT_EQ("i", SnapshotFetchPartial(&snapshot, convert::ToArray("name"), 2, 1));
+  EXPECT_EQ("", SnapshotFetchPartial(&snapshot, convert::ToArray("name"), 2, 0));
 
   // Negative offsets.
-  EXPECT_EQ("Alice",
-            SnapshotFetchPartial(&snapshot, convert::ToArray("name"), -5, -1));
-  EXPECT_EQ("e",
-            SnapshotFetchPartial(&snapshot, convert::ToArray("name"), -1, -1));
-  EXPECT_EQ("",
-            SnapshotFetchPartial(&snapshot, convert::ToArray("name"), -5, 0));
-  EXPECT_EQ("i",
-            SnapshotFetchPartial(&snapshot, convert::ToArray("name"), -3, 1));
+  EXPECT_EQ("Alice", SnapshotFetchPartial(&snapshot, convert::ToArray("name"), -5, -1));
+  EXPECT_EQ("e", SnapshotFetchPartial(&snapshot, convert::ToArray("name"), -1, -1));
+  EXPECT_EQ("", SnapshotFetchPartial(&snapshot, convert::ToArray("name"), -5, 0));
+  EXPECT_EQ("i", SnapshotFetchPartial(&snapshot, convert::ToArray("name"), -3, 1));
 
   // Attempt to get an entry that is not in the page.
   fuchsia::ledger::PageSnapshot_FetchPartial_Result result;
@@ -226,8 +207,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetKeys) {
   }
 
   // Get keys matching the prefix "0".
-  snapshot =
-      PageGetSnapshot(&page, fidl::VectorPtr<uint8_t>(std::vector<uint8_t>{0}));
+  snapshot = PageGetSnapshot(&page, fidl::VectorPtr<uint8_t>(std::vector<uint8_t>{0}));
   result = SnapshotGetKeys(&snapshot);
   EXPECT_EQ(N, result.size());
   for (size_t i = 0; i < N; ++i) {
@@ -235,8 +215,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetKeys) {
   }
 
   // Get keys matching the prefix "00".
-  snapshot = PageGetSnapshot(
-      &page, fidl::VectorPtr<uint8_t>(std::vector<uint8_t>{0, 0}));
+  snapshot = PageGetSnapshot(&page, fidl::VectorPtr<uint8_t>(std::vector<uint8_t>{0, 0}));
   result = SnapshotGetKeys(&snapshot);
   ASSERT_EQ(2u, result.size());
   for (size_t i = 0; i < 2u; ++i) {
@@ -244,23 +223,19 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetKeys) {
   }
 
   // Get keys matching the prefix "010".
-  snapshot = PageGetSnapshot(
-      &page, fidl::VectorPtr<uint8_t>(std::vector<uint8_t>{0, 1, 0}));
+  snapshot = PageGetSnapshot(&page, fidl::VectorPtr<uint8_t>(std::vector<uint8_t>{0, 1, 0}));
   result = SnapshotGetKeys(&snapshot);
   ASSERT_EQ(1u, result.size());
   EXPECT_EQ(keys[2], result.at(0));
 
   // Get keys matching the prefix "5".
-  snapshot =
-      PageGetSnapshot(&page, fidl::VectorPtr<uint8_t>(std::vector<uint8_t>{5}));
+  snapshot = PageGetSnapshot(&page, fidl::VectorPtr<uint8_t>(std::vector<uint8_t>{5}));
   result = SnapshotGetKeys(&snapshot);
   EXPECT_EQ(0u, result.size());
 
   // Get keys matching the prefix "0" and starting with the key "010".
-  snapshot =
-      PageGetSnapshot(&page, fidl::VectorPtr<uint8_t>(std::vector<uint8_t>{0}));
-  result = SnapshotGetKeys(&snapshot,
-                           std::vector<uint8_t>(std::vector<uint8_t>{0, 1, 0}));
+  snapshot = PageGetSnapshot(&page, fidl::VectorPtr<uint8_t>(std::vector<uint8_t>{0}));
+  result = SnapshotGetKeys(&snapshot, std::vector<uint8_t>(std::vector<uint8_t>{0, 1, 0}));
   EXPECT_EQ(2u, result.size());
 }
 
@@ -286,9 +261,8 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetKeysMultiPart) {
   for (size_t i = 0; i < N; ++i) {
     // Generate keys so that they are in increasing order to match the order
     // of results from GetKeys().
-    keys[i] = RandomArray(
-        GetRandom(), key_size,
-        {static_cast<uint8_t>(i >> 8), static_cast<uint8_t>(i & 0xFF)});
+    keys[i] = RandomArray(GetRandom(), key_size,
+                          {static_cast<uint8_t>(i >> 8), static_cast<uint8_t>(i & 0xFF)});
   }
 
   for (auto& key : keys) {
@@ -297,8 +271,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetKeysMultiPart) {
   snapshot = PageGetSnapshot(&page);
 
   // Get all keys.
-  result = SnapshotGetKeys(&snapshot, fidl::VectorPtr<uint8_t>::New(0),
-                           &num_queries);
+  result = SnapshotGetKeys(&snapshot, fidl::VectorPtr<uint8_t>::New(0), &num_queries);
   EXPECT_TRUE(num_queries > 1);
   ASSERT_EQ(N, result.size());
   for (size_t i = 0; i < N; ++i) {
@@ -344,8 +317,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntries) {
   }
 
   // Get entries matching the prefix "0".
-  snapshot =
-      PageGetSnapshot(&page, fidl::VectorPtr<uint8_t>(std::vector<uint8_t>{0}));
+  snapshot = PageGetSnapshot(&page, fidl::VectorPtr<uint8_t>(std::vector<uint8_t>{0}));
   entries = SnapshotGetEntries(this, &snapshot);
   EXPECT_EQ(N, entries.size());
   for (size_t i = 0; i < N; ++i) {
@@ -354,8 +326,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntries) {
   }
 
   // Get entries matching the prefix "00".
-  snapshot = PageGetSnapshot(
-      &page, fidl::VectorPtr<uint8_t>(std::vector<uint8_t>{0, 0}));
+  snapshot = PageGetSnapshot(&page, fidl::VectorPtr<uint8_t>(std::vector<uint8_t>{0, 0}));
   entries = SnapshotGetEntries(this, &snapshot);
   ASSERT_EQ(2u, entries.size());
   for (size_t i = 0; i < 2; ++i) {
@@ -364,16 +335,14 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntries) {
   }
 
   // Get keys matching the prefix "010".
-  snapshot = PageGetSnapshot(
-      &page, fidl::VectorPtr<uint8_t>(std::vector<uint8_t>{0, 1, 0}));
+  snapshot = PageGetSnapshot(&page, fidl::VectorPtr<uint8_t>(std::vector<uint8_t>{0, 1, 0}));
   entries = SnapshotGetEntries(this, &snapshot);
   ASSERT_EQ(1u, entries.size());
   EXPECT_EQ(keys[2], entries.at(0).key);
   EXPECT_EQ(values[2], ToArray(entries.at(0).value));
 
   // Get keys matching the prefix "5".
-  snapshot =
-      PageGetSnapshot(&page, fidl::VectorPtr<uint8_t>(std::vector<uint8_t>{5}));
+  snapshot = PageGetSnapshot(&page, fidl::VectorPtr<uint8_t>(std::vector<uint8_t>{5}));
 
   entries = SnapshotGetEntries(this, &snapshot);
   EXPECT_EQ(0u, entries.size());
@@ -387,8 +356,8 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntriesMultiPartSize) {
   // returns empty results.
   PageSnapshotPtr snapshot = PageGetSnapshot(&page);
   int num_queries;
-  auto entries = SnapshotGetEntries(
-      this, &snapshot, fidl::VectorPtr<uint8_t>::New(0), &num_queries);
+  auto entries =
+      SnapshotGetEntries(this, &snapshot, fidl::VectorPtr<uint8_t>::New(0), &num_queries);
   EXPECT_EQ(0u, entries.size());
   EXPECT_EQ(1, num_queries);
 
@@ -397,16 +366,14 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntriesMultiPartSize) {
   // multiple queries.
   const size_t value_size = 100;
   const size_t key_size = kMaxKeySize;
-  const size_t N =
-      fidl_serialization::kMaxInlineDataSize / (key_size + value_size) + 1;
+  const size_t N = fidl_serialization::kMaxInlineDataSize / (key_size + value_size) + 1;
   std::vector<uint8_t> keys[N];
   std::vector<uint8_t> values[N];
   for (size_t i = 0; i < N; ++i) {
     // Generate keys so that they are in increasing order to match the order
     // of results from GetEntries().
-    keys[i] = RandomArray(
-        GetRandom(), key_size,
-        {static_cast<uint8_t>(i >> 8), static_cast<uint8_t>(i & 0xFF)});
+    keys[i] = RandomArray(GetRandom(), key_size,
+                          {static_cast<uint8_t>(i >> 8), static_cast<uint8_t>(i & 0xFF)});
     values[i] = RandomArray(GetRandom(), value_size);
   }
 
@@ -416,8 +383,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntriesMultiPartSize) {
   snapshot = PageGetSnapshot(&page);
 
   // Get all entries.
-  entries = SnapshotGetEntries(this, &snapshot,
-                               fidl::VectorPtr<uint8_t>::New(0), &num_queries);
+  entries = SnapshotGetEntries(this, &snapshot, fidl::VectorPtr<uint8_t>::New(0), &num_queries);
   EXPECT_TRUE(num_queries > 1);
   ASSERT_EQ(N, entries.size());
   for (size_t i = 0; i < N; ++i) {
@@ -434,8 +400,8 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntriesMultiPartHandles) {
   // returns empty results.
   PageSnapshotPtr snapshot = PageGetSnapshot(&page);
   int num_queries;
-  auto entries = SnapshotGetEntries(
-      this, &snapshot, fidl::VectorPtr<uint8_t>::New(0), &num_queries);
+  auto entries =
+      SnapshotGetEntries(this, &snapshot, fidl::VectorPtr<uint8_t>::New(0), &num_queries);
   EXPECT_EQ(0u, entries.size());
   EXPECT_EQ(1, num_queries);
 
@@ -446,9 +412,8 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntriesMultiPartHandles) {
   for (size_t i = 0; i < N; ++i) {
     // Generate keys so that they are in increasing order to match the order
     // of results from GetEntries().
-    keys[i] = RandomArray(
-        GetRandom(), 20,
-        {static_cast<uint8_t>(i >> 8), static_cast<uint8_t>(i & 0xFF)});
+    keys[i] = RandomArray(GetRandom(), 20,
+                          {static_cast<uint8_t>(i >> 8), static_cast<uint8_t>(i & 0xFF)});
     values[i] = RandomArray(GetRandom(), 100);
   }
 
@@ -458,8 +423,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntriesMultiPartHandles) {
   snapshot = PageGetSnapshot(&page);
 
   // Get all entries.
-  entries = SnapshotGetEntries(this, &snapshot,
-                               fidl::VectorPtr<uint8_t>::New(0), &num_queries);
+  entries = SnapshotGetEntries(this, &snapshot, fidl::VectorPtr<uint8_t>::New(0), &num_queries);
   EXPECT_TRUE(num_queries > 1);
   ASSERT_EQ(N, entries.size());
   for (size_t i = 0; i < N; ++i) {
@@ -519,9 +483,8 @@ TEST_P(PageSnapshotIntegrationTest, PageCreateReferenceFromSocketWrongSize) {
 
   fuchsia::ledger::Page_CreateReferenceFromSocket_Result result;
   auto waiter = NewWaiter();
-  page->CreateReferenceFromSocket(
-      123, StreamDataToSocket(big_data),
-      callback::Capture(waiter->GetCallback(), &result));
+  page->CreateReferenceFromSocket(123, StreamDataToSocket(big_data),
+                                  callback::Capture(waiter->GetCallback(), &result));
   ASSERT_TRUE(waiter->RunUntilCalled());
   ASSERT_TRUE(result.is_err());
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, result.err());
@@ -536,15 +499,13 @@ TEST_P(PageSnapshotIntegrationTest, PageCreatePutLargeReferenceFromSocket) {
   // Stream the data into the reference.
   fuchsia::ledger::Page_CreateReferenceFromSocket_Result create_result;
   auto waiter = NewWaiter();
-  page->CreateReferenceFromSocket(
-      big_data.size(), StreamDataToSocket(big_data),
-      callback::Capture(waiter->GetCallback(), &create_result));
+  page->CreateReferenceFromSocket(big_data.size(), StreamDataToSocket(big_data),
+                                  callback::Capture(waiter->GetCallback(), &create_result));
   ASSERT_TRUE(waiter->RunUntilCalled());
   EXPECT_TRUE(create_result.is_response());
 
   // Set the reference under a key.
-  page->PutReference(convert::ToArray("big data"),
-                     std::move(create_result.response().reference),
+  page->PutReference(convert::ToArray("big data"), std::move(create_result.response().reference),
                      Priority::EAGER);
 
   // Get a snapshot and read the value.
@@ -568,15 +529,13 @@ TEST_P(PageSnapshotIntegrationTest, PageCreatePutLargeReferenceFromVmo) {
   // Stream the data into the reference.
   fuchsia::ledger::Page_CreateReferenceFromBuffer_Result create_result;
   auto waiter = NewWaiter();
-  page->CreateReferenceFromBuffer(
-      std::move(vmo).ToTransport(),
-      callback::Capture(waiter->GetCallback(), &create_result));
+  page->CreateReferenceFromBuffer(std::move(vmo).ToTransport(),
+                                  callback::Capture(waiter->GetCallback(), &create_result));
   ASSERT_TRUE(waiter->RunUntilCalled());
   EXPECT_TRUE(create_result.is_response());
 
   // Set the reference under a key.
-  page->PutReference(convert::ToArray("big data"),
-                     std::move(create_result.response().reference),
+  page->PutReference(convert::ToArray("big data"), std::move(create_result.response().reference),
                      Priority::EAGER);
 
   // Get a snapshot and read the value.
@@ -601,8 +560,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotClosePageGet) {
 
   fuchsia::ledger::PageSnapshot_Get_Result result;
   auto waiter = NewWaiter();
-  snapshot->Get(convert::ToArray("name"),
-                callback::Capture(waiter->GetCallback(), &result));
+  snapshot->Get(convert::ToArray("name"), callback::Capture(waiter->GetCallback(), &result));
   ASSERT_TRUE(waiter->RunUntilCalled());
   EXPECT_THAT(result, MatchesString("Alice"));
 
@@ -642,15 +600,13 @@ TEST_P(PageSnapshotIntegrationTest, PageGetById) {
   PageSnapshotPtr snapshot = PageGetSnapshot(&page);
   fuchsia::ledger::PageSnapshot_Get_Result result;
   waiter = NewWaiter();
-  snapshot->Get(convert::ToArray("name"),
-                callback::Capture(waiter->GetCallback(), &result));
+  snapshot->Get(convert::ToArray("name"), callback::Capture(waiter->GetCallback(), &result));
   ASSERT_TRUE(waiter->RunUntilCalled());
   EXPECT_THAT(result, MatchesString("Alice"));
 }
 
-INSTANTIATE_TEST_SUITE_P(
-    PageSnapshotIntegrationTest, PageSnapshotIntegrationTest,
-    ::testing::ValuesIn(GetLedgerAppInstanceFactoryBuilders()));
+INSTANTIATE_TEST_SUITE_P(PageSnapshotIntegrationTest, PageSnapshotIntegrationTest,
+                         ::testing::ValuesIn(GetLedgerAppInstanceFactoryBuilders()));
 
 }  // namespace
 }  // namespace ledger

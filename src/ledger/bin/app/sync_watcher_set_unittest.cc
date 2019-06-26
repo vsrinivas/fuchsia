@@ -54,8 +54,7 @@ TEST_F(SyncWatcherSetTest, OneWatcher) {
 
   SyncWatcherImpl impl(watcher_ptr.NewRequest());
 
-  watcher_set.Notify({sync_coordinator::DOWNLOAD_IN_PROGRESS,
-                      sync_coordinator::UPLOAD_PENDING});
+  watcher_set.Notify({sync_coordinator::DOWNLOAD_IN_PROGRESS, sync_coordinator::UPLOAD_PENDING});
 
   watcher_set.AddSyncWatcher(std::move(watcher_ptr));
 
@@ -66,8 +65,7 @@ TEST_F(SyncWatcherSetTest, OneWatcher) {
   ASSERT_EQ(1u, impl.upload_states.size());
   EXPECT_EQ(SyncState::PENDING, *impl.upload_states.rbegin());
 
-  watcher_set.Notify(
-      {sync_coordinator::DOWNLOAD_ERROR, sync_coordinator::UPLOAD_IDLE});
+  watcher_set.Notify({sync_coordinator::DOWNLOAD_ERROR, sync_coordinator::UPLOAD_IDLE});
 
   RunLoopUntilIdle();
 
@@ -100,8 +98,7 @@ TEST_F(SyncWatcherSetTest, TwoWatchers) {
   EXPECT_EQ(1u, impl2.upload_states.size());
   EXPECT_EQ(SyncState::IDLE, *impl2.upload_states.rbegin());
 
-  watcher_set.Notify({sync_coordinator::DOWNLOAD_IN_PROGRESS,
-                      sync_coordinator::UPLOAD_PENDING});
+  watcher_set.Notify({sync_coordinator::DOWNLOAD_IN_PROGRESS, sync_coordinator::UPLOAD_PENDING});
 
   RunLoopUntilIdle();
 

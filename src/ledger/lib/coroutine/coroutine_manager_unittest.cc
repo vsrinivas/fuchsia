@@ -20,13 +20,13 @@ TEST(CoroutineManager, CallbackIsCalled) {
 
   bool called = false;
   CoroutineHandler* handler = nullptr;
-  manager.StartCoroutine(callback::SetWhenCalled(&called),
-                         [&handler](CoroutineHandler* current_handler,
-                                    fit::function<void()> callback) {
-                           handler = current_handler;
-                           EXPECT_EQ(ContinuationStatus::OK, handler->Yield());
-                           callback();
-                         });
+  manager.StartCoroutine(
+      callback::SetWhenCalled(&called),
+      [&handler](CoroutineHandler* current_handler, fit::function<void()> callback) {
+        handler = current_handler;
+        EXPECT_EQ(ContinuationStatus::OK, handler->Yield());
+        callback();
+      });
 
   ASSERT_TRUE(handler);
   EXPECT_FALSE(called);
@@ -43,15 +43,14 @@ TEST(CoroutineManager, InterruptCoroutineOnDestruction) {
   bool reached_callback = false;
   bool executed_callback = false;
   CoroutineHandler* handler = nullptr;
-  manager->StartCoroutine(
-      callback::SetWhenCalled(&called),
-      [&](CoroutineHandler* current_handler, fit::function<void()> callback) {
-        handler = current_handler;
-        EXPECT_EQ(ContinuationStatus::INTERRUPTED, handler->Yield());
-        reached_callback = true;
-        callback();
-        executed_callback = true;
-      });
+  manager->StartCoroutine(callback::SetWhenCalled(&called),
+                          [&](CoroutineHandler* current_handler, fit::function<void()> callback) {
+                            handler = current_handler;
+                            EXPECT_EQ(ContinuationStatus::INTERRUPTED, handler->Yield());
+                            reached_callback = true;
+                            callback();
+                            executed_callback = true;
+                          });
 
   ASSERT_TRUE(handler);
   EXPECT_FALSE(called);
@@ -80,9 +79,9 @@ TEST(CoroutineManager, DeleteInCallback) {
   std::unique_ptr<CoroutineManager> manager =
       std::make_unique<CoroutineManager>(&coroutine_service);
 
-  manager->StartCoroutine([&manager] { manager.reset(); },
-                          [](CoroutineHandler* current_handler,
-                             fit::function<void()> callback) { callback(); });
+  manager->StartCoroutine(
+      [&manager] { manager.reset(); },
+      [](CoroutineHandler* current_handler, fit::function<void()> callback) { callback(); });
 }
 
 }  // namespace

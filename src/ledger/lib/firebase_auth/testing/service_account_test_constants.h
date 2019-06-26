@@ -13,8 +13,7 @@ namespace service_account {
 
 // Expected value for the Credentials members.
 constexpr fxl::StringView kTestServiceAccountProjectId = "fake_project_id";
-constexpr fxl::StringView kTestServiceAccountClientEmail =
-    "fake_email@example.com";
+constexpr fxl::StringView kTestServiceAccountClientEmail = "fake_email@example.com";
 constexpr fxl::StringView kTestServiceAccountClientId = "fake_client_id";
 
 // Correct test json configuration file for Credentials.

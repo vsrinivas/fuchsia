@@ -26,8 +26,8 @@ class ActivePageManager;
 // have the same parent, the first one to be received will be tracked.
 class BranchTracker : public storage::CommitWatcher {
  public:
-  BranchTracker(coroutine::CoroutineService* coroutine_service,
-                ActivePageManager* manager, storage::PageStorage* storage);
+  BranchTracker(coroutine::CoroutineService* coroutine_service, ActivePageManager* manager,
+                storage::PageStorage* storage);
   ~BranchTracker() override;
 
   Status Init();
@@ -63,9 +63,8 @@ class BranchTracker : public storage::CommitWatcher {
   class PageWatcherContainer;
 
   // storage::CommitWatcher:
-  void OnNewCommits(
-      const std::vector<std::unique_ptr<const storage::Commit>>& commits,
-      storage::ChangeSource source) override;
+  void OnNewCommits(const std::vector<std::unique_ptr<const storage::Commit>>& commits,
+                    storage::ChangeSource source) override;
 
   void CheckEmpty();
 

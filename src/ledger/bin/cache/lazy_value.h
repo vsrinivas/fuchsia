@@ -28,11 +28,8 @@ class LazyValue {
   // |generator| generates the value. It takes a callback to returns its result.
   //   It must return |ok_status| as a status when the request is successful.
   //   Any other return value is considered a failure.
-  LazyValue(S ok_status,
-            fit::function<void(fit::function<void(S, V)>)> generator)
-      : ok_status_(ok_status),
-        generator_(std::move(generator)),
-        value_set_(false) {}
+  LazyValue(S ok_status, fit::function<void(fit::function<void(S, V)>)> generator)
+      : ok_status_(ok_status), generator_(std::move(generator)), value_set_(false) {}
 
   // Retrieves the value and returns it to |callback|.
   //

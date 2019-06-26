@@ -34,8 +34,7 @@ class ListenCallHandlerImpl : public ListenCallHandler {
 
 }  // namespace
 
-ListenCall::ListenCall(ListenCallClient* client,
-                       std::unique_ptr<grpc::ClientContext> context,
+ListenCall::ListenCall(ListenCallClient* client, std::unique_ptr<grpc::ClientContext> context,
                        std::unique_ptr<ListenStream> stream)
     : client_(client),
       context_(std::move(context)),
@@ -46,18 +45,17 @@ ListenCall::ListenCall(ListenCallClient* client,
       weak_ptr_factory_(this) {
   // Configure reading from the stream.
   stream_reader_.SetOnError([this] { FinishIfNeeded(); });
-  stream_reader_.SetOnMessage(
-      [this](google::firestore::v1beta1::ListenResponse response) {
-        if (CheckEmpty()) {
-          return;
-        }
+  stream_reader_.SetOnMessage([this](google::firestore::v1beta1::ListenResponse response) {
+    if (CheckEmpty()) {
+      return;
+    }
 
-        client_->OnResponse(std::move(response));
-        if (finish_requested_) {
-          return;
-        }
-        stream_reader_.Read();
-      });
+    client_->OnResponse(std::move(response));
+    if (finish_requested_) {
+      return;
+    }
+    stream_reader_.Read();
+  });
 
   // Configure writing to the stream.
   stream_writer_.SetOnError([this] { FinishIfNeeded(); });
@@ -103,8 +101,7 @@ void ListenCall::OnHandlerGone() {
 }
 
 std::unique_ptr<ListenCallHandler> ListenCall::MakeHandler() {
-  return std::make_unique<ListenCallHandlerImpl>(
-      weak_ptr_factory_.GetWeakPtr());
+  return std::make_unique<ListenCallHandlerImpl>(weak_ptr_factory_.GetWeakPtr());
 }
 
 void ListenCall::FinishIfNeeded() {
@@ -146,8 +143,8 @@ void ListenCall::HandleFinished(grpc::Status status) {
 }
 
 bool ListenCall::IsEmpty() {
-  return client_ == nullptr && stream_controller_.IsEmpty() &&
-         stream_reader_.IsEmpty() && stream_writer_.IsEmpty();
+  return client_ == nullptr && stream_controller_.IsEmpty() && stream_reader_.IsEmpty() &&
+         stream_writer_.IsEmpty();
 }
 
 bool ListenCall::CheckEmpty() {

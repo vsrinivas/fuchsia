@@ -32,22 +32,18 @@ std::string GetValue(size_t index, size_t min_value_size = 0u) {
   return result;
 }
 
-::testing::AssertionResult CheckMessageSize(zx::channel channel,
-                                            size_t expected_bytes,
+::testing::AssertionResult CheckMessageSize(zx::channel channel, size_t expected_bytes,
                                             size_t expected_handles) {
   uint32_t actual_bytes, actual_handles;
-  zx_status_t status =
-      channel.read(0, nullptr, nullptr, 0, 0, &actual_bytes, &actual_handles);
+  zx_status_t status = channel.read(0, nullptr, nullptr, 0, 0, &actual_bytes, &actual_handles);
   if (status != ZX_ERR_BUFFER_TOO_SMALL) {
     return ::testing::AssertionFailure()
-           << "Channel read status = " << status
-           << ", expected ZX_ERR_BUFFER_TOO_SMALL (" << ZX_ERR_BUFFER_TOO_SMALL
-           << ").";
+           << "Channel read status = " << status << ", expected ZX_ERR_BUFFER_TOO_SMALL ("
+           << ZX_ERR_BUFFER_TOO_SMALL << ").";
   }
   EXPECT_EQ(expected_bytes, actual_bytes);
   EXPECT_EQ(expected_handles, actual_handles);
-  if ((expected_bytes != actual_bytes) ||
-      (expected_handles != actual_handles)) {
+  if ((expected_bytes != actual_bytes) || (expected_handles != actual_handles)) {
     return ::testing::AssertionFailure() << "Unexpected message size.";
   }
   return ::testing::AssertionSuccess();
@@ -68,20 +64,17 @@ class FakeSnapshotImpl : public PageSnapshot {
   // PageSnapshot:
   void Sync(SyncCallback /*callback*/) override { FXL_NOTIMPLEMENTED(); }
 
-  void GetEntriesInline(std::vector<uint8_t> /*key_start*/,
-                        std::unique_ptr<Token> /*token*/,
+  void GetEntriesInline(std::vector<uint8_t> /*key_start*/, std::unique_ptr<Token> /*token*/,
                         GetEntriesInlineCallback callback) override {
     get_entries_inline_callback = std::move(callback);
   }
 
-  void GetEntries(std::vector<uint8_t> /*key_start*/,
-                  std::unique_ptr<Token> /*token*/,
+  void GetEntries(std::vector<uint8_t> /*key_start*/, std::unique_ptr<Token> /*token*/,
                   GetEntriesCallback callback) override {
     get_entries_callback = std::move(callback);
   }
 
-  void GetKeys(std::vector<uint8_t> /*key_start*/,
-               std::unique_ptr<Token> /*token*/,
+  void GetKeys(std::vector<uint8_t> /*key_start*/, std::unique_ptr<Token> /*token*/,
                GetKeysCallback /*callback*/) override {
     FXL_NOTIMPLEMENTED();
   }
@@ -90,18 +83,15 @@ class FakeSnapshotImpl : public PageSnapshot {
     get_callback = std::move(callback);
   }
 
-  void GetInline(std::vector<uint8_t> /*key*/,
-                 GetInlineCallback callback) override {
+  void GetInline(std::vector<uint8_t> /*key*/, GetInlineCallback callback) override {
     get_inline_callback = std::move(callback);
   }
 
-  void Fetch(std::vector<uint8_t> /*key*/,
-             FetchCallback /*callback*/) override {
+  void Fetch(std::vector<uint8_t> /*key*/, FetchCallback /*callback*/) override {
     FXL_NOTIMPLEMENTED();
   }
 
-  void FetchPartial(std::vector<uint8_t> /*key*/, int64_t /*offset*/,
-                    int64_t /*max_size*/,
+  void FetchPartial(std::vector<uint8_t> /*key*/, int64_t /*offset*/, int64_t /*max_size*/,
                     FetchPartialCallback /*callback*/) override {
     FXL_NOTIMPLEMENTED();
   }
@@ -123,8 +113,7 @@ TEST_F(SerializationSizeTest, GetInline) {
   std::vector<uint8_t> key = GetKey(0, key_size);
   std::vector<uint8_t> value = convert::ToArray(GetValue(0, value_size));
 
-  auto client_callback =
-      [](fuchsia::ledger::PageSnapshot_GetInline_Result /*value*/) {};
+  auto client_callback = [](fuchsia::ledger::PageSnapshot_GetInline_Result /*value*/) {};
 
   // FakeSnapshot saves the callback instead of running it.
   snapshot_proxy->GetInline(std::move(key), std::move(client_callback));
@@ -141,8 +130,7 @@ TEST_F(SerializationSizeTest, GetInline) {
   const size_t expected_bytes =
       Align(kMessageHeaderSize + kPointerSize + GetByteVectorSize(value_size));
   const size_t expected_handles = 0;
-  EXPECT_TRUE(
-      CheckMessageSize(std::move(reader), expected_bytes, expected_handles));
+  EXPECT_TRUE(CheckMessageSize(std::move(reader), expected_bytes, expected_handles));
 }
 
 TEST_F(SerializationSizeTest, Get) {
@@ -164,8 +152,7 @@ TEST_F(SerializationSizeTest, Get) {
   ASSERT_TRUE(fsl::VmoFromString(object_data, &vmo));
   fuchsia::mem::Buffer value = std::move(vmo).ToTransport();
 
-  auto client_callback =
-      [](fuchsia::ledger::PageSnapshot_Get_Result /*result*/) {};
+  auto client_callback = [](fuchsia::ledger::PageSnapshot_Get_Result /*result*/) {};
   // FakeSnapshot saves the callback instead of running it.
   snapshot_proxy->Get(std::move(key), std::move(client_callback));
   RunLoopUntilIdle();
@@ -178,15 +165,13 @@ TEST_F(SerializationSizeTest, Get) {
   result.response().buffer = std::move(value);
   snapshot_impl.get_callback(std::move(result));
 
-  const size_t expected_bytes =
-      Align(kMessageHeaderSize +  // Header.
-            kPointerSize +        // Union tag.
-            Align(kHandleSize) +  // FIDL_HANDLE_PRESENT.
-            kPointerSize          // Size.
-      );
+  const size_t expected_bytes = Align(kMessageHeaderSize +  // Header.
+                                      kPointerSize +        // Union tag.
+                                      Align(kHandleSize) +  // FIDL_HANDLE_PRESENT.
+                                      kPointerSize          // Size.
+  );
   const size_t expected_handles = 1;
-  EXPECT_TRUE(
-      CheckMessageSize(std::move(reader), expected_bytes, expected_handles));
+  EXPECT_TRUE(CheckMessageSize(std::move(reader), expected_bytes, expected_handles));
 }
 
 TEST_F(SerializationSizeTest, GetEntriesInline) {
@@ -233,20 +218,18 @@ TEST_F(SerializationSizeTest, GetEntriesInline) {
   size_t kExpectedEmptyEntrySize = GetInlinedEntrySize(empty_entry);
 
   // Run the callback directly.
-  snapshot_impl.get_entries_inline_callback(std::move(entries_to_send),
-                                            std::move(token));
+  snapshot_impl.get_entries_inline_callback(std::move(entries_to_send), std::move(token));
 
   const size_t expected_bytes =
       Align(kMessageHeaderSize +                         // Header.
             kVectorHeaderSize +                          // VectorPtr.
             n_entries * kExpectedEntrySize +             // Vector of entries.
             n_empty_entries * kExpectedEmptyEntrySize +  // Vector of entries.
-            kPointerSize +               // Pointer to next_token.
-            GetByteVectorSize(key_size)  // next_token.
+            kPointerSize +                               // Pointer to next_token.
+            GetByteVectorSize(key_size)                  // next_token.
       );
   const size_t expected_handles = 0;
-  EXPECT_TRUE(
-      CheckMessageSize(std::move(reader), expected_bytes, expected_handles));
+  EXPECT_TRUE(CheckMessageSize(std::move(reader), expected_bytes, expected_handles));
 }
 
 TEST_F(SerializationSizeTest, GetEntries) {
@@ -259,11 +242,10 @@ TEST_F(SerializationSizeTest, GetEntries) {
   fidl::Binding<PageSnapshot> binding(&snapshot_impl);
   binding.Bind(std::move(writer));
 
-  auto client_callback = [](std::vector<Entry> /*entries*/,
-                            std::unique_ptr<Token> /*next_token*/) {};
+  auto client_callback = [](std::vector<Entry> /*entries*/, std::unique_ptr<Token> /*next_token*/) {
+  };
   // FakeSnapshot saves the callback instead of running it.
-  snapshot_proxy->GetEntries(fidl::VectorPtr<uint8_t>::New(0), nullptr,
-                             std::move(client_callback));
+  snapshot_proxy->GetEntries(fidl::VectorPtr<uint8_t>::New(0), nullptr, std::move(client_callback));
   RunLoopUntilIdle();
 
   fidl::InterfaceHandle<PageSnapshot> handle = snapshot_proxy.Unbind();
@@ -288,19 +270,16 @@ TEST_F(SerializationSizeTest, GetEntries) {
   }
 
   // Run the callback directly.
-  snapshot_impl.get_entries_callback(std::move(entries_to_send),
-                                     std::move(token));
+  snapshot_impl.get_entries_callback(std::move(entries_to_send), std::move(token));
 
-  const size_t expected_bytes =
-      Align(kMessageHeaderSize +                  // Header.
-            kVectorHeaderSize +                   // VectorPtr.
-            n_entries * GetEntrySize(key_size) +  // Vector of entries.
-            kPointerSize +                        // Pointer to next_token.
-            GetByteVectorSize(key_size)           // next_token.
-      );
+  const size_t expected_bytes = Align(kMessageHeaderSize +                  // Header.
+                                      kVectorHeaderSize +                   // VectorPtr.
+                                      n_entries * GetEntrySize(key_size) +  // Vector of entries.
+                                      kPointerSize +               // Pointer to next_token.
+                                      GetByteVectorSize(key_size)  // next_token.
+  );
   const size_t expected_handles = n_entries;
-  EXPECT_TRUE(
-      CheckMessageSize(std::move(reader), expected_bytes, expected_handles));
+  EXPECT_TRUE(CheckMessageSize(std::move(reader), expected_bytes, expected_handles));
 }
 
 }  // namespace

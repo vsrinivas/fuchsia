@@ -18,11 +18,9 @@ namespace storage {
 // Reads the given data source, and returns a single data chunk containing its
 // content. This method will not call its |callback| if |managed_container| is
 // deleted.
-void ReadDataSource(
-    callback::ManagedContainer* managed_container,
-    std::unique_ptr<DataSource> data_source,
-    fit::function<void(Status, std::unique_ptr<DataSource::DataChunk>)>
-        callback);
+void ReadDataSource(callback::ManagedContainer* managed_container,
+                    std::unique_ptr<DataSource> data_source,
+                    fit::function<void(Status, std::unique_ptr<DataSource::DataChunk>)> callback);
 }  // namespace storage
 
 #endif  // SRC_LEDGER_BIN_STORAGE_PUBLIC_READ_DATA_SOURCE_H_

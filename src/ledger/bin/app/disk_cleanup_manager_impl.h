@@ -15,11 +15,10 @@
 
 namespace ledger {
 
-class DiskCleanupManagerImpl : public DiskCleanupManager,
-                               public PageUsageListener {
+class DiskCleanupManagerImpl : public DiskCleanupManager, public PageUsageListener {
  public:
-  DiskCleanupManagerImpl(Environment* environment,
-                         storage::DbFactory* db_factory, DetachedPath db_path);
+  DiskCleanupManagerImpl(Environment* environment, storage::DbFactory* db_factory,
+                         DetachedPath db_path);
   ~DiskCleanupManagerImpl() override;
 
   // Asynchronously initializes this DiskCleanupManagerImpl.
@@ -35,12 +34,9 @@ class DiskCleanupManagerImpl : public DiskCleanupManager,
   void TryCleanUp(fit::function<void(Status)> callback) override;
 
   // PageUsageListener:
-  void OnPageOpened(fxl::StringView ledger_name,
-                    storage::PageIdView page_id) override;
-  void OnPageClosed(fxl::StringView ledger_name,
-                    storage::PageIdView page_id) override;
-  void OnPageUnused(fxl::StringView ledger_name,
-                    storage::PageIdView page_id) override;
+  void OnPageOpened(fxl::StringView ledger_name, storage::PageIdView page_id) override;
+  void OnPageClosed(fxl::StringView ledger_name, storage::PageIdView page_id) override;
+  void OnPageUnused(fxl::StringView ledger_name, storage::PageIdView page_id) override;
 
  private:
   PageEvictionManagerImpl page_eviction_manager_;

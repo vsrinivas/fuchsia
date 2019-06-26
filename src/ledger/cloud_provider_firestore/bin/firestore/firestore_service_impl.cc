@@ -14,8 +14,7 @@ namespace cloud_provider_firestore {
 
 namespace {
 
-constexpr fxl::StringView kGoogleCloudResourcePrefixHeader =
-    "google-cloud-resource-prefix";
+constexpr fxl::StringView kGoogleCloudResourcePrefixHeader = "google-cloud-resource-prefix";
 
 // Handles the general case of call response that returns a status and a
 // response value.
@@ -23,8 +22,7 @@ template <typename ResponseType>
 struct ResponseVariant {
   using CallbackType = fit::function<void(grpc::Status, ResponseType)>;
 
-  static void Call(const CallbackType& callback, grpc::Status status,
-                   ResponseType response) {
+  static void Call(const CallbackType& callback, grpc::Status status, ResponseType response) {
     callback(std::move(status), std::move(response));
   }
 };
@@ -42,29 +40,25 @@ struct ResponseVariant<google::protobuf::Empty> {
 };
 
 template <typename ResponseType>
-void MakeCall(
-    SingleResponseCall<ResponseType>* call,
-    std::unique_ptr<SingleResponseReader<ResponseType>> response_reader,
-    typename ResponseVariant<ResponseType>::CallbackType callback) {
+void MakeCall(SingleResponseCall<ResponseType>* call,
+              std::unique_ptr<SingleResponseReader<ResponseType>> response_reader,
+              typename ResponseVariant<ResponseType>::CallbackType callback) {
   call->response_reader = std::move(response_reader);
 
   call->on_complete = [call, callback = std::move(callback)](bool ok) {
-    ResponseVariant<ResponseType>::Call(std::move(callback),
-                                        std::move(call->status),
+    ResponseVariant<ResponseType>::Call(std::move(callback), std::move(call->status),
                                         std::move(call->response));
     if (call->on_empty) {
       call->on_empty();
     }
   };
-  call->response_reader->Finish(&call->response, &call->status,
-                                &call->on_complete);
+  call->response_reader->Finish(&call->response, &call->status, &call->on_complete);
 }
 
 }  // namespace
 
-FirestoreServiceImpl::FirestoreServiceImpl(
-    std::string server_id, async_dispatcher_t* dispatcher,
-    std::shared_ptr<grpc::Channel> channel)
+FirestoreServiceImpl::FirestoreServiceImpl(std::string server_id, async_dispatcher_t* dispatcher,
+                                           std::shared_ptr<grpc::Channel> channel)
     : server_id_(std::move(server_id)),
       database_path_("projects/" + server_id_ + "/databases/(default)"),
       root_path_(database_path_ + "/documents"),
@@ -78,82 +72,68 @@ FirestoreServiceImpl::~FirestoreServiceImpl() {}
 void FirestoreServiceImpl::GetDocument(
     google::firestore::v1beta1::GetDocumentRequest request,
     std::shared_ptr<grpc::CallCredentials> call_credentials,
-    fit::function<void(grpc::Status, google::firestore::v1beta1::Document)>
-        callback) {
+    fit::function<void(grpc::Status, google::firestore::v1beta1::Document)> callback) {
   FXL_DCHECK(dispatcher_ == async_get_default_dispatcher());
   DocumentResponseCall& call = document_response_calls_.emplace();
   SetUpContext(&call.context, call_credentials);
-  auto response_reader =
-      firestore_->AsyncGetDocument(&call.context, request, &cq_);
-  MakeCall<google::firestore::v1beta1::Document>(
-      &call, std::move(response_reader), std::move(callback));
+  auto response_reader = firestore_->AsyncGetDocument(&call.context, request, &cq_);
+  MakeCall<google::firestore::v1beta1::Document>(&call, std::move(response_reader),
+                                                 std::move(callback));
 }
 
 void FirestoreServiceImpl::ListDocuments(
     google::firestore::v1beta1::ListDocumentsRequest request,
     std::shared_ptr<grpc::CallCredentials> call_credentials,
-    fit::function<void(grpc::Status,
-                       google::firestore::v1beta1::ListDocumentsResponse)>
-        callback) {
+    fit::function<void(grpc::Status, google::firestore::v1beta1::ListDocumentsResponse)> callback) {
   FXL_DCHECK(dispatcher_ == async_get_default_dispatcher());
   ListDocumentsResponseCall& call = list_documents_response_calls_.emplace();
   SetUpContext(&call.context, call_credentials);
-  auto response_reader =
-      firestore_->AsyncListDocuments(&call.context, request, &cq_);
-  MakeCall<google::firestore::v1beta1::ListDocumentsResponse>(
-      &call, std::move(response_reader), std::move(callback));
+  auto response_reader = firestore_->AsyncListDocuments(&call.context, request, &cq_);
+  MakeCall<google::firestore::v1beta1::ListDocumentsResponse>(&call, std::move(response_reader),
+                                                              std::move(callback));
 }
 
 void FirestoreServiceImpl::CreateDocument(
     google::firestore::v1beta1::CreateDocumentRequest request,
     std::shared_ptr<grpc::CallCredentials> call_credentials,
-    fit::function<void(grpc::Status, google::firestore::v1beta1::Document)>
-        callback) {
+    fit::function<void(grpc::Status, google::firestore::v1beta1::Document)> callback) {
   FXL_DCHECK(dispatcher_ == async_get_default_dispatcher());
   DocumentResponseCall& call = document_response_calls_.emplace();
   SetUpContext(&call.context, call_credentials);
-  auto response_reader =
-      firestore_->AsyncCreateDocument(&call.context, request, &cq_);
+  auto response_reader = firestore_->AsyncCreateDocument(&call.context, request, &cq_);
 
-  MakeCall<google::firestore::v1beta1::Document>(
-      &call, std::move(response_reader), std::move(callback));
+  MakeCall<google::firestore::v1beta1::Document>(&call, std::move(response_reader),
+                                                 std::move(callback));
 }
 
-void FirestoreServiceImpl::DeleteDocument(
-    google::firestore::v1beta1::DeleteDocumentRequest request,
-    std::shared_ptr<grpc::CallCredentials> call_credentials,
-    fit::function<void(grpc::Status)> callback) {
+void FirestoreServiceImpl::DeleteDocument(google::firestore::v1beta1::DeleteDocumentRequest request,
+                                          std::shared_ptr<grpc::CallCredentials> call_credentials,
+                                          fit::function<void(grpc::Status)> callback) {
   FXL_DCHECK(dispatcher_ == async_get_default_dispatcher());
   EmptyResponseCall& call = empty_response_calls_.emplace();
   SetUpContext(&call.context, call_credentials);
-  auto response_reader =
-      firestore_->AsyncDeleteDocument(&call.context, request, &cq_);
+  auto response_reader = firestore_->AsyncDeleteDocument(&call.context, request, &cq_);
 
-  MakeCall<google::protobuf::Empty>(&call, std::move(response_reader),
-                                    std::move(callback));
+  MakeCall<google::protobuf::Empty>(&call, std::move(response_reader), std::move(callback));
 }
 
 void FirestoreServiceImpl::Commit(
     google::firestore::v1beta1::CommitRequest request,
     std::shared_ptr<grpc::CallCredentials> call_credentials,
-    fit::function<void(grpc::Status,
-                       google::firestore::v1beta1::CommitResponse)>
-        callback) {
+    fit::function<void(grpc::Status, google::firestore::v1beta1::CommitResponse)> callback) {
   FXL_DCHECK(dispatcher_ == async_get_default_dispatcher());
   CommitResponseCall& call = commit_response_calls_.emplace();
   SetUpContext(&call.context, call_credentials);
   auto response_reader = firestore_->AsyncCommit(&call.context, request, &cq_);
 
-  MakeCall<google::firestore::v1beta1::CommitResponse>(
-      &call, std::move(response_reader), std::move(callback));
+  MakeCall<google::firestore::v1beta1::CommitResponse>(&call, std::move(response_reader),
+                                                       std::move(callback));
 }
 
 void FirestoreServiceImpl::RunQuery(
     google::firestore::v1beta1::RunQueryRequest request,
     std::shared_ptr<grpc::CallCredentials> call_credentials,
-    fit::function<
-        void(grpc::Status,
-             std::vector<google::firestore::v1beta1::RunQueryResponse>)>
+    fit::function<void(grpc::Status, std::vector<google::firestore::v1beta1::RunQueryResponse>)>
         callback) {
   FXL_DCHECK(dispatcher_ == async_get_default_dispatcher());
   auto context = std::make_unique<grpc::ClientContext>();
@@ -165,15 +145,13 @@ void FirestoreServiceImpl::RunQuery(
 }
 
 std::unique_ptr<ListenCallHandler> FirestoreServiceImpl::Listen(
-    std::shared_ptr<grpc::CallCredentials> call_credentials,
-    ListenCallClient* client) {
+    std::shared_ptr<grpc::CallCredentials> call_credentials, ListenCallClient* client) {
   FXL_DCHECK(dispatcher_ == async_get_default_dispatcher());
   auto context = std::make_unique<grpc::ClientContext>();
   SetUpContext(context.get(), call_credentials);
 
   auto stream = firestore_->PrepareAsyncListen(context.get(), &cq_);
-  auto& call =
-      listen_calls_.emplace(client, std::move(context), std::move(stream));
+  auto& call = listen_calls_.emplace(client, std::move(context), std::move(stream));
   return call.MakeHandler();
 }
 
@@ -192,11 +170,9 @@ void FirestoreServiceImpl::ShutDown(fit::closure callback) {
   async::PostTask(dispatcher_, std::move(callback));
 }
 
-void FirestoreServiceImpl::SetUpContext(
-    grpc::ClientContext* context,
-    std::shared_ptr<grpc::CallCredentials> call_credentials) {
-  context->AddMetadata(kGoogleCloudResourcePrefixHeader.ToString(),
-                       database_path_);
+void FirestoreServiceImpl::SetUpContext(grpc::ClientContext* context,
+                                        std::shared_ptr<grpc::CallCredentials> call_credentials) {
+  context->AddMetadata(kGoogleCloudResourcePrefixHeader.ToString(), database_path_);
   context->set_credentials(call_credentials);
 }
 

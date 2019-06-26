@@ -25,18 +25,16 @@ storage::CommitId RandomCommitId(rng::Random* random) {
 
 }  // namespace
 
-FakeJournalDelegate::FakeJournalDelegate(rng::Random* random, Data initial_data,
-                                         CommitId parent_id, bool autocommit,
-                                         uint64_t generation = 0)
+FakeJournalDelegate::FakeJournalDelegate(rng::Random* random, Data initial_data, CommitId parent_id,
+                                         bool autocommit, uint64_t generation = 0)
     : autocommit_(autocommit),
       id_(RandomCommitId(random)),
       parent_id_(std::move(parent_id)),
       data_(std::move(initial_data)),
       generation_(generation) {}
 
-FakeJournalDelegate::FakeJournalDelegate(rng::Random* random, Data initial_data,
-                                         CommitId parent_id, CommitId other_id,
-                                         bool autocommit,
+FakeJournalDelegate::FakeJournalDelegate(rng::Random* random, Data initial_data, CommitId parent_id,
+                                         CommitId other_id, bool autocommit,
                                          uint64_t generation = 0)
     : autocommit_(autocommit),
       id_(RandomCommitId(random)),
@@ -47,8 +45,7 @@ FakeJournalDelegate::FakeJournalDelegate(rng::Random* random, Data initial_data,
 
 FakeJournalDelegate::~FakeJournalDelegate() {}
 
-void FakeJournalDelegate::SetValue(convert::ExtendedStringView key,
-                                   ObjectIdentifier value,
+void FakeJournalDelegate::SetValue(convert::ExtendedStringView key, ObjectIdentifier value,
                                    KeyPriority priority) {
   FXL_DCHECK(!is_committed_);
   data_.insert({key.ToString(), {key.ToString(), std::move(value), priority}});
@@ -68,8 +65,7 @@ void FakeJournalDelegate::Clear() {
 }
 
 void FakeJournalDelegate::Commit(
-    fit::function<void(Status, std::unique_ptr<const storage::Commit>)>
-        callback) {
+    fit::function<void(Status, std::unique_ptr<const storage::Commit>)> callback) {
   if (is_committed_) {
     callback(Status::ILLEGAL_STATE, nullptr);
     return;
@@ -91,9 +87,7 @@ std::vector<CommitIdView> FakeJournalDelegate::GetParentIds() const {
   return {parent_id_, other_id_};
 }
 
-bool FakeJournalDelegate::IsPendingCommit() {
-  return static_cast<bool>(commit_callback_);
-}
+bool FakeJournalDelegate::IsPendingCommit() { return static_cast<bool>(commit_callback_); }
 
 void FakeJournalDelegate::ResolvePendingCommit(Status /*status*/) {
   is_committed_ = true;
@@ -102,9 +96,7 @@ void FakeJournalDelegate::ResolvePendingCommit(Status /*status*/) {
   callback(Status::OK, std::make_unique<const FakeCommit>(this));
 }
 
-const FakeJournalDelegate::Data& FakeJournalDelegate::GetData() const {
-  return data_;
-}
+const FakeJournalDelegate::Data& FakeJournalDelegate::GetData() const { return data_; }
 
 }  // namespace fake
 }  // namespace storage

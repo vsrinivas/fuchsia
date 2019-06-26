@@ -100,18 +100,15 @@ class BTreeIterator {
 // Retrieves the ids of all objects in the B-Tree, i.e tree nodes and values of
 // entries in the tree. After a successfull call, |callback| will be called
 // with the set of results.
-void GetObjectIdentifiers(
-    coroutine::CoroutineService* coroutine_service, PageStorage* page_storage,
-    ObjectIdentifier root_identifier,
-    fit::function<void(Status, std::set<ObjectIdentifier>)> callback);
+void GetObjectIdentifiers(coroutine::CoroutineService* coroutine_service, PageStorage* page_storage,
+                          ObjectIdentifier root_identifier,
+                          fit::function<void(Status, std::set<ObjectIdentifier>)> callback);
 
 // Tries to download all tree nodes and values with |EAGER| priority that are
 // not locally available from sync. To do this |PageStorage::GetObject| is
 // called for all corresponding objects.
-void GetObjectsFromSync(coroutine::CoroutineService* coroutine_service,
-                        PageStorage* page_storage,
-                        ObjectIdentifier root_identifier,
-                        fit::function<void(Status)> callback);
+void GetObjectsFromSync(coroutine::CoroutineService* coroutine_service, PageStorage* page_storage,
+                        ObjectIdentifier root_identifier, fit::function<void(Status)> callback);
 
 // Iterates through the nodes of the tree with the given root and calls
 // |on_next| on found entries with a key equal to or greater than |min_key|. The
@@ -119,9 +116,8 @@ void GetObjectsFromSync(coroutine::CoroutineService* coroutine_service,
 // will interrupt the iteration in progress and no more |on_next| calls will be
 // made. |on_done| is called once, upon successfull completion, i.e. when there
 // are no more elements or iteration was interrupted, or if an error occurs.
-void ForEachEntry(coroutine::CoroutineService* coroutine_service,
-                  PageStorage* page_storage, ObjectIdentifier root_identifier,
-                  std::string min_key,
+void ForEachEntry(coroutine::CoroutineService* coroutine_service, PageStorage* page_storage,
+                  ObjectIdentifier root_identifier, std::string min_key,
                   fit::function<bool(EntryAndNodeIdentifier)> on_next,
                   fit::function<void(Status)> on_done);
 

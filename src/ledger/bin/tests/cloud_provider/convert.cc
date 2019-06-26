@@ -17,8 +17,7 @@ fidl::VectorPtr<uint8_t> ToArray(const std::string& val) {
 }
 
 std::string ToString(const fidl::VectorPtr<uint8_t>& bytes) {
-  return std::string(reinterpret_cast<const char*>(bytes->data()),
-                     bytes->size());
+  return std::string(reinterpret_cast<const char*>(bytes->data()), bytes->size());
 }
 
 std::string ToHex(const std::string& bytes) {

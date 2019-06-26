@@ -19,8 +19,7 @@ namespace ledger {
 class TestPageWatcher : public PageWatcher {
  public:
   explicit TestPageWatcher(
-      fidl::InterfaceRequest<PageWatcher> request,
-      fit::closure change_callback = [] {});
+      fidl::InterfaceRequest<PageWatcher> request, fit::closure change_callback = [] {});
 
   void DelayCallback(bool delay_callback);
   void CallOnChangeCallback();

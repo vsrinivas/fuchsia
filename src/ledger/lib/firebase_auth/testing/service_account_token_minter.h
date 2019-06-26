@@ -21,13 +21,7 @@ namespace service_account {
 // it.
 class ServiceAccountTokenMinter {
  public:
-  enum Status {
-    OK,
-    NETWORK_ERROR,
-    BAD_RESPONSE,
-    AUTH_SERVER_ERROR,
-    INTERNAL_ERROR
-  };
+  enum Status { OK, NETWORK_ERROR, BAD_RESPONSE, AUTH_SERVER_ERROR, INTERNAL_ERROR };
 
   struct GetTokenResponse {
     Status status;
@@ -37,16 +31,13 @@ class ServiceAccountTokenMinter {
     std::string error_msg;
   };
   ServiceAccountTokenMinter(network_wrapper::NetworkWrapper* network_wrapper,
-                            std::unique_ptr<Credentials> credentials,
-                            std::string user_id);
+                            std::unique_ptr<Credentials> credentials, std::string user_id);
 
   ~ServiceAccountTokenMinter();
 
-  using GetFirebaseTokenCallback =
-      fit::function<void(const GetTokenResponse& response)>;
+  using GetFirebaseTokenCallback = fit::function<void(const GetTokenResponse& response)>;
 
-  void GetFirebaseToken(fidl::StringPtr firebase_api_key,
-                        GetFirebaseTokenCallback callback);
+  void GetFirebaseToken(fidl::StringPtr firebase_api_key, GetFirebaseTokenCallback callback);
 
   std::string GetClientId();
 
@@ -57,10 +48,9 @@ class ServiceAccountTokenMinter {
   bool GetCustomToken(std::string* custom_token);
   GetTokenResponse GetCachedToken(fidl::StringPtr firebase_api_key);
   GetTokenResponse GetSuccessResponse(const std::string& id_token);
-  GetTokenResponse GetErrorResponse(Status status,
-                                    const std::string& error_msg);
-  ::fuchsia::net::oldhttp::URLRequest GetIdentityRequest(
-      const std::string& api_key, const std::string& custom_token);
+  GetTokenResponse GetErrorResponse(Status status, const std::string& error_msg);
+  ::fuchsia::net::oldhttp::URLRequest GetIdentityRequest(const std::string& api_key,
+                                                         const std::string& custom_token);
   std::string GetIdentityRequestBody(const std::string& custom_token);
   void HandleIdentityResponse(const std::string& api_key,
                               ::fuchsia::net::oldhttp::URLResponse response);
@@ -70,8 +60,7 @@ class ServiceAccountTokenMinter {
   std::unique_ptr<Credentials> credentials_;
   const std::string user_id_;
   std::map<std::string, std::unique_ptr<CachedToken>> cached_tokens_;
-  std::map<std::string, std::vector<GetFirebaseTokenCallback>>
-      in_progress_callbacks_;
+  std::map<std::string, std::vector<GetFirebaseTokenCallback>> in_progress_callbacks_;
   callback::CancellableContainer in_progress_requests_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ServiceAccountTokenMinter);

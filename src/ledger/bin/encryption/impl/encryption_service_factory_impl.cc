@@ -8,16 +8,14 @@
 
 namespace encryption {
 
-EncryptionServiceFactoryImpl::EncryptionServiceFactoryImpl(
-    ledger::Environment* environment)
+EncryptionServiceFactoryImpl::EncryptionServiceFactoryImpl(ledger::Environment* environment)
     : environment_(environment) {}
 
 EncryptionServiceFactoryImpl::~EncryptionServiceFactoryImpl() {}
 
-std::unique_ptr<EncryptionService>
-EncryptionServiceFactoryImpl::MakeEncryptionService(std::string namespace_id) {
-  return std::make_unique<EncryptionServiceImpl>(environment_,
-                                                 std::move(namespace_id));
+std::unique_ptr<EncryptionService> EncryptionServiceFactoryImpl::MakeEncryptionService(
+    std::string namespace_id) {
+  return std::make_unique<EncryptionServiceImpl>(environment_, std::move(namespace_id));
 }
 
 }  // namespace encryption

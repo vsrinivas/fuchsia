@@ -50,8 +50,7 @@ class PageUpload : public storage::CommitWatcher {
     virtual bool IsDownloadIdle() = 0;
   };
 
-  PageUpload(callback::ScopedTaskRunner* task_runner,
-             storage::PageStorage* storage,
+  PageUpload(callback::ScopedTaskRunner* task_runner, storage::PageStorage* storage,
              encryption::EncryptionService* encryption_service,
              cloud_provider::PageCloudPtr* page_cloud, Delegate* delegate,
              std::unique_ptr<backoff::Backoff> backoff);
@@ -70,15 +69,12 @@ class PageUpload : public storage::CommitWatcher {
 
  private:
   // storage::CommitWatcher:
-  void OnNewCommits(
-      const std::vector<std::unique_ptr<const storage::Commit>>& /*commits*/,
-      storage::ChangeSource source) override;
+  void OnNewCommits(const std::vector<std::unique_ptr<const storage::Commit>>& /*commits*/,
+                    storage::ChangeSource source) override;
 
   void UploadUnsyncedCommits();
-  void VerifyUnsyncedCommits(
-      std::vector<std::unique_ptr<const storage::Commit>> commits);
-  void HandleUnsyncedCommits(
-      std::vector<std::unique_ptr<const storage::Commit>> commits);
+  void VerifyUnsyncedCommits(std::vector<std::unique_ptr<const storage::Commit>> commits);
+  void HandleUnsyncedCommits(std::vector<std::unique_ptr<const storage::Commit>> commits);
 
   // Sets the external state.
   void SetState(UploadSyncState new_state);

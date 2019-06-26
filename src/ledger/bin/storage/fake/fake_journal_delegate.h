@@ -28,26 +28,22 @@ class FakeJournalDelegate {
   // Regular commit.
   // |initial_data| must contain the content of the page when the transaction
   // starts.
-  FakeJournalDelegate(rng::Random* random, Data initial_data,
-                      CommitId parent_id, bool autocommit, uint64_t generation);
+  FakeJournalDelegate(rng::Random* random, Data initial_data, CommitId parent_id, bool autocommit,
+                      uint64_t generation);
   // Merge commit.
   // |initial_data| must contain the content of the page when the transaction
   // starts.
-  FakeJournalDelegate(rng::Random* random, Data initial_data,
-                      CommitId parent_id, CommitId other_id, bool autocommit,
-                      uint64_t generation);
+  FakeJournalDelegate(rng::Random* random, Data initial_data, CommitId parent_id, CommitId other_id,
+                      bool autocommit, uint64_t generation);
   ~FakeJournalDelegate();
 
   const CommitId& GetId() const { return id_; }
 
-  void SetValue(convert::ExtendedStringView key, ObjectIdentifier value,
-                KeyPriority priority);
+  void SetValue(convert::ExtendedStringView key, ObjectIdentifier value, KeyPriority priority);
   void Delete(convert::ExtendedStringView key);
   void Clear();
 
-  void Commit(
-      fit::function<void(Status, std::unique_ptr<const storage::Commit>)>
-          callback);
+  void Commit(fit::function<void(Status, std::unique_ptr<const storage::Commit>)> callback);
   bool IsCommitted() const;
 
   uint64_t GetGeneration() const { return generation_; }
@@ -69,8 +65,7 @@ class FakeJournalDelegate {
   uint64_t generation_;
 
   bool is_committed_ = false;
-  fit::function<void(Status, std::unique_ptr<const storage::Commit>)>
-      commit_callback_;
+  fit::function<void(Status, std::unique_ptr<const storage::Commit>)> commit_callback_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FakeJournalDelegate);
 };

@@ -33,8 +33,7 @@ firebase_auth::FirebaseAuthImpl::Config GetFirebaseAuthConfig(
 }  // namespace
 
 FactoryImpl::FactoryImpl(async_dispatcher_t* dispatcher, rng::Random* random,
-                         sys::ComponentContext* component_context,
-                         std::string cobalt_client_name)
+                         sys::ComponentContext* component_context, std::string cobalt_client_name)
     : dispatcher_(dispatcher),
       random_(random),
       component_context_(component_context),
@@ -55,51 +54,40 @@ void FactoryImpl::ShutDown(fit::closure callback) {
 }
 
 void FactoryImpl::GetCloudProvider(
-    Config config,
-    fidl::InterfaceHandle<fuchsia::auth::TokenManager> token_manager,
-    fidl::InterfaceRequest<cloud_provider::CloudProvider>
-        cloud_provider_request,
+    Config config, fidl::InterfaceHandle<fuchsia::auth::TokenManager> token_manager,
+    fidl::InterfaceRequest<cloud_provider::CloudProvider> cloud_provider_request,
     GetCloudProviderCallback callback) {
   auto firebase_auth = std::make_unique<firebase_auth::FirebaseAuthImpl>(
-      GetFirebaseAuthConfig(config.api_key, config.user_profile_id,
-                            cobalt_client_name_),
+      GetFirebaseAuthConfig(config.api_key, config.user_profile_id, cobalt_client_name_),
       dispatcher_, random_, token_manager.Bind(), component_context_);
 
   GetFirebaseCloudProvider(std::move(config), std::move(firebase_auth),
-                           std::move(cloud_provider_request),
-                           std::move(callback));
+                           std::move(cloud_provider_request), std::move(callback));
 }
 
 void FactoryImpl::GetFirebaseCloudProvider(
-    Config config,
-    std::unique_ptr<firebase_auth::FirebaseAuthImpl> firebase_auth,
-    fidl::InterfaceRequest<cloud_provider::CloudProvider>
-        cloud_provider_request,
+    Config config, std::unique_ptr<firebase_auth::FirebaseAuthImpl> firebase_auth,
+    fidl::InterfaceRequest<cloud_provider::CloudProvider> cloud_provider_request,
     fit::function<void(cloud_provider::Status)> callback) {
   FXL_DCHECK(firebase_auth);
 
-  auto token_request =
-      firebase_auth->GetFirebaseUserId(
-          [this, config = std::move(config),
-           firebase_auth = std::move(firebase_auth),
-           cloud_provider_request = std::move(cloud_provider_request),
-           callback = std::move(callback)](firebase_auth::AuthStatus status,
-                                           std::string user_id) mutable {
-            if (status != firebase_auth::AuthStatus::OK) {
-              FXL_LOG(ERROR)
-                  << "Failed to retrieve the user ID from auth token provider";
-              callback(cloud_provider::Status::AUTH_ERROR);
-              return;
-            }
+  auto token_request = firebase_auth->GetFirebaseUserId(
+      [this, config = std::move(config), firebase_auth = std::move(firebase_auth),
+       cloud_provider_request = std::move(cloud_provider_request), callback = std::move(callback)](
+          firebase_auth::AuthStatus status, std::string user_id) mutable {
+        if (status != firebase_auth::AuthStatus::OK) {
+          FXL_LOG(ERROR) << "Failed to retrieve the user ID from auth token provider";
+          callback(cloud_provider::Status::AUTH_ERROR);
+          return;
+        }
 
-            auto firestore_service = std::make_unique<FirestoreServiceImpl>(
-                config.server_id, dispatcher_, MakeChannel());
+        auto firestore_service =
+            std::make_unique<FirestoreServiceImpl>(config.server_id, dispatcher_, MakeChannel());
 
-            providers_.emplace(random_, user_id, std::move(firebase_auth),
-                               std::move(firestore_service),
-                               std::move(cloud_provider_request));
-            callback(cloud_provider::Status::OK);
-          });
+        providers_.emplace(random_, user_id, std::move(firebase_auth), std::move(firestore_service),
+                           std::move(cloud_provider_request));
+        callback(cloud_provider::Status::OK);
+      });
   token_requests_.emplace(token_request);
 }
 

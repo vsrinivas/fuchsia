@@ -25,8 +25,8 @@ namespace service_account {
 // this JSON file must be pass to the |Parse| method of this class.
 class Credentials {
  public:
-  Credentials(std::string project_id, std::string client_email,
-              std::string client_id, bssl::UniquePtr<EVP_PKEY> private_key);
+  Credentials(std::string project_id, std::string client_email, std::string client_id,
+              bssl::UniquePtr<EVP_PKEY> private_key);
 
   const std::string& project_id() { return project_id_; }
   const std::string& client_email() { return client_email_; }

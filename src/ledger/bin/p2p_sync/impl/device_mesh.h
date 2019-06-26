@@ -24,8 +24,7 @@ class DeviceMesh {
   virtual DeviceSet GetDeviceList() = 0;
 
   // Sends the given buffer to a connected device.
-  virtual void Send(fxl::StringView device_name,
-                    convert::ExtendedStringView data) = 0;
+  virtual void Send(fxl::StringView device_name, convert::ExtendedStringView data) = 0;
 };
 
 }  // namespace p2p_sync

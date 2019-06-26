@@ -8,8 +8,7 @@
 
 namespace sync_coordinator {
 namespace {
-DownloadSyncState ConvertToDownloadSyncState(
-    cloud_sync::DownloadSyncState download) {
+DownloadSyncState ConvertToDownloadSyncState(cloud_sync::DownloadSyncState download) {
   switch (download) {
     case cloud_sync::DOWNLOAD_NOT_STARTED:
       return DownloadSyncState::DOWNLOAD_PENDING;
@@ -53,14 +52,12 @@ UploadSyncState ConvertToUploadSyncState(cloud_sync::UploadSyncState upload) {
 
 sync_coordinator::SyncStateWatcher::SyncStateContainer ConvertToSyncState(
     cloud_sync::SyncStateWatcher::SyncStateContainer state) {
-  return {ConvertToDownloadSyncState(state.download),
-          ConvertToUploadSyncState(state.upload)};
+  return {ConvertToDownloadSyncState(state.download), ConvertToUploadSyncState(state.upload)};
 }
 
 }  // namespace
 
-SyncWatcherConverter::SyncWatcherConverter(
-    sync_coordinator::SyncStateWatcher* watcher)
+SyncWatcherConverter::SyncWatcherConverter(sync_coordinator::SyncStateWatcher* watcher)
     : watcher_(watcher) {}
 SyncWatcherConverter::~SyncWatcherConverter() {}
 

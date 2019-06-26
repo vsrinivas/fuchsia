@@ -26,36 +26,29 @@ class MockCobaltLogger : public cobalt::CobaltLogger {
   MockCobaltLogger(int* called) : called_(called) {}
 
   void LogEvent(uint32_t metric_id, uint32_t event_code) override {}
-  void LogEventCount(uint32_t metric_id, uint32_t event_code,
-                     const std::string& component, zx::duration period_duration,
-                     int64_t count) override {
+  void LogEventCount(uint32_t metric_id, uint32_t event_code, const std::string& component,
+                     zx::duration period_duration, int64_t count) override {
     EXPECT_EQ(4u, metric_id);
     // The value should contain the client name.
     EXPECT_TRUE(component.find("firebase-test") != std::string::npos);
     *called_ += 1;
   }
-  void LogElapsedTime(uint32_t metric_id, uint32_t event_code,
-                      const std::string& component,
+  void LogElapsedTime(uint32_t metric_id, uint32_t event_code, const std::string& component,
                       zx::duration elapsed_time) override {}
-  void LogFrameRate(uint32_t metric_id, uint32_t event_code,
-                    const std::string& component, float fps) override {}
-  void LogMemoryUsage(uint32_t metric_id, uint32_t event_code,
-                      const std::string& component, int64_t bytes) override {}
+  void LogFrameRate(uint32_t metric_id, uint32_t event_code, const std::string& component,
+                    float fps) override {}
+  void LogMemoryUsage(uint32_t metric_id, uint32_t event_code, const std::string& component,
+                      int64_t bytes) override {}
   void LogString(uint32_t metric_id, const std::string& s) override {}
-  void StartTimer(uint32_t metric_id, uint32_t event_code,
-                  const std::string& component, const std::string& timer_id,
-                  zx::time timestamp, zx::duration timeout) override {}
-  void EndTimer(const std::string& timer_id, zx::time timestamp,
-                zx::duration timeout) override {}
-  void LogIntHistogram(
-      uint32_t metric_id, uint32_t event_code, const std::string& component,
-      std::vector<fuchsia::cobalt::HistogramBucket> histogram) override {}
-  void LogCustomEvent(
-      uint32_t metric_id,
-      std::vector<fuchsia::cobalt::CustomEventValue> event_values) override {}
+  void StartTimer(uint32_t metric_id, uint32_t event_code, const std::string& component,
+                  const std::string& timer_id, zx::time timestamp, zx::duration timeout) override {}
+  void EndTimer(const std::string& timer_id, zx::time timestamp, zx::duration timeout) override {}
+  void LogIntHistogram(uint32_t metric_id, uint32_t event_code, const std::string& component,
+                       std::vector<fuchsia::cobalt::HistogramBucket> histogram) override {}
+  void LogCustomEvent(uint32_t metric_id,
+                      std::vector<fuchsia::cobalt::CustomEventValue> event_values) override {}
   void LogCobaltEvent(fuchsia::cobalt::CobaltEvent event) override {}
-  void LogCobaltEvents(
-      std::vector<fuchsia::cobalt::CobaltEvent> events) override {}
+  void LogCobaltEvents(std::vector<fuchsia::cobalt::CobaltEvent> events) override {}
 
  private:
   int* called_;
@@ -66,10 +59,9 @@ class FirebaseAuthImplTest : public gtest::TestLoopFixture {
   FirebaseAuthImplTest()
       : token_manager_(dispatcher()),
         token_manager_binding_(&token_manager_),
-        firebase_auth_(
-            {"api_key", "user_id", "firebase-test", 1}, dispatcher(),
-            token_manager_binding_.NewBinding().Bind(), InitBackoff(),
-            std::make_unique<MockCobaltLogger>(&report_observation_count_)) {}
+        firebase_auth_({"api_key", "user_id", "firebase-test", 1}, dispatcher(),
+                       token_manager_binding_.NewBinding().Bind(), InitBackoff(),
+                       std::make_unique<MockCobaltLogger>(&report_observation_count_)) {}
 
   ~FirebaseAuthImplTest() override {}
 
@@ -97,8 +89,8 @@ TEST_F(FirebaseAuthImplTest, GetFirebaseToken) {
   bool called;
   AuthStatus auth_status;
   std::string firebase_token;
-  firebase_auth_.GetFirebaseToken(callback::Capture(
-      callback::SetWhenCalled(&called), &auth_status, &firebase_token));
+  firebase_auth_.GetFirebaseToken(
+      callback::Capture(callback::SetWhenCalled(&called), &auth_status, &firebase_token));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(AuthStatus::OK, auth_status);
@@ -112,8 +104,8 @@ TEST_F(FirebaseAuthImplTest, GetFirebaseTokenRetryOnError) {
   std::string firebase_token;
   token_manager_.SetError(fuchsia::auth::Status::NETWORK_ERROR);
   backoff_->SetOnGetNext(QuitLoopClosure());
-  firebase_auth_.GetFirebaseToken(callback::Capture(
-      callback::SetWhenCalled(&called), &auth_status, &firebase_token));
+  firebase_auth_.GetFirebaseToken(
+      callback::Capture(callback::SetWhenCalled(&called), &auth_status, &firebase_token));
   RunLoopUntilIdle();
   EXPECT_FALSE(called);
   EXPECT_EQ(1, backoff_->get_next_count);
@@ -136,8 +128,8 @@ TEST_F(FirebaseAuthImplTest, GetFirebaseUserId) {
   bool called;
   AuthStatus auth_status;
   std::string firebase_user_id;
-  firebase_auth_.GetFirebaseUserId(callback::Capture(
-      callback::SetWhenCalled(&called), &auth_status, &firebase_user_id));
+  firebase_auth_.GetFirebaseUserId(
+      callback::Capture(callback::SetWhenCalled(&called), &auth_status, &firebase_user_id));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(AuthStatus::OK, auth_status);
@@ -151,8 +143,8 @@ TEST_F(FirebaseAuthImplTest, GetFirebaseUserIdRetryOnError) {
   std::string firebase_id;
   token_manager_.SetError(fuchsia::auth::Status::NETWORK_ERROR);
   backoff_->SetOnGetNext(QuitLoopClosure());
-  firebase_auth_.GetFirebaseUserId(callback::Capture(
-      callback::SetWhenCalled(&called), &auth_status, &firebase_id));
+  firebase_auth_.GetFirebaseUserId(
+      callback::Capture(callback::SetWhenCalled(&called), &auth_status, &firebase_id));
   RunLoopUntilIdle();
   EXPECT_FALSE(called);
   EXPECT_EQ(1, backoff_->get_next_count);
@@ -174,8 +166,8 @@ TEST_F(FirebaseAuthImplTest, GetFirebaseUserIdMaxRetry) {
   AuthStatus auth_status;
   token_manager_.SetError(fuchsia::auth::Status::NETWORK_ERROR);
   backoff_->SetOnGetNext(QuitLoopClosure());
-  firebase_auth_.GetFirebaseUserId(callback::Capture(
-      callback::SetWhenCalled(&called), &auth_status, &std::ignore));
+  firebase_auth_.GetFirebaseUserId(
+      callback::Capture(callback::SetWhenCalled(&called), &auth_status, &std::ignore));
   RunLoopUntilIdle();
   EXPECT_FALSE(called);
   EXPECT_EQ(1, backoff_->get_next_count);
@@ -197,8 +189,8 @@ TEST_F(FirebaseAuthImplTest, GetFirebaseUserIdNonRetriableError) {
   AuthStatus auth_status;
   token_manager_.SetError(fuchsia::auth::Status::INVALID_REQUEST);
   backoff_->SetOnGetNext(QuitLoopClosure());
-  firebase_auth_.GetFirebaseUserId(callback::Capture(
-      callback::SetWhenCalled(&called), &auth_status, &std::ignore));
+  firebase_auth_.GetFirebaseUserId(
+      callback::Capture(callback::SetWhenCalled(&called), &auth_status, &std::ignore));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(AuthStatus::ERROR, auth_status);

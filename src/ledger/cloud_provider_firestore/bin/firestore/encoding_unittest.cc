@@ -18,9 +18,7 @@ namespace {
 
 // Creates correct std::strings with \0 bytes inside from C-style string
 // constants.
-std::string operator"" _s(const char* str, size_t size) {
-  return std::string(str, size);
-}
+std::string operator"" _s(const char* str, size_t size) { return std::string(str, size); }
 
 using StringEncodingTest = ::testing::TestWithParam<std::string>;
 
@@ -36,9 +34,8 @@ TEST_P(StringEncodingTest, BackAndForth) {
 }
 
 INSTANTIATE_TEST_SUITE_P(ExampleData, StringEncodingTest,
-                         ::testing::Values(""_s, "abcdef"_s, "\x02\x7F"_s,
-                                           "~!@#$%^&*()_+-="_s, "\0"_s,
-                                           "bazinga\0\0\0"_s));
+                         ::testing::Values(""_s, "abcdef"_s, "\x02\x7F"_s, "~!@#$%^&*()_+-="_s,
+                                           "\0"_s, "bazinga\0\0\0"_s));
 
 TEST(BatchEncodingTest, Empty) {
   cloud_provider::CommitPack commits;
@@ -54,8 +51,7 @@ TEST(BatchEncodingTest, Empty) {
 
 TEST(BatchEncodingTest, TwoCommits) {
   cloud_provider::CommitPack commits;
-  ASSERT_TRUE(cloud_provider::EncodeCommitPack(
-      {{"id0", "data0"}, {"id1", "data1"}}, &commits));
+  ASSERT_TRUE(cloud_provider::EncodeCommitPack({{"id0", "data0"}, {"id1", "data1"}}, &commits));
   google::firestore::v1beta1::Document document;
   ASSERT_TRUE(EncodeCommitBatch(commits, &document));
 
@@ -74,8 +70,8 @@ TEST(BatchEncodingTest, Timestamp) {
   ASSERT_TRUE(cloud_provider::EncodeCommitPack({{"id0", "data0"}}, &commits));
   google::firestore::v1beta1::Document document;
   google::protobuf::Timestamp protobuf_timestamp;
-  ASSERT_TRUE(google::protobuf::util::TimeUtil::FromString(
-      "2018-06-26T14:39:22+00:00", &protobuf_timestamp));
+  ASSERT_TRUE(google::protobuf::util::TimeUtil::FromString("2018-06-26T14:39:22+00:00",
+                                                           &protobuf_timestamp));
   std::string original_timestamp;
   ASSERT_TRUE(protobuf_timestamp.SerializeToString(&original_timestamp));
   EncodeCommitBatchWithTimestamp(commits, original_timestamp, &document);
@@ -126,8 +122,7 @@ TEST(BatchEncodingTest, DecodingErrors) {
         (*document.mutable_fields())["commits"].mutable_array_value();
     google::firestore::v1beta1::MapValue* commit_value =
         commit_array->add_values()->mutable_map_value();
-    *((*commit_value->mutable_fields())["id"].mutable_bytes_value()) =
-        "some_id";
+    *((*commit_value->mutable_fields())["id"].mutable_bytes_value()) = "some_id";
     EXPECT_FALSE(DecodeCommitBatch(document, &entries, &timestamp));
   }
 
@@ -138,8 +133,7 @@ TEST(BatchEncodingTest, DecodingErrors) {
         (*document.mutable_fields())["commits"].mutable_array_value();
     google::firestore::v1beta1::MapValue* commit_value =
         commit_array->add_values()->mutable_map_value();
-    *((*commit_value->mutable_fields())["data"].mutable_bytes_value()) =
-        "some_data";
+    *((*commit_value->mutable_fields())["data"].mutable_bytes_value()) = "some_data";
     EXPECT_FALSE(DecodeCommitBatch(document, &entries, &timestamp));
   }
 
@@ -150,10 +144,8 @@ TEST(BatchEncodingTest, DecodingErrors) {
         (*document.mutable_fields())["commits"].mutable_array_value();
     google::firestore::v1beta1::MapValue* commit_value =
         commit_array->add_values()->mutable_map_value();
-    *((*commit_value->mutable_fields())["id"].mutable_bytes_value()) =
-        "some_id";
-    *((*commit_value->mutable_fields())["data"].mutable_bytes_value()) =
-        "some_data";
+    *((*commit_value->mutable_fields())["id"].mutable_bytes_value()) = "some_id";
+    *((*commit_value->mutable_fields())["data"].mutable_bytes_value()) = "some_data";
     EXPECT_TRUE(DecodeCommitBatch(document, &entries, &timestamp));
   }
 }

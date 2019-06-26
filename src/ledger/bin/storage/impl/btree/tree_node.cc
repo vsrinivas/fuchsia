@@ -48,8 +48,7 @@ void ExtractReferences(const std::vector<Entry>& entries,
 
 }  // namespace
 
-TreeNode::TreeNode(ObjectIdentifier identifier, uint8_t level,
-                   std::vector<Entry> entries,
+TreeNode::TreeNode(ObjectIdentifier identifier, uint8_t level, std::vector<Entry> entries,
                    std::map<size_t, ObjectIdentifier> children)
     : identifier_(std::move(identifier)),
       level_(level),
@@ -63,22 +62,20 @@ TreeNode::~TreeNode() {}
 void TreeNode::FromIdentifier(
     PageStorage* page_storage, ObjectIdentifier identifier,
     fit::function<void(Status, std::unique_ptr<const TreeNode>)> callback) {
-  page_storage->GetObject(
-      identifier, PageStorage::Location::NETWORK,
-      [identifier, callback = std::move(callback)](
-          Status status, std::unique_ptr<const Object> object) mutable {
-        if (status != Status::OK) {
-          callback(status, nullptr);
-          return;
-        }
-        std::unique_ptr<const TreeNode> node;
-        status = FromObject(*object, &node);
-        callback(status, std::move(node));
-      });
+  page_storage->GetObject(identifier, PageStorage::Location::NETWORK,
+                          [identifier, callback = std::move(callback)](
+                              Status status, std::unique_ptr<const Object> object) mutable {
+                            if (status != Status::OK) {
+                              callback(status, nullptr);
+                              return;
+                            }
+                            std::unique_ptr<const TreeNode> node;
+                            status = FromObject(*object, &node);
+                            callback(status, std::move(node));
+                          });
 }
 
-Status TreeNode::FromObject(const Object& object,
-                            std::unique_ptr<const TreeNode>* node) {
+Status TreeNode::FromObject(const Object& object, std::unique_ptr<const TreeNode>* node) {
   fxl::StringView data;
   Status status = object.GetData(&data);
   if (status != Status::OK) {
@@ -90,28 +87,27 @@ Status TreeNode::FromObject(const Object& object,
   if (!DecodeNode(data, &level, &entries, &children)) {
     return Status::DATA_INTEGRITY_ERROR;
   }
-  node->reset(new TreeNode(object.GetIdentifier(), level, std::move(entries),
-                           std::move(children)));
+  node->reset(new TreeNode(object.GetIdentifier(), level, std::move(entries), std::move(children)));
   return Status::OK;
 }
 
 void TreeNode::Empty(PageStorage* page_storage,
                      fit::function<void(Status, ObjectIdentifier)> callback) {
-  FromEntries(page_storage, 0u, std::vector<Entry>(),
-              std::map<size_t, ObjectIdentifier>(), std::move(callback));
+  FromEntries(page_storage, 0u, std::vector<Entry>(), std::map<size_t, ObjectIdentifier>(),
+              std::move(callback));
 }
 
-void TreeNode::FromEntries(
-    PageStorage* page_storage, uint8_t level, const std::vector<Entry>& entries,
-    const std::map<size_t, ObjectIdentifier>& children,
-    fit::function<void(Status, ObjectIdentifier)> callback) {
+void TreeNode::FromEntries(PageStorage* page_storage, uint8_t level,
+                           const std::vector<Entry>& entries,
+                           const std::map<size_t, ObjectIdentifier>& children,
+                           fit::function<void(Status, ObjectIdentifier)> callback) {
   FXL_DCHECK(children.empty() || children.rbegin()->first <= entries.size());
   ObjectReferencesAndPriority tree_references;
   ExtractReferences(entries, children, &tree_references);
   std::string encoding = EncodeNode(level, entries, children);
-  page_storage->AddObjectFromLocal(
-      ObjectType::TREE_NODE, storage::DataSource::Create(std::move(encoding)),
-      std::move(tree_references), std::move(callback));
+  page_storage->AddObjectFromLocal(ObjectType::TREE_NODE,
+                                   storage::DataSource::Create(std::move(encoding)),
+                                   std::move(tree_references), std::move(callback));
 }
 
 int TreeNode::GetKeyCount() const { return entries_.size(); }
@@ -126,18 +122,14 @@ void TreeNode::AppendReferences(ObjectReferencesAndPriority* references) const {
   ExtractReferences(entries_, children_, references);
 }
 
-Status TreeNode::FindKeyOrChild(convert::ExtendedStringView key,
-                                int* index) const {
+Status TreeNode::FindKeyOrChild(convert::ExtendedStringView key, int* index) const {
   if (key.empty()) {
     *index = 0;
-    return !entries_.empty() && entries_[0].key.empty() ? Status::OK
-                                                        : Status::KEY_NOT_FOUND;
+    return !entries_.empty() && entries_[0].key.empty() ? Status::OK : Status::KEY_NOT_FOUND;
   }
-  auto it =
-      std::lower_bound(entries_.begin(), entries_.end(), key,
-                       [](const Entry& entry, convert::ExtendedStringView key) {
-                         return entry.key < key;
-                       });
+  auto it = std::lower_bound(
+      entries_.begin(), entries_.end(), key,
+      [](const Entry& entry, convert::ExtendedStringView key) { return entry.key < key; });
   if (it == entries_.end()) {
     *index = entries_.size();
     return Status::KEY_NOT_FOUND;

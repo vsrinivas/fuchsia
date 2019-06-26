@@ -34,14 +34,11 @@ constexpr fxl::StringView kSyncParamsSchema = R"({
 })";
 
 constexpr fxl::StringView kCredentialsPathFlag = "credentials-path";
-constexpr fxl::StringView kGnCredentialsPathArg =
-    "ledger_sync_credentials_file";
-constexpr fxl::StringView kCredentialsDefaultPath =
-    "/pkg/data/sync_credentials.json";
+constexpr fxl::StringView kGnCredentialsPathArg = "ledger_sync_credentials_file";
+constexpr fxl::StringView kCredentialsDefaultPath = "/pkg/data/sync_credentials.json";
 
 // URL that the sync infra bots use to pass the sync credentials to the tests.
-constexpr fxl::StringView kCredentialsFetchUrl =
-    "http://10.0.2.2:8081/ledger_e2e_sync_credentials";
+constexpr fxl::StringView kCredentialsFetchUrl = "http://10.0.2.2:8081/ledger_e2e_sync_credentials";
 
 void WarnIncorrectSyncParams() {
   std::cerr << "Missing the sync parameters." << std::endl;
@@ -64,16 +61,15 @@ void WarnIncorrectSyncParams() {
 // blocks until credentials are retrieved. This is intended exclusively for
 // infra bots that will expose the credentials over the network when running
 // sync tests.
-bool FetchCredentials(sys::ComponentContext* component_context,
-                      std::string* credentials_path, std::string* credentials) {
+bool FetchCredentials(sys::ComponentContext* component_context, std::string* credentials_path,
+                      std::string* credentials) {
   *credentials_path = kCredentialsFetchUrl.ToString();
 
   fidl::SynchronousInterfacePtr<http::HttpService> network_service;
   component_context->svc()->Connect(network_service.NewRequest());
   fidl::SynchronousInterfacePtr<http::URLLoader> url_loader;
 
-  zx_status_t status =
-      network_service->CreateURLLoader(url_loader.NewRequest());
+  zx_status_t status = network_service->CreateURLLoader(url_loader.NewRequest());
   if (status != ZX_OK) {
     FXL_LOG(WARNING) << "Unable to retrieve an URLLoader.";
     return false;
@@ -92,8 +88,7 @@ bool FetchCredentials(sys::ComponentContext* component_context,
   }
 
   if (response.error) {
-    FXL_LOG(ERROR) << "Net error " << response.error->code << ": "
-                   << response.error->description;
+    FXL_LOG(ERROR) << "Net error " << response.error->code << ": " << response.error->description;
     return false;
   }
 
@@ -115,11 +110,9 @@ bool FetchCredentials(sys::ComponentContext* component_context,
 // If it cannot find the credentials, this function will return |false|, and
 // |credentials_path| will contain the path of the last tried location.
 bool GetCredentialsContent(const fxl::CommandLine& command_line,
-                           sys::ComponentContext* component_context,
-                           std::string* credentials_path,
+                           sys::ComponentContext* component_context, std::string* credentials_path,
                            std::string* credentials) {
-  if (command_line.GetOptionValue(kCredentialsPathFlag.ToString(),
-                                  credentials_path)) {
+  if (command_line.GetOptionValue(kCredentialsPathFlag.ToString(), credentials_path)) {
     return files::ReadFileToString(*credentials_path, credentials);
   }
   *credentials_path = kCredentialsDefaultPath.ToString();
@@ -179,8 +172,7 @@ bool ParseSyncParamsFromCommandLine(const fxl::CommandLine& command_line,
                                     SyncParams* sync_params) {
   std::string credentials;
   std::string credentials_path;
-  if (!GetCredentialsContent(command_line, component_context, &credentials_path,
-                             &credentials)) {
+  if (!GetCredentialsContent(command_line, component_context, &credentials_path, &credentials)) {
     std::cerr << "Cannot access " << credentials_path << std::endl;
     WarnIncorrectSyncParams();
     return false;
@@ -191,8 +183,7 @@ bool ParseSyncParamsFromCommandLine(const fxl::CommandLine& command_line,
   rapidjson::Document document;
   document.Parse(credentials);
   if (document.HasParseError()) {
-    std::cerr << "Cannot parse sync parameters at " << credentials_path
-              << std::endl;
+    std::cerr << "Cannot parse sync parameters at " << credentials_path << std::endl;
     // TODO(qsr): NET-1636 Remove this code once the network service handles
     // chunked encoding. Extract the content of credentials from the first '{'
     // to the last '}' to work around the network service not handling chunked
@@ -215,18 +206,14 @@ bool ParseSyncParamsFromCommandLine(const fxl::CommandLine& command_line,
   }
 
   sync_params->api_key = document["api-key"].GetString();
-  sync_params->credentials =
-      service_account::Credentials::Parse(document["service-account"]);
+  sync_params->credentials = service_account::Credentials::Parse(document["service-account"]);
   if (!sync_params->credentials) {
-    std::cerr << "Cannot parse credentials at " << credentials_path
-              << std::endl;
+    std::cerr << "Cannot parse credentials at " << credentials_path << std::endl;
     return false;
   }
   return true;
 }
 
-std::set<std::string> GetSyncParamFlags() {
-  return {kCredentialsPathFlag.ToString()};
-}
+std::set<std::string> GetSyncParamFlags() { return {kCredentialsPathFlag.ToString()}; }
 
 }  // namespace ledger

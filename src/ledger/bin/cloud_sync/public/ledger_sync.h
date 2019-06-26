@@ -29,9 +29,8 @@ class LedgerSync {
   //
   // The provided |error_callback| is called when sync is stopped due to an
   // unrecoverable error.
-  virtual std::unique_ptr<PageSync> CreatePageSync(
-      storage::PageStorage* page_storage,
-      storage::PageSyncClient* page_sync_client) = 0;
+  virtual std::unique_ptr<PageSync> CreatePageSync(storage::PageStorage* page_storage,
+                                                   storage::PageSyncClient* page_sync_client) = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(LedgerSync);

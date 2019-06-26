@@ -29,8 +29,7 @@ class CoroutineServiceImpl::CoroutineHandlerImpl : public CoroutineHandler {
   void Resume(ContinuationStatus status) override;
 
   void Start();
-  void set_cleanup(
-      fit::function<void(std::unique_ptr<context::Stack>)> cleanup) {
+  void set_cleanup(fit::function<void(std::unique_ptr<context::Stack>)> cleanup) {
     cleanup_ = std::move(cleanup);
   }
 
@@ -55,16 +54,13 @@ class CoroutineServiceImpl::CoroutineHandlerImpl : public CoroutineHandler {
 };
 
 CoroutineServiceImpl::CoroutineHandlerImpl::CoroutineHandlerImpl(
-    std::unique_ptr<context::Stack> stack,
-    fit::function<void(CoroutineHandler*)> runnable)
+    std::unique_ptr<context::Stack> stack, fit::function<void(CoroutineHandler*)> runnable)
     : stack_(std::move(stack)), runnable_(std::move(runnable)) {
   FXL_DCHECK(stack_);
   FXL_DCHECK(runnable_);
 }
 
-CoroutineServiceImpl::CoroutineHandlerImpl::~CoroutineHandlerImpl() {
-  FXL_DCHECK(!stack_);
-}
+CoroutineServiceImpl::CoroutineHandlerImpl::~CoroutineHandlerImpl() { FXL_DCHECK(!stack_); }
 
 ContinuationStatus CoroutineServiceImpl::CoroutineHandlerImpl::Yield() {
   FXL_DCHECK(!interrupted_);
@@ -76,16 +72,14 @@ ContinuationStatus CoroutineServiceImpl::CoroutineHandlerImpl::Yield() {
   return DoYield();
 }
 
-void CoroutineServiceImpl::CoroutineHandlerImpl::Resume(
-    ContinuationStatus status) {
+void CoroutineServiceImpl::CoroutineHandlerImpl::Resume(ContinuationStatus status) {
   FXL_DCHECK(!finished_);
 
   interrupted_ = interrupted_ || (status == ContinuationStatus::INTERRUPTED);
 #if __has_feature(address_sanitizer)
   void* fake_stack_save;
   __sanitizer_start_switch_fiber(
-      &fake_stack_save, reinterpret_cast<const void*>(stack_->safe_stack()),
-      stack_->stack_size());
+      &fake_stack_save, reinterpret_cast<const void*>(stack_->safe_stack()), stack_->stack_size());
 #endif
   context::SwapContext(&main_context_, &routine_context_);
 #if __has_feature(address_sanitizer)
@@ -101,8 +95,7 @@ void CoroutineServiceImpl::CoroutineHandlerImpl::Resume(
 
 void CoroutineServiceImpl::CoroutineHandlerImpl::Start() {
   context::MakeContext(&routine_context_, stack_.get(),
-                       &CoroutineServiceImpl::CoroutineHandlerImpl::StaticRun,
-                       this);
+                       &CoroutineServiceImpl::CoroutineHandlerImpl::StaticRun, this);
   Resume(ContinuationStatus::OK);
 }
 
@@ -128,17 +121,15 @@ ContinuationStatus CoroutineServiceImpl::CoroutineHandlerImpl::DoYield() {
   FXL_DCHECK(origin_stack_);
   FXL_DCHECK(origin_stacksize_);
   void* fake_stack_save = nullptr;
-  __sanitizer_start_switch_fiber(finished_ ? nullptr : &fake_stack_save,
-                                 origin_stack_, origin_stacksize_);
+  __sanitizer_start_switch_fiber(finished_ ? nullptr : &fake_stack_save, origin_stack_,
+                                 origin_stacksize_);
 #endif
   context::SwapContext(&routine_context_, &main_context_);
 #if __has_feature(address_sanitizer)
-  __sanitizer_finish_switch_fiber(fake_stack_save, &origin_stack_,
-                                  &origin_stacksize_);
+  __sanitizer_finish_switch_fiber(fake_stack_save, &origin_stack_, &origin_stacksize_);
 #endif
 
-  return interrupted_ ? ContinuationStatus::INTERRUPTED
-                      : ContinuationStatus::OK;
+  return interrupted_ ? ContinuationStatus::INTERRUPTED : ContinuationStatus::OK;
 }
 
 CoroutineServiceImpl::CoroutineServiceImpl() {}
@@ -149,8 +140,7 @@ CoroutineServiceImpl::~CoroutineServiceImpl() {
   }
 }
 
-void CoroutineServiceImpl::StartCoroutine(
-    fit::function<void(CoroutineHandler* handler)> runnable) {
+void CoroutineServiceImpl::StartCoroutine(fit::function<void(CoroutineHandler* handler)> runnable) {
   std::unique_ptr<context::Stack> stack;
   if (available_stack_.empty()) {
     stack = std::make_unique<context::Stack>();
@@ -158,20 +148,18 @@ void CoroutineServiceImpl::StartCoroutine(
     stack = std::move(available_stack_.back());
     available_stack_.pop_back();
   }
-  auto handler = std::make_unique<CoroutineHandlerImpl>(std::move(stack),
-                                                        std::move(runnable));
+  auto handler = std::make_unique<CoroutineHandlerImpl>(std::move(stack), std::move(runnable));
   auto handler_ptr = handler.get();
-  handler->set_cleanup([this,
-                        handler_ptr](std::unique_ptr<context::Stack> stack) {
+  handler->set_cleanup([this, handler_ptr](std::unique_ptr<context::Stack> stack) {
     if (available_stack_.size() < kMaxAvailableStacks) {
       stack->Release();
       available_stack_.push_back(std::move(stack));
     }
-    handlers_.erase(std::find_if(
-        handlers_.begin(), handlers_.end(),
-        [handler_ptr](const std::unique_ptr<CoroutineHandlerImpl>& handler) {
-          return handler.get() == handler_ptr;
-        }));
+    handlers_.erase(
+        std::find_if(handlers_.begin(), handlers_.end(),
+                     [handler_ptr](const std::unique_ptr<CoroutineHandlerImpl>& handler) {
+                       return handler.get() == handler_ptr;
+                     }));
   });
   handlers_.push_back(std::move(handler));
   handler_ptr->Start();

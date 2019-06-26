@@ -41,8 +41,7 @@ TEST_F(NetConnectorFactoryTest, HostList_OneHost) {
   std::vector<std::string> host_list;
   netconnector1->GetKnownDeviceNames(
       fuchsia::netconnector::kInitialKnownDeviceNames,
-      callback::Capture(callback::SetWhenCalled(&called), &version,
-                        &host_list));
+      callback::Capture(callback::SetWhenCalled(&called), &version, &host_list));
 
   RunLoopUntilIdle();
 
@@ -54,8 +53,7 @@ TEST_F(NetConnectorFactoryTest, HostList_OneHost) {
 
   called = false;
   netconnector1->GetKnownDeviceNames(
-      version, callback::Capture(callback::SetWhenCalled(&called), &version,
-                                 &host_list));
+      version, callback::Capture(callback::SetWhenCalled(&called), &version, &host_list));
 
   RunLoopUntilIdle();
   EXPECT_FALSE(called);
@@ -71,8 +69,7 @@ TEST_F(NetConnectorFactoryTest, HostList_TwoHosts_Sequence) {
   std::vector<std::string> host_list;
   netconnector1->GetKnownDeviceNames(
       fuchsia::netconnector::kInitialKnownDeviceNames,
-      callback::Capture(callback::SetWhenCalled(&called), &version,
-                        &host_list));
+      callback::Capture(callback::SetWhenCalled(&called), &version, &host_list));
 
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
@@ -80,8 +77,7 @@ TEST_F(NetConnectorFactoryTest, HostList_TwoHosts_Sequence) {
   called = false;
   uint64_t new_version = version;
   netconnector1->GetKnownDeviceNames(
-      version, callback::Capture(callback::SetWhenCalled(&called), &new_version,
-                                 &host_list));
+      version, callback::Capture(callback::SetWhenCalled(&called), &new_version, &host_list));
 
   RunLoopUntilIdle();
   EXPECT_FALSE(called);
@@ -100,8 +96,7 @@ TEST_F(NetConnectorFactoryTest, HostList_TwoHosts_Sequence) {
   called = false;
   netconnector2->GetKnownDeviceNames(
       fuchsia::netconnector::kInitialKnownDeviceNames,
-      callback::Capture(callback::SetWhenCalled(&called), &new_version,
-                        &host_list));
+      callback::Capture(callback::SetWhenCalled(&called), &new_version, &host_list));
 
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
@@ -113,8 +108,7 @@ TEST_F(NetConnectorFactoryTest, HostList_TwoHosts_Sequence) {
   netconnector2.Unbind();
 
   netconnector1->GetKnownDeviceNames(
-      new_version, callback::Capture(callback::SetWhenCalled(&called),
-                                     &new_version, &host_list));
+      new_version, callback::Capture(callback::SetWhenCalled(&called), &new_version, &host_list));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   ASSERT_GE(1u, host_list.size());
@@ -134,8 +128,7 @@ TEST_F(NetConnectorFactoryTest, HostList_TwoHosts_Chained) {
   std::vector<std::string> host_list;
   netconnector1->GetKnownDeviceNames(
       fuchsia::netconnector::kInitialKnownDeviceNames,
-      callback::Capture(callback::SetWhenCalled(&called), &version,
-                        &host_list));
+      callback::Capture(callback::SetWhenCalled(&called), &version, &host_list));
 
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
@@ -143,8 +136,7 @@ TEST_F(NetConnectorFactoryTest, HostList_TwoHosts_Chained) {
   called = false;
   uint64_t new_version = version;
   netconnector1->GetKnownDeviceNames(
-      version, callback::Capture(callback::SetWhenCalled(&called), &new_version,
-                                 &host_list));
+      version, callback::Capture(callback::SetWhenCalled(&called), &new_version, &host_list));
 
   RunLoopUntilIdle();
   EXPECT_FALSE(called);
@@ -161,8 +153,7 @@ TEST_F(NetConnectorFactoryTest, HostList_TwoHosts_Chained) {
   EXPECT_EQ("host2", host_list.at(1));
 
   netconnector1->GetKnownDeviceNames(
-      new_version, callback::Capture(callback::SetWhenCalled(&called),
-                                     &new_version, &host_list));
+      new_version, callback::Capture(callback::SetWhenCalled(&called), &new_version, &host_list));
 
   RunLoopUntilIdle();
   EXPECT_FALSE(called);
@@ -185,8 +176,7 @@ TEST_F(NetConnectorFactoryTest, HostList_TwoHosts_Callback) {
   std::vector<std::string> host_list;
   netconnector1->GetKnownDeviceNames(
       fuchsia::netconnector::kInitialKnownDeviceNames,
-      callback::Capture(callback::SetWhenCalled(&called), &version,
-                        &host_list));
+      callback::Capture(callback::SetWhenCalled(&called), &version, &host_list));
 
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
@@ -194,8 +184,7 @@ TEST_F(NetConnectorFactoryTest, HostList_TwoHosts_Callback) {
   called = false;
   uint64_t new_version;
   netconnector1->GetKnownDeviceNames(
-      version, callback::Capture(callback::SetWhenCalled(&called), &new_version,
-                                 &host_list));
+      version, callback::Capture(callback::SetWhenCalled(&called), &new_version, &host_list));
 
   RunLoopUntilIdle();
   EXPECT_FALSE(called);
@@ -213,11 +202,9 @@ TEST_F(NetConnectorFactoryTest, HostList_TwoHosts_Callback) {
 
   bool called2;
   netconnector1->GetKnownDeviceNames(
-      new_version, callback::Capture(callback::SetWhenCalled(&called),
-                                     &new_version, &host_list));
+      new_version, callback::Capture(callback::SetWhenCalled(&called), &new_version, &host_list));
   netconnector2->GetKnownDeviceNames(
-      new_version, callback::Capture(callback::SetWhenCalled(&called2),
-                                     &new_version, &host_list));
+      new_version, callback::Capture(callback::SetWhenCalled(&called2), &new_version, &host_list));
 
   RunLoopUntilIdle();
   EXPECT_FALSE(called);
@@ -264,8 +251,7 @@ TEST_F(NetConnectorFactoryTest, ServiceProvider) {
   FXL_CHECK(status == ZX_OK) << "zx::channel::create failed, status " << status;
 
   fuchsia::sys::ServiceProviderPtr service_provider_ptr;
-  netconnector2->GetDeviceServiceProvider("host1",
-                                          service_provider_ptr.NewRequest());
+  netconnector2->GetDeviceServiceProvider("host1", service_provider_ptr.NewRequest());
 
   service_provider_ptr->ConnectToService("test_service", std::move(remote));
 
@@ -278,15 +264,15 @@ TEST_F(NetConnectorFactoryTest, ServiceProvider) {
   // Sets up MessageRelays to abstract sending messages through channels.
   bool called_host1 = false;
   std::vector<uint8_t> message_host1;
-  relays_host1[0]->SetMessageReceivedCallback(callback::Capture(
-      callback::SetWhenCalled(&called_host1), &message_host1));
+  relays_host1[0]->SetMessageReceivedCallback(
+      callback::Capture(callback::SetWhenCalled(&called_host1), &message_host1));
 
   netconnector::MessageRelay relay2;
   relay2.SetChannel(std::move(local));
   bool called_host2 = false;
   std::vector<uint8_t> message_host2;
-  relay2.SetMessageReceivedCallback(callback::Capture(
-      callback::SetWhenCalled(&called_host2), &message_host2));
+  relay2.SetMessageReceivedCallback(
+      callback::Capture(callback::SetWhenCalled(&called_host2), &message_host2));
 
   // Sends a message from host2 to host1.
   relay2.SendMessage({0u, 1u});
@@ -307,8 +293,7 @@ TEST_F(NetConnectorFactoryTest, ServiceProvider) {
 
   // Verifies that disconnection works.
   bool relay2_disconnected = false;
-  relay2.SetChannelClosedCallback(
-      callback::SetWhenCalled(&relay2_disconnected));
+  relay2.SetChannelClosedCallback(callback::SetWhenCalled(&relay2_disconnected));
   relays_host1[0].reset();
 
   RunLoopUntilIdle();

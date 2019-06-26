@@ -38,16 +38,11 @@ void RemoteConnection::Disconnect() {
   }
 }
 
-void RemoteConnection::set_on_empty(fit::closure on_empty) {
-  on_empty_ = std::move(on_empty);
-}
+void RemoteConnection::set_on_empty(fit::closure on_empty) { on_empty_ = std::move(on_empty); }
 
-void RemoteConnection::set_on_close(fit::closure on_close) {
-  on_close_ = std::move(on_close);
-}
+void RemoteConnection::set_on_close(fit::closure on_close) { on_close_ = std::move(on_close); }
 
-void RemoteConnection::set_on_message(
-    fit::function<void(std::vector<uint8_t>)> on_message) {
+void RemoteConnection::set_on_message(fit::function<void(std::vector<uint8_t>)> on_message) {
   on_message_ = std::move(on_message);
 }
 
@@ -62,8 +57,7 @@ void RemoteConnection::OnChannelClosed() {
 }
 
 void RemoteConnection::OnNewMessage(std::vector<uint8_t> data) {
-  FXL_DCHECK(on_message_)
-      << "No message handler has been set. We would be dropping messages.";
+  FXL_DCHECK(on_message_) << "No message handler has been set. We would be dropping messages.";
 
   if (on_message_) {
     on_message_(std::move(data));

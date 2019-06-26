@@ -25,13 +25,11 @@ class FileIndexSerialization {
   static bool CheckValidFileIndexSerialization(fxl::StringView data);
 
   // Parses a |FileIndex| from |content|.
-  static Status ParseFileIndex(fxl::StringView content,
-                               const FileIndex** file_index);
+  static Status ParseFileIndex(fxl::StringView content, const FileIndex** file_index);
 
   // Builds the |FileIndex| representing the given children.
-  static void BuildFileIndex(
-      const std::vector<ObjectIdentifierAndSize>& children,
-      std::unique_ptr<DataSource::DataChunk>* output, size_t* total_size);
+  static void BuildFileIndex(const std::vector<ObjectIdentifierAndSize>& children,
+                             std::unique_ptr<DataSource::DataChunk>* output, size_t* total_size);
 
  private:
   FileIndexSerialization() {}

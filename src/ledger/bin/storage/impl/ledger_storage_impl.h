@@ -25,8 +25,7 @@ class LedgerStorageImpl : public LedgerStorage {
  public:
   LedgerStorageImpl(ledger::Environment* environment,
                     encryption::EncryptionService* encryption_service,
-                    storage::DbFactory* db_factory,
-                    ledger::DetachedPath content_dir);
+                    storage::DbFactory* db_factory, ledger::DetachedPath content_dir);
   ~LedgerStorageImpl() override;
 
   // Initializes this LedgerStorageImpl by creating the |content_dir| directory
@@ -34,33 +33,26 @@ class LedgerStorageImpl : public LedgerStorage {
   Status Init();
 
   // LedgerStorage:
-  void ListPages(
-      fit::function<void(Status, std::set<PageId>)> callback) override;
+  void ListPages(fit::function<void(Status, std::set<PageId>)> callback) override;
   void CreatePageStorage(
-      PageId page_id,
-      fit::function<void(Status, std::unique_ptr<PageStorage>)> callback)
-      override;
+      PageId page_id, fit::function<void(Status, std::unique_ptr<PageStorage>)> callback) override;
 
   void GetPageStorage(PageId page_id,
-                      fit::function<void(Status, std::unique_ptr<PageStorage>)>
-                          callback) override;
+                      fit::function<void(Status, std::unique_ptr<PageStorage>)> callback) override;
 
-  void DeletePageStorage(PageIdView page_id,
-                         fit::function<void(Status)> callback) override;
+  void DeletePageStorage(PageIdView page_id, fit::function<void(Status)> callback) override;
 
  private:
   // Creates and returns through the callback, an initialized |PageStorageImpl|
   // object.
-  void InitializePageStorage(
-      PageId page_id, std::unique_ptr<Db> db,
-      fit::function<void(Status, std::unique_ptr<PageStorage>)> callback);
+  void InitializePageStorage(PageId page_id, std::unique_ptr<Db> db,
+                             fit::function<void(Status, std::unique_ptr<PageStorage>)> callback);
 
   // Gets or creates a new PageStorage at the given |path| for the page with the
   // given |page_id|.
-  void GetOrCreateDb(
-      ledger::DetachedPath path, PageId page_id,
-      DbFactory::OnDbNotFound on_db_not_found,
-      fit::function<void(Status, std::unique_ptr<PageStorage>)> callback);
+  void GetOrCreateDb(ledger::DetachedPath path, PageId page_id,
+                     DbFactory::OnDbNotFound on_db_not_found,
+                     fit::function<void(Status, std::unique_ptr<PageStorage>)> callback);
 
   ledger::DetachedPath GetPathFor(PageIdView page_id);
 
@@ -72,8 +64,7 @@ class LedgerStorageImpl : public LedgerStorage {
   // Keep track of all PageStorage instances currently in initialization. This
   // ensures that any created PageStorage that has not yet been passed to the
   // caller will be deleted when this object is deleted.
-  std::map<PageStorage*, std::unique_ptr<PageStorage>>
-      storage_in_initialization_;
+  std::map<PageStorage*, std::unique_ptr<PageStorage>> storage_in_initialization_;
 
   // This must be the last member of the class.
   fxl::WeakPtrFactory<LedgerStorageImpl> weak_factory_;

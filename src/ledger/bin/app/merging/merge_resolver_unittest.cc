@@ -53,22 +53,20 @@ class FakePageStorageImpl : public storage::PageStorageEmptyImpl {
     removed_commit_ids_.insert(commit_id.ToString());
   }
 
-  Status GetHeadCommits(std::vector<std::unique_ptr<const storage::Commit>>*
-                            head_commits) override {
+  Status GetHeadCommits(
+      std::vector<std::unique_ptr<const storage::Commit>>* head_commits) override {
     return storage_->GetHeadCommits(head_commits);
   }
 
   void GetMergeCommitIds(
       storage::CommitIdView parent1, storage::CommitIdView parent2,
-      fit::function<void(Status, std::vector<storage::CommitId>)> callback)
-      override {
+      fit::function<void(Status, std::vector<storage::CommitId>)> callback) override {
     storage_->GetMergeCommitIds(parent1, parent2, std::move(callback));
   }
 
   void GetCommit(
       storage::CommitIdView commit_id,
-      fit::function<void(Status, std::unique_ptr<const storage::Commit>)>
-          callback) override {
+      fit::function<void(Status, std::unique_ptr<const storage::Commit>)> callback) override {
     storage_->GetCommit(commit_id, std::move(callback));
   }
 
@@ -82,10 +80,8 @@ class FakePageStorageImpl : public storage::PageStorageEmptyImpl {
 
   void GetObject(
       storage::ObjectIdentifier object_identifier, Location location,
-      fit::function<void(Status, std::unique_ptr<const storage::Object>)>
-          callback) override {
-    storage_->GetObject(std::move(object_identifier), location,
-                        std::move(callback));
+      fit::function<void(Status, std::unique_ptr<const storage::Object>)> callback) override {
+    storage_->GetObject(std::move(object_identifier), location, std::move(callback));
   }
 
   std::unique_ptr<storage::Journal> StartCommit(
@@ -101,43 +97,35 @@ class FakePageStorageImpl : public storage::PageStorageEmptyImpl {
 
   void CommitJournal(
       std::unique_ptr<storage::Journal> journal,
-      fit::function<void(Status, std::unique_ptr<const storage::Commit>)>
-          callback) override {
+      fit::function<void(Status, std::unique_ptr<const storage::Commit>)> callback) override {
     storage_->CommitJournal(std::move(journal), std::move(callback));
   }
 
-  void AddObjectFromLocal(storage::ObjectType object_type,
-                          std::unique_ptr<storage::DataSource> data_source,
-                          storage::ObjectReferencesAndPriority tree_references,
-                          fit::function<void(Status, storage::ObjectIdentifier)>
-                              callback) override {
-    storage_->AddObjectFromLocal(object_type, std::move(data_source),
-                                 std::move(tree_references),
+  void AddObjectFromLocal(
+      storage::ObjectType object_type, std::unique_ptr<storage::DataSource> data_source,
+      storage::ObjectReferencesAndPriority tree_references,
+      fit::function<void(Status, storage::ObjectIdentifier)> callback) override {
+    storage_->AddObjectFromLocal(object_type, std::move(data_source), std::move(tree_references),
                                  std::move(callback));
   }
 
   void GetCommitContents(const storage::Commit& commit, std::string min_key,
                          fit::function<bool(storage::Entry)> on_next,
                          fit::function<void(Status)> on_done) override {
-    storage_->GetCommitContents(commit, std::move(min_key), std::move(on_next),
-                                std::move(on_done));
+    storage_->GetCommitContents(commit, std::move(min_key), std::move(on_next), std::move(on_done));
   }
 
-  void GetCommitContentsDiff(
-      const storage::Commit& base_commit, const storage::Commit& other_commit,
-      std::string min_key,
-      fit::function<bool(storage::EntryChange)> on_next_diff,
-      fit::function<void(Status)> on_done) override {
-    if (removed_commit_ids_.find(base_commit.GetId()) !=
-            removed_commit_ids_.end() ||
-        removed_commit_ids_.find(other_commit.GetId()) !=
-            removed_commit_ids_.end()) {
+  void GetCommitContentsDiff(const storage::Commit& base_commit,
+                             const storage::Commit& other_commit, std::string min_key,
+                             fit::function<bool(storage::EntryChange)> on_next_diff,
+                             fit::function<void(Status)> on_done) override {
+    if (removed_commit_ids_.find(base_commit.GetId()) != removed_commit_ids_.end() ||
+        removed_commit_ids_.find(other_commit.GetId()) != removed_commit_ids_.end()) {
       on_done(Status::NETWORK_ERROR);
       return;
     }
-    storage_->GetCommitContentsDiff(base_commit, other_commit,
-                                    std::move(min_key), std::move(on_next_diff),
-                                    std::move(on_done));
+    storage_->GetCommitContentsDiff(base_commit, other_commit, std::move(min_key),
+                                    std::move(on_next_diff), std::move(on_done));
   }
 
  private:
@@ -152,14 +140,11 @@ class RecordingTestStrategy : public MergeStrategy {
  public:
   RecordingTestStrategy() {}
   ~RecordingTestStrategy() override {}
-  void SetOnError(fit::closure on_error) override {
-    this->on_error = std::move(on_error);
-  }
+  void SetOnError(fit::closure on_error) override { this->on_error = std::move(on_error); }
 
   void SetOnMerge(fit::closure on_merge) { on_merge_ = std::move(on_merge); }
 
-  void Merge(storage::PageStorage* storage,
-             ActivePageManager* active_page_manager,
+  void Merge(storage::PageStorage* storage, ActivePageManager* active_page_manager,
              std::unique_ptr<const storage::Commit> merge_head_1,
              std::unique_ptr<const storage::Commit> merge_head_2,
              std::unique_ptr<const storage::Commit> merge_ancestor,
@@ -178,9 +163,8 @@ class RecordingTestStrategy : public MergeStrategy {
   }
 
   void Forward(MergeStrategy* strategy) {
-    strategy->Merge(storage_, active_page_manager_, std::move(head_1),
-                    std::move(head_2), std::move(ancestor),
-                    std::move(callback));
+    strategy->Merge(storage_, active_page_manager_, std::move(head_1), std::move(head_2),
+                    std::move(ancestor), std::move(callback));
   }
 
   void Cancel() override { cancel_calls++; }
@@ -216,64 +200,56 @@ class MergeResolverTest : public TestWithPageStorage {
     page_storage_ = std::make_unique<FakePageStorageImpl>(std::move(storage));
   }
 
-  storage::CommitId CreateCommit(
-      storage::CommitIdView parent_id,
-      fit::function<void(storage::Journal*)> contents) {
+  storage::CommitId CreateCommit(storage::CommitIdView parent_id,
+                                 fit::function<void(storage::Journal*)> contents) {
     return CreateCommit(page_storage_.get(), parent_id, std::move(contents));
   }
 
-  storage::CommitId CreateCommit(
-      storage::PageStorage* storage, storage::CommitIdView parent_id,
-      fit::function<void(storage::Journal*)> contents) {
+  storage::CommitId CreateCommit(storage::PageStorage* storage, storage::CommitIdView parent_id,
+                                 fit::function<void(storage::Journal*)> contents) {
     Status status;
     bool called;
     std::unique_ptr<const storage::Commit> base;
-    storage->GetCommit(
-        parent_id,
-        callback::Capture(callback::SetWhenCalled(&called), &status, &base));
+    storage->GetCommit(parent_id,
+                       callback::Capture(callback::SetWhenCalled(&called), &status, &base));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
     EXPECT_EQ(Status::OK, status);
 
-    std::unique_ptr<storage::Journal> journal =
-        storage->StartCommit(std::move(base));
+    std::unique_ptr<storage::Journal> journal = storage->StartCommit(std::move(base));
 
     contents(journal.get());
     std::unique_ptr<const storage::Commit> commit;
-    storage->CommitJournal(
-        std::move(journal),
-        callback::Capture(callback::SetWhenCalled(&called), &status, &commit));
+    storage->CommitJournal(std::move(journal),
+                           callback::Capture(callback::SetWhenCalled(&called), &status, &commit));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
     EXPECT_EQ(Status::OK, status);
     return commit->GetId();
   }
 
-  storage::CommitId CreateMergeCommit(
-      storage::CommitIdView parent_id1, storage::CommitIdView parent_id2,
-      fit::function<void(storage::Journal*)> contents) {
-    return CreateMergeCommit(page_storage_.get(), parent_id1, parent_id2,
-                             std::move(contents));
+  storage::CommitId CreateMergeCommit(storage::CommitIdView parent_id1,
+                                      storage::CommitIdView parent_id2,
+                                      fit::function<void(storage::Journal*)> contents) {
+    return CreateMergeCommit(page_storage_.get(), parent_id1, parent_id2, std::move(contents));
   }
 
-  storage::CommitId CreateMergeCommit(
-      storage::PageStorage* storage, storage::CommitIdView parent_id1,
-      storage::CommitIdView parent_id2,
-      fit::function<void(storage::Journal*)> contents) {
+  storage::CommitId CreateMergeCommit(storage::PageStorage* storage,
+                                      storage::CommitIdView parent_id1,
+                                      storage::CommitIdView parent_id2,
+                                      fit::function<void(storage::Journal*)> contents) {
     Status status;
     bool called;
     std::unique_ptr<const storage::Commit> base1;
-    storage->GetCommit(
-        parent_id1,
-        callback::Capture(callback::SetWhenCalled(&called), &status, &base1));
+    storage->GetCommit(parent_id1,
+                       callback::Capture(callback::SetWhenCalled(&called), &status, &base1));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
     EXPECT_EQ(Status::OK, status);
 
     std::unique_ptr<const storage::Commit> base2;
-    storage->GetCommit(
-        parent_id2,
-        callback::Capture(callback::SetWhenCalled(&called), &status, &base2));
+    storage->GetCommit(parent_id2,
+                       callback::Capture(callback::SetWhenCalled(&called), &status, &base2));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
     EXPECT_EQ(Status::OK, status);
@@ -284,9 +260,8 @@ class MergeResolverTest : public TestWithPageStorage {
 
     Status actual_status;
     std::unique_ptr<const storage::Commit> actual_commit;
-    storage->CommitJournal(std::move(journal),
-                           callback::Capture(callback::SetWhenCalled(&called),
-                                             &actual_status, &actual_commit));
+    storage->CommitJournal(std::move(journal), callback::Capture(callback::SetWhenCalled(&called),
+                                                                 &actual_status, &actual_commit));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
     EXPECT_EQ(Status::OK, actual_status);
@@ -301,9 +276,8 @@ class MergeResolverTest : public TestWithPageStorage {
       return true;
     };
     bool called;
-    page_storage_->GetCommitContents(
-        commit, "", std::move(on_next),
-        callback::Capture(callback::SetWhenCalled(&called), &status));
+    page_storage_->GetCommitContents(commit, "", std::move(on_next),
+                                     callback::Capture(callback::SetWhenCalled(&called), &status));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
 
@@ -323,8 +297,7 @@ class MergeResolverTest : public TestWithPageStorage {
   // exactly the common changes between left and right, and returns a version
   // that includes all the changes of left and right.
   // This is exactly the property we expect merging to verify.
-  std::string MergeAsSets(std::string left, std::string right,
-                          std::string base) {
+  std::string MergeAsSets(std::string left, std::string right, std::string base) {
     std::string out;
     std::string expected_base;
     EXPECT_TRUE(ValidSet(base));
@@ -332,19 +305,16 @@ class MergeResolverTest : public TestWithPageStorage {
     EXPECT_TRUE(ValidSet(right));
     std::set_intersection(left.begin(), left.end(), right.begin(), right.end(),
                           std::back_inserter(expected_base));
-    EXPECT_EQ(expected_base, base)
-        << " when merging " << left << " and " << right;
-    std::set_union(left.begin(), left.end(), right.begin(), right.end(),
-                   std::back_inserter(out));
+    EXPECT_EQ(expected_base, base) << " when merging " << left << " and " << right;
+    std::set_union(left.begin(), left.end(), right.begin(), right.end(), std::back_inserter(out));
     EXPECT_TRUE(ValidSet(out));
     return out;
   }
 
   std::string GetKeyOrEmpty(const storage::Commit& commit, std::string key) {
     std::vector<storage::Entry> entries = GetCommitContents(commit);
-    auto it =
-        std::find_if(entries.begin(), entries.end(),
-                     [&key](storage::Entry entry) { return entry.key == key; });
+    auto it = std::find_if(entries.begin(), entries.end(),
+                           [&key](storage::Entry entry) { return entry.key == key; });
     if (it == entries.end()) {
       return "";
     }
@@ -353,14 +323,11 @@ class MergeResolverTest : public TestWithPageStorage {
     return value;
   }
 
-  void MergeCommitsAsSets(const storage::Commit& left,
-                          const storage::Commit& right,
+  void MergeCommitsAsSets(const storage::Commit& left, const storage::Commit& right,
                           const storage::Commit& base) {
     std::string merge =
-        MergeAsSets(GetKeyOrEmpty(left, "k"), GetKeyOrEmpty(right, "k"),
-                    GetKeyOrEmpty(base, "k"));
-    CreateMergeCommit(left.GetId(), right.GetId(),
-                      AddKeyValueToJournal("k", merge));
+        MergeAsSets(GetKeyOrEmpty(left, "k"), GetKeyOrEmpty(right, "k"), GetKeyOrEmpty(base, "k"));
+    CreateMergeCommit(left.GetId(), right.GetId(), AddKeyValueToJournal("k", merge));
   }
 
   std::unique_ptr<FakePageStorageImpl> page_storage_;
@@ -373,8 +340,7 @@ TEST_F(MergeResolverTest, Empty) {
   // Set up conflict
   CreateCommit(storage::kFirstPageCommitId, AddKeyValueToJournal("foo", "bar"));
   CreateCommit(storage::kFirstPageCommitId, AddKeyValueToJournal("foo", "baz"));
-  std::unique_ptr<LastOneWinsMergeStrategy> strategy =
-      std::make_unique<LastOneWinsMergeStrategy>();
+  std::unique_ptr<LastOneWinsMergeStrategy> strategy = std::make_unique<LastOneWinsMergeStrategy>();
   MergeResolver resolver([] {}, &environment_, page_storage_.get(),
                          std::make_unique<backoff::TestBackoff>());
   resolver.SetMergeStrategy(std::move(strategy));
@@ -399,23 +365,18 @@ TEST_F(MergeResolverTest, CommonAncestor) {
   // (root) -> (1) -> (2) ->  (3)
   //                      \
   //                       -> (4) -> (5)
-  storage::CommitId commit_1 = CreateCommit(
-      storage::kFirstPageCommitId, AddKeyValueToJournal("key1", "val1.0"));
-  storage::CommitId commit_2 =
-      CreateCommit(commit_1, AddKeyValueToJournal("key2", "val2.0"));
-  storage::CommitId commit_3 =
-      CreateCommit(commit_2, AddKeyValueToJournal("key3", "val3.0"));
-  storage::CommitId commit_4 =
-      CreateCommit(commit_2, DeleteKeyFromJournal("key1"));
-  storage::CommitId commit_5 =
-      CreateCommit(commit_4, AddKeyValueToJournal("key2", "val2.1"));
+  storage::CommitId commit_1 =
+      CreateCommit(storage::kFirstPageCommitId, AddKeyValueToJournal("key1", "val1.0"));
+  storage::CommitId commit_2 = CreateCommit(commit_1, AddKeyValueToJournal("key2", "val2.0"));
+  storage::CommitId commit_3 = CreateCommit(commit_2, AddKeyValueToJournal("key3", "val3.0"));
+  storage::CommitId commit_4 = CreateCommit(commit_2, DeleteKeyFromJournal("key1"));
+  storage::CommitId commit_5 = CreateCommit(commit_4, AddKeyValueToJournal("key2", "val2.1"));
   RunLoopUntilIdle();
 
   // Set a merge strategy to capture the requested merge.
   MergeResolver resolver([] {}, &environment_, page_storage_.get(),
                          std::make_unique<backoff::TestBackoff>());
-  std::unique_ptr<RecordingTestStrategy> strategy =
-      std::make_unique<RecordingTestStrategy>();
+  std::unique_ptr<RecordingTestStrategy> strategy = std::make_unique<RecordingTestStrategy>();
   auto strategy_ptr = strategy.get();
   resolver.SetMergeStrategy(std::move(strategy));
   RunLoopUntilIdle();
@@ -427,8 +388,7 @@ TEST_F(MergeResolverTest, CommonAncestor) {
   EXPECT_EQ(commit_2, strategy_ptr->ancestor->GetId());
 
   // Resolve the conflict.
-  CreateMergeCommit(strategy_ptr->head_1->GetId(),
-                    strategy_ptr->head_2->GetId(),
+  CreateMergeCommit(strategy_ptr->head_1->GetId(), strategy_ptr->head_2->GetId(),
                     AddKeyValueToJournal("key_foo", "abc"));
   strategy_ptr->callback(Status::OK);
   strategy_ptr->callback = nullptr;
@@ -438,20 +398,16 @@ TEST_F(MergeResolverTest, CommonAncestor) {
 
 TEST_F(MergeResolverTest, LastOneWins) {
   // Set up conflict
-  storage::CommitId commit_1 = CreateCommit(
-      storage::kFirstPageCommitId, AddKeyValueToJournal("key1", "val1.0"));
+  storage::CommitId commit_1 =
+      CreateCommit(storage::kFirstPageCommitId, AddKeyValueToJournal("key1", "val1.0"));
 
-  storage::CommitId commit_2 =
-      CreateCommit(commit_1, AddKeyValueToJournal("key2", "val2.0"));
+  storage::CommitId commit_2 = CreateCommit(commit_1, AddKeyValueToJournal("key2", "val2.0"));
 
-  storage::CommitId commit_3 =
-      CreateCommit(commit_2, AddKeyValueToJournal("key3", "val3.0"));
+  storage::CommitId commit_3 = CreateCommit(commit_2, AddKeyValueToJournal("key3", "val3.0"));
 
-  storage::CommitId commit_4 =
-      CreateCommit(commit_2, DeleteKeyFromJournal("key1"));
+  storage::CommitId commit_4 = CreateCommit(commit_2, DeleteKeyFromJournal("key1"));
 
-  storage::CommitId commit_5 =
-      CreateCommit(commit_4, AddKeyValueToJournal("key2", "val2.1"));
+  storage::CommitId commit_5 = CreateCommit(commit_4, AddKeyValueToJournal("key2", "val2.1"));
 
   std::vector<std::unique_ptr<const storage::Commit>> commits;
   Status status = page_storage_->GetHeadCommits(&commits);
@@ -460,8 +416,7 @@ TEST_F(MergeResolverTest, LastOneWins) {
   EXPECT_THAT(ids, UnorderedElementsAre(commit_3, commit_5));
 
   bool called;
-  std::unique_ptr<LastOneWinsMergeStrategy> strategy =
-      std::make_unique<LastOneWinsMergeStrategy>();
+  std::unique_ptr<LastOneWinsMergeStrategy> strategy = std::make_unique<LastOneWinsMergeStrategy>();
   MergeResolver resolver([] {}, &environment_, page_storage_.get(),
                          std::make_unique<backoff::TestBackoff>());
   resolver.SetMergeStrategy(std::move(strategy));
@@ -490,20 +445,16 @@ TEST_F(MergeResolverTest, LastOneWins) {
 
 TEST_F(MergeResolverTest, LastOneWinsDiffNotAvailable) {
   // Set up conflict
-  storage::CommitId commit_1 = CreateCommit(
-      storage::kFirstPageCommitId, AddKeyValueToJournal("key1", "val1.0"));
+  storage::CommitId commit_1 =
+      CreateCommit(storage::kFirstPageCommitId, AddKeyValueToJournal("key1", "val1.0"));
 
-  storage::CommitId commit_2 =
-      CreateCommit(commit_1, AddKeyValueToJournal("key2", "val2.0"));
+  storage::CommitId commit_2 = CreateCommit(commit_1, AddKeyValueToJournal("key2", "val2.0"));
 
-  storage::CommitId commit_3 =
-      CreateCommit(commit_2, AddKeyValueToJournal("key3", "val3.0"));
+  storage::CommitId commit_3 = CreateCommit(commit_2, AddKeyValueToJournal("key3", "val3.0"));
 
-  storage::CommitId commit_4 =
-      CreateCommit(commit_2, DeleteKeyFromJournal("key1"));
+  storage::CommitId commit_4 = CreateCommit(commit_2, DeleteKeyFromJournal("key1"));
 
-  storage::CommitId commit_5 =
-      CreateCommit(commit_4, AddKeyValueToJournal("key2", "val2.1"));
+  storage::CommitId commit_5 = CreateCommit(commit_4, AddKeyValueToJournal("key2", "val2.1"));
 
   std::vector<std::unique_ptr<const storage::Commit>> commits;
   Status status = page_storage_->GetHeadCommits(&commits);
@@ -513,8 +464,7 @@ TEST_F(MergeResolverTest, LastOneWinsDiffNotAvailable) {
   page_storage_->MarkCommitContentsUnavailable(commit_2);
 
   bool called;
-  std::unique_ptr<LastOneWinsMergeStrategy> strategy =
-      std::make_unique<LastOneWinsMergeStrategy>();
+  std::unique_ptr<LastOneWinsMergeStrategy> strategy = std::make_unique<LastOneWinsMergeStrategy>();
   MergeResolver resolver([] {}, &environment_, page_storage_.get(),
                          std::make_unique<backoff::TestBackoff>());
   resolver.SetMergeStrategy(std::move(strategy));
@@ -531,20 +481,16 @@ TEST_F(MergeResolverTest, LastOneWinsDiffNotAvailable) {
 
 TEST_F(MergeResolverTest, None) {
   // Set up conflict
-  storage::CommitId commit_1 = CreateCommit(
-      storage::kFirstPageCommitId, AddKeyValueToJournal("key1", "val1.0"));
+  storage::CommitId commit_1 =
+      CreateCommit(storage::kFirstPageCommitId, AddKeyValueToJournal("key1", "val1.0"));
 
-  storage::CommitId commit_2 =
-      CreateCommit(commit_1, AddKeyValueToJournal("key2", "val2.0"));
+  storage::CommitId commit_2 = CreateCommit(commit_1, AddKeyValueToJournal("key2", "val2.0"));
 
-  storage::CommitId commit_3 =
-      CreateCommit(commit_2, AddKeyValueToJournal("key3", "val3.0"));
+  storage::CommitId commit_3 = CreateCommit(commit_2, AddKeyValueToJournal("key3", "val3.0"));
 
-  storage::CommitId commit_4 =
-      CreateCommit(commit_2, DeleteKeyFromJournal("key1"));
+  storage::CommitId commit_4 = CreateCommit(commit_2, DeleteKeyFromJournal("key1"));
 
-  storage::CommitId commit_5 =
-      CreateCommit(commit_4, AddKeyValueToJournal("key2", "val2.1"));
+  storage::CommitId commit_5 = CreateCommit(commit_4, AddKeyValueToJournal("key2", "val2.1"));
 
   std::vector<std::unique_ptr<const storage::Commit>> commits;
   Status status = page_storage_->GetHeadCommits(&commits);
@@ -567,14 +513,12 @@ TEST_F(MergeResolverTest, None) {
 
 TEST_F(MergeResolverTest, UpdateMidResolution) {
   // Set up conflict
-  storage::CommitId commit_1 = CreateCommit(
-      storage::kFirstPageCommitId, AddKeyValueToJournal("key1", "val1.0"));
+  storage::CommitId commit_1 =
+      CreateCommit(storage::kFirstPageCommitId, AddKeyValueToJournal("key1", "val1.0"));
 
-  storage::CommitId commit_2 =
-      CreateCommit(commit_1, AddKeyValueToJournal("key2", "val2.0"));
+  storage::CommitId commit_2 = CreateCommit(commit_1, AddKeyValueToJournal("key2", "val2.0"));
 
-  storage::CommitId commit_3 =
-      CreateCommit(commit_1, AddKeyValueToJournal("key3", "val3.0"));
+  storage::CommitId commit_3 = CreateCommit(commit_1, AddKeyValueToJournal("key3", "val3.0"));
 
   std::vector<std::unique_ptr<const storage::Commit>> commits;
   Status status = page_storage_->GetHeadCommits(&commits);
@@ -613,8 +557,7 @@ TEST_F(MergeResolverTest, WaitOnMergeOfMerges) {
   bool on_empty_called;
   auto backoff = std::make_unique<backoff::TestBackoff>();
   auto backoff_ptr = backoff.get();
-  MergeResolver resolver([] {}, &environment_, &page_storage,
-                         std::move(backoff));
+  MergeResolver resolver([] {}, &environment_, &page_storage, std::move(backoff));
   resolver.set_on_empty(callback::SetWhenCalled(&on_empty_called));
   auto strategy = std::make_unique<RecordingTestStrategy>();
   strategy->SetOnMerge(QuitLoopClosure());
@@ -626,25 +569,23 @@ TEST_F(MergeResolverTest, WaitOnMergeOfMerges) {
   page_storage.SetDropCommitNotifications(true);
 
   // Set up conflict
-  storage::CommitId commit_0 = CreateCommit(
-      &page_storage, storage::kFirstPageCommitId, [](storage::Journal*) {});
+  storage::CommitId commit_0 =
+      CreateCommit(&page_storage, storage::kFirstPageCommitId, [](storage::Journal*) {});
 
-  storage::CommitId commit_1 = CreateCommit(
-      &page_storage, commit_0, AddKeyValueToJournal("key1", "val1.0"));
+  storage::CommitId commit_1 =
+      CreateCommit(&page_storage, commit_0, AddKeyValueToJournal("key1", "val1.0"));
 
-  storage::CommitId commit_2 = CreateCommit(
-      &page_storage, commit_0, AddKeyValueToJournal("key1", "val1.0"));
+  storage::CommitId commit_2 =
+      CreateCommit(&page_storage, commit_0, AddKeyValueToJournal("key1", "val1.0"));
 
-  storage::CommitId commit_3 = CreateCommit(
-      &page_storage, commit_0, AddKeyValueToJournal("key2", "val2.0"));
+  storage::CommitId commit_3 =
+      CreateCommit(&page_storage, commit_0, AddKeyValueToJournal("key2", "val2.0"));
 
   storage::CommitId merge_1 =
-      CreateMergeCommit(&page_storage, commit_1, commit_3,
-                        AddKeyValueToJournal("key3", "val3.0"));
+      CreateMergeCommit(&page_storage, commit_1, commit_3, AddKeyValueToJournal("key3", "val3.0"));
 
   storage::CommitId merge_2 =
-      CreateMergeCommit(&page_storage, commit_2, commit_3,
-                        AddKeyValueToJournal("key3", "val3.0"));
+      CreateMergeCommit(&page_storage, commit_2, commit_3, AddKeyValueToJournal("key3", "val3.0"));
 
   std::vector<std::unique_ptr<const storage::Commit>> commits;
   Status status = page_storage.GetHeadCommits(&commits);
@@ -668,8 +609,7 @@ TEST_F(MergeResolverTest, NoConflictCallback_ConflictsResolved) {
   // Set up conflict.
   CreateCommit(storage::kFirstPageCommitId, AddKeyValueToJournal("foo", "bar"));
   CreateCommit(storage::kFirstPageCommitId, AddKeyValueToJournal("foo", "baz"));
-  std::unique_ptr<LastOneWinsMergeStrategy> strategy =
-      std::make_unique<LastOneWinsMergeStrategy>();
+  std::unique_ptr<LastOneWinsMergeStrategy> strategy = std::make_unique<LastOneWinsMergeStrategy>();
   MergeResolver resolver([] {}, &environment_, page_storage_.get(),
                          std::make_unique<backoff::TestBackoff>());
   resolver.SetMergeStrategy(std::move(strategy));
@@ -688,10 +628,8 @@ TEST_F(MergeResolverTest, NoConflictCallback_ConflictsResolved) {
     callback_calls++;
   };
   ConflictResolutionWaitStatus wait_status;
-  resolver.RegisterNoConflictCallback(
-      callback::Capture(conflicts_resolved_callback, &wait_status));
-  resolver.RegisterNoConflictCallback(
-      callback::Capture(conflicts_resolved_callback, &wait_status));
+  resolver.RegisterNoConflictCallback(callback::Capture(conflicts_resolved_callback, &wait_status));
+  resolver.RegisterNoConflictCallback(callback::Capture(conflicts_resolved_callback, &wait_status));
 
   // Check that the callback was called 2 times.
   RunLoopUntilIdle();
@@ -718,8 +656,7 @@ TEST_F(MergeResolverTest, NoConflictCallback_ConflictsResolved) {
 
 TEST_F(MergeResolverTest, NoConflictCallback_NoConflicts) {
   CreateCommit(storage::kFirstPageCommitId, AddKeyValueToJournal("foo", "baz"));
-  std::unique_ptr<LastOneWinsMergeStrategy> strategy =
-      std::make_unique<LastOneWinsMergeStrategy>();
+  std::unique_ptr<LastOneWinsMergeStrategy> strategy = std::make_unique<LastOneWinsMergeStrategy>();
   MergeResolver resolver([] {}, &environment_, page_storage_.get(),
                          std::make_unique<backoff::TestBackoff>());
   resolver.SetMergeStrategy(std::move(strategy));
@@ -731,8 +668,7 @@ TEST_F(MergeResolverTest, NoConflictCallback_NoConflicts) {
     callback_calls++;
   };
   ConflictResolutionWaitStatus wait_status;
-  resolver.RegisterNoConflictCallback(
-      callback::Capture(conflicts_resolved_callback, &wait_status));
+  resolver.RegisterNoConflictCallback(callback::Capture(conflicts_resolved_callback, &wait_status));
 
   // Check that the callback was called 1 times.
   RunLoopUntilIdle();
@@ -744,18 +680,17 @@ TEST_F(MergeResolverTest, NoConflictCallback_NoConflicts) {
 TEST_F(MergeResolverTest, HasUnfinishedMerges) {
   MergeResolver resolver([] {}, &environment_, page_storage_.get(),
                          std::make_unique<backoff::TestBackoff>());
-  std::unique_ptr<RecordingTestStrategy> strategy =
-      std::make_unique<RecordingTestStrategy>();
+  std::unique_ptr<RecordingTestStrategy> strategy = std::make_unique<RecordingTestStrategy>();
   auto strategy_ptr = strategy.get();
   resolver.SetMergeStrategy(std::move(strategy));
   RunLoopUntilIdle();
   EXPECT_FALSE(resolver.HasUnfinishedMerges());
 
   // Set up a conflict and verify that HasUnfinishedMerges() returns true.
-  storage::CommitId commit_1 = CreateCommit(storage::kFirstPageCommitId,
-                                            AddKeyValueToJournal("foo", "bar"));
-  storage::CommitId commit_2 = CreateCommit(storage::kFirstPageCommitId,
-                                            AddKeyValueToJournal("foo", "baz"));
+  storage::CommitId commit_1 =
+      CreateCommit(storage::kFirstPageCommitId, AddKeyValueToJournal("foo", "bar"));
+  storage::CommitId commit_2 =
+      CreateCommit(storage::kFirstPageCommitId, AddKeyValueToJournal("foo", "baz"));
   RunLoopUntilIdle();
   EXPECT_TRUE(resolver.HasUnfinishedMerges());
 
@@ -764,8 +699,7 @@ TEST_F(MergeResolverTest, HasUnfinishedMerges) {
   ASSERT_TRUE(strategy_ptr->head_2);
   ASSERT_TRUE(strategy_ptr->ancestor);
   ASSERT_TRUE(strategy_ptr->callback);
-  CreateMergeCommit(strategy_ptr->head_1->GetId(),
-                    strategy_ptr->head_2->GetId(),
+  CreateMergeCommit(strategy_ptr->head_1->GetId(), strategy_ptr->head_2->GetId(),
                     AddKeyValueToJournal("key3", "val3.0"));
   strategy_ptr->callback(Status::OK);
   strategy_ptr->callback = nullptr;
@@ -802,8 +736,7 @@ TEST_F(MergeResolverTest, MergeSubsets) {
   // Set a merge strategy to check that no merge is requested
   MergeResolver resolver([] {}, &environment_, page_storage_.get(),
                          std::make_unique<backoff::TestBackoff>());
-  std::unique_ptr<RecordingTestStrategy> strategy =
-      std::make_unique<RecordingTestStrategy>();
+  std::unique_ptr<RecordingTestStrategy> strategy = std::make_unique<RecordingTestStrategy>();
   auto strategy_ptr = strategy.get();
   resolver.SetMergeStrategy(std::move(strategy));
   RunLoopUntilIdle();
@@ -820,8 +753,7 @@ TEST_F(MergeResolverTest, MergeSubsets) {
   bool called;
   std::unique_ptr<const storage::Commit> commitptr_f;
   page_storage_->GetCommit(
-      commit_f, callback::Capture(callback::SetWhenCalled(&called), &status,
-                                  &commitptr_f));
+      commit_f, callback::Capture(callback::SetWhenCalled(&called), &status, &commitptr_f));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
@@ -852,8 +784,7 @@ TEST_F(MergeResolverTest, MergeEquivalents) {
   // Set a merge strategy to check that no merge is requested
   MergeResolver resolver([] {}, &environment_, page_storage_.get(),
                          std::make_unique<backoff::TestBackoff>());
-  std::unique_ptr<RecordingTestStrategy> strategy =
-      std::make_unique<RecordingTestStrategy>();
+  std::unique_ptr<RecordingTestStrategy> strategy = std::make_unique<RecordingTestStrategy>();
   auto strategy_ptr = strategy.get();
   resolver.SetMergeStrategy(std::move(strategy));
   RunLoopUntilIdle();
@@ -870,8 +801,7 @@ TEST_F(MergeResolverTest, MergeEquivalents) {
   bool called;
   std::unique_ptr<const storage::Commit> commitptr_c;
   page_storage_->GetCommit(
-      commit_c, callback::Capture(callback::SetWhenCalled(&called), &status,
-                                  &commitptr_c));
+      commit_c, callback::Capture(callback::SetWhenCalled(&called), &status, &commitptr_c));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
@@ -879,16 +809,14 @@ TEST_F(MergeResolverTest, MergeEquivalents) {
 
   std::unique_ptr<const storage::Commit> commitptr_d;
   page_storage_->GetCommit(
-      commit_d, callback::Capture(callback::SetWhenCalled(&called), &status,
-                                  &commitptr_d));
+      commit_d, callback::Capture(callback::SetWhenCalled(&called), &status, &commitptr_d));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
   ASSERT_TRUE(commitptr_d);
 
   EXPECT_THAT(commits[0]->GetRootIdentifier(),
-              AnyOf(Eq(commitptr_c->GetRootIdentifier()),
-                    Eq(commitptr_d->GetRootIdentifier())));
+              AnyOf(Eq(commitptr_c->GetRootIdentifier()), Eq(commitptr_d->GetRootIdentifier())));
 }
 
 // Tests that already existing merges are used
@@ -912,10 +840,8 @@ TEST_F(MergeResolverTest, ReuseExistingMerge) {
       CreateCommit(storage::kFirstPageCommitId, AddKeyValueToJournal("k", "a"));
   storage::CommitId commit_b =
       CreateCommit(storage::kFirstPageCommitId, AddKeyValueToJournal("k", "b"));
-  storage::CommitId commit_c =
-      CreateCommit(commit_a, AddKeyValueToJournal("k", "c"));
-  storage::CommitId commit_d =
-      CreateCommit(commit_b, AddKeyValueToJournal("k", "d"));
+  storage::CommitId commit_c = CreateCommit(commit_a, AddKeyValueToJournal("k", "c"));
+  storage::CommitId commit_d = CreateCommit(commit_b, AddKeyValueToJournal("k", "d"));
   storage::CommitId commit_e =
       CreateMergeCommit(commit_c, commit_b, AddKeyValueToJournal("k", "e"));
   storage::CommitId commit_f =
@@ -930,8 +856,7 @@ TEST_F(MergeResolverTest, ReuseExistingMerge) {
   // Set a merge strategy.
   MergeResolver resolver([] {}, &environment_, page_storage_.get(),
                          std::make_unique<backoff::TestBackoff>());
-  std::unique_ptr<RecordingTestStrategy> strategy =
-      std::make_unique<RecordingTestStrategy>();
+  std::unique_ptr<RecordingTestStrategy> strategy = std::make_unique<RecordingTestStrategy>();
   auto strategy_ptr = strategy.get();
   resolver.SetMergeStrategy(std::move(strategy));
   RunLoopUntilIdle();
@@ -944,8 +869,7 @@ TEST_F(MergeResolverTest, ReuseExistingMerge) {
               UnorderedElementsAre(commit_f, commit_h));
 
   // Create the merge
-  CreateMergeCommit(strategy_ptr->head_1->GetId(),
-                    strategy_ptr->head_2->GetId(),
+  CreateMergeCommit(strategy_ptr->head_1->GetId(), strategy_ptr->head_2->GetId(),
                     AddKeyValueToJournal("k", "merge"));
   strategy_ptr->callback(Status::OK);
   RunLoopUntilIdle();
@@ -980,10 +904,8 @@ TEST_F(MergeResolverTest, RecursiveMerge) {
       CreateCommit(storage::kFirstPageCommitId, AddKeyValueToJournal("k", "b"));
   storage::CommitId commit_c =
       CreateCommit(storage::kFirstPageCommitId, AddKeyValueToJournal("k", "c"));
-  storage::CommitId commit_d =
-      CreateCommit(commit_a, AddKeyValueToJournal("k", "ad"));
-  storage::CommitId commit_e =
-      CreateCommit(commit_c, AddKeyValueToJournal("k", "ce"));
+  storage::CommitId commit_d = CreateCommit(commit_a, AddKeyValueToJournal("k", "ad"));
+  storage::CommitId commit_e = CreateCommit(commit_c, AddKeyValueToJournal("k", "ce"));
   storage::CommitId commit_f =
       CreateMergeCommit(commit_b, commit_d, AddKeyValueToJournal("k", "abd"));
   storage::CommitId commit_g =
@@ -997,8 +919,7 @@ TEST_F(MergeResolverTest, RecursiveMerge) {
   // Set up a merge strategy.
   MergeResolver resolver([] {}, &environment_, page_storage_.get(),
                          std::make_unique<backoff::TestBackoff>());
-  std::unique_ptr<RecordingTestStrategy> strategy =
-      std::make_unique<RecordingTestStrategy>();
+  std::unique_ptr<RecordingTestStrategy> strategy = std::make_unique<RecordingTestStrategy>();
   auto strategy_ptr = strategy.get();
   resolver.SetMergeStrategy(std::move(strategy));
   RunLoopUntilIdle();
@@ -1007,8 +928,7 @@ TEST_F(MergeResolverTest, RecursiveMerge) {
   for (int i = 0; i < 3; i++) {
     EXPECT_TRUE(strategy_ptr->callback);
     if (strategy_ptr->callback) {
-      MergeCommitsAsSets(*strategy_ptr->head_1, *strategy_ptr->head_2,
-                         *strategy_ptr->ancestor);
+      MergeCommitsAsSets(*strategy_ptr->head_1, *strategy_ptr->head_2, *strategy_ptr->ancestor);
       strategy_ptr->callback(Status::OK);
     }
     strategy_ptr->callback = nullptr;
@@ -1049,35 +969,30 @@ TEST_F(MergeResolverTest, RecursiveMergeOrder) {
       CreateCommit(storage::kFirstPageCommitId, AddKeyValueToJournal("k", "v"));
 
   // Commit a, b and c can be done in any order.
-  storage::CommitId commit_b =
-      CreateCommit(commit_u, AddKeyValueToJournal("k", "bu"));
+  storage::CommitId commit_b = CreateCommit(commit_u, AddKeyValueToJournal("k", "bu"));
   // Ensure time advances between the commits
   RunLoopFor(zx::duration(1));
   storage::CommitId commit_a =
       CreateCommit(storage::kFirstPageCommitId, AddKeyValueToJournal("k", "a"));
   RunLoopFor(zx::duration(1));
-  storage::CommitId commit_c =
-      CreateCommit(commit_v, AddKeyValueToJournal("k", "cv"));
+  storage::CommitId commit_c = CreateCommit(commit_v, AddKeyValueToJournal("k", "cv"));
 
-  storage::CommitId commit_d =
-      CreateCommit(commit_a, AddKeyValueToJournal("k", "ad"));
-  storage::CommitId commit_e =
-      CreateCommit(commit_c, AddKeyValueToJournal("k", "cev"));
+  storage::CommitId commit_d = CreateCommit(commit_a, AddKeyValueToJournal("k", "ad"));
+  storage::CommitId commit_e = CreateCommit(commit_c, AddKeyValueToJournal("k", "cev"));
   storage::CommitId commit_f =
       CreateMergeCommit(commit_b, commit_d, AddKeyValueToJournal("k", "abdu"));
   storage::CommitId commit_g =
       CreateMergeCommit(commit_b, commit_e, AddKeyValueToJournal("k", "bcev"));
-  storage::CommitId commit_h = CreateMergeCommit(
-      commit_f, commit_c, AddKeyValueToJournal("k", "abcduv"));
-  storage::CommitId commit_i = CreateMergeCommit(
-      commit_a, commit_g, AddKeyValueToJournal("k", "abceuv"));
+  storage::CommitId commit_h =
+      CreateMergeCommit(commit_f, commit_c, AddKeyValueToJournal("k", "abcduv"));
+  storage::CommitId commit_i =
+      CreateMergeCommit(commit_a, commit_g, AddKeyValueToJournal("k", "abceuv"));
   RunLoopUntilIdle();
 
   // Set up a merge strategy
   MergeResolver resolver([] {}, &environment_, page_storage_.get(),
                          std::make_unique<backoff::TestBackoff>());
-  std::unique_ptr<RecordingTestStrategy> strategy =
-      std::make_unique<RecordingTestStrategy>();
+  std::unique_ptr<RecordingTestStrategy> strategy = std::make_unique<RecordingTestStrategy>();
   auto strategy_ptr = strategy.get();
   resolver.SetMergeStrategy(std::move(strategy));
   RunLoopUntilIdle();
@@ -1137,41 +1052,32 @@ TEST_F(MergeResolverTest, RecursiveMergeLastOneWins) {
   // We also insert a key k2 in A and B. If A and C are merged first, the value
   // in A will be "refreshed" and be considered as recent as C, and will win
   // against the value in B. We check that this does not happen.
-  storage::CommitId commit_a =
-      CreateCommit(storage::kFirstPageCommitId, [this](auto journal) {
-        AddKeyValueToJournal("k1", "a")(journal);
-        AddKeyValueToJournal("k2", "a")(journal);
-      });
+  storage::CommitId commit_a = CreateCommit(storage::kFirstPageCommitId, [this](auto journal) {
+    AddKeyValueToJournal("k1", "a")(journal);
+    AddKeyValueToJournal("k2", "a")(journal);
+  });
   RunLoopFor(zx::duration(1));
-  storage::CommitId commit_b =
-      CreateCommit(storage::kFirstPageCommitId, [this](auto journal) {
-        AddKeyValueToJournal("k1", "b")(journal);
-        AddKeyValueToJournal("k2", "b")(journal);
-      });
+  storage::CommitId commit_b = CreateCommit(storage::kFirstPageCommitId, [this](auto journal) {
+    AddKeyValueToJournal("k1", "b")(journal);
+    AddKeyValueToJournal("k2", "b")(journal);
+  });
   RunLoopFor(zx::duration(1));
-  storage::CommitId commit_c = CreateCommit(storage::kFirstPageCommitId,
-                                            AddKeyValueToJournal("k1", "c"));
+  storage::CommitId commit_c =
+      CreateCommit(storage::kFirstPageCommitId, AddKeyValueToJournal("k1", "c"));
 
   // Build the rest of the graph. We add values to generate changes.
-  storage::CommitId commit_d =
-      CreateCommit(commit_a, AddKeyValueToJournal("k", "d"));
-  storage::CommitId commit_e =
-      CreateCommit(commit_c, AddKeyValueToJournal("k", "e"));
-  storage::CommitId commit_f =
-      CreateMergeCommit(commit_b, commit_d, [](auto journal) {});
-  storage::CommitId commit_g =
-      CreateMergeCommit(commit_b, commit_e, [](auto journal) {});
-  storage::CommitId commit_h =
-      CreateMergeCommit(commit_f, commit_c, [](auto journal) {});
-  storage::CommitId commit_i =
-      CreateMergeCommit(commit_a, commit_g, [](auto journal) {});
+  storage::CommitId commit_d = CreateCommit(commit_a, AddKeyValueToJournal("k", "d"));
+  storage::CommitId commit_e = CreateCommit(commit_c, AddKeyValueToJournal("k", "e"));
+  storage::CommitId commit_f = CreateMergeCommit(commit_b, commit_d, [](auto journal) {});
+  storage::CommitId commit_g = CreateMergeCommit(commit_b, commit_e, [](auto journal) {});
+  storage::CommitId commit_h = CreateMergeCommit(commit_f, commit_c, [](auto journal) {});
+  storage::CommitId commit_i = CreateMergeCommit(commit_a, commit_g, [](auto journal) {});
   RunLoopUntilIdle();
 
   // Set up a merge strategy.
   MergeResolver resolver([] {}, &environment_, page_storage_.get(),
                          std::make_unique<backoff::TestBackoff>());
-  std::unique_ptr<RecordingTestStrategy> strategy =
-      std::make_unique<RecordingTestStrategy>();
+  std::unique_ptr<RecordingTestStrategy> strategy = std::make_unique<RecordingTestStrategy>();
   auto strategy_ptr = strategy.get();
   resolver.SetMergeStrategy(std::move(strategy));
 
@@ -1190,8 +1096,7 @@ TEST_F(MergeResolverTest, RecursiveMergeLastOneWins) {
   RunLoopUntilIdle();
   ASSERT_TRUE(strategy_ptr->callback);
   EXPECT_EQ(strategy_ptr->head_2->GetId(), commit_c);
-  EXPECT_EQ(strategy_ptr->ancestor->GetId(),
-            storage::kFirstPageCommitId.ToString());
+  EXPECT_EQ(strategy_ptr->ancestor->GetId(), storage::kFirstPageCommitId.ToString());
   // Check that the first head for the second merge holds the correct values.
   EXPECT_EQ("b", GetKeyOrEmpty(*strategy_ptr->head_1, "k1"));
   EXPECT_EQ("b", GetKeyOrEmpty(*strategy_ptr->head_1, "k2"));
@@ -1218,8 +1123,7 @@ TEST_F(MergeResolverTest, DoNotAutoMergeIdenticalCommits) {
   // Set up a merge strategy.
   MergeResolver resolver([] {}, &environment_, page_storage_.get(),
                          std::make_unique<backoff::TestBackoff>());
-  std::unique_ptr<RecordingTestStrategy> strategy =
-      std::make_unique<RecordingTestStrategy>();
+  std::unique_ptr<RecordingTestStrategy> strategy = std::make_unique<RecordingTestStrategy>();
   auto strategy_ptr = strategy.get();
   resolver.SetMergeStrategy(std::move(strategy));
 

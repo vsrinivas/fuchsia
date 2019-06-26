@@ -9,12 +9,10 @@
 namespace p2p_sync {
 
 void CreateUnknownResponseMessage(flatbuffers::FlatBufferBuilder* buffer,
-                                  fxl::StringView namespace_id,
-                                  fxl::StringView page_id,
+                                  fxl::StringView namespace_id, fxl::StringView page_id,
                                   ResponseStatus status) {
   flatbuffers::Offset<NamespacePageId> namespace_page_id_offset =
-      CreateNamespacePageId(*buffer,
-                            convert::ToFlatBufferVector(buffer, namespace_id),
+      CreateNamespacePageId(*buffer, convert::ToFlatBufferVector(buffer, namespace_id),
                             convert::ToFlatBufferVector(buffer, page_id));
   flatbuffers::Offset<Response> response =
       CreateResponse(*buffer, status, namespace_page_id_offset);

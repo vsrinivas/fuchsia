@@ -10,26 +10,21 @@ using testing::Field;
 
 namespace storage {
 
-testing::Matcher<ObjectIdentifier> MatchesDigest(
-    testing::Matcher<std::string> matcher) {
-  return Property(&ObjectIdentifier::object_digest,
-                  Property(&ObjectDigest::Serialize, matcher));
+testing::Matcher<ObjectIdentifier> MatchesDigest(testing::Matcher<std::string> matcher) {
+  return Property(&ObjectIdentifier::object_digest, Property(&ObjectDigest::Serialize, matcher));
 }
 
-testing::Matcher<ObjectIdentifier> MatchesDigest(
-    testing::Matcher<ObjectDigest> matcher) {
+testing::Matcher<ObjectIdentifier> MatchesDigest(testing::Matcher<ObjectDigest> matcher) {
   return Property(&ObjectIdentifier::object_digest, matcher);
 }
 
 testing::Matcher<Entry> MatchesEntry(
-    std::pair<testing::Matcher<std::string>, testing::Matcher<ObjectIdentifier>>
-        matcher) {
+    std::pair<testing::Matcher<std::string>, testing::Matcher<ObjectIdentifier>> matcher) {
   return MatchesEntry({matcher.first, matcher.second, _});
 }
 
 testing::Matcher<Entry> MatchesEntry(
-    std::tuple<testing::Matcher<std::string>,
-               testing::Matcher<ObjectIdentifier>,
+    std::tuple<testing::Matcher<std::string>, testing::Matcher<ObjectIdentifier>,
                testing::Matcher<KeyPriority>>
         matcher) {
   return AllOf(Field(&Entry::key, std::get<0>(matcher)),

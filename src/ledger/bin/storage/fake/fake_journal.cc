@@ -16,20 +16,16 @@ FakeJournal::FakeJournal(FakeJournalDelegate* delegate) : delegate_(delegate) {}
 FakeJournal::~FakeJournal() {}
 
 void FakeJournal::Commit(
-    fit::function<void(Status, std::unique_ptr<const storage::Commit>)>
-        callback) {
+    fit::function<void(Status, std::unique_ptr<const storage::Commit>)> callback) {
   delegate_->Commit(std::move(callback));
 }
 
-void FakeJournal::Put(convert::ExtendedStringView key,
-                      ObjectIdentifier object_identifier,
+void FakeJournal::Put(convert::ExtendedStringView key, ObjectIdentifier object_identifier,
                       KeyPriority priority) {
   delegate_->SetValue(key, std::move(object_identifier), priority);
 }
 
-void FakeJournal::Delete(convert::ExtendedStringView key) {
-  delegate_->Delete(key);
-}
+void FakeJournal::Delete(convert::ExtendedStringView key) { delegate_->Delete(key); }
 
 void FakeJournal::Clear() { delegate_->Clear(); }
 

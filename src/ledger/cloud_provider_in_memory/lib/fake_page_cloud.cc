@@ -30,16 +30,13 @@ constexpr uint32_t kAddObjectSeed = 3u;
 constexpr uint32_t kGetObjectSeed = 4u;
 
 cloud_provider::PositionToken PositionToToken(size_t position) {
-  std::string bytes(
-      std::string(reinterpret_cast<char*>(&position), sizeof(position)));
+  std::string bytes(std::string(reinterpret_cast<char*>(&position), sizeof(position)));
   cloud_provider::PositionToken result;
   result.opaque_id = convert::ToArray(bytes);
   return result;
 }
 
-bool TokenToPosition(
-    const std::unique_ptr<cloud_provider::PositionToken>& token,
-    size_t* result) {
+bool TokenToPosition(const std::unique_ptr<cloud_provider::PositionToken>& token, size_t* result) {
   if (!token) {
     *result = 0u;
     return true;
@@ -54,16 +51,13 @@ bool TokenToPosition(
 }
 
 uint64_t GetVectorSignature(const std::vector<uint8_t>& vector, uint32_t seed) {
-  return murmurhash(reinterpret_cast<const char*>(vector.data()), vector.size(),
-                    seed);
+  return murmurhash(reinterpret_cast<const char*>(vector.data()), vector.size(), seed);
 }
 
-uint64_t GetCommitsSignature(
-    const std::vector<cloud_provider::CommitPackEntry>& commits) {
+uint64_t GetCommitsSignature(const std::vector<cloud_provider::CommitPackEntry>& commits) {
   uint64_t result = 0;
   for (const auto& commit : commits) {
-    result = result ^
-             GetVectorSignature(convert::ToArray(commit.id), kAddCommitsSeed);
+    result = result ^ GetVectorSignature(convert::ToArray(commit.id), kAddCommitsSeed);
   }
   return result;
 }
@@ -72,11 +66,10 @@ uint64_t GetCommitsSignature(
 
 class FakePageCloud::WatcherContainer {
  public:
-  WatcherContainer(cloud_provider::PageCloudWatcherPtr watcher,
-                   size_t next_commit_index);
+  WatcherContainer(cloud_provider::PageCloudWatcherPtr watcher, size_t next_commit_index);
 
-  void SendCommits(std::vector<cloud_provider::CommitPackEntry> commits,
-                   size_t next_commit_index, fit::closure on_ack);
+  void SendCommits(std::vector<cloud_provider::CommitPackEntry> commits, size_t next_commit_index,
+                   fit::closure on_ack);
 
   size_t NextCommitIndex() { return next_commit_index_; }
 
@@ -99,13 +92,13 @@ class FakePageCloud::WatcherContainer {
   FXL_DISALLOW_COPY_AND_ASSIGN(WatcherContainer);
 };
 
-FakePageCloud::WatcherContainer::WatcherContainer(
-    cloud_provider::PageCloudWatcherPtr watcher, size_t next_commit_index)
+FakePageCloud::WatcherContainer::WatcherContainer(cloud_provider::PageCloudWatcherPtr watcher,
+                                                  size_t next_commit_index)
     : watcher_(std::move(watcher)), next_commit_index_(next_commit_index) {}
 
 void FakePageCloud::WatcherContainer::SendCommits(
-    std::vector<cloud_provider::CommitPackEntry> commits,
-    size_t next_commit_index, fit::closure on_ack) {
+    std::vector<cloud_provider::CommitPackEntry> commits, size_t next_commit_index,
+    fit::closure on_ack) {
   FXL_DCHECK(watcher_.is_bound());
   FXL_DCHECK(!waiting_for_watcher_ack_);
   FXL_DCHECK(!commits.empty());
@@ -117,8 +110,7 @@ void FakePageCloud::WatcherContainer::SendCommits(
     watcher_->OnError(cloud_provider::Status::INTERNAL_ERROR);
     return;
   }
-  watcher_->OnNewCommits(std::move(commit_pack),
-                         PositionToToken(next_commit_index),
+  watcher_->OnNewCommits(std::move(commit_pack), PositionToToken(next_commit_index),
                          [this, on_ack = std::move(on_ack)] {
                            waiting_for_watcher_ack_ = false;
                            on_ack();
@@ -136,15 +128,13 @@ FakePageCloud::FakePageCloud(InjectNetworkError inject_network_error)
 
 FakePageCloud::~FakePageCloud() {}
 
-void FakePageCloud::Bind(
-    fidl::InterfaceRequest<cloud_provider::PageCloud> request) {
+void FakePageCloud::Bind(fidl::InterfaceRequest<cloud_provider::PageCloud> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 
 void FakePageCloud::SendPendingCommits() {
   for (auto& container : containers_) {
-    if (container.WaitingForWatcherAck() ||
-        container.NextCommitIndex() >= commits_.size()) {
+    if (container.WaitingForWatcherAck() || container.NextCommitIndex() >= commits_.size()) {
       continue;
     }
 
@@ -153,8 +143,7 @@ void FakePageCloud::SendPendingCommits() {
       commits.push_back(commits_[i]);
     }
 
-    container.SendCommits(std::move(commits), commits_.size(),
-                          [this] { SendPendingCommits(); });
+    container.SendCommits(std::move(commits), commits_.size(), [this] { SendPendingCommits(); });
   }
 }
 
@@ -165,8 +154,7 @@ bool FakePageCloud::MustReturnError(uint64_t request_signature) {
     case InjectNetworkError::YES:
       auto it = remaining_errors_to_inject_.find(request_signature);
       if (it == remaining_errors_to_inject_.end()) {
-        remaining_errors_to_inject_[request_signature] =
-            kInitialRemainingErrorsToInject;
+        remaining_errors_to_inject_[request_signature] = kInitialRemainingErrorsToInject;
         it = remaining_errors_to_inject_.find(request_signature);
       }
       if (it->second) {
@@ -178,8 +166,7 @@ bool FakePageCloud::MustReturnError(uint64_t request_signature) {
   }
 }
 
-void FakePageCloud::AddCommits(cloud_provider::CommitPack commits,
-                               AddCommitsCallback callback) {
+void FakePageCloud::AddCommits(cloud_provider::CommitPack commits, AddCommitsCallback callback) {
   std::vector<cloud_provider::CommitPackEntry> commit_entries;
   if (!cloud_provider::DecodeCommitPack(commits, &commit_entries)) {
     callback(cloud_provider::Status::INTERNAL_ERROR);
@@ -190,19 +177,16 @@ void FakePageCloud::AddCommits(cloud_provider::CommitPack commits,
     callback(cloud_provider::Status::NETWORK_ERROR);
     return;
   }
-  std::move(commit_entries.begin(), commit_entries.end(),
-            std::back_inserter(commits_));
+  std::move(commit_entries.begin(), commit_entries.end(), std::back_inserter(commits_));
   SendPendingCommits();
   callback(cloud_provider::Status::OK);
 }
 
-void FakePageCloud::GetCommits(
-    std::unique_ptr<cloud_provider::PositionToken> min_position_token,
-    GetCommitsCallback callback) {
-  if (MustReturnError(GetVectorSignature(min_position_token
-                                             ? min_position_token->opaque_id
-                                             : std::vector<uint8_t>(),
-                                         kGetCommitsSeed))) {
+void FakePageCloud::GetCommits(std::unique_ptr<cloud_provider::PositionToken> min_position_token,
+                               GetCommitsCallback callback) {
+  if (MustReturnError(GetVectorSignature(
+          min_position_token ? min_position_token->opaque_id : std::vector<uint8_t>(),
+          kGetCommitsSeed))) {
     callback(cloud_provider::Status::NETWORK_ERROR, nullptr, nullptr);
     return;
   }
@@ -228,12 +212,11 @@ void FakePageCloud::GetCommits(
     callback(cloud_provider::Status::INTERNAL_ERROR, nullptr, nullptr);
     return;
   }
-  callback(cloud_provider::Status::OK,
-           fidl::MakeOptional(std::move(commit_pack)), std::move(token));
+  callback(cloud_provider::Status::OK, fidl::MakeOptional(std::move(commit_pack)),
+           std::move(token));
 }
 
-void FakePageCloud::AddObject(std::vector<uint8_t> id,
-                              fuchsia::mem::Buffer data,
+void FakePageCloud::AddObject(std::vector<uint8_t> id, fuchsia::mem::Buffer data,
                               cloud_provider::ReferencePack /*references*/,
                               AddObjectCallback callback) {
   if (MustReturnError(GetVectorSignature(id, kAddObjectSeed))) {
@@ -250,8 +233,7 @@ void FakePageCloud::AddObject(std::vector<uint8_t> id,
   callback(cloud_provider::Status::OK);
 }
 
-void FakePageCloud::GetObject(std::vector<uint8_t> id,
-                              GetObjectCallback callback) {
+void FakePageCloud::GetObject(std::vector<uint8_t> id, GetObjectCallback callback) {
   if (MustReturnError(GetVectorSignature(id, kGetObjectSeed))) {
     callback(cloud_provider::Status::NETWORK_ERROR, nullptr);
     return;
@@ -269,10 +251,9 @@ void FakePageCloud::GetObject(std::vector<uint8_t> id,
   callback(cloud_provider::Status::OK, fidl::MakeOptional(std::move(buffer)));
 }
 
-void FakePageCloud::SetWatcher(
-    std::unique_ptr<cloud_provider::PositionToken> min_position_token,
-    fidl::InterfaceHandle<cloud_provider::PageCloudWatcher> watcher,
-    SetWatcherCallback callback) {
+void FakePageCloud::SetWatcher(std::unique_ptr<cloud_provider::PositionToken> min_position_token,
+                               fidl::InterfaceHandle<cloud_provider::PageCloudWatcher> watcher,
+                               SetWatcherCallback callback) {
   // TODO(qsr): Inject errors here when LE-438 is fixed.
   // TODO(ppi): for the cloud provider to be useful for Voila, we need
   // to support multiple watchers.

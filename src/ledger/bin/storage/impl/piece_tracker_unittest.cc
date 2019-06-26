@@ -19,10 +19,8 @@ using ::testing::UnorderedElementsAre;
 using PieceTokenTest = ledger::TestWithEnvironment;
 
 TEST_F(PieceTokenTest, PieceTracker) {
-  const ObjectIdentifier identifier =
-      RandomObjectIdentifier(environment_.random());
-  const ObjectIdentifier another_identifier =
-      RandomObjectIdentifier(environment_.random());
+  const ObjectIdentifier identifier = RandomObjectIdentifier(environment_.random());
+  const ObjectIdentifier another_identifier = RandomObjectIdentifier(environment_.random());
 
   PieceTracker tracker;
   EXPECT_EQ(tracker.count(identifier), 0);

@@ -24,9 +24,7 @@ class FakeJournal : public Journal {
   explicit FakeJournal(FakeJournalDelegate* delegate);
   ~FakeJournal() override;
 
-  void Commit(
-      fit::function<void(Status, std::unique_ptr<const storage::Commit>)>
-          callback);
+  void Commit(fit::function<void(Status, std::unique_ptr<const storage::Commit>)> callback);
 
   // Journal:
   void Put(convert::ExtendedStringView key, ObjectIdentifier object_identifier,

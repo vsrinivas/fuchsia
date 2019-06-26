@@ -30,9 +30,7 @@ CustomMergeStrategy::CustomMergeStrategy(ConflictResolverPtr conflict_resolver)
 
 CustomMergeStrategy::~CustomMergeStrategy() {}
 
-void CustomMergeStrategy::SetOnError(fit::closure on_error) {
-  on_error_ = std::move(on_error);
-}
+void CustomMergeStrategy::SetOnError(fit::closure on_error) { on_error_ = std::move(on_error); }
 
 void CustomMergeStrategy::Merge(storage::PageStorage* storage,
                                 ActivePageManager* active_page_manager,
@@ -44,9 +42,8 @@ void CustomMergeStrategy::Merge(storage::PageStorage* storage,
   FXL_DCHECK(!in_progress_merge_);
 
   in_progress_merge_ = std::make_unique<ConflictResolverClient>(
-      storage, active_page_manager, conflict_resolver_.get(), std::move(head_2),
-      std::move(head_1), std::move(ancestor),
-      [this, callback = std::move(callback)](Status status) {
+      storage, active_page_manager, conflict_resolver_.get(), std::move(head_2), std::move(head_1),
+      std::move(ancestor), [this, callback = std::move(callback)](Status status) {
         in_progress_merge_.reset();
         callback(status);
       });

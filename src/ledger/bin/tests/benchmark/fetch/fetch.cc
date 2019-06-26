@@ -53,8 +53,7 @@ void PrintUsage() {
             // Comment to make clang format not break formatting.
             << " --" << kEntryCountFlag << "=<int>"
             << " --" << kValueSizeFlag << "=<int>"
-            << " --" << kPartSizeFlag << "=<int>" << GetSyncParamsUsage()
-            << std::endl;
+            << " --" << kPartSizeFlag << "=<int>" << GetSyncParamsUsage() << std::endl;
 }
 
 // Benchmark that measures time to fetch lazy values from server.
@@ -66,10 +65,8 @@ void PrintUsage() {
 //   --credentials-path=<file path> Firestore service account credentials
 class FetchBenchmark : public SyncWatcher {
  public:
-  FetchBenchmark(async::Loop* loop,
-                 std::unique_ptr<sys::ComponentContext> component_context,
-                 size_t entry_count, size_t value_size, size_t part_size,
-                 SyncParams sync_params);
+  FetchBenchmark(async::Loop* loop, std::unique_ptr<sys::ComponentContext> component_context,
+                 size_t entry_count, size_t value_size, size_t part_size, SyncParams sync_params);
 
   void Run();
 
@@ -115,17 +112,16 @@ class FetchBenchmark : public SyncWatcher {
   FXL_DISALLOW_COPY_AND_ASSIGN(FetchBenchmark);
 };
 
-FetchBenchmark::FetchBenchmark(
-    async::Loop* loop, std::unique_ptr<sys::ComponentContext> component_context,
-    size_t entry_count, size_t value_size, size_t part_size,
-    SyncParams sync_params)
+FetchBenchmark::FetchBenchmark(async::Loop* loop,
+                               std::unique_ptr<sys::ComponentContext> component_context,
+                               size_t entry_count, size_t value_size, size_t part_size,
+                               SyncParams sync_params)
     : loop_(loop),
       random_(0),
       generator_(&random_),
       page_data_generator_(&random_),
       component_context_(std::move(component_context)),
-      cloud_provider_factory_(component_context_.get(), &random_,
-                              std::move(sync_params.api_key),
+      cloud_provider_factory_(component_context_.get(), &random_, std::move(sync_params.api_key),
                               std::move(sync_params.credentials)),
       sync_watcher_binding_(this),
       entry_count_(entry_count),
@@ -157,28 +153,25 @@ void FetchBenchmark::Run() {
   FXL_DCHECK(ret);
 
   cloud_provider::CloudProviderPtr cloud_provider_writer;
-  cloud_provider_factory_.MakeCloudProvider(user_id_,
-                                            cloud_provider_writer.NewRequest());
-  Status status = GetLedger(
-      component_context_.get(), writer_controller_.NewRequest(),
-      std::move(cloud_provider_writer), user_id_.user_id(), "fetch",
-      DetachedPath(std::move(writer_path)), QuitLoopClosure(), &writer_);
+  cloud_provider_factory_.MakeCloudProvider(user_id_, cloud_provider_writer.NewRequest());
+  Status status = GetLedger(component_context_.get(), writer_controller_.NewRequest(),
+                            std::move(cloud_provider_writer), user_id_.user_id(), "fetch",
+                            DetachedPath(std::move(writer_path)), QuitLoopClosure(), &writer_);
   if (QuitOnError(QuitLoopClosure(), status, "Get writer ledger")) {
     return;
   }
 
-  GetPageEnsureInitialized(&writer_, nullptr, DelayCallback::YES,
-                           QuitLoopClosure(),
-                           [this](Status status, PagePtr page, PageId id) {
-                             if (QuitOnError(QuitLoopClosure(), status,
-                                             "Writer page initialization")) {
-                               return;
-                             }
-                             writer_page_ = std::move(page);
-                             page_id_ = id;
+  GetPageEnsureInitialized(
+      &writer_, nullptr, DelayCallback::YES, QuitLoopClosure(),
+      [this](Status status, PagePtr page, PageId id) {
+        if (QuitOnError(QuitLoopClosure(), status, "Writer page initialization")) {
+          return;
+        }
+        writer_page_ = std::move(page);
+        page_id_ = id;
 
-                             Populate();
-                           });
+        Populate();
+      });
 }
 
 void FetchBenchmark::Populate() {
@@ -189,8 +182,7 @@ void FetchBenchmark::Populate() {
 
   page_data_generator_.Populate(
       &writer_page_, std::move(keys), value_size_, entry_count_,
-      PageDataGenerator::ReferenceStrategy::REFERENCE, Priority::LAZY,
-      [this](Status status) {
+      PageDataGenerator::ReferenceStrategy::REFERENCE, Priority::LAZY, [this](Status status) {
         if (QuitOnError(QuitLoopClosure(), status, "PageGenerator::Populate")) {
           return;
         }
@@ -217,12 +209,10 @@ void FetchBenchmark::ConnectReader() {
   FXL_DCHECK(ret);
 
   cloud_provider::CloudProviderPtr cloud_provider_reader;
-  cloud_provider_factory_.MakeCloudProvider(user_id_,
-                                            cloud_provider_reader.NewRequest());
-  Status status = GetLedger(
-      component_context_.get(), reader_controller_.NewRequest(),
-      std::move(cloud_provider_reader), user_id_.user_id(), "fetch",
-      DetachedPath(std::move(reader_path)), QuitLoopClosure(), &reader_);
+  cloud_provider_factory_.MakeCloudProvider(user_id_, cloud_provider_reader.NewRequest());
+  Status status = GetLedger(component_context_.get(), reader_controller_.NewRequest(),
+                            std::move(cloud_provider_reader), user_id_.user_id(), "fetch",
+                            DetachedPath(std::move(reader_path)), QuitLoopClosure(), &reader_);
   if (QuitOnError(QuitLoopClosure(), status, "ConnectReader")) {
     return;
   }
@@ -236,8 +226,7 @@ void FetchBenchmark::WaitForReaderDownload() {
     if (download == SyncState::IDLE) {
       on_sync_state_changed_ = nullptr;
       PageSnapshotPtr snapshot;
-      reader_page_->GetSnapshot(snapshot.NewRequest(),
-                                fidl::VectorPtr<uint8_t>::New(0), nullptr);
+      reader_page_->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0), nullptr);
       FetchValues(std::move(snapshot), 0);
       return;
     }
@@ -259,20 +248,18 @@ void FetchBenchmark::FetchValues(PageSnapshotPtr snapshot, size_t i) {
   PageSnapshot* snapshot_ptr = snapshot.get();
 
   TRACE_ASYNC_BEGIN("benchmark", "Fetch", i);
-  snapshot_ptr->Fetch(
-      std::move(keys_[i]),
-      [this, snapshot = std::move(snapshot),
-       i](fuchsia::ledger::PageSnapshot_Fetch_Result result) mutable {
-        if (QuitOnError(QuitLoopClosure(), result, "PageSnapshot::Fetch")) {
-          return;
-        }
-        TRACE_ASYNC_END("benchmark", "Fetch", i);
-        FetchValues(std::move(snapshot), i + 1);
-      });
+  snapshot_ptr->Fetch(std::move(keys_[i]),
+                      [this, snapshot = std::move(snapshot),
+                       i](fuchsia::ledger::PageSnapshot_Fetch_Result result) mutable {
+                        if (QuitOnError(QuitLoopClosure(), result, "PageSnapshot::Fetch")) {
+                          return;
+                        }
+                        TRACE_ASYNC_END("benchmark", "Fetch", i);
+                        FetchValues(std::move(snapshot), i + 1);
+                      });
 }
 
-void FetchBenchmark::FetchPart(PageSnapshotPtr snapshot, size_t i,
-                               size_t part) {
+void FetchBenchmark::FetchPart(PageSnapshotPtr snapshot, size_t i, size_t part) {
   if (part * part_size_ >= value_size_) {
     TRACE_ASYNC_END("benchmark", "Fetch (cumulative)", i);
     FetchValues(std::move(snapshot), i + 1);
@@ -283,10 +270,9 @@ void FetchBenchmark::FetchPart(PageSnapshotPtr snapshot, size_t i,
   TRACE_ASYNC_BEGIN("benchmark", "FetchPartial", trace_event_id);
   snapshot_ptr->FetchPartial(
       keys_[i], part * part_size_, part_size_,
-      [this, snapshot = std::move(snapshot), i, part, trace_event_id](
-          fuchsia::ledger::PageSnapshot_FetchPartial_Result result) mutable {
-        if (QuitOnError(QuitLoopClosure(), result,
-                        "PageSnapshot::FetchPartial")) {
+      [this, snapshot = std::move(snapshot), i, part,
+       trace_event_id](fuchsia::ledger::PageSnapshot_FetchPartial_Result result) mutable {
+        if (QuitOnError(QuitLoopClosure(), result, "PageSnapshot::FetchPartial")) {
           return;
         }
         TRACE_ASYNC_END("benchmark", "FetchPartial", trace_event_id);
@@ -316,24 +302,19 @@ int Main(int argc, const char** argv) {
   std::string part_size_str;
   size_t part_size;
   SyncParams sync_params;
-  if (!command_line.GetOptionValue(kEntryCountFlag.ToString(),
-                                   &entry_count_str) ||
-      !fxl::StringToNumberWithError(entry_count_str, &entry_count) ||
-      entry_count == 0 ||
-      !command_line.GetOptionValue(kValueSizeFlag.ToString(),
-                                   &value_size_str) ||
-      !fxl::StringToNumberWithError(value_size_str, &value_size) ||
-      value_size == 0 ||
+  if (!command_line.GetOptionValue(kEntryCountFlag.ToString(), &entry_count_str) ||
+      !fxl::StringToNumberWithError(entry_count_str, &entry_count) || entry_count == 0 ||
+      !command_line.GetOptionValue(kValueSizeFlag.ToString(), &value_size_str) ||
+      !fxl::StringToNumberWithError(value_size_str, &value_size) || value_size == 0 ||
       !command_line.GetOptionValue(kPartSizeFlag.ToString(), &part_size_str) ||
       !fxl::StringToNumberWithError(part_size_str, &part_size) ||
-      !ParseSyncParamsFromCommandLine(command_line, component_context.get(),
-                                      &sync_params)) {
+      !ParseSyncParamsFromCommandLine(command_line, component_context.get(), &sync_params)) {
     PrintUsage();
     return -1;
   }
 
-  FetchBenchmark app(&loop, std::move(component_context), entry_count,
-                     value_size, part_size, std::move(sync_params));
+  FetchBenchmark app(&loop, std::move(component_context), entry_count, value_size, part_size,
+                     std::move(sync_params));
   return RunWithTracing(&loop, [&app] { app.Run(); });
 }
 

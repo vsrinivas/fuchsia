@@ -79,8 +79,7 @@ struct ElementTracker {
 // Gets the global allocation tracker to use.
 ElementTracker<> &GetAllocationTracker() {
   static ElementTracker<> *sAllocationSet = [] {
-    void *memory reinterpret_cast<ElementTracker<> *>(
-        malloc(sizeof(ElementTracker<>)));
+    void *memory reinterpret_cast<ElementTracker<> *>(malloc(sizeof(ElementTracker<>)));
     return new (memory) ElementTracker<>();
   }();
   return *sAllocationSet;
@@ -203,8 +202,7 @@ INTERFACE void *operator new(size_t size, std::align_val_t align) {
 INTERFACE void *operator new[](size_t size, std::align_val_t align) {
   return WrapAlloc(malloc(size));
 }
-INTERFACE void *operator new(size_t size, std::align_val_t align,
-                             std::nothrow_t const &) noexcept {
+INTERFACE void *operator new(size_t size, std::align_val_t align, std::nothrow_t const &) noexcept {
   return WrapAlloc(malloc(size));
 }
 INTERFACE void *operator new[](size_t size, std::align_val_t align,
@@ -220,32 +218,25 @@ INTERFACE void operator delete(void *ptr, std::nothrow_t const &)noexcept {
 INTERFACE void operator delete[](void *ptr, std::nothrow_t const &) noexcept {
   free(WrapDealloc(ptr));
 }
-INTERFACE void operator delete(void *ptr, size_t size) noexcept {
-  free(WrapDealloc(ptr));
-}
-INTERFACE void operator delete[](void *ptr, size_t size) noexcept {
-  free(WrapDealloc(ptr));
-}
+INTERFACE void operator delete(void *ptr, size_t size) noexcept { free(WrapDealloc(ptr)); }
+INTERFACE void operator delete[](void *ptr, size_t size) noexcept { free(WrapDealloc(ptr)); }
 INTERFACE void operator delete(void *ptr, std::align_val_t align) noexcept {
   free(WrapDealloc(ptr));
 }
 INTERFACE void operator delete[](void *ptr, std::align_val_t align) noexcept {
   free(WrapDealloc(ptr));
 }
-INTERFACE void operator delete(void *ptr, std::align_val_t align,
-                               std::nothrow_t const &)noexcept {
+INTERFACE void operator delete(void *ptr, std::align_val_t align, std::nothrow_t const &)noexcept {
   free(WrapDealloc(ptr));
 }
 INTERFACE void operator delete[](void *ptr, std::align_val_t align,
                                  std::nothrow_t const &) noexcept {
   free(WrapDealloc(ptr));
 }
-INTERFACE void operator delete(void *ptr, size_t size,
-                               std::align_val_t align) noexcept {
+INTERFACE void operator delete(void *ptr, size_t size, std::align_val_t align) noexcept {
   free(WrapDealloc(ptr));
 }
-INTERFACE void operator delete[](void *ptr, size_t size,
-                                 std::align_val_t align) noexcept {
+INTERFACE void operator delete[](void *ptr, size_t size, std::align_val_t align) noexcept {
   free(WrapDealloc(ptr));
 }
 

@@ -20,9 +20,9 @@ namespace cloud_provider_firestore {
 // given timestamp appears as the server-set timestamp.
 //
 // |timestamp| must be a valid serialized protobuf::Timestamp.
-bool EncodeCommitBatchWithTimestamp(
-    const cloud_provider::CommitPack& commits, std::string timestamp,
-    google::firestore::v1beta1::Document* document);
+bool EncodeCommitBatchWithTimestamp(const cloud_provider::CommitPack& commits,
+                                    std::string timestamp,
+                                    google::firestore::v1beta1::Document* document);
 
 }  // namespace cloud_provider_firestore
 

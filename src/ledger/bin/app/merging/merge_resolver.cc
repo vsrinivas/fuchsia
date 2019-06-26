@@ -89,9 +89,7 @@ bool MergeResolver::MergeCandidates::HasCandidate() {
   return current_pair_.first != head_count_ - 1;
 }
 
-std::pair<size_t, size_t> MergeResolver::MergeCandidates::GetCurrentPair() {
-  return current_pair_;
-}
+std::pair<size_t, size_t> MergeResolver::MergeCandidates::GetCurrentPair() { return current_pair_; }
 
 void MergeResolver::MergeCandidates::OnMergeSuccess() { needs_reset_ = true; }
 
@@ -117,8 +115,7 @@ void MergeResolver::MergeCandidates::PrepareNext() {
   }
 }
 
-MergeResolver::MergeResolver(fit::closure on_destroyed,
-                             Environment* environment,
+MergeResolver::MergeResolver(fit::closure on_destroyed, Environment* environment,
                              storage::PageStorage* storage,
                              std::unique_ptr<backoff::Backoff> backoff)
     : coroutine_service_(environment->coroutine_service()),
@@ -143,9 +140,8 @@ void MergeResolver::set_on_empty(fit::closure on_empty_callback) {
 bool MergeResolver::IsEmpty() { return !merge_in_progress_; }
 
 bool MergeResolver::HasUnfinishedMerges() {
-  return merge_in_progress_ || check_conflicts_in_progress_ ||
-         check_conflicts_task_count_ != 0 || in_delay_ ||
-         merge_candidates_->HadNetworkErrors();
+  return merge_in_progress_ || check_conflicts_in_progress_ || check_conflicts_task_count_ != 0 ||
+         in_delay_ || merge_candidates_->HadNetworkErrors();
 }
 
 void MergeResolver::SetMergeStrategy(std::unique_ptr<MergeStrategy> strategy) {
@@ -164,8 +160,7 @@ void MergeResolver::SetMergeStrategy(std::unique_ptr<MergeStrategy> strategy) {
   }
 }
 
-void MergeResolver::SetActivePageManager(
-    ActivePageManager* active_page_manager) {
+void MergeResolver::SetActivePageManager(ActivePageManager* active_page_manager) {
   FXL_DCHECK(active_page_manager_ == nullptr);
   active_page_manager_ = active_page_manager;
 }
@@ -179,10 +174,9 @@ void MergeResolver::OnNewCommits(
     const std::vector<std::unique_ptr<const storage::Commit>>& /*commits*/,
     storage::ChangeSource source) {
   merge_candidates_->OnNewCommits();
-  PostCheckConflicts(source == storage::ChangeSource::LOCAL
-                         ? DelayedStatus::DONT_DELAY
-                         // We delay remote commits.
-                         : DelayedStatus::MAY_DELAY);
+  PostCheckConflicts(source == storage::ChangeSource::LOCAL ? DelayedStatus::DONT_DELAY
+                                                            // We delay remote commits.
+                                                            : DelayedStatus::MAY_DELAY);
 }
 
 void MergeResolver::PostCheckConflicts(DelayedStatus delayed_status) {
@@ -194,8 +188,7 @@ void MergeResolver::PostCheckConflicts(DelayedStatus delayed_status) {
 }
 
 void MergeResolver::CheckConflicts(DelayedStatus delayed_status) {
-  if (!strategy_ || merge_in_progress_ || check_conflicts_in_progress_ ||
-      in_delay_) {
+  if (!strategy_ || merge_in_progress_ || check_conflicts_in_progress_ || in_delay_) {
     // No strategy is set, or a merge is already in progress, or we are already
     // checking for conflicts, or we are delaying merges. Let's bail out early.
     return;
@@ -211,8 +204,7 @@ void MergeResolver::CheckConflicts(DelayedStatus delayed_status) {
   FXL_DCHECK(merge_candidates_->head_count() == heads.size())
       << merge_candidates_->head_count() << " != " << heads.size();
 
-  if (s != Status::OK || heads.size() == 1 ||
-      !(merge_candidates_->HasCandidate())) {
+  if (s != Status::OK || heads.size() == 1 || !(merge_candidates_->HasCandidate())) {
     // An error occurred, or there is no conflict we can resolve. In
     // either case, return early.
     if (s != Status::OK) {
@@ -242,9 +234,9 @@ void MergeResolver::CheckConflicts(DelayedStatus delayed_status) {
                    std::move(heads[head_indexes.second]));
 }
 
-void MergeResolver::ResolveConflicts(
-    DelayedStatus delayed_status, std::unique_ptr<const storage::Commit> head1,
-    std::unique_ptr<const storage::Commit> head2) {
+void MergeResolver::ResolveConflicts(DelayedStatus delayed_status,
+                                     std::unique_ptr<const storage::Commit> head1,
+                                     std::unique_ptr<const storage::Commit> head2) {
   auto cleanup = fit::defer(task_runner_.MakeScoped([this, delayed_status] {
     // |merge_in_progress_| must be reset before calling
     // |on_empty_callback_|.
@@ -278,8 +270,7 @@ void MergeResolver::ResolveConflicts(
       };
       in_delay_ = true;
       task_runner_.PostDelayedTask(
-          TRACE_CALLBACK(std::move(delay_callback), "ledger", "merge_delay"),
-          backoff_->GetNext());
+          TRACE_CALLBACK(std::move(delay_callback), "ledger", "merge_delay"), backoff_->GetNext());
       cleanup.cancel();
       merge_in_progress_ = false;
       // We don't want to continue merging if nobody is interested
@@ -299,38 +290,33 @@ void MergeResolver::ResolveConflicts(
 
   // Merge the first two commits using the most recent one as the
   // base.
-  RecursiveMergeOneStep(
-      std::move(head1), std::move(head2),
-      [cleanup = std::move(cleanup), tracing = std::move(tracing)] {
-        ReportEvent(CobaltEvent::COMMITS_MERGED);
-      });
+  RecursiveMergeOneStep(std::move(head1), std::move(head2),
+                        [cleanup = std::move(cleanup), tracing = std::move(tracing)] {
+                          ReportEvent(CobaltEvent::COMMITS_MERGED);
+                        });
 }
 
-void MergeResolver::RecursiveMergeOneStep(
-    std::unique_ptr<const storage::Commit> left,
-    std::unique_ptr<const storage::Commit> right,
-    fit::closure on_successful_merge) {
-  coroutine_service_->StartCoroutine(
-      [this, left = std::move(left), right = std::move(right),
-       on_successful_merge = std::move(on_successful_merge)](
-          coroutine::CoroutineHandler* handler) mutable {
-        TRACE_DURATION("ledger", "recursive_merge");
-        Status status =
-            RecursiveMergeSync(handler, std::move(left), std::move(right));
-        if (status == Status::INTERRUPTED) {
-          return;
-        }
-        if (status != Status::OK) {
-          FXL_LOG(ERROR) << "Recursive merge failed";
-          return;
-        }
-        on_successful_merge();
-      });
+void MergeResolver::RecursiveMergeOneStep(std::unique_ptr<const storage::Commit> left,
+                                          std::unique_ptr<const storage::Commit> right,
+                                          fit::closure on_successful_merge) {
+  coroutine_service_->StartCoroutine([this, left = std::move(left), right = std::move(right),
+                                      on_successful_merge = std::move(on_successful_merge)](
+                                         coroutine::CoroutineHandler* handler) mutable {
+    TRACE_DURATION("ledger", "recursive_merge");
+    Status status = RecursiveMergeSync(handler, std::move(left), std::move(right));
+    if (status == Status::INTERRUPTED) {
+      return;
+    }
+    if (status != Status::OK) {
+      FXL_LOG(ERROR) << "Recursive merge failed";
+      return;
+    }
+    on_successful_merge();
+  });
 }
 
 Status MergeResolver::MergeCommitsToContentOfLeftSync(
-    coroutine::CoroutineHandler* handler,
-    std::unique_ptr<const storage::Commit> left,
+    coroutine::CoroutineHandler* handler, std::unique_ptr<const storage::Commit> left,
     std::unique_ptr<const storage::Commit> right) {
   std::unique_ptr<storage::Journal> journal =
       storage_->StartMergeCommit(std::move(left), std::move(right));
@@ -341,8 +327,7 @@ Status MergeResolver::MergeCommitsToContentOfLeftSync(
   auto sync_call_status = coroutine::SyncCall(
       handler,
       [this, journal = std::move(journal)](
-          fit::function<void(Status status,
-                             std::unique_ptr<const storage::Commit>)>
+          fit::function<void(Status status, std::unique_ptr<const storage::Commit>)>
               callback) mutable {
         storage_->CommitJournal(std::move(journal), std::move(callback));
       },
@@ -355,10 +340,10 @@ Status MergeResolver::MergeCommitsToContentOfLeftSync(
 
 // Synchronously get the commit with id |commit_id|. Try |candidate| if it has
 // the right id, otherwise fetch it from storage.
-Status MergeResolver::GetCommitSync(
-    coroutine::CoroutineHandler* handler, storage::CommitIdView commit_id,
-    std::unique_ptr<const storage::Commit> candidate,
-    std::unique_ptr<const storage::Commit>* result) {
+Status MergeResolver::GetCommitSync(coroutine::CoroutineHandler* handler,
+                                    storage::CommitIdView commit_id,
+                                    std::unique_ptr<const storage::Commit> candidate,
+                                    std::unique_ptr<const storage::Commit>* result) {
   // Exit early if we already have the commit.
   if (candidate->GetId() == commit_id) {
     *result = std::move(candidate);
@@ -368,10 +353,8 @@ Status MergeResolver::GetCommitSync(
   Status status;
   auto sync_call_status = coroutine::SyncCall(
       handler,
-      [this,
-       commit_id](fit::function<void(Status status,
-                                     std::unique_ptr<const storage::Commit>)>
-                      callback) {
+      [this, commit_id](
+          fit::function<void(Status status, std::unique_ptr<const storage::Commit>)> callback) {
         storage_->GetCommit(commit_id, std::move(callback));
       },
       &status, result);
@@ -387,15 +370,14 @@ Status MergeResolver::GetCommitSync(
 
 // Requests the merges of |right_commit| and any element of |left_commits|, and
 // return them in |merges|.
-Status MergeResolver::FindMergesSync(
-    coroutine::CoroutineHandler* handler,
-    const std::vector<storage::CommitId>& left_commits,
-    storage::CommitId right_commit, std::vector<storage::CommitId>* merges) {
-  auto waiter = fxl::MakeRefCounted<
-      callback::Waiter<Status, std::vector<storage::CommitId>>>(Status::OK);
+Status MergeResolver::FindMergesSync(coroutine::CoroutineHandler* handler,
+                                     const std::vector<storage::CommitId>& left_commits,
+                                     storage::CommitId right_commit,
+                                     std::vector<storage::CommitId>* merges) {
+  auto waiter =
+      fxl::MakeRefCounted<callback::Waiter<Status, std::vector<storage::CommitId>>>(Status::OK);
   for (const auto& left_commit : left_commits) {
-    storage_->GetMergeCommitIds(left_commit, right_commit,
-                                waiter->NewCallback());
+    storage_->GetMergeCommitIds(left_commit, right_commit, waiter->NewCallback());
   }
   Status status;
   std::vector<std::vector<storage::CommitId>> merge_lists;
@@ -420,17 +402,15 @@ Status MergeResolver::FindMergesSync(
 // Try to build a merge of all commits in |ancestors|. Either the merge already
 // exists and is returned in |final_merge| or one intermediate merge is
 // constructed.
-Status MergeResolver::MergeSetSync(
-    coroutine::CoroutineHandler* handler,
-    std::vector<std::unique_ptr<const storage::Commit>> ancestors,
-    std::unique_ptr<const storage::Commit>* final_merge) {
+Status MergeResolver::MergeSetSync(coroutine::CoroutineHandler* handler,
+                                   std::vector<std::unique_ptr<const storage::Commit>> ancestors,
+                                   std::unique_ptr<const storage::Commit>* final_merge) {
   FXL_DCHECK(!ancestors.empty());
 
   // Sort ancestors by timestamp. This guarantees that, when we call the merge
   // strategy, the right-hand side commit is always the most recent, and also
   // matches (as much as possible) the order in which heads would be merged.
-  std::sort(ancestors.begin(), ancestors.end(),
-            storage::Commit::TimestampOrdered);
+  std::sort(ancestors.begin(), ancestors.end(), storage::Commit::TimestampOrdered);
 
   // Build a merge of the first N ancestors. This holds the list of available
   // merges of all the ancestors examined until now. Since merges have the
@@ -446,8 +426,7 @@ Status MergeResolver::MergeSetSync(
     std::vector<storage::CommitId> next_merges;
     auto& next_ancestor = *it;
 
-    Status status =
-        FindMergesSync(handler, merges, next_ancestor->GetId(), &next_merges);
+    Status status = FindMergesSync(handler, merges, next_ancestor->GetId(), &next_merges);
     if (status != Status::OK) {
       return status;
     }
@@ -460,8 +439,7 @@ Status MergeResolver::MergeSetSync(
       // Get |merge[0]| from storage, or from |ancestors[0]| if they are the
       // same commit.
       std::unique_ptr<const storage::Commit> last_merge;
-      Status status = GetCommitSync(handler, merges[0], std::move(ancestors[0]),
-                                    &last_merge);
+      Status status = GetCommitSync(handler, merges[0], std::move(ancestors[0]), &last_merge);
       if (status != Status::OK) {
         return status;
       }
@@ -470,11 +448,9 @@ Status MergeResolver::MergeSetSync(
       // higher. In case of equality we need to reorder the calls.
       if (!storage::Commit::TimestampOrdered(last_merge, next_ancestor)) {
         FXL_DCHECK(last_merge->GetTimestamp() == next_ancestor->GetTimestamp());
-        return RecursiveMergeSync(handler, std::move(next_ancestor),
-                                  std::move(last_merge));
+        return RecursiveMergeSync(handler, std::move(next_ancestor), std::move(last_merge));
       }
-      return RecursiveMergeSync(handler, std::move(last_merge),
-                                std::move(next_ancestor));
+      return RecursiveMergeSync(handler, std::move(last_merge), std::move(next_ancestor));
     }
     merges = std::move(next_merges);
   }
@@ -483,18 +459,16 @@ Status MergeResolver::MergeSetSync(
 
   // Try to create the merge in a deterministic way: order by id.
   std::sort(merges.begin(), merges.end());
-  return GetCommitSync(handler, merges[0], std::move(ancestors[0]),
-                       final_merge);
+  return GetCommitSync(handler, merges[0], std::move(ancestors[0]), final_merge);
 }
 
 // Does one step of recursive merging: tries to merge |left| and |right| and
 // either produces a merge commit, or calls itself recursively to merge some
 // common ancestors. Assumes that |left| is older than |right| according to
 // |storage::Commit::TimestampOrdered|.
-Status MergeResolver::RecursiveMergeSync(
-    coroutine::CoroutineHandler* handler,
-    std::unique_ptr<const storage::Commit> left,
-    std::unique_ptr<const storage::Commit> right) {
+Status MergeResolver::RecursiveMergeSync(coroutine::CoroutineHandler* handler,
+                                         std::unique_ptr<const storage::Commit> left,
+                                         std::unique_ptr<const storage::Commit> right) {
   FXL_DCHECK(storage::Commit::TimestampOrdered(left, right));
 
   CommitComparison comparison;
@@ -502,9 +476,8 @@ Status MergeResolver::RecursiveMergeSync(
   Status status;
   {
     TRACE_DURATION("ledger", "merge_common_ancestor");
-    status =
-        FindCommonAncestors(handler, storage_, left->Clone(), right->Clone(),
-                            &comparison, &common_ancestors);
+    status = FindCommonAncestors(handler, storage_, left->Clone(), right->Clone(), &comparison,
+                                 &common_ancestors);
   }
   if (status != Status::OK) {
     return status;
@@ -515,16 +488,13 @@ Status MergeResolver::RecursiveMergeSync(
   }
 
   if (comparison == CommitComparison::LEFT_SUBSET_OF_RIGHT) {
-    return MergeCommitsToContentOfLeftSync(handler, std::move(right),
-                                           std::move(left));
+    return MergeCommitsToContentOfLeftSync(handler, std::move(right), std::move(left));
   } else if (comparison == CommitComparison::RIGHT_SUBSET_OF_LEFT) {
-    return MergeCommitsToContentOfLeftSync(handler, std::move(left),
-                                           std::move(right));
+    return MergeCommitsToContentOfLeftSync(handler, std::move(left), std::move(right));
   } else if (comparison == CommitComparison::EQUIVALENT) {
     // The commits are equivalent so we can merge to the content
     // of either of them.
-    return MergeCommitsToContentOfLeftSync(handler, std::move(left),
-                                           std::move(right));
+    return MergeCommitsToContentOfLeftSync(handler, std::move(left), std::move(right));
   }
 
   FXL_DCHECK(!common_ancestors.empty());
@@ -549,12 +519,10 @@ Status MergeResolver::RecursiveMergeSync(
   auto sync_call_status = coroutine::SyncCall(
       handler,
       [this, left = std::move(left), right = std::move(right),
-       merge_base = std::move(merge_base)](
-          fit::function<void(Status)> callback) mutable {
-        strategy_->Merge(storage_, active_page_manager_, std::move(left),
-                         std::move(right), std::move(merge_base),
-                         TRACE_CALLBACK(std::move(callback), "ledger",
-                                        "merge_strategy_merge"));
+       merge_base = std::move(merge_base)](fit::function<void(Status)> callback) mutable {
+        strategy_->Merge(storage_, active_page_manager_, std::move(left), std::move(right),
+                         std::move(merge_base),
+                         TRACE_CALLBACK(std::move(callback), "ledger", "merge_strategy_merge"));
       },
       &merge_status);
   if (sync_call_status == coroutine::ContinuationStatus::INTERRUPTED) {

@@ -31,19 +31,15 @@ class FakePageCloud : public cloud_provider::PageCloud {
   bool MustReturnError(uint64_t request_signature);
 
   // cloud_provider::PageCloud:
-  void AddCommits(cloud_provider::CommitPack commits,
-                  AddCommitsCallback callback) override;
-  void GetCommits(
-      std::unique_ptr<cloud_provider::PositionToken> min_position_token,
-      GetCommitsCallback callback) override;
+  void AddCommits(cloud_provider::CommitPack commits, AddCommitsCallback callback) override;
+  void GetCommits(std::unique_ptr<cloud_provider::PositionToken> min_position_token,
+                  GetCommitsCallback callback) override;
   void AddObject(std::vector<uint8_t> id, fuchsia::mem::Buffer data,
-                 cloud_provider::ReferencePack references,
-                 AddObjectCallback callback) override;
+                 cloud_provider::ReferencePack references, AddObjectCallback callback) override;
   void GetObject(std::vector<uint8_t> id, GetObjectCallback callback) override;
-  void SetWatcher(
-      std::unique_ptr<cloud_provider::PositionToken> min_position_token,
-      fidl::InterfaceHandle<cloud_provider::PageCloudWatcher> watcher,
-      SetWatcherCallback callback) override;
+  void SetWatcher(std::unique_ptr<cloud_provider::PositionToken> min_position_token,
+                  fidl::InterfaceHandle<cloud_provider::PageCloudWatcher> watcher,
+                  SetWatcherCallback callback) override;
 
   InjectNetworkError inject_network_error_;
   std::map<uint64_t, size_t> remaining_errors_to_inject_;

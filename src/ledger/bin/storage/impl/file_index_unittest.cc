@@ -22,16 +22,15 @@ TEST_F(FileIndexSerializationTest, CheckInvalid) {
 }
 
 TEST_F(FileIndexSerializationTest, SerializationDeserialization) {
-  const std::vector<FileIndexSerialization::ObjectIdentifierAndSize> elements =
-      {
-          {RandomObjectIdentifier(environment_.random()), 1},
-          {RandomObjectIdentifier(environment_.random()), 2},
-          {RandomObjectIdentifier(environment_.random()), 3},
-          {RandomObjectIdentifier(environment_.random()), 4},
-          {RandomObjectIdentifier(environment_.random()), 3},
-          {RandomObjectIdentifier(environment_.random()), 2},
-          {RandomObjectIdentifier(environment_.random()), 1},
-      };
+  const std::vector<FileIndexSerialization::ObjectIdentifierAndSize> elements = {
+      {RandomObjectIdentifier(environment_.random()), 1},
+      {RandomObjectIdentifier(environment_.random()), 2},
+      {RandomObjectIdentifier(environment_.random()), 3},
+      {RandomObjectIdentifier(environment_.random()), 4},
+      {RandomObjectIdentifier(environment_.random()), 3},
+      {RandomObjectIdentifier(environment_.random()), 2},
+      {RandomObjectIdentifier(environment_.random()), 1},
+  };
 
   constexpr size_t expected_total_size = 16;
 
@@ -42,8 +41,7 @@ TEST_F(FileIndexSerializationTest, SerializationDeserialization) {
   EXPECT_EQ(expected_total_size, total_size);
 
   const FileIndex* file_index;
-  Status status =
-      FileIndexSerialization::ParseFileIndex(chunk->Get(), &file_index);
+  Status status = FileIndexSerialization::ParseFileIndex(chunk->Get(), &file_index);
   ASSERT_EQ(Status::OK, status);
 
   EXPECT_EQ(expected_total_size, file_index->size());
@@ -51,8 +49,7 @@ TEST_F(FileIndexSerializationTest, SerializationDeserialization) {
   const auto& children = *(file_index->children());
   for (size_t i = 0; i < elements.size(); ++i) {
     EXPECT_EQ(elements[i].size, children[i]->size());
-    EXPECT_EQ(elements[i].identifier,
-              ToObjectIdentifier(children[i]->object_identifier()));
+    EXPECT_EQ(elements[i].identifier, ToObjectIdentifier(children[i]->object_identifier()));
   }
 }
 

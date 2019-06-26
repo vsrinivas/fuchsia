@@ -32,8 +32,7 @@ class MergeStrategy {
   // Merge the given commits. MergeStrategy should not be deleted while merges
   // are in progress. The heads must be sorted according to their timestamps:
   // |storage::Commit::TimestampOrdered(head_1, head_2)| must be true.
-  virtual void Merge(storage::PageStorage* storage,
-                     ActivePageManager* active_page_manager,
+  virtual void Merge(storage::PageStorage* storage, ActivePageManager* active_page_manager,
                      std::unique_ptr<const storage::Commit> head_1,
                      std::unique_ptr<const storage::Commit> head_2,
                      std::unique_ptr<const storage::Commit> ancestor,

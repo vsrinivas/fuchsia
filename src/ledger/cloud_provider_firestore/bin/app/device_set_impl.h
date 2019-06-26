@@ -27,8 +27,7 @@ namespace cloud_provider_firestore {
 // closed.
 class DeviceSetImpl : public cloud_provider::DeviceSet, ListenCallClient {
  public:
-  DeviceSetImpl(std::string user_path,
-                CredentialsProvider* credentials_provider,
+  DeviceSetImpl(std::string user_path, CredentialsProvider* credentials_provider,
                 FirestoreService* firestore_service,
                 fidl::InterfaceRequest<cloud_provider::DeviceSet> request);
   ~DeviceSetImpl() override;
@@ -36,27 +35,23 @@ class DeviceSetImpl : public cloud_provider::DeviceSet, ListenCallClient {
   void set_on_empty(fit::closure on_empty) { on_empty_ = std::move(on_empty); }
 
  private:
-  void ScopedGetCredentials(
-      fit::function<void(std::shared_ptr<grpc::CallCredentials>)> callback);
+  void ScopedGetCredentials(fit::function<void(std::shared_ptr<grpc::CallCredentials>)> callback);
 
   // cloud_provider::DeviceSet:
   void CheckFingerprint(std::vector<uint8_t> fingerprint,
                         CheckFingerprintCallback callback) override;
 
-  void SetFingerprint(std::vector<uint8_t> fingerprint,
-                      SetFingerprintCallback callback) override;
+  void SetFingerprint(std::vector<uint8_t> fingerprint, SetFingerprintCallback callback) override;
 
-  void SetWatcher(
-      std::vector<uint8_t> fingerprint,
-      fidl::InterfaceHandle<cloud_provider::DeviceSetWatcher> watcher,
-      SetWatcherCallback callback) override;
+  void SetWatcher(std::vector<uint8_t> fingerprint,
+                  fidl::InterfaceHandle<cloud_provider::DeviceSetWatcher> watcher,
+                  SetWatcherCallback callback) override;
 
   void Erase(EraseCallback callback) override;
 
-  void OnGotDocumentsToErase(
-      std::shared_ptr<grpc::CallCredentials> call_credentials,
-      google::firestore::v1beta1::ListDocumentsResponse documents_response,
-      EraseCallback callback);
+  void OnGotDocumentsToErase(std::shared_ptr<grpc::CallCredentials> call_credentials,
+                             google::firestore::v1beta1::ListDocumentsResponse documents_response,
+                             EraseCallback callback);
 
   // ListenCallClient:
   void OnConnected() override;

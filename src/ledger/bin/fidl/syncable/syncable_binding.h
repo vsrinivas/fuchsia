@@ -39,8 +39,7 @@ namespace ledger {
 template <typename D>
 class SyncableBinding {
  public:
-  explicit SyncableBinding(D* delegate)
-      : impl_(delegate, this), binding_(&impl_) {
+  explicit SyncableBinding(D* delegate) : impl_(delegate, this), binding_(&impl_) {
     binding_.set_error_handler([this](zx_status_t status) {
       binding_error_status_ = status;
       CheckEmpty();
@@ -48,26 +47,21 @@ class SyncableBinding {
     sync_helper_.set_on_empty([this] { CheckEmpty(); });
   }
 
-  SyncableBinding(D* delegate,
-                  fidl::InterfaceRequest<typename D::FidlInterface> request,
+  SyncableBinding(D* delegate, fidl::InterfaceRequest<typename D::FidlInterface> request,
                   async_dispatcher_t* dispatcher = nullptr)
       : SyncableBinding(delegate) {
     binding_.Bind(std::move(request), dispatcher);
   }
 
   void set_on_empty(fit::closure on_empty) {
-    error_handler_ = [on_empty = std::move(on_empty)](zx_status_t /*status*/) {
-      on_empty();
-    };
+    error_handler_ = [on_empty = std::move(on_empty)](zx_status_t /*status*/) { on_empty(); };
   }
   void set_error_handler(fit::function<void(zx_status_t)> error_handler) {
     error_handler_ = std::move(error_handler);
   }
   bool empty() { return !binding_.is_bound() && sync_helper_.empty(); }
 
-  fidl::InterfaceRequest<typename D::FidlInterface> Unbind() {
-    return binding_.Unbind();
-  }
+  fidl::InterfaceRequest<typename D::FidlInterface> Unbind() { return binding_.Unbind(); }
   fidl::InterfaceHandle<typename D::FidlInterface> NewBinding(
       async_dispatcher_t* dispatcher = nullptr) {
     return binding_.NewBinding(dispatcher);
@@ -89,21 +83,18 @@ class SyncableBinding {
   // Wraps a callback in another one that preprends a Status arguments and
   // handles the status in case of error.
   template <typename... Args>
-  auto WrapOperation(const char* function_name,
-                     fit::function<void(Args...)> callback) {
-    return sync_helper_.WrapOperation(
-        [this, function_name, callback = std::move(callback)](
-            ::ledger::Status status, Args&&... args) {
-          if (status == ::ledger::Status::OK) {
-            callback(std::forward<Args>(args)...);
-            return;
-          }
-          FXL_LOG(INFO) << "FIDL call " << D::Impl::kInterfaceName
-                        << "::" << function_name
-                        << " failed with status: " << status
-                        << ". Sending the epitaph and closing the connection.";
-          Close(ConvertToEpitaph(status));
-        });
+  auto WrapOperation(const char* function_name, fit::function<void(Args...)> callback) {
+    return sync_helper_.WrapOperation([this, function_name, callback = std::move(callback)](
+                                          ::ledger::Status status, Args&&... args) {
+      if (status == ::ledger::Status::OK) {
+        callback(std::forward<Args>(args)...);
+        return;
+      }
+      FXL_LOG(INFO) << "FIDL call " << D::Impl::kInterfaceName << "::" << function_name
+                    << " failed with status: " << status
+                    << ". Sending the epitaph and closing the connection.";
+      Close(ConvertToEpitaph(status));
+    });
   }
 
   // Returns a new callback taking a ledger::Status. This callback will be

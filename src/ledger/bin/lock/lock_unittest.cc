@@ -31,18 +31,16 @@ TEST(Lock, OneLock) {
 
   size_t received_value = 0;
   size_t other_value = 0;
-  coroutine_service.StartCoroutine([&serializer, callable, &received_value](
-                                       coroutine::CoroutineHandler* handler) {
-    std::unique_ptr<Lock> lock;
-    EXPECT_EQ(coroutine::ContinuationStatus::OK,
-              AcquireLock(handler, &serializer, &lock));
-    UseStack();
-    size_t value;
-    EXPECT_EQ(coroutine::ContinuationStatus::OK,
-              SyncCall(handler, callable, &value));
-    UseStack();
-    received_value = value;
-  });
+  coroutine_service.StartCoroutine(
+      [&serializer, callable, &received_value](coroutine::CoroutineHandler* handler) {
+        std::unique_ptr<Lock> lock;
+        EXPECT_EQ(coroutine::ContinuationStatus::OK, AcquireLock(handler, &serializer, &lock));
+        UseStack();
+        size_t value;
+        EXPECT_EQ(coroutine::ContinuationStatus::OK, SyncCall(handler, callable, &value));
+        UseStack();
+        received_value = value;
+      });
 
   EXPECT_TRUE(callback);
   EXPECT_EQ(0u, received_value);
@@ -70,18 +68,16 @@ TEST(Lock, ManyLocks) {
     auto callable = [&callbacks](fit::function<void(size_t)> called_callback) {
       callbacks.push(std::move(called_callback));
     };
-    coroutine_service.StartCoroutine([&serializer, callable, &received_values](
-                                         coroutine::CoroutineHandler* handler) {
-      std::unique_ptr<Lock> lock;
-      EXPECT_EQ(coroutine::ContinuationStatus::OK,
-                AcquireLock(handler, &serializer, &lock));
-      UseStack();
-      size_t value;
-      EXPECT_EQ(coroutine::ContinuationStatus::OK,
-                SyncCall(handler, callable, &value));
-      UseStack();
-      received_values.push_back(value);
-    });
+    coroutine_service.StartCoroutine(
+        [&serializer, callable, &received_values](coroutine::CoroutineHandler* handler) {
+          std::unique_ptr<Lock> lock;
+          EXPECT_EQ(coroutine::ContinuationStatus::OK, AcquireLock(handler, &serializer, &lock));
+          UseStack();
+          size_t value;
+          EXPECT_EQ(coroutine::ContinuationStatus::OK, SyncCall(handler, callable, &value));
+          UseStack();
+          received_values.push_back(value);
+        });
   }
 
   for (size_t i = 0; i < nb_routines; i++) {
@@ -108,16 +104,16 @@ TEST(Lock, Interrupted) {
   bool executed = false;
   {
     coroutine::CoroutineServiceImpl coroutine_service;
-    coroutine_service.StartCoroutine([&serializer, &executed, &handler_ptr](
-                                         coroutine::CoroutineHandler* handler) {
-      handler_ptr = handler;
-      std::unique_ptr<Lock> lock;
-      // We are interrupted.
-      EXPECT_EQ(coroutine::ContinuationStatus::INTERRUPTED,
-                AcquireLock(handler, &serializer, &lock));
-      executed = true;
-      return;
-    });
+    coroutine_service.StartCoroutine(
+        [&serializer, &executed, &handler_ptr](coroutine::CoroutineHandler* handler) {
+          handler_ptr = handler;
+          std::unique_ptr<Lock> lock;
+          // We are interrupted.
+          EXPECT_EQ(coroutine::ContinuationStatus::INTERRUPTED,
+                    AcquireLock(handler, &serializer, &lock));
+          executed = true;
+          return;
+        });
 
     EXPECT_TRUE(callback);
     EXPECT_FALSE(executed);

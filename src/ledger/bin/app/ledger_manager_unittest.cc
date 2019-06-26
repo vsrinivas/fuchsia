@@ -82,12 +82,11 @@ class DelayingCallbacksManager {
   FXL_DISALLOW_COPY_AND_ASSIGN(DelayingCallbacksManager);
 };
 
-class DelayIsSyncedCallbackFakePageStorage
-    : public storage::fake::FakePageStorage {
+class DelayIsSyncedCallbackFakePageStorage : public storage::fake::FakePageStorage {
  public:
   explicit DelayIsSyncedCallbackFakePageStorage(
-      Environment* environment,
-      DelayingCallbacksManager* delaying_callbacks_manager, storage::PageId id)
+      Environment* environment, DelayingCallbacksManager* delaying_callbacks_manager,
+      storage::PageId id)
       : storage::fake::FakePageStorage(environment, id),
         delaying_callbacks_manager_(delaying_callbacks_manager) {}
   ~DelayIsSyncedCallbackFakePageStorage() override {}
@@ -100,9 +99,7 @@ class DelayIsSyncedCallbackFakePageStorage
     is_synced_callback_ = std::move(callback);
   }
 
-  void IsEmpty(fit::function<void(Status, bool)> callback) override {
-    callback(Status::OK, true);
-  }
+  void IsEmpty(fit::function<void(Status, bool)> callback) override { callback(Status::OK, true); }
 
   bool IsOnline() override { return false; }
 
@@ -117,43 +114,36 @@ class DelayIsSyncedCallbackFakePageStorage
   FXL_DISALLOW_COPY_AND_ASSIGN(DelayIsSyncedCallbackFakePageStorage);
 };
 
-class FakeLedgerStorage : public storage::LedgerStorage,
-                          public DelayingCallbacksManager {
+class FakeLedgerStorage : public storage::LedgerStorage, public DelayingCallbacksManager {
  public:
-  explicit FakeLedgerStorage(Environment* environment)
-      : environment_(environment) {}
+  explicit FakeLedgerStorage(Environment* environment) : environment_(environment) {}
   ~FakeLedgerStorage() override {}
 
-  void ListPages(fit::function<void(storage::Status, std::set<storage::PageId>)>
-                     callback) override {
+  void ListPages(
+      fit::function<void(storage::Status, std::set<storage::PageId>)> callback) override {
     FXL_NOTREACHED() << "Maybe implement this later on if needed?";
   }
 
   void CreatePageStorage(
       storage::PageId page_id,
-      fit::function<void(Status, std::unique_ptr<storage::PageStorage>)>
-          callback) override {
+      fit::function<void(Status, std::unique_ptr<storage::PageStorage>)> callback) override {
     create_page_calls.push_back(std::move(page_id));
     callback(Status::IO_ERROR, nullptr);
   }
 
   void GetPageStorage(
       storage::PageId page_id,
-      fit::function<void(Status, std::unique_ptr<storage::PageStorage>)>
-          callback) override {
+      fit::function<void(Status, std::unique_ptr<storage::PageStorage>)> callback) override {
     get_page_calls.push_back(page_id);
     async::PostTask(
-        environment_->dispatcher(),
-        [this, callback = std::move(callback), page_id]() mutable {
+        environment_->dispatcher(), [this, callback = std::move(callback), page_id]() mutable {
           if (should_get_page_fail) {
             callback(Status::PAGE_NOT_FOUND, nullptr);
           } else {
             auto fake_page_storage =
-                std::make_unique<DelayIsSyncedCallbackFakePageStorage>(
-                    environment_, this, page_id);
+                std::make_unique<DelayIsSyncedCallbackFakePageStorage>(environment_, this, page_id);
             // If the page was opened before, restore the previous sync state.
-            fake_page_storage->set_synced(synced_pages_.find(page_id) !=
-                                          synced_pages_.end());
+            fake_page_storage->set_synced(synced_pages_.find(page_id) != synced_pages_.end());
             page_storages_[std::move(page_id)] = fake_page_storage.get();
             callback(Status::OK, std::move(fake_page_storage));
           }
@@ -206,8 +196,7 @@ class FakeLedgerStorage : public storage::LedgerStorage,
     page_storages_[page_id_string]->set_synced(is_synced);
   }
 
-  void set_page_storage_offline_empty(storage::PageIdView page_id,
-                                      bool is_offline_empty) {
+  void set_page_storage_offline_empty(storage::PageIdView page_id, bool is_offline_empty) {
     storage::PageId page_id_string = page_id.ToString();
     if (is_offline_empty) {
       offline_empty_pages_.insert(page_id_string);
@@ -226,8 +215,7 @@ class FakeLedgerStorage : public storage::LedgerStorage,
 
  private:
   Environment* const environment_;
-  std::map<storage::PageId, DelayIsSyncedCallbackFakePageStorage*>
-      page_storages_;
+  std::map<storage::PageId, DelayIsSyncedCallbackFakePageStorage*> page_storages_;
   std::set<storage::PageId> synced_pages_;
   std::set<storage::PageId> offline_empty_pages_;
   std::set<storage::PageId> pages_with_delayed_callback;
@@ -262,8 +250,7 @@ class LedgerManagerTest : public TestWithEnvironment {
   // gtest::TestWithEnvironment:
   void SetUp() override {
     TestWithEnvironment::SetUp();
-    std::unique_ptr<FakeLedgerStorage> storage =
-        std::make_unique<FakeLedgerStorage>(&environment_);
+    std::unique_ptr<FakeLedgerStorage> storage = std::make_unique<FakeLedgerStorage>(&environment_);
     storage_ptr = storage.get();
     std::unique_ptr<FakeLedgerSync> sync = std::make_unique<FakeLedgerSync>();
     sync_ptr = sync.get();
@@ -272,8 +259,8 @@ class LedgerManagerTest : public TestWithEnvironment {
     ledger_manager_ = std::make_unique<LedgerManager>(
         &environment_, kLedgerName.ToString(),
         top_level_node_.CreateChild(kInspectPathComponent.ToString()),
-        std::make_unique<encryption::FakeEncryptionService>(dispatcher()),
-        std::move(storage), std::move(sync), disk_cleanup_manager_.get());
+        std::make_unique<encryption::FakeEncryptionService>(dispatcher()), std::move(storage),
+        std::move(sync), disk_cleanup_manager_.get());
     ResetLedgerPtr();
   }
 
@@ -293,22 +280,18 @@ class LedgerManagerTest : public TestWithEnvironment {
 
 class StubConflictResolverFactory : public ConflictResolverFactory {
  public:
-  explicit StubConflictResolverFactory(
-      fidl::InterfaceRequest<ConflictResolverFactory> request)
+  explicit StubConflictResolverFactory(fidl::InterfaceRequest<ConflictResolverFactory> request)
       : binding_(this, std::move(request)) {
-    binding_.set_error_handler(
-        [this](zx_status_t status) { disconnected = true; });
+    binding_.set_error_handler([this](zx_status_t status) { disconnected = true; });
   }
 
   bool disconnected = false;
 
  private:
-  void GetPolicy(PageId page_id,
-                 fit::function<void(MergePolicy)> callback) override {}
+  void GetPolicy(PageId page_id, fit::function<void(MergePolicy)> callback) override {}
 
-  void NewConflictResolver(
-      PageId page_id,
-      fidl::InterfaceRequest<ConflictResolver> resolver) override {}
+  void NewConflictResolver(PageId page_id,
+                           fidl::InterfaceRequest<ConflictResolver> resolver) override {}
 
   fidl::Binding<ConflictResolverFactory> binding_;
 };
@@ -411,8 +394,7 @@ TEST_F(LedgerManagerTest, NonEmptyDuringDeletion) {
   bool delete_page_called;
   Status delete_page_status;
   ledger_manager_->DeletePageStorage(
-      id.id, callback::Capture(callback::SetWhenCalled(&delete_page_called),
-                               &delete_page_status));
+      id.id, callback::Capture(callback::SetWhenCalled(&delete_page_called), &delete_page_status));
 
   // Empty the Ledger manager.
   ledger_.Unbind();
@@ -439,8 +421,7 @@ TEST_F(LedgerManagerTest, PageIsClosedAndSyncedCheckNotFound) {
   // Check for a page that doesn't exist.
   storage_ptr->should_get_page_fail = true;
   ledger_manager_->PageIsClosedAndSynced(
-      id.id, callback::Capture(callback::SetWhenCalled(&called), &status,
-                               &is_closed_and_synced));
+      id.id, callback::Capture(callback::SetWhenCalled(&called), &status, &is_closed_and_synced));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::PAGE_NOT_FOUND, status);
@@ -464,8 +445,7 @@ TEST_F(LedgerManagerTest, PageIsClosedAndSyncedCheckClosed) {
   storage_ptr->set_page_storage_synced(storage_page_id, true);
   ledger_manager_->PageIsClosedAndSynced(
       storage_page_id,
-      callback::Capture(callback::SetWhenCalled(&called), &storage_status,
-                        &is_closed_and_synced));
+      callback::Capture(callback::SetWhenCalled(&called), &storage_status, &is_closed_and_synced));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, storage_status);
@@ -477,8 +457,7 @@ TEST_F(LedgerManagerTest, PageIsClosedAndSyncedCheckClosed) {
 
   ledger_manager_->PageIsClosedAndSynced(
       storage_page_id,
-      callback::Capture(callback::SetWhenCalled(&called), &storage_status,
-                        &is_closed_and_synced));
+      callback::Capture(callback::SetWhenCalled(&called), &storage_status, &is_closed_and_synced));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, storage_status);
@@ -518,8 +497,7 @@ TEST_F(LedgerManagerTest, PageIsClosedAndSyncedCallOnEmpty) {
 
   ledger_manager_->PageIsClosedAndSynced(
       storage_page_id,
-      callback::Capture(callback::SetWhenCalled(&called), &storage_status,
-                        &is_closed_and_synced));
+      callback::Capture(callback::SetWhenCalled(&called), &storage_status, &is_closed_and_synced));
   RunLoopUntilIdle();
   EXPECT_FALSE(called);
 
@@ -553,8 +531,7 @@ TEST_F(LedgerManagerTest, PageIsClosedAndSyncedCheckSynced) {
   Status storage_status;
   ledger_manager_->PageIsClosedAndSynced(
       storage_page_id,
-      callback::Capture(callback::SetWhenCalled(&called), &storage_status,
-                        &is_closed_and_synced));
+      callback::Capture(callback::SetWhenCalled(&called), &storage_status, &is_closed_and_synced));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, storage_status);
@@ -583,10 +560,8 @@ TEST_F(LedgerManagerTest, PageIsClosedAndSyncedCheckPageOpened) {
   storage_ptr->DelayIsSyncedCallback(storage_page_id, true);
   Status storage_status;
   ledger_manager_->PageIsClosedAndSynced(
-      storage_page_id,
-      callback::Capture(
-          callback::SetWhenCalled(&page_is_closed_and_synced_called),
-          &storage_status, &is_closed_and_synced));
+      storage_page_id, callback::Capture(callback::SetWhenCalled(&page_is_closed_and_synced_called),
+                                         &storage_status, &is_closed_and_synced));
   RunLoopUntilIdle();
   EXPECT_FALSE(page_is_closed_and_synced_called);
 
@@ -627,8 +602,8 @@ TEST_F(LedgerManagerTest, PageIsClosedAndSyncedConcurrentCalls) {
   PagePredicateResult is_closed_and_synced1;
   storage_ptr->DelayIsSyncedCallback(storage_page_id, true);
   ledger_manager_->PageIsClosedAndSynced(
-      storage_page_id, callback::Capture(callback::SetWhenCalled(&called1),
-                                         &status1, &is_closed_and_synced1));
+      storage_page_id,
+      callback::Capture(callback::SetWhenCalled(&called1), &status1, &is_closed_and_synced1));
   RunLoopUntilIdle();
 
   // Prepare for the second call: it will return immediately and the expected
@@ -638,8 +613,8 @@ TEST_F(LedgerManagerTest, PageIsClosedAndSyncedConcurrentCalls) {
   PagePredicateResult is_closed_and_synced2;
   storage_ptr->DelayIsSyncedCallback(storage_page_id, false);
   ledger_manager_->PageIsClosedAndSynced(
-      storage_page_id, callback::Capture(callback::SetWhenCalled(&called2),
-                                         &status2, &is_closed_and_synced2));
+      storage_page_id,
+      callback::Capture(callback::SetWhenCalled(&called2), &status2, &is_closed_and_synced2));
   RunLoopUntilIdle();
   EXPECT_FALSE(called1);
   EXPECT_TRUE(called2);
@@ -672,8 +647,8 @@ TEST_F(LedgerManagerTest, PageIsClosedOfflineAndEmptyCheckNotFound) {
   // Check for a page that doesn't exist.
   storage_ptr->should_get_page_fail = true;
   ledger_manager_->PageIsClosedOfflineAndEmpty(
-      id.id, callback::Capture(callback::SetWhenCalled(&called), &status,
-                               &is_closed_offline_empty));
+      id.id,
+      callback::Capture(callback::SetWhenCalled(&called), &status, &is_closed_offline_empty));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::PAGE_NOT_FOUND, status);
@@ -694,9 +669,8 @@ TEST_F(LedgerManagerTest, PageIsClosedOfflineAndEmptyCheckClosed) {
   storage_ptr->set_page_storage_offline_empty(storage_page_id, true);
   Status storage_status;
   ledger_manager_->PageIsClosedOfflineAndEmpty(
-      storage_page_id,
-      callback::Capture(callback::SetWhenCalled(&called), &storage_status,
-                        &is_closed_offline_empty));
+      storage_page_id, callback::Capture(callback::SetWhenCalled(&called), &storage_status,
+                                         &is_closed_offline_empty));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, storage_status);
@@ -707,9 +681,8 @@ TEST_F(LedgerManagerTest, PageIsClosedOfflineAndEmptyCheckClosed) {
   RunLoopUntilIdle();
 
   ledger_manager_->PageIsClosedOfflineAndEmpty(
-      storage_page_id,
-      callback::Capture(callback::SetWhenCalled(&called), &storage_status,
-                        &is_closed_offline_empty));
+      storage_page_id, callback::Capture(callback::SetWhenCalled(&called), &storage_status,
+                                         &is_closed_offline_empty));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, storage_status);
@@ -735,8 +708,7 @@ TEST_F(LedgerManagerTest, PageIsClosedOfflineAndEmptyCanDeletePageOnCallback) {
 
         ledger_manager_->DeletePageStorage(
             id.id,
-            callback::Capture(callback::SetWhenCalled(&delete_page_called),
-                              &delete_page_status));
+            callback::Capture(callback::SetWhenCalled(&delete_page_called), &delete_page_status));
       });
   RunLoopUntilIdle();
   // Make sure the deletion finishes successfully.
@@ -776,8 +748,7 @@ TEST_F(LedgerManagerTest, GetPageDoNotCallTheCloud) {
   bool called;
   storage_ptr->ClearCalls();
   // Get the root page.
-  ledger_.set_error_handler(
-      callback::Capture(callback::SetWhenCalled(&called), &status));
+  ledger_.set_error_handler(callback::Capture(callback::SetWhenCalled(&called), &status));
   ledger_->GetRootPage(page.NewRequest());
   RunLoopUntilIdle();
   EXPECT_FALSE(ledger_.is_bound());
@@ -791,8 +762,7 @@ TEST_F(LedgerManagerTest, GetPageDoNotCallTheCloud) {
   storage_ptr->ClearCalls();
 
   // Get a new page with a random id.
-  ledger_.set_error_handler(
-      callback::Capture(callback::SetWhenCalled(&called), &status));
+  ledger_.set_error_handler(callback::Capture(callback::SetWhenCalled(&called), &status));
   ledger_->GetPage(fidl::MakeOptional(id), page.NewRequest());
   RunLoopUntilIdle();
   EXPECT_FALSE(ledger_.is_bound());
@@ -806,8 +776,7 @@ TEST_F(LedgerManagerTest, GetPageDoNotCallTheCloud) {
   storage_ptr->ClearCalls();
 
   // Create a new page.
-  ledger_.set_error_handler(
-      callback::Capture(callback::SetWhenCalled(&called), &status));
+  ledger_.set_error_handler(callback::Capture(callback::SetWhenCalled(&called), &status));
   ledger_->GetPage(nullptr, page.NewRequest());
   RunLoopUntilIdle();
   EXPECT_FALSE(ledger_.is_bound());
@@ -871,8 +840,7 @@ TEST_F(LedgerManagerTest, OnPageOpenedClosedCallInternalRequest) {
   PagePredicateResult page_state;
   ledger_manager_->PageIsClosedAndSynced(
       convert::ToString(id.id),
-      callback::Capture(callback::SetWhenCalled(&called), &storage_status,
-                        &page_state));
+      callback::Capture(callback::SetWhenCalled(&called), &storage_status, &page_state));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, storage_status);
@@ -917,9 +885,8 @@ TEST_F(LedgerManagerTest, OnPageOpenedClosedUnused) {
   storage_ptr->DelayIsSyncedCallback(storage_page_id, true);
   Status storage_status;
   ledger_manager_->PageIsClosedAndSynced(
-      storage_page_id,
-      callback::Capture(callback::SetWhenCalled(&page_is_synced_called),
-                        &storage_status, &is_synced));
+      storage_page_id, callback::Capture(callback::SetWhenCalled(&page_is_synced_called),
+                                         &storage_status, &is_synced));
   RunLoopUntilIdle();
   EXPECT_FALSE(page_is_synced_called);
   EXPECT_EQ(1, disk_cleanup_manager_->page_opened_count);
@@ -963,8 +930,7 @@ TEST_F(LedgerManagerTest, DeletePageStorageWhenPageOpenFails) {
   // Try to delete the page while it is open. Expect to get an error.
   Status storage_status;
   ledger_manager_->DeletePageStorage(
-      id.id,
-      callback::Capture(callback::SetWhenCalled(&called), &storage_status));
+      id.id, callback::Capture(callback::SetWhenCalled(&called), &storage_status));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::ILLEGAL_STATE, storage_status);
@@ -978,8 +944,7 @@ TEST_F(LedgerManagerTest, OpenPageWithDeletePageStorageInProgress) {
   bool delete_called;
   Status delete_status;
   ledger_manager_->DeletePageStorage(
-      id.id, callback::Capture(callback::SetWhenCalled(&delete_called),
-                               &delete_status));
+      id.id, callback::Capture(callback::SetWhenCalled(&delete_called), &delete_status));
   RunLoopUntilIdle();
   EXPECT_FALSE(delete_called);
 
@@ -1041,19 +1006,17 @@ TEST_F(LedgerManagerTest, MultipleConflictResolvers) {
 // under that, and a node for each of the given |page_ids| under that.
 testing::Matcher<const inspect::ObjectHierarchy&> HierarchyMatcher(
     const std::vector<storage::PageId>& page_ids) {
-  auto page_expectations =
-      std::vector<testing::Matcher<const inspect::ObjectHierarchy&>>();
+  auto page_expectations = std::vector<testing::Matcher<const inspect::ObjectHierarchy&>>();
   std::set<storage::PageId> sorted_and_unique_page_ids;
   for (const storage::PageId& page_id : page_ids) {
     sorted_and_unique_page_ids.insert(page_id);
   }
   for (const storage::PageId& page_id : sorted_and_unique_page_ids) {
-    page_expectations.push_back(
-        NodeMatches(NameMatches(PageIdToDisplayName(page_id))));
+    page_expectations.push_back(NodeMatches(NameMatches(PageIdToDisplayName(page_id))));
   }
-  return ChildrenMatch(ElementsAre(ChildrenMatch(ElementsAre(
-      AllOf(NodeMatches(NameMatches(kPagesInspectPathComponent.ToString())),
-            ChildrenMatch(ElementsAreArray(page_expectations)))))));
+  return ChildrenMatch(ElementsAre(ChildrenMatch(
+      ElementsAre(AllOf(NodeMatches(NameMatches(kPagesInspectPathComponent.ToString())),
+                        ChildrenMatch(ElementsAreArray(page_expectations)))))));
 }
 
 // TODO(https://fuchsia.atlassian.net/browse/LE-800): Make FakeLedgerStorage
@@ -1066,8 +1029,7 @@ class LedgerManagerWithRealStorageTest : public TestWithEnvironment {
   // gtest::TestWithEnvironment:
   void SetUp() override {
     TestWithEnvironment::SetUp();
-    auto encryption_service =
-        std::make_unique<encryption::FakeEncryptionService>(dispatcher());
+    auto encryption_service = std::make_unique<encryption::FakeEncryptionService>(dispatcher());
     db_factory_ = std::make_unique<storage::fake::FakeDbFactory>(dispatcher());
     auto ledger_storage = std::make_unique<storage::LedgerStorageImpl>(
         &environment_, encryption_service.get(),
@@ -1075,14 +1037,14 @@ class LedgerManagerWithRealStorageTest : public TestWithEnvironment {
         db_factory_.get(), DetachedPath(tmpfs_.root_fd()));
     std::unique_ptr<FakeLedgerSync> sync = std::make_unique<FakeLedgerSync>();
     top_level_node_ = inspect::Node(kTestTopLevelNodeName.ToString());
-    attachment_node_ = top_level_node_.CreateChild(
-        kSystemUnderTestAttachmentPointPathComponent.ToString());
+    attachment_node_ =
+        top_level_node_.CreateChild(kSystemUnderTestAttachmentPointPathComponent.ToString());
     disk_cleanup_manager_ = std::make_unique<FakeDiskCleanupManager>();
     ledger_manager_ = std::make_unique<LedgerManager>(
         &environment_, kLedgerName.ToString(),
         attachment_node_.CreateChild(kInspectPathComponent.ToString()),
-        std::move(encryption_service), std::move(std::move(ledger_storage)),
-        std::move(sync), disk_cleanup_manager_.get());
+        std::move(encryption_service), std::move(std::move(ledger_storage)), std::move(sync),
+        disk_cleanup_manager_.get());
   }
 
  protected:
@@ -1090,8 +1052,7 @@ class LedgerManagerWithRealStorageTest : public TestWithEnvironment {
     page_ptr->Put(convert::ToArray("Hello."),
                   convert::ToArray("Is it me for whom you are looking?"));
     bool sync_callback_called;
-    page_ptr->Sync(
-        callback::Capture(callback::SetWhenCalled(&sync_callback_called)));
+    page_ptr->Sync(callback::Capture(callback::SetWhenCalled(&sync_callback_called)));
     RunLoopUntilIdle();
     if (!sync_callback_called) {
       return testing::AssertionFailure() << "Sync callback wasn't called!";
@@ -1125,10 +1086,9 @@ TEST_F(LedgerManagerWithRealStorageTest, InspectAPIDisconnectedPagePresence) {
   PageId second_page_id = SpecificId("second_page_id__");
   // Real components also use random PageIds.
   PageId third_page_id = RandomId(environment_);
-  std::vector<storage::PageId> storage_page_ids(
-      {convert::ToString(first_page_id.id),
-       convert::ToString(second_page_id.id),
-       convert::ToString(third_page_id.id)});
+  std::vector<storage::PageId> storage_page_ids({convert::ToString(first_page_id.id),
+                                                 convert::ToString(second_page_id.id),
+                                                 convert::ToString(third_page_id.id)});
   LedgerPtr ledger_ptr;
   ledger_manager_->BindLedger(ledger_ptr.NewRequest());
 
@@ -1141,24 +1101,19 @@ TEST_F(LedgerManagerWithRealStorageTest, InspectAPIDisconnectedPagePresence) {
   // When one page has been created in the ledger, check that the Inspect
   // hierarchy is as expected with a node for that one page.
   PagePtr first_page_ptr;
-  ledger_ptr->GetPage(fidl::MakeOptional(first_page_id),
-                      first_page_ptr.NewRequest());
+  ledger_ptr->GetPage(fidl::MakeOptional(first_page_id), first_page_ptr.NewRequest());
   RunLoopUntilIdle();
   inspect::ObjectHierarchy hierarchy_after_one_connection;
-  ASSERT_TRUE(
-      Inspect(&top_level_node_, &test_loop(), &hierarchy_after_one_connection));
-  EXPECT_THAT(hierarchy_after_one_connection,
-              HierarchyMatcher({storage_page_ids[0]}));
+  ASSERT_TRUE(Inspect(&top_level_node_, &test_loop(), &hierarchy_after_one_connection));
+  EXPECT_THAT(hierarchy_after_one_connection, HierarchyMatcher({storage_page_ids[0]}));
 
   // When two ledgers have been created in the repository, check that the
   // Inspect hierarchy is as expected with nodes for both ledgers.
   PagePtr second_page_ptr;
-  ledger_ptr->GetPage(fidl::MakeOptional(second_page_id),
-                      second_page_ptr.NewRequest());
+  ledger_ptr->GetPage(fidl::MakeOptional(second_page_id), second_page_ptr.NewRequest());
   RunLoopUntilIdle();
   inspect::ObjectHierarchy hierarchy_after_two_connections;
-  ASSERT_TRUE(Inspect(&top_level_node_, &test_loop(),
-                      &hierarchy_after_two_connections));
+  ASSERT_TRUE(Inspect(&top_level_node_, &test_loop(), &hierarchy_after_two_connections));
   EXPECT_THAT(hierarchy_after_two_connections,
               HierarchyMatcher({storage_page_ids[0], storage_page_ids[1]}));
 
@@ -1172,22 +1127,18 @@ TEST_F(LedgerManagerWithRealStorageTest, InspectAPIDisconnectedPagePresence) {
   // When one of the two pages has been disconnected, check that an inspection
   // still finds both.
   inspect::ObjectHierarchy hierarchy_after_one_disconnection;
-  ASSERT_TRUE(Inspect(&top_level_node_, &test_loop(),
-                      &hierarchy_after_one_disconnection));
+  ASSERT_TRUE(Inspect(&top_level_node_, &test_loop(), &hierarchy_after_one_disconnection));
   EXPECT_THAT(hierarchy_after_one_disconnection,
               HierarchyMatcher({storage_page_ids[0], storage_page_ids[1]}));
 
   // Check that after a third page connection is made, all three pages appear in
   // an inspection.
   PagePtr third_page_ptr;
-  ledger_ptr->GetPage(fidl::MakeOptional(third_page_id),
-                      third_page_ptr.NewRequest());
+  ledger_ptr->GetPage(fidl::MakeOptional(third_page_id), third_page_ptr.NewRequest());
   RunLoopUntilIdle();
   inspect::ObjectHierarchy hierarchy_with_second_and_third_connection;
-  ASSERT_TRUE(Inspect(&top_level_node_, &test_loop(),
-                      &hierarchy_with_second_and_third_connection));
-  EXPECT_THAT(hierarchy_with_second_and_third_connection,
-              HierarchyMatcher(storage_page_ids));
+  ASSERT_TRUE(Inspect(&top_level_node_, &test_loop(), &hierarchy_with_second_and_third_connection));
+  EXPECT_THAT(hierarchy_with_second_and_third_connection, HierarchyMatcher(storage_page_ids));
 
   // Check that after all pages are mutated and unbound all three pages still
   // appear in an inspection.
@@ -1198,10 +1149,8 @@ TEST_F(LedgerManagerWithRealStorageTest, InspectAPIDisconnectedPagePresence) {
   RunLoopUntilIdle();
 
   inspect::ObjectHierarchy hierarchy_after_three_disconnections;
-  ASSERT_TRUE(Inspect(&top_level_node_, &test_loop(),
-                      &hierarchy_after_three_disconnections));
-  EXPECT_THAT(hierarchy_after_three_disconnections,
-              HierarchyMatcher(storage_page_ids));
+  ASSERT_TRUE(Inspect(&top_level_node_, &test_loop(), &hierarchy_after_three_disconnections));
+  EXPECT_THAT(hierarchy_after_three_disconnections, HierarchyMatcher(storage_page_ids));
 }
 
 }  // namespace

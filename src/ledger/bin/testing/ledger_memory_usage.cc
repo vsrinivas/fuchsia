@@ -25,8 +25,7 @@ constexpr fxl::StringView kLedgerBinaryName = "ledger.cmx";
 // success, or false otherwise.
 bool GetTaskName(zx::unowned<zx::process>& task, std::string* name) {
   char task_name[ZX_MAX_NAME_LEN];
-  zx_status_t status =
-      task->get_property(ZX_PROP_NAME, task_name, ZX_MAX_NAME_LEN);
+  zx_status_t status = task->get_property(ZX_PROP_NAME, task_name, ZX_MAX_NAME_LEN);
   if (status != ZX_OK) {
     // Failed to get the name of task.
     return false;
@@ -39,8 +38,7 @@ bool GetTaskName(zx::unowned<zx::process>& task, std::string* name) {
 // or false otherwise.
 bool GetMemoryUsageForTask(zx::process& task, uint64_t* memory) {
   zx_info_task_stats_t info;
-  zx_status_t status =
-      task.get_info(ZX_INFO_TASK_STATS, &info, sizeof(info), nullptr, nullptr);
+  zx_status_t status = task.get_info(ZX_INFO_TASK_STATS, &info, sizeof(info), nullptr, nullptr);
   if (status != ZX_OK) {
     return false;
   }
@@ -64,8 +62,7 @@ class Walker final : public TaskEnumerator {
  public:
   Walker() {
     zx_info_handle_basic_t info;
-    FXL_CHECK(zx::job::default_job()->get_info(ZX_INFO_HANDLE_BASIC, &info,
-                                               sizeof(info), nullptr,
+    FXL_CHECK(zx::job::default_job()->get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr,
                                                nullptr) == ZX_OK);
     test_env_koid_ = info.related_koid;
   }
@@ -95,8 +92,7 @@ class Walker final : public TaskEnumerator {
         return ZX_ERR_ALREADY_EXISTS;
       }
       // This process corresponds to the right instance of Ledger.
-      FXL_CHECK(unowned_task->duplicate(ZX_RIGHT_SAME_RIGHTS,
-                                        &ledger_handle_) == ZX_OK);
+      FXL_CHECK(unowned_task->duplicate(ZX_RIGHT_SAME_RIGHTS, &ledger_handle_) == ZX_OK);
     }
     return ZX_OK;
   }
@@ -132,9 +128,8 @@ bool LedgerMemoryEstimator::Init() {
   Walker walker;
   zx_status_t status = walker.WalkRootJobTree();
   if (status == ZX_ERR_ALREADY_EXISTS) {
-    FXL_LOG(ERROR)
-        << "More than one Ledger processes are running in this test. Did you "
-           "set the environment name for this benchmark?";
+    FXL_LOG(ERROR) << "More than one Ledger processes are running in this test. Did you "
+                      "set the environment name for this benchmark?";
     return false;
   }
   ledger_task_ = walker.TakeLedgerHandle();

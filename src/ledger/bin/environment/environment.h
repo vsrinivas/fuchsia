@@ -27,8 +27,7 @@ class Environment {
               async_dispatcher_t* io_dispatcher, std::string firebase_api_key,
               sys::ComponentContext* component_context,
               std::unique_ptr<coroutine::CoroutineService> coroutine_service,
-              BackoffFactory backoff_factory,
-              std::unique_ptr<timekeeper::Clock> clock,
+              BackoffFactory backoff_factory, std::unique_ptr<timekeeper::Clock> clock,
               std::unique_ptr<rng::Random> random);
   Environment(Environment&& other) noexcept;
   ~Environment();
@@ -44,13 +43,9 @@ class Environment {
 
   const std::string& firebase_api_key() const { return firebase_api_key_; };
 
-  sys::ComponentContext* component_context() const {
-    return component_context_;
-  };
+  sys::ComponentContext* component_context() const { return component_context_; };
 
-  coroutine::CoroutineService* coroutine_service() const {
-    return coroutine_service_.get();
-  }
+  coroutine::CoroutineService* coroutine_service() const { return coroutine_service_.get(); }
 
   std::unique_ptr<backoff::Backoff> MakeBackoff();
 
@@ -94,12 +89,10 @@ class EnvironmentBuilder {
   EnvironmentBuilder& SetAsync(async_dispatcher_t* dispatcher);
   EnvironmentBuilder& SetIOAsync(async_dispatcher_t* io_dispatcher);
   EnvironmentBuilder& SetFirebaseApiKey(std::string firebase_api_key);
-  EnvironmentBuilder& SetStartupContext(
-      sys::ComponentContext* component_context);
+  EnvironmentBuilder& SetStartupContext(sys::ComponentContext* component_context);
   EnvironmentBuilder& SetCoroutineService(
       std::unique_ptr<coroutine::CoroutineService> coroutine_service);
-  EnvironmentBuilder& SetBackoffFactory(
-      Environment::BackoffFactory backoff_factory);
+  EnvironmentBuilder& SetBackoffFactory(Environment::BackoffFactory backoff_factory);
   EnvironmentBuilder& SetClock(std::unique_ptr<timekeeper::Clock> clock);
   EnvironmentBuilder& SetRandom(std::unique_ptr<rng::Random> random);
 

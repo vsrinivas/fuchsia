@@ -32,8 +32,7 @@ class TestSyncStateWatcher : public SyncStateWatcher {
 class UserSyncImplTest : public ledger::TestWithEnvironment {
  public:
   UserSyncImplTest()
-      : cloud_provider_(cloud_provider_ptr_.NewRequest()),
-        encryption_service_(dispatcher()) {
+      : cloud_provider_(cloud_provider_ptr_.NewRequest()), encryption_service_(dispatcher()) {
     UserConfig user_config;
     user_config.user_directory = ledger::DetachedPath(tmpfs_.root_fd());
     user_config.cloud_provider = std::move(cloud_provider_ptr_);
@@ -45,9 +44,9 @@ class UserSyncImplTest : public ledger::TestWithEnvironment {
       QuitLoop();
     });
 
-    user_sync_ = std::make_unique<UserSyncImpl>(
-        &environment_, std::move(user_config), std::move(backoff),
-        [this] { on_version_mismatch_calls_++; });
+    user_sync_ =
+        std::make_unique<UserSyncImpl>(&environment_, std::move(user_config), std::move(backoff),
+                                       [this] { on_version_mismatch_calls_++; });
     user_sync_->SetSyncWatcher(&sync_state_watcher_);
   }
   ~UserSyncImplTest() override {}
@@ -55,8 +54,7 @@ class UserSyncImplTest : public ledger::TestWithEnvironment {
  protected:
   bool SetFingerprintFile(std::string content) {
     ledger::DetachedPath fingerprint_path = user_sync_->GetFingerprintPath();
-    return files::WriteFileAt(fingerprint_path.root_fd(),
-                              fingerprint_path.path(), content.data(),
+    return files::WriteFileAt(fingerprint_path.root_fd(), fingerprint_path.path(), content.data(),
                               content.size());
   }
 
@@ -77,8 +75,7 @@ class UserSyncImplTest : public ledger::TestWithEnvironment {
 // be erased from the cloud.
 TEST_F(UserSyncImplTest, CloudCheckErased) {
   ASSERT_TRUE(SetFingerprintFile("some-value"));
-  cloud_provider_.device_set.status_to_return =
-      cloud_provider::Status::NOT_FOUND;
+  cloud_provider_.device_set.status_to_return = cloud_provider::Status::NOT_FOUND;
   EXPECT_EQ(0, on_version_mismatch_calls_);
   user_sync_->Start();
   RunLoopUntilIdle();
@@ -111,8 +108,7 @@ TEST_F(UserSyncImplTest, CloudCheckOk) {
 // cloud.
 TEST_F(UserSyncImplTest, CloudCheckSet) {
   auto fingerprint_path = user_sync_->GetFingerprintPath();
-  EXPECT_FALSE(
-      files::IsFileAt(fingerprint_path.root_fd(), fingerprint_path.path()));
+  EXPECT_FALSE(files::IsFileAt(fingerprint_path.root_fd(), fingerprint_path.path()));
   cloud_provider_.device_set.status_to_return = cloud_provider::Status::OK;
   EXPECT_EQ(0, on_version_mismatch_calls_);
   user_sync_->Start();
@@ -126,8 +122,7 @@ TEST_F(UserSyncImplTest, CloudCheckSet) {
   EXPECT_FALSE(cloud_provider_.device_set.set_fingerprint.empty());
 
   // Verify that the fingerprint file was created.
-  EXPECT_TRUE(
-      files::IsFileAt(fingerprint_path.root_fd(), fingerprint_path.path()));
+  EXPECT_TRUE(files::IsFileAt(fingerprint_path.root_fd(), fingerprint_path.path()));
 }
 
 // Verifies that the cloud watcher for the fingerprint is set and triggers the
@@ -150,8 +145,7 @@ TEST_F(UserSyncImplTest, WatchErase) {
 // Verifies that setting the cloud watcher for is retried on network errors.
 TEST_F(UserSyncImplTest, WatchRetry) {
   ASSERT_TRUE(SetFingerprintFile("some-value"));
-  cloud_provider_.device_set.set_watcher_status_to_return =
-      cloud_provider::Status::NETWORK_ERROR;
+  cloud_provider_.device_set.set_watcher_status_to_return = cloud_provider::Status::NETWORK_ERROR;
   user_sync_->Start();
 
   RunLoopUntilIdle();

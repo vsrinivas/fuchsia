@@ -22,11 +22,10 @@
 
 namespace ledger {
 
-class PageEvictionManagerImpl : public PageEvictionManager,
-                                public PageEvictionDelegate {
+class PageEvictionManagerImpl : public PageEvictionManager, public PageEvictionDelegate {
  public:
-  PageEvictionManagerImpl(Environment* environment,
-                          storage::DbFactory* db_factory, DetachedPath db_path);
+  PageEvictionManagerImpl(Environment* environment, storage::DbFactory* db_factory,
+                          DetachedPath db_path);
   ~PageEvictionManagerImpl() override;
 
   // Asynchronously initializes this PageEvictionManager.
@@ -41,20 +40,16 @@ class PageEvictionManagerImpl : public PageEvictionManager,
 
   bool IsEmpty() override;
 
-  void TryEvictPages(PageEvictionPolicy* policy,
-                     fit::function<void(Status)> callback) override;
+  void TryEvictPages(PageEvictionPolicy* policy, fit::function<void(Status)> callback) override;
 
-  void MarkPageOpened(fxl::StringView ledger_name,
-                      storage::PageIdView page_id) override;
+  void MarkPageOpened(fxl::StringView ledger_name, storage::PageIdView page_id) override;
 
-  void MarkPageClosed(fxl::StringView ledger_name,
-                      storage::PageIdView page_id) override;
+  void MarkPageClosed(fxl::StringView ledger_name, storage::PageIdView page_id) override;
 
   // PageEvictionDelegate:
-  void TryEvictPage(
-      fxl::StringView ledger_name, storage::PageIdView page_id,
-      PageEvictionCondition condition,
-      fit::function<void(Status, PageWasEvicted)> callback) override;
+  void TryEvictPage(fxl::StringView ledger_name, storage::PageIdView page_id,
+                    PageEvictionCondition condition,
+                    fit::function<void(Status, PageWasEvicted)> callback) override;
 
  private:
   // A Completer allowing waiting until the target operation is completed.
@@ -100,23 +95,19 @@ class PageEvictionManagerImpl : public PageEvictionManager,
   // currently closed and either:
   // - has no unsynced commits or objects, or
   // - is empty and offline, i.e. was never synced to the cloud or a peer.
-  Status CanEvictPage(coroutine::CoroutineHandler* handler,
-                      fxl::StringView ledger_name, storage::PageIdView page_id,
-                      bool* can_evict);
+  Status CanEvictPage(coroutine::CoroutineHandler* handler, fxl::StringView ledger_name,
+                      storage::PageIdView page_id, bool* can_evict);
 
   // Checks whether a page is closed, offline and empty, and thus can be
   // evicted.
-  Status CanEvictEmptyPage(coroutine::CoroutineHandler* handler,
-                           fxl::StringView ledger_name,
+  Status CanEvictEmptyPage(coroutine::CoroutineHandler* handler, fxl::StringView ledger_name,
                            storage::PageIdView page_id, bool* can_evict);
 
   // Marks the given page as evicted in the page usage database.
   void MarkPageEvicted(std::string ledger_name, storage::PageId page_id);
 
-  Status SynchronousTryEvictPage(coroutine::CoroutineHandler* handler,
-                                 std::string ledger_name,
-                                 storage::PageId page_id,
-                                 PageEvictionCondition condition,
+  Status SynchronousTryEvictPage(coroutine::CoroutineHandler* handler, std::string ledger_name,
+                                 storage::PageId page_id, PageEvictionCondition condition,
                                  PageWasEvicted* was_evicted);
 
   ExpiringToken NewExpiringToken();

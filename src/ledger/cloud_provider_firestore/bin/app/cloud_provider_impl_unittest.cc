@@ -21,14 +21,13 @@ namespace cloud_provider_firestore {
 class CloudProviderImplTest : public gtest::TestLoopFixture {
  public:
   CloudProviderImplTest() : random_(test_loop().initial_state()) {
-    auto firebase_auth =
-        std::make_unique<firebase_auth::TestFirebaseAuth>(dispatcher());
+    auto firebase_auth = std::make_unique<firebase_auth::TestFirebaseAuth>(dispatcher());
     firebase_auth_ = firebase_auth.get();
     auto firestore_service = std::make_unique<TestFirestoreService>();
     firestore_service_ = firestore_service.get();
     cloud_provider_impl_ = std::make_unique<CloudProviderImpl>(
-        &random_, "some user id", std::move(firebase_auth),
-        std::move(firestore_service), cloud_provider_.NewRequest());
+        &random_, "some user id", std::move(firebase_auth), std::move(firestore_service),
+        cloud_provider_.NewRequest());
   }
   ~CloudProviderImplTest() override {}
 
@@ -46,8 +45,7 @@ class CloudProviderImplTest : public gtest::TestLoopFixture {
 
 TEST_F(CloudProviderImplTest, EmptyWhenClientDisconnected) {
   bool on_empty_called = false;
-  cloud_provider_impl_->set_on_empty(
-      [&on_empty_called] { on_empty_called = true; });
+  cloud_provider_impl_->set_on_empty([&on_empty_called] { on_empty_called = true; });
   EXPECT_FALSE(firestore_service_->shutdown_callback);
   cloud_provider_.Unbind();
   RunLoopUntilIdle();
@@ -63,8 +61,7 @@ TEST_F(CloudProviderImplTest, EmptyWhenClientDisconnected) {
 
 TEST_F(CloudProviderImplTest, EmptyWhenFirebaseAuthDisconnected) {
   bool on_empty_called = false;
-  cloud_provider_impl_->set_on_empty(
-      [&on_empty_called] { on_empty_called = true; });
+  cloud_provider_impl_->set_on_empty([&on_empty_called] { on_empty_called = true; });
   firebase_auth_->TriggerConnectionErrorHandler();
   RunLoopUntilIdle();
 
@@ -98,8 +95,7 @@ TEST_F(CloudProviderImplTest, GetPageCloud) {
   auto status = cloud_provider::Status::INTERNAL_ERROR;
   cloud_provider::PageCloudPtr page_cloud;
   cloud_provider_->GetPageCloud(
-      convert::ToArray("app_id"), convert::ToArray("page_id"),
-      page_cloud.NewRequest(),
+      convert::ToArray("app_id"), convert::ToArray("page_id"), page_cloud.NewRequest(),
       callback::Capture(callback::SetWhenCalled(&callback_called), &status));
   RunLoopUntilIdle();
   EXPECT_TRUE(callback_called);

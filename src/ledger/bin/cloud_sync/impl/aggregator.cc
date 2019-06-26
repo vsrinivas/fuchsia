@@ -26,20 +26,16 @@ class Aggregator::Listener : public SyncStateWatcher {
   Aggregator* aggregator_;
 };
 
-Aggregator::Listener::Listener(Aggregator* aggregator)
-    : aggregator_(aggregator) {}
+Aggregator::Listener::Listener(Aggregator* aggregator) : aggregator_(aggregator) {}
 
 Aggregator::Listener::~Listener() { aggregator_->UnregisterListener(this); }
 
-void Aggregator::Listener::Notify(
-    SyncStateWatcher::SyncStateContainer sync_state) {
+void Aggregator::Listener::Notify(SyncStateWatcher::SyncStateContainer sync_state) {
   state_ = sync_state;
   aggregator_->NewStateAvailable();
 }
 
-SyncStateWatcher::SyncStateContainer Aggregator::Listener::GetCurrentState() {
-  return state_;
-}
+SyncStateWatcher::SyncStateContainer Aggregator::Listener::GetCurrentState() { return state_; }
 
 Aggregator::Aggregator() {}
 
@@ -61,9 +57,7 @@ std::unique_ptr<SyncStateWatcher> Aggregator::GetNewStateWatcher() {
   return listener;
 }
 
-void Aggregator::UnregisterListener(Listener* listener) {
-  listeners_.erase(listener);
-}
+void Aggregator::UnregisterListener(Listener* listener) { listeners_.erase(listener); }
 
 void Aggregator::NewStateAvailable() {
   SyncStateWatcher::SyncStateContainer new_state;

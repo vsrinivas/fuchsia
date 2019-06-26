@@ -15,15 +15,12 @@ namespace {
 
 TEST(ParseMessageTest, Valid_WatchStart) {
   flatbuffers::FlatBufferBuilder buffer;
-  flatbuffers::Offset<WatchStartRequest> watch_start =
-      CreateWatchStartRequest(buffer);
+  flatbuffers::Offset<WatchStartRequest> watch_start = CreateWatchStartRequest(buffer);
   flatbuffers::Offset<NamespacePageId> namespace_page_id =
-      CreateNamespacePageId(
-          buffer, convert::ToFlatBufferVector(&buffer, "namespace_id"),
-          convert::ToFlatBufferVector(&buffer, "page_id"));
-  flatbuffers::Offset<Request> request =
-      CreateRequest(buffer, namespace_page_id, RequestMessage_WatchStartRequest,
-                    watch_start.Union());
+      CreateNamespacePageId(buffer, convert::ToFlatBufferVector(&buffer, "namespace_id"),
+                            convert::ToFlatBufferVector(&buffer, "page_id"));
+  flatbuffers::Offset<Request> request = CreateRequest(
+      buffer, namespace_page_id, RequestMessage_WatchStartRequest, watch_start.Union());
   flatbuffers::Offset<Message> message =
       CreateMessage(buffer, MessageUnion_Request, request.Union());
   buffer.Finish(message);
@@ -33,12 +30,10 @@ TEST(ParseMessageTest, Valid_WatchStart) {
 
 TEST(ParseMessageTest, Invalid_NoNamespace) {
   flatbuffers::FlatBufferBuilder buffer;
-  flatbuffers::Offset<WatchStartRequest> watch_start =
-      CreateWatchStartRequest(buffer);
+  flatbuffers::Offset<WatchStartRequest> watch_start = CreateWatchStartRequest(buffer);
   flatbuffers::Offset<NamespacePageId> namespace_page_id;
-  flatbuffers::Offset<Request> request =
-      CreateRequest(buffer, namespace_page_id, RequestMessage_WatchStartRequest,
-                    watch_start.Union());
+  flatbuffers::Offset<Request> request = CreateRequest(
+      buffer, namespace_page_id, RequestMessage_WatchStartRequest, watch_start.Union());
   flatbuffers::Offset<Message> message =
       CreateMessage(buffer, MessageUnion_Request, request.Union());
   buffer.Finish(message);
@@ -49,19 +44,17 @@ TEST(ParseMessageTest, Invalid_NoNamespace) {
 TEST(ParseMessageTest, Valid_ObjectResponseNoObject) {
   flatbuffers::FlatBufferBuilder buffer;
   flatbuffers::Offset<NamespacePageId> namespace_page_id =
-      CreateNamespacePageId(
-          buffer, convert::ToFlatBufferVector(&buffer, "namespace_id"),
-          convert::ToFlatBufferVector(&buffer, "page_id"));
-  flatbuffers::Offset<ObjectId> fb_object_id = CreateObjectId(
-      buffer, 1, 3, convert::ToFlatBufferVector(&buffer, "digest"));
+      CreateNamespacePageId(buffer, convert::ToFlatBufferVector(&buffer, "namespace_id"),
+                            convert::ToFlatBufferVector(&buffer, "page_id"));
+  flatbuffers::Offset<ObjectId> fb_object_id =
+      CreateObjectId(buffer, 1, 3, convert::ToFlatBufferVector(&buffer, "digest"));
   std::vector<flatbuffers::Offset<Object>> fb_objects;
-  fb_objects.emplace_back(
-      CreateObject(buffer, fb_object_id, ObjectStatus_UNKNOWN_OBJECT));
+  fb_objects.emplace_back(CreateObject(buffer, fb_object_id, ObjectStatus_UNKNOWN_OBJECT));
   flatbuffers::Offset<ObjectResponse> object_response =
       CreateObjectResponse(buffer, buffer.CreateVector(fb_objects));
   flatbuffers::Offset<Response> response =
-      CreateResponse(buffer, ResponseStatus_OK, namespace_page_id,
-                     ResponseMessage_ObjectResponse, object_response.Union());
+      CreateResponse(buffer, ResponseStatus_OK, namespace_page_id, ResponseMessage_ObjectResponse,
+                     object_response.Union());
   flatbuffers::Offset<Message> message =
       CreateMessage(buffer, MessageUnion_Response, response.Union());
   buffer.Finish(message);
@@ -72,8 +65,7 @@ TEST(ParseMessageTest, Valid_ObjectResponseNoObject) {
 
 TEST(ParseMessageTest, Valid_ResponseUnknownNamespace) {
   flatbuffers::FlatBufferBuilder buffer;
-  CreateUnknownResponseMessage(&buffer, "namespace", "page",
-                               ResponseStatus_UNKNOWN_NAMESPACE);
+  CreateUnknownResponseMessage(&buffer, "namespace", "page", ResponseStatus_UNKNOWN_NAMESPACE);
 
   const Message* message_ptr = ParseMessage(convert::ToStringView(buffer));
   EXPECT_NE(message_ptr, nullptr);

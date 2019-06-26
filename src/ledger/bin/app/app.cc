@@ -50,9 +50,9 @@ struct InspectObjects {
   inspect::StringProperty statistic_gathering;
 };
 
-fit::deferred_action<fit::closure> SetupCobalt(
-    bool disable_statistics, async_dispatcher_t* dispatcher,
-    sys::ComponentContext* component_context) {
+fit::deferred_action<fit::closure> SetupCobalt(bool disable_statistics,
+                                               async_dispatcher_t* dispatcher,
+                                               sys::ComponentContext* component_context) {
   if (disable_statistics) {
     return fit::defer<fit::closure>([] {});
   }
@@ -73,8 +73,7 @@ class App : public ledger_internal::LedgerController {
         io_loop_(&kAsyncLoopConfigNoAttachToThread),
         trace_provider_(loop_.dispatcher()),
         component_context_(sys::ComponentContext::Create()),
-        cobalt_cleaner_(SetupCobalt(app_params_.disable_statistics,
-                                    loop_.dispatcher(),
+        cobalt_cleaner_(SetupCobalt(app_params_.disable_statistics, loop_.dispatcher(),
                                     component_context_.get())) {
     FXL_DCHECK(component_context_);
 
@@ -90,13 +89,11 @@ class App : public ledger_internal::LedgerController {
     component_context_->outgoing()
         ->GetOrCreateDirectory(kInspectNodesDirectory.ToString())
         ->AddEntry(fuchsia::inspect::Inspect::Name_,
-                   std::make_unique<vfs::Service>(inspect_bindings_.GetHandler(
-                       object_dir.object().get())));
+                   std::make_unique<vfs::Service>(
+                       inspect_bindings_.GetHandler(object_dir.object().get())));
     inspect_objects_.top_level_node = inspect::Node(std::move(object_dir));
-    inspect_objects_.statistic_gathering =
-        inspect_objects_.top_level_node.CreateStringProperty(
-            "statistic_gathering",
-            app_params_.disable_statistics ? "off" : "on");
+    inspect_objects_.statistic_gathering = inspect_objects_.top_level_node.CreateStringProperty(
+        "statistic_gathering", app_params_.disable_statistics ? "off" : "on");
 
     EnvironmentBuilder builder;
 
@@ -104,33 +101,26 @@ class App : public ledger_internal::LedgerController {
       builder.SetFirebaseApiKey(app_params_.firebase_api_key);
     }
 
-    environment_ = std::make_unique<Environment>(
-        builder.SetDisableStatistics(app_params_.disable_statistics)
-            .SetAsync(loop_.dispatcher())
-            .SetIOAsync(io_loop_.dispatcher())
-            .SetStartupContext(component_context_.get())
-            .Build());
-    std::unique_ptr<p2p_sync::UserCommunicatorFactoryImpl>
-        user_communicator_factory;
+    environment_ =
+        std::make_unique<Environment>(builder.SetDisableStatistics(app_params_.disable_statistics)
+                                          .SetAsync(loop_.dispatcher())
+                                          .SetIOAsync(io_loop_.dispatcher())
+                                          .SetStartupContext(component_context_.get())
+                                          .Build());
+    std::unique_ptr<p2p_sync::UserCommunicatorFactoryImpl> user_communicator_factory;
     if (!app_params_.disable_p2p_sync) {
       user_communicator_factory =
-          std::make_unique<p2p_sync::UserCommunicatorFactoryImpl>(
-              environment_.get());
+          std::make_unique<p2p_sync::UserCommunicatorFactoryImpl>(environment_.get());
     }
 
     factory_impl_ = std::make_unique<LedgerRepositoryFactoryImpl>(
         environment_.get(), std::move(user_communicator_factory),
-        inspect_objects_.top_level_node.CreateChild(
-            kRepositoriesInspectPathComponent.ToString()));
+        inspect_objects_.top_level_node.CreateChild(kRepositoriesInspectPathComponent.ToString()));
 
-    component_context_->outgoing()
-        ->AddPublicService<ledger_internal::LedgerRepositoryFactory>(
-            [this](
-                fidl::InterfaceRequest<ledger_internal::LedgerRepositoryFactory>
-                    request) {
-              factory_bindings_.emplace(factory_impl_.get(),
-                                        std::move(request));
-            });
+    component_context_->outgoing()->AddPublicService<ledger_internal::LedgerRepositoryFactory>(
+        [this](fidl::InterfaceRequest<ledger_internal::LedgerRepositoryFactory> request) {
+          factory_bindings_.emplace(factory_impl_.get(), std::move(request));
+        });
     component_context_->outgoing()->AddPublicService<LedgerController>(
         [this](fidl::InterfaceRequest<LedgerController> request) {
           controller_bindings_.AddBinding(this, std::move(request));
@@ -155,8 +145,8 @@ class App : public ledger_internal::LedgerController {
   fit::deferred_action<fit::closure> cobalt_cleaner_;
   std::unique_ptr<Environment> environment_;
   std::unique_ptr<LedgerRepositoryFactoryImpl> factory_impl_;
-  callback::AutoCleanableSet<SyncableBinding<
-      fuchsia::ledger::internal::LedgerRepositoryFactorySyncableDelegate>>
+  callback::AutoCleanableSet<
+      SyncableBinding<fuchsia::ledger::internal::LedgerRepositoryFactorySyncableDelegate>>
       factory_bindings_;
   fidl::BindingSet<LedgerController> controller_bindings_;
 
@@ -168,12 +158,10 @@ int Main(int argc, const char** argv) {
   fxl::SetLogSettingsFromCommandLine(command_line);
 
   AppParams app_params;
-  app_params.disable_statistics =
-      command_line.HasOption(kNoStatisticsReportingFlag);
+  app_params.disable_statistics = command_line.HasOption(kNoStatisticsReportingFlag);
   app_params.disable_p2p_sync = command_line.HasOption(kNoPeerToPeerSync);
   if (command_line.HasOption(kFirebaseApiKeyFlag)) {
-    if (!command_line.GetOptionValue(kFirebaseApiKeyFlag,
-                                     &app_params.firebase_api_key)) {
+    if (!command_line.GetOptionValue(kFirebaseApiKeyFlag, &app_params.firebase_api_key)) {
       FXL_LOG(ERROR) << "Unable to retrieve the firebase api key.";
       return 1;
     }

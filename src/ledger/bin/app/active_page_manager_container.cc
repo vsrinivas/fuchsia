@@ -17,12 +17,11 @@
 
 namespace ledger {
 
-ActivePageManagerContainer::ActivePageManagerContainer(
-    std::string ledger_name, storage::PageId page_id,
-    PageUsageListener* page_usage_listener)
+ActivePageManagerContainer::ActivePageManagerContainer(std::string ledger_name,
+                                                       storage::PageId page_id,
+                                                       PageUsageListener* page_usage_listener)
     : page_id_(page_id),
-      connection_notifier_(std::move(ledger_name), std::move(page_id),
-                           page_usage_listener) {}
+      connection_notifier_(std::move(ledger_name), std::move(page_id), page_usage_listener) {}
 
 ActivePageManagerContainer::~ActivePageManagerContainer() = default;
 
@@ -35,20 +34,17 @@ void ActivePageManagerContainer::set_on_empty(fit::closure on_empty_callback) {
   }
 }
 
-void ActivePageManagerContainer::BindPage(
-    fidl::InterfaceRequest<Page> page_request,
-    fit::function<void(Status)> callback) {
+void ActivePageManagerContainer::BindPage(fidl::InterfaceRequest<Page> page_request,
+                                          fit::function<void(Status)> callback) {
   connection_notifier_.RegisterExternalRequest();
 
   if (status_ != Status::OK) {
     callback(status_);
     return;
   }
-  auto page_impl =
-      std::make_unique<PageImpl>(page_id_, std::move(page_request));
+  auto page_impl = std::make_unique<PageImpl>(page_id_, std::move(page_request));
   if (active_page_manager_) {
-    active_page_manager_->AddPageImpl(std::move(page_impl),
-                                      std::move(callback));
+    active_page_manager_->AddPageImpl(std::move(page_impl), std::move(callback));
     return;
   }
   page_impls_.emplace_back(std::move(page_impl), std::move(callback));
@@ -62,8 +58,7 @@ void ActivePageManagerContainer::NewInternalRequest(
   }
 
   if (active_page_manager_) {
-    callback(status_, connection_notifier_.NewInternalRequestToken(),
-             active_page_manager_.get());
+    callback(status_, connection_notifier_.NewInternalRequestToken(), active_page_manager_.get());
     return;
   }
 
@@ -83,8 +78,7 @@ void ActivePageManagerContainer::SetActivePageManager(
 
   for (auto& [page_impl, callback] : page_impls_) {
     if (active_page_manager_) {
-      active_page_manager_->AddPageImpl(std::move(page_impl),
-                                        std::move(callback));
+      active_page_manager_->AddPageImpl(std::move(page_impl), std::move(callback));
     } else {
       callback(status_);
     }
@@ -96,8 +90,7 @@ void ActivePageManagerContainer::SetActivePageManager(
       callback(status_, fit::defer<fit::closure>([] {}), nullptr);
       continue;
     }
-    callback(status_, connection_notifier_.NewInternalRequestToken(),
-             active_page_manager_.get());
+    callback(status_, connection_notifier_.NewInternalRequestToken(), active_page_manager_.get());
   }
   internal_request_callbacks_.clear();
 
@@ -111,15 +104,13 @@ void ActivePageManagerContainer::SetActivePageManager(
 }
 
 bool ActivePageManagerContainer::PageConnectionIsOpen() {
-  return (active_page_manager_ && !active_page_manager_->IsEmpty()) ||
-         !page_impls_.empty();
+  return (active_page_manager_ && !active_page_manager_->IsEmpty()) || !page_impls_.empty();
 }
 
 void ActivePageManagerContainer::CheckEmpty() {
   // The ActivePageManagerContainer is not considered empty until
   // |SetActivePageManager| has been called.
-  if (on_empty_callback_ && connection_notifier_.IsEmpty() &&
-      active_page_manager_is_set_ &&
+  if (on_empty_callback_ && connection_notifier_.IsEmpty() && active_page_manager_is_set_ &&
       (!active_page_manager_ || active_page_manager_->IsEmpty())) {
     on_empty_callback_();
   }

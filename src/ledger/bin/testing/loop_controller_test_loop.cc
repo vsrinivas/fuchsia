@@ -26,9 +26,7 @@ class SubLoopTestLoop : public SubLoop {
     FXL_CHECK(waiter->RunUntilCalled());
   }
 
-  async_dispatcher_t* dispatcher() override {
-    return loop_interface_->dispatcher();
-  }
+  async_dispatcher_t* dispatcher() override { return loop_interface_->dispatcher(); }
 
  private:
   LoopController* controller_;
@@ -62,9 +60,7 @@ class CallbackWaiterImpl : public CallbackWaiter {
     return called;
   }
 
-  bool NotCalledYet() override {
-    return callback_called_count_ <= run_until_called_count_;
-  }
+  bool NotCalledYet() override { return callback_called_count_ <= run_until_called_count_; }
 
  private:
   LoopController* loop_;
@@ -76,8 +72,7 @@ class CallbackWaiterImpl : public CallbackWaiter {
 
 }  // namespace
 
-LoopControllerTestLoop::LoopControllerTestLoop(async::TestLoop* loop)
-    : loop_(loop) {}
+LoopControllerTestLoop::LoopControllerTestLoop(async::TestLoop* loop) : loop_(loop) {}
 
 LoopControllerTestLoop::~LoopControllerTestLoop() {}
 
@@ -87,17 +82,14 @@ void LoopControllerTestLoop::StopLoop() { loop_->Quit(); }
 
 std::unique_ptr<SubLoop> LoopControllerTestLoop::StartNewLoop() {
   return std::make_unique<SubLoopTestLoop>(
-      this,
-      std::unique_ptr<async::LoopInterface>(loop_->StartNewLoop().release()));
+      this, std::unique_ptr<async::LoopInterface>(loop_->StartNewLoop().release()));
 }
 
 std::unique_ptr<CallbackWaiter> LoopControllerTestLoop::NewWaiter() {
   return std::make_unique<CallbackWaiterImpl>(this);
 }
 
-async_dispatcher_t* LoopControllerTestLoop::dispatcher() {
-  return loop_->dispatcher();
-}
+async_dispatcher_t* LoopControllerTestLoop::dispatcher() { return loop_->dispatcher(); }
 
 bool LoopControllerTestLoop::RunLoopUntil(fit::function<bool()> condition) {
   if (condition()) {
@@ -117,8 +109,6 @@ bool LoopControllerTestLoop::RunLoopUntil(fit::function<bool()> condition) {
   return false;
 }
 
-void LoopControllerTestLoop::RunLoopFor(zx::duration duration) {
-  loop_->RunFor(duration);
-}
+void LoopControllerTestLoop::RunLoopFor(zx::duration duration) { loop_->RunFor(duration); }
 
 }  // namespace ledger

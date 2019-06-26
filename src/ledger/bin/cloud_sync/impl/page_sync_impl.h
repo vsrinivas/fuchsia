@@ -53,9 +53,7 @@ namespace cloud_sync {
 // Unrecoverable errors (such as internal errors accessing the storage) cause
 // the page sync to stop, in which case the client is notified using the error
 // callback set via SetOnUnrecoverableError().
-class PageSyncImpl : public PageSync,
-                     public PageDownload::Delegate,
-                     public PageUpload::Delegate {
+class PageSyncImpl : public PageSync, public PageDownload::Delegate, public PageUpload::Delegate {
  public:
   PageSyncImpl(async_dispatcher_t* dispatcher, storage::PageStorage* storage,
                storage::PageSyncClient* sync_client,

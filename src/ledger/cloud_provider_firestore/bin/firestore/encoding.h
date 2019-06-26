@@ -35,10 +35,9 @@ bool EncodeCommitBatch(const cloud_provider::CommitPack& commits,
                        google::firestore::v1beta1::Document* document);
 
 // Decodes a Firestore document representing a commit batch.
-bool DecodeCommitBatch(
-    const google::firestore::v1beta1::Document& document,
-    std::vector<cloud_provider::CommitPackEntry>* commit_entries,
-    std::string* timestamp);
+bool DecodeCommitBatch(const google::firestore::v1beta1::Document& document,
+                       std::vector<cloud_provider::CommitPackEntry>* commit_entries,
+                       std::string* timestamp);
 
 }  // namespace cloud_provider_firestore
 

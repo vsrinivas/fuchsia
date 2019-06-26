@@ -46,8 +46,7 @@ class ActivePageManager {
 
   // Both |page_storage| and |page_sync| are owned by ActivePageManager and are
   // deleted when it goes away.
-  ActivePageManager(Environment* environment,
-                    std::unique_ptr<storage::PageStorage> page_storage,
+  ActivePageManager(Environment* environment, std::unique_ptr<storage::PageStorage> page_storage,
                     std::unique_ptr<sync_coordinator::PageSync> page_sync,
                     std::unique_ptr<MergeResolver> merge_resolver,
                     ActivePageManager::PageStorageState state,
@@ -56,8 +55,7 @@ class ActivePageManager {
 
   // Creates a new PageDelegate managed by this ActivePageManager, and binds it
   // to the given PageImpl.
-  void AddPageImpl(std::unique_ptr<PageImpl> page_impl,
-                   fit::function<void(Status)> on_done);
+  void AddPageImpl(std::unique_ptr<PageImpl> page_impl, fit::function<void(Status)> on_done);
 
   // Creates a new PageSnapshotImpl managed by this ActivePageManager, and binds
   // it to the request.
@@ -69,8 +67,7 @@ class ActivePageManager {
   Reference CreateReference(storage::ObjectIdentifier object_identifier);
 
   // Retrieve an object identifier from a Reference.
-  Status ResolveReference(Reference reference,
-                          storage::ObjectIdentifier* object_identifier);
+  Status ResolveReference(Reference reference, storage::ObjectIdentifier* object_identifier);
 
   // Checks whether there are any unsynced commits or pieces in this page.
   void IsSynced(fit::function<void(Status, bool)> callback);
@@ -95,16 +92,15 @@ class ActivePageManager {
   std::unique_ptr<sync_coordinator::PageSync> page_sync_;
   std::unique_ptr<MergeResolver> merge_resolver_;
   const zx::duration sync_timeout_;
-  callback::AutoCleanableSet<fidl_helpers::BoundInterface<
-      PageSnapshot, PageSnapshotImpl,
-      SyncableBinding<fuchsia::ledger::PageSnapshotSyncableDelegate>>>
+  callback::AutoCleanableSet<
+      fidl_helpers::BoundInterface<PageSnapshot, PageSnapshotImpl,
+                                   SyncableBinding<fuchsia::ledger::PageSnapshotSyncableDelegate>>>
       snapshots_;
   callback::AutoCleanableSet<PageDelegate> page_delegates_;
   fit::closure on_empty_callback_;
 
   bool sync_backlog_downloaded_ = false;
-  std::vector<std::pair<std::unique_ptr<PageImpl>, fit::function<void(Status)>>>
-      page_impls_;
+  std::vector<std::pair<std::unique_ptr<PageImpl>, fit::function<void(Status)>>> page_impls_;
 
   SyncWatcherSet watchers_;
 

@@ -46,8 +46,7 @@ class LedgerRepositoryFactoryImplTest : public TestWithEnvironment {
     top_level_inspect_node_ = inspect::Node(kTestTopLevelNodeName);
     repository_factory_ = std::make_unique<LedgerRepositoryFactoryImpl>(
         &environment_, nullptr,
-        top_level_inspect_node_.CreateChild(
-            kRepositoriesInspectPathComponent.ToString()));
+        top_level_inspect_node_.CreateChild(kRepositoriesInspectPathComponent.ToString()));
   }
 
   ~LedgerRepositoryFactoryImplTest() override {}
@@ -55,8 +54,7 @@ class LedgerRepositoryFactoryImplTest : public TestWithEnvironment {
  protected:
   ::testing::AssertionResult CreateDirectory(const std::string& name);
   ::testing::AssertionResult CallGetRepository(
-      const std::string& name,
-      ledger_internal::LedgerRepositoryPtr* ledger_repository_ptr);
+      const std::string& name, ledger_internal::LedgerRepositoryPtr* ledger_repository_ptr);
 
   scoped_tmpfs::ScopedTmpFS tmpfs_;
   inspect::Node top_level_inspect_node_;
@@ -69,19 +67,16 @@ class LedgerRepositoryFactoryImplTest : public TestWithEnvironment {
 ::testing::AssertionResult LedgerRepositoryFactoryImplTest::CreateDirectory(
     const std::string& name) {
   if (!files::CreateDirectoryAt(tmpfs_.root_fd(), name)) {
-    return ::testing::AssertionFailure()
-           << "Failed to create directory \"" << name << "\"!";
+    return ::testing::AssertionFailure() << "Failed to create directory \"" << name << "\"!";
   }
   return ::testing::AssertionSuccess();
 }
 
 ::testing::AssertionResult LedgerRepositoryFactoryImplTest::CallGetRepository(
-    const std::string& name,
-    ledger_internal::LedgerRepositoryPtr* ledger_repository_ptr) {
+    const std::string& name, ledger_internal::LedgerRepositoryPtr* ledger_repository_ptr) {
   fxl::UniqueFD fd(openat(tmpfs_.root_fd(), name.c_str(), O_RDONLY));
   if (!fd.is_valid()) {
-    return ::testing::AssertionFailure()
-           << "Failed to validate directory \"" << name << "\"!";
+    return ::testing::AssertionFailure() << "Failed to validate directory \"" << name << "\"!";
   }
 
   bool callback_called;
@@ -93,28 +88,24 @@ class LedgerRepositoryFactoryImplTest : public TestWithEnvironment {
       callback::Capture(callback::SetWhenCalled(&callback_called), &status));
 
   if (!callback_called) {
-    return ::testing::AssertionFailure()
-           << "Callback passed to GetRepository not called!";
+    return ::testing::AssertionFailure() << "Callback passed to GetRepository not called!";
   }
   if (status != Status::OK) {
-    return ::testing::AssertionFailure() << "Status of GetRepository call was "
-                                         << static_cast<int32_t>(status) << "!";
+    return ::testing::AssertionFailure()
+           << "Status of GetRepository call was " << static_cast<int32_t>(status) << "!";
   }
   return ::testing::AssertionSuccess();
 }
 
 TEST_F(LedgerRepositoryFactoryImplTest, InspectAPINoRepositories) {
   auto hierarchy = inspect::ReadFromObject(top_level_inspect_node_);
-  EXPECT_THAT(
-      hierarchy,
-      AllOf(NodeMatches(AllOf(NameMatches(kTestTopLevelNodeName),
-                              MetricList(IsEmpty()), PropertyList(IsEmpty()))),
-            ChildrenMatch(UnorderedElementsAre(NodeMatches(AllOf(
-                NameMatches(kRepositoriesInspectPathComponent.ToString())))))));
+  EXPECT_THAT(hierarchy, AllOf(NodeMatches(AllOf(NameMatches(kTestTopLevelNodeName),
+                                                 MetricList(IsEmpty()), PropertyList(IsEmpty()))),
+                               ChildrenMatch(UnorderedElementsAre(NodeMatches(AllOf(
+                                   NameMatches(kRepositoriesInspectPathComponent.ToString())))))));
 }
 
-TEST_F(LedgerRepositoryFactoryImplTest,
-       InspectAPITwoRepositoriesOneAccessedTwice) {
+TEST_F(LedgerRepositoryFactoryImplTest, InspectAPITwoRepositoriesOneAccessedTwice) {
   // The directories in which the two repositories will be created.
   std::string first_directory = "first directory";
   std::string second_directory = "second directory";
@@ -141,44 +132,39 @@ TEST_F(LedgerRepositoryFactoryImplTest,
   // under which it is listed) and that it was requested once.
   ASSERT_TRUE(CallGetRepository(first_directory, &first_ledger_repository_ptr));
   auto top_hierarchy = inspect::ReadFromObject(top_level_inspect_node_);
-  auto lone_repository_match = NodeMatches(MetricList(
-      Contains(UIntMetricIs(kRequestsInspectPathComponent.ToString(), 1UL))));
-  auto first_inspection_repositories_match = AllOf(
-      NodeMatches(NameMatches(kRepositoriesInspectPathComponent.ToString())),
-      ChildrenMatch(UnorderedElementsAre(lone_repository_match)));
+  auto lone_repository_match = NodeMatches(
+      MetricList(Contains(UIntMetricIs(kRequestsInspectPathComponent.ToString(), 1UL))));
+  auto first_inspection_repositories_match =
+      AllOf(NodeMatches(NameMatches(kRepositoriesInspectPathComponent.ToString())),
+            ChildrenMatch(UnorderedElementsAre(lone_repository_match)));
   auto first_inspection_top_level_match =
       ChildrenMatch(UnorderedElementsAre(first_inspection_repositories_match));
   EXPECT_THAT(top_hierarchy, first_inspection_top_level_match);
-  first_repository_name =
-      top_hierarchy.children()[0].children()[0].node().name();
+  first_repository_name = top_hierarchy.children()[0].children()[0].node().name();
   EXPECT_THAT(first_repository_name, Not(IsEmpty()));
 
   // Request a second repository, then query the "repositories" Inspect object
   // to verify that that second repository is listed in addition to the first
   // (and to learn the name under which it is listed) and that the two
   // repositories were each requested once.
-  ASSERT_TRUE(
-      CallGetRepository(second_directory, &second_ledger_repository_ptr));
+  ASSERT_TRUE(CallGetRepository(second_directory, &second_ledger_repository_ptr));
   top_hierarchy = inspect::ReadFromObject(top_level_inspect_node_);
   auto second_inspection_two_repositories_match = UnorderedElementsAre(
-      NodeMatches(AllOf(NameMatches(first_repository_name),
-                        MetricList(Contains(UIntMetricIs(
-                            kRequestsInspectPathComponent.ToString(), 1UL))))),
-      NodeMatches(MetricList(Contains(
-          UIntMetricIs(kRequestsInspectPathComponent.ToString(), 1UL)))));
-  auto second_inspection_repositories_match = UnorderedElementsAre(AllOf(
-      NodeMatches(NameMatches(kRepositoriesInspectPathComponent.ToString())),
-      ChildrenMatch(second_inspection_two_repositories_match)));
-  auto second_inspection_top_level_match =
-      ChildrenMatch(second_inspection_repositories_match);
+      NodeMatches(
+          AllOf(NameMatches(first_repository_name),
+                MetricList(Contains(UIntMetricIs(kRequestsInspectPathComponent.ToString(), 1UL))))),
+      NodeMatches(
+          MetricList(Contains(UIntMetricIs(kRequestsInspectPathComponent.ToString(), 1UL)))));
+  auto second_inspection_repositories_match = UnorderedElementsAre(
+      AllOf(NodeMatches(NameMatches(kRepositoriesInspectPathComponent.ToString())),
+            ChildrenMatch(second_inspection_two_repositories_match)));
+  auto second_inspection_top_level_match = ChildrenMatch(second_inspection_repositories_match);
   EXPECT_THAT(top_hierarchy, second_inspection_top_level_match);
   second_repository_name =
       find_if_not(top_hierarchy.children()[0].children().begin(),
                   top_hierarchy.children()[0].children().end(),
-                  [&first_repository_name](
-                      const inspect::ObjectHierarchy& repository_hierarchy) {
-                    return repository_hierarchy.node().name() ==
-                           first_repository_name;
+                  [&first_repository_name](const inspect::ObjectHierarchy& repository_hierarchy) {
+                    return repository_hierarchy.node().name() == first_repository_name;
                   })
           ->node()
           .name();
@@ -188,29 +174,26 @@ TEST_F(LedgerRepositoryFactoryImplTest,
   // Inspect object to verify that both repositories remain listed (with their
   // same names) and are described as having been requested twice and once,
   // respectively.
-  ASSERT_TRUE(
-      CallGetRepository(first_directory, &first_again_ledger_repository_ptr));
+  ASSERT_TRUE(CallGetRepository(first_directory, &first_again_ledger_repository_ptr));
   top_hierarchy = inspect::ReadFromObject(top_level_inspect_node_);
   auto third_inspection_two_repositories_match = UnorderedElementsAre(
-      NodeMatches(AllOf(NameMatches(first_repository_name),
-                        MetricList(Contains(UIntMetricIs(
-                            kRequestsInspectPathComponent.ToString(), 2UL))))),
-      NodeMatches(AllOf(NameMatches(second_repository_name),
-                        MetricList(Contains(UIntMetricIs(
-                            kRequestsInspectPathComponent.ToString(), 1UL))))));
-  auto third_inspection_repositories_match = UnorderedElementsAre(AllOf(
-      NodeMatches(NameMatches(kRepositoriesInspectPathComponent.ToString())),
-      ChildrenMatch(third_inspection_two_repositories_match)));
-  auto third_inspection_top_level_match =
-      ChildrenMatch(third_inspection_repositories_match);
+      NodeMatches(
+          AllOf(NameMatches(first_repository_name),
+                MetricList(Contains(UIntMetricIs(kRequestsInspectPathComponent.ToString(), 2UL))))),
+      NodeMatches(AllOf(
+          NameMatches(second_repository_name),
+          MetricList(Contains(UIntMetricIs(kRequestsInspectPathComponent.ToString(), 1UL))))));
+  auto third_inspection_repositories_match = UnorderedElementsAre(
+      AllOf(NodeMatches(NameMatches(kRepositoriesInspectPathComponent.ToString())),
+            ChildrenMatch(third_inspection_two_repositories_match)));
+  auto third_inspection_top_level_match = ChildrenMatch(third_inspection_repositories_match);
   EXPECT_THAT(top_hierarchy, third_inspection_top_level_match);
 }
 
 // Verifies that closing the filesystem closes the LedgerRepository connection.
 // There may be errors, but this test should not crash the binary.
 TEST_F(LedgerRepositoryFactoryImplTest, CloseOnFilesystemUnavailableNoCrash) {
-  std::unique_ptr<scoped_tmpfs::ScopedTmpFS> tmpfs =
-      std::make_unique<scoped_tmpfs::ScopedTmpFS>();
+  std::unique_ptr<scoped_tmpfs::ScopedTmpFS> tmpfs = std::make_unique<scoped_tmpfs::ScopedTmpFS>();
   ledger_internal::LedgerRepositoryPtr ledger_repository_ptr;
 
   bool get_repository_called;
@@ -219,8 +202,7 @@ TEST_F(LedgerRepositoryFactoryImplTest, CloseOnFilesystemUnavailableNoCrash) {
   repository_factory_->GetRepository(
       fsl::CloneChannelFromFileDescriptor(tmpfs->root_fd()), nullptr, "",
       ledger_repository_ptr.NewRequest(),
-      callback::Capture(callback::SetWhenCalled(&get_repository_called),
-                        &status));
+      callback::Capture(callback::SetWhenCalled(&get_repository_called), &status));
 
   bool channel_closed;
   zx_status_t zx_status;
@@ -259,19 +241,18 @@ TEST_F(LedgerRepositoryFactoryImplTest, CloseLedgerRepository) {
 
   bool ptr1_closed;
   zx_status_t ptr1_closed_status;
-  ledger_repository_ptr1.set_error_handler(callback::Capture(
-      callback::SetWhenCalled(&ptr1_closed), &ptr1_closed_status));
+  ledger_repository_ptr1.set_error_handler(
+      callback::Capture(callback::SetWhenCalled(&ptr1_closed), &ptr1_closed_status));
   bool ptr2_closed;
   zx_status_t ptr2_closed_status;
-  ledger_repository_ptr2.set_error_handler(callback::Capture(
-      callback::SetWhenCalled(&ptr2_closed), &ptr2_closed_status));
+  ledger_repository_ptr2.set_error_handler(
+      callback::Capture(callback::SetWhenCalled(&ptr2_closed), &ptr2_closed_status));
   bool ledger_closed;
   zx_status_t ledger_closed_status;
-  ledger_ptr.set_error_handler(callback::Capture(
-      callback::SetWhenCalled(&ledger_closed), &ledger_closed_status));
+  ledger_ptr.set_error_handler(
+      callback::Capture(callback::SetWhenCalled(&ledger_closed), &ledger_closed_status));
 
-  ledger_repository_ptr1->GetLedger(convert::ToArray("ledger"),
-                                    ledger_ptr.NewRequest());
+  ledger_repository_ptr1->GetLedger(convert::ToArray("ledger"), ledger_ptr.NewRequest());
   RunLoopUntilIdle();
   EXPECT_FALSE(ptr1_closed);
   EXPECT_FALSE(ptr2_closed);

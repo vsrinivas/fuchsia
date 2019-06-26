@@ -16,15 +16,13 @@
 
 namespace ledger {
 
-inline constexpr fxl::StringView kSystemUnderTestAttachmentPointPathComponent =
-    "attachment_point";
+inline constexpr fxl::StringView kSystemUnderTestAttachmentPointPathComponent = "attachment_point";
 
 // Given an |inspect::Node| under which another |inspect::Node| is available at
 // |kSystemUnderTestAttachmentPointPathComponent|, reads the exposed Inspect
 // data of the system under test and assigned to |hierarchy| the
 // |inspect::ObjectHierarchy| of the read data.
-testing::AssertionResult Inspect(inspect::Node* top_level_node,
-                                 async::TestLoop* test_loop,
+testing::AssertionResult Inspect(inspect::Node* top_level_node, async::TestLoop* test_loop,
                                  inspect::ObjectHierarchy* hierarchy);
 
 }  // namespace ledger

@@ -22,16 +22,13 @@ namespace cloud_sync {
 
 class LedgerSyncImpl : public LedgerSync {
  public:
-  LedgerSyncImpl(ledger::Environment* environment,
-                 const UserConfig* user_config,
-                 encryption::EncryptionService* encryption_service,
-                 fxl::StringView app_id,
+  LedgerSyncImpl(ledger::Environment* environment, const UserConfig* user_config,
+                 encryption::EncryptionService* encryption_service, fxl::StringView app_id,
                  std::unique_ptr<SyncStateWatcher> watcher);
   ~LedgerSyncImpl() override;
 
-  std::unique_ptr<PageSync> CreatePageSync(
-      storage::PageStorage* page_storage,
-      storage::PageSyncClient* page_sync_client) override;
+  std::unique_ptr<PageSync> CreatePageSync(storage::PageStorage* page_storage,
+                                           storage::PageSyncClient* page_sync_client) override;
 
   // Enables upload. Has no effect if this method has already been called.
   void EnableUpload();

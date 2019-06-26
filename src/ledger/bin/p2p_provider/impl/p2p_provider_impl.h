@@ -39,10 +39,8 @@ namespace p2p_provider {
 // device also sends an handshake to confirm the connection.
 class P2PProviderImpl : public P2PProvider {
  public:
-  P2PProviderImpl(
-      std::string host_name,
-      fuchsia::netconnector::NetConnectorPtr net_connector,
-      std::unique_ptr<p2p_provider::UserIdProvider> user_id_provider);
+  P2PProviderImpl(std::string host_name, fuchsia::netconnector::NetConnectorPtr net_connector,
+                  std::unique_ptr<p2p_provider::UserIdProvider> user_id_provider);
   ~P2PProviderImpl() override;
 
   // P2PProvider:
@@ -56,8 +54,7 @@ class P2PProviderImpl : public P2PProvider {
   // |should_send_handshake|, a handshake is also sent back on the connection;
   // this happens when the connection was established by the other side.
   void ProcessHandshake(RemoteConnection* connection, std::vector<uint8_t> data,
-                        bool should_send_handshake,
-                        fxl::StringView network_remote_name);
+                        bool should_send_handshake, fxl::StringView network_remote_name);
   // Retrieves and processes the current devices list
   void ListenForNewDevices(uint64_t version);
   // Dispatches an incoming message to the relevant page, or sends an error
@@ -65,16 +62,14 @@ class P2PProviderImpl : public P2PProvider {
   void Dispatch(fxl::StringView source, std::vector<uint8_t> data);
   // Callback when we establish a new device connection, or a device breaks its
   // connection.
-  void OnDeviceChange(fxl::StringView remote_device,
-                      DeviceChangeType change_type);
+  void OnDeviceChange(fxl::StringView remote_device, DeviceChangeType change_type);
 
   Client* client_ = nullptr;
 
   // ID of a user, used to ensure all connected Ledgers are for the same user.
   std::string user_id_;
   // |connection_map_| holds the connections, keyed by the remote host name.
-  std::map<std::string, RemoteConnection*, convert::StringViewComparator>
-      connection_map_;
+  std::map<std::string, RemoteConnection*, convert::StringViewComparator> connection_map_;
   // |connections_| holds the set of all established peer-to-peer connections.
   // We need both |connections_| and |connection_map_| as inbound connections
   // don't have an assiociated host name until we receive the handshake.

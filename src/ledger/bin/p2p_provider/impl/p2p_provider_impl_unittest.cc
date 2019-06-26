@@ -40,26 +40,21 @@ class RecordingClient : public P2PProvider::Client {
     std::string source;
     std::string data;
 
-    bool operator==(const Message& b) const {
-      return source == b.source && data == b.data;
-    }
+    bool operator==(const Message& b) const { return source == b.source && data == b.data; }
   };
 
-  void OnDeviceChange(fxl::StringView device_name,
-                      DeviceChangeType change_type) override {
+  void OnDeviceChange(fxl::StringView device_name, DeviceChangeType change_type) override {
     device_changes.push_back(DeviceChange{device_name.ToString(), change_type});
   }
 
-  void OnNewMessage(fxl::StringView device_name,
-                    fxl::StringView message) override {
+  void OnNewMessage(fxl::StringView device_name, fxl::StringView message) override {
     messages.push_back(Message{device_name.ToString(), message.ToString()});
   }
   std::vector<DeviceChange> device_changes;
   std::vector<Message> messages;
 };
 
-std::ostream& operator<<(std::ostream& os,
-                         const RecordingClient::DeviceChange& d) {
+std::ostream& operator<<(std::ostream& os, const RecordingClient::DeviceChange& d) {
   return os << "DeviceChange{" << d.device << ", " << bool(d.change) << "}";
 }
 
@@ -72,8 +67,7 @@ class P2PProviderImplTest : public gtest::TestLoopFixture {
   P2PProviderImplTest() {}
   ~P2PProviderImplTest() override {}
 
-  std::unique_ptr<P2PProvider> GetProvider(std::string host_name,
-                                           std::string user_name = "user") {
+  std::unique_ptr<P2PProvider> GetProvider(std::string host_name, std::string user_name = "user") {
     fuchsia::netconnector::NetConnectorPtr netconnector;
     net_connector_factory_.AddBinding(host_name, netconnector.NewRequest());
     return std::make_unique<p2p_provider::P2PProviderImpl>(
@@ -102,35 +96,28 @@ TEST_F(P2PProviderImplTest, ThreeHosts_SameUser) {
   provider2->Start(&client2);
   RunLoopUntilIdle();
 
-  EXPECT_THAT(client1.device_changes,
-              testing::UnorderedElementsAre(RecordingClient::DeviceChange{
-                  "host2", DeviceChangeType::NEW}));
-  EXPECT_THAT(client2.device_changes,
-              testing::UnorderedElementsAre(RecordingClient::DeviceChange{
-                  "host1", DeviceChangeType::NEW}));
+  EXPECT_THAT(client1.device_changes, testing::UnorderedElementsAre(RecordingClient::DeviceChange{
+                                          "host2", DeviceChangeType::NEW}));
+  EXPECT_THAT(client2.device_changes, testing::UnorderedElementsAre(RecordingClient::DeviceChange{
+                                          "host1", DeviceChangeType::NEW}));
 
   std::unique_ptr<P2PProvider> provider3 = GetProvider("host3");
   RecordingClient client3;
   provider3->Start(&client3);
   RunLoopUntilIdle();
 
-  EXPECT_THAT(
-      client1.device_changes,
-      testing::ElementsAre(
-          RecordingClient::DeviceChange{"host2", DeviceChangeType::NEW},
-          RecordingClient::DeviceChange{"host3", DeviceChangeType::NEW}));
+  EXPECT_THAT(client1.device_changes,
+              testing::ElementsAre(RecordingClient::DeviceChange{"host2", DeviceChangeType::NEW},
+                                   RecordingClient::DeviceChange{"host3", DeviceChangeType::NEW}));
 
-  EXPECT_THAT(
-      client2.device_changes,
-      testing::ElementsAre(
-          RecordingClient::DeviceChange{"host1", DeviceChangeType::NEW},
-          RecordingClient::DeviceChange{"host3", DeviceChangeType::NEW}));
+  EXPECT_THAT(client2.device_changes,
+              testing::ElementsAre(RecordingClient::DeviceChange{"host1", DeviceChangeType::NEW},
+                                   RecordingClient::DeviceChange{"host3", DeviceChangeType::NEW}));
 
   EXPECT_THAT(
       client3.device_changes,
-      testing::UnorderedElementsAre(
-          RecordingClient::DeviceChange{"host1", DeviceChangeType::NEW},
-          RecordingClient::DeviceChange{"host2", DeviceChangeType::NEW}));
+      testing::UnorderedElementsAre(RecordingClient::DeviceChange{"host1", DeviceChangeType::NEW},
+                                    RecordingClient::DeviceChange{"host2", DeviceChangeType::NEW}));
 
   // Disconnect one host, and verify disconnection notices are sent.
   provider2.reset();
@@ -138,17 +125,15 @@ TEST_F(P2PProviderImplTest, ThreeHosts_SameUser) {
 
   EXPECT_THAT(
       client1.device_changes,
-      testing::ElementsAre(
-          RecordingClient::DeviceChange{"host2", DeviceChangeType::NEW},
-          RecordingClient::DeviceChange{"host3", DeviceChangeType::NEW},
-          RecordingClient::DeviceChange{"host2", DeviceChangeType::DELETED}));
+      testing::ElementsAre(RecordingClient::DeviceChange{"host2", DeviceChangeType::NEW},
+                           RecordingClient::DeviceChange{"host3", DeviceChangeType::NEW},
+                           RecordingClient::DeviceChange{"host2", DeviceChangeType::DELETED}));
 
-  EXPECT_THAT(
-      client3.device_changes,
-      testing::UnorderedElementsAre(
-          RecordingClient::DeviceChange{"host1", DeviceChangeType::NEW},
-          RecordingClient::DeviceChange{"host2", DeviceChangeType::NEW},
-          RecordingClient::DeviceChange{"host2", DeviceChangeType::DELETED}));
+  EXPECT_THAT(client3.device_changes,
+              testing::UnorderedElementsAre(
+                  RecordingClient::DeviceChange{"host1", DeviceChangeType::NEW},
+                  RecordingClient::DeviceChange{"host2", DeviceChangeType::NEW},
+                  RecordingClient::DeviceChange{"host2", DeviceChangeType::DELETED}));
 }
 
 TEST_F(P2PProviderImplTest, FourHosts_TwoUsers) {
@@ -168,32 +153,25 @@ TEST_F(P2PProviderImplTest, FourHosts_TwoUsers) {
 
   // Verify that only devices with the same user connect together.
   EXPECT_THAT(client1.device_changes,
-              testing::ElementsAre(RecordingClient::DeviceChange{
-                  "host4", DeviceChangeType::NEW}));
+              testing::ElementsAre(RecordingClient::DeviceChange{"host4", DeviceChangeType::NEW}));
   EXPECT_THAT(client2.device_changes,
-              testing::ElementsAre(RecordingClient::DeviceChange{
-                  "host3", DeviceChangeType::NEW}));
+              testing::ElementsAre(RecordingClient::DeviceChange{"host3", DeviceChangeType::NEW}));
   EXPECT_THAT(client3.device_changes,
-              testing::ElementsAre(RecordingClient::DeviceChange{
-                  "host2", DeviceChangeType::NEW}));
+              testing::ElementsAre(RecordingClient::DeviceChange{"host2", DeviceChangeType::NEW}));
   EXPECT_THAT(client4.device_changes,
-              testing::ElementsAre(RecordingClient::DeviceChange{
-                  "host1", DeviceChangeType::NEW}));
+              testing::ElementsAre(RecordingClient::DeviceChange{"host1", DeviceChangeType::NEW}));
 
   provider4.reset();
   RunLoopUntilIdle();
 
   EXPECT_THAT(
       client1.device_changes,
-      testing::ElementsAre(
-          RecordingClient::DeviceChange{"host4", DeviceChangeType::NEW},
-          RecordingClient::DeviceChange{"host4", DeviceChangeType::DELETED}));
+      testing::ElementsAre(RecordingClient::DeviceChange{"host4", DeviceChangeType::NEW},
+                           RecordingClient::DeviceChange{"host4", DeviceChangeType::DELETED}));
   EXPECT_THAT(client2.device_changes,
-              testing::ElementsAre(RecordingClient::DeviceChange{
-                  "host3", DeviceChangeType::NEW}));
+              testing::ElementsAre(RecordingClient::DeviceChange{"host3", DeviceChangeType::NEW}));
   EXPECT_THAT(client3.device_changes,
-              testing::ElementsAre(RecordingClient::DeviceChange{
-                  "host2", DeviceChangeType::NEW}));
+              testing::ElementsAre(RecordingClient::DeviceChange{"host2", DeviceChangeType::NEW}));
 }
 
 TEST_F(P2PProviderImplTest, TwoHosts_Messages) {
@@ -210,27 +188,24 @@ TEST_F(P2PProviderImplTest, TwoHosts_Messages) {
   RunLoopUntilIdle();
 
   EXPECT_THAT(client1.messages, testing::ElementsAre());
-  EXPECT_THAT(client2.messages, testing::ElementsAre(RecordingClient::Message{
-                                    "host1", "datagram"}));
+  EXPECT_THAT(client2.messages,
+              testing::ElementsAre(RecordingClient::Message{"host1", "datagram"}));
 }
 
 class MockNetConnector : public fuchsia::netconnector::NetConnector {
  public:
-  explicit MockNetConnector(
-      fidl::InterfaceRequest<fuchsia::netconnector::NetConnector> request)
+  explicit MockNetConnector(fidl::InterfaceRequest<fuchsia::netconnector::NetConnector> request)
       : binding_(this, std::move(request)) {}
 
   void RegisterServiceProvider(
       std::string service_name,
-      fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> service_provider)
-      override {
+      fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> service_provider) override {
     FXL_NOTIMPLEMENTED();
   }
 
   void GetDeviceServiceProvider(
       std::string device_name,
-      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> service_provider)
-      override {
+      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> service_provider) override {
     device_requests.push_back(std::move(device_name));
   }
 
@@ -240,8 +215,7 @@ class MockNetConnector : public fuchsia::netconnector::NetConnector {
   }
 
   std::vector<std::string> device_requests;
-  std::vector<std::pair<uint64_t, GetKnownDeviceNamesCallback>>
-      device_names_callbacks;
+  std::vector<std::pair<uint64_t, GetKnownDeviceNamesCallback>> device_names_callbacks;
 
  private:
   fidl::Binding<fuchsia::netconnector::NetConnector> binding_;
@@ -252,8 +226,7 @@ TEST_F(P2PProviderImplTest, HostConnectionOrdering) {
   fuchsia::netconnector::NetConnectorPtr netconnector_ptr_0;
   MockNetConnector netconnector_impl_0(netconnector_ptr_0.NewRequest());
   auto p2p_provider_0 = std::make_unique<p2p_provider::P2PProviderImpl>(
-      "device0", std::move(netconnector_ptr_0),
-      std::make_unique<StaticUserIdProvider>("user"));
+      "device0", std::move(netconnector_ptr_0), std::make_unique<StaticUserIdProvider>("user"));
 
   RecordingClient client1;
   p2p_provider_0->Start(&client1);
@@ -270,8 +243,7 @@ TEST_F(P2PProviderImplTest, HostConnectionOrdering) {
   fuchsia::netconnector::NetConnectorPtr netconnector_ptr_1;
   MockNetConnector netconnector_impl_1(netconnector_ptr_1.NewRequest());
   auto p2p_provider_1 = std::make_unique<p2p_provider::P2PProviderImpl>(
-      "device1", std::move(netconnector_ptr_1),
-      std::make_unique<StaticUserIdProvider>("user"));
+      "device1", std::move(netconnector_ptr_1), std::make_unique<StaticUserIdProvider>("user"));
 
   RecordingClient client2;
   p2p_provider_1->Start(&client2);
@@ -287,8 +259,8 @@ TEST_F(P2PProviderImplTest, HostConnectionOrdering) {
 
   // Only one device should initiate the connection. We don't really care which
   // one, as long as it is reliably correct.
-  EXPECT_EQ(1U, netconnector_impl_0.device_requests.size() +
-                    netconnector_impl_1.device_requests.size());
+  EXPECT_EQ(
+      1U, netconnector_impl_0.device_requests.size() + netconnector_impl_1.device_requests.size());
 }
 
 }  // namespace

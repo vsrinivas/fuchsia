@@ -12,67 +12,56 @@
 #include "src/lib/fxl/logging.h"
 
 namespace firebase_auth {
-TestTokenManager::TestTokenManager(async_dispatcher_t* dispatcher)
-    : dispatcher_(dispatcher) {
+TestTokenManager::TestTokenManager(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {
   status_to_return_ = fuchsia::auth::Status::OK;
 }
 
 TestTokenManager::~TestTokenManager() {}
 
-void TestTokenManager::Authorize(
-    AppConfig app_config,
-    fidl::InterfaceHandle<AuthenticationUIContext> auth_ui_context,
-    std::vector<std::string> /*app_scopes*/,
-    fidl::StringPtr /*user_profile_id*/, fidl::StringPtr /*auth_code*/,
-    AuthorizeCallback callback /*callback*/) {
+void TestTokenManager::Authorize(AppConfig app_config,
+                                 fidl::InterfaceHandle<AuthenticationUIContext> auth_ui_context,
+                                 std::vector<std::string> /*app_scopes*/,
+                                 fidl::StringPtr /*user_profile_id*/, fidl::StringPtr /*auth_code*/,
+                                 AuthorizeCallback callback /*callback*/) {
   FXL_NOTIMPLEMENTED();
 }
 
-void TestTokenManager::GetAccessToken(
-    AppConfig app_config, std::string /*user_profile_id*/,
-    std::vector<std::string> /*app_scopes*/,
-    GetAccessTokenCallback callback /*callback*/) {
+void TestTokenManager::GetAccessToken(AppConfig app_config, std::string /*user_profile_id*/,
+                                      std::vector<std::string> /*app_scopes*/,
+                                      GetAccessTokenCallback callback /*callback*/) {
   FXL_NOTIMPLEMENTED();
 }
 
-void TestTokenManager::GetIdToken(AppConfig app_config,
-                                  std::string /*user_profile_id*/,
+void TestTokenManager::GetIdToken(AppConfig app_config, std::string /*user_profile_id*/,
                                   fidl::StringPtr /*audience*/,
                                   GetIdTokenCallback callback /*callback*/) {
   FXL_NOTIMPLEMENTED();
 }
 
-void TestTokenManager::GetFirebaseToken(AppConfig /*app_config*/,
-                                        std::string /*user_profile_id*/,
-                                        std::string /*audience*/,
-                                        std::string /*firebase_api_key*/,
+void TestTokenManager::GetFirebaseToken(AppConfig /*app_config*/, std::string /*user_profile_id*/,
+                                        std::string /*audience*/, std::string /*firebase_api_key*/,
                                         GetFirebaseTokenCallback callback) {
   fuchsia::auth::FirebaseTokenPtr token_to_return_copy;
   fidl::Clone(token_to_return_, &token_to_return_copy);
   fuchsia::auth::Status status_to_return_copy;
   status_to_return_copy = status_to_return_;
-  async::PostTask(dispatcher_,
-                  [status_to_return = status_to_return_copy,
-                   token_to_return = std::move(token_to_return_copy),
-                   callback = std::move(callback)]() mutable {
-                    callback(status_to_return, std::move(token_to_return));
-                  });
+  async::PostTask(dispatcher_, [status_to_return = status_to_return_copy,
+                                token_to_return = std::move(token_to_return_copy),
+                                callback = std::move(callback)]() mutable {
+    callback(status_to_return, std::move(token_to_return));
+  });
 }
 
-void TestTokenManager::DeleteAllTokens(AppConfig /*app_config*/,
-                                       std::string /*user_profile_id*/,
-                                       bool /*force*/,
-                                       DeleteAllTokensCallback callback) {
+void TestTokenManager::DeleteAllTokens(AppConfig /*app_config*/, std::string /*user_profile_id*/,
+                                       bool /*force*/, DeleteAllTokensCallback callback) {
   FXL_NOTIMPLEMENTED();
 }
 
-void TestTokenManager::ListProfileIds(AppConfig app_config,
-                                      ListProfileIdsCallback callback) {
+void TestTokenManager::ListProfileIds(AppConfig app_config, ListProfileIdsCallback callback) {
   FXL_NOTIMPLEMENTED();
 }
 
-void TestTokenManager::Set(std::string id_token, std::string local_id,
-                           std::string email) {
+void TestTokenManager::Set(std::string id_token, std::string local_id, std::string email) {
   token_to_return_ = fuchsia::auth::FirebaseToken::New();
   token_to_return_->id_token = id_token;
   token_to_return_->local_id = local_id;

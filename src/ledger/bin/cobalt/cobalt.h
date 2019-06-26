@@ -27,8 +27,8 @@ enum class CobaltEvent : uint32_t {
 
 // Cobalt initialization. When cobalt is not need, the returned object must be
 // deleted. This method must not be called again until then.
-fit::deferred_action<fit::closure> InitializeCobalt(
-    async_dispatcher_t* dispatcher, sys::ComponentContext* context);
+fit::deferred_action<fit::closure> InitializeCobalt(async_dispatcher_t* dispatcher,
+                                                    sys::ComponentContext* context);
 
 // Report an event to Cobalt. The callback returned by |InitializeCobalt|
 // must be live throughout every call to this function. This is

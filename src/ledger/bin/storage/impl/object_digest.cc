@@ -14,8 +14,7 @@ namespace storage {
 
 namespace {
 
-static_assert(kStorageHashSize == encryption::kHashSize,
-              "Unexpected kStorageHashSize value");
+static_assert(kStorageHashSize == encryption::kHashSize, "Unexpected kStorageHashSize value");
 
 // The first bit is 1 for inlined values and 0 otherwise.
 constexpr size_t kInlineBit = 0;
@@ -27,8 +26,7 @@ constexpr size_t kTypeBit = 1;
 constexpr char kTreeNodeBit = 2;
 
 // Builds an object digest by concatenating |prefix| and |data|.
-ObjectDigest BuildDigest(std::bitset<8> prefix,
-                         convert::ExtendedStringView data) {
+ObjectDigest BuildDigest(std::bitset<8> prefix, convert::ExtendedStringView data) {
   std::string result;
   result.reserve(data.size() + 1);
   result.push_back(prefix.to_ulong());
@@ -47,14 +45,12 @@ bool IsDigestValid(convert::ExtendedStringView object_digest) {
   std::bitset<8> prefix(object_digest[0]);
   // Check inline bit.
   if (prefix[kInlineBit] && object_digest.size() > kStorageHashSize + 1) {
-    FXL_LOG(INFO) << "Invalid object digest: inline but size="
-                  << object_digest.size()
+    FXL_LOG(INFO) << "Invalid object digest: inline but size=" << object_digest.size()
                   << "; digest=" << convert::ToHex(object_digest);
     return false;
   }
   if (!prefix[kInlineBit] && object_digest.size() != kStorageHashSize + 1) {
-    FXL_LOG(INFO) << "Invalid object digest: not inline but size="
-                  << object_digest.size()
+    FXL_LOG(INFO) << "Invalid object digest: not inline but size=" << object_digest.size()
                   << "; digest=" << convert::ToHex(object_digest);
     return false;
   }
@@ -75,8 +71,7 @@ ObjectDigestInfo GetObjectDigestInfo(const ObjectDigest& object_digest) {
   const std::string& digest = object_digest.Serialize();
   std::bitset<8> prefix(digest[0]);
   ObjectDigestInfo result;
-  result.object_type =
-      prefix[kTreeNodeBit] ? ObjectType::TREE_NODE : ObjectType::BLOB;
+  result.object_type = prefix[kTreeNodeBit] ? ObjectType::TREE_NODE : ObjectType::BLOB;
   result.piece_type = prefix[kTypeBit] ? PieceType::INDEX : PieceType::CHUNK;
   result.inlined = prefix[kInlineBit] ? InlinedPiece::YES : InlinedPiece::NO;
   return result;

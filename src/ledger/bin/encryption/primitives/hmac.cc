@@ -17,9 +17,8 @@ std::string SHA256HMAC(fxl::StringView key, fxl::StringView data) {
   result.resize(SHA256_DIGEST_LENGTH);
   unsigned int result_size;
   const uint8_t* out =
-      HMAC(EVP_sha256(), key.data(), key.size(),
-           reinterpret_cast<const uint8_t*>(data.data()), data.size(),
-           reinterpret_cast<uint8_t*>(&result[0]), &result_size);
+      HMAC(EVP_sha256(), key.data(), key.size(), reinterpret_cast<const uint8_t*>(data.data()),
+           data.size(), reinterpret_cast<uint8_t*>(&result[0]), &result_size);
   FXL_CHECK(out);
   FXL_DCHECK(result_size == SHA256_DIGEST_LENGTH);
   result.resize(result_size);

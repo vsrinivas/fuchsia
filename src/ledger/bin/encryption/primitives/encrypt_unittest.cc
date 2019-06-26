@@ -36,17 +36,14 @@ TEST_P(EncryptTest, Correctness) {
   EXPECT_EQ(message, decrypted);
 
   // Check that changing any of the first 128 bytes breaks the encryption.
-  for (size_t index = 0; index < std::min<size_t>(128u, encrypted.size());
-       ++index) {
+  for (size_t index = 0; index < std::min<size_t>(128u, encrypted.size()); ++index) {
     std::string encrypted_copy = encrypted;
     encrypted_copy[index] ^= 0xFF;
     EXPECT_FALSE(AES128GCMSIVDecrypt(key, encrypted_copy, &decrypted));
   }
 }
 
-INSTANTIATE_TEST_SUITE_P(, EncryptTest,
-                         ::testing::Values(0, 64, 127, 128, 129, 192, 256,
-                                           12345));
+INSTANTIATE_TEST_SUITE_P(, EncryptTest, ::testing::Values(0, 64, 127, 128, 129, 192, 256, 12345));
 
 }  // namespace
 }  // namespace encryption

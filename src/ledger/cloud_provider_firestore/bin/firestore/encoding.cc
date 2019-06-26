@@ -57,10 +57,9 @@ bool EncodeCommitBatch(const cloud_provider::CommitPack& commits,
   return true;
 }
 
-bool DecodeCommitBatch(
-    const google::firestore::v1beta1::Document& document,
-    std::vector<cloud_provider::CommitPackEntry>* commit_entries,
-    std::string* timestamp) {
+bool DecodeCommitBatch(const google::firestore::v1beta1::Document& document,
+                       std::vector<cloud_provider::CommitPackEntry>* commit_entries,
+                       std::string* timestamp) {
   FXL_DCHECK(commit_entries);
   FXL_DCHECK(timestamp);
 
@@ -69,39 +68,33 @@ bool DecodeCommitBatch(
     return false;
   }
 
-  const google::firestore::v1beta1::Value& commits_value =
-      document.fields().at(kCommitsKey);
+  const google::firestore::v1beta1::Value& commits_value = document.fields().at(kCommitsKey);
   if (!commits_value.has_array_value()) {
     return false;
   }
 
-  const google::firestore::v1beta1::ArrayValue& commits_array_value =
-      commits_value.array_value();
+  const google::firestore::v1beta1::ArrayValue& commits_array_value = commits_value.array_value();
   for (const auto& commit_value : commits_array_value.values()) {
     if (!commit_value.has_map_value()) {
       return false;
     }
 
-    const google::firestore::v1beta1::MapValue& commit_map_value =
-        commit_value.map_value();
+    const google::firestore::v1beta1::MapValue& commit_map_value = commit_value.map_value();
     cloud_provider::CommitPackEntry entry;
     if (commit_map_value.fields().count(kIdKey) != 1) {
       return false;
     }
-    entry.id =
-        convert::ToString(commit_map_value.fields().at(kIdKey).bytes_value());
+    entry.id = convert::ToString(commit_map_value.fields().at(kIdKey).bytes_value());
     if (commit_map_value.fields().count(kDataKey) != 1) {
       return false;
     }
-    entry.data =
-        convert::ToString(commit_map_value.fields().at(kDataKey).bytes_value());
+    entry.data = convert::ToString(commit_map_value.fields().at(kDataKey).bytes_value());
     result.push_back(std::move(entry));
   }
 
   // Read the timestamp field.
   if (document.fields().count(kTimestampKey) == 1) {
-    const google::firestore::v1beta1::Value& timestamp_value =
-        document.fields().at(kTimestampKey);
+    const google::firestore::v1beta1::Value& timestamp_value = document.fields().at(kTimestampKey);
     if (!timestamp_value.has_timestamp_value()) {
       return false;
     }

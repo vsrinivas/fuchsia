@@ -17,9 +17,7 @@ namespace {
 // Implementation of a SubLoop that uses a real loop.
 class SubLoopRealLoop : public SubLoop {
  public:
-  SubLoopRealLoop() : loop_(&kAsyncLoopConfigNoAttachToThread) {
-    loop_.StartThread();
-  };
+  SubLoopRealLoop() : loop_(&kAsyncLoopConfigNoAttachToThread) { loop_.StartThread(); };
 
   ~SubLoopRealLoop() override { loop_.Shutdown(); }
 
@@ -37,8 +35,7 @@ class SubLoopRealLoop : public SubLoop {
 
 }  // namespace
 
-LoopControllerRealLoop::LoopControllerRealLoop()
-    : loop_(&kAsyncLoopConfigAttachToThread) {}
+LoopControllerRealLoop::LoopControllerRealLoop() : loop_(&kAsyncLoopConfigAttachToThread) {}
 
 LoopControllerRealLoop::~LoopControllerRealLoop() {}
 
@@ -57,9 +54,7 @@ std::unique_ptr<CallbackWaiter> LoopControllerRealLoop::NewWaiter() {
   return std::make_unique<BlockingCallbackWaiter>(this);
 }
 
-async_dispatcher_t* LoopControllerRealLoop::dispatcher() {
-  return loop_.dispatcher();
-}
+async_dispatcher_t* LoopControllerRealLoop::dispatcher() { return loop_.dispatcher(); }
 
 bool LoopControllerRealLoop::RunLoopUntil(fit::function<bool()> condition) {
   while (true) {

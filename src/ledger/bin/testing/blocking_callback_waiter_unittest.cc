@@ -15,8 +15,7 @@ namespace {
 
 class FakeLoopController : public LoopController {
  public:
-  FakeLoopController(fit::function<void()> on_run,
-                     fit::function<void()> on_stop)
+  FakeLoopController(fit::function<void()> on_run, fit::function<void()> on_stop)
       : on_run_(std::move(on_run)), on_stop_(std::move(on_stop)) {}
   FakeLoopController(const FakeLoopController&) = delete;
   FakeLoopController& operator=(const FakeLoopController&) = delete;

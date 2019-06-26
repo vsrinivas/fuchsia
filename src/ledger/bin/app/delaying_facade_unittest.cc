@@ -18,9 +18,7 @@ class Foo {
  public:
   void AddNumber(int i) { numbers.push_back(i); }
 
-  void AddUniqueNumber(std::unique_ptr<int> i) {
-    unique_numbers.push_back(std::move(i));
-  }
+  void AddUniqueNumber(std::unique_ptr<int> i) { unique_numbers.push_back(std::move(i)); }
 
   std::vector<int> numbers;
   std::vector<std::unique_ptr<int>> unique_numbers;

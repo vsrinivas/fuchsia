@@ -28,8 +28,7 @@ class ServiceAccountTokenManagerTest : public gtest::TestLoopFixture {
  public:
   ServiceAccountTokenManagerTest()
       : network_wrapper_(dispatcher()),
-        token_manager_(&network_wrapper_,
-                       Credentials::Parse(kTestServiceAccountConfig),
+        token_manager_(&network_wrapper_, Credentials::Parse(kTestServiceAccountConfig),
                        "user_id") {}
 
  protected:
@@ -40,8 +39,7 @@ class ServiceAccountTokenManagerTest : public gtest::TestLoopFixture {
         {"google", "", ""}, /*app_config*/
         "",                 /*user_profile_id*/
         "",                 /*audience*/
-        api_key,
-        callback::Capture(callback::SetWhenCalled(&called), status, token));
+        api_key, callback::Capture(callback::SetWhenCalled(&called), status, token));
     RunLoopUntilIdle();
     return called;
   }
@@ -51,8 +49,8 @@ class ServiceAccountTokenManagerTest : public gtest::TestLoopFixture {
 };
 
 TEST_F(ServiceAccountTokenManagerTest, GetToken) {
-  network_wrapper_.SetResponse(GetResponseForTest(
-      nullptr, 200, GetSuccessResponseBodyForTest("token", 3600)));
+  network_wrapper_.SetResponse(
+      GetResponseForTest(nullptr, 200, GetSuccessResponseBodyForTest("token", 3600)));
 
   fuchsia::auth::FirebaseTokenPtr token;
   fuchsia::auth::Status status;
@@ -62,8 +60,8 @@ TEST_F(ServiceAccountTokenManagerTest, GetToken) {
 }
 
 TEST_F(ServiceAccountTokenManagerTest, GetTokenFromCache) {
-  network_wrapper_.SetResponse(GetResponseForTest(
-      nullptr, 200, GetSuccessResponseBodyForTest("token", 3600)));
+  network_wrapper_.SetResponse(
+      GetResponseForTest(nullptr, 200, GetSuccessResponseBodyForTest("token", 3600)));
 
   fuchsia::auth::FirebaseTokenPtr token;
   fuchsia::auth::Status status;
@@ -74,8 +72,8 @@ TEST_F(ServiceAccountTokenManagerTest, GetTokenFromCache) {
   EXPECT_TRUE(network_wrapper_.GetRequest());
 
   network_wrapper_.ResetRequest();
-  network_wrapper_.SetResponse(GetResponseForTest(
-      nullptr, 200, GetSuccessResponseBodyForTest("token2", 3600)));
+  network_wrapper_.SetResponse(
+      GetResponseForTest(nullptr, 200, GetSuccessResponseBodyForTest("token2", 3600)));
 
   ASSERT_TRUE(GetToken("api_key", &token, &status));
   EXPECT_EQ(fuchsia::auth::Status::OK, status);
@@ -84,8 +82,8 @@ TEST_F(ServiceAccountTokenManagerTest, GetTokenFromCache) {
 }
 
 TEST_F(ServiceAccountTokenManagerTest, GetTokenNoCacheCache) {
-  network_wrapper_.SetResponse(GetResponseForTest(
-      nullptr, 200, GetSuccessResponseBodyForTest("token", 0)));
+  network_wrapper_.SetResponse(
+      GetResponseForTest(nullptr, 200, GetSuccessResponseBodyForTest("token", 0)));
 
   fuchsia::auth::FirebaseTokenPtr token;
   fuchsia::auth::Status status;
@@ -95,8 +93,8 @@ TEST_F(ServiceAccountTokenManagerTest, GetTokenNoCacheCache) {
   EXPECT_EQ("token", token->id_token);
   EXPECT_TRUE(network_wrapper_.GetRequest());
 
-  network_wrapper_.SetResponse(GetResponseForTest(
-      nullptr, 200, GetSuccessResponseBodyForTest("token2", 0)));
+  network_wrapper_.SetResponse(
+      GetResponseForTest(nullptr, 200, GetSuccessResponseBodyForTest("token2", 0)));
 
   ASSERT_TRUE(GetToken("api_key", &token, &status));
   EXPECT_EQ(fuchsia::auth::Status::OK, status);
@@ -108,8 +106,7 @@ TEST_F(ServiceAccountTokenManagerTest, NetworkError) {
   auto network_status = http::HttpError::New();
   network_status->description = "Error";
 
-  network_wrapper_.SetResponse(
-      GetResponseForTest(std::move(network_status), 0, ""));
+  network_wrapper_.SetResponse(GetResponseForTest(std::move(network_status), 0, ""));
 
   fuchsia::auth::FirebaseTokenPtr token;
   fuchsia::auth::Status status;
@@ -121,8 +118,7 @@ TEST_F(ServiceAccountTokenManagerTest, NetworkError) {
 }
 
 TEST_F(ServiceAccountTokenManagerTest, AuthenticationError) {
-  network_wrapper_.SetResponse(
-      GetResponseForTest(nullptr, 401, "Unauthorized"));
+  network_wrapper_.SetResponse(GetResponseForTest(nullptr, 401, "Unauthorized"));
 
   fuchsia::auth::FirebaseTokenPtr token;
   fuchsia::auth::Status status;

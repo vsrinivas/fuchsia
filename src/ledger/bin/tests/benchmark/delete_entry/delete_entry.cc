@@ -61,10 +61,9 @@ void PrintUsage() {
 //   --value-size=<int> the size of a single value in bytes
 class DeleteEntryBenchmark {
  public:
-  DeleteEntryBenchmark(async::Loop* loop,
-                       std::unique_ptr<sys::ComponentContext> component_context,
-                       size_t entry_count, size_t transaction_size,
-                       size_t key_size, size_t value_size);
+  DeleteEntryBenchmark(async::Loop* loop, std::unique_ptr<sys::ComponentContext> component_context,
+                       size_t entry_count, size_t transaction_size, size_t key_size,
+                       size_t value_size);
 
   void Run();
 
@@ -93,10 +92,10 @@ class DeleteEntryBenchmark {
   FXL_DISALLOW_COPY_AND_ASSIGN(DeleteEntryBenchmark);
 };
 
-DeleteEntryBenchmark::DeleteEntryBenchmark(
-    async::Loop* loop, std::unique_ptr<sys::ComponentContext> component_context,
-    size_t entry_count, size_t transaction_size, size_t key_size,
-    size_t value_size)
+DeleteEntryBenchmark::DeleteEntryBenchmark(async::Loop* loop,
+                                           std::unique_ptr<sys::ComponentContext> component_context,
+                                           size_t entry_count, size_t transaction_size,
+                                           size_t key_size, size_t value_size)
     : loop_(loop),
       random_(0),
       tmp_dir_(kStoragePath),
@@ -116,22 +115,20 @@ DeleteEntryBenchmark::DeleteEntryBenchmark(
 
 void DeleteEntryBenchmark::Run() {
   Status status =
-      GetLedger(component_context_.get(), component_controller_.NewRequest(),
-                nullptr, "", "delete_entry", DetachedPath(tmp_dir_.path()),
-                QuitLoopClosure(), &ledger_);
+      GetLedger(component_context_.get(), component_controller_.NewRequest(), nullptr, "",
+                "delete_entry", DetachedPath(tmp_dir_.path()), QuitLoopClosure(), &ledger_);
   if (QuitOnError(QuitLoopClosure(), status, "GetLedger")) {
     return;
   }
 
-  GetPageEnsureInitialized(
-      &ledger_, nullptr, DelayCallback::YES, QuitLoopClosure(),
-      [this](Status status, PagePtr page, PageId id) {
-        if (QuitOnError(QuitLoopClosure(), status, "Page initialization")) {
-          return;
-        }
-        page_ = std::move(page);
-        Populate();
-      });
+  GetPageEnsureInitialized(&ledger_, nullptr, DelayCallback::YES, QuitLoopClosure(),
+                           [this](Status status, PagePtr page, PageId id) {
+                             if (QuitOnError(QuitLoopClosure(), status, "Page initialization")) {
+                               return;
+                             }
+                             page_ = std::move(page);
+                             Populate();
+                           });
 }
 
 void DeleteEntryBenchmark::Populate() {
@@ -142,8 +139,7 @@ void DeleteEntryBenchmark::Populate() {
 
   page_data_generator_.Populate(
       &page_, std::move(keys), value_size_, entry_count_,
-      PageDataGenerator::ReferenceStrategy::REFERENCE, Priority::EAGER,
-      [this](Status status) {
+      PageDataGenerator::ReferenceStrategy::REFERENCE, Priority::EAGER, [this](Status status) {
         if (status != Status::OK) {
           QuitOnError(QuitLoopClosure(), status, "PageGenerator::Populate");
           return;
@@ -165,8 +161,7 @@ void DeleteEntryBenchmark::RunSingle(size_t i) {
     ShutDown();
 
     uint64_t tmp_dir_size = 0;
-    FXL_CHECK(
-        GetDirectoryContentSize(DetachedPath(tmp_dir_.path()), &tmp_dir_size));
+    FXL_CHECK(GetDirectoryContentSize(DetachedPath(tmp_dir_.path()), &tmp_dir_size));
     TRACE_COUNTER("benchmark", "ledger_directory_size", 0, "directory_size",
                   TA_UINT64(tmp_dir_size));
     return;
@@ -177,8 +172,7 @@ void DeleteEntryBenchmark::RunSingle(size_t i) {
   page_->Sync([this, i]() {
     TRACE_ASYNC_END("benchmark", "delete_entry", i);
     if (transaction_size_ > 0 &&
-        (i % transaction_size_ == transaction_size_ - 1 ||
-         i + 1 == entry_count_)) {
+        (i % transaction_size_ == transaction_size_ - 1 || i + 1 == entry_count_)) {
       CommitAndRunNext(i);
     } else {
       RunSingle(i + 1);
@@ -227,25 +221,20 @@ int Main(int argc, const char** argv) {
   size_t key_size;
   std::string value_size_str;
   size_t value_size;
-  if (!command_line.GetOptionValue(kEntryCountFlag.ToString(),
-                                   &entry_count_str) ||
-      !fxl::StringToNumberWithError(entry_count_str, &entry_count) ||
-      entry_count == 0 ||
-      !command_line.GetOptionValue(kTransactionSizeFlag.ToString(),
-                                   &transaction_size_str) ||
+  if (!command_line.GetOptionValue(kEntryCountFlag.ToString(), &entry_count_str) ||
+      !fxl::StringToNumberWithError(entry_count_str, &entry_count) || entry_count == 0 ||
+      !command_line.GetOptionValue(kTransactionSizeFlag.ToString(), &transaction_size_str) ||
       !fxl::StringToNumberWithError(transaction_size_str, &transaction_size) ||
       !command_line.GetOptionValue(kKeySizeFlag.ToString(), &key_size_str) ||
       !fxl::StringToNumberWithError(key_size_str, &key_size) || key_size == 0 ||
-      !command_line.GetOptionValue(kValueSizeFlag.ToString(),
-                                   &value_size_str) ||
-      !fxl::StringToNumberWithError(value_size_str, &value_size) ||
-      value_size == 0) {
+      !command_line.GetOptionValue(kValueSizeFlag.ToString(), &value_size_str) ||
+      !fxl::StringToNumberWithError(value_size_str, &value_size) || value_size == 0) {
     PrintUsage();
     return -1;
   }
 
-  DeleteEntryBenchmark app(&loop, std::move(component_context), entry_count,
-                           transaction_size, key_size, value_size);
+  DeleteEntryBenchmark app(&loop, std::move(component_context), entry_count, transaction_size,
+                           key_size, value_size);
 
   return RunWithTracing(&loop, [&app] { app.Run(); });
 }

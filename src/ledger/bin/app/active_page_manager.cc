@@ -17,12 +17,12 @@
 
 namespace ledger {
 
-ActivePageManager::ActivePageManager(
-    Environment* environment,
-    std::unique_ptr<storage::PageStorage> page_storage,
-    std::unique_ptr<sync_coordinator::PageSync> page_sync,
-    std::unique_ptr<MergeResolver> merge_resolver,
-    ActivePageManager::PageStorageState state, zx::duration sync_timeout)
+ActivePageManager::ActivePageManager(Environment* environment,
+                                     std::unique_ptr<storage::PageStorage> page_storage,
+                                     std::unique_ptr<sync_coordinator::PageSync> page_sync,
+                                     std::unique_ptr<MergeResolver> merge_resolver,
+                                     ActivePageManager::PageStorageState state,
+                                     zx::duration sync_timeout)
     : environment_(environment),
       page_storage_(std::move(page_storage)),
       page_sync_(std::move(page_sync)),
@@ -69,28 +69,25 @@ ActivePageManager::~ActivePageManager() {
 
 void ActivePageManager::AddPageImpl(std::unique_ptr<PageImpl> page_impl,
                                     fit::function<void(Status)> on_done) {
-  auto traced_on_done = TRACE_CALLBACK(std::move(on_done), "ledger",
-                                       "page_manager_add_page_impl");
+  auto traced_on_done = TRACE_CALLBACK(std::move(on_done), "ledger", "page_manager_add_page_impl");
   if (!sync_backlog_downloaded_) {
     page_impls_.emplace_back(std::move(page_impl), std::move(traced_on_done));
     return;
   }
   page_delegates_
-      .emplace(environment_->coroutine_service(), this, page_storage_.get(),
-               merge_resolver_.get(), &watchers_, std::move(page_impl))
+      .emplace(environment_->coroutine_service(), this, page_storage_.get(), merge_resolver_.get(),
+               &watchers_, std::move(page_impl))
       .Init(std::move(traced_on_done));
 }
 
-void ActivePageManager::BindPageSnapshot(
-    std::unique_ptr<const storage::Commit> commit,
-    fidl::InterfaceRequest<PageSnapshot> snapshot_request,
-    std::string key_prefix) {
-  snapshots_.emplace(std::move(snapshot_request), page_storage_.get(),
-                     std::move(commit), std::move(key_prefix));
+void ActivePageManager::BindPageSnapshot(std::unique_ptr<const storage::Commit> commit,
+                                         fidl::InterfaceRequest<PageSnapshot> snapshot_request,
+                                         std::string key_prefix) {
+  snapshots_.emplace(std::move(snapshot_request), page_storage_.get(), std::move(commit),
+                     std::move(key_prefix));
 }
 
-Reference ActivePageManager::CreateReference(
-    storage::ObjectIdentifier object_identifier) {
+Reference ActivePageManager::CreateReference(storage::ObjectIdentifier object_identifier) {
   uint64_t index = environment_->random()->Draw<uint64_t>();
   FXL_DCHECK(references_.find(index) == references_.end());
   references_[index] = std::move(object_identifier);
@@ -99,13 +96,12 @@ Reference ActivePageManager::CreateReference(
   return reference;
 }
 
-Status ActivePageManager::ResolveReference(
-    Reference reference, storage::ObjectIdentifier* object_identifier) {
+Status ActivePageManager::ResolveReference(Reference reference,
+                                           storage::ObjectIdentifier* object_identifier) {
   if (reference.opaque_id.size() != sizeof(uint64_t)) {
     return Status::INVALID_ARGUMENT;
   }
-  uint64_t index = storage::DeserializeData<uint64_t>(
-      convert::ToStringView(reference.opaque_id));
+  uint64_t index = storage::DeserializeData<uint64_t>(convert::ToStringView(reference.opaque_id));
   auto iterator = references_.find(index);
   if (iterator == references_.end()) {
     return Status::INVALID_ARGUMENT;
@@ -115,23 +111,20 @@ Status ActivePageManager::ResolveReference(
 }
 
 void ActivePageManager::IsSynced(fit::function<void(Status, bool)> callback) {
-  page_storage_->IsSynced(
-      [callback = std::move(callback)](Status status, bool is_synced) {
-        callback(status, is_synced);
-      });
+  page_storage_->IsSynced([callback = std::move(callback)](Status status, bool is_synced) {
+    callback(status, is_synced);
+  });
 }
 
-void ActivePageManager::IsOfflineAndEmpty(
-    fit::function<void(Status, bool)> callback) {
+void ActivePageManager::IsOfflineAndEmpty(fit::function<void(Status, bool)> callback) {
   if (page_storage_->IsOnline()) {
     callback(Status::OK, false);
     return;
   }
   // The page is offline. Check and return if it's also empty.
-  page_storage_->IsEmpty(
-      [callback = std::move(callback)](Status status, bool is_empty) {
-        callback(status, is_empty);
-      });
+  page_storage_->IsEmpty([callback = std::move(callback)](Status status, bool is_empty) {
+    callback(status, is_empty);
+  });
 }
 
 bool ActivePageManager::IsEmpty() {

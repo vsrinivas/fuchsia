@@ -23,18 +23,15 @@ class SplittingDataSource : public DataSource {
 
   uint64_t GetSize() override { return content_.size(); };
 
-  void Get(fit::function<void(std::unique_ptr<DataChunk>, Status)> callback)
-      override {
+  void Get(fit::function<void(std::unique_ptr<DataChunk>, Status)> callback) override {
     if (index_ >= content_.size()) {
       callback(nullptr, Status::DONE);
       return;
     }
-    callback(DataChunk::Create(content_.substr(index_, 1)),
-             Status::TO_BE_CONTINUED);
+    callback(DataChunk::Create(content_.substr(index_, 1)), Status::TO_BE_CONTINUED);
     ++index_;
-    task_runner_.PostTask([this, callback = std::move(callback)]() mutable {
-      Get(std::move(callback));
-    });
+    task_runner_.PostTask(
+        [this, callback = std::move(callback)]() mutable { Get(std::move(callback)); });
   };
 
  private:
@@ -53,10 +50,8 @@ TEST_F(ReadDataSourceTest, ReadDataSource) {
   bool called;
   Status status;
   std::unique_ptr<DataSource::DataChunk> content;
-  ReadDataSource(
-      &container,
-      std::make_unique<SplittingDataSource>(dispatcher(), expected_content),
-      callback::Capture(callback::SetWhenCalled(&called), &status, &content));
+  ReadDataSource(&container, std::make_unique<SplittingDataSource>(dispatcher(), expected_content),
+                 callback::Capture(callback::SetWhenCalled(&called), &status, &content));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
@@ -71,10 +66,9 @@ TEST_F(ReadDataSourceTest, DeleteContainerWhileReading) {
   std::unique_ptr<DataSource::DataChunk> content;
   {
     callback::ManagedContainer container;
-    ReadDataSource(
-        &container,
-        std::make_unique<SplittingDataSource>(dispatcher(), expected_content),
-        callback::Capture(callback::SetWhenCalled(&called), &status, &content));
+    ReadDataSource(&container,
+                   std::make_unique<SplittingDataSource>(dispatcher(), expected_content),
+                   callback::Capture(callback::SetWhenCalled(&called), &status, &content));
   }
   RunLoopUntilIdle();
   EXPECT_FALSE(called);

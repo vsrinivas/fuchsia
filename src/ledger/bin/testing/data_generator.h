@@ -42,9 +42,7 @@ class DataGenerator {
   size_t GetKeyId(const std::vector<uint8_t>& key);
 
  private:
-  std::independent_bits_engine<rng::Random::BitGenerator<uint64_t>, CHAR_BIT,
-                               uint8_t>
-      generator_;
+  std::independent_bits_engine<rng::Random::BitGenerator<uint64_t>, CHAR_BIT, uint8_t> generator_;
 };
 
 }  // namespace ledger

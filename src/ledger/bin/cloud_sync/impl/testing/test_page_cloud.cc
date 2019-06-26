@@ -14,8 +14,8 @@
 namespace cloud_sync {
 
 cloud_provider::CommitPackEntry MakeTestCommit(
-    encryption::FakeEncryptionService* encryption_service,
-    const std::string& id, const std::string& data) {
+    encryption::FakeEncryptionService* encryption_service, const std::string& id,
+    const std::string& data) {
   cloud_provider::CommitPackEntry commit;
   commit.id = id;
   commit.data = encryption_service->EncryptCommitSynchronous(data);
@@ -27,8 +27,7 @@ std::unique_ptr<cloud_provider::CommitPack> MakeTestCommitPack(
     std::vector<std::tuple<std::string, std::string>> commit_data) {
   std::vector<cloud_provider::CommitPackEntry> entries;
   for (auto& data : commit_data) {
-    entries.push_back(MakeTestCommit(encryption_service, std::get<0>(data),
-                                     std::get<1>(data)));
+    entries.push_back(MakeTestCommit(encryption_service, std::get<0>(data), std::get<1>(data)));
   }
   cloud_provider::CommitPack result;
   if (!cloud_provider::EncodeCommitPack(entries, &result)) {
@@ -37,8 +36,7 @@ std::unique_ptr<cloud_provider::CommitPack> MakeTestCommitPack(
   return fidl::MakeOptional(std::move(result));
 }
 
-TestPageCloud::TestPageCloud(
-    fidl::InterfaceRequest<cloud_provider::PageCloud> request)
+TestPageCloud::TestPageCloud(fidl::InterfaceRequest<cloud_provider::PageCloud> request)
     : binding_(this, std::move(request)) {}
 TestPageCloud::~TestPageCloud() {}
 
@@ -50,8 +48,7 @@ void TestPageCloud::RunPendingCallbacks() {
 }
 
 // cloud_provider::PageCloud:
-void TestPageCloud::AddCommits(cloud_provider::CommitPack commits,
-                               AddCommitsCallback callback) {
+void TestPageCloud::AddCommits(cloud_provider::CommitPack commits, AddCommitsCallback callback) {
   std::vector<cloud_provider::CommitPackEntry> entries;
   if (!cloud_provider::DecodeCommitPack(commits, &entries)) {
     callback(cloud_provider::Status::INTERNAL_ERROR);
@@ -78,8 +75,7 @@ void TestPageCloud::GetCommits(
            std::move(position_token_to_return));
 }
 
-void TestPageCloud::AddObject(std::vector<uint8_t> id,
-                              fuchsia::mem::Buffer data,
+void TestPageCloud::AddObject(std::vector<uint8_t> id, fuchsia::mem::Buffer data,
                               cloud_provider::ReferencePack /*references*/,
                               AddObjectCallback callback) {
   add_object_calls++;
@@ -89,8 +85,7 @@ void TestPageCloud::AddObject(std::vector<uint8_t> id,
     return;
   }
   received_objects[convert::ToString(id)] = received_data;
-  fit::closure report_result = [callback = std::move(callback),
-                                status = object_status_to_return] {
+  fit::closure report_result = [callback = std::move(callback), status = object_status_to_return] {
     callback(status);
   };
   if (delay_add_object_callbacks) {
@@ -104,8 +99,7 @@ void TestPageCloud::AddObject(std::vector<uint8_t> id,
   }
 }
 
-void TestPageCloud::GetObject(std::vector<uint8_t> id,
-                              GetObjectCallback callback) {
+void TestPageCloud::GetObject(std::vector<uint8_t> id, GetObjectCallback callback) {
   get_object_calls++;
   if (status_to_return != cloud_provider::Status::OK) {
     callback(status_to_return, nullptr);
@@ -126,10 +120,9 @@ void TestPageCloud::GetObject(std::vector<uint8_t> id,
   callback(status_to_return, fidl::MakeOptional(std::move(buffer)));
 }
 
-void TestPageCloud::SetWatcher(
-    std::unique_ptr<cloud_provider::PositionToken> min_position_token,
-    fidl::InterfaceHandle<cloud_provider::PageCloudWatcher> watcher,
-    SetWatcherCallback callback) {
+void TestPageCloud::SetWatcher(std::unique_ptr<cloud_provider::PositionToken> min_position_token,
+                               fidl::InterfaceHandle<cloud_provider::PageCloudWatcher> watcher,
+                               SetWatcherCallback callback) {
   set_watcher_position_tokens.push_back(std::move(min_position_token));
   set_watcher = watcher.Bind();
   callback(status_to_return);

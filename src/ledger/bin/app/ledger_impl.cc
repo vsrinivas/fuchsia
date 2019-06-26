@@ -29,13 +29,11 @@ LedgerImpl::~LedgerImpl() {}
 
 void LedgerImpl::GetRootPage(fidl::InterfaceRequest<Page> page_request,
                              fit::function<void(Status)> callback) {
-  delegate_->GetPage(
-      kRootPageId, Delegate::PageState::NAMED, std::move(page_request),
-      TRACE_CALLBACK(std::move(callback), "ledger", "ledger_get_root_page"));
+  delegate_->GetPage(kRootPageId, Delegate::PageState::NAMED, std::move(page_request),
+                     TRACE_CALLBACK(std::move(callback), "ledger", "ledger_get_root_page"));
 }
 
-void LedgerImpl::GetPage(PageIdPtr id,
-                         fidl::InterfaceRequest<Page> page_request,
+void LedgerImpl::GetPage(PageIdPtr id, fidl::InterfaceRequest<Page> page_request,
                          fit::function<void(Status)> callback) {
   Delegate::PageState page_state = Delegate::PageState::NAMED;
   if (!id) {
@@ -43,14 +41,12 @@ void LedgerImpl::GetPage(PageIdPtr id,
     environment_->random()->Draw(&id->id);
     page_state = Delegate::PageState::NEW;
   }
-  delegate_->GetPage(
-      id->id, page_state, std::move(page_request),
-      TRACE_CALLBACK(std::move(callback), "ledger", "ledger_get_page"));
+  delegate_->GetPage(id->id, page_state, std::move(page_request),
+                     TRACE_CALLBACK(std::move(callback), "ledger", "ledger_get_page"));
 }
 
-void LedgerImpl::SetConflictResolverFactory(
-    fidl::InterfaceHandle<ConflictResolverFactory> factory,
-    fit::function<void(Status)> callback) {
+void LedgerImpl::SetConflictResolverFactory(fidl::InterfaceHandle<ConflictResolverFactory> factory,
+                                            fit::function<void(Status)> callback) {
   TRACE_DURATION("ledger", "ledger_set_conflict_resolver_factory");
 
   delegate_->SetConflictResolverFactory(std::move(factory));

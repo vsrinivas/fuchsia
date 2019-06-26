@@ -16,17 +16,14 @@ class StringObject : public Object {
   explicit StringObject(std::string value) : value_(std::move(value)) {}
   ~StringObject() override {}
 
-  ObjectIdentifier GetIdentifier() const override {
-    return {1u, 2u, ObjectDigest("digest")};
-  }
+  ObjectIdentifier GetIdentifier() const override { return {1u, 2u, ObjectDigest("digest")}; }
 
   Status GetData(fxl::StringView* data) const override {
     *data = value_;
     return Status::OK;
   }
 
-  Status AppendReferences(
-      ObjectReferencesAndPriority* references) const override {
+  Status AppendReferences(ObjectReferencesAndPriority* references) const override {
     return Status::OK;
   }
 

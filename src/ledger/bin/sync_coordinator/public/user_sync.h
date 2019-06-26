@@ -30,8 +30,7 @@ class UserSync {
   // Returns the Ledger-level synchronization object. The user-level
   // synchronization must be started before calling this method.
   virtual std::unique_ptr<LedgerSync> CreateLedgerSync(
-      fxl::StringView app_id,
-      encryption::EncryptionService* encryption_service) = 0;
+      fxl::StringView app_id, encryption::EncryptionService* encryption_service) = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(UserSync);

@@ -21,13 +21,12 @@
 
 namespace cloud_sync {
 
-BatchUpload::BatchUpload(
-    storage::PageStorage* storage,
-    encryption::EncryptionService* encryption_service,
-    cloud_provider::PageCloudPtr* page_cloud,
-    std::vector<std::unique_ptr<const storage::Commit>> commits,
-    fit::closure on_done, fit::function<void(ErrorType)> on_error,
-    unsigned int max_concurrent_uploads)
+BatchUpload::BatchUpload(storage::PageStorage* storage,
+                         encryption::EncryptionService* encryption_service,
+                         cloud_provider::PageCloudPtr* page_cloud,
+                         std::vector<std::unique_ptr<const storage::Commit>> commits,
+                         fit::closure on_done, fit::function<void(ErrorType)> on_error,
+                         unsigned int max_concurrent_uploads)
     : storage_(storage),
       encryption_service_(encryption_service),
       page_cloud_(page_cloud),
@@ -36,8 +35,7 @@ BatchUpload::BatchUpload(
       on_error_(std::move(on_error)),
       max_concurrent_uploads_(max_concurrent_uploads),
       weak_ptr_factory_(this) {
-  TRACE_ASYNC_BEGIN("ledger", "batch_upload",
-                    reinterpret_cast<uintptr_t>(this));
+  TRACE_ASYNC_BEGIN("ledger", "batch_upload", reinterpret_cast<uintptr_t>(this));
   FXL_DCHECK(storage_);
   FXL_DCHECK(page_cloud_);
 }
@@ -52,8 +50,7 @@ void BatchUpload::Start() {
   started_ = true;
   storage_->GetUnsyncedPieces(callback::MakeScoped(
       weak_ptr_factory_.GetWeakPtr(),
-      [this](ledger::Status status,
-             std::vector<storage::ObjectIdentifier> object_identifiers) {
+      [this](ledger::Status status, std::vector<storage::ObjectIdentifier> object_identifiers) {
         if (status != ledger::Status::OK) {
           errored_ = true;
           on_error_(ErrorType::PERMANENT);
@@ -80,8 +77,7 @@ void BatchUpload::StartObjectUpload() {
     return;
   }
 
-  while (current_uploads_ < max_concurrent_uploads_ &&
-         !remaining_object_identifiers_.empty()) {
+  while (current_uploads_ < max_concurrent_uploads_ && !remaining_object_identifiers_.empty()) {
     UploadNextObject();
   }
 }
@@ -91,8 +87,7 @@ void BatchUpload::UploadNextObject() {
   FXL_DCHECK(current_uploads_ < max_concurrent_uploads_);
   current_uploads_++;
   current_objects_handled_++;
-  auto object_identifier_to_send =
-      std::move(remaining_object_identifiers_.back());
+  auto object_identifier_to_send = std::move(remaining_object_identifiers_.back());
   // Pop the object from the queue - if the upload fails, we will re-enqueue it.
   remaining_object_identifiers_.pop_back();
 
@@ -100,63 +95,55 @@ void BatchUpload::UploadNextObject() {
   // retrieving the object content.
   encryption_service_->GetObjectName(
       object_identifier_to_send,
-      callback::MakeScoped(weak_ptr_factory_.GetWeakPtr(),
-                           [this, object_identifier_to_send](
-                               encryption::Status encryption_status,
-                               std::string object_name) mutable {
-                             if (encryption_status != encryption::Status::OK) {
-                               EnqueueForRetryAndSignalError(
-                                   std::move(object_identifier_to_send));
-                               return;
-                             }
+      callback::MakeScoped(weak_ptr_factory_.GetWeakPtr(), [this, object_identifier_to_send](
+                                                               encryption::Status encryption_status,
+                                                               std::string object_name) mutable {
+        if (encryption_status != encryption::Status::OK) {
+          EnqueueForRetryAndSignalError(std::move(object_identifier_to_send));
+          return;
+        }
 
-                             GetObjectContentAndUpload(
-                                 std::move(object_identifier_to_send),
-                                 std::move(object_name));
-                           }));
+        GetObjectContentAndUpload(std::move(object_identifier_to_send), std::move(object_name));
+      }));
 }
 
-void BatchUpload::GetObjectContentAndUpload(
-    storage::ObjectIdentifier object_identifier, std::string object_name) {
+void BatchUpload::GetObjectContentAndUpload(storage::ObjectIdentifier object_identifier,
+                                            std::string object_name) {
   storage_->GetPiece(
       object_identifier,
       callback::MakeScoped(
           weak_ptr_factory_.GetWeakPtr(),
           [this, object_identifier, object_name = std::move(object_name)](
-              ledger::Status storage_status,
-              std::unique_ptr<const storage::Piece> piece,
+              ledger::Status storage_status, std::unique_ptr<const storage::Piece> piece,
               std::unique_ptr<const storage::PieceToken> token) mutable {
             FXL_DCHECK(storage_status == ledger::Status::OK);
-            UploadObject(std::move(object_identifier), std::move(object_name),
-                         std::move(piece), std::move(token));
+            UploadObject(std::move(object_identifier), std::move(object_name), std::move(piece),
+                         std::move(token));
           }));
 }
 
-void BatchUpload::UploadObject(
-    storage::ObjectIdentifier object_identifier, std::string object_name,
-    std::unique_ptr<const storage::Piece> piece,
-    std::unique_ptr<const storage::PieceToken> token) {
+void BatchUpload::UploadObject(storage::ObjectIdentifier object_identifier, std::string object_name,
+                               std::unique_ptr<const storage::Piece> piece,
+                               std::unique_ptr<const storage::PieceToken> token) {
   encryption_service_->EncryptObject(
       object_identifier, piece->GetData(),
       callback::MakeScoped(
           weak_ptr_factory_.GetWeakPtr(),
-          [this, object_identifier, object_name = std::move(object_name),
-           token = std::move(token)](encryption::Status encryption_status,
-                                     std::string encrypted_data) mutable {
+          [this, object_identifier, object_name = std::move(object_name), token = std::move(token)](
+              encryption::Status encryption_status, std::string encrypted_data) mutable {
             if (encryption_status != encryption::Status::OK) {
               EnqueueForRetryAndSignalError(std::move(object_identifier));
               return;
             }
 
-            UploadEncryptedObject(std::move(object_identifier),
-                                  std::move(object_name),
+            UploadEncryptedObject(std::move(object_identifier), std::move(object_name),
                                   std::move(encrypted_data), std::move(token));
           }));
 }
 
-void BatchUpload::UploadEncryptedObject(
-    storage::ObjectIdentifier object_identifier, std::string object_name,
-    std::string content, std::unique_ptr<const storage::PieceToken> token) {
+void BatchUpload::UploadEncryptedObject(storage::ObjectIdentifier object_identifier,
+                                        std::string object_name, std::string content,
+                                        std::unique_ptr<const storage::PieceToken> token) {
   fsl::SizedVmo data;
   if (!fsl::VmoFromString(content, &data)) {
     EnqueueForRetryAndSignalError(std::move(object_identifier));
@@ -164,59 +151,55 @@ void BatchUpload::UploadEncryptedObject(
   }
 
   (*page_cloud_)
-      ->AddObject(
-          convert::ToArray(object_name), std::move(data).ToTransport(), {},
-          callback::MakeScoped(
-              weak_ptr_factory_.GetWeakPtr(),
-              [this, object_identifier = std::move(object_identifier),
-               token =
-                   std::move(token)](cloud_provider::Status status) mutable {
-                FXL_DCHECK(current_uploads_ > 0);
-                current_uploads_--;
+      ->AddObject(convert::ToArray(object_name), std::move(data).ToTransport(), {},
+                  callback::MakeScoped(
+                      weak_ptr_factory_.GetWeakPtr(),
+                      [this, object_identifier = std::move(object_identifier),
+                       token = std::move(token)](cloud_provider::Status status) mutable {
+                        FXL_DCHECK(current_uploads_ > 0);
+                        current_uploads_--;
 
-                if (status != cloud_provider::Status::OK) {
-                  EnqueueForRetryAndSignalError(std::move(object_identifier));
-                  return;
-                }
+                        if (status != cloud_provider::Status::OK) {
+                          EnqueueForRetryAndSignalError(std::move(object_identifier));
+                          return;
+                        }
 
-                // Uploading the object succeeded.
-                storage_->MarkPieceSynced(
-                    std::move(object_identifier),
-                    callback::MakeScoped(
-                        weak_ptr_factory_.GetWeakPtr(),
-                        [this,
-                         token = std::move(token)](ledger::Status status) {
-                          // Object is marked, it is safe to drop |token| at
-                          // this point.
+                        // Uploading the object succeeded.
+                        storage_->MarkPieceSynced(
+                            std::move(object_identifier),
+                            callback::MakeScoped(
+                                weak_ptr_factory_.GetWeakPtr(),
+                                [this, token = std::move(token)](ledger::Status status) {
+                                  // Object is marked, it is safe to drop |token| at
+                                  // this point.
 
-                          FXL_DCHECK(current_objects_handled_ > 0);
-                          current_objects_handled_--;
-                          if (status != ledger::Status::OK) {
-                            errored_ = true;
-                            error_type_ = ErrorType::PERMANENT;
-                          }
+                                  FXL_DCHECK(current_objects_handled_ > 0);
+                                  current_objects_handled_--;
+                                  if (status != ledger::Status::OK) {
+                                    errored_ = true;
+                                    error_type_ = ErrorType::PERMANENT;
+                                  }
 
-                          // Notify the user about the error once all pending
-                          // operations of the recent retry complete.
-                          if (errored_ && current_objects_handled_ == 0u) {
-                            on_error_(error_type_);
-                            return;
-                          }
+                                  // Notify the user about the error once all pending
+                                  // operations of the recent retry complete.
+                                  if (errored_ && current_objects_handled_ == 0u) {
+                                    on_error_(error_type_);
+                                    return;
+                                  }
 
-                          if (current_objects_handled_ == 0 &&
-                              remaining_object_identifiers_.empty()) {
-                            // All the referenced objects are uploaded and
-                            // marked as synced, upload the commits.
-                            FilterAndUploadCommits();
-                            return;
-                          }
+                                  if (current_objects_handled_ == 0 &&
+                                      remaining_object_identifiers_.empty()) {
+                                    // All the referenced objects are uploaded and
+                                    // marked as synced, upload the commits.
+                                    FilterAndUploadCommits();
+                                    return;
+                                  }
 
-                          if (!errored_ &&
-                              !remaining_object_identifiers_.empty()) {
-                            UploadNextObject();
-                          }
-                        }));
-              }));
+                                  if (!errored_ && !remaining_object_identifiers_.empty()) {
+                                    UploadNextObject();
+                                  }
+                                }));
+                      }));
 }
 
 void BatchUpload::FilterAndUploadCommits() {
@@ -225,23 +208,17 @@ void BatchUpload::FilterAndUploadCommits() {
   // same time.
   storage_->GetUnsyncedCommits(callback::MakeScoped(
       weak_ptr_factory_.GetWeakPtr(),
-      [this](ledger::Status status,
-             std::vector<std::unique_ptr<const storage::Commit>> commits) {
+      [this](ledger::Status status, std::vector<std::unique_ptr<const storage::Commit>> commits) {
         std::set<storage::CommitId> commit_ids;
         std::transform(
-            commits.begin(), commits.end(),
-            std::inserter(commit_ids, commit_ids.begin()),
-            [](const std::unique_ptr<const storage::Commit>& commit) {
-              return commit->GetId();
-            });
+            commits.begin(), commits.end(), std::inserter(commit_ids, commit_ids.begin()),
+            [](const std::unique_ptr<const storage::Commit>& commit) { return commit->GetId(); });
 
         commits_.erase(
-            std::remove_if(
-                commits_.begin(), commits_.end(),
-                [&commit_ids](
-                    const std::unique_ptr<const storage::Commit>& commit) {
-                  return commit_ids.count(commit->GetId()) == 0;
-                }),
+            std::remove_if(commits_.begin(), commits_.end(),
+                           [&commit_ids](const std::unique_ptr<const storage::Commit>& commit) {
+                             return commit_ids.count(commit->GetId()) == 0;
+                           }),
             commits_.end());
 
         if (commits_.empty()) {
@@ -256,16 +233,15 @@ void BatchUpload::FilterAndUploadCommits() {
 void BatchUpload::UploadCommits() {
   FXL_DCHECK(!errored_);
   std::vector<storage::CommitId> ids;
-  auto waiter = fxl::MakeRefCounted<
-      callback::Waiter<encryption::Status, cloud_provider::CommitPackEntry>>(
-      encryption::Status::OK);
+  auto waiter =
+      fxl::MakeRefCounted<callback::Waiter<encryption::Status, cloud_provider::CommitPackEntry>>(
+          encryption::Status::OK);
   for (auto& storage_commit : commits_) {
     storage::CommitId id = storage_commit->GetId();
     encryption_service_->EncryptCommit(
         storage_commit->GetStorageBytes().ToString(),
-        [id, callback = waiter->NewCallback()](
-            encryption::Status status,
-            std::string encrypted_storage_bytes) mutable {
+        [id, callback = waiter->NewCallback()](encryption::Status status,
+                                               std::string encrypted_storage_bytes) mutable {
           cloud_provider::CommitPackEntry entry;
           entry.id = std::move(id);
           entry.data = std::move(encrypted_storage_bytes);
@@ -275,9 +251,8 @@ void BatchUpload::UploadCommits() {
   }
   waiter->Finalize(callback::MakeScoped(
       weak_ptr_factory_.GetWeakPtr(),
-      [this, ids = std::move(ids)](
-          encryption::Status status,
-          std::vector<cloud_provider::CommitPackEntry> entries) mutable {
+      [this, ids = std::move(ids)](encryption::Status status,
+                                   std::vector<cloud_provider::CommitPackEntry> entries) mutable {
         if (status != encryption::Status::OK) {
           errored_ = true;
           on_error_(ErrorType::PERMANENT);
@@ -290,48 +265,44 @@ void BatchUpload::UploadCommits() {
           return;
         }
         (*page_cloud_)
-            ->AddCommits(
-                std::move(commit_pack),
-                callback::MakeScoped(
-                    weak_ptr_factory_.GetWeakPtr(),
-                    [this, commit_ids =
-                               std::move(ids)](cloud_provider::Status status) {
-                      // UploadCommit() is called as a last step of a
-                      // so-far-successful upload attempt, so we couldn't have
-                      // failed before.
-                      FXL_DCHECK(!errored_);
-                      if (status != cloud_provider::Status::OK) {
-                        errored_ = true;
-                        on_error_(ErrorType::TEMPORARY);
-                        return;
-                      }
-                      auto waiter = fxl::MakeRefCounted<
-                          callback::StatusWaiter<ledger::Status>>(
-                          ledger::Status::OK);
+            ->AddCommits(std::move(commit_pack),
+                         callback::MakeScoped(
+                             weak_ptr_factory_.GetWeakPtr(),
+                             [this, commit_ids = std::move(ids)](cloud_provider::Status status) {
+                               // UploadCommit() is called as a last step of a
+                               // so-far-successful upload attempt, so we couldn't have
+                               // failed before.
+                               FXL_DCHECK(!errored_);
+                               if (status != cloud_provider::Status::OK) {
+                                 errored_ = true;
+                                 on_error_(ErrorType::TEMPORARY);
+                                 return;
+                               }
+                               auto waiter =
+                                   fxl::MakeRefCounted<callback::StatusWaiter<ledger::Status>>(
+                                       ledger::Status::OK);
 
-                      for (auto& id : commit_ids) {
-                        storage_->MarkCommitSynced(id, waiter->NewCallback());
-                      }
-                      waiter->Finalize(callback::MakeScoped(
-                          weak_ptr_factory_.GetWeakPtr(),
-                          [this](ledger::Status status) {
-                            if (status != ledger::Status::OK) {
-                              errored_ = true;
-                              on_error_(ErrorType::PERMANENT);
-                              return;
-                            }
+                               for (auto& id : commit_ids) {
+                                 storage_->MarkCommitSynced(id, waiter->NewCallback());
+                               }
+                               waiter->Finalize(callback::MakeScoped(
+                                   weak_ptr_factory_.GetWeakPtr(), [this](ledger::Status status) {
+                                     if (status != ledger::Status::OK) {
+                                       errored_ = true;
+                                       on_error_(ErrorType::PERMANENT);
+                                       return;
+                                     }
 
-                            // This object can be deleted in the
-                            // on_done_() callback, don't do
-                            // anything after the call.
-                            on_done_();
-                          }));
-                    }));
+                                     // This object can be deleted in the
+                                     // on_done_() callback, don't do
+                                     // anything after the call.
+                                     on_done_();
+                                   }));
+                             }));
       }));
 }
 
-void BatchUpload::EnqueueForRetryAndSignalError(
-    storage::ObjectIdentifier object_identifier) {
+void BatchUpload::EnqueueForRetryAndSignalError(storage::ObjectIdentifier object_identifier) {
   FXL_DCHECK(current_objects_handled_ > 0);
   current_objects_handled_--;
 

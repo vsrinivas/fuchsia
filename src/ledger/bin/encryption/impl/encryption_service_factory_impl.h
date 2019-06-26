@@ -15,8 +15,7 @@ class EncryptionServiceFactoryImpl : public EncryptionServiceFactory {
   ~EncryptionServiceFactoryImpl() override;
 
   // EncryptionServiceFactory
-  std::unique_ptr<EncryptionService> MakeEncryptionService(
-      std::string namespace_id) override;
+  std::unique_ptr<EncryptionService> MakeEncryptionService(std::string namespace_id) override;
 
  private:
   ledger::Environment* const environment_;

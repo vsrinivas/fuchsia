@@ -33,8 +33,7 @@
 namespace ledger {
 namespace {
 
-constexpr fxl::StringView kBinaryPath =
-    "fuchsia-pkg://fuchsia.com/ledger_benchmarks#meta/put.cmx";
+constexpr fxl::StringView kBinaryPath = "fuchsia-pkg://fuchsia.com/ledger_benchmarks#meta/put.cmx";
 constexpr fxl::StringView kEntryCountFlag = "entry-count";
 constexpr fxl::StringView kTransactionSizeFlag = "transaction-size";
 constexpr fxl::StringView kKeySizeFlag = "key-size";
@@ -61,12 +60,9 @@ constexpr fxl::StringView kRefsOffFlag = "off";
 //   --seed=<int> (optional) the seed for key and value generation
 class PutBenchmark : public PageWatcher {
  public:
-  PutBenchmark(async::Loop* loop,
-               std::unique_ptr<sys::ComponentContext> component_context,
-               int entry_count, int transaction_size, int key_size,
-               int value_size, bool update,
-               PageDataGenerator::ReferenceStrategy reference_strategy,
-               uint64_t seed);
+  PutBenchmark(async::Loop* loop, std::unique_ptr<sys::ComponentContext> component_context,
+               int entry_count, int transaction_size, int key_size, int value_size, bool update,
+               PageDataGenerator::ReferenceStrategy reference_strategy, uint64_t seed);
 
   void Run();
 
@@ -78,13 +74,11 @@ class PutBenchmark : public PageWatcher {
   // Initilizes the keys to be used in the benchmark. In case the benchmark is
   // on updating entries, it also adds these keys in the ledger with some
   // initial values.
-  void InitializeKeys(
-      fit::function<void(std::vector<std::vector<uint8_t>>)> on_done);
+  void InitializeKeys(fit::function<void(std::vector<std::vector<uint8_t>>)> on_done);
 
   void BindWatcher(std::vector<std::vector<uint8_t>> keys);
   void RunSingle(int i, std::vector<std::vector<uint8_t>> keys);
-  void CommitAndRunNext(int i, size_t key_number,
-                        std::vector<std::vector<uint8_t>> keys);
+  void CommitAndRunNext(int i, size_t key_number, std::vector<std::vector<uint8_t>> keys);
   void PutEntry(std::vector<uint8_t> key, std::vector<uint8_t> value,
                 fit::function<void()> on_done);
 
@@ -127,11 +121,11 @@ class PutBenchmark : public PageWatcher {
 
 constexpr fxl::StringView kStoragePath = "/data/benchmark/ledger/put";
 
-PutBenchmark::PutBenchmark(
-    async::Loop* loop, std::unique_ptr<sys::ComponentContext> component_context,
-    int entry_count, int transaction_size, int key_size, int value_size,
-    bool update, PageDataGenerator::ReferenceStrategy reference_strategy,
-    uint64_t seed)
+PutBenchmark::PutBenchmark(async::Loop* loop,
+                           std::unique_ptr<sys::ComponentContext> component_context,
+                           int entry_count, int transaction_size, int key_size, int value_size,
+                           bool update, PageDataGenerator::ReferenceStrategy reference_strategy,
+                           uint64_t seed)
     : loop_(loop),
       random_(seed),
       generator_(&random_),
@@ -158,14 +152,12 @@ void PutBenchmark::Run() {
                 << " --" << kKeySizeFlag << "=" << key_size_                  //
                 << " --" << kValueSizeFlag << "=" << value_size_              //
                 << " --" << kRefsFlag << "="
-                << (reference_strategy_ ==
-                            PageDataGenerator::ReferenceStrategy::INLINE
+                << (reference_strategy_ == PageDataGenerator::ReferenceStrategy::INLINE
                         ? kRefsOffFlag
                         : kRefsOnFlag)
                 << (update_ ? fxl::Concatenate({" --", kUpdateFlag}) : "");
-  Status status = GetLedger(
-      component_context_.get(), component_controller_.NewRequest(), nullptr, "",
-      "put", DetachedPath(tmp_dir_.path()), QuitLoopClosure(), &ledger_);
+  Status status = GetLedger(component_context_.get(), component_controller_.NewRequest(), nullptr,
+                            "", "put", DetachedPath(tmp_dir_.path()), QuitLoopClosure(), &ledger_);
   if (QuitOnError(QuitLoopClosure(), status, "GetLedger")) {
     return;
   }
@@ -174,8 +166,7 @@ void PutBenchmark::Run() {
   GetPageEnsureInitialized(
       &ledger_, nullptr, DelayCallback::YES, QuitLoopClosure(),
       [this](Status status, PagePtr page, PageId id) mutable {
-        if (QuitOnError(QuitLoopClosure(), status,
-                        "GetPageEnsureInitialized")) {
+        if (QuitOnError(QuitLoopClosure(), status, "GetPageEnsureInitialized")) {
           return;
         }
         page_ = std::move(page);
@@ -190,8 +181,7 @@ void PutBenchmark::Run() {
       });
 }
 
-void PutBenchmark::OnChange(PageChange page_change,
-                            ResultState /*result_state*/,
+void PutBenchmark::OnChange(PageChange page_change, ResultState /*result_state*/,
                             OnChangeCallback callback) {
   for (auto const& change : page_change.changed_entries) {
     size_t key_number = generator_.GetKeyId(change.key);
@@ -211,15 +201,13 @@ void PutBenchmark::OnChange(PageChange page_change,
   callback(nullptr);
 }
 
-void PutBenchmark::InitializeKeys(
-    fit::function<void(std::vector<std::vector<uint8_t>>)> on_done) {
+void PutBenchmark::InitializeKeys(fit::function<void(std::vector<std::vector<uint8_t>>)> on_done) {
   std::vector<std::vector<uint8_t>> keys =
       generator_.MakeKeys(entry_count_, key_size_, entry_count_);
   std::vector<std::vector<uint8_t>> keys_cloned;
   for (int i = 0; i < entry_count_; ++i) {
     keys_cloned.push_back(keys[i]);
-    if (transaction_size_ == 0 ||
-        i % transaction_size_ == transaction_size_ - 1) {
+    if (transaction_size_ == 0 || i % transaction_size_ == transaction_size_ - 1) {
       keys_to_receive_.insert(generator_.GetKeyId(keys[i]));
     }
   }
@@ -231,12 +219,10 @@ void PutBenchmark::InitializeKeys(
     return;
   }
   page_data_generator_.Populate(
-      &page_, std::move(keys_cloned), value_size_, keys_cloned.size(),
-      reference_strategy_, Priority::EAGER,
-      [this, keys = std::move(keys),
-       on_done = std::move(on_done)](Status status) mutable {
-        if (QuitOnError(QuitLoopClosure(), status,
-                        "PageDataGenerator::Populate")) {
+      &page_, std::move(keys_cloned), value_size_, keys_cloned.size(), reference_strategy_,
+      Priority::EAGER,
+      [this, keys = std::move(keys), on_done = std::move(on_done)](Status status) mutable {
+        if (QuitOnError(QuitLoopClosure(), status, "PageDataGenerator::Populate")) {
           return;
         }
         on_done(std::move(keys));
@@ -247,9 +233,7 @@ void PutBenchmark::BindWatcher(std::vector<std::vector<uint8_t>> keys) {
   PageSnapshotPtr snapshot;
   page_->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
                      page_watcher_binding_.NewBinding());
-  page_->Sync([this, keys = std::move(keys)]() mutable {
-    RunSingle(0, std::move(keys));
-  });
+  page_->Sync([this, keys = std::move(keys)]() mutable { RunSingle(0, std::move(keys)); });
 }
 
 void PutBenchmark::RunSingle(int i, std::vector<std::vector<uint8_t>> keys) {
@@ -271,11 +255,9 @@ void PutBenchmark::RunSingle(int i, std::vector<std::vector<uint8_t>> keys) {
            [this, i, key_number, keys = std::move(keys)]() mutable {
              uint64_t memory;
              FXL_CHECK(memory_estimator_.GetLedgerMemoryUsage(&memory));
-             TRACE_COUNTER("benchmark", "ledger_memory_put", i, "memory",
-                           TA_UINT64(memory));
+             TRACE_COUNTER("benchmark", "ledger_memory_put", i, "memory", TA_UINT64(memory));
              if (transaction_size_ > 0 &&
-                 (i % transaction_size_ == transaction_size_ - 1 ||
-                  i + 1 == entry_count_)) {
+                 (i % transaction_size_ == transaction_size_ - 1 || i + 1 == entry_count_)) {
                CommitAndRunNext(i, key_number, std::move(keys));
              } else {
                RunSingle(i + 1, std::move(keys));
@@ -283,8 +265,7 @@ void PutBenchmark::RunSingle(int i, std::vector<std::vector<uint8_t>> keys) {
            });
 }
 
-void PutBenchmark::PutEntry(std::vector<uint8_t> key,
-                            std::vector<uint8_t> value,
+void PutBenchmark::PutEntry(std::vector<uint8_t> key, std::vector<uint8_t> value,
                             fit::function<void()> on_done) {
   auto trace_event_id = TRACE_NONCE();
   TRACE_ASYNC_BEGIN("benchmark", "put", trace_event_id);
@@ -301,18 +282,14 @@ void PutBenchmark::PutEntry(std::vector<uint8_t> key,
   TRACE_ASYNC_BEGIN("benchmark", "create_reference", trace_event_id);
   page_->CreateReferenceFromBuffer(
       std::move(vmo).ToTransport(),
-      [this, trace_event_id, key = std::move(key),
-       on_done = std::move(on_done)](
-          fuchsia::ledger::Page_CreateReferenceFromBuffer_Result
-              result) mutable {
-        if (QuitOnError(QuitLoopClosure(), result,
-                        "Page::CreateReferenceFromBuffer")) {
+      [this, trace_event_id, key = std::move(key), on_done = std::move(on_done)](
+          fuchsia::ledger::Page_CreateReferenceFromBuffer_Result result) mutable {
+        if (QuitOnError(QuitLoopClosure(), result, "Page::CreateReferenceFromBuffer")) {
           return;
         }
         TRACE_ASYNC_END("benchmark", "create_reference", trace_event_id);
         TRACE_ASYNC_BEGIN("benchmark", "put_reference", trace_event_id);
-        page_->PutReference(std::move(key),
-                            std::move(result.response().reference),
+        page_->PutReference(std::move(key), std::move(result.response().reference),
                             Priority::EAGER);
         page_->Sync([trace_event_id, on_done = std::move(on_done)] {
           TRACE_ASYNC_END("benchmark", "put_reference", trace_event_id);
@@ -361,19 +338,16 @@ void PrintUsage() {
             << " --" << kTransactionSizeFlag << "=<int>"
             << " --" << kKeySizeFlag << "=<int>"
             << " --" << kValueSizeFlag << "=<int>"
-            << " --" << kRefsFlag << "=(" << kRefsOnFlag << "|" << kRefsOffFlag
-            << ")"
+            << " --" << kRefsFlag << "=(" << kRefsOnFlag << "|" << kRefsOffFlag << ")"
             << " [--" << kSeedFlag << "=<int>]"
             << " [--" << kUpdateFlag << "]" << std::endl;
 }
 
-bool GetPositiveIntValue(const fxl::CommandLine& command_line,
-                         fxl::StringView flag, int* value) {
+bool GetPositiveIntValue(const fxl::CommandLine& command_line, fxl::StringView flag, int* value) {
   std::string value_str;
   int found_value;
   if (!command_line.GetOptionValue(flag.ToString(), &value_str) ||
-      !fxl::StringToNumberWithError(value_str, &found_value) ||
-      found_value <= 0) {
+      !fxl::StringToNumberWithError(value_str, &found_value) || found_value <= 0) {
     return false;
   }
   *value = found_value;
@@ -392,11 +366,9 @@ int Main(int argc, const char** argv) {
   int value_size;
   bool update = command_line.HasOption(kUpdateFlag.ToString());
   if (!GetPositiveIntValue(command_line, kEntryCountFlag, &entry_count) ||
-      !command_line.GetOptionValue(kTransactionSizeFlag.ToString(),
-                                   &transaction_size_str) ||
+      !command_line.GetOptionValue(kTransactionSizeFlag.ToString(), &transaction_size_str) ||
       !fxl::StringToNumberWithError(transaction_size_str, &transaction_size) ||
-      transaction_size < 0 ||
-      !GetPositiveIntValue(command_line, kKeySizeFlag, &key_size) ||
+      transaction_size < 0 || !GetPositiveIntValue(command_line, kKeySizeFlag, &key_size) ||
       !GetPositiveIntValue(command_line, kValueSizeFlag, &value_size)) {
     PrintUsage();
     return -1;
@@ -413,8 +385,8 @@ int Main(int argc, const char** argv) {
   } else if (ref_strategy_str == kRefsOffFlag) {
     ref_strategy = PageDataGenerator::ReferenceStrategy::INLINE;
   } else {
-    std::cerr << "Unknown option " << ref_strategy_str << " for "
-              << kRefsFlag.ToString() << std::endl;
+    std::cerr << "Unknown option " << ref_strategy_str << " for " << kRefsFlag.ToString()
+              << std::endl;
     PrintUsage();
     return -1;
   }
@@ -430,9 +402,8 @@ int Main(int argc, const char** argv) {
     seed = 0;
   }
 
-  PutBenchmark app(&loop, std::move(component_context), entry_count,
-                   transaction_size, key_size, value_size, update, ref_strategy,
-                   seed);
+  PutBenchmark app(&loop, std::move(component_context), entry_count, transaction_size, key_size,
+                   value_size, update, ref_strategy, seed);
 
   return RunWithTracing(&loop, [&app] { app.Run(); });
 }

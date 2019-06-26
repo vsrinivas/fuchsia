@@ -35,8 +35,7 @@
 namespace ledger {
 namespace {
 
-constexpr fxl::StringView kBinaryPath =
-    "fuchsia-pkg://fuchsia.com/ledger_benchmarks#meta/sync.cmx";
+constexpr fxl::StringView kBinaryPath = "fuchsia-pkg://fuchsia.com/ledger_benchmarks#meta/sync.cmx";
 constexpr fxl::StringView kStoragePath = "/data/benchmark/ledger/sync";
 constexpr fxl::StringView kChangeCountFlag = "change-count";
 constexpr fxl::StringView kValueSizeFlag = "value-size";
@@ -55,8 +54,8 @@ void PrintUsage() {
             << " --" << kChangeCountFlag << "=<int>"
             << " --" << kValueSizeFlag << "=<int>"
             << " --" << kEntriesPerChangeFlag << "=<int>"
-            << " --" << kRefsFlag << "=(" << kRefsOnFlag << "|" << kRefsOffFlag
-            << ")" << GetSyncParamsUsage() << std::endl;
+            << " --" << kRefsFlag << "=(" << kRefsOnFlag << "|" << kRefsOffFlag << ")"
+            << GetSyncParamsUsage() << std::endl;
 }
 
 // Benchmark that measures sync latency between two Ledger instances syncing
@@ -76,12 +75,9 @@ void PrintUsage() {
 //   --credentials-path=<file path> Firestore service account credentials
 class SyncBenchmark : public PageWatcher {
  public:
-  SyncBenchmark(async::Loop* loop,
-                std::unique_ptr<sys::ComponentContext> component_context,
-                size_t change_count, size_t value_size,
-                size_t entries_per_change,
-                PageDataGenerator::ReferenceStrategy reference_strategy,
-                SyncParams sync_params);
+  SyncBenchmark(async::Loop* loop, std::unique_ptr<sys::ComponentContext> component_context,
+                size_t change_count, size_t value_size, size_t entries_per_change,
+                PageDataGenerator::ReferenceStrategy reference_strategy, SyncParams sync_params);
 
   void Run();
 
@@ -122,18 +118,17 @@ class SyncBenchmark : public PageWatcher {
   FXL_DISALLOW_COPY_AND_ASSIGN(SyncBenchmark);
 };
 
-SyncBenchmark::SyncBenchmark(
-    async::Loop* loop, std::unique_ptr<sys::ComponentContext> component_context,
-    size_t change_count, size_t value_size, size_t entries_per_change,
-    PageDataGenerator::ReferenceStrategy reference_strategy,
-    SyncParams sync_params)
+SyncBenchmark::SyncBenchmark(async::Loop* loop,
+                             std::unique_ptr<sys::ComponentContext> component_context,
+                             size_t change_count, size_t value_size, size_t entries_per_change,
+                             PageDataGenerator::ReferenceStrategy reference_strategy,
+                             SyncParams sync_params)
     : loop_(loop),
       random_(0),
       generator_(&random_),
       page_data_generator_(&random_),
       component_context_(std::move(component_context)),
-      cloud_provider_factory_(component_context_.get(), &random_,
-                              std::move(sync_params.api_key),
+      cloud_provider_factory_(component_context_.get(), &random_, std::move(sync_params.api_key),
                               std::move(sync_params.credentials)),
       change_count_(change_count),
       value_size_(value_size),
@@ -162,19 +157,16 @@ void SyncBenchmark::Run() {
   FXL_DCHECK(ret);
 
   cloud_provider::CloudProviderPtr cloud_provider_alpha;
-  cloud_provider_factory_.MakeCloudProvider(user_id_,
-                                            cloud_provider_alpha.NewRequest());
-  Status status = GetLedger(
-      component_context_.get(), alpha_controller_.NewRequest(),
-      std::move(cloud_provider_alpha), user_id_.user_id(), "sync",
-      DetachedPath(std::move(alpha_path)), QuitLoopClosure(), &alpha_);
+  cloud_provider_factory_.MakeCloudProvider(user_id_, cloud_provider_alpha.NewRequest());
+  Status status = GetLedger(component_context_.get(), alpha_controller_.NewRequest(),
+                            std::move(cloud_provider_alpha), user_id_.user_id(), "sync",
+                            DetachedPath(std::move(alpha_path)), QuitLoopClosure(), &alpha_);
   if (QuitOnError(QuitLoopClosure(), status, "alpha ledger")) {
     return;
   };
 
   cloud_provider::CloudProviderPtr cloud_provider_beta;
-  cloud_provider_factory_.MakeCloudProvider(user_id_,
-                                            cloud_provider_beta.NewRequest());
+  cloud_provider_factory_.MakeCloudProvider(user_id_, cloud_provider_beta.NewRequest());
 
   status = GetLedger(component_context_.get(), beta_controller_.NewRequest(),
                      std::move(cloud_provider_beta), user_id_.user_id(), "sync",
@@ -185,16 +177,14 @@ void SyncBenchmark::Run() {
   GetPageEnsureInitialized(
       &alpha_, nullptr, DelayCallback::YES, QuitLoopClosure(),
       [this](Status status, PagePtr page, PageId id) {
-        if (QuitOnError(QuitLoopClosure(), status,
-                        "alpha page initialization")) {
+        if (QuitOnError(QuitLoopClosure(), status, "alpha page initialization")) {
           return;
         }
         alpha_page_ = std::move(page);
         page_id_ = id;
         beta_->GetPage(fidl::MakeOptional(id), beta_page_.NewRequest());
         PageSnapshotPtr snapshot;
-        beta_page_->GetSnapshot(snapshot.NewRequest(),
-                                fidl::VectorPtr<uint8_t>::New(0),
+        beta_page_->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
                                 page_watcher_binding_.NewBinding());
         beta_page_->Sync([this] { RunSingleChange(0); });
       });
@@ -205,12 +195,10 @@ void SyncBenchmark::OnChange(PageChange page_change, ResultState result_state,
   FXL_DCHECK(!page_change.changed_entries.empty());
   size_t i = generator_.GetKeyId(page_change.changed_entries.at(0).key);
   changed_entries_received_ += page_change.changed_entries.size();
-  if (result_state == ResultState::COMPLETED ||
-      result_state == ResultState::PARTIAL_STARTED) {
+  if (result_state == ResultState::COMPLETED || result_state == ResultState::PARTIAL_STARTED) {
     TRACE_ASYNC_END("benchmark", "sync latency", i);
   }
-  if (result_state == ResultState::COMPLETED ||
-      result_state == ResultState::PARTIAL_COMPLETED) {
+  if (result_state == ResultState::COMPLETED || result_state == ResultState::PARTIAL_COMPLETED) {
     FXL_DCHECK(changed_entries_received_ == entries_per_change_);
     RunSingleChange(i + 1);
   }
@@ -233,10 +221,9 @@ void SyncBenchmark::RunSingleChange(size_t change_number) {
   changed_entries_received_ = 0;
   TRACE_ASYNC_BEGIN("benchmark", "sync latency", change_number);
   page_data_generator_.Populate(
-      &alpha_page_, std::move(keys), value_size_, entries_per_change_,
-      reference_strategy_, Priority::EAGER, [this](Status status) {
-        if (QuitOnError(QuitLoopClosure(), status,
-                        "PageDataGenerator::Populate")) {
+      &alpha_page_, std::move(keys), value_size_, entries_per_change_, reference_strategy_,
+      Priority::EAGER, [this](Status status) {
+        if (QuitOnError(QuitLoopClosure(), status, "PageDataGenerator::Populate")) {
           return;
         }
       });
@@ -265,22 +252,14 @@ int Main(int argc, const char** argv) {
   size_t entries_per_change;
   std::string reference_strategy_str;
   SyncParams sync_params;
-  if (!command_line.GetOptionValue(kChangeCountFlag.ToString(),
-                                   &change_count_str) ||
-      !fxl::StringToNumberWithError(change_count_str, &change_count) ||
-      change_count <= 0 ||
-      !command_line.GetOptionValue(kValueSizeFlag.ToString(),
-                                   &value_size_str) ||
-      !fxl::StringToNumberWithError(value_size_str, &value_size) ||
-      value_size <= 0 ||
-      !command_line.GetOptionValue(kEntriesPerChangeFlag.ToString(),
-                                   &entries_per_change_str) ||
-      !fxl::StringToNumberWithError(entries_per_change_str,
-                                    &entries_per_change) ||
-      !command_line.GetOptionValue(kRefsFlag.ToString(),
-                                   &reference_strategy_str) ||
-      !ParseSyncParamsFromCommandLine(command_line, component_context.get(),
-                                      &sync_params)) {
+  if (!command_line.GetOptionValue(kChangeCountFlag.ToString(), &change_count_str) ||
+      !fxl::StringToNumberWithError(change_count_str, &change_count) || change_count <= 0 ||
+      !command_line.GetOptionValue(kValueSizeFlag.ToString(), &value_size_str) ||
+      !fxl::StringToNumberWithError(value_size_str, &value_size) || value_size <= 0 ||
+      !command_line.GetOptionValue(kEntriesPerChangeFlag.ToString(), &entries_per_change_str) ||
+      !fxl::StringToNumberWithError(entries_per_change_str, &entries_per_change) ||
+      !command_line.GetOptionValue(kRefsFlag.ToString(), &reference_strategy_str) ||
+      !ParseSyncParamsFromCommandLine(command_line, component_context.get(), &sync_params)) {
     PrintUsage();
     return -1;
   }
@@ -291,15 +270,14 @@ int Main(int argc, const char** argv) {
   } else if (reference_strategy_str == kRefsOffFlag) {
     reference_strategy = PageDataGenerator::ReferenceStrategy::INLINE;
   } else {
-    std::cerr << "Unknown option " << reference_strategy_str << " for "
-              << kRefsFlag.ToString() << std::endl;
+    std::cerr << "Unknown option " << reference_strategy_str << " for " << kRefsFlag.ToString()
+              << std::endl;
     PrintUsage();
     return -1;
   }
 
-  SyncBenchmark app(&loop, std::move(component_context), change_count,
-                    value_size, entries_per_change, reference_strategy,
-                    std::move(sync_params));
+  SyncBenchmark app(&loop, std::move(component_context), change_count, value_size,
+                    entries_per_change, reference_strategy, std::move(sync_params));
   return RunWithTracing(&loop, [&app] { app.Run(); });
 }
 

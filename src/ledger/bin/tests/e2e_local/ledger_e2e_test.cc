@@ -40,8 +40,7 @@ using ::testing::ElementsAre;
 // Recursively searches for a directory with name |target_dir| and returns
 // whether it was found. If found, |path_to_dir| is updated with the path from
 // the source path.
-bool FindPathToDir(const ledger::DetachedPath& root_path,
-                   fxl::StringView target_dir,
+bool FindPathToDir(const ledger::DetachedPath& root_path, fxl::StringView target_dir,
                    ledger::DetachedPath* path_to_dir) {
   bool dir_found = false;
   auto on_next_directory_entry = [&](fxl::StringView entry) {
@@ -93,8 +92,7 @@ class LedgerEndToEndTest : public gtest::RealLoopFixture {
     for (auto& additional_arg : additional_args) {
       launch_info.arguments.push_back(additional_arg);
     }
-    launcher_->CreateComponent(std::move(launch_info),
-                               ledger_controller_.NewRequest());
+    launcher_->CreateComponent(std::move(launch_info), ledger_controller_.NewRequest());
 
     ledger_controller_.set_error_handler([this](zx_status_t status) {
       for (const auto& callback : ledger_shutdown_callbacks_) {
@@ -115,9 +113,7 @@ class LedgerEndToEndTest : public gtest::RealLoopFixture {
     ledger_shutdown_callbacks_.push_back(std::move(callback));
   }
 
-  sys::ComponentContext* component_context() {
-    return component_context_.get();
-  }
+  sys::ComponentContext* component_context() { return component_context_.get(); }
 
  private:
   fuchsia::sys::ComponentControllerPtr ledger_controller_;
@@ -133,12 +129,10 @@ class LedgerEndToEndTest : public gtest::RealLoopFixture {
 
 TEST_F(LedgerEndToEndTest, PutAndGet) {
   Init({});
-  fidl::SynchronousInterfacePtr<ledger_internal::LedgerRepository>
-      ledger_repository;
+  fidl::SynchronousInterfacePtr<ledger_internal::LedgerRepository> ledger_repository;
   scoped_tmpfs::ScopedTmpFS tmpfs;
-  ledger_repository_factory_->GetRepository(
-      fsl::CloneChannelFromFileDescriptor(tmpfs.root_fd()), nullptr, "",
-      ledger_repository.NewRequest());
+  ledger_repository_factory_->GetRepository(fsl::CloneChannelFromFileDescriptor(tmpfs.root_fd()),
+                                            nullptr, "", ledger_repository.NewRequest());
 
   ledger_repository->GetLedger(TestArray(), ledger_.NewRequest());
   ASSERT_EQ(ZX_OK, ledger_repository->Sync());
@@ -147,8 +141,7 @@ TEST_F(LedgerEndToEndTest, PutAndGet) {
   ledger_->GetRootPage(page.NewRequest());
   page->Put(TestArray(), TestArray());
   fidl::SynchronousInterfacePtr<ledger::PageSnapshot> snapshot;
-  page->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                    nullptr);
+  page->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0), nullptr);
   fuchsia::ledger::PageSnapshot_Get_Result result;
   EXPECT_EQ(ZX_OK, snapshot->Get(TestArray(), &result));
   EXPECT_THAT(result, ledger::MatchesString(convert::ToString(TestArray())));
@@ -168,12 +161,10 @@ TEST_F(LedgerEndToEndTest, Terminate) {
 
 TEST_F(LedgerEndToEndTest, ClearPage) {
   Init({});
-  fidl::SynchronousInterfacePtr<ledger_internal::LedgerRepository>
-      ledger_repository;
+  fidl::SynchronousInterfacePtr<ledger_internal::LedgerRepository> ledger_repository;
   scoped_tmpfs::ScopedTmpFS tmpfs;
-  ledger_repository_factory_->GetRepository(
-      fsl::CloneChannelFromFileDescriptor(tmpfs.root_fd()), nullptr, "",
-      ledger_repository.NewRequest());
+  ledger_repository_factory_->GetRepository(fsl::CloneChannelFromFileDescriptor(tmpfs.root_fd()),
+                                            nullptr, "", ledger_repository.NewRequest());
 
   ledger_repository->GetLedger(TestArray(), ledger_.NewRequest());
   ASSERT_EQ(ZX_OK, ledger_repository->Sync());
@@ -195,11 +186,9 @@ TEST_F(LedgerEndToEndTest, ClearPage) {
 
     // The following is assuming that the page's folder is using the name
     // <base64(page_id)>.
-    std::string page_dir_name =
-        base64url::Base64UrlEncode(convert::ExtendedStringView(page_id.id));
+    std::string page_dir_name = base64url::Base64UrlEncode(convert::ExtendedStringView(page_id.id));
     ledger::DetachedPath page_path;
-    ASSERT_TRUE(FindPathToDir(ledger::DetachedPath(tmpfs.root_fd()),
-                              page_dir_name, &page_path))
+    ASSERT_TRUE(FindPathToDir(ledger::DetachedPath(tmpfs.root_fd()), page_dir_name, &page_path))
         << "Failed to find page's directory. Expected to find directory named "
            "`base64(page_id)`: "
         << page_dir_name;
@@ -215,8 +204,7 @@ TEST_F(LedgerEndToEndTest, ClearPage) {
 
   // Make sure all directories have been deleted.
   for (const ledger::DetachedPath& path : page_paths) {
-    RunLoopUntil(
-        [&] { return !files::IsDirectoryAt(path.root_fd(), path.path()); });
+    RunLoopUntil([&] { return !files::IsDirectoryAt(path.root_fd(), path.path()); });
     EXPECT_FALSE(files::IsDirectoryAt(tmpfs.root_fd(), path.path()));
   }
 }
@@ -236,30 +224,28 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryOnInitialCheck) {
   const std::string content_path = ledger::kSerializationVersion.ToString();
   const std::string deletion_sentinel_path = content_path + "/sentinel";
   ASSERT_TRUE(files::CreateDirectoryAt(tmpfs.root_fd(), content_path));
-  ASSERT_TRUE(
-      files::WriteFileAt(tmpfs.root_fd(), deletion_sentinel_path, "", 0));
+  ASSERT_TRUE(files::WriteFileAt(tmpfs.root_fd(), deletion_sentinel_path, "", 0));
   ASSERT_TRUE(files::IsFileAt(tmpfs.root_fd(), deletion_sentinel_path));
 
   // Write a fingerprint file, so that Ledger will check if it is still in the
   // cloud device set.
   const std::string fingerprint_path = content_path + "/fingerprint";
   const std::string fingerprint = "bazinga";
-  ASSERT_TRUE(files::WriteFileAt(tmpfs.root_fd(), fingerprint_path,
-                                 fingerprint.c_str(), fingerprint.size()));
+  ASSERT_TRUE(files::WriteFileAt(tmpfs.root_fd(), fingerprint_path, fingerprint.c_str(),
+                                 fingerprint.size()));
 
   // Create a cloud provider configured to trigger the cloude erase recovery on
   // initial check.
-  auto cloud_provider =
-      ledger::FakeCloudProvider::Builder()
-          .SetCloudEraseOnCheck(ledger::CloudEraseOnCheck::YES)
-          .Build();
+  auto cloud_provider = ledger::FakeCloudProvider::Builder()
+                            .SetCloudEraseOnCheck(ledger::CloudEraseOnCheck::YES)
+                            .Build();
   cloud_provider::CloudProviderPtr cloud_provider_ptr;
   fidl::Binding<cloud_provider::CloudProvider> cloud_provider_binding(
       cloud_provider.get(), cloud_provider_ptr.NewRequest());
 
-  ledger_repository_factory_->GetRepository(
-      fsl::CloneChannelFromFileDescriptor(tmpfs.root_fd()),
-      std::move(cloud_provider_ptr), "user_id", ledger_repository.NewRequest());
+  ledger_repository_factory_->GetRepository(fsl::CloneChannelFromFileDescriptor(tmpfs.root_fd()),
+                                            std::move(cloud_provider_ptr), "user_id",
+                                            ledger_repository.NewRequest());
 
   bool repo_disconnected = false;
   ledger_repository.set_error_handler(
@@ -268,8 +254,7 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryOnInitialCheck) {
   // Run the message loop until Ledger clears the repo directory and disconnects
   // the client.
   RunLoopUntil([&] {
-    return !files::IsFileAt(tmpfs.root_fd(), deletion_sentinel_path) &&
-           repo_disconnected;
+    return !files::IsFileAt(tmpfs.root_fd(), deletion_sentinel_path) && repo_disconnected;
   });
   EXPECT_FALSE(files::IsFileAt(tmpfs.root_fd(), deletion_sentinel_path));
   EXPECT_TRUE(repo_disconnected);
@@ -281,8 +266,8 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryOnInitialCheck) {
     directory_entries.push_back(entry.ToString());
     return true;
   };
-  EXPECT_TRUE(ledger::GetDirectoryEntries(ledger::DetachedPath(tmpfs.root_fd()),
-                                          on_next_directory_entry));
+  EXPECT_TRUE(
+      ledger::GetDirectoryEntries(ledger::DetachedPath(tmpfs.root_fd()), on_next_directory_entry));
   EXPECT_THAT(directory_entries, ElementsAre("staging"));
 
   // Verify that the Ledger app didn't crash.
@@ -304,23 +289,21 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryFromTheWatcher) {
   const std::string content_path = ledger::kSerializationVersion.ToString();
   const std::string deletion_sentinel_path = content_path + "/sentinel";
   ASSERT_TRUE(files::CreateDirectoryAt(tmpfs.root_fd(), content_path));
-  ASSERT_TRUE(
-      files::WriteFileAt(tmpfs.root_fd(), deletion_sentinel_path, "", 0));
+  ASSERT_TRUE(files::WriteFileAt(tmpfs.root_fd(), deletion_sentinel_path, "", 0));
   ASSERT_TRUE(files::IsFileAt(tmpfs.root_fd(), deletion_sentinel_path));
 
   // Create a cloud provider configured to trigger the cloud erase recovery
   // while Ledger is connected.
-  auto cloud_provider =
-      ledger::FakeCloudProvider::Builder()
-          .SetCloudEraseFromWatcher(ledger::CloudEraseFromWatcher::YES)
-          .Build();
+  auto cloud_provider = ledger::FakeCloudProvider::Builder()
+                            .SetCloudEraseFromWatcher(ledger::CloudEraseFromWatcher::YES)
+                            .Build();
   cloud_provider::CloudProviderPtr cloud_provider_ptr;
   fidl::Binding<cloud_provider::CloudProvider> cloud_provider_binding(
       cloud_provider.get(), cloud_provider_ptr.NewRequest());
 
-  ledger_repository_factory_->GetRepository(
-      fsl::CloneChannelFromFileDescriptor(tmpfs.root_fd()),
-      std::move(cloud_provider_ptr), "user_id", ledger_repository.NewRequest());
+  ledger_repository_factory_->GetRepository(fsl::CloneChannelFromFileDescriptor(tmpfs.root_fd()),
+                                            std::move(cloud_provider_ptr), "user_id",
+                                            ledger_repository.NewRequest());
 
   bool repo_disconnected = false;
   ledger_repository.set_error_handler(
@@ -329,8 +312,7 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryFromTheWatcher) {
   // Run the message loop until Ledger clears the repo directory and disconnects
   // the client.
   RunLoopUntil([&] {
-    return !files::IsFileAt(tmpfs.root_fd(), deletion_sentinel_path) &&
-           repo_disconnected;
+    return !files::IsFileAt(tmpfs.root_fd(), deletion_sentinel_path) && repo_disconnected;
   });
   EXPECT_FALSE(files::IsFileAt(tmpfs.root_fd(), deletion_sentinel_path));
   EXPECT_TRUE(repo_disconnected);
@@ -347,19 +329,17 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryFromTheWatcher) {
 TEST_F(LedgerEndToEndTest, HandleCloudProviderDisconnectBeforePageInit) {
   Init({});
   bool ledger_app_shut_down = false;
-  RegisterShutdownCallback(
-      [&ledger_app_shut_down] { ledger_app_shut_down = true; });
+  RegisterShutdownCallback([&ledger_app_shut_down] { ledger_app_shut_down = true; });
   scoped_tmpfs::ScopedTmpFS tmpfs;
 
   cloud_provider::CloudProviderPtr cloud_provider_ptr;
-  fidl::SynchronousInterfacePtr<ledger_internal::LedgerRepository>
-      ledger_repository;
+  fidl::SynchronousInterfacePtr<ledger_internal::LedgerRepository> ledger_repository;
   ledger::FakeCloudProvider cloud_provider;
   fidl::Binding<cloud_provider::CloudProvider> cloud_provider_binding(
       &cloud_provider, cloud_provider_ptr.NewRequest());
-  ledger_repository_factory_->GetRepository(
-      fsl::CloneChannelFromFileDescriptor(tmpfs.root_fd()),
-      std::move(cloud_provider_ptr), "user_id", ledger_repository.NewRequest());
+  ledger_repository_factory_->GetRepository(fsl::CloneChannelFromFileDescriptor(tmpfs.root_fd()),
+                                            std::move(cloud_provider_ptr), "user_id",
+                                            ledger_repository.NewRequest());
 
   ledger_repository->GetLedger(TestArray(), ledger_.NewRequest());
   ASSERT_EQ(ZX_OK, ledger_repository->Sync());
@@ -372,8 +352,7 @@ TEST_F(LedgerEndToEndTest, HandleCloudProviderDisconnectBeforePageInit) {
   ledger_->GetPage(nullptr, page.NewRequest());
   page->Put(TestArray(), TestArray());
   fidl::SynchronousInterfacePtr<ledger::PageSnapshot> snapshot;
-  page->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                    nullptr);
+  page->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0), nullptr);
   fuchsia::mem::BufferPtr value;
   fuchsia::ledger::PageSnapshot_Get_Result result;
   EXPECT_EQ(ZX_OK, snapshot->Get(TestArray(), &result));
@@ -387,20 +366,18 @@ TEST_F(LedgerEndToEndTest, HandleCloudProviderDisconnectBeforePageInit) {
 TEST_F(LedgerEndToEndTest, HandleCloudProviderDisconnectBetweenReadAndWrite) {
   Init({});
   bool ledger_app_shut_down = false;
-  RegisterShutdownCallback(
-      [&ledger_app_shut_down] { ledger_app_shut_down = true; });
+  RegisterShutdownCallback([&ledger_app_shut_down] { ledger_app_shut_down = true; });
   ledger::Status status;
   scoped_tmpfs::ScopedTmpFS tmpfs;
 
   cloud_provider::CloudProviderPtr cloud_provider_ptr;
-  fidl::SynchronousInterfacePtr<ledger_internal::LedgerRepository>
-      ledger_repository;
+  fidl::SynchronousInterfacePtr<ledger_internal::LedgerRepository> ledger_repository;
   ledger::FakeCloudProvider cloud_provider;
   fidl::Binding<cloud_provider::CloudProvider> cloud_provider_binding(
       &cloud_provider, cloud_provider_ptr.NewRequest());
-  ledger_repository_factory_->GetRepository(
-      fsl::CloneChannelFromFileDescriptor(tmpfs.root_fd()),
-      std::move(cloud_provider_ptr), "user_id", ledger_repository.NewRequest());
+  ledger_repository_factory_->GetRepository(fsl::CloneChannelFromFileDescriptor(tmpfs.root_fd()),
+                                            std::move(cloud_provider_ptr), "user_id",
+                                            ledger_repository.NewRequest());
 
   ledger_repository->GetLedger(TestArray(), ledger_.NewRequest());
   ASSERT_EQ(ZX_OK, ledger_repository->Sync());
@@ -417,8 +394,7 @@ TEST_F(LedgerEndToEndTest, HandleCloudProviderDisconnectBetweenReadAndWrite) {
   // Read the data back.
   fidl::SynchronousInterfacePtr<ledger::PageSnapshot> snapshot;
   status = ledger::Status::INTERNAL_ERROR;
-  page->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                    nullptr);
+  page->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0), nullptr);
   fuchsia::mem::BufferPtr value;
   fuchsia::ledger::PageSnapshot_Get_Result result;
   EXPECT_EQ(ZX_OK, snapshot->Get(TestArray(), &result));

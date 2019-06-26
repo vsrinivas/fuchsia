@@ -22,11 +22,10 @@ TEST_P(CommitPackTest, BackAndForth) {
 
 INSTANTIATE_TEST_SUITE_P(
     CommitPackTest, CommitPackTest,
-    ::testing::Values(
-        std::vector<CommitPackEntry>(),
-        std::vector<CommitPackEntry>{{"id_0", "data_0"}, {"id_1", "data_1"}},
-        // This vector is too large to fit in a zx::channel message.
-        std::vector<CommitPackEntry>(10000, {"id_0", "data_0"})));
+    ::testing::Values(std::vector<CommitPackEntry>(),
+                      std::vector<CommitPackEntry>{{"id_0", "data_0"}, {"id_1", "data_1"}},
+                      // This vector is too large to fit in a zx::channel message.
+                      std::vector<CommitPackEntry>(10000, {"id_0", "data_0"})));
 
 }  // namespace
 }  // namespace cloud_provider

@@ -28,20 +28,17 @@ class StringLikeDataChunk : public DataSource::DataChunk {
 template <typename S>
 class StringLikeDataSource : public DataSource {
  public:
-  explicit StringLikeDataSource(S value)
-      : value_(std::move(value)), size_(value_.size()) {}
+  explicit StringLikeDataSource(S value) : value_(std::move(value)), size_(value_.size()) {}
 
  private:
   uint64_t GetSize() override { return size_; }
 
-  void Get(fit::function<void(std::unique_ptr<DataChunk>, Status)> callback)
-      override {
+  void Get(fit::function<void(std::unique_ptr<DataChunk>, Status)> callback) override {
 #ifndef NDEBUG
     FXL_DCHECK(!called_);
     called_ = true;
 #endif
-    callback(std::make_unique<StringLikeDataChunk<S>>(std::move(value_)),
-             Status::DONE);
+    callback(std::make_unique<StringLikeDataChunk<S>>(std::move(value_)), Status::DONE);
   }
 
   S value_;
@@ -58,24 +55,19 @@ class VmoDataChunk : public DataSource::DataChunk {
   zx_status_t Init() {
     uintptr_t allocate_address;
     zx_status_t status = zx::vmar::root_self()->allocate(
-        0, ToFullPages(vmo_.size()), ZX_VM_CAN_MAP_READ, &vmar_,
-        &allocate_address);
+        0, ToFullPages(vmo_.size()), ZX_VM_CAN_MAP_READ, &vmar_, &allocate_address);
     if (status != ZX_OK) {
       return status;
     }
 
-    return vmar_.map(0, vmo_.vmo(), 0, vmo_.size(), ZX_VM_PERM_READ,
-                     &mapped_address_);
+    return vmar_.map(0, vmo_.vmo(), 0, vmo_.size(), ZX_VM_PERM_READ, &mapped_address_);
   }
 
  private:
-  uint64_t ToFullPages(uint64_t value) {
-    return (value + PAGE_SIZE - 1) & (~(PAGE_SIZE - 1));
-  }
+  uint64_t ToFullPages(uint64_t value) { return (value + PAGE_SIZE - 1) & (~(PAGE_SIZE - 1)); }
 
   fxl::StringView Get() override {
-    return fxl::StringView(reinterpret_cast<char*>(mapped_address_),
-                           vmo_.size());
+    return fxl::StringView(reinterpret_cast<char*>(mapped_address_), vmo_.size());
   }
 
   fsl::SizedVmo vmo_;
@@ -85,15 +77,12 @@ class VmoDataChunk : public DataSource::DataChunk {
 
 class VmoDataSource : public DataSource {
  public:
-  explicit VmoDataSource(fsl::SizedVmo vmo) : vmo_(std::move(vmo)) {
-    FXL_DCHECK(vmo_);
-  }
+  explicit VmoDataSource(fsl::SizedVmo vmo) : vmo_(std::move(vmo)) { FXL_DCHECK(vmo_); }
 
  private:
   uint64_t GetSize() override { return vmo_.size(); }
 
-  void Get(fit::function<void(std::unique_ptr<DataChunk>, Status)> callback)
-      override {
+  void Get(fit::function<void(std::unique_ptr<DataChunk>, Status)> callback) override {
 #ifndef NDEBUG
     FXL_DCHECK(!called_);
     called_ = true;
@@ -119,17 +108,14 @@ class VmoDataSource : public DataSource {
 class SocketDataSource : public DataSource, public fsl::SocketDrainer::Client {
  public:
   SocketDataSource(zx::socket socket, uint64_t expected_size)
-      : socket_(std::move(socket)),
-        expected_size_(expected_size),
-        remaining_bytes_(expected_size) {
+      : socket_(std::move(socket)), expected_size_(expected_size), remaining_bytes_(expected_size) {
     FXL_DCHECK(socket_);
   }
 
  private:
   uint64_t GetSize() override { return expected_size_; }
 
-  void Get(fit::function<void(std::unique_ptr<DataChunk>, Status)> callback)
-      override {
+  void Get(fit::function<void(std::unique_ptr<DataChunk>, Status)> callback) override {
     FXL_DCHECK(socket_);
     callback_ = std::move(callback);
     socket_drainer_ = std::make_unique<fsl::SocketDrainer>(this);
@@ -139,9 +125,8 @@ class SocketDataSource : public DataSource, public fsl::SocketDrainer::Client {
 
   void OnDataAvailable(const void* data, size_t num_bytes) override {
     if (num_bytes > remaining_bytes_) {
-      FXL_LOG(ERROR) << "Received incorrect number of bytes. Expected: "
-                     << expected_size_ << ", but received at least "
-                     << (num_bytes - remaining_bytes_) << " more.";
+      FXL_LOG(ERROR) << "Received incorrect number of bytes. Expected: " << expected_size_
+                     << ", but received at least " << (num_bytes - remaining_bytes_) << " more.";
       socket_drainer_.reset();
       callback_(nullptr, Status::ERROR);
       return;
@@ -156,15 +141,13 @@ class SocketDataSource : public DataSource, public fsl::SocketDrainer::Client {
   void OnDataComplete() override {
     socket_drainer_.reset();
     if (remaining_bytes_ != 0) {
-      FXL_LOG(ERROR) << "Received incorrect number of bytes. Expected: "
-                     << expected_size_ << ", but received "
-                     << (expected_size_ - remaining_bytes_);
+      FXL_LOG(ERROR) << "Received incorrect number of bytes. Expected: " << expected_size_
+                     << ", but received " << (expected_size_ - remaining_bytes_);
       callback_(nullptr, Status::ERROR);
       return;
     }
 
-    callback_(std::make_unique<StringLikeDataChunk<std::string>>(std::string()),
-              Status::DONE);
+    callback_(std::make_unique<StringLikeDataChunk<std::string>>(std::string()), Status::DONE);
   }
 
   zx::socket socket_;
@@ -176,14 +159,12 @@ class SocketDataSource : public DataSource, public fsl::SocketDrainer::Client {
 
 class FlatBufferDataChunk : public DataSource::DataChunk {
  public:
-  explicit FlatBufferDataChunk(
-      std::unique_ptr<flatbuffers::FlatBufferBuilder> value)
+  explicit FlatBufferDataChunk(std::unique_ptr<flatbuffers::FlatBufferBuilder> value)
       : value_(std::move(value)) {}
 
  private:
   fxl::StringView Get() override {
-    return fxl::StringView(reinterpret_cast<char*>(value_->GetBufferPointer()),
-                           value_->GetSize());
+    return fxl::StringView(reinterpret_cast<char*>(value_->GetBufferPointer()), value_->GetSize());
   }
 
   std::unique_ptr<flatbuffers::FlatBufferBuilder> value_;
@@ -191,8 +172,7 @@ class FlatBufferDataChunk : public DataSource::DataChunk {
 
 }  // namespace
 
-std::unique_ptr<DataSource::DataChunk> DataSource::DataChunk::Create(
-    std::string value) {
+std::unique_ptr<DataSource::DataChunk> DataSource::DataChunk::Create(std::string value) {
   return std::make_unique<StringLikeDataChunk<std::string>>(std::move(value));
 }
 
@@ -206,16 +186,14 @@ std::unique_ptr<DataSource> DataSource::Create(std::string value) {
 }
 
 std::unique_ptr<DataSource> DataSource::Create(std::vector<uint8_t> value) {
-  return std::make_unique<StringLikeDataSource<std::vector<uint8_t>>>(
-      std::move(value));
+  return std::make_unique<StringLikeDataSource<std::vector<uint8_t>>>(std::move(value));
 }
 
 std::unique_ptr<DataSource> DataSource::Create(fsl::SizedVmo vmo) {
   return std::make_unique<VmoDataSource>(std::move(vmo));
 }
 
-std::unique_ptr<DataSource> DataSource::Create(zx::socket socket,
-                                               uint64_t size) {
+std::unique_ptr<DataSource> DataSource::Create(zx::socket socket, uint64_t size) {
   return std::make_unique<SocketDataSource>(std::move(socket), size);
 }
 

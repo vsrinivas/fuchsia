@@ -34,19 +34,15 @@ SyncState ConvertToSyncState(sync_coordinator::UploadSyncState upload) {
   }
 }
 
-bool operator==(
-    const sync_coordinator::SyncStateWatcher::SyncStateContainer& lhs,
-    const sync_coordinator::SyncStateWatcher::SyncStateContainer& rhs) {
-  return std::tie(lhs.download, lhs.upload) ==
-         std::tie(rhs.download, rhs.upload);
+bool operator==(const sync_coordinator::SyncStateWatcher::SyncStateContainer& lhs,
+                const sync_coordinator::SyncStateWatcher::SyncStateContainer& rhs) {
+  return std::tie(lhs.download, lhs.upload) == std::tie(rhs.download, rhs.upload);
 }
 }  // namespace
 
-class SyncWatcherSet::SyncWatcherContainer
-    : public sync_coordinator::SyncStateWatcher {
+class SyncWatcherSet::SyncWatcherContainer : public sync_coordinator::SyncStateWatcher {
  public:
-  explicit SyncWatcherContainer(SyncWatcherPtr watcher)
-      : watcher_(std::move(watcher)) {}
+  explicit SyncWatcherContainer(SyncWatcherPtr watcher) : watcher_(std::move(watcher)) {}
 
   ~SyncWatcherContainer() override {}
 
@@ -66,8 +62,8 @@ class SyncWatcherSet::SyncWatcherContainer
 
   void set_on_empty(fit::closure on_empty_callback) {
     if (on_empty_callback) {
-      watcher_.set_error_handler([callback = std::move(on_empty_callback)](
-                                     zx_status_t status) { callback(); });
+      watcher_.set_error_handler(
+          [callback = std::move(on_empty_callback)](zx_status_t status) { callback(); });
     }
   }
 
@@ -82,8 +78,8 @@ class SyncWatcherSet::SyncWatcherContainer
   void Send() {
     notification_in_progress_ = true;
     last_ = pending_;
-    watcher_->SyncStateChanged(ConvertToSyncState(last_.download),
-                               ConvertToSyncState(last_.upload), [this]() {
+    watcher_->SyncStateChanged(ConvertToSyncState(last_.download), ConvertToSyncState(last_.upload),
+                               [this]() {
                                  notification_in_progress_ = false;
                                  SendIfPending();
                                });
@@ -107,8 +103,7 @@ SyncWatcherSet::SyncWatcherSet() {}
 
 SyncWatcherSet::~SyncWatcherSet() {}
 
-void SyncWatcherSet::AddSyncWatcher(
-    fidl::InterfaceHandle<SyncWatcher> watcher) {
+void SyncWatcherSet::AddSyncWatcher(fidl::InterfaceHandle<SyncWatcher> watcher) {
   SyncWatcherContainer& container = watchers_.emplace(watcher.Bind());
   container.Start(current_);
 }

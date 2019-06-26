@@ -106,8 +106,8 @@ bool operator==(const SyncStateWatcher::SyncStateContainer& lhs,
                 const SyncStateWatcher::SyncStateContainer& rhs);
 bool operator!=(const SyncStateWatcher::SyncStateContainer& lhs,
                 const SyncStateWatcher::SyncStateContainer& rhs);
-std::ostream& operator<<(
-    std::ostream& strm, const SyncStateWatcher::SyncStateContainer& sync_state);
+std::ostream& operator<<(std::ostream& strm,
+                         const SyncStateWatcher::SyncStateContainer& sync_state);
 
 }  // namespace cloud_sync
 

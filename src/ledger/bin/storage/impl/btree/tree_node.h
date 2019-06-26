@@ -25,9 +25,8 @@ class TreeNode {
 
   // Creates a |TreeNode| object in |page_storage| for an existing node and
   // calls the given |callback| with the returned status and node.
-  static void FromIdentifier(
-      PageStorage* page_storage, ObjectIdentifier identifier,
-      fit::function<void(Status, std::unique_ptr<const TreeNode>)> callback);
+  static void FromIdentifier(PageStorage* page_storage, ObjectIdentifier identifier,
+                             fit::function<void(Status, std::unique_ptr<const TreeNode>)> callback);
 
   // Creates a |TreeNode| object in |page_storage| with the given entries and
   // children. |children| is a map from the index of the child to the identifier
@@ -35,11 +34,10 @@ class TreeNode {
   // child indexes are between |0| and |size(entries)| (included). The
   // |callback| will be called with the success or error status and the id of
   // the new node.
-  static void FromEntries(
-      PageStorage* page_storage, uint8_t level,
-      const std::vector<Entry>& entries,
-      const std::map<size_t, ObjectIdentifier>& children,
-      fit::function<void(Status, ObjectIdentifier)> callback);
+  static void FromEntries(PageStorage* page_storage, uint8_t level,
+                          const std::vector<Entry>& entries,
+                          const std::map<size_t, ObjectIdentifier>& children,
+                          fit::function<void(Status, ObjectIdentifier)> callback);
 
   // Creates an empty node in |page_storage|, i.e. a TreeNode with no entries
   // and an empty child at index 0 and calls the callback with the result.
@@ -47,8 +45,7 @@ class TreeNode {
                     fit::function<void(Status, ObjectIdentifier)> callback);
 
   // Initializes |node| with a |TreeNode| object for an existing |object|.
-  static Status FromObject(const Object& object,
-                           std::unique_ptr<const TreeNode>* node);
+  static Status FromObject(const Object& object, std::unique_ptr<const TreeNode>* node);
 
   // Returns the number of entries stored in this tree node.
   int GetKeyCount() const;
@@ -73,13 +70,10 @@ class TreeNode {
 
   const std::vector<Entry>& entries() const { return entries_; }
 
-  const std::map<size_t, ObjectIdentifier>& children_identifiers() const {
-    return children_;
-  }
+  const std::map<size_t, ObjectIdentifier>& children_identifiers() const { return children_; }
 
  private:
-  TreeNode(ObjectIdentifier identifier, uint8_t level,
-           std::vector<Entry> entries,
+  TreeNode(ObjectIdentifier identifier, uint8_t level, std::vector<Entry> entries,
            std::map<size_t, ObjectIdentifier> children);
 
   ObjectIdentifier identifier_;

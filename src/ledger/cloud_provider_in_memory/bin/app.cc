@@ -28,8 +28,7 @@ class App {
 
     component_context_->outgoing()->AddPublicService<CloudProvider>(
         [this](fidl::InterfaceRequest<CloudProvider> request) {
-          cloud_provider_bindings_.AddBinding(cloud_provider_impl_.get(),
-                                              std::move(request));
+          cloud_provider_bindings_.AddBinding(cloud_provider_impl_.get(), std::move(request));
         });
 
     return true;
@@ -61,6 +60,4 @@ int Main(int argc, const char** argv) {
 }  // namespace
 }  // namespace cloud_provider
 
-int main(int argc, const char** argv) {
-  return cloud_provider::Main(argc, argv);
-}
+int main(int argc, const char** argv) { return cloud_provider::Main(argc, argv); }

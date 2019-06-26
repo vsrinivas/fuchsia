@@ -12,16 +12,13 @@
 namespace context {
 
 namespace {
-size_t ToFullPages(size_t value) {
-  return (value + PAGE_SIZE - 1) & (~(PAGE_SIZE - 1));
-}
+size_t ToFullPages(size_t value) { return (value + PAGE_SIZE - 1) & (~(PAGE_SIZE - 1)); }
 
 // ASAN doesn't instrument vmo mappings. Use traditional malloc/free when
 // running with ASAN.
 #if __has_feature(address_sanitizer)
 // ASAN doesn't support safe stack.
-static_assert(!__has_feature(safe_stack),
-              "Add support for safe stack under ASAN");
+static_assert(!__has_feature(safe_stack), "Add support for safe stack under ASAN");
 
 void AllocateASAN(size_t stack_size, uintptr_t* stack) {
   *stack = reinterpret_cast<uintptr_t>(malloc(stack_size));
@@ -40,13 +37,12 @@ constexpr size_t kVmoSizeMultiplier = 2u;
 constexpr size_t kVmoSizeMultiplier = 1u;
 #endif
 
-void AllocateStack(const zx::vmo& vmo, size_t vmo_offset, size_t stack_size,
-                   zx::vmar* vmar, uintptr_t* addr) {
+void AllocateStack(const zx::vmo& vmo, size_t vmo_offset, size_t stack_size, zx::vmar* vmar,
+                   uintptr_t* addr) {
   uintptr_t allocate_address;
   zx_status_t status = zx::vmar::root_self()->allocate(
       0, stack_size + 2 * kStackGuardSize,
-      ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_CAN_MAP_SPECIFIC, vmar,
-      &allocate_address);
+      ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_CAN_MAP_SPECIFIC, vmar, &allocate_address);
   FXL_DCHECK(status == ZX_OK);
 
   status = vmar->map(kStackGuardSize, vmo, vmo_offset, stack_size,
@@ -76,16 +72,14 @@ void Stack::Release() {
 
 Stack::Stack(size_t stack_size) : stack_size_(ToFullPages(stack_size)) {
   FXL_DCHECK(stack_size_);
-  zx_status_t status =
-      zx::vmo::create(kVmoSizeMultiplier * stack_size_, 0, &vmo_);
+  zx_status_t status = zx::vmo::create(kVmoSizeMultiplier * stack_size_, 0, &vmo_);
   FXL_DCHECK(status == ZX_OK);
 
   AllocateStack(vmo_, 0, stack_size_, &safe_stack_mapping_, &safe_stack_);
   FXL_DCHECK(safe_stack_);
 
 #if __has_feature(safe_stack)
-  AllocateStack(vmo_, stack_size_, stack_size_, &unsafe_stack_mapping_,
-                &unsafe_stack_);
+  AllocateStack(vmo_, stack_size_, stack_size_, &unsafe_stack_mapping_, &unsafe_stack_);
   FXL_DCHECK(unsafe_stack_);
 #endif
 }
@@ -98,8 +92,8 @@ Stack::~Stack() {
 }
 
 void Stack::Release() {
-  zx_status_t status = vmo_.op_range(
-      ZX_VMO_OP_DECOMMIT, 0, kVmoSizeMultiplier * stack_size_, nullptr, 0);
+  zx_status_t status =
+      vmo_.op_range(ZX_VMO_OP_DECOMMIT, 0, kVmoSizeMultiplier * stack_size_, nullptr, 0);
   FXL_DCHECK(status == ZX_OK);
 }
 

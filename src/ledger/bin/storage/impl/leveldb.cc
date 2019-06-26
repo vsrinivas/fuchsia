@@ -51,13 +51,9 @@ class BatchImpl : public Db::Batch {
   // |callback| will be called with the same batch, ready to be written in
   // leveldb. If the destructor is called without a previous execution of the
   // batch, |callback| will be called with a |nullptr| and must return OK.
-  BatchImpl(
-      async_dispatcher_t* dispatcher,
-      std::unique_ptr<leveldb::WriteBatch> batch,
-      fit::function<Status(std::unique_ptr<leveldb::WriteBatch>)> callback)
-      : dispatcher_(dispatcher),
-        batch_(std::move(batch)),
-        callback_(std::move(callback)) {}
+  BatchImpl(async_dispatcher_t* dispatcher, std::unique_ptr<leveldb::WriteBatch> batch,
+            fit::function<Status(std::unique_ptr<leveldb::WriteBatch>)> callback)
+      : dispatcher_(dispatcher), batch_(std::move(batch)), callback_(std::move(callback)) {}
 
   ~BatchImpl() override {
     if (batch_) {
@@ -69,16 +65,14 @@ class BatchImpl : public Db::Batch {
   Status Put(CoroutineHandler* handler, convert::ExtendedStringView key,
              fxl::StringView value) override {
     FXL_DCHECK(batch_);
-    if (MakeEmptySyncCallAndCheck(dispatcher_, handler) ==
-        Status::INTERRUPTED) {
+    if (MakeEmptySyncCallAndCheck(dispatcher_, handler) == Status::INTERRUPTED) {
       return Status::INTERRUPTED;
     }
     batch_->Put(key, convert::ToSlice(value));
     return Status::OK;
   }
 
-  Status Delete(CoroutineHandler* handler,
-                convert::ExtendedStringView key) override {
+  Status Delete(CoroutineHandler* handler, convert::ExtendedStringView key) override {
     FXL_DCHECK(batch_);
     batch_->Delete(key);
     return MakeEmptySyncCallAndCheck(dispatcher_, handler);
@@ -86,8 +80,7 @@ class BatchImpl : public Db::Batch {
 
   Status Execute(CoroutineHandler* handler) override {
     FXL_DCHECK(batch_);
-    if (MakeEmptySyncCallAndCheck(dispatcher_, handler) ==
-        Status::INTERRUPTED) {
+    if (MakeEmptySyncCallAndCheck(dispatcher_, handler) == Status::INTERRUPTED) {
       return Status::INTERRUPTED;
     }
     return callback_(std::move(batch_));
@@ -101,8 +94,7 @@ class BatchImpl : public Db::Batch {
 };
 
 class RowIterator
-    : public Iterator<const std::pair<convert::ExtendedStringView,
-                                      convert::ExtendedStringView>> {
+    : public Iterator<const std::pair<convert::ExtendedStringView, convert::ExtendedStringView>> {
  public:
   RowIterator(std::unique_ptr<leveldb::Iterator> it, std::string prefix)
       : it_(std::move(it)), prefix_(std::move(prefix)) {
@@ -111,29 +103,26 @@ class RowIterator
 
   ~RowIterator() override {}
 
-  Iterator<const std::pair<convert::ExtendedStringView,
-                           convert::ExtendedStringView>>&
-  Next() override {
+  Iterator<const std::pair<convert::ExtendedStringView, convert::ExtendedStringView>>& Next()
+      override {
     it_->Next();
     PrepareEntry();
     return *this;
   }
 
-  bool Valid() const final {
-    return it_->Valid() && it_->key().starts_with(prefix_);
-  }
+  bool Valid() const final { return it_->Valid() && it_->key().starts_with(prefix_); }
 
   Status GetStatus() const override {
     return it_->status().ok() ? Status::OK : Status::INTERNAL_ERROR;
   }
 
-  const std::pair<convert::ExtendedStringView, convert::ExtendedStringView>&
-  operator*() const override {
+  const std::pair<convert::ExtendedStringView, convert::ExtendedStringView>& operator*()
+      const override {
     return *(row_.get());
   }
 
-  const std::pair<convert::ExtendedStringView, convert::ExtendedStringView>*
-  operator->() const override {
+  const std::pair<convert::ExtendedStringView, convert::ExtendedStringView>* operator->()
+      const override {
     return row_.get();
   }
 
@@ -143,17 +132,14 @@ class RowIterator
       row_.reset(nullptr);
       return;
     }
-    row_ = std::make_unique<
-        std::pair<convert::ExtendedStringView, convert::ExtendedStringView>>(
+    row_ = std::make_unique<std::pair<convert::ExtendedStringView, convert::ExtendedStringView>>(
         it_->key(), it_->value());
   }
 
   std::unique_ptr<leveldb::Iterator> it_;
   const std::string prefix_;
 
-  std::unique_ptr<
-      std::pair<convert::ExtendedStringView, convert::ExtendedStringView>>
-      row_;
+  std::unique_ptr<std::pair<convert::ExtendedStringView, convert::ExtendedStringView>> row_;
 };
 
 }  // namespace
@@ -178,8 +164,7 @@ Status LevelDb::Init() {
     // Open a UniqueFD at the db path.
     unique_fd = db_path_.OpenFD(&db_path);
     if (!unique_fd.is_valid()) {
-      FXL_LOG(ERROR) << "Unable to open directory at " << db_path_.path()
-                     << ". errno: " << errno;
+      FXL_LOG(ERROR) << "Unable to open directory at " << db_path_.path() << ". errno: " << errno;
       return Status::INTERNAL_ERROR;
     }
   }
@@ -193,13 +178,11 @@ Status LevelDb::Init() {
     FXL_LOG(ERROR) << "Ledger state corrupted at " << db_path_.path()
                    << " with leveldb status: " << status.ToString();
     FXL_LOG(WARNING) << "Trying to recover by erasing the local state.";
-    FXL_LOG(WARNING)
-        << "***** ALL LOCAL CHANGES IN THIS PAGE WILL BE LOST *****";
+    FXL_LOG(WARNING) << "***** ALL LOCAL CHANGES IN THIS PAGE WILL BE LOST *****";
     ledger::ReportEvent(ledger::CobaltEvent::LEDGER_LEVELDB_STATE_CORRUPTED);
 
     if (!files::DeletePathAt(db_path_.root_fd(), db_path_.path(), true)) {
-      FXL_LOG(ERROR) << "Failed to delete corrupted ledger at "
-                     << db_path_.path();
+      FXL_LOG(ERROR) << "Failed to delete corrupted ledger at " << db_path_.path();
       return Status::INTERNAL_ERROR;
     }
     leveldb::Status status = leveldb::DB::Open(options, db_path.path(), &db);
@@ -217,19 +200,16 @@ Status LevelDb::Init() {
   return Status::OK;
 }
 
-Status LevelDb::StartBatch(CoroutineHandler* handler,
-                           std::unique_ptr<Db::Batch>* batch) {
+Status LevelDb::StartBatch(CoroutineHandler* handler, std::unique_ptr<Db::Batch>* batch) {
   auto db_batch = std::make_unique<leveldb::WriteBatch>();
   active_batches_count_++;
   *batch = std::make_unique<BatchImpl>(
-      dispatcher_, std::move(db_batch),
-      [this](std::unique_ptr<leveldb::WriteBatch> db_batch) {
+      dispatcher_, std::move(db_batch), [this](std::unique_ptr<leveldb::WriteBatch> db_batch) {
         active_batches_count_--;
         if (db_batch) {
           leveldb::Status status = db_->Write(write_options_, db_batch.get());
           if (!status.ok()) {
-            FXL_LOG(ERROR) << "Failed to execute batch with status: "
-                           << status.ToString();
+            FXL_LOG(ERROR) << "Failed to execute batch with status: " << status.ToString();
             return Status::INTERNAL_ERROR;
           }
         }
@@ -246,8 +226,7 @@ Status LevelDb::Get(CoroutineHandler* handler, convert::ExtendedStringView key,
   return ConvertStatus(db_->Get(read_options_, key, value));
 }
 
-Status LevelDb::HasKey(CoroutineHandler* handler,
-                       convert::ExtendedStringView key) {
+Status LevelDb::HasKey(CoroutineHandler* handler, convert::ExtendedStringView key) {
   std::unique_ptr<leveldb::Iterator> iterator(db_->NewIterator(read_options_));
   iterator->Seek(key);
 
@@ -257,10 +236,8 @@ Status LevelDb::HasKey(CoroutineHandler* handler,
   return MakeEmptySyncCallAndCheck(dispatcher_, handler);
 }
 
-Status LevelDb::GetObject(CoroutineHandler* handler,
-                          convert::ExtendedStringView key,
-                          ObjectIdentifier object_identifier,
-                          std::unique_ptr<const Piece>* piece) {
+Status LevelDb::GetObject(CoroutineHandler* handler, convert::ExtendedStringView key,
+                          ObjectIdentifier object_identifier, std::unique_ptr<const Piece>* piece) {
   FXL_DCHECK(piece);
   std::unique_ptr<leveldb::Iterator> iterator(db_->NewIterator(read_options_));
   iterator->Seek(key);
@@ -269,18 +246,15 @@ Status LevelDb::GetObject(CoroutineHandler* handler,
     return Status::INTERNAL_NOT_FOUND;
   }
 
-  *piece = std::make_unique<LevelDBPiece>(std::move(object_identifier),
-                                          std::move(iterator));
+  *piece = std::make_unique<LevelDBPiece>(std::move(object_identifier), std::move(iterator));
   return MakeEmptySyncCallAndCheck(dispatcher_, handler);
 }
 
-Status LevelDb::GetByPrefix(CoroutineHandler* handler,
-                            convert::ExtendedStringView prefix,
+Status LevelDb::GetByPrefix(CoroutineHandler* handler, convert::ExtendedStringView prefix,
                             std::vector<std::string>* key_suffixes) {
   std::vector<std::string> result;
   std::unique_ptr<leveldb::Iterator> it(db_->NewIterator(read_options_));
-  for (it->Seek(prefix); it->Valid() && it->key().starts_with(prefix);
-       it->Next()) {
+  for (it->Seek(prefix); it->Valid() && it->key().starts_with(prefix); it->Next()) {
     leveldb::Slice key = it->key();
     key.remove_prefix(prefix.size());
     result.push_back(key.ToString());
@@ -292,13 +266,11 @@ Status LevelDb::GetByPrefix(CoroutineHandler* handler,
   return MakeEmptySyncCallAndCheck(dispatcher_, handler);
 }
 
-Status LevelDb::GetEntriesByPrefix(
-    CoroutineHandler* handler, convert::ExtendedStringView prefix,
-    std::vector<std::pair<std::string, std::string>>* entries) {
+Status LevelDb::GetEntriesByPrefix(CoroutineHandler* handler, convert::ExtendedStringView prefix,
+                                   std::vector<std::pair<std::string, std::string>>* entries) {
   std::vector<std::pair<std::string, std::string>> result;
   std::unique_ptr<leveldb::Iterator> it(db_->NewIterator(read_options_));
-  for (it->Seek(prefix); it->Valid() && it->key().starts_with(prefix);
-       it->Next()) {
+  for (it->Seek(prefix); it->Valid() && it->key().starts_with(prefix); it->Next()) {
     leveldb::Slice key = it->key();
     key.remove_prefix(prefix.size());
     result.emplace_back(key.ToString(), it->value().ToString());
@@ -312,17 +284,16 @@ Status LevelDb::GetEntriesByPrefix(
 
 Status LevelDb::GetIteratorAtPrefix(
     CoroutineHandler* handler, convert::ExtendedStringView prefix,
-    std::unique_ptr<Iterator<const std::pair<
-        convert::ExtendedStringView, convert::ExtendedStringView>>>* iterator) {
-  std::unique_ptr<leveldb::Iterator> local_iterator(
-      db_->NewIterator(read_options_));
+    std::unique_ptr<
+        Iterator<const std::pair<convert::ExtendedStringView, convert::ExtendedStringView>>>*
+        iterator) {
+  std::unique_ptr<leveldb::Iterator> local_iterator(db_->NewIterator(read_options_));
   local_iterator->Seek(prefix);
 
   if (iterator) {
-    std::unique_ptr<Iterator<const std::pair<convert::ExtendedStringView,
-                                             convert::ExtendedStringView>>>
-        row_iterator = std::make_unique<RowIterator>(std::move(local_iterator),
-                                                     prefix.ToString());
+    std::unique_ptr<
+        Iterator<const std::pair<convert::ExtendedStringView, convert::ExtendedStringView>>>
+        row_iterator = std::make_unique<RowIterator>(std::move(local_iterator), prefix.ToString());
     iterator->swap(row_iterator);
   }
   return MakeEmptySyncCallAndCheck(dispatcher_, handler);

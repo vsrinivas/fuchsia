@@ -27,16 +27,14 @@ class UserSyncImpl : public UserSync, cloud_provider::DeviceSetWatcher {
   //   |on_version_mismatch| is called when the local state is detected to be
   //     incompatible with the state in the cloud and has to be erased.
   UserSyncImpl(ledger::Environment* environment, UserConfig user_config,
-               std::unique_ptr<backoff::Backoff> backoff,
-               fit::closure on_version_mismatch);
+               std::unique_ptr<backoff::Backoff> backoff, fit::closure on_version_mismatch);
   ~UserSyncImpl() override;
 
   // UserSync:
   void SetSyncWatcher(SyncStateWatcher* watcher) override;
   void Start() override;
   std::unique_ptr<LedgerSync> CreateLedgerSync(
-      fxl::StringView app_id,
-      encryption::EncryptionService* encryption_service) override;
+      fxl::StringView app_id, encryption::EncryptionService* encryption_service) override;
 
   // Returns the path where the device fingerprint is stored.
   ledger::DetachedPath GetFingerprintPath();

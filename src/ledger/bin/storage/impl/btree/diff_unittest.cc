@@ -19,8 +19,7 @@
 namespace storage {
 namespace btree {
 namespace {
-std::unique_ptr<Entry> CreateEntryPtr(std::string key,
-                                      ObjectIdentifier object_identifier,
+std::unique_ptr<Entry> CreateEntryPtr(std::string key, ObjectIdentifier object_identifier,
                                       KeyPriority priority) {
   auto e = std::make_unique<Entry>();
   e->key = key;
@@ -77,25 +76,22 @@ TEST_F(DiffTest, ForEachDiff) {
 
   std::vector<EntryChange> other_changes;
   // Update value for key1.
-  other_changes.push_back(
-      EntryChange{Entry{"key1", object_identifier, KeyPriority::LAZY}, false});
+  other_changes.push_back(EntryChange{Entry{"key1", object_identifier, KeyPriority::LAZY}, false});
   // Add entry key255.
-  other_changes.push_back(EntryChange{
-      Entry{"key255", object_identifier, KeyPriority::LAZY}, false});
-  // Remove entry key40.
   other_changes.push_back(
-      EntryChange{Entry{"key40", {}, KeyPriority::LAZY}, true});
+      EntryChange{Entry{"key255", object_identifier, KeyPriority::LAZY}, false});
+  // Remove entry key40.
+  other_changes.push_back(EntryChange{Entry{"key40", {}, KeyPriority::LAZY}, true});
   ObjectIdentifier other_root_identifier;
-  ASSERT_TRUE(CreateTreeFromChanges(base_root_identifier, other_changes,
-                                    &other_root_identifier));
+  ASSERT_TRUE(CreateTreeFromChanges(base_root_identifier, other_changes, &other_root_identifier));
 
   // ForEachDiff should return all changes just applied.
   bool called;
   Status status;
   size_t current_change = 0;
   ForEachDiff(
-      environment_.coroutine_service(), &fake_storage_, base_root_identifier,
-      other_root_identifier, "",
+      environment_.coroutine_service(), &fake_storage_, base_root_identifier, other_root_identifier,
+      "",
       [&other_changes, &current_change](EntryChange e) {
         EXPECT_EQ(other_changes[current_change].deleted, e.deleted);
         if (e.deleted) {
@@ -121,8 +117,7 @@ TEST_F(DiffTest, ForEachDiffWithMinKey) {
   //     /
   // [01, 02]
   std::vector<EntryChange> base_entries;
-  ASSERT_TRUE(CreateEntryChanges(
-      std::vector<size_t>({1, 2, 3, 7, 30, 50, 65, 76}), &base_entries));
+  ASSERT_TRUE(CreateEntryChanges(std::vector<size_t>({1, 2, 3, 7, 30, 50, 65, 76}), &base_entries));
   // Expected other tree layout (XX is key "keyXX"):
   //               [50, 75]
   //             /    |    \
@@ -136,14 +131,13 @@ TEST_F(DiffTest, ForEachDiffWithMinKey) {
   Status status;
   ObjectIdentifier base_root_identifier = CreateTree(base_entries);
   ObjectIdentifier other_root_identifier;
-  ASSERT_TRUE(CreateTreeFromChanges(base_root_identifier, changes,
-                                    &other_root_identifier));
+  ASSERT_TRUE(CreateTreeFromChanges(base_root_identifier, changes, &other_root_identifier));
 
   // ForEachDiff with a "key0" as min_key should return both changes.
   size_t current_change = 0;
   ForEachDiff(
-      environment_.coroutine_service(), &fake_storage_, base_root_identifier,
-      other_root_identifier, "key0",
+      environment_.coroutine_service(), &fake_storage_, base_root_identifier, other_root_identifier,
+      "key0",
       [&changes, &current_change](EntryChange e) {
         EXPECT_EQ(changes[current_change++].entry, e.entry);
         return true;
@@ -156,8 +150,8 @@ TEST_F(DiffTest, ForEachDiffWithMinKey) {
 
   // With "key60" as min_key, only key75 should be returned.
   ForEachDiff(
-      environment_.coroutine_service(), &fake_storage_, base_root_identifier,
-      other_root_identifier, "key60",
+      environment_.coroutine_service(), &fake_storage_, base_root_identifier, other_root_identifier,
+      "key60",
       [&changes](EntryChange e) {
         EXPECT_EQ(changes[1].entry, e.entry);
         return true;
@@ -174,8 +168,7 @@ TEST_F(DiffTest, ForEachDiffWithMinKeySkipNodes) {
   //     /
   // [01, 02]
   std::vector<EntryChange> base_entries;
-  ASSERT_TRUE(
-      CreateEntryChanges(std::vector<size_t>({1, 2, 3, 7, 30}), &base_entries));
+  ASSERT_TRUE(CreateEntryChanges(std::vector<size_t>({1, 2, 3, 7, 30}), &base_entries));
   // Expected other tree layout (XX is key "keyXX"):
   //               [50]
   //             /
@@ -189,12 +182,11 @@ TEST_F(DiffTest, ForEachDiffWithMinKeySkipNodes) {
   Status status;
   ObjectIdentifier base_root_identifier = CreateTree(base_entries);
   ObjectIdentifier other_root_identifier;
-  ASSERT_TRUE(CreateTreeFromChanges(base_root_identifier, changes,
-                                    &other_root_identifier));
+  ASSERT_TRUE(CreateTreeFromChanges(base_root_identifier, changes, &other_root_identifier));
 
   ForEachDiff(
-      environment_.coroutine_service(), &fake_storage_, base_root_identifier,
-      other_root_identifier, "key01",
+      environment_.coroutine_service(), &fake_storage_, base_root_identifier, other_root_identifier,
+      "key01",
       [&changes](EntryChange e) {
         EXPECT_EQ(changes[0].entry, e.entry);
         return true;
@@ -213,22 +205,20 @@ TEST_F(DiffTest, ForEachDiffPriorityChange) {
 
   std::vector<EntryChange> other_changes;
   // Update priority for a key.
-  other_changes.push_back(EntryChange{
-      Entry{base_entry.key, base_entry.object_identifier, KeyPriority::LAZY},
-      false});
+  other_changes.push_back(
+      EntryChange{Entry{base_entry.key, base_entry.object_identifier, KeyPriority::LAZY}, false});
 
   bool called;
   Status status;
   ObjectIdentifier other_root_identifier;
-  ASSERT_TRUE(CreateTreeFromChanges(base_root_identifier, other_changes,
-                                    &other_root_identifier));
+  ASSERT_TRUE(CreateTreeFromChanges(base_root_identifier, other_changes, &other_root_identifier));
 
   // ForEachDiff should return all changes just applied.
   size_t change_count = 0;
   EntryChange actual_change;
   ForEachDiff(
-      environment_.coroutine_service(), &fake_storage_, base_root_identifier,
-      other_root_identifier, "",
+      environment_.coroutine_service(), &fake_storage_, base_root_identifier, other_root_identifier,
+      "",
       [&actual_change, &change_count](EntryChange e) {
         actual_change = e;
         ++change_count;
@@ -241,8 +231,7 @@ TEST_F(DiffTest, ForEachDiffPriorityChange) {
   EXPECT_EQ(1u, change_count);
   EXPECT_FALSE(actual_change.deleted);
   EXPECT_EQ(base_entry.key, actual_change.entry.key);
-  EXPECT_EQ(base_entry.object_identifier,
-            actual_change.entry.object_identifier);
+  EXPECT_EQ(base_entry.object_identifier, actual_change.entry.object_identifier);
   EXPECT_EQ(KeyPriority::LAZY, actual_change.entry.priority);
 }
 
@@ -250,12 +239,9 @@ TEST_F(DiffTest, ForEachThreeWayDiff) {
   // Base tree.
   std::vector<EntryChange> base_changes;
   ASSERT_TRUE(CreateEntryChanges(50, &base_changes));
-  ObjectIdentifier base_object01_identifier =
-      base_changes[1].entry.object_identifier;
-  ObjectIdentifier base_object02_identifier =
-      base_changes[2].entry.object_identifier;
-  ObjectIdentifier base_object40_identifier =
-      base_changes[40].entry.object_identifier;
+  ObjectIdentifier base_object01_identifier = base_changes[1].entry.object_identifier;
+  ObjectIdentifier base_object02_identifier = base_changes[2].entry.object_identifier;
+  ObjectIdentifier base_object40_identifier = base_changes[40].entry.object_identifier;
   ObjectIdentifier base_root_identifier = CreateTree(base_changes);
 
   std::unique_ptr<const Object> object;
@@ -265,18 +251,14 @@ TEST_F(DiffTest, ForEachThreeWayDiff) {
   // Left tree.
   std::vector<EntryChange> left_changes;
   // Update value for key1.
-  left_changes.push_back(
-      EntryChange{Entry{"key01", object_identifier, KeyPriority::LAZY}, false});
+  left_changes.push_back(EntryChange{Entry{"key01", object_identifier, KeyPriority::LAZY}, false});
   // Add entry key255.
-  left_changes.push_back(EntryChange{
-      Entry{"key255", object_identifier, KeyPriority::LAZY}, false});
+  left_changes.push_back(EntryChange{Entry{"key255", object_identifier, KeyPriority::LAZY}, false});
   // Remove entry key40.
-  left_changes.push_back(
-      EntryChange{Entry{"key40", {}, KeyPriority::LAZY}, true});
+  left_changes.push_back(EntryChange{Entry{"key40", {}, KeyPriority::LAZY}, true});
 
   ObjectIdentifier left_root_identifier;
-  ASSERT_TRUE(CreateTreeFromChanges(base_root_identifier, left_changes,
-                                    &left_root_identifier));
+  ASSERT_TRUE(CreateTreeFromChanges(base_root_identifier, left_changes, &left_root_identifier));
 
   // Right tree.
   std::unique_ptr<const Object> object2;
@@ -284,46 +266,42 @@ TEST_F(DiffTest, ForEachThreeWayDiff) {
   ObjectIdentifier object_identifier2 = object2->GetIdentifier();
   std::vector<EntryChange> right_changes;
   // Update to same value for key1.
-  right_changes.push_back(
-      EntryChange{Entry{"key01", object_identifier, KeyPriority::LAZY}, false});
+  right_changes.push_back(EntryChange{Entry{"key01", object_identifier, KeyPriority::LAZY}, false});
   // Update to different value for key2
-  right_changes.push_back(EntryChange{
-      Entry{"key02", object_identifier2, KeyPriority::LAZY}, false});
+  right_changes.push_back(
+      EntryChange{Entry{"key02", object_identifier2, KeyPriority::LAZY}, false});
   // Add entry key258.
-  right_changes.push_back(EntryChange{
-      Entry{"key258", object_identifier, KeyPriority::LAZY}, false});
+  right_changes.push_back(
+      EntryChange{Entry{"key258", object_identifier, KeyPriority::LAZY}, false});
 
   ObjectIdentifier right_root_identifier;
-  ASSERT_TRUE(CreateTreeFromChanges(base_root_identifier, right_changes,
-                                    &right_root_identifier));
+  ASSERT_TRUE(CreateTreeFromChanges(base_root_identifier, right_changes, &right_root_identifier));
 
   std::vector<ThreeWayChange> expected_three_way_changes;
+  expected_three_way_changes.push_back(
+      ThreeWayChange{CreateEntryPtr("key01", base_object01_identifier, KeyPriority::EAGER),
+                     CreateEntryPtr("key01", object_identifier, KeyPriority::LAZY),
+                     CreateEntryPtr("key01", object_identifier, KeyPriority::LAZY)});
+  expected_three_way_changes.push_back(
+      ThreeWayChange{CreateEntryPtr("key02", base_object02_identifier, KeyPriority::EAGER),
+                     CreateEntryPtr("key02", base_object02_identifier, KeyPriority::EAGER),
+                     CreateEntryPtr("key02", object_identifier2, KeyPriority::LAZY)});
   expected_three_way_changes.push_back(ThreeWayChange{
-      CreateEntryPtr("key01", base_object01_identifier, KeyPriority::EAGER),
-      CreateEntryPtr("key01", object_identifier, KeyPriority::LAZY),
-      CreateEntryPtr("key01", object_identifier, KeyPriority::LAZY)});
-  expected_three_way_changes.push_back(ThreeWayChange{
-      CreateEntryPtr("key02", base_object02_identifier, KeyPriority::EAGER),
-      CreateEntryPtr("key02", base_object02_identifier, KeyPriority::EAGER),
-      CreateEntryPtr("key02", object_identifier2, KeyPriority::LAZY)});
-  expected_three_way_changes.push_back(ThreeWayChange{
-      CreateEntryPtr(),
-      CreateEntryPtr("key255", object_identifier, KeyPriority::LAZY),
+      CreateEntryPtr(), CreateEntryPtr("key255", object_identifier, KeyPriority::LAZY),
       CreateEntryPtr()});
+  expected_three_way_changes.push_back(
+      ThreeWayChange{CreateEntryPtr(), CreateEntryPtr(),
+                     CreateEntryPtr("key258", object_identifier, KeyPriority::LAZY)});
   expected_three_way_changes.push_back(ThreeWayChange{
-      CreateEntryPtr(), CreateEntryPtr(),
-      CreateEntryPtr("key258", object_identifier, KeyPriority::LAZY)});
-  expected_three_way_changes.push_back(ThreeWayChange{
-      CreateEntryPtr("key40", base_object40_identifier, KeyPriority::EAGER),
-      CreateEntryPtr(),
+      CreateEntryPtr("key40", base_object40_identifier, KeyPriority::EAGER), CreateEntryPtr(),
       CreateEntryPtr("key40", base_object40_identifier, KeyPriority::EAGER)});
 
   bool called;
   Status status;
   unsigned int current_change = 0;
   ForEachThreeWayDiff(
-      environment_.coroutine_service(), &fake_storage_, base_root_identifier,
-      left_root_identifier, right_root_identifier, "",
+      environment_.coroutine_service(), &fake_storage_, base_root_identifier, left_root_identifier,
+      right_root_identifier, "",
       [&expected_three_way_changes, &current_change](ThreeWayChange e) {
         EXPECT_LT(current_change, expected_three_way_changes.size());
         if (current_change >= expected_three_way_changes.size()) {
@@ -344,12 +322,9 @@ TEST_F(DiffTest, ForEachThreeWayDiffMinKey) {
   // Base tree.
   std::vector<EntryChange> base_changes;
   ASSERT_TRUE(CreateEntryChanges(50, &base_changes));
-  ObjectIdentifier base_object01_identifier =
-      base_changes[1].entry.object_identifier;
-  ObjectIdentifier base_object02_identifier =
-      base_changes[2].entry.object_identifier;
-  ObjectIdentifier base_object40_identifier =
-      base_changes[40].entry.object_identifier;
+  ObjectIdentifier base_object01_identifier = base_changes[1].entry.object_identifier;
+  ObjectIdentifier base_object02_identifier = base_changes[2].entry.object_identifier;
+  ObjectIdentifier base_object40_identifier = base_changes[40].entry.object_identifier;
   ObjectIdentifier base_root_identifier = CreateTree(base_changes);
 
   std::unique_ptr<const Object> object;
@@ -359,18 +334,14 @@ TEST_F(DiffTest, ForEachThreeWayDiffMinKey) {
   // Left tree.
   std::vector<EntryChange> left_changes;
   // Update value for key1.
-  left_changes.push_back(
-      EntryChange{Entry{"key01", object_identifier, KeyPriority::LAZY}, false});
+  left_changes.push_back(EntryChange{Entry{"key01", object_identifier, KeyPriority::LAZY}, false});
   // Add entry key255.
-  left_changes.push_back(EntryChange{
-      Entry{"key255", object_identifier, KeyPriority::LAZY}, false});
+  left_changes.push_back(EntryChange{Entry{"key255", object_identifier, KeyPriority::LAZY}, false});
   // Remove entry key40.
-  left_changes.push_back(
-      EntryChange{Entry{"key40", {}, KeyPriority::LAZY}, true});
+  left_changes.push_back(EntryChange{Entry{"key40", {}, KeyPriority::LAZY}, true});
 
   ObjectIdentifier left_root_identifier;
-  ASSERT_TRUE(CreateTreeFromChanges(base_root_identifier, left_changes,
-                                    &left_root_identifier));
+  ASSERT_TRUE(CreateTreeFromChanges(base_root_identifier, left_changes, &left_root_identifier));
 
   // Right tree.
   std::unique_ptr<const Object> object2;
@@ -378,34 +349,31 @@ TEST_F(DiffTest, ForEachThreeWayDiffMinKey) {
   ObjectIdentifier object_identifier2 = object2->GetIdentifier();
   std::vector<EntryChange> right_changes;
   // Update to same value for key1.
-  right_changes.push_back(
-      EntryChange{Entry{"key01", object_identifier, KeyPriority::LAZY}, false});
+  right_changes.push_back(EntryChange{Entry{"key01", object_identifier, KeyPriority::LAZY}, false});
   // Update to different value for key2
-  right_changes.push_back(EntryChange{
-      Entry{"key02", object_identifier2, KeyPriority::LAZY}, false});
+  right_changes.push_back(
+      EntryChange{Entry{"key02", object_identifier2, KeyPriority::LAZY}, false});
   // Add entry key258.
-  right_changes.push_back(EntryChange{
-      Entry{"key258", object_identifier, KeyPriority::LAZY}, false});
+  right_changes.push_back(
+      EntryChange{Entry{"key258", object_identifier, KeyPriority::LAZY}, false});
 
   ObjectIdentifier right_root_identifier;
-  ASSERT_TRUE(CreateTreeFromChanges(base_root_identifier, right_changes,
-                                    &right_root_identifier));
+  ASSERT_TRUE(CreateTreeFromChanges(base_root_identifier, right_changes, &right_root_identifier));
 
   std::vector<ThreeWayChange> expected_three_way_changes;
+  expected_three_way_changes.push_back(
+      ThreeWayChange{CreateEntryPtr(), CreateEntryPtr(),
+                     CreateEntryPtr("key258", object_identifier, KeyPriority::LAZY)});
   expected_three_way_changes.push_back(ThreeWayChange{
-      CreateEntryPtr(), CreateEntryPtr(),
-      CreateEntryPtr("key258", object_identifier, KeyPriority::LAZY)});
-  expected_three_way_changes.push_back(ThreeWayChange{
-      CreateEntryPtr("key40", base_object40_identifier, KeyPriority::EAGER),
-      CreateEntryPtr(),
+      CreateEntryPtr("key40", base_object40_identifier, KeyPriority::EAGER), CreateEntryPtr(),
       CreateEntryPtr("key40", base_object40_identifier, KeyPriority::EAGER)});
 
   bool called;
   Status status;
   unsigned int current_change = 0;
   ForEachThreeWayDiff(
-      environment_.coroutine_service(), &fake_storage_, base_root_identifier,
-      left_root_identifier, right_root_identifier, "key257",
+      environment_.coroutine_service(), &fake_storage_, base_root_identifier, left_root_identifier,
+      right_root_identifier, "key257",
       [&expected_three_way_changes, &current_change](ThreeWayChange e) {
         EXPECT_LT(current_change, expected_three_way_changes.size());
         if (current_change >= expected_three_way_changes.size()) {
@@ -426,12 +394,9 @@ TEST_F(DiffTest, ForEachThreeWayDiffNoDiff) {
   // Base tree.
   std::vector<EntryChange> base_changes;
   ASSERT_TRUE(CreateEntryChanges(50, &base_changes));
-  ObjectIdentifier base_object01_identifier =
-      base_changes[1].entry.object_identifier;
-  ObjectIdentifier base_object02_identifier =
-      base_changes[2].entry.object_identifier;
-  ObjectIdentifier base_object40_identifier =
-      base_changes[40].entry.object_identifier;
+  ObjectIdentifier base_object01_identifier = base_changes[1].entry.object_identifier;
+  ObjectIdentifier base_object02_identifier = base_changes[2].entry.object_identifier;
+  ObjectIdentifier base_object40_identifier = base_changes[40].entry.object_identifier;
   ObjectIdentifier base_root_identifier = CreateTree(base_changes);
 
   std::unique_ptr<const Object> object;
@@ -441,18 +406,14 @@ TEST_F(DiffTest, ForEachThreeWayDiffNoDiff) {
   // Left tree.
   std::vector<EntryChange> left_changes;
   // Update value for key1.
-  left_changes.push_back(
-      EntryChange{Entry{"key01", object_identifier, KeyPriority::LAZY}, false});
+  left_changes.push_back(EntryChange{Entry{"key01", object_identifier, KeyPriority::LAZY}, false});
   // Add entry key255.
-  left_changes.push_back(EntryChange{
-      Entry{"key255", object_identifier, KeyPriority::LAZY}, false});
+  left_changes.push_back(EntryChange{Entry{"key255", object_identifier, KeyPriority::LAZY}, false});
   // Remove entry key40.
-  left_changes.push_back(
-      EntryChange{Entry{"key40", {}, KeyPriority::LAZY}, true});
+  left_changes.push_back(EntryChange{Entry{"key40", {}, KeyPriority::LAZY}, true});
 
   ObjectIdentifier left_root_identifier;
-  ASSERT_TRUE(CreateTreeFromChanges(base_root_identifier, left_changes,
-                                    &left_root_identifier));
+  ASSERT_TRUE(CreateTreeFromChanges(base_root_identifier, left_changes, &left_root_identifier));
 
   // Right tree.
   std::unique_ptr<const Object> object2;
@@ -460,25 +421,23 @@ TEST_F(DiffTest, ForEachThreeWayDiffNoDiff) {
   ObjectIdentifier object_identifier2 = object2->GetIdentifier();
   std::vector<EntryChange> right_changes;
   // Update to same value for key1.
-  right_changes.push_back(
-      EntryChange{Entry{"key01", object_identifier, KeyPriority::LAZY}, false});
+  right_changes.push_back(EntryChange{Entry{"key01", object_identifier, KeyPriority::LAZY}, false});
   // Update to different value for key2
-  right_changes.push_back(EntryChange{
-      Entry{"key02", object_identifier2, KeyPriority::LAZY}, false});
+  right_changes.push_back(
+      EntryChange{Entry{"key02", object_identifier2, KeyPriority::LAZY}, false});
   // Add entry key258.
-  right_changes.push_back(EntryChange{
-      Entry{"key258", object_identifier, KeyPriority::LAZY}, false});
+  right_changes.push_back(
+      EntryChange{Entry{"key258", object_identifier, KeyPriority::LAZY}, false});
 
   ObjectIdentifier right_root_identifier;
-  ASSERT_TRUE(CreateTreeFromChanges(base_root_identifier, right_changes,
-                                    &right_root_identifier));
+  ASSERT_TRUE(CreateTreeFromChanges(base_root_identifier, right_changes, &right_root_identifier));
 
   bool called;
   Status status;
   // No change is expected.
   ForEachThreeWayDiff(
-      environment_.coroutine_service(), &fake_storage_, base_root_identifier,
-      left_root_identifier, right_root_identifier, "key5",
+      environment_.coroutine_service(), &fake_storage_, base_root_identifier, left_root_identifier,
+      right_root_identifier, "key5",
       [](ThreeWayChange e) {
         ADD_FAILURE();
         return true;
@@ -506,48 +465,44 @@ TEST_F(DiffTest, ForEachThreeWayNoBaseChange) {
 
   // Left tree.
   std::vector<EntryChange> left_changes;
-  left_changes.push_back(EntryChange{
-      Entry{"key01", object1_identifier, KeyPriority::EAGER}, false});
-  left_changes.push_back(EntryChange{
-      Entry{"key03", object3_identifier, KeyPriority::EAGER}, false});
+  left_changes.push_back(
+      EntryChange{Entry{"key01", object1_identifier, KeyPriority::EAGER}, false});
+  left_changes.push_back(
+      EntryChange{Entry{"key03", object3_identifier, KeyPriority::EAGER}, false});
 
   ObjectIdentifier left_root_identifier;
-  ASSERT_TRUE(CreateTreeFromChanges(base_root_identifier, left_changes,
-                                    &left_root_identifier));
+  ASSERT_TRUE(CreateTreeFromChanges(base_root_identifier, left_changes, &left_root_identifier));
 
   // Right tree.
   std::vector<EntryChange> right_changes;
-  right_changes.push_back(EntryChange{
-      Entry{"key02", object2_identifier, KeyPriority::EAGER}, false});
-  right_changes.push_back(EntryChange{
-      Entry{"key04", object4_identifier, KeyPriority::EAGER}, false});
+  right_changes.push_back(
+      EntryChange{Entry{"key02", object2_identifier, KeyPriority::EAGER}, false});
+  right_changes.push_back(
+      EntryChange{Entry{"key04", object4_identifier, KeyPriority::EAGER}, false});
 
   ObjectIdentifier right_root_identifier;
-  ASSERT_TRUE(CreateTreeFromChanges(base_root_identifier, right_changes,
-                                    &right_root_identifier));
+  ASSERT_TRUE(CreateTreeFromChanges(base_root_identifier, right_changes, &right_root_identifier));
 
   std::vector<ThreeWayChange> expected_three_way_changes;
   expected_three_way_changes.push_back(ThreeWayChange{
-      CreateEntryPtr(),
-      CreateEntryPtr("key01", object1_identifier, KeyPriority::EAGER),
+      CreateEntryPtr(), CreateEntryPtr("key01", object1_identifier, KeyPriority::EAGER),
       CreateEntryPtr()});
+  expected_three_way_changes.push_back(
+      ThreeWayChange{CreateEntryPtr(), CreateEntryPtr(),
+                     CreateEntryPtr("key02", object2_identifier, KeyPriority::EAGER)});
   expected_three_way_changes.push_back(ThreeWayChange{
-      CreateEntryPtr(), CreateEntryPtr(),
-      CreateEntryPtr("key02", object2_identifier, KeyPriority::EAGER)});
-  expected_three_way_changes.push_back(ThreeWayChange{
-      CreateEntryPtr(),
-      CreateEntryPtr("key03", object3_identifier, KeyPriority::EAGER),
+      CreateEntryPtr(), CreateEntryPtr("key03", object3_identifier, KeyPriority::EAGER),
       CreateEntryPtr()});
-  expected_three_way_changes.push_back(ThreeWayChange{
-      CreateEntryPtr(), CreateEntryPtr(),
-      CreateEntryPtr("key04", object4_identifier, KeyPriority::EAGER)});
+  expected_three_way_changes.push_back(
+      ThreeWayChange{CreateEntryPtr(), CreateEntryPtr(),
+                     CreateEntryPtr("key04", object4_identifier, KeyPriority::EAGER)});
 
   bool called;
   Status status;
   unsigned int current_change = 0;
   ForEachThreeWayDiff(
-      environment_.coroutine_service(), &fake_storage_, base_root_identifier,
-      left_root_identifier, right_root_identifier, "",
+      environment_.coroutine_service(), &fake_storage_, base_root_identifier, left_root_identifier,
+      right_root_identifier, "",
       [&expected_three_way_changes, &current_change](ThreeWayChange e) {
         EXPECT_LT(current_change, expected_three_way_changes.size());
         if (current_change >= expected_three_way_changes.size()) {

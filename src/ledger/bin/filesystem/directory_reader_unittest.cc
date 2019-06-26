@@ -24,21 +24,19 @@ TEST(DirectoryReaderTest, GetDirectoryEntries) {
   scoped_tmpfs::ScopedTmpFS tmpfs;
 
   ASSERT_TRUE(files::CreateDirectoryAt(tmpfs.root_fd(), "foo"));
-  ASSERT_TRUE(files::WriteFileAt(tmpfs.root_fd(), "bar", kFileContent.data(),
-                                 kFileContent.size()));
-  ASSERT_TRUE(files::WriteFileAt(tmpfs.root_fd(), "foo/baz",
-                                 kFileContent.data(), kFileContent.size()));
+  ASSERT_TRUE(files::WriteFileAt(tmpfs.root_fd(), "bar", kFileContent.data(), kFileContent.size()));
+  ASSERT_TRUE(
+      files::WriteFileAt(tmpfs.root_fd(), "foo/baz", kFileContent.data(), kFileContent.size()));
 
   std::set<std::string> expected_entries = {"foo", "bar"};
 
-  EXPECT_TRUE(GetDirectoryEntries(
-      DetachedPath(tmpfs.root_fd()),
-      [&expected_entries](fxl::StringView entry) {
-        auto entry_iterator = expected_entries.find(entry.ToString());
-        EXPECT_NE(entry_iterator, expected_entries.end());
-        expected_entries.erase(entry_iterator);
-        return true;
-      }));
+  EXPECT_TRUE(GetDirectoryEntries(DetachedPath(tmpfs.root_fd()),
+                                  [&expected_entries](fxl::StringView entry) {
+                                    auto entry_iterator = expected_entries.find(entry.ToString());
+                                    EXPECT_NE(entry_iterator, expected_entries.end());
+                                    expected_entries.erase(entry_iterator);
+                                    return true;
+                                  }));
   EXPECT_EQ(expected_entries.size(), 0u);
 }
 

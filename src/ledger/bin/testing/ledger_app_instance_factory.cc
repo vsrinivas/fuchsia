@@ -21,8 +21,7 @@ LedgerAppInstanceFactory::LedgerAppInstance::LedgerAppInstance(
       ledger_repository_factory_(std::move(ledger_repository_factory)) {
   ledger_repository_factory_.set_error_handler([](zx_status_t status) {
     if (status != ZX_ERR_PEER_CLOSED) {
-      ADD_FAILURE() << "|LedgerRepositoryFactory| failed with an error: "
-                    << status;
+      ADD_FAILURE() << "|LedgerRepositoryFactory| failed with an error: " << status;
     }
   });
 }
@@ -42,9 +41,9 @@ LedgerAppInstanceFactory::LedgerAppInstance::GetTestLedgerRepository() {
       ADD_FAILURE() << "|LedgerRepository| failed with an error: " << status;
     }
   });
-  ledger_repository_factory_->GetRepository(
-      fsl::CloneChannelFromFileDescriptor(tmpfs_.root_fd()),
-      MakeCloudProvider(), GetUserId(), repository.NewRequest());
+  ledger_repository_factory_->GetRepository(fsl::CloneChannelFromFileDescriptor(tmpfs_.root_fd()),
+                                            MakeCloudProvider(), GetUserId(),
+                                            repository.NewRequest());
   return repository;
 }
 
@@ -73,8 +72,7 @@ PagePtr LedgerAppInstanceFactory::LedgerAppInstance::GetTestPage() {
   return page;
 }
 
-PagePtr LedgerAppInstanceFactory::LedgerAppInstance::GetPage(
-    const PageIdPtr& page_id) {
+PagePtr LedgerAppInstanceFactory::LedgerAppInstance::GetPage(const PageIdPtr& page_id) {
   PagePtr page_ptr;
   GetTestLedger()->GetPage(fidl::Clone(page_id), page_ptr.NewRequest());
   return page_ptr;

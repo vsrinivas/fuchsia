@@ -18,16 +18,14 @@
 
 namespace {
 
-int TryGetMemory(sys::ComponentContext* context,
-                 fuchsia::sys::ComponentControllerPtr* controller,
+int TryGetMemory(sys::ComponentContext* context, fuchsia::sys::ComponentControllerPtr* controller,
                  int root_fd) {
   ledger::LedgerPtr benchmark_ledger;
   ledger::Status status = ledger::GetLedger(
       context, controller->NewRequest(), nullptr, "", "benchmark_ledger",
       ledger::DetachedPath(root_fd), [] {}, &benchmark_ledger);
   if (status != ledger::Status::OK) {
-    FXL_LOG(INFO) << "GetLedger failed with status "
-                  << fidl::ToUnderlying(status);
+    FXL_LOG(INFO) << "GetLedger failed with status " << fidl::ToUnderlying(status);
     return EXIT_FAILURE;
   }
 

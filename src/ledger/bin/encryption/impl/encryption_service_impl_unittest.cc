@@ -16,22 +16,19 @@ namespace {
 
 class EncryptionServiceTest : public ledger::TestWithEnvironment {
  public:
-  EncryptionServiceTest()
-      : encryption_service_(&environment_, "namespace_id") {}
+  EncryptionServiceTest() : encryption_service_(&environment_, "namespace_id") {}
 
  protected:
-  void EncryptCommit(std::string commit_storage, Status* status,
-                     std::string* result) {
+  void EncryptCommit(std::string commit_storage, Status* status, std::string* result) {
     bool called;
     encryption_service_.EncryptCommit(
-        commit_storage,
-        callback::Capture(callback::SetWhenCalled(&called), status, result));
+        commit_storage, callback::Capture(callback::SetWhenCalled(&called), status, result));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
   }
 
-  void DecryptCommit(convert::ExtendedStringView encrypted_commit_storage,
-                     Status* status, std::string* result) {
+  void DecryptCommit(convert::ExtendedStringView encrypted_commit_storage, Status* status,
+                     std::string* result) {
     bool called;
     encryption_service_.DecryptCommit(
         encrypted_commit_storage,
@@ -40,8 +37,8 @@ class EncryptionServiceTest : public ledger::TestWithEnvironment {
     EXPECT_TRUE(called);
   }
 
-  void GetObjectName(storage::ObjectIdentifier object_identifier,
-                     Status* status, std::string* result) {
+  void GetObjectName(storage::ObjectIdentifier object_identifier, Status* status,
+                     std::string* result) {
     bool called;
     encryption_service_.GetObjectName(
         std::move(object_identifier),
@@ -50,9 +47,8 @@ class EncryptionServiceTest : public ledger::TestWithEnvironment {
     EXPECT_TRUE(called);
   }
 
-  void EncryptObject(storage::ObjectIdentifier object_identifier,
-                     fxl::StringView content, Status* status,
-                     std::string* result) {
+  void EncryptObject(storage::ObjectIdentifier object_identifier, fxl::StringView content,
+                     Status* status, std::string* result) {
     bool called;
     encryption_service_.EncryptObject(
         std::move(object_identifier), content,
@@ -61,9 +57,8 @@ class EncryptionServiceTest : public ledger::TestWithEnvironment {
     EXPECT_TRUE(called);
   }
 
-  void DecryptObject(storage::ObjectIdentifier object_identifier,
-                     std::string encrypted_data, Status* status,
-                     std::string* result) {
+  void DecryptObject(storage::ObjectIdentifier object_identifier, std::string encrypted_data,
+                     Status* status, std::string* result) {
     bool called;
     encryption_service_.DecryptObject(
         std::move(object_identifier), std::move(encrypted_data),
@@ -95,8 +90,7 @@ TEST_F(EncryptionServiceTest, EncryptDecryptCommit) {
 }
 
 TEST_F(EncryptionServiceTest, GetName) {
-  storage::ObjectIdentifier identifier{
-      42u, 42u, storage::ObjectDigest(std::string(33u, '\0'))};
+  storage::ObjectIdentifier identifier{42u, 42u, storage::ObjectDigest(std::string(33u, '\0'))};
   Status status;
   std::string name;
   GetObjectName(identifier, &status, &name);
@@ -105,8 +99,7 @@ TEST_F(EncryptionServiceTest, GetName) {
 }
 
 TEST_F(EncryptionServiceTest, EncryptDecryptObject) {
-  storage::ObjectIdentifier identifier{
-      42u, 42u, storage::ObjectDigest(std::string(33u, '\0'))};
+  storage::ObjectIdentifier identifier{42u, 42u, storage::ObjectDigest(std::string(33u, '\0'))};
   std::string content(256u, '\0');
   std::unique_ptr<storage::Object> object =
       std::make_unique<storage::fake::FakeObject>(identifier, content);
@@ -115,8 +108,7 @@ TEST_F(EncryptionServiceTest, EncryptDecryptObject) {
 
   Status status;
   std::string encrypted_bytes;
-  EncryptObject(object->GetIdentifier(), content_data, &status,
-                &encrypted_bytes);
+  EncryptObject(object->GetIdentifier(), content_data, &status, &encrypted_bytes);
   EXPECT_EQ(Status::OK, status);
   EXPECT_FALSE(encrypted_bytes.empty());
 

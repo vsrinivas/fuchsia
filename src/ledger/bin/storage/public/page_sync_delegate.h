@@ -25,8 +25,7 @@ class PageSyncDelegate {
   // Retrieves the object of the given id from the cloud.
   virtual void GetObject(
       ObjectIdentifier object_identifier,
-      fit::function<void(Status status, ChangeSource source,
-                         IsObjectSynced is_object_synced,
+      fit::function<void(Status status, ChangeSource source, IsObjectSynced is_object_synced,
                          std::unique_ptr<DataSource::DataChunk>)>
           callback) = 0;
 

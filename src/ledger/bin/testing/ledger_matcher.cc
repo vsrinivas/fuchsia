@@ -23,8 +23,8 @@ MATCHER_P(InternalViewMatcher, sub_matcher, "") {  // NOLINT
 
 MATCHER_P(InternalBufferMatcher, sub_matcher, "") {  // NOLINT
   std::string vmo_content;
-  if (!TypedEq<bool>(true).MatchAndExplain(
-          fsl::StringFromVmo(arg, &vmo_content), result_listener)) {
+  if (!TypedEq<bool>(true).MatchAndExplain(fsl::StringFromVmo(arg, &vmo_content),
+                                           result_listener)) {
     return false;
   }
 
@@ -32,24 +32,19 @@ MATCHER_P(InternalBufferMatcher, sub_matcher, "") {  // NOLINT
 }
 
 MATCHER_P(InternalErrorOrStringResultAdapterErrorMatcher, sub_matcher, "") {
-  const fit::result<std::string,
-                    std::pair<zx_status_t, fuchsia::ledger::Error>>& result =
+  const fit::result<std::string, std::pair<zx_status_t, fuchsia::ledger::Error>>& result =
       arg.ToResult();
-  if (!TypedEq<bool>(true).MatchAndExplain(result.is_error(),
-                                           result_listener)) {
+  if (!TypedEq<bool>(true).MatchAndExplain(result.is_error(), result_listener)) {
     return false;
   }
-  if (!TypedEq<zx_status_t>(ZX_OK).MatchAndExplain(result.error().first,
-                                                   result_listener)) {
+  if (!TypedEq<zx_status_t>(ZX_OK).MatchAndExplain(result.error().first, result_listener)) {
     return false;
   }
-  return ExplainMatchResult(sub_matcher, result.error().second,
-                            result_listener);
+  return ExplainMatchResult(sub_matcher, result.error().second, result_listener);
 }
 
 MATCHER_P(InternalErrorOrStringResultAdapterStringMatcher, sub_matcher, "") {
-  const fit::result<std::string,
-                    std::pair<zx_status_t, fuchsia::ledger::Error>>& result =
+  const fit::result<std::string, std::pair<zx_status_t, fuchsia::ledger::Error>>& result =
       arg.ToResult();
   if (!TypedEq<bool>(true).MatchAndExplain(result.is_ok(), result_listener)) {
     return false;
@@ -77,8 +72,7 @@ ErrorOrStringResultAdapter::ErrorOrStringResultAdapter(const Result& result) {
   std::string value;
   bool status = fsl::StringFromVmo(result.response().buffer, &value);
   if (!status) {
-    result_ = fit::error(std::make_pair(ZX_ERR_BAD_HANDLE,
-                                        fuchsia::ledger::Error::NETWORK_ERROR));
+    result_ = fit::error(std::make_pair(ZX_ERR_BAD_HANDLE, fuchsia::ledger::Error::NETWORK_ERROR));
     return;
   }
   result_ = fit::ok(std::move(value));
@@ -111,19 +105,16 @@ ErrorOrStringResultAdapter::ToResult() const {
 
 }  // namespace internal
 
-testing::Matcher<convert::ExtendedStringView> MatchesView(
-    testing::Matcher<std::string> matcher) {
+testing::Matcher<convert::ExtendedStringView> MatchesView(testing::Matcher<std::string> matcher) {
   return InternalViewMatcher(std::move(matcher));
 }
 
-testing::Matcher<const fuchsia::mem::Buffer&> MatchesBuffer(
-    testing::Matcher<std::string> matcher) {
+testing::Matcher<const fuchsia::mem::Buffer&> MatchesBuffer(testing::Matcher<std::string> matcher) {
   return InternalBufferMatcher(std::move(matcher));
 }
 
 testing::Matcher<const Entry&> MatchesEntry(
-    std::pair<testing::Matcher<std::string>, testing::Matcher<std::string>>
-        matcher) {
+    std::pair<testing::Matcher<std::string>, testing::Matcher<std::string>> matcher) {
   return AllOf(Field(&Entry::key, MatchesView(matcher.first)),
                Field(&Entry::value, Pointee(MatchesBuffer(matcher.second))));
 }

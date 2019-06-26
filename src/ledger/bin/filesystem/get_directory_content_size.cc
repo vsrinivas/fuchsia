@@ -21,17 +21,14 @@ bool GetDirectoryContentSize(DetachedPath directory, uint64_t* size) {
   while (!directories.empty()) {
     DetachedPath parent = std::move(directories.front());
     directories.pop();
-    if (!GetDirectoryEntries(parent, [&parent, size,
-                                      &directories](fxl::StringView child) {
+    if (!GetDirectoryEntries(parent, [&parent, size, &directories](fxl::StringView child) {
           DetachedPath child_path = parent.SubPath(child);
           if (files::IsDirectoryAt(child_path.root_fd(), child_path.path())) {
             directories.push(child_path);
           } else {
             uint64_t file_size = 0;
-            if (!files::GetFileSizeAt(child_path.root_fd(), child_path.path(),
-                                      &file_size)) {
-              FXL_LOG(ERROR)
-                  << "Couldn't get file size of " << child_path.path();
+            if (!files::GetFileSizeAt(child_path.root_fd(), child_path.path(), &file_size)) {
+              FXL_LOG(ERROR) << "Couldn't get file size of " << child_path.path();
               return false;
             }
             *size += file_size;

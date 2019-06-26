@@ -25,9 +25,7 @@ std::unique_ptr<const Commit> FakeCommit::Clone() const {
 
 const CommitId& FakeCommit::GetId() const { return journal_->GetId(); }
 
-std::vector<CommitIdView> FakeCommit::GetParentIds() const {
-  return journal_->GetParentIds();
-}
+std::vector<CommitIdView> FakeCommit::GetParentIds() const { return journal_->GetParentIds(); }
 
 zx::time_utc FakeCommit::GetTimestamp() const { return zx::time_utc(); }
 
@@ -35,13 +33,10 @@ uint64_t FakeCommit::GetGeneration() const { return journal_->GetGeneration(); }
 
 ObjectIdentifier FakeCommit::GetRootIdentifier() const {
   // The object digest is fake here: using journal id is arbitrary.
-  return encryption::MakeDefaultObjectIdentifier(
-      ObjectDigest(journal_->GetId()));
+  return encryption::MakeDefaultObjectIdentifier(ObjectDigest(journal_->GetId()));
 }
 
-fxl::StringView FakeCommit::GetStorageBytes() const {
-  return fxl::StringView();
-}
+fxl::StringView FakeCommit::GetStorageBytes() const { return fxl::StringView(); }
 
 }  // namespace fake
 }  // namespace storage

@@ -22,8 +22,7 @@ class Journal {
 
   // Adds an entry with the given |key| and |object_identifier| to this
   // |Journal|.
-  virtual void Put(convert::ExtendedStringView key,
-                   ObjectIdentifier object_identifier,
+  virtual void Put(convert::ExtendedStringView key, ObjectIdentifier object_identifier,
                    KeyPriority priority) = 0;
 
   // Deletes the entry with the given |key| from this |Journal|.

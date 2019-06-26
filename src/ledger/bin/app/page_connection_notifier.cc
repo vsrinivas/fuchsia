@@ -12,9 +12,8 @@
 
 namespace ledger {
 
-PageConnectionNotifier::PageConnectionNotifier(
-    std::string ledger_name, storage::PageId page_id,
-    PageUsageListener* page_usage_listener)
+PageConnectionNotifier::PageConnectionNotifier(std::string ledger_name, storage::PageId page_id,
+                                               PageUsageListener* page_usage_listener)
     : ledger_name_(std::move(ledger_name)),
       page_id_(std::move(page_id)),
       page_usage_listener_(page_usage_listener),

@@ -24,17 +24,15 @@ class NetConnectorFactory::Holder {
   void OnEmpty();
 
   const std::string device_name_;
-  fidl_helpers::BoundInterface<fuchsia::netconnector::NetConnector,
-                               FakeNetConnector>
-      interface_;
+  fidl_helpers::BoundInterface<fuchsia::netconnector::NetConnector, FakeNetConnector> interface_;
   fit::closure on_empty_;
   fit::closure on_disconnect_;
 };
 
 NetConnectorFactory::Holder::Holder(
     FakeNetConnector::Delegate* delegate,
-    fidl::InterfaceRequest<fuchsia::netconnector::NetConnector> request,
-    std::string device_name, fit::closure on_disconnect)
+    fidl::InterfaceRequest<fuchsia::netconnector::NetConnector> request, std::string device_name,
+    fit::closure on_disconnect)
     : device_name_(std::move(device_name)),
       interface_(std::move(request), delegate),
       on_disconnect_(std::move(on_disconnect)) {
@@ -45,9 +43,7 @@ void NetConnectorFactory::Holder::set_on_empty(fit::closure on_empty) {
   on_empty_ = std::move(on_empty);
 }
 
-FakeNetConnector* NetConnectorFactory::Holder::impl() {
-  return interface_.impl();
-}
+FakeNetConnector* NetConnectorFactory::Holder::impl() { return interface_.impl(); }
 
 void NetConnectorFactory::Holder::OnEmpty() {
   // We need to deregister ourselves from the list of active devices (call
@@ -68,12 +64,10 @@ NetConnectorFactory::NetConnectorFactory() {}
 NetConnectorFactory::~NetConnectorFactory() {}
 
 void NetConnectorFactory::AddBinding(
-    std::string host_name,
-    fidl::InterfaceRequest<fuchsia::netconnector::NetConnector> request) {
+    std::string host_name, fidl::InterfaceRequest<fuchsia::netconnector::NetConnector> request) {
   net_connectors_.emplace(
       std::piecewise_construct, std::forward_as_tuple(host_name),
-      std::forward_as_tuple(this, std::move(request), host_name,
-                            [this] { UpdatedHostList(); }));
+      std::forward_as_tuple(this, std::move(request), host_name, [this] { UpdatedHostList(); }));
   UpdatedHostList();
 }
 
@@ -93,12 +87,10 @@ void NetConnectorFactory::UpdatedHostList() {
 }
 
 void NetConnectorFactory::GetDevicesNames(
-    uint64_t last_version,
-    fit::function<void(uint64_t, std::vector<std::string>)> callback) {
+    uint64_t last_version, fit::function<void(uint64_t, std::vector<std::string>)> callback) {
   FXL_CHECK(last_version <= current_version_)
-      << "Last seen version (" << last_version
-      << ") is more recent than current version (" << current_version_
-      << "). Something is wrong here.";
+      << "Last seen version (" << last_version << ") is more recent than current version ("
+      << current_version_ << "). Something is wrong here.";
   if (last_version == current_version_) {
     pending_device_list_callbacks_.push_back(std::move(callback));
     return;
@@ -111,8 +103,7 @@ void NetConnectorFactory::GetDevicesNames(
 }
 
 void NetConnectorFactory::ConnectToServiceProvider(
-    std::string device_name,
-    fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> request) {
+    std::string device_name, fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> request) {
   auto it = net_connectors_.find(device_name);
   if (it == net_connectors_.end()) {
     return;

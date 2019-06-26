@@ -18,8 +18,7 @@ class EncryptionServiceFactory {
   virtual ~EncryptionServiceFactory() {}
 
   // Creates the encryption service for the given namespace.
-  virtual std::unique_ptr<EncryptionService> MakeEncryptionService(
-      std::string namespace_id) = 0;
+  virtual std::unique_ptr<EncryptionService> MakeEncryptionService(std::string namespace_id) = 0;
 };
 
 }  // namespace encryption

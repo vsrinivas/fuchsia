@@ -26,19 +26,16 @@ namespace ledger {
 namespace {
 
 fidl::VectorPtr<uint8_t> DoubleToArray(double dbl) {
-  fidl::VectorPtr<uint8_t> array =
-      fidl::VectorPtr<uint8_t>::New(sizeof(double));
+  fidl::VectorPtr<uint8_t> array = fidl::VectorPtr<uint8_t>::New(sizeof(double));
   std::memcpy(array->data(), &dbl, sizeof(double));
   return array;
 }
 
-::testing::AssertionResult VmoToDouble(const fuchsia::mem::BufferPtr& vmo,
-                                       double* dbl) {
+::testing::AssertionResult VmoToDouble(const fuchsia::mem::BufferPtr& vmo, double* dbl) {
   *dbl = 0;
   if (vmo->size != sizeof(double)) {
     return ::testing::AssertionFailure()
-           << "VMO has the wrong size: " << vmo->size << " instead of "
-           << sizeof(double) << ".";
+           << "VMO has the wrong size: " << vmo->size << " instead of " << sizeof(double) << ".";
   }
   zx_status_t status = vmo->vmo.read(dbl, 0, sizeof(double));
   if (status < 0) {
@@ -47,8 +44,7 @@ fidl::VectorPtr<uint8_t> DoubleToArray(double dbl) {
   return ::testing::AssertionSuccess();
 }
 
-class RefCountedPageSnapshot
-    : public fxl::RefCountedThreadSafe<RefCountedPageSnapshot> {
+class RefCountedPageSnapshot : public fxl::RefCountedThreadSafe<RefCountedPageSnapshot> {
  public:
   RefCountedPageSnapshot() {}
 
@@ -63,8 +59,7 @@ class PageWatcherImpl : public PageWatcher {
  public:
   PageWatcherImpl(fidl::InterfaceRequest<PageWatcher> request,
                   fxl::RefPtr<RefCountedPageSnapshot> base_snapshot)
-      : binding_(this, std::move(request)),
-        current_snapshot_(std::move(base_snapshot)) {}
+      : binding_(this, std::move(request)), current_snapshot_(std::move(base_snapshot)) {}
 
   int changes = 0;
 
@@ -74,13 +69,11 @@ class PageWatcherImpl : public PageWatcher {
     // call survives as long as the call is active, even if a new snapshot
     // arrives in between.
     (*current_snapshot_)
-        ->GetInline(
-            std::move(key),
-            [snapshot = current_snapshot_.Clone(),
-             callback = std::move(callback)](
-                fuchsia::ledger::PageSnapshot_GetInline_Result result) mutable {
-              callback(std::move(result));
-            });
+        ->GetInline(std::move(key),
+                    [snapshot = current_snapshot_.Clone(), callback = std::move(callback)](
+                        fuchsia::ledger::PageSnapshot_GetInline_Result result) mutable {
+                      callback(std::move(result));
+                    });
   }
 
  private:
@@ -130,28 +123,22 @@ class SyncWatcherImpl : public SyncWatcher {
 // produces the merged value (4*A+B)/3.
 class NonAssociativeConflictResolverImpl : public ConflictResolver {
  public:
-  explicit NonAssociativeConflictResolverImpl(
-      fidl::InterfaceRequest<ConflictResolver> request)
+  explicit NonAssociativeConflictResolverImpl(fidl::InterfaceRequest<ConflictResolver> request)
       : binding_(this, std::move(request)) {}
   ~NonAssociativeConflictResolverImpl() override {}
 
  private:
   // ConflictResolver:
-  void Resolve(
-      fidl::InterfaceHandle<PageSnapshot> /*left_version*/,
-      fidl::InterfaceHandle<PageSnapshot> /*right_version*/,
-      fidl::InterfaceHandle<PageSnapshot> /*common_version*/,
-      fidl::InterfaceHandle<MergeResultProvider> result_provider) override {
-    auto merge_result_provider =
-        std::make_unique<MergeResultProviderPtr>(result_provider.Bind());
-    merge_result_provider->set_error_handler(
-        [](zx_status_t status) { EXPECT_EQ(ZX_OK, status); });
-    MergeResultProvider* merge_result_provider_ptr =
-        merge_result_provider->get();
+  void Resolve(fidl::InterfaceHandle<PageSnapshot> /*left_version*/,
+               fidl::InterfaceHandle<PageSnapshot> /*right_version*/,
+               fidl::InterfaceHandle<PageSnapshot> /*common_version*/,
+               fidl::InterfaceHandle<MergeResultProvider> result_provider) override {
+    auto merge_result_provider = std::make_unique<MergeResultProviderPtr>(result_provider.Bind());
+    merge_result_provider->set_error_handler([](zx_status_t status) { EXPECT_EQ(ZX_OK, status); });
+    MergeResultProvider* merge_result_provider_ptr = merge_result_provider->get();
     merge_result_provider_ptr->GetFullDiff(
         nullptr, [merge_result_provider = std::move(merge_result_provider)](
-                     std::vector<DiffEntry> changes,
-                     std::unique_ptr<Token> next_token) mutable {
+                     std::vector<DiffEntry> changes, std::unique_ptr<Token> next_token) mutable {
           ASSERT_FALSE(next_token);
           ASSERT_EQ(1u, changes.size());
 
@@ -176,8 +163,7 @@ class NonAssociativeConflictResolverImpl : public ConflictResolver {
 
 class TestConflictResolverFactory : public ConflictResolverFactory {
  public:
-  explicit TestConflictResolverFactory(
-      fidl::InterfaceRequest<ConflictResolverFactory> request)
+  explicit TestConflictResolverFactory(fidl::InterfaceRequest<ConflictResolverFactory> request)
       : binding_(this, std::move(request)) {}
 
  private:
@@ -186,9 +172,8 @@ class TestConflictResolverFactory : public ConflictResolverFactory {
     callback(MergePolicy::CUSTOM);
   }
 
-  void NewConflictResolver(
-      PageId page_id,
-      fidl::InterfaceRequest<ConflictResolver> resolver) override {
+  void NewConflictResolver(PageId page_id,
+                           fidl::InterfaceRequest<ConflictResolver> resolver) override {
     resolvers.emplace(std::piecewise_construct,
                       std::forward_as_tuple(convert::ToString(page_id.id)),
                       std::forward_as_tuple(std::move(resolver)));
@@ -204,14 +189,12 @@ enum class MergeType {
   NON_ASSOCIATIVE_CUSTOM,
 };
 
-class ConvergenceTest
-    : public BaseIntegrationTest,
-      public ::testing::WithParamInterface<
-          std::tuple<MergeType, int, const LedgerAppInstanceFactoryBuilder*>> {
+class ConvergenceTest : public BaseIntegrationTest,
+                        public ::testing::WithParamInterface<
+                            std::tuple<MergeType, int, const LedgerAppInstanceFactoryBuilder*>> {
  public:
   ConvergenceTest()
-      : BaseIntegrationTest(
-            std::get<const LedgerAppInstanceFactoryBuilder*>(GetParam())) {}
+      : BaseIntegrationTest(std::get<const LedgerAppInstanceFactoryBuilder*>(GetParam())) {}
   ~ConvergenceTest() override{};
 
   void SetUp() override {
@@ -242,8 +225,7 @@ class ConvergenceTest
             ADD_FAILURE() << "Page should not be disconnected.";
             StopLoop();
           },
-          callback::Capture(loop_waiter->GetCallback(), &status, &pages_[i],
-                            &page_id));
+          callback::Capture(loop_waiter->GetCallback(), &status, &pages_[i], &page_id));
       ASSERT_TRUE(loop_waiter->RunUntilCalled());
       ASSERT_EQ(Status::OK, status);
     }
@@ -253,35 +235,29 @@ class ConvergenceTest
   std::unique_ptr<PageWatcherImpl> WatchPageContents(PagePtr* page) {
     PageWatcherPtr page_watcher;
     auto page_snapshot = fxl::MakeRefCounted<RefCountedPageSnapshot>();
-    fidl::InterfaceRequest<PageSnapshot> page_snapshot_request =
-        (**page_snapshot).NewRequest();
+    fidl::InterfaceRequest<PageSnapshot> page_snapshot_request = (**page_snapshot).NewRequest();
     std::unique_ptr<PageWatcherImpl> watcher =
-        std::make_unique<PageWatcherImpl>(page_watcher.NewRequest(),
-                                          std::move(page_snapshot));
-    (*page)->GetSnapshot(std::move(page_snapshot_request),
-                         fidl::VectorPtr<uint8_t>::New(0),
+        std::make_unique<PageWatcherImpl>(page_watcher.NewRequest(), std::move(page_snapshot));
+    (*page)->GetSnapshot(std::move(page_snapshot_request), fidl::VectorPtr<uint8_t>::New(0),
                          std::move(page_watcher));
     return watcher;
   }
 
   std::unique_ptr<SyncWatcherImpl> WatchPageSyncState(PagePtr* page) {
-    std::unique_ptr<SyncWatcherImpl> watcher =
-        std::make_unique<SyncWatcherImpl>();
+    std::unique_ptr<SyncWatcherImpl> watcher = std::make_unique<SyncWatcherImpl>();
     (*page)->SetSyncStateWatcher(watcher->NewBinding());
     return watcher;
   }
 
   // Returns true if the values for |key| on all the watchers are identical.
-  bool AreValuesIdentical(
-      const std::vector<std::unique_ptr<PageWatcherImpl>>& watchers,
-      std::string key) {
+  bool AreValuesIdentical(const std::vector<std::unique_ptr<PageWatcherImpl>>& watchers,
+                          std::string key) {
     std::vector<InlinedValue> values;
     for (int i = 0; i < num_ledgers_; i++) {
       auto loop_waiter = NewWaiter();
       fuchsia::ledger::PageSnapshot_GetInline_Result result;
       watchers[i]->GetInlineOnLatestSnapshot(
-          convert::ToArray(key),
-          callback::Capture(loop_waiter->GetCallback(), &result));
+          convert::ToArray(key), callback::Capture(loop_waiter->GetCallback(), &result));
       EXPECT_TRUE(loop_waiter->RunUntilCalled());
       EXPECT_TRUE(result.is_response());
       values.emplace_back(std::move(result.response().value));
@@ -298,8 +274,7 @@ class ConvergenceTest
   int num_ledgers_;
   MergeType merge_function_type_;
 
-  std::vector<std::unique_ptr<LedgerAppInstanceFactory::LedgerAppInstance>>
-      ledger_instances_;
+  std::vector<std::unique_ptr<LedgerAppInstanceFactory::LedgerAppInstance>> ledger_instances_;
   std::vector<PagePtr> pages_;
   std::unique_ptr<DataGenerator> data_generator_;
 };
@@ -311,16 +286,14 @@ TEST_P(ConvergenceTest, NLedgersConverge) {
   std::vector<std::unique_ptr<SyncWatcherImpl>> sync_watchers;
 
   std::vector<std::unique_ptr<TestConflictResolverFactory>> resolver_factories;
-  std::independent_bits_engine<std::default_random_engine, CHAR_BIT, uint8_t>
-      generator;
+  std::independent_bits_engine<std::default_random_engine, CHAR_BIT, uint8_t> generator;
   std::uniform_real_distribution<> distribution(1, 100);
 
   for (int i = 0; i < num_ledgers_; i++) {
     if (merge_function_type_ == MergeType::NON_ASSOCIATIVE_CUSTOM) {
       ConflictResolverFactoryPtr resolver_factory_ptr;
       resolver_factories.push_back(
-          std::make_unique<TestConflictResolverFactory>(
-              resolver_factory_ptr.NewRequest()));
+          std::make_unique<TestConflictResolverFactory>(resolver_factory_ptr.NewRequest()));
       LedgerPtr ledger = ledger_instances_[i]->GetTestLedger();
       ledger->SetConflictResolverFactory(std::move(resolver_factory_ptr));
     }
@@ -331,8 +304,7 @@ TEST_P(ConvergenceTest, NLedgersConverge) {
     pages_[i]->StartTransaction();
 
     if (merge_function_type_ == MergeType::NON_ASSOCIATIVE_CUSTOM) {
-      pages_[i]->Put(convert::ToArray("value"),
-                     DoubleToArray(distribution(generator)));
+      pages_[i]->Put(convert::ToArray("value"), DoubleToArray(distribution(generator)));
     } else {
       pages_[i]->Put(convert::ToArray("value"), data_generator_->MakeValue(50));
     }
@@ -350,8 +322,7 @@ TEST_P(ConvergenceTest, NLedgersConverge) {
 
   // Function to verify if the visible Ledger state has not changed since last
   // call and all values are identical.
-  fit::function<bool()> has_state_converged = [this, &watchers,
-                                               &sync_watchers]() {
+  fit::function<bool()> has_state_converged = [this, &watchers, &sync_watchers]() {
     // Counts the number of visible changes. Used to verify that the minimal
     // number of changes for all Ledgers to have communicated is accounted for
     // (see also below).
@@ -370,8 +341,7 @@ TEST_P(ConvergenceTest, NLedgersConverge) {
     bool idle = true;
     for (int i = 0; i < num_ledgers_; i++) {
       if (sync_watchers[i]->download != SyncState::IDLE ||
-          sync_watchers[i]->upload != SyncState::IDLE ||
-          sync_watchers[i]->new_state) {
+          sync_watchers[i]->upload != SyncState::IDLE || sync_watchers[i]->new_state) {
         idle = false;
       }
       // With this, we make sure we can verify if the state changes during the
@@ -384,31 +354,27 @@ TEST_P(ConvergenceTest, NLedgersConverge) {
   };
 
   bool merge_done = false;
-  ConflictResolutionWaitStatus wait_status =
-      ConflictResolutionWaitStatus::NO_CONFLICTS;
+  ConflictResolutionWaitStatus wait_status = ConflictResolutionWaitStatus::NO_CONFLICTS;
   fxl::RefPtr<callback::StatusWaiter<ConflictResolutionWaitStatus>> waiter;
 
   // In addition of verifying that the external states of the ledgers have
   // converged, we also verify we are not currently performing a merge in the
   // background, indicating that the convergence did not finish.
-  auto is_sync_and_merge_complete = [this, &has_state_converged, &merge_done,
-                                     &wait_status, &waiter] {
+  auto is_sync_and_merge_complete = [this, &has_state_converged, &merge_done, &wait_status,
+                                     &waiter] {
     TRACE_DURATION("ledger", "ledger_test_is_sync_and_merge_complete");
 
     if (has_state_converged()) {
-      if (merge_done &&
-          wait_status == ConflictResolutionWaitStatus::NO_CONFLICTS) {
+      if (merge_done && wait_status == ConflictResolutionWaitStatus::NO_CONFLICTS) {
         return true;
       }
       if (!waiter) {
-        waiter = fxl::MakeRefCounted<
-            callback::StatusWaiter<ConflictResolutionWaitStatus>>(
+        waiter = fxl::MakeRefCounted<callback::StatusWaiter<ConflictResolutionWaitStatus>>(
             ConflictResolutionWaitStatus::NO_CONFLICTS);
         for (int i = 0; i < num_ledgers_; i++) {
           pages_[i]->WaitForConflictResolution(waiter->NewCallback());
         }
-        waiter->Finalize([&merge_done, &wait_status,
-                          &waiter](ConflictResolutionWaitStatus status) {
+        waiter->Finalize([&merge_done, &wait_status, &waiter](ConflictResolutionWaitStatus status) {
           merge_done = true;
           wait_status = status;
           waiter = nullptr;
@@ -445,13 +411,12 @@ TEST_P(ConvergenceTest, NLedgersConverge) {
 
 INSTANTIATE_TEST_SUITE_P(
     ManyLedgersConvergenceTest, ConvergenceTest,
-    ::testing::Combine(
-        ::testing::Values(MergeType::LAST_ONE_WINS,
-                          MergeType::NON_ASSOCIATIVE_CUSTOM),
-        // Temporarily reduced the number of simulated Ledgers to reduce flaky
-        // failures on bots, see LE-752. TODO(ppi): revert back to (2, 6).
-        ::testing::Range(2, 3),
-        ::testing::ValuesIn(GetLedgerAppInstanceFactoryBuilders())));
+    ::testing::Combine(::testing::Values(MergeType::LAST_ONE_WINS,
+                                         MergeType::NON_ASSOCIATIVE_CUSTOM),
+                       // Temporarily reduced the number of simulated Ledgers to reduce flaky
+                       // failures on bots, see LE-752. TODO(ppi): revert back to (2, 6).
+                       ::testing::Range(2, 3),
+                       ::testing::ValuesIn(GetLedgerAppInstanceFactoryBuilders())));
 
 }  // namespace
 }  // namespace ledger

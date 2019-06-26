@@ -20,26 +20,22 @@ class FakeDb : public Db {
   ~FakeDb() override;
 
   // Db:
-  Status StartBatch(coroutine::CoroutineHandler* handler,
-                    std::unique_ptr<Batch>* batch) override;
-  Status Get(coroutine::CoroutineHandler* handler,
-             convert::ExtendedStringView key, std::string* value) override;
-  Status HasKey(coroutine::CoroutineHandler* handler,
-                convert::ExtendedStringView key) override;
-  Status GetObject(coroutine::CoroutineHandler* handler,
-                   convert::ExtendedStringView key,
+  Status StartBatch(coroutine::CoroutineHandler* handler, std::unique_ptr<Batch>* batch) override;
+  Status Get(coroutine::CoroutineHandler* handler, convert::ExtendedStringView key,
+             std::string* value) override;
+  Status HasKey(coroutine::CoroutineHandler* handler, convert::ExtendedStringView key) override;
+  Status GetObject(coroutine::CoroutineHandler* handler, convert::ExtendedStringView key,
                    ObjectIdentifier object_identifier,
                    std::unique_ptr<const Piece>* piece) override;
-  Status GetByPrefix(coroutine::CoroutineHandler* handler,
-                     convert::ExtendedStringView prefix,
+  Status GetByPrefix(coroutine::CoroutineHandler* handler, convert::ExtendedStringView prefix,
                      std::vector<std::string>* key_suffixes) override;
-  Status GetEntriesByPrefix(
-      coroutine::CoroutineHandler* handler, convert::ExtendedStringView prefix,
-      std::vector<std::pair<std::string, std::string>>* entries) override;
+  Status GetEntriesByPrefix(coroutine::CoroutineHandler* handler,
+                            convert::ExtendedStringView prefix,
+                            std::vector<std::pair<std::string, std::string>>* entries) override;
   Status GetIteratorAtPrefix(
       coroutine::CoroutineHandler* handler, convert::ExtendedStringView prefix,
-      std::unique_ptr<Iterator<const std::pair<convert::ExtendedStringView,
-                                               convert::ExtendedStringView>>>*
+      std::unique_ptr<
+          Iterator<const std::pair<convert::ExtendedStringView, convert::ExtendedStringView>>>*
           iterator) override;
 
  private:

@@ -11,12 +11,9 @@
 #include "src/ledger/bin/p2p_sync/impl/page_communicator_impl.h"
 
 namespace p2p_sync {
-LedgerCommunicatorImpl::LedgerCommunicatorImpl(
-    coroutine::CoroutineService* coroutine_service, std::string namespace_id,
-    DeviceMesh* mesh)
-    : coroutine_service_(coroutine_service),
-      namespace_id_(std::move(namespace_id)),
-      mesh_(mesh) {}
+LedgerCommunicatorImpl::LedgerCommunicatorImpl(coroutine::CoroutineService* coroutine_service,
+                                               std::string namespace_id, DeviceMesh* mesh)
+    : coroutine_service_(coroutine_service), namespace_id_(std::move(namespace_id)), mesh_(mesh) {}
 
 LedgerCommunicatorImpl::~LedgerCommunicatorImpl() {
   FXL_DCHECK(pages_.empty());
@@ -30,22 +27,20 @@ void LedgerCommunicatorImpl::set_on_delete(fit::closure on_delete) {
   on_delete_ = std::move(on_delete);
 }
 
-void LedgerCommunicatorImpl::OnDeviceChange(
-    fxl::StringView remote_device, p2p_provider::DeviceChangeType change_type) {
+void LedgerCommunicatorImpl::OnDeviceChange(fxl::StringView remote_device,
+                                            p2p_provider::DeviceChangeType change_type) {
   for (const auto& page : pages_) {
     page.second->OnDeviceChange(remote_device, change_type);
   }
 }
 
-void LedgerCommunicatorImpl::OnNewRequest(fxl::StringView source,
-                                          fxl::StringView page_id,
+void LedgerCommunicatorImpl::OnNewRequest(fxl::StringView source, fxl::StringView page_id,
                                           MessageHolder<Request> message) {
   const auto& it = pages_.find(page_id);
   if (it == pages_.end()) {
     // Send unknown page response.
     flatbuffers::FlatBufferBuilder buffer;
-    CreateUnknownResponseMessage(&buffer, namespace_id_, page_id,
-                                 ResponseStatus_UNKNOWN_PAGE);
+    CreateUnknownResponseMessage(&buffer, namespace_id_, page_id, ResponseStatus_UNKNOWN_PAGE);
     mesh_->Send(source, convert::ExtendedStringView(buffer));
     return;
   }
@@ -53,8 +48,7 @@ void LedgerCommunicatorImpl::OnNewRequest(fxl::StringView source,
   it->second->OnNewRequest(source, std::move(message));
 }
 
-void LedgerCommunicatorImpl::OnNewResponse(fxl::StringView source,
-                                           fxl::StringView page_id,
+void LedgerCommunicatorImpl::OnNewResponse(fxl::StringView source, fxl::StringView page_id,
                                            MessageHolder<Response> message) {
   const auto& it = pages_.find(page_id);
   if (it == pages_.end()) {
@@ -71,10 +65,8 @@ std::unique_ptr<PageCommunicator> LedgerCommunicatorImpl::GetPageCommunicator(
 
   FXL_DCHECK(pages_.find(page_id) == pages_.end());
 
-  std::unique_ptr<PageCommunicatorImpl> page =
-      std::make_unique<PageCommunicatorImpl>(coroutine_service_, storage,
-                                             sync_client, namespace_id_,
-                                             page_id, mesh_);
+  std::unique_ptr<PageCommunicatorImpl> page = std::make_unique<PageCommunicatorImpl>(
+      coroutine_service_, storage, sync_client, namespace_id_, page_id, mesh_);
   PageCommunicatorImpl* page_ptr = page.get();
   pages_.emplace(page_id, page_ptr);
   page->set_on_delete([this, page_id = std::move(page_id)] {

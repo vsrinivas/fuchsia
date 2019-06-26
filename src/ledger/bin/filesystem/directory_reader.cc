@@ -29,12 +29,10 @@ bool GetDirectoryEntries(const DetachedPath& directory,
   if (dir_fd == -1) {
     return false;
   }
-  std::unique_ptr<DIR, decltype(&SafeCloseDir)> dir(fdopendir(dir_fd),
-                                                    SafeCloseDir);
+  std::unique_ptr<DIR, decltype(&SafeCloseDir)> dir(fdopendir(dir_fd), SafeCloseDir);
   if (!dir)
     return false;
-  for (struct dirent* entry = readdir(dir.get()); entry != nullptr;
-       entry = readdir(dir.get())) {
+  for (struct dirent* entry = readdir(dir.get()); entry != nullptr; entry = readdir(dir.get())) {
     char* name = entry->d_name;
     if (name[0]) {
       if (name[0] == '.') {

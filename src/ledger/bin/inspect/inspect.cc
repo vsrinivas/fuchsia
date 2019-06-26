@@ -30,8 +30,7 @@ bool FromHex(fxl::StringView data, storage::PageId* page_id) {
   page_id->reserve(data.size() / 2);
   while (!data.empty()) {
     uint8_t value;
-    if (!fxl::StringToNumberWithError(data.substr(0, 2), &value,
-                                      fxl::Base::k16)) {
+    if (!fxl::StringToNumberWithError(data.substr(0, 2), &value, fxl::Base::k16)) {
       return false;
     }
     page_id->push_back(value);
@@ -50,13 +49,11 @@ std::string PageIdToDisplayName(const storage::PageId& page_id) {
   }
 }
 
-bool PageDisplayNameToPageId(const std::string& page_display_name,
-                             storage::PageId* page_id) {
+bool PageDisplayNameToPageId(const std::string& page_display_name, storage::PageId* page_id) {
   if (page_display_name.size() < fuchsia::ledger::PAGE_ID_SIZE * 2) {
     return false;
   }
-  return FromHex(fxl::StringView(page_display_name)
-                     .substr(0, fuchsia::ledger::PAGE_ID_SIZE * 2),
+  return FromHex(fxl::StringView(page_display_name).substr(0, fuchsia::ledger::PAGE_ID_SIZE * 2),
                  page_id);
 }
 
@@ -84,8 +81,7 @@ std::string KeyToDisplayName(const std::string& key) {
   }
 }
 
-bool KeyDisplayNameToKey(const std::string& key_display_name,
-                         std::string* key) {
+bool KeyDisplayNameToKey(const std::string& key_display_name, std::string* key) {
   fxl::StringView hex_portion = key_display_name;
   if (key_display_name.size() >= 5) {
     size_t key_length = (key_display_name.size() - 5) / 3;

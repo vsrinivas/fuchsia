@@ -17,8 +17,7 @@ class PageSyncEmptyImpl : public PageSync {
   void Start() override;
   void SetOnIdle(fit::closure on_idle_callback) override;
   bool IsIdle() override;
-  void SetOnBacklogDownloaded(
-      fit::closure on_backlog_downloaded_callback) override;
+  void SetOnBacklogDownloaded(fit::closure on_backlog_downloaded_callback) override;
   void SetSyncWatcher(SyncStateWatcher* watcher) override;
   void SetOnUnrecoverableError(fit::closure on_error) override;
 };

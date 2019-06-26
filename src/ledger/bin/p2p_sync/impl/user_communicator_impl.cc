@@ -15,11 +15,9 @@
 
 namespace p2p_sync {
 
-UserCommunicatorImpl::UserCommunicatorImpl(
-    std::unique_ptr<p2p_provider::P2PProvider> provider,
-    coroutine::CoroutineService* coroutine_service)
-    : p2p_provider_(std::move(provider)),
-      coroutine_service_(coroutine_service) {}
+UserCommunicatorImpl::UserCommunicatorImpl(std::unique_ptr<p2p_provider::P2PProvider> provider,
+                                           coroutine::CoroutineService* coroutine_service)
+    : p2p_provider_(std::move(provider)), coroutine_service_(coroutine_service) {}
 
 UserCommunicatorImpl::~UserCommunicatorImpl() { FXL_DCHECK(ledgers_.empty()); }
 
@@ -38,19 +36,15 @@ std::unique_ptr<LedgerCommunicator> UserCommunicatorImpl::GetLedgerCommunicator(
       << namespace_id;
 
   std::unique_ptr<LedgerCommunicatorImpl> ledger =
-      std::make_unique<LedgerCommunicatorImpl>(coroutine_service_, namespace_id,
-                                               this);
+      std::make_unique<LedgerCommunicatorImpl>(coroutine_service_, namespace_id, this);
   LedgerCommunicatorImpl* ledger_ptr = ledger.get();
-  ledger->set_on_delete(
-      [this, namespace_id]() mutable { ledgers_.erase(namespace_id); });
+  ledger->set_on_delete([this, namespace_id]() mutable { ledgers_.erase(namespace_id); });
   ledgers_[std::move(namespace_id)] = ledger_ptr;
   return ledger;
 }
 
-void UserCommunicatorImpl::OnNewMessage(fxl::StringView source,
-                                        fxl::StringView data) {
-  std::optional<MessageHolder<Message>> message =
-      CreateMessageHolder<Message>(data, &ParseMessage);
+void UserCommunicatorImpl::OnNewMessage(fxl::StringView source, fxl::StringView data) {
+  std::optional<MessageHolder<Message>> message = CreateMessageHolder<Message>(data, &ParseMessage);
   if (!message) {
     // Wrong serialization, abort.
     FXL_LOG(ERROR) << "The message received is malformed.";
@@ -64,10 +58,8 @@ void UserCommunicatorImpl::OnNewMessage(fxl::StringView source,
       break;
 
     case MessageUnion_Request: {
-      MessageHolder<Request> request =
-          std::move(*message).TakeAndMap<Request>([](const Message* message) {
-            return static_cast<const Request*>(message->message());
-          });
+      MessageHolder<Request> request = std::move(*message).TakeAndMap<Request>(
+          [](const Message* message) { return static_cast<const Request*>(message->message()); });
       const NamespacePageId* namespace_page_id = request->namespace_page();
 
       std::string namespace_id(namespace_page_id->namespace_id()->begin(),
@@ -88,10 +80,8 @@ void UserCommunicatorImpl::OnNewMessage(fxl::StringView source,
     }
 
     case MessageUnion_Response: {
-      MessageHolder<Response> response =
-          std::move(*message).TakeAndMap<Response>([](const Message* message) {
-            return static_cast<const Response*>(message->message());
-          });
+      MessageHolder<Response> response = std::move(*message).TakeAndMap<Response>(
+          [](const Message* message) { return static_cast<const Response*>(message->message()); });
       const NamespacePageId* namespace_page_id = response->namespace_page();
       std::string namespace_id(namespace_page_id->namespace_id()->begin(),
                                namespace_page_id->namespace_id()->end());
@@ -112,8 +102,8 @@ void UserCommunicatorImpl::OnNewMessage(fxl::StringView source,
   }
 }
 
-void UserCommunicatorImpl::OnDeviceChange(
-    fxl::StringView remote_device, p2p_provider::DeviceChangeType change_type) {
+void UserCommunicatorImpl::OnDeviceChange(fxl::StringView remote_device,
+                                          p2p_provider::DeviceChangeType change_type) {
   switch (change_type) {
     case p2p_provider::DeviceChangeType::NEW: {
       devices_.insert(remote_device.ToString());
@@ -133,8 +123,7 @@ void UserCommunicatorImpl::OnDeviceChange(
 
 DeviceMesh::DeviceSet UserCommunicatorImpl::GetDeviceList() { return devices_; }
 
-void UserCommunicatorImpl::Send(fxl::StringView device_name,
-                                convert::ExtendedStringView data) {
+void UserCommunicatorImpl::Send(fxl::StringView device_name, convert::ExtendedStringView data) {
   p2p_provider_->SendMessage(device_name, data);
 }
 

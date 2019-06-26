@@ -43,13 +43,11 @@ namespace ledger {
 // deletes the LedgerImpl and tears down the storage.
 class LedgerManager : public LedgerImpl::Delegate, inspect::ChildrenManager {
  public:
-  LedgerManager(
-      Environment* environment, std::string ledger_name,
-      inspect::Node inspect_node,
-      std::unique_ptr<encryption::EncryptionService> encryption_service,
-      std::unique_ptr<storage::LedgerStorage> storage,
-      std::unique_ptr<sync_coordinator::LedgerSync> ledger_sync,
-      PageUsageListener* page_usage_listener);
+  LedgerManager(Environment* environment, std::string ledger_name, inspect::Node inspect_node,
+                std::unique_ptr<encryption::EncryptionService> encryption_service,
+                std::unique_ptr<storage::LedgerStorage> storage,
+                std::unique_ptr<sync_coordinator::LedgerSync> ledger_sync,
+                PageUsageListener* page_usage_listener);
   ~LedgerManager() override;
 
   // Creates a new proxy for the LedgerImpl managed by this LedgerManager.
@@ -59,35 +57,29 @@ class LedgerManager : public LedgerImpl::Delegate, inspect::ChildrenManager {
   // the callback will be |PAGE_OPENED| if the page is opened after calling this
   // method and before the callback is called. Otherwise it will be |YES| or
   // |NO| depending on whether the page is synced or not.
-  void PageIsClosedAndSynced(
-      storage::PageIdView page_id,
-      fit::function<void(Status, PagePredicateResult)> callback);
+  void PageIsClosedAndSynced(storage::PageIdView page_id,
+                             fit::function<void(Status, PagePredicateResult)> callback);
 
   // Checks whether the given page is closed, offline and empty. The result
   // returned in the callback will be |PAGE_OPENED| if the page is opened after
   // calling this method and before the callback is called. Otherwise it will be
   // |YES| or |NO| depending on whether the page is offline and empty or not.
-  void PageIsClosedOfflineAndEmpty(
-      storage::PageIdView page_id,
-      fit::function<void(Status, PagePredicateResult)> callback);
+  void PageIsClosedOfflineAndEmpty(storage::PageIdView page_id,
+                                   fit::function<void(Status, PagePredicateResult)> callback);
 
   // Deletes the local copy of the page. If the page is currently open, the
   // callback will be called with |ILLEGAL_STATE|.
-  void DeletePageStorage(convert::ExtendedStringView page_id,
-                         fit::function<void(Status)> callback);
+  void DeletePageStorage(convert::ExtendedStringView page_id, fit::function<void(Status)> callback);
 
   // LedgerImpl::Delegate:
   void GetPage(convert::ExtendedStringView page_id, PageState page_state,
                fidl::InterfaceRequest<Page> page_request,
                fit::function<void(Status)> callback) override;
-  void SetConflictResolverFactory(
-      fidl::InterfaceHandle<ConflictResolverFactory> factory) override;
+  void SetConflictResolverFactory(fidl::InterfaceHandle<ConflictResolverFactory> factory) override;
 
   // inspect::ChildrenManager:
-  void GetNames(
-      fit::function<void(std::vector<std::string>)> callback) override;
-  void Attach(std::string name,
-              fit::function<void(fit::closure)> callback) override;
+  void GetNames(fit::function<void(std::vector<std::string>)> callback) override;
+  void Attach(std::string name, fit::function<void(fit::closure)> callback) override;
 
   void set_on_empty(fit::closure on_empty_callback) {
     on_empty_callback_ = std::move(on_empty_callback);
@@ -131,13 +123,10 @@ class LedgerManager : public LedgerImpl::Delegate, inspect::ChildrenManager {
   // |merge_manager_| must be destructed after |active_page_manager_containers_|
   // to ensure it outlives any page-specific merge resolver.
   LedgerMergeManager merge_manager_;
-  callback::AutoCleanableSet<
-      SyncableBinding<fuchsia::ledger::LedgerSyncableDelegate>>
-      bindings_;
+  callback::AutoCleanableSet<SyncableBinding<fuchsia::ledger::LedgerSyncableDelegate>> bindings_;
 
   // Mapping from each page id to the manager of that page.
-  callback::AutoCleanableMap<storage::PageId, PageManager,
-                             convert::StringViewComparator>
+  callback::AutoCleanableMap<storage::PageId, PageManager, convert::StringViewComparator>
       page_managers_;
   PageUsageListener* page_usage_listener_;
   fit::closure on_empty_callback_;

@@ -26,9 +26,7 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
 
   storage::PageId GetId() override { return "page"; }
 
-  void SetSyncDelegate(storage::PageSyncDelegate* page_sync) override {
-    return;
-  }
+  void SetSyncDelegate(storage::PageSyncDelegate* page_sync) override { return; }
 };
 
 class FuzzingP2PProvider : public p2p_provider::P2PProvider {
@@ -53,18 +51,15 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* Data, size_t Size) {
   auto provider = std::make_unique<FuzzingP2PProvider>();
   FuzzingP2PProvider* provider_ptr = provider.get();
 
-  UserCommunicatorImpl user_communicator(std::move(provider),
-                                         &coroutine_service);
+  UserCommunicatorImpl user_communicator(std::move(provider), &coroutine_service);
   user_communicator.Start();
   auto ledger_communicator = user_communicator.GetLedgerCommunicator("ledger");
 
   storage::PageStorageEmptyImpl page_storage;
 
-  auto page_communicator =
-      ledger_communicator->GetPageCommunicator(&page_storage, &page_storage);
+  auto page_communicator = ledger_communicator->GetPageCommunicator(&page_storage, &page_storage);
 
-  provider_ptr->client_->OnDeviceChange("device",
-                                        p2p_provider::DeviceChangeType::NEW);
+  provider_ptr->client_->OnDeviceChange("device", p2p_provider::DeviceChangeType::NEW);
   provider_ptr->client_->OnNewMessage("device", bytes);
 
   return 0;

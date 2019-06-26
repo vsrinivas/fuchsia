@@ -62,8 +62,7 @@ TEST(LedgerMatcher, EntriesMatcher) {
   entries.push_back(std::move(entry2));
 
   EXPECT_THAT(entries, MatchEntries({{"key1", "hello"}, {"key2", "hello2"}}));
-  EXPECT_THAT(entries, MatchEntries({{"key1", HasSubstr("ll")},
-                                     {"key2", HasSubstr("ll")}}));
+  EXPECT_THAT(entries, MatchEntries({{"key1", HasSubstr("ll")}, {"key2", HasSubstr("ll")}}));
 }
 
 }  // namespace

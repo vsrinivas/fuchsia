@@ -15,7 +15,6 @@ const char kNullPageId[::fuchsia::ledger::PAGE_ID_SIZE] = {};
 }  // namespace
 
 // The zero-initialized root id.
-constexpr fxl::StringView kRootPageId(kNullPageId,
-                                      ::fuchsia::ledger::PAGE_ID_SIZE);
+constexpr fxl::StringView kRootPageId(kNullPageId, ::fuchsia::ledger::PAGE_ID_SIZE);
 
 }  // namespace ledger

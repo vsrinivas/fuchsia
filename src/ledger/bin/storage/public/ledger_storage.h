@@ -23,27 +23,23 @@ class LedgerStorage {
   virtual ~LedgerStorage() {}
 
   // Finds the PageIds of pages that occupy storage on disk.
-  virtual void ListPages(
-      fit::function<void(Status, std::set<PageId>)> callback) = 0;
+  virtual void ListPages(fit::function<void(Status, std::set<PageId>)> callback) = 0;
 
   // Creates a new |PageStorage| for the Page with the given |page_id|.
   virtual void CreatePageStorage(
-      PageId page_id,
-      fit::function<void(Status, std::unique_ptr<PageStorage>)> callback) = 0;
+      PageId page_id, fit::function<void(Status, std::unique_ptr<PageStorage>)> callback) = 0;
 
   // Finds the |PageStorage| corresponding to the page with the given |page_id|.
   // The result will be returned through the given |callback|. If the storage
   // for the given page isn't found locally, nullptr will be returned instead.
   virtual void GetPageStorage(
-      PageId page_id,
-      fit::function<void(Status, std::unique_ptr<PageStorage>)> callback) = 0;
+      PageId page_id, fit::function<void(Status, std::unique_ptr<PageStorage>)> callback) = 0;
 
   // Deletes the storage related to the page with |page_id|. This includes the
   // local copy of the page storage with all commits, tree nodes and values.
   // This method can fail with a |PAGE_NOT_FOUND| error if the page is not
   // present in the local storage, or with an |IO_ERROR| if deletion fails.
-  virtual void DeletePageStorage(PageIdView page_id,
-                                 fit::function<void(Status)> callback) = 0;
+  virtual void DeletePageStorage(PageIdView page_id, fit::function<void(Status)> callback) = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(LedgerStorage);

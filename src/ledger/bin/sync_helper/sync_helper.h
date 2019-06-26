@@ -50,8 +50,8 @@ class SyncHelper {
   auto WrapOperation(A callback) {
     auto sync_point = current_sync_point_;
     in_flight_operation_counts_per_sync_point_[sync_point]++;
-    auto on_first_call = fit::defer(callback::MakeScoped(
-        weak_ptr_factory_.GetWeakPtr(), [this, sync_point] {
+    auto on_first_call =
+        fit::defer(callback::MakeScoped(weak_ptr_factory_.GetWeakPtr(), [this, sync_point] {
           if (--in_flight_operation_counts_per_sync_point_[sync_point] == 0) {
             CallSynchronizationCallbacks();
           }
@@ -64,12 +64,11 @@ class SyncHelper {
     //   is not a const operation.
     // - |callback| must be wrap into a Mutable because it might not have a
     //   const operator().
-    return
-        [callback = Mutable(std::move(callback)),
-         on_first_call = Mutable(std::move(on_first_call))](auto&&... params) {
-          (*callback)(std::forward<decltype(params)>(params)...);
-          on_first_call->call();
-        };
+    return [callback = Mutable(std::move(callback)),
+            on_first_call = Mutable(std::move(on_first_call))](auto&&... params) {
+      (*callback)(std::forward<decltype(params)>(params)...);
+      on_first_call->call();
+    };
   }
 
  private:

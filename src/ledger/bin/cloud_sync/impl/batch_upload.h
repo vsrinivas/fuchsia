@@ -51,12 +51,10 @@ class BatchUpload {
     TEMPORARY,
   };
 
-  BatchUpload(storage::PageStorage* storage,
-              encryption::EncryptionService* encryption_service,
+  BatchUpload(storage::PageStorage* storage, encryption::EncryptionService* encryption_service,
               cloud_provider::PageCloudPtr* page_cloud,
-              std::vector<std::unique_ptr<const storage::Commit>> commits,
-              fit::closure on_done, fit::function<void(ErrorType)> on_error,
-              unsigned int max_concurrent_uploads = 10);
+              std::vector<std::unique_ptr<const storage::Commit>> commits, fit::closure on_done,
+              fit::function<void(ErrorType)> on_error, unsigned int max_concurrent_uploads = 10);
   ~BatchUpload();
 
   // Starts a new upload attempt. Results are reported through |on_done|
@@ -77,15 +75,13 @@ class BatchUpload {
                                  std::string object_name);
 
   // Uploads the given object.
-  void UploadObject(storage::ObjectIdentifier object_identifier,
-                    std::string object_name,
+  void UploadObject(storage::ObjectIdentifier object_identifier, std::string object_name,
                     std::unique_ptr<const storage::Piece> piece,
                     std::unique_ptr<const storage::PieceToken> token);
 
   // Uploads the given object.
-  void UploadEncryptedObject(storage::ObjectIdentifier object_identifier,
-                             std::string object_name, std::string content,
-                             std::unique_ptr<const storage::PieceToken> token);
+  void UploadEncryptedObject(storage::ObjectIdentifier object_identifier, std::string object_name,
+                             std::string content, std::unique_ptr<const storage::PieceToken> token);
 
   // Filters already synced commits.
   void FilterAndUploadCommits();
@@ -94,8 +90,7 @@ class BatchUpload {
   void UploadCommits();
 
   // Notifies an error when trying to upload the given object.
-  void EnqueueForRetryAndSignalError(
-      storage::ObjectIdentifier object_identifier);
+  void EnqueueForRetryAndSignalError(storage::ObjectIdentifier object_identifier);
 
   storage::PageStorage* const storage_;
   encryption::EncryptionService* const encryption_service_;

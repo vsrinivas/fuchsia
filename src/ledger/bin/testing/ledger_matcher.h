@@ -21,29 +21,23 @@ class ErrorOrStringResultAdapter {
   template <typename Result>
   ErrorOrStringResultAdapter(const Result& result);
 
-  const fit::result<std::string,
-                    std::pair<zx_status_t, fuchsia::ledger::Error>>&
-  ToResult() const;
+  const fit::result<std::string, std::pair<zx_status_t, fuchsia::ledger::Error>>& ToResult() const;
 
  private:
-  fit::result<std::string, std::pair<zx_status_t, fuchsia::ledger::Error>>
-      result_;
+  fit::result<std::string, std::pair<zx_status_t, fuchsia::ledger::Error>> result_;
 };
 }  // namespace internal
 
 // Matcher that matches a convert::ExtendedStringView against a string-like.
-testing::Matcher<convert::ExtendedStringView> MatchesView(
-    testing::Matcher<std::string> matcher);
+testing::Matcher<convert::ExtendedStringView> MatchesView(testing::Matcher<std::string> matcher);
 
 // Matcher that matches a mem::Buffer against a string.
-testing::Matcher<const fuchsia::mem::Buffer&> MatchesBuffer(
-    testing::Matcher<std::string> matcher);
+testing::Matcher<const fuchsia::mem::Buffer&> MatchesBuffer(testing::Matcher<std::string> matcher);
 
 // Matcher that matches a Ledger entry against a pair of matchers on the entry's
 // key and value. The entry's priority is not considered in this Matcher.
 testing::Matcher<const Entry&> MatchesEntry(
-    std::pair<testing::Matcher<std::string>, testing::Matcher<std::string>>
-        matcher);
+    std::pair<testing::Matcher<std::string>, testing::Matcher<std::string>> matcher);
 
 // Matcher that matches a list of ledger entries against a map from key to
 // matchers on the entries' values. The entries' priorities are not considered

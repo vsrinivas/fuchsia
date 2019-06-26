@@ -10,9 +10,7 @@
 
 namespace ledger {
 namespace {
-TEST(StatusTest, StatusToString) {
-  EXPECT_EQ("OK", StatusToString(Status::OK));
-}
+TEST(StatusTest, StatusToString) { EXPECT_EQ("OK", StatusToString(Status::OK)); }
 
 TEST(StatusTest, StatusToStream) {
   std::stringstream ss;

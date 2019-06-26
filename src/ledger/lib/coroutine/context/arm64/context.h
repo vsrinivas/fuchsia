@@ -79,9 +79,8 @@ struct InternalContext {
   uint64_t registers[NUM_REGISTERS];
 };
 
-#define ASSERT_REGISTER_OFFSET(REG)                                 \
-  static_assert(offsetof(struct InternalContext,                    \
-                         registers[context::REG_##REG]) == REG##_O, \
+#define ASSERT_REGISTER_OFFSET(REG)                                                         \
+  static_assert(offsetof(struct InternalContext, registers[context::REG_##REG]) == REG##_O, \
                 "offset is incorrect")
 
 ASSERT_REGISTER_OFFSET(X19);

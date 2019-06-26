@@ -14,13 +14,12 @@
 
 namespace ledger {
 
-Environment::Environment(
-    bool disable_statistics, async_dispatcher_t* dispatcher,
-    async_dispatcher_t* io_dispatcher, std::string firebase_api_key,
-    sys::ComponentContext* component_context,
-    std::unique_ptr<coroutine::CoroutineService> coroutine_service,
-    BackoffFactory backoff_factory, std::unique_ptr<timekeeper::Clock> clock,
-    std::unique_ptr<rng::Random> random)
+Environment::Environment(bool disable_statistics, async_dispatcher_t* dispatcher,
+                         async_dispatcher_t* io_dispatcher, std::string firebase_api_key,
+                         sys::ComponentContext* component_context,
+                         std::unique_ptr<coroutine::CoroutineService> coroutine_service,
+                         BackoffFactory backoff_factory, std::unique_ptr<timekeeper::Clock> clock,
+                         std::unique_ptr<rng::Random> random)
     : disable_statistics_(disable_statistics),
       dispatcher_(dispatcher),
       io_dispatcher_(io_dispatcher),
@@ -39,9 +38,7 @@ Environment::Environment(
   FXL_DCHECK(random_);
 }
 
-Environment::Environment(Environment&& other) noexcept {
-  *this = std::move(other);
-}
+Environment::Environment(Environment&& other) noexcept { *this = std::move(other); }
 
 Environment& Environment::operator=(Environment&& other) noexcept {
   disable_statistics_ = other.disable_statistics_;
@@ -65,35 +62,28 @@ Environment& Environment::operator=(Environment&& other) noexcept {
 
 Environment::~Environment() {}
 
-std::unique_ptr<backoff::Backoff> Environment::MakeBackoff() {
-  return backoff_factory_();
-}
+std::unique_ptr<backoff::Backoff> Environment::MakeBackoff() { return backoff_factory_(); }
 
-EnvironmentBuilder::EnvironmentBuilder()
-    : firebase_api_key_(modular::kFirebaseApiKey) {}
+EnvironmentBuilder::EnvironmentBuilder() : firebase_api_key_(modular::kFirebaseApiKey) {}
 
 EnvironmentBuilder::~EnvironmentBuilder() {}
 
-EnvironmentBuilder& EnvironmentBuilder::SetDisableStatistics(
-    bool disable_statistics) {
+EnvironmentBuilder& EnvironmentBuilder::SetDisableStatistics(bool disable_statistics) {
   disable_statistics_ = disable_statistics;
   return *this;
 }
 
-EnvironmentBuilder& EnvironmentBuilder::SetAsync(
-    async_dispatcher_t* dispatcher) {
+EnvironmentBuilder& EnvironmentBuilder::SetAsync(async_dispatcher_t* dispatcher) {
   dispatcher_ = dispatcher;
   return *this;
 }
 
-EnvironmentBuilder& EnvironmentBuilder::SetIOAsync(
-    async_dispatcher_t* io_dispatcher) {
+EnvironmentBuilder& EnvironmentBuilder::SetIOAsync(async_dispatcher_t* io_dispatcher) {
   io_dispatcher_ = io_dispatcher;
   return *this;
 }
 
-EnvironmentBuilder& EnvironmentBuilder::SetFirebaseApiKey(
-    std::string firebase_api_key) {
+EnvironmentBuilder& EnvironmentBuilder::SetFirebaseApiKey(std::string firebase_api_key) {
   firebase_api_key_ = std::move(firebase_api_key);
   return *this;
 }
@@ -117,14 +107,12 @@ EnvironmentBuilder& EnvironmentBuilder::SetBackoffFactory(
   return *this;
 }
 
-EnvironmentBuilder& EnvironmentBuilder::SetClock(
-    std::unique_ptr<timekeeper::Clock> clock) {
+EnvironmentBuilder& EnvironmentBuilder::SetClock(std::unique_ptr<timekeeper::Clock> clock) {
   clock_ = std::move(clock);
   return *this;
 }
 
-EnvironmentBuilder& EnvironmentBuilder::SetRandom(
-    std::unique_ptr<rng::Random> random) {
+EnvironmentBuilder& EnvironmentBuilder::SetRandom(std::unique_ptr<rng::Random> random) {
   random_ = std::move(random);
   return *this;
 }
@@ -141,13 +129,11 @@ Environment EnvironmentBuilder::Build() {
   }
   if (!backoff_factory_) {
     backoff_factory_ = [random = random_.get()] {
-      return std::make_unique<backoff::ExponentialBackoff>(
-          random->NewBitGenerator<uint64_t>());
+      return std::make_unique<backoff::ExponentialBackoff>(random->NewBitGenerator<uint64_t>());
     };
   }
-  return Environment(disable_statistics_, dispatcher_, io_dispatcher_,
-                     std::move(firebase_api_key_), component_context_,
-                     std::move(coroutine_service_), std::move(backoff_factory_),
+  return Environment(disable_statistics_, dispatcher_, io_dispatcher_, std::move(firebase_api_key_),
+                     component_context_, std::move(coroutine_service_), std::move(backoff_factory_),
                      std::move(clock_), std::move(random_));
 }
 

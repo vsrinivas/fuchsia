@@ -38,11 +38,9 @@ namespace ledger {
 // |on_empty_callback|.
 class PageManager {
  public:
-  PageManager(Environment* environment, std::string ledger_name,
-              storage::PageId page_id, PageUsageListener* page_usage_listener,
-              storage::LedgerStorage* ledger_storage,
-              sync_coordinator::LedgerSync* ledger_sync,
-              LedgerMergeManager* ledger_merge_manager,
+  PageManager(Environment* environment, std::string ledger_name, storage::PageId page_id,
+              PageUsageListener* page_usage_listener, storage::LedgerStorage* ledger_storage,
+              sync_coordinator::LedgerSync* ledger_sync, LedgerMergeManager* ledger_merge_manager,
               inspect::Node inspect_node);
   ~PageManager();
 
@@ -50,8 +48,7 @@ class PageManager {
   // the callback will be |PAGE_OPENED| if the page is opened after calling this
   // method and before the callback is called. Otherwise it will be |YES| or
   // |NO| depending on whether the page is synced or not.
-  void PageIsClosedAndSynced(
-      fit::function<void(storage::Status, PagePredicateResult)> callback);
+  void PageIsClosedAndSynced(fit::function<void(storage::Status, PagePredicateResult)> callback);
 
   // Checks whether the given page is closed, offline and empty. The result
   // returned in the callback will be |PAGE_OPENED| if the page is opened after
@@ -85,9 +82,8 @@ class PageManager {
 
   // Requests a PageStorage object for the given |container|. If the page is not
   // locally available, the |callback| is called with |PAGE_NOT_FOUND|.
-  void InitActivePageManagerContainer(
-      ActivePageManagerContainer* container,
-      fit::function<void(storage::Status)> callback);
+  void InitActivePageManagerContainer(ActivePageManagerContainer* container,
+                                      fit::function<void(storage::Status)> callback);
 
   // Creates a page storage for the given |page_id| and completes the
   // ActivePageManagerContainer.
@@ -108,9 +104,7 @@ class PageManager {
   // called. Otherwise it will be |YES| or |NO| depending on whether the
   // predicate is satisfied.
   void PageIsClosedAndSatisfiesPredicate(
-      fit::function<void(ActivePageManager*,
-                         fit::function<void(storage::Status, bool)>)>
-          predicate,
+      fit::function<void(ActivePageManager*, fit::function<void(storage::Status, bool)>)> predicate,
       fit::function<void(storage::Status, PagePredicateResult)> callback);
 
   // Returns a tracking Callable object for the page. When called, returns

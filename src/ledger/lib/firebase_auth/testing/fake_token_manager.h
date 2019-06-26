@@ -33,27 +33,23 @@ class FakeTokenManager : public fuchsia::auth::TokenManager {
   // fuchsia::auth::TokenManager:
   void Authorize(AppConfig app_config,
                  fidl::InterfaceHandle<AuthenticationUIContext> auth_ui_context,
-                 std::vector<std::string> app_scopes,
-                 fidl::StringPtr user_profile_id, fidl::StringPtr auth_code,
-                 AuthorizeCallback callback) override;
+                 std::vector<std::string> app_scopes, fidl::StringPtr user_profile_id,
+                 fidl::StringPtr auth_code, AuthorizeCallback callback) override;
 
   void GetAccessToken(AppConfig app_config, std::string user_profile_id,
                       std::vector<std::string> app_scopes,
                       GetAccessTokenCallback callback) override;
 
-  void GetIdToken(AppConfig app_config, std::string user_profile_id,
-                  fidl::StringPtr audience,
+  void GetIdToken(AppConfig app_config, std::string user_profile_id, fidl::StringPtr audience,
                   GetIdTokenCallback callback) override;
 
-  void GetFirebaseToken(AppConfig app_config, std::string user_profile_id,
-                        std::string audience, std::string firebase_api_key,
-                        GetFirebaseTokenCallback callback) override;
+  void GetFirebaseToken(AppConfig app_config, std::string user_profile_id, std::string audience,
+                        std::string firebase_api_key, GetFirebaseTokenCallback callback) override;
 
-  void DeleteAllTokens(AppConfig app_config, std::string user_profile_id,
-                       bool force, DeleteAllTokensCallback callback) override;
+  void DeleteAllTokens(AppConfig app_config, std::string user_profile_id, bool force,
+                       DeleteAllTokensCallback callback) override;
 
-  void ListProfileIds(AppConfig app_config,
-                      ListProfileIdsCallback callback) override;
+  void ListProfileIds(AppConfig app_config, ListProfileIdsCallback callback) override;
 
   // Sets the token to return to null, and status to |status|.
   std::string firebase_id_token_;

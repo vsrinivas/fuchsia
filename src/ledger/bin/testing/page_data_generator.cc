@@ -22,8 +22,7 @@ constexpr size_t kMaxInlineDataSize = ZX_CHANNEL_MAX_MSG_BYTES * 9 / 10;
 
 bool LogOnError(Status status, fxl::StringView description) {
   if (status != Status::OK) {
-    FXL_LOG(ERROR) << description << " failed with status "
-                   << fidl::ToUnderlying(status) << ".";
+    FXL_LOG(ERROR) << description << " failed with status " << fidl::ToUnderlying(status) << ".";
     return true;
   }
   return false;
@@ -31,19 +30,15 @@ bool LogOnError(Status status, fxl::StringView description) {
 
 }  // namespace
 
-PageDataGenerator::PageDataGenerator(rng::Random* random)
-    : generator_(random) {}
+PageDataGenerator::PageDataGenerator(rng::Random* random) : generator_(random) {}
 
 void PageDataGenerator::PutEntry(PagePtr* page, std::vector<uint8_t> key,
-                                 std::vector<uint8_t> value,
-                                 ReferenceStrategy ref_strategy,
-                                 Priority priority,
-                                 fit::function<void(Status)> callback) {
+                                 std::vector<uint8_t> value, ReferenceStrategy ref_strategy,
+                                 Priority priority, fit::function<void(Status)> callback) {
   if (ref_strategy == ReferenceStrategy::INLINE) {
     if (value.size() >= kMaxInlineDataSize) {
-      FXL_LOG(ERROR)
-          << "Value too large (" << value.size()
-          << ") to be put inline. Consider putting as reference instead.";
+      FXL_LOG(ERROR) << "Value too large (" << value.size()
+                     << ") to be put inline. Consider putting as reference instead.";
       callback(Status::IO_ERROR);
       return;
     }
@@ -60,45 +55,39 @@ void PageDataGenerator::PutEntry(PagePtr* page, std::vector<uint8_t> key,
   (*page)->CreateReferenceFromBuffer(
       std::move(vmo).ToTransport(),
       [page, key = std::move(key), priority, callback = std::move(callback)](
-          fuchsia::ledger::Page_CreateReferenceFromBuffer_Result
-              result) mutable {
+          fuchsia::ledger::Page_CreateReferenceFromBuffer_Result result) mutable {
         if (result.is_err()) {
           LogOnError(Status::IO_ERROR, "Page::CreateReferenceFromBuffer");
           callback(Status::IO_ERROR);
           return;
         }
-        (*page)->PutReference(std::move(key),
-                              std::move(result.response().reference), priority);
+        (*page)->PutReference(std::move(key), std::move(result.response().reference), priority);
         callback(Status::OK);
       });
 }
 
-void PageDataGenerator::Populate(PagePtr* page,
-                                 std::vector<std::vector<uint8_t>> keys,
+void PageDataGenerator::Populate(PagePtr* page, std::vector<std::vector<uint8_t>> keys,
                                  size_t value_size, size_t transaction_size,
-                                 ReferenceStrategy ref_strategy,
-                                 Priority priority,
+                                 ReferenceStrategy ref_strategy, Priority priority,
                                  fit::function<void(Status)> callback) {
   if (transaction_size == 0) {
-    PutMultipleEntries(page, std::move(keys), value_size, ref_strategy,
-                       priority, std::move(callback));
+    PutMultipleEntries(page, std::move(keys), value_size, ref_strategy, priority,
+                       std::move(callback));
     return;
   }
-  PutInTransaction(page, std::move(keys), 0, value_size, transaction_size,
-                   ref_strategy, priority, std::move(callback));
+  PutInTransaction(page, std::move(keys), 0, value_size, transaction_size, ref_strategy, priority,
+                   std::move(callback));
 }
 
-void PageDataGenerator::PutInTransaction(
-    PagePtr* page, std::vector<std::vector<uint8_t>> keys,
-    size_t current_key_index, size_t value_size, size_t transaction_size,
-    ReferenceStrategy ref_strategy, Priority priority,
-    fit::function<void(Status)> callback) {
+void PageDataGenerator::PutInTransaction(PagePtr* page, std::vector<std::vector<uint8_t>> keys,
+                                         size_t current_key_index, size_t value_size,
+                                         size_t transaction_size, ReferenceStrategy ref_strategy,
+                                         Priority priority, fit::function<void(Status)> callback) {
   if (current_key_index >= keys.size()) {
     (*page)->Sync([callback = std::move(callback)] { callback(Status::OK); });
     return;
   }
-  size_t this_transaction_size =
-      std::min(transaction_size, keys.size() - current_key_index);
+  size_t this_transaction_size = std::min(transaction_size, keys.size() - current_key_index);
   std::vector<std::vector<uint8_t>> partial_keys;
   std::move(keys.begin() + current_key_index,
             keys.begin() + current_key_index + this_transaction_size,
@@ -107,30 +96,26 @@ void PageDataGenerator::PutInTransaction(
   (*page)->StartTransaction();
   PutMultipleEntries(
       page, std::move(partial_keys), value_size, ref_strategy, priority,
-      [this, page, keys = std::move(keys), current_key_index, value_size,
-       ref_strategy, priority, transaction_size,
-       callback = std::move(callback)](Status status) mutable {
+      [this, page, keys = std::move(keys), current_key_index, value_size, ref_strategy, priority,
+       transaction_size, callback = std::move(callback)](Status status) mutable {
         if (LogOnError(status, "PutMultipleEntries")) {
           callback(status);
           return;
         }
         (*page)->Commit();
-        PutInTransaction(page, std::move(keys),
-                         current_key_index + transaction_size, value_size,
-                         transaction_size, ref_strategy, priority,
-                         std::move(callback));
+        PutInTransaction(page, std::move(keys), current_key_index + transaction_size, value_size,
+                         transaction_size, ref_strategy, priority, std::move(callback));
       });
 }
 
-void PageDataGenerator::PutMultipleEntries(
-    PagePtr* page, std::vector<std::vector<uint8_t>> keys, size_t value_size,
-    ReferenceStrategy ref_strategy, Priority priority,
-    fit::function<void(Status)> callback) {
+void PageDataGenerator::PutMultipleEntries(PagePtr* page, std::vector<std::vector<uint8_t>> keys,
+                                           size_t value_size, ReferenceStrategy ref_strategy,
+                                           Priority priority,
+                                           fit::function<void(Status)> callback) {
   auto waiter = fxl::MakeRefCounted<callback::StatusWaiter<Status>>(Status::OK);
   for (auto& key : keys) {
     std::vector<uint8_t> value = generator_.MakeValue(value_size);
-    PutEntry(page, std::move(key), std::move(value), ref_strategy, priority,
-             waiter->NewCallback());
+    PutEntry(page, std::move(key), std::move(value), ref_strategy, priority, waiter->NewCallback());
   }
   waiter->Finalize(std::move(callback));
 }

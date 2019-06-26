@@ -18,8 +18,7 @@
 
 namespace cloud_sync {
 
-PageSyncImpl::PageSyncImpl(async_dispatcher_t* dispatcher,
-                           storage::PageStorage* storage,
+PageSyncImpl::PageSyncImpl(async_dispatcher_t* dispatcher, storage::PageStorage* storage,
                            storage::PageSyncClient* sync_client,
                            encryption::EncryptionService* encryption_service,
                            cloud_provider::PageCloudPtr page_cloud,
@@ -37,12 +36,11 @@ PageSyncImpl::PageSyncImpl(async_dispatcher_t* dispatcher,
   FXL_DCHECK(page_cloud_);
   // We need to initialize page_download_ after task_runner_, but task_runner_
   // must be the last field.
-  page_download_ = std::make_unique<PageDownload>(
-      &task_runner_, storage_, sync_client_, encryption_service_, &page_cloud_,
-      this, std::move(download_backoff));
-  page_upload_ = std::make_unique<PageUpload>(&task_runner_, storage_,
-                                              encryption_service_, &page_cloud_,
-                                              this, std::move(upload_backoff));
+  page_download_ =
+      std::make_unique<PageDownload>(&task_runner_, storage_, sync_client_, encryption_service_,
+                                     &page_cloud_, this, std::move(download_backoff));
+  page_upload_ = std::make_unique<PageUpload>(&task_runner_, storage_, encryption_service_,
+                                              &page_cloud_, this, std::move(upload_backoff));
   page_cloud_.set_error_handler([this](zx_status_t status) {
     if (on_unrecoverable_error_ && !error_callback_already_called_) {
       error_callback_already_called_ = true;
@@ -86,9 +84,7 @@ void PageSyncImpl::SetOnIdle(fit::closure on_idle) {
   on_idle_ = std::move(on_idle);
 }
 
-bool PageSyncImpl::IsIdle() {
-  return page_upload_->IsIdle() && page_download_->IsIdle();
-}
+bool PageSyncImpl::IsIdle() { return page_upload_->IsIdle() && page_download_->IsIdle(); }
 
 void PageSyncImpl::SetOnBacklogDownloaded(fit::closure on_backlog_downloaded) {
   FXL_DCHECK(!on_backlog_downloaded_);
@@ -103,8 +99,7 @@ void PageSyncImpl::SetSyncWatcher(SyncStateWatcher* watcher) {
   }
 }
 
-void PageSyncImpl::SetOnUnrecoverableError(
-    fit::closure on_unrecoverable_error) {
+void PageSyncImpl::SetOnUnrecoverableError(fit::closure on_unrecoverable_error) {
   on_unrecoverable_error_ = std::move(on_unrecoverable_error);
 }
 
@@ -139,14 +134,12 @@ void PageSyncImpl::NotifyStateWatcher() {
 }
 
 void PageSyncImpl::SetDownloadState(DownloadSyncState next_download_state) {
-  if (download_state_ == DOWNLOAD_BACKLOG &&
-      next_download_state != DOWNLOAD_PERMANENT_ERROR &&
+  if (download_state_ == DOWNLOAD_BACKLOG && next_download_state != DOWNLOAD_PERMANENT_ERROR &&
       on_backlog_downloaded_) {
     on_backlog_downloaded_();
   }
 
-  if (download_state_ != DOWNLOAD_IDLE &&
-      next_download_state == DOWNLOAD_IDLE && enable_upload_) {
+  if (download_state_ != DOWNLOAD_IDLE && next_download_state == DOWNLOAD_IDLE && enable_upload_) {
     page_upload_->StartOrRestartUpload();
   }
 

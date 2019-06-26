@@ -17,8 +17,8 @@ namespace ledger {
 
 class LedgerAppInstanceFactoryImpl : public LedgerAppInstanceFactory {
  public:
-  explicit LedgerAppInstanceFactoryImpl(
-      std::unique_ptr<LoopController> loop_controller, SyncParams sync_params);
+  explicit LedgerAppInstanceFactoryImpl(std::unique_ptr<LoopController> loop_controller,
+                                        SyncParams sync_params);
   ~LedgerAppInstanceFactoryImpl() override;
 
   std::unique_ptr<LedgerAppInstance> NewLedgerAppInstance() override;

@@ -15,26 +15,24 @@ namespace {
 constexpr zx::duration kDelay = zx::msec(500);
 }  // namespace
 
-void GetPageEnsureInitialized(
-    LedgerPtr* ledger, PageIdPtr requested_id, DelayCallback delay_callback,
-    fit::function<void()> error_handler,
-    fit::function<void(Status, PagePtr, PageId)> callback) {
+void GetPageEnsureInitialized(LedgerPtr* ledger, PageIdPtr requested_id,
+                              DelayCallback delay_callback, fit::function<void()> error_handler,
+                              fit::function<void(Status, PagePtr, PageId)> callback) {
   auto page = std::make_unique<PagePtr>();
   auto request = page->NewRequest();
   (*ledger)->GetPage(std::move(requested_id), std::move(request));
-  page->set_error_handler(
-      [error_handler = std::move(error_handler)](zx_status_t status) {
-        FXL_LOG(ERROR) << "The page connection was closed, quitting.";
-        error_handler();
-      });
+  page->set_error_handler([error_handler = std::move(error_handler)](zx_status_t status) {
+    FXL_LOG(ERROR) << "The page connection was closed, quitting.";
+    error_handler();
+  });
 
   auto page_ptr = (*page).get();
-  page_ptr->GetId([delay_callback, page = std::move(page),
-                   callback = std::move(callback)](PageId page_id) {
-    if (delay_callback == DelayCallback::YES) {
-      zx_nanosleep(zx_deadline_after(kDelay.get()));
-    }
-    callback(Status::OK, std::move(*page), page_id);
-  });
+  page_ptr->GetId(
+      [delay_callback, page = std::move(page), callback = std::move(callback)](PageId page_id) {
+        if (delay_callback == DelayCallback::YES) {
+          zx_nanosleep(zx_deadline_after(kDelay.get()));
+        }
+        callback(Status::OK, std::move(*page), page_id);
+      });
 }
 }  // namespace ledger

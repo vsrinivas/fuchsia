@@ -13,16 +13,13 @@ namespace {
 
 class RecordingWatcher : public SyncStateWatcher {
  public:
-  void Notify(SyncStateContainer sync_state) override {
-    states.push_back(sync_state);
-  }
+  void Notify(SyncStateContainer sync_state) override { states.push_back(sync_state); }
 
   std::vector<SyncStateContainer> states;
 };
 
 TEST(AggregatorTest, SendFirstNotification) {
-  std::unique_ptr<RecordingWatcher> base_watcher =
-      std::make_unique<RecordingWatcher>();
+  std::unique_ptr<RecordingWatcher> base_watcher = std::make_unique<RecordingWatcher>();
   Aggregator aggregator;
   aggregator.SetBaseWatcher(base_watcher.get());
 
@@ -35,8 +32,7 @@ TEST(AggregatorTest, SendFirstNotification) {
 }
 
 TEST(AggregatorTest, AggregateTwo) {
-  std::unique_ptr<RecordingWatcher> base_watcher =
-      std::make_unique<RecordingWatcher>();
+  std::unique_ptr<RecordingWatcher> base_watcher = std::make_unique<RecordingWatcher>();
 
   Aggregator aggregator;
   aggregator.SetBaseWatcher(base_watcher.get());
@@ -62,8 +58,7 @@ TEST(AggregatorTest, AggregateTwo) {
 }
 
 TEST(AggregatorTest, ResetWatcher) {
-  std::unique_ptr<RecordingWatcher> base_watcher =
-      std::make_unique<RecordingWatcher>();
+  std::unique_ptr<RecordingWatcher> base_watcher = std::make_unique<RecordingWatcher>();
   Aggregator aggregator;
   aggregator.SetBaseWatcher(base_watcher.get());
 
@@ -74,8 +69,7 @@ TEST(AggregatorTest, ResetWatcher) {
   EXPECT_EQ(DOWNLOAD_IN_PROGRESS, base_watcher->states[1].download);
   EXPECT_EQ(UPLOAD_WAIT_REMOTE_DOWNLOAD, base_watcher->states[1].upload);
 
-  std::unique_ptr<RecordingWatcher> base_watcher2 =
-      std::make_unique<RecordingWatcher>();
+  std::unique_ptr<RecordingWatcher> base_watcher2 = std::make_unique<RecordingWatcher>();
   aggregator.SetBaseWatcher(base_watcher2.get());
 
   ASSERT_EQ(1u, base_watcher2->states.size());

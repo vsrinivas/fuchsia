@@ -28,8 +28,7 @@ class UserSyncImpl : public UserSync {
   void Start() override;
   void SetWatcher(SyncStateWatcher* watcher) override;
   std::unique_ptr<LedgerSync> CreateLedgerSync(
-      fxl::StringView app_id,
-      encryption::EncryptionService* encryption_service) override;
+      fxl::StringView app_id, encryption::EncryptionService* encryption_service) override;
 
  private:
   std::unique_ptr<SyncWatcherConverter> watcher_;

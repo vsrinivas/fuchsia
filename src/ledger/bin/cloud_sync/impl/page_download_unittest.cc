@@ -43,8 +43,7 @@ cloud_provider::PositionToken MakeToken(convert::ExtendedStringView token_id) {
 storage::ObjectIdentifier MakeObjectIdentifier() {
   // Need not be valid (wrt. internal storage constraints) as it is only used as
   // an opaque identifier for cloud_sync.
-  return storage::ObjectIdentifier(1u, 1u,
-                                   storage::ObjectDigest("object_digest"));
+  return storage::ObjectIdentifier(1u, 1u, storage::ObjectDigest("object_digest"));
 }
 
 constexpr zx::duration kTestBackoffInterval = zx::msec(50);
@@ -56,24 +55,21 @@ std::unique_ptr<backoff::TestBackoff> NewTestBackoff() {
 // Dummy implementation of a backoff policy, which always returns zero backoff
 // time.
 template <typename E>
-class BasePageDownloadTest : public gtest::TestLoopFixture,
-                             public PageDownload::Delegate {
+class BasePageDownloadTest : public gtest::TestLoopFixture, public PageDownload::Delegate {
  public:
   BasePageDownloadTest()
       : storage_(dispatcher()),
         encryption_service_(dispatcher()),
         page_cloud_(page_cloud_ptr_.NewRequest()),
         task_runner_(dispatcher()) {
-    page_download_ = std::make_unique<PageDownload>(
-        &task_runner_, &storage_, &storage_, &encryption_service_,
-        &page_cloud_ptr_, this, NewTestBackoff());
+    page_download_ =
+        std::make_unique<PageDownload>(&task_runner_, &storage_, &storage_, &encryption_service_,
+                                       &page_cloud_ptr_, this, NewTestBackoff());
   }
   ~BasePageDownloadTest() override {}
 
  protected:
-  void SetOnNewStateCallback(fit::closure callback) {
-    new_state_callback_ = std::move(callback);
-  }
+  void SetOnNewStateCallback(fit::closure callback) { new_state_callback_ = std::move(callback); }
 
   // Starts download and runs the loop until the download state is idle. Returns
   // true iff the download state went to idle as expected.
@@ -91,8 +87,7 @@ class BasePageDownloadTest : public gtest::TestLoopFixture,
     if (on_idle_called) {
       return ::testing::AssertionSuccess();
     }
-    return ::testing::AssertionFailure()
-           << "The download state never reached idle.";
+    return ::testing::AssertionFailure() << "The download state never reached idle.";
   }
 
   TestPageStorage storage_;
@@ -120,8 +115,7 @@ class BasePageDownloadTest : public gtest::TestLoopFixture,
   FXL_DISALLOW_COPY_AND_ASSIGN(BasePageDownloadTest);
 };
 
-using PageDownloadTest =
-    BasePageDownloadTest<encryption::FakeEncryptionService>;
+using PageDownloadTest = BasePageDownloadTest<encryption::FakeEncryptionService>;
 
 // Verifies that the backlog of unsynced commits is retrieved from the cloud
 // provider and saved in storage.
@@ -129,10 +123,8 @@ TEST_F(PageDownloadTest, DownloadBacklog) {
   EXPECT_EQ(0u, storage_.received_commits.size());
   EXPECT_EQ(0u, storage_.sync_metadata.count(kTimestampKey.ToString()));
 
-  page_cloud_.commits_to_return.push_back(
-      MakeTestCommit(&encryption_service_, "id1", "content1"));
-  page_cloud_.commits_to_return.push_back(
-      MakeTestCommit(&encryption_service_, "id2", "content2"));
+  page_cloud_.commits_to_return.push_back(MakeTestCommit(&encryption_service_, "id1", "content1"));
+  page_cloud_.commits_to_return.push_back(MakeTestCommit(&encryption_service_, "id2", "content2"));
   page_cloud_.position_token_to_return = fidl::MakeOptional(MakeToken("43"));
 
   ASSERT_TRUE(StartDownloadAndWaitForIdle());
@@ -150,9 +142,8 @@ TEST_F(PageDownloadTest, DownloadLongBacklog) {
 
   const size_t commit_count = 100'000;
   for (size_t i = 0; i < commit_count; i++) {
-    page_cloud_.commits_to_return.push_back(
-        MakeTestCommit(&encryption_service_, "id" + std::to_string(i),
-                       "content" + std::to_string(i)));
+    page_cloud_.commits_to_return.push_back(MakeTestCommit(
+        &encryption_service_, "id" + std::to_string(i), "content" + std::to_string(i)));
   }
   page_cloud_.position_token_to_return = fidl::MakeOptional(MakeToken("43"));
 
@@ -163,25 +154,19 @@ TEST_F(PageDownloadTest, DownloadLongBacklog) {
   EXPECT_EQ(DOWNLOAD_IDLE, states_.back());
 }
 
-TEST_F(PageDownloadTest, DownloadEmptyBacklog) {
-  ASSERT_TRUE(StartDownloadAndWaitForIdle());
-}
+TEST_F(PageDownloadTest, DownloadEmptyBacklog) { ASSERT_TRUE(StartDownloadAndWaitForIdle()); }
 
 // Verifies that the cloud watcher is registered for the timestamp of the most
 // recent commit downloaded from the backlog.
 TEST_F(PageDownloadTest, RegisterWatcher) {
-  page_cloud_.commits_to_return.push_back(
-      MakeTestCommit(&encryption_service_, "id1", "content1"));
-  page_cloud_.commits_to_return.push_back(
-      MakeTestCommit(&encryption_service_, "id2", "content2"));
+  page_cloud_.commits_to_return.push_back(MakeTestCommit(&encryption_service_, "id1", "content1"));
+  page_cloud_.commits_to_return.push_back(MakeTestCommit(&encryption_service_, "id2", "content2"));
   page_cloud_.position_token_to_return = fidl::MakeOptional(MakeToken("43"));
 
   ASSERT_TRUE(StartDownloadAndWaitForIdle());
 
   ASSERT_EQ(1u, page_cloud_.set_watcher_position_tokens.size());
-  EXPECT_EQ("43",
-            convert::ToString(
-                page_cloud_.set_watcher_position_tokens.front()->opaque_id));
+  EXPECT_EQ("43", convert::ToString(page_cloud_.set_watcher_position_tokens.front()->opaque_id));
 }
 
 // Verifies that commit notifications about new commits in cloud provider are
@@ -192,11 +177,10 @@ TEST_F(PageDownloadTest, ReceiveNotifications) {
   // Deliver a remote notification.
   EXPECT_EQ(0u, storage_.received_commits.size());
   EXPECT_EQ(0u, storage_.sync_metadata.count(kTimestampKey.ToString()));
-  auto commit_pack = MakeTestCommitPack(
-      &encryption_service_, {{"id1", "content1"}, {"id2", "content2"}});
+  auto commit_pack =
+      MakeTestCommitPack(&encryption_service_, {{"id1", "content1"}, {"id2", "content2"}});
   ASSERT_TRUE(commit_pack);
-  page_cloud_.set_watcher->OnNewCommits(std::move(*commit_pack),
-                                        MakeToken("43"), [] {});
+  page_cloud_.set_watcher->OnNewCommits(std::move(*commit_pack), MakeToken("43"), [] {});
   RunLoopUntilIdle();
 
   // Verify that the remote commits were added to storage.
@@ -236,19 +220,16 @@ TEST_F(PageDownloadTest, CoalesceMultipleNotifications) {
   // Deliver a remote notification.
   EXPECT_EQ(0u, storage_.received_commits.size());
   EXPECT_EQ(0u, storage_.sync_metadata.count(kTimestampKey.ToString()));
-  auto commit_pack =
-      MakeTestCommitPack(&encryption_service_, {{"id1", "content1"}});
+  auto commit_pack = MakeTestCommitPack(&encryption_service_, {{"id1", "content1"}});
   ASSERT_TRUE(commit_pack);
-  page_cloud_.set_watcher->OnNewCommits(std::move(*commit_pack),
-                                        MakeToken("42"), [] {});
+  page_cloud_.set_watcher->OnNewCommits(std::move(*commit_pack), MakeToken("42"), [] {});
   RunLoopUntilIdle();
   EXPECT_EQ(1u, storage_.delayed_add_commit_confirmations.size());
 
   // Add two more remote commits, before storage confirms adding the first one.
-  commit_pack = MakeTestCommitPack(&encryption_service_,
-                                   {{"id2", "content2"}, {"id3", "content3"}});
-  page_cloud_.set_watcher->OnNewCommits(std::move(*commit_pack),
-                                        MakeToken("44"), [] {});
+  commit_pack =
+      MakeTestCommitPack(&encryption_service_, {{"id2", "content2"}, {"id3", "content3"}});
+  page_cloud_.set_watcher->OnNewCommits(std::move(*commit_pack), MakeToken("44"), [] {});
 
   // Make storage confirm adding the first commit.
   storage_.should_delay_add_commit_confirmation = false;
@@ -285,8 +266,7 @@ TEST_F(PageDownloadTest, RetryDownloadBacklog) {
 
   SetOnNewStateCallback([] {});
   page_cloud_.status_to_return = cloud_provider::Status::OK;
-  page_cloud_.commits_to_return.push_back(
-      MakeTestCommit(&encryption_service_, "id1", "content1"));
+  page_cloud_.commits_to_return.push_back(MakeTestCommit(&encryption_service_, "id1", "content1"));
   page_cloud_.position_token_to_return = fidl::MakeOptional(MakeToken("42"));
   RunLoopFor(kTestBackoffInterval);
   EXPECT_TRUE(page_download_->IsIdle());
@@ -303,11 +283,9 @@ TEST_F(PageDownloadTest, FailToStoreRemoteCommit) {
   EXPECT_TRUE(page_cloud_.set_watcher.is_bound());
 
   storage_.should_fail_add_commit_from_sync = true;
-  auto commit_pack =
-      MakeTestCommitPack(&encryption_service_, {{"id1", "content1"}});
+  auto commit_pack = MakeTestCommitPack(&encryption_service_, {{"id1", "content1"}});
   ASSERT_TRUE(commit_pack);
-  page_cloud_.set_watcher->OnNewCommits(std::move(*commit_pack),
-                                        MakeToken("42"), [] {});
+  page_cloud_.set_watcher->OnNewCommits(std::move(*commit_pack), MakeToken("42"), [] {});
 
   RunLoopUntilIdle();
   ASSERT_FALSE(states_.empty());
@@ -318,10 +296,8 @@ TEST_F(PageDownloadTest, FailToStoreRemoteCommit) {
 // Verifies that the idle status is returned when there is no download in
 // progress.
 TEST_F(PageDownloadTest, DownloadIdleCallback) {
-  page_cloud_.commits_to_return.push_back(
-      MakeTestCommit(&encryption_service_, "id1", "content1"));
-  page_cloud_.commits_to_return.push_back(
-      MakeTestCommit(&encryption_service_, "id2", "content2"));
+  page_cloud_.commits_to_return.push_back(MakeTestCommit(&encryption_service_, "id1", "content1"));
+  page_cloud_.commits_to_return.push_back(MakeTestCommit(&encryption_service_, "id2", "content2"));
   page_cloud_.position_token_to_return = fidl::MakeOptional(MakeToken("43"));
 
   int on_idle_calls = 0;
@@ -342,11 +318,9 @@ TEST_F(PageDownloadTest, DownloadIdleCallback) {
 
   // Notify about a new commit to download and verify that the idle callback was
   // called again on completion.
-  auto commit_pack =
-      MakeTestCommitPack(&encryption_service_, {{"id3", "content3"}});
+  auto commit_pack = MakeTestCommitPack(&encryption_service_, {{"id3", "content3"}});
   ASSERT_TRUE(commit_pack);
-  page_cloud_.set_watcher->OnNewCommits(std::move(*commit_pack),
-                                        MakeToken("44"), [] {});
+  page_cloud_.set_watcher->OnNewCommits(std::move(*commit_pack), MakeToken("44"), [] {});
   RunLoopUntilIdle();
   EXPECT_EQ(3u, storage_.received_commits.size());
   EXPECT_EQ(2, on_idle_calls);
@@ -356,8 +330,7 @@ TEST_F(PageDownloadTest, DownloadIdleCallback) {
 // Verifies that sync correctly fetches objects from the cloud provider.
 TEST_F(PageDownloadTest, GetObject) {
   storage::ObjectIdentifier object_identifier = MakeObjectIdentifier();
-  std::string object_name =
-      encryption_service_.GetObjectNameSynchronous(object_identifier);
+  std::string object_name = encryption_service_.GetObjectNameSynchronous(object_identifier);
   page_cloud_.objects_to_return[object_name] =
       encryption_service_.EncryptObjectSynchronous("content");
   page_download_->StartDownload();
@@ -370,9 +343,8 @@ TEST_F(PageDownloadTest, GetObject) {
   RunLoopUntilIdle();
   states_.clear();
   storage_.page_sync_delegate_->GetObject(
-      object_identifier,
-      callback::Capture(callback::SetWhenCalled(&called), &status, &source,
-                        &is_object_synced, &data_chunk));
+      object_identifier, callback::Capture(callback::SetWhenCalled(&called), &status, &source,
+                                           &is_object_synced, &data_chunk));
   RunLoopUntilIdle();
 
   EXPECT_TRUE(called);
@@ -388,8 +360,7 @@ TEST_F(PageDownloadTest, GetObject) {
 // Verifies that sync retries GetObject() attempts upon connection error.
 TEST_F(PageDownloadTest, RetryGetObject) {
   storage::ObjectIdentifier object_identifier = MakeObjectIdentifier();
-  std::string object_name =
-      encryption_service_.GetObjectNameSynchronous(object_identifier);
+  std::string object_name = encryption_service_.GetObjectNameSynchronous(object_identifier);
 
   page_cloud_.status_to_return = cloud_provider::Status::NETWORK_ERROR;
   SetOnNewStateCallback([this] {
@@ -406,9 +377,8 @@ TEST_F(PageDownloadTest, RetryGetObject) {
   storage::IsObjectSynced is_object_synced;
   std::unique_ptr<storage::DataSource::DataChunk> data_chunk;
   storage_.page_sync_delegate_->GetObject(
-      object_identifier,
-      callback::Capture(callback::SetWhenCalled(&called), &status, &source,
-                        &is_object_synced, &data_chunk));
+      object_identifier, callback::Capture(callback::SetWhenCalled(&called), &status, &source,
+                                           &is_object_synced, &data_chunk));
 
   // Allow the operation to succeed after looping through five attempts.
   RunLoopFor(kTestBackoffInterval * 4);
@@ -425,42 +395,36 @@ TEST_F(PageDownloadTest, RetryGetObject) {
   EXPECT_EQ(storage::IsObjectSynced::YES, is_object_synced);
 }
 
-class FailingDecryptCommitEncryptionService
-    : public encryption::FakeEncryptionService {
+class FailingDecryptCommitEncryptionService : public encryption::FakeEncryptionService {
  public:
   explicit FailingDecryptCommitEncryptionService(async_dispatcher_t* dispatcher)
       : encryption::FakeEncryptionService(dispatcher) {}
 
-  void DecryptCommit(
-      convert::ExtendedStringView /*storage_bytes*/,
-      fit::function<void(encryption::Status, std::string)> callback) override {
+  void DecryptCommit(convert::ExtendedStringView /*storage_bytes*/,
+                     fit::function<void(encryption::Status, std::string)> callback) override {
     callback(encryption::Status::INVALID_ARGUMENT, "");
   }
 };
 
-class FailingGetNameEncryptionService
-    : public encryption::FakeEncryptionService {
+class FailingGetNameEncryptionService : public encryption::FakeEncryptionService {
  public:
   explicit FailingGetNameEncryptionService(async_dispatcher_t* dispatcher)
       : encryption::FakeEncryptionService(dispatcher) {}
 
-  void GetObjectName(
-      storage::ObjectIdentifier /*object_identifier*/,
-      fit::function<void(encryption::Status, std::string)> callback) override {
+  void GetObjectName(storage::ObjectIdentifier /*object_identifier*/,
+                     fit::function<void(encryption::Status, std::string)> callback) override {
     callback(encryption::Status::INVALID_ARGUMENT, "");
   }
 };
 
-class FailingDecryptObjectEncryptionService
-    : public encryption::FakeEncryptionService {
+class FailingDecryptObjectEncryptionService : public encryption::FakeEncryptionService {
  public:
   explicit FailingDecryptObjectEncryptionService(async_dispatcher_t* dispatcher)
       : encryption::FakeEncryptionService(dispatcher) {}
 
-  void DecryptObject(
-      storage::ObjectIdentifier /*object_identifier*/,
-      std::string /*encrypted_data*/,
-      fit::function<void(encryption::Status, std::string)> callback) override {
+  void DecryptObject(storage::ObjectIdentifier /*object_identifier*/,
+                     std::string /*encrypted_data*/,
+                     fit::function<void(encryption::Status, std::string)> callback) override {
     callback(encryption::Status::INVALID_ARGUMENT, "");
   }
 };
@@ -471,10 +435,8 @@ TEST_F(FailingDecryptCommitPageDownloadTest, Fail) {
   EXPECT_EQ(0u, storage_.received_commits.size());
   EXPECT_EQ(0u, storage_.sync_metadata.count(kTimestampKey.ToString()));
 
-  page_cloud_.commits_to_return.push_back(
-      MakeTestCommit(&encryption_service_, "id1", "content1"));
-  page_cloud_.commits_to_return.push_back(
-      MakeTestCommit(&encryption_service_, "id2", "content2"));
+  page_cloud_.commits_to_return.push_back(MakeTestCommit(&encryption_service_, "id1", "content1"));
+  page_cloud_.commits_to_return.push_back(MakeTestCommit(&encryption_service_, "id2", "content2"));
   page_cloud_.position_token_to_return = fidl::MakeOptional(MakeToken("43"));
 
   EXPECT_FALSE(StartDownloadAndWaitForIdle());
@@ -486,15 +448,13 @@ template <typename E>
 using FailingPageDownloadTest = BasePageDownloadTest<E>;
 
 using FailingEncryptionServices =
-    ::testing::Types<FailingGetNameEncryptionService,
-                     FailingDecryptObjectEncryptionService>;
+    ::testing::Types<FailingGetNameEncryptionService, FailingDecryptObjectEncryptionService>;
 
 TYPED_TEST_SUITE(FailingPageDownloadTest, FailingEncryptionServices);
 
 TYPED_TEST(FailingPageDownloadTest, Fail) {
   storage::ObjectIdentifier object_identifier = MakeObjectIdentifier();
-  std::string object_name =
-      this->encryption_service_.GetObjectNameSynchronous(object_identifier);
+  std::string object_name = this->encryption_service_.GetObjectNameSynchronous(object_identifier);
   this->page_cloud_.objects_to_return[object_name] =
       this->encryption_service_.EncryptObjectSynchronous("content");
   this->page_download_->StartDownload();
@@ -505,9 +465,8 @@ TYPED_TEST(FailingPageDownloadTest, Fail) {
   storage::IsObjectSynced is_object_synced;
   std::unique_ptr<storage::DataSource::DataChunk> data_chunk;
   this->storage_.page_sync_delegate_->GetObject(
-      object_identifier,
-      callback::Capture(callback::SetWhenCalled(&called), &status, &source,
-                        &is_object_synced, &data_chunk));
+      object_identifier, callback::Capture(callback::SetWhenCalled(&called), &status, &source,
+                                           &is_object_synced, &data_chunk));
   this->RunLoopUntilIdle();
 
   ASSERT_TRUE(called);

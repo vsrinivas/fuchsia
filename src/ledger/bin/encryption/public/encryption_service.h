@@ -40,36 +40,31 @@ class EncryptionService {
   // index and a default |deletion_scope_id|.
   // TODO(qsr): The user should have some control on the |deletion_scope_id| to
   // decide on the scope of deletion for objects.
-  virtual storage::ObjectIdentifier MakeObjectIdentifier(
-      storage::ObjectDigest digest) = 0;
+  virtual storage::ObjectIdentifier MakeObjectIdentifier(storage::ObjectDigest digest) = 0;
 
   // Encrypts the given commit storage bytes for storing in the cloud.
-  virtual void EncryptCommit(
-      std::string commit_storage,
-      fit::function<void(Status, std::string)> callback) = 0;
+  virtual void EncryptCommit(std::string commit_storage,
+                             fit::function<void(Status, std::string)> callback) = 0;
 
   // Decrypts the given encrypted commit storage bytes from the cloud.
-  virtual void DecryptCommit(
-      convert::ExtendedStringView storage_bytes,
-      fit::function<void(Status, std::string)> callback) = 0;
+  virtual void DecryptCommit(convert::ExtendedStringView storage_bytes,
+                             fit::function<void(Status, std::string)> callback) = 0;
 
   // Returns the obfuscated object name for the given identifier.
   //
   // This method is used to translate a local object identifier to the name that
   // is used to refer the object in the cloud provider.
-  virtual void GetObjectName(
-      storage::ObjectIdentifier object_identifier,
-      fit::function<void(Status, std::string)> callback) = 0;
+  virtual void GetObjectName(storage::ObjectIdentifier object_identifier,
+                             fit::function<void(Status, std::string)> callback) = 0;
 
   // Encrypts the given object.
-  virtual void EncryptObject(
-      storage::ObjectIdentifier object_identifier, fxl::StringView content,
-      fit::function<void(Status, std::string)> callback) = 0;
+  virtual void EncryptObject(storage::ObjectIdentifier object_identifier, fxl::StringView content,
+                             fit::function<void(Status, std::string)> callback) = 0;
 
   // Decrypts the given object.
-  virtual void DecryptObject(
-      storage::ObjectIdentifier object_identifier, std::string encrypted_data,
-      fit::function<void(Status, std::string)> callback) = 0;
+  virtual void DecryptObject(storage::ObjectIdentifier object_identifier,
+                             std::string encrypted_data,
+                             fit::function<void(Status, std::string)> callback) = 0;
 
   // Applies a pseudorandom permutation to a given hash.
   //

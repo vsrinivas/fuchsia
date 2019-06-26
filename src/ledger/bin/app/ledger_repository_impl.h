@@ -32,10 +32,9 @@
 
 namespace ledger {
 
-class LedgerRepositoryImpl
-    : public fuchsia::ledger::internal::LedgerRepositorySyncableDelegate,
-      public PageEvictionManager::Delegate,
-      public inspect::ChildrenManager {
+class LedgerRepositoryImpl : public fuchsia::ledger::internal::LedgerRepositorySyncableDelegate,
+                             public PageEvictionManager::Delegate,
+                             public inspect::ChildrenManager {
  public:
   // Creates a new LedgerRepositoryImpl object. Guarantees that |db_factory|
   // will outlive the given |disk_cleanup_manager|.
@@ -44,55 +43,45 @@ class LedgerRepositoryImpl
                        std::unique_ptr<SyncWatcherSet> watchers,
                        std::unique_ptr<sync_coordinator::UserSync> user_sync,
                        std::unique_ptr<DiskCleanupManager> disk_cleanup_manager,
-                       PageUsageListener* page_usage_listener,
-                       inspect::Node inspect_node);
+                       PageUsageListener* page_usage_listener, inspect::Node inspect_node);
   ~LedgerRepositoryImpl() override;
 
   void set_on_empty(fit::closure on_empty_callback) {
     on_empty_callback_ = std::move(on_empty_callback);
   }
 
-  void BindRepository(fidl::InterfaceRequest<ledger_internal::LedgerRepository>
-                          repository_request);
+  void BindRepository(fidl::InterfaceRequest<ledger_internal::LedgerRepository> repository_request);
 
   // Releases all handles bound to this repository impl.
-  std::vector<fidl::InterfaceRequest<ledger_internal::LedgerRepository>>
-  Unbind();
+  std::vector<fidl::InterfaceRequest<ledger_internal::LedgerRepository>> Unbind();
 
   // PageEvictionManager::Delegate:
-  void PageIsClosedAndSynced(
-      fxl::StringView ledger_name, storage::PageIdView page_id,
-      fit::function<void(Status, PagePredicateResult)> callback) override;
+  void PageIsClosedAndSynced(fxl::StringView ledger_name, storage::PageIdView page_id,
+                             fit::function<void(Status, PagePredicateResult)> callback) override;
   void PageIsClosedOfflineAndEmpty(
       fxl::StringView ledger_name, storage::PageIdView page_id,
       fit::function<void(Status, PagePredicateResult)> callback) override;
-  void DeletePageStorage(fxl::StringView ledger_name,
-                         storage::PageIdView page_id,
+  void DeletePageStorage(fxl::StringView ledger_name, storage::PageIdView page_id,
                          fit::function<void(Status)> callback) override;
 
   // LedgerRepository:
-  void GetLedger(std::vector<uint8_t> ledger_name,
-                 fidl::InterfaceRequest<Ledger> ledger_request,
+  void GetLedger(std::vector<uint8_t> ledger_name, fidl::InterfaceRequest<Ledger> ledger_request,
                  fit::function<void(Status)> callback) override;
-  void Duplicate(
-      fidl::InterfaceRequest<ledger_internal::LedgerRepository> request,
-      fit::function<void(Status)> callback) override;
+  void Duplicate(fidl::InterfaceRequest<ledger_internal::LedgerRepository> request,
+                 fit::function<void(Status)> callback) override;
   void SetSyncStateWatcher(fidl::InterfaceHandle<SyncWatcher> watcher,
                            fit::function<void(Status)> callback) override;
   void DiskCleanUp(fit::function<void(Status)> callback) override;
   void Close(fit::function<void(Status)> callback) override;
 
   // inspect::ChildrenManager:
-  void GetNames(
-      fit::function<void(std::vector<std::string>)> callback) override;
-  void Attach(std::string ledger_name,
-              fit::function<void(fit::closure)> callback) override;
+  void GetNames(fit::function<void(std::vector<std::string>)> callback) override;
+  void Attach(std::string ledger_name, fit::function<void(fit::closure)> callback) override;
 
  private:
   // Retrieves the existing, or creates a new LedgerManager object with the
   // given |ledger_name|.
-  Status GetLedgerManager(convert::ExtendedStringView ledger_name,
-                          LedgerManager** ledger_manager);
+  Status GetLedgerManager(convert::ExtendedStringView ledger_name, LedgerManager** ledger_manager);
 
   void CheckEmpty();
 
@@ -105,13 +94,12 @@ class LedgerRepositoryImpl
   std::unique_ptr<SyncWatcherSet> watchers_;
   std::unique_ptr<sync_coordinator::UserSync> user_sync_;
   PageUsageListener* page_usage_listener_;
-  callback::AutoCleanableMap<std::string, LedgerManager,
-                             convert::StringViewComparator>
+  callback::AutoCleanableMap<std::string, LedgerManager, convert::StringViewComparator>
       ledger_managers_;
   // The DiskCleanupManager relies on the |ledger_managers_| being still alive.
   std::unique_ptr<DiskCleanupManager> disk_cleanup_manager_;
-  callback::AutoCleanableSet<SyncableBinding<
-      fuchsia::ledger::internal::LedgerRepositorySyncableDelegate>>
+  callback::AutoCleanableSet<
+      SyncableBinding<fuchsia::ledger::internal::LedgerRepositorySyncableDelegate>>
       bindings_;
   fit::closure on_empty_callback_;
 

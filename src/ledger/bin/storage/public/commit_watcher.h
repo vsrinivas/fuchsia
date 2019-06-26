@@ -16,9 +16,8 @@ class CommitWatcher {
   virtual ~CommitWatcher() {}
 
   // Called when new commits have been created.
-  virtual void OnNewCommits(
-      const std::vector<std::unique_ptr<const Commit>>& commits,
-      ChangeSource source) = 0;
+  virtual void OnNewCommits(const std::vector<std::unique_ptr<const Commit>>& commits,
+                            ChangeSource source) = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(CommitWatcher);

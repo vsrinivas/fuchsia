@@ -19,10 +19,9 @@ enum DelayCallback : bool { NO, YES };
 // Retrieves the requested page of the given Ledger instance amd returns after
 // ensuring that it is initialized. If |id| is nullptr, a new page with a unique
 // id is created.
-void GetPageEnsureInitialized(
-    LedgerPtr* ledger, PageIdPtr requested_id, DelayCallback delay_callback,
-    fit::function<void()> error_handler,
-    fit::function<void(Status, PagePtr, PageId)> callback);
+void GetPageEnsureInitialized(LedgerPtr* ledger, PageIdPtr requested_id,
+                              DelayCallback delay_callback, fit::function<void()> error_handler,
+                              fit::function<void(Status, PagePtr, PageId)> callback);
 }  // namespace ledger
 
 #endif  // SRC_LEDGER_BIN_TESTING_GET_PAGE_ENSURE_INITIALIZED_H_

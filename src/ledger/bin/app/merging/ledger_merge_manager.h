@@ -31,8 +31,7 @@ class LedgerMergeManager {
 
   void AddFactory(fidl::InterfaceHandle<ConflictResolverFactory> factory);
 
-  std::unique_ptr<MergeResolver> GetMergeResolver(
-      storage::PageStorage* storage);
+  std::unique_ptr<MergeResolver> GetMergeResolver(storage::PageStorage* storage);
 
  private:
   void ResetFactory();
@@ -47,11 +46,9 @@ class LedgerMergeManager {
   class ConflictResolverFactoryPtrContainer;
 
   // Inactive, available conflict resolver factories
-  callback::AutoCleanableSet<ConflictResolverFactoryPtrContainer>
-      conflict_resolver_factories_;
+  callback::AutoCleanableSet<ConflictResolverFactoryPtrContainer> conflict_resolver_factories_;
   // The ConflictResolverFactory that is currently in use
-  fidl::InterfacePtr<ConflictResolverFactory>
-      current_conflict_resolver_factory_;
+  fidl::InterfacePtr<ConflictResolverFactory> current_conflict_resolver_factory_;
   // |true| if using the default last-one-wins conflict resolver factory
   bool using_default_conflict_resolver_ = true;
 

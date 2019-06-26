@@ -18,8 +18,7 @@
 
 namespace {
 
-constexpr char kLedgerBinaryPath[] =
-    "fuchsia-pkg://fuchsia.com/ledger#meta/ledger.cmx";
+constexpr char kLedgerBinaryPath[] = "fuchsia-pkg://fuchsia.com/ledger#meta/ledger.cmx";
 constexpr fxl::StringView kLedgerName = "test ledger instance";
 
 }  // namespace
@@ -27,8 +26,7 @@ constexpr fxl::StringView kLedgerName = "test ledger instance";
 // Exposes a public service that serves an in-memory Ledger.
 int main(int argc, char const *argv[]) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  std::unique_ptr<sys::ComponentContext> context(
-      sys::ComponentContext::Create());
+  std::unique_ptr<sys::ComponentContext> context(sys::ComponentContext::Create());
 
   // Get a repository factory.
   component::Services services;
@@ -45,19 +43,16 @@ int main(int argc, char const *argv[]) {
 
   // Create memfs.
   auto memfs = std::make_unique<scoped_tmpfs::ScopedTmpFS>();
-  zx::channel memfs_channel =
-      fsl::CloneChannelFromFileDescriptor(memfs->root_fd());
+  zx::channel memfs_channel = fsl::CloneChannelFromFileDescriptor(memfs->root_fd());
 
   // Get a repository.
   fuchsia::ledger::internal::LedgerRepositorySyncPtr repository;
-  repository_factory->GetRepository(std::move(memfs_channel), nullptr, "",
-                                    repository.NewRequest());
+  repository_factory->GetRepository(std::move(memfs_channel), nullptr, "", repository.NewRequest());
 
   // Serve the repository.
   context->outgoing()->AddPublicService<fuchsia::ledger::Ledger>(
       [&repository](fidl::InterfaceRequest<fuchsia::ledger::Ledger> request) {
-        repository->GetLedger(convert::ToArray(kLedgerName),
-                              std::move(request));
+        repository->GetLedger(convert::ToArray(kLedgerName), std::move(request));
       });
   loop.Run();
   return EXIT_SUCCESS;

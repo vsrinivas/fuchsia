@@ -14,8 +14,7 @@ namespace {
 // Holder for a synchronization provider (cloud or peer-to-peer).
 //
 // This object handles communication between storage and the page synchronizer.
-class SyncProviderHolderBase : public storage::PageSyncClient,
-                               public storage::PageSyncDelegate {
+class SyncProviderHolderBase : public storage::PageSyncClient, public storage::PageSyncDelegate {
  public:
   SyncProviderHolderBase();
   ~SyncProviderHolderBase() override;
@@ -25,10 +24,9 @@ class SyncProviderHolderBase : public storage::PageSyncClient,
 
   // PageSyncDelegate:
   void GetObject(storage::ObjectIdentifier object_identifier,
-                 fit::function<void(
-                     ledger::Status status, storage::ChangeSource change_source,
-                     storage::IsObjectSynced is_object_synced,
-                     std::unique_ptr<storage::DataSource::DataChunk>)>
+                 fit::function<void(ledger::Status status, storage::ChangeSource change_source,
+                                    storage::IsObjectSynced is_object_synced,
+                                    std::unique_ptr<storage::DataSource::DataChunk>)>
                      callback) override;
 
  private:
@@ -39,20 +37,17 @@ SyncProviderHolderBase::SyncProviderHolderBase() {}
 
 SyncProviderHolderBase::~SyncProviderHolderBase() {}
 
-void SyncProviderHolderBase::SetSyncDelegate(
-    storage::PageSyncDelegate* page_sync) {
+void SyncProviderHolderBase::SetSyncDelegate(storage::PageSyncDelegate* page_sync) {
   page_sync_delegate_ = page_sync;
 }
 
 void SyncProviderHolderBase::GetObject(
     storage::ObjectIdentifier object_identifier,
-    fit::function<void(ledger::Status status,
-                       storage::ChangeSource change_source,
+    fit::function<void(ledger::Status status, storage::ChangeSource change_source,
                        storage::IsObjectSynced is_object_synced,
                        std::unique_ptr<storage::DataSource::DataChunk>)>
         callback) {
-  page_sync_delegate_->GetObject(std::move(object_identifier),
-                                 std::move(callback));
+  page_sync_delegate_->GetObject(std::move(object_identifier), std::move(callback));
 }
 }  // namespace
 
@@ -72,8 +67,7 @@ PageSyncImpl::CloudSyncHolder::CloudSyncHolder() {}
 
 PageSyncImpl::CloudSyncHolder::~CloudSyncHolder() {}
 
-void PageSyncImpl::CloudSyncHolder::SetCloudSync(
-    std::unique_ptr<cloud_sync::PageSync> cloud_sync) {
+void PageSyncImpl::CloudSyncHolder::SetCloudSync(std::unique_ptr<cloud_sync::PageSync> cloud_sync) {
   FXL_DCHECK(!cloud_sync_);
   cloud_sync_ = std::move(cloud_sync);
 }
@@ -99,8 +93,7 @@ PageSyncImpl::P2PSyncHolder::P2PSyncHolder() {}
 
 PageSyncImpl::P2PSyncHolder::~P2PSyncHolder() {}
 
-void PageSyncImpl::P2PSyncHolder::SetP2PSync(
-    std::unique_ptr<p2p_sync::PageCommunicator> p2p_sync) {
+void PageSyncImpl::P2PSyncHolder::SetP2PSync(std::unique_ptr<p2p_sync::PageCommunicator> p2p_sync) {
   FXL_DCHECK(!p2p_sync_);
   p2p_sync_ = std::move(p2p_sync);
 }
@@ -110,8 +103,7 @@ p2p_sync::PageCommunicator* PageSyncImpl::P2PSyncHolder::GetP2PSync() {
   return p2p_sync_.get();
 }
 
-PageSyncImpl::PageSyncImpl(storage::PageStorage* storage,
-                           storage::PageSyncClient* sync_client)
+PageSyncImpl::PageSyncImpl(storage::PageStorage* storage, storage::PageSyncClient* sync_client)
     : storage_(storage), sync_client_(sync_client) {
   FXL_DCHECK(storage_);
   FXL_DCHECK(sync_client_);
@@ -125,8 +117,7 @@ storage::PageSyncClient* PageSyncImpl::CreateCloudSyncClient() {
   return cloud_sync_.get();
 }
 
-void PageSyncImpl::SetCloudSync(
-    std::unique_ptr<cloud_sync::PageSync> cloud_sync) {
+void PageSyncImpl::SetCloudSync(std::unique_ptr<cloud_sync::PageSync> cloud_sync) {
   FXL_DCHECK(cloud_sync_);
   if (!cloud_sync) {
     // Cloud sync failed to produce an initialized |cloud_sync| instance - e.g.
@@ -150,8 +141,7 @@ storage::PageSyncClient* PageSyncImpl::CreateP2PSyncClient() {
   return p2p_sync_.get();
 }
 
-void PageSyncImpl::SetP2PSync(
-    std::unique_ptr<p2p_sync::PageCommunicator> p2p_sync) {
+void PageSyncImpl::SetP2PSync(std::unique_ptr<p2p_sync::PageCommunicator> p2p_sync) {
   FXL_DCHECK(p2p_sync_);
   p2p_sync_->SetP2PSync(std::move(p2p_sync));
 }
@@ -182,8 +172,7 @@ bool PageSyncImpl::IsIdle() {
 
 void PageSyncImpl::SetOnBacklogDownloaded(fit::closure on_backlog_downloaded) {
   if (cloud_sync_) {
-    cloud_sync_->GetCloudSync()->SetOnBacklogDownloaded(
-        std::move(on_backlog_downloaded));
+    cloud_sync_->GetCloudSync()->SetOnBacklogDownloaded(std::move(on_backlog_downloaded));
   }
 }
 
@@ -194,53 +183,45 @@ void PageSyncImpl::SetSyncWatcher(SyncStateWatcher* watcher) {
   }
 }
 
-void PageSyncImpl::GetObject(
-    storage::ObjectIdentifier object_identifier,
-    fit::function<void(ledger::Status, storage::ChangeSource,
-                       storage::IsObjectSynced is_object_synced,
-                       std::unique_ptr<storage::DataSource::DataChunk>)>
-        callback) {
+void PageSyncImpl::GetObject(storage::ObjectIdentifier object_identifier,
+                             fit::function<void(ledger::Status, storage::ChangeSource,
+                                                storage::IsObjectSynced is_object_synced,
+                                                std::unique_ptr<storage::DataSource::DataChunk>)>
+                                 callback) {
   // AnyWaiter returns the first successful value to its Finalize callback. For
   // example, if P2P returns before cloud with a NOT_FOUND status, then we will
   // wait for Cloud to return; if P2P returns with an OK status, we will pass
   // the P2P-returned value immediately.
   auto waiter = fxl::MakeRefCounted<callback::AnyWaiter<
-      ledger::Status,
-      std::tuple<storage::ChangeSource, storage::IsObjectSynced,
-                 std::unique_ptr<storage::DataSource::DataChunk>>>>(
+      ledger::Status, std::tuple<storage::ChangeSource, storage::IsObjectSynced,
+                                 std::unique_ptr<storage::DataSource::DataChunk>>>>(
       ledger::Status::OK, ledger::Status::INTERNAL_NOT_FOUND,
       std::tuple<storage::ChangeSource, storage::IsObjectSynced,
                  std::unique_ptr<storage::DataSource::DataChunk>>());
   if (cloud_sync_) {
     cloud_sync_->GetObject(
         object_identifier,
-        [callback = waiter->NewCallback()](
-            ledger::Status status, storage::ChangeSource source,
-            storage::IsObjectSynced is_object_synced,
-            std::unique_ptr<storage::DataSource::DataChunk> data) {
-          callback(status,
-                   std::make_tuple(source, is_object_synced, std::move(data)));
+        [callback = waiter->NewCallback()](ledger::Status status, storage::ChangeSource source,
+                                           storage::IsObjectSynced is_object_synced,
+                                           std::unique_ptr<storage::DataSource::DataChunk> data) {
+          callback(status, std::make_tuple(source, is_object_synced, std::move(data)));
         });
   }
   if (p2p_sync_) {
     p2p_sync_->GetObject(
         std::move(object_identifier),
-        [callback = waiter->NewCallback()](
-            ledger::Status status, storage::ChangeSource source,
-            storage::IsObjectSynced is_object_synced,
-            std::unique_ptr<storage::DataSource::DataChunk> data) {
-          callback(status,
-                   std::make_tuple(source, is_object_synced, std::move(data)));
+        [callback = waiter->NewCallback()](ledger::Status status, storage::ChangeSource source,
+                                           storage::IsObjectSynced is_object_synced,
+                                           std::unique_ptr<storage::DataSource::DataChunk> data) {
+          callback(status, std::make_tuple(source, is_object_synced, std::move(data)));
         });
   }
   waiter->Finalize(
-      [callback = std::move(callback)](
-          ledger::Status status,
-          std::tuple<storage::ChangeSource, storage::IsObjectSynced,
-                     std::unique_ptr<storage::DataSource::DataChunk>>
-              data) {
-        callback(status, std::get<0>(data), std::get<1>(data),
-                 std::move(std::get<2>(data)));
+      [callback = std::move(callback)](ledger::Status status,
+                                       std::tuple<storage::ChangeSource, storage::IsObjectSynced,
+                                                  std::unique_ptr<storage::DataSource::DataChunk>>
+                                           data) {
+        callback(status, std::get<0>(data), std::get<1>(data), std::move(std::get<2>(data)));
       });
 }
 

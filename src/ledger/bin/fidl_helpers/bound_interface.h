@@ -16,23 +16,17 @@ template <class Interface, class Impl, class Binding = fidl::Binding<Interface>>
 class BoundInterface {
  public:
   template <class... Args>
-  explicit BoundInterface(fidl::InterfaceRequest<Interface> request,
-                          Args&&... args)
-      : impl_(std::forward<Args>(args)...),
-        binding_(&impl_, std::move(request)) {}
+  explicit BoundInterface(fidl::InterfaceRequest<Interface> request, Args&&... args)
+      : impl_(std::forward<Args>(args)...), binding_(&impl_, std::move(request)) {}
 
   template <class... Args>
-  explicit BoundInterface(Args&&... args)
-      : impl_(std::forward<Args>(args)...), binding_(&impl_) {}
+  explicit BoundInterface(Args&&... args) : impl_(std::forward<Args>(args)...), binding_(&impl_) {}
 
-  void Bind(fidl::InterfaceRequest<Interface> request) {
-    binding_.Bind(std::move(request));
-  }
+  void Bind(fidl::InterfaceRequest<Interface> request) { binding_.Bind(std::move(request)); }
 
   void set_on_empty(fit::closure on_empty_callback) {
     binding_.set_error_handler(
-        [this,
-         on_empty_callback = std::move(on_empty_callback)](zx_status_t status) {
+        [this, on_empty_callback = std::move(on_empty_callback)](zx_status_t status) {
           binding_.Unbind();
           if (on_empty_callback)
             on_empty_callback();

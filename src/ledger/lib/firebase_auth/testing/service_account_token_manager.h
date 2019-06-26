@@ -31,34 +31,29 @@ using fuchsia::auth::AuthenticationUIContext;
 class ServiceAccountTokenManager : public fuchsia::auth::TokenManager {
  public:
   ServiceAccountTokenManager(network_wrapper::NetworkWrapper* network_wrapper,
-                             std::unique_ptr<Credentials> credentials,
-                             std::string user_id);
+                             std::unique_ptr<Credentials> credentials, std::string user_id);
   ~ServiceAccountTokenManager() override;
 
   // fuchsia::auth::TokenManager:
   void Authorize(AppConfig app_config,
                  fidl::InterfaceHandle<AuthenticationUIContext> auth_ui_context,
-                 std::vector<std::string> app_scopes,
-                 fidl::StringPtr user_profile_id, fidl::StringPtr auth_code,
-                 AuthorizeCallback callback) override;
+                 std::vector<std::string> app_scopes, fidl::StringPtr user_profile_id,
+                 fidl::StringPtr auth_code, AuthorizeCallback callback) override;
 
   void GetAccessToken(AppConfig app_config, std::string user_profile_id,
                       std::vector<std::string> app_scopes,
                       GetAccessTokenCallback callback) override;
 
-  void GetIdToken(AppConfig app_config, std::string user_profile_id,
-                  fidl::StringPtr audience,
+  void GetIdToken(AppConfig app_config, std::string user_profile_id, fidl::StringPtr audience,
                   GetIdTokenCallback callback) override;
 
-  void GetFirebaseToken(AppConfig app_config, std::string user_profile_id,
-                        std::string audience, std::string firebase_api_key,
-                        GetFirebaseTokenCallback callback) override;
+  void GetFirebaseToken(AppConfig app_config, std::string user_profile_id, std::string audience,
+                        std::string firebase_api_key, GetFirebaseTokenCallback callback) override;
 
-  void DeleteAllTokens(AppConfig app_config, std::string user_profile_id,
-                       bool force, DeleteAllTokensCallback callback) override;
+  void DeleteAllTokens(AppConfig app_config, std::string user_profile_id, bool force,
+                       DeleteAllTokensCallback callback) override;
 
-  void ListProfileIds(AppConfig app_config,
-                      ListProfileIdsCallback callback) override;
+  void ListProfileIds(AppConfig app_config, ListProfileIdsCallback callback) override;
 
  private:
   ServiceAccountTokenMinter service_account_token_minter_;

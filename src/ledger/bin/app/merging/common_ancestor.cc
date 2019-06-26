@@ -74,18 +74,16 @@ class CommitWalkMap {
   // The number of interesting elements in the map.
   size_t interesting_nodes_ = 0;
   // The underlying map.
-  std::map<std::unique_ptr<const storage::Commit>, WalkFlags,
-           GenerationComparator>
-      map_;
+  std::map<std::unique_ptr<const storage::Commit>, WalkFlags, GenerationComparator> map_;
 };
 
 }  // namespace
 
-Status FindCommonAncestors(
-    coroutine::CoroutineHandler* handler, storage::PageStorage* storage,
-    std::unique_ptr<const storage::Commit> left,
-    std::unique_ptr<const storage::Commit> right, CommitComparison* comparison,
-    std::vector<std::unique_ptr<const storage::Commit>>* ancestors) {
+Status FindCommonAncestors(coroutine::CoroutineHandler* handler, storage::PageStorage* storage,
+                           std::unique_ptr<const storage::Commit> left,
+                           std::unique_ptr<const storage::Commit> right,
+                           CommitComparison* comparison,
+                           std::vector<std::unique_ptr<const storage::Commit>>* ancestors) {
   FXL_DCHECK(ancestors->empty());
 
   // The merge base is found by a highest-generation-first search in the commit
@@ -94,10 +92,8 @@ Status FindCommonAncestors(
   // explored to flags. Since the flags depend on the child commits, they are
   // correct when the node is visited.
   CommitWalkMap walk_state;
-  walk_state.SetFlag(std::move(left),
-                     WalkFlags().set(WalkFlag::kAncestorOfLeft));
-  walk_state.SetFlag(std::move(right),
-                     WalkFlags().set(WalkFlag::kAncestorOfRight));
+  walk_state.SetFlag(std::move(left), WalkFlags().set(WalkFlag::kAncestorOfLeft));
+  walk_state.SetFlag(std::move(right), WalkFlags().set(WalkFlag::kAncestorOfRight));
 
   // These booleans are set when we encounter a change commit that is an
   // ancestor of left but not right, or right but not left.
@@ -107,8 +103,8 @@ Status FindCommonAncestors(
   // Loop until we only find "BelowCommonAncestors"
   while (walk_state.interesting_size() > 0) {
     uint64_t expected_generation = walk_state.NextGeneration();
-    auto waiter = fxl::MakeRefCounted<callback::Waiter<
-        Status, std::pair<std::unique_ptr<const storage::Commit>, WalkFlags>>>(
+    auto waiter = fxl::MakeRefCounted<
+        callback::Waiter<Status, std::pair<std::unique_ptr<const storage::Commit>, WalkFlags>>>(
         Status::OK);
     while (walk_state.interesting_size() > 0 &&
            expected_generation == walk_state.NextGeneration()) {
@@ -116,19 +112,17 @@ Status FindCommonAncestors(
       bool is_merge = commit->GetParentIds().size() == 2;
       // Fetch its parents
       WalkFlags parent_flags = flags;
-      if (flags.test(WalkFlag::kAncestorOfLeft) &&
-          flags.test(WalkFlag::kAncestorOfRight)) {
+      if (flags.test(WalkFlag::kAncestorOfLeft) && flags.test(WalkFlag::kAncestorOfRight)) {
         // The parents of common ancestors are still common ancestors, but do
         // not need to be included in the set. We mark them as uninteresting.
         parent_flags.set(WalkFlag::kBelowCommonAncestor);
       }
       for (const auto& parent_id : commit->GetParentIds()) {
-        storage->GetCommit(
-            parent_id,
-            [callback = waiter->NewCallback(), flags = parent_flags](
-                Status status, std::unique_ptr<const storage::Commit> result) {
-              callback(status, make_pair(std::move(result), flags));
-            });
+        storage->GetCommit(parent_id,
+                           [callback = waiter->NewCallback(), flags = parent_flags](
+                               Status status, std::unique_ptr<const storage::Commit> result) {
+                             callback(status, make_pair(std::move(result), flags));
+                           });
       }
 
       if (flags.test(WalkFlag::kBelowCommonAncestor)) {
@@ -146,8 +140,7 @@ Status FindCommonAncestors(
       }
     }
     Status status;
-    std::vector<std::pair<std::unique_ptr<const storage::Commit>, WalkFlags>>
-        parents;
+    std::vector<std::pair<std::unique_ptr<const storage::Commit>, WalkFlags>> parents;
     if (coroutine::Wait(handler, std::move(waiter), &status, &parents) ==
         coroutine::ContinuationStatus::INTERRUPTED) {
       return Status::INTERRUPTED;
@@ -178,9 +171,8 @@ Status FindCommonAncestors(
   return Status::OK;
 }
 
-bool GenerationComparator::operator()(
-    const std::unique_ptr<const storage::Commit>& lhs,
-    const std::unique_ptr<const storage::Commit>& rhs) const {
+bool GenerationComparator::operator()(const std::unique_ptr<const storage::Commit>& lhs,
+                                      const std::unique_ptr<const storage::Commit>& rhs) const {
   return std::forward_as_tuple(lhs->GetGeneration(), lhs->GetId()) >
          std::forward_as_tuple(rhs->GetGeneration(), rhs->GetId());
 }

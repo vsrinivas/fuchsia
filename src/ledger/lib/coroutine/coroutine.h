@@ -60,8 +60,7 @@ class CoroutineService {
   virtual ~CoroutineService() {}
 
   // Starts a new coroutine that will execute |runnable|.
-  virtual void StartCoroutine(
-      fit::function<void(CoroutineHandler*)> runnable) = 0;
+  virtual void StartCoroutine(fit::function<void(CoroutineHandler*)> runnable) = 0;
 };
 
 // Allows to execute an asynchronous call in a coroutine. The coroutine will
@@ -104,18 +103,15 @@ class CoroutineService {
 // FXL_LOG(INFO) << "Some background task computed: " << s << " " << i;
 //
 template <typename A, typename... Args>
-FXL_WARN_UNUSED_RESULT ContinuationStatus SyncCall(CoroutineHandler* handler,
-                                                   A async_call,
+FXL_WARN_UNUSED_RESULT ContinuationStatus SyncCall(CoroutineHandler* handler, A async_call,
                                                    Args*... parameters) {
-  class TerminationSentinel
-      : public fxl::RefCountedThreadSafe<TerminationSentinel> {
+  class TerminationSentinel : public fxl::RefCountedThreadSafe<TerminationSentinel> {
    public:
     bool terminated = false;
   };
 
   auto termination_sentinel = fxl::MakeRefCounted<TerminationSentinel>();
-  auto on_return = fit::defer(
-      [termination_sentinel] { termination_sentinel->terminated = true; });
+  auto on_return = fit::defer([termination_sentinel] { termination_sentinel->terminated = true; });
 
   volatile bool sync_state = true;
   volatile bool callback_called = false;
@@ -133,8 +129,7 @@ FXL_WARN_UNUSED_RESULT ContinuationStatus SyncCall(CoroutineHandler* handler,
     handler->Resume(ContinuationStatus::INTERRUPTED);
   });
   auto capture = callback::Capture(
-      [&sync_state, &callback_called, handler,
-       unblocker = std::move(unblocker)]() mutable {
+      [&sync_state, &callback_called, handler, unblocker = std::move(unblocker)]() mutable {
         // |capture| is already gated by the termination sentinel below. No need
         // to re-check here.
 
@@ -147,8 +142,7 @@ FXL_WARN_UNUSED_RESULT ContinuationStatus SyncCall(CoroutineHandler* handler,
         handler->Resume(ContinuationStatus::OK);
       },
       parameters...);
-  async_call([termination_sentinel,
-              capture = std::move(capture)](Args... args) mutable {
+  async_call([termination_sentinel, capture = std::move(capture)](Args... args) mutable {
     if (termination_sentinel->terminated) {
       return;
     }
@@ -160,8 +154,7 @@ FXL_WARN_UNUSED_RESULT ContinuationStatus SyncCall(CoroutineHandler* handler,
     sync_state = false;
     return handler->Yield();
   }
-  return callback_called ? ContinuationStatus::OK
-                         : ContinuationStatus::INTERRUPTED;
+  return callback_called ? ContinuationStatus::OK : ContinuationStatus::INTERRUPTED;
 };
 
 }  // namespace coroutine

@@ -32,17 +32,14 @@ class ActivePageManagerContainer {
 
   // Keeps track of |page| and |callback|. Binds |page| and fires |callback|
   // when a ActivePageManager is available or an error occurs.
-  void BindPage(fidl::InterfaceRequest<Page> page_request,
-                fit::function<void(Status)> callback);
+  void BindPage(fidl::InterfaceRequest<Page> page_request, fit::function<void(Status)> callback);
 
   // Registers a new internal request for PageStorage.
-  void NewInternalRequest(
-      fit::function<void(Status, ExpiringToken, ActivePageManager*)> callback);
+  void NewInternalRequest(fit::function<void(Status, ExpiringToken, ActivePageManager*)> callback);
 
   // Sets the ActivePageManager or the error status for the container. This
   // notifies all awaiting callbacks and binds all pages in case of success.
-  void SetActivePageManager(
-      Status status, std::unique_ptr<ActivePageManager> active_page_manager);
+  void SetActivePageManager(Status status, std::unique_ptr<ActivePageManager> active_page_manager);
 
   // Returns true if there is at least one active external page connection.
   bool PageConnectionIsOpen();
@@ -68,8 +65,7 @@ class ActivePageManagerContainer {
   // ActivePageManager is created and assigned to active_page_manager_, the
   // PageImpls stored in page_impls_ are handed off to that ActivePageManager
   // and page_impls_ is not used again.
-  std::vector<std::pair<std::unique_ptr<PageImpl>, fit::function<void(Status)>>>
-      page_impls_;
+  std::vector<std::pair<std::unique_ptr<PageImpl>, fit::function<void(Status)>>> page_impls_;
   std::vector<fit::function<void(Status, ExpiringToken, ActivePageManager*)>>
       internal_request_callbacks_;
   fit::closure on_empty_callback_;

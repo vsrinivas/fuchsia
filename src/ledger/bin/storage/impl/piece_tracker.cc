@@ -11,8 +11,7 @@ namespace storage {
 namespace {
 
 // Converts a map of ObjectIdentifier counts to a string listing them.
-std::string TokenCountsToString(
-    const std::map<ObjectIdentifier, int>& token_counts) {
+std::string TokenCountsToString(const std::map<ObjectIdentifier, int>& token_counts) {
   std::ostringstream stream;
   for (const auto& token : token_counts) {
     stream << "\n" << token.first << " " << token.second;
@@ -24,20 +23,16 @@ std::string TokenCountsToString(
 
 PieceTracker::PieceTracker() = default;
 
-PieceTracker::PieceTokenImpl::PieceTokenImpl(PieceTracker* tracker,
-                                             ObjectIdentifier identifier)
+PieceTracker::PieceTokenImpl::PieceTokenImpl(PieceTracker* tracker, ObjectIdentifier identifier)
     : tracker_(tracker),
-      map_entry_(
-          tracker_->token_counts_.emplace(std::move(identifier), 0).first) {
+      map_entry_(tracker_->token_counts_.emplace(std::move(identifier), 0).first) {
   ++map_entry_->second;
-  FXL_VLOG(1) << "PieceToken " << map_entry_->first << " "
-              << map_entry_->second;
+  FXL_VLOG(1) << "PieceToken " << map_entry_->first << " " << map_entry_->second;
 }
 
 PieceTracker::PieceTokenImpl::~PieceTokenImpl() {
   --map_entry_->second;
-  FXL_VLOG(1) << "PieceToken " << map_entry_->first << " "
-              << map_entry_->second;
+  FXL_VLOG(1) << "PieceToken " << map_entry_->first << " " << map_entry_->second;
   if (map_entry_->second == 0) {
     tracker_->token_counts_.erase(map_entry_);
   }
@@ -51,11 +46,9 @@ PieceTracker::~PieceTracker() {
   FXL_DCHECK(token_counts_.empty()) << TokenCountsToString(token_counts_);
 }
 
-std::unique_ptr<PieceToken> PieceTracker::GetPieceToken(
-    ObjectIdentifier identifier) {
+std::unique_ptr<PieceToken> PieceTracker::GetPieceToken(ObjectIdentifier identifier) {
   // Using `new` to access a non-public constructor.
-  return std::unique_ptr<PieceToken>(
-      new PieceTokenImpl(this, std::move(identifier)));
+  return std::unique_ptr<PieceToken>(new PieceTokenImpl(this, std::move(identifier)));
 }
 
 int PieceTracker::count(const ObjectIdentifier& identifier) const {

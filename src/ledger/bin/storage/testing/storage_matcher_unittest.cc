@@ -31,11 +31,8 @@ TEST(StorageMatcher, MatchesEntry2Parameters) {
 TEST(StorageMatcher, MatchesEntry3Parameters) {
   Entry entry = {"key", {0, 1, ObjectDigest("hello")}, KeyPriority::EAGER};
 
-  EXPECT_THAT(
-      entry, MatchesEntry({"key", MatchesDigest("hello"), KeyPriority::EAGER}));
-  EXPECT_THAT(
-      entry,
-      Not(MatchesEntry({"key", MatchesDigest("hello"), KeyPriority::LAZY})));
+  EXPECT_THAT(entry, MatchesEntry({"key", MatchesDigest("hello"), KeyPriority::EAGER}));
+  EXPECT_THAT(entry, Not(MatchesEntry({"key", MatchesDigest("hello"), KeyPriority::LAZY})));
 }
 
 }  // namespace

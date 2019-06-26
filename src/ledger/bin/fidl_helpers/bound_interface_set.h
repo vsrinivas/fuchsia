@@ -16,8 +16,7 @@ template <class Interface, class Impl>
 class BoundInterfaceSet {
  public:
   template <class... Args>
-  explicit BoundInterfaceSet(Args&&... args)
-      : impl_(std::forward<Args>(args)...) {}
+  explicit BoundInterfaceSet(Args&&... args) : impl_(std::forward<Args>(args)...) {}
 
   void AddBinding(fidl::InterfaceRequest<Interface> request) {
     binding_.AddBinding(&impl_, std::move(request));
@@ -25,9 +24,7 @@ class BoundInterfaceSet {
 
   void CloseAll() { binding_.CloseAll(); }
 
-  void set_on_empty(fit::closure on_empty) {
-    binding_.set_empty_set_handler(std::move(on_empty));
-  }
+  void set_on_empty(fit::closure on_empty) { binding_.set_empty_set_handler(std::move(on_empty)); }
 
   bool is_bound() { return binding_.is_bound(); }
 

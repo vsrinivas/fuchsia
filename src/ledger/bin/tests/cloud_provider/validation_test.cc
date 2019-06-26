@@ -6,12 +6,9 @@
 
 namespace cloud_provider {
 
-ValidationTest::ValidationTest()
-    : component_context_(sys::ComponentContext::Create()) {}
+ValidationTest::ValidationTest() : component_context_(sys::ComponentContext::Create()) {}
 ValidationTest::~ValidationTest() {}
 
-void ValidationTest::SetUp() {
-  component_context_->svc()->Connect(cloud_provider_.NewRequest());
-}
+void ValidationTest::SetUp() { component_context_->svc()->Connect(cloud_provider_.NewRequest()); }
 
 }  // namespace cloud_provider

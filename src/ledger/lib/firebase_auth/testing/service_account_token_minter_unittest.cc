@@ -28,17 +28,15 @@ class ServiceAccountTokenMinterTest : public gtest::TestLoopFixture {
  public:
   ServiceAccountTokenMinterTest()
       : network_wrapper_(dispatcher()),
-        token_minter_(&network_wrapper_,
-                      Credentials::Parse(kTestServiceAccountConfig),
-                      "user_id") {}
+        token_minter_(&network_wrapper_, Credentials::Parse(kTestServiceAccountConfig), "user_id") {
+  }
 
  protected:
   bool GetFirebaseToken(std::string api_key,
                         ServiceAccountTokenMinter::GetTokenResponse* response) {
     bool called;
-    token_minter_.GetFirebaseToken(
-        "api_key",
-        callback::Capture(callback::SetWhenCalled(&called), response));
+    token_minter_.GetFirebaseToken("api_key",
+                                   callback::Capture(callback::SetWhenCalled(&called), response));
     RunLoopUntilIdle();
     return called;
   }
@@ -49,13 +47,11 @@ class ServiceAccountTokenMinterTest : public gtest::TestLoopFixture {
   ServiceAccountTokenMinter token_minter_;
 };
 
-TEST_F(ServiceAccountTokenMinterTest, GetClientId) {
-  EXPECT_FALSE(GetClientId().empty());
-}
+TEST_F(ServiceAccountTokenMinterTest, GetClientId) { EXPECT_FALSE(GetClientId().empty()); }
 
 TEST_F(ServiceAccountTokenMinterTest, GetFirebaseToken) {
-  network_wrapper_.SetResponse(GetResponseForTest(
-      nullptr, 200, GetSuccessResponseBodyForTest("token", 3600)));
+  network_wrapper_.SetResponse(
+      GetResponseForTest(nullptr, 200, GetSuccessResponseBodyForTest("token", 3600)));
 
   ServiceAccountTokenMinter::GetTokenResponse resp;
   ASSERT_TRUE(GetFirebaseToken("api_key", &resp));
@@ -64,8 +60,8 @@ TEST_F(ServiceAccountTokenMinterTest, GetFirebaseToken) {
 }
 
 TEST_F(ServiceAccountTokenMinterTest, GetFirebaseTokenFromCache) {
-  network_wrapper_.SetResponse(GetResponseForTest(
-      nullptr, 200, GetSuccessResponseBodyForTest("token", 3600)));
+  network_wrapper_.SetResponse(
+      GetResponseForTest(nullptr, 200, GetSuccessResponseBodyForTest("token", 3600)));
 
   ServiceAccountTokenMinter::GetTokenResponse resp;
 
@@ -75,8 +71,8 @@ TEST_F(ServiceAccountTokenMinterTest, GetFirebaseTokenFromCache) {
   EXPECT_TRUE(network_wrapper_.GetRequest());
 
   network_wrapper_.ResetRequest();
-  network_wrapper_.SetResponse(GetResponseForTest(
-      nullptr, 200, GetSuccessResponseBodyForTest("token2", 3600)));
+  network_wrapper_.SetResponse(
+      GetResponseForTest(nullptr, 200, GetSuccessResponseBodyForTest("token2", 3600)));
 
   ASSERT_TRUE(GetFirebaseToken("api_key", &resp));
   ASSERT_EQ(ServiceAccountTokenMinter::Status::OK, resp.status);
@@ -85,8 +81,8 @@ TEST_F(ServiceAccountTokenMinterTest, GetFirebaseTokenFromCache) {
 }
 
 TEST_F(ServiceAccountTokenMinterTest, GetFirebaseTokenNoCacheCache) {
-  network_wrapper_.SetResponse(GetResponseForTest(
-      nullptr, 200, GetSuccessResponseBodyForTest("token", 0)));
+  network_wrapper_.SetResponse(
+      GetResponseForTest(nullptr, 200, GetSuccessResponseBodyForTest("token", 0)));
 
   ServiceAccountTokenMinter::GetTokenResponse resp;
 
@@ -96,8 +92,8 @@ TEST_F(ServiceAccountTokenMinterTest, GetFirebaseTokenNoCacheCache) {
   EXPECT_TRUE(network_wrapper_.GetRequest());
 
   network_wrapper_.ResetRequest();
-  network_wrapper_.SetResponse(GetResponseForTest(
-      nullptr, 200, GetSuccessResponseBodyForTest("token2", 3600)));
+  network_wrapper_.SetResponse(
+      GetResponseForTest(nullptr, 200, GetSuccessResponseBodyForTest("token2", 3600)));
 
   ASSERT_TRUE(GetFirebaseToken("api_key", &resp));
   ASSERT_EQ(ServiceAccountTokenMinter::Status::OK, resp.status);
@@ -109,8 +105,7 @@ TEST_F(ServiceAccountTokenMinterTest, NetworkError) {
   auto network_status = http::HttpError::New();
   network_status->description = "Error";
 
-  network_wrapper_.SetResponse(
-      GetResponseForTest(std::move(network_status), 0, ""));
+  network_wrapper_.SetResponse(GetResponseForTest(std::move(network_status), 0, ""));
 
   ServiceAccountTokenMinter::GetTokenResponse resp;
 
@@ -121,8 +116,7 @@ TEST_F(ServiceAccountTokenMinterTest, NetworkError) {
 }
 
 TEST_F(ServiceAccountTokenMinterTest, AuthenticationError) {
-  network_wrapper_.SetResponse(
-      GetResponseForTest(nullptr, 401, "Unauthorized"));
+  network_wrapper_.SetResponse(GetResponseForTest(nullptr, 401, "Unauthorized"));
 
   ServiceAccountTokenMinter::GetTokenResponse resp;
 

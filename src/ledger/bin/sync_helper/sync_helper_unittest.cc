@@ -32,10 +32,8 @@ TEST(SyncHelper, TwoSyncCallbacks) {
   auto operation = sync_helper.WrapOperation([] {});
   bool called1 = false;
   bool called2 = false;
-  sync_helper.RegisterSynchronizationCallback(
-      callback::SetWhenCalled(&called1));
-  sync_helper.RegisterSynchronizationCallback(
-      callback::SetWhenCalled(&called2));
+  sync_helper.RegisterSynchronizationCallback(callback::SetWhenCalled(&called1));
+  sync_helper.RegisterSynchronizationCallback(callback::SetWhenCalled(&called2));
   EXPECT_FALSE(called1);
   EXPECT_FALSE(called2);
   operation();
@@ -75,12 +73,10 @@ TEST(SyncHelper, TwoOperationTwoCallbacks) {
   SyncHelper sync_helper;
   auto operation1 = sync_helper.WrapOperation([] {});
   bool called1 = false;
-  sync_helper.RegisterSynchronizationCallback(
-      callback::SetWhenCalled(&called1));
+  sync_helper.RegisterSynchronizationCallback(callback::SetWhenCalled(&called1));
   auto operation2 = sync_helper.WrapOperation([] {});
   bool called2 = false;
-  sync_helper.RegisterSynchronizationCallback(
-      callback::SetWhenCalled(&called2));
+  sync_helper.RegisterSynchronizationCallback(callback::SetWhenCalled(&called2));
 
   EXPECT_FALSE(called1);
   EXPECT_FALSE(called2);
@@ -119,8 +115,7 @@ TEST(SyncHelper, WrapMutableLambda) {
 TEST(SyncHelper, StoreConstWrappedOperation) {
   SyncHelper sync_helper;
   bool called = false;
-  const auto operation =
-      sync_helper.WrapOperation(callback::SetWhenCalled(&called));
+  const auto operation = sync_helper.WrapOperation(callback::SetWhenCalled(&called));
   EXPECT_FALSE(called);
   operation();
   EXPECT_TRUE(called);

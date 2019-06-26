@@ -18,13 +18,12 @@
 namespace cloud_provider_firestore {
 namespace {
 
-class DeviceSetImplTest : public gtest::TestLoopFixture,
-                          public cloud_provider::DeviceSetWatcher {
+class DeviceSetImplTest : public gtest::TestLoopFixture, public cloud_provider::DeviceSetWatcher {
  public:
   DeviceSetImplTest()
       : test_credentials_provider_(dispatcher()),
-        device_set_impl_("user_path", &test_credentials_provider_,
-                         &firestore_service_, device_set_.NewRequest()),
+        device_set_impl_("user_path", &test_credentials_provider_, &firestore_service_,
+                         device_set_.NewRequest()),
         watcher_binding_(this) {}
 
   // cloud_provider::DeviceSetWatcher:
@@ -65,8 +64,8 @@ TEST_F(DeviceSetImplTest, CheckFingerprintOk) {
   EXPECT_FALSE(callback_called);
   EXPECT_EQ(1u, firestore_service_.get_document_records.size());
 
-  firestore_service_.get_document_records.front().callback(
-      grpc::Status(), google::firestore::v1beta1::Document());
+  firestore_service_.get_document_records.front().callback(grpc::Status(),
+                                                           google::firestore::v1beta1::Document());
 
   RunLoopUntilIdle();
   EXPECT_TRUE(callback_called);
@@ -84,9 +83,8 @@ TEST_F(DeviceSetImplTest, CheckFingerprintNotFound) {
   EXPECT_FALSE(callback_called);
   EXPECT_EQ(1u, firestore_service_.get_document_records.size());
 
-  firestore_service_.get_document_records.front().callback(
-      grpc::Status(grpc::NOT_FOUND, ""),
-      google::firestore::v1beta1::Document());
+  firestore_service_.get_document_records.front().callback(grpc::Status(grpc::NOT_FOUND, ""),
+                                                           google::firestore::v1beta1::Document());
 
   RunLoopUntilIdle();
   EXPECT_TRUE(callback_called);
@@ -117,9 +115,8 @@ TEST_F(DeviceSetImplTest, SetWatcherResultOk) {
   auto status = cloud_provider::Status::INTERNAL_ERROR;
   cloud_provider::DeviceSetWatcherPtr watcher;
   watcher_binding_.Bind(watcher.NewRequest());
-  device_set_->SetWatcher(
-      convert::ToArray("abc"), std::move(watcher),
-      callback::Capture(callback::SetWhenCalled(&callback_called), &status));
+  device_set_->SetWatcher(convert::ToArray("abc"), std::move(watcher),
+                          callback::Capture(callback::SetWhenCalled(&callback_called), &status));
 
   RunLoopUntilIdle();
   EXPECT_EQ(1u, firestore_service_.listen_clients.size());
@@ -141,9 +138,8 @@ TEST_F(DeviceSetImplTest, SetWatcherResultCloudErased) {
   auto status = cloud_provider::Status::INTERNAL_ERROR;
   cloud_provider::DeviceSetWatcherPtr watcher;
   watcher_binding_.Bind(watcher.NewRequest());
-  device_set_->SetWatcher(
-      convert::ToArray("abc"), std::move(watcher),
-      callback::Capture(callback::SetWhenCalled(&callback_called), &status));
+  device_set_->SetWatcher(convert::ToArray("abc"), std::move(watcher),
+                          callback::Capture(callback::SetWhenCalled(&callback_called), &status));
 
   RunLoopUntilIdle();
   EXPECT_EQ(1u, firestore_service_.listen_clients.size());
@@ -162,8 +158,7 @@ TEST_F(DeviceSetImplTest, SetWatcherResultCloudErased) {
 TEST_F(DeviceSetImplTest, Erase) {
   bool callback_called = false;
   auto status = cloud_provider::Status::INTERNAL_ERROR;
-  device_set_->Erase(
-      callback::Capture(callback::SetWhenCalled(&callback_called), &status));
+  device_set_->Erase(callback::Capture(callback::SetWhenCalled(&callback_called), &status));
 
   RunLoopUntilIdle();
   EXPECT_FALSE(callback_called);
@@ -172,16 +167,13 @@ TEST_F(DeviceSetImplTest, Erase) {
   auto response = google::firestore::v1beta1::ListDocumentsResponse();
   response.add_documents()->set_name("some/document/name");
   response.add_documents()->set_name("some/other/name");
-  firestore_service_.list_documents_records[0].callback(grpc::Status::OK,
-                                                        std::move(response));
+  firestore_service_.list_documents_records[0].callback(grpc::Status::OK, std::move(response));
 
   RunLoopUntilIdle();
   EXPECT_FALSE(callback_called);
   EXPECT_EQ(2u, firestore_service_.delete_document_records.size());
-  EXPECT_EQ("some/document/name",
-            firestore_service_.delete_document_records[0].request.name());
-  EXPECT_EQ("some/other/name",
-            firestore_service_.delete_document_records[1].request.name());
+  EXPECT_EQ("some/document/name", firestore_service_.delete_document_records[0].request.name());
+  EXPECT_EQ("some/other/name", firestore_service_.delete_document_records[1].request.name());
 
   firestore_service_.delete_document_records[0].callback(grpc::Status::OK);
   firestore_service_.delete_document_records[1].callback(grpc::Status::OK);
@@ -197,8 +189,7 @@ TEST_F(DeviceSetImplTest, Erase) {
 TEST_F(DeviceSetImplTest, EraseWithPaginatedDeviceListResponse) {
   bool callback_called = false;
   auto status = cloud_provider::Status::OK;
-  device_set_->Erase(
-      callback::Capture(callback::SetWhenCalled(&callback_called), &status));
+  device_set_->Erase(callback::Capture(callback::SetWhenCalled(&callback_called), &status));
 
   RunLoopUntilIdle();
   EXPECT_FALSE(callback_called);
@@ -208,8 +199,7 @@ TEST_F(DeviceSetImplTest, EraseWithPaginatedDeviceListResponse) {
   response.add_documents()->set_name("some/document/name");
   response.add_documents()->set_name("some/other/name");
   response.set_next_page_token("token");
-  firestore_service_.list_documents_records[0].callback(grpc::Status::OK,
-                                                        std::move(response));
+  firestore_service_.list_documents_records[0].callback(grpc::Status::OK, std::move(response));
 
   RunLoopUntilIdle();
   EXPECT_TRUE(callback_called);

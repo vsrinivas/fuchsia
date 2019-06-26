@@ -28,8 +28,7 @@ class JournalTest : public ledger::TestWithEnvironment {
   JournalTest()
       : encryption_service_(dispatcher()),
         page_storage_(&environment_, &encryption_service_,
-                      std::make_unique<storage::fake::FakeDb>(dispatcher()),
-                      "page_id"),
+                      std::make_unique<storage::fake::FakeDb>(dispatcher()), "page_id"),
         object_identifier_(0u, 0u, MakeObjectDigest("value")) {}
 
   ~JournalTest() override {}
@@ -38,15 +37,13 @@ class JournalTest : public ledger::TestWithEnvironment {
   void SetUp() override {
     Status status;
     bool called;
-    page_storage_.Init(
-        callback::Capture(callback::SetWhenCalled(&called), &status));
+    page_storage_.Init(callback::Capture(callback::SetWhenCalled(&called), &status));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
     ASSERT_EQ(Status::OK, status);
 
-    page_storage_.GetCommit(kFirstPageCommitId,
-                            callback::Capture(callback::SetWhenCalled(&called),
-                                              &status, &first_commit_));
+    page_storage_.GetCommit(kFirstPageCommitId, callback::Capture(callback::SetWhenCalled(&called),
+                                                                  &status, &first_commit_));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
     ASSERT_EQ(Status::OK, status);
@@ -55,8 +52,7 @@ class JournalTest : public ledger::TestWithEnvironment {
   // Casts the given |Journal| to |JournalImpl| and updates |journal_| to have
   // this value.
   void SetJournal(std::unique_ptr<Journal> journal) {
-    journal_ = std::unique_ptr<JournalImpl>(
-        static_cast<JournalImpl*>(journal.release()));
+    journal_ = std::unique_ptr<JournalImpl>(static_cast<JournalImpl*>(journal.release()));
   }
 
   std::vector<Entry> GetCommitContents(const Commit& commit) {
@@ -67,9 +63,8 @@ class JournalTest : public ledger::TestWithEnvironment {
       result.push_back(e);
       return true;
     };
-    page_storage_.GetCommitContents(
-        commit, "", std::move(on_next),
-        callback::Capture(callback::SetWhenCalled(&called), &status));
+    page_storage_.GetCommitContents(commit, "", std::move(on_next),
+                                    callback::Capture(callback::SetWhenCalled(&called), &status));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
     EXPECT_EQ(Status::OK, status);
@@ -90,8 +85,7 @@ class JournalTest : public ledger::TestWithEnvironment {
 };
 
 TEST_F(JournalTest, CommitEmptyJournal) {
-  SetJournal(JournalImpl::Simple(&environment_, &page_storage_,
-                                 first_commit_->Clone()));
+  SetJournal(JournalImpl::Simple(&environment_, &page_storage_, first_commit_->Clone()));
   ASSERT_TRUE(RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
     std::unique_ptr<const Commit> commit;
     std::vector<ObjectIdentifier> objects_to_sync;
@@ -105,8 +99,7 @@ TEST_F(JournalTest, CommitEmptyJournal) {
 
 TEST_F(JournalTest, JournalsPutDeleteCommit) {
   ASSERT_TRUE(RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
-    SetJournal(JournalImpl::Simple(&environment_, &page_storage_,
-                                   first_commit_->Clone()));
+    SetJournal(JournalImpl::Simple(&environment_, &page_storage_, first_commit_->Clone()));
     journal_->Put("key", object_identifier_, KeyPriority::EAGER);
 
     std::unique_ptr<const Commit> commit;
@@ -122,8 +115,7 @@ TEST_F(JournalTest, JournalsPutDeleteCommit) {
     EXPECT_EQ(KeyPriority::EAGER, entries[0].priority);
 
     // Ledger's content is now a single entry "key" -> "value". Delete it.
-    SetJournal(
-        JournalImpl::Simple(&environment_, &page_storage_, std::move(commit)));
+    SetJournal(JournalImpl::Simple(&environment_, &page_storage_, std::move(commit)));
     journal_->Delete("key");
 
     status = journal_->Commit(handler, &commit, &objects_to_sync);
@@ -135,8 +127,7 @@ TEST_F(JournalTest, JournalsPutDeleteCommit) {
 }
 
 TEST_F(JournalTest, JournalsPutRollback) {
-  SetJournal(JournalImpl::Simple(&environment_, &page_storage_,
-                                 first_commit_->Clone()));
+  SetJournal(JournalImpl::Simple(&environment_, &page_storage_, first_commit_->Clone()));
   journal_->Put("key", object_identifier_, KeyPriority::EAGER);
 
   // The journal was not committed: the contents of page storage should not have
@@ -153,8 +144,7 @@ TEST_F(JournalTest, JournalsPutRollback) {
 TEST_F(JournalTest, MultiplePutsDeletes) {
   ASSERT_TRUE(RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
     int size = 3;
-    SetJournal(JournalImpl::Simple(&environment_, &page_storage_,
-                                   first_commit_->Clone()));
+    SetJournal(JournalImpl::Simple(&environment_, &page_storage_, first_commit_->Clone()));
     Status status;
     // Insert keys {"0", "1", "2"}. Also insert key "0" a second time, with a
     // different value, and delete a non-existing key.
@@ -163,8 +153,7 @@ TEST_F(JournalTest, MultiplePutsDeletes) {
     }
     journal_->Delete("notfound");
 
-    ObjectIdentifier object_identifier_2(0u, 0u,
-                                         MakeObjectDigest("another value"));
+    ObjectIdentifier object_identifier_2(0u, 0u, MakeObjectDigest("another value"));
     journal_->Put("0", object_identifier_2, KeyPriority::EAGER);
 
     std::unique_ptr<const Commit> commit;
@@ -187,8 +176,7 @@ TEST_F(JournalTest, MultiplePutsDeletes) {
 
     // Delete keys {"0", "2"}. Also insert a key, that is deleted on the same
     // journal.
-    SetJournal(
-        JournalImpl::Simple(&environment_, &page_storage_, std::move(commit)));
+    SetJournal(JournalImpl::Simple(&environment_, &page_storage_, std::move(commit)));
     journal_->Delete("0");
     journal_->Delete("2");
     journal_->Put("tmp", object_identifier_, KeyPriority::EAGER);
@@ -210,8 +198,7 @@ TEST_F(JournalTest, MultiplePutsDeletes) {
 TEST_F(JournalTest, PutClear) {
   ASSERT_TRUE(RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
     int size = 3;
-    SetJournal(JournalImpl::Simple(&environment_, &page_storage_,
-                                   first_commit_->Clone()));
+    SetJournal(JournalImpl::Simple(&environment_, &page_storage_, first_commit_->Clone()));
     Status status;
     // Insert keys {"0", "1", "2"}.
     for (int i = 0; i < size; i++) {
@@ -227,8 +214,7 @@ TEST_F(JournalTest, PutClear) {
     ASSERT_THAT(GetCommitContents(*commit), SizeIs(size));
 
     // Clear the contents.
-    SetJournal(
-        JournalImpl::Simple(&environment_, &page_storage_, std::move(commit)));
+    SetJournal(JournalImpl::Simple(&environment_, &page_storage_, std::move(commit)));
     journal_->Clear();
 
     status = journal_->Commit(handler, &commit, &objects_to_sync);
@@ -243,8 +229,7 @@ TEST_F(JournalTest, MergeJournal) {
   ASSERT_TRUE(RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
     // Create 2 commits from the |kFirstPageCommitId|, one with a key "0", and
     // one with a key "1".
-    SetJournal(JournalImpl::Simple(&environment_, &page_storage_,
-                                   first_commit_->Clone()));
+    SetJournal(JournalImpl::Simple(&environment_, &page_storage_, first_commit_->Clone()));
     journal_->Put("0", object_identifier_, KeyPriority::EAGER);
 
     Status status;
@@ -254,8 +239,7 @@ TEST_F(JournalTest, MergeJournal) {
     ASSERT_EQ(Status::OK, status);
     ASSERT_NE(nullptr, commit_0);
 
-    SetJournal(JournalImpl::Simple(&environment_, &page_storage_,
-                                   first_commit_->Clone()));
+    SetJournal(JournalImpl::Simple(&environment_, &page_storage_, first_commit_->Clone()));
     journal_->Put("1", object_identifier_, KeyPriority::EAGER);
 
     std::unique_ptr<const Commit> commit_1;
@@ -265,8 +249,8 @@ TEST_F(JournalTest, MergeJournal) {
     ASSERT_NE(nullptr, commit_1);
 
     // Create a merge journal, adding only a key "2".
-    SetJournal(JournalImpl::Merge(&environment_, &page_storage_,
-                                  std::move(commit_0), std::move(commit_1)));
+    SetJournal(JournalImpl::Merge(&environment_, &page_storage_, std::move(commit_0),
+                                  std::move(commit_1)));
     journal_->Put("2", object_identifier_, KeyPriority::EAGER);
 
     std::unique_ptr<const Commit> merge_commit;

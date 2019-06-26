@@ -29,20 +29,17 @@ class FakeDeviceSet : public cloud_provider::DeviceSet {
   void CheckFingerprint(std::vector<uint8_t> fingerprint,
                         CheckFingerprintCallback callback) override;
 
-  void SetFingerprint(std::vector<uint8_t> fingerprint,
-                      SetFingerprintCallback callback) override;
+  void SetFingerprint(std::vector<uint8_t> fingerprint, SetFingerprintCallback callback) override;
 
-  void SetWatcher(
-      std::vector<uint8_t> fingerprint,
-      fidl::InterfaceHandle<cloud_provider::DeviceSetWatcher> watcher,
-      SetWatcherCallback callback) override;
+  void SetWatcher(std::vector<uint8_t> fingerprint,
+                  fidl::InterfaceHandle<cloud_provider::DeviceSetWatcher> watcher,
+                  SetWatcherCallback callback) override;
 
   void Erase(EraseCallback callback) override;
 
   const CloudEraseOnCheck cloud_erase_on_check_ = CloudEraseOnCheck::NO;
 
-  const CloudEraseFromWatcher cloud_erase_from_watcher_ =
-      CloudEraseFromWatcher::NO;
+  const CloudEraseFromWatcher cloud_erase_from_watcher_ = CloudEraseFromWatcher::NO;
 
   fit::closure on_empty_;
 

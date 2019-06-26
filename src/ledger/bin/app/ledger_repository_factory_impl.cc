@@ -85,8 +85,7 @@ constexpr fxl::StringView kLedgersPath = "ledgers";
 constexpr fxl::StringView kStagingPath = "staging";
 constexpr fxl::StringView kNamePath = "name";
 
-bool GetRepositoryName(rng::Random* random, const DetachedPath& content_path,
-                       std::string* name) {
+bool GetRepositoryName(rng::Random* random, const DetachedPath& content_path, std::string* name) {
   DetachedPath name_path = content_path.SubPath(kNamePath);
 
   if (files::ReadFileToStringAt(name_path.root_fd(), name_path.path(), name)) {
@@ -100,8 +99,8 @@ bool GetRepositoryName(rng::Random* random, const DetachedPath& content_path,
   std::string new_name;
   new_name.resize(16);
   random->Draw(&new_name);
-  if (!files::WriteFileAt(name_path.root_fd(), name_path.path(),
-                          new_name.c_str(), new_name.size())) {
+  if (!files::WriteFileAt(name_path.root_fd(), name_path.path(), new_name.c_str(),
+                          new_name.size())) {
     FXL_LOG(ERROR) << "Unable to write file at: " << name_path.path();
     return false;
   }
@@ -116,8 +115,7 @@ bool GetRepositoryName(rng::Random* random, const DetachedPath& content_path,
 // requests and callbacks and fires them when the repository is available.
 class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
  public:
-  explicit LedgerRepositoryContainer(fxl::UniqueFD root_fd)
-      : root_fd_(std::move(root_fd)) {
+  explicit LedgerRepositoryContainer(fxl::UniqueFD root_fd) : root_fd_(std::move(root_fd)) {
     // Ensure that we close the repository if the underlying filesystem closes
     // too. This prevents us from trying to write on disk when there's no disk
     // anymore. This situation can happen when the Ledger is shut down, if the
@@ -125,8 +123,7 @@ class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
     fd_chan_ = fsl::CloneChannelFromFileDescriptor(root_fd_.get());
     fd_wait_ = std::make_unique<async::Wait>(
         fd_chan_.get(), ZX_CHANNEL_PEER_CLOSED,
-        [this](async_dispatcher_t* dispatcher, async::WaitBase* wait,
-               zx_status_t status,
+        [this](async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                const zx_packet_signal* signal) { on_empty(); });
     zx_status_t status = fd_wait_->Begin(async_get_default_dispatcher());
     FXL_DCHECK(status == ZX_OK);
@@ -144,9 +141,8 @@ class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
 
   // Keeps track of |request| and |callback|. Binds |request| and fires
   // |callback| when the repository is available or an error occurs.
-  void BindRepository(
-      fidl::InterfaceRequest<ledger_internal::LedgerRepository> request,
-      fit::function<void(Status)> callback) {
+  void BindRepository(fidl::InterfaceRequest<ledger_internal::LedgerRepository> request,
+                      fit::function<void(Status)> callback) {
     if (status_ != Status::OK) {
       callback(status_);
       return;
@@ -161,8 +157,7 @@ class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
 
   // Sets the implementation or the error status for the container. This
   // notifies all awaiting callbacks and binds all pages in case of success.
-  void SetRepository(Status status,
-                     std::unique_ptr<LedgerRepositoryImpl> ledger_repository) {
+  void SetRepository(Status status, std::unique_ptr<LedgerRepositoryImpl> ledger_repository) {
     FXL_DCHECK(!ledger_repository_);
     FXL_DCHECK(status != Status::OK || ledger_repository);
     status_ = status;
@@ -209,13 +204,11 @@ class LedgerRepositoryFactoryImpl::LedgerRepositoryContainer {
   std::unique_ptr<async::Wait> fd_wait_;
   std::unique_ptr<LedgerRepositoryImpl> ledger_repository_;
   Status status_ = Status::OK;
-  std::vector<
-      std::pair<fidl::InterfaceRequest<ledger_internal::LedgerRepository>,
-                fit::function<void(Status)>>>
+  std::vector<std::pair<fidl::InterfaceRequest<ledger_internal::LedgerRepository>,
+                        fit::function<void(Status)>>>
       requests_;
   fit::closure on_empty_callback_;
-  std::vector<fidl::InterfaceRequest<ledger_internal::LedgerRepository>>
-      detached_handles_;
+  std::vector<fidl::InterfaceRequest<ledger_internal::LedgerRepository>> detached_handles_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LedgerRepositoryContainer);
 };
@@ -234,9 +227,7 @@ struct LedgerRepositoryFactoryImpl::RepositoryInformation {
   RepositoryInformation(const RepositoryInformation& other) = default;
   RepositoryInformation(RepositoryInformation&& other) = default;
 
-  bool Init(rng::Random* random) {
-    return GetRepositoryName(random, content_path, &name);
-  }
+  bool Init(rng::Random* random) { return GetRepositoryName(random, content_path, &name); }
 
   DetachedPath base_path;
   DetachedPath content_path;
@@ -250,8 +241,7 @@ struct LedgerRepositoryFactoryImpl::RepositoryInformation {
 
 LedgerRepositoryFactoryImpl::LedgerRepositoryFactoryImpl(
     Environment* environment,
-    std::unique_ptr<p2p_sync::UserCommunicatorFactory>
-        user_communicator_factory,
+    std::unique_ptr<p2p_sync::UserCommunicatorFactory> user_communicator_factory,
     inspect::Node inspect_node)
     : environment_(environment),
       user_communicator_factory_(std::move(user_communicator_factory)),
@@ -261,13 +251,10 @@ LedgerRepositoryFactoryImpl::~LedgerRepositoryFactoryImpl() {}
 
 void LedgerRepositoryFactoryImpl::GetRepository(
     zx::channel repository_handle,
-    fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider,
-    std::string user_id,
-    fidl::InterfaceRequest<ledger_internal::LedgerRepository>
-        repository_request,
+    fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider, std::string user_id,
+    fidl::InterfaceRequest<ledger_internal::LedgerRepository> repository_request,
     fit::function<void(Status)> callback) {
-  fxl::UniqueFD root_fd =
-      fsl::OpenChannelAsFileDescriptor(std::move(repository_handle));
+  fxl::UniqueFD root_fd = fsl::OpenChannelAsFileDescriptor(std::move(repository_handle));
   if (!root_fd.is_valid()) {
     callback(Status::IO_ERROR);
     return;
@@ -277,16 +264,13 @@ void LedgerRepositoryFactoryImpl::GetRepository(
 }
 
 void LedgerRepositoryFactoryImpl::GetRepositoryByFD(
-    fxl::UniqueFD root_fd,
-    fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider,
+    fxl::UniqueFD root_fd, fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider,
     std::string user_id,
-    fidl::InterfaceRequest<ledger_internal::LedgerRepository>
-        repository_request,
+    fidl::InterfaceRequest<ledger_internal::LedgerRepository> repository_request,
     fit::function<void(Status)> callback) {
   TRACE_DURATION("ledger", "repository_factory_get_repository");
 
-  RepositoryInformation repository_information(root_fd.get(),
-                                               std::move(user_id));
+  RepositoryInformation repository_information(root_fd.get(), std::move(user_id));
   if (!repository_information.Init(environment_->random())) {
     callback(Status::IO_ERROR);
     return;
@@ -294,31 +278,27 @@ void LedgerRepositoryFactoryImpl::GetRepositoryByFD(
 
   auto it = repositories_.find(repository_information.name);
   if (it != repositories_.end()) {
-    it->second.BindRepository(std::move(repository_request),
-                              std::move(callback));
+    it->second.BindRepository(std::move(repository_request), std::move(callback));
     return;
   }
 
-  auto ret =
-      repositories_.emplace(std::piecewise_construct,
-                            std::forward_as_tuple(repository_information.name),
-                            std::forward_as_tuple(std::move(root_fd)));
+  auto ret = repositories_.emplace(std::piecewise_construct,
+                                   std::forward_as_tuple(repository_information.name),
+                                   std::forward_as_tuple(std::move(root_fd)));
   LedgerRepositoryContainer* container = &ret.first->second;
   container->BindRepository(std::move(repository_request), std::move(callback));
 
-  auto db_factory = std::make_unique<storage::LevelDbFactory>(
-      environment_, repository_information.cache_path);
+  auto db_factory =
+      std::make_unique<storage::LevelDbFactory>(environment_, repository_information.cache_path);
   db_factory->Init();
   auto disk_cleanup_manager = std::make_unique<DiskCleanupManagerImpl>(
-      environment_, db_factory.get(),
-      repository_information.page_usage_db_path);
+      environment_, db_factory.get(), repository_information.page_usage_db_path);
   disk_cleanup_manager->Init();
 
   std::unique_ptr<SyncWatcherSet> watchers = std::make_unique<SyncWatcherSet>();
   std::unique_ptr<sync_coordinator::UserSyncImpl> user_sync;
   if (cloud_provider) {
-    user_sync = CreateUserSync(repository_information,
-                               std::move(cloud_provider), watchers.get());
+    user_sync = CreateUserSync(repository_information, std::move(cloud_provider), watchers.get());
   } else {
     FXL_LOG(WARNING) << "No cloud provider - Ledger will work locally but "
                      << "not sync. (running in Guest mode?)";
@@ -326,23 +306,19 @@ void LedgerRepositoryFactoryImpl::GetRepositoryByFD(
 
   DiskCleanupManagerImpl* disk_cleanup_manager_ptr = disk_cleanup_manager.get();
   auto repository = std::make_unique<LedgerRepositoryImpl>(
-      repository_information.ledgers_path, environment_, std::move(db_factory),
-      std::move(watchers), std::move(user_sync),
-      std::move(disk_cleanup_manager), disk_cleanup_manager_ptr,
+      repository_information.ledgers_path, environment_, std::move(db_factory), std::move(watchers),
+      std::move(user_sync), std::move(disk_cleanup_manager), disk_cleanup_manager_ptr,
       inspect_node_.CreateChild(convert::ToHex(repository_information.name)));
   disk_cleanup_manager_ptr->SetPageEvictionDelegate(repository.get());
   container->SetRepository(Status::OK, std::move(repository));
 }
 
-std::unique_ptr<sync_coordinator::UserSyncImpl>
-LedgerRepositoryFactoryImpl::CreateUserSync(
+std::unique_ptr<sync_coordinator::UserSyncImpl> LedgerRepositoryFactoryImpl::CreateUserSync(
     const RepositoryInformation& repository_information,
-    fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider,
-    SyncWatcherSet* watchers) {
+    fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider, SyncWatcherSet* watchers) {
   auto cloud_provider_ptr = cloud_provider.Bind();
   cloud_provider_ptr.set_error_handler([](zx_status_t status) {
-    FXL_LOG(ERROR)
-        << "Lost connection to cloud provider; cloud sync will no longer work.";
+    FXL_LOG(ERROR) << "Lost connection to cloud provider; cloud sync will no longer work.";
   });
 
   cloud_sync::UserConfig user_config;
@@ -351,21 +327,19 @@ LedgerRepositoryFactoryImpl::CreateUserSync(
   fit::closure on_version_mismatch = [this, repository_information]() mutable {
     OnVersionMismatch(repository_information);
   };
-  auto cloud_sync = std::make_unique<cloud_sync::UserSyncImpl>(
-      environment_, std::move(user_config), environment_->MakeBackoff(),
-      std::move(on_version_mismatch));
-  std::unique_ptr<p2p_sync::UserCommunicator> p2p_sync =
-      CreateP2PSync(repository_information);
+  auto cloud_sync = std::make_unique<cloud_sync::UserSyncImpl>(environment_, std::move(user_config),
+                                                               environment_->MakeBackoff(),
+                                                               std::move(on_version_mismatch));
+  std::unique_ptr<p2p_sync::UserCommunicator> p2p_sync = CreateP2PSync(repository_information);
 
-  auto user_sync = std::make_unique<sync_coordinator::UserSyncImpl>(
-      std::move(cloud_sync), std::move(p2p_sync));
+  auto user_sync =
+      std::make_unique<sync_coordinator::UserSyncImpl>(std::move(cloud_sync), std::move(p2p_sync));
   user_sync->SetWatcher(watchers);
   user_sync->Start();
   return user_sync;
 }
 
-std::unique_ptr<p2p_sync::UserCommunicator>
-LedgerRepositoryFactoryImpl::CreateP2PSync(
+std::unique_ptr<p2p_sync::UserCommunicator> LedgerRepositoryFactoryImpl::CreateP2PSync(
     const RepositoryInformation& repository_information) {
   if (!user_communicator_factory_) {
     return nullptr;
@@ -375,18 +349,15 @@ LedgerRepositoryFactoryImpl::CreateP2PSync(
     return nullptr;
   }
 
-  auto user_id_provider = std::make_unique<p2p_provider::StaticUserIdProvider>(
-      repository_information.user_id);
+  auto user_id_provider =
+      std::make_unique<p2p_provider::StaticUserIdProvider>(repository_information.user_id);
 
-  return user_communicator_factory_->GetUserCommunicator(
-      std::move(user_id_provider));
+  return user_communicator_factory_->GetUserCommunicator(std::move(user_id_provider));
 }
 
-void LedgerRepositoryFactoryImpl::OnVersionMismatch(
-    RepositoryInformation repository_information) {
-  FXL_LOG(WARNING)
-      << "Data in the cloud was wiped out, erasing local state. "
-      << "This should log you out, log back in to start syncing again.";
+void LedgerRepositoryFactoryImpl::OnVersionMismatch(RepositoryInformation repository_information) {
+  FXL_LOG(WARNING) << "Data in the cloud was wiped out, erasing local state. "
+                   << "This should log you out, log back in to start syncing again.";
 
   // First, shut down the repository so that we can delete the files while it's
   // not running.
@@ -399,23 +370,21 @@ void LedgerRepositoryFactoryImpl::OnVersionMismatch(
 
 void LedgerRepositoryFactoryImpl::DeleteRepositoryDirectory(
     const RepositoryInformation& repository_information) {
-  files::ScopedTempDirAt tmp_directory(
-      repository_information.staging_path.root_fd(),
-      repository_information.staging_path.path());
+  files::ScopedTempDirAt tmp_directory(repository_information.staging_path.root_fd(),
+                                       repository_information.staging_path.path());
   std::string destination = tmp_directory.path() + "/graveyard";
 
   // <base_path>/<serialization_version> becomes
   // <base_path>/<random temporary name>/graveyard/<serialization_version>
   if (renameat(repository_information.content_path.root_fd(),
-               repository_information.content_path.path().c_str(),
-               tmp_directory.root_fd(), destination.c_str()) != 0) {
-    FXL_LOG(ERROR) << "Unable to move repository local storage to "
-                   << destination << ". Error: " << strerror(errno);
+               repository_information.content_path.path().c_str(), tmp_directory.root_fd(),
+               destination.c_str()) != 0) {
+    FXL_LOG(ERROR) << "Unable to move repository local storage to " << destination
+                   << ". Error: " << strerror(errno);
     return;
   }
   if (!files::DeletePathAt(tmp_directory.root_fd(), destination, true)) {
-    FXL_LOG(ERROR) << "Unable to delete repository staging storage at "
-                   << destination;
+    FXL_LOG(ERROR) << "Unable to delete repository staging storage at " << destination;
     return;
   }
 }

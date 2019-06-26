@@ -13,13 +13,10 @@ void FakeNetConnector::ConnectToServiceProvider(
 }
 
 void FakeNetConnector::RegisterServiceProvider(
-    std::string name,
-    fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> service_provider) {
-  fuchsia::sys::ServiceProviderPtr service_provider_ptr =
-      service_provider.Bind();
+    std::string name, fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> service_provider) {
+  fuchsia::sys::ServiceProviderPtr service_provider_ptr = service_provider.Bind();
   service_provider_impl_.AddServiceForName(
-      [name, service_provider_ptr =
-                 std::move(service_provider_ptr)](zx::channel channel) {
+      [name, service_provider_ptr = std::move(service_provider_ptr)](zx::channel channel) {
         service_provider_ptr->ConnectToService(name, std::move(channel));
       },
       name);
@@ -31,8 +28,8 @@ void FakeNetConnector::GetDeviceServiceProvider(
   delegate_->ConnectToServiceProvider(device_name, std::move(service_provider));
 }
 
-void FakeNetConnector::GetKnownDeviceNames(
-    uint64_t version_last_seen, GetKnownDeviceNamesCallback callback) {
+void FakeNetConnector::GetKnownDeviceNames(uint64_t version_last_seen,
+                                           GetKnownDeviceNamesCallback callback) {
   delegate_->GetDevicesNames(version_last_seen, std::move(callback));
 }
 

@@ -14,9 +14,9 @@ namespace encryption {
 std::string HMAC256KDF(fxl::StringView data, size_t length) {
   std::string output;
   output.resize(length);
-  int result = HKDF(reinterpret_cast<uint8_t*>(&output[0]), output.size(),
-                    EVP_sha256(), reinterpret_cast<const uint8_t*>(data.data()),
-                    data.size(), nullptr, 0u, nullptr, 0u);
+  int result =
+      HKDF(reinterpret_cast<uint8_t*>(&output[0]), output.size(), EVP_sha256(),
+           reinterpret_cast<const uint8_t*>(data.data()), data.size(), nullptr, 0u, nullptr, 0u);
   FXL_CHECK(result == 1);
   return output;
 }

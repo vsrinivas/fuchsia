@@ -31,8 +31,7 @@ using Status = fuchsia::ledger::cloud::Status;
 namespace ledger {
 using BytesOrReference = fuchsia::ledger::BytesOrReference;
 using BytesOrReferencePtr = fuchsia::ledger::BytesOrReferencePtr;
-using ConflictResolutionWaitStatus =
-    fuchsia::ledger::ConflictResolutionWaitStatus;
+using ConflictResolutionWaitStatus = fuchsia::ledger::ConflictResolutionWaitStatus;
 using ConflictResolver = fuchsia::ledger::ConflictResolver;
 using ConflictResolverFactory = fuchsia::ledger::ConflictResolverFactory;
 using ConflictResolverFactoryPtr = fuchsia::ledger::ConflictResolverFactoryPtr;
@@ -75,10 +74,8 @@ using LedgerController = fuchsia::ledger::internal::LedgerController;
 using LedgerControllerPtr = fuchsia::ledger::internal::LedgerControllerPtr;
 using LedgerRepository = fuchsia::ledger::internal::LedgerRepository;
 using LedgerRepositoryPtr = fuchsia::ledger::internal::LedgerRepositoryPtr;
-using LedgerRepositoryFactory =
-    fuchsia::ledger::internal::LedgerRepositoryFactory;
-using LedgerRepositoryFactoryPtr =
-    fuchsia::ledger::internal::LedgerRepositoryFactoryPtr;
+using LedgerRepositoryFactory = fuchsia::ledger::internal::LedgerRepositoryFactory;
+using LedgerRepositoryFactoryPtr = fuchsia::ledger::internal::LedgerRepositoryFactoryPtr;
 }  // namespace ledger_internal
 
 #endif  // SRC_LEDGER_BIN_FIDL_INCLUDE_TYPES_H_

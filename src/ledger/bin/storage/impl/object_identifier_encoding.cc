@@ -9,39 +9,31 @@
 #include "src/ledger/bin/storage/impl/object_digest.h"
 
 namespace storage {
-ObjectIdentifier ToObjectIdentifier(
-    const ObjectIdentifierStorage* object_identifier_storage) {
-  return {object_identifier_storage->key_index(),
-          object_identifier_storage->deletion_scope_id(),
+ObjectIdentifier ToObjectIdentifier(const ObjectIdentifierStorage* object_identifier_storage) {
+  return {object_identifier_storage->key_index(), object_identifier_storage->deletion_scope_id(),
           ObjectDigest(object_identifier_storage->object_digest())};
 }
 
 flatbuffers::Offset<ObjectIdentifierStorage> ToObjectIdentifierStorage(
-    flatbuffers::FlatBufferBuilder* builder,
-    const ObjectIdentifier& object_identifier) {
+    flatbuffers::FlatBufferBuilder* builder, const ObjectIdentifier& object_identifier) {
   return CreateObjectIdentifierStorage(
-      *builder, object_identifier.key_index(),
-      object_identifier.deletion_scope_id(),
-      convert::ToFlatBufferVector(
-          builder, object_identifier.object_digest().Serialize()));
+      *builder, object_identifier.key_index(), object_identifier.deletion_scope_id(),
+      convert::ToFlatBufferVector(builder, object_identifier.object_digest().Serialize()));
 }
 
 std::string EncodeObjectIdentifier(const ObjectIdentifier& object_identifier) {
   flatbuffers::FlatBufferBuilder builder;
   builder.Finish(ToObjectIdentifierStorage(&builder, object_identifier));
-  return std::string(reinterpret_cast<const char*>(builder.GetBufferPointer()),
-                     builder.GetSize());
+  return std::string(reinterpret_cast<const char*>(builder.GetBufferPointer()), builder.GetSize());
 }
 
-bool DecodeObjectIdentifier(fxl::StringView data,
-                            ObjectIdentifier* object_identifier) {
-  flatbuffers::Verifier verifier(
-      reinterpret_cast<const unsigned char*>(data.data()), data.size());
+bool DecodeObjectIdentifier(fxl::StringView data, ObjectIdentifier* object_identifier) {
+  flatbuffers::Verifier verifier(reinterpret_cast<const unsigned char*>(data.data()), data.size());
   if (!VerifyObjectIdentifierStorageBuffer(verifier)) {
     return false;
   }
-  const ObjectIdentifierStorage* storage = GetObjectIdentifierStorage(
-      reinterpret_cast<const unsigned char*>(data.data()));
+  const ObjectIdentifierStorage* storage =
+      GetObjectIdentifierStorage(reinterpret_cast<const unsigned char*>(data.data()));
   if (!IsObjectIdentifierStorageValid(storage)) {
     return false;
   }
@@ -50,8 +42,7 @@ bool DecodeObjectIdentifier(fxl::StringView data,
 }
 
 bool IsObjectIdentifierStorageValid(const ObjectIdentifierStorage* storage) {
-  return storage && storage->object_digest() &&
-         IsDigestValid(storage->object_digest());
+  return storage && storage->object_digest() && IsDigestValid(storage->object_digest());
 }
 
 }  // namespace storage

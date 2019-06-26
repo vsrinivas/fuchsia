@@ -12,6 +12,5 @@ namespace {
 constexpr char kFirstPageCommitIdArray[kCommitIdSize] = {};
 }  // namespace
 
-constexpr fxl::StringView kFirstPageCommitId(kFirstPageCommitIdArray,
-                                             kCommitIdSize);
+constexpr fxl::StringView kFirstPageCommitId(kFirstPageCommitIdArray, kCommitIdSize);
 }  // namespace storage

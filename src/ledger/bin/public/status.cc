@@ -43,14 +43,12 @@ zx_status_t ConvertToEpitaph(Status status) {
     case Status::PAGE_NOT_FOUND:
     case Status::KEY_NOT_FOUND:
     case Status::NETWORK_ERROR:
-      FXL_DCHECK(false)
-          << "Status: " << status
-          << " is a visible status and should not be sent as epitaph";
+      FXL_DCHECK(false) << "Status: " << status
+                        << " is a visible status and should not be sent as epitaph";
       return ZX_ERR_INTERNAL;
     case Status::INTERRUPTED:
     case Status::NOT_IMPLEMENTED:
-      FXL_DCHECK(false) << "Status: " << status
-                        << " should never be sent to the client.";
+      FXL_DCHECK(false) << "Status: " << status << " should never be sent to the client.";
       return ZX_ERR_INTERNAL;
     case Status::DATA_INTEGRITY_ERROR:
       return ZX_ERR_IO_DATA_INTEGRITY;
@@ -67,8 +65,6 @@ zx_status_t ConvertToEpitaph(Status status) {
   }
 }
 
-std::ostream& operator<<(std::ostream& os, Status status) {
-  return os << StatusToString(status);
-}
+std::ostream& operator<<(std::ostream& os, Status status) { return os << StatusToString(status); }
 
 }  // namespace ledger

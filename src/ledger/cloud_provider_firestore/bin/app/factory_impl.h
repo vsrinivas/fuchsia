@@ -22,8 +22,7 @@ namespace cloud_provider_firestore {
 class FactoryImpl : public Factory {
  public:
   explicit FactoryImpl(async_dispatcher_t* dispatcher, rng::Random* random,
-                       sys::ComponentContext* component_context,
-                       std::string cobalt_client_name);
+                       sys::ComponentContext* component_context, std::string cobalt_client_name);
 
   ~FactoryImpl() override;
 
@@ -36,17 +35,13 @@ class FactoryImpl : public Factory {
  private:
   // Factory:
   void GetCloudProvider(
-      Config config,
-      fidl::InterfaceHandle<fuchsia::auth::TokenManager> token_manager,
-      fidl::InterfaceRequest<cloud_provider::CloudProvider>
-          cloud_provider_request,
+      Config config, fidl::InterfaceHandle<fuchsia::auth::TokenManager> token_manager,
+      fidl::InterfaceRequest<cloud_provider::CloudProvider> cloud_provider_request,
       GetCloudProviderCallback callback) override;
 
   void GetFirebaseCloudProvider(
-      Config config,
-      std::unique_ptr<firebase_auth::FirebaseAuthImpl> firebase_auth,
-      fidl::InterfaceRequest<cloud_provider::CloudProvider>
-          cloud_provider_request,
+      Config config, std::unique_ptr<firebase_auth::FirebaseAuthImpl> firebase_auth,
+      fidl::InterfaceRequest<cloud_provider::CloudProvider> cloud_provider_request,
       fit::function<void(cloud_provider::Status)> callback);
 
   async_dispatcher_t* const dispatcher_;

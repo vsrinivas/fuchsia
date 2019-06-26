@@ -26,9 +26,8 @@ class NetConnectorFactory : public FakeNetConnector::Delegate {
 
   // Creates a new virtual host with the given host name, and connects to its
   // NetConnector.
-  void AddBinding(
-      std::string host_name,
-      fidl::InterfaceRequest<fuchsia::netconnector::NetConnector> request);
+  void AddBinding(std::string host_name,
+                  fidl::InterfaceRequest<fuchsia::netconnector::NetConnector> request);
 
  private:
   // Holder holds a NetConnector.
@@ -40,8 +39,7 @@ class NetConnectorFactory : public FakeNetConnector::Delegate {
 
   // FakeNetConnector::Delegate:
   void GetDevicesNames(uint64_t last_version,
-                       fit::function<void(uint64_t, std::vector<std::string>)>
-                           callback) override;
+                       fit::function<void(uint64_t, std::vector<std::string>)> callback) override;
   void ConnectToServiceProvider(
       std::string device_name,
       fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> request) override;

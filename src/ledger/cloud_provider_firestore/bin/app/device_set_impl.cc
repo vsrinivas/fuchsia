@@ -23,11 +23,10 @@ constexpr char kSeparator[] = "/";
 constexpr char kDeviceCollection[] = "devices";
 constexpr char kExistsKey[] = "exists";
 
-std::string GetDevicePath(fxl::StringView user_path,
-                          fxl::StringView fingerprint) {
+std::string GetDevicePath(fxl::StringView user_path, fxl::StringView fingerprint) {
   std::string encoded_fingerprint = EncodeKey(fingerprint);
-  return fxl::Concatenate({user_path, kSeparator, kDeviceCollection, kSeparator,
-                           encoded_fingerprint});
+  return fxl::Concatenate(
+      {user_path, kSeparator, kDeviceCollection, kSeparator, encoded_fingerprint});
 }
 
 class GrpcStatusAccumulator {
@@ -46,8 +45,7 @@ class GrpcStatusAccumulator {
 };
 
 class GrpcStatusWaiter
-    : public callback::BaseWaiter<GrpcStatusAccumulator, grpc::Status,
-                                  grpc::Status> {
+    : public callback::BaseWaiter<GrpcStatusAccumulator, grpc::Status, grpc::Status> {
  private:
   GrpcStatusWaiter()
       : callback::BaseWaiter<GrpcStatusAccumulator, grpc::Status, grpc::Status>(
@@ -57,10 +55,9 @@ class GrpcStatusWaiter
 };
 }  // namespace
 
-DeviceSetImpl::DeviceSetImpl(
-    std::string user_path, CredentialsProvider* credentials_provider,
-    FirestoreService* firestore_service,
-    fidl::InterfaceRequest<cloud_provider::DeviceSet> request)
+DeviceSetImpl::DeviceSetImpl(std::string user_path, CredentialsProvider* credentials_provider,
+                             FirestoreService* firestore_service,
+                             fidl::InterfaceRequest<cloud_provider::DeviceSet> request)
     : user_path_(std::move(user_path)),
       credentials_provider_(credentials_provider),
       firestore_service_(firestore_service),
@@ -82,30 +79,27 @@ DeviceSetImpl::~DeviceSetImpl() {}
 
 void DeviceSetImpl::ScopedGetCredentials(
     fit::function<void(std::shared_ptr<grpc::CallCredentials>)> callback) {
-  credentials_provider_->GetCredentials(callback::MakeScoped(
-      weak_ptr_factory_.GetWeakPtr(), std::move(callback)));
+  credentials_provider_->GetCredentials(
+      callback::MakeScoped(weak_ptr_factory_.GetWeakPtr(), std::move(callback)));
 }
 
 void DeviceSetImpl::CheckFingerprint(std::vector<uint8_t> fingerprint,
                                      CheckFingerprintCallback callback) {
   auto request = google::firestore::v1beta1::GetDocumentRequest();
-  request.set_name(
-      GetDevicePath(user_path_, convert::ToStringView(fingerprint)));
+  request.set_name(GetDevicePath(user_path_, convert::ToStringView(fingerprint)));
 
-  ScopedGetCredentials(
-      [this, request = std::move(request),
-       callback = std::move(callback)](auto call_credentials) mutable {
-        firestore_service_->GetDocument(
-            std::move(request), std::move(call_credentials),
-            [callback = std::move(callback)](auto status, auto result) {
-              if (LogGrpcRequestError(status)) {
-                callback(ConvertGrpcStatus(status.error_code()));
-                return;
-              }
+  ScopedGetCredentials([this, request = std::move(request),
+                        callback = std::move(callback)](auto call_credentials) mutable {
+    firestore_service_->GetDocument(std::move(request), std::move(call_credentials),
+                                    [callback = std::move(callback)](auto status, auto result) {
+                                      if (LogGrpcRequestError(status)) {
+                                        callback(ConvertGrpcStatus(status.error_code()));
+                                        return;
+                                      }
 
-              callback(cloud_provider::Status::OK);
-            });
-      });
+                                      callback(cloud_provider::Status::OK);
+                                    });
+  });
 }
 
 void DeviceSetImpl::SetFingerprint(std::vector<uint8_t> fingerprint,
@@ -120,25 +114,22 @@ void DeviceSetImpl::SetFingerprint(std::vector<uint8_t> fingerprint,
   exists.set_boolean_value(true);
   (*(request.mutable_document()->mutable_fields()))[kExistsKey] = exists;
 
-  ScopedGetCredentials(
-      [this, request = std::move(request),
-       callback = std::move(callback)](auto call_credentials) mutable {
-        firestore_service_->CreateDocument(
-            std::move(request), std::move(call_credentials),
-            [callback = std::move(callback)](auto status, auto result) {
-              if (LogGrpcRequestError(status)) {
-                callback(ConvertGrpcStatus(status.error_code()));
-                return;
-              }
-              callback(cloud_provider::Status::OK);
-            });
-      });
+  ScopedGetCredentials([this, request = std::move(request),
+                        callback = std::move(callback)](auto call_credentials) mutable {
+    firestore_service_->CreateDocument(std::move(request), std::move(call_credentials),
+                                       [callback = std::move(callback)](auto status, auto result) {
+                                         if (LogGrpcRequestError(status)) {
+                                           callback(ConvertGrpcStatus(status.error_code()));
+                                           return;
+                                         }
+                                         callback(cloud_provider::Status::OK);
+                                       });
+  });
 }
 
-void DeviceSetImpl::SetWatcher(
-    std::vector<uint8_t> fingerprint,
-    fidl::InterfaceHandle<cloud_provider::DeviceSetWatcher> watcher,
-    SetWatcherCallback callback) {
+void DeviceSetImpl::SetWatcher(std::vector<uint8_t> fingerprint,
+                               fidl::InterfaceHandle<cloud_provider::DeviceSetWatcher> watcher,
+                               SetWatcherCallback callback) {
   watcher_ = watcher.Bind();
   watched_fingerprint_ = convert::ToString(fingerprint);
   set_watcher_callback_ = std::move(callback);
@@ -146,8 +137,7 @@ void DeviceSetImpl::SetWatcher(
   ScopedGetCredentials([this](auto call_credentials) mutable {
     // Initiate the listen RPC. We will receive a call on OnConnected() when the
     // watcher is ready.
-    listen_call_handler_ =
-        firestore_service_->Listen(std::move(call_credentials), this);
+    listen_call_handler_ = firestore_service_->Listen(std::move(call_credentials), this);
   });
 }
 
@@ -156,31 +146,27 @@ void DeviceSetImpl::Erase(EraseCallback callback) {
   request.set_parent(user_path_);
   request.set_collection_id(kDeviceCollection);
 
-  ScopedGetCredentials(
-      [this, request = std::move(request),
-       callback = std::move(callback)](auto call_credentials) mutable {
-        firestore_service_->ListDocuments(
-            std::move(request), call_credentials,
-            [this, call_credentials, callback = std::move(callback)](
-                auto status, auto result) mutable {
-              if (LogGrpcRequestError(status)) {
-                callback(ConvertGrpcStatus(status.error_code()));
-                return;
-              }
-              OnGotDocumentsToErase(std::move(call_credentials),
-                                    std::move(result), std::move(callback));
-            });
-      });
+  ScopedGetCredentials([this, request = std::move(request),
+                        callback = std::move(callback)](auto call_credentials) mutable {
+    firestore_service_->ListDocuments(
+        std::move(request), call_credentials,
+        [this, call_credentials, callback = std::move(callback)](auto status, auto result) mutable {
+          if (LogGrpcRequestError(status)) {
+            callback(ConvertGrpcStatus(status.error_code()));
+            return;
+          }
+          OnGotDocumentsToErase(std::move(call_credentials), std::move(result),
+                                std::move(callback));
+        });
+  });
 }
 
 void DeviceSetImpl::OnGotDocumentsToErase(
     std::shared_ptr<grpc::CallCredentials> call_credentials,
-    google::firestore::v1beta1::ListDocumentsResponse documents_response,
-    EraseCallback callback) {
+    google::firestore::v1beta1::ListDocumentsResponse documents_response, EraseCallback callback) {
   if (!documents_response.next_page_token().empty()) {
     // TODO(ppi): handle paginated response.
-    FXL_LOG(ERROR)
-        << "Failed to erase the device map - too many devices in the map.";
+    FXL_LOG(ERROR) << "Failed to erase the device map - too many devices in the map.";
     callback(cloud_provider::Status::INTERNAL_ERROR);
     return;
   }
@@ -189,18 +175,16 @@ void DeviceSetImpl::OnGotDocumentsToErase(
   for (const auto& document : documents_response.documents()) {
     auto request = google::firestore::v1beta1::DeleteDocumentRequest();
     request.set_name(document.name());
-    firestore_service_->DeleteDocument(std::move(request), call_credentials,
-                                       waiter->NewCallback());
+    firestore_service_->DeleteDocument(std::move(request), call_credentials, waiter->NewCallback());
   }
-  waiter->Finalize(callback::MakeScoped(
-      weak_ptr_factory_.GetWeakPtr(),
-      [callback = std::move(callback)](grpc::Status status) {
-        if (LogGrpcRequestError(status)) {
-          callback(ConvertGrpcStatus(status.error_code()));
-          return;
-        }
-        callback(cloud_provider::Status::OK);
-      }));
+  waiter->Finalize(callback::MakeScoped(weak_ptr_factory_.GetWeakPtr(),
+                                        [callback = std::move(callback)](grpc::Status status) {
+                                          if (LogGrpcRequestError(status)) {
+                                            callback(ConvertGrpcStatus(status.error_code()));
+                                            return;
+                                          }
+                                          callback(cloud_provider::Status::OK);
+                                        }));
 }
 
 void DeviceSetImpl::OnConnected() {
@@ -211,8 +195,7 @@ void DeviceSetImpl::OnConnected() {
   listen_call_handler_->Write(std::move(request));
 }
 
-void DeviceSetImpl::OnResponse(
-    google::firestore::v1beta1::ListenResponse response) {
+void DeviceSetImpl::OnResponse(google::firestore::v1beta1::ListenResponse response) {
   if (response.has_target_change()) {
     if (response.target_change().target_change_type() ==
         google::firestore::v1beta1::TargetChange_TargetChangeType_CURRENT) {
@@ -234,13 +217,11 @@ void DeviceSetImpl::OnResponse(
 }
 
 void DeviceSetImpl::OnFinished(grpc::Status status) {
-  if (status.error_code() == grpc::UNAVAILABLE ||
-      status.error_code() == grpc::UNAUTHENTICATED) {
+  if (status.error_code() == grpc::UNAVAILABLE || status.error_code() == grpc::UNAUTHENTICATED) {
     if (watcher_) {
-      cloud_provider::Status watcher_status =
-          (status.error_code() == grpc::UNAVAILABLE)
-              ? cloud_provider::Status::NETWORK_ERROR
-              : cloud_provider::Status::AUTH_ERROR;
+      cloud_provider::Status watcher_status = (status.error_code() == grpc::UNAVAILABLE)
+                                                  ? cloud_provider::Status::NETWORK_ERROR
+                                                  : cloud_provider::Status::AUTH_ERROR;
       watcher_->OnError(watcher_status);
     }
     return;

@@ -8,8 +8,8 @@
 
 namespace cloud_sync {
 
-SyncStateWatcher::SyncStateContainer::SyncStateContainer(
-    DownloadSyncState download, UploadSyncState upload)
+SyncStateWatcher::SyncStateContainer::SyncStateContainer(DownloadSyncState download,
+                                                         UploadSyncState upload)
     : download(download), upload(upload) {}
 
 SyncStateWatcher::SyncStateContainer::SyncStateContainer() {}
@@ -23,15 +23,13 @@ void SyncStateWatcher::SyncStateContainer::Merge(SyncStateContainer other) {
   }
 }
 
-void SyncStateWatcher::Notify(DownloadSyncState download,
-                              UploadSyncState upload) {
+void SyncStateWatcher::Notify(DownloadSyncState download, UploadSyncState upload) {
   Notify(SyncStateContainer(download, upload));
 }
 
 bool operator==(const SyncStateWatcher::SyncStateContainer& lhs,
                 const SyncStateWatcher::SyncStateContainer& rhs) {
-  return std::tie(lhs.download, lhs.upload) ==
-         std::tie(rhs.download, rhs.upload);
+  return std::tie(lhs.download, lhs.upload) == std::tie(rhs.download, rhs.upload);
 }
 
 bool operator!=(const SyncStateWatcher::SyncStateContainer& lhs,
@@ -39,9 +37,8 @@ bool operator!=(const SyncStateWatcher::SyncStateContainer& lhs,
   return !(lhs == rhs);
 }
 
-std::ostream& operator<<(
-    std::ostream& strm,
-    const SyncStateWatcher::SyncStateContainer& sync_state) {
+std::ostream& operator<<(std::ostream& strm,
+                         const SyncStateWatcher::SyncStateContainer& sync_state) {
   return strm << "{" << sync_state.download << ", " << sync_state.upload << "}";
 }
 

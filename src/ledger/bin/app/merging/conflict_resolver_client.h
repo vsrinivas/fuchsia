@@ -25,16 +25,15 @@ namespace ledger {
 // Client handling communication with a ConflictResolver interface in order to
 // merge conflicting commit branches. It is used both by AutoMergeStrategy and
 // CustomMergeStrategy.
-class ConflictResolverClient
-    : public fuchsia::ledger::MergeResultProviderSyncableDelegate {
+class ConflictResolverClient : public fuchsia::ledger::MergeResultProviderSyncableDelegate {
  public:
-  explicit ConflictResolverClient(
-      storage::PageStorage* storage, ActivePageManager* active_page_manager,
-      ConflictResolver* conflict_resolver,
-      std::unique_ptr<const storage::Commit> left,
-      std::unique_ptr<const storage::Commit> right,
-      std::unique_ptr<const storage::Commit> ancestor,
-      fit::function<void(Status)> callback);
+  explicit ConflictResolverClient(storage::PageStorage* storage,
+                                  ActivePageManager* active_page_manager,
+                                  ConflictResolver* conflict_resolver,
+                                  std::unique_ptr<const storage::Commit> left,
+                                  std::unique_ptr<const storage::Commit> right,
+                                  std::unique_ptr<const storage::Commit> ancestor,
+                                  fit::function<void(Status)> callback);
   ~ConflictResolverClient() override;
 
   void Start();
@@ -44,42 +43,37 @@ class ConflictResolverClient
   // Gets or creates the object identifier associated to the given
   // |merge_value|. This method can only be called on merge values whose source
   // is either |NEW| or |RIGHT|.
-  void GetOrCreateObjectIdentifier(
-      const MergedValue& merged_value,
-      fit::function<void(Status, storage::ObjectIdentifier)> callback);
+  void GetOrCreateObjectIdentifier(const MergedValue& merged_value,
+                                   fit::function<void(Status, storage::ObjectIdentifier)> callback);
 
   // Rolls back journal, closes merge result provider and invokes callback_ with
   // |status|. This method must be called at most once.
   void Finalize(Status status);
 
   // Performs a diff of the given type on the conflict.
-  void GetDiff(diff_utils::DiffType type, std::unique_ptr<Token> token,
-               fit::function<void(Status, std::vector<DiffEntry>,
-                                  std::unique_ptr<Token>)>
-                   callback);
+  void GetDiff(
+      diff_utils::DiffType type, std::unique_ptr<Token> token,
+      fit::function<void(Status, std::vector<DiffEntry>, std::unique_ptr<Token>)> callback);
 
   // MergeResultProviderNotifierDelegate:
   void GetFullDiff(std::unique_ptr<Token> token,
-                   fit::function<void(Status, std::vector<DiffEntry>,
-                                      std::unique_ptr<Token>)>
+                   fit::function<void(Status, std::vector<DiffEntry>, std::unique_ptr<Token>)>
                        callback) override;
-  void GetConflictingDiff(std::unique_ptr<Token> token,
-                          fit::function<void(Status, std::vector<DiffEntry>,
-                                             std::unique_ptr<Token>)>
-                              callback) override;
-  void Merge(std::vector<MergedValue> merged_values,
-             fit::function<void(Status)> callback) override;
-  void MergeNonConflictingEntries(
-      fit::function<void(Status)> callback) override;
+  void GetConflictingDiff(
+      std::unique_ptr<Token> token,
+      fit::function<void(Status, std::vector<DiffEntry>, std::unique_ptr<Token>)> callback)
+      override;
+  void Merge(std::vector<MergedValue> merged_values, fit::function<void(Status)> callback) override;
+  void MergeNonConflictingEntries(fit::function<void(Status)> callback) override;
   void Done(fit::function<void(Status)> callback) override;
 
   // Checks whether this ConflictResolverClient is still valid (not deleted nor
   // cancelled) and the status is OK. Returns |true| in that case. Otherwise,
   // calls |callback| with the given |status| and calls |Finalize| if this
   // object is not deleted, then return |false|.
-  static bool IsInValidStateAndNotify(
-      const fxl::WeakPtr<ConflictResolverClient>& weak_this,
-      const fit::function<void(Status)>& callback, Status status = Status::OK);
+  static bool IsInValidStateAndNotify(const fxl::WeakPtr<ConflictResolverClient>& weak_this,
+                                      const fit::function<void(Status)>& callback,
+                                      Status status = Status::OK);
 
   storage::PageStorage* const storage_;
   ActivePageManager* const manager_;

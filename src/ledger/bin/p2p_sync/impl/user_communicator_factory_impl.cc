@@ -13,14 +13,12 @@
 #include "src/lib/fxl/logging.h"
 
 namespace p2p_sync {
-UserCommunicatorFactoryImpl::UserCommunicatorFactoryImpl(
-    ledger::Environment* environment)
+UserCommunicatorFactoryImpl::UserCommunicatorFactoryImpl(ledger::Environment* environment)
     : environment_(environment) {}
 
 UserCommunicatorFactoryImpl::~UserCommunicatorFactoryImpl() {}
 
-std::unique_ptr<UserCommunicator>
-UserCommunicatorFactoryImpl::GetUserCommunicator(
+std::unique_ptr<UserCommunicator> UserCommunicatorFactoryImpl::GetUserCommunicator(
     std::unique_ptr<p2p_provider::UserIdProvider> user_id_provider) {
   char host_name_buffer[HOST_NAME_MAX + 1];
   int result = gethostname(host_name_buffer, sizeof(host_name_buffer));
@@ -30,14 +28,11 @@ UserCommunicatorFactoryImpl::GetUserCommunicator(
   }
 
   fuchsia::netconnector::NetConnectorPtr net_connector =
-      environment_->component_context()
-          ->svc()
-          ->Connect<fuchsia::netconnector::NetConnector>();
+      environment_->component_context()->svc()->Connect<fuchsia::netconnector::NetConnector>();
 
   return std::make_unique<p2p_sync::UserCommunicatorImpl>(
-      std::make_unique<p2p_provider::P2PProviderImpl>(
-          host_name_buffer, std::move(net_connector),
-          std::move(user_id_provider)),
+      std::make_unique<p2p_provider::P2PProviderImpl>(host_name_buffer, std::move(net_connector),
+                                                      std::move(user_id_provider)),
       environment_->coroutine_service());
 }
 

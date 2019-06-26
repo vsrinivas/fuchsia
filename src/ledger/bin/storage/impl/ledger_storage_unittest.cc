@@ -62,16 +62,14 @@ TEST_F(LedgerStorageTest, CreateGetCreatePageStorage) {
   std::unique_ptr<PageStorage> page_storage;
   bool called;
   storage_.GetPageStorage(
-      page_id, callback::Capture(callback::SetWhenCalled(&called), &status,
-                                 &page_storage));
+      page_id, callback::Capture(callback::SetWhenCalled(&called), &status, &page_storage));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::PAGE_NOT_FOUND, status);
   EXPECT_EQ(nullptr, page_storage);
 
   storage_.CreatePageStorage(
-      page_id, callback::Capture(callback::SetWhenCalled(&called), &status,
-                                 &page_storage));
+      page_id, callback::Capture(callback::SetWhenCalled(&called), &status, &page_storage));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   ASSERT_EQ(Status::OK, status);
@@ -80,8 +78,7 @@ TEST_F(LedgerStorageTest, CreateGetCreatePageStorage) {
 
   page_storage.reset();
   storage_.GetPageStorage(
-      page_id, callback::Capture(callback::SetWhenCalled(&called), &status,
-                                 &page_storage));
+      page_id, callback::Capture(callback::SetWhenCalled(&called), &status, &page_storage));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
@@ -94,8 +91,7 @@ TEST_F(LedgerStorageTest, CreateDeletePageStorage) {
   bool called;
   std::unique_ptr<PageStorage> page_storage;
   storage_.CreatePageStorage(
-      page_id, callback::Capture(callback::SetWhenCalled(&called), &status,
-                                 &page_storage));
+      page_id, callback::Capture(callback::SetWhenCalled(&called), &status, &page_storage));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   ASSERT_EQ(Status::OK, status);
@@ -104,22 +100,19 @@ TEST_F(LedgerStorageTest, CreateDeletePageStorage) {
   page_storage.reset();
 
   storage_.GetPageStorage(
-      page_id, callback::Capture(callback::SetWhenCalled(&called), &status,
-                                 &page_storage));
+      page_id, callback::Capture(callback::SetWhenCalled(&called), &status, &page_storage));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
   EXPECT_NE(nullptr, page_storage);
 
-  storage_.DeletePageStorage(
-      page_id, callback::Capture(callback::SetWhenCalled(&called), &status));
+  storage_.DeletePageStorage(page_id, callback::Capture(callback::SetWhenCalled(&called), &status));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
 
   storage_.GetPageStorage(
-      page_id, callback::Capture(callback::SetWhenCalled(&called), &status,
-                                 &page_storage));
+      page_id, callback::Capture(callback::SetWhenCalled(&called), &status, &page_storage));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::PAGE_NOT_FOUND, status);
@@ -131,8 +124,7 @@ TEST_F(LedgerStorageTest, DeletePageStorageNotFound) {
   Status status;
   bool called;
 
-  storage_.DeletePageStorage(
-      page_id, callback::Capture(callback::SetWhenCalled(&called), &status));
+  storage_.DeletePageStorage(page_id, callback::Capture(callback::SetWhenCalled(&called), &status));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::PAGE_NOT_FOUND, status);
@@ -143,8 +135,8 @@ TEST_F(LedgerStorageTest, ListNoPages) {
   bool called;
 
   std::set<PageId> listed_page_ids;
-  storage_.ListPages(callback::Capture(callback::SetWhenCalled(&called),
-                                       &status, &listed_page_ids));
+  storage_.ListPages(
+      callback::Capture(callback::SetWhenCalled(&called), &status, &listed_page_ids));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
@@ -160,9 +152,8 @@ TEST_F(LedgerStorageTest, ListPages) {
   std::vector<std::unique_ptr<PageStorage>> page_storages(all_page_ids.size());
   std::vector<PageId> expected_page_ids;
   for (size_t i = 0; i < all_page_ids.size(); i++) {
-    storage_.CreatePageStorage(
-        all_page_ids[i], callback::Capture(callback::SetWhenCalled(&called),
-                                           &status, &page_storages[i]));
+    storage_.CreatePageStorage(all_page_ids[i], callback::Capture(callback::SetWhenCalled(&called),
+                                                                  &status, &page_storages[i]));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
     ASSERT_EQ(Status::OK, status);
@@ -170,8 +161,8 @@ TEST_F(LedgerStorageTest, ListPages) {
 
     expected_page_ids.push_back(all_page_ids[i]);
     std::set<PageId> listed_page_ids;
-    storage_.ListPages(callback::Capture(callback::SetWhenCalled(&called),
-                                         &status, &listed_page_ids));
+    storage_.ListPages(
+        callback::Capture(callback::SetWhenCalled(&called), &status, &listed_page_ids));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
     ASSERT_EQ(Status::OK, status);
@@ -183,8 +174,8 @@ TEST_F(LedgerStorageTest, ListPages) {
   for (size_t i = 0; i < all_page_ids.size(); i++) {
     page_storages[i].reset();
     std::set<PageId> listed_page_ids;
-    storage_.ListPages(callback::Capture(callback::SetWhenCalled(&called),
-                                         &status, &listed_page_ids));
+    storage_.ListPages(
+        callback::Capture(callback::SetWhenCalled(&called), &status, &listed_page_ids));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
     ASSERT_EQ(Status::OK, status);
@@ -193,16 +184,16 @@ TEST_F(LedgerStorageTest, ListPages) {
 
   // ... deleting the page storages does cause them to no longer be listed.
   for (const auto& page_id : all_page_ids) {
-    storage_.DeletePageStorage(
-        page_id, callback::Capture(callback::SetWhenCalled(&called), &status));
+    storage_.DeletePageStorage(page_id,
+                               callback::Capture(callback::SetWhenCalled(&called), &status));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
     ASSERT_EQ(Status::OK, status);
     expected_page_ids.erase(expected_page_ids.begin());
 
     std::set<PageId> listed_page_ids;
-    storage_.ListPages(callback::Capture(callback::SetWhenCalled(&called),
-                                         &status, &listed_page_ids));
+    storage_.ListPages(
+        callback::Capture(callback::SetWhenCalled(&called), &status, &listed_page_ids));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
     ASSERT_EQ(Status::OK, status);

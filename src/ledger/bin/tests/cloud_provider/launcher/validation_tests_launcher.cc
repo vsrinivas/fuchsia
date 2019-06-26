@@ -35,8 +35,7 @@ ValidationTestsLauncher::CloudProviderProxy::CloudProviderProxy(
 
 ValidationTestsLauncher::CloudProviderProxy::~CloudProviderProxy(){};
 
-void ValidationTestsLauncher::CloudProviderProxy::set_on_empty(
-    fit::closure on_empty) {
+void ValidationTestsLauncher::CloudProviderProxy::set_on_empty(fit::closure on_empty) {
   on_empty_ = std::move(on_empty);
 }
 
@@ -47,12 +46,10 @@ ValidationTestsLauncher::ValidationTestsLauncher(
         factory)
     : component_context_(component_context), factory_(std::move(factory)) {
   service_directory_provider_.AddService<fuchsia::ledger::cloud::CloudProvider>(
-      [this](fidl::InterfaceRequest<fuchsia::ledger::cloud::CloudProvider>
-                 request) {
+      [this](fidl::InterfaceRequest<fuchsia::ledger::cloud::CloudProvider> request) {
         fidl::InterfacePtr<fuchsia::ledger::cloud::CloudProvider> proxied;
         auto controller = factory_(proxied.NewRequest());
-        proxies_.emplace(std::move(proxied), std::move(request),
-                         std::move(controller));
+        proxies_.emplace(std::move(proxied), std::move(request), std::move(controller));
       });
 }
 
@@ -63,17 +60,15 @@ void ValidationTestsLauncher::Run(const std::vector<std::string>& arguments,
   launch_info.url = kValidationTestsUrl;
   fuchsia::sys::ServiceList service_list;
   service_list.names.push_back(fuchsia::ledger::cloud::CloudProvider::Name_);
-  service_list.host_directory = service_directory_provider_.service_directory()
-                                    ->CloneChannel()
-                                    .TakeChannel();
+  service_list.host_directory =
+      service_directory_provider_.service_directory()->CloneChannel().TakeChannel();
   launch_info.additional_services = fidl::MakeOptional(std::move(service_list));
   for (const auto& argument : arguments) {
     launch_info.arguments.push_back(argument);
   }
   fuchsia::sys::LauncherPtr launcher;
   component_context_->svc()->Connect(launcher.NewRequest());
-  launcher->CreateComponent(std::move(launch_info),
-                            validation_tests_controller_.NewRequest());
+  launcher->CreateComponent(std::move(launch_info), validation_tests_controller_.NewRequest());
 
   validation_tests_controller_.events().OnTerminated =
       [this](int32_t return_code, fuchsia::sys::TerminationReason reason) {

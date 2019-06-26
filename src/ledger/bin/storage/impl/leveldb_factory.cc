@@ -54,10 +54,9 @@ constexpr size_t kRandomBytesCount = 16;
 // to access the parent directory, returns whether the given |path| exists.
 bool ParentDirectoryExists(ledger::DetachedPath path) {
   size_t last_slash = path.path().find_last_of('/');
-  return files::IsDirectoryAt(path.root_fd(),
-                              last_slash == std::string::npos
-                                  ? path.path()
-                                  : path.path().substr(0, last_slash));
+  return files::IsDirectoryAt(path.root_fd(), last_slash == std::string::npos
+                                                  ? path.path()
+                                                  : path.path().substr(0, last_slash));
 }
 
 enum class CreateInStagingPath : bool {
@@ -80,9 +79,7 @@ class LockingWrapper {
 
   // Acquire a lock on the promise execution, effectively blocking any wrapped
   // promise once acquired.
-  std::unique_lock<std::mutex> lock() {
-    return std::unique_lock<std::mutex>(mutex_);
-  }
+  std::unique_lock<std::mutex> lock() { return std::unique_lock<std::mutex>(mutex_); }
 
  private:
   // Promise continuation that acquires the shared lock from LockingWrapper
@@ -90,8 +87,7 @@ class LockingWrapper {
   template <class Promise>
   class LockingWrappedContinuation {
    public:
-    explicit LockingWrappedContinuation(LockingWrapper* wrapper,
-                                        Promise promise)
+    explicit LockingWrappedContinuation(LockingWrapper* wrapper, Promise promise)
         : wrapper_(wrapper), promise_(std::move(promise)) {}
 
     // Executes the wrapped promise.
@@ -113,9 +109,7 @@ class LockingWrapper {
 class ScopedAsyncExecutor {
  public:
   // Creates a ScopedAsyncExecutor using the provided async loop dispatcher.
-  ScopedAsyncExecutor(async_dispatcher_t* dispatcher) : executor_(dispatcher) {
-    scope_.emplace();
-  }
+  ScopedAsyncExecutor(async_dispatcher_t* dispatcher) : executor_(dispatcher) { scope_.emplace(); }
 
   ~ScopedAsyncExecutor() { FXL_DCHECK(stopped_); }
 
@@ -157,8 +151,7 @@ class ScopedAsyncExecutor {
 // IOLevelDbFactory holds all operations happening on the IO thread.
 class LevelDbFactory::IOLevelDbFactory {
  public:
-  IOLevelDbFactory(ledger::Environment* environment,
-                   ledger::DetachedPath cache_path)
+  IOLevelDbFactory(ledger::Environment* environment, ledger::DetachedPath cache_path)
       : environment_(environment),
         staging_path_(cache_path.SubPath(kStagingPath)),
         cached_db_path_(cache_path.SubPath(kCachedDbPath)),
@@ -169,8 +162,7 @@ class LevelDbFactory::IOLevelDbFactory {
 
   // Returns through the completer a LevelDB database, initialized on the IO
   // thread.
-  void GetOrCreateDb(ledger::DetachedPath db_path,
-                     DbFactory::OnDbNotFound on_db_not_found,
+  void GetOrCreateDb(ledger::DetachedPath db_path, DbFactory::OnDbNotFound on_db_not_found,
                      fit::completer<std::unique_ptr<Db>, Status> completer);
 
   // Self-destructs this class on the IO thread.
@@ -188,9 +180,9 @@ class LevelDbFactory::IOLevelDbFactory {
   // execute the returned promise, as it would contain any deferred
   // computation, if deferred computation is needed. This method should be
   // called on the I/O thread.
-  fit::promise<> GetOrCreateDbOnIOThread(
-      ledger::DetachedPath db_path, DbFactory::OnDbNotFound on_db_not_found,
-      fit::completer<std::unique_ptr<Db>, Status> completer);
+  fit::promise<> GetOrCreateDbOnIOThread(ledger::DetachedPath db_path,
+                                         DbFactory::OnDbNotFound on_db_not_found,
+                                         fit::completer<std::unique_ptr<Db>, Status> completer);
 
   // Gets or creates a new LevelDb instance.
   // This method should be called on the I/O thread.
@@ -214,8 +206,7 @@ class LevelDbFactory::IOLevelDbFactory {
   // Sychronously prepares a precached DB for normal use.
   // This method should be called on the I/O thread.
   fit::result<std::unique_ptr<Db>, Status> ReturnPrecachedDbOnIOThread(
-      ledger::DetachedPath db_path,
-      fit::result<std::unique_ptr<Db>, Status> result);
+      ledger::DetachedPath db_path, fit::result<std::unique_ptr<Db>, Status> result);
 
   // We hold a cached database to speed up initialization. |cached_db_| is only
   // manipulated on the I/O thread.
@@ -236,9 +227,8 @@ void LevelDbFactory::IOLevelDbFactory::Init() {
   io_executor_.schedule_task(fit::make_promise([this](fit::context& context) {
     fit::bridge<std::unique_ptr<Db>, Status> bridge;
     cached_db_ = bridge.consumer.promise();
-    CreateInStagingPath create_in_staging_path =
-        static_cast<CreateInStagingPath>(!files::IsDirectoryAt(
-            cached_db_path_.root_fd(), cached_db_path_.path()));
+    CreateInStagingPath create_in_staging_path = static_cast<CreateInStagingPath>(
+        !files::IsDirectoryAt(cached_db_path_.root_fd(), cached_db_path_.path()));
     auto cache_db_result = PrepareCachedDbOnIOThread(create_in_staging_path);
     bridge.completer.complete_or_abandon(std::move(cache_db_result));
   }));
@@ -247,11 +237,10 @@ void LevelDbFactory::IOLevelDbFactory::Init() {
 void LevelDbFactory::IOLevelDbFactory::GetOrCreateDb(
     ledger::DetachedPath db_path, DbFactory::OnDbNotFound on_db_not_found,
     fit::completer<std::unique_ptr<Db>, Status> completer) {
-  io_executor_.schedule_task(fit::make_promise(
-      [this, db_path, on_db_not_found,
-       completer = std::move(completer)](fit::context& context) mutable {
-        return GetOrCreateDbOnIOThread(db_path, on_db_not_found,
-                                       std::move(completer));
+  io_executor_.schedule_task(
+      fit::make_promise([this, db_path, on_db_not_found,
+                         completer = std::move(completer)](fit::context& context) mutable {
+        return GetOrCreateDbOnIOThread(db_path, on_db_not_found, std::move(completer));
       }));
 }
 
@@ -268,8 +257,7 @@ fit::promise<> LevelDbFactory::IOLevelDbFactory::GetOrCreateDbOnIOThread(
   if (files::IsDirectoryAt(db_path.root_fd(), db_path.path())) {
     // If the path exists, there is a LevelDb instance already there. Open and
     // return it.
-    auto result = GetOrCreateDbAtPathOnIOThread(std::move(db_path),
-                                                CreateInStagingPath::NO);
+    auto result = GetOrCreateDbAtPathOnIOThread(std::move(db_path), CreateInStagingPath::NO);
     completer.complete_or_abandon(std::move(result));
     return fit::promise<>();
   }
@@ -281,16 +269,15 @@ fit::promise<> LevelDbFactory::IOLevelDbFactory::GetOrCreateDbOnIOThread(
 
   switch (cached_db_.state()) {
     case fit::future_state::ok:
-      completer.complete_or_abandon(ReturnPrecachedDbOnIOThread(
-          std::move(db_path), cached_db_.take_result()));
+      completer.complete_or_abandon(
+          ReturnPrecachedDbOnIOThread(std::move(db_path), cached_db_.take_result()));
       return fit::promise<>();
     case fit::future_state::pending:
       return cached_db_.take_promise().then(
           [this, db_path, completer = std::move(completer)](
-              fit::result<std::unique_ptr<Db>, Status>& cache_result) mutable
-          -> void {
-            completer.complete_or_abandon(ReturnPrecachedDbOnIOThread(
-                std::move(db_path), std::move(cache_result)));
+              fit::result<std::unique_ptr<Db>, Status>& cache_result) mutable -> void {
+            completer.complete_or_abandon(
+                ReturnPrecachedDbOnIOThread(std::move(db_path), std::move(cache_result)));
           });
     case fit::future_state::empty:
       // If creating the pre-cached db failed at some point it will likely fail
@@ -299,8 +286,8 @@ fit::promise<> LevelDbFactory::IOLevelDbFactory::GetOrCreateDbOnIOThread(
       // Either creation of a cached db has failed or a previous request is
       // already waiting for the cached instance. Request a new LevelDb at the
       // final destination.
-      completer.complete_or_abandon(GetOrCreateDbAtPathOnIOThread(
-          std::move(db_path), CreateInStagingPath::YES));
+      completer.complete_or_abandon(
+          GetOrCreateDbAtPathOnIOThread(std::move(db_path), CreateInStagingPath::YES));
       return fit::promise<>();
     }
   }
@@ -315,8 +302,7 @@ LevelDbFactory::IOLevelDbFactory::GetOrCreateDbAtPathOnIOThread(
     status = CreateDbThroughStagingPathOnIOThread(std::move(db_path), &leveldb);
   } else {
     FXL_DCHECK(files::IsDirectoryAt(db_path.root_fd(), db_path.path()));
-    leveldb = std::make_unique<LevelDb>(environment_->dispatcher(),
-                                        std::move(db_path));
+    leveldb = std::make_unique<LevelDb>(environment_->dispatcher(), std::move(db_path));
     status = leveldb->Init();
   }
   if (status != Status::OK) {
@@ -329,11 +315,10 @@ Status LevelDbFactory::IOLevelDbFactory::CreateDbThroughStagingPathOnIOThread(
     ledger::DetachedPath db_path, std::unique_ptr<LevelDb>* db) {
   char name[kRandomBytesCount];
   environment_->random()->Draw(name, kRandomBytesCount);
-  ledger::DetachedPath tmp_destination = staging_path_.SubPath(
-      convert::ToHex(fxl::StringView(name, kRandomBytesCount)));
+  ledger::DetachedPath tmp_destination =
+      staging_path_.SubPath(convert::ToHex(fxl::StringView(name, kRandomBytesCount)));
   // Create a LevelDb instance in a temporary path.
-  auto result =
-      std::make_unique<LevelDb>(environment_->dispatcher(), tmp_destination);
+  auto result = std::make_unique<LevelDb>(environment_->dispatcher(), tmp_destination);
   Status status = result->Init();
   if (status != Status::OK) {
     return status;
@@ -348,8 +333,8 @@ Status LevelDbFactory::IOLevelDbFactory::CreateDbThroughStagingPathOnIOThread(
   FXL_DCHECK(ParentDirectoryExists(db_path))
       << "Parent directory does not exit for path: " << db_path.path();
   // Move it to the final destination.
-  if (renameat(tmp_destination.root_fd(), tmp_destination.path().c_str(),
-               db_path.root_fd(), db_path.path().c_str()) != 0) {
+  if (renameat(tmp_destination.root_fd(), tmp_destination.path().c_str(), db_path.root_fd(),
+               db_path.path().c_str()) != 0) {
     FXL_LOG(ERROR) << "Unable to move LevelDb from staging path to final "
                       "destination: "
                    << db_path.path() << ". Error: " << strerror(errno);
@@ -368,8 +353,7 @@ LevelDbFactory::IOLevelDbFactory::PrepareCachedDbOnIOThread(
 
 fit::result<std::unique_ptr<Db>, Status>
 LevelDbFactory::IOLevelDbFactory::ReturnPrecachedDbOnIOThread(
-    ledger::DetachedPath db_path,
-    fit::result<std::unique_ptr<Db>, Status> result) {
+    ledger::DetachedPath db_path, fit::result<std::unique_ptr<Db>, Status> result) {
   if (result.is_error()) {
     // If we failed to create a cached db instance, any future attempts will
     // likely fail as well: just return the error, and subsequent attempts will
@@ -378,11 +362,10 @@ LevelDbFactory::IOLevelDbFactory::ReturnPrecachedDbOnIOThread(
   }
 
   // Move the cached db to the final destination.
-  if (renameat(cached_db_path_.root_fd(), cached_db_path_.path().c_str(),
-               db_path.root_fd(), db_path.path().c_str()) != 0) {
+  if (renameat(cached_db_path_.root_fd(), cached_db_path_.path().c_str(), db_path.root_fd(),
+               db_path.path().c_str()) != 0) {
     FXL_LOG(ERROR) << "Unable to move LevelDb from: " << cached_db_path_.path()
-                   << " to final destination: " << db_path.path()
-                   << ". Error: " << strerror(errno);
+                   << " to final destination: " << db_path.path() << ". Error: " << strerror(errno);
     // Moving to the final destination failed, but the cached db was created
     // succesfully: we fail, and we'll retry the cached db next time.
     fit::bridge<std::unique_ptr<Db>, Status> bridge;
@@ -394,21 +377,17 @@ LevelDbFactory::IOLevelDbFactory::ReturnPrecachedDbOnIOThread(
   // Asynchronously start preparing the next cached db.
   fit::bridge<std::unique_ptr<Db>, Status> bridge;
   cached_db_ = bridge.consumer.promise();
-  io_executor_.schedule_task(
-      fit::make_promise([this, completer = std::move(bridge.completer)](
-                            fit::context& context) mutable {
-        auto cache_db_result =
-            PrepareCachedDbOnIOThread(CreateInStagingPath::YES);
+  io_executor_.schedule_task(fit::make_promise(
+      [this, completer = std::move(bridge.completer)](fit::context& context) mutable {
+        auto cache_db_result = PrepareCachedDbOnIOThread(CreateInStagingPath::YES);
         completer.complete_or_abandon(std::move(cache_db_result));
       }));
   return result;
 }
 
-LevelDbFactory::LevelDbFactory(ledger::Environment* environment,
-                               ledger::DetachedPath cache_path)
+LevelDbFactory::LevelDbFactory(ledger::Environment* environment, ledger::DetachedPath cache_path)
     : main_executor_(environment->dispatcher()) {
-  io_level_db_factory_ =
-      std::make_unique<IOLevelDbFactory>(environment, cache_path);
+  io_level_db_factory_ = std::make_unique<IOLevelDbFactory>(environment, cache_path);
 }
 
 LevelDbFactory::~LevelDbFactory() {
@@ -416,17 +395,15 @@ LevelDbFactory::~LevelDbFactory() {
 }
 
 void LevelDbFactory::Init() { io_level_db_factory_->Init(); }
-void LevelDbFactory::GetOrCreateDb(
-    ledger::DetachedPath db_path, DbFactory::OnDbNotFound on_db_not_found,
-    fit::function<void(Status, std::unique_ptr<Db>)> callback) {
+void LevelDbFactory::GetOrCreateDb(ledger::DetachedPath db_path,
+                                   DbFactory::OnDbNotFound on_db_not_found,
+                                   fit::function<void(Status, std::unique_ptr<Db>)> callback) {
   fit::bridge<std::unique_ptr<Db>, Status> bridge;
-  io_level_db_factory_->GetOrCreateDb(db_path, on_db_not_found,
-                                      std::move(bridge.completer));
+  io_level_db_factory_->GetOrCreateDb(db_path, on_db_not_found, std::move(bridge.completer));
 
   main_executor_.schedule_task(
       bridge.consumer.promise_or(fit::error(Status::ILLEGAL_STATE))
-          .then([callback = std::move(callback)](
-                    fit::result<std::unique_ptr<Db>, Status>& result) {
+          .then([callback = std::move(callback)](fit::result<std::unique_ptr<Db>, Status>& result) {
             switch (result.state()) {
               case fit::result_state::error:
                 callback(result.take_error(), nullptr);

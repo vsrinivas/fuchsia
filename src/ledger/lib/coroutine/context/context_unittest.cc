@@ -165,8 +165,7 @@ void CheckDistinctStack(void* context) {
   // buff is on the unsafe stack, GetSafeStackPointer() returns a value on the
   // safe stack. This checks that the address of the 2 stacks are separated at
   // least by 2 PAGE_SIZE, given that each stack has a guard.
-  EXPECT_GE(std::abs(reinterpret_cast<intptr_t>(buff) - GetSafeStackPointer()),
-            2 * PAGE_SIZE);
+  EXPECT_GE(std::abs(reinterpret_cast<intptr_t>(buff) - GetSafeStackPointer()), 2 * PAGE_SIZE);
 
   SetContext(reinterpret_cast<Context*>(context));
 }

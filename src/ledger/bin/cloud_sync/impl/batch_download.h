@@ -26,11 +26,10 @@ namespace cloud_sync {
 // not recoverable.
 class BatchDownload {
  public:
-  BatchDownload(storage::PageStorage* storage,
-                encryption::EncryptionService* encryption_service,
+  BatchDownload(storage::PageStorage* storage, encryption::EncryptionService* encryption_service,
                 std::vector<cloud_provider::CommitPackEntry> entries,
-                std::unique_ptr<cloud_provider::PositionToken> position_token,
-                fit::closure on_done, fit::closure on_error);
+                std::unique_ptr<cloud_provider::PositionToken> position_token, fit::closure on_done,
+                fit::closure on_error);
   ~BatchDownload();
 
   // Can be called only once.

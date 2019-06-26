@@ -16,12 +16,11 @@
 
 namespace cloud_sync {
 
-BatchDownload::BatchDownload(
-    storage::PageStorage* storage,
-    encryption::EncryptionService* encryption_service,
-    std::vector<cloud_provider::CommitPackEntry> entries,
-    std::unique_ptr<cloud_provider::PositionToken> position_token,
-    fit::closure on_done, fit::closure on_error)
+BatchDownload::BatchDownload(storage::PageStorage* storage,
+                             encryption::EncryptionService* encryption_service,
+                             std::vector<cloud_provider::CommitPackEntry> entries,
+                             std::unique_ptr<cloud_provider::PositionToken> position_token,
+                             fit::closure on_done, fit::closure on_error)
     : storage_(storage),
       encryption_service_(encryption_service),
       entries_(std::move(entries)),
@@ -30,28 +29,25 @@ BatchDownload::BatchDownload(
       on_error_(std::move(on_error)),
       weak_ptr_factory_(this) {
   FXL_DCHECK(storage);
-  TRACE_ASYNC_BEGIN("ledger", "batch_download",
-                    reinterpret_cast<uintptr_t>(this));
+  TRACE_ASYNC_BEGIN("ledger", "batch_download", reinterpret_cast<uintptr_t>(this));
 }
 
 BatchDownload::~BatchDownload() {
-  TRACE_ASYNC_END("ledger", "batch_download",
-                  reinterpret_cast<uintptr_t>(this));
+  TRACE_ASYNC_END("ledger", "batch_download", reinterpret_cast<uintptr_t>(this));
 }
 
 void BatchDownload::Start() {
   FXL_DCHECK(!started_);
   started_ = true;
-  auto waiter = fxl::MakeRefCounted<callback::Waiter<
-      encryption::Status, storage::PageStorage::CommitIdAndBytes>>(
+  auto waiter = fxl::MakeRefCounted<
+      callback::Waiter<encryption::Status, storage::PageStorage::CommitIdAndBytes>>(
       encryption::Status::OK);
   for (auto& entry : entries_) {
     encryption_service_->DecryptCommit(
-        entry.data,
-        [id = entry.id, callback = waiter->NewCallback()](
-            encryption::Status status, std::string content) mutable {
-          callback(status, storage::PageStorage::CommitIdAndBytes(
-                               std::move(id), std::move(content)));
+        entry.data, [id = entry.id, callback = waiter->NewCallback()](encryption::Status status,
+                                                                      std::string content) mutable {
+          callback(status,
+                   storage::PageStorage::CommitIdAndBytes(std::move(id), std::move(content)));
         });
   }
   waiter->Finalize(callback::MakeScoped(
@@ -67,8 +63,7 @@ void BatchDownload::Start() {
             std::move(commits), storage::ChangeSource::CLOUD,
             callback::MakeScoped(
                 weak_ptr_factory_.GetWeakPtr(),
-                [this](ledger::Status status,
-                       std::vector<storage::CommitId> /*commit_ids*/) {
+                [this](ledger::Status status, std::vector<storage::CommitId> /*commit_ids*/) {
                   if (status != ledger::Status::OK) {
                     on_error_();
                     return;
@@ -88,16 +83,15 @@ void BatchDownload::UpdateTimestampAndQuit() {
 
   storage_->SetSyncMetadata(
       kTimestampKey, convert::ToString(position_token_->opaque_id),
-      callback::MakeScoped(weak_ptr_factory_.GetWeakPtr(),
-                           [this](ledger::Status status) {
-                             if (status != ledger::Status::OK) {
-                               on_error_();
-                               return;
-                             }
+      callback::MakeScoped(weak_ptr_factory_.GetWeakPtr(), [this](ledger::Status status) {
+        if (status != ledger::Status::OK) {
+          on_error_();
+          return;
+        }
 
-                             // Can be deleted within.
-                             on_done_();
-                           }));
+        // Can be deleted within.
+        on_done_();
+      }));
 }
 
 }  // namespace cloud_sync

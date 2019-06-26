@@ -32,13 +32,11 @@ const NodeLevelCalculator* GetDefaultNodeLevelCalculator();
 // their key. |new_root_identifier| will contain the id of the new root and
 // |new_identifiers| the list of ids of all new nodes created after the changes.
 // Existing elements inside |new_identifiers| will be deleted.
-Status ApplyChanges(coroutine::CoroutineHandler* coroutine_handler,
-                    PageStorage* page_storage, ObjectIdentifier root_identifier,
-                    std::vector<EntryChange> changes,
-                    ObjectIdentifier* new_root_identifier,
-                    std::set<ObjectIdentifier>* new_identifiers,
-                    const NodeLevelCalculator* node_level_calculator =
-                        GetDefaultNodeLevelCalculator());
+Status ApplyChanges(
+    coroutine::CoroutineHandler* coroutine_handler, PageStorage* page_storage,
+    ObjectIdentifier root_identifier, std::vector<EntryChange> changes,
+    ObjectIdentifier* new_root_identifier, std::set<ObjectIdentifier>* new_identifiers,
+    const NodeLevelCalculator* node_level_calculator = GetDefaultNodeLevelCalculator());
 
 }  // namespace btree
 }  // namespace storage

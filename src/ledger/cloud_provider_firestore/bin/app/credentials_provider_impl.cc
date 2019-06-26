@@ -12,13 +12,11 @@ namespace {
 
 class FirebaseAuthPlugin : public grpc::MetadataCredentialsPlugin {
  public:
-  explicit FirebaseAuthPlugin(std::string token)
-      : header_value_("Bearer " + token) {}
+  explicit FirebaseAuthPlugin(std::string token) : header_value_("Bearer " + token) {}
 
-  grpc::Status GetMetadata(
-      grpc::string_ref /*service_url*/, grpc::string_ref /*method_name*/,
-      const grpc::AuthContext& /*channel_auth_context*/,
-      std::multimap<grpc::string, grpc::string>* metadata) override {
+  grpc::Status GetMetadata(grpc::string_ref /*service_url*/, grpc::string_ref /*method_name*/,
+                           const grpc::AuthContext& /*channel_auth_context*/,
+                           std::multimap<grpc::string, grpc::string>* metadata) override {
     // note: grpc seems to insist on lowercase "authorization", otherwise we get
     // "Illegal header key" from "src/core/lib/surface/validate_metadata.c".
     metadata->insert(std::make_pair("authorization", header_value_));
@@ -45,8 +43,8 @@ CredentialsProviderImpl::~CredentialsProviderImpl() {}
 void CredentialsProviderImpl::GetCredentials(
     fit::function<void(std::shared_ptr<grpc::CallCredentials>)> callback) {
   auto request = firebase_auth_->GetFirebaseToken(
-      [callback = std::move(callback)](
-          firebase_auth::AuthStatus auth_status, std::string auth_token) {
+      [callback = std::move(callback)](firebase_auth::AuthStatus auth_status,
+                                       std::string auth_token) {
         switch (auth_status) {
           case firebase_auth::AuthStatus::OK:
             callback(MakeCredentials(auth_token));

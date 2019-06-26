@@ -9,19 +9,16 @@
 
 namespace cloud_sync {
 
-PageUpload::PageUpload(callback::ScopedTaskRunner* task_runner,
-                       storage::PageStorage* storage,
+PageUpload::PageUpload(callback::ScopedTaskRunner* task_runner, storage::PageStorage* storage,
                        encryption::EncryptionService* encryption_service,
-                       cloud_provider::PageCloudPtr* page_cloud,
-                       Delegate* delegate,
+                       cloud_provider::PageCloudPtr* page_cloud, Delegate* delegate,
                        std::unique_ptr<backoff::Backoff> backoff)
     : task_runner_(task_runner),
       storage_(storage),
       encryption_service_(encryption_service),
       page_cloud_(page_cloud),
       delegate_(delegate),
-      log_prefix_("Page " + convert::ToHex(storage->GetId()) +
-                  " upload sync: "),
+      log_prefix_("Page " + convert::ToHex(storage->GetId()) + " upload sync: "),
       backoff_(std::move(backoff)),
       weak_ptr_factory_(this) {
   // Start to watch right away.
@@ -91,8 +88,7 @@ void PageUpload::UploadUnsyncedCommits() {
   // commits can be possibly very big.
   storage_->GetUnsyncedCommits(callback::MakeScoped(
       weak_ptr_factory_.GetWeakPtr(),
-      [this](ledger::Status status,
-             std::vector<std::unique_ptr<const storage::Commit>> commits) {
+      [this](ledger::Status status, std::vector<std::unique_ptr<const storage::Commit>> commits) {
         if (status != ledger::Status::OK) {
           SetState(UPLOAD_PERMANENT_ERROR);
           HandleError("Failed to retrieve the unsynced commits");
@@ -154,17 +150,15 @@ void PageUpload::HandleUnsyncedCommits(
       [this](BatchUpload::ErrorType error_type) {
         switch (error_type) {
           case BatchUpload::ErrorType::TEMPORARY: {
-            FXL_LOG(WARNING)
-                << log_prefix_
-                << "commit upload failed due to a connection error, retrying.";
+            FXL_LOG(WARNING) << log_prefix_
+                             << "commit upload failed due to a connection error, retrying.";
             SetState(UPLOAD_TEMPORARY_ERROR);
             batch_upload_.reset();
             PreviousState();
             RetryWithBackoff([this] { NextState(); });
           } break;
           case BatchUpload::ErrorType::PERMANENT: {
-            FXL_LOG(WARNING) << log_prefix_
-                             << "commit upload failed with a permanent error.";
+            FXL_LOG(WARNING) << log_prefix_ << "commit upload failed with a permanent error.";
             SetState(UPLOAD_PERMANENT_ERROR);
           } break;
         }
@@ -196,8 +190,7 @@ void PageUpload::SetState(UploadSyncState new_state) {
   // this class in the SetUploadState method.
   // TODO(qsr): Aggregate changed state, so that a change from A -> B -> A do
   //            not send any signal.
-  task_runner_->PostTask(
-      [this] { delegate_->SetUploadState(external_state_); });
+  task_runner_->PostTask([this] { delegate_->SetUploadState(external_state_); });
 }
 
 bool PageUpload::IsIdle() {

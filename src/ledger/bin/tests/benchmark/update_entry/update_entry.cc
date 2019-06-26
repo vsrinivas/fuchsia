@@ -60,8 +60,7 @@ void PrintUsage() {
 //     individually (implicit transaction).
 class UpdateEntryBenchmark {
  public:
-  UpdateEntryBenchmark(async::Loop* loop,
-                       std::unique_ptr<sys::ComponentContext> component_context,
+  UpdateEntryBenchmark(async::Loop* loop, std::unique_ptr<sys::ComponentContext> component_context,
                        int entry_count, int value_size, int transaction_size);
 
   void Run();
@@ -91,9 +90,9 @@ class UpdateEntryBenchmark {
   FXL_DISALLOW_COPY_AND_ASSIGN(UpdateEntryBenchmark);
 };
 
-UpdateEntryBenchmark::UpdateEntryBenchmark(
-    async::Loop* loop, std::unique_ptr<sys::ComponentContext> component_context,
-    int entry_count, int value_size, int transaction_size)
+UpdateEntryBenchmark::UpdateEntryBenchmark(async::Loop* loop,
+                                           std::unique_ptr<sys::ComponentContext> component_context,
+                                           int entry_count, int value_size, int transaction_size)
     : loop_(loop),
       random_(0),
       generator_(&random_),
@@ -111,20 +110,17 @@ UpdateEntryBenchmark::UpdateEntryBenchmark(
 }
 
 void UpdateEntryBenchmark::Run() {
-  FXL_LOG(INFO) << "--entry-count=" << entry_count_
-                << " --transaction-size=" << transaction_size_;
+  FXL_LOG(INFO) << "--entry-count=" << entry_count_ << " --transaction-size=" << transaction_size_;
   Status status =
-      GetLedger(component_context_.get(), component_controller_.NewRequest(),
-                nullptr, "", "update_entry", DetachedPath(tmp_dir_.path()),
-                QuitLoopClosure(), &ledger_);
+      GetLedger(component_context_.get(), component_controller_.NewRequest(), nullptr, "",
+                "update_entry", DetachedPath(tmp_dir_.path()), QuitLoopClosure(), &ledger_);
   if (QuitOnError(QuitLoopClosure(), status, "GetLedger")) {
     return;
   }
   GetPageEnsureInitialized(
       &ledger_, nullptr, DelayCallback::YES, QuitLoopClosure(),
       [this](Status status, PagePtr page, PageId id) {
-        if (QuitOnError(QuitLoopClosure(), status,
-                        "GetPageEnsureInitialized")) {
+        if (QuitOnError(QuitLoopClosure(), status, "GetPageEnsureInitialized")) {
           return;
         }
         page_ = std::move(page);
@@ -153,8 +149,7 @@ void UpdateEntryBenchmark::RunSingle(int i, std::vector<uint8_t> key) {
   page_->Sync([this, i, key = std::move(key)]() mutable {
     TRACE_ASYNC_END("benchmark", "put", i);
     if (transaction_size_ > 0 &&
-        (i % transaction_size_ == transaction_size_ - 1 ||
-         i + 1 == entry_count_)) {
+        (i % transaction_size_ == transaction_size_ - 1 || i + 1 == entry_count_)) {
       CommitAndRunNext(i, std::move(key));
     } else {
       RunSingle(i + 1, std::move(key));
@@ -202,24 +197,19 @@ int Main(int argc, const char** argv) {
   int value_size;
   std::string transaction_size_str;
   int transaction_size;
-  if (!command_line.GetOptionValue(kEntryCountFlag.ToString(),
-                                   &entry_count_str) ||
-      !fxl::StringToNumberWithError(entry_count_str, &entry_count) ||
-      entry_count <= 0 ||
-      !command_line.GetOptionValue(kValueSizeFlag.ToString(),
-                                   &value_size_str) ||
-      !fxl::StringToNumberWithError(value_size_str, &value_size) ||
-      value_size <= 0 ||
-      !command_line.GetOptionValue(kTransactionSizeFlag.ToString(),
-                                   &transaction_size_str) ||
+  if (!command_line.GetOptionValue(kEntryCountFlag.ToString(), &entry_count_str) ||
+      !fxl::StringToNumberWithError(entry_count_str, &entry_count) || entry_count <= 0 ||
+      !command_line.GetOptionValue(kValueSizeFlag.ToString(), &value_size_str) ||
+      !fxl::StringToNumberWithError(value_size_str, &value_size) || value_size <= 0 ||
+      !command_line.GetOptionValue(kTransactionSizeFlag.ToString(), &transaction_size_str) ||
       !fxl::StringToNumberWithError(transaction_size_str, &transaction_size) ||
       transaction_size < 0) {
     PrintUsage();
     return -1;
   }
 
-  UpdateEntryBenchmark app(&loop, std::move(component_context), entry_count,
-                           value_size, transaction_size);
+  UpdateEntryBenchmark app(&loop, std::move(component_context), entry_count, value_size,
+                           transaction_size);
   return RunWithTracing(&loop, [&app] { app.Run(); });
 }
 

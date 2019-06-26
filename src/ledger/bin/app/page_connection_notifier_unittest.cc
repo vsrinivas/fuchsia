@@ -22,9 +22,8 @@ constexpr char kLedgerName[] = "test_ledger_name";
 class PageConnectionNotifierTest : public TestWithEnvironment {
  public:
   PageConnectionNotifierTest()
-      : page_connection_notifier_(
-            kLedgerName, std::string(::fuchsia::ledger::PAGE_ID_SIZE, '3'),
-            &fake_disk_cleanup_manager_){};
+      : page_connection_notifier_(kLedgerName, std::string(::fuchsia::ledger::PAGE_ID_SIZE, '3'),
+                                  &fake_disk_cleanup_manager_){};
   ~PageConnectionNotifierTest() override = default;
 
  protected:
@@ -54,8 +53,7 @@ TEST_F(PageConnectionNotifierTest, MultipleExternalRequests) {
 TEST_F(PageConnectionNotifierTest, UnregisteredExternalRequests) {
   bool on_empty_called;
 
-  page_connection_notifier_.set_on_empty(
-      callback::SetWhenCalled(&on_empty_called));
+  page_connection_notifier_.set_on_empty(callback::SetWhenCalled(&on_empty_called));
   page_connection_notifier_.RegisterExternalRequest();
   page_connection_notifier_.UnregisterExternalRequests();
 
@@ -68,8 +66,7 @@ TEST_F(PageConnectionNotifierTest, UnregisteredExternalRequests) {
 TEST_F(PageConnectionNotifierTest, SingleExpiringTokenImmediatelyDiscarded) {
   bool on_empty_called;
 
-  page_connection_notifier_.set_on_empty(
-      callback::SetWhenCalled(&on_empty_called));
+  page_connection_notifier_.set_on_empty(callback::SetWhenCalled(&on_empty_called));
   page_connection_notifier_.NewInternalRequestToken();
 
   EXPECT_TRUE(page_connection_notifier_.IsEmpty());
@@ -79,8 +76,7 @@ TEST_F(PageConnectionNotifierTest, SingleExpiringTokenImmediatelyDiscarded) {
 TEST_F(PageConnectionNotifierTest, SingleExpiringTokenNotImmediatelyDiscarded) {
   bool on_empty_called;
 
-  page_connection_notifier_.set_on_empty(
-      callback::SetWhenCalled(&on_empty_called));
+  page_connection_notifier_.set_on_empty(callback::SetWhenCalled(&on_empty_called));
   {
     auto expiring_token = page_connection_notifier_.NewInternalRequestToken();
 
@@ -91,18 +87,16 @@ TEST_F(PageConnectionNotifierTest, SingleExpiringTokenNotImmediatelyDiscarded) {
   EXPECT_TRUE(on_empty_called);
 }
 
-TEST_F(PageConnectionNotifierTest,
-       MultipleExpiringTokensNotImmediatelyDiscarded) {
+TEST_F(PageConnectionNotifierTest, MultipleExpiringTokensNotImmediatelyDiscarded) {
   auto bit_generator = environment_.random()->NewBitGenerator<size_t>();
   int token_count = std::uniform_int_distribution(2, 20)(bit_generator);
   bool on_empty_called;
   std::vector<std::unique_ptr<ExpiringToken>> tokens;
 
-  page_connection_notifier_.set_on_empty(
-      callback::SetWhenCalled(&on_empty_called));
+  page_connection_notifier_.set_on_empty(callback::SetWhenCalled(&on_empty_called));
   for (int i = 0; i < token_count; i++) {
-    tokens.emplace_back(std::make_unique<ExpiringToken>(
-        page_connection_notifier_.NewInternalRequestToken()));
+    tokens.emplace_back(
+        std::make_unique<ExpiringToken>(page_connection_notifier_.NewInternalRequestToken()));
     EXPECT_FALSE(page_connection_notifier_.IsEmpty());
     EXPECT_FALSE(on_empty_called);
   }
@@ -119,8 +113,7 @@ TEST_F(PageConnectionNotifierTest,
   EXPECT_TRUE(on_empty_called);
 }
 
-TEST_F(PageConnectionNotifierTest,
-       MultipleExternalRequestsAndMultipleExpiringTokensDiscarded) {
+TEST_F(PageConnectionNotifierTest, MultipleExternalRequestsAndMultipleExpiringTokensDiscarded) {
   auto bit_generator = environment_.random()->NewBitGenerator<size_t>();
   size_t token_count = std::uniform_int_distribution(2u, 20u)(bit_generator);
   size_t unregister_requests_when_tokens_remain =
@@ -128,15 +121,14 @@ TEST_F(PageConnectionNotifierTest,
   bool on_empty_called;
   std::vector<std::unique_ptr<ExpiringToken>> tokens;
 
-  page_connection_notifier_.set_on_empty(
-      callback::SetWhenCalled(&on_empty_called));
+  page_connection_notifier_.set_on_empty(callback::SetWhenCalled(&on_empty_called));
   EXPECT_TRUE(page_connection_notifier_.IsEmpty());
   for (size_t i = 0; i < token_count; i++) {
     page_connection_notifier_.RegisterExternalRequest();
     EXPECT_FALSE(page_connection_notifier_.IsEmpty());
     EXPECT_FALSE(on_empty_called);
-    tokens.emplace_back(std::make_unique<ExpiringToken>(
-        page_connection_notifier_.NewInternalRequestToken()));
+    tokens.emplace_back(
+        std::make_unique<ExpiringToken>(page_connection_notifier_.NewInternalRequestToken()));
     EXPECT_FALSE(page_connection_notifier_.IsEmpty());
     EXPECT_FALSE(on_empty_called);
   }
@@ -170,16 +162,13 @@ TEST_F(PageConnectionNotifierTest,
   EXPECT_TRUE(on_empty_called);
 }
 
-TEST_F(PageConnectionNotifierTest,
-       PageConnectionNotifierDestroyedWhileRequestsOutstanding) {
+TEST_F(PageConnectionNotifierTest, PageConnectionNotifierDestroyedWhileRequestsOutstanding) {
   FakeDiskCleanupManager fake_disk_cleanup_manager;
   bool on_empty_called;
 
   auto page_connection_notifier = std::make_unique<PageConnectionNotifier>(
-      kLedgerName, std::string(::fuchsia::ledger::PAGE_ID_SIZE, '3'),
-      &fake_disk_cleanup_manager);
-  page_connection_notifier->set_on_empty(
-      callback::SetWhenCalled(&on_empty_called));
+      kLedgerName, std::string(::fuchsia::ledger::PAGE_ID_SIZE, '3'), &fake_disk_cleanup_manager);
+  page_connection_notifier->set_on_empty(callback::SetWhenCalled(&on_empty_called));
   page_connection_notifier->RegisterExternalRequest();
   page_connection_notifier->RegisterExternalRequest();
   page_connection_notifier->RegisterExternalRequest();
@@ -188,20 +177,15 @@ TEST_F(PageConnectionNotifierTest,
   EXPECT_FALSE(on_empty_called);
 }
 
-TEST_F(PageConnectionNotifierTest,
-       PageConnectionNotifierDestroyedWhileTokensOutstanding) {
+TEST_F(PageConnectionNotifierTest, PageConnectionNotifierDestroyedWhileTokensOutstanding) {
   FakeDiskCleanupManager fake_disk_cleanup_manager;
   bool on_empty_called;
 
   auto page_connection_notifier = std::make_unique<PageConnectionNotifier>(
-      kLedgerName, std::string(::fuchsia::ledger::PAGE_ID_SIZE, '3'),
-      &fake_disk_cleanup_manager);
-  page_connection_notifier->set_on_empty(
-      callback::SetWhenCalled(&on_empty_called));
-  auto first_expiring_token =
-      page_connection_notifier->NewInternalRequestToken();
-  auto second_expiring_token =
-      page_connection_notifier->NewInternalRequestToken();
+      kLedgerName, std::string(::fuchsia::ledger::PAGE_ID_SIZE, '3'), &fake_disk_cleanup_manager);
+  page_connection_notifier->set_on_empty(callback::SetWhenCalled(&on_empty_called));
+  auto first_expiring_token = page_connection_notifier->NewInternalRequestToken();
+  auto second_expiring_token = page_connection_notifier->NewInternalRequestToken();
   page_connection_notifier.reset();
 
   EXPECT_FALSE(on_empty_called);
@@ -213,24 +197,19 @@ TEST_F(PageConnectionNotifierTest,
   bool on_empty_called;
 
   auto page_connection_notifier = std::make_unique<PageConnectionNotifier>(
-      kLedgerName, std::string(::fuchsia::ledger::PAGE_ID_SIZE, '3'),
-      &fake_disk_cleanup_manager);
-  page_connection_notifier->set_on_empty(
-      callback::SetWhenCalled(&on_empty_called));
+      kLedgerName, std::string(::fuchsia::ledger::PAGE_ID_SIZE, '3'), &fake_disk_cleanup_manager);
+  page_connection_notifier->set_on_empty(callback::SetWhenCalled(&on_empty_called));
   page_connection_notifier->RegisterExternalRequest();
   page_connection_notifier->RegisterExternalRequest();
   page_connection_notifier->RegisterExternalRequest();
-  auto first_expiring_token =
-      page_connection_notifier->NewInternalRequestToken();
-  auto second_expiring_token =
-      page_connection_notifier->NewInternalRequestToken();
+  auto first_expiring_token = page_connection_notifier->NewInternalRequestToken();
+  auto second_expiring_token = page_connection_notifier->NewInternalRequestToken();
   page_connection_notifier.reset();
 
   EXPECT_FALSE(on_empty_called);
 }
 
-TEST_F(PageConnectionNotifierTest,
-       PageConnectionNotifierDestroyedWhileCallingPageUsageListener) {
+TEST_F(PageConnectionNotifierTest, PageConnectionNotifierDestroyedWhileCallingPageUsageListener) {
   FakeDiskCleanupManager fake_disk_cleanup_manager;
   auto bit_generator = environment_.random()->NewBitGenerator<size_t>();
   size_t token_count = std::uniform_int_distribution(2u, 20u)(bit_generator);
@@ -241,13 +220,10 @@ TEST_F(PageConnectionNotifierTest,
   std::vector<std::unique_ptr<ExpiringToken>> tokens;
 
   auto page_connection_notifier = std::make_unique<PageConnectionNotifier>(
-      kLedgerName, std::string(::fuchsia::ledger::PAGE_ID_SIZE, '3'),
-      &fake_disk_cleanup_manager);
-  page_connection_notifier->set_on_empty(
-      callback::SetWhenCalled(&on_empty_called));
+      kLedgerName, std::string(::fuchsia::ledger::PAGE_ID_SIZE, '3'), &fake_disk_cleanup_manager);
+  page_connection_notifier->set_on_empty(callback::SetWhenCalled(&on_empty_called));
   fake_disk_cleanup_manager.set_on_OnPageUnused(
-      [&on_OnPageUnused_called,
-       page_connection_notifier_ptr = &page_connection_notifier] {
+      [&on_OnPageUnused_called, page_connection_notifier_ptr = &page_connection_notifier] {
         on_OnPageUnused_called = true;
         page_connection_notifier_ptr->reset();
       });
@@ -259,8 +235,8 @@ TEST_F(PageConnectionNotifierTest,
     page_connection_notifier->RegisterExternalRequest();
     EXPECT_FALSE(page_connection_notifier->IsEmpty());
     EXPECT_FALSE(on_empty_called);
-    tokens.emplace_back(std::make_unique<ExpiringToken>(
-        page_connection_notifier->NewInternalRequestToken()));
+    tokens.emplace_back(
+        std::make_unique<ExpiringToken>(page_connection_notifier->NewInternalRequestToken()));
     EXPECT_FALSE(page_connection_notifier->IsEmpty());
     EXPECT_FALSE(on_empty_called);
   }

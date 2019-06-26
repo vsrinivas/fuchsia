@@ -31,8 +31,7 @@ class PageSyncImplTest2 : public ::gtest::TestLoopFixture {
 TEST_F(PageSyncImplTest2, PageCloudError) {
   // Creates the PageCloud
   fuchsia::ledger::cloud::PageCloudPtr page_cloud_ptr;
-  auto page_cloud =
-      std::make_unique<cloud_sync::TestPageCloud>(page_cloud_ptr.NewRequest());
+  auto page_cloud = std::make_unique<cloud_sync::TestPageCloud>(page_cloud_ptr.NewRequest());
 
   // Creates the cloud_sync::PageSync using the PageCloud
   cloud_sync::TestPageStorage storage(dispatcher());
@@ -44,9 +43,8 @@ TEST_F(PageSyncImplTest2, PageCloudError) {
 
   EXPECT_TRUE(storage.watcher_ == nullptr);
   auto cloud_sync = std::make_unique<cloud_sync::PageSyncImpl>(
-      dispatcher(), &storage, &storage, &encryption_service,
-      std::move(page_cloud_ptr), std::move(download_backoff),
-      std::move(upload_backoff));
+      dispatcher(), &storage, &storage, &encryption_service, std::move(page_cloud_ptr),
+      std::move(download_backoff), std::move(upload_backoff));
   EXPECT_TRUE(storage.watcher_ != nullptr);
 
   // Start sync

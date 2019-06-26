@@ -34,16 +34,15 @@ std::unique_ptr<LedgerSync> UserSyncImpl::CreateLedgerSync(
   FXL_DCHECK(started_);
   std::unique_ptr<cloud_sync::LedgerSync> cloud_ledger_sync;
   if (cloud_sync_) {
-    cloud_ledger_sync =
-        cloud_sync_->CreateLedgerSync(app_id, encryption_service);
+    cloud_ledger_sync = cloud_sync_->CreateLedgerSync(app_id, encryption_service);
   }
   std::unique_ptr<p2p_sync::LedgerCommunicator> p2p_ledger_sync;
   if (p2p_sync_) {
     // FIXME(etiennej): fix the API
     p2p_ledger_sync = p2p_sync_->GetLedgerCommunicator(app_id.ToString());
   }
-  auto combined_sync = std::make_unique<LedgerSyncImpl>(
-      std::move(cloud_ledger_sync), std::move(p2p_ledger_sync));
+  auto combined_sync =
+      std::make_unique<LedgerSyncImpl>(std::move(cloud_ledger_sync), std::move(p2p_ledger_sync));
   return combined_sync;
 }
 

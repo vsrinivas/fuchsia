@@ -29,19 +29,16 @@ class App : public fuchsia::modular::Lifecycle {
       : loop_(&kAsyncLoopConfigAttachToThread),
         component_context_(sys::ComponentContext::Create()),
         trace_provider_(loop_.dispatcher()),
-        factory_impl_(
-            loop_.dispatcher(), &random_, component_context_.get(),
-            app_params.disable_statistics ? "" : kCobaltClientName.ToString()) {
+        factory_impl_(loop_.dispatcher(), &random_, component_context_.get(),
+                      app_params.disable_statistics ? "" : kCobaltClientName.ToString()) {
     FXL_DCHECK(component_context_);
   }
 
   void Run() {
-    component_context_->outgoing()
-        ->AddPublicService<fuchsia::modular::Lifecycle>(
-            [this](
-                fidl::InterfaceRequest<fuchsia::modular::Lifecycle> request) {
-              lifecycle_bindings_.AddBinding(this, std::move(request));
-            });
+    component_context_->outgoing()->AddPublicService<fuchsia::modular::Lifecycle>(
+        [this](fidl::InterfaceRequest<fuchsia::modular::Lifecycle> request) {
+          lifecycle_bindings_.AddBinding(this, std::move(request));
+        });
     component_context_->outgoing()->AddPublicService<Factory>(
         [this](fidl::InterfaceRequest<Factory> request) {
           factory_bindings_.AddBinding(&factory_impl_, std::move(request));

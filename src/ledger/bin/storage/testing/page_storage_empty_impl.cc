@@ -53,8 +53,7 @@ std::unique_ptr<Journal> PageStorageEmptyImpl::StartCommit(
 }
 
 std::unique_ptr<Journal> PageStorageEmptyImpl::StartMergeCommit(
-    std::unique_ptr<const Commit> /*left*/,
-    std::unique_ptr<const Commit> /*right*/) {
+    std::unique_ptr<const Commit> /*left*/, std::unique_ptr<const Commit> /*right*/) {
   FXL_NOTIMPLEMENTED();
   return nullptr;
 }
@@ -66,16 +65,11 @@ void PageStorageEmptyImpl::CommitJournal(
   callback(Status::NOT_IMPLEMENTED, nullptr);
 }
 
-void PageStorageEmptyImpl::AddCommitWatcher(CommitWatcher* /*watcher*/) {
-  FXL_NOTIMPLEMENTED();
-}
+void PageStorageEmptyImpl::AddCommitWatcher(CommitWatcher* /*watcher*/) { FXL_NOTIMPLEMENTED(); }
 
-void PageStorageEmptyImpl::RemoveCommitWatcher(CommitWatcher* /*watcher*/) {
-  FXL_NOTIMPLEMENTED();
-}
+void PageStorageEmptyImpl::RemoveCommitWatcher(CommitWatcher* /*watcher*/) { FXL_NOTIMPLEMENTED(); }
 
-void PageStorageEmptyImpl::IsSynced(
-    fit::function<void(Status, bool)> callback) {
+void PageStorageEmptyImpl::IsSynced(fit::function<void(Status, bool)> callback) {
   FXL_NOTIMPLEMENTED();
   callback(Status::NOT_IMPLEMENTED, false);
 }
@@ -91,14 +85,13 @@ void PageStorageEmptyImpl::IsEmpty(fit::function<void(Status, bool)> callback) {
 }
 
 void PageStorageEmptyImpl::GetUnsyncedCommits(
-    fit::function<void(Status, std::vector<std::unique_ptr<const Commit>>)>
-        callback) {
+    fit::function<void(Status, std::vector<std::unique_ptr<const Commit>>)> callback) {
   FXL_NOTIMPLEMENTED();
   callback(Status::NOT_IMPLEMENTED, {});
 }
 
-void PageStorageEmptyImpl::MarkCommitSynced(
-    const CommitId& /*commit_id*/, fit::function<void(Status)> callback) {
+void PageStorageEmptyImpl::MarkCommitSynced(const CommitId& /*commit_id*/,
+                                            fit::function<void(Status)> callback) {
   FXL_NOTIMPLEMENTED();
   callback(Status::NOT_IMPLEMENTED);
 }
@@ -109,22 +102,19 @@ void PageStorageEmptyImpl::GetUnsyncedPieces(
   callback(Status::NOT_IMPLEMENTED, std::vector<ObjectIdentifier>());
 }
 
-void PageStorageEmptyImpl::MarkPieceSynced(
-    ObjectIdentifier /*object_identifier*/,
-    fit::function<void(Status)> callback) {
+void PageStorageEmptyImpl::MarkPieceSynced(ObjectIdentifier /*object_identifier*/,
+                                           fit::function<void(Status)> callback) {
   FXL_NOTIMPLEMENTED();
   callback(Status::NOT_IMPLEMENTED);
 }
 
-void PageStorageEmptyImpl::IsPieceSynced(
-    ObjectIdentifier /*object_identifier*/,
-    fit::function<void(Status, bool)> callback) {
+void PageStorageEmptyImpl::IsPieceSynced(ObjectIdentifier /*object_identifier*/,
+                                         fit::function<void(Status, bool)> callback) {
   FXL_NOTIMPLEMENTED();
   callback(Status::NOT_IMPLEMENTED, false);
 }
 
-void PageStorageEmptyImpl::MarkSyncedToPeer(
-    fit::function<void(Status)> callback) {
+void PageStorageEmptyImpl::MarkSyncedToPeer(fit::function<void(Status)> callback) {
   FXL_NOTIMPLEMENTED();
   callback(Status::NOT_IMPLEMENTED);
 }
@@ -137,9 +127,9 @@ void PageStorageEmptyImpl::AddObjectFromLocal(
   callback(Status::NOT_IMPLEMENTED, {});
 }
 
-void PageStorageEmptyImpl::GetObjectPart(
-    ObjectIdentifier object_identifier, int64_t offset, int64_t max_size,
-    Location location, fit::function<void(Status, fsl::SizedVmo)> callback) {
+void PageStorageEmptyImpl::GetObjectPart(ObjectIdentifier object_identifier, int64_t offset,
+                                         int64_t max_size, Location location,
+                                         fit::function<void(Status, fsl::SizedVmo)> callback) {
   FXL_NOTIMPLEMENTED();
   callback(Status::NOT_IMPLEMENTED, nullptr);
 }
@@ -153,53 +143,48 @@ void PageStorageEmptyImpl::GetObject(
 
 void PageStorageEmptyImpl::GetPiece(
     ObjectIdentifier /*object_identifier*/,
-    fit::function<void(Status, std::unique_ptr<const Piece>,
-                       std::unique_ptr<const PieceToken>)>
+    fit::function<void(Status, std::unique_ptr<const Piece>, std::unique_ptr<const PieceToken>)>
         callback) {
   callback(Status::NOT_IMPLEMENTED, nullptr, nullptr);
 }
 
-void PageStorageEmptyImpl::SetSyncMetadata(
-    fxl::StringView /*key*/, fxl::StringView /*value*/,
-    fit::function<void(Status)> callback) {
+void PageStorageEmptyImpl::SetSyncMetadata(fxl::StringView /*key*/, fxl::StringView /*value*/,
+                                           fit::function<void(Status)> callback) {
   FXL_NOTIMPLEMENTED();
   callback(Status::NOT_IMPLEMENTED);
 }
 
-void PageStorageEmptyImpl::GetSyncMetadata(
-    fxl::StringView /*key*/,
-    fit::function<void(Status, std::string)> callback) {
+void PageStorageEmptyImpl::GetSyncMetadata(fxl::StringView /*key*/,
+                                           fit::function<void(Status, std::string)> callback) {
   FXL_NOTIMPLEMENTED();
   callback(Status::NOT_IMPLEMENTED, "");
 }
 
-void PageStorageEmptyImpl::GetCommitContents(
-    const Commit& /*commit*/, std::string /*min_key*/,
-    fit::function<bool(Entry)> /*on_next*/,
-    fit::function<void(Status)> on_done) {
+void PageStorageEmptyImpl::GetCommitContents(const Commit& /*commit*/, std::string /*min_key*/,
+                                             fit::function<bool(Entry)> /*on_next*/,
+                                             fit::function<void(Status)> on_done) {
   FXL_NOTIMPLEMENTED();
   on_done(Status::NOT_IMPLEMENTED);
 }
 
-void PageStorageEmptyImpl::GetEntryFromCommit(
-    const Commit& /*commit*/, std::string /*key*/,
-    fit::function<void(Status, Entry)> callback) {
+void PageStorageEmptyImpl::GetEntryFromCommit(const Commit& /*commit*/, std::string /*key*/,
+                                              fit::function<void(Status, Entry)> callback) {
   FXL_NOTIMPLEMENTED();
   callback(Status::NOT_IMPLEMENTED, Entry());
 }
 
-void PageStorageEmptyImpl::GetCommitContentsDiff(
-    const Commit& /*base_commit*/, const Commit& /*other_commit*/,
-    std::string /*min_key*/, fit::function<bool(EntryChange)> /*on_next_diff*/,
-    fit::function<void(Status)> on_done) {
+void PageStorageEmptyImpl::GetCommitContentsDiff(const Commit& /*base_commit*/,
+                                                 const Commit& /*other_commit*/,
+                                                 std::string /*min_key*/,
+                                                 fit::function<bool(EntryChange)> /*on_next_diff*/,
+                                                 fit::function<void(Status)> on_done) {
   FXL_NOTIMPLEMENTED();
   on_done(Status::NOT_IMPLEMENTED);
 }
 
 void PageStorageEmptyImpl::GetThreeWayContentsDiff(
-    const Commit& /*base_commit*/, const Commit& /*left_commit*/,
-    const Commit& /*right_commit*/, std::string /*min_key*/,
-    fit::function<bool(ThreeWayChange)> /*on_next_diff*/,
+    const Commit& /*base_commit*/, const Commit& /*left_commit*/, const Commit& /*right_commit*/,
+    std::string /*min_key*/, fit::function<bool(ThreeWayChange)> /*on_next_diff*/,
     fit::function<void(Status)> on_done) {
   FXL_NOTIMPLEMENTED();
   on_done(Status::NOT_IMPLEMENTED);

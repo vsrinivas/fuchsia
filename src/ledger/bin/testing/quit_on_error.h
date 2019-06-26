@@ -24,15 +24,12 @@ class StatusTranslater {
   // Implicit to be able to take both status in |QuitOnError| and
   // |QuitOnErrorCallback|.
   StatusTranslater(Status status);
-  StatusTranslater(
-      const fuchsia::ledger::Page_CreateReferenceFromBuffer_Result& result);
+  StatusTranslater(const fuchsia::ledger::Page_CreateReferenceFromBuffer_Result& result);
   StatusTranslater(zx_status_t status);
   StatusTranslater(const fuchsia::ledger::PageSnapshot_Get_Result& result);
-  StatusTranslater(
-      const fuchsia::ledger::PageSnapshot_GetInline_Result& result);
+  StatusTranslater(const fuchsia::ledger::PageSnapshot_GetInline_Result& result);
   StatusTranslater(const fuchsia::ledger::PageSnapshot_Fetch_Result& result);
-  StatusTranslater(
-      const fuchsia::ledger::PageSnapshot_FetchPartial_Result& result);
+  StatusTranslater(const fuchsia::ledger::PageSnapshot_FetchPartial_Result& result);
 
   bool ok() { return ok_; };
   const std::string& description() { return description_; }
@@ -49,11 +46,9 @@ class StatusTranslater {
 bool QuitOnError(fit::closure quit_callback, internal::StatusTranslater status,
                  fxl::StringView description);
 
-inline auto QuitOnErrorCallback(fit::closure quit_callback,
-                                std::string description) {
+inline auto QuitOnErrorCallback(fit::closure quit_callback, std::string description) {
   return [quit_callback = std::move(quit_callback),
-          description = std::move(description)](
-             internal::StatusTranslater status) mutable {
+          description = std::move(description)](internal::StatusTranslater status) mutable {
     QuitOnError(quit_callback.share(), status, description);
   };
 }

@@ -12,14 +12,12 @@ Status PageDbEmptyImpl::StartBatch(CoroutineHandler* /*handler*/,
                                    std::unique_ptr<PageDb::Batch>* /*batch*/) {
   return Status::NOT_IMPLEMENTED;
 }
-Status PageDbEmptyImpl::GetHeads(
-    CoroutineHandler* /*handler*/,
-    std::vector<std::pair<zx::time_utc, CommitId>>* /*heads*/) {
+Status PageDbEmptyImpl::GetHeads(CoroutineHandler* /*handler*/,
+                                 std::vector<std::pair<zx::time_utc, CommitId>>* /*heads*/) {
   return Status::NOT_IMPLEMENTED;
 }
 Status PageDbEmptyImpl::GetMerges(coroutine::CoroutineHandler* /*handler*/,
-                                  CommitIdView /*commit1_id*/,
-                                  CommitIdView /*commit2_id*/,
+                                  CommitIdView /*commit1_id*/, CommitIdView /*commit2_id*/,
                                   std::vector<CommitId>* /*merges*/) {
   return Status::NOT_IMPLEMENTED;
 }
@@ -28,52 +26,44 @@ Status PageDbEmptyImpl::GetCommitStorageBytes(CoroutineHandler* /*handler*/,
                                               std::string* /*storage_bytes*/) {
   return Status::NOT_IMPLEMENTED;
 }
-Status PageDbEmptyImpl::ReadObject(
-    CoroutineHandler* /*handler*/,
-    const ObjectIdentifier& /*object_identifier*/,
-    std::unique_ptr<const Piece>* /*piece*/,
-    std::unique_ptr<const PieceToken>* /*token*/) {
+Status PageDbEmptyImpl::ReadObject(CoroutineHandler* /*handler*/,
+                                   const ObjectIdentifier& /*object_identifier*/,
+                                   std::unique_ptr<const Piece>* /*piece*/,
+                                   std::unique_ptr<const PieceToken>* /*token*/) {
   return Status::NOT_IMPLEMENTED;
 }
-Status PageDbEmptyImpl::HasObject(
-    CoroutineHandler* /*handler*/,
-    const ObjectIdentifier& /*object_identifier*/) {
+Status PageDbEmptyImpl::HasObject(CoroutineHandler* /*handler*/,
+                                  const ObjectIdentifier& /*object_identifier*/) {
   return Status::NOT_IMPLEMENTED;
 }
-Status PageDbEmptyImpl::GetObjectStatus(
-    CoroutineHandler* /*handler*/,
-    const ObjectIdentifier& /*object_identifier*/,
-    PageDbObjectStatus* /*object_status*/) {
+Status PageDbEmptyImpl::GetObjectStatus(CoroutineHandler* /*handler*/,
+                                        const ObjectIdentifier& /*object_identifier*/,
+                                        PageDbObjectStatus* /*object_status*/) {
   return Status::NOT_IMPLEMENTED;
 }
-Status PageDbEmptyImpl::GetInboundObjectReferences(
-    coroutine::CoroutineHandler* /*handler*/,
-    const ObjectIdentifier& /*object_identifier*/,
-    ObjectReferencesAndPriority* /*references*/) {
+Status PageDbEmptyImpl::GetInboundObjectReferences(coroutine::CoroutineHandler* /*handler*/,
+                                                   const ObjectIdentifier& /*object_identifier*/,
+                                                   ObjectReferencesAndPriority* /*references*/) {
   return Status::NOT_IMPLEMENTED;
 }
-Status PageDbEmptyImpl::GetInboundCommitReferences(
-    coroutine::CoroutineHandler* /*handler*/,
-    const ObjectIdentifier& /*object_identifier*/,
-    std::vector<CommitId>* /*references*/) {
+Status PageDbEmptyImpl::GetInboundCommitReferences(coroutine::CoroutineHandler* /*handler*/,
+                                                   const ObjectIdentifier& /*object_identifier*/,
+                                                   std::vector<CommitId>* /*references*/) {
   return Status::NOT_IMPLEMENTED;
 }
-Status PageDbEmptyImpl::GetUnsyncedCommitIds(
-    CoroutineHandler* /*handler*/, std::vector<CommitId>* /*commit_ids*/) {
+Status PageDbEmptyImpl::GetUnsyncedCommitIds(CoroutineHandler* /*handler*/,
+                                             std::vector<CommitId>* /*commit_ids*/) {
   return Status::NOT_IMPLEMENTED;
 }
-Status PageDbEmptyImpl::IsCommitSynced(CoroutineHandler* /*handler*/,
-                                       const CommitId& /*commit_id*/,
+Status PageDbEmptyImpl::IsCommitSynced(CoroutineHandler* /*handler*/, const CommitId& /*commit_id*/,
                                        bool* /*is_synced*/) {
   return Status::NOT_IMPLEMENTED;
 }
-Status PageDbEmptyImpl::GetUnsyncedPieces(
-    CoroutineHandler* /*handler*/,
-    std::vector<ObjectIdentifier>* /*object_identifiers*/) {
+Status PageDbEmptyImpl::GetUnsyncedPieces(CoroutineHandler* /*handler*/,
+                                          std::vector<ObjectIdentifier>* /*object_identifiers*/) {
   return Status::NOT_IMPLEMENTED;
 }
-Status PageDbEmptyImpl::GetSyncMetadata(CoroutineHandler* /*handler*/,
-                                        fxl::StringView /*key*/,
+Status PageDbEmptyImpl::GetSyncMetadata(CoroutineHandler* /*handler*/, fxl::StringView /*key*/,
                                         std::string* /*value*/) {
   return Status::NOT_IMPLEMENTED;
 }
@@ -81,36 +71,32 @@ Status PageDbEmptyImpl::IsPageOnline(coroutine::CoroutineHandler* /*handler*/,
                                      bool* /*page_is_online*/) {
   return Status::NOT_IMPLEMENTED;
 }
-Status PageDbEmptyImpl::AddHead(CoroutineHandler* /*handler*/,
-                                CommitIdView /*head*/,
+Status PageDbEmptyImpl::AddHead(CoroutineHandler* /*handler*/, CommitIdView /*head*/,
                                 zx::time_utc /*timestamp*/) {
   return Status::NOT_IMPLEMENTED;
 }
-Status PageDbEmptyImpl::RemoveHead(CoroutineHandler* /*handler*/,
-                                   CommitIdView /*head*/) {
+Status PageDbEmptyImpl::RemoveHead(CoroutineHandler* /*handler*/, CommitIdView /*head*/) {
   return Status::NOT_IMPLEMENTED;
 }
 Status PageDbEmptyImpl::AddMerge(coroutine::CoroutineHandler* /*handler*/,
-                                 CommitIdView /*parent1_id*/,
-                                 CommitIdView /*parent2_id*/,
+                                 CommitIdView /*parent1_id*/, CommitIdView /*parent2_id*/,
                                  CommitIdView /*merge_commit_id*/) {
   return Status::ILLEGAL_STATE;
 }
-Status PageDbEmptyImpl::AddCommitStorageBytes(
-    CoroutineHandler* /*handler*/, const CommitId& /*commit_id*/,
-    const ObjectIdentifier& /*root_node*/, fxl::StringView /*storage_bytes*/) {
+Status PageDbEmptyImpl::AddCommitStorageBytes(CoroutineHandler* /*handler*/,
+                                              const CommitId& /*commit_id*/,
+                                              const ObjectIdentifier& /*root_node*/,
+                                              fxl::StringView /*storage_bytes*/) {
   return Status::NOT_IMPLEMENTED;
 }
-Status PageDbEmptyImpl::WriteObject(
-    CoroutineHandler* /*handler*/, const Piece& /*piece*/,
-    PageDbObjectStatus /*object_status*/,
-    const ObjectReferencesAndPriority& /*children*/) {
+Status PageDbEmptyImpl::WriteObject(CoroutineHandler* /*handler*/, const Piece& /*piece*/,
+                                    PageDbObjectStatus /*object_status*/,
+                                    const ObjectReferencesAndPriority& /*children*/) {
   return Status::NOT_IMPLEMENTED;
 }
-Status PageDbEmptyImpl::SetObjectStatus(
-    CoroutineHandler* /*handler*/,
-    const ObjectIdentifier& /*object_identifier*/,
-    PageDbObjectStatus /*object_status*/) {
+Status PageDbEmptyImpl::SetObjectStatus(CoroutineHandler* /*handler*/,
+                                        const ObjectIdentifier& /*object_identifier*/,
+                                        PageDbObjectStatus /*object_status*/) {
   return Status::NOT_IMPLEMENTED;
 }
 Status PageDbEmptyImpl::MarkCommitIdSynced(CoroutineHandler* /*handler*/,
@@ -122,19 +108,15 @@ Status PageDbEmptyImpl::MarkCommitIdUnsynced(CoroutineHandler* /*handler*/,
                                              uint64_t /*generation*/) {
   return Status::NOT_IMPLEMENTED;
 }
-Status PageDbEmptyImpl::SetSyncMetadata(CoroutineHandler* /*handler*/,
-                                        fxl::StringView /*key*/,
+Status PageDbEmptyImpl::SetSyncMetadata(CoroutineHandler* /*handler*/, fxl::StringView /*key*/,
                                         fxl::StringView /*value*/) {
   return Status::NOT_IMPLEMENTED;
 }
 
-Status PageDbEmptyImpl::MarkPageOnline(
-    coroutine::CoroutineHandler* /*handlers*/) {
+Status PageDbEmptyImpl::MarkPageOnline(coroutine::CoroutineHandler* /*handlers*/) {
   return Status::NOT_IMPLEMENTED;
 }
 
-Status PageDbEmptyImpl::Execute(CoroutineHandler* /*handler*/) {
-  return Status::NOT_IMPLEMENTED;
-}
+Status PageDbEmptyImpl::Execute(CoroutineHandler* /*handler*/) { return Status::NOT_IMPLEMENTED; }
 
 }  // namespace storage

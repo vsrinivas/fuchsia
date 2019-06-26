@@ -15,8 +15,7 @@ TestCredentialsProvider::~TestCredentialsProvider() {}
 
 void TestCredentialsProvider::GetCredentials(
     fit::function<void(std::shared_ptr<grpc::CallCredentials>)> callback) {
-  task_runner_.PostTask(
-      [callback = std::move(callback)] { callback(nullptr); });
+  task_runner_.PostTask([callback = std::move(callback)] { callback(nullptr); });
 }
 
 }  // namespace cloud_provider_firestore

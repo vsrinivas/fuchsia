@@ -48,8 +48,7 @@ void PrintUsage() {
             // Comment to make clang format not break formatting.
             << " --" << kEntryCountFlag << "=<int>"
             << " --" << kValueSizeFlag << "=<int>"
-            << " --" << kDeviceCountFlag << "=<int>" << GetSyncParamsUsage()
-            << std::endl;
+            << " --" << kDeviceCountFlag << "=<int>" << GetSyncParamsUsage() << std::endl;
 }
 
 constexpr size_t kKeySize = 100;
@@ -68,10 +67,8 @@ constexpr size_t kKeySize = 100;
 //   --credentials-path=<file path> Firestore service account credentials
 class ConvergenceBenchmark : public PageWatcher {
  public:
-  ConvergenceBenchmark(async::Loop* loop,
-                       std::unique_ptr<sys::ComponentContext> component_context,
-                       int entry_count, int value_size, int device_count,
-                       SyncParams sync_params);
+  ConvergenceBenchmark(async::Loop* loop, std::unique_ptr<sys::ComponentContext> component_context,
+                       int entry_count, int value_size, int device_count, SyncParams sync_params);
 
   void Run();
 
@@ -114,15 +111,15 @@ class ConvergenceBenchmark : public PageWatcher {
   FXL_DISALLOW_COPY_AND_ASSIGN(ConvergenceBenchmark);
 };
 
-ConvergenceBenchmark::ConvergenceBenchmark(
-    async::Loop* loop, std::unique_ptr<sys::ComponentContext> component_context,
-    int entry_count, int value_size, int device_count, SyncParams sync_params)
+ConvergenceBenchmark::ConvergenceBenchmark(async::Loop* loop,
+                                           std::unique_ptr<sys::ComponentContext> component_context,
+                                           int entry_count, int value_size, int device_count,
+                                           SyncParams sync_params)
     : loop_(loop),
       random_(0),
       generator_(&random_),
       component_context_(std::move(component_context)),
-      cloud_provider_factory_(component_context_.get(), &random_,
-                              std::move(sync_params.api_key),
+      cloud_provider_factory_(component_context_.get(), &random_, std::move(sync_params.api_key),
                               std::move(sync_params.credentials)),
       entry_count_(entry_count),
       value_size_(value_size),
@@ -135,10 +132,8 @@ ConvergenceBenchmark::ConvergenceBenchmark(
   FXL_DCHECK(device_count_ > 1);
   for (auto& device_context : devices_) {
     device_context = std::make_unique<DeviceContext>();
-    device_context->storage_directory =
-        std::make_unique<files::ScopedTempDir>(kStoragePath);
-    device_context->page_watcher =
-        std::make_unique<fidl::Binding<PageWatcher>>(this);
+    device_context->storage_directory = std::make_unique<files::ScopedTempDir>(kStoragePath);
+    device_context->page_watcher = std::make_unique<fidl::Binding<PageWatcher>>(this);
   }
   page_id_ = generator_.MakePageId();
   cloud_provider_factory_.Init();
@@ -150,31 +145,27 @@ void ConvergenceBenchmark::Run() {
     // Initialize ledgers in different paths to emulate separate devices,
     // but with the same lowest-level directory name, so they correspond to the
     // same "user".
-    std::string synced_dir_path =
-        device_context->storage_directory->path() + "/convergence_user";
+    std::string synced_dir_path = device_context->storage_directory->path() + "/convergence_user";
     bool ret = files::CreateDirectory(synced_dir_path);
     FXL_DCHECK(ret);
 
     cloud_provider::CloudProviderPtr cloud_provider;
-    cloud_provider_factory_.MakeCloudProvider(user_id_,
-                                              cloud_provider.NewRequest());
+    cloud_provider_factory_.MakeCloudProvider(user_id_, cloud_provider.NewRequest());
 
-    Status status = GetLedger(component_context_.get(),
-                              device_context->controller.NewRequest(),
-                              std::move(cloud_provider), user_id_.user_id(),
-                              "convergence", DetachedPath(synced_dir_path),
-                              QuitLoopClosure(), &device_context->ledger);
+    Status status =
+        GetLedger(component_context_.get(), device_context->controller.NewRequest(),
+                  std::move(cloud_provider), user_id_.user_id(), "convergence",
+                  DetachedPath(synced_dir_path), QuitLoopClosure(), &device_context->ledger);
     if (QuitOnError(QuitLoopClosure(), status, "GetLedger")) {
       return;
     }
-    device_context->ledger->GetPage(
-        fidl::MakeOptional(page_id_),
-        device_context->page_connection.NewRequest());
+    device_context->ledger->GetPage(fidl::MakeOptional(page_id_),
+                                    device_context->page_connection.NewRequest());
     PageSnapshotPtr snapshot;
     // Register a watcher; we don't really need the snapshot.
-    device_context->page_connection->GetSnapshot(
-        snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-        device_context->page_watcher->NewBinding());
+    device_context->page_connection->GetSnapshot(snapshot.NewRequest(),
+                                                 fidl::VectorPtr<uint8_t>::New(0),
+                                                 device_context->page_watcher->NewBinding());
     device_context->page_connection->Sync(waiter->NewCallback());
   }
   waiter->Finalize([this] { Start(0); });
@@ -187,12 +178,10 @@ void ConvergenceBenchmark::Start(int step) {
   }
 
   for (int device_id = 0; device_id < device_count_; device_id++) {
-    std::vector<uint8_t> key =
-        generator_.MakeKey(device_count_ * step + device_id, kKeySize);
+    std::vector<uint8_t> key = generator_.MakeKey(device_count_ * step + device_id, kKeySize);
     // Insert each key N times, as we will receive N notifications - one for
     // each connection, sender included.
-    for (int receiving_device = 0; receiving_device < device_count_;
-         receiving_device++) {
+    for (int receiving_device = 0; receiving_device < device_count_; receiving_device++) {
       remaining_keys_.insert(convert::ToString(key));
     }
     fidl::VectorPtr<uint8_t> value = generator_.MakeValue(value_size_);
@@ -205,8 +194,7 @@ void ConvergenceBenchmark::Start(int step) {
   current_step_ = step;
 }
 
-void ConvergenceBenchmark::OnChange(PageChange page_change,
-                                    ResultState result_state,
+void ConvergenceBenchmark::OnChange(PageChange page_change, ResultState result_state,
                                     OnChangeCallback callback) {
   FXL_DCHECK(result_state == ResultState::COMPLETED);
   for (auto& change : page_change.changed_entries) {
@@ -243,26 +231,19 @@ int Main(int argc, const char** argv) {
   std::string device_count_str;
   int device_count;
   SyncParams sync_params;
-  if (!command_line.GetOptionValue(kEntryCountFlag.ToString(),
-                                   &entry_count_str) ||
-      !fxl::StringToNumberWithError(entry_count_str, &entry_count) ||
-      entry_count <= 0 ||
-      !command_line.GetOptionValue(kValueSizeFlag.ToString(),
-                                   &value_size_str) ||
-      !fxl::StringToNumberWithError(value_size_str, &value_size) ||
-      value_size <= 0 ||
-      !command_line.GetOptionValue(kDeviceCountFlag.ToString(),
-                                   &device_count_str) ||
-      !fxl::StringToNumberWithError(device_count_str, &device_count) ||
-      device_count <= 0 ||
-      !ParseSyncParamsFromCommandLine(command_line, component_context.get(),
-                                      &sync_params)) {
+  if (!command_line.GetOptionValue(kEntryCountFlag.ToString(), &entry_count_str) ||
+      !fxl::StringToNumberWithError(entry_count_str, &entry_count) || entry_count <= 0 ||
+      !command_line.GetOptionValue(kValueSizeFlag.ToString(), &value_size_str) ||
+      !fxl::StringToNumberWithError(value_size_str, &value_size) || value_size <= 0 ||
+      !command_line.GetOptionValue(kDeviceCountFlag.ToString(), &device_count_str) ||
+      !fxl::StringToNumberWithError(device_count_str, &device_count) || device_count <= 0 ||
+      !ParseSyncParamsFromCommandLine(command_line, component_context.get(), &sync_params)) {
     PrintUsage();
     return -1;
   }
 
-  ConvergenceBenchmark app(&loop, std::move(component_context), entry_count,
-                           value_size, device_count, std::move(sync_params));
+  ConvergenceBenchmark app(&loop, std::move(component_context), entry_count, value_size,
+                           device_count, std::move(sync_params));
   return RunWithTracing(&loop, [&app] { app.Run(); });
 }
 

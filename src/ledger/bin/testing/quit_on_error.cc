@@ -47,20 +47,16 @@ StatusTranslater::StatusTranslater(
     const fuchsia::ledger::Page_CreateReferenceFromBuffer_Result& result)
     : ok_(result.is_response()), description_(FidlResultToString(result)) {}
 
-StatusTranslater::StatusTranslater(
-    const fuchsia::ledger::PageSnapshot_Get_Result& result)
+StatusTranslater::StatusTranslater(const fuchsia::ledger::PageSnapshot_Get_Result& result)
     : ok_(result.is_response()), description_(FidlResultToString(result)) {}
 
-StatusTranslater::StatusTranslater(
-    const fuchsia::ledger::PageSnapshot_GetInline_Result& result)
+StatusTranslater::StatusTranslater(const fuchsia::ledger::PageSnapshot_GetInline_Result& result)
     : ok_(result.is_response()), description_(FidlResultToString(result)) {}
 
-StatusTranslater::StatusTranslater(
-    const fuchsia::ledger::PageSnapshot_Fetch_Result& result)
+StatusTranslater::StatusTranslater(const fuchsia::ledger::PageSnapshot_Fetch_Result& result)
     : ok_(result.is_response()), description_(FidlResultToString(result)) {}
 
-StatusTranslater::StatusTranslater(
-    const fuchsia::ledger::PageSnapshot_FetchPartial_Result& result)
+StatusTranslater::StatusTranslater(const fuchsia::ledger::PageSnapshot_FetchPartial_Result& result)
     : ok_(result.is_response()), description_(FidlResultToString(result)) {}
 }  // namespace internal
 
@@ -69,8 +65,7 @@ bool QuitOnError(fit::closure quit_callback, internal::StatusTranslater status,
   if (status.ok()) {
     return false;
   }
-  FXL_LOG(ERROR) << description << " failed with status "
-                 << status.description() << ".";
+  FXL_LOG(ERROR) << description << " failed with status " << status.description() << ".";
   quit_callback();
   return true;
 }

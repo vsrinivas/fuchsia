@@ -59,8 +59,7 @@ class PageEvictionManager {
         fit::function<void(Status, PagePredicateResult)> callback) = 0;
 
     // Deletes the local copy of the given page from storage.
-    virtual void DeletePageStorage(fxl::StringView ledger_name,
-                                   storage::PageIdView page_id,
+    virtual void DeletePageStorage(fxl::StringView ledger_name, storage::PageIdView page_id,
                                    fit::function<void(Status)> callback) = 0;
   };
 
@@ -79,16 +78,13 @@ class PageEvictionManager {
   // through the callback in case of failure to retrieve data on page usage, or
   // when trying to evict a given page; |OK| otherwise. It is not an error if
   // there is no page fulfilling the requirements.
-  virtual void TryEvictPages(PageEvictionPolicy* policy,
-                             fit::function<void(Status)> callback) = 0;
+  virtual void TryEvictPages(PageEvictionPolicy* policy, fit::function<void(Status)> callback) = 0;
 
   // Marks the page as open.
-  virtual void MarkPageOpened(fxl::StringView ledger_name,
-                              storage::PageIdView page_id) = 0;
+  virtual void MarkPageOpened(fxl::StringView ledger_name, storage::PageIdView page_id) = 0;
 
   // Marks the page as closed.
-  virtual void MarkPageClosed(fxl::StringView ledger_name,
-                              storage::PageIdView page_id) = 0;
+  virtual void MarkPageClosed(fxl::StringView ledger_name, storage::PageIdView page_id) = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(PageEvictionManager);

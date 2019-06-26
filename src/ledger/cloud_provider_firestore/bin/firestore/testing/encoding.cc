@@ -14,9 +14,9 @@ namespace {
 constexpr char kTimestampKey[] = "timestamp";
 }  // namespace
 
-bool EncodeCommitBatchWithTimestamp(
-    const cloud_provider::CommitPack& commits, std::string timestamp,
-    google::firestore::v1beta1::Document* document) {
+bool EncodeCommitBatchWithTimestamp(const cloud_provider::CommitPack& commits,
+                                    std::string timestamp,
+                                    google::firestore::v1beta1::Document* document) {
   google::firestore::v1beta1::Document result;
   if (!EncodeCommitBatch(commits, &result)) {
     return false;
@@ -26,8 +26,7 @@ bool EncodeCommitBatchWithTimestamp(
   if (!protobuf_timestamp.ParseFromString(timestamp)) {
     return false;
   }
-  google::firestore::v1beta1::Value& timestamp_value =
-      (*result.mutable_fields())[kTimestampKey];
+  google::firestore::v1beta1::Value& timestamp_value = (*result.mutable_fields())[kTimestampKey];
   *(timestamp_value.mutable_timestamp_value()) = std::move(protobuf_timestamp);
 
   document->Swap(&result);

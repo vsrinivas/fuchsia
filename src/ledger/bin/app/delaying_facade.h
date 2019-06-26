@@ -49,13 +49,9 @@ class DelayingFacade {
       return;
     }
     delayed_calls_.push_back(
-        [function_pointer,
-         tuple = std::make_tuple(std::forward<Args>(args)...)](A* a) mutable {
-          fxl::Apply(
-              [&](auto... args) {
-                (a->*function_pointer)(std::forward<Args>(args)...);
-              },
-              std::move(tuple));
+        [function_pointer, tuple = std::make_tuple(std::forward<Args>(args)...)](A* a) mutable {
+          fxl::Apply([&](auto... args) { (a->*function_pointer)(std::forward<Args>(args)...); },
+                     std::move(tuple));
         });
   }
 

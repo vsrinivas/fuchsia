@@ -72,8 +72,7 @@ size_t RollSumSplit::Feed(fxl::StringView buffer, size_t* bits) {
     Roll(buffer[i]);
     ++current_length_;
     if (current_length_ >= min_length_ &&
-        ((p_s2_ & (kBlobSize - 1)) == ((~0) & (kBlobSize - 1)) ||
-         current_length_ >= max_length_)) {
+        ((p_s2_ & (kBlobSize - 1)) == ((~0) & (kBlobSize - 1)) || current_length_ >= max_length_)) {
       if (bits) {
         uint32_t rsum = Digest();
         *bits = kBlobBits;

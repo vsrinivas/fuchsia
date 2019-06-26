@@ -25,10 +25,8 @@ TEST_F(PageAvailabilityManagerTest, PageAvailableByDefault) {
   bool on_available_called;
 
   PageAvailabilityManager page_availability_manager;
-  page_availability_manager.set_on_empty(
-      callback::SetWhenCalled(&on_empty_called));
-  page_availability_manager.OnPageAvailable(
-      page_id, callback::SetWhenCalled(&on_available_called));
+  page_availability_manager.set_on_empty(callback::SetWhenCalled(&on_empty_called));
+  page_availability_manager.OnPageAvailable(page_id, callback::SetWhenCalled(&on_available_called));
 
   EXPECT_TRUE(page_availability_manager.IsEmpty());
   EXPECT_TRUE(on_available_called);
@@ -41,11 +39,9 @@ TEST_F(PageAvailabilityManagerTest, SingleBusyPage) {
   bool on_available_called;
 
   PageAvailabilityManager page_availability_manager;
-  page_availability_manager.set_on_empty(
-      callback::SetWhenCalled(&on_empty_called));
+  page_availability_manager.set_on_empty(callback::SetWhenCalled(&on_empty_called));
   page_availability_manager.MarkPageBusy(page_id);
-  page_availability_manager.OnPageAvailable(
-      page_id, callback::SetWhenCalled(&on_available_called));
+  page_availability_manager.OnPageAvailable(page_id, callback::SetWhenCalled(&on_available_called));
 
   EXPECT_FALSE(page_availability_manager.IsEmpty());
   EXPECT_FALSE(on_available_called);
@@ -62,22 +58,19 @@ TEST_F(PageAvailabilityManagerTest, MultiplePages) {
   std::vector<storage::PageId> page_ids;
   std::map<storage::PageId, size_t> indices;
   for (uint8_t i = 0; i < page_count; i++) {
-    storage::PageId page_id =
-        std::string(::fuchsia::ledger::PAGE_ID_SIZE, i + 'a');
+    storage::PageId page_id = std::string(::fuchsia::ledger::PAGE_ID_SIZE, i + 'a');
     page_ids.push_back(page_id);
     indices[page_id] = i;
   }
   bool on_empty_called;
 
   PageAvailabilityManager page_availability_manager;
-  page_availability_manager.set_on_empty(
-      callback::SetWhenCalled(&on_empty_called));
+  page_availability_manager.set_on_empty(callback::SetWhenCalled(&on_empty_called));
   EXPECT_TRUE(page_availability_manager.IsEmpty());
   EXPECT_FALSE(on_empty_called);
   // In a random order, mark all the pages busy.
   std::vector<storage::PageId> remaining_page_ids = page_ids;
-  std::shuffle(remaining_page_ids.begin(), remaining_page_ids.end(),
-               bit_generator);
+  std::shuffle(remaining_page_ids.begin(), remaining_page_ids.end(), bit_generator);
   while (!remaining_page_ids.empty()) {
     auto page_id = remaining_page_ids.back();
     page_availability_manager.MarkPageBusy(page_id);
@@ -88,13 +81,11 @@ TEST_F(PageAvailabilityManagerTest, MultiplePages) {
   for (int dimension = 0; dimension < dimension_count; dimension++) {
     // ... register a single callback for each page (in a random page ordering)
     remaining_page_ids = page_ids;
-    std::shuffle(remaining_page_ids.begin(), remaining_page_ids.end(),
-                 bit_generator);
+    std::shuffle(remaining_page_ids.begin(), remaining_page_ids.end(), bit_generator);
     while (!remaining_page_ids.empty()) {
       auto page_id = remaining_page_ids.back();
       page_availability_manager.OnPageAvailable(
-          page_id, callback::SetWhenCalled(
-                       &page_available_called[indices[page_id]][dimension]));
+          page_id, callback::SetWhenCalled(&page_available_called[indices[page_id]][dimension]));
       EXPECT_FALSE(page_available_called[indices[page_id]][dimension]);
       remaining_page_ids.pop_back();
     }
@@ -102,8 +93,7 @@ TEST_F(PageAvailabilityManagerTest, MultiplePages) {
   // In a random order, mark all the pages available and verify that each page's
   // callbacks are called.
   remaining_page_ids = page_ids;
-  std::shuffle(remaining_page_ids.begin(), remaining_page_ids.end(),
-               bit_generator);
+  std::shuffle(remaining_page_ids.begin(), remaining_page_ids.end(), bit_generator);
   while (!remaining_page_ids.empty()) {
     EXPECT_FALSE(on_empty_called);
     auto page_id = remaining_page_ids.back();
@@ -117,28 +107,25 @@ TEST_F(PageAvailabilityManagerTest, MultiplePages) {
 }
 
 TEST_F(PageAvailabilityManagerTest, PageAvailabilityManagerReusable) {
-  storage::PageId first_page_id =
-      std::string(::fuchsia::ledger::PAGE_ID_SIZE, '8');
-  storage::PageId second_page_id =
-      std::string(::fuchsia::ledger::PAGE_ID_SIZE, '9');
+  storage::PageId first_page_id = std::string(::fuchsia::ledger::PAGE_ID_SIZE, '8');
+  storage::PageId second_page_id = std::string(::fuchsia::ledger::PAGE_ID_SIZE, '9');
   bool on_empty_called;
   bool first_on_available_called;
   bool second_on_available_called;
 
   PageAvailabilityManager page_availability_manager;
-  page_availability_manager.set_on_empty(
-      callback::SetWhenCalled(&on_empty_called));
+  page_availability_manager.set_on_empty(callback::SetWhenCalled(&on_empty_called));
   page_availability_manager.MarkPageBusy(first_page_id);
-  page_availability_manager.OnPageAvailable(
-      first_page_id, callback::SetWhenCalled(&first_on_available_called));
+  page_availability_manager.OnPageAvailable(first_page_id,
+                                            callback::SetWhenCalled(&first_on_available_called));
 
   EXPECT_FALSE(page_availability_manager.IsEmpty());
   EXPECT_FALSE(first_on_available_called);
   EXPECT_FALSE(on_empty_called);
 
   page_availability_manager.MarkPageBusy(second_page_id);
-  page_availability_manager.OnPageAvailable(
-      second_page_id, callback::SetWhenCalled(&second_on_available_called));
+  page_availability_manager.OnPageAvailable(second_page_id,
+                                            callback::SetWhenCalled(&second_on_available_called));
 
   EXPECT_FALSE(page_availability_manager.IsEmpty());
   EXPECT_FALSE(first_on_available_called);
@@ -159,10 +146,10 @@ TEST_F(PageAvailabilityManagerTest, PageAvailabilityManagerReusable) {
 
   page_availability_manager.MarkPageBusy(second_page_id);
   page_availability_manager.MarkPageBusy(first_page_id);
-  page_availability_manager.OnPageAvailable(
-      second_page_id, callback::SetWhenCalled(&second_on_available_called));
-  page_availability_manager.OnPageAvailable(
-      first_page_id, callback::SetWhenCalled(&first_on_available_called));
+  page_availability_manager.OnPageAvailable(second_page_id,
+                                            callback::SetWhenCalled(&second_on_available_called));
+  page_availability_manager.OnPageAvailable(first_page_id,
+                                            callback::SetWhenCalled(&first_on_available_called));
 
   EXPECT_FALSE(page_availability_manager.IsEmpty());
   EXPECT_FALSE(first_on_available_called);
@@ -179,28 +166,25 @@ TEST_F(PageAvailabilityManagerTest, PageAvailabilityManagerReusable) {
 }
 
 TEST_F(PageAvailabilityManagerTest, CallbacksNotCalledOnDestruction) {
-  storage::PageId first_page_id =
-      std::string(::fuchsia::ledger::PAGE_ID_SIZE, '8');
-  storage::PageId second_page_id =
-      std::string(::fuchsia::ledger::PAGE_ID_SIZE, '9');
+  storage::PageId first_page_id = std::string(::fuchsia::ledger::PAGE_ID_SIZE, '8');
+  storage::PageId second_page_id = std::string(::fuchsia::ledger::PAGE_ID_SIZE, '9');
   bool on_empty_called;
   bool first_on_available_called;
   bool second_on_available_called;
 
   auto page_availability_manager = std::make_unique<PageAvailabilityManager>();
-  page_availability_manager->set_on_empty(
-      callback::SetWhenCalled(&on_empty_called));
+  page_availability_manager->set_on_empty(callback::SetWhenCalled(&on_empty_called));
   page_availability_manager->MarkPageBusy(first_page_id);
-  page_availability_manager->OnPageAvailable(
-      first_page_id, callback::SetWhenCalled(&first_on_available_called));
+  page_availability_manager->OnPageAvailable(first_page_id,
+                                             callback::SetWhenCalled(&first_on_available_called));
 
   EXPECT_FALSE(page_availability_manager->IsEmpty());
   EXPECT_FALSE(first_on_available_called);
   EXPECT_FALSE(on_empty_called);
 
   page_availability_manager->MarkPageBusy(second_page_id);
-  page_availability_manager->OnPageAvailable(
-      second_page_id, callback::SetWhenCalled(&second_on_available_called));
+  page_availability_manager->OnPageAvailable(second_page_id,
+                                             callback::SetWhenCalled(&second_on_available_called));
 
   EXPECT_FALSE(page_availability_manager->IsEmpty());
   EXPECT_FALSE(first_on_available_called);

@@ -31,8 +31,7 @@ class PageAvailabilityManager {
 
   // If the page is available calls the given callback directly. Otherwise,
   // the callback is registered util the page becomes available.
-  void OnPageAvailable(convert::ExtendedStringView page_id,
-                       fit::closure on_page_available);
+  void OnPageAvailable(convert::ExtendedStringView page_id, fit::closure on_page_available);
 
   // Checks whether there are no busy pages.
   bool IsEmpty();

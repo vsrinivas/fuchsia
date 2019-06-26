@@ -32,8 +32,7 @@ class JournalImpl : public Journal {
   class Token;
 
  public:
-  JournalImpl(Token token, ledger::Environment* environment,
-              PageStorageImpl* page_storage,
+  JournalImpl(Token token, ledger::Environment* environment, PageStorageImpl* page_storage,
               std::unique_ptr<const Commit> base);
   ~JournalImpl() override;
 
@@ -75,17 +74,14 @@ class JournalImpl : public Journal {
   // |root_identifier|. |commit| will contain:
   // - the new commit if a new commit object has been created.
   // - a null commit if the operation is a no-op.
-  Status CreateCommitFromChanges(
-      coroutine::CoroutineHandler* handler,
-      std::vector<std::unique_ptr<const storage::Commit>> parents,
-      ObjectIdentifier root_identifier, std::vector<EntryChange> changes,
-      std::unique_ptr<const storage::Commit>* commit,
-      std::vector<ObjectIdentifier>* objects_to_sync);
+  Status CreateCommitFromChanges(coroutine::CoroutineHandler* handler,
+                                 std::vector<std::unique_ptr<const storage::Commit>> parents,
+                                 ObjectIdentifier root_identifier, std::vector<EntryChange> changes,
+                                 std::unique_ptr<const storage::Commit>* commit,
+                                 std::vector<ObjectIdentifier>* objects_to_sync);
 
   void GetObjectsToSync(
-      fit::function<void(Status status,
-                         std::vector<ObjectIdentifier> objects_to_sync)>
-          callback);
+      fit::function<void(Status status, std::vector<ObjectIdentifier> objects_to_sync)> callback);
 
   ledger::Environment* const environment_;
   PageStorageImpl* const page_storage_;

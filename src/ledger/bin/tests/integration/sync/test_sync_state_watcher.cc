@@ -9,8 +9,7 @@ namespace ledger {
 TestSyncStateWatcher::TestSyncStateWatcher() : binding_(this) {}
 TestSyncStateWatcher::~TestSyncStateWatcher() {}
 
-void TestSyncStateWatcher::SyncStateChanged(SyncState download,
-                                            SyncState upload,
+void TestSyncStateWatcher::SyncStateChanged(SyncState download, SyncState upload,
                                             SyncStateChangedCallback callback) {
   state_change_count++;
   download_state = download;

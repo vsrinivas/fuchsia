@@ -30,9 +30,8 @@ class DbFactory {
   // Opens and returns an initialized instance of Db in the given |db_path|.
   // Depending on the value of |on_db_not_found|, if the Db doesn't already
   // exist, it either returns with NOT_FOUND status, or creates a new one.
-  virtual void GetOrCreateDb(
-      ledger::DetachedPath db_path, OnDbNotFound on_db_not_found,
-      fit::function<void(Status, std::unique_ptr<Db>)> callback) = 0;
+  virtual void GetOrCreateDb(ledger::DetachedPath db_path, OnDbNotFound on_db_not_found,
+                             fit::function<void(Status, std::unique_ptr<Db>)> callback) = 0;
 };
 
 }  // namespace storage

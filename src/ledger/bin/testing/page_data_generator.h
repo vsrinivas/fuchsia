@@ -33,16 +33,15 @@ class PageDataGenerator {
   // Put an entry (|key|, |value|) to the given page |page|, inline or as
   // reference depending on |ref_strategy| and with priority specified by
   // |priority|.
-  void PutEntry(PagePtr* page, std::vector<uint8_t> key,
-                std::vector<uint8_t> value, ReferenceStrategy ref_strategy,
-                Priority priority, fit::function<void(Status)> callback);
+  void PutEntry(PagePtr* page, std::vector<uint8_t> key, std::vector<uint8_t> value,
+                ReferenceStrategy ref_strategy, Priority priority,
+                fit::function<void(Status)> callback);
 
   // Fill the page |page| with entries with keys |keys| and random values of
   // size |value_size|, performing at maximum
   // |transaction_size| Put operations per commit.
-  void Populate(PagePtr* page, std::vector<std::vector<uint8_t>> keys,
-                size_t value_size, size_t transaction_size,
-                ReferenceStrategy ref_strategy, Priority priority,
+  void Populate(PagePtr* page, std::vector<std::vector<uint8_t>> keys, size_t value_size,
+                size_t transaction_size, ReferenceStrategy ref_strategy, Priority priority,
                 fit::function<void(Status)> /*callback*/);
 
  private:
@@ -52,16 +51,14 @@ class PageDataGenerator {
   // recursively. Call |callback| with Status::OK once all keys have been put,
   // or with a first encountered status that is different from Status::OK.
   void PutInTransaction(PagePtr* page, std::vector<std::vector<uint8_t>> keys,
-                        size_t current_key_index, size_t value_size,
-                        size_t transaction_size, ReferenceStrategy ref_strategy,
-                        Priority priority,
+                        size_t current_key_index, size_t value_size, size_t transaction_size,
+                        ReferenceStrategy ref_strategy, Priority priority,
                         fit::function<void(Status)> callback);
 
   // Run PutEntry on all the provided keys in |keys| with random value of size
   // |value_size|.
-  void PutMultipleEntries(PagePtr* page, std::vector<std::vector<uint8_t>> keys,
-                          size_t value_size, ReferenceStrategy ref_strategy,
-                          Priority priority,
+  void PutMultipleEntries(PagePtr* page, std::vector<std::vector<uint8_t>> keys, size_t value_size,
+                          ReferenceStrategy ref_strategy, Priority priority,
                           fit::function<void(Status)> /*callback*/);
 
   DataGenerator generator_;

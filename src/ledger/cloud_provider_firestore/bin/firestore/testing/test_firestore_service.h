@@ -17,21 +17,17 @@ namespace cloud_provider_firestore {
 
 struct GetDocumentRecord {
   google::firestore::v1beta1::GetDocumentRequest request;
-  fit::function<void(grpc::Status, google::firestore::v1beta1::Document)>
-      callback;
+  fit::function<void(grpc::Status, google::firestore::v1beta1::Document)> callback;
 };
 
 struct ListDocumentsRecord {
   google::firestore::v1beta1::ListDocumentsRequest request;
-  fit::function<void(grpc::Status,
-                     google::firestore::v1beta1::ListDocumentsResponse)>
-      callback;
+  fit::function<void(grpc::Status, google::firestore::v1beta1::ListDocumentsResponse)> callback;
 };
 
 struct CreateDocumentRecord {
   google::firestore::v1beta1::CreateDocumentRequest request;
-  fit::function<void(grpc::Status, google::firestore::v1beta1::Document)>
-      callback;
+  fit::function<void(grpc::Status, google::firestore::v1beta1::Document)> callback;
 };
 
 struct DeleteDocumentRecord {
@@ -41,14 +37,12 @@ struct DeleteDocumentRecord {
 
 struct CommitRecord {
   google::firestore::v1beta1::CommitRequest request;
-  fit::function<void(grpc::Status, google::firestore::v1beta1::CommitResponse)>
-      callback;
+  fit::function<void(grpc::Status, google::firestore::v1beta1::CommitResponse)> callback;
 };
 
 struct RunQueryRecord {
   google::firestore::v1beta1::RunQueryRequest request;
-  fit::function<void(grpc::Status,
-                     std::vector<google::firestore::v1beta1::RunQueryResponse>)>
+  fit::function<void(grpc::Status, std::vector<google::firestore::v1beta1::RunQueryResponse>)>
       callback;
 };
 
@@ -65,42 +59,36 @@ class TestFirestoreService : public FirestoreService {
   void GetDocument(
       google::firestore::v1beta1::GetDocumentRequest request,
       std::shared_ptr<grpc::CallCredentials> call_credentials,
-      fit::function<void(grpc::Status, google::firestore::v1beta1::Document)>
-          callback) override;
+      fit::function<void(grpc::Status, google::firestore::v1beta1::Document)> callback) override;
 
   void ListDocuments(
       google::firestore::v1beta1::ListDocumentsRequest request,
       std::shared_ptr<grpc::CallCredentials> call_credentials,
-      fit::function<void(grpc::Status,
-                         google::firestore::v1beta1::ListDocumentsResponse)>
-          callback) override;
+      fit::function<void(grpc::Status, google::firestore::v1beta1::ListDocumentsResponse)> callback)
+      override;
 
   void CreateDocument(
       google::firestore::v1beta1::CreateDocumentRequest request,
       std::shared_ptr<grpc::CallCredentials> call_credentials,
-      fit::function<void(grpc::Status, google::firestore::v1beta1::Document)>
-          callback) override;
+      fit::function<void(grpc::Status, google::firestore::v1beta1::Document)> callback) override;
 
   void DeleteDocument(google::firestore::v1beta1::DeleteDocumentRequest request,
                       std::shared_ptr<grpc::CallCredentials> call_credentials,
                       fit::function<void(grpc::Status)> callback) override;
 
-  void RunQuery(google::firestore::v1beta1::RunQueryRequest request,
-                std::shared_ptr<grpc::CallCredentials> call_credentials,
-                fit::function<void(
-                    grpc::Status,
-                    std::vector<google::firestore::v1beta1::RunQueryResponse>)>
-                    callback) override;
+  void RunQuery(
+      google::firestore::v1beta1::RunQueryRequest request,
+      std::shared_ptr<grpc::CallCredentials> call_credentials,
+      fit::function<void(grpc::Status, std::vector<google::firestore::v1beta1::RunQueryResponse>)>
+          callback) override;
 
   void Commit(google::firestore::v1beta1::CommitRequest request,
               std::shared_ptr<grpc::CallCredentials> call_credentials,
-              fit::function<void(grpc::Status,
-                                 google::firestore::v1beta1::CommitResponse)>
+              fit::function<void(grpc::Status, google::firestore::v1beta1::CommitResponse)>
                   callback) override;
 
-  std::unique_ptr<ListenCallHandler> Listen(
-      std::shared_ptr<grpc::CallCredentials> call_credentials,
-      ListenCallClient* client) override;
+  std::unique_ptr<ListenCallHandler> Listen(std::shared_ptr<grpc::CallCredentials> call_credentials,
+                                            ListenCallClient* client) override;
 
   void ShutDown(fit::closure callback) override;
 

@@ -37,10 +37,8 @@ class MergingIntegrationTest : public IntegrationTest {
 
 class Watcher : public PageWatcher {
  public:
-  Watcher(fidl::InterfaceRequest<PageWatcher> request,
-          fit::closure change_callback)
-      : binding_(this, std::move(request)),
-        change_callback_(std::move(change_callback)) {}
+  Watcher(fidl::InterfaceRequest<PageWatcher> request, fit::closure change_callback)
+      : binding_(this, std::move(request)), change_callback_(std::move(change_callback)) {}
 
   uint changes_seen = 0;
   PageSnapshotPtr last_snapshot_;
@@ -70,9 +68,8 @@ enum class MergeType {
 
 class ConflictResolverImpl : public ConflictResolver {
  public:
-  explicit ConflictResolverImpl(
-      LoopController* loop_controller,
-      fidl::InterfaceRequest<ConflictResolver> request)
+  explicit ConflictResolverImpl(LoopController* loop_controller,
+                                fidl::InterfaceRequest<ConflictResolver> request)
       : loop_controller_(loop_controller),
         resolve_waiter_(loop_controller->NewWaiter()),
         binding_(this, std::move(request)) {
@@ -98,8 +95,8 @@ class ConflictResolverImpl : public ConflictResolver {
           result_provider(result_provider.Bind()),
           disconnect_waiter_(loop_controller->NewWaiter()),
           loop_controller_(loop_controller) {
-      this->result_provider.set_error_handler(callback::Capture(
-          disconnect_waiter_->GetCallback(), &result_provider_status));
+      this->result_provider.set_error_handler(
+          callback::Capture(disconnect_waiter_->GetCallback(), &result_provider_status));
     }
 
     // Returns the full list of changes.
@@ -110,23 +107,20 @@ class ConflictResolverImpl : public ConflictResolver {
                                            size_t min_queries = 0) {
       return GetDiff(
           [this](std::unique_ptr<Token> token,
-                 fit::function<void(std::vector<DiffEntry>,
-                                    std::unique_ptr<Token>)>
+                 fit::function<void(std::vector<DiffEntry>, std::unique_ptr<Token>)>
                      callback) mutable {
             result_provider->GetFullDiff(std::move(token), std::move(callback));
           },
           entries, min_queries);
     }
 
-    ::testing::AssertionResult GetConflictingDiff(
-        std::vector<DiffEntry>* entries, size_t min_queries = 0) {
+    ::testing::AssertionResult GetConflictingDiff(std::vector<DiffEntry>* entries,
+                                                  size_t min_queries = 0) {
       return GetDiff(
           [this](std::unique_ptr<Token> token,
-                 fit::function<void(std::vector<DiffEntry>,
-                                    std::unique_ptr<Token>)>
+                 fit::function<void(std::vector<DiffEntry>, std::unique_ptr<Token>)>
                      callback) mutable {
-            result_provider->GetConflictingDiff(std::move(token),
-                                                std::move(callback));
+            result_provider->GetConflictingDiff(std::move(token), std::move(callback));
           },
           entries, min_queries);
     }
@@ -139,13 +133,11 @@ class ConflictResolverImpl : public ConflictResolver {
       FXL_DCHECK(merge_type == MergeType::SIMPLE || results.size() >= 2);
 
       if (!result_provider) {
-        return ::testing::AssertionFailure()
-               << "Merge failed: result_provider is disconnected.";
+        return ::testing::AssertionFailure() << "Merge failed: result_provider is disconnected.";
       }
 
       if (merge_type == MergeType::SIMPLE) {
-        ::testing::AssertionResult merge_status =
-            PartialMerge(std::move(results));
+        ::testing::AssertionResult merge_status = PartialMerge(std::move(results));
         if (!merge_status) {
           return merge_status;
         }
@@ -157,8 +149,7 @@ class ConflictResolverImpl : public ConflictResolver {
         }
         results.resize(part1_size);
 
-        ::testing::AssertionResult merge_status =
-            PartialMerge(std::move(results));
+        ::testing::AssertionResult merge_status = PartialMerge(std::move(results));
         if (!merge_status) {
           return merge_status;
         }
@@ -185,8 +176,7 @@ class ConflictResolverImpl : public ConflictResolver {
         // Printing the |result_provider_status| in case the issue is that the
         // object has been disconnected.
         return ::testing::AssertionFailure()
-               << "|Sync| failed to called back. Error provider status: "
-               << result_provider_status;
+               << "|Sync| failed to called back. Error provider status: " << result_provider_status;
       }
       return ::testing::AssertionSuccess();
     }
@@ -202,8 +192,7 @@ class ConflictResolverImpl : public ConflictResolver {
 
     ::testing::AssertionResult GetDiff(
         fit::function<void(std::unique_ptr<Token>,
-                           fit::function<void(std::vector<DiffEntry>,
-                                              std::unique_ptr<Token>)>)>
+                           fit::function<void(std::vector<DiffEntry>, std::unique_ptr<Token>)>)>
             get_diff,
         std::vector<DiffEntry>* entries, size_t min_queries) {
       entries->resize(0);
@@ -213,30 +202,26 @@ class ConflictResolverImpl : public ConflictResolver {
         std::vector<DiffEntry> new_entries;
         auto waiter = loop_controller_->NewWaiter();
         std::unique_ptr<Token> new_token;
-        get_diff(std::move(token), callback::Capture(waiter->GetCallback(),
-                                                     &new_entries, &new_token));
+        get_diff(std::move(token),
+                 callback::Capture(waiter->GetCallback(), &new_entries, &new_token));
         if (!waiter->RunUntilCalled()) {
-          return ::testing::AssertionFailure()
-                 << "|get_diff| failed to called back.";
+          return ::testing::AssertionFailure() << "|get_diff| failed to called back.";
         }
         token = std::move(new_token);
-        entries->insert(entries->end(),
-                        std::make_move_iterator(new_entries.begin()),
+        entries->insert(entries->end(), std::make_move_iterator(new_entries.begin()),
                         std::make_move_iterator(new_entries.end()));
         ++num_queries;
       } while (token);
 
       if (num_queries < min_queries) {
         return ::testing::AssertionFailure()
-               << "Only " << num_queries
-               << " partial results were found, but at least " << min_queries
-               << " were expected";
+               << "Only " << num_queries << " partial results were found, but at least "
+               << min_queries << " were expected";
       }
       return ::testing::AssertionSuccess();
     }
 
-    ::testing::AssertionResult PartialMerge(
-        std::vector<MergedValue> partial_result) {
+    ::testing::AssertionResult PartialMerge(std::vector<MergedValue> partial_result) {
       result_provider->Merge(std::move(partial_result));
       return Sync();
     }
@@ -245,23 +230,19 @@ class ConflictResolverImpl : public ConflictResolver {
     LoopController* loop_controller_;
   };
 
-  void RunUntilResolveCalled() {
-    ASSERT_TRUE(resolve_waiter_->RunUntilCalled());
-  }
+  void RunUntilResolveCalled() { ASSERT_TRUE(resolve_waiter_->RunUntilCalled()); }
 
   std::vector<ResolveRequest> requests;
   bool disconnected = false;
 
  private:
   // ConflictResolver:
-  void Resolve(
-      fidl::InterfaceHandle<PageSnapshot> left_version,
-      fidl::InterfaceHandle<PageSnapshot> right_version,
-      fidl::InterfaceHandle<PageSnapshot> common_version,
-      fidl::InterfaceHandle<MergeResultProvider> result_provider) override {
-    requests.emplace_back(loop_controller_, std::move(left_version),
-                          std::move(right_version), std::move(common_version),
-                          std::move(result_provider));
+  void Resolve(fidl::InterfaceHandle<PageSnapshot> left_version,
+               fidl::InterfaceHandle<PageSnapshot> right_version,
+               fidl::InterfaceHandle<PageSnapshot> common_version,
+               fidl::InterfaceHandle<MergeResultProvider> result_provider) override {
+    requests.emplace_back(loop_controller_, std::move(left_version), std::move(right_version),
+                          std::move(common_version), std::move(result_provider));
     resolve_waiter_->GetCallback()();
   }
 
@@ -273,8 +254,7 @@ class ConflictResolverImpl : public ConflictResolver {
 // Custom conflict resolver that doesn't resolve any conflicts.
 class DummyConflictResolver : public ConflictResolver {
  public:
-  explicit DummyConflictResolver(
-      fidl::InterfaceRequest<ConflictResolver> request)
+  explicit DummyConflictResolver(fidl::InterfaceRequest<ConflictResolver> request)
       : binding_(this, std::move(request)) {}
   ~DummyConflictResolver() override {}
 
@@ -293,11 +273,10 @@ class DummyConflictResolver : public ConflictResolver {
 
 class TestConflictResolverFactory : public ConflictResolverFactory {
  public:
-  TestConflictResolverFactory(
-      LoopController* loop_controller, MergePolicy policy,
-      fidl::InterfaceRequest<ConflictResolverFactory> request,
-      fit::closure on_get_policy_called_callback,
-      zx::duration response_delay = zx::msec(0))
+  TestConflictResolverFactory(LoopController* loop_controller, MergePolicy policy,
+                              fidl::InterfaceRequest<ConflictResolverFactory> request,
+                              fit::closure on_get_policy_called_callback,
+                              zx::duration response_delay = zx::msec(0))
       : loop_controller_(loop_controller),
         new_conflict_resolver_waiter_(loop_controller->NewWaiter()),
         policy_(policy),
@@ -308,9 +287,7 @@ class TestConflictResolverFactory : public ConflictResolverFactory {
   uint get_policy_calls = 0;
   std::map<storage::PageId, ConflictResolverImpl> resolvers;
 
-  void set_use_dummy_resolver(bool use_dummy_resolver) {
-    use_dummy_resolver_ = use_dummy_resolver;
-  }
+  void set_use_dummy_resolver(bool use_dummy_resolver) { use_dummy_resolver_ = use_dummy_resolver; }
 
   void RunUntilNewConflictResolverCalled() {
     ASSERT_TRUE(new_conflict_resolver_waiter_->RunUntilCalled());
@@ -333,21 +310,18 @@ class TestConflictResolverFactory : public ConflictResolverFactory {
         response_delay_);
   }
 
-  void NewConflictResolver(
-      PageId page_id,
-      fidl::InterfaceRequest<ConflictResolver> resolver) override {
+  void NewConflictResolver(PageId page_id,
+                           fidl::InterfaceRequest<ConflictResolver> resolver) override {
     if (use_dummy_resolver_) {
-      dummy_resolvers_.emplace(
-          std::piecewise_construct,
-          std::forward_as_tuple(convert::ToString(page_id.id)),
-          std::forward_as_tuple(std::move(resolver)));
+      dummy_resolvers_.emplace(std::piecewise_construct,
+                               std::forward_as_tuple(convert::ToString(page_id.id)),
+                               std::forward_as_tuple(std::move(resolver)));
       new_conflict_resolver_waiter_->GetCallback()();
       return;
     }
-    resolvers.emplace(
-        std::piecewise_construct,
-        std::forward_as_tuple(convert::ToString(page_id.id)),
-        std::forward_as_tuple(loop_controller_, std::move(resolver)));
+    resolvers.emplace(std::piecewise_construct,
+                      std::forward_as_tuple(convert::ToString(page_id.id)),
+                      std::forward_as_tuple(loop_controller_, std::move(resolver)));
     new_conflict_resolver_waiter_->GetCallback()();
   }
 
@@ -379,8 +353,7 @@ class Optional {
   T const obj_;
 };
 
-::testing::AssertionResult ValueMatch(const std::string& type,
-                                      const ValuePtr& value,
+::testing::AssertionResult ValueMatch(const std::string& type, const ValuePtr& value,
                                       const Optional<std::string>& expected) {
   if (expected) {
     if (!value) {
@@ -388,14 +361,12 @@ class Optional {
              << type << " has no value but expected \"" << *expected << "\".";
     }
     if (ToString(value->value) != *expected) {
-      return ::testing::AssertionFailure()
-             << type << " has value \"" << ToString(value->value)
-             << "\" but expected \"" << *expected << "\".";
+      return ::testing::AssertionFailure() << type << " has value \"" << ToString(value->value)
+                                           << "\" but expected \"" << *expected << "\".";
     }
   } else if (!expected && value) {
     return ::testing::AssertionFailure()
-           << type << " has value \"" << ToString(value->value)
-           << "\" but expected no value.";
+           << type << " has value \"" << ToString(value->value) << "\" but expected no value.";
   }
   return ::testing::AssertionSuccess();
 }
@@ -408,11 +379,9 @@ class Optional {
   convert::ExtendedStringView found_key(entry.key);
   if (expected_key != convert::ExtendedStringView(found_key)) {
     return ::testing::AssertionFailure()
-           << "Expected key \"" << expected_key << "\" but found \""
-           << found_key << "\"";
+           << "Expected key \"" << expected_key << "\" but found \"" << found_key << "\"";
   }
-  ::testing::AssertionResult result =
-      ValueMatch("Base", entry.base, expected_base);
+  ::testing::AssertionResult result = ValueMatch("Base", entry.base, expected_base);
   if (!result) {
     return result;
   }
@@ -653,12 +622,10 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionNoConflict) {
 
   // We now have a conflict.
   EXPECT_EQ(1u, resolver_factory->resolvers.size());
-  EXPECT_NE(
-      resolver_factory->resolvers.end(),
-      resolver_factory->resolvers.find(convert::ToString(test_page_id.id)));
+  EXPECT_NE(resolver_factory->resolvers.end(),
+            resolver_factory->resolvers.find(convert::ToString(test_page_id.id)));
   ConflictResolverImpl* resolver_impl =
-      &(resolver_factory->resolvers.find(convert::ToString(test_page_id.id))
-            ->second);
+      &(resolver_factory->resolvers.find(convert::ToString(test_page_id.id))->second);
   resolver_impl->RunUntilResolveCalled();
   ASSERT_EQ(1u, resolver_impl->requests.size());
 
@@ -666,17 +633,14 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionNoConflict) {
   ASSERT_TRUE(resolver_impl->requests[0].GetFullDiff(&changes));
 
   EXPECT_EQ(4u, changes.size());
-  EXPECT_TRUE(ChangeMatch("city", Optional<std::string>(),
-                          Optional<std::string>(),
+  EXPECT_TRUE(ChangeMatch("city", Optional<std::string>(), Optional<std::string>(),
                           Optional<std::string>("Paris"), changes[0]));
   EXPECT_TRUE(ChangeMatch("email", Optional<std::string>(),
-                          Optional<std::string>("alice@example.org"),
-                          Optional<std::string>(), changes[1]));
-  EXPECT_TRUE(ChangeMatch("name", Optional<std::string>(),
-                          Optional<std::string>(),
+                          Optional<std::string>("alice@example.org"), Optional<std::string>(),
+                          changes[1]));
+  EXPECT_TRUE(ChangeMatch("name", Optional<std::string>(), Optional<std::string>(),
                           Optional<std::string>("Alice"), changes[2]));
-  EXPECT_TRUE(ChangeMatch("phone", Optional<std::string>(),
-                          Optional<std::string>("0123456789"),
+  EXPECT_TRUE(ChangeMatch("phone", Optional<std::string>(), Optional<std::string>("0123456789"),
                           Optional<std::string>(), changes[3]));
 
   // Common ancestor is empty.
@@ -763,12 +727,10 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionMergeValuesOrder) {
 
   // We now have a conflict.
   EXPECT_EQ(1u, resolver_factory->resolvers.size());
-  EXPECT_NE(
-      resolver_factory->resolvers.end(),
-      resolver_factory->resolvers.find(convert::ToString(test_page_id.id)));
+  EXPECT_NE(resolver_factory->resolvers.end(),
+            resolver_factory->resolvers.find(convert::ToString(test_page_id.id)));
   ConflictResolverImpl* resolver_impl =
-      &(resolver_factory->resolvers.find(convert::ToString(test_page_id.id))
-            ->second);
+      &(resolver_factory->resolvers.find(convert::ToString(test_page_id.id))->second);
   resolver_impl->RunUntilResolveCalled();
   ASSERT_EQ(1u, resolver_impl->requests.size());
 
@@ -777,10 +739,9 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionMergeValuesOrder) {
 
   EXPECT_EQ(2u, changes.size());
   EXPECT_TRUE(ChangeMatch("email", Optional<std::string>(),
-                          Optional<std::string>("alice@example.org"),
-                          Optional<std::string>(), changes[0]));
-  EXPECT_TRUE(ChangeMatch("name", Optional<std::string>(),
-                          Optional<std::string>(),
+                          Optional<std::string>("alice@example.org"), Optional<std::string>(),
+                          changes[0]));
+  EXPECT_TRUE(ChangeMatch("name", Optional<std::string>(), Optional<std::string>(),
                           Optional<std::string>("Alice"), changes[1]));
 
   // Common ancestor is empty.
@@ -865,12 +826,10 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionGetDiffMultiPart) {
   // We now have a conflict, wait for the resolve to be called.
   resolver_factory->RunUntilNewConflictResolverCalled();
   EXPECT_EQ(1u, resolver_factory->resolvers.size());
-  EXPECT_NE(
-      resolver_factory->resolvers.end(),
-      resolver_factory->resolvers.find(convert::ToString(test_page_id.id)));
+  EXPECT_NE(resolver_factory->resolvers.end(),
+            resolver_factory->resolvers.find(convert::ToString(test_page_id.id)));
   ConflictResolverImpl* resolver_impl =
-      &(resolver_factory->resolvers.find(convert::ToString(test_page_id.id))
-            ->second);
+      &(resolver_factory->resolvers.find(convert::ToString(test_page_id.id))->second);
   resolver_impl->RunUntilResolveCalled();
   ASSERT_EQ(1u, resolver_impl->requests.size());
 
@@ -883,12 +842,10 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionGetDiffMultiPart) {
   for (int i = 0; i < N; ++i) {
     // Left change is the most recent, so the one made on |page2|; right change
     // comes from |page1|.
-    EXPECT_TRUE(ChangeMatch(page1_keys[i], Optional<std::string>(),
-                            Optional<std::string>(),
+    EXPECT_TRUE(ChangeMatch(page1_keys[i], Optional<std::string>(), Optional<std::string>(),
                             Optional<std::string>("value"), changes[i]));
 
-    EXPECT_TRUE(ChangeMatch(page2_keys[i], Optional<std::string>(),
-                            Optional<std::string>("value"),
+    EXPECT_TRUE(ChangeMatch(page2_keys[i], Optional<std::string>(), Optional<std::string>("value"),
                             Optional<std::string>(), changes[N + i]));
   }
 }
@@ -928,12 +885,10 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionClosingPipe) {
 
   // We now have a conflict.
   EXPECT_EQ(1u, resolver_factory->resolvers.size());
-  EXPECT_NE(
-      resolver_factory->resolvers.end(),
-      resolver_factory->resolvers.find(convert::ToString(test_page_id.id)));
+  EXPECT_NE(resolver_factory->resolvers.end(),
+            resolver_factory->resolvers.find(convert::ToString(test_page_id.id)));
   ConflictResolverImpl* resolver_impl =
-      &(resolver_factory->resolvers.find(convert::ToString(test_page_id.id))
-            ->second);
+      &(resolver_factory->resolvers.find(convert::ToString(test_page_id.id))->second);
   resolver_impl->RunUntilResolveCalled();
   EXPECT_EQ(1u, resolver_impl->requests.size());
 
@@ -945,12 +900,9 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionClosingPipe) {
 
   // We should ask again for a resolution.
   EXPECT_EQ(1u, resolver_factory->resolvers.size());
-  EXPECT_NE(
-      resolver_factory->resolvers.end(),
-      resolver_factory->resolvers.find(convert::ToString(test_page_id.id)));
-  resolver_impl =
-      &(resolver_factory->resolvers.find(convert::ToString(test_page_id.id))
-            ->second);
+  EXPECT_NE(resolver_factory->resolvers.end(),
+            resolver_factory->resolvers.find(convert::ToString(test_page_id.id)));
+  resolver_impl = &(resolver_factory->resolvers.find(convert::ToString(test_page_id.id))->second);
   resolver_impl->RunUntilResolveCalled();
   ASSERT_EQ(1u, resolver_impl->requests.size());
 
@@ -1000,12 +952,10 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionResetFactory) {
 
   // We now have a conflict.
   EXPECT_EQ(1u, resolver_factory->resolvers.size());
-  EXPECT_NE(
-      resolver_factory->resolvers.end(),
-      resolver_factory->resolvers.find(convert::ToString(test_page_id.id)));
+  EXPECT_NE(resolver_factory->resolvers.end(),
+            resolver_factory->resolvers.find(convert::ToString(test_page_id.id)));
   ConflictResolverImpl* resolver_impl =
-      &(resolver_factory->resolvers.find(convert::ToString(test_page_id.id))
-            ->second);
+      &(resolver_factory->resolvers.find(convert::ToString(test_page_id.id))->second);
   EXPECT_FALSE(resolver_impl->disconnected);
   resolver_impl->RunUntilResolveCalled();
   EXPECT_EQ(1u, resolver_impl->requests.size());
@@ -1023,12 +973,10 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionResetFactory) {
 
   // We should ask again for a resolution on a new resolver.
   EXPECT_EQ(1u, resolver_factory2->resolvers.size());
-  ASSERT_NE(
-      resolver_factory2->resolvers.end(),
-      resolver_factory2->resolvers.find(convert::ToString(test_page_id.id)));
+  ASSERT_NE(resolver_factory2->resolvers.end(),
+            resolver_factory2->resolvers.find(convert::ToString(test_page_id.id)));
   ConflictResolverImpl* resolver_impl2 =
-      &(resolver_factory2->resolvers.find(convert::ToString(test_page_id.id))
-            ->second);
+      &(resolver_factory2->resolvers.find(convert::ToString(test_page_id.id))->second);
   resolver_impl2->RunUntilResolveCalled();
   ASSERT_EQ(1u, resolver_impl2->requests.size());
 
@@ -1079,12 +1027,10 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionMultipartMerge) {
 
   // We now have a conflict.
   EXPECT_EQ(1u, resolver_factory->resolvers.size());
-  EXPECT_NE(
-      resolver_factory->resolvers.end(),
-      resolver_factory->resolvers.find(convert::ToString(test_page_id.id)));
+  EXPECT_NE(resolver_factory->resolvers.end(),
+            resolver_factory->resolvers.find(convert::ToString(test_page_id.id)));
   ConflictResolverImpl* resolver_impl =
-      &(resolver_factory->resolvers.find(convert::ToString(test_page_id.id))
-            ->second);
+      &(resolver_factory->resolvers.find(convert::ToString(test_page_id.id))->second);
   resolver_impl->RunUntilResolveCalled();
   ASSERT_EQ(1u, resolver_impl->requests.size());
 
@@ -1120,8 +1066,7 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionMultipartMerge) {
   page1->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
                      std::move(watcher_ptr));
 
-  EXPECT_TRUE(resolver_impl->requests[0].Merge(std::move(merged_values),
-                                               MergeType::MULTIPART));
+  EXPECT_TRUE(resolver_impl->requests[0].Merge(std::move(merged_values), MergeType::MULTIPART));
 
   // Wait for the watcher to be called.
   ASSERT_TRUE(watcher_waiter->RunUntilCalled());
@@ -1136,8 +1081,7 @@ TEST_P(MergingIntegrationTest, AutoConflictResolutionNoConflict) {
   auto instance = NewLedgerAppInstance();
   ConflictResolverFactoryPtr resolver_factory_ptr;
   auto resolver_factory = std::make_unique<TestConflictResolverFactory>(
-      this, MergePolicy::AUTOMATIC_WITH_FALLBACK,
-      resolver_factory_ptr.NewRequest(), nullptr);
+      this, MergePolicy::AUTOMATIC_WITH_FALLBACK, resolver_factory_ptr.NewRequest(), nullptr);
   LedgerPtr ledger_ptr = instance->GetTestLedger();
   ledger_ptr->SetConflictResolverFactory(std::move(resolver_factory_ptr));
 
@@ -1182,12 +1126,10 @@ TEST_P(MergingIntegrationTest, AutoConflictResolutionNoConflict) {
 
   // We now have an automatically-resolved conflict.
   EXPECT_EQ(1u, resolver_factory->resolvers.size());
-  EXPECT_NE(
-      resolver_factory->resolvers.end(),
-      resolver_factory->resolvers.find(convert::ToString(test_page_id.id)));
+  EXPECT_NE(resolver_factory->resolvers.end(),
+            resolver_factory->resolvers.find(convert::ToString(test_page_id.id)));
   ConflictResolverImpl* resolver_impl =
-      &(resolver_factory->resolvers.find(convert::ToString(test_page_id.id))
-            ->second);
+      &(resolver_factory->resolvers.find(convert::ToString(test_page_id.id))->second);
 
   // The waiter is notified of the second change while the resolver has not been
   // asked to resolve anything.
@@ -1207,8 +1149,7 @@ TEST_P(MergingIntegrationTest, AutoConflictResolutionWithConflict) {
   auto instance = NewLedgerAppInstance();
   ConflictResolverFactoryPtr resolver_factory_ptr;
   auto resolver_factory = std::make_unique<TestConflictResolverFactory>(
-      this, MergePolicy::AUTOMATIC_WITH_FALLBACK,
-      resolver_factory_ptr.NewRequest(), nullptr);
+      this, MergePolicy::AUTOMATIC_WITH_FALLBACK, resolver_factory_ptr.NewRequest(), nullptr);
   LedgerPtr ledger_ptr = instance->GetTestLedger();
   ledger_ptr->SetConflictResolverFactory(std::move(resolver_factory_ptr));
 
@@ -1241,12 +1182,10 @@ TEST_P(MergingIntegrationTest, AutoConflictResolutionWithConflict) {
 
   // We now have a conflict.
   EXPECT_EQ(1u, resolver_factory->resolvers.size());
-  EXPECT_NE(
-      resolver_factory->resolvers.end(),
-      resolver_factory->resolvers.find(convert::ToString(test_page_id.id)));
+  EXPECT_NE(resolver_factory->resolvers.end(),
+            resolver_factory->resolvers.find(convert::ToString(test_page_id.id)));
   ConflictResolverImpl* resolver_impl =
-      &(resolver_factory->resolvers.find(convert::ToString(test_page_id.id))
-            ->second);
+      &(resolver_factory->resolvers.find(convert::ToString(test_page_id.id))->second);
   resolver_impl->RunUntilResolveCalled();
   ASSERT_EQ(1u, resolver_impl->requests.size());
 
@@ -1255,11 +1194,9 @@ TEST_P(MergingIntegrationTest, AutoConflictResolutionWithConflict) {
 
   EXPECT_EQ(2u, changes.size());
   // Left change is the most recent, so the one made on |page2|.
-  EXPECT_TRUE(ChangeMatch("city", Optional<std::string>(),
-                          Optional<std::string>("San Francisco"),
+  EXPECT_TRUE(ChangeMatch("city", Optional<std::string>(), Optional<std::string>("San Francisco"),
                           Optional<std::string>("Paris"), changes[0]));
-  EXPECT_TRUE(ChangeMatch("name", Optional<std::string>(),
-                          Optional<std::string>("Alice"),
+  EXPECT_TRUE(ChangeMatch("name", Optional<std::string>(), Optional<std::string>("Alice"),
                           Optional<std::string>(), changes[1]));
 
   // Common ancestor is empty.
@@ -1299,8 +1236,7 @@ TEST_P(MergingIntegrationTest, AutoConflictResolutionMultipartMerge) {
   auto instance = NewLedgerAppInstance();
   ConflictResolverFactoryPtr resolver_factory_ptr;
   auto resolver_factory = std::make_unique<TestConflictResolverFactory>(
-      this, MergePolicy::AUTOMATIC_WITH_FALLBACK,
-      resolver_factory_ptr.NewRequest(), nullptr);
+      this, MergePolicy::AUTOMATIC_WITH_FALLBACK, resolver_factory_ptr.NewRequest(), nullptr);
   LedgerPtr ledger_ptr = instance->GetTestLedger();
   ledger_ptr->SetConflictResolverFactory(std::move(resolver_factory_ptr));
 
@@ -1332,12 +1268,10 @@ TEST_P(MergingIntegrationTest, AutoConflictResolutionMultipartMerge) {
 
   // We now have a conflict.
   EXPECT_EQ(1u, resolver_factory->resolvers.size());
-  EXPECT_NE(
-      resolver_factory->resolvers.end(),
-      resolver_factory->resolvers.find(convert::ToString(test_page_id.id)));
+  EXPECT_NE(resolver_factory->resolvers.end(),
+            resolver_factory->resolvers.find(convert::ToString(test_page_id.id)));
   ConflictResolverImpl* resolver_impl =
-      &(resolver_factory->resolvers.find(convert::ToString(test_page_id.id))
-            ->second);
+      &(resolver_factory->resolvers.find(convert::ToString(test_page_id.id))->second);
   resolver_impl->RunUntilResolveCalled();
   ASSERT_EQ(1u, resolver_impl->requests.size());
 
@@ -1366,8 +1300,7 @@ TEST_P(MergingIntegrationTest, AutoConflictResolutionMultipartMerge) {
   page1->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
                      std::move(watcher_ptr));
 
-  EXPECT_TRUE(resolver_impl->requests[0].Merge(std::move(merged_values),
-                                               MergeType::MULTIPART));
+  EXPECT_TRUE(resolver_impl->requests[0].Merge(std::move(merged_values), MergeType::MULTIPART));
 
   // Wait for the watcher to be called.
   ASSERT_TRUE(watcher_waiter->RunUntilCalled());
@@ -1385,8 +1318,7 @@ TEST_P(MergingIntegrationTest, AutoConflictResolutionNoRightChange) {
   auto instance = NewLedgerAppInstance();
   ConflictResolverFactoryPtr resolver_factory_ptr;
   auto resolver_factory = std::make_unique<TestConflictResolverFactory>(
-      this, MergePolicy::AUTOMATIC_WITH_FALLBACK,
-      resolver_factory_ptr.NewRequest(), nullptr);
+      this, MergePolicy::AUTOMATIC_WITH_FALLBACK, resolver_factory_ptr.NewRequest(), nullptr);
   LedgerPtr ledger_ptr = instance->GetTestLedger();
   ledger_ptr->SetConflictResolverFactory(std::move(resolver_factory_ptr));
 
@@ -1434,12 +1366,10 @@ TEST_P(MergingIntegrationTest, AutoConflictResolutionNoRightChange) {
 
   // We now have an automatically-resolved conflict.
   EXPECT_EQ(1u, resolver_factory->resolvers.size());
-  ASSERT_NE(
-      resolver_factory->resolvers.end(),
-      resolver_factory->resolvers.find(convert::ToString(test_page_id.id)));
+  ASSERT_NE(resolver_factory->resolvers.end(),
+            resolver_factory->resolvers.find(convert::ToString(test_page_id.id)));
   ConflictResolverImpl* resolver_impl =
-      &(resolver_factory->resolvers.find(convert::ToString(test_page_id.id))
-            ->second);
+      &(resolver_factory->resolvers.find(convert::ToString(test_page_id.id))->second);
 
   // The waiter is notified of the third change while the resolver has not been
   // asked to resolve anything.
@@ -1489,20 +1419,18 @@ TEST_P(MergingIntegrationTest, WaitForCustomMerge) {
 
   // Check that we have a resolver and pending conflict resolution request.
   EXPECT_EQ(1u, resolver_factory->resolvers.size());
-  EXPECT_NE(
-      resolver_factory->resolvers.end(),
-      resolver_factory->resolvers.find(convert::ToString(test_page_id.id)));
+  EXPECT_NE(resolver_factory->resolvers.end(),
+            resolver_factory->resolvers.find(convert::ToString(test_page_id.id)));
   ConflictResolverImpl* resolver_impl =
-      &(resolver_factory->resolvers.find(convert::ToString(test_page_id.id))
-            ->second);
+      &(resolver_factory->resolvers.find(convert::ToString(test_page_id.id))->second);
   resolver_impl->RunUntilResolveCalled();
   ASSERT_EQ(1u, resolver_impl->requests.size());
 
   // Try to wait for conflicts resolution.
   auto conflicts_resolved_callback_waiter = NewWaiter();
   ConflictResolutionWaitStatus wait_status;
-  page1->WaitForConflictResolution(callback::Capture(
-      conflicts_resolved_callback_waiter->GetCallback(), &wait_status));
+  page1->WaitForConflictResolution(
+      callback::Capture(conflicts_resolved_callback_waiter->GetCallback(), &wait_status));
 
   // Check that conflicts_resolved_callback is not called, as there are merge
   // requests pending.
@@ -1511,8 +1439,7 @@ TEST_P(MergingIntegrationTest, WaitForCustomMerge) {
 
   // Merge manually.
   std::vector<MergedValue> merged_values;
-  EXPECT_TRUE(resolver_impl->requests[0].Merge(std::move(merged_values),
-                                               MergeType::SIMPLE));
+  EXPECT_TRUE(resolver_impl->requests[0].Merge(std::move(merged_values), MergeType::SIMPLE));
   EXPECT_TRUE(conflicts_resolved_callback_waiter->NotCalledYet());
 
   // Now conflict_resolved_callback can run.
@@ -1557,12 +1484,10 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionConflictingMerge) {
 
   // We now have a conflict.
   EXPECT_EQ(1u, resolver_factory->resolvers.size());
-  EXPECT_NE(
-      resolver_factory->resolvers.end(),
-      resolver_factory->resolvers.find(convert::ToString(test_page_id.id)));
+  EXPECT_NE(resolver_factory->resolvers.end(),
+            resolver_factory->resolvers.find(convert::ToString(test_page_id.id)));
   ConflictResolverImpl* resolver_impl =
-      &(resolver_factory->resolvers.find(convert::ToString(test_page_id.id))
-            ->second);
+      &(resolver_factory->resolvers.find(convert::ToString(test_page_id.id))->second);
   resolver_impl->RunUntilResolveCalled();
   ASSERT_EQ(1u, resolver_impl->requests.size());
 
@@ -1570,8 +1495,7 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionConflictingMerge) {
   ASSERT_TRUE(resolver_impl->requests[0].GetConflictingDiff(&changes));
 
   EXPECT_EQ(1u, changes.size());
-  EXPECT_TRUE(ChangeMatch("name", Optional<std::string>(),
-                          Optional<std::string>("Bob"),
+  EXPECT_TRUE(ChangeMatch("name", Optional<std::string>(), Optional<std::string>("Bob"),
                           Optional<std::string>("Alice"), changes[0]));
 
   // Prepare the merged values
@@ -1687,8 +1611,7 @@ TEST_P(MergingIntegrationTest, ConflictResolutionFactoryFailover) {
 
 // Tests that when a conflict resolution factory disconnects, already
 // open pages still get their conflicts resolved
-TEST_P(MergingIntegrationTest,
-       ConflictResolutionFactoryUnavailableMergingContinues) {
+TEST_P(MergingIntegrationTest, ConflictResolutionFactoryUnavailableMergingContinues) {
   auto resolver_factory_waiter = NewWaiter();
   auto instance = NewLedgerAppInstance();
   ConflictResolverFactoryPtr resolver_factory_ptr;
@@ -1714,15 +1637,13 @@ TEST_P(MergingIntegrationTest,
   auto watcher_waiter = NewWaiter();
   Watcher watcher1(watcher1_ptr.NewRequest(), watcher_waiter->GetCallback());
   PageSnapshotPtr snapshot1;
-  page_conn1->GetSnapshot(snapshot1.NewRequest(),
-                          fidl::VectorPtr<uint8_t>::New(0),
+  page_conn1->GetSnapshot(snapshot1.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
                           std::move(watcher1_ptr));
 
   PageWatcherPtr watcher2_ptr;
   Watcher watcher2(watcher2_ptr.NewRequest(), watcher_waiter->GetCallback());
   PageSnapshotPtr snapshot2;
-  page_conn2->GetSnapshot(snapshot2.NewRequest(),
-                          fidl::VectorPtr<uint8_t>::New(0),
+  page_conn2->GetSnapshot(snapshot2.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
                           std::move(watcher2_ptr));
 
   page_conn1->StartTransaction();
@@ -1758,8 +1679,7 @@ TEST_P(MergingIntegrationTest,
 
   ASSERT_TRUE(watcher_waiter->RunUntilCalled());
   PageSnapshotPtr snapshot3;
-  page_conn1->GetSnapshot(snapshot3.NewRequest(),
-                          fidl::VectorPtr<uint8_t>::New(0), nullptr);
+  page_conn1->GetSnapshot(snapshot3.NewRequest(), fidl::VectorPtr<uint8_t>::New(0), nullptr);
 
   waiter = NewWaiter();
   fuchsia::ledger::PageSnapshot_GetInline_Result result1;
@@ -1768,8 +1688,7 @@ TEST_P(MergingIntegrationTest,
   ASSERT_TRUE(waiter->RunUntilCalled());
 
   PageSnapshotPtr snapshot4;
-  page_conn1->GetSnapshot(snapshot4.NewRequest(),
-                          fidl::VectorPtr<uint8_t>::New(0), nullptr);
+  page_conn1->GetSnapshot(snapshot4.NewRequest(), fidl::VectorPtr<uint8_t>::New(0), nullptr);
 
   fuchsia::ledger::PageSnapshot_GetInline_Result result2;
   waiter = NewWaiter();
@@ -1786,8 +1705,7 @@ TEST_P(MergingIntegrationTest,
 // Tests that pages opened after disconnection of a conflict resolver
 // factory do not see their conflict resolved, including if another connection
 // is present with no conflict resolution set
-TEST_P(MergingIntegrationTest,
-       ConflictResolutionFactoryUnavailableNewPagesMergeBlocked) {
+TEST_P(MergingIntegrationTest, ConflictResolutionFactoryUnavailableNewPagesMergeBlocked) {
   auto resolver_factory_waiter = NewWaiter();
   auto instance = NewLedgerAppInstance();
   ConflictResolverFactoryPtr resolver_factory_ptr;
@@ -1814,15 +1732,13 @@ TEST_P(MergingIntegrationTest,
   auto watcher_waiter = NewWaiter();
   Watcher watcher1(watcher1_ptr.NewRequest(), watcher_waiter->GetCallback());
   PageSnapshotPtr snapshot1;
-  page_conn1->GetSnapshot(snapshot1.NewRequest(),
-                          fidl::VectorPtr<uint8_t>::New(0),
+  page_conn1->GetSnapshot(snapshot1.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
                           std::move(watcher1_ptr));
 
   PageWatcherPtr watcher2_ptr;
   Watcher watcher2(watcher2_ptr.NewRequest(), watcher_waiter->GetCallback());
   PageSnapshotPtr snapshot2;
-  page_conn2->GetSnapshot(snapshot2.NewRequest(),
-                          fidl::VectorPtr<uint8_t>::New(0),
+  page_conn2->GetSnapshot(snapshot2.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
                           std::move(watcher2_ptr));
 
   page_conn1->StartTransaction();
@@ -1869,8 +1785,7 @@ TEST_P(MergingIntegrationTest,
   ASSERT_TRUE(watcher_waiter->RunUntilCalled());
 
   PageSnapshotPtr snapshot3;
-  page_conn1->GetSnapshot(snapshot3.NewRequest(),
-                          fidl::VectorPtr<uint8_t>::New(0), nullptr);
+  page_conn1->GetSnapshot(snapshot3.NewRequest(), fidl::VectorPtr<uint8_t>::New(0), nullptr);
 
   waiter = NewWaiter();
   fuchsia::ledger::PageSnapshot_GetInline_Result result1;
@@ -1879,8 +1794,7 @@ TEST_P(MergingIntegrationTest,
   ASSERT_TRUE(waiter->RunUntilCalled());
 
   PageSnapshotPtr snapshot4;
-  page_conn1->GetSnapshot(snapshot4.NewRequest(),
-                          fidl::VectorPtr<uint8_t>::New(0), nullptr);
+  page_conn1->GetSnapshot(snapshot4.NewRequest(), fidl::VectorPtr<uint8_t>::New(0), nullptr);
 
   fuchsia::ledger::PageSnapshot_GetInline_Result result2;
   waiter = NewWaiter();
@@ -1894,9 +1808,8 @@ TEST_P(MergingIntegrationTest,
             convert::ToString(result2.response().value.value));
 }
 
-INSTANTIATE_TEST_SUITE_P(
-    MergingIntegrationTest, MergingIntegrationTest,
-    ::testing::ValuesIn(GetLedgerAppInstanceFactoryBuilders()));
+INSTANTIATE_TEST_SUITE_P(MergingIntegrationTest, MergingIntegrationTest,
+                         ::testing::ValuesIn(GetLedgerAppInstanceFactoryBuilders()));
 
 }  // namespace
 }  // namespace ledger

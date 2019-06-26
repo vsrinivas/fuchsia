@@ -28,40 +28,32 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
  public:
   explicit TestPageStorage(async_dispatcher_t* dispatcher);
 
-  std::unique_ptr<TestCommit> NewCommit(std::string id, std::string content,
-                                        bool unsynced = true);
+  std::unique_ptr<TestCommit> NewCommit(std::string id, std::string content, bool unsynced = true);
 
   storage::PageId GetId() override;
 
   void SetSyncDelegate(storage::PageSyncDelegate* page_sync_delegate) override;
 
   ledger::Status GetHeadCommits(
-      std::vector<std::unique_ptr<const storage::Commit>>* head_commits)
-      override;
+      std::vector<std::unique_ptr<const storage::Commit>>* head_commits) override;
 
   void GetCommit(storage::CommitIdView commit_id,
-                 fit::function<void(ledger::Status,
-                                    std::unique_ptr<const storage::Commit>)>
+                 fit::function<void(ledger::Status, std::unique_ptr<const storage::Commit>)>
                      callback) override;
 
   void AddCommitsFromSync(
-      std::vector<PageStorage::CommitIdAndBytes> ids_and_bytes,
-      storage::ChangeSource source,
-      fit::function<void(ledger::Status status, std::vector<storage::CommitId>)>
-          callback) override;
+      std::vector<PageStorage::CommitIdAndBytes> ids_and_bytes, storage::ChangeSource source,
+      fit::function<void(ledger::Status status, std::vector<storage::CommitId>)> callback) override;
 
-  void GetUnsyncedPieces(
-      fit::function<void(ledger::Status,
-                         std::vector<storage::ObjectIdentifier>)>
-          callback) override;
+  void GetUnsyncedPieces(fit::function<void(ledger::Status, std::vector<storage::ObjectIdentifier>)>
+                             callback) override;
 
   void AddCommitWatcher(storage::CommitWatcher* watcher) override;
 
   void RemoveCommitWatcher(storage::CommitWatcher* watcher) override;
 
   void GetUnsyncedCommits(
-      fit::function<void(ledger::Status,
-                         std::vector<std::unique_ptr<const storage::Commit>>)>
+      fit::function<void(ledger::Status, std::vector<std::unique_ptr<const storage::Commit>>)>
           callback) override;
 
   void MarkCommitSynced(const storage::CommitId& commit_id,
@@ -70,18 +62,15 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
   void SetSyncMetadata(fxl::StringView key, fxl::StringView value,
                        fit::function<void(ledger::Status)> callback) override;
 
-  void GetSyncMetadata(
-      fxl::StringView key,
-      fit::function<void(ledger::Status, std::string)> callback) override;
+  void GetSyncMetadata(fxl::StringView key,
+                       fit::function<void(ledger::Status, std::string)> callback) override;
 
   storage::PageId page_id_to_return;
   // Commits to be returned from GetUnsyncedCommits calls.
-  std::vector<std::unique_ptr<const storage::Commit>>
-      unsynced_commits_to_return;
+  std::vector<std::unique_ptr<const storage::Commit>> unsynced_commits_to_return;
   size_t head_count = 1;
   // Commits to be returned from GetCommit() calls.
-  std::map<storage::CommitId, std::unique_ptr<const storage::Commit>>
-      new_commits_to_return;
+  std::map<storage::CommitId, std::unique_ptr<const storage::Commit>> new_commits_to_return;
   bool should_fail_get_unsynced_commits = false;
   bool should_fail_get_commit = false;
   bool should_fail_add_commit_from_sync = false;

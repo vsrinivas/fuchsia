@@ -37,9 +37,8 @@ class LedgerAppInstanceFactory {
   // A Ledger app instance
   class LedgerAppInstance {
    public:
-    LedgerAppInstance(
-        LoopController* loop_controller, std::vector<uint8_t> test_ledger_name,
-        ledger_internal::LedgerRepositoryFactoryPtr ledger_repository_factory);
+    LedgerAppInstance(LoopController* loop_controller, std::vector<uint8_t> test_ledger_name,
+                      ledger_internal::LedgerRepositoryFactoryPtr ledger_repository_factory);
     virtual ~LedgerAppInstance();
 
     // Returns the LedgerRepositoryFactory associated with this application
@@ -87,8 +86,7 @@ class LedgerAppInstanceFactory {
 // parameters to the tests. The implementation of this function changes
 // depending on whether the tests are ran as integration tests, or end to end
 // tests.
-std::vector<const LedgerAppInstanceFactoryBuilder*>
-GetLedgerAppInstanceFactoryBuilders();
+std::vector<const LedgerAppInstanceFactoryBuilder*> GetLedgerAppInstanceFactoryBuilders();
 
 }  // namespace ledger
 

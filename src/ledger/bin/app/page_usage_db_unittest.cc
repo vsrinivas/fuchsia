@@ -22,8 +22,8 @@ namespace {
 class PageUsageDbTest : public TestWithEnvironment {
  public:
   PageUsageDbTest()
-      : db_(environment_.clock(), std::make_unique<storage::fake::FakeDb>(
-                                      environment_.dispatcher())) {}
+      : db_(environment_.clock(),
+            std::make_unique<storage::fake::FakeDb>(environment_.dispatcher())) {}
 
   ~PageUsageDbTest() override {}
 
@@ -115,13 +115,11 @@ TEST_F(PageUsageDbTest, MarkAllPagesClosed) {
 
     // Open 5 pages.
     for (int i = 0; i < N; ++i) {
-      EXPECT_EQ(Status::OK,
-                db_.MarkPageOpened(handler, ledger_name, page_ids[i]));
+      EXPECT_EQ(Status::OK, db_.MarkPageOpened(handler, ledger_name, page_ids[i]));
     }
 
     // Close 1 of them.
-    EXPECT_EQ(Status::OK,
-              db_.MarkPageClosed(handler, ledger_name, page_ids[0]));
+    EXPECT_EQ(Status::OK, db_.MarkPageClosed(handler, ledger_name, page_ids[0]));
 
     // Expect to find 4 entries with timestamp equal to the opened page marker
     // timestamp.

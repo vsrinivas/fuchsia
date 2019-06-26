@@ -30,8 +30,7 @@ class PageMutationTest : public IntegrationTest {
 
   std::vector<Entry> GetEntries() {
     PageSnapshotPtr snapshot;
-    page_->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                       nullptr);
+    page_->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0), nullptr);
     return SnapshotGetEntries(this, &snapshot);
   }
 
@@ -46,9 +45,7 @@ class PageMutationTest : public IntegrationTest {
   PagePtr page_;
 };
 
-TEST_P(PageMutationTest, InitialSnapshotIsEmpty) {
-  EXPECT_THAT(GetEntries(), IsEmpty());
-}
+TEST_P(PageMutationTest, InitialSnapshotIsEmpty) { EXPECT_THAT(GetEntries(), IsEmpty()); }
 
 TEST_P(PageMutationTest, PutOutsideOfTransaction) {
   Put("key", "value");
@@ -57,8 +54,7 @@ TEST_P(PageMutationTest, PutOutsideOfTransaction) {
 
   Put("key2", "value2");
 
-  ASSERT_THAT(GetEntries(),
-              MatchEntries({{"key", "value"}, {"key2", "value2"}}));
+  ASSERT_THAT(GetEntries(), MatchEntries({{"key", "value"}, {"key2", "value2"}}));
 }
 
 TEST_P(PageMutationTest, PutInsideOfTransaction) {
@@ -70,8 +66,7 @@ TEST_P(PageMutationTest, PutInsideOfTransaction) {
   Put("key2", "value2");
   page_->Commit();
 
-  ASSERT_THAT(GetEntries(),
-              MatchEntries({{"key", "value"}, {"key2", "value2"}}));
+  ASSERT_THAT(GetEntries(), MatchEntries({{"key", "value"}, {"key2", "value2"}}));
 }
 
 TEST_P(PageMutationTest, RollbackTransaction) {
@@ -89,8 +84,7 @@ TEST_P(PageMutationTest, RollbackTransaction) {
 TEST_P(PageMutationTest, DeleteOutsideOfTransaction) {
   Put("key", "value");
   Put("key2", "value2");
-  ASSERT_THAT(GetEntries(),
-              MatchEntries({{"key", "value"}, {"key2", "value2"}}));
+  ASSERT_THAT(GetEntries(), MatchEntries({{"key", "value"}, {"key2", "value2"}}));
 
   Delete("key");
 
@@ -100,8 +94,7 @@ TEST_P(PageMutationTest, DeleteOutsideOfTransaction) {
 TEST_P(PageMutationTest, DeleteInsideOfTransaction) {
   Put("key", "value");
   Put("key2", "value2");
-  ASSERT_THAT(GetEntries(),
-              MatchEntries({{"key", "value"}, {"key2", "value2"}}));
+  ASSERT_THAT(GetEntries(), MatchEntries({{"key", "value"}, {"key2", "value2"}}));
 
   page_->StartTransaction();
   Delete("key");
@@ -115,8 +108,7 @@ TEST_P(PageMutationTest, DeleteInsideOfTransaction) {
 TEST_P(PageMutationTest, ClearOutsideOfTransaction) {
   Put("key", "value");
   Put("key2", "value2");
-  ASSERT_THAT(GetEntries(),
-              MatchEntries({{"key", "value"}, {"key2", "value2"}}));
+  ASSERT_THAT(GetEntries(), MatchEntries({{"key", "value"}, {"key2", "value2"}}));
 
   page_->Clear();
 
@@ -126,8 +118,7 @@ TEST_P(PageMutationTest, ClearOutsideOfTransaction) {
 TEST_P(PageMutationTest, ClearInsideOfTransaction) {
   Put("key", "value");
   Put("key2", "value2");
-  ASSERT_THAT(GetEntries(),
-              MatchEntries({{"key", "value"}, {"key2", "value2"}}));
+  ASSERT_THAT(GetEntries(), MatchEntries({{"key", "value"}, {"key2", "value2"}}));
 
   page_->StartTransaction();
   Put("key3", "value3");
@@ -141,8 +132,7 @@ TEST_P(PageMutationTest, ClearInsideOfTransaction) {
 TEST_P(PageMutationTest, MultipleClearCallsInsideOfTransaction) {
   Put("key", "value");
   Put("key2", "value2");
-  ASSERT_THAT(GetEntries(),
-              MatchEntries({{"key", "value"}, {"key2", "value2"}}));
+  ASSERT_THAT(GetEntries(), MatchEntries({{"key", "value"}, {"key2", "value2"}}));
 
   page_->StartTransaction();
   Put("key3", "value3");
@@ -191,9 +181,8 @@ TEST_P(PageMutationTest, ClearAndRestoreInsideTransaction) {
   ASSERT_THAT(GetEntries(), MatchEntries({{"key", "value"}}));
 }
 
-INSTANTIATE_TEST_SUITE_P(
-    PageMutationTest, PageMutationTest,
-    ::testing::ValuesIn(GetLedgerAppInstanceFactoryBuilders()));
+INSTANTIATE_TEST_SUITE_P(PageMutationTest, PageMutationTest,
+                         ::testing::ValuesIn(GetLedgerAppInstanceFactoryBuilders()));
 
 }  // namespace
 }  // namespace ledger

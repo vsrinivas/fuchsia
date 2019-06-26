@@ -32,10 +32,9 @@ void FakeDeviceSet::SetFingerprint(std::vector<uint8_t> fingerprint,
   callback(cloud_provider::Status::OK);
 }
 
-void FakeDeviceSet::SetWatcher(
-    std::vector<uint8_t> fingerprint,
-    fidl::InterfaceHandle<cloud_provider::DeviceSetWatcher> watcher,
-    SetWatcherCallback callback) {
+void FakeDeviceSet::SetWatcher(std::vector<uint8_t> fingerprint,
+                               fidl::InterfaceHandle<cloud_provider::DeviceSetWatcher> watcher,
+                               SetWatcherCallback callback) {
   // TODO(ppi): for the cloud provider to be useful for Voila, we need
   // to support multiple watchers.
   if (fingerprints_.count(convert::ToString(fingerprint)) == 0) {

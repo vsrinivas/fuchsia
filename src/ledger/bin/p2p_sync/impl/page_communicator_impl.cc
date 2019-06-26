@@ -21,9 +21,8 @@ namespace {
 storage::ObjectIdentifier ToObjectIdentifier(const ObjectId* fb_object_id) {
   uint32_t key_index = fb_object_id->key_index();
   uint32_t deletion_scope_id = fb_object_id->deletion_scope_id();
-  return storage::ObjectIdentifier{
-      key_index, deletion_scope_id,
-      storage::ObjectDigest(fb_object_id->digest())};
+  return storage::ObjectIdentifier{key_index, deletion_scope_id,
+                                   storage::ObjectDigest(fb_object_id->digest())};
 }
 }  // namespace
 
@@ -37,17 +36,14 @@ class PageCommunicatorImpl::PendingObjectRequestHolder {
 
   // Registers this additional callback for the request.
   void AddCallback(
-      fit::function<void(ledger::Status, storage::ChangeSource,
-                         storage::IsObjectSynced,
+      fit::function<void(ledger::Status, storage::ChangeSource, storage::IsObjectSynced,
                          std::unique_ptr<storage::DataSource::DataChunk>)>
           callback) {
     callbacks_.push_back(std::move(callback));
   }
 
   // Registers a new pending request to device |destination|.
-  void AddNewPendingRequest(std::string destination) {
-    requests_.emplace(std::move(destination));
-  }
+  void AddNewPendingRequest(std::string destination) { requests_.emplace(std::move(destination)); }
 
   // Processes the response from device |source|.
   void Complete(fxl::StringView source, const Object* object) {
@@ -82,10 +78,8 @@ class PageCommunicatorImpl::PendingObjectRequestHolder {
     }
     for (auto& callback : callbacks_) {
       std::unique_ptr<storage::DataSource::DataChunk> chunk =
-          storage::DataSource::DataChunk::Create(
-              convert::ToString(object->data()->bytes()));
-      callback(ledger::Status::OK, storage::ChangeSource::P2P, is_object_synced,
-               std::move(chunk));
+          storage::DataSource::DataChunk::Create(convert::ToString(object->data()->bytes()));
+      callback(ledger::Status::OK, storage::ChangeSource::P2P, is_object_synced, std::move(chunk));
     }
     if (on_empty_) {
       on_empty_();
@@ -93,9 +87,8 @@ class PageCommunicatorImpl::PendingObjectRequestHolder {
   }
 
  private:
-  std::vector<fit::function<void(
-      ledger::Status, storage::ChangeSource, storage::IsObjectSynced,
-      std::unique_ptr<storage::DataSource::DataChunk>)>>
+  std::vector<fit::function<void(ledger::Status, storage::ChangeSource, storage::IsObjectSynced,
+                                 std::unique_ptr<storage::DataSource::DataChunk>)>>
       callbacks_;
   // Set of devices for which we are waiting an answer.
   // We might be able to get rid of this list and just use a counter (or even
@@ -117,10 +110,11 @@ struct PageCommunicatorImpl::ObjectResponseHolder {
       : identifier(std::move(identifier)) {}
 };
 
-PageCommunicatorImpl::PageCommunicatorImpl(
-    coroutine::CoroutineService* coroutine_service,
-    storage::PageStorage* storage, storage::PageSyncClient* sync_client,
-    std::string namespace_id, std::string page_id, DeviceMesh* mesh)
+PageCommunicatorImpl::PageCommunicatorImpl(coroutine::CoroutineService* coroutine_service,
+                                           storage::PageStorage* storage,
+                                           storage::PageSyncClient* sync_client,
+                                           std::string namespace_id, std::string page_id,
+                                           DeviceMesh* mesh)
     : coroutine_manager_(coroutine_service),
       namespace_id_(std::move(namespace_id)),
       page_id_(std::move(page_id)),
@@ -170,8 +164,8 @@ void PageCommunicatorImpl::set_on_delete(fit::closure on_delete) {
   on_delete_ = std::move(on_delete);
 }
 
-void PageCommunicatorImpl::OnDeviceChange(
-    fxl::StringView remote_device, p2p_provider::DeviceChangeType change_type) {
+void PageCommunicatorImpl::OnDeviceChange(fxl::StringView remote_device,
+                                          p2p_provider::DeviceChangeType change_type) {
   if (!started_ || in_destructor_) {
     return;
   }
@@ -192,8 +186,7 @@ void PageCommunicatorImpl::OnDeviceChange(
 
     // Remove pending requests from the device: it disconnected, it is not going
     // to answer.
-    for (auto it = pending_object_requests_.begin();
-         it != pending_object_requests_.end();) {
+    for (auto it = pending_object_requests_.begin(); it != pending_object_requests_.end();) {
       // |Complete| may delete the request, invalidating the iterator. We
       // increment and make a copy to be able to continue to iterate.
       auto request = it++;
@@ -207,33 +200,31 @@ void PageCommunicatorImpl::OnDeviceChange(
   mesh_->Send(remote_device, buffer);
 }
 
-void PageCommunicatorImpl::OnNewRequest(fxl::StringView source,
-                                        MessageHolder<Request> message) {
+void PageCommunicatorImpl::OnNewRequest(fxl::StringView source, MessageHolder<Request> message) {
   FXL_DCHECK(!in_destructor_);
   switch (message->request_type()) {
     case RequestMessage_WatchStartRequest: {
-      MarkSyncedToPeer(
-          [this, source = source.ToString()](ledger::Status status) {
-            if (status != ledger::Status::OK) {
-              // If we fail to mark the page storage as synced to a peer, we
-              // might end up in a situation of deleting from disk a partially
-              // synced page. Log an error and return.
-              FXL_LOG(ERROR) << "Failed to mark PageStorage as synced to peer";
-              return;
-            }
-            if (interested_devices_.find(source) == interested_devices_.end()) {
-              interested_devices_.insert(source);
-            }
-            auto it = not_interested_devices_.find(source);
-            if (it != not_interested_devices_.end()) {
-              // The device used to be uninterested, but now wants updates.
-              // Let's contact it again.
-              not_interested_devices_.erase(it);
-              flatbuffers::FlatBufferBuilder buffer;
-              BuildWatchStartBuffer(&buffer);
-              mesh_->Send(source, buffer);
-            }
-          });
+      MarkSyncedToPeer([this, source = source.ToString()](ledger::Status status) {
+        if (status != ledger::Status::OK) {
+          // If we fail to mark the page storage as synced to a peer, we
+          // might end up in a situation of deleting from disk a partially
+          // synced page. Log an error and return.
+          FXL_LOG(ERROR) << "Failed to mark PageStorage as synced to peer";
+          return;
+        }
+        if (interested_devices_.find(source) == interested_devices_.end()) {
+          interested_devices_.insert(source);
+        }
+        auto it = not_interested_devices_.find(source);
+        if (it != not_interested_devices_.end()) {
+          // The device used to be uninterested, but now wants updates.
+          // Let's contact it again.
+          not_interested_devices_.erase(it);
+          flatbuffers::FlatBufferBuilder buffer;
+          BuildWatchStartBuffer(&buffer);
+          mesh_->Send(source, buffer);
+        }
+      });
       break;
     }
     case RequestMessage_WatchStopRequest: {
@@ -256,20 +247,16 @@ void PageCommunicatorImpl::OnNewRequest(fxl::StringView source,
       break;
     }
     case RequestMessage_CommitRequest:
-      ProcessCommitRequest(
-          source.ToString(),
-          std::move(message).TakeAndMap<CommitRequest>(
-              [](const Request* request) {
-                return static_cast<const CommitRequest*>(request->request());
-              }));
+      ProcessCommitRequest(source.ToString(),
+                           std::move(message).TakeAndMap<CommitRequest>([](const Request* request) {
+                             return static_cast<const CommitRequest*>(request->request());
+                           }));
       break;
     case RequestMessage_ObjectRequest:
-      ProcessObjectRequest(
-          source,
-          std::move(message).TakeAndMap<ObjectRequest>(
-              [](const Request* request) {
-                return static_cast<const ObjectRequest*>(request->request());
-              }));
+      ProcessObjectRequest(source,
+                           std::move(message).TakeAndMap<ObjectRequest>([](const Request* request) {
+                             return static_cast<const ObjectRequest*>(request->request());
+                           }));
       break;
     case RequestMessage_NONE:
       FXL_LOG(ERROR) << "The message received is malformed";
@@ -277,8 +264,7 @@ void PageCommunicatorImpl::OnNewRequest(fxl::StringView source,
   }
 }
 
-void PageCommunicatorImpl::OnNewResponse(fxl::StringView source,
-                                         MessageHolder<Response> message) {
+void PageCommunicatorImpl::OnNewResponse(fxl::StringView source, MessageHolder<Response> message) {
   FXL_DCHECK(!in_destructor_);
   if (message->status() != ResponseStatus_OK) {
     // The namespace or page was unknown on the other side. We can probably do
@@ -332,8 +318,7 @@ void PageCommunicatorImpl::OnNewResponse(fxl::StringView source,
 
 void PageCommunicatorImpl::GetObject(
     storage::ObjectIdentifier object_identifier,
-    fit::function<void(ledger::Status, storage::ChangeSource,
-                       storage::IsObjectSynced,
+    fit::function<void(ledger::Status, storage::ChangeSource, storage::IsObjectSynced,
                        std::unique_ptr<storage::DataSource::DataChunk>)>
         callback) {
   if (interested_devices_.empty()) {
@@ -342,8 +327,8 @@ void PageCommunicatorImpl::GetObject(
     return;
   }
 
-  auto [request_holder, is_new_request] = pending_object_requests_.emplace(
-      object_identifier, PendingObjectRequestHolder());
+  auto [request_holder, is_new_request] =
+      pending_object_requests_.emplace(object_identifier, PendingObjectRequestHolder());
   request_holder->second.AddCallback(std::move(callback));
 
   if (is_new_request) {
@@ -395,8 +380,7 @@ void PageCommunicatorImpl::RequestCommits(fxl::StringView device,
                                           std::vector<storage::CommitId> ids) {
   flatbuffers::FlatBufferBuilder buffer;
   flatbuffers::Offset<NamespacePageId> namespace_page_id =
-      CreateNamespacePageId(buffer,
-                            convert::ToFlatBufferVector(&buffer, namespace_id_),
+      CreateNamespacePageId(buffer, convert::ToFlatBufferVector(&buffer, namespace_id_),
                             convert::ToFlatBufferVector(&buffer, page_id_));
   std::vector<flatbuffers::Offset<CommitId>> commit_ids;
   for (const auto& id : ids) {
@@ -406,65 +390,50 @@ void PageCommunicatorImpl::RequestCommits(fxl::StringView device,
   }
   flatbuffers::Offset<CommitRequest> commit_request =
       CreateCommitRequest(buffer, buffer.CreateVector(commit_ids));
-  flatbuffers::Offset<Request> request =
-      CreateRequest(buffer, namespace_page_id, RequestMessage_CommitRequest,
-                    commit_request.Union());
+  flatbuffers::Offset<Request> request = CreateRequest(
+      buffer, namespace_page_id, RequestMessage_CommitRequest, commit_request.Union());
   flatbuffers::Offset<Message> message =
       CreateMessage(buffer, MessageUnion_Request, request.Union());
   buffer.Finish(message);
   mesh_->Send(device, buffer);
 }
 
-void PageCommunicatorImpl::BuildWatchStartBuffer(
-    flatbuffers::FlatBufferBuilder* buffer) {
-  flatbuffers::Offset<WatchStartRequest> watch_start =
-      CreateWatchStartRequest(*buffer);
+void PageCommunicatorImpl::BuildWatchStartBuffer(flatbuffers::FlatBufferBuilder* buffer) {
+  flatbuffers::Offset<WatchStartRequest> watch_start = CreateWatchStartRequest(*buffer);
   flatbuffers::Offset<NamespacePageId> namespace_page_id =
-      CreateNamespacePageId(*buffer,
-                            convert::ToFlatBufferVector(buffer, namespace_id_),
+      CreateNamespacePageId(*buffer, convert::ToFlatBufferVector(buffer, namespace_id_),
                             convert::ToFlatBufferVector(buffer, page_id_));
-  flatbuffers::Offset<Request> request =
-      CreateRequest(*buffer, namespace_page_id,
-                    RequestMessage_WatchStartRequest, watch_start.Union());
+  flatbuffers::Offset<Request> request = CreateRequest(
+      *buffer, namespace_page_id, RequestMessage_WatchStartRequest, watch_start.Union());
   flatbuffers::Offset<Message> message =
       CreateMessage(*buffer, MessageUnion_Request, request.Union());
   buffer->Finish(message);
 }
 
-void PageCommunicatorImpl::BuildWatchStopBuffer(
-    flatbuffers::FlatBufferBuilder* buffer) {
-  flatbuffers::Offset<WatchStopRequest> watch_stop =
-      CreateWatchStopRequest(*buffer);
+void PageCommunicatorImpl::BuildWatchStopBuffer(flatbuffers::FlatBufferBuilder* buffer) {
+  flatbuffers::Offset<WatchStopRequest> watch_stop = CreateWatchStopRequest(*buffer);
   flatbuffers::Offset<NamespacePageId> namespace_page_id =
-      CreateNamespacePageId(*buffer,
-                            convert::ToFlatBufferVector(buffer, namespace_id_),
+      CreateNamespacePageId(*buffer, convert::ToFlatBufferVector(buffer, namespace_id_),
                             convert::ToFlatBufferVector(buffer, page_id_));
-  flatbuffers::Offset<Request> request =
-      CreateRequest(*buffer, namespace_page_id, RequestMessage_WatchStopRequest,
-                    watch_stop.Union());
+  flatbuffers::Offset<Request> request = CreateRequest(
+      *buffer, namespace_page_id, RequestMessage_WatchStopRequest, watch_stop.Union());
   flatbuffers::Offset<Message> message =
       CreateMessage(*buffer, MessageUnion_Request, request.Union());
   buffer->Finish(message);
 }
 
-void PageCommunicatorImpl::BuildObjectRequestBuffer(
-    flatbuffers::FlatBufferBuilder* buffer,
-    storage::ObjectIdentifier object_identifier) {
+void PageCommunicatorImpl::BuildObjectRequestBuffer(flatbuffers::FlatBufferBuilder* buffer,
+                                                    storage::ObjectIdentifier object_identifier) {
   flatbuffers::Offset<NamespacePageId> namespace_page_id =
-      CreateNamespacePageId(*buffer,
-                            convert::ToFlatBufferVector(buffer, namespace_id_),
+      CreateNamespacePageId(*buffer, convert::ToFlatBufferVector(buffer, namespace_id_),
                             convert::ToFlatBufferVector(buffer, page_id_));
   flatbuffers::Offset<ObjectId> object_id = CreateObjectId(
-      *buffer, object_identifier.key_index(),
-      object_identifier.deletion_scope_id(),
-      convert::ToFlatBufferVector(
-          buffer, object_identifier.object_digest().Serialize()));
+      *buffer, object_identifier.key_index(), object_identifier.deletion_scope_id(),
+      convert::ToFlatBufferVector(buffer, object_identifier.object_digest().Serialize()));
   flatbuffers::Offset<ObjectRequest> object_request = CreateObjectRequest(
-      *buffer, buffer->CreateVector(
-                   std::vector<flatbuffers::Offset<ObjectId>>({object_id})));
-  flatbuffers::Offset<Request> request =
-      CreateRequest(*buffer, namespace_page_id, RequestMessage_ObjectRequest,
-                    object_request.Union());
+      *buffer, buffer->CreateVector(std::vector<flatbuffers::Offset<ObjectId>>({object_id})));
+  flatbuffers::Offset<Request> request = CreateRequest(
+      *buffer, namespace_page_id, RequestMessage_ObjectRequest, object_request.Union());
   flatbuffers::Offset<Message> message =
       CreateMessage(*buffer, MessageUnion_Request, request.Union());
   buffer->Finish(message);
@@ -474,25 +443,22 @@ void PageCommunicatorImpl::BuildCommitBuffer(
     flatbuffers::FlatBufferBuilder* buffer,
     const std::vector<std::unique_ptr<const storage::Commit>>& commits) {
   flatbuffers::Offset<NamespacePageId> namespace_page_id =
-      CreateNamespacePageId(*buffer,
-                            convert::ToFlatBufferVector(buffer, namespace_id_),
+      CreateNamespacePageId(*buffer, convert::ToFlatBufferVector(buffer, namespace_id_),
                             convert::ToFlatBufferVector(buffer, page_id_));
   std::vector<flatbuffers::Offset<Commit>> fb_commits;
   for (const auto& commit : commits) {
-    flatbuffers::Offset<CommitId> fb_commit_id = CreateCommitId(
-        *buffer, convert::ToFlatBufferVector(buffer, commit->GetId()));
-    flatbuffers::Offset<Data> fb_commit_data = CreateData(
-        *buffer,
-        convert::ToFlatBufferVector(buffer, commit->GetStorageBytes()));
-    fb_commits.emplace_back(
-        CreateCommit(*buffer, fb_commit_id, CommitStatus_OK, fb_commit_data));
+    flatbuffers::Offset<CommitId> fb_commit_id =
+        CreateCommitId(*buffer, convert::ToFlatBufferVector(buffer, commit->GetId()));
+    flatbuffers::Offset<Data> fb_commit_data =
+        CreateData(*buffer, convert::ToFlatBufferVector(buffer, commit->GetStorageBytes()));
+    fb_commits.emplace_back(CreateCommit(*buffer, fb_commit_id, CommitStatus_OK, fb_commit_data));
   }
 
   flatbuffers::Offset<CommitResponse> commit_response =
       CreateCommitResponse(*buffer, buffer->CreateVector(fb_commits));
   flatbuffers::Offset<Response> response =
-      CreateResponse(*buffer, ResponseStatus_OK, namespace_page_id,
-                     ResponseMessage_CommitResponse, commit_response.Union());
+      CreateResponse(*buffer, ResponseStatus_OK, namespace_page_id, ResponseMessage_CommitResponse,
+                     commit_response.Union());
   flatbuffers::Offset<Message> message =
       CreateMessage(*buffer, MessageUnion_Response, response.Union());
   buffer->Finish(message);
@@ -500,214 +466,190 @@ void PageCommunicatorImpl::BuildCommitBuffer(
 
 void PageCommunicatorImpl::BuildCommitResponseBuffer(
     flatbuffers::FlatBufferBuilder* buffer,
-    const std::vector<
-        std::pair<storage::CommitId, std::unique_ptr<const storage::Commit>>>&
+    const std::vector<std::pair<storage::CommitId, std::unique_ptr<const storage::Commit>>>&
         commits) {
   flatbuffers::Offset<NamespacePageId> namespace_page_id =
-      CreateNamespacePageId(*buffer,
-                            convert::ToFlatBufferVector(buffer, namespace_id_),
+      CreateNamespacePageId(*buffer, convert::ToFlatBufferVector(buffer, namespace_id_),
                             convert::ToFlatBufferVector(buffer, page_id_));
   std::vector<flatbuffers::Offset<Commit>> fb_commits;
   for (const auto& commit : commits) {
-    flatbuffers::Offset<CommitId> fb_commit_id = CreateCommitId(
-        *buffer, convert::ToFlatBufferVector(buffer, commit.first));
+    flatbuffers::Offset<CommitId> fb_commit_id =
+        CreateCommitId(*buffer, convert::ToFlatBufferVector(buffer, commit.first));
     if (commit.second) {
-      flatbuffers::Offset<Data> fb_commit_data =
-          CreateData(*buffer, convert::ToFlatBufferVector(
-                                  buffer, commit.second->GetStorageBytes()));
-      fb_commits.emplace_back(
-          CreateCommit(*buffer, fb_commit_id, CommitStatus_OK, fb_commit_data));
+      flatbuffers::Offset<Data> fb_commit_data = CreateData(
+          *buffer, convert::ToFlatBufferVector(buffer, commit.second->GetStorageBytes()));
+      fb_commits.emplace_back(CreateCommit(*buffer, fb_commit_id, CommitStatus_OK, fb_commit_data));
     } else {
-      fb_commits.emplace_back(
-          CreateCommit(*buffer, fb_commit_id, CommitStatus_UNKNOWN_COMMIT));
+      fb_commits.emplace_back(CreateCommit(*buffer, fb_commit_id, CommitStatus_UNKNOWN_COMMIT));
     }
   }
 
   flatbuffers::Offset<CommitResponse> commit_response =
       CreateCommitResponse(*buffer, buffer->CreateVector(fb_commits));
   flatbuffers::Offset<Response> response =
-      CreateResponse(*buffer, ResponseStatus_OK, namespace_page_id,
-                     ResponseMessage_CommitResponse, commit_response.Union());
+      CreateResponse(*buffer, ResponseStatus_OK, namespace_page_id, ResponseMessage_CommitResponse,
+                     commit_response.Union());
   flatbuffers::Offset<Message> message =
       CreateMessage(*buffer, MessageUnion_Response, response.Union());
   buffer->Finish(message);
 }
 
-void PageCommunicatorImpl::ProcessCommitRequest(
-    std::string source, MessageHolder<CommitRequest> request) {
-  coroutine_manager_.StartCoroutine([this, source = std::move(source),
-                                     request = std::move(request)](
-                                        coroutine::CoroutineHandler* handler) {
-    auto commit_waiter = fxl::MakeRefCounted<callback::Waiter<
-        ledger::Status,
-        std::pair<storage::CommitId, std::unique_ptr<const storage::Commit>>>>(
-        ledger::Status::OK);
-    for (const CommitId* id : *request->commit_ids()) {
-      storage_->GetCommit(
-          id->id(), [commit_id = convert::ToString(id->id()),
-                     callback = commit_waiter->NewCallback()](
-                        ledger::Status status,
-                        std::unique_ptr<const storage::Commit> commit) mutable {
-            if (status == ledger::Status::INTERNAL_NOT_FOUND) {
-              // Not finding an commit is okay in this context: we'll just
-              // reply we don't have it. There is not need to abort
-              // processing the request.
-              callback(ledger::Status::OK,
-                       std::make_pair(std::move(commit_id), nullptr));
-              return;
-            }
-            callback(status,
-                     std::make_pair(std::move(commit_id), std::move(commit)));
-          });
-    }
-    ledger::Status status;
-    std::vector<
-        std::pair<storage::CommitId, std::unique_ptr<const storage::Commit>>>
-        commits;
-    if (coroutine::Wait(handler, std::move(commit_waiter), &status, &commits) ==
-        coroutine::ContinuationStatus::INTERRUPTED) {
-      return;
-    }
-
-    if (status != ledger::Status::OK) {
-      return;
-    }
-
-    flatbuffers::FlatBufferBuilder buffer;
-    BuildCommitResponseBuffer(&buffer, commits);
-    mesh_->Send(source, buffer);
-  });
-}
-
-void PageCommunicatorImpl::ProcessObjectRequest(
-    fxl::StringView source, MessageHolder<ObjectRequest> request) {
+void PageCommunicatorImpl::ProcessCommitRequest(std::string source,
+                                                MessageHolder<CommitRequest> request) {
   coroutine_manager_.StartCoroutine(
-      [this, source = source.ToString(),
+      [this, source = std::move(source),
        request = std::move(request)](coroutine::CoroutineHandler* handler) {
-        // We use a std::list so that we can keep a reference to an element
-        // while adding new items.
-        std::list<ObjectResponseHolder> object_responses;
-        auto response_waiter =
-            fxl::MakeRefCounted<callback::StatusWaiter<ledger::Status>>(
-                ledger::Status::OK);
-        for (const ObjectId* object_id : *request->object_ids()) {
-          storage::ObjectIdentifier identifier{
-              object_id->key_index(), object_id->deletion_scope_id(),
-              storage::ObjectDigest(object_id->digest())};
-          object_responses.emplace_back(identifier);
-          auto& response = object_responses.back();
-          storage_->GetPiece(
-              identifier,
-              [callback = response_waiter->NewCallback(), &response](
-                  ledger::Status status,
-                  std::unique_ptr<const storage::Piece> piece,
-                  std::unique_ptr<const storage::PieceToken> token) mutable {
+        auto commit_waiter = fxl::MakeRefCounted<callback::Waiter<
+            ledger::Status, std::pair<storage::CommitId, std::unique_ptr<const storage::Commit>>>>(
+            ledger::Status::OK);
+        for (const CommitId* id : *request->commit_ids()) {
+          storage_->GetCommit(
+              id->id(),
+              [commit_id = convert::ToString(id->id()), callback = commit_waiter->NewCallback()](
+                  ledger::Status status, std::unique_ptr<const storage::Commit> commit) mutable {
                 if (status == ledger::Status::INTERNAL_NOT_FOUND) {
-                  // Not finding an object is okay in this context: we'll just
+                  // Not finding an commit is okay in this context: we'll just
                   // reply we don't have it. There is not need to abort
                   // processing the request.
-                  callback(ledger::Status::OK);
+                  callback(ledger::Status::OK, std::make_pair(std::move(commit_id), nullptr));
                   return;
                 }
-                response.piece = std::move(piece);
-                // The token is safely discarded now that we have a copy of the
-                // piece. We do not need to keep it alive or update it on-disk,
-                // only to send it to the requesting peer.
-                callback(status);
-              });
-          storage_->IsPieceSynced(
-              std::move(identifier),
-              [callback = response_waiter->NewCallback(), &response](
-                  ledger::Status status, bool is_synced) {
-                if (status == ledger::Status::INTERNAL_NOT_FOUND) {
-                  // Not finding an object is okay in this context: we'll just
-                  // reply we don't have it. There is not need to abort
-                  // processing the request.
-                  callback(ledger::Status::OK);
-                  return;
-                }
-                // TODO(LE-788): there is a race-condition here, the piece may
-                // disappear while we're fetching it.
-                response.is_synced = is_synced;
-                callback(status);
+                callback(status, std::make_pair(std::move(commit_id), std::move(commit)));
               });
         }
-
         ledger::Status status;
-        if (coroutine::Wait(handler, response_waiter, &status) ==
+        std::vector<std::pair<storage::CommitId, std::unique_ptr<const storage::Commit>>> commits;
+        if (coroutine::Wait(handler, std::move(commit_waiter), &status, &commits) ==
             coroutine::ContinuationStatus::INTERRUPTED) {
           return;
         }
 
         if (status != ledger::Status::OK) {
-          FXL_LOG(WARNING) << "Error while retrieving objects: " << status;
           return;
         }
 
         flatbuffers::FlatBufferBuilder buffer;
-        BuildObjectResponseBuffer(&buffer, std::move(object_responses));
-
+        BuildCommitResponseBuffer(&buffer, commits);
         mesh_->Send(source, buffer);
       });
 }
 
+void PageCommunicatorImpl::ProcessObjectRequest(fxl::StringView source,
+                                                MessageHolder<ObjectRequest> request) {
+  coroutine_manager_.StartCoroutine([this, source = source.ToString(),
+                                     request =
+                                         std::move(request)](coroutine::CoroutineHandler* handler) {
+    // We use a std::list so that we can keep a reference to an element
+    // while adding new items.
+    std::list<ObjectResponseHolder> object_responses;
+    auto response_waiter =
+        fxl::MakeRefCounted<callback::StatusWaiter<ledger::Status>>(ledger::Status::OK);
+    for (const ObjectId* object_id : *request->object_ids()) {
+      storage::ObjectIdentifier identifier{object_id->key_index(), object_id->deletion_scope_id(),
+                                           storage::ObjectDigest(object_id->digest())};
+      object_responses.emplace_back(identifier);
+      auto& response = object_responses.back();
+      storage_->GetPiece(identifier,
+                         [callback = response_waiter->NewCallback(), &response](
+                             ledger::Status status, std::unique_ptr<const storage::Piece> piece,
+                             std::unique_ptr<const storage::PieceToken> token) mutable {
+                           if (status == ledger::Status::INTERNAL_NOT_FOUND) {
+                             // Not finding an object is okay in this context: we'll just
+                             // reply we don't have it. There is not need to abort
+                             // processing the request.
+                             callback(ledger::Status::OK);
+                             return;
+                           }
+                           response.piece = std::move(piece);
+                           // The token is safely discarded now that we have a copy of the
+                           // piece. We do not need to keep it alive or update it on-disk,
+                           // only to send it to the requesting peer.
+                           callback(status);
+                         });
+      storage_->IsPieceSynced(std::move(identifier),
+                              [callback = response_waiter->NewCallback(), &response](
+                                  ledger::Status status, bool is_synced) {
+                                if (status == ledger::Status::INTERNAL_NOT_FOUND) {
+                                  // Not finding an object is okay in this context: we'll just
+                                  // reply we don't have it. There is not need to abort
+                                  // processing the request.
+                                  callback(ledger::Status::OK);
+                                  return;
+                                }
+                                // TODO(LE-788): there is a race-condition here, the piece may
+                                // disappear while we're fetching it.
+                                response.is_synced = is_synced;
+                                callback(status);
+                              });
+    }
+
+    ledger::Status status;
+    if (coroutine::Wait(handler, response_waiter, &status) ==
+        coroutine::ContinuationStatus::INTERRUPTED) {
+      return;
+    }
+
+    if (status != ledger::Status::OK) {
+      FXL_LOG(WARNING) << "Error while retrieving objects: " << status;
+      return;
+    }
+
+    flatbuffers::FlatBufferBuilder buffer;
+    BuildObjectResponseBuffer(&buffer, std::move(object_responses));
+
+    mesh_->Send(source, buffer);
+  });
+}
+
 void PageCommunicatorImpl::BuildObjectResponseBuffer(
-    flatbuffers::FlatBufferBuilder* buffer,
-    std::list<ObjectResponseHolder> object_responses) {
+    flatbuffers::FlatBufferBuilder* buffer, std::list<ObjectResponseHolder> object_responses) {
   flatbuffers::Offset<NamespacePageId> namespace_page_id =
-      CreateNamespacePageId(*buffer,
-                            convert::ToFlatBufferVector(buffer, namespace_id_),
+      CreateNamespacePageId(*buffer, convert::ToFlatBufferVector(buffer, namespace_id_),
                             convert::ToFlatBufferVector(buffer, page_id_));
   std::vector<flatbuffers::Offset<Object>> fb_objects;
   for (const ObjectResponseHolder& object_response : object_responses) {
-    flatbuffers::Offset<ObjectId> fb_object_id = CreateObjectId(
-        *buffer, object_response.identifier.key_index(),
-        object_response.identifier.deletion_scope_id(),
-        convert::ToFlatBufferVector(
-            buffer, object_response.identifier.object_digest().Serialize()));
+    flatbuffers::Offset<ObjectId> fb_object_id =
+        CreateObjectId(*buffer, object_response.identifier.key_index(),
+                       object_response.identifier.deletion_scope_id(),
+                       convert::ToFlatBufferVector(
+                           buffer, object_response.identifier.object_digest().Serialize()));
     if (object_response.piece) {
       fxl::StringView data = object_response.piece->GetData();
       flatbuffers::Offset<Data> fb_data =
           CreateData(*buffer, convert::ToFlatBufferVector(buffer, data));
-      ObjectSyncStatus sync_status = object_response.is_synced
-                                         ? ObjectSyncStatus_SYNCED_TO_CLOUD
-                                         : ObjectSyncStatus_UNSYNCED;
-      fb_objects.emplace_back(CreateObject(
-          *buffer, fb_object_id, ObjectStatus_OK, fb_data, sync_status));
-    } else {
+      ObjectSyncStatus sync_status =
+          object_response.is_synced ? ObjectSyncStatus_SYNCED_TO_CLOUD : ObjectSyncStatus_UNSYNCED;
       fb_objects.emplace_back(
-          CreateObject(*buffer, fb_object_id, ObjectStatus_UNKNOWN_OBJECT));
+          CreateObject(*buffer, fb_object_id, ObjectStatus_OK, fb_data, sync_status));
+    } else {
+      fb_objects.emplace_back(CreateObject(*buffer, fb_object_id, ObjectStatus_UNKNOWN_OBJECT));
     }
   }
   flatbuffers::Offset<ObjectResponse> object_response =
       CreateObjectResponse(*buffer, buffer->CreateVector(fb_objects));
   flatbuffers::Offset<Response> response =
-      CreateResponse(*buffer, ResponseStatus_OK, namespace_page_id,
-                     ResponseMessage_ObjectResponse, object_response.Union());
+      CreateResponse(*buffer, ResponseStatus_OK, namespace_page_id, ResponseMessage_ObjectResponse,
+                     object_response.Union());
   flatbuffers::Offset<Message> message =
       CreateMessage(*buffer, MessageUnion_Response, response.Union());
   buffer->Finish(message);
 }
 
-void PageCommunicatorImpl::MarkSyncedToPeer(
-    fit::function<void(ledger::Status)> callback) {
+void PageCommunicatorImpl::MarkSyncedToPeer(fit::function<void(ledger::Status)> callback) {
   if (marked_as_synced_to_peer_) {
     callback(ledger::Status::OK);
     return;
   }
-  storage_->MarkSyncedToPeer(
-      [this, callback = std::move(callback)](ledger::Status status) {
-        if (status == ledger::Status::OK) {
-          marked_as_synced_to_peer_ = true;
-        }
-        callback(status);
-      });
+  storage_->MarkSyncedToPeer([this, callback = std::move(callback)](ledger::Status status) {
+    if (status == ledger::Status::OK) {
+      marked_as_synced_to_peer_ = true;
+    }
+    callback(status);
+  });
 }
 
-void PageCommunicatorImpl::SendToInterestedDevices(
-    convert::ExtendedStringView data) {
-  for (auto it = interested_devices_.begin();
-       it != interested_devices_.end();) {
+void PageCommunicatorImpl::SendToInterestedDevices(convert::ExtendedStringView data) {
+  for (auto it = interested_devices_.begin(); it != interested_devices_.end();) {
     // mesh_->Send() may invalidate the current iterator. Thus here, we make a
     // copy and increment it. If mesh_->Send() invalidates the iterator
     // |device|, |it| will not be affected.

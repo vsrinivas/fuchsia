@@ -30,9 +30,8 @@ class PageEvictionPolicy {
   // returned through the |callback| will be |IO_ERROR| in case of failure
   // during trying to evict a page; |OK| otherwise. It is not an error if no
   // page was evited.
-  virtual void SelectAndEvict(
-      std::unique_ptr<storage::Iterator<const PageInfo>> pages,
-      fit::function<void(Status)> callback) = 0;
+  virtual void SelectAndEvict(std::unique_ptr<storage::Iterator<const PageInfo>> pages,
+                              fit::function<void(Status)> callback) = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(PageEvictionPolicy);
@@ -62,10 +61,9 @@ class PageEvictionDelegate {
   // retrieving information on the page, or when trying to evict it; |OK|
   // otherwise. The boolean in the callback indicates whether the page was
   // evicted.
-  virtual void TryEvictPage(
-      fxl::StringView ledger_name, storage::PageIdView page_id,
-      PageEvictionCondition condition,
-      fit::function<void(Status, PageWasEvicted)> callback) = 0;
+  virtual void TryEvictPage(fxl::StringView ledger_name, storage::PageIdView page_id,
+                            PageEvictionCondition condition,
+                            fit::function<void(Status, PageWasEvicted)> callback) = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(PageEvictionDelegate);
@@ -75,23 +73,21 @@ class PageEvictionDelegate {
 // recently used page among those that can be evicted. The given delegate should
 // outlive the returned object.
 std::unique_ptr<PageEvictionPolicy> NewLeastRecentyUsedPolicy(
-    coroutine::CoroutineService* corroutine_service,
-    PageEvictionDelegate* delegate);
+    coroutine::CoroutineService* corroutine_service, PageEvictionDelegate* delegate);
 
 // Creates and returns a new Age-Based policy, which evicts the pages that
 // were closed and not used for at least 5 hours. The given delegate should
 // outlive the returned object.
 std::unique_ptr<PageEvictionPolicy> NewAgeBasedPolicy(
-    coroutine::CoroutineService* corroutine_service,
-    PageEvictionDelegate* delegate, timekeeper::Clock* clock);
+    coroutine::CoroutineService* corroutine_service, PageEvictionDelegate* delegate,
+    timekeeper::Clock* clock);
 
 // Creates and returns a new Age-Based policy, which evicts the pages that
 // were closed and not used for at least the specified duration. The given
 // delegate should outlive the returned object.
 std::unique_ptr<PageEvictionPolicy> NewAgeBasedPolicy(
-    coroutine::CoroutineService* corroutine_service,
-    PageEvictionDelegate* delegate, timekeeper::Clock* clock,
-    zx::duration unused_time_limit);
+    coroutine::CoroutineService* corroutine_service, PageEvictionDelegate* delegate,
+    timekeeper::Clock* clock, zx::duration unused_time_limit);
 
 }  // namespace ledger
 

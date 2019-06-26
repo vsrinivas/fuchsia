@@ -20,9 +20,8 @@ using ::testing::IsEmpty;
 
 class FakeDelegate : public PageEvictionManager::Delegate {
  public:
-  void PageIsClosedAndSynced(
-      fxl::StringView /*ledger_name*/, storage::PageIdView /*page_id*/,
-      fit::function<void(Status, PagePredicateResult)> callback) override {
+  void PageIsClosedAndSynced(fxl::StringView /*ledger_name*/, storage::PageIdView /*page_id*/,
+                             fit::function<void(Status, PagePredicateResult)> callback) override {
     callback(Status::OK, PagePredicateResult::YES);
   }
 
@@ -32,8 +31,7 @@ class FakeDelegate : public PageEvictionManager::Delegate {
     callback(Status::OK, closed_offline_empty);
   }
 
-  void DeletePageStorage(fxl::StringView /*ledger_name*/,
-                         storage::PageIdView page_id,
+  void DeletePageStorage(fxl::StringView /*ledger_name*/, storage::PageIdView page_id,
                          fit::function<void(Status)> callback) override {
     deleted_pages.push_back(page_id.ToString());
     callback(Status::OK);
@@ -48,8 +46,7 @@ class DiskCleanupManagerTest : public TestWithEnvironment {
  public:
   DiskCleanupManagerTest()
       : db_factory_(environment_.dispatcher()),
-        disk_cleanup_manager_(&environment_, &db_factory_,
-                              DetachedPath(tmpfs_.root_fd())) {}
+        disk_cleanup_manager_(&environment_, &db_factory_, DetachedPath(tmpfs_.root_fd())) {}
 
   // gtest::TestLoopFixture:
   void SetUp() override {

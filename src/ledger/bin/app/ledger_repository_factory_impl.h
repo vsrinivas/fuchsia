@@ -32,24 +32,20 @@
 namespace ledger {
 
 class LedgerRepositoryFactoryImpl
-    : public ::fuchsia::ledger::internal::
-          LedgerRepositoryFactorySyncableDelegate {
+    : public ::fuchsia::ledger::internal::LedgerRepositoryFactorySyncableDelegate {
  public:
   explicit LedgerRepositoryFactoryImpl(
       Environment* environment,
-      std::unique_ptr<p2p_sync::UserCommunicatorFactory>
-          user_communicator_factory,
+      std::unique_ptr<p2p_sync::UserCommunicatorFactory> user_communicator_factory,
       inspect::Node inspect_node);
   ~LedgerRepositoryFactoryImpl() override;
 
   // LedgerRepositoryFactorySyncableDelegate:
-  void GetRepository(
-      zx::channel repository_handle,
-      fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider,
-      std::string user_id,
-      fidl::InterfaceRequest<ledger_internal::LedgerRepository>
-          repository_request,
-      fit::function<void(Status)> callback) override;
+  void GetRepository(zx::channel repository_handle,
+                     fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider,
+                     std::string user_id,
+                     fidl::InterfaceRequest<ledger_internal::LedgerRepository> repository_request,
+                     fit::function<void(Status)> callback) override;
 
  private:
   class LedgerRepositoryContainer;
@@ -58,11 +54,9 @@ class LedgerRepositoryFactoryImpl
   // Binds |repository_request| to the repository stored in the directory opened
   // in |root_fd|.
   void GetRepositoryByFD(
-      fxl::UniqueFD root_fd,
-      fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider,
+      fxl::UniqueFD root_fd, fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider,
       std::string user_id,
-      fidl::InterfaceRequest<ledger_internal::LedgerRepository>
-          repository_request,
+      fidl::InterfaceRequest<ledger_internal::LedgerRepository> repository_request,
       fit::function<void(Status)> callback);
   std::unique_ptr<sync_coordinator::UserSyncImpl> CreateUserSync(
       const RepositoryInformation& repository_information,
@@ -72,15 +66,12 @@ class LedgerRepositoryFactoryImpl
       const RepositoryInformation& repository_information);
   void OnVersionMismatch(RepositoryInformation repository_information);
 
-  void DeleteRepositoryDirectory(
-      const RepositoryInformation& repository_information);
+  void DeleteRepositoryDirectory(const RepositoryInformation& repository_information);
 
   Environment* const environment_;
-  std::unique_ptr<p2p_sync::UserCommunicatorFactory> const
-      user_communicator_factory_;
+  std::unique_ptr<p2p_sync::UserCommunicatorFactory> const user_communicator_factory_;
 
-  callback::AutoCleanableMap<std::string, LedgerRepositoryContainer>
-      repositories_;
+  callback::AutoCleanableMap<std::string, LedgerRepositoryContainer> repositories_;
 
   inspect::Node inspect_node_;
 

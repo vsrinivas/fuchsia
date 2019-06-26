@@ -26,9 +26,7 @@ class TestIntegerStream : public IntegerStream {
   ~TestIntegerStream() override {}
 
   // IntegerStream:
-  void StartCall(void* tag) override {
-    connect_tag = static_cast<fit::function<void(bool)>*>(tag);
-  }
+  void StartCall(void* tag) override { connect_tag = static_cast<fit::function<void(bool)>*>(tag); }
   void ReadInitialMetadata(void* /*tag*/) override {}
   void Read(int* message, void* tag) override {
     message_ptr = message;
@@ -56,8 +54,8 @@ class ReadStreamDrainerTest : public ::testing::Test {
     auto stream = std::make_unique<TestIntegerStream>();
     auto context = std::make_unique<grpc::ClientContext>();
     stream_ = stream.get();
-    drainer_ = std::make_unique<ReadStreamDrainer<IntegerStream, int>>(
-        std::move(context), std::move(stream));
+    drainer_ = std::make_unique<ReadStreamDrainer<IntegerStream, int>>(std::move(context),
+                                                                       std::move(stream));
     drainer_->set_on_empty([this] { on_empty_calls_++; });
   }
   ~ReadStreamDrainerTest() override {}
@@ -76,8 +74,7 @@ TEST_F(ReadStreamDrainerTest, ConnectionError) {
   bool called = false;
   grpc::Status status;
   std::vector<int> result;
-  drainer_->Drain(
-      callback::Capture(callback::SetWhenCalled(&called), &status, &result));
+  drainer_->Drain(callback::Capture(callback::SetWhenCalled(&called), &status, &result));
   (*stream_->connect_tag)(false);
   (*stream_->status_ptr) = grpc::Status(grpc::StatusCode::INTERNAL, "");
   EXPECT_FALSE(called);
@@ -93,8 +90,7 @@ TEST_F(ReadStreamDrainerTest, Ok) {
   bool called = false;
   grpc::Status status;
   std::vector<int> result;
-  drainer_->Drain(
-      callback::Capture(callback::SetWhenCalled(&called), &status, &result));
+  drainer_->Drain(callback::Capture(callback::SetWhenCalled(&called), &status, &result));
   (*stream_->connect_tag)(true);
   (*stream_->message_ptr) = 1;
   (*stream_->read_tag)(true);

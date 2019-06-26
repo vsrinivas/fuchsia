@@ -27,8 +27,7 @@ using ::testing::ResultOf;
 using ::testing::UnorderedElementsAre;
 using ::testing::UnorderedElementsAreArray;
 
-std::vector<CommitId> ToCommitIdVector(
-    const std::vector<std::unique_ptr<const Commit>>& commits) {
+std::vector<CommitId> ToCommitIdVector(const std::vector<std::unique_ptr<const Commit>>& commits) {
   std::vector<CommitId> ids;
   for (const auto& commit : commits) {
     ids.push_back(commit->GetId());
@@ -36,8 +35,7 @@ std::vector<CommitId> ToCommitIdVector(
   return ids;
 };
 
-std::set<CommitId> ToCommitIdSet(
-    const std::vector<std::unique_ptr<const Commit>>& commits) {
+std::set<CommitId> ToCommitIdSet(const std::vector<std::unique_ptr<const Commit>>& commits) {
   std::set<CommitId> ids;
   for (const auto& commit : commits) {
     ids.insert(commit->GetId());
@@ -56,13 +54,12 @@ class LiveCommitTrackerTest : public ledger::TestWithEnvironment {
     tmpfs_ = std::make_unique<scoped_tmpfs::ScopedTmpFS>();
     auto leveldb = std::make_unique<fake::FakeDb>(dispatcher());
     PageId id = RandomString(environment_.random(), 10);
-    storage_ = std::make_unique<PageStorageImpl>(
-        &environment_, &encryption_service_, std::move(leveldb), id);
+    storage_ = std::make_unique<PageStorageImpl>(&environment_, &encryption_service_,
+                                                 std::move(leveldb), id);
 
     bool called;
     Status status;
-    storage_->Init(
-        callback::Capture(callback::SetWhenCalled(&called), &status));
+    storage_->Init(callback::Capture(callback::SetWhenCalled(&called), &status));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
     EXPECT_EQ(Status::OK, status);
@@ -85,17 +82,14 @@ class LiveCommitTrackerTest : public ledger::TestWithEnvironment {
   }
 
   // Returns a randomly created new commit, child of |base|.
-  std::unique_ptr<const Commit> CreateRandomCommit(
-      std::unique_ptr<const Commit> base) {
+  std::unique_ptr<const Commit> CreateRandomCommit(std::unique_ptr<const Commit> base) {
     std::unique_ptr<Journal> journal = storage_->StartCommit(std::move(base));
-    journal->Put("key", RandomObjectIdentifier(environment_.random()),
-                 KeyPriority::EAGER);
+    journal->Put("key", RandomObjectIdentifier(environment_.random()), KeyPriority::EAGER);
     bool called;
     Status status;
     std::unique_ptr<const Commit> commit;
-    storage_->CommitJournal(
-        std::move(journal),
-        callback::Capture(callback::SetWhenCalled(&called), &status, &commit));
+    storage_->CommitJournal(std::move(journal),
+                            callback::Capture(callback::SetWhenCalled(&called), &status, &commit));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
     EXPECT_EQ(Status::OK, status);
@@ -132,8 +126,7 @@ TEST_F(LiveCommitTrackerTest, GetLiveCommits) {
 
   // When no journal has started, live commits should be the heads.
   auto initial_heads = ToCommitIdSet(GetHeads());
-  EXPECT_THAT(ToCommitIdSet(tracker->GetLiveCommits()),
-              UnorderedElementsAreArray(initial_heads));
+  EXPECT_THAT(ToCommitIdSet(tracker->GetLiveCommits()), UnorderedElementsAreArray(initial_heads));
 
   // Let's keep an old commit, and make new ones.
   std::unique_ptr<const Commit> old_commit = GetFirstHead();
@@ -148,21 +141,17 @@ TEST_F(LiveCommitTrackerTest, GetLiveCommits) {
 
   // Even if we don't keep hold of the new commit, it should remain live as it
   // is a head.
-  EXPECT_THAT(ToCommitIdSet(tracker->GetLiveCommits()),
-              UnorderedElementsAre(old_id, new_id));
+  EXPECT_THAT(ToCommitIdSet(tracker->GetLiveCommits()), UnorderedElementsAre(old_id, new_id));
 
   // If we use old_commit in a journal, it remains live even if we don't hold it
   // anymore.
-  std::unique_ptr<Journal> journal =
-      storage_->StartCommit(std::move(old_commit));
-  EXPECT_THAT(ToCommitIdSet(tracker->GetLiveCommits()),
-              UnorderedElementsAre(old_id, new_id));
+  std::unique_ptr<Journal> journal = storage_->StartCommit(std::move(old_commit));
+  EXPECT_THAT(ToCommitIdSet(tracker->GetLiveCommits()), UnorderedElementsAre(old_id, new_id));
 
   // If we don't hold neither old_commit nor a journal based on it, it is no
   // longer live.
   journal.reset();
-  EXPECT_THAT(ToCommitIdSet(tracker->GetLiveCommits()),
-              UnorderedElementsAre(new_id));
+  EXPECT_THAT(ToCommitIdSet(tracker->GetLiveCommits()), UnorderedElementsAre(new_id));
 }
 
 }  // namespace

@@ -31,8 +31,7 @@ class UserSync {
   virtual void Start() = 0;
 
   virtual std::unique_ptr<LedgerSync> CreateLedgerSync(
-      fxl::StringView app_id,
-      encryption::EncryptionService* encryption_service) = 0;
+      fxl::StringView app_id, encryption::EncryptionService* encryption_service) = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(UserSync);

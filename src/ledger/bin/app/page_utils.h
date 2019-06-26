@@ -23,19 +23,18 @@ class PageUtils {
   // Retrieves the data referenced by the given identifier as a StringView with
   // no offset.
   static void ResolveObjectIdentifierAsStringView(
-      storage::PageStorage* storage,
-      storage::ObjectIdentifier object_identifier,
+      storage::PageStorage* storage, storage::ObjectIdentifier object_identifier,
       storage::PageStorage::Location location,
       fit::function<void(Status, fxl::StringView)> callback);
 
   // Retrieves the data referenced by the given identifier and returns a subset
   // of its contents as a buffer. |offset| can be negative. In that case, the
   // offset is understood as starting from the end of the contents.
-  static void ResolveObjectIdentifierAsBuffer(
-      storage::PageStorage* storage,
-      storage::ObjectIdentifier object_identifier, int64_t offset,
-      int64_t max_size, storage::PageStorage::Location location,
-      fit::function<void(Status, fsl::SizedVmo)> callback);
+  static void ResolveObjectIdentifierAsBuffer(storage::PageStorage* storage,
+                                              storage::ObjectIdentifier object_identifier,
+                                              int64_t offset, int64_t max_size,
+                                              storage::PageStorage::Location location,
+                                              fit::function<void(Status, fsl::SizedVmo)> callback);
 
   // Returns true if a key matches the provided prefix, false otherwise.
   static bool MatchesPrefix(const std::string& key, const std::string& prefix);

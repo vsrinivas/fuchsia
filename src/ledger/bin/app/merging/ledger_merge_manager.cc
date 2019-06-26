@@ -51,13 +51,11 @@ class LedgerMergeManager::ConflictResolverFactoryPtrContainer {
   fit::closure on_empty_callback_;
 };
 
-LedgerMergeManager::LedgerMergeManager(Environment* environment)
-    : environment_(environment) {}
+LedgerMergeManager::LedgerMergeManager(Environment* environment) : environment_(environment) {}
 
 LedgerMergeManager::~LedgerMergeManager() {}
 
-void LedgerMergeManager::AddFactory(
-    fidl::InterfaceHandle<ConflictResolverFactory> factory) {
+void LedgerMergeManager::AddFactory(fidl::InterfaceHandle<ConflictResolverFactory> factory) {
   using_default_conflict_resolver_ = false;
 
   conflict_resolver_factories_.emplace(std::move(factory));
@@ -71,16 +69,14 @@ void LedgerMergeManager::ResetFactory() {
   if (conflict_resolver_factories_.empty())
     return;
 
-  current_conflict_resolver_factory_ =
-      conflict_resolver_factories_.begin()->TakePtr();
+  current_conflict_resolver_factory_ = conflict_resolver_factories_.begin()->TakePtr();
   current_conflict_resolver_factory_.set_error_handler(
       [this](zx_status_t status) { this->ResetFactory(); });
 
   for (const auto& item : resolvers_) {
     item.second->SetMergeStrategy(nullptr);
     GetResolverStrategyForPage(
-        item.first, [this, page_id = item.first](
-                        std::unique_ptr<MergeStrategy> strategy) mutable {
+        item.first, [this, page_id = item.first](std::unique_ptr<MergeStrategy> strategy) mutable {
           if (resolvers_.find(page_id) != resolvers_.end()) {
             resolvers_[page_id]->SetMergeStrategy(std::move(strategy));
           }
@@ -92,22 +88,19 @@ void LedgerMergeManager::RemoveResolver(const storage::PageId& page_id) {
   resolvers_.erase(page_id);
 }
 
-std::unique_ptr<MergeResolver> LedgerMergeManager::GetMergeResolver(
-    storage::PageStorage* storage) {
+std::unique_ptr<MergeResolver> LedgerMergeManager::GetMergeResolver(storage::PageStorage* storage) {
   storage::PageId page_id = storage->GetId();
   std::unique_ptr<MergeResolver> resolver = std::make_unique<MergeResolver>(
       [this, page_id]() { RemoveResolver(page_id); }, environment_, storage,
       std::make_unique<backoff::ExponentialBackoff>(
-          zx::msec(10), 2u, zx::sec(60 * 60),
-          environment_->random()->NewBitGenerator<uint64_t>()));
+          zx::msec(10), 2u, zx::sec(60 * 60), environment_->random()->NewBitGenerator<uint64_t>()));
   resolvers_[page_id] = resolver.get();
-  GetResolverStrategyForPage(
-      page_id,
-      [this, page_id](std::unique_ptr<MergeStrategy> strategy) mutable {
-        if (resolvers_.find(page_id) != resolvers_.end()) {
-          resolvers_[page_id]->SetMergeStrategy(std::move(strategy));
-        }
-      });
+  GetResolverStrategyForPage(page_id,
+                             [this, page_id](std::unique_ptr<MergeStrategy> strategy) mutable {
+                               if (resolvers_.find(page_id) != resolvers_.end()) {
+                                 resolvers_[page_id]->SetMergeStrategy(std::move(strategy));
+                               }
+                             });
   return resolver;
 }
 
@@ -124,9 +117,8 @@ void LedgerMergeManager::GetResolverStrategyForPage(
     PageId converted_page_id;
     convert::ToArray(page_id, &converted_page_id.id);
     current_conflict_resolver_factory_->GetPolicy(
-        converted_page_id,
-        [this, page_id, converted_page_id,
-         strategy_callback = std::move(strategy_callback)](MergePolicy policy) {
+        converted_page_id, [this, page_id, converted_page_id,
+                            strategy_callback = std::move(strategy_callback)](MergePolicy policy) {
           switch (policy) {
             case MergePolicy::LAST_ONE_WINS:
               strategy_callback(std::make_unique<LastOneWinsMergeStrategy>());
@@ -136,10 +128,8 @@ void LedgerMergeManager::GetResolverStrategyForPage(
               current_conflict_resolver_factory_->NewConflictResolver(
                   converted_page_id, conflict_resolver.NewRequest());
               std::unique_ptr<AutoMergeStrategy> auto_merge_strategy =
-                  std::make_unique<AutoMergeStrategy>(
-                      std::move(conflict_resolver));
-              auto_merge_strategy->SetOnError(
-                  [this, page_id]() { ResetStrategyForPage(page_id); });
+                  std::make_unique<AutoMergeStrategy>(std::move(conflict_resolver));
+              auto_merge_strategy->SetOnError([this, page_id]() { ResetStrategyForPage(page_id); });
               strategy_callback(std::move(auto_merge_strategy));
               break;
             }
@@ -150,8 +140,7 @@ void LedgerMergeManager::GetResolverStrategyForPage(
               current_conflict_resolver_factory_->NewConflictResolver(
                   converted_page_id, conflict_resolver.NewRequest());
               std::unique_ptr<CustomMergeStrategy> custom_merge_strategy =
-                  std::make_unique<CustomMergeStrategy>(
-                      std::move(conflict_resolver));
+                  std::make_unique<CustomMergeStrategy>(std::move(conflict_resolver));
               custom_merge_strategy->SetOnError(
                   [this, page_id]() { ResetStrategyForPage(page_id); });
               strategy_callback(std::move(custom_merge_strategy));
@@ -167,12 +156,11 @@ void LedgerMergeManager::ResetStrategyForPage(storage::PageId page_id) {
     return;
   }
   resolvers_[page_id]->SetMergeStrategy(nullptr);
-  GetResolverStrategyForPage(
-      page_id,
-      [this, page_id](std::unique_ptr<MergeStrategy> strategy) mutable {
-        if (resolvers_.find(page_id) != resolvers_.end()) {
-          resolvers_[page_id]->SetMergeStrategy(std::move(strategy));
-        }
-      });
+  GetResolverStrategyForPage(page_id,
+                             [this, page_id](std::unique_ptr<MergeStrategy> strategy) mutable {
+                               if (resolvers_.find(page_id) != resolvers_.end()) {
+                                 resolvers_[page_id]->SetMergeStrategy(std::move(strategy));
+                               }
+                             });
 }
 }  // namespace ledger

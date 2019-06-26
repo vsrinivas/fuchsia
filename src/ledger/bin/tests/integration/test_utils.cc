@@ -45,10 +45,8 @@ std::vector<uint8_t> ToArray(const fuchsia::mem::BufferPtr& vmo) {
   return convert::ToArray(ToString(vmo));
 }
 
-std::vector<Entry> SnapshotGetEntries(LoopController* loop_controller,
-                                      PageSnapshotPtr* snapshot,
-                                      fidl::VectorPtr<uint8_t> start,
-                                      int* num_queries) {
+std::vector<Entry> SnapshotGetEntries(LoopController* loop_controller, PageSnapshotPtr* snapshot,
+                                      fidl::VectorPtr<uint8_t> start, int* num_queries) {
   std::vector<Entry> result;
   std::unique_ptr<Token> token;
   if (num_queries) {
@@ -57,9 +55,8 @@ std::vector<Entry> SnapshotGetEntries(LoopController* loop_controller,
   do {
     std::vector<Entry> entries;
     auto waiter = loop_controller->NewWaiter();
-    (*snapshot)->GetEntries(
-        start.Clone(), std::move(token),
-        callback::Capture(waiter->GetCallback(), &entries, &token));
+    (*snapshot)->GetEntries(start.Clone(), std::move(token),
+                            callback::Capture(waiter->GetCallback(), &entries, &token));
     if (!waiter->RunUntilCalled()) {
       ADD_FAILURE() << "|GetEntries| failed to call back.";
       return {};

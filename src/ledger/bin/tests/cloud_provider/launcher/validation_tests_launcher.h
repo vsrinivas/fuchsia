@@ -25,29 +25,26 @@ class ValidationTestsLauncher {
   // It may return a component controller: when the cloud provider instance is
   // not used anymore (ie. the other end of the interface request is closed),
   // the component controller is closed, which terminates the cloud provider.
-  ValidationTestsLauncher(
-      sys::ComponentContext* component_context,
-      fit::function<fuchsia::sys::ComponentControllerPtr(
-          fidl::InterfaceRequest<fuchsia::ledger::cloud::CloudProvider>)>
-          factory);
+  ValidationTestsLauncher(sys::ComponentContext* component_context,
+                          fit::function<fuchsia::sys::ComponentControllerPtr(
+                              fidl::InterfaceRequest<fuchsia::ledger::cloud::CloudProvider>)>
+                              factory);
 
   // Starts the tests.
   //
   // |arguments| are passed to the test binary.
   // |callback| is called after the tests are finished and passed the exit code
   //     of the test binary.
-  void Run(const std::vector<std::string>& arguments,
-           fit::function<void(int32_t)> callback);
+  void Run(const std::vector<std::string>& arguments, fit::function<void(int32_t)> callback);
 
  private:
   // Proxies requests from |request| to |proxied|, and terminates the component
   // controlled by |controller| when one of the ends closes the channel.
   class CloudProviderProxy {
    public:
-    CloudProviderProxy(
-        fidl::InterfacePtr<fuchsia::ledger::cloud::CloudProvider> proxied,
-        fidl::InterfaceRequest<fuchsia::ledger::cloud::CloudProvider> request,
-        fuchsia::sys::ComponentControllerPtr controller);
+    CloudProviderProxy(fidl::InterfacePtr<fuchsia::ledger::cloud::CloudProvider> proxied,
+                       fidl::InterfaceRequest<fuchsia::ledger::cloud::CloudProvider> request,
+                       fuchsia::sys::ComponentControllerPtr controller);
     ~CloudProviderProxy();
     void set_on_empty(fit::closure on_empty);
 

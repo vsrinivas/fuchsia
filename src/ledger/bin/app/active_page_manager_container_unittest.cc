@@ -29,13 +29,11 @@ TEST_F(ActivePageManagerContainerTest, OneEarlyBindingNoPageManager) {
   Status status;
   bool on_empty_called;
 
-  ActivePageManagerContainer active_page_manager_container(
-      kLedgerName, page_id, &page_usage_listener);
-  active_page_manager_container.set_on_empty(
-      callback::SetWhenCalled(&on_empty_called));
+  ActivePageManagerContainer active_page_manager_container(kLedgerName, page_id,
+                                                           &page_usage_listener);
+  active_page_manager_container.set_on_empty(callback::SetWhenCalled(&on_empty_called));
   active_page_manager_container.BindPage(
-      page.NewRequest(),
-      callback::Capture(callback::SetWhenCalled(&callback_called), &status));
+      page.NewRequest(), callback::Capture(callback::SetWhenCalled(&callback_called), &status));
   RunLoopUntilIdle();
   EXPECT_FALSE(callback_called);
   EXPECT_FALSE(on_empty_called);
@@ -58,30 +56,25 @@ TEST_F(ActivePageManagerContainerTest, OneEarlyBindingNoPageManager) {
 TEST_F(ActivePageManagerContainerTest, BindBeforePageManager) {
   storage::PageId page_id = std::string(::fuchsia::ledger::PAGE_ID_SIZE, '3');
   FakeDiskCleanupManager page_usage_listener;
-  auto page_storage =
-      std::make_unique<storage::fake::FakePageStorage>(&environment_, page_id);
-  auto merge_resolver = std::make_unique<MergeResolver>(
-      [] {}, &environment_, page_storage.get(), nullptr);
+  auto page_storage = std::make_unique<storage::fake::FakePageStorage>(&environment_, page_id);
+  auto merge_resolver =
+      std::make_unique<MergeResolver>([] {}, &environment_, page_storage.get(), nullptr);
   auto active_page_manager = std::make_unique<ActivePageManager>(
-      &environment_, std::move(page_storage), nullptr,
-      std::move(merge_resolver),
+      &environment_, std::move(page_storage), nullptr, std::move(merge_resolver),
       ActivePageManager::PageStorageState::AVAILABLE);
   PagePtr page;
   bool callback_called;
   Status status;
   bool on_empty_called;
 
-  ActivePageManagerContainer active_page_manager_container(
-      kLedgerName, page_id, &page_usage_listener);
-  active_page_manager_container.set_on_empty(
-      callback::SetWhenCalled(&on_empty_called));
+  ActivePageManagerContainer active_page_manager_container(kLedgerName, page_id,
+                                                           &page_usage_listener);
+  active_page_manager_container.set_on_empty(callback::SetWhenCalled(&on_empty_called));
   active_page_manager_container.BindPage(
-      page.NewRequest(),
-      callback::Capture(callback::SetWhenCalled(&callback_called), &status));
+      page.NewRequest(), callback::Capture(callback::SetWhenCalled(&callback_called), &status));
   RunLoopUntilIdle();
   EXPECT_FALSE(callback_called);
-  active_page_manager_container.SetActivePageManager(
-      Status::OK, std::move(active_page_manager));
+  active_page_manager_container.SetActivePageManager(Status::OK, std::move(active_page_manager));
 
   EXPECT_TRUE(callback_called);
   EXPECT_EQ(Status::OK, status);

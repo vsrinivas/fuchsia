@@ -22,14 +22,12 @@ TEST(LRUCacheTest, SimpleGet) {
   bool called;
   size_t status;
   size_t value;
-  cache.Get(
-      0, callback::Capture(callback::SetWhenCalled(&called), &status, &value));
+  cache.Get(0, callback::Capture(callback::SetWhenCalled(&called), &status, &value));
   ASSERT_TRUE(called);
   EXPECT_EQ(0u, status);
   EXPECT_EQ(0u, value);
 
-  cache.Get(
-      42, callback::Capture(callback::SetWhenCalled(&called), &status, &value));
+  cache.Get(42, callback::Capture(callback::SetWhenCalled(&called), &status, &value));
   ASSERT_TRUE(called);
   EXPECT_EQ(0u, status);
   EXPECT_EQ(84u, value);
@@ -37,8 +35,7 @@ TEST(LRUCacheTest, SimpleGet) {
 
 TEST(LRUCacheTest, FailingGenerator) {
   size_t nb_called = 0;
-  auto generator = [&nb_called](size_t i,
-                                fit::function<void(size_t, size_t)> callback) {
+  auto generator = [&nb_called](size_t i, fit::function<void(size_t, size_t)> callback) {
     ++nb_called;
     callback(1, 0);
   };
@@ -49,14 +46,12 @@ TEST(LRUCacheTest, FailingGenerator) {
   size_t status;
   size_t value;
 
-  cache.Get(
-      0, callback::Capture(callback::SetWhenCalled(&called), &status, &value));
+  cache.Get(0, callback::Capture(callback::SetWhenCalled(&called), &status, &value));
   ASSERT_TRUE(called);
   EXPECT_EQ(1u, status);
   EXPECT_EQ(1u, nb_called);
 
-  cache.Get(
-      0, callback::Capture(callback::SetWhenCalled(&called), &status, &value));
+  cache.Get(0, callback::Capture(callback::SetWhenCalled(&called), &status, &value));
   ASSERT_TRUE(called);
   EXPECT_EQ(1u, status);
   EXPECT_EQ(2u, nb_called);
@@ -65,8 +60,8 @@ TEST(LRUCacheTest, FailingGenerator) {
 TEST(LRUCacheTest, CacheCallback) {
   size_t nb_called = 0;
   fit::function<void(size_t, size_t)> generator_callback;
-  auto generator = [&nb_called, &generator_callback](
-                       size_t i, fit::function<void(size_t, size_t)> callback) {
+  auto generator = [&nb_called, &generator_callback](size_t i,
+                                                     fit::function<void(size_t, size_t)> callback) {
     ++nb_called;
     generator_callback = std::move(callback);
   };
@@ -77,14 +72,12 @@ TEST(LRUCacheTest, CacheCallback) {
   size_t status1, status2;
   size_t value1, value2;
 
-  cache.Get(0, callback::Capture(callback::SetWhenCalled(&called1), &status1,
-                                 &value1));
+  cache.Get(0, callback::Capture(callback::SetWhenCalled(&called1), &status1, &value1));
 
   EXPECT_FALSE(called1);
   EXPECT_EQ(1u, nb_called);
 
-  cache.Get(0, callback::Capture(callback::SetWhenCalled(&called2), &status2,
-                                 &value2));
+  cache.Get(0, callback::Capture(callback::SetWhenCalled(&called2), &status2, &value2));
 
   EXPECT_FALSE(called2);
   EXPECT_EQ(1u, nb_called);
@@ -103,8 +96,7 @@ TEST(LRUCacheTest, CacheCallback) {
 TEST(LRUCacheTest, LRUPolicy) {
   size_t nb_called = 0;
   fit::function<void(size_t, size_t)> generator_callback;
-  auto generator = [&nb_called](size_t i,
-                                fit::function<void(size_t, size_t)> callback) {
+  auto generator = [&nb_called](size_t i, fit::function<void(size_t, size_t)> callback) {
     ++nb_called;
     callback(0u, 0u);
   };

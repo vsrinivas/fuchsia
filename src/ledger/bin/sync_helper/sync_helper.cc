@@ -8,8 +8,7 @@ namespace ledger {
 
 SyncHelper::SyncHelper() : current_sync_point_(0), weak_ptr_factory_(this) {}
 
-void SyncHelper::RegisterSynchronizationCallback(
-    fit::function<void()> callback) {
+void SyncHelper::RegisterSynchronizationCallback(fit::function<void()> callback) {
   if (in_flight_operation_counts_per_sync_point_.empty()) {
     callback();
     return;
@@ -22,8 +21,7 @@ void SyncHelper::RegisterSynchronizationCallback(
 
 void SyncHelper::CallSynchronizationCallbacks() {
   for (auto it = in_flight_operation_counts_per_sync_point_.begin();
-       it != in_flight_operation_counts_per_sync_point_.end() &&
-       it->second == 0;
+       it != in_flight_operation_counts_per_sync_point_.end() && it->second == 0;
        it = in_flight_operation_counts_per_sync_point_.erase(it)) {
     auto sync_point_it = sync_callback_per_sync_points_.find(it->first);
     if (sync_point_it != sync_callback_per_sync_points_.end()) {

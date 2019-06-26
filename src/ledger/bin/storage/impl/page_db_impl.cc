@@ -35,15 +35,12 @@ namespace {
 // Extracts a sorted list of deserialized |A|'s to commit ids from |entries|.
 // Entries must be a map from commit ids to serialized |A|.
 template <typename A>
-void ExtractSortedCommitsIds(
-    std::vector<std::pair<std::string, std::string>>* entries,
-    std::vector<std::pair<A, CommitId>>* commit_ids) {
+void ExtractSortedCommitsIds(std::vector<std::pair<std::string, std::string>>* entries,
+                             std::vector<std::pair<A, CommitId>>* commit_ids) {
   commit_ids->clear();
   commit_ids->reserve(entries->size());
-  std::transform(std::make_move_iterator(entries->begin()),
-                 std::make_move_iterator(entries->end()),
-                 std::back_inserter(*commit_ids),
-                 [](std::pair<std::string, std::string>&& entry) {
+  std::transform(std::make_move_iterator(entries->begin()), std::make_move_iterator(entries->end()),
+                 std::back_inserter(*commit_ids), [](std::pair<std::string, std::string>&& entry) {
                    auto t = DeserializeData<A>(entry.second);
                    return std::make_pair(t, std::move(entry.first));
                  });
@@ -60,58 +57,48 @@ PageDbImpl::PageDbImpl(ledger::Environment* environment, std::unique_ptr<Db> db)
 
 PageDbImpl::~PageDbImpl() {}
 
-Status PageDbImpl::StartBatch(coroutine::CoroutineHandler* handler,
-                              std::unique_ptr<Batch>* batch) {
+Status PageDbImpl::StartBatch(coroutine::CoroutineHandler* handler, std::unique_ptr<Batch>* batch) {
   std::unique_ptr<Db::Batch> db_batch;
   RETURN_ON_ERROR(db_->StartBatch(handler, &db_batch));
   *batch = std::make_unique<PageDbBatchImpl>(std::move(db_batch), this);
   return Status::OK;
 }
 
-Status PageDbImpl::GetHeads(
-    CoroutineHandler* handler,
-    std::vector<std::pair<zx::time_utc, CommitId>>* heads) {
+Status PageDbImpl::GetHeads(CoroutineHandler* handler,
+                            std::vector<std::pair<zx::time_utc, CommitId>>* heads) {
   std::vector<std::pair<std::string, std::string>> entries;
-  RETURN_ON_ERROR(db_->GetEntriesByPrefix(
-      handler, convert::ToSlice(HeadRow::kPrefix), &entries));
+  RETURN_ON_ERROR(db_->GetEntriesByPrefix(handler, convert::ToSlice(HeadRow::kPrefix), &entries));
   ExtractSortedCommitsIds<zx::time_utc>(&entries, heads);
   return Status::OK;
 }
 
-Status PageDbImpl::GetMerges(coroutine::CoroutineHandler* handler,
-                             CommitIdView commit1_id, CommitIdView commit2_id,
-                             std::vector<CommitId>* merges) {
+Status PageDbImpl::GetMerges(coroutine::CoroutineHandler* handler, CommitIdView commit1_id,
+                             CommitIdView commit2_id, std::vector<CommitId>* merges) {
   merges->clear();
-  return db_->GetByPrefix(
-      handler, MergeRow::GetEntriesPrefixFor(commit1_id, commit2_id), merges);
+  return db_->GetByPrefix(handler, MergeRow::GetEntriesPrefixFor(commit1_id, commit2_id), merges);
 }
 
-Status PageDbImpl::GetCommitStorageBytes(CoroutineHandler* handler,
-                                         CommitIdView commit_id,
+Status PageDbImpl::GetCommitStorageBytes(CoroutineHandler* handler, CommitIdView commit_id,
                                          std::string* storage_bytes) {
   return db_->Get(handler, CommitRow::GetKeyFor(commit_id), storage_bytes);
 }
 
-Status PageDbImpl::ReadObject(CoroutineHandler* handler,
-                              const ObjectIdentifier& object_identifier,
+Status PageDbImpl::ReadObject(CoroutineHandler* handler, const ObjectIdentifier& object_identifier,
                               std::unique_ptr<const Piece>* piece,
                               std::unique_ptr<const PieceToken>* token) {
   FXL_DCHECK(piece);
   FXL_DCHECK(token);
   *token = object_tracker_.GetPieceToken(object_identifier);
   const Status status = db_->GetObject(
-      handler, ObjectRow::GetKeyFor(object_identifier.object_digest()),
-      object_identifier, piece);
+      handler, ObjectRow::GetKeyFor(object_identifier.object_digest()), object_identifier, piece);
   if (status != Status::OK) {
     token->reset();
   }
   return status;
 }
 
-Status PageDbImpl::HasObject(CoroutineHandler* handler,
-                             const ObjectIdentifier& object_identifier) {
-  return db_->HasKey(handler,
-                     ObjectRow::GetKeyFor(object_identifier.object_digest()));
+Status PageDbImpl::HasObject(CoroutineHandler* handler, const ObjectIdentifier& object_identifier) {
+  return db_->HasKey(handler, ObjectRow::GetKeyFor(object_identifier.object_digest()));
 }
 
 Status PageDbImpl::GetObjectStatus(CoroutineHandler* handler,
@@ -126,11 +113,10 @@ Status PageDbImpl::GetObjectStatus(CoroutineHandler* handler,
   // The only case that would generate a spurious lookup is when the status is
   // changed concurrently, which is a rare occurence.
   for (PageDbObjectStatus possible_status :
-       {PageDbObjectStatus::SYNCED, PageDbObjectStatus::TRANSIENT,
-        PageDbObjectStatus::LOCAL, PageDbObjectStatus::SYNCED}) {
-    Status key_found_status = db_->HasKey(
-        handler,
-        ObjectStatusRow::GetKeyFor(possible_status, object_identifier));
+       {PageDbObjectStatus::SYNCED, PageDbObjectStatus::TRANSIENT, PageDbObjectStatus::LOCAL,
+        PageDbObjectStatus::SYNCED}) {
+    Status key_found_status =
+        db_->HasKey(handler, ObjectStatusRow::GetKeyFor(possible_status, object_identifier));
     if (key_found_status == Status::OK) {
       *object_status = possible_status;
       return Status::OK;
@@ -144,63 +130,54 @@ Status PageDbImpl::GetObjectStatus(CoroutineHandler* handler,
   return Status::OK;
 }
 
-Status PageDbImpl::GetInboundObjectReferences(
-    coroutine::CoroutineHandler* handler,
-    const ObjectIdentifier& object_identifier,
-    ObjectReferencesAndPriority* references) {
+Status PageDbImpl::GetInboundObjectReferences(coroutine::CoroutineHandler* handler,
+                                              const ObjectIdentifier& object_identifier,
+                                              ObjectReferencesAndPriority* references) {
   FXL_DCHECK(references);
   references->clear();
   std::vector<std::string> keys;
   RETURN_ON_ERROR(db_->GetByPrefix(
-      handler,
-      ReferenceRow::GetEagerKeyPrefixFor(object_identifier.object_digest()),
-      &keys));
+      handler, ReferenceRow::GetEagerKeyPrefixFor(object_identifier.object_digest()), &keys));
   for (auto& key : keys) {
     references->emplace(ObjectDigest(std::move(key)), KeyPriority::EAGER);
   }
   RETURN_ON_ERROR(db_->GetByPrefix(
-      handler,
-      ReferenceRow::GetLazyKeyPrefixFor(object_identifier.object_digest()),
-      &keys));
+      handler, ReferenceRow::GetLazyKeyPrefixFor(object_identifier.object_digest()), &keys));
   for (auto& key : keys) {
     references->emplace(ObjectDigest(std::move(key)), KeyPriority::LAZY);
   }
   return Status::OK;
 }
 
-Status PageDbImpl::GetInboundCommitReferences(
-    coroutine::CoroutineHandler* handler,
-    const ObjectIdentifier& object_identifier,
-    std::vector<CommitId>* references) {
+Status PageDbImpl::GetInboundCommitReferences(coroutine::CoroutineHandler* handler,
+                                              const ObjectIdentifier& object_identifier,
+                                              std::vector<CommitId>* references) {
   FXL_DCHECK(references);
   references->clear();
   return db_->GetByPrefix(
-      handler,
-      ReferenceRow::GetCommitKeyPrefixFor(object_identifier.object_digest()),
-      references);
+      handler, ReferenceRow::GetCommitKeyPrefixFor(object_identifier.object_digest()), references);
 }
 
 Status PageDbImpl::GetUnsyncedCommitIds(CoroutineHandler* handler,
                                         std::vector<CommitId>* commit_ids) {
   std::vector<std::pair<std::string, std::string>> entries;
-  RETURN_ON_ERROR(db_->GetEntriesByPrefix(
-      handler, convert::ToSlice(UnsyncedCommitRow::kPrefix), &entries));
+  RETURN_ON_ERROR(
+      db_->GetEntriesByPrefix(handler, convert::ToSlice(UnsyncedCommitRow::kPrefix), &entries));
   // Unsynced commit row values are the commit's generation.
   std::vector<std::pair<uint64_t, CommitId>> extracted_ids;
   ExtractSortedCommitsIds<uint64_t>(&entries, &extracted_ids);
   commit_ids->clear();
   commit_ids->reserve(entries.size());
   std::transform(std::make_move_iterator(extracted_ids.begin()),
-                 std::make_move_iterator(extracted_ids.end()),
-                 std::back_inserter(*commit_ids),
+                 std::make_move_iterator(extracted_ids.end()), std::back_inserter(*commit_ids),
                  [](std::pair<uint64_t, CommitId>&& commit_id_pair) {
                    return std::move(std::get<CommitId>(commit_id_pair));
                  });
   return Status::OK;
 }
 
-Status PageDbImpl::IsCommitSynced(CoroutineHandler* handler,
-                                  const CommitId& commit_id, bool* is_synced) {
+Status PageDbImpl::IsCommitSynced(CoroutineHandler* handler, const CommitId& commit_id,
+                                  bool* is_synced) {
   Status status = db_->HasKey(handler, UnsyncedCommitRow::GetKeyFor(commit_id));
   if (status != Status::OK && status != Status::INTERNAL_NOT_FOUND) {
     return status;
@@ -209,13 +186,11 @@ Status PageDbImpl::IsCommitSynced(CoroutineHandler* handler,
   return Status::OK;
 }
 
-Status PageDbImpl::GetUnsyncedPieces(
-    CoroutineHandler* handler,
-    std::vector<ObjectIdentifier>* object_identifiers) {
+Status PageDbImpl::GetUnsyncedPieces(CoroutineHandler* handler,
+                                     std::vector<ObjectIdentifier>* object_identifiers) {
   std::vector<std::string> encoded_identifiers;
-  Status status =
-      db_->GetByPrefix(handler, convert::ToSlice(ObjectStatusRow::kLocalPrefix),
-                       &encoded_identifiers);
+  Status status = db_->GetByPrefix(handler, convert::ToSlice(ObjectStatusRow::kLocalPrefix),
+                                   &encoded_identifiers);
   if (status != Status::OK) {
     return status;
   }
@@ -232,13 +207,12 @@ Status PageDbImpl::GetUnsyncedPieces(
   return Status::OK;
 }
 
-Status PageDbImpl::GetSyncMetadata(CoroutineHandler* handler,
-                                   fxl::StringView key, std::string* value) {
+Status PageDbImpl::GetSyncMetadata(CoroutineHandler* handler, fxl::StringView key,
+                                   std::string* value) {
   return db_->Get(handler, SyncMetadataRow::GetKeyFor(key), value);
 }
 
-Status PageDbImpl::IsPageOnline(coroutine::CoroutineHandler* handler,
-                                bool* page_is_online) {
+Status PageDbImpl::IsPageOnline(coroutine::CoroutineHandler* handler, bool* page_is_online) {
   Status status = db_->HasKey(handler, PageIsOnlineRow::kKey);
   if (status != Status::OK && status != Status::INTERNAL_NOT_FOUND) {
     return status;
@@ -247,8 +221,7 @@ Status PageDbImpl::IsPageOnline(coroutine::CoroutineHandler* handler,
   return Status::OK;
 }
 
-Status PageDbImpl::AddHead(CoroutineHandler* handler, CommitIdView head,
-                           zx::time_utc timestamp) {
+Status PageDbImpl::AddHead(CoroutineHandler* handler, CommitIdView head, zx::time_utc timestamp) {
   std::unique_ptr<Batch> batch;
   RETURN_ON_ERROR(StartBatch(handler, &batch));
   RETURN_ON_ERROR(batch->AddHead(handler, head, timestamp));
@@ -262,21 +235,18 @@ Status PageDbImpl::RemoveHead(CoroutineHandler* handler, CommitIdView head) {
   return batch->Execute(handler);
 }
 
-Status PageDbImpl::AddMerge(coroutine::CoroutineHandler* handler,
-                            CommitIdView parent1_id, CommitIdView parent2_id,
-                            CommitIdView merge_commit_id) {
+Status PageDbImpl::AddMerge(coroutine::CoroutineHandler* handler, CommitIdView parent1_id,
+                            CommitIdView parent2_id, CommitIdView merge_commit_id) {
   // This should only be called in a batch.
   return Status::ILLEGAL_STATE;
 }
 
-Status PageDbImpl::AddCommitStorageBytes(CoroutineHandler* handler,
-                                         const CommitId& commit_id,
+Status PageDbImpl::AddCommitStorageBytes(CoroutineHandler* handler, const CommitId& commit_id,
                                          const ObjectIdentifier& root_node,
                                          fxl::StringView storage_bytes) {
   std::unique_ptr<Batch> batch;
   RETURN_ON_ERROR(StartBatch(handler, &batch));
-  RETURN_ON_ERROR(batch->AddCommitStorageBytes(handler, commit_id, root_node,
-                                               storage_bytes));
+  RETURN_ON_ERROR(batch->AddCommitStorageBytes(handler, commit_id, root_node, storage_bytes));
   return batch->Execute(handler);
 }
 
@@ -285,8 +255,7 @@ Status PageDbImpl::WriteObject(CoroutineHandler* handler, const Piece& piece,
                                const ObjectReferencesAndPriority& references) {
   std::unique_ptr<Batch> batch;
   RETURN_ON_ERROR(StartBatch(handler, &batch));
-  RETURN_ON_ERROR(
-      batch->WriteObject(handler, piece, object_status, references));
+  RETURN_ON_ERROR(batch->WriteObject(handler, piece, object_status, references));
   return batch->Execute(handler);
 }
 
@@ -295,21 +264,18 @@ Status PageDbImpl::SetObjectStatus(CoroutineHandler* handler,
                                    PageDbObjectStatus object_status) {
   std::unique_ptr<Batch> batch;
   RETURN_ON_ERROR(StartBatch(handler, &batch));
-  RETURN_ON_ERROR(
-      batch->SetObjectStatus(handler, object_identifier, object_status));
+  RETURN_ON_ERROR(batch->SetObjectStatus(handler, object_identifier, object_status));
   return batch->Execute(handler);
 }
 
-Status PageDbImpl::MarkCommitIdSynced(CoroutineHandler* handler,
-                                      const CommitId& commit_id) {
+Status PageDbImpl::MarkCommitIdSynced(CoroutineHandler* handler, const CommitId& commit_id) {
   std::unique_ptr<Batch> batch;
   RETURN_ON_ERROR(StartBatch(handler, &batch));
   RETURN_ON_ERROR(batch->MarkCommitIdSynced(handler, commit_id));
   return batch->Execute(handler);
 }
 
-Status PageDbImpl::MarkCommitIdUnsynced(CoroutineHandler* handler,
-                                        const CommitId& commit_id,
+Status PageDbImpl::MarkCommitIdUnsynced(CoroutineHandler* handler, const CommitId& commit_id,
                                         uint64_t generation) {
   std::unique_ptr<Batch> batch;
   RETURN_ON_ERROR(StartBatch(handler, &batch));
@@ -317,8 +283,8 @@ Status PageDbImpl::MarkCommitIdUnsynced(CoroutineHandler* handler,
   return batch->Execute(handler);
 }
 
-Status PageDbImpl::SetSyncMetadata(CoroutineHandler* handler,
-                                   fxl::StringView key, fxl::StringView value) {
+Status PageDbImpl::SetSyncMetadata(CoroutineHandler* handler, fxl::StringView key,
+                                   fxl::StringView value) {
   std::unique_ptr<Batch> batch;
   RETURN_ON_ERROR(StartBatch(handler, &batch));
   RETURN_ON_ERROR(batch->SetSyncMetadata(handler, key, value));

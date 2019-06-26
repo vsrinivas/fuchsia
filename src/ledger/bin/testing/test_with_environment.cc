@@ -20,8 +20,7 @@ namespace {
 // calls |ResumeIfNeeded| when the loop exits.
 class TestCoroutineHandler : public coroutine::CoroutineHandler {
  public:
-  explicit TestCoroutineHandler(coroutine::CoroutineHandler* delegate,
-                                fit::closure quit_callback)
+  explicit TestCoroutineHandler(coroutine::CoroutineHandler* delegate, fit::closure quit_callback)
       : delegate_(delegate), quit_callback_(std::move(quit_callback)) {}
 
   coroutine::ContinuationStatus Yield() override { return delegate_->Yield(); }
@@ -58,35 +57,28 @@ class TestCoroutineHandler : public coroutine::CoroutineHandler {
 }  // namespace
 
 TestWithEnvironment::TestWithEnvironment()
-    : environment_(
-          EnvironmentBuilder()
-              .SetAsync(dispatcher())
-              .SetIOAsync(dispatcher())
-              .SetStartupContext(component_context_provider_.context())
-              .SetClock(
-                  std::make_unique<timekeeper::TestLoopTestClock>(&test_loop()))
-              .SetRandom(std::make_unique<rng::TestRandom>(
-                  test_loop().initial_state()))
-              .Build()) {}
+    : environment_(EnvironmentBuilder()
+                       .SetAsync(dispatcher())
+                       .SetIOAsync(dispatcher())
+                       .SetStartupContext(component_context_provider_.context())
+                       .SetClock(std::make_unique<timekeeper::TestLoopTestClock>(&test_loop()))
+                       .SetRandom(std::make_unique<rng::TestRandom>(test_loop().initial_state()))
+                       .Build()) {}
 
 ::testing::AssertionResult TestWithEnvironment::RunInCoroutine(
-    fit::function<void(coroutine::CoroutineHandler*)> run_test,
-    zx::duration delay) {
+    fit::function<void(coroutine::CoroutineHandler*)> run_test, zx::duration delay) {
   std::unique_ptr<TestCoroutineHandler> test_handler;
   volatile bool ended = false;
-  environment_.coroutine_service()->StartCoroutine(
-      [&](coroutine::CoroutineHandler* handler) {
-        test_handler = std::make_unique<TestCoroutineHandler>(
-            handler, [this] { QuitLoop(); });
-        run_test(test_handler.get());
-        ended = true;
-      });
+  environment_.coroutine_service()->StartCoroutine([&](coroutine::CoroutineHandler* handler) {
+    test_handler = std::make_unique<TestCoroutineHandler>(handler, [this] { QuitLoop(); });
+    run_test(test_handler.get());
+    ended = true;
+  });
   while (!ended) {
     bool has_resumed = test_handler->ResumeIfNeeded();
     bool tasks_executed = RunLoopFor(delay);
     if (!has_resumed && !tasks_executed) {
-      return ::testing::AssertionFailure()
-             << "Coroutine stopped executing but did not end.";
+      return ::testing::AssertionFailure() << "Coroutine stopped executing but did not end.";
     }
   }
   return ::testing::AssertionSuccess();

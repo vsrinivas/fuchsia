@@ -12,8 +12,7 @@ std::string FromHex(fxl::StringView data) {
   std::string result;
   result.reserve(data.size() / 2);
   while (!data.empty()) {
-    result.push_back(
-        fxl::StringToNumber<uint8_t>(data.substr(0, 2), fxl::Base::k16));
+    result.push_back(fxl::StringToNumber<uint8_t>(data.substr(0, 2), fxl::Base::k16));
     data = data.substr(2);
   }
   return result;

@@ -23,10 +23,10 @@ TEST(GetDirectoryContentSizeTest, GetDirectoryContentSize) {
   DetachedPath foo_baz = foo.SubPath("baz");
 
   ASSERT_TRUE(files::CreateDirectoryAt(foo.root_fd(), foo.path()));
-  ASSERT_TRUE(files::WriteFileAt(bar.root_fd(), bar.path(), kFileContent.data(),
+  ASSERT_TRUE(
+      files::WriteFileAt(bar.root_fd(), bar.path(), kFileContent.data(), kFileContent.size()));
+  ASSERT_TRUE(files::WriteFileAt(foo_baz.root_fd(), foo_baz.path(), kFileContent.data(),
                                  kFileContent.size()));
-  ASSERT_TRUE(files::WriteFileAt(foo_baz.root_fd(), foo_baz.path(),
-                                 kFileContent.data(), kFileContent.size()));
   uint64_t directory_size = 0;
   ASSERT_TRUE(GetDirectoryContentSize(root, &directory_size));
   ASSERT_EQ(directory_size, 2 * kFileContent.size());

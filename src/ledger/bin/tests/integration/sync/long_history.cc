@@ -23,9 +23,7 @@ class LongHistorySyncTest : public IntegrationTest {
   }
 
   bool WaitUntilSyncIsIdle(TestSyncStateWatcher* watcher) {
-    return RunLoopUntil([watcher] {
-      return watcher->Equals(SyncState::IDLE, SyncState::IDLE);
-    });
+    return RunLoopUntil([watcher] { return watcher->Equals(SyncState::IDLE, SyncState::IDLE); });
   }
 };
 
@@ -40,8 +38,7 @@ TEST_P(LongHistorySyncTest, SyncLongHistory) {
   const int commit_history_length = 500;
   // Overwrite one key N times, creating N implicit commits.
   for (int i = 0; i < commit_history_length; i++) {
-    page1->Put(convert::ToArray("iteration"),
-               convert::ToArray(std::to_string(i)));
+    page1->Put(convert::ToArray("iteration"), convert::ToArray(std::to_string(i)));
   }
   // Wait until the commits are uploaded.
   EXPECT_TRUE(WaitUntilSyncIsIdle(page1_state_watcher.get()));
@@ -61,8 +58,7 @@ TEST_P(LongHistorySyncTest, SyncLongHistory) {
   EXPECT_TRUE(WaitUntilSyncIsIdle(page2_state_watcher.get()));
 
   PageSnapshotPtr snapshot;
-  page2->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                     nullptr);
+  page2->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0), nullptr);
 
   waiter = NewWaiter();
   fuchsia::ledger::PageSnapshot_GetInline_Result result;
@@ -77,9 +73,8 @@ TEST_P(LongHistorySyncTest, SyncLongHistory) {
   EXPECT_TRUE(WaitUntilSyncIsIdle(page2_state_watcher.get()));
 }
 
-INSTANTIATE_TEST_SUITE_P(
-    LongHistorySyncTest, LongHistorySyncTest,
-    ::testing::ValuesIn(GetLedgerAppInstanceFactoryBuilders()));
+INSTANTIATE_TEST_SUITE_P(LongHistorySyncTest, LongHistorySyncTest,
+                         ::testing::ValuesIn(GetLedgerAppInstanceFactoryBuilders()));
 
 }  // namespace
 }  // namespace ledger

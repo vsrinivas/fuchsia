@@ -27,30 +27,25 @@ class CommitImpl : public Commit {
 
  public:
   // Creates a new |CommitImpl| object with the given contents.
-  CommitImpl(Token token, CommitId id, zx::time_utc timestamp,
-             uint64_t generation, ObjectIdentifier root_node_identifier,
-             std::vector<CommitIdView> parent_ids,
-             fxl::RefPtr<SharedStorageBytes> storage_bytes,
-             LiveCommitTracker* tracker);
+  CommitImpl(Token token, CommitId id, zx::time_utc timestamp, uint64_t generation,
+             ObjectIdentifier root_node_identifier, std::vector<CommitIdView> parent_ids,
+             fxl::RefPtr<SharedStorageBytes> storage_bytes, LiveCommitTracker* tracker);
 
   ~CommitImpl() override;
 
   // Factory method for creating a |CommitImpl| object given its storage
   // representation. If the format is incorrect, |nullptr| will be returned.
-  static Status FromStorageBytes(LiveCommitTracker* tracker, CommitId id,
-                                 std::string storage_bytes,
+  static Status FromStorageBytes(LiveCommitTracker* tracker, CommitId id, std::string storage_bytes,
                                  std::unique_ptr<const Commit>* commit);
 
   static std::unique_ptr<const Commit> FromContentAndParents(
-      LiveCommitTracker* tracker, timekeeper::Clock* clock,
-      ObjectIdentifier root_node_identifier,
+      LiveCommitTracker* tracker, timekeeper::Clock* clock, ObjectIdentifier root_node_identifier,
       std::vector<std::unique_ptr<const Commit>> parent_commits);
 
   // Factory method for creating an empty |CommitImpl| object, i.e. without
   // parents and with empty contents.
-  static void Empty(
-      PageStorage* page_storage, LiveCommitTracker* tracker,
-      fit::function<void(Status, std::unique_ptr<const Commit>)> callback);
+  static void Empty(PageStorage* page_storage, LiveCommitTracker* tracker,
+                    fit::function<void(Status, std::unique_ptr<const Commit>)> callback);
 
   // Commit:
   std::unique_ptr<const Commit> Clone() const override;

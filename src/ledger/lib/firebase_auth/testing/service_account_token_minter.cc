@@ -77,9 +77,8 @@ struct ServiceAccountTokenMinter::CachedToken {
   time_t expiration_time;
 };
 
-ServiceAccountTokenMinter::GetTokenResponse
-ServiceAccountTokenMinter::GetErrorResponse(Status status,
-                                            const std::string& error_msg) {
+ServiceAccountTokenMinter::GetTokenResponse ServiceAccountTokenMinter::GetErrorResponse(
+    Status status, const std::string& error_msg) {
   GetTokenResponse response = {status, /* response status */
                                "",     /* id_token */
                                "",     /* local_id */
@@ -88,8 +87,8 @@ ServiceAccountTokenMinter::GetErrorResponse(Status status,
   return response;
 }
 
-ServiceAccountTokenMinter::GetTokenResponse
-ServiceAccountTokenMinter::GetSuccessResponse(const std::string& id_token) {
+ServiceAccountTokenMinter::GetTokenResponse ServiceAccountTokenMinter::GetSuccessResponse(
+    const std::string& id_token) {
   GetTokenResponse response = {Status::OK,                /* success status */
                                id_token,                  /* token */
                                user_id_,                  /* local_id */
@@ -99,23 +98,22 @@ ServiceAccountTokenMinter::GetSuccessResponse(const std::string& id_token) {
 }
 
 ServiceAccountTokenMinter::ServiceAccountTokenMinter(
-    network_wrapper::NetworkWrapper* network_wrapper,
-    std::unique_ptr<Credentials> credentials, std::string user_id)
+    network_wrapper::NetworkWrapper* network_wrapper, std::unique_ptr<Credentials> credentials,
+    std::string user_id)
     : network_wrapper_(network_wrapper),
       credentials_(std::move(credentials)),
       user_id_(std::move(user_id)) {}
 
 ServiceAccountTokenMinter::~ServiceAccountTokenMinter() {
   for (const auto& pair : in_progress_callbacks_) {
-    ResolveCallbacks(
-        pair.first,
-        GetErrorResponse(Status::INTERNAL_ERROR,
-                         "Account provider deleted with requests in flight."));
+    ResolveCallbacks(pair.first,
+                     GetErrorResponse(Status::INTERNAL_ERROR,
+                                      "Account provider deleted with requests in flight."));
   }
 }
 
-void ServiceAccountTokenMinter::GetFirebaseToken(
-    fidl::StringPtr firebase_api_key, GetFirebaseTokenCallback callback) {
+void ServiceAccountTokenMinter::GetFirebaseToken(fidl::StringPtr firebase_api_key,
+                                                 GetFirebaseTokenCallback callback) {
   // A request is in progress to get a token. Registers the callback that will
   // be called when the request ends.
   if (!in_progress_callbacks_[firebase_api_key].empty()) {
@@ -139,27 +137,22 @@ void ServiceAccountTokenMinter::GetFirebaseToken(
   std::string custom_token;
   if (!GetCustomToken(&custom_token)) {
     callback(
-        GetErrorResponse(Status::INTERNAL_ERROR,
-                         "Unable to compute custom authentication token."));
+        GetErrorResponse(Status::INTERNAL_ERROR, "Unable to compute custom authentication token."));
     return;
   }
 
   in_progress_callbacks_[firebase_api_key].push_back(std::move(callback));
 
   in_progress_requests_.emplace(network_wrapper_->Request(
-      [this, firebase_api_key = firebase_api_key.get(),
-       custom_token = std::move(custom_token)] {
+      [this, firebase_api_key = firebase_api_key.get(), custom_token = std::move(custom_token)] {
         return GetIdentityRequest(firebase_api_key, custom_token);
       },
-      [this,
-       firebase_api_key = firebase_api_key.get()](http::URLResponse response) {
+      [this, firebase_api_key = firebase_api_key.get()](http::URLResponse response) {
         HandleIdentityResponse(firebase_api_key, std::move(response));
       }));
 }
 
-std::string ServiceAccountTokenMinter::GetClientId() {
-  return credentials_->client_id();
-}
+std::string ServiceAccountTokenMinter::GetClientId() { return credentials_->client_id(); }
 
 std::string ServiceAccountTokenMinter::GetClaims() {
   rapidjson::StringBuffer string_buffer;
@@ -204,8 +197,7 @@ bool ServiceAccountTokenMinter::GetCustomToken(std::string* custom_token) {
     return false;
   }
 
-  if (EVP_DigestSignUpdate(md_ctx.get(), message.c_str(), message.size()) !=
-      1) {
+  if (EVP_DigestSignUpdate(md_ctx.get(), message.c_str(), message.size()) != 1) {
     FXL_LOG(ERROR) << ERR_reason_error_string(ERR_get_error());
     return false;
   }
@@ -217,21 +209,19 @@ bool ServiceAccountTokenMinter::GetCustomToken(std::string* custom_token) {
   }
 
   char result[result_length];
-  if (EVP_DigestSignFinal(md_ctx.get(), reinterpret_cast<uint8_t*>(result),
-                          &result_length) != 1) {
+  if (EVP_DigestSignFinal(md_ctx.get(), reinterpret_cast<uint8_t*>(result), &result_length) != 1) {
     FXL_LOG(ERROR) << ERR_reason_error_string(ERR_get_error());
     return false;
   }
 
-  std::string signature =
-      base64url::Base64UrlEncode(fxl::StringView(result, result_length));
+  std::string signature = base64url::Base64UrlEncode(fxl::StringView(result, result_length));
 
   *custom_token = message + "." + signature;
   return true;
 }
 
-http::URLRequest ServiceAccountTokenMinter::GetIdentityRequest(
-    const std::string& api_key, const std::string& custom_token) {
+http::URLRequest ServiceAccountTokenMinter::GetIdentityRequest(const std::string& api_key,
+                                                               const std::string& custom_token) {
   http::URLRequest request;
   request.url =
       "https://www.googleapis.com/identitytoolkit/v3/relyingparty/"
@@ -263,8 +253,7 @@ http::URLRequest ServiceAccountTokenMinter::GetIdentityRequest(
   return request;
 }
 
-std::string ServiceAccountTokenMinter::GetIdentityRequestBody(
-    const std::string& custom_token) {
+std::string ServiceAccountTokenMinter::GetIdentityRequestBody(const std::string& custom_token) {
   rapidjson::StringBuffer string_buffer;
   rapidjson::Writer<rapidjson::StringBuffer> writer(string_buffer);
 
@@ -281,11 +270,10 @@ std::string ServiceAccountTokenMinter::GetIdentityRequestBody(
   return std::string(string_buffer.GetString(), string_buffer.GetSize());
 }
 
-void ServiceAccountTokenMinter::HandleIdentityResponse(
-    const std::string& api_key, http::URLResponse response) {
+void ServiceAccountTokenMinter::HandleIdentityResponse(const std::string& api_key,
+                                                       http::URLResponse response) {
   if (response.error) {
-    ResolveCallbacks(api_key, GetErrorResponse(Status::NETWORK_ERROR,
-                                               response.error->description));
+    ResolveCallbacks(api_key, GetErrorResponse(Status::NETWORK_ERROR, response.error->description));
     return;
   }
 
@@ -293,15 +281,14 @@ void ServiceAccountTokenMinter::HandleIdentityResponse(
   if (response.body) {
     FXL_DCHECK(response.body->is_buffer());
     if (!fsl::StringFromVmo(response.body->buffer(), &response_body)) {
-      ResolveCallbacks(api_key, GetErrorResponse(Status::INTERNAL_ERROR,
-                                                 "Unable to read from VMO."));
+      ResolveCallbacks(api_key,
+                       GetErrorResponse(Status::INTERNAL_ERROR, "Unable to read from VMO."));
       return;
     }
   }
 
   if (response.status_code != 200) {
-    ResolveCallbacks(
-        api_key, GetErrorResponse(Status::AUTH_SERVER_ERROR, response_body));
+    ResolveCallbacks(api_key, GetErrorResponse(Status::AUTH_SERVER_ERROR, response_body));
     return;
   }
 
@@ -309,26 +296,21 @@ void ServiceAccountTokenMinter::HandleIdentityResponse(
   document.Parse(response_body.c_str(), response_body.size());
   if (document.HasParseError() || !document.IsObject()) {
     ResolveCallbacks(api_key, GetErrorResponse(Status::BAD_RESPONSE,
-                                               "Unable to parse response: " +
-                                                   response_body));
+                                               "Unable to parse response: " + response_body));
     return;
   }
 
-  if (!rapidjson_utils::ValidateSchema(document, GetResponseSchema(),
-                                       "identity response")) {
-    ResolveCallbacks(api_key,
-                     GetErrorResponse(Status::BAD_RESPONSE,
-                                      "Malformed response: " + response_body));
+  if (!rapidjson_utils::ValidateSchema(document, GetResponseSchema(), "identity response")) {
+    ResolveCallbacks(
+        api_key, GetErrorResponse(Status::BAD_RESPONSE, "Malformed response: " + response_body));
     return;
   }
 
   auto cached_token = std::make_unique<CachedToken>();
   cached_token->id_token = convert::ToString(document["idToken"]);
   cached_token->expiration_time =
-      time(nullptr) + (9u *
-                       fxl::StringToNumber<time_t>(
-                           convert::ToStringView(document["expiresIn"])) /
-                       10u);
+      time(nullptr) +
+      (9u * fxl::StringToNumber<time_t>(convert::ToStringView(document["expiresIn"])) / 10u);
   const auto& id_token = cached_token->id_token;
   cached_tokens_[api_key] = std::move(cached_token);
   ResolveCallbacks(api_key, GetSuccessResponse(id_token));

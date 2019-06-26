@@ -30,9 +30,7 @@ class SyncIntegrationTest : public IntegrationTest {
   }
 
   bool WaitUntilSyncIsIdle(TestSyncStateWatcher* watcher) {
-    return RunLoopUntil([watcher] {
-      return watcher->Equals(SyncState::IDLE, SyncState::IDLE);
-    });
+    return RunLoopUntil([watcher] { return watcher->Equals(SyncState::IDLE, SyncState::IDLE); });
   }
 };
 
@@ -68,8 +66,7 @@ TEST_P(SyncIntegrationTest, SerialConnection) {
   EXPECT_TRUE(WaitUntilSyncIsIdle(page2_state_watcher.get()));
 
   PageSnapshotPtr snapshot;
-  page2->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                     nullptr);
+  page2->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0), nullptr);
 
   loop_waiter = NewWaiter();
   fuchsia::ledger::PageSnapshot_GetInline_Result result;
@@ -103,8 +100,7 @@ TEST_P(SyncIntegrationTest, ConcurrentConnection) {
   // Wait until the sync on the second device is idle and record the number of
   // state updates.
   EXPECT_TRUE(WaitUntilSyncIsIdle(page2_state_watcher.get()));
-  int page2_initial_state_change_count =
-      page2_state_watcher->state_change_count;
+  int page2_initial_state_change_count = page2_state_watcher->state_change_count;
 
   page1->Put(convert::ToArray("Hello"), convert::ToArray("World"));
 
@@ -115,16 +111,13 @@ TEST_P(SyncIntegrationTest, ConcurrentConnection) {
   // instance, as it might still be idle upon the first check because the device
   // hasn't yet received the remote notification about new commits. This is why
   // we also check that another state change notification was delivered.
-  EXPECT_TRUE(
-      RunLoopUntil([&page2_state_watcher, page2_initial_state_change_count] {
-        return page2_state_watcher->state_change_count >
-                   page2_initial_state_change_count &&
-               page2_state_watcher->Equals(SyncState::IDLE, SyncState::IDLE);
-      }));
+  EXPECT_TRUE(RunLoopUntil([&page2_state_watcher, page2_initial_state_change_count] {
+    return page2_state_watcher->state_change_count > page2_initial_state_change_count &&
+           page2_state_watcher->Equals(SyncState::IDLE, SyncState::IDLE);
+  }));
 
   PageSnapshotPtr snapshot;
-  page2->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                     nullptr);
+  page2->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0), nullptr);
 
   loop_waiter = NewWaiter();
   fuchsia::ledger::PageSnapshot_GetInline_Result result;
@@ -171,15 +164,13 @@ TEST_P(SyncIntegrationTest, LazyToEagerTransition) {
   ASSERT_TRUE(fsl::VmoFromVector(big_value, &vmo));
   fuchsia::ledger::Page_CreateReferenceFromBuffer_Result create_result;
   loop_waiter = NewWaiter();
-  page1->CreateReferenceFromBuffer(
-      std::move(vmo).ToTransport(),
-      callback::Capture(loop_waiter->GetCallback(), &create_result));
+  page1->CreateReferenceFromBuffer(std::move(vmo).ToTransport(),
+                                   callback::Capture(loop_waiter->GetCallback(), &create_result));
   ASSERT_TRUE(loop_waiter->RunUntilCalled());
   ASSERT_TRUE(create_result.is_response());
   page1->PutReference(key, create_result.response().reference, Priority::LAZY);
 
-  EXPECT_TRUE(RunLoopUntil(
-      [&page2_watcher]() { return page2_watcher.GetChangesSeen() == 1; }));
+  EXPECT_TRUE(RunLoopUntil([&page2_watcher]() { return page2_watcher.GetChangesSeen() == 1; }));
   snapshot = std::move(*page2_watcher.GetLastSnapshot());
 
   // Lazy value is not downloaded eagerly.
@@ -193,17 +184,15 @@ TEST_P(SyncIntegrationTest, LazyToEagerTransition) {
   fuchsia::ledger::PageSnapshot_FetchPartial_Result fetch_result;
   loop_waiter = NewWaiter();
   // Fetch only a small part.
-  snapshot->FetchPartial(
-      convert::ToArray("Hello"), 0, 10,
-      callback::Capture(loop_waiter->GetCallback(), &fetch_result));
+  snapshot->FetchPartial(convert::ToArray("Hello"), 0, 10,
+                         callback::Capture(loop_waiter->GetCallback(), &fetch_result));
   ASSERT_TRUE(loop_waiter->RunUntilCalled());
   EXPECT_THAT(fetch_result, MatchesString(SizeIs(10)));
 
   // Change priority to eager, re-upload.
   page1->PutReference(key, create_result.response().reference, Priority::EAGER);
 
-  EXPECT_TRUE(RunLoopUntil(
-      [&page2_watcher]() { return page2_watcher.GetChangesSeen() == 2; }));
+  EXPECT_TRUE(RunLoopUntil([&page2_watcher]() { return page2_watcher.GetChangesSeen() == 2; }));
   snapshot = std::move(*page2_watcher.GetLastSnapshot());
 
   // Now Get succeeds, as the value is no longer lazy.
@@ -234,9 +223,8 @@ TEST_P(SyncIntegrationTest, PageChangeLazyEntry) {
   ASSERT_TRUE(fsl::VmoFromVector(big_value, &vmo));
   fuchsia::ledger::Page_CreateReferenceFromBuffer_Result result;
   loop_waiter = NewWaiter();
-  page1->CreateReferenceFromBuffer(
-      std::move(vmo).ToTransport(),
-      callback::Capture(loop_waiter->GetCallback(), &result));
+  page1->CreateReferenceFromBuffer(std::move(vmo).ToTransport(),
+                                   callback::Capture(loop_waiter->GetCallback(), &result));
   ASSERT_TRUE(loop_waiter->RunUntilCalled());
   ASSERT_TRUE(result.is_response());
 
@@ -249,8 +237,7 @@ TEST_P(SyncIntegrationTest, PageChangeLazyEntry) {
   auto sync_waiter = NewWaiter();
   page2->Sync(sync_waiter->GetCallback());
   ASSERT_TRUE(sync_waiter->RunUntilCalled());
-  page1->PutReference(std::move(key), std::move(result.response().reference),
-                      Priority::LAZY);
+  page1->PutReference(std::move(key), std::move(result.response().reference), Priority::LAZY);
   ASSERT_TRUE(loop_waiter->RunUntilCalled());
 
   EXPECT_EQ(1u, watcher.GetChangesSeen());
@@ -260,9 +247,8 @@ TEST_P(SyncIntegrationTest, PageChangeLazyEntry) {
   EXPECT_EQ(nullptr, change->changed_entries[0].value);
 }
 
-INSTANTIATE_TEST_SUITE_P(
-    SyncIntegrationTest, SyncIntegrationTest,
-    ::testing::ValuesIn(GetLedgerAppInstanceFactoryBuilders()));
+INSTANTIATE_TEST_SUITE_P(SyncIntegrationTest, SyncIntegrationTest,
+                         ::testing::ValuesIn(GetLedgerAppInstanceFactoryBuilders()));
 
 }  // namespace
 }  // namespace ledger

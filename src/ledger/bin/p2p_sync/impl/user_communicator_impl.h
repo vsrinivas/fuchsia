@@ -31,20 +31,17 @@ class UserCommunicatorImpl : public UserCommunicator,
                              public DeviceMesh,
                              public p2p_provider::P2PProvider::Client {
  public:
-  explicit UserCommunicatorImpl(
-      std::unique_ptr<p2p_provider::P2PProvider> provider,
-      coroutine::CoroutineService* coroutine_service);
+  explicit UserCommunicatorImpl(std::unique_ptr<p2p_provider::P2PProvider> provider,
+                                coroutine::CoroutineService* coroutine_service);
   ~UserCommunicatorImpl() override;
 
   // UserCommunicator:
   void Start() override;
-  std::unique_ptr<LedgerCommunicator> GetLedgerCommunicator(
-      std::string namespace_id) override;
+  std::unique_ptr<LedgerCommunicator> GetLedgerCommunicator(std::string namespace_id) override;
 
   // DeviceMesh:
   DeviceSet GetDeviceList() override;
-  void Send(fxl::StringView device_name,
-            convert::ExtendedStringView data) override;
+  void Send(fxl::StringView device_name, convert::ExtendedStringView data) override;
 
  private:
   // P2PProvider::Client
@@ -53,8 +50,7 @@ class UserCommunicatorImpl : public UserCommunicator,
   void OnNewMessage(fxl::StringView source, fxl::StringView data) override;
 
   // Set of active ledgers.
-  std::map<std::string, LedgerCommunicatorImpl*, convert::StringViewComparator>
-      ledgers_;
+  std::map<std::string, LedgerCommunicatorImpl*, convert::StringViewComparator> ledgers_;
   std::set<std::string, convert::StringViewComparator> devices_;
 
   bool started_ = false;

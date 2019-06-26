@@ -23,23 +23,20 @@ constexpr fxl::StringView kCloudProviderUrl =
 
 int main(int argc, char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  std::unique_ptr<sys::ComponentContext> component_context =
-      sys::ComponentContext::Create();
+  std::unique_ptr<sys::ComponentContext> component_context = sys::ComponentContext::Create();
   fuchsia::sys::LauncherPtr component_launcher;
   component_context->svc()->Connect(component_launcher.NewRequest());
   cloud_provider::ValidationTestsLauncher launcher(
-      component_context.get(),
-      [component_launcher = std::move(component_launcher)](auto request) {
+      component_context.get(), [component_launcher = std::move(component_launcher)](auto request) {
         fuchsia::sys::LaunchInfo launch_info;
         launch_info.url = kCloudProviderUrl.ToString();
-        auto cloud_provider_services = sys::ServiceDirectory::CreateWithRequest(
-            &launch_info.directory_request);
+        auto cloud_provider_services =
+            sys::ServiceDirectory::CreateWithRequest(&launch_info.directory_request);
 
         fuchsia::sys::ComponentControllerPtr cloud_instance;
-        component_launcher->CreateComponent(std::move(launch_info),
-                                            cloud_instance.NewRequest());
-        cloud_provider_services->Connect(
-            std::move(request), fuchsia::ledger::cloud::CloudProvider::Name_);
+        component_launcher->CreateComponent(std::move(launch_info), cloud_instance.NewRequest());
+        cloud_provider_services->Connect(std::move(request),
+                                         fuchsia::ledger::cloud::CloudProvider::Name_);
         return cloud_instance;
       });
 

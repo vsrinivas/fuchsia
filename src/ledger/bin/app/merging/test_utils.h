@@ -32,19 +32,17 @@ class TestWithPageStorage : public TestWithEnvironment {
 
   // Returns a function that, when executed, adds the provided key and object to
   // a journal.
-  fit::function<void(storage::Journal*)> AddKeyValueToJournal(
-      const std::string& key, std::string value);
+  fit::function<void(storage::Journal*)> AddKeyValueToJournal(const std::string& key,
+                                                              std::string value);
 
   // Returns a function that, when executed, deleted the provided key from a
   // journal.
-  fit::function<void(storage::Journal*)> DeleteKeyFromJournal(
-      const std::string& key);
+  fit::function<void(storage::Journal*)> DeleteKeyFromJournal(const std::string& key);
 
-  ::testing::AssertionResult GetValue(
-      storage::ObjectIdentifier object_identifier, std::string* value);
+  ::testing::AssertionResult GetValue(storage::ObjectIdentifier object_identifier,
+                                      std::string* value);
 
-  ::testing::AssertionResult CreatePageStorage(
-      std::unique_ptr<storage::PageStorage>* page_storage);
+  ::testing::AssertionResult CreatePageStorage(std::unique_ptr<storage::PageStorage>* page_storage);
 
   fit::closure MakeQuitTaskOnce();
 

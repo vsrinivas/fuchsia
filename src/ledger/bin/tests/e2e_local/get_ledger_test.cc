@@ -23,9 +23,8 @@ TEST(GetLedgerTest, CreateAndDeleteLedger) {
 
   LedgerPtr ledger;
   Status status = GetLedger(
-      component_context.get(), controller.NewRequest(), nullptr, "",
-      "ledger_name", DetachedPath(tmpfs.root_fd()), [&] { loop.Quit(); },
-      &ledger);
+      component_context.get(), controller.NewRequest(), nullptr, "", "ledger_name",
+      DetachedPath(tmpfs.root_fd()), [&] { loop.Quit(); }, &ledger);
 
   // No need to |Sync| as |GetLedger| handles it.
   EXPECT_EQ(Status::OK, status);
@@ -42,9 +41,8 @@ TEST(GetLedgerTest, GetPageEnsureInitialized) {
 
   LedgerPtr ledger;
   Status status = GetLedger(
-      component_context.get(), controller.NewRequest(), nullptr, "",
-      "ledger_name", DetachedPath(tmpfs.root_fd()), [&] { loop.Quit(); },
-      &ledger);
+      component_context.get(), controller.NewRequest(), nullptr, "", "ledger_name",
+      DetachedPath(tmpfs.root_fd()), [&] { loop.Quit(); }, &ledger);
 
   ASSERT_EQ(Status::OK, status);
 

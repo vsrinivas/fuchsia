@@ -39,31 +39,28 @@ bool IsRetriableError(fuchsia::auth::Status status) {
 }
 }  // namespace
 
-FirebaseAuthImpl::FirebaseAuthImpl(Config config,
-                                   async_dispatcher_t* dispatcher,
+FirebaseAuthImpl::FirebaseAuthImpl(Config config, async_dispatcher_t* dispatcher,
                                    rng::Random* random,
                                    fuchsia::auth::TokenManagerPtr token_manager,
                                    sys::ComponentContext* component_context)
     : config_(std::move(config)),
       token_manager_(std::move(token_manager)),
-      backoff_(std::make_unique<backoff::ExponentialBackoff>(
-          random->NewBitGenerator<uint64_t>())),
+      backoff_(std::make_unique<backoff::ExponentialBackoff>(random->NewBitGenerator<uint64_t>())),
       max_retries_(config_.max_retries),
       cobalt_client_name_(config_.cobalt_client_name),
       task_runner_(dispatcher) {
   if (component_context) {
-    cobalt_logger_ = cobalt::NewCobaltLoggerFromProjectName(
-        dispatcher, component_context, cobalt_registry::kProjectName);
+    cobalt_logger_ = cobalt::NewCobaltLoggerFromProjectName(dispatcher, component_context,
+                                                            cobalt_registry::kProjectName);
   } else {
     cobalt_logger_ = nullptr;
   }
 }
 
-FirebaseAuthImpl::FirebaseAuthImpl(
-    Config config, async_dispatcher_t* dispatcher,
-    fuchsia::auth::TokenManagerPtr token_manager,
-    std::unique_ptr<backoff::Backoff> backoff,
-    std::unique_ptr<cobalt::CobaltLogger> cobalt_logger)
+FirebaseAuthImpl::FirebaseAuthImpl(Config config, async_dispatcher_t* dispatcher,
+                                   fuchsia::auth::TokenManagerPtr token_manager,
+                                   std::unique_ptr<backoff::Backoff> backoff,
+                                   std::unique_ptr<cobalt::CobaltLogger> cobalt_logger)
     : config_(std::move(config)),
       token_manager_(std::move(token_manager)),
       backoff_(std::move(backoff)),
@@ -84,45 +81,40 @@ fxl::RefPtr<callback::Cancellable> FirebaseAuthImpl::GetFirebaseToken(
                         "may be unauthenticated.";
   }
   auto cancellable = callback::CancellableImpl::Create([] {});
-  GetToken(max_retries_, [callback = cancellable->WrapCallback(
-                              std::move(callback))](auto status, auto token) {
-    callback(status, token ? token->id_token : "");
-  });
+  GetToken(max_retries_,
+           [callback = cancellable->WrapCallback(std::move(callback))](auto status, auto token) {
+             callback(status, token ? token->id_token : "");
+           });
   return cancellable;
 }
 
 fxl::RefPtr<callback::Cancellable> FirebaseAuthImpl::GetFirebaseUserId(
     fit::function<void(AuthStatus, std::string)> callback) {
   auto cancellable = callback::CancellableImpl::Create([] {});
-  GetToken(max_retries_, [callback = cancellable->WrapCallback(
-                              std::move(callback))](auto status, auto token) {
-    callback(status, token ? token->local_id : "");
-  });
+  GetToken(max_retries_,
+           [callback = cancellable->WrapCallback(std::move(callback))](auto status, auto token) {
+             callback(status, token ? token->local_id : "");
+           });
   return cancellable;
 }
 
 void FirebaseAuthImpl::GetToken(
-    int max_retries,
-    fit::function<void(AuthStatus, fuchsia::auth::FirebaseTokenPtr)> callback) {
+    int max_retries, fit::function<void(AuthStatus, fuchsia::auth::FirebaseTokenPtr)> callback) {
   fuchsia::auth::AppConfig oauth_config;
   oauth_config.auth_provider_type = "google";
 
   token_manager_->GetFirebaseToken(
-      std::move(oauth_config), config_.user_profile_id, /*audience*/ "",
-      config_.api_key,
+      std::move(oauth_config), config_.user_profile_id, /*audience*/ "", config_.api_key,
       [this, max_retries, callback = std::move(callback)](
-          fuchsia::auth::Status status,
-          fuchsia::auth::FirebaseTokenPtr token) mutable {
+          fuchsia::auth::Status status, fuchsia::auth::FirebaseTokenPtr token) mutable {
         if (!token || status != fuchsia::auth::Status::OK) {
           if (!token && status == fuchsia::auth::Status::OK) {
-            FXL_LOG(ERROR)
-                << "null Firebase token returned from token provider with no "
-                << "error reported. This should never happen. Retrying.";
+            FXL_LOG(ERROR) << "null Firebase token returned from token provider with no "
+                           << "error reported. This should never happen. Retrying.";
             status = fuchsia::auth::Status::UNKNOWN_ERROR;
           } else {
-            FXL_LOG(ERROR)
-                << "Error retrieving the Firebase token from token provider: "
-                << fidl::ToUnderlying(status) << "', retrying.";
+            FXL_LOG(ERROR) << "Error retrieving the Firebase token from token provider: "
+                           << fidl::ToUnderlying(status) << "', retrying.";
           }
 
           if (max_retries > 0 && IsRetriableError(status)) {
@@ -151,7 +143,6 @@ void FirebaseAuthImpl::ReportError(int32_t metric_id, uint32_t status) {
     return;
   }
 
-  cobalt_logger_->LogEventCount(metric_id, status, cobalt_client_name_,
-                                zx::duration(0), 1);
+  cobalt_logger_->LogEventCount(metric_id, status, cobalt_client_name_, zx::duration(0), 1);
 }
 }  // namespace firebase_auth

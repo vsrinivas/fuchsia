@@ -25,12 +25,10 @@ class CommitBatch {
    public:
     // Request missing commits from this batch. Commits will be added later
     // through CommitBatch::AddBatch.
-    virtual void RequestCommits(fxl::StringView device,
-                                std::vector<storage::CommitId> ids) = 0;
+    virtual void RequestCommits(fxl::StringView device, std::vector<storage::CommitId> ids) = 0;
   };
 
-  CommitBatch(std::string device, Delegate* delegate,
-              storage::PageStorage* storage);
+  CommitBatch(std::string device, Delegate* delegate, storage::PageStorage* storage);
   CommitBatch(const CommitBatch&) = delete;
   const CommitBatch& operator=(const CommitBatch&) = delete;
 
@@ -42,8 +40,7 @@ class CommitBatch {
   // Adds the provided commits to this batch.
   // This method will attempt to add the whole batch to |PageStorage|, and may
   // request additional commits through the |Delegate| if needed.
-  void AddToBatch(
-      std::vector<storage::PageStorage::CommitIdAndBytes> new_commits);
+  void AddToBatch(std::vector<storage::PageStorage::CommitIdAndBytes> new_commits);
 
  private:
   std::string const device_;

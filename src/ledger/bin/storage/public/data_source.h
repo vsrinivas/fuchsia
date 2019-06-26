@@ -63,8 +63,7 @@ class DataSource {
   // |TO_BE_CONTINUED|, |callback| will be called again with the next chunk of
   // data. If |Status| is |DONE|, all the data has been received. In case of
   // error, |callback| will be called with an |ERROR| status and a null |Data|.
-  virtual void Get(
-      fit::function<void(std::unique_ptr<DataChunk>, Status)> callback) = 0;
+  virtual void Get(fit::function<void(std::unique_ptr<DataChunk>, Status)> callback) = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(DataSource);

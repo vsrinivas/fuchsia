@@ -25,8 +25,7 @@ class MergeRow {
 
   static std::string GetKeyFor(CommitIdView parent1_id, CommitIdView parent2_id,
                                CommitIdView merge_commit_id);
-  static std::string GetEntriesPrefixFor(CommitIdView parent1_id,
-                                         CommitIdView parent2_id);
+  static std::string GetEntriesPrefixFor(CommitIdView parent1_id, CommitIdView parent2_id);
 };
 
 class CommitRow {
@@ -52,13 +51,11 @@ class ReferenceRow {
   static constexpr fxl::StringView kCommitPrefix = "/commit/";
 
   // Returns key for object-object links.
-  static std::string GetKeyForObject(const ObjectDigest& source,
-                                     const ObjectDigest& destination,
+  static std::string GetKeyForObject(const ObjectDigest& source, const ObjectDigest& destination,
                                      KeyPriority priority);
 
   // Returns key for commit-object links.
-  static std::string GetKeyForCommit(CommitIdView source,
-                                     const ObjectDigest& destination);
+  static std::string GetKeyForCommit(CommitIdView source, const ObjectDigest& destination);
 
   // Returns key prefix for all links to |destination|.
   static std::string GetKeyPrefixFor(const ObjectDigest& destination);
@@ -81,8 +78,7 @@ class UnsyncedCommitRow {
 
 class ObjectStatusRow {
  public:
-  static constexpr fxl::StringView kTransientPrefix =
-      "transient/object_digests/";
+  static constexpr fxl::StringView kTransientPrefix = "transient/object_digests/";
   static constexpr fxl::StringView kLocalPrefix = "local/object_digests/";
   static constexpr fxl::StringView kSyncedPrefix = "synced/object_digests/";
 

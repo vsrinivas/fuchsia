@@ -8,18 +8,15 @@
 
 namespace storage {
 
-void ReadDataSource(
-    callback::ManagedContainer* managed_container,
-    std::unique_ptr<DataSource> data_source,
-    fit::function<void(Status, std::unique_ptr<DataSource::DataChunk>)>
-        callback) {
+void ReadDataSource(callback::ManagedContainer* managed_container,
+                    std::unique_ptr<DataSource> data_source,
+                    fit::function<void(Status, std::unique_ptr<DataSource::DataChunk>)> callback) {
   auto managed_data_source = managed_container->Manage(std::move(data_source));
   auto chunks = std::vector<std::unique_ptr<DataSource::DataChunk>>();
   (*managed_data_source)
-      ->Get([managed_data_source = std::move(managed_data_source),
-             chunks = std::move(chunks), callback = std::move(callback)](
-                std::unique_ptr<DataSource::DataChunk> chunk,
-                DataSource::Status status) mutable {
+      ->Get([managed_data_source = std::move(managed_data_source), chunks = std::move(chunks),
+             callback = std::move(callback)](std::unique_ptr<DataSource::DataChunk> chunk,
+                                             DataSource::Status status) mutable {
         if (status == DataSource::Status::ERROR) {
           FXL_LOG(WARNING) << "Error while reading data source content.";
           callback(Status::INTERNAL_ERROR, nullptr);
@@ -54,8 +51,7 @@ void ReadDataSource(
         for (const auto& chunk : chunks) {
           final_content.append(chunk->Get().data(), chunk->Get().size());
         }
-        callback(Status::OK,
-                 DataSource::DataChunk::Create(std::move(final_content)));
+        callback(Status::OK, DataSource::DataChunk::Create(std::move(final_content)));
       });
 }
 

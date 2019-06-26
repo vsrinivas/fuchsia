@@ -38,21 +38,17 @@ enum class DiffType {
 // the diff result and the string representation of the next token if the
 // result is paginated, or empty if there are no more results to return. Note
 // that the PageChangePtr in the callback will be nullptr if the diff is empty.
-void ComputePageChange(
-    storage::PageStorage* storage, const storage::Commit& base,
-    const storage::Commit& other, std::string prefix_key, std::string min_key,
-    PaginationBehavior pagination_behavior,
-    fit::function<void(Status, std::pair<PageChangePtr, std::string>)>
-        callback);
+void ComputePageChange(storage::PageStorage* storage, const storage::Commit& base,
+                       const storage::Commit& other, std::string prefix_key, std::string min_key,
+                       PaginationBehavior pagination_behavior,
+                       fit::function<void(Status, std::pair<PageChangePtr, std::string>)> callback);
 
 // Asynchronously computes the three-way diff between a base commit and two
 // other commits, starting from the given |min_key|.
 void ComputeThreeWayDiff(
-    storage::PageStorage* storage, const storage::Commit& base,
-    const storage::Commit& left, const storage::Commit& right,
-    std::string prefix_key, std::string min_key, DiffType diff_type,
-    fit::function<void(Status, std::pair<std::vector<DiffEntry>, std::string>)>
-        callback);
+    storage::PageStorage* storage, const storage::Commit& base, const storage::Commit& left,
+    const storage::Commit& right, std::string prefix_key, std::string min_key, DiffType diff_type,
+    fit::function<void(Status, std::pair<std::vector<DiffEntry>, std::string>)> callback);
 
 }  // namespace diff_utils
 }  // namespace ledger

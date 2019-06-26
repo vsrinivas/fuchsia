@@ -15,8 +15,7 @@ namespace service_account {
 
 namespace http = ::fuchsia::net::oldhttp;
 
-std::string GetSuccessResponseBodyForTest(std::string token,
-                                          size_t expiration) {
+std::string GetSuccessResponseBodyForTest(std::string token, size_t expiration) {
   rapidjson::StringBuffer string_buffer;
   rapidjson::Writer<rapidjson::StringBuffer> writer(string_buffer);
 
@@ -33,8 +32,7 @@ std::string GetSuccessResponseBodyForTest(std::string token,
   return std::string(string_buffer.GetString(), string_buffer.GetSize());
 }
 
-http::URLResponse GetResponseForTest(http::HttpErrorPtr error, uint32_t status,
-                                     std::string body) {
+http::URLResponse GetResponseForTest(http::HttpErrorPtr error, uint32_t status, std::string body) {
   http::URLResponse response;
   response.error = std::move(error);
   response.status_code = status;

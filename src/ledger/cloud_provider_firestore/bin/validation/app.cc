@@ -31,12 +31,11 @@ void PrintUsage(const char* executable_name) {
 int main(int argc, char** argv) {
   fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  std::unique_ptr<sys::ComponentContext> component_context =
-      sys::ComponentContext::Create();
+  std::unique_ptr<sys::ComponentContext> component_context = sys::ComponentContext::Create();
 
   ledger::SyncParams sync_params;
-  if (!ledger::ParseSyncParamsFromCommandLine(
-          command_line, component_context.get(), &sync_params)) {
+  if (!ledger::ParseSyncParamsFromCommandLine(command_line, component_context.get(),
+                                              &sync_params)) {
     cloud_provider_firestore::PrintUsage(argv[0]);
     return -1;
   }
@@ -45,37 +44,34 @@ int main(int argc, char** argv) {
   std::vector<std::string> arguments;
   for (auto& option : command_line.options()) {
     if (known_options.count(option.name) == 0u) {
-      arguments.push_back(
-          fxl::Concatenate({"--", option.name, "=", option.value}));
+      arguments.push_back(fxl::Concatenate({"--", option.name, "=", option.value}));
     }
   }
 
   rng::SystemRandom random;
 
   cloud_provider_firestore::CloudProviderFactory factory(
-      component_context.get(), &random, sync_params.api_key,
-      sync_params.credentials->Clone());
+      component_context.get(), &random, sync_params.api_key, sync_params.credentials->Clone());
 
   cloud_provider::ValidationTestsLauncher launcher(
       component_context.get(), [&factory](auto request) {
-        factory.MakeCloudProvider(
-            cloud_provider_firestore::CloudProviderFactory::UserId::New(),
-            std::move(request));
+        factory.MakeCloudProvider(cloud_provider_firestore::CloudProviderFactory::UserId::New(),
+                                  std::move(request));
         // Return null because we do not create individual instances of a
         // component per request.
         return nullptr;
       });
 
   int32_t return_code = -1;
-  async::PostTask(loop.dispatcher(), [&factory, &launcher, &return_code, &loop,
-                                      arguments = std::move(arguments)] {
-    factory.Init();
+  async::PostTask(loop.dispatcher(),
+                  [&factory, &launcher, &return_code, &loop, arguments = std::move(arguments)] {
+                    factory.Init();
 
-    launcher.Run(arguments, [&return_code, &loop](int32_t result) {
-      return_code = result;
-      loop.Quit();
-    });
-  });
+                    launcher.Run(arguments, [&return_code, &loop](int32_t result) {
+                      return_code = result;
+                      loop.Quit();
+                    });
+                  });
   loop.Run();
   return return_code;
 }

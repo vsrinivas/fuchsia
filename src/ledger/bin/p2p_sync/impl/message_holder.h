@@ -35,8 +35,7 @@ class MessageHolder {
   //             return static_cast<const Request*>(message->message());
   //         });
   template <class T>
-  MessageHolder<T> TakeAndMap(
-      fit::function<const T*(const M*)> get_message) && {
+  MessageHolder<T> TakeAndMap(fit::function<const T*(const M*)> get_message) && {
     return MessageHolder<T>(std::move(*this), std::move(get_message));
   }
 
@@ -62,8 +61,7 @@ class MessageHolder {
   // to explicitly declare template parameters, permitting the use of a lambda
   // directly.
   template <class T>
-  MessageHolder(MessageHolder<T>&& other,
-                fit::function<const M*(const T*)> get_message)
+  MessageHolder(MessageHolder<T>&& other, fit::function<const M*(const T*)> get_message)
       : data_(std::move(other.data_)), message_(get_message(other.message_)) {
     other.message_ = nullptr;
   }
@@ -76,8 +74,7 @@ class MessageHolder {
 // can be obtained.
 template <class M>
 std::optional<MessageHolder<M>> CreateMessageHolder(
-    fxl::StringView data,
-    fit::function<const M*(convert::ExtendedStringView)> get_message) {
+    fxl::StringView data, fit::function<const M*(convert::ExtendedStringView)> get_message) {
   std::unique_ptr<std::vector<uint8_t>> data_vec =
       std::make_unique<std::vector<uint8_t>>(data.begin(), data.end());
 

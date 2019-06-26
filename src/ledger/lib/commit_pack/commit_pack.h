@@ -22,11 +22,9 @@ struct CommitPackEntry {
 
 bool operator==(const CommitPackEntry& lhs, const CommitPackEntry& rhs);
 
-bool EncodeCommitPack(std::vector<CommitPackEntry> commits,
-                      CommitPack* commit_pack);
+bool EncodeCommitPack(std::vector<CommitPackEntry> commits, CommitPack* commit_pack);
 
-bool DecodeCommitPack(const CommitPack& commit_pack,
-                      std::vector<CommitPackEntry>* commits);
+bool DecodeCommitPack(const CommitPack& commit_pack, std::vector<CommitPackEntry>* commits);
 
 }  // namespace cloud_provider
 

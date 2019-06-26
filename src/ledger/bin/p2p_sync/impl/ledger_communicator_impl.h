@@ -24,15 +24,14 @@ class PageCommunicatorImpl;
 // Ledger-level P2P communicator.
 class LedgerCommunicatorImpl : public LedgerCommunicator {
  public:
-  LedgerCommunicatorImpl(coroutine::CoroutineService* coroutine_service,
-                         std::string namespace_id, DeviceMesh* mesh);
+  LedgerCommunicatorImpl(coroutine::CoroutineService* coroutine_service, std::string namespace_id,
+                         DeviceMesh* mesh);
   ~LedgerCommunicatorImpl() override;
 
   void set_on_delete(fit::closure on_delete);
 
   // OnDeviceChange is called each time a device connects or unconnects.
-  void OnDeviceChange(fxl::StringView remote_device,
-                      p2p_provider::DeviceChangeType change_type);
+  void OnDeviceChange(fxl::StringView remote_device, p2p_provider::DeviceChangeType change_type);
 
   // Called when a new request arrived for this ledger from device |source|.
   void OnNewRequest(fxl::StringView source, fxl::StringView page_id,
@@ -44,12 +43,10 @@ class LedgerCommunicatorImpl : public LedgerCommunicator {
 
   // LedgerCommunicator:
   std::unique_ptr<PageCommunicator> GetPageCommunicator(
-      storage::PageStorage* storage,
-      storage::PageSyncClient* sync_client) override;
+      storage::PageStorage* storage, storage::PageSyncClient* sync_client) override;
 
  private:
-  std::map<std::string, PageCommunicatorImpl*, convert::StringViewComparator>
-      pages_;
+  std::map<std::string, PageCommunicatorImpl*, convert::StringViewComparator> pages_;
 
   fit::closure on_delete_;
   coroutine::CoroutineService* const coroutine_service_;

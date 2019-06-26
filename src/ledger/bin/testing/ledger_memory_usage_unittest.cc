@@ -30,13 +30,11 @@ int64_t LaunchTestBenchmark(async::Loop* loop) {
 
   fuchsia::sys::LauncherPtr launcher;
   component_context->svc()->Connect(launcher.NewRequest());
-  launcher->CreateComponent(std::move(launch_info),
-                            component_controller.NewRequest());
+  launcher->CreateComponent(std::move(launch_info), component_controller.NewRequest());
 
   int64_t return_code = INT64_MIN;
   component_controller.events().OnTerminated =
-      [loop, &return_code](int64_t rc,
-                           fuchsia::sys::TerminationReason termination_reason) {
+      [loop, &return_code](int64_t rc, fuchsia::sys::TerminationReason termination_reason) {
         switch (termination_reason) {
           case fuchsia::sys::TerminationReason::UNKNOWN:
             return_code = EXIT_FAILURE;
@@ -68,8 +66,7 @@ TEST(LedgerMemoryUsage, LaunchTwoLedgers) {
   // Start a first Ledger instance.
   LedgerPtr top_level_ledger;
   fit::function<void()> error_handler = [] { ADD_FAILURE(); };
-  Status status = GetLedger(component_context.get(),
-                            component_controller.NewRequest(), nullptr, "",
+  Status status = GetLedger(component_context.get(), component_controller.NewRequest(), nullptr, "",
                             "top_level_ledger", DetachedPath(tmp_dir.root_fd()),
                             std::move(error_handler), &top_level_ledger);
   ASSERT_EQ(Status::OK, status);

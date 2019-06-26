@@ -26,8 +26,7 @@ class FakeCloudProvider : public cloud_provider::CloudProvider {
 
     Builder& SetInjectNetworkError(InjectNetworkError inject_network_error);
     Builder& SetCloudEraseOnCheck(CloudEraseOnCheck cloud_erase_on_check);
-    Builder& SetCloudEraseFromWatcher(
-        CloudEraseFromWatcher cloud_erase_from_watcher);
+    Builder& SetCloudEraseFromWatcher(CloudEraseFromWatcher cloud_erase_from_watcher);
 
     std::unique_ptr<FakeCloudProvider> Build();
 
@@ -44,17 +43,14 @@ class FakeCloudProvider : public cloud_provider::CloudProvider {
   ~FakeCloudProvider() override;
 
  private:
-  void GetDeviceSet(
-      fidl::InterfaceRequest<cloud_provider::DeviceSet> device_set,
-      GetDeviceSetCallback callback) override;
+  void GetDeviceSet(fidl::InterfaceRequest<cloud_provider::DeviceSet> device_set,
+                    GetDeviceSetCallback callback) override;
 
-  void GetPageCloud(
-      std::vector<uint8_t> app_id, std::vector<uint8_t> page_id,
-      fidl::InterfaceRequest<cloud_provider::PageCloud> page_cloud,
-      GetPageCloudCallback callback) override;
+  void GetPageCloud(std::vector<uint8_t> app_id, std::vector<uint8_t> page_id,
+                    fidl::InterfaceRequest<cloud_provider::PageCloud> page_cloud,
+                    GetPageCloudCallback callback) override;
 
-  fidl_helpers::BoundInterfaceSet<cloud_provider::DeviceSet, FakeDeviceSet>
-      device_set_;
+  fidl_helpers::BoundInterfaceSet<cloud_provider::DeviceSet, FakeDeviceSet> device_set_;
 
   callback::AutoCleanableMap<std::string, FakePageCloud> page_clouds_;
 

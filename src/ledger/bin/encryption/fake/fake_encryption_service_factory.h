@@ -16,8 +16,7 @@ class FakeEncryptionServiceFactory : public EncryptionServiceFactory {
   ~FakeEncryptionServiceFactory() override;
 
   // EncryptionServiceFactory
-  std::unique_ptr<EncryptionService> MakeEncryptionService(
-      std::string namespace_id) override;
+  std::unique_ptr<EncryptionService> MakeEncryptionService(std::string namespace_id) override;
 
  private:
   async_dispatcher_t* dispatcher_;

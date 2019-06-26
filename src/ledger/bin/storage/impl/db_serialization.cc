@@ -19,25 +19,20 @@ namespace storage {
 
 constexpr fxl::StringView HeadRow::kPrefix;
 
-std::string HeadRow::GetKeyFor(CommitIdView head) {
-  return fxl::Concatenate({kPrefix, head});
-}
+std::string HeadRow::GetKeyFor(CommitIdView head) { return fxl::Concatenate({kPrefix, head}); }
 
 // MergeRow.
 
 constexpr fxl::StringView MergeRow::kPrefix;
 
-std::string MergeRow::GetEntriesPrefixFor(CommitIdView parent1_id,
-                                          CommitIdView parent2_id) {
+std::string MergeRow::GetEntriesPrefixFor(CommitIdView parent1_id, CommitIdView parent2_id) {
   auto [parent_min_id, parent_max_id] = std::minmax(parent1_id, parent2_id);
   return fxl::Concatenate({kPrefix, parent_min_id, "/", parent_max_id, "/"});
 }
 
-std::string MergeRow::GetKeyFor(CommitIdView parent1_id,
-                                CommitIdView parent2_id,
+std::string MergeRow::GetKeyFor(CommitIdView parent1_id, CommitIdView parent2_id,
                                 CommitIdView merge_commit_id) {
-  return fxl::Concatenate(
-      {GetEntriesPrefixFor(parent1_id, parent2_id), merge_commit_id});
+  return fxl::Concatenate({GetEntriesPrefixFor(parent1_id, parent2_id), merge_commit_id});
 }
 
 // CommitRow.
@@ -65,16 +60,13 @@ constexpr fxl::StringView ReferenceRow::kLazyPrefix;
 constexpr fxl::StringView ReferenceRow::kCommitPrefix;
 
 std::string ReferenceRow::GetKeyForObject(const ObjectDigest& source,
-                                          const ObjectDigest& destination,
-                                          KeyPriority priority) {
-  return fxl::Concatenate({priority == KeyPriority::EAGER
-                               ? GetEagerKeyPrefixFor(destination)
-                               : GetLazyKeyPrefixFor(destination),
+                                          const ObjectDigest& destination, KeyPriority priority) {
+  return fxl::Concatenate({priority == KeyPriority::EAGER ? GetEagerKeyPrefixFor(destination)
+                                                          : GetLazyKeyPrefixFor(destination),
                            source.Serialize()});
 }
 
-std::string ReferenceRow::GetKeyForCommit(CommitIdView source,
-                                          const ObjectDigest& destination) {
+std::string ReferenceRow::GetKeyForCommit(CommitIdView source, const ObjectDigest& destination) {
   return fxl::Concatenate({GetCommitKeyPrefixFor(destination), source});
 }
 
@@ -83,8 +75,7 @@ std::string ReferenceRow::GetKeyPrefixFor(const ObjectDigest& destination) {
   // with a byte containing its length to avoid collisions. The content of
   // destination can be arbitrary, but not longer that the size we can
   // serialize.
-  FXL_DCHECK(destination.Serialize().size() <=
-             std::numeric_limits<uint8_t>::max());
+  FXL_DCHECK(destination.Serialize().size() <= std::numeric_limits<uint8_t>::max());
   return fxl::Concatenate({
       kPrefix,                                                              //
       SerializeData(static_cast<uint8_t>(destination.Serialize().size())),  //
@@ -92,13 +83,11 @@ std::string ReferenceRow::GetKeyPrefixFor(const ObjectDigest& destination) {
   });
 };
 
-std::string ReferenceRow::GetObjectKeyPrefixFor(
-    const ObjectDigest& destination) {
+std::string ReferenceRow::GetObjectKeyPrefixFor(const ObjectDigest& destination) {
   return fxl::Concatenate({GetKeyPrefixFor(destination), kObjectPrefix});
 };
 
-std::string ReferenceRow::GetEagerKeyPrefixFor(
-    const ObjectDigest& destination) {
+std::string ReferenceRow::GetEagerKeyPrefixFor(const ObjectDigest& destination) {
   return fxl::Concatenate({GetObjectKeyPrefixFor(destination), kEagerPrefix});
 };
 
@@ -106,8 +95,7 @@ std::string ReferenceRow::GetLazyKeyPrefixFor(const ObjectDigest& destination) {
   return fxl::Concatenate({GetObjectKeyPrefixFor(destination), kLazyPrefix});
 };
 
-std::string ReferenceRow::GetCommitKeyPrefixFor(
-    const ObjectDigest& destination) {
+std::string ReferenceRow::GetCommitKeyPrefixFor(const ObjectDigest& destination) {
   return fxl::Concatenate({GetKeyPrefixFor(destination), kCommitPrefix});
 };
 
@@ -125,15 +113,12 @@ constexpr fxl::StringView ObjectStatusRow::kTransientPrefix;
 constexpr fxl::StringView ObjectStatusRow::kLocalPrefix;
 constexpr fxl::StringView ObjectStatusRow::kSyncedPrefix;
 
-std::string ObjectStatusRow::GetKeyFor(
-    PageDbObjectStatus object_status,
-    const ObjectIdentifier& object_identifier) {
-  return fxl::Concatenate(
-      {GetPrefixFor(object_status), EncodeObjectIdentifier(object_identifier)});
+std::string ObjectStatusRow::GetKeyFor(PageDbObjectStatus object_status,
+                                       const ObjectIdentifier& object_identifier) {
+  return fxl::Concatenate({GetPrefixFor(object_status), EncodeObjectIdentifier(object_identifier)});
 }
 
-fxl::StringView ObjectStatusRow::GetPrefixFor(
-    PageDbObjectStatus object_status) {
+fxl::StringView ObjectStatusRow::GetPrefixFor(PageDbObjectStatus object_status) {
   switch (object_status) {
     case PageDbObjectStatus::UNKNOWN:
       FXL_NOTREACHED();

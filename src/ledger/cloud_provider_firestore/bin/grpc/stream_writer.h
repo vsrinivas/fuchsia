@@ -42,14 +42,10 @@ class StreamWriter {
   //
   // This error is unrecoverable and means that the write call cannot be made
   // because the connection is broken.
-  void SetOnError(fit::function<void()> on_error) {
-    on_error_ = std::move(on_error);
-  }
+  void SetOnError(fit::function<void()> on_error) { on_error_ = std::move(on_error); }
 
   // Sets a callback which is called when a write operation succeeds.
-  void SetOnSuccess(fit::function<void()> on_success) {
-    on_success_ = std::move(on_success);
-  }
+  void SetOnSuccess(fit::function<void()> on_success) { on_success_ = std::move(on_success); }
 
   // Attempts to write a message to the stream.
   //

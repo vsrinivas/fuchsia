@@ -33,8 +33,7 @@ class ListenCallClient {
   // Called when a response is received.
   //
   // Can be called multiple times.
-  virtual void OnResponse(
-      google::firestore::v1beta1::ListenResponse response) = 0;
+  virtual void OnResponse(google::firestore::v1beta1::ListenResponse response) = 0;
 
   // Called when the stream is closed.
   //

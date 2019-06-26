@@ -28,45 +28,44 @@ fuchsia::auth::Status ConvertStatus(ServiceAccountTokenMinter::Status status) {
 }  // namespace
 
 ServiceAccountTokenManager::ServiceAccountTokenManager(
-    network_wrapper::NetworkWrapper* network_wrapper,
-    std::unique_ptr<Credentials> credentials, std::string user_id)
-    : service_account_token_minter_(network_wrapper, std::move(credentials),
-                                    std::move(user_id)) {}
+    network_wrapper::NetworkWrapper* network_wrapper, std::unique_ptr<Credentials> credentials,
+    std::string user_id)
+    : service_account_token_minter_(network_wrapper, std::move(credentials), std::move(user_id)) {}
 
 ServiceAccountTokenManager::~ServiceAccountTokenManager() {}
 
 void ServiceAccountTokenManager::Authorize(
-    AppConfig app_config,
-    fidl::InterfaceHandle<AuthenticationUIContext> auth_ui_context,
-    std::vector<std::string> /*app_scopes*/,
-    fidl::StringPtr /*user_profile_id*/, fidl::StringPtr /*auth_code*/,
-    AuthorizeCallback callback /*callback*/) {
+    AppConfig app_config, fidl::InterfaceHandle<AuthenticationUIContext> auth_ui_context,
+    std::vector<std::string> /*app_scopes*/, fidl::StringPtr /*user_profile_id*/,
+    fidl::StringPtr /*auth_code*/, AuthorizeCallback callback /*callback*/) {
   FXL_NOTIMPLEMENTED();
   callback(fuchsia::auth::Status::INTERNAL_ERROR /*Not implemented*/, nullptr);
 }
 
-void ServiceAccountTokenManager::GetAccessToken(
-    AppConfig app_config, std::string /*user_profile_id*/,
-    std::vector<std::string> /*app_scopes*/, GetAccessTokenCallback callback) {
+void ServiceAccountTokenManager::GetAccessToken(AppConfig app_config,
+                                                std::string /*user_profile_id*/,
+                                                std::vector<std::string> /*app_scopes*/,
+                                                GetAccessTokenCallback callback) {
   FXL_NOTIMPLEMENTED();
   callback(fuchsia::auth::Status::INTERNAL_ERROR /*Not implemented*/, nullptr);
 }
 
-void ServiceAccountTokenManager::GetIdToken(
-    AppConfig app_config, std::string /*user_profile_id*/,
-    fidl::StringPtr /*audience*/, GetIdTokenCallback callback /*callback*/) {
+void ServiceAccountTokenManager::GetIdToken(AppConfig app_config, std::string /*user_profile_id*/,
+                                            fidl::StringPtr /*audience*/,
+                                            GetIdTokenCallback callback /*callback*/) {
   FXL_NOTIMPLEMENTED();
   callback(fuchsia::auth::Status::INTERNAL_ERROR /*Not implemented*/, nullptr);
 }
 
-void ServiceAccountTokenManager::GetFirebaseToken(
-    AppConfig /*app_config*/, std::string /*user_profile_id*/,
-    std::string /*audience*/, std::string firebase_api_key,
-    GetFirebaseTokenCallback callback) {
+void ServiceAccountTokenManager::GetFirebaseToken(AppConfig /*app_config*/,
+                                                  std::string /*user_profile_id*/,
+                                                  std::string /*audience*/,
+                                                  std::string firebase_api_key,
+                                                  GetFirebaseTokenCallback callback) {
   service_account_token_minter_.GetFirebaseToken(
       std::move(firebase_api_key),
-      [callback = std::move(callback)](
-          const ServiceAccountTokenMinter::GetTokenResponse& response) {
+      [callback =
+           std::move(callback)](const ServiceAccountTokenMinter::GetTokenResponse& response) {
         auto status = ConvertStatus(response.status);
 
         if (response.status == ServiceAccountTokenMinter::Status::OK) {
@@ -76,22 +75,21 @@ void ServiceAccountTokenManager::GetFirebaseToken(
           fb_token->email = response.email;
           callback(status, std::move(fb_token));
         } else {
-          FXL_LOG(ERROR) << "Encountered error in GetToken(): "
-                         << response.error_msg;
+          FXL_LOG(ERROR) << "Encountered error in GetToken(): " << response.error_msg;
           callback(status, nullptr);
         }
       });
 }
 
-void ServiceAccountTokenManager::DeleteAllTokens(
-    AppConfig app_config, std::string /*user_profile_id*/, bool /*force*/,
-    DeleteAllTokensCallback callback /*callback*/) {
+void ServiceAccountTokenManager::DeleteAllTokens(AppConfig app_config,
+                                                 std::string /*user_profile_id*/, bool /*force*/,
+                                                 DeleteAllTokensCallback callback /*callback*/) {
   FXL_NOTIMPLEMENTED();
   callback(fuchsia::auth::Status::INTERNAL_ERROR /*Not implemented*/);
 }
 
-void ServiceAccountTokenManager::ListProfileIds(
-    AppConfig app_config, ListProfileIdsCallback callback /*callback*/) {
+void ServiceAccountTokenManager::ListProfileIds(AppConfig app_config,
+                                                ListProfileIdsCallback callback /*callback*/) {
   FXL_NOTIMPLEMENTED();
   callback(fuchsia::auth::Status::INTERNAL_ERROR /*Not implemented*/, {});
 }

@@ -35,8 +35,7 @@ class LevelDbFactoryTest : public ledger::TestWithEnvironment {
   void SetUp() override {
     ledger::TestWithEnvironment::SetUp();
 
-    ASSERT_TRUE(
-        files::CreateDirectoryAt(cache_path_.root_fd(), cache_path_.path()));
+    ASSERT_TRUE(files::CreateDirectoryAt(cache_path_.root_fd(), cache_path_.path()));
     ASSERT_TRUE(files::CreateDirectoryAt(db_path_.root_fd(), db_path_.path()));
 
     db_factory_.Init();
@@ -60,9 +59,8 @@ TEST_F(LevelDbFactoryTest, GetOrCreateDb) {
   Status status;
   std::unique_ptr<Db> db;
   bool called;
-  db_factory_.GetOrCreateDb(
-      db_path_.SubPath("db"), DbFactory::OnDbNotFound::CREATE,
-      callback::Capture(callback::SetWhenCalled(&called), &status, &db));
+  db_factory_.GetOrCreateDb(db_path_.SubPath("db"), DbFactory::OnDbNotFound::CREATE,
+                            callback::Capture(callback::SetWhenCalled(&called), &status, &db));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
@@ -77,9 +75,8 @@ TEST_F(LevelDbFactoryTest, GetOrCreateDb) {
 
   // Close the previous instance and open it again.
   db.reset();
-  db_factory_.GetOrCreateDb(
-      db_path_.SubPath("db"), DbFactory::OnDbNotFound::RETURN,
-      callback::Capture(callback::SetWhenCalled(&called), &status, &db));
+  db_factory_.GetOrCreateDb(db_path_.SubPath("db"), DbFactory::OnDbNotFound::RETURN,
+                            callback::Capture(callback::SetWhenCalled(&called), &status, &db));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
@@ -97,9 +94,8 @@ TEST_F(LevelDbFactoryTest, GetDbOnNotFound) {
   Status status;
   std::unique_ptr<Db> db;
   bool called;
-  db_factory_.GetOrCreateDb(
-      db_path_.SubPath("db"), DbFactory::OnDbNotFound::RETURN,
-      callback::Capture(callback::SetWhenCalled(&called), &status, &db));
+  db_factory_.GetOrCreateDb(db_path_.SubPath("db"), DbFactory::OnDbNotFound::RETURN,
+                            callback::Capture(callback::SetWhenCalled(&called), &status, &db));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
   EXPECT_EQ(Status::PAGE_NOT_FOUND, status);
@@ -118,9 +114,8 @@ TEST_F(LevelDbFactoryTest, CreateMultipleDbs) {
     ledger::DetachedPath path = db_path_.SubPath(fxl::NumberToString(i));
     EXPECT_FALSE(files::IsDirectoryAt(path.root_fd(), path.path()));
 
-    db_factory_.GetOrCreateDb(
-        path, DbFactory::OnDbNotFound::CREATE,
-        callback::Capture(callback::SetWhenCalled(&called), &status, &db));
+    db_factory_.GetOrCreateDb(path, DbFactory::OnDbNotFound::CREATE,
+                              callback::Capture(callback::SetWhenCalled(&called), &status, &db));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
     EXPECT_EQ(Status::OK, status);
@@ -145,10 +140,8 @@ TEST_F(LevelDbFactoryTest, CreateMultipleDbsConcurrently) {
     EXPECT_FALSE(files::IsDirectoryAt(path.root_fd(), path.path()));
 
     db_factory_.GetOrCreateDb(
-        db_path_.SubPath(fxl::NumberToString(i)),
-        DbFactory::OnDbNotFound::CREATE,
-        callback::Capture(callback::SetWhenCalled(&called[i]), &statuses[i],
-                          &dbs[i]));
+        db_path_.SubPath(fxl::NumberToString(i)), DbFactory::OnDbNotFound::CREATE,
+        callback::Capture(callback::SetWhenCalled(&called[i]), &statuses[i], &dbs[i]));
   }
   RunLoopUntilIdle();
 
@@ -172,15 +165,13 @@ TEST_F(LevelDbFactoryTest, GetOrCreateDbInCallback) {
   std::unique_ptr<Db> db2;
 
   db_factory_.GetOrCreateDb(
-      path1, DbFactory::OnDbNotFound::CREATE,
-      [&](Status status1, std::unique_ptr<Db> db1) {
+      path1, DbFactory::OnDbNotFound::CREATE, [&](Status status1, std::unique_ptr<Db> db1) {
         called1 = true;
         EXPECT_EQ(Status::OK, status1);
         EXPECT_NE(nullptr, db1);
         db_factory_.GetOrCreateDb(
             path2, DbFactory::OnDbNotFound::CREATE,
-            callback::Capture(callback::SetWhenCalled(&called2), &status2,
-                              &db2));
+            callback::Capture(callback::SetWhenCalled(&called2), &status2, &db2));
       });
   RunLoopUntilIdle();
   EXPECT_TRUE(called1);
@@ -205,8 +196,7 @@ TEST_F(LevelDbFactoryTest, InitWithCachedDbAvailable) {
   auto db_factory = std::make_unique<LevelDbFactory>(&environment_, cache_path);
 
   // The cached db directory should not be created, yet.
-  EXPECT_FALSE(
-      files::IsDirectoryAt(cached_db_path.root_fd(), cached_db_path.path()));
+  EXPECT_FALSE(files::IsDirectoryAt(cached_db_path.root_fd(), cached_db_path.path()));
 
   // Initialize and wait for the cached instance to be created.
   db_factory->Init();
@@ -215,8 +205,7 @@ TEST_F(LevelDbFactoryTest, InitWithCachedDbAvailable) {
   // Close the factory. This will not affect the created cached instance, which
   // was created under |cached_db_path|.
   db_factory.reset();
-  EXPECT_TRUE(
-      files::IsDirectoryAt(cached_db_path.root_fd(), cached_db_path.path()));
+  EXPECT_TRUE(files::IsDirectoryAt(cached_db_path.root_fd(), cached_db_path.path()));
 
   // Reset and re-initialize the factory object. It should now use the
   // previously created instance.
@@ -236,14 +225,14 @@ TEST_F(LevelDbFactoryTest, QuitWhenBusy) {
   std::unique_ptr<Db> db_0, db_1;
   bool called_0, called_1;
 
-  db_factory_ptr->GetOrCreateDb(
-      db_path_.SubPath(fxl::NumberToString(0)), DbFactory::OnDbNotFound::CREATE,
-      callback::Capture(
-          [this, callback = callback::SetWhenCalled(&called_0)]() {
-            callback();
-            QuitLoop();
-          },
-          &status_0, &db_0));
+  db_factory_ptr->GetOrCreateDb(db_path_.SubPath(fxl::NumberToString(0)),
+                                DbFactory::OnDbNotFound::CREATE,
+                                callback::Capture(
+                                    [this, callback = callback::SetWhenCalled(&called_0)]() {
+                                      callback();
+                                      QuitLoop();
+                                    },
+                                    &status_0, &db_0));
 
   db_factory_ptr->GetOrCreateDb(
       db_path_.SubPath(fxl::NumberToString(1)), DbFactory::OnDbNotFound::CREATE,

@@ -25,8 +25,7 @@ class UserCommunicator {
   // Returns a ledger-specific communicator.
   // All |LedgerCommunicator| objects obtained through this method must be
   // destroyed before |UserCommunicator|.
-  virtual std::unique_ptr<LedgerCommunicator> GetLedgerCommunicator(
-      std::string repository_id) = 0;
+  virtual std::unique_ptr<LedgerCommunicator> GetLedgerCommunicator(std::string repository_id) = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(UserCommunicator);

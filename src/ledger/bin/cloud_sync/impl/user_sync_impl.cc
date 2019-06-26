@@ -22,8 +22,7 @@ constexpr size_t kFingerprintSize = 16;
 
 }  // namespace
 
-UserSyncImpl::UserSyncImpl(ledger::Environment* environment,
-                           UserConfig user_config,
+UserSyncImpl::UserSyncImpl(ledger::Environment* environment, UserConfig user_config,
                            std::unique_ptr<backoff::Backoff> backoff,
                            fit::closure on_version_mismatch)
     : environment_(environment),
@@ -45,12 +44,10 @@ std::unique_ptr<LedgerSync> UserSyncImpl::CreateLedgerSync(
     fxl::StringView app_id, encryption::EncryptionService* encryption_service) {
   FXL_DCHECK(started_);
 
-  auto result = std::make_unique<LedgerSyncImpl>(
-      environment_, &user_config_, encryption_service, app_id,
-      aggregator_.GetNewStateWatcher());
-  result->set_on_delete([this, ledger_sync = result.get()]() {
-    active_ledger_syncs_.erase(ledger_sync);
-  });
+  auto result = std::make_unique<LedgerSyncImpl>(environment_, &user_config_, encryption_service,
+                                                 app_id, aggregator_.GetNewStateWatcher());
+  result->set_on_delete(
+      [this, ledger_sync = result.get()]() { active_ledger_syncs_.erase(ledger_sync); });
   active_ledger_syncs_.insert(result.get());
   if (upload_enabled_) {
     result->EnableUpload();
@@ -69,8 +66,7 @@ void UserSyncImpl::OnCloudErased() {
 }
 
 void UserSyncImpl::OnError(cloud_provider::Status status) {
-  task_runner_.PostDelayedTask([this] { SetCloudErasedWatcher(); },
-                               backoff_->GetNext());
+  task_runner_.PostDelayedTask([this] { SetCloudErasedWatcher(); }, backoff_->GetNext());
 }
 
 void UserSyncImpl::Start() {
@@ -82,16 +78,14 @@ void UserSyncImpl::Start() {
     return;
   }
 
-  user_config_.cloud_provider->GetDeviceSet(
-      device_set_.NewRequest(), [this](auto status) {
-        if (status != cloud_provider::Status::OK) {
-          FXL_LOG(ERROR) << "Failed to retrieve the device map: "
-                         << fidl::ToUnderlying(status)
-                         << ", sync upload will not work.";
-          return;
-        }
-        CheckCloudNotErased();
-      });
+  user_config_.cloud_provider->GetDeviceSet(device_set_.NewRequest(), [this](auto status) {
+    if (status != cloud_provider::Status::OK) {
+      FXL_LOG(ERROR) << "Failed to retrieve the device map: " << fidl::ToUnderlying(status)
+                     << ", sync upload will not work.";
+      return;
+    }
+    CheckCloudNotErased();
+  });
 
   started_ = true;
 }
@@ -110,10 +104,10 @@ void UserSyncImpl::CheckCloudNotErased() {
     return;
   }
 
-  if (!files::ReadFileToStringAt(fingerprint_path.root_fd(),
-                                 fingerprint_path.path(), &fingerprint_)) {
-    FXL_LOG(ERROR) << "Unable to read the fingerprint file at: "
-                   << fingerprint_path.path() << ", sync upload will not work.";
+  if (!files::ReadFileToStringAt(fingerprint_path.root_fd(), fingerprint_path.path(),
+                                 &fingerprint_)) {
+    FXL_LOG(ERROR) << "Unable to read the fingerprint file at: " << fingerprint_path.path()
+                   << ", sync upload will not work.";
     return;
   }
 
@@ -133,8 +127,7 @@ void UserSyncImpl::CreateFingerprint() {
   // Generate the fingerprint.
   char fingerprint_array[kFingerprintSize];
   environment_->random()->Draw(fingerprint_array, kFingerprintSize);
-  fingerprint_ =
-      convert::ToHex(fxl::StringView(fingerprint_array, kFingerprintSize));
+  fingerprint_ = convert::ToHex(fxl::StringView(fingerprint_array, kFingerprintSize));
 
   device_set_->SetFingerprint(
       convert::ToArray(fingerprint_), [this](cloud_provider::Status status) {
@@ -142,11 +135,9 @@ void UserSyncImpl::CreateFingerprint() {
           // Persist the new fingerprint.
           FXL_DCHECK(!fingerprint_.empty());
           ledger::DetachedPath fingerprint_path = GetFingerprintPath();
-          if (!files::WriteFileAt(fingerprint_path.root_fd(),
-                                  fingerprint_path.path(), fingerprint_.data(),
-                                  fingerprint_.size())) {
-            FXL_LOG(ERROR) << "Failed to persist the fingerprint at: "
-                           << fingerprint_path.path()
+          if (!files::WriteFileAt(fingerprint_path.root_fd(), fingerprint_path.path(),
+                                  fingerprint_.data(), fingerprint_.size())) {
+            FXL_LOG(ERROR) << "Failed to persist the fingerprint at: " << fingerprint_path.path()
                            << ", sync upload will not work.";
             return;
           }
@@ -164,8 +155,7 @@ void UserSyncImpl::HandleDeviceSetResult(cloud_provider::Status status) {
       return;
     case cloud_provider::Status::NETWORK_ERROR:
       // Retry after some backoff time.
-      task_runner_.PostDelayedTask([this] { CheckCloudNotErased(); },
-                                   backoff_->GetNext());
+      task_runner_.PostDelayedTask([this] { CheckCloudNotErased(); }, backoff_->GetNext());
       return;
     case cloud_provider::Status::NOT_FOUND:
       // |this| can be deleted within on_version_mismatch_() - don't
@@ -173,8 +163,7 @@ void UserSyncImpl::HandleDeviceSetResult(cloud_provider::Status status) {
       on_version_mismatch_();
       return;
     default:
-      FXL_LOG(ERROR) << "Unexpected status returned from device set: "
-                     << fidl::ToUnderlying(status)
+      FXL_LOG(ERROR) << "Unexpected status returned from device set: " << fidl::ToUnderlying(status)
                      << ", sync upload will not work.";
       return;
   }

@@ -29,8 +29,7 @@ namespace storage {
 // make sure that there is no live LevelDb instance for the same path.
 class LevelDbFactory : public DbFactory {
  public:
-  LevelDbFactory(ledger::Environment* environment,
-                 ledger::DetachedPath cache_path);
+  LevelDbFactory(ledger::Environment* environment, ledger::DetachedPath cache_path);
 
   ~LevelDbFactory() override;
 
@@ -38,9 +37,8 @@ class LevelDbFactory : public DbFactory {
   void Init();
 
   // DbFactory:
-  void GetOrCreateDb(
-      ledger::DetachedPath db_path, DbFactory::OnDbNotFound on_db_not_found,
-      fit::function<void(Status, std::unique_ptr<Db>)> callback) override;
+  void GetOrCreateDb(ledger::DetachedPath db_path, DbFactory::OnDbNotFound on_db_not_found,
+                     fit::function<void(Status, std::unique_ptr<Db>)> callback) override;
 
  private:
   // IOLevelDbFactory holds all operations happening on the IO thread.

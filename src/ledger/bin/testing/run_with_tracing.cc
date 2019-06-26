@@ -39,9 +39,8 @@ int RunWithTracing(async::Loop* loop, fit::function<void()> runnable) {
       // started in the immediate next task on the queue (before the quit
       // task executes).
       started = true;
-      FXL_LOG(ERROR)
-          << "Timed out waiting for the tracing to start; Did you run the "
-             "binary with the trace tool enabled?";
+      FXL_LOG(ERROR) << "Timed out waiting for the tracing to start; Did you run the "
+                        "binary with the trace tool enabled?";
       err = -1;
       loop->Quit();
     }

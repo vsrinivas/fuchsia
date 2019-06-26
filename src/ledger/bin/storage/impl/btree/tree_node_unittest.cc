@@ -79,18 +79,17 @@ TEST_F(TreeNodeTest, CreateGetTreeNode) {
   bool called;
   Status status;
   std::unique_ptr<const TreeNode> found_node;
-  TreeNode::FromIdentifier(&fake_storage_, node->GetIdentifier(),
-                           callback::Capture(callback::SetWhenCalled(&called),
-                                             &status, &found_node));
+  TreeNode::FromIdentifier(
+      &fake_storage_, node->GetIdentifier(),
+      callback::Capture(callback::SetWhenCalled(&called), &status, &found_node));
   RunLoopFor(kSufficientDelay);
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
   EXPECT_NE(nullptr, found_node);
 
-  TreeNode::FromIdentifier(&fake_storage_,
-                           RandomObjectIdentifier(environment_.random()),
-                           callback::Capture(callback::SetWhenCalled(&called),
-                                             &status, &found_node));
+  TreeNode::FromIdentifier(
+      &fake_storage_, RandomObjectIdentifier(environment_.random()),
+      callback::Capture(callback::SetWhenCalled(&called), &status, &found_node));
   RunLoopFor(kSufficientDelay);
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::INTERNAL_NOT_FOUND, status);
@@ -149,9 +148,8 @@ TEST_F(TreeNodeTest, Serialization) {
   bool called;
   Status status;
   std::unique_ptr<const Object> object;
-  fake_storage_.GetObject(
-      node->GetIdentifier(), PageStorage::Location::LOCAL,
-      callback::Capture(callback::SetWhenCalled(&called), &status, &object));
+  fake_storage_.GetObject(node->GetIdentifier(), PageStorage::Location::LOCAL,
+                          callback::Capture(callback::SetWhenCalled(&called), &status, &object));
   RunLoopFor(kSufficientDelay);
   EXPECT_TRUE(called);
   EXPECT_EQ(Status::OK, status);
@@ -181,10 +179,8 @@ TEST_F(TreeNodeTest, References) {
   // References to inline objects are ignored so we ensure object00 and object01
   // are big enough not to be inlined.
   std::unique_ptr<const Object> object0, object1, object2;
-  ASSERT_TRUE(AddObject(ObjectData("object00", InlineBehavior::PREVENT).value,
-                        &object0));
-  ASSERT_TRUE(AddObject(ObjectData("object01", InlineBehavior::PREVENT).value,
-                        &object1));
+  ASSERT_TRUE(AddObject(ObjectData("object00", InlineBehavior::PREVENT).value, &object0));
+  ASSERT_TRUE(AddObject(ObjectData("object01", InlineBehavior::PREVENT).value, &object1));
   // Inline object, the references to it should be skipped.
   ASSERT_TRUE(AddObject("object02", &object2));
   const ObjectIdentifier object0_id = object0->GetIdentifier();
@@ -194,37 +190,31 @@ TEST_F(TreeNodeTest, References) {
   const std::vector<Entry> entries = {
       // A single node pointing to the same value with both eager and lazy
       // links.
-      Entry{"key00", object0_id, KeyPriority::LAZY},
-      Entry{"key01", object1_id, KeyPriority::EAGER},
+      Entry{"key00", object0_id, KeyPriority::LAZY}, Entry{"key01", object1_id, KeyPriority::EAGER},
       Entry{"key02", object0_id, KeyPriority::EAGER},
 
       Entry{"key03", object1_id, KeyPriority::LAZY},
 
       // Two lazy references for the same object.
-      Entry{"key04", object0_id, KeyPriority::LAZY},
-      Entry{"key05", object1_id, KeyPriority::EAGER},
+      Entry{"key04", object0_id, KeyPriority::LAZY}, Entry{"key05", object1_id, KeyPriority::EAGER},
       Entry{"key06", object0_id, KeyPriority::LAZY},
 
       Entry{"key07", object1_id, KeyPriority::EAGER},
 
       // Two eager references for the same object, and an inlined object.
-      Entry{"key08", object0_id, KeyPriority::EAGER},
-      Entry{"key09", object1_id, KeyPriority::LAZY},
+      Entry{"key08", object0_id, KeyPriority::EAGER}, Entry{"key09", object1_id, KeyPriority::LAZY},
       Entry{"key10", object0_id, KeyPriority::EAGER},
       Entry{"key11", inlined_object_id, KeyPriority::EAGER}};
 
   std::unique_ptr<const TreeNode> root, child0, child1, child2;
+  ASSERT_TRUE(CreateNodeFromEntries({entries[0], entries[1], entries[2]}, {}, &child0));
+  ASSERT_TRUE(CreateNodeFromEntries({entries[4], entries[5], entries[6]}, {}, &child1));
   ASSERT_TRUE(
-      CreateNodeFromEntries({entries[0], entries[1], entries[2]}, {}, &child0));
-  ASSERT_TRUE(
-      CreateNodeFromEntries({entries[4], entries[5], entries[6]}, {}, &child1));
+      CreateNodeFromEntries({entries[8], entries[9], entries[10], entries[11]}, {}, &child2));
   ASSERT_TRUE(CreateNodeFromEntries(
-      {entries[8], entries[9], entries[10], entries[11]}, {}, &child2));
-  ASSERT_TRUE(CreateNodeFromEntries({entries[3], entries[7]},
-                                    {{0, child0->GetIdentifier()},
-                                     {1, child1->GetIdentifier()},
-                                     {2, child2->GetIdentifier()}},
-                                    &root));
+      {entries[3], entries[7]},
+      {{0, child0->GetIdentifier()}, {1, child1->GetIdentifier()}, {2, child2->GetIdentifier()}},
+      &root));
 
   const ObjectDigest digest0 = object0->GetIdentifier().object_digest();
   const ObjectDigest digest1 = object1->GetIdentifier().object_digest();
@@ -232,81 +222,69 @@ TEST_F(TreeNodeTest, References) {
   // Check that references returned by each TreeNode are correct.
   ObjectReferencesAndPriority references;
   root->AppendReferences(&references);
-  EXPECT_THAT(
-      references,
-      UnorderedElementsAre(
-          // Keys
-          Pair(digest1, KeyPriority::LAZY),   // key03
-          Pair(digest1, KeyPriority::EAGER),  // key07
-          // Children
-          Pair(child0->GetIdentifier().object_digest(), KeyPriority::EAGER),
-          Pair(child1->GetIdentifier().object_digest(), KeyPriority::EAGER),
-          Pair(child2->GetIdentifier().object_digest(), KeyPriority::EAGER)));
+  EXPECT_THAT(references, UnorderedElementsAre(
+                              // Keys
+                              Pair(digest1, KeyPriority::LAZY),   // key03
+                              Pair(digest1, KeyPriority::EAGER),  // key07
+                              // Children
+                              Pair(child0->GetIdentifier().object_digest(), KeyPriority::EAGER),
+                              Pair(child1->GetIdentifier().object_digest(), KeyPriority::EAGER),
+                              Pair(child2->GetIdentifier().object_digest(), KeyPriority::EAGER)));
   references.clear();
   child0->AppendReferences(&references);
-  EXPECT_THAT(references,
-              UnorderedElementsAre(Pair(digest0, KeyPriority::LAZY),   // key00
-                                   Pair(digest1, KeyPriority::EAGER),  // key01
-                                   Pair(digest0, KeyPriority::EAGER)   // key02
-                                   ));
+  EXPECT_THAT(references, UnorderedElementsAre(Pair(digest0, KeyPriority::LAZY),   // key00
+                                               Pair(digest1, KeyPriority::EAGER),  // key01
+                                               Pair(digest0, KeyPriority::EAGER)   // key02
+                                               ));
   references.clear();
   child1->AppendReferences(&references);
-  EXPECT_THAT(
-      references,
-      UnorderedElementsAre(Pair(digest0, KeyPriority::LAZY),  // key04 and key06
-                           Pair(digest1, KeyPriority::EAGER)  // key05
-                           ));
+  EXPECT_THAT(references, UnorderedElementsAre(Pair(digest0, KeyPriority::LAZY),  // key04 and key06
+                                               Pair(digest1, KeyPriority::EAGER)  // key05
+                                               ));
   references.clear();
   child2->AppendReferences(&references);
   EXPECT_THAT(references,
-              UnorderedElementsAre(
-                  Pair(digest0, KeyPriority::EAGER),  // key08 and key10
-                  Pair(digest1, KeyPriority::LAZY)    // key09
-                  // No reference to key11 (points to inline object02)
-                  ));
+              UnorderedElementsAre(Pair(digest0, KeyPriority::EAGER),  // key08 and key10
+                                   Pair(digest1, KeyPriority::LAZY)    // key09
+                                   // No reference to key11 (points to inline object02)
+                                   ));
 
   // Check that references have been correctly added to PageStorage during
   // object creation.
-  EXPECT_THAT(
-      fake_storage_.GetReferences(),
-      // All the pieces are small enough not to get split so we know all objects
-      // and can exhaustively enumerate references.
-      UnorderedElementsAre(
-          // References from the root piece.
-          Pair(root->GetIdentifier().object_digest(),
-               UnorderedElementsAre(
-                   // Keys
-                   Pair(digest1, KeyPriority::LAZY),   // key03
-                   Pair(digest1, KeyPriority::EAGER),  // key07
-                   // Children
-                   Pair(child0->GetIdentifier().object_digest(),
-                        KeyPriority::EAGER),
-                   Pair(child1->GetIdentifier().object_digest(),
-                        KeyPriority::EAGER),
-                   Pair(child2->GetIdentifier().object_digest(),
-                        KeyPriority::EAGER))),
-          // References from each child, which don't have any children
-          // themselves, but reference values.
-          Pair(child0->GetIdentifier().object_digest(),
-               UnorderedElementsAre(Pair(digest0, KeyPriority::LAZY),   // key00
-                                    Pair(digest1, KeyPriority::EAGER),  // key01
-                                    Pair(digest0, KeyPriority::EAGER)   // key02
-                                    )),
-          Pair(child1->GetIdentifier().object_digest(),
-               UnorderedElementsAre(
-                   Pair(digest0, KeyPriority::LAZY),  // key04 and key06
-                   Pair(digest1, KeyPriority::EAGER)  // key05
-                   )),
-          Pair(child2->GetIdentifier().object_digest(),
-               UnorderedElementsAre(
-                   Pair(digest0, KeyPriority::EAGER),  // key08 and key10
-                   Pair(digest1, KeyPriority::LAZY)    // key09
-                   // No reference to key11 (points to inline object02)
-                   )),
-          // References from values, which don't have any children themselves.
-          Pair(object0->GetIdentifier().object_digest(), IsEmpty()),
-          Pair(object1->GetIdentifier().object_digest(), IsEmpty()),
-          Pair(object2->GetIdentifier().object_digest(), IsEmpty())));
+  EXPECT_THAT(fake_storage_.GetReferences(),
+              // All the pieces are small enough not to get split so we know all objects
+              // and can exhaustively enumerate references.
+              UnorderedElementsAre(
+                  // References from the root piece.
+                  Pair(root->GetIdentifier().object_digest(),
+                       UnorderedElementsAre(
+                           // Keys
+                           Pair(digest1, KeyPriority::LAZY),   // key03
+                           Pair(digest1, KeyPriority::EAGER),  // key07
+                           // Children
+                           Pair(child0->GetIdentifier().object_digest(), KeyPriority::EAGER),
+                           Pair(child1->GetIdentifier().object_digest(), KeyPriority::EAGER),
+                           Pair(child2->GetIdentifier().object_digest(), KeyPriority::EAGER))),
+                  // References from each child, which don't have any children
+                  // themselves, but reference values.
+                  Pair(child0->GetIdentifier().object_digest(),
+                       UnorderedElementsAre(Pair(digest0, KeyPriority::LAZY),   // key00
+                                            Pair(digest1, KeyPriority::EAGER),  // key01
+                                            Pair(digest0, KeyPriority::EAGER)   // key02
+                                            )),
+                  Pair(child1->GetIdentifier().object_digest(),
+                       UnorderedElementsAre(Pair(digest0, KeyPriority::LAZY),  // key04 and key06
+                                            Pair(digest1, KeyPriority::EAGER)  // key05
+                                            )),
+                  Pair(child2->GetIdentifier().object_digest(),
+                       UnorderedElementsAre(Pair(digest0, KeyPriority::EAGER),  // key08 and key10
+                                            Pair(digest1, KeyPriority::LAZY)    // key09
+                                            // No reference to key11 (points to inline object02)
+                                            )),
+                  // References from values, which don't have any children themselves.
+                  Pair(object0->GetIdentifier().object_digest(), IsEmpty()),
+                  Pair(object1->GetIdentifier().object_digest(), IsEmpty()),
+                  Pair(object2->GetIdentifier().object_digest(), IsEmpty())));
 }
 
 }  // namespace

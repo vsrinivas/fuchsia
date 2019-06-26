@@ -25,9 +25,8 @@ class LedgerSyncImpl : public LedgerSync {
   ~LedgerSyncImpl() override;
 
   // LedgerSync:
-  std::unique_ptr<PageSync> CreatePageSync(
-      storage::PageStorage* page_storage,
-      storage::PageSyncClient* page_sync_client) override;
+  std::unique_ptr<PageSync> CreatePageSync(storage::PageStorage* page_storage,
+                                           storage::PageSyncClient* page_sync_client) override;
 
  private:
   std::unique_ptr<cloud_sync::LedgerSync> const cloud_sync_;

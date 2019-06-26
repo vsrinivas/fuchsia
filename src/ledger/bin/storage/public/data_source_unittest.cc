@@ -16,8 +16,8 @@ namespace {
 
 class DataSourceTest : public gtest::TestLoopFixture {
  protected:
-  ::testing::AssertionResult TestDataSource(
-      std::string expected, std::unique_ptr<DataSource> source) {
+  ::testing::AssertionResult TestDataSource(std::string expected,
+                                            std::unique_ptr<DataSource> source) {
     std::string result;
     DataSource::Status status;
 
@@ -34,13 +34,11 @@ class DataSourceTest : public gtest::TestLoopFixture {
 
     if (status != DataSource::Status::DONE) {
       return ::testing::AssertionFailure()
-             << "Expected: " << DataSource::Status::DONE
-             << ", but got: " << status;
+             << "Expected: " << DataSource::Status::DONE << ", but got: " << status;
     }
 
     if (expected != result) {
-      return ::testing::AssertionFailure()
-             << "Expected: " << expected << ", but got: " << result;
+      return ::testing::AssertionFailure() << "Expected: " << expected << ", but got: " << result;
     }
 
     return ::testing::AssertionSuccess();
@@ -75,20 +73,17 @@ TEST_F(DataSourceTest, Vmo) {
 TEST_F(DataSourceTest, Socket) {
   std::string value = "Hello World";
 
-  EXPECT_TRUE(TestDataSource(
-      value,
-      DataSource::Create(fsl::WriteStringToSocket(value), value.size())));
+  EXPECT_TRUE(
+      TestDataSource(value, DataSource::Create(fsl::WriteStringToSocket(value), value.size())));
 }
 
 TEST_F(DataSourceTest, SocketWrongSize) {
   std::string value = "Hello World";
 
-  EXPECT_FALSE(TestDataSource(
-      value,
-      DataSource::Create(fsl::WriteStringToSocket(value), value.size() - 1)));
-  EXPECT_FALSE(TestDataSource(
-      value,
-      DataSource::Create(fsl::WriteStringToSocket(value), value.size() + 1)));
+  EXPECT_FALSE(
+      TestDataSource(value, DataSource::Create(fsl::WriteStringToSocket(value), value.size() - 1)));
+  EXPECT_FALSE(
+      TestDataSource(value, DataSource::Create(fsl::WriteStringToSocket(value), value.size() + 1)));
 }
 
 TEST_F(DataSourceTest, SocketMultipleChunk) {
@@ -98,25 +93,23 @@ TEST_F(DataSourceTest, SocketMultipleChunk) {
   DataSource::Status status;
 
   socket::SocketPair socket_pair;
-  auto data_source = DataSource::Create(std::move(socket_pair.socket2),
-                                        nb_iterations * value.size());
+  auto data_source =
+      DataSource::Create(std::move(socket_pair.socket2), nb_iterations * value.size());
 
-  data_source->Get(
-      [&chunks, &status](std::unique_ptr<DataSource::DataChunk> chunk,
-                         DataSource::Status new_status) {
-        EXPECT_NE(DataSource::Status::ERROR, new_status);
-        if (new_status == DataSource::Status::TO_BE_CONTINUED) {
-          chunks.push_back(chunk->Get().ToString());
-        }
-        status = new_status;
-      });
+  data_source->Get([&chunks, &status](std::unique_ptr<DataSource::DataChunk> chunk,
+                                      DataSource::Status new_status) {
+    EXPECT_NE(DataSource::Status::ERROR, new_status);
+    if (new_status == DataSource::Status::TO_BE_CONTINUED) {
+      chunks.push_back(chunk->Get().ToString());
+    }
+    status = new_status;
+  });
 
   for (size_t i = 0; i < nb_iterations; ++i) {
     EXPECT_EQ(i, chunks.size());
 
     size_t actual = 0;
-    EXPECT_EQ(ZX_OK, socket_pair.socket1.write(0, value.c_str(), value.size(),
-                                               &actual));
+    EXPECT_EQ(ZX_OK, socket_pair.socket1.write(0, value.c_str(), value.size(), &actual));
     EXPECT_EQ(value.size(), actual);
 
     RunLoopUntilIdle();
