@@ -252,7 +252,7 @@ zx_status_t NandPartDevice::BadBlockGetBadBlockList(
 
     if (!bad_block_list_) {
         const zx_status_t status = bad_block_->GetBadBlockList(
-            erase_block_start_, erase_block_start_ + nand_info_.num_blocks, &bad_block_list_);
+            erase_block_start_, erase_block_start_ + nand_info_.num_blocks - 1, &bad_block_list_);
         if (status != ZX_OK) {
             return status;
         }

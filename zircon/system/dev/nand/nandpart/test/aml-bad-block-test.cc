@@ -449,5 +449,25 @@ TEST(AmlBadBlockTest, MarkBlockBadFullBlockTest) {
     ASSERT_TRUE(it != table_entries.end());
 }
 
+TEST(AmlBadBlockTest, BootloaderQuirkTest) {
+    TableNode::ResetCount();
+    TableEntries table_entries;
+    fbl::Vector<uint32_t> bad_blocks_1 = {8, 9, 10, 11, 12};
+    table_entries.insert_or_replace(std::make_unique<TableNode>(kPagesPerBlock,
+                                                                std::move(bad_blocks_1)));
+    Context context = {
+        .table_entries = table_entries,
+    };
+
+    fbl::RefPtr<BadBlock> bad_block;
+    zx_status_t status = BadBlock::Create(MakeBadBlockConfig(&context), &bad_block);
+    ASSERT_EQ(status, ZX_OK);
+
+    fbl::Array<uint32_t> bad_blocks;
+    status = bad_block->GetBadBlockList(4, 10, &bad_blocks);
+    ASSERT_EQ(status, ZX_OK);
+    ASSERT_EQ(bad_blocks.size(), 3);
+}
+
 } // namespace
 } // namespace nand

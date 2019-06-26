@@ -395,6 +395,9 @@ zx_status_t AmlBadBlock::FindBadBlockTable() {
 
 zx_status_t AmlBadBlock::GetBadBlockList(uint32_t first_block, uint32_t last_block,
                                          fbl::Array<uint32_t>* bad_blocks) {
+    // Account for an off-by-one error in the bootloader.
+    last_block++;
+
     fbl::AutoLock al(&lock_);
     if (!table_valid_) {
         const zx_status_t status = FindBadBlockTable();
