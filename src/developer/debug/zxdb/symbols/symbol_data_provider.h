@@ -34,11 +34,9 @@ class Err;
 //
 // This object is reference counted since evaluating a DWARF expression is
 // asynchronous.
-class SymbolDataProvider
-    : public fxl::RefCountedThreadSafe<SymbolDataProvider> {
+class SymbolDataProvider : public fxl::RefCountedThreadSafe<SymbolDataProvider> {
  public:
-  using GetMemoryCallback =
-      std::function<void(const Err&, std::vector<uint8_t>)>;
+  using GetMemoryCallback = std::function<void(const Err&, std::vector<uint8_t>)>;
   using GetRegisterCallback = std::function<void(const Err&, uint64_t)>;
 
   virtual debug_ipc::Arch GetArch();
@@ -52,8 +50,7 @@ class SymbolDataProvider
   // In the synchronous case, we could have the value, but we could also know
   // that the value is not known (e.g. when that register was not saved for the
   // stack frame). The *value will reflect this when the return value is true.
-  virtual bool GetRegister(debug_ipc::RegisterID id,
-                           std::optional<uint64_t>* value);
+  virtual bool GetRegister(debug_ipc::RegisterID id, std::optional<uint64_t>* value);
 
   // Request for register data with an asynchronous callback. The callback will
   // be issued when the register data is available.
@@ -62,8 +59,7 @@ class SymbolDataProvider
   // the register is not available now (maybe the thread is running), success
   // will be set to false. When the register value contains valid data, success
   // will indicate true.
-  virtual void GetRegisterAsync(debug_ipc::RegisterID id,
-                                GetRegisterCallback callback);
+  virtual void GetRegisterAsync(debug_ipc::RegisterID id, GetRegisterCallback callback);
 
   // Synchronously returns the frame base pointer if possible. As with
   // GetRegister, if this is not available the implementation should call
@@ -89,8 +85,7 @@ class SymbolDataProvider
   // It will read valid memory up to the maximum. It will do short reads if it
   // encounters invalid memory, so the result may be shorter than requested
   // or empty (if the first byte is invalid).
-  virtual void GetMemoryAsync(uint64_t address, uint32_t size,
-                              GetMemoryCallback callback);
+  virtual void GetMemoryAsync(uint64_t address, uint32_t size, GetMemoryCallback callback);
 
   // Asynchronously writes to the given memory. The callback will be issued
   // when the write is complete.

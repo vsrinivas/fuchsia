@@ -17,8 +17,7 @@ namespace {
 constexpr int kMaxAbstractOriginRefsToFollow = 8;
 
 // Decodes a cross-DIE reference. Return value will be !isValid() on failure.
-llvm::DWARFDie DecodeReference(llvm::DWARFUnit* unit,
-                               const llvm::DWARFFormValue& form) {
+llvm::DWARFDie DecodeReference(llvm::DWARFUnit* unit, const llvm::DWARFFormValue& form) {
   switch (form.getForm()) {
     case llvm::dwarf::DW_FORM_ref1:
     case llvm::dwarf::DW_FORM_ref2:
@@ -51,22 +50,16 @@ llvm::DWARFDie DecodeReference(llvm::DWARFUnit* unit,
 
 }  // namespace
 
-DwarfDieDecoder::DwarfDieDecoder(llvm::DWARFContext* context,
-                                 llvm::DWARFUnit* unit)
-    : context_(context),
-      unit_(unit),
-      extractor_(unit_->getDebugInfoExtractor()) {}
+DwarfDieDecoder::DwarfDieDecoder(llvm::DWARFContext* context, llvm::DWARFUnit* unit)
+    : context_(context), unit_(unit), extractor_(unit_->getDebugInfoExtractor()) {}
 
 DwarfDieDecoder::~DwarfDieDecoder() = default;
 
-void DwarfDieDecoder::AddPresenceCheck(llvm::dwarf::Attribute attribute,
-                                       bool* present) {
-  attrs_.emplace_back(
-      attribute, [present](const llvm::DWARFFormValue&) { *present = true; });
+void DwarfDieDecoder::AddPresenceCheck(llvm::dwarf::Attribute attribute, bool* present) {
+  attrs_.emplace_back(attribute, [present](const llvm::DWARFFormValue&) { *present = true; });
 }
 
-void DwarfDieDecoder::AddBool(llvm::dwarf::Attribute attribute,
-                              llvm::Optional<bool>* output) {
+void DwarfDieDecoder::AddBool(llvm::dwarf::Attribute attribute, llvm::Optional<bool>* output) {
   attrs_.emplace_back(attribute, [output](const llvm::DWARFFormValue& form) {
     *output = !!form.getAsUnsignedConstant();
   });
@@ -88,55 +81,49 @@ void DwarfDieDecoder::AddSignedConstant(llvm::dwarf::Attribute attribute,
 
 void DwarfDieDecoder::AddAddress(llvm::dwarf::Attribute attribute,
                                  llvm::Optional<uint64_t>* output) {
-  attrs_.emplace_back(attribute, [output](const llvm::DWARFFormValue& form) {
-    *output = form.getAsAddress();
-  });
+  attrs_.emplace_back(
+      attribute, [output](const llvm::DWARFFormValue& form) { *output = form.getAsAddress(); });
 }
 
 void DwarfDieDecoder::AddHighPC(llvm::Optional<HighPC>* output) {
-  attrs_.emplace_back(
-      llvm::dwarf::DW_AT_high_pc, [output](const llvm::DWARFFormValue& form) {
-        if (form.isFormClass(llvm::DWARFFormValue::FC_Constant)) {
-          auto as_constant = form.getAsUnsignedConstant();
-          if (as_constant)
-            *output = HighPC(true, *as_constant);
-        } else if (form.isFormClass(llvm::DWARFFormValue::FC_Address)) {
-          auto as_addr = form.getAsAddress();
-          if (as_addr)
-            *output = HighPC(false, *as_addr);
-        }
-      });
+  attrs_.emplace_back(llvm::dwarf::DW_AT_high_pc, [output](const llvm::DWARFFormValue& form) {
+    if (form.isFormClass(llvm::DWARFFormValue::FC_Constant)) {
+      auto as_constant = form.getAsUnsignedConstant();
+      if (as_constant)
+        *output = HighPC(true, *as_constant);
+    } else if (form.isFormClass(llvm::DWARFFormValue::FC_Address)) {
+      auto as_addr = form.getAsAddress();
+      if (as_addr)
+        *output = HighPC(false, *as_addr);
+    }
+  });
 }
 
 void DwarfDieDecoder::AddCString(llvm::dwarf::Attribute attribute,
                                  llvm::Optional<const char*>* output) {
-  attrs_.emplace_back(attribute, [output](const llvm::DWARFFormValue& form) {
-    *output = form.getAsCString();
-  });
+  attrs_.emplace_back(
+      attribute, [output](const llvm::DWARFFormValue& form) { *output = form.getAsCString(); });
 }
 
 void DwarfDieDecoder::AddLineTableFile(llvm::dwarf::Attribute attribute,
                                        llvm::Optional<std::string>* output) {
-  const llvm::DWARFDebugLine::LineTable* line_table =
-      context_->getLineTableForUnit(unit_);
+  const llvm::DWARFDebugLine::LineTable* line_table = context_->getLineTableForUnit(unit_);
   const char* compilation_dir = unit_->getCompilationDir();
   if (line_table) {
-    attrs_.emplace_back(attribute, [output, compilation_dir, line_table](
-                                       const llvm::DWARFFormValue& form) {
-      output->emplace();
-      line_table->getFileNameByIndex(
-          form.getAsUnsignedConstant().getValue(), compilation_dir,
-          llvm::DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath,
-          output->getValue());
-    });
+    attrs_.emplace_back(
+        attribute, [output, compilation_dir, line_table](const llvm::DWARFFormValue& form) {
+          output->emplace();
+          line_table->getFileNameByIndex(
+              form.getAsUnsignedConstant().getValue(), compilation_dir,
+              llvm::DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath, output->getValue());
+        });
   }
 }
 
 void DwarfDieDecoder::AddReference(llvm::dwarf::Attribute attribute,
                                    llvm::Optional<uint64_t>* unit_offset,
                                    llvm::Optional<uint64_t>* global_offset) {
-  attrs_.emplace_back(attribute, [unit_offset, global_offset](
-                                     const llvm::DWARFFormValue& form) {
+  attrs_.emplace_back(attribute, [unit_offset, global_offset](const llvm::DWARFFormValue& form) {
     // See DecodeReference() function above for more info.
     switch (form.getForm()) {
       case llvm::dwarf::DW_FORM_ref1:
@@ -155,33 +142,28 @@ void DwarfDieDecoder::AddReference(llvm::dwarf::Attribute attribute,
   });
 }
 
-void DwarfDieDecoder::AddReference(llvm::dwarf::Attribute attribute,
-                                   llvm::DWARFDie* output) {
-  attrs_.emplace_back(attribute,
-                      [this, output](const llvm::DWARFFormValue& form) {
-                        *output = DecodeReference(unit_, form);
-                      });
+void DwarfDieDecoder::AddReference(llvm::dwarf::Attribute attribute, llvm::DWARFDie* output) {
+  attrs_.emplace_back(attribute, [this, output](const llvm::DWARFFormValue& form) {
+    *output = DecodeReference(unit_, form);
+  });
 }
 
 void DwarfDieDecoder::AddFile(llvm::dwarf::Attribute attribute,
                               llvm::Optional<std::string>* output) {
-  attrs_.emplace_back(
-      attribute, [this, output](const llvm::DWARFFormValue& form) {
-        llvm::Optional<uint64_t> file_index = form.getAsUnsignedConstant();
-        if (!file_index)
-          return;
+  attrs_.emplace_back(attribute, [this, output](const llvm::DWARFFormValue& form) {
+    llvm::Optional<uint64_t> file_index = form.getAsUnsignedConstant();
+    if (!file_index)
+      return;
 
-        const llvm::DWARFDebugLine::LineTable* line_table =
-            context_->getLineTableForUnit(unit_);
-        const char* compilation_dir = unit_->getCompilationDir();
+    const llvm::DWARFDebugLine::LineTable* line_table = context_->getLineTableForUnit(unit_);
+    const char* compilation_dir = unit_->getCompilationDir();
 
-        std::string file_name;
-        if (line_table->getFileNameByIndex(
-                *file_index, compilation_dir,
-                llvm::DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath,
-                file_name))
-          *output = std::move(file_name);
-      });
+    std::string file_name;
+    if (line_table->getFileNameByIndex(
+            *file_index, compilation_dir,
+            llvm::DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath, file_name))
+      *output = std::move(file_name);
+  });
 }
 
 void DwarfDieDecoder::AddAbstractParent(llvm::DWARFDie* output) {
@@ -189,15 +171,12 @@ void DwarfDieDecoder::AddAbstractParent(llvm::DWARFDie* output) {
   abstract_parent_ = output;
 }
 
-void DwarfDieDecoder::AddCustom(
-    llvm::dwarf::Attribute attribute,
-    std::function<void(const llvm::DWARFFormValue&)> callback) {
+void DwarfDieDecoder::AddCustom(llvm::dwarf::Attribute attribute,
+                                std::function<void(const llvm::DWARFFormValue&)> callback) {
   attrs_.emplace_back(attribute, std::move(callback));
 }
 
-bool DwarfDieDecoder::Decode(const llvm::DWARFDie& die) {
-  return Decode(*die.getDebugInfoEntry());
-}
+bool DwarfDieDecoder::Decode(const llvm::DWARFDie& die) { return Decode(*die.getDebugInfoEntry()); }
 
 bool DwarfDieDecoder::Decode(const llvm::DWARFDebugInfoEntry& die) {
   seen_attrs_.clear();
@@ -217,8 +196,7 @@ bool DwarfDieDecoder::DecodeInternal(const llvm::DWARFDebugInfoEntry& die,
   //    entry in that table declares its own tag so it's not an index or an
   //    offset). The abbreviation entry indicates the attributes that this
   //    type of DIE contains, plus the data format for each.
-  const llvm::DWARFAbbreviationDeclaration* abbrev =
-      die.getAbbreviationDeclarationPtr();
+  const llvm::DWARFAbbreviationDeclaration* abbrev = die.getAbbreviationDeclarationPtr();
   if (!abbrev)
     return false;
 
@@ -235,8 +213,7 @@ bool DwarfDieDecoder::DecodeInternal(const llvm::DWARFDebugInfoEntry& die,
   // Set when we encounter an abstract origin attribute.
   llvm::DWARFDie abstract_origin;
 
-  for (const llvm::DWARFAbbreviationDeclaration::AttributeSpec& spec :
-       abbrev->attributes()) {
+  for (const llvm::DWARFAbbreviationDeclaration::AttributeSpec& spec : abbrev->attributes()) {
     // Set to true when the form_value has been decoded. Otherwise, the value
     // needs to be skipped to advance through the data.
     bool decoded_current = false;
@@ -251,8 +228,7 @@ bool DwarfDieDecoder::DecodeInternal(const llvm::DWARFDebugInfoEntry& die,
       // Abtract origins are handled after loop completion. Explicitly don't
       // check for duplicate attributes in this case so we can follow more than
       // one link in the chain.
-      form_value.extractValue(extractor_, &offset, unit_->getFormParams(),
-                              unit_);
+      form_value.extractValue(extractor_, &offset, unit_->getFormParams(), unit_);
       abstract_origin = DecodeReference(unit_, form_value);
       decoded_current = true;
     } else {
@@ -262,8 +238,7 @@ bool DwarfDieDecoder::DecodeInternal(const llvm::DWARFDebugInfoEntry& die,
       // because the typical number of attributes is small enough that this
       // should be more efficient than a set which requires per-element heap
       // allocations.
-      if (std::find(seen_attrs_.begin(), seen_attrs_.end(), spec.Attr) !=
-          seen_attrs_.end())
+      if (std::find(seen_attrs_.begin(), seen_attrs_.end(), spec.Attr) != seen_attrs_.end())
         needs_dispatch = false;
       else
         seen_attrs_.push_back(spec.Attr);
@@ -277,8 +252,7 @@ bool DwarfDieDecoder::DecodeInternal(const llvm::DWARFDebugInfoEntry& die,
 
         // Found the attribute, dispatch it and mark it read.
         if (!decoded_current) {
-          form_value.extractValue(extractor_, &offset, unit_->getFormParams(),
-                                  unit_);
+          form_value.extractValue(extractor_, &offset, unit_->getFormParams(), unit_);
           decoded_current = true;
         }
         dispatch.second(form_value);
@@ -295,8 +269,7 @@ bool DwarfDieDecoder::DecodeInternal(const llvm::DWARFDebugInfoEntry& die,
   // Recursively decode abstract origins. The attributes on the abstract origin
   // DIE "underlay" any attributes present on the current one.
   if (abstract_origin.isValid() && abstract_origin_refs_to_follow > 0) {
-    return DecodeInternal(*abstract_origin.getDebugInfoEntry(),
-                          abstract_origin_refs_to_follow - 1);
+    return DecodeInternal(*abstract_origin.getDebugInfoEntry(), abstract_origin_refs_to_follow - 1);
   } else {
     // The deepest DIE in the abstract origin chain was found (which will be
     // the original DIE itself if there was no abstract origin).

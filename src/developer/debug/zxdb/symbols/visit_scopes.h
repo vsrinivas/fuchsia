@@ -33,9 +33,8 @@ VisitResult VisitLocalBlocks(const CodeBlock* starting,
 //
 // The callback takes the current collection being iterated, as well as the
 // offset of that collection from the beginning of the starting collection.
-VisitResult VisitClassHierarchy(
-    const Collection* starting,
-    std::function<VisitResult(const Collection*, uint64_t offset)> cb);
+VisitResult VisitClassHierarchy(const Collection* starting,
+                                std::function<VisitResult(const Collection*, uint64_t offset)> cb);
 
 }  // namespace zxdb
 

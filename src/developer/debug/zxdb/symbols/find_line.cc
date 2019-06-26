@@ -16,8 +16,8 @@ enum class FileChecked { kUnchecked = 0, kMatch, kNoMatch };
 
 }  // namespace
 
-std::vector<LineMatch> GetAllLineTableMatchesInUnit(
-    const LineTable& line_table, const std::string& full_path, int line) {
+std::vector<LineMatch> GetAllLineTableMatchesInUnit(const LineTable& line_table,
+                                                    const std::string& full_path, int line) {
   std::vector<LineMatch> result;
 
   // The file table usually has a bunch of entries not referenced by the line
@@ -76,9 +76,8 @@ std::vector<LineMatch> GetAllLineTableMatchesInUnit(
         if (row_line == best_line) {
           // Accumulate all matching results.
           auto subroutine = line_table.GetSubroutineForRow(row);
-          result.emplace_back(
-              row.Address, row_line,
-              subroutine.isValid() ? subroutine.getOffset() : 0);
+          result.emplace_back(row.Address, row_line,
+                              subroutine.isValid() ? subroutine.getOffset() : 0);
         }
       }
     }
@@ -87,14 +86,13 @@ std::vector<LineMatch> GetAllLineTableMatchesInUnit(
   return result;
 }
 
-std::vector<LineMatch> GetBestLineMatches(
-    const std::vector<LineMatch>& matches) {
+std::vector<LineMatch> GetBestLineMatches(const std::vector<LineMatch>& matches) {
   // The lowest line is tbe "best" match because GetAllLineTableMatchesInUnit()
   // returns the next row for all pairs that cross the line in question. The
   // lowest of the "next" rows will be the closest line.
-  auto min_elt_iter = std::min_element(
-      matches.begin(), matches.end(),
-      [](const LineMatch& a, const LineMatch& b) { return a.line < b.line; });
+  auto min_elt_iter =
+      std::min_element(matches.begin(), matches.end(),
+                       [](const LineMatch& a, const LineMatch& b) { return a.line < b.line; });
 
   // This will be populated with all matches for the line equal to the best
   // one (one line can match many addresses depending on inlining and code

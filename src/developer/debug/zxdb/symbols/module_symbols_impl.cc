@@ -48,8 +48,7 @@ class GlobalSymbolDataProvider : public SymbolDataProvider {
 
   // SymbolDataProvider implementation.
   debug_ipc::Arch GetArch() override { return debug_ipc::Arch::kUnknown; }
-  void GetRegisterAsync(debug_ipc::RegisterID,
-                        GetRegisterCallback callback) override {
+  void GetRegisterAsync(debug_ipc::RegisterID, GetRegisterCallback callback) override {
     debug_ipc::MessageLoop::Current()->PostTask(
         FROM_HERE, [cb = std::move(callback)]() { cb(GetContextError(), 0); });
   }
@@ -57,22 +56,18 @@ class GlobalSymbolDataProvider : public SymbolDataProvider {
     debug_ipc::MessageLoop::Current()->PostTask(
         FROM_HERE, [cb = std::move(callback)]() { cb(GetContextError(), 0); });
   }
-  void GetMemoryAsync(uint64_t address, uint32_t size,
-                      GetMemoryCallback callback) override {
+  void GetMemoryAsync(uint64_t address, uint32_t size, GetMemoryCallback callback) override {
     debug_ipc::MessageLoop::Current()->PostTask(
-        FROM_HERE, [cb = std::move(callback)]() {
-          cb(GetContextError(), std::vector<uint8_t>());
-        });
+        FROM_HERE, [cb = std::move(callback)]() { cb(GetContextError(), std::vector<uint8_t>()); });
   }
   void WriteMemory(uint64_t address, std::vector<uint8_t> data,
                    std::function<void(const Err&)> cb) override {
-    debug_ipc::MessageLoop::Current()->PostTask(
-        FROM_HERE, [cb = std::move(cb)]() { cb(GetContextError()); });
+    debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE,
+                                                [cb = std::move(cb)]() { cb(GetContextError()); });
   }
 };
 
-bool SameFileLine(const llvm::DWARFDebugLine::Row& a,
-                  const llvm::DWARFDebugLine::Row& b) {
+bool SameFileLine(const llvm::DWARFDebugLine::Row& a, const llvm::DWARFDebugLine::Row& b) {
   return a.File == b.File && a.Line == b.Line;
 }
 
@@ -80,8 +75,7 @@ bool SameFileLine(const llvm::DWARFDebugLine::Row& a,
 // returns the name of that symbol (with the "@plt" annotation stripped). If it
 // does not, returns a null optional.
 std::optional<std::string> GetPLTInputLocation(const InputLocation& loc) {
-  if (loc.type != InputLocation::Type::kSymbol ||
-      loc.symbol.components().size() != 1)
+  if (loc.type != InputLocation::Type::kSymbol || loc.symbol.components().size() != 1)
     return std::nullopt;
 
   const IdentifierComponent& comp = loc.symbol.components()[0];
@@ -94,21 +88,16 @@ std::optional<std::string> GetPLTInputLocation(const InputLocation& loc) {
 // Returns true if the given input references the special "main" function
 // annotation.
 bool ReferencesMainFunction(const InputLocation& loc) {
-  if (loc.type != InputLocation::Type::kSymbol ||
-      loc.symbol.components().size() != 1)
+  if (loc.type != InputLocation::Type::kSymbol || loc.symbol.components().size() != 1)
     return false;
   return loc.symbol.components()[0].name() == "@main";
 }
 
 }  // namespace
 
-ModuleSymbolsImpl::ModuleSymbolsImpl(const std::string& name,
-                                     const std::string& binary_name,
+ModuleSymbolsImpl::ModuleSymbolsImpl(const std::string& name, const std::string& binary_name,
                                      const std::string& build_id)
-    : name_(name),
-      binary_name_(binary_name),
-      build_id_(build_id),
-      weak_factory_(this) {
+    : name_(name), binary_name_(binary_name), build_id_(build_id), weak_factory_(this) {
   symbol_factory_ = fxl::MakeRefCounted<DwarfSymbolFactory>(GetWeakPtr());
 }
 
@@ -121,7 +110,7 @@ fxl::WeakPtr<ModuleSymbolsImpl> ModuleSymbolsImpl::GetWeakPtr() {
 ModuleSymbolStatus ModuleSymbolsImpl::GetStatus() const {
   ModuleSymbolStatus status;
   status.build_id = build_id_;
-  status.base = 0;  // We don't know this, only ProcessSymbols does.
+  status.base = 0;               // We don't know this, only ProcessSymbols does.
   status.symbols_loaded = true;  // Since this instance exists at all.
   status.functions_indexed = index_.CountSymbolsIndexed();
   status.files_indexed = index_.files_indexed();
@@ -150,15 +139,12 @@ Err ModuleSymbolsImpl::Load() {
   binary_buffer_ = std::move(binary_pair.second);
   binary_ = std::move(binary_pair.first);
 
-  llvm::object::ObjectFile* obj =
-      static_cast<llvm::object::ObjectFile*>(binary_.get());
-  context_ = llvm::DWARFContext::create(
-      *obj, nullptr, llvm::DWARFContext::defaultErrorHandler);
+  llvm::object::ObjectFile* obj = static_cast<llvm::object::ObjectFile*>(binary_.get());
+  context_ = llvm::DWARFContext::create(*obj, nullptr, llvm::DWARFContext::defaultErrorHandler);
 
-  context_->getDWARFObj().forEachInfoSections(
-      [this](const llvm::DWARFSection& s) {
-        compile_units_.addUnitsForSection(*context_, s, llvm::DW_SECT_INFO);
-      });
+  context_->getDWARFObj().forEachInfoSections([this](const llvm::DWARFSection& s) {
+    compile_units_.addUnitsForSection(*context_, s, llvm::DW_SECT_INFO);
+  });
 
   // We could consider creating a new binary/object file just for indexing.
   // The indexing will page all of the binary in, and most of it won't be
@@ -171,34 +157,30 @@ Err ModuleSymbolsImpl::Load() {
   return Err();
 }
 
-std::vector<Location> ModuleSymbolsImpl::ResolveInputLocation(
-    const SymbolContext& symbol_context, const InputLocation& input_location,
-    const ResolveOptions& options) const {
+std::vector<Location> ModuleSymbolsImpl::ResolveInputLocation(const SymbolContext& symbol_context,
+                                                              const InputLocation& input_location,
+                                                              const ResolveOptions& options) const {
   switch (input_location.type) {
     case InputLocation::Type::kNone:
       return std::vector<Location>();
     case InputLocation::Type::kLine:
       return ResolveLineInputLocation(symbol_context, input_location, options);
     case InputLocation::Type::kSymbol:
-      return ResolveSymbolInputLocation(symbol_context, input_location,
-                                        options);
+      return ResolveSymbolInputLocation(symbol_context, input_location, options);
     case InputLocation::Type::kAddress:
-      return ResolveAddressInputLocation(symbol_context, input_location,
-                                         options);
+      return ResolveAddressInputLocation(symbol_context, input_location, options);
   }
 }
 
-LineDetails ModuleSymbolsImpl::LineDetailsForAddress(
-    const SymbolContext& symbol_context, uint64_t absolute_address) const {
-  uint64_t relative_address =
-      symbol_context.AbsoluteToRelative(absolute_address);
+LineDetails ModuleSymbolsImpl::LineDetailsForAddress(const SymbolContext& symbol_context,
+                                                     uint64_t absolute_address) const {
+  uint64_t relative_address = symbol_context.AbsoluteToRelative(absolute_address);
 
   llvm::DWARFCompileUnit* unit = llvm::dyn_cast_or_null<llvm::DWARFCompileUnit>(
       CompileUnitForRelativeAddress(relative_address));
   if (!unit)
     return LineDetails();
-  const llvm::DWARFDebugLine::LineTable* line_table =
-      context_->getLineTableForUnit(unit);
+  const llvm::DWARFDebugLine::LineTable* line_table = context_->getLineTableForUnit(unit);
   if (!line_table && line_table->Rows.empty())
     return LineDetails();
 
@@ -211,15 +193,13 @@ LineDetails ModuleSymbolsImpl::LineDetailsForAddress(
   // address isn't an instruction. With this flag, the other information on the
   // line will be irrelevant (in practice it will be the same as for the
   // previous entry).
-  if (found_row_index == line_table->UnknownRowIndex ||
-      rows[found_row_index].EndSequence)
+  if (found_row_index == line_table->UnknownRowIndex || rows[found_row_index].EndSequence)
     return LineDetails();
 
   // Adjust the beginning and end ranges greedily to include all matching
   // entries of the same line.
   uint32_t first_row_index = found_row_index;
-  while (first_row_index > 0 &&
-         SameFileLine(rows[found_row_index], rows[first_row_index - 1])) {
+  while (first_row_index > 0 && SameFileLine(rows[found_row_index], rows[first_row_index - 1])) {
     first_row_index--;
   }
   uint32_t last_row_index = found_row_index;
@@ -231,34 +211,31 @@ LineDetails ModuleSymbolsImpl::LineDetailsForAddress(
   // Resolve the file name.
   const char* compilation_dir = unit->getCompilationDir();
   std::string file_name;
-  line_table->getFileNameByIndex(
-      rows[first_row_index].File, compilation_dir,
-      llvm::DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath, file_name);
+  line_table->getFileNameByIndex(rows[first_row_index].File, compilation_dir,
+                                 llvm::DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath,
+                                 file_name);
 
   LineDetails result(FileLine(file_name, rows[first_row_index].Line));
 
   // Add entries for each row. The last row doesn't count because it should be
   // an end_sequence marker to provide the ending size of the previous entry.
   // So never include that.
-  for (uint32_t i = first_row_index; i <= last_row_index && i < rows.size() - 1;
-       i++) {
+  for (uint32_t i = first_row_index; i <= last_row_index && i < rows.size() - 1; i++) {
     // With loop bounds we can always dereference @ i + 1.
     if (rows[i + 1].Address < rows[i].Address)
       break;  // Going backwards, corrupted so give up.
 
     LineDetails::LineEntry entry;
     entry.column = rows[i].Column;
-    entry.range =
-        AddressRange(symbol_context.RelativeToAbsolute(rows[i].Address),
-                     symbol_context.RelativeToAbsolute(rows[i + 1].Address));
+    entry.range = AddressRange(symbol_context.RelativeToAbsolute(rows[i].Address),
+                               symbol_context.RelativeToAbsolute(rows[i + 1].Address));
     result.entries().push_back(entry);
   }
 
   return result;
 }
 
-std::vector<std::string> ModuleSymbolsImpl::FindFileMatches(
-    std::string_view name) const {
+std::vector<std::string> ModuleSymbolsImpl::FindFileMatches(std::string_view name) const {
   return index_.FindFileMatches(name);
 }
 
@@ -280,15 +257,15 @@ LazySymbol ModuleSymbolsImpl::IndexDieRefToSymbol(
   return symbol_factory_->MakeLazy(die_ref.ToDie(context_.get()));
 }
 
-llvm::DWARFUnit* ModuleSymbolsImpl::CompileUnitForRelativeAddress(
-    uint64_t relative_address) const {
+llvm::DWARFUnit* ModuleSymbolsImpl::CompileUnitForRelativeAddress(uint64_t relative_address) const {
   return compile_units_.getUnitForOffset(
       context_->getDebugAranges()->findAddress(relative_address));
 }
 
-void ModuleSymbolsImpl::AppendLocationForFunction(
-    const SymbolContext& symbol_context, const ResolveOptions& options,
-    const Function* func, std::vector<Location>* result) const {
+void ModuleSymbolsImpl::AppendLocationForFunction(const SymbolContext& symbol_context,
+                                                  const ResolveOptions& options,
+                                                  const Function* func,
+                                                  std::vector<Location>* result) const {
   if (func->code_ranges().empty())
     return;  // No code associated with this.
 
@@ -297,8 +274,7 @@ void ModuleSymbolsImpl::AppendLocationForFunction(
   // simpler and ensures the results are always the same with regard to
   // how things like inlined functions are handled (if the location maps
   // to both a function and an inlined function inside of it).
-  uint64_t abs_addr =
-      symbol_context.RelativeToAbsolute(func->code_ranges()[0].begin());
+  uint64_t abs_addr = symbol_context.RelativeToAbsolute(func->code_ranges()[0].begin());
   if (options.symbolize)
     result->push_back(LocationForAddress(symbol_context, abs_addr));
   else
@@ -310,8 +286,8 @@ std::vector<Location> ModuleSymbolsImpl::ResolveLineInputLocation(
     const ResolveOptions& options) const {
   std::vector<Location> result;
   for (const std::string& file : FindFileMatches(input_location.line.file())) {
-    ResolveLineInputLocationForFile(
-        symbol_context, file, input_location.line.line(), options, &result);
+    ResolveLineInputLocationForFile(symbol_context, file, input_location.line.line(), options,
+                                    &result);
   }
   return result;
 }
@@ -327,8 +303,7 @@ std::vector<Location> ModuleSymbolsImpl::ResolveSymbolInputLocation(
 
     // TODO: We should have a location type that can properly hold names and
     // sizes for PLT entries and other weird symbol-adjacent bits of code.
-    return {Location(Location::State::kAddress,
-                     symbol_context.RelativeToAbsolute(found->second))};
+    return {Location(Location::State::kAddress, symbol_context.RelativeToAbsolute(found->second))};
   }
 
   std::vector<Location> result;
@@ -345,8 +320,7 @@ std::vector<Location> ModuleSymbolsImpl::ResolveSymbolInputLocation(
     } else {
       // Nothing explicitly marked as the main function, fall back on anything
       // in the toplevel namespace named "main".
-      symbol_to_find = Identifier(IdentifierQualification::kGlobal,
-                                  IdentifierComponent("main"));
+      symbol_to_find = Identifier(IdentifierQualification::kGlobal, IdentifierComponent("main"));
 
       // Fall through to symbol finding on the new name.
     }
@@ -363,9 +337,8 @@ std::vector<Location> ModuleSymbolsImpl::ResolveSymbolInputLocation(
       // Symbol is a variable. This will be the case for global variables and
       // file- and class-level statics. This always symbolizes since we
       // already computed the symbol.
-      result.push_back(LocationForVariable(
-          symbol_context,
-          fxl::RefPtr<Variable>(const_cast<Variable*>(variable))));
+      result.push_back(LocationForVariable(symbol_context,
+                                           fxl::RefPtr<Variable>(const_cast<Variable*>(variable))));
     } else {
       // Unknown type of symbol.
       continue;
@@ -379,8 +352,7 @@ std::vector<Location> ModuleSymbolsImpl::ResolveAddressInputLocation(
     const ResolveOptions& options) const {
   std::vector<Location> result;
   if (options.symbolize) {
-    result.push_back(
-        LocationForAddress(symbol_context, input_location.address));
+    result.push_back(LocationForAddress(symbol_context, input_location.address));
   } else {
     result.emplace_back(Location::State::kAddress, input_location.address);
   }
@@ -390,11 +362,10 @@ std::vector<Location> ModuleSymbolsImpl::ResolveAddressInputLocation(
 // This function is similar to llvm::DWARFContext::getLineInfoForAddress
 // but we can't use that because we want the actual DIE reference to the
 // function rather than its name.
-Location ModuleSymbolsImpl::LocationForAddress(
-    const SymbolContext& symbol_context, uint64_t absolute_address) const {
+Location ModuleSymbolsImpl::LocationForAddress(const SymbolContext& symbol_context,
+                                               uint64_t absolute_address) const {
   // TODO(DX-695) handle addresses that aren't code like global variables.
-  uint64_t relative_address =
-      symbol_context.AbsoluteToRelative(absolute_address);
+  uint64_t relative_address = symbol_context.AbsoluteToRelative(absolute_address);
   llvm::DWARFUnit* unit = CompileUnitForRelativeAddress(relative_address);
   if (!unit)  // No symbol
     return Location(Location::State::kSymbolized, absolute_address);
@@ -407,29 +378,24 @@ Location ModuleSymbolsImpl::LocationForAddress(
     lazy_function = symbol_factory_->MakeLazy(subroutine);
 
   // Get the file/line location (may fail).
-  const llvm::DWARFDebugLine::LineTable* line_table =
-      context_->getLineTableForUnit(unit);
+  const llvm::DWARFDebugLine::LineTable* line_table = context_->getLineTableForUnit(unit);
   if (line_table) {
     llvm::DILineInfo line_info;
     if (line_table->getFileLineInfoForAddress(
             relative_address, unit->getCompilationDir(),
-            llvm::DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath,
-            line_info)) {
+            llvm::DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath, line_info)) {
       // Line info present.
-      return Location(absolute_address,
-                      FileLine(std::move(line_info.FileName), line_info.Line),
-                      line_info.Column, symbol_context,
-                      std::move(lazy_function));
+      return Location(absolute_address, FileLine(std::move(line_info.FileName), line_info.Line),
+                      line_info.Column, symbol_context, std::move(lazy_function));
     }
   }
 
   // No line information.
-  return Location(absolute_address, FileLine(), 0, symbol_context,
-                  std::move(lazy_function));
+  return Location(absolute_address, FileLine(), 0, symbol_context, std::move(lazy_function));
 }
 
-Location ModuleSymbolsImpl::LocationForVariable(
-    const SymbolContext& symbol_context, fxl::RefPtr<Variable> variable) const {
+Location ModuleSymbolsImpl::LocationForVariable(const SymbolContext& symbol_context,
+                                                fxl::RefPtr<Variable> variable) const {
   // Evaluate the DWARF expression for the variable. Global and static
   // variables' locations aren't based on CPU state. In some cases like TLS
   // the location may require CPU state or may result in a constant instead
@@ -443,8 +409,7 @@ Location ModuleSymbolsImpl::LocationForVariable(
 
   auto global_data_provider = fxl::MakeRefCounted<GlobalSymbolDataProvider>();
   DwarfExprEval eval;
-  eval.Eval(global_data_provider, symbol_context,
-            variable->location().locations()[0].expression,
+  eval.Eval(global_data_provider, symbol_context, variable->location().locations()[0].expression,
             [](DwarfExprEval* eval, const Err& err) {});
 
   // Only evaluate synchronous outputs that result in a pointer.
@@ -455,8 +420,7 @@ Location ModuleSymbolsImpl::LocationForVariable(
   // TODO(brettw) in all of the return cases we could in the future fill in the
   // file/line of the definition of the variable. Currently Variables don't
   // provide that (even though it's usually in the DWARF symbols).
-  return Location(eval.GetResult(), FileLine(), 0, symbol_context,
-                  LazySymbol(std::move(variable)));
+  return Location(eval.GetResult(), FileLine(), 0, symbol_context, LazySymbol(std::move(variable)));
 }
 
 // To a first approximation we just look up the line in the line table for
@@ -479,12 +443,12 @@ Location ModuleSymbolsImpl::LocationForVariable(
 //    exact same line. Only keep the first match per function or inlined
 //    function to catch the case where a line is spread across multiple line
 //    table entries.
-void ModuleSymbolsImpl::ResolveLineInputLocationForFile(
-    const SymbolContext& symbol_context, const std::string& canonical_file,
-    int line_number, const ResolveOptions& options,
-    std::vector<Location>* output) const {
-  const std::vector<unsigned>* units =
-      index_.FindFileUnitIndices(canonical_file);
+void ModuleSymbolsImpl::ResolveLineInputLocationForFile(const SymbolContext& symbol_context,
+                                                        const std::string& canonical_file,
+                                                        int line_number,
+                                                        const ResolveOptions& options,
+                                                        std::vector<Location>* output) const {
+  const std::vector<unsigned>* units = index_.FindFileUnitIndices(canonical_file);
   if (!units)
     return;
 

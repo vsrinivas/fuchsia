@@ -25,45 +25,37 @@ TEST(ModuleSymbolIndex, FindExactFunction) {
   index.CreateIndex(module.object_file());
 
   // Standalone function search.
-  auto result = index.FindExact(
-      TestSymbolModule::SplitName(TestSymbolModule::kMyFunctionName));
+  auto result = index.FindExact(TestSymbolModule::SplitName(TestSymbolModule::kMyFunctionName));
   EXPECT_EQ(1u, result.size()) << "Symbol not found.";
 
   // Standalone function inside a named namespace.
-  result = index.FindExact(
-      TestSymbolModule::SplitName(TestSymbolModule::kNamespaceFunctionName));
+  result = index.FindExact(TestSymbolModule::SplitName(TestSymbolModule::kNamespaceFunctionName));
   EXPECT_EQ(1u, result.size()) << "Symbol not found.";
 
   // Standalone function inside an anonymous namespace. Currently this is
   // indexed as if the anonymous namespace wasn't there, but this may need to
   // change in the future.
-  result = index.FindExact(
-      TestSymbolModule::SplitName(TestSymbolModule::kAnonNSFunctionName));
+  result = index.FindExact(TestSymbolModule::SplitName(TestSymbolModule::kAnonNSFunctionName));
   EXPECT_EQ(1u, result.size()) << "Symbol not found.";
 
   // Namespace + class member function search.
-  result = index.FindExact(
-      TestSymbolModule::SplitName(TestSymbolModule::kMyMemberOneName));
+  result = index.FindExact(TestSymbolModule::SplitName(TestSymbolModule::kMyMemberOneName));
   EXPECT_EQ(1u, result.size()) << "Symbol not found.";
 
   // Same but in the 2nd compilation unit (tests unit-relative addressing).
-  result = index.FindExact(
-      TestSymbolModule::SplitName(TestSymbolModule::kFunctionInTest2Name));
+  result = index.FindExact(TestSymbolModule::SplitName(TestSymbolModule::kFunctionInTest2Name));
   EXPECT_EQ(1u, result.size()) << "Symbol not found.";
 
   // Namespace + class + struct with static member function search.
-  result = index.FindExact(
-      TestSymbolModule::SplitName(TestSymbolModule::kMyMemberTwoName));
+  result = index.FindExact(TestSymbolModule::SplitName(TestSymbolModule::kMyMemberTwoName));
   EXPECT_EQ(1u, result.size()) << "Symbol not found.";
 
   // Global variable.
-  result = index.FindExact(
-      TestSymbolModule::SplitName(TestSymbolModule::kGlobalName));
+  result = index.FindExact(TestSymbolModule::SplitName(TestSymbolModule::kGlobalName));
   EXPECT_EQ(1u, result.size()) << "Symbol not found.";
 
   // Class static variable.
-  result = index.FindExact(
-      TestSymbolModule::SplitName(TestSymbolModule::kClassStaticName));
+  result = index.FindExact(TestSymbolModule::SplitName(TestSymbolModule::kClassStaticName));
   EXPECT_EQ(1u, result.size()) << "Symbol not found.";
 }
 
@@ -90,8 +82,7 @@ TEST(ModuleSymbolIndex, FindPrefix) {
 
   // Something with multiple results (NOTE: if more functions are added to the
   // test file with this prefix, the expected results might change).
-  std::tie(found, end) =
-      index.FindPrefix(Identifier(IdentifierComponent("Call")));
+  std::tie(found, end) = index.FindPrefix(Identifier(IdentifierComponent("Call")));
   ASSERT_NE(found, end);
   EXPECT_EQ("CallInline", found->first);
   ++found;
@@ -99,8 +90,7 @@ TEST(ModuleSymbolIndex, FindPrefix) {
   EXPECT_EQ("CallInlineMember", found->first);
 
   // A nested namespace.
-  std::tie(found, end) =
-      index.FindPrefix(TestSymbolModule::SplitName("my_ns::Base"));
+  std::tie(found, end) = index.FindPrefix(TestSymbolModule::SplitName("my_ns::Base"));
   ASSERT_NE(found, end);
   EXPECT_EQ("Base1", found->first);
   ++found;
@@ -117,11 +107,9 @@ TEST(ModuleSymbolIndex, FindFileMatches) {
   index.CreateIndex(module.object_file());
 
   // Simple filename-only query that succeeds.
-  std::vector<std::string> result =
-      index.FindFileMatches("zxdb_symbol_test.cc");
+  std::vector<std::string> result = index.FindFileMatches("zxdb_symbol_test.cc");
   ASSERT_EQ(1u, result.size());
-  EXPECT_TRUE(
-      StringEndsWith(result[0], "symbols/test_data/zxdb_symbol_test.cc"));
+  EXPECT_TRUE(StringEndsWith(result[0], "symbols/test_data/zxdb_symbol_test.cc"));
 
   // Save the full path for later.
   std::string full_path = result[0];
@@ -158,10 +146,8 @@ TEST(ModuleSymbolIndex, FindFilePrefixes) {
   // Should find both files. Order not guaranteed.
   std::vector<std::string> result = index.FindFilePrefixes("z");
   ASSERT_EQ(2u, result.size());
-  EXPECT_NE(result.end(),
-            std::find(result.begin(), result.end(), "zxdb_symbol_test.cc"));
-  EXPECT_NE(result.end(),
-            std::find(result.begin(), result.end(), "zxdb_symbol_test2.cc"));
+  EXPECT_NE(result.end(), std::find(result.begin(), result.end(), "zxdb_symbol_test.cc"));
+  EXPECT_NE(result.end(), std::find(result.begin(), result.end(), "zxdb_symbol_test2.cc"));
 }
 
 TEST(ModuleSymbolIndex, FindTypeAndNamespace) {
@@ -173,18 +159,15 @@ TEST(ModuleSymbolIndex, FindTypeAndNamespace) {
   index.CreateIndex(module.object_file());
 
   // Should have one namespace.
-  auto result = index.FindExact(
-      TestSymbolModule::SplitName(TestSymbolModule::kMyNamespaceName));
+  auto result = index.FindExact(TestSymbolModule::SplitName(TestSymbolModule::kMyNamespaceName));
   EXPECT_EQ(1u, result.size()) << "Namespace not found.";
 
   // Outer class name.
-  result = index.FindExact(
-      TestSymbolModule::SplitName(TestSymbolModule::kMyClassName));
+  result = index.FindExact(TestSymbolModule::SplitName(TestSymbolModule::kMyClassName));
   EXPECT_EQ(1u, result.size()) << "Class not found.";
 
   // Inner class name.
-  result = index.FindExact(
-      TestSymbolModule::SplitName(TestSymbolModule::kMyInnerClassName));
+  result = index.FindExact(TestSymbolModule::SplitName(TestSymbolModule::kMyInnerClassName));
   EXPECT_EQ(1u, result.size()) << "Class not found.";
 
   // Should also have deifned an "int" type.

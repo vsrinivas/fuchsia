@@ -124,8 +124,7 @@ class ModuleSymbolIndexNode {
   // is stored in the parent's map. If printing some node other than the root,
   // specify the name.
   void Dump(std::ostream& out, int indent_level = 0) const;
-  void Dump(const std::string& name, std::ostream& out,
-            int indent_level = 0) const;
+  void Dump(const std::string& name, std::ostream& out, int indent_level = 0) const;
 
   // AsString is useful only in small unit tests since even a small module can
   // have many megabytes of dump.
@@ -164,9 +163,8 @@ class ModuleSymbolIndexNode {
   // If the caller wants to find all matching prefixes, it can advance the
   // iterator as long as the last input component is a prefix if the current
   // iterator key and less than the end.
-  std::pair<ModuleSymbolIndexNode::ConstIterator,
-            ModuleSymbolIndexNode::ConstIterator>
-  FindPrefix(const std::string& input) const;
+  std::pair<ModuleSymbolIndexNode::ConstIterator, ModuleSymbolIndexNode::ConstIterator> FindPrefix(
+      const std::string& input) const;
 
  private:
   // Performance note: The strings are all null-terminated C strings that come

@@ -45,12 +45,10 @@ class BuildIDIndex {
   // Returns the local file name for the given build ID, or the empty string
   // if there is no match. The file type specifies whether we need the debug
   // info, or the actual binary.
-  std::string FileForBuildID(const std::string& build_id,
-                             DebugSymbolFileType file_type);
+  std::string FileForBuildID(const std::string& build_id, DebugSymbolFileType file_type);
 
   // Manually inserts a mapping of a build ID to a file name.
-  void AddBuildIDMapping(const std::string& build_id,
-                         const std::string& file_name,
+  void AddBuildIDMapping(const std::string& build_id, const std::string& file_name,
                          DebugSymbolFileType file_type);
 
   // Adds an "ids.txt" file that maps build ID to file paths.
@@ -81,13 +79,10 @@ class BuildIDIndex {
   // Parses a build ID mapping file (ids.txt). This is a separate static
   // function for testing purposes. The results are added to the output.
   // Returns the number of items loaded.
-  static int ParseIDs(const std::string& input,
-                      const std::filesystem::path& containing_dir,
+  static int ParseIDs(const std::string& input, const std::filesystem::path& containing_dir,
                       IDMap* output);
 
-  const std::vector<std::string>& build_id_files() const {
-    return build_id_files_;
-  }
+  const std::vector<std::string>& build_id_files() const { return build_id_files_; }
   const std::vector<std::string>& sources() const { return sources_; }
 
   const IDMap& build_id_to_files() const { return build_id_to_files_; }
@@ -110,8 +105,7 @@ class BuildIDIndex {
   bool IndexOneSourceFile(const std::string& file_path);
 
   // Search the repo sources.
-  std::string SearchRepoSources(const std::string& build_id,
-                                DebugSymbolFileType file_type);
+  std::string SearchRepoSources(const std::string& build_id, DebugSymbolFileType file_type);
 
   // Function to output informational messages. May be null. Use LogMessage().
   std::function<void(const std::string&)> information_callback_;

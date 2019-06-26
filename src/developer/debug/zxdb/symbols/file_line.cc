@@ -7,8 +7,7 @@
 namespace zxdb {
 
 FileLine::FileLine() = default;
-FileLine::FileLine(std::string file, int line)
-    : file_(std::move(file)), line_(line) {}
+FileLine::FileLine(std::string file, int line) : file_(std::move(file)), line_(line) {}
 FileLine::~FileLine() = default;
 
 bool operator<(const FileLine& a, const FileLine& b) {
@@ -21,8 +20,6 @@ bool operator==(const FileLine& a, const FileLine& b) {
   return a.line() == b.line() && a.file() == b.file();
 }
 
-bool operator!=(const FileLine& a, const FileLine& b) {
-  return !operator==(a, b);
-}
+bool operator!=(const FileLine& a, const FileLine& b) { return !operator==(a, b); }
 
 }  // namespace zxdb

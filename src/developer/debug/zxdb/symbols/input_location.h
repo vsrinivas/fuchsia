@@ -30,12 +30,9 @@ struct InputLocation {
   enum class Type { kNone, kLine, kSymbol, kAddress };
 
   InputLocation() = default;
-  explicit InputLocation(FileLine file_line)
-      : type(Type::kLine), line(std::move(file_line)) {}
-  explicit InputLocation(Identifier symbol)
-      : type(Type::kSymbol), symbol(std::move(symbol)) {}
-  explicit InputLocation(uint64_t address)
-      : type(Type::kAddress), address(address) {}
+  explicit InputLocation(FileLine file_line) : type(Type::kLine), line(std::move(file_line)) {}
+  explicit InputLocation(Identifier symbol) : type(Type::kSymbol), symbol(std::move(symbol)) {}
+  explicit InputLocation(uint64_t address) : type(Type::kAddress), address(address) {}
 
   // Converts the input location type to a string. This is intended to be used
   // in error messages.

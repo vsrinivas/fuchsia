@@ -82,9 +82,7 @@ const Variable* Symbol::AsVariable() const { return nullptr; }
 const Variant* Symbol::AsVariant() const { return nullptr; }
 const VariantPart* Symbol::AsVariantPart() const { return nullptr; }
 
-std::string Symbol::ComputeFullName() const {
-  return GetIdentifier().GetFullName();
-}
+std::string Symbol::ComputeFullName() const { return GetIdentifier().GetFullName(); }
 
 Identifier Symbol::ComputeIdentifier() const {
   const std::string& assigned_name = GetAssignedName();

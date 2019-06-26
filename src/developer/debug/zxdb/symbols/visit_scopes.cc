@@ -29,8 +29,7 @@ VisitResult DoVisitClassHierarchy(
     if (!from_coll)
       continue;
 
-    result =
-        DoVisitClassHierarchy(from_coll, offset + inherited_from->offset(), cb);
+    result = DoVisitClassHierarchy(from_coll, offset + inherited_from->offset(), cb);
     if (result != VisitResult::kContinue)
       return result;
   }
@@ -55,9 +54,8 @@ VisitResult VisitLocalBlocks(const CodeBlock* starting,
   return VisitResult::kContinue;
 }
 
-VisitResult VisitClassHierarchy(
-    const Collection* starting,
-    std::function<VisitResult(const Collection*, uint64_t offset)> cb) {
+VisitResult VisitClassHierarchy(const Collection* starting,
+                                std::function<VisitResult(const Collection*, uint64_t offset)> cb) {
   return DoVisitClassHierarchy(starting, 0, cb);
 }
 

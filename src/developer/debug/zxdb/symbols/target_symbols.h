@@ -70,8 +70,8 @@ class TargetSymbols {
   // Since the modules aren't loaded, there are no load addresses. As a result,
   // all output addresses will be 0. This function's purpose is to expand
   // file/line information for symbols.
-  std::vector<Location> ResolveInputLocation(
-      const InputLocation& input_location, const ResolveOptions& options) const;
+  std::vector<Location> ResolveInputLocation(const InputLocation& input_location,
+                                             const ResolveOptions& options) const;
 
   // Gets file matches across all known modules. See
   // ModuleSymbols::FindFileMatches().

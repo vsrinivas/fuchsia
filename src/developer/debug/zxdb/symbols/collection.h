@@ -54,9 +54,7 @@ class Collection final : public Type {
 
   // Data members. These should be DataMember objects.
   const std::vector<LazySymbol>& data_members() const { return data_members_; }
-  void set_data_members(std::vector<LazySymbol> d) {
-    data_members_ = std::move(d);
-  }
+  void set_data_members(std::vector<LazySymbol> d) { data_members_ = std::move(d); }
 
   // This will be a VariantPart class if there is one defined.
   //
@@ -75,12 +73,8 @@ class Collection final : public Type {
   // object.
   //
   // These are in the same order as declared in the symbol file.
-  const std::vector<LazySymbol>& inherited_from() const {
-    return inherited_from_;
-  }
-  void set_inherited_from(std::vector<LazySymbol> f) {
-    inherited_from_ = std::move(f);
-  }
+  const std::vector<LazySymbol>& inherited_from() const { return inherited_from_; }
+  void set_inherited_from(std::vector<LazySymbol> f) { inherited_from_ = std::move(f); }
 
   // Heuristic that attempts to determine whether this collection has special
   // meaning in the current programming language.

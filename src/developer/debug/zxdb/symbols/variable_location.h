@@ -62,8 +62,7 @@ class VariableLocation {
 
   // Returns the Entry that corresponds to the given IP, or nullptr if none
   // matched.
-  const Entry* EntryForIP(const SymbolContext& symbol_context,
-                          uint64_t ip) const;
+  const Entry* EntryForIP(const SymbolContext& symbol_context, uint64_t ip) const;
 
  private:
   // The location list. The DWARF spec explicitly allows for ranges to overlap

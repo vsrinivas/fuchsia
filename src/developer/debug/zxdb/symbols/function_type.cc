@@ -9,8 +9,7 @@
 
 namespace zxdb {
 
-FunctionType::FunctionType(LazySymbol return_type,
-                           std::vector<LazySymbol> parameters)
+FunctionType::FunctionType(LazySymbol return_type, std::vector<LazySymbol> parameters)
     : Type(DwarfTag::kSubroutineType),
       return_type_(std::move(return_type)),
       parameters_(std::move(parameters)) {
@@ -22,8 +21,7 @@ FunctionType::~FunctionType() = default;
 
 const FunctionType* FunctionType::AsFunctionType() const { return this; }
 
-std::string FunctionType::ComputeFullNameForFunctionPtr(
-    const std::string& container) const {
+std::string FunctionType::ComputeFullNameForFunctionPtr(const std::string& container) const {
   std::string result = ComputeReturnTypeString();
   result.push_back(' ');
 

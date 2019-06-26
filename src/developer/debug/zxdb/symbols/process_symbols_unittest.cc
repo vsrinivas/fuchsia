@@ -44,9 +44,7 @@ class NotificationsImpl : public ProcessSymbols::Notifications {
   }
 
   // Notifications implementation.
-  void DidLoadModuleSymbols(LoadedModuleSymbols* module) override {
-    loaded_.push_back(module);
-  }
+  void DidLoadModuleSymbols(LoadedModuleSymbols* module) override { loaded_.push_back(module); }
   void WillUnloadModuleSymbols(LoadedModuleSymbols* module) override {
     unloaded_.push_back(module->load_address());
   }
@@ -96,8 +94,7 @@ TEST(ProcessSymbols, SetModules) {
   ASSERT_EQ(1u, notifications.loaded().size());
   LoadedModuleSymbols* loaded_symbols = notifications.loaded()[0];
   EXPECT_EQ(base1, loaded_symbols->load_address());
-  EXPECT_EQ(test_file_name,
-            loaded_symbols->module_symbols()->GetStatus().symbol_file);
+  EXPECT_EQ(test_file_name, loaded_symbols->module_symbols()->GetStatus().symbol_file);
   EXPECT_EQ(0, notifications.err_count());
 
   // Replace with a different one at the same address.

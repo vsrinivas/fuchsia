@@ -41,8 +41,7 @@ class Variable;
 class ModuleSymbolsImpl : public ModuleSymbols {
  public:
   // You must call Load before using this class.
-  explicit ModuleSymbolsImpl(const std::string& name,
-                             const std::string& binary_name,
+  explicit ModuleSymbolsImpl(const std::string& name, const std::string& binary_name,
                              const std::string& build_id);
   ~ModuleSymbolsImpl();
 
@@ -61,34 +60,30 @@ class ModuleSymbolsImpl : public ModuleSymbols {
       const ResolveOptions& options = ResolveOptions()) const override;
   LineDetails LineDetailsForAddress(const SymbolContext& symbol_context,
                                     uint64_t absolute_address) const override;
-  std::vector<std::string> FindFileMatches(
-      std::string_view name) const override;
+  std::vector<std::string> FindFileMatches(std::string_view name) const override;
   std::vector<fxl::RefPtr<Function>> GetMainFunctions() const override;
   const ModuleSymbolIndex& GetIndex() const override;
-  LazySymbol IndexDieRefToSymbol(
-      const ModuleSymbolIndexNode::DieRef&) const override;
+  LazySymbol IndexDieRefToSymbol(const ModuleSymbolIndexNode::DieRef&) const override;
   bool HasBinary() const override;
 
  private:
   FRIEND_TEST(ModuleSymbols, ResolveMainFunction);
 
-  llvm::DWARFUnit* CompileUnitForRelativeAddress(
-      uint64_t relative_address) const;
+  llvm::DWARFUnit* CompileUnitForRelativeAddress(uint64_t relative_address) const;
 
   // Helpers for ResolveInputLocation() for the different types of inputs.
-  std::vector<Location> ResolveLineInputLocation(
-      const SymbolContext& symbol_context, const InputLocation& input_location,
-      const ResolveOptions& options) const;
-  std::vector<Location> ResolveSymbolInputLocation(
-      const SymbolContext& symbol_context, const InputLocation& input_location,
-      const ResolveOptions& options) const;
-  std::vector<Location> ResolveAddressInputLocation(
-      const SymbolContext& symbol_context, const InputLocation& input_location,
-      const ResolveOptions& options) const;
+  std::vector<Location> ResolveLineInputLocation(const SymbolContext& symbol_context,
+                                                 const InputLocation& input_location,
+                                                 const ResolveOptions& options) const;
+  std::vector<Location> ResolveSymbolInputLocation(const SymbolContext& symbol_context,
+                                                   const InputLocation& input_location,
+                                                   const ResolveOptions& options) const;
+  std::vector<Location> ResolveAddressInputLocation(const SymbolContext& symbol_context,
+                                                    const InputLocation& input_location,
+                                                    const ResolveOptions& options) const;
 
   // Symbolizes the given address if possible.
-  Location LocationForAddress(const SymbolContext& symbol_context,
-                              uint64_t absolute_address) const;
+  Location LocationForAddress(const SymbolContext& symbol_context, uint64_t absolute_address) const;
 
   // Converts the given global or static variable to a Location. This doesn't
   // work for local variables which are dynamic and based on the current CPU
@@ -99,18 +94,15 @@ class ModuleSymbolsImpl : public ModuleSymbols {
   // Converts a Function object to a found location according to the options
   // and adds it to the list. May append nothing if there is no code for the
   // function.
-  void AppendLocationForFunction(const SymbolContext& symbol_context,
-                                 const ResolveOptions& options,
-                                 const Function* func,
-                                 std::vector<Location>* result) const;
+  void AppendLocationForFunction(const SymbolContext& symbol_context, const ResolveOptions& options,
+                                 const Function* func, std::vector<Location>* result) const;
 
   // Resolves the line number information for the given file, which must be an
   // exact match. This is a helper function for ResolveLineInputLocation().
   //
   // This appends to the given output.
   void ResolveLineInputLocationForFile(const SymbolContext& symbol_context,
-                                       const std::string& canonical_file,
-                                       int line_number,
+                                       const std::string& canonical_file, int line_number,
                                        const ResolveOptions& options,
                                        std::vector<Location>* output) const;
 

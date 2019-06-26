@@ -76,8 +76,7 @@ std::string BuildIDIndex::SearchRepoSources(const std::string& build_id,
   return std::string();
 }
 
-void BuildIDIndex::AddBuildIDMapping(const std::string& build_id,
-                                     const std::string& file_name,
+void BuildIDIndex::AddBuildIDMapping(const std::string& build_id, const std::string& file_name,
                                      DebugSymbolFileType file_type) {
   if (file_type == DebugSymbolFileType::kDebugInfo) {
     // This map saves the manual mapping across cache updates.
@@ -126,8 +125,7 @@ void BuildIDIndex::ClearCache() {
 }
 
 // static
-int BuildIDIndex::ParseIDs(const std::string& input,
-                           const std::filesystem::path& containing_dir,
+int BuildIDIndex::ParseIDs(const std::string& input, const std::filesystem::path& containing_dir,
                            IDMap* output) {
   int added = 0;
   for (size_t line_begin = 0; line_begin < input.size(); line_begin++) {
@@ -139,15 +137,12 @@ int BuildIDIndex::ParseIDs(const std::string& input,
     if (!line.empty()) {
       // Format is <buildid> <space> <filename>
       size_t first_space = line.find(' ');
-      if (first_space != std::string::npos && first_space > 0 &&
-          first_space + 1 < line.size()) {
+      if (first_space != std::string::npos && first_space > 0 && first_space + 1 < line.size()) {
         // There is a space and it separates two nonempty things.
         fxl::StringView to_trim(" \t\r\n");
-        fxl::StringView build_id =
-            fxl::TrimString(line.substr(0, first_space), to_trim);
-        fxl::StringView path_data = fxl::TrimString(
-            line.substr(first_space + 1, line.size() - first_space - 1),
-            to_trim);
+        fxl::StringView build_id = fxl::TrimString(line.substr(0, first_space), to_trim);
+        fxl::StringView path_data =
+            fxl::TrimString(line.substr(first_space + 1, line.size() - first_space - 1), to_trim);
 
         std::filesystem::path path(path_data.ToString());
 
@@ -207,8 +202,7 @@ void BuildIDIndex::LoadOneBuildIDFile(const std::string& file_name) {
   contents.resize(length);
 
   fseek(id_file, 0, SEEK_SET);
-  if (fread(&contents[0], 1, contents.size(), id_file) !=
-      static_cast<size_t>(length)) {
+  if (fread(&contents[0], 1, contents.size(), id_file) != static_cast<size_t>(length)) {
     status_.emplace_back(file_name, 0);
     LogMessage("Can't read build ID file: " + file_name);
     return;
@@ -248,8 +242,7 @@ void BuildIDIndex::IndexOneSourcePath(const std::string& path) {
       status_.emplace_back(path, 1);
     } else {
       status_.emplace_back(path, 0);
-      LogMessage(fxl::StringPrintf("Symbol file could not be loaded: %s",
-                                   path.c_str()));
+      LogMessage(fxl::StringPrintf("Symbol file could not be loaded: %s", path.c_str()));
     }
   }
 }

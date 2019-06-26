@@ -17,8 +17,7 @@ struct TestIndexedSymbol {
   // unique.
   static int next_die_ref;
 
-  TestIndexedSymbol(MockModuleSymbols* mod_sym,
-                    ModuleSymbolIndexNode* index_parent,
+  TestIndexedSymbol(MockModuleSymbols* mod_sym, ModuleSymbolIndexNode* index_parent,
                     const std::string& name, fxl::RefPtr<Symbol> sym);
 
   // The DieRef links the index and the entry injected into the ModuleSymbols.
@@ -33,8 +32,7 @@ struct TestIndexedSymbol {
 // Creates a global variable that's inserted into the index and the mock
 // ModuleSymbols.
 struct TestIndexedGlobalVariable : public TestIndexedSymbol {
-  TestIndexedGlobalVariable(MockModuleSymbols* mod_sym,
-                            ModuleSymbolIndexNode* index_parent,
+  TestIndexedGlobalVariable(MockModuleSymbols* mod_sym, ModuleSymbolIndexNode* index_parent,
                             const std::string& var_name);
 
   // The variable itself.

@@ -17,23 +17,18 @@ namespace zxdb {
 
 MockSymbolDataProvider::MockSymbolDataProvider() : weak_factory_(this) {}
 
-void MockSymbolDataProvider::AddRegisterValue(debug_ipc::RegisterID id,
-                                              bool synchronous,
+void MockSymbolDataProvider::AddRegisterValue(debug_ipc::RegisterID id, bool synchronous,
                                               uint64_t value) {
   regs_[id] = RegData(synchronous, value);
 }
 
-void MockSymbolDataProvider::AddMemory(uint64_t address,
-                                       std::vector<uint8_t> data) {
+void MockSymbolDataProvider::AddMemory(uint64_t address, std::vector<uint8_t> data) {
   memory_.AddMemory(address, std::move(data));
 }
 
-debug_ipc::Arch MockSymbolDataProvider::GetArch() {
-  return debug_ipc::Arch::kArm64;
-}
+debug_ipc::Arch MockSymbolDataProvider::GetArch() { return debug_ipc::Arch::kArm64; }
 
-bool MockSymbolDataProvider::GetRegister(debug_ipc::RegisterID id,
-                                         std::optional<uint64_t>* value) {
+bool MockSymbolDataProvider::GetRegister(debug_ipc::RegisterID id, std::optional<uint64_t>* value) {
   *value = std::nullopt;
 
   if (GetSpecialRegisterType(id) == debug_ipc::SpecialRegisterType::kIP) {
@@ -81,19 +76,16 @@ void MockSymbolDataProvider::GetFrameBaseAsync(GetRegisterCallback callback) {
       });
 }
 
-uint64_t MockSymbolDataProvider::GetCanonicalFrameAddress() const {
-  return cfa_;
-}
+uint64_t MockSymbolDataProvider::GetCanonicalFrameAddress() const { return cfa_; }
 
 void MockSymbolDataProvider::GetMemoryAsync(uint64_t address, uint32_t size,
                                             GetMemoryCallback callback) {
   std::vector<uint8_t> result = memory_.ReadMemory(address, size);
-  debug_ipc::MessageLoop::Current()->PostTask(
-      FROM_HERE, [callback, result]() { callback(Err(), result); });
+  debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE,
+                                              [callback, result]() { callback(Err(), result); });
 }
 
-void MockSymbolDataProvider::WriteMemory(uint64_t address,
-                                         std::vector<uint8_t> data,
+void MockSymbolDataProvider::WriteMemory(uint64_t address, std::vector<uint8_t> data,
                                          std::function<void(const Err&)> cb) {
   memory_writes_.emplace_back(address, std::move(data));
 

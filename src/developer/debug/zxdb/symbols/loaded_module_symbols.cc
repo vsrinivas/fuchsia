@@ -9,9 +9,8 @@
 
 namespace zxdb {
 
-LoadedModuleSymbols::LoadedModuleSymbols(
-    fxl::RefPtr<SystemSymbols::ModuleRef> module, std::string build_id,
-    uint64_t load_address)
+LoadedModuleSymbols::LoadedModuleSymbols(fxl::RefPtr<SystemSymbols::ModuleRef> module,
+                                         std::string build_id, uint64_t load_address)
     : module_(std::move(module)),
       load_address_(load_address),
       build_id_(std::move(build_id)),
@@ -27,8 +26,7 @@ fxl::WeakPtr<LoadedModuleSymbols> LoadedModuleSymbols::GetWeakPtr() {
 std::vector<Location> LoadedModuleSymbols::ResolveInputLocation(
     const InputLocation& input_location, const ResolveOptions& options) const {
   if (module_) {
-    return module_symbols()->ResolveInputLocation(symbol_context(),
-                                                  input_location, options);
+    return module_symbols()->ResolveInputLocation(symbol_context(), input_location, options);
   }
 
   return std::vector<Location>();

@@ -22,8 +22,7 @@ bool TargetSymbols::ModuleRefComparePtr::operator()(
   return a.get() < b.get();
 }
 
-TargetSymbols::TargetSymbols(SystemSymbols* system_symbols)
-    : system_symbols_(system_symbols) {}
+TargetSymbols::TargetSymbols(SystemSymbols* system_symbols) : system_symbols_(system_symbols) {}
 TargetSymbols::TargetSymbols(const TargetSymbols& other)
     : system_symbols_(other.system_symbols_), modules_(other.modules_) {}
 TargetSymbols::~TargetSymbols() {}
@@ -37,8 +36,7 @@ void TargetSymbols::AddModule(fxl::RefPtr<SystemSymbols::ModuleRef> module) {
   modules_.insert(std::move(module));
 }
 
-void TargetSymbols::RemoveModule(
-    fxl::RefPtr<SystemSymbols::ModuleRef>& module) {
+void TargetSymbols::RemoveModule(fxl::RefPtr<SystemSymbols::ModuleRef>& module) {
   auto found = modules_.find(module);
   if (found == modules_.end()) {
     FXL_NOTREACHED();
@@ -56,8 +54,8 @@ std::vector<const ModuleSymbols*> TargetSymbols::GetModuleSymbols() const {
   return result;
 }
 
-std::vector<Location> TargetSymbols::ResolveInputLocation(
-    const InputLocation& input_location, const ResolveOptions& options) const {
+std::vector<Location> TargetSymbols::ResolveInputLocation(const InputLocation& input_location,
+                                                          const ResolveOptions& options) const {
   FXL_DCHECK(input_location.type != InputLocation::Type::kNone);
   FXL_DCHECK(input_location.type != InputLocation::Type::kAddress);
 
@@ -67,19 +65,17 @@ std::vector<Location> TargetSymbols::ResolveInputLocation(
 
   std::vector<Location> result;
   for (const auto& module : modules_) {
-    for (const Location& location :
-         module->module_symbols()->ResolveInputLocation(
+    for (const Location& location : module->module_symbols()->ResolveInputLocation(
              symbol_context, input_location, ResolveOptions())) {
       // Clear the location on the result to prevent confusion.
-      result.emplace_back(0, location.file_line(), location.column(),
-                          location.symbol_context(), location.symbol());
+      result.emplace_back(0, location.file_line(), location.column(), location.symbol_context(),
+                          location.symbol());
     }
   }
   return result;
 }
 
-std::vector<std::string> TargetSymbols::FindFileMatches(
-    std::string_view name) const {
+std::vector<std::string> TargetSymbols::FindFileMatches(std::string_view name) const {
   // Different modules can each use the same file, but we want to return each
   // one once.
   std::set<std::string> result_set;
@@ -96,8 +92,7 @@ std::vector<std::string> TargetSymbols::FindFileMatches(
 
 // This could be optimized quite a bit if we find it's slow, there are a lot
 // of container copies in this implementation.
-std::string TargetSymbols::GetShortestUniqueFileName(
-    std::string_view file_name) const {
+std::string TargetSymbols::GetShortestUniqueFileName(std::string_view file_name) const {
   if (file_name.empty())
     return std::string();
 
@@ -107,14 +102,12 @@ std::string TargetSymbols::GetShortestUniqueFileName(
   if (all_matches.size() <= 1)
     return std::string(file_name_last_part);  // Unique or not found.
 
-  auto components =
-      fxl::SplitString(fxl::StringView(file_name.data(), file_name.size()), "/",
-                       fxl::kKeepWhitespace, fxl::kSplitWantAll);
+  auto components = fxl::SplitString(fxl::StringView(file_name.data(), file_name.size()), "/",
+                                     fxl::kKeepWhitespace, fxl::kSplitWantAll);
 
   // Append path components from the right until its unique.
   std::string result(file_name_last_part);
-  for (int comp_index = static_cast<int>(components.size()) - 2;
-       comp_index >= 0; comp_index--) {
+  for (int comp_index = static_cast<int>(components.size()) - 2; comp_index >= 0; comp_index--) {
     result = components[comp_index].ToString() + "/" + result;
     if (FindFileMatches(result).size() <= 1)
       return result;

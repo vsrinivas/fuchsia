@@ -11,8 +11,7 @@
 namespace zxdb {
 
 CodeBlock::CodeBlock(DwarfTag tag) : Symbol(tag) {
-  FXL_DCHECK(tag == DwarfTag::kSubprogram ||
-             tag == DwarfTag::kInlinedSubroutine ||
+  FXL_DCHECK(tag == DwarfTag::kSubprogram || tag == DwarfTag::kInlinedSubroutine ||
              tag == DwarfTag::kLexicalBlock);
 }
 
@@ -20,18 +19,15 @@ CodeBlock::~CodeBlock() = default;
 
 const CodeBlock* CodeBlock::AsCodeBlock() const { return this; }
 
-AddressRanges CodeBlock::GetAbsoluteCodeRanges(
-    const SymbolContext& symbol_context) const {
+AddressRanges CodeBlock::GetAbsoluteCodeRanges(const SymbolContext& symbol_context) const {
   return symbol_context.RelativeToAbsolute(code_ranges());
 }
 
-AddressRange CodeBlock::GetFullRange(
-    const SymbolContext& symbol_context) const {
+AddressRange CodeBlock::GetFullRange(const SymbolContext& symbol_context) const {
   if (code_ranges_.empty())
     return AddressRange();
-  return AddressRange(
-      symbol_context.RelativeToAbsolute(code_ranges_.front().begin()),
-      symbol_context.RelativeToAbsolute(code_ranges_.back().end()));
+  return AddressRange(symbol_context.RelativeToAbsolute(code_ranges_.front().begin()),
+                      symbol_context.RelativeToAbsolute(code_ranges_.back().end()));
 }
 
 bool CodeBlock::ContainsAddress(const SymbolContext& symbol_context,
@@ -47,8 +43,8 @@ bool CodeBlock::ContainsAddress(const SymbolContext& symbol_context,
   return false;
 }
 
-const CodeBlock* CodeBlock::GetMostSpecificChild(
-    const SymbolContext& symbol_context, uint64_t absolute_address) const {
+const CodeBlock* CodeBlock::GetMostSpecificChild(const SymbolContext& symbol_context,
+                                                 uint64_t absolute_address) const {
   if (!ContainsAddress(symbol_context, absolute_address))
     return nullptr;  // This block doesn't contain the address.
 
@@ -59,8 +55,7 @@ const CodeBlock* CodeBlock::GetMostSpecificChild(
     const CodeBlock* inner_block = inner.Get()->AsCodeBlock();
     if (!inner_block)
       continue;  // Corrupted symbols.
-    const CodeBlock* found =
-        inner_block->GetMostSpecificChild(symbol_context, absolute_address);
+    const CodeBlock* found = inner_block->GetMostSpecificChild(symbol_context, absolute_address);
     if (found)
       return found;
   }

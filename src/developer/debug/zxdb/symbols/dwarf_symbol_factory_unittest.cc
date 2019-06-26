@@ -39,15 +39,15 @@ fxl::RefPtr<const Function> GetFunctionWithName(ModuleSymbolsImpl& module,
                                                 const std::string& name) {
   DwarfSymbolFactory* factory = module.symbol_factory();
 
-  llvm::DWARFUnit* unit = GetUnitWithNameEndingIn(
-      module.context(), module.compile_units(), "/type_test.cc");
+  llvm::DWARFUnit* unit =
+      GetUnitWithNameEndingIn(module.context(), module.compile_units(), "/type_test.cc");
   EXPECT_TRUE(unit);
   if (!unit)
     return nullptr;
 
   // Find the GetIntPtr function.
-  llvm::DWARFDie function_die = GetFirstDieOfTagAndName(
-      module.context(), unit, llvm::dwarf::DW_TAG_subprogram, name);
+  llvm::DWARFDie function_die =
+      GetFirstDieOfTagAndName(module.context(), unit, llvm::dwarf::DW_TAG_subprogram, name);
   EXPECT_TRUE(function_die);
   if (!function_die)
     return nullptr;
@@ -72,8 +72,7 @@ TEST(DwarfSymbolFactory, Function) {
   EXPECT_FALSE(err.has_error()) << err.msg();
 
   // Find the GetIntPtr function.
-  fxl::RefPtr<const Function> function =
-      GetFunctionWithName(module, kGetIntPtrName);
+  fxl::RefPtr<const Function> function = GetFunctionWithName(module, kGetIntPtrName);
   ASSERT_TRUE(function);
 
   // Unmangled name.
@@ -100,8 +99,7 @@ TEST(DwarfSymbolFactory, PtrToMemberFunction) {
   EXPECT_FALSE(err.has_error()) << err.msg();
 
   // Find the GetIntPtr function.
-  fxl::RefPtr<const Function> get_function =
-      GetFunctionWithName(module, kGetStructMemberPtrName);
+  fxl::RefPtr<const Function> get_function = GetFunctionWithName(module, kGetStructMemberPtrName);
   ASSERT_TRUE(get_function);
 
   // Get the return type, this is a typedef (because functions can't return
@@ -112,8 +110,7 @@ TEST(DwarfSymbolFactory, PtrToMemberFunction) {
   // The typedef references the member pointer. The type name encapsulates all
   // return values and parameters so this tests everything at once.
   const Symbol* member = return_typedef->modified().Get();
-  EXPECT_EQ("int (my_ns::Struct::*)(my_ns::Struct*, char)",
-            member->GetFullName());
+  EXPECT_EQ("int (my_ns::Struct::*)(my_ns::Struct*, char)", member->GetFullName());
 }
 
 TEST(DwarfSymbolFactory, InlinedMemberFunction) {
@@ -122,14 +119,12 @@ TEST(DwarfSymbolFactory, InlinedMemberFunction) {
   EXPECT_FALSE(err.has_error()) << err.msg();
 
   // Find the CallInline function.
-  fxl::RefPtr<const Function> call_function =
-      GetFunctionWithName(module, kCallInlineMemberName);
+  fxl::RefPtr<const Function> call_function = GetFunctionWithName(module, kCallInlineMemberName);
   ASSERT_TRUE(call_function);
 
   // It should have one inner block that's the inline function.
   ASSERT_EQ(1u, call_function->inner_blocks().size());
-  const Function* inline_func =
-      call_function->inner_blocks()[0].Get()->AsFunction();
+  const Function* inline_func = call_function->inner_blocks()[0].Get()->AsFunction();
   ASSERT_TRUE(inline_func);
   EXPECT_EQ(DwarfTag::kInlinedSubroutine, inline_func->tag());
 
@@ -140,8 +135,7 @@ TEST(DwarfSymbolFactory, InlinedMemberFunction) {
   const Variable* this_param = inline_func->parameters()[0].Get()->AsVariable();
   ASSERT_TRUE(this_param);
   EXPECT_EQ("this", this_param->GetAssignedName());
-  const Variable* param_param =
-      inline_func->parameters()[1].Get()->AsVariable();
+  const Variable* param_param = inline_func->parameters()[1].Get()->AsVariable();
   ASSERT_TRUE(param_param);
   EXPECT_EQ("param", param_param->GetAssignedName());
 
@@ -159,14 +153,12 @@ TEST(DwarfSymbolFactory, InlinedFunction) {
   EXPECT_FALSE(err.has_error()) << err.msg();
 
   // Find the CallInline function.
-  fxl::RefPtr<const Function> call_function =
-      GetFunctionWithName(module, kCallInlineName);
+  fxl::RefPtr<const Function> call_function = GetFunctionWithName(module, kCallInlineName);
   ASSERT_TRUE(call_function);
 
   // It should have one inner block that's the inline function.
   ASSERT_EQ(1u, call_function->inner_blocks().size());
-  const Function* inline_func =
-      call_function->inner_blocks()[0].Get()->AsFunction();
+  const Function* inline_func = call_function->inner_blocks()[0].Get()->AsFunction();
   ASSERT_TRUE(inline_func);
   EXPECT_EQ(DwarfTag::kInlinedSubroutine, inline_func->tag());
 
@@ -189,24 +181,19 @@ TEST(DwarfSymbolFactory, ModifiedBaseType) {
   EXPECT_FALSE(err.has_error()) << err.msg();
 
   // Find the GetIntPtr function.
-  fxl::RefPtr<const Function> function =
-      GetFunctionWithName(module, kGetIntPtrName);
+  fxl::RefPtr<const Function> function = GetFunctionWithName(module, kGetIntPtrName);
   ASSERT_TRUE(function);
 
   // Get the return type, this references a "pointer" modifier.
   EXPECT_TRUE(function->return_type().is_valid());
   const ModifiedType* ptr_mod = function->return_type().Get()->AsModifiedType();
-  ASSERT_TRUE(ptr_mod) << "Tag = "
-                       << static_cast<int>(
-                              function->return_type().Get()->tag());
+  ASSERT_TRUE(ptr_mod) << "Tag = " << static_cast<int>(function->return_type().Get()->tag());
   EXPECT_EQ(DwarfTag::kPointerType, ptr_mod->tag());
   EXPECT_EQ("const int*", ptr_mod->GetFullName());
 
   // The modified type should be a "const" modifier.
   const ModifiedType* const_mod = ptr_mod->modified().Get()->AsModifiedType();
-  ASSERT_TRUE(const_mod) << "Tag = "
-                         << static_cast<int>(
-                                function->return_type().Get()->tag());
+  ASSERT_TRUE(const_mod) << "Tag = " << static_cast<int>(function->return_type().Get()->tag());
   EXPECT_EQ(DwarfTag::kConstType, const_mod->tag());
   EXPECT_EQ("const int", const_mod->GetFullName());
 
@@ -233,8 +220,7 @@ TEST(DwarfSymbolFactory, RValueRef) {
   EXPECT_FALSE(err.has_error()) << err.msg();
 
   // Find the GetIntPtr function.
-  fxl::RefPtr<const Function> function =
-      GetFunctionWithName(module, kPassRValueRefName);
+  fxl::RefPtr<const Function> function = GetFunctionWithName(module, kPassRValueRefName);
   ASSERT_TRUE(function);
 
   // Should have one parameter of rvalue ref type.
@@ -255,8 +241,7 @@ TEST(DwarfSymbolFactory, ArrayType) {
 
   // Find the GetString function.
   const char kGetString[] = "GetString";
-  fxl::RefPtr<const Function> function =
-      GetFunctionWithName(module, kGetString);
+  fxl::RefPtr<const Function> function = GetFunctionWithName(module, kGetString);
   ASSERT_TRUE(function);
 
   // Find the "str_array" variable in the function.
@@ -284,8 +269,7 @@ TEST(DwarfSymbolFactory, Array2D) {
 
   // Find the My2DArray function.
   const char kMy2DArray[] = "My2DArray";
-  fxl::RefPtr<const Function> function =
-      GetFunctionWithName(module, kMy2DArray);
+  fxl::RefPtr<const Function> function = GetFunctionWithName(module, kMy2DArray);
   ASSERT_TRUE(function);
 
   // Find the "array" variable in the function. It's declared as:
@@ -324,8 +308,7 @@ TEST(DwarfSymbolFactory, Collection) {
 
   // Find the GetStruct function.
   const char kGetStruct[] = "GetStruct";
-  fxl::RefPtr<const Function> function =
-      GetFunctionWithName(module, kGetStruct);
+  fxl::RefPtr<const Function> function = GetFunctionWithName(module, kGetStruct);
   ASSERT_TRUE(function);
 
   // The return type should be the struct.
@@ -387,8 +370,7 @@ TEST(DwarfSymbolFactory, Enum) {
 
   // Find the GetStruct function.
   const char kGetStruct[] = "GetStructWithEnums";
-  fxl::RefPtr<const Function> function =
-      GetFunctionWithName(module, kGetStruct);
+  fxl::RefPtr<const Function> function = GetFunctionWithName(module, kGetStruct);
   ASSERT_TRUE(function);
 
   // The return type should be the struct.
@@ -400,12 +382,8 @@ TEST(DwarfSymbolFactory, Enum) {
   ASSERT_EQ(3u, struct_type->data_members().size());
 
   // First is a regular enum with no values.
-  auto regular_enum = struct_type->data_members()[0]
-                          .Get()
-                          ->AsDataMember()
-                          ->type()
-                          .Get()
-                          ->AsEnumeration();
+  auto regular_enum =
+      struct_type->data_members()[0].Get()->AsDataMember()->type().Get()->AsEnumeration();
   ASSERT_TRUE(regular_enum);
   EXPECT_EQ("StructWithEnums::RegularEnum", regular_enum->GetFullName());
   EXPECT_TRUE(regular_enum->values().empty());
@@ -413,24 +391,16 @@ TEST(DwarfSymbolFactory, Enum) {
   // Second is an anonymous signed enum with two values. We don't bother to
   // test the enumerator values on this one since some aspects will be
   // compiler-dependent.
-  auto anon_enum = struct_type->data_members()[1]
-                       .Get()
-                       ->AsDataMember()
-                       ->type()
-                       .Get()
-                       ->AsEnumeration();
+  auto anon_enum =
+      struct_type->data_members()[1].Get()->AsDataMember()->type().Get()->AsEnumeration();
   ASSERT_TRUE(anon_enum);
   EXPECT_EQ("StructWithEnums::(anon enum)", anon_enum->GetFullName());
   EXPECT_TRUE(anon_enum->is_signed());
   EXPECT_EQ(2u, anon_enum->values().size());
 
   // Third is a type enum with two values.
-  auto typed_enum = struct_type->data_members()[2]
-                        .Get()
-                        ->AsDataMember()
-                        ->type()
-                        .Get()
-                        ->AsEnumeration();
+  auto typed_enum =
+      struct_type->data_members()[2].Get()->AsDataMember()->type().Get()->AsEnumeration();
   ASSERT_TRUE(typed_enum);
   EXPECT_EQ("StructWithEnums::TypedEnum", typed_enum->GetFullName());
   EXPECT_TRUE(typed_enum->is_signed());
@@ -454,8 +424,7 @@ TEST(DwarfSymbolFactory, CodeBlocks) {
   EXPECT_FALSE(err.has_error()) << err.msg();
 
   // Find the DoStructCall function.
-  fxl::RefPtr<const Function> function =
-      GetFunctionWithName(module, kDoStructCallName);
+  fxl::RefPtr<const Function> function = GetFunctionWithName(module, kDoStructCallName);
   ASSERT_TRUE(function);
 
   // It should have two parameters, arg1 and arg2.
@@ -522,8 +491,7 @@ TEST(DwarfSymbolFactory, NullPtrTTypedef) {
 
   // Find the GetNullPtrT function.
   const char kGetNullPtrT[] = "GetNullPtrT";
-  fxl::RefPtr<const Function> function =
-      GetFunctionWithName(module, kGetNullPtrT);
+  fxl::RefPtr<const Function> function = GetFunctionWithName(module, kGetNullPtrT);
   ASSERT_TRUE(function);
 
   // The return type should be nullptr_t.

@@ -7,9 +7,8 @@
 namespace zxdb {
 
 bool DwarfTagIsType(DwarfTag tag) {
-  return DwarfTagIsTypeModifier(tag) || tag == DwarfTag::kArrayType ||
-         tag == DwarfTag::kBaseType || tag == DwarfTag::kClassType ||
-         tag == DwarfTag::kEnumerationType ||
+  return DwarfTagIsTypeModifier(tag) || tag == DwarfTag::kArrayType || tag == DwarfTag::kBaseType ||
+         tag == DwarfTag::kClassType || tag == DwarfTag::kEnumerationType ||
          tag == DwarfTag::kPtrToMemberType || tag == DwarfTag::kStringType ||
          tag == DwarfTag::kStructureType || tag == DwarfTag::kSubroutineType ||
          tag == DwarfTag::kUnionType || tag == DwarfTag::kUnspecifiedType;
@@ -26,13 +25,11 @@ bool DwarfTagIsTypeModifier(DwarfTag tag) {
   return tag == DwarfTag::kConstType || tag == DwarfTag::kPointerType ||
          tag == DwarfTag::kReferenceType || tag == DwarfTag::kRestrictType ||
          tag == DwarfTag::kRvalueReferenceType || tag == DwarfTag::kTypedef ||
-         tag == DwarfTag::kVolatileType ||
-         tag == DwarfTag::kImportedDeclaration;
+         tag == DwarfTag::kVolatileType || tag == DwarfTag::kImportedDeclaration;
 }
 
 bool DwarfTagIsEitherReference(DwarfTag tag) {
-  return tag == DwarfTag::kReferenceType ||
-         tag == DwarfTag::kRvalueReferenceType;
+  return tag == DwarfTag::kReferenceType || tag == DwarfTag::kRvalueReferenceType;
 }
 
 bool DwarfTagIsPointerOrReference(DwarfTag tag) {

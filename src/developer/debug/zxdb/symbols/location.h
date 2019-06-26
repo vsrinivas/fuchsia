@@ -56,8 +56,7 @@ class Location {
   Location(State state, uint64_t address);
 
   // Symbolized location.
-  Location(uint64_t address, FileLine file_line, int column,
-           const SymbolContext& symbol_context,
+  Location(uint64_t address, FileLine file_line, int column, const SymbolContext& symbol_context,
            LazySymbol symbol = LazySymbol());
 
   // Unlocated variable.

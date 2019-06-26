@@ -38,20 +38,16 @@ std::string GetBuildDir() {
 
 // SystemSymbols::ModuleRef ----------------------------------------------------
 
-SystemSymbols::ModuleRef::ModuleRef(
-    SystemSymbols* system_symbols,
-    std::unique_ptr<ModuleSymbols> module_symbols)
-    : system_symbols_(system_symbols),
-      module_symbols_(std::move(module_symbols)) {}
+SystemSymbols::ModuleRef::ModuleRef(SystemSymbols* system_symbols,
+                                    std::unique_ptr<ModuleSymbols> module_symbols)
+    : system_symbols_(system_symbols), module_symbols_(std::move(module_symbols)) {}
 
 SystemSymbols::ModuleRef::~ModuleRef() {
   if (system_symbols_)
     system_symbols_->WillDeleteModule(this);
 }
 
-void SystemSymbols::ModuleRef::SystemSymbolsDeleting() {
-  system_symbols_ = nullptr;
-}
+void SystemSymbols::ModuleRef::SystemSymbolsDeleting() { system_symbols_ = nullptr; }
 
 // SystemSymbols ---------------------------------------------------------------
 
@@ -70,42 +66,37 @@ fxl::RefPtr<SystemSymbols::ModuleRef> SystemSymbols::InjectModuleForTesting(
   // Can't inject a module that already exists.
   FXL_DCHECK(modules_.find(build_id) == modules_.end());
 
-  fxl::RefPtr<ModuleRef> result =
-      fxl::MakeRefCounted<ModuleRef>(this, std::move(module));
+  fxl::RefPtr<ModuleRef> result = fxl::MakeRefCounted<ModuleRef>(this, std::move(module));
   modules_[build_id] = result.get();
   return result;
 }
 
-Err SystemSymbols::GetModule(const std::string& build_id,
-                             fxl::RefPtr<ModuleRef>* module, bool download) {
+Err SystemSymbols::GetModule(const std::string& build_id, fxl::RefPtr<ModuleRef>* module,
+                             bool download) {
   auto found_existing = modules_.find(build_id);
   if (found_existing != modules_.end()) {
     *module = fxl::RefPtr<ModuleRef>(found_existing->second);
     return Err();
   }
 
-  std::string file_name =
-      build_id_index_.FileForBuildID(build_id, DebugSymbolFileType::kDebugInfo);
+  std::string file_name = build_id_index_.FileForBuildID(build_id, DebugSymbolFileType::kDebugInfo);
   if (file_name.empty() && download && download_handler_) {
     *module = nullptr;
-    download_handler_->RequestDownload(build_id,
-                                       DebugSymbolFileType::kDebugInfo, false);
+    download_handler_->RequestDownload(build_id, DebugSymbolFileType::kDebugInfo, false);
   }
 
   std::string binary_file_name =
       build_id_index_.FileForBuildID(build_id, DebugSymbolFileType::kBinary);
 
   if (binary_file_name.empty() && download && download_handler_) {
-    download_handler_->RequestDownload(build_id, DebugSymbolFileType::kBinary,
-                                       false);
+    download_handler_->RequestDownload(build_id, DebugSymbolFileType::kBinary, false);
   }
 
   if (file_name.empty()) {
     return Err();
   }
 
-  auto module_symbols = std::make_unique<ModuleSymbolsImpl>(
-      file_name, binary_file_name, build_id);
+  auto module_symbols = std::make_unique<ModuleSymbolsImpl>(file_name, binary_file_name, build_id);
   Err err = module_symbols->Load();
   if (err.has_error())
     return err;

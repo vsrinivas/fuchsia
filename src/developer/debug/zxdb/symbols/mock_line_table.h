@@ -20,10 +20,8 @@ class MockLineTable : public LineTable {
   // LineTable implementation.
   size_t GetNumFileNames() const override;
   const std::vector<llvm::DWARFDebugLine::Row>& GetRows() const override;
-  std::optional<std::string> GetFileNameByIndex(
-      uint64_t file_id) const override;
-  llvm::DWARFDie GetSubroutineForRow(
-      const llvm::DWARFDebugLine::Row& row) const override;
+  std::optional<std::string> GetFileNameByIndex(uint64_t file_id) const override;
+  llvm::DWARFDie GetSubroutineForRow(const llvm::DWARFDebugLine::Row& row) const override;
 
  private:
   FileNameVector file_names_;

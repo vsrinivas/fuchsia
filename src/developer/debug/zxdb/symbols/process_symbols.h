@@ -71,8 +71,7 @@ class ProcessSymbols {
   // Appends the ModuleSymbols implementation to the current list (unlike
   // SetModules which does a replacement). This is typically used to populate
   // a ProcessSymbols with one or more MockModuleSymbols for testing purposes.
-  void InjectModuleForTesting(const std::string& name,
-                              const std::string& build_id,
+  void InjectModuleForTesting(const std::string& name, const std::string& build_id,
                               std::unique_ptr<LoadedModuleSymbols> mod_sym);
 
   // Returns statistics on the currently-loaded modules.
@@ -88,8 +87,7 @@ class ProcessSymbols {
   // If symbolize is true, the results will be symbolized, otherwise the
   // output locations will be regular addresses (this will be slightly faster).
   std::vector<Location> ResolveInputLocation(
-      const InputLocation& input_location,
-      const ResolveOptions& options = ResolveOptions()) const;
+      const InputLocation& input_location, const ResolveOptions& options = ResolveOptions()) const;
 
   // Computes the line that corresponds to the given address. Unlike
   // ResolveInputLocation (which just returns the current source line), this
@@ -128,13 +126,11 @@ class ProcessSymbols {
   // This class issues no notifications, the caller needs to do that. Just
   // because there's no error doesn't necessarily mean the symbols have been
   // loaded, since some symbols might be expected to be not present.
-  ModuleInfo* SaveModuleInfo(const debug_ipc::Module& module,
-                             Err* symbol_load_err);
+  ModuleInfo* SaveModuleInfo(const debug_ipc::Module& module, Err* symbol_load_err);
 
   // Equality comparison for the two types of modules. This compares load
   // address and build id.
-  static bool RefersToSameModule(const debug_ipc::Module& a,
-                                 const ModuleInfo& b);
+  static bool RefersToSameModule(const debug_ipc::Module& a, const ModuleInfo& b);
 
   // Looks up the given address and returns the module it's part of. Returns
   // null if the address is out-of-range.

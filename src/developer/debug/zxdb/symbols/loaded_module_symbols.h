@@ -28,15 +28,13 @@ class LineDetails;
 // load address) and holds the load address.
 class LoadedModuleSymbols {
  public:
-  LoadedModuleSymbols(fxl::RefPtr<SystemSymbols::ModuleRef> module,
-                      std::string build_id, uint64_t load_address);
+  LoadedModuleSymbols(fxl::RefPtr<SystemSymbols::ModuleRef> module, std::string build_id,
+                      uint64_t load_address);
   ~LoadedModuleSymbols();
 
   // Returns the underlying ModuleSymbols object.
   SystemSymbols::ModuleRef* module_ref() { return module_.get(); }
-  const ModuleSymbols* module_symbols() const {
-    return module_->module_symbols();
-  }
+  const ModuleSymbols* module_symbols() const { return module_->module_symbols(); }
 
   fxl::WeakPtr<LoadedModuleSymbols> GetWeakPtr();
 
@@ -87,8 +85,7 @@ class LoadedModuleSymbols {
   // Since a function implementation can be duplicated more than once, there
   // can be multiple results.
   std::vector<Location> ResolveInputLocation(
-      const InputLocation& input_location,
-      const ResolveOptions& options = ResolveOptions()) const;
+      const InputLocation& input_location, const ResolveOptions& options = ResolveOptions()) const;
 
  private:
   fxl::RefPtr<SystemSymbols::ModuleRef> module_;

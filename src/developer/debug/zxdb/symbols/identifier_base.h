@@ -38,22 +38,19 @@ class IdentifierBase {
  public:
   using Qualification = IdentifierQualification;
 
-  explicit IdentifierBase(Qualification qual = Qualification::kRelative)
-      : qualification_(qual) {}
+  explicit IdentifierBase(Qualification qual = Qualification::kRelative) : qualification_(qual) {}
 
   // Makes an identifier from a single component. Without the qualification
   // means relative.
   explicit IdentifierBase(ComponentType comp)
-      : qualification_(Qualification::kRelative),
-        components_({std::move(comp)}) {}
+      : qualification_(Qualification::kRelative), components_({std::move(comp)}) {}
   IdentifierBase(Qualification qual, ComponentType comp)
       : qualification_(qual), components_({std::move(comp)}) {}
 
   // Construction of a relative identifier from a simple single-name string.
   // This string is passed to the underlying component's constructor.
   IdentifierBase(const std::string& name)
-      : qualification_(Qualification::kRelative),
-        components_({ComponentType(name)}) {}
+      : qualification_(Qualification::kRelative), components_({ComponentType(name)}) {}
 
   // Makes an identifier over a range of components.
   template <class InputIterator>
@@ -61,19 +58,14 @@ class IdentifierBase {
       : qualification_(qual), components_(first, last) {}
 
   bool operator==(const IdentifierBase<ComponentType>& other) const {
-    return qualification_ == other.qualification_ &&
-           components_ == other.components_;
+    return qualification_ == other.qualification_ && components_ == other.components_;
   }
-  bool operator!=(const IdentifierBase<ComponentType>& other) const {
-    return !operator==(other);
-  }
+  bool operator!=(const IdentifierBase<ComponentType>& other) const { return !operator==(other); }
 
   std::vector<ComponentType>& components() { return components_; }
   const std::vector<ComponentType>& components() const { return components_; }
 
-  bool empty() const {
-    return components_.empty() && qualification_ == Qualification::kRelative;
-  }
+  bool empty() const { return components_.empty() && qualification_ == Qualification::kRelative; }
 
   // Appends a single component.
   void AppendComponent(ComponentType c) { components_.push_back(std::move(c)); }

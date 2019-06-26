@@ -13,16 +13,13 @@
 
 namespace zxdb {
 
-llvm::DWARFDie ModuleSymbolIndexNode::DieRef::ToDie(
-    llvm::DWARFContext* context) const {
+llvm::DWARFDie ModuleSymbolIndexNode::DieRef::ToDie(llvm::DWARFContext* context) const {
   return context->getDIEForOffset(offset_);
 }
 
 ModuleSymbolIndexNode::ModuleSymbolIndexNode() = default;
 
-ModuleSymbolIndexNode::ModuleSymbolIndexNode(const DieRef& ref) {
-  dies_.push_back(ref);
-}
+ModuleSymbolIndexNode::ModuleSymbolIndexNode(const DieRef& ref) { dies_.push_back(ref); }
 
 ModuleSymbolIndexNode::~ModuleSymbolIndexNode() = default;
 
@@ -99,8 +96,7 @@ void ModuleSymbolIndexNode::AddDie(const DieRef& ref) {
 }
 
 ModuleSymbolIndexNode* ModuleSymbolIndexNode::AddChild(std::string name) {
-  return &sub_.emplace(std::piecewise_construct,
-                       std::forward_as_tuple(std::move(name)),
+  return &sub_.emplace(std::piecewise_construct, std::forward_as_tuple(std::move(name)),
                        std::forward_as_tuple())
               .first->second;
 }
@@ -111,8 +107,7 @@ ModuleSymbolIndexNode* ModuleSymbolIndexNode::AddChild(const char* name) {
               .first->second;
 }
 
-void ModuleSymbolIndexNode::AddChild(const std::string& name,
-                                     ModuleSymbolIndexNode&& child) {
+void ModuleSymbolIndexNode::AddChild(const std::string& name, ModuleSymbolIndexNode&& child) {
   auto existing = sub_.find(name);
   if (existing == sub_.end()) {
     sub_.emplace(std::piecewise_construct, std::forward_as_tuple(name),
@@ -143,8 +138,7 @@ void ModuleSymbolIndexNode::Merge(ModuleSymbolIndexNode&& other) {
   }
 }
 
-std::pair<ModuleSymbolIndexNode::ConstIterator,
-          ModuleSymbolIndexNode::ConstIterator>
+std::pair<ModuleSymbolIndexNode::ConstIterator, ModuleSymbolIndexNode::ConstIterator>
 ModuleSymbolIndexNode::FindPrefix(const std::string& input) const {
   if (input.empty())
     return std::make_pair(sub_.end(), sub_.end());

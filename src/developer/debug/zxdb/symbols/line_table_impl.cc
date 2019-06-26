@@ -15,27 +15,22 @@ LineTableImpl::LineTableImpl(llvm::DWARFContext* context, llvm::DWARFUnit* unit)
 
 LineTableImpl::~LineTableImpl() = default;
 
-size_t LineTableImpl::GetNumFileNames() const {
-  return line_table_->Prologue.FileNames.size();
-}
+size_t LineTableImpl::GetNumFileNames() const { return line_table_->Prologue.FileNames.size(); }
 
 const std::vector<llvm::DWARFDebugLine::Row>& LineTableImpl::GetRows() const {
   return line_table_->Rows;
 }
 
-std::optional<std::string> LineTableImpl::GetFileNameByIndex(
-    uint64_t file_id) const {
+std::optional<std::string> LineTableImpl::GetFileNameByIndex(uint64_t file_id) const {
   std::string result;
-  if (line_table_->getFileNameByIndex(
-          file_id, compilation_dir_,
-          llvm::DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath,
-          result))
+  if (line_table_->getFileNameByIndex(file_id, compilation_dir_,
+                                      llvm::DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath,
+                                      result))
     return std::optional<std::string>(std::move(result));
   return std::nullopt;
 }
 
-llvm::DWARFDie LineTableImpl::GetSubroutineForRow(
-    const llvm::DWARFDebugLine::Row& row) const {
+llvm::DWARFDie LineTableImpl::GetSubroutineForRow(const llvm::DWARFDebugLine::Row& row) const {
   return unit_->getSubroutineForAddress(row.Address);
 }
 

@@ -29,8 +29,7 @@ bool IsPointerTag(DwarfTag tag) {
 
 }  // namespace
 
-ModifiedType::ModifiedType(DwarfTag kind, LazySymbol modified)
-    : Type(kind), modified_(modified) {
+ModifiedType::ModifiedType(DwarfTag kind, LazySymbol modified) : Type(kind), modified_(modified) {
   FXL_DCHECK(DwarfTagIsTypeModifier(kind));
   if (IsTransparentTag(kind)) {
     const Type* mod_type = modified_.Get()->AsType();

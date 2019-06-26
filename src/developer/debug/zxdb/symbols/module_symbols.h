@@ -67,8 +67,8 @@ class ModuleSymbols {
   // with a "0" line number should be skipped over.
   //
   // The SymbolContext will be used to interpret the absolute input address.
-  virtual LineDetails LineDetailsForAddress(
-      const SymbolContext& symbol_context, uint64_t absolute_address) const = 0;
+  virtual LineDetails LineDetailsForAddress(const SymbolContext& symbol_context,
+                                            uint64_t absolute_address) const = 0;
 
   // Returns a vector of full file names that match the input.
   //
@@ -78,8 +78,7 @@ class ModuleSymbols {
   //
   // In the future we may want to return an object representing the compilation
   // unit for each of the files.
-  virtual std::vector<std::string> FindFileMatches(
-      std::string_view name) const = 0;
+  virtual std::vector<std::string> FindFileMatches(std::string_view name) const = 0;
 
   // Returns the functions marked with DW_AT_main_subprogram in this module.
   //
@@ -93,8 +92,7 @@ class ModuleSymbols {
 
   // Converts the given DieRef from the symbol index to an actual Symbol
   // object for reading.
-  virtual LazySymbol IndexDieRefToSymbol(
-      const ModuleSymbolIndexNode::DieRef&) const = 0;
+  virtual LazySymbol IndexDieRefToSymbol(const ModuleSymbolIndexNode::DieRef&) const = 0;
 
   // Return whether this module has been given the opportunity to include
   // symbols from the binary itself, such as PLT entries.

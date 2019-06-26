@@ -30,8 +30,7 @@ class MockSymbolDataProvider : public SymbolDataProvider {
   // should require a callback to retrieve.
   //
   // Any registers not set will be synchronously reported as unknown.
-  void AddRegisterValue(debug_ipc::RegisterID id, bool synchronous,
-                        uint64_t value);
+  void AddRegisterValue(debug_ipc::RegisterID id, bool synchronous, uint64_t value);
 
   // Sets an expected memory value.
   void AddMemory(uint64_t address, std::vector<uint8_t> data);
@@ -42,15 +41,12 @@ class MockSymbolDataProvider : public SymbolDataProvider {
 
   // SymbolDataProvider implementation.
   debug_ipc::Arch GetArch() override;
-  bool GetRegister(debug_ipc::RegisterID id,
-                   std::optional<uint64_t>* value) override;
-  void GetRegisterAsync(debug_ipc::RegisterID id,
-                        GetRegisterCallback callback) override;
+  bool GetRegister(debug_ipc::RegisterID id, std::optional<uint64_t>* value) override;
+  void GetRegisterAsync(debug_ipc::RegisterID id, GetRegisterCallback callback) override;
   std::optional<uint64_t> GetFrameBase() override;
   void GetFrameBaseAsync(GetRegisterCallback callback) override;
   uint64_t GetCanonicalFrameAddress() const override;
-  void GetMemoryAsync(uint64_t address, uint32_t size,
-                      GetMemoryCallback callback) override;
+  void GetMemoryAsync(uint64_t address, uint32_t size, GetMemoryCallback callback) override;
   void WriteMemory(uint64_t address, std::vector<uint8_t> data,
                    std::function<void(const Err&)> cb) override;
 

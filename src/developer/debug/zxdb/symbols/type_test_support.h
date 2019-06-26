@@ -30,26 +30,25 @@ fxl::RefPtr<BaseType> MakeUint64Type();
 //
 // type_tag is one of DwarfTag::k*Type appropriate for collections (class,
 // struct, union).
-fxl::RefPtr<Collection> MakeCollectionType(
-    DwarfTag type_tag, const std::string& struct_name,
-    std::initializer_list<NameAndType> members);
+fxl::RefPtr<Collection> MakeCollectionType(DwarfTag type_tag, const std::string& struct_name,
+                                           std::initializer_list<NameAndType> members);
 
 // Like MakeCollectionType but takes an offset for the first data member to
 // start at. Subsequent data members go from there.
-fxl::RefPtr<Collection> MakeCollectionTypeWithOffset(
-    DwarfTag type_tag, const std::string& type_name,
-    uint32_t first_member_offset, std::initializer_list<NameAndType> members);
+fxl::RefPtr<Collection> MakeCollectionTypeWithOffset(DwarfTag type_tag,
+                                                     const std::string& type_name,
+                                                     uint32_t first_member_offset,
+                                                     std::initializer_list<NameAndType> members);
 
 // Makes a two collections, one a base class of the other, and returns the
 // derived type.
 //
 // type_tag is one of DwarfTag::k*Type appropriate for collections (class,
 // struct, union).
-fxl::RefPtr<Collection> MakeDerivedClassPair(
-    DwarfTag type_tag, const std::string& base_name,
-    std::initializer_list<NameAndType> base_members,
-    const std::string& derived_name,
-    std::initializer_list<NameAndType> derived_members);
+fxl::RefPtr<Collection> MakeDerivedClassPair(DwarfTag type_tag, const std::string& base_name,
+                                             std::initializer_list<NameAndType> base_members,
+                                             const std::string& derived_name,
+                                             std::initializer_list<NameAndType> derived_members);
 
 // Setting this compile unit as the parent of a symbol will mark it as having
 // the Rust language.
@@ -64,9 +63,8 @@ fxl::RefPtr<CompileUnit> MakeRustUnit();
 // members of each Variant start at offset 0 so they overlap! The passed-in
 // members then go inside this struct, and should be arranged so they don't
 // overlap the data taken by the disciminant.
-fxl::RefPtr<Variant> MakeRustVariant(
-    const std::string& name, std::optional<uint64_t> discriminant,
-    const std::vector<fxl::RefPtr<DataMember>>& members);
+fxl::RefPtr<Variant> MakeRustVariant(const std::string& name, std::optional<uint64_t> discriminant,
+                                     const std::vector<fxl::RefPtr<DataMember>>& members);
 
 // A rust enum is a collection containing a variant part. The variant part
 // includes a discriminant and the variants that it selects from. The caller
@@ -74,9 +72,8 @@ fxl::RefPtr<Variant> MakeRustVariant(
 // overlap.
 //
 // The result will be sized to the largest variant.
-fxl::RefPtr<Collection> MakeRustEnum(
-    const std::string& name, fxl::RefPtr<DataMember> discriminant,
-    const std::vector<fxl::RefPtr<Variant>>& variants);
+fxl::RefPtr<Collection> MakeRustEnum(const std::string& name, fxl::RefPtr<DataMember> discriminant,
+                                     const std::vector<fxl::RefPtr<Variant>>& variants);
 
 // Makes a standard rust enum representing the definition:
 //
@@ -93,8 +90,8 @@ fxl::RefPtr<Collection> MakeTestRustEnum();
 // To make a regular tuple give it a name according to the types you use in
 // parens, e.g. "(u32, Point)", to make a tuple struct, give it a word name
 // like "Foo".
-fxl::RefPtr<Collection> MakeTestRustTuple(
-    const std::string& name, const std::vector<fxl::RefPtr<Type>>& members);
+fxl::RefPtr<Collection> MakeTestRustTuple(const std::string& name,
+                                          const std::vector<fxl::RefPtr<Type>>& members);
 
 }  // namespace zxdb
 

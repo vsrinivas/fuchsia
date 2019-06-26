@@ -45,8 +45,8 @@ struct LineMatch {
 // Searches the given line table for the given file/line. Finds the smallest
 // line greater than or equal to the input line and returns all instances
 // of that line.
-std::vector<LineMatch> GetAllLineTableMatchesInUnit(
-    const LineTable& line_table, const std::string& full_path, int line);
+std::vector<LineMatch> GetAllLineTableMatchesInUnit(const LineTable& line_table,
+                                                    const std::string& full_path, int line);
 
 // Filters the set of matches to get all instances of the closest match for the
 // line, with a maximum of one per function. It's assumed that the LineMatches
@@ -59,8 +59,7 @@ std::vector<LineMatch> GetAllLineTableMatchesInUnit(
 // The "one per function" rule is because a line can often get broken into
 // muliple line table entries (sometimes disjoint, sometimes not), and when
 // asking for a line we want the one with the lowest address.
-std::vector<LineMatch> GetBestLineMatches(
-    const std::vector<LineMatch>& matches);
+std::vector<LineMatch> GetBestLineMatches(const std::vector<LineMatch>& matches);
 
 }  // namespace zxdb
 

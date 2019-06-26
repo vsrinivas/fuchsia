@@ -9,9 +9,7 @@
 namespace zxdb {
 
 ArrayType::ArrayType(fxl::RefPtr<Type> value_type, size_t num_elts)
-    : Type(DwarfTag::kArrayType),
-      value_type_(std::move(value_type)),
-      num_elts_(num_elts) {
+    : Type(DwarfTag::kArrayType), value_type_(std::move(value_type)), num_elts_(num_elts) {
   set_byte_size(num_elts * value_type_->byte_size());
 }
 
@@ -24,8 +22,7 @@ std::string ArrayType::ComputeFullName() const {
   return ComputeFullNameOfNestedArray(std::string());
 }
 
-std::string ArrayType::ComputeFullNameOfNestedArray(
-    const std::string& outer_dims) const {
+std::string ArrayType::ComputeFullNameOfNestedArray(const std::string& outer_dims) const {
   std::string elt_count = fxl::StringPrintf("[%zu]", num_elts_);
   if (const ArrayType* inner_array = value_type_->AsArrayType()) {
     // Special-case nested arrays.

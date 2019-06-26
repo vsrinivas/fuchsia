@@ -6,20 +6,15 @@
 
 namespace zxdb {
 
-AddressRange SymbolContext::RelativeToAbsolute(
-    const AddressRange& relative) const {
-  return AddressRange(RelativeToAbsolute(relative.begin()),
-                      RelativeToAbsolute(relative.end()));
+AddressRange SymbolContext::RelativeToAbsolute(const AddressRange& relative) const {
+  return AddressRange(RelativeToAbsolute(relative.begin()), RelativeToAbsolute(relative.end()));
 }
 
-AddressRange SymbolContext::AbsoluteToRelative(
-    const AddressRange& absolute) const {
-  return AddressRange(AbsoluteToRelative(absolute.begin()),
-                      AbsoluteToRelative(absolute.end()));
+AddressRange SymbolContext::AbsoluteToRelative(const AddressRange& absolute) const {
+  return AddressRange(AbsoluteToRelative(absolute.begin()), AbsoluteToRelative(absolute.end()));
 }
 
-AddressRanges SymbolContext::RelativeToAbsolute(
-    const AddressRanges& relative) const {
+AddressRanges SymbolContext::RelativeToAbsolute(const AddressRanges& relative) const {
   AddressRanges::RangeVector result;
   result.reserve(relative.size());
 
@@ -29,8 +24,7 @@ AddressRanges SymbolContext::RelativeToAbsolute(
   return AddressRanges(AddressRanges::kCanonical, std::move(result));
 }
 
-AddressRanges SymbolContext::AbsoluteToRelative(
-    const AddressRanges& absolute) const {
+AddressRanges SymbolContext::AbsoluteToRelative(const AddressRanges& absolute) const {
   AddressRanges::RangeVector result;
   result.reserve(absolute.size());
 

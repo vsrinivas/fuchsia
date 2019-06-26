@@ -55,8 +55,7 @@ class DwarfExprEval {
   // Storage for opcode data.
   using Expression = std::vector<uint8_t>;
 
-  using CompletionCallback =
-      std::function<void(DwarfExprEval* eval, const Err& err)>;
+  using CompletionCallback = std::function<void(DwarfExprEval* eval, const Err& err)>;
 
   DwarfExprEval();
   ~DwarfExprEval();
@@ -89,8 +88,7 @@ class DwarfExprEval {
   //
   // This class must not be deleted from within the completion callback.
   Completion Eval(fxl::RefPtr<SymbolDataProvider> data_provider,
-                  const SymbolContext& symbol_context, Expression expr,
-                  CompletionCallback cb);
+                  const SymbolContext& symbol_context, Expression expr, CompletionCallback cb);
 
  private:
   // Evaluates the next phases of the expression until an asynchronous operation

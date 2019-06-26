@@ -158,61 +158,46 @@ class Symbol : public fxl::RefCountedThreadSafe<Symbol> {
 
   // Non-const manual RTTI wrappers.
   ArrayType* AsArrayType() {
-    return const_cast<ArrayType*>(
-        const_cast<const Symbol*>(this)->AsArrayType());
+    return const_cast<ArrayType*>(const_cast<const Symbol*>(this)->AsArrayType());
   }
   BaseType* AsBaseType() {
     return const_cast<BaseType*>(const_cast<const Symbol*>(this)->AsBaseType());
   }
   CodeBlock* AsCodeBlock() {
-    return const_cast<CodeBlock*>(
-        const_cast<const Symbol*>(this)->AsCodeBlock());
+    return const_cast<CodeBlock*>(const_cast<const Symbol*>(this)->AsCodeBlock());
   }
   CompileUnit* AsCompileUnit() {
-    return const_cast<CompileUnit*>(
-        const_cast<const Symbol*>(this)->AsCompileUnit());
+    return const_cast<CompileUnit*>(const_cast<const Symbol*>(this)->AsCompileUnit());
   }
   DataMember* AsDataMember() {
-    return const_cast<DataMember*>(
-        const_cast<const Symbol*>(this)->AsDataMember());
+    return const_cast<DataMember*>(const_cast<const Symbol*>(this)->AsDataMember());
   }
   Enumeration* AsEnumeration() {
-    return const_cast<Enumeration*>(
-        const_cast<const Symbol*>(this)->AsEnumeration());
+    return const_cast<Enumeration*>(const_cast<const Symbol*>(this)->AsEnumeration());
   }
   Function* AsFunction() {
     return const_cast<Function*>(const_cast<const Symbol*>(this)->AsFunction());
   }
   FunctionType* AsFunctionType() {
-    return const_cast<FunctionType*>(
-        const_cast<const Symbol*>(this)->AsFunctionType());
+    return const_cast<FunctionType*>(const_cast<const Symbol*>(this)->AsFunctionType());
   }
   InheritedFrom* AsInheritedFrom() {
-    return const_cast<InheritedFrom*>(
-        const_cast<const Symbol*>(this)->AsInheritedFrom());
+    return const_cast<InheritedFrom*>(const_cast<const Symbol*>(this)->AsInheritedFrom());
   }
   MemberPtr* AsMemberPtr() {
-    return const_cast<MemberPtr*>(
-        const_cast<const Symbol*>(this)->AsMemberPtr());
+    return const_cast<MemberPtr*>(const_cast<const Symbol*>(this)->AsMemberPtr());
   }
   ModifiedType* AsModifiedType() {
-    return const_cast<ModifiedType*>(
-        const_cast<const Symbol*>(this)->AsModifiedType());
+    return const_cast<ModifiedType*>(const_cast<const Symbol*>(this)->AsModifiedType());
   }
   Namespace* AsNamespace() {
-    return const_cast<Namespace*>(
-        const_cast<const Symbol*>(this)->AsNamespace());
+    return const_cast<Namespace*>(const_cast<const Symbol*>(this)->AsNamespace());
   }
   Collection* AsCollection() {
-    return const_cast<Collection*>(
-        const_cast<const Symbol*>(this)->AsCollection());
+    return const_cast<Collection*>(const_cast<const Symbol*>(this)->AsCollection());
   }
-  Type* AsType() {
-    return const_cast<Type*>(const_cast<const Symbol*>(this)->AsType());
-  }
-  Value* AsValue() {
-    return const_cast<Value*>(const_cast<const Symbol*>(this)->AsValue());
-  }
+  Type* AsType() { return const_cast<Type*>(const_cast<const Symbol*>(this)->AsType()); }
+  Value* AsValue() { return const_cast<Value*>(const_cast<const Symbol*>(this)->AsValue()); }
   Variable* AsVariable() {
     return const_cast<Variable*>(const_cast<const Symbol*>(this)->AsVariable());
   }
@@ -220,8 +205,7 @@ class Symbol : public fxl::RefCountedThreadSafe<Symbol> {
     return const_cast<Variant*>(const_cast<const Symbol*>(this)->AsVariant());
   }
   VariantPart* AsVariantPart() {
-    return const_cast<VariantPart*>(
-        const_cast<const Symbol*>(this)->AsVariantPart());
+    return const_cast<VariantPart*>(const_cast<const Symbol*>(this)->AsVariantPart());
   }
 
  protected:

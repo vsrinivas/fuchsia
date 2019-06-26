@@ -19,14 +19,13 @@ fxl::RefPtr<Symbol> null_symbol;
 LazySymbol::LazySymbol() = default;
 LazySymbol::LazySymbol(const LazySymbol& other) = default;
 LazySymbol::LazySymbol(LazySymbol&& other) = default;
-LazySymbol::LazySymbol(fxl::RefPtr<SymbolFactory> factory,
-                       void* factory_data_ptr, uint32_t factory_data_offset)
+LazySymbol::LazySymbol(fxl::RefPtr<SymbolFactory> factory, void* factory_data_ptr,
+                       uint32_t factory_data_offset)
     : factory_(std::move(factory)),
       factory_data_ptr_(factory_data_ptr),
       factory_data_offset_(factory_data_offset) {}
 LazySymbol::LazySymbol(fxl::RefPtr<Symbol> symbol) : symbol_(symbol) {}
-LazySymbol::LazySymbol(const Symbol* symbol)
-    : symbol_(const_cast<Symbol*>(symbol)) {}
+LazySymbol::LazySymbol(const Symbol* symbol) : symbol_(const_cast<Symbol*>(symbol)) {}
 LazySymbol::~LazySymbol() = default;
 
 LazySymbol& LazySymbol::operator=(const LazySymbol& other) = default;

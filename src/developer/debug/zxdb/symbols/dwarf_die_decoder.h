@@ -69,17 +69,12 @@ class DwarfDieDecoder {
   // The output pointers must remain valid until the last call to Decode()
   // has returned.
   void AddBool(llvm::dwarf::Attribute attribute, llvm::Optional<bool>* output);
-  void AddUnsignedConstant(llvm::dwarf::Attribute attribute,
-                           llvm::Optional<uint64_t>* output);
-  void AddSignedConstant(llvm::dwarf::Attribute attribute,
-                         llvm::Optional<int64_t>* output);
-  void AddAddress(llvm::dwarf::Attribute attribute,
-                  llvm::Optional<uint64_t>* output);
+  void AddUnsignedConstant(llvm::dwarf::Attribute attribute, llvm::Optional<uint64_t>* output);
+  void AddSignedConstant(llvm::dwarf::Attribute attribute, llvm::Optional<int64_t>* output);
+  void AddAddress(llvm::dwarf::Attribute attribute, llvm::Optional<uint64_t>* output);
   void AddHighPC(llvm::Optional<HighPC>* output);
-  void AddCString(llvm::dwarf::Attribute attribute,
-                  llvm::Optional<const char*>* output);
-  void AddLineTableFile(llvm::dwarf::Attribute attribute,
-                        llvm::Optional<std::string>* output);
+  void AddCString(llvm::dwarf::Attribute attribute, llvm::Optional<const char*>* output);
+  void AddLineTableFile(llvm::dwarf::Attribute attribute, llvm::Optional<std::string>* output);
 
   // For cross-DIE references. These references can be within the current
   // unit (byte offsets, not DIE indices), or from within the object file.
@@ -87,8 +82,7 @@ class DwarfDieDecoder {
   // variable according to the storage form of the attribute.
   //
   // Most callers will want to use the next variant which returns a DIE.
-  void AddReference(llvm::dwarf::Attribute attribute,
-                    llvm::Optional<uint64_t>* unit_offset,
+  void AddReference(llvm::dwarf::Attribute attribute, llvm::Optional<uint64_t>* unit_offset,
                     llvm::Optional<uint64_t>* global_offset);
 
   // Variant of the above AddReference that automatically converts a reference
@@ -99,8 +93,7 @@ class DwarfDieDecoder {
   // Extract a file name. File names (e.g. for DW_AT_decl_file) are not
   // strings but rather indices into the file name table for the corresponding
   // unit. This accessor resolves the string automatically.
-  void AddFile(llvm::dwarf::Attribute attribute,
-               llvm::Optional<std::string>* output);
+  void AddFile(llvm::dwarf::Attribute attribute, llvm::Optional<std::string>* output);
 
   // A special handler to get the parent of the most deep abstract origin.
   //
@@ -139,8 +132,8 @@ class DwarfDieDecoder {
   bool Decode(const llvm::DWARFDebugInfoEntry& die);
 
  public:
-  using Dispatch = std::pair<llvm::dwarf::Attribute,
-                             std::function<void(const llvm::DWARFFormValue&)>>;
+  using Dispatch =
+      std::pair<llvm::dwarf::Attribute, std::function<void(const llvm::DWARFFormValue&)>>;
 
   // Backend for Decode() above.
   //
@@ -149,8 +142,7 @@ class DwarfDieDecoder {
   // abstract origin references to follow which is decremented each time a
   // recursive call is made. When this gets to 0, no more abstract origin
   // references will be followed.
-  bool DecodeInternal(const llvm::DWARFDebugInfoEntry& die,
-                      int abstract_origin_refs_to_follow);
+  bool DecodeInternal(const llvm::DWARFDebugInfoEntry& die, int abstract_origin_refs_to_follow);
 
   llvm::DWARFContext* context_;
   llvm::DWARFUnit* unit_;

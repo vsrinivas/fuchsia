@@ -28,12 +28,8 @@ class SymbolContext {
   explicit SymbolContext(uint64_t load_address) : load_address_(load_address) {}
 
   // Address conversion.
-  uint64_t RelativeToAbsolute(uint64_t relative) const {
-    return load_address_ + relative;
-  }
-  uint64_t AbsoluteToRelative(uint64_t absolute) const {
-    return absolute - load_address_;
-  }
+  uint64_t RelativeToAbsolute(uint64_t relative) const { return load_address_ + relative; }
+  uint64_t AbsoluteToRelative(uint64_t absolute) const { return absolute - load_address_; }
 
   // AddressRange conversion.
   AddressRange RelativeToAbsolute(const AddressRange& relative) const;

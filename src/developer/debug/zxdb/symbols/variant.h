@@ -65,8 +65,7 @@ class Variant final : public Symbol {
   FRIEND_REF_COUNTED_THREAD_SAFE(Variant);
   FRIEND_MAKE_REF_COUNTED(Variant);
 
-  Variant(std::optional<uint64_t> discr_value,
-          std::vector<LazySymbol> data_members);
+  Variant(std::optional<uint64_t> discr_value, std::vector<LazySymbol> data_members);
   virtual ~Variant();
 
   std::optional<uint64_t> discr_value_;

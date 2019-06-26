@@ -23,11 +23,8 @@ bool ExpectSymbolsForName(const std::string& name) { return name != "<vDSO>"; }
 
 }  // namespace
 
-ProcessSymbols::ProcessSymbols(Notifications* notifications,
-                               TargetSymbols* target_symbols)
-    : notifications_(notifications),
-      target_symbols_(target_symbols),
-      weak_factory_(this) {}
+ProcessSymbols::ProcessSymbols(Notifications* notifications, TargetSymbols* target_symbols)
+    : notifications_(notifications), target_symbols_(target_symbols), weak_factory_(this) {}
 
 ProcessSymbols::~ProcessSymbols() = default;
 
@@ -46,8 +43,7 @@ void ProcessSymbols::SetModules(const std::vector<debug_ipc::Module>& modules) {
 
     auto found_addr = modules_.find(modules[i].base);
     // Even if address is a match, the library could have been swapped.
-    if (found_addr == modules_.end() ||
-        !RefersToSameModule(modules[i], found_addr->second))
+    if (found_addr == modules_.end() || !RefersToSameModule(modules[i], found_addr->second))
       new_module_indices.push_back(i);
   }
 
@@ -89,9 +85,8 @@ void ProcessSymbols::SetModules(const std::vector<debug_ipc::Module>& modules) {
     notifications_->OnSymbolLoadFailure(err);
 }
 
-void ProcessSymbols::InjectModuleForTesting(
-    const std::string& name, const std::string& build_id,
-    std::unique_ptr<LoadedModuleSymbols> mod_sym) {
+void ProcessSymbols::InjectModuleForTesting(const std::string& name, const std::string& build_id,
+                                            std::unique_ptr<LoadedModuleSymbols> mod_sym) {
   LoadedModuleSymbols* loaded_ptr = mod_sym.get();
   FXL_DCHECK(loaded_ptr);
 
@@ -103,8 +98,7 @@ void ProcessSymbols::InjectModuleForTesting(
   modules_[loaded_ptr->load_address()] = std::move(info);
 
   // Issue notifications.
-  target_symbols_->AddModule(
-      fxl::RefPtr<SystemSymbols::ModuleRef>(loaded_ptr->module_ref()));
+  target_symbols_->AddModule(fxl::RefPtr<SystemSymbols::ModuleRef>(loaded_ptr->module_ref()));
   notifications_->DidLoadModuleSymbols(loaded_ptr);
 }
 
@@ -130,8 +124,7 @@ std::vector<ModuleSymbolStatus> ProcessSymbols::GetStatus() const {
   return result;
 }
 
-std::vector<const LoadedModuleSymbols*> ProcessSymbols::GetLoadedModuleSymbols()
-    const {
+std::vector<const LoadedModuleSymbols*> ProcessSymbols::GetLoadedModuleSymbols() const {
   std::vector<const LoadedModuleSymbols*> result;
   result.reserve(modules_.size());
   for (const auto& [base, mod_info] : modules_) {
@@ -141,8 +134,8 @@ std::vector<const LoadedModuleSymbols*> ProcessSymbols::GetLoadedModuleSymbols()
   return result;
 }
 
-std::vector<Location> ProcessSymbols::ResolveInputLocation(
-    const InputLocation& input_location, const ResolveOptions& options) const {
+std::vector<Location> ProcessSymbols::ResolveInputLocation(const InputLocation& input_location,
+                                                           const ResolveOptions& options) const {
   FXL_DCHECK(input_location.type != InputLocation::Type::kNone);
 
   // Address resolution.
@@ -160,8 +153,7 @@ std::vector<Location> ProcessSymbols::ResolveInputLocation(
     }
 
     // No-op conversion of address -> address.
-    return std::vector<Location>{
-        Location(Location::State::kAddress, input_location.address)};
+    return std::vector<Location>{Location(Location::State::kAddress, input_location.address)};
   }
 
   // Symbol and file/line resolution both requires iterating over all modules.
@@ -169,8 +161,7 @@ std::vector<Location> ProcessSymbols::ResolveInputLocation(
   for (const auto& [base, mod_info] : modules_) {
     if (mod_info.symbols->module_ref()) {
       const LoadedModuleSymbols* loaded = mod_info.symbols.get();
-      for (Location& location :
-           loaded->ResolveInputLocation(input_location, options))
+      for (Location& location : loaded->ResolveInputLocation(input_location, options))
         result.push_back(std::move(location));
     }
   }
@@ -181,8 +172,8 @@ LineDetails ProcessSymbols::LineDetailsForAddress(uint64_t address) const {
   const ModuleInfo* info = InfoForAddress(address);
   if (!info || !info->symbols->module_ref())
     return LineDetails();
-  return info->symbols->module_symbols()->LineDetailsForAddress(
-      info->symbols->symbol_context(), address);
+  return info->symbols->module_symbols()->LineDetailsForAddress(info->symbols->symbol_context(),
+                                                                address);
 }
 
 bool ProcessSymbols::HaveSymbolsLoadedForModuleAt(uint64_t address) const {
@@ -190,33 +181,30 @@ bool ProcessSymbols::HaveSymbolsLoadedForModuleAt(uint64_t address) const {
   return info && info->symbols->module_ref();
 }
 
-ProcessSymbols::ModuleInfo* ProcessSymbols::SaveModuleInfo(
-    const debug_ipc::Module& module, Err* symbol_load_err) {
+ProcessSymbols::ModuleInfo* ProcessSymbols::SaveModuleInfo(const debug_ipc::Module& module,
+                                                           Err* symbol_load_err) {
   ModuleInfo info;
   info.name = module.name;
   info.build_id = module.build_id;
   info.base = module.base;
 
   fxl::RefPtr<SystemSymbols::ModuleRef> module_symbols;
-  *symbol_load_err = target_symbols_->system_symbols()->GetModule(
-      module.build_id, &module_symbols);
+  *symbol_load_err = target_symbols_->system_symbols()->GetModule(module.build_id, &module_symbols);
   if (symbol_load_err->has_error()) {
     // Error, but it may be expected.
     if (!ExpectSymbolsForName(module.name))
       *symbol_load_err = Err();
-    info.symbols = std::make_unique<LoadedModuleSymbols>(
-        nullptr, module.build_id, module.base);
+    info.symbols = std::make_unique<LoadedModuleSymbols>(nullptr, module.build_id, module.base);
   } else {
     // Success, make the LoadedModuleSymbols.
-    info.symbols = std::make_unique<LoadedModuleSymbols>(
-        std::move(module_symbols), module.build_id, module.base);
+    info.symbols = std::make_unique<LoadedModuleSymbols>(std::move(module_symbols), module.build_id,
+                                                         module.base);
   }
 
-  auto inserted_iter =
-      modules_
-          .emplace(std::piecewise_construct, std::forward_as_tuple(module.base),
-                   std::forward_as_tuple(std::move(info)))
-          .first;
+  auto inserted_iter = modules_
+                           .emplace(std::piecewise_construct, std::forward_as_tuple(module.base),
+                                    std::forward_as_tuple(std::move(info)))
+                           .first;
   return &inserted_iter->second;
 }
 
@@ -227,8 +215,7 @@ void ProcessSymbols::RetryLoadBuildID(const std::string& build_id) {
     }
 
     fxl::RefPtr<SystemSymbols::ModuleRef> module_symbols;
-    Err err = target_symbols_->system_symbols()->GetModule(
-        build_id, &module_symbols, false);
+    Err err = target_symbols_->system_symbols()->GetModule(build_id, &module_symbols, false);
 
     if (!err.has_error() && !module_symbols) {
       err = Err("Symbols were downloaded but did not appear in index.");
@@ -239,8 +226,7 @@ void ProcessSymbols::RetryLoadBuildID(const std::string& build_id) {
       return;
     }
 
-    mod.symbols = std::make_unique<LoadedModuleSymbols>(
-        std::move(module_symbols), build_id, base);
+    mod.symbols = std::make_unique<LoadedModuleSymbols>(std::move(module_symbols), build_id, base);
 
     // If we can have multiple modules with the same build ID in the process
     // then this logic will be wrong. I don't see how that happens as of today,
@@ -256,20 +242,18 @@ void ProcessSymbols::DoRefreshTargetSymbols() {
   target_symbols_->RemoveAllModules();
   for (auto& [base, mod_info] : modules_) {
     if (mod_info.symbols->module_ref()) {
-      target_symbols_->AddModule(fxl::RefPtr<SystemSymbols::ModuleRef>(
-          mod_info.symbols->module_ref()));
+      target_symbols_->AddModule(
+          fxl::RefPtr<SystemSymbols::ModuleRef>(mod_info.symbols->module_ref()));
     }
   }
 }
 
 // static
-bool ProcessSymbols::RefersToSameModule(const debug_ipc::Module& a,
-                                        const ModuleInfo& b) {
+bool ProcessSymbols::RefersToSameModule(const debug_ipc::Module& a, const ModuleInfo& b) {
   return a.base == b.base && a.build_id == b.build_id;
 }
 
-const ProcessSymbols::ModuleInfo* ProcessSymbols::InfoForAddress(
-    uint64_t address) const {
+const ProcessSymbols::ModuleInfo* ProcessSymbols::InfoForAddress(uint64_t address) const {
   if (modules_.empty())
     return nullptr;
   auto found = modules_.lower_bound(address);

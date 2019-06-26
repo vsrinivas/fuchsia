@@ -91,8 +91,7 @@ constexpr unsigned kNoParent = std::numeric_limits<unsigned>::max();
 // Returns true if the given abbreviation defines a PC range.
 bool AbbrevHasCode(const llvm::DWARFAbbreviationDeclaration* abbrev) {
   for (const auto spec : abbrev->attributes()) {
-    if (spec.Attr == llvm::dwarf::DW_AT_low_pc ||
-        spec.Attr == llvm::dwarf::DW_AT_high_pc)
+    if (spec.Attr == llvm::dwarf::DW_AT_low_pc || spec.Attr == llvm::dwarf::DW_AT_high_pc)
       return true;
   }
   return false;
@@ -122,11 +121,10 @@ size_t RecursiveCountDies(const ModuleSymbolIndexNode& node) {
 //
 // All functions found with DW_AT_main_subprogram will be added to the
 // main_functions array.
-void ExtractUnitIndexableEntries(
-    llvm::DWARFContext* context, llvm::DWARFUnit* unit,
-    std::vector<SymbolStorage>* symbol_storage,
-    std::vector<unsigned>* parent_indices,
-    std::vector<ModuleSymbolIndexNode::DieRef>* main_functions) {
+void ExtractUnitIndexableEntries(llvm::DWARFContext* context, llvm::DWARFUnit* unit,
+                                 std::vector<SymbolStorage>* symbol_storage,
+                                 std::vector<unsigned>* parent_indices,
+                                 std::vector<ModuleSymbolIndexNode::DieRef>* main_functions) {
   DwarfDieDecoder decoder(context, unit);
 
   // The offset of the declaration. This can be unit-relative or file-absolute.
@@ -137,8 +135,7 @@ void ExtractUnitIndexableEntries(
   // since probably we won't do any optimized lookups.
   llvm::Optional<uint64_t> decl_unit_offset;
   llvm::Optional<uint64_t> decl_global_offset;
-  decoder.AddReference(llvm::dwarf::DW_AT_specification, &decl_unit_offset,
-                       &decl_global_offset);
+  decoder.AddReference(llvm::dwarf::DW_AT_specification, &decl_unit_offset, &decl_global_offset);
 
   llvm::Optional<bool> is_declaration;
   decoder.AddBool(llvm::dwarf::DW_AT_declaration, &is_declaration);
@@ -156,8 +153,7 @@ void ExtractUnitIndexableEntries(
   // tree_stack.back(). inside_function should be set if this node or any
   // parent node is a function.
   struct StackEntry {
-    StackEntry(int d, unsigned i, bool f)
-        : depth(d), index(i), inside_function(f) {}
+    StackEntry(int d, unsigned i, bool f) : depth(d), index(i), inside_function(f) {}
 
     int depth;
     unsigned index;
@@ -175,10 +171,8 @@ void ExtractUnitIndexableEntries(
     decl_global_offset.reset();
     is_main_subprogram.reset();
 
-    const llvm::DWARFDebugInfoEntry* die =
-        unit->getDIEAtIndex(i).getDebugInfoEntry();
-    const llvm::DWARFAbbreviationDeclaration* abbrev =
-        die->getAbbreviationDeclarationPtr();
+    const llvm::DWARFDebugInfoEntry* die = unit->getDIEAtIndex(i).getDebugInfoEntry();
+    const llvm::DWARFAbbreviationDeclaration* abbrev = die->getAbbreviationDeclarationPtr();
     if (!abbrev)
       continue;
 
@@ -206,8 +200,8 @@ void ExtractUnitIndexableEntries(
       // disambiguated once the DIE is decoded below).
       ref_type = ModuleSymbolIndexNode::RefType::kType;
       should_index = true;
-    } else if (!tree_stack.back().inside_function &&
-               tag == DwarfTag::kVariable && AbbrevHasLocation(abbrev)) {
+    } else if (!tree_stack.back().inside_function && tag == DwarfTag::kVariable &&
+               AbbrevHasLocation(abbrev)) {
       // Found variable storage outside of a function (variables inside
       // functions are local so don't get added to the global index).
       ref_type = ModuleSymbolIndexNode::RefType::kVariable;
@@ -219,14 +213,12 @@ void ExtractUnitIndexableEntries(
       decoder.Decode(*die);
 
       // Apply the declaration flag for types now that we've decoded.
-      if (ref_type == ModuleSymbolIndexNode::RefType::kType && is_declaration &&
-          *is_declaration)
+      if (ref_type == ModuleSymbolIndexNode::RefType::kType && is_declaration && *is_declaration)
         ref_type = ModuleSymbolIndexNode::RefType::kTypeDecl;
 
       if (decl_unit_offset) {
         // Save the declaration for indexing.
-        symbol_storage->emplace_back(die, unit->getOffset() + *decl_unit_offset,
-                                     ref_type);
+        symbol_storage->emplace_back(die, unit->getOffset() + *decl_unit_offset, ref_type);
       } else if (decl_global_offset) {
         FXL_NOTREACHED() << "Implement DW_FORM_ref_addr for references.";
       } else {
@@ -236,10 +228,9 @@ void ExtractUnitIndexableEntries(
       }
 
       // Check for "main" function annotation.
-      if (ref_type == ModuleSymbolIndexNode::RefType::kFunction &&
-          is_main_subprogram && *is_main_subprogram) {
-        main_functions->emplace_back(ModuleSymbolIndexNode::RefType::kFunction,
-                                     die->getOffset());
+      if (ref_type == ModuleSymbolIndexNode::RefType::kFunction && is_main_subprogram &&
+          *is_main_subprogram) {
+        main_functions->emplace_back(ModuleSymbolIndexNode::RefType::kFunction, die->getOffset());
       }
     }
 
@@ -257,10 +248,9 @@ void ExtractUnitIndexableEntries(
       while (tree_stack.back().depth >= current_depth)
         tree_stack.pop_back();
 
-      tree_stack.push_back(
-          StackEntry(current_depth, i,
-                     ref_type == ModuleSymbolIndexNode::RefType::kFunction ||
-                         tree_stack.back().inside_function));
+      tree_stack.push_back(StackEntry(current_depth, i,
+                                      ref_type == ModuleSymbolIndexNode::RefType::kFunction ||
+                                          tree_stack.back().inside_function));
     }
 
     // Save parent info. The parent of this node is the one right before the
@@ -276,12 +266,8 @@ void ExtractUnitIndexableEntries(
 class SymbolStorageIndexer {
  public:
   SymbolStorageIndexer(llvm::DWARFContext* context, llvm::DWARFUnit* unit,
-                       const std::vector<unsigned>& parent_indices,
-                       ModuleSymbolIndexNode* root)
-      : unit_(unit),
-        parent_indices_(parent_indices),
-        root_(root),
-        decoder_(context, unit) {
+                       const std::vector<unsigned>& parent_indices, ModuleSymbolIndexNode* root)
+      : unit_(unit), parent_indices_(parent_indices), root_(root), decoder_(context, unit) {
     decoder_.AddCString(llvm::dwarf::DW_AT_name, &name_);
 
     components_.reserve(8);
@@ -356,8 +342,7 @@ class SymbolStorageIndexer {
     ModuleSymbolIndexNode* cur = root_;
     for (int i = static_cast<int>(components_.size()) - 1; i >= 0; i--)
       cur = cur->AddChild(components_[i]);
-    cur->AddDie(
-        ModuleSymbolIndexNode::DieRef(impl.ref_type, impl.entry->getOffset()));
+    cur->AddDie(ModuleSymbolIndexNode::DieRef(impl.ref_type, impl.entry->getOffset()));
   }
 
  private:
@@ -388,8 +373,8 @@ ModuleSymbolIndex::ModuleSymbolIndex() = default;
 ModuleSymbolIndex::~ModuleSymbolIndex() = default;
 
 void ModuleSymbolIndex::CreateIndex(llvm::object::ObjectFile* object_file) {
-  std::unique_ptr<llvm::DWARFContext> context = llvm::DWARFContext::create(
-      *object_file, nullptr, llvm::DWARFContext::defaultErrorHandler);
+  std::unique_ptr<llvm::DWARFContext> context =
+      llvm::DWARFContext::create(*object_file, nullptr, llvm::DWARFContext::defaultErrorHandler);
 
   llvm::DWARFUnitVector compile_units;
   context->getDWARFObj().forEachInfoSections([&](const llvm::DWARFSection& s) {
@@ -408,9 +393,7 @@ void ModuleSymbolIndex::CreateIndex(llvm::object::ObjectFile* object_file) {
   IndexFileNames();
 }
 
-size_t ModuleSymbolIndex::CountSymbolsIndexed() const {
-  return RecursiveCountDies(root_);
-}
+size_t ModuleSymbolIndex::CountSymbolsIndexed() const { return RecursiveCountDies(root_); }
 
 const std::vector<ModuleSymbolIndexNode::DieRef>& ModuleSymbolIndex::FindExact(
     const Identifier& input) const {
@@ -429,8 +412,7 @@ const std::vector<ModuleSymbolIndexNode::DieRef>& ModuleSymbolIndex::FindExact(
   return cur->dies();
 }
 
-std::pair<ModuleSymbolIndexNode::ConstIterator,
-          ModuleSymbolIndexNode::ConstIterator>
+std::pair<ModuleSymbolIndexNode::ConstIterator, ModuleSymbolIndexNode::ConstIterator>
 ModuleSymbolIndex::FindPrefix(const Identifier& input) const {
   if (input.empty())
     return std::make_pair(root_.sub().end(), root_.sub().end());
@@ -448,16 +430,14 @@ ModuleSymbolIndex::FindPrefix(const Identifier& input) const {
   return cur->FindPrefix(input.components().back().GetName(false));
 }
 
-std::vector<std::string> ModuleSymbolIndex::FindFileMatches(
-    std::string_view name) const {
+std::vector<std::string> ModuleSymbolIndex::FindFileMatches(std::string_view name) const {
   std::string_view name_last_comp = ExtractLastFileComponent(name);
 
   std::vector<std::string> result;
 
   // Search all files whose last component matches (the input may contain more
   // than one component).
-  FileNameIndex::const_iterator iter =
-      file_name_index_.lower_bound(name_last_comp);
+  FileNameIndex::const_iterator iter = file_name_index_.lower_bound(name_last_comp);
   while (iter != file_name_index_.end() && iter->first == name_last_comp) {
     const auto& pair = *iter->second;
     if (StringEndsWith(pair.first, name) &&
@@ -471,21 +451,18 @@ std::vector<std::string> ModuleSymbolIndex::FindFileMatches(
   return result;
 }
 
-std::vector<std::string> ModuleSymbolIndex::FindFilePrefixes(
-    const std::string& prefix) const {
+std::vector<std::string> ModuleSymbolIndex::FindFilePrefixes(const std::string& prefix) const {
   std::vector<std::string> result;
 
   auto found = file_name_index_.lower_bound(prefix);
-  while (found != file_name_index_.end() &&
-         StringBeginsWith(found->first, prefix)) {
+  while (found != file_name_index_.end() && StringBeginsWith(found->first, prefix)) {
     result.push_back(std::string(found->first));
     ++found;
   }
   return result;
 }
 
-const std::vector<unsigned>* ModuleSymbolIndex::FindFileUnitIndices(
-    const std::string& name) const {
+const std::vector<unsigned>* ModuleSymbolIndex::FindFileUnitIndices(const std::string& name) const {
   auto found = files_.find(name);
   if (found == files_.end())
     return nullptr;
@@ -495,20 +472,17 @@ const std::vector<unsigned>* ModuleSymbolIndex::FindFileUnitIndices(
 void ModuleSymbolIndex::DumpFileIndex(std::ostream& out) const {
   for (const auto& [filename, file_index_entry] : file_name_index_) {
     const auto& [filepath, compilation_units] = *file_index_entry;
-    out << filename << " -> " << filepath << " -> " << compilation_units.size()
-        << " units\n";
+    out << filename << " -> " << filepath << " -> " << compilation_units.size() << " units\n";
   }
 }
 
-void ModuleSymbolIndex::IndexCompileUnit(llvm::DWARFContext* context,
-                                         llvm::DWARFUnit* unit,
+void ModuleSymbolIndex::IndexCompileUnit(llvm::DWARFContext* context, llvm::DWARFUnit* unit,
                                          unsigned unit_index) {
   // Find the things to index.
   std::vector<SymbolStorage> symbol_storage;
   symbol_storage.reserve(256);
   std::vector<unsigned> parent_indices;
-  ExtractUnitIndexableEntries(context, unit, &symbol_storage, &parent_indices,
-                              &main_functions_);
+  ExtractUnitIndexableEntries(context, unit, &symbol_storage, &parent_indices, &main_functions_);
 
   // Index each one.
   SymbolStorageIndexer indexer(context, unit, parent_indices, &root_);
@@ -519,10 +493,8 @@ void ModuleSymbolIndex::IndexCompileUnit(llvm::DWARFContext* context,
 }
 
 void ModuleSymbolIndex::IndexCompileUnitSourceFiles(llvm::DWARFContext* context,
-                                                    llvm::DWARFUnit* unit,
-                                                    unsigned unit_index) {
-  const llvm::DWARFDebugLine::LineTable* line_table =
-      context->getLineTableForUnit(unit);
+                                                    llvm::DWARFUnit* unit, unsigned unit_index) {
+  const llvm::DWARFDebugLine::LineTable* line_table = context->getLineTableForUnit(unit);
   if (!line_table) {
     return;  // No line table for this unit.
   }
@@ -552,8 +524,7 @@ void ModuleSymbolIndex::IndexCompileUnitSourceFiles(llvm::DWARFContext* context,
       added_file[file_index] = 1;
       if (line_table->getFileNameByIndex(
               file_id, compilation_dir,
-              llvm::DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath,
-              file_name)) {
+              llvm::DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath, file_name)) {
         // The files here can contain relative components like
         // "/foo/bar/../baz". This is OK because we want it to match other
         // places in the symbol code that do a similar computation to get a
@@ -565,8 +536,7 @@ void ModuleSymbolIndex::IndexCompileUnitSourceFiles(llvm::DWARFContext* context,
 }
 
 void ModuleSymbolIndex::IndexFileNames() {
-  for (FileIndex::const_iterator iter = files_.begin(); iter != files_.end();
-       ++iter) {
+  for (FileIndex::const_iterator iter = files_.begin(); iter != files_.end(); ++iter) {
     std::string_view name = ExtractLastFileComponent(iter->first);
     file_name_index_.insert(std::make_pair(name, iter));
   }

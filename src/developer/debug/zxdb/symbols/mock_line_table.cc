@@ -13,20 +13,16 @@ MockLineTable::~MockLineTable() = default;
 
 size_t MockLineTable::GetNumFileNames() const { return file_names_.size(); }
 
-const std::vector<llvm::DWARFDebugLine::Row>& MockLineTable::GetRows() const {
-  return rows_;
-}
+const std::vector<llvm::DWARFDebugLine::Row>& MockLineTable::GetRows() const { return rows_; }
 
-std::optional<std::string> MockLineTable::GetFileNameByIndex(
-    uint64_t file_id) const {
+std::optional<std::string> MockLineTable::GetFileNameByIndex(uint64_t file_id) const {
   // File indices are 1-based!
   if (file_id == 0 || file_id > file_names_.size())
     return std::nullopt;
   return file_names_[file_id - 1];
 }
 
-llvm::DWARFDie MockLineTable::GetSubroutineForRow(
-    const llvm::DWARFDebugLine::Row& row) const {
+llvm::DWARFDie MockLineTable::GetSubroutineForRow(const llvm::DWARFDebugLine::Row& row) const {
   // For now, don't support subroutine lookup in the mock.
   return llvm::DWARFDie();
 }

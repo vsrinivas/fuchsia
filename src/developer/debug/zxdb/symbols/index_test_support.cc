@@ -12,8 +12,7 @@ namespace zxdb {
 
 namespace {
 
-ModuleSymbolIndexNode::RefType RefTypeForSymbol(
-    const fxl::RefPtr<Symbol>& sym) {
+ModuleSymbolIndexNode::RefType RefTypeForSymbol(const fxl::RefPtr<Symbol>& sym) {
   if (sym->AsType())
     return ModuleSymbolIndexNode::RefType::kType;
   if (sym->AsNamespace())
@@ -32,8 +31,7 @@ ModuleSymbolIndexNode::RefType RefTypeForSymbol(
 int TestIndexedSymbol::next_die_ref = 1;
 
 TestIndexedSymbol::TestIndexedSymbol(MockModuleSymbols* mod_sym,
-                                     ModuleSymbolIndexNode* index_parent,
-                                     const std::string& name,
+                                     ModuleSymbolIndexNode* index_parent, const std::string& name,
                                      fxl::RefPtr<Symbol> sym)
     : die_ref(RefTypeForSymbol(sym), next_die_ref++),
       index_node(index_parent->AddChild(name)),
@@ -42,12 +40,12 @@ TestIndexedSymbol::TestIndexedSymbol(MockModuleSymbols* mod_sym,
   mod_sym->AddDieRef(die_ref, symbol);
 }
 
-TestIndexedGlobalVariable::TestIndexedGlobalVariable(
-    MockModuleSymbols* mod_sym, ModuleSymbolIndexNode* index_parent,
-    const std::string& var_name)
-    : TestIndexedSymbol(mod_sym, index_parent, var_name,
-                        MakeVariableForTest(var_name, MakeInt32Type(), 0x100,
-                                            0x200, std::vector<uint8_t>())),
+TestIndexedGlobalVariable::TestIndexedGlobalVariable(MockModuleSymbols* mod_sym,
+                                                     ModuleSymbolIndexNode* index_parent,
+                                                     const std::string& var_name)
+    : TestIndexedSymbol(
+          mod_sym, index_parent, var_name,
+          MakeVariableForTest(var_name, MakeInt32Type(), 0x100, 0x200, std::vector<uint8_t>())),
       var(symbol->AsVariable()) {}
 
 }  // namespace zxdb

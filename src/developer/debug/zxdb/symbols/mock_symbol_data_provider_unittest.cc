@@ -11,15 +11,14 @@ namespace zxdb {
 
 class MockSymbolDataProviderTest : public TestWithLoop {
  public:
-  std::vector<uint8_t> SyncRead(fxl::RefPtr<MockSymbolDataProvider> provider,
-                                uint64_t address, uint32_t size) {
+  std::vector<uint8_t> SyncRead(fxl::RefPtr<MockSymbolDataProvider> provider, uint64_t address,
+                                uint32_t size) {
     std::vector<uint8_t> result;
-    provider->GetMemoryAsync(
-        address, size,
-        [this, &result](const Err& err, std::vector<uint8_t> data) {
-          result = std::move(data);
-          loop().QuitNow();
-        });
+    provider->GetMemoryAsync(address, size,
+                             [this, &result](const Err& err, std::vector<uint8_t> data) {
+                               result = std::move(data);
+                               loop().QuitNow();
+                             });
     loop().Run();
     return result;
   }

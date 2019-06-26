@@ -45,8 +45,8 @@ class Enumeration final : public Type {
 
   // The name can be empty for anonymous enums. The type can be empty for
   // untyped enums. The byte size must always be nonzero.
-  Enumeration(const std::string& name, LazySymbol type, uint32_t byte_size,
-              bool is_signed, Map map);
+  Enumeration(const std::string& name, LazySymbol type, uint32_t byte_size, bool is_signed,
+              Map map);
   virtual ~Enumeration();
 
   LazySymbol underlying_type_;

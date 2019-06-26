@@ -18,33 +18,27 @@ TEST(TypeUtils, GetPointedToType_Null) {
 }
 
 TEST(TypeUtils, GetPointedToType_NotPointer) {
-  auto int32_type =
-      fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeSigned, 4, "int32_t");
+  auto int32_type = fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeSigned, 4, "int32_t");
 
   const Type* pointed_to = nullptr;
   Err err = GetPointedToType(int32_type.get(), &pointed_to);
   EXPECT_TRUE(err.has_error());
-  EXPECT_EQ("Attempting to dereference 'int32_t' which is not a pointer.",
-            err.msg());
+  EXPECT_EQ("Attempting to dereference 'int32_t' which is not a pointer.", err.msg());
 }
 
 TEST(TypeUtils, GetPointedToType_NoPointedToType) {
   // Pointer to nothing.
-  auto ptr_type =
-      fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, LazySymbol());
+  auto ptr_type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, LazySymbol());
 
   const Type* pointed_to = nullptr;
   Err err = GetPointedToType(ptr_type.get(), &pointed_to);
   EXPECT_TRUE(err.has_error());
-  EXPECT_EQ("Missing pointer type info, please file a bug with a repro.",
-            err.msg());
+  EXPECT_EQ("Missing pointer type info, please file a bug with a repro.", err.msg());
 }
 
 TEST(TypeUtils, GetPointedToType_Good) {
-  auto int32_type =
-      fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeSigned, 4, "int32_t");
-  auto ptr_type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType,
-                                                    LazySymbol(int32_type));
+  auto int32_type = fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeSigned, 4, "int32_t");
+  auto ptr_type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, LazySymbol(int32_type));
 
   const Type* pointed_to = nullptr;
   Err err = GetPointedToType(ptr_type.get(), &pointed_to);

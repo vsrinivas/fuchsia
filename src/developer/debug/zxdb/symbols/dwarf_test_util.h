@@ -19,16 +19,13 @@ namespace zxdb {
 // The name is normally the file name, so searching for "/foo.cc" will
 // find the unit corresponding to foo.cc (the full path in the unit name may be
 // more complicated so don't depend on the particulars of that).
-llvm::DWARFUnit* GetUnitWithNameEndingIn(llvm::DWARFContext* context,
-                                         llvm::DWARFUnitVector& units,
+llvm::DWARFUnit* GetUnitWithNameEndingIn(llvm::DWARFContext* context, llvm::DWARFUnitVector& units,
                                          const std::string& name);
 
 // Returns the first DIE in the unit with the matching tag and DW_AT_Name
 // attribute. If not found,t he returned DIE will be !isValid().
-llvm::DWARFDie GetFirstDieOfTagAndName(llvm::DWARFContext* context,
-                                       llvm::DWARFUnit* unit,
-                                       llvm::dwarf::Tag tag,
-                                       const std::string& name);
+llvm::DWARFDie GetFirstDieOfTagAndName(llvm::DWARFContext* context, llvm::DWARFUnit* unit,
+                                       llvm::dwarf::Tag tag, const std::string& name);
 
 }  // namespace zxdb
 

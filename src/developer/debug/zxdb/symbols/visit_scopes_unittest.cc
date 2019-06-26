@@ -21,8 +21,8 @@ TEST(VisitScopes, ClassHierarchy) {
   VisitLog visited;
 
   // A single class with no hierarchy.
-  VisitResult result = VisitClassHierarchy(
-      derived.get(), [&visited](const Collection* c, uint64_t o) {
+  VisitResult result =
+      VisitClassHierarchy(derived.get(), [&visited](const Collection* c, uint64_t o) {
         visited.emplace_back(c, o);
         return VisitResult::kContinue;
       });
@@ -37,12 +37,9 @@ TEST(VisitScopes, ClassHierarchy) {
   uint64_t mid1_offset = 8;
   uint64_t mid2_offset = 0;
   uint64_t base1_offset = 32;
-  auto mid1_inh =
-      fxl::MakeRefCounted<InheritedFrom>(LazySymbol(mid1), mid1_offset);
-  auto mid2_inh =
-      fxl::MakeRefCounted<InheritedFrom>(LazySymbol(mid2), mid2_offset);
-  auto base1_inh =
-      fxl::MakeRefCounted<InheritedFrom>(LazySymbol(base1), base1_offset);
+  auto mid1_inh = fxl::MakeRefCounted<InheritedFrom>(LazySymbol(mid1), mid1_offset);
+  auto mid2_inh = fxl::MakeRefCounted<InheritedFrom>(LazySymbol(mid2), mid2_offset);
+  auto base1_inh = fxl::MakeRefCounted<InheritedFrom>(LazySymbol(base1), base1_offset);
   derived->set_inherited_from({LazySymbol(mid1_inh), LazySymbol(mid2_inh)});
   mid1->set_inherited_from({LazySymbol(base1_inh)});
 
@@ -50,11 +47,10 @@ TEST(VisitScopes, ClassHierarchy) {
   // ordering was most convenient for the implementation, it can be changed
   // in the future if there's a reason for a specific different order).
   visited = VisitLog();
-  result = VisitClassHierarchy(derived.get(),
-                               [&visited](const Collection* c, uint64_t o) {
-                                 visited.emplace_back(c, o);
-                                 return VisitResult::kContinue;
-                               });
+  result = VisitClassHierarchy(derived.get(), [&visited](const Collection* c, uint64_t o) {
+    visited.emplace_back(c, o);
+    return VisitResult::kContinue;
+  });
   EXPECT_EQ(VisitResult::kContinue, result);
   expected = VisitLog{{derived.get(), 0},
                       {mid1.get(), mid1_offset},
@@ -64,11 +60,10 @@ TEST(VisitScopes, ClassHierarchy) {
 
   // Test early termination at mid1.
   visited = VisitLog();
-  result = VisitClassHierarchy(
-      derived.get(), [&visited, mid1](const Collection* c, uint64_t o) {
-        visited.emplace_back(c, o);
-        return c == mid1.get() ? VisitResult::kDone : VisitResult::kContinue;
-      });
+  result = VisitClassHierarchy(derived.get(), [&visited, mid1](const Collection* c, uint64_t o) {
+    visited.emplace_back(c, o);
+    return c == mid1.get() ? VisitResult::kDone : VisitResult::kContinue;
+  });
   EXPECT_EQ(VisitResult::kDone, result);  // Should have found mid1.
   expected = VisitLog{{derived.get(), 0}, {mid1.get(), mid1_offset}};
   EXPECT_EQ(expected, visited);

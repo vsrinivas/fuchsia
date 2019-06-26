@@ -17,8 +17,7 @@ TEST(TargetSymbols, GetShortestUniqueName) {
   EXPECT_EQ("", setup.target().GetShortestUniqueFileName({}));
 
   // Valid input but no indexed files means no match, so name part.
-  EXPECT_EQ("baz.cc",
-            setup.target().GetShortestUniqueFileName("foo/bar/baz.cc"));
+  EXPECT_EQ("baz.cc", setup.target().GetShortestUniqueFileName("foo/bar/baz.cc"));
 
   // Add some file names.
   const char kUnique[] = "a/b/unique.cc";
@@ -48,27 +47,20 @@ TEST(TargetSymbols, GetShortestUniqueName) {
 
   // Unique names and not found names get just the name part.
   EXPECT_EQ("unique.cc", setup.target().GetShortestUniqueFileName(kUnique));
-  EXPECT_EQ("random.cc",
-            setup.target().GetShortestUniqueFileName("something/random.cc"));
+  EXPECT_EQ("random.cc", setup.target().GetShortestUniqueFileName("something/random.cc"));
 
   // Disambiguation with various parts being the same.
-  EXPECT_EQ("bar/baz/file.cc",
-            setup.target().GetShortestUniqueFileName(kFile1));
-  EXPECT_EQ("something_else/file.cc",
-            setup.target().GetShortestUniqueFileName(kFile2));
-  EXPECT_EQ("really_something/baz/file.cc",
-            setup.target().GetShortestUniqueFileName(kFile3));
+  EXPECT_EQ("bar/baz/file.cc", setup.target().GetShortestUniqueFileName(kFile1));
+  EXPECT_EQ("something_else/file.cc", setup.target().GetShortestUniqueFileName(kFile2));
+  EXPECT_EQ("really_something/baz/file.cc", setup.target().GetShortestUniqueFileName(kFile3));
 
   // Disambiguation when there's one with no path.
-  EXPECT_EQ("short/name.cc",
-            setup.target().GetShortestUniqueFileName(kNoPath1));
+  EXPECT_EQ("short/name.cc", setup.target().GetShortestUniqueFileName(kNoPath1));
   EXPECT_EQ("name.cc", setup.target().GetShortestUniqueFileName(kNoPath2));
 
   // Same as the "short name" cases but with an absolute path.
-  EXPECT_EQ("other/absolute.cc",
-            setup.target().GetShortestUniqueFileName(kAbsolute2));
-  EXPECT_EQ("/absolute.cc",
-            setup.target().GetShortestUniqueFileName(kAbsolute1));
+  EXPECT_EQ("other/absolute.cc", setup.target().GetShortestUniqueFileName(kAbsolute2));
+  EXPECT_EQ("/absolute.cc", setup.target().GetShortestUniqueFileName(kAbsolute1));
 }
 
 }  // namespace zxdb

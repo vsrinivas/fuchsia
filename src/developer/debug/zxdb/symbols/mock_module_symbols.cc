@@ -17,8 +17,7 @@ MockModuleSymbols::MockModuleSymbols(const std::string& local_file_name)
     : local_file_name_(local_file_name) {}
 MockModuleSymbols::~MockModuleSymbols() = default;
 
-void MockModuleSymbols::AddSymbolLocations(const std::string& name,
-                                           std::vector<Location> locs) {
+void MockModuleSymbols::AddSymbolLocations(const std::string& name, std::vector<Location> locs) {
   symbols_[name] = std::move(locs);
 }
 
@@ -31,9 +30,7 @@ void MockModuleSymbols::AddDieRef(const ModuleSymbolIndexNode::DieRef& die,
   die_refs_[die.offset()] = std::move(symbol);
 }
 
-void MockModuleSymbols::AddFileName(const std::string& file_name) {
-  files_.push_back(file_name);
-}
+void MockModuleSymbols::AddFileName(const std::string& file_name) { files_.push_back(file_name); }
 
 ModuleSymbolStatus MockModuleSymbols::GetStatus() const {
   ModuleSymbolStatus status;
@@ -43,9 +40,9 @@ ModuleSymbolStatus MockModuleSymbols::GetStatus() const {
   return status;
 }
 
-std::vector<Location> MockModuleSymbols::ResolveInputLocation(
-    const SymbolContext& symbol_context, const InputLocation& input_location,
-    const ResolveOptions& options) const {
+std::vector<Location> MockModuleSymbols::ResolveInputLocation(const SymbolContext& symbol_context,
+                                                              const InputLocation& input_location,
+                                                              const ResolveOptions& options) const {
   std::vector<Location> result;
   switch (input_location.type) {
     case InputLocation::Type::kAddress:
@@ -73,8 +70,8 @@ std::vector<Location> MockModuleSymbols::ResolveInputLocation(
   return result;
 }
 
-LineDetails MockModuleSymbols::LineDetailsForAddress(
-    const SymbolContext& symbol_context, uint64_t absolute_address) const {
+LineDetails MockModuleSymbols::LineDetailsForAddress(const SymbolContext& symbol_context,
+                                                     uint64_t absolute_address) const {
   // This mock assumes all addresses are absolute so the symbol context is not
   // used.
   auto found = lines_.find(absolute_address);
@@ -83,8 +80,7 @@ LineDetails MockModuleSymbols::LineDetailsForAddress(
   return found->second;
 }
 
-std::vector<std::string> MockModuleSymbols::FindFileMatches(
-    std::string_view name) const {
+std::vector<std::string> MockModuleSymbols::FindFileMatches(std::string_view name) const {
   std::vector<std::string> result;
   for (const std::string& cur : files_) {
     std::string with_slash("/");

@@ -8,11 +8,8 @@
 
 namespace zxdb {
 
-VariantPart::VariantPart(const LazySymbol& discriminant,
-                         std::vector<LazySymbol> variants)
-    : Symbol(DwarfTag::kVariantPart),
-      discriminant_(discriminant),
-      variants_(std::move(variants)) {}
+VariantPart::VariantPart(const LazySymbol& discriminant, std::vector<LazySymbol> variants)
+    : Symbol(DwarfTag::kVariantPart), discriminant_(discriminant), variants_(std::move(variants)) {}
 
 VariantPart::~VariantPart() = default;
 

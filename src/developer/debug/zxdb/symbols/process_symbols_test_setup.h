@@ -31,8 +31,8 @@ class ProcessSymbolsTestSetup {
 
   // Appends the given module symbols implementation to the process. This will
   // typically be a MockModuleSymbols.
-  void InjectModule(const std::string& name, const std::string& build_id,
-                    uint64_t base, std::unique_ptr<ModuleSymbols> mod_sym);
+  void InjectModule(const std::string& name, const std::string& build_id, uint64_t base,
+                    std::unique_ptr<ModuleSymbols> mod_sym);
 
  private:
   SystemSymbols system_;

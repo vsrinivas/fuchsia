@@ -53,8 +53,7 @@ class ModuleSymbolIndex {
 
   // Takes a fully-qualified name with namespaces and classes and template
   // parameters and returns the list of symbols which match exactly.
-  const std::vector<ModuleSymbolIndexNode::DieRef>& FindExact(
-      const Identifier& input) const;
+  const std::vector<ModuleSymbolIndexNode::DieRef>& FindExact(const Identifier& input) const;
 
   // Takes a fully-qualified name with namespaces and classes and returns a
   // pair of iterators.
@@ -78,9 +77,8 @@ class ModuleSymbolIndex {
   // If the caller wants to find all matching prefixes, it can advance the
   // iterator as long as the last input component is a prefix if the current
   // iterator key and less than the end.
-  std::pair<ModuleSymbolIndexNode::ConstIterator,
-            ModuleSymbolIndexNode::ConstIterator>
-  FindPrefix(const Identifier& input) const;
+  std::pair<ModuleSymbolIndexNode::ConstIterator, ModuleSymbolIndexNode::ConstIterator> FindPrefix(
+      const Identifier& input) const;
 
   // Looks up the name in the file index and returns the set of matches. The
   // name is matched from the right side with a left boundary of either a slash
@@ -100,26 +98,22 @@ class ModuleSymbolIndex {
   //
   // The contents of the vector are indices into the compilation unit array.
   // (see llvm::DWARFContext::getCompileUnitAtIndex).
-  const std::vector<unsigned>* FindFileUnitIndices(
-      const std::string& name) const;
+  const std::vector<unsigned>* FindFileUnitIndices(const std::string& name) const;
 
   // See main_functions_ below.
   const std::vector<ModuleSymbolIndexNode::DieRef>& main_functions() const {
     return main_functions_;
   }
-  std::vector<ModuleSymbolIndexNode::DieRef>& main_functions() {
-    return main_functions_;
-  }
+  std::vector<ModuleSymbolIndexNode::DieRef>& main_functions() { return main_functions_; }
 
   // Dumps the file index to the stream for debugging.
   void DumpFileIndex(std::ostream& out) const;
 
  private:
-  void IndexCompileUnit(llvm::DWARFContext* context, llvm::DWARFUnit* unit,
-                        unsigned unit_index);
+  void IndexCompileUnit(llvm::DWARFContext* context, llvm::DWARFUnit* unit, unsigned unit_index);
 
-  void IndexCompileUnitSourceFiles(llvm::DWARFContext* context,
-                                   llvm::DWARFUnit* unit, unsigned unit_index);
+  void IndexCompileUnitSourceFiles(llvm::DWARFContext* context, llvm::DWARFUnit* unit,
+                                   unsigned unit_index);
 
   // Populates the file_name_index_ given a now-unchanging files_ map.
   void IndexFileNames();
@@ -146,8 +140,7 @@ class ModuleSymbolIndex {
   // This is a multimap because the name parts will generally be unique so we
   // should get few duplicates. The cost of using a vector for most items
   // containing one element becomes higher in that case.
-  using FileNameIndex =
-      std::multimap<std::string_view, FileIndex::const_iterator>;
+  using FileNameIndex = std::multimap<std::string_view, FileIndex::const_iterator>;
   FileNameIndex file_name_index_;
 
   // All references to functions in this module found annotated with the

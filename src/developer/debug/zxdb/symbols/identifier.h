@@ -19,12 +19,8 @@ class IdentifierComponent {
   IdentifierComponent();
   explicit IdentifierComponent(std::string name) : name_(std::move(name)) {}
 
-  bool operator==(const IdentifierComponent& other) const {
-    return name_ == other.name_;
-  }
-  bool operator!=(const IdentifierComponent& other) const {
-    return !operator==(other);
-  }
+  bool operator==(const IdentifierComponent& other) const { return name_ == other.name_; }
+  bool operator!=(const IdentifierComponent& other) const { return !operator==(other); }
 
   const std::string& name() const { return name_; }
 

@@ -10,8 +10,7 @@
 
 namespace zxdb {
 
-bool VariableLocation::Entry::InRange(const SymbolContext& symbol_context,
-                                      uint64_t ip) const {
+bool VariableLocation::Entry::InRange(const SymbolContext& symbol_context, uint64_t ip) const {
   if (begin == 0 && end == 0)
     return true;
   return ip >= symbol_context.RelativeToAbsolute(begin) &&
@@ -34,8 +33,8 @@ VariableLocation::VariableLocation(std::vector<Entry> locations)
 
 VariableLocation::~VariableLocation() = default;
 
-const VariableLocation::Entry* VariableLocation::EntryForIP(
-    const SymbolContext& symbol_context, uint64_t ip) const {
+const VariableLocation::Entry* VariableLocation::EntryForIP(const SymbolContext& symbol_context,
+                                                            uint64_t ip) const {
   for (const auto& entry : locations_) {
     if (entry.InRange(symbol_context, ip))
       return &entry;

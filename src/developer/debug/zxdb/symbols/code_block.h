@@ -46,8 +46,7 @@ class CodeBlock : public Symbol {
 
   // Retrieves the code ranges for this block in absolute addresses for the
   // process.
-  AddressRanges GetAbsoluteCodeRanges(
-      const SymbolContext& symbol_context) const;
+  AddressRanges GetAbsoluteCodeRanges(const SymbolContext& symbol_context) const;
 
   // Computes the full code range covering all sub-ranges. There can be
   // multiple code ranges that can be discontiguous so not everything in this
@@ -57,9 +56,7 @@ class CodeBlock : public Symbol {
 
   // The lexical blocks that are children of this one.
   const std::vector<LazySymbol>& inner_blocks() const { return inner_blocks_; }
-  void set_inner_blocks(std::vector<LazySymbol> ib) {
-    inner_blocks_ = std::move(ib);
-  }
+  void set_inner_blocks(std::vector<LazySymbol> ib) { inner_blocks_ = std::move(ib); }
 
   // Variables contained within this block.
   const std::vector<LazySymbol>& variables() const { return variables_; }
@@ -67,8 +64,7 @@ class CodeBlock : public Symbol {
 
   // Returns true if the block's code ranges contain the given address. A
   // block with no specified range will always return true.
-  bool ContainsAddress(const SymbolContext& symbol_context,
-                       uint64_t absolute_address) const;
+  bool ContainsAddress(const SymbolContext& symbol_context, uint64_t absolute_address) const;
 
   // Recursively searches all children of this block for the innermost block
   // covering the given address. Returns |this| if the current block is

@@ -26,8 +26,7 @@ std::string GetDIEName(llvm::DWARFContext* context, llvm::DWARFUnit* unit,
 
 }  // namespace
 
-llvm::DWARFUnit* GetUnitWithNameEndingIn(llvm::DWARFContext* context,
-                                         llvm::DWARFUnitVector& units,
+llvm::DWARFUnit* GetUnitWithNameEndingIn(llvm::DWARFContext* context, llvm::DWARFUnitVector& units,
                                          const std::string& name) {
   for (unsigned i = 0; i < units.size(); i++) {
     llvm::DWARFUnit* unit = units[i].get();
@@ -38,10 +37,8 @@ llvm::DWARFUnit* GetUnitWithNameEndingIn(llvm::DWARFContext* context,
   return nullptr;
 }
 
-llvm::DWARFDie GetFirstDieOfTagAndName(llvm::DWARFContext* context,
-                                       llvm::DWARFUnit* unit,
-                                       llvm::dwarf::Tag tag,
-                                       const std::string& name) {
+llvm::DWARFDie GetFirstDieOfTagAndName(llvm::DWARFContext* context, llvm::DWARFUnit* unit,
+                                       llvm::dwarf::Tag tag, const std::string& name) {
   for (unsigned i = 0; i < unit->getNumDIEs(); i++) {
     llvm::DWARFDie die = unit->getDIEAtIndex(i);
     if (die.getTag() == tag) {
