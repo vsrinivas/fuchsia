@@ -8,8 +8,8 @@
 #include "gtest/gtest_prod.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "src/developer/debug/zxdb/common/err.h"
+#include "src/developer/debug/zxdb/symbols/index.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
-#include "src/developer/debug/zxdb/symbols/module_symbol_index.h"
 #include "src/developer/debug/zxdb/symbols/module_symbols.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
@@ -33,11 +33,10 @@ class Variable;
 
 // Represents the symbols for a module (executable or shared library).
 //
-// All addresses in and out of the API of this class are module-relative. This
-// way, the symbol information can be shared between multiple processes that
-// have mapped the same .so file (often at different addresses). This means
-// that callers have to offset addresses when calling into this class, and
-// offset them in the opposite way when they get the results.
+// All addresses in and out of the API of this class are module-relative. This way, the symbol
+// information can be shared between multiple processes that have mapped the same .so file (often at
+// different addresses). This means that callers have to offset addresses when calling into this
+// class, and offset them in the opposite way when they get the results.
 class ModuleSymbolsImpl : public ModuleSymbols {
  public:
   // You must call Load before using this class.
@@ -62,8 +61,8 @@ class ModuleSymbolsImpl : public ModuleSymbols {
                                     uint64_t absolute_address) const override;
   std::vector<std::string> FindFileMatches(std::string_view name) const override;
   std::vector<fxl::RefPtr<Function>> GetMainFunctions() const override;
-  const ModuleSymbolIndex& GetIndex() const override;
-  LazySymbol IndexDieRefToSymbol(const ModuleSymbolIndexNode::DieRef&) const override;
+  const Index& GetIndex() const override;
+  LazySymbol IndexDieRefToSymbol(const IndexNode::DieRef&) const override;
   bool HasBinary() const override;
 
  private:
@@ -85,20 +84,18 @@ class ModuleSymbolsImpl : public ModuleSymbols {
   // Symbolizes the given address if possible.
   Location LocationForAddress(const SymbolContext& symbol_context, uint64_t absolute_address) const;
 
-  // Converts the given global or static variable to a Location. This doesn't
-  // work for local variables which are dynamic and based on the current CPU
-  // state and stack.
+  // Converts the given global or static variable to a Location. This doesn't work for local
+  // variables which are dynamic and based on the current CPU state and stack.
   Location LocationForVariable(const SymbolContext& symbol_context,
                                fxl::RefPtr<Variable> variable) const;
 
-  // Converts a Function object to a found location according to the options
-  // and adds it to the list. May append nothing if there is no code for the
-  // function.
+  // Converts a Function object to a found location according to the options and adds it to the
+  // list. May append nothing if there is no code for the function.
   void AppendLocationForFunction(const SymbolContext& symbol_context, const ResolveOptions& options,
                                  const Function* func, std::vector<Location>* result) const;
 
-  // Resolves the line number information for the given file, which must be an
-  // exact match. This is a helper function for ResolveLineInputLocation().
+  // Resolves the line number information for the given file, which must be an exact match. This is
+  // a helper function for ResolveLineInputLocation().
   //
   // This appends to the given output.
   void ResolveLineInputLocationForFile(const SymbolContext& symbol_context,
@@ -116,7 +113,7 @@ class ModuleSymbolsImpl : public ModuleSymbols {
 
   llvm::DWARFUnitVector compile_units_;
 
-  ModuleSymbolIndex index_;
+  Index index_;
 
   std::map<std::string, uint64_t> plt_locations_;
 

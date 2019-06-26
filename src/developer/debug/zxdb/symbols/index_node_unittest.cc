@@ -2,20 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/debug/zxdb/symbols/module_symbol_index_node.h"
+#include "src/developer/debug/zxdb/symbols/index_node.h"
 
 #include "gtest/gtest.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
 
 namespace zxdb {
 
-using DieRef = ModuleSymbolIndexNode::DieRef;
-using RefType = ModuleSymbolIndexNode::RefType;
+using DieRef = IndexNode::DieRef;
+using RefType = IndexNode::RefType;
 
-// Tests de-duplicating type definitions and namespaces, and upgrading forward
-// declarations to full definitions.
-TEST(ModuleSymbolIndexNode, DeDupe) {
-  ModuleSymbolIndexNode node;
+// Tests de-duplicating type definitions and namespaces, and upgrading forward declarations to full
+// definitions.
+TEST(IndexNode, DeDupe) {
+  IndexNode node;
 
   // Add a function.
   const uint32_t kFunction1Offset = 10;
@@ -90,7 +90,7 @@ TEST(ModuleSymbolIndexNode, DeDupe) {
 }
 
 // Tests AddChild() and its merging capabilities when a duplicate is found.
-TEST(ModuleSymbolIndexNode, AddChildMerge) {
+TEST(IndexNode, AddChildMerge) {
   const uint32_t offset1 = 10;
   const uint32_t offset2 = 20;
   const uint32_t offset3 = 30;
@@ -104,14 +104,14 @@ TEST(ModuleSymbolIndexNode, AddChildMerge) {
   //   [root]
   //     node1 = "foo" [1 function = #1]
   //       node2 = "bar" [1 function = #2]
-  ModuleSymbolIndexNode node2;
+  IndexNode node2;
   node2.AddDie(DieRef(RefType::kFunction, offset2));
 
-  ModuleSymbolIndexNode node1;
+  IndexNode node1;
   node1.AddDie(DieRef(RefType::kFunction, offset1));
   node1.AddChild(bar, std::move(node2));
 
-  ModuleSymbolIndexNode root;
+  IndexNode root;
   EXPECT_TRUE(root.empty());
   root.AddChild(foo, std::move(node1));
   EXPECT_FALSE(root.empty());
@@ -119,10 +119,10 @@ TEST(ModuleSymbolIndexNode, AddChildMerge) {
   // The merged one has the hierarchy:
   //   merge1 = "foo" [1 function = #3]
   //     merge2 = "bloop" [1 function = #4]
-  ModuleSymbolIndexNode merge2;
+  IndexNode merge2;
   merge2.AddDie(DieRef(RefType::kFunction, offset4));
 
-  ModuleSymbolIndexNode merge1;
+  IndexNode merge1;
   merge1.AddDie(DieRef(RefType::kFunction, offset3));
   merge1.AddChild(bloop, std::move(merge2));
 
@@ -142,7 +142,7 @@ TEST(ModuleSymbolIndexNode, AddChildMerge) {
   EXPECT_EQ(foo, root.sub().begin()->first);
 
   // Check out1.
-  const ModuleSymbolIndexNode& out1 = root.sub().begin()->second;
+  const IndexNode& out1 = root.sub().begin()->second;
   ASSERT_EQ(2u, out1.dies().size());
   EXPECT_EQ(offset1, out1.dies()[0].offset());
   EXPECT_EQ(offset3, out1.dies()[1].offset());
@@ -151,13 +151,13 @@ TEST(ModuleSymbolIndexNode, AddChildMerge) {
   EXPECT_EQ(bloop, (++out1.sub().begin())->first);
 
   // Check out2.
-  const ModuleSymbolIndexNode& out2 = out1.sub().begin()->second;
+  const IndexNode& out2 = out1.sub().begin()->second;
   EXPECT_TRUE(out2.sub().empty());
   ASSERT_EQ(1u, out2.dies().size());
   EXPECT_EQ(offset2, out2.dies()[0].offset());
 
   // Check out3.
-  const ModuleSymbolIndexNode& out3 = (++out1.sub().begin())->second;
+  const IndexNode& out3 = (++out1.sub().begin())->second;
   EXPECT_TRUE(out3.sub().empty());
   ASSERT_EQ(1u, out3.dies().size());
   EXPECT_EQ(offset4, out3.dies()[0].offset());

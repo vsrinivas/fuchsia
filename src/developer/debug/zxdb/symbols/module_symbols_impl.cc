@@ -35,9 +35,9 @@ namespace zxdb {
 
 namespace {
 
-// Implementation of SymbolDataProvider that returns no memory or registers.
-// This is used when evaluating global variables' location expressions which
-// normally just declare an address. See LocationForVariable().
+// Implementation of SymbolDataProvider that returns no memory or registers. This is used when
+// evaluating global variables' location expressions which normally just declare an address. See
+// LocationForVariable().
 class GlobalSymbolDataProvider : public SymbolDataProvider {
  public:
   static Err GetContextError() {
@@ -71,9 +71,8 @@ bool SameFileLine(const llvm::DWARFDebugLine::Row& a, const llvm::DWARFDebugLine
   return a.File == b.File && a.Line == b.Line;
 }
 
-// Determines if the given input location references a PLT symbol. If it does,
-// returns the name of that symbol (with the "@plt" annotation stripped). If it
-// does not, returns a null optional.
+// Determines if the given input location references a PLT symbol. If it does, returns the name of
+// that symbol (with the "@plt" annotation stripped). If it does not, returns a null optional.
 std::optional<std::string> GetPLTInputLocation(const InputLocation& loc) {
   if (loc.type != InputLocation::Type::kSymbol || loc.symbol.components().size() != 1)
     return std::nullopt;
@@ -85,8 +84,7 @@ std::optional<std::string> GetPLTInputLocation(const InputLocation& loc) {
   return comp.name().substr(0, comp.name().size() - 4);
 }
 
-// Returns true if the given input references the special "main" function
-// annotation.
+// Returns true if the given input references the special "main" function annotation.
 bool ReferencesMainFunction(const InputLocation& loc) {
   if (loc.type != InputLocation::Type::kSymbol || loc.symbol.components().size() != 1)
     return false;
@@ -146,13 +144,12 @@ Err ModuleSymbolsImpl::Load() {
     compile_units_.addUnitsForSection(*context_, s, llvm::DW_SECT_INFO);
   });
 
-  // We could consider creating a new binary/object file just for indexing.
-  // The indexing will page all of the binary in, and most of it won't be
-  // needed again (it will be paged back in slowly, savings may make
-  // such a change worth it for large programs as needed).
+  // We could consider creating a new binary/object file just for indexing. The indexing will page
+  // all of the binary in, and most of it won't be needed again (it will be paged back in slowly,
+  // savings may make such a change worth it for large programs as needed).
   //
-  // Although it will be slightly slower to create, the memory savings may make
-  // such a change worth it for large programs.
+  // Although it will be slightly slower to create, the memory savings may make such a change worth
+  // it for large programs.
   index_.CreateIndex(obj);
   return Err();
 }
@@ -250,10 +247,9 @@ std::vector<fxl::RefPtr<Function>> ModuleSymbolsImpl::GetMainFunctions() const {
   return result;
 }
 
-const ModuleSymbolIndex& ModuleSymbolsImpl::GetIndex() const { return index_; }
+const Index& ModuleSymbolsImpl::GetIndex() const { return index_; }
 
-LazySymbol ModuleSymbolsImpl::IndexDieRefToSymbol(
-    const ModuleSymbolIndexNode::DieRef& die_ref) const {
+LazySymbol ModuleSymbolsImpl::IndexDieRefToSymbol(const IndexNode::DieRef& die_ref) const {
   return symbol_factory_->MakeLazy(die_ref.ToDie(context_.get()));
 }
 
@@ -269,11 +265,10 @@ void ModuleSymbolsImpl::AppendLocationForFunction(const SymbolContext& symbol_co
   if (func->code_ranges().empty())
     return;  // No code associated with this.
 
-  // Compute the full file/line information if requested. This recomputes
-  // function DIE which is unnecessary but makes the code structure
-  // simpler and ensures the results are always the same with regard to
-  // how things like inlined functions are handled (if the location maps
-  // to both a function and an inlined function inside of it).
+  // Compute the full file/line information if requested. This recomputes function DIE which is
+  // unnecessary but makes the code structure simpler and ensures the results are always the same
+  // with regard to how things like inlined functions are handled (if the location maps to both a
+  // function and an inlined function inside of it).
   uint64_t abs_addr = symbol_context.RelativeToAbsolute(func->code_ranges()[0].begin());
   if (options.symbolize)
     result->push_back(LocationForAddress(symbol_context, abs_addr));
@@ -301,8 +296,8 @@ std::vector<Location> ModuleSymbolsImpl::ResolveSymbolInputLocation(
     if (found == plt_locations_.end())
       return {};
 
-    // TODO: We should have a location type that can properly hold names and
-    // sizes for PLT entries and other weird symbol-adjacent bits of code.
+    // TODO: We should have a location type that can properly hold names and sizes for PLT entries
+    // and other weird symbol-adjacent bits of code.
     return {Location(Location::State::kAddress, symbol_context.RelativeToAbsolute(found->second))};
   }
 
@@ -318,8 +313,8 @@ std::vector<Location> ModuleSymbolsImpl::ResolveSymbolInputLocation(
         AppendLocationForFunction(symbol_context, options, func.get(), &result);
       return result;
     } else {
-      // Nothing explicitly marked as the main function, fall back on anything
-      // in the toplevel namespace named "main".
+      // Nothing explicitly marked as the main function, fall back on anything in the toplevel
+      // namespace named "main".
       symbol_to_find = Identifier(IdentifierQualification::kGlobal, IdentifierComponent("main"));
 
       // Fall through to symbol finding on the new name.
@@ -334,9 +329,8 @@ std::vector<Location> ModuleSymbolsImpl::ResolveSymbolInputLocation(
       // Symbol is a function.
       AppendLocationForFunction(symbol_context, options, function, &result);
     } else if (const Variable* variable = symbol->AsVariable()) {
-      // Symbol is a variable. This will be the case for global variables and
-      // file- and class-level statics. This always symbolizes since we
-      // already computed the symbol.
+      // Symbol is a variable. This will be the case for global variables and file- and class-level
+      // statics. This always symbolizes since we already computed the symbol.
       result.push_back(LocationForVariable(symbol_context,
                                            fxl::RefPtr<Variable>(const_cast<Variable*>(variable))));
     } else {
@@ -359,9 +353,8 @@ std::vector<Location> ModuleSymbolsImpl::ResolveAddressInputLocation(
   return result;
 }
 
-// This function is similar to llvm::DWARFContext::getLineInfoForAddress
-// but we can't use that because we want the actual DIE reference to the
-// function rather than its name.
+// This function is similar to llvm::DWARFContext::getLineInfoForAddress but we can't use that
+// because we want the actual DIE reference to the function rather than its name.
 Location ModuleSymbolsImpl::LocationForAddress(const SymbolContext& symbol_context,
                                                uint64_t absolute_address) const {
   // TODO(DX-695) handle addresses that aren't code like global variables.
@@ -370,8 +363,8 @@ Location ModuleSymbolsImpl::LocationForAddress(const SymbolContext& symbol_conte
   if (!unit)  // No symbol
     return Location(Location::State::kSymbolized, absolute_address);
 
-  // Get the innermost subroutine or inlined function for the address. This
-  // may be empty, but still lookup the line info below in case its present.
+  // Get the innermost subroutine or inlined function for the address. This may be empty, but still
+  // lookup the line info below in case its present.
   llvm::DWARFDie subroutine = unit->getSubroutineForAddress(relative_address);
   LazySymbol lazy_function;
   if (subroutine)
@@ -396,12 +389,10 @@ Location ModuleSymbolsImpl::LocationForAddress(const SymbolContext& symbol_conte
 
 Location ModuleSymbolsImpl::LocationForVariable(const SymbolContext& symbol_context,
                                                 fxl::RefPtr<Variable> variable) const {
-  // Evaluate the DWARF expression for the variable. Global and static
-  // variables' locations aren't based on CPU state. In some cases like TLS
-  // the location may require CPU state or may result in a constant instead
-  // of an address. In these cases give up and return an "unlocated variable."
-  // These can easily be evaluated by the expression system so we can still
-  // print their values.
+  // Evaluate the DWARF expression for the variable. Global and static variables' locations aren't
+  // based on CPU state. In some cases like TLS the location may require CPU state or may result in
+  // a constant instead of an address. In these cases give up and return an "unlocated variable."
+  // These can easily be evaluated by the expression system so we can still print their values.
 
   // Need one unique location.
   if (variable->location().locations().size() != 1)
@@ -417,32 +408,30 @@ Location ModuleSymbolsImpl::LocationForVariable(const SymbolContext& symbol_cont
       eval.GetResultType() != DwarfExprEval::ResultType::kPointer)
     return Location(symbol_context, LazySymbol(std::move(variable)));
 
-  // TODO(brettw) in all of the return cases we could in the future fill in the
-  // file/line of the definition of the variable. Currently Variables don't
-  // provide that (even though it's usually in the DWARF symbols).
+  // TODO(brettw) in all of the return cases we could in the future fill in the file/line of the
+  // definition of the variable. Currently Variables don't provide that (even though it's usually in
+  // the DWARF symbols).
   return Location(eval.GetResult(), FileLine(), 0, symbol_context, LazySymbol(std::move(variable)));
 }
 
-// To a first approximation we just look up the line in the line table for
-// each compilation unit that references the file. Complications:
+// To a first approximation we just look up the line in the line table for each compilation unit
+// that references the file. Complications:
 //
-// 1. The line might not be an exact match (the user can specify a blank line
-//    or something optimized out). In this case, find the next valid line.
+// 1. The line might not be an exact match (the user can specify a blank line or something optimized
+//    out). In this case, find the next valid line.
 //
-// 2. The above step can find many different locations. Maybe some code from
-//    the file in question is inlined into the compilation unit, but not the
-//    function with the line in it. Or different template instantiations can
-//    mean that a line of code is in some instantiations but don't apply to
-//    others.
+// 2. The above step can find many different locations. Maybe some code from the file in question is
+//    inlined into the compilation unit, but not the function with the line in it. Or different
+//    template instantiations can mean that a line of code is in some instantiations but don't apply
+//    to others.
 //
-//    To solve this duplication problem, get the resolved line of each of the
-//    addresses found above and find the best one. Keep only those locations
-//    matching the best one (there can still be multiple).
+//    To solve this duplication problem, get the resolved line of each of the addresses found above
+//    and find the best one. Keep only those locations matching the best one (there can still be
+//    multiple).
 //
-// 3. Inlining and templates can mean there can be multiple matches of the
-//    exact same line. Only keep the first match per function or inlined
-//    function to catch the case where a line is spread across multiple line
-//    table entries.
+// 3. Inlining and templates can mean there can be multiple matches of the exact same line. Only
+//    keep the first match per function or inlined function to catch the case where a line is spread
+//    across multiple line table entries.
 void ModuleSymbolsImpl::ResolveLineInputLocationForFile(const SymbolContext& symbol_context,
                                                         const std::string& canonical_file,
                                                         int line_number,
@@ -467,10 +456,9 @@ void ModuleSymbolsImpl::ResolveLineInputLocationForFile(const SymbolContext& sym
   if (matches.empty())
     return;
 
-  // Complications 2 & 3 above: Get all instances of the best match only with
-  // a max of one per function. The best match is the one with the lowest line
-  // number (found matches should all be bigger than the input line, so this
-  // will be the closest).
+  // Complications 2 & 3 above: Get all instances of the best match only with a max of one per
+  // function. The best match is the one with the lowest line number (found matches should all be
+  // bigger than the input line, so this will be the closest).
   for (const LineMatch& match : GetBestLineMatches(matches)) {
     uint64_t abs_addr = symbol_context.RelativeToAbsolute(match.address);
     if (options.symbolize)

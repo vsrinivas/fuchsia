@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/debug/zxdb/symbols/module_symbol_index_node.h"
+#include "src/developer/debug/zxdb/symbols/index_node.h"
 
 #include <sstream>
 
@@ -13,24 +13,23 @@
 
 namespace zxdb {
 
-llvm::DWARFDie ModuleSymbolIndexNode::DieRef::ToDie(llvm::DWARFContext* context) const {
+llvm::DWARFDie IndexNode::DieRef::ToDie(llvm::DWARFContext* context) const {
   return context->getDIEForOffset(offset_);
 }
 
-ModuleSymbolIndexNode::ModuleSymbolIndexNode() = default;
+IndexNode::IndexNode() = default;
 
-ModuleSymbolIndexNode::ModuleSymbolIndexNode(const DieRef& ref) { dies_.push_back(ref); }
+IndexNode::IndexNode(const DieRef& ref) { dies_.push_back(ref); }
 
-ModuleSymbolIndexNode::~ModuleSymbolIndexNode() = default;
+IndexNode::~IndexNode() = default;
 
-void ModuleSymbolIndexNode::Dump(std::ostream& out, int indent_level) const {
+void IndexNode::Dump(std::ostream& out, int indent_level) const {
   // When printing the root node, only do the children.
   for (const auto& cur : sub_)
     cur.second.Dump(cur.first, out, indent_level);
 }
 
-void ModuleSymbolIndexNode::Dump(const std::string& name, std::ostream& out,
-                                 int indent_level) const {
+void IndexNode::Dump(const std::string& name, std::ostream& out, int indent_level) const {
   out << std::string(indent_level * 2, ' ') << name;
   if (!dies_.empty()) {
     out << " (" << dies_.size() << ") ";
@@ -59,13 +58,13 @@ void ModuleSymbolIndexNode::Dump(const std::string& name, std::ostream& out,
     cur.second.Dump(cur.first, out, indent_level + 1);
 }
 
-std::string ModuleSymbolIndexNode::AsString(int indent_level) const {
+std::string IndexNode::AsString(int indent_level) const {
   std::ostringstream out;
   Dump(out, indent_level);
   return out.str();
 }
 
-void ModuleSymbolIndexNode::AddDie(const DieRef& ref) {
+void IndexNode::AddDie(const DieRef& ref) {
   if (ref.type() == RefType::kNamespace) {
     // Just save a namespace once.
     for (auto& existing : dies_) {
@@ -73,9 +72,8 @@ void ModuleSymbolIndexNode::AddDie(const DieRef& ref) {
         return;  // Already have an entry for this namespace.
     }
   } else if (ref.type() == RefType::kType || ref.type() == RefType::kTypeDecl) {
-    // This is a type. Types only appear in the index once (see the class
-    // comment in the header). This loop does the de-duplication and also
-    // upgrades declarations to full definitions.
+    // This is a type. Types only appear in the index once (see the class comment in the header).
+    // This loop does the de-duplication and also upgrades declarations to full definitions.
     for (auto& existing : dies_) {
       if (existing.type() == RefType::kTypeDecl) {
         if (ref.type() == RefType::kType) {
@@ -95,19 +93,19 @@ void ModuleSymbolIndexNode::AddDie(const DieRef& ref) {
   dies_.push_back(ref);
 }
 
-ModuleSymbolIndexNode* ModuleSymbolIndexNode::AddChild(std::string name) {
+IndexNode* IndexNode::AddChild(std::string name) {
   return &sub_.emplace(std::piecewise_construct, std::forward_as_tuple(std::move(name)),
                        std::forward_as_tuple())
               .first->second;
 }
 
-ModuleSymbolIndexNode* ModuleSymbolIndexNode::AddChild(const char* name) {
+IndexNode* IndexNode::AddChild(const char* name) {
   return &sub_.emplace(std::piecewise_construct, std::forward_as_tuple(name),
                        std::forward_as_tuple())
               .first->second;
 }
 
-void ModuleSymbolIndexNode::AddChild(const std::string& name, ModuleSymbolIndexNode&& child) {
+void IndexNode::AddChild(const std::string& name, IndexNode&& child) {
   auto existing = sub_.find(name);
   if (existing == sub_.end()) {
     sub_.emplace(std::piecewise_construct, std::forward_as_tuple(name),
@@ -117,7 +115,7 @@ void ModuleSymbolIndexNode::AddChild(const std::string& name, ModuleSymbolIndexN
   }
 }
 
-void ModuleSymbolIndexNode::Merge(ModuleSymbolIndexNode&& other) {
+void IndexNode::Merge(IndexNode&& other) {
   for (auto& pair : other.sub_) {
     auto found = sub_.find(pair.first);
     if (found == sub_.end()) {
@@ -138,8 +136,8 @@ void ModuleSymbolIndexNode::Merge(ModuleSymbolIndexNode&& other) {
   }
 }
 
-std::pair<ModuleSymbolIndexNode::ConstIterator, ModuleSymbolIndexNode::ConstIterator>
-ModuleSymbolIndexNode::FindPrefix(const std::string& input) const {
+std::pair<IndexNode::ConstIterator, IndexNode::ConstIterator> IndexNode::FindPrefix(
+    const std::string& input) const {
   if (input.empty())
     return std::make_pair(sub_.end(), sub_.end());
 

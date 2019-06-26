@@ -25,8 +25,7 @@ void MockModuleSymbols::AddLineDetails(uint64_t address, LineDetails details) {
   lines_[address] = std::move(details);
 }
 
-void MockModuleSymbols::AddDieRef(const ModuleSymbolIndexNode::DieRef& die,
-                                  fxl::RefPtr<Symbol> symbol) {
+void MockModuleSymbols::AddDieRef(const IndexNode::DieRef& die, fxl::RefPtr<Symbol> symbol) {
   die_refs_[die.offset()] = std::move(symbol);
 }
 
@@ -61,9 +60,8 @@ std::vector<Location> MockModuleSymbols::ResolveInputLocation(const SymbolContex
   }
 
   if (!options.symbolize) {
-    // The caller did not request symbols so convert each result to an
-    // unsymbolized answer. This will match the type of output from the
-    // non-mock version.
+    // The caller did not request symbols so convert each result to an unsymbolized answer. This
+    // will match the type of output from the non-mock version.
     for (size_t i = 0; i < result.size(); i++)
       result[i] = Location(Location::State::kAddress, result[i].address());
   }
@@ -72,8 +70,7 @@ std::vector<Location> MockModuleSymbols::ResolveInputLocation(const SymbolContex
 
 LineDetails MockModuleSymbols::LineDetailsForAddress(const SymbolContext& symbol_context,
                                                      uint64_t absolute_address) const {
-  // This mock assumes all addresses are absolute so the symbol context is not
-  // used.
+  // This mock assumes all addresses are absolute so the symbol context is not used.
   auto found = lines_.find(absolute_address);
   if (found == lines_.end())
     return LineDetails();
@@ -95,10 +92,9 @@ std::vector<fxl::RefPtr<Function>> MockModuleSymbols::GetMainFunctions() const {
   return std::vector<fxl::RefPtr<Function>>();
 }
 
-const ModuleSymbolIndex& MockModuleSymbols::GetIndex() const { return index_; }
+const Index& MockModuleSymbols::GetIndex() const { return index_; }
 
-LazySymbol MockModuleSymbols::IndexDieRefToSymbol(
-    const ModuleSymbolIndexNode::DieRef& die_ref) const {
+LazySymbol MockModuleSymbols::IndexDieRefToSymbol(const IndexNode::DieRef& die_ref) const {
   auto found = die_refs_.find(die_ref.offset());
   if (found == die_refs_.end())
     return LazySymbol();

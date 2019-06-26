@@ -29,6 +29,8 @@ static_library("symbols") {
     "function_type.h",
     "identifier.h",
     "identifier_base.h",
+    "index.h",
+    "index_node.h",
     "inherited_from.h",
     "input_location.h",
     "lazy_symbol.h",
@@ -37,8 +39,6 @@ static_library("symbols") {
     "location.h",
     "member_ptr.h",
     "modified_type.h",
-    "module_symbol_index.h",
-    "module_symbol_index_node.h",
     "module_symbol_status.h",
     "module_symbols.h",
     "namespace.h",
@@ -85,6 +85,8 @@ static_library("symbols") {
     "function.cc",
     "function_type.cc",
     "identifier.cc",
+    "index.cc",
+    "index_node.cc",
     "inherited_from.cc",
     "lazy_symbol.cc",
     "line_details.cc",
@@ -95,8 +97,6 @@ static_library("symbols") {
     "location.cc",
     "member_ptr.cc",
     "modified_type.cc",
-    "module_symbol_index.cc",
-    "module_symbol_index_node.cc",
     "module_symbols.cc",
     "module_symbols_impl.cc",
     "module_symbols_impl.h",
@@ -226,12 +226,12 @@ source_set("tests") {
     "find_line_unittest.cc",
     "function_type_unittest.cc",
     "identifier_unittest.cc",
+    "index_node_unittest.cc",
+    "index_unittest.cc",
     "loaded_module_symbols_unittest.cc",
     "member_ptr_unittest.cc",
     "mock_symbol_data_provider_unittest.cc",
     "modified_type_unittest.cc",
-    "module_symbol_index_node_unittest.cc",
-    "module_symbol_index_unittest.cc",
     "module_symbols_impl_unittest.cc",
     "process_symbols_unittest.cc",
     "symbol_utils_unittest.cc",
@@ -264,7 +264,7 @@ source_set("perf_tests") {
   testonly = true
 
   sources = [
-    "module_symbol_index_perftest.cc",
+    "index_perftest.cc",
   ]
 
   deps = [

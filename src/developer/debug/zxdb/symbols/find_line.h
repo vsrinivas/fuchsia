@@ -18,7 +18,6 @@ namespace zxdb {
 
 class LineTable;
 class Location;
-class ModuleSymbolIndex;
 struct ResolveOptions;
 class SymbolContext;
 

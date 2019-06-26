@@ -30,9 +30,9 @@
 #include "src/developer/debug/zxdb/symbols/collection.h"
 #include "src/developer/debug/zxdb/symbols/data_member.h"
 #include "src/developer/debug/zxdb/symbols/identifier.h"
+#include "src/developer/debug/zxdb/symbols/index.h"
 #include "src/developer/debug/zxdb/symbols/loaded_module_symbols.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
-#include "src/developer/debug/zxdb/symbols/module_symbol_index.h"
 #include "src/developer/debug/zxdb/symbols/module_symbol_status.h"
 #include "src/developer/debug/zxdb/symbols/module_symbols.h"
 #include "src/developer/debug/zxdb/symbols/process_symbols.h"
@@ -723,7 +723,7 @@ struct DumpModuleContext {
 };
 
 // Returns true if the list was truncated.
-bool DumpModule(const Command& cmd, const ModuleSymbolIndexNode& node, DumpModuleContext* context,
+bool DumpModule(const Command& cmd, const IndexNode& node, DumpModuleContext* context,
                 int indent_level = 0) {
   // Root node doesn't have a name, so it's not printed.
   bool root = context->names->empty();

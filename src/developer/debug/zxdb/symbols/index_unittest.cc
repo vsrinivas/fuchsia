@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/debug/zxdb/symbols/module_symbol_index.h"
+#include "src/developer/debug/zxdb/symbols/index.h"
 
 #include <inttypes.h>
 #include <time.h>
@@ -16,12 +16,12 @@
 
 namespace zxdb {
 
-TEST(ModuleSymbolIndex, FindExactFunction) {
+TEST(Index, FindExactFunction) {
   TestSymbolModule module;
   std::string err;
   ASSERT_TRUE(module.Load(&err)) << err;
 
-  ModuleSymbolIndex index;
+  Index index;
   index.CreateIndex(module.object_file());
 
   // Standalone function search.
@@ -32,9 +32,8 @@ TEST(ModuleSymbolIndex, FindExactFunction) {
   result = index.FindExact(TestSymbolModule::SplitName(TestSymbolModule::kNamespaceFunctionName));
   EXPECT_EQ(1u, result.size()) << "Symbol not found.";
 
-  // Standalone function inside an anonymous namespace. Currently this is
-  // indexed as if the anonymous namespace wasn't there, but this may need to
-  // change in the future.
+  // Standalone function inside an anonymous namespace. Currently this is indexed as if the
+  // anonymous namespace wasn't there, but this may need to change in the future.
   result = index.FindExact(TestSymbolModule::SplitName(TestSymbolModule::kAnonNSFunctionName));
   EXPECT_EQ(1u, result.size()) << "Symbol not found.";
 
@@ -59,12 +58,12 @@ TEST(ModuleSymbolIndex, FindExactFunction) {
   EXPECT_EQ(1u, result.size()) << "Symbol not found.";
 }
 
-TEST(ModuleSymbolIndex, FindPrefix) {
+TEST(Index, FindPrefix) {
   TestSymbolModule module;
   std::string err;
   ASSERT_TRUE(module.Load(&err)) << err;
 
-  ModuleSymbolIndex index;
+  Index index;
   index.CreateIndex(module.object_file());
 
   // Querying an exact identifier should return it.
@@ -80,8 +79,8 @@ TEST(ModuleSymbolIndex, FindPrefix) {
   std::tie(found, end) = index.FindPrefix(Identifier("ThisDoesntExist"));
   EXPECT_EQ(found, end);
 
-  // Something with multiple results (NOTE: if more functions are added to the
-  // test file with this prefix, the expected results might change).
+  // Something with multiple results (NOTE: if more functions are added to the test file with this
+  // prefix, the expected results might change).
   std::tie(found, end) = index.FindPrefix(Identifier(IdentifierComponent("Call")));
   ASSERT_NE(found, end);
   EXPECT_EQ("CallInline", found->first);
@@ -98,12 +97,12 @@ TEST(ModuleSymbolIndex, FindPrefix) {
   EXPECT_EQ("Base2", found->first);
 }
 
-TEST(ModuleSymbolIndex, FindFileMatches) {
+TEST(Index, FindFileMatches) {
   TestSymbolModule module;
   std::string err;
   ASSERT_TRUE(module.Load(&err)) << err;
 
-  ModuleSymbolIndex index;
+  Index index;
   index.CreateIndex(module.object_file());
 
   // Simple filename-only query that succeeds.
@@ -135,12 +134,12 @@ TEST(ModuleSymbolIndex, FindFileMatches) {
   EXPECT_EQ(0u, result.size());
 }
 
-TEST(ModuleSymbolIndex, FindFilePrefixes) {
+TEST(Index, FindFilePrefixes) {
   TestSymbolModule module;
   std::string err;
   ASSERT_TRUE(module.Load(&err)) << err;
 
-  ModuleSymbolIndex index;
+  Index index;
   index.CreateIndex(module.object_file());
 
   // Should find both files. Order not guaranteed.
@@ -150,12 +149,12 @@ TEST(ModuleSymbolIndex, FindFilePrefixes) {
   EXPECT_NE(result.end(), std::find(result.begin(), result.end(), "zxdb_symbol_test2.cc"));
 }
 
-TEST(ModuleSymbolIndex, FindTypeAndNamespace) {
+TEST(Index, FindTypeAndNamespace) {
   TestSymbolModule module;
   std::string err;
   ASSERT_TRUE(module.Load(&err)) << err;
 
-  ModuleSymbolIndex index;
+  Index index;
   index.CreateIndex(module.object_file());
 
   // Should have one namespace.
@@ -175,15 +174,14 @@ TEST(ModuleSymbolIndex, FindTypeAndNamespace) {
   EXPECT_EQ(1u, result.size()) << "int not found.";
 }
 
-// Enable and substitute a path on your system to dump the index for a
-// DWARF file.
+// Enable and substitute a path on your system to dump the index for a DWARF file.
 #if 0
-TEST(ModuleSymbolIndex, DumpFileIndex) {
+TEST(Index, DumpFileIndex) {
   TestSymbolModule module;
   std::string err;
   ASSERT_TRUE(module.LoadSpecific("chrome", &err)) << err;
 
-  ModuleSymbolIndex index;
+  Index index;
   index.CreateIndex(module.object_file());
 
   std::cout << index.main_functions().size() << " main function(s) found.\n\n";
@@ -209,7 +207,7 @@ static int64_t GetTickMicroseconds() {
   return result;
 }
 
-TEST(ModuleSymbolIndex, BenchmarkIndexing) {
+TEST(Index, BenchmarkIndexing) {
   const char kFilename[] = "chrome";
   int64_t begin_us = GetTickMicroseconds();
 
@@ -219,7 +217,7 @@ TEST(ModuleSymbolIndex, BenchmarkIndexing) {
 
   int64_t load_complete_us = GetTickMicroseconds();
 
-  ModuleSymbolIndex index;
+  Index index;
   index.CreateIndex(module.object_file());
 
   int64_t index_complete_us = GetTickMicroseconds();

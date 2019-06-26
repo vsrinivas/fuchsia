@@ -4,7 +4,7 @@
 
 #include "gtest/gtest.h"
 #include "src/developer/debug/zxdb/common/perf_test.h"
-#include "src/developer/debug/zxdb/symbols/module_symbol_index.h"
+#include "src/developer/debug/zxdb/symbols/index.h"
 
 namespace zxdb {
 

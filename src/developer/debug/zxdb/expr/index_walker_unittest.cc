@@ -6,7 +6,7 @@
 
 #include "gtest/gtest.h"
 #include "src/developer/debug/zxdb/expr/expr_parser.h"
-#include "src/developer/debug/zxdb/symbols/module_symbol_index.h"
+#include "src/developer/debug/zxdb/symbols/index.h"
 
 namespace zxdb {
 
@@ -75,7 +75,7 @@ TEST(IndexWalker, IsIndexStringBeyondName) {
 }
 
 TEST(IndexWalker, WalkInto) {
-  ModuleSymbolIndex index;
+  Index index;
   auto& root = index.root();
   auto foo_node = root.AddChild("Foo");
   root.AddChild("Foo<Bar>");

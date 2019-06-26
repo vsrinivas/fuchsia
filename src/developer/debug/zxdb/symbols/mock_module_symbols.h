@@ -7,7 +7,7 @@
 
 #include <map>
 
-#include "src/developer/debug/zxdb/symbols/module_symbol_index.h"
+#include "src/developer/debug/zxdb/symbols/index.h"
 #include "src/developer/debug/zxdb/symbols/module_symbols.h"
 #include "src/developer/debug/zxdb/symbols/symbol.h"
 
@@ -22,21 +22,20 @@ class MockModuleSymbols : public ModuleSymbols {
   // Adds a mock mapping from the given name to the list of locations.
   void AddSymbolLocations(const std::string& name, std::vector<Location> locs);
 
-  // Adds a mock mapping from address to line details. This matches an exact
-  // address only, not a range.
+  // Adds a mock mapping from address to line details. This matches an exact address only, not a
+  // range.
   void AddLineDetails(uint64_t absolute_address, LineDetails details);
 
-  // Injects a response to IndexDieRefToSymbol for resolving symbols from the
-  // index. See index() getter.
-  void AddDieRef(const ModuleSymbolIndexNode::DieRef& die, fxl::RefPtr<Symbol> symbol);
+  // Injects a response to IndexDieRefToSymbol for resolving symbols from the index. See index()
+  // getter.
+  void AddDieRef(const IndexNode::DieRef& die, fxl::RefPtr<Symbol> symbol);
 
   // Adds a name to the list of files considered for FindFileMatches().
   void AddFileName(const std::string& file_name);
 
-  // Provides writable access to the index for tests to insert data. To hook
-  // up symbols, add them to the index and call AddDieRef() with the same
-  // DieRef and the symbol you want it to resolve to.
-  ModuleSymbolIndex& index() { return index_; }
+  // Provides writable access to the index for tests to insert data. To hook up symbols, add them to
+  // the index and call AddDieRef() with the same DieRef and the symbol you want it to resolve to.
+  Index& index() { return index_; }
 
   // ModuleSymbols implementation.
   ModuleSymbolStatus GetStatus() const override;
@@ -47,12 +46,12 @@ class MockModuleSymbols : public ModuleSymbols {
                                     uint64_t address) const override;
   std::vector<std::string> FindFileMatches(std::string_view name) const override;
   std::vector<fxl::RefPtr<Function>> GetMainFunctions() const override;
-  const ModuleSymbolIndex& GetIndex() const override;
-  LazySymbol IndexDieRefToSymbol(const ModuleSymbolIndexNode::DieRef&) const override;
+  const Index& GetIndex() const override;
+  LazySymbol IndexDieRefToSymbol(const IndexNode::DieRef&) const override;
   bool HasBinary() const override;
 
  private:
-  ModuleSymbolIndex index_;
+  Index index_;
 
   std::string local_file_name_;
 

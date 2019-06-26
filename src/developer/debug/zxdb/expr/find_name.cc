@@ -13,9 +13,9 @@
 #include "src/developer/debug/zxdb/symbols/data_member.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/symbols/identifier.h"
+#include "src/developer/debug/zxdb/symbols/index.h"
+#include "src/developer/debug/zxdb/symbols/index_node.h"
 #include "src/developer/debug/zxdb/symbols/loaded_module_symbols.h"
-#include "src/developer/debug/zxdb/symbols/module_symbol_index.h"
-#include "src/developer/debug/zxdb/symbols/module_symbol_index_node.h"
 #include "src/developer/debug/zxdb/symbols/module_symbols.h"
 #include "src/developer/debug/zxdb/symbols/namespace.h"
 #include "src/developer/debug/zxdb/symbols/process_symbols.h"
@@ -26,15 +26,15 @@ namespace zxdb {
 
 namespace {
 
-// Returns true if an index search is required for the options. Everything but
-// local variables requires the index.
+// Returns true if an index search is required for the options. Everything but local variables
+// requires the index.
 bool OptionsRequiresIndex(const FindNameOptions& options) {
   return options.find_types || options.find_functions || options.find_templates ||
          options.find_namespaces;
 }
 
-// Returns true if the |name| of an object matches what we're |looking_for|
-// given the current options.
+// Returns true if the |name| of an object matches what we're |looking_for| given the current
+// options.
 bool NameMatches(const FindNameOptions& options, const std::string& name,
                  const std::string& looking_for) {
   if (options.how == FindNameOptions::kPrefix)
@@ -42,10 +42,9 @@ bool NameMatches(const FindNameOptions& options, const std::string& name,
   return name == looking_for;
 }
 
-// Iterates over the variables in the given vector, calling the visit callback
-// for each as long as the visitor says to continue.
-// Searches the given vector of values for one with the given name. If found,
-// returns it, otherwise returns null.
+// Iterates over the variables in the given vector, calling the visit callback for each as long as
+// the visitor says to continue. Searches the given vector of values for one with the given name. If
+// found, returns it, otherwise returns null.
 VisitResult VisitVariableVector(const std::vector<LazySymbol>& vect,
                                 const std::function<VisitResult(const Variable*)>& visitor) {
   for (const auto& cur : vect) {
@@ -61,7 +60,7 @@ VisitResult VisitVariableVector(const std::vector<LazySymbol>& vect,
 }
 
 FoundName FoundNameFromDieRef(const ModuleSymbols* module_symbols, const FindNameOptions& options,
-                              const ModuleSymbolIndexNode::DieRef& ref) {
+                              const IndexNode::DieRef& ref) {
   LazySymbol lazy_symbol = module_symbols->IndexDieRefToSymbol(ref);
   if (!lazy_symbol)
     return FoundName();
@@ -95,9 +94,9 @@ FoundName FoundNameFromDieRef(const ModuleSymbols* module_symbols, const FindNam
 }
 
 VisitResult GetNamesFromDieList(const ModuleSymbols* module_symbols, const FindNameOptions& options,
-                                const std::vector<ModuleSymbolIndexNode::DieRef>& dies,
+                                const std::vector<IndexNode::DieRef>& dies,
                                 std::vector<FoundName>* results) {
-  for (const ModuleSymbolIndexNode::DieRef& cur : dies) {
+  for (const IndexNode::DieRef& cur : dies) {
     if (FoundName found = FoundNameFromDieRef(module_symbols, options, cur))
       results->push_back(std::move(found));
 
@@ -138,16 +137,15 @@ VisitResult FindPerIndexNode(const FindNameOptions& options, const ModuleSymbols
 
   ParsedIdentifier looking_for_scope = looking_for.GetScope();
 
-  // Walk into all but the last node of the identifier (the last one is
-  // the part that needs completion).
+  // Walk into all but the last node of the identifier (the last one is the part that needs
+  // completion).
   IndexWalker prefix_walker(walker);
   if (!prefix_walker.WalkInto(looking_for_scope))
     return VisitResult::kContinue;
 
-  // Need to separate out prefix so we can take advantage of the template
-  // canonization of the IndexWalker in the exact match case. This means that
-  // we can't currently do prefix matches of templates that are canonicalized
-  // differently than DWARF represents them.
+  // Need to separate out prefix so we can take advantage of the template canonization of the
+  // IndexWalker in the exact match case. This means that we can't currently do prefix matches of
+  // templates that are canonicalized differently than DWARF represents them.
   if (options.how == FindNameOptions::kPrefix) {
     std::string last_comp = looking_for.components().back().GetName(false);
     auto [cur, end] = prefix_walker.current()->FindPrefix(last_comp);
@@ -169,10 +167,9 @@ VisitResult FindPerIndexNode(const FindNameOptions& options, const ModuleSymbols
     }
   }
 
-  // We also want to know if there are any templates with that name which will
-  // look like "foo::bar<...". In that case, do a prefix search with an
-  // appended "<" and see if there are any results. Don't bother if the
-  // input already has a template.
+  // We also want to know if there are any templates with that name which will look like
+  // "foo::bar<...". In that case, do a prefix search with an appended "<" and see if there are any
+  // results. Don't bother if the input already has a template.
   //
   // Prefix matches will already have been caught above so don't handle here.
   if (options.how == FindNameOptions::kExact && options.find_templates &&
@@ -188,9 +185,9 @@ VisitResult FindPerIndexNode(const FindNameOptions& options, const ModuleSymbols
     last_comp.push_back('<');
     auto [cur, end] = template_walker.current()->FindPrefix(last_comp);
     if (cur != end) {
-      // We could check every possible match with this prefix and see if there's
-      // one with a type name. But that seems unnecessary. Instead, assume that
-      // anything with a name containing a "<" is a template type name.
+      // We could check every possible match with this prefix and see if there's one with a type
+      // name. But that seems unnecessary. Instead, assume that anything with a name containing a
+      // "<" is a template type name.
       results->emplace_back(FoundName::kTemplate, looking_for.GetFullName());
       if (results->size() >= options.max_results)
         return VisitResult::kDone;
@@ -250,10 +247,9 @@ void FindName(const FindNameContext& context, const FindNameOptions& options,
 
   // Fall back to searching global vars.
   if (context.module_symbols || context.target_symbols) {
-    // Get the scope for the current function. This may fail in which case
-    // we'll be left with an empty current scope. This is non-fatal: it just
-    // means we won't implicitly search the current namespace and will search
-    // only the global one.
+    // Get the scope for the current function. This may fail in which case we'll be left with an
+    // empty current scope. This is non-fatal: it just means we won't implicitly search the current
+    // namespace and will search only the global one.
     ParsedIdentifier current_scope;
     if (context.block) {
       if (const Function* function = context.block->GetContainingFunction()) {
@@ -314,9 +310,8 @@ void FindMember(const FindNameContext& context, const FindNameOptions& options,
         looking_for_name && options.find_vars) {
       for (const auto& lazy : cur_collection->data_members()) {
         if (const DataMember* data = lazy.Get()->AsDataMember()) {
-          // TODO(brettw) allow "BaseClass::foo" syntax for specifically
-          // naming a member of a base class. Watch out: the base class
-          // could be qualified (or not) in various ways:
+          // TODO(brettw) allow "BaseClass::foo" syntax for specifically naming a member of a base
+          // class. Watch out: the base class could be qualified (or not) in various ways:
           // ns::BaseClass::foo, BaseClass::foo, etc.
           if (NameMatches(options, data->GetAssignedName(), *looking_for_name)) {
             result->emplace_back(optional_object_ptr, data, cur_offset + data->member_location());
@@ -331,9 +326,8 @@ void FindMember(const FindNameContext& context, const FindNameOptions& options,
     if (OptionsRequiresIndex(options)) {
       ParsedIdentifier container_name = ToParsedIdentifier(cur_collection->GetIdentifier());
 
-      // Don't search previous scopes (pass |search_containing| = false).
-      // If a class derives from a class in another namespace, that
-      // doesn't bring the other namespace in the current scope.
+      // Don't search previous scopes (pass |search_containing| = false). If a class derives from a
+      // class in another namespace, that doesn't bring the other namespace in the current scope.
       VisitResult vr =
           FindIndexedName(context, options, container_name, looking_for, false, result);
       if (vr != VisitResult::kContinue)
@@ -381,8 +375,7 @@ VisitResult FindIndexedNameInModule(const FindNameOptions& options,
                                     std::vector<FoundName>* results) {
   IndexWalker walker(&module_symbols->GetIndex());
   if (!current_scope.empty() && looking_for.qualification() == IdentifierQualification::kRelative) {
-    // Unless the input identifier is fully qualified, start the search in the
-    // current context.
+    // Unless the input identifier is fully qualified, start the search in the current context.
     walker.WalkIntoClosest(current_scope);
   }
 

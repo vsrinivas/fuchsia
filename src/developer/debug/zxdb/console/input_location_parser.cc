@@ -17,8 +17,8 @@
 #include "src/developer/debug/zxdb/expr/expr_parser.h"
 #include "src/developer/debug/zxdb/expr/find_name.h"
 #include "src/developer/debug/zxdb/symbols/identifier.h"
+#include "src/developer/debug/zxdb/symbols/index.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
-#include "src/developer/debug/zxdb/symbols/module_symbol_index.h"
 #include "src/developer/debug/zxdb/symbols/module_symbols.h"
 #include "src/developer/debug/zxdb/symbols/process_symbols.h"
 #include "src/developer/debug/zxdb/symbols/target_symbols.h"
@@ -122,17 +122,16 @@ Err ResolveInputLocations(const ProcessSymbols* process_symbols, const Frame* op
   return ResolveInputLocations(process_symbols, input_location, symbolize, locations);
 }
 
-// This implementation isn't great, it doesn't always show the best
-// disambiguations for the given input.
+// This implementation isn't great, it doesn't always show the best disambiguations for the given
+// input.
 //
-// Also it misses a file name edge case: If there is one file whose full
-// path in the symbols is a right-side subset of another (say "foo/bar.cc" and
-// "something/foo/bar.cc"), then "foo/bar.cc" is the most unique name of the
-// first file. But if the user types that, they'll get both matches and this
-// function will report an ambiguous location.
+// Also it misses a file name edge case: If there is one file whose full path in the symbols is a
+// right-side subset of another (say "foo/bar.cc" and "something/foo/bar.cc"), then "foo/bar.cc" is
+// the most unique name of the first file. But if the user types that, they'll get both matches and
+// this function will report an ambiguous location.
 //
-// Instead, if the input is a file name and there is only one result where the
-// file name matches exactly, we should pick it.
+// Instead, if the input is a file name and there is only one result where the file name matches
+// exactly, we should pick it.
 Err ResolveUniqueInputLocation(const ProcessSymbols* process_symbols,
                                const InputLocation& input_location, bool symbolize,
                                Location* location) {
@@ -149,23 +148,21 @@ Err ResolveUniqueInputLocation(const ProcessSymbols* process_symbols,
     return Err();
   }
 
-  // When there is more than one, generate an error that lists the
-  // possibilities for disambiguation.
+  // When there is more than one, generate an error that lists the possibilities for disambiguation.
   std::string err_str = "This resolves to more than one location. Could be:\n";
   constexpr size_t kMaxSuggestions = 10u;
 
   if (!symbolize) {
     // The original call did not request symbolization which will produce very
-    // non-helpful suggestions. We're not concerned about performance in this
-    // error case so re-query to get the full symbols.
+    // non-helpful suggestions. We're not concerned about performance in this error case so re-query
+    // to get the full symbols.
     locations.clear();
     ResolveInputLocations(process_symbols, input_location, true, &locations);
   }
 
   for (size_t i = 0; i < locations.size() && i < kMaxSuggestions; i++) {
-    // Always show the full path (omit TargetSymbols) since we're doing
-    // disambiguation and the problem could have been two files with the same
-    // name but different paths.
+    // Always show the full path (omit TargetSymbols) since we're doing disambiguation and the
+    // problem could have been two files with the same name but different paths.
     err_str += fxl::StringPrintf(" %s ", GetBullet().c_str());
     if (locations[i].file_line().is_valid()) {
       err_str += DescribeFileLine(nullptr, locations[i].file_line());
@@ -201,8 +198,8 @@ void CompleteInputLocation(const Command& command, const std::string& prefix,
   constexpr size_t kMaxClasses = 32;
   constexpr size_t kMaxFunctions = 32;
 
-  // Extract the current code block if possible. This will be used to find
-  // local variables and to prioritize symbols from the current module.
+  // Extract the current code block if possible. This will be used to find local variables and to
+  // prioritize symbols from the current module.
   const CodeBlock* code_block = nullptr;
   SymbolContext symbol_context = SymbolContext::ForRelativeAddresses();
   if (const Frame* frame = command.frame()) {
@@ -213,11 +210,10 @@ void CompleteInputLocation(const Command& command, const std::string& prefix,
     }
   }
 
-  // TODO(brettw) prioritize the current module when it's known (when there is
-  // a current frame with symbol information). Factor prioritization code from
-  // find_name.cc
+  // TODO(brettw) prioritize the current module when it's known (when there is a current frame with
+  // symbol information). Factor prioritization code from find_name.cc
   for (const ModuleSymbols* mod : command.target()->GetSymbols()->GetModuleSymbols()) {
-    const ModuleSymbolIndex& index = mod->GetIndex();
+    const Index& index = mod->GetIndex();
     auto files = index.FindFilePrefixes(prefix);
 
     // Files get colons at the end for the user to type a line number next.
@@ -258,9 +254,9 @@ void CompleteInputLocation(const Command& command, const std::string& prefix,
     completions->push_back(found.GetName() + "::");
   options.find_namespaces = false;
 
-  // Follow with types. Only do structure and class types since we're really
-  // looking for function names. In the future it might be nice to check if
-  // there are any member functions in the types before adding them.
+  // Follow with types. Only do structure and class types since we're really looking for function
+  // names. In the future it might be nice to check if there are any member functions in the types
+  // before adding them.
   options.find_types = true;
   options.max_results = kMaxClasses;
   found_names.clear();
