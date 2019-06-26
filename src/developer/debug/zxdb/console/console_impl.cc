@@ -83,16 +83,14 @@ void PreserveStdoutTermios() {}
 
 }  // namespace
 
-ConsoleImpl::ConsoleImpl(Session* session)
-    : Console(session), line_input_("[zxdb] ") {
+ConsoleImpl::ConsoleImpl(Session* session) : Console(session), line_input_("[zxdb] ") {
   // Set the line input completion callback that can know about our context.
   // OK to bind |this| since we own the line_input object.
   auto fill_command_context = [this](Command* cmd) {
     context_.FillOutCommand(cmd);  // Ignore errors, this is for autocomplete.
   };
   line_input_.set_completion_callback(
-      [fill_command_context](
-          const std::string& prefix) -> std::vector<std::string> {
+      [fill_command_context](const std::string& prefix) -> std::vector<std::string> {
         return GetCommandCompletions(prefix, fill_command_context);
       });
 
@@ -102,8 +100,7 @@ ConsoleImpl::ConsoleImpl(Session* session)
 
 ConsoleImpl::~ConsoleImpl() {
   if (!SaveHistoryFile())
-    Console::Output(
-        Err("Could not save history file to $HOME/%s.\n", kHistoryFilename));
+    Console::Output(Err("Could not save history file to $HOME/%s.\n", kHistoryFilename));
 }
 
 void ConsoleImpl::Init() {
@@ -126,8 +123,7 @@ void ConsoleImpl::LoadHistoryFile() {
   if (!files::ReadFileToString(path, &data))
     return;
 
-  auto history = fxl::SplitStringCopy(data, "\n", fxl::kTrimWhitespace,
-                                      fxl::kSplitWantNonEmpty);
+  auto history = fxl::SplitStringCopy(data, "\n", fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
 
   for (const std::string& cmd : history)
     line_input_.AddToHistory(cmd);
@@ -144,8 +140,7 @@ bool ConsoleImpl::SaveHistoryFile() {
   for (auto it = history.rbegin(); it != history.rend(); it++) {
     auto trimmed = fxl::TrimString(*it, " ");
     // We ignore empty entries or quit commands.
-    if (trimmed.empty() || trimmed == "quit" || trimmed == "q" ||
-        trimmed == "exit") {
+    if (trimmed.empty() || trimmed == "quit" || trimmed == "q" || trimmed == "exit") {
       continue;
     }
 
@@ -190,8 +185,7 @@ void ConsoleImpl::Clear() {
   line_input_.Show();
 }
 
-Console::Result ConsoleImpl::DispatchInputLine(const std::string& line,
-                                               CommandCallback callback) {
+Console::Result ConsoleImpl::DispatchInputLine(const std::string& line, CommandCallback callback) {
   Command cmd;
   Err err;
   if (line.empty()) {
@@ -213,8 +207,8 @@ Console::Result ConsoleImpl::DispatchInputLine(const std::string& line,
 
         if (cmd.thread() && cmd.verb() != Verb::kNone) {
           // Show the right source/disassembly for the next listing.
-          context_.SetSourceAffinityForThread(
-              cmd.thread(), GetVerbRecord(cmd.verb())->source_affinity);
+          context_.SetSourceAffinityForThread(cmd.thread(),
+                                              GetVerbRecord(cmd.verb())->source_affinity);
         }
       }
     }
@@ -228,8 +222,7 @@ Console::Result ConsoleImpl::DispatchInputLine(const std::string& line,
   return Result::kContinue;
 }
 
-Console::Result ConsoleImpl::ProcessInputLine(const std::string& line,
-                                              CommandCallback callback) {
+Console::Result ConsoleImpl::ProcessInputLine(const std::string& line, CommandCallback callback) {
   Result result = DispatchInputLine(line, callback);
   if (result == Result::kQuit)
     debug_ipc::MessageLoop::Current()->QuitNow();

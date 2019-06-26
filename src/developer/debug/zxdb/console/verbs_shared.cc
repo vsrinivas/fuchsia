@@ -74,8 +74,7 @@ Err DoNew(ConsoleContext* context, const Command& cmd) {
     context->SetActiveJobContext(new_job_context);
     Console::get()->Output(FormatJobContext(context, new_job_context));
   } else {
-    Target* new_target =
-        context->session()->system().CreateNewTarget(cmd.target());
+    Target* new_target = context->session()->system().CreateNewTarget(cmd.target());
     context->SetActiveTarget(new_target);
     Console::get()->Output(FormatTarget(context, new_target));
   }
@@ -85,8 +84,8 @@ Err DoNew(ConsoleContext* context, const Command& cmd) {
 }  // namespace
 
 void AppendSharedVerbs(std::map<Verb, VerbRecord>* verbs) {
-  (*verbs)[Verb::kNew] = VerbRecord(&DoNew, {"new"}, kNewShortHelp, kNewHelp,
-                                    CommandGroup::kGeneral);
+  (*verbs)[Verb::kNew] =
+      VerbRecord(&DoNew, {"new"}, kNewShortHelp, kNewHelp, CommandGroup::kGeneral);
 }
 
 }  // namespace zxdb

@@ -60,8 +60,7 @@ Command syntax
           thread or process.
 )";
 
-std::string FormatGroupHelp(const char* heading,
-                            std::vector<std::string>* items) {
+std::string FormatGroupHelp(const char* heading, std::vector<std::string>* items) {
   std::sort(items->begin(), items->end());
 
   std::string help("\n");
@@ -184,8 +183,7 @@ Err DoQuitAgent(ConsoleContext* context, const Command& cmd) {
 
 // connect ---------------------------------------------------------------------
 
-const char kConnectShortHelp[] =
-    R"(connect: Connect to a remote system for debugging.)";
+const char kConnectShortHelp[] = R"(connect: Connect to a remote system for debugging.)";
 const char kConnectHelp[] =
     R"(connect <remote_address>
 
@@ -211,8 +209,7 @@ Examples
   connect [1234:5678::9abc]:1234
 )";
 
-Err DoConnect(ConsoleContext* context, const Command& cmd,
-              CommandCallback callback = nullptr) {
+Err DoConnect(ConsoleContext* context, const Command& cmd, CommandCallback callback = nullptr) {
   // Can accept either one or two arg forms.
   std::string host;
   uint16_t port = 0;
@@ -261,8 +258,7 @@ Err DoConnect(ConsoleContext* context, const Command& cmd,
 
 // opendump --------------------------------------------------------------------
 
-const char kOpenDumpShortHelp[] =
-    R"(opendump: Open a dump file for debugging.)";
+const char kOpenDumpShortHelp[] = R"(opendump: Open a dump file for debugging.)";
 const char kOpenDumpHelp[] =
     R"(opendump <path>
 
@@ -275,8 +271,7 @@ const char kOpenDumpHelp[] =
   original system.
 )";
 
-Err DoOpenDump(ConsoleContext* context, const Command& cmd,
-               CommandCallback callback = nullptr) {
+Err DoOpenDump(ConsoleContext* context, const Command& cmd, CommandCallback callback = nullptr) {
   std::string path;
 
   if (cmd.args().size() == 0) {
@@ -366,8 +361,7 @@ void DoCompleteOpenDump(const Command& cmd, const std::string& prefix,
 
 // disconnect ------------------------------------------------------------------
 
-const char kDisconnectShortHelp[] =
-    R"(disconnect: Disconnect from the remote system.)";
+const char kDisconnectShortHelp[] = R"(disconnect: Disconnect from the remote system.)";
 const char kDisconnectHelp[] =
     R"(disconnect
 
@@ -377,8 +371,7 @@ const char kDisconnectHelp[] =
   There are no arguments.
 )";
 
-Err DoDisconnect(ConsoleContext* context, const Command& cmd,
-                 CommandCallback callback = nullptr) {
+Err DoDisconnect(ConsoleContext* context, const Command& cmd, CommandCallback callback = nullptr) {
   if (!cmd.args().empty())
     return Err(ErrType::kInput, "\"disconnect\" takes no arguments.");
 
@@ -407,8 +400,7 @@ const char kClsHelp[] =
   There are no arguments.
 )";
 
-Err DoCls(ConsoleContext* context, const Command& cmd,
-          CommandCallback callback = nullptr) {
+Err DoCls(ConsoleContext* context, const Command& cmd, CommandCallback callback = nullptr) {
   if (!cmd.args().empty())
     return Err(ErrType::kInput, "\"cls\" takes no arguments.");
 
@@ -428,8 +420,7 @@ const char kStatusHelp[] = R"(status: Show debugger status.
   with suggestions on what to do.
 )";
 
-Err DoStatus(ConsoleContext* context, const Command& cmd,
-             CommandCallback callback = nullptr) {
+Err DoStatus(ConsoleContext* context, const Command& cmd, CommandCallback callback = nullptr) {
   OutputBuffer out;
   out.Append(GetConnectionStatus(context->session()));
   out.Append("\n");
@@ -448,28 +439,23 @@ Err DoStatus(ConsoleContext* context, const Command& cmd,
 }  // namespace
 
 void AppendControlVerbs(std::map<Verb, VerbRecord>* verbs) {
-  (*verbs)[Verb::kHelp] = VerbRecord(&DoHelp, {"help", "h"}, kHelpShortHelp,
-                                     kHelpHelp, CommandGroup::kGeneral);
+  (*verbs)[Verb::kHelp] =
+      VerbRecord(&DoHelp, {"help", "h"}, kHelpShortHelp, kHelpHelp, CommandGroup::kGeneral);
   (*verbs)[Verb::kQuit] =
-      VerbRecord(&DoQuit, {"quit", "q", "exit"}, kQuitShortHelp, kQuitHelp,
-                 CommandGroup::kGeneral);
+      VerbRecord(&DoQuit, {"quit", "q", "exit"}, kQuitShortHelp, kQuitHelp, CommandGroup::kGeneral);
   (*verbs)[Verb::kConnect] =
-      VerbRecord(&DoConnect, {"connect"}, kConnectShortHelp, kConnectHelp,
-                 CommandGroup::kGeneral);
-  (*verbs)[Verb::kDisconnect] =
-      VerbRecord(&DoDisconnect, {"disconnect"}, kDisconnectShortHelp,
-                 kDisconnectHelp, CommandGroup::kGeneral);
-  (*verbs)[Verb::kQuitAgent] =
-      VerbRecord(&DoQuitAgent, {"quit-agent"}, kQuitAgentShortHelp,
-                 kQuitAgentHelp, CommandGroup::kGeneral);
-  (*verbs)[Verb::kOpenDump] = VerbRecord(
-      &DoOpenDump, &DoCompleteOpenDump, {"opendump"}, kOpenDumpShortHelp,
-      kOpenDumpHelp, CommandGroup::kGeneral, SourceAffinity::kNone);
-  (*verbs)[Verb::kStatus] =
-      VerbRecord(&DoStatus, {"status", "stat", "wtf"}, kStatusShortHelp,
-                 kStatusHelp, CommandGroup::kGeneral);
-  (*verbs)[Verb::kCls] = VerbRecord(&DoCls, {"cls"}, kClsShortHelp, kClsHelp,
-                                    CommandGroup::kGeneral);
+      VerbRecord(&DoConnect, {"connect"}, kConnectShortHelp, kConnectHelp, CommandGroup::kGeneral);
+  (*verbs)[Verb::kDisconnect] = VerbRecord(&DoDisconnect, {"disconnect"}, kDisconnectShortHelp,
+                                           kDisconnectHelp, CommandGroup::kGeneral);
+  (*verbs)[Verb::kQuitAgent] = VerbRecord(&DoQuitAgent, {"quit-agent"}, kQuitAgentShortHelp,
+                                          kQuitAgentHelp, CommandGroup::kGeneral);
+  (*verbs)[Verb::kOpenDump] =
+      VerbRecord(&DoOpenDump, &DoCompleteOpenDump, {"opendump"}, kOpenDumpShortHelp, kOpenDumpHelp,
+                 CommandGroup::kGeneral, SourceAffinity::kNone);
+  (*verbs)[Verb::kStatus] = VerbRecord(&DoStatus, {"status", "stat", "wtf"}, kStatusShortHelp,
+                                       kStatusHelp, CommandGroup::kGeneral);
+  (*verbs)[Verb::kCls] =
+      VerbRecord(&DoCls, {"cls"}, kClsShortHelp, kClsHelp, CommandGroup::kGeneral);
 }
 
 }  // namespace zxdb

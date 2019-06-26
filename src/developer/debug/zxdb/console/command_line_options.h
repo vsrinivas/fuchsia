@@ -32,8 +32,7 @@ struct CommandLineOptions {
 //
 // Returns an error if the command-line is badly formed. In addition, --help
 // text will be returned as an error.
-cmdline::Status ParseCommandLine(int argc, const char* argv[],
-                                 CommandLineOptions* options,
+cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOptions* options,
                                  std::vector<std::string>* params);
 
 }  // namespace zxdb

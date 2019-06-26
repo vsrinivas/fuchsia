@@ -70,17 +70,14 @@ class FormatValue : public fxl::RefCountedThreadSafe<FormatValue> {
 
   // Construct with fxl::MakeRefCounted<FormatValue>().
 
-  void AppendValue(fxl::RefPtr<EvalContext> eval_context,
-                   const ExprValue& value,
+  void AppendValue(fxl::RefPtr<EvalContext> eval_context, const ExprValue& value,
                    const FormatExprValueOptions& options);
 
   // The eval context normally comes from the frame where you want to evaluate
   // the variable in. This will prepend "<name> = " to the value of the
   // variable.
-  void AppendVariable(const SymbolContext& symbol_context,
-                      fxl::RefPtr<EvalContext> eval_context,
-                      const Variable* var,
-                      const FormatExprValueOptions& options);
+  void AppendVariable(const SymbolContext& symbol_context, fxl::RefPtr<EvalContext> eval_context,
+                      const Variable* var, const FormatExprValueOptions& options);
 
   void Append(std::string str);
   void Append(OutputBuffer out);
@@ -173,45 +170,38 @@ class FormatValue : public fxl::RefCountedThreadSafe<FormatValue> {
   // options.always_show_types for this item only (but not nested items). This
   // is designed to be used when called recursively and the type has already
   // been printed.
-  void FormatExprValue(fxl::RefPtr<EvalContext> eval_context,
-                       const ExprValue& value,
-                       const FormatExprValueOptions& options,
-                       bool suppress_type_printing, OutputKey output_key);
+  void FormatExprValue(fxl::RefPtr<EvalContext> eval_context, const ExprValue& value,
+                       const FormatExprValueOptions& options, bool suppress_type_printing,
+                       OutputKey output_key);
   void FormatExprValue(fxl::RefPtr<EvalContext> eval_context, const Err& err,
-                       const ExprValue& value,
-                       const FormatExprValueOptions& options,
+                       const ExprValue& value, const FormatExprValueOptions& options,
                        bool suppress_type_printing, OutputKey output_key);
 
   // Asynchronously formats the given type.
   //
   // The known_elt_count can be -1 if the array size is not statically known.
-  void FormatCollection(fxl::RefPtr<EvalContext> expr_eval_context,
-                        const Collection* coll, const ExprValue& value,
-                        const FormatExprValueOptions& options,
+  void FormatCollection(fxl::RefPtr<EvalContext> expr_eval_context, const Collection* coll,
+                        const ExprValue& value, const FormatExprValueOptions& options,
                         OutputKey output_key);
 
   // Checks array and string types and formats the value accordingly. Returns
   // true if it was an array or string type that was handled, false if it
   // was anything else.
-  bool TryFormatArrayOrString(fxl::RefPtr<EvalContext> eval_context,
-                              const Type* type, const ExprValue& value,
-                              const FormatExprValueOptions& options,
+  bool TryFormatArrayOrString(fxl::RefPtr<EvalContext> eval_context, const Type* type,
+                              const ExprValue& value, const FormatExprValueOptions& options,
                               OutputKey output_key);
 
   // Array and string format helpers.
-  void FormatCharPointer(fxl::RefPtr<EvalContext> eval_context,
-                         const Type* type, const ExprValue& value,
-                         const FormatExprValueOptions& options,
+  void FormatCharPointer(fxl::RefPtr<EvalContext> eval_context, const Type* type,
+                         const ExprValue& value, const FormatExprValueOptions& options,
                          OutputKey output_key);
-  void FormatCharArray(const uint8_t* data, size_t length, bool truncated,
-                       OutputKey output_key);
-  void FormatArray(fxl::RefPtr<EvalContext> eval_context,
-                   const ExprValue& value, int elt_count,
+  void FormatCharArray(const uint8_t* data, size_t length, bool truncated, OutputKey output_key);
+  void FormatArray(fxl::RefPtr<EvalContext> eval_context, const ExprValue& value, int elt_count,
                    const FormatExprValueOptions& options, OutputKey output_key);
 
   // Dispatcher for all numeric types. This handles formatting overrides.
-  void FormatNumeric(const ExprValue& value,
-                     const FormatExprValueOptions& options, OutputBuffer* out);
+  void FormatNumeric(const ExprValue& value, const FormatExprValueOptions& options,
+                     OutputBuffer* out);
 
   // Simpler synchronous outputs.
   void FormatBoolean(const ExprValue& value, OutputBuffer* out);
@@ -219,32 +209,23 @@ class FormatValue : public fxl::RefCountedThreadSafe<FormatValue> {
                   const FormatExprValueOptions& options, OutputBuffer* out);
   void FormatFloat(const ExprValue& value, OutputBuffer* out);
   void FormatSignedInt(const ExprValue& value, OutputBuffer* out);
-  void FormatUnsignedInt(const ExprValue& value,
-                         const FormatExprValueOptions& options,
+  void FormatUnsignedInt(const ExprValue& value, const FormatExprValueOptions& options,
                          OutputBuffer* out);
   void FormatChar(const ExprValue& value, OutputBuffer* out);
-  void FormatPointer(const ExprValue& value,
-                     const FormatExprValueOptions& options, OutputBuffer* out);
-  void FormatReference(fxl::RefPtr<EvalContext> eval_context,
-                       const ExprValue& value,
-                       const FormatExprValueOptions& options,
-                       OutputKey output_key);
-  void FormatFunctionPointer(const ExprValue& value,
-                             const FormatExprValueOptions& options,
+  void FormatPointer(const ExprValue& value, const FormatExprValueOptions& options,
+                     OutputBuffer* out);
+  void FormatReference(fxl::RefPtr<EvalContext> eval_context, const ExprValue& value,
+                       const FormatExprValueOptions& options, OutputKey output_key);
+  void FormatFunctionPointer(const ExprValue& value, const FormatExprValueOptions& options,
                              OutputBuffer* out);
   void FormatMemberPtr(const ExprValue& value, const MemberPtr* type,
-                       const FormatExprValueOptions& options,
-                       OutputBuffer* out);
-  void FormatZxStatusT(const ExprValue& value,
-                       const FormatExprValueOptions& options,
+                       const FormatExprValueOptions& options, OutputBuffer* out);
+  void FormatZxStatusT(const ExprValue& value, const FormatExprValueOptions& options,
                        OutputKey output_key);
-  void FormatRustEnum(fxl::RefPtr<EvalContext> eval_context,
-                      const ExprValue& value,
-                      const FormatExprValueOptions& options,
-                      OutputKey output_key);
-  void FormatRustTuple(fxl::RefPtr<EvalContext> eval_context,
-                       const Collection* coll, const ExprValue& value,
-                       const FormatExprValueOptions& options,
+  void FormatRustEnum(fxl::RefPtr<EvalContext> eval_context, const ExprValue& value,
+                      const FormatExprValueOptions& options, OutputKey output_key);
+  void FormatRustTuple(fxl::RefPtr<EvalContext> eval_context, const Collection* coll,
+                       const ExprValue& value, const FormatExprValueOptions& options,
                        OutputKey output_key);
 
   OutputKey GetRootOutputKey();

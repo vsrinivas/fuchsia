@@ -63,8 +63,7 @@ class AsyncOutputBuffer : public fxl::RefCountedThreadSafe<AsyncOutputBuffer> {
 
   // Mirrors the OutputBuffer API with the addition of being aboe to append
   // AsyncOutputBuffers.
-  void Append(std::string str,
-              TextForegroundColor fg = TextForegroundColor::kDefault,
+  void Append(std::string str, TextForegroundColor fg = TextForegroundColor::kDefault,
               TextBackgroundColor bg = TextBackgroundColor::kDefault);
   void Append(fxl::RefPtr<AsyncOutputBuffer> buf);
   void Append(Syntax syntax, std::string str);
@@ -80,8 +79,7 @@ class AsyncOutputBuffer : public fxl::RefCountedThreadSafe<AsyncOutputBuffer> {
 
   // Helper functions that do Append(...) + Complete() since this is a very
   // common use case.
-  void Complete(std::string str,
-                TextForegroundColor fg = TextForegroundColor::kDefault,
+  void Complete(std::string str, TextForegroundColor fg = TextForegroundColor::kDefault,
                 TextBackgroundColor bg = TextBackgroundColor::kDefault);
   void Complete(fxl::RefPtr<AsyncOutputBuffer> buf);
   void Complete(Syntax syntax, std::string str);

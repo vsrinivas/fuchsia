@@ -9,13 +9,11 @@ namespace zxdb {
 MockFormatValueProcessContext::MockFormatValueProcessContext() = default;
 MockFormatValueProcessContext::~MockFormatValueProcessContext() = default;
 
-void MockFormatValueProcessContext::AddResult(uint64_t address,
-                                              Location location) {
+void MockFormatValueProcessContext::AddResult(uint64_t address, Location location) {
   locations_[address] = std::move(location);
 }
 
-Location MockFormatValueProcessContext::GetLocationForAddress(
-    uint64_t address) const {
+Location MockFormatValueProcessContext::GetLocationForAddress(uint64_t address) const {
   auto found = locations_.find(address);
   if (found == locations_.end())
     return Location(Location::State::kAddress, address);

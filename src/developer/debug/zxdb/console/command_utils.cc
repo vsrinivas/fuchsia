@@ -43,20 +43,17 @@
 
 namespace zxdb {
 
-Err AssertRunningTarget(ConsoleContext* context, const char* command_name,
-                        Target* target) {
+Err AssertRunningTarget(ConsoleContext* context, const char* command_name, Target* target) {
   Target::State state = target->GetState();
   if (state == Target::State::kRunning)
     return Err();
-  return Err(
-      ErrType::kInput,
-      fxl::StringPrintf("%s requires a running process but process %d is %s.",
-                        command_name, context->IdForTarget(target),
-                        TargetStateToString(state)));
+  return Err(ErrType::kInput,
+             fxl::StringPrintf("%s requires a running process but process %d is %s.", command_name,
+                               context->IdForTarget(target), TargetStateToString(state)));
 }
 
-Err AssertStoppedThreadCommand(ConsoleContext* context, const Command& cmd,
-                               bool validate_nouns, const char* command_name) {
+Err AssertStoppedThreadCommand(ConsoleContext* context, const Command& cmd, bool validate_nouns,
+                               const char* command_name) {
   Err err;
   if (validate_nouns) {
     err = cmd.ValidateNouns({Noun::kProcess, Noun::kThread});
@@ -65,8 +62,7 @@ Err AssertStoppedThreadCommand(ConsoleContext* context, const Command& cmd,
   }
 
   if (!cmd.thread()) {
-    return Err("\"%s\" requires a thread but there is no current thread.",
-               command_name);
+    return Err("\"%s\" requires a thread but there is no current thread.", command_name);
   }
   if (cmd.thread()->GetState() != debug_ipc::ThreadRecord::State::kBlocked &&
       cmd.thread()->GetState() != debug_ipc::ThreadRecord::State::kCoreDump &&
@@ -76,15 +72,12 @@ Err AssertStoppedThreadCommand(ConsoleContext* context, const Command& cmd,
         "To view and sync thread state with the remote system, type "
         "\"thread\".",
         command_name, context->IdForThread(cmd.thread()),
-        ThreadStateToString(cmd.thread()->GetState(),
-                            cmd.thread()->GetBlockedReason())
-            .c_str());
+        ThreadStateToString(cmd.thread()->GetState(), cmd.thread()->GetBlockedReason()).c_str());
   }
   return Err();
 }
 
-Err AssertStoppedThreadWithFrameCommand(ConsoleContext* context,
-                                        const Command& cmd,
+Err AssertStoppedThreadWithFrameCommand(ConsoleContext* context, const Command& cmd,
                                         const char* command_name) {
   // Does most validation except noun checking.
   Err err = AssertStoppedThreadCommand(context, cmd, false, command_name);
@@ -157,8 +150,7 @@ Err StringToUint32(const std::string& s, uint32_t* out) {
     return err;
 
   if (value64 > static_cast<uint64_t>(std::numeric_limits<uint32_t>::max())) {
-    return Err("Expected 32-bit unsigned value, but %s is too large.",
-               s.c_str());
+    return Err("Expected 32-bit unsigned value, but %s is too large.", s.c_str());
   }
   *out = static_cast<uint32_t>(value64);
   return Err();
@@ -195,24 +187,21 @@ Err StringToUint64(const std::string& s, uint64_t* out) {
   return number_value.PromoteTo64(out);
 }
 
-Err ReadUint64Arg(const Command& cmd, size_t arg_index, const char* param_desc,
-                  uint64_t* out) {
+Err ReadUint64Arg(const Command& cmd, size_t arg_index, const char* param_desc, uint64_t* out) {
   if (cmd.args().size() <= arg_index) {
     return Err(ErrType::kInput,
-               fxl::StringPrintf("Not enough arguments when reading the %s.",
-                                 param_desc));
+               fxl::StringPrintf("Not enough arguments when reading the %s.", param_desc));
   }
   Err result = StringToUint64(cmd.args()[arg_index], out);
   if (result.has_error()) {
-    return Err(ErrType::kInput,
-               fxl::StringPrintf("Invalid number \"%s\" when reading the %s.",
-                                 cmd.args()[arg_index].c_str(), param_desc));
+    return Err(ErrType::kInput, fxl::StringPrintf("Invalid number \"%s\" when reading the %s.",
+                                                  cmd.args()[arg_index].c_str(), param_desc));
   }
   return Err();
 }
 
-Err ParseHostPort(const std::string& in_host, const std::string& in_port,
-                  std::string* out_host, uint16_t* out_port) {
+Err ParseHostPort(const std::string& in_host, const std::string& in_port, std::string* out_host,
+                  uint16_t* out_port) {
   if (in_host.empty())
     return Err(ErrType::kInput, "No host component specified.");
   if (in_port.empty())
@@ -236,8 +225,7 @@ Err ParseHostPort(const std::string& in_host, const std::string& in_port,
   return Err();
 }
 
-Err ParseHostPort(const std::string& input, std::string* out_host,
-                  uint16_t* out_port) {
+Err ParseHostPort(const std::string& input, std::string* out_host, uint16_t* out_port) {
   // Separate based on the last colon.
   size_t colon = input.rfind(':');
   if (colon == std::string::npos)
@@ -262,19 +250,16 @@ Err ParseHostPort(const std::string& input, std::string* out_host,
   return ParseHostPort(host, port, out_host, out_port);
 }
 
-std::string ThreadStateToString(
-    debug_ipc::ThreadRecord::State state,
-    debug_ipc::ThreadRecord::BlockedReason blocked_reason) {
+std::string ThreadStateToString(debug_ipc::ThreadRecord::State state,
+                                debug_ipc::ThreadRecord::BlockedReason blocked_reason) {
   // Blocked can have many cases, so we handle it separately.
   if (state != debug_ipc::ThreadRecord::State::kBlocked)
     return debug_ipc::ThreadRecord::StateToString(state);
 
-  FXL_DCHECK(blocked_reason !=
-             debug_ipc::ThreadRecord::BlockedReason::kNotBlocked)
+  FXL_DCHECK(blocked_reason != debug_ipc::ThreadRecord::BlockedReason::kNotBlocked)
       << "A blocked thread has to have a valid reason.";
-  return fxl::StringPrintf(
-      "Blocked (%s)",
-      debug_ipc::ThreadRecord::BlockedReasonToString(blocked_reason));
+  return fxl::StringPrintf("Blocked (%s)",
+                           debug_ipc::ThreadRecord::BlockedReasonToString(blocked_reason));
 }
 
 std::string BreakpointScopeToString(const ConsoleContext* context,
@@ -283,13 +268,10 @@ std::string BreakpointScopeToString(const ConsoleContext* context,
     case BreakpointSettings::Scope::kSystem:
       return "Global";
     case BreakpointSettings::Scope::kTarget:
-      return fxl::StringPrintf("pr %d",
-                               context->IdForTarget(settings.scope_target));
+      return fxl::StringPrintf("pr %d", context->IdForTarget(settings.scope_target));
     case BreakpointSettings::Scope::kThread:
       return fxl::StringPrintf(
-          "pr %d t %d",
-          context->IdForTarget(
-              settings.scope_thread->GetProcess()->GetTarget()),
+          "pr %d t %d", context->IdForTarget(settings.scope_thread->GetProcess()->GetTarget()),
           context->IdForThread(settings.scope_thread));
   }
   FXL_NOTREACHED();
@@ -311,21 +293,16 @@ std::string BreakpointStopToString(BreakpointSettings::StopMode mode) {
   return std::string();
 }
 
-const char* BreakpointEnabledToString(bool enabled) {
-  return enabled ? "Enabled" : "Disabled";
-}
+const char* BreakpointEnabledToString(bool enabled) { return enabled ? "Enabled" : "Disabled"; }
 
-std::string DescribeThread(const ConsoleContext* context,
-                           const Thread* thread) {
+std::string DescribeThread(const ConsoleContext* context, const Thread* thread) {
   return fxl::StringPrintf(
       "Thread %d [%s] koid=%" PRIu64 " %s", context->IdForThread(thread),
-      ThreadStateToString(thread->GetState(), thread->GetBlockedReason())
-          .c_str(),
+      ThreadStateToString(thread->GetState(), thread->GetBlockedReason()).c_str(),
       thread->GetKoid(), thread->GetName().c_str());
 }
 
-OutputBuffer FormatBreakpoint(const ConsoleContext* context,
-                              const Breakpoint* breakpoint) {
+OutputBuffer FormatBreakpoint(const ConsoleContext* context, const Breakpoint* breakpoint) {
   BreakpointSettings settings = breakpoint->GetSettings();
 
   std::string scope = BreakpointScopeToString(context, settings);
@@ -335,10 +312,9 @@ OutputBuffer FormatBreakpoint(const ConsoleContext* context,
   OutputBuffer location = FormatInputLocation(settings.location);
 
   OutputBuffer result("Breakpoint ");
-  result.Append(Syntax::kSpecial,
-                fxl::StringPrintf("%d", context->IdForBreakpoint(breakpoint)));
-  result.Append(fxl::StringPrintf(" (%s) on %s, %s, stop=%s, @ ", type,
-                                  scope.c_str(), enabled, stop.c_str()));
+  result.Append(Syntax::kSpecial, fxl::StringPrintf("%d", context->IdForBreakpoint(breakpoint)));
+  result.Append(fxl::StringPrintf(" (%s) on %s, %s, stop=%s, @ ", type, scope.c_str(), enabled,
+                                  stop.c_str()));
 
   result.Append(std::move(location));
   return result;
@@ -368,8 +344,7 @@ OutputBuffer FormatIdentifier(const Identifier& identifier, bool bold_last) {
 
 // This annoyingly duplicates Identifier::GetName but is required to get
 // syntax highlighting for all the components.
-OutputBuffer FormatIdentifier(const ParsedIdentifier& identifier,
-                              bool bold_last) {
+OutputBuffer FormatIdentifier(const ParsedIdentifier& identifier, bool bold_last) {
   OutputBuffer result;
   if (identifier.qualification() == IdentifierQualification::kGlobal)
     result.Append(identifier.GetSeparator());
@@ -404,9 +379,8 @@ OutputBuffer FormatIdentifier(const ParsedIdentifier& identifier,
   return result;
 }
 
-OutputBuffer FormatLocation(const TargetSymbols* optional_target_symbols,
-                            const Location& loc, bool always_show_address,
-                            bool always_show_types) {
+OutputBuffer FormatLocation(const TargetSymbols* optional_target_symbols, const Location& loc,
+                            bool always_show_address, bool always_show_types) {
   if (!loc.is_valid())
     return OutputBuffer("<invalid address>");
   if (!loc.has_symbols())
@@ -414,8 +388,7 @@ OutputBuffer FormatLocation(const TargetSymbols* optional_target_symbols,
 
   OutputBuffer result;
   if (always_show_address) {
-    result = OutputBuffer(Syntax::kComment,
-                          fxl::StringPrintf("0x%" PRIx64 ", ", loc.address()));
+    result = OutputBuffer(Syntax::kComment, fxl::StringPrintf("0x%" PRIx64 ", ", loc.address()));
   }
 
   const Function* func = loc.symbol().Get()->AsFunction();
@@ -431,8 +404,7 @@ OutputBuffer FormatLocation(const TargetSymbols* optional_target_symbols,
         AddressRange function_range = func->GetFullRange(loc.symbol_context());
         if (function_range.InRange(loc.address())) {
           // Inside a function but no file/line known. Show the offset.
-          result.Append(fxl::StringPrintf(
-              " + 0x%" PRIx64, loc.address() - function_range.begin()));
+          result.Append(fxl::StringPrintf(" + 0x%" PRIx64, loc.address() - function_range.begin()));
           result.Append(Syntax::kComment, " (no line info)");
         }
       }
@@ -454,8 +426,7 @@ std::string DescribeFileLine(const TargetSymbols* optional_target_symbols,
   } else if (!optional_target_symbols) {
     result = file_line.file();
   } else {
-    result =
-        optional_target_symbols->GetShortestUniqueFileName(file_line.file());
+    result = optional_target_symbols->GetShortestUniqueFileName(file_line.file());
   }
 
   result.push_back(':');
@@ -469,8 +440,7 @@ std::string DescribeFileLine(const TargetSymbols* optional_target_symbols,
   return result;
 }
 
-Err SetElementsToAdd(const std::vector<std::string>& args,
-                     AssignType* assign_type,
+Err SetElementsToAdd(const std::vector<std::string>& args, AssignType* assign_type,
                      std::vector<std::string>* elements_to_set) {
   if (args.size() < 2u)
     return Err("Expected at least two arguments.");
@@ -482,8 +452,7 @@ Err SetElementsToAdd(const std::vector<std::string>& args,
   if (token == "=" || token == "+=" || token == "-=") {
     if (args.size() < 3)
       return Err("Expected a value after \"=\"");
-    elements_to_set->insert(elements_to_set->end(), args.begin() + 2,
-                            args.end());
+    elements_to_set->insert(elements_to_set->end(), args.begin() + 2, args.end());
     if (token == "=") {
       *assign_type = AssignType::kAssign;
     } else if (token == "+=") {
@@ -495,8 +464,7 @@ Err SetElementsToAdd(const std::vector<std::string>& args,
   } else {
     *assign_type = AssignType::kAssign;
     // We just append everything after the setting name.
-    elements_to_set->insert(elements_to_set->end(), args.begin() + 1,
-                            args.end());
+    elements_to_set->insert(elements_to_set->end(), args.begin() + 1, args.end());
   }
 
   return Err();
@@ -522,21 +490,18 @@ fxl::RefPtr<EvalContext> GetEvalContextForCommand(const Command& cmd) {
 
   if (Process* process = cmd.target()->GetProcess()) {
     // Process context only.
-    return fxl::MakeRefCounted<EvalContextImpl>(
-        process->GetSymbols()->GetWeakPtr(), process->GetSymbolDataProvider(),
-        Location());
+    return fxl::MakeRefCounted<EvalContextImpl>(process->GetSymbols()->GetWeakPtr(),
+                                                process->GetSymbolDataProvider(), Location());
   }
 
   // No context.
   return fxl::MakeRefCounted<EvalContextImpl>(
-      fxl::WeakPtr<ProcessSymbols>(), fxl::MakeRefCounted<SymbolDataProvider>(),
-      Location());
+      fxl::WeakPtr<ProcessSymbols>(), fxl::MakeRefCounted<SymbolDataProvider>(), Location());
 }
 
-Err EvalCommandExpression(
-    const Command& cmd, const char* verb, fxl::RefPtr<EvalContext> eval_context,
-    bool follow_references,
-    std::function<void(const Err& err, ExprValue value)> cb) {
+Err EvalCommandExpression(const Command& cmd, const char* verb,
+                          fxl::RefPtr<EvalContext> eval_context, bool follow_references,
+                          std::function<void(const Err& err, ExprValue value)> cb) {
   Err err = cmd.ValidateNouns({Noun::kProcess, Noun::kThread, Noun::kFrame});
   if (err.has_error())
     return err;
@@ -556,16 +521,13 @@ Err EvalCommandExpression(
   if (expr.empty())
     return Err("Usage: %s <expression>\nSee \"help %s\" for more.", verb, verb);
 
-  EvalExpression(expr, std::move(eval_context), follow_references,
-                 std::move(cb));
+  EvalExpression(expr, std::move(eval_context), follow_references, std::move(cb));
   return Err();
 }
 
 Err EvalCommandAddressExpression(
     const Command& cmd, const char* verb, fxl::RefPtr<EvalContext> eval_context,
-    std::function<void(const Err& err, uint64_t address,
-                       std::optional<uint32_t> size)>
-        cb) {
+    std::function<void(const Err& err, uint64_t address, std::optional<uint32_t> size)> cb) {
   return EvalCommandExpression(
       cmd, verb, eval_context, true,
       [eval_context, cb = std::move(cb)](const Err& err, ExprValue value) {
@@ -574,14 +536,12 @@ Err EvalCommandAddressExpression(
           return;
         }
 
-        fxl::RefPtr<Type> concrete_type =
-            value.GetConcreteType(eval_context.get());
+        fxl::RefPtr<Type> concrete_type = value.GetConcreteType(eval_context.get());
         if (concrete_type->AsCollection()) {
           // Don't allow structs and classes that are <= 64 bits to be converted
           // to addresses.
-          cb(Err("Can't convert '%s' to an address.",
-                 concrete_type->GetFullName().c_str()),
-             0, std::nullopt);
+          cb(Err("Can't convert '%s' to an address.", concrete_type->GetFullName().c_str()), 0,
+             std::nullopt);
           return;
         }
 

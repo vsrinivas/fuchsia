@@ -38,16 +38,14 @@ TEST_F(VerbsSymbolTest, SymStat) {
 
   auto event = console.GetOutputEvent();
   ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
-  ASSERT_EQ("Attached Process 1 [Running] koid=1234 <mock>",
-            event.output.AsString());
+  ASSERT_EQ("Attached Process 1 [Running] koid=1234 <mock>", event.output.AsString());
 
   auto target = console.context().GetActiveTarget();
   ASSERT_NE(nullptr, target);
   ASSERT_NE(nullptr, target->GetProcess());
 
   target->GetProcess()->GetSymbols()->InjectModuleForTesting(
-      "fakelib", "abc123",
-      std::make_unique<LoadedModuleSymbols>(nullptr, "abc123", 0));
+      "fakelib", "abc123", std::make_unique<LoadedModuleSymbols>(nullptr, "abc123", 0));
 
   auto download = session().system().InjectDownloadForTesting("abc123");
 

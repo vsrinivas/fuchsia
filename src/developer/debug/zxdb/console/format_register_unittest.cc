@@ -32,8 +32,7 @@ std::vector<uint8_t> CreateData(size_t length, size_t val_loop) {
   return data;
 }
 
-debug_ipc::Register CreateRegister(RegisterID id, size_t length,
-                                   size_t val_loop) {
+debug_ipc::Register CreateRegister(RegisterID id, size_t length, size_t val_loop) {
   debug_ipc::Register reg;
   reg.id = id;
   reg.data = CreateData(length, val_loop);
@@ -166,8 +165,7 @@ TEST(FormatRegisters, AllRegisters) {
 
   FormatRegisterOptions options;
   options.arch = debug_ipc::Arch::kX64;
-  options.categories = {RegisterCategory::Type::kGeneral,
-                        RegisterCategory::Type::kFP,
+  options.categories = {RegisterCategory::Type::kGeneral, RegisterCategory::Type::kFP,
                         RegisterCategory::Type::kVector};
   FilteredRegisterSet filtered_set;
   Err err = FilterRegisters(options, registers, &filtered_set);
@@ -207,8 +205,7 @@ TEST(FormatRegisters, OneRegister) {
   FormatRegisterOptions options;
   options.arch = debug_ipc::Arch::kX64;
   options.filter_regexp = "xmm3";
-  options.categories = {RegisterCategory::Type::kGeneral,
-                        RegisterCategory::Type::kFP,
+  options.categories = {RegisterCategory::Type::kGeneral, RegisterCategory::Type::kFP,
                         RegisterCategory::Type::kVector};
 
   FilteredRegisterSet filtered_set;
@@ -259,8 +256,7 @@ TEST(FormatRegisters, CannotFindRegister) {
   FormatRegisterOptions options;
   options.arch = debug_ipc::Arch::kX64;
   options.filter_regexp = "W0";
-  options.categories = {RegisterCategory::Type::kGeneral,
-                        RegisterCategory::Type::kFP,
+  options.categories = {RegisterCategory::Type::kGeneral, RegisterCategory::Type::kFP,
                         RegisterCategory::Type::kVector};
   FilteredRegisterSet filtered_set;
   Err err = FilterRegisters(options, registers, &filtered_set);
@@ -347,14 +343,12 @@ TEST(FormatRegisters, RFlagsValuesExtended) {
   // filtered_set now holds a pointer to rflags that we can change.
   auto& reg = filtered_set[RegisterCategory::Type::kGeneral].front();
 
-  SetRegisterValue(&reg, X86_FLAG_MASK(RflagsCF) | X86_FLAG_MASK(RflagsPF) |
-                             X86_FLAG_MASK(RflagsAF) | X86_FLAG_MASK(RflagsZF) |
-                             X86_FLAG_MASK(RflagsTF) | X86_FLAG_MASK(RflagsDF) |
-                             // Extended flags
-                             (0b10 << kRflagsIOPLShift) |
-                             X86_FLAG_MASK(RflagsNT) | X86_FLAG_MASK(RflagsVM) |
-                             X86_FLAG_MASK(RflagsVIF) |
-                             X86_FLAG_MASK(RflagsID));
+  SetRegisterValue(
+      &reg, X86_FLAG_MASK(RflagsCF) | X86_FLAG_MASK(RflagsPF) | X86_FLAG_MASK(RflagsAF) |
+                X86_FLAG_MASK(RflagsZF) | X86_FLAG_MASK(RflagsTF) | X86_FLAG_MASK(RflagsDF) |
+                // Extended flags
+                (0b10 << kRflagsIOPLShift) | X86_FLAG_MASK(RflagsNT) | X86_FLAG_MASK(RflagsVM) |
+                X86_FLAG_MASK(RflagsVIF) | X86_FLAG_MASK(RflagsID));
 
   OutputBuffer out;
   err = FormatRegisters(options, filtered_set, &out);
@@ -399,12 +393,11 @@ TEST(FormatRegisters, CPSRValues) {
       out.AsString());
 
   // Check out extended
-  SetRegisterValue(&reg,
-                   ARM64_FLAG_MASK(Cpsr, C) | ARM64_FLAG_MASK(Cpsr, N) |
-                       // Extended flags.
-                       ARM64_FLAG_MASK(Cpsr, EL) | ARM64_FLAG_MASK(Cpsr, I) |
-                       ARM64_FLAG_MASK(Cpsr, A) | ARM64_FLAG_MASK(Cpsr, IL) |
-                       ARM64_FLAG_MASK(Cpsr, PAN) | ARM64_FLAG_MASK(Cpsr, UAO));
+  SetRegisterValue(&reg, ARM64_FLAG_MASK(Cpsr, C) | ARM64_FLAG_MASK(Cpsr, N) |
+                             // Extended flags.
+                             ARM64_FLAG_MASK(Cpsr, EL) | ARM64_FLAG_MASK(Cpsr, I) |
+                             ARM64_FLAG_MASK(Cpsr, A) | ARM64_FLAG_MASK(Cpsr, IL) |
+                             ARM64_FLAG_MASK(Cpsr, PAN) | ARM64_FLAG_MASK(Cpsr, UAO));
 
   options.extended = true;
   out = OutputBuffer();
@@ -425,8 +418,7 @@ TEST(FormatRegisters, DebugRegisters_x86) {
   cat.push_back(CreateRegisterWithValue(RegisterID::kX64_dr0, 0x1234));
   cat.push_back(CreateRegisterWithValue(RegisterID::kX64_dr1, 0x1234567));
   cat.push_back(CreateRegisterWithValue(RegisterID::kX64_dr2, 0x123456789ab));
-  cat.push_back(
-      CreateRegisterWithValue(RegisterID::kX64_dr3, 0x123456789abcdef));
+  cat.push_back(CreateRegisterWithValue(RegisterID::kX64_dr3, 0x123456789abcdef));
 
   cat.push_back(CreateRegisterWithValue(RegisterID::kX64_dr6, 0xaffa));
   cat.push_back(CreateRegisterWithValue(RegisterID::kX64_dr7, 0xaaaa26aa));
@@ -463,25 +455,20 @@ TEST(FormatRegisters, DebugRegisters_x86) {
 TEST(FormatRegisters, DebugRegisters_arm64) {
   RegisterSet register_set;
   auto& cat = register_set.category_map()[RegisterCategory::Type::kDebug];
-  cat.push_back(CreateRegisterWithValue(RegisterID::kARMv8_dbgbcr0_el1,
-                                        ARM64_FLAG_MASK(DBGBCR, PMC) |
-                                            ARM64_FLAG_MASK(DBGBCR, HMC) |
-                                            ARM64_FLAG_MASK(DBGBCR, LBN)));
-  cat.push_back(CreateRegisterWithValue(RegisterID::kARMv8_dbgbvr0_el1,
-                                        0xdeadbeefaabbccdd));
   cat.push_back(CreateRegisterWithValue(
-      RegisterID::kARMv8_dbgbcr15_el1,
-      ARM64_FLAG_MASK(DBGBCR, E) | ARM64_FLAG_MASK(DBGBCR, BAS) |
-          ARM64_FLAG_MASK(DBGBCR, SSC) | ARM64_FLAG_MASK(DBGBCR, BT)));
-  cat.push_back(CreateRegisterWithValue(RegisterID::kARMv8_dbgbvr0_el1,
-                                        0xaabbccdd11223344));
-  cat.push_back(
-      CreateRegisterWithValue(RegisterID::kARMv8_id_aa64dfr0_el1,
-                              ARM64_FLAG_MASK(ID_AA64DFR0_EL1, DV) |
-                                  ARM64_FLAG_MASK(ID_AA64DFR0_EL1, PMUV) |
-                                  ARM64_FLAG_MASK(ID_AA64DFR0_EL1, BRP) |
-                                  ARM64_FLAG_MASK(ID_AA64DFR0_EL1, WRP) |
-                                  ARM64_FLAG_MASK(ID_AA64DFR0_EL1, PMSV)));
+      RegisterID::kARMv8_dbgbcr0_el1,
+      ARM64_FLAG_MASK(DBGBCR, PMC) | ARM64_FLAG_MASK(DBGBCR, HMC) | ARM64_FLAG_MASK(DBGBCR, LBN)));
+  cat.push_back(CreateRegisterWithValue(RegisterID::kARMv8_dbgbvr0_el1, 0xdeadbeefaabbccdd));
+  cat.push_back(CreateRegisterWithValue(RegisterID::kARMv8_dbgbcr15_el1,
+                                        ARM64_FLAG_MASK(DBGBCR, E) | ARM64_FLAG_MASK(DBGBCR, BAS) |
+                                            ARM64_FLAG_MASK(DBGBCR, SSC) |
+                                            ARM64_FLAG_MASK(DBGBCR, BT)));
+  cat.push_back(CreateRegisterWithValue(RegisterID::kARMv8_dbgbvr0_el1, 0xaabbccdd11223344));
+  cat.push_back(CreateRegisterWithValue(
+      RegisterID::kARMv8_id_aa64dfr0_el1,
+      ARM64_FLAG_MASK(ID_AA64DFR0_EL1, DV) | ARM64_FLAG_MASK(ID_AA64DFR0_EL1, PMUV) |
+          ARM64_FLAG_MASK(ID_AA64DFR0_EL1, BRP) | ARM64_FLAG_MASK(ID_AA64DFR0_EL1, WRP) |
+          ARM64_FLAG_MASK(ID_AA64DFR0_EL1, PMSV)));
   cat.push_back(CreateRegisterWithValue(
       RegisterID::kARMv8_mdscr_el1,
       ARM64_FLAG_MASK(MDSCR_EL1, SS) | ARM64_FLAG_MASK(MDSCR_EL1, TDCC) |

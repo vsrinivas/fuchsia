@@ -37,8 +37,8 @@ enum class Noun {
 
 struct NounRecord {
   NounRecord();
-  NounRecord(std::initializer_list<std::string> aliases, const char* short_help,
-             const char* help, CommandGroup command_group);
+  NounRecord(std::initializer_list<std::string> aliases, const char* short_help, const char* help,
+             CommandGroup command_group);
   ~NounRecord();
 
   // These are the user-typed strings that will name this noun. The [0]th one

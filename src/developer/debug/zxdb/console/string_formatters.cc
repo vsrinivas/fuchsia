@@ -13,8 +13,7 @@
 
 namespace zxdb {
 
-Err GetLittleEndianHexOutput(const std::vector<uint8_t>& value,
-                             std::string* out, int length) {
+Err GetLittleEndianHexOutput(const std::vector<uint8_t>& value, std::string* out, int length) {
   if (value.empty())
     return Err("Invalid size for hex printing: 0");
 
@@ -54,27 +53,22 @@ Err GetLittleEndianHexOutput(const std::vector<uint8_t>& value,
   return Err();
 }
 
-Err GetFPString(const std::vector<uint8_t>& value, std::string* out,
-                int precision) {
+Err GetFPString(const std::vector<uint8_t>& value, std::string* out, int precision) {
   switch (value.size()) {
     case 4:
       precision = precision != 0 ? precision : FLT_DIG;
-      *out =
-          fxl::StringPrintf("%.*e", precision, *(const float*)(value.data()));
+      *out = fxl::StringPrintf("%.*e", precision, *(const float*)(value.data()));
       return Err();
     case 8:
       precision = precision != 0 ? precision : DBL_DIG;
-      *out =
-          fxl::StringPrintf("%.*e", precision, *(const double*)(value.data()));
+      *out = fxl::StringPrintf("%.*e", precision, *(const double*)(value.data()));
       return Err();
     case 16:
       precision = precision != 0 ? precision : LDBL_DIG;
-      *out = fxl::StringPrintf("%.*Le", precision,
-                               *(const long double*)(value.data()));
+      *out = fxl::StringPrintf("%.*Le", precision, *(const long double*)(value.data()));
       return Err();
     default:
-      return Err(fxl::StringPrintf(
-          "Wrong size for floating point printing: %zu", value.size()));
+      return Err(fxl::StringPrintf("Wrong size for floating point printing: %zu", value.size()));
   }
 }
 

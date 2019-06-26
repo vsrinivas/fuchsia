@@ -26,15 +26,13 @@
 
 namespace zxdb {
 
-Err ParseInputLocation(const Frame* frame, const std::string& input,
-                       InputLocation* location) {
+Err ParseInputLocation(const Frame* frame, const std::string& input, InputLocation* location) {
   if (input.empty())
     return Err("Passed empty location.");
 
   // Check for one colon. Two colons is a C++ member function.
   size_t colon = input.find(':');
-  if (colon != std::string::npos && colon < input.size() - 1 &&
-      input[colon + 1] != ':') {
+  if (colon != std::string::npos && colon < input.size() - 1 && input[colon + 1] != ':') {
     // <file>:<line> format.
     std::string file = input.substr(0, colon);
 
@@ -86,8 +84,7 @@ Err ParseInputLocation(const Frame* frame, const std::string& input,
           "have to specify a file.");
     }
     location->type = InputLocation::Type::kLine;
-    location->line =
-        FileLine(frame_location.file_line().file(), static_cast<int>(line));
+    location->line = FileLine(frame_location.file_line().file(), static_cast<int>(line));
     return Err();
   }
 
@@ -115,15 +112,14 @@ Err ResolveInputLocations(const ProcessSymbols* process_symbols,
   return Err();
 }
 
-Err ResolveInputLocations(const ProcessSymbols* process_symbols,
-                          const Frame* optional_frame, const std::string& input,
-                          bool symbolize, std::vector<Location>* locations) {
+Err ResolveInputLocations(const ProcessSymbols* process_symbols, const Frame* optional_frame,
+                          const std::string& input, bool symbolize,
+                          std::vector<Location>* locations) {
   InputLocation input_location;
   Err err = ParseInputLocation(optional_frame, input, &input_location);
   if (err.has_error())
     return err;
-  return ResolveInputLocations(process_symbols, input_location, symbolize,
-                               locations);
+  return ResolveInputLocations(process_symbols, input_location, symbolize, locations);
 }
 
 // This implementation isn't great, it doesn't always show the best
@@ -138,11 +134,10 @@ Err ResolveInputLocations(const ProcessSymbols* process_symbols,
 // Instead, if the input is a file name and there is only one result where the
 // file name matches exactly, we should pick it.
 Err ResolveUniqueInputLocation(const ProcessSymbols* process_symbols,
-                               const InputLocation& input_location,
-                               bool symbolize, Location* location) {
+                               const InputLocation& input_location, bool symbolize,
+                               Location* location) {
   std::vector<Location> locations;
-  Err err = ResolveInputLocations(process_symbols, input_location, symbolize,
-                                  &locations);
+  Err err = ResolveInputLocations(process_symbols, input_location, symbolize, &locations);
   if (err.has_error())
     return err;
 
@@ -181,22 +176,18 @@ Err ResolveUniqueInputLocation(const ProcessSymbols* process_symbols,
     err_str += "\n";
   }
   if (locations.size() > kMaxSuggestions) {
-    err_str += fxl::StringPrintf("...%zu more omitted...\n",
-                                 locations.size() - kMaxSuggestions);
+    err_str += fxl::StringPrintf("...%zu more omitted...\n", locations.size() - kMaxSuggestions);
   }
   return Err(err_str);
 }
 
-Err ResolveUniqueInputLocation(const ProcessSymbols* process_symbols,
-                               const Frame* optional_frame,
-                               const std::string& input, bool symbolize,
-                               Location* location) {
+Err ResolveUniqueInputLocation(const ProcessSymbols* process_symbols, const Frame* optional_frame,
+                               const std::string& input, bool symbolize, Location* location) {
   InputLocation input_location;
   Err err = ParseInputLocation(optional_frame, input, &input_location);
   if (err.has_error())
     return err;
-  return ResolveUniqueInputLocation(process_symbols, input_location, symbolize,
-                                    location);
+  return ResolveUniqueInputLocation(process_symbols, input_location, symbolize, location);
 }
 
 void CompleteInputLocation(const Command& command, const std::string& prefix,
@@ -218,16 +209,14 @@ void CompleteInputLocation(const Command& command, const std::string& prefix,
     const Location& location = frame->GetLocation();
     if (const CodeBlock* fn_block = location.symbol().Get()->AsCodeBlock()) {
       symbol_context = location.symbol_context();
-      code_block =
-          fn_block->GetMostSpecificChild(symbol_context, location.address());
+      code_block = fn_block->GetMostSpecificChild(symbol_context, location.address());
     }
   }
 
   // TODO(brettw) prioritize the current module when it's known (when there is
   // a current frame with symbol information). Factor prioritization code from
   // find_name.cc
-  for (const ModuleSymbols* mod :
-       command.target()->GetSymbols()->GetModuleSymbols()) {
+  for (const ModuleSymbols* mod : command.target()->GetSymbols()->GetModuleSymbols()) {
     const ModuleSymbolIndex& index = mod->GetIndex();
     auto files = index.FindFilePrefixes(prefix);
 
@@ -254,11 +243,10 @@ void CompleteInputLocation(const Command& command, const std::string& prefix,
   // When there's a live process there is more context to find stuff.
   std::unique_ptr<FindNameContext> find_context;
   if (Process* process = command.target()->GetProcess()) {
-    find_context = std::make_unique<FindNameContext>(
-        process->GetSymbols(), symbol_context, code_block);
-  } else {
     find_context =
-        std::make_unique<FindNameContext>(command.target()->GetSymbols());
+        std::make_unique<FindNameContext>(process->GetSymbols(), symbol_context, code_block);
+  } else {
+    find_context = std::make_unique<FindNameContext>(command.target()->GetSymbols());
   }
 
   // First start with namespaces.

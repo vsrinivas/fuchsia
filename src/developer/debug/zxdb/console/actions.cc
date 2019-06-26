@@ -21,8 +21,7 @@ using Option = fxl::CommandLine::Option;
 // Action ----------------------------------------------------------------------
 
 Action::Action() = default;
-Action::Action(std::string name, Action::ActionFunction action)
-    : name_(name), action_(action) {}
+Action::Action(std::string name, Action::ActionFunction action) : name_(name), action_(action) {}
 
 Action::Action(Action&&) = default;
 Action& Action::operator=(Action&& other) {
@@ -39,9 +38,8 @@ void Action::operator()(const Session& session, Console* console) const {
 
 // ActionFlow ------------------------------------------------------------------
 
-void ActionFlow::ScheduleActions(std::vector<Action>&& actions,
-                                 const Session* session, Console* console,
-                                 Callback callback) {
+void ActionFlow::ScheduleActions(std::vector<Action>&& actions, const Session* session,
+                                 Console* console, Callback callback) {
   // If there are no actions, we schedule the callback.
   if (actions.empty()) {
     callback_(Err());
@@ -104,16 +102,14 @@ void ActionFlow::Clear() {
 }
 
 std::vector<Action> CommandsToActions(const std::string& input) {
-  auto commands = fxl::SplitStringCopy(input, "\n", fxl::kTrimWhitespace,
-                                       fxl::kSplitWantNonEmpty);
+  auto commands = fxl::SplitStringCopy(input, "\n", fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
   std::vector<Action> result;
   for (size_t i = 0; i < commands.size(); i++) {
-    result.push_back(Action(commands[i], [&, cmd = commands[i]](
-                                             const Action& action,
-                                             const Session& session,
-                                             Console* console) {
-      console->ProcessInputLine(cmd.c_str(), ActionFlow::PostActionCallback);
-    }));
+    result.push_back(Action(
+        commands[i],
+        [&, cmd = commands[i]](const Action& action, const Session& session, Console* console) {
+          console->ProcessInputLine(cmd.c_str(), ActionFlow::PostActionCallback);
+        }));
   }
   return result;
 }

@@ -16,9 +16,8 @@ namespace {
 
 using debug_ipc::MessageLoop;
 
-#define STOP_MESSAGE_LOOP()         \
-  MessageLoop::Current()->PostTask( \
-      FROM_HERE, []() { MessageLoop::Current()->QuitNow(); })
+#define STOP_MESSAGE_LOOP() \
+  MessageLoop::Current()->PostTask(FROM_HERE, []() { MessageLoop::Current()->QuitNow(); })
 
 // We override the Console in order to be able to override the dispatch
 // function
@@ -26,8 +25,7 @@ class ConsoleTest : public ConsoleImpl {
  public:
   ConsoleTest(Session* session) : ConsoleImpl(session) {}
 
-  Result ProcessInputLine(const std::string& line,
-                          CommandCallback callback = nullptr) override {
+  Result ProcessInputLine(const std::string& line, CommandCallback callback = nullptr) override {
     // We update the info
     calls.push_back(line);
     if (callback) {
@@ -67,9 +65,7 @@ TEST_F(ActionsTest, ScriptFile) {
   std::vector<std::string> mock_commands = {"help", "connect 192.168.0.1 2345",
                                             "run /path/to/binary"};
   std::stringstream ss;
-  ss << mock_commands[0] << "\n"
-     << mock_commands[1] << "\n"
-     << mock_commands[2];
+  ss << mock_commands[0] << "\n" << mock_commands[1] << "\n" << mock_commands[2];
   std::string mock_contents = ss.str();
 
   auto actions = CommandsToActions(mock_contents);
@@ -86,8 +82,7 @@ TEST_F(ActionsTest, ScriptFile) {
   };
   // The callback mechanism depends on a global ActionFlow
   ActionFlow& flow = ActionFlow::Singleton();
-  flow.ScheduleActions(std::move(actions), session.get(), console.get(),
-                       callback);
+  flow.ScheduleActions(std::move(actions), session.get(), console.get(), callback);
   loop.Run();
 
   EXPECT_FALSE(callback_err.has_error()) << callback_err.msg();
@@ -110,9 +105,7 @@ TEST_F(ActionsTest, ScriptFileWithFailure) {
   std::vector<std::string> mock_commands = {"help", "connect 192.168.0.1 2345",
                                             "run /path/to/binary"};
   std::stringstream ss;
-  ss << mock_commands[0] << "\n"
-     << mock_commands[1] << "\n"
-     << mock_commands[2];
+  ss << mock_commands[0] << "\n" << mock_commands[1] << "\n" << mock_commands[2];
   std::string mock_contents = ss.str();
 
   auto actions = CommandsToActions(mock_contents);
@@ -131,8 +124,7 @@ TEST_F(ActionsTest, ScriptFileWithFailure) {
   // The callback mechanism depends on a global ActionFlow
   ActionFlow& flow = ActionFlow::Singleton();
   flow.Clear();
-  flow.ScheduleActions(std::move(actions), session.get(), console.get(),
-                       callback);
+  flow.ScheduleActions(std::move(actions), session.get(), console.get(), callback);
   loop.Run();
 
   // The error callback was called

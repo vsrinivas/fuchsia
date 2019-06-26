@@ -18,11 +18,10 @@ using debug_ipc::MessageLoop;
 class MemoryMockRemoteAPI : public MockRemoteAPI {
  public:
   // Return an empty AddressSpace reply.
-  void AddressSpace(
-      const debug_ipc::AddressSpaceRequest& request,
-      std::function<void(const Err&, debug_ipc::AddressSpaceReply)> cb) {
-    MessageLoop::Current()->PostTask(
-        FROM_HERE, [cb]() { cb(Err(), debug_ipc::AddressSpaceReply()); });
+  void AddressSpace(const debug_ipc::AddressSpaceRequest& request,
+                    std::function<void(const Err&, debug_ipc::AddressSpaceReply)> cb) {
+    MessageLoop::Current()->PostTask(FROM_HERE,
+                                     [cb]() { cb(Err(), debug_ipc::AddressSpaceReply()); });
   }
 };
 
@@ -51,8 +50,7 @@ TEST_F(VerbsMemoryTest, Stack) {
   console.ProcessInputLine("stack");
   auto event = console.GetOutputEvent();
   ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
-  ASSERT_EQ("\"stack\" requires a thread but there is no current thread.",
-            event.output.AsString());
+  ASSERT_EQ("\"stack\" requires a thread but there is no current thread.", event.output.AsString());
 
   // Inject a fake running process.
   constexpr uint64_t kProcessKoid = 1234;
@@ -85,11 +83,9 @@ TEST_F(VerbsMemoryTest, Stack) {
       std::vector<Register>{Register(debug_ipc::RegisterID::kX64_rsp, kSP0)}));
   frames.push_back(std::make_unique<MockFrame>(
       &session(), thread, Location(Location::State::kSymbolized, kIP1), kSP1, 0,
-      std::vector<Register>{
-          Register(debug_ipc::RegisterID::kX64_rsp, kSP1),
-          Register(debug_ipc::RegisterID::kX64_rax, kSP0 + 0x20)}));
-  InjectExceptionWithStack(kProcessKoid, kThreadKoid,
-                           debug_ipc::NotifyException::Type::kSingleStep,
+      std::vector<Register>{Register(debug_ipc::RegisterID::kX64_rsp, kSP1),
+                            Register(debug_ipc::RegisterID::kX64_rax, kSP0 + 0x20)}));
+  InjectExceptionWithStack(kProcessKoid, kThreadKoid, debug_ipc::NotifyException::Type::kSingleStep,
                            std::move(frames), true);
   console.GetOutputEvent();  // Eat output from the exception.
 

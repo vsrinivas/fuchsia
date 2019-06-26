@@ -40,8 +40,7 @@ TEST_F(FormatJobTest, FormatJobContext) {
 
   // Empty job context (extra space at end is an implementation detail because
   // there's no name).
-  EXPECT_EQ("Job 1 [Not attached] ",
-            FormatJobContext(&context, job_contexts[0]).AsString());
+  EXPECT_EQ("Job 1 [Not attached] ", FormatJobContext(&context, job_contexts[0]).AsString());
 }
 
 }  // namespace zxdb

@@ -26,9 +26,7 @@ Console::~Console() {
     pair.second->SetCompletionCallback({});
 }
 
-fxl::WeakPtr<Console> Console::GetWeakPtr() {
-  return weak_factory_.GetWeakPtr();
-}
+fxl::WeakPtr<Console> Console::GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
 
 void Console::Output(const std::string& s) {
   OutputBuffer buffer;

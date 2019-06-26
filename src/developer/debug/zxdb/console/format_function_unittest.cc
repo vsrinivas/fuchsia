@@ -25,16 +25,13 @@ TEST(FormatFunction, Regular) {
 
   // Add two parameters.
   auto int32_type = MakeInt32Type();
-  auto param_value = MakeVariableForTest("value", int32_type, 0x100, 0x200,
-                                         std::vector<uint8_t>());
-  auto param_other = MakeVariableForTest("other_param", int32_type, 0x100,
-                                         0x200, std::vector<uint8_t>());
+  auto param_value = MakeVariableForTest("value", int32_type, 0x100, 0x200, std::vector<uint8_t>());
+  auto param_other =
+      MakeVariableForTest("other_param", int32_type, 0x100, 0x200, std::vector<uint8_t>());
   function->set_parameters({LazySymbol(param_value), LazySymbol(param_other)});
 
-  EXPECT_EQ("Function(…)",
-            FormatFunctionName(function.get(), false).AsString());
-  EXPECT_EQ("Function(int32_t, int32_t)",
-            FormatFunctionName(function.get(), true).AsString());
+  EXPECT_EQ("Function(…)", FormatFunctionName(function.get(), false).AsString());
+  EXPECT_EQ("Function(int32_t, int32_t)", FormatFunctionName(function.get(), true).AsString());
 
   // Put in a namespace and add some templates. This needs a new function
   // because the name will be cached above.

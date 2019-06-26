@@ -42,12 +42,10 @@ OutputBuffer FormatTarget(ConsoleContext* context, const Target* target) {
   // concat'd even when not present and things look nice.
   std::string koid_str;
   if (target->GetState() == Target::State::kRunning) {
-    koid_str =
-        fxl::StringPrintf("koid=%" PRIu64 " ", target->GetProcess()->GetKoid());
+    koid_str = fxl::StringPrintf("koid=%" PRIu64 " ", target->GetProcess()->GetKoid());
   }
 
-  std::string result = fxl::StringPrintf("Process %d [%s] %s", id,
-                                         state, koid_str.c_str());
+  std::string result = fxl::StringPrintf("Process %d [%s] %s", id, state, koid_str.c_str());
   result += GetTargetName(target);
   return result;
 }
@@ -82,8 +80,7 @@ OutputBuffer FormatTargetList(ConsoleContext* context, int indent) {
     // State and koid (if running).
     row.push_back(TargetStateToString(pair.second->GetState()));
     if (pair.second->GetState() == Target::State::kRunning) {
-      row.push_back(
-          fxl::StringPrintf("%" PRIu64, pair.second->GetProcess()->GetKoid()));
+      row.push_back(fxl::StringPrintf("%" PRIu64, pair.second->GetProcess()->GetKoid()));
     } else {
       row.emplace_back();
     }
@@ -92,12 +89,10 @@ OutputBuffer FormatTargetList(ConsoleContext* context, int indent) {
   }
 
   OutputBuffer out;
-  FormatTable(
-      {ColSpec(Align::kLeft),
-       ColSpec(Align::kRight, 0, "#", 0, Syntax::kSpecial),
-       ColSpec(Align::kLeft, 0, "State"), ColSpec(Align::kRight, 0, "Koid"),
-       ColSpec(Align::kLeft, 0, "Name")},
-      rows, &out);
+  FormatTable({ColSpec(Align::kLeft), ColSpec(Align::kRight, 0, "#", 0, Syntax::kSpecial),
+               ColSpec(Align::kLeft, 0, "State"), ColSpec(Align::kRight, 0, "Koid"),
+               ColSpec(Align::kLeft, 0, "Name")},
+              rows, &out);
   return out;
 }
 

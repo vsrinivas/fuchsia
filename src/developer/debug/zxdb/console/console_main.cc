@@ -29,32 +29,28 @@ namespace zxdb {
 namespace {
 
 // Loads any actions specified on the command line into the vector.
-Err SetupActions(const CommandLineOptions& options,
-                 std::vector<Action>* actions) {
+Err SetupActions(const CommandLineOptions& options, std::vector<Action>* actions) {
   if (options.core) {
     if (options.connect || options.run) {
       return Err("--core can't be used with commands to connect or run.");
     }
 
     std::string cmd = VerbToString(Verb::kOpenDump) + " " + *options.core;
-    actions->push_back(Action("Open Dump", [cmd](const Action&, const Session&,
-                                                 Console* console) {
+    actions->push_back(Action("Open Dump", [cmd](const Action&, const Session&, Console* console) {
       console->ProcessInputLine(cmd.c_str(), ActionFlow::PostActionCallback);
     }));
   }
 
   if (options.connect) {
     std::string cmd = "connect " + *options.connect;
-    actions->push_back(Action("Connect", [cmd](const Action&, const Session&,
-                                               Console* console) {
+    actions->push_back(Action("Connect", [cmd](const Action&, const Session&, Console* console) {
       console->ProcessInputLine(cmd.c_str(), ActionFlow::PostActionCallback);
     }));
   }
 
   if (options.run) {
     std::string cmd = "run " + *options.run;
-    actions->push_back(Action("Run", [cmd](const Action&, const Session&,
-                                           Console* console) {
+    actions->push_back(Action("Run", [cmd](const Action&, const Session&, Console* console) {
       console->ProcessInputLine(cmd.c_str(), ActionFlow::PostActionCallback);
     }));
   }
@@ -67,8 +63,7 @@ Err SetupActions(const CommandLineOptions& options,
 
   for (const auto& filter : options.filter) {
     std::string cmd = "filter attach " + filter;
-    actions->push_back(Action("Filter", [cmd](const Action&, const Session&,
-                                              Console* console) {
+    actions->push_back(Action("Filter", [cmd](const Action&, const Session&, Console* console) {
       console->ProcessInputLine(cmd.c_str(), ActionFlow::PostActionCallback);
     }));
   }
@@ -108,21 +103,18 @@ void ScheduleActions(zxdb::Session& session, zxdb::Console& console,
   flow.ScheduleActions(std::move(actions), &session, &console, callback);
 }
 
-void SetupCommandLineOptions(const CommandLineOptions& options,
-                             Session* session) {
+void SetupCommandLineOptions(const CommandLineOptions& options, Session* session) {
   // Symbol paths
   std::vector<std::string> paths;
   // At this moment, the build index has all the "default" paths.
-  BuildIDIndex& build_id_index =
-      session->system().GetSymbols()->build_id_index();
+  BuildIDIndex& build_id_index = session->system().GetSymbols()->build_id_index();
   for (const auto& build_id_file : build_id_index.build_id_files())
     paths.push_back(build_id_file);
   for (const auto& source : build_id_index.sources())
     paths.push_back(source);
 
   // We add the options paths given paths.
-  paths.insert(paths.end(), options.symbol_paths.begin(),
-               options.symbol_paths.end());
+  paths.insert(paths.end(), options.symbol_paths.begin(), options.symbol_paths.end());
 
   if (options.symbol_cache_path) {
     session->system().settings().SetString(ClientSettings::System::kSymbolCache,
@@ -136,8 +128,7 @@ void SetupCommandLineOptions(const CommandLineOptions& options,
 
   // Adding it to the settings will trigger the loading of the symbols.
   // Redundant adds are ignored.
-  session->system().settings().SetList(ClientSettings::System::kSymbolPaths,
-                                       std::move(paths));
+  session->system().settings().SetList(ClientSettings::System::kSymbolPaths, std::move(paths));
 }
 
 }  // namespace
@@ -168,21 +159,18 @@ int ConsoleMain(int argc, const char* argv[]) {
 
     // Route data from buffer -> session.
     Session session;
-    buffer.set_data_available_callback(
-        [&session]() { session.OnStreamReadable(); });
+    buffer.set_data_available_callback([&session]() { session.OnStreamReadable(); });
 
     // TODO(donosoc): Do correct category setup.
     debug_ipc::SetLogCategories({debug_ipc::LogCategory::kAll});
     if (options.debug_mode) {
       debug_ipc::SetDebugMode(true);
-      session.system().settings().SetBool(ClientSettings::System::kDebugMode,
-                                          true);
+      session.system().settings().SetBool(ClientSettings::System::kDebugMode, true);
     }
 
     ConsoleImpl console(&session);
     if (options.quit_agent_on_quit) {
-      session.system().settings().SetBool(
-          ClientSettings::System::kQuitAgentOnExit, true);
+      session.system().settings().SetBool(ClientSettings::System::kQuitAgentOnExit, true);
     }
 
     SetupCommandLineOptions(options, &session);

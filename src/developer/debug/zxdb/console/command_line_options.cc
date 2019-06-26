@@ -81,32 +81,25 @@ const char kSymbolServerHelp[] = R"(  --symbol-server=<url>
 
 }  // namespace
 
-cmdline::Status ParseCommandLine(int argc, const char* argv[],
-                                 CommandLineOptions* options,
+cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOptions* options,
                                  std::vector<std::string>* params) {
   cmdline::ArgsParser<CommandLineOptions> parser;
 
   parser.AddSwitch("connect", 'c', kConnectHelp, &CommandLineOptions::connect);
   parser.AddSwitch("core", 0, kCoreHelp, &CommandLineOptions::core);
-  parser.AddSwitch("debug-mode", 'd', kDebugModeHelp,
-                   &CommandLineOptions::debug_mode);
+  parser.AddSwitch("debug-mode", 'd', kDebugModeHelp, &CommandLineOptions::debug_mode);
   parser.AddSwitch("quit-agent-on-exit", 0, kQuitAgentOnExit,
                    &CommandLineOptions::quit_agent_on_quit);
   parser.AddSwitch("run", 'r', kRunHelp, &CommandLineOptions::run);
   parser.AddSwitch("filter", 'f', kFilterHelp, &CommandLineOptions::filter);
-  parser.AddSwitch("script-file", 'S', kScriptFileHelp,
-                   &CommandLineOptions::script_file);
-  parser.AddSwitch("symbol-cache", 0, kSymbolCachePathHelp,
-                   &CommandLineOptions::symbol_cache_path);
-  parser.AddSwitch("symbol-path", 's', kSymbolPathHelp,
-                   &CommandLineOptions::symbol_paths);
-  parser.AddSwitch("symbol-server", 0, kSymbolServerHelp,
-                   &CommandLineOptions::symbol_servers);
+  parser.AddSwitch("script-file", 'S', kScriptFileHelp, &CommandLineOptions::script_file);
+  parser.AddSwitch("symbol-cache", 0, kSymbolCachePathHelp, &CommandLineOptions::symbol_cache_path);
+  parser.AddSwitch("symbol-path", 's', kSymbolPathHelp, &CommandLineOptions::symbol_paths);
+  parser.AddSwitch("symbol-server", 0, kSymbolServerHelp, &CommandLineOptions::symbol_servers);
 
   // Special --help switch which doesn't exist in the options structure.
   bool requested_help = false;
-  parser.AddGeneralSwitch("help", 'h', kHelpHelp,
-                          [&requested_help]() { requested_help = true; });
+  parser.AddGeneralSwitch("help", 'h', kHelpHelp, [&requested_help]() { requested_help = true; });
 
   cmdline::Status status = parser.Parse(argc, argv, options, params);
   if (status.has_error())

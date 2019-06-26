@@ -103,10 +103,10 @@ class Command {
   // The effective context for the command. The explicitly specified process/
   // thread/etc. will be reflected here, and anything that wasn't explicit
   // will inherit the default.
-  Target* target_ = nullptr;  // Guaranteed non-null for valid commands.
-  JobContext* job_context_ = nullptr;  // May be null.
-  Thread* thread_ = nullptr;           // Will be null if not running.
-  Frame* frame_ = nullptr;  // Will be null if no valid thread stopped.
+  Target* target_ = nullptr;               // Guaranteed non-null for valid commands.
+  JobContext* job_context_ = nullptr;      // May be null.
+  Thread* thread_ = nullptr;               // Will be null if not running.
+  Frame* frame_ = nullptr;                 // Will be null if no valid thread stopped.
   Breakpoint* breakpoint_ = nullptr;       // May be null.
   Filter* filter_ = nullptr;               // May be null.
   SymbolServer* symbol_server_ = nullptr;  // May be null.

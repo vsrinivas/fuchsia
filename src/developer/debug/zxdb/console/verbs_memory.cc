@@ -72,12 +72,11 @@ Err ReadNumAndSize(const Command& cmd, std::optional<uint32_t>* out_size) {
 // *location_size. Otherwise, *location_size will be 0.
 //
 // The command_name is used for writing the current command to error messages.
-Err ReadLocation(const Command& cmd, const char* command_name,
-                 Location* location, uint64_t* location_size) {
+Err ReadLocation(const Command& cmd, const char* command_name, Location* location,
+                 uint64_t* location_size) {
   *location_size = 0;
   if (cmd.args().size() != 1) {
-    return Err("%s requires exactly one argument specifying a location.",
-               command_name);
+    return Err("%s requires exactly one argument specifying a location.", command_name);
   }
 
   // We need to check the type of the parsed input location so parse and
@@ -87,8 +86,8 @@ Err ReadLocation(const Command& cmd, const char* command_name,
   if (err.has_error())
     return err;
 
-  err = ResolveUniqueInputLocation(cmd.target()->GetProcess()->GetSymbols(),
-                                   input_location, true, location);
+  err = ResolveUniqueInputLocation(cmd.target()->GetProcess()->GetSymbols(), input_location, true,
+                                   location);
   if (err.has_error())
     return err;
 
@@ -187,8 +186,7 @@ Err DoStack(ConsoleContext* context, const Command& cmd) {
   Console::get()->Output(async_output);
 
   AnalyzeMemory(opts, [bytes_to_read = opts.bytes_to_read, async_output](
-                          const Err& err, OutputBuffer output,
-                          uint64_t next_addr) {
+                          const Err& err, OutputBuffer output, uint64_t next_addr) {
     async_output->Append(std::move(output));
     if (err.has_error()) {
       async_output->Append(err);
@@ -197,8 +195,7 @@ Err DoStack(ConsoleContext* context, const Command& cmd) {
       async_output->Append(
           Syntax::kComment,
           fxl::StringPrintf("↓ For more lines: stack -n %d 0x%" PRIx64,
-                            static_cast<int>(bytes_to_read / sizeof(uint64_t)),
-                            next_addr));
+                            static_cast<int>(bytes_to_read / sizeof(uint64_t)), next_addr));
     }
     async_output->Complete();
   });
@@ -207,8 +204,7 @@ Err DoStack(ConsoleContext* context, const Command& cmd) {
 
 // mem-analyze -----------------------------------------------------------------
 
-const char kMemAnalyzeShortHelp[] =
-    "mem-analyze / ma: Analyze a memory region.";
+const char kMemAnalyzeShortHelp[] = "mem-analyze / ma: Analyze a memory region.";
 const char kMemAnalyzeHelp[] =
     R"(mem-analyze [ --num=<lines> ] [ --size=<size> ] <address-expression>
 
@@ -261,9 +257,8 @@ Err DoMemAnalyze(ConsoleContext* context, const Command& cmd) {
 
   return EvalCommandAddressExpression(
       cmd, "mem-analyze", GetEvalContextForCommand(cmd),
-      [weak_target = cmd.target()->GetWeakPtr(), input_size](
-          const Err& err, uint64_t address,
-          std::optional<uint64_t> object_size) {
+      [weak_target = cmd.target()->GetWeakPtr(), input_size](const Err& err, uint64_t address,
+                                                             std::optional<uint64_t> object_size) {
         Console* console = Console::get();
         if (err.has_error()) {
           console->Output(err);  // Evaluation error.
@@ -276,8 +271,7 @@ Err DoMemAnalyze(ConsoleContext* context, const Command& cmd) {
           return;
         }
 
-        Err run_err = AssertRunningTarget(&console->context(), "mem-read",
-                                          weak_target.get());
+        Err run_err = AssertRunningTarget(&console->context(), "mem-read", weak_target.get());
         if (run_err.has_error()) {
           console->Output(run_err);
           return;
@@ -294,22 +288,19 @@ Err DoMemAnalyze(ConsoleContext* context, const Command& cmd) {
         else
           opts.bytes_to_read = kDefaultAnalyzeByteSize;
 
-        AnalyzeMemory(
-            opts, [bytes_to_read = opts.bytes_to_read](
-                      const Err& err, OutputBuffer output, uint64_t next_addr) {
-              if (err.has_error()) {
-                output.Append(err);
-              } else {
-                // Help text for continuation.
-                output.Append(
-                    Syntax::kComment,
-                    fxl::StringPrintf(
-                        "↓ For more lines: ma -n %d 0x%" PRIx64,
-                        static_cast<int>(bytes_to_read / sizeof(uint64_t)),
-                        next_addr));
-              }
-              Console::get()->Output(output);
-            });
+        AnalyzeMemory(opts, [bytes_to_read = opts.bytes_to_read](
+                                const Err& err, OutputBuffer output, uint64_t next_addr) {
+          if (err.has_error()) {
+            output.Append(err);
+          } else {
+            // Help text for continuation.
+            output.Append(
+                Syntax::kComment,
+                fxl::StringPrintf("↓ For more lines: ma -n %d 0x%" PRIx64,
+                                  static_cast<int>(bytes_to_read / sizeof(uint64_t)), next_addr));
+          }
+          Console::get()->Output(output);
+        });
       });
 }
 
@@ -325,14 +316,12 @@ void MemoryReadComplete(const Err& err, MemoryDump dump) {
     opts.show_ascii = true;
     opts.values_per_line = 16;
     opts.separator_every = 8;
-    out.Append(FormatMemory(dump, dump.address(),
-                            static_cast<uint32_t>(dump.size()), opts));
+    out.Append(FormatMemory(dump, dump.address(), static_cast<uint32_t>(dump.size()), opts));
   }
   Console::get()->Output(out);
 }
 
-const char kMemReadShortHelp[] =
-    R"(mem-read / x: Read memory from debugged process.)";
+const char kMemReadShortHelp[] = R"(mem-read / x: Read memory from debugged process.)";
 const char kMemReadHelp[] =
     R"(mem-read [ --size=<bytes> ] <address-expression>
 
@@ -382,9 +371,8 @@ Err DoMemRead(ConsoleContext* context, const Command& cmd) {
 
   return EvalCommandAddressExpression(
       cmd, "mem-read", GetEvalContextForCommand(cmd),
-      [weak_target = cmd.target()->GetWeakPtr(), input_size](
-          const Err& err, uint64_t address,
-          std::optional<uint64_t> object_size) {
+      [weak_target = cmd.target()->GetWeakPtr(), input_size](const Err& err, uint64_t address,
+                                                             std::optional<uint64_t> object_size) {
         Console* console = Console::get();
         if (err.has_error()) {
           console->Output(err);  // Evaluation error.
@@ -397,8 +385,7 @@ Err DoMemRead(ConsoleContext* context, const Command& cmd) {
           return;
         }
 
-        Err run_err = AssertRunningTarget(&console->context(), "mem-read",
-                                          weak_target.get());
+        Err run_err = AssertRunningTarget(&console->context(), "mem-read", weak_target.get());
         if (run_err.has_error()) {
           console->Output(run_err);
           return;
@@ -412,8 +399,7 @@ Err DoMemRead(ConsoleContext* context, const Command& cmd) {
         else
           read_size = 64;
 
-        weak_target->GetProcess()->ReadMemory(address, read_size,
-                                              &MemoryReadComplete);
+        weak_target->GetProcess()->ReadMemory(address, read_size, &MemoryReadComplete);
       });
 
   return Err();
@@ -422,8 +408,7 @@ Err DoMemRead(ConsoleContext* context, const Command& cmd) {
 // disassemble -----------------------------------------------------------------
 
 // Completion callback after reading process memory.
-void CompleteDisassemble(const Err& err, MemoryDump dump,
-                         fxl::WeakPtr<Process> weak_process,
+void CompleteDisassemble(const Err& err, MemoryDump dump, fxl::WeakPtr<Process> weak_process,
                          const FormatAsmOpts& options) {
   Console* console = Console::get();
   if (err.has_error()) {
@@ -435,8 +420,7 @@ void CompleteDisassemble(const Err& err, MemoryDump dump,
     return;  // Give up if the process went away.
 
   OutputBuffer out;
-  Err format_err = FormatAsmContext(weak_process->session()->arch_info(), dump,
-                                    options, &out);
+  Err format_err = FormatAsmContext(weak_process->session()->arch_info(), dump, options, &out);
   if (format_err.has_error()) {
     console->Output(err);
     return;
@@ -445,8 +429,7 @@ void CompleteDisassemble(const Err& err, MemoryDump dump,
   console->Output(out);
 }
 
-const char kDisassembleShortHelp[] =
-    "disassemble / di: Disassemble machine instructions.";
+const char kDisassembleShortHelp[] = "disassemble / di: Disassemble machine instructions.";
 const char kDisassembleHelp[] =
     R"(disassemble [ --num=<lines> ] [ --raw ] [ <location> ]
 
@@ -545,16 +528,14 @@ Err DoDisassemble(ConsoleContext* context, const Command& cmd) {
     if (err.has_error())
       return err;
     options.max_instructions = num_instr;
-    size = options.max_instructions *
-           context->session()->arch_info()->max_instr_len();
+    size = options.max_instructions * context->session()->arch_info()->max_instr_len();
   } else if (location_size > 0) {
     // Byte size is known.
     size = location_size;
   } else {
     // Default instruction count when no symbol and no explicit size is given.
     options.max_instructions = 16;
-    size = options.max_instructions *
-           context->session()->arch_info()->max_instr_len();
+    size = options.max_instructions * context->session()->arch_info()->max_instr_len();
   }
 
   // Show bytes.
@@ -563,10 +544,8 @@ Err DoDisassemble(ConsoleContext* context, const Command& cmd) {
   // Schedule memory request.
   Process* process = cmd.target()->GetProcess();
   process->ReadMemory(location.address(), size,
-                      [options, process = process->GetWeakPtr()](
-                          const Err& err, MemoryDump dump) {
-                        CompleteDisassemble(err, std::move(dump),
-                                            std::move(process), options);
+                      [options, process = process->GetWeakPtr()](const Err& err, MemoryDump dump) {
+                        CompleteDisassemble(err, std::move(dump), std::move(process), options);
                       });
   return Err();
 }
@@ -578,31 +557,28 @@ void AppendMemoryVerbs(std::map<Verb, VerbRecord>* verbs) {
   SwitchRecord num_switch(kNumSwitch, true, "num", 'n');
 
   // Disassemble.
-  VerbRecord disass(&DoDisassemble, &CompleteInputLocation,
-                    {"disassemble", "di"}, kDisassembleShortHelp,
-                    kDisassembleHelp, CommandGroup::kAssembly,
+  VerbRecord disass(&DoDisassemble, &CompleteInputLocation, {"disassemble", "di"},
+                    kDisassembleShortHelp, kDisassembleHelp, CommandGroup::kAssembly,
                     SourceAffinity::kAssembly);
   disass.switches.push_back(num_switch);
   disass.switches.push_back(SwitchRecord(kRawSwitch, false, "raw", 'r'));
   (*verbs)[Verb::kDisassemble] = std::move(disass);
 
   // Mem-analyze
-  VerbRecord mem_analyze(&DoMemAnalyze, {"mem-analyze", "ma"},
-                         kMemAnalyzeShortHelp, kMemAnalyzeHelp,
-                         CommandGroup::kQuery);
+  VerbRecord mem_analyze(&DoMemAnalyze, {"mem-analyze", "ma"}, kMemAnalyzeShortHelp,
+                         kMemAnalyzeHelp, CommandGroup::kQuery);
   mem_analyze.switches.push_back(num_switch);
   mem_analyze.switches.push_back(size_switch);
   (*verbs)[Verb::kMemAnalyze] = std::move(mem_analyze);
 
   // Mem-read. Note: "x" is the GDB command to read memory.
-  VerbRecord mem_read(&DoMemRead, &CompleteInputLocation, {"mem-read", "x"},
-                      kMemReadShortHelp, kMemReadHelp, CommandGroup::kQuery);
+  VerbRecord mem_read(&DoMemRead, &CompleteInputLocation, {"mem-read", "x"}, kMemReadShortHelp,
+                      kMemReadHelp, CommandGroup::kQuery);
   mem_read.switches.push_back(size_switch);
   (*verbs)[Verb::kMemRead] = std::move(mem_read);
 
   // Stack.
-  VerbRecord stack(&DoStack, {"stack", "st"}, kStackShortHelp, kStackHelp,
-                   CommandGroup::kQuery);
+  VerbRecord stack(&DoStack, {"stack", "st"}, kStackShortHelp, kStackHelp, CommandGroup::kQuery);
   stack.switches.push_back(num_switch);
   stack.switches.push_back(size_switch);
   stack.switches.push_back(SwitchRecord(kOffsetSwitch, true, "offset", 'o'));

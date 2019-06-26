@@ -121,8 +121,7 @@ TEST(MemoryFormat, Limits) {
 
   // Asking for data past the end of the address space should just stop output.
   output = FormatMemory(dump, max - 0xF, 0x20, opts);
-  char expected2[] =
-      "0xfffffffffffffff0:  11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11\n";
+  char expected2[] = "0xfffffffffffffff0:  11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11\n";
   EXPECT_EQ(expected2, output);
 }
 

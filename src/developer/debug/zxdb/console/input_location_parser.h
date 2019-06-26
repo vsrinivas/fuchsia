@@ -38,9 +38,9 @@ Err ParseInputLocation(const Frame* optional_frame, const std::string& input,
 Err ResolveInputLocations(const ProcessSymbols* process_symbols,
                           const InputLocation& input_location, bool symbolize,
                           std::vector<Location>* locations);
-Err ResolveInputLocations(const ProcessSymbols* process_symbols,
-                          const Frame* optional_frame, const std::string& input,
-                          bool symbolize, std::vector<Location>* locations);
+Err ResolveInputLocations(const ProcessSymbols* process_symbols, const Frame* optional_frame,
+                          const std::string& input, bool symbolize,
+                          std::vector<Location>* locations);
 
 // Resolves the given input string to a Location object. Returns an error
 // parsing or if the location can not be resolved or resolves to more than one
@@ -49,12 +49,10 @@ Err ResolveInputLocations(const ProcessSymbols* process_symbols,
 // Set |symbolize| to make the output |*location| symbolized. This will be
 // slightly slower. If you just need the address, pass false.
 Err ResolveUniqueInputLocation(const ProcessSymbols* process_symbols,
-                               const InputLocation& input_location,
-                               bool symbolize, Location* location);
-Err ResolveUniqueInputLocation(const ProcessSymbols* process_symbols,
-                               const Frame* optional_frame,
-                               const std::string& input, bool symbolize,
+                               const InputLocation& input_location, bool symbolize,
                                Location* location);
+Err ResolveUniqueInputLocation(const ProcessSymbols* process_symbols, const Frame* optional_frame,
+                               const std::string& input, bool symbolize, Location* location);
 
 // Autocomplete for input locations.
 void CompleteInputLocation(const Command& command, const std::string& prefix,

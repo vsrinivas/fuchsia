@@ -76,20 +76,18 @@ TEST(InputLocationParser, Parse) {
   EXPECT_TRUE(err.has_error());
 
   // Implicit file name and valid frame but the location has no file name.
-  MockFrame frame_no_file(
-      nullptr, nullptr,
-      Location(0x1234, FileLine(), 0, relative_context, LazySymbol()),
-      0x12345678);
+  MockFrame frame_no_file(nullptr, nullptr,
+                          Location(0x1234, FileLine(), 0, relative_context, LazySymbol()),
+                          0x12345678);
   location = InputLocation();
   err = ParseInputLocation(&frame_no_file, "21", &location);
   EXPECT_TRUE(err.has_error());
 
   // Valid implicit file name.
   std::string file = "foo.cc";
-  MockFrame frame_valid(
-      nullptr, nullptr,
-      Location(0x1234, FileLine(file, 12), 0, relative_context, LazySymbol()),
-      0x12345678);
+  MockFrame frame_valid(nullptr, nullptr,
+                        Location(0x1234, FileLine(file, 12), 0, relative_context, LazySymbol()),
+                        0x12345678);
   location = InputLocation();
   err = ParseInputLocation(&frame_valid, "21", &location);
   EXPECT_FALSE(err.has_error()) << err.msg();
@@ -104,13 +102,11 @@ TEST(InputLocation, ResolveInputLocation) {
 
   constexpr uint64_t kModuleLoadAddress = 0x10000;
   SymbolContext symbol_context(kModuleLoadAddress);
-  symbols.InjectModule("mid.so", "1234", kModuleLoadAddress,
-                       std::move(owning_mod_sym));
+  symbols.InjectModule("mid.so", "1234", kModuleLoadAddress, std::move(owning_mod_sym));
 
   // Resolve to nothing.
   Location output;
-  Err err = ResolveUniqueInputLocation(&symbols.process(), nullptr, "Foo",
-                                       false, &output);
+  Err err = ResolveUniqueInputLocation(&symbols.process(), nullptr, "Foo", false, &output);
   EXPECT_TRUE(err.has_error());
   EXPECT_EQ("Nothing matching this symbol was found.", err.msg());
 
@@ -118,8 +114,7 @@ TEST(InputLocation, ResolveInputLocation) {
 
   // Resolve to one location (success) case.
   module_symbols->AddSymbolLocations("Foo", {expected});
-  err = ResolveUniqueInputLocation(&symbols.process(), nullptr, "Foo", false,
-                                   &output);
+  err = ResolveUniqueInputLocation(&symbols.process(), nullptr, "Foo", false, &output);
   EXPECT_FALSE(err.has_error());
   EXPECT_EQ(expected.address(), output.address());
 
@@ -128,15 +123,14 @@ TEST(InputLocation, ResolveInputLocation) {
   std::vector<Location> expected_locations;
   for (int i = 0; i < 15; i++) {
     // The address and line numbers count up for each match.
-    expected_locations.emplace_back(
-        0x12345000 + i, FileLine("file.cc", 100 + i), 0, symbol_context);
+    expected_locations.emplace_back(0x12345000 + i, FileLine("file.cc", 100 + i), 0,
+                                    symbol_context);
   }
   module_symbols->AddSymbolLocations("Foo", expected_locations);
 
   // Resolve to all of them.
   std::vector<Location> output_locations;
-  err = ResolveInputLocations(&symbols.process(), nullptr, "Foo", false,
-                              &output_locations);
+  err = ResolveInputLocations(&symbols.process(), nullptr, "Foo", false, &output_locations);
   EXPECT_FALSE(err.has_error());
 
   // The result should be the same as the input but not symbolized (we
@@ -150,8 +144,7 @@ TEST(InputLocation, ResolveInputLocation) {
   // Try to resolve one of them. Since there are many this will fail. We
   // requested no symbolization but the error message should still be
   // symbolized.
-  err = ResolveUniqueInputLocation(&symbols.process(), nullptr, "Foo", false,
-                                   &output);
+  err = ResolveUniqueInputLocation(&symbols.process(), nullptr, "Foo", false, &output);
   EXPECT_TRUE(err.has_error());
   EXPECT_EQ(R"(This resolves to more than one location. Could be:
  • file.cc:100 = 0x12345000
@@ -196,16 +189,14 @@ TEST(InputLocation, CompleteInputLocation) {
   auto global_type = fxl::MakeRefCounted<Collection>(DwarfTag::kClassType);
   global_type->set_parent(LazySymbol(ns));
   global_type->set_assigned_name(kClassName);
-  TestIndexedSymbol indexed_type(mod, indexed_ns.index_node, kClassName,
-                                 global_type);
+  TestIndexedSymbol indexed_type(mod, indexed_ns.index_node, kClassName, global_type);
 
   // Function inside the class.
   const char kMemberName[] = "MemberFunction";
   auto member_func = fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);
   member_func->set_assigned_name(kMemberName);
   member_func->set_parent(LazySymbol(global_type));
-  TestIndexedSymbol indexed_member(mod, indexed_type.index_node, kMemberName,
-                                   member_func);
+  TestIndexedSymbol indexed_member(mod, indexed_type.index_node, kMemberName, member_func);
 
   // TODO(brettw) make a test setup helper for a whole session / target /
   // process / thread / frame + symbols.

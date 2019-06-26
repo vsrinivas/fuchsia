@@ -83,25 +83,23 @@ void MemoryAnalysis::Schedule(const AnalyzeMemoryOptions& opts) {
 
   // Request memory dump.
   if (!have_memory_) {
-    opts.process->ReadMemory(begin_address_, bytes_to_read_,
-                             [this_ref](const Err& err, MemoryDump dump) {
-                               this_ref->OnMemory(err, std::move(dump));
-                             });
+    opts.process->ReadMemory(
+        begin_address_, bytes_to_read_,
+        [this_ref](const Err& err, MemoryDump dump) { this_ref->OnMemory(err, std::move(dump)); });
   }
 
   // Request address space dump.
   if (!have_aspace_) {
     opts.process->GetAspace(
-        0, [this_ref](const Err& err,
-                      std::vector<debug_ipc::AddressRegion> aspace) {
+        0, [this_ref](const Err& err, std::vector<debug_ipc::AddressRegion> aspace) {
           this_ref->OnAspace(err, std::move(aspace));
         });
   }
 
   // Test code could have set everything, in which case trigger a run.
   if (HasEverything()) {
-    debug_ipc::MessageLoop::Current()->PostTask(
-        FROM_HERE, [this_ref]() { this_ref->DoAnalysis(); });
+    debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE,
+                                                [this_ref]() { this_ref->DoAnalysis(); });
   }
 }
 
@@ -146,8 +144,7 @@ void MemoryAnalysis::DoAnalysis() {
     uint64_t address = begin_address_ + offset;
 
     // Address.
-    row.emplace_back(Syntax::kComment,
-                     fxl::StringPrintf("0x%" PRIx64, address));
+    row.emplace_back(Syntax::kComment, fxl::StringPrintf("0x%" PRIx64, address));
 
     // Data
     uint64_t data_value = 0;
@@ -177,14 +174,12 @@ void MemoryAnalysis::DoAnalysis() {
   }
 
   OutputBuffer out;
-  FormatTable({ColSpec(Align::kRight, 0, "Address"),
-               ColSpec(Align::kRight, 0, "Data"), ColSpec()},
+  FormatTable({ColSpec(Align::kRight, 0, "Address"), ColSpec(Align::kRight, 0, "Data"), ColSpec()},
               rows, &out);
   callback_(Err(), std::move(out), begin_address_ + bytes_to_read_);
 }
 
-void MemoryAnalysis::OnAspace(const Err& err,
-                              std::vector<debug_ipc::AddressRegion> aspace) {
+void MemoryAnalysis::OnAspace(const Err& err, std::vector<debug_ipc::AddressRegion> aspace) {
   if (aborted_)
     return;
 
@@ -225,9 +220,7 @@ void MemoryAnalysis::OnFrames(fxl::WeakPtr<Thread> thread) {
     DoAnalysis();
 }
 
-bool MemoryAnalysis::HasEverything() const {
-  return have_memory_ && have_frames_ && have_aspace_;
-}
+bool MemoryAnalysis::HasEverything() const { return have_memory_ && have_frames_ && have_aspace_; }
 
 void MemoryAnalysis::IssueError(const Err& err) {
   aborted_ = true;
@@ -237,8 +230,7 @@ void MemoryAnalysis::IssueError(const Err& err) {
   callback_ = Callback();
 }
 
-void MemoryAnalysis::AddRegisters(int frame_no,
-                                  const std::vector<Register>& regs) {
+void MemoryAnalysis::AddRegisters(int frame_no, const std::vector<Register>& regs) {
   // Frames can have saved registers. Sometimes these will be the same as frame
   // 0 (the current CPU state). We want to make them say, e.g. "rax" if the
   // value matches the top frame, but if the current frame's register value is
@@ -258,12 +250,10 @@ void MemoryAnalysis::AddRegisters(int frame_no,
       // Later frames get an annotation and only get added if they're
       // different than frame 0.
       auto found_frame_0 = frame_0_regs_.find(r.id());
-      if (found_frame_0 != frame_0_regs_.end() &&
-          found_frame_0->second == value)
+      if (found_frame_0 != frame_0_regs_.end() && found_frame_0->second == value)
         continue;  // Matches frame 0, don't add a record.
 
-      reg_desc = fxl::StringPrintf("frame %d %s", frame_no,
-                                   RegisterIDToString(r.id()));
+      reg_desc = fxl::StringPrintf("frame %d %s", frame_no, RegisterIDToString(r.id()));
     }
 
     AddAnnotation(value, reg_desc);
@@ -322,8 +312,7 @@ std::string MemoryAnalysis::GetAnnotationsBetween(uint64_t address_begin,
 std::string MemoryAnalysis::GetPointedToAnnotation(uint64_t data) const {
   if (!process_)
     return std::string();
-  auto locations =
-      process_->GetSymbols()->ResolveInputLocation(InputLocation(data));
+  auto locations = process_->GetSymbols()->ResolveInputLocation(InputLocation(data));
   FXL_DCHECK(locations.size() == 1);
 
   if (!locations[0].symbol()) {
@@ -334,8 +323,7 @@ std::string MemoryAnalysis::GetPointedToAnnotation(uint64_t data) const {
     for (size_t i = 0; i < aspace_.size(); i++) {
       const auto& region = aspace_[i];
       if (region.size < kMaxAspaceRegion && data >= region.base &&
-          data < region.base + region.size &&
-          max_depth < static_cast<int>(region.depth)) {
+          data < region.base + region.size && max_depth < static_cast<int>(region.depth)) {
         max_depth = static_cast<int>(region.depth);
         found_entry = i;
       }
@@ -343,8 +331,7 @@ std::string MemoryAnalysis::GetPointedToAnnotation(uint64_t data) const {
 
     if (found_entry == aspace_.size())
       return std::string();  // Not found.
-    return fxl::StringPrintf("▷ inside map \"%s\"",
-                             aspace_[found_entry].name.c_str());
+    return fxl::StringPrintf("▷ inside map \"%s\"", aspace_[found_entry].name.c_str());
   }
   // TODO(brettw) this should indicate the byte offset from the beginning of
   // the function, or maybe the file/line number.
@@ -353,12 +340,10 @@ std::string MemoryAnalysis::GetPointedToAnnotation(uint64_t data) const {
 
 }  // namespace internal
 
-void AnalyzeMemory(const AnalyzeMemoryOptions& opts,
-                   std::function<void(const Err& err, OutputBuffer analysis,
-                                      uint64_t next_addr)>
-                       cb) {
-  auto analysis =
-      fxl::MakeRefCounted<zxdb::internal::MemoryAnalysis>(opts, std::move(cb));
+void AnalyzeMemory(
+    const AnalyzeMemoryOptions& opts,
+    std::function<void(const Err& err, OutputBuffer analysis, uint64_t next_addr)> cb) {
+  auto analysis = fxl::MakeRefCounted<zxdb::internal::MemoryAnalysis>(opts, std::move(cb));
   analysis->Schedule(opts);
 }
 

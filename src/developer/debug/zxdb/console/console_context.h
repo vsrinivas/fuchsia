@@ -96,14 +96,12 @@ class ConsoleContext : public ProcessObserver,
   // to kSource for new and unknown threads. Setting SourceAffinity::kNone does
   // nothing so calling code can unconditionally call for all commands.
   SourceAffinity GetSourceAffinityForThread(const Thread* thread) const;
-  void SetSourceAffinityForThread(const Thread* thread,
-                                  SourceAffinity source_affinity);
+  void SetSourceAffinityForThread(const Thread* thread, SourceAffinity source_affinity);
 
   // Outputs to the console information on the given stopped thread with the
   // given reasons for stopping.
-  void OutputThreadContext(
-      const Thread* thread, debug_ipc::NotifyException::Type type,
-      const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) const;
+  void OutputThreadContext(const Thread* thread, debug_ipc::NotifyException::Type type,
+                           const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) const;
 
   // Fills the current effective process, thread, etc. into the given Command
   // structure based on what the command specifies and the current context.
@@ -157,8 +155,8 @@ class ConsoleContext : public ProcessObserver,
   // TargetObserver implementation:
   void DidCreateProcess(Target* target, Process* process,
                         bool autoattached_to_new_process) override;
-  void WillDestroyProcess(Target* target, Process* process,
-                          DestroyReason reason, int exit_code) override;
+  void WillDestroyProcess(Target* target, Process* process, DestroyReason reason,
+                          int exit_code) override;
 
   // ProcessObserver implementation:
   void DidCreateThread(Process* process, Thread* thread) override;
@@ -166,9 +164,8 @@ class ConsoleContext : public ProcessObserver,
   void OnSymbolLoadFailure(Process* process, const Err& err) override;
 
   // ThreadObserver implementation:
-  void OnThreadStopped(
-      Thread* thread, debug_ipc::NotifyException::Type type,
-      const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) override;
+  void OnThreadStopped(Thread* thread, debug_ipc::NotifyException::Type type,
+                       const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) override;
   void OnThreadFramesInvalidated(Thread* thread) override;
 
   // Returns the record for the given target, or null (+ assertion) if not
@@ -199,8 +196,7 @@ class ConsoleContext : public ProcessObserver,
   Err FillOutSymbolServer(Command* cmd) const;
 
   // Generates a string describing the breakpoints that were hit.
-  std::string DescribeHitBreakpoints(
-      const std::vector<fxl::WeakPtr<Breakpoint>>& hits) const;
+  std::string DescribeHitBreakpoints(const std::vector<fxl::WeakPtr<Breakpoint>>& hits) const;
 
   Session* const session_;
 

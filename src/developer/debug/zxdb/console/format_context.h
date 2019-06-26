@@ -31,8 +31,7 @@ class Process;
 //
 // An error will be returned if the location is symbolized but the file can't
 // be found or doesn't contain that line. In this case, nothing will be output.
-Err OutputSourceContext(Process* process, const Location& location,
-                        SourceAffinity source_affinity);
+Err OutputSourceContext(Process* process, const Location& location, SourceAffinity source_affinity);
 
 struct FormatSourceOpts {
   // Range of lines to print, inclusive. This can be outside of the range of
@@ -77,8 +76,7 @@ struct FormatSourceOpts {
 //
 // The build_dir indicates the directory where relative file names will be
 // treated as relative to.
-Err FormatSourceFileContext(const std::string& file_name,
-                            const std::string& build_dir,
+Err FormatSourceFileContext(const std::string& file_name, const std::string& build_dir,
                             const FormatSourceOpts& opts, OutputBuffer* out);
 
 // Formats the given source to the output.
@@ -86,8 +84,7 @@ Err FormatSourceFileContext(const std::string& file_name,
 // If the active line is nonzero but is not in the file, an error will be
 // returned and no output will be generated. The file_name_for_errors will be
 // used to generate this string, it will not be used for any other purpose.
-Err FormatSourceContext(const std::string& file_name_for_errors,
-                        const std::string& file_contents,
+Err FormatSourceContext(const std::string& file_name_for_errors, const std::string& file_contents,
                         const FormatSourceOpts& opts, OutputBuffer* out);
 
 struct FormatAsmOpts {
@@ -106,8 +103,8 @@ struct FormatAsmOpts {
 };
 
 // On error, returns it and does nothing.
-Err FormatAsmContext(const ArchInfo* arch_info, const MemoryDump& dump,
-                     const FormatAsmOpts& opts, OutputBuffer* out);
+Err FormatAsmContext(const ArchInfo* arch_info, const MemoryDump& dump, const FormatAsmOpts& opts,
+                     OutputBuffer* out);
 
 // Creates a source code context of the given location and puts it in the
 // output buffer. This does not write disassembly since that would require
@@ -121,8 +118,7 @@ Err FormatAsmContext(const ArchInfo* arch_info, const MemoryDump& dump,
 // file name, and the breakpoint may move slightly when it's actually applied.
 //
 // Build_dir is used to find relative files by FormatSourceFileContext().
-Err FormatBreakpointContext(const Location& location,
-                            const std::string& build_dur, bool enabled,
+Err FormatBreakpointContext(const Location& location, const std::string& build_dur, bool enabled,
                             OutputBuffer* out);
 
 }  // namespace zxdb

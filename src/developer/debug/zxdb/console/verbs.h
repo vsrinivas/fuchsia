@@ -95,16 +95,15 @@ struct VerbRecord {
   using CommandExecutor = std::function<Err(ConsoleContext*, const Command&)>;
 
   // Executor that is able to receive a callback that it can then pass on.
-  using CommandExecutorWithCallback = std::function<Err(
-      ConsoleContext*, const Command&, std::function<void(Err)>)>;
+  using CommandExecutorWithCallback =
+      std::function<Err(ConsoleContext*, const Command&, std::function<void(Err)>)>;
 
   // Type for the callback to complete the command's arguments. The command
   // will be filled out as far as is possible for the current parse, and the
   // completions should be filled with suggestions for the next token, each of
   // which should begin with the given prefix.
-  using CommandCompleter =
-      std::function<void(const Command& command, const std::string& prefix,
-                         std::vector<std::string>* completions)>;
+  using CommandCompleter = std::function<void(const Command& command, const std::string& prefix,
+                                              std::vector<std::string>* completions)>;
 
   VerbRecord();
 
@@ -113,18 +112,15 @@ struct VerbRecord {
   VerbRecord(CommandExecutor exec, std::initializer_list<std::string> aliases,
              const char* short_help, const char* help, CommandGroup group,
              SourceAffinity source_affinity = SourceAffinity::kNone);
-  VerbRecord(CommandExecutorWithCallback exec_cb,
-             std::initializer_list<std::string> aliases, const char* short_help,
-             const char* help, CommandGroup group,
+  VerbRecord(CommandExecutorWithCallback exec_cb, std::initializer_list<std::string> aliases,
+             const char* short_help, const char* help, CommandGroup group,
              SourceAffinity source_affinity = SourceAffinity::kNone);
   VerbRecord(CommandExecutor exec, CommandCompleter complete,
-             std::initializer_list<std::string> aliases, const char* short_help,
-             const char* help, CommandGroup group,
-             SourceAffinity source_affinity = SourceAffinity::kNone);
+             std::initializer_list<std::string> aliases, const char* short_help, const char* help,
+             CommandGroup group, SourceAffinity source_affinity = SourceAffinity::kNone);
   VerbRecord(CommandExecutorWithCallback exec_cb, CommandCompleter complete,
-             std::initializer_list<std::string> aliases, const char* short_help,
-             const char* help, CommandGroup group,
-             SourceAffinity source_affinity = SourceAffinity::kNone);
+             std::initializer_list<std::string> aliases, const char* short_help, const char* help,
+             CommandGroup group, SourceAffinity source_affinity = SourceAffinity::kNone);
   ~VerbRecord();
 
   CommandExecutor exec = nullptr;

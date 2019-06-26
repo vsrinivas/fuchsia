@@ -35,18 +35,15 @@ struct FormatRegisterOptions {
   bool extended = false;
 };
 
-using FilteredRegisterSet =
-    std::map<debug_ipc::RegisterCategory::Type, std::vector<Register>>;
+using FilteredRegisterSet = std::map<debug_ipc::RegisterCategory::Type, std::vector<Register>>;
 
 // Filters the available registers to the ones matching the given categories and
 // matching the registers.
 // Not defining a regexp will let all the registers pass.
-Err FilterRegisters(const FormatRegisterOptions&, const RegisterSet&,
-                    FilteredRegisterSet* out);
+Err FilterRegisters(const FormatRegisterOptions&, const RegisterSet&, FilteredRegisterSet* out);
 
 // Format the output of the FilterRegisters call into a console readable format.
-Err FormatRegisters(const FormatRegisterOptions&, const FilteredRegisterSet&,
-                    OutputBuffer* out);
+Err FormatRegisters(const FormatRegisterOptions&, const FilteredRegisterSet&, OutputBuffer* out);
 
 // Formatting helpers ----------------------------------------------------------
 
@@ -54,8 +51,7 @@ Err FormatRegisters(const FormatRegisterOptions&, const FilteredRegisterSet&,
 //  - name
 //  - hex value
 //  - comment (may be empty if inapplicable).
-std::vector<OutputBuffer> DescribeRegister(const Register& reg,
-                                           TextForegroundColor color);
+std::vector<OutputBuffer> DescribeRegister(const Register& reg, TextForegroundColor color);
 
 }  // namespace zxdb
 

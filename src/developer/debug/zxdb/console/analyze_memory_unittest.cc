@@ -32,8 +32,8 @@ class AnalyzeMemoryTest : public testing::Test {
 
 class MyMockRegisterSet : public RegisterSet {
  public:
-  void AddRegister(RegisterCategory::Type cat_type, RegisterID id,
-                   uint32_t length, uint64_t value) {
+  void AddRegister(RegisterCategory::Type cat_type, RegisterID id, uint32_t length,
+                   uint64_t value) {
     std::vector<uint8_t> data(sizeof(value));
     memcpy(&data[0], &value, sizeof(value));
     debug_ipc::Register ipc_reg({id, std::move(data)});
@@ -65,8 +65,7 @@ TEST_F(AnalyzeMemoryTest, Basic) {
   // The callback just saves the buffer to "output".
   OutputBuffer output;
   auto analysis = fxl::MakeRefCounted<MemoryAnalysis>(
-      opts,
-      [&output](const Err& err, OutputBuffer analysis, uint64_t next_addr) {
+      opts, [&output](const Err& err, OutputBuffer analysis, uint64_t next_addr) {
         output = analysis;
         debug_ipc::MessageLoop::Current()->QuitNow();
       });
@@ -89,26 +88,24 @@ TEST_F(AnalyzeMemoryTest, Basic) {
   const uint64_t kStack1SP = kBegin + 8;
 
   constexpr uint64_t kAway = 0xFF00000000000;  // Points out of the dump.
-  std::vector<Register> frame0_regs = {
-      Register(RegisterID::kX64_rax, kBegin),
-      Register(RegisterID::kX64_rcx, kAway),
-      Register(RegisterID::kX64_rsp, kStack0SP)};
+  std::vector<Register> frame0_regs = {Register(RegisterID::kX64_rax, kBegin),
+                                       Register(RegisterID::kX64_rcx, kAway),
+                                       Register(RegisterID::kX64_rsp, kStack0SP)};
 
   // Frame 1 duplicates rax (should not have both in the output), but rcx is
   // different and this should be called out in the dump.
-  std::vector<Register> frame1_regs = {
-      Register(RegisterID::kX64_rax, kBegin),
-      Register(RegisterID::kX64_rcx, kBegin + 16),
-      Register(RegisterID::kX64_rsp, kStack1SP)};
+  std::vector<Register> frame1_regs = {Register(RegisterID::kX64_rax, kBegin),
+                                       Register(RegisterID::kX64_rcx, kBegin + 16),
+                                       Register(RegisterID::kX64_rsp, kStack1SP)};
 
   // Setup frames.
   std::vector<std::unique_ptr<Frame>> frames;
-  frames.push_back(std::make_unique<MockFrame>(
-      nullptr, nullptr, Location(Location::State::kSymbolized, 0x1234),
-      kStack0SP, 0, frame0_regs, kStack0SP));
-  frames.push_back(std::make_unique<MockFrame>(
-      nullptr, nullptr, Location(Location::State::kSymbolized, 0x1234),
-      kStack1SP, 0, frame1_regs, kStack1SP));
+  frames.push_back(std::make_unique<MockFrame>(nullptr, nullptr,
+                                               Location(Location::State::kSymbolized, 0x1234),
+                                               kStack0SP, 0, frame0_regs, kStack0SP));
+  frames.push_back(std::make_unique<MockFrame>(nullptr, nullptr,
+                                               Location(Location::State::kSymbolized, 0x1234),
+                                               kStack1SP, 0, frame1_regs, kStack1SP));
 
   // Stack to hold our mock frames. This stack doesn't need to do anything
   // other than return the frames again, so the delegate can be null.

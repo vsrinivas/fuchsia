@@ -48,12 +48,10 @@ TEST(CommandUtils, StringToInt) {
 
   // Test just beyond the limits.
   int64_t kBeyondMax = static_cast<int64_t>(kMax) + 1;
-  EXPECT_TRUE(StringToInt(fxl::StringPrintf("%" PRId64, kBeyondMax), &result)
-                  .has_error());
+  EXPECT_TRUE(StringToInt(fxl::StringPrintf("%" PRId64, kBeyondMax), &result).has_error());
 
   int64_t kBeyondMin = static_cast<int64_t>(kMin) - 1;
-  EXPECT_TRUE(StringToInt(fxl::StringPrintf("%" PRId64, kBeyondMin), &result)
-                  .has_error());
+  EXPECT_TRUE(StringToInt(fxl::StringPrintf("%" PRId64, kBeyondMin), &result).has_error());
 }
 
 TEST(CommandUtils, StringToUint32) {
@@ -209,52 +207,43 @@ TEST(CommandUtils, FormatIdentifier) {
 TEST(CommandUtils, FormatLocation) {
   SymbolContext symbol_context = SymbolContext::ForRelativeAddresses();
 
-  EXPECT_EQ("<invalid address>",
-            FormatLocation(nullptr, Location(), true, false).AsString());
+  EXPECT_EQ("<invalid address>", FormatLocation(nullptr, Location(), true, false).AsString());
 
   // Address-only location.
+  EXPECT_EQ("0x12345",
+            FormatLocation(nullptr, Location(Location::State::kAddress, 0x12345), false, false)
+                .AsString());
+
+  // Function-only location.
+  fxl::RefPtr<Function> function(fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram));
+  function->set_assigned_name("Func");
+  function->set_code_ranges(AddressRanges(AddressRange(0x1200, 0x1300)));
   EXPECT_EQ(
-      "0x12345",
-      FormatLocation(nullptr, Location(Location::State::kAddress, 0x12345),
+      "Func() + 0x34 (no line info)",
+      FormatLocation(nullptr, Location(0x1234, FileLine(), 0, symbol_context, LazySymbol(function)),
                      false, false)
           .AsString());
 
-  // Function-only location.
-  fxl::RefPtr<Function> function(
-      fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram));
-  function->set_assigned_name("Func");
-  function->set_code_ranges(AddressRanges(AddressRange(0x1200, 0x1300)));
-  EXPECT_EQ("Func() + 0x34 (no line info)",
-            FormatLocation(nullptr,
-                           Location(0x1234, FileLine(), 0, symbol_context,
-                                    LazySymbol(function)),
-                           false, false)
-                .AsString());
-
   // Same as above but location is before the function address (probably
   // something is corrupt). It should omit the offset.
-  EXPECT_EQ("Func()",
-            FormatLocation(nullptr,
-                           Location(0x1100, FileLine(), 0, symbol_context,
-                                    LazySymbol(function)),
-                           false, false)
-                .AsString());
+  EXPECT_EQ(
+      "Func()",
+      FormatLocation(nullptr, Location(0x1100, FileLine(), 0, symbol_context, LazySymbol(function)),
+                     false, false)
+          .AsString());
 
   // File/line-only location.
-  EXPECT_EQ("/path/foo.cc:21",
-            FormatLocation(nullptr,
-                           Location(0x1234, FileLine("/path/foo.cc", 21), 0,
-                                    symbol_context),
-                           false, false)
-                .AsString());
+  EXPECT_EQ(
+      "/path/foo.cc:21",
+      FormatLocation(nullptr, Location(0x1234, FileLine("/path/foo.cc", 21), 0, symbol_context),
+                     false, false)
+          .AsString());
 
   // Full location.
-  Location loc(0x1234, FileLine("/path/foo.cc", 21), 0, symbol_context,
-               LazySymbol(function));
+  Location loc(0x1234, FileLine("/path/foo.cc", 21), 0, symbol_context, LazySymbol(function));
   EXPECT_EQ("0x1234, Func() • /path/foo.cc:21",
             FormatLocation(nullptr, loc, true, false).AsString());
-  EXPECT_EQ("Func() • /path/foo.cc:21",
-            FormatLocation(nullptr, loc, false, false).AsString());
+  EXPECT_EQ("Func() • /path/foo.cc:21", FormatLocation(nullptr, loc, false, false).AsString());
 }
 
 TEST(CommandUtils, DescribeFileLine) {
@@ -262,8 +251,7 @@ TEST(CommandUtils, DescribeFileLine) {
   EXPECT_EQ("/path/to/foo.cc:21", DescribeFileLine(nullptr, fl));
 
   // Missing line number.
-  EXPECT_EQ("/path/foo.cc:?",
-            DescribeFileLine(nullptr, FileLine("/path/foo.cc", 0)));
+  EXPECT_EQ("/path/foo.cc:?", DescribeFileLine(nullptr, FileLine("/path/foo.cc", 0)));
 
   // Missing both.
   EXPECT_EQ("?:?", DescribeFileLine(nullptr, FileLine()));
@@ -307,16 +295,14 @@ TEST(SetElementsToAdd, TestCase) {
 
   // Multiple assign.
 
-  err =
-      SetElementsToAdd({"option_name", "value", "value2"}, &assign_type, &out);
+  err = SetElementsToAdd({"option_name", "value", "value2"}, &assign_type, &out);
   EXPECT_FALSE(err.has_error()) << err.msg();
   EXPECT_EQ(assign_type, AssignType::kAssign);
   ASSERT_EQ(out.size(), 2u);
   EXPECT_EQ(out[0], "value");
   EXPECT_EQ(out[1], "value2");
 
-  err = SetElementsToAdd({"option_name", "=", "value", "value2"}, &assign_type,
-                         &out);
+  err = SetElementsToAdd({"option_name", "=", "value", "value2"}, &assign_type, &out);
   EXPECT_FALSE(err.has_error()) << err.msg();
   EXPECT_EQ(assign_type, AssignType::kAssign);
   ASSERT_EQ(out.size(), 2u);
@@ -334,8 +320,7 @@ TEST(SetElementsToAdd, TestCase) {
   ASSERT_EQ(out.size(), 1u);
   EXPECT_EQ(out[0], "value");
 
-  err = SetElementsToAdd({"option_name", "+=", "value", "value2"}, &assign_type,
-                         &out);
+  err = SetElementsToAdd({"option_name", "+=", "value", "value2"}, &assign_type, &out);
   EXPECT_FALSE(err.has_error()) << err.msg();
   EXPECT_EQ(assign_type, AssignType::kAppend);
   ASSERT_EQ(out.size(), 2u);
@@ -353,8 +338,7 @@ TEST(SetElementsToAdd, TestCase) {
   ASSERT_EQ(out.size(), 1u);
   EXPECT_EQ(out[0], "value");
 
-  err = SetElementsToAdd({"option_name", "-=", "value", "value2"}, &assign_type,
-                         &out);
+  err = SetElementsToAdd({"option_name", "-=", "value", "value2"}, &assign_type, &out);
   EXPECT_FALSE(err.has_error()) << err.msg();
   EXPECT_EQ(assign_type, AssignType::kRemove);
   ASSERT_EQ(out.size(), 2u);

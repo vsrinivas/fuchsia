@@ -22,8 +22,7 @@ void MockConsole::Output(const OutputBuffer& output) {
 }
 
 void MockConsole::Clear() {
-  output_queue_.push_back(
-      {MockConsole::OutputEvent::Type::kClear, OutputBuffer()});
+  output_queue_.push_back({MockConsole::OutputEvent::Type::kClear, OutputBuffer()});
   output_buffer_.Clear();
 
   if (waiting_for_output_) {
@@ -51,8 +50,7 @@ MockConsole::OutputEvent MockConsole::GetOutputEvent() {
   return ret;
 }
 
-Console::Result MockConsole::ProcessInputLine(const std::string& line,
-                                              CommandCallback callback) {
+Console::Result MockConsole::ProcessInputLine(const std::string& line, CommandCallback callback) {
   FXL_DCHECK(!line.empty());
 
   Command cmd;
@@ -78,8 +76,7 @@ Console::Result MockConsole::ProcessInputLine(const std::string& line,
 
   if (cmd.thread() && cmd.verb() != Verb::kNone) {
     // Show the right source/disassembly for the next listing.
-    context_.SetSourceAffinityForThread(
-        cmd.thread(), GetVerbRecord(cmd.verb())->source_affinity);
+    context_.SetSourceAffinityForThread(cmd.thread(), GetVerbRecord(cmd.verb())->source_affinity);
   }
 
   if (err.has_error()) {

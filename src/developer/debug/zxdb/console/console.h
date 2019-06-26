@@ -52,8 +52,7 @@ class Console {
   // We pass the result out for callers to use and react accordingly, which
   // can indicate whether they want the console to continue processing
   // commands.
-  virtual Result ProcessInputLine(const std::string& line,
-                                  CommandCallback callback = nullptr) = 0;
+  virtual Result ProcessInputLine(const std::string& line, CommandCallback callback = nullptr) = 0;
 
  protected:
   static Console* singleton_;

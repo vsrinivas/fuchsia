@@ -17,8 +17,7 @@ void AsyncOutputBuffer::SetCompletionCallback(CompletionCallback cb) {
   completion_callback_ = std::move(cb);
 }
 
-void AsyncOutputBuffer::Append(std::string str, TextForegroundColor fg,
-                               TextBackgroundColor bg) {
+void AsyncOutputBuffer::Append(std::string str, TextForegroundColor fg, TextBackgroundColor bg) {
   FXL_DCHECK(!marked_complete_);
   nodes_.emplace_back(Span(std::move(str), fg, bg));
 }
@@ -64,8 +63,7 @@ void AsyncOutputBuffer::Complete() {
   CheckComplete();
 }
 
-void AsyncOutputBuffer::Complete(std::string str, TextForegroundColor fg,
-                                 TextBackgroundColor bg) {
+void AsyncOutputBuffer::Complete(std::string str, TextForegroundColor fg, TextBackgroundColor bg) {
   Append(std::move(str), fg, bg);
   Complete();
 }

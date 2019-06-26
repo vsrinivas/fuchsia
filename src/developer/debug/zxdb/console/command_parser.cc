@@ -51,8 +51,7 @@ const SwitchRecord* FindLongSwitch(const std::string& str,
   return nullptr;
 }
 
-const SwitchRecord* FindSwitch(char ch,
-                               const std::vector<SwitchRecord>& switches) {
+const SwitchRecord* FindSwitch(char ch, const std::vector<SwitchRecord>& switches) {
   for (const auto& sr : switches) {
     if (sr.ch == ch)
       return &sr;
@@ -96,8 +95,7 @@ class Parser {
     return err_;
   }
 
-  const Err& Complete(const std::string& input,
-                      std::vector<std::string>* results) {
+  const Err& Complete(const std::string& input, std::vector<std::string>* results) {
     FXL_DCHECK(results->empty());
 
     if (!Tokenize(input)) {
@@ -147,8 +145,7 @@ class Parser {
     void (Parser::*complete)(const std::string&, std::vector<std::string>*);
 
     State(bool (Parser::*advance)(),
-          void (Parser::*complete)(const std::string&,
-                                   std::vector<std::string>*))
+          void (Parser::*complete)(const std::string&, std::vector<std::string>*))
         : advance(advance), complete(complete) {}
   };
 
@@ -212,14 +209,10 @@ class Parser {
 
   void NoComplete(const std::string&, std::vector<std::string>*) {}
 
-  void DoCompleteNoun(const std::string& to_complete,
-                      std::vector<std::string>* result);
-  void DoCompleteSwitches(const std::string& to_complete,
-                          std::vector<std::string>* result);
-  void DoCompleteVerb(const std::string& to_complete,
-                      std::vector<std::string>* result);
-  void DoCompleteArgs(const std::string& to_complete,
-                      std::vector<std::string>* result);
+  void DoCompleteNoun(const std::string& to_complete, std::vector<std::string>* result);
+  void DoCompleteSwitches(const std::string& to_complete, std::vector<std::string>* result);
+  void DoCompleteVerb(const std::string& to_complete, std::vector<std::string>* result);
+  void DoCompleteArgs(const std::string& to_complete, std::vector<std::string>* result);
 
   static const State kNounState;
   static const State kNounIndexState;
@@ -295,22 +288,14 @@ class Parser {
   std::vector<const State*> states_at_pos_;
 };
 
-const Parser::State Parser::kNounState(&Parser::DoNounState,
-                                       &Parser::DoCompleteNoun);
-const Parser::State Parser::kNounIndexState(&Parser::DoNounIndexState,
-                                            &Parser::NoComplete);
-const Parser::State Parser::kVerbState(&Parser::DoVerbState,
-                                       &Parser::DoCompleteVerb);
-const Parser::State Parser::kSwitchesState(&Parser::DoSwitchesState,
-                                           &Parser::DoCompleteSwitches);
-const Parser::State Parser::kSwitchState(&Parser::DoSwitchState,
-                                         &Parser::NoComplete);
-const Parser::State Parser::kLongSwitchState(&Parser::DoLongSwitchState,
-                                             &Parser::NoComplete);
-const Parser::State Parser::kSwitchArgState(&Parser::DoSwitchArgState,
-                                            &Parser::NoComplete);
-const Parser::State Parser::kArgState(&Parser::DoArgState,
-                                      &Parser::DoCompleteArgs);
+const Parser::State Parser::kNounState(&Parser::DoNounState, &Parser::DoCompleteNoun);
+const Parser::State Parser::kNounIndexState(&Parser::DoNounIndexState, &Parser::NoComplete);
+const Parser::State Parser::kVerbState(&Parser::DoVerbState, &Parser::DoCompleteVerb);
+const Parser::State Parser::kSwitchesState(&Parser::DoSwitchesState, &Parser::DoCompleteSwitches);
+const Parser::State Parser::kSwitchState(&Parser::DoSwitchState, &Parser::NoComplete);
+const Parser::State Parser::kLongSwitchState(&Parser::DoLongSwitchState, &Parser::NoComplete);
+const Parser::State Parser::kSwitchArgState(&Parser::DoSwitchArgState, &Parser::NoComplete);
+const Parser::State Parser::kArgState(&Parser::DoArgState, &Parser::DoCompleteArgs);
 
 bool Parser::DoNounState() {
   if (at_end()) {
@@ -345,8 +330,7 @@ bool Parser::DoNounIndexState() {
 
   size_t noun_index = Command::kNoIndex;
   if (sscanf(token().c_str(), "%zu", &noun_index) != 1) {
-    return Fail("Invalid index \"" + token() + "\" for \"" +
-                NounToString(noun_) + "\".");
+    return Fail("Invalid index \"" + token() + "\" for \"" + NounToString(noun_) + "\".");
   }
 
   command_->SetNoun(noun_, noun_index);
@@ -477,8 +461,7 @@ bool Parser::DoArgState() {
   return Accept();
 }
 
-void Parser::DoCompleteNoun(const std::string& to_complete,
-                            std::vector<std::string>* result) {
+void Parser::DoCompleteNoun(const std::string& to_complete, std::vector<std::string>* result) {
   for (const auto& noun_pair : GetNouns()) {
     if (command_->HasNoun(noun_pair.first)) {
       continue;
@@ -495,8 +478,7 @@ void Parser::DoCompleteNoun(const std::string& to_complete,
   }
 }
 
-void Parser::DoCompleteSwitches(const std::string& to_complete,
-                                std::vector<std::string>* result) {
+void Parser::DoCompleteSwitches(const std::string& to_complete, std::vector<std::string>* result) {
   const std::vector<SwitchRecord>& switches =
       verb_record_ ? verb_record_->switches : GetNounSwitches();
 
@@ -510,8 +492,7 @@ void Parser::DoCompleteSwitches(const std::string& to_complete,
   }
 }
 
-void Parser::DoCompleteVerb(const std::string& to_complete,
-                            std::vector<std::string>* result) {
+void Parser::DoCompleteVerb(const std::string& to_complete, std::vector<std::string>* result) {
   if (verb_record_) {
     return;
   }
@@ -528,8 +509,7 @@ void Parser::DoCompleteVerb(const std::string& to_complete,
   }
 }
 
-void Parser::DoCompleteArgs(const std::string& to_complete,
-                            std::vector<std::string>* result) {
+void Parser::DoCompleteArgs(const std::string& to_complete, std::vector<std::string>* result) {
   if (verb_record_ && verb_record_->complete) {
     // Fill in the noun context if possible for the completion routine.
     if (fill_context_)
@@ -540,8 +520,7 @@ void Parser::DoCompleteArgs(const std::string& to_complete,
 
 }  // namespace
 
-Err TokenizeCommand(const std::string& input,
-                    std::vector<std::string>* result) {
+Err TokenizeCommand(const std::string& input, std::vector<std::string>* result) {
   result->clear();
 
   // TODO(brettw) this will probably need some kind of quoting and escaping
@@ -584,8 +563,8 @@ Err ParseCommand(const std::string& input, Command* output) {
 
 // It would be nice to do more context-aware completions. For now, just
 // complete based on all known nouns and verbs.
-std::vector<std::string> GetCommandCompletions(
-    const std::string& input, const FillCommandContextCallback& fill_context) {
+std::vector<std::string> GetCommandCompletions(const std::string& input,
+                                               const FillCommandContextCallback& fill_context) {
   Command temp;
   Parser parser(&temp, fill_context);
 

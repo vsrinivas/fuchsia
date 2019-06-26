@@ -52,8 +52,7 @@ OutputBuffer HighlightLine(std::string str, int column) {
 
 Err OutputSourceContext(Process* process, const Location& location,
                         SourceAffinity source_affinity) {
-  if (source_affinity != SourceAffinity::kAssembly &&
-      location.file_line().is_valid()) {
+  if (source_affinity != SourceAffinity::kAssembly && location.file_line().is_valid()) {
     // Synchronous source output.
     FormatSourceOpts source_opts;
     source_opts.active_line = location.file_line().line();
@@ -64,10 +63,9 @@ Err OutputSourceContext(Process* process, const Location& location,
     source_opts.dim_others = true;
 
     OutputBuffer out;
-    Err err = FormatSourceFileContext(
-        location.file_line().file(),
-        process->session()->system().GetSymbols()->build_dir(), source_opts,
-        &out);
+    Err err = FormatSourceFileContext(location.file_line().file(),
+                                      process->session()->system().GetSymbols()->build_dir(),
+                                      source_opts, &out);
     if (err.has_error())
       return err;
 
@@ -99,26 +97,24 @@ Err OutputSourceContext(Process* process, const Location& location,
 
     size_t size = options.max_instructions * arch_info->max_instr_len();
 
-    process->ReadMemory(start_address, size,
-                        [options, weak_process = process->GetWeakPtr()](
-                            const Err& in_err, MemoryDump dump) {
-                          if (!weak_process)
-                            return;  // Give up when the process went away.
+    process->ReadMemory(
+        start_address, size,
+        [options, weak_process = process->GetWeakPtr()](const Err& in_err, MemoryDump dump) {
+          if (!weak_process)
+            return;  // Give up when the process went away.
 
-                          Console* console = Console::get();
-                          if (in_err.has_error()) {
-                            console->Output(in_err);
-                            return;
-                          }
-                          OutputBuffer out;
-                          Err err = FormatAsmContext(
-                              weak_process->session()->arch_info(), dump,
-                              options, &out);
-                          if (err.has_error())
-                            console->Output(err);
-                          else
-                            console->Output(out);
-                        });
+          Console* console = Console::get();
+          if (in_err.has_error()) {
+            console->Output(in_err);
+            return;
+          }
+          OutputBuffer out;
+          Err err = FormatAsmContext(weak_process->session()->arch_info(), dump, options, &out);
+          if (err.has_error())
+            console->Output(err);
+          else
+            console->Output(out);
+        });
   }
   return Err();
 }
@@ -126,8 +122,7 @@ Err OutputSourceContext(Process* process, const Location& location,
 // This doesn't cache the file contents. We may want to add that for
 // performance, but we should be careful to always pick the latest version
 // since it can get updated.
-Err FormatSourceFileContext(const std::string& file_name,
-                            const std::string& build_dir,
+Err FormatSourceFileContext(const std::string& file_name, const std::string& build_dir,
                             const FormatSourceOpts& opts, OutputBuffer* out) {
   std::string contents;
   Err err = GetFileContents(file_name, build_dir, &contents);
@@ -136,20 +131,17 @@ Err FormatSourceFileContext(const std::string& file_name,
   return FormatSourceContext(file_name, contents, opts, out);
 }
 
-Err FormatSourceContext(const std::string& file_name_for_errors,
-                        const std::string& file_contents,
+Err FormatSourceContext(const std::string& file_name_for_errors, const std::string& file_contents,
                         const FormatSourceOpts& opts, OutputBuffer* out) {
   FXL_DCHECK(opts.active_line == 0 || !opts.require_active_line ||
-             (opts.active_line >= opts.first_line &&
-              opts.active_line <= opts.last_line));
+             (opts.active_line >= opts.first_line && opts.active_line <= opts.last_line));
 
   // Allow the beginning to be out-of-range. This mirrors the end handling
   // (clamped to end-of-file) so callers can blindly create offsets from
   // a current line without clamping.
   int first_line = std::max(1, opts.first_line);
 
-  std::vector<std::string> context =
-      ExtractSourceLines(file_contents, first_line, opts.last_line);
+  std::vector<std::string> context = ExtractSourceLines(file_contents, first_line, opts.last_line);
   if (context.empty()) {
     // No source found for this location. If highlight_line exists, assume
     // it's the one the user cares about.
@@ -159,8 +151,7 @@ Err FormatSourceContext(const std::string& file_name_for_errors,
   }
   if (opts.active_line != 0 && opts.require_active_line &&
       first_line + static_cast<int>(context.size()) < opts.active_line) {
-    return Err(fxl::StringPrintf("There is no line %d in the file %s",
-                                 opts.active_line,
+    return Err(fxl::StringPrintf("There is no line %d in the file %s", opts.active_line,
                                  file_name_for_errors.c_str()));
   }
 
@@ -176,9 +167,8 @@ Err FormatSourceContext(const std::string& file_name_for_errors,
     OutputBuffer margin;
     auto found_bp = opts.bp_lines.find(line_number);
     if (found_bp != opts.bp_lines.end()) {
-      std::string breakpoint_marker = found_bp->second
-                                          ? GetBreakpointMarker()
-                                          : GetDisabledBreakpointMarker();
+      std::string breakpoint_marker =
+          found_bp->second ? GetBreakpointMarker() : GetDisabledBreakpointMarker();
 
       if (line_number == opts.active_line) {
         // Active + breakpoint.
@@ -212,14 +202,14 @@ Err FormatSourceContext(const std::string& file_name_for_errors,
     }
   }
 
-  FormatTable({ColSpec(Align::kLeft), ColSpec(Align::kRight),
-               ColSpec(Align::kLeft, 0, std::string(), 0)},
-              rows, out);
+  FormatTable(
+      {ColSpec(Align::kLeft), ColSpec(Align::kRight), ColSpec(Align::kLeft, 0, std::string(), 0)},
+      rows, out);
   return Err();
 }
 
-Err FormatAsmContext(const ArchInfo* arch_info, const MemoryDump& dump,
-                     const FormatAsmOpts& opts, OutputBuffer* out) {
+Err FormatAsmContext(const ArchInfo* arch_info, const MemoryDump& dump, const FormatAsmOpts& opts,
+                     OutputBuffer* out) {
   // Make the disassembler.
   Disassembler disassembler;
   Err my_err = disassembler.Init(arch_info);
@@ -229,8 +219,7 @@ Err FormatAsmContext(const ArchInfo* arch_info, const MemoryDump& dump,
   Disassembler::Options options;
 
   std::vector<Disassembler::Row> rows;
-  disassembler.DisassembleDump(dump, dump.address(), options,
-                               opts.max_instructions, &rows);
+  disassembler.DisassembleDump(dump, dump.address(), options, opts.max_instructions, &rows);
 
   std::vector<std::vector<OutputBuffer>> table;
   for (auto& row : rows) {
@@ -241,9 +230,8 @@ Err FormatAsmContext(const ArchInfo* arch_info, const MemoryDump& dump,
     OutputBuffer margin;
     auto found_bp = opts.bp_addrs.find(row.address);
     if (found_bp != opts.bp_addrs.end()) {
-      std::string breakpoint_marker = found_bp->second
-                                          ? GetBreakpointMarker()
-                                          : GetDisabledBreakpointMarker();
+      std::string breakpoint_marker =
+          found_bp->second ? GetBreakpointMarker() : GetDisabledBreakpointMarker();
 
       if (row.address == opts.active_address) {
         // Active + breakpoint.
@@ -265,8 +253,7 @@ Err FormatAsmContext(const ArchInfo* arch_info, const MemoryDump& dump,
     out_row.push_back(std::move(margin));
 
     if (opts.emit_addresses) {
-      out_row.emplace_back(Syntax::kComment,
-                           fxl::StringPrintf("0x%" PRIx64, row.address));
+      out_row.emplace_back(Syntax::kComment, fxl::StringPrintf("0x%" PRIx64, row.address));
     }
     if (opts.emit_bytes) {
       std::string bytes_str;
@@ -311,8 +298,7 @@ Err FormatAsmContext(const ArchInfo* arch_info, const MemoryDump& dump,
   return Err();
 }
 
-Err FormatBreakpointContext(const Location& location,
-                            const std::string& build_dir, bool enabled,
+Err FormatBreakpointContext(const Location& location, const std::string& build_dir, bool enabled,
                             OutputBuffer* out) {
   if (!location.has_symbols())
     return Err("No symbols for this location.");
@@ -325,8 +311,7 @@ Err FormatBreakpointContext(const Location& location,
   opts.last_line = line + kBreakpointContext;
   opts.highlight_line = line;
   opts.bp_lines[line] = enabled;
-  return FormatSourceFileContext(location.file_line().file(), build_dir, opts,
-                                 out);
+  return FormatSourceFileContext(location.file_line().file(), build_dir, opts, out);
 }
 
 }  // namespace zxdb

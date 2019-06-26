@@ -93,16 +93,14 @@ class OutputBuffer {
   OutputBuffer();
 
   // Creates an output buffer with one substring in it.
-  OutputBuffer(std::string str,
-               TextForegroundColor fg = TextForegroundColor::kDefault,
+  OutputBuffer(std::string str, TextForegroundColor fg = TextForegroundColor::kDefault,
                TextBackgroundColor bg = TextBackgroundColor::kDefault);
   OutputBuffer(Syntax syntax, std::string str);
 
   ~OutputBuffer();
 
   // Appends the given type.
-  void Append(std::string str,
-              TextForegroundColor fg = TextForegroundColor::kDefault,
+  void Append(std::string str, TextForegroundColor fg = TextForegroundColor::kDefault,
               TextBackgroundColor bg = TextBackgroundColor::kDefault);
   void Append(Syntax syntax, std::string str);
   void Append(OutputBuffer buffer);

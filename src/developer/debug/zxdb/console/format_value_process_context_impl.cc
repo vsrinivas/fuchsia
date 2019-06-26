@@ -19,13 +19,11 @@ FormatValueProcessContextImpl::FormatValueProcessContextImpl(Process* process)
     : weak_process_(process->GetWeakPtr()) {}
 FormatValueProcessContextImpl::~FormatValueProcessContextImpl() = default;
 
-Location FormatValueProcessContextImpl::GetLocationForAddress(
-    uint64_t address) const {
+Location FormatValueProcessContextImpl::GetLocationForAddress(uint64_t address) const {
   if (!weak_process_)
     return Location(Location::State::kAddress, address);  // Can't symbolize.
 
-  auto locations =
-      weak_process_->GetSymbols()->ResolveInputLocation(InputLocation(address));
+  auto locations = weak_process_->GetSymbols()->ResolveInputLocation(InputLocation(address));
 
   // Given an exact address, ResolveInputLocation() should only return one
   // result.

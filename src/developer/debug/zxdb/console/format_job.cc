@@ -27,8 +27,7 @@ std::string GetJobContextName(const JobContext* job_context) {
 
 }  // namespace
 
-OutputBuffer FormatJobContext(ConsoleContext* context,
-                              const JobContext* job_context) {
+OutputBuffer FormatJobContext(ConsoleContext* context, const JobContext* job_context) {
   int id = context->IdForJobContext(job_context);
   const char* state = JobContextStateToString(job_context->GetState());
 
@@ -36,12 +35,10 @@ OutputBuffer FormatJobContext(ConsoleContext* context,
   // concat'd even when not present and things look nice.
   std::string koid_str;
   if (job_context->GetState() == JobContext::State::kAttached) {
-    koid_str = fxl::StringPrintf("koid=%" PRIu64 " ",
-                                 job_context->GetJob()->GetKoid());
+    koid_str = fxl::StringPrintf("koid=%" PRIu64 " ", job_context->GetJob()->GetKoid());
   }
 
-  std::string result =
-      fxl::StringPrintf("Job %d [%s] %s", id, state, koid_str.c_str());
+  std::string result = fxl::StringPrintf("Job %d [%s] %s", id, state, koid_str.c_str());
   result += GetJobContextName(job_context);
   return result;
 }
@@ -54,8 +51,7 @@ OutputBuffer FormatJobList(ConsoleContext* context, int indent) {
   // Sort by ID.
   std::vector<std::pair<int, JobContext*>> id_job_contexts;
   for (auto& job_context : job_contexts)
-    id_job_contexts.push_back(
-        std::make_pair(context->IdForJobContext(job_context), job_context));
+    id_job_contexts.push_back(std::make_pair(context->IdForJobContext(job_context), job_context));
   std::sort(id_job_contexts.begin(), id_job_contexts.end());
 
   std::string indent_str(indent, ' ');
@@ -78,8 +74,7 @@ OutputBuffer FormatJobList(ConsoleContext* context, int indent) {
     // State and koid (if running).
     row.push_back(JobContextStateToString(pair.second->GetState()));
     if (pair.second->GetState() == JobContext::State::kAttached) {
-      row.push_back(
-          fxl::StringPrintf("%" PRIu64, pair.second->GetJob()->GetKoid()));
+      row.push_back(fxl::StringPrintf("%" PRIu64, pair.second->GetJob()->GetKoid()));
     } else {
       row.emplace_back();
     }
@@ -88,12 +83,10 @@ OutputBuffer FormatJobList(ConsoleContext* context, int indent) {
   }
 
   OutputBuffer out;
-  FormatTable(
-      {ColSpec(Align::kLeft),
-       ColSpec(Align::kRight, 0, "#", 0, Syntax::kSpecial),
-       ColSpec(Align::kLeft, 0, "State"), ColSpec(Align::kRight, 0, "Koid"),
-       ColSpec(Align::kLeft, 0, "Name")},
-      rows, &out);
+  FormatTable({ColSpec(Align::kLeft), ColSpec(Align::kRight, 0, "#", 0, Syntax::kSpecial),
+               ColSpec(Align::kLeft, 0, "State"), ColSpec(Align::kRight, 0, "Koid"),
+               ColSpec(Align::kLeft, 0, "Name")},
+              rows, &out);
   return out;
 }
 

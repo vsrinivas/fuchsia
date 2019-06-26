@@ -26,8 +26,7 @@ void OutputFrameList(Thread* thread, bool include_params, bool long_format);
 // Printing of function parameter types is controlled by include_params.
 //
 // This does not append a newline at the end of the output.
-void FormatFrame(const Frame* frame, bool include_params, OutputBuffer* out,
-                 int id = -1);
+void FormatFrame(const Frame* frame, bool include_params, OutputBuffer* out, int id = -1);
 
 // Formats one frame using the long format. Since the long format includes
 // function parameters which are computed asynchronously, this takes the
@@ -38,8 +37,8 @@ void FormatFrameLong(const Frame* frame, bool include_params, FormatValue* out,
                      const FormatExprValueOptions& options, int id = -1);
 
 // Asynchronously outputs a description of the current frame.
-void FormatFrameAsync(ConsoleContext* context, Target* target, Thread* thread,
-                      Frame* frame, bool force_types = false);
+void FormatFrameAsync(ConsoleContext* context, Target* target, Thread* thread, Frame* frame,
+                      bool force_types = false);
 
 }  // namespace zxdb
 

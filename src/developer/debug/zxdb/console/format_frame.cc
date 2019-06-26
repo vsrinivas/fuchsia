@@ -25,8 +25,7 @@ namespace zxdb {
 
 namespace {
 
-void ListCompletedFrames(Thread* thread, bool include_params,
-                         bool long_format) {
+void ListCompletedFrames(Thread* thread, bool include_params, bool long_format) {
   Console* console = Console::get();
   int active_frame_id = console->context().GetActiveFrameIdForThread(thread);
 
@@ -43,8 +42,7 @@ void ListCompletedFrames(Thread* thread, bool include_params,
   if (stack.empty()) {
     if (thread->GetState() != debug_ipc::ThreadRecord::State::kSuspended &&
         !(thread->GetState() == debug_ipc::ThreadRecord::State::kBlocked &&
-          thread->GetBlockedReason() ==
-              debug_ipc::ThreadRecord::BlockedReason::kException)) {
+          thread->GetBlockedReason() == debug_ipc::ThreadRecord::BlockedReason::kException)) {
       // Make a nicer error message for the common case of requesting stack
       // frames when the thread is in the wrong state.
       helper->Append(
@@ -60,14 +58,12 @@ void ListCompletedFrames(Thread* thread, bool include_params,
       else
         helper->Append("  ");
 
-      helper->Append(
-          OutputBuffer(Syntax::kSpecial, fxl::StringPrintf("%d ", i)));
+      helper->Append(OutputBuffer(Syntax::kSpecial, fxl::StringPrintf("%d ", i)));
 
       // Supply "-1" for the frame index to suppress printing (we already
       // did it above).
       if (long_format) {
-        FormatFrameLong(stack[i], include_params, helper.get(), format_options,
-                        -1);
+        FormatFrameLong(stack[i], include_params, helper.get(), format_options, -1);
       } else {
         OutputBuffer out;
         FormatFrame(stack[i], include_params, &out, -1);
@@ -87,30 +83,26 @@ void OutputFrameList(Thread* thread, bool include_params, bool long_format) {
   // Always request an up-to-date frame list from the agent. Various things
   // could have changed and the user is manually requesting a new list, so
   // don't rely on the cached copy even if Stack::has_all_frames() is true.
-  thread->GetStack().SyncFrames([thread = thread->GetWeakPtr(), include_params,
-                                 long_format](const Err& err) {
-    Console* console = Console::get();
-    if (!err.has_error() && thread)
-      ListCompletedFrames(thread.get(), include_params, long_format);
-    else
-      console->Output("Thread exited, no frames.\n");
-  });
+  thread->GetStack().SyncFrames(
+      [thread = thread->GetWeakPtr(), include_params, long_format](const Err& err) {
+        Console* console = Console::get();
+        if (!err.has_error() && thread)
+          ListCompletedFrames(thread.get(), include_params, long_format);
+        else
+          console->Output("Thread exited, no frames.\n");
+      });
 }
 
-void FormatFrame(const Frame* frame, bool include_params, OutputBuffer* out,
-                 int id) {
+void FormatFrame(const Frame* frame, bool include_params, OutputBuffer* out, int id) {
   if (id >= 0)
     out->Append(fxl::StringPrintf("Frame %d ", id));
 
   // Allow the thread to be null for unit testing purposes. This only disables
   // the file name shortener.
   const TargetSymbols* syms =
-      !frame->GetThread()
-          ? nullptr
-          : frame->GetThread()->GetProcess()->GetTarget()->GetSymbols();
+      !frame->GetThread() ? nullptr : frame->GetThread()->GetProcess()->GetTarget()->GetSymbols();
 
-  out->Append(
-      FormatLocation(syms, frame->GetLocation(), false, include_params));
+  out->Append(FormatLocation(syms, frame->GetLocation(), false, include_params));
 }
 
 void FormatFrameLong(const Frame* frame, bool include_params, FormatValue* out,
@@ -125,9 +117,7 @@ void FormatFrameLong(const Frame* frame, bool include_params, FormatValue* out,
     // Allow the thread to be null for unit testing purposes. This only
     // disables the file name shortener.
     const TargetSymbols* syms =
-        !frame->GetThread()
-            ? nullptr
-            : frame->GetThread()->GetProcess()->GetTarget()->GetSymbols();
+        !frame->GetThread() ? nullptr : frame->GetThread()->GetProcess()->GetTarget()->GetSymbols();
 
     out->Append(FormatLocation(syms, location, false, include_params));
   }
@@ -136,16 +126,14 @@ void FormatFrameLong(const Frame* frame, bool include_params, FormatValue* out,
     out->Append(OutputBuffer(Syntax::kComment, " (inline)"));
 
   // Long format includes the IP address and stack pointer.
-  out->Append(OutputBuffer(
-      Syntax::kComment,
-      fxl::StringPrintf("\n      IP = 0x%" PRIx64 ", SP = 0x%" PRIx64,
-                        frame->GetAddress(), frame->GetStackPointer())));
+  out->Append(OutputBuffer(Syntax::kComment,
+                           fxl::StringPrintf("\n      IP = 0x%" PRIx64 ", SP = 0x%" PRIx64,
+                                             frame->GetAddress(), frame->GetStackPointer())));
 
   // Base pointer.
   // TODO(brettw) make this work when the frame base is asynchronous.
   if (auto bp = frame->GetBasePointer()) {
-    out->Append(OutputBuffer(Syntax::kComment,
-                             fxl::StringPrintf(", base = 0x%" PRIx64, *bp)));
+    out->Append(OutputBuffer(Syntax::kComment, fxl::StringPrintf(", base = 0x%" PRIx64, *bp)));
   }
 
   if (location.symbol()) {
@@ -158,17 +146,16 @@ void FormatFrameLong(const Frame* frame, bool include_params, FormatValue* out,
           continue;  // Symbols are corrupt.
 
         out->Append("\n      ");  // Indent.
-        out->AppendVariable(location.symbol_context(), frame->GetEvalContext(),
-                            value, options);
+        out->AppendVariable(location.symbol_context(), frame->GetEvalContext(), value, options);
       }
     }
   }
 }
 
-void FormatFrameAsync(ConsoleContext* context, Target* target, Thread* thread,
-                      Frame* frame, bool force_types) {
-  auto helper = fxl::MakeRefCounted<FormatValue>(
-      std::make_unique<FormatValueProcessContextImpl>(target));
+void FormatFrameAsync(ConsoleContext* context, Target* target, Thread* thread, Frame* frame,
+                      bool force_types) {
+  auto helper =
+      fxl::MakeRefCounted<FormatValue>(std::make_unique<FormatValueProcessContextImpl>(target));
   FormatFrameLong(frame, force_types, helper.get(), FormatExprValueOptions(),
                   context->GetActiveFrameIdForThread(thread));
   helper->Complete([helper](OutputBuffer out) { Console::get()->Output(out); });

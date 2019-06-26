@@ -54,8 +54,8 @@ constexpr int kListAllSwitch = 1;
 constexpr int kListContextSwitch = 2;
 constexpr int kDumpIndexSwitch = 3;
 
-void DumpVariableLocation(const SymbolContext& symbol_context,
-                          const VariableLocation& loc, OutputBuffer* out) {
+void DumpVariableLocation(const SymbolContext& symbol_context, const VariableLocation& loc,
+                          OutputBuffer* out) {
   if (loc.is_null()) {
     out->Append("DWARF location: <no location info>\n");
     return;
@@ -67,10 +67,9 @@ void DumpVariableLocation(const SymbolContext& symbol_context,
     if (entry.begin == 0 && entry.end == 0) {
       out->Append("  <always valid>:");
     } else {
-      out->Append(
-          fxl::StringPrintf("  [0x%" PRIx64 ", 0x%" PRIx64 "):",
-                            symbol_context.RelativeToAbsolute(entry.begin),
-                            symbol_context.RelativeToAbsolute(entry.end)));
+      out->Append(fxl::StringPrintf(
+          "  [0x%" PRIx64 ", 0x%" PRIx64 "):", symbol_context.RelativeToAbsolute(entry.begin),
+          symbol_context.RelativeToAbsolute(entry.end)));
     }
 
     // Dump the raw DWARF expression bytes. In the future we can decode if
@@ -87,15 +86,13 @@ std::string GetTypeDescription(const LazySymbol& lazy_type) {
   return "<bad type>";
 }
 
-void DumpVariableInfo(const SymbolContext& symbol_context,
-                      const Variable* variable, OutputBuffer* out) {
+void DumpVariableInfo(const SymbolContext& symbol_context, const Variable* variable,
+                      OutputBuffer* out) {
   out->Append("Variable: ");
   out->Append(Syntax::kVariable, variable->GetAssignedName());
   out->Append("\n");
-  out->Append(fxl::StringPrintf("Type: %s\n",
-                                GetTypeDescription(variable->type()).c_str()));
-  out->Append(fxl::StringPrintf("DWARF tag: 0x02%x\n",
-                                static_cast<unsigned>(variable->tag())));
+  out->Append(fxl::StringPrintf("Type: %s\n", GetTypeDescription(variable->type()).c_str()));
+  out->Append(fxl::StringPrintf("DWARF tag: 0x02%x\n", static_cast<unsigned>(variable->tag())));
   DumpVariableLocation(symbol_context, variable->location(), out);
 }
 
@@ -103,12 +100,10 @@ void DumpDataMemberInfo(const DataMember* data_member, OutputBuffer* out) {
   out->Append("Data member: " + data_member->GetFullName() + "\n");
   const Symbol* parent = data_member->parent().Get();
   out->Append("Contained in: " + parent->GetFullName() + "\n");
-  out->Append(fxl::StringPrintf(
-      "Type: %s\n", GetTypeDescription(data_member->type()).c_str()));
-  out->Append(fxl::StringPrintf("Offset within container: %" PRIu32 "\n",
-                                data_member->member_location()));
-  out->Append(fxl::StringPrintf("DWARF tag: 0x02%x\n",
-                                static_cast<unsigned>(data_member->tag())));
+  out->Append(fxl::StringPrintf("Type: %s\n", GetTypeDescription(data_member->type()).c_str()));
+  out->Append(
+      fxl::StringPrintf("Offset within container: %" PRIu32 "\n", data_member->member_location()));
+  out->Append(fxl::StringPrintf("DWARF tag: 0x02%x\n", static_cast<unsigned>(data_member->tag())));
 }
 
 // auth ------------------------------------------------------------------------
@@ -145,24 +140,20 @@ Err DoAuth(ConsoleContext* context, const Command& cmd) {
       return Err("Unknown authentication type.");
     }
 
-    Console::get()->Output(
-        std::string("To authenticate, please supply an authentication "
-                    "token. You can retrieve a token from:\n\n") +
-        cmd.sym_server()->AuthInfo() +
-        "\n\nOnce you've retrieved a token, run 'auth <token>'");
+    Console::get()->Output(std::string("To authenticate, please supply an authentication "
+                                       "token. You can retrieve a token from:\n\n") +
+                           cmd.sym_server()->AuthInfo() +
+                           "\n\nOnce you've retrieved a token, run 'auth <token>'");
     return Err();
   }
 
-  cmd.sym_server()->Authenticate(
-      cmd.args()[0], [name = cmd.sym_server()->name()](const Err& err) {
-        if (!err.has_error()) {
-          Console::get()->Output(
-              std::string("Successfully authenticated with ") + name);
-        } else {
-          Console::get()->Output(std::string("Authentication with ") + name +
-                                 " failed: " + err.msg());
-        }
-      });
+  cmd.sym_server()->Authenticate(cmd.args()[0], [name = cmd.sym_server()->name()](const Err& err) {
+    if (!err.has_error()) {
+      Console::get()->Output(std::string("Successfully authenticated with ") + name);
+    } else {
+      Console::get()->Output(std::string("Authentication with ") + name + " failed: " + err.msg());
+    }
+  });
 
   return Err();  // Will complete asynchronously.
 }
@@ -209,13 +200,11 @@ Examples
 
 // Expands the input file name to a fully qualified one if it is unique. If
 // it's ambiguous, return an error.
-Err CanonicalizeFile(const TargetSymbols* target_symbols, const FileLine& input,
-                     FileLine* output) {
+Err CanonicalizeFile(const TargetSymbols* target_symbols, const FileLine& input, FileLine* output) {
   auto matches = target_symbols->FindFileMatches(input.file());
   if (matches.empty()) {
     // No match.
-    return Err("There is no source file in this process matching \"" +
-               input.file() + "\".");
+    return Err("There is no source file in this process matching \"" + input.file() + "\".");
   }
 
   if (matches.size() == 1) {
@@ -234,9 +223,8 @@ Err CanonicalizeFile(const TargetSymbols* target_symbols, const FileLine& input,
 // target_symbols is required but process_symbols may be null if the process
 // is not running. In that case, if a running process is required to resolve
 // the input, an error will be thrown.
-Err ParseListLocation(const TargetSymbols* target_symbols,
-                      const ProcessSymbols* process_symbols, const Frame* frame,
-                      const std::string& arg, FileLine* file_line) {
+Err ParseListLocation(const TargetSymbols* target_symbols, const ProcessSymbols* process_symbols,
+                      const Frame* frame, const std::string& arg, FileLine* file_line) {
   // One arg = normal location (ParseInputLocation can handle null frames).
   InputLocation input_location;
   Err err = ParseInputLocation(frame, arg, &input_location);
@@ -255,11 +243,9 @@ Err ParseListLocation(const TargetSymbols* target_symbols,
   if (input_location.type == InputLocation::Type::kAddress) {
     if (!process_symbols)
       return Err("Looking up an address requires a running process.");
-    locations =
-        process_symbols->ResolveInputLocation(input_location, ResolveOptions());
+    locations = process_symbols->ResolveInputLocation(input_location, ResolveOptions());
   } else {
-    locations =
-        target_symbols->ResolveInputLocation(input_location, ResolveOptions());
+    locations = target_symbols->ResolveInputLocation(input_location, ResolveOptions());
   }
 
   // Inlined functions might resolve to many locations, but only one file/line,
@@ -278,8 +264,7 @@ Err ParseListLocation(const TargetSymbols* target_symbols,
 
     switch (input_location.type) {
       case InputLocation::Type::kLine:
-        return Err("There are no files matching \"%s\".",
-                   input_location.line.file().c_str());
+        return Err("There are no files matching \"%s\".", input_location.line.file().c_str());
       case InputLocation::Type::kSymbol:
         return Err("There are no symbols matching \"%s\".",
                    FormatInputLocation(input_location).AsString().c_str());
@@ -295,8 +280,8 @@ Err ParseListLocation(const TargetSymbols* target_symbols,
   if (matches.size() > 1) {
     std::string msg = "There are multiple matches for this symbol:\n";
     for (const auto& match : matches) {
-      msg += fxl::StringPrintf(" %s %s:%d\n", GetBullet().c_str(),
-                               match.file().c_str(), match.line());
+      msg +=
+          fxl::StringPrintf(" %s %s:%d\n", GetBullet().c_str(), match.file().c_str(), match.line());
     }
     return Err(msg);
   }
@@ -315,8 +300,7 @@ Err DoList(ConsoleContext* context, const Command& cmd) {
   FileLine file_line;
   if (cmd.args().empty()) {
     if (!cmd.frame()) {
-      return Err(ErrType::kInput,
-                 "There isn't a current frame to take the location from.");
+      return Err(ErrType::kInput, "There isn't a current frame to take the location from.");
     }
     file_line = cmd.frame()->GetLocation().file_line();
   } else if (cmd.args().size() == 1) {
@@ -326,8 +310,8 @@ Err DoList(ConsoleContext* context, const Command& cmd) {
     if (cmd.target()->GetProcess())
       process_symbols = cmd.target()->GetProcess()->GetSymbols();
 
-    err = ParseListLocation(cmd.target()->GetSymbols(), process_symbols,
-                            cmd.frame(), cmd.args()[0], &file_line);
+    err = ParseListLocation(cmd.target()->GetSymbols(), process_symbols, cmd.frame(), cmd.args()[0],
+                            &file_line);
     if (err.has_error())
       return err;
   } else {
@@ -370,8 +354,7 @@ Err DoList(ConsoleContext* context, const Command& cmd) {
       opts.active_line = active_file_line.line();
   }
 
-  const std::string& build_dir =
-      cmd.target()->session()->system().GetSymbols()->build_dir();
+  const std::string& build_dir = cmd.target()->session()->system().GetSymbols()->build_dir();
 
   OutputBuffer out;
   err = FormatSourceFileContext(file_line.file(), build_dir, opts, &out);
@@ -417,8 +400,7 @@ Err DoSymInfo(ConsoleContext* context, const Command& cmd) {
     const Location& location = cmd.frame()->GetLocation();
     fxl::RefPtr<EvalContext> eval_context = cmd.frame()->GetEvalContext();
     eval_context->GetNamedValue(
-        identifier, [location](const Err& err, fxl::RefPtr<Symbol> symbol,
-                               ExprValue value) {
+        identifier, [location](const Err& err, fxl::RefPtr<Symbol> symbol, ExprValue value) {
           // Expression evaluation could fail but there still could be a symbol.
           OutputBuffer out;
           if (!symbol) {
@@ -471,18 +453,15 @@ Example
   sym-stat --dump-index
 )";
 
-void SummarizeProcessSymbolStatus(ConsoleContext* context, Process* process,
-                                  OutputBuffer* out) {
+void SummarizeProcessSymbolStatus(ConsoleContext* context, Process* process, OutputBuffer* out) {
   // Get modules sorted by name.
   std::vector<ModuleSymbolStatus> modules = process->GetSymbols()->GetStatus();
-  std::sort(modules.begin(), modules.end(),
-            [](const ModuleSymbolStatus& a, const ModuleSymbolStatus& b) {
-              return a.name < b.name;
-            });
+  std::sort(
+      modules.begin(), modules.end(),
+      [](const ModuleSymbolStatus& a, const ModuleSymbolStatus& b) { return a.name < b.name; });
 
-  out->Append(Syntax::kHeading,
-              fxl::StringPrintf("\nProcess %d symbol status\n\n",
-                                context->IdForTarget(process->GetTarget())));
+  out->Append(Syntax::kHeading, fxl::StringPrintf("\nProcess %d symbol status\n\n",
+                                                  context->IdForTarget(process->GetTarget())));
 
   for (const auto& module : modules) {
     out->Append(Syntax::kHeading, "  " + module.name + "\n");
@@ -496,14 +475,11 @@ void SummarizeProcessSymbolStatus(ConsoleContext* context, Process* process,
     out->Append("\n");
 
     if (module.symbols_loaded) {
-      out->Append("    Symbols loaded: Yes\n    Symbol file: " +
-                  module.symbol_file);
+      out->Append("    Symbols loaded: Yes\n    Symbol file: " + module.symbol_file);
       out->Append(module.files_indexed ? Syntax::kNormal : Syntax::kError,
-                  fxl::StringPrintf("\n    Source files indexed: %zu",
-                                    module.files_indexed));
+                  fxl::StringPrintf("\n    Source files indexed: %zu", module.files_indexed));
       out->Append(module.functions_indexed ? Syntax::kNormal : Syntax::kError,
-                  fxl::StringPrintf("\n    Symbols indexed: %zu",
-                                    module.functions_indexed));
+                  fxl::StringPrintf("\n    Symbols indexed: %zu", module.functions_indexed));
     } else {
       out->Append(Syntax::kError, "    Symbols loaded: No");
     }
@@ -514,8 +490,7 @@ void SummarizeProcessSymbolStatus(ConsoleContext* context, Process* process,
     out->Append(Syntax::kError, "  No known modules.\n");
 
   out->Append(Syntax::kWarning, "  👉 ");
-  out->Append(Syntax::kComment,
-              "Use \"libs\" to refresh the module list from the process.");
+  out->Append(Syntax::kComment, "Use \"libs\" to refresh the module list from the process.");
   out->Append(Syntax::kNormal, "\n\n");
 }
 
@@ -530,9 +505,8 @@ void DumpIndexOverview(SystemSymbols* system_symbols, OutputBuffer* out) {
         "\n\n  Use the command-line switch \"zxdb -s <path>\" to "
         "specify the location of\n  your symbols.\n\n");
   } else {
-    out->Append(
-        Syntax::kComment,
-        "  Use \"sym-stat --dump-index\" to see the individual mappings.\n\n");
+    out->Append(Syntax::kComment,
+                "  Use \"sym-stat --dump-index\" to see the individual mappings.\n\n");
     for (const auto& pair : index_status) {
       auto& row = table.emplace_back();
       auto syntax = pair.second ? Syntax::kNormal : Syntax::kError;
@@ -545,21 +519,19 @@ void DumpIndexOverview(SystemSymbols* system_symbols, OutputBuffer* out) {
 
       row.emplace_back(syntax, pair.first);
     }
-    FormatTable({ColSpec(Align::kRight, 0, "Indexed", 2),
-                 ColSpec(Align::kLeft, 0, "Source path", 1)},
-                table, out);
+    FormatTable(
+        {ColSpec(Align::kRight, 0, "Indexed", 2), ColSpec(Align::kLeft, 0, "Source path", 1)},
+        table, out);
   }
 }
 
 void DumpBuildIdIndex(SystemSymbols* system_symbols, OutputBuffer* out) {
-  const auto& build_id_to_files =
-      system_symbols->build_id_index().build_id_to_files();
+  const auto& build_id_to_files = system_symbols->build_id_index().build_id_to_files();
   if (build_id_to_files.empty()) {
     out->Append(Syntax::kError, "  No build IDs found.\n");
   } else {
     for (const auto& [id, files] : build_id_to_files)
-      out->Append(
-          fxl::StringPrintf("%s %s\n", id.c_str(), files.debug_info.c_str()));
+      out->Append(fxl::StringPrintf("%s %s\n", id.c_str(), files.debug_info.c_str()));
   }
   out->Append("\n");
 }
@@ -621,8 +593,8 @@ Err DoSymNear(ConsoleContext* context, const Command& cmd) {
 
   return EvalCommandAddressExpression(
       cmd, "sym-near", GetEvalContextForCommand(cmd),
-      [weak_process = cmd.target()->GetProcess()->GetWeakPtr()](
-          const Err& err, uint64_t address, std::optional<uint64_t> size) {
+      [weak_process = cmd.target()->GetProcess()->GetWeakPtr()](const Err& err, uint64_t address,
+                                                                std::optional<uint64_t> size) {
         Console* console = Console::get();
         if (err.has_error()) {
           console->Output(err);  // Evaluation error.
@@ -635,11 +607,10 @@ Err DoSymNear(ConsoleContext* context, const Command& cmd) {
           return;
         }
 
-        auto locations = weak_process->GetSymbols()->ResolveInputLocation(
-            InputLocation(address));
+        auto locations = weak_process->GetSymbols()->ResolveInputLocation(InputLocation(address));
         FXL_DCHECK(locations.size() == 1u);
-        console->Output(FormatLocation(weak_process->GetTarget()->GetSymbols(),
-                                       locations[0], true, true));
+        console->Output(
+            FormatLocation(weak_process->GetTarget()->GetSymbols(), locations[0], true, true));
       });
 }
 
@@ -738,8 +709,7 @@ struct CaseInsensitiveCompare {
   }
 };
 
-std::string CreateSymbolName(const Command& cmd,
-                             const std::vector<std::string>& names,
+std::string CreateSymbolName(const Command& cmd, const std::vector<std::string>& names,
                              int indent_level) {
   if (cmd.HasSwitch(kSymSearchUnfold))
     return fxl::StringPrintf("%*s%s", indent_level, "", names.back().c_str());
@@ -753,8 +723,8 @@ struct DumpModuleContext {
 };
 
 // Returns true if the list was truncated.
-bool DumpModule(const Command& cmd, const ModuleSymbolIndexNode& node,
-                DumpModuleContext* context, int indent_level = 0) {
+bool DumpModule(const Command& cmd, const ModuleSymbolIndexNode& node, DumpModuleContext* context,
+                int indent_level = 0) {
   // Root node doesn't have a name, so it's not printed.
   bool root = context->names->empty();
   if (!root) {
@@ -764,8 +734,7 @@ bool DumpModule(const Command& cmd, const ModuleSymbolIndexNode& node,
     }
   }
 
-  if (!cmd.HasSwitch(kSymSearchListAll) &&
-      context->output->size() >= kSymSearchListLimit) {
+  if (!cmd.HasSwitch(kSymSearchListAll) && context->output->size() >= kSymSearchListLimit) {
     return true;
   }
 
@@ -838,8 +807,7 @@ Err DoSymSearch(ConsoleContext* context, const Command& cmd) {
   size_t current_index = 0;
   for (const auto& [module_info, limit] : module_symbol_indices) {
     console->Output(
-        OutputBuffer(Syntax::kHeading,
-                     fxl::StringPrintf("%s\n\n", module_info.name.c_str())));
+        OutputBuffer(Syntax::kHeading, fxl::StringPrintf("%s\n\n", module_info.name.c_str())));
 
     while (current_index < limit) {
       console->Output(dump[current_index]);
@@ -863,16 +831,14 @@ Err DoSymSearch(ConsoleContext* context, const Command& cmd) {
 }  // namespace
 
 void AppendSymbolVerbs(std::map<Verb, VerbRecord>* verbs) {
-  VerbRecord list(&DoList, &CompleteInputLocation, {"list", "l"},
-                  kListShortHelp, kListHelp, CommandGroup::kQuery,
-                  SourceAffinity::kSource);
+  VerbRecord list(&DoList, &CompleteInputLocation, {"list", "l"}, kListShortHelp, kListHelp,
+                  CommandGroup::kQuery, SourceAffinity::kSource);
   list.switches.emplace_back(kListAllSwitch, false, "all", 'a');
   list.switches.emplace_back(kListContextSwitch, true, "context", 'c');
 
   (*verbs)[Verb::kList] = std::move(list);
   (*verbs)[Verb::kSymInfo] =
-      VerbRecord(&DoSymInfo, {"sym-info"}, kSymInfoShortHelp, kSymInfoHelp,
-                 CommandGroup::kSymbol);
+      VerbRecord(&DoSymInfo, {"sym-info"}, kSymInfoShortHelp, kSymInfoHelp, CommandGroup::kSymbol);
 
   // sym-stat
   VerbRecord sym_stat(&DoSymStat, {"sym-stat"}, kSymStatShortHelp, kSymStatHelp,
@@ -880,17 +846,16 @@ void AppendSymbolVerbs(std::map<Verb, VerbRecord>* verbs) {
   sym_stat.switches.emplace_back(kDumpIndexSwitch, false, "dump-index", 0);
   (*verbs)[Verb::kSymStat] = std::move(sym_stat);
 
-  (*verbs)[Verb::kSymNear] =
-      VerbRecord(&DoSymNear, {"sym-near", "sn"}, kSymNearShortHelp,
-                 kSymNearHelp, CommandGroup::kSymbol);
+  (*verbs)[Verb::kSymNear] = VerbRecord(&DoSymNear, {"sym-near", "sn"}, kSymNearShortHelp,
+                                        kSymNearHelp, CommandGroup::kSymbol);
 
-  VerbRecord search(&DoSymSearch, {"sym-search"}, kSymSearchShortHelp,
-                    kSymSearchHelp, CommandGroup::kSymbol);
+  VerbRecord search(&DoSymSearch, {"sym-search"}, kSymSearchShortHelp, kSymSearchHelp,
+                    CommandGroup::kSymbol);
   search.switches.emplace_back(kSymSearchListAll, false, "--all", 'a');
   search.switches.emplace_back(kSymSearchUnfold, false, "unfold", 'u');
   (*verbs)[Verb::kSymSearch] = std::move(search);
-  (*verbs)[Verb::kAuth] = VerbRecord(&DoAuth, {"auth"}, kAuthShortHelp,
-                                     kAuthHelp, CommandGroup::kSymbol);
+  (*verbs)[Verb::kAuth] =
+      VerbRecord(&DoAuth, {"auth"}, kAuthShortHelp, kAuthHelp, CommandGroup::kSymbol);
 }
 
 }  // namespace zxdb

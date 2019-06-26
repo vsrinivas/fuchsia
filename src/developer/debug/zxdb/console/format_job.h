@@ -14,8 +14,7 @@ namespace zxdb {
 
 class ConsoleContext;
 
-OutputBuffer FormatJobContext(ConsoleContext* context,
-                              const JobContext* job_context);
+OutputBuffer FormatJobContext(ConsoleContext* context, const JobContext* job_context);
 
 // Formats all jobs as a table. The number of spaces given by |indent| will be
 // added to the left.

@@ -21,8 +21,8 @@ namespace {
 
 // List Processes --------------------------------------------------------------
 
-void OutputProcessTreeRecord(const debug_ipc::ProcessTreeRecord& rec,
-                             int indent, OutputBuffer* output) {
+void OutputProcessTreeRecord(const debug_ipc::ProcessTreeRecord& rec, int indent,
+                             OutputBuffer* output) {
   std::ostringstream line;
   line << std::setw(indent * 2) << "";
 
@@ -44,8 +44,7 @@ void OutputProcessTreeRecord(const debug_ipc::ProcessTreeRecord& rec,
     OutputProcessTreeRecord(child, indent + 1, output);
 }
 
-void OnListProcessesComplete(const Err& err,
-                             debug_ipc::ProcessTreeReply reply) {
+void OnListProcessesComplete(const Err& err, debug_ipc::ProcessTreeReply reply) {
   OutputBuffer out;
   if (err.has_error())
     out.Append(err);
@@ -54,8 +53,7 @@ void OnListProcessesComplete(const Err& err,
   Console::get()->Output(out);
 }
 
-const char kListProcessesShortHelp[] =
-    "ps: Prints the process tree of the debugged system.";
+const char kListProcessesShortHelp[] = "ps: Prints the process tree of the debugged system.";
 const char kListProcessesHelp[] =
     R"(ps
 
@@ -68,8 +66,7 @@ Err DoListProcesses(ConsoleContext* context, const Command& cmd) {
 
 // System Info -----------------------------------------------------------------
 
-const char kSysInfoShortHelp[] =
-    "sys-info: Get general information about the target system.";
+const char kSysInfoShortHelp[] = "sys-info: Get general information about the target system.";
 
 const char kSysInfoHelp[] =
     R"(sys-info
@@ -96,10 +93,8 @@ void OnSysInfo(const Err& err, debug_ipc::SysInfoReply sys_info) {
     out.Append(Syntax::kComment, "<Unknown>\n");
   }
 
-  out.Append(
-      fxl::StringPrintf("HW Breakpoints: %u\n", sys_info.hw_breakpoint_count));
-  out.Append(
-      fxl::StringPrintf("HW Watchpoints: %u\n", sys_info.hw_watchpoint_count));
+  out.Append(fxl::StringPrintf("HW Breakpoints: %u\n", sys_info.hw_breakpoint_count));
+  out.Append(fxl::StringPrintf("HW Watchpoints: %u\n", sys_info.hw_watchpoint_count));
 
   Console::get()->Output(std::move(out));
 }
@@ -113,12 +108,10 @@ Err DoSysInfo(ConsoleContext* context, const Command& cmd) {
 }  // namespace
 
 void AppendSystemVerbs(std::map<Verb, VerbRecord>* verbs) {
-  (*verbs)[Verb::kListProcesses] =
-      VerbRecord(&DoListProcesses, {"ps"}, kListProcessesShortHelp,
-                 kListProcessesHelp, CommandGroup::kGeneral);
+  (*verbs)[Verb::kListProcesses] = VerbRecord(&DoListProcesses, {"ps"}, kListProcessesShortHelp,
+                                              kListProcessesHelp, CommandGroup::kGeneral);
   (*verbs)[Verb::kSysInfo] =
-      VerbRecord(&DoSysInfo, {"sys-info"}, kSysInfoShortHelp, kSysInfoHelp,
-                 CommandGroup::kGeneral);
+      VerbRecord(&DoSysInfo, {"sys-info"}, kSysInfoShortHelp, kSysInfoHelp, CommandGroup::kGeneral);
 }
 
 }  // namespace zxdb

@@ -32,8 +32,8 @@ size_t GetTerminalMaxCols(int fileno) {
     fdio_t* io = fdio_unsafe_fd_to_io(STDIN_FILENO);
     fuchsia_hardware_pty_WindowSize wsz;
     zx_status_t status;
-    zx_status_t call_status = fuchsia_hardware_pty_DeviceGetWindowSize(
-        fdio_unsafe_borrow_channel(io), &status, &wsz);
+    zx_status_t call_status =
+        fuchsia_hardware_pty_DeviceGetWindowSize(fdio_unsafe_borrow_channel(io), &status, &wsz);
     fdio_unsafe_release(io);
     if (call_status != ZX_OK || status != ZX_OK) {
       return 0;
@@ -423,8 +423,7 @@ void LineInputBase::RepaintLine() {
   buf += SpecialCharacters::kTermClearToEnd;
 
   char forward_buf[32];
-  snprintf(forward_buf, sizeof(forward_buf),
-           SpecialCharacters::kTermCursorToColFormat,
+  snprintf(forward_buf, sizeof(forward_buf), SpecialCharacters::kTermCursorToColFormat,
            static_cast<int>(pos_in_cols));
   buf += forward_buf;
 
@@ -440,8 +439,7 @@ void LineInputBase::ResetLineState() {
   cur_line() = std::string();
 }
 
-LineInputStdout::LineInputStdout(const std::string& prompt)
-    : LineInputBase(prompt) {
+LineInputStdout::LineInputStdout(const std::string& prompt) : LineInputBase(prompt) {
   set_max_cols(GetTerminalMaxCols(STDIN_FILENO));
 }
 LineInputStdout::~LineInputStdout() {}

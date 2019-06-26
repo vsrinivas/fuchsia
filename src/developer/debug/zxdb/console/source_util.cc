@@ -21,8 +21,7 @@ Err GetFileContents(const std::string& file_name, const std::string& build_dir,
     // Absolute path, expect it to be readable or fail.
     if (!files::ReadFileToString(file_name, contents))
       return Err("Source file not found: " + file_name);
-  } else if (!files::ReadFileToString(CatPathComponents(build_dir, file_name),
-                                      contents)) {
+  } else if (!files::ReadFileToString(CatPathComponents(build_dir, file_name), contents)) {
     // Doesn't exist relative to build dir, fall back to trying to read it
     // from the current dir.
     if (!files::ReadFileToString(file_name, contents))
@@ -31,8 +30,8 @@ Err GetFileContents(const std::string& file_name, const std::string& build_dir,
   return Err();
 }
 
-std::vector<std::string> ExtractSourceLines(const std::string& contents,
-                                            int first_line, int last_line) {
+std::vector<std::string> ExtractSourceLines(const std::string& contents, int first_line,
+                                            int last_line) {
   FXL_DCHECK(first_line > 0);
 
   std::vector<std::string> result;

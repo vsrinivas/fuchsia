@@ -75,9 +75,8 @@ void JobCommandCallback(const char* verb, fxl::WeakPtr<JobContext> job_context,
   OutputBuffer out;
   if (err.has_error()) {
     if (job_context) {
-      out.Append(fxl::StringPrintf(
-          "Job %d %s failed.\n",
-          console->context().IdForJobContext(job_context.get()), verb));
+      out.Append(fxl::StringPrintf("Job %d %s failed.\n",
+                                   console->context().IdForJobContext(job_context.get()), verb));
     }
     out.Append(err);
   } else if (job_context) {
@@ -96,9 +95,8 @@ void JobCommandCallback(const char* verb, fxl::WeakPtr<JobContext> job_context,
 //
 // The optional callback parameter will be issued with the error for calling
 // code to identify the error.
-void ProcessCommandCallback(fxl::WeakPtr<Target> target,
-                            bool display_message_on_success, const Err& err,
-                            CommandCallback callback = nullptr) {
+void ProcessCommandCallback(fxl::WeakPtr<Target> target, bool display_message_on_success,
+                            const Err& err, CommandCallback callback = nullptr) {
   if (display_message_on_success || err.has_error()) {
     // Display messaging.
     Console* console = Console::get();
@@ -106,8 +104,7 @@ void ProcessCommandCallback(fxl::WeakPtr<Target> target,
     OutputBuffer out;
     if (err.has_error()) {
       if (target) {
-        out.Append(fxl::StringPrintf(
-            "Process %d ", console->context().IdForTarget(target.get())));
+        out.Append(fxl::StringPrintf("Process %d ", console->context().IdForTarget(target.get())));
       }
       out.Append(err);
     } else if (target) {
@@ -210,11 +207,10 @@ void LaunchComponent(const Command& cmd) {
   request.inferior_type = debug_ipc::InferiorType::kComponent;
   request.argv = cmd.args();
 
-  auto launch_cb = [target = cmd.target()->GetWeakPtr()](
-                       const Err& err, debug_ipc::LaunchReply reply) {
+  auto launch_cb = [target = cmd.target()->GetWeakPtr()](const Err& err,
+                                                         debug_ipc::LaunchReply reply) {
     FXL_DCHECK(reply.inferior_type == debug_ipc::InferiorType::kComponent)
-        << "Expected Component, Got: "
-        << debug_ipc::InferiorTypeToString(reply.inferior_type);
+        << "Expected Component, Got: " << debug_ipc::InferiorTypeToString(reply.inferior_type);
     if (err.has_error()) {
       Console::get()->Output(err);
       return;
@@ -223,8 +219,7 @@ void LaunchComponent(const Command& cmd) {
     if (reply.status != debug_ipc::kZxOk) {
       // TODO(donosoc): This should interpret the component termination reason
       //                values.
-      Console::get()->Output(Err("Could not start component %s: %s",
-                                 reply.process_name.c_str(),
+      Console::get()->Output(Err("Could not start component %s: %s", reply.process_name.c_str(),
                                  debug_ipc::ZxStatusToString(reply.status)));
       return;
     }
@@ -237,12 +232,10 @@ void LaunchComponent(const Command& cmd) {
     target->session()->ExpectComponent(reply.component_id);
   };
 
-  cmd.target()->session()->remote_api()->Launch(std::move(request),
-                                                std::move(launch_cb));
+  cmd.target()->session()->remote_api()->Launch(std::move(request), std::move(launch_cb));
 }
 
-Err DoRun(ConsoleContext* context, const Command& cmd,
-          CommandCallback callback = nullptr) {
+Err DoRun(ConsoleContext* context, const Command& cmd, CommandCallback callback = nullptr) {
   // Only a process can be run.
   Err err = cmd.ValidateNouns({Noun::kProcess});
   if (err.has_error())
@@ -268,12 +261,11 @@ Err DoRun(ConsoleContext* context, const Command& cmd,
       cmd.target()->SetArgs(cmd.args());
     }
 
-    cmd.target()->Launch(
-        [callback](fxl::WeakPtr<Target> target, const Err& err) {
-          // The ConsoleContext displays messages for new processes, so don't
-          // display messages when successfully starting.
-          ProcessCommandCallback(target, false, err, callback);
-        });
+    cmd.target()->Launch([callback](fxl::WeakPtr<Target> target, const Err& err) {
+      // The ConsoleContext displays messages for new processes, so don't
+      // display messages when successfully starting.
+      ProcessCommandCallback(target, false, err, callback);
+    });
   } else {
     LaunchComponent(cmd);
   }
@@ -300,8 +292,7 @@ Examples
   process 4 kill
       Kills process 4.
 )";
-Err DoKill(ConsoleContext* context, const Command& cmd,
-           CommandCallback callback = nullptr) {
+Err DoKill(ConsoleContext* context, const Command& cmd, CommandCallback callback = nullptr) {
   // Only a process can be detached.
   Err err = cmd.ValidateNouns({Noun::kProcess});
   if (err.has_error())
@@ -406,8 +397,7 @@ Err DoAttachFilter(ConsoleContext* context, const Command& cmd,
     return Err("Wrong number of arguments to attach.");
 
   Filter* filter;
-  if (cmd.HasNoun(Noun::kFilter) &&
-      cmd.GetNounIndex(Noun::kFilter) != Command::kNoIndex) {
+  if (cmd.HasNoun(Noun::kFilter) && cmd.GetNounIndex(Noun::kFilter) != Command::kNoIndex) {
     if (cmd.HasNoun(Noun::kJob)) {
       return Err("Cannot change job for existing filter.");
     }
@@ -421,13 +411,11 @@ Err DoAttachFilter(ConsoleContext* context, const Command& cmd,
 
   filter->SetPattern(cmd.args()[0]);
 
-  Console::get()->Output("Waiting for process matching /" + cmd.args()[0] +
-                         "/");
+  Console::get()->Output("Waiting for process matching /" + cmd.args()[0] + "/");
   return Err();
 }
 
-Err DoAttach(ConsoleContext* context, const Command& cmd,
-             CommandCallback callback = nullptr) {
+Err DoAttach(ConsoleContext* context, const Command& cmd, CommandCallback callback = nullptr) {
   // Only a process can be attached.
   Err err = cmd.ValidateNouns({Noun::kProcess, Noun::kJob, Noun::kFilter});
   if (err.has_error())
@@ -451,8 +439,7 @@ Err DoAttach(ConsoleContext* context, const Command& cmd,
       JobCommandCallback("attach", job_context, true, err, callback);
     };
 
-    if (cmd.HasSwitch(kAttachComponentRootSwitch) &&
-        cmd.HasSwitch(kAttachSystemRootSwitch))
+    if (cmd.HasSwitch(kAttachComponentRootSwitch) && cmd.HasSwitch(kAttachSystemRootSwitch))
       return Err("Can't specify both component and root job.");
 
     if (cmd.HasSwitch(kAttachComponentRootSwitch)) {
@@ -493,10 +480,9 @@ Err DoAttach(ConsoleContext* context, const Command& cmd,
       return err;
     }
 
-    cmd.target()->Attach(
-        koid, [callback](fxl::WeakPtr<Target> target, const Err& err) {
-          ProcessCommandCallback(target, true, err, callback);
-        });
+    cmd.target()->Attach(koid, [callback](fxl::WeakPtr<Target> target, const Err& err) {
+      ProcessCommandCallback(target, true, err, callback);
+    });
   }
   return Err();
 }
@@ -529,8 +515,7 @@ Examples
   job 3 detach
       Detaches from job context 3.
 )";
-Err DoDetach(ConsoleContext* context, const Command& cmd,
-             CommandCallback callback = nullptr) {
+Err DoDetach(ConsoleContext* context, const Command& cmd, CommandCallback callback = nullptr) {
   // Only a process can be detached.
   Err err = cmd.ValidateNouns({Noun::kProcess, Noun::kJob});
   if (err.has_error())
@@ -540,20 +525,18 @@ Err DoDetach(ConsoleContext* context, const Command& cmd,
     return Err(ErrType::kInput, "\"detach\" takes no parameters.");
 
   if (cmd.HasNoun(Noun::kJob)) {
-    cmd.job_context()->Detach(
-        [callback](fxl::WeakPtr<JobContext> job_context, const Err& err) {
-          JobCommandCallback("detach", job_context, true, err, callback);
-        });
+    cmd.job_context()->Detach([callback](fxl::WeakPtr<JobContext> job_context, const Err& err) {
+      JobCommandCallback("detach", job_context, true, err, callback);
+    });
   } else {
     // Only print something when there was an error detaching. The console
     // context will watch for Process destruction and print messages for each
     // one in the success case.
-    cmd.target()->Detach(
-        [callback](fxl::WeakPtr<Target> target, const Err& err) {
-          // The ConsoleContext displays messages for stopped processes, so
-          // don't display messages when successfully detaching.
-          ProcessCommandCallback(target, false, err, callback);
-        });
+    cmd.target()->Detach([callback](fxl::WeakPtr<Target> target, const Err& err) {
+      // The ConsoleContext displays messages for stopped processes, so
+      // don't display messages when successfully detaching.
+      ProcessCommandCallback(target, false, err, callback);
+    });
   }
   return Err();
 }
@@ -582,19 +565,16 @@ void OnLibsComplete(const Err& err, std::vector<debug_ipc::Module> modules) {
 
   // Sort by load address.
   std::sort(modules.begin(), modules.end(),
-            [](const debug_ipc::Module& a, const debug_ipc::Module& b) {
-              return a.base < b.base;
-            });
+            [](const debug_ipc::Module& a, const debug_ipc::Module& b) { return a.base < b.base; });
 
   std::vector<std::vector<std::string>> rows;
   for (const auto& module : modules) {
-    rows.push_back(std::vector<std::string>{
-        fxl::StringPrintf("0x%" PRIx64, module.base), module.name});
+    rows.push_back(
+        std::vector<std::string>{fxl::StringPrintf("0x%" PRIx64, module.base), module.name});
   }
 
   OutputBuffer out;
-  FormatTable({ColSpec(Align::kRight, 0, "Load address", 2),
-               ColSpec(Align::kLeft, 0, "Name", 1)},
+  FormatTable({ColSpec(Align::kRight, 0, "Load address", 2), ColSpec(Align::kLeft, 0, "Name", 1)},
               rows, &out);
   console->Output(out);
 }
@@ -639,8 +619,7 @@ std::string PrintRegionName(uint64_t depth, const std::string& name) {
   return std::string(depth * 2, ' ') + name;
 }
 
-const char kAspaceShortHelp[] =
-    "aspace / as: Show address space for a process.";
+const char kAspaceShortHelp[] = "aspace / as: Show address space for a process.";
 const char kAspaceHelp[] =
     R"(aspace [ <address> ]
 
@@ -659,8 +638,7 @@ Examples
   process 2 aspace
 )";
 
-void OnAspaceComplete(const Err& err,
-                      std::vector<debug_ipc::AddressRegion> map) {
+void OnAspaceComplete(const Err& err, std::vector<debug_ipc::AddressRegion> map) {
   Console* console = Console::get();
   if (err.has_error()) {
     console->Output(err);
@@ -676,16 +654,13 @@ void OnAspaceComplete(const Err& err,
   for (const auto& region : map) {
     rows.push_back(std::vector<std::string>{
         fxl::StringPrintf("0x%" PRIx64, region.base),
-        fxl::StringPrintf("0x%" PRIx64, region.base + region.size),
-        PrintRegionSize(region.size),
+        fxl::StringPrintf("0x%" PRIx64, region.base + region.size), PrintRegionSize(region.size),
         PrintRegionName(region.depth, region.name)});
   }
 
   OutputBuffer out;
-  FormatTable({ColSpec(Align::kRight, 0, "Start", 2),
-               ColSpec(Align::kRight, 0, "End", 2),
-               ColSpec(Align::kRight, 0, "Size", 2),
-               ColSpec(Align::kLeft, 0, "Name", 1)},
+  FormatTable({ColSpec(Align::kRight, 0, "Start", 2), ColSpec(Align::kRight, 0, "End", 2),
+               ColSpec(Align::kRight, 0, "Size", 2), ColSpec(Align::kLeft, 0, "Name", 1)},
               rows, &out);
 
   console->Output(out);
@@ -767,8 +742,7 @@ Err DoStdio(Verb io_type, const Command& cmd, ConsoleContext* context) {
     return err;
 
   Process* process = cmd.target()->GetProcess();
-  auto& container =
-      io_type == Verb::kStdout ? process->get_stdout() : process->get_stderr();
+  auto& container = io_type == Verb::kStdout ? process->get_stdout() : process->get_stderr();
   Console::get()->Output(OutputContainer(container));
   return Err();
 }
@@ -783,8 +757,7 @@ Err DoStderr(ConsoleContext* context, const Command& cmd) {
 
 // PastBacktrace ---------------------------------------------------------------
 
-const char kPastBacktraceShortHelp[] =
-    "past-backtrace: [EXPERIMENTAL] Show a cached backtrace.";
+const char kPastBacktraceShortHelp[] = "past-backtrace: [EXPERIMENTAL] Show a cached backtrace.";
 const char kPastBacktraceHelp[] =
     R"(past-backtrace: Show a cached backtrace.
 
@@ -814,8 +787,7 @@ OutputBuffer TemporaryOutputBacktrace(const Backtrace& backtrace) {
   }
 
   OutputBuffer out;
-  FormatTable({ColSpec(Align::kLeft, 0, "No", 0),
-               ColSpec(Align::kRight, 0, "Function", 0),
+  FormatTable({ColSpec(Align::kLeft, 0, "No", 0), ColSpec(Align::kRight, 0, "Function", 0),
                ColSpec(Align::kRight, 0, "File:Number", 0)},
               rows, &out);
 
@@ -855,37 +827,31 @@ Err DoPastBacktrace(ConsoleContext* context, const Command& cmd) {
 }  // namespace
 
 void AppendProcessVerbs(std::map<Verb, VerbRecord>* verbs) {
-  VerbRecord run(&DoRun, {"run", "r"}, kRunShortHelp, kRunHelp,
-                 CommandGroup::kProcess);
-  run.switches.push_back(
-      SwitchRecord(kRunComponentSwitch, false, "component", 'c'));
+  VerbRecord run(&DoRun, {"run", "r"}, kRunShortHelp, kRunHelp, CommandGroup::kProcess);
+  run.switches.push_back(SwitchRecord(kRunComponentSwitch, false, "component", 'c'));
   (*verbs)[Verb::kRun] = std::move(run);
 
-  (*verbs)[Verb::kKill] = VerbRecord(&DoKill, {"kill", "k"}, kKillShortHelp,
-                                     kKillHelp, CommandGroup::kProcess);
+  (*verbs)[Verb::kKill] =
+      VerbRecord(&DoKill, {"kill", "k"}, kKillShortHelp, kKillHelp, CommandGroup::kProcess);
 
-  VerbRecord attach(&DoAttach, {"attach"}, kAttachShortHelp, kAttachHelp,
-                    CommandGroup::kProcess);
-  attach.switches.push_back(
-      SwitchRecord(kAttachComponentRootSwitch, false, "app", 'a'));
-  attach.switches.push_back(
-      SwitchRecord(kAttachSystemRootSwitch, false, "root", 'r'));
+  VerbRecord attach(&DoAttach, {"attach"}, kAttachShortHelp, kAttachHelp, CommandGroup::kProcess);
+  attach.switches.push_back(SwitchRecord(kAttachComponentRootSwitch, false, "app", 'a'));
+  attach.switches.push_back(SwitchRecord(kAttachSystemRootSwitch, false, "root", 'r'));
   (*verbs)[Verb::kAttach] = std::move(attach);
 
-  (*verbs)[Verb::kDetach] = VerbRecord(&DoDetach, {"detach"}, kDetachShortHelp,
-                                       kDetachHelp, CommandGroup::kProcess);
-  (*verbs)[Verb::kLibs] = VerbRecord(&DoLibs, {"libs"}, kLibsShortHelp,
-                                     kLibsHelp, CommandGroup::kQuery);
+  (*verbs)[Verb::kDetach] =
+      VerbRecord(&DoDetach, {"detach"}, kDetachShortHelp, kDetachHelp, CommandGroup::kProcess);
+  (*verbs)[Verb::kLibs] =
+      VerbRecord(&DoLibs, {"libs"}, kLibsShortHelp, kLibsHelp, CommandGroup::kQuery);
   (*verbs)[Verb::kAspace] =
-      VerbRecord(&DoAspace, {"aspace", "as"}, kAspaceShortHelp, kAspaceHelp,
-                 CommandGroup::kQuery);
-  (*verbs)[Verb::kStdout] = VerbRecord(&DoStdout, {"stdout"}, kStdoutShortHelp,
-                                       kStdioHelp, CommandGroup::kProcess);
-  (*verbs)[Verb::kStderr] = VerbRecord(&DoStderr, {"stderr"}, kStderrShortHelp,
-                                       kStdioHelp, CommandGroup::kProcess);
+      VerbRecord(&DoAspace, {"aspace", "as"}, kAspaceShortHelp, kAspaceHelp, CommandGroup::kQuery);
+  (*verbs)[Verb::kStdout] =
+      VerbRecord(&DoStdout, {"stdout"}, kStdoutShortHelp, kStdioHelp, CommandGroup::kProcess);
+  (*verbs)[Verb::kStderr] =
+      VerbRecord(&DoStderr, {"stderr"}, kStderrShortHelp, kStdioHelp, CommandGroup::kProcess);
   (*verbs)[Verb::kPastBacktrace] =
-      VerbRecord(&DoPastBacktrace, {"past-backtrace"}, kPastBacktraceShortHelp,
-                 kPastBacktraceHelp, CommandGroup::kProcess);
+      VerbRecord(&DoPastBacktrace, {"past-backtrace"}, kPastBacktraceShortHelp, kPastBacktraceHelp,
+                 CommandGroup::kProcess);
 }
 
 }  // namespace zxdb

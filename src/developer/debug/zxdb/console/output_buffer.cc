@@ -94,9 +94,7 @@ static const ForegroundColorMap& GetForegroundColorMap() {
 }
 
 // Writes the given string to stdout.
-void FwriteStringView(std::string_view str) {
-  fwrite(str.data(), 1, str.size(), stdout);
-}
+void FwriteStringView(std::string_view str) { fwrite(str.data(), 1, str.size(), stdout); }
 
 }  // namespace
 
@@ -202,16 +200,13 @@ const char* TextForegroundColorToString(TextForegroundColor color) {
   return nullptr;
 }
 
-OutputBuffer::Span::Span(Syntax s, std::string t)
-    : syntax(s), text(std::move(t)) {}
-OutputBuffer::Span::Span(std::string t, TextForegroundColor fg,
-                         TextBackgroundColor bg)
+OutputBuffer::Span::Span(Syntax s, std::string t) : syntax(s), text(std::move(t)) {}
+OutputBuffer::Span::Span(std::string t, TextForegroundColor fg, TextBackgroundColor bg)
     : foreground(fg), background(bg), text(std::move(t)) {}
 
 OutputBuffer::OutputBuffer() = default;
 
-OutputBuffer::OutputBuffer(std::string str, TextForegroundColor fg,
-                           TextBackgroundColor bg) {
+OutputBuffer::OutputBuffer(std::string str, TextForegroundColor fg, TextBackgroundColor bg) {
   spans_.emplace_back(std::move(str), fg, bg);
 }
 
@@ -221,8 +216,7 @@ OutputBuffer::OutputBuffer(Syntax syntax, std::string str) {
 
 OutputBuffer::~OutputBuffer() = default;
 
-void OutputBuffer::Append(std::string str, TextForegroundColor fg,
-                          TextBackgroundColor bg) {
+void OutputBuffer::Append(std::string str, TextForegroundColor fg, TextBackgroundColor bg) {
   spans_.emplace_back(std::move(str), fg, bg);
 }
 
@@ -235,15 +229,12 @@ void OutputBuffer::Append(OutputBuffer buf) {
     spans_.push_back(std::move(span));
 }
 
-void OutputBuffer::Append(const Err& err) {
-  spans_.push_back(Span(Syntax::kNormal, err.msg()));
-}
+void OutputBuffer::Append(const Err& err) { spans_.push_back(Span(Syntax::kNormal, err.msg())); }
 
 void OutputBuffer::Append(Span span) { spans_.push_back(std::move(span)); }
 
 void OutputBuffer::FormatHelp(const std::string& str) {
-  for (auto line :
-       fxl::SplitString(str, "\n", fxl::kKeepWhitespace, fxl::kSplitWantAll)) {
+  for (auto line : fxl::SplitString(str, "\n", fxl::kKeepWhitespace, fxl::kSplitWantAll)) {
     Syntax syntax;
     if (!line.empty() && line[0] != ' ') {
       // Nonempty lines beginning with non-whitespace are headings.
@@ -274,8 +265,7 @@ void OutputBuffer::WriteToStdout() const {
     FwriteStringView(span.text);
 
     // If any formatting was done, reset the attributes.
-    if ((span.syntax != Syntax::kNormal) ||
-        (span.background != TextBackgroundColor::kDefault) ||
+    if ((span.syntax != Syntax::kNormal) || (span.background != TextBackgroundColor::kDefault) ||
         (span.foreground != TextForegroundColor::kDefault))
       FwriteStringView(kNormalEscapeCode);
 

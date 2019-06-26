@@ -41,8 +41,7 @@ bool FormatClangLambda(const Function* function, OutputBuffer* out) {
   //                                         function->decl_line()));
   // so users can tell where the lambda function is.
   const Collection* coll = function->parent().Get()->AsCollection();
-  if (coll && coll->tag() == DwarfTag::kClassType &&
-      coll->GetAssignedName().empty()) {
+  if (coll && coll->tag() == DwarfTag::kClassType && coll->GetAssignedName().empty()) {
     // Clang-style.
     out->Append("λ");
     return true;
@@ -72,8 +71,7 @@ bool FormatRustClosure(const Function* function, OutputBuffer* out) {
 
 OutputBuffer FormatFunctionName(const Function* function, bool show_params) {
   OutputBuffer result;
-  if (!FormatClangLambda(function, &result) &&
-      !FormatRustClosure(function, &result))
+  if (!FormatClangLambda(function, &result) && !FormatRustClosure(function, &result))
     result = FormatIdentifier(function->GetIdentifier(), true);
 
   const auto& params = function->parameters();

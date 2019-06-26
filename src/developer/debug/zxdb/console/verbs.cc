@@ -9,10 +9,8 @@
 namespace zxdb {
 
 VerbRecord::VerbRecord() = default;
-VerbRecord::VerbRecord(CommandExecutor exec,
-                       std::initializer_list<std::string> aliases,
-                       const char* short_help, const char* help,
-                       CommandGroup command_group,
+VerbRecord::VerbRecord(CommandExecutor exec, std::initializer_list<std::string> aliases,
+                       const char* short_help, const char* help, CommandGroup command_group,
                        SourceAffinity source_affinity)
     : exec(exec),
       aliases(aliases),
@@ -21,10 +19,8 @@ VerbRecord::VerbRecord(CommandExecutor exec,
       command_group(command_group),
       source_affinity(source_affinity) {}
 VerbRecord::VerbRecord(CommandExecutorWithCallback exec_cb,
-                       std::initializer_list<std::string> aliases,
-                       const char* short_help, const char* help,
-                       CommandGroup command_group,
-                       SourceAffinity source_affinity)
+                       std::initializer_list<std::string> aliases, const char* short_help,
+                       const char* help, CommandGroup command_group, SourceAffinity source_affinity)
     : exec_cb(exec_cb),
       aliases(aliases),
       short_help(short_help),
@@ -32,10 +28,8 @@ VerbRecord::VerbRecord(CommandExecutorWithCallback exec_cb,
       command_group(command_group),
       source_affinity(source_affinity) {}
 VerbRecord::VerbRecord(CommandExecutor exec, CommandCompleter complete,
-                       std::initializer_list<std::string> aliases,
-                       const char* short_help, const char* help,
-                       CommandGroup command_group,
-                       SourceAffinity source_affinity)
+                       std::initializer_list<std::string> aliases, const char* short_help,
+                       const char* help, CommandGroup command_group, SourceAffinity source_affinity)
     : exec(exec),
       aliases(aliases),
       short_help(short_help),
@@ -43,12 +37,9 @@ VerbRecord::VerbRecord(CommandExecutor exec, CommandCompleter complete,
       command_group(command_group),
       source_affinity(source_affinity),
       complete(complete) {}
-VerbRecord::VerbRecord(CommandExecutorWithCallback exec_cb,
-                       CommandCompleter complete,
-                       std::initializer_list<std::string> aliases,
-                       const char* short_help, const char* help,
-                       CommandGroup command_group,
-                       SourceAffinity source_affinity)
+VerbRecord::VerbRecord(CommandExecutorWithCallback exec_cb, CommandCompleter complete,
+                       std::initializer_list<std::string> aliases, const char* short_help,
+                       const char* help, CommandGroup command_group, SourceAffinity source_affinity)
     : exec_cb(exec_cb),
       aliases(aliases),
       short_help(short_help),

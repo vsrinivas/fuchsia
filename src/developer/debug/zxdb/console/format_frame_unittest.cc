@@ -20,13 +20,11 @@ namespace zxdb {
 namespace {
 
 // Synchronous wrapper around asynchronous long formatting.
-std::string SyncFormatFrameLong(const Frame* frame,
-                                const FormatExprValueOptions& options) {
+std::string SyncFormatFrameLong(const Frame* frame, const FormatExprValueOptions& options) {
   debug_ipc::PlatformMessageLoop loop;
   loop.Init();
 
-  auto helper = fxl::MakeRefCounted<FormatValue>(
-      std::make_unique<MockFormatValueProcessContext>());
+  auto helper = fxl::MakeRefCounted<FormatValue>(std::make_unique<MockFormatValueProcessContext>());
   FormatFrameLong(frame, false, helper.get(), FormatExprValueOptions());
 
   std::string out_string;
@@ -51,9 +49,8 @@ std::string SyncFormatFrameLong(const Frame* frame,
 }  // namespace
 
 TEST(FormatFrame, Unsymbolized) {
-  MockFrame frame(nullptr, nullptr,
-                  Location(Location::State::kSymbolized, 0x12345678), 0x567890,
-                  0, std::vector<Register>(), 0xdeadbeef);
+  MockFrame frame(nullptr, nullptr, Location(Location::State::kSymbolized, 0x12345678), 0x567890, 0,
+                  std::vector<Register>(), 0xdeadbeef);
 
   OutputBuffer out;
 
@@ -74,8 +71,7 @@ TEST(FormatFrame, Unsymbolized) {
 TEST(FormatFrame, Inline) {
   // This is to have some place for the inline frame to refer to as the
   // underlying physical frame. The values are ignored.
-  MockFrame physical_frame(nullptr, nullptr,
-                           Location(Location::State::kSymbolized, 0x12345678),
+  MockFrame physical_frame(nullptr, nullptr, Location(Location::State::kSymbolized, 0x12345678),
                            0x567890);
 
   SymbolContext symbol_context = SymbolContext::ForRelativeAddresses();
@@ -83,11 +79,10 @@ TEST(FormatFrame, Inline) {
   auto function = fxl::MakeRefCounted<Function>(DwarfTag::kInlinedSubroutine);
   function->set_assigned_name("Function");
 
-  MockFrame inline_frame(nullptr, nullptr,
-                         Location(0x12345678, FileLine("file.cc", 22), 0,
-                                  symbol_context, LazySymbol(function)),
-                         0x567890, 0, std::vector<Register>(), 0xdeadbeef,
-                         &physical_frame);
+  MockFrame inline_frame(
+      nullptr, nullptr,
+      Location(0x12345678, FileLine("file.cc", 22), 0, symbol_context, LazySymbol(function)),
+      0x567890, 0, std::vector<Register>(), 0xdeadbeef, &physical_frame);
 
   EXPECT_EQ(
       "Function() • file.cc:22 (inline)\n"

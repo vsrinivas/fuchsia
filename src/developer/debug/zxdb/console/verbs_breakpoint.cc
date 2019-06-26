@@ -27,8 +27,7 @@ constexpr int kEnableSwitch = 2;
 constexpr int kTypeSwitch = 3;
 
 // Callback for when updating a breakpoint is done.
-void CreateOrEditBreakpointComplete(fxl::WeakPtr<Breakpoint> breakpoint,
-                                    const Err& err) {
+void CreateOrEditBreakpointComplete(fxl::WeakPtr<Breakpoint> breakpoint, const Err& err) {
   if (!breakpoint)
     return;  // Do nothing if the breakpoint is gone.
 
@@ -68,18 +67,16 @@ void CreateOrEditBreakpointComplete(fxl::WeakPtr<Breakpoint> breakpoint,
   // use location-specific enabling anyway.
   //
   // Ignore errors from printing the source, it doesn't matter that much.
-  FormatBreakpointContext(
-      locs[0]->GetLocation(),
-      breakpoint->session()->system().GetSymbols()->build_dir(),
-      breakpoint->GetSettings().enabled, &out);
+  FormatBreakpointContext(locs[0]->GetLocation(),
+                          breakpoint->session()->system().GetSymbols()->build_dir(),
+                          breakpoint->GetSettings().enabled, &out);
   console->Output(out);
 }
 
 // Backend for setting attributes on a breakpoint from both creation and
 // editing. The given breakpoint is specified if this is an edit, or is null
 // if this is a creation.
-Err CreateOrEditBreakpoint(ConsoleContext* context, const Command& cmd,
-                           Breakpoint* breakpoint) {
+Err CreateOrEditBreakpoint(ConsoleContext* context, const Command& cmd, Breakpoint* breakpoint) {
   // Get existing settings (or defaults for new one).
   BreakpointSettings settings;
   if (breakpoint)
@@ -93,8 +90,7 @@ Err CreateOrEditBreakpoint(ConsoleContext* context, const Command& cmd,
     } else if (enable_str == "false") {
       settings.enabled = false;
     } else {
-      return Err(
-          "--enabled switch requires either \"true\" or \"false\" values.");
+      return Err("--enabled switch requires either \"true\" or \"false\" values.");
     }
   }
 
@@ -127,8 +123,7 @@ Err CreateOrEditBreakpoint(ConsoleContext* context, const Command& cmd,
     } else if (type_str == "w" || type_str == "watchpoint") {
       break_type = debug_ipc::BreakpointType::kWatchpoint;
     } else {
-      return Err(
-          fxl::StringPrintf("Unknown breakpoint type: %s", type_str.data()));
+      return Err(fxl::StringPrintf("Unknown breakpoint type: %s", type_str.data()));
     }
   }
   settings.type = break_type;
@@ -155,8 +150,7 @@ Err CreateOrEditBreakpoint(ConsoleContext* context, const Command& cmd,
         settings.location = InputLocation(cmd.frame()->GetAddress());
     }
   } else if (cmd.args().size() == 1u) {
-    Err err =
-        ParseInputLocation(cmd.frame(), cmd.args()[0], &settings.location);
+    Err err = ParseInputLocation(cmd.frame(), cmd.args()[0], &settings.location);
     if (err.has_error())
       return err;
   } else {
@@ -187,10 +181,9 @@ Err CreateOrEditBreakpoint(ConsoleContext* context, const Command& cmd,
     breakpoint = context->session()->system().CreateNewBreakpoint();
     context->SetActiveBreakpoint(breakpoint);
   }
-  breakpoint->SetSettings(
-      settings, [breakpoint = breakpoint->GetWeakPtr()](const Err& err) {
-        CreateOrEditBreakpointComplete(std::move(breakpoint), err);
-      });
+  breakpoint->SetSettings(settings, [breakpoint = breakpoint->GetWeakPtr()](const Err& err) {
+    CreateOrEditBreakpointComplete(std::move(breakpoint), err);
+  });
 
   return Err();
 }
@@ -325,8 +318,7 @@ Examples
       hardware breakpoint.
 )";
 Err DoBreak(ConsoleContext* context, const Command& cmd) {
-  Err err = cmd.ValidateNouns(
-      {Noun::kProcess, Noun::kThread, Noun::kFrame, Noun::kBreakpoint});
+  Err err = cmd.ValidateNouns({Noun::kProcess, Noun::kThread, Noun::kFrame, Noun::kBreakpoint});
   if (err.has_error())
     return err;
   return CreateOrEditBreakpoint(context, cmd, nullptr);
@@ -468,8 +460,7 @@ Err DoEdit(ConsoleContext* context, const Command& cmd) {
                "\"breakpoint <index> edit\" for an\nexplicit one.");
   }
 
-  Err err =
-      cmd.ValidateNouns({Noun::kProcess, Noun::kThread, Noun::kBreakpoint});
+  Err err = cmd.ValidateNouns({Noun::kProcess, Noun::kThread, Noun::kBreakpoint});
   if (err.has_error())
     return err;
 
@@ -483,9 +474,8 @@ void AppendBreakpointVerbs(std::map<Verb, VerbRecord>* verbs) {
   SwitchRecord stop_switch(kStopSwitch, true, "stop", 's');
   SwitchRecord type_switch(kTypeSwitch, true, "type", 't');
 
-  VerbRecord break_record(&DoBreak, &CompleteInputLocation, {"break", "b"},
-                          kBreakShortHelp, kBreakHelp,
-                          CommandGroup::kBreakpoint);
+  VerbRecord break_record(&DoBreak, &CompleteInputLocation, {"break", "b"}, kBreakShortHelp,
+                          kBreakHelp, CommandGroup::kBreakpoint);
   break_record.switches.push_back(enable_switch);
   break_record.switches.push_back(stop_switch);
   break_record.switches.push_back(type_switch);
@@ -500,13 +490,11 @@ void AppendBreakpointVerbs(std::map<Verb, VerbRecord>* verbs) {
   (*verbs)[Verb::kEdit] = edit_record;
 
   (*verbs)[Verb::kHardwareBreakpoint] =
-      VerbRecord(&DoHardwareBreakpoint, {"hardware-breakpoint", "hb"},
-                 kHardwareBreakpointShortHelp, kHardwareBreakpointHelp,
-                 CommandGroup::kBreakpoint);
+      VerbRecord(&DoHardwareBreakpoint, {"hardware-breakpoint", "hb"}, kHardwareBreakpointShortHelp,
+                 kHardwareBreakpointHelp, CommandGroup::kBreakpoint);
 
   (*verbs)[Verb::kClear] =
-      VerbRecord(&DoClear, {"clear", "cl"}, kClearShortHelp, kClearHelp,
-                 CommandGroup::kBreakpoint);
+      VerbRecord(&DoClear, {"clear", "cl"}, kClearShortHelp, kClearHelp, CommandGroup::kBreakpoint);
 }
 
 }  // namespace zxdb

@@ -33,8 +33,7 @@ class ConsoleImpl : public Console, public debug_ipc::FDWatcher {
                                    CommandCallback callback = nullptr) override;
 
  protected:
-  Result DispatchInputLine(const std::string& line,
-                           CommandCallback callback = nullptr);
+  Result DispatchInputLine(const std::string& line, CommandCallback callback = nullptr);
 
   // FDWatcher implementation.
   void OnFDReady(int fd, bool read, bool write, bool err) override;

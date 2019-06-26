@@ -49,10 +49,9 @@ struct AnalyzeMemoryOptions {
 //
 // On error, the Err will be set, the output buffer will be empty, and
 // next_addr will be 0.
-void AnalyzeMemory(const AnalyzeMemoryOptions& opts,
-                   std::function<void(const Err& err, OutputBuffer analysis,
-                                      uint64_t next_addr)>
-                       cb);
+void AnalyzeMemory(
+    const AnalyzeMemoryOptions& opts,
+    std::function<void(const Err& err, OutputBuffer analysis, uint64_t next_addr)> cb);
 
 namespace internal {
 
@@ -63,8 +62,7 @@ namespace internal {
 // asynchronous callbacks to issue the final complete callback.
 class MemoryAnalysis : public fxl::RefCountedThreadSafe<MemoryAnalysis> {
  public:
-  using Callback = std::function<void(const Err& err, OutputBuffer analysis,
-                                      uint64_t next_addr)>;
+  using Callback = std::function<void(const Err& err, OutputBuffer analysis, uint64_t next_addr)>;
 
   MemoryAnalysis(const AnalyzeMemoryOptions& opts, Callback cb);
   ~MemoryAnalysis() = default;
@@ -108,8 +106,7 @@ class MemoryAnalysis : public fxl::RefCountedThreadSafe<MemoryAnalysis> {
 
   // Returns a formatted string representing all annotations in the range (end
   // non-inclusive).
-  std::string GetAnnotationsBetween(uint64_t address_begin,
-                                    uint64_t address_end) const;
+  std::string GetAnnotationsBetween(uint64_t address_begin, uint64_t address_end) const;
 
   // Returns a formatted string representing with the given data value
   // points to (if possible). Returns an empty string otherwise.

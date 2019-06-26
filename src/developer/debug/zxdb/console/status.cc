@@ -23,8 +23,7 @@ OutputBuffer GetConnectionStatus(const Session* session) {
     result.Append(session->minidump_path() + "\n");
   } else if (session->IsConnected()) {
     result.Append(fxl::StringPrintf("  Connected to '%s' on port %d.\n",
-                                    session->connected_host().c_str(),
-                                    session->connected_port()));
+                                    session->connected_host().c_str(), session->connected_port()));
   } else {
     result.Append(
         "  Not connected. You can type these commands (see also \"help "
@@ -62,11 +61,11 @@ OutputBuffer GetJobStatus(ConsoleContext* context) {
       attached_count++;
   }
 
-  result.Append(fxl::StringPrintf(
-      "  Attached to %d job(s) (jobs are nodes in the Zircon process tree). "
-      "Processes\n  launched in attached jobs can be caught and debugged via "
-      "filters.\n  See \"help job\". The debugger has these:\n",
-      attached_count));
+  result.Append(
+      fxl::StringPrintf("  Attached to %d job(s) (jobs are nodes in the Zircon process tree). "
+                        "Processes\n  launched in attached jobs can be caught and debugged via "
+                        "filters.\n  See \"help job\". The debugger has these:\n",
+                        attached_count));
   result.Append(FormatJobList(context, 2));
 
   return result;
@@ -83,9 +82,8 @@ OutputBuffer GetProcessStatus(ConsoleContext* context) {
       attached_count++;
   }
 
-  result.Append(fxl::StringPrintf(
-      "  Attached to %d process(es). The debugger has these:\n",
-      attached_count));
+  result.Append(
+      fxl::StringPrintf("  Attached to %d process(es). The debugger has these:\n", attached_count));
   result.Append(FormatTargetList(context, 2));
 
   return result;

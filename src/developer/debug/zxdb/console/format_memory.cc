@@ -16,8 +16,7 @@ namespace zxdb {
 namespace {
 
 const char kUnknownByte[] = "??";
-const char kNonAscii =
-    ' ';  // When printing ASCII and the character is not in range.
+const char kNonAscii = ' ';  // When printing ASCII and the character is not in range.
 
 bool IsPrintableAscii(uint8_t c) { return c >= ' ' && c < 0x7f; }
 
@@ -37,8 +36,7 @@ std::string FormatMemory(const MemoryDump& dump, uint64_t begin, uint32_t size,
   // Max address character width.
   int addr_width = 0;
   if (opts.show_addrs) {
-    addr_width =
-        static_cast<int>(fxl::StringPrintf("%" PRIx64, max_addr).size());
+    addr_width = static_cast<int>(fxl::StringPrintf("%" PRIx64, max_addr).size());
   }
 
   uint64_t cur = begin;  // Current address being printed.
@@ -60,8 +58,7 @@ std::string FormatMemory(const MemoryDump& dump, uint64_t begin, uint32_t size,
     for (int i = 0; i < opts.values_per_line; i++) {  // Value loop.
       // Separator between values.
       if (i > 0) {
-        if (!done && opts.separator_every > 0 &&
-            (i % opts.separator_every) == 0) {
+        if (!done && opts.separator_every > 0 && (i % opts.separator_every) == 0) {
           values.push_back('-');
         } else {
           values.push_back(' ');

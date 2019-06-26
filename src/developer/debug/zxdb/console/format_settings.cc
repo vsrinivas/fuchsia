@@ -47,15 +47,13 @@ std::vector<std::string> ListToBullet(const std::vector<std::string>& list) {
   output.reserve(list.size());
   auto bullet = GetBullet();
   for (const std::string& item : list)
-    output.emplace_back(
-        fxl::StringPrintf("%s %s", bullet.c_str(), item.c_str()));
+    output.emplace_back(fxl::StringPrintf("%s %s", bullet.c_str(), item.c_str()));
   return output;
 }
 
 // |add_heading| refers whether it should show the setting name or just list the
 // values.
-void AddSettingToTable(const Setting& setting,
-                       std::vector<std::vector<OutputBuffer>>* rows,
+void AddSettingToTable(const Setting& setting, std::vector<std::vector<OutputBuffer>>* rows,
                        bool add_heading = true) {
   // TODO(donosoc): We need to check what level the setting comes from so we can
   //                highlight it in the listing.
@@ -82,8 +80,7 @@ void AddSettingToTable(const Setting& setting,
 
         if (add_heading) {
           // The first entry has the setting name.
-          auto title =
-              i == 0 ? OutputBuffer(setting.info.name) : OutputBuffer();
+          auto title = i == 0 ? OutputBuffer(setting.info.name) : OutputBuffer();
           auto it = row.emplace_back(std::move(title));
         }
         row.emplace_back(std::move(bullet_list[i]));
@@ -125,10 +122,8 @@ OutputBuffer FormatSetting(const Setting& setting) {
   // List have a copy-paste value for setting the value.
   if (setting.value.is_list()) {
     out.Append("\n");
-    out.Append(Syntax::kComment,
-               "See \"help set\" about using the set value for lists.\n");
-    out.Append(fxl::StringPrintf("Set value: %s",
-                                 SettingValueToString(setting.value).c_str()));
+    out.Append(Syntax::kComment, "See \"help set\" about using the set value for lists.\n");
+    out.Append(fxl::StringPrintf("Set value: %s", SettingValueToString(setting.value).c_str()));
     out.Append("\n");
   }
 
