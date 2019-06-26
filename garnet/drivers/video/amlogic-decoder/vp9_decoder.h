@@ -244,6 +244,7 @@ class Vp9Decoder : public VideoDecoder {
   void ConfigureMotionPrediction();
   void ConfigureReferenceFrameHardware();
   void SetRefFrames(HardwareRenderParams* params);
+  void AdaptProbabilityCoefficients(uint32_t adapt_prob_status);
   __WARN_UNUSED_RESULT zx_status_t InitializeBuffers();
   void InitializeLoopFilterData();
 

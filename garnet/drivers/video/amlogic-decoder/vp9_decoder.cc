@@ -12,6 +12,7 @@
 #include "memory_barriers.h"
 #include "pts_manager.h"
 #include "third_party/libvpx/vp9/common/vp9_loopfilter.h"
+#include "third_party/vp9_adapt_probs/vp9_coefficient_adaptation.h"
 
 using HevcDecStatusReg = HevcAssistScratch0;
 using HevcRpmBuffer = HevcAssistScratch1;
@@ -572,6 +573,56 @@ void Vp9Decoder::UpdateDecodeSize(uint32_t size) {
   state_ = DecoderState::kRunning;
 }
 
+void Vp9Decoder::AdaptProbabilityCoefficients(uint32_t adapt_prob_status) {
+  constexpr uint32_t kFrameContextSize = 0x1000;
+  constexpr uint32_t kVp9FrameContextCount = 4;
+  constexpr uint32_t kProbSize = 496 * 2 * 4;  // 3968 < 4096
+  static_assert(kProbSize <= kFrameContextSize);
+  if ((adapt_prob_status & 0xff) == 0xfd) {
+    // current_frame_data_ still reflects the frame that just finished decoding.
+    uint32_t previous_fc = current_frame_data_.keyframe;
+
+    // TODO(dustingreen): (comment from jbauman@) We probably don't need to
+    // invalidate the entire buffer, but good enough for now.
+    io_buffer_cache_flush_invalidate(
+        &working_buffers_.probability_buffer.buffer(), 0,
+        io_buffer_size(&working_buffers_.probability_buffer.buffer(), 0));
+    io_buffer_cache_flush_invalidate(
+        &working_buffers_.count_buffer.buffer(), 0,
+        io_buffer_size(&working_buffers_.count_buffer.buffer(), 0));
+
+    uint32_t frame_context_idx = adapt_prob_status >> 8;
+    uint8_t* previous_prob_buffer =
+        (uint8_t*)io_buffer_virt(
+            &working_buffers_.probability_buffer.buffer()) +
+        frame_context_idx * kFrameContextSize;
+    uint8_t* current_prob_buffer =
+        (uint8_t*)io_buffer_virt(
+            &working_buffers_.probability_buffer.buffer()) +
+        kVp9FrameContextCount * kFrameContextSize;
+    uint8_t* count_buffer =
+        (uint8_t*)io_buffer_virt(&working_buffers_.count_buffer.buffer());
+
+    adapt_coef_proc_cfg config{};
+    config.pre_pr_buf = reinterpret_cast<unsigned int*>(previous_prob_buffer);
+    config.pr_buf = reinterpret_cast<unsigned int*>(current_prob_buffer);
+    config.count_buf = reinterpret_cast<unsigned int*>(count_buffer);
+    adapt_coef_process(&config, !!last_frame_data_.keyframe, previous_fc, frame_context_idx);
+    memcpy(reinterpret_cast<uint8_t*>(config.pre_pr_buf), reinterpret_cast<uint8_t*>(config.pr_buf), kProbSize);
+
+    // TODO(dustingreen): (comment from jbauman@) We probably only need to flush
+    // the portions of the probability buffer that were modified (and none of
+    // the count buffer), but this should be fine for now.
+    io_buffer_cache_flush(
+        &working_buffers_.probability_buffer.buffer(), 0,
+        io_buffer_size(&working_buffers_.probability_buffer.buffer(), 0));
+    io_buffer_cache_flush(
+        &working_buffers_.count_buffer.buffer(), 0,
+        io_buffer_size(&working_buffers_.count_buffer.buffer(), 0));
+    Vp9AdaptProbReg::Get().FromValue(0).WriteTo(owner_->dosbus());
+  }
+}
+
 void Vp9Decoder::HandleInterrupt() {
   DLOG("%p Got VP9 interrupt\n", this);
   ZX_DEBUG_ASSERT(state_ == DecoderState::kRunning);
@@ -584,6 +635,7 @@ void Vp9Decoder::HandleInterrupt() {
       Vp9AdaptProbReg::Get().ReadFrom(owner_->dosbus()).reg_value();
 
   DLOG("Decoder state: %x %x\n", dec_status, adapt_prob_status);
+  AdaptProbabilityCoefficients(adapt_prob_status);
 
   if (dec_status == kVp9InputBufferEmpty) {
     // TODO: We'll want to use this to continue filling input data of
