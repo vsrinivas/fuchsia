@@ -86,9 +86,22 @@ static void test_shutdown(uint32_t iters)
 
         TestBase test_base;
 
+        {
+            uint64_t is_supported = 0;
+            fdio_t* fdio = fdio_unsafe_fd_to_io(test_base.fd());
+            zx_status_t status =
+                fuchsia_gpu_magma_DeviceQuery(fdio_unsafe_borrow_channel(fdio),
+                                              MAGMA_QUERY_IS_TEST_RESTART_SUPPORTED, &is_supported);
+            fdio_unsafe_release(fdio);
+            if (status != ZX_OK || !is_supported) {
+                printf("Test restart not supported: status %d is_supported %lu\n", status,
+                       is_supported);
+                return;
+            }
+        }
+
         std::thread looper(looper_thread_entry);
         std::thread looper2(looper_thread_entry);
-
         uint32_t count = kRestartCount;
         while (complete_count < kMaxCount) {
             if (complete_count > count) {
