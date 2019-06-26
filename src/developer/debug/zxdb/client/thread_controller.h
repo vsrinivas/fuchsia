@@ -94,8 +94,7 @@ class ThreadController {
     bool synthetic_stop_ = false;
 
     // Valid when synthetic_stop = true.
-    debug_ipc::ResumeRequest::How how =
-        debug_ipc::ResumeRequest::How::kContinue;
+    debug_ipc::ResumeRequest::How how = debug_ipc::ResumeRequest::How::kContinue;
 
     // When how == kStepInRange, this defines the address range to step in. As
     // long as the instruction pointer is inside, execution will continue.
@@ -119,8 +118,7 @@ class ThreadController {
   // If the callback does not specify an error, the thread will be resumed
   // when it is called. If the callback has an error, it will be reported and
   // the thread will remain stopped.
-  virtual void InitWithThread(Thread* thread,
-                              std::function<void(const Err&)> cb) = 0;
+  virtual void InitWithThread(Thread* thread, std::function<void(const Err&)> cb) = 0;
 
   // Returns how to continue the thread when running this controller. This
   // will be called after InitWithThread and after every subsequent kContinue
@@ -147,9 +145,8 @@ class ThreadController {
   // active and any of them can report "stop". When a thread is being
   // continued, the main controller will get GetContinueOp() called to see what
   // type of continuation it wants.
-  virtual StopOp OnThreadStop(
-      debug_ipc::NotifyException::Type stop_type,
-      const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) = 0;
+  virtual StopOp OnThreadStop(debug_ipc::NotifyException::Type stop_type,
+                              const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) = 0;
 
 #if defined(DEBUG_THREAD_CONTROLLERS)
   // Writes the log message prefixed with the thread controller type. Callers
@@ -168,9 +165,7 @@ class ThreadController {
 #else
   void Log(const char* format, ...) const {}
   static void LogRaw(const char* format, ...) {}
-  static std::string FrameFunctionNameForLog(const Frame* frame) {
-    return std::string();
-  }
+  static std::string FrameFunctionNameForLog(const Frame* frame) { return std::string(); }
 #endif
 
  protected:
@@ -210,8 +205,7 @@ class ThreadController {
   // If there is no ambiguity or one of the possibly ambiguous frames doesn't
   // match the given fingerprint, the inline frame hide count will be
   // unchanged.
-  void SetInlineFrameIfAmbiguous(InlineFrameIs comparison,
-                                 FrameFingerprint fingerprint);
+  void SetInlineFrameIfAmbiguous(InlineFrameIs comparison, FrameFingerprint fingerprint);
 
   // Tells the owner of this class that this ThreadController has completed
   // its work. Normally returning kStop from OnThreadStop() will do this, but

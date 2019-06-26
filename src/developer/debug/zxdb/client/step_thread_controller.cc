@@ -26,8 +26,7 @@ StepThreadController::StepThreadController(AddressRanges ranges)
 
 StepThreadController::~StepThreadController() = default;
 
-void StepThreadController::InitWithThread(Thread* thread,
-                                          std::function<void(const Err&)> cb) {
+void StepThreadController::InitWithThread(Thread* thread, std::function<void(const Err&)> cb) {
   set_thread(thread);
 
   const Stack& stack = thread->GetStack();
@@ -47,14 +46,13 @@ void StepThreadController::InitWithThread(Thread* thread,
       file_line_ = top_frame->GetLocation().file_line();
     }
 
-    LineDetails line_details =
-        thread->GetProcess()->GetSymbols()->LineDetailsForAddress(ip);
+    LineDetails line_details = thread->GetProcess()->GetSymbols()->LineDetailsForAddress(ip);
     if (line_details.file_line() == *file_line_) {
       // When the stack and the line details match up, the range from the line
       // table is usable.
       current_ranges_ = AddressRanges(line_details.GetExtent());
-      Log("Stepping in %s:%d %s", file_line_->file().c_str(),
-          file_line_->line(), current_ranges_.ToString().c_str());
+      Log("Stepping in %s:%d %s", file_line_->file().c_str(), file_line_->line(),
+          current_ranges_.ToString().c_str());
     } else {
       // Otherwise keep the current range empty to cause a step into inline
       // routine or potentially a single step.
@@ -111,8 +109,7 @@ ThreadController::StopOp StepThreadController::OnThreadStop(
     const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) {
   if (finish_unsymolized_function_) {
     Log("Trying to step out of unsymbolized function.");
-    if (finish_unsymolized_function_->OnThreadStop(
-            stop_type, hit_breakpoints) == kContinue) {
+    if (finish_unsymolized_function_->OnThreadStop(stop_type, hit_breakpoints) == kContinue) {
       finish_unsymolized_function_->Log("Reported continue.");
       return kContinue;
     }
@@ -190,8 +187,7 @@ ThreadController::StopOp StepThreadController::OnThreadStop(
     // As in InitWithThread(), always use the stack's file/line over the result
     // from the line table.
     const Location& top_location = top_frame->GetLocation();
-    if (top_location.file_line().line() == 0 ||
-        top_location.file_line() == *file_line_) {
+    if (top_location.file_line().line() == 0 || top_location.file_line() == *file_line_) {
       // Still on the same line.
       if (top_location.file_line() == line_details.file_line()) {
         // Can use the range from the line table.
@@ -231,8 +227,7 @@ ThreadController::StopOp StepThreadController::OnThreadStop(
     // stepping in because we could have just stepped out of a frame to an
     // inline function starting immediately after the call. We always want to at
     // the oldest possible inline call.
-    stack.SetHideAmbiguousInlineFrameCount(
-        stack.GetAmbiguousInlineFrameCount());
+    stack.SetHideAmbiguousInlineFrameCount(stack.GetAmbiguousInlineFrameCount());
   }
   return kStopDone;
 }
@@ -261,8 +256,7 @@ bool StepThreadController::TrySteppingIntoInline(StepIntoInline command) {
   }
 
   // Examine the closest hidden frame.
-  const Frame* frame =
-      stack.FrameAtIndexIncludingHiddenInline(hidden_frame_count - 1);
+  const Frame* frame = stack.FrameAtIndexIncludingHiddenInline(hidden_frame_count - 1);
   if (!frame->IsAmbiguousInlineLocation())
     return false;  // No inline or not ambiguous.
 
@@ -276,8 +270,7 @@ bool StepThreadController::TrySteppingIntoInline(StepIntoInline command) {
   return true;
 }
 
-ThreadController::StopOp
-StepThreadController::OnThreadStopOnUnsymbolizedCode() {
+ThreadController::StopOp StepThreadController::OnThreadStopOnUnsymbolizedCode() {
   Log("Stepped into code with no symbols.");
 
   const Stack& stack = thread()->GetStack();

@@ -24,10 +24,9 @@ class MinidumpTest : public testing::Test {
   Err TryOpen(const std::string& filename);
 
   template <typename RequestType, typename ReplyType>
-  void DoRequest(
-      RequestType request, ReplyType& reply, Err& err,
-      void (RemoteAPI::*handler)(const RequestType&,
-                                 std::function<void(const Err&, ReplyType)>));
+  void DoRequest(RequestType request, ReplyType& reply, Err& err,
+                 void (RemoteAPI::*handler)(const RequestType&,
+                                            std::function<void(const Err&, ReplyType)>));
 
  private:
   debug_ipc::PlatformMessageLoop loop_;
@@ -42,8 +41,7 @@ MinidumpTest::MinidumpTest() {
 MinidumpTest::~MinidumpTest() { loop_.Cleanup(); }
 
 Err MinidumpTest::TryOpen(const std::string& filename) {
-  static auto data_dir =
-      std::filesystem::path(GetSelfPath()).parent_path() / "test_data" / "zxdb";
+  static auto data_dir = std::filesystem::path(GetSelfPath()).parent_path() / "test_data" / "zxdb";
 
   Err err;
   auto path = (data_dir / filename).string();
@@ -61,14 +59,12 @@ Err MinidumpTest::TryOpen(const std::string& filename) {
 template <typename RequestType, typename ReplyType>
 void MinidumpTest::DoRequest(
     RequestType request, ReplyType& reply, Err& err,
-    void (RemoteAPI::*handler)(const RequestType&,
-                               std::function<void(const Err&, ReplyType)>)) {
-  (session().remote_api()->*handler)(
-      request, [&reply, &err](const Err& e, ReplyType r) {
-        err = e;
-        reply = r;
-        debug_ipc::MessageLoop::Current()->QuitNow();
-      });
+    void (RemoteAPI::*handler)(const RequestType&, std::function<void(const Err&, ReplyType)>)) {
+  (session().remote_api()->*handler)(request, [&reply, &err](const Err& e, ReplyType r) {
+    err = e;
+    reply = r;
+    debug_ipc::MessageLoop::Current()->QuitNow();
+  });
   loop().Run();
 }
 
@@ -104,8 +100,7 @@ constexpr uint32_t kTestExampleMinidumpWithAspaceKOID = 9462UL;
 TEST_F(MinidumpTest, Load) {
   EXPECT_ZXDB_SUCCESS(TryOpen("test_example_minidump.dmp"));
 
-  EXPECT_NE(nullptr,
-            session().system().ProcessFromKoid(kTestExampleMinidumpKOID));
+  EXPECT_NE(nullptr, session().system().ProcessFromKoid(kTestExampleMinidumpKOID));
 }
 
 TEST_F(MinidumpTest, ProcessTreeRecord) {
@@ -113,8 +108,7 @@ TEST_F(MinidumpTest, ProcessTreeRecord) {
 
   Err err;
   debug_ipc::ProcessTreeReply reply;
-  DoRequest(debug_ipc::ProcessTreeRequest(), reply, err,
-            &RemoteAPI::ProcessTree);
+  DoRequest(debug_ipc::ProcessTreeRequest(), reply, err, &RemoteAPI::ProcessTree);
   ASSERT_ZXDB_SUCCESS(err);
 
   auto record = reply.root;
@@ -225,8 +219,7 @@ TEST_F(MinidumpTest, Registers) {
   }
 
   std::vector<uint8_t> zero_short = {0, 0};
-  std::vector<uint8_t> zero_128 = {0, 0, 0, 0, 0, 0, 0, 0,
-                                   0, 0, 0, 0, 0, 0, 0, 0};
+  std::vector<uint8_t> zero_128 = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
   EXPECT_EQ(AsData(0x83UL), got[std::pair(C::kGeneral, R::kX64_rax)]);
   EXPECT_EQ(AsData(0x2FE150062100UL), got[std::pair(C::kGeneral, R::kX64_rbx)]);
@@ -312,28 +305,23 @@ TEST_F(MinidumpTest, Modules) {
 
   EXPECT_EQ("libfdio.so", reply.modules[2].name);
   EXPECT_EQ(0xf84d6c82a000UL, reply.modules[2].base);
-  EXPECT_EQ("47521571b0824b71ddc745a01d7a0352539dd803",
-            reply.modules[2].build_id);
+  EXPECT_EQ("47521571b0824b71ddc745a01d7a0352539dd803", reply.modules[2].build_id);
 
   EXPECT_EQ("libzircon.so", reply.modules[3].name);
   EXPECT_EQ(0xe0a9f4b35000UL, reply.modules[3].base);
-  EXPECT_EQ("b0cb33d5e533ba8f6dcb73cc9c158cb8247f0263",
-            reply.modules[3].build_id);
+  EXPECT_EQ("b0cb33d5e533ba8f6dcb73cc9c158cb8247f0263", reply.modules[3].build_id);
 
   EXPECT_EQ("libasync-default.so", reply.modules[4].name);
   EXPECT_EQ(0xacc33bf02000UL, reply.modules[4].base);
-  EXPECT_EQ("94dee2c0e27202b524255e07f7a9a9e5e282bdb0",
-            reply.modules[4].build_id);
+  EXPECT_EQ("94dee2c0e27202b524255e07f7a9a9e5e282bdb0", reply.modules[4].build_id);
 
   EXPECT_EQ("libsyslog.so", reply.modules[5].name);
   EXPECT_EQ(0xf4e730afa000UL, reply.modules[5].base);
-  EXPECT_EQ("d9ea935594739f99127a67a1816b4afa2d2fd486",
-            reply.modules[5].build_id);
+  EXPECT_EQ("d9ea935594739f99127a67a1816b4afa2d2fd486", reply.modules[5].build_id);
 
   EXPECT_EQ("libtrace-engine.so", reply.modules[6].name);
   EXPECT_EQ(0xe0f0f0035000UL, reply.modules[6].base);
-  EXPECT_EQ("b1f55f8a9a49d4bd5040c17b69b3e795f5e9ee84",
-            reply.modules[6].build_id);
+  EXPECT_EQ("b1f55f8a9a49d4bd5040c17b69b3e795f5e9ee84", reply.modules[6].build_id);
 
   EXPECT_EQ("libc++.so.2", reply.modules[7].name);
   EXPECT_EQ(0xd9512a2b0000UL, reply.modules[7].base);
@@ -341,8 +329,7 @@ TEST_F(MinidumpTest, Modules) {
 
   EXPECT_EQ("libc.so", reply.modules[8].name);
   EXPECT_EQ(0xd339f6596000UL, reply.modules[8].base);
-  EXPECT_EQ("c92393053718b514a70777d18c4c0cc415d544b0",
-            reply.modules[8].build_id);
+  EXPECT_EQ("c92393053718b514a70777d18c4c0cc415d544b0", reply.modules[8].build_id);
 
   EXPECT_EQ("libc++abi.so.1", reply.modules[9].name);
   EXPECT_EQ(0xbcd34b71000UL, reply.modules[9].base);
@@ -508,9 +495,7 @@ TEST_F(MinidumpTest, SysInfo) {
   DoRequest(request, reply, err, &RemoteAPI::SysInfo);
   ASSERT_ZXDB_SUCCESS(err);
 
-  EXPECT_EQ(
-      "Zircon prerelease git-50fbb1100548dc716d72abd4024461a85f5c8eb8 x86_64",
-      reply.version);
+  EXPECT_EQ("Zircon prerelease git-50fbb1100548dc716d72abd4024461a85f5c8eb8 x86_64", reply.version);
   EXPECT_EQ(4u, reply.num_cpus);
   EXPECT_EQ(0u, reply.memory_mb);
   EXPECT_EQ(0u, reply.hw_breakpoint_count);

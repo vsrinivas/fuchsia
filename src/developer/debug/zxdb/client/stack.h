@@ -56,18 +56,16 @@ class Stack {
     //
     // The callback should be issued with an error if the object is destroyed
     // during processing.
-    virtual void SyncFramesForStack(
-        std::function<void(const Err&)> callback) = 0;
+    virtual void SyncFramesForStack(std::function<void(const Err&)> callback) = 0;
 
     // Constructs a Frame implementation for the given IPC stack frame and
     // location. The location must be an input since inline frame expansion
     // requires stack frames be constructed with different symbols than just
     // looking up the address in the symbols.
-    virtual std::unique_ptr<Frame> MakeFrameForStack(
-        const debug_ipc::StackFrame& input, Location location) = 0;
+    virtual std::unique_ptr<Frame> MakeFrameForStack(const debug_ipc::StackFrame& input,
+                                                     Location location) = 0;
 
-    virtual Location GetSymbolizedLocationForStackFrame(
-        const debug_ipc::StackFrame& input) = 0;
+    virtual Location GetSymbolizedLocationForStackFrame(const debug_ipc::StackFrame& input) = 0;
   };
 
   // The delegate must outlive this class.
@@ -81,9 +79,7 @@ class Stack {
   // the top 1-2 (see class-level comment above).
   bool has_all_frames() const { return has_all_frames_; }
 
-  size_t size() const {
-    return frames_.size() - hide_ambiguous_inline_frame_count_;
-  }
+  size_t size() const { return frames_.size() - hide_ambiguous_inline_frame_count_; }
   bool empty() const { return frames_.empty(); }
 
   // Access into the individual frames. The topmost stack frame is index 0.
@@ -123,9 +119,7 @@ class Stack {
   // From 0 to "top inline frame count" of inline frames can be hidden or
   // unhidden. By default they are all visible (hide count = 0).
   size_t GetAmbiguousInlineFrameCount() const;
-  size_t hide_ambiguous_inline_frame_count() const {
-    return hide_ambiguous_inline_frame_count_;
-  }
+  size_t hide_ambiguous_inline_frame_count() const { return hide_ambiguous_inline_frame_count_; }
   void SetHideAmbiguousInlineFrameCount(size_t hide_count);
 
   // Queries the size and for frames at indices ignoring any hidden inline
@@ -133,9 +127,7 @@ class Stack {
   // the innermost inline frame and is not affected by
   // SetTopInlineFrameShowCount().
   size_t SizeIncludingHiddenInline() const { return frames_.size(); }
-  Frame* FrameAtIndexIncludingHiddenInline(size_t index) {
-    return frames_[index].get();
-  }
+  Frame* FrameAtIndexIncludingHiddenInline(size_t index) { return frames_[index].get(); }
 
   // Requests that all frame information be updated. This can be used to
   // (asynchronously) populate the frames when a Stack has only partial
@@ -163,8 +155,7 @@ class Stack {
                  const std::vector<debug_ipc::StackFrame>& frames);
 
   // Sets the frames to a known set to provide synthetic stacks for tests.
-  void SetFramesForTest(std::vector<std::unique_ptr<Frame>> frames,
-                        bool has_all);
+  void SetFramesForTest(std::vector<std::unique_ptr<Frame>> frames, bool has_all);
 
   // Removes all frames. In normal operation this is called by the Thread when
   // things happen that invalidate all frames such as resuming the thread.

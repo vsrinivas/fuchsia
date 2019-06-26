@@ -37,11 +37,10 @@ class MockStackDelegate : public Stack::Delegate {
   }
 
   void SyncFramesForStack(std::function<void(const Err&)> cb) override {
-    debug_ipc::MessageLoop::Current()->PostTask(
-        FROM_HERE, [cb = std::move(cb), this]() {
-          stack_->SetFramesForTest(std::move(async_frames_), true);
-          cb(Err());
-        });
+    debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [cb = std::move(cb), this]() {
+      stack_->SetFramesForTest(std::move(async_frames_), true);
+      cb(Err());
+    });
   }
 
   std::unique_ptr<Frame> MakeFrameForStack(const debug_ipc::StackFrame& input,
@@ -49,8 +48,7 @@ class MockStackDelegate : public Stack::Delegate {
     return std::make_unique<MockFrame>(nullptr, nullptr, location, input.sp);
   }
 
-  Location GetSymbolizedLocationForStackFrame(
-      const debug_ipc::StackFrame& input) override {
+  Location GetSymbolizedLocationForStackFrame(const debug_ipc::StackFrame& input) override {
     auto found = locations_.find(input.ip);
     if (found == locations_.end())
       return Location(Location::State::kSymbolized, input.ip);
@@ -81,31 +79,27 @@ std::vector<std::unique_ptr<Frame>> MakeInlineStackFrames() {
   Location middle_location(Location::State::kSymbolized, 0x1010);
   Location bottom_location(Location::State::kSymbolized, 0x1020);
 
-  auto phys_top = std::make_unique<MockFrame>(nullptr, nullptr, top_location,
-                                              kTopSP, kMiddleSP);
-  auto phys_middle = std::make_unique<MockFrame>(
-      nullptr, nullptr, middle_location, kMiddleSP, kBottomSP);
-  auto phys_bottom = std::make_unique<MockFrame>(nullptr, nullptr,
-                                                 bottom_location, kBottomSP, 0);
+  auto phys_top = std::make_unique<MockFrame>(nullptr, nullptr, top_location, kTopSP, kMiddleSP);
+  auto phys_middle =
+      std::make_unique<MockFrame>(nullptr, nullptr, middle_location, kMiddleSP, kBottomSP);
+  auto phys_bottom = std::make_unique<MockFrame>(nullptr, nullptr, bottom_location, kBottomSP, 0);
 
   std::vector<std::unique_ptr<Frame>> frames;
 
   // Top frame has two inline functions expanded on top of it. This uses the
   // same Location object for simplicity, in real life these will be different.
-  frames.push_back(std::make_unique<MockFrame>(
-      nullptr, nullptr, top_location, kTopSP, kMiddleSP,
-      std::vector<Register>(), kTopSP, phys_top.get()));
-  frames.push_back(std::make_unique<MockFrame>(
-      nullptr, nullptr, top_location, kTopSP, kMiddleSP,
-      std::vector<Register>(), kTopSP, phys_top.get()));
+  frames.push_back(std::make_unique<MockFrame>(nullptr, nullptr, top_location, kTopSP, kMiddleSP,
+                                               std::vector<Register>(), kTopSP, phys_top.get()));
+  frames.push_back(std::make_unique<MockFrame>(nullptr, nullptr, top_location, kTopSP, kMiddleSP,
+                                               std::vector<Register>(), kTopSP, phys_top.get()));
 
   // Physical top frame below those.
   frames.push_back(std::move(phys_top));
 
   // Middle frame has one inline function expanded on top of it.
-  frames.push_back(std::make_unique<MockFrame>(
-      nullptr, nullptr, middle_location, kMiddleSP, kBottomSP,
-      std::vector<Register>(), kMiddleSP, phys_middle.get()));
+  frames.push_back(std::make_unique<MockFrame>(nullptr, nullptr, middle_location, kMiddleSP,
+                                               kBottomSP, std::vector<Register>(), kMiddleSP,
+                                               phys_middle.get()));
   frames.push_back(std::move(phys_middle));
 
   // Bottom frame has no inline frame.
@@ -189,22 +183,19 @@ TEST_F(StackTest, InlineExpansion) {
   // Non-inline location for the top stack frame.
   auto top_func = fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);
   top_func->set_assigned_name("Top");
-  Location top_location(kTopAddr, top_line, 0, symbol_context,
-                        LazySymbol(top_func));
+  Location top_location(kTopAddr, top_line, 0, symbol_context, LazySymbol(top_func));
   delegate.AddLocation(top_location);
 
   // Bottom stack frame has a real function, an inline function, and an
   // ambiguous inline location (at the start of an inline range).
-  auto bottom_ambig_inline_func =
-      fxl::MakeRefCounted<Function>(DwarfTag::kInlinedSubroutine);
+  auto bottom_ambig_inline_func = fxl::MakeRefCounted<Function>(DwarfTag::kInlinedSubroutine);
   bottom_ambig_inline_func->set_assigned_name("Inline");
   // Must start exactly at kBottomAddr for the location to be ambiguous.
   bottom_ambig_inline_func->set_code_ranges(
       AddressRanges(AddressRange(kBottomAddr, kBottomAddr + 8)));
   bottom_ambig_inline_func->set_call_line(inline_ambig_call_line);
 
-  auto bottom_inline_func =
-      fxl::MakeRefCounted<Function>(DwarfTag::kInlinedSubroutine);
+  auto bottom_inline_func = fxl::MakeRefCounted<Function>(DwarfTag::kInlinedSubroutine);
   bottom_inline_func->set_assigned_name("Inline");
   // Must start before at kBottomAddr for the location to not be ambiguous.
   bottom_inline_func->set_code_ranges(
@@ -213,11 +204,9 @@ TEST_F(StackTest, InlineExpansion) {
 
   auto bottom_func = fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);
   bottom_func->set_assigned_name("Bottom");
-  bottom_func->set_code_ranges(
-      AddressRanges(AddressRange(kBottomAddr - 8, kBottomAddr + 16)));
+  bottom_func->set_code_ranges(AddressRanges(AddressRange(kBottomAddr - 8, kBottomAddr + 16)));
 
-  bottom_ambig_inline_func->set_containing_block(
-      LazySymbol(bottom_inline_func));
+  bottom_ambig_inline_func->set_containing_block(LazySymbol(bottom_inline_func));
   bottom_inline_func->set_containing_block(LazySymbol(bottom_func));
 
   // The location returned by the symbol function will have the file/line
@@ -284,20 +273,18 @@ TEST_F(StackTest, InlineHiding) {
   Location top_location(Location::State::kSymbolized, 0x1000);
   Location bottom_location(Location::State::kSymbolized, 0x1020);
 
-  auto phys_top =
-      std::make_unique<MockFrame>(nullptr, nullptr, top_location, kTopSP);
-  auto phys_bottom =
-      std::make_unique<MockFrame>(nullptr, nullptr, bottom_location, kBottomSP);
+  auto phys_top = std::make_unique<MockFrame>(nullptr, nullptr, top_location, kTopSP);
+  auto phys_bottom = std::make_unique<MockFrame>(nullptr, nullptr, bottom_location, kBottomSP);
 
   std::vector<std::unique_ptr<Frame>> frames;
 
   // Top frame has two inline functions expanded on top of it.
-  frames.push_back(std::make_unique<MockFrame>(
-      nullptr, nullptr, top_location, kTopSP, 0, std::vector<Register>(),
-      kTopSP, phys_top.get(), true));
-  frames.push_back(std::make_unique<MockFrame>(
-      nullptr, nullptr, top_location, kTopSP, 0, std::vector<Register>(),
-      kTopSP, phys_top.get(), true));
+  frames.push_back(std::make_unique<MockFrame>(nullptr, nullptr, top_location, kTopSP, 0,
+                                               std::vector<Register>(), kTopSP, phys_top.get(),
+                                               true));
+  frames.push_back(std::make_unique<MockFrame>(nullptr, nullptr, top_location, kTopSP, 0,
+                                               std::vector<Register>(), kTopSP, phys_top.get(),
+                                               true));
 
   // Physical top frame below those.
   frames.push_back(std::move(phys_top));
@@ -333,12 +320,11 @@ TEST_F(StackTest, UpdateExisting) {
 
   // Make a stack with one physial frame and one inline frame above it.
   Location top_location(Location::State::kSymbolized, 0x1000);
-  auto phys_top =
+  auto phys_top = std::make_unique<MockFrame>(nullptr, nullptr, top_location, kTopSP, 0,
+                                              std::vector<Register>(), kTopSP);
+  auto inline_top =
       std::make_unique<MockFrame>(nullptr, nullptr, top_location, kTopSP, 0,
-                                  std::vector<Register>(), kTopSP);
-  auto inline_top = std::make_unique<MockFrame>(
-      nullptr, nullptr, top_location, kTopSP, 0, std::vector<Register>(),
-      kTopSP, phys_top.get(), true);
+                                  std::vector<Register>(), kTopSP, phys_top.get(), true);
   inline_top->set_is_ambiguous_inline(true);
 
   // Save for verification later.

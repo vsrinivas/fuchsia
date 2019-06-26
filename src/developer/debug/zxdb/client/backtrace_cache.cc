@@ -18,8 +18,7 @@ namespace zxdb {
 
 namespace {
 
-void AppendFrame(const Location& location, const TargetSymbols* symbols,
-                 Backtrace* backtrace) {
+void AppendFrame(const Location& location, const TargetSymbols* symbols, Backtrace* backtrace) {
   if (!location.is_valid()) {
     backtrace->frames.push_back({});
     return;
@@ -49,13 +48,10 @@ void AppendFrame(const Location& location, const TargetSymbols* symbols,
 BacktraceCache::BacktraceCache() : weak_factory_(this) {}
 BacktraceCache::~BacktraceCache() = default;
 
-fxl::WeakPtr<BacktraceCache> BacktraceCache::GetWeakPtr() {
-  return weak_factory_.GetWeakPtr();
-}
+fxl::WeakPtr<BacktraceCache> BacktraceCache::GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
 
-void BacktraceCache::OnThreadStopped(
-    Thread* thread, debug_ipc::NotifyException::Type type,
-    const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) {
+void BacktraceCache::OnThreadStopped(Thread* thread, debug_ipc::NotifyException::Type type,
+                                     const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) {
   if (!should_cache_ || type != NotifyException::Type::kSoftware)
     return;
 
@@ -72,13 +68,12 @@ void BacktraceCache::OnThreadStopped(
   // requirement should be posted before a resume call (we're in the middle of
   // a thread exception notification), so we should get the frames reliably for
   // normal cases.
-  stack.SyncFrames(
-      [stack = stack.GetWeakPtr(), cache = GetWeakPtr()](const Err& err) {
-        if (err.has_error() || !stack)
-          return;
+  stack.SyncFrames([stack = stack.GetWeakPtr(), cache = GetWeakPtr()](const Err& err) {
+    if (err.has_error() || !stack)
+      return;
 
-        cache->StoreBacktrace(*stack);
-      });
+    cache->StoreBacktrace(*stack);
+  });
 }
 
 void BacktraceCache::StoreBacktrace(const Stack& stack) {
@@ -88,8 +83,7 @@ void BacktraceCache::StoreBacktrace(const Stack& stack) {
     Thread* thread = frame->GetThread();
 
     // Tests can provide a null thread for a frame.
-    const TargetSymbols* syms =
-        !thread ? nullptr : thread->GetProcess()->GetTarget()->GetSymbols();
+    const TargetSymbols* syms = !thread ? nullptr : thread->GetProcess()->GetTarget()->GetSymbols();
     AppendFrame(frame->GetLocation(), syms, &backtrace);
   }
 

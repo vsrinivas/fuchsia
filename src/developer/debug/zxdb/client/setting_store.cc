@@ -10,17 +10,14 @@
 
 namespace zxdb {
 
-SettingStore::SettingStore(fxl::RefPtr<SettingSchema> schema,
-                           SettingStore* fallback)
+SettingStore::SettingStore(fxl::RefPtr<SettingSchema> schema, SettingStore* fallback)
     : schema_(std::move(schema)), fallback_(fallback) {}
 
-void SettingStore::AddObserver(const std::string& setting_name,
-                               SettingStoreObserver* observer) {
+void SettingStore::AddObserver(const std::string& setting_name, SettingStoreObserver* observer) {
   observer_map_[setting_name].AddObserver(observer);
 }
 
-void SettingStore::RemoveObserver(const std::string& setting_name,
-                                  SettingStoreObserver* observer) {
+void SettingStore::RemoveObserver(const std::string& setting_name, SettingStoreObserver* observer) {
   observer_map_[setting_name].RemoveObserver(observer);
 }
 
@@ -60,9 +57,7 @@ std::vector<std::string> SettingStore::GetList(const std::string& key) const {
   return value.get_list();
 }
 
-SettingValue SettingStore::GetValue(const std::string& key) const {
-  return GetSetting(key).value;
-}
+SettingValue SettingStore::GetValue(const std::string& key) const { return GetSetting(key).value; }
 
 Setting SettingStore::GetSetting(const std::string& key) const {
   // First check if it's in the schema.
@@ -75,8 +70,8 @@ Setting SettingStore::GetSetting(const std::string& key) const {
   // Check if it already exists. If so, return it.
   auto it = values_.find(key);
   if (it != values_.end()) {
-    DEBUG_LOG(Setting) << "Store " << name_ << ": stored value for " << key
-                       << ": " << it->second.ToDebugString();
+    DEBUG_LOG(Setting) << "Store " << name_ << ": stored value for " << key << ": "
+                       << it->second.ToDebugString();
     return {std::move(default_setting.setting.info), it->second};
   }
 
@@ -89,31 +84,24 @@ Setting SettingStore::GetSetting(const std::string& key) const {
   }
 
   // No fallback has the schema, we return the default.
-  DEBUG_LOG(Setting) << "Store: " << name_ << ": schema default for " << key
-                     << ": " << default_setting.setting.value.ToDebugString();
+  DEBUG_LOG(Setting) << "Store: " << name_ << ": schema default for " << key << ": "
+                     << default_setting.setting.value.ToDebugString();
   return default_setting.setting;
 }
 
-bool SettingStore::HasSetting(const std::string& key) const {
-  return schema_->HasSetting(key);
-}
+bool SettingStore::HasSetting(const std::string& key) const { return schema_->HasSetting(key); }
 
 // Setters ---------------------------------------------------------------------
 
-Err SettingStore::SetBool(const std::string& key, bool val) {
-  return SetSetting(key, val);
-}
+Err SettingStore::SetBool(const std::string& key, bool val) { return SetSetting(key, val); }
 
-Err SettingStore::SetInt(const std::string& key, int val) {
-  return SetSetting(key, val);
-}
+Err SettingStore::SetInt(const std::string& key, int val) { return SetSetting(key, val); }
 
 Err SettingStore::SetString(const std::string& key, std::string val) {
   return SetSetting(key, std::move(val));
 }
 
-Err SettingStore::SetList(const std::string& key,
-                          std::vector<std::string> list) {
+Err SettingStore::SetList(const std::string& key, std::vector<std::string> list) {
   return SetSetting(key, std::move(list));
 }
 
@@ -127,8 +115,7 @@ Err SettingStore::SetSetting(const std::string& key, T t) {
 
   // We can safely insert or override and notify observers.
   auto new_setting = SettingValue(std::move(t));
-  DEBUG_LOG(Setting) << "Store " << name_ << " set " << key << ": "
-                     << new_setting.ToDebugString();
+  DEBUG_LOG(Setting) << "Store " << name_ << " set " << key << ": " << new_setting.ToDebugString();
   values_[key] = std::move(new_setting);
   NotifySettingChanged(key);
 

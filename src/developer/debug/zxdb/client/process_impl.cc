@@ -25,8 +25,8 @@
 
 namespace zxdb {
 
-ProcessImpl::ProcessImpl(TargetImpl* target, uint64_t koid,
-                         const std::string& name, Process::StartType start_type)
+ProcessImpl::ProcessImpl(TargetImpl* target, uint64_t koid, const std::string& name,
+                         Process::StartType start_type)
     : Process(target->session(), start_type),
       target_(target),
       koid_(koid),
@@ -64,20 +64,18 @@ void ProcessImpl::GetModules(
     std::function<void(const Err&, std::vector<debug_ipc::Module>)> callback) {
   debug_ipc::ModulesRequest request;
   request.process_koid = koid_;
-  session()->remote_api()->Modules(
-      request, [process = weak_factory_.GetWeakPtr(), callback](
-                   const Err& err, debug_ipc::ModulesReply reply) {
-        if (process)
-          process->symbols_.SetModules(reply.modules);
-        if (callback)
-          callback(err, std::move(reply.modules));
-      });
+  session()->remote_api()->Modules(request, [process = weak_factory_.GetWeakPtr(), callback](
+                                                const Err& err, debug_ipc::ModulesReply reply) {
+    if (process)
+      process->symbols_.SetModules(reply.modules);
+    if (callback)
+      callback(err, std::move(reply.modules));
+  });
 }
 
 void ProcessImpl::GetAspace(
     uint64_t address,
-    std::function<void(const Err&, std::vector<debug_ipc::AddressRegion>)>
-        callback) const {
+    std::function<void(const Err&, std::vector<debug_ipc::AddressRegion>)> callback) const {
   debug_ipc::AddressSpaceRequest request;
   request.process_koid = koid_;
   request.address = address;
@@ -96,38 +94,33 @@ std::vector<Thread*> ProcessImpl::GetThreads() const {
   return result;
 }
 
-Thread* ProcessImpl::GetThreadFromKoid(uint64_t koid) {
-  return GetThreadImplFromKoid(koid);
-}
+Thread* ProcessImpl::GetThreadFromKoid(uint64_t koid) { return GetThreadImplFromKoid(koid); }
 
 void ProcessImpl::SyncThreads(std::function<void()> callback) {
   debug_ipc::ThreadsRequest request;
   request.process_koid = koid_;
-  session()->remote_api()->Threads(
-      request, [callback, process = weak_factory_.GetWeakPtr()](
-                   const Err& err, debug_ipc::ThreadsReply reply) {
-        if (process) {
-          process->UpdateThreads(reply.threads);
-          if (callback)
-            callback();
-        }
-      });
+  session()->remote_api()->Threads(request, [callback, process = weak_factory_.GetWeakPtr()](
+                                                const Err& err, debug_ipc::ThreadsReply reply) {
+    if (process) {
+      process->UpdateThreads(reply.threads);
+      if (callback)
+        callback();
+    }
+  });
 }
 
 void ProcessImpl::Pause(std::function<void()> on_paused) {
   debug_ipc::PauseRequest request;
   request.process_koid = koid_;
   session()->remote_api()->Pause(
-      request, [weak_process = weak_factory_.GetWeakPtr(),
-                on_paused = std::move(on_paused)](const Err& err,
-                                                  debug_ipc::PauseReply reply) {
+      request, [weak_process = weak_factory_.GetWeakPtr(), on_paused = std::move(on_paused)](
+                   const Err& err, debug_ipc::PauseReply reply) {
         if (weak_process) {
           // Save any new thread metadata (will be empty for errors so don't
           // need to check explicitly for errors).
           for (const auto& record : reply.threads) {
             FXL_DCHECK(record.process_koid == weak_process->koid_);
-            if (ThreadImpl* thread =
-                    weak_process->GetThreadImplFromKoid(record.thread_koid))
+            if (ThreadImpl* thread = weak_process->GetThreadImplFromKoid(record.thread_koid))
               thread->SetMetadata(record);
           }
         }
@@ -139,12 +132,10 @@ void ProcessImpl::Continue() {
   debug_ipc::ResumeRequest request;
   request.process_koid = koid_;
   request.how = debug_ipc::ResumeRequest::How::kContinue;
-  session()->remote_api()->Resume(
-      request, [](const Err& err, debug_ipc::ResumeReply) {});
+  session()->remote_api()->Resume(request, [](const Err& err, debug_ipc::ResumeReply) {});
 }
 
-void ProcessImpl::ContinueUntil(const InputLocation& location,
-                                std::function<void(const Err&)> cb) {
+void ProcessImpl::ContinueUntil(const InputLocation& location, std::function<void(const Err&)> cb) {
   cb(
       Err("Process-wide 'Until' is temporarily closed for construction. "
           "Please try again in a few days."));
@@ -152,23 +143,22 @@ void ProcessImpl::ContinueUntil(const InputLocation& location,
 
 fxl::RefPtr<SymbolDataProvider> ProcessImpl::GetSymbolDataProvider() const {
   if (!symbol_data_provider_) {
-    symbol_data_provider_ = fxl::MakeRefCounted<ProcessSymbolDataProvider>(
-        const_cast<ProcessImpl*>(this));
+    symbol_data_provider_ =
+        fxl::MakeRefCounted<ProcessSymbolDataProvider>(const_cast<ProcessImpl*>(this));
   }
   return symbol_data_provider_;
 }
 
-void ProcessImpl::ReadMemory(
-    uint64_t address, uint32_t size,
-    std::function<void(const Err&, MemoryDump)> callback) {
+void ProcessImpl::ReadMemory(uint64_t address, uint32_t size,
+                             std::function<void(const Err&, MemoryDump)> callback) {
   debug_ipc::ReadMemoryRequest request;
   request.process_koid = koid_;
   request.address = address;
   request.size = size;
-  session()->remote_api()->ReadMemory(
-      request, [callback](const Err& err, debug_ipc::ReadMemoryReply reply) {
-        callback(err, MemoryDump(std::move(reply.blocks)));
-      });
+  session()->remote_api()->ReadMemory(request,
+                                      [callback](const Err& err, debug_ipc::ReadMemoryReply reply) {
+                                        callback(err, MemoryDump(std::move(reply.blocks)));
+                                      });
 }
 
 void ProcessImpl::WriteMemory(uint64_t address, std::vector<uint8_t> data,
@@ -178,14 +168,13 @@ void ProcessImpl::WriteMemory(uint64_t address, std::vector<uint8_t> data,
   request.address = address;
   request.data = std::move(data);
   session()->remote_api()->WriteMemory(
-      request,
-      [address, callback](const Err& err, debug_ipc::WriteMemoryReply reply) {
+      request, [address, callback](const Err& err, debug_ipc::WriteMemoryReply reply) {
         if (err.has_error()) {
           callback(err);
         } else if (reply.status != 0) {
           // Convert bad reply to error.
-          callback(Err("Unable to write memory to 0x%" PRIx64 ", error %d.",
-                       address, reply.status));
+          callback(
+              Err("Unable to write memory to 0x%" PRIx64 ", error %d.", address, reply.status));
         } else {
           // Success.
           callback(Err());
@@ -193,8 +182,7 @@ void ProcessImpl::WriteMemory(uint64_t address, std::vector<uint8_t> data,
       });
 }
 
-void ProcessImpl::OnThreadStarting(const debug_ipc::ThreadRecord& record,
-                                   bool resume) {
+void ProcessImpl::OnThreadStarting(const debug_ipc::ThreadRecord& record, bool resume) {
   TIME_BLOCK();
   if (threads_.find(record.thread_koid) != threads_.end()) {
     // Duplicate new thread notification. Some legitimate cases could cause
@@ -210,8 +198,7 @@ void ProcessImpl::OnThreadStarting(const debug_ipc::ThreadRecord& record,
   // Only backtrace create the cache if the process is currently tracking them.
   // Otherwise creation will be delayed until the process starts tracking.
   if (should_cache_backtraces_) {
-    DEBUG_LOG(Process) << "Process " << koid_
-                       << ": Caching backtraces for thread "
+    DEBUG_LOG(Process) << "Process " << koid_ << ": Caching backtraces for thread "
                        << thread_ptr->GetKoid();
     auto backtrace_cache = std::make_unique<BacktraceCache>();
     backtrace_cache->set_should_cache(true);
@@ -247,10 +234,9 @@ void ProcessImpl::OnModules(const std::vector<debug_ipc::Module>& modules,
   symbols_.SetModules(modules);
 
   // If this is the first thread, we see if we need to restart.
-  if (start_type() == StartType::kLaunch ||
-      start_type() == StartType::kComponent) {
-    bool pause_on_launch = session()->system().settings().GetBool(
-        ClientSettings::System::kPauseOnLaunch);
+  if (start_type() == StartType::kLaunch || start_type() == StartType::kComponent) {
+    bool pause_on_launch =
+        session()->system().settings().GetBool(ClientSettings::System::kPauseOnLaunch);
     if (stopped_thread_koids.size() == 1u && pause_on_launch) {
       return;
     }
@@ -264,14 +250,12 @@ void ProcessImpl::OnModules(const std::vector<debug_ipc::Module>& modules,
     request.process_koid = koid_;
     request.how = debug_ipc::ResumeRequest::How::kContinue;
     request.thread_koids = stopped_thread_koids;
-    session()->remote_api()->Resume(
-        request, [](const Err& err, debug_ipc::ResumeReply) {});
+    session()->remote_api()->Resume(request, [](const Err& err, debug_ipc::ResumeReply) {});
   }
 }
 
 bool ProcessImpl::HandleIO(const debug_ipc::NotifyIO& io) {
-  auto& buffer =
-      io.type == debug_ipc::NotifyIO::Type::kStdout ? stdout_ : stderr_;
+  auto& buffer = io.type == debug_ipc::NotifyIO::Type::kStdout ? stdout_ : stderr_;
 
   buffer.insert(buffer.end(), io.data.data(), io.data.data() + io.data.size());
   if (buffer.size() >= kMaxIOBufferSize)
@@ -280,8 +264,7 @@ bool ProcessImpl::HandleIO(const debug_ipc::NotifyIO& io) {
   return target()->settings().GetBool(ClientSettings::System::kShowStdout);
 }
 
-void ProcessImpl::UpdateThreads(
-    const std::vector<debug_ipc::ThreadRecord>& new_threads) {
+void ProcessImpl::UpdateThreads(const std::vector<debug_ipc::ThreadRecord>& new_threads) {
   // Go through all new threads, checking to added ones and updating existing.
   std::set<uint64_t> new_threads_koids;
   for (const auto& record : new_threads) {

@@ -25,12 +25,10 @@ class ProcessObserver {
   //
   // Note: There is currently no notification for module loads absent symbol
   // information. If that's necessary, this will need refactoring.
-  virtual void DidLoadModuleSymbols(Process* process,
-                                    LoadedModuleSymbols* module) {}
+  virtual void DidLoadModuleSymbols(Process* process, LoadedModuleSymbols* module) {}
 
   // Notification that the given module with symbols is about to be removed.
-  virtual void WillUnloadModuleSymbols(Process* process,
-                                       LoadedModuleSymbols* module) {}
+  virtual void WillUnloadModuleSymbols(Process* process, LoadedModuleSymbols* module) {}
 
   // Called when symbols for a loaded binary could not be loaded.
   virtual void OnSymbolLoadFailure(Process* process, const Err& err) {}

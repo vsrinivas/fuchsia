@@ -10,10 +10,9 @@
 
 namespace zxdb {
 
-MockFrame::MockFrame(Session* session, Thread* thread, const Location& location,
-                     uint64_t sp, uint64_t cfa, std::vector<Register> regs,
-                     uint64_t frame_base, const Frame* physical_frame,
-                     bool is_ambiguous_inline)
+MockFrame::MockFrame(Session* session, Thread* thread, const Location& location, uint64_t sp,
+                     uint64_t cfa, std::vector<Register> regs, uint64_t frame_base,
+                     const Frame* physical_frame, bool is_ambiguous_inline)
     : Frame(session),
       thread_(thread),
       sp_(sp),
@@ -48,15 +47,10 @@ const Frame* MockFrame::GetPhysicalFrame() const {
 
 const Location& MockFrame::GetLocation() const { return location_; }
 uint64_t MockFrame::GetAddress() const { return location_.address(); }
-const std::vector<Register>& MockFrame::GetGeneralRegisters() const {
-  return registers_;
-}
-std::optional<uint64_t> MockFrame::GetBasePointer() const {
-  return frame_base_;
-}
+const std::vector<Register>& MockFrame::GetGeneralRegisters() const { return registers_; }
+std::optional<uint64_t> MockFrame::GetBasePointer() const { return frame_base_; }
 void MockFrame::GetBasePointerAsync(std::function<void(uint64_t)> cb) {
-  debug_ipc::MessageLoop::Current()->PostTask(
-      FROM_HERE, [bp = frame_base_, cb]() { cb(bp); });
+  debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [bp = frame_base_, cb]() { cb(bp); });
 }
 uint64_t MockFrame::GetStackPointer() const { return sp_; }
 uint64_t MockFrame::GetCanonicalFrameAddress() const { return cfa_; }
@@ -69,15 +63,12 @@ fxl::RefPtr<SymbolDataProvider> MockFrame::GetSymbolDataProvider() const {
 
 fxl::RefPtr<EvalContext> MockFrame::GetEvalContext() const {
   if (!eval_context_) {
-    eval_context_ = fxl::MakeRefCounted<EvalContextImpl>(
-        fxl::WeakPtr<const ProcessSymbols>(), GetSymbolDataProvider(),
-        location_);
+    eval_context_ = fxl::MakeRefCounted<EvalContextImpl>(fxl::WeakPtr<const ProcessSymbols>(),
+                                                         GetSymbolDataProvider(), location_);
   }
   return eval_context_;
 }
 
-bool MockFrame::IsAmbiguousInlineLocation() const {
-  return is_ambiguous_inline_;
-}
+bool MockFrame::IsAmbiguousInlineLocation() const { return is_ambiguous_inline_; }
 
 }  // namespace zxdb

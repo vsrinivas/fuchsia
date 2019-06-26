@@ -42,8 +42,8 @@ class Disassembler {
   // One disassembled instruction.
   struct Row {
     Row();
-    Row(uint64_t address, const uint8_t* bytes, size_t bytes_len,
-        std::string op, std::string params, std::string comment);
+    Row(uint64_t address, const uint8_t* bytes, size_t bytes_len, std::string op,
+        std::string params, std::string comment);
     ~Row();
 
     uint64_t address;
@@ -85,9 +85,9 @@ class Disassembler {
   //
   // The output will be one vector of columns per line. See DisassembleOne for
   // row format.
-  size_t DisassembleMany(const uint8_t* data, size_t data_len,
-                         uint64_t start_address, const Options& options,
-                         size_t max_instructions, std::vector<Row>* out) const;
+  size_t DisassembleMany(const uint8_t* data, size_t data_len, uint64_t start_address,
+                         const Options& options, size_t max_instructions,
+                         std::vector<Row>* out) const;
 
   // Like DisassembleMany() but uses a MemoryDump object. The dump will start
   // at the beginning of the memory dump. This function understands the
@@ -97,9 +97,8 @@ class Disassembler {
   // An unmapped range will be counted as one instruction. The memory
   // addresses for unmapped ranges will always be shown even if disabled in the
   // options.
-  size_t DisassembleDump(const MemoryDump& dump, uint64_t start_address,
-                         const Options& options, size_t max_instructions,
-                         std::vector<Row>* out) const;
+  size_t DisassembleDump(const MemoryDump& dump, uint64_t start_address, const Options& options,
+                         size_t max_instructions, std::vector<Row>* out) const;
 
  private:
   const ArchInfo* arch_ = nullptr;

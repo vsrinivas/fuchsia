@@ -28,18 +28,15 @@ TEST_F(FinishThreadControllerTest, FinishInline) {
   auto mock_frames = GetStack();
   InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
                            debug_ipc::NotifyException::Type::kSingleStep,
-                           MockFrameVectorToFrameVector(std::move(mock_frames)),
-                           true);
+                           MockFrameVectorToFrameVector(std::move(mock_frames)), true);
 
   // "Finish" from the top stack frame, which is an inline one.
-  auto finish_controller =
-      std::make_unique<FinishThreadController>(thread()->GetStack(), 0);
+  auto finish_controller = std::make_unique<FinishThreadController>(thread()->GetStack(), 0);
   bool continued = false;
-  thread()->ContinueWith(std::move(finish_controller),
-                         [&continued](const Err& err) {
-                           if (!err.has_error())
-                             continued = true;
-                         });
+  thread()->ContinueWith(std::move(finish_controller), [&continued](const Err& err) {
+    if (!err.has_error())
+      continued = true;
+  });
 
   // It should have been able to step without doing any further async work.
   EXPECT_TRUE(continued);
@@ -50,8 +47,7 @@ TEST_F(FinishThreadControllerTest, FinishInline) {
   mock_frames[0]->SetAddress(mock_frames[0]->GetAddress() + 4);
   InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
                            debug_ipc::NotifyException::Type::kSingleStep,
-                           MockFrameVectorToFrameVector(std::move(mock_frames)),
-                           true);
+                           MockFrameVectorToFrameVector(std::move(mock_frames)), true);
 
   // That's still inside the frame's range, so it should continue.
   EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());
@@ -64,8 +60,7 @@ TEST_F(FinishThreadControllerTest, FinishInline) {
 
   InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
                            debug_ipc::NotifyException::Type::kSingleStep,
-                           MockFrameVectorToFrameVector(std::move(mock_frames)),
-                           true);
+                           MockFrameVectorToFrameVector(std::move(mock_frames)), true);
 
   // Should not have resumed.
   EXPECT_EQ(0, mock_remote_api()->GetAndResetResumeCount());
@@ -82,18 +77,15 @@ TEST_F(FinishThreadControllerTest, FinishPhysicalAndInline) {
   uint64_t frame_2_ip = mock_frames[2]->GetAddress();
   InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
                            debug_ipc::NotifyException::Type::kSingleStep,
-                           MockFrameVectorToFrameVector(std::move(mock_frames)),
-                           true);
+                           MockFrameVectorToFrameVector(std::move(mock_frames)), true);
 
   // "Finish" frame 3,
-  auto finish_controller =
-      std::make_unique<FinishThreadController>(thread()->GetStack(), 3);
+  auto finish_controller = std::make_unique<FinishThreadController>(thread()->GetStack(), 3);
   bool continued = false;
-  thread()->ContinueWith(std::move(finish_controller),
-                         [&continued](const Err& err) {
-                           if (!err.has_error())
-                             continued = true;
-                         });
+  thread()->ContinueWith(std::move(finish_controller), [&continued](const Err& err) {
+    if (!err.has_error())
+      continued = true;
+  });
 
   // That should have sent a resume + a breakpoint set at the frame 2 IP (this
   // breakpoint is implementing the "finish" to step out of the frame 1
@@ -115,8 +107,7 @@ TEST_F(FinishThreadControllerTest, FinishPhysicalAndInline) {
   // Create a stack now showing frame 2 as the top (new frame 0).
   mock_frames = GetStack();
   mock_frames.erase(mock_frames.begin(), mock_frames.begin() + 3);
-  InjectExceptionWithStack(
-      exception, MockFrameVectorToFrameVector(std::move(mock_frames)), true);
+  InjectExceptionWithStack(exception, MockFrameVectorToFrameVector(std::move(mock_frames)), true);
 
   // The breakpoint should have been cleared and the thread should have been
   // resumed.
@@ -130,8 +121,7 @@ TEST_F(FinishThreadControllerTest, FinishPhysicalAndInline) {
   mock_frames[0]->SetAddress(mock_frames[0]->GetAddress() + 4);
   InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
                            debug_ipc::NotifyException::Type::kSingleStep,
-                           MockFrameVectorToFrameVector(std::move(mock_frames)),
-                           true);
+                           MockFrameVectorToFrameVector(std::move(mock_frames)), true);
   EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());
 
   // Stop in inline frame 1. This leaves inline frame 2 (right after its
@@ -142,8 +132,7 @@ TEST_F(FinishThreadControllerTest, FinishPhysicalAndInline) {
   mock_frames[0]->SetAddress(kMiddleInline2FunctionRange.end());
   InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
                            debug_ipc::NotifyException::Type::kSingleStep,
-                           MockFrameVectorToFrameVector(std::move(mock_frames)),
-                           true);
+                           MockFrameVectorToFrameVector(std::move(mock_frames)), true);
   EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());
 
   // Stop in middle frame which is the target (right after the inline 1 range).
@@ -152,8 +141,7 @@ TEST_F(FinishThreadControllerTest, FinishPhysicalAndInline) {
   mock_frames[0]->SetAddress(kMiddleInline1FunctionRange.end());
   InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
                            debug_ipc::NotifyException::Type::kSingleStep,
-                           MockFrameVectorToFrameVector(std::move(mock_frames)),
-                           true);
+                           MockFrameVectorToFrameVector(std::move(mock_frames)), true);
   EXPECT_EQ(0, mock_remote_api()->GetAndResetResumeCount());  // Stopped.
 }
 

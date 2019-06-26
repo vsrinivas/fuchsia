@@ -25,10 +25,8 @@ namespace {
 fxl::RefPtr<SettingSchema> CreateSchema() {
   auto schema = fxl::MakeRefCounted<SettingSchema>();
 
-  schema->AddBool(ClientSettings::System::kShowStdout, kShowStdoutDescription,
-                  true);
-  schema->AddBool(ClientSettings::Target::kStoreBacktraces,
-                  kStoreBacktracesDescription, false);
+  schema->AddBool(ClientSettings::System::kShowStdout, kShowStdoutDescription, true);
+  schema->AddBool(ClientSettings::Target::kStoreBacktraces, kStoreBacktracesDescription, false);
 
   return schema;
 }
@@ -45,13 +43,9 @@ Target::Target(Session* session)
 
 Target::~Target() = default;
 
-void Target::AddObserver(TargetObserver* observer) {
-  observers_.AddObserver(observer);
-}
+void Target::AddObserver(TargetObserver* observer) { observers_.AddObserver(observer); }
 
-void Target::RemoveObserver(TargetObserver* observer) {
-  observers_.RemoveObserver(observer);
-}
+void Target::RemoveObserver(TargetObserver* observer) { observers_.RemoveObserver(observer); }
 
 fxl::WeakPtr<Target> Target::GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
 

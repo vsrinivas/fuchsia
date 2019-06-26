@@ -23,15 +23,13 @@ class DummyThreadController : public ThreadController {
   ~DummyThreadController() = default;
 
   // ThreadController implementation.
-  void InitWithThread(Thread* thread,
-                      std::function<void(const Err&)> cb) override {
+  void InitWithThread(Thread* thread, std::function<void(const Err&)> cb) override {
     set_thread(thread);
     cb(Err());
   }
   ContinueOp GetContinueOp() override { return ContinueOp::StepInstruction(); }
-  StopOp OnThreadStop(
-      debug_ipc::NotifyException::Type stop_type,
-      const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) override {
+  StopOp OnThreadStop(debug_ipc::NotifyException::Type stop_type,
+                      const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) override {
     return kStopDone;
   }
   const char* GetName() const override { return "Dummy"; }
@@ -73,20 +71,17 @@ TEST_F(ThreadControllerUnitTest, SetInlineFrameIfAmbiguous) {
   // also have the same code address.
   ASSERT_EQ(
       kMiddleInline2FunctionRange,
-      mock_frames[0]->GetLocation().symbol().Get()->AsFunction()->GetFullRange(
-          symbol_context));
+      mock_frames[0]->GetLocation().symbol().Get()->AsFunction()->GetFullRange(symbol_context));
   ASSERT_EQ(
       kMiddleInline1FunctionRange,
-      mock_frames[1]->GetLocation().symbol().Get()->AsFunction()->GetFullRange(
-          symbol_context));
+      mock_frames[1]->GetLocation().symbol().Get()->AsFunction()->GetFullRange(symbol_context));
   ASSERT_EQ(kMiddleInline1FunctionRange.begin(), address);
   ASSERT_EQ(kMiddleInline2FunctionRange.begin(), address);
 
   // Set the stack.
   InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
                            debug_ipc::NotifyException::Type::kSingleStep,
-                           MockFrameVectorToFrameVector(std::move(mock_frames)),
-                           true);
+                           MockFrameVectorToFrameVector(std::move(mock_frames)), true);
 
   // Check the initial state of the inline frames on the stack. This is also
   // pre-test validation. There should be two inline frames and neither should
@@ -103,52 +98,51 @@ TEST_F(ThreadControllerUnitTest, SetInlineFrameIfAmbiguous) {
   // ignored.
   DummyThreadController controller;
   controller.InitWithThread(thread(), [](const Err&) {});
-  controller.SetInlineFrameIfAmbiguous(
-      DummyThreadController::InlineFrameIs::kEqual,
-      FrameFingerprint(0x1234567, 0));
+  controller.SetInlineFrameIfAmbiguous(DummyThreadController::InlineFrameIs::kEqual,
+                                       FrameFingerprint(0x1234567, 0));
   EXPECT_EQ(2u, stack.GetAmbiguousInlineFrameCount());
   EXPECT_EQ(0u, stack.hide_ambiguous_inline_frame_count());
 
   // Supply the top frame fingerprint, this should also do nothing since it's
   // already the top one.
-  controller.SetInlineFrameIfAmbiguous(
-      DummyThreadController::InlineFrameIs::kEqual, inline_2_fingerprint);
+  controller.SetInlineFrameIfAmbiguous(DummyThreadController::InlineFrameIs::kEqual,
+                                       inline_2_fingerprint);
   EXPECT_EQ(2u, stack.GetAmbiguousInlineFrameCount());
   EXPECT_EQ(0u, stack.hide_ambiguous_inline_frame_count());
 
   // Set previous to the top frame, it should hide the top frame.
-  controller.SetInlineFrameIfAmbiguous(
-      DummyThreadController::InlineFrameIs::kOneBefore, inline_2_fingerprint);
+  controller.SetInlineFrameIfAmbiguous(DummyThreadController::InlineFrameIs::kOneBefore,
+                                       inline_2_fingerprint);
   EXPECT_EQ(1u, stack.hide_ambiguous_inline_frame_count());
 
   // The inline frame 1 fingerprint should hide the top inline frame.
-  controller.SetInlineFrameIfAmbiguous(
-      DummyThreadController::InlineFrameIs::kEqual, inline_1_fingerprint);
+  controller.SetInlineFrameIfAmbiguous(DummyThreadController::InlineFrameIs::kEqual,
+                                       inline_1_fingerprint);
   EXPECT_EQ(2u, stack.GetAmbiguousInlineFrameCount());
   EXPECT_EQ(1u, stack.hide_ambiguous_inline_frame_count());
 
   // Set previous to inline frame 1, it should hide two frames.
-  controller.SetInlineFrameIfAmbiguous(
-      DummyThreadController::InlineFrameIs::kOneBefore, inline_1_fingerprint);
+  controller.SetInlineFrameIfAmbiguous(DummyThreadController::InlineFrameIs::kOneBefore,
+                                       inline_1_fingerprint);
   EXPECT_EQ(2u, stack.hide_ambiguous_inline_frame_count());
 
   // Top physical frame should hide both inline frames.
-  controller.SetInlineFrameIfAmbiguous(
-      DummyThreadController::InlineFrameIs::kEqual, physical_fingerprint);
+  controller.SetInlineFrameIfAmbiguous(DummyThreadController::InlineFrameIs::kEqual,
+                                       physical_fingerprint);
   EXPECT_EQ(2u, stack.GetAmbiguousInlineFrameCount());
   EXPECT_EQ(2u, stack.hide_ambiguous_inline_frame_count());
 
   // Go back to the frame 1 fingerprint. This should work even though its
   // currently hidden.
-  controller.SetInlineFrameIfAmbiguous(
-      DummyThreadController::InlineFrameIs::kEqual, inline_1_fingerprint);
+  controller.SetInlineFrameIfAmbiguous(DummyThreadController::InlineFrameIs::kEqual,
+                                       inline_1_fingerprint);
   EXPECT_EQ(1u, stack.hide_ambiguous_inline_frame_count());
 
   // Set previous to the top physical frame should be invalid because it's
   // not ambiguous (there's a physical frame in the way). As a result, the
   // hide count should be unchanged from before.
-  controller.SetInlineFrameIfAmbiguous(
-      DummyThreadController::InlineFrameIs::kOneBefore, physical_fingerprint);
+  controller.SetInlineFrameIfAmbiguous(DummyThreadController::InlineFrameIs::kOneBefore,
+                                       physical_fingerprint);
   EXPECT_EQ(1u, stack.hide_ambiguous_inline_frame_count());
 
   // Make a case that's not ambiguous because the current location isn't at the
@@ -159,8 +153,7 @@ TEST_F(ThreadControllerUnitTest, SetInlineFrameIfAmbiguous) {
   mock_frames[0]->set_is_ambiguous_inline(false);
   InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
                            debug_ipc::NotifyException::Type::kSingleStep,
-                           MockFrameVectorToFrameVector(std::move(mock_frames)),
-                           true);
+                           MockFrameVectorToFrameVector(std::move(mock_frames)), true);
 }
 
 }  // namespace zxdb

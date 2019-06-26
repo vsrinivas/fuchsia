@@ -39,12 +39,10 @@ class FinishThreadController : public ThreadController {
   ~FinishThreadController() override;
 
   // ThreadController implementation.
-  void InitWithThread(Thread* thread,
-                      std::function<void(const Err&)> cb) override;
+  void InitWithThread(Thread* thread, std::function<void(const Err&)> cb) override;
   ContinueOp GetContinueOp() override;
-  StopOp OnThreadStop(
-      debug_ipc::NotifyException::Type stop_type,
-      const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) override;
+  StopOp OnThreadStop(debug_ipc::NotifyException::Type stop_type,
+                      const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) override;
   const char* GetName() const override { return "Finish"; }
 
  private:
@@ -63,8 +61,7 @@ class FinishThreadController : public ThreadController {
 
   // Will be non-null when stepping out of the nearest physical frame. When
   // doing the subsequent inline step this will be null.
-  std::unique_ptr<FinishPhysicalFrameThreadController>
-      finish_physical_controller_;
+  std::unique_ptr<FinishPhysicalFrameThreadController> finish_physical_controller_;
 
   // The frame being stepped out of. This will be set when the frame being
   // stepped out of is an inline frame. Otherwise, only the physical frame

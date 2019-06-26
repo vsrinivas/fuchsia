@@ -18,8 +18,7 @@
 
 namespace zxdb {
 
-FrameImpl::FrameImpl(Thread* thread, const debug_ipc::StackFrame& stack_frame,
-                     Location location)
+FrameImpl::FrameImpl(Thread* thread, const debug_ipc::StackFrame& stack_frame, Location location)
     : Frame(thread->session()),
       thread_(thread),
       sp_(stack_frame.sp),
@@ -48,9 +47,7 @@ const Location& FrameImpl::GetLocation() const {
 
 uint64_t FrameImpl::GetAddress() const { return location_.address(); }
 
-const std::vector<Register>& FrameImpl::GetGeneralRegisters() const {
-  return registers_;
-}
+const std::vector<Register>& FrameImpl::GetGeneralRegisters() const { return registers_; }
 
 std::optional<uint64_t> FrameImpl::GetBasePointer() const {
   // This function is logically const even though EnsureBasePointer does some
@@ -67,8 +64,7 @@ void FrameImpl::GetBasePointerAsync(std::function<void(uint64_t bp)> cb) {
     // BP available synchronously but we don't want to reenter the caller.
     FXL_DCHECK(computed_base_pointer_);
     debug_ipc::MessageLoop::Current()->PostTask(
-        FROM_HERE,
-        [bp = *computed_base_pointer_, cb = std::move(cb)]() { cb(bp); });
+        FROM_HERE, [bp = *computed_base_pointer_, cb = std::move(cb)]() { cb(bp); });
   } else {
     // Add pending request for when evaluation is complete.
     FXL_DCHECK(base_pointer_eval_ && !base_pointer_eval_->is_complete());
@@ -83,8 +79,8 @@ uint64_t FrameImpl::GetCanonicalFrameAddress() const { return cfa_; }
 void FrameImpl::EnsureSymbolized() const {
   if (location_.is_symbolized())
     return;
-  auto vect = thread_->GetProcess()->GetSymbols()->ResolveInputLocation(
-      InputLocation(location_.address()));
+  auto vect =
+      thread_->GetProcess()->GetSymbols()->ResolveInputLocation(InputLocation(location_.address()));
   // Should always return 1 result for symbolizing addresses.
   FXL_DCHECK(vect.size() == 1);
   location_ = std::move(vect[0]);
@@ -92,8 +88,8 @@ void FrameImpl::EnsureSymbolized() const {
 
 fxl::RefPtr<SymbolDataProvider> FrameImpl::GetSymbolDataProvider() const {
   if (!symbol_data_provider_) {
-    symbol_data_provider_ = fxl::MakeRefCounted<FrameSymbolDataProvider>(
-        const_cast<FrameImpl*>(this));
+    symbol_data_provider_ =
+        fxl::MakeRefCounted<FrameSymbolDataProvider>(const_cast<FrameImpl*>(this));
   }
   return symbol_data_provider_;
 }
@@ -102,8 +98,7 @@ fxl::RefPtr<EvalContext> FrameImpl::GetEvalContext() const {
   if (!symbol_eval_context_) {
     EnsureSymbolized();
     symbol_eval_context_ = fxl::MakeRefCounted<EvalContextImpl>(
-        thread_->GetProcess()->GetSymbols()->GetWeakPtr(),
-        GetSymbolDataProvider(), location_);
+        thread_->GetProcess()->GetSymbols()->GetWeakPtr(), GetSymbolDataProvider(), location_);
   }
   return symbol_eval_context_;
 }
@@ -132,8 +127,8 @@ bool FrameImpl::EnsureBasePointer() {
 
   const Function* function = loc.symbol().Get()->AsFunction();
   const VariableLocation::Entry* location_entry = nullptr;
-  if (!function || !(location_entry = function->frame_base().EntryForIP(
-                         loc.symbol_context(), GetAddress()))) {
+  if (!function ||
+      !(location_entry = function->frame_base().EntryForIP(loc.symbol_context(), GetAddress()))) {
     // No frame base declared for this function.
     computed_base_pointer_ = 0;
     return true;
@@ -158,15 +153,13 @@ bool FrameImpl::EnsureBasePointer() {
 
     // Issue callbacks for everybody waiting. Moving to a local here prevents
     // weirdness if a callback calls back into us, and also clears the vector.
-    std::vector<std::function<void(uint64_t)>> callbacks =
-        std::move(base_pointer_requests_);
+    std::vector<std::function<void(uint64_t)>> callbacks = std::move(base_pointer_requests_);
     for (const auto& cb : callbacks)
       cb(*computed_base_pointer_);
   };
 
-  auto eval_result = base_pointer_eval_->Eval(
-      GetSymbolDataProvider(), loc.symbol_context(), location_entry->expression,
-      std::move(save_result));
+  auto eval_result = base_pointer_eval_->Eval(GetSymbolDataProvider(), loc.symbol_context(),
+                                              location_entry->expression, std::move(save_result));
 
   // In the common case this will complete synchronously and the above callback
   // will have put the result into base_pointer_requests_ before this code is

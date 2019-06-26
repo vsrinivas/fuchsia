@@ -56,13 +56,11 @@ class RemoteAPITest : public testing::Test {
   // If you use the one that takes a NotifyException, the calling code need not
   // populate the thread vector and stack amount, they will be ignored.
   void InjectExceptionWithStack(const debug_ipc::NotifyException& exception,
-                                std::vector<std::unique_ptr<Frame>> frames,
-                                bool has_all_frames);
-  void InjectExceptionWithStack(
-      uint64_t process_koid, uint64_t thread_koid,
-      debug_ipc::NotifyException::Type exception_type,
-      std::vector<std::unique_ptr<Frame>> frames, bool has_all_frames,
-      const std::vector<debug_ipc::BreakpointStats>& breakpoints = {});
+                                std::vector<std::unique_ptr<Frame>> frames, bool has_all_frames);
+  void InjectExceptionWithStack(uint64_t process_koid, uint64_t thread_koid,
+                                debug_ipc::NotifyException::Type exception_type,
+                                std::vector<std::unique_ptr<Frame>> frames, bool has_all_frames,
+                                const std::vector<debug_ipc::BreakpointStats>& breakpoints = {});
 
  protected:
   // Derived classes implement this to provide their own IPC mocks. Ownership

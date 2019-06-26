@@ -23,10 +23,8 @@ RemoteAPITest::~RemoteAPITest() { loop_.Cleanup(); }
 
 void RemoteAPITest::SetUp() {
   session_ = std::make_unique<Session>(GetRemoteAPIImpl(), GetArch());
-  session_->system().settings().SetBool(ClientSettings::System::kPauseOnAttach,
-                                        true);
-  session_->system().settings().SetBool(ClientSettings::System::kPauseOnLaunch,
-                                        true);
+  session_->system().settings().SetBool(ClientSettings::System::kPauseOnAttach, true);
+  session_->system().settings().SetBool(ClientSettings::System::kPauseOnLaunch, true);
 }
 
 void RemoteAPITest::TearDown() { session_.reset(); }
@@ -45,8 +43,7 @@ Process* RemoteAPITest::InjectProcess(uint64_t process_koid) {
   return targets[0]->GetProcess();
 }
 
-Thread* RemoteAPITest::InjectThread(uint64_t process_koid,
-                                    uint64_t thread_koid) {
+Thread* RemoteAPITest::InjectThread(uint64_t process_koid, uint64_t thread_koid) {
   debug_ipc::NotifyThread notify;
   notify.record.process_koid = process_koid;
   notify.record.thread_koid = thread_koid;
@@ -57,16 +54,15 @@ Thread* RemoteAPITest::InjectThread(uint64_t process_koid,
   return session_->ThreadImplFromKoid(process_koid, thread_koid);
 }
 
-void RemoteAPITest::InjectException(
-    const debug_ipc::NotifyException& exception) {
+void RemoteAPITest::InjectException(const debug_ipc::NotifyException& exception) {
   session_->DispatchNotifyException(exception);
 }
 
-void RemoteAPITest::InjectExceptionWithStack(
-    const debug_ipc::NotifyException& exception,
-    std::vector<std::unique_ptr<Frame>> frames, bool has_all_frames) {
-  ThreadImpl* thread = session_->ThreadImplFromKoid(
-      exception.thread.process_koid, exception.thread.thread_koid);
+void RemoteAPITest::InjectExceptionWithStack(const debug_ipc::NotifyException& exception,
+                                             std::vector<std::unique_ptr<Frame>> frames,
+                                             bool has_all_frames) {
+  ThreadImpl* thread =
+      session_->ThreadImplFromKoid(exception.thread.process_koid, exception.thread.thread_koid);
   FXL_CHECK(thread);  // Tests should always pass valid KOIDs.
 
   // Need to supply at least one stack frame.
@@ -77,8 +73,7 @@ void RemoteAPITest::InjectExceptionWithStack(
   debug_ipc::NotifyException modified(exception);
   modified.thread.stack_amount = debug_ipc::ThreadRecord::StackAmount::kMinimal;
   modified.thread.frames.clear();
-  modified.thread.frames.emplace_back(frames[0]->GetAddress(),
-                                      frames[0]->GetStackPointer());
+  modified.thread.frames.emplace_back(frames[0]->GetAddress(), frames[0]->GetStackPointer());
 
   // To manually set the thread state, set the general metadata which will pick
   // up the basic flags and the first stack frame. Then re-set the stack frame
@@ -92,8 +87,7 @@ void RemoteAPITest::InjectExceptionWithStack(
 }
 
 void RemoteAPITest::InjectExceptionWithStack(
-    uint64_t process_koid, uint64_t thread_koid,
-    debug_ipc::NotifyException::Type exception_type,
+    uint64_t process_koid, uint64_t thread_koid, debug_ipc::NotifyException::Type exception_type,
     std::vector<std::unique_ptr<Frame>> frames, bool has_all_frames,
     const std::vector<debug_ipc::BreakpointStats>& breakpoints) {
   // Need to supply at least one stack frame to get the address from.

@@ -52,24 +52,20 @@ class MockThread : public Thread, public Stack::Delegate {
     return debug_ipc::ThreadRecord::BlockedReason::kNotBlocked;
   }
   void Pause(std::function<void()> on_paused) override {
-    debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE,
-                                                [on_paused]() { on_paused(); });
+    debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [on_paused]() { on_paused(); });
   }
   void Continue() override {}
   void ContinueWith(std::unique_ptr<ThreadController> controller,
                     std::function<void(const Err&)> on_continue) override {}
-  void JumpTo(uint64_t new_address,
-              std::function<void(const Err&)> cb) override {}
+  void JumpTo(uint64_t new_address, std::function<void(const Err&)> cb) override {}
   void NotifyControllerDone(ThreadController* controller) override {}
   void StepInstruction() override {}
   const Stack& GetStack() const override { return stack_; }
   Stack& GetStack() override { return stack_; }
-  void ReadRegisters(
-      std::vector<debug_ipc::RegisterCategory::Type> cats_to_get,
-      std::function<void(const Err&, const RegisterSet&)> cb) override {
+  void ReadRegisters(std::vector<debug_ipc::RegisterCategory::Type> cats_to_get,
+                     std::function<void(const Err&, const RegisterSet&)> cb) override {
     debug_ipc::MessageLoop::Current()->PostTask(
-        FROM_HERE,
-        [registers = register_contents_, cb]() { cb(Err(), registers); });
+        FROM_HERE, [registers = register_contents_, cb]() { cb(Err(), registers); });
   }
 
  private:
@@ -82,8 +78,7 @@ class MockThread : public Thread, public Stack::Delegate {
     FXL_NOTREACHED();  // Should not get called since we provide stack frames.
     return std::unique_ptr<Frame>();
   }
-  Location GetSymbolizedLocationForStackFrame(
-      const debug_ipc::StackFrame& input) override {
+  Location GetSymbolizedLocationForStackFrame(const debug_ipc::StackFrame& input) override {
     return Location(Location::State::kSymbolized, input.ip);
   }
 
@@ -122,15 +117,13 @@ TEST_F(FrameImplTest, AsyncBasePointer) {
 
   // This describes the frame base location for the function. This encodes
   // the memory pointed to by register 0.
-  const uint8_t kSelectRegRef[2] = {llvm::dwarf::DW_OP_reg0,
-                                    llvm::dwarf::DW_OP_deref};
+  const uint8_t kSelectRegRef[2] = {llvm::dwarf::DW_OP_reg0, llvm::dwarf::DW_OP_deref};
   VariableLocation frame_base(kSelectRegRef, 2);
 
   auto function = fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);
   function->set_frame_base(frame_base);
 
-  Location location(stack.ip, FileLine("file.cc", 12), 0, symbol_context,
-                    LazySymbol(function));
+  Location location(stack.ip, FileLine("file.cc", 12), 0, symbol_context, LazySymbol(function));
 
   MockThread thread(process);
   thread.register_contents().set_arch(debug_ipc::Arch::kX64);

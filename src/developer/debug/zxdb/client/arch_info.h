@@ -49,12 +49,8 @@ class ArchInfo {
 
   const llvm::Target* target() const { return target_; }
   const llvm::MCInstrInfo* instr_info() const { return instr_info_.get(); }
-  const llvm::MCRegisterInfo* register_info() const {
-    return register_info_.get();
-  }
-  const llvm::MCSubtargetInfo* subtarget_info() const {
-    return subtarget_info_.get();
-  }
+  const llvm::MCRegisterInfo* register_info() const { return register_info_.get(); }
+  const llvm::MCSubtargetInfo* subtarget_info() const { return subtarget_info_.get(); }
   const llvm::MCAsmInfo* asm_info() const { return asm_info_.get(); }
 
  private:

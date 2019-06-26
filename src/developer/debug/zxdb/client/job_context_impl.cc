@@ -47,12 +47,11 @@ JobContext::State JobContextImpl::GetState() const { return state_; }
 Job* JobContextImpl::GetJob() const { return job_.get(); }
 
 // static
-void JobContextImpl::OnAttachReplyThunk(
-    fxl::WeakPtr<JobContextImpl> job_context, Callback callback, const Err& err,
-    uint64_t koid, uint32_t status, const std::string& job_name) {
+void JobContextImpl::OnAttachReplyThunk(fxl::WeakPtr<JobContextImpl> job_context, Callback callback,
+                                        const Err& err, uint64_t koid, uint32_t status,
+                                        const std::string& job_name) {
   if (job_context) {
-    job_context->OnAttachReply(std::move(callback), err, koid, status,
-                               job_name);
+    job_context->OnAttachReply(std::move(callback), err, koid, status, job_name);
     if (!job_context->filters_.empty()) {
       job_context->SendAndUpdateFilters(job_context->filters_, true);
     }
@@ -69,9 +68,8 @@ void JobContextImpl::OnAttachReplyThunk(
   }
 }
 
-void JobContextImpl::OnAttachReply(Callback callback, const Err& err,
-                                   uint64_t koid, uint32_t status,
-                                   const std::string& job_name) {
+void JobContextImpl::OnAttachReply(Callback callback, const Err& err, uint64_t koid,
+                                   uint32_t status, const std::string& job_name) {
   FXL_DCHECK(state_ == State::kAttaching);
   FXL_DCHECK(!job_.get());  // Shouldn't have a job.
 
@@ -92,15 +90,12 @@ void JobContextImpl::OnAttachReply(Callback callback, const Err& err,
   callback(GetWeakPtr(), issue_err);
 }
 
-void JobContextImpl::AttachInternal(debug_ipc::TaskType type, uint64_t koid,
-                                    Callback callback) {
+void JobContextImpl::AttachInternal(debug_ipc::TaskType type, uint64_t koid, Callback callback) {
   if (state_ != State::kNone) {
     // Avoid reentering caller to dispatch the error.
-    debug_ipc::MessageLoop::Current()->PostTask(
-        FROM_HERE, [callback, weak_ptr = GetWeakPtr()]() {
-          callback(std::move(weak_ptr),
-                   Err("Can't attach, job is already running or starting."));
-        });
+    debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [callback, weak_ptr = GetWeakPtr()]() {
+      callback(std::move(weak_ptr), Err("Can't attach, job is already running or starting."));
+    });
     return;
   }
 
@@ -112,8 +107,8 @@ void JobContextImpl::AttachInternal(debug_ipc::TaskType type, uint64_t koid,
   session()->remote_api()->Attach(
       request, [callback, weak_job_context = impl_weak_factory_.GetWeakPtr()](
                    const Err& err, debug_ipc::AttachReply reply) {
-        OnAttachReplyThunk(std::move(weak_job_context), std::move(callback),
-                           err, reply.koid, reply.status, reply.name);
+        OnAttachReplyThunk(std::move(weak_job_context), std::move(callback), err, reply.koid,
+                           reply.status, reply.name);
       });
 }
 
@@ -131,10 +126,9 @@ void JobContextImpl::AttachToComponentRoot(Callback callback) {
 
 void JobContextImpl::Detach(Callback callback) {
   if (!job_.get()) {
-    debug_ipc::MessageLoop::Current()->PostTask(
-        FROM_HERE, [callback, weak_ptr = GetWeakPtr()]() {
-          callback(std::move(weak_ptr), Err("Error detaching: No job."));
-        });
+    debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [callback, weak_ptr = GetWeakPtr()]() {
+      callback(std::move(weak_ptr), Err("Error detaching: No job."));
+    });
     return;
   }
 
@@ -150,8 +144,7 @@ void JobContextImpl::Detach(Callback callback) {
       request, [callback, weak_job_context = impl_weak_factory_.GetWeakPtr()](
                    const Err& err, debug_ipc::DetachReply reply) {
         if (weak_job_context) {
-          weak_job_context->OnDetachReply(err, reply.status,
-                                          std::move(callback));
+          weak_job_context->OnDetachReply(err, reply.status, std::move(callback));
         } else {
           // The reply that the process was launched came after the local
           // objects were destroyed. We're still OK to dispatch either way.
@@ -164,8 +157,7 @@ void JobContextImpl::SendAndUpdateFilters(std::vector<std::string> filters) {
   SendAndUpdateFilters(filters, last_filter_set_failed_);
 }
 
-void JobContextImpl::SendAndUpdateFilters(std::vector<std::string> filters,
-                                          bool force_send) {
+void JobContextImpl::SendAndUpdateFilters(std::vector<std::string> filters, bool force_send) {
   last_filter_set_failed_ = false;
 
   if (!job_.get()) {
@@ -185,8 +177,7 @@ void JobContextImpl::SendAndUpdateFilters(std::vector<std::string> filters,
       request, [filters, weak_job_context = impl_weak_factory_.GetWeakPtr()](
                    const Err& err, debug_ipc::JobFilterReply reply) {
         if (reply.status != 0) {
-          FXL_LOG(ERROR) << "Error adding filter: "
-                         << debug_ipc::ZxStatusToString(reply.status);
+          FXL_LOG(ERROR) << "Error adding filter: " << debug_ipc::ZxStatusToString(reply.status);
           if (weak_job_context) {
             // Agent failed, mark that we had trouble setting filters and
             // return.
@@ -200,13 +191,11 @@ void JobContextImpl::SendAndUpdateFilters(std::vector<std::string> filters,
       });
 }
 
-void JobContextImpl::OnSettingChanged(const SettingStore&,
-                                      const std::string& setting_name) {
+void JobContextImpl::OnSettingChanged(const SettingStore&, const std::string& setting_name) {
   FXL_NOTREACHED() << "No settings supported for jobs.";
 }
 
-void JobContextImpl::OnDetachReply(const Err& err, uint32_t status,
-                                   Callback callback) {
+void JobContextImpl::OnDetachReply(const Err& err, uint32_t status, Callback callback) {
   FXL_DCHECK(job_.get());  // Should have a job.
 
   Err issue_err;  // Error to send in callback.

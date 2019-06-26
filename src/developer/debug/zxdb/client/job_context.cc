@@ -28,9 +28,7 @@ JobContext::JobContext(Session* session)
       weak_factory_(this) {}
 JobContext::~JobContext() = default;
 
-fxl::WeakPtr<JobContext> JobContext::GetWeakPtr() {
-  return weak_factory_.GetWeakPtr();
-}
+fxl::WeakPtr<JobContext> JobContext::GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
 
 fxl::RefPtr<SettingSchema> JobContext::GetSchema() {
   // Will only run initialization once.

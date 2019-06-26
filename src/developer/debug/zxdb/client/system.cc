@@ -46,8 +46,7 @@ static const char* kQuitAgentOnExitDescription =
     R"(  Whether the client will shutdown the connected agent upon exiting.")";
 
 const char* ClientSettings::System::kSymbolServers = "symbol-servers";
-static const char* kSymbolServersDescription =
-    R"(  List of symbol server URLs.)";
+static const char* kSymbolServersDescription = R"(  List of symbol server URLs.)";
 
 const char* ClientSettings::System::kSymbolCache = "symbol-cache";
 static const char* kSymbolCacheDescription =
@@ -60,22 +59,14 @@ namespace {
 fxl::RefPtr<SettingSchema> CreateSchema() {
   auto schema = fxl::MakeRefCounted<SettingSchema>();
 
-  schema->AddBool(ClientSettings::System::kDebugMode, kDebugModeDescription,
-                  false);
-  schema->AddList(ClientSettings::System::kSymbolPaths, kSymbolPathsDescription,
-                  {});
-  schema->AddBool(ClientSettings::System::kPauseOnLaunch,
-                  kPauseOnLaunchDescription, false);
-  schema->AddBool(ClientSettings::System::kPauseOnAttach,
-                  kPauseOnAttachDescription, false);
-  schema->AddBool(ClientSettings::System::kQuitAgentOnExit,
-                  kQuitAgentOnExitDescription, false);
-  schema->AddBool(ClientSettings::System::kShowStdout, kShowStdoutDescription,
-                  true);
-  schema->AddList(ClientSettings::System::kSymbolServers,
-                  kSymbolServersDescription, {});
-  schema->AddString(ClientSettings::System::kSymbolCache,
-                    kSymbolCacheDescription, "");
+  schema->AddBool(ClientSettings::System::kDebugMode, kDebugModeDescription, false);
+  schema->AddList(ClientSettings::System::kSymbolPaths, kSymbolPathsDescription, {});
+  schema->AddBool(ClientSettings::System::kPauseOnLaunch, kPauseOnLaunchDescription, false);
+  schema->AddBool(ClientSettings::System::kPauseOnAttach, kPauseOnAttachDescription, false);
+  schema->AddBool(ClientSettings::System::kQuitAgentOnExit, kQuitAgentOnExitDescription, false);
+  schema->AddBool(ClientSettings::System::kShowStdout, kShowStdoutDescription, true);
+  schema->AddList(ClientSettings::System::kSymbolServers, kSymbolServersDescription, {});
+  schema->AddString(ClientSettings::System::kSymbolCache, kSymbolCacheDescription, "");
 
   return schema;
 }
@@ -85,21 +76,15 @@ fxl::RefPtr<SettingSchema> CreateSchema() {
 // System Implementation -------------------------------------------------------
 
 System::System(Session* session)
-    : ClientObject(session),
-      settings_(GetSchema(), nullptr),
-      weak_factory_(this) {}
+    : ClientObject(session), settings_(GetSchema(), nullptr), weak_factory_(this) {}
 
 System::~System() = default;
 
 fxl::WeakPtr<System> System::GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
 
-void System::AddObserver(SystemObserver* observer) {
-  observers_.AddObserver(observer);
-}
+void System::AddObserver(SystemObserver* observer) { observers_.AddObserver(observer); }
 
-void System::RemoveObserver(SystemObserver* observer) {
-  observers_.RemoveObserver(observer);
-}
+void System::RemoveObserver(SystemObserver* observer) { observers_.RemoveObserver(observer); }
 
 fxl::RefPtr<SettingSchema> System::GetSchema() {
   // Will only run initialization once.

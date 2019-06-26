@@ -26,15 +26,13 @@ class ContinueThreadController : public ThreadController {
   ~ContinueThreadController() override = default;
 
   // ThreadController implementation.
-  void InitWithThread(Thread* thread,
-                      std::function<void(const Err&)> cb) override {
+  void InitWithThread(Thread* thread, std::function<void(const Err&)> cb) override {
     set_thread(thread);
     cb(Err());
   }
   ContinueOp GetContinueOp() override { return ContinueOp::Continue(); }
-  StopOp OnThreadStop(
-      debug_ipc::NotifyException::Type stop_type,
-      const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) override {
+  StopOp OnThreadStop(debug_ipc::NotifyException::Type stop_type,
+                      const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) override {
     *got_stop_ = true;
     return kContinue;
   }
@@ -51,15 +49,13 @@ class UnexpectedThreadController : public ThreadController {
   ~UnexpectedThreadController() override = default;
 
   // ThreadController implementation.
-  void InitWithThread(Thread* thread,
-                      std::function<void(const Err&)> cb) override {
+  void InitWithThread(Thread* thread, std::function<void(const Err&)> cb) override {
     set_thread(thread);
     cb(Err());
   }
   ContinueOp GetContinueOp() override { return ContinueOp::Continue(); }
-  StopOp OnThreadStop(
-      debug_ipc::NotifyException::Type stop_type,
-      const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) override {
+  StopOp OnThreadStop(debug_ipc::NotifyException::Type stop_type,
+                      const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) override {
     return kUnexpected;
   }
   const char* GetName() const override { return "Unexpected"; }
@@ -103,14 +99,12 @@ TEST_F(ThreadImplTest, Frames) {
   // element should match the one already there.
   debug_ipc::ThreadStatusReply expected_reply;
   expected_reply.record = break_notification.thread;  // Copies existing frame.
-  expected_reply.record.stack_amount =
-      debug_ipc::ThreadRecord::StackAmount::kFull;
+  expected_reply.record.stack_amount = debug_ipc::ThreadRecord::StackAmount::kFull;
   expected_reply.record.frames.emplace_back(kAddress2, kStack2, 0);
   mock_remote_api().set_thread_status_reply(expected_reply);
 
   // Asynchronously request the frames.
-  thread->GetStack().SyncFrames(
-      [](const Err&) { debug_ipc::MessageLoop::Current()->QuitNow(); });
+  thread->GetStack().SyncFrames([](const Err&) { debug_ipc::MessageLoop::Current()->QuitNow(); });
   loop().Run();
 
   // The thread should have the new stack we provided.
@@ -203,8 +197,7 @@ TEST_F(ThreadImplTest, ControllersUnexpected) {
   thread_observer.set_got_stopped(false);
 
   // Add the controller that always reports unexpected.
-  thread->ContinueWith(std::make_unique<UnexpectedThreadController>(),
-                       [](const Err& err) {});
+  thread->ContinueWith(std::make_unique<UnexpectedThreadController>(), [](const Err& err) {});
 
   // Notify on thread stop again (this is the same address as above but it
   // doesn't matter).
@@ -219,9 +212,8 @@ TEST_F(ThreadImplTest, ControllersUnexpected) {
   // controller voting "continue" and one voting "unexpected" which should
   // continue the thread.
   bool continue_got_stop = false;
-  thread->ContinueWith(
-      std::make_unique<ContinueThreadController>(&continue_got_stop),
-      [](const Err& err) {});
+  thread->ContinueWith(std::make_unique<ContinueThreadController>(&continue_got_stop),
+                       [](const Err& err) {});
   InjectException(notification);
   EXPECT_FALSE(thread_observer.got_stopped());
 }

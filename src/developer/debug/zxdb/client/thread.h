@@ -95,8 +95,7 @@ class Thread : public ClientObject {
   // pick up the new location (if any) because the requests will be ordered.
   // But because the jump request may fail, the caller isn't guaranteed what
   // location will be resumed from unless it waits for the callback.
-  virtual void JumpTo(uint64_t new_address,
-                      std::function<void(const Err&)> cb) = 0;
+  virtual void JumpTo(uint64_t new_address, std::function<void(const Err&)> cb) = 0;
 
   // Notification from a ThreadController that it has completed its job. The
   // thread controller should be removed from this thread and deleted.
@@ -113,9 +112,8 @@ class Thread : public ClientObject {
   //
   // The returned structures are architecture independent, but the contents
   // will be dependent on the architecture the target is running on.
-  virtual void ReadRegisters(
-      std::vector<debug_ipc::RegisterCategory::Type> cats_to_get,
-      std::function<void(const Err&, const RegisterSet&)>) = 0;
+  virtual void ReadRegisters(std::vector<debug_ipc::RegisterCategory::Type> cats_to_get,
+                             std::function<void(const Err&, const RegisterSet&)>) = 0;
 
   // Provides the setting schema for this object.
   static fxl::RefPtr<SettingSchema> GetSchema();

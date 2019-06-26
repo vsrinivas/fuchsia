@@ -26,8 +26,7 @@ class RegisterSet {
   // If this gets slow, a map from ID -> Register might be needed. Or we could
   // eliminate the indirection of categories and keep all registers in a single
   // map.
-  using CategoryMap =
-      std::map<debug_ipc::RegisterCategory::Type, std::vector<Register>>;
+  using CategoryMap = std::map<debug_ipc::RegisterCategory::Type, std::vector<Register>>;
 
   RegisterSet();
   RegisterSet(debug_ipc::Arch, std::vector<debug_ipc::RegisterCategory>);

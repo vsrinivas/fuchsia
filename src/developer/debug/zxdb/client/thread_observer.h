@@ -21,9 +21,8 @@ class ThreadObserver {
   // caused this thread stop (there can be more than one at the same address).
   // These are weak pointers because other observers could possibly delete
   // breakpoints in response to this notification.
-  virtual void OnThreadStopped(
-      Thread* thread, debug_ipc::NotifyException::Type type,
-      const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) {}
+  virtual void OnThreadStopped(Thread* thread, debug_ipc::NotifyException::Type type,
+                               const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) {}
 
   // A thread's backtrace (consisting of a vector of Frames) will be static
   // as long as the thread is not running. When the thread is resumed, the

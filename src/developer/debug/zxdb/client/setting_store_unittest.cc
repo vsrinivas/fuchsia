@@ -27,8 +27,7 @@ fxl::RefPtr<SettingSchema> GetSchema() {
     FXL_NOTREACHED() << "Schema should be valid!";
     return nullptr;
   }
-  if (!schema->AddList("list_with_options", "list_with_options", {},
-                       DefaultList())) {
+  if (!schema->AddList("list_with_options", "list_with_options", {}, DefaultList())) {
     FXL_NOTREACHED() << "Schema should be valid!";
     return nullptr;
   }
@@ -43,17 +42,14 @@ class SettingObserver : public SettingStoreObserver {
     Setting setting;
   };
 
-  void OnSettingChanged(const SettingStore& store,
-                        const std::string& setting_name) override {
+  void OnSettingChanged(const SettingStore& store, const std::string& setting_name) override {
     SettingNotificationRecord record = {};
     record.store = &store;
     record.setting = store.GetSetting(setting_name);
     notifications_.push_back(std::move(record));
   }
 
-  const std::vector<SettingNotificationRecord>& notifications() const {
-    return notifications_;
-  }
+  const std::vector<SettingNotificationRecord>& notifications() const { return notifications_; }
 
  private:
   std::vector<SettingNotificationRecord> notifications_;

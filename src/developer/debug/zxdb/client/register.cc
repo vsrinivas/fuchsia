@@ -16,8 +16,7 @@ namespace zxdb {
 
 RegisterSet::RegisterSet() = default;
 
-RegisterSet::RegisterSet(debug_ipc::Arch arch,
-                         std::vector<debug_ipc::RegisterCategory> categories)
+RegisterSet::RegisterSet(debug_ipc::Arch arch, std::vector<debug_ipc::RegisterCategory> categories)
     : arch_(arch) {
   for (auto& category : categories) {
     std::vector<Register> registers;
@@ -68,8 +67,7 @@ inline UintType ReadRegisterData(const Register& reg) {
 
 Register::Register(debug_ipc::Register reg) : reg_(std::move(reg)) {}
 
-Register::Register(debug_ipc::RegisterID id, uint64_t value)
-    : reg_(id, value) {}
+Register::Register(debug_ipc::RegisterID id, uint64_t value) : reg_(id, value) {}
 
 uint64_t Register::GetValue() const {
   switch (size()) {
@@ -82,8 +80,8 @@ uint64_t Register::GetValue() const {
     case 8:
       return ReadRegisterData<uint64_t>(*this);
     default:
-      FXL_NOTREACHED() << fxl::StringPrintf("Invalid size for %s: %lu",
-                                            __PRETTY_FUNCTION__, size());
+      FXL_NOTREACHED() << fxl::StringPrintf("Invalid size for %s: %lu", __PRETTY_FUNCTION__,
+                                            size());
       return 0;
   }
 }

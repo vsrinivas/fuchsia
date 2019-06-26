@@ -73,8 +73,7 @@ class Session : public SettingStoreObserver {
 
   // Connects to a remote system. Calling when there is already a connection
   // will issue the callback with an error.
-  void Connect(const std::string& host, uint16_t port,
-               std::function<void(const Err&)> callback);
+  void Connect(const std::string& host, uint16_t port, std::function<void(const Err&)> callback);
 
   // Disconnects from the remote system. Calling when there is no connection
   // connection will issue the callback with an error.
@@ -88,8 +87,7 @@ class Session : public SettingStoreObserver {
   // Open a minidump instead of connecting to a running system. The callback
   // will be issued with an error if the file cannot be opened or if there is
   // already a connection.
-  void OpenMinidump(const std::string& path,
-                    std::function<void(const Err&)> callback);
+  void OpenMinidump(const std::string& path, std::function<void(const Err&)> callback);
 
   // Frees all connection-related data. A helper for different modes of
   // cleanup. Returns true if there was a connection to clear.
@@ -130,8 +128,7 @@ class Session : public SettingStoreObserver {
   // in the exception.
   void DispatchNotifyThreadStarting(const debug_ipc::NotifyThread& notify);
   void DispatchNotifyThreadExiting(const debug_ipc::NotifyThread& notify);
-  void DispatchNotifyException(const debug_ipc::NotifyException& notify,
-                               bool set_metadata = true);
+  void DispatchNotifyException(const debug_ipc::NotifyException& notify, bool set_metadata = true);
   void DispatchNotifyModules(const debug_ipc::NotifyModules& notify);
   void DispatchProcessStarting(const debug_ipc::NotifyProcessStarting&);
   void DispatchNotifyIO(const debug_ipc::NotifyIO& notify);
@@ -140,8 +137,7 @@ class Session : public SettingStoreObserver {
   void QuitAgent(std::function<void(const Err&)> callback);
 
   // SettingStoreObserver
-  void OnSettingChanged(const SettingStore&,
-                        const std::string& setting_name) override;
+  void OnSettingChanged(const SettingStore&, const std::string& setting_name) override;
 
  protected:
   fxl::ObserverList<SessionObserver> observers_;
@@ -165,30 +161,26 @@ class Session : public SettingStoreObserver {
   // callback is invoked with details. The opening_dump argument indicates
   // whether we are trying to open a dump file rather than connect to a debug
   // agent.
-  bool ConnectCanProceed(std::function<void(const Err&)> callback,
-                         bool opening_dump);
+  bool ConnectCanProceed(std::function<void(const Err&)> callback, bool opening_dump);
 
   // Dispatches unsolicited notifications sent from the agent.
-  void DispatchNotification(const debug_ipc::MsgHeader& header,
-                            std::vector<char> data);
+  void DispatchNotification(const debug_ipc::MsgHeader& header, std::vector<char> data);
 
   // Returns the thread object from the given koids, or null.
   ThreadImpl* ThreadImplFromKoid(uint64_t process_koid, uint64_t thread_koid);
 
   // Callback when a connection has been successful or failed.
-  void ConnectionResolved(fxl::RefPtr<PendingConnection> pending,
-                          const Err& err, const debug_ipc::HelloReply& reply,
+  void ConnectionResolved(fxl::RefPtr<PendingConnection> pending, const Err& err,
+                          const debug_ipc::HelloReply& reply,
                           std::unique_ptr<debug_ipc::BufferedFD> buffer,
                           std::function<void(const Err&)> callback);
 
   // Sends a notification to all the UI observers.
-  void SendSessionNotification(SessionObserver::NotificationType,
-                               const char* fmt, ...) FXL_PRINTF_FORMAT(3, 4);
-  void SendSessionNotification(SessionObserver::NotificationType,
-                               const std::string& msg);
+  void SendSessionNotification(SessionObserver::NotificationType, const char* fmt, ...)
+      FXL_PRINTF_FORMAT(3, 4);
+  void SendSessionNotification(SessionObserver::NotificationType, const std::string& msg);
 
-  SessionObserver::NotificationType HandleProcessIO(ProcessImpl*,
-                                                    const debug_ipc::NotifyIO&);
+  SessionObserver::NotificationType HandleProcessIO(ProcessImpl*, const debug_ipc::NotifyIO&);
   void ListenForSystemSettings();
 
   // Configurations ------------------------------------------------------------
@@ -199,8 +191,7 @@ class Session : public SettingStoreObserver {
 
   // Notifies the agent that it should quit upon connection closing.
   // Will no-op if not connected.
-  void ConfigQuitAgent(bool quit,
-                       std::vector<debug_ipc::ConfigAction>* actions);
+  void ConfigQuitAgent(bool quit, std::vector<debug_ipc::ConfigAction>* actions);
 
   // Whether we have opened a core dump. Makes much of the connection-related
   // stuff obsolete.

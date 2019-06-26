@@ -32,30 +32,25 @@ class SettingSchema : public fxl::RefCountedThreadSafe<SettingSchema> {
 
   // Returns a null setting if |key| is not within the schema.
   const SchemaSetting& GetSetting(const std::string& name) const;
-  const std::map<std::string, SchemaSetting>& settings() const {
-    return settings_;
-  }
+  const std::map<std::string, SchemaSetting>& settings() const { return settings_; }
 
   // Create new items for settings that only belong to this schema.
   // For inter-schema options, the easier way is to create the Setting
   // separately and then insert it to each schema with AddSetting.
   void AddBool(std::string name, std::string description, bool value = false);
   void AddInt(std::string name, std::string description, int value = 0);
-  void AddString(std::string name, std::string description,
-                 std::string value = {});
+  void AddString(std::string name, std::string description, std::string value = {});
 
   // |valid_options| determines which options will be accepted when writing into
   // a setting. They will be stored as lowercase and comparison will be in
   // lowercase for simplicty.
   // Will return false if the given list has a entry that is not within the
   // valid options.
-  bool AddList(std::string name, std::string description,
-               std::vector<std::string> list = {},
+  bool AddList(std::string name, std::string description, std::vector<std::string> list = {},
                std::vector<std::string> valid_options = {});
 
   // |options| are used to implement enum-like strings/lists.
-  void AddSetting(const std::string& key, Setting setting,
-                  std::vector<std::string> options = {});
+  void AddSetting(const std::string& key, Setting setting, std::vector<std::string> options = {});
 
   Err ValidateSetting(const std::string& key, const SettingValue&) const;
 

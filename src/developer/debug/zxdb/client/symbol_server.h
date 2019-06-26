@@ -24,8 +24,7 @@ class SymbolServer : public ClientObject {
   // of a connection error. If the symbols are simply unavailable the error
   // will not be set.
   using FetchCallback = std::function<void(const Err&, const std::string&)>;
-  using CheckFetchCallback =
-      std::function<void(const Err&, std::function<void(FetchCallback)>)>;
+  using CheckFetchCallback = std::function<void(const Err&, std::function<void(FetchCallback)>)>;
 
   enum class State {
     kInitializing,
@@ -39,8 +38,7 @@ class SymbolServer : public ClientObject {
     kOAuth,
   };
 
-  static std::unique_ptr<SymbolServer> FromURL(Session* session,
-                                               const std::string& url);
+  static std::unique_ptr<SymbolServer> FromURL(Session* session, const std::string& url);
 
   const std::string& name() const { return name_; }
 
@@ -54,8 +52,7 @@ class SymbolServer : public ClientObject {
   AuthType auth_type() const { return AuthType::kOAuth; }
 
   virtual std::string AuthInfo() const = 0;
-  virtual void Authenticate(const std::string& data,
-                            std::function<void(const Err&)> cb) = 0;
+  virtual void Authenticate(const std::string& data, std::function<void(const Err&)> cb) = 0;
   virtual void Fetch(const std::string& build_id, DebugSymbolFileType file_type,
                      FetchCallback cb) = 0;
 
@@ -65,8 +62,7 @@ class SymbolServer : public ClientObject {
   // same signature as the Fetch method. If the callback == nullptr the symbol
   // was not found. The error supplied is only set if there was a problem with
   // the connection, not if the symbols were simply unavailable.
-  virtual void CheckFetch(const std::string& build_id,
-                          DebugSymbolFileType file_type,
+  virtual void CheckFetch(const std::string& build_id, DebugSymbolFileType file_type,
                           CheckFetchCallback cb) = 0;
 
  protected:

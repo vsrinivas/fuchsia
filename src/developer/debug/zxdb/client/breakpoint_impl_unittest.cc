@@ -22,32 +22,27 @@ using debug_ipc::MessageLoop;
 
 class BreakpointSink : public RemoteAPI {
  public:
-  using AddPair = std::pair<
-      debug_ipc::AddOrChangeBreakpointRequest,
-      std::function<void(const Err&, debug_ipc::AddOrChangeBreakpointReply)>>;
-  using RemovePair = std::pair<
-      debug_ipc::RemoveBreakpointRequest,
-      std::function<void(const Err&, debug_ipc::RemoveBreakpointReply)>>;
+  using AddPair = std::pair<debug_ipc::AddOrChangeBreakpointRequest,
+                            std::function<void(const Err&, debug_ipc::AddOrChangeBreakpointReply)>>;
+  using RemovePair = std::pair<debug_ipc::RemoveBreakpointRequest,
+                               std::function<void(const Err&, debug_ipc::RemoveBreakpointReply)>>;
 
   void AddOrChangeBreakpoint(
       const debug_ipc::AddOrChangeBreakpointRequest& request,
-      std::function<void(const Err&, debug_ipc::AddOrChangeBreakpointReply)> cb)
-      override {
+      std::function<void(const Err&, debug_ipc::AddOrChangeBreakpointReply)> cb) override {
     adds.push_back(std::make_pair(request, cb));
 
-    MessageLoop::Current()->PostTask(FROM_HERE, [cb]() {
-      cb(Err(), debug_ipc::AddOrChangeBreakpointReply());
-    });
+    MessageLoop::Current()->PostTask(
+        FROM_HERE, [cb]() { cb(Err(), debug_ipc::AddOrChangeBreakpointReply()); });
   }
 
   void RemoveBreakpoint(
       const debug_ipc::RemoveBreakpointRequest& request,
-      std::function<void(const Err&, debug_ipc::RemoveBreakpointReply)> cb)
-      override {
+      std::function<void(const Err&, debug_ipc::RemoveBreakpointReply)> cb) override {
     removes.push_back(std::make_pair(request, cb));
 
-    MessageLoop::Current()->PostTask(
-        FROM_HERE, [cb]() { cb(Err(), debug_ipc::RemoveBreakpointReply()); });
+    MessageLoop::Current()->PostTask(FROM_HERE,
+                                     [cb]() { cb(Err(), debug_ipc::RemoveBreakpointReply()); });
   }
 
   std::vector<AddPair> adds;
@@ -121,24 +116,19 @@ TEST_F(BreakpointImplTest, DynamicLoading) {
   const uint64_t kModule1Base = 0x1000000;
   const uint64_t kAddress1 = 0x78456345;
   const uint64_t kAddress2 = 0x12345678;
-  std::unique_ptr<MockModuleSymbols> module1 =
-      std::make_unique<MockModuleSymbols>("myfile1.so");
-  std::unique_ptr<MockModuleSymbols> module2 =
-      std::make_unique<MockModuleSymbols>("myfile2.so");
-  module1->AddSymbolLocations(
-      kFunctionName, {Location(Location::State::kSymbolized, kAddress1),
-                      Location(Location::State::kSymbolized, kAddress2)});
+  std::unique_ptr<MockModuleSymbols> module1 = std::make_unique<MockModuleSymbols>("myfile1.so");
+  std::unique_ptr<MockModuleSymbols> module2 = std::make_unique<MockModuleSymbols>("myfile2.so");
+  module1->AddSymbolLocations(kFunctionName, {Location(Location::State::kSymbolized, kAddress1),
+                                              Location(Location::State::kSymbolized, kAddress2)});
 
   // Cause the process to load the module. We have to keep the module_ref
   // alive for this to stay cached in the SystemSymbols.
   const std::string kBuildID1 = "abcd";
   const std::string kBuildID2 = "zyxw";
   fxl::RefPtr<SystemSymbols::ModuleRef> module1_ref =
-      session().system().GetSymbols()->InjectModuleForTesting(
-          kBuildID1, std::move(module1));
+      session().system().GetSymbols()->InjectModuleForTesting(kBuildID1, std::move(module1));
   fxl::RefPtr<SystemSymbols::ModuleRef> module2_ref =
-      session().system().GetSymbols()->InjectModuleForTesting(
-          kBuildID2, std::move(module2));
+      session().system().GetSymbols()->InjectModuleForTesting(kBuildID2, std::move(module2));
 
   // Cause the process to load module 1.
   std::vector<debug_ipc::Module> modules;

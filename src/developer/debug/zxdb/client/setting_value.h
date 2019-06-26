@@ -42,9 +42,7 @@ struct SettingValue {
   const auto& get_bool() const { return std::get<bool>(value); }
   const auto& get_int() const { return std::get<int>(value); }
   const auto& get_string() const { return std::get<std::string>(value); }
-  const auto& get_list() const {
-    return std::get<std::vector<std::string>>(value);
-  }
+  const auto& get_list() const { return std::get<std::vector<std::string>>(value); }
 
   void set_bool(bool v) { value = v; }
   void set_int(int v) { value = v; }
@@ -53,8 +51,7 @@ struct SettingValue {
 
   std::string ToDebugString() const;
 
-  using VariantValue =
-      std::variant<bool, int, std::string, std::vector<std::string>>;
+  using VariantValue = std::variant<bool, int, std::string, std::vector<std::string>>;
 
   SettingType type = SettingType::kNull;
   VariantValue value;

@@ -24,8 +24,7 @@
 
 namespace zxdb {
 
-ThreadImpl::ThreadImpl(ProcessImpl* process,
-                       const debug_ipc::ThreadRecord& record)
+ThreadImpl::ThreadImpl(ProcessImpl* process, const debug_ipc::ThreadRecord& record)
     : Thread(process->session()),
       process_(process),
       koid_(record.thread_koid),
@@ -60,13 +59,11 @@ void ThreadImpl::Pause(std::function<void()> on_paused) {
   request.process_koid = process_->GetKoid();
   request.thread_koid = koid_;
   session()->remote_api()->Pause(
-      request, [weak_thread = weak_factory_.GetWeakPtr(),
-                on_paused = std::move(on_paused)](const Err& err,
-                                                  debug_ipc::PauseReply reply) {
+      request, [weak_thread = weak_factory_.GetWeakPtr(), on_paused = std::move(on_paused)](
+                   const Err& err, debug_ipc::PauseReply reply) {
         if (!err.has_error() && weak_thread) {
           // Save the new metadata.
-          if (reply.threads.size() == 1 &&
-              reply.threads[0].thread_koid == weak_thread->koid_) {
+          if (reply.threads.size() == 1 && reply.threads[0].thread_koid == weak_thread->koid_) {
             weak_thread->SetMetadata(reply.threads[0]);
           } else {
             // If the client thread still exists, the agent's record of that
@@ -119,8 +116,7 @@ void ThreadImpl::Continue() {
       debug_ipc::MessageLoop::Current()->PostTask(
           FROM_HERE, [thread = weak_factory_.GetWeakPtr()]() {
             if (thread) {
-              thread->OnException(debug_ipc::NotifyException::Type::kSynthetic,
-                                  {});
+              thread->OnException(debug_ipc::NotifyException::Type::kSynthetic, {});
             }
           });
       return;
@@ -133,8 +129,7 @@ void ThreadImpl::Continue() {
   }
 
   ClearFrames();
-  session()->remote_api()->Resume(
-      request, [](const Err& err, debug_ipc::ResumeReply) {});
+  session()->remote_api()->Resume(request, [](const Err& err, debug_ipc::ResumeReply) {});
 }
 
 void ThreadImpl::ContinueWith(std::unique_ptr<ThreadController> controller,
@@ -146,8 +141,7 @@ void ThreadImpl::ContinueWith(std::unique_ptr<ThreadController> controller,
   controllers_.push_back(std::move(controller));
 
   controller_ptr->InitWithThread(
-      this, [this, controller_ptr,
-             on_continue = std::move(on_continue)](const Err& err) {
+      this, [this, controller_ptr, on_continue = std::move(on_continue)](const Err& err) {
         if (err.has_error()) {
           controller_ptr->Log("InitWithThread failed.");
           NotifyControllerDone(controller_ptr);  // Remove the controller.
@@ -159,16 +153,13 @@ void ThreadImpl::ContinueWith(std::unique_ptr<ThreadController> controller,
       });
 }
 
-void ThreadImpl::JumpTo(uint64_t new_address,
-                        std::function<void(const Err&)> cb) {
+void ThreadImpl::JumpTo(uint64_t new_address, std::function<void(const Err&)> cb) {
   // The register to set.
   debug_ipc::WriteRegistersRequest request;
   request.process_koid = process_->GetKoid();
   request.thread_koid = koid_;
   request.registers.emplace_back(
-      GetSpecialRegisterID(session()->arch(),
-                           debug_ipc::SpecialRegisterType::kIP),
-      new_address);
+      GetSpecialRegisterID(session()->arch(), debug_ipc::SpecialRegisterType::kIP), new_address);
 
   // The "jump" command updates the thread's location so we need to recompute
   // the stack. So once the jump is complete we re-request the thread's
@@ -187,10 +178,8 @@ void ThreadImpl::JumpTo(uint64_t new_address,
         if (err.has_error()) {
           cb(err);  // Transport error.
         } else if (reply.status != 0) {
-          cb(Err("Could not set thread instruction pointer. Error %d (%s).",
-                 reply.status,
-                 debug_ipc::ZxStatusToString(
-                     static_cast<uint32_t>(reply.status))));
+          cb(Err("Could not set thread instruction pointer. Error %d (%s).", reply.status,
+                 debug_ipc::ZxStatusToString(static_cast<uint32_t>(reply.status))));
         } else if (!thread) {
           cb(Err("Thread destroyed."));
         } else {
@@ -218,17 +207,15 @@ void ThreadImpl::StepInstruction() {
   request.process_koid = process_->GetKoid();
   request.thread_koids.push_back(koid_);
   request.how = debug_ipc::ResumeRequest::How::kStepInstruction;
-  session()->remote_api()->Resume(
-      request, [](const Err& err, debug_ipc::ResumeReply) {});
+  session()->remote_api()->Resume(request, [](const Err& err, debug_ipc::ResumeReply) {});
 }
 
 const Stack& ThreadImpl::GetStack() const { return stack_; }
 
 Stack& ThreadImpl::GetStack() { return stack_; }
 
-void ThreadImpl::ReadRegisters(
-    std::vector<debug_ipc::RegisterCategory::Type> cats_to_get,
-    std::function<void(const Err&, const RegisterSet&)> callback) {
+void ThreadImpl::ReadRegisters(std::vector<debug_ipc::RegisterCategory::Type> cats_to_get,
+                               std::function<void(const Err&, const RegisterSet&)> callback) {
   debug_ipc::ReadRegistersRequest request;
   request.process_koid = process_->GetKoid();
   request.thread_koid = koid_;
@@ -237,8 +224,8 @@ void ThreadImpl::ReadRegisters(
   session()->remote_api()->ReadRegisters(
       request, [thread = weak_factory_.GetWeakPtr(), callback](
                    const Err& err, debug_ipc::ReadRegistersReply reply) {
-        thread->registers_ = std::make_unique<RegisterSet>(
-            thread->session()->arch(), std::move(reply.categories));
+        thread->registers_ =
+            std::make_unique<RegisterSet>(thread->session()->arch(), std::move(reply.categories));
         if (callback)
           callback(err, *thread->registers_.get());
       });
@@ -254,15 +241,13 @@ void ThreadImpl::SetMetadata(const debug_ipc::ThreadRecord& record) {
   stack_.SetFrames(record.stack_amount, record.frames);
 }
 
-void ThreadImpl::OnException(
-    debug_ipc::NotifyException::Type type,
-    const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) {
+void ThreadImpl::OnException(debug_ipc::NotifyException::Type type,
+                             const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) {
   TIME_BLOCK();
 #if defined(DEBUG_THREAD_CONTROLLERS)
-  ThreadController::LogRaw(
-      "----------\r\nGot %s exception @ 0x%" PRIx64 " in %s",
-      debug_ipc::NotifyException::TypeToString(type), stack_[0]->GetAddress(),
-      ThreadController::FrameFunctionNameForLog(stack_[0]).c_str());
+  ThreadController::LogRaw("----------\r\nGot %s exception @ 0x%" PRIx64 " in %s",
+                           debug_ipc::NotifyException::TypeToString(type), stack_[0]->GetAddress(),
+                           ThreadController::FrameFunctionNameForLog(stack_[0]).c_str());
 #endif
 
   // When any controller says "stop" it takes precendence and the thread will
@@ -297,8 +282,7 @@ void ThreadImpl::OnException(
         // "finish" again, both finish commands would be active and you would
         // want them both to be completed when the current frame actually
         // finishes).
-        controller->Log(
-            "Reported stop on exception, stopping and removing it.");
+        controller->Log("Reported stop on exception, stopping and removing it.");
         controller_iter = controllers_.erase(controller_iter);
         should_stop = true;
         break;
@@ -359,9 +343,8 @@ void ThreadImpl::SyncFramesForStack(std::function<void(const Err&)> callback) {
   request.thread_koid = koid_;
 
   session()->remote_api()->ThreadStatus(
-      request,
-      [callback = std::move(callback), thread = weak_factory_.GetWeakPtr()](
-          const Err& err, debug_ipc::ThreadStatusReply reply) {
+      request, [callback = std::move(callback), thread = weak_factory_.GetWeakPtr()](
+                   const Err& err, debug_ipc::ThreadStatusReply reply) {
         if (err.has_error()) {
           callback(err);
           return;
@@ -377,15 +360,13 @@ void ThreadImpl::SyncFramesForStack(std::function<void(const Err&)> callback) {
       });
 }
 
-std::unique_ptr<Frame> ThreadImpl::MakeFrameForStack(
-    const debug_ipc::StackFrame& input, Location location) {
+std::unique_ptr<Frame> ThreadImpl::MakeFrameForStack(const debug_ipc::StackFrame& input,
+                                                     Location location) {
   return std::make_unique<FrameImpl>(this, input, std::move(location));
 }
 
-Location ThreadImpl::GetSymbolizedLocationForStackFrame(
-    const debug_ipc::StackFrame& input) {
-  auto vect =
-      GetProcess()->GetSymbols()->ResolveInputLocation(InputLocation(input.ip));
+Location ThreadImpl::GetSymbolizedLocationForStackFrame(const debug_ipc::StackFrame& input) {
+  auto vect = GetProcess()->GetSymbols()->ResolveInputLocation(InputLocation(input.ip));
 
   // Symbolizing an address should always give exactly one result.
   FXL_DCHECK(vect.size() == 1u);

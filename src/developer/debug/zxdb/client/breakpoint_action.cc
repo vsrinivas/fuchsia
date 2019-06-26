@@ -8,11 +8,9 @@
 
 namespace zxdb {
 
-BreakpointAction BreakpointActionHighestPrecedence(BreakpointAction a,
-                                                   BreakpointAction b) {
+BreakpointAction BreakpointActionHighestPrecedence(BreakpointAction a, BreakpointAction b) {
   // Enum value encodes precedence.
-  return static_cast<BreakpointAction>(
-      std::max(static_cast<int>(a), static_cast<int>(b)));
+  return static_cast<BreakpointAction>(std::max(static_cast<int>(a), static_cast<int>(b)));
 }
 
 }  // namespace zxdb

@@ -22,9 +22,7 @@ namespace zxdb {
 
 class BreakpointLocationImpl;
 
-class BreakpointImpl : public Breakpoint,
-                       public ProcessObserver,
-                       public SystemObserver {
+class BreakpointImpl : public Breakpoint, public ProcessObserver, public SystemObserver {
  public:
   // The controller can be null in which case it will perform the default
   // behavior. The controller must outlive the breakpoint.
@@ -61,18 +59,15 @@ class BreakpointImpl : public Breakpoint,
 
   // ProcessObserver.
   void WillDestroyThread(Process* process, Thread* thread) override;
-  void DidLoadModuleSymbols(Process* process,
-                            LoadedModuleSymbols* module) override;
-  void WillUnloadModuleSymbols(Process* process,
-                               LoadedModuleSymbols* module) override;
+  void DidLoadModuleSymbols(Process* process, LoadedModuleSymbols* module) override;
+  void WillUnloadModuleSymbols(Process* process, LoadedModuleSymbols* module) override;
 
   // SystemObserver.
   void WillDestroyTarget(Target* target) override;
   void GlobalDidCreateProcess(Process* process) override;
   void GlobalWillDestroyProcess(Process* process) override;
 
-  void SyncBackend(std::function<void(const Err&)> callback =
-                       std::function<void(const Err&)>());
+  void SyncBackend(std::function<void(const Err&)> callback = std::function<void(const Err&)>());
   void SendBackendAddOrChange(std::function<void(const Err&)> callback);
   void SendBackendRemove(std::function<void(const Err&)> callback);
 

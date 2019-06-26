@@ -29,8 +29,8 @@ class TargetObserver {
   // will exist but the Target object will report there is no process
   // currently running. The exit code will only have meaning when reason ==
   // kExit, otherwise it will be 0.
-  virtual void WillDestroyProcess(Target* target, Process* process,
-                                  DestroyReason reason, int exit_code) {}
+  virtual void WillDestroyProcess(Target* target, Process* process, DestroyReason reason,
+                                  int exit_code) {}
 };
 
 }  // namespace zxdb

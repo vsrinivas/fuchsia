@@ -25,18 +25,15 @@ namespace {
 
 // In-place replaces instances of ANY of the characters in "search_for" with the
 // given replacement in the given string.
-void ReplaceAllInstancesOf(const char* search_for, char replace_with,
-                           std::string* str) {
+void ReplaceAllInstancesOf(const char* search_for, char replace_with, std::string* str) {
   size_t found_pos = 0;
-  while ((found_pos = str->find_first_of(search_for, found_pos)) !=
-         std::string::npos) {
+  while ((found_pos = str->find_first_of(search_for, found_pos)) != std::string::npos) {
     (*str)[found_pos] = replace_with;
   }
 }
 
-void GetInvalidInstructionStrs(const uint8_t* data, size_t len,
-                               std::string* instruction, std::string* params,
-                               std::string* comment) {
+void GetInvalidInstructionStrs(const uint8_t* data, size_t len, std::string* instruction,
+                               std::string* params, std::string* comment) {
   *instruction = ".byte";
   params->clear();
   for (size_t i = 0; i < len; i++) {
@@ -68,21 +65,16 @@ void SplitInstruction(std::string* instruction, std::string* params) {
 
   // Trim off the params.
   *params = instruction->substr(param_separator + 1);
-  instruction->erase(instruction->begin() + param_separator,
-                     instruction->end());
+  instruction->erase(instruction->begin() + param_separator, instruction->end());
 }
 
 }  // namespace
 
 Disassembler::Row::Row() = default;
 
-Disassembler::Row::Row(uint64_t address, const uint8_t* bytes, size_t bytes_len,
-                       std::string op, std::string params, std::string comment)
-    : address(address),
-      bytes(bytes, bytes + bytes_len),
-      op(op),
-      params(params),
-      comment(comment) {}
+Disassembler::Row::Row(uint64_t address, const uint8_t* bytes, size_t bytes_len, std::string op,
+                       std::string params, std::string comment)
+    : address(address), bytes(bytes, bytes + bytes_len), op(op), params(params), comment(comment) {}
 Disassembler::Row::~Row() = default;
 
 bool Disassembler::Row::operator==(const Row& other) const {
@@ -96,17 +88,15 @@ Disassembler::~Disassembler() = default;
 Err Disassembler::Init(const ArchInfo* arch) {
   arch_ = arch;
 
-  context_ = std::make_unique<llvm::MCContext>(arch_->asm_info(),
-                                               arch_->register_info(), nullptr);
-  disasm_.reset(arch_->target()->createMCDisassembler(*arch_->subtarget_info(),
-                                                      *context_));
+  context_ = std::make_unique<llvm::MCContext>(arch_->asm_info(), arch_->register_info(), nullptr);
+  disasm_.reset(arch_->target()->createMCDisassembler(*arch_->subtarget_info(), *context_));
   if (!disasm_)
     return Err("Couldn't create LLVM disassembler.");
 
   constexpr int kAssemblyFlavor = 1;  // 1 means "Intel" (not AT&T).
-  printer_.reset(arch_->target()->createMCInstPrinter(
-      *arch_->triple(), kAssemblyFlavor, *arch_->asm_info(),
-      *arch_->instr_info(), *arch_->register_info()));
+  printer_.reset(arch_->target()->createMCInstPrinter(*arch_->triple(), kAssemblyFlavor,
+                                                      *arch_->asm_info(), *arch_->instr_info(),
+                                                      *arch_->register_info()));
   printer_->setPrintHexStyle(llvm::HexStyle::C);  // ::C = 0xff-style.
   printer_->setPrintImmHex(true);
   printer_->setUseMarkup(true);
@@ -114,16 +104,14 @@ Err Disassembler::Init(const ArchInfo* arch) {
   return Err();
 }
 
-size_t Disassembler::DisassembleOne(const uint8_t* data, size_t data_len,
-                                    uint64_t address, const Options& options,
-                                    Row* out) const {
+size_t Disassembler::DisassembleOne(const uint8_t* data, size_t data_len, uint64_t address,
+                                    const Options& options, Row* out) const {
   out->address = address;
 
   // Decode.
   llvm::MCInst inst;
   uint64_t consumed = 0;
-  auto status = disasm_->getInstruction(inst, consumed,
-                                        llvm::ArrayRef<uint8_t>(data, data_len),
+  auto status = disasm_->getInstruction(inst, consumed, llvm::ArrayRef<uint8_t>(data, data_len),
                                         address, llvm::nulls(), llvm::nulls());
   if (status == llvm::MCDisassembler::Success) {
     // Print the instruction. Note that LLVM appends to the strings so we need
@@ -134,8 +122,7 @@ size_t Disassembler::DisassembleOne(const uint8_t* data, size_t data_len,
     llvm::raw_string_ostream comment_stream(out->comment);
 
     printer_->setCommentStream(comment_stream);
-    printer_->printInst(&inst, inst_stream, llvm::StringRef(),
-                        *arch_->subtarget_info());
+    printer_->printInst(&inst, inst_stream, llvm::StringRef(), *arch_->subtarget_info());
     printer_->setCommentStream(llvm::nulls());
 
     inst_stream.flush();
@@ -147,8 +134,7 @@ size_t Disassembler::DisassembleOne(const uint8_t* data, size_t data_len,
     if (!options.emit_undecodable)
       return 0;
     consumed = std::min(data_len, arch_->instr_align());
-    GetInvalidInstructionStrs(data, consumed, &out->op, &out->params,
-                              &out->comment);
+    GetInvalidInstructionStrs(data, consumed, &out->op, &out->params, &out->comment);
   }
 
   // Comments.
@@ -158,18 +144,15 @@ size_t Disassembler::DisassembleOne(const uint8_t* data, size_t data_len,
     out->comment = fxl::TrimString(out->comment, "\r\n ").ToString();
     ReplaceAllInstancesOf("\r\n", ' ', &out->comment);
 
-    out->comment =
-        arch_->asm_info()->getCommentString().str() + " " + out->comment;
+    out->comment = arch_->asm_info()->getCommentString().str() + " " + out->comment;
   }
 
   out->bytes = std::vector<uint8_t>(data, data + consumed);
   return consumed;
 }
 
-size_t Disassembler::DisassembleMany(const uint8_t* data, size_t data_len,
-                                     uint64_t start_address,
-                                     const Options& in_options,
-                                     size_t max_instructions,
+size_t Disassembler::DisassembleMany(const uint8_t* data, size_t data_len, uint64_t start_address,
+                                     const Options& in_options, size_t max_instructions,
                                      std::vector<Row>* out) const {
   if (max_instructions == 0)
     max_instructions = std::numeric_limits<size_t>::max();
@@ -182,9 +165,8 @@ size_t Disassembler::DisassembleMany(const uint8_t* data, size_t data_len,
   size_t byte_offset = 0;
   while (byte_offset < data_len && out->size() < max_instructions) {
     out->emplace_back();
-    size_t bytes_read =
-        DisassembleOne(&data[byte_offset], data_len - byte_offset,
-                       start_address + byte_offset, options, &out->back());
+    size_t bytes_read = DisassembleOne(&data[byte_offset], data_len - byte_offset,
+                                       start_address + byte_offset, options, &out->back());
     FXL_DCHECK(bytes_read > 0);
     byte_offset += bytes_read;
   }
@@ -192,10 +174,8 @@ size_t Disassembler::DisassembleMany(const uint8_t* data, size_t data_len,
   return byte_offset;
 }
 
-size_t Disassembler::DisassembleDump(const MemoryDump& dump,
-                                     uint64_t start_address,
-                                     const Options& options,
-                                     size_t max_instructions,
+size_t Disassembler::DisassembleDump(const MemoryDump& dump, uint64_t start_address,
+                                     const Options& options, size_t max_instructions,
                                      std::vector<Row>* out) const {
   if (max_instructions == 0)
     max_instructions = std::numeric_limits<size_t>::max();
@@ -210,8 +190,7 @@ size_t Disassembler::DisassembleDump(const MemoryDump& dump,
 
     if (!block.valid) {
       // Invalid region.
-      std::string comment =
-          arch_->asm_info()->getCommentString().str() + " Invalid memory @ ";
+      std::string comment = arch_->asm_info()->getCommentString().str() + " Invalid memory @ ";
 
       if (block_i == dump.blocks().size() - 1) {
         // If the last block, just show the starting address because the size
@@ -221,9 +200,8 @@ size_t Disassembler::DisassembleDump(const MemoryDump& dump,
         comment += fxl::StringPrintf("0x%" PRIx64, block.address);
       } else {
         // Invalid range.
-        comment +=
-            fxl::StringPrintf("0x%" PRIx64 " - 0x%" PRIx64, block.address,
-                              block.address + block.size - 1);
+        comment += fxl::StringPrintf("0x%" PRIx64 " - 0x%" PRIx64, block.address,
+                                     block.address + block.size - 1);
       }
 
       // Append the row.
@@ -240,14 +218,13 @@ size_t Disassembler::DisassembleDump(const MemoryDump& dump,
     uint64_t block_offset = cur_address - block.address;
     if (block_offset < block.data.size()) {
       // Valid region, print instructions to the end of the block.
-      size_t block_bytes_consumed = DisassembleMany(
-          &block.data[block_offset], block.data.size(),
-          block.address + block_offset, options, max_instructions, out);
+      size_t block_bytes_consumed =
+          DisassembleMany(&block.data[block_offset], block.data.size(),
+                          block.address + block_offset, options, max_instructions, out);
       if (out->size() >= max_instructions) {
         // Return the number of bytes from the beginning of the memory dump
         // that were consumed.
-        return static_cast<size_t>(block.address + block_bytes_consumed -
-                                   dump.blocks()[0].address);
+        return static_cast<size_t>(block.address + block_bytes_consumed - dump.blocks()[0].address);
       }
     }
     cur_address = block_end;

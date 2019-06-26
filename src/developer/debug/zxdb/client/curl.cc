@@ -38,8 +38,7 @@ void CurlFDWatcher::OnFDReady(int fd, bool read, bool write, bool err) {
   if (err)
     action |= CURL_CSELECT_ERR;
 
-  auto result =
-      curl_multi_socket_action(Curl::multi_handle, fd, action, &_ignore);
+  auto result = curl_multi_socket_action(Curl::multi_handle, fd, action, &_ignore);
   FXL_DCHECK(result == CURLM_OK);
 
   if (cleanup_pending) {
@@ -59,15 +58,13 @@ void CurlFDWatcher::OnFDReady(int fd, bool read, bool write, bool err) {
       }
 
       Curl* curl;
-      auto result =
-          curl_easy_getinfo(info->easy_handle, CURLINFO_PRIVATE, &curl);
+      auto result = curl_easy_getinfo(info->easy_handle, CURLINFO_PRIVATE, &curl);
       FXL_DCHECK(result == CURLE_OK);
 
       auto cb = curl->multi_cb_;
       curl->multi_cb_ = nullptr;
       curl->FreeSList();
-      auto rem_result =
-          curl_multi_remove_handle(Curl::multi_handle, info->easy_handle);
+      auto rem_result = curl_multi_remove_handle(Curl::multi_handle, info->easy_handle);
       FXL_DCHECK(rem_result == CURLM_OK);
 
       auto ref = curl->self_ref_;
@@ -101,8 +98,8 @@ int SocketCallback(CURL* easy, curl_socket_t s, int what, void*, void*) {
         return -1;
     };
 
-    CurlFDWatcher::watches[s] = debug_ipc::MessageLoop::Current()->WatchFD(
-        mode, s, &CurlFDWatcher::instance);
+    CurlFDWatcher::watches[s] =
+        debug_ipc::MessageLoop::Current()->WatchFD(mode, s, &CurlFDWatcher::instance);
   }
 
   return 0;
@@ -131,8 +128,7 @@ int TimerCallback(CURLM* multi, long timeout_ms, void*) {
         }
 
         int _ignore;
-        auto result =
-            curl_multi_socket_action(multi, CURL_SOCKET_TIMEOUT, 0, &_ignore);
+        auto result = curl_multi_socket_action(multi, CURL_SOCKET_TIMEOUT, 0, &_ignore);
         FXL_DCHECK(result == CURLM_OK);
       });
 
@@ -266,8 +262,7 @@ Curl::Error Curl::Perform() {
 
 void Curl::Perform(std::function<void(Curl*, Curl::Error)> cb) {
   self_ref_ = weak_self_ref_.lock();
-  FXL_DCHECK(self_ref_)
-      << "To use async Curl::Perform you must construct with Curl::MakeShared";
+  FXL_DCHECK(self_ref_) << "To use async Curl::Perform you must construct with Curl::MakeShared";
 
   PrepareToPerform();
   InitMulti();
@@ -277,8 +272,7 @@ void Curl::Perform(std::function<void(Curl*, Curl::Error)> cb) {
   multi_cb_ = cb;
 
   int _ignore;
-  result =
-      curl_multi_socket_action(multi_handle, CURL_SOCKET_TIMEOUT, 0, &_ignore);
+  result = curl_multi_socket_action(multi_handle, CURL_SOCKET_TIMEOUT, 0, &_ignore);
   FXL_DCHECK(result == CURLM_OK);
 }
 
@@ -290,11 +284,9 @@ void Curl::InitMulti() {
   multi_handle = curl_multi_init();
   FXL_DCHECK(multi_handle);
 
-  auto result =
-      curl_multi_setopt(multi_handle, CURLMOPT_SOCKETFUNCTION, SocketCallback);
+  auto result = curl_multi_setopt(multi_handle, CURLMOPT_SOCKETFUNCTION, SocketCallback);
   FXL_DCHECK(result == CURLM_OK);
-  result =
-      curl_multi_setopt(multi_handle, CURLMOPT_TIMERFUNCTION, TimerCallback);
+  result = curl_multi_setopt(multi_handle, CURLMOPT_TIMERFUNCTION, TimerCallback);
   FXL_DCHECK(result == CURLM_OK);
 }
 

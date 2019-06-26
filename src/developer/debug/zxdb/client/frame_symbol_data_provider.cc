@@ -24,15 +24,13 @@ namespace {
 Err CallFrameDestroyedErr() { return Err("Call frame destroyed."); }
 
 Err RegisterUnavailableErr(debug_ipc::RegisterID id) {
-  return Err(fxl::StringPrintf("Register %s unavailable.",
-                               debug_ipc::RegisterIDToString(id)));
+  return Err(fxl::StringPrintf("Register %s unavailable.", debug_ipc::RegisterIDToString(id)));
 }
 
 }  // namespace
 
 FrameSymbolDataProvider::FrameSymbolDataProvider(Frame* frame)
-    : ProcessSymbolDataProvider(frame->GetThread()->GetProcess()),
-      frame_(frame) {}
+    : ProcessSymbolDataProvider(frame->GetThread()->GetProcess()), frame_(frame) {}
 
 FrameSymbolDataProvider::~FrameSymbolDataProvider() = default;
 
@@ -73,9 +71,7 @@ void FrameSymbolDataProvider::GetRegisterAsync(debug_ipc::RegisterID id,
   if (!frame_) {
     // Frame deleted out from under us.
     debug_ipc::MessageLoop::Current()->PostTask(
-        FROM_HERE, [id, cb = std::move(callback)]() {
-          cb(RegisterUnavailableErr(id), 0);
-        });
+        FROM_HERE, [id, cb = std::move(callback)]() { cb(RegisterUnavailableErr(id), 0); });
     return;
   }
 
@@ -86,13 +82,12 @@ void FrameSymbolDataProvider::GetRegisterAsync(debug_ipc::RegisterID id,
     std::optional<uint64_t> value;
     GetRegister(id, &value);
 
-    debug_ipc::MessageLoop::Current()->PostTask(
-        FROM_HERE, [id, value, cb = std::move(callback)]() {
-          if (value)
-            cb(Err(), *value);
-          else
-            cb(RegisterUnavailableErr(id), 0);
-        });
+    debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [id, value, cb = std::move(callback)]() {
+      if (value)
+        cb(Err(), *value);
+      else
+        cb(RegisterUnavailableErr(id), 0);
+    });
     return;
   }
 
@@ -101,12 +96,9 @@ void FrameSymbolDataProvider::GetRegisterAsync(debug_ipc::RegisterID id,
   //  and vector registers here.
   //}
 
-  debug_ipc::MessageLoop::Current()->PostTask(
-      FROM_HERE, [id, cb = std::move(callback)]() {
-        cb(Err(fxl::StringPrintf("Register %s unavailable.",
-                                 debug_ipc::RegisterIDToString(id))),
-           0);
-      });
+  debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [id, cb = std::move(callback)]() {
+    cb(Err(fxl::StringPrintf("Register %s unavailable.", debug_ipc::RegisterIDToString(id))), 0);
+  });
 }
 
 std::optional<uint64_t> FrameSymbolDataProvider::GetFrameBase() {
@@ -122,8 +114,7 @@ void FrameSymbolDataProvider::GetFrameBaseAsync(GetRegisterCallback cb) {
     return;
   }
 
-  frame_->GetBasePointerAsync(
-      [cb = std::move(cb)](uint64_t value) { cb(Err(), value); });
+  frame_->GetBasePointerAsync([cb = std::move(cb)](uint64_t value) { cb(Err(), value); });
 }
 
 uint64_t FrameSymbolDataProvider::GetCanonicalFrameAddress() const {

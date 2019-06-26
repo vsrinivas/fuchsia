@@ -20,77 +20,52 @@ class RemoteAPIImpl : public RemoteAPI {
   ~RemoteAPIImpl();
 
   // RemoteAPI implementation.
-  void Hello(
-      const debug_ipc::HelloRequest& request,
-      std::function<void(const Err&, debug_ipc::HelloReply)> cb) override;
-  void Launch(
-      const debug_ipc::LaunchRequest& request,
-      std::function<void(const Err&, debug_ipc::LaunchReply)> cb) override;
+  void Hello(const debug_ipc::HelloRequest& request,
+             std::function<void(const Err&, debug_ipc::HelloReply)> cb) override;
+  void Launch(const debug_ipc::LaunchRequest& request,
+              std::function<void(const Err&, debug_ipc::LaunchReply)> cb) override;
   void Kill(const debug_ipc::KillRequest& request,
             std::function<void(const Err&, debug_ipc::KillReply)> cb) override;
-  void Attach(
-      const debug_ipc::AttachRequest& request,
-      std::function<void(const Err&, debug_ipc::AttachReply)> cb) override;
-  void ConfigAgent(
-      const debug_ipc::ConfigAgentRequest& request,
-      std::function<void(const Err&, debug_ipc::ConfigAgentReply)> cb) override;
-  void Detach(
-      const debug_ipc::DetachRequest& request,
-      std::function<void(const Err&, debug_ipc::DetachReply)> cb) override;
-  void Modules(
-      const debug_ipc::ModulesRequest& request,
-      std::function<void(const Err&, debug_ipc::ModulesReply)> cb) override;
-  void Pause(
-      const debug_ipc::PauseRequest& request,
-      std::function<void(const Err&, debug_ipc::PauseReply)> cb) override;
-  void QuitAgent(
-      const debug_ipc::QuitAgentRequest& request,
-      std::function<void(const Err&, debug_ipc::QuitAgentReply)> cb) override;
-  void Resume(
-      const debug_ipc::ResumeRequest& request,
-      std::function<void(const Err&, debug_ipc::ResumeReply)> cb) override;
-  void ProcessTree(
-      const debug_ipc::ProcessTreeRequest& request,
-      std::function<void(const Err&, debug_ipc::ProcessTreeReply)> cb) override;
-  void Threads(
-      const debug_ipc::ThreadsRequest& request,
-      std::function<void(const Err&, debug_ipc::ThreadsReply)> cb) override;
-  void ReadMemory(
-      const debug_ipc::ReadMemoryRequest& request,
-      std::function<void(const Err&, debug_ipc::ReadMemoryReply)> cb) override;
-  void ReadRegisters(
-      const debug_ipc::ReadRegistersRequest& request,
-      std::function<void(const Err&, debug_ipc::ReadRegistersReply)> cb)
-      override;
-  void WriteRegisters(
-      const debug_ipc::WriteRegistersRequest& request,
-      std::function<void(const Err&, debug_ipc::WriteRegistersReply)> cb)
-      override;
+  void Attach(const debug_ipc::AttachRequest& request,
+              std::function<void(const Err&, debug_ipc::AttachReply)> cb) override;
+  void ConfigAgent(const debug_ipc::ConfigAgentRequest& request,
+                   std::function<void(const Err&, debug_ipc::ConfigAgentReply)> cb) override;
+  void Detach(const debug_ipc::DetachRequest& request,
+              std::function<void(const Err&, debug_ipc::DetachReply)> cb) override;
+  void Modules(const debug_ipc::ModulesRequest& request,
+               std::function<void(const Err&, debug_ipc::ModulesReply)> cb) override;
+  void Pause(const debug_ipc::PauseRequest& request,
+             std::function<void(const Err&, debug_ipc::PauseReply)> cb) override;
+  void QuitAgent(const debug_ipc::QuitAgentRequest& request,
+                 std::function<void(const Err&, debug_ipc::QuitAgentReply)> cb) override;
+  void Resume(const debug_ipc::ResumeRequest& request,
+              std::function<void(const Err&, debug_ipc::ResumeReply)> cb) override;
+  void ProcessTree(const debug_ipc::ProcessTreeRequest& request,
+                   std::function<void(const Err&, debug_ipc::ProcessTreeReply)> cb) override;
+  void Threads(const debug_ipc::ThreadsRequest& request,
+               std::function<void(const Err&, debug_ipc::ThreadsReply)> cb) override;
+  void ReadMemory(const debug_ipc::ReadMemoryRequest& request,
+                  std::function<void(const Err&, debug_ipc::ReadMemoryReply)> cb) override;
+  void ReadRegisters(const debug_ipc::ReadRegistersRequest& request,
+                     std::function<void(const Err&, debug_ipc::ReadRegistersReply)> cb) override;
+  void WriteRegisters(const debug_ipc::WriteRegistersRequest& request,
+                      std::function<void(const Err&, debug_ipc::WriteRegistersReply)> cb) override;
   void AddOrChangeBreakpoint(
       const debug_ipc::AddOrChangeBreakpointRequest& request,
-      std::function<void(const Err&, debug_ipc::AddOrChangeBreakpointReply)> cb)
-      override;
+      std::function<void(const Err&, debug_ipc::AddOrChangeBreakpointReply)> cb) override;
   void RemoveBreakpoint(
       const debug_ipc::RemoveBreakpointRequest& request,
-      std::function<void(const Err&, debug_ipc::RemoveBreakpointReply)> cb)
-      override;
-  void SysInfo(
-      const debug_ipc::SysInfoRequest& request,
-      std::function<void(const Err&, debug_ipc::SysInfoReply)> cb) override;
-  void ThreadStatus(
-      const debug_ipc::ThreadStatusRequest& request,
-      std::function<void(const Err&, debug_ipc::ThreadStatusReply)> cb)
-      override;
-  void AddressSpace(
-      const debug_ipc::AddressSpaceRequest& request,
-      std::function<void(const Err&, debug_ipc::AddressSpaceReply)> cb)
-      override;
-  void JobFilter(
-      const debug_ipc::JobFilterRequest& request,
-      std::function<void(const Err&, debug_ipc::JobFilterReply)> cb) override;
-  void WriteMemory(
-      const debug_ipc::WriteMemoryRequest& request,
-      std::function<void(const Err&, debug_ipc::WriteMemoryReply)> cb) override;
+      std::function<void(const Err&, debug_ipc::RemoveBreakpointReply)> cb) override;
+  void SysInfo(const debug_ipc::SysInfoRequest& request,
+               std::function<void(const Err&, debug_ipc::SysInfoReply)> cb) override;
+  void ThreadStatus(const debug_ipc::ThreadStatusRequest& request,
+                    std::function<void(const Err&, debug_ipc::ThreadStatusReply)> cb) override;
+  void AddressSpace(const debug_ipc::AddressSpaceRequest& request,
+                    std::function<void(const Err&, debug_ipc::AddressSpaceReply)> cb) override;
+  void JobFilter(const debug_ipc::JobFilterRequest& request,
+                 std::function<void(const Err&, debug_ipc::JobFilterReply)> cb) override;
+  void WriteMemory(const debug_ipc::WriteMemoryRequest& request,
+                   std::function<void(const Err&, debug_ipc::WriteMemoryReply)> cb) override;
 
  private:
   // Sends a message with an asynchronous reply.
@@ -102,8 +77,7 @@ class RemoteAPIImpl : public RemoteAPI {
   // The callback will always be issued asynchronously (not from withing the
   // Send() function itself).
   template <typename SendMsgType, typename RecvMsgType>
-  void Send(const SendMsgType& send_msg,
-            std::function<void(const Err&, RecvMsgType)> callback);
+  void Send(const SendMsgType& send_msg, std::function<void(const Err&, RecvMsgType)> callback);
 
   Session* session_;
 

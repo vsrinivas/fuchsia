@@ -39,9 +39,7 @@ class MockRemoteAPI : public RemoteAPI {
   const debug_ipc::AddOrChangeBreakpointRequest& last_breakpoint_add() const {
     return last_breakpoint_add_;
   }
-  uint64_t last_breakpoint_id() const {
-    return last_breakpoint_add_.breakpoint.id;
-  }
+  uint64_t last_breakpoint_id() const { return last_breakpoint_add_.breakpoint.id; }
   uint64_t last_breakpoint_address() const {
     if (last_breakpoint_add_.breakpoint.locations.empty())
       return 0;
@@ -56,31 +54,22 @@ class MockRemoteAPI : public RemoteAPI {
   }
 
   // RemoteAPI implementation.
-  void Attach(
-      const debug_ipc::AttachRequest& request,
-      std::function<void(const Err&, debug_ipc::AttachReply)> cb) override;
+  void Attach(const debug_ipc::AttachRequest& request,
+              std::function<void(const Err&, debug_ipc::AttachReply)> cb) override;
   void AddOrChangeBreakpoint(
       const debug_ipc::AddOrChangeBreakpointRequest& request,
-      std::function<void(const Err&, debug_ipc::AddOrChangeBreakpointReply)> cb)
-      override;
+      std::function<void(const Err&, debug_ipc::AddOrChangeBreakpointReply)> cb) override;
   void RemoveBreakpoint(
       const debug_ipc::RemoveBreakpointRequest& request,
-      std::function<void(const Err&, debug_ipc::RemoveBreakpointReply)> cb)
-      override;
-  void ThreadStatus(
-      const debug_ipc::ThreadStatusRequest& request,
-      std::function<void(const Err&, debug_ipc::ThreadStatusReply)> cb)
-      override;
-  void Resume(
-      const debug_ipc::ResumeRequest& request,
-      std::function<void(const Err&, debug_ipc::ResumeReply)> cb) override;
-  void ReadMemory(
-      const debug_ipc::ReadMemoryRequest& request,
-      std::function<void(const Err&, debug_ipc::ReadMemoryReply)> cb) override;
-  void WriteRegisters(
-      const debug_ipc::WriteRegistersRequest& request,
-      std::function<void(const Err&, debug_ipc::WriteRegistersReply)> cb)
-      override;
+      std::function<void(const Err&, debug_ipc::RemoveBreakpointReply)> cb) override;
+  void ThreadStatus(const debug_ipc::ThreadStatusRequest& request,
+                    std::function<void(const Err&, debug_ipc::ThreadStatusReply)> cb) override;
+  void Resume(const debug_ipc::ResumeRequest& request,
+              std::function<void(const Err&, debug_ipc::ResumeReply)> cb) override;
+  void ReadMemory(const debug_ipc::ReadMemoryRequest& request,
+                  std::function<void(const Err&, debug_ipc::ReadMemoryReply)> cb) override;
+  void WriteRegisters(const debug_ipc::WriteRegistersRequest& request,
+                      std::function<void(const Err&, debug_ipc::WriteRegistersReply)> cb) override;
 
  private:
   debug_ipc::ThreadStatusReply thread_status_reply_;

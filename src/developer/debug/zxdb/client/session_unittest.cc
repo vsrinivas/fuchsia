@@ -26,14 +26,10 @@ class SessionSink : public RemoteAPI {
   ~SessionSink() override = default;
 
   // Returns the breakpoint IDs that the backend is supposed to know about now.
-  const std::set<uint32_t>& set_breakpoint_ids() const {
-    return set_breakpoint_ids_;
-  }
+  const std::set<uint32_t>& set_breakpoint_ids() const { return set_breakpoint_ids_; }
 
   // Returns the last received resume request sent by the client.
-  const debug_ipc::ResumeRequest& resume_request() const {
-    return resume_request_;
-  }
+  const debug_ipc::ResumeRequest& resume_request() const { return resume_request_; }
   int resume_count() const { return resume_count_; }
 
   // Clears the last resume request and count.
@@ -54,32 +50,27 @@ class SessionSink : public RemoteAPI {
     }
   }
 
-  void Resume(
-      const debug_ipc::ResumeRequest& request,
-      std::function<void(const Err&, debug_ipc::ResumeReply)> cb) override {
+  void Resume(const debug_ipc::ResumeRequest& request,
+              std::function<void(const Err&, debug_ipc::ResumeReply)> cb) override {
     resume_count_++;
     resume_request_ = request;
-    MessageLoop::Current()->PostTask(
-        FROM_HERE, [cb]() { cb(Err(), debug_ipc::ResumeReply()); });
+    MessageLoop::Current()->PostTask(FROM_HERE, [cb]() { cb(Err(), debug_ipc::ResumeReply()); });
   }
 
   void AddOrChangeBreakpoint(
       const debug_ipc::AddOrChangeBreakpointRequest& request,
-      std::function<void(const Err&, debug_ipc::AddOrChangeBreakpointReply)> cb)
-      override {
+      std::function<void(const Err&, debug_ipc::AddOrChangeBreakpointReply)> cb) override {
     set_breakpoint_ids_.insert(request.breakpoint.id);
-    MessageLoop::Current()->PostTask(FROM_HERE, [cb]() {
-      cb(Err(), debug_ipc::AddOrChangeBreakpointReply());
-    });
+    MessageLoop::Current()->PostTask(
+        FROM_HERE, [cb]() { cb(Err(), debug_ipc::AddOrChangeBreakpointReply()); });
   }
 
   void RemoveBreakpoint(
       const debug_ipc::RemoveBreakpointRequest& request,
-      std::function<void(const Err&, debug_ipc::RemoveBreakpointReply)> cb)
-      override {
+      std::function<void(const Err&, debug_ipc::RemoveBreakpointReply)> cb) override {
     set_breakpoint_ids_.erase(request.breakpoint_id);
-    MessageLoop::Current()->PostTask(
-        FROM_HERE, [cb]() { cb(Err(), debug_ipc::RemoveBreakpointReply()); });
+    MessageLoop::Current()->PostTask(FROM_HERE,
+                                     [cb]() { cb(Err(), debug_ipc::RemoveBreakpointReply()); });
   }
 
  private:
@@ -100,9 +91,8 @@ class SessionThreadObserver : public ThreadObserver {
   // The breakpoints that triggered from the last stop notification.
   const std::vector<Breakpoint*> breakpoints() const { return breakpoints_; }
 
-  void OnThreadStopped(
-      Thread* thread, debug_ipc::NotifyException::Type type,
-      const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) {
+  void OnThreadStopped(Thread* thread, debug_ipc::NotifyException::Type type,
+                       const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) {
     stop_count_++;
     breakpoints_.clear();
     for (auto& bp : hit_breakpoints) {

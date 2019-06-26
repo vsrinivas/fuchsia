@@ -22,8 +22,7 @@ constexpr uint64_t kReturnAddress = 0x34567890;
 constexpr uint64_t kReturnBase = kInitialBase + 0x10;
 constexpr uint64_t kBottomBase = kReturnBase + 0x10;
 
-class FinishPhysicalFrameThreadControllerTest
-    : public InlineThreadControllerTest {
+class FinishPhysicalFrameThreadControllerTest : public InlineThreadControllerTest {
  public:
   // Creates a break notification with two stack frames using the constants
   // above.
@@ -50,8 +49,7 @@ TEST_F(FinishPhysicalFrameThreadControllerTest, Finish) {
   auto& break_frames = break_notification.thread.frames;
   InjectException(break_notification);
 
-  debug_ipc::StackFrame bottom_frame(kReturnAddress, kBottomBase,
-                                     kBottomBase + 0x10);
+  debug_ipc::StackFrame bottom_frame(kReturnAddress, kBottomBase, kBottomBase + 0x10);
 
   // Supply three frames for when the thread requests them: the top one (of the
   // stop above), the one we'll return to, and the one before that (so the
@@ -60,20 +58,19 @@ TEST_F(FinishPhysicalFrameThreadControllerTest, Finish) {
   debug_ipc::ThreadStatusReply expected_reply;
   // Copy previous frames and add to it.
   expected_reply.record = break_notification.thread;
-  expected_reply.record.stack_amount =
-      debug_ipc::ThreadRecord::StackAmount::kFull;
+  expected_reply.record.stack_amount = debug_ipc::ThreadRecord::StackAmount::kFull;
   expected_reply.record.frames.push_back(bottom_frame);
   mock_remote_api()->set_thread_status_reply(expected_reply);
 
   EXPECT_EQ(0, mock_remote_api()->breakpoint_add_count());
   Err out_err;
   mock_remote_api()->set_resume_quits_loop(true);
-  thread()->ContinueWith(std::make_unique<FinishPhysicalFrameThreadController>(
-                             thread()->GetStack(), 0),
-                         [&out_err](const Err& err) {
-                           out_err = err;
-                           debug_ipc::MessageLoop::Current()->QuitNow();
-                         });
+  thread()->ContinueWith(
+      std::make_unique<FinishPhysicalFrameThreadController>(thread()->GetStack(), 0),
+      [&out_err](const Err& err) {
+        out_err = err;
+        debug_ipc::MessageLoop::Current()->QuitNow();
+      });
   loop().Run();
 
   TestThreadObserver thread_observer(thread());
@@ -88,11 +85,9 @@ TEST_F(FinishPhysicalFrameThreadControllerTest, Finish) {
 
   // Simulate a hit of the breakpoint. This stack frame is a recursive call
   // above the frame we're returning to so it should not trigger.
-  break_frames.emplace(break_frames.begin(), kReturnAddress,
-                       kInitialBase - 0x100, kInitialBase);
+  break_frames.emplace(break_frames.begin(), kReturnAddress, kInitialBase - 0x100, kInitialBase);
   break_notification.hit_breakpoints.emplace_back();
-  break_notification.hit_breakpoints[0].id =
-      mock_remote_api()->last_breakpoint_id();
+  break_notification.hit_breakpoints[0].id = mock_remote_api()->last_breakpoint_id();
   InjectException(break_notification);
   EXPECT_FALSE(thread_observer.got_stopped());
 
@@ -118,19 +113,18 @@ TEST_F(FinishPhysicalFrameThreadControllerTest, BottomStackFrame) {
   // (the Thread doesn't know until it requests them).
   debug_ipc::ThreadStatusReply expected_reply;
   expected_reply.record = break_notification.thread;
-  expected_reply.record.stack_amount =
-      debug_ipc::ThreadRecord::StackAmount::kFull;
+  expected_reply.record.stack_amount = debug_ipc::ThreadRecord::StackAmount::kFull;
   mock_remote_api()->set_thread_status_reply(expected_reply);
 
   EXPECT_EQ(0, mock_remote_api()->breakpoint_add_count());
   Err out_err;
   mock_remote_api()->set_resume_quits_loop(true);
-  thread()->ContinueWith(std::make_unique<FinishPhysicalFrameThreadController>(
-                             thread()->GetStack(), 0),
-                         [&out_err](const Err& err) {
-                           out_err = err;
-                           debug_ipc::MessageLoop::Current()->QuitNow();
-                         });
+  thread()->ContinueWith(
+      std::make_unique<FinishPhysicalFrameThreadController>(thread()->GetStack(), 0),
+      [&out_err](const Err& err) {
+        out_err = err;
+        debug_ipc::MessageLoop::Current()->QuitNow();
+      });
   loop().Run();
 
   TestThreadObserver thread_observer(thread());
@@ -158,14 +152,12 @@ TEST_F(FinishPhysicalFrameThreadControllerTest, FinishToInline) {
 
   InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
                            debug_ipc::NotifyException::Type::kSingleStep,
-                           MockFrameVectorToFrameVector(std::move(mock_frames)),
-                           true);
+                           MockFrameVectorToFrameVector(std::move(mock_frames)), true);
   Stack& stack = thread()->GetStack();
 
   // Finish stack frame #1 (top physical frame).
-  thread()->ContinueWith(
-      std::make_unique<FinishPhysicalFrameThreadController>(stack, 1),
-      [](const Err& err) {});
+  thread()->ContinueWith(std::make_unique<FinishPhysicalFrameThreadController>(stack, 1),
+                         [](const Err& err) {});
   EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());  // Continued.
 
   // Should have added a breakpoint to catch completion of function
@@ -180,14 +172,12 @@ TEST_F(FinishPhysicalFrameThreadControllerTest, FinishToInline) {
 
   // Make an inline function starting at the return address of the function.
   AddressRange second_inline_range(return_address, return_address + 4);
-  auto second_inline_func =
-      fxl::MakeRefCounted<Function>(DwarfTag::kInlinedSubroutine);
+  auto second_inline_func = fxl::MakeRefCounted<Function>(DwarfTag::kInlinedSubroutine);
   second_inline_func->set_assigned_name("Second");
   second_inline_func->set_code_ranges(AddressRanges(second_inline_range));
 
-  Location second_inline_loc(
-      second_inline_range.begin(), FileLine("file.cc", 21), 0,
-      SymbolContext::ForRelativeAddresses(), LazySymbol(second_inline_func));
+  Location second_inline_loc(second_inline_range.begin(), FileLine("file.cc", 21), 0,
+                             SymbolContext::ForRelativeAddresses(), LazySymbol(second_inline_func));
 
   // Construct the stack of the address after the call. In this case the frame
   // being returned to immediately calls an inline subroutine, so execution
@@ -195,15 +185,13 @@ TEST_F(FinishPhysicalFrameThreadControllerTest, FinishToInline) {
   mock_frames = GetStack();
   mock_frames.erase(mock_frames.begin(), mock_frames.begin() + 2);
   mock_frames.insert(mock_frames.begin(),
-                     std::make_unique<MockFrame>(
-                         nullptr, nullptr, second_inline_loc, kMiddleSP,
-                         kBottomSP, std::vector<Register>(), kMiddleSP,
-                         mock_frames[0]->GetPhysicalFrame(), true));
+                     std::make_unique<MockFrame>(nullptr, nullptr, second_inline_loc, kMiddleSP,
+                                                 kBottomSP, std::vector<Register>(), kMiddleSP,
+                                                 mock_frames[0]->GetPhysicalFrame(), true));
 
-  InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
-                           debug_ipc::NotifyException::Type::kSingleStep,
-                           MockFrameVectorToFrameVector(std::move(mock_frames)),
-                           true, hit_breakpoints);
+  InjectExceptionWithStack(
+      process()->GetKoid(), thread()->GetKoid(), debug_ipc::NotifyException::Type::kSingleStep,
+      MockFrameVectorToFrameVector(std::move(mock_frames)), true, hit_breakpoints);
   EXPECT_EQ(0, mock_remote_api()->GetAndResetResumeCount());  // Stopped.
 
   EXPECT_EQ(1u, thread()->GetStack().hide_ambiguous_inline_frame_count());

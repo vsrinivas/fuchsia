@@ -13,8 +13,7 @@ class BreakpointImpl;
 
 class BreakpointLocationImpl final : public BreakpointLocation {
  public:
-  BreakpointLocationImpl(BreakpointImpl* bp, Process* process,
-                         uint64_t address);
+  BreakpointLocationImpl(BreakpointImpl* bp, Process* process, uint64_t address);
   ~BreakpointLocationImpl() override;
 
   // Non-virtual inline getter that doesn't force a symbol lookup.

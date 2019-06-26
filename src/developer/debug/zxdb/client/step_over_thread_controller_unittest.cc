@@ -71,8 +71,7 @@ TEST_F(StepOverThreadControllerTest, Inline) {
   // but at the same address.
   module_symbols()->AddLineDetails(
       kTopInlineFunctionRange.begin(),
-      LineDetails(kTopInlineFileLine,
-                  {LineDetails::LineEntry(kTopInlineFunctionRange)}));
+      LineDetails(kTopInlineFileLine, {LineDetails::LineEntry(kTopInlineFunctionRange)}));
 
   // The SecondInlineFunction() immediately following the first.
   FileLine second_inline_line("random.cc", 3746);
@@ -80,17 +79,14 @@ TEST_F(StepOverThreadControllerTest, Inline) {
                                    kTopInlineFunctionRange.end() + 4);
   module_symbols()->AddLineDetails(
       second_inline_range.begin(),
-      LineDetails(second_inline_line,
-                  {LineDetails::LineEntry(second_inline_range)}));
+      LineDetails(second_inline_line, {LineDetails::LineEntry(second_inline_range)}));
 
   // Line information for the address following the inlined function but on
   // the same line (this is the code for the NonInlinedFunction() call).
   const uint64_t kNonInlinedAddress = second_inline_range.end();
-  AddressRange non_inlined_call_range(kNonInlinedAddress,
-                                      kNonInlinedAddress + 4);
+  AddressRange non_inlined_call_range(kNonInlinedAddress, kNonInlinedAddress + 4);
   module_symbols()->AddLineDetails(
-      kNonInlinedAddress,
-      LineDetails(step_line, {LineDetails::LineEntry(non_inlined_call_range)}));
+      kNonInlinedAddress, LineDetails(step_line, {LineDetails::LineEntry(non_inlined_call_range)}));
 
   // Code for the line after (the "bar()" call in the example). This maps to
   // a different line (immediately following) which is how we know to stop.
@@ -98,13 +94,11 @@ TEST_F(StepOverThreadControllerTest, Inline) {
   AddressRange following_range(kFollowingAddress, kFollowingAddress + 4);
   FileLine following_line(kTopFileLine.file(), kTopFileLine.line() + 1);
   module_symbols()->AddLineDetails(
-      kFollowingAddress,
-      LineDetails(following_line, {LineDetails::LineEntry(following_range)}));
+      kFollowingAddress, LineDetails(following_line, {LineDetails::LineEntry(following_range)}));
 
   InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
                            debug_ipc::NotifyException::Type::kSingleStep,
-                           MockFrameVectorToFrameVector(std::move(mock_frames)),
-                           true);
+                           MockFrameVectorToFrameVector(std::move(mock_frames)), true);
 
   // -----------------------------------------------------------------------------
   // Done with setup, actual test following.
@@ -129,9 +123,8 @@ TEST_F(StepOverThreadControllerTest, Inline) {
   //   Top
   //   ...
   EXPECT_EQ(step_line, stack[0]->GetLocation().file_line());
-  thread()->ContinueWith(
-      std::make_unique<StepOverThreadController>(StepMode::kSourceLine),
-      [](const Err& err) {});
+  thread()->ContinueWith(std::make_unique<StepOverThreadController>(StepMode::kSourceLine),
+                         [](const Err& err) {});
 
   // That should have requested a synthetic exception which will be sent out
   // asynchronously. The Resume() call will cause the MockRemoteAPI to exit the
@@ -156,18 +149,15 @@ TEST_F(StepOverThreadControllerTest, Inline) {
   mock_frames[0]->SetAddress(kTopInlineFunctionRange.begin() + 1);
   InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
                            debug_ipc::NotifyException::Type::kSingleStep,
-                           MockFrameVectorToFrameVector(std::move(mock_frames)),
-                           true);
+                           MockFrameVectorToFrameVector(std::move(mock_frames)), true);
   EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());  // Continue.
 
   // Make the 2nd inline function.
-  auto second_inline_func =
-      fxl::MakeRefCounted<Function>(DwarfTag::kInlinedSubroutine);
+  auto second_inline_func = fxl::MakeRefCounted<Function>(DwarfTag::kInlinedSubroutine);
   second_inline_func->set_assigned_name("SecondInlineFunction");
   second_inline_func->set_code_ranges(AddressRanges(second_inline_range));
   Location second_inline_loc(second_inline_range.begin(), second_inline_line, 0,
-                             SymbolContext::ForRelativeAddresses(),
-                             LazySymbol(second_inline_func));
+                             SymbolContext::ForRelativeAddresses(), LazySymbol(second_inline_func));
 
   // The code exits the first inline function and is now at the first
   // instruction of the second inline function. This is an ambiguous location.
@@ -176,13 +166,12 @@ TEST_F(StepOverThreadControllerTest, Inline) {
   //   SecondInline (ambiguous address @ beginning of inline block)
   //   Top
   mock_frames = GetStack();
-  mock_frames[0] = std::make_unique<MockFrame>(
-      nullptr, nullptr, second_inline_loc, kTopSP, 0, std::vector<Register>(),
-      kTopSP, mock_frames[1].get(), true);
+  mock_frames[0] =
+      std::make_unique<MockFrame>(nullptr, nullptr, second_inline_loc, kTopSP, 0,
+                                  std::vector<Register>(), kTopSP, mock_frames[1].get(), true);
   InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
                            debug_ipc::NotifyException::Type::kSingleStep,
-                           MockFrameVectorToFrameVector(std::move(mock_frames)),
-                           true);
+                           MockFrameVectorToFrameVector(std::move(mock_frames)), true);
   // That should have hidden the top ambiguous inline frame, the StepOver
   // controller should have decided to keep going since it's still on the same
   // line, and then the step controller should have unhidden the top frame to
@@ -211,8 +200,7 @@ TEST_F(StepOverThreadControllerTest, Inline) {
   mock_frames[0]->SetFileLine(step_line);
   InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
                            debug_ipc::NotifyException::Type::kSingleStep,
-                           MockFrameVectorToFrameVector(std::move(mock_frames)),
-                           true);
+                           MockFrameVectorToFrameVector(std::move(mock_frames)), true);
   EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());  // Continue.
 
   // Issue a step for a different line, this should finally stop.
@@ -225,8 +213,7 @@ TEST_F(StepOverThreadControllerTest, Inline) {
   mock_frames[0]->SetFileLine(following_line);
   InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
                            debug_ipc::NotifyException::Type::kSingleStep,
-                           MockFrameVectorToFrameVector(std::move(mock_frames)),
-                           true);
+                           MockFrameVectorToFrameVector(std::move(mock_frames)), true);
   EXPECT_EQ(0, mock_remote_api()->GetAndResetResumeCount());  // Stop.
 }
 
@@ -252,14 +239,13 @@ TEST_F(StepOverThreadControllerTest, OutToZeroLine) {
   // instruction where the "step over" beings.
   module_symbols()->AddLineDetails(
       kFromAddress,
-      LineDetails(kMiddleFileLine, {LineDetails::LineEntry(AddressRange(
-                                       kFromAddress, kFromAddress + 1))}));
+      LineDetails(kMiddleFileLine,
+                  {LineDetails::LineEntry(AddressRange(kFromAddress, kFromAddress + 1))}));
 
   // Line info for the top function call.
   const uint64_t kTopAddress = kTopFunctionRange.begin();
   module_symbols()->AddLineDetails(
-      kTopAddress,
-      LineDetails(kTopFileLine, {LineDetails::LineEntry(kTopFunctionRange)}));
+      kTopAddress, LineDetails(kTopFileLine, {LineDetails::LineEntry(kTopFunctionRange)}));
 
   // The function call returns to the next instruction which gives a "0" line
   // number. Note that the file name is still present because this is how DWARF
@@ -268,22 +254,20 @@ TEST_F(StepOverThreadControllerTest, OutToZeroLine) {
   const FileLine kZeroFileLine(kMiddleFileLine.file(), 0);
   module_symbols()->AddLineDetails(
       kReturnAddress,
-      LineDetails(kZeroFileLine, {LineDetails::LineEntry(AddressRange(
-                                     kReturnAddress, kReturnAddress + 1))}));
+      LineDetails(kZeroFileLine,
+                  {LineDetails::LineEntry(AddressRange(kReturnAddress, kReturnAddress + 1))}));
 
   // The third byte is a new line number. This is where stepping should stop.
   const uint64_t kFinalAddress = kReturnAddress + 1;
-  const FileLine kFinalFileLine(kMiddleFileLine.file(),
-                                kMiddleFileLine.line() + 1);
+  const FileLine kFinalFileLine(kMiddleFileLine.file(), kMiddleFileLine.line() + 1);
   module_symbols()->AddLineDetails(
       kFinalAddress,
-      LineDetails(kFinalFileLine, {LineDetails::LineEntry(AddressRange(
-                                      kFinalAddress, kFinalAddress + 1))}));
+      LineDetails(kFinalFileLine,
+                  {LineDetails::LineEntry(AddressRange(kFinalAddress, kFinalAddress + 1))}));
 
   InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
                            debug_ipc::NotifyException::Type::kSingleStep,
-                           MockFrameVectorToFrameVector(std::move(mock_frames)),
-                           true);
+                           MockFrameVectorToFrameVector(std::move(mock_frames)), true);
 
   // -----------------------------------------------------------------------------
   // Done with setup, actual test following.
@@ -293,9 +277,8 @@ TEST_F(StepOverThreadControllerTest, OutToZeroLine) {
   //   Bottom
 
   // Step over the "from" address.
-  thread()->ContinueWith(
-      std::make_unique<StepOverThreadController>(StepMode::kSourceLine),
-      [](const Err& err) {});
+  thread()->ContinueWith(std::make_unique<StepOverThreadController>(StepMode::kSourceLine),
+                         [](const Err& err) {});
   EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());  // Continue.
 
   // Stop in a new stack frame called by the previous execution. It should
@@ -305,8 +288,7 @@ TEST_F(StepOverThreadControllerTest, OutToZeroLine) {
   mock_frames.push_back(GetBottomFrame(kBottomAddress));
   InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
                            debug_ipc::NotifyException::Type::kSingleStep,
-                           MockFrameVectorToFrameVector(std::move(mock_frames)),
-                           true);
+                           MockFrameVectorToFrameVector(std::move(mock_frames)), true);
   EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());  // Continue.
 
   // Execution returns to the original frame at the next instruction. This is
@@ -315,30 +297,26 @@ TEST_F(StepOverThreadControllerTest, OutToZeroLine) {
   // FileLine.
   mock_frames.push_back(std::make_unique<MockFrame>(
       nullptr, nullptr,
-      Location(kReturnAddress, kZeroFileLine, 0,
-               SymbolContext::ForRelativeAddresses(),
+      Location(kReturnAddress, kZeroFileLine, 0, SymbolContext::ForRelativeAddresses(),
                LazySymbol(GetMiddleFunction())),
       kMiddleSP, kBottomSP, std::vector<Register>(), kMiddleSP));
   mock_frames.push_back(GetBottomFrame(kBottomAddress));
   InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
                            debug_ipc::NotifyException::Type::kSingleStep,
-                           MockFrameVectorToFrameVector(std::move(mock_frames)),
-                           true);
+                           MockFrameVectorToFrameVector(std::move(mock_frames)), true);
   EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());  // Continue.
 
   // The next instruction is on a different line, reporting a stop there should
   // finish stepping.
   mock_frames.push_back(std::make_unique<MockFrame>(
       nullptr, nullptr,
-      Location(kFinalAddress, kFinalFileLine, 0,
-               SymbolContext::ForRelativeAddresses(),
+      Location(kFinalAddress, kFinalFileLine, 0, SymbolContext::ForRelativeAddresses(),
                LazySymbol(GetMiddleFunction())),
       kMiddleSP, kBottomSP, std::vector<Register>(), kMiddleSP));
   mock_frames.push_back(GetBottomFrame(kBottomAddress));
   InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
                            debug_ipc::NotifyException::Type::kSingleStep,
-                           MockFrameVectorToFrameVector(std::move(mock_frames)),
-                           true);
+                           MockFrameVectorToFrameVector(std::move(mock_frames)), true);
   EXPECT_EQ(0, mock_remote_api()->GetAndResetResumeCount());  // Stop.
 }
 

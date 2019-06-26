@@ -32,15 +32,13 @@ class ThreadImpl final : public Thread, public Stack::Delegate {
   void Continue() override;
   void ContinueWith(std::unique_ptr<ThreadController> controller,
                     std::function<void(const Err&)> on_continue) override;
-  void JumpTo(uint64_t new_address,
-              std::function<void(const Err&)> cb) override;
+  void JumpTo(uint64_t new_address, std::function<void(const Err&)> cb) override;
   void NotifyControllerDone(ThreadController* controller) override;
   void StepInstruction() override;
   const Stack& GetStack() const override;
   Stack& GetStack() override;
-  void ReadRegisters(
-      std::vector<debug_ipc::RegisterCategory::Type> cats_to_get,
-      std::function<void(const Err&, const RegisterSet&)>) override;
+  void ReadRegisters(std::vector<debug_ipc::RegisterCategory::Type> cats_to_get,
+                     std::function<void(const Err&, const RegisterSet&)>) override;
 
   // NOTE: If the registers are not up to date, the set can be null.
   const RegisterSet* registers() const { return registers_.get(); }
@@ -56,17 +54,15 @@ class ThreadImpl final : public Thread, public Stack::Delegate {
   //
   // The his breakpoints should include all breakpoints, including internal
   // ones.
-  void OnException(
-      debug_ipc::NotifyException::Type type,
-      const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints);
+  void OnException(debug_ipc::NotifyException::Type type,
+                   const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints);
 
  private:
   // Stack::Delegate implementation.
   void SyncFramesForStack(std::function<void(const Err&)> callback) override;
   std::unique_ptr<Frame> MakeFrameForStack(const debug_ipc::StackFrame& input,
                                            Location location) override;
-  Location GetSymbolizedLocationForStackFrame(
-      const debug_ipc::StackFrame& input) override;
+  Location GetSymbolizedLocationForStackFrame(const debug_ipc::StackFrame& input) override;
 
   // Invalidates the cached frames.
   void ClearFrames();

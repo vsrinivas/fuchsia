@@ -17,9 +17,8 @@ using debug_ipc::MessageLoop;
 
 class FilterSink : public RemoteAPI {
  public:
-  void JobFilter(
-      const debug_ipc::JobFilterRequest& request,
-      std::function<void(const Err&, debug_ipc::JobFilterReply)> cb) override {
+  void JobFilter(const debug_ipc::JobFilterRequest& request,
+                 std::function<void(const Err&, debug_ipc::JobFilterReply)> cb) override {
     filters[request.job_koid] = request.filters;
 
     MessageLoop::Current()->PostTask(FROM_HERE, [cb]() {
@@ -28,14 +27,12 @@ class FilterSink : public RemoteAPI {
     });
   }
 
-  void Attach(
-      const debug_ipc::AttachRequest& request,
-      std::function<void(const Err&, debug_ipc::AttachReply)> cb) override {
+  void Attach(const debug_ipc::AttachRequest& request,
+              std::function<void(const Err&, debug_ipc::AttachReply)> cb) override {
     debug_ipc::AttachReply reply;
     reply.koid = request.koid;
     reply.name = "test";
-    MessageLoop::Current()->PostTask(FROM_HERE,
-                                     [cb, reply]() { cb(Err(), reply); });
+    MessageLoop::Current()->PostTask(FROM_HERE, [cb, reply]() { cb(Err(), reply); });
   }
 
   std::map<uint64_t, std::vector<std::string>> filters;
@@ -70,12 +67,12 @@ TEST_F(FilterTest, SetFilters) {
   bool job_context_alive;
   Err ctx_err;
 
-  context->Attach(1234, [&job_context_alive, &ctx_err](
-                            fxl::WeakPtr<JobContext> ctx, const Err& err) {
-    ctx_err = err;
-    job_context_alive = !!ctx;
-    MessageLoop::Current()->QuitNow();
-  });
+  context->Attach(1234,
+                  [&job_context_alive, &ctx_err](fxl::WeakPtr<JobContext> ctx, const Err& err) {
+                    ctx_err = err;
+                    job_context_alive = !!ctx;
+                    MessageLoop::Current()->QuitNow();
+                  });
   MessageLoop::Current()->Run();
 
   EXPECT_FALSE(ctx_err.has_error());
@@ -98,23 +95,23 @@ TEST_F(FilterTest, SetSpecificFilters) {
   bool job_context_alive;
   Err ctx_err;
 
-  context_a->Attach(1234, [&job_context_alive, &ctx_err](
-                              fxl::WeakPtr<JobContext> ctx, const Err& err) {
-    ctx_err = err;
-    job_context_alive = !!ctx;
-    MessageLoop::Current()->QuitNow();
-  });
+  context_a->Attach(1234,
+                    [&job_context_alive, &ctx_err](fxl::WeakPtr<JobContext> ctx, const Err& err) {
+                      ctx_err = err;
+                      job_context_alive = !!ctx;
+                      MessageLoop::Current()->QuitNow();
+                    });
   MessageLoop::Current()->Run();
 
   EXPECT_FALSE(ctx_err.has_error());
   EXPECT_TRUE(job_context_alive);
 
-  context_b->Attach(5678, [&job_context_alive, &ctx_err](
-                              fxl::WeakPtr<JobContext> ctx, const Err& err) {
-    ctx_err = err;
-    job_context_alive = !!ctx;
-    MessageLoop::Current()->QuitNow();
-  });
+  context_b->Attach(5678,
+                    [&job_context_alive, &ctx_err](fxl::WeakPtr<JobContext> ctx, const Err& err) {
+                      ctx_err = err;
+                      job_context_alive = !!ctx;
+                      MessageLoop::Current()->QuitNow();
+                    });
   MessageLoop::Current()->Run();
 
   EXPECT_FALSE(ctx_err.has_error());
@@ -139,23 +136,23 @@ TEST_F(FilterTest, SetBroadFilters) {
   bool job_context_alive;
   Err ctx_err;
 
-  context_a->Attach(1234, [&job_context_alive, &ctx_err](
-                              fxl::WeakPtr<JobContext> ctx, const Err& err) {
-    ctx_err = err;
-    job_context_alive = !!ctx;
-    MessageLoop::Current()->QuitNow();
-  });
+  context_a->Attach(1234,
+                    [&job_context_alive, &ctx_err](fxl::WeakPtr<JobContext> ctx, const Err& err) {
+                      ctx_err = err;
+                      job_context_alive = !!ctx;
+                      MessageLoop::Current()->QuitNow();
+                    });
   MessageLoop::Current()->Run();
 
   EXPECT_FALSE(ctx_err.has_error());
   EXPECT_TRUE(job_context_alive);
 
-  context_b->Attach(5678, [&job_context_alive, &ctx_err](
-                              fxl::WeakPtr<JobContext> ctx, const Err& err) {
-    ctx_err = err;
-    job_context_alive = !!ctx;
-    MessageLoop::Current()->QuitNow();
-  });
+  context_b->Attach(5678,
+                    [&job_context_alive, &ctx_err](fxl::WeakPtr<JobContext> ctx, const Err& err) {
+                      ctx_err = err;
+                      job_context_alive = !!ctx;
+                      MessageLoop::Current()->QuitNow();
+                    });
   MessageLoop::Current()->Run();
 
   EXPECT_FALSE(ctx_err.has_error());
@@ -181,12 +178,12 @@ TEST_F(FilterTest, SetExAnteFilters) {
   bool job_context_alive;
   Err ctx_err;
 
-  context->Attach(1234, [&job_context_alive, &ctx_err](
-                            fxl::WeakPtr<JobContext> ctx, const Err& err) {
-    ctx_err = err;
-    job_context_alive = !!ctx;
-    MessageLoop::Current()->QuitNow();
-  });
+  context->Attach(1234,
+                  [&job_context_alive, &ctx_err](fxl::WeakPtr<JobContext> ctx, const Err& err) {
+                    ctx_err = err;
+                    job_context_alive = !!ctx;
+                    MessageLoop::Current()->QuitNow();
+                  });
   MessageLoop::Current()->Run();
 
   EXPECT_FALSE(ctx_err.has_error());

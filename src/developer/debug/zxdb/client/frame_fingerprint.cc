@@ -11,18 +11,15 @@
 namespace zxdb {
 
 bool FrameFingerprint::operator==(const FrameFingerprint& other) const {
-  return frame_address_ == other.frame_address_ &&
-         inline_count_ == other.inline_count_;
+  return frame_address_ == other.frame_address_ && inline_count_ == other.inline_count_;
 }
 
 std::string FrameFingerprint::ToString() const {
-  return fxl::StringPrintf("{0x%" PRIx64 ", %zu}", frame_address_,
-                           inline_count_);
+  return fxl::StringPrintf("{0x%" PRIx64 ", %zu}", frame_address_, inline_count_);
 }
 
 // static
-bool FrameFingerprint::Newer(const FrameFingerprint& left,
-                             const FrameFingerprint& right) {
+bool FrameFingerprint::Newer(const FrameFingerprint& left, const FrameFingerprint& right) {
   if (left.frame_address_ == right.frame_address_) {
     // Inline functions (in the same physical frame) are newer if the inline
     // stack depth is higher.
@@ -34,8 +31,7 @@ bool FrameFingerprint::Newer(const FrameFingerprint& left,
 }
 
 // static
-bool FrameFingerprint::NewerOrEqual(const FrameFingerprint& left,
-                                    const FrameFingerprint& right) {
+bool FrameFingerprint::NewerOrEqual(const FrameFingerprint& left, const FrameFingerprint& right) {
   return Newer(left, right) || left == right;
 }
 

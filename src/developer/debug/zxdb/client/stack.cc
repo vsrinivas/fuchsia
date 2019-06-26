@@ -29,9 +29,7 @@ class InlineFrame final : public Frame {
   // The physical_frame must outlive this class. Normally both are owned by the
   // Stack and have the same lifetime.
   InlineFrame(Frame* physical_frame, Location loc)
-      : Frame(physical_frame->session()),
-        physical_frame_(physical_frame),
-        location_(loc) {}
+      : Frame(physical_frame->session()), physical_frame_(physical_frame), location_(loc) {}
   ~InlineFrame() override = default;
 
   // Frame implementation.
@@ -52,9 +50,7 @@ class InlineFrame final : public Frame {
   uint64_t GetCanonicalFrameAddress() const override {
     return physical_frame_->GetCanonicalFrameAddress();
   }
-  uint64_t GetStackPointer() const override {
-    return physical_frame_->GetStackPointer();
-  }
+  uint64_t GetStackPointer() const override { return physical_frame_->GetStackPointer(); }
   fxl::RefPtr<SymbolDataProvider> GetSymbolDataProvider() const override {
     return physical_frame_->GetSymbolDataProvider();
   }
@@ -75,8 +71,7 @@ class InlineFrame final : public Frame {
 
     // There could be multiple code ranges for the inlined function, consider
     // any of them as being a candidate.
-    for (const auto& cur :
-         function->GetAbsoluteCodeRanges(loc.symbol_context())) {
+    for (const auto& cur : function->GetAbsoluteCodeRanges(loc.symbol_context())) {
       if (loc.address() == cur.begin())
         return true;
     }
@@ -96,9 +91,8 @@ class InlineFrame final : public Frame {
 //
 // The main_location is the location returned by symbol lookup for the
 // current address.
-Location LocationForInlineFrameChain(
-    const std::vector<const Function*>& inline_chain, size_t chain_index,
-    const Location& main_location) {
+Location LocationForInlineFrameChain(const std::vector<const Function*>& inline_chain,
+                                     size_t chain_index, const Location& main_location) {
   // The file/line is the call location of the next (into the future) inlined
   // function. Fall back on the file/line from the main lookup.
   const FileLine* new_line = &main_location.file_line();
@@ -111,8 +105,7 @@ Location LocationForInlineFrameChain(
     }
   }
 
-  return Location(main_location.address(), *new_line, new_column,
-                  main_location.symbol_context(),
+  return Location(main_location.address(), *new_line, new_column, main_location.symbol_context(),
                   LazySymbol(inline_chain[chain_index]));
 }
 
@@ -156,8 +149,7 @@ FrameFingerprint Stack::GetFrameFingerprint(size_t virtual_frame_index) const {
   // index to the current physical frame.
   size_t inline_count = InlineDepthForIndex(frame_index);
 
-  return FrameFingerprint(frames_[frame_index]->GetCanonicalFrameAddress(),
-                          inline_count);
+  return FrameFingerprint(frames_[frame_index]->GetCanonicalFrameAddress(), inline_count);
 }
 
 size_t Stack::GetAmbiguousInlineFrameCount() const {
@@ -221,8 +213,7 @@ void Stack::SetFrames(debug_ipc::ThreadRecord::StackAmount amount,
   has_all_frames_ = amount == debug_ipc::ThreadRecord::StackAmount::kFull;
 }
 
-void Stack::SetFramesForTest(std::vector<std::unique_ptr<Frame>> frames,
-                             bool has_all) {
+void Stack::SetFramesForTest(std::vector<std::unique_ptr<Frame>> frames, bool has_all) {
   frames_ = std::move(frames);
   has_all_frames_ = has_all;
   hide_ambiguous_inline_frame_count_ = 0;
@@ -273,15 +264,13 @@ void Stack::AppendFrame(const debug_ipc::StackFrame& record) {
   // Need to make the base "physical" frame first because all of the inline
   // frames refer to it.
   auto physical_frame = delegate_->MakeFrameForStack(
-      record, LocationForInlineFrameChain(inline_chain, inline_chain.size() - 1,
-                                          inner_loc));
+      record, LocationForInlineFrameChain(inline_chain, inline_chain.size() - 1, inner_loc));
 
   // Add inline functions (skipping the last which is the physical frame
   // made above).
   for (size_t i = 0; i < inline_chain.size() - 1; i++) {
     auto inline_frame = std::make_unique<InlineFrame>(
-        physical_frame.get(),
-        LocationForInlineFrameChain(inline_chain, i, inner_loc));
+        physical_frame.get(), LocationForInlineFrameChain(inline_chain, i, inner_loc));
 
     // Only add ambiguous inline frames when they correspond to the top
     // physical frame of the stack. The reason is that the instruction pointer

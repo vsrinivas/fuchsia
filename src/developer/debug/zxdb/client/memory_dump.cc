@@ -7,8 +7,7 @@
 namespace zxdb {
 
 MemoryDump::MemoryDump() {}
-MemoryDump::MemoryDump(std::vector<debug_ipc::MemoryBlock>&& blocks)
-    : blocks_(std::move(blocks)) {}
+MemoryDump::MemoryDump(std::vector<debug_ipc::MemoryBlock>&& blocks) : blocks_(std::move(blocks)) {}
 MemoryDump::~MemoryDump() = default;
 
 bool MemoryDump::AllValid() const {
@@ -35,8 +34,7 @@ bool MemoryDump::GetByte(uint64_t address, uint8_t* byte) const {
   // brute-force search for the
   // block containing the address more efficient than a binary search.
   for (const auto& block : blocks_) {
-    uint64_t last_addr =
-        block.address + (block.size - 1);  // Watch out for overflow.
+    uint64_t last_addr = block.address + (block.size - 1);  // Watch out for overflow.
     if (address >= block.address && address <= last_addr) {
       if (!block.valid)
         return false;

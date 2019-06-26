@@ -19,8 +19,7 @@ namespace zxdb {
 UntilThreadController::UntilThreadController(InputLocation location)
     : ThreadController(), location_(std::move(location)), weak_factory_(this) {}
 
-UntilThreadController::UntilThreadController(InputLocation location,
-                                             FrameFingerprint newest_frame,
+UntilThreadController::UntilThreadController(InputLocation location, FrameFingerprint newest_frame,
                                              FrameComparison cmp)
     : ThreadController(),
       location_(std::move(location)),
@@ -33,8 +32,7 @@ UntilThreadController::~UntilThreadController() {
     GetSystem()->DeleteBreakpoint(breakpoint_.get());
 }
 
-void UntilThreadController::InitWithThread(Thread* thread,
-                                           std::function<void(const Err&)> cb) {
+void UntilThreadController::InitWithThread(Thread* thread, std::function<void(const Err&)> cb) {
   set_thread(thread);
 
   BreakpointSettings settings;
@@ -52,11 +50,10 @@ void UntilThreadController::InitWithThread(Thread* thread,
   // The breakpoint may post the callback asynchronously, so we can't be sure
   // this class is still alive when this callback is issued, even though we
   // destroy the breakpoint in the destructor.
-  breakpoint_->SetSettings(
-      settings, [weak_this = weak_factory_.GetWeakPtr(), cb](const Err& err) {
-        if (weak_this)
-          weak_this->OnBreakpointSet(err, std::move(cb));
-      });
+  breakpoint_->SetSettings(settings, [weak_this = weak_factory_.GetWeakPtr(), cb](const Err& err) {
+    if (weak_this)
+      weak_this->OnBreakpointSet(err, std::move(cb));
+  });
 }
 
 ThreadController::ContinueOp UntilThreadController::GetContinueOp() {
@@ -132,16 +129,11 @@ ThreadController::StopOp UntilThreadController::OnThreadStop(
   return kStopDone;
 }
 
-System* UntilThreadController::GetSystem() {
-  return &thread()->session()->system();
-}
+System* UntilThreadController::GetSystem() { return &thread()->session()->system(); }
 
-Target* UntilThreadController::GetTarget() {
-  return thread()->GetProcess()->GetTarget();
-}
+Target* UntilThreadController::GetTarget() { return thread()->GetProcess()->GetTarget(); }
 
-void UntilThreadController::OnBreakpointSet(
-    const Err& err, std::function<void(const Err&)> cb) {
+void UntilThreadController::OnBreakpointSet(const Err& err, std::function<void(const Err&)> cb) {
   // This may get called after the thread stop in some cases so don't do
   // anything important in this function. See OnThreadStop().
   if (err.has_error()) {

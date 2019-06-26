@@ -89,11 +89,9 @@ class FrameFingerprint {
 
   // Computes "left Newer than right". This doesn't use operator < or > because
   // it's ambiguous whether a newer frame is "less" or "greater".
-  static bool Newer(const FrameFingerprint& left,
-                    const FrameFingerprint& right);
+  static bool Newer(const FrameFingerprint& left, const FrameFingerprint& right);
 
-  static bool NewerOrEqual(const FrameFingerprint& left,
-                           const FrameFingerprint& right);
+  static bool NewerOrEqual(const FrameFingerprint& left, const FrameFingerprint& right);
 
  private:
   // The address of the stack immediately before the function call (i.e. the

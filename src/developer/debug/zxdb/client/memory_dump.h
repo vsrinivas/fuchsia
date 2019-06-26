@@ -32,8 +32,7 @@ class MemoryDump {
   uint64_t size() const {
     if (blocks_.empty())
       return 0;
-    return blocks_.back().address + blocks_.back().size -
-           blocks_.front().address;
+    return blocks_.back().address + blocks_.back().size - blocks_.front().address;
   }
 
   // Returns true if every block in this memory dump is valid.

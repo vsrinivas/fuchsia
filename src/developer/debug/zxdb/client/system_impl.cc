@@ -47,9 +47,7 @@ class Download {
  public:
   explicit Download(const std::string& build_id, DebugSymbolFileType file_type,
                     SymbolServer::FetchCallback result_cb)
-      : build_id_(build_id),
-        file_type_(file_type),
-        result_cb_(std::move(result_cb)) {}
+      : build_id_(build_id), file_type_(file_type), result_cb_(std::move(result_cb)) {}
 
   ~Download() { Finish(); }
 
@@ -61,8 +59,7 @@ class Download {
 
   // Notify this Download object that one of the servers has the symbols
   // available.
-  void Found(std::shared_ptr<Download> self,
-             std::function<void(SymbolServer::FetchCallback)>);
+  void Found(std::shared_ptr<Download> self, std::function<void(SymbolServer::FetchCallback)>);
 
   // Notify this Download object that a transaction failed.
   void Error(std::shared_ptr<Download> self, const Err& err);
@@ -71,8 +68,7 @@ class Download {
   void AddServer(std::shared_ptr<Download> self, SymbolServer* server);
 
  private:
-  void RunCB(std::shared_ptr<Download> self,
-             std::function<void(SymbolServer::FetchCallback)>& cb);
+  void RunCB(std::shared_ptr<Download> self, std::function<void(SymbolServer::FetchCallback)>& cb);
 
   std::string build_id_;
   DebugSymbolFileType file_type_;
@@ -100,15 +96,13 @@ void Download::AddServer(std::shared_ptr<Download> self, SymbolServer* server) {
   if (!result_cb_)
     return;
 
-  server->CheckFetch(
-      build_id_, file_type_,
-      [self](const Err& err,
-             std::function<void(SymbolServer::FetchCallback)> cb) {
-        if (!cb)
-          self->Error(self, err);
-        else
-          self->Found(self, std::move(cb));
-      });
+  server->CheckFetch(build_id_, file_type_,
+                     [self](const Err& err, std::function<void(SymbolServer::FetchCallback)> cb) {
+                       if (!cb)
+                         self->Error(self, err);
+                       else
+                         self->Found(self, std::move(cb));
+                     });
 }
 
 void Download::Found(std::shared_ptr<Download> self,
@@ -162,8 +156,7 @@ void Download::RunCB(std::shared_ptr<Download> self,
   });
 }
 
-SystemImpl::SystemImpl(Session* session)
-    : System(session), symbols_(this), weak_factory_(this) {
+SystemImpl::SystemImpl(Session* session) : System(session), symbols_(this), weak_factory_(this) {
   // Create the default job and target.
   AddNewJobContext(std::make_unique<JobContextImpl>(this, true));
   AddNewTarget(std::make_unique<TargetImpl>(this));
@@ -172,11 +165,10 @@ SystemImpl::SystemImpl(Session* session)
 
   // Forward all messages from the symbol index to our observers. It's OK to
   // bind |this| because the symbol index is owned by |this|.
-  symbols_.build_id_index().set_information_callback(
-      [this](const std::string& msg) {
-        for (auto& observer : observers())
-          observer.OnSymbolIndexingInformation(msg);
-      });
+  symbols_.build_id_index().set_information_callback([this](const std::string& msg) {
+    for (auto& observer : observers())
+      observer.OnSymbolIndexingInformation(msg);
+  });
 
   // The system is the one holding the system symbols and is the one who
   // will be updating the symbols once we get a symbol change, so the
@@ -328,8 +320,7 @@ std::vector<SymbolServer*> SystemImpl::GetSymbolServers() const {
 }
 
 std::shared_ptr<Download> SystemImpl::GetDownload(std::string build_id,
-                                                  DebugSymbolFileType file_type,
-                                                  bool quiet) {
+                                                  DebugSymbolFileType file_type, bool quiet) {
   if (auto existing = downloads_[{build_id, file_type}].lock()) {
     return existing;
   }
@@ -348,8 +339,7 @@ std::shared_ptr<Download> SystemImpl::GetDownload(std::string build_id,
           if (err.has_error()) {
             // If we got a path but still had an error, something went wrong
             // with the cache repo. Add the path manually.
-            symbols.build_id_index().AddBuildIDMapping(build_id, path,
-                                                       file_type);
+            symbols.build_id_index().AddBuildIDMapping(build_id, path, file_type);
           }
 
           for (const auto& target : weak_this->targets_) {
@@ -367,8 +357,8 @@ std::shared_ptr<Download> SystemImpl::GetDownload(std::string build_id,
   return download;
 }
 
-void SystemImpl::RequestDownload(const std::string& build_id,
-                                 DebugSymbolFileType file_type, bool quiet) {
+void SystemImpl::RequestDownload(const std::string& build_id, DebugSymbolFileType file_type,
+                                 bool quiet) {
   auto download = GetDownload(build_id, file_type, quiet);
 
   for (auto& server : symbol_servers_) {
@@ -380,8 +370,7 @@ void SystemImpl::RequestDownload(const std::string& build_id,
   }
 }
 
-void SystemImpl::NotifyFailedToFindDebugSymbols(const Err& err,
-                                                const std::string& build_id,
+void SystemImpl::NotifyFailedToFindDebugSymbols(const Err& err, const std::string& build_id,
                                                 DebugSymbolFileType file_type) {
   for (const auto& target : targets_) {
     // Notify only those targets which are processes and which have attempted
@@ -396,15 +385,15 @@ void SystemImpl::NotifyFailedToFindDebugSymbols(const Err& err,
 
       if (!err.has_error()) {
         if (file_type == DebugSymbolFileType::kDebugInfo) {
-          process->OnSymbolLoadFailure(Err(fxl::StringPrintf(
-              "Could not load symbols for \"%s\" because there was no mapping "
-              "for build ID \"%s\".",
-              status.name.c_str(), status.build_id.c_str())));
+          process->OnSymbolLoadFailure(Err(
+              fxl::StringPrintf("Could not load symbols for \"%s\" because there was no mapping "
+                                "for build ID \"%s\".",
+                                status.name.c_str(), status.build_id.c_str())));
         } else {
-          process->OnSymbolLoadFailure(Err(fxl::StringPrintf(
-              "Could not load binary for \"%s\" because there was no mapping "
-              "for build ID \"%s\".",
-              status.name.c_str(), status.build_id.c_str())));
+          process->OnSymbolLoadFailure(
+              Err(fxl::StringPrintf("Could not load binary for \"%s\" because there was no mapping "
+                                    "for build ID \"%s\".",
+                                    status.name.c_str(), status.build_id.c_str())));
         }
       } else {
         process->OnSymbolLoadFailure(err);
@@ -421,25 +410,20 @@ void SystemImpl::OnSymbolServerBecomesReady(SymbolServer* server) {
 
     for (const auto& mod : process->GetSymbols()->GetStatus()) {
       if (!mod.symbols || !mod.symbols->module_ref()) {
-        auto download =
-            GetDownload(mod.build_id, DebugSymbolFileType::kDebugInfo, true);
+        auto download = GetDownload(mod.build_id, DebugSymbolFileType::kDebugInfo, true);
         download->AddServer(download, server);
       } else if (!mod.symbols->module_symbols()->HasBinary()) {
-        auto download =
-            GetDownload(mod.build_id, DebugSymbolFileType::kBinary, true);
+        auto download = GetDownload(mod.build_id, DebugSymbolFileType::kBinary, true);
         download->AddServer(download, server);
       }
     }
   }
 }
 
-Process* SystemImpl::ProcessFromKoid(uint64_t koid) const {
-  return ProcessImplFromKoid(koid);
-}
+Process* SystemImpl::ProcessFromKoid(uint64_t koid) const { return ProcessImplFromKoid(koid); }
 
 void SystemImpl::GetProcessTree(ProcessTreeCallback callback) {
-  session()->remote_api()->ProcessTree(debug_ipc::ProcessTreeRequest(),
-                                       std::move(callback));
+  session()->remote_api()->ProcessTree(debug_ipc::ProcessTreeRequest(), std::move(callback));
 }
 
 Target* SystemImpl::CreateNewTarget(Target* clone) {
@@ -478,8 +462,7 @@ Breakpoint* SystemImpl::CreateNewInternalBreakpoint() {
 }
 
 Filter* SystemImpl::CreateNewFilter() {
-  Filter* to_return =
-      filters_.emplace_back(std::make_unique<Filter>(session())).get();
+  Filter* to_return = filters_.emplace_back(std::make_unique<Filter>(session())).get();
 
   // Notify observers (may mutate filter list).
   for (auto& observer : observers())
@@ -510,17 +493,14 @@ void SystemImpl::Pause(std::function<void()> on_paused) {
   request.process_koid = 0;  // 0 means all processes.
   request.thread_koid = 0;   // 0 means all threads.
   session()->remote_api()->Pause(
-      request, [weak_system = weak_factory_.GetWeakPtr(),
-                on_paused = std::move(on_paused)](const Err&,
-                                                  debug_ipc::PauseReply reply) {
+      request, [weak_system = weak_factory_.GetWeakPtr(), on_paused = std::move(on_paused)](
+                   const Err&, debug_ipc::PauseReply reply) {
         if (weak_system) {
           // Save the newly paused thread metadata. This may need to be
           // generalized if we add other messages that update thread metadata.
           for (const auto& record : reply.threads) {
-            if (auto* process =
-                    weak_system->ProcessImplFromKoid(record.process_koid)) {
-              if (auto* thread =
-                      process->GetThreadImplFromKoid(record.thread_koid))
+            if (auto* process = weak_system->ProcessImplFromKoid(record.process_koid)) {
+              if (auto* thread = process->GetThreadImplFromKoid(record.thread_koid))
                 thread->SetMetadata(record);
             }
           }
@@ -533,8 +513,8 @@ void SystemImpl::Continue() {
   debug_ipc::ResumeRequest request;
   request.process_koid = 0;  // 0 means all processes.
   request.how = debug_ipc::ResumeRequest::How::kContinue;
-  session()->remote_api()->Resume(
-      request, std::function<void(const Err&, debug_ipc::ResumeReply)>());
+  session()->remote_api()->Resume(request,
+                                  std::function<void(const Err&, debug_ipc::ResumeReply)>());
 }
 
 bool SystemImpl::HasDownload(const std::string& build_id) {
@@ -552,8 +532,7 @@ bool SystemImpl::HasDownload(const std::string& build_id) {
   return ptr && ptr->active();
 }
 
-std::shared_ptr<Download> SystemImpl::InjectDownloadForTesting(
-    const std::string& build_id) {
+std::shared_ptr<Download> SystemImpl::InjectDownloadForTesting(const std::string& build_id) {
   return GetDownload(build_id, DebugSymbolFileType::kDebugInfo, true);
 }
 
@@ -615,8 +594,7 @@ void SystemImpl::AddNewJobContext(std::unique_ptr<JobContextImpl> job_context) {
   MarkFiltersDirty();
 }
 
-void SystemImpl::OnSettingChanged(const SettingStore& store,
-                                  const std::string& setting_name) {
+void SystemImpl::OnSettingChanged(const SettingStore& store, const std::string& setting_name) {
   if (setting_name == ClientSettings::System::kSymbolPaths) {
     auto paths = store.GetList(ClientSettings::System::kSymbolPaths);
     BuildIDIndex& build_id_index = GetSymbols()->build_id_index();
@@ -632,8 +610,7 @@ void SystemImpl::OnSettingChanged(const SettingStore& store,
 
     if (!path.empty()) {
       std::error_code ec;
-      std::filesystem::create_directory(
-          std::filesystem::path(path) / ".build-id", ec);
+      std::filesystem::create_directory(std::filesystem::path(path) / ".build-id", ec);
       GetSymbols()->build_id_index().AddSymbolSource(path);
     }
   } else if (setting_name == ClientSettings::System::kSymbolServers) {
@@ -657,8 +634,7 @@ void SystemImpl::OnSettingChanged(const SettingStore& store,
   }
 }
 
-void SystemImpl::InjectSymbolServerForTesting(
-    std::unique_ptr<SymbolServer> server) {
+void SystemImpl::InjectSymbolServerForTesting(std::unique_ptr<SymbolServer> server) {
   symbol_servers_.push_back(std::move(server));
   AddSymbolServer(symbol_servers_.back().get());
 }
@@ -669,8 +645,7 @@ void SystemImpl::AddSymbolServer(SymbolServer* server) {
   }
 
   server->set_state_change_callback(
-      [weak_this = weak_factory_.GetWeakPtr()](SymbolServer* server,
-                                               SymbolServer::State state) {
+      [weak_this = weak_factory_.GetWeakPtr()](SymbolServer* server, SymbolServer::State state) {
         if (weak_this && state == SymbolServer::State::kReady)
           weak_this->OnSymbolServerBecomesReady(server);
       });

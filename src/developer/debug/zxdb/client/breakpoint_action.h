@@ -28,8 +28,7 @@ enum class BreakpointAction {
 // Returns the action that takes precedence. If two breakpoints are hit at the
 // same time and they each report different actions, the one with the highest
 // precedence is the action taken.
-BreakpointAction BreakpointActionHighestPrecedence(BreakpointAction a,
-                                                   BreakpointAction b);
+BreakpointAction BreakpointActionHighestPrecedence(BreakpointAction a, BreakpointAction b);
 
 }  // namespace zxdb
 

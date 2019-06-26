@@ -43,10 +43,9 @@ debug_ipc::Arch ProcessSymbolDataProvider::GetArch() { return arch_; }
 void ProcessSymbolDataProvider::GetMemoryAsync(uint64_t address, uint32_t size,
                                                GetMemoryCallback callback) {
   if (!process_) {
-    debug_ipc::MessageLoop::Current()->PostTask(
-        FROM_HERE, [cb = std::move(callback)]() {
-          cb(ProcessDestroyedErr(), std::vector<uint8_t>());
-        });
+    debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [cb = std::move(callback)]() {
+      cb(ProcessDestroyedErr(), std::vector<uint8_t>());
+    });
     return;
   }
 
@@ -55,8 +54,7 @@ void ProcessSymbolDataProvider::GetMemoryAsync(uint64_t address, uint32_t size,
   if (size > 1024 * 1024) {
     debug_ipc::MessageLoop::Current()->PostTask(
         FROM_HERE, [address, size, cb = std::move(callback)]() {
-          cb(Err(fxl::StringPrintf("Memory request for %u bytes at 0x%" PRIx64
-                                   " is too large.",
+          cb(Err(fxl::StringPrintf("Memory request for %u bytes at 0x%" PRIx64 " is too large.",
                                    size, address)),
              std::vector<uint8_t>());
         });
@@ -64,9 +62,7 @@ void ProcessSymbolDataProvider::GetMemoryAsync(uint64_t address, uint32_t size,
   }
 
   process_->ReadMemory(
-      address, size,
-      [address, size, cb = std::move(callback)](const Err& err,
-                                                MemoryDump dump) {
+      address, size, [address, size, cb = std::move(callback)](const Err& err, MemoryDump dump) {
         if (err.has_error()) {
           cb(err, std::vector<uint8_t>());
           return;
@@ -74,8 +70,7 @@ void ProcessSymbolDataProvider::GetMemoryAsync(uint64_t address, uint32_t size,
 
         FXL_DCHECK(size == 0 || dump.address() == address);
         FXL_DCHECK(dump.size() == size);
-        if (dump.blocks().size() == 1 ||
-            (dump.blocks().size() > 1 && !dump.blocks()[1].valid)) {
+        if (dump.blocks().size() == 1 || (dump.blocks().size() > 1 && !dump.blocks()[1].valid)) {
           // Common case: came back as one block OR it read until an invalid
           // memory boundary and the second block is invalid.
           //
@@ -99,9 +94,8 @@ void ProcessSymbolDataProvider::GetMemoryAsync(uint64_t address, uint32_t size,
       });
 }
 
-void ProcessSymbolDataProvider::WriteMemory(
-    uint64_t address, std::vector<uint8_t> data,
-    std::function<void(const Err&)> cb) {
+void ProcessSymbolDataProvider::WriteMemory(uint64_t address, std::vector<uint8_t> data,
+                                            std::function<void(const Err&)> cb) {
   if (!process_) {
     debug_ipc::MessageLoop::Current()->PostTask(
         FROM_HERE, [cb = std::move(cb)]() { cb(ProcessDestroyedErr()); });

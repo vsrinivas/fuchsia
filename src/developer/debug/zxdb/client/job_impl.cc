@@ -8,8 +8,7 @@
 
 namespace zxdb {
 
-JobImpl::JobImpl(JobContextImpl* job_context, uint64_t koid,
-                 const std::string& name)
+JobImpl::JobImpl(JobContextImpl* job_context, uint64_t koid, const std::string& name)
     : Job(job_context->session()),
       job_context_(job_context),
       koid_(koid),

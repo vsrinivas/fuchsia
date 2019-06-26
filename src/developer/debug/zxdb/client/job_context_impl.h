@@ -55,8 +55,7 @@ class JobContextImpl : public JobContext, public SettingStoreObserver {
   void SendAndUpdateFilters(std::vector<std::string> filters) override;
 
   // SettingStoreObserver implementation
-  void OnSettingChanged(const SettingStore&,
-                        const std::string& setting_name) override;
+  void OnSettingChanged(const SettingStore&, const std::string& setting_name) override;
 
  private:
   SystemImpl* system_;  // Owns |this|.
@@ -71,15 +70,13 @@ class JobContextImpl : public JobContext, public SettingStoreObserver {
 
   fxl::WeakPtrFactory<JobContextImpl> impl_weak_factory_;
 
-  void AttachInternal(debug_ipc::TaskType type, uint64_t koid,
-                      Callback callback);
+  void AttachInternal(debug_ipc::TaskType type, uint64_t koid, Callback callback);
 
-  static void OnAttachReplyThunk(fxl::WeakPtr<JobContextImpl> job_context,
-                                 Callback callback, const Err& err,
-                                 uint64_t koid, uint32_t status,
+  static void OnAttachReplyThunk(fxl::WeakPtr<JobContextImpl> job_context, Callback callback,
+                                 const Err& err, uint64_t koid, uint32_t status,
                                  const std::string& job_name);
-  void OnAttachReply(Callback callback, const Err& err, uint64_t koid,
-                     uint32_t status, const std::string& job_name);
+  void OnAttachReply(Callback callback, const Err& err, uint64_t koid, uint32_t status,
+                     const std::string& job_name);
   void OnDetachReply(const Err& err, uint32_t status, Callback callback);
 
   // If job is running this will update |filters_| only after getting OK from

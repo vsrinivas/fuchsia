@@ -27,10 +27,9 @@ class MockFrame : public Frame {
   // The physical frame is the non-inlined call frame associated with this one.
   // The pointer must outlive this class (normally both are owned by the
   // Stack). A null physical frame indicates that this is not inline.
-  MockFrame(Session* session, Thread* thread, const Location& location,
-            uint64_t sp, uint64_t cfa = 0, std::vector<Register> regs = {},
-            uint64_t frame_base = 0, const Frame* physical_frame = nullptr,
-            bool is_ambiguous_inline = false);
+  MockFrame(Session* session, Thread* thread, const Location& location, uint64_t sp,
+            uint64_t cfa = 0, std::vector<Register> regs = {}, uint64_t frame_base = 0,
+            const Frame* physical_frame = nullptr, bool is_ambiguous_inline = false);
 
   ~MockFrame() override;
 
@@ -45,9 +44,7 @@ class MockFrame : public Frame {
   // else as-is.
   void SetFileLine(const FileLine& file_line);
 
-  void set_is_ambiguous_inline(bool ambiguous) {
-    is_ambiguous_inline_ = ambiguous;
-  }
+  void set_is_ambiguous_inline(bool ambiguous) { is_ambiguous_inline_ = ambiguous; }
 
   // Frame implementation.
   Thread* GetThread() const override;

@@ -29,16 +29,13 @@ const char* SettingTypeToString(SettingType type) {
 
 SettingValue::SettingValue() = default;
 
-SettingValue::SettingValue(bool val)
-    : type(SettingType::kBoolean), value(val) {}
+SettingValue::SettingValue(bool val) : type(SettingType::kBoolean), value(val) {}
 
 SettingValue::SettingValue(int val) : type(SettingType::kInteger), value(val) {}
 
-SettingValue::SettingValue(const char* val)
-    : type(SettingType::kString), value(std::string(val)) {}
+SettingValue::SettingValue(const char* val) : type(SettingType::kString), value(std::string(val)) {}
 
-SettingValue::SettingValue(std::string val)
-    : type(SettingType::kString), value(val) {}
+SettingValue::SettingValue(std::string val) : type(SettingType::kString), value(val) {}
 
 SettingValue::SettingValue(std::vector<std::string> val)
     : type(SettingType::kList), value(std::move(val)) {}

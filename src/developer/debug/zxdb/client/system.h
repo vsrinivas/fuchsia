@@ -34,8 +34,7 @@ class SystemSymbols;
 class System : public ClientObject {
  public:
   // Callback for requesting the process tree.
-  using ProcessTreeCallback =
-      std::function<void(const Err&, debug_ipc::ProcessTreeReply)>;
+  using ProcessTreeCallback = std::function<void(const Err&, debug_ipc::ProcessTreeReply)>;
 
   explicit System(Session* session);
   ~System() override;
@@ -120,8 +119,7 @@ class System : public ClientObject {
   virtual bool HasDownload(const std::string& build_id) { return false; }
 
   // Get a test download object.
-  virtual std::shared_ptr<Download> InjectDownloadForTesting(
-      const std::string& build_id) {
+  virtual std::shared_ptr<Download> InjectDownloadForTesting(const std::string& build_id) {
     return nullptr;
   }
 

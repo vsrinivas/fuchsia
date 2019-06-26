@@ -12,10 +12,8 @@ namespace zxdb {
 
 namespace {
 
-fxl::RefPtr<Function> MakeFunction(const char* name, bool is_inline,
-                                   AddressRanges ranges) {
-  DwarfTag tag =
-      is_inline ? DwarfTag::kInlinedSubroutine : DwarfTag::kSubprogram;
+fxl::RefPtr<Function> MakeFunction(const char* name, bool is_inline, AddressRanges ranges) {
+  DwarfTag tag = is_inline ? DwarfTag::kInlinedSubroutine : DwarfTag::kSubprogram;
   auto func = fxl::MakeRefCounted<Function>(tag);
   func->set_assigned_name(name);
   func->set_code_ranges(std::move(ranges));
@@ -30,8 +28,9 @@ const uint64_t InlineThreadControllerTest::kBottomSP = 0x2040;
 
 // These address ranges must all be inside the symbolized module address so
 // tests can mock symbols and line lookups inside of them.
-const AddressRange InlineThreadControllerTest::kTopFunctionRange(
-    kSymbolizedModuleAddress + 0x30000, kSymbolizedModuleAddress + 0x40000);
+const AddressRange InlineThreadControllerTest::kTopFunctionRange(kSymbolizedModuleAddress + 0x30000,
+                                                                 kSymbolizedModuleAddress +
+                                                                     0x40000);
 // Must be inside the top function.
 const AddressRange InlineThreadControllerTest::kTopInlineFunctionRange(
     kSymbolizedModuleAddress + 0x30100, kSymbolizedModuleAddress + 0x30200);
@@ -51,10 +50,8 @@ const AddressRange InlineThreadControllerTest::kMiddleInline2FunctionRange(
 // is the easiest thing to compute.
 const FileLine InlineThreadControllerTest::kTopInlineFileLine("file.cc", 11);
 const FileLine InlineThreadControllerTest::kTopFileLine("file.cc", 15);
-const FileLine InlineThreadControllerTest::kMiddleInline2FileLine("file.cc",
-                                                                  22);
-const FileLine InlineThreadControllerTest::kMiddleInline1FileLine("file.cc",
-                                                                  25);
+const FileLine InlineThreadControllerTest::kMiddleInline2FileLine("file.cc", 22);
+const FileLine InlineThreadControllerTest::kMiddleInline1FileLine("file.cc", 25);
 const FileLine InlineThreadControllerTest::kMiddleFileLine("file.cc", 30);
 
 // static
@@ -64,8 +61,7 @@ fxl::RefPtr<Function> InlineThreadControllerTest::GetTopFunction() {
 
 // static
 fxl::RefPtr<Function> InlineThreadControllerTest::GetTopInlineFunction() {
-  return MakeFunction("TopInline", true,
-                      AddressRanges(kTopInlineFunctionRange));
+  return MakeFunction("TopInline", true, AddressRanges(kTopInlineFunctionRange));
 }
 
 // static
@@ -75,102 +71,84 @@ fxl::RefPtr<Function> InlineThreadControllerTest::GetMiddleFunction() {
 
 // static
 fxl::RefPtr<Function> InlineThreadControllerTest::GetMiddleInline1Function() {
-  return MakeFunction("MiddleInline1", true,
-                      AddressRanges(kMiddleInline1FunctionRange));
+  return MakeFunction("MiddleInline1", true, AddressRanges(kMiddleInline1FunctionRange));
 }
 
 // static
 fxl::RefPtr<Function> InlineThreadControllerTest::GetMiddleInline2Function() {
-  return MakeFunction("MiddleInline2", true,
-                      AddressRanges(kMiddleInline2FunctionRange));
+  return MakeFunction("MiddleInline2", true, AddressRanges(kMiddleInline2FunctionRange));
 }
 
 // static
 Location InlineThreadControllerTest::GetTopLocation(uint64_t address) {
-  return Location(address, kTopFileLine, 0,
-                  SymbolContext::ForRelativeAddresses(),
+  return Location(address, kTopFileLine, 0, SymbolContext::ForRelativeAddresses(),
                   LazySymbol(GetTopFunction()));
 }
 
 // static
 Location InlineThreadControllerTest::GetTopInlineLocation(uint64_t address) {
-  return Location(address, kTopInlineFileLine, 0,
-                  SymbolContext::ForRelativeAddresses(),
+  return Location(address, kTopInlineFileLine, 0, SymbolContext::ForRelativeAddresses(),
                   LazySymbol(GetTopInlineFunction()));
 }
 
 // static
 Location InlineThreadControllerTest::GetMiddleLocation(uint64_t address) {
-  return Location(address, kMiddleFileLine, 0,
-                  SymbolContext::ForRelativeAddresses(),
+  return Location(address, kMiddleFileLine, 0, SymbolContext::ForRelativeAddresses(),
                   LazySymbol(GetMiddleFunction()));
 }
 
 // static
-Location InlineThreadControllerTest::GetMiddleInline1Location(
-    uint64_t address) {
-  return Location(address, kMiddleInline1FileLine, 0,
-                  SymbolContext::ForRelativeAddresses(),
+Location InlineThreadControllerTest::GetMiddleInline1Location(uint64_t address) {
+  return Location(address, kMiddleInline1FileLine, 0, SymbolContext::ForRelativeAddresses(),
                   LazySymbol(GetMiddleInline1Function()));
 }
 
 // static
-Location InlineThreadControllerTest::GetMiddleInline2Location(
-    uint64_t address) {
-  return Location(address, kMiddleInline2FileLine, 0,
-                  SymbolContext::ForRelativeAddresses(),
+Location InlineThreadControllerTest::GetMiddleInline2Location(uint64_t address) {
+  return Location(address, kMiddleInline2FileLine, 0, SymbolContext::ForRelativeAddresses(),
                   LazySymbol(GetMiddleInline2Function()));
 }
 
 // static
-std::unique_ptr<MockFrame> InlineThreadControllerTest::GetTopFrame(
-    uint64_t address) {
-  return std::make_unique<MockFrame>(nullptr, nullptr, GetTopLocation(address),
-                                     kTopSP, kMiddleSP);
+std::unique_ptr<MockFrame> InlineThreadControllerTest::GetTopFrame(uint64_t address) {
+  return std::make_unique<MockFrame>(nullptr, nullptr, GetTopLocation(address), kTopSP, kMiddleSP);
 }
 
 // static
-std::unique_ptr<MockFrame> InlineThreadControllerTest::GetTopInlineFrame(
-    uint64_t address, MockFrame* top) {
+std::unique_ptr<MockFrame> InlineThreadControllerTest::GetTopInlineFrame(uint64_t address,
+                                                                         MockFrame* top) {
   // The location is ambiguous if the address is at the beginning of the range.
-  return std::make_unique<MockFrame>(
-      nullptr, nullptr, GetTopInlineLocation(address), kTopSP, kMiddleSP,
-      std::vector<Register>(), kTopSP, top,
-      address == kTopInlineFunctionRange.begin());
+  return std::make_unique<MockFrame>(nullptr, nullptr, GetTopInlineLocation(address), kTopSP,
+                                     kMiddleSP, std::vector<Register>(), kTopSP, top,
+                                     address == kTopInlineFunctionRange.begin());
 }
 
 // static
-std::unique_ptr<MockFrame> InlineThreadControllerTest::GetMiddleFrame(
-    uint64_t address) {
-  return std::make_unique<MockFrame>(
-      nullptr, nullptr, GetMiddleLocation(address), kMiddleSP, kBottomSP,
-      std::vector<Register>(), kMiddleSP);
+std::unique_ptr<MockFrame> InlineThreadControllerTest::GetMiddleFrame(uint64_t address) {
+  return std::make_unique<MockFrame>(nullptr, nullptr, GetMiddleLocation(address), kMiddleSP,
+                                     kBottomSP, std::vector<Register>(), kMiddleSP);
 }
 
 // static
-std::unique_ptr<MockFrame> InlineThreadControllerTest::GetMiddleInline1Frame(
-    uint64_t address, MockFrame* middle) {
-  return std::make_unique<MockFrame>(
-      nullptr, nullptr, GetMiddleInline1Location(address), kMiddleSP, kBottomSP,
-      std::vector<Register>(), kMiddleSP, middle,
-      address == kMiddleInline1FunctionRange.begin());
+std::unique_ptr<MockFrame> InlineThreadControllerTest::GetMiddleInline1Frame(uint64_t address,
+                                                                             MockFrame* middle) {
+  return std::make_unique<MockFrame>(nullptr, nullptr, GetMiddleInline1Location(address), kMiddleSP,
+                                     kBottomSP, std::vector<Register>(), kMiddleSP, middle,
+                                     address == kMiddleInline1FunctionRange.begin());
 }
 
 // static
-std::unique_ptr<MockFrame> InlineThreadControllerTest::GetMiddleInline2Frame(
-    uint64_t address, MockFrame* middle) {
-  return std::make_unique<MockFrame>(
-      nullptr, nullptr, GetMiddleInline2Location(address), kMiddleSP, kBottomSP,
-      std::vector<Register>(), kMiddleSP, middle,
-      address == kMiddleInline2FunctionRange.begin());
+std::unique_ptr<MockFrame> InlineThreadControllerTest::GetMiddleInline2Frame(uint64_t address,
+                                                                             MockFrame* middle) {
+  return std::make_unique<MockFrame>(nullptr, nullptr, GetMiddleInline2Location(address), kMiddleSP,
+                                     kBottomSP, std::vector<Register>(), kMiddleSP, middle,
+                                     address == kMiddleInline2FunctionRange.begin());
 }
 
 // static
-std::unique_ptr<MockFrame> InlineThreadControllerTest::GetBottomFrame(
-    uint64_t address) {
-  return std::make_unique<MockFrame>(
-      nullptr, nullptr, Location(Location::State::kSymbolized, address),
-      kBottomSP);
+std::unique_ptr<MockFrame> InlineThreadControllerTest::GetBottomFrame(uint64_t address) {
+  return std::make_unique<MockFrame>(nullptr, nullptr,
+                                     Location(Location::State::kSymbolized, address), kBottomSP);
 }
 
 // static
@@ -182,17 +160,14 @@ std::vector<std::unique_ptr<MockFrame>> InlineThreadControllerTest::GetStack() {
   auto middle_frame = GetMiddleFrame(top_middle_inline2_range.begin());
 
   std::vector<std::unique_ptr<MockFrame>> frames;
-  frames.push_back(
-      GetTopInlineFrame(top_inline_range.begin(), top_frame.get()));
+  frames.push_back(GetTopInlineFrame(top_inline_range.begin(), top_frame.get()));
   frames.push_back(std::move(top_frame));
   // These inlined functions in the middle of the stack must not be ambiguous
   // because the stack will never generate ambiguous inlined functions for
   // anything but the top frame. To do this, the address bust be after the
   // beginning of the code range.
-  frames.push_back(GetMiddleInline2Frame(top_middle_inline2_range.begin() + 1,
-                                         middle_frame.get()));
-  frames.push_back(GetMiddleInline1Frame(top_middle_inline2_range.begin() + 1,
-                                         middle_frame.get()));
+  frames.push_back(GetMiddleInline2Frame(top_middle_inline2_range.begin() + 1, middle_frame.get()));
+  frames.push_back(GetMiddleInline1Frame(top_middle_inline2_range.begin() + 1, middle_frame.get()));
   frames.push_back(std::move(middle_frame));
   frames.push_back(GetBottomFrame(0x100000000));
 
@@ -200,8 +175,7 @@ std::vector<std::unique_ptr<MockFrame>> InlineThreadControllerTest::GetStack() {
 }
 
 // static
-std::vector<std::unique_ptr<Frame>>
-InlineThreadControllerTest::MockFrameVectorToFrameVector(
+std::vector<std::unique_ptr<Frame>> InlineThreadControllerTest::MockFrameVectorToFrameVector(
     std::vector<std::unique_ptr<MockFrame>> mock_frames) {
   std::vector<std::unique_ptr<Frame>> frames;
   for (auto& mf : mock_frames)

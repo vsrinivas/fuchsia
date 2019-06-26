@@ -66,11 +66,9 @@ constexpr uint32_t kMaxMessageSize = 16777216;
 //  - The Session object can be destroyed (weak pointer checks).
 //  - The connection could be canceled by the user (the session callback
 //    checks for this).
-class Session::PendingConnection
-    : public fxl::RefCountedThreadSafe<PendingConnection> {
+class Session::PendingConnection : public fxl::RefCountedThreadSafe<PendingConnection> {
  public:
-  void Initiate(fxl::WeakPtr<Session> session,
-                std::function<void(const Err&)> callback);
+  void Initiate(fxl::WeakPtr<Session> session, std::function<void(const Err&)> callback);
 
   // There are no other functions since this will be running on a background
   // thread and the class state can't be safely retrieved. It reports all of
@@ -80,18 +78,15 @@ class Session::PendingConnection
   FRIEND_REF_COUNTED_THREAD_SAFE(PendingConnection);
   FRIEND_MAKE_REF_COUNTED(PendingConnection);
 
-  PendingConnection(const std::string& host, uint16_t port)
-      : host_(host), port_(port) {}
+  PendingConnection(const std::string& host, uint16_t port) : host_(host), port_(port) {}
   ~PendingConnection() {}
 
   // These are the steps of connection, in order. They each take a RefPtr
   // to |this| to ensure the class is in scope for the full flow.
   void ConnectBackgroundThread(fxl::RefPtr<PendingConnection> owner);
-  void ConnectCompleteMainThread(fxl::RefPtr<PendingConnection> owner,
-                                 const Err& err);
+  void ConnectCompleteMainThread(fxl::RefPtr<PendingConnection> owner, const Err& err);
   void DataAvailableMainThread(fxl::RefPtr<PendingConnection> owner);
-  void HelloCompleteMainThread(fxl::RefPtr<PendingConnection> owner,
-                               const Err& err,
+  void HelloCompleteMainThread(fxl::RefPtr<PendingConnection> owner, const Err& err,
                                const debug_ipc::HelloReply& reply);
 
   // Creates the connection (called on the background thread). On success
@@ -123,8 +118,8 @@ class Session::PendingConnection
   std::function<void(const Err&)> callback_;
 };
 
-void Session::PendingConnection::Initiate(
-    fxl::WeakPtr<Session> session, std::function<void(const Err&)> callback) {
+void Session::PendingConnection::Initiate(fxl::WeakPtr<Session> session,
+                                          std::function<void(const Err&)> callback) {
   FXL_DCHECK(!thread_.get());  // Duplicate Initiate() call.
 
   main_loop_ = debug_ipc::MessageLoop::Current();
@@ -134,21 +129,18 @@ void Session::PendingConnection::Initiate(
   // Create the background thread, and run the background function. The
   // context will keep a ref to this class.
   thread_ = std::make_unique<std::thread>(
-      [owner = fxl::RefPtr<PendingConnection>(this)]() {
-        owner->ConnectBackgroundThread(owner);
-      });
+      [owner = fxl::RefPtr<PendingConnection>(this)]() { owner->ConnectBackgroundThread(owner); });
 }
 
-void Session::PendingConnection::ConnectBackgroundThread(
-    fxl::RefPtr<PendingConnection> owner) {
+void Session::PendingConnection::ConnectBackgroundThread(fxl::RefPtr<PendingConnection> owner) {
   Err err = DoConnectBackgroundThread();
   main_loop_->PostTask(FROM_HERE, [owner = std::move(owner), err]() {
     owner->ConnectCompleteMainThread(owner, err);
   });
 }
 
-void Session::PendingConnection::ConnectCompleteMainThread(
-    fxl::RefPtr<PendingConnection> owner, const Err& err) {
+void Session::PendingConnection::ConnectCompleteMainThread(fxl::RefPtr<PendingConnection> owner,
+                                                           const Err& err) {
   // The background thread function has now completed so the thread can be
   // destroyed. We do want to join with the thread here to ensure there are no
   // references to the PendingConnection on the background thread, which might
@@ -172,11 +164,9 @@ void Session::PendingConnection::ConnectCompleteMainThread(
   // and these handlers won't be called within this stack frame, it's a good
   // mental model to set up handlers before actually sending the first piece
   // of data.
-  buffer_->set_data_available_callback(
-      [owner]() { owner->DataAvailableMainThread(owner); });
+  buffer_->set_data_available_callback([owner]() { owner->DataAvailableMainThread(owner); });
   buffer_->set_error_callback([owner]() {
-    owner->HelloCompleteMainThread(owner, Err("Connection error."),
-                                   debug_ipc::HelloReply());
+    owner->HelloCompleteMainThread(owner, Err("Connection error."), debug_ipc::HelloReply());
   });
 
   // Send "Hello" message. We can't use the Session::Send infrastructure
@@ -186,13 +176,11 @@ void Session::PendingConnection::ConnectCompleteMainThread(
   buffer_->stream().Write(writer.MessageComplete());
 }
 
-void Session::PendingConnection::DataAvailableMainThread(
-    fxl::RefPtr<PendingConnection> owner) {
+void Session::PendingConnection::DataAvailableMainThread(fxl::RefPtr<PendingConnection> owner) {
   // This function needs to manually deserialize the hello message since
   // the Session stuff isn't connected yet.
   constexpr size_t kHelloMessageSize =
-      debug_ipc::MsgHeader::kSerializedHeaderSize +
-      sizeof(debug_ipc::HelloReply);
+      debug_ipc::MsgHeader::kSerializedHeaderSize + sizeof(debug_ipc::HelloReply);
 
   if (!buffer_->stream().IsAvailable(kHelloMessageSize))
     return;  // Wait for more data.
@@ -216,9 +204,9 @@ void Session::PendingConnection::DataAvailableMainThread(
   HelloCompleteMainThread(owner, err, reply);
 }
 
-void Session::PendingConnection::HelloCompleteMainThread(
-    fxl::RefPtr<PendingConnection> owner, const Err& err,
-    const debug_ipc::HelloReply& reply) {
+void Session::PendingConnection::HelloCompleteMainThread(fxl::RefPtr<PendingConnection> owner,
+                                                         const Err& err,
+                                                         const debug_ipc::HelloReply& reply) {
   // Prevent future notifications.
   if (buffer_.get()) {
     buffer_->set_data_available_callback(std::function<void()>());
@@ -231,8 +219,8 @@ void Session::PendingConnection::HelloCompleteMainThread(
 
     // If the session exists, always tell it about the completion, whether
     // the connection was successful or not. It will issue the callback.
-    session_->ConnectionResolved(std::move(owner), err, reply,
-                                 std::move(buffer_), std::move(callback_));
+    session_->ConnectionResolved(std::move(owner), err, reply, std::move(buffer_),
+                                 std::move(callback_));
   } else if (callback_) {
     // Session was destroyed. Issue the callback with an error (not clobbering
     // an existing one if there was one).
@@ -250,17 +238,12 @@ Err Session::PendingConnection::DoConnectBackgroundThread() {
 // Session ---------------------------------------------------------------------
 
 Session::Session()
-    : remote_api_(std::make_unique<RemoteAPIImpl>(this)),
-      system_(this),
-      weak_factory_(this) {
+    : remote_api_(std::make_unique<RemoteAPIImpl>(this)), system_(this), weak_factory_(this) {
   ListenForSystemSettings();
 }
 
 Session::Session(std::unique_ptr<RemoteAPI> remote_api, debug_ipc::Arch arch)
-    : remote_api_(std::move(remote_api)),
-      system_(this),
-      arch_(arch),
-      weak_factory_(this) {
+    : remote_api_(std::move(remote_api)), system_(this), arch_(arch), weak_factory_(this) {
   arch_info_ = std::make_unique<ArchInfo>();
   Err err = arch_info_->Init(arch);
 
@@ -282,14 +265,12 @@ void Session::OnStreamReadable() {
     return;  // Notification could have raced with detaching the stream.
 
   while (true) {
-    if (!stream_ ||
-        !stream_->IsAvailable(debug_ipc::MsgHeader::kSerializedHeaderSize))
+    if (!stream_ || !stream_->IsAvailable(debug_ipc::MsgHeader::kSerializedHeaderSize))
       return;
 
     std::vector<char> serialized_header;
     serialized_header.resize(debug_ipc::MsgHeader::kSerializedHeaderSize);
-    stream_->Peek(&serialized_header[0],
-                  debug_ipc::MsgHeader::kSerializedHeaderSize);
+    stream_->Peek(&serialized_header[0], debug_ipc::MsgHeader::kSerializedHeaderSize);
 
     debug_ipc::MessageReader reader(std::move(serialized_header));
     debug_ipc::MsgHeader header;
@@ -331,11 +312,10 @@ void Session::OnStreamReadable() {
     // Find the transaction.
     auto found = pending_.find(header.transaction_id);
     if (found == pending_.end()) {
-      SendSessionNotification(
-          SessionObserver::NotificationType::kError,
-          "Received reply for unexpected transaction %u (type = %u).\n",
-          static_cast<unsigned>(header.transaction_id),
-          static_cast<unsigned>(header.type));
+      SendSessionNotification(SessionObserver::NotificationType::kError,
+                              "Received reply for unexpected transaction %u (type = %u).\n",
+                              static_cast<unsigned>(header.transaction_id),
+                              static_cast<unsigned>(header.type));
       // Just ignore this bad message.
       continue;
     }
@@ -349,16 +329,14 @@ void Session::OnStreamReadable() {
 
 void Session::OnStreamError() {
   if (ClearConnectionData()) {
-    SendSessionNotification(
-        SessionObserver::NotificationType::kError,
-        "The debug agent has disconnected.\nThis is most probably a bug, "
-        "please "
-        "file a bug adding the system crash log (fx syslog) if possible.");
+    SendSessionNotification(SessionObserver::NotificationType::kError,
+                            "The debug agent has disconnected.\nThis is most probably a bug, "
+                            "please "
+                            "file a bug adding the system crash log (fx syslog) if possible.");
   }
 }
 
-bool Session::ConnectCanProceed(std::function<void(const Err&)> callback,
-                                bool opening_dump) {
+bool Session::ConnectCanProceed(std::function<void(const Err&)> callback, bool opening_dump) {
   Err err;
   if (stream_) {
     if (opening_dump) {
@@ -374,8 +352,7 @@ bool Session::ConnectCanProceed(std::function<void(const Err&)> callback,
 
   if (err.has_error()) {
     if (callback) {
-      debug_ipc::MessageLoop::Current()->PostTask(
-          FROM_HERE, [callback, err]() { callback(err); });
+      debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [callback, err]() { callback(err); });
     }
     return false;
   }
@@ -394,8 +371,7 @@ void Session::Connect(const std::string& host, uint16_t port,
   connected_host_ = host;
   connected_port_ = port;
   pending_connection_ = fxl::MakeRefCounted<PendingConnection>(host, port);
-  pending_connection_->Initiate(weak_factory_.GetWeakPtr(),
-                                std::move(callback));
+  pending_connection_->Initiate(weak_factory_.GetWeakPtr(), std::move(callback));
 }
 
 Err Session::SetArch(debug_ipc::Arch arch) {
@@ -409,8 +385,7 @@ Err Session::SetArch(debug_ipc::Arch arch) {
   return arch_err;
 }
 
-void Session::OpenMinidump(const std::string& path,
-                           std::function<void(const Err&)> callback) {
+void Session::OpenMinidump(const std::string& path, std::function<void(const Err&)> callback) {
   if (!ConnectCanProceed(callback, true)) {
     return;
   }
@@ -422,24 +397,22 @@ void Session::OpenMinidump(const std::string& path,
   Err err = minidump->Open(path);
 
   if (err.has_error()) {
-    debug_ipc::MessageLoop::Current()->PostTask(
-        FROM_HERE, [callback, err]() { callback(err); });
+    debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [callback, err]() { callback(err); });
 
     return;
   }
 
-  system().GetTargets()[0]->Attach(
-      minidump->ProcessID(), [](fxl::WeakPtr<Target> target, const Err&) {});
+  system().GetTargets()[0]->Attach(minidump->ProcessID(),
+                                   [](fxl::WeakPtr<Target> target, const Err&) {});
 
-  remote_api_->Hello(debug_ipc::HelloRequest(),
-                     [callback, weak_this = GetWeakPtr()](
-                         const Err& err, debug_ipc::HelloReply reply) {
-                       if (weak_this && !err.has_error()) {
-                         weak_this->SetArch(reply.arch);
-                       }
+  remote_api_->Hello(debug_ipc::HelloRequest(), [callback, weak_this = GetWeakPtr()](
+                                                    const Err& err, debug_ipc::HelloReply reply) {
+    if (weak_this && !err.has_error()) {
+      weak_this->SetArch(reply.arch);
+    }
 
-                       callback(err);
-                     });
+    callback(err);
+  });
 }
 
 void Session::Disconnect(std::function<void(const Err&)> callback) {
@@ -453,8 +426,7 @@ void Session::Disconnect(std::function<void(const Err&)> callback) {
     }
 
     if (callback) {
-      debug_ipc::MessageLoop::Current()->PostTask(
-          FROM_HERE, [callback, err]() { callback(err); });
+      debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [callback, err]() { callback(err); });
     }
     return;
   }
@@ -495,10 +467,8 @@ bool Session::ClearConnectionData() {
   return true;
 }
 
-void Session::DispatchNotifyThreadStarting(
-    const debug_ipc::NotifyThread& notify) {
-  ProcessImpl* process =
-      system_.ProcessImplFromKoid(notify.record.process_koid);
+void Session::DispatchNotifyThreadStarting(const debug_ipc::NotifyThread& notify) {
+  ProcessImpl* process = system_.ProcessImplFromKoid(notify.record.process_koid);
   if (!process) {
     SendSessionNotification(SessionObserver::NotificationType::kWarning,
                             "Received thread starting notification for an "
@@ -520,12 +490,10 @@ void Session::DispatchNotifyThreadStarting(
     switch (process->start_type()) {
       case Process::StartType::kComponent:
       case Process::StartType::kLaunch:
-        resume_thread =
-            !system_.settings().GetBool(ClientSettings::System::kPauseOnLaunch);
+        resume_thread = !system_.settings().GetBool(ClientSettings::System::kPauseOnLaunch);
         break;
       case Process::StartType::kAttach:
-        resume_thread =
-            !system_.settings().GetBool(ClientSettings::System::kPauseOnAttach);
+        resume_thread = !system_.settings().GetBool(ClientSettings::System::kPauseOnAttach);
         break;
     }
   }
@@ -533,10 +501,8 @@ void Session::DispatchNotifyThreadStarting(
   process->OnThreadStarting(notify.record, resume_thread);
 }
 
-void Session::DispatchNotifyThreadExiting(
-    const debug_ipc::NotifyThread& notify) {
-  ProcessImpl* process =
-      system_.ProcessImplFromKoid(notify.record.process_koid);
+void Session::DispatchNotifyThreadExiting(const debug_ipc::NotifyThread& notify) {
+  ProcessImpl* process = system_.ProcessImplFromKoid(notify.record.process_koid);
   if (!process) {
     SendSessionNotification(SessionObserver::NotificationType::kWarning,
                             "Received thread exiting notification for an "
@@ -549,15 +515,12 @@ void Session::DispatchNotifyThreadExiting(
 }
 
 // This is the main entrypoint for all thread stops notifications in the client.
-void Session::DispatchNotifyException(const debug_ipc::NotifyException& notify,
-                                      bool set_metadata) {
+void Session::DispatchNotifyException(const debug_ipc::NotifyException& notify, bool set_metadata) {
   TIME_BLOCK();
-  ThreadImpl* thread =
-      ThreadImplFromKoid(notify.thread.process_koid, notify.thread.thread_koid);
+  ThreadImpl* thread = ThreadImplFromKoid(notify.thread.process_koid, notify.thread.thread_koid);
   if (!thread) {
-    SendSessionNotification(
-        SessionObserver::NotificationType::kWarning,
-        "Received thread exception for an unknown thread.\n");
+    SendSessionNotification(SessionObserver::NotificationType::kWarning,
+                            "Received thread exception for an unknown thread.\n");
     return;
   }
 
@@ -613,15 +576,13 @@ void Session::DispatchNotifyModules(const debug_ipc::NotifyModules& notify) {
   }
 }
 
-void Session::DispatchProcessStarting(
-    const debug_ipc::NotifyProcessStarting& notify) {
+void Session::DispatchProcessStarting(const debug_ipc::NotifyProcessStarting& notify) {
   // Search the targets to see if there is a non-attached empty one.
   // Normally this would be the initial one. Assume that targets that have
   // a name have been set up by the user which we don't want to overwrite.
   TargetImpl* found_target = nullptr;
   for (TargetImpl* target : system_.GetTargetImpls()) {
-    if (target->GetState() == Target::State::kNone &&
-        target->GetArgs().empty()) {
+    if (target->GetState() == Target::State::kNone && target->GetArgs().empty()) {
       found_target = target;
       break;
     }
@@ -648,10 +609,9 @@ void Session::DispatchProcessStarting(
 void Session::DispatchNotifyIO(const debug_ipc::NotifyIO& notify) {
   ProcessImpl* process = system_.ProcessImplFromKoid(notify.process_koid);
   if (!process) {
-    SendSessionNotification(
-        SessionObserver::NotificationType::kWarning,
-        "Received io notification for an unexpected process %" PRIu64 ".",
-        notify.process_koid);
+    SendSessionNotification(SessionObserver::NotificationType::kWarning,
+                            "Received io notification for an unexpected process %" PRIu64 ".",
+                            notify.process_koid);
     return;
   }
 
@@ -670,12 +630,10 @@ void Session::DispatchNotifyIO(const debug_ipc::NotifyIO& notify) {
   }
 }
 
-void Session::DispatchNotification(const debug_ipc::MsgHeader& header,
-                                   std::vector<char> data) {
+void Session::DispatchNotification(const debug_ipc::MsgHeader& header, std::vector<char> data) {
   debug_ipc::MessageReader reader(std::move(data));
 
-  DEBUG_LOG(Session) << "Got notification: "
-                     << debug_ipc::MsgHeader::TypeToString(header.type);
+  DEBUG_LOG(Session) << "Got notification: " << debug_ipc::MsgHeader::TypeToString(header.type);
   switch (header.type) {
     case debug_ipc::MsgHeader::Type::kNotifyProcessExiting: {
       debug_ipc::NotifyProcessExiting notify;
@@ -728,16 +686,14 @@ void Session::DispatchNotification(const debug_ipc::MsgHeader& header,
   }
 }
 
-ThreadImpl* Session::ThreadImplFromKoid(uint64_t process_koid,
-                                        uint64_t thread_koid) {
+ThreadImpl* Session::ThreadImplFromKoid(uint64_t process_koid, uint64_t thread_koid) {
   ProcessImpl* process = system_.ProcessImplFromKoid(process_koid);
   if (!process)
     return nullptr;
   return process->GetThreadImplFromKoid(thread_koid);
 }
 
-void Session::ConnectionResolved(fxl::RefPtr<PendingConnection> pending,
-                                 const Err& err,
+void Session::ConnectionResolved(fxl::RefPtr<PendingConnection> pending, const Err& err,
                                  const debug_ipc::HelloReply& reply,
                                  std::unique_ptr<debug_ipc::BufferedFD> buffer,
                                  std::function<void(const Err&)> callback) {
@@ -761,10 +717,10 @@ void Session::ConnectionResolved(fxl::RefPtr<PendingConnection> pending,
   // Version check.
   if (reply.version != debug_ipc::HelloReply::kCurrentVersion) {
     if (callback) {
-      callback(Err(fxl::StringPrintf(
-          "Protocol version mismatch. The target system debug agent reports "
-          "version %" PRIu32 " but this client expects version %" PRIu32 ".",
-          reply.version, debug_ipc::HelloReply::kCurrentVersion)));
+      callback(
+          Err(fxl::StringPrintf("Protocol version mismatch. The target system debug agent reports "
+                                "version %" PRIu32 " but this client expects version %" PRIu32 ".",
+                                reply.version, debug_ipc::HelloReply::kCurrentVersion)));
     }
   }
 
@@ -780,8 +736,7 @@ void Session::ConnectionResolved(fxl::RefPtr<PendingConnection> pending,
   connection_storage_ = std::move(buffer);
 
   stream_ = &connection_storage_->stream();
-  connection_storage_->set_data_available_callback(
-      [this]() { OnStreamReadable(); });
+  connection_storage_->set_data_available_callback([this]() { OnStreamReadable(); });
   connection_storage_->set_error_callback([this]() { OnStreamError(); });
 
   // Issue success callbacks.
@@ -793,16 +748,12 @@ void Session::ConnectionResolved(fxl::RefPtr<PendingConnection> pending,
   SendAgentConfiguration();
 }
 
-void Session::AddObserver(SessionObserver* observer) {
-  observers_.AddObserver(observer);
-}
+void Session::AddObserver(SessionObserver* observer) { observers_.AddObserver(observer); }
 
-void Session::RemoveObserver(SessionObserver* observer) {
-  observers_.RemoveObserver(observer);
-}
+void Session::RemoveObserver(SessionObserver* observer) { observers_.RemoveObserver(observer); }
 
-void Session::SendSessionNotification(SessionObserver::NotificationType type,
-                                      const char* fmt, ...) {
+void Session::SendSessionNotification(SessionObserver::NotificationType type, const char* fmt,
+                                      ...) {
   va_list ap;
   va_start(ap, fmt);
   std::string msg = fxl::StringPrintf(fmt, ap);
@@ -817,8 +768,8 @@ void Session::SendSessionNotification(SessionObserver::NotificationType type,
     observer.HandleNotification(type, msg);
 }
 
-SessionObserver::NotificationType Session::HandleProcessIO(
-    ProcessImpl* process, const debug_ipc::NotifyIO& notify) {
+SessionObserver::NotificationType Session::HandleProcessIO(ProcessImpl* process,
+                                                           const debug_ipc::NotifyIO& notify) {
   if (!process->HandleIO(notify)) {
     return SessionObserver::NotificationType::kNone;
   }
@@ -833,9 +784,7 @@ void Session::ExpectComponent(uint32_t component_id) {
   expected_components_.insert(component_id);
 }
 
-fxl::WeakPtr<Session> Session::GetWeakPtr() {
-  return weak_factory_.GetWeakPtr();
-}
+fxl::WeakPtr<Session> Session::GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
 
 void Session::QuitAgent(std::function<void(const Err&)> cb) {
   bool is_connected = IsConnected();
@@ -846,77 +795,66 @@ void Session::QuitAgent(std::function<void(const Err&)> cb) {
     Disconnect(nullptr);
     if (cb) {
       debug_ipc::MessageLoop::Current()->PostTask(
-          FROM_HERE, [cb = std::move(cb)]() {
-            cb(Err("Not connected to a debug agent."));
-          });
+          FROM_HERE, [cb = std::move(cb)]() { cb(Err("Not connected to a debug agent.")); });
     }
     return;
   }
 
   debug_ipc::QuitAgentRequest request;
-  remote_api()->QuitAgent(request,
-                          [session = GetWeakPtr(), cb = std::move(cb)](
-                              const Err& err, debug_ipc::QuitAgentReply) {
-                            // If we received a response, there is a connection
-                            // to receive it, so the session should be around.
-                            FXL_DCHECK(session && session->stream_);
-                            session->Disconnect(nullptr);
-                            if (cb)
-                              cb(err);
-                          });
+  remote_api()->QuitAgent(request, [session = GetWeakPtr(), cb = std::move(cb)](
+                                       const Err& err, debug_ipc::QuitAgentReply) {
+    // If we received a response, there is a connection
+    // to receive it, so the session should be around.
+    FXL_DCHECK(session && session->stream_);
+    session->Disconnect(nullptr);
+    if (cb)
+      cb(err);
+  });
 }
 
-void Session::OnSettingChanged(const SettingStore& store,
-                               const std::string& setting_name) {
+void Session::OnSettingChanged(const SettingStore& store, const std::string& setting_name) {
   if (setting_name == ClientSettings::System::kQuitAgentOnExit) {
     SendAgentConfiguration();
   } else {
     SendSessionNotification(SessionObserver::NotificationType::kWarning,
-                            "Session handling invalid setting %s",
-                            setting_name.c_str());
+                            "Session handling invalid setting %s", setting_name.c_str());
   }
 }
 
 void Session::ListenForSystemSettings() {
-  system_.settings().AddObserver(ClientSettings::System::kQuitAgentOnExit,
-                                 this);
+  system_.settings().AddObserver(ClientSettings::System::kQuitAgentOnExit, this);
 }
 
 void Session::SendAgentConfiguration() {
   // We bungle the actions and send them in one go.
   std::vector<debug_ipc::ConfigAction> actions;
 
-  ConfigQuitAgent(
-      system_.settings().GetBool(ClientSettings::System::kQuitAgentOnExit),
-      &actions);
+  ConfigQuitAgent(system_.settings().GetBool(ClientSettings::System::kQuitAgentOnExit), &actions);
 
   debug_ipc::ConfigAgentRequest request;
   request.actions = std::move(actions);
-  remote_api()->ConfigAgent(
-      request, [request, session = GetWeakPtr()](
-                   const Err& err, debug_ipc::ConfigAgentReply reply) {
-        FXL_DCHECK(reply.results.size() == request.actions.size());
+  remote_api()->ConfigAgent(request, [request, session = GetWeakPtr()](
+                                         const Err& err, debug_ipc::ConfigAgentReply reply) {
+    FXL_DCHECK(reply.results.size() == request.actions.size());
 
-        if (!session)
-          return;
+    if (!session)
+      return;
 
-        for (size_t i = 0; i < reply.results.size(); i++) {
-          debug_ipc::zx_status_t status = reply.results[i];
-          if (status == debug_ipc::kZxOk)
-            continue;
+    for (size_t i = 0; i < reply.results.size(); i++) {
+      debug_ipc::zx_status_t status = reply.results[i];
+      if (status == debug_ipc::kZxOk)
+        continue;
 
-          auto& action = request.actions[i];
-          session->SendSessionNotification(
-              SessionObserver::NotificationType::kWarning,
-              "Agent configuration for %s failed with result: %s",
-              debug_ipc::ConfigAction::TypeToString(action.type),
-              debug_ipc::ZxStatusToString(status));
-        }
-      });
+      auto& action = request.actions[i];
+      session->SendSessionNotification(SessionObserver::NotificationType::kWarning,
+                                       "Agent configuration for %s failed with result: %s",
+                                       debug_ipc::ConfigAction::TypeToString(action.type),
+                                       debug_ipc::ZxStatusToString(status));
+    }
+  });
 }
 
-void Session::ConfigQuitAgent(bool quit,
-                              std::vector<debug_ipc::ConfigAction>* actions) {
+void Session::ConfigQuitAgent(bool quit, std::vector<debug_ipc::ConfigAction>* actions) {
   DEBUG_LOG(RemoteAPI) << "Sending quit agent config: " << quit;
 
   if (!IsConnected())

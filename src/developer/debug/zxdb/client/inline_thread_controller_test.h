@@ -131,13 +131,10 @@ class InlineThreadControllerTest : public ThreadControllerTest {
 
   // Constructor for frames.
   static std::unique_ptr<MockFrame> GetTopFrame(uint64_t address);
-  static std::unique_ptr<MockFrame> GetTopInlineFrame(uint64_t address,
-                                                      MockFrame* top);
+  static std::unique_ptr<MockFrame> GetTopInlineFrame(uint64_t address, MockFrame* top);
   static std::unique_ptr<MockFrame> GetMiddleFrame(uint64_t address);
-  static std::unique_ptr<MockFrame> GetMiddleInline1Frame(uint64_t address,
-                                                          MockFrame* middle);
-  static std::unique_ptr<MockFrame> GetMiddleInline2Frame(uint64_t address,
-                                                          MockFrame* middle);
+  static std::unique_ptr<MockFrame> GetMiddleInline1Frame(uint64_t address, MockFrame* middle);
+  static std::unique_ptr<MockFrame> GetMiddleInline2Frame(uint64_t address, MockFrame* middle);
   static std::unique_ptr<MockFrame> GetBottomFrame(uint64_t address);
 
   // Constructs a fake stack. Even frame will have the address at the beginning

@@ -44,18 +44,15 @@ class UntilThreadController : public ThreadController {
   // Runs to the given location until the current frame compares to the given
   // frame according to the given comparator. This allows stepping backward in
   // the call stack.
-  UntilThreadController(InputLocation location, FrameFingerprint newest_frame,
-                        FrameComparison cmp);
+  UntilThreadController(InputLocation location, FrameFingerprint newest_frame, FrameComparison cmp);
 
   ~UntilThreadController() override;
 
   // ThreadController implementation:
-  void InitWithThread(Thread* thread,
-                      std::function<void(const Err&)> cb) override;
+  void InitWithThread(Thread* thread, std::function<void(const Err&)> cb) override;
   ContinueOp GetContinueOp() override;
-  StopOp OnThreadStop(
-      debug_ipc::NotifyException::Type stop_type,
-      const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) override;
+  StopOp OnThreadStop(debug_ipc::NotifyException::Type stop_type,
+                      const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) override;
   const char* GetName() const override { return "Until"; }
 
  private:

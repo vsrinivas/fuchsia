@@ -36,8 +36,7 @@ namespace {
 
 using SockAddrVariant = std::variant<sockaddr_in, sockaddr_in6>;
 
-Err ResolveTargetAddress(const std::string& host, uint16_t port,
-                         SockAddrVariant* out) {
+Err ResolveTargetAddress(const std::string& host, uint16_t port, SockAddrVariant* out) {
   int res;
   // First try IPv6. Result of 0 means that the string is not IPv6.
   struct sockaddr_in6 addr6 = {};  // zero-out.
@@ -50,8 +49,7 @@ Err ResolveTargetAddress(const std::string& host, uint16_t port,
     return Err();
   }
 
-  DEBUG_LOG(RemoteAPI) << "Could not resolve IPv6: " << strerror(errno)
-                       << " (res: " << res << ").";
+  DEBUG_LOG(RemoteAPI) << "Could not resolve IPv6: " << strerror(errno) << " (res: " << res << ").";
 
   // We now try IPv4.
   struct sockaddr_in addr4 = {};  // zero-out.
@@ -69,8 +67,7 @@ Err ResolveTargetAddress(const std::string& host, uint16_t port,
 
 }  // namespace
 
-Err ConnectToHost(const std::string& host, uint16_t port,
-                  fxl::UniqueFD* socket_out) {
+Err ConnectToHost(const std::string& host, uint16_t port, fxl::UniqueFD* socket_out) {
   SockAddrVariant addr_variant;
   Err err = ResolveTargetAddress(host, port, &addr_variant);
   if (err.has_error())
@@ -85,8 +82,7 @@ Err ConnectToHost(const std::string& host, uint16_t port,
       return Err("Could not create socket: %s.", strerror(errno));
 
     sockaddr_in6& addr6 = std::get<sockaddr_in6>(addr_variant);
-    if (connect(res_socket.get(), reinterpret_cast<sockaddr*>(&addr6),
-                sizeof(sockaddr_in6))) {
+    if (connect(res_socket.get(), reinterpret_cast<sockaddr*>(&addr6), sizeof(sockaddr_in6))) {
       return Err("Could not connect to socket: %s.", strerror(errno));
     }
   }
@@ -98,8 +94,7 @@ Err ConnectToHost(const std::string& host, uint16_t port,
       return Err("Could not create socket: %s.", strerror(errno));
 
     sockaddr_in& addr4 = std::get<sockaddr_in>(addr_variant);
-    if (connect(res_socket.get(), reinterpret_cast<sockaddr*>(&addr4),
-                sizeof(sockaddr_in))) {
+    if (connect(res_socket.get(), reinterpret_cast<sockaddr*>(&addr4), sizeof(sockaddr_in))) {
       return Err("Could not connect to socket: %s.", strerror(errno));
     }
   }
@@ -138,15 +133,13 @@ Err ResolveAddress(const std::string& host, uint16_t port, addrinfo* addr) {
   struct addrinfo* addrs = nullptr;
   int addr_err = getaddrinfo(host.c_str(), port_str.c_str(), &hints, &addrs);
   if (addr_err != 0) {
-    return Err("Failed to resolve %s: %s.", host.c_str(),
-               gai_strerror(addr_err));
+    return Err("Failed to resolve %s: %s.", host.c_str(), gai_strerror(addr_err));
   }
 
   struct addrinfo* p;
   for (p = addrs; p != nullptr; p = p->ai_next) {
     char buf[1024];
-    getnameinfo(p->ai_addr, p->ai_addrlen, buf, sizeof(buf), nullptr, 0,
-                NI_NUMERICHOST);
+    getnameinfo(p->ai_addr, p->ai_addrlen, buf, sizeof(buf), nullptr, 0, NI_NUMERICHOST);
   }
 
   *addr = *addrs;
@@ -156,8 +149,7 @@ Err ResolveAddress(const std::string& host, uint16_t port, addrinfo* addr) {
 
 }  // namespace
 
-Err ConnectToHost(const std::string& host, uint16_t port,
-                  fxl::UniqueFD* socket_out) {
+Err ConnectToHost(const std::string& host, uint16_t port, fxl::UniqueFD* socket_out) {
   addrinfo addr;
   Err err = ResolveAddress(host, port, &addr);
   if (err.has_error())

@@ -65,12 +65,8 @@ class Curl {
   std::vector<std::string>& headers() { return headers_; }
   bool& get_body() { return get_body_; }
 
-  void set_data_callback(DataCallback handler) {
-    data_callback_ = std::move(handler);
-  }
-  void set_header_callback(DataCallback handler) {
-    header_callback_ = std::move(handler);
-  }
+  void set_data_callback(DataCallback handler) { data_callback_ = std::move(handler); }
+  void set_header_callback(DataCallback handler) { header_callback_ = std::move(handler); }
 
   // Believe it or not this takes a curl handle, so it can't be static.
   std::string Escape(const std::string& input);
@@ -88,10 +84,8 @@ class Curl {
  private:
   friend class CurlFDWatcher;
 
-  friend size_t DoHeaderCallback(char* data, size_t size, size_t nitems,
-                                 void* curl);
-  friend size_t DoDataCallback(char* data, size_t size, size_t nitems,
-                               void* curl);
+  friend size_t DoHeaderCallback(char* data, size_t size, size_t nitems, void* curl);
+  friend size_t DoDataCallback(char* data, size_t size, size_t nitems, void* curl);
 
   static CURLM* multi_handle;
 
@@ -114,12 +108,8 @@ class Curl {
   std::shared_ptr<Curl> self_ref_;
   std::vector<std::string> headers_;
   std::function<void(Curl*, Error)> multi_cb_ = nullptr;
-  DataCallback header_callback_ = [](const std::string& data) {
-    return data.size();
-  };
-  DataCallback data_callback_ = [](const std::string& data) {
-    return data.size();
-  };
+  DataCallback header_callback_ = [](const std::string& data) { return data.size(); };
+  DataCallback data_callback_ = [](const std::string& data) { return data.size(); };
 };
 
 }  // namespace zxdb

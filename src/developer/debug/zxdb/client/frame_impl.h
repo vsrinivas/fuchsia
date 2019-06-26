@@ -24,8 +24,7 @@ class Thread;
 // A frame is lazily symbolized.
 class FrameImpl final : public Frame {
  public:
-  FrameImpl(Thread* thread, const debug_ipc::StackFrame& stack_frame,
-            Location location);
+  FrameImpl(Thread* thread, const debug_ipc::StackFrame& stack_frame, Location location);
   ~FrameImpl() override;
 
   // Frame implementation.
@@ -59,7 +58,7 @@ class FrameImpl final : public Frame {
   uint64_t cfa_;
   std::vector<Register> registers_;
 
-  mutable Location location_;  // Lazily symbolized.
+  mutable Location location_;                                          // Lazily symbolized.
   mutable fxl::RefPtr<FrameSymbolDataProvider> symbol_data_provider_;  // Lazy.
   mutable fxl::RefPtr<EvalContextImpl> symbol_eval_context_;           // Lazy.
 

@@ -38,8 +38,7 @@ class TargetImpl : public Target, public SettingStoreObserver {
   // Notification that a new process was created as a new component.
   // We need the distinction because they look identical as a process caught
   // by a job filter.
-  void ProcessCreatedAsComponent(uint64_t koid,
-                                 const std::string& process_name);
+  void ProcessCreatedAsComponent(uint64_t koid, const std::string& process_name);
 
   // Tests can use this to create a target for mocking purposes without making
   // any IPC. To destroy call ImplicitlyDetach().
@@ -66,25 +65,21 @@ class TargetImpl : public Target, public SettingStoreObserver {
   void OnProcessExiting(int return_code) override;
 
   // SettingStoreObserver implementation.
-  void OnSettingChanged(const SettingStore&,
-                        const std::string& setting_name) override;
+  void OnSettingChanged(const SettingStore&, const std::string& setting_name) override;
 
  private:
-  static void OnLaunchOrAttachReplyThunk(fxl::WeakPtr<TargetImpl> target,
-                                         Callback callback, const Err& err,
-                                         uint64_t koid,
+  static void OnLaunchOrAttachReplyThunk(fxl::WeakPtr<TargetImpl> target, Callback callback,
+                                         const Err& err, uint64_t koid,
                                          debug_ipc::zx_status_t status,
                                          const std::string& process_name);
   void OnLaunchOrAttachReply(Callback callback, const Err& err, uint64_t koid,
-                             debug_ipc::zx_status_t status,
-                             const std::string& process_name);
+                             debug_ipc::zx_status_t status, const std::string& process_name);
 
   void OnKillOrDetachReply(TargetObserver::DestroyReason reason, const Err& err,
                            debug_ipc::zx_status_t status, Callback callback);
 
   // Actual creation that unified common behaviour.
-  std::unique_ptr<ProcessImpl> CreateProcessImpl(uint64_t koid,
-                                                 const std::string& name,
+  std::unique_ptr<ProcessImpl> CreateProcessImpl(uint64_t koid, const std::string& name,
                                                  Process::StartType);
 
   SystemImpl* system_;  // Owns |this|.

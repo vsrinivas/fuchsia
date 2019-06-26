@@ -26,17 +26,14 @@ constexpr char kClientId[] =
 constexpr char kClientSecret[] = "uBfbay2KCy9t4QveJ-dOqHtp";
 
 constexpr char kAuthServer[] = "https://accounts.google.com/o/oauth2/v2/auth";
-constexpr char kScope[] =
-    "https://www.googleapis.com/auth/devstorage.read_only";
+constexpr char kScope[] = "https://www.googleapis.com/auth/devstorage.read_only";
 constexpr char kTokenServer[] = "https://www.googleapis.com/oauth2/v4/token";
 
 bool DocIsAuthInfo(const rapidjson::Document& document) {
-  return !document.HasParseError() && document.IsObject() &&
-         document.HasMember("access_token");
+  return !document.HasParseError() && document.IsObject() && document.HasMember("access_token");
 }
 
-std::string ToDebugFileName(const std::string& name,
-                            DebugSymbolFileType file_type) {
+std::string ToDebugFileName(const std::string& name, DebugSymbolFileType file_type) {
   if (file_type == DebugSymbolFileType::kDebugInfo) {
     return name + ".debug";
   }
@@ -55,8 +52,7 @@ std::filesystem::path GetCachePath() {
 
 #ifdef __APPLE__
   if (home) {
-    ret = std::filesystem::path(home) / "Library" / "Caches" /
-          "com.googlesource.fuchsia.zxdb";
+    ret = std::filesystem::path(home) / "Library" / "Caches" / "com.googlesource.fuchsia.zxdb";
   }
 #else
   auto xdg = getenv("XDG_CACHE_HOME");
@@ -99,17 +95,14 @@ class CloudStorageSymbolServerImpl : public CloudStorageSymbolServer {
  private:
   void DoAuthenticate(const std::map<std::string, std::string>& data,
                       std::function<void(const Err&)> cb) override;
-  std::shared_ptr<Curl> PrepareCurl(const std::string& build_id,
-                                    DebugSymbolFileType file_type);
+  std::shared_ptr<Curl> PrepareCurl(const std::string& build_id, DebugSymbolFileType file_type);
   void FetchWithCurl(const std::string& build_id, DebugSymbolFileType file_type,
-                     std::shared_ptr<Curl> curl,
-                     SymbolServer::FetchCallback cb);
+                     std::shared_ptr<Curl> curl, SymbolServer::FetchCallback cb);
 };
 
 }  // namespace
 
-CloudStorageSymbolServer::CloudStorageSymbolServer(Session* session,
-                                                   const std::string& url)
+CloudStorageSymbolServer::CloudStorageSymbolServer(Session* session, const std::string& url)
     : SymbolServer(session, url) {
   // Strip off the protocol identifier, yielding only the bucket name.
   bucket_ = url.substr(5);
@@ -119,21 +112,18 @@ CloudStorageSymbolServer::CloudStorageSymbolServer(Session* session,
   }
 }
 
-std::unique_ptr<CloudStorageSymbolServer> CloudStorageSymbolServer::Impl(
-    Session* session, const std::string& url) {
+std::unique_ptr<CloudStorageSymbolServer> CloudStorageSymbolServer::Impl(Session* session,
+                                                                         const std::string& url) {
   return std::make_unique<CloudStorageSymbolServerImpl>(session, url);
 }
 
-bool CloudStorageSymbolServer::HandleRequestResult(Curl::Error result,
-                                                   long response_code,
-                                                   size_t previous_ready_count,
-                                                   Err* out_err) {
+bool CloudStorageSymbolServer::HandleRequestResult(Curl::Error result, long response_code,
+                                                   size_t previous_ready_count, Err* out_err) {
   if (!result && response_code == 200) {
     return true;
   }
 
-  if (state() != SymbolServer::State::kReady ||
-      previous_ready_count != ready_count_) {
+  if (state() != SymbolServer::State::kReady || previous_ready_count != ready_count_) {
     return false;
   }
 
@@ -180,8 +170,7 @@ std::string CloudStorageSymbolServer::AuthInfo() const {
 }
 
 void CloudStorageSymbolServerImpl::DoAuthenticate(
-    const std::map<std::string, std::string>& post_data,
-    std::function<void(const Err&)> cb) {
+    const std::map<std::string, std::string>& post_data, std::function<void(const Err&)> cb) {
   ChangeState(SymbolServer::State::kBusy);
 
   auto curl = Curl::MakeShared();
@@ -230,8 +219,7 @@ void CloudStorageSymbolServerImpl::DoAuthenticate(
       }
 
       time *= kMilli;
-      debug_ipc::MessageLoop::Current()->PostTimer(FROM_HERE, time,
-                                                   [this]() { AuthRefresh(); });
+      debug_ipc::MessageLoop::Current()->PostTimer(FROM_HERE, time, [this]() { AuthRefresh(); });
     }
 
     ChangeState(SymbolServer::State::kReady);
@@ -248,8 +236,8 @@ void CloudStorageSymbolServerImpl::DoAuthenticate(
   });
 }
 
-void CloudStorageSymbolServer::Authenticate(
-    const std::string& data, std::function<void(const Err&)> cb) {
+void CloudStorageSymbolServer::Authenticate(const std::string& data,
+                                            std::function<void(const Err&)> cb) {
   if (state() != SymbolServer::State::kAuth) {
     debug_ipc::MessageLoop::Current()->PostTask(
         FROM_HERE, [cb]() { cb(Err("Authentication not required.")); });
@@ -303,8 +291,8 @@ void CloudStorageSymbolServer::LoadCachedAuth() {
   AuthRefresh();
 }
 
-std::shared_ptr<Curl> CloudStorageSymbolServerImpl::PrepareCurl(
-    const std::string& build_id, DebugSymbolFileType file_type) {
+std::shared_ptr<Curl> CloudStorageSymbolServerImpl::PrepareCurl(const std::string& build_id,
+                                                                DebugSymbolFileType file_type) {
   if (state() != SymbolServer::State::kReady) {
     return nullptr;
   }
@@ -316,20 +304,19 @@ std::shared_ptr<Curl> CloudStorageSymbolServerImpl::PrepareCurl(
   FXL_DCHECK(curl);
 
   curl->SetURL(url);
-  curl->headers().push_back(std::string("Authorization: Bearer ") +
-                            access_token_);
+  curl->headers().push_back(std::string("Authorization: Bearer ") + access_token_);
 
   return curl;
 }
 
-void CloudStorageSymbolServerImpl::CheckFetch(
-    const std::string& build_id, DebugSymbolFileType file_type,
-    SymbolServer::CheckFetchCallback cb) {
+void CloudStorageSymbolServerImpl::CheckFetch(const std::string& build_id,
+                                              DebugSymbolFileType file_type,
+                                              SymbolServer::CheckFetchCallback cb) {
   auto curl = PrepareCurl(build_id, file_type);
 
   if (!curl) {
-    debug_ipc::MessageLoop::Current()->PostTask(
-        FROM_HERE, [cb]() { cb(Err("Server not ready."), nullptr); });
+    debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE,
+                                                [cb]() { cb(Err("Server not ready."), nullptr); });
     return;
   }
 
@@ -337,32 +324,30 @@ void CloudStorageSymbolServerImpl::CheckFetch(
 
   size_t previous_ready_count = ready_count_;
 
-  curl->Perform([this, build_id, file_type, curl, cb, previous_ready_count](
-                    Curl*, Curl::Error result) {
-    Err err;
-    auto code = curl->ResponseCode();
+  curl->Perform(
+      [this, build_id, file_type, curl, cb, previous_ready_count](Curl*, Curl::Error result) {
+        Err err;
+        auto code = curl->ResponseCode();
 
-    if (HandleRequestResult(result, code, previous_ready_count, &err)) {
-      curl->get_body() = true;
-      cb(Err(),
-         [this, build_id, file_type, curl](SymbolServer::FetchCallback fcb) {
-           FetchWithCurl(build_id, file_type, curl, fcb);
-         });
-      return;
-    }
+        if (HandleRequestResult(result, code, previous_ready_count, &err)) {
+          curl->get_body() = true;
+          cb(Err(), [this, build_id, file_type, curl](SymbolServer::FetchCallback fcb) {
+            FetchWithCurl(build_id, file_type, curl, fcb);
+          });
+          return;
+        }
 
-    cb(err, nullptr);
-  });
+        cb(err, nullptr);
+      });
 }
 
-void CloudStorageSymbolServerImpl::Fetch(const std::string& build_id,
-                                         DebugSymbolFileType file_type,
+void CloudStorageSymbolServerImpl::Fetch(const std::string& build_id, DebugSymbolFileType file_type,
                                          SymbolServer::FetchCallback cb) {
   auto curl = PrepareCurl(build_id, file_type);
 
   if (!curl) {
-    debug_ipc::MessageLoop::Current()->PostTask(
-        FROM_HERE, [cb]() { cb(Err("Server not ready."), ""); });
+    debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE,
+                                                [cb]() { cb(Err("Server not ready."), ""); });
     return;
   }
 
@@ -371,10 +356,8 @@ void CloudStorageSymbolServerImpl::Fetch(const std::string& build_id,
 
 void CloudStorageSymbolServerImpl::FetchWithCurl(const std::string& build_id,
                                                  DebugSymbolFileType file_type,
-                                                 std::shared_ptr<Curl> curl,
-                                                 FetchCallback cb) {
-  auto cache_path = session()->system().settings().GetString(
-      ClientSettings::System::kSymbolCache);
+                                                 std::shared_ptr<Curl> curl, FetchCallback cb) {
+  auto cache_path = session()->system().settings().GetString(ClientSettings::System::kSymbolCache);
   std::string path;
 
   if (!cache_path.empty()) {
@@ -414,8 +397,8 @@ void CloudStorageSymbolServerImpl::FetchWithCurl(const std::string& build_id,
     return;
   }
 
-  auto cleanup = [file, path, cache_path, build_id, file_type](
-                     bool valid, Err* result) -> std::string {
+  auto cleanup = [file, path, cache_path, build_id, file_type](bool valid,
+                                                               Err* result) -> std::string {
     fclose(file);
 
     std::error_code ec;
@@ -429,8 +412,7 @@ void CloudStorageSymbolServerImpl::FetchWithCurl(const std::string& build_id,
       return path;
     }
 
-    auto target_path =
-        std::filesystem::path(cache_path) / ".build-id" / build_id.substr(0, 2);
+    auto target_path = std::filesystem::path(cache_path) / ".build-id" / build_id.substr(0, 2);
     auto target_name = ToDebugFileName(build_id.substr(2), file_type);
 
     std::filesystem::create_directory(target_path, ec);
@@ -443,21 +425,19 @@ void CloudStorageSymbolServerImpl::FetchWithCurl(const std::string& build_id,
     }
   };
 
-  curl->set_data_callback([file](const std::string& data) {
-    return std::fwrite(data.data(), 1, data.size(), file);
-  });
+  curl->set_data_callback(
+      [file](const std::string& data) { return std::fwrite(data.data(), 1, data.size(), file); });
 
   size_t previous_ready_count = ready_count_;
 
-  curl->Perform([this, cleanup, build_id, cb, previous_ready_count](
-                    Curl* curl, Curl::Error result) {
-    Err err;
-    bool valid = HandleRequestResult(result, curl->ResponseCode(),
-                                     previous_ready_count, &err);
+  curl->Perform(
+      [this, cleanup, build_id, cb, previous_ready_count](Curl* curl, Curl::Error result) {
+        Err err;
+        bool valid = HandleRequestResult(result, curl->ResponseCode(), previous_ready_count, &err);
 
-    std::string final_path = cleanup(valid, &err);
-    cb(err, final_path);
-  });
+        std::string final_path = cleanup(valid, &err);
+        cb(err, final_path);
+      });
 }
 
 }  // namespace zxdb

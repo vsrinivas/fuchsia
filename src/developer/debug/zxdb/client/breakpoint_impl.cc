@@ -45,8 +45,7 @@ Err ValidateSettings(const BreakpointSettings& settings) {
       break;
     case BreakpointSettings::Scope::kThread:
       if (!settings.scope_target || !settings.scope_thread) {
-        return Err(ErrType::kClientApi,
-                   "Thread scopes require a target and a thread.");
+        return Err(ErrType::kClientApi, "Thread scopes require a target and a thread.");
       }
   }
   return Err();
@@ -79,11 +78,9 @@ struct BreakpointImpl::ProcessRecord {
 
   // Helper to add a list of locations to the locs array. Returns true if
   // anything was added (this makes the call site cleaner).
-  bool AddLocations(BreakpointImpl* bp, Process* process,
-                    const std::vector<Location>& locations) {
+  bool AddLocations(BreakpointImpl* bp, Process* process, const std::vector<Location>& locations) {
     for (const auto& loc : locations) {
-      locs.emplace(std::piecewise_construct,
-                   std::forward_as_tuple(loc.address()),
+      locs.emplace(std::piecewise_construct, std::forward_as_tuple(loc.address()),
                    std::forward_as_tuple(bp, process, loc.address()));
     }
     return !locations.empty();
@@ -126,8 +123,7 @@ void BreakpointImpl::SetSettings(const BreakpointSettings& settings,
                                  std::function<void(const Err&)> callback) {
   Err err = ValidateSettings(settings);
   if (err.has_error()) {
-    debug_ipc::MessageLoop::Current()->PostTask(
-        FROM_HERE, [callback, err]() { callback(err); });
+    debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [callback, err]() { callback(err); });
     return;
   }
 
@@ -153,9 +149,7 @@ std::vector<BreakpointLocation*> BreakpointImpl::GetLocations() {
   return result;
 }
 
-void BreakpointImpl::UpdateStats(const debug_ipc::BreakpointStats& stats) {
-  stats_ = stats;
-}
+void BreakpointImpl::UpdateStats(const debug_ipc::BreakpointStats& stats) { stats_ = stats; }
 
 void BreakpointImpl::BackendBreakpointRemoved() { backend_installed_ = false; }
 
@@ -173,22 +167,19 @@ void BreakpointImpl::WillDestroyThread(Process* process, Thread* thread) {
   }
 }
 
-void BreakpointImpl::DidLoadModuleSymbols(Process* process,
-                                          LoadedModuleSymbols* module) {
+void BreakpointImpl::DidLoadModuleSymbols(Process* process, LoadedModuleSymbols* module) {
   // Should only get this notification for relevant processes.
   FXL_DCHECK(CouldApplyToProcess(process));
 
   // Resolve addresses.
   ResolveOptions options;
   options.symbolize = false;  // Just want the addresses back.
-  if (procs_[process].AddLocations(
-          this, process,
-          module->ResolveInputLocation(settings_.location, options)))
+  if (procs_[process].AddLocations(this, process,
+                                   module->ResolveInputLocation(settings_.location, options)))
     SyncBackend();
 }
 
-void BreakpointImpl::WillUnloadModuleSymbols(Process* process,
-                                             LoadedModuleSymbols* module) {
+void BreakpointImpl::WillUnloadModuleSymbols(Process* process, LoadedModuleSymbols* module) {
   // TODO(brettw) need to get the address range of this module and then
   // remove all breakpoints in that range.
 }
@@ -249,14 +240,12 @@ void BreakpointImpl::SyncBackend(std::function<void(const Err&)> callback) {
   } else {
     // Backend doesn't know about it and we don't require anything.
     if (callback) {
-      debug_ipc::MessageLoop::Current()->PostTask(
-          FROM_HERE, [callback]() { callback(Err()); });
+      debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [callback]() { callback(Err()); });
     }
   }
 }
 
-void BreakpointImpl::SendBackendAddOrChange(
-    std::function<void(const Err&)> callback) {
+void BreakpointImpl::SendBackendAddOrChange(std::function<void(const Err&)> callback) {
   backend_installed_ = true;
 
   debug_ipc::AddOrChangeBreakpointRequest request;
@@ -298,9 +287,8 @@ void BreakpointImpl::SendBackendAddOrChange(
   }
 
   session()->remote_api()->AddOrChangeBreakpoint(
-      request,
-      [callback, breakpoint = impl_weak_factory_.GetWeakPtr()](
-          const Err& err, debug_ipc::AddOrChangeBreakpointReply reply) {
+      request, [callback, breakpoint = impl_weak_factory_.GetWeakPtr()](
+                   const Err& err, debug_ipc::AddOrChangeBreakpointReply reply) {
         // Be sure to issue the callback even if the breakpoint no longer
         // exists.
         if (err.has_error()) {
@@ -326,8 +314,7 @@ void BreakpointImpl::SendBackendAddOrChange(
           }
           if (callback) {
             std::stringstream ss;
-            ss << "Error setting breakpoint: "
-               << debug_ipc::ZxStatusToString(reply.status);
+            ss << "Error setting breakpoint: " << debug_ipc::ZxStatusToString(reply.status);
             if (reply.status == debug_ipc::kZxErrNoResources) {
               ss << std::endl
                  << "Is this a hardware breakpoint? Check \"sys-info\" to "
@@ -343,14 +330,12 @@ void BreakpointImpl::SendBackendAddOrChange(
       });
 }
 
-void BreakpointImpl::SendBackendRemove(
-    std::function<void(const Err&)> callback) {
+void BreakpointImpl::SendBackendRemove(std::function<void(const Err&)> callback) {
   debug_ipc::RemoveBreakpointRequest request;
   request.breakpoint_id = backend_id_;
 
   session()->remote_api()->RemoveBreakpoint(
-      request,
-      [callback](const Err& err, debug_ipc::RemoveBreakpointReply reply) {
+      request, [callback](const Err& err, debug_ipc::RemoveBreakpointReply reply) {
         if (callback)
           callback(err);
       });
@@ -394,9 +379,8 @@ bool BreakpointImpl::RegisterProcess(Process* process) {
   ProcessSymbols* symbols = process->GetSymbols();
   ResolveOptions options;
   options.symbolize = false;  // Only need addresses.
-  changed |= record.AddLocations(
-      this, process,
-      symbols->ResolveInputLocation(settings_.location, options));
+  changed |= record.AddLocations(this, process,
+                                 symbols->ResolveInputLocation(settings_.location, options));
   return changed;
 }
 

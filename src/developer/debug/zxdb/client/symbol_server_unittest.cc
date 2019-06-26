@@ -22,13 +22,12 @@ namespace zxdb {
 class SymbolServerTest : public TestWithLoop {
  public:
   SymbolServerTest() : session_() {
-    static auto fake_home = std::filesystem::path(GetSelfPath()).parent_path() /
-                            "test_data" / "zxdb" / "fake_home";
+    static auto fake_home =
+        std::filesystem::path(GetSelfPath()).parent_path() / "test_data" / "zxdb" / "fake_home";
     setenv("HOME", fake_home.string().c_str(), true);
     unsetenv("XDG_CACHE_HOME");
 
-    auto server = std::make_unique<MockCloudStorageSymbolServer>(
-        &session_, "gs://fake-bucket");
+    auto server = std::make_unique<MockCloudStorageSymbolServer>(&session_, "gs://fake-bucket");
     server_ = server.get();
     session_.system_impl().InjectSymbolServerForTesting(std::move(server));
   }
@@ -39,9 +38,8 @@ class SymbolServerTest : public TestWithLoop {
   MockCloudStorageSymbolServer* server() { return server_; }
 
   void QuietlyFinishInit() {
-    server()->on_do_authenticate =
-        [](const std::map<std::string, std::string>& data,
-           std::function<void(const Err&)>) {};
+    server()->on_do_authenticate = [](const std::map<std::string, std::string>& data,
+                                      std::function<void(const Err&)>) {};
     server()->InitForTest();
     server()->ForceReady();
   }
@@ -60,9 +58,8 @@ class SymbolServerTest : public TestWithLoop {
 TEST_F(SymbolServerTest, LoadAuth) {
   std::map<std::string, std::string> got;
 
-  server()->on_do_authenticate =
-      [&got](const std::map<std::string, std::string>& data,
-             std::function<void(const Err&)>) { got = data; };
+  server()->on_do_authenticate = [&got](const std::map<std::string, std::string>& data,
+                                        std::function<void(const Err&)>) { got = data; };
 
   server()->InitForTest();
 
@@ -86,20 +83,17 @@ TEST_F(SymbolServerTest, DownloadTypes) {
   bool saw_binary_request = false;
   bool saw_symbol_request = false;
 
-  server()->on_check_fetch =
-      [this, &saw_weird_module, &saw_binary_request, &saw_symbol_request](
-          const std::string& build_id, DebugSymbolFileType file_type,
-          SymbolServer::CheckFetchCallback cb) {
-        saw_weird_module = build_id != "1234";
-        saw_binary_request =
-            saw_binary_request || file_type == DebugSymbolFileType::kBinary;
-        saw_symbol_request =
-            saw_symbol_request || file_type == DebugSymbolFileType::kDebugInfo;
+  server()->on_check_fetch = [this, &saw_weird_module, &saw_binary_request, &saw_symbol_request](
+                                 const std::string& build_id, DebugSymbolFileType file_type,
+                                 SymbolServer::CheckFetchCallback cb) {
+    saw_weird_module = build_id != "1234";
+    saw_binary_request = saw_binary_request || file_type == DebugSymbolFileType::kBinary;
+    saw_symbol_request = saw_symbol_request || file_type == DebugSymbolFileType::kDebugInfo;
 
-        if (saw_weird_module || (saw_binary_request && saw_symbol_request)) {
-          loop().QuitNow();
-        }
-      };
+    if (saw_weird_module || (saw_binary_request && saw_symbol_request)) {
+      loop().QuitNow();
+    }
+  };
 
   process->GetSymbols()->SetModules({module});
 

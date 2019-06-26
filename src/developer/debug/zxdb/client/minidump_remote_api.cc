@@ -27,9 +27,7 @@ namespace zxdb {
 
 namespace {
 
-Err ErrNoLive() {
-  return Err(ErrType::kNoConnection, "System is no longer live");
-}
+Err ErrNoLive() { return Err(ErrType::kNoConnection, "System is no longer live"); }
 
 Err ErrNoDump() { return Err("Core dump failed to open"); }
 
@@ -37,26 +35,22 @@ Err ErrNoArch() { return Err("Architecture not supported"); }
 
 template <typename ReplyType>
 void ErrNoLive(std::function<void(const Err&, ReplyType)> cb) {
-  debug_ipc::MessageLoop::Current()->PostTask(
-      FROM_HERE, [cb]() { cb(ErrNoLive(), ReplyType()); });
+  debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [cb]() { cb(ErrNoLive(), ReplyType()); });
 }
 
 template <typename ReplyType>
 void ErrNoDump(std::function<void(const Err&, ReplyType)> cb) {
-  debug_ipc::MessageLoop::Current()->PostTask(
-      FROM_HERE, [cb]() { cb(ErrNoDump(), ReplyType()); });
+  debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [cb]() { cb(ErrNoDump(), ReplyType()); });
 }
 
 template <typename ReplyType>
 void ErrNoArch(std::function<void(const Err&, ReplyType)> cb) {
-  debug_ipc::MessageLoop::Current()->PostTask(
-      FROM_HERE, [cb]() { cb(ErrNoArch(), ReplyType()); });
+  debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [cb]() { cb(ErrNoArch(), ReplyType()); });
 }
 
 template <typename ReplyType>
 void Succeed(std::function<void(const Err&, ReplyType)> cb, ReplyType r) {
-  debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE,
-                                              [cb, r]() { cb(Err(), r); });
+  debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [cb, r]() { cb(Err(), r); });
 }
 
 template <typename ValueType>
@@ -65,14 +59,12 @@ void AddReg(debug_ipc::RegisterCategory* category, debug_ipc::RegisterID id,
   auto& reg = category->registers.emplace_back();
   reg.id = id;
   reg.data.resize(sizeof(ValueType));
-  std::memcpy(reg.data.data(), reinterpret_cast<const void*>(&value),
-              reg.data.size());
+  std::memcpy(reg.data.data(), reinterpret_cast<const void*>(&value), reg.data.size());
 }
 
 template <typename IterType>
-debug_ipc::RegisterCategory* MakeCategory(
-    IterType& pos, debug_ipc::RegisterCategory::Type type,
-    debug_ipc::ReadRegistersReply* reply) {
+debug_ipc::RegisterCategory* MakeCategory(IterType& pos, debug_ipc::RegisterCategory::Type type,
+                                          debug_ipc::ReadRegistersReply* reply) {
   if (*pos == type) {
     pos++;
     auto category = &reply->categories.emplace_back();
@@ -90,8 +82,7 @@ void PopulateRegistersARM64(const crashpad::CPUContextARM64& ctx,
 
   using R = debug_ipc::RegisterID;
 
-  auto category =
-      MakeCategory(pos, debug_ipc::RegisterCategory::Type::kGeneral, reply);
+  auto category = MakeCategory(pos, debug_ipc::RegisterCategory::Type::kGeneral, reply);
   if (category != nullptr) {
     AddReg(category, R::kARMv8_x0, ctx.regs[0]);
     AddReg(category, R::kARMv8_x1, ctx.regs[1]);
@@ -132,8 +123,7 @@ void PopulateRegistersARM64(const crashpad::CPUContextARM64& ctx,
   // ARM doesn't define any registers in this category.
   MakeCategory(pos, debug_ipc::RegisterCategory::Type::kFP, reply);
 
-  category =
-      MakeCategory(pos, debug_ipc::RegisterCategory::Type::kVector, reply);
+  category = MakeCategory(pos, debug_ipc::RegisterCategory::Type::kVector, reply);
   if (category != nullptr) {
     AddReg(category, R::kARMv8_fpcr, ctx.fpcr);
     AddReg(category, R::kARMv8_fpsr, ctx.fpsr);
@@ -182,8 +172,7 @@ void PopulateRegistersX86_64(const crashpad::CPUContextX86_64& ctx,
 
   using R = debug_ipc::RegisterID;
 
-  auto category =
-      MakeCategory(pos, debug_ipc::RegisterCategory::Type::kGeneral, reply);
+  auto category = MakeCategory(pos, debug_ipc::RegisterCategory::Type::kGeneral, reply);
   if (category != nullptr) {
     AddReg(category, R::kX64_rax, ctx.rax);
     AddReg(category, R::kX64_rbx, ctx.rbx);
@@ -223,8 +212,7 @@ void PopulateRegistersX86_64(const crashpad::CPUContextX86_64& ctx,
     AddReg(category, R::kX64_st7, ctx.fxsave.st_mm[7]);
   }
 
-  category =
-      MakeCategory(pos, debug_ipc::RegisterCategory::Type::kVector, reply);
+  category = MakeCategory(pos, debug_ipc::RegisterCategory::Type::kVector, reply);
   if (category != nullptr) {
     AddReg(category, R::kX64_mxcsr, ctx.fxsave.mxcsr);
     AddReg(category, R::kX64_xmm0, ctx.fxsave.xmm[0]);
@@ -247,8 +235,7 @@ void PopulateRegistersX86_64(const crashpad::CPUContextX86_64& ctx,
     // YMM registers are missing from minidump at this time.
   }
 
-  category =
-      MakeCategory(pos, debug_ipc::RegisterCategory::Type::kDebug, reply);
+  category = MakeCategory(pos, debug_ipc::RegisterCategory::Type::kDebug, reply);
   if (category != nullptr) {
     AddReg(category, R::kX64_dr0, ctx.dr0);
     AddReg(category, R::kX64_dr1, ctx.dr1);
@@ -298,15 +285,13 @@ class SnapshotMemoryRegion : public MinidumpRemoteAPI::MemoryRegion {
         snapshot_(snapshot) {}
   virtual ~SnapshotMemoryRegion() = default;
 
-  std::optional<std::vector<uint8_t>> Read(uint64_t offset,
-                                           size_t size) const override;
+  std::optional<std::vector<uint8_t>> Read(uint64_t offset, size_t size) const override;
 
  private:
   const crashpad::MemorySnapshot* snapshot_;
 };
 
-std::optional<std::vector<uint8_t>> SnapshotMemoryRegion::Read(
-    uint64_t offset, size_t size) const {
+std::optional<std::vector<uint8_t>> SnapshotMemoryRegion::Read(uint64_t offset, size_t size) const {
   std::vector<uint8_t> data;
   data.resize(size);
 
@@ -324,23 +309,19 @@ class ElfMemoryRegion : public MinidumpRemoteAPI::MemoryRegion {
   // Construct a memory region from a crashpad MemorySnapshot. The pointer
   // should always be derived from the minidump_ object, and will thus always
   // share its lifetime.
-  explicit ElfMemoryRegion(std::shared_ptr<elflib::ElfLib>& elf,
-                           uint64_t start_in, size_t size_in, size_t idx)
-      : MinidumpRemoteAPI::MemoryRegion(start_in, size_in),
-        idx_(idx),
-        elf_(elf) {}
+  explicit ElfMemoryRegion(std::shared_ptr<elflib::ElfLib>& elf, uint64_t start_in, size_t size_in,
+                           size_t idx)
+      : MinidumpRemoteAPI::MemoryRegion(start_in, size_in), idx_(idx), elf_(elf) {}
   virtual ~ElfMemoryRegion() = default;
 
-  std::optional<std::vector<uint8_t>> Read(uint64_t offset,
-                                           size_t size) const override;
+  std::optional<std::vector<uint8_t>> Read(uint64_t offset, size_t size) const override;
 
  private:
   size_t idx_;
   std::shared_ptr<elflib::ElfLib> elf_;
 };
 
-std::optional<std::vector<uint8_t>> ElfMemoryRegion::Read(uint64_t offset,
-                                                          size_t size) const {
+std::optional<std::vector<uint8_t>> ElfMemoryRegion::Read(uint64_t offset, size_t size) const {
   if (offset + size > this->size) {
     return std::nullopt;
   }
@@ -383,9 +364,7 @@ std::string MinidumpGetUUID(const crashpad::ModuleSnapshot& mod) {
 
 class MinidumpUnwindMemory : public unwindstack::Memory {
  public:
-  MinidumpUnwindMemory(
-      const std::vector<std::unique_ptr<MinidumpRemoteAPI::MemoryRegion>>&
-          regions)
+  MinidumpUnwindMemory(const std::vector<std::unique_ptr<MinidumpRemoteAPI::MemoryRegion>>& regions)
       : regions_(regions) {}
 
   size_t Read(uint64_t addr, void* dst, size_t size) override {
@@ -492,8 +471,7 @@ std::unique_ptr<unwindstack::Regs> MinidumpRemoteAPI::GetUnwindRegsARM64(
   ucontext.uc_mcontext.regs[unwindstack::Arm64Reg::ARM64_REG_PC] = ctx.pc;
 
   return std::unique_ptr<unwindstack::Regs>(
-      unwindstack::Regs::CreateFromUcontext(unwindstack::ArchEnum::ARCH_ARM64,
-                                            &ucontext));
+      unwindstack::Regs::CreateFromUcontext(unwindstack::ArchEnum::ARCH_ARM64, &ucontext));
 }
 
 std::unique_ptr<unwindstack::Regs> MinidumpRemoteAPI::GetUnwindRegsX86_64(
@@ -521,8 +499,7 @@ std::unique_ptr<unwindstack::Regs> MinidumpRemoteAPI::GetUnwindRegsX86_64(
   ucontext.uc_mcontext.rip = ctx.rip;
 
   return std::unique_ptr<unwindstack::Regs>(
-      unwindstack::Regs::CreateFromUcontext(unwindstack::ArchEnum::ARCH_X86_64,
-                                            &ucontext));
+      unwindstack::Regs::CreateFromUcontext(unwindstack::ArchEnum::ARCH_X86_64, &ucontext));
 }
 
 void MinidumpRemoteAPI::CollectMemory() {
@@ -540,8 +517,8 @@ void MinidumpRemoteAPI::CollectMemory() {
 
   for (const auto& minidump_mod : minidump_->Modules()) {
     uint64_t base = minidump_mod->Address();
-    auto path = build_id_index.FileForBuildID(MinidumpGetUUID(*minidump_mod),
-                                              DebugSymbolFileType::kBinary);
+    auto path =
+        build_id_index.FileForBuildID(MinidumpGetUUID(*minidump_mod), DebugSymbolFileType::kBinary);
     std::shared_ptr<elflib::ElfLib> elf = elflib::ElfLib::Create(path);
 
     if (!elf) {
@@ -563,8 +540,8 @@ void MinidumpRemoteAPI::CollectMemory() {
         continue;
       }
 
-      memory_.push_back(std::make_unique<ElfMemoryRegion>(
-          elf, segment.p_vaddr + base, segment.p_memsz, i));
+      memory_.push_back(
+          std::make_unique<ElfMemoryRegion>(elf, segment.p_vaddr + base, segment.p_memsz, i));
     }
   }
 
@@ -609,9 +586,8 @@ Err MinidumpRemoteAPI::Close() {
   return Err();
 }
 
-void MinidumpRemoteAPI::Hello(
-    const debug_ipc::HelloRequest& request,
-    std::function<void(const Err&, debug_ipc::HelloReply)> cb) {
+void MinidumpRemoteAPI::Hello(const debug_ipc::HelloRequest& request,
+                              std::function<void(const Err&, debug_ipc::HelloReply)> cb) {
   if (!minidump_) {
     ErrNoDump(cb);
     return;
@@ -640,24 +616,21 @@ void MinidumpRemoteAPI::Hello(
   Succeed(cb, reply);
 }
 
-void MinidumpRemoteAPI::Launch(
-    const debug_ipc::LaunchRequest& request,
-    std::function<void(const Err&, debug_ipc::LaunchReply)> cb) {
+void MinidumpRemoteAPI::Launch(const debug_ipc::LaunchRequest& request,
+                               std::function<void(const Err&, debug_ipc::LaunchReply)> cb) {
   ErrNoLive(cb);
 }
 
-void MinidumpRemoteAPI::Kill(
-    const debug_ipc::KillRequest& request,
-    std::function<void(const Err&, debug_ipc::KillReply)> cb) {
+void MinidumpRemoteAPI::Kill(const debug_ipc::KillRequest& request,
+                             std::function<void(const Err&, debug_ipc::KillReply)> cb) {
   ErrNoLive(cb);
 }
 
 constexpr uint32_t kAttachOk = 0;
 constexpr uint32_t kAttachNotFound = 1;
 
-void MinidumpRemoteAPI::Attach(
-    const debug_ipc::AttachRequest& request,
-    std::function<void(const Err&, debug_ipc::AttachReply)> cb) {
+void MinidumpRemoteAPI::Attach(const debug_ipc::AttachRequest& request,
+                               std::function<void(const Err&, debug_ipc::AttachReply)> cb) {
   if (!minidump_) {
     ErrNoDump(cb);
     return;
@@ -692,8 +665,7 @@ void MinidumpRemoteAPI::Attach(
   mod_notification.modules = GetModules();
 
   std::function<void(const Err&, debug_ipc::AttachReply)> new_cb =
-      [cb, notifications, mod_notification, session](const Err& e,
-                                                     debug_ipc::AttachReply a) {
+      [cb, notifications, mod_notification, session](const Err& e, debug_ipc::AttachReply a) {
         cb(e, a);
 
         for (const auto& notification : notifications) {
@@ -706,9 +678,8 @@ void MinidumpRemoteAPI::Attach(
   Succeed(new_cb, reply);
 }
 
-void MinidumpRemoteAPI::Detach(
-    const debug_ipc::DetachRequest& request,
-    std::function<void(const Err&, debug_ipc::DetachReply)> cb) {
+void MinidumpRemoteAPI::Detach(const debug_ipc::DetachRequest& request,
+                               std::function<void(const Err&, debug_ipc::DetachReply)> cb) {
   if (!minidump_) {
     ErrNoDump(cb);
     return;
@@ -726,9 +697,8 @@ void MinidumpRemoteAPI::Detach(
   Succeed(cb, reply);
 }
 
-void MinidumpRemoteAPI::Modules(
-    const debug_ipc::ModulesRequest& request,
-    std::function<void(const Err&, debug_ipc::ModulesReply)> cb) {
+void MinidumpRemoteAPI::Modules(const debug_ipc::ModulesRequest& request,
+                                std::function<void(const Err&, debug_ipc::ModulesReply)> cb) {
   if (!minidump_) {
     ErrNoDump(cb);
     return;
@@ -746,15 +716,13 @@ void MinidumpRemoteAPI::Modules(
   Succeed(cb, reply);
 }
 
-void MinidumpRemoteAPI::Pause(
-    const debug_ipc::PauseRequest& request,
-    std::function<void(const Err&, debug_ipc::PauseReply)> cb) {
+void MinidumpRemoteAPI::Pause(const debug_ipc::PauseRequest& request,
+                              std::function<void(const Err&, debug_ipc::PauseReply)> cb) {
   ErrNoLive(cb);
 }
 
-void MinidumpRemoteAPI::Resume(
-    const debug_ipc::ResumeRequest& request,
-    std::function<void(const Err&, debug_ipc::ResumeReply)> cb) {
+void MinidumpRemoteAPI::Resume(const debug_ipc::ResumeRequest& request,
+                               std::function<void(const Err&, debug_ipc::ResumeReply)> cb) {
   ErrNoLive(cb);
 }
 
@@ -779,9 +747,8 @@ void MinidumpRemoteAPI::ProcessTree(
   Succeed(cb, reply);
 }
 
-void MinidumpRemoteAPI::Threads(
-    const debug_ipc::ThreadsRequest& request,
-    std::function<void(const Err&, debug_ipc::ThreadsReply)> cb) {
+void MinidumpRemoteAPI::Threads(const debug_ipc::ThreadsRequest& request,
+                                std::function<void(const Err&, debug_ipc::ThreadsReply)> cb) {
   if (!minidump_) {
     ErrNoDump(cb);
     return;
@@ -802,9 +769,8 @@ void MinidumpRemoteAPI::Threads(
   Succeed(cb, reply);
 }
 
-void MinidumpRemoteAPI::ReadMemory(
-    const debug_ipc::ReadMemoryRequest& request,
-    std::function<void(const Err&, debug_ipc::ReadMemoryReply)> cb) {
+void MinidumpRemoteAPI::ReadMemory(const debug_ipc::ReadMemoryRequest& request,
+                                   std::function<void(const Err&, debug_ipc::ReadMemoryReply)> cb) {
   if (!minidump_) {
     ErrNoDump(cb);
     return;
@@ -908,9 +874,8 @@ void MinidumpRemoteAPI::RemoveBreakpoint(
   ErrNoLive(cb);
 }
 
-void MinidumpRemoteAPI::SysInfo(
-    const debug_ipc::SysInfoRequest& request,
-    std::function<void(const Err&, debug_ipc::SysInfoReply)> cb) {
+void MinidumpRemoteAPI::SysInfo(const debug_ipc::SysInfoRequest& request,
+                                std::function<void(const Err&, debug_ipc::SysInfoReply)> cb) {
   if (!minidump_) {
     ErrNoDump(cb);
     return;
@@ -977,21 +942,18 @@ void MinidumpRemoteAPI::ThreadStatus(
 
   auto modules = minidump_->Modules();
 
-  std::sort(
-      modules.begin(), modules.end(),
-      [](const crashpad::ModuleSnapshot* a, const crashpad::ModuleSnapshot* b) {
-        return a->Address() < b->Address();
-      });
+  std::sort(modules.begin(), modules.end(),
+            [](const crashpad::ModuleSnapshot* a, const crashpad::ModuleSnapshot* b) {
+              return a->Address() < b->Address();
+            });
 
   unwindstack::Maps maps;
   for (const auto& mod : modules) {
-    maps.Add(mod->Address(), mod->Address() + mod->Size(), 0, 0, mod->Name(),
-             0);
+    maps.Add(mod->Address(), mod->Address() + mod->Size(), 0, 0, mod->Name(), 0);
   }
 
-  unwindstack::Unwinder unwinder(
-      40, &maps, regs.get(), std::make_shared<MinidumpUnwindMemory>(memory_),
-      true);
+  unwindstack::Unwinder unwinder(40, &maps, regs.get(),
+                                 std::make_shared<MinidumpUnwindMemory>(memory_), true);
 
   unwinder.Unwind();
 
@@ -1030,9 +992,8 @@ void MinidumpRemoteAPI::AddressSpace(
     for (const auto& region_object : minidump_->MemoryMap()) {
       const auto& region = region_object->AsMinidumpMemoryInfo();
 
-      if (request.address > 0 &&
-          (request.address < region.BaseAddress ||
-           request.address >= region.BaseAddress + region.RegionSize)) {
+      if (request.address > 0 && (request.address < region.BaseAddress ||
+                                  request.address >= region.BaseAddress + region.RegionSize)) {
         continue;
       }
 
@@ -1046,9 +1007,8 @@ void MinidumpRemoteAPI::AddressSpace(
   Succeed(cb, reply);
 }
 
-void MinidumpRemoteAPI::JobFilter(
-    const debug_ipc::JobFilterRequest& request,
-    std::function<void(const Err&, debug_ipc::JobFilterReply)> cb) {
+void MinidumpRemoteAPI::JobFilter(const debug_ipc::JobFilterRequest& request,
+                                  std::function<void(const Err&, debug_ipc::JobFilterReply)> cb) {
   ErrNoLive(cb);
 }
 
