@@ -834,13 +834,16 @@ static inline void iwl_enable_interrupts(struct iwl_trans* trans) {
     _iwl_enable_interrupts(trans);
     spin_unlock(&trans_pcie->irq_lock);
 }
-static inline void iwl_enable_hw_int_msk_msix(struct iwl_trans* trans, uint32_t msk) {
-    struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
+#endif  // NEEDS_PORTING
 
-    iwl_write32(trans, CSR_MSIX_HW_INT_MASK_AD, ~msk);
-    trans_pcie->hw_mask = msk;
+static inline void iwl_enable_hw_int_msk_msix(struct iwl_trans* trans, uint32_t msk) {
+  struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
+
+  iwl_write32(trans, CSR_MSIX_HW_INT_MASK_AD, ~msk);
+  trans_pcie->hw_mask = msk;
 }
 
+#if 0   // NEEDS_PORTING
 static inline void iwl_enable_fh_int_msk_msix(struct iwl_trans* trans, uint32_t msk) {
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 
@@ -897,31 +900,33 @@ static inline const char* queue_name(struct device* dev, struct iwl_trans_pcie* 
 
     return devm_kasprintf(dev, GFP_KERNEL, DRV_NAME ": queue %d", i);
 }
+#endif  // NEEDS_PORTING
 
 static inline void iwl_enable_rfkill_int(struct iwl_trans* trans) {
-    struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
+  struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 
-    IWL_DEBUG_ISR(trans, "Enabling rfkill interrupt\n");
-    if (!trans_pcie->msix_enabled) {
-        trans_pcie->inta_mask = CSR_INT_BIT_RF_KILL;
-        iwl_write32(trans, CSR_INT_MASK, trans_pcie->inta_mask);
-    } else {
-        iwl_write32(trans, CSR_MSIX_FH_INT_MASK_AD, trans_pcie->fh_init_mask);
-        iwl_enable_hw_int_msk_msix(trans, MSIX_HW_INT_CAUSES_REG_RF_KILL);
-    }
+  IWL_DEBUG_ISR(trans, "Enabling rfkill interrupt\n");
+  if (!trans_pcie->msix_enabled) {
+    trans_pcie->inta_mask = CSR_INT_BIT_RF_KILL;
+    iwl_write32(trans, CSR_INT_MASK, trans_pcie->inta_mask);
+  } else {
+    iwl_write32(trans, CSR_MSIX_FH_INT_MASK_AD, trans_pcie->fh_init_mask);
+    iwl_enable_hw_int_msk_msix(trans, MSIX_HW_INT_CAUSES_REG_RF_KILL);
+  }
 
-    if (trans->cfg->device_family == IWL_DEVICE_FAMILY_9000) {
-        /*
-         * On 9000-series devices this bit isn't enabled by default, so
-         * when we power down the device we need set the bit to allow it
-         * to wake up the PCI-E bus for RF-kill interrupts.
-         */
-        iwl_set_bit(trans, CSR_GP_CNTRL, CSR_GP_CNTRL_REG_FLAG_RFKILL_WAKE_L1A_EN);
-    }
+  if (trans->cfg->device_family == IWL_DEVICE_FAMILY_9000) {
+    /*
+     * On 9000-series devices this bit isn't enabled by default, so
+     * when we power down the device we need set the bit to allow it
+     * to wake up the PCI-E bus for RF-kill interrupts.
+     */
+    iwl_set_bit(trans, CSR_GP_CNTRL, CSR_GP_CNTRL_REG_FLAG_RFKILL_WAKE_L1A_EN);
+  }
 }
 
 void iwl_pcie_handle_rfkill_irq(struct iwl_trans* trans);
 
+#if 0   // NEEDS_PORTING
 static inline void iwl_wake_queue(struct iwl_trans* trans, struct iwl_txq* txq) {
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 
@@ -949,19 +954,17 @@ static inline bool iwl_queue_used(const struct iwl_txq* q, int i) {
 
     return w >= r ? (index >= r && index < w) : !(index < r && index >= w);
 }
+#endif  // NEEDS_PORTING
 
 static inline bool iwl_is_rfkill_set(struct iwl_trans* trans) {
-    struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
+  struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 
-    lockdep_assert_held(&trans_pcie->mutex);
+  if (trans_pcie->debug_rfkill) {
+    return true;
+  }
 
-    if (trans_pcie->debug_rfkill) {
-        return true;
-    }
-
-    return !(iwl_read32(trans, CSR_GP_CNTRL) & CSR_GP_CNTRL_REG_FLAG_HW_RF_KILL_SW);
+  return !(iwl_read32(trans, CSR_GP_CNTRL) & CSR_GP_CNTRL_REG_FLAG_HW_RF_KILL_SW);
 }
-#endif  // NEEDS_PORTING
 
 static inline void __iwl_trans_pcie_set_bits_mask(struct iwl_trans* trans, uint32_t reg,
                                                   uint32_t mask, uint32_t value) {
