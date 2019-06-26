@@ -4,7 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_ARCH_X86_HYPERVISOR_PVCLOCK_PRIV_H_
+#define ZIRCON_KERNEL_ARCH_X86_HYPERVISOR_PVCLOCK_PRIV_H_
 
 #include <hypervisor/guest_physical_address_space.h>
 #include <zircon/types.h>
@@ -20,11 +21,11 @@ struct PvClockState;
 // More detailed description of KVM API is available here:
 //  https://www.kernel.org/doc/Documentation/virtual/kvm/hypercalls.txt
 struct PvClockOffset {
-    uint64_t sec;
-    uint64_t nsec;
-    uint64_t tsc;
-    uint32_t flags;
-    uint32_t unused[9];
+  uint64_t sec;
+  uint64_t nsec;
+  uint64_t tsc;
+  uint32_t flags;
+  uint32_t unused[9];
 } __PACKED;
 
 // Updates guest boot time.
@@ -46,3 +47,5 @@ void pvclock_update_system_time(PvClockState* pvclock, hypervisor::GuestPhysical
 // physical address of PvClockOffset structure where the result should be stored.
 zx_status_t pvclock_populate_offset(hypervisor::GuestPhysicalAddressSpace* gpas,
                                     zx_vaddr_t guest_paddr);
+
+#endif  // ZIRCON_KERNEL_ARCH_X86_HYPERVISOR_PVCLOCK_PRIV_H_

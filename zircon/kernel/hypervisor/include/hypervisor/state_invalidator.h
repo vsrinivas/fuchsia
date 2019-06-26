@@ -4,14 +4,17 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_HYPERVISOR_INCLUDE_HYPERVISOR_STATE_INVALIDATOR_H_
+#define ZIRCON_KERNEL_HYPERVISOR_INCLUDE_HYPERVISOR_STATE_INVALIDATOR_H_
 
 namespace hypervisor {
 
 // Allows hypervisor state to be invalidated.
 struct StateInvalidator {
-    virtual ~StateInvalidator() = default;
-    virtual void Invalidate() = 0;
+  virtual ~StateInvalidator() = default;
+  virtual void Invalidate() = 0;
 };
 
-} // namespace hypervisor
+}  // namespace hypervisor
+
+#endif  // ZIRCON_KERNEL_HYPERVISOR_INCLUDE_HYPERVISOR_STATE_INVALIDATOR_H_

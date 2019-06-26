@@ -4,7 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_ARCH_X86_HYPERVISOR_VMX_CPU_STATE_PRIV_H_
+#define ZIRCON_KERNEL_ARCH_X86_HYPERVISOR_VMX_CPU_STATE_PRIV_H_
 
 #include <arch/hypervisor.h>
 
@@ -32,29 +33,31 @@
 
 /* Stores VMX info from the IA32_VMX_BASIC MSR. */
 struct VmxInfo {
-    uint32_t revision_id;
-    uint16_t region_size;
-    bool write_back;
-    bool io_exit_info;
-    bool vmx_controls;
+  uint32_t revision_id;
+  uint16_t region_size;
+  bool write_back;
+  bool io_exit_info;
+  bool vmx_controls;
 
-    VmxInfo();
+  VmxInfo();
 };
 
 /* Stores EPT info from the IA32_VMX_EPT_VPID_CAP MSR. */
 struct EptInfo {
-    bool page_walk_4;
-    bool write_back;
-    bool invept;
+  bool page_walk_4;
+  bool write_back;
+  bool invept;
 
-    EptInfo();
+  EptInfo();
 };
 
 /* VMX region to be used with both VMXON and VMCS. */
 struct VmxRegion {
-    uint32_t revision_id;
+  uint32_t revision_id;
 };
 
 zx_status_t alloc_vmx_state();
 zx_status_t free_vmx_state();
 bool cr_is_invalid(uint64_t cr_value, uint32_t fixed0_msr, uint32_t fixed1_msr);
+
+#endif  // ZIRCON_KERNEL_ARCH_X86_HYPERVISOR_VMX_CPU_STATE_PRIV_H_

@@ -4,7 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_ARCH_X86_HYPERVISOR_VCPU_PRIV_H_
+#define ZIRCON_KERNEL_ARCH_X86_HYPERVISOR_VCPU_PRIV_H_
 
 #include <hypervisor/state_invalidator.h>
 
@@ -212,39 +213,41 @@ enum class InvEpt : uint64_t {
 
 // Loads a VMCS within a given scope.
 class AutoVmcs : public hypervisor::StateInvalidator {
-public:
-    AutoVmcs(paddr_t vmcs_address_);
-    ~AutoVmcs();
+ public:
+  AutoVmcs(paddr_t vmcs_address_);
+  ~AutoVmcs();
 
-    void Invalidate() override;
-    void InterruptWindowExiting(bool enable);
-    void IssueInterrupt(uint32_t vector);
+  void Invalidate() override;
+  void InterruptWindowExiting(bool enable);
+  void IssueInterrupt(uint32_t vector);
 
-    uint16_t Read(VmcsField16 field) const;
-    uint32_t Read(VmcsField32 field) const;
-    uint64_t Read(VmcsField64 field) const;
-    uint64_t Read(VmcsFieldXX field) const;
-    void Write(VmcsField16 field, uint16_t val);
-    void Write(VmcsField32 field, uint32_t val);
-    void Write(VmcsField64 field, uint64_t val);
-    void Write(VmcsFieldXX field, uint64_t val);
+  uint16_t Read(VmcsField16 field) const;
+  uint32_t Read(VmcsField32 field) const;
+  uint64_t Read(VmcsField64 field) const;
+  uint64_t Read(VmcsFieldXX field) const;
+  void Write(VmcsField16 field, uint16_t val);
+  void Write(VmcsField32 field, uint32_t val);
+  void Write(VmcsField64 field, uint64_t val);
+  void Write(VmcsFieldXX field, uint64_t val);
 
-    zx_status_t SetControl(VmcsField32 controls, uint64_t true_msr, uint64_t old_msr, uint32_t set,
-                           uint32_t clear);
+  zx_status_t SetControl(VmcsField32 controls, uint64_t true_msr, uint64_t old_msr, uint32_t set,
+                         uint32_t clear);
 
-private:
-    paddr_t vmcs_address_;
+ private:
+  paddr_t vmcs_address_;
 };
 
 // Pins execution to a CPU within a given scope.
 class AutoPin {
-public:
-    AutoPin(uint16_t vpid);
-    ~AutoPin();
+ public:
+  AutoPin(uint16_t vpid);
+  ~AutoPin();
 
-private:
-    cpu_mask_t prev_cpu_mask_;
-    thread_t* thread_;
+ private:
+  cpu_mask_t prev_cpu_mask_;
+  thread_t* thread_;
 };
 
 bool cr0_is_invalid(AutoVmcs* vmcs, uint64_t cr0_value);
+
+#endif  // ZIRCON_KERNEL_ARCH_X86_HYPERVISOR_VCPU_PRIV_H_

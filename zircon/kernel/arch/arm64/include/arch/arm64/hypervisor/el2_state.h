@@ -4,7 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_ARM64_HYPERVISOR_EL2_STATE_H_
+#define ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_ARM64_HYPERVISOR_EL2_STATE_H_
 
 #include <zircon/compiler.h>
 
@@ -115,76 +116,76 @@
 typedef uint32_t __ALIGNED(8) algn32_t;
 
 struct FpState {
-    __uint128_t q[FS_NUM_REGS];
-    algn32_t fpsr;
-    algn32_t fpcr;
+  __uint128_t q[FS_NUM_REGS];
+  algn32_t fpsr;
+  algn32_t fpcr;
 };
 
 struct SystemState {
-    uint64_t sp_el0;
-    uint64_t tpidr_el0;
-    uint64_t tpidrro_el0;
+  uint64_t sp_el0;
+  uint64_t tpidr_el0;
+  uint64_t tpidrro_el0;
 
-    algn32_t cntkctl_el1;
-    algn32_t contextidr_el1;
-    algn32_t cpacr_el1;
-    algn32_t csselr_el1;
-    uint64_t elr_el1;
-    algn32_t esr_el1;
-    uint64_t far_el1;
-    uint64_t mair_el1;
-    algn32_t mdscr_el1;
-    uint64_t par_el1;
-    algn32_t sctlr_el1;
-    uint64_t sp_el1;
-    algn32_t spsr_el1;
-    uint64_t tcr_el1;
-    uint64_t tpidr_el1;
-    uint64_t ttbr0_el1;
-    uint64_t ttbr1_el1;
-    uint64_t vbar_el1;
+  algn32_t cntkctl_el1;
+  algn32_t contextidr_el1;
+  algn32_t cpacr_el1;
+  algn32_t csselr_el1;
+  uint64_t elr_el1;
+  algn32_t esr_el1;
+  uint64_t far_el1;
+  uint64_t mair_el1;
+  algn32_t mdscr_el1;
+  uint64_t par_el1;
+  algn32_t sctlr_el1;
+  uint64_t sp_el1;
+  algn32_t spsr_el1;
+  uint64_t tcr_el1;
+  uint64_t tpidr_el1;
+  uint64_t ttbr0_el1;
+  uint64_t ttbr1_el1;
+  uint64_t vbar_el1;
 
-    uint64_t elr_el2;
-    algn32_t spsr_el2;
-    uint64_t vmpidr_el2;
+  uint64_t elr_el2;
+  algn32_t spsr_el2;
+  uint64_t vmpidr_el2;
 };
 
 struct GuestState {
-    uint64_t x[GS_NUM_REGS];
-    FpState fp_state;
-    SystemState system_state;
+  uint64_t x[GS_NUM_REGS];
+  FpState fp_state;
+  SystemState system_state;
 
-    // Exit state.
-    algn32_t cntv_ctl_el0;
-    uint64_t cntv_cval_el0;
-    algn32_t esr_el2;
-    uint64_t far_el2;
-    uint64_t hpfar_el2;
+  // Exit state.
+  algn32_t cntv_ctl_el0;
+  uint64_t cntv_cval_el0;
+  algn32_t esr_el2;
+  uint64_t far_el2;
+  uint64_t hpfar_el2;
 };
 
 struct HostState {
-    // We only save X18 to X30 from the host, as the host is making an explicit
-    // call into the hypervisor, and therefore is saving the rest of its state.
-    uint64_t x[HS_NUM_REGS];
-    FpState fp_state;
-    SystemState system_state;
+  // We only save X18 to X30 from the host, as the host is making an explicit
+  // call into the hypervisor, and therefore is saving the rest of its state.
+  uint64_t x[HS_NUM_REGS];
+  FpState fp_state;
+  SystemState system_state;
 };
 
 struct IchState {
-    uint8_t num_aprs;
-    uint8_t num_lrs;
-    algn32_t vmcr;
-    algn32_t misr;
-    uint64_t elrsr;
-    uint64_t apr[IS_MAX_APR_GROUPS][IS_MAX_APRS];
-    uint64_t lr[IS_MAX_LRS];
+  uint8_t num_aprs;
+  uint8_t num_lrs;
+  algn32_t vmcr;
+  algn32_t misr;
+  uint64_t elrsr;
+  uint64_t apr[IS_MAX_APR_GROUPS][IS_MAX_APRS];
+  uint64_t lr[IS_MAX_LRS];
 };
 
 struct El2State {
-    bool resume;
-    GuestState guest_state;
-    HostState host_state;
-    IchState ich_state;
+  bool resume;
+  GuestState guest_state;
+  HostState host_state;
+  IchState ich_state;
 };
 
 static_assert(sizeof(El2State) <= PAGE_SIZE);
@@ -245,7 +246,7 @@ static_assert(offsetof(IchState, misr) == IS_MISR);
 static_assert(offsetof(IchState, elrsr) == IS_ELRSR);
 static_assert(offsetof(IchState, apr) == IS_AP0R0);
 static_assert(offsetof(IchState, apr[IS_MAX_APR_GROUPS - 1][IS_MAX_APRS - 1]) ==
-    IS_APR(IS_MAX_APR_GROUPS - 1, IS_MAX_APRS - 1));
+              IS_APR(IS_MAX_APR_GROUPS - 1, IS_MAX_APRS - 1));
 static_assert(offsetof(IchState, lr) == IS_LR0);
 static_assert(offsetof(IchState, lr[IS_MAX_LRS - 1]) == IS_LR(IS_MAX_LRS - 1));
 
@@ -259,4 +260,6 @@ extern zx_status_t arm64_el2_resume(zx_paddr_t vttbr, zx_paddr_t state, uint64_t
 
 __END_CDECLS
 
-#endif // __ASSEMBLER__
+#endif  // __ASSEMBLER__
+
+#endif  // ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_ARM64_HYPERVISOR_EL2_STATE_H_

@@ -4,14 +4,15 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#pragma once
+#ifndef ZIRCON_KERNEL_HYPERVISOR_INCLUDE_HYPERVISOR_CPU_H_
+#define ZIRCON_KERNEL_HYPERVISOR_INCLUDE_HYPERVISOR_CPU_H_
 
 #include <kernel/cpu.h>
 #include <kernel/thread.h>
 
 namespace hypervisor {
 
-typedef zx_status_t (* percpu_task_t)(void* context, cpu_num_t cpu_num);
+typedef zx_status_t (*percpu_task_t)(void* context, cpu_num_t cpu_num);
 
 // Executes a task on each online CPU, and returns a CPU mask containing each
 // CPU the task was successfully run on.
@@ -27,4 +28,6 @@ thread_t* pin_thread(uint16_t vpid);
 // Check that the current thread is correctly pinned, based on the given VPID.
 bool check_pinned_cpu_invariant(uint16_t vpid, const thread_t* thread);
 
-} // namespace hypervisor
+}  // namespace hypervisor
+
+#endif  // ZIRCON_KERNEL_HYPERVISOR_INCLUDE_HYPERVISOR_CPU_H_
