@@ -6,11 +6,15 @@
 
 #include <ddk/device.h>
 #include <fbl/array.h>
+#include <fbl/auto_lock.h>
+#include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 #include <fbl/string.h>
+#include <fuchsia/device/manager/c/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/event.h>
 #include <variant>
 
 #include "composite-device.h"
@@ -52,6 +56,14 @@ class SuspendTask;
 // Devices may be created in this state, but may not
 // return to this state once made visible.
 #define DEV_CTX_INVISIBLE     0x80
+
+// Signals used on the test event
+#define TEST_BIND_DONE_SIGNAL ZX_USER_SIGNAL_0
+#define TEST_SUSPEND_DONE_SIGNAL ZX_USER_SIGNAL_1
+#define TEST_RESUME_DONE_SIGNAL ZX_USER_SIGNAL_2
+#define TEST_REMOVE_DONE_SIGNAL ZX_USER_SIGNAL_3
+
+constexpr zx::duration kDefaultTestTimeout = zx::sec(5);
 
 // clang-format on
 
@@ -306,6 +318,8 @@ struct Device : public fbl::RefCounted<Device>, public AsyncLoopRefCountedRpcHan
     // Device.
     void CompleteSuspend(zx_status_t status);
 
+    zx_status_t DriverCompatibiltyTest();
+
     zx::channel take_client_remote() { return std::move(client_remote_); }
 
     const fbl::String& name() const { return name_; }
@@ -330,8 +344,40 @@ struct Device : public fbl::RefCounted<Device>, public AsyncLoopRefCountedRpcHan
     };
 
     State state() const { return state_; }
+
+    enum class TestStateMachine {
+        kTestNotStarted = 1,
+        kTestUnbindSent,
+        kTestBindSent,
+        kTestBindDone,
+        kTestSuspendSent,
+        kTestSuspendDone,
+        kTestResumeSent,
+        kTestResumeDone,
+        kTestDone,
+    };
+
+    TestStateMachine test_state() {
+        fbl::AutoLock<fbl::Mutex> lock(&test_state_lock_);
+        return test_state_;
+    }
+
+    void set_test_state(TestStateMachine new_state) {
+        fbl::AutoLock<fbl::Mutex> lock(&test_state_lock_);
+        test_state_ = new_state;
+    }
+    void set_test_time(zx::duration& test_time) {
+        test_time_ = test_time;
+    }
+    zx::duration& test_time() {
+        return test_time_;
+    }
+    const char* GetTestDriverName();
+    zx::event& test_event() { return test_event_; }
+
 private:
     zx_status_t HandleRead();
+    int RunCompatibilityTests();
 
     const fbl::String name_;
     const fbl::String libname_;
@@ -394,6 +440,10 @@ private:
     // For attaching as an open connection to the proxy device,
     // or once the device becomes visible.
     zx::channel client_remote_;
+    fbl::Mutex test_state_lock_;
+    TestStateMachine test_state_ __TA_GUARDED(test_state_lock_) = TestStateMachine::kTestNotStarted;
+    zx::event test_event_;
+    zx::duration test_time_;
 };
 
 } // namespace devmgr

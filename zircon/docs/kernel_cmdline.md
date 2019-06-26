@@ -73,6 +73,19 @@ All other libraries should be statically linked into a driver.
 
 Turn on verbose logging.
 
+## driver.\<name>.compatibility-tests-enable
+
+If this option is set, devmgr will run compatibility tests for the driver.
+zircon\_driver\_info, and can be found as the first argument to the
+ZIRCON\_DRIVER\_BEGIN macro.
+
+## driver.\<name>.compatibility-tests-wait-time
+
+This timeout lets you configure the wait time in milliseconds for each of
+bind/unbind/suspend hooks to complete in compatibility tests.
+zircon\_driver\_info, and can be found as the first argument to the
+ZIRCON\_DRIVER\_BEGIN macro.
+
 ## driver.\<name>.disable
 
 Disables the driver with the given name. The driver name comes from the

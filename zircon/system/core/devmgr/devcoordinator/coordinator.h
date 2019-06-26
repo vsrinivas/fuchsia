@@ -141,6 +141,7 @@ public:
     void DriverAdded(Driver* drv, const char* version);
     void DriverAddedInit(Driver* drv, const char* version);
     zx_status_t LibnameToVmo(const fbl::String& libname, zx::vmo* out_vmo) const;
+    const Driver* LibnameToDriver(const fbl::String& libname) const;
 
     // Function that is invoked to request a driver try to bind to a device
     using AttemptBindFunc =
@@ -302,7 +303,6 @@ private:
     void Suspend(SuspendContext ctx, std::function<void(zx_status_t)> callback);
 
     fbl::unique_ptr<Driver> ValidateDriver(fbl::unique_ptr<Driver> drv);
-    const Driver* LibnameToDriver(const fbl::String& libname) const;
 
     zx_status_t NewDevhost(const char* name, Devhost* parent, Devhost** out);
 
@@ -315,7 +315,6 @@ private:
 
     zx_status_t GetMetadataRecurse(const fbl::RefPtr<Device>& dev, uint32_t type, void* buffer,
                                    size_t buflen, size_t* size);
-
     void InitOutgoingServices();
 };
 

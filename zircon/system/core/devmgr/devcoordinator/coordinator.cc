@@ -15,6 +15,7 @@
 
 #include <ddk/driver.h>
 #include <driver-info/driver-info.h>
+#include <fbl/auto_call.h>
 #include <fbl/unique_ptr.h>
 #include <fuchsia/boot/c/fidl.h>
 #include <fuchsia/io/c/fidl.h>
@@ -127,8 +128,7 @@ zx_status_t Coordinator::InitializeCoreDevices(const char* sys_device_driver) {
     root_device_->flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE | DEV_CTX_MULTI_BIND;
 
     misc_device_ = fbl::MakeRefCounted<Device>(this, "misc", fbl::String(), "misc,", root_device_,
-                                               ZX_PROTOCOL_MISC_PARENT,
-                                               zx::channel());
+                                               ZX_PROTOCOL_MISC_PARENT, zx::channel());
     misc_device_->flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE | DEV_CTX_MULTI_BIND;
 
     sys_device_ = fbl::MakeRefCounted<Device>(this, "sys", sys_device_driver, "sys,", root_device_,
@@ -193,8 +193,8 @@ zx_status_t Coordinator::LibnameToVmo(const fbl::String& libname, zx::vmo* out_v
                                                    ZX_RIGHT_READ | ZX_RIGHT_EXECUTE | ZX_RIGHT_MAP,
                                                out_vmo);
         if (r != ZX_OK) {
-            log(ERROR, "devcoordinator: cannot duplicate cached dso for '%s' '%s'\n", drv->name.data(),
-                libname.data());
+            log(ERROR, "devcoordinator: cannot duplicate cached dso for '%s' '%s'\n",
+                drv->name.data(), libname.data());
         }
         return r;
     } else {
@@ -235,10 +235,9 @@ void Coordinator::DumpState(VmoWriter* vmo) const {
 
 void Coordinator::DumpDeviceProps(VmoWriter* vmo, const Device* dev) const {
     if (dev->host()) {
-        vmo->Printf("Name [%s]%s%s%s\n", dev->name().data(),
-                    dev->libname().empty() ? "" : " Driver [",
-                    dev->libname().empty() ? "" : dev->libname().data(),
-                    dev->libname().empty() ? "" : "]");
+        vmo->Printf(
+            "Name [%s]%s%s%s\n", dev->name().data(), dev->libname().empty() ? "" : " Driver [",
+            dev->libname().empty() ? "" : dev->libname().data(), dev->libname().empty() ? "" : "]");
         vmo->Printf("Flags   :%s%s%s%s%s%s\n", dev->flags & DEV_CTX_IMMORTAL ? " Immortal" : "",
                     dev->flags & DEV_CTX_MUST_ISOLATE ? " Isolate" : "",
                     dev->flags & DEV_CTX_MULTI_BIND ? " MultiBind" : "",
@@ -251,8 +250,8 @@ void Coordinator::DumpDeviceProps(VmoWriter* vmo, const Device* dev) const {
         char c = (char)((dev->protocol_id() >> 8) & 0xFF);
         char d = (char)(dev->protocol_id() & 0xFF);
         vmo->Printf("ProtoId : '%c%c%c%c' 0x%08x(%u)\n", isprint(a) ? a : '.', isprint(b) ? b : '.',
-                    isprint(c) ? c : '.', isprint(d) ? d : '.',
-                    dev->protocol_id(), dev->protocol_id());
+                    isprint(c) ? c : '.', isprint(d) ? d : '.', dev->protocol_id(),
+                    dev->protocol_id());
 
         const auto& props = dev->props();
         vmo->Printf("%zu Propert%s\n", props.size(), props.size() == 1 ? "y" : "ies");
@@ -341,7 +340,7 @@ zx_status_t Coordinator::GetTopologicalPath(const fbl::RefPtr<const Device>& dev
         } else if (itr->composite() != nullptr) {
             strcpy(name_buf, "dev/");
             strncpy(name_buf + strlen("dev/"), itr->name().data(), fuchsia_io_MAX_FILENAME);
-            name_buf[sizeof(name_buf)-1] = 0;
+            name_buf[sizeof(name_buf) - 1] = 0;
             name = name_buf;
         } else {
             name = itr->name().data();
@@ -405,24 +404,23 @@ static zx_status_t dc_launch_devhost(Devhost* host, DevhostLoaderService* loader
     constexpr size_t kMaxActions = 6;
     fdio_spawn_action_t actions[kMaxActions];
     size_t actions_count = 0;
-    actions[actions_count++] = fdio_spawn_action_t {
-        .action = FDIO_SPAWN_ACTION_SET_NAME,
-        .name = {.data = name}};
+    actions[actions_count++] =
+        fdio_spawn_action_t{.action = FDIO_SPAWN_ACTION_SET_NAME, .name = {.data = name}};
     // TODO: constrain to /svc/device
-    actions[actions_count++] = fdio_spawn_action_t {
+    actions[actions_count++] = fdio_spawn_action_t{
         .action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
         .ns = {.prefix = "/svc", .handle = fs_clone("svc").release()},
     };
-    actions[actions_count++] = fdio_spawn_action_t {
+    actions[actions_count++] = fdio_spawn_action_t{
         .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
         .h = {.id = PA_HND(PA_USER0, 0), .handle = hrpc},
     };
-    actions[actions_count++] = fdio_spawn_action_t {
+    actions[actions_count++] = fdio_spawn_action_t{
         .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
         .h = {.id = PA_HND(PA_USER0, kIdHJobRoot), .handle = root_job_svc.release()},
     };
     if (resource.is_valid()) {
-        actions[actions_count++] = fdio_spawn_action_t {
+        actions[actions_count++] = fdio_spawn_action_t{
             .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
             .h = {.id = PA_HND(PA_RESOURCE, 0), .handle = resource.release()},
         };
@@ -430,7 +428,7 @@ static zx_status_t dc_launch_devhost(Devhost* host, DevhostLoaderService* loader
 
     uint32_t spawn_flags = FDIO_SPAWN_CLONE_ENVIRON;
     if (loader_connection.is_valid()) {
-        actions[actions_count++] = fdio_spawn_action_t {
+        actions[actions_count++] = fdio_spawn_action_t{
             .action = FDIO_SPAWN_ACTION_ADD_HANDLE,
             .h = {.id = PA_HND(PA_LDSVC_LOADER, 0), .handle = loader_connection.release()},
         };
@@ -482,9 +480,9 @@ zx_status_t Coordinator::NewDevhost(const char* name, Devhost* parent, Devhost**
     fbl::Vector<const char*> env;
     boot_args().Collect("driver.", &env);
     env.push_back(nullptr);
-    status = dc_launch_devhost(dh.get(), loader_service_, get_devhost_bin(config_.asan_drivers),
-                               name, env.get(), hrpc, root_resource(),
-                               zx::unowned_job(config_.devhost_job));
+    status =
+        dc_launch_devhost(dh.get(), loader_service_, get_devhost_bin(config_.asan_drivers), name,
+                          env.get(), hrpc, root_resource(), zx::unowned_job(config_.devhost_job));
     if (status != ZX_OK) {
         zx_handle_close(dh->hrpc());
         return status;
@@ -540,8 +538,8 @@ zx_status_t Coordinator::AddDevice(const fbl::RefPtr<Device>& parent, zx::channe
         return ZX_ERR_BAD_STATE;
     }
 
-    log(RPC_IN, "devcoordinator: rpc: add-device '%.*s' args='%.*s'\n", static_cast<int>(name.size()),
-        name.data(), static_cast<int>(args.size()), args.data());
+    log(RPC_IN, "devcoordinator: rpc: add-device '%.*s' args='%.*s'\n",
+        static_cast<int>(name.size()), name.data(), static_cast<int>(args.size()), args.data());
 
     fbl::Array<zx_device_prop_t> props(new zx_device_prop_t[props_count], props_count);
     if (!props) {
@@ -565,10 +563,9 @@ zx_status_t Coordinator::AddDevice(const fbl::RefPtr<Device>& parent, zx::channe
     }
 
     fbl::RefPtr<Device> dev;
-    zx_status_t status = Device::Create(this, parent, std::move(name_str),
-                                        std::move(driver_path_str), std::move(args_str),
-                                        protocol_id, std::move(props), std::move(rpc), invisible,
-                                        std::move(client_remote), &dev);
+    zx_status_t status = Device::Create(
+        this, parent, std::move(name_str), std::move(driver_path_str), std::move(args_str),
+        protocol_id, std::move(props), std::move(rpc), invisible, std::move(client_remote), &dev);
     if (status != ZX_OK) {
         return status;
     }
@@ -709,16 +706,29 @@ zx_status_t Coordinator::RemoveDevice(const fbl::RefPtr<Device>& dev, bool force
     // if we have a parent, disconnect and downref it
     fbl::RefPtr<Device> parent = dev->parent();
     if (parent != nullptr) {
+        Device* real_parent;
+        if (parent->flags & DEV_CTX_PROXY) {
+            real_parent = parent->parent().get();
+        } else {
+            real_parent = parent.get();
+        }
         dev->DetachFromParent();
         if (!(dev->flags & DEV_CTX_PROXY)) {
             if (parent->children().is_empty()) {
                 parent->flags &= (~DEV_CTX_BOUND);
+                if (real_parent->test_state() == Device::TestStateMachine::kTestUnbindSent) {
+                    real_parent->test_event().signal(0, TEST_REMOVE_DONE_SIGNAL);
+                    if (!(dev->flags & DEV_CTX_PROXY)) {
+                        // remove from list of all devices
+                        devices_.erase(*dev);
+                    }
+                    return ZX_OK;
+                }
 
                 // TODO: This code is to cause the bind process to
                 //      restart and get a new devhost to be launched
                 //      when a devhost dies.  It should probably be
                 //      more tied to devhost teardown than it is.
-
                 // IF we are the last child of our parent
                 // AND our parent is not itself dead
                 // AND our parent is a BUSDEV
@@ -753,10 +763,11 @@ zx_status_t Coordinator::RemoveDevice(const fbl::RefPtr<Device>& dev, bool force
     return ZX_OK;
 }
 
-zx_status_t Coordinator::AddCompositeDevice(
-        const fbl::RefPtr<Device>& dev, fbl::StringPiece name, const zx_device_prop_t* props_data,
-        size_t props_count, const fuchsia_device_manager_DeviceComponent* components,
-        size_t components_count, uint32_t coresident_device_index) {
+zx_status_t
+Coordinator::AddCompositeDevice(const fbl::RefPtr<Device>& dev, fbl::StringPiece name,
+                                const zx_device_prop_t* props_data, size_t props_count,
+                                const fuchsia_device_manager_DeviceComponent* components,
+                                size_t components_count, uint32_t coresident_device_index) {
     // Only the platform bus driver should be able to use this.  It is the
     // descendant of the sys device node.
     if (dev->parent() != sys_device_) {
@@ -764,9 +775,9 @@ zx_status_t Coordinator::AddCompositeDevice(
     }
 
     std::unique_ptr<CompositeDevice> new_device;
-    zx_status_t status = CompositeDevice::Create(name, props_data, props_count, components,
-                                                 components_count, coresident_device_index,
-                                                 &new_device);
+    zx_status_t status =
+        CompositeDevice::Create(name, props_data, props_count, components, components_count,
+                                coresident_device_index, &new_device);
     if (status != ZX_OK) {
         return status;
     }
@@ -821,7 +832,8 @@ zx_status_t Coordinator::LoadFirmware(const fbl::RefPtr<Device>& dev, const char
             zx::vmo nonexec_vmo;
             zx_status_t r = fdio_get_vmo_clone(fwfd, nonexec_vmo.reset_and_get_address());
             if (r == ZX_OK) {
-                r = zx_vmo_replace_as_executable(nonexec_vmo.release(), ZX_HANDLE_INVALID, vmo->reset_and_get_address());
+                r = zx_vmo_replace_as_executable(nonexec_vmo.release(), ZX_HANDLE_INVALID,
+                                                 vmo->reset_and_get_address());
             }
             close(fwfd);
             return r;
@@ -866,7 +878,7 @@ zx_status_t Coordinator::GetMetadataRecurse(const fbl::RefPtr<Device>& dev, uint
     // search components of composite devices
     if (test->composite()) {
         for (auto& component : test->composite()->bound_components()) {
-           auto dev = component.bound_device();
+            auto dev = component.bound_device();
             if (dev != nullptr) {
                 if (GetMetadataRecurse(dev, type, buffer, buflen, size) == ZX_OK) {
                     return ZX_OK;
@@ -1216,8 +1228,8 @@ void Coordinator::Suspend(SuspendContext ctx, std::function<void(zx_status_t)> c
 
     if (suspend_fallback() || suspend_debug()) {
         thrd_t t;
-        int ret = thrd_create_with_name(&t, suspend_timeout_thread, this,
-                                        "devcoord-suspend-timeout");
+        int ret =
+            thrd_create_with_name(&t, suspend_timeout_thread, this, "devcoord-suspend-timeout");
         if (ret != thrd_success) {
             log(ERROR, "devcoordinator: failed to create suspend timeout thread\n");
         } else {
@@ -1304,8 +1316,8 @@ void Coordinator::DriverAddedSys(Driver* drv, const char* version) {
     log(INFO, "devcoordinator: adding system driver '%s' '%s'\n", driver->name.data(),
         driver->libname.data());
     if (load_vmo(driver->libname.data(), &driver->dso_vmo)) {
-        log(ERROR, "devcoordinator: system driver '%s' '%s' could not cache DSO\n", driver->name.data(),
-            driver->libname.data());
+        log(ERROR, "devcoordinator: system driver '%s' '%s' could not cache DSO\n",
+            driver->name.data(), driver->libname.data());
     }
     if (version[0] == '*') {
         // de-prioritize drivers that are "fallback"
@@ -1324,8 +1336,6 @@ zx_status_t Coordinator::BindDriverToDevice(const fbl::RefPtr<Device>& dev, cons
         return ZX_ERR_NEXT;
     }
 
-    log(SPEW, "devcoordinator: drv='%s' bindable to dev='%s'\n", drv->name.data(),
-        dev->name().data());
     zx_status_t status = attempt_bind(drv, dev);
     if (status != ZX_OK) {
         log(ERROR, "devcoordinator: failed to bind drv='%s' to dev='%s': %s\n", drv->name.data(),
@@ -1362,8 +1372,8 @@ zx_status_t Coordinator::BindDriver(Driver* drv, const AttemptBindFunc& attempt_
     }
     printf("devcoordinator: driver '%s' added\n", drv->name.data());
     for (auto& dev : devices_) {
-        zx_status_t status = BindDriverToDevice(fbl::WrapRefPtr(&dev), drv, true /* autobind */,
-                                                attempt_bind);
+        zx_status_t status =
+            BindDriverToDevice(fbl::WrapRefPtr(&dev), drv, true /* autobind */, attempt_bind);
         if (status == ZX_ERR_NEXT) {
             continue;
         }
@@ -1533,32 +1543,33 @@ void Coordinator::InitOutgoingServices() {
 
     const auto debug = [this](zx::channel request) {
         static constexpr fuchsia_device_manager_DebugDumper_ops_t kOps = {
-            .DumpTree = [](void* ctx, zx_handle_t vmo, fidl_txn_t* txn) {
-                VmoWriter writer{zx::vmo(vmo)};
-                static_cast<Coordinator*>(ctx)->DumpState(&writer);
-                return fuchsia_device_manager_DebugDumperDumpTree_reply(
+            .DumpTree =
+                [](void* ctx, zx_handle_t vmo, fidl_txn_t* txn) {
+                    VmoWriter writer{zx::vmo(vmo)};
+                    static_cast<Coordinator*>(ctx)->DumpState(&writer);
+                    return fuchsia_device_manager_DebugDumperDumpTree_reply(
                         txn, writer.status(), writer.written(), writer.available());
-            },
-            .DumpDrivers = [](void* ctx, zx_handle_t vmo, fidl_txn_t* txn) {
-                VmoWriter writer{zx::vmo(vmo)};
-                static_cast<Coordinator*>(ctx)->DumpDrivers(&writer);
-                return fuchsia_device_manager_DebugDumperDumpDrivers_reply(
+                },
+            .DumpDrivers =
+                [](void* ctx, zx_handle_t vmo, fidl_txn_t* txn) {
+                    VmoWriter writer{zx::vmo(vmo)};
+                    static_cast<Coordinator*>(ctx)->DumpDrivers(&writer);
+                    return fuchsia_device_manager_DebugDumperDumpDrivers_reply(
                         txn, writer.status(), writer.written(), writer.available());
-            },
-            .DumpBindingProperties = [](void* ctx, zx_handle_t vmo, fidl_txn_t* txn) {
-                VmoWriter writer{zx::vmo(vmo)};
-                static_cast<Coordinator*>(ctx)->DumpGlobalDeviceProps(&writer);
-                return fuchsia_device_manager_DebugDumperDumpBindingProperties_reply(
+                },
+            .DumpBindingProperties =
+                [](void* ctx, zx_handle_t vmo, fidl_txn_t* txn) {
+                    VmoWriter writer{zx::vmo(vmo)};
+                    static_cast<Coordinator*>(ctx)->DumpGlobalDeviceProps(&writer);
+                    return fuchsia_device_manager_DebugDumperDumpBindingProperties_reply(
                         txn, writer.status(), writer.written(), writer.available());
-            },
+                },
         };
 
-        auto status = fidl_bind(this->config_.dispatcher,
-                                request.release(),
-                                reinterpret_cast<fidl_dispatch_t*>(
-                                        fuchsia_device_manager_DebugDumper_dispatch),
-                                this,
-                                &kOps);
+        auto status = fidl_bind(
+            this->config_.dispatcher, request.release(),
+            reinterpret_cast<fidl_dispatch_t*>(fuchsia_device_manager_DebugDumper_dispatch), this,
+            &kOps);
         if (status != ZX_OK) {
             printf("Failed to bind to client channel: %d \n", status);
         }
