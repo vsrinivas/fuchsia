@@ -22,12 +22,12 @@ static void ignore_msr(VmxPage* msr_bitmaps_page, bool ignore_writes, uint32_t m
   uint8_t msr_bit = msr_low % 8;
 
   // Ignore reads to the MSR.
-  msr_bitmaps[msr_byte] &= (uint8_t) ~(1 << msr_bit);
+  msr_bitmaps[msr_byte] &= static_cast<uint8_t>(~(1u << msr_bit));
 
   if (ignore_writes) {
     // Ignore writes to the MSR.
     msr_bitmaps += 2 << 10;
-    msr_bitmaps[msr_byte] &= (uint8_t) ~(1 << msr_bit);
+    msr_bitmaps[msr_byte] &= static_cast<uint8_t>(~(1u << msr_bit));
   }
 }
 
