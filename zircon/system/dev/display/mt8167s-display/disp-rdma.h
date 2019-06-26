@@ -2,17 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_DISPLAY_MT8167S_DISPLAY_DISP_RDMA_H_
+#define ZIRCON_SYSTEM_DEV_DISPLAY_MT8167S_DISPLAY_DISP_RDMA_H_
 
-#include <lib/zx/bti.h>
-#include <zircon/compiler.h>
 #include <ddk/protocol/platform/device.h>
-#include <lib/device-protocol/platform-device.h>
-#include <zircon/assert.h>
 #include <ddktl/device.h>
-#include <lib/mmio/mmio.h>
 #include <fbl/unique_ptr.h>
+#include <lib/device-protocol/platform-device.h>
+#include <lib/mmio/mmio.h>
+#include <lib/zx/bti.h>
+#include <zircon/assert.h>
+#include <zircon/compiler.h>
+
 #include <optional>
+
 #include "common.h"
 #include "registers-disp-rdma.h"
 
@@ -34,44 +37,46 @@ namespace mt8167s_display {
 //
 
 class DispRdma {
-public:
-    DispRdma(uint32_t height, uint32_t width) : height_(height), width_(width) {
-        ZX_ASSERT(height_ < kMaxHeight);
-        ZX_ASSERT(width_ < kMaxWidth);
-    }
+ public:
+  DispRdma(uint32_t height, uint32_t width) : height_(height), width_(width) {
+    ZX_ASSERT(height_ < kMaxHeight);
+    ZX_ASSERT(width_ < kMaxWidth);
+  }
 
-    // Init
-    zx_status_t Init(zx_device_t* parent);
+  // Init
+  zx_status_t Init(zx_device_t* parent);
 
-    // Reset Display RDMA engine
-    void Reset();
+  // Reset Display RDMA engine
+  void Reset();
 
-    // Start the Display RDMA engine
-    void Start();
+  // Start the Display RDMA engine
+  void Start();
 
-    // Stop the Display RDMA engine
-    void Stop();
+  // Stop the Display RDMA engine
+  void Stop();
 
-    void Restart() {
-        Stop();
-        Start();
-    }
+  void Restart() {
+    Stop();
+    Start();
+  }
 
-    // Configure Display RDMA engine based on display dimensions
-    zx_status_t Config();
+  // Configure Display RDMA engine based on display dimensions
+  zx_status_t Config();
 
-    // Dumps all the relevant Display RDMA Registers
-    void Dump();
+  // Dumps all the relevant Display RDMA Registers
+  void Dump();
 
-private:
-    uint32_t                            height_;
-    uint32_t                            width_;
+ private:
+  uint32_t height_;
+  uint32_t width_;
 
-    fbl::unique_ptr<ddk::MmioBuffer>    disp_rdma_mmio_;
-    pdev_protocol_t                     pdev_ = {nullptr, nullptr};
-    zx::bti                             bti_;
+  fbl::unique_ptr<ddk::MmioBuffer> disp_rdma_mmio_;
+  pdev_protocol_t pdev_ = {nullptr, nullptr};
+  zx::bti bti_;
 
-    bool                                initialized_ = false;
+  bool initialized_ = false;
 };
 
-} // namespace mt8167s_display
+}  // namespace mt8167s_display
+
+#endif  // ZIRCON_SYSTEM_DEV_DISPLAY_MT8167S_DISPLAY_DISP_RDMA_H_

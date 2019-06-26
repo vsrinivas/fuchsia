@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_DISPLAY_MT8167S_DISPLAY_REGISTERS_OVL_H_
+#define ZIRCON_SYSTEM_DEV_DISPLAY_MT8167S_DISPLAY_REGISTERS_OVL_H_
 
 // clang-format off
 #define OVL_STA                         (0x0000)
@@ -97,3 +98,5 @@ enum {
     BT601_TO_RGB = 6,
     BT709_TO_RGB = 7,
 };
+
+#endif  // ZIRCON_SYSTEM_DEV_DISPLAY_MT8167S_DISPLAY_REGISTERS_OVL_H_

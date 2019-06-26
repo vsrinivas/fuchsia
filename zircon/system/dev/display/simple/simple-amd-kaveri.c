@@ -18,8 +18,8 @@
 #define AMD_GFX_STONEY_RIDGE_DID (0x98e4)
 
 static zx_status_t kaveri_disp_bind(void* ctx, zx_device_t* dev) {
-    // framebuffer bar seems to be 0
-    return bind_simple_pci_display_bootloader(dev, "amd", 0u);
+  // framebuffer bar seems to be 0
+  return bind_simple_pci_display_bootloader(dev, "amd", 0u);
 }
 
 static zx_driver_ops_t kaveri_disp_driver_ops = {

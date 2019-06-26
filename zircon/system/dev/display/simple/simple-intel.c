@@ -11,7 +11,7 @@
 #define INTEL_I915_VID (0x8086)
 
 static zx_status_t intel_disp_bind(void* ctx, zx_device_t* dev) {
-    return bind_simple_pci_display_bootloader(dev, "intel", 2u);
+  return bind_simple_pci_display_bootloader(dev, "intel", 2u);
 }
 
 static zx_driver_ops_t intel_disp_driver_ops = {

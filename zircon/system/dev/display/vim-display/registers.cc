@@ -6,4 +6,4 @@
 
 namespace registers {
 constexpr uint32_t VpuViuOsdBlk0CfgW4::kBaseAddresses[];
-} // namespace registers
+}  // namespace registers

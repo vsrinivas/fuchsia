@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_DISPLAY_HIKEY_DISPLAY_HIDISPLAY_REGS_H_
+#define ZIRCON_SYSTEM_DEV_DISPLAY_HIKEY_DISPLAY_HIDISPLAY_REGS_H_
 #define DW_DSI_PHY_TST_CTRL1_TESTEN (1 << 16)
 #define DS_NUM_LANES 4
-#define DW_DSI_DPI_COLOR_CODING 0x10       /* configs DPI color coding */
-#define DW_DSI_VID_MODE_CFG 0x38           /* Video mode operation config */
+#define DW_DSI_DPI_COLOR_CODING 0x10 /* configs DPI color coding */
+#define DW_DSI_VID_MODE_CFG 0x38     /* Video mode operation config */
 #define DSI_NON_BURST_SYNC_PULSES 0
-#define DW_DSI_PCKHDL_CFG 0x2c             /* how EoTp, BTA, CRC and ECC are to be used */
-#define DW_DSI_LPCLK_CTRL 0x94             /* non continuous clock in the clock lane. */
+#define DW_DSI_PCKHDL_CFG 0x2c /* how EoTp, BTA, CRC and ECC are to be used */
+#define DW_DSI_LPCLK_CTRL 0x94 /* non continuous clock in the clock lane. */
 
 // ADV7533 Registers
 #define ADV7533_REG_CHIP_REVISION 0x00
@@ -65,7 +66,7 @@
 #define REG_HDCP_HDMI_CFG_AVI_MODE (0 << 1)
 #define REG_HDCP_HDMI_CFG_HDMI_MODE (1 << 1)
 #define REG_HDCP_HDMI_CFG_DEFAULT (0x14)
-#define REG_HDCP_HDMI_CFG_ENB_HDMI (REG_HDCP_HDMI_CFG_DEFAULT | \
-                                    REG_HDCP_HDMI_CFG_HDMI_MODE)
-#define REG_HDCP_HDMI_CFG_ENB_AVI (REG_HDCP_HDMI_CFG_DEFAULT | \
-                                   REG_HDCP_HDMI_CFG_AVI_MODE)
+#define REG_HDCP_HDMI_CFG_ENB_HDMI (REG_HDCP_HDMI_CFG_DEFAULT | REG_HDCP_HDMI_CFG_HDMI_MODE)
+#define REG_HDCP_HDMI_CFG_ENB_AVI (REG_HDCP_HDMI_CFG_DEFAULT | REG_HDCP_HDMI_CFG_AVI_MODE)
+
+#endif  // ZIRCON_SYSTEM_DEV_DISPLAY_HIKEY_DISPLAY_HIDISPLAY_REGS_H_

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_DISPLAY_MT8167S_DISPLAY_REGISTERS_DISP_RDMA_H_
+#define ZIRCON_SYSTEM_DEV_DISPLAY_MT8167S_DISPLAY_REGISTERS_DISP_RDMA_H_
 
 // clang-format off
 #define DISP_RDMA_INT_ENABLE                    (0x0000)
@@ -62,3 +63,5 @@
 #define FIFO_CON_CLEAR_MASK                     (0x800003FF)
 #define FIFO_CON_UNDERFLOW_EN                   (1 << 31)
 #define FIFO_CON_FIFO_THRESHOLD_DEFAULT         (16 << 0)
+
+#endif  // ZIRCON_SYSTEM_DEV_DISPLAY_MT8167S_DISPLAY_REGISTERS_DISP_RDMA_H_

@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_DISPLAY_INTEL_I915_DISPLAY_DEVICE_H_
+#define ZIRCON_SYSTEM_DEV_DISPLAY_INTEL_I915_DISPLAY_DEVICE_H_
 
 #include <ddk/protocol/display/controller.h>
 #include <ddktl/device.h>
 #include <lib/mmio/mmio.h>
-#include <region-alloc/region-alloc.h>
 #include <lib/zx/vmo.h>
+#include <region-alloc/region-alloc.h>
 
 #include "gtt.h"
 #include "pipe.h"
@@ -26,93 +27,95 @@ class DisplayDevice;
 // lifecycle is managed by devmgr but the DisplayDevice lifecycle is managed
 // by the display controller class.
 typedef struct display_ref {
-    mtx_t mtx;
-    DisplayDevice* display_device __TA_GUARDED(mtx);
+  mtx_t mtx;
+  DisplayDevice* display_device __TA_GUARDED(mtx);
 } display_ref_t;
 
-
 class DisplayDevice {
-public:
-    DisplayDevice(Controller* device, uint64_t id, registers::Ddi ddi);
-    virtual ~DisplayDevice();
+ public:
+  DisplayDevice(Controller* device, uint64_t id, registers::Ddi ddi);
+  virtual ~DisplayDevice();
 
-    bool AttachPipe(Pipe* pipe);
-    void ApplyConfiguration(const display_config_t* config);
+  bool AttachPipe(Pipe* pipe);
+  void ApplyConfiguration(const display_config_t* config);
 
-    // Query whether or not there is a display attached to this ddi. Does not
-    // actually do any initialization - that is done by Init.
-    virtual bool Query() = 0;
-    // Does display mode agnostic ddi initialization - subclasses implement InitDdi.
-    bool Init();
-    // Initializes the display backlight for an already initialized display.
-    void InitBacklight();
-    // Resumes the ddi after suspend.
-    bool Resume();
-    // Loads ddi state from the hardware at driver startup.
-    void LoadActiveMode();
-    // Method to allow the display device to handle hotplug events. Returns
-    // true if the device can handle the event without disconnecting. Otherwise
-    // the device will be removed.
-    virtual bool HandleHotplug(bool long_pulse) { return false; }
+  // Query whether or not there is a display attached to this ddi. Does not
+  // actually do any initialization - that is done by Init.
+  virtual bool Query() = 0;
+  // Does display mode agnostic ddi initialization - subclasses implement InitDdi.
+  bool Init();
+  // Initializes the display backlight for an already initialized display.
+  void InitBacklight();
+  // Resumes the ddi after suspend.
+  bool Resume();
+  // Loads ddi state from the hardware at driver startup.
+  void LoadActiveMode();
+  // Method to allow the display device to handle hotplug events. Returns
+  // true if the device can handle the event without disconnecting. Otherwise
+  // the device will be removed.
+  virtual bool HandleHotplug(bool long_pulse) { return false; }
 
-    uint64_t id() const { return id_; }
-    registers::Ddi ddi() const { return ddi_; }
-    Controller* controller() { return controller_; }
+  uint64_t id() const { return id_; }
+  registers::Ddi ddi() const { return ddi_; }
+  Controller* controller() { return controller_; }
 
-    virtual uint32_t i2c_bus_id() const = 0;
+  virtual uint32_t i2c_bus_id() const = 0;
 
-    Pipe* pipe() const { return pipe_; }
+  Pipe* pipe() const { return pipe_; }
 
-    bool is_hdmi() const { return is_hdmi_; }
-    void set_is_hdmi(bool is_hdmi) { is_hdmi_ = is_hdmi; }
+  bool is_hdmi() const { return is_hdmi_; }
+  void set_is_hdmi(bool is_hdmi) { is_hdmi_ = is_hdmi; }
 
-    virtual bool HasBacklight() { return false; }
-    virtual void SetBacklightState(bool power, uint8_t brightness) {}
-    virtual void GetBacklightState(bool* power, uint8_t* brightness) {}
+  virtual bool HasBacklight() { return false; }
+  virtual void SetBacklightState(bool power, uint8_t brightness) {}
+  virtual void GetBacklightState(bool* power, uint8_t* brightness) {}
 
-    virtual bool CheckPixelRate(uint64_t pixel_rate) = 0;
-protected:
-    // Attempts to initialize the ddi.
-    virtual bool InitDdi() = 0;
-    virtual bool InitBacklightHw() { return false; }
+  virtual bool CheckPixelRate(uint64_t pixel_rate) = 0;
 
-    // Configures the hardware to display content at the given resolution.
-    virtual bool DdiModeset(const display_mode_t& mode,
-                            registers::Pipe pipe, registers::Trans trans) = 0;
-    virtual bool ComputeDpllState(uint32_t pixel_clock_10khz, struct dpll_state* config) = 0;
-    // Load the clock rate from hardware if it's necessary when changing the transcoder.
-    virtual uint32_t LoadClockRateForTranscoder(registers::Trans transcoder) = 0;
+ protected:
+  // Attempts to initialize the ddi.
+  virtual bool InitDdi() = 0;
+  virtual bool InitBacklightHw() { return false; }
 
-    // Attaching a pipe to a display or configuring a pipe after display mode change has
-    // 3 steps. The second step is generic pipe configuration, whereas PipeConfigPreamble
-    // and PipeConfigEpilogue are responsible for display-type-specific configuration that
-    // must be done before and after the generic configuration.
-    virtual bool PipeConfigPreamble(const display_mode_t& mode,
-                                    registers::Pipe pipe, registers::Trans trans) = 0;
-    virtual bool PipeConfigEpilogue(const display_mode_t& mode,
-                                    registers::Pipe pipe, registers::Trans trans) = 0;
+  // Configures the hardware to display content at the given resolution.
+  virtual bool DdiModeset(const display_mode_t& mode, registers::Pipe pipe,
+                          registers::Trans trans) = 0;
+  virtual bool ComputeDpllState(uint32_t pixel_clock_10khz, struct dpll_state* config) = 0;
+  // Load the clock rate from hardware if it's necessary when changing the transcoder.
+  virtual uint32_t LoadClockRateForTranscoder(registers::Trans transcoder) = 0;
 
-    ddk::MmioBuffer* mmio_space() const;
+  // Attaching a pipe to a display or configuring a pipe after display mode change has
+  // 3 steps. The second step is generic pipe configuration, whereas PipeConfigPreamble
+  // and PipeConfigEpilogue are responsible for display-type-specific configuration that
+  // must be done before and after the generic configuration.
+  virtual bool PipeConfigPreamble(const display_mode_t& mode, registers::Pipe pipe,
+                                  registers::Trans trans) = 0;
+  virtual bool PipeConfigEpilogue(const display_mode_t& mode, registers::Pipe pipe,
+                                  registers::Trans trans) = 0;
 
-private:
-    bool CheckNeedsModeset(const display_mode_t* mode);
+  ddk::MmioBuffer* mmio_space() const;
 
-    // Borrowed reference to Controller instance
-    Controller* controller_;
+ private:
+  bool CheckNeedsModeset(const display_mode_t* mode);
 
-    uint64_t id_;
-    registers::Ddi ddi_;
+  // Borrowed reference to Controller instance
+  Controller* controller_;
 
-    Pipe* pipe_= nullptr;
+  uint64_t id_;
+  registers::Ddi ddi_;
 
-    PowerWellRef ddi_power_;
+  Pipe* pipe_ = nullptr;
 
-    bool inited_ = false;
-    display_mode_t info_ = {};
-    bool is_hdmi_ = false;
+  PowerWellRef ddi_power_;
 
-    zx_device_t* backlight_device_ = nullptr;
-    display_ref_t* display_ref_ = nullptr;
+  bool inited_ = false;
+  display_mode_t info_ = {};
+  bool is_hdmi_ = false;
+
+  zx_device_t* backlight_device_ = nullptr;
+  display_ref_t* display_ref_ = nullptr;
 };
 
-} // namespace i915
+}  // namespace i915
+
+#endif  // ZIRCON_SYSTEM_DEV_DISPLAY_INTEL_I915_DISPLAY_DEVICE_H_
