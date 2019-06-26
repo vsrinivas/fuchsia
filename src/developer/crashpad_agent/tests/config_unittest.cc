@@ -22,8 +22,7 @@ void CheckEmptyConfig(const Config& config) {
 
 TEST(ConfigTest, ParseConfig_ValidConfig_NoUpload) {
   Config config;
-  ASSERT_EQ(ParseConfig("/pkg/data/valid_config_no_upload.json", &config),
-            ZX_OK);
+  ASSERT_EQ(ParseConfig("/pkg/data/valid_config_no_upload.json", &config), ZX_OK);
   EXPECT_EQ(config.crashpad_database.path, "/foo/crashes");
   EXPECT_EQ(config.crashpad_database.max_size_in_kb, 1024u);
   EXPECT_FALSE(config.crash_server.enable_upload);
@@ -41,9 +40,7 @@ TEST(ConfigTest, ParseConfig_ValidConfig_Upload) {
 
 TEST(ConfigTest, ParseConfig_ValidConfig_NoUploadServerUrlIgnored) {
   Config config;
-  ASSERT_EQ(ParseConfig("/pkg/data/valid_config_no_upload_spurious_server.json",
-                        &config),
-            ZX_OK);
+  ASSERT_EQ(ParseConfig("/pkg/data/valid_config_no_upload_spurious_server.json", &config), ZX_OK);
   EXPECT_EQ(config.crashpad_database.path, "/foo/crashes");
   EXPECT_EQ(config.crashpad_database.max_size_in_kb, 1024u);
   EXPECT_FALSE(config.crash_server.enable_upload);
@@ -60,26 +57,22 @@ TEST(ConfigTest, ParseConfig_MissingConfig) {
 
 TEST(ConfigTest, ParseConfig_BadConfig_SpuriousField) {
   Config config;
-  ASSERT_EQ(
-      ParseConfig("/pkg/data/bad_schema_spurious_field_config.json", &config),
-      ZX_ERR_INTERNAL);
+  ASSERT_EQ(ParseConfig("/pkg/data/bad_schema_spurious_field_config.json", &config),
+            ZX_ERR_INTERNAL);
   CheckEmptyConfig(config);
 }
 
 TEST(ConfigTest, ParseConfig_BadConfig_MissingRequiredField) {
   Config config;
-  ASSERT_EQ(
-      ParseConfig("/pkg/data/bad_schema_missing_required_field_config.json",
-                  &config),
-      ZX_ERR_INTERNAL);
+  ASSERT_EQ(ParseConfig("/pkg/data/bad_schema_missing_required_field_config.json", &config),
+            ZX_ERR_INTERNAL);
   CheckEmptyConfig(config);
 }
 
 TEST(ConfigTest, ParseConfig_BadConfig_MissingServerUrlWithUploadEnabled) {
   Config config;
-  ASSERT_EQ(
-      ParseConfig("/pkg/data/bad_schema_missing_server_config.json", &config),
-      ZX_ERR_INTERNAL);
+  ASSERT_EQ(ParseConfig("/pkg/data/bad_schema_missing_server_config.json", &config),
+            ZX_ERR_INTERNAL);
   CheckEmptyConfig(config);
 }
 

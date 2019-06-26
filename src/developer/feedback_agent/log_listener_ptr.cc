@@ -26,12 +26,11 @@ namespace fuchsia {
 namespace feedback {
 fit::promise<fuchsia::mem::Buffer> CollectSystemLog(
     std::shared_ptr<::sys::ServiceDirectory> services, zx::duration timeout) {
-  std::unique_ptr<LogListener> log_listener =
-      std::make_unique<LogListener>(services);
+  std::unique_ptr<LogListener> log_listener = std::make_unique<LogListener>(services);
 
   return log_listener->CollectLogs(timeout).then(
-      [log_listener = std::move(log_listener)](const fit::result<void>& result)
-          -> fit::result<fuchsia::mem::Buffer> {
+      [log_listener = std::move(log_listener)](
+          const fit::result<void>& result) -> fit::result<fuchsia::mem::Buffer> {
         if (!result.is_ok()) {
           FX_LOGS(WARNING) << "System log collection was interrupted - "
                               "logs may be partial or missing";
@@ -98,11 +97,9 @@ fit::promise<void> LogListener::CollectLogs(zx::duration timeout) {
     done->completer.complete_error();
   });
   const zx_status_t post_status = async::PostDelayedTask(
-      async_get_default_dispatcher(),
-      [cb = done_after_timeout_.callback()] { cb(); }, timeout);
+      async_get_default_dispatcher(), [cb = done_after_timeout_.callback()] { cb(); }, timeout);
   if (post_status != ZX_OK) {
-    FX_PLOGS(ERROR, post_status)
-        << "Failed to post delayed task, no timeout for log collection";
+    FX_PLOGS(ERROR, post_status) << "Failed to post delayed task, no timeout for log collection";
   }
 
   return done_->consumer.promise_or(fit::error());
@@ -141,12 +138,11 @@ std::string SeverityToString(const int32_t severity) {
 }  // namespace
 
 void LogListener::Log(fuchsia::logger::LogMessage message) {
-  logs_ += fxl::StringPrintf(
-      "[%05d.%03d][%05" PRIu64 "][%05" PRIu64 "][%s] %s: %s\n",
-      static_cast<int>(message.time / 1000000000ULL),
-      static_cast<int>((message.time / 1000000ULL) % 1000ULL), message.pid,
-      message.tid, fxl::JoinStrings(message.tags, ", ").c_str(),
-      SeverityToString(message.severity).c_str(), message.msg.c_str());
+  logs_ += fxl::StringPrintf("[%05d.%03d][%05" PRIu64 "][%05" PRIu64 "][%s] %s: %s\n",
+                             static_cast<int>(message.time / 1000000000ULL),
+                             static_cast<int>((message.time / 1000000ULL) % 1000ULL), message.pid,
+                             message.tid, fxl::JoinStrings(message.tags, ", ").c_str(),
+                             SeverityToString(message.severity).c_str(), message.msg.c_str());
 }
 
 void LogListener::Done() {
@@ -159,8 +155,7 @@ void LogListener::Done() {
   }
 
   if (logs_.empty()) {
-    FX_LOGS(WARNING)
-        << "Done() was called, but no logs have been collected yet";
+    FX_LOGS(WARNING) << "Done() was called, but no logs have been collected yet";
   }
 
   done_->completer.complete_ok();

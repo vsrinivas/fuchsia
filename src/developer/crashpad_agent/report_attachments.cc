@@ -58,10 +58,9 @@ void AddFeedbackAttachments(crashpad::CrashReportDatabase::NewReport* report,
 
 }  // namespace
 
-void AddManagedRuntimeExceptionAttachments(
-    crashpad::CrashReportDatabase::NewReport* report,
-    const fuchsia::feedback::Data& feedback_data,
-    ManagedRuntimeException* exception) {
+void AddManagedRuntimeExceptionAttachments(crashpad::CrashReportDatabase::NewReport* report,
+                                           const fuchsia::feedback::Data& feedback_data,
+                                           ManagedRuntimeException* exception) {
   AddFeedbackAttachments(report, feedback_data);
 
   // Language-specific attachments.
@@ -73,8 +72,7 @@ void AddManagedRuntimeExceptionAttachments(
       AddAttachment(report, "data", exception->unknown_().data);
       break;
     case ManagedRuntimeException::Tag::kDart:
-      AddAttachment(report, kAttachmentDartStackTraceFilename,
-                    exception->dart().stack_trace);
+      AddAttachment(report, kAttachmentDartStackTraceFilename, exception->dart().stack_trace);
       break;
   }
 }

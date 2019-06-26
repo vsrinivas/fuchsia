@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_CRASHPAD_AGENT_FEEDBACK_DATA_PROVIDER_H_
-#define SRC_DEVELOPER_CRASHPAD_AGENT_FEEDBACK_DATA_PROVIDER_H_
+#ifndef SRC_DEVELOPER_CRASHPAD_AGENT_FEEDBACK_DATA_PROVIDER_PTR_H_
+#define SRC_DEVELOPER_CRASHPAD_AGENT_FEEDBACK_DATA_PROVIDER_PTR_H_
 
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
@@ -48,4 +48,4 @@ class FeedbackDataProvider {
 }  // namespace crash
 }  // namespace fuchsia
 
-#endif  // SRC_DEVELOPER_CRASHPAD_AGENT_FEEDBACK_DATA_PROVIDER_H_
+#endif  // SRC_DEVELOPER_CRASHPAD_AGENT_FEEDBACK_DATA_PROVIDER_PTR_H_

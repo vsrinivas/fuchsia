@@ -30,8 +30,7 @@ namespace feedback {
 namespace {
 
 template <typename ResultListenerT>
-bool DoStringBufferMatch(const fuchsia::mem::Buffer& actual,
-                         const std::string& expected,
+bool DoStringBufferMatch(const fuchsia::mem::Buffer& actual, const std::string& expected,
                          ResultListenerT* result_listener) {
   std::string actual_value;
   if (!fsl::StringFromVmo(actual, &actual_value)) {
@@ -56,13 +55,12 @@ class CollectSystemLogTest : public gtest::RealLoopFixture {
   CollectSystemLogTest()
       : executor_(dispatcher()),
         service_directory_provider_loop_(&kAsyncLoopConfigNoAttachToThread),
-        service_directory_provider_(
-            service_directory_provider_loop_.dispatcher()) {
+        service_directory_provider_(service_directory_provider_loop_.dispatcher()) {
     // We run the service directory provider in a different loop and thread so
     // that the stub logger can sleep (blocking call) without affecting the main
     // loop.
-    FXL_CHECK(service_directory_provider_loop_.StartThread(
-                  "service directory provider thread") == ZX_OK);
+    FXL_CHECK(service_directory_provider_loop_.StartThread("service directory provider thread") ==
+              ZX_OK);
   }
 
   ~CollectSystemLogTest() { service_directory_provider_loop_.Shutdown(); }
@@ -76,15 +74,12 @@ class CollectSystemLogTest : public gtest::RealLoopFixture {
     }
   }
 
-  fit::result<fuchsia::mem::Buffer> CollectSystemLog(
-      zx::duration timeout = zx::sec(1)) {
+  fit::result<fuchsia::mem::Buffer> CollectSystemLog(zx::duration timeout = zx::sec(1)) {
     fit::result<fuchsia::mem::Buffer> result;
     executor_.schedule_task(
-        fuchsia::feedback::CollectSystemLog(
-            service_directory_provider_.service_directory(), timeout)
-            .then([&result](fit::result<fuchsia::mem::Buffer>& res) {
-              result = std::move(res);
-            }));
+        fuchsia::feedback::CollectSystemLog(service_directory_provider_.service_directory(),
+                                            timeout)
+            .then([&result](fit::result<fuchsia::mem::Buffer>& res) { result = std::move(res); }));
     RunLoopUntil([&result] { return !!result; });
     return result;
   }
@@ -130,15 +125,12 @@ TEST_F(CollectSystemLogTest, Succeed_BasicCase) {
 )"));
 }
 
-TEST_F(CollectSystemLogTest,
-       Succeed_LoggerUnbindsFromLogListenerAfterOneMessage) {
+TEST_F(CollectSystemLogTest, Succeed_LoggerUnbindsFromLogListenerAfterOneMessage) {
   std::unique_ptr<StubLogger> stub_logger =
       std::make_unique<StubLoggerUnbindsFromLogListenerAfterOneMessage>();
   stub_logger->set_messages({
-      BuildLogMessage(FX_LOG_INFO,
-                      "this line should appear in the partial logs"),
-      BuildLogMessage(FX_LOG_INFO,
-                      "this line should be missing from the partial logs"),
+      BuildLogMessage(FX_LOG_INFO, "this line should appear in the partial logs"),
+      BuildLogMessage(FX_LOG_INFO, "this line should be missing from the partial logs"),
   });
   ResetStubLogger(std::move(stub_logger));
 
@@ -146,9 +138,8 @@ TEST_F(CollectSystemLogTest,
 
   ASSERT_TRUE(result.is_ok());
   fuchsia::mem::Buffer logs = result.take_value();
-  EXPECT_THAT(logs,
-              MatchesStringBuffer("[15604.000][07559][07687][] INFO: this line "
-                                  "should appear in the partial logs\n"));
+  EXPECT_THAT(logs, MatchesStringBuffer("[15604.000][07559][07687][] INFO: this line "
+                                        "should appear in the partial logs\n"));
 }
 
 TEST_F(CollectSystemLogTest, Succeed_LogCollectionTimesOut) {
@@ -160,21 +151,17 @@ TEST_F(CollectSystemLogTest, Succeed_LogCollectionTimesOut) {
   std::unique_ptr<StubLogger> stub_logger =
       std::make_unique<StubLoggerSleepsAfterOneMessage>(logger_sleep);
   stub_logger->set_messages({
-      BuildLogMessage(FX_LOG_INFO,
-                      "this line should appear in the partial logs"),
-      BuildLogMessage(FX_LOG_INFO,
-                      "this line should be missing from the partial logs"),
+      BuildLogMessage(FX_LOG_INFO, "this line should appear in the partial logs"),
+      BuildLogMessage(FX_LOG_INFO, "this line should be missing from the partial logs"),
   });
   ResetStubLogger(std::move(stub_logger));
 
-  fit::result<fuchsia::mem::Buffer> result =
-      CollectSystemLog(log_collection_timeout);
+  fit::result<fuchsia::mem::Buffer> result = CollectSystemLog(log_collection_timeout);
 
   ASSERT_TRUE(result.is_ok());
   fuchsia::mem::Buffer logs = result.take_value();
-  EXPECT_THAT(logs,
-              MatchesStringBuffer("[15604.000][07559][07687][] INFO: this line "
-                                  "should appear in the partial logs\n"));
+  EXPECT_THAT(logs, MatchesStringBuffer("[15604.000][07559][07687][] INFO: this line "
+                                        "should appear in the partial logs\n"));
 }
 
 TEST_F(CollectSystemLogTest, Fail_EmptyLog) {
@@ -219,8 +206,7 @@ TEST_F(CollectSystemLogTest, Fail_LoggerNeverCallsLogManyBeforeDone) {
 
 class LogListenerTest : public gtest::RealLoopFixture {
  public:
-  LogListenerTest()
-      : executor_(dispatcher()), service_directory_provider_(dispatcher()) {}
+  LogListenerTest() : executor_(dispatcher()), service_directory_provider_(dispatcher()) {}
 
  protected:
   async::Executor executor_;
@@ -233,16 +219,14 @@ TEST_F(LogListenerTest, Succeed_LoggerClosesConnectionAfterSuccessfulFlow) {
   stub_logger->set_messages({
       BuildLogMessage(FX_LOG_INFO, "msg"),
   });
-  FXL_CHECK(service_directory_provider_.AddService(
-                stub_logger->GetHandler(dispatcher())) == ZX_OK);
+  FXL_CHECK(service_directory_provider_.AddService(stub_logger->GetHandler(dispatcher())) == ZX_OK);
 
   fit::result<void> result;
-  std::unique_ptr<LogListener> log_listener = std::make_unique<LogListener>(
-      service_directory_provider_.service_directory());
-  executor_.schedule_task(log_listener->CollectLogs(/*timeout=*/zx::sec(1))
-                              .then([&result](const fit::result<void>& res) {
-                                result = std::move(res);
-                              }));
+  std::unique_ptr<LogListener> log_listener =
+      std::make_unique<LogListener>(service_directory_provider_.service_directory());
+  executor_.schedule_task(
+      log_listener->CollectLogs(/*timeout=*/zx::sec(1))
+          .then([&result](const fit::result<void>& res) { result = std::move(res); }));
   RunLoopUntil([&result] { return !!result; });
 
   // First, we check we have had a successful flow.

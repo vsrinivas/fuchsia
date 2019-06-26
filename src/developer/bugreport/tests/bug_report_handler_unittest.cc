@@ -17,8 +17,7 @@ std::optional<std::string> ReadWholeFile(const std::filesystem::path& path) {
   if (!ifs.good())
     return std::nullopt;
 
-  std::string tmp((std::istreambuf_iterator<char>(ifs)),
-                  std::istreambuf_iterator<char>());
+  std::string tmp((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());
   return tmp;
 }
 

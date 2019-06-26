@@ -37,12 +37,9 @@ MATCHER_P(MatchesKey, expected_key,
 
 // Smoke-tests the real environment service for the
 // fuchsia.feedback.DataProvider FIDL interface, connecting through FIDL.
-class FeedbackAgentIntegrationTest
-    : public ::sys::testing::TestWithEnvironment {
+class FeedbackAgentIntegrationTest : public ::sys::testing::TestWithEnvironment {
  public:
-  void SetUp() override {
-    environment_services_ = ::sys::ServiceDirectory::CreateFromNamespace();
-  }
+  void SetUp() override { environment_services_ = ::sys::ServiceDirectory::CreateFromNamespace(); }
 
   void TearDown() override {
     if (!controller_) {
@@ -50,11 +47,11 @@ class FeedbackAgentIntegrationTest
     }
     controller_->Kill();
     bool done = false;
-    controller_.events().OnTerminated =
-        [&done](int64_t code, fuchsia::sys::TerminationReason reason) {
-          FXL_CHECK(reason == fuchsia::sys::TerminationReason::EXITED);
-          done = true;
-        };
+    controller_.events().OnTerminated = [&done](int64_t code,
+                                                fuchsia::sys::TerminationReason reason) {
+      FXL_CHECK(reason == fuchsia::sys::TerminationReason::EXITED);
+      done = true;
+    };
     RunLoopUntil([&done] { return done; });
   }
 
@@ -70,10 +67,8 @@ class FeedbackAgentIntegrationTest
     launch_info.url =
         "fuchsia-pkg://fuchsia.com/feedback_agent_tests#meta/"
         "inspect_test_app.cmx";
-    environment_ = CreateNewEnclosingEnvironment("inspect_test_app_environment",
-                                                 CreateServices());
-    environment_->CreateComponent(std::move(launch_info),
-                                  controller_.NewRequest());
+    environment_ = CreateNewEnclosingEnvironment("inspect_test_app_environment", CreateServices());
+    environment_->CreateComponent(std::move(launch_info), controller_.NewRequest());
     bool ready = false;
     controller_.events().OnDirectoryReady = [&ready] { ready = true; };
     RunLoopUntil([&ready] { return ready; });
@@ -95,16 +90,14 @@ VK_TEST_F(FeedbackAgentIntegrationTest, GetScreenshot_SmokeTest) {
   environment_services_->Connect(data_provider.NewRequest());
 
   std::unique_ptr<Screenshot> out_screenshot;
-  ASSERT_EQ(data_provider->GetScreenshot(ImageEncoding::PNG, &out_screenshot),
-            ZX_OK);
+  ASSERT_EQ(data_provider->GetScreenshot(ImageEncoding::PNG, &out_screenshot), ZX_OK);
   // We cannot expect a particular payload in the response because Scenic might
   // return a screenshot or not depending on which device the test runs.
 }
 
 class LogListener : public fuchsia::logger::LogListener {
  public:
-  LogListener(std::shared_ptr<::sys::ServiceDirectory> services)
-      : binding_(this) {
+  LogListener(std::shared_ptr<::sys::ServiceDirectory> services) : binding_(this) {
     binding_.Bind(log_listener_.NewRequest());
 
     fuchsia::logger::LogPtr logger = services->Connect<fuchsia::logger::Log>();
@@ -115,9 +108,7 @@ class LogListener : public fuchsia::logger::LogListener {
 
  private:
   // |fuchsia::logger::LogListener|
-  void LogMany(::std::vector<fuchsia::logger::LogMessage> log) {
-    has_logs_ = true;
-  }
+  void LogMany(::std::vector<fuchsia::logger::LogMessage> log) { has_logs_ = true; }
   void Log(fuchsia::logger::LogMessage log) { has_logs_ = true; }
   void Done() { FXL_NOTIMPLEMENTED(); }
 
@@ -168,29 +159,26 @@ TEST_F(FeedbackAgentIntegrationTest, GetData_CheckKeys) {
   // name) or what happened prior to running this test (e.g., logs). But we
   // should expect the keys to be present.
   ASSERT_TRUE(out_result.response().data.has_annotations());
-  EXPECT_THAT(out_result.response().data.annotations(),
-              testing::UnorderedElementsAreArray({
-                  MatchesKey("device.board-name"),
-                  MatchesKey("build.latest-commit-date"),
-                  MatchesKey("build.version"),
-                  MatchesKey("build.board"),
-                  MatchesKey("build.product"),
-              }));
+  EXPECT_THAT(out_result.response().data.annotations(), testing::UnorderedElementsAreArray({
+                                                            MatchesKey("device.board-name"),
+                                                            MatchesKey("build.latest-commit-date"),
+                                                            MatchesKey("build.version"),
+                                                            MatchesKey("build.board"),
+                                                            MatchesKey("build.product"),
+                                                        }));
   ASSERT_TRUE(out_result.response().data.has_attachments());
-  EXPECT_THAT(out_result.response().data.attachments(),
-              testing::UnorderedElementsAreArray({
-                  MatchesKey("build.snapshot.xml"),
-                  MatchesKey("log.kernel.txt"),
-                  MatchesKey("log.system.txt"),
-                  MatchesKey("inspect.json"),
-              }));
+  EXPECT_THAT(out_result.response().data.attachments(), testing::UnorderedElementsAreArray({
+                                                            MatchesKey("build.snapshot.xml"),
+                                                            MatchesKey("log.kernel.txt"),
+                                                            MatchesKey("log.system.txt"),
+                                                            MatchesKey("inspect.json"),
+                                                        }));
 }
 
 // EXPECTs that there is a feedback_agent.cmx process running in a child job of
 // the test environment job and that this process has
 // |expected_num_data_providers| sibling processes.
-void CheckNumberOfDataProviderProcesses(
-    const uint32_t expected_num_data_providers) {
+void CheckNumberOfDataProviderProcesses(const uint32_t expected_num_data_providers) {
   // We want to check how many data_provider subprocesses feedback_agent has
   // spawned.
   //
@@ -213,13 +201,11 @@ void CheckNumberOfDataProviderProcesses(
   // the number of sibling processes named /pkg/bin/data_provider.
 
   fuchsia::sys::JobProviderSyncPtr job_provider;
-  ASSERT_EQ(fdio_service_connect(
-                "/hub/job", job_provider.NewRequest().TakeChannel().release()),
+  ASSERT_EQ(fdio_service_connect("/hub/job", job_provider.NewRequest().TakeChannel().release()),
             ZX_OK);
   zx::job env_for_test_job;
   ASSERT_EQ(job_provider->GetJob(&env_for_test_job), ZX_OK);
-  ASSERT_THAT(fsl::GetObjectName(env_for_test_job.get()),
-              testing::StartsWith("env_for_test"));
+  ASSERT_THAT(fsl::GetObjectName(env_for_test_job.get()), testing::StartsWith("env_for_test"));
 
   // Child jobs are for the test component and each injected service.
   auto child_jobs = GetChildJobs(env_for_test_job.get());

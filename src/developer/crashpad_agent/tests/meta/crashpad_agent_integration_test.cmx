@@ -1,7 +1,4 @@
 {
-    "program": {
-        "binary": "test/crashpad_agent_integration_test"
-    },
     "facets": {
         "fuchsia.test": {
             "injected-services": {
@@ -10,6 +7,9 @@
                 "fuchsia.logger.Log": "fuchsia-pkg://fuchsia.com/logger#meta/logger.cmx"
             }
         }
+    },
+    "program": {
+        "binary": "test/crashpad_agent_integration_test"
     },
     "sandbox": {
         "services": [

@@ -55,8 +55,8 @@ fit::promise<fuchsia::mem::Buffer> CollectInspectData(zx::duration timeout) {
         }
       });
   const zx_status_t post_status = async::PostDelayedTask(
-      async_get_default_dispatcher(),
-      [cb = discovery_done_after_timeout->callback()] { cb(); }, timeout);
+      async_get_default_dispatcher(), [cb = discovery_done_after_timeout->callback()] { cb(); },
+      timeout);
   if (post_status != ZX_OK) {
     FX_PLOGS(ERROR, post_status) << "Failed to post delayed task";
     FX_LOGS(ERROR) << "Skipping Inspect data collection as Inspect discovery "
@@ -72,8 +72,8 @@ fit::promise<fuchsia::mem::Buffer> CollectInspectData(zx::duration timeout) {
   // components. It is okay to have potentially dangling threads as we run each
   // fuchsia.feedback.DataProvider request in a separate process that exits when
   // the connection with the client is closed.
-  std::thread([discovery_done, discovery_done_after_timeout = std::move(
-                                   discovery_done_after_timeout)]() mutable {
+  std::thread([discovery_done,
+               discovery_done_after_timeout = std::move(discovery_done_after_timeout)]() mutable {
     Locations locations = ::inspect::SyncFindPaths("/hub");
 
     discovery_done_after_timeout->Cancel();
@@ -91,53 +91,47 @@ fit::promise<fuchsia::mem::Buffer> CollectInspectData(zx::duration timeout) {
 
   // Then, we connect to each entrypoint and read asynchronously its Inspect
   // data.
-  return discovery_done->consumer.promise_or(fit::error())
-      .and_then([](Locations& locations) {
-        std::vector<fit::promise<::inspect::Source, std::string>> sources;
-        for (auto location : locations) {
-          if (location.directory_path.find("system_objects") ==
-              std::string::npos) {
-            sources.push_back(::inspect::ReadLocation(std::move(location)));
+  return discovery_done->consumer.promise_or(fit::error()).and_then([](Locations& locations) {
+    std::vector<fit::promise<::inspect::Source, std::string>> sources;
+    for (auto location : locations) {
+      if (location.directory_path.find("system_objects") == std::string::npos) {
+        sources.push_back(::inspect::ReadLocation(std::move(location)));
+      }
+    }
+
+    return fit::join_promise_vector(std::move(sources))
+        .and_then([](std::vector<fit::result<::inspect::Source, std::string>>& sources)
+                      -> fit::result<fuchsia::mem::Buffer> {
+          std::vector<::inspect::Source> ok_sources;
+          for (auto& source : sources) {
+            if (source.is_ok()) {
+              ok_sources.emplace_back(source.take_value());
+            } else {
+              FX_LOGS(ERROR) << "Failed to read one Inspect source: " << source.take_error();
+            }
           }
-        }
 
-        return fit::join_promise_vector(std::move(sources))
-            .and_then(
-                [](std::vector<fit::result<::inspect::Source, std::string>>&
-                       sources) -> fit::result<fuchsia::mem::Buffer> {
-                  std::vector<::inspect::Source> ok_sources;
-                  for (auto& source : sources) {
-                    if (source.is_ok()) {
-                      ok_sources.emplace_back(source.take_value());
-                    } else {
-                      FX_LOGS(ERROR) << "Failed to read one Inspect source: "
-                                     << source.take_error();
-                    }
-                  }
+          if (ok_sources.empty()) {
+            FX_LOGS(WARNING) << "No valid Inspect sources found";
+            return fit::error();
+          }
 
-                  if (ok_sources.empty()) {
-                    FX_LOGS(WARNING) << "No valid Inspect sources found";
-                    return fit::error();
-                  }
-
-                  fsl::SizedVmo vmo;
-                  if (!fsl::VmoFromString(
-                          ::inspect::JsonFormatter(
-                              ::inspect::JsonFormatter::Options{},
-                              ::inspect::Formatter::PathFormat::ABSOLUTE)
-                              .FormatSourcesRecursive(ok_sources),
-                          &vmo)) {
-                    FX_LOGS(ERROR)
-                        << "Failed to convert Inspect data JSON string to vmo";
-                    return fit::error();
-                  }
-                  return fit::ok(std::move(vmo).ToTransport());
-                })
-            .or_else([]() {
-              FX_LOGS(ERROR) << "Failed to get Inspect data";
-              return fit::error();
-            });
-      });
+          fsl::SizedVmo vmo;
+          if (!fsl::VmoFromString(
+                  ::inspect::JsonFormatter(::inspect::JsonFormatter::Options{},
+                                           ::inspect::Formatter::PathFormat::ABSOLUTE)
+                      .FormatSourcesRecursive(ok_sources),
+                  &vmo)) {
+            FX_LOGS(ERROR) << "Failed to convert Inspect data JSON string to vmo";
+            return fit::error();
+          }
+          return fit::ok(std::move(vmo).ToTransport());
+        })
+        .or_else([]() {
+          FX_LOGS(ERROR) << "Failed to get Inspect data";
+          return fit::error();
+        });
+  });
 }
 
 }  // namespace feedback

@@ -34,8 +34,7 @@ TEST(ConfigTest, ParseConfig_ValidConfig) {
 
 TEST(ConfigTest, ParseConfig_ValidConfigEmptyList) {
   Config config;
-  ASSERT_EQ(ParseConfig("/pkg/data/valid_config_empty_list.json", &config),
-            ZX_OK);
+  ASSERT_EQ(ParseConfig("/pkg/data/valid_config_empty_list.json", &config), ZX_OK);
   EXPECT_THAT(config.annotation_allowlist, testing::UnorderedElementsAreArray({
                                                "foo",
                                            }));
@@ -50,27 +49,22 @@ TEST(ConfigTest, ParseConfig_MissingConfig) {
 
 TEST(ConfigTest, ParseConfig_BadConfig_DuplicatedAttachmentKey) {
   Config config;
-  ASSERT_EQ(
-      ParseConfig("/pkg/data/bad_schema_duplicated_attachment_key_config.json",
-                  &config),
-      ZX_ERR_INTERNAL);
+  ASSERT_EQ(ParseConfig("/pkg/data/bad_schema_duplicated_attachment_key_config.json", &config),
+            ZX_ERR_INTERNAL);
   CheckEmptyConfig(config);
 }
 
 TEST(ConfigTest, ParseConfig_BadConfig_SpuriousField) {
   Config config;
-  ASSERT_EQ(
-      ParseConfig("/pkg/data/bad_schema_spurious_field_config.json", &config),
-      ZX_ERR_INTERNAL);
+  ASSERT_EQ(ParseConfig("/pkg/data/bad_schema_spurious_field_config.json", &config),
+            ZX_ERR_INTERNAL);
   CheckEmptyConfig(config);
 }
 
 TEST(ConfigTest, ParseConfig_BadConfig_MissingRequiredField) {
   Config config;
-  ASSERT_EQ(
-      ParseConfig("/pkg/data/bad_schema_missing_required_field_config.json",
-                  &config),
-      ZX_ERR_INTERNAL);
+  ASSERT_EQ(ParseConfig("/pkg/data/bad_schema_missing_required_field_config.json", &config),
+            ZX_ERR_INTERNAL);
   CheckEmptyConfig(config);
 }
 

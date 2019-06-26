@@ -29,11 +29,9 @@ int main(int argc, char** argv) {
     case Mode::MINIMAL:
       attachment_allowlist = {"inspect.json"};
     case Mode::DEFAULT:
-      auto environment_services =
-          ::sys::ServiceDirectory::CreateFromNamespace();
+      auto environment_services = ::sys::ServiceDirectory::CreateFromNamespace();
 
-      return fuchsia::bugreport::MakeBugReport(environment_services,
-                                               attachment_allowlist)
+      return fuchsia::bugreport::MakeBugReport(environment_services, attachment_allowlist)
                  ? EXIT_SUCCESS
                  : EXIT_FAILURE;
   }

@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifndef SRC_DEVELOPER_CRASHPAD_AGENT_TESTS_STUB_CRASH_SERVER_H_
+#define SRC_DEVELOPER_CRASHPAD_AGENT_TESTS_STUB_CRASH_SERVER_H_
+
 #include <string>
 
 #include "src/developer/crashpad_agent/crash_server.h"
@@ -16,8 +19,7 @@ extern const char kStubCrashServerUrl[];
 class StubCrashServer : public CrashServer {
  public:
   StubCrashServer(bool request_return_value)
-      : CrashServer(kStubCrashServerUrl),
-        request_return_value_(request_return_value) {}
+      : CrashServer(kStubCrashServerUrl), request_return_value_(request_return_value) {}
 
   bool MakeRequest(const crashpad::HTTPHeaders& headers,
                    std::unique_ptr<crashpad::HTTPBodyStream> stream,
@@ -29,3 +31,5 @@ class StubCrashServer : public CrashServer {
 
 }  // namespace crash
 }  // namespace fuchsia
+
+#endif  // SRC_DEVELOPER_CRASHPAD_AGENT_TESTS_STUB_CRASH_SERVER_H_

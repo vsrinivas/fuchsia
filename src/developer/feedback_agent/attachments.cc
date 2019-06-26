@@ -54,11 +54,10 @@ fit::promise<fuchsia::mem::Buffer> GetKernelLog() {
     }
     record->data[record->datalen] = 0;
 
-    kernel_log += fxl::StringPrintf(
-        "[%05d.%03d] %05" PRIu64 ".%05" PRIu64 "> %s\n",
-        static_cast<int>(record->timestamp / 1000000000ULL),
-        static_cast<int>((record->timestamp / 1000000ULL) % 1000ULL),
-        record->pid, record->tid, record->data);
+    kernel_log += fxl::StringPrintf("[%05d.%03d] %05" PRIu64 ".%05" PRIu64 "> %s\n",
+                                    static_cast<int>(record->timestamp / 1000000000ULL),
+                                    static_cast<int>((record->timestamp / 1000000ULL) % 1000ULL),
+                                    record->pid, record->tid, record->data);
   }
 
   fsl::SizedVmo vmo;
@@ -71,8 +70,7 @@ fit::promise<fuchsia::mem::Buffer> GetKernelLog() {
 
 // This is actually synchronous, but we return a fit::promise to match other
 // attachment providers that are asynchronous.
-fit::promise<fuchsia::mem::Buffer> VmoFromFilename(
-    const std::string& filename) {
+fit::promise<fuchsia::mem::Buffer> VmoFromFilename(const std::string& filename) {
   fsl::SizedVmo vmo;
   if (!fsl::VmoFromFilename(filename, &vmo)) {
     FX_LOGS(ERROR) << "Failed to read VMO from file " << filename;
@@ -81,8 +79,8 @@ fit::promise<fuchsia::mem::Buffer> VmoFromFilename(
   return fit::make_ok_promise(std::move(vmo).ToTransport());
 }
 
-fit::promise<fuchsia::mem::Buffer> BuildValue(
-    const std::string& key, std::shared_ptr<::sys::ServiceDirectory> services) {
+fit::promise<fuchsia::mem::Buffer> BuildValue(const std::string& key,
+                                              std::shared_ptr<::sys::ServiceDirectory> services) {
   if (key == "build.snapshot.xml") {
     return VmoFromFilename("/config/build-info/snapshot");
   } else if (key == "log.kernel.txt") {
@@ -97,8 +95,8 @@ fit::promise<fuchsia::mem::Buffer> BuildValue(
   }
 }
 
-fit::promise<Attachment> BuildAttachment(
-    const std::string& key, std::shared_ptr<::sys::ServiceDirectory> services) {
+fit::promise<Attachment> BuildAttachment(const std::string& key,
+                                         std::shared_ptr<::sys::ServiceDirectory> services) {
   return BuildValue(key, services)
       .and_then([key](fuchsia::mem::Buffer& vmo) -> fit::result<Attachment> {
         Attachment attachment;
@@ -115,8 +113,7 @@ fit::promise<Attachment> BuildAttachment(
 }  // namespace
 
 std::vector<fit::promise<Attachment>> GetAttachments(
-    std::shared_ptr<::sys::ServiceDirectory> services,
-    const std::set<std::string>& allowlist) {
+    std::shared_ptr<::sys::ServiceDirectory> services, const std::set<std::string>& allowlist) {
   if (allowlist.empty()) {
     FX_LOGS(WARNING) << "Attachment allowlist is empty, nothing to retrieve";
     return {};

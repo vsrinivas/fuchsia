@@ -22,10 +22,9 @@ namespace feedback {
 // Returns a LogMessage with the given severity, message and optional tags.
 // The process and thread ids are constants. The timestamp is a constant plus
 // the optionally provided offset.
-fuchsia::logger::LogMessage BuildLogMessage(
-    const int32_t severity, const std::string& text,
-    const zx::duration timestamp_offset = zx::duration(0),
-    const std::vector<std::string>& tags = {});
+fuchsia::logger::LogMessage BuildLogMessage(const int32_t severity, const std::string& text,
+                                            const zx::duration timestamp_offset = zx::duration(0),
+                                            const std::vector<std::string>& tags = {});
 
 // Stub Log service to return canned responses to Log::DumpLogs().
 class StubLogger : public fuchsia::logger::Log {
@@ -33,20 +32,17 @@ class StubLogger : public fuchsia::logger::Log {
   // Returns a request handler for binding to this stub service.
   // We pass a dispatcher to be able to run it on a different loop than the
   // default one.
-  fidl::InterfaceRequestHandler<fuchsia::logger::Log> GetHandler(
-      async_dispatcher_t* dispatcher) {
+  fidl::InterfaceRequestHandler<fuchsia::logger::Log> GetHandler(async_dispatcher_t* dispatcher) {
     return bindings_.GetHandler(this, dispatcher);
   }
 
   // fuchsia::logger::Log methods.
-  void Listen(
-      fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
-      std::unique_ptr<fuchsia::logger::LogFilterOptions> options) override {
+  void Listen(fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
+              std::unique_ptr<fuchsia::logger::LogFilterOptions> options) override {
     FXL_NOTIMPLEMENTED();
   }
-  void DumpLogs(
-      fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
-      std::unique_ptr<fuchsia::logger::LogFilterOptions> options) override;
+  void DumpLogs(fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
+                std::unique_ptr<fuchsia::logger::LogFilterOptions> options) override;
 
   // Stub injection methods.
   void set_messages(const std::vector<fuchsia::logger::LogMessage>& messages) {
@@ -62,39 +58,34 @@ class StubLogger : public fuchsia::logger::Log {
 
 class StubLoggerClosesConnection : public StubLogger {
  public:
-  void DumpLogs(
-      fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
-      std::unique_ptr<fuchsia::logger::LogFilterOptions> options) override;
+  void DumpLogs(fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
+                std::unique_ptr<fuchsia::logger::LogFilterOptions> options) override;
 };
 
 class StubLoggerNeverBindsToLogListener : public StubLogger {
  public:
-  void DumpLogs(
-      fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
-      std::unique_ptr<fuchsia::logger::LogFilterOptions> options) override;
+  void DumpLogs(fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
+                std::unique_ptr<fuchsia::logger::LogFilterOptions> options) override;
 };
 
 class StubLoggerUnbindsFromLogListenerAfterOneMessage : public StubLogger {
  public:
-  void DumpLogs(
-      fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
-      std::unique_ptr<fuchsia::logger::LogFilterOptions> options) override;
+  void DumpLogs(fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
+                std::unique_ptr<fuchsia::logger::LogFilterOptions> options) override;
 };
 
 class StubLoggerNeverCallsLogManyBeforeDone : public StubLogger {
  public:
-  void DumpLogs(
-      fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
-      std::unique_ptr<fuchsia::logger::LogFilterOptions> options) override;
+  void DumpLogs(fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
+                std::unique_ptr<fuchsia::logger::LogFilterOptions> options) override;
 };
 
 class StubLoggerSleepsAfterOneMessage : public StubLogger {
  public:
   StubLoggerSleepsAfterOneMessage(zx::duration sleep) : sleep_(sleep) {}
 
-  void DumpLogs(
-      fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
-      std::unique_ptr<fuchsia::logger::LogFilterOptions> options) override;
+  void DumpLogs(fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
+                std::unique_ptr<fuchsia::logger::LogFilterOptions> options) override;
 
  private:
   zx::duration sleep_;

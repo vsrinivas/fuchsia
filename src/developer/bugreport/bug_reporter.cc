@@ -21,27 +21,23 @@ namespace fuchsia {
 namespace bugreport {
 namespace {
 
-void AddAnnotations(
-    const std::vector<fuchsia::feedback::Annotation>& annotations,
-    rapidjson::Document* document) {
+void AddAnnotations(const std::vector<fuchsia::feedback::Annotation>& annotations,
+                    rapidjson::Document* document) {
   rapidjson::Value json_annotations(rapidjson::kObjectType);
   for (const auto& annotation : annotations) {
-    json_annotations.AddMember(rapidjson::StringRef(annotation.key),
-                               annotation.value, document->GetAllocator());
+    json_annotations.AddMember(rapidjson::StringRef(annotation.key), annotation.value,
+                               document->GetAllocator());
   }
-  document->AddMember("annotations", json_annotations,
-                      document->GetAllocator());
+  document->AddMember("annotations", json_annotations, document->GetAllocator());
 }
 
-void AddAttachments(
-    const std::vector<fuchsia::feedback::Attachment>& attachments,
-    const std::set<std::string>& attachment_allowlist,
-    rapidjson::Document* document) {
+void AddAttachments(const std::vector<fuchsia::feedback::Attachment>& attachments,
+                    const std::set<std::string>& attachment_allowlist,
+                    rapidjson::Document* document) {
   rapidjson::Value json_attachments(rapidjson::kObjectType);
   for (const auto& attachment : attachments) {
     if (!attachment_allowlist.empty() &&
-        attachment_allowlist.find(attachment.key) ==
-            attachment_allowlist.end()) {
+        attachment_allowlist.find(attachment.key) == attachment_allowlist.end()) {
       continue;
     }
 
@@ -54,13 +50,11 @@ void AddAttachments(
     json_attachments.AddMember(rapidjson::StringRef(attachment.key), value,
                                document->GetAllocator());
   }
-  document->AddMember("attachments", json_attachments,
-                      document->GetAllocator());
+  document->AddMember("attachments", json_attachments, document->GetAllocator());
 }
 
 bool MakeAndWriteJson(const fuchsia::feedback::Data& feedback_data,
-                      const std::set<std::string>& attachment_allowlist,
-                      FILE* out_file) {
+                      const std::set<std::string>& attachment_allowlist, FILE* out_file) {
   rapidjson::Document document;
   document.SetObject();
   AddAnnotations(feedback_data.annotations(), &document);
@@ -81,24 +75,21 @@ bool MakeAndWriteJson(const fuchsia::feedback::Data& feedback_data,
 }  // namespace
 
 bool MakeBugReport(std::shared_ptr<::sys::ServiceDirectory> services,
-                   const std::set<std::string>& attachment_allowlist,
-                   const char* out_filename) {
+                   const std::set<std::string>& attachment_allowlist, const char* out_filename) {
   fuchsia::feedback::DataProviderSyncPtr feedback_data_provider;
   services->Connect(feedback_data_provider.NewRequest());
 
   fuchsia::feedback::DataProvider_GetData_Result result;
   const zx_status_t get_data_status = feedback_data_provider->GetData(&result);
   if (get_data_status != ZX_OK) {
-    fprintf(stderr,
-            "Failed to get data from fuchsia.feedback.DataProvider: %d (%s)\n",
+    fprintf(stderr, "Failed to get data from fuchsia.feedback.DataProvider: %d (%s)\n",
             get_data_status, zx_status_get_string(get_data_status));
     return false;
   }
 
   if (result.is_err()) {
-    fprintf(stderr,
-            "fuchsia.feedback.DataProvider failed to get data: %d (%s) ",
-            result.err(), zx_status_get_string(result.err()));
+    fprintf(stderr, "fuchsia.feedback.DataProvider failed to get data: %d (%s) ", result.err(),
+            zx_status_get_string(result.err()));
     return false;
   }
 
@@ -108,13 +99,11 @@ bool MakeBugReport(std::shared_ptr<::sys::ServiceDirectory> services,
       fprintf(stderr, "Failed to open output file %s\n", out_filename);
       return false;
     }
-    const bool success = MakeAndWriteJson(result.response().data,
-                                          attachment_allowlist, out_file);
+    const bool success = MakeAndWriteJson(result.response().data, attachment_allowlist, out_file);
     fclose(out_file);
     return success;
   } else {
-    return MakeAndWriteJson(result.response().data, attachment_allowlist,
-                            stdout);
+    return MakeAndWriteJson(result.response().data, attachment_allowlist, stdout);
   }
 }
 

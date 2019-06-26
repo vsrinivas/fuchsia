@@ -22,9 +22,7 @@
 
 class CrashAnalyzer {
  public:
-  CrashAnalyzer() : context_(sys::ComponentContext::Create()) {
-    FXL_DCHECK(context_);
-  }
+  CrashAnalyzer() : context_(sys::ComponentContext::Create()) { FXL_DCHECK(context_); }
 
   void ProcessCrashlog(fuchsia::mem::Buffer crashlog) {
     fuchsia::crash::AnalyzerSyncPtr analyzer;
@@ -32,13 +30,11 @@ class CrashAnalyzer {
     FXL_DCHECK(analyzer);
 
     fuchsia::crash::Analyzer_OnKernelPanicCrashLog_Result out_result;
-    const zx_status_t status =
-        analyzer->OnKernelPanicCrashLog(std::move(crashlog), &out_result);
+    const zx_status_t status = analyzer->OnKernelPanicCrashLog(std::move(crashlog), &out_result);
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "failed to connect to crash analyzer";
     } else if (out_result.is_err()) {
-      FX_PLOGS(ERROR, out_result.err())
-          << "failed to process kernel panic crash log";
+      FX_PLOGS(ERROR, out_result.err()) << "failed to process kernel panic crash log";
     }
   }
 
@@ -71,9 +67,7 @@ int main(int argc, char** argv) {
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   fuchsia::net::ConnectivityPtr connectivity =
-      sys::ComponentContext::Create()
-          ->svc()
-          ->Connect<fuchsia::net::Connectivity>();
+      sys::ComponentContext::Create()->svc()->Connect<fuchsia::net::Connectivity>();
   connectivity.events().OnNetworkReachable = [&crashlog_vmo](bool reachable) {
     if (!reachable) {
       return;

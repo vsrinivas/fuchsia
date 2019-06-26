@@ -43,8 +43,7 @@ std::string ReadStringFromFile(const std::string& filepath) {
 }  // namespace
 
 std::map<std::string, std::string> MakeDefaultAnnotations(
-    const fuchsia::feedback::Data& feedback_data,
-    const std::string& package_name) {
+    const fuchsia::feedback::Data& feedback_data, const std::string& package_name) {
   std::map<std::string, std::string> annotations = {
       {"product", "Fuchsia"},
       {"version", ReadStringFromFile("/config/build-info/version")},
@@ -63,8 +62,8 @@ std::map<std::string, std::string> MakeDefaultAnnotations(
 }
 
 std::map<std::string, std::string> MakeManagedRuntimeExceptionAnnotations(
-    const fuchsia::feedback::Data& feedback_data,
-    const std::string& component_url, ManagedRuntimeException* exception) {
+    const fuchsia::feedback::Data& feedback_data, const std::string& component_url,
+    ManagedRuntimeException* exception) {
   std::map<std::string, std::string> annotations =
       MakeDefaultAnnotations(feedback_data, component_url);
   switch (exception->Which()) {
@@ -76,10 +75,10 @@ std::map<std::string, std::string> MakeManagedRuntimeExceptionAnnotations(
       break;
     case ManagedRuntimeException::Tag::kDart:
       annotations[kDartTypeKey] = kDartTypeValue;
-      annotations[kDartErrorRuntimeTypeKey] = std::string(
-          reinterpret_cast<const char*>(exception->dart().type.data()));
-      annotations[kDartErrorMessageKey] = std::string(
-          reinterpret_cast<const char*>(exception->dart().message.data()));
+      annotations[kDartErrorRuntimeTypeKey] =
+          std::string(reinterpret_cast<const char*>(exception->dart().type.data()));
+      annotations[kDartErrorMessageKey] =
+          std::string(reinterpret_cast<const char*>(exception->dart().message.data()));
       break;
   }
   return annotations;

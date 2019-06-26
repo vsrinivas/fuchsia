@@ -57,8 +57,7 @@ std::optional<Target> ParseAnnotations(const JsonNode& annotations) {
 
 // Each attachment is big enough to warrant its own target.
 template <typename JsonNode>
-std::optional<std::vector<Target>> ParseAttachments(
-    const JsonNode& attachments) {
+std::optional<std::vector<Target>> ParseAttachments(const JsonNode& attachments) {
   if (!attachments.IsObject()) {
     FXL_LOG(ERROR) << "Attachments are not an object.";
     return std::nullopt;
@@ -103,8 +102,7 @@ std::optional<rapidjson::Document> ParseDocument(const std::string& input) {
   rapidjson::Document document;
   rapidjson::ParseResult result = document.Parse(input);
   if (!result) {
-    FXL_LOG(ERROR) << "Error parsing json: "
-                   << rapidjson::GetParseError_En(result.Code()) << "("
+    FXL_LOG(ERROR) << "Error parsing json: " << rapidjson::GetParseError_En(result.Code()) << "("
                    << result.Offset() << ").";
     return std::nullopt;
   }
@@ -112,8 +110,7 @@ std::optional<rapidjson::Document> ParseDocument(const std::string& input) {
   return document;
 }
 
-bool Validate(const rapidjson::Document& document,
-              const std::string& schema_str) {
+bool Validate(const rapidjson::Document& document, const std::string& schema_str) {
   auto input_document = ParseDocument(schema_str);
   if (!input_document)
     return false;
@@ -181,8 +178,7 @@ std::optional<std::vector<Target>> ProcessBugReport(const std::string& input) {
   return targets;
 }
 
-bool Export(const std::vector<Target>& targets,
-            const std::filesystem::path& output_path) {
+bool Export(const std::vector<Target>& targets, const std::filesystem::path& output_path) {
   std::error_code ec;
   if (!std::filesystem::exists(output_path, ec)) {
     if (!std::filesystem::create_directory(output_path, ec)) {
@@ -210,8 +206,8 @@ bool Export(const std::vector<Target>& targets,
   return no_errors;
 }
 
-std::optional<std::vector<Target>> HandleBugReport(
-    const std::filesystem::path& output_path, std::istream* input) {
+std::optional<std::vector<Target>> HandleBugReport(const std::filesystem::path& output_path,
+                                                   std::istream* input) {
   auto content = ReadStream(input);
   if (!content)
     return std::nullopt;

@@ -13,8 +13,7 @@
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 
-fidl::InterfaceRequestHandler<fuchsia::feedback::DataProvider>
-SpawnNewDataProvider() {
+fidl::InterfaceRequestHandler<fuchsia::feedback::DataProvider> SpawnNewDataProvider() {
   return [](fidl::InterfaceRequest<fuchsia::feedback::DataProvider> request) {
     // We spawn a new process to which we forward the channel of the incoming
     // request so it can handle it.
@@ -31,12 +30,11 @@ SpawnNewDataProvider() {
     };
     char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH] = {};
     const zx_status_t spawn_status =
-        fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, args[0], args,
-                       nullptr, 1, &actions, nullptr, err_msg);
+        fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, args[0], args, nullptr, 1, &actions,
+                       nullptr, err_msg);
     if (spawn_status != ZX_OK) {
       FX_PLOGS(ERROR, spawn_status)
-          << "Failed to spawn data provider to handle incoming request: "
-          << err_msg;
+          << "Failed to spawn data provider to handle incoming request: " << err_msg;
     }
   };
 }

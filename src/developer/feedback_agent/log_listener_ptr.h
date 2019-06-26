@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FEEDBACK_AGENT_LOG_LISTENER_H_
-#define SRC_DEVELOPER_FEEDBACK_AGENT_LOG_LISTENER_H_
+#ifndef SRC_DEVELOPER_FEEDBACK_AGENT_LOG_LISTENER_PTR_H_
+#define SRC_DEVELOPER_FEEDBACK_AGENT_LOG_LISTENER_PTR_H_
 
 #include <fuchsia/logger/cpp/fidl.h>
 #include <fuchsia/mem/cpp/fidl.h>
@@ -70,4 +70,4 @@ class LogListener : public fuchsia::logger::LogListener {
 }  // namespace feedback
 }  // namespace fuchsia
 
-#endif  // SRC_DEVELOPER_FEEDBACK_AGENT_LOG_LISTENER_H_
+#endif  // SRC_DEVELOPER_FEEDBACK_AGENT_LOG_LISTENER_PTR_H_

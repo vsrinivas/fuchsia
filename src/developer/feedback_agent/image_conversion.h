@@ -16,10 +16,8 @@ namespace feedback {
 // Encodes |raw_image| in PNG.
 //
 // The only |pixel_format| supported today is BGRA_8.
-bool RawToPng(const fuchsia::mem::Buffer& raw_image, size_t height,
-              size_t width, size_t stride,
-              fuchsia::images::PixelFormat pixel_format,
-              fuchsia::mem::Buffer* png_image);
+bool RawToPng(const fuchsia::mem::Buffer& raw_image, size_t height, size_t width, size_t stride,
+              fuchsia::images::PixelFormat pixel_format, fuchsia::mem::Buffer* png_image);
 
 }  // namespace feedback
 }  // namespace fuchsia

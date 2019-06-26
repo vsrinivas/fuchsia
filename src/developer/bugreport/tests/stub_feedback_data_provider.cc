@@ -28,8 +28,7 @@ Annotation BuildAnnotation(const std::string& key, const std::string& value) {
   return annotation;
 }
 
-std::vector<Annotation> BuildAnnotations(
-    const std::map<std::string, std::string>& annotation_map) {
+std::vector<Annotation> BuildAnnotations(const std::map<std::string, std::string>& annotation_map) {
   std::vector<Annotation> annotations;
   for (const auto& [key, value] : annotation_map) {
     annotations.push_back(BuildAnnotation(key, value));
@@ -44,8 +43,7 @@ Attachment BuildAttachment(const std::string& key, const std::string& value) {
   return attachment;
 }
 
-std::vector<Attachment> BuildAttachments(
-    const std::map<std::string, std::string>& attachment_map) {
+std::vector<Attachment> BuildAttachments(const std::map<std::string, std::string>& attachment_map) {
   std::vector<Attachment> attachments;
   for (const auto& [key, value] : attachment_map) {
     attachments.push_back(BuildAttachment(key, value));

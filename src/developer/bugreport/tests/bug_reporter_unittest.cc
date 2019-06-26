@@ -30,25 +30,22 @@ class BugReporterTest : public gtest::RealLoopFixture {
  public:
   BugReporterTest()
       : service_directory_provider_loop_(&kAsyncLoopConfigNoAttachToThread),
-        service_directory_provider_(
-            service_directory_provider_loop_.dispatcher()) {
+        service_directory_provider_(service_directory_provider_loop_.dispatcher()) {
     // We run the service directory provider in a different loop and thread so
     // that the MakeBugReport can connect to the stub feedback data provider
     // synchronously.
-    FXL_CHECK(service_directory_provider_loop_.StartThread(
-                  "service directory provider thread") == ZX_OK);
+    FXL_CHECK(service_directory_provider_loop_.StartThread("service directory provider thread") ==
+              ZX_OK);
   }
 
   void SetUp() override { ASSERT_TRUE(tmp_dir_.NewTempFile(&json_path_)); }
 
  protected:
-  void ResetFeedbackDataProvider(
-      const std::map<std::string, std::string>& annotations,
-      const std::map<std::string, std::string>& attachments) {
-    stub_feedback_data_provider_.reset(
-        new StubFeedbackDataProvider(annotations, attachments));
-    FXL_CHECK(service_directory_provider_.AddService(
-                  stub_feedback_data_provider_->GetHandler()) == ZX_OK);
+  void ResetFeedbackDataProvider(const std::map<std::string, std::string>& annotations,
+                                 const std::map<std::string, std::string>& attachments) {
+    stub_feedback_data_provider_.reset(new StubFeedbackDataProvider(annotations, attachments));
+    FXL_CHECK(service_directory_provider_.AddService(stub_feedback_data_provider_->GetHandler()) ==
+              ZX_OK);
   }
 
  private:
@@ -99,22 +96,17 @@ TEST_F(BugReporterTest, Basic) {
   ASSERT_TRUE(document["annotations"]["annotation.1.key"].IsString());
   ASSERT_TRUE(document["annotations"]["annotation.2.key"].IsString());
   ASSERT_TRUE(document["annotations"]["annotation.3.key"].IsString());
-  EXPECT_STREQ(document["annotations"]["annotation.1.key"].GetString(),
-               "annotation.1.value");
-  EXPECT_STREQ(document["annotations"]["annotation.2.key"].GetString(),
-               "annotation.2.value");
-  EXPECT_STREQ(document["annotations"]["annotation.3.key"].GetString(),
-               "annotation.3.value");
+  EXPECT_STREQ(document["annotations"]["annotation.1.key"].GetString(), "annotation.1.value");
+  EXPECT_STREQ(document["annotations"]["annotation.2.key"].GetString(), "annotation.2.value");
+  EXPECT_STREQ(document["annotations"]["annotation.3.key"].GetString(), "annotation.3.value");
 
   ASSERT_TRUE(document.HasMember("attachments"));
   ASSERT_TRUE(document["attachments"].HasMember("attachment.1.key"));
   ASSERT_TRUE(document["attachments"].HasMember("attachment.2.key"));
   ASSERT_TRUE(document["attachments"]["attachment.1.key"].IsString());
   ASSERT_TRUE(document["attachments"]["attachment.2.key"].IsString());
-  EXPECT_STREQ(document["attachments"]["attachment.1.key"].GetString(),
-               "attachment.1.value");
-  EXPECT_STREQ(document["attachments"]["attachment.2.key"].GetString(),
-               "attachment.2.value");
+  EXPECT_STREQ(document["attachments"]["attachment.1.key"].GetString(), "attachment.1.value");
+  EXPECT_STREQ(document["attachments"]["attachment.2.key"].GetString(), "attachment.2.value");
 }
 
 TEST_F(BugReporterTest, RestrictedAttachments) {

@@ -84,8 +84,7 @@ struct GetScreenshotResponse {
 
   // This is used by gTest to pretty-prints failed expectations instead of the
   // default byte string.
-  friend std::ostream& operator<<(std::ostream& os,
-                                  const GetScreenshotResponse& response) {
+  friend std::ostream& operator<<(std::ostream& os, const GetScreenshotResponse& response) {
     return os << std::string(response);
   }
 };
@@ -112,11 +111,9 @@ bool DoGetScreenshotResponseMatch(const GetScreenshotResponse& actual,
   }
   // actual.screenshot and expected.screenshot are now valid.
 
-  if (!fidl::Equals(actual.screenshot->dimensions_in_px,
-                    expected.screenshot->dimensions_in_px)) {
-    *result_listener << "Expected screenshot dimensions "
-                     << expected.screenshot->dimensions_in_px << ", got "
-                     << actual.screenshot->dimensions_in_px;
+  if (!fidl::Equals(actual.screenshot->dimensions_in_px, expected.screenshot->dimensions_in_px)) {
+    *result_listener << "Expected screenshot dimensions " << expected.screenshot->dimensions_in_px
+                     << ", got " << actual.screenshot->dimensions_in_px;
     return false;
   }
 
@@ -127,33 +124,27 @@ bool DoGetScreenshotResponseMatch(const GetScreenshotResponse& actual,
 
 // Returns true if gMock |arg| matches |expected|, assuming two
 // GetScreenshotResponse.
-MATCHER_P(MatchesGetScreenshotResponse, expected,
-          "matches " + std::string(expected.get())) {
+MATCHER_P(MatchesGetScreenshotResponse, expected, "matches " + std::string(expected.get())) {
   return DoGetScreenshotResponseMatch(arg, expected, result_listener);
 }
 
 // Compares two Attachment.
 template <typename ResultListenerT>
-bool DoAttachmentMatch(const Attachment& actual,
-                       const std::string& expected_key,
-                       const std::string& expected_value,
-                       ResultListenerT* result_listener) {
+bool DoAttachmentMatch(const Attachment& actual, const std::string& expected_key,
+                       const std::string& expected_value, ResultListenerT* result_listener) {
   if (actual.key != expected_key) {
-    *result_listener << "Expected key " << expected_key << ", got "
-                     << actual.key;
+    *result_listener << "Expected key " << expected_key << ", got " << actual.key;
     return false;
   }
 
   std::string actual_value;
   if (!fsl::StringFromVmo(actual.value, &actual_value)) {
-    *result_listener << "Cannot parse actual VMO for key " << actual.key
-                     << " to string";
+    *result_listener << "Cannot parse actual VMO for key " << actual.key << " to string";
     return false;
   }
 
   if (actual_value.compare(expected_value) != 0) {
-    *result_listener << "Expected value " << expected_value << ", got "
-                     << actual_value;
+    *result_listener << "Expected value " << expected_value << ", got " << actual_value;
     return false;
   }
 
@@ -163,8 +154,8 @@ bool DoAttachmentMatch(const Attachment& actual,
 // Returns true if gMock |arg|.key matches |expected_key| and str(|arg|.value)
 // matches |expected_value|, assuming two Attachment.
 MATCHER_P2(MatchesAttachment, expected_key, expected_value,
-           "matches an attachment with key '" + std::string(expected_key) +
-               "' and value '" + std::string(expected_value) + "'") {
+           "matches an attachment with key '" + std::string(expected_key) + "' and value '" +
+               std::string(expected_value) + "'") {
   return DoAttachmentMatch(arg, expected_key, expected_value, result_listener);
 }
 
@@ -183,11 +174,11 @@ class DataProviderImplTest : public ::sys::testing::TestWithEnvironment {
     }
     controller_->Kill();
     bool done = false;
-    controller_.events().OnTerminated =
-        [&done](int64_t code, fuchsia::sys::TerminationReason reason) {
-          FXL_CHECK(reason == fuchsia::sys::TerminationReason::EXITED);
-          done = true;
-        };
+    controller_.events().OnTerminated = [&done](int64_t code,
+                                                fuchsia::sys::TerminationReason reason) {
+      FXL_CHECK(reason == fuchsia::sys::TerminationReason::EXITED);
+      done = true;
+    };
     RunLoopUntil([&done] { return done; });
   }
 
@@ -202,8 +193,7 @@ class DataProviderImplTest : public ::sys::testing::TestWithEnvironment {
   void ResetScenic(std::unique_ptr<StubScenic> stub_scenic) {
     stub_scenic_ = std::move(stub_scenic);
     if (stub_scenic_) {
-      FXL_CHECK(service_directory_provider_.AddService(
-                    stub_scenic_->GetHandler()) == ZX_OK);
+      FXL_CHECK(service_directory_provider_.AddService(stub_scenic_->GetHandler()) == ZX_OK);
     }
   }
 
@@ -211,8 +201,8 @@ class DataProviderImplTest : public ::sys::testing::TestWithEnvironment {
   void ResetLogger(const std::vector<fuchsia::logger::LogMessage>& messages) {
     stub_logger_.reset(new StubLogger());
     stub_logger_->set_messages(messages);
-    FXL_CHECK(service_directory_provider_.AddService(
-                  stub_logger_->GetHandler(dispatcher())) == ZX_OK);
+    FXL_CHECK(service_directory_provider_.AddService(stub_logger_->GetHandler(dispatcher())) ==
+              ZX_OK);
   }
 
   // Injects a test app that exposes some Inspect data in the test environment.
@@ -226,10 +216,8 @@ class DataProviderImplTest : public ::sys::testing::TestWithEnvironment {
     launch_info.url =
         "fuchsia-pkg://fuchsia.com/feedback_agent_tests#meta/"
         "inspect_test_app.cmx";
-    environment_ = CreateNewEnclosingEnvironment("inspect_test_app_environment",
-                                                 CreateServices());
-    environment_->CreateComponent(std::move(launch_info),
-                                  controller_.NewRequest());
+    environment_ = CreateNewEnclosingEnvironment("inspect_test_app_environment", CreateServices());
+    environment_->CreateComponent(std::move(launch_info), controller_.NewRequest());
     bool ready = false;
     controller_.events().OnDirectoryReady = [&ready] { ready = true; };
     RunLoopUntil([&ready] { return ready; });
@@ -238,12 +226,11 @@ class DataProviderImplTest : public ::sys::testing::TestWithEnvironment {
   GetScreenshotResponse GetScreenshot() {
     GetScreenshotResponse out_response;
     bool has_out_response = false;
-    data_provider_->GetScreenshot(
-        ImageEncoding::PNG, [&out_response, &has_out_response](
-                                std::unique_ptr<Screenshot> screenshot) {
-          out_response.screenshot = std::move(screenshot);
-          has_out_response = true;
-        });
+    data_provider_->GetScreenshot(ImageEncoding::PNG, [&out_response, &has_out_response](
+                                                          std::unique_ptr<Screenshot> screenshot) {
+      out_response.screenshot = std::move(screenshot);
+      has_out_response = true;
+    });
     RunLoopUntil([&has_out_response] { return has_out_response; });
     return out_response;
   }
@@ -251,21 +238,16 @@ class DataProviderImplTest : public ::sys::testing::TestWithEnvironment {
   DataProvider_GetData_Result GetData() {
     DataProvider_GetData_Result out_result;
     bool has_out_result = false;
-    data_provider_->GetData(
-        [&out_result, &has_out_result](DataProvider_GetData_Result result) {
-          out_result = std::move(result);
-          has_out_result = true;
-        });
+    data_provider_->GetData([&out_result, &has_out_result](DataProvider_GetData_Result result) {
+      out_result = std::move(result);
+      has_out_result = true;
+    });
     RunLoopUntil([&has_out_result] { return has_out_result; });
     return out_result;
   }
 
-  uint64_t total_num_scenic_bindings() {
-    return stub_scenic_->total_num_bindings();
-  }
-  size_t current_num_scenic_bindings() {
-    return stub_scenic_->current_num_bindings();
-  }
+  uint64_t total_num_scenic_bindings() { return stub_scenic_->total_num_bindings(); }
+  size_t current_num_scenic_bindings() { return stub_scenic_->current_num_bindings(); }
   const std::vector<TakeScreenshotResponse>& get_scenic_responses() const {
     return stub_scenic_->take_screenshot_responses();
   }
@@ -284,8 +266,7 @@ class DataProviderImplTest : public ::sys::testing::TestWithEnvironment {
 TEST_F(DataProviderImplTest, GetScreenshot_SucceedOnScenicReturningSuccess) {
   const size_t image_dim_in_px = 100;
   std::vector<TakeScreenshotResponse> scenic_responses;
-  scenic_responses.emplace_back(CreateCheckerboardScreenshot(image_dim_in_px),
-                                kSuccess);
+  scenic_responses.emplace_back(CreateCheckerboardScreenshot(image_dim_in_px), kSuccess);
   std::unique_ptr<StubScenic> stub_scenic = std::make_unique<StubScenic>();
   stub_scenic->set_take_screenshot_responses(std::move(scenic_responses));
   ResetScenic(std::move(stub_scenic));
@@ -295,20 +276,16 @@ TEST_F(DataProviderImplTest, GetScreenshot_SucceedOnScenicReturningSuccess) {
   EXPECT_TRUE(get_scenic_responses().empty());
 
   ASSERT_NE(feedback_response.screenshot, nullptr);
-  EXPECT_EQ((size_t)feedback_response.screenshot->dimensions_in_px.height,
-            image_dim_in_px);
-  EXPECT_EQ((size_t)feedback_response.screenshot->dimensions_in_px.width,
-            image_dim_in_px);
+  EXPECT_EQ((size_t)feedback_response.screenshot->dimensions_in_px.height, image_dim_in_px);
+  EXPECT_EQ((size_t)feedback_response.screenshot->dimensions_in_px.width, image_dim_in_px);
   EXPECT_TRUE(feedback_response.screenshot->image.vmo.is_valid());
 
   fsl::SizedVmo expected_sized_vmo;
-  ASSERT_TRUE(fsl::VmoFromFilename("/pkg/data/checkerboard_100.png",
-                                   &expected_sized_vmo));
+  ASSERT_TRUE(fsl::VmoFromFilename("/pkg/data/checkerboard_100.png", &expected_sized_vmo));
   std::vector<uint8_t> expected_pixels;
   ASSERT_TRUE(fsl::VectorFromVmo(expected_sized_vmo, &expected_pixels));
   std::vector<uint8_t> actual_pixels;
-  ASSERT_TRUE(
-      fsl::VectorFromVmo(feedback_response.screenshot->image, &actual_pixels));
+  ASSERT_TRUE(fsl::VectorFromVmo(feedback_response.screenshot->image, &actual_pixels));
   EXPECT_EQ(actual_pixels, expected_pixels);
 }
 
@@ -326,8 +303,7 @@ TEST_F(DataProviderImplTest, GetScreenshot_FailOnScenicReturningFailure) {
   EXPECT_EQ(feedback_response.screenshot, nullptr);
 }
 
-TEST_F(DataProviderImplTest,
-       GetScreenshot_FailOnScenicReturningNonBGRA8Screenshot) {
+TEST_F(DataProviderImplTest, GetScreenshot_FailOnScenicReturningNonBGRA8Screenshot) {
   std::vector<TakeScreenshotResponse> scenic_responses;
   scenic_responses.emplace_back(CreateNonBGRA8Screenshot(), kSuccess);
   std::unique_ptr<StubScenic> stub_scenic = std::make_unique<StubScenic>();
@@ -349,10 +325,8 @@ TEST_F(DataProviderImplTest, GetScreenshot_ParallelRequests) {
   const size_t image_dim_in_px_0 = 10u;
   const size_t image_dim_in_px_1 = 20u;
   std::vector<TakeScreenshotResponse> scenic_responses;
-  scenic_responses.emplace_back(CreateCheckerboardScreenshot(image_dim_in_px_0),
-                                kSuccess);
-  scenic_responses.emplace_back(CreateCheckerboardScreenshot(image_dim_in_px_1),
-                                kSuccess);
+  scenic_responses.emplace_back(CreateCheckerboardScreenshot(image_dim_in_px_0), kSuccess);
+  scenic_responses.emplace_back(CreateCheckerboardScreenshot(image_dim_in_px_1), kSuccess);
   scenic_responses.emplace_back(CreateEmptyScreenshot(), kFailure);
   ASSERT_EQ(scenic_responses.size(), num_calls);
   std::unique_ptr<StubScenic> stub_scenic = std::make_unique<StubScenic>();
@@ -361,14 +335,12 @@ TEST_F(DataProviderImplTest, GetScreenshot_ParallelRequests) {
 
   std::vector<GetScreenshotResponse> feedback_responses;
   for (size_t i = 0; i < num_calls; i++) {
-    data_provider_->GetScreenshot(
-        ImageEncoding::PNG,
-        [&feedback_responses](std::unique_ptr<Screenshot> screenshot) {
-          feedback_responses.push_back({std::move(screenshot)});
-        });
+    data_provider_->GetScreenshot(ImageEncoding::PNG,
+                                  [&feedback_responses](std::unique_ptr<Screenshot> screenshot) {
+                                    feedback_responses.push_back({std::move(screenshot)});
+                                  });
   }
-  RunLoopUntil(
-      [&feedback_responses] { return feedback_responses.size() == num_calls; });
+  RunLoopUntil([&feedback_responses] { return feedback_responses.size() == num_calls; });
 
   EXPECT_TRUE(get_scenic_responses().empty());
 
@@ -378,17 +350,14 @@ TEST_F(DataProviderImplTest, GetScreenshot_ParallelRequests) {
   //
   // We set the expectations in advance and then pass a reference to the gMock
   // matcher using testing::ByRef() because the underlying VMO is not copyable.
-  const GetScreenshotResponse expected_0 = {
-      MakeUniqueScreenshot(image_dim_in_px_0)};
-  const GetScreenshotResponse expected_1 = {
-      MakeUniqueScreenshot(image_dim_in_px_1)};
+  const GetScreenshotResponse expected_0 = {MakeUniqueScreenshot(image_dim_in_px_0)};
+  const GetScreenshotResponse expected_1 = {MakeUniqueScreenshot(image_dim_in_px_1)};
   const GetScreenshotResponse expected_2 = {nullptr};
-  EXPECT_THAT(feedback_responses,
-              testing::UnorderedElementsAreArray({
-                  MatchesGetScreenshotResponse(testing::ByRef(expected_0)),
-                  MatchesGetScreenshotResponse(testing::ByRef(expected_1)),
-                  MatchesGetScreenshotResponse(testing::ByRef(expected_2)),
-              }));
+  EXPECT_THAT(feedback_responses, testing::UnorderedElementsAreArray({
+                                      MatchesGetScreenshotResponse(testing::ByRef(expected_0)),
+                                      MatchesGetScreenshotResponse(testing::ByRef(expected_1)),
+                                      MatchesGetScreenshotResponse(testing::ByRef(expected_2)),
+                                  }));
 
   // Additionally, we check that in the non-empty responses, the VMO is valid.
   for (const auto& response : feedback_responses) {
@@ -400,8 +369,7 @@ TEST_F(DataProviderImplTest, GetScreenshot_ParallelRequests) {
   }
 }
 
-TEST_F(DataProviderImplTest,
-       GetScreenshot_OneScenicConnectionPerGetScreenshotCall) {
+TEST_F(DataProviderImplTest, GetScreenshot_OneScenicConnectionPerGetScreenshotCall) {
   // We use a stub that always returns false as we are not interested in the
   // responses.
   ResetScenic(std::make_unique<StubScenicAlwaysReturnsFalse>());
@@ -409,14 +377,12 @@ TEST_F(DataProviderImplTest,
   const size_t num_calls = 5u;
   std::vector<GetScreenshotResponse> feedback_responses;
   for (size_t i = 0; i < num_calls; i++) {
-    data_provider_->GetScreenshot(
-        ImageEncoding::PNG,
-        [&feedback_responses](std::unique_ptr<Screenshot> screenshot) {
-          feedback_responses.push_back({std::move(screenshot)});
-        });
+    data_provider_->GetScreenshot(ImageEncoding::PNG,
+                                  [&feedback_responses](std::unique_ptr<Screenshot> screenshot) {
+                                    feedback_responses.push_back({std::move(screenshot)});
+                                  });
   }
-  RunLoopUntil(
-      [&feedback_responses] { return feedback_responses.size() == num_calls; });
+  RunLoopUntil([&feedback_responses] { return feedback_responses.size() == num_calls; });
 
   EXPECT_EQ(total_num_scenic_bindings(), num_calls);
   // The unbinding is asynchronous so we need to run the loop until all the
@@ -446,8 +412,7 @@ TEST_F(DataProviderImplTest, GetData_SysLog) {
   ASSERT_TRUE(result.response().data.has_attachments());
   EXPECT_THAT(result.response().data.attachments(),
               testing::Contains(MatchesAttachment(
-                  "log.system.txt",
-                  "[15604.000][07559][07687][foo] INFO: log message\n")));
+                  "log.system.txt", "[15604.000][07559][07687][foo] INFO: log message\n")));
 }
 
 constexpr char kInspectJsonSchema[] = R"({
@@ -546,8 +511,7 @@ TEST_F(DataProviderImplTest, GetData_EmptyAttachmentAllowlist) {
 }
 
 TEST_F(DataProviderImplTest, GetData_EmptyAllowlists) {
-  ResetDataProvider(
-      Config{/*annotation_allowlist=*/{}, /*attachment_allowlist=*/{}});
+  ResetDataProvider(Config{/*annotation_allowlist=*/{}, /*attachment_allowlist=*/{}});
 
   DataProvider_GetData_Result result = GetData();
   ASSERT_TRUE(result.is_response());
@@ -556,8 +520,7 @@ TEST_F(DataProviderImplTest, GetData_EmptyAllowlists) {
 }
 
 TEST_F(DataProviderImplTest, GetData_UnknownAllowlistedAnnotation) {
-  ResetDataProvider(Config{/*annotation_allowlist=*/{"unknown.annotation"},
-                           kDefaultAttachments});
+  ResetDataProvider(Config{/*annotation_allowlist=*/{"unknown.annotation"}, kDefaultAttachments});
 
   DataProvider_GetData_Result result = GetData();
   ASSERT_TRUE(result.is_response());

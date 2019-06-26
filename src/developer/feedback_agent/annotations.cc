@@ -35,11 +35,9 @@ fit::promise<std::string> GetDeviceBoardName() {
   }
 
   zx::channel channel;
-  const zx_status_t channel_status =
-      fdio_get_service_handle(fd, channel.reset_and_get_address());
+  const zx_status_t channel_status = fdio_get_service_handle(fd, channel.reset_and_get_address());
   if (channel_status != ZX_OK) {
-    FX_PLOGS(ERROR, channel_status)
-        << "failed to open a channel at " << kSysInfoPath;
+    FX_PLOGS(ERROR, channel_status) << "failed to open a channel at " << kSysInfoPath;
     return fit::make_result_promise<std::string>(fit::error());
   }
 
@@ -48,11 +46,9 @@ fit::promise<std::string> GetDeviceBoardName() {
 
   zx_status_t out_status;
   fidl::StringPtr out_board_name;
-  const zx_status_t fidl_status =
-      device->GetBoardName(&out_status, &out_board_name);
+  const zx_status_t fidl_status = device->GetBoardName(&out_status, &out_board_name);
   if (fidl_status != ZX_OK) {
-    FX_PLOGS(ERROR, fidl_status)
-        << "failed to connect to fuchsia.sysinfo.Device";
+    FX_PLOGS(ERROR, fidl_status) << "failed to connect to fuchsia.sysinfo.Device";
     return fit::make_result_promise<std::string>(fit::error());
   }
   if (out_status != ZX_OK) {
@@ -104,8 +100,7 @@ fit::promise<Annotation> BuildAnnotation(const std::string& key) {
 
 }  // namespace
 
-std::vector<fit::promise<Annotation>> GetAnnotations(
-    const std::set<std::string>& allowlist) {
+std::vector<fit::promise<Annotation>> GetAnnotations(const std::set<std::string>& allowlist) {
   if (allowlist.empty()) {
     FX_LOGS(WARNING) << "Annotation allowlist is empty, nothing to retrieve";
     return {};

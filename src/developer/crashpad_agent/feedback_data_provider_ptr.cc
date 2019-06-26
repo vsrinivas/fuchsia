@@ -12,13 +12,11 @@
 namespace fuchsia {
 namespace crash {
 
-FeedbackDataProvider::FeedbackDataProvider(
-    async_dispatcher_t* dispatcher,
-    std::shared_ptr<::sys::ServiceDirectory> services)
+FeedbackDataProvider::FeedbackDataProvider(async_dispatcher_t* dispatcher,
+                                           std::shared_ptr<::sys::ServiceDirectory> services)
     : dispatcher_(dispatcher), services_(services) {}
 
-fit::promise<fuchsia::feedback::Data> FeedbackDataProvider::GetData(
-    zx::duration timeout) {
+fit::promise<fuchsia::feedback::Data> FeedbackDataProvider::GetData(zx::duration timeout) {
   data_provider_ = services_->Connect<fuchsia::feedback::DataProvider>();
   done_ = std::make_shared<fit::bridge<fuchsia::feedback::Data>>();
 
@@ -49,27 +47,24 @@ fit::promise<fuchsia::feedback::Data> FeedbackDataProvider::GetData(
       return;
     }
 
-    FX_PLOGS(ERROR, status)
-        << "Lost connection to fuchsia.feedback.DataProvider";
+    FX_PLOGS(ERROR, status) << "Lost connection to fuchsia.feedback.DataProvider";
     done_->completer.complete_error();
     done_after_timeout_.Cancel();
   });
 
-  data_provider_->GetData(
-      [this](fuchsia::feedback::DataProvider_GetData_Result out_result) {
-        if (!done_->completer) {
-          return;
-        }
+  data_provider_->GetData([this](fuchsia::feedback::DataProvider_GetData_Result out_result) {
+    if (!done_->completer) {
+      return;
+    }
 
-        if (out_result.is_err()) {
-          FX_PLOGS(WARNING, out_result.err())
-              << "Failed to fetch feedback data";
-          done_->completer.complete_error();
-        } else {
-          done_->completer.complete_ok(std::move(out_result.response().data));
-        }
-        done_after_timeout_.Cancel();
-      });
+    if (out_result.is_err()) {
+      FX_PLOGS(WARNING, out_result.err()) << "Failed to fetch feedback data";
+      done_->completer.complete_error();
+    } else {
+      done_->completer.complete_ok(std::move(out_result.response().data));
+    }
+    done_after_timeout_.Cancel();
+  });
 
   return done_->consumer.promise_or(fit::error());
 }

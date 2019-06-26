@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FEEDBACK_AGENT_INSPECT_H_
-#define SRC_DEVELOPER_FEEDBACK_AGENT_INSPECT_H_
+#ifndef SRC_DEVELOPER_FEEDBACK_AGENT_INSPECT_PTR_H_
+#define SRC_DEVELOPER_FEEDBACK_AGENT_INSPECT_PTR_H_
 
 #include <fuchsia/mem/cpp/fidl.h>
 #include <lib/fit/promise.h>
@@ -21,4 +21,4 @@ fit::promise<fuchsia::mem::Buffer> CollectInspectData(zx::duration timeout);
 }  // namespace feedback
 }  // namespace fuchsia
 
-#endif  // SRC_DEVELOPER_FEEDBACK_AGENT_INSPECT_H_
+#endif  // SRC_DEVELOPER_FEEDBACK_AGENT_INSPECT_PTR_H_

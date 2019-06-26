@@ -77,8 +77,8 @@ bool CheckAgainstSchema(rapidjson::Document& doc) {
   rapidjson::Document sd;
   rapidjson::ParseResult ok = sd.Parse(kSchema);
   if (!ok) {
-    FX_LOGS(ERROR) << "invalid JSON schema for config at offset " << ok.Offset()
-                   << " " << rapidjson::GetParseError_En(ok.Code());
+    FX_LOGS(ERROR) << "invalid JSON schema for config at offset " << ok.Offset() << " "
+                   << rapidjson::GetParseError_En(ok.Code());
     return false;
   }
 
@@ -110,12 +110,10 @@ bool ParseCrashServerConfig(const JsonObject& obj, CrashServerConfig* config) {
 
   if (local_config.enable_upload) {
     if (!obj.HasMember(kCrashServerUrlKey)) {
-      FX_LOGS(ERROR)
-          << "missing crash server URL in config with upload enabled";
+      FX_LOGS(ERROR) << "missing crash server URL in config with upload enabled";
       return false;
     }
-    local_config.url =
-        std::make_unique<std::string>(obj[kCrashServerUrlKey].GetString());
+    local_config.url = std::make_unique<std::string>(obj[kCrashServerUrlKey].GetString());
   } else if (obj.HasMember(kCrashServerUrlKey)) {
     FX_LOGS(WARNING) << "crash server URL set in config with upload disabled, "
                         "ignoring value";
@@ -137,8 +135,8 @@ zx_status_t ParseConfig(const std::string& filepath, Config* config) {
   rapidjson::Document doc;
   rapidjson::ParseResult ok = doc.Parse(json.c_str());
   if (!ok) {
-    FX_LOGS(ERROR) << "error parsing config as JSON at offset " << ok.Offset()
-                   << " " << rapidjson::GetParseError_En(ok.Code());
+    FX_LOGS(ERROR) << "error parsing config as JSON at offset " << ok.Offset() << " "
+                   << rapidjson::GetParseError_En(ok.Code());
     return ZX_ERR_INTERNAL;
   }
 
@@ -153,8 +151,7 @@ zx_status_t ParseConfig(const std::string& filepath, Config* config) {
 
   local_config.crashpad_database =
       ParseCrashpadDatabaseConfig(doc[kCrashpadDatabaseKey].GetObject());
-  if (!ParseCrashServerConfig(doc[kCrashServerKey].GetObject(),
-                              &local_config.crash_server)) {
+  if (!ParseCrashServerConfig(doc[kCrashServerKey].GetObject(), &local_config.crash_server)) {
     return ZX_ERR_INTERNAL;
   }
   local_config.feedback_data_collection_timeout_in_milliseconds =

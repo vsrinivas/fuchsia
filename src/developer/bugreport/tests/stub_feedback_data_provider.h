@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifndef SRC_DEVELOPER_BUGREPORT_TESTS_STUB_FEEDBACK_DATA_PROVIDER_H_
+#define SRC_DEVELOPER_BUGREPORT_TESTS_STUB_FEEDBACK_DATA_PROVIDER_H_
+
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/interface_handle.h>
@@ -18,9 +21,8 @@ namespace bugreport {
 // fuchsia::feedback::DataProvider::GetData().
 class StubFeedbackDataProvider : public fuchsia::feedback::DataProvider {
  public:
-  StubFeedbackDataProvider(
-      const std::map<std::string, std::string>& annotations,
-      const std::map<std::string, std::string>& attachments)
+  StubFeedbackDataProvider(const std::map<std::string, std::string>& annotations,
+                           const std::map<std::string, std::string>& attachments)
       : annotations_(annotations), attachments_(attachments) {}
 
   // Returns a request handler for binding to this stub service.
@@ -44,3 +46,5 @@ class StubFeedbackDataProvider : public fuchsia::feedback::DataProvider {
 
 }  // namespace bugreport
 }  // namespace fuchsia
+
+#endif  // SRC_DEVELOPER_BUGREPORT_TESTS_STUB_FEEDBACK_DATA_PROVIDER_H_

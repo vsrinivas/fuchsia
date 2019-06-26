@@ -37,35 +37,31 @@ class CrashpadAgent : public Analyzer {
   // Returns nullptr if the agent cannot be instantiated, e.g., because the
   // local report database cannot be accessed.
   static std::unique_ptr<CrashpadAgent> TryCreate(
-      async_dispatcher_t* dispatcher,
-      std::shared_ptr<::sys::ServiceDirectory> services);
-  static std::unique_ptr<CrashpadAgent> TryCreate(
-      async_dispatcher_t* dispatcher,
-      std::shared_ptr<::sys::ServiceDirectory> services, Config config);
-  static std::unique_ptr<CrashpadAgent> TryCreate(
-      async_dispatcher_t* dispatcher,
-      std::shared_ptr<::sys::ServiceDirectory> services, Config config,
-      std::unique_ptr<CrashServer> crash_server);
+      async_dispatcher_t* dispatcher, std::shared_ptr<::sys::ServiceDirectory> services);
+  static std::unique_ptr<CrashpadAgent> TryCreate(async_dispatcher_t* dispatcher,
+                                                  std::shared_ptr<::sys::ServiceDirectory> services,
+                                                  Config config);
+  static std::unique_ptr<CrashpadAgent> TryCreate(async_dispatcher_t* dispatcher,
+                                                  std::shared_ptr<::sys::ServiceDirectory> services,
+                                                  Config config,
+                                                  std::unique_ptr<CrashServer> crash_server);
 
   // |fuchsia::crash::Analyzer|
   void OnNativeException(zx::process process, zx::thread thread,
                          OnNativeExceptionCallback callback) override;
-  void OnManagedRuntimeException(
-      std::string component_url, ManagedRuntimeException exception,
-      OnManagedRuntimeExceptionCallback callback) override;
+  void OnManagedRuntimeException(std::string component_url, ManagedRuntimeException exception,
+                                 OnManagedRuntimeExceptionCallback callback) override;
   void OnKernelPanicCrashLog(fuchsia::mem::Buffer crash_log,
                              OnKernelPanicCrashLogCallback callback) override;
 
  private:
-  CrashpadAgent(async_dispatcher_t* dispatcher,
-                std::shared_ptr<::sys::ServiceDirectory> services,
-                Config config,
-                std::unique_ptr<crashpad::CrashReportDatabase> database,
+  CrashpadAgent(async_dispatcher_t* dispatcher, std::shared_ptr<::sys::ServiceDirectory> services,
+                Config config, std::unique_ptr<crashpad::CrashReportDatabase> database,
                 std::unique_ptr<CrashServer> crash_server);
 
   fit::promise<void> OnNativeException(zx::process process, zx::thread thread);
-  fit::promise<void> OnManagedRuntimeException(
-      std::string component_url, ManagedRuntimeException exception);
+  fit::promise<void> OnManagedRuntimeException(std::string component_url,
+                                               ManagedRuntimeException exception);
   fit::promise<void> OnKernelPanicCrashLog(fuchsia::mem::Buffer crash_log);
 
   // Makes a new connection to fuchsia.feedback.DataProvider and requests
@@ -96,8 +92,7 @@ class CrashpadAgent : public Analyzer {
   const std::unique_ptr<CrashServer> crash_server_;
 
   uint64_t next_feedback_data_provider_id_ = 0;
-  std::map<uint64_t, std::unique_ptr<FeedbackDataProvider>>
-      feedback_data_providers_;
+  std::map<uint64_t, std::unique_ptr<FeedbackDataProvider>> feedback_data_providers_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CrashpadAgent);
 };

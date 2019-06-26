@@ -24,8 +24,7 @@ namespace crash {
 // two, e.g., the package name can be extracted from the crashing process in
 // userspace, but it's just "kernel" in kernel space.
 std::map<std::string, std::string> MakeDefaultAnnotations(
-    const fuchsia::feedback::Data& feedback_data,
-    const std::string& package_name);
+    const fuchsia::feedback::Data& feedback_data, const std::string& package_name);
 
 // Returns the annotations we want in a crash report for managed runtime
 // exceptions.
@@ -33,8 +32,8 @@ std::map<std::string, std::string> MakeDefaultAnnotations(
 // May augment the default annotation map from MakeDefaultAnnotations() or
 // simply return the default.
 std::map<std::string, std::string> MakeManagedRuntimeExceptionAnnotations(
-    const fuchsia::feedback::Data& feedback_data,
-    const std::string& component_url, ManagedRuntimeException* exception);
+    const fuchsia::feedback::Data& feedback_data, const std::string& component_url,
+    ManagedRuntimeException* exception);
 
 }  // namespace crash
 }  // namespace fuchsia

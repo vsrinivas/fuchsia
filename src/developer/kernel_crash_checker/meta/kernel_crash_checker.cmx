@@ -3,7 +3,9 @@
         "binary": "bin/kernel_crash_checker"
     },
     "sandbox": {
-        "boot": [ "log" ],
+        "boot": [
+            "log"
+        ],
         "services": [
             "fuchsia.crash.Analyzer",
             "fuchsia.logger.LogSink",

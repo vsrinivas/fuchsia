@@ -26,17 +26,14 @@ class DataProviderImpl : public DataProvider {
   // Returns nullptr if the data provider cannot be instantiated, e.g., because
   // the config cannot be parsed.
   static std::unique_ptr<DataProviderImpl> TryCreate(
-      async_dispatcher_t* dispatcher,
-      std::shared_ptr<::sys::ServiceDirectory> services);
+      async_dispatcher_t* dispatcher, std::shared_ptr<::sys::ServiceDirectory> services);
 
   DataProviderImpl(async_dispatcher_t* dispatcher,
-                   std::shared_ptr<::sys::ServiceDirectory> services,
-                   const Config& config);
+                   std::shared_ptr<::sys::ServiceDirectory> services, const Config& config);
 
   // |fuchsia.feedback.DataProvider|
   void GetData(GetDataCallback callback) override;
-  void GetScreenshot(ImageEncoding encoding,
-                     GetScreenshotCallback callback) override;
+  void GetScreenshot(ImageEncoding encoding, GetScreenshotCallback callback) override;
 
  private:
   // Closes the Scenic connection keyed by |id|.

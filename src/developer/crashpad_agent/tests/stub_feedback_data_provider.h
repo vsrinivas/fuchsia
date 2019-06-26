@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifndef SRC_DEVELOPER_CRASHPAD_AGENT_TESTS_STUB_FEEDBACK_DATA_PROVIDER_H_
+#define SRC_DEVELOPER_CRASHPAD_AGENT_TESTS_STUB_FEEDBACK_DATA_PROVIDER_H_
+
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/interface_handle.h>
@@ -30,12 +33,10 @@ class StubFeedbackDataProvider : public fuchsia::feedback::DataProvider {
 
   // Returns a request handler for binding to this stub service.
   fidl::InterfaceRequestHandler<fuchsia::feedback::DataProvider> GetHandler() {
-    return
-        [this](
-            fidl::InterfaceRequest<fuchsia::feedback::DataProvider> request) {
-          total_num_bindings_++;
-          bindings_.AddBinding(this, std::move(request));
-        };
+    return [this](fidl::InterfaceRequest<fuchsia::feedback::DataProvider> request) {
+      total_num_bindings_++;
+      bindings_.AddBinding(this, std::move(request));
+    };
   }
 
   // |fuchsia::feedback::DataProvider|
@@ -59,18 +60,16 @@ class StubFeedbackDataProvider : public fuchsia::feedback::DataProvider {
   uint64_t total_num_bindings_ = 0;
 };
 
-class StubFeedbackDataProviderReturnsNoAnnotation
-    : public StubFeedbackDataProvider {
+class StubFeedbackDataProviderReturnsNoAnnotation : public StubFeedbackDataProvider {
  public:
   StubFeedbackDataProviderReturnsNoAnnotation()
-      : StubFeedbackDataProvider(/*annotation_keys=*/{}, /*attachment_keys=*/{
-                                     "build.snapshot", "log.kernel"}) {}
+      : StubFeedbackDataProvider(/*annotation_keys=*/{},
+                                 /*attachment_keys=*/{"build.snapshot", "log.kernel"}) {}
 
   void GetData(GetDataCallback callback) override;
 };
 
-class StubFeedbackDataProviderReturnsNoAttachment
-    : public StubFeedbackDataProvider {
+class StubFeedbackDataProviderReturnsNoAttachment : public StubFeedbackDataProvider {
  public:
   StubFeedbackDataProviderReturnsNoAttachment()
       : StubFeedbackDataProvider(
@@ -102,3 +101,5 @@ class StubFeedbackDataProviderNeverReturning : public StubFeedbackDataProvider {
 
 }  // namespace crash
 }  // namespace fuchsia
+
+#endif  // SRC_DEVELOPER_CRASHPAD_AGENT_TESTS_STUB_FEEDBACK_DATA_PROVIDER_H_

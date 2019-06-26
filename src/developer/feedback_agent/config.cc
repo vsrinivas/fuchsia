@@ -50,8 +50,8 @@ bool CheckAgainstSchema(rapidjson::Document& doc) {
   rapidjson::Document sd;
   rapidjson::ParseResult ok = sd.Parse(kSchema);
   if (!ok) {
-    FX_LOGS(ERROR) << "invalid JSON schema for config at offset " << ok.Offset()
-                   << " " << rapidjson::GetParseError_En(ok.Code());
+    FX_LOGS(ERROR) << "invalid JSON schema for config at offset " << ok.Offset() << " "
+                   << rapidjson::GetParseError_En(ok.Code());
     return false;
   }
 
@@ -80,8 +80,8 @@ zx_status_t ParseConfig(const std::string& filepath, Config* config) {
   rapidjson::Document doc;
   rapidjson::ParseResult ok = doc.Parse(json.c_str());
   if (!ok) {
-    FX_LOGS(ERROR) << "error parsing config as JSON at offset " << ok.Offset()
-                   << " " << rapidjson::GetParseError_En(ok.Code());
+    FX_LOGS(ERROR) << "error parsing config as JSON at offset " << ok.Offset() << " "
+                   << rapidjson::GetParseError_En(ok.Code());
     return ZX_ERR_INTERNAL;
   }
 

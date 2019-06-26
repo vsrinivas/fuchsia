@@ -26,9 +26,7 @@ TEST(CrashpadAgentIntegrationTest, SmokeTest) {
   ::fuchsia::mem::Buffer crash_log;
   ASSERT_TRUE(::fsl::VmoFromString("ZIRCON KERNEL PANIC", &crash_log));
   Analyzer_OnKernelPanicCrashLog_Result out_result;
-  ASSERT_EQ(
-      crash_analyzer->OnKernelPanicCrashLog(std::move(crash_log), &out_result),
-      ZX_OK);
+  ASSERT_EQ(crash_analyzer->OnKernelPanicCrashLog(std::move(crash_log), &out_result), ZX_OK);
   EXPECT_TRUE(out_result.is_response());
 }
 

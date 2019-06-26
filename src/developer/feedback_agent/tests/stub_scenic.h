@@ -25,8 +25,7 @@ fuchsia::ui::scenic::ScreenshotData CreateEmptyScreenshot();
 
 // Returns an 8-bit BGRA image of a |image_dim_in_px| x |image_dim_in_px|
 // checkerboard, where each white/black region is a 10x10 pixel square.
-fuchsia::ui::scenic::ScreenshotData CreateCheckerboardScreenshot(
-    const size_t image_dim_in_px);
+fuchsia::ui::scenic::ScreenshotData CreateCheckerboardScreenshot(const size_t image_dim_in_px);
 
 // Returns an empty screenshot with a pixel format different from BGRA-8.
 fuchsia::ui::scenic::ScreenshotData CreateNonBGRA8Screenshot();
@@ -54,15 +53,11 @@ class StubScenic : public fuchsia::ui::scenic::Scenic {
   // |fuchsia::ui::scenic::Scenic|.
   void CreateSession(
       fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session,
-      fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener)
-      override {
+      fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener) override {
     FXL_NOTIMPLEMENTED();
   }
-  void GetDisplayInfo(GetDisplayInfoCallback callback) override {
-    FXL_NOTIMPLEMENTED();
-  }
-  void GetDisplayOwnershipEvent(
-      GetDisplayOwnershipEventCallback callback) override {
+  void GetDisplayInfo(GetDisplayInfoCallback callback) override { FXL_NOTIMPLEMENTED(); }
+  void GetDisplayOwnershipEvent(GetDisplayOwnershipEventCallback callback) override {
     FXL_NOTIMPLEMENTED();
   }
   void TakeScreenshot(TakeScreenshotCallback callback) override;
@@ -71,8 +66,7 @@ class StubScenic : public fuchsia::ui::scenic::Scenic {
   size_t current_num_bindings() { return bindings_.size(); }
 
   // Stub injection and verification methods.
-  void set_take_screenshot_responses(
-      std::vector<TakeScreenshotResponse> responses) {
+  void set_take_screenshot_responses(std::vector<TakeScreenshotResponse> responses) {
     take_screenshot_responses_ = std::move(responses);
   }
   const std::vector<TakeScreenshotResponse>& take_screenshot_responses() const {

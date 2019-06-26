@@ -19,8 +19,7 @@ namespace feedback {
 // feedback).
 //
 // Only annotations which keys are in the |allowlist| will be returned.
-std::vector<fit::promise<Annotation>> GetAnnotations(
-    const std::set<std::string>& allowlist);
+std::vector<fit::promise<Annotation>> GetAnnotations(const std::set<std::string>& allowlist);
 
 }  // namespace feedback
 }  // namespace fuchsia

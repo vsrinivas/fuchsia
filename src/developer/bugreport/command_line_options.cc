@@ -32,8 +32,7 @@ Arguments:
 Mode ParseModeFromArgcArgv(int argc, const char* const* argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   auto& pos_args = command_line.positional_args();
-  if (command_line.HasOption("help") ||
-      (pos_args.size() == 1u && pos_args[0] == "help")) {
+  if (command_line.HasOption("help") || (pos_args.size() == 1u && pos_args[0] == "help")) {
     printf("%s\n", fxl::Substitute(kUsage, command_line.argv0()).c_str());
     return Mode::HELP;
   }

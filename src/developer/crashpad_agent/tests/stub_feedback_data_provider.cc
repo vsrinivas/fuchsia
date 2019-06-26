@@ -28,8 +28,7 @@ Annotation BuildAnnotation(const std::string& key) {
   return annotation;
 }
 
-std::vector<Annotation> BuildAnnotations(
-    const std::vector<std::string>& annotation_keys) {
+std::vector<Annotation> BuildAnnotations(const std::vector<std::string>& annotation_keys) {
   std::vector<Annotation> annotations;
   for (const auto& key : annotation_keys) {
     annotations.push_back(BuildAnnotation(key));
@@ -44,8 +43,7 @@ Attachment BuildAttachment(const std::string& key) {
   return attachment;
 }
 
-std::vector<Attachment> BuildAttachments(
-    const std::vector<std::string>& attachment_keys) {
+std::vector<Attachment> BuildAttachments(const std::vector<std::string>& attachment_keys) {
   std::vector<Attachment> attachments;
   for (const auto& key : attachment_keys) {
     attachments.push_back(BuildAttachment(key));
@@ -64,8 +62,7 @@ void StubFeedbackDataProvider::GetData(GetDataCallback callback) {
   callback(std::move(result));
 }
 
-void StubFeedbackDataProviderReturnsNoAnnotation::GetData(
-    GetDataCallback callback) {
+void StubFeedbackDataProviderReturnsNoAnnotation::GetData(GetDataCallback callback) {
   DataProvider_GetData_Result result;
   DataProvider_GetData_Response response;
   response.data.set_attachments(BuildAttachments(attachment_keys_));
@@ -73,8 +70,7 @@ void StubFeedbackDataProviderReturnsNoAnnotation::GetData(
   callback(std::move(result));
 }
 
-void StubFeedbackDataProviderReturnsNoAttachment::GetData(
-    GetDataCallback callback) {
+void StubFeedbackDataProviderReturnsNoAttachment::GetData(GetDataCallback callback) {
   DataProvider_GetData_Result result;
   DataProvider_GetData_Response response;
   response.data.set_annotations(BuildAnnotations(annotation_keys_));
@@ -88,8 +84,7 @@ void StubFeedbackDataProviderReturnsNoData::GetData(GetDataCallback callback) {
   callback(std::move(result));
 }
 
-void StubFeedbackDataProviderNeverReturning::GetData(GetDataCallback callback) {
-}
+void StubFeedbackDataProviderNeverReturning::GetData(GetDataCallback callback) {}
 
 }  // namespace crash
 }  // namespace fuchsia
