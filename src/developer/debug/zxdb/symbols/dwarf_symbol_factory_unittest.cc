@@ -88,7 +88,7 @@ TEST(DwarfSymbolFactory, Function) {
   EXPECT_TRUE(function->decl_line().is_valid());
   EXPECT_TRUE(StringEndsWith(function->decl_line().file(), "/type_test.cc"))
       << function->decl_line().file();
-  EXPECT_EQ(12, function->decl_line().line());
+  EXPECT_EQ(15, function->decl_line().line());
 
   // Note: return type tested by ModifiedBaseType.
 }

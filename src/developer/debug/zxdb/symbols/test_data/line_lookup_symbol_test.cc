@@ -5,7 +5,7 @@
 #include "src/developer/debug/zxdb/symbols/test_data/zxdb_symbol_test.h"
 
 // This code isn't executed but is used for ModuleSymbolsImpl unit tests.
-//
+// clang-format off
 // IMPORTANT: Do not change the layout of this file! They tests depend on
 // absolute line indices into this file.
 

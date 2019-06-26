@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// clang-format off
+// This file is used to check symbol information so should not be modified by the formatter.
+
 #include "src/developer/debug/zxdb/symbols/test_data/zxdb_symbol_test.h"
 
 class ClassInTest2 {
