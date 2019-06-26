@@ -669,8 +669,8 @@ zx_status_t VmAddressRegion::UnmapInternalLocked(vaddr_t base, size_t size,
 
     // Any unmap spanning the vDSO code mapping is verboten.
     if (aspace_->vdso_code_mapping_ &&
-        aspace_->vdso_code_mapping_->base() >= base &&
-        aspace_->vdso_code_mapping_->base() - base < size) {
+        Intersects(aspace_->vdso_code_mapping_->base(), aspace_->vdso_code_mapping_->size(), base,
+                   size)) {
         return ZX_ERR_ACCESS_DENIED;
     }
 
