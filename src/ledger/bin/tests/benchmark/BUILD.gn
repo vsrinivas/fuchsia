@@ -344,6 +344,11 @@ package("ledger_benchmarks") {
       path = rebase_path("stories_simulation/stories_single_active.tspec")
       dest = "stories_single_active.tspec"
     },
+
+    {
+      path = rebase_path("stories_simulation/stories_wait_cached.tspec")
+      dest = "stories_wait_cached.tspec"
+    },
   ]
 
   if (ledger_sync_credentials_file != "") {

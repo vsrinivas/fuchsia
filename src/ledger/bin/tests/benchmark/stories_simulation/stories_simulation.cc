@@ -37,9 +37,18 @@ namespace {
 
 constexpr fxl::StringView kBinaryPath =
     "fuchsia-pkg://fuchsia.com/ledger_benchmarks#meta/stories-simulation.cmx";
+
 constexpr fxl::StringView kStoryCountFlag = "story-count";
+constexpr fxl::StringView kWaitForCachedPageFlag = "wait-for-cached-page";
+
 constexpr fxl::StringView kMessageQueuePageId = "MessageQueuePage";
 constexpr fxl::StringView kAgentRunnerPageId = "AgentRunnerPage_";
+
+// The delay to be used when waiting for ledger background I/O operations to finish. Adding this
+// delay before creating a new story will simulate the optimal conditions for creating a new Story:
+// A precached Page will be prepared on the background and, upon request, it will be attributed to
+// the next Story, with minimal delay.
+constexpr zx::duration kDelay = zx::msec(100);
 
 // Contents and metadata as observed in the e2e tests.
 constexpr size_t kStoryValueSize = 320;
@@ -142,10 +151,12 @@ void ReadAllFromPage(const PagePtr* page, const std::vector<uint8_t>& prefix,
 //
 // Parameters:
 //   --story-count=<int> the number of stories to be created
+//   --wait_for_cached_page - if this flag is specified, the benchmark will waitfor a sufficient
+//   amount of time before each page request, to allow Ledger to precache an empty new page.
 class StoriesBenchmark {
  public:
   StoriesBenchmark(async::Loop* loop, std::unique_ptr<sys::ComponentContext> component_context,
-                   int story_count);
+                   int story_count, bool wait_for_cached);
 
   void Run();
 
@@ -165,7 +176,10 @@ class StoriesBenchmark {
 
   scoped_tmpfs::ScopedTmpFS tmp_fs_;
   std::unique_ptr<sys::ComponentContext> component_context_;
+
+  // Input arguments.
   const int story_count_;
+  const bool wait_for_cached_page_;
 
   fuchsia::sys::ComponentControllerPtr component_controller_;
   LedgerPtr ledger_;
@@ -191,13 +205,14 @@ class StoriesBenchmark {
 
 StoriesBenchmark::StoriesBenchmark(async::Loop* loop,
                                    std::unique_ptr<sys::ComponentContext> component_context,
-                                   int story_count)
+                                   int story_count, bool wait_for_cached_page)
     : loop_(loop),
       random_(0),
       generator_(&random_),
       page_data_generator_(&random_),
       component_context_(std::move(component_context)),
-      story_count_(story_count) {
+      story_count_(story_count),
+      wait_for_cached_page_(wait_for_cached_page) {
   FXL_DCHECK(loop_);
   FXL_DCHECK(story_count > 0);
 }
@@ -245,6 +260,11 @@ void StoriesBenchmark::RunSingle(int i) {
   if (i == story_count_) {
     ShutDown();
     return;
+  }
+  if (wait_for_cached_page_) {
+    // Add a delay before each story creation to get the performance in Ledger's best working
+    // conditions.
+    zx_nanosleep(zx_deadline_after(kDelay.get()));
   }
   std::vector<uint8_t> story_name = GetStoryName(i);
   std::vector<uint8_t> story_data = generator_.MakeValue(kStoryValueSize);
@@ -384,7 +404,9 @@ int Main(int argc, const char** argv) {
     PrintUsage();
     return -1;
   }
-  StoriesBenchmark app(&loop, std::move(component_context), story_count);
+  bool wait_for_cached_page = command_line.HasOption(kWaitForCachedPageFlag);
+
+  StoriesBenchmark app(&loop, std::move(component_context), story_count, wait_for_cached_page);
 
   return RunWithTracing(&loop, [&app] { app.Run(); });
 }

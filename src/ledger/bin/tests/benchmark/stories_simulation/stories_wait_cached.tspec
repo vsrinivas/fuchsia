@@ -1,0 +1,35 @@
+{
+  "test_suite_name": "fuchsia.ledger.stories_simulation",
+  "app": "fuchsia-pkg://fuchsia.com/ledger_benchmarks#meta/stories_simulation.cmx",
+  "args": [ "--story-count=100", "--wait-for-cached-page" ],
+  "environment": {
+    "name": "trace_record_environment"
+  },
+  "categories": [ "benchmark", "ledger" ],
+  "duration": 60,
+  "measure": [
+    {
+      "type": "duration",
+      "output_test_name": "stories_single_active/initialization",
+      "event_name": "default_pages_initialization",
+      "event_category": "benchmark",
+      "expected_sample_count": 1
+    },
+    {
+      "type": "duration",
+      "output_test_name": "stories_single_active/story_lifetime",
+      "event_name": "story_lifetime",
+      "event_category": "benchmark",
+      "expected_sample_count": 100,
+      "split_first": true
+    },
+    {
+      "type": "duration",
+      "output_test_name": "stories_single_active/story_cleanup",
+      "event_name": "story_cleanup",
+      "event_category": "benchmark",
+      "expected_sample_count": 100,
+      "split_first": true
+    }
+  ]
+}
