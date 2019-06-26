@@ -30,8 +30,7 @@ Err GetPointerValue(const ExprValue& value, TargetPointer* pointer_value) {
 
 }  // namespace
 
-void ResolvePointer(fxl::RefPtr<EvalContext> eval_context, uint64_t address,
-                    fxl::RefPtr<Type> type,
+void ResolvePointer(fxl::RefPtr<EvalContext> eval_context, uint64_t address, fxl::RefPtr<Type> type,
                     std::function<void(const Err&, ExprValue)> cb) {
   if (!type) {
     cb(Err("Missing pointer type."), ExprValue());
@@ -41,23 +40,20 @@ void ResolvePointer(fxl::RefPtr<EvalContext> eval_context, uint64_t address,
   uint32_t type_size = type->byte_size();
   eval_context->GetDataProvider()->GetMemoryAsync(
       address, type_size,
-      [type = std::move(type), address, cb = std::move(cb)](
-          const Err& err, std::vector<uint8_t> data) {
+      [type = std::move(type), address, cb = std::move(cb)](const Err& err,
+                                                            std::vector<uint8_t> data) {
         if (err.has_error()) {
           cb(err, ExprValue());
         } else if (data.size() != type->byte_size()) {
           // Short read, memory is invalid.
-          cb(Err(fxl::StringPrintf("Invalid pointer 0x%" PRIx64, address)),
-             ExprValue());
+          cb(Err(fxl::StringPrintf("Invalid pointer 0x%" PRIx64, address)), ExprValue());
         } else {
-          cb(Err(), ExprValue(std::move(type), std::move(data),
-                              ExprValueSource(address)));
+          cb(Err(), ExprValue(std::move(type), std::move(data), ExprValueSource(address)));
         }
       });
 }
 
-void ResolvePointer(fxl::RefPtr<EvalContext> eval_context,
-                    const ExprValue& pointer,
+void ResolvePointer(fxl::RefPtr<EvalContext> eval_context, const ExprValue& pointer,
                     std::function<void(const Err&, ExprValue)> cb) {
   const Type* pointed_to = nullptr;
   Err err = GetPointedToType(pointer.type(), &pointed_to);
@@ -72,13 +68,11 @@ void ResolvePointer(fxl::RefPtr<EvalContext> eval_context,
     cb(err, ExprValue());
   } else {
     ResolvePointer(std::move(eval_context), pointer_value,
-                   fxl::RefPtr<Type>(const_cast<Type*>(pointed_to)),
-                   std::move(cb));
+                   fxl::RefPtr<Type>(const_cast<Type*>(pointed_to)), std::move(cb));
   }
 }
 
-void EnsureResolveReference(fxl::RefPtr<EvalContext> eval_context,
-                            ExprValue value,
+void EnsureResolveReference(fxl::RefPtr<EvalContext> eval_context, ExprValue value,
                             std::function<void(const Err&, ExprValue)> cb) {
   Type* type = value.type();
   if (!type) {
@@ -108,8 +102,7 @@ void EnsureResolveReference(fxl::RefPtr<EvalContext> eval_context,
     cb(err, ExprValue());
   } else {
     ResolvePointer(std::move(eval_context), pointer_value,
-                   fxl::RefPtr<Type>(const_cast<Type*>(underlying_type)),
-                   std::move(cb));
+                   fxl::RefPtr<Type>(const_cast<Type*>(underlying_type)), std::move(cb));
   }
 }
 

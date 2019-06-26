@@ -82,8 +82,7 @@ class FormatNode {
   // FormatNode, that will be handled by the implementation of the callback
   // passed to it.
   using GetProgramaticValue = std::function<void(
-      fxl::RefPtr<EvalContext> context,
-      fit::callback<void(const Err& err, ExprValue value)> cb)>;
+      fxl::RefPtr<EvalContext> context, fit::callback<void(const Err& err, ExprValue value)> cb)>;
 
   // The original source or the value for this node.
   enum Source {
@@ -162,8 +161,7 @@ class FormatNode {
   // Call when source == kProgramatic to fill the value from the getter. The
   // callback will be issued (possibly from within this call stack) when the
   // value is filled.
-  void FillProgramaticValue(fxl::RefPtr<EvalContext> context,
-                            fit::deferred_callback cb);
+  void FillProgramaticValue(fxl::RefPtr<EvalContext> context, fit::deferred_callback cb);
 
   // The value. This will be valid when the State == kHasValue. The description
   // and type might not be up-to-date, see FillFormatNodeDescription().

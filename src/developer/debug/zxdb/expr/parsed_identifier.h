@@ -24,8 +24,7 @@ class ParsedIdentifierComponent {
   // Constructor for names with templates. The contents will be a
   // vector of somewhat-normalized type string in between the <>. This always
   // generates a template even if the contents are empty (meaning "name<>");
-  ParsedIdentifierComponent(std::string name,
-                            std::vector<std::string> template_contents)
+  ParsedIdentifierComponent(std::string name, std::vector<std::string> template_contents)
       : name_(std::move(name)),
         has_template_(true),
         template_contents_(std::move(template_contents)) {}
@@ -34,17 +33,13 @@ class ParsedIdentifierComponent {
     return name_ == other.name_ && has_template_ == other.has_template_ &&
            template_contents_ == other.template_contents_;
   }
-  bool operator!=(const ParsedIdentifierComponent& other) const {
-    return !operator==(other);
-  }
+  bool operator!=(const ParsedIdentifierComponent& other) const { return !operator==(other); }
 
   bool has_template() const { return has_template_; }
 
   const std::string& name() const { return name_; }
 
-  const std::vector<std::string>& template_contents() const {
-    return template_contents_;
-  }
+  const std::vector<std::string>& template_contents() const { return template_contents_; }
 
   // Returns this component, either as a string as it would be represented in
   // C++, or in our debug format for unit test format checking (the name and

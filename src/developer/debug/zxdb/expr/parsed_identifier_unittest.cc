@@ -19,16 +19,13 @@ TEST(ParsedIdentifier, GetName) {
   EXPECT_EQ("First", unqualified.GetFullName());
 
   // Single name with a "::" at the beginning.
-  ParsedIdentifier qualified(IdentifierQualification::kGlobal,
-                             ParsedIdentifierComponent("First"));
+  ParsedIdentifier qualified(IdentifierQualification::kGlobal, ParsedIdentifierComponent("First"));
   EXPECT_EQ("::First", qualified.GetFullName());
 
   // Append some template stuff.
-  qualified.AppendComponent(
-      ParsedIdentifierComponent("Second", {"int", "Foo"}));
+  qualified.AppendComponent(ParsedIdentifierComponent("Second", {"int", "Foo"}));
   EXPECT_EQ("::First::Second<int, Foo>", qualified.GetFullName());
-  EXPECT_EQ("::\"First\"; ::\"Second\",<\"int\", \"Foo\">",
-            qualified.GetDebugName());
+  EXPECT_EQ("::\"First\"; ::\"Second\",<\"int\", \"Foo\">", qualified.GetDebugName());
 }
 
 TEST(ParsedIdentifier, ToIdentifier) {
@@ -38,13 +35,11 @@ TEST(ParsedIdentifier, ToIdentifier) {
   EXPECT_EQ(0u, empty_out.components().size());
 
   ParsedIdentifier complex;
-  Err err =
-      ExprParser::ParseIdentifier("::std::vector<int>::iterator", &complex);
+  Err err = ExprParser::ParseIdentifier("::std::vector<int>::iterator", &complex);
   ASSERT_FALSE(err.has_error());
 
   Identifier complex_out = ToIdentifier(complex);
-  EXPECT_EQ("::\"std\"; ::\"vector<int>\"; ::\"iterator\"",
-            complex_out.GetDebugName());
+  EXPECT_EQ("::\"std\"; ::\"vector<int>\"; ::\"iterator\"", complex_out.GetDebugName());
 }
 
 TEST(ParsedIdentifier, ToParsedIdentifier) {
@@ -55,16 +50,14 @@ TEST(ParsedIdentifier, ToParsedIdentifier) {
 
   // Round-trip this template.
   ParsedIdentifier complex_parsed;
-  Err err = ExprParser::ParseIdentifier("::std::vector<int>::iterator",
-                                        &complex_parsed);
+  Err err = ExprParser::ParseIdentifier("::std::vector<int>::iterator", &complex_parsed);
   ASSERT_FALSE(err.has_error());
 
   Identifier complex_ident = ToIdentifier(complex_parsed);
   ParsedIdentifier complex_parsed2 = ToParsedIdentifier(complex_ident);
 
   EXPECT_EQ(complex_parsed, complex_parsed2);
-  EXPECT_EQ("::\"std\"; ::\"vector\",<\"int\">; ::\"iterator\"",
-            complex_parsed2.GetDebugName());
+  EXPECT_EQ("::\"std\"; ::\"vector\",<\"int\">; ::\"iterator\"", complex_parsed2.GetDebugName());
 
   // Round-trip an invalid C++ identifier. The "::" in one component should not
   // be split, and the crazy characters should be preserved.
@@ -74,13 +67,11 @@ TEST(ParsedIdentifier, ToParsedIdentifier) {
   ident.AppendComponent(IdentifierComponent("hello{<"));
 
   ParsedIdentifier ident_parsed = ToParsedIdentifier(ident);
-  EXPECT_EQ("\"vector\",<\"int\">; ::\"foo::bar\"; ::\"hello{<\"",
-            ident_parsed.GetDebugName());
+  EXPECT_EQ("\"vector\",<\"int\">; ::\"foo::bar\"; ::\"hello{<\"", ident_parsed.GetDebugName());
 
   Identifier ident2 = ToIdentifier(ident_parsed);
   EXPECT_EQ(ident, ident2);
-  EXPECT_EQ("\"vector<int>\"; ::\"foo::bar\"; ::\"hello{<\"",
-            ident2.GetDebugName());
+  EXPECT_EQ("\"vector<int>\"; ::\"foo::bar\"; ::\"hello{<\"", ident2.GetDebugName());
 }
 
 }  // namespace zxdb

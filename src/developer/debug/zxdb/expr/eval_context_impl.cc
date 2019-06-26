@@ -41,8 +41,7 @@ debug_ipc::RegisterID GetRegister(const ParsedIdentifier& ident) {
 // The data associated with one in-progress variable resolution. This must be
 // heap allocated for each resolution operation since multiple operations can
 // be pending.
-struct EvalContextImpl::ResolutionState
-    : public fxl::RefCountedThreadSafe<ResolutionState> {
+struct EvalContextImpl::ResolutionState : public fxl::RefCountedThreadSafe<ResolutionState> {
   DwarfExprEval dwarf_eval;
   ValueCallback callback;
 
@@ -59,26 +58,24 @@ struct EvalContextImpl::ResolutionState
   FRIEND_REF_COUNTED_THREAD_SAFE(ResolutionState);
   FRIEND_MAKE_REF_COUNTED(ResolutionState);
 
-  explicit ResolutionState(ValueCallback cb, fxl::RefPtr<Type> t,
-                           fxl::RefPtr<Symbol> s)
+  explicit ResolutionState(ValueCallback cb, fxl::RefPtr<Type> t, fxl::RefPtr<Symbol> s)
       : callback(std::move(cb)), type(std::move(t)), symbol(std::move(s)) {}
   ~ResolutionState() = default;
 };
 
-EvalContextImpl::EvalContextImpl(
-    fxl::WeakPtr<const ProcessSymbols> process_symbols,
-    const SymbolContext& symbol_context,
-    fxl::RefPtr<SymbolDataProvider> data_provider,
-    fxl::RefPtr<CodeBlock> code_block)
+EvalContextImpl::EvalContextImpl(fxl::WeakPtr<const ProcessSymbols> process_symbols,
+                                 const SymbolContext& symbol_context,
+                                 fxl::RefPtr<SymbolDataProvider> data_provider,
+                                 fxl::RefPtr<CodeBlock> code_block)
     : process_symbols_(std::move(process_symbols)),
       symbol_context_(symbol_context),
       data_provider_(data_provider),
       block_(std::move(code_block)),
       weak_factory_(this) {}
 
-EvalContextImpl::EvalContextImpl(
-    fxl::WeakPtr<const ProcessSymbols> process_symbols,
-    fxl::RefPtr<SymbolDataProvider> data_provider, const Location& location)
+EvalContextImpl::EvalContextImpl(fxl::WeakPtr<const ProcessSymbols> process_symbols,
+                                 fxl::RefPtr<SymbolDataProvider> data_provider,
+                                 const Location& location)
     : process_symbols_(std::move(process_symbols)),
       symbol_context_(location.symbol_context()),
       data_provider_(data_provider),
@@ -88,9 +85,8 @@ EvalContextImpl::EvalContextImpl(
   const CodeBlock* function = location.symbol().Get()->AsCodeBlock();
   if (function) {
     // Const cast unfortunately required for RefPtr constructor.
-    block_ = fxl::RefPtr<const CodeBlock>(
-        const_cast<CodeBlock*>(function->GetMostSpecificChild(
-            location.symbol_context(), location.address())));
+    block_ = fxl::RefPtr<const CodeBlock>(const_cast<CodeBlock*>(
+        function->GetMostSpecificChild(location.symbol_context(), location.address())));
 
     // Extract the language for the code if possible.
     if (const CompileUnit* unit = function->GetCompileUnit())
@@ -102,11 +98,9 @@ EvalContextImpl::~EvalContextImpl() = default;
 
 ExprLanguage EvalContextImpl::GetLanguage() const { return language_; }
 
-void EvalContextImpl::GetNamedValue(const ParsedIdentifier& identifier,
-                                    ValueCallback cb) const {
+void EvalContextImpl::GetNamedValue(const ParsedIdentifier& identifier, ValueCallback cb) const {
   if (FoundName found =
-          FindName(GetFindNameContext(),
-                   FindNameOptions(FindNameOptions::kAllKinds), identifier)) {
+          FindName(GetFindNameContext(), FindNameOptions(FindNameOptions::kAllKinds), identifier)) {
     switch (found.kind()) {
       case FoundName::kVariable:
       case FoundName::kMemberVariable:
@@ -116,8 +110,7 @@ void EvalContextImpl::GetNamedValue(const ParsedIdentifier& identifier,
         cb(Err("Can not evaluate a namespace."), nullptr, ExprValue());
         return;
       case FoundName::kTemplate:
-        cb(Err("Can not evaluate a template with no parameters."), nullptr,
-           ExprValue());
+        cb(Err("Can not evaluate a template with no parameters."), nullptr, ExprValue());
         return;
       case FoundName::kType:
         cb(Err("Can not evaluate a type."), nullptr, ExprValue());
@@ -133,20 +126,17 @@ void EvalContextImpl::GetNamedValue(const ParsedIdentifier& identifier,
 
   if (reg == debug_ipc::RegisterID::kUnknown ||
       GetArchForRegisterID(reg) != data_provider_->GetArch()) {
-    cb(Err("No variable '%s' found.", identifier.GetFullName().c_str()),
-       nullptr, ExprValue());
+    cb(Err("No variable '%s' found.", identifier.GetFullName().c_str()), nullptr, ExprValue());
     return;
   }
 
   // Fall back to matching registers when no symbol is found.
-  data_provider_->GetRegisterAsync(
-      reg, [cb = std::move(cb)](const Err& err, uint64_t value) {
-        cb(err, fxl::RefPtr<zxdb::Symbol>(), ExprValue(value));
-      });
+  data_provider_->GetRegisterAsync(reg, [cb = std::move(cb)](const Err& err, uint64_t value) {
+    cb(err, fxl::RefPtr<zxdb::Symbol>(), ExprValue(value));
+  });
 }
 
-void EvalContextImpl::GetVariableValue(fxl::RefPtr<Variable> var,
-                                       ValueCallback cb) const {
+void EvalContextImpl::GetVariableValue(fxl::RefPtr<Variable> var, ValueCallback cb) const {
   // Need to explicitly take a reference to the type.
   fxl::RefPtr<Type> type(const_cast<Type*>(var->type().Get()->AsType()));
   if (!type) {
@@ -155,18 +145,16 @@ void EvalContextImpl::GetVariableValue(fxl::RefPtr<Variable> var,
   }
 
   std::optional<uint64_t> ip;
-  data_provider_->GetRegister(
-      debug_ipc::GetSpecialRegisterID(data_provider_->GetArch(),
-                                      debug_ipc::SpecialRegisterType::kIP),
-      &ip);
+  data_provider_->GetRegister(debug_ipc::GetSpecialRegisterID(data_provider_->GetArch(),
+                                                              debug_ipc::SpecialRegisterType::kIP),
+                              &ip);
   if (!ip) {
     // The IP should never require an async call.
     cb(Err("No location available."), var, ExprValue());
     return;
   }
 
-  const VariableLocation::Entry* loc_entry =
-      var->location().EntryForIP(symbol_context_, *ip);
+  const VariableLocation::Entry* loc_entry = var->location().EntryForIP(symbol_context_, *ip);
   if (!loc_entry) {
     // No DWARF location applies to the current instruction pointer.
     const char* err_str;
@@ -182,25 +170,22 @@ void EvalContextImpl::GetVariableValue(fxl::RefPtr<Variable> var,
   }
 
   // Schedule the expression to be evaluated.
-  auto state = fxl::MakeRefCounted<ResolutionState>(
-      std::move(cb), std::move(type), std::move(var));
-  state->dwarf_eval.Eval(
-      data_provider_, symbol_context_, loc_entry->expression,
-      [state = std::move(state), weak_this = weak_factory_.GetWeakPtr()](
-          DwarfExprEval*, const Err& err) {
-        if (weak_this)
-          weak_this->OnDwarfEvalComplete(err, std::move(state));
+  auto state = fxl::MakeRefCounted<ResolutionState>(std::move(cb), std::move(type), std::move(var));
+  state->dwarf_eval.Eval(data_provider_, symbol_context_, loc_entry->expression,
+                         [state = std::move(state), weak_this = weak_factory_.GetWeakPtr()](
+                             DwarfExprEval*, const Err& err) {
+                           if (weak_this)
+                             weak_this->OnDwarfEvalComplete(err, std::move(state));
 
-        // Prevent the DwarfExprEval from getting reentrantly deleted from
-        // within its own callback by posting a reference back to the message
-        // loop.
-        debug_ipc::MessageLoop::Current()->PostTask(
-            FROM_HERE, [state = std::move(state)]() {});
-      });
+                           // Prevent the DwarfExprEval from getting reentrantly deleted from
+                           // within its own callback by posting a reference back to the message
+                           // loop.
+                           debug_ipc::MessageLoop::Current()->PostTask(
+                               FROM_HERE, [state = std::move(state)]() {});
+                         });
 }
 
-fxl::RefPtr<Type> EvalContextImpl::ResolveForwardDefinition(
-    const Type* type) const {
+fxl::RefPtr<Type> EvalContextImpl::ResolveForwardDefinition(const Type* type) const {
   Identifier ident = type->GetIdentifier();
   if (ident.empty()) {
     // Some things like modified types don't have real identifier names.
@@ -249,15 +234,12 @@ fxl::RefPtr<Type> EvalContextImpl::GetConcreteType(const Type* type) const {
   return cur;
 }
 
-fxl::RefPtr<SymbolDataProvider> EvalContextImpl::GetDataProvider() {
-  return data_provider_;
-}
+fxl::RefPtr<SymbolDataProvider> EvalContextImpl::GetDataProvider() { return data_provider_; }
 
 NameLookupCallback EvalContextImpl::GetSymbolNameLookupCallback() {
   // The contract for this function is that the callback must not be stored
   // so the callback can reference |this|.
-  return [this](const ParsedIdentifier& ident,
-                const FindNameOptions& opts) -> FoundName {
+  return [this](const ParsedIdentifier& ident, const FindNameOptions& opts) -> FoundName {
     // Look up the symbols in the symbol table if possible.
     FoundName result = FindName(GetFindNameContext(), opts, ident);
 
@@ -279,39 +261,36 @@ void EvalContextImpl::DoResolve(FoundName found, ValueCallback cb) const {
 
   // Object variable resolution: Get the value of of the |this| variable.
   FXL_DCHECK(found.kind() == FoundName::kMemberVariable);
-  GetVariableValue(
-      found.object_ptr_ref(),
-      [weak_this = weak_factory_.GetWeakPtr(), found, cb = std::move(cb)](
-          const Err& err, fxl::RefPtr<Symbol> symbol, ExprValue value) {
-        if (!weak_this)
-          return;  // Don't issue callbacks if we've been destroyed.
+  GetVariableValue(found.object_ptr_ref(),
+                   [weak_this = weak_factory_.GetWeakPtr(), found, cb = std::move(cb)](
+                       const Err& err, fxl::RefPtr<Symbol> symbol, ExprValue value) {
+                     if (!weak_this)
+                       return;  // Don't issue callbacks if we've been destroyed.
 
-        if (err.has_error()) {
-          // |this| not available, probably optimized out.
-          cb(err, symbol, ExprValue());
-          return;
-        }
+                     if (err.has_error()) {
+                       // |this| not available, probably optimized out.
+                       cb(err, symbol, ExprValue());
+                       return;
+                     }
 
-        // Got |this|, resolve |this-><DataMember>|.
-        ResolveMemberByPointer(
-            fxl::RefPtr<EvalContextImpl>(weak_this.get()), value,
-            found.member(),
-            [weak_this, found, cb = std::move(cb)](const Err& err,
-                                                   ExprValue value) {
-              if (!weak_this)
-                return;  // Don't issue callbacks if we've been destroyed.
-              if (err.has_error()) {
-                cb(err, found.member().data_member_ref(), ExprValue());
-              } else {
-                // Found |this->name|.
-                cb(Err(), found.member().data_member_ref(), std::move(value));
-              }
-            });
-      });
+                     // Got |this|, resolve |this-><DataMember>|.
+                     ResolveMemberByPointer(
+                         fxl::RefPtr<EvalContextImpl>(weak_this.get()), value, found.member(),
+                         [weak_this, found, cb = std::move(cb)](const Err& err, ExprValue value) {
+                           if (!weak_this)
+                             return;  // Don't issue callbacks if we've been destroyed.
+                           if (err.has_error()) {
+                             cb(err, found.member().data_member_ref(), ExprValue());
+                           } else {
+                             // Found |this->name|.
+                             cb(Err(), found.member().data_member_ref(), std::move(value));
+                           }
+                         });
+                   });
 }
 
-void EvalContextImpl::OnDwarfEvalComplete(
-    const Err& err, fxl::RefPtr<ResolutionState> state) const {
+void EvalContextImpl::OnDwarfEvalComplete(const Err& err,
+                                          fxl::RefPtr<ResolutionState> state) const {
   if (err.has_error()) {
     // Error decoding.
     state->callback(err, state->symbol, ExprValue());
@@ -331,34 +310,29 @@ void EvalContextImpl::OnDwarfEvalComplete(
     // The DWARF expression produced the exact value (it's not in memory).
     uint32_t type_size = concrete_type->byte_size();
     if (type_size > sizeof(uint64_t)) {
-      state->callback(
-          Err(fxl::StringPrintf("Result size insufficient for type of size %u. "
-                                "Please file a bug with a repro case.",
-                                type_size)),
-          state->symbol, ExprValue());
+      state->callback(Err(fxl::StringPrintf("Result size insufficient for type of size %u. "
+                                            "Please file a bug with a repro case.",
+                                            type_size)),
+                      state->symbol, ExprValue());
       return;
     }
     std::vector<uint8_t> data;
     data.resize(type_size);
     memcpy(&data[0], &result_int, type_size);
-    state->callback(Err(), state->symbol,
-                    ExprValue(state->type, std::move(data)));
+    state->callback(Err(), state->symbol, ExprValue(state->type, std::move(data)));
   } else {
     // The DWARF result is a pointer to the value.
-    ResolvePointer(fxl::RefPtr<EvalContext>(const_cast<EvalContextImpl*>(this)),
-                   result_int, state->type,
-                   [state, weak_this = weak_factory_.GetWeakPtr()](
-                       const Err& err, ExprValue value) {
-                     if (weak_this)
-                       state->callback(err, state->symbol, std::move(value));
-                   });
+    ResolvePointer(
+        fxl::RefPtr<EvalContext>(const_cast<EvalContextImpl*>(this)), result_int, state->type,
+        [state, weak_this = weak_factory_.GetWeakPtr()](const Err& err, ExprValue value) {
+          if (weak_this)
+            state->callback(err, state->symbol, std::move(value));
+        });
   }
 }
 
-FoundName EvalContextImpl::DoTargetSymbolsNameLookup(
-    const ParsedIdentifier& ident) {
-  return FindName(GetFindNameContext(),
-                  FindNameOptions(FindNameOptions::kAllKinds), ident);
+FoundName EvalContextImpl::DoTargetSymbolsNameLookup(const ParsedIdentifier& ident) {
+  return FindName(GetFindNameContext(), FindNameOptions(FindNameOptions::kAllKinds), ident);
 }
 
 FindNameContext EvalContextImpl::GetFindNameContext() const {

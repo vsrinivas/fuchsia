@@ -106,12 +106,10 @@ struct FindNameOptions {
 //
 // The variant that returns a single value ignores the max_results of the
 // options and always returns the first thing.
-FoundName FindName(const FindNameContext& context,
-                   const FindNameOptions& options,
+FoundName FindName(const FindNameContext& context, const FindNameOptions& options,
                    const ParsedIdentifier& identifier);
 void FindName(const FindNameContext& context, const FindNameOptions& options,
-              const ParsedIdentifier& looking_for,
-              std::vector<FoundName>* results);
+              const ParsedIdentifier& looking_for, std::vector<FoundName>* results);
 
 // Type-specific finding -------------------------------------------------------
 
@@ -123,12 +121,10 @@ void FindName(const FindNameContext& context, const FindNameOptions& options,
 // The "visit" variant calls the callback for every variable in order of
 // priority for as long as the visitor reports "continue." The "find" variant
 // does an exact string search, the "prefix" variant does a prefix search.
-VisitResult VisitLocalVariables(
-    const CodeBlock* block,
-    const std::function<VisitResult(const Variable*)>& visitor);
+VisitResult VisitLocalVariables(const CodeBlock* block,
+                                const std::function<VisitResult(const Variable*)>& visitor);
 void FindLocalVariable(const FindNameOptions& options, const CodeBlock* block,
-                       const ParsedIdentifier& looking_for,
-                       std::vector<FoundName>* results);
+                       const ParsedIdentifier& looking_for, std::vector<FoundName>* results);
 
 // Searches for the named variable or type on the given collection. This is the
 // lower-level function and assumes a valid object. The result can be either a
@@ -146,8 +142,7 @@ void FindLocalVariable(const FindNameOptions& options, const CodeBlock* block,
 // a variable for the object it's looking up (just doing a type query).
 void FindMember(const FindNameContext& context, const FindNameOptions& options,
                 const Collection* object, const ParsedIdentifier& looking_for,
-                const Variable* optional_object_ptr,
-                std::vector<FoundName>* result);
+                const Variable* optional_object_ptr, std::vector<FoundName>* result);
 
 // Attempts the resolve the given named member variable or type on the "this"
 // pointer associated with the given code block. Fails if the function has no
@@ -159,21 +154,17 @@ void FindMember(const FindNameContext& context, const FindNameOptions& options,
 //
 // The optional symbol context is the symbol context for the current code. it
 // will be used to prioritize symbol searching to the current module if given.
-void FindMemberOnThis(const FindNameContext& context,
-                      const FindNameOptions& options,
-                      const ParsedIdentifier& looking_for,
-                      std::vector<FoundName>* result);
+void FindMemberOnThis(const FindNameContext& context, const FindNameOptions& options,
+                      const ParsedIdentifier& looking_for, std::vector<FoundName>* result);
 
 // Attempts to resolve the named |looking_for| in the index.
 //
 // The |current_scope| is the namespace to start looking in. If
 // |search_containing| is true, parent scopes of the |current_scope| are also
 // searched, otherwise only exact matches in that scope will be found.
-VisitResult FindIndexedName(const FindNameContext& context,
-                            const FindNameOptions& options,
+VisitResult FindIndexedName(const FindNameContext& context, const FindNameOptions& options,
                             const ParsedIdentifier& current_scope,
-                            const ParsedIdentifier& looking_for,
-                            bool search_containing,
+                            const ParsedIdentifier& looking_for, bool search_containing,
                             std::vector<FoundName>* results);
 
 // Searches a specific index and current namespace for a global variable or
@@ -182,8 +173,7 @@ VisitResult FindIndexedName(const FindNameContext& context,
 VisitResult FindIndexedNameInModule(const FindNameOptions& options,
                                     const ModuleSymbols* module_symbols,
                                     const ParsedIdentifier& current_scope,
-                                    const ParsedIdentifier& looking_for,
-                                    bool search_containing,
+                                    const ParsedIdentifier& looking_for, bool search_containing,
                                     std::vector<FoundName>* results);
 
 // In many contexts (like function parameters and local variables) an
@@ -193,8 +183,7 @@ VisitResult FindIndexedNameInModule(const FindNameOptions& options,
 // or any template specs, returns null.
 //
 // The returned pointer will be invalidated if the Identifier is mutated.
-const std::string* GetSingleComponentIdentifierName(
-    const ParsedIdentifier& ident);
+const std::string* GetSingleComponentIdentifierName(const ParsedIdentifier& ident);
 
 }  // namespace zxdb
 

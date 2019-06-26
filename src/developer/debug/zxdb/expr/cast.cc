@@ -36,12 +36,9 @@ bool IsIntegerLike(const Type* t) {
     return false;
 
   int kind = base_type->base_type();
-  return kind == BaseType::kBaseTypeAddress ||
-         kind == BaseType::kBaseTypeBoolean ||
-         kind == BaseType::kBaseTypeSigned ||
-         kind == BaseType::kBaseTypeSignedChar ||
-         kind == BaseType::kBaseTypeUnsigned ||
-         kind == BaseType::kBaseTypeUnsignedChar ||
+  return kind == BaseType::kBaseTypeAddress || kind == BaseType::kBaseTypeBoolean ||
+         kind == BaseType::kBaseTypeSigned || kind == BaseType::kBaseTypeSignedChar ||
+         kind == BaseType::kBaseTypeUnsigned || kind == BaseType::kBaseTypeUnsignedChar ||
          kind == BaseType::kBaseTypeUTF;
 }
 
@@ -50,8 +47,7 @@ bool IsSignedBaseType(const Type* type) {
   if (!base_type)
     return false;
   int kind = base_type->base_type();
-  return kind == BaseType::kBaseTypeSigned ||
-         kind == BaseType::kBaseTypeSignedChar;
+  return kind == BaseType::kBaseTypeSigned || kind == BaseType::kBaseTypeSignedChar;
 }
 
 bool IsBooleanBaseType(const Type* type) {
@@ -69,17 +65,15 @@ bool IsFloatingPointBaseType(const Type* type) {
 }
 
 // Numbers include integers and floating point.
-bool IsNumberLike(const Type* t) {
-  return IsIntegerLike(t) || IsFloatingPointBaseType(t);
-}
+bool IsNumberLike(const Type* t) { return IsIntegerLike(t) || IsFloatingPointBaseType(t); }
 
 // Creates an ExprValue with the contents of the given "value". The size of
 // "value" must match the destination type. This function always places the
 // output into *result and returns an empty Err() for the convenience of the
 // callers.
 template <typename T>
-Err CreateValue(T value, const fxl::RefPtr<Type>& dest_type,
-                const ExprValueSource& dest_source, ExprValue* result) {
+Err CreateValue(T value, const fxl::RefPtr<Type>& dest_type, const ExprValueSource& dest_source,
+                ExprValue* result) {
   FXL_DCHECK(sizeof(T) == dest_type->byte_size());
 
   std::vector<uint8_t> dest_bytes;
@@ -90,8 +84,7 @@ Err CreateValue(T value, const fxl::RefPtr<Type>& dest_type,
   return Err();
 }
 
-std::vector<uint8_t> CastToIntegerOfSize(const std::vector<uint8_t>& source,
-                                         bool source_is_signed,
+std::vector<uint8_t> CastToIntegerOfSize(const std::vector<uint8_t>& source, bool source_is_signed,
                                          size_t dest_size) {
   if (source.size() > dest_size) {
     // Truncate. Assume little-endian so copy from the beginning to get the low
@@ -113,20 +106,17 @@ std::vector<uint8_t> CastToIntegerOfSize(const std::vector<uint8_t>& source,
 }
 
 ExprValue CastIntToInt(const ExprValue& source, const Type* source_type,
-                       const fxl::RefPtr<Type>& dest_type,
-                       const ExprValueSource& dest_source) {
+                       const fxl::RefPtr<Type>& dest_type, const ExprValueSource& dest_source) {
   return ExprValue(
       dest_type,
-      CastToIntegerOfSize(source.data(), IsSignedBaseType(source_type),
-                          dest_type->byte_size()),
+      CastToIntegerOfSize(source.data(), IsSignedBaseType(source_type), dest_type->byte_size()),
       dest_source);
 }
 
 // The "Int64" parameter is either "uint64_t" or "int64_t" depending on the
 // signedness of the integer desired.
 template <typename Int64>
-ExprValue CastFloatToIntT(double double_value,
-                          const fxl::RefPtr<Type>& dest_type,
+ExprValue CastFloatToIntT(double double_value, const fxl::RefPtr<Type>& dest_type,
                           const ExprValueSource& dest_source) {
   Int64 int64_value = static_cast<Int64>(double_value);
 
@@ -135,14 +125,13 @@ ExprValue CastFloatToIntT(double double_value,
   memcpy(&int64_data[0], &int64_value, sizeof(Int64));
 
   // CastToIntegerOfSize will downcast the int64 to the desired result size.
-  return ExprValue(
-      dest_type, CastToIntegerOfSize(int64_data, true, dest_type->byte_size()),
-      dest_source);
+  return ExprValue(dest_type, CastToIntegerOfSize(int64_data, true, dest_type->byte_size()),
+                   dest_source);
 }
 
 Err CastFloatToInt(const ExprValue& source, const fxl::RefPtr<Type>& dest_type,
-                   const Type* concrete_dest_type,
-                   const ExprValueSource& dest_source, ExprValue* result) {
+                   const Type* concrete_dest_type, const ExprValueSource& dest_source,
+                   ExprValue* result) {
   double source_value;
   Err err = source.PromoteToDouble(&source_value);
   if (err.has_error())
@@ -171,37 +160,30 @@ Err CastIntToFloatT(const ExprValue& source, const fxl::RefPtr<Type>& dest_type,
   if (err.has_error())
     return err;
 
-  return CreateValue(static_cast<Float>(source_int), dest_type, dest_source,
-                     result);
+  return CreateValue(static_cast<Float>(source_int), dest_type, dest_source, result);
 }
 
 Err CastIntToFloat(const ExprValue& source, bool source_is_signed,
-                   const fxl::RefPtr<Type>& dest_type,
-                   const ExprValueSource& dest_source, ExprValue* result) {
+                   const fxl::RefPtr<Type>& dest_type, const ExprValueSource& dest_source,
+                   ExprValue* result) {
   if (source_is_signed) {
     if (dest_type->byte_size() == 4) {
-      return CastIntToFloatT<int64_t, float>(source, dest_type, dest_source,
-                                             result);
+      return CastIntToFloatT<int64_t, float>(source, dest_type, dest_source, result);
     } else if (dest_type->byte_size() == 8) {
-      return CastIntToFloatT<int64_t, double>(source, dest_type, dest_source,
-                                              result);
+      return CastIntToFloatT<int64_t, double>(source, dest_type, dest_source, result);
     }
   } else {
     if (dest_type->byte_size() == 4) {
-      return CastIntToFloatT<uint64_t, float>(source, dest_type, dest_source,
-                                              result);
+      return CastIntToFloatT<uint64_t, float>(source, dest_type, dest_source, result);
     } else if (dest_type->byte_size() == 8) {
-      return CastIntToFloatT<uint64_t, double>(source, dest_type, dest_source,
-                                               result);
+      return CastIntToFloatT<uint64_t, double>(source, dest_type, dest_source, result);
     }
   }
 
-  return Err("Can't convert to floating-point number of size %u.",
-             dest_type->byte_size());
+  return Err("Can't convert to floating-point number of size %u.", dest_type->byte_size());
 }
 
-Err CastFloatToFloat(const ExprValue& source,
-                     const fxl::RefPtr<Type>& dest_type,
+Err CastFloatToFloat(const ExprValue& source, const fxl::RefPtr<Type>& dest_type,
                      const ExprValueSource& dest_source, ExprValue* result) {
   if (source.data().size() == 4) {
     float f = source.GetAs<float>();
@@ -217,13 +199,13 @@ Err CastFloatToFloat(const ExprValue& source,
       return CreateValue<double>(d, dest_type, dest_source, result);
   }
 
-  return Err("Can't convert floating-point from size %zu to %u.",
-             source.data().size(), dest_type->byte_size());
+  return Err("Can't convert floating-point from size %zu to %u.", source.data().size(),
+             dest_type->byte_size());
 }
 
 Err CastNumberToBool(const ExprValue& source, const Type* concrete_from,
-                     const fxl::RefPtr<Type>& dest_type,
-                     const ExprValueSource& dest_source, ExprValue* result) {
+                     const fxl::RefPtr<Type>& dest_type, const ExprValueSource& dest_source,
+                     ExprValue* result) {
   bool value = false;
 
   if (IsIntegerLike(concrete_from)) {
@@ -274,8 +256,7 @@ bool TypesAreBinaryCoercable(const Type* a, const Type* b) {
     return true;  // Names match, assume same type.
 
   // Allow integers and pointers of the same size to be converted by copying.
-  if (a->tag() == DwarfTag::kPointerType &&
-      b->tag() == DwarfTag::kPointerType) {
+  if (a->tag() == DwarfTag::kPointerType && b->tag() == DwarfTag::kPointerType) {
     // Don't allow pointer-to-pointer conversions because those might need to
     // be adjusted according to base/derived classes.
     return false;
@@ -289,8 +270,7 @@ bool TypesAreBinaryCoercable(const Type* a, const Type* b) {
 // class. If not, returns an empty optional.
 //
 // The two types must have c-v qualifiers stripped.
-std::optional<uint64_t> GetDerivedClassOffset(const Type* base,
-                                              const Type* derived) {
+std::optional<uint64_t> GetDerivedClassOffset(const Type* base, const Type* derived) {
   const Collection* derived_collection = derived->AsCollection();
   if (!derived_collection)
     return std::nullopt;
@@ -301,21 +281,19 @@ std::optional<uint64_t> GetDerivedClassOffset(const Type* base,
   std::string base_name = base_collection->GetFullName();
 
   std::optional<uint64_t> result;
-  VisitClassHierarchy(
-      derived_collection,
-      [&result, &base_name](const Collection* cur, uint64_t offset) {
-        if (cur->GetFullName() == base_name) {
-          result = offset;
-          return VisitResult::kDone;
-        }
-        return VisitResult::kContinue;
-      });
+  VisitClassHierarchy(derived_collection,
+                      [&result, &base_name](const Collection* cur, uint64_t offset) {
+                        if (cur->GetFullName() == base_name) {
+                          result = offset;
+                          return VisitResult::kDone;
+                        }
+                        return VisitResult::kContinue;
+                      });
   return result;
 }
 
 Err MakeCastError(const Type* from, const Type* to) {
-  return Err("Can't cast '%s' to '%s'.", from->GetFullName().c_str(),
-             to->GetFullName().c_str());
+  return Err("Can't cast '%s' to '%s'.", from->GetFullName().c_str(), to->GetFullName().c_str());
 }
 
 // Flag that indicates whether a base class' pointer or reference can be
@@ -330,9 +308,8 @@ enum CastPointer { kAllowBaseToDerived, kDisallowBaseToDerived };
 // The source and dest types should already be concrete (from
 // EvalContext::GetConcreteType()).
 Err StaticCastPointerOrRef(EvalContext* eval_context, const ExprValue& source,
-                           const fxl::RefPtr<Type>& dest_type,
-                           const Type* concrete_from, const Type* concrete_to,
-                           const ExprValueSource& dest_source,
+                           const fxl::RefPtr<Type>& dest_type, const Type* concrete_from,
+                           const Type* concrete_to, const ExprValueSource& dest_source,
                            CastPointer cast_pointer, ExprValue* result) {
   if (!DwarfTagIsPointerOrReference(concrete_from->tag()) ||
       !DwarfTagIsPointerOrReference(concrete_to->tag()))
@@ -375,8 +352,7 @@ Err StaticCastPointerOrRef(EvalContext* eval_context, const ExprValue& source,
   }
 
   // Strip qualifiers to handle things like "pointer to const int".
-  fxl::RefPtr<Type> refed_from =
-      eval_context->GetConcreteType(refed_from_abstract);
+  fxl::RefPtr<Type> refed_from = eval_context->GetConcreteType(refed_from_abstract);
   fxl::RefPtr<Type> refed_to = eval_context->GetConcreteType(refed_to_abstract);
 
   if (refed_from->GetFullName() == refed_to->GetFullName()) {
@@ -385,8 +361,7 @@ Err StaticCastPointerOrRef(EvalContext* eval_context, const ExprValue& source,
     return Err();
   }
 
-  if (auto found_offset =
-          GetDerivedClassOffset(refed_to.get(), refed_from.get())) {
+  if (auto found_offset = GetDerivedClassOffset(refed_to.get(), refed_from.get())) {
     // Convert derived class ref/ptr to base class ref/ptr. This requires
     // adjusting the pointer to point to where the base class is inside of the
     // derived class.
@@ -400,22 +375,20 @@ Err StaticCastPointerOrRef(EvalContext* eval_context, const ExprValue& source,
   if (cast_pointer == kAllowBaseToDerived) {
     // The reverse of the above case. This is used when the user knows a base
     // class pointer/reference actually points to a specific derived class.
-    if (auto found_offset =
-            GetDerivedClassOffset(refed_from.get(), refed_to.get())) {
+    if (auto found_offset = GetDerivedClassOffset(refed_from.get(), refed_to.get())) {
       uint64_t ptr_value = source.GetAs<uint64_t>();
       ptr_value -= *found_offset;
       return CreateValue(ptr_value, dest_type, dest_source, result);
     }
   }
 
-  return Err("Can't convert '%s' to unrelated type '%s'.",
-             concrete_from->GetFullName().c_str(),
+  return Err("Can't convert '%s' to unrelated type '%s'.", concrete_from->GetFullName().c_str(),
              concrete_to->GetFullName().c_str());
 }
 
 Err ImplicitCast(EvalContext* eval_context, const ExprValue& source,
-                 const fxl::RefPtr<Type>& dest_type,
-                 const ExprValueSource& dest_source, ExprValue* result) {
+                 const fxl::RefPtr<Type>& dest_type, const ExprValueSource& dest_source,
+                 ExprValue* result) {
   // There are several fundamental types of things that can be casted:
   //  - Aggregate types: Can only convert if they're the same.
   //  - Integers and integer-like things: This includes pointers.
@@ -427,10 +400,8 @@ Err ImplicitCast(EvalContext* eval_context, const ExprValue& source,
     return Err("Type has 0 size.");
 
   // Get the types without "const", etc. modifiers.
-  fxl::RefPtr<Type> concrete_from =
-      eval_context->GetConcreteType(source.type());
-  fxl::RefPtr<Type> concrete_to =
-      eval_context->GetConcreteType(dest_type.get());
+  fxl::RefPtr<Type> concrete_from = eval_context->GetConcreteType(source.type());
+  fxl::RefPtr<Type> concrete_to = eval_context->GetConcreteType(dest_type.get());
 
   // Handles identical type conversions. This includes all aggregate types.
   if (TypesAreBinaryCoercable(concrete_from.get(), concrete_to.get())) {
@@ -440,10 +411,8 @@ Err ImplicitCast(EvalContext* eval_context, const ExprValue& source,
 
   // Conversions to bool. Conversions from bool will follow the standard
   // "number to X" path where we assume the bool is like a number.
-  if (IsBooleanBaseType(concrete_to.get()) &&
-      IsNumberLike(concrete_from.get())) {
-    return CastNumberToBool(source, concrete_from.get(), dest_type, dest_source,
-                            result);
+  if (IsBooleanBaseType(concrete_to.get()) && IsNumberLike(concrete_from.get())) {
+    return CastNumberToBool(source, concrete_from.get(), dest_type, dest_source, result);
   }
 
   // Pointer-to-pointer conversions. Allow anything that can be static_cast-ed
@@ -458,9 +427,8 @@ Err ImplicitCast(EvalContext* eval_context, const ExprValue& source,
     // the reference pointers. The reference conversion feature of this
     // function is used for static casting where static_cast<A&>(b) refers to
     // the reference address and not the referenced object.
-    return StaticCastPointerOrRef(eval_context, source, dest_type,
-                                  concrete_from.get(), concrete_to.get(),
-                                  dest_source, kDisallowBaseToDerived, result);
+    return StaticCastPointerOrRef(eval_context, source, dest_type, concrete_from.get(),
+                                  concrete_to.get(), dest_source, kDisallowBaseToDerived, result);
   }
 
   // Conversions between different types of ints, including pointers (truncate
@@ -472,39 +440,33 @@ Err ImplicitCast(EvalContext* eval_context, const ExprValue& source,
   }
 
   // Conversions between different types of floats.
-  if (IsFloatingPointBaseType(concrete_from.get()) &&
-      IsFloatingPointBaseType(concrete_to.get()))
+  if (IsFloatingPointBaseType(concrete_from.get()) && IsFloatingPointBaseType(concrete_to.get()))
     return CastFloatToFloat(source, dest_type, dest_source, result);
 
   // Conversions between ints and floats.
-  if (IsIntegerLike(concrete_to.get()) &&
-      IsFloatingPointBaseType(concrete_from.get()))
-    return CastFloatToInt(source, dest_type, concrete_to.get(), dest_source,
+  if (IsIntegerLike(concrete_to.get()) && IsFloatingPointBaseType(concrete_from.get()))
+    return CastFloatToInt(source, dest_type, concrete_to.get(), dest_source, result);
+  if (IsFloatingPointBaseType(concrete_to.get()) && IsIntegerLike(concrete_from.get())) {
+    return CastIntToFloat(source, IsSignedBaseType(concrete_from.get()), dest_type, dest_source,
                           result);
-  if (IsFloatingPointBaseType(concrete_to.get()) &&
-      IsIntegerLike(concrete_from.get())) {
-    return CastIntToFloat(source, IsSignedBaseType(concrete_from.get()),
-                          dest_type, dest_source, result);
   }
 
   // Conversions to base classes (on objects, not on pointers or references).
   // e.g. "foo = bar" where foo's type is a base class of bar's.
-  if (auto found_offset =
-          GetDerivedClassOffset(concrete_to.get(), concrete_from.get())) {
+  if (auto found_offset = GetDerivedClassOffset(concrete_to.get(), concrete_from.get())) {
     // Ignore the dest_source. ResolveInherited is extracting data from inside
     // the source object which has a well-defined source location (unlike for
     // all other casts that change the data so there isn't so clear a source).
     return ResolveInherited(source, dest_type, *found_offset, result);
   }
 
-  return Err("Can't cast from '%s' to '%s'.",
-             source.type()->GetFullName().c_str(),
+  return Err("Can't cast from '%s' to '%s'.", source.type()->GetFullName().c_str(),
              dest_type->GetFullName().c_str());
 }
 
 Err ReinterpretCast(EvalContext* eval_context, const ExprValue& source,
-                    const fxl::RefPtr<Type>& dest_type,
-                    const ExprValueSource& dest_source, ExprValue* result) {
+                    const fxl::RefPtr<Type>& dest_type, const ExprValueSource& dest_source,
+                    ExprValue* result) {
   if (!source.type())
     return Err("Can't cast from a null type.");
   if (!dest_type)
@@ -513,13 +475,11 @@ Err ReinterpretCast(EvalContext* eval_context, const ExprValue& source,
   // The input and output types should both be integer-like (this includes
   // pointers). This check is more restrictive than the "coerce" rules above
   // because we don't want to support things like integer-to-double conversion.
-  fxl::RefPtr<Type> concrete_source =
-      eval_context->GetConcreteType(source.type());
+  fxl::RefPtr<Type> concrete_source = eval_context->GetConcreteType(source.type());
   if (!IsIntegerLike(concrete_source.get()))
     return Err("Can't cast from a '%s'.", source.type()->GetFullName().c_str());
 
-  fxl::RefPtr<Type> concrete_dest =
-      eval_context->GetConcreteType(dest_type.get());
+  fxl::RefPtr<Type> concrete_dest = eval_context->GetConcreteType(dest_type.get());
   if (!IsIntegerLike(concrete_dest.get()))
     return Err("Can't cast to a '%s'.", dest_type->GetFullName().c_str());
 
@@ -535,25 +495,21 @@ Err ReinterpretCast(EvalContext* eval_context, const ExprValue& source,
 }
 
 Err StaticCast(EvalContext* eval_context, const ExprValue& source,
-               const fxl::RefPtr<Type>& dest_type,
-               const ExprValueSource& dest_source, ExprValue* result) {
+               const fxl::RefPtr<Type>& dest_type, const ExprValueSource& dest_source,
+               ExprValue* result) {
   // Our implicit cast is permissive enough to handle most cases including all
   // number conversions, and casts to base types.
-  if (!ImplicitCast(eval_context, source, dest_type, dest_source, result)
-           .has_error())
+  if (!ImplicitCast(eval_context, source, dest_type, dest_source, result).has_error())
     return Err();
 
   // Get the types without "const", etc. modifiers.
-  fxl::RefPtr<Type> concrete_from =
-      eval_context->GetConcreteType(source.type());
-  fxl::RefPtr<Type> concrete_to =
-      eval_context->GetConcreteType(dest_type.get());
+  fxl::RefPtr<Type> concrete_from = eval_context->GetConcreteType(source.type());
+  fxl::RefPtr<Type> concrete_to = eval_context->GetConcreteType(dest_type.get());
 
   // Static casts explicitly allow conversion of pointers to a derived class
   // my modifying the address being pointed to.
-  return StaticCastPointerOrRef(eval_context, source, dest_type,
-                                concrete_from.get(), concrete_to.get(),
-                                dest_source, kAllowBaseToDerived, result);
+  return StaticCastPointerOrRef(eval_context, source, dest_type, concrete_from.get(),
+                                concrete_to.get(), dest_source, kAllowBaseToDerived, result);
 }
 
 }  // namespace
@@ -572,9 +528,9 @@ const char* CastTypeToString(CastType type) {
   return "<invalid>";
 }
 
-Err CastExprValue(EvalContext* eval_context, CastType cast_type,
-                  const ExprValue& source, const fxl::RefPtr<Type>& dest_type,
-                  ExprValue* result, const ExprValueSource& dest_source) {
+Err CastExprValue(EvalContext* eval_context, CastType cast_type, const ExprValue& source,
+                  const fxl::RefPtr<Type>& dest_type, ExprValue* result,
+                  const ExprValueSource& dest_source) {
   switch (cast_type) {
     case CastType::kImplicit:
       return ImplicitCast(eval_context, source, dest_type, dest_source, result);
@@ -588,15 +544,12 @@ Err CastExprValue(EvalContext* eval_context, CastType cast_type,
       //
       // Since the debugger ignores const in debugging, this ends up being
       // a static cast falling back to a reinterpret cast.
-      if (!StaticCast(eval_context, source, dest_type, dest_source, result)
-               .has_error())
+      if (!StaticCast(eval_context, source, dest_type, dest_source, result).has_error())
         return Err();
-      return ReinterpretCast(eval_context, source, dest_type, dest_source,
-                             result);
+      return ReinterpretCast(eval_context, source, dest_type, dest_source, result);
     }
     case CastType::kReinterpret:
-      return ReinterpretCast(eval_context, source, dest_type, dest_source,
-                             result);
+      return ReinterpretCast(eval_context, source, dest_type, dest_source, result);
     case CastType::kStatic:
       return StaticCast(eval_context, source, dest_type, dest_source, result);
   }
@@ -605,8 +558,7 @@ Err CastExprValue(EvalContext* eval_context, CastType cast_type,
 }
 
 bool CastShouldFollowReferences(EvalContext* eval_context, CastType cast_type,
-                                const ExprValue& source,
-                                const fxl::RefPtr<Type>& dest_type) {
+                                const ExprValue& source, const fxl::RefPtr<Type>& dest_type) {
   // Implicit casts never follow references. If you have two references:
   //   A& a;
   //   B& b;
@@ -622,10 +574,8 @@ bool CastShouldFollowReferences(EvalContext* eval_context, CastType cast_type,
   // Casting a reference to a reference needs to keep the reference
   // information. Casting a reference to anything else means the reference
   // should be stripped.
-  fxl::RefPtr<Type> concrete_from =
-      eval_context->GetConcreteType(source.type());
-  fxl::RefPtr<Type> concrete_to =
-      eval_context->GetConcreteType(dest_type.get());
+  fxl::RefPtr<Type> concrete_from = eval_context->GetConcreteType(source.type());
+  fxl::RefPtr<Type> concrete_to = eval_context->GetConcreteType(dest_type.get());
 
   // Count rvalue references as references. This isn't always strictly valid
   // since you can't static cast a Base&& to a Derived&&, but from a debugger

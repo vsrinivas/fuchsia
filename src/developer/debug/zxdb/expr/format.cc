@@ -32,13 +32,10 @@ using NumFormat = FormatExprValueOptions::NumFormat;
 // Returns true if the base type is some kind of number such that the NumFormat
 // of the format options should be applied.
 bool IsNumericBaseType(int base_type) {
-  return base_type == BaseType::kBaseTypeSigned ||
-         base_type == BaseType::kBaseTypeUnsigned ||
-         base_type == BaseType::kBaseTypeBoolean ||
-         base_type == BaseType::kBaseTypeFloat ||
+  return base_type == BaseType::kBaseTypeSigned || base_type == BaseType::kBaseTypeUnsigned ||
+         base_type == BaseType::kBaseTypeBoolean || base_type == BaseType::kBaseTypeFloat ||
          base_type == BaseType::kBaseTypeSignedChar ||
-         base_type == BaseType::kBaseTypeUnsignedChar ||
-         base_type == BaseType::kBaseTypeUTF;
+         base_type == BaseType::kBaseTypeUnsignedChar || base_type == BaseType::kBaseTypeUTF;
 }
 
 // Appends the given byte to the destination, escaping as per C rules.
@@ -82,8 +79,8 @@ void FormatFloat(FormatNode* node) {
       node->set_description(fxl::StringPrintf("%g", value.GetAs<double>()));
       break;
     default:
-      node->set_err(Err(fxl::StringPrintf(
-          "Unknown float of size %d", static_cast<int>(value.data().size()))));
+      node->set_err(Err(
+          fxl::StringPrintf("Unknown float of size %d", static_cast<int>(value.data().size()))));
       break;
   }
 }
@@ -97,8 +94,7 @@ void FormatSignedInt(FormatNode* node) {
     node->set_description(fxl::StringPrintf("%" PRId64, int_val));
 }
 
-void FormatUnsignedInt(FormatNode* node,
-                       const FormatExprValueOptions& options) {
+void FormatUnsignedInt(FormatNode* node, const FormatExprValueOptions& options) {
   // This formatter handles unsigned and hex output.
   uint64_t int_val = 0;
   Err err = node->value().PromoteTo64(&int_val);
@@ -181,8 +177,7 @@ void FormatNumeric(FormatNode* node, const FormatExprValueOptions& options) {
 //       The struct will have two values, __0 and __1, etc.
 //   Struct{x:u32, y:u32}
 //       The struct will have "x" and "y" members.
-void FormatRustEnum(FormatNode* node, const Collection* coll,
-                    const FormatExprValueOptions& options,
+void FormatRustEnum(FormatNode* node, const Collection* coll, const FormatExprValueOptions& options,
                     fxl::RefPtr<EvalContext> eval_context) {
   node->set_description_kind(FormatNode::kRustEnum);
 
@@ -218,8 +213,7 @@ void FormatRustEnum(FormatNode* node, const Collection* coll,
     if (err.has_error()) {
       // In the error case, still append a child so that the child can have
       // the error associated with it.
-      node->children().push_back(
-          std::make_unique<FormatNode>(member->GetAssignedName(), err));
+      node->children().push_back(std::make_unique<FormatNode>(member->GetAssignedName(), err));
     } else {
       // Only append as a child if the variant has "stuff". The case here is
       // to skip adding children for enums with no data like
@@ -228,8 +222,8 @@ void FormatRustEnum(FormatNode* node, const Collection* coll,
       auto member_type = member_value.GetConcreteType(eval_context.get());
       const Collection* member_coll_type = member_type->AsCollection();
       if (!member_coll_type || !member_coll_type->data_members().empty()) {
-        node->children().push_back(std::make_unique<FormatNode>(
-            member->GetAssignedName(), std::move(member_value)));
+        node->children().push_back(
+            std::make_unique<FormatNode>(member->GetAssignedName(), std::move(member_value)));
       }
     }
   }
@@ -239,8 +233,7 @@ void FormatRustEnum(FormatNode* node, const Collection* coll,
 }
 
 void FormatRustTuple(FormatNode* node, const Collection* coll,
-                     const FormatExprValueOptions& options,
-                     fxl::RefPtr<EvalContext> eval_context) {
+                     const FormatExprValueOptions& options, fxl::RefPtr<EvalContext> eval_context) {
   node->set_description_kind(FormatNode::kRustTuple);
 
   // Rust tuple (and tuple struct) symbols have the tuple members encoded as
@@ -263,8 +256,7 @@ void FormatRustTuple(FormatNode* node, const Collection* coll,
       // the error associated with it.
       node->children().push_back(std::make_unique<FormatNode>(name, err));
     } else {
-      node->children().push_back(
-          std::make_unique<FormatNode>(name, member_value));
+      node->children().push_back(std::make_unique<FormatNode>(name, member_value));
     }
   }
 
@@ -307,12 +299,11 @@ void FormatCollection(FormatNode* node, const Collection* coll,
 
     // Some base classes are empty. Only show if this base class or any of
     // its base classes have member values.
-    VisitResult has_members_result =
-        VisitClassHierarchy(from, [](const Collection* cur, uint64_t) {
-          if (cur->data_members().empty())
-            return VisitResult::kContinue;
-          return VisitResult::kDone;
-        });
+    VisitResult has_members_result = VisitClassHierarchy(from, [](const Collection* cur, uint64_t) {
+      if (cur->data_members().empty())
+        return VisitResult::kContinue;
+      return VisitResult::kDone;
+    });
     if (has_members_result == VisitResult::kContinue)
       continue;
 
@@ -324,8 +315,7 @@ void FormatCollection(FormatNode* node, const Collection* coll,
     if (err.has_error()) {
       node->children().push_back(std::make_unique<FormatNode>(from_name, err));
     } else {
-      node->children().push_back(
-          std::make_unique<FormatNode>(from_name, from_value));
+      node->children().push_back(std::make_unique<FormatNode>(from_name, from_value));
     }
   }
 
@@ -343,11 +333,9 @@ void FormatCollection(FormatNode* node, const Collection* coll,
     ExprValue member_value;
     Err err = ResolveMember(eval_context, node->value(), member, &member_value);
     if (err.has_error()) {
-      node->children().push_back(
-          std::make_unique<FormatNode>(member_name, err));
+      node->children().push_back(std::make_unique<FormatNode>(member_name, err));
     } else {
-      node->children().push_back(
-          std::make_unique<FormatNode>(member_name, member_value));
+      node->children().push_back(std::make_unique<FormatNode>(member_name, member_value));
     }
   }
 
@@ -369,8 +357,7 @@ void FormatPointer(FormatNode* node, const FormatExprValueOptions& options,
   }
 
   // The address goes in the description.
-  node->set_description(
-      fxl::StringPrintf("0x%" PRIx64, node->value().GetAs<TargetPointer>()));
+  node->set_description(fxl::StringPrintf("0x%" PRIx64, node->value().GetAs<TargetPointer>()));
 
   // Make a child node that's the dereferenced pointer value. If/when we
   // support GUIs, we should probably remove the intermediate node and put the
@@ -380,11 +367,9 @@ void FormatPointer(FormatNode* node, const FormatExprValueOptions& options,
   // Use our name but with a "*" to show it dereferenced.
   auto deref_node = std::make_unique<FormatNode>(
       "*" + node->name(),
-      [ptr_value = node->value()](
-          fxl::RefPtr<EvalContext> context,
-          fit::callback<void(const Err& err, ExprValue value)> cb) {
-        ResolvePointer(context, ptr_value,
-                       FitCallbackToStdFunction(std::move(cb)));
+      [ptr_value = node->value()](fxl::RefPtr<EvalContext> context,
+                                  fit::callback<void(const Err& err, ExprValue value)> cb) {
+        ResolvePointer(context, ptr_value, FitCallbackToStdFunction(std::move(cb)));
       });
   node->children().push_back(std::move(deref_node));
 }
@@ -408,16 +393,13 @@ void FormatReference(FormatNode* node, const FormatExprValueOptions& options,
   }
 
   // The address goes in the description (see note above).
-  node->set_description(
-      fxl::StringPrintf("0x%" PRIx64, node->value().GetAs<TargetPointer>()));
+  node->set_description(fxl::StringPrintf("0x%" PRIx64, node->value().GetAs<TargetPointer>()));
 
   auto deref_node = std::make_unique<FormatNode>(
       std::string(),
-      [ref = node->value()](
-          fxl::RefPtr<EvalContext> context,
-          fit::callback<void(const Err& err, ExprValue value)> cb) {
-        EnsureResolveReference(context, ref,
-                               FitCallbackToStdFunction(std::move(cb)));
+      [ref = node->value()](fxl::RefPtr<EvalContext> context,
+                            fit::callback<void(const Err& err, ExprValue value)> cb) {
+        EnsureResolveReference(context, ref, FitCallbackToStdFunction(std::move(cb)));
       });
   node->children().push_back(std::move(deref_node));
 }
@@ -436,8 +418,7 @@ void FillFormatNodeValue(FormatNode* node, fxl::RefPtr<EvalContext> context,
       // fit::callback.
       auto shared_cb = std::make_shared<fit::deferred_callback>(std::move(cb));
       EvalExpression(node->expression(), context, true,
-                     [weak_node = node->GetWeakPtr(), shared_cb](
-                         const Err& err, ExprValue value) {
+                     [weak_node = node->GetWeakPtr(), shared_cb](const Err& err, ExprValue value) {
                        if (!weak_node)
                          return;
                        if (err.has_error()) {
@@ -457,12 +438,10 @@ void FillFormatNodeValue(FormatNode* node, fxl::RefPtr<EvalContext> context,
   FXL_NOTREACHED();
 }
 
-void FillFormatNodeDescription(FormatNode* node,
-                               const FormatExprValueOptions& options,
-                               fxl::RefPtr<EvalContext> context,
-                               fit::deferred_callback cb) {
-  if (node->state() == FormatNode::kEmpty ||
-      node->state() == FormatNode::kUnevaluated || node->err().has_error()) {
+void FillFormatNodeDescription(FormatNode* node, const FormatExprValueOptions& options,
+                               fxl::RefPtr<EvalContext> context, fit::deferred_callback cb) {
+  if (node->state() == FormatNode::kEmpty || node->state() == FormatNode::kUnevaluated ||
+      node->err().has_error()) {
     node->set_state(FormatNode::kDescribed);
     return;
   }

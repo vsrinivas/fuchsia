@@ -27,8 +27,8 @@ namespace {
 // A wrapper around FindMember that issues errors rather than returning
 // an optional. The base can be null for the convenience of the caller. On
 // error, the output FoundMember will be untouched.
-Err FindMemberWithErr(const Collection* base,
-                      const ParsedIdentifier& identifier, FoundMember* out) {
+Err FindMemberWithErr(const Collection* base, const ParsedIdentifier& identifier,
+                      FoundMember* out) {
   if (!base) {
     return Err("Can't resolve '%s' on non-struct/class/union value.",
                identifier.GetFullName().c_str());
@@ -45,8 +45,8 @@ Err FindMemberWithErr(const Collection* base,
     return Err();
   }
 
-  return Err("No member '%s' in %s '%s'.", identifier.GetFullName().c_str(),
-             base->GetKindString(), base->GetFullName().c_str());
+  return Err("No member '%s' in %s '%s'.", identifier.GetFullName().c_str(), base->GetKindString(),
+             base->GetFullName().c_str());
 }
 
 Err GetErrorForInvalidMemberOf(const Collection* coll) {
@@ -75,8 +75,7 @@ Err GetMemberType(const Collection* coll, const DataMember* member,
   if (!member)
     return GetErrorForInvalidMemberOf(coll);
 
-  *member_type =
-      fxl::RefPtr<Type>(const_cast<Type*>(member->type().Get()->AsType()));
+  *member_type = fxl::RefPtr<Type>(const_cast<Type*>(member->type().Get()->AsType()));
   if (!*member_type) {
     return Err("Bad type information for '%s.%s'.", coll->GetFullName().c_str(),
                member->GetAssignedName().c_str());
@@ -84,10 +83,8 @@ Err GetMemberType(const Collection* coll, const DataMember* member,
   return Err();
 }
 
-void DoResolveMemberByPointer(fxl::RefPtr<EvalContext> context,
-                              const ExprValue& base_ptr,
-                              const Collection* pointed_to_type,
-                              const FoundMember& member,
+void DoResolveMemberByPointer(fxl::RefPtr<EvalContext> context, const ExprValue& base_ptr,
+                              const Collection* pointed_to_type, const FoundMember& member,
                               std::function<void(const Err&, ExprValue)> cb) {
   Err err = base_ptr.EnsureSizeIs(kTargetPointerSize);
   if (err.has_error()) {
@@ -103,23 +100,23 @@ void DoResolveMemberByPointer(fxl::RefPtr<EvalContext> context,
   }
 
   TargetPointer base_address = base_ptr.GetAs<TargetPointer>();
-  ResolvePointer(context, base_address + member.data_member_offset(),
-                 std::move(member_type), std::move(cb));
+  ResolvePointer(context, base_address + member.data_member_offset(), std::move(member_type),
+                 std::move(cb));
 }
 
 // Extracts an embedded type inside of a base. This can be used for finding
 // collection data members and inherited classes, both of which consist of a
 // type and an offset.
-Err ExtractSubType(const ExprValue& base, fxl::RefPtr<Type> sub_type,
-                   uint32_t offset, ExprValue* out) {
+Err ExtractSubType(const ExprValue& base, fxl::RefPtr<Type> sub_type, uint32_t offset,
+                   ExprValue* out) {
   uint32_t size = sub_type->byte_size();
   if (offset + size > base.data().size())
     return GetErrorForInvalidMemberOf(base);
   std::vector<uint8_t> member_data(base.data().begin() + offset,
                                    base.data().begin() + (offset + size));
 
-  *out = ExprValue(std::move(sub_type), std::move(member_data),
-                   base.source().GetOffsetInto(offset));
+  *out =
+      ExprValue(std::move(sub_type), std::move(member_data), base.source().GetOffsetInto(offset));
   return Err();
 }
 
@@ -138,18 +135,16 @@ Err DoResolveMember(fxl::RefPtr<EvalContext> context, const ExprValue& base,
   if (err.has_error())
     return err;
 
-  return ExtractSubType(base, std::move(member_type),
-                        member.data_member_offset(), out);
+  return ExtractSubType(base, std::move(member_type), member.data_member_offset(), out);
 }
 
 }  // namespace
 
-Err ResolveMember(fxl::RefPtr<EvalContext> context, const ExprValue& base,
-                  const DataMember* member, ExprValue* out) {
+Err ResolveMember(fxl::RefPtr<EvalContext> context, const ExprValue& base, const DataMember* member,
+                  ExprValue* out) {
   if (!member)
     return GetErrorForInvalidMemberOf(base);
-  return DoResolveMember(context, base,
-                         FoundMember(member, member->member_location()), out);
+  return DoResolveMember(context, base, FoundMember(member, member->member_location()), out);
 }
 
 Err ResolveMember(fxl::RefPtr<EvalContext> context, const ExprValue& base,
@@ -159,15 +154,13 @@ Err ResolveMember(fxl::RefPtr<EvalContext> context, const ExprValue& base,
     return Err("No type information.");
 
   FoundMember found;
-  Err err =
-      FindMemberWithErr(concrete_type->AsCollection(), identifier, &found);
+  Err err = FindMemberWithErr(concrete_type->AsCollection(), identifier, &found);
   if (err.has_error())
     return err;
   return DoResolveMember(context, base, found, out);
 }
 
-void ResolveMemberByPointer(fxl::RefPtr<EvalContext> context,
-                            const ExprValue& base_ptr,
+void ResolveMemberByPointer(fxl::RefPtr<EvalContext> context, const ExprValue& base_ptr,
                             const FoundMember& found_member,
                             std::function<void(const Err&, ExprValue)> cb) {
   const Collection* coll = nullptr;
@@ -177,13 +170,11 @@ void ResolveMemberByPointer(fxl::RefPtr<EvalContext> context,
     return;
   }
 
-  DoResolveMemberByPointer(context, base_ptr, coll, found_member,
-                           std::move(cb));
+  DoResolveMemberByPointer(context, base_ptr, coll, found_member, std::move(cb));
 }
 
 void ResolveMemberByPointer(
-    fxl::RefPtr<EvalContext> context, const ExprValue& base_ptr,
-    const ParsedIdentifier& identifier,
+    fxl::RefPtr<EvalContext> context, const ExprValue& base_ptr, const ParsedIdentifier& identifier,
     std::function<void(const Err&, fxl::RefPtr<DataMember>, ExprValue)> cb) {
   const Collection* coll = nullptr;
   Err err = GetPointedToCollection(base_ptr.type(), &coll);
@@ -202,24 +193,21 @@ void ResolveMemberByPointer(
   DoResolveMemberByPointer(
       context, base_ptr, coll, found_member,
       [cb = std::move(cb),
-       member_ref = fxl::RefPtr<DataMember>(const_cast<DataMember*>(
-           found_member.data_member()))](const Err& err, ExprValue value) {
-        cb(err, std::move(member_ref), std::move(value));
-      });
+       member_ref = fxl::RefPtr<DataMember>(const_cast<DataMember*>(found_member.data_member()))](
+          const Err& err, ExprValue value) { cb(err, std::move(member_ref), std::move(value)); });
 }
 
-Err ResolveInherited(const ExprValue& value, const InheritedFrom* from,
-                     ExprValue* out) {
+Err ResolveInherited(const ExprValue& value, const InheritedFrom* from, ExprValue* out) {
   const Type* from_type = from->from().Get()->AsType();
   if (!from_type)
     return GetErrorForInvalidMemberOf(value);
 
-  return ExtractSubType(value, fxl::RefPtr<Type>(const_cast<Type*>(from_type)),
-                        from->offset(), out);
+  return ExtractSubType(value, fxl::RefPtr<Type>(const_cast<Type*>(from_type)), from->offset(),
+                        out);
 }
 
-Err ResolveInherited(const ExprValue& value, fxl::RefPtr<Type> base_type,
-                     uint64_t offset, ExprValue* out) {
+Err ResolveInherited(const ExprValue& value, fxl::RefPtr<Type> base_type, uint64_t offset,
+                     ExprValue* out) {
   return ExtractSubType(value, std::move(base_type), offset, out);
 }
 

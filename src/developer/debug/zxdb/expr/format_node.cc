@@ -19,17 +19,10 @@ FormatNode::FormatNode(const std::string& name, ExprValue value)
       weak_factory_(this) {}
 
 FormatNode::FormatNode(const std::string& name, Err err)
-    : source_(kValue),
-      state_(kDescribed),
-      name_(name),
-      err_(std::move(err)),
-      weak_factory_(this) {}
+    : source_(kValue), state_(kDescribed), name_(name), err_(std::move(err)), weak_factory_(this) {}
 
 FormatNode::FormatNode(const std::string& expression)
-    : source_(kExpression),
-      state_(kUnevaluated),
-      expression_(expression),
-      weak_factory_(this) {}
+    : source_(kExpression), state_(kUnevaluated), expression_(expression), weak_factory_(this) {}
 
 FormatNode::FormatNode(const std::string& name, GetProgramaticValue get_value)
     : source_(kProgramatic),
@@ -42,25 +35,21 @@ FormatNode::FormatNode(const std::string& name, GetProgramaticValue get_value)
 
 FormatNode::~FormatNode() = default;
 
-fxl::WeakPtr<FormatNode> FormatNode::GetWeakPtr() {
-  return weak_factory_.GetWeakPtr();
-}
+fxl::WeakPtr<FormatNode> FormatNode::GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
 
-void FormatNode::FillProgramaticValue(fxl::RefPtr<EvalContext> context,
-                                      fit::deferred_callback cb) {
+void FormatNode::FillProgramaticValue(fxl::RefPtr<EvalContext> context, fit::deferred_callback cb) {
   FXL_DCHECK(source() == kProgramatic);
   FXL_DCHECK(get_programatic_value_);
-  get_programatic_value_(std::move(context),
-                         [weak_node = GetWeakPtr(), cb = std::move(cb)](
-                             const Err& err, ExprValue value) {
-                           if (weak_node) {
-                             weak_node->state_ = kHasValue;
-                             if (err.has_error())
-                               weak_node->set_err(err);
-                             else
-                               weak_node->SetValue(std::move(value));
-                           }
-                         });
+  get_programatic_value_(std::move(context), [weak_node = GetWeakPtr(), cb = std::move(cb)](
+                                                 const Err& err, ExprValue value) {
+    if (weak_node) {
+      weak_node->state_ = kHasValue;
+      if (err.has_error())
+        weak_node->set_err(err);
+      else
+        weak_node->SetValue(std::move(value));
+    }
+  });
 }
 
 void FormatNode::SetValue(ExprValue v) { value_ = std::move(v); }

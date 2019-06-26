@@ -18,29 +18,21 @@ ExprValue::ExprValue(bool value)
 ExprValue::ExprValue(int8_t value)
     : ExprValue(BaseType::kBaseTypeSigned, "int8_t", &value, sizeof(int8_t)) {}
 ExprValue::ExprValue(uint8_t value)
-    : ExprValue(BaseType::kBaseTypeUnsigned, "uint8_t", &value,
-                sizeof(uint8_t)) {}
+    : ExprValue(BaseType::kBaseTypeUnsigned, "uint8_t", &value, sizeof(uint8_t)) {}
 ExprValue::ExprValue(int16_t value)
-    : ExprValue(BaseType::kBaseTypeSigned, "int16_t", &value, sizeof(int16_t)) {
-}
+    : ExprValue(BaseType::kBaseTypeSigned, "int16_t", &value, sizeof(int16_t)) {}
 ExprValue::ExprValue(uint16_t value)
-    : ExprValue(BaseType::kBaseTypeUnsigned, "uint16_t", &value,
-                sizeof(uint16_t)) {}
+    : ExprValue(BaseType::kBaseTypeUnsigned, "uint16_t", &value, sizeof(uint16_t)) {}
 ExprValue::ExprValue(int32_t value)
-    : ExprValue(BaseType::kBaseTypeSigned, "int32_t", &value, sizeof(int32_t)) {
-}
+    : ExprValue(BaseType::kBaseTypeSigned, "int32_t", &value, sizeof(int32_t)) {}
 ExprValue::ExprValue(uint32_t value)
-    : ExprValue(BaseType::kBaseTypeUnsigned, "uint32_t", &value,
-                sizeof(uint32_t)) {}
+    : ExprValue(BaseType::kBaseTypeUnsigned, "uint32_t", &value, sizeof(uint32_t)) {}
 ExprValue::ExprValue(int64_t value)
-    : ExprValue(BaseType::kBaseTypeSigned, "int64_t", &value, sizeof(int64_t)) {
-}
+    : ExprValue(BaseType::kBaseTypeSigned, "int64_t", &value, sizeof(int64_t)) {}
 ExprValue::ExprValue(uint64_t value)
-    : ExprValue(BaseType::kBaseTypeUnsigned, "uint64_t", &value,
-                sizeof(uint64_t)) {}
+    : ExprValue(BaseType::kBaseTypeUnsigned, "uint64_t", &value, sizeof(uint64_t)) {}
 
-ExprValue::ExprValue(int base_type, const char* type_name, void* data,
-                     uint32_t data_size)
+ExprValue::ExprValue(int base_type, const char* type_name, void* data, uint32_t data_size)
     : type_(fxl::MakeRefCounted<BaseType>(base_type, data_size, type_name)) {
   data_.resize(data_size);
   memcpy(&data_[0], data, data_size);
@@ -79,8 +71,7 @@ Err ExprValue::EnsureSizeIs(size_t size) const {
     return Err(
         fxl::StringPrintf("The value of type '%s' is the incorrect size "
                           "(expecting %zu, got %zu). Please file a bug.",
-                          type_ ? type_->GetFullName().c_str() : "<unknown>",
-                          size, data_.size()));
+                          type_ ? type_->GetFullName().c_str() : "<unknown>", size, data_.size()));
   }
   return Err();
 }
@@ -111,8 +102,7 @@ int16_t ExprValue::GetAs<int16_t>() const {
 
 template <>
 uint16_t ExprValue::GetAs<uint16_t>() const {
-  FXL_DCHECK(data_.size() == sizeof(uint16_t))
-      << "Got size of " << data_.size();
+  FXL_DCHECK(data_.size() == sizeof(uint16_t)) << "Got size of " << data_.size();
   uint16_t result;
   memcpy(&result, &data_[0], sizeof(uint16_t));
   return result;
@@ -128,8 +118,7 @@ int32_t ExprValue::GetAs<int32_t>() const {
 
 template <>
 uint32_t ExprValue::GetAs<uint32_t>() const {
-  FXL_DCHECK(data_.size() == sizeof(uint32_t))
-      << "Got size of " << data_.size();
+  FXL_DCHECK(data_.size() == sizeof(uint32_t)) << "Got size of " << data_.size();
   uint32_t result;
   memcpy(&result, &data_[0], sizeof(uint32_t));
   return result;
@@ -145,8 +134,7 @@ int64_t ExprValue::GetAs<int64_t>() const {
 
 template <>
 uint64_t ExprValue::GetAs<uint64_t>() const {
-  FXL_DCHECK(data_.size() == sizeof(uint64_t))
-      << "Got size of " << data_.size();
+  FXL_DCHECK(data_.size() == sizeof(uint64_t)) << "Got size of " << data_.size();
   uint64_t result;
   memcpy(&result, &data_[0], sizeof(uint64_t));
   return result;
@@ -185,8 +173,8 @@ Err ExprValue::PromoteTo64(int64_t* output) const {
       *output = GetAs<int64_t>();
       break;
     default:
-      return Err(fxl::StringPrintf(
-          "Unexpected value size (%zu), please file a bug.", data_.size()));
+      return Err(
+          fxl::StringPrintf("Unexpected value size (%zu), please file a bug.", data_.size()));
   }
   return Err();
 }
@@ -208,8 +196,8 @@ Err ExprValue::PromoteTo64(uint64_t* output) const {
       *output = GetAs<uint64_t>();
       break;
     default:
-      return Err(fxl::StringPrintf(
-          "Unexpected value size (%zu), please file a bug.", data_.size()));
+      return Err(
+          fxl::StringPrintf("Unexpected value size (%zu), please file a bug.", data_.size()));
   }
   return Err();
 }
@@ -225,8 +213,8 @@ Err ExprValue::PromoteToDouble(double* output) const {
       *output = GetAs<double>();
       break;
     default:
-      return Err(fxl::StringPrintf(
-          "Unexpected value size (%zu), please file a bug.", data_.size()));
+      return Err(
+          fxl::StringPrintf("Unexpected value size (%zu), please file a bug.", data_.size()));
   }
   return Err();
 }

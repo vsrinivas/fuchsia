@@ -31,8 +31,8 @@ class InheritedFrom;
 //
 // The DataMember may be null. If so, returns an error (this is so callers
 // don't have to type check the inputs).
-Err ResolveMember(fxl::RefPtr<EvalContext> context, const ExprValue& base,
-                  const DataMember* member, ExprValue* out);
+Err ResolveMember(fxl::RefPtr<EvalContext> context, const ExprValue& base, const DataMember* member,
+                  ExprValue* out);
 
 // Resolves a DataMember by name. This variant searches base classes for name
 // matches.
@@ -43,18 +43,16 @@ Err ResolveMember(fxl::RefPtr<EvalContext> context, const ExprValue& base,
 
 // The variant takes an ExprValue which is a pointer to the base/struct or
 // class. Because it fetches memory it is asynchronous.
-void ResolveMemberByPointer(fxl::RefPtr<EvalContext> context,
-                            const ExprValue& base_ptr,
+void ResolveMemberByPointer(fxl::RefPtr<EvalContext> context, const ExprValue& base_ptr,
                             const FoundMember& found_member,
                             std::function<void(const Err&, ExprValue)> cb);
 
 // Same as previous version but takes the name of the member to find.
 // The callback also provides the DataMember corresponding to what the name
 // matched.
-void ResolveMemberByPointer(
-    fxl::RefPtr<EvalContext> context, const ExprValue& base_ptr,
-    const ParsedIdentifier& identifier,
-    std::function<void(const Err&, fxl::RefPtr<DataMember>, ExprValue)> cb);
+void ResolveMemberByPointer(fxl::RefPtr<EvalContext> context, const ExprValue& base_ptr,
+                            const ParsedIdentifier& identifier,
+                            std::function<void(const Err&, fxl::RefPtr<DataMember>, ExprValue)> cb);
 
 // Takes a Collection value and a base class inside of it, computes the value
 // of the base class and puts it in *out.
@@ -66,10 +64,9 @@ void ResolveMemberByPointer(
 // been computed as some type of base class that lives at the given offset. It
 // need not be a direct base and no type checking is done as long as the
 // offsets and sizes are valid.
-Err ResolveInherited(const ExprValue& value, const InheritedFrom* from,
+Err ResolveInherited(const ExprValue& value, const InheritedFrom* from, ExprValue* out);
+Err ResolveInherited(const ExprValue& value, fxl::RefPtr<Type> base_type, uint64_t offset,
                      ExprValue* out);
-Err ResolveInherited(const ExprValue& value, fxl::RefPtr<Type> base_type,
-                     uint64_t offset, ExprValue* out);
 
 }  // namespace zxdb
 

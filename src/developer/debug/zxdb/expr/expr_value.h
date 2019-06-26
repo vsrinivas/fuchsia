@@ -97,8 +97,7 @@ class ExprValue {
  private:
   // Internal constructor for the primitive types that constructs an on-the-fly
   // type definition for the built-in type.
-  ExprValue(int base_type, const char* type_name, void* data,
-            uint32_t data_size);
+  ExprValue(int base_type, const char* type_name, void* data, uint32_t data_size);
 
   // Application-defined type from the symbols.
   fxl::RefPtr<Type> type_;

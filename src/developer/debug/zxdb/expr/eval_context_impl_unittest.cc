@@ -38,10 +38,7 @@ const char kPresentVarName[] = "present";
 
 class EvalContextImplTest : public testing::Test {
  public:
-  EvalContextImplTest()
-      : provider_(fxl::MakeRefCounted<MockSymbolDataProvider>()) {
-    loop_.Init();
-  }
+  EvalContextImplTest() : provider_(fxl::MakeRefCounted<MockSymbolDataProvider>()) { loop_.Init(); }
   ~EvalContextImplTest() { loop_.Cleanup(); }
 
   DwarfExprEval& eval() { return eval_; }
@@ -52,9 +49,9 @@ class EvalContextImplTest : public testing::Test {
     auto block = fxl::MakeRefCounted<CodeBlock>(DwarfTag::kLexicalBlock);
 
     // Declare a variable in this code block stored in register 0.
-    auto variable = MakeUint64VariableForTest(
-        kPresentVarName, kBeginValidRange, kEndValidRange,
-        {llvm::dwarf::DW_OP_reg0, llvm::dwarf::DW_OP_stack_value});
+    auto variable =
+        MakeUint64VariableForTest(kPresentVarName, kBeginValidRange, kEndValidRange,
+                                  {llvm::dwarf::DW_OP_reg0, llvm::dwarf::DW_OP_stack_value});
     block->set_variables({LazySymbol(std::move(variable))});
 
     // TODO(brettw) this needs a type. Currently this test is very simple and
@@ -64,12 +61,10 @@ class EvalContextImplTest : public testing::Test {
 
   // Returns an evaluation context for a code block. If the code block is null,
   // a default one will be created with MakeCodeBlock().
-  fxl::RefPtr<EvalContext> MakeEvalContext(
-      fxl::RefPtr<CodeBlock> code_block = nullptr) {
-    return fxl::MakeRefCounted<EvalContextImpl>(
-        fxl::WeakPtr<const ProcessSymbols>(),
-        SymbolContext::ForRelativeAddresses(), provider(),
-        code_block ? code_block : MakeCodeBlock());
+  fxl::RefPtr<EvalContext> MakeEvalContext(fxl::RefPtr<CodeBlock> code_block = nullptr) {
+    return fxl::MakeRefCounted<EvalContextImpl>(fxl::WeakPtr<const ProcessSymbols>(),
+                                                SymbolContext::ForRelativeAddresses(), provider(),
+                                                code_block ? code_block : MakeCodeBlock());
   }
 
  private:
@@ -91,16 +86,14 @@ enum GetValueAsync { kQuitLoop, kSynchronous };
 
 // Wrapper around eval_context->GetNamedValue that places the callback
 // parameters into a struct. It makes the callsites cleaner.
-void GetNamedValue(const fxl::RefPtr<EvalContext>& eval_context,
-                   const std::string& name, GetValueAsync async,
-                   ValueResult* result) {
+void GetNamedValue(const fxl::RefPtr<EvalContext>& eval_context, const std::string& name,
+                   GetValueAsync async, ValueResult* result) {
   ParsedIdentifier ident;
   Err err = ExprParser::ParseIdentifier(name, &ident);
   ASSERT_FALSE(err.has_error());
 
   eval_context->GetNamedValue(
-      ident, [result, async](const Err& err, fxl::RefPtr<Symbol> symbol,
-                             ExprValue value) {
+      ident, [result, async](const Err& err, fxl::RefPtr<Symbol> symbol, ExprValue value) {
         result->called = true;
         result->err = err;
         result->value = std::move(value);
@@ -111,12 +104,10 @@ void GetNamedValue(const fxl::RefPtr<EvalContext>& eval_context,
 }
 
 // Sync wrapper around GetVariableValue().
-void GetVariableValue(const fxl::RefPtr<EvalContext>& eval_context,
-                      fxl::RefPtr<Variable> variable, GetValueAsync async,
-                      ValueResult* result) {
+void GetVariableValue(const fxl::RefPtr<EvalContext>& eval_context, fxl::RefPtr<Variable> variable,
+                      GetValueAsync async, ValueResult* result) {
   eval_context->GetVariableValue(
-      variable, [result, async](const Err& err, fxl::RefPtr<Symbol> symbol,
-                                ExprValue value) {
+      variable, [result, async](const Err& err, fxl::RefPtr<Symbol> symbol, ExprValue value) {
         result->called = true;
         result->err = err;
         result->value = std::move(value);
@@ -224,12 +215,11 @@ TEST_F(EvalContextImplTest, FoundButNotEvaluatable) {
 // Tests finding variables on |this| and subclasses of |this|.
 TEST_F(EvalContextImplTest, FoundThis) {
   auto int32_type = MakeInt32Type();
-  auto derived = MakeDerivedClassPair(
-      DwarfTag::kClassType, "Base", {{"b1", int32_type}, {"b2", int32_type}},
-      "Derived", {{"d1", int32_type}, {"d2", int32_type}});
+  auto derived =
+      MakeDerivedClassPair(DwarfTag::kClassType, "Base", {{"b1", int32_type}, {"b2", int32_type}},
+                           "Derived", {{"d1", int32_type}, {"d2", int32_type}});
 
-  auto derived_ptr = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType,
-                                                       LazySymbol(derived));
+  auto derived_ptr = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, LazySymbol(derived));
 
   // Make the storage for the class in memory.
   constexpr uint64_t kObjectAddr = 0x3000;
@@ -245,9 +235,8 @@ TEST_F(EvalContextImplTest, FoundThis) {
   // Our parameter "Derived* this = kObjectAddr" is passed in register 0.
   provider()->set_ip(kBeginValidRange);
   provider()->AddRegisterValue(kDWARFReg0ID, false, kObjectAddr);
-  auto this_var = MakeVariableForTest(
-      "this", derived_ptr, kBeginValidRange, kEndValidRange,
-      {llvm::dwarf::DW_OP_reg0, llvm::dwarf::DW_OP_stack_value});
+  auto this_var = MakeVariableForTest("this", derived_ptr, kBeginValidRange, kEndValidRange,
+                                      {llvm::dwarf::DW_OP_reg0, llvm::dwarf::DW_OP_stack_value});
 
   // Make a function with a parameter / object pointer to Derived (this will be
   // like a member function on Derived).
@@ -311,15 +300,13 @@ TEST_F(EvalContextImplTest, DwarfEvalFailure) {
   const char kEmptyExprVarName[] = "empty_expr";
   provider()->set_ip(kBeginValidRange);
 
-  auto var = MakeUint64VariableForTest(kEmptyExprVarName, kBeginValidRange,
-                                       kEndValidRange, {});
+  auto var = MakeUint64VariableForTest(kEmptyExprVarName, kBeginValidRange, kEndValidRange, {});
 
   auto block = MakeCodeBlock();
   block->set_variables({LazySymbol(std::move(var))});
 
   ValueResult result;
-  GetNamedValue(MakeEvalContext(block), kEmptyExprVarName, kSynchronous,
-                &result);
+  GetNamedValue(MakeEvalContext(block), kEmptyExprVarName, kSynchronous, &result);
   EXPECT_TRUE(result.called);
   EXPECT_TRUE(result.err.has_error());
   EXPECT_EQ("DWARF expression produced no results.", result.err.msg());
@@ -335,8 +322,7 @@ TEST_F(EvalContextImplTest, IntOnStack) {
 
   constexpr uint8_t kOffset = 8;
   auto type = MakeInt32Type();
-  auto var =
-      MakeUint64VariableForTest("i", 0, 0, {llvm::dwarf::DW_OP_fbreg, kOffset});
+  auto var = MakeUint64VariableForTest("i", 0, 0, {llvm::dwarf::DW_OP_fbreg, kOffset});
   var->set_type(LazySymbol(type));
 
   constexpr uint64_t kBp = 0x1000;
@@ -355,8 +341,8 @@ TEST_F(EvalContextImplTest, IntOnStack) {
 
   // Before running the loop and receiving the memory, start a new request,
   // this one will fail synchronously due to a range miss.
-  auto rangemiss = MakeUint64VariableForTest("rangemiss", 0x6000, 0x7000,
-                                             {llvm::dwarf::DW_OP_reg0});
+  auto rangemiss =
+      MakeUint64VariableForTest("rangemiss", 0x6000, 0x7000, {llvm::dwarf::DW_OP_reg0});
   ValueResult result2;
   GetVariableValue(context, rangemiss, kSynchronous, &result2);
   EXPECT_TRUE(result2.called);
@@ -384,8 +370,7 @@ TEST_F(EvalContextImplTest, NodeIntegation) {
   bool called = false;
   Err out_err;
   ExprValue out_value;
-  present->Eval(context, [&called, &out_err, &out_value](const Err& err,
-                                                         ExprValue value) {
+  present->Eval(context, [&called, &out_err, &out_value](const Err& err, ExprValue value) {
     called = true;
     out_err = err;
     out_value = value;
@@ -428,9 +413,9 @@ TEST_F(EvalContextImplTest, RegisterShadowed) {
   constexpr uint64_t kRegValue = 0xdeadb33f;
   constexpr uint64_t kVarValue = 0xf00db4be;
 
-  auto shadow_var = MakeUint64VariableForTest(
-      "x0", kBeginValidRange, kEndValidRange,
-      {llvm::dwarf::DW_OP_reg1, llvm::dwarf::DW_OP_stack_value});
+  auto shadow_var =
+      MakeUint64VariableForTest("x0", kBeginValidRange, kEndValidRange,
+                                {llvm::dwarf::DW_OP_reg1, llvm::dwarf::DW_OP_stack_value});
 
   auto block = MakeCodeBlock();
   block->set_variables({LazySymbol(std::move(shadow_var))});
@@ -477,21 +462,19 @@ TEST_F(EvalContextImplTest, GetConcreteType) {
   forward_def->set_is_declaration(true);
 
   // A const modification of the forward definition.
-  auto const_forward_def = fxl::MakeRefCounted<ModifiedType>(
-      DwarfTag::kConstType, LazySymbol(forward_def));
+  auto const_forward_def =
+      fxl::MakeRefCounted<ModifiedType>(DwarfTag::kConstType, LazySymbol(forward_def));
 
   // Make a symbol context.
-  auto context = fxl::MakeRefCounted<EvalContextImpl>(
-      setup.process().GetWeakPtr(), symbol_context, provider(),
-      fxl::RefPtr<CodeBlock>());
+  auto context = fxl::MakeRefCounted<EvalContextImpl>(setup.process().GetWeakPtr(), symbol_context,
+                                                      provider(), fxl::RefPtr<CodeBlock>());
 
   // Resolving the const forward-defined value gives the non-const version.
   auto result_type = context->GetConcreteType(const_forward_def.get());
   EXPECT_EQ(forward_def.get(), result_type.get());
 
   // Make a definition for the type. It has one 32-bit data member.
-  auto decl = MakeCollectionType(DwarfTag::kStructureType, kMyStructName,
-                                 {{"a", MakeInt32Type()}});
+  auto decl = MakeCollectionType(DwarfTag::kStructureType, kMyStructName, {{"a", MakeInt32Type()}});
 
   // Index the declaration of the type.
   TestIndexedSymbol indexed_decl(mod, &root, kMyStructName, decl);

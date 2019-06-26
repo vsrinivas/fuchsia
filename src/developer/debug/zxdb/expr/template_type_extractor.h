@@ -56,8 +56,7 @@ struct TemplateTypeResult {
   std::string canonical_name;
 };
 
-TemplateTypeResult ExtractTemplateType(const std::vector<ExprToken>& tokens,
-                                       size_t begin_token);
+TemplateTypeResult ExtractTemplateType(const std::vector<ExprToken>& tokens, size_t begin_token);
 
 }  // namespace zxdb
 

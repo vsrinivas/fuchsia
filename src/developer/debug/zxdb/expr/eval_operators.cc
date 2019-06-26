@@ -32,8 +32,8 @@ void DoAssignment(fxl::RefPtr<EvalContext> context, const ExprValue& left_value,
   // The coerced value will be the result. It should have the "source" of the
   // left-hand-side since the location being assigned to doesn't change.
   ExprValue coerced;
-  Err err = CastExprValue(context.get(), CastType::kImplicit, right_value,
-                          left_value.type_ref(), &coerced, dest);
+  Err err = CastExprValue(context.get(), CastType::kImplicit, right_value, left_value.type_ref(),
+                          &coerced, dest);
   if (err.has_error()) {
     cb(err, ExprValue());
     return;
@@ -54,9 +54,8 @@ void DoAssignment(fxl::RefPtr<EvalContext> context, const ExprValue& left_value,
       });
 }
 
-void DoBinaryOperator(fxl::RefPtr<EvalContext> context,
-                      const ExprValue& left_value, const ExprToken& op,
-                      const ExprValue& right_value, EvalCallback cb) {
+void DoBinaryOperator(fxl::RefPtr<EvalContext> context, const ExprValue& left_value,
+                      const ExprToken& op, const ExprValue& right_value, EvalCallback cb) {
   switch (op.type()) {
     case ExprTokenType::kEquals:
       DoAssignment(std::move(context), left_value, right_value, std::move(cb));
@@ -68,33 +67,29 @@ void DoBinaryOperator(fxl::RefPtr<EvalContext> context,
     case ExprTokenType::kBitwiseOr:
     case ExprTokenType::kLogicalOr:
     default:
-      cb(Err("Unsupported binary operator '%s', sorry!", op.value().c_str()),
-         ExprValue());
+      cb(Err("Unsupported binary operator '%s', sorry!", op.value().c_str()), ExprValue());
       break;
   }
 }
 
 }  // namespace
 
-void EvalBinaryOperator(fxl::RefPtr<EvalContext> context,
-                        const fxl::RefPtr<ExprNode>& left, const ExprToken& op,
-                        const fxl::RefPtr<ExprNode>& right, EvalCallback cb) {
-  left->Eval(context, [context, op, right, cb = std::move(cb)](
-                          const Err& err, ExprValue left_value) {
-    if (err.has_error()) {
-      cb(err, ExprValue());
-      return;
-    }
+void EvalBinaryOperator(fxl::RefPtr<EvalContext> context, const fxl::RefPtr<ExprNode>& left,
+                        const ExprToken& op, const fxl::RefPtr<ExprNode>& right, EvalCallback cb) {
+  left->Eval(context,
+             [context, op, right, cb = std::move(cb)](const Err& err, ExprValue left_value) {
+               if (err.has_error()) {
+                 cb(err, ExprValue());
+                 return;
+               }
 
-    // Note: if we implement ||, need to special-case here so evaluation
-    // short-circuits if the "left" is true.
-    right->Eval(context,
-                [context, left_value = std::move(left_value), op,
-                 cb = std::move(cb)](const Err& err, ExprValue right_value) {
-                  DoBinaryOperator(std::move(context), left_value, op,
-                                   right_value, std::move(cb));
-                });
-  });
+               // Note: if we implement ||, need to special-case here so evaluation
+               // short-circuits if the "left" is true.
+               right->Eval(context, [context, left_value = std::move(left_value), op,
+                                     cb = std::move(cb)](const Err& err, ExprValue right_value) {
+                 DoBinaryOperator(std::move(context), left_value, op, right_value, std::move(cb));
+               });
+             });
 }
 
 }  // namespace zxdb

@@ -30,32 +30,29 @@ TEST_F(ResolvePtrRefTest, NotPointer) {
   bool called = false;
   Err out_err;
   ExprValue out_value;
-  ResolvePointer(
-      eval_context, int32_value,
-      [&called, &out_err, &out_value](const Err& err, ExprValue value) {
-        called = true;
-        out_err = err;
-        out_value = value;
-      });
+  ResolvePointer(eval_context, int32_value,
+                 [&called, &out_err, &out_value](const Err& err, ExprValue value) {
+                   called = true;
+                   out_err = err;
+                   out_value = value;
+                 });
 
   // This should fail synchronously.
   EXPECT_TRUE(called);
-  EXPECT_EQ("Attempting to dereference 'int32_t' which is not a pointer.",
-            out_err.msg());
+  EXPECT_EQ("Attempting to dereference 'int32_t' which is not a pointer.", out_err.msg());
 
   // Pointer with incorrectly sized data.
-  auto int32_ptr_type = fxl::MakeRefCounted<ModifiedType>(
-      DwarfTag::kPointerType, LazySymbol(int32_type));
+  auto int32_ptr_type =
+      fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, LazySymbol(int32_type));
   ExprValue int32_ptr_value(int32_ptr_type, {0x00, 0x00, 0x00, 0x00});
 
   called = false;
-  ResolvePointer(
-      eval_context, int32_ptr_value,
-      [&called, &out_err, &out_value](const Err& err, ExprValue value) {
-        called = true;
-        out_err = err;
-        out_value = value;
-      });
+  ResolvePointer(eval_context, int32_ptr_value,
+                 [&called, &out_err, &out_value](const Err& err, ExprValue value) {
+                   called = true;
+                   out_err = err;
+                   out_value = value;
+                 });
 
   // This should fail synchronously.
   EXPECT_TRUE(called);
@@ -75,14 +72,13 @@ TEST_F(ResolvePtrRefTest, InvalidMemory) {
   bool called = false;
   Err out_err;
   ExprValue out_value;
-  ResolvePointer(
-      eval_context, kAddress, int32_type,
-      [&called, &out_err, &out_value](const Err& err, ExprValue value) {
-        called = true;
-        out_err = err;
-        out_value = value;
-        debug_ipc::MessageLoop::Current()->QuitNow();
-      });
+  ResolvePointer(eval_context, kAddress, int32_type,
+                 [&called, &out_err, &out_value](const Err& err, ExprValue value) {
+                   called = true;
+                   out_err = err;
+                   out_value = value;
+                   debug_ipc::MessageLoop::Current()->QuitNow();
+                 });
 
   EXPECT_FALSE(called);
   loop().Run();
@@ -93,14 +89,13 @@ TEST_F(ResolvePtrRefTest, InvalidMemory) {
   eval_context->data_provider()->AddMemory(kAddress, {0x00, 0x00});
   called = false;
   out_err = Err();
-  ResolvePointer(
-      eval_context, kAddress, int32_type,
-      [&called, &out_err, &out_value](const Err& err, ExprValue value) {
-        called = true;
-        out_err = err;
-        out_value = value;
-        debug_ipc::MessageLoop::Current()->QuitNow();
-      });
+  ResolvePointer(eval_context, kAddress, int32_type,
+                 [&called, &out_err, &out_value](const Err& err, ExprValue value) {
+                   called = true;
+                   out_err = err;
+                   out_value = value;
+                   debug_ipc::MessageLoop::Current()->QuitNow();
+                 });
 
   EXPECT_FALSE(called);
   loop().Run();
@@ -117,13 +112,12 @@ TEST_F(ResolvePtrRefTest, NotRef) {
 
   bool called = false;
   ExprValue out_value;
-  EnsureResolveReference(
-      eval_context, value,
-      [&called, &out_value](const Err& err, ExprValue result) {
-        EXPECT_FALSE(err.has_error());
-        called = true;
-        out_value = result;
-      });
+  EnsureResolveReference(eval_context, value,
+                         [&called, &out_value](const Err& err, ExprValue result) {
+                           EXPECT_FALSE(err.has_error());
+                           called = true;
+                           out_value = result;
+                         });
 
   // Should have run synchronously.
   EXPECT_TRUE(called);
@@ -144,26 +138,24 @@ TEST_F(ResolvePtrRefTest, ConstRef) {
   // Make "volatile const int32_t&". This tests modifies on both sides of the
   // reference (volatile on the outside, const on the inside).
   auto int32_type = MakeInt32Type();
-  auto const_int32_type = fxl::MakeRefCounted<ModifiedType>(
-      DwarfTag::kConstType, LazySymbol(int32_type));
-  auto const_int32_ref_type = fxl::MakeRefCounted<ModifiedType>(
-      DwarfTag::kReferenceType, LazySymbol(const_int32_type));
-  auto volatile_const_int32_ref_type = fxl::MakeRefCounted<ModifiedType>(
-      DwarfTag::kVolatileType, LazySymbol(const_int32_ref_type));
+  auto const_int32_type =
+      fxl::MakeRefCounted<ModifiedType>(DwarfTag::kConstType, LazySymbol(int32_type));
+  auto const_int32_ref_type =
+      fxl::MakeRefCounted<ModifiedType>(DwarfTag::kReferenceType, LazySymbol(const_int32_type));
+  auto volatile_const_int32_ref_type =
+      fxl::MakeRefCounted<ModifiedType>(DwarfTag::kVolatileType, LazySymbol(const_int32_ref_type));
 
-  ExprValue value(volatile_const_int32_ref_type,
-                  {0x20, 0x00, 0x30, 0x00, 0x00, 0x00, 0x00, 0x00});
+  ExprValue value(volatile_const_int32_ref_type, {0x20, 0x00, 0x30, 0x00, 0x00, 0x00, 0x00, 0x00});
 
   bool called = false;
   ExprValue out_value;
-  EnsureResolveReference(
-      eval_context, value,
-      [&called, &out_value](const Err& err, ExprValue result) {
-        EXPECT_FALSE(err.has_error());
-        called = true;
-        out_value = result;
-        debug_ipc::MessageLoop::Current()->QuitNow();
-      });
+  EnsureResolveReference(eval_context, value,
+                         [&called, &out_value](const Err& err, ExprValue result) {
+                           EXPECT_FALSE(err.has_error());
+                           called = true;
+                           out_value = result;
+                           debug_ipc::MessageLoop::Current()->QuitNow();
+                         });
 
   // Should have run asynchronously.
   EXPECT_FALSE(called);

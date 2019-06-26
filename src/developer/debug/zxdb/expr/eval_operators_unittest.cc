@@ -50,14 +50,13 @@ TEST_F(EvalOperators, Assignment) {
   bool called = false;
   Err out_err;
   ExprValue out_value;
-  EvalBinaryOperator(
-      eval_context(), dest_node, assign, source_node,
-      [&called, &out_err, &out_value](const Err& err, ExprValue value) {
-        called = true;
-        out_err = err;
-        out_value = value;
-        QuitNow();
-      });
+  EvalBinaryOperator(eval_context(), dest_node, assign, source_node,
+                     [&called, &out_err, &out_value](const Err& err, ExprValue value) {
+                       called = true;
+                       out_err = err;
+                       out_value = value;
+                       QuitNow();
+                     });
 
   EXPECT_FALSE(called);
   loop().Run();

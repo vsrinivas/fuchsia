@@ -25,9 +25,7 @@ inline bool IsNameEnd(char ch) { return isspace(ch) || ch == '<'; }
 
 }  // namespace
 
-IndexWalker::IndexWalker(const ModuleSymbolIndex* index) {
-  path_.push_back(&index->root());
-}
+IndexWalker::IndexWalker(const ModuleSymbolIndex* index) { path_.push_back(&index->root()); }
 
 IndexWalker::~IndexWalker() = default;
 
@@ -67,8 +65,7 @@ bool IndexWalker::WalkInto(const ParsedIdentifierComponent& comp) {
 
   // Check all nodes until template canonicalization can't affect the
   // comparison.
-  while (iter != node->sub().end() &&
-         !IsIndexStringBeyondName(iter->first, comp_name)) {
+  while (iter != node->sub().end() && !IsIndexStringBeyondName(iter->first, comp_name)) {
     if (ComponentMatches(iter->first, comp)) {
       // Found match.
       path_.push_back(&iter->second);
@@ -112,8 +109,8 @@ bool IndexWalker::ComponentMatches(const std::string& index_string,
 }
 
 // static
-bool IndexWalker::ComponentMatchesNameOnly(
-    const std::string& index_string, const ParsedIdentifierComponent& comp) {
+bool IndexWalker::ComponentMatchesNameOnly(const std::string& index_string,
+                                           const ParsedIdentifierComponent& comp) {
   const std::string& comp_name = comp.name();
   if (comp_name.size() > index_string.size())
     return false;  // Index string can't contain the name.
@@ -123,13 +120,12 @@ bool IndexWalker::ComponentMatchesNameOnly(
 
   // The index string should be at the end or should have a template spec
   // following the name.
-  return index_string.size() == comp_name.size() ||
-         IsNameEnd(index_string[comp_name.size()]);
+  return index_string.size() == comp_name.size() || IsNameEnd(index_string[comp_name.size()]);
 }
 
 // static
-bool IndexWalker::ComponentMatchesTemplateOnly(
-    const std::string& index_string, const ParsedIdentifierComponent& comp) {
+bool IndexWalker::ComponentMatchesTemplateOnly(const std::string& index_string,
+                                               const ParsedIdentifierComponent& comp) {
   ParsedIdentifier index_ident;
   Err err = ExprParser::ParseIdentifier(index_string, &index_ident);
   if (err.has_error())
@@ -148,8 +144,7 @@ bool IndexWalker::ComponentMatchesTemplateOnly(
 }
 
 // static
-bool IndexWalker::IsIndexStringBeyondName(std::string_view index_name,
-                                          std::string_view name) {
+bool IndexWalker::IsIndexStringBeyondName(std::string_view index_name, std::string_view name) {
   if (index_name.size() <= name.size()) {
     // The |index_name| is too small to start with the name and have template
     // stuff on it (which requires special handling), so we can directly return

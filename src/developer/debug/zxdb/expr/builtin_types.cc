@@ -136,8 +136,7 @@ fxl::RefPtr<BaseType> GetBuiltinType(ExprLanguage lang, std::string_view name) {
     return nullptr;
 
   const BuiltinTypeInfo& info = *found->second;
-  return fxl::MakeRefCounted<BaseType>(info.base_type, info.byte_size,
-                                       info.name);
+  return fxl::MakeRefCounted<BaseType>(info.base_type, info.byte_size, info.name);
 }
 
 }  // namespace zxdb

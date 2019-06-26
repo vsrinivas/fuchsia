@@ -18,8 +18,7 @@ namespace zxdb {
 
 class ExprTokenizer {
  public:
-  explicit ExprTokenizer(const std::string& input,
-                         ExprLanguage lang = ExprLanguage::kC);
+  explicit ExprTokenizer(const std::string& input, ExprLanguage lang = ExprLanguage::kC);
 
   // Returns true on successful tokenizing. In this case, the tokens can be
   // read from tokens(). On failure, err() will contain the error message, and
@@ -44,8 +43,7 @@ class ExprTokenizer {
   // Returns two context lines for an error message. It will quote a relevant
   // portion of the input showing the byte offset, and add a "^" on the next
   // line to indicate where the error is.
-  static std::string GetErrorContext(const std::string& input,
-                                     size_t byte_offset);
+  static std::string GetErrorContext(const std::string& input, size_t byte_offset);
 
  private:
   void AdvanceChars(int n);

@@ -49,8 +49,7 @@ enum class ExprTokenType : size_t {
   kNumTypes
 };
 
-constexpr size_t kNumExprTokenTypes =
-    static_cast<size_t>(ExprTokenType::kNumTypes);
+constexpr size_t kNumExprTokenTypes = static_cast<size_t>(ExprTokenType::kNumTypes);
 
 struct ExprTokenRecord {
   constexpr ExprTokenRecord() = default;

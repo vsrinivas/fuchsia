@@ -41,19 +41,15 @@ class EvalContextImpl : public EvalContext {
   // not be resolved (this can make testing easier).
   EvalContextImpl(fxl::WeakPtr<const ProcessSymbols> process_symbols,
                   const SymbolContext& symbol_context,
-                  fxl::RefPtr<SymbolDataProvider> data_provider,
-                  fxl::RefPtr<CodeBlock> code_block);
+                  fxl::RefPtr<SymbolDataProvider> data_provider, fxl::RefPtr<CodeBlock> code_block);
   EvalContextImpl(fxl::WeakPtr<const ProcessSymbols> process_symbols,
-                  fxl::RefPtr<SymbolDataProvider> data_provider,
-                  const Location& location);
+                  fxl::RefPtr<SymbolDataProvider> data_provider, const Location& location);
   ~EvalContextImpl() override;
 
   // EvalContext implementation.
   ExprLanguage GetLanguage() const override;
-  void GetNamedValue(const ParsedIdentifier& name,
-                     ValueCallback cb) const override;
-  void GetVariableValue(fxl::RefPtr<Variable> variable,
-                        ValueCallback cb) const override;
+  void GetNamedValue(const ParsedIdentifier& name, ValueCallback cb) const override;
+  void GetVariableValue(fxl::RefPtr<Variable> variable, ValueCallback cb) const override;
   fxl::RefPtr<Type> ResolveForwardDefinition(const Type* type) const override;
   fxl::RefPtr<Type> GetConcreteType(const Type* type) const override;
   fxl::RefPtr<SymbolDataProvider> GetDataProvider() override;
@@ -67,8 +63,7 @@ class EvalContextImpl : public EvalContext {
   void DoResolve(FoundName found, ValueCallback cb) const;
 
   // Callback for when the dwarf_eval_ has completed evaluation.
-  void OnDwarfEvalComplete(const Err& err,
-                           fxl::RefPtr<ResolutionState> state) const;
+  void OnDwarfEvalComplete(const Err& err, fxl::RefPtr<ResolutionState> state) const;
 
   // Implements type name lookup on the target's symbol index.
   FoundName DoTargetSymbolsNameLookup(const ParsedIdentifier& ident);

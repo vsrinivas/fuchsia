@@ -20,10 +20,9 @@ class ExprValue;
 class ExprValueSource;
 class Type;
 
-void EvalBinaryOperator(
-    fxl::RefPtr<EvalContext> context, const fxl::RefPtr<ExprNode>& left,
-    const ExprToken& op, const fxl::RefPtr<ExprNode>& right,
-    std::function<void(const Err& err, ExprValue value)> cb);
+void EvalBinaryOperator(fxl::RefPtr<EvalContext> context, const fxl::RefPtr<ExprNode>& left,
+                        const ExprToken& op, const fxl::RefPtr<ExprNode>& right,
+                        std::function<void(const Err& err, ExprValue value)> cb);
 
 }  // namespace zxdb
 

@@ -129,19 +129,16 @@ TEST(NumberParser, StringToNumber) {
       {"0xabcd", nullptr, int32_t(0xabcd), "int"},
       {"- 0x614u", nullptr, uint32_t(-0x614), "unsigned"},
       {"0xabcdull", nullptr, uint64_t(0xabcd), "unsigned long long"},
-      {"0xffffFFFFffffFFFF", nullptr, uint64_t(0xffffFFFFffffFFFF),
-       "unsigned long"},
+      {"0xffffFFFFffffFFFF", nullptr, uint64_t(0xffffFFFFffffFFFF), "unsigned long"},
       // This overflow case gets promoted to "long long" because it's "bigger".
       // C++ would put this in a long.
-      {"-0xffffFFFFffffFFFF", nullptr, uint64_t(-0xffffFFFFffffFFFF),
-       "unsigned long long"},
+      {"-0xffffFFFFffffFFFF", nullptr, uint64_t(-0xffffFFFFffffFFFF), "unsigned long long"},
 
       // Octal input ("0" prefix disallowed).
       {"0o567", nullptr, int32_t(0567), "int"},
       {"-0o567", nullptr, int32_t(-0567), "int"},
       {"-0o0567llu", nullptr, uint64_t(-0567), "unsigned long long"},
-      {"0567", "Octal numbers must be prefixed with '0o'.", int32_t(0567),
-       "int"},
+      {"0567", "Octal numbers must be prefixed with '0o'.", int32_t(0567), "int"},
       {"-0567llu", "Octal numbers must be prefixed with '0o'.", uint64_t(-0567),
        "unsigned long long"},
 
@@ -183,8 +180,7 @@ TEST(NumberParser, StringToNumber) {
       EXPECT_EQ(cur.err_msg, err.msg()) << "Input = " << cur.input;
     } else {
       // Expected success.
-      EXPECT_FALSE(err.has_error())
-          << err.msg() << " for input = " << cur.input;
+      EXPECT_FALSE(err.has_error()) << err.msg() << " for input = " << cur.input;
 
       // This craziness calls the lambda with the given expected type and
       // value. We can compare the type of the expected parameter based on the
@@ -197,8 +193,7 @@ TEST(NumberParser, StringToNumber) {
             ASSERT_TRUE(expr_type) << "Input = " << cur.input;
 
             // Size of types should match.
-            EXPECT_EQ(sizeof(ExpectedType), expr_value.data().size())
-                << "Input = " << cur.input;
+            EXPECT_EQ(sizeof(ExpectedType), expr_value.data().size()) << "Input = " << cur.input;
 
             // Sign on types should match.
             if (std::is_signed_v<ExpectedType>) {
@@ -210,12 +205,10 @@ TEST(NumberParser, StringToNumber) {
             }
 
             // Names of types should match.
-            EXPECT_EQ(cur.expected_type_name, expr_type->GetFullName())
-                << "Input = " << cur.input;
+            EXPECT_EQ(cur.expected_type_name, expr_type->GetFullName()) << "Input = " << cur.input;
 
             // Values should match.
-            EXPECT_EQ(expected, expr_value.GetAs<ExpectedType>())
-                << "Input = " << cur.input;
+            EXPECT_EQ(expected, expr_value.GetAs<ExpectedType>()) << "Input = " << cur.input;
           },
           cur.expected);
     }

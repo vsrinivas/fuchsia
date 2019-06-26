@@ -40,10 +40,8 @@ const OperatorRecord kOperators[] = {
 };
 
 bool IsNamelikeToken(const ExprToken& token) {
-  return token.type() == ExprTokenType::kName ||
-         token.type() == ExprTokenType::kTrue ||
-         token.type() == ExprTokenType::kFalse ||
-         token.type() == ExprTokenType::kConst ||
+  return token.type() == ExprTokenType::kName || token.type() == ExprTokenType::kTrue ||
+         token.type() == ExprTokenType::kFalse || token.type() == ExprTokenType::kConst ||
          token.type() == ExprTokenType::kVolatile;
 }
 
@@ -51,8 +49,7 @@ bool IsNamelikeToken(const ExprToken& token) {
 // separate it from the previous token. The first_index is the index of the
 // first token being considered for type extraction (so we don't consider the
 // boundary before this).
-bool NeedsSpaceBefore(const std::vector<ExprToken>& tokens, size_t first_index,
-                      size_t index) {
+bool NeedsSpaceBefore(const std::vector<ExprToken>& tokens, size_t first_index, size_t index) {
   FXL_DCHECK(first_index <= index);
   if (first_index == index)
     return false;  // Also catches index == 0.
@@ -76,8 +73,7 @@ bool NeedsSpaceBefore(const std::vector<ExprToken>& tokens, size_t first_index,
 
 // |*index| points to the index of the operator token. It will be updated to
 // point to the last token consumed.
-void HandleOperator(const std::vector<ExprToken>& tokens, size_t* index,
-                    std::string* result) {
+void HandleOperator(const std::vector<ExprToken>& tokens, size_t* index, std::string* result) {
   // Always append "operator" itself.
   result->append(tokens[*index].value());
   if (tokens.size() - 1 == *index)
@@ -87,9 +83,8 @@ void HandleOperator(const std::vector<ExprToken>& tokens, size_t* index,
   int matched_tokens = 0;
 
   // The second token we're looking for.
-  ExprTokenType second_type = tokens.size() > *index + 2
-                                  ? tokens[*index + 2].type()
-                                  : ExprTokenType::kInvalid;
+  ExprTokenType second_type =
+      tokens.size() > *index + 2 ? tokens[*index + 2].type() : ExprTokenType::kInvalid;
   for (const auto& cur_op : kOperators) {
     if (cur_op.first == tokens[*index + 1].type()) {
       // First character matched.
@@ -102,8 +97,7 @@ void HandleOperator(const std::vector<ExprToken>& tokens, size_t* index,
       // The following token should also match, and the two tokens should be
       // adjacent in the input stream.
       if (cur_op.second == second_type &&
-          tokens[*index + 1].byte_offset() + 1 ==
-              tokens[*index + 2].byte_offset()) {
+          tokens[*index + 1].byte_offset() + 1 == tokens[*index + 2].byte_offset()) {
         matched_tokens = 2;
         break;
       }
@@ -146,8 +140,7 @@ void HandleOperator(const std::vector<ExprToken>& tokens, size_t* index,
 //
 // When we have this lookahead for "operator>" we can remove the
 // "PreviousTokenIsOperatorKeyword" code.
-TemplateTypeResult ExtractTemplateType(const std::vector<ExprToken>& tokens,
-                                       size_t begin_token) {
+TemplateTypeResult ExtractTemplateType(const std::vector<ExprToken>& tokens, size_t begin_token) {
   TemplateTypeResult result;
 
   bool inhibit_next_space = false;
@@ -166,17 +159,16 @@ TemplateTypeResult ExtractTemplateType(const std::vector<ExprToken>& tokens,
       // < (the sequences "operator<" and "operator<<" were handled when we
       //    got the "operator" token).
       nesting.emplace_back(i, ExprTokenType::kGreater);
-    } else if (nesting.empty() && (type == ExprTokenType::kGreater ||
-                                   type == ExprTokenType::kRightParen ||
-                                   type == ExprTokenType::kComma)) {
+    } else if (nesting.empty() &&
+               (type == ExprTokenType::kGreater || type == ExprTokenType::kRightParen ||
+                type == ExprTokenType::kComma)) {
       // These tokens mark the end of a type when seen without nesting. Usually
       // this marks the end of the enclosing cast or template.
       break;
     } else if (!nesting.empty() && type == nesting.back().end) {
       // Found the closing token for a previous opening one.
       nesting.pop_back();
-    } else if (type == ExprTokenType::kName &&
-               tokens[i].value() == "operator") {
+    } else if (type == ExprTokenType::kName && tokens[i].value() == "operator") {
       // Possible space before "operator".
       if (NeedsSpaceBefore(tokens, begin_token, i))
         result.canonical_name.push_back(' ');

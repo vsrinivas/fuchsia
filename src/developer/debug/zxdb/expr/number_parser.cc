@@ -78,8 +78,7 @@ bool ValidForBase(IntegerPrefix::Base base, char c) {
     case IntegerPrefix::kDec:
       return c >= '0' && c <= '9';
     case IntegerPrefix::kHex:
-      return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') ||
-             (c >= 'a' && c <= 'f');
+      return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f');
   }
   return false;
 }
@@ -88,8 +87,7 @@ bool ValidForBase(IntegerPrefix::Base base, char c) {
 
 Err StringToNumber(std::string_view str, ExprValue* output) {
   IntegerPrefix prefix = ExtractIntegerPrefix(&str);
-  if (prefix.base == IntegerPrefix::kOct &&
-      prefix.octal_type == IntegerPrefix::OctalType::kC) {
+  if (prefix.base == IntegerPrefix::kOct && prefix.octal_type == IntegerPrefix::OctalType::kC) {
     // Require "0o" prefixes for octal numbers instead of allowing C-style
     // "0" prefixes. Octal numbers are very unusual to be typed interactively
     // in a debugger, and it's easier to accidentally copy-and-paste a decimal
@@ -118,8 +116,7 @@ Err StringToNumber(std::string_view str, ExprValue* output) {
   char* parsed_end = str_end;
 
   // This will be the absolute value of the returned number.
-  uint64_t abs_value =
-      strtoull(str.data(), &parsed_end, static_cast<int>(prefix.base));
+  uint64_t abs_value = strtoull(str.data(), &parsed_end, static_cast<int>(prefix.base));
 
   // If strtoull stopped early it means it it hit an invalid character
   // (shouldn't happen since we validated above) or maybe the input was too
@@ -162,13 +159,12 @@ Err StringToNumber(std::string_view str, ExprValue* output) {
     matched_type = &*(std::end(kTypeLookup) - 1);
   }
 
-  int symbol_tag = matched_type->type_signed ? BaseType::kBaseTypeSigned
-                                             : BaseType::kBaseTypeUnsigned;
-  auto type = fxl::MakeRefCounted<BaseType>(symbol_tag, matched_type->byte_size,
-                                            matched_type->name);
+  int symbol_tag =
+      matched_type->type_signed ? BaseType::kBaseTypeSigned : BaseType::kBaseTypeUnsigned;
+  auto type =
+      fxl::MakeRefCounted<BaseType>(symbol_tag, matched_type->byte_size, matched_type->name);
 
-  uint64_t value =
-      prefix.sign == IntegerPrefix::kNegative ? -abs_value : abs_value;
+  uint64_t value = prefix.sign == IntegerPrefix::kNegative ? -abs_value : abs_value;
 
   // Construct the data. This assumes little-endian since it truncates or
   // zero-fills off the right.
@@ -248,8 +244,7 @@ Err ExtractIntegerSuffix(std::string_view* s, IntegerSuffix* suffix) {
 
       // Technically C++ says "Ll" and "lL" aren't allowed, but we don't
       // bother enforcing this.
-      if (suffix_begin > 1 &&
-          ((*s)[suffix_begin - 2] == 'l' || (*s)[suffix_begin - 2] == 'L')) {
+      if (suffix_begin > 1 && ((*s)[suffix_begin - 2] == 'l' || (*s)[suffix_begin - 2] == 'L')) {
         // "ll" = Long long.
         suffix->length = IntegerSuffix::Length::kLongLong;
         suffix_begin -= 2;

@@ -70,17 +70,15 @@ const char* CastTypeToString(CastType);
 //
 // The dest_source is an optional specification of what "source location" the
 // returned value should have.
-Err CastExprValue(EvalContext* eval_context, CastType cast_type,
-                  const ExprValue& source, const fxl::RefPtr<Type>& dest_type,
-                  ExprValue* result,
+Err CastExprValue(EvalContext* eval_context, CastType cast_type, const ExprValue& source,
+                  const fxl::RefPtr<Type>& dest_type, ExprValue* result,
                   const ExprValueSource& dest_source = ExprValueSource());
 
 // See comment for CastExprValue. This determines whether the source should
 // have references expanded to the referenced data before executing the given
 // cast.
 bool CastShouldFollowReferences(EvalContext* eval_context, CastType cast_type,
-                                const ExprValue& source,
-                                const fxl::RefPtr<Type>& dest_type);
+                                const ExprValue& source, const fxl::RefPtr<Type>& dest_type);
 
 }  // namespace zxdb
 

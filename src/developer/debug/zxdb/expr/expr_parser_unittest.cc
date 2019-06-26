@@ -18,8 +18,7 @@ namespace {
 // This name looker-upper declares anything beginning with "Namespace" is a
 // namespace, anything beginning with "Template" is a template, and anything
 // beginning with "Type" is a type.
-FoundName TestLookupName(const ParsedIdentifier& ident,
-                         const FindNameOptions& opts) {
+FoundName TestLookupName(const ParsedIdentifier& ident, const FindNameOptions& opts) {
   const ParsedIdentifierComponent& comp = ident.components().back();
   const std::string& name = comp.name();
 
@@ -54,9 +53,8 @@ class ExprParserTest : public testing::Test {
   // Valid after Parse() is called.
   ExprParser& parser() { return *parser_; }
 
-  fxl::RefPtr<ExprNode> Parse(
-      const char* input,
-      NameLookupCallback name_lookup = NameLookupCallback()) {
+  fxl::RefPtr<ExprNode> Parse(const char* input,
+                              NameLookupCallback name_lookup = NameLookupCallback()) {
     parser_.reset();
 
     tokenizer_ = std::make_unique<ExprTokenizer>(input);
@@ -65,14 +63,13 @@ class ExprParserTest : public testing::Test {
       return nullptr;
     }
 
-    parser_ =
-        std::make_unique<ExprParser>(tokenizer_->TakeTokens(), name_lookup);
+    parser_ = std::make_unique<ExprParser>(tokenizer_->TakeTokens(), name_lookup);
     return parser_->Parse();
   }
 
   // Does the parse and returns the string dump of the structure.
-  std::string GetParseString(const char* input, NameLookupCallback name_lookup =
-                                                    NameLookupCallback()) {
+  std::string GetParseString(const char* input,
+                             NameLookupCallback name_lookup = NameLookupCallback()) {
     auto root = Parse(input, name_lookup);
     if (!root) {
       // Expect calls to this to parse successfully.
@@ -128,8 +125,7 @@ TEST_F(ExprParserTest, AccessorAtEnd) {
   auto result = Parse("base. ");
   ASSERT_FALSE(result);
 
-  EXPECT_EQ("Expected identifier for right-hand-side of \".\".",
-            parser().err().msg());
+  EXPECT_EQ("Expected identifier for right-hand-side of \".\".", parser().err().msg());
 
   EXPECT_EQ(4u, parser().error_token().byte_offset());
   EXPECT_EQ(".", parser().error_token().value());
@@ -139,8 +135,7 @@ TEST_F(ExprParserTest, BadAccessorMemberName) {
   auto result = Parse("base->23");
   ASSERT_FALSE(result);
 
-  EXPECT_EQ("Expected identifier for right-hand-side of \"->\".",
-            parser().err().msg());
+  EXPECT_EQ("Expected identifier for right-hand-side of \"->\".", parser().err().msg());
 
   // This error reports the "->" as the location, one could also imagine
   // reporting the right-side token (if any) instead.
@@ -168,8 +163,7 @@ TEST_F(ExprParserTest, Arrow) {
   // Arrow with no name.
   result = Parse("base->");
   ASSERT_FALSE(result);
-  EXPECT_EQ("Expected identifier for right-hand-side of \"->\".",
-            parser().err().msg());
+  EXPECT_EQ("Expected identifier for right-hand-side of \"->\".", parser().err().msg());
 }
 
 TEST_F(ExprParserTest, NestedDotArrow) {
@@ -189,8 +183,7 @@ TEST_F(ExprParserTest, UnexpectedInput) {
   auto result = Parse("foo 5");
   ASSERT_FALSE(result);
 
-  EXPECT_EQ("Unexpected input, did you forget an operator?",
-            parser().err().msg());
+  EXPECT_EQ("Unexpected input, did you forget an operator?", parser().err().msg());
   EXPECT_EQ(4u, parser().error_token().byte_offset());
 }
 
@@ -327,8 +320,7 @@ TEST_F(ExprParserTest, AndOr) {
 TEST_F(ExprParserTest, Identifiers) {
   EXPECT_EQ("IDENTIFIER(\"foo\")\n", GetParseString("foo"));
   EXPECT_EQ("IDENTIFIER(::\"foo\")\n", GetParseString("::foo"));
-  EXPECT_EQ("IDENTIFIER(::\"foo\"; ::\"bar\")\n",
-            GetParseString("::foo :: bar"));
+  EXPECT_EQ("IDENTIFIER(::\"foo\"; ::\"bar\")\n", GetParseString("::foo :: bar"));
 
   auto result = Parse("::");
   ASSERT_FALSE(result);
@@ -336,14 +328,12 @@ TEST_F(ExprParserTest, Identifiers) {
 
   result = Parse(":: :: name");
   ASSERT_FALSE(result);
-  EXPECT_EQ(
-      "Could not identify thing to the left of '::' as a type or namespace.",
-      parser().err().msg());
+  EXPECT_EQ("Could not identify thing to the left of '::' as a type or namespace.",
+            parser().err().msg());
 
   result = Parse("foo bar");
   ASSERT_FALSE(result);
-  EXPECT_EQ("Unexpected identifier, did you forget an operator?",
-            parser().err().msg());
+  EXPECT_EQ("Unexpected identifier, did you forget an operator?", parser().err().msg());
 
   // It's valid to have identifiers with colons in them to access class members
   // (this is how you provide an explicit base class).
@@ -384,14 +374,12 @@ TEST_F(ExprParserTest, FunctionCall) {
   // Unmatched "(" error.
   auto result = Parse("Call(a, ");
   ASSERT_FALSE(result);
-  EXPECT_EQ("Expected ')' to match. Hit the end of input instead.",
-            parser().err().msg());
+  EXPECT_EQ("Expected ')' to match. Hit the end of input instead.", parser().err().msg());
 
   // Arguments not separated by commas.
   result = Parse("Call(a b)");
   ASSERT_FALSE(result);
-  EXPECT_EQ("Unexpected identifier, did you forget an operator?",
-            parser().err().msg());
+  EXPECT_EQ("Unexpected identifier, did you forget an operator?", parser().err().msg());
 
   // Empty parameter
   result = Parse("Call(a, , b)");
@@ -429,8 +417,7 @@ TEST_F(ExprParserTest, Templates) {
   // expecting the match for the outer level.
   auto result = Parse("std::map<Key, Value");
   ASSERT_FALSE(result);
-  EXPECT_EQ("Expected '>' to match. Hit the end of input instead.",
-            parser().err().msg());
+  EXPECT_EQ("Expected '>' to match. Hit the end of input instead.", parser().err().msg());
 
   // This unmatched token is generated by the template type skipper which is
   // why the error message is slightly different (both are OK).
@@ -473,8 +460,7 @@ TEST_F(ExprParserTest, NamesWithSymbolLookup) {
   // Bare template is an error.
   result = Parse("Template", &TestLookupName);
   ASSERT_FALSE(result);
-  EXPECT_EQ("Expected template args after template name.",
-            parser().err().msg());
+  EXPECT_EQ("Expected template args after template name.", parser().err().msg());
 
   // Nothing after "::"
   result = Parse("Namespace::", &TestLookupName);
@@ -486,14 +472,12 @@ TEST_F(ExprParserTest, NamesWithSymbolLookup) {
   ASSERT_FALSE(result);
   // This error message might change with future type support because it might
   // look like a comparison between a type and an int.
-  EXPECT_EQ("Template parameters not valid on this object type.",
-            parser().err().msg());
+  EXPECT_EQ("Template parameters not valid on this object type.", parser().err().msg());
 
   // Can't put a template on a namespace.
   result = Parse("Namespace<int>", &TestLookupName);
   ASSERT_FALSE(result);
-  EXPECT_EQ("Template parameters not valid on this object type.",
-            parser().err().msg());
+  EXPECT_EQ("Template parameters not valid on this object type.", parser().err().msg());
 
   // Good type name.
   EXPECT_EQ("FUNCTIONCALL(\"Namespace\"; ::\"Template\",<\"int\">; ::\"fn\")\n",
@@ -512,18 +496,14 @@ TEST_F(ExprParserTest, TrueFalse) {
 
 TEST_F(ExprParserTest, Types) {
   EXPECT_EQ("TYPE(Type)\n", GetParseString("Type", &TestLookupName));
-  EXPECT_EQ("IDENTIFIER(\"NotType\")\n",
-            GetParseString("NotType", &TestLookupName));
+  EXPECT_EQ("IDENTIFIER(\"NotType\")\n", GetParseString("NotType", &TestLookupName));
 
-  EXPECT_EQ("TYPE(const Type)\n",
-            GetParseString("const Type", &TestLookupName));
-  EXPECT_EQ("TYPE(const Type)\n",
-            GetParseString("Type const", &TestLookupName));
+  EXPECT_EQ("TYPE(const Type)\n", GetParseString("const Type", &TestLookupName));
+  EXPECT_EQ("TYPE(const Type)\n", GetParseString("Type const", &TestLookupName));
 
   // It would be better it this printed as "const volatile Type" but our
   // heuristic for moving modifiers to the beginning isn't good enough.
-  EXPECT_EQ("TYPE(volatile Type const)\n",
-            GetParseString("const volatile Type", &TestLookupName));
+  EXPECT_EQ("TYPE(volatile Type const)\n", GetParseString("const volatile Type", &TestLookupName));
 
   // Duplicate const qualifications.
   auto result = Parse("const Type const", &TestLookupName);
@@ -585,8 +565,7 @@ TEST_F(ExprParserTest, C_Cast) {
   // Looks like a cast but it's not a type.
   auto result = Parse("(NotType)a", &TestLookupName);
   EXPECT_FALSE(result);
-  EXPECT_EQ("Unexpected input, did you forget an operator?",
-            parser().err().msg());
+  EXPECT_EQ("Unexpected input, did you forget an operator?", parser().err().msg());
 }
 
 TEST_F(ExprParserTest, CppCast) {
@@ -608,8 +587,7 @@ TEST_F(ExprParserTest, CppCast) {
       " BINARY_OP(&&)\n"
       "  IDENTIFIER(\"x\")\n"
       "  IDENTIFIER(\"y\")\n",
-      GetParseString("reinterpret_cast<  const Type&& >( x && y)",
-                     &TestLookupName));
+      GetParseString("reinterpret_cast<  const Type&& >( x && y)", &TestLookupName));
 
   auto result = Parse("reinterpret_cast<", &TestLookupName);
   EXPECT_FALSE(result);

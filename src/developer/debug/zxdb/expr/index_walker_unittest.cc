@@ -23,8 +23,7 @@ TEST(IndexWalker, ComponentMatchesNameOnly) {
   EXPECT_TRUE(IndexWalker::ComponentMatchesNameOnly("Foo", foo_template_comp));
 
   // Component has no template, the index does.
-  EXPECT_TRUE(
-      IndexWalker::ComponentMatchesNameOnly("Foo < C >", foo_template_comp));
+  EXPECT_TRUE(IndexWalker::ComponentMatchesNameOnly("Foo < C >", foo_template_comp));
 }
 
 TEST(IndexWalker, ComponentMatchesTemplateOnly) {
@@ -36,18 +35,15 @@ TEST(IndexWalker, ComponentMatchesTemplateOnly) {
   EXPECT_TRUE(IndexWalker::ComponentMatchesTemplateOnly("Foo", foo_comp));
 
   // Template match but with different whitespace.
-  EXPECT_TRUE(IndexWalker::ComponentMatchesTemplateOnly("Foo < A,  b > ",
-                                                        foo_template_comp));
+  EXPECT_TRUE(IndexWalker::ComponentMatchesTemplateOnly("Foo < A,  b > ", foo_template_comp));
 
   // One has a template but the other doesn't.
-  EXPECT_FALSE(
-      IndexWalker::ComponentMatchesTemplateOnly("Foo", foo_template_comp));
+  EXPECT_FALSE(IndexWalker::ComponentMatchesTemplateOnly("Foo", foo_template_comp));
   EXPECT_FALSE(IndexWalker::ComponentMatchesTemplateOnly("Foo<C>", foo_comp));
 
   // Empty template doesn't match no template.
   EXPECT_FALSE(IndexWalker::ComponentMatchesTemplateOnly("Foo<>", foo_comp));
-  EXPECT_FALSE(IndexWalker::ComponentMatchesTemplateOnly(
-      "Foo", foo_empty_template_comp));
+  EXPECT_FALSE(IndexWalker::ComponentMatchesTemplateOnly("Foo", foo_empty_template_comp));
 }
 
 // Most cases are tested by ComponentMatchesNameOnly and ...TemplateOnly above.

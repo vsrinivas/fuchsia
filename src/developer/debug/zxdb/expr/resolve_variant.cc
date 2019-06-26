@@ -16,12 +16,10 @@
 namespace zxdb {
 
 Err ResolveVariant(fxl::RefPtr<EvalContext> context, const ExprValue& value,
-                   const VariantPart* variant_part,
-                   fxl::RefPtr<Variant>* result) {
+                   const VariantPart* variant_part, fxl::RefPtr<Variant>* result) {
   // Resolve the discriminant value. It is effectively a member of the
   // enclosing structure.
-  const DataMember* discr_member =
-      variant_part->discriminant().Get()->AsDataMember();
+  const DataMember* discr_member = variant_part->discriminant().Get()->AsDataMember();
   if (!discr_member)
     return Err("Missing disciminant for variant.");
 
@@ -65,9 +63,7 @@ Err ResolveVariant(fxl::RefPtr<EvalContext> context, const ExprValue& value,
     return Err();
   }
 
-  return Err("Discriminant value of 0x%" PRIx64
-             " does not match any of the Variants.",
-             discr);
+  return Err("Discriminant value of 0x%" PRIx64 " does not match any of the Variants.", discr);
 }
 
 }  // namespace zxdb

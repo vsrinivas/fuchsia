@@ -25,10 +25,8 @@ TEST(ResolveVariant, TwoValues) {
   auto b = fxl::MakeRefCounted<Variant>(1, std::vector<LazySymbol>{});
 
   // 8-bit disciminant.
-  auto u8_type =
-      fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsigned, 1, "u8");
-  auto discr =
-      fxl::MakeRefCounted<DataMember>(std::string(), LazySymbol(u8_type), 0);
+  auto u8_type = fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsigned, 1, "u8");
+  auto discr = fxl::MakeRefCounted<DataMember>(std::string(), LazySymbol(u8_type), 0);
 
   auto rust_enum = MakeRustEnum("RustEnum", discr, {a, b});
   auto variant_part = rust_enum->variant_part().Get()->AsVariantPart();
@@ -50,8 +48,7 @@ TEST(ResolveVariant, TwoValues) {
   ExprValue invalid_value(rust_enum, {2});
   err = ResolveVariant(eval_context, invalid_value, variant_part, &output);
   EXPECT_TRUE(err.has_error());
-  EXPECT_EQ(err.msg(),
-            "Discriminant value of 0x2 does not match any of the Variants.");
+  EXPECT_EQ(err.msg(), "Discriminant value of 0x2 does not match any of the Variants.");
 }
 
 TEST(ResolveVariant, DefaultValue) {
@@ -59,14 +56,11 @@ TEST(ResolveVariant, DefaultValue) {
 
   // Here b has no discriminant value, making it the default.
   auto a = fxl::MakeRefCounted<Variant>(0, std::vector<LazySymbol>{});
-  auto b =
-      fxl::MakeRefCounted<Variant>(std::nullopt, std::vector<LazySymbol>{});
+  auto b = fxl::MakeRefCounted<Variant>(std::nullopt, std::vector<LazySymbol>{});
 
   // 8-bit disciminant.
-  auto u8_type =
-      fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsigned, 1, "u8");
-  auto discr =
-      fxl::MakeRefCounted<DataMember>(std::string(), LazySymbol(u8_type), 0);
+  auto u8_type = fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsigned, 1, "u8");
+  auto discr = fxl::MakeRefCounted<DataMember>(std::string(), LazySymbol(u8_type), 0);
 
   auto rust_enum = MakeRustEnum("RustEnum", discr, {a, b});
   auto variant_part = rust_enum->variant_part().Get()->AsVariantPart();

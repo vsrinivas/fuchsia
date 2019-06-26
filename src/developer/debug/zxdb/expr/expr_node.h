@@ -85,8 +85,7 @@ class ExprNode : public fxl::RefCountedThreadSafe<ExprNode> {
   // reference counted.
   //
   // See also EvalFollowReferences below.
-  virtual void Eval(fxl::RefPtr<EvalContext> context,
-                    EvalCallback cb) const = 0;
+  virtual void Eval(fxl::RefPtr<EvalContext> context, EvalCallback cb) const = 0;
 
   // Like "Eval" but expands all references to the values they point to. When
   // evaluating a subexpression this is the variant you want because without
@@ -95,8 +94,7 @@ class ExprNode : public fxl::RefCountedThreadSafe<ExprNode> {
   //
   // The time you wouldn't want this is when calling externally where the
   // caller wants to know the actual type the expression evaluated to.
-  void EvalFollowReferences(fxl::RefPtr<EvalContext> context,
-                            EvalCallback cb) const;
+  void EvalFollowReferences(fxl::RefPtr<EvalContext> context, EvalCallback cb) const;
 
   // Dumps the tree to a stream with the given indent. Used for unit testing
   // and debugging.
@@ -139,11 +137,11 @@ class ArrayAccessExprNode : public ExprNode {
 
   // Converts the given value which is the result of executing the "inner"
   // expression and converts it to an integer if possible.
-  static Err InnerValueToOffset(fxl::RefPtr<EvalContext> context,
-                                const ExprValue& inner, int64_t* offset);
+  static Err InnerValueToOffset(fxl::RefPtr<EvalContext> context, const ExprValue& inner,
+                                int64_t* offset);
 
-  static void DoAccess(fxl::RefPtr<EvalContext> context, ExprValue left,
-                       int64_t offset, EvalCallback cb);
+  static void DoAccess(fxl::RefPtr<EvalContext> context, ExprValue left, int64_t offset,
+                       EvalCallback cb);
 
   fxl::RefPtr<ExprNode> left_;
   fxl::RefPtr<ExprNode> inner_;
@@ -161,8 +159,7 @@ class BinaryOpExprNode : public ExprNode {
   FRIEND_MAKE_REF_COUNTED(BinaryOpExprNode);
 
   BinaryOpExprNode();
-  BinaryOpExprNode(fxl::RefPtr<ExprNode> left, ExprToken op,
-                   fxl::RefPtr<ExprNode> right)
+  BinaryOpExprNode(fxl::RefPtr<ExprNode> left, ExprToken op, fxl::RefPtr<ExprNode> right)
       : left_(std::move(left)), op_(std::move(op)), right_(std::move(right)) {}
   ~BinaryOpExprNode() override = default;
 
@@ -183,11 +180,8 @@ class CastExprNode : public ExprNode {
   FRIEND_MAKE_REF_COUNTED(CastExprNode);
 
   CastExprNode();
-  CastExprNode(CastType cast_type, fxl::RefPtr<TypeExprNode> to_type,
-               fxl::RefPtr<ExprNode> from)
-      : cast_type_(cast_type),
-        to_type_(std::move(to_type)),
-        from_(std::move(from)) {}
+  CastExprNode(CastType cast_type, fxl::RefPtr<TypeExprNode> to_type, fxl::RefPtr<ExprNode> from)
+      : cast_type_(cast_type), to_type_(std::move(to_type)), from_(std::move(from)) {}
   ~CastExprNode() override = default;
 
   CastType cast_type_;
@@ -228,8 +222,7 @@ class FunctionCallExprNode : public ExprNode {
   FRIEND_MAKE_REF_COUNTED(FunctionCallExprNode);
 
   FunctionCallExprNode();
-  FunctionCallExprNode(ParsedIdentifier name,
-                       std::vector<fxl::RefPtr<ExprNode>> args)
+  FunctionCallExprNode(ParsedIdentifier name, std::vector<fxl::RefPtr<ExprNode>> args)
       : name_(std::move(name)), args_(std::move(args)) {}
   ~FunctionCallExprNode() override = default;
 
@@ -260,8 +253,7 @@ class IdentifierExprNode : public ExprNode {
   IdentifierExprNode() = default;
 
   // Simple one-name identifier.
-  IdentifierExprNode(std::string name)
-      : ident_(ParsedIdentifierComponent(std::move(name))) {}
+  IdentifierExprNode(std::string name) : ident_(ParsedIdentifierComponent(std::move(name))) {}
 
   IdentifierExprNode(ParsedIdentifier id) : ident_(std::move(id)) {}
   ~IdentifierExprNode() override = default;
@@ -337,8 +329,7 @@ class SizeofExprNode : public ExprNode {
   SizeofExprNode(fxl::RefPtr<ExprNode> expr) : expr_(std::move(expr)) {}
   ~SizeofExprNode() override = default;
 
-  static void SizeofType(fxl::RefPtr<EvalContext> context, const Type* type,
-                         EvalCallback cb);
+  static void SizeofType(fxl::RefPtr<EvalContext> context, const Type* type, EvalCallback cb);
 
   fxl::RefPtr<ExprNode> expr_;
 };

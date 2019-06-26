@@ -23,11 +23,10 @@ namespace {
 
 // Defines a class with two member types "a" and "b". It puts the definitions
 // of "a" and "b' members into the two out params.
-fxl::RefPtr<Collection> GetTestClassType(const DataMember** member_a,
-                                         const DataMember** member_b) {
+fxl::RefPtr<Collection> GetTestClassType(const DataMember** member_a, const DataMember** member_b) {
   auto int32_type = MakeInt32Type();
-  auto sc = MakeCollectionType(DwarfTag::kStructureType, "Foo",
-                               {{"a", int32_type}, {"b", int32_type}});
+  auto sc =
+      MakeCollectionType(DwarfTag::kStructureType, "Foo", {{"a", int32_type}, {"b", int32_type}});
 
   *member_a = sc->data_members()[0].Get()->AsDataMember();
   *member_b = sc->data_members()[1].Get()->AsDataMember();
@@ -36,9 +35,8 @@ fxl::RefPtr<Collection> GetTestClassType(const DataMember** member_a,
 
 // Helper function that calls ResolveMember with an identifier with the
 // containing value.
-Err ResolveMemberFromString(fxl::RefPtr<EvalContext> eval_context,
-                            const ExprValue& base, const std::string& name,
-                            ExprValue* out) {
+Err ResolveMemberFromString(fxl::RefPtr<EvalContext> eval_context, const ExprValue& base,
+                            const std::string& name, ExprValue* out) {
   ParsedIdentifier ident;
   Err err = ExprParser::ParseIdentifier(name, &ident);
   if (err.has_error())
@@ -57,10 +55,8 @@ TEST(ResolveCollection, GoodMemberAccess) {
   auto sc = GetTestClassType(&a_data, &b_data);
 
   // Make this const volatile to add extra layers.
-  auto vol_sc = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kVolatileType,
-                                                  LazySymbol(sc));
-  auto const_vol_sc = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kConstType,
-                                                        LazySymbol(vol_sc));
+  auto vol_sc = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kVolatileType, LazySymbol(sc));
+  auto const_vol_sc = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kConstType, LazySymbol(vol_sc));
 
   // This struct has the values 1 and 2 in it.
   constexpr uint64_t kBaseAddr = 0x11000;
@@ -110,8 +106,7 @@ TEST(ResolveCollection, BadMemberArgs) {
   EXPECT_EQ("Can't resolve data member on non-struct/class value.", err.msg());
 
   constexpr uint64_t kBaseAddr = 0x11000;
-  ExprValue base(sc, {0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00},
-                 ExprValueSource(kBaseAddr));
+  ExprValue base(sc, {0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00}, ExprValueSource(kBaseAddr));
 
   // Null data member pointer.
   out = ExprValue();
@@ -128,8 +123,7 @@ TEST(ResolveCollection, BadMemberAccess) {
   auto sc = GetTestClassType(&a_data, &b_data);
 
   constexpr uint64_t kBaseAddr = 0x11000;
-  ExprValue base(sc, {0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00},
-                 ExprValueSource(kBaseAddr));
+  ExprValue base(sc, {0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00}, ExprValueSource(kBaseAddr));
 
   // Lookup by name that doesn't exist.
   ExprValue out;
@@ -161,17 +155,14 @@ TEST(ResolveCollection, DerivedClass) {
   auto derived = fxl::MakeRefCounted<Collection>(DwarfTag::kClassType);
 
   uint32_t base_offset = 4;  // Offset in derived of base.
-  auto inherited =
-      fxl::MakeRefCounted<InheritedFrom>(LazySymbol(base), base_offset);
+  auto inherited = fxl::MakeRefCounted<InheritedFrom>(LazySymbol(base), base_offset);
   derived->set_inherited_from({LazySymbol(inherited)});
 
   // This struct has the values 1 and 2 in it, offset by 4 bytes (the offset
   // within "derived" of "base").
   constexpr uint64_t kBaseAddr = 0x11000;
-  ExprValue value(
-      derived,
-      {0xff, 0xff, 0xff, 0xff, 0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00},
-      ExprValueSource(kBaseAddr));
+  ExprValue value(derived, {0xff, 0xff, 0xff, 0xff, 0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00},
+                  ExprValueSource(kBaseAddr));
 
   // Resolve B by name.
   ExprValue out;
@@ -189,8 +180,7 @@ TEST(ResolveCollection, DerivedClass) {
   err = ResolveInherited(value, inherited.get(), &base_value);
   EXPECT_FALSE(err.has_error());
 
-  ExprValue expected_base(base,
-                          {0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00},
+  ExprValue expected_base(base, {0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00},
                           ExprValueSource(kBaseAddr + base_offset));
   EXPECT_EQ(expected_base, base_value);
 

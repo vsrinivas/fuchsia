@@ -24,9 +24,7 @@ class IndexWalker {
 
   ~IndexWalker();
 
-  const ModuleSymbolIndexNode* current() const {
-    return path_.empty() ? nullptr : path_.back();
-  }
+  const ModuleSymbolIndexNode* current() const { return path_.empty() ? nullptr : path_.back(); }
 
   // Goes up one level. If the current scope is "my_namespace::MyClass",
   // the new scope will be "my_namespace". Returns true if anything happened,
@@ -74,13 +72,12 @@ class IndexWalker {
 
   // Returns true if the template parts of the component match a canonicalized
   // version of the template parameters extracted from the index string.
-  static bool ComponentMatchesTemplateOnly(
-      const std::string& index_string, const ParsedIdentifierComponent& comp);
+  static bool ComponentMatchesTemplateOnly(const std::string& index_string,
+                                           const ParsedIdentifierComponent& comp);
 
   // Returns true if all templates using the given base |name| will be before
   // the given indexed name in an index sorted by ASCII string values.
-  static bool IsIndexStringBeyondName(std::string_view index_name,
-                                      std::string_view name);
+  static bool IsIndexStringBeyondName(std::string_view index_name, std::string_view name);
 
  private:
   // The path of index nodes to the current location. The current location is

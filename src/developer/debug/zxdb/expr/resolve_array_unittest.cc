@@ -31,8 +31,7 @@ TEST_F(ResolveArrayTest, ResolveStatic) {
 
   // Array holds 3 uint16_t.
   constexpr uint32_t kTypeSize = 2;
-  auto elt_type = fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsigned,
-                                                kTypeSize, "uint16_t");
+  auto elt_type = fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsigned, kTypeSize, "uint16_t");
   auto array_type = fxl::MakeRefCounted<ArrayType>(elt_type, 3);
 
   // Values are 0x1122, 0x3344, 0x5566
@@ -67,17 +66,14 @@ TEST_F(ResolveArrayTest, ResolvePointer) {
 
   // Array holds 3 uint16_t.
   constexpr uint32_t kTypeSize = 2;
-  auto elt_type = fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsigned,
-                                                kTypeSize, "uint16_t");
-  auto ptr_type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType,
-                                                    LazySymbol(elt_type));
+  auto elt_type = fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsigned, kTypeSize, "uint16_t");
+  auto ptr_type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, LazySymbol(elt_type));
 
   // Create memory with two values 0x3344, 0x5566. Note that these are offset
   // one value from the beginning of the array so the requested address of the
   // kBeginIndex'th element matches this address.
   constexpr uint64_t kBeginAddress = kBaseAddress + kBeginIndex * kTypeSize;
-  eval_context->data_provider()->AddMemory(kBeginAddress,
-                                           {0x44, 0x33, 0x66, 0x55});
+  eval_context->data_provider()->AddMemory(kBeginAddress, {0x44, 0x33, 0x66, 0x55});
 
   // Data in the value is the pointer to the beginning of the array.
   ExprValue value(ptr_type, {0, 0, 0x10, 0, 0, 0, 0, 0});
@@ -86,8 +82,7 @@ TEST_F(ResolveArrayTest, ResolvePointer) {
   Err out_err;
   std::vector<ExprValue> result;
   ResolveArray(eval_context, value, kBeginIndex, kEndIndex,
-               [&called, &out_err, &result](const Err& err,
-                                            std::vector<ExprValue> values) {
+               [&called, &out_err, &result](const Err& err, std::vector<ExprValue> values) {
                  called = true;
                  out_err = err;
                  result = std::move(values);

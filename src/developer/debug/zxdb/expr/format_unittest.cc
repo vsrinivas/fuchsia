@@ -39,8 +39,7 @@ class FormatTest : public TestWithLoop {
       loop().Run();
 
     called = false;
-    FillFormatNodeDescription(node, opts, eval_context_,
-                              fit::defer_callback([&called]() {
+    FillFormatNodeDescription(node, opts, eval_context_, fit::defer_callback([&called]() {
                                 debug_ipc::MessageLoop::Current()->QuitNow();
                                 called = true;
                               }));
@@ -48,8 +47,8 @@ class FormatTest : public TestWithLoop {
       loop().Run();
   }
 
-  std::unique_ptr<FormatNode> GetDescribedNode(
-      const ExprValue& value, const FormatExprValueOptions& opts) {
+  std::unique_ptr<FormatNode> GetDescribedNode(const ExprValue& value,
+                                               const FormatExprValueOptions& opts) {
     auto node = std::make_unique<FormatNode>(std::string(), value);
     SyncFormat(node.get(), opts);
     return node;
@@ -78,8 +77,7 @@ class FormatTest : public TestWithLoop {
 
   // Returns "<type>, <description>" for the given formatting.
   // On error, returns "Err: <msg>".
-  std::string SyncTypeDesc(const ExprValue& value,
-                           const FormatExprValueOptions& opts) {
+  std::string SyncTypeDesc(const ExprValue& value, const FormatExprValueOptions& opts) {
     auto node = GetDescribedNode(value, opts);
     return GetTypeDesc(node.get());
   }
@@ -94,8 +92,7 @@ class FormatTest : public TestWithLoop {
   //   <child name> = <child type>, <child description>
   //     <child level 2 name> = <child 2 type>, <child 2 description>
   //   <child name> = <child type>, <child description>
-  std::string SyncTreeTypeDesc(const ExprValue& value,
-                               const FormatExprValueOptions& opts) {
+  std::string SyncTreeTypeDesc(const ExprValue& value, const FormatExprValueOptions& opts) {
     auto node = std::make_unique<FormatNode>(std::string(), value);
     RecursiveSyncDescribe(node.get(), true, opts);
 
@@ -106,8 +103,7 @@ class FormatTest : public TestWithLoop {
 
  private:
   // Recursive backend for SyncTreeTypeDesc.
-  void RecursiveTreeTypeDesc(const FormatNode* node, std::string* output,
-                             int indent) {
+  void RecursiveTreeTypeDesc(const FormatNode* node, std::string* output, int indent) {
     output->append(std::string(indent * 2, ' '));
     output->append(node->name());
     output->append(" = ");
@@ -126,33 +122,27 @@ TEST_F(FormatTest, Signed) {
   FormatExprValueOptions opts;
 
   // 8-bit.
-  ExprValue val_int8(
-      fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeSigned, 1, "char"),
-      {123});
+  ExprValue val_int8(fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeSigned, 1, "char"), {123});
   EXPECT_EQ("char, 123", SyncTypeDesc(val_int8, opts));
 
   // 16-bit.
-  ExprValue val_int16(
-      fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeSigned, 2, "short"),
-      {0xe0, 0xf0});
+  ExprValue val_int16(fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeSigned, 2, "short"),
+                      {0xe0, 0xf0});
   EXPECT_EQ("short, -3872", SyncTypeDesc(val_int16, opts));
 
   // 32-bit.
-  ExprValue val_int32(
-      fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeSigned, 4, "int"),
-      {0x01, 0x02, 0x03, 0x04});
+  ExprValue val_int32(fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeSigned, 4, "int"),
+                      {0x01, 0x02, 0x03, 0x04});
   EXPECT_EQ("int, 67305985", SyncTypeDesc(val_int32, opts));
 
   // 64-bit.
-  ExprValue val_int64(
-      fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeSigned, 8, "long long"),
-      {0xfe, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff});
+  ExprValue val_int64(fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeSigned, 8, "long long"),
+                      {0xfe, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff});
   EXPECT_EQ("long long, -2", SyncTypeDesc(val_int64, opts));
 
   // Force a 32-bit float to an int.
-  ExprValue val_float(
-      fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeFloat, 4, "float"),
-      {0x04, 0x03, 0x02, 0x01});
+  ExprValue val_float(fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeFloat, 4, "float"),
+                      {0x04, 0x03, 0x02, 0x01});
   opts.num_format = FormatExprValueOptions::NumFormat::kSigned;
   EXPECT_EQ("float, 16909060", SyncTypeDesc(val_float, opts));
 }
@@ -161,33 +151,27 @@ TEST_F(FormatTest, Unsigned) {
   FormatExprValueOptions opts;
 
   // 8-bit.
-  ExprValue val_int8(
-      fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsigned, 1, "char"),
-      {123});
+  ExprValue val_int8(fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsigned, 1, "char"), {123});
   EXPECT_EQ("char, 123", SyncTypeDesc(val_int8, opts));
 
   // 16-bit.
-  ExprValue val_int16(
-      fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsigned, 1, "short"),
-      {0xe0, 0xf0});
+  ExprValue val_int16(fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsigned, 1, "short"),
+                      {0xe0, 0xf0});
   EXPECT_EQ("short, 61664", SyncTypeDesc(val_int16, opts));
 
   // 32-bit.
-  ExprValue val_int32(
-      fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsigned, 1, "int"),
-      {0x01, 0x02, 0x03, 0x04});
+  ExprValue val_int32(fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsigned, 1, "int"),
+                      {0x01, 0x02, 0x03, 0x04});
   EXPECT_EQ("int, 67305985", SyncTypeDesc(val_int32, opts));
 
   // 64-bit.
-  ExprValue val_int64(fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsigned,
-                                                    1, "long long"),
+  ExprValue val_int64(fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsigned, 1, "long long"),
                       {0xfe, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff});
   EXPECT_EQ("long long, 18446744073709551614", SyncTypeDesc(val_int64, opts));
 
   // Force a 32-bit float to an unsigned and a hex.
-  ExprValue val_float(
-      fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeFloat, 4, "float"),
-      {0x04, 0x03, 0x02, 0x01});
+  ExprValue val_float(fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeFloat, 4, "float"),
+                      {0x04, 0x03, 0x02, 0x01});
   opts.num_format = FormatExprValueOptions::NumFormat::kUnsigned;
   EXPECT_EQ("float, 16909060", SyncTypeDesc(val_float, opts));
   opts.num_format = FormatExprValueOptions::NumFormat::kHex;
@@ -198,21 +182,17 @@ TEST_F(FormatTest, Bool) {
   FormatExprValueOptions opts;
 
   // 8-bit true.
-  ExprValue val_true8(
-      fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeBoolean, 1, "bool"),
-      {0x01});
+  ExprValue val_true8(fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeBoolean, 1, "bool"), {0x01});
   EXPECT_EQ("bool, true", SyncTypeDesc(val_true8, opts));
 
   // 8-bit false.
-  ExprValue val_false8(
-      fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeBoolean, 1, "bool"),
-      {0x00});
+  ExprValue val_false8(fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeBoolean, 1, "bool"),
+                       {0x00});
   EXPECT_EQ("bool, false", SyncTypeDesc(val_false8, opts));
 
   // 32-bit true.
-  ExprValue val_false32(
-      fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeBoolean, 4, "bool"),
-      {0x00, 0x01, 0x00, 0x00});
+  ExprValue val_false32(fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeBoolean, 4, "bool"),
+                        {0x00, 0x01, 0x00, 0x00});
   EXPECT_EQ("bool, false", SyncTypeDesc(val_false8, opts));
 }
 
@@ -220,34 +200,29 @@ TEST_F(FormatTest, Char) {
   FormatExprValueOptions opts;
 
   // 8-bit char.
-  ExprValue val_char8(
-      fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsignedChar, 1, "char"),
-      {'c'});
+  ExprValue val_char8(fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsignedChar, 1, "char"),
+                      {'c'});
   EXPECT_EQ("char, 'c'", SyncTypeDesc(val_char8, opts));
 
   // Hex encoded 8-bit char.
   ExprValue val_char8_zero(
-      fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsignedChar, 1, "char"),
-      {0});
+      fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsignedChar, 1, "char"), {0});
   EXPECT_EQ(R"(char, '\x00')", SyncTypeDesc(val_char8_zero, opts));
 
   // Backslash-escaped 8-bit char.
   ExprValue val_char8_quote(
-      fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsignedChar, 1, "char"),
-      {'\"'});
+      fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsignedChar, 1, "char"), {'\"'});
   EXPECT_EQ(R"(char, '\"')", SyncTypeDesc(val_char8_quote, opts));
 
   // 32-bit char (downcasted to 8 for printing).
-  ExprValue val_char32(
-      fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeSignedChar, 4, "big"),
-      {'A', 1, 2, 3});
+  ExprValue val_char32(fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeSignedChar, 4, "big"),
+                       {'A', 1, 2, 3});
   EXPECT_EQ("big, 'A'", SyncTypeDesc(val_char32, opts));
 
   // 32-bit int forced to char.
   opts.num_format = FormatExprValueOptions::NumFormat::kChar;
-  ExprValue val_int32(
-      fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeSigned, 4, "int32_t"),
-      {'$', 0x01, 0x00, 0x00});
+  ExprValue val_int32(fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeSigned, 4, "int32_t"),
+                      {'$', 0x01, 0x00, 0x00});
   EXPECT_EQ("int32_t, '$'", SyncTypeDesc(val_int32, opts));
 }
 
@@ -259,17 +234,15 @@ TEST_F(FormatTest, Float) {
   // 32-bit float.
   float in_float = 3.14159;
   memcpy(buffer, &in_float, 4);
-  ExprValue val_float(
-      fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeFloat, 4, "float"),
-      std::vector<uint8_t>(&buffer[0], &buffer[4]));
+  ExprValue val_float(fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeFloat, 4, "float"),
+                      std::vector<uint8_t>(&buffer[0], &buffer[4]));
   EXPECT_EQ("float, 3.14159", SyncTypeDesc(val_float, opts));
 
   // 64-bit float.
   double in_double = 9.875e+12;
   memcpy(buffer, &in_double, 8);
-  ExprValue val_double(
-      fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeFloat, 8, "double"),
-      std::vector<uint8_t>(&buffer[0], &buffer[8]));
+  ExprValue val_double(fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeFloat, 8, "double"),
+                       std::vector<uint8_t>(&buffer[0], &buffer[8]));
   EXPECT_EQ("double, 9.875e+12", SyncTypeDesc(val_double, opts));
 }
 
@@ -281,8 +254,8 @@ TEST_F(FormatTest, Structs) {
 
   // Make an int reference. Reference type printing combined with struct type
   // printing can get complicated.
-  auto int_ref = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kReferenceType,
-                                                   LazySymbol(int32_type));
+  auto int_ref =
+      fxl::MakeRefCounted<ModifiedType>(DwarfTag::kReferenceType, LazySymbol(int32_type));
 
   // The references point to this data.
   constexpr uint64_t kAddress = 0x1100;
@@ -290,16 +263,15 @@ TEST_F(FormatTest, Structs) {
 
   // Struct with two values, an int and a int&, and a pair of two of those
   // structs.
-  auto foo = MakeCollectionType(DwarfTag::kStructureType, "Foo",
-                                {{"a", int32_type}, {"b", int_ref}});
-  auto pair = MakeCollectionType(DwarfTag::kStructureType, "Pair",
-                                 {{"first", foo}, {"second", foo}});
+  auto foo =
+      MakeCollectionType(DwarfTag::kStructureType, "Foo", {{"a", int32_type}, {"b", int_ref}});
+  auto pair =
+      MakeCollectionType(DwarfTag::kStructureType, "Pair", {{"first", foo}, {"second", foo}});
 
-  ExprValue pair_value(
-      pair, {0x11, 0x00, 0x11, 0x00,                            // (int32) a
-             0x00, 0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,    // (int32&) b
-             0x33, 0x00, 0x33, 0x00,                            // (int32) a
-             0x00, 0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00});  // (int32&) b
+  ExprValue pair_value(pair, {0x11, 0x00, 0x11, 0x00,                            // (int32) a
+                              0x00, 0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,    // (int32&) b
+                              0x33, 0x00, 0x33, 0x00,                            // (int32) a
+                              0x00, 0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00});  // (int32&) b
 
   // The references when not printing all types are printed after the
   // struct member name.
@@ -320,10 +292,9 @@ TEST_F(FormatTest, Struct_Anon) {
   // Test an anonymous struct. Clang will generate structs with no names for
   // things like closures. This struct has no members.
   auto anon_struct = fxl::MakeRefCounted<Collection>(DwarfTag::kStructureType);
-  auto anon_struct_ptr = fxl::MakeRefCounted<ModifiedType>(
-      DwarfTag::kPointerType, LazySymbol(anon_struct));
-  ExprValue anon_value(anon_struct_ptr,
-                       {0x00, 0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00});
+  auto anon_struct_ptr =
+      fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, LazySymbol(anon_struct));
+  ExprValue anon_value(anon_struct_ptr, {0x00, 0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00});
 
   EXPECT_EQ(
       " = (anon struct)*, 0x1100\n"
@@ -335,9 +306,8 @@ TEST_F(FormatTest, Struct_Anon) {
 // print these.
 TEST_F(FormatTest, Struct_Artificial) {
   auto int32_type = MakeInt32Type();
-  auto foo_type =
-      MakeCollectionType(DwarfTag::kStructureType, "Foo",
-                         {{"normal", int32_type}, {"artificial", int32_type}});
+  auto foo_type = MakeCollectionType(DwarfTag::kStructureType, "Foo",
+                                     {{"normal", int32_type}, {"artificial", int32_type}});
 
   // Print without anything being marked artificial.
   ExprValue value(foo_type, {1, 0, 0, 0, 2, 0, 0, 0});
@@ -348,8 +318,8 @@ TEST_F(FormatTest, Struct_Artificial) {
       SyncTreeTypeDesc(value, FormatExprValueOptions()));
 
   // Mark second one as artificial.
-  DataMember* artificial_member = const_cast<DataMember*>(
-      foo_type->data_members()[1].Get()->AsDataMember());
+  DataMember* artificial_member =
+      const_cast<DataMember*>(foo_type->data_members()[1].Get()->AsDataMember());
   artificial_member->set_artificial(true);
 
   EXPECT_EQ(
@@ -366,8 +336,7 @@ TEST_F(FormatTest, Union) {
   // Define a union type with two int32 values.
   auto int32_type = MakeInt32Type();
 
-  auto union_type =
-      fxl::MakeRefCounted<Collection>(DwarfTag::kUnionType, "MyUnion");
+  auto union_type = fxl::MakeRefCounted<Collection>(DwarfTag::kUnionType, "MyUnion");
   union_type->set_byte_size(int32_type->byte_size());
 
   std::vector<LazySymbol> data_members;
@@ -397,23 +366,20 @@ TEST_F(FormatTest, Union) {
 // Tests formatting when a class has derived base classes.
 TEST_F(FormatTest, DerivedClasses) {
   auto int32_type = MakeInt32Type();
-  auto base = MakeCollectionType(DwarfTag::kStructureType, "Base",
-                                 {{"a", int32_type}, {"b", int32_type}});
+  auto base =
+      MakeCollectionType(DwarfTag::kStructureType, "Base", {{"a", int32_type}, {"b", int32_type}});
 
   // This second base class is empty, it should be omitted from the output.
-  auto empty_base =
-      fxl::MakeRefCounted<Collection>(DwarfTag::kClassType, "EmptyBase");
+  auto empty_base = fxl::MakeRefCounted<Collection>(DwarfTag::kClassType, "EmptyBase");
 
   // Derived class, leave enough room to hold |Base|.
-  auto derived = MakeCollectionTypeWithOffset(
-      DwarfTag::kStructureType, "Derived", base->byte_size(),
-      {{"c", int32_type}, {"d", int32_type}});
+  auto derived =
+      MakeCollectionTypeWithOffset(DwarfTag::kStructureType, "Derived", base->byte_size(),
+                                   {{"c", int32_type}, {"d", int32_type}});
 
   auto inherited = fxl::MakeRefCounted<InheritedFrom>(LazySymbol(base), 0);
-  auto empty_inherited =
-      fxl::MakeRefCounted<InheritedFrom>(LazySymbol(empty_base), 0);
-  derived->set_inherited_from(
-      {LazySymbol(inherited), LazySymbol(empty_inherited)});
+  auto empty_inherited = fxl::MakeRefCounted<InheritedFrom>(LazySymbol(empty_base), 0);
+  derived->set_inherited_from({LazySymbol(inherited), LazySymbol(empty_inherited)});
 
   uint8_t kAValue = 1;
   uint8_t kBValue = 2;
@@ -441,8 +407,7 @@ TEST_F(FormatTest, Pointer) {
   FormatExprValueOptions opts;
 
   auto base_type = MakeInt32Type();
-  auto ptr_type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType,
-                                                    LazySymbol(base_type));
+  auto ptr_type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, LazySymbol(base_type));
 
   std::vector<uint8_t> data = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08};
   ExprValue value(ptr_type, data);
@@ -474,10 +439,9 @@ TEST_F(FormatTest, Pointer) {
 TEST_F(FormatTest, Reference) {
   FormatExprValueOptions opts;
 
-  auto base_type =
-      fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeSigned, 1, "int");
-  auto ref_type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kReferenceType,
-                                                    LazySymbol(base_type));
+  auto base_type = fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeSigned, 1, "int");
+  auto ref_type =
+      fxl::MakeRefCounted<ModifiedType>(DwarfTag::kReferenceType, LazySymbol(base_type));
   constexpr uint64_t kAddress = 0x1100;
   provider()->AddMemory(kAddress, {123, 0, 0, 0, 0, 0, 0, 0});
 
@@ -500,8 +464,8 @@ TEST_F(FormatTest, Reference) {
 
   // Test an rvalue reference. This is treated the same as a regular reference
   // from an interpretation and printing perspective.
-  auto rvalue_ref_type = fxl::MakeRefCounted<ModifiedType>(
-      DwarfTag::kRvalueReferenceType, LazySymbol(base_type));
+  auto rvalue_ref_type =
+      fxl::MakeRefCounted<ModifiedType>(DwarfTag::kRvalueReferenceType, LazySymbol(base_type));
   value = ExprValue(rvalue_ref_type, data);
   opts.verbosity = FormatExprValueOptions::Verbosity::kMedium;
   EXPECT_EQ(
@@ -543,11 +507,10 @@ TEST_F(FormatTest, RustEnum) {
 }
 
 TEST_F(FormatTest, RustTuple) {
-  auto tuple_two_type = MakeTestRustTuple("(int32_t, uint64_t)",
-                                          {MakeInt32Type(), MakeUint64Type()});
-  ExprValue tuple_two(tuple_two_type,
-                      {123, 0, 0, 0,               // int32_t member 0
-                       78, 0, 0, 0, 0, 0, 0, 0});  // uint64_t member 1
+  auto tuple_two_type =
+      MakeTestRustTuple("(int32_t, uint64_t)", {MakeInt32Type(), MakeUint64Type()});
+  ExprValue tuple_two(tuple_two_type, {123, 0, 0, 0,               // int32_t member 0
+                                       78, 0, 0, 0, 0, 0, 0, 0});  // uint64_t member 1
   FormatExprValueOptions opts;
   EXPECT_EQ(
       " = (int32_t, uint64_t), \n"
@@ -557,8 +520,7 @@ TEST_F(FormatTest, RustTuple) {
 
   // 1-element tuple struct.
   auto tuple_struct_one_type = MakeTestRustTuple("Some", {MakeInt32Type()});
-  ExprValue tuple_struct_one(tuple_struct_one_type,
-                             {123, 0, 0, 0});  // int32_t member 0
+  ExprValue tuple_struct_one(tuple_struct_one_type, {123, 0, 0, 0});  // int32_t member 0
   EXPECT_EQ(
       " = Some, \n"
       "  0 = int32_t, 123\n",

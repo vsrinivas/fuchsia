@@ -80,41 +80,37 @@ TEST(FindName, FindLocalVariable) {
   function->set_assigned_name("function");
   uint64_t kFunctionBeginAddr = 0x1000;
   uint64_t kFunctionEndAddr = 0x2000;
-  function->set_code_ranges(
-      AddressRanges(AddressRange(kFunctionBeginAddr, kFunctionEndAddr)));
+  function->set_code_ranges(AddressRanges(AddressRange(kFunctionBeginAddr, kFunctionEndAddr)));
   function->set_parent(LazySymbol(ns));
 
   // Function parameters.
-  auto param_value = MakeVariableForTest(
-      "value", int32_type, kFunctionBeginAddr, kFunctionEndAddr, var_loc);
-  auto param_other = MakeVariableForTest(
-      "other_param", int32_type, kFunctionBeginAddr, kFunctionEndAddr, var_loc);
+  auto param_value =
+      MakeVariableForTest("value", int32_type, kFunctionBeginAddr, kFunctionEndAddr, var_loc);
+  auto param_other =
+      MakeVariableForTest("other_param", int32_type, kFunctionBeginAddr, kFunctionEndAddr, var_loc);
   function->set_parameters({LazySymbol(param_value), LazySymbol(param_other)});
 
   // Function local variables.
-  auto var_value = MakeVariableForTest("value", int32_type, kFunctionBeginAddr,
+  auto var_value =
+      MakeVariableForTest("value", int32_type, kFunctionBeginAddr, kFunctionEndAddr, var_loc);
+  auto var_other = MakeVariableForTest("function_local", int32_type, kFunctionBeginAddr,
                                        kFunctionEndAddr, var_loc);
-  auto var_other =
-      MakeVariableForTest("function_local", int32_type, kFunctionBeginAddr,
-                          kFunctionEndAddr, var_loc);
   function->set_variables({LazySymbol(var_value), LazySymbol(var_other)});
-  FindNameContext function_context(&setup.process(), symbol_context,
-                                   function.get());
+  FindNameContext function_context(&setup.process(), symbol_context, function.get());
 
   // Inner block.
   uint64_t kBlockBeginAddr = 0x1100;
   uint64_t kBlockEndAddr = 0x1200;
   auto block = fxl::MakeRefCounted<CodeBlock>(DwarfTag::kLexicalBlock);
-  block->set_code_ranges(
-      AddressRanges(AddressRange(kBlockBeginAddr, kBlockEndAddr)));
+  block->set_code_ranges(AddressRanges(AddressRange(kBlockBeginAddr, kBlockEndAddr)));
   block->set_parent(LazySymbol(function));
   function->set_inner_blocks({LazySymbol(block)});
 
   // Inner block variables.
-  auto block_value = MakeVariableForTest("value", int32_type, kBlockBeginAddr,
-                                         kBlockEndAddr, var_loc);
-  auto block_other = MakeVariableForTest(
-      "block_local", int32_type, kBlockBeginAddr, kBlockEndAddr, var_loc);
+  auto block_value =
+      MakeVariableForTest("value", int32_type, kBlockBeginAddr, kBlockEndAddr, var_loc);
+  auto block_other =
+      MakeVariableForTest("block_local", int32_type, kBlockBeginAddr, kBlockEndAddr, var_loc);
   block->set_variables({LazySymbol(block_value), LazySymbol(block_other)});
   FindNameContext block_context(&setup.process(), symbol_context, block.get());
 
@@ -135,9 +131,8 @@ TEST(FindName, FindLocalVariable) {
   EXPECT_EQ(var_value->GetAssignedName(), found.GetName());
 
   // Find "::value" should match nothing.
-  ParsedIdentifier value_global_ident(
-      IdentifierQualification::kGlobal,
-      ParsedIdentifierComponent(var_value->GetAssignedName()));
+  ParsedIdentifier value_global_ident(IdentifierQualification::kGlobal,
+                                      ParsedIdentifierComponent(var_value->GetAssignedName()));
   found = FindName(function_context, all_kinds, value_global_ident);
   EXPECT_FALSE(found);
 
@@ -208,8 +203,7 @@ TEST(FindName, FindMember) {
   // Finding one member "b" should find the first one (Base1) because the
   // options find the first match by default.
   std::vector<FoundName> results;
-  FindMember(context, exact_var, d.derived_type.get(), b_ident, nullptr,
-             &results);
+  FindMember(context, exact_var, d.derived_type.get(), b_ident, nullptr, &results);
   ASSERT_EQ(1u, results.size());
   ASSERT_EQ(FoundName::kMemberVariable, results[0].kind());
   EXPECT_EQ(d.kBase1Offset, results[0].member().data_member_offset());
@@ -218,8 +212,7 @@ TEST(FindName, FindMember) {
   // Increase the limit, it should find both in order of Base1, Base2.
   results.clear();
   exact_var.max_results = 100;
-  FindMember(context, exact_var, d.derived_type.get(), b_ident, nullptr,
-             &results);
+  FindMember(context, exact_var, d.derived_type.get(), b_ident, nullptr, &results);
   ASSERT_EQ(2u, results.size());
   ASSERT_EQ(FoundName::kMemberVariable, results[0].kind());
   ASSERT_EQ(FoundName::kMemberVariable, results[1].kind());
@@ -266,8 +259,7 @@ TEST(FindName, FindIndexedName) {
   // Searching for "global" in module1's context should give the global in that
   // module.
   FindNameContext mod1_context(&setup.process(), symbol_context1);
-  FindIndexedName(mod1_context, all_opts, ParsedIdentifier(), global_ident,
-                  true, &found);
+  FindIndexedName(mod1_context, all_opts, ParsedIdentifier(), global_ident, true, &found);
   ASSERT_EQ(1u, found.size());
   EXPECT_EQ(global1.var.get(), found[0].variable());
 
@@ -275,23 +267,21 @@ TEST(FindName, FindIndexedName) {
   // module.
   found.clear();
   FindNameContext mod2_context(&setup.process(), symbol_context2);
-  FindIndexedName(mod2_context, all_opts, ParsedIdentifier(), global_ident,
-                  true, &found);
+  FindIndexedName(mod2_context, all_opts, ParsedIdentifier(), global_ident, true, &found);
   ASSERT_EQ(1u, found.size());
   EXPECT_EQ(global2.var.get(), found[0].variable());
 
   // Searching for "var1" in module2's context should still find it even though
   // its in the other module.
   found.clear();
-  FindIndexedName(mod2_context, all_opts, ParsedIdentifier(), var1_ident, true,
-                  &found);
+  FindIndexedName(mod2_context, all_opts, ParsedIdentifier(), var1_ident, true, &found);
   ASSERT_EQ(1u, found.size());
   EXPECT_EQ(var1.var.get(), found[0].variable());
 
   // Searching for "var2" with only target-level symbols should still find it.
   found.clear();
-  FindIndexedName(FindNameContext(&setup.target()), all_opts,
-                  ParsedIdentifier(), var2_ident, true, &found);
+  FindIndexedName(FindNameContext(&setup.target()), all_opts, ParsedIdentifier(), var2_ident, true,
+                  &found);
   ASSERT_EQ(1u, found.size());
   EXPECT_EQ(var2.var.get(), found[0].variable());
 }
@@ -311,8 +301,7 @@ TEST(FindName, FindIndexedNameInModule) {
   TestIndexedGlobalVariable global(&mod_sym, &root, kVarName);
 
   ParsedIdentifier var_ident(kVarName);
-  FindIndexedNameInModule(all_opts, &mod_sym, ParsedIdentifier(), var_ident,
-                          true, &found);
+  FindIndexedNameInModule(all_opts, &mod_sym, ParsedIdentifier(), var_ident, true, &found);
   ASSERT_EQ(1u, found.size());
   EXPECT_EQ(global.var.get(), found[0].variable());
 
@@ -320,8 +309,7 @@ TEST(FindName, FindIndexedNameInModule) {
   // find the variable in the upper namespace.
   ParsedIdentifier nested_ns(kNsName);
   found.clear();
-  FindIndexedNameInModule(all_opts, &mod_sym, nested_ns, var_ident, true,
-                          &found);
+  FindIndexedNameInModule(all_opts, &mod_sym, nested_ns, var_ident, true, &found);
   ASSERT_EQ(1u, found.size());
   EXPECT_EQ(global.var.get(), found[0].variable());
 
@@ -332,8 +320,7 @@ TEST(FindName, FindIndexedNameInModule) {
   // Re-search for the same name in the nested namespace, it should get the
   // nested one first.
   found.clear();
-  FindIndexedNameInModule(all_opts, &mod_sym, nested_ns, var_ident, true,
-                          &found);
+  FindIndexedNameInModule(all_opts, &mod_sym, nested_ns, var_ident, true, &found);
   ASSERT_EQ(1u, found.size());
   EXPECT_EQ(ns.var.get(), found[0].variable());
 
@@ -342,8 +329,7 @@ TEST(FindName, FindIndexedNameInModule) {
   ParsedIdentifier var_global_ident(IdentifierQualification::kGlobal,
                                     ParsedIdentifierComponent(kVarName));
   found.clear();
-  FindIndexedNameInModule(all_opts, &mod_sym, nested_ns, var_global_ident, true,
-                          &found);
+  FindIndexedNameInModule(all_opts, &mod_sym, nested_ns, var_global_ident, true, &found);
   ASSERT_EQ(1u, found.size());
   EXPECT_EQ(global.var.get(), found[0].variable());
   EXPECT_EQ(kVarName, found[0].GetName());
@@ -362,8 +348,7 @@ TEST(FindName, FindTypeName) {
   ParsedIdentifier global_type_name(kGlobalTypeName);
   auto global_type = fxl::MakeRefCounted<Collection>(DwarfTag::kClassType);
   global_type->set_assigned_name(kGlobalTypeName);
-  TestIndexedSymbol global_indexed(mod.get(), &root, kGlobalTypeName,
-                                   global_type);
+  TestIndexedSymbol global_indexed(mod.get(), &root, kGlobalTypeName, global_type);
 
   // Child type definition inside the global class name. Currently types don't
   // have child types and everything is found via the index.
@@ -375,27 +360,24 @@ TEST(FindName, FindTypeName) {
   ASSERT_FALSE(err.has_error());
   auto child_type = fxl::MakeRefCounted<Collection>(DwarfTag::kClassType);
   child_type->set_assigned_name(kChildTypeName);
-  TestIndexedSymbol child_indexed(mod.get(), global_indexed.index_node,
-                                  kChildTypeName, child_type);
+  TestIndexedSymbol child_indexed(mod.get(), global_indexed.index_node, kChildTypeName, child_type);
 
   // Declares a variable that points to the GlobalType. It will be the "this"
   // pointer for the function. The address range of this variable doesn't
   // overlap the function. This means we can never compute its value, but since
   // it's syntactically in-scope, we should still be able to use its type
   // to resolve type names on the current class.
-  auto global_type_ptr = fxl::MakeRefCounted<ModifiedType>(
-      DwarfTag::kPointerType, LazySymbol(global_type));
-  auto this_var = MakeVariableForTest(
-      "this", global_type_ptr, 0x9000, 0x9001,
-      {llvm::dwarf::DW_OP_reg0, llvm::dwarf::DW_OP_stack_value});
+  auto global_type_ptr =
+      fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, LazySymbol(global_type));
+  auto this_var = MakeVariableForTest("this", global_type_ptr, 0x9000, 0x9001,
+                                      {llvm::dwarf::DW_OP_reg0, llvm::dwarf::DW_OP_stack_value});
 
   // Function as a member of GlobalType.
   auto function = fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);
   function->set_assigned_name("function");
   uint64_t kFunctionBeginAddr = 0x1000;
   uint64_t kFunctionEndAddr = 0x2000;
-  function->set_code_ranges(
-      AddressRanges(AddressRange(kFunctionBeginAddr, kFunctionEndAddr)));
+  function->set_code_ranges(AddressRanges(AddressRange(kFunctionBeginAddr, kFunctionEndAddr)));
   function->set_object_pointer(LazySymbol(this_var));
 
   // This context declares a target and a block but no current module, which
@@ -463,13 +445,11 @@ TEST(FindName, FindTemplateName) {
 
   auto template_int = fxl::MakeRefCounted<Collection>(DwarfTag::kClassType);
   template_int->set_assigned_name(kTemplateIntName);
-  TestIndexedSymbol template_int_indexed(mod.get(), &root, kTemplateIntName,
-                                         template_int);
+  TestIndexedSymbol template_int_indexed(mod.get(), &root, kTemplateIntName, template_int);
 
   auto template_not = fxl::MakeRefCounted<Collection>(DwarfTag::kClassType);
   template_not->set_assigned_name(kTemplateNotName);
-  TestIndexedSymbol template_not_indexed(mod.get(), &root, kTemplateNotName,
-                                         template_not);
+  TestIndexedSymbol template_not_indexed(mod.get(), &root, kTemplateNotName, template_not);
 
   // Search for names globally within the target.
   FindNameContext context(&setup.target());

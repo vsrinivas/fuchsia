@@ -29,8 +29,8 @@ namespace {
 // Returns true if an index search is required for the options. Everything but
 // local variables requires the index.
 bool OptionsRequiresIndex(const FindNameOptions& options) {
-  return options.find_types || options.find_functions ||
-         options.find_templates || options.find_namespaces;
+  return options.find_types || options.find_functions || options.find_templates ||
+         options.find_namespaces;
 }
 
 // Returns true if the |name| of an object matches what we're |looking_for|
@@ -46,9 +46,8 @@ bool NameMatches(const FindNameOptions& options, const std::string& name,
 // for each as long as the visitor says to continue.
 // Searches the given vector of values for one with the given name. If found,
 // returns it, otherwise returns null.
-VisitResult VisitVariableVector(
-    const std::vector<LazySymbol>& vect,
-    const std::function<VisitResult(const Variable*)>& visitor) {
+VisitResult VisitVariableVector(const std::vector<LazySymbol>& vect,
+                                const std::function<VisitResult(const Variable*)>& visitor) {
   for (const auto& cur : vect) {
     const Variable* var = cur.Get()->AsVariable();
     if (!var)
@@ -61,8 +60,7 @@ VisitResult VisitVariableVector(
   return VisitResult::kContinue;
 }
 
-FoundName FoundNameFromDieRef(const ModuleSymbols* module_symbols,
-                              const FindNameOptions& options,
+FoundName FoundNameFromDieRef(const ModuleSymbols* module_symbols, const FindNameOptions& options,
                               const ModuleSymbolIndexNode::DieRef& ref) {
   LazySymbol lazy_symbol = module_symbols->IndexDieRefToSymbol(ref);
   if (!lazy_symbol)
@@ -96,10 +94,9 @@ FoundName FoundNameFromDieRef(const ModuleSymbols* module_symbols,
   return FoundName();
 }
 
-VisitResult GetNamesFromDieList(
-    const ModuleSymbols* module_symbols, const FindNameOptions& options,
-    const std::vector<ModuleSymbolIndexNode::DieRef>& dies,
-    std::vector<FoundName>* results) {
+VisitResult GetNamesFromDieList(const ModuleSymbols* module_symbols, const FindNameOptions& options,
+                                const std::vector<ModuleSymbolIndexNode::DieRef>& dies,
+                                std::vector<FoundName>* results) {
   for (const ModuleSymbolIndexNode::DieRef& cur : dies) {
     if (FoundName found = FoundNameFromDieRef(module_symbols, options, cur))
       results->push_back(std::move(found));
@@ -110,9 +107,8 @@ VisitResult GetNamesFromDieList(
   return VisitResult::kContinue;
 }
 
-VisitResult VisitPerModule(
-    const FindNameContext& context,
-    std::function<VisitResult(const ModuleSymbols*)> visitor) {
+VisitResult VisitPerModule(const FindNameContext& context,
+                           std::function<VisitResult(const ModuleSymbols*)> visitor) {
   if (context.module_symbols) {
     // Search in the current module.
     VisitResult vr = visitor(context.module_symbols);
@@ -134,10 +130,8 @@ VisitResult VisitPerModule(
   return VisitResult::kContinue;
 }
 
-VisitResult FindPerIndexNode(const FindNameOptions& options,
-                             const ModuleSymbols* module_symbols,
-                             const IndexWalker& walker,
-                             const ParsedIdentifier& looking_for,
+VisitResult FindPerIndexNode(const FindNameOptions& options, const ModuleSymbols* module_symbols,
+                             const IndexWalker& walker, const ParsedIdentifier& looking_for,
                              std::vector<FoundName>* results) {
   if (looking_for.empty())
     return VisitResult::kDone;
@@ -159,8 +153,7 @@ VisitResult FindPerIndexNode(const FindNameOptions& options,
     auto [cur, end] = prefix_walker.current()->FindPrefix(last_comp);
     while (cur != end && results->size() < options.max_results &&
            NameMatches(options, cur->first, last_comp)) {
-      VisitResult vr = GetNamesFromDieList(module_symbols, options,
-                                           cur->second.dies(), results);
+      VisitResult vr = GetNamesFromDieList(module_symbols, options, cur->second.dies(), results);
       if (vr != VisitResult::kContinue)
         return vr;
 
@@ -169,8 +162,8 @@ VisitResult FindPerIndexNode(const FindNameOptions& options,
   } else {
     // Exact match case.
     if (prefix_walker.WalkInto(looking_for.components().back())) {
-      VisitResult vr = GetNamesFromDieList(
-          module_symbols, options, prefix_walker.current()->dies(), results);
+      VisitResult vr =
+          GetNamesFromDieList(module_symbols, options, prefix_walker.current()->dies(), results);
       if (vr != VisitResult::kContinue)
         return vr;
     }
@@ -209,8 +202,7 @@ VisitResult FindPerIndexNode(const FindNameOptions& options,
 
 }  // namespace
 
-FindNameContext::FindNameContext(const ProcessSymbols* ps,
-                                 const SymbolContext& symbol_context,
+FindNameContext::FindNameContext(const ProcessSymbols* ps, const SymbolContext& symbol_context,
                                  const CodeBlock* b)
     : block(b) {
   if (ps) {
@@ -227,11 +219,9 @@ FindNameContext::FindNameContext(const ProcessSymbols* ps,
   }
 }
 
-FindNameContext::FindNameContext(const TargetSymbols* ts)
-    : target_symbols(ts) {}
+FindNameContext::FindNameContext(const TargetSymbols* ts) : target_symbols(ts) {}
 
-FoundName FindName(const FindNameContext& context,
-                   const FindNameOptions& options,
+FoundName FindName(const FindNameContext& context, const FindNameOptions& options,
                    const ParsedIdentifier& identifier) {
   FindNameOptions new_opts(options);
   new_opts.max_results = 1;
@@ -244,8 +234,7 @@ FoundName FindName(const FindNameContext& context,
 }
 
 void FindName(const FindNameContext& context, const FindNameOptions& options,
-              const ParsedIdentifier& looking_for,
-              std::vector<FoundName>* results) {
+              const ParsedIdentifier& looking_for, std::vector<FoundName>* results) {
   if (options.find_vars && context.block &&
       looking_for.qualification() == IdentifierQualification::kRelative) {
     // Search for local variables and function parameters.
@@ -268,18 +257,15 @@ void FindName(const FindNameContext& context, const FindNameOptions& options,
     ParsedIdentifier current_scope;
     if (context.block) {
       if (const Function* function = context.block->GetContainingFunction()) {
-        current_scope =
-            ToParsedIdentifier(function->GetIdentifier()).GetScope();
+        current_scope = ToParsedIdentifier(function->GetIdentifier()).GetScope();
       }
     }
-    FindIndexedName(context, options, current_scope, looking_for, true,
-                    results);
+    FindIndexedName(context, options, current_scope, looking_for, true, results);
   }
 }
 
-VisitResult VisitLocalVariables(
-    const CodeBlock* block,
-    const std::function<VisitResult(const Variable*)>& visitor) {
+VisitResult VisitLocalVariables(const CodeBlock* block,
+                                const std::function<VisitResult(const Variable*)>& visitor) {
   return VisitLocalBlocks(block, [&visitor](const CodeBlock* cur_block) {
     // Local variables in this block.
     VisitResult vr = VisitVariableVector(cur_block->variables(), visitor);
@@ -298,8 +284,7 @@ VisitResult VisitLocalVariables(
 }
 
 void FindLocalVariable(const FindNameOptions& options, const CodeBlock* block,
-                       const ParsedIdentifier& looking_for,
-                       std::vector<FoundName>* results) {
+                       const ParsedIdentifier& looking_for, std::vector<FoundName>* results) {
   // TODO(DX-1214) lookup type names defined locally in this function.
 
   // Local variables can only be simple names.
@@ -319,56 +304,48 @@ void FindLocalVariable(const FindNameOptions& options, const CodeBlock* block,
 
 void FindMember(const FindNameContext& context, const FindNameOptions& options,
                 const Collection* object, const ParsedIdentifier& looking_for,
-                const Variable* optional_object_ptr,
-                std::vector<FoundName>* result) {
-  VisitClassHierarchy(
-      object, [&context, &options, &looking_for, optional_object_ptr, result](
-                  const Collection* cur_collection, uint64_t cur_offset) {
-        // Called for each collection in the hierarchy.
+                const Variable* optional_object_ptr, std::vector<FoundName>* result) {
+  VisitClassHierarchy(object, [&context, &options, &looking_for, optional_object_ptr, result](
+                                  const Collection* cur_collection, uint64_t cur_offset) {
+    // Called for each collection in the hierarchy.
 
-        // Data member iteration.
-        if (const std::string* looking_for_name =
-                GetSingleComponentIdentifierName(looking_for);
-            looking_for_name && options.find_vars) {
-          for (const auto& lazy : cur_collection->data_members()) {
-            if (const DataMember* data = lazy.Get()->AsDataMember()) {
-              // TODO(brettw) allow "BaseClass::foo" syntax for specifically
-              // naming a member of a base class. Watch out: the base class
-              // could be qualified (or not) in various ways:
-              // ns::BaseClass::foo, BaseClass::foo, etc.
-              if (NameMatches(options, data->GetAssignedName(),
-                              *looking_for_name)) {
-                result->emplace_back(optional_object_ptr, data,
-                                     cur_offset + data->member_location());
-                if (result->size() >= options.max_results)
-                  return VisitResult::kDone;
-              }
-            }
+    // Data member iteration.
+    if (const std::string* looking_for_name = GetSingleComponentIdentifierName(looking_for);
+        looking_for_name && options.find_vars) {
+      for (const auto& lazy : cur_collection->data_members()) {
+        if (const DataMember* data = lazy.Get()->AsDataMember()) {
+          // TODO(brettw) allow "BaseClass::foo" syntax for specifically
+          // naming a member of a base class. Watch out: the base class
+          // could be qualified (or not) in various ways:
+          // ns::BaseClass::foo, BaseClass::foo, etc.
+          if (NameMatches(options, data->GetAssignedName(), *looking_for_name)) {
+            result->emplace_back(optional_object_ptr, data, cur_offset + data->member_location());
+            if (result->size() >= options.max_results)
+              return VisitResult::kDone;
           }
         }
+      }
+    }
 
-        // Index node iteration for this class' scope.
-        if (OptionsRequiresIndex(options)) {
-          ParsedIdentifier container_name =
-              ToParsedIdentifier(cur_collection->GetIdentifier());
+    // Index node iteration for this class' scope.
+    if (OptionsRequiresIndex(options)) {
+      ParsedIdentifier container_name = ToParsedIdentifier(cur_collection->GetIdentifier());
 
-          // Don't search previous scopes (pass |search_containing| = false).
-          // If a class derives from a class in another namespace, that
-          // doesn't bring the other namespace in the current scope.
-          VisitResult vr = FindIndexedName(context, options, container_name,
-                                           looking_for, false, result);
-          if (vr != VisitResult::kContinue)
-            return vr;
-        }
+      // Don't search previous scopes (pass |search_containing| = false).
+      // If a class derives from a class in another namespace, that
+      // doesn't bring the other namespace in the current scope.
+      VisitResult vr =
+          FindIndexedName(context, options, container_name, looking_for, false, result);
+      if (vr != VisitResult::kContinue)
+        return vr;
+    }
 
-        return VisitResult::kContinue;
-      });
+    return VisitResult::kContinue;
+  });
 }
 
-void FindMemberOnThis(const FindNameContext& context,
-                      const FindNameOptions& options,
-                      const ParsedIdentifier& looking_for,
-                      std::vector<FoundName>* result) {
+void FindMemberOnThis(const FindNameContext& context, const FindNameOptions& options,
+                      const ParsedIdentifier& looking_for, std::vector<FoundName>* result) {
   if (!context.block)
     return;  // No current code.
   const Function* function = context.block->GetContainingFunction();
@@ -380,38 +357,30 @@ void FindMemberOnThis(const FindNameContext& context,
 
   // Pointed-to type for "this".
   const Collection* collection = nullptr;
-  if (GetPointedToCollection(this_var->type().Get()->AsType(), &collection)
-          .has_error())
+  if (GetPointedToCollection(this_var->type().Get()->AsType(), &collection).has_error())
     return;  // Symbols likely corrupt.
 
   FindMember(context, options, collection, looking_for, this_var, result);
 }
 
-VisitResult FindIndexedName(const FindNameContext& context,
-                            const FindNameOptions& options,
+VisitResult FindIndexedName(const FindNameContext& context, const FindNameOptions& options,
                             const ParsedIdentifier& current_scope,
-                            const ParsedIdentifier& looking_for,
-                            bool search_containing,
+                            const ParsedIdentifier& looking_for, bool search_containing,
                             std::vector<FoundName>* results) {
-  return VisitPerModule(
-      context, [&options, &current_scope, &looking_for, search_containing,
-                results](const ModuleSymbols* ms) {
-        FindIndexedNameInModule(options, ms, current_scope, looking_for,
-                                search_containing, results);
-        return results->size() >= options.max_results ? VisitResult::kDone
-                                                      : VisitResult::kContinue;
-      });
+  return VisitPerModule(context, [&options, &current_scope, &looking_for, search_containing,
+                                  results](const ModuleSymbols* ms) {
+    FindIndexedNameInModule(options, ms, current_scope, looking_for, search_containing, results);
+    return results->size() >= options.max_results ? VisitResult::kDone : VisitResult::kContinue;
+  });
 }
 
 VisitResult FindIndexedNameInModule(const FindNameOptions& options,
                                     const ModuleSymbols* module_symbols,
                                     const ParsedIdentifier& current_scope,
-                                    const ParsedIdentifier& looking_for,
-                                    bool search_containing,
+                                    const ParsedIdentifier& looking_for, bool search_containing,
                                     std::vector<FoundName>* results) {
   IndexWalker walker(&module_symbols->GetIndex());
-  if (!current_scope.empty() &&
-      looking_for.qualification() == IdentifierQualification::kRelative) {
+  if (!current_scope.empty() && looking_for.qualification() == IdentifierQualification::kRelative) {
     // Unless the input identifier is fully qualified, start the search in the
     // current context.
     walker.WalkIntoClosest(current_scope);
@@ -419,8 +388,7 @@ VisitResult FindIndexedNameInModule(const FindNameOptions& options,
 
   // Search from the current namespace going up.
   do {
-    VisitResult vr =
-        FindPerIndexNode(options, module_symbols, walker, looking_for, results);
+    VisitResult vr = FindPerIndexNode(options, module_symbols, walker, looking_for, results);
     if (vr != VisitResult::kContinue)
       return vr;
     if (!search_containing)
@@ -433,8 +401,7 @@ VisitResult FindIndexedNameInModule(const FindNameOptions& options,
   return VisitResult::kContinue;
 }
 
-const std::string* GetSingleComponentIdentifierName(
-    const ParsedIdentifier& ident) {
+const std::string* GetSingleComponentIdentifierName(const ParsedIdentifier& ident) {
   if (ident.components().size() != 1 || ident.components()[0].has_template())
     return nullptr;
   return &ident.components()[0].name();

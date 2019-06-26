@@ -26,9 +26,8 @@ class EvalContext;
 // This variant works only for static array types ("foo[5]") where the size is
 // known constant at compile time and therefor the entire array is contained
 // in the ExprValue's data.
-Err ResolveArray(fxl::RefPtr<EvalContext> eval_context, const ExprValue& array,
-                 size_t begin_index, size_t end_index,
-                 std::vector<ExprValue>* result);
+Err ResolveArray(fxl::RefPtr<EvalContext> eval_context, const ExprValue& array, size_t begin_index,
+                 size_t end_index, std::vector<ExprValue>* result);
 
 // This variant handles both the static array version above and also
 // dereferencing pointers using array indexing. Since this requires memory
@@ -36,9 +35,8 @@ Err ResolveArray(fxl::RefPtr<EvalContext> eval_context, const ExprValue& array,
 //
 // The input will be clipped to the array size so the result may be empty
 // or smaller than requested.
-void ResolveArray(fxl::RefPtr<EvalContext> eval_context, const ExprValue& array,
-                  size_t begin_index, size_t end_index,
-                  std::function<void(const Err&, std::vector<ExprValue>)> cb);
+void ResolveArray(fxl::RefPtr<EvalContext> eval_context, const ExprValue& array, size_t begin_index,
+                  size_t end_index, std::function<void(const Err&, std::vector<ExprValue>)> cb);
 
 }  // namespace zxdb
 

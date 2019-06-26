@@ -24,8 +24,7 @@ class ExprValueSource {
   ExprValueSource() = default;
 
   // Initializes the source indicating a memory address.
-  explicit ExprValueSource(uint64_t address)
-      : type_(Type::kMemory), address_(address) {}
+  explicit ExprValueSource(uint64_t address) : type_(Type::kMemory), address_(address) {}
 
   Type type() const { return type_; }
 
@@ -43,9 +42,7 @@ class ExprValueSource {
   bool operator==(const ExprValueSource& other) const {
     return type_ == other.type_ && address_ == other.address_;
   }
-  bool operator!=(const ExprValueSource& other) const {
-    return !operator==(other);
-  }
+  bool operator!=(const ExprValueSource& other) const { return !operator==(other); }
 
  private:
   Type type_ = Type::kTemporary;

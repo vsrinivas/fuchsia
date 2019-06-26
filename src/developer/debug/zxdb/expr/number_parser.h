@@ -73,8 +73,7 @@ struct IntegerSuffix {
 //
 // If there is no suffix, it will return a signed integer and not trim
 // anything. If the suffix is invalid, return the error.
-[[nodiscard]] Err ExtractIntegerSuffix(std::string_view* s,
-                                       IntegerSuffix* suffix);
+[[nodiscard]] Err ExtractIntegerSuffix(std::string_view* s, IntegerSuffix* suffix);
 
 }  // namespace zxdb
 

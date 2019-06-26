@@ -24,8 +24,8 @@ class Variable;
 // world. This provides access to the variables currently in scope.
 class EvalContext : public fxl::RefCountedThreadSafe<EvalContext> {
  public:
-  using ValueCallback = std::function<void(
-      const Err& err, fxl::RefPtr<Symbol> symbol, ExprValue value)>;
+  using ValueCallback =
+      std::function<void(const Err& err, fxl::RefPtr<Symbol> symbol, ExprValue value)>;
 
   virtual ~EvalContext() = default;
 
@@ -47,13 +47,11 @@ class EvalContext : public fxl::RefCountedThreadSafe<EvalContext> {
   //
   // If the EvalContext is destroyed before the data is ready, the callback
   // will not be issued.
-  virtual void GetNamedValue(const ParsedIdentifier& identifier,
-                             ValueCallback cb) const = 0;
+  virtual void GetNamedValue(const ParsedIdentifier& identifier, ValueCallback cb) const = 0;
 
   // Like GetNamedValue() but takes an already-identified Variable. In this
   // case the Symbol of the callback will just be the input |variable|.
-  virtual void GetVariableValue(fxl::RefPtr<Variable> variable,
-                                ValueCallback cb) const = 0;
+  virtual void GetVariableValue(fxl::RefPtr<Variable> variable, ValueCallback cb) const = 0;
 
   // Attempts to resolve a type that is a declaration (is_declaration() is set
   // on the type) by looking up a non-declaration type with the same name.
@@ -69,8 +67,7 @@ class EvalContext : public fxl::RefCountedThreadSafe<EvalContext> {
   // a different type, but if the user has more than one type with the same
   // name bad things will happen anyway. On failure, the input type will be
   // returned.
-  virtual fxl::RefPtr<Type> ResolveForwardDefinition(
-      const Type* type) const = 0;
+  virtual fxl::RefPtr<Type> ResolveForwardDefinition(const Type* type) const = 0;
 
   // Strips C-V qualifications and resolves forward declarations.
   //

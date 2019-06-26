@@ -20,18 +20,16 @@ void EvalExpression(const std::string& input, fxl::RefPtr<EvalContext> context,
     return;
   }
 
-  ExprParser parser(tokenizer.TakeTokens(),
-                    context->GetSymbolNameLookupCallback());
+  ExprParser parser(tokenizer.TakeTokens(), context->GetSymbolNameLookupCallback());
   auto node = parser.Parse();
   if (parser.err().has_error()) {
     // Add context information since we have the original input string (the
     // parser doesn't have this).
     ExprToken error_token = parser.error_token();
     if (error_token.type() != ExprTokenType::kInvalid) {
-      Err context_err(
-          parser.err().type(),
-          parser.err().msg() + "\n" +
-              ExprTokenizer::GetErrorContext(input, error_token.byte_offset()));
+      Err context_err(parser.err().type(),
+                      parser.err().msg() + "\n" +
+                          ExprTokenizer::GetErrorContext(input, error_token.byte_offset()));
       cb(context_err, ExprValue());
     } else {
       cb(parser.err(), ExprValue());

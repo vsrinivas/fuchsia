@@ -14,8 +14,7 @@ namespace {
 
 // A constexpr version of isalnum.
 constexpr bool IsAlnum(char c) {
-  return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') ||
-         (c >= '0' && c <= '9');
+  return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9');
 }
 
 constexpr bool StringIsAlphanum(std::string_view str) {
@@ -38,8 +37,8 @@ constexpr ExprTokenRecord::ExprTokenRecord(ExprTokenType t, unsigned langs,
 
 namespace {
 
-constexpr unsigned kLangAll = static_cast<unsigned>(ExprLanguage::kC) |
-                              static_cast<unsigned>(ExprLanguage::kRust);
+constexpr unsigned kLangAll =
+    static_cast<unsigned>(ExprLanguage::kC) | static_cast<unsigned>(ExprLanguage::kRust);
 constexpr unsigned kLangC = static_cast<unsigned>(ExprLanguage::kC);
 // Currently unused:
 // constexpr unsigned kLangRust = static_cast<unsigned>(ExprLanguage::kRust);
@@ -85,9 +84,8 @@ constexpr ExprTokenRecord kRecords[kNumExprTokenTypes] = {
 }  // namespace
 
 const ExprTokenRecord& RecordForTokenType(ExprTokenType type) {
-  static_assert(
-      arraysize(kRecords) == static_cast<int>(ExprTokenType::kNumTypes),
-      "kRecords needs updating to match ExprTokenType");
+  static_assert(arraysize(kRecords) == static_cast<int>(ExprTokenType::kNumTypes),
+                "kRecords needs updating to match ExprTokenType");
 
   // Checks that this record is in the right place.
   FXL_DCHECK(kRecords[static_cast<size_t>(type)].type == type);

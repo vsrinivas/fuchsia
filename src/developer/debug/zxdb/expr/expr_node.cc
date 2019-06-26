@@ -34,8 +34,7 @@ std::string IndentFor(int value) { return std::string(value, ' '); }
 bool BaseTypeCanBeArrayIndex(const BaseType* type) {
   int bt = type->base_type();
   return bt == BaseType::kBaseTypeBoolean || bt == BaseType::kBaseTypeSigned ||
-         bt == BaseType::kBaseTypeSignedChar ||
-         bt == BaseType::kBaseTypeUnsigned ||
+         bt == BaseType::kBaseTypeSignedChar || bt == BaseType::kBaseTypeUnsigned ||
          bt == BaseType::kBaseTypeUnsignedChar;
 }
 
@@ -98,8 +97,7 @@ void EvalUnaryOperator(const ExprToken& op_token, const ExprValue& value,
 
 }  // namespace
 
-void ExprNode::EvalFollowReferences(fxl::RefPtr<EvalContext> context,
-                                    EvalCallback cb) const {
+void ExprNode::EvalFollowReferences(fxl::RefPtr<EvalContext> context, EvalCallback cb) const {
   Eval(context, [context, cb = std::move(cb)](const Err& err, ExprValue value) {
     if (err.has_error())
       cb(err, ExprValue());
@@ -108,25 +106,23 @@ void ExprNode::EvalFollowReferences(fxl::RefPtr<EvalContext> context,
   });
 }
 
-void AddressOfExprNode::Eval(fxl::RefPtr<EvalContext> context,
-                             EvalCallback cb) const {
-  expr_->EvalFollowReferences(
-      context, [cb = std::move(cb)](const Err& err, ExprValue value) {
-        if (value.source().type() != ExprValueSource::Type::kMemory) {
-          cb(Err("Can't take the address of a temporary."), ExprValue());
-        } else {
-          // Construct a pointer type to the variable.
-          auto ptr_type = fxl::MakeRefCounted<ModifiedType>(
-              DwarfTag::kPointerType, LazySymbol(value.type_ref()));
+void AddressOfExprNode::Eval(fxl::RefPtr<EvalContext> context, EvalCallback cb) const {
+  expr_->EvalFollowReferences(context, [cb = std::move(cb)](const Err& err, ExprValue value) {
+    if (value.source().type() != ExprValueSource::Type::kMemory) {
+      cb(Err("Can't take the address of a temporary."), ExprValue());
+    } else {
+      // Construct a pointer type to the variable.
+      auto ptr_type =
+          fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, LazySymbol(value.type_ref()));
 
-          std::vector<uint8_t> contents;
-          contents.resize(kTargetPointerSize);
-          TargetPointer address = value.source().address();
-          memcpy(&contents[0], &address, sizeof(kTargetPointerSize));
+      std::vector<uint8_t> contents;
+      contents.resize(kTargetPointerSize);
+      TargetPointer address = value.source().address();
+      memcpy(&contents[0], &address, sizeof(kTargetPointerSize));
 
-          cb(Err(), ExprValue(std::move(ptr_type), std::move(contents)));
-        }
-      });
+      cb(Err(), ExprValue(std::move(ptr_type), std::move(contents)));
+    }
+  });
 }
 
 void AddressOfExprNode::Print(std::ostream& out, int indent) const {
@@ -134,31 +130,26 @@ void AddressOfExprNode::Print(std::ostream& out, int indent) const {
   expr_->Print(out, indent + 1);
 }
 
-void ArrayAccessExprNode::Eval(fxl::RefPtr<EvalContext> context,
-                               EvalCallback cb) const {
+void ArrayAccessExprNode::Eval(fxl::RefPtr<EvalContext> context, EvalCallback cb) const {
   left_->EvalFollowReferences(
-      context, [inner = inner_, context, cb = std::move(cb)](
-                   const Err& err, ExprValue left_value) {
+      context, [inner = inner_, context, cb = std::move(cb)](const Err& err, ExprValue left_value) {
         if (err.has_error()) {
           cb(err, ExprValue());
         } else {
           // "left" has been evaluated, now do "inner".
           inner->EvalFollowReferences(
-              context,
-              [context, left_value = std::move(left_value), cb = std::move(cb)](
-                  const Err& err, ExprValue inner_value) {
+              context, [context, left_value = std::move(left_value), cb = std::move(cb)](
+                           const Err& err, ExprValue inner_value) {
                 if (err.has_error()) {
                   cb(err, ExprValue());
                 } else {
                   // Both "left" and "inner" has been evaluated.
                   int64_t offset = 0;
-                  Err offset_err =
-                      InnerValueToOffset(context, inner_value, &offset);
+                  Err offset_err = InnerValueToOffset(context, inner_value, &offset);
                   if (offset_err.has_error()) {
                     cb(offset_err, ExprValue());
                   } else {
-                    DoAccess(std::move(context), std::move(left_value), offset,
-                             std::move(cb));
+                    DoAccess(std::move(context), std::move(left_value), offset, std::move(cb));
                   }
                 }
               });
@@ -168,8 +159,7 @@ void ArrayAccessExprNode::Eval(fxl::RefPtr<EvalContext> context,
 
 // static
 Err ArrayAccessExprNode::InnerValueToOffset(fxl::RefPtr<EvalContext> context,
-                                            const ExprValue& inner,
-                                            int64_t* offset) {
+                                            const ExprValue& inner, int64_t* offset) {
   // Type should be some kind of number.
   const Type* abstract_type = inner.type();
   if (!abstract_type)
@@ -191,25 +181,22 @@ Err ArrayAccessExprNode::InnerValueToOffset(fxl::RefPtr<EvalContext> context,
 }
 
 // static
-void ArrayAccessExprNode::DoAccess(fxl::RefPtr<EvalContext> context,
-                                   ExprValue left, int64_t offset,
+void ArrayAccessExprNode::DoAccess(fxl::RefPtr<EvalContext> context, ExprValue left, int64_t offset,
                                    EvalCallback cb) {
-  ResolveArray(
-      context, left, static_cast<size_t>(offset),
-      static_cast<size_t>(offset) + 1,
-      [cb = std::move(cb)](const Err& err, std::vector<ExprValue> result) {
-        if (err.has_error()) {
-          cb(err, ExprValue());
-          return;
-        }
-        if (result.size() == 0) {
-          // Short read, array not big enough.
-          cb(Err("Array index out of range."), ExprValue());
-          return;
-        }
-        FXL_DCHECK(result.size() == 1);
-        cb(Err(), result[0]);
-      });
+  ResolveArray(context, left, static_cast<size_t>(offset), static_cast<size_t>(offset) + 1,
+               [cb = std::move(cb)](const Err& err, std::vector<ExprValue> result) {
+                 if (err.has_error()) {
+                   cb(err, ExprValue());
+                   return;
+                 }
+                 if (result.size() == 0) {
+                   // Short read, array not big enough.
+                   cb(Err("Array index out of range."), ExprValue());
+                   return;
+                 }
+                 FXL_DCHECK(result.size() == 1);
+                 cb(Err(), result[0]);
+               });
 }
 
 void ArrayAccessExprNode::Print(std::ostream& out, int indent) const {
@@ -218,8 +205,7 @@ void ArrayAccessExprNode::Print(std::ostream& out, int indent) const {
   inner_->Print(out, indent + 1);
 }
 
-void BinaryOpExprNode::Eval(fxl::RefPtr<EvalContext> context,
-                            EvalCallback cb) const {
+void BinaryOpExprNode::Eval(fxl::RefPtr<EvalContext> context, EvalCallback cb) const {
   EvalBinaryOperator(std::move(context), left_, op_, right_, std::move(cb));
 }
 
@@ -229,8 +215,7 @@ void BinaryOpExprNode::Print(std::ostream& out, int indent) const {
   right_->Print(out, indent + 1);
 }
 
-void CastExprNode::Eval(fxl::RefPtr<EvalContext> context,
-                        EvalCallback cb) const {
+void CastExprNode::Eval(fxl::RefPtr<EvalContext> context, EvalCallback cb) const {
   // Callback that does the cast given the right type of value.
   auto exec_cast = [context, cast_type = cast_type_, to_type = to_type_->type(),
                     cb = std::move(cb)](const Err& err, ExprValue value) {
@@ -238,8 +223,7 @@ void CastExprNode::Eval(fxl::RefPtr<EvalContext> context,
       cb(err, value);
     } else {
       ExprValue cast_result;
-      Err cast_err =
-          CastExprValue(context.get(), cast_type, value, to_type, &cast_result);
+      Err cast_err = CastExprValue(context.get(), cast_type, value, to_type, &cast_result);
       if (cast_err.has_error())
         cb(cast_err, ExprValue());
       else
@@ -247,14 +231,11 @@ void CastExprNode::Eval(fxl::RefPtr<EvalContext> context,
     }
   };
 
-  from_->Eval(context, [context, cast_type = cast_type_,
-                        to_type = to_type_->type(),
-                        exec_cast = std::move(exec_cast)](const Err& err,
-                                                          ExprValue value) {
+  from_->Eval(context, [context, cast_type = cast_type_, to_type = to_type_->type(),
+                        exec_cast = std::move(exec_cast)](const Err& err, ExprValue value) {
     // This lambda optionally follows the reference on the value according
     // to the requirements of the cast.
-    if (err.has_error() ||
-        !CastShouldFollowReferences(context.get(), cast_type, value, to_type)) {
+    if (err.has_error() || !CastShouldFollowReferences(context.get(), cast_type, value, to_type)) {
       exec_cast(err, value);  // Also handles the error cases.
     } else {
       EnsureResolveReference(context, std::move(value), std::move(exec_cast));
@@ -268,12 +249,11 @@ void CastExprNode::Print(std::ostream& out, int indent) const {
   from_->Print(out, indent + 1);
 }
 
-void DereferenceExprNode::Eval(fxl::RefPtr<EvalContext> context,
-                               EvalCallback cb) const {
-  expr_->EvalFollowReferences(
-      context, [context, cb = std::move(cb)](const Err& err, ExprValue value) {
-        ResolvePointer(context, value, std::move(cb));
-      });
+void DereferenceExprNode::Eval(fxl::RefPtr<EvalContext> context, EvalCallback cb) const {
+  expr_->EvalFollowReferences(context,
+                              [context, cb = std::move(cb)](const Err& err, ExprValue value) {
+                                ResolvePointer(context, value, std::move(cb));
+                              });
 }
 
 void DereferenceExprNode::Print(std::ostream& out, int indent) const {
@@ -281,8 +261,7 @@ void DereferenceExprNode::Print(std::ostream& out, int indent) const {
   expr_->Print(out, indent + 1);
 }
 
-void FunctionCallExprNode::Eval(fxl::RefPtr<EvalContext> context,
-                                EvalCallback cb) const {
+void FunctionCallExprNode::Eval(fxl::RefPtr<EvalContext> context, EvalCallback cb) const {
   cb(Err("Sorry, function calls are not supported."), ExprValue());
 }
 
@@ -292,11 +271,9 @@ void FunctionCallExprNode::Print(std::ostream& out, int indent) const {
     arg->Print(out, indent + 1);
 }
 
-void IdentifierExprNode::Eval(fxl::RefPtr<EvalContext> context,
-                              EvalCallback cb) const {
+void IdentifierExprNode::Eval(fxl::RefPtr<EvalContext> context, EvalCallback cb) const {
   context->GetNamedValue(
-      ident_, [cb = std::move(cb)](const Err& err, fxl::RefPtr<Symbol>,
-                                   ExprValue value) {
+      ident_, [cb = std::move(cb)](const Err& err, fxl::RefPtr<Symbol>, ExprValue value) {
         // Discard resolved symbol, we only need the value.
         cb(err, std::move(value));
       });
@@ -306,8 +283,7 @@ void IdentifierExprNode::Print(std::ostream& out, int indent) const {
   out << IndentFor(indent) << "IDENTIFIER(" << ident_.GetDebugName() << ")\n";
 }
 
-void LiteralExprNode::Eval(fxl::RefPtr<EvalContext> context,
-                           EvalCallback cb) const {
+void LiteralExprNode::Eval(fxl::RefPtr<EvalContext> context, EvalCallback cb) const {
   switch (token_.type()) {
     case ExprTokenType::kInteger: {
       ExprValue value;
@@ -332,29 +308,26 @@ void LiteralExprNode::Print(std::ostream& out, int indent) const {
   out << IndentFor(indent) << "LITERAL(" << token_.value() << ")\n";
 }
 
-void MemberAccessExprNode::Eval(fxl::RefPtr<EvalContext> context,
-                                EvalCallback cb) const {
+void MemberAccessExprNode::Eval(fxl::RefPtr<EvalContext> context, EvalCallback cb) const {
   bool is_arrow = accessor_.type() == ExprTokenType::kArrow;
-  left_->EvalFollowReferences(
-      context, [context, is_arrow, member = member_, cb = std::move(cb)](
-                   const Err& err, ExprValue base) {
-        if (!is_arrow) {
-          // "." operator.
-          ExprValue result;
-          Err err = ResolveMember(context, base, member, &result);
-          cb(err, std::move(result));
-          return;
-        }
+  left_->EvalFollowReferences(context, [context, is_arrow, member = member_, cb = std::move(cb)](
+                                           const Err& err, ExprValue base) {
+    if (!is_arrow) {
+      // "." operator.
+      ExprValue result;
+      Err err = ResolveMember(context, base, member, &result);
+      cb(err, std::move(result));
+      return;
+    }
 
-        // Everything else should be a -> operator.
-        ResolveMemberByPointer(
-            context, base, member,
-            [cb = std::move(cb)](const Err& err, fxl::RefPtr<Symbol>,
-                                 ExprValue result) {
-              // Discard resolved symbol, we only need the value.
-              cb(err, std::move(result));
-            });
-      });
+    // Everything else should be a -> operator.
+    ResolveMemberByPointer(
+        context, base, member,
+        [cb = std::move(cb)](const Err& err, fxl::RefPtr<Symbol>, ExprValue result) {
+          // Discard resolved symbol, we only need the value.
+          cb(err, std::move(result));
+        });
+  });
 }
 
 void MemberAccessExprNode::Print(std::ostream& out, int indent) const {
@@ -363,23 +336,20 @@ void MemberAccessExprNode::Print(std::ostream& out, int indent) const {
   out << IndentFor(indent + 1) << member_.GetFullName() << "\n";
 }
 
-void SizeofExprNode::Eval(fxl::RefPtr<EvalContext> context,
-                          EvalCallback cb) const {
-  if (const TypeExprNode* type_node =
-          const_cast<ExprNode*>(expr_.get())->AsType()) {
+void SizeofExprNode::Eval(fxl::RefPtr<EvalContext> context, EvalCallback cb) const {
+  if (const TypeExprNode* type_node = const_cast<ExprNode*>(expr_.get())->AsType()) {
     // Types just get used directly.
     SizeofType(context, type_node->type().get(), std::move(cb));
   } else {
     // Everything else gets evaluated. Strictly C++ won't do this because it's
     // statically typed, but our expression system is not. This doesn't need to
     // follow references because we only need the type and the
-    expr_->Eval(context,
-                [context, cb = std::move(cb)](const Err& err, ExprValue value) {
-                  if (err.has_error())
-                    cb(err, ExprValue());
-                  else
-                    SizeofType(context, value.type(), std::move(cb));
-                });
+    expr_->Eval(context, [context, cb = std::move(cb)](const Err& err, ExprValue value) {
+      if (err.has_error())
+        cb(err, ExprValue());
+      else
+        SizeofType(context, value.type(), std::move(cb));
+    });
   }
 }
 
@@ -389,8 +359,8 @@ void SizeofExprNode::Print(std::ostream& out, int indent) const {
 }
 
 // static
-void SizeofExprNode::SizeofType(fxl::RefPtr<EvalContext> context,
-                                const Type* in_type, EvalCallback cb) {
+void SizeofExprNode::SizeofType(fxl::RefPtr<EvalContext> context, const Type* in_type,
+                                EvalCallback cb) {
   // References should get stripped (sizeof(char&) = 1).
   if (!in_type) {
     cb(Err("Can't do sizeof on a null type."), ExprValue());
@@ -399,27 +369,23 @@ void SizeofExprNode::SizeofType(fxl::RefPtr<EvalContext> context,
 
   fxl::RefPtr<Type> type = context->GetConcreteType(in_type);
   if (type->is_declaration()) {
-    cb(Err("Can't resolve forward declaration for '%s'.",
-           in_type->GetFullName().c_str()),
+    cb(Err("Can't resolve forward declaration for '%s'.", in_type->GetFullName().c_str()),
        ExprValue());
     return;
   }
 
   if (DwarfTagIsEitherReference(type->tag())) {
-    type = fxl::RefPtr<Type>(
-        const_cast<Type*>(type->AsModifiedType()->modified().Get()->AsType()));
+    type = fxl::RefPtr<Type>(const_cast<Type*>(type->AsModifiedType()->modified().Get()->AsType()));
   }
   if (!type) {
-    cb(Err("Symbol error for '%s'.", in_type->GetFullName().c_str()),
-       ExprValue());
+    cb(Err("Symbol error for '%s'.", in_type->GetFullName().c_str()), ExprValue());
     return;
   }
 
   cb(Err(), ExprValue(type->byte_size()));
 }
 
-void TypeExprNode::Eval(fxl::RefPtr<EvalContext> context,
-                        EvalCallback cb) const {
+void TypeExprNode::Eval(fxl::RefPtr<EvalContext> context, EvalCallback cb) const {
   // Doesn't make sense to evaluate a type, callers like casts that expect a
   // type name will look into the node themselves.
   cb(Err("Can not evaluate a type name."), ExprValue());
@@ -432,15 +398,14 @@ void TypeExprNode::Print(std::ostream& out, int indent) const {
   out << ")\n";
 }
 
-void UnaryOpExprNode::Eval(fxl::RefPtr<EvalContext> context,
-                           EvalCallback cb) const {
-  expr_->EvalFollowReferences(
-      context, [cb = std::move(cb), op = op_](const Err& err, ExprValue value) {
-        if (err.has_error())
-          cb(err, std::move(value));
-        else
-          EvalUnaryOperator(op, value, std::move(cb));
-      });
+void UnaryOpExprNode::Eval(fxl::RefPtr<EvalContext> context, EvalCallback cb) const {
+  expr_->EvalFollowReferences(context,
+                              [cb = std::move(cb), op = op_](const Err& err, ExprValue value) {
+                                if (err.has_error())
+                                  cb(err, std::move(value));
+                                else
+                                  EvalUnaryOperator(op, value, std::move(cb));
+                              });
 }
 
 void UnaryOpExprNode::Print(std::ostream& out, int indent) const {
