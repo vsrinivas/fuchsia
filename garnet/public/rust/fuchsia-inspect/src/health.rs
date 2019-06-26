@@ -43,6 +43,20 @@ use {
     std::sync::{Arc, Mutex},
 };
 
+/// A trait of a standardized health checker.
+///
+/// Contains the methods to set standardized health status.  All standardized health status reporters
+/// must implement this trait.
+pub trait Reporter {
+    /// Sets the health status to `STARTING_UP`.
+    fn set_starting_up(&mut self);
+    /// Sets the health status to `OK`.
+    fn set_ok(&mut self);
+    /// Sets the health status to `UNHEALTHY`.  A `message` that explains why the node is healthy
+    /// MUST be given.
+    fn set_unhealthy(&mut self, message: &str);
+}
+
 // The metric node name, as exposed by the health checker.
 const FUCHSIA_INSPECT_HEALTH: &str = "fuchsia.inspect.Health";
 
@@ -88,6 +102,24 @@ pub struct Node {
     message: Option<StringProperty>,
 }
 
+impl Reporter for Node {
+    /// Sets the health status to `STARTING_UP`.
+    fn set_starting_up(&mut self) {
+        self.set_status_enum(Status::StartingUp, None);
+    }
+
+    /// Sets the health status to `OK`.
+    fn set_ok(&mut self) {
+        self.set_status_enum(Status::Ok, None);
+    }
+
+    /// Sets the health status to `UNHEALTHY`.  A `message` that explains why the node is healthy
+    /// MUST be given.
+    fn set_unhealthy(&mut self, message: &str) {
+        self.set_status_enum(Status::Unhealthy, Some(message));
+    }
+}
+
 impl Node {
     /// Creates a new health checking node as a child of `parent`.  The initial observed state
     /// is `STARTING_UP`, and remains so until the programs call one of `set_ok` or `set_unhealthy`.
@@ -96,17 +128,6 @@ impl Node {
         let status = node.create_string(STATUS_PROPERTY_KEY, Status::StartingUp.to_string());
         let message = None;
         Node { node, status, message }
-    }
-
-    // Sets the health status to `OK`.
-    pub fn set_ok(&mut self) {
-        self.set_status_enum(Status::Ok, None);
-    }
-
-    // Sets the health status to `UNHEALTHY`.  A `message` that explains why the node is healthy
-    // MUST be given.
-    pub fn set_unhealthy(&mut self, message: &str) {
-        self.set_status_enum(Status::Unhealthy, Some(message));
     }
 
     // Sets the health status from the supplied `status` and `message`.  Panics if setting invalid
@@ -189,6 +210,15 @@ mod tests {
         root: contains {
             "fuchsia.inspect.Health": {
                 status: "OK",
+            }
+        });
+
+        // Revert to STARTING_UP, but only for tests.
+        health.set_starting_up();
+        assert_inspect_tree!(inspector,
+        root: contains {
+            "fuchsia.inspect.Health": {
+                status: "STARTING_UP",
             }
         });
     }

@@ -23,6 +23,7 @@ use {
 mod bitfields;
 mod block;
 mod block_type;
+pub mod component;
 mod constants;
 pub mod health;
 mod heap;
