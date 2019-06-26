@@ -1,0 +1,661 @@
+{
+    "fuchsia_packages": [
+        {
+            "crate_name": "unicode_normalization",
+            "crate_type": "lib",
+            "package_name": "unicode-normalization"
+        },
+        {
+            "crate_name": "unic_char_range",
+            "crate_type": "lib",
+            "package_name": "unic-char-range"
+        },
+        {
+            "crate_name": "serde_json",
+            "crate_type": "lib",
+            "package_name": "serde_json"
+        },
+        {
+            "crate_name": "hyper",
+            "crate_type": "lib",
+            "package_name": "hyper"
+        },
+        {
+            "crate_name": "walkdir",
+            "crate_type": "lib",
+            "package_name": "walkdir"
+        },
+        {
+            "crate_name": "derp",
+            "crate_type": "lib",
+            "package_name": "derp"
+        },
+        {
+            "crate_name": "vte",
+            "crate_type": "lib",
+            "package_name": "vte"
+        },
+        {
+            "crate_name": "uuid",
+            "crate_type": "lib",
+            "package_name": "uuid"
+        },
+        {
+            "crate_name": "crypto",
+            "crate_type": "lib",
+            "package_name": "rust-crypto"
+        },
+        {
+            "crate_name": "tempfile",
+            "crate_type": "lib",
+            "package_name": "tempfile"
+        },
+        {
+            "crate_name": "proptest",
+            "crate_type": "lib",
+            "package_name": "proptest"
+        },
+        {
+            "crate_name": "xi_core_lib",
+            "crate_type": "lib",
+            "package_name": "xi-core-lib"
+        },
+        {
+            "crate_name": "pretty_assertions",
+            "crate_type": "lib",
+            "package_name": "pretty_assertions"
+        },
+        {
+            "crate_name": "data_encoding",
+            "crate_type": "lib",
+            "package_name": "data-encoding"
+        },
+        {
+            "crate_name": "derivative",
+            "crate_type": "proc-macro",
+            "package_name": "derivative"
+        },
+        {
+            "crate_name": "rand_core",
+            "crate_type": "lib",
+            "package_name": "rand_core"
+        },
+        {
+            "crate_name": "pest_derive",
+            "crate_type": "proc-macro",
+            "package_name": "pest_derive"
+        },
+        {
+            "crate_name": "freetype",
+            "crate_type": "lib",
+            "package_name": "freetype"
+        },
+        {
+            "crate_name": "libc",
+            "crate_type": "lib",
+            "package_name": "libc"
+        },
+        {
+            "crate_name": "void",
+            "crate_type": "lib",
+            "package_name": "void"
+        },
+        {
+            "crate_name": "timebomb",
+            "crate_type": "lib",
+            "package_name": "timebomb"
+        },
+        {
+            "crate_name": "hyper_rustls",
+            "crate_type": "lib",
+            "package_name": "hyper-rustls"
+        },
+        {
+            "crate_name": "utf8parse",
+            "crate_type": "lib",
+            "package_name": "utf8parse"
+        },
+        {
+            "crate_name": "smallvec",
+            "crate_type": "lib",
+            "package_name": "smallvec"
+        },
+        {
+            "crate_name": "net2",
+            "crate_type": "lib",
+            "package_name": "net2"
+        },
+        {
+            "crate_name": "ct_logs",
+            "crate_type": "lib",
+            "package_name": "ct-logs"
+        },
+        {
+            "crate_name": "pin_utils",
+            "crate_type": "lib",
+            "package_name": "pin-utils"
+        },
+        {
+            "crate_name": "criterion",
+            "crate_type": "lib",
+            "package_name": "criterion"
+        },
+        {
+            "crate_name": "bytes",
+            "crate_type": "lib",
+            "package_name": "bytes"
+        },
+        {
+            "crate_name": "json5",
+            "crate_type": "lib",
+            "package_name": "json5"
+        },
+        {
+            "crate_name": "rustls",
+            "crate_type": "lib",
+            "package_name": "rustls"
+        },
+        {
+            "crate_name": "num_derive",
+            "crate_type": "proc-macro",
+            "package_name": "num-derive"
+        },
+        {
+            "crate_name": "clap",
+            "crate_type": "lib",
+            "package_name": "clap"
+        },
+        {
+            "crate_name": "unicode_segmentation",
+            "crate_type": "lib",
+            "package_name": "unicode-segmentation"
+        },
+        {
+            "crate_name": "getopts",
+            "crate_type": "lib",
+            "package_name": "getopts"
+        },
+        {
+            "crate_name": "xml",
+            "crate_type": "lib",
+            "package_name": "xml-rs"
+        },
+        {
+            "crate_name": "num",
+            "crate_type": "lib",
+            "package_name": "num"
+        },
+        {
+            "crate_name": "euclid",
+            "crate_type": "lib",
+            "package_name": "euclid"
+        },
+        {
+            "crate_name": "proc_macro_nested",
+            "crate_type": "lib",
+            "package_name": "proc-macro-nested"
+        },
+        {
+            "crate_name": "rand_os",
+            "crate_type": "lib",
+            "package_name": "rand_os"
+        },
+        {
+            "crate_name": "num_bigint",
+            "crate_type": "lib",
+            "package_name": "num-bigint"
+        },
+        {
+            "crate_name": "owning_ref",
+            "crate_type": "lib",
+            "package_name": "owning_ref"
+        },
+        {
+            "crate_name": "serde_repr",
+            "crate_type": "proc-macro",
+            "package_name": "serde_repr"
+        },
+        {
+            "crate_name": "proc_macro_hack",
+            "crate_type": "proc-macro",
+            "package_name": "proc-macro-hack"
+        },
+        {
+            "crate_name": "static_assertions",
+            "crate_type": "lib",
+            "package_name": "static_assertions"
+        },
+        {
+            "crate_name": "paste",
+            "crate_type": "lib",
+            "package_name": "paste"
+        },
+        {
+            "crate_name": "futures",
+            "crate_type": "lib",
+            "package_name": "futures-preview"
+        },
+        {
+            "crate_name": "itoa",
+            "crate_type": "lib",
+            "package_name": "itoa"
+        },
+        {
+            "crate_name": "unic_ucd_block",
+            "crate_type": "lib",
+            "package_name": "unic-ucd-block"
+        },
+        {
+            "crate_name": "itertools",
+            "crate_type": "lib",
+            "package_name": "itertools"
+        },
+        {
+            "crate_name": "heck",
+            "crate_type": "lib",
+            "package_name": "heck"
+        },
+        {
+            "crate_name": "memchr",
+            "crate_type": "lib",
+            "package_name": "memchr"
+        },
+        {
+            "crate_name": "rand",
+            "crate_type": "lib",
+            "package_name": "rand"
+        },
+        {
+            "crate_name": "base64",
+            "crate_type": "lib",
+            "package_name": "base64"
+        },
+        {
+            "crate_name": "crossbeam",
+            "crate_type": "lib",
+            "package_name": "crossbeam"
+        },
+        {
+            "crate_name": "harfbuzz",
+            "crate_type": "lib",
+            "package_name": "harfbuzz"
+        },
+        {
+            "crate_name": "rusttype",
+            "crate_type": "lib",
+            "package_name": "rusttype"
+        },
+        {
+            "crate_name": "bitflags",
+            "crate_type": "lib",
+            "package_name": "bitflags"
+        },
+        {
+            "crate_name": "ring",
+            "crate_type": "lib",
+            "package_name": "ring"
+        },
+        {
+            "crate_name": "unicode_width",
+            "crate_type": "lib",
+            "package_name": "unicode-width"
+        },
+        {
+            "crate_name": "regex",
+            "crate_type": "lib",
+            "package_name": "regex"
+        },
+        {
+            "crate_name": "log",
+            "crate_type": "lib",
+            "package_name": "log"
+        },
+        {
+            "crate_name": "futures_test",
+            "crate_type": "lib",
+            "package_name": "futures-test-preview"
+        },
+        {
+            "crate_name": "hex",
+            "crate_type": "lib",
+            "package_name": "hex"
+        },
+        {
+            "crate_name": "valico",
+            "crate_type": "lib",
+            "package_name": "valico"
+        },
+        {
+            "crate_name": "serde_derive",
+            "crate_type": "proc-macro",
+            "package_name": "serde_derive"
+        },
+        {
+            "crate_name": "failure",
+            "crate_type": "lib",
+            "package_name": "failure"
+        },
+        {
+            "crate_name": "png",
+            "crate_type": "lib",
+            "package_name": "png"
+        },
+        {
+            "crate_name": "rouille",
+            "crate_type": "lib",
+            "package_name": "rouille"
+        },
+        {
+            "crate_name": "num_traits",
+            "crate_type": "lib",
+            "package_name": "num-traits"
+        },
+        {
+            "crate_name": "rand_xorshift",
+            "crate_type": "lib",
+            "package_name": "rand_xorshift"
+        },
+        {
+            "crate_name": "pest",
+            "crate_type": "lib",
+            "package_name": "pest"
+        },
+        {
+            "crate_name": "maplit",
+            "crate_type": "lib",
+            "package_name": "maplit"
+        },
+        {
+            "crate_name": "unicase",
+            "crate_type": "lib",
+            "package_name": "unicase"
+        },
+        {
+            "crate_name": "serde",
+            "crate_type": "lib",
+            "package_name": "serde"
+        },
+        {
+            "crate_name": "proptest_derive",
+            "crate_type": "proc-macro",
+            "package_name": "proptest-derive"
+        },
+        {
+            "crate_name": "nom",
+            "crate_type": "lib",
+            "package_name": "nom"
+        },
+        {
+            "crate_name": "bitfield",
+            "crate_type": "lib",
+            "package_name": "bitfield"
+        },
+        {
+            "crate_name": "rayon",
+            "crate_type": "lib",
+            "package_name": "rayon"
+        },
+        {
+            "crate_name": "structopt",
+            "crate_type": "lib",
+            "package_name": "structopt"
+        },
+        {
+            "crate_name": "slab",
+            "crate_type": "lib",
+            "package_name": "slab"
+        },
+        {
+            "crate_name": "bincode",
+            "crate_type": "lib",
+            "package_name": "bincode"
+        },
+        {
+            "crate_name": "lazy_static",
+            "crate_type": "lib",
+            "package_name": "lazy_static"
+        },
+        {
+            "crate_name": "http",
+            "crate_type": "lib",
+            "package_name": "http"
+        },
+        {
+            "crate_name": "openat",
+            "crate_type": "lib",
+            "package_name": "openat"
+        },
+        {
+            "crate_name": "glob",
+            "crate_type": "lib",
+            "package_name": "glob"
+        },
+        {
+            "crate_name": "eui48",
+            "crate_type": "lib",
+            "package_name": "eui48"
+        },
+        {
+            "crate_name": "webpki",
+            "crate_type": "lib",
+            "package_name": "webpki"
+        },
+        {
+            "crate_name": "parking_lot",
+            "crate_type": "lib",
+            "package_name": "parking_lot"
+        },
+        {
+            "crate_name": "byteorder",
+            "crate_type": "lib",
+            "package_name": "byteorder"
+        },
+        {
+            "crate_name": "chrono",
+            "crate_type": "lib",
+            "package_name": "chrono"
+        },
+        {
+            "crate_name": "url",
+            "crate_type": "lib",
+            "package_name": "url"
+        },
+        {
+            "crate_name": "untrusted",
+            "crate_type": "lib",
+            "package_name": "untrusted"
+        },
+        {
+            "crate_name": "time",
+            "crate_type": "lib",
+            "package_name": "time"
+        },
+        {
+            "crate_name": "xi_rpc",
+            "crate_type": "lib",
+            "package_name": "xi-rpc"
+        }
+    ],
+    "host_packages": [
+        {
+            "crate_name": "unic_char_range",
+            "crate_type": "lib",
+            "package_name": "unic-char-range"
+        },
+        {
+            "crate_name": "serde",
+            "crate_type": "lib",
+            "package_name": "serde"
+        },
+        {
+            "crate_name": "tar",
+            "crate_type": "lib",
+            "package_name": "tar"
+        },
+        {
+            "crate_name": "flate2",
+            "crate_type": "lib",
+            "package_name": "flate2"
+        },
+        {
+            "crate_name": "serde_json",
+            "crate_type": "lib",
+            "package_name": "serde_json"
+        },
+        {
+            "crate_name": "bitfield",
+            "crate_type": "lib",
+            "package_name": "bitfield"
+        },
+        {
+            "crate_name": "json5",
+            "crate_type": "lib",
+            "package_name": "json5"
+        },
+        {
+            "crate_name": "num",
+            "crate_type": "lib",
+            "package_name": "num"
+        },
+        {
+            "crate_name": "byteorder",
+            "crate_type": "lib",
+            "package_name": "byteorder"
+        },
+        {
+            "crate_name": "rayon",
+            "crate_type": "lib",
+            "package_name": "rayon"
+        },
+        {
+            "crate_name": "structopt",
+            "crate_type": "lib",
+            "package_name": "structopt"
+        },
+        {
+            "crate_name": "regex",
+            "crate_type": "lib",
+            "package_name": "regex"
+        },
+        {
+            "crate_name": "proc_macro2",
+            "crate_type": "lib",
+            "package_name": "proc-macro2"
+        },
+        {
+            "crate_name": "handlebars",
+            "crate_type": "lib",
+            "package_name": "handlebars"
+        },
+        {
+            "crate_name": "tempfile",
+            "crate_type": "lib",
+            "package_name": "tempfile"
+        },
+        {
+            "crate_name": "criterion",
+            "crate_type": "lib",
+            "package_name": "criterion"
+        },
+        {
+            "crate_name": "pretty_assertions",
+            "crate_type": "lib",
+            "package_name": "pretty_assertions"
+        },
+        {
+            "crate_name": "lazy_static",
+            "crate_type": "lib",
+            "package_name": "lazy_static"
+        },
+        {
+            "crate_name": "valico",
+            "crate_type": "lib",
+            "package_name": "valico"
+        },
+        {
+            "crate_name": "serde_derive",
+            "crate_type": "proc-macro",
+            "package_name": "serde_derive"
+        },
+        {
+            "crate_name": "pest_derive",
+            "crate_type": "proc-macro",
+            "package_name": "pest_derive"
+        },
+        {
+            "crate_name": "libc",
+            "crate_type": "lib",
+            "package_name": "libc"
+        },
+        {
+            "crate_name": "quote",
+            "crate_type": "lib",
+            "package_name": "quote"
+        },
+        {
+            "crate_name": "proc_macro_hack",
+            "crate_type": "proc-macro",
+            "package_name": "proc-macro-hack"
+        },
+        {
+            "crate_name": "syn",
+            "crate_type": "lib",
+            "package_name": "syn"
+        },
+        {
+            "crate_name": "synstructure",
+            "crate_type": "lib",
+            "package_name": "synstructure"
+        },
+        {
+            "crate_name": "failure",
+            "crate_type": "lib",
+            "package_name": "failure"
+        },
+        {
+            "crate_name": "parking_lot",
+            "crate_type": "lib",
+            "package_name": "parking_lot"
+        },
+        {
+            "crate_name": "xml",
+            "crate_type": "lib",
+            "package_name": "xml-rs"
+        },
+        {
+            "crate_name": "png",
+            "crate_type": "lib",
+            "package_name": "png"
+        },
+        {
+            "crate_name": "log",
+            "crate_type": "lib",
+            "package_name": "log"
+        },
+        {
+            "crate_name": "unic_ucd_block",
+            "crate_type": "lib",
+            "package_name": "unic-ucd-block"
+        },
+        {
+            "crate_name": "uuid",
+            "crate_type": "lib",
+            "package_name": "uuid"
+        },
+        {
+            "crate_name": "heck",
+            "crate_type": "lib",
+            "package_name": "heck"
+        },
+        {
+            "crate_name": "pest",
+            "crate_type": "lib",
+            "package_name": "pest"
+        },
+        {
+            "crate_name": "clap",
+            "crate_type": "lib",
+            "package_name": "clap"
+        }
+    ]
+}

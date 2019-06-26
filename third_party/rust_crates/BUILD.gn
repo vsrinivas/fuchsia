@@ -8,6 +8,7 @@ import("//build/rust/rustc_artifact.gni")  # for rustc_third_party_artifact
 
 third_party_lock = "//third_party/rust_crates/Cargo.lock"
 third_party_toml = "//third_party/rust_crates/Cargo.toml"
+third_party_map = "//third_party/rust_crates/crate_map.json"
 
 fuchsia_cprng_dir = "//garnet/public/rust/fuchsia-cprng"
 
@@ -21,17 +22,18 @@ fuchsia_cprng_src =
                 # lib.rs will contain `mod` statements for all top-level files
                 [ rebase_path("${fuchsia_cprng_dir}/src/lib.rs") ])
 
-third_party_crate_names = exec_script("//build/rust/list_3p_crates.py",
-                                      [
-                                        "--cargo-toml",
-                                        rebase_path(third_party_toml),
-                                      ],
-                                      "list lines",
-                                      [ third_party_toml ])
+all_third_party_packages = read_file(third_party_map, "json")
+if (is_fuchsia) {
+  third_party_packages = all_third_party_packages.fuchsia_packages
+} else {
+  third_party_packages = all_third_party_packages.host_packages
+}
 
-foreach(crate_name, third_party_crate_names) {
-  rustc_third_party_artifact(crate_name) {
-    crate_name = crate_name
+foreach(package, third_party_packages) {
+  rustc_third_party_artifact(package.package_name) {
+    package_name = package.package_name
+    crate_name = package.crate_name
+    crate_type = package.crate_type
   }
 }
 
@@ -70,7 +72,10 @@ action("build-third-party") {
   } else {
     rust_opt_level = "z"
   }
-  args += ["--opt-level", rust_opt_level]
+  args += [
+    "--opt-level",
+    rust_opt_level,
+  ]
 
   outputs = [
     out_deps_data,

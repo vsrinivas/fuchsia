@@ -201,7 +201,7 @@ def main():
             deps_folders.add(os.path.dirname(lib_path))
 
         crate_id_to_info[crate_id] = {
-            "crate_name": crate_name,
+            "crate_name": crate_name.replace('-', '_'),
             "lib_path": lib_path,
         }
 
@@ -239,6 +239,21 @@ def main():
                     package_name = package_name_from_crate_id(crate_id)
                     if package_name in cargo_dependencies:
                         crate_info["cargo_dependency_toml"] = cargo_dependencies[package_name]
+
+                        # Move the library into the top level out_dir at:
+                        # `{out_dir}/lib{crate_name}-{package_name}.{ext}`
+                        # This keeps the path the library stable between invocations of cargo
+                        # on different machines with different root paths, which affect
+                        # the suffix hash of the crate (in `lib{crate_name}-{hash}.{ext}`).
+                        # This makes it possible for GN to know where to look for the library
+                        # without first running this script.
+                        old_lib_path = crate_info["lib_path"]
+                        ext = os.path.splitext(old_lib_path)[1] # save .rlib/.so/.a
+                        new_filename = "lib" + crate_name + "-" + package_name + ext
+                        new_lib_path = os.path.join(args.out_dir, new_filename)
+                        os.rename(old_lib_path, new_lib_path)
+                        crate_info["lib_path"] = new_lib_path
+
                         crates[package_name] = crate_info
                     elif package_name not in other_target_deps:
                         print (package_name + " not found in Cargo.toml dependencies section")
