@@ -7,6 +7,7 @@ import("//build/test/test_package.gni")
 
 test("scenic_cpp_unittests") {
   sources = [
+    "view_ref_pair_test.cc",
     "view_token_pair_test.cc",
   ]
 

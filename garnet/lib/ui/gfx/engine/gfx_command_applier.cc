@@ -43,6 +43,7 @@
 #include "garnet/lib/ui/gfx/swapchain/swapchain_factory.h"
 #include "garnet/lib/ui/gfx/util/time.h"
 #include "garnet/lib/ui/gfx/util/unwrap.h"
+#include "garnet/lib/ui/gfx/util/validate_eventpair.h"
 #include "garnet/lib/ui/gfx/util/wrap.h"
 #include "src/ui/lib/escher/hmd/pose_buffer.h"
 #include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"
@@ -319,6 +320,8 @@ bool GfxCommandApplier::ApplyCreateResourceCmd(
               .debug_name =
                   std::move(command.resource.view_holder2().debug_name),
           });
+    case fuchsia::ui::gfx::ResourceArgs::Tag::kView3:
+      return ApplyCreateView(session, id, std::move(command.resource.view3()));
     case fuchsia::ui::gfx::ResourceArgs::Tag::kClipNode:
       return ApplyCreateClipNode(session, id,
                                  std::move(command.resource.clip_node()));
@@ -1340,6 +1343,28 @@ bool GfxCommandApplier::ApplyCreateView(Session* session, ResourceId id,
   return false;
 }
 
+bool GfxCommandApplier::ApplyCreateView(Session* session, ResourceId id,
+                                        fuchsia::ui::gfx::ViewArgs3 args) {
+  // Sanity check.  We also rely on FIDL to enforce this for us, although it
+  // does not at the moment.
+  FXL_DCHECK(args.token.value) << "scenic_impl::gfx::GfxCommandApplier::"
+                                  "ApplyCreateView(): no token provided.";
+  if (auto view = CreateView(session, id, std::move(args))) {
+    if (!(session->SetRootView(view->As<View>()->GetWeakPtr()))) {
+      FXL_LOG(ERROR) << "Error: cannot set more than one root view in a"
+                     << " session. This will soon become a session-terminating "
+                     << "error. For more info, see [SCN-1249].";
+      // TODO(SCN-1249) Return false and report the error in this case, and
+      // shut down any sessions that violate the one-view-per-session contract.
+      // return false;
+    }
+    view->As<View>()->Connect();  // Initiate the link.
+    session->resources()->AddResource(id, std::move(view));
+    return true;
+  }
+  return false;
+}
+
 bool GfxCommandApplier::ApplyCreateViewHolder(
     Session* session, ResourceId id, fuchsia::ui::gfx::ViewHolderArgs args) {
   // Sanity check.  We also rely on FIDL to enforce this for us, although it
@@ -1513,26 +1538,46 @@ ResourcePtr GfxCommandApplier::CreateView(Session* session, ResourceId id,
   ViewLinker::ImportLink link = view_linker->CreateImport(
       std::move(args.token.value), session->error_reporter());
 
-  // Create a View if the Link was successfully registered.
-  if (link.valid()) {
-    // TODO(SCN-1410): ViewRefControl/ViewRef should come through the command.
-    fuchsia::ui::views::ViewRefControl control_ref;
-    fuchsia::ui::views::ViewRef view_ref;
-    {
-      // Safe and valid eventpair, by construction.
-      zx_status_t status = zx::eventpair::create(
-          /*flags*/ 0u, &control_ref.reference, &view_ref.reference);
-      FXL_DCHECK(status == ZX_OK);
-      // Remove signaling.
-      status = view_ref.reference.replace(ZX_RIGHTS_BASIC, &view_ref.reference);
-      FXL_DCHECK(status == ZX_OK);
-    }
-
-    return fxl::MakeRefCounted<View>(session, id, std::move(link),
-                                     std::move(control_ref),
-                                     std::move(view_ref));
+  if (!link.valid()) {
+    return nullptr;  // Error out: link could not be registered.
   }
-  return nullptr;
+
+  // TODO(SCN-1410): Deprecate in favor of ViewArgs3.
+  fuchsia::ui::views::ViewRefControl control_ref;
+  fuchsia::ui::views::ViewRef view_ref;
+  {
+    // Safe and valid eventpair, by construction.
+    zx_status_t status = zx::eventpair::create(
+        /*flags*/ 0u, &control_ref.reference, &view_ref.reference);
+    FXL_DCHECK(status == ZX_OK);
+    // Remove signaling.
+    status = view_ref.reference.replace(ZX_RIGHTS_BASIC, &view_ref.reference);
+    FXL_DCHECK(status == ZX_OK);
+  }
+
+  // Create a View: Link was successful, view ref is valid.
+  return fxl::MakeRefCounted<View>(session, id, std::move(link),
+                                   std::move(control_ref), std::move(view_ref));
+}
+
+ResourcePtr GfxCommandApplier::CreateView(Session* session, ResourceId id,
+                                          fuchsia::ui::gfx::ViewArgs3 args) {
+  if (!validate_viewref(args.control_ref, args.view_ref)) {
+    return nullptr;  // Error out: view ref not usable.
+  }
+
+  ViewLinker* view_linker = session->session_context().view_linker;
+  ViewLinker::ImportLink link = view_linker->CreateImport(
+      std::move(args.token.value), session->error_reporter());
+
+  if (!link.valid()) {
+    return nullptr;  // Error out: link could not be registered.
+  }
+
+  // Create a View: Link was successful, view ref is valid.
+  return fxl::MakeRefCounted<View>(session, id, std::move(link),
+                                   std::move(args.control_ref),
+                                   std::move(args.view_ref));
 }
 
 ResourcePtr GfxCommandApplier::CreateViewHolder(

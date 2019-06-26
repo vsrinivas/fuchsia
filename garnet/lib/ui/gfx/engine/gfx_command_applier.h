@@ -201,6 +201,8 @@ class GfxCommandApplier {
                               fuchsia::ui::gfx::ViewArgs args);
   static bool ApplyCreateViewHolder(Session* session, ResourceId id,
                                     fuchsia::ui::gfx::ViewHolderArgs args);
+  static bool ApplyCreateView(Session* session, ResourceId id,
+                              fuchsia::ui::gfx::ViewArgs3 args);
   static bool ApplyCreateClipNode(Session* session, ResourceId id,
                                   fuchsia::ui::gfx::ClipNodeArgs args);
   static bool ApplyCreateEntityNode(Session* session, ResourceId id,
@@ -259,6 +261,8 @@ class GfxCommandApplier {
 
   static ResourcePtr CreateView(Session* session, ResourceId id,
                                 fuchsia::ui::gfx::ViewArgs args);
+  static ResourcePtr CreateView(Session* session, ResourceId id,
+                                fuchsia::ui::gfx::ViewArgs3 args);
   static ResourcePtr CreateViewHolder(Session* session, ResourceId id,
                                       fuchsia::ui::gfx::ViewHolderArgs args);
   static ResourcePtr CreateClipNode(Session* session, ResourceId id,

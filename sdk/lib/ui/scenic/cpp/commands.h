@@ -92,6 +92,10 @@ fuchsia::ui::gfx::Command NewCreateShapeNodeCmd(uint32_t id);
 fuchsia::ui::gfx::Command NewCreateViewCmd(uint32_t id,
                                            fuchsia::ui::views::ViewToken token,
                                            const std::string& debug_name);
+fuchsia::ui::gfx::Command NewCreateViewCmd(
+    uint32_t id, fuchsia::ui::views::ViewToken token,
+    fuchsia::ui::views::ViewRefControl control_ref,
+    fuchsia::ui::views::ViewRef view_ref, const std::string& debug_name);
 fuchsia::ui::gfx::Command NewCreateViewHolderCmd(
     uint32_t id, fuchsia::ui::views::ViewHolderToken token,
     const std::string& debug_name);

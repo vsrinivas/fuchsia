@@ -367,6 +367,15 @@ View::View(Session* session, fuchsia::ui::views::ViewToken token,
   session->Enqueue(NewCreateViewCmd(id(), std::move(token), debug_name));
 }
 
+View::View(Session* session, fuchsia::ui::views::ViewToken token,
+           fuchsia::ui::views::ViewRefControl control_ref,
+           fuchsia::ui::views::ViewRef view_ref, const std::string& debug_name)
+    : Resource(session) {
+  session->Enqueue(NewCreateViewCmd(id(), std::move(token),
+                                    std::move(control_ref), std::move(view_ref),
+                                    debug_name));
+}
+
 View::View(View&& moved) : Resource(std::move(moved)) {}
 
 View::~View() = default;

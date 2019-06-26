@@ -374,6 +374,9 @@ class View final : public Resource {
   View(Session* session, zx::eventpair token, const std::string& debug_name);
   View(Session* session, fuchsia::ui::views::ViewToken token,
        const std::string& debug_name);
+  View(Session* session, fuchsia::ui::views::ViewToken token,
+       fuchsia::ui::views::ViewRefControl control_ref,
+       fuchsia::ui::views::ViewRef view_ref, const std::string& debug_name);
   View(View&& moved);
   ~View();
 

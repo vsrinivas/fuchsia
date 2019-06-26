@@ -86,7 +86,7 @@ void FakeSession::HandleGfxCreateResource(fuchsia::ui::gfx::CreateResourceCmd cm
 
   // If the resource is a View, we need to send information to the user
   // about it.
-  if (type == ResourceArgs::Tag::kView) {
+  if (type == ResourceArgs::Tag::kView || type == ResourceArgs::Tag::kView3) {
     HandleCreateView(id);
   }
 }

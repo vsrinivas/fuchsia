@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/ui/scenic/cpp/commands.h>
+#include <lib/ui/scenic/cpp/view_ref_pair.h>
 #include <zircon/assert.h>
 
 #include <array>
@@ -398,12 +399,33 @@ fuchsia::ui::gfx::Command NewCreateViewCmd(uint32_t id,
                                            const std::string& debug_name) {
   ZX_DEBUG_ASSERT(token.value);
 
-  fuchsia::ui::gfx::ViewArgs view;
+  scenic::ViewRefPair ref_pair = scenic::ViewRefPair::New();
+
+  fuchsia::ui::gfx::ViewArgs3 view;
   view.token = std::move(token);
+  view.control_ref = std::move(ref_pair.control_ref);
+  view.view_ref = std::move(ref_pair.view_ref);
   view.debug_name = debug_name;
 
   fuchsia::ui::gfx::ResourceArgs resource;
-  resource.set_view(std::move(view));
+  resource.set_view3(std::move(view));
+  return NewCreateResourceCmd(id, std::move(resource));
+}
+
+fuchsia::ui::gfx::Command NewCreateViewCmd(
+    uint32_t id, fuchsia::ui::views::ViewToken token,
+    fuchsia::ui::views::ViewRefControl control_ref,
+    fuchsia::ui::views::ViewRef view_ref, const std::string& debug_name) {
+  ZX_DEBUG_ASSERT(token.value);
+
+  fuchsia::ui::gfx::ViewArgs3 view;
+  view.token = std::move(token);
+  view.control_ref = std::move(control_ref);
+  view.view_ref = std::move(view_ref);
+  view.debug_name = debug_name;
+
+  fuchsia::ui::gfx::ResourceArgs resource;
+  resource.set_view3(std::move(view));
   return NewCreateResourceCmd(id, std::move(resource));
 }
 

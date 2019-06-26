@@ -25,6 +25,8 @@ sdk_source_set("cpp") {
     "session.h",
     "util/mesh_utils.cc",
     "util/mesh_utils.h",
+    "view_ref_pair.cc",
+    "view_ref_pair.h",
     "view_token_pair.cc",
     "view_token_pair.h",
   ]
