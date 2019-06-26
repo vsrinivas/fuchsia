@@ -35,21 +35,10 @@ import (
 	"golang.org/x/net/dns/dnsmessage"
 )
 
-var staticDNSConfig = dnsConfig{
-	ndots:    100,
-	timeout:  3 * time.Second,
-	attempts: 3,
-	rotate:   true,
-}
-
-func init() {
-	clientConf.dnsConfig = &staticDNSConfig
-	clientConf.resolver = newCachedResolver(newNetworkResolver(clientConf.dnsConfig))
-}
-
 // Client is a DNS client.
 type Client struct {
-	stack *stack.Stack
+	stack  *stack.Stack
+	config clientConfig
 }
 
 // A Resolver answers DNS Questions.
@@ -70,11 +59,19 @@ func (e *Error) Error() string {
 	return fmt.Sprintf("lookup %s: %s", e.Name, e.Err)
 }
 
-// NewClient creates a DHCP client.
+// NewClient creates a DNS client.
 func NewClient(s *stack.Stack) *Client {
-	return &Client{
+	c := &Client{
 		stack: s,
+		config: clientConfig{
+			ndots:    100,
+			timeout:  3 * time.Second,
+			attempts: 3,
+			rotate:   true,
+		},
 	}
+	c.config.mu.resolver = newCachedResolver(newNetworkResolver(&c.config))
+	return c
 }
 
 // roundTrip writes the query to and reads the response from the Endpoint.
@@ -226,11 +223,11 @@ func (c *Client) exchange(server tcpip.FullAddress, name dnsmessage.Name, qtype 
 
 // Do a lookup for a single name, which must be rooted
 // (otherwise answer will not find the answers).
-func (c *Client) tryOneName(cfg *dnsConfig, name dnsmessage.Name, qtype dnsmessage.Type) (dnsmessage.Name, []dnsmessage.Resource, dnsmessage.Message, error) {
+func (c *Client) tryOneName(cfg *clientConfig, name dnsmessage.Name, qtype dnsmessage.Type) (dnsmessage.Name, []dnsmessage.Resource, dnsmessage.Message, error) {
 	var lastErr error
 
 	for i := 0; i < cfg.attempts; i++ {
-		for _, serverLists := range [][]*[]tcpip.Address{{&cfg.defaultServers}, cfg.runtimeServers} {
+		for _, serverLists := range [][]*[]tcpip.Address{{&cfg.mu.defaultServers}, cfg.mu.runtimeServers} {
 			for _, serverList := range serverLists {
 				for _, server := range *serverList {
 					server := tcpip.FullAddress{
@@ -291,24 +288,20 @@ func addrRecordList(rrs []dnsmessage.Resource) []tcpip.Address {
 
 // A clientConfig represents a DNS stub resolver configuration.
 type clientConfig struct {
-	mu        sync.RWMutex // protects the following vars
-	dnsConfig *dnsConfig   // DNS configuration used in lookups. Should never be nil.
-	resolver  Resolver     // a handler which answers DNS Questions
+	mu struct {
+		sync.RWMutex
+		defaultServers []tcpip.Address    // server addresses (host and port) to use
+		runtimeServers []*[]tcpip.Address // references to slices of DNS servers configured at runtime
+		resolver       Resolver           // a handler which answers DNS Questions
+	}
+	search   []string      // rooted suffixes to append to local name
+	ndots    int           // number of dots in name to trigger absolute lookup
+	timeout  time.Duration // wait before giving up on a query, including retries
+	attempts int           // lost packets before giving up on server
+	rotate   bool          // round robin among servers
 }
 
-type dnsConfig struct {
-	defaultServers []tcpip.Address    // server addresses (host and port) to use
-	runtimeServers []*[]tcpip.Address // references to slices of DNS servers configured at runtime
-	search         []string           // rooted suffixes to append to local name
-	ndots          int                // number of dots in name to trigger absolute lookup
-	timeout        time.Duration      // wait before giving up on a query, including retries
-	attempts       int                // lost packets before giving up on server
-	rotate         bool               // round robin among servers
-}
-
-var clientConf clientConfig
-
-func newNetworkResolver(cfg *dnsConfig) Resolver {
+func newNetworkResolver(cfg *clientConfig) Resolver {
 	return func(c *Client, question dnsmessage.Question) (dnsmessage.Name, []dnsmessage.Resource, dnsmessage.Message, error) {
 		return c.tryOneName(cfg, question.Name, question.Type)
 	}
@@ -329,7 +322,7 @@ func avoidDNS(name string) bool {
 }
 
 // nameList returns a list of names for sequential DNS queries.
-func (conf *dnsConfig) nameList(name string) []string {
+func (conf *clientConfig) nameList(name string) []string {
 	if avoidDNS(name) {
 		return nil
 	}
@@ -362,10 +355,10 @@ func (conf *dnsConfig) nameList(name string) []string {
 }
 
 func (c *Client) GetDefaultServers() []tcpip.Address {
-	clientConf.mu.RLock()
-	defer clientConf.mu.RUnlock()
+	c.config.mu.RLock()
+	defer c.config.mu.RUnlock()
 
-	return append([]tcpip.Address(nil), clientConf.dnsConfig.defaultServers...)
+	return append([]tcpip.Address(nil), c.config.mu.defaultServers...)
 }
 
 // SetDefaultServers sets the default list of nameservers to query.
@@ -373,11 +366,11 @@ func (c *Client) GetDefaultServers() []tcpip.Address {
 // Servers are checked sequentially, in order.
 // Takes ownership of the passed-in slice of addrs.
 func (c *Client) SetDefaultServers(servers []tcpip.Address) {
-	clientConf.mu.Lock()
-	defer clientConf.mu.Unlock()
+	c.config.mu.Lock()
+	defer c.config.mu.Unlock()
 
-	clientConf.dnsConfig.defaultServers = servers
-	clientConf.resolver = newCachedResolver(newNetworkResolver(clientConf.dnsConfig))
+	c.config.mu.defaultServers = servers
+	c.config.mu.resolver = newCachedResolver(newNetworkResolver(&c.config))
 }
 
 // SetRuntimeServers sets the list of lists of runtime servers to query (e.g.
@@ -391,11 +384,19 @@ func (c *Client) SetDefaultServers(servers []tcpip.Address) {
 // deleted, SetRuntimeServers should be called again with an updated list of
 // runtime server refs.
 func (c *Client) SetRuntimeServers(runtimeServerRefs []*[]tcpip.Address) {
-	clientConf.mu.Lock()
-	defer clientConf.mu.Unlock()
+	c.config.mu.Lock()
+	defer c.config.mu.Unlock()
 
-	clientConf.dnsConfig.runtimeServers = runtimeServerRefs
-	clientConf.resolver = newCachedResolver(newNetworkResolver(clientConf.dnsConfig))
+	c.config.mu.runtimeServers = runtimeServerRefs
+	c.config.mu.resolver = newCachedResolver(newNetworkResolver(&c.config))
+}
+
+func (c *Client) SetResolver(resolver Resolver) {
+	c.config.mu.Lock()
+	defer c.config.mu.Unlock()
+
+	c.config.mu.runtimeServers = nil
+	c.config.mu.resolver = resolver
 }
 
 // LookupIP returns a list of IP addresses that are registered for the give domain name.
@@ -403,10 +404,9 @@ func (c *Client) LookupIP(name string) (addrs []tcpip.Address, err error) {
 	if !isDomainName(name) {
 		return nil, &Error{Err: "invalid domain name", Name: name}
 	}
-	clientConf.mu.RLock()
-	conf := clientConf.dnsConfig
-	resolver := clientConf.resolver
-	clientConf.mu.RUnlock()
+	c.config.mu.RLock()
+	resolver := c.config.mu.resolver
+	c.config.mu.RUnlock()
 	type racer struct {
 		fqdn string
 		rrs  []dnsmessage.Resource
@@ -415,7 +415,7 @@ func (c *Client) LookupIP(name string) (addrs []tcpip.Address, err error) {
 	lane := make(chan racer, 1)
 	qtypes := [...]dnsmessage.Type{dnsmessage.TypeA, dnsmessage.TypeAAAA}
 	var lastErr error
-	for _, fqdn := range conf.nameList(name) {
+	for _, fqdn := range c.config.nameList(name) {
 		for _, qtype := range qtypes {
 			name, err := dnsmessage.NewName(fqdn)
 			if err != nil {

@@ -51,7 +51,7 @@ func Main() {
 	l, err := syslog.NewLogger(syslog.LogInitOptions{
 		LogLevel:                      logLevel,
 		MinSeverityForFileAndLineInfo: syslog.InfoLevel,
-		Tags: []string{"netstack"},
+		Tags:                          []string{"netstack"},
 	})
 	if err != nil {
 		panic(err)
@@ -163,6 +163,13 @@ func Main() {
 	var stackService stack.StackService
 	ctx.OutgoingService.AddService(stack.StackName, func(c zx.Channel) error {
 		_, err := stackService.Add(&stackImpl{ns: ns}, c, nil)
+		return err
+	})
+
+	var nameLookupService net.NameLookupService
+	nameLookupImpl := nameLookupImpl{dnsClient: ns.dnsClient}
+	ctx.OutgoingService.AddService(net.NameLookupName, func(c zx.Channel) error {
+		_, err := nameLookupService.Add(&nameLookupImpl, c, nil)
 		return err
 	})
 
