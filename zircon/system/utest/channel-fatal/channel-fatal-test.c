@@ -15,7 +15,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/exception.h>
 #include <zircon/syscalls/port.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 static const char* process_bin;
 
@@ -100,13 +100,11 @@ static void bad_channel_call(void) {
 
 // Verify that if an interrupted channel call does not retry and instead a new
 // channel call happens, the process dies.
-static bool bad_channel_call_contract_violation(void) {
-    BEGIN_TEST;
-
+TEST(ChannelFatalTestCase, BadChannelCallContractViolation) {
     zx_handle_t chan, remote, event, event_copy;
-    ASSERT_EQ(zx_channel_create(0, &chan, &remote), ZX_OK, "");
-    ASSERT_EQ(zx_event_create(0, &event), ZX_OK, "");
-    ASSERT_EQ(zx_handle_duplicate(event, ZX_RIGHT_SAME_RIGHTS, &event_copy), ZX_OK, "");
+    ASSERT_OK(zx_channel_create(0, &chan, &remote));
+    ASSERT_OK(zx_event_create(0, &event));
+    ASSERT_OK(zx_handle_duplicate(event, ZX_RIGHT_SAME_RIGHTS, &event_copy));
 
     launchpad_t* lp;
     launchpad_create(0, process_bin, &lp);
@@ -121,17 +119,16 @@ static bool bad_channel_call_contract_violation(void) {
     launchpad_load_from_file(lp, process_bin);
     const char* errmsg;
     zx_handle_t proc;
-    ASSERT_EQ(launchpad_go(lp, &proc, &errmsg), ZX_OK, "");
+    ASSERT_OK(launchpad_go(lp, &proc, &errmsg));
 
     uint32_t act_bytes = UINT32_MAX;
     uint32_t act_handles = UINT32_MAX;
     zx_handle_t thread;
 
     // Get the thread handle from our child
-    ASSERT_EQ(zx_object_wait_one(chan, ZX_CHANNEL_READABLE, ZX_TIME_INFINITE, NULL), ZX_OK, "");
-    ASSERT_EQ(zx_channel_read(chan, 0, NULL, &thread, 0, 1, &act_bytes, &act_handles),
-              ZX_OK, "");
-    ASSERT_EQ(act_handles, 1u, "");
+    ASSERT_OK(zx_object_wait_one(chan, ZX_CHANNEL_READABLE, ZX_TIME_INFINITE, NULL));
+    ASSERT_OK(zx_channel_read(chan, 0, NULL, &thread, 0, 1, &act_bytes, &act_handles));
+    ASSERT_EQ(act_handles, 1u);
 
     // Wait for the channel call and pull its message out of the pipe.  This
     // relies on an implementation detail of suspend and channel_call,
@@ -139,44 +136,37 @@ static bool bad_channel_call_contract_violation(void) {
     // until it reaches the wait.  So if we see the message written to the
     // channel, we know the other thread is in the call, and so when we see
     // it has suspended, it will have attempted the wait first.
-    EXPECT_EQ(zx_object_wait_one(chan, ZX_CHANNEL_READABLE, ZX_TIME_INFINITE, NULL), ZX_OK, "");
+    EXPECT_OK(zx_object_wait_one(chan, ZX_CHANNEL_READABLE, ZX_TIME_INFINITE, NULL));
     char msg[8] = { 0 };
-    ASSERT_EQ(zx_channel_read(chan, 0, msg, NULL, sizeof(msg), 0, &act_bytes, &act_handles),
-              ZX_OK, "");
+    ASSERT_OK(zx_channel_read(chan, 0, msg, NULL, sizeof(msg), 0, &act_bytes, &act_handles));
 
     zx_handle_t suspend_token = ZX_HANDLE_INVALID;
-    ASSERT_EQ(zx_task_suspend_token(thread, &suspend_token), ZX_OK, "");
+    ASSERT_OK(zx_task_suspend_token(thread, &suspend_token));
 
     // Wait for the thread to suspend
     zx_signals_t observed = 0u;
-    ASSERT_EQ(zx_object_wait_one(thread, ZX_THREAD_SUSPENDED, ZX_TIME_INFINITE, &observed), ZX_OK, "");
+    ASSERT_OK(zx_object_wait_one(thread, ZX_THREAD_SUSPENDED, ZX_TIME_INFINITE, &observed));
 
     // Resume the thread
-    ASSERT_EQ(zx_handle_close(suspend_token), ZX_OK, "");
+    ASSERT_OK(zx_handle_close(suspend_token));
 
     // Wait for signal 0 or 1, meaning either it's going to try its second call,
     // or something unexpected happened.
-    ASSERT_EQ(zx_object_wait_one(event, ZX_USER_SIGNAL_0 | ZX_USER_SIGNAL_1,
-                                 ZX_TIME_INFINITE, &observed), ZX_OK, "");
-    ASSERT_TRUE(observed & ZX_USER_SIGNAL_1, "");
-    ASSERT_FALSE(observed & ZX_USER_SIGNAL_0, "");
+    ASSERT_OK(zx_object_wait_one(event, ZX_USER_SIGNAL_0 | ZX_USER_SIGNAL_1,
+                                 ZX_TIME_INFINITE, &observed));
+    ASSERT_TRUE(observed & ZX_USER_SIGNAL_1);
+    ASSERT_FALSE(observed & ZX_USER_SIGNAL_0);
 
     // Process should have been shot
-    ASSERT_EQ(zx_object_wait_one(proc, ZX_PROCESS_TERMINATED, ZX_TIME_INFINITE, NULL), ZX_OK, "");
+    ASSERT_OK(zx_object_wait_one(proc, ZX_PROCESS_TERMINATED, ZX_TIME_INFINITE, NULL));
     // Make sure we don't see the "unexpected thing happened" signal.
-    ASSERT_EQ(zx_object_wait_one(event, ZX_USER_SIGNAL_0, 0, &observed), ZX_ERR_TIMED_OUT, "");
+    ASSERT_EQ(zx_object_wait_one(event, ZX_USER_SIGNAL_0, 0, &observed), ZX_ERR_TIMED_OUT);
 
-    ASSERT_EQ(zx_handle_close(event), ZX_OK, "");
-    ASSERT_EQ(zx_handle_close(chan), ZX_OK, "");
-    ASSERT_EQ(zx_handle_close(thread), ZX_OK, "");
-    ASSERT_EQ(zx_handle_close(proc), ZX_OK, "");
-
-    END_TEST;
+    ASSERT_OK(zx_handle_close(event));
+    ASSERT_OK(zx_handle_close(chan));
+    ASSERT_OK(zx_handle_close(thread));
+    ASSERT_OK(zx_handle_close(proc));
 }
-
-BEGIN_TEST_CASE(channel_fatal_tests)
-RUN_TEST(bad_channel_call_contract_violation)
-END_TEST_CASE(channel_fatal_tests)
 
 int main(int argc, char** argv) {
     process_bin = argv[0];
@@ -184,5 +174,5 @@ int main(int argc, char** argv) {
         bad_channel_call();
         return 0;
     }
-    return unittest_run_all_tests(argc, argv) ? 0 : -1;
+    return RUN_ALL_TESTS(argc, argv);
 }
