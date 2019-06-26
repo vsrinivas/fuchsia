@@ -24,6 +24,7 @@ import("sdk_molecule.gni")
 #     Path to the file representing the canonical contents of this SDK.
 #     This file is used to ensure modifications to the SDK contents are
 #     explicitly acknowledged.
+#     Mandatory for "public" or "partner" SDKs.
 #
 #   category (required)
 #     Describes the minimum category that atoms in this SDK must have.
@@ -39,7 +40,9 @@ import("sdk_molecule.gni")
 template("sdk") {
   assert(defined(invoker.category), "Must define an SDK category")
 
-  # TODO(DX-685): enforce that the "api" attribute is set.
+  if (invoker.category == "public" || invoker.category == "partner") {
+    assert(defined(invoker.api), "API file required for public/partner SDKs")
+  }
 
   main_target_name = target_name
   generation_target_name = "${target_name}_molecule"

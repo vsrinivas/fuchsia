@@ -72,7 +72,7 @@ sdk_documentation("vulkan_license") {
 }
 
 sdk("zircon_sysroot") {
-  category = "partner"
+  category = "internal"
 
   export = true
 
@@ -82,7 +82,7 @@ sdk("zircon_sysroot") {
 }
 
 sdk("ddk") {
-  category = "partner"
+  category = "internal"
 
   deps = [
     "tools:banjo_sdk($host_toolchain)",
@@ -135,6 +135,8 @@ sdk("e2e_testing") {
   id = sdk_id
 
   category = "partner"
+
+  api = "e2e_testing.api"
 
   deps = [
     "//sdk/testing/sl4f/client:client_sdk($dart_toolchain)",
