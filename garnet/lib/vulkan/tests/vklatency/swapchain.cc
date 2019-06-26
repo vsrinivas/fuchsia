@@ -5,6 +5,7 @@
 #include "garnet/lib/vulkan/tests/vklatency/swapchain.h"
 
 #include "src/lib/fxl/logging.h"
+#include "third_party/skia/include/gpu/GrTypes.h"
 #include "third_party/skia/include/gpu/vk/GrVkBackendContext.h"
 
 namespace examples {
@@ -159,6 +160,8 @@ GrContext* Swapchain::GetGrContext() {
     return vk_instance_.getProcAddr(proc_name);
   };
   backend_context.fOwnsInstanceAndDevice = false;
+  backend_context.fProtectedContext =
+      protected_output_ ? GrProtected::kYes : GrProtected::kNo;
   gr_context_ = GrContext::MakeVulkan(backend_context);
   FXL_CHECK(gr_context_);
   return gr_context_.get();

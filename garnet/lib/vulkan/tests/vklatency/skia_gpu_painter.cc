@@ -7,6 +7,7 @@
 #include "src/lib/fxl/logging.h"
 #include "third_party/skia/include/core/SkPaint.h"
 #include "third_party/skia/include/gpu/GrBackendSurface.h"
+#include "third_party/skia/include/gpu/GrTypes.h"
 
 namespace examples {
 
@@ -61,7 +62,6 @@ void SkiaGpuPainter::DrawImage() {
   PrepareSkSurface(image);
   auto& image_draw_resource = image_draw_resources_[image_index];
   SkCanvas* canvas = image_draw_resource.sk_surface->getCanvas();
-  canvas->save();
 
   SkPaint paint;
   paint.setColor(SK_ColorBLACK);
@@ -79,7 +79,6 @@ void SkiaGpuPainter::DrawImage() {
     paths_in_progress.second.getLastPt(&last_point);
     paths_in_progress.second = SkPath().moveTo(last_point);
   }
-  canvas->restore();
   canvas->flush();
 
   SetImageLayout(image);
@@ -104,6 +103,9 @@ void SkiaGpuPainter::PrepareSkSurface(
     vk_image_info.fLevelCount = 1;
     auto size = vk_swapchain_->GetImageSize();
     GrBackendRenderTarget render_target(size.width, size.height, 0,
+                                        vk_swapchain_->protected_output()
+                                            ? GrProtected::kYes
+                                            : GrProtected::kNo,
                                         vk_image_info);
     sk_surface = SkSurface::MakeFromBackendRenderTarget(
         vk_swapchain_->GetGrContext(), render_target, kTopLeft_GrSurfaceOrigin,
