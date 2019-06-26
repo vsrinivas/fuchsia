@@ -9,7 +9,8 @@ use {
     cm_rust::{self, ComponentDecl, UseDirectoryDecl, UseServiceDecl},
     fidl::endpoints::{create_endpoints, ClientEnd, ServerEnd},
     fidl_fuchsia_io::{
-        DirectoryProxy, NodeMarker, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+        DirectoryProxy, NodeMarker, CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_DIRECTORY,
+        OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_vfs_pseudo_fs as fvfs,
     fuchsia_vfs_pseudo_fs::directory::entry::DirectoryEntry,
@@ -53,7 +54,7 @@ impl IncomingNamespace {
 
     pub fn clone_package_dir(&self) -> Result<Option<DirectoryProxy>, ModelError> {
         if let Some(package_dir) = &self.package_dir {
-            let clone_dir_proxy = io_util::clone_directory(package_dir)
+            let clone_dir_proxy = io_util::clone_directory(package_dir, CLONE_FLAG_SAME_RIGHTS)
                 .map_err(|e| ModelError::namespace_creation_failed(e))?;
             return Ok(Some(clone_dir_proxy));
         }
@@ -116,7 +117,7 @@ impl IncomingNamespace {
         ns: &mut fsys::ComponentNamespace,
         package_dir: &DirectoryProxy,
     ) -> Result<(), ModelError> {
-        let clone_dir_proxy = io_util::clone_directory(package_dir)
+        let clone_dir_proxy = io_util::clone_directory(package_dir, CLONE_FLAG_SAME_RIGHTS)
             .map_err(|e| ModelError::namespace_creation_failed(e))?;
         let cloned_dir = ClientEnd::new(
             clone_dir_proxy

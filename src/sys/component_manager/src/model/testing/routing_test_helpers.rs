@@ -12,8 +12,8 @@ use {
     fidl_fidl_examples_echo::{self as echo, EchoMarker, EchoRequest, EchoRequestStream},
     fidl_fuchsia_data as fdata,
     fidl_fuchsia_io::{
-        DirectoryMarker, DirectoryProxy, NodeMarker, MODE_TYPE_DIRECTORY, MODE_TYPE_SERVICE,
-        OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+        DirectoryMarker, DirectoryProxy, NodeMarker, CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_DIRECTORY,
+        MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_vfs_pseudo_fs::{
@@ -346,7 +346,8 @@ mod capability_util {
         let path = path.to_string();
         let dir_proxy = await!(get_dir_from_namespace(&path, resolved_url, namespaces));
         let file = PathBuf::from("hippo");
-        let file_proxy = io_util::open_file(&dir_proxy, &file).expect("failed to open file");
+        let file_proxy = io_util::open_file(&dir_proxy, &file, OPEN_RIGHT_READABLE)
+            .expect("failed to open file");
         let res = await!(io_util::read_file(&file_proxy));
 
         match should_succeed {
@@ -367,9 +368,13 @@ mod capability_util {
         should_succeed: bool,
     ) {
         let dir_proxy = await!(get_dir_from_namespace(&path.dirname, resolved_url, namespaces));
-        let node_proxy =
-            io_util::open_node(&dir_proxy, &PathBuf::from(path.basename), MODE_TYPE_SERVICE)
-                .expect("failed to open echo service");
+        let node_proxy = io_util::open_node(
+            &dir_proxy,
+            &PathBuf::from(path.basename),
+            OPEN_RIGHT_READABLE,
+            MODE_TYPE_SERVICE,
+        )
+        .expect("failed to open echo service");
         let echo_proxy = echo::EchoProxy::new(node_proxy.into_channel().unwrap());
         let res = await!(echo_proxy.echo_string(Some("hippos")));
 
@@ -400,7 +405,8 @@ mod capability_util {
         await!(open_exposed_dir(&path, abs_moniker, model, MODE_TYPE_DIRECTORY, server_end));
         let dir_proxy = DirectoryProxy::new(node_proxy.into_channel().unwrap());
         let file = PathBuf::from("hippo");
-        let file_proxy = io_util::open_file(&dir_proxy, &file).expect("failed to open file");
+        let file_proxy = io_util::open_file(&dir_proxy, &file, OPEN_RIGHT_READABLE)
+            .expect("failed to open file");
         let res = await!(io_util::read_file(&file_proxy));
 
         match should_succeed {
@@ -449,9 +455,13 @@ mod capability_util {
     ) {
         let dir_proxy =
             await!(get_dir_from_namespace(&path.dirname, resolved_url.clone(), namespaces));
-        let node_proxy =
-            io_util::open_node(&dir_proxy, &PathBuf::from(path.basename), MODE_TYPE_SERVICE)
-                .expect("failed to open realm service");
+        let node_proxy = io_util::open_node(
+            &dir_proxy,
+            &PathBuf::from(path.basename),
+            OPEN_RIGHT_READABLE,
+            MODE_TYPE_SERVICE,
+        )
+        .expect("failed to open realm service");
         let realm_proxy = fsys::RealmProxy::new(node_proxy.into_channel().unwrap());
         let child_ref = fsys::ChildRef { name: Some("my_child".to_string()), collection: None };
         let (_client_chan, server_chan) = zx::Channel::create().unwrap();
@@ -476,9 +486,13 @@ mod capability_util {
         let path = CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").expect("no realm service");
         let dir_proxy =
             await!(get_dir_from_namespace(&path.dirname, resolved_url.clone(), namespaces));
-        let node_proxy =
-            io_util::open_node(&dir_proxy, &PathBuf::from(path.basename), MODE_TYPE_SERVICE)
-                .expect("failed to open realm service");
+        let node_proxy = io_util::open_node(
+            &dir_proxy,
+            &PathBuf::from(path.basename),
+            OPEN_RIGHT_READABLE,
+            MODE_TYPE_SERVICE,
+        )
+        .expect("failed to open realm service");
         let realm_proxy = fsys::RealmProxy::new(node_proxy.into_channel().unwrap());
         let collection_ref = fsys::CollectionRef { name: Some(collection.to_string()) };
         let child_decl = child_decl.native_into_fidl();
@@ -505,7 +519,7 @@ mod capability_util {
         // Clone our directory, and then put the directory and path back on the end of the namespace so
         // that the namespace is (somewhat) unmodified.
         let dir_proxy = directory.into_proxy().unwrap();
-        let dir_proxy_clone = io_util::clone_directory(&dir_proxy).unwrap();
+        let dir_proxy_clone = io_util::clone_directory(&dir_proxy, CLONE_FLAG_SAME_RIGHTS).unwrap();
         ns.directories.push(ClientEnd::new(dir_proxy.into_channel().unwrap().into_zx_channel()));
         ns.paths.push(path);
 

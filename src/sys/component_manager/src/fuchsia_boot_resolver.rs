@@ -38,7 +38,7 @@ impl FuchsiaBootResolver {
             res_path.to_str().ok_or(ResolverError::url_missing_resource_error(component_url))?;
 
         // Read component manifest from resource into a component decl.
-        let cm_file = io_util::open_file_in_namespace(&res_path_str)
+        let cm_file = io_util::open_file_in_namespace(&res_path_str, io_util::OPEN_RIGHT_READABLE)
             .map_err(|e| ResolverError::component_not_available(component_url, e))?;
         let cm_str = await!(io_util::read_file(&cm_file))
             .map_err(|e| ResolverError::component_not_available(component_url, e))?;
@@ -47,8 +47,9 @@ impl FuchsiaBootResolver {
 
         // Set up the fuchsia-boot path as the component's "package" namespace.
         let package_path = url.path();
-        let path_proxy = io_util::open_directory_in_namespace(&package_path)
-            .map_err(|e| ResolverError::component_not_available(component_url, e))?;
+        let path_proxy =
+            io_util::open_directory_in_namespace(&package_path, io_util::OPEN_RIGHT_READABLE)
+                .map_err(|e| ResolverError::component_not_available(component_url, e))?;
         let package = fsys::Package {
             package_url: Some(url.root_url().to_string()),
             package_dir: Some(ClientEnd::new(path_proxy.into_channel().unwrap().into_zx_channel())),

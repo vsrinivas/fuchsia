@@ -66,7 +66,7 @@ impl FuchsiaPkgResolver {
         let dir = ClientEnd::<DirectoryMarker>::new(package_dir_c)
             .into_proxy()
             .expect("failed to create directory proxy");
-        let file = io_util::open_file(&dir, &cm_path)
+        let file = io_util::open_file(&dir, &cm_path, io_util::OPEN_RIGHT_READABLE)
             .map_err(|e| ResolverError::manifest_not_available(component_url, e))?;
         let cm_str = await!(io_util::read_file(&file))
             .map_err(|e| ResolverError::manifest_not_available(component_url, e))?;
@@ -143,7 +143,11 @@ mod tests {
                 return Err(zx::Status::NOT_FOUND);
             }
             let path = Path::new("/pkg");
-            io_util::connect_in_namespace(path.to_str().unwrap(), dir.into_channel())
+            io_util::connect_in_namespace(
+                path.to_str().unwrap(),
+                dir.into_channel(),
+                io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
+            )
         }
     }
 
@@ -182,7 +186,8 @@ mod tests {
         assert_eq!(package_url.unwrap(), "fuchsia-pkg://fuchsia.com/hello_world");
         let dir_proxy = package_dir.unwrap().into_proxy().unwrap();
         let path = PathBuf::from("meta/component_manager_tests_hello_world.cm");
-        let file_proxy = io_util::open_file(&dir_proxy, &path).expect("could not open cm");
+        let file_proxy = io_util::open_file(&dir_proxy, &path, io_util::OPEN_RIGHT_READABLE)
+            .expect("could not open cm");
         let cm_contents = await!(io_util::read_file(&file_proxy)).expect("could not read cm");
         assert_eq!(
             cm_fidl_translator::translate(&cm_contents).expect("could not parse cm"),

@@ -186,8 +186,12 @@ async fn read_cmx_file(package: fsys::Package) -> Result<String, Error> {
 
     let directory_proxy = DirectoryProxy::from_channel(channel);
 
-    let cmx_file = io_util::open_file(&directory_proxy, &PathBuf::from(cmx_path))
-        .context("Could not open cmx file for package.")?;
+    let cmx_file = io_util::open_file(
+        &directory_proxy,
+        &PathBuf::from(cmx_path),
+        io_util::OPEN_RIGHT_READABLE,
+    )
+    .context("Could not open cmx file for package.")?;
 
     await!(io_util::read_file(&cmx_file))
 }

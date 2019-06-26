@@ -257,7 +257,8 @@ impl ElfRunner {
             .find(|(p, _)| p.as_str() == pkg_str)
             .ok_or(err_msg("/pkg missing from namespace"))?;
 
-        let lib_proxy = io_util::open_directory(pkg_proxy, &PathBuf::from("lib"))?;
+        let lib_proxy =
+            io_util::open_directory(pkg_proxy, &PathBuf::from("lib"), OPEN_RIGHT_READABLE)?;
 
         // The loader service should only be able to load files from `/pkg/lib`. Giving it a larger
         // scope is potentially a security vulnerability, as it could make it trivial for parts of
@@ -456,7 +457,7 @@ mod tests {
     ) -> fsys::ComponentStartInfo {
         // Get a handle to /pkg
         let pkg_path = "/pkg".to_string();
-        let pkg_chan = io_util::open_directory_in_namespace("/pkg")
+        let pkg_chan = io_util::open_directory_in_namespace("/pkg", OPEN_RIGHT_READABLE)
             .unwrap()
             .into_channel()
             .unwrap()
@@ -496,7 +497,8 @@ mod tests {
     // refactoring this into a test util file.
     async fn read_file<'a>(root_proxy: &'a DirectoryProxy, path: &'a str) -> String {
         let file_proxy =
-            io_util::open_file(&root_proxy, &PathBuf::from(path)).expect("Failed to open file.");
+            io_util::open_file(&root_proxy, &PathBuf::from(path), io_util::OPEN_RIGHT_READABLE)
+                .expect("Failed to open file.");
         let res = await!(io_util::read_file(&file_proxy));
         res.expect("Unable to read file.")
     }

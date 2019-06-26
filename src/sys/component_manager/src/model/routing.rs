@@ -66,7 +66,7 @@ async fn open_capability_at_source<'a>(
     match source {
         CapabilitySource::ComponentMgrNamespace(source_capability) => {
             if let Some(path) = source_capability.path() {
-                io_util::connect_in_namespace(&path.to_string(), server_chan)
+                io_util::connect_in_namespace(&path.to_string(), server_chan, flags)
                     .map_err(|e| ModelError::capability_discovery_error(e))?;
             } else {
                 return Err(ModelError::capability_discovery_error(format_err!(

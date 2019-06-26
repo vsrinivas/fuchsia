@@ -235,7 +235,10 @@ impl ExtraDataCollector {
     ///
     /// This currently only does a single pass over the directory to find information.
     async fn collect(mut self, path: PathBuf) -> Result<(), Error> {
-        let proxy = match io_util::open_directory_in_namespace(&path.to_string_lossy()) {
+        let proxy = match io_util::open_directory_in_namespace(
+            &path.to_string_lossy(),
+            io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
+        ) {
             Ok(proxy) => proxy,
             Err(e) => {
                 return Err(format_err!("Failed to open out directory at {:?}: {}", path, e));
@@ -250,7 +253,10 @@ impl ExtraDataCollector {
             }
 
             let path = path.join(entry.name);
-            let proxy = match io_util::open_file_in_namespace(&path.to_string_lossy()) {
+            let proxy = match io_util::open_file_in_namespace(
+                &path.to_string_lossy(),
+                io_util::OPEN_RIGHT_READABLE,
+            ) {
                 Ok(proxy) => proxy,
                 Err(_) => {
                     continue;

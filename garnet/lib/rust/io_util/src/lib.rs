@@ -11,7 +11,7 @@ use {
     fidl::endpoints::Proxy,
     fidl_fuchsia_io::{
         DirectoryProxy, FileProxy, NodeProxy, MAX_BUF, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE,
-        OPEN_FLAG_DESCRIBE, OPEN_RIGHT_READABLE,
+        OPEN_FLAG_DIRECTORY,
     },
     fuchsia_async as fasync,
     fuchsia_zircon::{self as zx, HandleBased},
@@ -21,16 +21,20 @@ use {
     std::str::from_utf8,
 };
 
+// Reexported from fidl_fuchsia_io for convenience
+pub const OPEN_RIGHT_READABLE: u32 = fidl_fuchsia_io::OPEN_RIGHT_READABLE;
+pub const OPEN_RIGHT_WRITABLE: u32 = fidl_fuchsia_io::OPEN_RIGHT_WRITABLE;
+
 /// open_node will return a NodeProxy opened to the node at the given path relative to the
 /// given directory, or return an error if no such node exists (or some other FIDL error was
 /// encountered). This function will not block.
 pub fn open_node<'a>(
     dir: &'a DirectoryProxy,
     path: &'a PathBuf,
+    flags: u32,
     mode: u32,
 ) -> Result<NodeProxy, Error> {
     let path = path.to_str().ok_or(err_msg("path is invalid"))?;
-    let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
     let (new_node, server_end) = create_proxy()?;
     dir.open(flags, mode, path, server_end)?;
     Ok(new_node)
@@ -41,21 +45,30 @@ pub fn open_node<'a>(
 pub fn open_directory<'a>(
     dir: &'a DirectoryProxy,
     path: &'a PathBuf,
+    flags: u32,
 ) -> Result<DirectoryProxy, Error> {
-    node_to_directory(open_node(dir, path, MODE_TYPE_DIRECTORY)?)
+    node_to_directory(open_node(dir, path, flags | OPEN_FLAG_DIRECTORY, MODE_TYPE_DIRECTORY)?)
 }
 
 /// open_file will open a NodeProxy at the given path relative to the given directory, and convert
 /// it into a FileProxy. This function will not block.
-pub fn open_file<'a>(dir: &'a DirectoryProxy, path: &'a PathBuf) -> Result<FileProxy, Error> {
-    node_to_file(open_node(dir, path, MODE_TYPE_FILE)?)
+pub fn open_file<'a>(
+    dir: &'a DirectoryProxy,
+    path: &'a PathBuf,
+    flags: u32,
+) -> Result<FileProxy, Error> {
+    node_to_file(open_node(dir, path, flags, MODE_TYPE_FILE)?)
 }
 
 // TODO: this function will block on the FDIO calls. This should be rewritten/wrapped/whatever to
 // be asynchronous.
 
 /// Connect a zx::Channel to a path in the namespace.
-pub fn connect_in_namespace(path: &str, server_chan: zx::Channel) -> Result<(), zx::Status> {
+pub fn connect_in_namespace(
+    path: &str,
+    server_chan: zx::Channel,
+    flags: u32,
+) -> Result<(), zx::Status> {
     let mut ns_ptr: *mut fdio::fdio_sys::fdio_ns_t = ptr::null_mut();
     let status = unsafe { fdio::fdio_sys::fdio_ns_get_installed(&mut ns_ptr) };
     if status != zx::sys::ZX_OK {
@@ -64,12 +77,7 @@ pub fn connect_in_namespace(path: &str, server_chan: zx::Channel) -> Result<(), 
 
     let cstr = CString::new(path)?;
     let status = unsafe {
-        fdio::fdio_sys::fdio_ns_connect(
-            ns_ptr,
-            cstr.as_ptr(),
-            OPEN_RIGHT_READABLE,
-            server_chan.into_raw(),
-        )
+        fdio::fdio_sys::fdio_ns_connect(ns_ptr, cstr.as_ptr(), flags, server_chan.into_raw())
     };
     if status != zx::sys::ZX_OK {
         return Err(zx::Status::from_raw(status));
@@ -79,7 +87,7 @@ pub fn connect_in_namespace(path: &str, server_chan: zx::Channel) -> Result<(), 
 
 /// open_node_in_namespace will return a NodeProxy to the given path by using the default namespace
 /// stored in fdio. The path argument must be an absolute path.
-pub fn open_node_in_namespace(path: &str) -> Result<NodeProxy, Error> {
+pub fn open_node_in_namespace(path: &str, flags: u32) -> Result<NodeProxy, Error> {
     let mut ns_ptr: *mut fdio::fdio_sys::fdio_ns_t = ptr::null_mut();
     let status = unsafe { fdio::fdio_sys::fdio_ns_get_installed(&mut ns_ptr) };
     if status != zx::sys::ZX_OK {
@@ -91,12 +99,7 @@ pub fn open_node_in_namespace(path: &str) -> Result<NodeProxy, Error> {
 
     let cstr = CString::new(path)?;
     let status = unsafe {
-        fdio::fdio_sys::fdio_ns_connect(
-            ns_ptr,
-            cstr.as_ptr(),
-            OPEN_RIGHT_READABLE,
-            server_end.into_raw(),
-        )
+        fdio::fdio_sys::fdio_ns_connect(ns_ptr, cstr.as_ptr(), flags, server_end.into_raw())
     };
     if status != zx::sys::ZX_OK {
         return Err(format_err!("fdio_ns_connect error: {}", status));
@@ -107,14 +110,14 @@ pub fn open_node_in_namespace(path: &str) -> Result<NodeProxy, Error> {
 
 /// open_directory_in_namespace will open a NodeProxy to the given path and convert it into a
 /// DirectoryProxy. The path argument must be an absolute path.
-pub fn open_directory_in_namespace(path: &str) -> Result<DirectoryProxy, Error> {
-    node_to_directory(open_node_in_namespace(path)?)
+pub fn open_directory_in_namespace(path: &str, flags: u32) -> Result<DirectoryProxy, Error> {
+    node_to_directory(open_node_in_namespace(path, flags)?)
 }
 
 /// open_file_in_namespace will open a NodeProxy to the given path and convert it into a FileProxy.
 /// The path argument must be an absolute path.
-pub fn open_file_in_namespace(path: &str) -> Result<FileProxy, Error> {
-    node_to_file(open_node_in_namespace(path)?)
+pub fn open_file_in_namespace(path: &str, flags: u32) -> Result<FileProxy, Error> {
+    node_to_file(open_node_in_namespace(path, flags)?)
 }
 
 pub async fn read_file(file: &FileProxy) -> Result<String, Error> {
@@ -149,9 +152,9 @@ pub fn node_to_file(node: NodeProxy) -> Result<FileProxy, Error> {
 
 /// clone_directory will create a clone of the given DirectoryProxy by calling its clone function.
 /// This function will not block.
-pub fn clone_directory(dir: &DirectoryProxy) -> Result<DirectoryProxy, Error> {
+pub fn clone_directory(dir: &DirectoryProxy, flags: u32) -> Result<DirectoryProxy, Error> {
     let (node_clone, server_end) = create_proxy()?;
-    dir.clone(OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE, server_end)?;
+    dir.clone(flags, server_end)?;
     node_to_directory(node_clone)
 }
 
@@ -167,24 +170,93 @@ pub fn canonicalize_path(path: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, fuchsia_async as fasync, std::fs, tempfile::TempDir};
+    use {
+        super::*,
+        fidl::endpoints::ServerEnd,
+        fidl_fuchsia_io::DirectoryMarker,
+        fuchsia_async as fasync,
+        fuchsia_vfs_pseudo_fs::{
+            directory::entry::DirectoryEntry,
+            file::simple::{read_only_str, read_write_str, write_only},
+            pseudo_directory,
+        },
+        std::fs,
+        std::iter,
+        tempfile::TempDir,
+    };
 
     #[test]
     fn open_and_read_file_test() {
         let mut executor = fasync::Executor::new().unwrap();
-        executor.run_singlethreaded(
-            async {
-                let tempdir = TempDir::new().expect("failed to create tmp dir");
-                let data = "abc".repeat(10000);
-                fs::write(tempdir.path().join("myfile"), &data).expect("failed writing file");
+        executor.run_singlethreaded(async {
+            let tempdir = TempDir::new().expect("failed to create tmp dir");
+            let data = "abc".repeat(10000);
+            fs::write(tempdir.path().join("myfile"), &data).expect("failed writing file");
 
-                let dir = open_directory_in_namespace(tempdir.path().to_str().unwrap())
+            let dir =
+                open_directory_in_namespace(tempdir.path().to_str().unwrap(), OPEN_RIGHT_READABLE)
                     .expect("could not open tmp dir");
-                let path = PathBuf::from("myfile");
-                let file = open_file(&dir, &path).expect("could not open file");
-                let contents = await!(read_file(&file)).expect("could not read file");
-                assert_eq!(&contents, &data, "File contents did not match");
-            },
+            let path = PathBuf::from("myfile");
+            let file = open_file(&dir, &path, OPEN_RIGHT_READABLE).expect("could not open file");
+            let contents = await!(read_file(&file)).expect("could not read file");
+            assert_eq!(&contents, &data, "File contents did not match");
+        });
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn flags_test() -> Result<(), Error> {
+        let mut example_dir = pseudo_directory! {
+            "read_only" => read_only_str(|| Ok("read_only".to_string())),
+            "read_write" => read_write_str(
+                || Ok("read_write".to_string()),
+                100,
+                |_| Ok(()),
+            ),
+            "write_only" => write_only(100, |_| Ok(())),
+        };
+        let (example_dir_proxy, example_dir_service) =
+            fidl::endpoints::create_proxy::<DirectoryMarker>()?;
+        example_dir.open(
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            MODE_TYPE_DIRECTORY,
+            &mut iter::empty(),
+            ServerEnd::new(example_dir_service.into_channel()),
         );
+        fasync::spawn(async move {
+            let _ = await!(example_dir);
+        });
+
+        for (file_name, flags, should_succeed) in vec![
+            ("read_only", OPEN_RIGHT_READABLE, true),
+            ("read_only", OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, false),
+            ("read_only", OPEN_RIGHT_WRITABLE, false),
+            ("read_write", OPEN_RIGHT_READABLE, true),
+            ("read_write", OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, true),
+            ("read_write", OPEN_RIGHT_WRITABLE, true),
+            ("write_only", OPEN_RIGHT_READABLE, false),
+            ("write_only", OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, false),
+            ("write_only", OPEN_RIGHT_WRITABLE, true),
+        ] {
+            let file_proxy = open_file(&example_dir_proxy, &PathBuf::from(file_name), flags)?;
+            match (should_succeed, await!(file_proxy.describe())) {
+                (true, Ok(_)) => (),
+                (false, Err(_)) => continue,
+                (true, Err(e)) => {
+                    panic!("failed to open when expected success, couldn't describe: {:?}", e)
+                }
+                (false, Ok(d)) => {
+                    panic!("successfully opened when expected failure, could describe: {:?}", d)
+                }
+            }
+            if flags & OPEN_RIGHT_READABLE != 0 {
+                assert_eq!(file_name, await!(read_file(&file_proxy)).expect("failed to read file"));
+            }
+            if flags & OPEN_RIGHT_WRITABLE != 0 {
+                let (s, _) = await!(file_proxy.write(&mut b"write_only".to_vec().into_iter()))?;
+                assert_eq!(zx::Status::OK, zx::Status::from_raw(s));
+            }
+            assert_eq!(zx::Status::OK, zx::Status::from_raw(await!(file_proxy.close())?));
+        }
+        Ok(())
     }
 }

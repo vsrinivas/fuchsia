@@ -10,7 +10,7 @@ use {
         error::ModelError,
     },
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_io::{DirectoryProxy, NodeMarker},
+    fidl_fuchsia_io::{DirectoryProxy, NodeMarker, CLONE_FLAG_SAME_RIGHTS},
     fuchsia_async as fasync,
     fuchsia_vfs_pseudo_fs::{directory, file::simple::read_only},
     futures::{
@@ -222,7 +222,9 @@ impl Hub {
                 // Install the out directory if we can successfully clone it.
                 // TODO(fsamuel): We should probably preserve the original error messages
                 // instead of dropping them.
-                if let Ok(out_dir) = io_util::clone_directory(&execution.outgoing_dir) {
+                if let Ok(out_dir) =
+                    io_util::clone_directory(&execution.outgoing_dir, CLONE_FLAG_SAME_RIGHTS)
+                {
                     execution_controlled.add_node(
                         "out",
                         directory_broker::DirectoryBroker::new(Self::route_open_fn(out_dir)),
@@ -233,7 +235,9 @@ impl Hub {
                 // Install the runtime directory if we can successfully clone it.
                 // TODO(fsamuel): We should probably preserve the original error messages
                 // instead of dropping them.
-                if let Ok(runtime_dir) = io_util::clone_directory(&execution.runtime_dir) {
+                if let Ok(runtime_dir) =
+                    io_util::clone_directory(&execution.runtime_dir, CLONE_FLAG_SAME_RIGHTS)
+                {
                     execution_controlled.add_node(
                         "runtime",
                         directory_broker::DirectoryBroker::new(Self::route_open_fn(runtime_dir)),
@@ -541,8 +545,12 @@ mod tests {
             }]
         ));
 
-        let in_dir = io_util::open_directory(&hub_proxy, &PathBuf::from("self/exec/in"))
-            .expect("Failed to open directory");
+        let in_dir = io_util::open_directory(
+            &hub_proxy,
+            &PathBuf::from("self/exec/in"),
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+        )
+        .expect("Failed to open directory");
         assert_eq!(
             vec!["data/bar", "data/hippo", "svc/hippo"],
             await!(list_directory_recursive(&in_dir))

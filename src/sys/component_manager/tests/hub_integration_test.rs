@@ -67,8 +67,12 @@ async fn main() -> Result<(), Error> {
         .expect("failed to create directory proxy");
 
     // Verify that echo_realm has two children.
-    let children_dir_proxy = io_util::open_directory(&hub_proxy, &PathBuf::from("self/children"))
-        .expect("Failed to open directory");
+    let children_dir_proxy = io_util::open_directory(
+        &hub_proxy,
+        &PathBuf::from("self/children"),
+        OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+    )
+    .expect("Failed to open directory");
     assert_eq!(vec!["echo_client", "echo_server"], await!(list_directory(&children_dir_proxy)));
 
     // These args are from echo_client.cml.
@@ -83,22 +87,34 @@ async fn main() -> Result<(), Error> {
 
     let in_dir = "self/children/echo_client/exec/in";
     let svc_dir = format!("{}/{}", in_dir, "svc");
-    let svc_dir_proxy = io_util::open_directory(&hub_proxy, &PathBuf::from(svc_dir.clone()))
-        .expect("Failed to open directory");
+    let svc_dir_proxy = io_util::open_directory(
+        &hub_proxy,
+        &PathBuf::from(svc_dir.clone()),
+        OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+    )
+    .expect("Failed to open directory");
     let echo_service_name = "fidl.examples.routing.echo.Echo";
     assert_eq!(vec![echo_service_name], await!(list_directory(&svc_dir_proxy)));
 
     // Verify that the 'pkg' directory is avaialble
     let pkg_dir = format!("{}/{}", in_dir, "pkg");
-    let pkg_dir_proxy = io_util::open_directory(&hub_proxy, &PathBuf::from(pkg_dir))
-        .expect("Failed to open directory");
+    let pkg_dir_proxy = io_util::open_directory(
+        &hub_proxy,
+        &PathBuf::from(pkg_dir),
+        OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+    )
+    .expect("Failed to open directory");
     assert_eq!(vec!["bin", "lib", "meta", "test"], await!(list_directory(&pkg_dir_proxy)));
 
     // Verify that we can connect to the echo service from the hub.
     let echo_service = format!("{}/{}", svc_dir, echo_service_name);
-    let node_proxy =
-        io_util::open_node(&hub_proxy, &PathBuf::from(echo_service), MODE_TYPE_SERVICE)
-            .expect("failed to open echo service");
+    let node_proxy = io_util::open_node(
+        &hub_proxy,
+        &PathBuf::from(echo_service),
+        io_util::OPEN_RIGHT_READABLE,
+        MODE_TYPE_SERVICE,
+    )
+    .expect("failed to open echo service");
     let echo_proxy = fecho::EchoProxy::new(node_proxy.into_channel().unwrap());
     let res = await!(echo_proxy.echo_string(Some("hippos")));
     assert_eq!(res.expect("failed to use echo service"), Some("hippos".to_string()));

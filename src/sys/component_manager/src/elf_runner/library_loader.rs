@@ -5,7 +5,7 @@
 use {
     failure::{format_err, Error},
     fidl::endpoints::RequestStream,
-    fidl_fuchsia_io::{DirectoryProxy, VMO_FLAG_READ},
+    fidl_fuchsia_io::{DirectoryProxy, CLONE_FLAG_SAME_RIGHTS, VMO_FLAG_READ},
     fidl_fuchsia_ldsvc::{LoaderRequest, LoaderRequestStream},
     fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::{TryFutureExt, TryStreamExt},
@@ -19,7 +19,8 @@ use {
 pub fn start(lib_proxy: DirectoryProxy, chan: zx::Channel) {
     fasync::spawn(
         async move {
-            let mut search_dirs = vec![io_util::clone_directory(&lib_proxy)?];
+            let mut search_dirs =
+                vec![io_util::clone_directory(&lib_proxy, CLONE_FLAG_SAME_RIGHTS)?];
             // Wait for requests
             let mut stream =
                 LoaderRequestStream::from_channel(fasync::Channel::from_channel(chan)?);
@@ -62,7 +63,8 @@ pub fn start(lib_proxy: DirectoryProxy, chan: zx::Channel) {
                         }
                     }
                     LoaderRequest::Clone { loader, responder } => {
-                        let new_lib_proxy = io_util::clone_directory(&lib_proxy)?;
+                        let new_lib_proxy =
+                            io_util::clone_directory(&lib_proxy, CLONE_FLAG_SAME_RIGHTS)?;
                         start(new_lib_proxy, loader.into_channel());
                         responder.send(zx::sys::ZX_OK)?;
                     }
@@ -88,7 +90,8 @@ pub async fn load_vmo<'a>(
     dir_proxy: &'a DirectoryProxy,
     object_name: &'a str,
 ) -> Result<zx::Vmo, Error> {
-    let file_proxy = io_util::open_file(dir_proxy, &PathBuf::from(object_name))?;
+    let file_proxy =
+        io_util::open_file(dir_proxy, &PathBuf::from(object_name), io_util::OPEN_RIGHT_READABLE)?;
     let (status, fidlbuf) = await!(file_proxy.get_buffer(VMO_FLAG_READ))
         .map_err(|e| format_err!("reading object at {:?} failed: {}", object_name, e))?;
     let status = zx::Status::from_raw(status);
@@ -114,11 +117,19 @@ fn parse_config_string(
     }
     if Some('!') == config.chars().last() {
         config.pop();
-        let sub_dir_proxy = io_util::open_directory(dir_proxy, &PathBuf::from(&config))?;
+        let sub_dir_proxy = io_util::open_directory(
+            dir_proxy,
+            &PathBuf::from(&config),
+            io_util::OPEN_RIGHT_READABLE,
+        )?;
         Ok(vec![sub_dir_proxy])
     } else {
-        let dir_proxy_clone = io_util::clone_directory(dir_proxy)?;
-        let sub_dir_proxy = io_util::open_directory(dir_proxy, &PathBuf::from(&config))?;
+        let dir_proxy_clone = io_util::clone_directory(dir_proxy, CLONE_FLAG_SAME_RIGHTS)?;
+        let sub_dir_proxy = io_util::open_directory(
+            dir_proxy,
+            &PathBuf::from(&config),
+            io_util::OPEN_RIGHT_READABLE,
+        )?;
         Ok(vec![sub_dir_proxy, dir_proxy_clone])
     }
 }
@@ -138,7 +149,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn load_objects_test() -> Result<(), Error> {
-        let pkg_lib = io_util::open_directory_in_namespace("/pkg/lib")?;
+        let pkg_lib = io_util::open_directory_in_namespace("/pkg/lib", OPEN_RIGHT_READABLE)?;
         let (client_chan, service_chan) = zx::Channel::create()?;
         start(pkg_lib, service_chan);
 
@@ -212,7 +223,8 @@ mod tests {
             // Should be able to load baz with config "bar" (also look in sub directory bar)
             ("baz", Some("bar"), Some("rule")),
         ] {
-            let example_dir_proxy_clone = io_util::clone_directory(&example_dir_proxy)?;
+            let example_dir_proxy_clone =
+                io_util::clone_directory(&example_dir_proxy, CLONE_FLAG_SAME_RIGHTS)?;
 
             let (loader_proxy, loader_service) = fidl::endpoints::create_proxy::<LoaderMarker>()?;
             start(example_dir_proxy_clone, loader_service.into_channel());
