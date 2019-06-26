@@ -4,6 +4,7 @@
 
 #include "src/developer/debug/zxdb/expr/format.h"
 
+#include "src/developer/debug/shared/zx_status.h"
 #include "src/developer/debug/zxdb/common/function.h"
 #include "src/developer/debug/zxdb/expr/eval_context.h"
 #include "src/developer/debug/zxdb/expr/expr.h"
@@ -16,6 +17,7 @@
 #include "src/developer/debug/zxdb/symbols/arch.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
 #include "src/developer/debug/zxdb/symbols/collection.h"
+#include "src/developer/debug/zxdb/symbols/enumeration.h"
 #include "src/developer/debug/zxdb/symbols/inherited_from.h"
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
 #include "src/developer/debug/zxdb/symbols/variant.h"
@@ -120,6 +122,8 @@ void FormatChar(FormatNode* node) {
   node->set_description(std::move(str));
 }
 
+// Formats a numeric-style input. This assumes the type of the value in the given node has already
+// been determined to be numeric. This may also be called as a fallback for things like enums.
 void FormatNumeric(FormatNode* node, const FormatExprValueOptions& options) {
   node->set_description_kind(FormatNode::kBaseType);
 
@@ -162,6 +166,54 @@ void FormatNumeric(FormatNode* node, const FormatExprValueOptions& options) {
         break;
     }
   }
+}
+
+void FormatZxStatusT(FormatNode* node, const FormatExprValueOptions& options) {
+  FormatNumeric(node, options);
+
+  // Caller should have checked this is the right size.
+  debug_ipc::zx_status_t int_val = node->value().GetAs<debug_ipc::zx_status_t>();
+  node->set_description(node->description() +
+                        fxl::StringPrintf(" (%s)", debug_ipc::ZxStatusToString(int_val)));
+}
+
+void FormatEnum(FormatNode* node, const Enumeration* enum_type,
+                const FormatExprValueOptions& options) {
+  // Get the value out casted to a uint64.
+  Err err;
+  uint64_t numeric_value;
+  if (enum_type->is_signed()) {
+    int64_t signed_value;
+    err = node->value().PromoteTo64(&signed_value);
+    if (!err.has_error())
+      numeric_value = static_cast<uint64_t>(signed_value);
+  } else {
+    err = node->value().PromoteTo64(&numeric_value);
+  }
+  if (err.has_error()) {
+    node->set_err(err);
+    return;
+  }
+
+  // When the output is marked for a specific numeric type, always skip name lookup and output the
+  // numeric value below instead.
+  if (options.num_format == NumFormat::kDefault) {
+    const auto& map = enum_type->values();
+    auto found = map.find(numeric_value);
+    if (found != map.end()) {
+      // Got the enum value string.
+      node->set_description(found->second);
+      return;
+    }
+    // Not found, fall through to numeric formatting.
+  }
+
+  // Invalid enum values of explicitly overridden numeric formatting gets printed as a number.
+  // Be explicit about the number formatting since the enum won't be a BaseType.
+  FormatExprValueOptions modified_opts = options;
+  if (modified_opts.num_format == NumFormat::kDefault)
+    modified_opts.num_format = enum_type->is_signed() ? NumFormat::kSigned : NumFormat::kUnsigned;
+  FormatNumeric(node, modified_opts);
 }
 
 // Rust enums are formatted with the enum name in the description.
@@ -460,6 +512,17 @@ void FillFormatNodeDescription(FormatNode* node, const FormatExprValueOptions& o
   }
   node->set_type(node->value().type()->GetFullName());
 
+  // Special-case zx_status_t. Long-term this should be removed and replaced with a pretty-printing
+  // system where this can be expressed generically.
+  //
+  // This code needs to go here because zx_status_t is a typedef that will be expanded away by the
+  // GetConcreteType() below.
+  if (node->value().type()->GetFullName() == "zx_status_t" &&
+      node->value().type()->byte_size() == sizeof(debug_ipc::zx_status_t)) {
+    FormatZxStatusT(node, options);
+    return;
+  }
+
   // Trim "const", "volatile", etc. and follow typedef and using for the type
   // checking below.
   //
@@ -489,6 +552,9 @@ void FillFormatNodeDescription(FormatNode* node, const FormatExprValueOptions& o
   } else if (IsNumericBaseType(node->value().GetBaseType())) {
     // Numeric types.
     FormatNumeric(node, options);
+  } else if (const Enumeration* enum_type = type->AsEnumeration()) {
+    // Enumerations.
+    FormatEnum(node, enum_type, options);
   } else if (const Collection* coll = type->AsCollection()) {
     FormatCollection(node, coll, options, context);
   } else {

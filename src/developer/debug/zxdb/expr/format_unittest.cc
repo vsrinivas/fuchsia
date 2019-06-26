@@ -11,6 +11,7 @@
 #include "src/developer/debug/zxdb/expr/mock_eval_context.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
 #include "src/developer/debug/zxdb/symbols/collection.h"
+#include "src/developer/debug/zxdb/symbols/enumeration.h"
 #include "src/developer/debug/zxdb/symbols/inherited_from.h"
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
 #include "src/developer/debug/zxdb/symbols/type_test_support.h"
@@ -525,6 +526,88 @@ TEST_F(FormatTest, RustTuple) {
       " = Some, \n"
       "  0 = int32_t, 123\n",
       SyncTreeTypeDesc(tuple_struct_one, opts));
+}
+
+TEST_F(FormatTest, Enumeration) {
+  // Unsigned 64-bit enum.
+  Enumeration::Map unsigned_map;
+  unsigned_map[0] = "kZero";
+  unsigned_map[1] = "kOne";
+  unsigned_map[std::numeric_limits<uint64_t>::max()] = "kMax";
+  auto unsigned_enum =
+      fxl::MakeRefCounted<Enumeration>("UnsignedEnum", LazySymbol(), 8, false, unsigned_map);
+
+  // Found value
+  FormatExprValueOptions opts;
+  EXPECT_EQ(" = UnsignedEnum, kZero\n",
+            SyncTreeTypeDesc(ExprValue(unsigned_enum, {0, 0, 0, 0, 0, 0, 0, 0}), opts));
+  EXPECT_EQ(" = UnsignedEnum, kMax\n",
+            SyncTreeTypeDesc(
+                ExprValue(unsigned_enum, {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}), opts));
+
+  // Found value forced to hex.
+  FormatExprValueOptions hex_opts;
+  hex_opts.num_format = FormatExprValueOptions::NumFormat::kHex;
+  EXPECT_EQ(
+      " = UnsignedEnum, 0xffffffffffffffff\n",
+      SyncTreeTypeDesc(ExprValue(unsigned_enum, {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}),
+                       hex_opts));
+
+  // Not found value.
+  EXPECT_EQ(" = UnsignedEnum, 12\n",
+            SyncTreeTypeDesc(ExprValue(unsigned_enum, {12, 0, 0, 0, 0, 0, 0, 0}), opts));
+
+  // Signed 32-bit enum.
+  Enumeration::Map signed_map;
+  signed_map[0] = "kZero";
+  signed_map[static_cast<uint64_t>(-5)] = "kMinusFive";
+  signed_map[static_cast<uint64_t>(std::numeric_limits<int32_t>::max())] = "kMax";
+  auto signed_enum =
+      fxl::MakeRefCounted<Enumeration>("SignedEnum", LazySymbol(), 4, true, signed_map);
+
+  // Found values.
+  EXPECT_EQ(" = SignedEnum, kZero\n", SyncTreeTypeDesc(ExprValue(signed_enum, {0, 0, 0, 0}), opts));
+  EXPECT_EQ(" = SignedEnum, kMinusFive\n",
+            SyncTreeTypeDesc(ExprValue(signed_enum, {0xfb, 0xff, 0xff, 0xff}), opts));
+
+  // Not-found value.
+  EXPECT_EQ(" = SignedEnum, -4\n",
+            SyncTreeTypeDesc(ExprValue(signed_enum, {0xfc, 0xff, 0xff, 0xff}), opts));
+
+  // Not-found signed value printed as hex should be unsigned.
+  EXPECT_EQ(" = SignedEnum, 0xffffffff\n",
+            SyncTreeTypeDesc(ExprValue(signed_enum, {0xff, 0xff, 0xff, 0xff}), hex_opts));
+}
+
+TEST_F(FormatTest, ZxStatusT) {
+  // Types in the global namespace named "zx_status_t" of the right size should get the enum name
+  // expanded (Zircon special-case).
+  auto int32_type = MakeInt32Type();
+  auto status_t_type =
+      fxl::MakeRefCounted<ModifiedType>(DwarfTag::kTypedef, LazySymbol(int32_type));
+  status_t_type->set_assigned_name("zx_status_t");
+
+  ExprValue status_ok(status_t_type, {0, 0, 0, 0});
+  FormatExprValueOptions opts;
+  EXPECT_EQ(" = zx_status_t, 0 (ZX_OK)\n", SyncTreeTypeDesc(status_ok, opts));
+
+  // -15 = ZX_ERR_BUFFER_TOO_SMALL
+  ExprValue status_too_small(status_t_type, {0xf1, 0xff, 0xff, 0xff});
+  EXPECT_EQ(" = zx_status_t, -15 (ZX_ERR_BUFFER_TOO_SMALL)\n",
+            SyncTreeTypeDesc(status_too_small, opts));
+
+  // Invalid negative number.
+  ExprValue status_invalid(status_t_type, {0xf0, 0xd8, 0xff, 0xff});
+  EXPECT_EQ(" = zx_status_t, -10000 (<unknown>)\n", SyncTreeTypeDesc(status_invalid, opts));
+
+  // Positive values.
+  ExprValue status_one(status_t_type, {1, 0, 0, 0});
+  EXPECT_EQ(" = zx_status_t, 1 (<unknown>)\n", SyncTreeTypeDesc(status_one, opts));
+
+  // Hex formatting should be applied if requested.
+  opts.num_format = FormatExprValueOptions::NumFormat::kHex;
+  EXPECT_EQ(" = zx_status_t, 0xfffffff1 (ZX_ERR_BUFFER_TOO_SMALL)\n",
+            SyncTreeTypeDesc(status_too_small, opts));
 }
 
 }  // namespace zxdb

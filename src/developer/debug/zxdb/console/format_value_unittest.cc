@@ -718,7 +718,7 @@ TEST_F(FormatValueTest, NullptrT) {
 }
 
 TEST_F(FormatValueTest, ZxStatusT) {
-  // Types in the global namespace named "zs_status_t" of the right size should
+  // Types in the global namespace named "zx_status_t" of the right size should
   // get the enum name expanded (Zircon special-case).
   auto int32_type = GetInt32Type();
   auto status_t_type =
