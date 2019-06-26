@@ -340,7 +340,24 @@ standard_variants += [
 # selector must be compatible with all environments used in
 # environment_redirect(),
 default_variants = [
-  # Use Clang as default for both host and the target.
+  # For host environments default to Clang.  The prebuilt Clang toolchain
+  # supplied for Fuchsia targets also targets Linux and Mac hosts and is
+  # more reliable (especially in C++ language and library support) than
+  # many native host toolchains (depending on host OS version), so always
+  # use it.  Users can use the "host_gcc" variant shorthand (below) to use
+  # the host-native GCC instead.
+  {
+    host = true
+    variant = "clang"
+  },
+
+  # Otherwise default to gcc.
+  "gcc",
+
+  # But GCC doesn't support some environments (efi, *.fuzz).  Those use
+  # exclude_variant_tags = [ "gcc" ] so the preceding selector won't match,
+  # and this final fallback is needed.  Clang supports all the environments
+  # defined in this build.
   "clang",
 ]
 

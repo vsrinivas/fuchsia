@@ -11,7 +11,6 @@ function HELP {
     echo "-a <arch>            : build just one architecture (default: both)"
     echo "-A                   : build asan variant"
     echo "-C                   : build clang variant"
-    echo "-G                   : build gcc variant"
     echo "-l                   : build thinlto variant"
     echo "-L                   : build lto variant"
     echo "-X                   : build xray variant"
@@ -33,18 +32,17 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 GN_SWITCHES=()
 GN_ARGS=()
 NINJA_ARGS=()
-VARIANT=clang
+VARIANT=gcc
 BUILDDIR=
 BUILDDIR_SUFFIX=
 ARCH=
 
-while getopts a:ACdGhj:lLo:PqrtvX FLAG; do
+while getopts a:ACdhj:lLo:PqrtvX FLAG; do
     case $FLAG in
         a) NINJA_ARGS+=("$OPTARG") ARCH="$OPTARG" ;;
         A) VARIANT=asan ;;
         C) VARIANT=clang ;;
         d) VARIANT=noopt ;;
-        G) VARIANT=gcc ;;
         j) NINJA_ARGS+=(-j "$OPTARG") ;;
         l) VARIANT=thinlto ;;
         L) VARIANT=lto ;;

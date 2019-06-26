@@ -12,7 +12,6 @@ function HELP {
     echo "-b                   : build first"
     echo "-c <text>            : add item to kernel commandline"
     echo "-C                   : use Clang build"
-    echo "-G                   : use GCC build"
     echo "-A                   : use ASan build"
     echo "-P                   : use profile build"
     echo "-L                   : use LTO build"
@@ -76,7 +75,7 @@ NET=0
 QEMUDIR=
 RELEASE=0
 UPSCRIPT=no
-VARIANT=clang
+VARIANT=gcc
 VNC=
 VIRTIO=0
 SERIAL=1
@@ -117,7 +116,7 @@ abspath() {
 VARIANT=gcc
 BUILD_SWITCH=
 
-while getopts "Aa:bc:CdD:gGI:kLlm:nNo:Pq:rs:t::u:VXz:h-:" FLAG; do
+while getopts "Aa:bc:CdD:gG:I:kLlm:nNo:Pq:rs:t::u:VXz:h-:" FLAG; do
     case $FLAG in
         A) VARIANT=asan BUILD_SWITCH=-A ;;
         a) ARCH=$OPTARG;;
@@ -127,7 +126,7 @@ while getopts "Aa:bc:CdD:gGI:kLlm:nNo:Pq:rs:t::u:VXz:h-:" FLAG; do
         d) DISK=1;;
         D) DISKFILE="$(abspath "$OPTARG")";;
         g) GRAPHICS=1;;
-        G) VARIANT=gcc BUILD_SWITCH=-G ;;
+        G) GIC=$OPTARG;;
         I) IFNAME=$OPTARG;;
         k)
             if [[ "$(uname -s)" == "Darwin" ]]; then
@@ -166,7 +165,6 @@ while getopts "Aa:bc:CdD:gGI:kLlm:nNo:Pq:rs:t::u:VXz:h-:" FLAG; do
             debugger) DEBUGGER=1;;
             disktype=*) DISKTYPE=${OPTARG#*=};;
             diskfmt=*) DISKFMT=${OPTARG#*=};;
-            gic) GIC=${OPTARG#*=};;
             no-serial) SERIAL=0;;
             vnc=*) VNC=${OPTARG#*=};;
             *)
