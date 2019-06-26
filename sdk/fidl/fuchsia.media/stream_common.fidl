@@ -6,6 +6,9 @@ library fuchsia.media;
 
 using fuchsia.sysmem;
 
+const uint32 KEY_ID_SIZE = 16;
+const uint32 MAX_INIT_VECTOR_SIZE = 16;
+
 /// Value
 ///
 /// Generic "value" for use within generic "Parameter" struct.
@@ -297,12 +300,108 @@ union VideoFormat {
     VideoUncompressedFormat uncompressed;
 };
 
+/// KeyId
+///
+/// An encryption key identifier.
+struct KeyId {
+    array<uint8>:KEY_ID_SIZE data;
+};
+
+/// SubsampleEntry
+///
+/// A subsample is a byte range within a sample consisting of a clear byte range
+/// followed by an encrypted byte range. This structure specifies the size of
+/// each range in the subsample.
+struct SubsampleEntry {
+    uint32 clear_bytes;
+    uint32 encrypted_bytes;
+};
+
+/// EncryptionPattern
+///
+/// Pattern encryption utilizes a pattern of encrypted and clear 16 byte blocks
+/// over the protected range of a subsample (the encrypted_bytes of a
+/// `SubsampleEntry`). This structure specifies the number of encrypted data
+/// blocks followed by the number of clear data blocks.
+struct EncryptionPattern {
+    uint32 clear_blocks;
+    uint32 encrypted_blocks;
+};
+
+/// EncryptedFormat
+///
+/// The stream format details payload of a decrypting stream processor. This is
+/// a sparsely populated table to specify parameters necessary for decryption
+/// other than the data stream. It is only necessary to update fields if they
+/// changed, but not an error if the same value is repeated.
+table EncryptedFormat {
+    /// `mode` specifies which encryption scheme to use, such as
+    /// fuchsia.media.ENCRYPTION_MODE_CENC.
+    /// Usage:
+    ///  - It is required to be set prior to delivery of input packets.
+    ///  - This should only be changed at the beginning of a data stream.
+    1: string mode;
+
+    /// `key_id` identifies the key that should be used for decrypting
+    /// subsequent data.
+    /// Usage:
+    ///  - It is required to be set prior to delivery of input packets to a
+    ///    decryptor.
+    ///  - This may be changed multiple times during a data stream.
+    2: KeyId key_id;
+
+    /// `init_vector` is used in combination with a key and a block of content
+    /// to create the first cipher block in a chain and derive subsequent cipher
+    /// blocks in a cipher block chain.
+    /// Usage:
+    ///  - It is required to be set prior to the delivery of input packets to a
+    ///    decryptor.
+    ///  - This may be changed multiple times during a data stream.
+    3: bytes:MAX_INIT_VECTOR_SIZE init_vector;
+
+    /// `subsamples` is used to identify the clear and encrypted portions of a
+    /// subsample.
+    /// Usage:
+    ///  - For whole sample encryption, this parameter should not be sent.
+    ///  - This may be changed multiple times during a data stream.
+    4: vector<SubsampleEntry> subsamples;
+
+    /// `pattern` is used to identify the clear and encrypted blocks for pattern
+    /// based encryption.
+    /// Usage:
+    /// - This is not allowed for CENC and CBC1 and required for CENS and CBCS.
+    /// - If required, it must be set prior to the delivery of input packets to
+    ///   a decryptor.
+    /// - This may be changed multiple times during a data stream.
+    5: EncryptionPattern pattern;
+};
+
+/// DecryptedFormat
+///
+/// This describes the format of the decrypted content. It is required to be
+/// sent by the StreamProcessor server prior to the delivery of output packets.
+/// Currently, there is no additional format details for decrypted output.
+table DecryptedFormat {
+    // TODO(FIDL-709): Empty tables cause dart analysis error. Remove this
+    // unused field once the issue is resolved.
+    1: bool ignore_this_field;
+};
+
+/// CryptoFormat
+///
+/// Crypto (encrypted or decrypted) format details.
+xunion CryptoFormat {
+    EncryptedFormat encrypted;
+    DecryptedFormat decrypted;
+};
+
 /// DomainFormat
 ///
 // Domain-specific format details (audio or video, compressed or uncompressed).
 union DomainFormat {
     AudioFormat audio;
     VideoFormat video;
+    CryptoFormat crypto;
 };
 
 const uint64 kMaxOobBytesSize = 8192;
