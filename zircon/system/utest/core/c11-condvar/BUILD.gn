@@ -5,7 +5,7 @@
 source_set("c11-condvar") {
   testonly = true
   sources = [
-    "condvar.c",
+    "condvar.cc",
   ]
   deps = [
     "$zx/system/ulib/fdio",
