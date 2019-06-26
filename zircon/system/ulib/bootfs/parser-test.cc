@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <cstdint>
 #include <utility>
 
 #include <fbl/algorithm.h>
@@ -9,7 +10,7 @@
 #include <fbl/string_piece.h>
 #include <lib/bootfs/parser.h>
 #include <lib/zx/vmo.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 #include <zircon/boot/bootdata.h>
 
 namespace {
@@ -22,13 +23,9 @@ struct BootfsEntry {
 };
 
 // helper for creating a bootfs to use
-zx_status_t CreateBootfs(BootfsEntry* entries, size_t num_entries, zx::vmo* vmo_out) {
+void CreateBootfs(BootfsEntry* entries, size_t num_entries, zx::vmo* vmo_out) {
     zx::vmo vmo;
-    zx_status_t status;
-    status = zx::vmo::create(kVmoSize, 0, &vmo);
-    if (status != ZX_OK) {
-        return status;
-    }
+    ASSERT_OK(zx::vmo::create(kVmoSize, 0, &vmo));
 
     uint32_t offset = static_cast<uint32_t>(sizeof(bootfs_header_t));
     for (size_t i = 0; i < num_entries; ++i) {
@@ -43,24 +40,15 @@ zx_status_t CreateBootfs(BootfsEntry* entries, size_t num_entries, zx::vmo* vmo_
         };
 
         // Write header
-        status = vmo.write(entry_header, offset, sizeof(entry_header));
-        if (status != ZX_OK) {
-            return status;
-        }
+        ASSERT_OK(vmo.write(entry_header, offset, sizeof(entry_header)));
         offset += static_cast<uint32_t>(sizeof(entry_header));
 
         // Write name
-        status = vmo.write(entry.name.c_str(), offset, entry_header[0]);
-        if (status != ZX_OK) {
-            return status;
-        }
+        ASSERT_OK(vmo.write(entry.name.c_str(), offset, entry_header[0]));
         offset += entry_header[0];
 
         // Write data
-        status = vmo.write(entry.data.data(), data_offset, entry.data.size());
-        if (status != ZX_OK) {
-            return status;
-        }
+        ASSERT_OK(vmo.write(entry.data.data(), data_offset, entry.data.size()));
 
         // Entries must be 32-bit aligned
         offset = fbl::round_up(offset, 4u);
@@ -70,96 +58,58 @@ zx_status_t CreateBootfs(BootfsEntry* entries, size_t num_entries, zx::vmo* vmo_
     header.magic = BOOTFS_MAGIC;
     header.dirsize = static_cast<uint32_t>(offset - sizeof(header));
 
-    status = vmo.write(&header, 0, sizeof(header));
-    if (status != ZX_OK) {
-        return status;
-    }
-
+    ASSERT_OK(vmo.write(&header, 0, sizeof(header)));
     *vmo_out = std::move(vmo);
-    return ZX_OK;
 }
 
-bool TestParseWithoutInit() {
-    BEGIN_TEST;
-
+TEST(ParserTestCase, ParseWithoutInit) {
     bootfs::Parser parser;
 
     ASSERT_EQ(parser.Parse([](const bootfs_entry_t* entry) { return ZX_OK; }),
               ZX_ERR_BAD_STATE);
-
-    END_TEST;
 }
 
-bool TestInitTwice() {
-    BEGIN_TEST;
-
+TEST(ParserTestCase, InitTwice) {
     zx::vmo vmo;
-    ASSERT_EQ(CreateBootfs(nullptr, 0, &vmo), ZX_OK);
+    ASSERT_NO_FAILURES(CreateBootfs(nullptr, 0, &vmo));
 
     bootfs::Parser parser;
-    ASSERT_EQ(parser.Init(zx::unowned_vmo(vmo)), ZX_OK);
+    ASSERT_OK(parser.Init(zx::unowned_vmo(vmo)));
     ASSERT_EQ(parser.Init(zx::unowned_vmo(vmo)), ZX_ERR_BAD_STATE);
-
-    END_TEST;
 }
 
-bool TestInitBadMagic() {
-    BEGIN_TEST;
-
+TEST(ParserTestCase, InitBadMagic) {
     zx::vmo vmo;
-    zx_status_t status;
-    status = zx::vmo::create(kVmoSize, 0, &vmo);
-    if (status != ZX_OK) {
-        return status;
-    }
+    ASSERT_OK(zx::vmo::create(kVmoSize, 0, &vmo));
 
     bootfs_header_t header = {};
     header.magic = BOOTFS_MAGIC ^ 1;
     header.dirsize = 0;
 
-    status = vmo.write(&header, 0, sizeof(header));
-    if (status != ZX_OK) {
-        return status;
-    }
+    ASSERT_OK(vmo.write(&header, 0, sizeof(header)));
 
     bootfs::Parser parser;
     ASSERT_EQ(parser.Init(zx::unowned_vmo(vmo)), ZX_ERR_IO);
-
-    END_TEST;
 }
 
-bool TestInitShortHeader() {
-    BEGIN_TEST;
-
+TEST(ParserTestCase, InitShortHeader) {
     zx::vmo vmo;
-    zx_status_t status;
-    status = zx::vmo::create(0, 0, &vmo);
-    if (status != ZX_OK) {
-        return status;
-    }
+    ASSERT_OK(zx::vmo::create(0, 0, &vmo));
 
     bootfs::Parser parser;
     ASSERT_EQ(parser.Init(zx::unowned_vmo(vmo)), ZX_ERR_OUT_OF_RANGE);
-
-    END_TEST;
 }
 
-bool TestInitCantMap() {
-    BEGIN_TEST;
-
+TEST(ParserTestCase, InitCantMap) {
     zx::vmo vmo;
-    ASSERT_EQ(CreateBootfs(nullptr, 0, &vmo), ZX_OK);
-    ASSERT_EQ(vmo.replace(ZX_RIGHT_READ, &vmo), ZX_OK);
+    ASSERT_NO_FAILURES(CreateBootfs(nullptr, 0, &vmo));
+    ASSERT_OK(vmo.replace(ZX_RIGHT_READ, &vmo));
 
     bootfs::Parser parser;
     ASSERT_EQ(parser.Init(zx::unowned_vmo(vmo)), ZX_ERR_ACCESS_DENIED);
-
-    END_TEST;
 }
 
-bool TestParseSuccess() {
-    BEGIN_TEST;
-
+TEST(ParserTestCase, ParseSuccess) {
     BootfsEntry entries[] = {
         {
             .name = "file 3",
@@ -175,21 +125,21 @@ bool TestParseSuccess() {
         },
     };
     zx::vmo vmo;
-    ASSERT_EQ(CreateBootfs(entries, fbl::count_of(entries), &vmo), ZX_OK);
+    ASSERT_NO_FAILURES(CreateBootfs(entries, fbl::count_of(entries), &vmo));
 
     bootfs::Parser parser;
-    ASSERT_EQ(parser.Init(zx::unowned_vmo(vmo)), ZX_OK);
+    ASSERT_OK(parser.Init(zx::unowned_vmo(vmo)));
 
     const bootfs_entry_t* parsed_entries[3];
     size_t seen = 0;
-    EXPECT_EQ(parser.Parse([&entries, &parsed_entries, &seen](const bootfs_entry_t* entry) {
+    EXPECT_OK(parser.Parse([&entries, &parsed_entries, &seen](const bootfs_entry_t* entry) {
         if (seen >= fbl::count_of(entries)) {
             return ZX_ERR_BAD_STATE;
         }
         parsed_entries[seen] = entry;
         ++seen;
         return ZX_OK;
-    }), ZX_OK);
+    }));
     ASSERT_EQ(seen, fbl::count_of(entries));
 
     for (size_t i = 0; i < seen; ++i) {
@@ -199,24 +149,14 @@ bool TestParseSuccess() {
         ASSERT_EQ(parsed_entry->data_len, real_entry.data.size());
         ASSERT_BYTES_EQ(reinterpret_cast<const uint8_t*>(parsed_entry->name),
                         reinterpret_cast<const uint8_t*>(real_entry.name.c_str()),
-                        parsed_entry->name_len, "");
+                        parsed_entry->name_len);
 
         uint8_t buffer[parsed_entry->data_len];
-        ASSERT_EQ(vmo.read(buffer, parsed_entry->data_off, sizeof(buffer)), ZX_OK);
-        ASSERT_BYTES_EQ(buffer, reinterpret_cast<const uint8_t*>(real_entry.data.data()),
-                        sizeof(buffer), "");
+        ASSERT_OK(vmo.read(buffer, parsed_entry->data_off, sizeof(buffer)));
+        ASSERT_BYTES_EQ(static_cast<const uint8_t*>(buffer),
+                        reinterpret_cast<const uint8_t*>(real_entry.data.data()),
+                        sizeof(buffer));
     }
-
-    END_TEST;
 }
 
 } // namespace
-
-BEGIN_TEST_CASE(bootfs_tests)
-RUN_TEST(TestParseWithoutInit)
-RUN_TEST(TestInitTwice)
-RUN_TEST(TestInitBadMagic)
-RUN_TEST(TestInitShortHeader)
-RUN_TEST(TestInitCantMap)
-RUN_TEST(TestParseSuccess)
-END_TEST_CASE(bootfs_tests)
