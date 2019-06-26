@@ -27,6 +27,7 @@ mod macros;
 
 #[cfg(all(test, feature = "benchmark"))]
 mod benchmarks;
+mod data_structures;
 mod device;
 mod error;
 mod ip;
