@@ -1,0 +1,29 @@
+#!/bin/bash
+
+### run e2e tests
+## Usage: fx run-e2e-tests
+##
+## Thin wrapper around `fx run-host-tests` which sets up the environment to run
+## an end to end test against the current hardware target.
+##
+## Hint:
+## Use fx --dir and/or fx -d flags to change the selected build directory or
+## target device.
+
+set -o errexit
+set -o pipefail
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh
+fx-config-read
+
+export FUCHSIA_IPV4_ADDR=$(fx-command-run shell ifconfig eth | perl -n -e 'print $1 if /inet addr:(\S*)/')
+if [[ -z "$FUCHSIA_IPV4_ADDR" ]]; then
+  fx-error "Can not determine IPV4 address of Fuchsia target"
+  exit 1
+fi
+
+export FUCHSIA_SSH_KEY="${FUCHSIA_DIR}/.ssh/pkey"
+export FUCHSIA_TEST_OUTDIR="${FUCHSIA_OUT_DIR}/test_out/$(date +'%F-%H:%M:%S')"
+mkdir -p "${FUCHSIA_TEST_OUTDIR}"
+
+fx-command-run run-host-tests "$@"
