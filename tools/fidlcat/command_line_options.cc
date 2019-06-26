@@ -21,9 +21,10 @@ namespace fidlcat {
 
 const char kHelpIntro[] = R"(fidlcat [ <options> ] [ command [args] ]
 
-  fidlcat will run the specified command until it exits.  It will intercept and
-  record all fidl calls invoked by the process.  The command may be of the form
-  "run <component URL>", in which case the given component will be launched.
+  fidlcat will intercept and record all fidl calls invoked by a given process.
+  The user may either attach to an existing process, or start a new process.  In
+  addition to the options given below, the command may be of the form "run
+  <component URL>", in which case the given component will be launched.
 
 Options:
 
