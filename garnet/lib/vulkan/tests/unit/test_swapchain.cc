@@ -5,11 +5,13 @@
 #include <fuchsia/images/cpp/fidl.h>
 #include <fuchsia/images/cpp/fidl_test_base.h>
 #include <gtest/gtest.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/cpp/binding.h>
-#include <lib/gtest/test_loop_fixture.h>
 #include <lib/zx/channel.h>
 #include <vulkan/vulkan.h>
+
 #include <chrono>
+#include <mutex>
 #include <set>
 
 class TestSwapchain {
@@ -22,11 +24,9 @@ class TestSwapchain {
   }
 
   TestSwapchain() {
-    std::vector<const char*> instance_layers{
-        "VK_LAYER_FUCHSIA_imagepipe_swapchain"};
-    std::vector<const char*> instance_ext{
-        VK_KHR_SURFACE_EXTENSION_NAME,
-        VK_FUCHSIA_IMAGEPIPE_SURFACE_EXTENSION_NAME};
+    std::vector<const char*> instance_layers{"VK_LAYER_FUCHSIA_imagepipe_swapchain"};
+    std::vector<const char*> instance_ext{VK_KHR_SURFACE_EXTENSION_NAME,
+                                          VK_FUCHSIA_IMAGEPIPE_SURFACE_EXTENSION_NAME};
     std::vector<const char*> device_ext{VK_KHR_SWAPCHAIN_EXTENSION_NAME};
 
     VkInstanceCreateInfo inst_info = {
@@ -48,8 +48,7 @@ class TestSwapchain {
 
     uint32_t gpu_count = 1;
     std::vector<VkPhysicalDevice> physical_devices(gpu_count);
-    result = vkEnumeratePhysicalDevices(vk_instance_, &gpu_count,
-                                        physical_devices.data());
+    result = vkEnumeratePhysicalDevices(vk_instance_, &gpu_count, physical_devices.data());
     if (result != VK_SUCCESS && result != VK_INCOMPLETE) {
       fprintf(stderr, "vkEnumeratePhysicalDevices failed: %d\n", result);
       return;
@@ -75,16 +74,14 @@ class TestSwapchain {
         .ppEnabledExtensionNames = device_ext.data(),
         .pEnabledFeatures = nullptr};
 
-    result = vkCreateDevice(physical_devices[0], &device_create_info, nullptr,
-                            &vk_device_);
+    result = vkCreateDevice(physical_devices[0], &device_create_info, nullptr, &vk_device_);
     if (result != VK_SUCCESS) {
       fprintf(stderr, "vkCreateDevice failed: %d\n", result);
       return;
     }
 
-    PFN_vkGetDeviceProcAddr get_device_proc_addr =
-        reinterpret_cast<PFN_vkGetDeviceProcAddr>(
-            vkGetInstanceProcAddr(vk_instance_, "vkGetDeviceProcAddr"));
+    PFN_vkGetDeviceProcAddr get_device_proc_addr = reinterpret_cast<PFN_vkGetDeviceProcAddr>(
+        vkGetInstanceProcAddr(vk_instance_, "vkGetDeviceProcAddr"));
     if (!get_device_proc_addr) {
       fprintf(stderr, "Failed to find vkGetDeviceProcAddr\n");
       return;
@@ -99,8 +96,7 @@ class TestSwapchain {
     init_ = true;
   }
 
-  VkResult CreateSwapchainHelper(VkSurfaceKHR surface,
-                                 VkSwapchainKHR* swapchain_out) {
+  VkResult CreateSwapchainHelper(VkSurfaceKHR surface, VkSwapchainKHR* swapchain_out) {
     VkSwapchainCreateInfoKHR create_info = {
         .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
         .pNext = nullptr,
@@ -122,8 +118,7 @@ class TestSwapchain {
         .oldSwapchain = VK_NULL_HANDLE,
     };
 
-    return create_swapchain_khr_(vk_device_, &create_info, nullptr,
-                                 swapchain_out);
+    return create_swapchain_khr_(vk_device_, &create_info, nullptr, swapchain_out);
   }
 
   void Surface() {
@@ -138,8 +133,8 @@ class TestSwapchain {
         .pNext = nullptr,
     };
     VkSurfaceKHR surface;
-    EXPECT_EQ(VK_SUCCESS, vkCreateImagePipeSurfaceFUCHSIA(
-                              vk_instance_, &create_info, nullptr, &surface));
+    EXPECT_EQ(VK_SUCCESS,
+              vkCreateImagePipeSurfaceFUCHSIA(vk_instance_, &create_info, nullptr, &surface));
     vkDestroySurfaceKHR(vk_instance_, surface, nullptr);
   }
 
@@ -155,8 +150,8 @@ class TestSwapchain {
         .pNext = nullptr,
     };
     VkSurfaceKHR surface;
-    EXPECT_EQ(VK_SUCCESS, vkCreateImagePipeSurfaceFUCHSIA(
-                              vk_instance_, &create_info, nullptr, &surface));
+    EXPECT_EQ(VK_SUCCESS,
+              vkCreateImagePipeSurfaceFUCHSIA(vk_instance_, &create_info, nullptr, &surface));
 
     VkSwapchainKHR swapchain;
     EXPECT_EQ(VK_SUCCESS, CreateSwapchainHelper(surface, &swapchain));
@@ -184,24 +179,29 @@ namespace {
 
 uint64_t ZirconIdFromHandle(uint32_t handle) {
   zx_info_handle_basic_t info;
-  zx_status_t status = zx_object_get_info(handle, ZX_INFO_HANDLE_BASIC, &info,
-                                          sizeof(info), nullptr, nullptr);
+  zx_status_t status =
+      zx_object_get_info(handle, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
   if (status != ZX_OK)
     return 0;
   return info.koid;
 }
 
+// FakeImagePipe runs async loop on its own thread to allow the test
+// to use blocking Vulkan calls while present callbacks are processed.
 class FakeImagePipe : public fuchsia::images::testing::ImagePipe_TestBase {
  public:
   FakeImagePipe(fidl::InterfaceRequest<fuchsia::images::ImagePipe> request)
-      : binding_(this, std::move(request)) {}
-
-  void NotImplemented_(const std::string& name) override {
-    printf("%s\n", name.c_str());
+      : loop_(&kAsyncLoopConfigNoAttachToThread),
+        binding_(this, std::move(request), loop_.dispatcher()) {
+    loop_.StartThread();
   }
 
-  void AddImage(uint32_t image_id, fuchsia::images::ImageInfo image_info,
-                ::zx::vmo memory, uint64_t offset_bytes, uint64_t size_bytes,
+  ~FakeImagePipe() { loop_.Shutdown(); }
+
+  void NotImplemented_(const std::string& name) override {}
+
+  void AddImage(uint32_t image_id, fuchsia::images::ImageInfo image_info, ::zx::vmo memory,
+                uint64_t offset_bytes, uint64_t size_bytes,
                 fuchsia::images::MemoryType memory_type) override {
     // Do nothing.
   }
@@ -210,11 +210,13 @@ class FakeImagePipe : public fuchsia::images::testing::ImagePipe_TestBase {
                     ::std::vector<::zx::event> acquire_fences,
                     ::std::vector<::zx::event> release_fences,
                     PresentImageCallback callback) override {
+    std::unique_lock<std::mutex> lock(mutex_);
+
     acquire_fences_.insert(ZirconIdFromHandle(acquire_fences[0].get()));
 
     zx_signals_t pending;
-    zx_status_t status = acquire_fences[0].wait_one(
-        ZX_EVENT_SIGNALED, zx::deadline_after(zx::sec(10)), &pending);
+    zx_status_t status =
+        acquire_fences[0].wait_one(ZX_EVENT_SIGNALED, zx::deadline_after(zx::sec(10)), &pending);
 
     if (status == ZX_OK) {
       release_fences[0].signal(0, ZX_EVENT_SIGNALED);
@@ -223,37 +225,42 @@ class FakeImagePipe : public fuchsia::images::testing::ImagePipe_TestBase {
     presented_.push_back({image_id, status});
   }
 
+  uint32_t presented_count() {
+    std::unique_lock<std::mutex> lock(mutex_);
+    return presented_.size();
+  }
+
+  uint32_t acquire_fences_count() {
+    std::unique_lock<std::mutex> lock(mutex_);
+    return acquire_fences_.size();
+  }
+
   struct Presented {
     uint32_t image_id;
     zx_status_t acquire_wait_status;
   };
 
+ private:
+  async::Loop loop_;
+  fidl::Binding<fuchsia::images::ImagePipe> binding_;
+  std::mutex mutex_;
   std::vector<Presented> presented_;
   std::set<uint64_t> acquire_fences_;
-
- private:
-  fidl::Binding<fuchsia::images::ImagePipe> binding_;
 };
 
 }  // namespace
 
-class SwapchainFidlTest : public gtest::TestLoopFixture {
- public:
-  void SetUp() override { TestLoopFixture::SetUp(); }
-
-  std::unique_ptr<FakeImagePipe> imagepipe_;
-};
-
-TEST_F(SwapchainFidlTest, PresentAndAcquireNoSemaphore) {
+TEST(SwapchainFidlTest, PresentAndAcquireNoSemaphore) {
   TestSwapchain test;
   ASSERT_TRUE(test.init_);
+
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
   zx::channel local_endpoint, remote_endpoint;
   EXPECT_EQ(ZX_OK, zx::channel::create(0, &local_endpoint, &remote_endpoint));
 
-  imagepipe_ = std::make_unique<FakeImagePipe>(
-      fidl::InterfaceRequest<fuchsia::images::ImagePipe>(
-          std::move(remote_endpoint)));
+  std::unique_ptr<FakeImagePipe> imagepipe_ = std::make_unique<FakeImagePipe>(
+      fidl::InterfaceRequest<fuchsia::images::ImagePipe>(std::move(remote_endpoint)));
 
   VkImagePipeSurfaceCreateInfoFUCHSIA create_info = {
       .sType = VK_STRUCTURE_TYPE_IMAGEPIPE_SURFACE_CREATE_INFO_FUCHSIA,
@@ -262,8 +269,7 @@ TEST_F(SwapchainFidlTest, PresentAndAcquireNoSemaphore) {
   };
   VkSurfaceKHR surface;
   EXPECT_EQ(VK_SUCCESS,
-            vkCreateImagePipeSurfaceFUCHSIA(test.vk_instance_, &create_info,
-                                            nullptr, &surface));
+            vkCreateImagePipeSurfaceFUCHSIA(test.vk_instance_, &create_info, nullptr, &surface));
 
   VkSwapchainKHR swapchain;
   ASSERT_EQ(VK_SUCCESS, test.CreateSwapchainHelper(surface, &swapchain));
@@ -274,15 +280,15 @@ TEST_F(SwapchainFidlTest, PresentAndAcquireNoSemaphore) {
   uint32_t image_index;
   // Acquire all initial images.
   for (uint32_t i = 0; i < 3; i++) {
-    EXPECT_EQ(VK_SUCCESS, test.acquire_next_image_khr_(
-                              test.vk_device_, swapchain, 0, VK_NULL_HANDLE,
-                              VK_NULL_HANDLE, &image_index));
+    EXPECT_EQ(VK_SUCCESS,
+              test.acquire_next_image_khr_(test.vk_device_, swapchain, 0, VK_NULL_HANDLE,
+                                           VK_NULL_HANDLE, &image_index));
     EXPECT_EQ(i, image_index);
   }
 
-  EXPECT_EQ(VK_NOT_READY, test.acquire_next_image_khr_(
-                              test.vk_device_, swapchain, 0, VK_NULL_HANDLE,
-                              VK_NULL_HANDLE, &image_index));
+  EXPECT_EQ(VK_NOT_READY,
+            test.acquire_next_image_khr_(test.vk_device_, swapchain, 0, VK_NULL_HANDLE,
+                                         VK_NULL_HANDLE, &image_index));
 
   uint32_t present_index;  // Initialized below.
   VkResult present_result;
@@ -302,23 +308,20 @@ TEST_F(SwapchainFidlTest, PresentAndAcquireNoSemaphore) {
     present_index = i % 3;
     ASSERT_EQ(VK_SUCCESS, test.queue_present_khr_(queue, &present_info));
 
-    // Run loop generates calls into FakeImagePipe::PresentImage
-    RunLoopUntilIdle();
-
     constexpr uint64_t kTimeoutNs = std::chrono::nanoseconds(std::chrono::seconds(10)).count();
-    ASSERT_EQ(VK_SUCCESS, test.acquire_next_image_khr_(
-                              test.vk_device_, swapchain, kTimeoutNs,
-                              VK_NULL_HANDLE, VK_NULL_HANDLE, &image_index));
+    ASSERT_EQ(VK_SUCCESS,
+              test.acquire_next_image_khr_(test.vk_device_, swapchain, kTimeoutNs, VK_NULL_HANDLE,
+                                           VK_NULL_HANDLE, &image_index));
     EXPECT_EQ(present_index, image_index);
 
-    EXPECT_EQ(VK_NOT_READY, test.acquire_next_image_khr_(
-                                test.vk_device_, swapchain, 0, VK_NULL_HANDLE,
-                                VK_NULL_HANDLE, &image_index));
+    EXPECT_EQ(VK_NOT_READY,
+              test.acquire_next_image_khr_(test.vk_device_, swapchain, 0, VK_NULL_HANDLE,
+                                           VK_NULL_HANDLE, &image_index));
   }
 
   test.destroy_swapchain_khr_(test.vk_device_, swapchain, nullptr);
   vkDestroySurfaceKHR(test.vk_instance_, surface, nullptr);
 
-  EXPECT_EQ(kFrameCount, imagepipe_->presented_.size());
-  EXPECT_EQ(kFrameCount, imagepipe_->acquire_fences_.size());
+  EXPECT_EQ(kFrameCount, imagepipe_->presented_count());
+  EXPECT_EQ(kFrameCount, imagepipe_->acquire_fences_count());
 }
