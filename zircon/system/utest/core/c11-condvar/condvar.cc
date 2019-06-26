@@ -8,38 +8,40 @@
 
 #include <zxtest/zxtest.h>
 
-typedef struct cond_thread_args {
-    mtx_t mutex;
-    cnd_t cond;
-    int threads_woken;
-    int threads_started;
-    int threads_woke_first_barrier;
-} cond_thread_args_t;
-
-static int cond_thread(void* arg) {
-    cond_thread_args_t* args = (cond_thread_args_t*)(arg);
-
-    mtx_lock(&args->mutex);
-    args->threads_started++;
-    cnd_wait(&args->cond, &args->mutex);
-    args->threads_woke_first_barrier++;
-    cnd_wait(&args->cond, &args->mutex);
-    args->threads_woken++;
-    mtx_unlock(&args->mutex);
-    return 0;
-}
+namespace {
 
 TEST(ConditionalVariableTest, BroadcastSignalWait) {
-    cond_thread_args_t args = {};
+    struct CondThreadArgs {
+        mtx_t mutex;
+        cnd_t cond;
+        int threads_woken;
+        int threads_started;
+        int threads_woke_first_barrier;
+    };
+
+    auto CondWaitHelper = [](void* arg) -> int {
+        CondThreadArgs* args = static_cast<CondThreadArgs*>(arg);
+
+        mtx_lock(&args->mutex);
+        args->threads_started++;
+        cnd_wait(&args->cond, &args->mutex);
+        args->threads_woke_first_barrier++;
+        cnd_wait(&args->cond, &args->mutex);
+        args->threads_woken++;
+        mtx_unlock(&args->mutex);
+        return 0;
+    };
+
+    CondThreadArgs args = {};
 
     ASSERT_EQ(mtx_init(&args.mutex, mtx_plain), thrd_success);
     ASSERT_EQ(cnd_init(&args.cond), thrd_success);
 
     thrd_t thread1, thread2, thread3;
 
-    ASSERT_EQ(thrd_create(&thread1, cond_thread, &args), thrd_success);
-    ASSERT_EQ(thrd_create(&thread2, cond_thread, &args), thrd_success);
-    ASSERT_EQ(thrd_create(&thread3, cond_thread, &args), thrd_success);
+    ASSERT_EQ(thrd_create(&thread1, CondWaitHelper, &args), thrd_success);
+    ASSERT_EQ(thrd_create(&thread2, CondWaitHelper, &args), thrd_success);
+    ASSERT_EQ(thrd_create(&thread3, CondWaitHelper, &args), thrd_success);
 
     // Wait for all the threads to report that they've started.
     while (true) {
@@ -80,13 +82,14 @@ TEST(ConditionalVariableTest, BroadcastSignalWait) {
         }
     }
 
-    EXPECT_EQ(thrd_join(thread1, NULL), thrd_success);
-    EXPECT_EQ(thrd_join(thread2, NULL), thrd_success);
-    EXPECT_EQ(thrd_join(thread3, NULL), thrd_success);
+    constexpr int* kIgnoreReturn = nullptr;
+    EXPECT_EQ(thrd_join(thread1, kIgnoreReturn), thrd_success);
+    EXPECT_EQ(thrd_join(thread2, kIgnoreReturn), thrd_success);
+    EXPECT_EQ(thrd_join(thread3, kIgnoreReturn), thrd_success);
 }
 
-static void time_add_nsec(struct timespec* ts, int nsec) {
-    const int kNsecPerSec = 1000000000;
+void TimeAddNsec(struct timespec* ts, int nsec) {
+    constexpr int kNsecPerSec = 1000000000;
     assert(nsec < kNsecPerSec);
     ts->tv_nsec += nsec;
     if (ts->tv_nsec > kNsecPerSec) {
@@ -102,9 +105,11 @@ TEST(ConditionalVariableTest, ConditionalVariablesTimeout) {
     mtx_lock(&mutex);
     struct timespec delay;
     clock_gettime(CLOCK_REALTIME, &delay);
-    time_add_nsec(&delay, 1000000);
+    TimeAddNsec(&delay, zx::msec(1).get());
     int result = cnd_timedwait(&cond, &mutex, &delay);
     mtx_unlock(&mutex);
 
     EXPECT_EQ(result, thrd_timedout, "Lock should have timedout");
 }
+
+} // namespace
