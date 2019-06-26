@@ -2,12 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <unittest/unittest.h>
 #include <zircon/time.h>
+#include <zxtest/zxtest.h>
 
-static bool time_add_duration_test() {
-  BEGIN_TEST;
-
+TEST(TimeTest, TimeAddDuration) {
   EXPECT_EQ(0, zx_time_add_duration(0, 0));
 
   EXPECT_EQ(918741562, zx_time_add_duration(918729180, 12382));
@@ -22,13 +20,9 @@ static bool time_add_duration_test() {
   EXPECT_EQ(ZX_TIME_INFINITE, zx_time_add_duration(ZX_TIME_INFINITE, 1));
   EXPECT_EQ(ZX_TIME_INFINITE, zx_time_add_duration(ZX_TIME_INFINITE, 3298901));
   EXPECT_EQ(ZX_TIME_INFINITE, zx_time_add_duration(ZX_TIME_INFINITE, ZX_TIME_INFINITE));
-
-  END_TEST;
 }
 
-static bool time_sub_duration_test() {
-  BEGIN_TEST;
-
+TEST(TimeTest, TimeSubDuration) {
   EXPECT_EQ(-1, zx_time_sub_duration(1, 2));
   EXPECT_EQ(-1, zx_time_sub_duration(0, 1));
 
@@ -44,13 +38,9 @@ static bool time_sub_duration_test() {
   EXPECT_EQ((ZX_TIME_INFINITE - 1), zx_time_sub_duration(ZX_TIME_INFINITE, 1));
 
   EXPECT_EQ(918716798, zx_time_sub_duration(918729180, 12382));
-
-  END_TEST;
 }
 
-static bool time_sub_time_test() {
-  BEGIN_TEST;
-
+TEST(TimeTest, TimeSubTime) {
   EXPECT_EQ(-1, zx_time_sub_time(1, 2));
   EXPECT_EQ(-1, zx_time_sub_time(0, 1));
 
@@ -66,13 +56,9 @@ static bool time_sub_time_test() {
   EXPECT_EQ((ZX_TIME_INFINITE - 1), zx_time_sub_time(ZX_TIME_INFINITE, 1));
 
   EXPECT_EQ(918716798, zx_time_sub_time(918729180, 12382));
-
-  END_TEST;
 }
 
-static bool duration_add_duration_test() {
-  BEGIN_TEST;
-
+TEST(TimeTest, DurationAddDuration) {
   EXPECT_EQ(0, zx_duration_add_duration(0, 0));
 
   EXPECT_EQ(918741562, zx_duration_add_duration(918729180, 12382));
@@ -88,13 +74,9 @@ static bool duration_add_duration_test() {
   EXPECT_EQ(ZX_TIME_INFINITE, zx_duration_add_duration(ZX_TIME_INFINITE, 3298901));
   EXPECT_EQ(ZX_TIME_INFINITE, zx_duration_add_duration(ZX_TIME_INFINITE, ZX_TIME_INFINITE));
   EXPECT_EQ(ZX_TIME_INFINITE, zx_duration_add_duration(ZX_TIME_INFINITE, INT64_MAX));
-
-  END_TEST;
 }
 
-static bool duration_sub_duration_test() {
-  BEGIN_TEST;
-
+TEST(TimeTest, DurationSubDuration) {
   EXPECT_EQ(918716798, zx_duration_sub_duration(918729180, 12382));
 
   EXPECT_EQ(-1, zx_duration_sub_duration(1, 2));
@@ -114,13 +96,9 @@ static bool duration_sub_duration_test() {
   EXPECT_EQ((ZX_TIME_INFINITE - 1), zx_duration_sub_duration(ZX_TIME_INFINITE, 1));
 
   EXPECT_EQ(ZX_TIME_INFINITE, zx_duration_sub_duration(0, ZX_TIME_INFINITE_PAST));
-
-  END_TEST;
 }
 
-static bool duration_mul_int64_test() {
-  BEGIN_TEST;
-
+TEST(TimeTest, DurationMulInt64) {
   EXPECT_EQ(0, zx_duration_mul_int64(0, 0));
   EXPECT_EQ(39284291, zx_duration_mul_int64(39284291, 1));
   EXPECT_EQ(220499082795, zx_duration_mul_int64(23451, 9402545));
@@ -131,13 +109,9 @@ static bool duration_mul_int64_test() {
   EXPECT_EQ(ZX_TIME_INFINITE, zx_duration_mul_int64(ZX_TIME_INFINITE, 2));
   EXPECT_EQ(ZX_TIME_INFINITE, zx_duration_mul_int64(ZX_TIME_INFINITE_PAST, -2));
   EXPECT_EQ(ZX_TIME_INFINITE_PAST, zx_duration_mul_int64(ZX_TIME_INFINITE_PAST, 2));
-
-  END_TEST;
 }
 
-static bool duration_from_test() {
-  BEGIN_TEST;
-
+TEST(TimeTest, DurationFrom) {
   // overflow saturates to ZX_TIME_INFINITE
   EXPECT_EQ(zx_duration_from_nsec(INT64_MAX), ZX_TIME_INFINITE);
   EXPECT_EQ(zx_duration_from_usec(9223372036854775), 9223372036854775000);
@@ -171,8 +145,6 @@ static bool duration_from_test() {
   static_assert(zx_duration_from_sec(1) == 1000000000);
   static_assert(zx_duration_from_min(1) == 60000000000);
   static_assert(zx_duration_from_hour(1) == 3600000000000);
-
-  END_TEST;
 }
 
 // See that we can use the conversion macros as constexpr initializers.
@@ -180,9 +152,7 @@ static constexpr const zx_duration_t durations[] = {
     ZX_NSEC(1), ZX_USEC(1), ZX_MSEC(1), ZX_SEC(1), ZX_MIN(1), ZX_HOUR(1),
 };
 
-static bool macro_conversion_test() {
-  BEGIN_TEST;
-
+TEST(TimeTest, MacroConversion) {
   // Verify a few values just shy of overflow.
   EXPECT_EQ(ZX_NSEC(INT64_MAX), ZX_TIME_INFINITE);
   EXPECT_EQ(ZX_USEC(9223372036854775), 9223372036854775000);
@@ -227,17 +197,4 @@ static bool macro_conversion_test() {
   EXPECT_EQ(durations[3], ZX_SEC(1));
   EXPECT_EQ(durations[4], ZX_MIN(1));
   EXPECT_EQ(durations[5], ZX_HOUR(1));
-
-  END_TEST;
 }
-
-BEGIN_TEST_CASE(time_test)
-RUN_TEST(time_add_duration_test)
-RUN_TEST(time_sub_duration_test)
-RUN_TEST(time_sub_time_test)
-RUN_TEST(duration_add_duration_test)
-RUN_TEST(duration_sub_duration_test)
-RUN_TEST(duration_mul_int64_test)
-RUN_TEST(duration_from_test)
-RUN_TEST(macro_conversion_test)
-END_TEST_CASE(time_test)
