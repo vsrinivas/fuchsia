@@ -65,6 +65,14 @@ Err SetupActions(const CommandLineOptions& options,
       return err;
   }
 
+  for (const auto& filter : options.filter) {
+    std::string cmd = "filter attach " + filter;
+    actions->push_back(Action("Filter", [cmd](const Action&, const Session&,
+                                              Console* console) {
+      console->ProcessInputLine(cmd.c_str(), ActionFlow::PostActionCallback);
+    }));
+  }
+
   return Err();
 }
 
@@ -130,17 +138,6 @@ void SetupCommandLineOptions(const CommandLineOptions& options,
   // Redundant adds are ignored.
   session->system().settings().SetList(ClientSettings::System::kSymbolPaths,
                                        std::move(paths));
-
-  // Filters, there should already be a default job context.
-  if (!options.filter.empty()) {
-    JobContext* default_job = session->system().GetJobContexts()[0];
-    Err err = default_job->settings().SetList(ClientSettings::Job::kFilters,
-                                              options.filter);
-
-    // The filters aren't currently validated when setting the list so an error
-    // here means we used the API wrong.
-    FXL_DCHECK(!err.has_error()) << err.msg();
-  }
 }
 
 }  // namespace

@@ -10,6 +10,7 @@
 #include "src/developer/debug/shared/platform_message_loop.h"
 #include "src/developer/debug/shared/zx_status.h"
 #include "src/developer/debug/zxdb/client/breakpoint.h"
+#include "src/developer/debug/zxdb/client/filter.h"
 #include "src/developer/debug/zxdb/client/remote_api.h"
 #include "src/developer/debug/zxdb/client/setting_schema_definition.h"
 #include "src/developer/debug/zxdb/client/thread.h"
@@ -258,12 +259,7 @@ class SetupTargetObserver : public zxdb::TargetObserver {
 void InterceptionWorkflow::Filter(const std::vector<std::string>& filter,
                                   SimpleErrorFunction and_then) {
   zxdb::JobContext* default_job = session_->system().GetJobContexts()[0];
-  zxdb::Err err = default_job->settings().SetList(
-      zxdb::ClientSettings::Job::kFilters, filter);
-
-  // The filters aren't currently validated when setting the list so an error
-  // here means we used the API wrong.
-  FXL_DCHECK(err.ok()) << err.msg();
+  default_job->SendAndUpdateFilters(filter);
   GetTarget()->AddObserver(new SetupTargetObserver(std::move(and_then)));
   AddObserver(GetTarget());
 }

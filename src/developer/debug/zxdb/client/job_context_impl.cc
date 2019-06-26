@@ -24,7 +24,6 @@ JobContextImpl::JobContextImpl(SystemImpl* system, bool is_implicit_root)
       system_(system),
       is_implicit_root_(is_implicit_root),
       impl_weak_factory_(this) {
-  settings_.AddObserver(ClientSettings::Job::kFilters, this);
   settings_.set_name("job");
 }
 
@@ -161,8 +160,14 @@ void JobContextImpl::Detach(Callback callback) {
       });
 }
 
+void JobContextImpl::SendAndUpdateFilters(std::vector<std::string> filters) {
+  SendAndUpdateFilters(filters, last_filter_set_failed_);
+}
+
 void JobContextImpl::SendAndUpdateFilters(std::vector<std::string> filters,
                                           bool force_send) {
+  last_filter_set_failed_ = false;
+
   if (!job_.get()) {
     filters_ = std::move(filters);
     return;
@@ -183,11 +188,9 @@ void JobContextImpl::SendAndUpdateFilters(std::vector<std::string> filters,
           FXL_LOG(ERROR) << "Error adding filter: "
                          << debug_ipc::ZxStatusToString(reply.status);
           if (weak_job_context) {
-            // Agent failed, reset filters in settings.
-            // This will also trigger another callback but would be a no-op
-            // because |force_send| would be false.
-            weak_job_context->settings_.SetList(ClientSettings::Job::kFilters,
-                                                weak_job_context->filters_);
+            // Agent failed, mark that we had trouble setting filters and
+            // return.
+            weak_job_context->last_filter_set_failed_ = true;
           }
           return;
         }
@@ -199,8 +202,7 @@ void JobContextImpl::SendAndUpdateFilters(std::vector<std::string> filters,
 
 void JobContextImpl::OnSettingChanged(const SettingStore&,
                                       const std::string& setting_name) {
-  FXL_CHECK(setting_name == ClientSettings::Job::kFilters);
-  SendAndUpdateFilters(settings_.GetList(setting_name));
+  FXL_NOTREACHED() << "No settings supported for jobs.";
 }
 
 void JobContextImpl::OnDetachReply(const Err& err, uint32_t status,

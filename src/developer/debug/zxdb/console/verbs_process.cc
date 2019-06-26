@@ -416,10 +416,10 @@ Err DoAttachFilter(ConsoleContext* context, const Command& cmd,
   } else {
     JobContext* job = cmd.HasNoun(Noun::kJob) ? cmd.job_context() : nullptr;
     filter = context->session()->system().CreateNewFilter();
-    filter->set_job(job);
+    filter->SetJob(job);
   }
 
-  filter->set_pattern(cmd.args()[0]);
+  filter->SetPattern(cmd.args()[0]);
 
   Console::get()->Output("Waiting for process matching /" + cmd.args()[0] +
                          "/");

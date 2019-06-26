@@ -52,6 +52,7 @@ class JobContextImpl : public JobContext, public SettingStoreObserver {
   void AttachToSystemRoot(Callback callback) override;
   void AttachToComponentRoot(Callback callback) override;
   void Detach(Callback callback) override;
+  void SendAndUpdateFilters(std::vector<std::string> filters) override;
 
   // SettingStoreObserver implementation
   void OnSettingChanged(const SettingStore&,
@@ -66,6 +67,7 @@ class JobContextImpl : public JobContext, public SettingStoreObserver {
   std::unique_ptr<JobImpl> job_;
   std::vector<std::string> filters_;
   bool is_implicit_root_;
+  bool last_filter_set_failed_ = false;
 
   fxl::WeakPtrFactory<JobContextImpl> impl_weak_factory_;
 
@@ -82,8 +84,7 @@ class JobContextImpl : public JobContext, public SettingStoreObserver {
 
   // If job is running this will update |filters_| only after getting OK from
   // agent else it will set |filters_| and return.
-  void SendAndUpdateFilters(std::vector<std::string> filters,
-                            bool force_send = false);
+  void SendAndUpdateFilters(std::vector<std::string> filters, bool force_send);
 
   FXL_DISALLOW_COPY_AND_ASSIGN(JobContextImpl);
 };

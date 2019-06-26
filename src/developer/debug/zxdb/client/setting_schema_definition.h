@@ -30,9 +30,7 @@ struct ClientSettings {
     static const char* kSymbolCache;
   };
 
-  struct Job {
-    static const char* kFilters;
-  };
+  struct Job {};
 
   struct Target {
     static const char* kStoreBacktraces;
