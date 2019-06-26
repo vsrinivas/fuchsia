@@ -20,58 +20,45 @@
 #include <zircon/status.h>
 
 #include "bus.h"
+#include "chip.h"
 #include "device.h"
 
-// Start talking to simulated firmware
-zx_status_t brcmf_sim_probe(struct brcmf_simdev* simdev) {
+// Get device-specific information
+zx_status_t brcmf_sim_probe(brcmf_simdev* simdev) {
+    uint32_t chip, chiprev;
+
+    simdev->sim_fw->getChipInfo(&chip, &chiprev);
+    simdev->bus_if.chip = chip;
+    simdev->bus_if.chiprev = chiprev;
+
     return ZX_OK;
 }
 
 // Allocate necessary memory and initialize simulator-specific structures
 zx_status_t brcmf_sim_register(zx_device_t* zxdev) {
-    struct brcmf_bus* bus_if = nullptr;
-    struct brcmf_simdev* simdev = nullptr;
-    struct brcmf_device* dev = nullptr;
     zx_status_t status = ZX_OK;
+    auto simdev = new brcmf_simdev {};
+    struct brcmf_bus* bus_if = &simdev->bus_if;
 
     brcmf_dbg(SIM, "Registering simulator target\n");
 
-    bus_if = static_cast<decltype(bus_if)>(calloc(1, sizeof(struct brcmf_bus)));
-    if (!bus_if) {
-        status = ZX_ERR_NO_MEMORY;
-        goto fail;
-    }
+    simdev->sim_fw = std::make_unique<SimFirmware>();
 
-    simdev = static_cast<decltype(simdev)>(calloc(1, sizeof(struct brcmf_simdev)));
-    if (!bus_if) {
-        status = ZX_ERR_NO_MEMORY;
-        goto fail_bus;
-    }
-
-    dev = &simdev->dev;
+    brcmf_device* dev = &simdev->dev;
     dev->zxdev = zxdev;
-    simdev->bus_if = bus_if;
     bus_if->bus_priv.sim = simdev;
     dev->bus = bus_if;
 
     status = brcmf_sim_probe(simdev);
     if (status != ZX_OK) {
         brcmf_err("sim_probe failed: %s\n", zx_status_get_string(status));
-        goto fail_simdev;
+        dev->zxdev = nullptr;
+        dev->bus = nullptr;
+        delete simdev;
     }
-    return ZX_OK;
-
-fail_simdev:
-    free(simdev);
-    dev->zxdev = NULL;
-    dev->bus = NULL;
-
-fail_bus:
-    free(bus_if);
-
-fail:
     return status;
 }
 
 void brcmf_sim_exit(void) {
+    // TODO (WLAN-1057): Free memory associated with the brcmf_simdev instance.
 }

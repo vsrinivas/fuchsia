@@ -23,19 +23,26 @@ group("test") {
   ]
 }
 
-executable("workqueue_test") {
-  output_name = "workqueue_test"
+executable("lifecycle_test") {
+  output_name = "lifecycle_test"
   testonly = true
 
-  defines = [ "CONFIG_BRCMFMAC_DBG=1" ]
+  defines = [
+    "CONFIG_BRCMFMAC_DBG=1",
+    "CONFIG_BRCMFMAC_SIM=1",
+  ]
 
   sources = [
-    "workqueue_test.cc",
+    "lifecycle_test.cc",
   ]
 
   deps = [
+    "//garnet/lib/wlan/protocol",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:brcmfmac_test_srcs",
     "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/async-loop",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/device-protocol-pci",
     "//zircon/public/lib/sync",
   ]
 }
@@ -83,10 +90,28 @@ executable("sdio_test") {
   ]
 }
 
+executable("workqueue_test") {
+  output_name = "workqueue_test"
+  testonly = true
+
+  defines = [ "CONFIG_BRCMFMAC_DBG=1" ]
+
+  sources = [
+    "workqueue_test.cc",
+  ]
+
+  deps = [
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:brcmfmac_test_srcs",
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/sync",
+  ]
+}
+
 unittest_package("brcmfmac_test") {
   package_name = "brcmfmac_test"
 
   deps = [
+    ":lifecycle_test",
     ":netbuf_test",
     ":sdio_test",
     ":workqueue_test",
@@ -94,7 +119,7 @@ unittest_package("brcmfmac_test") {
 
   tests = [
     {
-      name = "workqueue_test"
+      name = "lifecycle_test"
       environments = basic_envs
     },
     {
@@ -103,6 +128,10 @@ unittest_package("brcmfmac_test") {
     },
     {
       name = "sdio_test"
+      environments = basic_envs
+    },
+    {
+      name = "workqueue_test"
       environments = basic_envs
     },
   ]

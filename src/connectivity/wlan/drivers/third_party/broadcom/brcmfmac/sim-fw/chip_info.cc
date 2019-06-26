@@ -14,20 +14,11 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_SIM_H_
-#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_SIM_H_
+#include "sim_fw.h"
 
-#include <memory>
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/brcm_hw_ids.h"
 
-#include "bus.h"
-#include "device.h"
-#include "sim-fw/sim_fw.h"
-
-struct brcmf_simdev {
-    struct brcmf_device dev = {};
-    struct brcmf_bus bus_if;
-
-    std::unique_ptr<SimFirmware> sim_fw;
-};
-
-#endif // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_SIM_H_
+void SimFirmware::getChipInfo(uint32_t* chip, uint32_t* chiprev) {
+    *chip = BRCM_CC_4356_CHIP_ID;
+    *chiprev = 2;
+}

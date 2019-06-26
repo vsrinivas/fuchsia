@@ -14,20 +14,20 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_SIM_H_
-#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_SIM_H_
+#include <ddk/device.h>
+#include <gtest/gtest.h>
+#include <stdio.h>
 
-#include <memory>
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/common.h"
 
-#include "bus.h"
-#include "device.h"
-#include "sim-fw/sim_fw.h"
+namespace {
 
-struct brcmf_simdev {
-    struct brcmf_device dev = {};
-    struct brcmf_bus bus_if;
+static zx_device_t* sim_dev = reinterpret_cast<zx_device_t*>(0x123456543210);
 
-    std::unique_ptr<SimFirmware> sim_fw;
-};
+TEST(LifecycleTest, StartStop) {
+    zx_status_t status = brcmfmac_module_init(sim_dev);
+    EXPECT_EQ(status, ZX_OK);
+    brcmf_core_exit();
+}
 
-#endif // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_SIM_H_
+}  // namespace

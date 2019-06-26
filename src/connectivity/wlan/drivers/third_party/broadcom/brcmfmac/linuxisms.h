@@ -117,17 +117,6 @@ typedef uint64_t __be64;
         return 0;                                                                              \
     }
 
-#define CHIPSET_ARM_CM3_CORE      0x82a
-#define CHIPSET_INTERNAL_MEM_CORE 0x80e
-#define CHIPSET_ARM_CR4_CORE      0x83e
-#define CHIPSET_ARM_CA7_CORE      0x847
-#define CHIPSET_80211_CORE        0x812
-#define CHIPSET_PCIE2_CORE        0x83c
-#define CHIPSET_SDIO_DEV_CORE     0x829
-#define CHIPSET_CHIPCOMMON_CORE   0x800
-#define CHIPSET_SYS_MEM_CORE      0x849
-#define CHIPSET_PMU_CORE          0x827
-
 // clang-format off
 #define LINUX_FUNCII(name) LINUX_FUNC(name, int, int)
 #define LINUX_FUNCIV(name) LINUX_FUNC(name, int, void*)

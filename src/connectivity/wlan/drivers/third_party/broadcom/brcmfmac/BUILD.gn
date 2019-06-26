@@ -113,7 +113,11 @@ source_set("brcmfmac_test_srcs") {
 
   defines = [ "CONFIG_BRCMFMAC_SIM=1" ]
 
-  sources = brcmf_core_srcs + [ "sim.cc" ]
+  sources = brcmf_core_srcs + [
+              "sim.cc",
+              "sim-fw/chip_info.cc",
+              "sim-fw/sim_fw.h",
+            ]
 
   deps = brcmf_core_deps + [ "//zircon/public/lib/fake_ddk" ]
 
