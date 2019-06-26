@@ -2,13 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/mman.h>
 
+#include <vector>
+
 #include <digest/digest.h>
+#include <fbl/auto_call.h>
+#include <fuchsia/blobfs/c/fidl.h>
 #include <fuchsia/io/c/fidl.h>
 #include <lib/fzl/fdio.h>
+#include <lib/zx/vmo.h>
 #include <zircon/device/vfs.h>
 #include <zxtest/zxtest.h>
 
@@ -280,71 +286,69 @@ TEST_F(BlobfsTestWithFvm, MmapUseAfterClose) {
     RunMmapUseAfterCloseTest();
 }
 
-/*
-
-static bool TestReaddir(BlobfsTest* blobfsTest) {
-    BEGIN_HELPER;
+void RunReadDirectoryTest() {
     constexpr size_t kMaxEntries = 50;
     constexpr size_t kBlobSize = 1 << 10;
 
-    fbl::AllocChecker ac;
-    fbl::Array<fbl::unique_ptr<fs_test_utils::BlobInfo>>
-        info(new (&ac) fbl::unique_ptr<fs_test_utils::BlobInfo>[kMaxEntries](), kMaxEntries);
-    ASSERT_TRUE(ac.check());
+    std::unique_ptr<fs_test_utils::BlobInfo> info[kMaxEntries];
 
-    // Try to readdir on an empty directory
-    DIR* dir = opendir(MOUNT_PATH);
-    ASSERT_NONNULL(dir);
+    // Try to readdir on an empty directory.
+    DIR* dir = opendir(kMountPath);
+    ASSERT_NOT_NULL(dir);
     auto cleanup = fbl::MakeAutoCall([dir](){ closedir(dir); });
     ASSERT_NULL(readdir(dir), "Expected blobfs to start empty");
 
-    // Fill a directory with entries
+    // Fill a directory with entries.
     for (size_t i = 0; i < kMaxEntries; i++) {
-        ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(MOUNT_PATH, kBlobSize, &info[i]));
+        ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, kBlobSize, &info[i]));
         fbl::unique_fd fd;
-        ASSERT_TRUE(MakeBlob(info[i].get(), &fd));
-        ASSERT_EQ(close(fd.release()), 0);
-        fd.reset(open(info[i]->path, O_RDONLY));
-        ASSERT_TRUE(fd, "Failed to-reopen blob");
-        ASSERT_TRUE(fs_test_utils::VerifyContents(fd.get(), info[i]->data.get(),
-                    info[i]->size_data));
-        ASSERT_EQ(close(fd.release()), 0);
+        ASSERT_NO_FAILURES(MakeBlob(info[i].get(), &fd));
     }
 
     // Check that we see the expected number of entries
     size_t entries_seen = 0;
-    struct dirent* de;
-    while ((de = readdir(dir)) != nullptr) {
+    struct dirent* dir_entry;
+    while ((dir_entry = readdir(dir)) != nullptr) {
         entries_seen++;
     }
-    ASSERT_EQ(entries_seen, kMaxEntries);
+    ASSERT_EQ(kMaxEntries, entries_seen);
     entries_seen = 0;
     rewinddir(dir);
 
     // Readdir on a directory which contains entries, removing them as we go
     // along.
-    while ((de = readdir(dir)) != nullptr) {
+    while ((dir_entry = readdir(dir)) != nullptr) {
+        bool found = false;
         for (size_t i = 0; i < kMaxEntries; i++) {
             if ((info[i]->size_data != 0) &&
-                strcmp(strrchr(info[i]->path, '/') + 1, de->d_name) == 0) {
-                ASSERT_EQ(unlink(info[i]->path), 0);
+                strcmp(strrchr(info[i]->path, '/') + 1, dir_entry->d_name) == 0) {
+                ASSERT_EQ(0, unlink(info[i]->path));
                 // It's a bit hacky, but we set 'size_data' to zero
                 // to identify the entry has been unlinked.
                 info[i]->size_data = 0;
-                goto found;
+                found = true;
+                break;
             }
         }
-        ASSERT_TRUE(false, "Blobfs Readdir found an unexpected entry");
-    found:
+        ASSERT_TRUE(found, "Unknown directory entry");
         entries_seen++;
     }
-    ASSERT_EQ(entries_seen, kMaxEntries);
+    ASSERT_EQ(kMaxEntries, entries_seen);
 
-    ASSERT_NULL(readdir(dir), "Expected blobfs to end empty");
+    ASSERT_NULL(readdir(dir), "Directory should be empty");
     cleanup.cancel();
-    ASSERT_EQ(closedir(dir), 0);
-    END_HELPER;
+    ASSERT_EQ(0, closedir(dir));
 }
+
+TEST_F(BlobfsTest, ReadDirectory) {
+    RunReadDirectoryTest();
+}
+
+TEST_F(BlobfsTestWithFvm, ReadDirectory) {
+    RunReadDirectoryTest();
+}
+
+/*
 
 static bool TestDiskTooSmall(BlobfsTest* blobfsTest) {
     BEGIN_TEST;
@@ -466,24 +470,19 @@ TEST_F(BlobfsTestWithFvm, QueryInfo) {
     ASSERT_NO_FAILURES(QueryInfo(6, total_bytes));
 }
 
-/*
-
-bool GetAllocations(zx::vmo* out_vmo, uint64_t* out_count) {
-    BEGIN_HELPER;
-    fbl::unique_fd fd(open(MOUNT_PATH, O_RDONLY | O_DIRECTORY));
+void GetAllocations(zx::vmo* out_vmo, uint64_t* out_count) {
+    fbl::unique_fd fd(open(kMountPath, O_RDONLY | O_DIRECTORY));
     ASSERT_TRUE(fd);
     zx_status_t status;
     zx_handle_t vmo_handle;
     fzl::FdioCaller caller(std::move(fd));
-    ASSERT_EQ(fuchsia_blobfs_BlobfsGetAllocatedRegions(caller.borrow_channel(), &status,
-              &vmo_handle, out_count), ZX_OK);
-    ASSERT_EQ(status, ZX_OK);
+    ASSERT_OK(fuchsia_blobfs_BlobfsGetAllocatedRegions(caller.borrow_channel(), &status,
+              &vmo_handle, out_count));
+    ASSERT_OK(status);
     out_vmo->reset(vmo_handle);
-    END_HELPER;
 }
 
-bool TestGetAllocatedRegions(BlobfsTest* blobfsTest) {
-    BEGIN_HELPER;
+void RunGetAllocatedRegionsTest() {
     zx::vmo vmo;
     uint64_t count;
     size_t total_bytes = 0;
@@ -492,32 +491,42 @@ bool TestGetAllocatedRegions(BlobfsTest* blobfsTest) {
     // Although we expect this partition to be empty, we check the results of GetAllocations
     // in case blobfs chooses to store any metadata of pre-initialized data with the
     // allocated regions.
-    ASSERT_TRUE(GetAllocations(&vmo, &count));
-    fbl::Array<fuchsia_blobfs_BlockRegion> buffer(new fuchsia_blobfs_BlockRegion[count], count);
-    ASSERT_EQ(vmo.read(buffer.get(), 0, sizeof(fuchsia_blobfs_BlockRegion) * count), ZX_OK);
+    ASSERT_NO_FAILURES(GetAllocations(&vmo, &count));
+
+    std::vector<fuchsia_blobfs_BlockRegion> buffer(count);
+    ASSERT_OK(vmo.read(buffer.data(), 0, sizeof(fuchsia_blobfs_BlockRegion) * count));
     for (size_t i = 0; i < count; i++) {
         total_bytes += buffer[i].length * blobfs::kBlobfsBlockSize;
     }
 
     for (size_t i = 10; i < 16; i++) {
-        fbl::unique_ptr<fs_test_utils::BlobInfo> info;
-        ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(MOUNT_PATH, 1 << i, &info));
+        std::unique_ptr<fs_test_utils::BlobInfo> info;
+        ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 1 << i, &info));
 
         fbl::unique_fd fd;
-        ASSERT_TRUE(MakeBlob(info.get(), &fd));
-        ASSERT_EQ(close(fd.release()), 0);
+        ASSERT_NO_FAILURES(MakeBlob(info.get(), &fd));
         total_bytes += fbl::round_up(info->size_merkle + info->size_data,
-                       blobfs::kBlobfsBlockSize);
+                                     blobfs::kBlobfsBlockSize);
     }
-    ASSERT_TRUE(GetAllocations(&vmo, &count));
-    buffer.reset(new fuchsia_blobfs_BlockRegion[count], count);
-    ASSERT_EQ(vmo.read(buffer.get(), 0, sizeof(fuchsia_blobfs_BlockRegion) * count), ZX_OK);
+    ASSERT_NO_FAILURES(GetAllocations(&vmo, &count));
+
+    buffer.resize(count);
+    ASSERT_OK(vmo.read(buffer.data(), 0, sizeof(fuchsia_blobfs_BlockRegion) * count));
     for (size_t i = 0; i < count; i++) {
         fidl_bytes += buffer[i].length * blobfs::kBlobfsBlockSize;
     }
     ASSERT_EQ(fidl_bytes, total_bytes);
-    END_HELPER;
 }
+
+TEST_F(BlobfsTest, GetAllocatedRegions) {
+    RunGetAllocatedRegionsTest();
+}
+
+TEST_F(BlobfsTestWithFvm, GetAllocatedRegions) {
+    RunGetAllocatedRegionsTest();
+}
+
+/*
 
 static bool UseAfterUnlink(BlobfsTest* blobfsTest) {
     BEGIN_HELPER;
@@ -2044,9 +2053,7 @@ TEST_F(LargeBlobTest, UseSecondBitmap) {
 /*
 
 BEGIN_TEST_CASE(blobfs_tests)
-RUN_TESTS(MEDIUM, TestReaddir)
 RUN_TESTS(MEDIUM, TestDiskTooSmall)
-RUN_TESTS(MEDIUM, TestGetAllocatedRegions)
 RUN_TESTS(MEDIUM, UseAfterUnlink)
 RUN_TESTS(MEDIUM, WriteAfterRead)
 RUN_TESTS(MEDIUM, WriteAfterUnlink)
