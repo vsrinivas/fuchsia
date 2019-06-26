@@ -75,6 +75,10 @@ namespace internal {
 // Returns a string with the Hex representation of the contents of the buffer pointed by
 // ptr. If |ptr| is nullptr, returns "<nullptr>". If |size| is 0 returns <empty>.
 fbl::String ToHex(const void* ptr, size_t size);
+
+// It's not necessarily safe to do pointer arithmetic on volatiles because of
+// alignment issues, so just print whether the pointer is nullptr/empty/normal.
+fbl::String PrintVolatile(volatile const void* ptr, size_t size);
 } // namespace internal
 
 // Specializations exist for primitive types, pointers and |fbl::String|.
@@ -82,6 +86,11 @@ template <typename T>
 fbl::String PrintValue(const T& value) {
     // TODO(gevalentino): By default generate a hex represetation of the memory contents of value.
     return internal::ToHex(&value, sizeof(value));
+}
+
+template <typename T>
+fbl::String PrintValue(volatile const T& value) {
+    return internal::PrintVolatile(&value, sizeof(value));
 }
 
 // Template Specialization for integers and char pointers.

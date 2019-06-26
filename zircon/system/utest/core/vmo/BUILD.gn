@@ -5,18 +5,19 @@
 source_set("vmo") {
   testonly = true
   sources = [
-    "vmo-signal.c",
-    "vmo.cc",
     "vmo-clone.cc",
+
     # TODO(stevensd): Rename once the clone flag names are cleaned up
     "vmo-clone2.cc",
+    "vmo-signal.cc",
+    "vmo.cc",
   ]
   deps = [
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fit",
     "$zx/system/ulib/fzl",
-    "$zx/system/ulib/unittest",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zxtest",
   ]
 }

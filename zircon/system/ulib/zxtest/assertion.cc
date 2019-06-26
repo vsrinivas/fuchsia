@@ -47,6 +47,18 @@ fbl::String ToHex(const void* ptr, size_t size) {
     return buffer;
 }
 
+fbl::String PrintVolatile(volatile const void* ptr, size_t size) {
+    if (size == 0) {
+        return "<empty>";
+    }
+
+    if (ptr == nullptr) {
+        return "<nullptr>";
+    }
+
+    return "<ptr>";
+}
+
 } // namespace internal
 
 template <>

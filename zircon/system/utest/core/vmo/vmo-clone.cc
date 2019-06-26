@@ -7,92 +7,82 @@
 
 #include <fbl/algorithm.h>
 #include <lib/fzl/memory-probe.h>
-#include <unittest/unittest.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 
-bool vmo_clone_size_align_test() {
-    BEGIN_TEST;
-
+TEST(VmoCloneTestCase, SizeAlign) {
     zx_handle_t vmo;
     zx_status_t status = zx_vmo_create(0, 0, &vmo);
-    EXPECT_EQ(ZX_OK, status, "vm_object_create");
+    EXPECT_OK(status, "vm_object_create");
 
     // create clones with different sizes, make sure the created size is a multiple of a page size
     for (uint64_t s = 0; s < PAGE_SIZE * 4; s++) {
         zx_handle_t clone_vmo;
-        EXPECT_EQ(ZX_OK, zx_vmo_create_child(vmo, ZX_VMO_CHILD_COPY_ON_WRITE,
+        EXPECT_OK(zx_vmo_create_child(vmo, ZX_VMO_CHILD_COPY_ON_WRITE,
                                              0, s, &clone_vmo), "vm_clone");
 
         // should be the size rounded up to the nearest page boundary
         uint64_t size = 0x99999999;
         zx_status_t status = zx_vmo_get_size(clone_vmo, &size);
-        EXPECT_EQ(ZX_OK, status, "vm_object_get_size");
+        EXPECT_OK(status, "vm_object_get_size");
         EXPECT_EQ(fbl::round_up(s, static_cast<size_t>(PAGE_SIZE)), size, "vm_object_get_size");
 
         // close the handle
-        EXPECT_EQ(ZX_OK, zx_handle_close(clone_vmo), "handle_close");
+        EXPECT_OK(zx_handle_close(clone_vmo), "handle_close");
     }
 
     // close the handle
-    EXPECT_EQ(ZX_OK, zx_handle_close(vmo), "handle_close");
-
-    END_TEST;
+    EXPECT_OK(zx_handle_close(vmo), "handle_close");
 }
 
 
 // test set 1: create a few clones, close them
-bool vmo_clone_test_1() {
-    BEGIN_TEST;
-
+TEST(VmoCloneTestCase, Test1) {
     zx_handle_t vmo;
     zx_handle_t clone_vmo[3];
 
     // create a vmo
     const size_t size = PAGE_SIZE * 4;
-    EXPECT_EQ(ZX_OK, zx_vmo_create(size, 0, &vmo), "vm_object_create");
-    EXPECT_EQ(ZX_OK, zx_object_set_property(vmo, ZX_PROP_NAME, "test1", 5), "zx_object_set_property");
+    EXPECT_OK(zx_vmo_create(size, 0, &vmo), "vm_object_create");
+    EXPECT_OK(zx_object_set_property(vmo, ZX_PROP_NAME, "test1", 5), "zx_object_set_property");
 
     // clone it
     clone_vmo[0] = ZX_HANDLE_INVALID;
-    EXPECT_EQ(ZX_OK, zx_vmo_create_child(vmo, ZX_VMO_CHILD_COPY_ON_WRITE, 0, size, &clone_vmo[0]), "vm_clone");
+    EXPECT_OK(zx_vmo_create_child(vmo, ZX_VMO_CHILD_COPY_ON_WRITE, 0, size, &clone_vmo[0]), "vm_clone");
     EXPECT_NE(ZX_HANDLE_INVALID, clone_vmo[0], "vm_clone_handle");
     char name[ZX_MAX_NAME_LEN];
-    EXPECT_EQ(ZX_OK, zx_object_get_property(clone_vmo[0], ZX_PROP_NAME, name, ZX_MAX_NAME_LEN), "zx_object_get_property");
+    EXPECT_OK(zx_object_get_property(clone_vmo[0], ZX_PROP_NAME, name, ZX_MAX_NAME_LEN), "zx_object_get_property");
     EXPECT_TRUE(!strcmp(name, "test1"), "get_name");
 
     // clone it a second time
     clone_vmo[1] = ZX_HANDLE_INVALID;
-    EXPECT_EQ(ZX_OK, zx_vmo_create_child(vmo, ZX_VMO_CHILD_COPY_ON_WRITE, 0, size, &clone_vmo[1]), "vm_clone");
+    EXPECT_OK(zx_vmo_create_child(vmo, ZX_VMO_CHILD_COPY_ON_WRITE, 0, size, &clone_vmo[1]), "vm_clone");
     EXPECT_NE(ZX_HANDLE_INVALID, clone_vmo[1], "vm_clone_handle");
 
     // clone the clone
     clone_vmo[2] = ZX_HANDLE_INVALID;
-    EXPECT_EQ(ZX_OK, zx_vmo_create_child(clone_vmo[1], ZX_VMO_CHILD_COPY_ON_WRITE, 0, size, &clone_vmo[2]), "vm_clone");
+    EXPECT_OK(zx_vmo_create_child(clone_vmo[1], ZX_VMO_CHILD_COPY_ON_WRITE, 0, size, &clone_vmo[2]), "vm_clone");
     EXPECT_NE(ZX_HANDLE_INVALID, clone_vmo[2], "vm_clone_handle");
 
     // close the original handle
-    EXPECT_EQ(ZX_OK, zx_handle_close(vmo), "handle_close");
+    EXPECT_OK(zx_handle_close(vmo), "handle_close");
 
     // close the clone handles
     for (auto h: clone_vmo)
-        EXPECT_EQ(ZX_OK, zx_handle_close(h), "handle_close");
-
-    END_TEST;
+        EXPECT_OK(zx_handle_close(h), "handle_close");
 }
 
 // test set 2: create a clone, verify that it COWs via the read/write interface
-bool vmo_clone_test_2() {
-    BEGIN_TEST;
-
+TEST(VmoCloneTestCase, Test2) {
     zx_handle_t vmo;
     zx_handle_t clone_vmo[1];
 
     // create a vmo
     const size_t size = PAGE_SIZE * 4;
-    EXPECT_EQ(ZX_OK, zx_vmo_create(size, 0, &vmo), "vm_object_create");
+    EXPECT_OK(zx_vmo_create(size, 0, &vmo), "vm_object_create");
 
     // fill the original with stuff
     for (size_t off = 0; off < size; off += sizeof(off)) {
@@ -101,7 +91,7 @@ bool vmo_clone_test_2() {
 
     // clone it
     clone_vmo[0] = ZX_HANDLE_INVALID;
-    EXPECT_EQ(ZX_OK, zx_vmo_create_child(vmo, ZX_VMO_CHILD_COPY_ON_WRITE, 0, size, &clone_vmo[0]), "vm_clone");
+    EXPECT_OK(zx_vmo_create_child(vmo, ZX_VMO_CHILD_COPY_ON_WRITE, 0, size, &clone_vmo[0]), "vm_clone");
     EXPECT_NE(ZX_HANDLE_INVALID, clone_vmo[0], "vm_clone_handle");
 
     // verify that the clone reads back as the same
@@ -121,7 +111,7 @@ bool vmo_clone_test_2() {
     zx_vmo_write(clone_vmo[0], &val, 0, sizeof(val));
 
     // verify the clone was written to
-    EXPECT_EQ(ZX_OK, zx_vmo_read(clone_vmo[0], &val, 0, sizeof(val)), "writing to clone");
+    EXPECT_OK(zx_vmo_read(clone_vmo[0], &val, 0, sizeof(val)), "writing to clone");
 
     // verify it was written to
     EXPECT_EQ(99, val, "reading back from clone");
@@ -149,24 +139,20 @@ bool vmo_clone_test_2() {
     // write to the original in the part that is still visible to the clone
     val = 99;
     uint64_t offset = PAGE_SIZE * 2;
-    EXPECT_EQ(ZX_OK, zx_vmo_write(vmo, &val, offset, sizeof(val)), "writing to original");
-    EXPECT_EQ(ZX_OK, zx_vmo_read(clone_vmo[0], &val, offset, sizeof(val)), "reading back original from clone");
+    EXPECT_OK(zx_vmo_write(vmo, &val, offset, sizeof(val)), "writing to original");
+    EXPECT_OK(zx_vmo_read(clone_vmo[0], &val, offset, sizeof(val)), "reading back original from clone");
     EXPECT_EQ(99, val, "checking value");
 
     // close the clone handles
     for (auto h: clone_vmo)
-        EXPECT_EQ(ZX_OK, zx_handle_close(h), "handle_close");
+        EXPECT_OK(zx_handle_close(h), "handle_close");
 
     // close the original handle
-    EXPECT_EQ(ZX_OK, zx_handle_close(vmo), "handle_close");
-
-    END_TEST;
+    EXPECT_OK(zx_handle_close(vmo), "handle_close");
 }
 
 // test set 3: test COW via a mapping
-bool vmo_clone_test_3() {
-    BEGIN_TEST;
-
+TEST(VmoCloneTestCase, Test3) {
     zx_handle_t vmo;
     zx_handle_t clone_vmo[1];
     uintptr_t ptr;
@@ -176,7 +162,7 @@ bool vmo_clone_test_3() {
 
     // create a vmo
     const size_t size = PAGE_SIZE * 4;
-    EXPECT_EQ(ZX_OK, zx_vmo_create(size, 0, &vmo), "vm_object_create");
+    EXPECT_OK(zx_vmo_create(size, 0, &vmo), "vm_object_create");
 
     // map it
     EXPECT_EQ(ZX_OK,
@@ -187,7 +173,7 @@ bool vmo_clone_test_3() {
 
     // clone it
     clone_vmo[0] = ZX_HANDLE_INVALID;
-    EXPECT_EQ(ZX_OK, zx_vmo_create_child(vmo, ZX_VMO_CHILD_COPY_ON_WRITE | ZX_VMO_CHILD_RESIZABLE,
+    EXPECT_OK(zx_vmo_create_child(vmo, ZX_VMO_CHILD_COPY_ON_WRITE | ZX_VMO_CHILD_RESIZABLE,
                                          0, size, &clone_vmo[0]),"vm_clone");
     EXPECT_NE(ZX_HANDLE_INVALID, clone_vmo[0], "vm_clone_handle");
 
@@ -231,22 +217,18 @@ bool vmo_clone_test_3() {
     EXPECT_EQ(99, p[0], "read back from original");
 
     // close the original handle
-    EXPECT_EQ(ZX_OK, zx_handle_close(vmo), "handle_close");
+    EXPECT_OK(zx_handle_close(vmo), "handle_close");
 
     // close the clone handle
-    EXPECT_EQ(ZX_OK, zx_handle_close(clone_vmo[0]), "handle_close");
+    EXPECT_OK(zx_handle_close(clone_vmo[0]), "handle_close");
 
     // unmap
-    EXPECT_EQ(ZX_OK, zx_vmar_unmap(zx_vmar_root_self(), ptr, size), "unmap");
-    EXPECT_EQ(ZX_OK, zx_vmar_unmap(zx_vmar_root_self(), clone_ptr, size), "unmap");
-
-    END_TEST;
+    EXPECT_OK(zx_vmar_unmap(zx_vmar_root_self(), ptr, size), "unmap");
+    EXPECT_OK(zx_vmar_unmap(zx_vmar_root_self(), clone_ptr, size), "unmap");
 }
 
 // verify that the parent is visible through decommitted pages
-bool vmo_clone_decommit_test() {
-    BEGIN_TEST;
-
+TEST(VmoCloneTestCase, Decommit) {
     zx_handle_t vmo;
     zx_handle_t clone_vmo;
     uintptr_t ptr;
@@ -256,7 +238,7 @@ bool vmo_clone_decommit_test() {
 
     // create a vmo
     const size_t size = PAGE_SIZE * 4;
-    EXPECT_EQ(ZX_OK, zx_vmo_create(size, 0, &vmo), "vm_object_create");
+    EXPECT_OK(zx_vmo_create(size, 0, &vmo), "vm_object_create");
 
     // map it
     EXPECT_EQ(ZX_OK,
@@ -267,7 +249,7 @@ bool vmo_clone_decommit_test() {
 
     // clone it and map that
     clone_vmo = ZX_HANDLE_INVALID;
-    EXPECT_EQ(ZX_OK, zx_vmo_create_child(vmo, ZX_VMO_CHILD_COPY_ON_WRITE, 0, size, &clone_vmo), "vm_clone");
+    EXPECT_OK(zx_vmo_create_child(vmo, ZX_VMO_CHILD_COPY_ON_WRITE, 0, size, &clone_vmo), "vm_clone");
     EXPECT_NE(ZX_HANDLE_INVALID, clone_vmo, "vm_clone_handle");
     EXPECT_EQ(ZX_OK,
             zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ|ZX_VM_PERM_WRITE, 0, clone_vmo, 0, size, &clone_ptr),
@@ -285,7 +267,7 @@ bool vmo_clone_decommit_test() {
     EXPECT_EQ(100, cp[0], "read back from clone");
     EXPECT_EQ(99, p[0], "read back from original");
 
-    EXPECT_EQ(ZX_OK, zx_vmo_op_range(clone_vmo, ZX_VMO_OP_DECOMMIT, 0, PAGE_SIZE, NULL, 0));
+    EXPECT_OK(zx_vmo_op_range(clone_vmo, ZX_VMO_OP_DECOMMIT, 0, PAGE_SIZE, NULL, 0));
 
     // make sure that clone reverted to original, and that parent is unaffected
     // by the decommit
@@ -298,22 +280,18 @@ bool vmo_clone_decommit_test() {
     EXPECT_EQ(99, p[0], "read back from original");
 
     // close the original handle
-    EXPECT_EQ(ZX_OK, zx_handle_close(vmo), "handle_close");
+    EXPECT_OK(zx_handle_close(vmo), "handle_close");
 
     // close the clone handle
-    EXPECT_EQ(ZX_OK, zx_handle_close(clone_vmo), "handle_close");
+    EXPECT_OK(zx_handle_close(clone_vmo), "handle_close");
 
     // unmap
-    EXPECT_EQ(ZX_OK, zx_vmar_unmap(zx_vmar_root_self(), ptr, size), "unmap");
-    EXPECT_EQ(ZX_OK, zx_vmar_unmap(zx_vmar_root_self(), clone_ptr, size), "unmap");
-
-    END_TEST;
+    EXPECT_OK(zx_vmar_unmap(zx_vmar_root_self(), ptr, size), "unmap");
+    EXPECT_OK(zx_vmar_unmap(zx_vmar_root_self(), clone_ptr, size), "unmap");
 }
 
 // verify the affect of commit on a clone
-bool vmo_clone_commit_test() {
-    BEGIN_TEST;
-
+TEST(VmoCloneTestCase, Commit) {
     zx_handle_t vmo;
     zx_handle_t clone_vmo;
     uintptr_t ptr;
@@ -323,7 +301,7 @@ bool vmo_clone_commit_test() {
 
     // create a vmo
     const size_t size = PAGE_SIZE * 4;
-    EXPECT_EQ(ZX_OK, zx_vmo_create(size, 0, &vmo), "vm_object_create");
+    EXPECT_OK(zx_vmo_create(size, 0, &vmo), "vm_object_create");
 
     // map it
     EXPECT_EQ(ZX_OK,
@@ -334,7 +312,7 @@ bool vmo_clone_commit_test() {
 
     // clone it and map that
     clone_vmo = ZX_HANDLE_INVALID;
-    EXPECT_EQ(ZX_OK, zx_vmo_create_child(vmo, ZX_VMO_CHILD_COPY_ON_WRITE, 0, size, &clone_vmo), "vm_clone");
+    EXPECT_OK(zx_vmo_create_child(vmo, ZX_VMO_CHILD_COPY_ON_WRITE, 0, size, &clone_vmo), "vm_clone");
     EXPECT_NE(ZX_HANDLE_INVALID, clone_vmo, "vm_clone_handle");
     EXPECT_EQ(ZX_OK,
             zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ|ZX_VM_PERM_WRITE, 0, clone_vmo, 0, size,  &clone_ptr),
@@ -347,7 +325,7 @@ bool vmo_clone_commit_test() {
     EXPECT_EQ(0x99999999, p[0], "wrote to original");
     EXPECT_EQ(0x99999999, cp[0], "read back from clone");
 
-    EXPECT_EQ(ZX_OK, zx_vmo_op_range(clone_vmo, ZX_VMO_OP_COMMIT, 0, PAGE_SIZE, NULL, 0));
+    EXPECT_OK(zx_vmo_op_range(clone_vmo, ZX_VMO_OP_COMMIT, 0, PAGE_SIZE, NULL, 0));
 
     // make sure that clone has the same contents as the parent
     for (size_t i = 0; i < PAGE_SIZE / sizeof(*p); ++i) {
@@ -360,28 +338,24 @@ bool vmo_clone_commit_test() {
     EXPECT_EQ(0, cp[0], "wrote to clone");
     EXPECT_EQ(0x99999999, p[0], "read back from original");
 
-    EXPECT_EQ(ZX_OK, zx_vmo_op_range(clone_vmo, ZX_VMO_OP_DECOMMIT, 0, PAGE_SIZE, NULL, 0));
+    EXPECT_OK(zx_vmo_op_range(clone_vmo, ZX_VMO_OP_DECOMMIT, 0, PAGE_SIZE, NULL, 0));
 
     EXPECT_EQ(0x99999999, cp[0], "clone should match orig again");
     EXPECT_EQ(0x99999999, p[0], "read back from original");
 
     // close the original handle
-    EXPECT_EQ(ZX_OK, zx_handle_close(vmo), "handle_close");
+    EXPECT_OK(zx_handle_close(vmo), "handle_close");
 
     // close the clone handle
-    EXPECT_EQ(ZX_OK, zx_handle_close(clone_vmo), "handle_close");
+    EXPECT_OK(zx_handle_close(clone_vmo), "handle_close");
 
     // unmap
-    EXPECT_EQ(ZX_OK, zx_vmar_unmap(zx_vmar_root_self(), ptr, size), "unmap");
-    EXPECT_EQ(ZX_OK, zx_vmar_unmap(zx_vmar_root_self(), clone_ptr, size), "unmap");
-
-    END_TEST;
+    EXPECT_OK(zx_vmar_unmap(zx_vmar_root_self(), ptr, size), "unmap");
+    EXPECT_OK(zx_vmar_unmap(zx_vmar_root_self(), clone_ptr, size), "unmap");
 }
 
 // test set 4: deal with clones with nonzero offsets and offsets that extend beyond the original
-bool vmo_clone_test_4() {
-    BEGIN_TEST;
-
+TEST(VmoCloneTestCase, Test4) {
     zx_handle_t vmo;
     zx_handle_t clone_vmo[1];
     uintptr_t ptr;
@@ -391,7 +365,7 @@ bool vmo_clone_test_4() {
 
     // create a vmo
     const size_t size = PAGE_SIZE * 4;
-    EXPECT_EQ(ZX_OK, zx_vmo_create(size, ZX_VMO_RESIZABLE, &vmo), "vm_object_create");
+    EXPECT_OK(zx_vmo_create(size, ZX_VMO_RESIZABLE, &vmo), "vm_object_create");
 
     // map it
     EXPECT_EQ(ZX_OK,
@@ -410,7 +384,7 @@ bool vmo_clone_test_4() {
 
     // create a clone that extends beyond the parent by one page
     clone_vmo[0] = ZX_HANDLE_INVALID;
-    EXPECT_EQ(ZX_OK, zx_vmo_create_child(vmo, ZX_VMO_CHILD_COPY_ON_WRITE | ZX_VMO_CHILD_RESIZABLE,
+    EXPECT_OK(zx_vmo_create_child(vmo, ZX_VMO_CHILD_COPY_ON_WRITE | ZX_VMO_CHILD_RESIZABLE,
                                          PAGE_SIZE, size, &clone_vmo[0]), "vm_clone");
 
     // map the clone
@@ -437,7 +411,7 @@ bool vmo_clone_test_4() {
     }
 
     // resize the original
-    EXPECT_EQ(ZX_OK, zx_vmo_set_size(vmo, size + PAGE_SIZE), "extend the vmo");
+    EXPECT_OK(zx_vmo_set_size(vmo, size + PAGE_SIZE), "extend the vmo");
 
     // verify that the last page we have mapped still returns zeros
     for (size_t off = (size - PAGE_SIZE) / sizeof(off); off < size / sizeof(off); off++) {
@@ -449,7 +423,7 @@ bool vmo_clone_test_4() {
 
     // write to the new part of the original
     size_t val = 99;
-    EXPECT_EQ(ZX_OK, zx_vmo_write(vmo, &val, size, sizeof(val)),
+    EXPECT_OK(zx_vmo_write(vmo, &val, size, sizeof(val)),
               "writing to original after extending");
 
     // verify that it is not reflected in the clone
@@ -457,7 +431,7 @@ bool vmo_clone_test_4() {
               "didn't modified newly exposed part of cow clone");
 
     // write to a page in the original vmo
-    EXPECT_EQ(ZX_OK, zx_vmo_write(vmo, &val, size - PAGE_SIZE, sizeof(val)),
+    EXPECT_OK(zx_vmo_write(vmo, &val, size - PAGE_SIZE, sizeof(val)),
               "writing to original after extending");
 
     // verify that it is reflected in the clone
@@ -465,18 +439,18 @@ bool vmo_clone_test_4() {
               "modified newly exposed part of cow clone");
 
     // shrink and enlarge the clone
-    EXPECT_EQ(ZX_OK, zx_vmo_set_size(clone_vmo[0], size - 2 * PAGE_SIZE), "shrunk the clone");
-    EXPECT_EQ(ZX_OK, zx_vmo_set_size(clone_vmo[0], size), "extend the clone");
+    EXPECT_OK(zx_vmo_set_size(clone_vmo[0], size - 2 * PAGE_SIZE), "shrunk the clone");
+    EXPECT_OK(zx_vmo_set_size(clone_vmo[0], size), "extend the clone");
 
     // verify that new pages are zero-pages instead of uncovering previously visible parent pages
     EXPECT_EQ(0, cp[(size - 2 * PAGE_SIZE) / sizeof(*cp)],
               "didn't modified newly exposed part of cow clone");
 
     // resize the original again, completely extending it beyond he clone
-    EXPECT_EQ(ZX_OK, zx_vmo_set_size(vmo, size + PAGE_SIZE * 2), "extend the vmo");
+    EXPECT_OK(zx_vmo_set_size(vmo, size + PAGE_SIZE * 2), "extend the vmo");
 
     // resize the original to zero
-    EXPECT_EQ(ZX_OK, zx_vmo_set_size(vmo, 0), "truncate the vmo");
+    EXPECT_OK(zx_vmo_set_size(vmo, 0), "truncate the vmo");
 
     // verify that the clone now reads completely zeros, since it never COWed
     for (size_t off = 0; off < size / sizeof(off); off++) {
@@ -487,16 +461,14 @@ bool vmo_clone_test_4() {
     }
 
     // close and unmap
-    EXPECT_EQ(ZX_OK, zx_handle_close(vmo), "handle_close");
-    EXPECT_EQ(ZX_OK, zx_vmar_unmap(zx_vmar_root_self(), ptr, size), "unmap");
-    EXPECT_EQ(ZX_OK, zx_handle_close(clone_vmo[0]), "handle_close");
-    EXPECT_EQ(ZX_OK, zx_vmar_unmap(zx_vmar_root_self(), clone_ptr, size), "unmap");
-
-    END_TEST;
+    EXPECT_OK(zx_handle_close(vmo), "handle_close");
+    EXPECT_OK(zx_vmar_unmap(zx_vmar_root_self(), ptr, size), "unmap");
+    EXPECT_OK(zx_handle_close(clone_vmo[0]), "handle_close");
+    EXPECT_OK(zx_vmar_unmap(zx_vmar_root_self(), clone_ptr, size), "unmap");
 }
 
 // Returns zero on failure.
-static zx_rights_t get_handle_rights(zx_handle_t h) {
+zx_rights_t GetHandleRights(zx_handle_t h) {
     zx_info_handle_basic_t info;
     zx_status_t s = zx_object_get_info(h, ZX_INFO_HANDLE_BASIC, &info,
                                        sizeof(info), nullptr, nullptr);
@@ -507,9 +479,7 @@ static zx_rights_t get_handle_rights(zx_handle_t h) {
     return info.rights;
 }
 
-bool vmo_clone_rights_test() {
-    BEGIN_TEST;
-
+TEST(VmoCloneTestCase, Rights) {
     static const char kOldVmoName[] = "original";
     static const char kNewVmoName[] = "clone";
 
@@ -525,12 +495,12 @@ bool vmo_clone_rights_test() {
     ASSERT_EQ(zx_object_set_property(vmo, ZX_PROP_NAME,
                                      kOldVmoName, sizeof(kOldVmoName)),
               ZX_OK);
-    ASSERT_EQ(get_handle_rights(vmo) & kOldVmoRights, kOldVmoRights);
+    ASSERT_EQ(GetHandleRights(vmo) & kOldVmoRights, kOldVmoRights);
 
     zx_handle_t reduced_rights_vmo;
     ASSERT_EQ(zx_handle_duplicate(vmo, kOldVmoRights, &reduced_rights_vmo),
               ZX_OK);
-    EXPECT_EQ(get_handle_rights(reduced_rights_vmo), kOldVmoRights);
+    EXPECT_EQ(GetHandleRights(reduced_rights_vmo), kOldVmoRights);
 
     zx_handle_t clone;
     ASSERT_EQ(zx_vmo_create_child(reduced_rights_vmo, ZX_VMO_CHILD_COPY_ON_WRITE,
@@ -556,78 +526,68 @@ bool vmo_clone_rights_test() {
     EXPECT_STR_EQ(newname, kNewVmoName, "clone VMO name");
 
     EXPECT_EQ(zx_handle_close(vmo), ZX_OK);
-    EXPECT_EQ(get_handle_rights(clone), kNewVmoRights);
+    EXPECT_EQ(GetHandleRights(clone), kNewVmoRights);
     EXPECT_EQ(zx_handle_close(clone), ZX_OK);
-
-    END_TEST;
 }
 
 // Resizing a cloned VMO causes a fault.
-bool vmo_clone_resize_clone_hazard() {
-    BEGIN_TEST;
-
+TEST(VmoCloneTestCase, ResizeCloneHazard) {
     const size_t size = PAGE_SIZE * 2;
     zx_handle_t vmo;
     ASSERT_EQ(zx_vmo_create(size, 0, &vmo), ZX_OK);
 
     zx_handle_t clone_vmo;
-    EXPECT_EQ(ZX_OK, zx_vmo_create_child(
+    EXPECT_OK(zx_vmo_create_child(
         vmo, ZX_VMO_CHILD_COPY_ON_WRITE | ZX_VMO_CHILD_RESIZABLE, 0, size, &clone_vmo), "vm_clone");
 
     uintptr_t ptr_rw;
-    EXPECT_EQ(ZX_OK, zx_vmar_map(
+    EXPECT_OK(zx_vmar_map(
             zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0,
             clone_vmo, 0, size, &ptr_rw), "map");
 
     auto int_arr = reinterpret_cast<int*>(ptr_rw);
     EXPECT_EQ(int_arr[1], 0);
 
-    EXPECT_EQ(ZX_OK, zx_vmo_set_size(clone_vmo, 0u));
+    EXPECT_OK(zx_vmo_set_size(clone_vmo, 0u));
 
     EXPECT_EQ(false, probe_for_read(&int_arr[1]), "read probe");
     EXPECT_EQ(false, probe_for_write(&int_arr[1]), "write probe");
 
-    EXPECT_EQ(ZX_OK, zx_handle_close(vmo));
-    EXPECT_EQ(ZX_OK, zx_handle_close(clone_vmo));
-    EXPECT_EQ(ZX_OK, zx_vmar_unmap(zx_vmar_root_self(), ptr_rw, size), "unmap");
-    END_TEST;
+    EXPECT_OK(zx_handle_close(vmo));
+    EXPECT_OK(zx_handle_close(clone_vmo));
+    EXPECT_OK(zx_vmar_unmap(zx_vmar_root_self(), ptr_rw, size), "unmap");
 }
 
 // Resizing the parent VMO and accessing via a mapped VMO is ok.
-bool vmo_clone_resize_parent_ok() {
-    BEGIN_TEST;
-
+TEST(VmoCloneTestCase, ResizeParentOk) {
     const size_t size = PAGE_SIZE * 2;
     zx_handle_t vmo;
     ASSERT_EQ(zx_vmo_create(size, ZX_VMO_RESIZABLE, &vmo), ZX_OK);
 
     zx_handle_t clone_vmo;
-    EXPECT_EQ(ZX_OK, zx_vmo_create_child(
+    EXPECT_OK(zx_vmo_create_child(
         vmo, ZX_VMO_CHILD_COPY_ON_WRITE, 0, size, &clone_vmo), "vm_clone");
 
     uintptr_t ptr_rw;
-    EXPECT_EQ(ZX_OK, zx_vmar_map(
+    EXPECT_OK(zx_vmar_map(
             zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0,
             clone_vmo, 0, size, &ptr_rw), "map");
 
     auto int_arr = reinterpret_cast<int*>(ptr_rw);
     EXPECT_EQ(int_arr[1], 0);
 
-    EXPECT_EQ(ZX_OK, zx_vmo_set_size(vmo, 0u));
+    EXPECT_OK(zx_vmo_set_size(vmo, 0u));
 
     EXPECT_EQ(true, probe_for_read(&int_arr[1]), "read probe");
     EXPECT_EQ(true, probe_for_write(&int_arr[1]), "write probe");
 
-    EXPECT_EQ(ZX_OK, zx_handle_close(vmo));
-    EXPECT_EQ(ZX_OK, zx_handle_close(clone_vmo));
-    EXPECT_EQ(ZX_OK, zx_vmar_unmap(zx_vmar_root_self(), ptr_rw, size), "unmap");
-    END_TEST;
+    EXPECT_OK(zx_handle_close(vmo));
+    EXPECT_OK(zx_handle_close(clone_vmo));
+    EXPECT_OK(zx_vmar_unmap(zx_vmar_root_self(), ptr_rw, size), "unmap");
 }
 
 // Pages exposed by growing the parent after shrinking it aren't visible to the child.
-bool vmo_clone_shrink_grow_parent() {
-    BEGIN_TEST;
-
+TEST(VmoCloneTestCase, ShrinkGrowParent) {
     struct {
         uint64_t vmo_size;
         uint64_t clone_offset;
@@ -645,7 +605,7 @@ bool vmo_clone_shrink_grow_parent() {
 
     for (auto& config : configs) {
         zx_handle_t vmo;
-        ASSERT_EQ(ZX_OK, zx_vmo_create(config.vmo_size, ZX_VMO_RESIZABLE, &vmo));
+        ASSERT_OK(zx_vmo_create(config.vmo_size, ZX_VMO_RESIZABLE, &vmo));
 
         zx_handle_t clone_vmo;
         EXPECT_EQ(ZX_OK,
@@ -653,7 +613,7 @@ bool vmo_clone_shrink_grow_parent() {
                                       config.clone_offset, config.clone_size, &clone_vmo));
 
         uintptr_t ptr_rw;
-        EXPECT_EQ(ZX_OK, zx_vmar_map(
+        EXPECT_OK(zx_vmar_map(
                 zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0,
                 clone_vmo, 0, config.clone_size, &ptr_rw));
 
@@ -662,32 +622,28 @@ bool vmo_clone_shrink_grow_parent() {
 
         uint32_t data = 1;
         const uint64_t vmo_offset = config.clone_offset + config.clone_test_offset;
-        EXPECT_EQ(ZX_OK, zx_vmo_write(vmo, &data, vmo_offset, sizeof(data)));
+        EXPECT_OK(zx_vmo_write(vmo, &data, vmo_offset, sizeof(data)));
 
         EXPECT_EQ(1, *ptr);
 
-        EXPECT_EQ(ZX_OK, zx_vmo_set_size(vmo, 0u));
+        EXPECT_OK(zx_vmo_set_size(vmo, 0u));
 
         EXPECT_EQ(0, *ptr);
 
-        EXPECT_EQ(ZX_OK, zx_vmo_set_size(vmo, config.vmo_size));
+        EXPECT_OK(zx_vmo_set_size(vmo, config.vmo_size));
         data = 2;
-        EXPECT_EQ(ZX_OK, zx_vmo_write(vmo, &data, vmo_offset, sizeof(data)));
+        EXPECT_OK(zx_vmo_write(vmo, &data, vmo_offset, sizeof(data)));
 
         EXPECT_EQ(0, *ptr);
 
-        EXPECT_EQ(ZX_OK, zx_handle_close(vmo));
-        EXPECT_EQ(ZX_OK, zx_handle_close(clone_vmo));
-        EXPECT_EQ(ZX_OK, zx_vmar_unmap(zx_vmar_root_self(), ptr_rw, config.clone_size));
+        EXPECT_OK(zx_handle_close(vmo));
+        EXPECT_OK(zx_handle_close(clone_vmo));
+        EXPECT_OK(zx_vmar_unmap(zx_vmar_root_self(), ptr_rw, config.clone_size));
     }
-
-    END_TEST;
 }
 
 // Check that non-resizable VMOs cannot get resized.
-bool vmo_clone_no_resize_test_helper(uint32_t flag) {
-    BEGIN_TEST;
-
+void NoResizeHelper(uint32_t flag) {
     const size_t len = PAGE_SIZE * 4;
     zx_handle_t parent = ZX_HANDLE_INVALID;
     zx_handle_t vmo = ZX_HANDLE_INVALID;
@@ -708,7 +664,7 @@ bool vmo_clone_no_resize_test_helper(uint32_t flag) {
 
     size_t size;
     status = zx_vmo_get_size(vmo, &size);
-    EXPECT_EQ(ZX_OK, status, "vm_object_get_size");
+    EXPECT_OK(status, "vm_object_get_size");
     EXPECT_EQ(len, size, "vm_object_get_size");
 
     uintptr_t ptr;
@@ -716,40 +672,22 @@ bool vmo_clone_no_resize_test_helper(uint32_t flag) {
         zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_REQUIRE_NON_RESIZABLE,
         0, vmo, 0, len,
         &ptr);
-    ASSERT_EQ(ZX_OK, status, "vm_map");
+    ASSERT_OK(status, "vm_map");
     ASSERT_NE(ptr, 0, "vm_map");
 
     status = zx_vmar_unmap(zx_vmar_root_self(), ptr, len);
-    EXPECT_EQ(ZX_OK, status, "unmap");
+    EXPECT_OK(status, "unmap");
 
     status = zx_handle_close(vmo);
-    EXPECT_EQ(ZX_OK, status, "handle_close");
-
-    END_TEST;
+    EXPECT_OK(status, "handle_close");
 }
 
-bool vmo_clone_no_resize_test() {
-    return vmo_clone_no_resize_test_helper(0);
+TEST(VmoCloneTestCase, NoResize) {
+    ASSERT_NO_FATAL_FAILURES(NoResizeHelper(0));
 }
 
-bool vmo_clone_legacy_no_resize_test() {
-    return vmo_clone_no_resize_test_helper(2);
+TEST(VmoCloneTestCase, LegacyNoResize) {
+    ASSERT_NO_FATAL_FAILURES(NoResizeHelper(2));
 }
 
 } // namespace
-
-BEGIN_TEST_CASE(vmo_clone_tests)
-RUN_TEST(vmo_clone_size_align_test);
-RUN_TEST(vmo_clone_test_1);
-RUN_TEST(vmo_clone_test_2);
-RUN_TEST(vmo_clone_test_3);
-RUN_TEST(vmo_clone_test_4);
-RUN_TEST(vmo_clone_decommit_test);
-RUN_TEST(vmo_clone_commit_test);
-RUN_TEST(vmo_clone_rights_test);
-RUN_TEST(vmo_clone_resize_clone_hazard);
-RUN_TEST(vmo_clone_resize_parent_ok);
-RUN_TEST(vmo_clone_shrink_grow_parent);
-RUN_TEST(vmo_clone_no_resize_test);
-RUN_TEST(vmo_clone_legacy_no_resize_test);
-END_TEST_CASE(vmo_clone_tests)
