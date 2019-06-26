@@ -15,12 +15,9 @@ std::string_view ExtractLastFileComponent(std::string_view path) {
   return path.substr(last_slash + 1);
 }
 
-bool IsPathAbsolute(const std::string& path) {
-  return !path.empty() && path[0] == '/';
-}
+bool IsPathAbsolute(const std::string& path) { return !path.empty() && path[0] == '/'; }
 
-std::string CatPathComponents(const std::string& first,
-                              const std::string& second) {
+std::string CatPathComponents(const std::string& first, const std::string& second) {
   // Second component shouldn't begin with a slash.
   FXL_DCHECK(second.empty() || second[0] != '/');
 

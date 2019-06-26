@@ -24,8 +24,7 @@ bool IsPathAbsolute(const std::string& path);
 // Concatenates the two path components with a slash in between them. "first"
 // can end with a slash or not. The second component shouldn't begin with a
 // slash.
-std::string CatPathComponents(const std::string& first,
-                              const std::string& second);
+std::string CatPathComponents(const std::string& first, const std::string& second);
 
 }  // namespace zxdb
 

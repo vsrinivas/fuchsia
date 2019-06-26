@@ -60,27 +60,22 @@ class CompletionCallback {
 
   CompletionCallback(decltype(nullptr)) : callback_(nullptr) {}
 
-  CompletionCallback(void (*target)(const Err& err, Args...))
-      : callback_(target) {}
+  CompletionCallback(void (*target)(const Err& err, Args...)) : callback_(target) {}
 
   // For functors, we need to capture the raw type but also restrict on the
   // existence of an appropriate operator () to resolve overloads and implicit
   // casts properly.
-  template <
-      typename Callable,
-      typename = std::enable_if_t<std::is_convertible<
-          decltype(std::declval<Callable&>()(Err(), std::declval<Args>()...)),
-          void>::value>>
+  template <typename Callable,
+            typename = std::enable_if_t<std::is_convertible<
+                decltype(std::declval<Callable&>()(Err(), std::declval<Args>()...)), void>::value>>
   CompletionCallback(Callable target) : callback_(std::move(target)) {}
 
   // Delete specialization for fit::callback.
   template <size_t other_inline_target_size, bool other_require_inline>
   CompletionCallback(
-      ::fit::callback_impl<other_inline_target_size, other_require_inline,
-                           void(Args...)>) = delete;
+      ::fit::callback_impl<other_inline_target_size, other_require_inline, void(Args...)>) = delete;
 
-  CompletionCallback(CompletionCallback&& other)
-      : callback_(std::move(other.callback_)) {}
+  CompletionCallback(CompletionCallback&& other) : callback_(std::move(other.callback_)) {}
 
   ~CompletionCallback() {
     FXL_CHECK(!callback_) << "Completion callback not run before destruction.";
@@ -90,14 +85,11 @@ class CompletionCallback {
   //
   // Unlike fit::callback, this will assert if the current object has a
   // function that has not been called.
-  template <
-      typename Callable,
-      typename = std::enable_if_t<std::is_convertible<
-          decltype(std::declval<Callable&>()(Err(), std::declval<Args>()...)),
-          void>::value>>
+  template <typename Callable,
+            typename = std::enable_if_t<std::is_convertible<
+                decltype(std::declval<Callable&>()(Err(), std::declval<Args>()...)), void>::value>>
   CompletionCallback& operator=(Callable target) {
-    FXL_CHECK(!callback_)
-        << "Overwriting a completion callback without calling it.";
+    FXL_CHECK(!callback_) << "Overwriting a completion callback without calling it.";
     callback_ = std::move(target);
     return *this;
   }
@@ -107,8 +99,7 @@ class CompletionCallback {
     if (&other == this)
       return *this;
 
-    FXL_CHECK(!callback_)
-        << "Overwriting a completion callback without calling it.";
+    FXL_CHECK(!callback_) << "Overwriting a completion callback without calling it.";
     callback_ = std::move(other.callback_);
     return *this;
   }

@@ -34,8 +34,7 @@ class AddressRanges {
   AddressRanges() = default;
 
   AddressRanges(const AddressRanges& other) : ranges_(other.ranges_) {}
-  AddressRanges(AddressRanges&& other) noexcept
-      : ranges_(std::move(other.ranges_)) {}
+  AddressRanges(AddressRanges&& other) noexcept : ranges_(std::move(other.ranges_)) {}
 
   // Creates a single-range set. If the range is empty it will not be added.
   explicit AddressRanges(const AddressRange& r) {

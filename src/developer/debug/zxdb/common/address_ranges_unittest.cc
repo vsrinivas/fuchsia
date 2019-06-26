@@ -26,9 +26,9 @@ TEST(AddressRanges, NonCanonical) {
   EXPECT_TRUE(b.empty());
 
   // Enclosed inputs.
-  AddressRanges c(AddressRanges::kNonCanonical,
-                  {AddressRange(0x100, 0x200), AddressRange(0x110, 0x120),
-                   AddressRange(0x140, 0x150)});
+  AddressRanges c(
+      AddressRanges::kNonCanonical,
+      {AddressRange(0x100, 0x200), AddressRange(0x110, 0x120), AddressRange(0x140, 0x150)});
   ASSERT_EQ(1u, c.size());
   EXPECT_EQ(AddressRange(0x100, 0x200), c[0]);
   EXPECT_EQ("{[0x100, 0x200)}", c.ToString());
@@ -62,8 +62,7 @@ TEST(AddressRanges, InRange) {
   EXPECT_FALSE(one.InRange(200));
   EXPECT_FALSE(one.InRange(300));
 
-  AddressRanges two(AddressRanges::kCanonical,
-                    {AddressRange(100, 200), AddressRange(300, 400)});
+  AddressRanges two(AddressRanges::kCanonical, {AddressRange(100, 200), AddressRange(300, 400)});
   EXPECT_FALSE(two.InRange(0));
   EXPECT_FALSE(two.InRange(99));
   EXPECT_TRUE(two.InRange(100));

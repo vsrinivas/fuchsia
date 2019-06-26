@@ -20,8 +20,8 @@ void FinalizePerfLog();
 
 // Writes to the perf result log the given 'value' resulting from the named
 // 'test'. The units are to aid in reading the log by people.
-void LogPerfResult(const char* test_suite_name, const char* test_name,
-                   double value, const char* units);
+void LogPerfResult(const char* test_suite_name, const char* test_name, double value,
+                   const char* units);
 
 // Automates calling LogPerfResult for the common case where you want
 // to measure the time that something took. Call Done() when the test

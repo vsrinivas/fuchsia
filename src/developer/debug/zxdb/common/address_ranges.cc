@@ -10,8 +10,7 @@
 
 namespace zxdb {
 
-AddressRanges::AddressRanges(Format format, RangeVector ranges)
-    : ranges_(std::move(ranges)) {
+AddressRanges::AddressRanges(Format format, RangeVector ranges) : ranges_(std::move(ranges)) {
   if (format == kCanonical) {
     FXL_DCHECK(IsCanonical(ranges_));
   } else {
@@ -22,24 +21,20 @@ AddressRanges::AddressRanges(Format format, RangeVector ranges)
   }
 }
 
-std::optional<AddressRange> AddressRanges::GetRangeContaining(
-    uint64_t addr) const {
+std::optional<AddressRange> AddressRanges::GetRangeContaining(uint64_t addr) const {
   if (empty())
     return std::nullopt;
 
   // This would be faster using brute-force for smallish numbers of elements,
   // but it doesn't matter that much and forcing the more complex code path in
   // all cases helps ensure correctness.
-  auto found = std::lower_bound(ranges_.begin(), ranges_.end(), addr,
-                                AddressRangeEndAddrCmp());
+  auto found = std::lower_bound(ranges_.begin(), ranges_.end(), addr, AddressRangeEndAddrCmp());
   if (found == ranges_.end() || !found->InRange(addr))
     return std::nullopt;
   return *found;
 }
 
-bool AddressRanges::InRange(uint64_t addr) const {
-  return !!GetRangeContaining(addr);
-}
+bool AddressRanges::InRange(uint64_t addr) const { return !!GetRangeContaining(addr); }
 
 std::string AddressRanges::ToString() const {
   std::string result("{");

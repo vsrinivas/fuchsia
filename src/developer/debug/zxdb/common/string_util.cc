@@ -18,8 +18,7 @@ bool StringEndsWith(std::string_view str, std::string_view ends_with) {
   if (ends_with.size() > str.size())
     return false;
 
-  std::string_view source =
-      str.substr(str.size() - ends_with.size(), ends_with.size());
+  std::string_view source = str.substr(str.size() - ends_with.size(), ends_with.size());
   return source == ends_with;
 }
 

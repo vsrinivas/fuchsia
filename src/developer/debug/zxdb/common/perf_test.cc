@@ -42,8 +42,8 @@ void FinalizePerfLog() {
   perf_log_file = nullptr;
 }
 
-void LogPerfResult(const char* test_suite_name, const char* test_name,
-                   double value, const char* units) {
+void LogPerfResult(const char* test_suite_name, const char* test_name, double value,
+                   const char* units) {
   if (!perf_log_file) {
     FXL_NOTREACHED();
     return;
@@ -61,14 +61,12 @@ void LogPerfResult(const char* test_suite_name, const char* test_name,
     fprintf(perf_log_file, ",\n");
   written_perf_line = true;
 
-  fprintf(perf_log_file,
-          R"({"label":"%s", "test_suite":"%s", "unit":"%s", "values":[%g]})",
+  fprintf(perf_log_file, R"({"label":"%s", "test_suite":"%s", "unit":"%s", "values":[%g]})",
           test_name, test_suite_name, units, value);
   fflush(stdout);
 }
 
-PerfTimeLogger::PerfTimeLogger(const char* test_suite_name,
-                               const char* test_name)
+PerfTimeLogger::PerfTimeLogger(const char* test_suite_name, const char* test_name)
     : test_suite_name_(test_suite_name), test_name_(test_name) {
   timer_.Start();
 }
@@ -82,8 +80,8 @@ void PerfTimeLogger::Done() {
   // Use a floating-point millisecond value because it is more
   // intuitive than microseconds and we want more precision than
   // integer milliseconds
-  LogPerfResult(test_suite_name_.c_str(), test_name_.c_str(),
-                timer_.Elapsed().ToMillisecondsF(), "ms");
+  LogPerfResult(test_suite_name_.c_str(), test_name_.c_str(), timer_.Elapsed().ToMillisecondsF(),
+                "ms");
   logged_ = true;
 }
 

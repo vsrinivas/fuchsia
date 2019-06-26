@@ -25,8 +25,6 @@ Err::Err(const char* fmt, ...) : type_(ErrType::kGeneral) {
 
 Err::~Err() = default;
 
-bool Err::operator==(const Err& other) const {
-  return type_ == other.type_ && msg_ == other.msg_;
-}
+bool Err::operator==(const Err& other) const { return type_ == other.type_ && msg_ == other.msg_; }
 
 }  // namespace zxdb

@@ -10,16 +10,14 @@ void MockMemory::AddMemory(uint64_t address, std::vector<uint8_t> data) {
   mem_[address] = std::move(data);
 }
 
-std::vector<uint8_t> MockMemory::ReadMemory(uint64_t address,
-                                            uint32_t size) const {
+std::vector<uint8_t> MockMemory::ReadMemory(uint64_t address, uint32_t size) const {
   auto found = FindBlockForAddress(address);
   if (found == mem_.end())
     return {};
 
   size_t offset = address - found->first;
 
-  uint32_t size_to_return =
-      std::min(size, static_cast<uint32_t>(found->second.size() - offset));
+  uint32_t size_to_return = std::min(size, static_cast<uint32_t>(found->second.size() - offset));
 
   std::vector<uint8_t> subset;
   subset.resize(size_to_return);

@@ -20,13 +20,13 @@ namespace zxdb {
 // converted to fit::callback in our codebase. When the conversion is complete,
 // this should be deleted.
 template <typename Result, typename... Args>
-std::function<Result(Args...)> FitCallbackToStdFunction(
-    fit::callback<Result(Args...)> f) {
+std::function<Result(Args...)> FitCallbackToStdFunction(fit::callback<Result(Args...)> f) {
   // Moves the fit::function to a heap-allocated shared_ptr which allows
   // copying without copying the underlying fit::callback.
   return std::function<Result(Args...)>(
-      [fn = std::make_shared<fit::callback<Result(Args...)>>(std::move(f))](
-          Args&&... args) { return (*fn)(std::forward<Args>(args)...); });
+      [fn = std::make_shared<fit::callback<Result(Args...)>>(std::move(f))](Args&&... args) {
+        return (*fn)(std::forward<Args>(args)...);
+      });
 }
 
 }  // namespace zxdb
