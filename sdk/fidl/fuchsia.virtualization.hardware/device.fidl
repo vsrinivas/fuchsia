@@ -126,6 +126,14 @@ protocol VirtioInput {
 };
 
 [Discoverable]
+protocol VirtioMagma {
+    compose VirtioDevice;
+
+    // Start the magma device.
+    Start(StartInfo start_info, handle<vmar> vmar) -> (zx.status status);
+};
+
+[Discoverable]
 protocol VirtioNet {
     compose VirtioDevice;
 

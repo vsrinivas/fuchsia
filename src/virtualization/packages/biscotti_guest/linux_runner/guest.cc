@@ -190,6 +190,7 @@ void Guest::StartGuest() {
   launch_info.block_devices = GetBlockDevices(config_.stateful_image_size);
   launch_info.wayland_device = fuchsia::virtualization::WaylandDevice::New();
   launch_info.wayland_device->dispatcher = wayland_dispatcher_.NewBinding();
+  launch_info.magma_device = fuchsia::virtualization::MagmaDevice::New();
 
   auto vm_create_nonce = TRACE_NONCE();
   TRACE_FLOW_BEGIN("linux_runner", "LaunchInstance", vm_create_nonce);

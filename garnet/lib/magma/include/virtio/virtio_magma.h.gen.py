@@ -111,6 +111,8 @@ def gen_enums(magma):
   errors = tab + comment(['magma error responses'], fuchsia)
   string_table = 'inline const char* virtio_magma_ctrl_type_string(enum virtio_magma_ctrl_type type) {\n'
   string_table += tab + 'switch (type) {\n'
+  expected_response_table = 'inline enum virtio_magma_ctrl_type virtio_magma_expected_response_type(enum virtio_magma_ctrl_type type) {\n'
+  expected_response_table += tab + 'switch (type) {\n'
   command_id = ' = 0x0400'
   response_id = ' = 0x1180'
   error_id = ' = 0x1280'
@@ -121,6 +123,7 @@ def gen_enums(magma):
     command_id = response_id = ''
     string_table += tab + tab + 'case VIRTIO_MAGMA_CMD_' + name + ': return "VIRTIO_MAGMA_CMD_' + name + '";\n'
     string_table += tab + tab + 'case VIRTIO_MAGMA_RESP_' + name + ': return "VIRTIO_MAGMA_RESP_' + name + '";\n'
+    expected_response_table += tab + tab + 'case VIRTIO_MAGMA_CMD_' + name + ': return VIRTIO_MAGMA_RESP_' + name + ';\n'
   error_names = [
     'VIRTIO_MAGMA_RESP_ERR_UNIMPLEMENTED',
     'VIRTIO_MAGMA_RESP_ERR_INTERNAL',
@@ -136,15 +139,19 @@ def gen_enums(magma):
   string_table += tab + tab + 'default: return "[invalid virtio_magma_ctrl_type]";\n'
   string_table += tab + '}\n'
   string_table += '}\n'
+  expected_response_table += tab + tab + 'default: return VIRTIO_MAGMA_RESP_ERR_INVALID_COMMAND;\n'
+  expected_response_table += tab + '}\n'
+  expected_response_table += '}\n'
   ret = 'enum virtio_magma_ctrl_type {\n'
   ret += commands
   ret += responses
   ret += errors
   if fuchsia:
-    ret += '} __PACKED;\n'
+    ret += '} __PACKED;\n\n'
   else:
     ret += '} __attribute((packed));\n\n'
-  ret += string_table
+  ret += string_table + '\n'
+  ret += expected_response_table
   return ret
 
 # Format command or response struct for an export
@@ -177,6 +184,20 @@ def format_struct(export, ctrl):
       ret += tab + wire_format(export['type']) + ' result_return;\n'
   if fuchsia:
     ret += '} __PACKED ' + name + '_t;\n'
+  else:
+    ret += '} __attribute((packed));\n'
+  return ret
+
+def config_type():
+  global fuchsia
+  global tab
+  ret = ''
+  if fuchsia:
+    ret += 'typedef '
+  ret += 'struct virtio_magma_config {\n'
+  ret += tab + wire_format('uint8_t') + ' dummy;\n'
+  if fuchsia:
+    ret += '} __PACKED virtio_magma_config_t;\n'
   else:
     ret += '} __attribute((packed));\n'
   return ret
@@ -220,6 +241,7 @@ def main():
       header += includes() + '\n'
       if fuchsia:
         header += '__BEGIN_CDECLS\n\n'
+      header += config_type() + '\n'
       header += gen_enums(magma) + '\n'
       header += ctrl_hdr() + '\n'
       for export in magma['exports']:

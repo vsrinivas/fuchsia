@@ -17,14 +17,11 @@
 #include <unordered_map>
 
 #include "src/virtualization/bin/vmm/device/device_base.h"
-#include "src/virtualization/bin/vmm/device/virtio_magma.h"
 #include "src/virtualization/bin/vmm/device/virtio_queue.h"
 
 #define VIRTWL_VQ_IN 0
 #define VIRTWL_VQ_OUT 1
-#define VIRTWL_VQ_MAGMA_IN 2
-#define VIRTWL_VQ_MAGMA_OUT 3
-#define VIRTWL_QUEUE_COUNT 4
+#define VIRTWL_QUEUE_COUNT 2
 #define VIRTWL_NEXT_VFD_ID_BASE (1 << 30)
 #define VIRTWL_VFD_ID_HOST_MASK VIRTWL_NEXT_VFD_ID_BASE
 
@@ -86,10 +83,6 @@ class VirtioWl : public DeviceBase<VirtioWl>,
 
   VirtioQueue* in_queue() { return &queues_[VIRTWL_VQ_IN]; }
   VirtioQueue* out_queue() { return &queues_[VIRTWL_VQ_OUT]; }
-  VirtioQueue* magma_in_queue() { return &queues_[VIRTWL_VQ_MAGMA_IN]; }
-  VirtioQueue* magma_out_queue() { return &queues_[VIRTWL_VQ_MAGMA_OUT]; }
-
-  zx::vmar* vmar() { return &vmar_; }
 
   // |fuchsia::virtualization::hardware::VirtioDevice|
   void Ready(uint32_t negotiated_features, ReadyCallback callback) override;
@@ -131,7 +124,6 @@ class VirtioWl : public DeviceBase<VirtioWl>,
   std::unordered_map<uint32_t, std::unique_ptr<Vfd>> vfds_;
   std::unordered_map<uint32_t, zx_signals_t> ready_vfds_;
   uint32_t next_vfd_id_ = VIRTWL_NEXT_VFD_ID_BASE;
-  std::unique_ptr<VirtioMagma> magma_;
 
   // A pending VFD is a zircon handle that will will be converted into a VFD
   // by sending a NEW_VFD command back to the guest.

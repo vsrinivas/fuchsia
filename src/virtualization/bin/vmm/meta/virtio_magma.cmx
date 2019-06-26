@@ -3,6 +3,9 @@
         "binary": "bin/app"
     },
     "sandbox": {
+        "features": [
+            "vulkan"
+        ],
         "services": [
             "fuchsia.tracing.provider.Registry"
         ]

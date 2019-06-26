@@ -28,7 +28,7 @@ protected:
 
 TEST_F(VirtMagmaTest, OpenDevice)
 {
-    static constexpr const char* kDevicePath = "/dev/wl0";
+    static constexpr const char* kDevicePath = "/dev/magma0";
     device_file_descriptor_ = open(kDevicePath, O_NONBLOCK);
     ASSERT_GE(device_file_descriptor_, 0)
         << "Failed to open device " << kDevicePath << " (" << errno << ")";

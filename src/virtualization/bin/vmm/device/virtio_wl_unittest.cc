@@ -17,8 +17,6 @@ namespace {
 
 #define VIRTWL_VQ_IN 0
 #define VIRTWL_VQ_OUT 1
-#define VIRTWL_VQ_MAGMA_IN 2
-#define VIRTWL_VQ_MAGMA_OUT 3
 #define VIRTWL_NEXT_VFD_ID_BASE 0x40000000
 
 static constexpr char kVirtioWlUrl[] = "fuchsia-pkg://fuchsia.com/virtio_wl#meta/virtio_wl.cmx";

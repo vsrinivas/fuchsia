@@ -200,18 +200,8 @@ void VirtioWl::Start(fuchsia::virtualization::hardware::StartInfo start_info, zx
   }
 }
 
-// TODO(MAC-228): move feature flag to common location
-#define VIRTIO_WL_F_MAGMA_FLAGS (1u << 2)
-
 void VirtioWl::Ready(uint32_t negotiated_features, ReadyCallback callback) {
   auto deferred = fit::defer(std::move(callback));
-  if (negotiated_features & VIRTIO_WL_F_MAGMA_FLAGS) {
-    magma_ = std::make_unique<VirtioMagma>(magma_out_queue());
-    zx_status_t status = magma_->Init(vmar_);
-    if (status != ZX_OK) {
-      FXL_LOG(WARNING) << "failed to initialize magma sub-device - " << status;
-    }
-  }
 }
 
 void VirtioWl::ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc, zx_gpaddr_t avail,
@@ -221,8 +211,6 @@ void VirtioWl::ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc, z
   switch (queue) {
     case VIRTWL_VQ_IN:
     case VIRTWL_VQ_OUT:
-    case VIRTWL_VQ_MAGMA_IN:
-    case VIRTWL_VQ_MAGMA_OUT:
       queues_[queue].Configure(size, desc, avail, used);
       break;
     default:
@@ -239,11 +227,6 @@ void VirtioWl::NotifyQueue(uint16_t queue) {
       break;
     case VIRTWL_VQ_OUT:
       OnCommandAvailable();
-      break;
-    case VIRTWL_VQ_MAGMA_OUT:
-      if (magma_) {
-        magma_->OnCommandAvailable();
-      }
       break;
     default:
       break;

@@ -58,11 +58,20 @@ struct WaylandDevice {
     // The amount of guest-physical address space to allocate for virtio_wl
     // buffers.
     //
-    // Default to a 16GiB allocation.
-    uint64 memory = 17179869184;
+    // Default to a 1GiB allocation.
+    uint64 memory = 1073741824;
 
     // The dispatcher for new virtio_wl connections.
     WaylandDispatcher dispatcher;
+};
+
+// Properties describing a virtio_magma device.
+struct MagmaDevice {
+    // The amount of guest-physical address space to allocate for virtio_magma
+    // buffers.
+    //
+    // Default to a 16GiB allocation.
+    uint64 memory = 17179869184;
 };
 
 struct LaunchInfo {
@@ -88,6 +97,11 @@ struct LaunchInfo {
     //
     // If not provided, no virtio_wl device will be created by the VMM.
     WaylandDevice? wayland_device;
+
+    // An optional virtio_magma device.
+    //
+    // If not provided, no virtio_magma device will be created by the VMM.
+    MagmaDevice? magma_device;
 };
 
 protocol Realm {

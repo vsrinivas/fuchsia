@@ -13,7 +13,7 @@
 
 #include "src/virtualization/bin/vmm/virtio_device.h"
 
-#define VIRTWL_QUEUE_COUNT 4
+#define VIRTWL_QUEUE_COUNT 2
 
 // Virtio wayland device.
 class VirtioWl

@@ -28,6 +28,8 @@ source_set("lib") {
     "controller/virtio_gpu.h",
     "controller/virtio_input.cc",
     "controller/virtio_input.h",
+    "controller/virtio_magma.cc",
+    "controller/virtio_magma.h",
     "controller/virtio_net.cc",
     "controller/virtio_net.h",
     "controller/virtio_rng.cc",
@@ -93,12 +95,10 @@ source_set("lib") {
     include_dirs = [ "//zircon/third_party/lib/acpica/source/include" ]
   }
 
-  defines = [
-    "_ALL_SOURCE=1",
-    "MAGMA_DEBUG_INTERNAL_USE_ONLY=1",
-  ]
+  defines = [ "_ALL_SOURCE=1" ]
 
   deps = [
+    "//garnet/lib/magma/include/virtio",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/ui/base_view/cpp",
     "//sdk/fidl/fuchsia.virtualization",

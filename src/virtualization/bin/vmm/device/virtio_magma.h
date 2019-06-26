@@ -18,17 +18,28 @@
 
 #include "garnet/lib/magma/include/magma_abi/magma.h"
 #include "garnet/lib/magma/include/virtio/virtio_magma.h"
+#include "src/virtualization/bin/vmm/device/device_base.h"
 #include "src/virtualization/bin/vmm/device/virtio_magma_generic.h"
 #include "src/virtualization/bin/vmm/device/virtio_queue.h"
 
-class VirtioMagma : public VirtioMagmaGeneric {
+class VirtioMagma : public VirtioMagmaGeneric,
+                    public DeviceBase<VirtioMagma>,
+                    public fuchsia::virtualization::hardware::VirtioMagma {
  public:
-  VirtioMagma(VirtioQueue* out_queue) : out_queue_(out_queue) {}
-  virtual ~VirtioMagma();
-  zx_status_t Init(const zx::vmar& vmar);
+  VirtioMagma(component::StartupContext* context);
+  ~VirtioMagma() override = default;
 
-  void OnCommandAvailable();
-  void OnQueueReady();
+  // |fuchsia::virtualization::hardware::VirtioDevice|
+  void Ready(uint32_t negotiated_features, ReadyCallback callback) override;
+  void ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc,
+                      zx_gpaddr_t avail, zx_gpaddr_t used,
+                      ConfigureQueueCallback callback) override;
+  void NotifyQueue(uint16_t queue) override;
+
+  // |fuchsia::virtualization::hardware::VirtioMagma|
+  void Start(fuchsia::virtualization::hardware::StartInfo start_info,
+             zx::vmar vmar,
+             StartCallback callback) override;
 
  private:
   virtual zx_status_t Handle_query(const virtio_magma_query_ctrl_t* request,
@@ -43,8 +54,7 @@ class VirtioMagma : public VirtioMagmaGeneric {
 
   fbl::unique_fd device_fd_;
   zx::vmar vmar_;
-  VirtioQueue* out_queue_;
-  VirtioChain out_chain_;
+  VirtioQueue out_queue_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(VirtioMagma);
 };
