@@ -29,8 +29,7 @@ void Output::Connect(Input* input) {
   mate_ = input;
 
   if (payload_config_.mode_ != PayloadMode::kNotConfigured) {
-    mate_->payload_manager().ApplyOutputConfiguration(payload_config_,
-                                                      std::move(bti_handle_));
+    mate_->payload_manager().ApplyOutputConfiguration(payload_config_, std::move(bti_handle_));
   }
 }
 

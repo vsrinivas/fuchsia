@@ -23,8 +23,7 @@ std::ostream& operator<<(std::ostream& os, NodeRef value) {
   }
 
   os << value.GetNode()->label();
-  for (size_t output_index = 0; output_index < value.output_count();
-       output_index++) {
+  for (size_t output_index = 0; output_index < value.output_count(); output_index++) {
     os << fostr::NewLine << "[" << output_index << "] " << fostr::Indent
        << value.output(output_index).mate().node() << fostr::Outdent;
   }
@@ -50,8 +49,7 @@ void ExpectEqual(const StreamType* a, const StreamType* b) {
       EXPECT_NE(nullptr, b->audio());
       EXPECT_EQ(a->audio()->sample_format(), b->audio()->sample_format());
       EXPECT_EQ(a->audio()->channels(), b->audio()->channels());
-      EXPECT_EQ(a->audio()->frames_per_second(),
-                b->audio()->frames_per_second());
+      EXPECT_EQ(a->audio()->frames_per_second(), b->audio()->frames_per_second());
       break;
     case StreamType::Medium::kVideo:
       EXPECT_EQ(StreamType::Medium::kVideo, b->medium());
@@ -63,10 +61,8 @@ void ExpectEqual(const StreamType* a, const StreamType* b) {
       EXPECT_EQ(a->video()->height(), b->video()->height());
       EXPECT_EQ(a->video()->coded_width(), b->video()->coded_width());
       EXPECT_EQ(a->video()->coded_height(), b->video()->coded_height());
-      EXPECT_EQ(a->video()->pixel_aspect_ratio_width(),
-                b->video()->pixel_aspect_ratio_width());
-      EXPECT_EQ(a->video()->pixel_aspect_ratio_height(),
-                b->video()->pixel_aspect_ratio_height());
+      EXPECT_EQ(a->video()->pixel_aspect_ratio_width(), b->video()->pixel_aspect_ratio_width());
+      EXPECT_EQ(a->video()->pixel_aspect_ratio_height(), b->video()->pixel_aspect_ratio_height());
       break;
     case StreamType::Medium::kText:
       EXPECT_EQ(StreamType::Medium::kText, b->medium());
@@ -128,15 +124,14 @@ TEST_F(PlayerTest, FakeSegments) {
   PlayerCore player_core(dispatcher());
 
   bool update_callback_called = false;
-  player_core.SetUpdateCallback(
-      [&update_callback_called]() { update_callback_called = true; });
+  player_core.SetUpdateCallback([&update_callback_called]() { update_callback_called = true; });
 
   EXPECT_FALSE(update_callback_called);
 
   // Add a source segment.
   bool source_segment_destroyed = false;
-  std::unique_ptr<FakeSourceSegment> source_segment = FakeSourceSegment::Create(
-      [&source_segment_destroyed](FakeSourceSegment* source_segment) {
+  std::unique_ptr<FakeSourceSegment> source_segment =
+      FakeSourceSegment::Create([&source_segment_destroyed](FakeSourceSegment* source_segment) {
         source_segment_destroyed = true;
         EXPECT_TRUE(source_segment->will_deprovision_called_);
         EXPECT_FALSE(source_segment->TEST_provisioned());
@@ -149,14 +144,12 @@ TEST_F(PlayerTest, FakeSegments) {
 
   EXPECT_FALSE(player_core.has_source_segment());
 
-  source_segment->Provision(player_core.graph(), dispatcher(), nullptr,
-                            nullptr);
+  source_segment->Provision(player_core.graph(), dispatcher(), nullptr, nullptr);
 
   bool set_source_segment_callback_called = false;
-  player_core.SetSourceSegment(std::move(source_segment),
-                               [&set_source_segment_callback_called]() {
-                                 set_source_segment_callback_called = true;
-                               });
+  player_core.SetSourceSegment(std::move(source_segment), [&set_source_segment_callback_called]() {
+    set_source_segment_callback_called = true;
+  });
 
   EXPECT_TRUE(player_core.has_source_segment());
   EXPECT_FALSE(update_callback_called);
@@ -170,8 +163,7 @@ TEST_F(PlayerTest, FakeSegments) {
 
   // Add an audio stream indicating we will add more streams.
   AudioStreamType audio_type(StreamType::kAudioEncodingLpcm, nullptr,
-                             AudioStreamType::SampleFormat::kSigned16, 2,
-                             44100);
+                             AudioStreamType::SampleFormat::kSigned16, 2, 44100);
 
   // We need a non-null output, but it doesn't have to work.
   OutputRef audio_output(reinterpret_cast<Output*>(1));
@@ -191,8 +183,7 @@ TEST_F(PlayerTest, FakeSegments) {
   // Add a video stream indicating we will *not* add more streams.
   VideoStreamType video_type(StreamType::kVideoEncodingUncompressed, nullptr,
                              VideoStreamType::PixelFormat::kYv12,
-                             VideoStreamType::ColorSpace::kNotApplicable, 0, 0,
-                             0, 0, 1, 1, 0);
+                             VideoStreamType::ColorSpace::kNotApplicable, 0, 0, 0, 0, 1, 1, 0);
 
   // We need a non-null output, but it doesn't have to work.
   OutputRef video_output(reinterpret_cast<Output*>(2));
@@ -221,8 +212,7 @@ TEST_F(PlayerTest, FakeSegments) {
   EXPECT_EQ(nullptr, player_core.problem());
 
   // Make sure problem reporting works via the source.
-  source_segment_raw->TEST_ReportProblem("fake problem type",
-                                         "fake problem details");
+  source_segment_raw->TEST_ReportProblem("fake problem type", "fake problem details");
   EXPECT_TRUE(update_callback_called);
   update_callback_called = false;
   EXPECT_NE(nullptr, player_core.problem());
@@ -248,8 +238,8 @@ TEST_F(PlayerTest, FakeSegments) {
 
   // Add a sink segment for audio.
   bool audio_sink_segment_destroyed = false;
-  std::unique_ptr<FakeSinkSegment> audio_sink_segment = FakeSinkSegment::Create(
-      [&audio_sink_segment_destroyed](FakeSinkSegment* sink_segment) {
+  std::unique_ptr<FakeSinkSegment> audio_sink_segment =
+      FakeSinkSegment::Create([&audio_sink_segment_destroyed](FakeSinkSegment* sink_segment) {
         audio_sink_segment_destroyed = true;
         EXPECT_TRUE(sink_segment->disconnect_called_);
         EXPECT_TRUE(sink_segment->will_deprovision_called_);
@@ -263,8 +253,7 @@ TEST_F(PlayerTest, FakeSegments) {
 
   EXPECT_FALSE(player_core.has_sink_segment(StreamType::Medium::kAudio));
 
-  player_core.SetSinkSegment(std::move(audio_sink_segment),
-                             StreamType::Medium::kAudio);
+  player_core.SetSinkSegment(std::move(audio_sink_segment), StreamType::Medium::kAudio);
 
   EXPECT_TRUE(player_core.has_sink_segment(StreamType::Medium::kAudio));
   EXPECT_FALSE(update_callback_called);
@@ -302,8 +291,8 @@ TEST_F(PlayerTest, FakeSegments) {
 
   // Add a sink segment for video.
   bool video_sink_segment_destroyed = false;
-  std::unique_ptr<FakeSinkSegment> video_sink_segment = FakeSinkSegment::Create(
-      [&video_sink_segment_destroyed](FakeSinkSegment* sink_segment) {
+  std::unique_ptr<FakeSinkSegment> video_sink_segment =
+      FakeSinkSegment::Create([&video_sink_segment_destroyed](FakeSinkSegment* sink_segment) {
         video_sink_segment_destroyed = true;
         EXPECT_TRUE(sink_segment->disconnect_called_);
         EXPECT_TRUE(sink_segment->will_deprovision_called_);
@@ -317,8 +306,7 @@ TEST_F(PlayerTest, FakeSegments) {
 
   EXPECT_FALSE(player_core.has_sink_segment(StreamType::Medium::kVideo));
 
-  player_core.SetSinkSegment(std::move(video_sink_segment),
-                             StreamType::Medium::kVideo);
+  player_core.SetSinkSegment(std::move(video_sink_segment), StreamType::Medium::kVideo);
 
   EXPECT_TRUE(player_core.has_sink_segment(StreamType::Medium::kVideo));
   EXPECT_FALSE(update_callback_called);
@@ -358,8 +346,7 @@ TEST_F(PlayerTest, FakeSegments) {
   EXPECT_FALSE(audio_sink_segment_raw->prime_called_);
   EXPECT_FALSE(video_sink_segment_raw->prime_called_);
   bool prime_callback_called = false;
-  player_core.Prime(
-      [&prime_callback_called]() { prime_callback_called = true; });
+  player_core.Prime([&prime_callback_called]() { prime_callback_called = true; });
   EXPECT_FALSE(prime_callback_called);
   EXPECT_TRUE(audio_sink_segment_raw->prime_called_);
   audio_sink_segment_raw->prime_called_ = false;
@@ -378,8 +365,7 @@ TEST_F(PlayerTest, FakeSegments) {
   // Test Flush.
   EXPECT_FALSE(source_segment_raw->flush_called_);
   bool flush_callback_called = false;
-  player_core.Flush(
-      true, [&flush_callback_called]() { flush_callback_called = true; });
+  player_core.Flush(true, [&flush_callback_called]() { flush_callback_called = true; });
   RunLoopUntilIdle();
   EXPECT_TRUE(flush_callback_called);
   EXPECT_TRUE(source_segment_raw->flush_called_);
@@ -391,25 +377,20 @@ TEST_F(PlayerTest, FakeSegments) {
   EXPECT_FALSE(video_sink_segment_raw->set_timeline_function_called_);
   media::TimelineFunction timeline_function(1, 2, 3, 4);
   bool set_timeline_function_callback_called = false;
-  player_core.SetTimelineFunction(
-      timeline_function, [&set_timeline_function_callback_called]() {
-        set_timeline_function_callback_called = true;
-      });
+  player_core.SetTimelineFunction(timeline_function, [&set_timeline_function_callback_called]() {
+    set_timeline_function_callback_called = true;
+  });
   EXPECT_FALSE(set_timeline_function_callback_called);
   EXPECT_TRUE(audio_sink_segment_raw->set_timeline_function_called_);
   audio_sink_segment_raw->set_timeline_function_called_ = false;
   EXPECT_TRUE(video_sink_segment_raw->set_timeline_function_called_);
   video_sink_segment_raw->set_timeline_function_called_ = false;
   EXPECT_EQ(timeline_function,
-            audio_sink_segment_raw
-                ->set_timeline_function_call_param_timeline_function_);
+            audio_sink_segment_raw->set_timeline_function_call_param_timeline_function_);
   EXPECT_EQ(timeline_function,
-            video_sink_segment_raw
-                ->set_timeline_function_call_param_timeline_function_);
-  EXPECT_NE(nullptr,
-            audio_sink_segment_raw->set_timeline_function_call_param_callback_);
-  EXPECT_NE(nullptr,
-            video_sink_segment_raw->set_timeline_function_call_param_callback_);
+            video_sink_segment_raw->set_timeline_function_call_param_timeline_function_);
+  EXPECT_NE(nullptr, audio_sink_segment_raw->set_timeline_function_call_param_callback_);
+  EXPECT_NE(nullptr, video_sink_segment_raw->set_timeline_function_call_param_callback_);
 
   audio_sink_segment_raw->set_timeline_function_call_param_callback_();
   EXPECT_FALSE(set_timeline_function_callback_called);
@@ -437,8 +418,7 @@ TEST_F(PlayerTest, FakeSegments) {
   // Test Seek.
   EXPECT_FALSE(source_segment_raw->seek_called_);
   bool seek_callback_called = false;
-  player_core.Seek(1234,
-                   [&seek_callback_called]() { seek_callback_called = true; });
+  player_core.Seek(1234, [&seek_callback_called]() { seek_callback_called = true; });
   EXPECT_FALSE(seek_callback_called);
   EXPECT_TRUE(source_segment_raw->seek_called_);
   source_segment_raw->seek_called_ = false;
@@ -536,17 +516,14 @@ void ExpectRealSegmentsGraph(const PlayerCore& player_core) {
   EXPECT_EQ(1u, audio_decoder_node_ref.output_count());
   EXPECT_TRUE(audio_decoder_node_ref.input().connected());
   EXPECT_TRUE(audio_decoder_node_ref.output().connected());
-  EXPECT_EQ(0,
-            strcmp("FakeDecoder", audio_decoder_node_ref.GetNode()->label()));
+  EXPECT_EQ(0, strcmp("FakeDecoder", audio_decoder_node_ref.GetNode()->label()));
 
-  NodeRef audio_renderer_node_ref =
-      audio_decoder_node_ref.output().mate().node();
+  NodeRef audio_renderer_node_ref = audio_decoder_node_ref.output().mate().node();
   EXPECT_TRUE(audio_renderer_node_ref);
   EXPECT_EQ(1u, audio_renderer_node_ref.input_count());
   EXPECT_EQ(0u, audio_renderer_node_ref.output_count());
   EXPECT_TRUE(audio_renderer_node_ref.input().connected());
-  EXPECT_EQ(0, strcmp("FakeAudioRenderer",
-                      audio_renderer_node_ref.GetNode()->label()));
+  EXPECT_EQ(0, strcmp("FakeAudioRenderer", audio_renderer_node_ref.GetNode()->label()));
 
   // Walk the video segment. It has a decoder and a renderer.
   NodeRef video_decoder_node_ref = source_node_ref.output(1).mate().node();
@@ -555,17 +532,14 @@ void ExpectRealSegmentsGraph(const PlayerCore& player_core) {
   EXPECT_EQ(1u, video_decoder_node_ref.output_count());
   EXPECT_TRUE(video_decoder_node_ref.input().connected());
   EXPECT_TRUE(video_decoder_node_ref.output().connected());
-  EXPECT_EQ(0,
-            strcmp("FakeDecoder", video_decoder_node_ref.GetNode()->label()));
+  EXPECT_EQ(0, strcmp("FakeDecoder", video_decoder_node_ref.GetNode()->label()));
 
-  NodeRef video_renderer_node_ref =
-      video_decoder_node_ref.output().mate().node();
+  NodeRef video_renderer_node_ref = video_decoder_node_ref.output().mate().node();
   EXPECT_TRUE(video_renderer_node_ref);
   EXPECT_EQ(1u, video_renderer_node_ref.input_count());
   EXPECT_EQ(0u, video_renderer_node_ref.output_count());
   EXPECT_TRUE(video_renderer_node_ref.input().connected());
-  EXPECT_EQ(0, strcmp("FakeVideoRenderer",
-                      video_renderer_node_ref.GetNode()->label()));
+  EXPECT_EQ(0, strcmp("FakeVideoRenderer", video_renderer_node_ref.GetNode()->label()));
 
   // std::cout << "\n" << source_node_ref << "\n\n";
 }
@@ -573,26 +547,22 @@ void ExpectRealSegmentsGraph(const PlayerCore& player_core) {
 // Tests a player_core with real segments constructed source-first.
 TEST_F(PlayerTest, BuildGraphWithRealSegmentsSourceFirst) {
   PlayerCore player_core(dispatcher());
-  std::unique_ptr<DecoderFactory> decoder_factory =
-      DecoderFactory::Create(nullptr);
+  std::unique_ptr<DecoderFactory> decoder_factory = DecoderFactory::Create(nullptr);
 
   auto source_segment = DemuxSourceSegment::Create(FakeDemux::Create());
 
-  source_segment->Provision(player_core.graph(), dispatcher(), nullptr,
-                            nullptr);
+  source_segment->Provision(player_core.graph(), dispatcher(), nullptr, nullptr);
 
   player_core.SetSourceSegment(std::move(source_segment), []() {});
 
   player_core.SetSinkSegment(
-      RendererSinkSegment::Create(FakeAudioRenderer::Create(),
-                                  decoder_factory.get()),
+      RendererSinkSegment::Create(FakeAudioRenderer::Create(), decoder_factory.get()),
       StreamType::Medium::kAudio);
   RunLoopUntilIdle();
   EXPECT_TRUE(player_core.medium_connected(StreamType::Medium::kAudio));
 
   player_core.SetSinkSegment(
-      RendererSinkSegment::Create(FakeVideoRenderer::Create(),
-                                  decoder_factory.get()),
+      RendererSinkSegment::Create(FakeVideoRenderer::Create(), decoder_factory.get()),
       StreamType::Medium::kVideo);
   RunLoopUntilIdle();
   EXPECT_TRUE(player_core.medium_connected(StreamType::Medium::kVideo));
@@ -603,25 +573,21 @@ TEST_F(PlayerTest, BuildGraphWithRealSegmentsSourceFirst) {
 // Tests a player_core with real segments constructed sinks-first.
 TEST_F(PlayerTest, BuildGraphWithRealSegmentsSinksFirst) {
   PlayerCore player_core(dispatcher());
-  std::unique_ptr<DecoderFactory> decoder_factory =
-      DecoderFactory::Create(nullptr);
+  std::unique_ptr<DecoderFactory> decoder_factory = DecoderFactory::Create(nullptr);
 
   player_core.SetSinkSegment(
-      RendererSinkSegment::Create(FakeAudioRenderer::Create(),
-                                  decoder_factory.get()),
+      RendererSinkSegment::Create(FakeAudioRenderer::Create(), decoder_factory.get()),
       StreamType::Medium::kAudio);
   EXPECT_FALSE(player_core.medium_connected(StreamType::Medium::kAudio));
 
   player_core.SetSinkSegment(
-      RendererSinkSegment::Create(FakeVideoRenderer::Create(),
-                                  decoder_factory.get()),
+      RendererSinkSegment::Create(FakeVideoRenderer::Create(), decoder_factory.get()),
       StreamType::Medium::kVideo);
   EXPECT_FALSE(player_core.medium_connected(StreamType::Medium::kVideo));
 
   auto source_segment = DemuxSourceSegment::Create(FakeDemux::Create());
 
-  source_segment->Provision(player_core.graph(), dispatcher(), nullptr,
-                            nullptr);
+  source_segment->Provision(player_core.graph(), dispatcher(), nullptr, nullptr);
 
   player_core.SetSourceSegment(std::move(source_segment), []() {});
   RunLoopUntilIdle();

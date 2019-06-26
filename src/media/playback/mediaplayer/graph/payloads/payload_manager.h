@@ -74,16 +74,14 @@ class PayloadManager {
   // The supplied VMOs are the same ones available on the node via
   // |Node::UseOutputVmos| or |Node::UseInputVmos|. They're passed to the
   // callback, because the callback may not call back into the node.
-  using AllocateCallback =
-      fit::function<fbl::RefPtr<PayloadBuffer>(uint64_t, const PayloadVmos&)>;
+  using AllocateCallback = fit::function<fbl::RefPtr<PayloadBuffer>(uint64_t, const PayloadVmos&)>;
 
   // Dumps this |PayloadManager|'s state to |os|.
   void Dump(std::ostream& os) const;
 
   // Applies the output configuration supplied in |config|. |bti_handle| must
   // be provided if and only if |config.physically_contiguous| is true.
-  void ApplyOutputConfiguration(const PayloadConfig& config,
-                                zx::handle bti_handle);
+  void ApplyOutputConfiguration(const PayloadConfig& config, zx::handle bti_handle);
 
   // Applies the input configuration supplied in |config|.
   //
@@ -95,8 +93,7 @@ class PayloadManager {
   //
   // |bti_handle| must be provided if and only if |config.physically_contiguous|
   // is true.
-  void ApplyInputConfiguration(const PayloadConfig& config,
-                               zx::handle bti_handle,
+  void ApplyInputConfiguration(const PayloadConfig& config, zx::handle bti_handle,
                                AllocateCallback allocate_callback);
 
   // Indicates whether the connection manager is ready for allocator access.
@@ -104,8 +101,7 @@ class PayloadManager {
 
   // Allocates and returns a |PayloadBuffer| for the output with the specified
   // size. Returns nullptr if the allocation fails.
-  fbl::RefPtr<PayloadBuffer> AllocatePayloadBufferForOutput(
-      uint64_t size) const;
+  fbl::RefPtr<PayloadBuffer> AllocatePayloadBufferForOutput(uint64_t size) const;
 
   // Gets the |PayloadVmos| interface for the input. This method should only be
   // called if this |PayloadManager| is ready and the input mode is |kUsesVmos|
@@ -136,8 +132,8 @@ class PayloadManager {
   // indicates that payload memory for this purpose is exhausted.
   //
   // |payload_buffer_out| may only be nullptr if |size| is also zero.
-  bool MaybeAllocatePayloadBufferForCopy(
-      uint64_t size, fbl::RefPtr<PayloadBuffer>* payload_buffer_out) const;
+  bool MaybeAllocatePayloadBufferForCopy(uint64_t size,
+                                         fbl::RefPtr<PayloadBuffer>* payload_buffer_out) const;
 
   // Signals that the output and input are disconnected.
   void OnDisconnect();
@@ -165,8 +161,7 @@ class PayloadManager {
     PayloadAllocator* payload_allocator() const;
   };
 
-  void DumpInternal(std::ostream& os) const
-      FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
+  void DumpInternal(std::ostream& os) const FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
 
   // Indicates whether the connection manager is ready for allocator access.
   bool ready_locked() const FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
@@ -187,8 +182,7 @@ class PayloadManager {
   // Returns a |VmoAllocation| value that satisfies both output and input,
   // either |kSingleVmo| or |kVmoPerBuffer|. The output and input must have
   // compatible |config_.vmo_allocation_| values.
-  VmoAllocation CombinedVmoAllocation() const
-      FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
+  VmoAllocation CombinedVmoAllocation() const FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
 
   // Creates VMOs for an allocator shared by the input and output and adds them
   // to |allocator|. The VMOs created will satisfy the requirements of both the
@@ -213,23 +207,21 @@ class PayloadManager {
   // |bti_handle| is provided to indicate that the VMOs must be physically
   // contiguous.
   void ProvideVmos(VmoPayloadAllocator* allocator, const PayloadConfig& config,
-                   uint64_t max_payload_size,
-                   const zx::handle* bti_handle) const
+                   uint64_t max_payload_size, const zx::handle* bti_handle) const
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
 
   // Prepares |allocator| for external VMOs by settings its |VmoAllocation|
   // setting based on |config|. This method is used when |allocator| is
   // associated with only the output or the input (not both). |config| is the
   // configuration for that output or input.
-  void PrepareForExternalVmos(VmoPayloadAllocator* allocator,
-                              const PayloadConfig& config) const
+  void PrepareForExternalVmos(VmoPayloadAllocator* allocator, const PayloadConfig& config) const
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
 
   // Prepares |allocator| for external VMOs by settings its |VmoAllocation|
   // setting based on the requirements of both the output and the input. This
   // method is used when |allocator| is shared by the output and input.
-  void PrepareSharedAllocatorForExternalVmos(VmoPayloadAllocator* allocator)
-      const FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
+  void PrepareSharedAllocatorForExternalVmos(VmoPayloadAllocator* allocator) const
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
 
   // Allocates and returns a |PayloadBuffer| using the allocator callback.
   // Returns nullptr if the allocation fails.

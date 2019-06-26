@@ -19,16 +19,13 @@ namespace test {
 namespace {
 
 constexpr uint64_t kPresentationRatePerSecond = 60;
-constexpr zx::duration kPresentationInterval =
-    zx::duration(ZX_SEC(1) / kPresentationRatePerSecond);
+constexpr zx::duration kPresentationInterval = zx::duration(ZX_SEC(1) / kPresentationRatePerSecond);
 constexpr uint32_t kRootNodeId = 1;
 
 }  // namespace
 
 FakeSession::FakeSession()
-    : dispatcher_(async_get_default_dispatcher()),
-      binding_(this),
-      weak_factory_(this) {
+    : dispatcher_(async_get_default_dispatcher()), binding_(this), weak_factory_(this) {
   fuchsia::ui::gfx::ResourceArgs root_resource;
   fuchsia::ui::gfx::ViewArgs view_args;
   root_resource.set_view(std::move(view_args));
@@ -37,9 +34,8 @@ FakeSession::FakeSession()
 
 FakeSession::~FakeSession() {}
 
-void FakeSession::Bind(
-    fidl::InterfaceRequest<fuchsia::ui::scenic::Session> request,
-    fuchsia::ui::scenic::SessionListenerPtr listener) {
+void FakeSession::Bind(fidl::InterfaceRequest<fuchsia::ui::scenic::Session> request,
+                       fuchsia::ui::scenic::SessionListenerPtr listener) {
   binding_.Bind(std::move(request));
   listener_ = std::move(listener);
 
@@ -55,13 +51,12 @@ void FakeSession::DumpExpectations(uint32_t display_height) {
   }
 }
 
-void FakeSession::SetExpectations(
-    uint32_t black_image_id, const fuchsia::images::ImageInfo& black_image_info,
-    const fuchsia::images::ImageInfo& info, uint32_t display_height,
-    const std::vector<PacketInfo>&& expected_packets_info) {
+void FakeSession::SetExpectations(uint32_t black_image_id,
+                                  const fuchsia::images::ImageInfo& black_image_info,
+                                  const fuchsia::images::ImageInfo& info, uint32_t display_height,
+                                  const std::vector<PacketInfo>&& expected_packets_info) {
   if (image_pipe_) {
-    image_pipe_->SetExpectations(black_image_id, black_image_info, info,
-                                 display_height,
+    image_pipe_->SetExpectations(black_image_id, black_image_info, info, display_height,
                                  std::move(expected_packets_info));
   } else {
     expected_black_image_id_ = black_image_id;
@@ -82,20 +77,17 @@ void FakeSession::Enqueue(std::vector<fuchsia::ui::scenic::Command> cmds) {
                                command.gfx().set_event_mask().event_mask);
             break;
           case fuchsia::ui::gfx::Command::Tag::kCreateResource:
-            HandleCreateResource(
-                command.gfx().create_resource().id,
-                std::move(command.gfx().create_resource().resource));
+            HandleCreateResource(command.gfx().create_resource().id,
+                                 std::move(command.gfx().create_resource().resource));
             break;
           case fuchsia::ui::gfx::Command::Tag::kReleaseResource:
             HandleReleaseResource(command.gfx().release_resource().id);
             break;
           case fuchsia::ui::gfx::Command::Tag::kAddChild:
-            HandleAddChild(command.gfx().add_child().node_id,
-                           command.gfx().add_child().child_id);
+            HandleAddChild(command.gfx().add_child().node_id, command.gfx().add_child().child_id);
             break;
           case fuchsia::ui::gfx::Command::Tag::kAddPart:
-            HandleAddPart(command.gfx().add_part().node_id,
-                          command.gfx().add_part().part_id);
+            HandleAddPart(command.gfx().add_part().node_id, command.gfx().add_part().part_id);
             break;
           case fuchsia::ui::gfx::Command::Tag::kSetMaterial:
             HandleSetMaterial(command.gfx().set_material().node_id,
@@ -106,21 +98,18 @@ void FakeSession::Enqueue(std::vector<fuchsia::ui::scenic::Command> cmds) {
                              command.gfx().set_texture().texture_id);
             break;
           case fuchsia::ui::gfx::Command::Tag::kSetShape:
-            HandleSetShape(command.gfx().set_shape().node_id,
-                           command.gfx().set_shape().shape_id);
+            HandleSetShape(command.gfx().set_shape().node_id, command.gfx().set_shape().shape_id);
             break;
           case fuchsia::ui::gfx::Command::Tag::kSetTranslation:
             HandleSetTranslation(command.gfx().set_translation().id,
                                  command.gfx().set_translation().value);
             break;
           case fuchsia::ui::gfx::Command::Tag::kSetScale:
-            HandleSetScale(command.gfx().set_scale().id,
-                           command.gfx().set_scale().value);
+            HandleSetScale(command.gfx().set_scale().id, command.gfx().set_scale().value);
             break;
           case fuchsia::ui::gfx::Command::Tag::kSetClipPlanes:
-            HandleSetClipPlanes(
-                command.gfx().set_clip_planes().node_id,
-                std::move(command.gfx().set_clip_planes().clip_planes));
+            HandleSetClipPlanes(command.gfx().set_clip_planes().node_id,
+                                std::move(command.gfx().set_clip_planes().clip_planes));
             break;
           default:
             break;
@@ -140,17 +129,14 @@ void FakeSession::Enqueue(std::vector<fuchsia::ui::scenic::Command> cmds) {
   }
 }
 
-void FakeSession::Present(uint64_t presentation_time,
-                          std::vector<zx::event> acquire_fences,
-                          std::vector<zx::event> release_fences,
-                          PresentCallback callback) {
+void FakeSession::Present(uint64_t presentation_time, std::vector<zx::event> acquire_fences,
+                          std::vector<zx::event> release_fences, PresentCallback callback) {
   // The video renderer doesn't use these fences, so we don't support them in
   // the fake.
   FXL_CHECK(acquire_fences.empty()) << "Present: acquire_fences not supported.";
   FXL_CHECK(release_fences.empty()) << "Present: release_fences not supported.";
 
-  async::PostTask(dispatcher_, [this, callback = std::move(callback),
-                                weak_this = GetWeakThis()]() {
+  async::PostTask(dispatcher_, [this, callback = std::move(callback), weak_this = GetWeakThis()]() {
     if (!weak_this) {
       return;
     }
@@ -167,25 +153,21 @@ FakeSession::Resource* FakeSession::FindResource(uint32_t id) {
   return (iter == resources_by_id_.end()) ? nullptr : &iter->second;
 }
 
-void FakeSession::HandleSetEventMask(uint32_t resource_id,
-                                     uint32_t event_mask) {
+void FakeSession::HandleSetEventMask(uint32_t resource_id, uint32_t event_mask) {
   if (event_mask & fuchsia::ui::gfx::kMetricsEventMask) {
     fuchsia::ui::gfx::Event gfx_event;
-    gfx_event.set_metrics(
-        {.node_id = resource_id, .metrics = {1.77344f, 1.77344f, 1.0f}});
+    gfx_event.set_metrics({.node_id = resource_id, .metrics = {1.77344f, 1.77344f, 1.0f}});
     SendGfxEvent(std::move(gfx_event));
   }
 }
 
-void FakeSession::HandleCreateResource(uint32_t resource_id,
-                                       fuchsia::ui::gfx::ResourceArgs args) {
+void FakeSession::HandleCreateResource(uint32_t resource_id, fuchsia::ui::gfx::ResourceArgs args) {
   if (args.is_image_pipe()) {
     FXL_CHECK(!image_pipe_) << "fake supports only one image pipe.";
     FXL_CHECK(args.image_pipe().image_pipe_request);
     image_pipe_ = std::make_unique<FakeImagePipe>();
     image_pipe_->Bind(std::move(args.image_pipe().image_pipe_request));
-    image_pipe_->OnPresentScene(zx::time(), next_presentation_time_,
-                                kPresentationInterval);
+    image_pipe_->OnPresentScene(zx::time(), next_presentation_time_, kPresentationInterval);
 
     if (dump_expectations_) {
       image_pipe_->DumpExpectations(expected_display_height_);
@@ -193,18 +175,16 @@ void FakeSession::HandleCreateResource(uint32_t resource_id,
 
     if (!expected_packets_info_.empty()) {
       FXL_CHECK(expected_image_info_);
-      image_pipe_->SetExpectations(
-          expected_black_image_id_, *expected_black_image_info_,
-          *expected_image_info_, expected_display_height_,
-          std::move(expected_packets_info_));
+      image_pipe_->SetExpectations(expected_black_image_id_, *expected_black_image_info_,
+                                   *expected_image_info_, expected_display_height_,
+                                   std::move(expected_packets_info_));
     }
   } else if (args.is_view()) {
     fuchsia::ui::gfx::ViewProperties view_properties;
     view_properties.bounding_box.min = {0.0f, 0.0f, -1000.0f};
     view_properties.bounding_box.max = {1353.3f, 902.203f, 0.0f};
     fuchsia::ui::gfx::Event gfx_event;
-    gfx_event.set_view_properties_changed(
-        {resource_id, std::move(view_properties)});
+    gfx_event.set_view_properties_changed({resource_id, std::move(view_properties)});
     SendGfxEvent(std::move(gfx_event));
   }
 
@@ -432,8 +412,8 @@ void FakeSession::HandleSetShape(uint32_t node_id, uint32_t shape_id) {
   node->shape_args_ = fidl::MakeOptional(fidl::Clone(shape->args_));
 }
 
-void FakeSession::HandleSetTranslation(
-    uint32_t node_id, const fuchsia::ui::gfx::Vector3Value& value) {
+void FakeSession::HandleSetTranslation(uint32_t node_id,
+                                       const fuchsia::ui::gfx::Vector3Value& value) {
   Resource* node = FindResource(node_id);
 
   if (!node) {
@@ -455,8 +435,7 @@ void FakeSession::HandleSetTranslation(
   node->translation_ = fidl::MakeOptional(value);
 }
 
-void FakeSession::HandleSetScale(uint32_t node_id,
-                                 const fuchsia::ui::gfx::Vector3Value& value) {
+void FakeSession::HandleSetScale(uint32_t node_id, const fuchsia::ui::gfx::Vector3Value& value) {
   Resource* node = FindResource(node_id);
 
   if (!node) {
@@ -478,8 +457,8 @@ void FakeSession::HandleSetScale(uint32_t node_id,
   node->scale_ = fidl::MakeOptional(value);
 }
 
-void FakeSession::HandleSetClipPlanes(
-    uint32_t node_id, std::vector<fuchsia::ui::gfx::Plane3> value) {
+void FakeSession::HandleSetClipPlanes(uint32_t node_id,
+                                      std::vector<fuchsia::ui::gfx::Plane3> value) {
   Resource* node = FindResource(node_id);
 
   if (!node) {
@@ -507,8 +486,7 @@ void FakeSession::PresentScene() {
   next_presentation_time_ = now + kPresentationInterval;
 
   if (image_pipe_) {
-    image_pipe_->OnPresentScene(now, next_presentation_time_,
-                                kPresentationInterval);
+    image_pipe_->OnPresentScene(now, next_presentation_time_, kPresentationInterval);
   }
 
   async::PostTaskForTime(
@@ -533,8 +511,7 @@ void FakeSession::SendGfxEvent(fuchsia::ui::gfx::Event gfx_event) {
 
 void FakeSession::DetectZFighting() {
   std::vector<ShapeNode> shape_nodes;
-  FindShapeNodes(kRootNodeId, {0.0f, 0.0f, 0.0f}, {1.0f, 1.0f, 1.0f},
-                 &shape_nodes);
+  FindShapeNodes(kRootNodeId, {0.0f, 0.0f, 0.0f}, {1.0f, 1.0f, 1.0f}, &shape_nodes);
 
   if (shape_nodes.size() == 0) {
     return;
@@ -543,16 +520,15 @@ void FakeSession::DetectZFighting() {
   for (size_t i = 0; i < shape_nodes.size() - 1; ++i) {
     for (size_t j = i + 1; j < shape_nodes.size(); ++j) {
       if (shape_nodes[i].Intersects(shape_nodes[j])) {
-        FXL_LOG(ERROR) << "Node " << shape_nodes[i].id_
-                       << " z-fights with node " << shape_nodes[j].id_ << ".";
+        FXL_LOG(ERROR) << "Node " << shape_nodes[i].id_ << " z-fights with node "
+                       << shape_nodes[j].id_ << ".";
         expected_ = false;
       }
     }
   }
 }
 
-void FakeSession::FindShapeNodes(uint32_t node_id,
-                                 fuchsia::ui::gfx::vec3 translation,
+void FakeSession::FindShapeNodes(uint32_t node_id, fuchsia::ui::gfx::vec3 translation,
                                  fuchsia::ui::gfx::vec3 scale,
                                  std::vector<ShapeNode>* shape_nodes) {
   FXL_CHECK(shape_nodes);
@@ -560,8 +536,7 @@ void FakeSession::FindShapeNodes(uint32_t node_id,
   FXL_CHECK(node);
 
   if (node->translation_) {
-    FXL_CHECK(node->translation_->variable_id == 0)
-        << "Variables not supported.";
+    FXL_CHECK(node->translation_->variable_id == 0) << "Variables not supported.";
     translation.x += node->translation_->value.x * scale.x;
     translation.y += node->translation_->value.y * scale.y;
     translation.z += node->translation_->value.z * scale.z;
@@ -575,8 +550,7 @@ void FakeSession::FindShapeNodes(uint32_t node_id,
   }
 
   if (node->shape_args_) {
-    FXL_CHECK(node->shape_args_->is_rectangle())
-        << "Only rectangle shapes are supported";
+    FXL_CHECK(node->shape_args_->is_rectangle()) << "Only rectangle shapes are supported";
     fuchsia::ui::gfx::vec3 extent;
     FXL_CHECK(node->shape_args_->rectangle().width.is_vector1())
         << "Only vector1 values are supported.";
@@ -587,8 +561,7 @@ void FakeSession::FindShapeNodes(uint32_t node_id,
     extent.z = scale.z * 0;
     shape_nodes->emplace_back(
         node_id,
-        fuchsia::ui::gfx::vec3{translation.x - extent.x / 2.0f,
-                               translation.y - extent.y / 2.0f,
+        fuchsia::ui::gfx::vec3{translation.x - extent.x / 2.0f, translation.y - extent.y / 2.0f,
                                translation.z - extent.z / 2.0f},
         extent);
   }

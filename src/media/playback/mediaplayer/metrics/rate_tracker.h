@@ -23,9 +23,7 @@ class RateTracker {
   void Reset();
 
   // Rate of progress samples.
-  double progress_samples_per_second() const {
-    return kNsPerSecond / average_progress_interval();
-  };
+  double progress_samples_per_second() const { return kNsPerSecond / average_progress_interval(); };
 
   size_t progress_interval_count() const { return progress_intervals_.count(); }
 
@@ -33,9 +31,7 @@ class RateTracker {
   int64_t min_progress_interval() const { return progress_intervals_.min(); }
 
   // Average inter-sample interval when progressing.
-  int64_t average_progress_interval() const {
-    return progress_intervals_.average();
-  }
+  int64_t average_progress_interval() const { return progress_intervals_.average(); }
 
   // Maximum inter-sample interval when progressing.
   int64_t max_progress_interval() const { return progress_intervals_.max(); }

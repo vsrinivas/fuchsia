@@ -54,11 +54,9 @@ void PayloadManager::DumpInternal(std::ostream& os) const {
   os << fostr::Outdent;
 }
 
-void PayloadManager::ApplyOutputConfiguration(const PayloadConfig& config,
-                                              zx::handle bti_handle) {
+void PayloadManager::ApplyOutputConfiguration(const PayloadConfig& config, zx::handle bti_handle) {
   FXL_DCHECK(config.mode_ != PayloadMode::kNotConfigured);
-  FXL_DCHECK(!config.physically_contiguous_ ||
-             (config.mode_ == PayloadMode::kUsesVmos));
+  FXL_DCHECK(!config.physically_contiguous_ || (config.mode_ == PayloadMode::kUsesVmos));
   FXL_DCHECK(config.physically_contiguous_ == bti_handle.is_valid());
   std::lock_guard<std::mutex> locker(mutex_);
 
@@ -77,16 +75,13 @@ void PayloadManager::ApplyOutputConfiguration(const PayloadConfig& config,
   }
 }
 
-void PayloadManager::ApplyInputConfiguration(
-    const PayloadConfig& config, zx::handle bti_handle,
-    AllocateCallback allocate_callback) {
+void PayloadManager::ApplyInputConfiguration(const PayloadConfig& config, zx::handle bti_handle,
+                                             AllocateCallback allocate_callback) {
   FXL_DCHECK(config.mode_ != PayloadMode::kNotConfigured);
   FXL_DCHECK(config.mode_ != PayloadMode::kProvidesLocalMemory);
-  FXL_DCHECK(!config.physically_contiguous_ ||
-             (config.mode_ == PayloadMode::kUsesVmos));
+  FXL_DCHECK(!config.physically_contiguous_ || (config.mode_ == PayloadMode::kUsesVmos));
   FXL_DCHECK(config.physically_contiguous_ == bti_handle.is_valid());
-  FXL_DCHECK(allocate_callback == nullptr ||
-             config.mode_ == PayloadMode::kUsesVmos ||
+  FXL_DCHECK(allocate_callback == nullptr || config.mode_ == PayloadMode::kUsesVmos ||
              config.mode_ == PayloadMode::kProvidesVmos);
   std::lock_guard<std::mutex> locker(mutex_);
 
@@ -111,8 +106,7 @@ bool PayloadManager::ready() const {
   return ready_locked();
 }
 
-fbl::RefPtr<PayloadBuffer> PayloadManager::AllocatePayloadBufferForOutput(
-    uint64_t size) const {
+fbl::RefPtr<PayloadBuffer> PayloadManager::AllocatePayloadBufferForOutput(uint64_t size) const {
   std::lock_guard<std::mutex> locker(mutex_);
   FXL_DCHECK(ready_locked());
   FXL_DCHECK(output_.config_.mode_ != PayloadMode::kProvidesLocalMemory);
@@ -144,8 +138,8 @@ PayloadVmos& PayloadManager::input_vmos() const {
   FXL_DCHECK(input_.config_.mode_ == PayloadMode::kUsesVmos ||
              input_.config_.mode_ == PayloadMode::kProvidesVmos);
 
-  PayloadVmos* result = input_.vmo_allocator_ ? input_.vmo_allocator_.get()
-                                              : output_.vmo_allocator_.get();
+  PayloadVmos* result =
+      input_.vmo_allocator_ ? input_.vmo_allocator_.get() : output_.vmo_allocator_.get();
   FXL_DCHECK(result);
 
   return *result;
@@ -156,9 +150,8 @@ PayloadVmoProvision& PayloadManager::input_external_vmos() const {
   FXL_DCHECK(ready_locked());
   FXL_DCHECK(input_.config_.mode_ == PayloadMode::kProvidesVmos);
 
-  PayloadVmoProvision* result = input_.vmo_allocator_
-                                    ? input_.vmo_allocator_.get()
-                                    : output_.vmo_allocator_.get();
+  PayloadVmoProvision* result =
+      input_.vmo_allocator_ ? input_.vmo_allocator_.get() : output_.vmo_allocator_.get();
 
   FXL_DCHECK(result);
 
@@ -171,8 +164,8 @@ PayloadVmos& PayloadManager::output_vmos() const {
   FXL_DCHECK(output_.config_.mode_ == PayloadMode::kUsesVmos ||
              output_.config_.mode_ == PayloadMode::kProvidesVmos);
 
-  PayloadVmos* result = output_.vmo_allocator_ ? output_.vmo_allocator_.get()
-                                               : input_.vmo_allocator_.get();
+  PayloadVmos* result =
+      output_.vmo_allocator_ ? output_.vmo_allocator_.get() : input_.vmo_allocator_.get();
   FXL_DCHECK(result);
 
   return *result;
@@ -183,9 +176,8 @@ PayloadVmoProvision& PayloadManager::output_external_vmos() const {
   FXL_DCHECK(ready_locked());
   FXL_DCHECK(output_.config_.mode_ == PayloadMode::kProvidesVmos);
 
-  PayloadVmoProvision* result = output_.vmo_allocator_
-                                    ? output_.vmo_allocator_.get()
-                                    : input_.vmo_allocator_.get();
+  PayloadVmoProvision* result =
+      output_.vmo_allocator_ ? output_.vmo_allocator_.get() : input_.vmo_allocator_.get();
   FXL_DCHECK(result);
 
   return *result;
@@ -323,8 +315,7 @@ void PayloadManager::UpdateAllocators() {
           } else {
             // The output will provide VMOs to its own VMO allocator.
             // The input will have a VMO allocator with VMOs provided here.
-            PrepareForExternalVmos(output_.EnsureVmoAllocator(),
-                                   output_.config_);
+            PrepareForExternalVmos(output_.EnsureVmoAllocator(), output_.config_);
             ProvideVmos(input_.EnsureVmoAllocator(), input_.config_,
                         output_.config_.max_payload_size_,
                         input_.bti_handle_ ? &input_.bti_handle_ : nullptr);
@@ -424,16 +415,14 @@ bool PayloadManager::ConfigsAreCompatible() const {
   }
 
   if ((output_.config_.mode_ == PayloadMode::kProvidesVmos) &&
-      !output_.config_.physically_contiguous_ &&
-      input_.config_.physically_contiguous_) {
+      !output_.config_.physically_contiguous_ && input_.config_.physically_contiguous_) {
     // The output will provide non-contiguous VMOS, but the input wants them
     // to be contiguous.
     return false;
   }
 
   if ((input_.config_.mode_ == PayloadMode::kProvidesVmos) &&
-      !input_.config_.physically_contiguous_ &&
-      output_.config_.physically_contiguous_) {
+      !input_.config_.physically_contiguous_ && output_.config_.physically_contiguous_) {
     // The input will provide non-contiguous VMOS, but the output wants them
     // to be contiguous.
     return false;
@@ -463,8 +452,7 @@ bool PayloadManager::ConfigModesAreCompatible() const {
 VmoAllocation PayloadManager::CombinedVmoAllocation() const {
   switch (output_.config_.vmo_allocation_) {
     case VmoAllocation::kNotApplicable:
-      FXL_DCHECK(input_.config_.vmo_allocation_ !=
-                 VmoAllocation::kNotApplicable);
+      FXL_DCHECK(input_.config_.vmo_allocation_ != VmoAllocation::kNotApplicable);
       // Falls through.
     case VmoAllocation::kUnrestricted:
       if (input_.config_.vmo_allocation_ == VmoAllocation::kSingleVmo ||
@@ -475,8 +463,7 @@ VmoAllocation PayloadManager::CombinedVmoAllocation() const {
       return VmoAllocation::kUnrestricted;
 
     case VmoAllocation::kSingleVmo:
-      FXL_DCHECK(input_.config_.vmo_allocation_ !=
-                 VmoAllocation::kVmoPerBuffer);
+      FXL_DCHECK(input_.config_.vmo_allocation_ != VmoAllocation::kVmoPerBuffer);
       return VmoAllocation::kSingleVmo;
 
     case VmoAllocation::kVmoPerBuffer:
@@ -485,16 +472,14 @@ VmoAllocation PayloadManager::CombinedVmoAllocation() const {
   }
 }
 
-void PayloadManager::ProvideVmos(VmoPayloadAllocator* allocator,
-                                 const PayloadConfig& config,
+void PayloadManager::ProvideVmos(VmoPayloadAllocator* allocator, const PayloadConfig& config,
                                  uint64_t other_connector_max_payload_size,
                                  const zx::handle* bti_handle) const {
   FXL_DCHECK(allocator);
   FXL_DCHECK(config.vmo_allocation_ != VmoAllocation::kNotApplicable);
   FXL_DCHECK(config.max_aggregate_payload_size_ != 0 ||
              (config.max_payload_count_ != 0 &&
-              (config.max_payload_size_ != 0 ||
-               other_connector_max_payload_size != 0)))
+              (config.max_payload_size_ != 0 || other_connector_max_payload_size != 0)))
       << "other_connector_max_payload_size " << other_connector_max_payload_size
       << ", config: " << config;
 
@@ -502,13 +487,11 @@ void PayloadManager::ProvideVmos(VmoPayloadAllocator* allocator,
   allocator->RemoveAllVmos();
 
   // We want to use the larger of two max payload sizes.
-  uint64_t max_payload_size =
-      std::max(other_connector_max_payload_size, config.max_payload_size_);
+  uint64_t max_payload_size = std::max(other_connector_max_payload_size, config.max_payload_size_);
 
   // Calculate a max aggregate size from the larger max payload size and the
   // payload count.
-  uint64_t max_aggregate_payload_size =
-      max_payload_size * config.max_payload_count_;
+  uint64_t max_aggregate_payload_size = max_payload_size * config.max_payload_count_;
 
   // Use |config.max_aggregate_payload_size_| instead, if it's larger.
   if (max_aggregate_payload_size < config.max_aggregate_payload_size_) {
@@ -517,8 +500,7 @@ void PayloadManager::ProvideVmos(VmoPayloadAllocator* allocator,
     if (config.max_payload_size_ != 0) {
       // Align up |max_aggregate_payload_size| to the nearest
       // |config.max_payload_size_| boundary.
-      max_aggregate_payload_size =
-          AlignUp(max_aggregate_payload_size, config.max_payload_size_);
+      max_aggregate_payload_size = AlignUp(max_aggregate_payload_size, config.max_payload_size_);
     }
   }
 
@@ -527,8 +509,8 @@ void PayloadManager::ProvideVmos(VmoPayloadAllocator* allocator,
   // are required.
   VmoAllocation vmo_allocation = config.vmo_allocation_;
   if (vmo_allocation == VmoAllocation::kUnrestricted) {
-    vmo_allocation = (bti_handle == nullptr) ? VmoAllocation::kSingleVmo
-                                             : VmoAllocation::kVmoPerBuffer;
+    vmo_allocation =
+        (bti_handle == nullptr) ? VmoAllocation::kSingleVmo : VmoAllocation::kVmoPerBuffer;
   }
 
   if (allocator->vmo_allocation() != vmo_allocation) {
@@ -542,8 +524,7 @@ void PayloadManager::ProvideVmos(VmoPayloadAllocator* allocator,
     FXL_DCHECK(max_payload_size != 0);
 
     // Allocate a VMO for each payload.
-    for (uint64_t i = 0; i < max_aggregate_payload_size / max_payload_size;
-         ++i) {
+    for (uint64_t i = 0; i < max_aggregate_payload_size / max_payload_size; ++i) {
       allocator->AddVmo(PayloadVmo::Create(max_payload_size, bti_handle));
     }
   } else {
@@ -552,19 +533,17 @@ void PayloadManager::ProvideVmos(VmoPayloadAllocator* allocator,
     FXL_DCHECK(max_aggregate_payload_size != 0);
 
     // Create a single VMO from which to allocate all payloads.
-    allocator->AddVmo(
-        PayloadVmo::Create(max_aggregate_payload_size, bti_handle));
+    allocator->AddVmo(PayloadVmo::Create(max_aggregate_payload_size, bti_handle));
   }
 }
 
-void PayloadManager::ProvideVmosForSharedAllocator(
-    VmoPayloadAllocator* allocator) const {
+void PayloadManager::ProvideVmosForSharedAllocator(VmoPayloadAllocator* allocator) const {
   FXL_DCHECK(allocator);
 
   PayloadConfig config;
 
-  config.max_payload_size_ = std::max(output_.config_.max_payload_size_,
-                                      input_.config_.max_payload_size_);
+  config.max_payload_size_ =
+      std::max(output_.config_.max_payload_size_, input_.config_.max_payload_size_);
   config.max_payload_count_ =
       output_.config_.max_payload_count_ + input_.config_.max_payload_count_;
 
@@ -589,8 +568,8 @@ void PayloadManager::ProvideVmosForSharedAllocator(
       output_max_aggregate_payload_size + input_max_aggregate_payload_size;
 
   config.vmo_allocation_ = CombinedVmoAllocation();
-  config.physically_contiguous_ = output_.config_.physically_contiguous_ ||
-                                  input_.config_.physically_contiguous_;
+  config.physically_contiguous_ =
+      output_.config_.physically_contiguous_ || input_.config_.physically_contiguous_;
 
   const zx::handle* bti_handle = nullptr;
   if (output_.bti_handle_) {
@@ -613,8 +592,7 @@ void PayloadManager::PrepareForExternalVmos(VmoPayloadAllocator* allocator,
   }
 }
 
-void PayloadManager::PrepareSharedAllocatorForExternalVmos(
-    VmoPayloadAllocator* allocator) const {
+void PayloadManager::PrepareSharedAllocatorForExternalVmos(VmoPayloadAllocator* allocator) const {
   FXL_DCHECK(allocator);
 
   VmoAllocation vmo_allocation = CombinedVmoAllocation();
@@ -623,8 +601,7 @@ void PayloadManager::PrepareSharedAllocatorForExternalVmos(
   }
 }
 
-fbl::RefPtr<PayloadBuffer> PayloadManager::AllocateUsingAllocateCallback(
-    uint64_t size) const {
+fbl::RefPtr<PayloadBuffer> PayloadManager::AllocateUsingAllocateCallback(uint64_t size) const {
   FXL_DCHECK(allocate_callback_);
   FXL_DCHECK(input_.vmo_allocator_);
 

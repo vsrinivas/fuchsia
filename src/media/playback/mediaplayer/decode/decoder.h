@@ -27,17 +27,15 @@ class Decoder : public Node {
 class DecoderFactory {
  public:
   // Creates a decoder factory.
-  static std::unique_ptr<DecoderFactory> Create(
-      component::StartupContext* startup_context);
+  static std::unique_ptr<DecoderFactory> Create(component::StartupContext* startup_context);
 
   virtual ~DecoderFactory() {}
 
   // Creates a |Decoder| object for a given stream type. Calls back with a
   // decoder if the operation succeeds, with nullptr if not. This method may
   // call back synchronously.
-  virtual void CreateDecoder(
-      const StreamType& stream_type,
-      fit::function<void(std::shared_ptr<Decoder>)> callback) = 0;
+  virtual void CreateDecoder(const StreamType& stream_type,
+                             fit::function<void(std::shared_ptr<Decoder>)> callback) = 0;
 
  protected:
   DecoderFactory() {}

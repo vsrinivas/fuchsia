@@ -50,9 +50,8 @@ class StreamType {
   static const char kVideoEncodingVp8[];
   static const char kVideoEncodingVp9[];
 
-  static std::unique_ptr<StreamType> Create(
-      Medium medium, const std::string& encoding,
-      std::unique_ptr<Bytes> encoding_parameters) {
+  static std::unique_ptr<StreamType> Create(Medium medium, const std::string& encoding,
+                                            std::unique_ptr<Bytes> encoding_parameters) {
     return std::unique_ptr<StreamType>(
         new StreamType(medium, encoding, std::move(encoding_parameters)));
   }
@@ -66,9 +65,7 @@ class StreamType {
 
   const std::string& encoding() const { return encoding_; }
 
-  const Bytes* encoding_parameters() const {
-    return encoding_parameters_.get();
-  }
+  const Bytes* encoding_parameters() const { return encoding_parameters_.get(); }
 
   virtual const AudioStreamType* audio() const;
   virtual const VideoStreamType* video() const;
@@ -104,13 +101,12 @@ class SubpictureStreamTypeSet;
 // Describes a set of possible stream types.
 class StreamTypeSet {
  public:
-  static std::unique_ptr<StreamTypeSet> Create(
-      StreamType::Medium medium, const std::vector<std::string>& encodings) {
+  static std::unique_ptr<StreamTypeSet> Create(StreamType::Medium medium,
+                                               const std::vector<std::string>& encodings) {
     return std::unique_ptr<StreamTypeSet>(new StreamTypeSet(medium, encodings));
   }
 
-  StreamTypeSet(StreamType::Medium medium,
-                const std::vector<std::string>& encodings);
+  StreamTypeSet(StreamType::Medium medium, const std::vector<std::string>& encodings);
 
   virtual ~StreamTypeSet();
 

@@ -21,51 +21,41 @@ FakeAudioRenderer::FakeAudioRenderer()
 
 FakeAudioRenderer::~FakeAudioRenderer() {}
 
-void FakeAudioRenderer::Bind(
-    fidl::InterfaceRequest<fuchsia::media::AudioRenderer> request) {
+void FakeAudioRenderer::Bind(fidl::InterfaceRequest<fuchsia::media::AudioRenderer> request) {
   binding_.Bind(std::move(request));
 }
 
-void FakeAudioRenderer::SetPcmStreamType(
-    fuchsia::media::AudioStreamType format) {
+void FakeAudioRenderer::SetPcmStreamType(fuchsia::media::AudioStreamType format) {
   format_ = format;
 }
 
-void FakeAudioRenderer::SetStreamType(fuchsia::media::StreamType format) {
-  FXL_NOTIMPLEMENTED();
-}
+void FakeAudioRenderer::SetStreamType(fuchsia::media::StreamType format) { FXL_NOTIMPLEMENTED(); }
 
 void FakeAudioRenderer::AddPayloadBuffer(uint32_t id, zx::vmo payload_buffer) {
   FXL_DCHECK(id == 0) << "Only ID 0 is currently supported.";
   vmo_mapper_.Map(std::move(payload_buffer), 0, 0, ZX_VM_PERM_READ);
 }
 
-void FakeAudioRenderer::RemovePayloadBuffer(uint32_t id) {
-  FXL_NOTIMPLEMENTED();
-}
+void FakeAudioRenderer::RemovePayloadBuffer(uint32_t id) { FXL_NOTIMPLEMENTED(); }
 
 void FakeAudioRenderer::SetPtsUnits(uint32_t tick_per_second_numerator,
                                     uint32_t tick_per_second_denominator) {
-  pts_rate_ = media::TimelineRate(tick_per_second_numerator,
-                                  tick_per_second_denominator);
+  pts_rate_ = media::TimelineRate(tick_per_second_numerator, tick_per_second_denominator);
 }
 
 void FakeAudioRenderer::SetPtsContinuityThreshold(float threshold_seconds) {
   threshold_seconds_ = threshold_seconds;
 }
 
-void FakeAudioRenderer::SetReferenceClock(zx::handle ref_clock) {
-  FXL_NOTIMPLEMENTED();
-}
+void FakeAudioRenderer::SetReferenceClock(zx::handle ref_clock) { FXL_NOTIMPLEMENTED(); }
 
 void FakeAudioRenderer::SendPacket(fuchsia::media::StreamPacket packet,
                                    SendPacketCallback callback) {
   if (dump_packets_) {
-    std::cerr << "{ " << packet.pts << ", " << packet.payload_size << ", 0x"
-              << std::hex << std::setw(16) << std::setfill('0')
+    std::cerr << "{ " << packet.pts << ", " << packet.payload_size << ", 0x" << std::hex
+              << std::setw(16) << std::setfill('0')
               << PacketInfo::Hash(
-                     reinterpret_cast<uint8_t*>(vmo_mapper_.start()) +
-                         packet.payload_offset,
+                     reinterpret_cast<uint8_t*>(vmo_mapper_.start()) + packet.payload_offset,
                      packet.payload_size)
               << std::dec << " },\n";
   }
@@ -79,9 +69,9 @@ void FakeAudioRenderer::SendPacket(fuchsia::media::StreamPacket packet,
     if (expected_packets_info_iter_->pts() != packet.pts ||
         expected_packets_info_iter_->size() != packet.payload_size ||
         expected_packets_info_iter_->hash() !=
-            PacketInfo::Hash(reinterpret_cast<uint8_t*>(vmo_mapper_.start()) +
-                                 packet.payload_offset,
-                             packet.payload_size)) {
+            PacketInfo::Hash(
+                reinterpret_cast<uint8_t*>(vmo_mapper_.start()) + packet.payload_offset,
+                packet.payload_size)) {
       FXL_LOG(ERROR) << "supplied packet doesn't match expected packet info";
       expected_ = false;
     }
@@ -115,8 +105,7 @@ void FakeAudioRenderer::DiscardAllPacketsNoReply() {
   DiscardAllPackets([]() {});
 }
 
-void FakeAudioRenderer::Play(int64_t reference_time, int64_t media_time,
-                             PlayCallback callback) {
+void FakeAudioRenderer::Play(int64_t reference_time, int64_t media_time, PlayCallback callback) {
   if (reference_time == fuchsia::media::NO_TIMESTAMP) {
     reference_time = zx::clock::get_monotonic().get();
   }
@@ -133,23 +122,20 @@ void FakeAudioRenderer::Play(int64_t reference_time, int64_t media_time,
 
   callback(reference_time, media_time);
 
-  timeline_function_ = media::TimelineFunction(
-      media_time, reference_time, pts_rate_ / media::TimelineRate::NsPerSecond);
+  timeline_function_ = media::TimelineFunction(media_time, reference_time,
+                                               pts_rate_ / media::TimelineRate::NsPerSecond);
 
   MaybeScheduleRetirement();
 }
 
-void FakeAudioRenderer::PlayNoReply(int64_t reference_time,
-                                    int64_t media_time) {
-  Play(reference_time, media_time,
-       [](int64_t reference_time, int64_t media_time) {});
+void FakeAudioRenderer::PlayNoReply(int64_t reference_time, int64_t media_time) {
+  Play(reference_time, media_time, [](int64_t reference_time, int64_t media_time) {});
 }
 
 void FakeAudioRenderer::Pause(PauseCallback callback) {
   int64_t reference_time = zx::clock::get_monotonic().get();
   int64_t media_time = timeline_function_(reference_time);
-  timeline_function_ =
-      media::TimelineFunction(media_time, reference_time, 0, 1);
+  timeline_function_ = media::TimelineFunction(media_time, reference_time, 0, 1);
   callback(reference_time, media_time);
 }
 
@@ -194,8 +180,7 @@ void FakeAudioRenderer::MaybeScheduleRetirement() {
           return;
         }
 
-        int64_t reference_time =
-            timeline_function_.ApplyInverse(packet_queue_.front().first.pts);
+        int64_t reference_time = timeline_function_.ApplyInverse(packet_queue_.front().first.pts);
 
         if (reference_time <= zx::clock::get_monotonic().get()) {
           packet_queue_.front().second();

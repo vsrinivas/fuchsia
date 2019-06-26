@@ -31,8 +31,7 @@ class FakeSinkSegment : public SinkSegment {
 
   void WillDeprovision() override { will_deprovision_called_ = true; }
 
-  void Connect(const StreamType& type, OutputRef output,
-               ConnectCallback callback) override {
+  void Connect(const StreamType& type, OutputRef output, ConnectCallback callback) override {
     connect_called_ = true;
     connect_call_param_type_ = &type;
     connect_call_param_output_ = output;
@@ -55,8 +54,7 @@ class FakeSinkSegment : public SinkSegment {
     set_timeline_function_call_param_callback_ = std::move(callback);
   }
 
-  void SetProgramRange(uint64_t program, int64_t min_pts,
-                       int64_t max_pts) override {
+  void SetProgramRange(uint64_t program, int64_t min_pts, int64_t max_pts) override {
     set_program_range_called_ = true;
     set_program_range_call_param_program_ = program;
     set_program_range_call_param_min_pts_ = min_pts;

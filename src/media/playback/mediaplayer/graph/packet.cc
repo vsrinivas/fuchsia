@@ -10,20 +10,18 @@
 namespace media_player {
 
 // static
-PacketPtr Packet::Create(int64_t pts, media::TimelineRate pts_rate,
-                         bool keyframe, bool end_of_stream, size_t size,
+PacketPtr Packet::Create(int64_t pts, media::TimelineRate pts_rate, bool keyframe,
+                         bool end_of_stream, size_t size,
                          fbl::RefPtr<PayloadBuffer> payload_buffer) {
-  return std::make_shared<Packet>(pts, pts_rate, keyframe, false, end_of_stream,
-                                  size, std::move(payload_buffer));
+  return std::make_shared<Packet>(pts, pts_rate, keyframe, false, end_of_stream, size,
+                                  std::move(payload_buffer));
 }
 
 // static
-PacketPtr Packet::Create(int64_t pts, media::TimelineRate pts_rate,
-                         bool keyframe, bool discontinuity, bool end_of_stream,
-                         size_t size,
+PacketPtr Packet::Create(int64_t pts, media::TimelineRate pts_rate, bool keyframe,
+                         bool discontinuity, bool end_of_stream, size_t size,
                          fbl::RefPtr<PayloadBuffer> payload_buffer) {
-  return std::make_shared<Packet>(pts, pts_rate, keyframe, discontinuity,
-                                  end_of_stream, size,
+  return std::make_shared<Packet>(pts, pts_rate, keyframe, discontinuity, end_of_stream, size,
                                   std::move(payload_buffer));
 }
 
@@ -37,9 +35,8 @@ PacketPtr Packet::CreateEndOfStream(int64_t pts, media::TimelineRate pts_rate) {
                                   nullptr);  // payload_buffer
 }
 
-Packet::Packet(int64_t pts, media::TimelineRate pts_rate, bool keyframe,
-               bool discontinuity, bool end_of_stream, size_t size,
-               fbl::RefPtr<PayloadBuffer> payload_buffer)
+Packet::Packet(int64_t pts, media::TimelineRate pts_rate, bool keyframe, bool discontinuity,
+               bool end_of_stream, size_t size, fbl::RefPtr<PayloadBuffer> payload_buffer)
     : pts_(pts),
       pts_rate_(pts_rate),
       keyframe_(keyframe),
@@ -68,8 +65,7 @@ int64_t Packet::GetPts(media::TimelineRate pts_rate) {
   // TODO(dalesat): Do the 128-bit calculation required to do this exactly.
   return (pts_rate == pts_rate_)
              ? pts()
-             : (pts() * media::TimelineRate::Product(
-                            pts_rate, pts_rate_.Inverse(), false));
+             : (pts() * media::TimelineRate::Product(pts_rate, pts_rate_.Inverse(), false));
 }
 
 uint64_t Packet::GetLabel() { return 0; }
@@ -83,8 +79,6 @@ void Packet::SetPtsRate(media::TimelineRate pts_rate) {
   pts_rate_ = pts_rate;
 }
 
-void Packet::AfterRecycling(Action action) {
-  after_recycling_ = std::move(action);
-}
+void Packet::AfterRecycling(Action action) { after_recycling_ = std::move(action); }
 
 }  // namespace media_player

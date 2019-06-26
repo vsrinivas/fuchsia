@@ -13,8 +13,7 @@ AudioStreamType::AudioStreamType(const std::string& encoding,
                                  std::unique_ptr<Bytes> encoding_parameters,
                                  SampleFormat sample_format, uint32_t channels,
                                  uint32_t frames_per_second)
-    : StreamType(StreamType::Medium::kAudio, encoding,
-                 std::move(encoding_parameters)),
+    : StreamType(StreamType::Medium::kAudio, encoding, std::move(encoding_parameters)),
       sample_format_(sample_format),
       channels_(channels),
       frames_per_second_(frames_per_second),
@@ -22,8 +21,7 @@ AudioStreamType::AudioStreamType(const std::string& encoding,
 
 AudioStreamType::AudioStreamType(const AudioStreamType& other)
     : AudioStreamType(other.encoding(), SafeClone(other.encoding_parameters()),
-                      other.sample_format(), other.channels(),
-                      other.frames_per_second()) {}
+                      other.sample_format(), other.channels(), other.frames_per_second()) {}
 
 AudioStreamType::~AudioStreamType() {}
 
@@ -51,14 +49,13 @@ uint32_t AudioStreamType::SampleSizeFromFormat(SampleFormat sample_format) {
 }
 
 std::unique_ptr<StreamType> AudioStreamType::Clone() const {
-  return Create(encoding(), SafeClone(encoding_parameters()), sample_format(),
-                channels(), frames_per_second());
+  return Create(encoding(), SafeClone(encoding_parameters()), sample_format(), channels(),
+                frames_per_second());
 }
 
-AudioStreamTypeSet::AudioStreamTypeSet(
-    const std::vector<std::string>& encodings,
-    AudioStreamType::SampleFormat sample_format, Range<uint32_t> channels,
-    Range<uint32_t> frames_per_second)
+AudioStreamTypeSet::AudioStreamTypeSet(const std::vector<std::string>& encodings,
+                                       AudioStreamType::SampleFormat sample_format,
+                                       Range<uint32_t> channels, Range<uint32_t> frames_per_second)
     : StreamTypeSet(StreamType::Medium::kAudio, encodings),
       sample_format_(sample_format),
       channels_(channels),

@@ -16,8 +16,7 @@ extern "C" {
 namespace media_player {
 
 void AVIOContextDeleter::operator()(AVIOContext* context) const {
-  AvIoContextOpaque* av_io_context =
-      reinterpret_cast<AvIoContextOpaque*>(context->opaque);
+  AvIoContextOpaque* av_io_context = reinterpret_cast<AvIoContextOpaque*>(context->opaque);
   FXL_DCHECK(av_io_context);
   // This is the matching delete for the new that happens in
   // AvIoContext::Create. This is part of the deleter for the io context, which
@@ -28,8 +27,7 @@ void AVIOContextDeleter::operator()(AVIOContext* context) const {
 }
 
 // static
-zx_status_t AvIoContext::Create(std::shared_ptr<Reader> reader,
-                                AvIoContextPtr* context_ptr_out,
+zx_status_t AvIoContext::Create(std::shared_ptr<Reader> reader, AvIoContextPtr* context_ptr_out,
                                 async_dispatcher_t* dispatcher) {
   FXL_CHECK(context_ptr_out);
 
@@ -40,8 +38,7 @@ zx_status_t AvIoContext::Create(std::shared_ptr<Reader> reader,
 
   // Using a raw pointer here, because the io context doesn't understand smart
   // pointers.
-  AvIoContextOpaque* avIoContextOpaque =
-      new AvIoContextOpaque(reader, dispatcher);
+  AvIoContextOpaque* avIoContextOpaque = new AvIoContextOpaque(reader, dispatcher);
   zx_status_t status = avIoContextOpaque->describe_status_;
   if (status != ZX_OK) {
     *context_ptr_out = nullptr;
@@ -52,12 +49,10 @@ zx_status_t AvIoContext::Create(std::shared_ptr<Reader> reader,
   AVIOContext* avIoContext = avio_alloc_context(
       static_cast<unsigned char*>(av_malloc(kBufferSize)), kBufferSize,
       0,  // write_flag
-      avIoContextOpaque, &AvIoContextOpaque::Read, nullptr,
-      &AvIoContextOpaque::Seek);
+      avIoContextOpaque, &AvIoContextOpaque::Read, nullptr, &AvIoContextOpaque::Seek);
 
   // Ensure FFmpeg only tries to seek when we know how.
-  avIoContext->seekable =
-      avIoContextOpaque->can_seek() ? AVIO_SEEKABLE_NORMAL : 0;
+  avIoContext->seekable = avIoContextOpaque->can_seek() ? AVIO_SEEKABLE_NORMAL : 0;
 
   // Ensure writing is disabled.
   avIoContext->write_flag = 0;
@@ -69,22 +64,19 @@ zx_status_t AvIoContext::Create(std::shared_ptr<Reader> reader,
 
 // static
 int AvIoContextOpaque::Read(void* opaque, uint8_t* buf, int buf_size) {
-  AvIoContextOpaque* av_io_context =
-      reinterpret_cast<AvIoContextOpaque*>(opaque);
+  AvIoContextOpaque* av_io_context = reinterpret_cast<AvIoContextOpaque*>(opaque);
   return av_io_context->Read(buf, buf_size);
 }
 
 // static
 int64_t AvIoContextOpaque::Seek(void* opaque, int64_t offset, int whence) {
-  AvIoContextOpaque* av_io_context =
-      reinterpret_cast<AvIoContextOpaque*>(opaque);
+  AvIoContextOpaque* av_io_context = reinterpret_cast<AvIoContextOpaque*>(opaque);
   return av_io_context->Seek(offset, whence);
 }
 
 AvIoContextOpaque::~AvIoContextOpaque() {}
 
-AvIoContextOpaque::AvIoContextOpaque(std::shared_ptr<Reader> reader,
-                                     async_dispatcher_t* dispatcher)
+AvIoContextOpaque::AvIoContextOpaque(std::shared_ptr<Reader> reader, async_dispatcher_t* dispatcher)
     : reader_(reader), dispatcher_(dispatcher) {
   async::PostTask(dispatcher_, [this]() {
     reader_->Describe([this](zx_status_t status, size_t size, bool can_seek) {
@@ -105,21 +97,20 @@ int AvIoContextOpaque::Read(uint8_t* buffer, size_t bytes_to_read) {
     return AVERROR_EOF;
   }
 
-  FXL_DCHECK(static_cast<uint64_t>(position_) <
-             std::numeric_limits<size_t>::max());
+  FXL_DCHECK(static_cast<uint64_t>(position_) < std::numeric_limits<size_t>::max());
 
   zx_status_t read_at_status;
   size_t read_at_bytes_read;
-  async::PostTask(dispatcher_, [this, &read_at_status, &read_at_bytes_read,
-                                buffer, bytes_to_read]() {
-    reader_->ReadAt(static_cast<size_t>(position_), buffer, bytes_to_read,
-                    [this, &read_at_status, &read_at_bytes_read](
-                        zx_status_t status, size_t bytes_read) {
-                      read_at_status = status;
-                      read_at_bytes_read = bytes_read;
-                      CallbackComplete();
-                    });
-  });
+  async::PostTask(
+      dispatcher_, [this, &read_at_status, &read_at_bytes_read, buffer, bytes_to_read]() {
+        reader_->ReadAt(
+            static_cast<size_t>(position_), buffer, bytes_to_read,
+            [this, &read_at_status, &read_at_bytes_read](zx_status_t status, size_t bytes_read) {
+              read_at_status = status;
+              read_at_bytes_read = bytes_read;
+              CallbackComplete();
+            });
+      });
 
   WaitForCallback();
 
@@ -136,8 +127,8 @@ int64_t AvIoContextOpaque::Seek(int64_t offset, int whence) {
   switch (whence) {
     case SEEK_SET:
       if (size_ != -1 && offset >= size_) {
-        FXL_DLOG(ERROR) << "Seek out of range: offset " << offset
-                        << ", whence SEEK_SET, size " << size_;
+        FXL_DLOG(ERROR) << "Seek out of range: offset " << offset << ", whence SEEK_SET, size "
+                        << size_;
         return AVERROR(EIO);
       }
 
@@ -147,8 +138,8 @@ int64_t AvIoContextOpaque::Seek(int64_t offset, int whence) {
     case SEEK_CUR:
       if (size_ != -1 && position_ + offset >= size_) {
         FXL_DLOG(ERROR) << "Seek out of range: offset " << offset
-                        << ", whence SEEK_CUR, current position " << position_
-                        << ", size " << size_;
+                        << ", whence SEEK_CUR, current position " << position_ << ", size "
+                        << size_;
         return AVERROR(EIO);
       }
 
@@ -162,8 +153,8 @@ int64_t AvIoContextOpaque::Seek(int64_t offset, int whence) {
       }
 
       if (offset < -size_ || offset >= 0) {
-        FXL_DLOG(ERROR) << "Seek out of range: offset " << offset
-                        << ", whence SEEK_END, size " << size_;
+        FXL_DLOG(ERROR) << "Seek out of range: offset " << offset << ", whence SEEK_END, size "
+                        << size_;
         return AVERROR(EIO);
       }
 

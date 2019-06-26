@@ -23,8 +23,7 @@ constexpr uint32_t kOutputMaxPayloadCount = 6;
 }  // namespace
 
 // static
-std::shared_ptr<Decoder> FfmpegVideoDecoder::Create(
-    AvCodecContextPtr av_codec_context) {
+std::shared_ptr<Decoder> FfmpegVideoDecoder::Create(AvCodecContextPtr av_codec_context) {
   return std::make_shared<FfmpegVideoDecoder>(std::move(av_codec_context));
 }
 
@@ -53,8 +52,7 @@ void FfmpegVideoDecoder::ConfigureConnectors() {
 
   if (has_size()) {
     configured_output_buffer_size_ = buffer_size_;
-    ConfigureOutputToUseLocalMemory(0, kOutputMaxPayloadCount,
-                                    configured_output_buffer_size_);
+    ConfigureOutputToUseLocalMemory(0, kOutputMaxPayloadCount, configured_output_buffer_size_);
   } else {
     ConfigureOutputDeferred();
   }
@@ -75,18 +73,15 @@ void FfmpegVideoDecoder::OnNewInputPacket(const PacketPtr& packet) {
   context()->reordered_opaque = packet->pts();
 }
 
-int FfmpegVideoDecoder::BuildAVFrame(const AVCodecContext& av_codec_context,
-                                     AVFrame* av_frame) {
+int FfmpegVideoDecoder::BuildAVFrame(const AVCodecContext& av_codec_context, AVFrame* av_frame) {
   FXL_DCHECK(av_frame);
 
   if (UpdateSize(av_codec_context)) {
     revised_stream_type_ = AvCodecContext::GetStreamType(av_codec_context);
   }
 
-  VideoStreamType::Extent visible_size(av_codec_context.width,
-                                       av_codec_context.height);
-  const int result =
-      av_image_check_size(visible_size.width(), visible_size.height(), 0, NULL);
+  VideoStreamType::Extent visible_size(av_codec_context.width, av_codec_context.height);
+  const int result = av_image_check_size(visible_size.width(), visible_size.height(), 0, NULL);
   if (result < 0) {
     return result;
   }
@@ -99,10 +94,8 @@ int FfmpegVideoDecoder::BuildAVFrame(const AVCodecContext& av_codec_context,
   // since we don't use this, just FXL_DCHECK that it's zero.
   FXL_DCHECK(av_codec_context.lowres == 0);
   VideoStreamType::Extent coded_size(
-      std::max(visible_size.width(),
-               static_cast<uint32_t>(av_codec_context.coded_width)),
-      std::max(visible_size.height(),
-               static_cast<uint32_t>(av_codec_context.coded_height)));
+      std::max(visible_size.width(), static_cast<uint32_t>(av_codec_context.coded_width)),
+      std::max(visible_size.height(), static_cast<uint32_t>(av_codec_context.coded_height)));
 
   size_t buffer_size = buffer_size_;
   if (has_size() && configured_output_buffer_size_ < buffer_size) {
@@ -112,22 +105,19 @@ int FfmpegVideoDecoder::BuildAVFrame(const AVCodecContext& av_codec_context,
     // thread. Do that and block until it's done.
     sync_completion completion;
     PostTask([this, buffer_size, &completion]() {
-      ConfigureOutputToUseLocalMemory(
-          0,                       // max_aggregate_payload_size
-          kOutputMaxPayloadCount,  // max_payload_count
-          buffer_size);            // max_payload_size
+      ConfigureOutputToUseLocalMemory(0,                       // max_aggregate_payload_size
+                                      kOutputMaxPayloadCount,  // max_payload_count
+                                      buffer_size);            // max_payload_size
       sync_completion_signal(&completion);
     });
 
     sync_completion_wait(&completion, ZX_TIME_INFINITE);
   }
 
-  fbl::RefPtr<PayloadBuffer> payload_buffer =
-      AllocatePayloadBuffer(buffer_size_);
+  fbl::RefPtr<PayloadBuffer> payload_buffer = AllocatePayloadBuffer(buffer_size_);
 
   if (!payload_buffer) {
-    FXL_LOG(ERROR) << "failed to allocate payload buffer of size "
-                   << buffer_size_;
+    FXL_LOG(ERROR) << "failed to allocate payload buffer of size " << buffer_size_;
     return -1;
   }
 
@@ -140,9 +130,8 @@ int FfmpegVideoDecoder::BuildAVFrame(const AVCodecContext& av_codec_context,
   std::memset(payload_buffer->data(), 0, buffer_size_);
 
   av_image_fill_arrays(av_frame->data, av_frame->linesize,
-                       reinterpret_cast<uint8_t*>(payload_buffer->data()),
-                       av_codec_context.pix_fmt, aligned_width_,
-                       aligned_height_, kFrameBufferAlign);
+                       reinterpret_cast<uint8_t*>(payload_buffer->data()), av_codec_context.pix_fmt,
+                       aligned_width_, aligned_height_, kFrameBufferAlign);
 
   if (av_codec_context.pix_fmt == AV_PIX_FMT_YUV420P ||
       av_codec_context.pix_fmt == AV_PIX_FMT_YUVJ420P) {
@@ -161,17 +150,16 @@ int FfmpegVideoDecoder::BuildAVFrame(const AVCodecContext& av_codec_context,
   return 0;
 }
 
-PacketPtr FfmpegVideoDecoder::CreateOutputPacket(
-    const AVFrame& av_frame, fbl::RefPtr<PayloadBuffer> payload_buffer) {
+PacketPtr FfmpegVideoDecoder::CreateOutputPacket(const AVFrame& av_frame,
+                                                 fbl::RefPtr<PayloadBuffer> payload_buffer) {
   FXL_DCHECK(av_frame.buf[0]);
   FXL_DCHECK(payload_buffer);
 
   // Recover the pts deposited in Decode.
   set_next_pts(av_frame.reordered_opaque);
 
-  PacketPtr packet =
-      Packet::Create(av_frame.reordered_opaque, pts_rate(), av_frame.key_frame,
-                     false, buffer_size_, std::move(payload_buffer));
+  PacketPtr packet = Packet::Create(av_frame.reordered_opaque, pts_rate(), av_frame.key_frame,
+                                    false, buffer_size_, std::move(payload_buffer));
 
   if (revised_stream_type_) {
     packet->SetRevisedStreamType(std::move(revised_stream_type_));
@@ -190,8 +178,8 @@ bool FfmpegVideoDecoder::UpdateSize(const AVCodecContext& av_codec_context) {
     return false;
   }
 
-  avcodec_align_dimensions(const_cast<AVCodecContext*>(&av_codec_context),
-                           &aligned_width, &aligned_height);
+  avcodec_align_dimensions(const_cast<AVCodecContext*>(&av_codec_context), &aligned_width,
+                           &aligned_height);
   FXL_DCHECK(aligned_width >= av_codec_context.coded_width);
   FXL_DCHECK(aligned_height >= av_codec_context.coded_height);
 
@@ -203,9 +191,8 @@ bool FfmpegVideoDecoder::UpdateSize(const AVCodecContext& av_codec_context) {
   aligned_width_ = aligned_width;
   aligned_height_ = aligned_height;
 
-  buffer_size_ =
-      av_image_get_buffer_size(av_codec_context.pix_fmt, aligned_width,
-                               aligned_height, kFrameBufferAlign);
+  buffer_size_ = av_image_get_buffer_size(av_codec_context.pix_fmt, aligned_width, aligned_height,
+                                          kFrameBufferAlign);
   return true;
 }
 

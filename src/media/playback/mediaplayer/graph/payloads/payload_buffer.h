@@ -28,14 +28,13 @@ class PayloadVmo : public fbl::RefCounted<PayloadVmo> {
   // Creates a VMO and wraps it with a |PayloadVmo|. If |bti_handle| is
   // provided, the VMO is created with |zx_vmo_create_contiguous|.
   // TODO(dalesat): Remove |bti_handle| when the fidl buffer allocator happens.
-  static fbl::RefPtr<PayloadVmo> Create(uint64_t vmo_size,
-                                        const zx::handle* bti_handle = nullptr);
+  static fbl::RefPtr<PayloadVmo> Create(uint64_t vmo_size, const zx::handle* bti_handle = nullptr);
 
   // Creates a |PayloadVmo| that wraps the provided VMO.
   static fbl::RefPtr<PayloadVmo> Create(zx::vmo vmo, zx_vm_option_t map_flags);
 
-  PayloadVmo(zx::vmo vmo, uint64_t vmo_size, zx_vm_option_t map_flags,
-             const zx::handle* bti_handle, zx_status_t* status_out);
+  PayloadVmo(zx::vmo vmo, uint64_t vmo_size, zx_vm_option_t map_flags, const zx::handle* bti_handle,
+             zx_status_t* status_out);
 
   ~PayloadVmo() = default;
 
@@ -118,18 +117,15 @@ class PayloadBuffer final : public fbl::RefCounted<PayloadBuffer>,
 
   // Creates a new |PayloadBuffer|. |size| may not be 0, and |data| may not be
   // nullptr.
-  static fbl::RefPtr<PayloadBuffer> Create(uint64_t size, void* data,
-                                           Recycler recycler);
+  static fbl::RefPtr<PayloadBuffer> Create(uint64_t size, void* data, Recycler recycler);
 
   // Creates a new |PayloadBuffer|. |size| may not be 0, and |data| may not be
   // nullptr. |offset_in_vmo| gives the offset of the buffer with respect to
   // the start of the VMO. This should be (data - vmo.start()). This
   // redundancy is for future support of VMOs that can't be mapped.
   // TODO(dalesat): Support null data for payloads that can't be mapped.
-  static fbl::RefPtr<PayloadBuffer> Create(uint64_t size, void* data,
-                                           fbl::RefPtr<PayloadVmo> vmo,
-                                           uint64_t offset_in_vmo,
-                                           Recycler recycler);
+  static fbl::RefPtr<PayloadBuffer> Create(uint64_t size, void* data, fbl::RefPtr<PayloadVmo> vmo,
+                                           uint64_t offset_in_vmo, Recycler recycler);
 
   static fbl::RefPtr<PayloadBuffer> CreateWithMalloc(uint64_t size);
 
@@ -167,9 +163,7 @@ class PayloadBuffer final : public fbl::RefCounted<PayloadBuffer>,
   uint64_t buffer_config() const { return buffer_config_; }
 
   // Sets the ID of this |PayloadBuffer|.
-  void SetBufferConfig(uint64_t buffer_config) {
-    buffer_config_ = buffer_config;
-  }
+  void SetBufferConfig(uint64_t buffer_config) { buffer_config_ = buffer_config; }
 
   // Registers a function to be called after recycling. This method may only
   // be called once on a given instance. An |Action| should not hold a reference
@@ -180,8 +174,8 @@ class PayloadBuffer final : public fbl::RefCounted<PayloadBuffer>,
  private:
   PayloadBuffer(uint64_t size, void* data, Recycler recycler);
 
-  PayloadBuffer(uint64_t size, void* data, fbl::RefPtr<PayloadVmo> vmo,
-                uint64_t offset, Recycler recycler);
+  PayloadBuffer(uint64_t size, void* data, fbl::RefPtr<PayloadVmo> vmo, uint64_t offset,
+                Recycler recycler);
 
   void fbl_recycle();
 

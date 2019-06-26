@@ -31,8 +31,7 @@ class SinkSegment : public Segment {
   // Connects (or reconnects) this sink segment to the specified output and
   // sets the stream type. After the callback is called, success can be
   // determined by calling |connected|.
-  virtual void Connect(const StreamType& type, OutputRef output,
-                       ConnectCallback callback) = 0;
+  virtual void Connect(const StreamType& type, OutputRef output, ConnectCallback callback) = 0;
 
   // Disconnects this sink segment.
   virtual void Disconnect() = 0;
@@ -49,8 +48,7 @@ class SinkSegment : public Segment {
                                    fit::closure callback) = 0;
 
   // Sets a program range for this sink segment.
-  virtual void SetProgramRange(uint64_t program, int64_t min_pts,
-                               int64_t max_pts) = 0;
+  virtual void SetProgramRange(uint64_t program, int64_t min_pts, int64_t max_pts) = 0;
 
   // Indicates whether this sink segment has reached end of stream.
   virtual bool end_of_stream() const = 0;

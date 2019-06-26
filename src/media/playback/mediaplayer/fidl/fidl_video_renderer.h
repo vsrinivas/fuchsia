@@ -25,8 +25,7 @@ namespace media_player {
 // VideoRenderer that renders video via FIDL services.
 class FidlVideoRenderer : public VideoRenderer {
  public:
-  static std::shared_ptr<FidlVideoRenderer> Create(
-      component::StartupContext* startup_context);
+  static std::shared_ptr<FidlVideoRenderer> Create(component::StartupContext* startup_context);
 
   FidlVideoRenderer(component::StartupContext* startup_context);
 
@@ -41,13 +40,11 @@ class FidlVideoRenderer : public VideoRenderer {
 
   void OnInputConnectionReady(size_t input_index) override;
 
-  void FlushInput(bool hold_frame, size_t input_index,
-                  fit::closure callback) override;
+  void FlushInput(bool hold_frame, size_t input_index, fit::closure callback) override;
 
   void PutInputPacket(PacketPtr packet, size_t input_index) override;
 
-  const std::vector<std::unique_ptr<StreamTypeSet>>& GetSupportedStreamTypes()
-      override {
+  const std::vector<std::unique_ptr<StreamTypeSet>>& GetSupportedStreamTypes() override {
     return supported_stream_types_;
   }
 
@@ -77,8 +74,7 @@ class FidlVideoRenderer : public VideoRenderer {
   class ReleaseTracker : public fbl::RefCounted<ReleaseTracker> {
    public:
     // Constructs a |ReleaseTracker|. |packet| and |renderer| are both required.
-    ReleaseTracker(PacketPtr packet,
-                   std::shared_ptr<FidlVideoRenderer> renderer);
+    ReleaseTracker(PacketPtr packet, std::shared_ptr<FidlVideoRenderer> renderer);
 
     ~ReleaseTracker();
 
@@ -93,8 +89,8 @@ class FidlVideoRenderer : public VideoRenderer {
     ~Image() = default;
 
     // Called when |release_fence_| is released.
-    void WaitHandler(async_dispatcher_t* dispatcher, async::WaitBase* wait,
-                     zx_status_t status, const zx_packet_signal_t* signal);
+    void WaitHandler(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
+                     const zx_packet_signal_t* signal);
 
     fbl::RefPtr<PayloadVmo> vmo_;
     uint32_t image_id_;
@@ -112,8 +108,7 @@ class FidlVideoRenderer : public VideoRenderer {
 
   class View : public scenic::BaseView {
    public:
-    View(scenic::ViewContext context,
-         std::shared_ptr<FidlVideoRenderer> renderer);
+    View(scenic::ViewContext context, std::shared_ptr<FidlVideoRenderer> renderer);
 
     ~View() override;
 
@@ -124,8 +119,7 @@ class FidlVideoRenderer : public VideoRenderer {
     // Removes the old images from the image pipe, if images were added
     // previously, and adds new images. An image is added for each VMO in
     // |vmos|, and they are numbered starting with |image_id_base|.
-    void UpdateImages(uint32_t image_id_base,
-                      fuchsia::images::ImageInfo image_info,
+    void UpdateImages(uint32_t image_id_base, fuchsia::images::ImageInfo image_info,
                       uint32_t display_width, uint32_t display_height,
                       const std::vector<fbl::RefPtr<PayloadVmo>>& vmos);
 
@@ -134,18 +128,14 @@ class FidlVideoRenderer : public VideoRenderer {
 
     // Presents an image using the |ImagePipe|.
     void PresentImage(uint32_t buffer_index, uint64_t presentation_time,
-                      fbl::RefPtr<ReleaseTracker> release_tracker,
-                      async_dispatcher_t* dispatcher);
+                      fbl::RefPtr<ReleaseTracker> release_tracker, async_dispatcher_t* dispatcher);
 
    private:
     // |scenic::BaseView|
-    void OnSceneInvalidated(
-        fuchsia::images::PresentationInfo presentation_info) override;
+    void OnSceneInvalidated(fuchsia::images::PresentationInfo presentation_info) override;
 
     // |scenic::SessionListener|
-    void OnScenicError(std::string error) override {
-      FXL_LOG(ERROR) << "Scenic Error " << error;
-    }
+    void OnScenicError(std::string error) override { FXL_LOG(ERROR) << "Scenic Error " << error; }
 
     std::shared_ptr<FidlVideoRenderer> renderer_;
 
@@ -191,13 +181,11 @@ class FidlVideoRenderer : public VideoRenderer {
   // Determines whether we need more packets.
   bool need_more_packets() const {
     return !flushed_ && !end_of_stream_pending() &&
-           (presented_packets_not_released_ +
-            packets_awaiting_presentation_.size()) < kPacketDemand;
+           (presented_packets_not_released_ + packets_awaiting_presentation_.size()) <
+               kPacketDemand;
   }
 
-  bool have_valid_image_info() {
-    return image_info_.width != 0 && image_info_.height != 0;
-  }
+  bool have_valid_image_info() { return image_info_.width != 0 && image_info_.height != 0; }
 
   component::StartupContext* startup_context_;
   fidl::InterfacePtr<fuchsia::ui::scenic::Scenic> scenic_;

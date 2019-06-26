@@ -48,8 +48,7 @@ std::unique_ptr<LpcmUtil> LpcmUtil::Create(const AudioStreamType& stream_type) {
       result = new LpcmUtilImpl<float>(stream_type);
       break;
     default:
-      FXL_DCHECK(false) << "unsupported sample format "
-                        << stream_type.sample_format();
+      FXL_DCHECK(false) << "unsupported sample format " << stream_type.sample_format();
       result = nullptr;
       break;
   }
@@ -58,8 +57,7 @@ std::unique_ptr<LpcmUtil> LpcmUtil::Create(const AudioStreamType& stream_type) {
 }
 
 template <typename T>
-LpcmUtilImpl<T>::LpcmUtilImpl(const AudioStreamType& stream_type)
-    : stream_type_(stream_type) {}
+LpcmUtilImpl<T>::LpcmUtilImpl(const AudioStreamType& stream_type) : stream_type_(stream_type) {}
 
 template <typename T>
 LpcmUtilImpl<T>::~LpcmUtilImpl() {}
@@ -67,8 +65,8 @@ LpcmUtilImpl<T>::~LpcmUtilImpl() {}
 template <typename T>
 void LpcmUtilImpl<T>::Silence(void* buffer, size_t frame_count) const {
   T* sample = reinterpret_cast<T*>(buffer);
-  for (size_t sample_countdown = frame_count * stream_type_.channels();
-       sample_countdown != 0; --sample_countdown) {
+  for (size_t sample_countdown = frame_count * stream_type_.channels(); sample_countdown != 0;
+       --sample_countdown) {
     *sample = 0;
     sample++;
   }
@@ -90,8 +88,7 @@ void LpcmUtilImpl<int32_t>::Silence(void* buffer, size_t frame_count) const {
 }
 
 template <typename T>
-void LpcmUtilImpl<T>::Copy(const void* in, void* out,
-                           size_t frame_count) const {
+void LpcmUtilImpl<T>::Copy(const void* in, void* out, size_t frame_count) const {
   std::memcpy(out, in, stream_type_.min_buffer_size(frame_count));
 }
 
@@ -99,8 +96,8 @@ template <typename T>
 void LpcmUtilImpl<T>::Mix(const void* in, void* out, size_t frame_count) const {
   const T* in_sample = reinterpret_cast<const T*>(in);
   T* out_sample = reinterpret_cast<T*>(out);
-  for (size_t sample_countdown = frame_count * stream_type_.channels();
-       sample_countdown != 0; --sample_countdown) {
+  for (size_t sample_countdown = frame_count * stream_type_.channels(); sample_countdown != 0;
+       --sample_countdown) {
     *out_sample += *in_sample;  // TODO(dalesat): Limit.
     out_sample++;
     in_sample++;
@@ -108,12 +105,11 @@ void LpcmUtilImpl<T>::Mix(const void* in, void* out, size_t frame_count) const {
 }
 
 template <>
-void LpcmUtilImpl<uint8_t>::Mix(const void* in, void* out,
-                                size_t frame_count) const {
+void LpcmUtilImpl<uint8_t>::Mix(const void* in, void* out, size_t frame_count) const {
   const uint8_t* in_sample = reinterpret_cast<const uint8_t*>(in);
   uint8_t* out_sample = reinterpret_cast<uint8_t*>(out);
-  for (size_t sample_countdown = frame_count * stream_type_.channels();
-       sample_countdown != 0; --sample_countdown) {
+  for (size_t sample_countdown = frame_count * stream_type_.channels(); sample_countdown != 0;
+       --sample_countdown) {
     *out_sample = uint8_t(uint16_t(*out_sample) + uint16_t(*in_sample) - 0x80);
     // TODO(dalesat): Limit.
     out_sample++;
@@ -122,8 +118,8 @@ void LpcmUtilImpl<uint8_t>::Mix(const void* in, void* out,
 }
 
 template <typename T>
-void LpcmUtilImpl<T>::Interleave(const void* in, size_t in_byte_count,
-                                 void* out, size_t frame_count) const {
+void LpcmUtilImpl<T>::Interleave(const void* in, size_t in_byte_count, void* out,
+                                 size_t frame_count) const {
   FXL_DCHECK(in);
   FXL_DCHECK(in_byte_count);
   FXL_DCHECK(out);

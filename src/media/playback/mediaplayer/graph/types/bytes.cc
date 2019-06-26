@@ -10,8 +10,6 @@ Bytes::Bytes(size_t size) : storage_(size) {}
 
 Bytes::~Bytes() {}
 
-std::unique_ptr<Bytes> Bytes::Clone() const {
-  return std::unique_ptr<Bytes>(new Bytes(*this));
-}
+std::unique_ptr<Bytes> Bytes::Clone() const { return std::unique_ptr<Bytes>(new Bytes(*this)); }
 
 }  // namespace media_player

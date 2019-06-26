@@ -14,8 +14,7 @@ namespace media_player {
 
 class FfmpegDemux : public Demux {
  public:
-  static std::shared_ptr<Demux> Create(
-      std::shared_ptr<ReaderCache> reader_cache);
+  static std::shared_ptr<Demux> Create(std::shared_ptr<ReaderCache> reader_cache);
 
   ~FfmpegDemux() override {}
 };

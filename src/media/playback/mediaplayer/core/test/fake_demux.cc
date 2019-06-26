@@ -12,9 +12,7 @@ namespace media_player {
 namespace test {
 
 // static
-std::shared_ptr<FakeDemux> FakeDemux::Create() {
-  return std::make_shared<FakeDemux>();
-}
+std::shared_ptr<FakeDemux> FakeDemux::Create() { return std::make_shared<FakeDemux>(); }
 
 FakeDemux::FakeDemux() {
   streams_.push_back(std::make_unique<DemuxStreamImpl>(
@@ -24,10 +22,9 @@ FakeDemux::FakeDemux() {
       media::TimelineRate(1, 1)));
   streams_.push_back(std::make_unique<DemuxStreamImpl>(
       1,
-      VideoStreamType::Create(StreamType::kVideoEncodingTheora, nullptr,
-                              VideoStreamType::PixelFormat::kYv12,
-                              VideoStreamType::ColorSpace::kNotApplicable, 1920,
-                              1080, 1920, 1080, 1, 1, 1920),
+      VideoStreamType::Create(
+          StreamType::kVideoEncodingTheora, nullptr, VideoStreamType::PixelFormat::kYv12,
+          VideoStreamType::ColorSpace::kNotApplicable, 1920, 1080, 1920, 1080, 1, 1, 1920),
       media::TimelineRate(1, 1)));
 }
 

@@ -76,8 +76,7 @@ class SourceImpl {
 // DemuxSourceImpl declaration.
 
 // |SourceImpl| that hosts a |DemuxSourceSegment|.
-class DemuxSourceImpl : public SourceImpl,
-                        public fuchsia::media::playback::Source {
+class DemuxSourceImpl : public SourceImpl, public fuchsia::media::playback::Source {
  public:
   // Creates a |DemuxSourceImpl|. |request| is optional.
   // |connection_failure_callback|, which is also optional, allows the source
@@ -87,10 +86,9 @@ class DemuxSourceImpl : public SourceImpl,
       fidl::InterfaceRequest<fuchsia::media::playback::Source> request,
       fit::closure connection_failure_callback);
 
-  DemuxSourceImpl(
-      std::shared_ptr<Demux> demux, Graph* graph,
-      fidl::InterfaceRequest<fuchsia::media::playback::Source> request,
-      fit::closure connection_failure_callback);
+  DemuxSourceImpl(std::shared_ptr<Demux> demux, Graph* graph,
+                  fidl::InterfaceRequest<fuchsia::media::playback::Source> request,
+                  fit::closure connection_failure_callback);
 
   ~DemuxSourceImpl() override;
 
@@ -112,8 +110,7 @@ class DemuxSourceImpl : public SourceImpl,
 // ElementarySourceImpl declaration.
 
 // |SourceImpl| that hosts a |ElementarySourceSegment|.
-class ElementarySourceImpl : public SourceImpl,
-                             public fuchsia::media::playback::ElementarySource {
+class ElementarySourceImpl : public SourceImpl, public fuchsia::media::playback::ElementarySource {
  public:
   // Creates a |ElementarySourceImpl|. |request| is required.
   // |connection_failure_callback|, which is also optional, allows the source
@@ -121,16 +118,13 @@ class ElementarySourceImpl : public SourceImpl,
   static std::unique_ptr<ElementarySourceImpl> Create(
       int64_t duration_ns, bool can_pause, bool can_seek,
       std::unique_ptr<fuchsia::media::Metadata> metadata, Graph* graph,
-      fidl::InterfaceRequest<fuchsia::media::playback::ElementarySource>
-          request,
+      fidl::InterfaceRequest<fuchsia::media::playback::ElementarySource> request,
       fit::closure connection_failure_callback);
 
-  ElementarySourceImpl(
-      int64_t duration_ns, bool can_pause, bool can_seek,
-      std::unique_ptr<fuchsia::media::Metadata> metadata, Graph* graph,
-      fidl::InterfaceRequest<fuchsia::media::playback::ElementarySource>
-          request,
-      fit::closure connection_failure_callback);
+  ElementarySourceImpl(int64_t duration_ns, bool can_pause, bool can_seek,
+                       std::unique_ptr<fuchsia::media::Metadata> metadata, Graph* graph,
+                       fidl::InterfaceRequest<fuchsia::media::playback::ElementarySource> request,
+                       fit::closure connection_failure_callback);
 
   ~ElementarySourceImpl() override;
 
@@ -140,20 +134,17 @@ class ElementarySourceImpl : public SourceImpl,
   void SendStatusUpdates() override;
 
   // ElementarySource implementation.
-  void AddStream(fuchsia::media::StreamType type,
-                 uint32_t tick_per_second_numerator,
-                 uint32_t tick_per_second_denominator,
-                 fidl::InterfaceRequest<fuchsia::media::SimpleStreamSink>
-                     simple_stream_sink_request) override;
+  void AddStream(
+      fuchsia::media::StreamType type, uint32_t tick_per_second_numerator,
+      uint32_t tick_per_second_denominator,
+      fidl::InterfaceRequest<fuchsia::media::SimpleStreamSink> simple_stream_sink_request) override;
 
-  void AddBinding(
-      fidl::InterfaceRequest<fuchsia::media::playback::ElementarySource>
-          elementary_source_request) override;
+  void AddBinding(fidl::InterfaceRequest<fuchsia::media::playback::ElementarySource>
+                      elementary_source_request) override;
 
  private:
   void AddBindingInternal(
-      fidl::InterfaceRequest<fuchsia::media::playback::ElementarySource>
-          elementary_source_request);
+      fidl::InterfaceRequest<fuchsia::media::playback::ElementarySource> elementary_source_request);
 
   fidl::BindingSet<fuchsia::media::playback::ElementarySource> bindings_;
 

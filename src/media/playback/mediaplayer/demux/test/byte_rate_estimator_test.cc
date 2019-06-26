@@ -12,9 +12,8 @@ namespace media_player {
 namespace {
 
 ByteRateEstimator::ByteRateSample SampleOfRate(size_t byte_rate) {
-  return ByteRateEstimator::ByteRateSample{.start_time = zx::time(0),
-                                           .stop_time = zx::time(ZX_SEC(1)),
-                                           .bytes_processed = byte_rate};
+  return ByteRateEstimator::ByteRateSample{
+      .start_time = zx::time(0), .stop_time = zx::time(ZX_SEC(1)), .bytes_processed = byte_rate};
 }
 
 TEST(ByteRateEstimator, Estimate) {

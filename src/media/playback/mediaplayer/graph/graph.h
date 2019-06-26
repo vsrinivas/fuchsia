@@ -111,8 +111,7 @@ class Graph {
   // Flushes the output and the subgraph downstream of it. |hold_frame|
   // indicates whether a video renderer should hold and display the newest
   // frame. |callback| is called when all flushes are complete.
-  void FlushOutput(const OutputRef& output, bool hold_frame,
-                   fit::closure callback);
+  void FlushOutput(const OutputRef& output, bool hold_frame, fit::closure callback);
 
   // Flushes the node and the subgraph downstream of it. |hold_frame|
   // indicates whether a video renderer should hold and display the newest
@@ -129,8 +128,7 @@ class Graph {
   // Flushes all the outputs in |backlog| and all inputs/outputs downstream
   // and calls |callback| when all flush operations are complete. |backlog| is
   // empty when this method returns.
-  void FlushOutputs(std::queue<Output*>* backlog, bool hold_frame,
-                    fit::closure callback);
+  void FlushOutputs(std::queue<Output*>* backlog, bool hold_frame, fit::closure callback);
 
   // Flushes the output and the subgraph downstream of it. |hold_frame|
   // indicates whether a video renderer should hold and display the newest

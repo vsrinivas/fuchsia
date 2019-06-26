@@ -25,15 +25,13 @@ class FakeWavReader : public fuchsia::media::playback::SeekingReader {
   ~FakeWavReader() override;
 
   void SetSize(uint64_t size) {
-    FXL_DCHECK(size > kMasterChunkHeaderSize + kFormatChunkSize +
-                          kDataChunkHeaderSize);
+    FXL_DCHECK(size > kMasterChunkHeaderSize + kFormatChunkSize + kDataChunkHeaderSize);
     size_ = size;
     WriteHeader();
   }
 
   // Binds the reader.
-  void Bind(
-      fidl::InterfaceRequest<fuchsia::media::playback::SeekingReader> request);
+  void Bind(fidl::InterfaceRequest<fuchsia::media::playback::SeekingReader> request);
 
   // SeekingReader implementation.
   void Describe(DescribeCallback callback) override;

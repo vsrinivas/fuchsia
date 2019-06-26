@@ -13,8 +13,7 @@
 namespace media_player {
 
 // static
-std::unique_ptr<DemuxSourceSegment> DemuxSourceSegment::Create(
-    std::shared_ptr<Demux> demux) {
+std::unique_ptr<DemuxSourceSegment> DemuxSourceSegment::Create(std::shared_ptr<Demux> demux) {
   return std::make_unique<DemuxSourceSegment>(demux);
 }
 
@@ -22,8 +21,7 @@ DemuxSourceSegment::DemuxSourceSegment(std::shared_ptr<Demux> demux)
     : SourceSegment(true), demux_(demux) {
   FXL_DCHECK(demux_);
 
-  demux_->SetStatusCallback([this](int64_t duration_ns, bool can_seek,
-                                   const Metadata& metadata,
+  demux_->SetStatusCallback([this](int64_t duration_ns, bool can_seek, const Metadata& metadata,
                                    const std::string& problem_type,
                                    const std::string& problem_details) {
     duration_ns_ = duration_ns;
@@ -45,8 +43,7 @@ DemuxSourceSegment::DemuxSourceSegment(std::shared_ptr<Demux> demux)
     }
   });
 
-  demux_->WhenInitialized(
-      [this](zx_status_t status) { demux_initialized_.Occur(); });
+  demux_->WhenInitialized([this](zx_status_t status) { demux_initialized_.Occur(); });
 }
 
 DemuxSourceSegment::~DemuxSourceSegment() {}
@@ -79,8 +76,7 @@ void DemuxSourceSegment::BuildGraph() {
   const auto& streams = demux_->streams();
   for (size_t index = 0; index < streams.size(); ++index) {
     auto& stream = streams[index];
-    OnStreamUpdated(stream->index(), *stream->stream_type(),
-                    demux_node_.output(stream->index()),
+    OnStreamUpdated(stream->index(), *stream->stream_type(), demux_node_.output(stream->index()),
                     index != streams.size() - 1);
   }
 }

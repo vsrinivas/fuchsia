@@ -32,14 +32,13 @@ class Packet {
   static const int64_t kMaxPts = std::numeric_limits<int64_t>::max() - 1;
 
   // Creates a packet.
-  static PacketPtr Create(int64_t pts, media::TimelineRate pts_rate,
-                          bool keyframe, bool discontinuity, bool end_of_stream,
-                          size_t size,
+  static PacketPtr Create(int64_t pts, media::TimelineRate pts_rate, bool keyframe,
+                          bool discontinuity, bool end_of_stream, size_t size,
                           fbl::RefPtr<PayloadBuffer> payload_buffer);
 
   // Creates a packet.
-  static PacketPtr Create(int64_t pts, media::TimelineRate pts_rate,
-                          bool keyframe, bool end_of_stream, size_t size,
+  static PacketPtr Create(int64_t pts, media::TimelineRate pts_rate, bool keyframe,
+                          bool end_of_stream, size_t size,
                           fbl::RefPtr<PayloadBuffer> payload_buffer);
 
   // Creates an end-of-stream packet with no payload.
@@ -48,9 +47,8 @@ class Packet {
   // Function type used for |AfterRecycling|.
   using Action = ::fit::function<void(Packet*)>;
 
-  Packet(int64_t pts, media::TimelineRate pts_rate, bool keyframe,
-         bool discontinuity, bool end_of_stream, size_t size,
-         fbl::RefPtr<PayloadBuffer> payload_buffer);
+  Packet(int64_t pts, media::TimelineRate pts_rate, bool keyframe, bool discontinuity,
+         bool end_of_stream, size_t size, fbl::RefPtr<PayloadBuffer> payload_buffer);
 
   virtual ~Packet();
 
@@ -79,9 +77,7 @@ class Packet {
 
   // Returns a pointer to the packet payload or nullptr if there is no payload
   // or the payload isn't mapped into process local memory.
-  void* payload() const {
-    return payload_buffer_ ? payload_buffer_->data() : nullptr;
-  }
+  void* payload() const { return payload_buffer_ ? payload_buffer_->data() : nullptr; }
 
   // Returns the packet's payload buffer.
   fbl::RefPtr<PayloadBuffer> payload_buffer() const { return payload_buffer_; }
@@ -101,9 +97,7 @@ class Packet {
   void SetPtsRate(media::TimelineRate pts_rate);
 
   // Gets the revised stream type, which may be null.
-  const StreamType* revised_stream_type() const {
-    return revised_stream_type_.get();
-  }
+  const StreamType* revised_stream_type() const { return revised_stream_type_.get(); }
 
   // Sets the revised stream type for the packet.
   void SetRevisedStreamType(std::unique_ptr<StreamType> stream_type) {

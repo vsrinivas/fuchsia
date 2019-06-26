@@ -10,8 +10,7 @@
 namespace media_player {
 
 // static
-std::shared_ptr<Decoder> FfmpegAudioDecoder::Create(
-    AvCodecContextPtr av_codec_context) {
+std::shared_ptr<Decoder> FfmpegAudioDecoder::Create(AvCodecContextPtr av_codec_context) {
   return std::make_shared<FfmpegAudioDecoder>(std::move(av_codec_context));
 }
 
@@ -23,8 +22,7 @@ FfmpegAudioDecoder::FfmpegAudioDecoder(AvCodecContextPtr av_codec_context)
   std::unique_ptr<StreamType> stream_type = output_stream_type();
   FXL_DCHECK(stream_type);
   FXL_DCHECK(stream_type->audio());
-  set_pts_rate(
-      media::TimelineRate(stream_type->audio()->frames_per_second(), 1));
+  set_pts_rate(media::TimelineRate(stream_type->audio()->frames_per_second(), 1));
 
   stream_type_ = std::move(stream_type);
 
@@ -52,16 +50,14 @@ void FfmpegAudioDecoder::OnNewInputPacket(const PacketPtr& packet) {
   context()->reordered_opaque = packet->discontinuity() ? 1 : 0;
 }
 
-int FfmpegAudioDecoder::BuildAVFrame(const AVCodecContext& av_codec_context,
-                                     AVFrame* av_frame) {
+int FfmpegAudioDecoder::BuildAVFrame(const AVCodecContext& av_codec_context, AVFrame* av_frame) {
   FXL_DCHECK(av_frame);
 
-  AVSampleFormat av_sample_format =
-      static_cast<AVSampleFormat>(av_frame->format);
+  AVSampleFormat av_sample_format = static_cast<AVSampleFormat>(av_frame->format);
 
-  int buffer_size = av_samples_get_buffer_size(
-      &av_frame->linesize[0], av_codec_context.channels, av_frame->nb_samples,
-      av_sample_format, FfmpegAudioDecoder::kChannelAlign);
+  int buffer_size = av_samples_get_buffer_size(&av_frame->linesize[0], av_codec_context.channels,
+                                               av_frame->nb_samples, av_sample_format,
+                                               FfmpegAudioDecoder::kChannelAlign);
   if (buffer_size < 0) {
     FXL_LOG(WARNING) << "av_samples_get_buffer_size failed";
     return buffer_size;
@@ -69,9 +65,8 @@ int FfmpegAudioDecoder::BuildAVFrame(const AVCodecContext& av_codec_context,
 
   // Get the right payload buffer. If we need to interleave later, we just get
   // a buffer allocated using malloc. If not, we ask the stage for a buffer.
-  fbl::RefPtr<PayloadBuffer> buffer =
-      lpcm_util_ ? PayloadBuffer::CreateWithMalloc(buffer_size)
-                 : AllocatePayloadBuffer(buffer_size);
+  fbl::RefPtr<PayloadBuffer> buffer = lpcm_util_ ? PayloadBuffer::CreateWithMalloc(buffer_size)
+                                                 : AllocatePayloadBuffer(buffer_size);
 
   if (!buffer) {
     // TODO(dalesat): Record/report packet drop.
@@ -104,14 +99,13 @@ int FfmpegAudioDecoder::BuildAVFrame(const AVCodecContext& av_codec_context,
     } else {
       // Too many channels for av_frame->data. We have to use
       // av_frame->extended_data
-      av_frame->extended_data = static_cast<uint8_t**>(
-          av_malloc(channels * sizeof(*av_frame->extended_data)));
+      av_frame->extended_data =
+          static_cast<uint8_t**>(av_malloc(channels * sizeof(*av_frame->extended_data)));
 
       // The first AV_NUM_DATA_POINTERS go in both data and extended_data.
       int channel = 0;
       for (; channel < AV_NUM_DATA_POINTERS; ++channel) {
-        av_frame->extended_data[channel] = av_frame->data[channel] =
-            channel_buffer;
+        av_frame->extended_data[channel] = av_frame->data[channel] = channel_buffer;
         channel_buffer += bytes_per_channel;
       }
 
@@ -129,8 +123,8 @@ int FfmpegAudioDecoder::BuildAVFrame(const AVCodecContext& av_codec_context,
   return 0;
 }
 
-PacketPtr FfmpegAudioDecoder::CreateOutputPacket(
-    const AVFrame& av_frame, fbl::RefPtr<PayloadBuffer> payload_buffer) {
+PacketPtr FfmpegAudioDecoder::CreateOutputPacket(const AVFrame& av_frame,
+                                                 fbl::RefPtr<PayloadBuffer> payload_buffer) {
   FXL_DCHECK(av_frame.buf[0]);
   FXL_DCHECK(payload_buffer);
 
@@ -147,8 +141,7 @@ PacketPtr FfmpegAudioDecoder::CreateOutputPacket(
   FXL_DCHECK(stream_type_);
   FXL_DCHECK(stream_type_->audio());
 
-  uint64_t payload_size =
-      stream_type_->audio()->min_buffer_size(av_frame.nb_samples);
+  uint64_t payload_size = stream_type_->audio()->min_buffer_size(av_frame.nb_samples);
 
   if (lpcm_util_) {
     // We need to interleave. The non-interleaved frames are in
@@ -161,10 +154,9 @@ PacketPtr FfmpegAudioDecoder::CreateOutputPacket(
       return nullptr;
     }
 
-    lpcm_util_->Interleave(
-        payload_buffer->data(),
-        av_frame.linesize[0] * stream_type_->audio()->channels(),
-        new_payload_buffer->data(), av_frame.nb_samples);
+    lpcm_util_->Interleave(payload_buffer->data(),
+                           av_frame.linesize[0] * stream_type_->audio()->channels(),
+                           new_payload_buffer->data(), av_frame.nb_samples);
 
     // |new_payload_buffer| is the buffer we want to attach to the |Packet|.
     // This assignment drops the reference to the original |payload_buffer|, so
@@ -174,12 +166,11 @@ PacketPtr FfmpegAudioDecoder::CreateOutputPacket(
 
   // Create the output packet. We set the discontinuity bit on the packet if
   // the corresponding input packet had one.
-  return Packet::Create(
-      pts, pts_rate(),
-      false,                           // Not a keyframe
-      av_frame.reordered_opaque != 0,  // discontinuity
-      false,  // Not end-of-stream. The base class handles end-of-stream.
-      payload_size, std::move(payload_buffer));
+  return Packet::Create(pts, pts_rate(),
+                        false,                           // Not a keyframe
+                        av_frame.reordered_opaque != 0,  // discontinuity
+                        false,  // Not end-of-stream. The base class handles end-of-stream.
+                        payload_size, std::move(payload_buffer));
 }
 
 const char* FfmpegAudioDecoder::label() const { return "audio_decoder"; }

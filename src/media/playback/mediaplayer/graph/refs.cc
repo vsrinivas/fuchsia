@@ -45,9 +45,7 @@ OutputRef NodeRef::output() const {
   return OutputRef(&node_->output(0));
 }
 
-NodeRef InputRef::node() const {
-  return input_ ? NodeRef(input_->node()) : NodeRef();
-}
+NodeRef InputRef::node() const { return input_ ? NodeRef(input_->node()) : NodeRef(); }
 
 bool InputRef::connected() const {
   FXL_DCHECK(input_);
@@ -59,9 +57,7 @@ OutputRef InputRef::mate() const {
   return OutputRef(input_->mate());
 }
 
-NodeRef OutputRef::node() const {
-  return output_ ? NodeRef(output_->node()) : NodeRef();
-}
+NodeRef OutputRef::node() const { return output_ ? NodeRef(output_->node()) : NodeRef(); }
 
 bool OutputRef::connected() const {
   FXL_DCHECK(output_);

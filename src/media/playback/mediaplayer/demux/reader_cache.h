@@ -27,11 +27,9 @@ namespace media_player {
 // ReaderCache will serve ReadAt requests from its in-memory cache, and maintain
 // its cache asynchronously using the upstream reader on a schedule determined
 // by the cache options (see SetCacheOptions).
-class ReaderCache : public Reader,
-                    public std::enable_shared_from_this<ReaderCache> {
+class ReaderCache : public Reader, public std::enable_shared_from_this<ReaderCache> {
  public:
-  static std::shared_ptr<ReaderCache> Create(
-      std::shared_ptr<Reader> upstream_reader);
+  static std::shared_ptr<ReaderCache> Create(std::shared_ptr<Reader> upstream_reader);
 
   ReaderCache(std::shared_ptr<Reader> upstream_reader);
 
@@ -67,8 +65,7 @@ class ReaderCache : public Reader,
   // allocations. 2) Makes async calls for the upstream |Reader| to fill all the
   // holes in the desired cache range. 3) Invokes |load_callback| on completion
   // of the load.
-  void StartLoadForPosition(size_t position,
-                            fit::function<void(zx_status_t)> load_callback);
+  void StartLoadForPosition(size_t position, fit::function<void(zx_status_t)> load_callback);
 
   // Estimates load range based on observations of the input (upstream source)
   // and output (demux requests) byte rates. Returns std::nullopt if there is

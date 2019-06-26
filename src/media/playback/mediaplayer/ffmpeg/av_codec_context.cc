@@ -115,37 +115,30 @@ bool IsLpcm(AVCodecID codec_id) {
 }
 
 // Creates a StreamType from an AVCodecContext describing an audio type.
-std::unique_ptr<StreamType> StreamTypeFromAudioCodecContext(
-    const AVCodecContext& from) {
+std::unique_ptr<StreamType> StreamTypeFromAudioCodecContext(const AVCodecContext& from) {
   bool decoded = from.codec != nullptr || IsLpcm(from.codec_id);
 
   return AudioStreamType::Create(
-      decoded ? StreamType::kAudioEncodingLpcm
-              : EncodingFromCodecId(from.codec_id),
-      (decoded || from.extradata_size == 0)
-          ? nullptr
-          : Bytes::Create(from.extradata, from.extradata_size),
+      decoded ? StreamType::kAudioEncodingLpcm : EncodingFromCodecId(from.codec_id),
+      (decoded || from.extradata_size == 0) ? nullptr
+                                            : Bytes::Create(from.extradata, from.extradata_size),
       Convert(from.sample_fmt), from.channels, from.sample_rate);
 }
 
 // Creates a StreamType from an AVCodecContext describing an audio type.
-std::unique_ptr<StreamType> StreamTypeFromAudioCodecParameters(
-    const AVCodecParameters& from) {
+std::unique_ptr<StreamType> StreamTypeFromAudioCodecParameters(const AVCodecParameters& from) {
   bool decoded = IsLpcm(from.codec_id);
 
   return AudioStreamType::Create(
-      decoded ? StreamType::kAudioEncodingLpcm
-              : EncodingFromCodecId(from.codec_id),
-      (decoded || from.extradata_size == 0)
-          ? nullptr
-          : Bytes::Create(from.extradata, from.extradata_size),
-      Convert(static_cast<AVSampleFormat>(from.format)), from.channels,
-      from.sample_rate);
+      decoded ? StreamType::kAudioEncodingLpcm : EncodingFromCodecId(from.codec_id),
+      (decoded || from.extradata_size == 0) ? nullptr
+                                            : Bytes::Create(from.extradata, from.extradata_size),
+      Convert(static_cast<AVSampleFormat>(from.format)), from.channels, from.sample_rate);
 }
 
 // Converts AVColorSpace and AVColorRange to ColorSpace.
-VideoStreamType::ColorSpace ColorSpaceFromAVColorSpaceAndRange(
-    AVColorSpace color_space, AVColorRange color_range) {
+VideoStreamType::ColorSpace ColorSpaceFromAVColorSpaceAndRange(AVColorSpace color_space,
+                                                               AVColorRange color_range) {
   // TODO(dalesat): Blindly copied from Chromium.
   if (color_range == AVCOL_RANGE_JPEG) {
     return VideoStreamType::ColorSpace::kJpeg;
@@ -165,12 +158,10 @@ VideoStreamType::ColorSpace ColorSpaceFromAVColorSpaceAndRange(
 }
 
 // Creates a StreamType from an AVCodecContext describing a video type.
-std::unique_ptr<StreamType> StreamTypeFromVideoCodecContext(
-    const AVCodecContext& from) {
+std::unique_ptr<StreamType> StreamTypeFromVideoCodecContext(const AVCodecContext& from) {
   int coded_width = from.coded_width;
   int coded_height = from.coded_height;
-  avcodec_align_dimensions(const_cast<AVCodecContext*>(&from), &coded_width,
-                           &coded_height);
+  avcodec_align_dimensions(const_cast<AVCodecContext*>(&from), &coded_width, &coded_height);
   FXL_DCHECK(coded_width >= from.coded_width);
   FXL_DCHECK(coded_height >= from.coded_height);
 
@@ -199,23 +190,21 @@ std::unique_ptr<StreamType> StreamTypeFromVideoCodecContext(
           ? nullptr
           : Bytes::Create(from.extradata, from.extradata_size),
       PixelFormatFromAVPixelFormat(from.pix_fmt),
-      ColorSpaceFromAVColorSpaceAndRange(from.colorspace, from.color_range),
-      from.width, from.height, coded_width, coded_height, aspect_ratio_width,
-      aspect_ratio_height, line_stride);
+      ColorSpaceFromAVColorSpaceAndRange(from.colorspace, from.color_range), from.width,
+      from.height, coded_width, coded_height, aspect_ratio_width, aspect_ratio_height, line_stride);
 }
 
 // Creates a StreamType from an AVStream describing a video type.
 std::unique_ptr<StreamType> StreamTypeFromVideoStream(const AVStream& from) {
   const AVCodecParameters parameters = *from.codecpar;
 
-  VideoStreamType::PixelFormat pixel_format = PixelFormatFromAVPixelFormat(
-      static_cast<AVPixelFormat>(parameters.format));
+  VideoStreamType::PixelFormat pixel_format =
+      PixelFormatFromAVPixelFormat(static_cast<AVPixelFormat>(parameters.format));
 
   AVRational pixel_aspect_ratio = {1, 1};
   if (from.sample_aspect_ratio.num != 0 && from.sample_aspect_ratio.den != 0) {
     pixel_aspect_ratio = from.sample_aspect_ratio;
-  } else if (parameters.sample_aspect_ratio.num != 0 &&
-             parameters.sample_aspect_ratio.den != 0) {
+  } else if (parameters.sample_aspect_ratio.num != 0 && parameters.sample_aspect_ratio.den != 0) {
     pixel_aspect_ratio = parameters.sample_aspect_ratio;
   }
 
@@ -225,45 +214,36 @@ std::unique_ptr<StreamType> StreamTypeFromVideoStream(const AVStream& from) {
           ? nullptr
           : Bytes::Create(parameters.extradata, parameters.extradata_size),
       pixel_format,
-      ColorSpaceFromAVColorSpaceAndRange(parameters.color_space,
-                                         parameters.color_range),
-      parameters.width, parameters.height, 0, 0, pixel_aspect_ratio.num,
-      pixel_aspect_ratio.den, 0);
+      ColorSpaceFromAVColorSpaceAndRange(parameters.color_space, parameters.color_range),
+      parameters.width, parameters.height, 0, 0, pixel_aspect_ratio.num, pixel_aspect_ratio.den, 0);
 }
 
 // Creates a StreamType from an AVCodecContext describing a data type.
-std::unique_ptr<StreamType> StreamTypeFromDataCodecContext(
-    const AVCodecContext& from) {
+std::unique_ptr<StreamType> StreamTypeFromDataCodecContext(const AVCodecContext& from) {
   // TODO(dalesat): Implement.
   return TextStreamType::Create("UNSUPPORTED TYPE (FFMPEG DATA)", nullptr);
 }
 
 // Creates a StreamType from AVCodecParameters describing a data type.
-std::unique_ptr<StreamType> StreamTypeFromDataCodecParameters(
-    const AVCodecParameters& from) {
+std::unique_ptr<StreamType> StreamTypeFromDataCodecParameters(const AVCodecParameters& from) {
   // TODO(dalesat): Implement.
   return TextStreamType::Create("UNSUPPORTED TYPE (FFMPEG DATA)", nullptr);
 }
 
 // Creates a StreamType from an AVCodecContext describing a subtitle type.
-std::unique_ptr<StreamType> StreamTypeFromSubtitleCodecContext(
-    const AVCodecContext& from) {
+std::unique_ptr<StreamType> StreamTypeFromSubtitleCodecContext(const AVCodecContext& from) {
   // TODO(dalesat): Implement.
-  return SubpictureStreamType::Create("UNSUPPORTED TYPE (FFMPEG SUBTITLE)",
-                                      nullptr);
+  return SubpictureStreamType::Create("UNSUPPORTED TYPE (FFMPEG SUBTITLE)", nullptr);
 }
 
 // Creates a StreamType from AVCodecParameters describing a subtitle type.
-std::unique_ptr<StreamType> StreamTypeFromSubtitleCodecParameters(
-    const AVCodecParameters& from) {
+std::unique_ptr<StreamType> StreamTypeFromSubtitleCodecParameters(const AVCodecParameters& from) {
   // TODO(dalesat): Implement.
-  return SubpictureStreamType::Create("UNSUPPORTED TYPE (FFMPEG SUBTITLE)",
-                                      nullptr);
+  return SubpictureStreamType::Create("UNSUPPORTED TYPE (FFMPEG SUBTITLE)", nullptr);
 }
 
 // Creates an AVCodecContext from an AudioStreamType.
-AvCodecContextPtr AVCodecContextFromAudioStreamType(
-    const AudioStreamType& stream_type) {
+AvCodecContextPtr AVCodecContextFromAudioStreamType(const AudioStreamType& stream_type) {
   FXL_DCHECK(stream_type.medium() == StreamType::Medium::kAudio);
 
   AVCodecID codec_id;
@@ -353,8 +333,7 @@ AvCodecContextPtr AVCodecContextFromAudioStreamType(
 }
 
 // Creats an AVCodecContext from a VideoStreamType.
-AvCodecContextPtr AVCodecContextFromVideoStreamType(
-    const VideoStreamType& stream_type) {
+AvCodecContextPtr AVCodecContextFromVideoStreamType(const VideoStreamType& stream_type) {
   AVCodecID codec_id = AV_CODEC_ID_NONE;
 
   if (stream_type.encoding() == StreamType::kVideoEncodingH263) {
@@ -403,16 +382,14 @@ AvCodecContextPtr AVCodecContextFromVideoStreamType(
 }
 
 // Creats an AVCodecContext from a TextStreamType.
-AvCodecContextPtr AVCodecContextFromTextStreamType(
-    const TextStreamType& stream_type) {
+AvCodecContextPtr AVCodecContextFromTextStreamType(const TextStreamType& stream_type) {
   // TODO(dalesat): Implement.
   FXL_LOG(ERROR) << "AVCodecContextFromTextStreamType not implemented";
   abort();
 }
 
 // Creats an AVCodecContext from a SubpictureStreamType.
-AvCodecContextPtr AVCodecContextFromSubpictureStreamType(
-    const SubpictureStreamType& stream_type) {
+AvCodecContextPtr AVCodecContextFromSubpictureStreamType(const SubpictureStreamType& stream_type) {
   // TODO(dalesat): Implement.
   FXL_LOG(ERROR) << "AVCodecContextFromSupictureStreamType not implemented";
   abort();
@@ -420,8 +397,7 @@ AvCodecContextPtr AVCodecContextFromSubpictureStreamType(
 
 }  // namespace
 
-VideoStreamType::PixelFormat PixelFormatFromAVPixelFormat(
-    AVPixelFormat av_pixel_format) {
+VideoStreamType::PixelFormat PixelFormatFromAVPixelFormat(AVPixelFormat av_pixel_format) {
   switch (av_pixel_format) {
     case AV_PIX_FMT_YUV420P:
     case AV_PIX_FMT_YUVJ420P:
@@ -431,8 +407,7 @@ VideoStreamType::PixelFormat PixelFormatFromAVPixelFormat(
   }
 }
 
-AVPixelFormat AVPixelFormatFromPixelFormat(
-    VideoStreamType::PixelFormat pixel_format) {
+AVPixelFormat AVPixelFormatFromPixelFormat(VideoStreamType::PixelFormat pixel_format) {
   switch (pixel_format) {
     case VideoStreamType::PixelFormat::kYv12:
       return AV_PIX_FMT_YUV420P;
@@ -446,8 +421,7 @@ AVPixelFormat AVPixelFormatFromPixelFormat(
 }
 
 // static
-std::unique_ptr<StreamType> AvCodecContext::GetStreamType(
-    const AVCodecContext& from) {
+std::unique_ptr<StreamType> AvCodecContext::GetStreamType(const AVCodecContext& from) {
   switch (from.codec_type) {
     case AVMEDIA_TYPE_AUDIO:
       return StreamTypeFromAudioCodecContext(from);
@@ -468,8 +442,7 @@ std::unique_ptr<StreamType> AvCodecContext::GetStreamType(
 }
 
 // static
-std::unique_ptr<StreamType> AvCodecContext::GetStreamType(
-    const AVStream& from) {
+std::unique_ptr<StreamType> AvCodecContext::GetStreamType(const AVStream& from) {
   switch (from.codecpar->codec_type) {
     case AVMEDIA_TYPE_AUDIO:
       return StreamTypeFromAudioCodecParameters(*from.codecpar);

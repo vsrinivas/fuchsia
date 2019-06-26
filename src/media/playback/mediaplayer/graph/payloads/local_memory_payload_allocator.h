@@ -12,9 +12,8 @@
 
 namespace media_player {
 
-class LocalMemoryPayloadAllocator
-    : public PayloadAllocator,
-      public fbl::RefCounted<LocalMemoryPayloadAllocator> {
+class LocalMemoryPayloadAllocator : public PayloadAllocator,
+                                    public fbl::RefCounted<LocalMemoryPayloadAllocator> {
  public:
   static fbl::RefPtr<LocalMemoryPayloadAllocator> Create();
 

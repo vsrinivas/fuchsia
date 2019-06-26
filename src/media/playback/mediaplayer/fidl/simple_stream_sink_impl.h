@@ -16,8 +16,7 @@
 namespace media_player {
 
 // Fidl decoder as exposed by the codec factory service.
-class SimpleStreamSinkImpl : public Node,
-                             public fuchsia::media::SimpleStreamSink {
+class SimpleStreamSinkImpl : public Node, public fuchsia::media::SimpleStreamSink {
  public:
   // Creates a fidl decoder factory. Calls the callback with the initalized
   // decoder on success. Calls the callback with nullptr on failure.
@@ -25,9 +24,8 @@ class SimpleStreamSinkImpl : public Node,
       const StreamType& output_stream_type, media::TimelineRate pts_rate,
       fidl::InterfaceRequest<fuchsia::media::SimpleStreamSink> request);
 
-  SimpleStreamSinkImpl(
-      const StreamType& output_stream_type, media::TimelineRate pts_rate,
-      fidl::InterfaceRequest<fuchsia::media::SimpleStreamSink> request);
+  SimpleStreamSinkImpl(const StreamType& output_stream_type, media::TimelineRate pts_rate,
+                       fidl::InterfaceRequest<fuchsia::media::SimpleStreamSink> request);
 
   ~SimpleStreamSinkImpl() override;
 
@@ -52,8 +50,7 @@ class SimpleStreamSinkImpl : public Node,
 
   void RemovePayloadBuffer(uint32_t id) override;
 
-  void SendPacket(fuchsia::media::StreamPacket packet,
-                  SendPacketCallback callback) override;
+  void SendPacket(fuchsia::media::StreamPacket packet, SendPacketCallback callback) override;
 
   void SendPacketNoReply(fuchsia::media::StreamPacket packet) override;
 

@@ -19,11 +19,10 @@ namespace media_player {
 // with the OutputRef for the end of the pipeline and the new stream type. If it
 // fails, the function calls back with the original OutputRef and a null
 // stream type pointer.
-void BuildConversionPipeline(
-    const StreamType& in_type,
-    const std::vector<std::unique_ptr<StreamTypeSet>>& out_type_sets,
-    Graph* graph, DecoderFactory* decoder_factory, OutputRef output,
-    fit::function<void(OutputRef, std::unique_ptr<StreamType>)> callback);
+void BuildConversionPipeline(const StreamType& in_type,
+                             const std::vector<std::unique_ptr<StreamTypeSet>>& out_type_sets,
+                             Graph* graph, DecoderFactory* decoder_factory, OutputRef output,
+                             fit::function<void(OutputRef, std::unique_ptr<StreamType>)> callback);
 
 }  // namespace media_player
 

@@ -19,8 +19,7 @@ void LocalMemoryPayloadAllocator::Dump(std::ostream& os) const {
   os << "no report (not tracking allocations)";
 }
 
-fbl::RefPtr<PayloadBuffer> LocalMemoryPayloadAllocator::AllocatePayloadBuffer(
-    uint64_t size) {
+fbl::RefPtr<PayloadBuffer> LocalMemoryPayloadAllocator::AllocatePayloadBuffer(uint64_t size) {
   return PayloadBuffer::CreateWithMalloc(size);
 }
 

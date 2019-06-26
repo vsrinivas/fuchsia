@@ -8,8 +8,7 @@
 
 namespace media_player {
 
-std::unique_ptr<DemuxFactory> DemuxFactory::Create(
-    component::StartupContext* startup_context) {
+std::unique_ptr<DemuxFactory> DemuxFactory::Create(component::StartupContext* startup_context) {
   return FfmpegDemuxFactory::Create(startup_context);
 }
 

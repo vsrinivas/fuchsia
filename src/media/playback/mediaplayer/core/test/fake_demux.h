@@ -24,15 +24,12 @@ class FakeDemux : public Demux {
 
   // Demux implementation.
   void ConfigureConnectors() override {
-    for (size_t output_index = 0; output_index < streams_.size();
-         ++output_index) {
+    for (size_t output_index = 0; output_index < streams_.size(); ++output_index) {
       ConfigureOutputToProvideLocalMemory(output_index);
     }
   }
 
-  void FlushOutput(size_t output_index, fit::closure callback) override {
-    callback();
-  }
+  void FlushOutput(size_t output_index, fit::closure callback) override { callback(); }
 
   void RequestOutputPacket() override {}
 
@@ -42,13 +39,9 @@ class FakeDemux : public Demux {
 
   void SetCacheOptions(zx_duration_t lead, zx_duration_t backtrack) override {}
 
-  void WhenInitialized(fit::function<void(zx_status_t)> callback) override {
-    callback(ZX_OK);
-  }
+  void WhenInitialized(fit::function<void(zx_status_t)> callback) override { callback(ZX_OK); }
 
-  const std::vector<std::unique_ptr<DemuxStream>>& streams() const override {
-    return streams_;
-  }
+  const std::vector<std::unique_ptr<DemuxStream>>& streams() const override { return streams_; }
 
   void Seek(int64_t position, SeekCallback callback) override {}
 
@@ -57,17 +50,13 @@ class FakeDemux : public Demux {
    public:
     DemuxStreamImpl(size_t index, std::unique_ptr<StreamType> stream_type,
                     media::TimelineRate pts_rate)
-        : index_(index),
-          stream_type_(std::move(stream_type)),
-          pts_rate_(pts_rate) {}
+        : index_(index), stream_type_(std::move(stream_type)), pts_rate_(pts_rate) {}
 
     ~DemuxStreamImpl() override {}
 
     size_t index() const override { return index_; }
 
-    std::unique_ptr<StreamType> stream_type() const override {
-      return stream_type_->Clone();
-    }
+    std::unique_ptr<StreamType> stream_type() const override { return stream_type_->Clone(); }
 
     media::TimelineRate pts_rate() const override { return pts_rate_; }
 

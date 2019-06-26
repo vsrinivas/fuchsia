@@ -36,8 +36,7 @@ class FfmpegDecoderBase : public SoftwareDecoder {
   // SoftwareDecoder overrides.
   void Flush() override;
 
-  bool TransformPacket(const PacketPtr& input, bool new_input,
-                       PacketPtr* output) override;
+  bool TransformPacket(const PacketPtr& input, bool new_input, PacketPtr* output) override;
 
   // Called when a new input packet is about to be processed. The default
   // implementation does nothing.
@@ -46,12 +45,11 @@ class FfmpegDecoderBase : public SoftwareDecoder {
   // Fills in |av_frame|, probably using an |AVBuffer| allocated via
   // CreateAVBuffer. |av_codec_context| may be distinct from context() and
   // should be used when a codec context is required.
-  virtual int BuildAVFrame(const AVCodecContext& av_codec_context,
-                           AVFrame* av_frame) = 0;
+  virtual int BuildAVFrame(const AVCodecContext& av_codec_context, AVFrame* av_frame) = 0;
 
   // Creates a Packet from av_frame.
-  virtual PacketPtr CreateOutputPacket(
-      const AVFrame& av_frame, fbl::RefPtr<PayloadBuffer> payload_buffer) = 0;
+  virtual PacketPtr CreateOutputPacket(const AVFrame& av_frame,
+                                       fbl::RefPtr<PayloadBuffer> payload_buffer) = 0;
 
   // The ffmpeg codec context.
   const AvCodecContextPtr& context() { return av_codec_context_; }
@@ -76,8 +74,8 @@ class FfmpegDecoderBase : public SoftwareDecoder {
 
  private:
   // Callback used by the ffmpeg decoder to acquire a buffer.
-  static int AllocateBufferForAvFrame(AVCodecContext* av_codec_context,
-                                      AVFrame* av_frame, int flags);
+  static int AllocateBufferForAvFrame(AVCodecContext* av_codec_context, AVFrame* av_frame,
+                                      int flags);
 
   // Callback used by the ffmpeg decoder to release a buffer.
   static void ReleaseBufferForAvFrame(void* opaque, uint8_t* buffer);

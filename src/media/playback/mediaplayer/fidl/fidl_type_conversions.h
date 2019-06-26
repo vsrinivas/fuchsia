@@ -30,17 +30,14 @@ struct TypeConverter<media_player::AudioStreamType::SampleFormat,
 };
 
 template <>
-struct TypeConverter<media_player::VideoStreamType::PixelFormat,
-                     fuchsia::images::PixelFormat> {
+struct TypeConverter<media_player::VideoStreamType::PixelFormat, fuchsia::images::PixelFormat> {
   static media_player::VideoStreamType::PixelFormat Convert(
       fuchsia::images::PixelFormat pixel_format);
 };
 
 template <>
-struct TypeConverter<media_player::VideoStreamType::ColorSpace,
-                     fuchsia::media::ColorSpace> {
-  static media_player::VideoStreamType::ColorSpace Convert(
-      fuchsia::media::ColorSpace color_space);
+struct TypeConverter<media_player::VideoStreamType::ColorSpace, fuchsia::media::ColorSpace> {
+  static media_player::VideoStreamType::ColorSpace Convert(fuchsia::media::ColorSpace color_space);
 };
 
 template <>
@@ -51,30 +48,24 @@ struct TypeConverter<fuchsia::media::AudioSampleFormat,
 };
 
 template <>
-struct TypeConverter<fuchsia::images::PixelFormat,
-                     media_player::VideoStreamType::PixelFormat> {
+struct TypeConverter<fuchsia::images::PixelFormat, media_player::VideoStreamType::PixelFormat> {
   static fuchsia::images::PixelFormat Convert(
       media_player::VideoStreamType::PixelFormat pixel_format);
 };
 
 template <>
-struct TypeConverter<fuchsia::media::ColorSpace,
-                     media_player::VideoStreamType::ColorSpace> {
-  static fuchsia::media::ColorSpace Convert(
-      media_player::VideoStreamType::ColorSpace color_space);
+struct TypeConverter<fuchsia::media::ColorSpace, media_player::VideoStreamType::ColorSpace> {
+  static fuchsia::media::ColorSpace Convert(media_player::VideoStreamType::ColorSpace color_space);
 };
 
 template <>
 struct TypeConverter<fuchsia::media::StreamType, media_player::StreamType> {
-  static fuchsia::media::StreamType Convert(
-      const media_player::StreamType& input);
+  static fuchsia::media::StreamType Convert(const media_player::StreamType& input);
 };
 
 template <>
-struct TypeConverter<std::unique_ptr<media_player::StreamType>,
-                     fuchsia::media::StreamType> {
-  static std::unique_ptr<media_player::StreamType> Convert(
-      const fuchsia::media::StreamType& input);
+struct TypeConverter<std::unique_ptr<media_player::StreamType>, fuchsia::media::StreamType> {
+  static std::unique_ptr<media_player::StreamType> Convert(const fuchsia::media::StreamType& input);
 };
 
 template <>
@@ -94,20 +85,16 @@ struct TypeConverter<VectorPtr<uint8_t>, const media_player::Bytes*> {
 
 template <>
 struct TypeConverter<std::unique_ptr<media_player::Bytes>, VectorPtr<uint8_t>> {
-  static std::unique_ptr<media_player::Bytes> Convert(
-      const VectorPtr<uint8_t>& input);
+  static std::unique_ptr<media_player::Bytes> Convert(const VectorPtr<uint8_t>& input);
 };
 
 template <>
-struct TypeConverter<fuchsia::media::FormatDetailsPtr,
-                     media_player::StreamType> {
-  static fuchsia::media::FormatDetailsPtr Convert(
-      const media_player::StreamType& input);
+struct TypeConverter<fuchsia::media::FormatDetailsPtr, media_player::StreamType> {
+  static fuchsia::media::FormatDetailsPtr Convert(const media_player::StreamType& input);
 };
 
 template <>
-struct TypeConverter<std::unique_ptr<media_player::StreamType>,
-                     fuchsia::media::FormatDetails> {
+struct TypeConverter<std::unique_ptr<media_player::StreamType>, fuchsia::media::FormatDetails> {
   static std::unique_ptr<media_player::StreamType> Convert(
       const fuchsia::media::FormatDetails& input);
 };

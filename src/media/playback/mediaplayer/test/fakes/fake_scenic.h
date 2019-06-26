@@ -24,8 +24,7 @@ class FakeScenic : public fuchsia::ui::scenic::Scenic {
   FakeSession& session() { return fake_session_; }
 
   // Returns a request handler for binding to this fake service.
-  fidl::InterfaceRequestHandler<fuchsia::ui::scenic::Scenic>
-  GetRequestHandler() {
+  fidl::InterfaceRequestHandler<fuchsia::ui::scenic::Scenic> GetRequestHandler() {
     return bindings_.GetHandler(this);
   }
 
@@ -35,15 +34,12 @@ class FakeScenic : public fuchsia::ui::scenic::Scenic {
   }
 
   // Scenic implementation.
-  void CreateSession(
-      fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session,
-      fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener)
-      override;
+  void CreateSession(fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session,
+                     fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener) override;
 
   void GetDisplayInfo(GetDisplayInfoCallback callback) override;
 
-  void GetDisplayOwnershipEvent(
-      GetDisplayOwnershipEventCallback callback) override;
+  void GetDisplayOwnershipEvent(GetDisplayOwnershipEventCallback callback) override;
 
   void TakeScreenshot(TakeScreenshotCallback callback) override;
 

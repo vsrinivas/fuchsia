@@ -14,14 +14,13 @@ namespace media_player {
 // Describes the type of a subpicture stream.
 class SubpictureStreamType : public StreamType {
  public:
-  static std::unique_ptr<StreamType> Create(
-      const std::string& encoding, std::unique_ptr<Bytes> encoding_parameters) {
+  static std::unique_ptr<StreamType> Create(const std::string& encoding,
+                                            std::unique_ptr<Bytes> encoding_parameters) {
     return std::unique_ptr<StreamType>(
         new SubpictureStreamType(encoding, std::move(encoding_parameters)));
   }
 
-  SubpictureStreamType(const std::string& encoding,
-                       std::unique_ptr<Bytes> encoding_parameters);
+  SubpictureStreamType(const std::string& encoding, std::unique_ptr<Bytes> encoding_parameters);
 
   ~SubpictureStreamType() override;
 
@@ -33,10 +32,8 @@ class SubpictureStreamType : public StreamType {
 // Describes a set of subpicture stream types.
 class SubpictureStreamTypeSet : public StreamTypeSet {
  public:
-  static std::unique_ptr<StreamTypeSet> Create(
-      const std::vector<std::string>& encodings) {
-    return std::unique_ptr<StreamTypeSet>(
-        new SubpictureStreamTypeSet(encodings));
+  static std::unique_ptr<StreamTypeSet> Create(const std::vector<std::string>& encodings) {
+    return std::unique_ptr<StreamTypeSet>(new SubpictureStreamTypeSet(encodings));
   }
 
   SubpictureStreamTypeSet(const std::vector<std::string>& encodings);

@@ -17,9 +17,8 @@ class SinkFeeder {
 
   ~SinkFeeder() = default;
 
-  zx_status_t Init(fuchsia::media::SimpleStreamSinkPtr sink, size_t size,
-                   uint32_t frame_size, uint32_t max_packet_size,
-                   uint32_t max_packet_count);
+  zx_status_t Init(fuchsia::media::SimpleStreamSinkPtr sink, size_t size, uint32_t frame_size,
+                   uint32_t max_packet_size, uint32_t max_packet_count);
 
  private:
   void MaybeSendPacket();

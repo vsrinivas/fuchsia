@@ -13,8 +13,7 @@ namespace media_player {
 class FfmpegDemuxFactory : public DemuxFactory {
  public:
   // Creates an ffmpeg demux factory.
-  static std::unique_ptr<DemuxFactory> Create(
-      component::StartupContext* startup_context);
+  static std::unique_ptr<DemuxFactory> Create(component::StartupContext* startup_context);
 
   FfmpegDemuxFactory();
 

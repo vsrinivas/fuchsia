@@ -69,14 +69,11 @@ class FakeSourceSegment : public SourceSegment {
 
   bool TEST_provisioned() { return provisioned(); }
 
-  void TEST_OnStreamUpdated(size_t index, const StreamType& type,
-                            OutputRef output, bool more) {
+  void TEST_OnStreamUpdated(size_t index, const StreamType& type, OutputRef output, bool more) {
     OnStreamUpdated(index, type, output, more);
   }
 
-  void TEST_OnStreamRemoved(size_t index, bool more) {
-    OnStreamRemoved(index, more);
-  }
+  void TEST_OnStreamRemoved(size_t index, bool more) { OnStreamRemoved(index, more); }
 
  public:
   // Instrumentation for test.

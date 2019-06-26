@@ -48,19 +48,14 @@ class FakeAudioRenderer : public fuchsia::media::AudioRenderer,
     return expected_ &&
            (expected_packets_info_.empty() ||
             expected_packets_info_iter_ == expected_packets_info_.end()) &&
-           (delay_packet_retirement_pts_ == fuchsia::media::NO_TIMESTAMP ||
-            packet_queue_.empty());
+           (delay_packet_retirement_pts_ == fuchsia::media::NO_TIMESTAMP || packet_queue_.empty());
   }
 
   // Sets a flag indicating whether this fake renderer should retain packets
   // (true) or retire them in a timeline manner (false).
-  void SetRetainPackets(bool retain_packets) {
-    retain_packets_ = retain_packets;
-  }
+  void SetRetainPackets(bool retain_packets) { retain_packets_ = retain_packets; }
 
-  void DelayPacketRetirement(int64_t packet_pts) {
-    delay_packet_retirement_pts_ = packet_pts;
-  }
+  void DelayPacketRetirement(int64_t packet_pts) { delay_packet_retirement_pts_ = packet_pts; }
 
   // AudioRenderer implementation.
   void SetPcmStreamType(fuchsia::media::AudioStreamType format) override;
@@ -78,8 +73,7 @@ class FakeAudioRenderer : public fuchsia::media::AudioRenderer,
 
   void SetReferenceClock(zx::handle ref_clock) override;
 
-  void SendPacket(fuchsia::media::StreamPacket packet,
-                  SendPacketCallback callback) override;
+  void SendPacket(fuchsia::media::StreamPacket packet, SendPacketCallback callback) override;
 
   void SendPacketNoReply(fuchsia::media::StreamPacket packet) override;
 
@@ -89,8 +83,7 @@ class FakeAudioRenderer : public fuchsia::media::AudioRenderer,
 
   void DiscardAllPacketsNoReply() override;
 
-  void Play(int64_t reference_time, int64_t media_time,
-            PlayCallback callback) override;
+  void Play(int64_t reference_time, int64_t media_time, PlayCallback callback) override;
 
   void PlayNoReply(int64_t reference_time, int64_t media_time) override;
 
@@ -98,9 +91,7 @@ class FakeAudioRenderer : public fuchsia::media::AudioRenderer,
 
   void PauseNoReply() override;
 
-  void BindGainControl(
-      fidl::InterfaceRequest<fuchsia::media::audio::GainControl> request)
-      override;
+  void BindGainControl(fidl::InterfaceRequest<fuchsia::media::audio::GainControl> request) override;
 
   void EnableMinLeadTimeEvents(bool enabled) override;
 
@@ -145,8 +136,7 @@ class FakeAudioRenderer : public fuchsia::media::AudioRenderer,
   std::vector<PacketInfo> expected_packets_info_;
   std::vector<PacketInfo>::iterator expected_packets_info_iter_;
 
-  std::queue<std::pair<fuchsia::media::StreamPacket, SendPacketCallback>>
-      packet_queue_;
+  std::queue<std::pair<fuchsia::media::StreamPacket, SendPacketCallback>> packet_queue_;
 
   bool expected_ = true;
 };

@@ -30,13 +30,12 @@ void SourceSegment::Deprovision() {
   stream_update_callback_ = nullptr;
 }
 
-void SourceSegment::SetStreamUpdateCallback(
-    StreamUpdateCallback stream_update_callback) {
+void SourceSegment::SetStreamUpdateCallback(StreamUpdateCallback stream_update_callback) {
   stream_update_callback_ = std::move(stream_update_callback);
 }
 
-void SourceSegment::OnStreamUpdated(size_t index, const StreamType& type,
-                                    OutputRef output, bool more) {
+void SourceSegment::OnStreamUpdated(size_t index, const StreamType& type, OutputRef output,
+                                    bool more) {
   FXL_DCHECK(output);
 
   if (streams_.size() <= index) {

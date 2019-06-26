@@ -16,8 +16,7 @@ namespace media_player {
 
 // static
 std::shared_ptr<FileReader> FileReader::Create(zx::channel file_channel) {
-  return std::make_shared<FileReader>(
-      fsl::OpenChannelAsFileDescriptor(std::move(file_channel)));
+  return std::make_shared<FileReader>(fsl::OpenChannelAsFileDescriptor(std::move(file_channel)));
 }
 
 FileReader::FileReader(fxl::UniqueFD fd)
@@ -41,9 +40,8 @@ FileReader::FileReader(fxl::UniqueFD fd)
 FileReader::~FileReader() {}
 
 void FileReader::Describe(DescribeCallback callback) {
-  async::PostTask(dispatcher_, [this, callback = std::move(callback)]() {
-    callback(status_, size_, true);
-  });
+  async::PostTask(dispatcher_,
+                  [this, callback = std::move(callback)]() { callback(status_, size_, true); });
 }
 
 void FileReader::ReadAt(size_t position, uint8_t* buffer, size_t bytes_to_read,
@@ -57,16 +55,15 @@ void FileReader::ReadAt(size_t position, uint8_t* buffer, size_t bytes_to_read,
 
   off_t seek_result = lseek(fd_.get(), position, SEEK_SET);
   if (seek_result < 0) {
-    FXL_LOG(ERROR) << "seek failed, result " << seek_result << " errno "
-                   << errno;
+    FXL_LOG(ERROR) << "seek failed, result " << seek_result << " errno " << errno;
     // TODO(dalesat): More specific error code.
     status_ = ZX_ERR_INTERNAL;
     callback(status_, 0);
     return;
   }
 
-  ssize_t result = fxl::ReadFileDescriptor(
-      fd_.get(), reinterpret_cast<char*>(buffer), bytes_to_read);
+  ssize_t result =
+      fxl::ReadFileDescriptor(fd_.get(), reinterpret_cast<char*>(buffer), bytes_to_read);
   if (result < 0) {
     // TODO(dalesat): More specific error code.
     status_ = ZX_ERR_INTERNAL;
@@ -74,9 +71,8 @@ void FileReader::ReadAt(size_t position, uint8_t* buffer, size_t bytes_to_read,
     return;
   }
 
-  async::PostTask(dispatcher_, [callback = std::move(callback), result]() {
-    callback(ZX_OK, result);
-  });
+  async::PostTask(dispatcher_,
+                  [callback = std::move(callback), result]() { callback(ZX_OK, result); });
 }
 
 }  // namespace media_player

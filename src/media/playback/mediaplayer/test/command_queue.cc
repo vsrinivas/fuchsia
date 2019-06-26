@@ -35,15 +35,13 @@ CommandQueue::CommandQueue() : dispatcher_(async_get_default_dispatcher()) {
 
 CommandQueue::~CommandQueue() {}
 
-void CommandQueue::NotifyStatusChanged(
-    const fuchsia::media::playback::PlayerStatus& status) {
+void CommandQueue::NotifyStatusChanged(const fuchsia::media::playback::PlayerStatus& status) {
   status_ = fidl::MakeOptional(fidl::Clone(status));
 
   MaybeFinishWaitingForStatusCondition();
 
   if (status.timeline_function) {
-    timeline_function_ =
-        fidl::To<media::TimelineFunction>(*status.timeline_function);
+    timeline_function_ = fidl::To<media::TimelineFunction>(*status.timeline_function);
     MaybeScheduleWaitForPositionTask();
     MaybeFinishWaitingForSeekCompletion();
   }
@@ -67,8 +65,7 @@ void CommandQueue::MaybeFinishWaitingForViewReady() {
 }
 
 void CommandQueue::MaybeFinishWaitingForStatusCondition() {
-  if (status_ && wait_for_status_condition_ &&
-      wait_for_status_condition_(*status_)) {
+  if (status_ && wait_for_status_condition_ && wait_for_status_condition_(*status_)) {
     // We have status from the player, are waiting for a condition relating to
     // status to become true and have detected that, indeed, that condition has
     // become true. Clear the condition and continue command execution.
@@ -83,8 +80,7 @@ void CommandQueue::MaybeScheduleWaitForPositionTask() {
     if (timeline_function_.invertible()) {
       // Apply the timeline function in reverse to find the CLOCK_MONOTONIC
       // time at which we should resume executing commands.
-      int64_t wait_for_time =
-          timeline_function_.ApplyInverse(wait_for_position_);
+      int64_t wait_for_time = timeline_function_.ApplyInverse(wait_for_position_);
       wait_for_position_task_.PostForTime(dispatcher_, zx::time(wait_for_time));
     }
   }
@@ -129,8 +125,7 @@ void CommandQueue::SetUrlCommand::Execute(CommandQueue* command_queue) {
   if (url.SchemeIsFile()) {
     auto fd = fxl::UniqueFD(open(url.path().c_str(), O_RDONLY));
     FXL_CHECK(fd.is_valid());
-    command_queue->player_->SetFileSource(
-        fsl::CloneChannelFromFileDescriptor(fd.get()));
+    command_queue->player_->SetFileSource(fsl::CloneChannelFromFileDescriptor(fd.get()));
   } else {
     command_queue->player_->SetHttpSource(url_, nullptr);
   }
@@ -147,8 +142,7 @@ void CommandQueue::SetFileCommand::Execute(CommandQueue* command_queue) {
 
   auto fd = fxl::UniqueFD(open(path_.c_str(), O_RDONLY));
   FXL_CHECK(fd.is_valid());
-  command_queue->player_->SetFileSource(
-      fsl::CloneChannelFromFileDescriptor(fd.get()));
+  command_queue->player_->SetFileSource(fsl::CloneChannelFromFileDescriptor(fd.get()));
   command_queue->prev_seek_position_ = 0;
   command_queue->status_ = nullptr;
   command_queue->ExecuteNextCommand();
@@ -193,8 +187,7 @@ void CommandQueue::InvokeCommand::Execute(CommandQueue* command_queue) {
   command_queue->ExecuteNextCommand();
 }
 
-void CommandQueue::WaitForStatusConditionCommand::Execute(
-    CommandQueue* command_queue) {
+void CommandQueue::WaitForStatusConditionCommand::Execute(CommandQueue* command_queue) {
   if (command_queue->verbose_) {
     std::cerr << "WaitForStatusConditionCommand\n";
   }
@@ -205,8 +198,7 @@ void CommandQueue::WaitForStatusConditionCommand::Execute(
   command_queue->MaybeFinishWaitingForStatusCondition();
 }
 
-void CommandQueue::WaitForViewReadyCommand::Execute(
-    CommandQueue* command_queue) {
+void CommandQueue::WaitForViewReadyCommand::Execute(CommandQueue* command_queue) {
   if (command_queue->verbose_) {
     std::cerr << "WaitForViewReady\n";
   }
@@ -216,8 +208,7 @@ void CommandQueue::WaitForViewReadyCommand::Execute(
   command_queue->MaybeFinishWaitingForViewReady();
 }
 
-void CommandQueue::WaitForPositionCommand::Execute(
-    CommandQueue* command_queue) {
+void CommandQueue::WaitForPositionCommand::Execute(CommandQueue* command_queue) {
   if (command_queue->verbose_) {
     std::cerr << "WaitForPosition " << AsNs(position_.get()) << "\n";
   }
@@ -227,14 +218,12 @@ void CommandQueue::WaitForPositionCommand::Execute(
   command_queue->MaybeScheduleWaitForPositionTask();
 }
 
-void CommandQueue::WaitForSeekCompletionCommand::Execute(
-    CommandQueue* command_queue) {
+void CommandQueue::WaitForSeekCompletionCommand::Execute(CommandQueue* command_queue) {
   if (command_queue->verbose_) {
     std::cerr << "WaitForSeekCompletion\n";
   }
 
-  command_queue->wait_for_seek_completion_position_ =
-      command_queue->prev_seek_position_;
+  command_queue->wait_for_seek_completion_position_ = command_queue->prev_seek_position_;
   // |ExecuteNextCommand| will be called when the seek has completed.
   command_queue->MaybeFinishWaitingForSeekCompletion();
 }
@@ -245,8 +234,7 @@ void CommandQueue::SleepCommand::Execute(CommandQueue* command_queue) {
   }
 
   async::PostDelayedTask(
-      command_queue->dispatcher_,
-      [command_queue]() { command_queue->ExecuteNextCommand(); },
+      command_queue->dispatcher_, [command_queue]() { command_queue->ExecuteNextCommand(); },
       zx::duration(duration_));
 }
 

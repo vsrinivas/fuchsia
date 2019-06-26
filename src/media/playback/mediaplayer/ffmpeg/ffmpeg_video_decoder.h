@@ -26,12 +26,10 @@ class FfmpegVideoDecoder : public FfmpegDecoderBase {
   // FfmpegDecoderBase overrides.
   void OnNewInputPacket(const PacketPtr& packet) override;
 
-  int BuildAVFrame(const AVCodecContext& av_codec_context,
-                   AVFrame* av_frame) override;
+  int BuildAVFrame(const AVCodecContext& av_codec_context, AVFrame* av_frame) override;
 
-  PacketPtr CreateOutputPacket(
-      const AVFrame& av_frame,
-      fbl::RefPtr<PayloadBuffer> payload_buffer) override;
+  PacketPtr CreateOutputPacket(const AVFrame& av_frame,
+                               fbl::RefPtr<PayloadBuffer> payload_buffer) override;
 
   const char* label() const override;
 

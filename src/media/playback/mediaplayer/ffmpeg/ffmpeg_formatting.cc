@@ -16,8 +16,7 @@ namespace media_player {
 
 const char* safe(const char* s) { return s == nullptr ? "<nullptr>" : s; }
 
-std::ostream& operator<<(std::ostream& os,
-                         const struct AVCodecTag* const* value) {
+std::ostream& operator<<(std::ostream& os, const struct AVCodecTag* const* value) {
   if (value == nullptr) {
     return os << "<nullptr>";
   } else if (*value == nullptr) {
@@ -40,8 +39,7 @@ std::ostream& operator<<(std::ostream& os, const AVInputFormat* value) {
   os << fostr::NewLine << "const char *long_name: " << value->long_name;
   os << fostr::NewLine << "int flags: " << AVFMTFlags(value->flags);
   os << fostr::NewLine << "const char *extensions: " << safe(value->extensions);
-  os << fostr::NewLine
-     << "const AVCodecTag * const *codec_tag: " << value->codec_tag;
+  os << fostr::NewLine << "const AVCodecTag * const *codec_tag: " << value->codec_tag;
   os << fostr::NewLine << "const char *mime_type: " << safe(value->mime_type);
   return os << fostr::Outdent;
 }
@@ -60,8 +58,7 @@ std::ostream& operator<<(std::ostream& os, const AVOutputFormat* value) {
   os << fostr::NewLine << "AVCodecID video_codec: " << value->video_codec;
   os << fostr::NewLine << "AVCodecID subtitle_codec: " << value->subtitle_codec;
   os << fostr::NewLine << "int flags: " << AVFMTFlags(value->flags);
-  os << fostr::NewLine
-     << "const AVCodecTag * const *codec_tag: " << value->codec_tag;
+  os << fostr::NewLine << "const AVCodecTag * const *codec_tag: " << value->codec_tag;
   return os << fostr::Outdent;
 }
 
@@ -144,14 +141,10 @@ std::ostream& operator<<(std::ostream& os, const AVCodec* value) {
   os << fostr::NewLine << "AVMediaType type: " << value->type;
   os << fostr::NewLine << "AVCodecID id: " << value->id;
   os << fostr::NewLine << "int capabilities: " << value->capabilities;
-  os << fostr::NewLine
-     << "AVRational *supported_framerates: " << value->supported_framerates;
-  os << fostr::NewLine
-     << "const int *supported_samplerates: " << value->supported_samplerates;
-  os << fostr::NewLine
-     << "const AVSampleFormat *sample_fmts: " << value->sample_fmts;
-  os << fostr::NewLine
-     << "const uint64_t *channel_layouts: " << value->channel_layouts;
+  os << fostr::NewLine << "AVRational *supported_framerates: " << value->supported_framerates;
+  os << fostr::NewLine << "const int *supported_samplerates: " << value->supported_samplerates;
+  os << fostr::NewLine << "const AVSampleFormat *sample_fmts: " << value->sample_fmts;
+  os << fostr::NewLine << "const uint64_t *channel_layouts: " << value->channel_layouts;
 
   return os << fostr::Outdent;
 }
@@ -180,12 +173,9 @@ std::ostream& operator<<(std::ostream& os, const AVCodecContext* value) {
   os << fostr::NewLine << "int block_align: " << value->block_align;
   os << fostr::NewLine << "int cutoff: " << value->cutoff;
   os << fostr::NewLine << "uint64_t channel_layout: " << value->channel_layout;
-  os << fostr::NewLine
-     << "uint64_t request_channel_layout: " << value->request_channel_layout;
-  os << fostr::NewLine
-     << "AVAudioServiceType audio_service_type: " << value->audio_service_type;
-  os << fostr::NewLine
-     << "AVSampleFormat request_sample_fmt: " << value->request_sample_fmt;
+  os << fostr::NewLine << "uint64_t request_channel_layout: " << value->request_channel_layout;
+  os << fostr::NewLine << "AVAudioServiceType audio_service_type: " << value->audio_service_type;
+  os << fostr::NewLine << "AVSampleFormat request_sample_fmt: " << value->request_sample_fmt;
   os << fostr::NewLine << "int profile: " << value->profile;
   return os << fostr::Outdent;
 }
@@ -206,20 +196,16 @@ std::ostream& operator<<(std::ostream& os, const AVStream* value) {
   os << fostr::NewLine << "int64_t start_time: " << value->start_time;
   os << fostr::NewLine << "int64_t duration: " << value->duration;
   os << fostr::NewLine << "int64_t nb_frames: " << value->nb_frames;
-  os << fostr::NewLine
-     << "int disposition: " << AV_DISPOSITIONFlags(value->disposition);
+  os << fostr::NewLine << "int disposition: " << AV_DISPOSITIONFlags(value->disposition);
   os << fostr::NewLine << "AVDiscard discard: " << value->discard;
-  os << fostr::NewLine
-     << "AVRational sample_aspect_ratio: " << value->sample_aspect_ratio;
+  os << fostr::NewLine << "AVRational sample_aspect_ratio: " << value->sample_aspect_ratio;
   os << fostr::NewLine << "AVDictionary *metadata: " << value->metadata;
-  os << fostr::NewLine
-     << "AVRational avg_frame_rate: " << value->avg_frame_rate;
+  os << fostr::NewLine << "AVRational avg_frame_rate: " << value->avg_frame_rate;
   os << fostr::NewLine << "AVPacket attached_pic: " << &value->attached_pic;
   os << fostr::NewLine << "int nb_side_data: " << value->nb_side_data;
   os << fostr::NewLine << "AVPacketSideData side_data: "
      << AVPacketSideDataArray(value->side_data, value->nb_side_data);
-  os << fostr::NewLine
-     << "int event_flags: " << AVSTREAM_EVENTFlags(value->event_flags);
+  os << fostr::NewLine << "int event_flags: " << AVSTREAM_EVENTFlags(value->event_flags);
   return os << fostr::Outdent;
 }
 
@@ -327,10 +313,8 @@ std::ostream& operator<<(std::ostream& os, const AVBufferRef* value) {
   }
 
   os << fostr::Indent;
-  os << fostr::NewLine << "AVBuffer *buffer: "
-     << (value->buffer == nullptr ? "<nullptr>" : "TODO");
-  os << fostr::NewLine << "uint8_t *data: "
-     << (value->data == nullptr ? "<nullptr>" : "<opaque>");
+  os << fostr::NewLine << "AVBuffer *buffer: " << (value->buffer == nullptr ? "<nullptr>" : "TODO");
+  os << fostr::NewLine << "uint8_t *data: " << (value->data == nullptr ? "<nullptr>" : "<opaque>");
   os << fostr::NewLine << "int size: " << value->size;
   return os << fostr::Outdent;
 }
@@ -377,8 +361,8 @@ std::ostream& operator<<(std::ostream& os, const AVFrame* value) {
     os << fostr::Outdent;
   }
 
-  os << fostr::NewLine << "uint8_t **extended_data: "
-     << (value->extended_data == nullptr ? "<nullptr>" : "<opaque>");
+  os << fostr::NewLine
+     << "uint8_t **extended_data: " << (value->extended_data == nullptr ? "<nullptr>" : "<opaque>");
   os << fostr::NewLine << "int width: " << value->width;
   os << fostr::NewLine << "int height: " << value->height;
   os << fostr::NewLine << "int nb_samples: " << value->nb_samples;
@@ -418,8 +402,7 @@ std::ostream& operator<<(std::ostream& os, const AVPacket* value) {
   os << fostr::NewLine << "AVBufferRef *buf: " << value->buf;
   os << fostr::NewLine << "int64_t pts: " << value->pts;
   os << fostr::NewLine << "int64_t dts: " << value->dts;
-  os << fostr::NewLine << "uint8_t *data: "
-     << (value->data == nullptr ? "<nullptr>" : "<opaque>");
+  os << fostr::NewLine << "uint8_t *data: " << (value->data == nullptr ? "<nullptr>" : "<opaque>");
   os << fostr::NewLine << "int size: " << value->size;
   os << fostr::NewLine << "int stream_index: " << value->stream_index;
   os << fostr::NewLine << "int flags: " << value->flags;
@@ -497,16 +480,14 @@ std::ostream& operator<<(std::ostream& os, const AVChapterArray& value) {
 }
 
 std::ostream& operator<<(std::ostream& os, AVCodecID value) {
-  return os << avcodec_get_name(value) << " (" << static_cast<int>(value)
-            << ")";
+  return os << avcodec_get_name(value) << " (" << static_cast<int>(value) << ")";
 }
 
 std::ostream& operator<<(std::ostream& os, const AVDictionary* value) {
   if (value == nullptr) {
     return os << "<nullptr>";
   }
-  AVDictionaryEntry* entry =
-      av_dict_get(value, "", nullptr, AV_DICT_IGNORE_SUFFIX);
+  AVDictionaryEntry* entry = av_dict_get(value, "", nullptr, AV_DICT_IGNORE_SUFFIX);
   if (entry == nullptr) {
     return os << "<empty>";
   }
@@ -604,8 +585,7 @@ std::ostream& operator<<(std::ostream& os, AVSampleFormat value) {
     case AV_SAMPLE_FMT_NB:
       return os << "AV_SAMPLE_FMT_NB";
     default:
-      return os << "<UNKNOWN AVSampleFormat: " << static_cast<int>(value)
-                << ">";
+      return os << "<UNKNOWN AVSampleFormat: " << static_cast<int>(value) << ">";
   }
 }
 
@@ -670,8 +650,7 @@ std::ostream& operator<<(std::ostream& os, AVDurationEstimationMethod value) {
     case AVFMT_DURATION_FROM_BITRATE:
       return os << "AVFMT_DURATION_FROM_BITRATE";
     default:
-      return os << "<UNKNOWN AVDurationEstimationMethod: "
-                << static_cast<int>(value) << ">";
+      return os << "<UNKNOWN AVDurationEstimationMethod: " << static_cast<int>(value) << ">";
   }
 }
 
@@ -686,8 +665,8 @@ std::ostream& operator<<(std::ostream& os, const AVFormatContext* value) {
   os << fostr::NewLine << "AVIOContext *pb: " << value->pb;
   os << fostr::NewLine << "int ctx_flags: " << AVFMTCTXFlags(value->ctx_flags);
   os << fostr::NewLine << "unsigned int nb_streams: " << value->nb_streams;
-  os << fostr::NewLine << "AVStream **streams: "
-     << AVStreamArray(value->streams, value->nb_streams);
+  os << fostr::NewLine
+     << "AVStream **streams: " << AVStreamArray(value->streams, value->nb_streams);
   os << fostr::NewLine << "char filename[1024]: " << value->filename;
   os << fostr::NewLine << "int64_t start_time: " << value->start_time;
   os << fostr::NewLine << "int64_t duration: " << value->duration;
@@ -697,45 +676,35 @@ std::ostream& operator<<(std::ostream& os, const AVFormatContext* value) {
   os << fostr::NewLine << "int flags: " << AVFMTFlags(value->flags);
   os << fostr::NewLine << "int64_t probesize: " << value->probesize;
   os << fostr::NewLine << "unsigned int nb_programs: " << value->nb_programs;
-  os << fostr::NewLine << "AVProgram **programs: "
-     << AVProgramArray(value->programs, value->nb_programs);
+  os << fostr::NewLine
+     << "AVProgram **programs: " << AVProgramArray(value->programs, value->nb_programs);
   os << fostr::NewLine << "AVCodecID video_codec_id: " << value->video_codec_id;
   os << fostr::NewLine << "AVCodecID audio_codec_id: " << value->audio_codec_id;
-  os << fostr::NewLine
-     << "AVCodecID subtitle_codec_id: " << value->subtitle_codec_id;
-  os << fostr::NewLine
-     << "unsigned int max_index_size: " << value->max_index_size;
-  os << fostr::NewLine
-     << "unsigned int max_picture_buffer: " << value->max_picture_buffer;
+  os << fostr::NewLine << "AVCodecID subtitle_codec_id: " << value->subtitle_codec_id;
+  os << fostr::NewLine << "unsigned int max_index_size: " << value->max_index_size;
+  os << fostr::NewLine << "unsigned int max_picture_buffer: " << value->max_picture_buffer;
   os << fostr::NewLine << "unsigned int nb_chapters: " << value->nb_chapters;
-  os << fostr::NewLine << "AVChapter **chapters: "
-     << AVChapterArray(value->chapters, value->nb_chapters);
-  os << fostr::NewLine << "AVDictionary *metadata: " << value->metadata;
   os << fostr::NewLine
-     << "int64_t start_time_realtime: " << value->start_time_realtime;
+     << "AVChapter **chapters: " << AVChapterArray(value->chapters, value->nb_chapters);
+  os << fostr::NewLine << "AVDictionary *metadata: " << value->metadata;
+  os << fostr::NewLine << "int64_t start_time_realtime: " << value->start_time_realtime;
   os << fostr::NewLine << "int fps_probe_size: " << value->fps_probe_size;
   os << fostr::NewLine << "int error_recognition: " << value->error_recognition;
-  os << fostr::NewLine
-     << "int64_t max_interleave_delta: " << value->max_interleave_delta;
-  os << fostr::NewLine
-     << "int strict_std_compliance: " << value->strict_std_compliance;
+  os << fostr::NewLine << "int64_t max_interleave_delta: " << value->max_interleave_delta;
+  os << fostr::NewLine << "int strict_std_compliance: " << value->strict_std_compliance;
   os << fostr::NewLine << "int event_flags: " << AVFMT_EVENTFlags(value->flags);
   os << fostr::NewLine << "int max_ts_probe: " << value->max_ts_probe;
-  os << fostr::NewLine << "int avoid_negative_ts: "
-     << AVFMT_AVOID_NEG_TSFlags(value->avoid_negative_ts);
+  os << fostr::NewLine
+     << "int avoid_negative_ts: " << AVFMT_AVOID_NEG_TSFlags(value->avoid_negative_ts);
   os << fostr::NewLine << "int ts_id: " << value->ts_id;
   os << fostr::NewLine << "int audio_preload: " << value->audio_preload;
-  os << fostr::NewLine
-     << "int max_chunk_duration: " << value->max_chunk_duration;
+  os << fostr::NewLine << "int max_chunk_duration: " << value->max_chunk_duration;
   os << fostr::NewLine << "int max_chunk_size: " << value->max_chunk_size;
-  os << fostr::NewLine << "int use_wallclock_as_timestamps: "
-     << value->use_wallclock_as_timestamps;
+  os << fostr::NewLine << "int use_wallclock_as_timestamps: " << value->use_wallclock_as_timestamps;
   os << fostr::NewLine << "int avio_flags: " << value->avio_flags;
-  os << fostr::NewLine
-     << "AVDurationEstimationMethod duration_estimation_method: "
+  os << fostr::NewLine << "AVDurationEstimationMethod duration_estimation_method: "
      << value->duration_estimation_method;
-  os << fostr::NewLine
-     << "int64_t skip_initial_bytes: " << value->skip_initial_bytes;
+  os << fostr::NewLine << "int64_t skip_initial_bytes: " << value->skip_initial_bytes;
   os << fostr::NewLine << "TODO(dalesat): more";
   return os << fostr::Outdent;
 }

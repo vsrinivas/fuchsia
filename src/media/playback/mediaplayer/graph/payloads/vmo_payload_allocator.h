@@ -76,13 +76,11 @@ class VmoPayloadAllocator : public PayloadAllocator,
 
  private:
   // Attempts to allocate memory from the specified VMO.
-  fbl::RefPtr<PayloadBuffer> TryAllocateFromVmo(
-      fbl::RefPtr<PayloadVmo> payload_vmo, uint64_t size)
+  fbl::RefPtr<PayloadBuffer> TryAllocateFromVmo(fbl::RefPtr<PayloadVmo> payload_vmo, uint64_t size)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
 
   mutable std::mutex mutex_;
-  VmoAllocation vmo_allocation_ FXL_GUARDED_BY(mutex_) =
-      VmoAllocation::kNotApplicable;
+  VmoAllocation vmo_allocation_ FXL_GUARDED_BY(mutex_) = VmoAllocation::kNotApplicable;
   std::vector<fbl::RefPtr<PayloadVmo>> payload_vmos_ FXL_GUARDED_BY(mutex_);
   size_t suggested_allocation_vmo_ FXL_GUARDED_BY(mutex_) = 0;
 };

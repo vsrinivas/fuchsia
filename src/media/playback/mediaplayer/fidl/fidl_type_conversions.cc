@@ -23,8 +23,7 @@ static const char kVideoMimeTypeH264[] = "video/h264";
 // static const char kVideoMimeTypeVp9[] = "video/vp9";
 // TODO(dalesat): Add MPEG2.
 
-static inline constexpr uint32_t make_fourcc(uint8_t a, uint8_t b, uint8_t c,
-                                             uint8_t d) {
+static inline constexpr uint32_t make_fourcc(uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
   return (static_cast<uint32_t>(d) << 24) | (static_cast<uint32_t>(c) << 16) |
          (static_cast<uint32_t>(b) << 8) | static_cast<uint32_t>(a);
 }
@@ -33,8 +32,7 @@ static constexpr uint32_t kNv12FourCc = make_fourcc('N', 'V', '1', '2');
 static constexpr uint32_t kYv12FourCc = make_fourcc('Y', 'V', '1', '2');
 
 bool KnownEncodingsMatch() {
-  return !strcmp(media_player::StreamType::kAudioEncodingAac,
-                 fuchsia::media::AUDIO_ENCODING_AAC) &&
+  return !strcmp(media_player::StreamType::kAudioEncodingAac, fuchsia::media::AUDIO_ENCODING_AAC) &&
          !strcmp(media_player::StreamType::kAudioEncodingAmrNb,
                  fuchsia::media::AUDIO_ENCODING_AMRNB) &&
          !strcmp(media_player::StreamType::kAudioEncodingAmrWb,
@@ -45,8 +43,7 @@ bool KnownEncodingsMatch() {
                  fuchsia::media::AUDIO_ENCODING_GSMMS) &&
          !strcmp(media_player::StreamType::kAudioEncodingLpcm,
                  fuchsia::media::AUDIO_ENCODING_LPCM) &&
-         !strcmp(media_player::StreamType::kAudioEncodingMp3,
-                 fuchsia::media::AUDIO_ENCODING_MP3) &&
+         !strcmp(media_player::StreamType::kAudioEncodingMp3, fuchsia::media::AUDIO_ENCODING_MP3) &&
          !strcmp(media_player::StreamType::kAudioEncodingPcmALaw,
                  fuchsia::media::AUDIO_ENCODING_PCMALAW) &&
          !strcmp(media_player::StreamType::kAudioEncodingPcmMuLaw,
@@ -63,19 +60,15 @@ bool KnownEncodingsMatch() {
                  fuchsia::media::VIDEO_ENCODING_THEORA) &&
          !strcmp(media_player::StreamType::kVideoEncodingUncompressed,
                  fuchsia::media::VIDEO_ENCODING_UNCOMPRESSED) &&
-         !strcmp(media_player::StreamType::kVideoEncodingVp3,
-                 fuchsia::media::VIDEO_ENCODING_VP3) &&
-         !strcmp(media_player::StreamType::kVideoEncodingVp8,
-                 fuchsia::media::VIDEO_ENCODING_VP8) &&
-         !strcmp(media_player::StreamType::kVideoEncodingVp9,
-                 fuchsia::media::VIDEO_ENCODING_VP9);
+         !strcmp(media_player::StreamType::kVideoEncodingVp3, fuchsia::media::VIDEO_ENCODING_VP3) &&
+         !strcmp(media_player::StreamType::kVideoEncodingVp8, fuchsia::media::VIDEO_ENCODING_VP8) &&
+         !strcmp(media_player::StreamType::kVideoEncodingVp9, fuchsia::media::VIDEO_ENCODING_VP9);
 }
 
 }  // namespace
 
 media_player::AudioStreamType::SampleFormat
-TypeConverter<media_player::AudioStreamType::SampleFormat,
-              fuchsia::media::AudioSampleFormat>::
+TypeConverter<media_player::AudioStreamType::SampleFormat, fuchsia::media::AudioSampleFormat>::
     Convert(fuchsia::media::AudioSampleFormat audio_sample_format) {
   switch (audio_sample_format) {
     case fuchsia::media::AudioSampleFormat::UNSIGNED_8:
@@ -92,10 +85,9 @@ TypeConverter<media_player::AudioStreamType::SampleFormat,
   abort();
 }
 
-media_player::VideoStreamType::PixelFormat TypeConverter<
-    media_player::VideoStreamType::PixelFormat,
-    fuchsia::images::PixelFormat>::Convert(fuchsia::images::PixelFormat
-                                               pixel_format) {
+media_player::VideoStreamType::PixelFormat
+TypeConverter<media_player::VideoStreamType::PixelFormat, fuchsia::images::PixelFormat>::Convert(
+    fuchsia::images::PixelFormat pixel_format) {
   switch (pixel_format) {
     case fuchsia::images::PixelFormat::BGRA_8:
       return media_player::VideoStreamType::PixelFormat::kArgb;
@@ -111,9 +103,8 @@ media_player::VideoStreamType::PixelFormat TypeConverter<
 }
 
 media_player::VideoStreamType::ColorSpace
-TypeConverter<media_player::VideoStreamType::ColorSpace,
-              fuchsia::media::ColorSpace>::Convert(fuchsia::media::ColorSpace
-                                                       color_space) {
+TypeConverter<media_player::VideoStreamType::ColorSpace, fuchsia::media::ColorSpace>::Convert(
+    fuchsia::media::ColorSpace color_space) {
   switch (color_space) {
     case fuchsia::media::ColorSpace::UNKNOWN:
       return media_player::VideoStreamType::ColorSpace::kUnknown;
@@ -131,8 +122,7 @@ TypeConverter<media_player::VideoStreamType::ColorSpace,
 }
 
 fuchsia::media::AudioSampleFormat
-TypeConverter<fuchsia::media::AudioSampleFormat,
-              media_player::AudioStreamType::SampleFormat>::
+TypeConverter<fuchsia::media::AudioSampleFormat, media_player::AudioStreamType::SampleFormat>::
     Convert(media_player::AudioStreamType::SampleFormat sample_format) {
   switch (sample_format) {
     case media_player::AudioStreamType::SampleFormat::kUnsigned8:
@@ -151,9 +141,9 @@ TypeConverter<fuchsia::media::AudioSampleFormat,
   abort();
 }
 
-fuchsia::images::PixelFormat TypeConverter<
-    fuchsia::images::PixelFormat, media_player::VideoStreamType::PixelFormat>::
-    Convert(media_player::VideoStreamType::PixelFormat pixel_format) {
+fuchsia::images::PixelFormat
+TypeConverter<fuchsia::images::PixelFormat, media_player::VideoStreamType::PixelFormat>::Convert(
+    media_player::VideoStreamType::PixelFormat pixel_format) {
   switch (pixel_format) {
     case media_player::VideoStreamType::PixelFormat::kUnknown:
       break;
@@ -171,9 +161,9 @@ fuchsia::images::PixelFormat TypeConverter<
   abort();
 }
 
-fuchsia::media::ColorSpace TypeConverter<
-    fuchsia::media::ColorSpace, media_player::VideoStreamType::ColorSpace>::
-    Convert(media_player::VideoStreamType::ColorSpace color_space) {
+fuchsia::media::ColorSpace
+TypeConverter<fuchsia::media::ColorSpace, media_player::VideoStreamType::ColorSpace>::Convert(
+    media_player::VideoStreamType::ColorSpace color_space) {
   switch (color_space) {
     case media_player::VideoStreamType::ColorSpace::kUnknown:
       return fuchsia::media::ColorSpace::UNKNOWN;
@@ -208,32 +198,27 @@ TypeConverter<fuchsia::media::StreamType, media_player::StreamType>::Convert(
       fuchsia::media::StreamType stream_type;
       stream_type.medium_specific = std::move(medium_specific_stream_type);
       stream_type.encoding = input.encoding();
-      stream_type.encoding_parameters =
-          To<fidl::VectorPtr<uint8_t>>(input.encoding_parameters());
+      stream_type.encoding_parameters = To<fidl::VectorPtr<uint8_t>>(input.encoding_parameters());
       return stream_type;
     }
     case media_player::StreamType::Medium::kVideo: {
       fuchsia::media::VideoStreamType video_stream_type;
       video_stream_type.pixel_format =
           To<fuchsia::images::PixelFormat>(input.video()->pixel_format());
-      video_stream_type.color_space =
-          To<fuchsia::media::ColorSpace>(input.video()->color_space());
+      video_stream_type.color_space = To<fuchsia::media::ColorSpace>(input.video()->color_space());
       video_stream_type.width = input.video()->width();
       video_stream_type.height = input.video()->height();
       video_stream_type.coded_width = input.video()->coded_width();
       video_stream_type.coded_height = input.video()->coded_height();
-      video_stream_type.pixel_aspect_ratio_width =
-          input.video()->pixel_aspect_ratio_width();
-      video_stream_type.pixel_aspect_ratio_height =
-          input.video()->pixel_aspect_ratio_height();
+      video_stream_type.pixel_aspect_ratio_width = input.video()->pixel_aspect_ratio_width();
+      video_stream_type.pixel_aspect_ratio_height = input.video()->pixel_aspect_ratio_height();
       video_stream_type.stride = input.video()->line_stride();
       fuchsia::media::MediumSpecificStreamType medium_specific_stream_type;
       medium_specific_stream_type.set_video(std::move(video_stream_type));
       fuchsia::media::StreamType stream_type;
       stream_type.medium_specific = std::move(medium_specific_stream_type);
       stream_type.encoding = input.encoding();
-      stream_type.encoding_parameters =
-          To<fidl::VectorPtr<uint8_t>>(input.encoding_parameters());
+      stream_type.encoding_parameters = To<fidl::VectorPtr<uint8_t>>(input.encoding_parameters());
       return stream_type;
     }
     case media_player::StreamType::Medium::kText: {
@@ -242,19 +227,16 @@ TypeConverter<fuchsia::media::StreamType, media_player::StreamType>::Convert(
       fuchsia::media::StreamType stream_type;
       stream_type.medium_specific = std::move(medium_specific_stream_type);
       stream_type.encoding = input.encoding();
-      stream_type.encoding_parameters =
-          To<fidl::VectorPtr<uint8_t>>(input.encoding_parameters());
+      stream_type.encoding_parameters = To<fidl::VectorPtr<uint8_t>>(input.encoding_parameters());
       return stream_type;
     }
     case media_player::StreamType::Medium::kSubpicture: {
       fuchsia::media::MediumSpecificStreamType medium_specific_stream_type;
-      medium_specific_stream_type.set_subpicture(
-          fuchsia::media::SubpictureStreamType());
+      medium_specific_stream_type.set_subpicture(fuchsia::media::SubpictureStreamType());
       fuchsia::media::StreamType stream_type;
       stream_type.medium_specific = std::move(medium_specific_stream_type);
       stream_type.encoding = input.encoding();
-      stream_type.encoding_parameters =
-          To<fidl::VectorPtr<uint8_t>>(input.encoding_parameters());
+      stream_type.encoding_parameters = To<fidl::VectorPtr<uint8_t>>(input.encoding_parameters());
       return stream_type;
     }
   }
@@ -263,44 +245,35 @@ TypeConverter<fuchsia::media::StreamType, media_player::StreamType>::Convert(
   abort();
 }
 
-std::unique_ptr<media_player::StreamType> TypeConverter<
-    std::unique_ptr<media_player::StreamType>,
-    fuchsia::media::StreamType>::Convert(const fuchsia::media::StreamType&
-                                             input) {
+std::unique_ptr<media_player::StreamType>
+TypeConverter<std::unique_ptr<media_player::StreamType>, fuchsia::media::StreamType>::Convert(
+    const fuchsia::media::StreamType& input) {
   FXL_DCHECK(KnownEncodingsMatch());
 
   switch (input.medium_specific.Which()) {
     case fuchsia::media::MediumSpecificStreamType::Tag::kAudio:
       return media_player::AudioStreamType::Create(
-          input.encoding,
-          To<std::unique_ptr<media_player::Bytes>>(input.encoding_parameters),
+          input.encoding, To<std::unique_ptr<media_player::Bytes>>(input.encoding_parameters),
           To<media_player::AudioStreamType::SampleFormat>(
               input.medium_specific.audio().sample_format),
-          input.medium_specific.audio().channels,
-          input.medium_specific.audio().frames_per_second);
+          input.medium_specific.audio().channels, input.medium_specific.audio().frames_per_second);
     case fuchsia::media::MediumSpecificStreamType::Tag::kVideo:
       return media_player::VideoStreamType::Create(
-          input.encoding,
-          To<std::unique_ptr<media_player::Bytes>>(input.encoding_parameters),
+          input.encoding, To<std::unique_ptr<media_player::Bytes>>(input.encoding_parameters),
           To<media_player::VideoStreamType::PixelFormat>(
               input.medium_specific.video().pixel_format),
-          To<media_player::VideoStreamType::ColorSpace>(
-              input.medium_specific.video().color_space),
-          input.medium_specific.video().width,
-          input.medium_specific.video().height,
-          input.medium_specific.video().coded_width,
-          input.medium_specific.video().coded_height,
+          To<media_player::VideoStreamType::ColorSpace>(input.medium_specific.video().color_space),
+          input.medium_specific.video().width, input.medium_specific.video().height,
+          input.medium_specific.video().coded_width, input.medium_specific.video().coded_height,
           input.medium_specific.video().pixel_aspect_ratio_width,
           input.medium_specific.video().pixel_aspect_ratio_height,
           input.medium_specific.video().stride);
     case fuchsia::media::MediumSpecificStreamType::Tag::kText:
       return media_player::TextStreamType::Create(
-          input.encoding,
-          To<std::unique_ptr<media_player::Bytes>>(input.encoding_parameters));
+          input.encoding, To<std::unique_ptr<media_player::Bytes>>(input.encoding_parameters));
     case fuchsia::media::MediumSpecificStreamType::Tag::kSubpicture:
       return media_player::SubpictureStreamType::Create(
-          input.encoding,
-          To<std::unique_ptr<media_player::Bytes>>(input.encoding_parameters));
+          input.encoding, To<std::unique_ptr<media_player::Bytes>>(input.encoding_parameters));
     default:
       break;
   }
@@ -308,8 +281,7 @@ std::unique_ptr<media_player::StreamType> TypeConverter<
   return nullptr;
 }
 
-fuchsia::media::Metadata
-TypeConverter<fuchsia::media::Metadata, media_player::Metadata>::Convert(
+fuchsia::media::Metadata TypeConverter<fuchsia::media::Metadata, media_player::Metadata>::Convert(
     const media_player::Metadata& input) {
   fuchsia::media::Metadata result;
   for (auto& pair : input) {
@@ -322,8 +294,7 @@ TypeConverter<fuchsia::media::Metadata, media_player::Metadata>::Convert(
   return result;
 }
 
-media_player::Metadata
-TypeConverter<media_player::Metadata, fuchsia::media::Metadata>::Convert(
+media_player::Metadata TypeConverter<media_player::Metadata, fuchsia::media::Metadata>::Convert(
     const fuchsia::media::Metadata& input) {
   media_player::Metadata result(input.properties.size());
   for (auto& property : input.properties) {
@@ -345,23 +316,22 @@ TypeConverter<fidl::VectorPtr<uint8_t>, const media_player::Bytes*>::Convert(
   return array;
 }
 
-std::unique_ptr<media_player::Bytes> TypeConverter<
-    std::unique_ptr<media_player::Bytes>,
-    fidl::VectorPtr<uint8_t>>::Convert(const fidl::VectorPtr<uint8_t>& input) {
+std::unique_ptr<media_player::Bytes>
+TypeConverter<std::unique_ptr<media_player::Bytes>, fidl::VectorPtr<uint8_t>>::Convert(
+    const fidl::VectorPtr<uint8_t>& input) {
   if (input.is_null()) {
     return nullptr;
   }
 
-  std::unique_ptr<media_player::Bytes> bytes =
-      media_player::Bytes::Create(input->size());
+  std::unique_ptr<media_player::Bytes> bytes = media_player::Bytes::Create(input->size());
   std::memcpy(bytes->data(), input->data(), input->size());
 
   return bytes;
 }
 
-fuchsia::media::FormatDetailsPtr TypeConverter<
-    fuchsia::media::FormatDetailsPtr,
-    media_player::StreamType>::Convert(const media_player::StreamType& input) {
+fuchsia::media::FormatDetailsPtr
+TypeConverter<fuchsia::media::FormatDetailsPtr, media_player::StreamType>::Convert(
+    const media_player::StreamType& input) {
   const char* mime_type = nullptr;
 
   switch (input.medium()) {
@@ -373,8 +343,7 @@ fuchsia::media::FormatDetailsPtr TypeConverter<
     case media_player::StreamType::Medium::kVideo:
       if (input.encoding() == media_player::StreamType::kVideoEncodingH264) {
         mime_type = kVideoMimeTypeH264;
-      } else if (input.encoding() ==
-                 media_player::StreamType::kVideoEncodingVp9) {
+      } else if (input.encoding() == media_player::StreamType::kVideoEncodingVp9) {
         // TODO(dalesat): (or dustingreen) Enable after amlogic-video VP9 decode
         // is fully working.
         //
@@ -394,24 +363,21 @@ fuchsia::media::FormatDetailsPtr TypeConverter<
   result->set_format_details_version_ordinal(0);
   result->set_mime_type(mime_type);
   if (input.encoding_parameters()) {
-    result->set_oob_bytes(
-        fidl::To<fidl::VectorPtr<uint8_t>>(input.encoding_parameters()));
+    result->set_oob_bytes(fidl::To<fidl::VectorPtr<uint8_t>>(input.encoding_parameters()));
   }
 
   return result;
 }
 
-std::unique_ptr<media_player::StreamType> TypeConverter<
-    std::unique_ptr<media_player::StreamType>,
-    fuchsia::media::FormatDetails>::Convert(const fuchsia::media::FormatDetails&
-                                                input) {
+std::unique_ptr<media_player::StreamType>
+TypeConverter<std::unique_ptr<media_player::StreamType>, fuchsia::media::FormatDetails>::Convert(
+    const fuchsia::media::FormatDetails& input) {
   if (!input.has_mime_type() || !input.has_domain()) {
     return nullptr;
   }
 
   if (input.mime_type() == kAudioMimeTypeLpcm) {
-    if (!input.domain().is_audio() ||
-        !input.domain().audio().is_uncompressed() ||
+    if (!input.domain().is_audio() || !input.domain().audio().is_uncompressed() ||
         !input.domain().audio().uncompressed().is_pcm()) {
       return nullptr;
     }
@@ -433,14 +399,13 @@ std::unique_ptr<media_player::StreamType> TypeConverter<
         return nullptr;
     }
 
-    return media_player::AudioStreamType::Create(
-        media_player::StreamType::kAudioEncodingLpcm, nullptr, sample_format,
-        format.channel_map.size(), format.frames_per_second);
+    return media_player::AudioStreamType::Create(media_player::StreamType::kAudioEncodingLpcm,
+                                                 nullptr, sample_format, format.channel_map.size(),
+                                                 format.frames_per_second);
   }
 
   if (input.mime_type() == kVideoMimeTypeUncompressed) {
-    if (!input.domain().is_video() ||
-        !input.domain().video().is_uncompressed()) {
+    if (!input.domain().is_video() || !input.domain().video().is_uncompressed()) {
       return nullptr;
     }
 
@@ -462,9 +427,8 @@ std::unique_ptr<media_player::StreamType> TypeConverter<
     // pixel_aspect_ratio_width == 1, pixel_aspect_ratio_height == 1 is as good
     // a default as any, at least for now.
     return media_player::VideoStreamType::Create(
-        media_player::StreamType::kVideoEncodingUncompressed, nullptr,
-        pixel_format, media_player::VideoStreamType::ColorSpace::kUnknown,
-        format.primary_display_width_pixels,
+        media_player::StreamType::kVideoEncodingUncompressed, nullptr, pixel_format,
+        media_player::VideoStreamType::ColorSpace::kUnknown, format.primary_display_width_pixels,
         format.primary_display_height_pixels, format.primary_width_pixels,
         format.primary_height_pixels, format.pixel_aspect_ratio_width,
         format.pixel_aspect_ratio_height, format.primary_line_stride_bytes);

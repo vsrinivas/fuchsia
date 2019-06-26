@@ -49,8 +49,7 @@ class MediaPlayerTests : public sys::testing::TestWithEnvironment {
     services->AddService(fake_scenic_.GetRequestHandler());
 
     // Create the synthetic environment.
-    environment_ =
-        CreateNewEnclosingEnvironment("mediaplayer_tests", std::move(services));
+    environment_ = CreateNewEnclosingEnvironment("mediaplayer_tests", std::move(services));
 
     // Instantiate the player under test.
     environment_->ConnectToService(player_.NewRequest());
@@ -63,10 +62,9 @@ class MediaPlayerTests : public sys::testing::TestWithEnvironment {
       QuitLoop();
     });
 
-    player_.events().OnStatusChanged =
-        [this](fuchsia::media::playback::PlayerStatus status) {
-          commands_.NotifyStatusChanged(status);
-        };
+    player_.events().OnStatusChanged = [this](fuchsia::media::playback::PlayerStatus status) {
+      commands_.NotifyStatusChanged(status);
+    };
   }
 
   void TearDown() override { EXPECT_FALSE(player_connection_closed_); }
@@ -123,8 +121,8 @@ TEST_F(MediaPlayerTests, PlayWav) {
                                         {15360, 4052, 0x7308a9824acbd5ea}});
 
   fuchsia::media::playback::SeekingReaderPtr fake_reader_ptr;
-  fidl::InterfaceRequest<fuchsia::media::playback::SeekingReader>
-      reader_request = fake_reader_ptr.NewRequest();
+  fidl::InterfaceRequest<fuchsia::media::playback::SeekingReader> reader_request =
+      fake_reader_ptr.NewRequest();
   fake_reader_.Bind(std::move(reader_request));
 
   fuchsia::media::playback::SourcePtr source;
@@ -159,8 +157,8 @@ TEST_F(MediaPlayerTests, PlayWavDelayEos) {
                                         {15360, 4052, 0x7308a9824acbd5ea}});
 
   fuchsia::media::playback::SeekingReaderPtr fake_reader_ptr;
-  fidl::InterfaceRequest<fuchsia::media::playback::SeekingReader>
-      reader_request = fake_reader_ptr.NewRequest();
+  fidl::InterfaceRequest<fuchsia::media::playback::SeekingReader> reader_request =
+      fake_reader_ptr.NewRequest();
   fake_reader_.Bind(std::move(reader_request));
 
   fuchsia::media::playback::SourcePtr source;
@@ -183,8 +181,8 @@ TEST_F(MediaPlayerTests, PlayWavRetainPackets) {
   fake_audio_.renderer().SetRetainPackets(true);
 
   fuchsia::media::playback::SeekingReaderPtr fake_reader_ptr;
-  fidl::InterfaceRequest<fuchsia::media::playback::SeekingReader>
-      reader_request = fake_reader_ptr.NewRequest();
+  fidl::InterfaceRequest<fuchsia::media::playback::SeekingReader> reader_request =
+      fake_reader_ptr.NewRequest();
   fake_reader_.Bind(std::move(reader_request));
 
   // Need more than 1s of data.
@@ -221,12 +219,10 @@ TEST_F(MediaPlayerTests, ElementarySource) {
                                         {15360, 4096, 0x66027b4aa3bf0000}});
 
   fuchsia::media::playback::ElementarySourcePtr elementary_source;
-  player_->CreateElementarySource(0, false, false, nullptr,
-                                  elementary_source.NewRequest());
+  player_->CreateElementarySource(0, false, false, nullptr, elementary_source.NewRequest());
 
   fuchsia::media::AudioStreamType audio_stream_type;
-  audio_stream_type.sample_format =
-      fuchsia::media::AudioSampleFormat::SIGNED_16;
+  audio_stream_type.sample_format = fuchsia::media::AudioSampleFormat::SIGNED_16;
   audio_stream_type.channels = kSamplesPerFrame;
   audio_stream_type.frames_per_second = kFramesPerSecond;
   fuchsia::media::StreamType stream_type;
@@ -234,8 +230,7 @@ TEST_F(MediaPlayerTests, ElementarySource) {
   stream_type.encoding = fuchsia::media::AUDIO_ENCODING_LPCM;
 
   fuchsia::media::SimpleStreamSinkPtr sink;
-  elementary_source->AddStream(std::move(stream_type), kFramesPerSecond, 1,
-                               sink.NewRequest());
+  elementary_source->AddStream(std::move(stream_type), kFramesPerSecond, 1, sink.NewRequest());
   sink.set_error_handler([this](zx_status_t status) {
     FXL_LOG(ERROR) << "SimpleStreamSink connection closed.";
     sink_connection_closed_ = true;
@@ -251,9 +246,8 @@ TEST_F(MediaPlayerTests, ElementarySource) {
   player_->SetSource(fidl::InterfaceHandle<fuchsia::media::playback::Source>(
       elementary_source.Unbind().TakeChannel()));
 
-  sink_feeder_.Init(std::move(sink), kSinkFeedSize,
-                    kSamplesPerFrame * sizeof(int16_t), kSinkFeedMaxPacketSize,
-                    kSinkFeedMaxPacketCount);
+  sink_feeder_.Init(std::move(sink), kSinkFeedSize, kSamplesPerFrame * sizeof(int16_t),
+                    kSinkFeedMaxPacketSize, kSinkFeedMaxPacketCount);
 
   commands_.Play();
   QuitOnEndOfStream();
@@ -266,12 +260,10 @@ TEST_F(MediaPlayerTests, ElementarySource) {
 // Opens an SBC elementary stream using |ElementarySource|.
 TEST_F(MediaPlayerTests, ElementarySourceWithSBC) {
   fuchsia::media::playback::ElementarySourcePtr elementary_source;
-  player_->CreateElementarySource(1, false, false, nullptr,
-                                  elementary_source.NewRequest());
+  player_->CreateElementarySource(1, false, false, nullptr, elementary_source.NewRequest());
 
   fuchsia::media::AudioStreamType audio_stream_type;
-  audio_stream_type.sample_format =
-      fuchsia::media::AudioSampleFormat::SIGNED_16;
+  audio_stream_type.sample_format = fuchsia::media::AudioSampleFormat::SIGNED_16;
   audio_stream_type.channels = kSamplesPerFrame;
   audio_stream_type.frames_per_second = kFramesPerSecond;
   fuchsia::media::StreamType stream_type;
@@ -279,8 +271,7 @@ TEST_F(MediaPlayerTests, ElementarySourceWithSBC) {
   stream_type.encoding = fuchsia::media::AUDIO_ENCODING_SBC;
 
   fuchsia::media::SimpleStreamSinkPtr sink;
-  elementary_source->AddStream(std::move(stream_type), kFramesPerSecond, 1,
-                               sink.NewRequest());
+  elementary_source->AddStream(std::move(stream_type), kFramesPerSecond, 1, sink.NewRequest());
   sink.set_error_handler([this](zx_status_t status) {
     FXL_LOG(ERROR) << "SimpleStreamSink connection closed.";
     sink_connection_closed_ = true;
@@ -306,12 +297,10 @@ TEST_F(MediaPlayerTests, ElementarySourceWithSBC) {
 // Opens an AAC elementary stream using |ElementarySource|.
 TEST_F(MediaPlayerTests, ElementarySourceWithAAC) {
   fuchsia::media::playback::ElementarySourcePtr elementary_source;
-  player_->CreateElementarySource(1, false, false, nullptr,
-                                  elementary_source.NewRequest());
+  player_->CreateElementarySource(1, false, false, nullptr, elementary_source.NewRequest());
 
   fuchsia::media::AudioStreamType audio_stream_type;
-  audio_stream_type.sample_format =
-      fuchsia::media::AudioSampleFormat::SIGNED_16;
+  audio_stream_type.sample_format = fuchsia::media::AudioSampleFormat::SIGNED_16;
   audio_stream_type.channels = kSamplesPerFrame;
   audio_stream_type.frames_per_second = kFramesPerSecond;
   fuchsia::media::StreamType stream_type;
@@ -319,8 +308,7 @@ TEST_F(MediaPlayerTests, ElementarySourceWithAAC) {
   stream_type.encoding = fuchsia::media::AUDIO_ENCODING_AAC;
 
   fuchsia::media::SimpleStreamSinkPtr sink;
-  elementary_source->AddStream(std::move(stream_type), kFramesPerSecond, 1,
-                               sink.NewRequest());
+  elementary_source->AddStream(std::move(stream_type), kFramesPerSecond, 1, sink.NewRequest());
   sink.set_error_handler([this](zx_status_t status) {
     FXL_LOG(ERROR) << "SimpleStreamSink connection closed.";
     sink_connection_closed_ = true;
@@ -346,12 +334,10 @@ TEST_F(MediaPlayerTests, ElementarySourceWithAAC) {
 // Tries to open a bogus elementary stream using |ElementarySource|.
 TEST_F(MediaPlayerTests, ElementarySourceWithBogus) {
   fuchsia::media::playback::ElementarySourcePtr elementary_source;
-  player_->CreateElementarySource(1, false, false, nullptr,
-                                  elementary_source.NewRequest());
+  player_->CreateElementarySource(1, false, false, nullptr, elementary_source.NewRequest());
 
   fuchsia::media::AudioStreamType audio_stream_type;
-  audio_stream_type.sample_format =
-      fuchsia::media::AudioSampleFormat::SIGNED_16;
+  audio_stream_type.sample_format = fuchsia::media::AudioSampleFormat::SIGNED_16;
   audio_stream_type.channels = kSamplesPerFrame;
   audio_stream_type.frames_per_second = kFramesPerSecond;
   fuchsia::media::StreamType stream_type;
@@ -359,8 +345,7 @@ TEST_F(MediaPlayerTests, ElementarySourceWithBogus) {
   stream_type.encoding = "bogus encoding";
 
   fuchsia::media::SimpleStreamSinkPtr sink;
-  elementary_source->AddStream(std::move(stream_type), kFramesPerSecond, 1,
-                               sink.NewRequest());
+  elementary_source->AddStream(std::move(stream_type), kFramesPerSecond, 1, sink.NewRequest());
   sink.set_error_handler([this](zx_status_t status) {
     FXL_LOG(ERROR) << "SimpleStreamSink connection closed.";
     sink_connection_closed_ = true;
@@ -403,89 +388,47 @@ TEST_F(MediaPlayerTests, PlayBear) {
           .stride = 1280,
           .pixel_format = fuchsia::images::PixelFormat::YV12,
       },
-      720,
-      {{0, 944640, 0x0864378c3655ba47},
-       {133729451, 944640, 0x2481a21b1e543c8e},
-       {167096118, 944640, 0xe4294049f22539bc},
-       {200462784, 944640, 0xde1058aba916ffad},
-       {233829451, 944640, 0xc3fc580b34dc0383},
-       {267196118, 944640, 0xff31322e5ccdebe0},
-       {300562784, 944640, 0x64d31206ece7417f},
-       {333929451, 944640, 0xf1c6bf7fe1be29be},
-       {367296118, 944640, 0x72f44e5249a05c15},
-       {400662784, 944640, 0x1ad7e92183fb3aa4},
-       {434029451, 944640, 0x24b78b95d8c8b73d},
-       {467396118, 944640, 0x25a798d9af5a1b7e},
-       {500762784, 944640, 0x3379288b1f4197a5},
-       {534129451, 944640, 0x15fb9c205590cbc9},
-       {567496118, 944640, 0xc04a1834aec8b399},
-       {600862784, 944640, 0x97eded0e3b6348d3},
-       {634229451, 944640, 0x09dba227982ba479},
-       {667596118, 944640, 0x4d2a1042babc479c},
-       {700962784, 944640, 0x379f96a35774dc2b},
-       {734329451, 944640, 0x2d95a4b5506bd4c3},
-       {767696118, 944640, 0xda99bf00cd971999},
-       {801062784, 944640, 0x20a21550eb717da2},
-       {834429451, 944640, 0x3733b96d2279460b},
-       {867796118, 944640, 0x8ea51ee0088cda67},
-       {901162784, 944640, 0x8d6af19e5d9629ae},
-       {934529451, 944640, 0xd9765bd28098f093},
-       {967896118, 944640, 0x9a747455b496c9d1},
-       {1001262784, 944640, 0xfc8e90e73cc086f6},
-       {1034629451, 944640, 0xc3dec92946fc0005},
-       {1067996118, 944640, 0x215b196e790214c4},
-       {1101362784, 944640, 0x30b114015d719041},
-       {1134729451, 944640, 0x5ed6e582ac4022a1},
-       {1168096118, 944640, 0xbccb6f8ba8601507},
-       {1201462784, 944640, 0x34eab6666dc6c717},
-       {1234829451, 944640, 0x5e33bfc44650245f},
-       {1268196118, 944640, 0x736397b78e0850ff},
-       {1301562784, 944640, 0x620d7190a9e49a31},
-       {1334929451, 944640, 0x436e952327e311ea},
-       {1368296118, 944640, 0xf6fa16fc170a85f3},
-       {1401662784, 944640, 0x9f457e1a66323ead},
-       {1435029451, 944640, 0xb1747e31ea5358db},
-       {1468396118, 944640, 0x4da84ec1c5cb45de},
-       {1501762784, 944640, 0x5454f9007dc4de01},
-       {1535129451, 944640, 0x8e9777accf38e4f0},
-       {1568496118, 944640, 0x16a2ebade809e497},
-       {1601862784, 944640, 0x36d323606ebca2f4},
-       {1635229451, 944640, 0x17eaf1e84353dec9},
-       {1668596118, 944640, 0xdb1b344498520386},
-       {1701962784, 944640, 0xec53764065860e7f},
-       {1735329451, 944640, 0x110a7dddd4c45a54},
-       {1768696118, 944640, 0x6df1c973722f01c7},
-       {1802062784, 944640, 0x2e18f1e1544e002a},
-       {1835429451, 944640, 0x0de7b784dd8b0494},
-       {1868796118, 944640, 0x6e254cd1652be6a9},
-       {1902162784, 944640, 0x6353cb7c270b06c2},
-       {1935529451, 944640, 0x8d62a2ddb0350ab9},
-       {1968896118, 944640, 0xaf0ee1376ded95cd},
-       {2002262784, 944640, 0xf617917814de4169},
-       {2035629451, 944640, 0xf686efcec861909f},
-       {2068996118, 944640, 0x539f93afe6863cca},
-       {2102362784, 944640, 0x12c5c5e4eb5b2649},
-       {2135729451, 944640, 0x984cf8179effd823},
-       {2169096118, 944640, 0xfcb0cc2eb449ed16},
-       {2202462784, 944640, 0xf070b3572db477cc},
-       {2235829451, 944640, 0x5dd53f712ce8e1a6},
-       {2269196118, 944640, 0x02e0600528534bef},
-       {2302562784, 944640, 0x53120fbaca19e13b},
-       {2335929451, 944640, 0xd66e3cb3e70897eb},
-       {2369296118, 944640, 0x9f4138aa8e84cbf4},
-       {2402662784, 944640, 0xf350694d6a12ec39},
-       {2436029451, 944640, 0x08c986a97ab8fbb3},
-       {2469396118, 944640, 0x229d2b908659b728},
-       {2502762784, 944640, 0xf54cbe4582a3f8e1},
-       {2536129451, 944640, 0x8c8985c6649a3e1c},
-       {2569496118, 944640, 0x711e04eccc5e4527},
-       {2602862784, 944640, 0x78e2979034921e70},
-       {2636229451, 944640, 0x51c3524f5bf83a62},
-       {2669596118, 944640, 0x12b6f7b7591e7044},
-       {2702962784, 944640, 0xca8d7ac09b973a4b},
-       {2736329451, 944640, 0x3e666b376fcaa466},
-       {2769696118, 944640, 0x8f3657c9648b6dbb},
-       {2803062784, 944640, 0x19a30916a3375f4e}});
+      720, {{0, 944640, 0x0864378c3655ba47},          {133729451, 944640, 0x2481a21b1e543c8e},
+            {167096118, 944640, 0xe4294049f22539bc},  {200462784, 944640, 0xde1058aba916ffad},
+            {233829451, 944640, 0xc3fc580b34dc0383},  {267196118, 944640, 0xff31322e5ccdebe0},
+            {300562784, 944640, 0x64d31206ece7417f},  {333929451, 944640, 0xf1c6bf7fe1be29be},
+            {367296118, 944640, 0x72f44e5249a05c15},  {400662784, 944640, 0x1ad7e92183fb3aa4},
+            {434029451, 944640, 0x24b78b95d8c8b73d},  {467396118, 944640, 0x25a798d9af5a1b7e},
+            {500762784, 944640, 0x3379288b1f4197a5},  {534129451, 944640, 0x15fb9c205590cbc9},
+            {567496118, 944640, 0xc04a1834aec8b399},  {600862784, 944640, 0x97eded0e3b6348d3},
+            {634229451, 944640, 0x09dba227982ba479},  {667596118, 944640, 0x4d2a1042babc479c},
+            {700962784, 944640, 0x379f96a35774dc2b},  {734329451, 944640, 0x2d95a4b5506bd4c3},
+            {767696118, 944640, 0xda99bf00cd971999},  {801062784, 944640, 0x20a21550eb717da2},
+            {834429451, 944640, 0x3733b96d2279460b},  {867796118, 944640, 0x8ea51ee0088cda67},
+            {901162784, 944640, 0x8d6af19e5d9629ae},  {934529451, 944640, 0xd9765bd28098f093},
+            {967896118, 944640, 0x9a747455b496c9d1},  {1001262784, 944640, 0xfc8e90e73cc086f6},
+            {1034629451, 944640, 0xc3dec92946fc0005}, {1067996118, 944640, 0x215b196e790214c4},
+            {1101362784, 944640, 0x30b114015d719041}, {1134729451, 944640, 0x5ed6e582ac4022a1},
+            {1168096118, 944640, 0xbccb6f8ba8601507}, {1201462784, 944640, 0x34eab6666dc6c717},
+            {1234829451, 944640, 0x5e33bfc44650245f}, {1268196118, 944640, 0x736397b78e0850ff},
+            {1301562784, 944640, 0x620d7190a9e49a31}, {1334929451, 944640, 0x436e952327e311ea},
+            {1368296118, 944640, 0xf6fa16fc170a85f3}, {1401662784, 944640, 0x9f457e1a66323ead},
+            {1435029451, 944640, 0xb1747e31ea5358db}, {1468396118, 944640, 0x4da84ec1c5cb45de},
+            {1501762784, 944640, 0x5454f9007dc4de01}, {1535129451, 944640, 0x8e9777accf38e4f0},
+            {1568496118, 944640, 0x16a2ebade809e497}, {1601862784, 944640, 0x36d323606ebca2f4},
+            {1635229451, 944640, 0x17eaf1e84353dec9}, {1668596118, 944640, 0xdb1b344498520386},
+            {1701962784, 944640, 0xec53764065860e7f}, {1735329451, 944640, 0x110a7dddd4c45a54},
+            {1768696118, 944640, 0x6df1c973722f01c7}, {1802062784, 944640, 0x2e18f1e1544e002a},
+            {1835429451, 944640, 0x0de7b784dd8b0494}, {1868796118, 944640, 0x6e254cd1652be6a9},
+            {1902162784, 944640, 0x6353cb7c270b06c2}, {1935529451, 944640, 0x8d62a2ddb0350ab9},
+            {1968896118, 944640, 0xaf0ee1376ded95cd}, {2002262784, 944640, 0xf617917814de4169},
+            {2035629451, 944640, 0xf686efcec861909f}, {2068996118, 944640, 0x539f93afe6863cca},
+            {2102362784, 944640, 0x12c5c5e4eb5b2649}, {2135729451, 944640, 0x984cf8179effd823},
+            {2169096118, 944640, 0xfcb0cc2eb449ed16}, {2202462784, 944640, 0xf070b3572db477cc},
+            {2235829451, 944640, 0x5dd53f712ce8e1a6}, {2269196118, 944640, 0x02e0600528534bef},
+            {2302562784, 944640, 0x53120fbaca19e13b}, {2335929451, 944640, 0xd66e3cb3e70897eb},
+            {2369296118, 944640, 0x9f4138aa8e84cbf4}, {2402662784, 944640, 0xf350694d6a12ec39},
+            {2436029451, 944640, 0x08c986a97ab8fbb3}, {2469396118, 944640, 0x229d2b908659b728},
+            {2502762784, 944640, 0xf54cbe4582a3f8e1}, {2536129451, 944640, 0x8c8985c6649a3e1c},
+            {2569496118, 944640, 0x711e04eccc5e4527}, {2602862784, 944640, 0x78e2979034921e70},
+            {2636229451, 944640, 0x51c3524f5bf83a62}, {2669596118, 944640, 0x12b6f7b7591e7044},
+            {2702962784, 944640, 0xca8d7ac09b973a4b}, {2736329451, 944640, 0x3e666b376fcaa466},
+            {2769696118, 944640, 0x8f3657c9648b6dbb}, {2803062784, 944640, 0x19a30916a3375f4e}});
 
   CreateView();
   commands_.SetFile(kBearFilePath);

@@ -15,8 +15,7 @@ namespace {
 // is used to compare type sets to see which represents the best goal for
 // conversion. Higher scores are preferred. A score of zero indicates that
 // in_type is incompatible with out_type_set.
-int Score(const AudioStreamType& in_type,
-          const AudioStreamTypeSet& out_type_set) {
+int Score(const AudioStreamType& in_type, const AudioStreamTypeSet& out_type_set) {
   // TODO(dalesat): Plenty of room for more subtlety here. Maybe actually
   // measure conversion costs (cpu, quality, etc) and reflect them here.
 
@@ -42,8 +41,7 @@ int Score(const AudioStreamType& in_type,
         score += 4;
         break;
       default:
-        FXL_DCHECK(false) << "unsupported sample format "
-                          << out_type_set.sample_format();
+        FXL_DCHECK(false) << "unsupported sample format " << out_type_set.sample_format();
         return 0;
     }
   }
@@ -68,8 +66,8 @@ int Score(const AudioStreamType& in_type,
 class Builder {
  public:
   Builder(const StreamType& in_type,
-          const std::vector<std::unique_ptr<StreamTypeSet>>& out_type_sets,
-          Graph* graph, DecoderFactory* decoder_factory, OutputRef output,
+          const std::vector<std::unique_ptr<StreamTypeSet>>& out_type_sets, Graph* graph,
+          DecoderFactory* decoder_factory, OutputRef output,
           fit::function<void(OutputRef, std::unique_ptr<StreamType>)> callback);
 
   ~Builder() = default;
@@ -81,8 +79,7 @@ class Builder {
 
   void Fail();
 
-  const AudioStreamTypeSet* BestLpcmOutputForInput(
-      const AudioStreamType& audio_type);
+  const AudioStreamTypeSet* BestLpcmOutputForInput(const AudioStreamType& audio_type);
 
   void AddTransformsForCompressedAudio(const AudioStreamType& audio_type);
 
@@ -104,11 +101,10 @@ class Builder {
   const fit::function<void(OutputRef, std::unique_ptr<StreamType>)> callback_;
 };
 
-Builder::Builder(
-    const StreamType& in_type,
-    const std::vector<std::unique_ptr<StreamTypeSet>>& out_type_sets,
-    Graph* graph, DecoderFactory* decoder_factory, OutputRef output,
-    fit::function<void(OutputRef, std::unique_ptr<StreamType>)> callback)
+Builder::Builder(const StreamType& in_type,
+                 const std::vector<std::unique_ptr<StreamTypeSet>>& out_type_sets, Graph* graph,
+                 DecoderFactory* decoder_factory, OutputRef output,
+                 fit::function<void(OutputRef, std::unique_ptr<StreamType>)> callback)
     : type_(in_type.Clone()),
       out_type_sets_(out_type_sets),
       graph_(graph),
@@ -134,8 +130,7 @@ void Builder::Build() {
       }
       break;
     default:
-      FXL_DLOG(ERROR) << "conversion not supported for medium"
-                      << type_->medium();
+      FXL_DLOG(ERROR) << "conversion not supported for medium" << type_->medium();
       Fail();
       break;
   }
@@ -152,8 +147,7 @@ void Builder::Fail() {
   delete this;
 }
 
-void Builder::AddTransformsForCompressedAudio(
-    const AudioStreamType& audio_type) {
+void Builder::AddTransformsForCompressedAudio(const AudioStreamType& audio_type) {
   // See if we have a matching audio type.
   for (const auto& out_type_set : out_type_sets_) {
     if (out_type_set->medium() == StreamType::Medium::kAudio) {
@@ -181,33 +175,29 @@ void Builder::AddTransformsForCompressedAudio(
   AddDecoder();
 }
 
-void Builder::AddTransformsForCompressedVideo(
-    const VideoStreamType& video_type) {
+void Builder::AddTransformsForCompressedVideo(const VideoStreamType& video_type) {
   // TODO(dalesat): See if we already have a matching video type.
 
   AddDecoder();
 }
 
 void Builder::AddDecoder() {
-  decoder_factory_->CreateDecoder(
-      *type_, [this](std::shared_ptr<Decoder> decoder) {
-        if (!decoder) {
-          // No decoder found.
-          Fail();
-          return;
-        }
+  decoder_factory_->CreateDecoder(*type_, [this](std::shared_ptr<Decoder> decoder) {
+    if (!decoder) {
+      // No decoder found.
+      Fail();
+      return;
+    }
 
-        output_ =
-            graph_->ConnectOutputToNode(output_, graph_->Add(decoder)).output();
-        type_ = decoder->output_stream_type();
+    output_ = graph_->ConnectOutputToNode(output_, graph_->Add(decoder)).output();
+    type_ = decoder->output_stream_type();
 
-        Build();
-      });
+    Build();
+  });
 }
 
 // Finds the stream type set that best matches in_type.
-const AudioStreamTypeSet* Builder::BestLpcmOutputForInput(
-    const AudioStreamType& in_type) {
+const AudioStreamTypeSet* Builder::BestLpcmOutputForInput(const AudioStreamType& in_type) {
   StreamTypeSet* best = nullptr;
   int best_score = -1;
 
@@ -230,8 +220,7 @@ void Builder::AddTransformsForLpcm(const AudioStreamType& audio_type,
   if (audio_type.sample_format() != out_type_set.sample_format() &&
       out_type_set.sample_format() != AudioStreamType::SampleFormat::kAny) {
     // TODO(dalesat): Insert sample format converter.
-    FXL_DLOG(ERROR)
-        << "conversion requires sample format change - not supported";
+    FXL_DLOG(ERROR) << "conversion requires sample format change - not supported";
     Fail();
     return;
   }
@@ -243,8 +232,7 @@ void Builder::AddTransformsForLpcm(const AudioStreamType& audio_type,
     return;
   }
 
-  if (!out_type_set.frames_per_second().contains(
-          audio_type.frames_per_second())) {
+  if (!out_type_set.frames_per_second().contains(audio_type.frames_per_second())) {
     // TODO(dalesat): Insert resampler.
     FXL_DLOG(ERROR) << "conversion requires resampling - not supported";
     Fail();
@@ -252,12 +240,12 @@ void Builder::AddTransformsForLpcm(const AudioStreamType& audio_type,
   }
 
   // Build the resulting media type.
-  type_ = AudioStreamType::Create(
-      StreamType::kAudioEncodingLpcm, nullptr,
-      out_type_set.sample_format() == AudioStreamType::SampleFormat::kAny
-          ? audio_type.sample_format()
-          : out_type_set.sample_format(),
-      audio_type.channels(), audio_type.frames_per_second());
+  type_ =
+      AudioStreamType::Create(StreamType::kAudioEncodingLpcm, nullptr,
+                              out_type_set.sample_format() == AudioStreamType::SampleFormat::kAny
+                                  ? audio_type.sample_format()
+                                  : out_type_set.sample_format(),
+                              audio_type.channels(), audio_type.frames_per_second());
 
   Succeed();
 }
@@ -276,18 +264,17 @@ void Builder::AddTransformsForLpcm(const AudioStreamType& audio_type) {
 
 }  // namespace
 
-void BuildConversionPipeline(
-    const StreamType& in_type,
-    const std::vector<std::unique_ptr<StreamTypeSet>>& out_type_sets,
-    Graph* graph, DecoderFactory* decoder_factory, OutputRef output,
-    fit::function<void(OutputRef, std::unique_ptr<StreamType>)> callback) {
+void BuildConversionPipeline(const StreamType& in_type,
+                             const std::vector<std::unique_ptr<StreamTypeSet>>& out_type_sets,
+                             Graph* graph, DecoderFactory* decoder_factory, OutputRef output,
+                             fit::function<void(OutputRef, std::unique_ptr<StreamType>)> callback) {
   FXL_DCHECK(graph);
   FXL_DCHECK(decoder_factory);
   FXL_DCHECK(output);
   FXL_DCHECK(callback);
 
-  auto builder = new Builder(in_type, out_type_sets, graph, decoder_factory,
-                             output, std::move(callback));
+  auto builder =
+      new Builder(in_type, out_type_sets, graph, decoder_factory, output, std::move(callback));
   builder->Build();
 }
 

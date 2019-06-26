@@ -15,9 +15,9 @@ std::shared_ptr<FakeVideoRenderer> FakeVideoRenderer::Create() {
 }
 
 FakeVideoRenderer::FakeVideoRenderer() {
-  supported_stream_types_.push_back(VideoStreamTypeSet::Create(
-      {StreamType::kVideoEncodingUncompressed}, Range<uint32_t>(1, 3840),
-      Range<uint32_t>(1, 2160)));
+  supported_stream_types_.push_back(
+      VideoStreamTypeSet::Create({StreamType::kVideoEncodingUncompressed}, Range<uint32_t>(1, 3840),
+                                 Range<uint32_t>(1, 2160)));
 }
 
 }  // namespace test

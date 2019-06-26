@@ -56,8 +56,7 @@ void ReleaseOpaqueRefPtr(void* opaque) {
 }  // namespace
 
 FfmpegDecoderBase::FfmpegDecoderBase(AvCodecContextPtr av_codec_context)
-    : av_codec_context_(std::move(av_codec_context)),
-      av_frame_ptr_(ffmpeg::AvFrame::Create()) {
+    : av_codec_context_(std::move(av_codec_context)), av_frame_ptr_(ffmpeg::AvFrame::Create()) {
   FXL_DCHECK(av_codec_context_);
 
   av_codec_context_->opaque = this;
@@ -77,16 +76,13 @@ void FfmpegDecoderBase::Flush() {
   next_pts_ = Packet::kNoPts;
 }
 
-bool FfmpegDecoderBase::TransformPacket(const PacketPtr& input, bool new_input,
-                                        PacketPtr* output) {
+bool FfmpegDecoderBase::TransformPacket(const PacketPtr& input, bool new_input, PacketPtr* output) {
   FXL_DCHECK(is_worker_thread());
   FXL_DCHECK(input);
   FXL_DCHECK(output);
 
-  TRACE_DURATION(
-      "motown", "DecodePacket", "type",
-      (av_codec_context_->codec_type == AVMEDIA_TYPE_VIDEO ? "video"
-                                                           : "audio"));
+  TRACE_DURATION("motown", "DecodePacket", "type",
+                 (av_codec_context_->codec_type == AVMEDIA_TYPE_VIDEO ? "video" : "audio"));
 
   *output = nullptr;
 
@@ -122,8 +118,7 @@ bool FfmpegDecoderBase::TransformPacket(const PacketPtr& input, bool new_input,
     }
   }
 
-  int result =
-      avcodec_receive_frame(av_codec_context_.get(), av_frame_ptr_.get());
+  int result = avcodec_receive_frame(av_codec_context_.get(), av_frame_ptr_.get());
 
   switch (result) {
     case 0:
@@ -131,9 +126,8 @@ bool FfmpegDecoderBase::TransformPacket(const PacketPtr& input, bool new_input,
       //
       // We use |CopyOpaqueRefPtr| here to create a real |fbl:RefPtr| to the
       // |PayloadBuffer| attached to the frame's |AVBuffer| in |CreateAVBuffer|.
-      *output = CreateOutputPacket(*av_frame_ptr_,
-                                   CopyOpaqueRefPtr<PayloadBuffer>(
-                                       av_frame_ptr_->buf[0]->buffer->opaque));
+      *output = CreateOutputPacket(
+          *av_frame_ptr_, CopyOpaqueRefPtr<PayloadBuffer>(av_frame_ptr_->buf[0]->buffer->opaque));
 
       // Release the frame returned by |avcodec_receive_frame|.
       av_frame_unref(av_frame_ptr_.get());
@@ -207,21 +201,18 @@ int FfmpegDecoderBase::SendPacket(const PacketPtr& input) {
 
 void FfmpegDecoderBase::OnNewInputPacket(const PacketPtr& packet) {}
 
-AVBufferRef* FfmpegDecoderBase::CreateAVBuffer(
-    fbl::RefPtr<PayloadBuffer> payload_buffer) {
+AVBufferRef* FfmpegDecoderBase::CreateAVBuffer(fbl::RefPtr<PayloadBuffer> payload_buffer) {
   FXL_DCHECK(payload_buffer);
-  FXL_DCHECK(payload_buffer->size() <=
-             static_cast<uint64_t>(std::numeric_limits<int>::max()));
+  FXL_DCHECK(payload_buffer->size() <= static_cast<uint64_t>(std::numeric_limits<int>::max()));
   return av_buffer_create(reinterpret_cast<uint8_t*>(payload_buffer->data()),
-                          static_cast<int>(payload_buffer->size()),
-                          ReleaseBufferForAvFrame,
+                          static_cast<int>(payload_buffer->size()), ReleaseBufferForAvFrame,
                           CopyRefPtrToOpaque(payload_buffer),
                           /* flags */ 0);
 }
 
 // static
-int FfmpegDecoderBase::AllocateBufferForAvFrame(
-    AVCodecContext* av_codec_context, AVFrame* av_frame, int flags) {
+int FfmpegDecoderBase::AllocateBufferForAvFrame(AVCodecContext* av_codec_context, AVFrame* av_frame,
+                                                int flags) {
   // It's important to use av_codec_context here rather than context(),
   // because av_codec_context is different for different threads when we're
   // decoding on multiple threads. Be sure to avoid using self->context() or
@@ -230,8 +221,7 @@ int FfmpegDecoderBase::AllocateBufferForAvFrame(
   // AV_CODEC_CAP_DR1 is required in order to do allocation this way.
   FXL_DCHECK(av_codec_context->codec->capabilities & AV_CODEC_CAP_DR1);
 
-  FfmpegDecoderBase* self =
-      reinterpret_cast<FfmpegDecoderBase*>(av_codec_context->opaque);
+  FfmpegDecoderBase* self = reinterpret_cast<FfmpegDecoderBase*>(av_codec_context->opaque);
   FXL_DCHECK(self);
 
   return self->BuildAVFrame(*av_codec_context, av_frame);
@@ -254,8 +244,7 @@ void FfmpegDecoderBase::Dump(std::ostream& os) const {
   SoftwareDecoder::Dump(os);
 
   os << fostr::Indent;
-  os << fostr::NewLine << "next pts:          " << AsNs(next_pts_) << "@"
-     << pts_rate_;
+  os << fostr::NewLine << "next pts:          " << AsNs(next_pts_) << "@" << pts_rate_;
   os << fostr::Outdent;
 }
 

@@ -70,8 +70,7 @@ class SoftwareDecoder : public Decoder {
   // Node implementation.
   void Dump(std::ostream& os) const override;
 
-  void FlushInput(bool hold_frame, size_t input_index,
-                  fit::closure callback) override;
+  void FlushInput(bool hold_frame, size_t input_index, fit::closure callback) override;
 
   void FlushOutput(size_t output_index, fit::closure callback) override;
 
@@ -88,9 +87,7 @@ class SoftwareDecoder : public Decoder {
     async::PostTask(worker_loop_.dispatcher(), std::move(task));
   }
 
-  bool is_main_thread() const {
-    return async_get_default_dispatcher() == main_thread_dispatcher_;
-  }
+  bool is_main_thread() const { return async_get_default_dispatcher() == main_thread_dispatcher_; }
 
   bool is_worker_thread() const {
     return async_get_default_dispatcher() == worker_loop_.dispatcher();
@@ -109,8 +106,7 @@ class SoftwareDecoder : public Decoder {
   // This method must always 'progress' decoding in one way or another. That is,
   // either the result must be true or an output packet must be generated or
   // both.
-  virtual bool TransformPacket(const PacketPtr& input, bool new_input,
-                               PacketPtr* output) = 0;
+  virtual bool TransformPacket(const PacketPtr& input, bool new_input, PacketPtr* output) = 0;
 
  private:
   // |OutputState| indicates where we are with respect to satisifying a request
@@ -125,12 +121,7 @@ class SoftwareDecoder : public Decoder {
   //         processing the input packet and may produce more output packets
   // Note that |OutputState| is not intended to reflect the prefetch of an input
   // packet.
-  enum class OutputState {
-    kIdle,
-    kWaitingForInput,
-    kWaitingForWorker,
-    kWorkerNotDone
-  };
+  enum class OutputState { kIdle, kWaitingForInput, kWaitingForWorker, kWorkerNotDone };
 
   // Processes a single input packet on the worker thread.
   void HandleInputPacketOnWorker(PacketPtr packet);

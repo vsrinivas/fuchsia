@@ -14,14 +14,13 @@ namespace media_player {
 // Describes the type of a text stream.
 class TextStreamType : public StreamType {
  public:
-  static std::unique_ptr<StreamType> Create(
-      const std::string& encoding, std::unique_ptr<Bytes> encoding_parameters) {
+  static std::unique_ptr<StreamType> Create(const std::string& encoding,
+                                            std::unique_ptr<Bytes> encoding_parameters) {
     return std::unique_ptr<StreamType>(
         new TextStreamType(encoding, std::move(encoding_parameters)));
   }
 
-  TextStreamType(const std::string& encoding,
-                 std::unique_ptr<Bytes> encoding_parameters);
+  TextStreamType(const std::string& encoding, std::unique_ptr<Bytes> encoding_parameters);
 
   ~TextStreamType() override;
 
@@ -33,8 +32,7 @@ class TextStreamType : public StreamType {
 // Describes a set of text stream types.
 class TextStreamTypeSet : public StreamTypeSet {
  public:
-  static std::unique_ptr<StreamTypeSet> Create(
-      const std::vector<std::string>& encodings) {
+  static std::unique_ptr<StreamTypeSet> Create(const std::vector<std::string>& encodings) {
     return std::unique_ptr<StreamTypeSet>(new TextStreamTypeSet(encodings));
   }
 

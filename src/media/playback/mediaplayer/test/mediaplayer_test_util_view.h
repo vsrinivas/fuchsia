@@ -24,8 +24,7 @@ namespace test {
 
 class MediaPlayerTestUtilView : public scenic::BaseView {
  public:
-  MediaPlayerTestUtilView(scenic::ViewContext view_context,
-                          fit::function<void(int)> quit_callback,
+  MediaPlayerTestUtilView(scenic::ViewContext view_context, fit::function<void(int)> quit_callback,
                           const MediaPlayerTestUtilParams& params);
 
   ~MediaPlayerTestUtilView() override;
@@ -34,9 +33,7 @@ class MediaPlayerTestUtilView : public scenic::BaseView {
   enum class State { kPaused, kPlaying, kEnded };
 
   // |scenic::SessionListener|
-  void OnScenicError(std::string error) override {
-    FXL_LOG(ERROR) << "Scenic Error " << error;
-  }
+  void OnScenicError(std::string error) override { FXL_LOG(ERROR) << "Scenic Error " << error; }
 
   // Implements --experiment. Implementations of this method should not, in
   // general, be submitted. This is for developer experiments.
@@ -53,12 +50,10 @@ class MediaPlayerTestUtilView : public scenic::BaseView {
   void ScheduleNextUrl();
 
   // |scenic::BaseView|
-  void OnPropertiesChanged(
-      fuchsia::ui::gfx::ViewProperties old_properties) override;
+  void OnPropertiesChanged(fuchsia::ui::gfx::ViewProperties old_properties) override;
 
   // |scenic::BaseView|
-  void OnSceneInvalidated(
-      fuchsia::images::PresentationInfo presentation_info) override;
+  void OnSceneInvalidated(fuchsia::images::PresentationInfo presentation_info) override;
 
   // |scenic::BaseView|
   void OnInputEvent(fuchsia::ui::input::InputEvent event) override;
@@ -73,8 +68,7 @@ class MediaPlayerTestUtilView : public scenic::BaseView {
   void Layout();
 
   // Handles a status changed event from the player.
-  void HandleStatusChanged(
-      const fuchsia::media::playback::PlayerStatus& status);
+  void HandleStatusChanged(const fuchsia::media::playback::PlayerStatus& status);
 
   // Toggles between play and pause.
   void TogglePlayPause();

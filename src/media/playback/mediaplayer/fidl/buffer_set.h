@@ -25,12 +25,11 @@ class BufferSet : public fbl::RefCounted<BufferSet> {
   // Creates a buffer set with the specified settings and lifetime ordinal.
   // |single_vmo| indicates whether the buffers should be allocated from a
   // single VMO (true) or a VMO per buffer.
-  static fbl::RefPtr<BufferSet> Create(
-      const fuchsia::media::StreamBufferSettings& settings,
-      uint64_t lifetime_ordinal, bool single_vmo);
+  static fbl::RefPtr<BufferSet> Create(const fuchsia::media::StreamBufferSettings& settings,
+                                       uint64_t lifetime_ordinal, bool single_vmo);
 
-  BufferSet(const fuchsia::media::StreamBufferSettings& settings,
-            uint64_t lifetime_ordinal, bool single_vmo);
+  BufferSet(const fuchsia::media::StreamBufferSettings& settings, uint64_t lifetime_ordinal,
+            bool single_vmo);
 
   ~BufferSet();
 
@@ -77,25 +76,21 @@ class BufferSet : public fbl::RefCounted<BufferSet> {
   // Returns a |StreamBuffer| struct for the specified buffer. |writeable|
   // determines whether the vmo handle in the descriptor should have write
   // permission.
-  fuchsia::media::StreamBuffer GetBufferDescriptor(
-      uint32_t buffer_index, bool writeable,
-      const PayloadVmos& payload_vmos) const;
+  fuchsia::media::StreamBuffer GetBufferDescriptor(uint32_t buffer_index, bool writeable,
+                                                   const PayloadVmos& payload_vmos) const;
 
   // Allocates a buffer.
-  fbl::RefPtr<PayloadBuffer> AllocateBuffer(uint64_t size,
-                                            const PayloadVmos& payload_vmos);
+  fbl::RefPtr<PayloadBuffer> AllocateBuffer(uint64_t size, const PayloadVmos& payload_vmos);
 
   // Creates a payload buffer on behalf of the outboard decoder and stores
   // a reference to it. The reference may be released with
   // |ReleaseBufferForDecoder| or |ReleaseAllDecoderOwnedBuffers|.
-  void CreateBufferForDecoder(uint32_t buffer_index,
-                              const PayloadVmos& payload_vmos);
+  void CreateBufferForDecoder(uint32_t buffer_index, const PayloadVmos& payload_vmos);
 
   // Adds a reference to the payload buffer on behalf of the outboard decoder.
   // |payload_buffer| cannot be null. This version is used when the client
   // has a reference to the |PayloadBuffer| already.
-  void AddRefBufferForDecoder(uint32_t buffer_index,
-                              fbl::RefPtr<PayloadBuffer> payload_buffer);
+  void AddRefBufferForDecoder(uint32_t buffer_index, fbl::RefPtr<PayloadBuffer> payload_buffer);
 
   // Takes a reference to the payload buffer previously added using
   // |AddRefBufferForDecoder| or |AllocateAllBuffersForDecoder| and returns a
@@ -135,14 +130,12 @@ class BufferSet : public fbl::RefCounted<BufferSet> {
   };
 
   // Gets the |PayloadVmo| for the specified index.
-  fbl::RefPtr<PayloadVmo> BufferVmo(size_t buffer_index,
-                                    const PayloadVmos& payload_vmos) const
+  fbl::RefPtr<PayloadVmo> BufferVmo(size_t buffer_index, const PayloadVmos& payload_vmos) const
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
 
   // Creates a |PayloadBuffer| for the indicated |buffer_index|.
-  fbl::RefPtr<PayloadBuffer> CreateBuffer(
-      uint32_t buffer_index,
-      const std::vector<fbl::RefPtr<PayloadVmo>>& payload_vmos)
+  fbl::RefPtr<PayloadBuffer> CreateBuffer(uint32_t buffer_index,
+                                          const std::vector<fbl::RefPtr<PayloadVmo>>& payload_vmos)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
 
   mutable std::mutex mutex_;
@@ -175,9 +168,7 @@ class BufferSetManager {
  public:
   BufferSetManager() = default;
 
-  ~BufferSetManager() {
-    FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
-  };
+  ~BufferSetManager() { FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_); };
 
   // Determines whether this has a current buffer set.
   bool has_current_set() const {
@@ -200,15 +191,13 @@ class BufferSetManager {
   // former case, false in the latter.
   //
   // Returns whether the constraints were successfully applied.
-  bool ApplyConstraints(
-      const fuchsia::media::StreamBufferConstraints& constraints,
-      bool single_vmo_preferred);
+  bool ApplyConstraints(const fuchsia::media::StreamBufferConstraints& constraints,
+                        bool single_vmo_preferred);
 
   // Releases a reference to the payload buffer previously added using
   // |BufferSet::AddRefBufferForDecoder| or
   // |BufferSet::AllocateAllBuffersForDecoder|.
-  void ReleaseBufferForDecoder(uint64_t lifetime_ordinal,
-                               uint32_t buffer_index);
+  void ReleaseBufferForDecoder(uint64_t lifetime_ordinal, uint32_t buffer_index);
 
  private:
   FXL_DECLARE_THREAD_CHECKER(thread_checker_);

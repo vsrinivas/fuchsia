@@ -20,9 +20,8 @@ FfmpegDecoderFactory::FfmpegDecoderFactory() {}
 
 FfmpegDecoderFactory::~FfmpegDecoderFactory() {}
 
-void FfmpegDecoderFactory::CreateDecoder(
-    const StreamType& stream_type,
-    fit::function<void(std::shared_ptr<Decoder>)> callback) {
+void FfmpegDecoderFactory::CreateDecoder(const StreamType& stream_type,
+                                         fit::function<void(std::shared_ptr<Decoder>)> callback) {
   FXL_DCHECK(callback);
 
   AvCodecContextPtr av_codec_context(AvCodecContext::Create(stream_type));
@@ -54,8 +53,7 @@ void FfmpegDecoderFactory::CreateDecoder(
       callback(FfmpegVideoDecoder::Create(std::move(av_codec_context)));
       break;
     default:
-      FXL_LOG(ERROR) << "unsupported codec type "
-                     << av_codec_context->codec_type;
+      FXL_LOG(ERROR) << "unsupported codec type " << av_codec_context->codec_type;
       callback(nullptr);
       break;
   }

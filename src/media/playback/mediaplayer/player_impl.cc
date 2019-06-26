@@ -44,16 +44,16 @@ static constexpr zx_duration_t kCacheBacktrack = ZX_SEC(5);
 template <typename T>
 zx_koid_t GetKoid(const fidl::InterfaceRequest<T>& request) {
   zx_info_handle_basic_t info;
-  zx_status_t status = request.channel().get_info(
-      ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
+  zx_status_t status =
+      request.channel().get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
   return status == ZX_OK ? info.koid : ZX_KOID_INVALID;
 }
 
 template <typename T>
 zx_koid_t GetRelatedKoid(const fidl::InterfaceHandle<T>& request) {
   zx_info_handle_basic_t info;
-  zx_status_t status = request.channel().get_info(
-      ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
+  zx_status_t status =
+      request.channel().get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
   return status == ZX_OK ? info.related_koid : ZX_KOID_INVALID;
 }
 
@@ -67,9 +67,8 @@ std::unique_ptr<PlayerImpl> PlayerImpl::Create(
                                       std::move(quit_callback));
 }
 
-PlayerImpl::PlayerImpl(
-    fidl::InterfaceRequest<fuchsia::media::playback::Player> request,
-    component::StartupContext* startup_context, fit::closure quit_callback)
+PlayerImpl::PlayerImpl(fidl::InterfaceRequest<fuchsia::media::playback::Player> request,
+                       component::StartupContext* startup_context, fit::closure quit_callback)
     : dispatcher_(async_get_default_dispatcher()),
       startup_context_(startup_context),
       quit_callback_(std::move(quit_callback)),
@@ -84,12 +83,10 @@ PlayerImpl::PlayerImpl(
   FXL_DCHECK(decoder_factory_);
 
   startup_context_->outgoing().debug_dir()->AddEntry(
-      kDumpEntry,
-      fbl::AdoptRef(new fs::BufferedPseudoFile([this](fbl::String* out) {
+      kDumpEntry, fbl::AdoptRef(new fs::BufferedPseudoFile([this](fbl::String* out) {
         std::ostringstream os;
 
-        os << fostr::NewLine
-           << "duration:           " << AsNs(status_.duration);
+        os << fostr::NewLine << "duration:           " << AsNs(status_.duration);
         os << fostr::NewLine << "can pause:          " << status_.can_pause;
         os << fostr::NewLine << "can seek:           " << status_.can_seek;
 
@@ -105,13 +102,11 @@ PlayerImpl::PlayerImpl(
         }
 
         if (target_state_ != state_) {
-          os << fostr::NewLine
-             << "transitioning to:   " << ToString(target_state_);
+          os << fostr::NewLine << "transitioning to:   " << ToString(target_state_);
         }
 
         if (target_position_ != Packet::kNoPts) {
-          os << fostr::NewLine
-             << "pending seek to:    " << AsNs(target_position_);
+          os << fostr::NewLine << "pending seek to:    " << AsNs(target_position_);
         }
 
         core_.Dump(os << std::boolalpha);
@@ -151,24 +146,20 @@ void PlayerImpl::MaybeCreateRenderer(StreamType::Medium medium) {
   switch (medium) {
     case StreamType::Medium::kAudio:
       if (!audio_renderer_) {
-        auto audio = startup_context_
-                         ->ConnectToEnvironmentService<fuchsia::media::Audio>();
+        auto audio = startup_context_->ConnectToEnvironmentService<fuchsia::media::Audio>();
         fuchsia::media::AudioRendererPtr audio_renderer;
         audio->CreateAudioRenderer(audio_renderer.NewRequest());
         audio_renderer_ = FidlAudioRenderer::Create(std::move(audio_renderer));
-        core_.SetSinkSegment(RendererSinkSegment::Create(
-                                 audio_renderer_, decoder_factory_.get()),
+        core_.SetSinkSegment(RendererSinkSegment::Create(audio_renderer_, decoder_factory_.get()),
                              medium);
       }
       break;
     case StreamType::Medium::kVideo:
       if (!video_renderer_) {
         video_renderer_ = FidlVideoRenderer::Create(startup_context_);
-        video_renderer_->SetGeometryUpdateCallback(
-            [this]() { SendStatusUpdates(); });
+        video_renderer_->SetGeometryUpdateCallback([this]() { SendStatusUpdates(); });
 
-        core_.SetSinkSegment(RendererSinkSegment::Create(
-                                 video_renderer_, decoder_factory_.get()),
+        core_.SetSinkSegment(RendererSinkSegment::Create(video_renderer_, decoder_factory_.get()),
                              medium);
       }
       break;
@@ -259,45 +250,42 @@ void PlayerImpl::Update() {
           transform_subject_time_ = target_position;
           program_range_min_pts_ = target_position;
 
-          SetTimelineFunction(0.0f, zx::clock::get_monotonic().get(),
-                              [this, target_position]() {
-                                if (target_position_ == target_position) {
-                                  // We've had a rendundant seek request. Ignore
-                                  // it.
-                                  target_position_ = Packet::kNoPts;
-                                } else if (target_position_ != Packet::kNoPts) {
-                                  // We've had a seek request to a new position.
-                                  // Refrain from seeking the source and
-                                  // re-enter this sequence.
-                                  state_ = State::kFlushed;
-                                  Update();
-                                  return;
-                                }
+          SetTimelineFunction(0.0f, zx::clock::get_monotonic().get(), [this, target_position]() {
+            if (target_position_ == target_position) {
+              // We've had a rendundant seek request. Ignore
+              // it.
+              target_position_ = Packet::kNoPts;
+            } else if (target_position_ != Packet::kNoPts) {
+              // We've had a seek request to a new position.
+              // Refrain from seeking the source and
+              // re-enter this sequence.
+              state_ = State::kFlushed;
+              Update();
+              return;
+            }
 
-                                if (!core_.can_seek()) {
-                                  // We can't seek, so |target_position| should
-                                  // be zero.
-                                  FXL_DCHECK(target_position == 0)
-                                      << "Can't seek, target_position is "
-                                      << target_position;
-                                  state_ = State::kFlushed;
-                                  Update();
-                                } else {
-                                  // Seek to the new position.
-                                  core_.Seek(target_position, [this]() {
-                                    state_ = State::kFlushed;
-                                    Update();
-                                  });
-                                }
-                              });
+            if (!core_.can_seek()) {
+              // We can't seek, so |target_position| should
+              // be zero.
+              FXL_DCHECK(target_position == 0)
+                  << "Can't seek, target_position is " << target_position;
+              state_ = State::kFlushed;
+              Update();
+            } else {
+              // Seek to the new position.
+              core_.Seek(target_position, [this]() {
+                state_ = State::kFlushed;
+                Update();
+              });
+            }
+          });
 
           // Done for now. We're in kWaiting, and the callback will call
           // Update when the Seek call is complete.
           return;
         }
 
-        if (target_state_ == State::kPlaying ||
-            target_state_ == State::kPrimed) {
+        if (target_state_ == State::kPlaying || target_state_ == State::kPrimed) {
           // We want to transition to |kPrimed| or to |kPlaying|, for which
           // |kPrimed| is a prerequisite. We enter |kWaiting| state, issue the
           // |SetProgramRange| and |Prime| requests and transition to |kPrimed|
@@ -343,12 +331,10 @@ void PlayerImpl::Update() {
           // operation completes.
           state_ = State::kWaiting;
           waiting_reason_ = "for renderers to start progressing";
-          SetTimelineFunction(
-              1.0f, zx::clock::get_monotonic().get() + kMinimumLeadTime,
-              [this]() {
-                state_ = State::kPlaying;
-                Update();
-              });
+          SetTimelineFunction(1.0f, zx::clock::get_monotonic().get() + kMinimumLeadTime, [this]() {
+            state_ = State::kPlaying;
+            Update();
+          });
 
           // Done for now. We're in |kWaiting|, and the callback will call
           // |Update| when the flush is complete.
@@ -368,12 +354,10 @@ void PlayerImpl::Update() {
           // operation completes.
           state_ = State::kWaiting;
           waiting_reason_ = "for renderers to stop progressing";
-          SetTimelineFunction(
-              0.0f, zx::clock::get_monotonic().get() + kMinimumLeadTime,
-              [this]() {
-                state_ = State::kPrimed;
-                Update();
-              });
+          SetTimelineFunction(0.0f, zx::clock::get_monotonic().get() + kMinimumLeadTime, [this]() {
+            state_ = State::kPrimed;
+            Update();
+          });
 
           // Done for now. We're in |kWaiting|, and the callback will call
           // |Update| when the timeline is set.
@@ -399,27 +383,22 @@ void PlayerImpl::Update() {
   }
 }
 
-void PlayerImpl::SetTimelineFunction(float rate, int64_t reference_time,
-                                     fit::closure callback) {
+void PlayerImpl::SetTimelineFunction(float rate, int64_t reference_time, fit::closure callback) {
   core_.SetTimelineFunction(
-      media::TimelineFunction(transform_subject_time_, reference_time,
-                              media::TimelineRate(rate)),
+      media::TimelineFunction(transform_subject_time_, reference_time, media::TimelineRate(rate)),
       std::move(callback));
   transform_subject_time_ = Packet::kNoPts;
   SendStatusUpdates();
 }
 
-void PlayerImpl::SetHttpSource(
-    std::string http_url,
-    fidl::VectorPtr<fuchsia::net::oldhttp::HttpHeader> headers) {
-  BeginSetSource(CreateSource(
-      HttpReader::Create(startup_context_, http_url, std::move(headers)),
-      nullptr));
+void PlayerImpl::SetHttpSource(std::string http_url,
+                               fidl::VectorPtr<fuchsia::net::oldhttp::HttpHeader> headers) {
+  BeginSetSource(
+      CreateSource(HttpReader::Create(startup_context_, http_url, std::move(headers)), nullptr));
 }
 
 void PlayerImpl::SetFileSource(zx::channel file_channel) {
-  BeginSetSource(
-      CreateSource(FileReader::Create(std::move(file_channel)), nullptr));
+  BeginSetSource(CreateSource(FileReader::Create(std::move(file_channel)), nullptr));
 }
 
 void PlayerImpl::AddBindingInternal(
@@ -513,8 +492,7 @@ void PlayerImpl::CreateView(fuchsia::ui::views::ViewToken view_token) {
 }
 
 void PlayerImpl::BindGainControl(
-    fidl::InterfaceRequest<fuchsia::media::audio::GainControl>
-        gain_control_request) {
+    fidl::InterfaceRequest<fuchsia::media::audio::GainControl> gain_control_request) {
   if (!audio_renderer_) {
     MaybeCreateRenderer(StreamType::Medium::kAudio);
   }
@@ -523,25 +501,21 @@ void PlayerImpl::BindGainControl(
   audio_renderer_->BindGainControl(std::move(gain_control_request));
 }
 
-void PlayerImpl::AddBinding(
-    fidl::InterfaceRequest<fuchsia::media::playback::Player> request) {
+void PlayerImpl::AddBinding(fidl::InterfaceRequest<fuchsia::media::playback::Player> request) {
   FXL_DCHECK(request);
   AddBindingInternal(std::move(request));
 }
 
 void PlayerImpl::CreateHttpSource(
-    std::string http_url,
-    fidl::VectorPtr<fuchsia::net::oldhttp::HttpHeader> headers,
+    std::string http_url, fidl::VectorPtr<fuchsia::net::oldhttp::HttpHeader> headers,
     fidl::InterfaceRequest<fuchsia::media::playback::Source> source_request) {
   FXL_DCHECK(source_request);
 
   zx_koid_t koid = GetKoid(source_request);
   source_impls_by_koid_.emplace(
-      koid, CreateSource(HttpReader::Create(startup_context_, http_url,
-                                            std::move(headers)),
-                         std::move(source_request), [this, koid]() {
-                           source_impls_by_koid_.erase(koid);
-                         }));
+      koid, CreateSource(HttpReader::Create(startup_context_, http_url, std::move(headers)),
+                         std::move(source_request),
+                         [this, koid]() { source_impls_by_koid_.erase(koid); }));
 }
 
 void PlayerImpl::CreateFileSource(
@@ -552,44 +526,36 @@ void PlayerImpl::CreateFileSource(
 
   zx_koid_t koid = GetKoid(source_request);
   source_impls_by_koid_.emplace(
-      koid, CreateSource(FileReader::Create(std::move(file_channel)),
-                         std::move(source_request), [this, koid]() {
-                           source_impls_by_koid_.erase(koid);
-                         }));
+      koid, CreateSource(FileReader::Create(std::move(file_channel)), std::move(source_request),
+                         [this, koid]() { source_impls_by_koid_.erase(koid); }));
 }
 
 void PlayerImpl::CreateReaderSource(
-    fidl::InterfaceHandle<fuchsia::media::playback::SeekingReader>
-        seeking_reader,
+    fidl::InterfaceHandle<fuchsia::media::playback::SeekingReader> seeking_reader,
     fidl::InterfaceRequest<fuchsia::media::playback::Source> source_request) {
   FXL_DCHECK(seeking_reader);
   FXL_DCHECK(source_request);
 
   zx_koid_t koid = GetKoid(source_request);
   source_impls_by_koid_.emplace(
-      koid, CreateSource(FidlReader::Create(seeking_reader.Bind()),
-                         std::move(source_request), [this, koid]() {
-                           source_impls_by_koid_.erase(koid);
-                         }));
+      koid, CreateSource(FidlReader::Create(seeking_reader.Bind()), std::move(source_request),
+                         [this, koid]() { source_impls_by_koid_.erase(koid); }));
 }
 
 void PlayerImpl::CreateElementarySource(
     int64_t duration_ns, bool can_pause, bool can_seek,
     std::unique_ptr<fuchsia::media::Metadata> metadata,
-    fidl::InterfaceRequest<fuchsia::media::playback::ElementarySource>
-        source_request) {
+    fidl::InterfaceRequest<fuchsia::media::playback::ElementarySource> source_request) {
   FXL_DCHECK(source_request);
 
   zx_koid_t koid = GetKoid(source_request);
   source_impls_by_koid_.emplace(
-      koid, ElementarySourceImpl::Create(
-                duration_ns, can_pause, can_seek, std::move(metadata),
-                core_.graph(), std::move(source_request),
-                [this, koid]() { source_impls_by_koid_.erase(koid); }));
+      koid, ElementarySourceImpl::Create(duration_ns, can_pause, can_seek, std::move(metadata),
+                                         core_.graph(), std::move(source_request),
+                                         [this, koid]() { source_impls_by_koid_.erase(koid); }));
 }
 
-void PlayerImpl::SetSource(
-    fidl::InterfaceHandle<fuchsia::media::playback::Source> source_handle) {
+void PlayerImpl::SetSource(fidl::InterfaceHandle<fuchsia::media::playback::Source> source_handle) {
   if (!source_handle) {
     BeginSetSource(nullptr);
     return;
@@ -605,8 +571,7 @@ void PlayerImpl::SetSource(
 
   auto iter = source_impls_by_koid_.find(source_koid);
   if (iter == source_impls_by_koid_.end()) {
-    FXL_LOG(ERROR)
-        << "Bad source handle passed to SetSource. Closing connection.";
+    FXL_LOG(ERROR) << "Bad source handle passed to SetSource. Closing connection.";
     bindings_.CloseAll();
     return;
   }
@@ -619,16 +584,14 @@ void PlayerImpl::SetSource(
   BeginSetSource(std::move(iter->second));
 }
 
-void PlayerImpl::TransitionToSource(
-    fidl::InterfaceHandle<fuchsia::media::playback::Source> source,
-    int64_t transition_pts, int64_t start_pts) {
+void PlayerImpl::TransitionToSource(fidl::InterfaceHandle<fuchsia::media::playback::Source> source,
+                                    int64_t transition_pts, int64_t start_pts) {
   FXL_NOTIMPLEMENTED();
   bindings_.CloseAll();
 }
 
 void PlayerImpl::CancelSourceTransition(
-    fidl::InterfaceRequest<fuchsia::media::playback::Source>
-        returned_source_request) {
+    fidl::InterfaceRequest<fuchsia::media::playback::Source> returned_source_request) {
   FXL_NOTIMPLEMENTED();
   bindings_.CloseAll();
 }
@@ -642,8 +605,7 @@ std::unique_ptr<SourceImpl> PlayerImpl::CreateSource(
   // TODO(dalesat): Handle CreateDemux failure.
   FXL_DCHECK(demux);
   demux->SetCacheOptions(kCacheLead, kCacheBacktrack);
-  return DemuxSourceImpl::Create(demux, core_.graph(),
-                                 std::move(source_request),
+  return DemuxSourceImpl::Create(demux, core_.graph(), std::move(source_request),
                                  std::move(connection_failure_callback));
 }
 
@@ -656,8 +618,8 @@ void PlayerImpl::SendStatusUpdates() {
 }
 
 void PlayerImpl::UpdateStatus() {
-  status_.timeline_function = fidl::MakeOptional(
-      fidl::To<fuchsia::media::TimelineFunction>(core_.timeline_function()));
+  status_.timeline_function =
+      fidl::MakeOptional(fidl::To<fuchsia::media::TimelineFunction>(core_.timeline_function()));
   status_.end_of_stream = core_.end_of_stream();
   status_.has_audio = core_.content_has_medium(StreamType::Medium::kAudio);
   status_.has_video = core_.content_has_medium(StreamType::Medium::kVideo);
@@ -670,14 +632,11 @@ void PlayerImpl::UpdateStatus() {
 
   auto metadata = core_.metadata();
   status_.metadata =
-      metadata
-          ? fidl::MakeOptional(fidl::To<fuchsia::media::Metadata>(*metadata))
-          : nullptr;
+      metadata ? fidl::MakeOptional(fidl::To<fuchsia::media::Metadata>(*metadata)) : nullptr;
 
   if (video_renderer_) {
     status_.video_size = CloneOptional(video_renderer_->video_size());
-    status_.pixel_aspect_ratio =
-        CloneOptional(video_renderer_->pixel_aspect_ratio());
+    status_.pixel_aspect_ratio = CloneOptional(video_renderer_->pixel_aspect_ratio());
   }
 
   status_.problem = CloneOptional(core_.problem());

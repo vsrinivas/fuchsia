@@ -8,30 +8,24 @@
 
 namespace media_player {
 
-SubpictureStreamType::SubpictureStreamType(
-    const std::string& encoding, std::unique_ptr<Bytes> encoding_parameters)
-    : StreamType(StreamType::Medium::kSubpicture, encoding,
-                 std::move(encoding_parameters)) {}
+SubpictureStreamType::SubpictureStreamType(const std::string& encoding,
+                                           std::unique_ptr<Bytes> encoding_parameters)
+    : StreamType(StreamType::Medium::kSubpicture, encoding, std::move(encoding_parameters)) {}
 
 SubpictureStreamType::~SubpictureStreamType() {}
 
-const SubpictureStreamType* SubpictureStreamType::subpicture() const {
-  return this;
-}
+const SubpictureStreamType* SubpictureStreamType::subpicture() const { return this; }
 
 std::unique_ptr<StreamType> SubpictureStreamType::Clone() const {
   return Create(encoding(), SafeClone(encoding_parameters()));
 }
 
-SubpictureStreamTypeSet::SubpictureStreamTypeSet(
-    const std::vector<std::string>& encodings)
+SubpictureStreamTypeSet::SubpictureStreamTypeSet(const std::vector<std::string>& encodings)
     : StreamTypeSet(StreamType::Medium::kSubpicture, encodings) {}
 
 SubpictureStreamTypeSet::~SubpictureStreamTypeSet() {}
 
-const SubpictureStreamTypeSet* SubpictureStreamTypeSet::subpicture() const {
-  return this;
-}
+const SubpictureStreamTypeSet* SubpictureStreamTypeSet::subpicture() const { return this; }
 
 std::unique_ptr<StreamTypeSet> SubpictureStreamTypeSet::Clone() const {
   return Create(encodings());

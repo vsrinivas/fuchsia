@@ -38,10 +38,8 @@ class FakeImagePipe : public fuchsia::images::ImagePipe {
 
   // Indicates that the session should verify supplied frames against the
   // specified PacketInfos.
-  void SetExpectations(uint32_t black_image_id,
-                       const fuchsia::images::ImageInfo& black_image_info,
-                       const fuchsia::images::ImageInfo& info,
-                       uint32_t display_height,
+  void SetExpectations(uint32_t black_image_id, const fuchsia::images::ImageInfo& black_image_info,
+                       const fuchsia::images::ImageInfo& info, uint32_t display_height,
                        const std::vector<PacketInfo>&& expected_packets_info) {
     expected_black_image_id_ = black_image_id;
     expected_black_image_info_ = fidl::MakeOptional(black_image_info);
@@ -55,26 +53,24 @@ class FakeImagePipe : public fuchsia::images::ImagePipe {
   bool expected() { return expected_; }
 
   // Handles scene presentation.
-  void OnPresentScene(zx::time presentation_time,
-                      zx::time next_presentation_time,
+  void OnPresentScene(zx::time presentation_time, zx::time next_presentation_time,
                       zx::duration presentation_interval);
 
   // ImagePipe implementation.
-  void AddImage(uint32_t image_id, fuchsia::images::ImageInfo image_info,
-                zx::vmo memory, uint64_t offset_bytes, uint64_t size_bytes,
+  void AddImage(uint32_t image_id, fuchsia::images::ImageInfo image_info, zx::vmo memory,
+                uint64_t offset_bytes, uint64_t size_bytes,
                 fuchsia::images::MemoryType memory_type) override;
 
   void RemoveImage(uint32_t image_id) override;
 
   void PresentImage(uint32_t image_id, uint64_t presentation_time,
-                    std::vector<zx::event> acquire_fences,
-                    std::vector<zx::event> release_fences,
+                    std::vector<zx::event> acquire_fences, std::vector<zx::event> release_fences,
                     PresentImageCallback callback) override;
 
  private:
   struct Image {
-    Image(fuchsia::images::ImageInfo image_info, zx::vmo memory,
-          uint64_t memory_offset, uint64_t size_bytes);
+    Image(fuchsia::images::ImageInfo image_info, zx::vmo memory, uint64_t memory_offset,
+          uint64_t size_bytes);
 
     fuchsia::images::ImageInfo image_info_;
     fzl::VmoMapper vmo_mapper_;
@@ -95,15 +91,12 @@ class FakeImagePipe : public fuchsia::images::ImagePipe {
   };
 
   // Gets a weak pointer to this |FakeImagePipe|.
-  fxl::WeakPtr<FakeImagePipe> GetWeakThis() {
-    return weak_factory_.GetWeakPtr();
-  }
+  fxl::WeakPtr<FakeImagePipe> GetWeakThis() { return weak_factory_.GetWeakPtr(); }
 
   void ExpectImageInfo(const fuchsia::images::ImageInfo& expected,
                        const fuchsia::images::ImageInfo& actual);
 
-  uint64_t PacketHash(const void* data,
-                      const fuchsia::images::ImageInfo& image_info);
+  uint64_t PacketHash(const void* data, const fuchsia::images::ImageInfo& image_info);
 
   async_dispatcher_t* dispatcher_;
   fidl::Binding<fuchsia::images::ImagePipe> binding_;

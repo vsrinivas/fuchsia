@@ -39,8 +39,7 @@ class Renderer : public Node {
 
   // Returns the types of the streams the renderer is able
   // to consume.
-  virtual const std::vector<std::unique_ptr<StreamTypeSet>>&
-  GetSupportedStreamTypes() = 0;
+  virtual const std::vector<std::unique_ptr<StreamTypeSet>>& GetSupportedStreamTypes() = 0;
 
   // Sets the type of stream the renderer will consume.
   virtual void SetStreamType(const StreamType& stream_type) = 0;
@@ -53,8 +52,7 @@ class Renderer : public Node {
                                    fit::closure callback);
 
   // Sets a program range for this renderer.
-  virtual void SetProgramRange(uint64_t program, int64_t min_pts,
-                               int64_t max_pts);
+  virtual void SetProgramRange(uint64_t program, int64_t min_pts, int64_t max_pts);
 
   // Determines whether end-of-stream has been reached.
   bool end_of_stream() const;
@@ -98,9 +96,7 @@ class Renderer : public Node {
   }
 
   // Indicates whether the end of stream packet has been encountered.
-  bool end_of_stream_pending() const {
-    return end_of_stream_pts_ != Packet::kNoPts;
-  }
+  bool end_of_stream_pending() const { return end_of_stream_pts_ != Packet::kNoPts; }
 
   // PTS at which end-of-stream is to occur or |kUnspecifiedTime| if an end-
   // of-stream packet has not yet been encountered.

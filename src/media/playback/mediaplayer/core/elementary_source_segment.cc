@@ -17,13 +17,12 @@ namespace media_player {
 std::unique_ptr<ElementarySourceSegment> ElementarySourceSegment::Create(
     int64_t duration_ns, bool can_pause, bool can_seek,
     std::unique_ptr<media_player::Metadata> metadata) {
-  return std::make_unique<ElementarySourceSegment>(
-      duration_ns, can_pause, can_seek, std::move(metadata));
+  return std::make_unique<ElementarySourceSegment>(duration_ns, can_pause, can_seek,
+                                                   std::move(metadata));
 }
 
-ElementarySourceSegment::ElementarySourceSegment(
-    int64_t duration_ns, bool can_pause, bool can_seek,
-    std::unique_ptr<media_player::Metadata> metadata)
+ElementarySourceSegment::ElementarySourceSegment(int64_t duration_ns, bool can_pause, bool can_seek,
+                                                 std::unique_ptr<media_player::Metadata> metadata)
     : SourceSegment(false),
       duration_ns_(duration_ns),
       can_pause_(can_pause),
@@ -66,8 +65,7 @@ void ElementarySourceSegment::Flush(bool hold_frame, fit::closure callback) {
   auto callback_joiner = CallbackJoiner::Create();
 
   for (auto node_ref : nodes_) {
-    graph().FlushOutput(node_ref.output(), hold_frame,
-                        callback_joiner->NewCallback());
+    graph().FlushOutput(node_ref.output(), hold_frame, callback_joiner->NewCallback());
   }
 
   callback_joiner->WhenJoined(std::move(callback));

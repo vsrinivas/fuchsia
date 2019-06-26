@@ -102,8 +102,7 @@ class FfmpegDemuxImpl : public FfmpegDemux {
   void NotifyInitComplete();
 
   // Waits on behalf of |Worker| for work to do.
-  bool Wait(bool* packet_requested, int64_t* seek_position,
-            SeekCallback* seek_callback);
+  bool Wait(bool* packet_requested, int64_t* seek_position, SeekCallback* seek_callback);
 
   // Produces a packet. Called from the ffmpeg thread only.
   PacketPtr PullPacket(size_t* stream_index_out);
@@ -153,8 +152,7 @@ class FfmpegDemuxImpl : public FfmpegDemux {
 };
 
 // static
-std::shared_ptr<Demux> FfmpegDemux::Create(
-    std::shared_ptr<ReaderCache> reader_cache) {
+std::shared_ptr<Demux> FfmpegDemux::Create(std::shared_ptr<ReaderCache> reader_cache) {
   return std::make_shared<FfmpegDemuxImpl>(reader_cache);
 }
 
@@ -180,8 +178,7 @@ void FfmpegDemuxImpl::SetStatusCallback(StatusCallback callback) {
   status_callback_ = std::move(callback);
 }
 
-void FfmpegDemuxImpl::SetCacheOptions(zx_duration_t lead,
-                                      zx_duration_t backtrack) {
+void FfmpegDemuxImpl::SetCacheOptions(zx_duration_t lead, zx_duration_t backtrack) {
   FXL_DCHECK(lead > 0);
 
   WhenInitialized([this, lead, backtrack](zx_status_t init_status) {
@@ -211,14 +208,11 @@ void FfmpegDemuxImpl::SetCacheOptions(zx_duration_t lead,
   });
 }
 
-void FfmpegDemuxImpl::WhenInitialized(
-    fit::function<void(zx_status_t)> callback) {
-  init_complete_.When(
-      [this, callback = std::move(callback)]() { callback(status_); });
+void FfmpegDemuxImpl::WhenInitialized(fit::function<void(zx_status_t)> callback) {
+  init_complete_.When([this, callback = std::move(callback)]() { callback(status_); });
 }
 
-const std::vector<std::unique_ptr<Demux::DemuxStream>>&
-FfmpegDemuxImpl::streams() const {
+const std::vector<std::unique_ptr<Demux::DemuxStream>>& FfmpegDemuxImpl::streams() const {
   return streams_;
 }
 
@@ -240,8 +234,7 @@ void FfmpegDemuxImpl::Dump(std::ostream& os) const {
     std::lock_guard<std::mutex> locker(mutex_);
 
     for (auto& stream : streams_) {
-      os << fostr::NewLine << "[" << stream->index() << "] "
-         << stream->stream_type();
+      os << fostr::NewLine << "[" << stream->index() << "] " << stream->stream_type();
     }
   }
 
@@ -249,15 +242,12 @@ void FfmpegDemuxImpl::Dump(std::ostream& os) const {
 }
 
 void FfmpegDemuxImpl::ConfigureConnectors() {
-  for (size_t output_index = 0; output_index < streams_.size();
-       ++output_index) {
+  for (size_t output_index = 0; output_index < streams_.size(); ++output_index) {
     ConfigureOutputToProvideLocalMemory(output_index);
   }
 }
 
-void FfmpegDemuxImpl::FlushOutput(size_t output_index, fit::closure callback) {
-  callback();
-}
+void FfmpegDemuxImpl::FlushOutput(size_t output_index, fit::closure callback) { callback(); }
 
 void FfmpegDemuxImpl::RequestOutputPacket() {
   std::lock_guard<std::mutex> locker(mutex_);
@@ -271,9 +261,8 @@ void FfmpegDemuxImpl::Worker() {
   status_ = AvIoContext::Create(reader_cache_, &io_context_, dispatcher_);
   if (status_ != ZX_OK) {
     FXL_LOG(ERROR) << "AvIoContext::Create failed, status " << status_;
-    ReportProblem(status_ == ZX_ERR_NOT_FOUND
-                      ? fuchsia::media::playback::PROBLEM_ASSET_NOT_FOUND
-                      : fuchsia::media::playback::PROBLEM_INTERNAL,
+    ReportProblem(status_ == ZX_ERR_NOT_FOUND ? fuchsia::media::playback::PROBLEM_ASSET_NOT_FOUND
+                                              : fuchsia::media::playback::PROBLEM_INTERNAL,
                   "");
 
     NotifyInitComplete();
@@ -286,8 +275,7 @@ void FfmpegDemuxImpl::Worker() {
   if (!format_context_) {
     FXL_LOG(ERROR) << "AvFormatContext::OpenInput failed";
     status_ = ZX_ERR_NOT_SUPPORTED;
-    ReportProblem(fuchsia::media::playback::PROBLEM_CONTAINER_NOT_SUPPORTED,
-                  "");
+    ReportProblem(fuchsia::media::playback::PROBLEM_CONTAINER_NOT_SUPPORTED, "");
     NotifyInitComplete();
     return;
   }
@@ -296,8 +284,7 @@ void FfmpegDemuxImpl::Worker() {
   if (r < 0) {
     FXL_LOG(ERROR) << "avformat_find_stream_info failed, result " << r;
     status_ = ZX_ERR_INTERNAL;
-    ReportProblem(fuchsia::media::playback::PROBLEM_INTERNAL,
-                  "avformat_find_stream_info failed");
+    ReportProblem(fuchsia::media::playback::PROBLEM_INTERNAL, "avformat_find_stream_info failed");
     NotifyInitComplete();
     return;
   }
@@ -339,8 +326,7 @@ void FfmpegDemuxImpl::Worker() {
       // producing packets from there so the decoder has the context it needs.
       // The renderers throw away the packets that occur between the i-frame
       // and the seek position.
-      int r = av_seek_frame(format_context_.get(), -1, seek_position / 1000,
-                            AVSEEK_FLAG_BACKWARD);
+      int r = av_seek_frame(format_context_.get(), -1, seek_position / 1000, AVSEEK_FLAG_BACKWARD);
       if (r < 0) {
         FXL_LOG(WARNING) << "av_seek_frame failed, result " << r;
       }
@@ -416,8 +402,7 @@ PacketPtr FfmpegDemuxImpl::PullPacket(size_t* stream_index_out) {
   FXL_DCHECK(av_packet->side_data == nullptr) << "side data not implemented";
   FXL_DCHECK(av_packet->side_data_elems == 0);
 
-  int64_t pts =
-      (av_packet->pts == AV_NOPTS_VALUE) ? Packet::kNoPts : av_packet->pts;
+  int64_t pts = (av_packet->pts == AV_NOPTS_VALUE) ? Packet::kNoPts : av_packet->pts;
   bool keyframe = av_packet->flags & AV_PKT_FLAG_KEY;
 
   fbl::RefPtr<PayloadBuffer> payload_buffer;
@@ -428,16 +413,15 @@ PacketPtr FfmpegDemuxImpl::PullPacket(size_t* stream_index_out) {
     // deleted/recycled. This doesn't prevent the demux from generating more
     // |AVPackets|.
     payload_buffer = PayloadBuffer::Create(
-        size, av_packet->data,
-        [av_packet = std::move(av_packet)](PayloadBuffer* payload_buffer) {
+        size, av_packet->data, [av_packet = std::move(av_packet)](PayloadBuffer* payload_buffer) {
           // The deallocation happens when |av_packet|
           // goes out of scope. The |PayloadBuffer|
           // object deletes itself.
         });
   }
 
-  return Packet::Create(pts, streams_[*stream_index_out]->pts_rate(), keyframe,
-                        false, size, std::move(payload_buffer));
+  return Packet::Create(pts, streams_[*stream_index_out]->pts_rate(), keyframe, false, size,
+                        std::move(payload_buffer));
 }
 
 PacketPtr FfmpegDemuxImpl::PullEndOfStreamPacket(size_t* stream_index_out) {
@@ -453,8 +437,7 @@ PacketPtr FfmpegDemuxImpl::PullEndOfStreamPacket(size_t* stream_index_out) {
   }
 
   *stream_index_out = next_stream_to_end_++;
-  return Packet::CreateEndOfStream(next_pts_,
-                                   streams_[*stream_index_out]->pts_rate());
+  return Packet::CreateEndOfStream(next_pts_, streams_[*stream_index_out]->pts_rate());
 }
 
 void FfmpegDemuxImpl::CopyMetadata(AVDictionary* source, Metadata& metadata) {
@@ -462,10 +445,8 @@ void FfmpegDemuxImpl::CopyMetadata(AVDictionary* source, Metadata& metadata) {
     return;
   }
 
-  for (AVDictionaryEntry* entry =
-           av_dict_get(source, "", nullptr, AV_DICT_IGNORE_SUFFIX);
-       entry != nullptr;
-       entry = av_dict_get(source, "", entry, AV_DICT_IGNORE_SUFFIX)) {
+  for (AVDictionaryEntry* entry = av_dict_get(source, "", nullptr, AV_DICT_IGNORE_SUFFIX);
+       entry != nullptr; entry = av_dict_get(source, "", entry, AV_DICT_IGNORE_SUFFIX)) {
     std::string label = entry->key;
     auto iter = kMetadataLabelMap.find(label);
     if (iter != kMetadataLabelMap.end()) {
@@ -504,14 +485,11 @@ void FfmpegDemuxImpl::SendStatus() {
     problem_details = problem_details_;
   }
 
-  status_callback_(
-      duration_ns,
-      io_context_ && (io_context_->seekable & AVIO_SEEKABLE_NORMAL) != 0,
-      std::move(metadata), problem_type, problem_details);
+  status_callback_(duration_ns, io_context_ && (io_context_->seekable & AVIO_SEEKABLE_NORMAL) != 0,
+                   std::move(metadata), problem_type, problem_details);
 }
 
-void FfmpegDemuxImpl::ReportProblem(const std::string& type,
-                                    const std::string& details) {
+void FfmpegDemuxImpl::ReportProblem(const std::string& type, const std::string& details) {
   {
     std::lock_guard<std::mutex> locker(mutex_);
     problem_type_ = type;
@@ -521,25 +499,21 @@ void FfmpegDemuxImpl::ReportProblem(const std::string& type,
   async::PostTask(dispatcher_, [this]() { SendStatus(); });
 }
 
-FfmpegDemuxImpl::FfmpegDemuxStream::FfmpegDemuxStream(
-    const AVFormatContext& format_context, size_t index)
+FfmpegDemuxImpl::FfmpegDemuxStream::FfmpegDemuxStream(const AVFormatContext& format_context,
+                                                      size_t index)
     : stream_(format_context.streams[index]), index_(index) {
   stream_type_ = AvCodecContext::GetStreamType(*stream_);
-  pts_rate_ =
-      media::TimelineRate(stream_->time_base.den, stream_->time_base.num);
+  pts_rate_ = media::TimelineRate(stream_->time_base.den, stream_->time_base.num);
 }
 
 FfmpegDemuxImpl::FfmpegDemuxStream::~FfmpegDemuxStream() {}
 
 size_t FfmpegDemuxImpl::FfmpegDemuxStream::index() const { return index_; }
 
-std::unique_ptr<StreamType> FfmpegDemuxImpl::FfmpegDemuxStream::stream_type()
-    const {
+std::unique_ptr<StreamType> FfmpegDemuxImpl::FfmpegDemuxStream::stream_type() const {
   return SafeClone(stream_type_);
 }
 
-media::TimelineRate FfmpegDemuxImpl::FfmpegDemuxStream::pts_rate() const {
-  return pts_rate_;
-}
+media::TimelineRate FfmpegDemuxImpl::FfmpegDemuxStream::pts_rate() const { return pts_rate_; }
 
 }  // namespace media_player

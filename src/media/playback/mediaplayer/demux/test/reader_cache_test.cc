@@ -23,9 +23,7 @@ class FakeReader : public Reader {
 
   FakeReader() {}
 
-  void Describe(DescribeCallback callback) override {
-    describe_callback_ = std::move(callback);
-  }
+  void Describe(DescribeCallback callback) override { describe_callback_ = std::move(callback); }
 
   void ReadAt(size_t position, uint8_t* buffer, size_t bytes_to_read,
               ReadAtCallback callback) override {
@@ -42,9 +40,7 @@ class FakeReader : public Reader {
     return request;
   }
 
-  DescribeCallback GetDescribeCallback() {
-    return std::move(describe_callback_);
-  }
+  DescribeCallback GetDescribeCallback() { return std::move(describe_callback_); }
 
  private:
   std::optional<ReadAtRequest> request_;
@@ -59,17 +55,14 @@ TEST(ReaderCache, MTWN214Repro) {
   uint8_t dest[800] = {0};
 
   // Set up a load and leave it hanging.
-  under_test->ReadAt(0, dest, 100,
-                     [](zx_status_t status, size_t bytes_read) {});
+  under_test->ReadAt(0, dest, 100, [](zx_status_t status, size_t bytes_read) {});
   auto request = fake_reader->GetReadAtRequest();
   EXPECT_NE(request, std::nullopt);
 
   // Start a new load so that ReadAt queues a recursive call on the upstream
   // reader callback incident.
-  under_test->ReadAt(101, dest, 300,
-                     [](zx_status_t status, size_t bytes_read) {});
-  under_test->ReadAt(300, dest, 600,
-                     [](zx_status_t status, size_t bytes_read) {});
+  under_test->ReadAt(101, dest, 300, [](zx_status_t status, size_t bytes_read) {});
+  under_test->ReadAt(300, dest, 600, [](zx_status_t status, size_t bytes_read) {});
 
   // Finish the first load, so that the reader callback incident calls itself.
   // It will not escape before hitting the stack limit because we aren't
@@ -105,26 +98,24 @@ TEST(ReaderCache, SunnyDayAPI) {
     // end of the upstream source to be fully serviced (e.g. a read of 10 bytes
     // at the 8th byte in a 10 byte medium).
     const size_t seek_start = rand() % kSourceSize;
-    const size_t expected_bytes_read =
-        std::min(kSourceSize - seek_start, seek_size);
+    const size_t expected_bytes_read = std::min(kSourceSize - seek_start, seek_size);
 
     std::vector<uint8_t> buffer(seek_size, 0);
 
     bool callback_executed = false;
-    under_test->ReadAt(seek_start, &buffer[0], seek_size,
-                       [&callback_executed, expected_bytes_read](
-                           zx_status_t status, size_t bytes_read) {
-                         EXPECT_EQ(bytes_read, expected_bytes_read);
-                         EXPECT_EQ(status, ZX_OK);
-                         callback_executed = true;
-                       });
+    under_test->ReadAt(
+        seek_start, &buffer[0], seek_size,
+        [&callback_executed, expected_bytes_read](zx_status_t status, size_t bytes_read) {
+          EXPECT_EQ(bytes_read, expected_bytes_read);
+          EXPECT_EQ(status, ZX_OK);
+          callback_executed = true;
+        });
 
     std::optional<FakeReader::ReadAtRequest> request;
     while ((request = fake_reader->GetReadAtRequest())) {
       EXPECT_NE(request->buffer, nullptr);
       EXPECT_NE(request->callback, nullptr);
-      memcpy(request->buffer, &source[request->position],
-             request->bytes_to_read);
+      memcpy(request->buffer, &source[request->position], request->bytes_to_read);
       request->callback(ZX_OK, request->bytes_to_read);
     }
 
@@ -147,12 +138,11 @@ TEST(ReaderCache, ReportFailure) {
 
   std::vector<uint8_t> buffer(10, 0);
   bool callback_executed = false;
-  under_test->ReadAt(
-      0, &buffer[0], 10,
-      [&callback_executed](zx_status_t status, size_t bytes_read) {
-        EXPECT_EQ(status, ZX_ERR_INTERNAL);
-        callback_executed = true;
-      });
+  under_test->ReadAt(0, &buffer[0], 10,
+                     [&callback_executed](zx_status_t status, size_t bytes_read) {
+                       EXPECT_EQ(status, ZX_ERR_INTERNAL);
+                       callback_executed = true;
+                     });
 
   auto request = fake_reader->GetReadAtRequest();
   ASSERT_TRUE(request);

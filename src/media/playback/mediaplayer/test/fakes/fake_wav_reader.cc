@@ -35,22 +35,17 @@ void FakeWavReader::WriteHeader() {
 
   // Data subchunk.
   WriteHeader4CC("data");
-  WriteHeaderUint32(size_ - kMasterChunkHeaderSize - kFormatChunkSize -
-                    kChunkSizeDeficit);
-  FXL_DCHECK(header_.size() ==
-             kMasterChunkHeaderSize + kFormatChunkSize + kDataChunkHeaderSize);
+  WriteHeaderUint32(size_ - kMasterChunkHeaderSize - kFormatChunkSize - kChunkSizeDeficit);
+  FXL_DCHECK(header_.size() == kMasterChunkHeaderSize + kFormatChunkSize + kDataChunkHeaderSize);
 }
 
 FakeWavReader::~FakeWavReader() {}
 
-void FakeWavReader::Bind(
-    fidl::InterfaceRequest<fuchsia::media::playback::SeekingReader> request) {
+void FakeWavReader::Bind(fidl::InterfaceRequest<fuchsia::media::playback::SeekingReader> request) {
   binding_.Bind(std::move(request));
 }
 
-void FakeWavReader::Describe(DescribeCallback callback) {
-  callback(ZX_OK, size_, true);
-}
+void FakeWavReader::Describe(DescribeCallback callback) { callback(ZX_OK, size_, true); }
 
 void FakeWavReader::ReadAt(uint64_t position, ReadAtCallback callback) {
   if (socket_) {
@@ -80,12 +75,11 @@ void FakeWavReader::WriteToSocket() {
     }
 
     if (status == ZX_ERR_SHOULD_WAIT) {
-      waiter_ = std::make_unique<async::Wait>(
-          socket_.get(), ZX_SOCKET_WRITABLE | ZX_SOCKET_PEER_CLOSED);
+      waiter_ =
+          std::make_unique<async::Wait>(socket_.get(), ZX_SOCKET_WRITABLE | ZX_SOCKET_PEER_CLOSED);
 
-      waiter_->set_handler([this](async_dispatcher_t* dispatcher,
-                                  async::Wait* wait, zx_status_t status,
-                                  const zx_packet_signal_t* signal) {
+      waiter_->set_handler([this](async_dispatcher_t* dispatcher, async::Wait* wait,
+                                  zx_status_t status, const zx_packet_signal_t* signal) {
         if (status == ZX_ERR_CANCELED) {
           // Run loop has aborted...the app is shutting down.
           return;

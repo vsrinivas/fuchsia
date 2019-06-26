@@ -31,8 +31,7 @@ namespace media_player {
 
 class Node : public std::enable_shared_from_this<Node> {
  public:
-  using AllocateCallback =
-      fit::function<fbl::RefPtr<PayloadBuffer>(uint64_t, const PayloadVmos&)>;
+  using AllocateCallback = fit::function<fbl::RefPtr<PayloadBuffer>(uint64_t, const PayloadVmos&)>;
 
   Node();
 
@@ -76,8 +75,7 @@ class Node : public std::enable_shared_from_this<Node> {
   // converse it not true.
   //
   // This method will be called on the graph's thread.
-  virtual void FlushInput(bool hold_frame, size_t input_index,
-                          fit::closure callback) {
+  virtual void FlushInput(bool hold_frame, size_t input_index, fit::closure callback) {
     FXL_CHECK(false) << "FlushInput not implemented.";
   }
 
@@ -183,9 +181,7 @@ class Node : public std::enable_shared_from_this<Node> {
   // Requests an output packet. The default implementation aborts.
   //
   // This method will be called on the graph's thread.
-  virtual void RequestOutputPacket() {
-    FXL_CHECK(false) << "RequestOutputPacket not implemented.";
-  }
+  virtual void RequestOutputPacket() { FXL_CHECK(false) << "RequestOutputPacket not implemented."; }
 
   //////////////////////////////////////////////////////////////////////////////
   // Methods relating to inputs (inbound packets from upstream).
@@ -222,8 +218,7 @@ class Node : public std::enable_shared_from_this<Node> {
   // configured previously (possibly with |ConfigureInputDeferred|). Otherwise,
   // it must be called on the main graph thread.
   bool ConfigureInputToUseLocalMemory(uint64_t max_aggregate_payload_size,
-                                      uint32_t max_payload_count,
-                                      size_t input_index = 0);
+                                      uint32_t max_payload_count, size_t input_index = 0);
 
   // Configures an input to address payloads as contiguous regions in VMOs
   // that are created by some other party. |max_aggregate_payload_size| sets
@@ -261,11 +256,12 @@ class Node : public std::enable_shared_from_this<Node> {
   // This method may be called on any thread provided the input has been
   // configured previously (possibly with |ConfigureInputDeferred|).
   // Otherwise, it must be called on the main graph thread.
-  bool ConfigureInputToUseVmos(
-      uint64_t max_aggregate_payload_size, uint32_t max_payload_count,
-      uint64_t max_payload_size, VmoAllocation vmo_allocation,
-      bool physically_contiguous = false, zx::handle bti_handle = zx::handle(),
-      AllocateCallback allocate_callback = nullptr, size_t input_index = 0);
+  bool ConfigureInputToUseVmos(uint64_t max_aggregate_payload_size, uint32_t max_payload_count,
+                               uint64_t max_payload_size, VmoAllocation vmo_allocation,
+                               bool physically_contiguous = false,
+                               zx::handle bti_handle = zx::handle(),
+                               AllocateCallback allocate_callback = nullptr,
+                               size_t input_index = 0);
 
   // Configures an input to address payloads as contiguous regions in VMOs
   // that the input provides. If the VMOs provided by the input are
@@ -292,8 +288,7 @@ class Node : public std::enable_shared_from_this<Node> {
   // This method may be called on any thread provided the input has been
   // configured previously (possibly with |ConfigureInputDeferred|). Otherwise,
   // it must be called on the main graph thread.
-  bool ConfigureInputToProvideVmos(VmoAllocation vmo_allocation,
-                                   bool physically_contiguous = false,
+  bool ConfigureInputToProvideVmos(VmoAllocation vmo_allocation, bool physically_contiguous = false,
                                    AllocateCallback allocate_callback = nullptr,
                                    size_t input_index = 0);
 
@@ -363,8 +358,7 @@ class Node : public std::enable_shared_from_this<Node> {
   // configured previously (possibly with |ConfigureOutputDeferred|). Otherwise,
   // it must be called on the main graph thread.
   bool ConfigureOutputToUseLocalMemory(uint64_t max_aggregate_payload_size,
-                                       uint32_t max_payload_count,
-                                       uint64_t max_payload_size,
+                                       uint32_t max_payload_count, uint64_t max_payload_size,
                                        size_t output_index = 0);
 
   // Configures an output to allocate its own payloads from local memory. It is
@@ -411,13 +405,10 @@ class Node : public std::enable_shared_from_this<Node> {
   // This method may be called on any thread provided the output has been
   // configured previously (possibly with |ConfigureOutputDeferred|). Otherwise,
   // it must be called on the main graph thread.
-  bool ConfigureOutputToUseVmos(uint64_t max_aggregate_payload_size,
-                                uint32_t max_payload_count,
-                                uint64_t max_payload_size,
-                                VmoAllocation vmo_allocation,
+  bool ConfigureOutputToUseVmos(uint64_t max_aggregate_payload_size, uint32_t max_payload_count,
+                                uint64_t max_payload_size, VmoAllocation vmo_allocation,
                                 bool physically_contiguous = false,
-                                zx::handle bti_handle = zx::handle(),
-                                size_t output_index = 0);
+                                zx::handle bti_handle = zx::handle(), size_t output_index = 0);
 
   // Configures an output to address payloads as contiguous regions in VMOs
   // that the output provides. If the VMOs provided by the output are
@@ -440,8 +431,7 @@ class Node : public std::enable_shared_from_this<Node> {
   // configured previously (possibly with |ConfigureOutputDeferred|). Otherwise,
   // it must be called on the main graph thread.
   bool ConfigureOutputToProvideVmos(VmoAllocation vmo_allocation,
-                                    bool physically_contiguous = false,
-                                    size_t output_index = 0);
+                                    bool physically_contiguous = false, size_t output_index = 0);
 
   // Returns true if the specified input is ready for calls to
   // |AllocatePayloadBuffer|, |UseOutputVmos| or |ProvideOutputVmos|.
@@ -455,8 +445,7 @@ class Node : public std::enable_shared_from_this<Node> {
   // specified output, and the connection is ready.
   //
   // This method may be called on an arbitrary thread.
-  fbl::RefPtr<PayloadBuffer> AllocatePayloadBuffer(uint64_t size,
-                                                   size_t output_index = 0);
+  fbl::RefPtr<PayloadBuffer> AllocatePayloadBuffer(uint64_t size, size_t output_index = 0);
 
   // Returns the |PayloadVmos| for the specified output. This method is only
   // useable if |ConfigureOutputToUseVmos| or |ConfigureOutputToProvideVmos|
@@ -538,8 +527,7 @@ class Node : public std::enable_shared_from_this<Node> {
   std::vector<Output> outputs_;
 
   mutable std::mutex packets_per_output_mutex_;
-  std::vector<std::deque<PacketPtr>> packets_per_output_
-      FXL_GUARDED_BY(packets_per_output_mutex_);
+  std::vector<std::deque<PacketPtr>> packets_per_output_ FXL_GUARDED_BY(packets_per_output_mutex_);
 
   friend class Graph;
 };

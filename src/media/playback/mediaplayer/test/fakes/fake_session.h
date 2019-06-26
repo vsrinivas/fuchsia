@@ -38,10 +38,8 @@ class FakeSession : public fuchsia::ui::scenic::Session {
 
   // Indicates that the session should verify supplied frames against the
   // specified PacketInfos.
-  void SetExpectations(uint32_t black_image_id,
-                       const fuchsia::images::ImageInfo& black_image_info,
-                       const fuchsia::images::ImageInfo& info,
-                       uint32_t display_height,
+  void SetExpectations(uint32_t black_image_id, const fuchsia::images::ImageInfo& black_image_info,
+                       const fuchsia::images::ImageInfo& info, uint32_t display_height,
                        const std::vector<PacketInfo>&& expected_packets_info);
 
   // Returns true if everything has gone as expected so far.
@@ -53,10 +51,8 @@ class FakeSession : public fuchsia::ui::scenic::Session {
   // Session implementation.
   void Enqueue(std::vector<fuchsia::ui::scenic::Command> cmds) override;
 
-  void Present(uint64_t presentation_time,
-               std::vector<zx::event> acquire_fences,
-               std::vector<zx::event> release_fences,
-               PresentCallback callback) override;
+  void Present(uint64_t presentation_time, std::vector<zx::event> acquire_fences,
+               std::vector<zx::event> release_fences, PresentCallback callback) override;
 
   void SetDebugName(std::string debug_name) override {}
 
@@ -67,32 +63,23 @@ class FakeSession : public fuchsia::ui::scenic::Session {
     Resource(fuchsia::ui::gfx::ResourceArgs args) : args_(std::move(args)) {}
 
     bool is_material() const { return args_.is_material(); }
-    bool is_texture() const {
-      return args_.is_image() || args_.is_image_pipe();
-    };
+    bool is_texture() const { return args_.is_image() || args_.is_image_pipe(); };
     bool is_shape() const {
-      return args_.is_rectangle() || args_.is_rounded_rectangle() ||
-             args_.is_circle() || args_.is_mesh();
+      return args_.is_rectangle() || args_.is_rounded_rectangle() || args_.is_circle() ||
+             args_.is_mesh();
     };
-    bool is_node() const {
-      return args_.is_shape_node() || args_.is_entity_node();
-    };
+    bool is_node() const { return args_.is_shape_node() || args_.is_entity_node(); };
     bool is_shape_node() const { return args_.is_shape_node(); };
 
     bool can_have_children() const {
-      return args_.is_view() || args_.is_view_holder() ||
-             args_.is_entity_node();
+      return args_.is_view() || args_.is_view_holder() || args_.is_entity_node();
     };
     bool can_have_parts() const { return args_.is_entity_node(); };
     bool can_be_part() const { return args_.is_shape_node(); };
-    bool can_have_parent() const {
-      return args_.is_shape_node() || args_.is_entity_node();
-    }
+    bool can_have_parent() const { return args_.is_shape_node() || args_.is_entity_node(); }
     bool can_have_material() const { return args_.is_shape_node(); }
     bool can_have_shape() const { return args_.is_shape_node(); }
-    bool can_have_transform() const {
-      return args_.is_shape_node() || args_.is_entity_node();
-    }
+    bool can_have_transform() const { return args_.is_shape_node() || args_.is_entity_node(); }
     bool can_have_clip_planes() const { return args_.is_entity_node(); }
 
     fuchsia::ui::gfx::ResourceArgs args_;
@@ -106,8 +93,7 @@ class FakeSession : public fuchsia::ui::scenic::Session {
   };
 
   struct ShapeNode {
-    ShapeNode(uint32_t id, fuchsia::ui::gfx::vec3 location,
-              fuchsia::ui::gfx::vec3 extent)
+    ShapeNode(uint32_t id, fuchsia::ui::gfx::vec3 location, fuchsia::ui::gfx::vec3 extent)
         : id_(id), location_(location), extent_(extent) {}
 
     bool Intersects(const ShapeNode& other) const {
@@ -131,8 +117,7 @@ class FakeSession : public fuchsia::ui::scenic::Session {
 
   void HandleSetEventMask(uint32_t resource_id, uint32_t event_mask);
 
-  void HandleCreateResource(uint32_t resource_id,
-                            fuchsia::ui::gfx::ResourceArgs args);
+  void HandleCreateResource(uint32_t resource_id, fuchsia::ui::gfx::ResourceArgs args);
 
   void HandleReleaseResource(uint32_t resource_id);
 
@@ -146,14 +131,11 @@ class FakeSession : public fuchsia::ui::scenic::Session {
 
   void HandleSetShape(uint32_t node_id, uint32_t shape_id);
 
-  void HandleSetTranslation(uint32_t node_id,
-                            const fuchsia::ui::gfx::Vector3Value& value);
+  void HandleSetTranslation(uint32_t node_id, const fuchsia::ui::gfx::Vector3Value& value);
 
-  void HandleSetScale(uint32_t node_id,
-                      const fuchsia::ui::gfx::Vector3Value& value);
+  void HandleSetScale(uint32_t node_id, const fuchsia::ui::gfx::Vector3Value& value);
 
-  void HandleSetClipPlanes(uint32_t node_id,
-                           std::vector<fuchsia::ui::gfx::Plane3> value);
+  void HandleSetClipPlanes(uint32_t node_id, std::vector<fuchsia::ui::gfx::Plane3> value);
 
   // Fake-presents a scene and schedules the next scene presentation.
   void PresentScene();
@@ -164,8 +146,7 @@ class FakeSession : public fuchsia::ui::scenic::Session {
   void DetectZFighting();
 
   void FindShapeNodes(uint32_t node_id, fuchsia::ui::gfx::vec3 translation,
-                      fuchsia::ui::gfx::vec3 scale,
-                      std::vector<ShapeNode>* shape_nodes);
+                      fuchsia::ui::gfx::vec3 scale, std::vector<ShapeNode>* shape_nodes);
 
   async_dispatcher_t* dispatcher_;
   fidl::Binding<fuchsia::ui::scenic::Session> binding_;

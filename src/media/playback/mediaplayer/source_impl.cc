@@ -57,8 +57,7 @@ void SourceImpl::CompleteConstruction(SourceSegment* source_segment) {
       });
 }
 
-void SourceImpl::OnStreamUpdated(size_t index,
-                                 const SourceSegment::Stream& update_stream) {
+void SourceImpl::OnStreamUpdated(size_t index, const SourceSegment::Stream& update_stream) {
   if (streams_.size() < index + 1) {
     streams_.resize(index + 1);
   }
@@ -126,9 +125,7 @@ void SourceImpl::UpdateStatus() {
 
   auto metadata = source_segment_->metadata();
   status_.metadata =
-      metadata
-          ? fidl::MakeOptional(fidl::To<fuchsia::media::Metadata>(*metadata))
-          : nullptr;
+      metadata ? fidl::MakeOptional(fidl::To<fuchsia::media::Metadata>(*metadata)) : nullptr;
 
   status_.problem = CloneOptional(source_segment_->problem());
 }
@@ -143,14 +140,13 @@ std::unique_ptr<DemuxSourceImpl> DemuxSourceImpl::Create(
     fit::closure connection_failure_callback) {
   FXL_DCHECK(demux);
   FXL_DCHECK(graph);
-  return std::make_unique<DemuxSourceImpl>(
-      demux, graph, std::move(request), std::move(connection_failure_callback));
+  return std::make_unique<DemuxSourceImpl>(demux, graph, std::move(request),
+                                           std::move(connection_failure_callback));
 }
 
-DemuxSourceImpl::DemuxSourceImpl(
-    std::shared_ptr<Demux> demux, Graph* graph,
-    fidl::InterfaceRequest<fuchsia::media::playback::Source> request,
-    fit::closure connection_failure_callback)
+DemuxSourceImpl::DemuxSourceImpl(std::shared_ptr<Demux> demux, Graph* graph,
+                                 fidl::InterfaceRequest<fuchsia::media::playback::Source> request,
+                                 fit::closure connection_failure_callback)
     : SourceImpl(graph, std::move(connection_failure_callback)),
       demux_(demux),
       binding_(this),
@@ -192,9 +188,9 @@ std::unique_ptr<ElementarySourceImpl> ElementarySourceImpl::Create(
     fit::closure connection_failure_callback) {
   FXL_DCHECK(graph);
   FXL_DCHECK(request);
-  return std::make_unique<ElementarySourceImpl>(
-      duration_ns, can_pause, can_seek, std::move(metadata), graph,
-      std::move(request), std::move(connection_failure_callback));
+  return std::make_unique<ElementarySourceImpl>(duration_ns, can_pause, can_seek,
+                                                std::move(metadata), graph, std::move(request),
+                                                std::move(connection_failure_callback));
 }
 
 ElementarySourceImpl::ElementarySourceImpl(
@@ -240,34 +236,29 @@ void ElementarySourceImpl::SendStatusUpdates() {
 void ElementarySourceImpl::AddStream(
     fuchsia::media::StreamType type, uint32_t tick_per_second_numerator,
     uint32_t tick_per_second_denominator,
-    fidl::InterfaceRequest<fuchsia::media::SimpleStreamSink>
-        simple_stream_sink_request) {
+    fidl::InterfaceRequest<fuchsia::media::SimpleStreamSink> simple_stream_sink_request) {
   FXL_DCHECK(simple_stream_sink_request);
   FXL_DCHECK(elementary_source_segment_raw_ptr_);
 
-  auto output_stream_type =
-      fidl::To<std::unique_ptr<media_player::StreamType>>(type);
+  auto output_stream_type = fidl::To<std::unique_ptr<media_player::StreamType>>(type);
   FXL_DCHECK(output_stream_type);
 
   elementary_source_segment_raw_ptr_->AddStream(
       SimpleStreamSinkImpl::Create(
           *output_stream_type,
-          media::TimelineRate(tick_per_second_numerator,
-                              tick_per_second_denominator),
+          media::TimelineRate(tick_per_second_numerator, tick_per_second_denominator),
           std::move(simple_stream_sink_request)),
       *output_stream_type);
 }
 
 void ElementarySourceImpl::AddBinding(
-    fidl::InterfaceRequest<fuchsia::media::playback::ElementarySource>
-        elementary_source_request) {
+    fidl::InterfaceRequest<fuchsia::media::playback::ElementarySource> elementary_source_request) {
   FXL_DCHECK(elementary_source_request);
   AddBindingInternal(std::move(elementary_source_request));
 }
 
 void ElementarySourceImpl::AddBindingInternal(
-    fidl::InterfaceRequest<fuchsia::media::playback::ElementarySource>
-        elementary_source_request) {
+    fidl::InterfaceRequest<fuchsia::media::playback::ElementarySource> elementary_source_request) {
   FXL_DCHECK(elementary_source_request);
 
   bindings_.AddBinding(this, std::move(elementary_source_request));

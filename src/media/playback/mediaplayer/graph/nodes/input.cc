@@ -15,15 +15,12 @@ namespace {
 // Creates a copy of |original| with |copied_payload_buffer| replacing the
 // original's payload buffer. |copied_payload_buffer| may be nullptr if and
 // only if |original| has no payload.
-PacketPtr CopyPacket(const Packet& original,
-                     fbl::RefPtr<PayloadBuffer> copied_payload_buffer) {
-  FXL_DCHECK(copied_payload_buffer ||
-             (original.size() == 0 && !original.payload_buffer()));
+PacketPtr CopyPacket(const Packet& original, fbl::RefPtr<PayloadBuffer> copied_payload_buffer) {
+  FXL_DCHECK(copied_payload_buffer || (original.size() == 0 && !original.payload_buffer()));
 
   PacketPtr copy =
       Packet::Create(original.pts(), original.pts_rate(), original.keyframe(),
-                     original.end_of_stream(), original.size(),
-                     std::move(copied_payload_buffer));
+                     original.end_of_stream(), original.size(), std::move(copied_payload_buffer));
 
   if (original.revised_stream_type()) {
     copy->SetRevisedStreamType(original.revised_stream_type()->Clone());
@@ -34,8 +31,7 @@ PacketPtr CopyPacket(const Packet& original,
 
 }  // namespace
 
-Input::Input(Node* node, size_t index)
-    : node_(node), index_(index), state_(State::kRefusesPacket) {
+Input::Input(Node* node, size_t index) : node_(node), index_(index), state_(State::kRefusesPacket) {
   FXL_DCHECK(node_);
 }
 
@@ -56,9 +52,7 @@ void Input::Connect(Output* output) {
   mate_ = output;
 }
 
-bool Input::needs_packet() const {
-  return state_.load() == State::kNeedsPacket;
-}
+bool Input::needs_packet() const { return state_.load() == State::kNeedsPacket; }
 
 void Input::PutPacket(PacketPtr packet) {
   FXL_DCHECK(packet);
@@ -89,8 +83,7 @@ PacketPtr Input::TakePacket(bool request_another) {
   size_t size = packet->size();
 
   fbl::RefPtr<PayloadBuffer> copy_destination_buffer;
-  if (!payload_manager_.MaybeAllocatePayloadBufferForCopy(
-          size, &copy_destination_buffer)) {
+  if (!payload_manager_.MaybeAllocatePayloadBufferForCopy(size, &copy_destination_buffer)) {
     // Copying is not required, so we just return the packet.
     return packet;
   }

@@ -22,8 +22,7 @@ static constexpr size_t kByteRateMaxSamples = 8;
 }  // namespace
 
 // static
-std::shared_ptr<ReaderCache> ReaderCache::Create(
-    std::shared_ptr<Reader> upstream_reader) {
+std::shared_ptr<ReaderCache> ReaderCache::Create(std::shared_ptr<Reader> upstream_reader) {
   return std::make_shared<ReaderCache>(upstream_reader);
 }
 
@@ -54,31 +53,29 @@ void ReaderCache::ReadAt(size_t position, uint8_t* buffer, size_t bytes_to_read,
   FXL_DCHECK(buffer);
   FXL_DCHECK(bytes_to_read > 0);
 
-  describe_is_complete_.When([this, position, buffer, bytes_to_read,
-                              callback = std::move(callback)]() mutable {
-    if (demux_sampler_) {
-      demux_byte_rate_.AddSample(
-          ByteRateEstimator::ByteRateSampler::FinishSample(
-              std::move(*demux_sampler_)));
-    }
+  describe_is_complete_.When(
+      [this, position, buffer, bytes_to_read, callback = std::move(callback)]() mutable {
+        if (demux_sampler_) {
+          demux_byte_rate_.AddSample(
+              ByteRateEstimator::ByteRateSampler::FinishSample(std::move(*demux_sampler_)));
+        }
 
-    if (!buffer_) {
-      buffer_ = SlidingBuffer(capacity_);
-    }
+        if (!buffer_) {
+          buffer_ = SlidingBuffer(capacity_);
+        }
 
-    ServeReadAtRequest({.callback = std::move(callback),
-                        .original_position = position,
-                        .total_bytes = bytes_to_read,
-                        .position = position,
-                        .bytes_to_read = bytes_to_read,
-                        .buffer = buffer});
-  });
+        ServeReadAtRequest({.callback = std::move(callback),
+                            .original_position = position,
+                            .total_bytes = bytes_to_read,
+                            .position = position,
+                            .bytes_to_read = bytes_to_read,
+                            .buffer = buffer});
+      });
 }
 
 void ReaderCache::SetCacheOptions(size_t capacity, size_t max_backtrack) {
-  FXL_DCHECK(!load_in_progress_)
-      << "SetCacheOptions cannot be called while a load is"
-         " in progress.";
+  FXL_DCHECK(!load_in_progress_) << "SetCacheOptions cannot be called while a load is"
+                                    " in progress.";
 
   buffer_ = SlidingBuffer(capacity);
   capacity_ = capacity;
@@ -91,14 +88,11 @@ void ReaderCache::ServeReadAtRequest(ReaderCache::ReadAtRequest request) {
   FXL_DCHECK(request.callback);
   FXL_DCHECK(request.position < upstream_size_);
 
-  size_t bytes_read =
-      buffer_->Read(request.position, request.buffer, request.bytes_to_read);
+  size_t bytes_read = buffer_->Read(request.position, request.buffer, request.bytes_to_read);
 
   size_t remaining_bytes = upstream_size_ - request.position;
-  if ((bytes_read == request.bytes_to_read) ||
-      (bytes_read == remaining_bytes)) {
-    demux_sampler_ =
-        ByteRateEstimator::ByteRateSampler::StartSample(bytes_read);
+  if ((bytes_read == request.bytes_to_read) || (bytes_read == remaining_bytes)) {
+    demux_sampler_ = ByteRateEstimator::ByteRateSampler::StartSample(bytes_read);
     const size_t bytes_we_will_not_read = request.bytes_to_read - bytes_read;
     request.callback(ZX_OK, request.total_bytes - bytes_we_will_not_read);
     return;
@@ -106,11 +100,9 @@ void ReaderCache::ServeReadAtRequest(ReaderCache::ReadAtRequest request) {
 
   StartLoadForPosition(
       request.position + bytes_read,
-      [this, bytes_read,
-       request = std::move(request)](zx_status_t status) mutable {
+      [this, bytes_read, request = std::move(request)](zx_status_t status) mutable {
         if (status != ZX_OK) {
-          request.callback(status, request.position + bytes_read -
-                                       request.original_position);
+          request.callback(status, request.position + bytes_read - request.original_position);
           return;
         }
 
@@ -125,23 +117,20 @@ void ReaderCache::ServeReadAtRequest(ReaderCache::ReadAtRequest request) {
       });
 }
 
-void ReaderCache::StartLoadForPosition(
-    size_t position, fit::function<void(zx_status_t)> load_callback) {
+void ReaderCache::StartLoadForPosition(size_t position,
+                                       fit::function<void(zx_status_t)> load_callback) {
   FXL_DCHECK(buffer_);
   FXL_DCHECK(!load_in_progress_);
   load_in_progress_ = true;
 
   auto load_range = CalculateLoadRange(position);
-  FXL_DCHECK(load_range)
-      << "The media is fully cached for the read, but a load was requested.";
+  FXL_DCHECK(load_range) << "The media is fully cached for the read, but a load was requested.";
 
   auto [load_start, load_size] = *load_range;
-  auto holes = buffer_->Slide(load_start,
-                              std::min({load_size, upstream_size_ - load_start,
-                                        buffer_->capacity() - max_backtrack_}));
+  auto holes = buffer_->Slide(load_start, std::min({load_size, upstream_size_ - load_start,
+                                                    buffer_->capacity() - max_backtrack_}));
 
-  FillHoles(holes, [this, load_callback = std::move(load_callback)](
-                       zx_status_t status) mutable {
+  FillHoles(holes, [this, load_callback = std::move(load_callback)](zx_status_t status) mutable {
     load_in_progress_ = false;
     if (load_callback) {
       load_callback(status);
@@ -149,8 +138,7 @@ void ReaderCache::StartLoadForPosition(
   });
 }
 
-std::optional<std::pair<size_t, size_t>> ReaderCache::CalculateLoadRange(
-    size_t position) {
+std::optional<std::pair<size_t, size_t>> ReaderCache::CalculateLoadRange(size_t position) {
   FXL_DCHECK(buffer_);
 
   auto next_missing_byte = buffer_->NextMissingByte(position);
@@ -163,19 +151,16 @@ std::optional<std::pair<size_t, size_t>> ReaderCache::CalculateLoadRange(
   const std::pair<size_t, size_t> defaultRange = {position, kDefaultChunkSize};
 
   std::optional<float> demux_byte_rate_estimate = demux_byte_rate_.Estimate();
-  std::optional<float> upstream_reader_byte_rate_estimate =
-      upstream_reader_byte_rate_.Estimate();
+  std::optional<float> upstream_reader_byte_rate_estimate = upstream_reader_byte_rate_.Estimate();
   if (!demux_byte_rate_estimate || !upstream_reader_byte_rate_estimate) {
     // We don't have enough information to make an informed estimation so we
     // defer to our configuration.
     return defaultRange;
   }
 
-  float time_until_demux_misses =
-      float(bytes_until_demux_misses) / (*demux_byte_rate_estimate);
+  float time_until_demux_misses = float(bytes_until_demux_misses) / (*demux_byte_rate_estimate);
   float bytes_we_can_read_before_demux_misses =
-      time_until_demux_misses * (*upstream_reader_byte_rate_estimate) *
-      kConservativeFactor;
+      time_until_demux_misses * (*upstream_reader_byte_rate_estimate) * kConservativeFactor;
 
   if (bytes_we_can_read_before_demux_misses < 1) {
     // Cache misses are inevitable. We fall back to our configuration in this
@@ -183,23 +168,19 @@ std::optional<std::pair<size_t, size_t>> ReaderCache::CalculateLoadRange(
     return defaultRange;
   }
 
-  return std::make_pair(position,
-                        size_t(bytes_we_can_read_before_demux_misses));
+  return std::make_pair(position, size_t(bytes_we_can_read_before_demux_misses));
 }
 
 void ReaderCache::FillHoles(std::vector<SlidingBuffer::Block> holes,
                             fit::function<void(zx_status_t)> callback) {
-  upstream_reader_sampler_ =
-      ByteRateEstimator::ByteRateSampler::StartSample(holes.back().size);
+  upstream_reader_sampler_ = ByteRateEstimator::ByteRateSampler::StartSample(holes.back().size);
   upstream_reader_->ReadAt(
       holes.back().start, holes.back().buffer, holes.back().size,
-      [this, holes, callback = std::move(callback)](zx_status_t status,
-                                                    size_t bytes_read) mutable {
+      [this, holes, callback = std::move(callback)](zx_status_t status, size_t bytes_read) mutable {
         last_status_ = status;
         if (status == ZX_OK && upstream_reader_sampler_) {
-          upstream_reader_byte_rate_.AddSample(
-              ByteRateEstimator::ByteRateSampler::FinishSample(
-                  std::move(*upstream_reader_sampler_)));
+          upstream_reader_byte_rate_.AddSample(ByteRateEstimator::ByteRateSampler::FinishSample(
+              std::move(*upstream_reader_sampler_)));
         }
         upstream_reader_sampler_ = std::nullopt;
 

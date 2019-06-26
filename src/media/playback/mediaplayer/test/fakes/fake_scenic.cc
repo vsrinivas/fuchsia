@@ -22,18 +22,13 @@ void FakeScenic::CreateSession(
   fake_session_.Bind(std::move(session), listener.Bind());
 }
 
-void FakeScenic::GetDisplayInfo(GetDisplayInfoCallback callback) {
+void FakeScenic::GetDisplayInfo(GetDisplayInfoCallback callback) { FXL_NOTIMPLEMENTED(); }
+
+void FakeScenic::GetDisplayOwnershipEvent(GetDisplayOwnershipEventCallback callback) {
   FXL_NOTIMPLEMENTED();
 }
 
-void FakeScenic::GetDisplayOwnershipEvent(
-    GetDisplayOwnershipEventCallback callback) {
-  FXL_NOTIMPLEMENTED();
-}
-
-void FakeScenic::TakeScreenshot(TakeScreenshotCallback callback) {
-  FXL_NOTIMPLEMENTED();
-}
+void FakeScenic::TakeScreenshot(TakeScreenshotCallback callback) { FXL_NOTIMPLEMENTED(); }
 
 }  // namespace test
 }  // namespace media_player

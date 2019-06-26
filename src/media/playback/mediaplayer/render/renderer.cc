@@ -14,8 +14,7 @@ Renderer::Renderer() { ClearPendingTimelineFunction(); }
 
 Renderer::~Renderer() {}
 
-void Renderer::Provision(async_dispatcher_t* dispatcher,
-                         fit::closure update_callback) {
+void Renderer::Provision(async_dispatcher_t* dispatcher, fit::closure update_callback) {
   dispatcher_ = dispatcher;
   update_callback_ = std::move(update_callback);
 }
@@ -28,14 +27,11 @@ void Renderer::Deprovision() {
 void Renderer::Dump(std::ostream& os) const {
   os << label() << fostr::Indent;
   Node::Dump(os);
-  os << fostr::NewLine
-     << "timeline:              " << current_timeline_function_;
-  os << fostr::NewLine
-     << "last rendered pts:     " << AsNs(last_rendered_pts_);
+  os << fostr::NewLine << "timeline:              " << current_timeline_function_;
+  os << fostr::NewLine << "last rendered pts:     " << AsNs(last_rendered_pts_);
   os << fostr::NewLine << "end of stream:         " << end_of_stream();
   os << fostr::NewLine << "end of stream pending: " << end_of_stream_pending();
-  os << fostr::NewLine
-     << "end of stream pts:     " << AsNs(end_of_stream_pts());
+  os << fostr::NewLine << "end of stream pts:     " << AsNs(end_of_stream_pts());
   os << fostr::NewLine << "minimum pts:           " << AsNs(program_0_min_pts_);
   os << fostr::NewLine << "maximum pts:           " << AsNs(program_0_max_pts_);
   os << fostr::Outdent;
@@ -46,8 +42,7 @@ void Renderer::ConfigureConnectors() {
   ConfigureInputDeferred();
 }
 
-void Renderer::SetProgramRange(uint64_t program, int64_t min_pts,
-                               int64_t max_pts) {
+void Renderer::SetProgramRange(uint64_t program, int64_t min_pts, int64_t max_pts) {
   FXL_DCHECK(program == 0) << "Only program 0 is currently supported.";
   program_0_min_pts_ = min_pts;
   program_0_max_pts_ = max_pts;
@@ -74,14 +69,12 @@ void Renderer::SetTimelineFunction(media::TimelineFunction timeline_function,
 
   auto reference_time = timeline_function.reference_time();
   async::PostTaskForTime(
-      dispatcher_,
-      [this, reference_time]() { ApplyPendingChanges(reference_time); },
+      dispatcher_, [this, reference_time]() { ApplyPendingChanges(reference_time); },
       zx::time(reference_time));
 }
 
 bool Renderer::end_of_stream() const {
-  return end_of_stream_pts_ != Packet::kNoPts &&
-         last_rendered_pts_ >= end_of_stream_pts_;
+  return end_of_stream_pts_ != Packet::kNoPts && last_rendered_pts_ >= end_of_stream_pts_;
 }
 
 void Renderer::NotifyUpdate() {
@@ -91,9 +84,8 @@ void Renderer::NotifyUpdate() {
 }
 
 bool Renderer::Progressing() {
-  return !end_of_stream_published_ &&
-         (current_timeline_function_.subject_delta() != 0 ||
-          pending_timeline_function_.subject_delta() != 0);
+  return !end_of_stream_published_ && (current_timeline_function_.subject_delta() != 0 ||
+                                       pending_timeline_function_.subject_delta() != 0);
 }
 
 void Renderer::SetEndOfStreamPts(int64_t end_of_stream_pts) {
@@ -120,8 +112,7 @@ void Renderer::UpdateLastRenderedPts(int64_t pts) {
 void Renderer::OnTimelineTransition() {}
 
 void Renderer::ApplyPendingChanges(int64_t reference_time) {
-  if (!TimelineFunctionPending() ||
-      pending_timeline_function_.reference_time() > reference_time) {
+  if (!TimelineFunctionPending() || pending_timeline_function_.reference_time() > reference_time) {
     return;
   }
 
@@ -131,8 +122,7 @@ void Renderer::ApplyPendingChanges(int64_t reference_time) {
 }
 
 void Renderer::ClearPendingTimelineFunction() {
-  pending_timeline_function_ =
-      media::TimelineFunction(Packet::kNoPts, Packet::kNoPts, 0, 1);
+  pending_timeline_function_ = media::TimelineFunction(Packet::kNoPts, Packet::kNoPts, 0, 1);
 
   if (set_timeline_function_callback_) {
     fit::closure callback = std::move(set_timeline_function_callback_);

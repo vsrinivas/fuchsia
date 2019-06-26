@@ -30,11 +30,9 @@ size_t SlidingBuffer::Read(size_t pos, uint8_t* buffer, size_t bytes_to_read) {
   return read_size;
 }
 
-std::vector<SlidingBuffer::Block> SlidingBuffer::Slide(size_t dest_pos,
-                                                       size_t budget) {
+std::vector<SlidingBuffer::Block> SlidingBuffer::Slide(size_t dest_pos, size_t budget) {
   FXL_DCHECK(budget <= store_.size())
-      << budget << " bytes were requested but buffer has capacity of "
-      << store_.size() << ".";
+      << budget << " bytes were requested but buffer has capacity of " << store_.size() << ".";
 
   const Range desired_range = FindNewRange(dest_pos, budget);
 
@@ -50,8 +48,8 @@ std::vector<SlidingBuffer::Block> SlidingBuffer::Slide(size_t dest_pos,
 }
 
 // static
-std::vector<SlidingBuffer::Range> SlidingBuffer::ClipRange(
-    const SlidingBuffer::Range& base, const SlidingBuffer::Range& clip) {
+std::vector<SlidingBuffer::Range> SlidingBuffer::ClipRange(const SlidingBuffer::Range& base,
+                                                           const SlidingBuffer::Range& clip) {
   const size_t clip_end = clip.start + clip.length;
   const size_t base_end = base.start + base.length;
 
@@ -72,22 +70,19 @@ std::vector<SlidingBuffer::Range> SlidingBuffer::ClipRange(
   return ranges;
 }
 
-SlidingBuffer::Range SlidingBuffer::FindNewRange(size_t dest_pos,
-                                                 size_t budget) {
+SlidingBuffer::Range SlidingBuffer::FindNewRange(size_t dest_pos, size_t budget) {
   Range desired_range = {.start = dest_pos, .length = budget};
 
-  if (desired_range.end() < filled_range_.end() &&
-      desired_range.end() >= filled_range_.start &&
+  if (desired_range.end() < filled_range_.end() && desired_range.end() >= filled_range_.start &&
       desired_range.length < store_.size()) {
-    desired_range.length += std::min(filled_range_.end() - desired_range.end(),
-                                     store_.size() - desired_range.length);
+    desired_range.length +=
+        std::min(filled_range_.end() - desired_range.end(), store_.size() - desired_range.length);
   }
 
-  if (desired_range.start > filled_range_.start &&
-      desired_range.start <= filled_range_.end() &&
+  if (desired_range.start > filled_range_.start && desired_range.start <= filled_range_.end() &&
       desired_range.length < store_.size()) {
-    const size_t expansion = std::min(desired_range.start - filled_range_.start,
-                                      store_.size() - desired_range.length);
+    const size_t expansion =
+        std::min(desired_range.start - filled_range_.start, store_.size() - desired_range.length);
     desired_range.length += expansion;
     desired_range.start -= expansion;
   }
@@ -95,8 +90,7 @@ SlidingBuffer::Range SlidingBuffer::FindNewRange(size_t dest_pos,
   return desired_range;
 }
 
-std::vector<SlidingBuffer::Block> SlidingBuffer::BlocksInRange(
-    const Range& range) {
+std::vector<SlidingBuffer::Block> SlidingBuffer::BlocksInRange(const Range& range) {
   const size_t start = range.start % store_.size();
   const size_t end = std::min(start + range.length, store_.size());
   const size_t wrap_end = (start + range.length) % store_.size();
@@ -104,9 +98,8 @@ std::vector<SlidingBuffer::Block> SlidingBuffer::BlocksInRange(
   std::vector<SlidingBuffer::Block> blocks = {
       {.start = range.start, .size = end - start, .buffer = &store_[start]}};
   if (start + range.length > store_.size()) {
-    blocks.push_back({.start = range.start + (end - start),
-                      .size = wrap_end,
-                      .buffer = &store_[0]});
+    blocks.push_back(
+        {.start = range.start + (end - start), .size = wrap_end, .buffer = &store_[0]});
   }
 
   return blocks;

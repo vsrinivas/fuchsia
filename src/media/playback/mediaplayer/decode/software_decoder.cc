@@ -20,8 +20,7 @@ SoftwareDecoder::SoftwareDecoder()
 
 SoftwareDecoder::~SoftwareDecoder() { FXL_DCHECK(is_main_thread()); }
 
-void SoftwareDecoder::FlushInput(bool hold_frame, size_t input_index,
-                                 fit::closure callback) {
+void SoftwareDecoder::FlushInput(bool hold_frame, size_t input_index, fit::closure callback) {
   FXL_DCHECK(is_main_thread());
   FXL_DCHECK(input_index == 0);
   FXL_DCHECK(callback);
@@ -126,9 +125,8 @@ void SoftwareDecoder::RequestOutputPacket() {
 
   output_state_ = OutputState::kWaitingForWorker;
 
-  PostTaskToWorkerThread([this, packet = std::move(input_packet_)] {
-    HandleInputPacketOnWorker(std::move(packet));
-  });
+  PostTaskToWorkerThread(
+      [this, packet = std::move(input_packet_)] { HandleInputPacketOnWorker(std::move(packet)); });
 
   if (!end_of_input_stream_) {
     // Request the next packet, so it will be ready when we need it.
@@ -148,7 +146,7 @@ void SoftwareDecoder::HandleInputPacketOnWorker(PacketPtr input) {
   // We depend on |TransformPacket| behaving properly here. Specifically, it
   // should return true in just a few iterations. It will normally produce an
   // output packet and/or return true. The only exception is when the output
-  // allocator is exhausted. 
+  // allocator is exhausted.
   while (!done) {
     PacketPtr output;
     done = TransformPacket(input, new_input, &output);
@@ -207,8 +205,7 @@ void SoftwareDecoder::WorkerDoneWithInputPacket() {
       break;
 
     case OutputState::kWaitingForInput:
-      FXL_DCHECK(false)
-          << "WorkerDoneWithInputPacket called waiting for input.";
+      FXL_DCHECK(false) << "WorkerDoneWithInputPacket called waiting for input.";
       break;
 
     case OutputState::kWaitingForWorker:
@@ -228,11 +225,10 @@ void SoftwareDecoder::WorkerDoneWithInputPacket() {
   }
 
   if (flush_callback_) {
-    PostTaskToWorkerThread(
-        [this, callback = std::move(flush_callback_)]() mutable {
-          Flush();
-          PostTaskToMainThread(std::move(callback));
-        });
+    PostTaskToWorkerThread([this, callback = std::move(flush_callback_)]() mutable {
+      Flush();
+      PostTaskToMainThread(std::move(callback));
+    });
   }
 }
 
@@ -274,8 +270,7 @@ void SoftwareDecoder::Dump(std::ostream& os) const {
       os << fostr::NewLine << "decode durations:";
       os << fostr::Indent;
       os << fostr::NewLine << "minimum        " << AsNs(decode_duration_.min());
-      os << fostr::NewLine << "average        "
-         << AsNs(decode_duration_.average());
+      os << fostr::NewLine << "average        " << AsNs(decode_duration_.average());
       os << fostr::NewLine << "maximum        " << AsNs(decode_duration_.max());
       os << fostr::Outdent;
     }

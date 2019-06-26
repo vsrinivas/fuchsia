@@ -62,8 +62,7 @@ class SourceSegment : public Segment {
   // and updated are indicated by non-null |stream| value. Stream removes are
   // indicated by null |stream| value. |more| is true during initial stream
   // enumeration when the segment knows there are more streams to report.
-  using StreamUpdateCallback =
-      fit::function<void(size_t index, const Stream* stream, bool more)>;
+  using StreamUpdateCallback = fit::function<void(size_t index, const Stream* stream, bool more)>;
 
   // Constructs a |SourceSegment|. |stream_add_imminent| should be true if the
   // subclass will immediately enumerate streams after |Provision| is called.
@@ -77,8 +76,7 @@ class SourceSegment : public Segment {
   // |updateCallback| and |stream_update_callback| are both optional. If the
   // segment can decide when streams are enumerated, it does so immediately
   // after this method is called.
-  void Provision(Graph* graph, async_dispatcher_t* dispatcher,
-                 fit::closure updateCallback,
+  void Provision(Graph* graph, async_dispatcher_t* dispatcher, fit::closure updateCallback,
                  StreamUpdateCallback stream_update_callback);
 
   // Revokes the graph, task runner and callbacks provided in a previous call
@@ -120,13 +118,10 @@ class SourceSegment : public Segment {
 
  protected:
   // Gets a weak pointer to this |SourceSegment|.
-  fxl::WeakPtr<SourceSegment> GetWeakThis() {
-    return weak_factory_.GetWeakPtr();
-  }
+  fxl::WeakPtr<SourceSegment> GetWeakThis() { return weak_factory_.GetWeakPtr(); }
 
   // Called by subclasses when a stream is updated.
-  void OnStreamUpdated(size_t index, const StreamType& type, OutputRef output,
-                       bool more);
+  void OnStreamUpdated(size_t index, const StreamType& type, OutputRef output, bool more);
 
   // Called by subclasses when a stream is removed.
   void OnStreamRemoved(size_t index, bool more);

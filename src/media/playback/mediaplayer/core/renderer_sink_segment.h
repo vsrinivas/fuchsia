@@ -14,11 +14,10 @@ namespace media_player {
 // A graph segment that delivers an elementary stream to a renderer.
 class RendererSinkSegment : public SinkSegment {
  public:
-  static std::unique_ptr<RendererSinkSegment> Create(
-      std::shared_ptr<Renderer> renderer, DecoderFactory* decoder_factory);
+  static std::unique_ptr<RendererSinkSegment> Create(std::shared_ptr<Renderer> renderer,
+                                                     DecoderFactory* decoder_factory);
 
-  RendererSinkSegment(std::shared_ptr<Renderer> renderer,
-                      DecoderFactory* decoder_factory);
+  RendererSinkSegment(std::shared_ptr<Renderer> renderer, DecoderFactory* decoder_factory);
 
   ~RendererSinkSegment() override;
 
@@ -27,8 +26,7 @@ class RendererSinkSegment : public SinkSegment {
 
   void WillDeprovision() override;
 
-  void Connect(const StreamType& type, OutputRef output,
-               ConnectCallback callback) override;
+  void Connect(const StreamType& type, OutputRef output, ConnectCallback callback) override;
 
   void Disconnect() override;
 
@@ -39,8 +37,7 @@ class RendererSinkSegment : public SinkSegment {
   void SetTimelineFunction(media::TimelineFunction timeline_function,
                            fit::closure callback) override;
 
-  void SetProgramRange(uint64_t program, int64_t min_pts,
-                       int64_t max_pts) override;
+  void SetProgramRange(uint64_t program, int64_t min_pts, int64_t max_pts) override;
 
   bool end_of_stream() const override { return renderer_->end_of_stream(); }
 

@@ -36,16 +36,14 @@ class PlayerCore {
   // Sets the current source segment. |source_segment| must be provisioned. The
   // callback is called when the initial set of streams supplied by the segment
   // have been connected.
-  void SetSourceSegment(std::unique_ptr<SourceSegment> source_segment,
-                        fit::closure callback);
+  void SetSourceSegment(std::unique_ptr<SourceSegment> source_segment, fit::closure callback);
 
   // Removes the current source segment, if there is one.
   void ClearSourceSegment();
 
   // Sets the current sink segment for the specified medium. |sink_segment| may
   // be null, indicating there is no sink segment for the specified medium.
-  void SetSinkSegment(std::unique_ptr<SinkSegment> sink_segment,
-                      StreamType::Medium medium);
+  void SetSinkSegment(std::unique_ptr<SinkSegment> sink_segment, StreamType::Medium medium);
 
   // Indicates whether the player has a source segment.
   bool has_source_segment() const { return !!source_segment_; }
@@ -62,17 +60,14 @@ class PlayerCore {
 
   // Indicates whether the currently-loaded content has a stream with the
   // specified medium.
-  bool content_has_medium(StreamType::Medium medium) const {
-    return !!GetStream(medium);
-  }
+  bool content_has_medium(StreamType::Medium medium) const { return !!GetStream(medium); }
 
   // Indicates whether the indicated medium is connected to a sink segment. This
   // will be false if no sink segment for the specified medium has been supplied
   // or the provided sink segment could not handle the stream type.
   bool medium_connected(StreamType::Medium medium) const {
     const Stream* stream = GetStream(medium);
-    return stream && stream->sink_segment_ &&
-           stream->sink_segment_->connected();
+    return stream && stream->sink_segment_ && stream->sink_segment_->connected();
   }
 
   // Prepares the graph for playback by satisfying initial renderer demand.
@@ -84,12 +79,9 @@ class PlayerCore {
   void Flush(bool hold_frame, fit::closure callback);
 
   // Sets the timeline function. |callback| will never be called synchronously.
-  void SetTimelineFunction(media::TimelineFunction timeline_function,
-                           fit::closure callback);
+  void SetTimelineFunction(media::TimelineFunction timeline_function, fit::closure callback);
 
-  const media::TimelineFunction& timeline_function() {
-    return timeline_function_;
-  }
+  const media::TimelineFunction& timeline_function() { return timeline_function_; }
 
   // Sets a program range for the renderers.
   void SetProgramRange(uint64_t program, int64_t min_pts, int64_t max_pts);
@@ -189,8 +181,7 @@ class PlayerCore {
   size_t set_source_segment_countdown_;
   std::unique_ptr<SourceSegment> source_segment_;
   std::vector<Stream> streams_;
-  std::unordered_map<StreamType::Medium, std::unique_ptr<SinkSegment>>
-      parked_sink_segments_;
+  std::unordered_map<StreamType::Medium, std::unique_ptr<SinkSegment>> parked_sink_segments_;
   bool primed_ = false;
   media::TimelineFunction timeline_function_;
 };

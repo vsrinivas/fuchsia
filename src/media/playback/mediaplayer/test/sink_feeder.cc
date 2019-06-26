@@ -11,9 +11,8 @@ namespace test {
 
 static const uint32_t kPayloadBufferId = 0;
 
-zx_status_t SinkFeeder::Init(fuchsia::media::SimpleStreamSinkPtr sink,
-                             size_t size, uint32_t frame_size,
-                             uint32_t max_packet_size,
+zx_status_t SinkFeeder::Init(fuchsia::media::SimpleStreamSinkPtr sink, size_t size,
+                             uint32_t frame_size, uint32_t max_packet_size,
                              uint32_t max_packet_count) {
   FXL_DCHECK(sink);
   FXL_DCHECK(size > 0);

@@ -15,13 +15,10 @@ extern "C" {
 namespace media_player {
 
 struct AVFormatContextDeleter {
-  inline void operator()(AVFormatContext* ptr) const {
-    avformat_free_context(ptr);
-  }
+  inline void operator()(AVFormatContext* ptr) const { avformat_free_context(ptr); }
 };
 
-using AvFormatContextPtr =
-    std::unique_ptr<AVFormatContext, AVFormatContextDeleter>;
+using AvFormatContextPtr = std::unique_ptr<AVFormatContext, AVFormatContextDeleter>;
 
 struct AvFormatContext {
   static AvFormatContextPtr OpenInput(const AvIoContextPtr& io_context) {

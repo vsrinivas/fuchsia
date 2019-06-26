@@ -16,8 +16,7 @@ namespace media_player {
 
 // See services/media/framework/ostream.h for details.
 
-std::ostream& operator<<(std::ostream& os,
-                         const struct AVCodecTag* const* value);
+std::ostream& operator<<(std::ostream& os, const struct AVCodecTag* const* value);
 std::ostream& operator<<(std::ostream& os, const AVInputFormat* value);
 std::ostream& operator<<(std::ostream& os, const AVOutputFormat* value);
 std::ostream& operator<<(std::ostream& os, const AVIOContext* value);
@@ -49,24 +48,21 @@ struct AVPacketSideDataArray {
 std::ostream& operator<<(std::ostream& os, const AVPacketSideDataArray& value);
 
 struct AVProgramArray {
-  AVProgramArray(AVProgram** items, unsigned int count)
-      : items_(items), count_(count) {}
+  AVProgramArray(AVProgram** items, unsigned int count) : items_(items), count_(count) {}
   AVProgram** items_;
   unsigned int count_;
 };
 std::ostream& operator<<(std::ostream& os, const AVProgramArray& value);
 
 struct AVChapterArray {
-  AVChapterArray(AVChapter** items, unsigned int count)
-      : items_(items), count_(count) {}
+  AVChapterArray(AVChapter** items, unsigned int count) : items_(items), count_(count) {}
   AVChapter** items_;
   unsigned int count_;
 };
 std::ostream& operator<<(std::ostream& os, const AVChapterArray& value);
 
 struct AVStreamArray {
-  AVStreamArray(AVStream** items, unsigned int count)
-      : items_(items), count_(count) {}
+  AVStreamArray(AVStream** items, unsigned int count) : items_(items), count_(count) {}
   AVStream** items_;
   unsigned int count_;
 };

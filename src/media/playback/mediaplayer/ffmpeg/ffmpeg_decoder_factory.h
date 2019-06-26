@@ -15,16 +15,14 @@ namespace media_player {
 class FfmpegDecoderFactory : public DecoderFactory {
  public:
   // Creates an ffmmpeg decoder factory.
-  static std::unique_ptr<DecoderFactory> Create(
-      component::StartupContext* startup_context);
+  static std::unique_ptr<DecoderFactory> Create(component::StartupContext* startup_context);
 
   FfmpegDecoderFactory();
 
   ~FfmpegDecoderFactory() override;
 
-  void CreateDecoder(
-      const StreamType& stream_type,
-      fit::function<void(std::shared_ptr<Decoder>)> callback) override;
+  void CreateDecoder(const StreamType& stream_type,
+                     fit::function<void(std::shared_ptr<Decoder>)> callback) override;
 };
 
 }  // namespace media_player

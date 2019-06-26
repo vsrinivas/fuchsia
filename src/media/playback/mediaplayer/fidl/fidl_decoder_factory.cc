@@ -18,18 +18,15 @@ std::unique_ptr<DecoderFactory> FidlDecoderFactory::Create(
   return std::make_unique<FidlDecoderFactory>(startup_context);
 }
 
-FidlDecoderFactory::FidlDecoderFactory(
-    component::StartupContext* startup_context) {
+FidlDecoderFactory::FidlDecoderFactory(component::StartupContext* startup_context) {
   codec_factory_ =
-      startup_context
-          ->ConnectToEnvironmentService<fuchsia::mediacodec::CodecFactory>();
+      startup_context->ConnectToEnvironmentService<fuchsia::mediacodec::CodecFactory>();
 }
 
 FidlDecoderFactory::~FidlDecoderFactory() {}
 
-void FidlDecoderFactory::CreateDecoder(
-    const StreamType& stream_type,
-    fit::function<void(std::shared_ptr<Decoder>)> callback) {
+void FidlDecoderFactory::CreateDecoder(const StreamType& stream_type,
+                                       fit::function<void(std::shared_ptr<Decoder>)> callback) {
   FXL_DCHECK(callback);
 
   auto format_details = fidl::To<fuchsia::media::FormatDetailsPtr>(stream_type);
@@ -46,12 +43,11 @@ void FidlDecoderFactory::CreateDecoder(
   decoder_params.set_require_hw(true);
 
   fuchsia::media::StreamProcessorPtr decoder;
-  codec_factory_->CreateDecoder(std::move(decoder_params),
-                                decoder.NewRequest());
+  codec_factory_->CreateDecoder(std::move(decoder_params), decoder.NewRequest());
   FXL_DCHECK(decoder);
 
-  FidlDecoder::Create(stream_type, std::move(*format_details),
-                      std::move(decoder), std::move(callback));
+  FidlDecoder::Create(stream_type, std::move(*format_details), std::move(decoder),
+                      std::move(callback));
 }
 
 }  // namespace media_player

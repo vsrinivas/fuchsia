@@ -95,16 +95,14 @@ NodeRef Graph::ConnectNodes(NodeRef upstream_node, NodeRef downstream_node) {
   return downstream_node;
 }
 
-NodeRef Graph::ConnectOutputToNode(const OutputRef& output,
-                                   NodeRef downstream_node) {
+NodeRef Graph::ConnectOutputToNode(const OutputRef& output, NodeRef downstream_node) {
   FXL_DCHECK(output);
   FXL_DCHECK(downstream_node);
   Connect(output, downstream_node.input());
   return downstream_node;
 }
 
-NodeRef Graph::ConnectNodeToInput(NodeRef upstream_node,
-                                  const InputRef& input) {
+NodeRef Graph::ConnectNodeToInput(NodeRef upstream_node, const InputRef& input) {
   FXL_DCHECK(upstream_node);
   FXL_DCHECK(input);
   Connect(upstream_node.output(), input);
@@ -211,16 +209,14 @@ void Graph::Reset() {
   });
 }
 
-void Graph::FlushOutput(const OutputRef& output, bool hold_frame,
-                        fit::closure callback) {
+void Graph::FlushOutput(const OutputRef& output, bool hold_frame, fit::closure callback) {
   FXL_DCHECK(output);
   std::queue<Output*> backlog;
   backlog.push(output.actual());
   FlushOutputs(&backlog, hold_frame, std::move(callback));
 }
 
-void Graph::FlushAllOutputs(NodeRef node, bool hold_frame,
-                            fit::closure callback) {
+void Graph::FlushAllOutputs(NodeRef node, bool hold_frame, fit::closure callback) {
   FXL_DCHECK(node);
 
   std::queue<Output*> backlog;
@@ -232,8 +228,7 @@ void Graph::FlushAllOutputs(NodeRef node, bool hold_frame,
   FlushOutputs(&backlog, hold_frame, std::move(callback));
 }
 
-void Graph::PostTask(fit::closure task,
-                     std::initializer_list<NodeRef> node_refs) {
+void Graph::PostTask(fit::closure task, std::initializer_list<NodeRef> node_refs) {
   auto joiner = ThreadsafeCallbackJoiner::Create();
 
   std::vector<Node*> nodes;
@@ -242,17 +237,15 @@ void Graph::PostTask(fit::closure task,
     nodes.push_back(node_ref.node_);
   }
 
-  joiner->WhenJoined(dispatcher_,
-                     [task = std::move(task), nodes = std::move(nodes)]() {
-                       task();
-                       for (auto node : nodes) {
-                         node->Release();
-                       }
-                     });
+  joiner->WhenJoined(dispatcher_, [task = std::move(task), nodes = std::move(nodes)]() {
+    task();
+    for (auto node : nodes) {
+      node->Release();
+    }
+  });
 }
 
-void Graph::FlushOutputs(std::queue<Output*>* backlog, bool hold_frame,
-                         fit::closure callback) {
+void Graph::FlushOutputs(std::queue<Output*>* backlog, bool hold_frame, fit::closure callback) {
   FXL_DCHECK(backlog);
 
   auto callback_joiner = CallbackJoiner::Create();
@@ -276,14 +269,11 @@ void Graph::FlushOutputs(std::queue<Output*>* backlog, bool hold_frame,
     FXL_DCHECK(input);
     Node* input_node = input->node();
 
-    output->node()->FlushOutputExternal(output->index(),
-                                        callback_joiner->NewCallback());
+    output->node()->FlushOutputExternal(output->index(), callback_joiner->NewCallback());
 
-    input_node->FlushInputExternal(input->index(), hold_frame,
-                                   callback_joiner->NewCallback());
+    input_node->FlushInputExternal(input->index(), hold_frame, callback_joiner->NewCallback());
 
-    for (size_t output_index = 0; output_index < input_node->output_count();
-         ++output_index) {
+    for (size_t output_index = 0; output_index < input_node->output_count(); ++output_index) {
       backlog->push(&input_node->output(output_index));
     }
   }
@@ -311,8 +301,7 @@ void Graph::VisitUpstream(Input* input, const Visitor& visitor) {
 
     visitor(input, output);
 
-    for (size_t input_index = 0; input_index < output_node->input_count();
-         ++input_index) {
+    for (size_t input_index = 0; input_index < output_node->input_count(); ++input_index) {
       backlog.push(&output_node->input(input_index));
     }
   }

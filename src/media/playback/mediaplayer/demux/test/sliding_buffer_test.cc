@@ -21,8 +21,7 @@ void FillBlocks(std::vector<SlidingBuffer::Block> blocks) {
   }
 }
 
-void CheckRange(SlidingBuffer& buffer, size_t start, size_t size,
-                size_t expected_read_size) {
+void CheckRange(SlidingBuffer& buffer, size_t start, size_t size, size_t expected_read_size) {
   std::vector<uint8_t> store(expected_read_size, 0);
   size_t bytes_read = buffer.Read(start, store.data(), size);
   EXPECT_EQ(bytes_read, expected_read_size);

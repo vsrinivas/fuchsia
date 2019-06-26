@@ -13,8 +13,7 @@ std::shared_ptr<SimpleStreamSinkImpl> SimpleStreamSinkImpl::Create(
     const StreamType& output_stream_type, media::TimelineRate pts_rate,
     fidl::InterfaceRequest<fuchsia::media::SimpleStreamSink> request) {
   FXL_DCHECK(request);
-  return std::make_shared<SimpleStreamSinkImpl>(output_stream_type, pts_rate,
-                                                std::move(request));
+  return std::make_shared<SimpleStreamSinkImpl>(output_stream_type, pts_rate, std::move(request));
 }
 
 SimpleStreamSinkImpl::SimpleStreamSinkImpl(
@@ -42,8 +41,7 @@ void SimpleStreamSinkImpl::ConfigureConnectors() {
   ConfigureOutputToProvideVmos(VmoAllocation::kUnrestricted);
 }
 
-void SimpleStreamSinkImpl::FlushOutput(size_t output_index,
-                                       fit::closure callback) {
+void SimpleStreamSinkImpl::FlushOutput(size_t output_index, fit::closure callback) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
   FXL_DCHECK(output_index == 0);
   FXL_DCHECK(callback);
@@ -64,8 +62,7 @@ void SimpleStreamSinkImpl::RequestOutputPacket() {
   // will.
 }
 
-void SimpleStreamSinkImpl::AddPayloadBuffer(uint32_t id,
-                                            zx::vmo payload_buffer) {
+void SimpleStreamSinkImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buffer) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
 
   if (payload_vmo_infos_by_id_.find(id) != payload_vmo_infos_by_id_.end()) {
@@ -75,8 +72,7 @@ void SimpleStreamSinkImpl::AddPayloadBuffer(uint32_t id,
     return;
   }
 
-  auto payload_vmo =
-      PayloadVmo::Create(std::move(payload_buffer), ZX_VM_PERM_READ);
+  auto payload_vmo = PayloadVmo::Create(std::move(payload_buffer), ZX_VM_PERM_READ);
   if (!payload_vmo) {
     FXL_LOG(ERROR) << "AddPayloadBuffer: cannot map VMO for reading.";
     binding_.Unbind();
@@ -148,8 +144,8 @@ void SimpleStreamSinkImpl::SendPacket(fuchsia::media::StreamPacket packet,
   ++payload_vmo_info.packet_count_;
 
   auto payload_buffer = PayloadBuffer::Create(
-      packet.payload_size, payload_vmo_info.vmo_->at_offset(payload_offset),
-      payload_vmo_info.vmo_, payload_offset,
+      packet.payload_size, payload_vmo_info.vmo_->at_offset(payload_offset), payload_vmo_info.vmo_,
+      payload_offset,
       [this, shared_this = shared_from_this(), vmo_id,
        callback = std::move(callback)](PayloadBuffer* payload_buffer) mutable {
         PostTask([this, shared_this, vmo_id, callback = std::move(callback)]() {
@@ -168,8 +164,7 @@ void SimpleStreamSinkImpl::SendPacket(fuchsia::media::StreamPacket packet,
       });
 
   PutOutputPacket(Packet::Create(
-      packet.pts, pts_rate_,
-      (packet.flags & fuchsia::media::STREAM_PACKET_FLAG_KEY_FRAME) != 0,
+      packet.pts, pts_rate_, (packet.flags & fuchsia::media::STREAM_PACKET_FLAG_KEY_FRAME) != 0,
       (packet.flags & fuchsia::media::STREAM_PACKET_FLAG_DISCONTINUITY) != 0,
       false,  // end_of_stream
       packet.payload_size, payload_buffer));
@@ -177,8 +172,7 @@ void SimpleStreamSinkImpl::SendPacket(fuchsia::media::StreamPacket packet,
   pts_ = packet.pts;
 }
 
-void SimpleStreamSinkImpl::SendPacketNoReply(
-    fuchsia::media::StreamPacket packet) {
+void SimpleStreamSinkImpl::SendPacketNoReply(fuchsia::media::StreamPacket packet) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
   SendPacket(std::move(packet), nullptr);
 }
@@ -188,8 +182,7 @@ void SimpleStreamSinkImpl::EndOfStream() {
   PutOutputPacket(Packet::CreateEndOfStream(pts_, pts_rate_));
 }
 
-void SimpleStreamSinkImpl::DiscardAllPackets(
-    DiscardAllPacketsCallback callback) {
+void SimpleStreamSinkImpl::DiscardAllPackets(DiscardAllPacketsCallback callback) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
   // |callback| is nullptr when |DiscardAllPacketsNoReply| calls this method.
   // TODO(dalesat): Implement.

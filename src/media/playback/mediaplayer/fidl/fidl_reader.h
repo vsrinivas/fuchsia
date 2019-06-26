@@ -19,13 +19,11 @@
 namespace media_player {
 
 // Reads raw data from a SeekingReader service.
-class FidlReader : public Reader,
-                   public std::enable_shared_from_this<FidlReader> {
+class FidlReader : public Reader, public std::enable_shared_from_this<FidlReader> {
  public:
   // Creates an FidlReader. Must be called on a fidl thread.
   static std::shared_ptr<Reader> Create(
-      fidl::InterfaceHandle<fuchsia::media::playback::SeekingReader>
-          seeking_reader) {
+      fidl::InterfaceHandle<fuchsia::media::playback::SeekingReader> seeking_reader) {
     return std::shared_ptr<Reader>(new FidlReader(std::move(seeking_reader)));
   }
 
@@ -38,8 +36,7 @@ class FidlReader : public Reader,
               ReadAtCallback callback) override;
 
  private:
-  FidlReader(fidl::InterfaceHandle<fuchsia::media::playback::SeekingReader>
-                 seeking_reader);
+  FidlReader(fidl::InterfaceHandle<fuchsia::media::playback::SeekingReader> seeking_reader);
 
   // Continues a ReadAt operation on the thread on which this reader was
   // constructed (a fidl thread).

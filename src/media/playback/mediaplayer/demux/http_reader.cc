@@ -35,12 +35,9 @@ std::shared_ptr<HttpReader> HttpReader::Create(
   return std::make_shared<HttpReader>(startup_context, url, std::move(headers));
 }
 
-HttpReader::HttpReader(
-    component::StartupContext* startup_context, const std::string& url,
-    fidl::VectorPtr<fuchsia::net::oldhttp::HttpHeader> headers)
-    : url_(url),
-      headers_(std::move(headers)),
-      ready_(async_get_default_dispatcher()) {
+HttpReader::HttpReader(component::StartupContext* startup_context, const std::string& url,
+                       fidl::VectorPtr<fuchsia::net::oldhttp::HttpHeader> headers)
+    : url_(url), headers_(std::move(headers)), ready_(async_get_default_dispatcher()) {
   http::HttpServicePtr network_service =
       startup_context->ConnectToEnvironmentService<http::HttpService>();
 
@@ -54,24 +51,20 @@ HttpReader::HttpReader(
     url_request.headers = fidl::Clone(headers_);
   }
 
-  url_loader_->Start(std::move(url_request), [this](
-                                                 http::URLResponse response) {
+  url_loader_->Start(std::move(url_request), [this](http::URLResponse response) {
     if (response.error) {
       FXL_LOG(ERROR) << "HEAD response error " << response.error->code << " "
-                     << (response.error->description
-                             ? response.error->description
-                             : "<no description>");
-      status_ = response.error->code == ::http::HTTP_ERR_NAME_NOT_RESOLVED
-                    ? ZX_ERR_NOT_FOUND
-                    : ZX_ERR_INTERNAL;
+                     << (response.error->description ? response.error->description
+                                                     : "<no description>");
+      status_ = response.error->code == ::http::HTTP_ERR_NAME_NOT_RESOLVED ? ZX_ERR_NOT_FOUND
+                                                                           : ZX_ERR_INTERNAL;
       ready_.Occur();
       return;
     }
 
     if (response.status_code != kStatusOk) {
       FXL_LOG(ERROR) << "HEAD response status code " << response.status_code;
-      status_ = response.status_code == kStatusNotFound ? ZX_ERR_NOT_FOUND
-                                                        : ZX_ERR_INTERNAL;
+      status_ = response.status_code == kStatusNotFound ? ZX_ERR_NOT_FOUND : ZX_ERR_INTERNAL;
       ready_.Occur();
       return;
     }
@@ -92,15 +85,12 @@ HttpReader::HttpReader(
 HttpReader::~HttpReader() {}
 
 void HttpReader::Describe(DescribeCallback callback) {
-  ready_.When([this, callback = std::move(callback)]() {
-    callback(status_, size_, can_seek_);
-  });
+  ready_.When([this, callback = std::move(callback)]() { callback(status_, size_, can_seek_); });
 }
 
 void HttpReader::ReadAt(size_t position, uint8_t* buffer, size_t bytes_to_read,
                         ReadAtCallback callback) {
-  ready_.When([this, position, buffer, bytes_to_read,
-               callback = std::move(callback)]() mutable {
+  ready_.When([this, position, buffer, bytes_to_read, callback = std::move(callback)]() mutable {
     if (status_ != ZX_OK) {
       callback(status_, 0);
       return;
@@ -137,16 +127,14 @@ void HttpReader::ReadAt(size_t position, uint8_t* buffer, size_t bytes_to_read,
 void HttpReader::ReadFromSocket() {
   while (true) {
     size_t byte_count = 0;
-    zx_status_t status = socket_.read(0u, read_at_buffer_,
-                                      read_at_bytes_remaining_, &byte_count);
+    zx_status_t status = socket_.read(0u, read_at_buffer_, read_at_bytes_remaining_, &byte_count);
 
     if (status == ZX_ERR_SHOULD_WAIT) {
-      waiter_ = std::make_unique<async::Wait>(
-          socket_.get(), ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED);
+      waiter_ =
+          std::make_unique<async::Wait>(socket_.get(), ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED);
 
-      waiter_->set_handler([this](async_dispatcher_t* dispatcher,
-                                  async::Wait* wait, zx_status_t status,
-                                  const zx_packet_signal_t* signal) {
+      waiter_->set_handler([this](async_dispatcher_t* dispatcher, async::Wait* wait,
+                                  zx_status_t status, const zx_packet_signal_t* signal) {
         if (status != ZX_OK) {
           if (status != ZX_ERR_CANCELED) {
             FXL_LOG(ERROR) << "AsyncWait failed, status " << status;
@@ -223,8 +211,7 @@ void HttpReader::LoadAndReadFromSocket() {
   }
 
   url_loader_->Start(std::move(request), [this](http::URLResponse response) {
-    if (response.status_code != kStatusOk &&
-        response.status_code != kStatusPartialContent) {
+    if (response.status_code != kStatusOk && response.status_code != kStatusPartialContent) {
       FXL_LOG(WARNING) << "GET response status code " << response.status_code;
       FailReadAt(ZX_ERR_INTERNAL);
       return;

@@ -35,15 +35,13 @@ class PlayerImpl : public fuchsia::media::playback::Player {
       component::StartupContext* startup_context, fit::closure quit_callback);
 
   PlayerImpl(fidl::InterfaceRequest<fuchsia::media::playback::Player> request,
-             component::StartupContext* startup_context,
-             fit::closure quit_callback);
+             component::StartupContext* startup_context, fit::closure quit_callback);
 
   ~PlayerImpl() override;
 
   // Player implementation.
-  void SetHttpSource(
-      std::string http_url,
-      fidl::VectorPtr<fuchsia::net::oldhttp::HttpHeader> headers) override;
+  void SetHttpSource(std::string http_url,
+                     fidl::VectorPtr<fuchsia::net::oldhttp::HttpHeader> headers) override;
 
   void SetFileSource(zx::channel file_channel) override;
 
@@ -56,44 +54,34 @@ class PlayerImpl : public fuchsia::media::playback::Player {
   void CreateView(fuchsia::ui::views::ViewToken view_token) override;
 
   void BindGainControl(
-      fidl::InterfaceRequest<fuchsia::media::audio::GainControl>
-          gain_control_request) override;
+      fidl::InterfaceRequest<fuchsia::media::audio::GainControl> gain_control_request) override;
 
-  void AddBinding(fidl::InterfaceRequest<fuchsia::media::playback::Player>
-                      request) override;
+  void AddBinding(fidl::InterfaceRequest<fuchsia::media::playback::Player> request) override;
 
   void CreateHttpSource(
-      std::string http_url,
-      fidl::VectorPtr<fuchsia::net::oldhttp::HttpHeader> headers,
-      fidl::InterfaceRequest<fuchsia::media::playback::Source> source_request)
-      override;
+      std::string http_url, fidl::VectorPtr<fuchsia::net::oldhttp::HttpHeader> headers,
+      fidl::InterfaceRequest<fuchsia::media::playback::Source> source_request) override;
 
-  void CreateFileSource(zx::channel file_channel,
-                        fidl::InterfaceRequest<fuchsia::media::playback::Source>
-                            source_request) override;
+  void CreateFileSource(
+      zx::channel file_channel,
+      fidl::InterfaceRequest<fuchsia::media::playback::Source> source_request) override;
 
   void CreateReaderSource(
-      fidl::InterfaceHandle<fuchsia::media::playback::SeekingReader>
-          seeking_reader,
-      fidl::InterfaceRequest<fuchsia::media::playback::Source> source_request)
-      override;
+      fidl::InterfaceHandle<fuchsia::media::playback::SeekingReader> seeking_reader,
+      fidl::InterfaceRequest<fuchsia::media::playback::Source> source_request) override;
 
   void CreateElementarySource(
       int64_t duration_ns, bool can_pause, bool can_seek,
       std::unique_ptr<fuchsia::media::Metadata> metadata,
-      fidl::InterfaceRequest<fuchsia::media::playback::ElementarySource>
-          source_request) override;
+      fidl::InterfaceRequest<fuchsia::media::playback::ElementarySource> source_request) override;
 
-  void SetSource(
-      fidl::InterfaceHandle<fuchsia::media::playback::Source> source) override;
+  void SetSource(fidl::InterfaceHandle<fuchsia::media::playback::Source> source) override;
 
-  void TransitionToSource(
-      fidl::InterfaceHandle<fuchsia::media::playback::Source> source,
-      int64_t transition_pts, int64_t start_pts) override;
+  void TransitionToSource(fidl::InterfaceHandle<fuchsia::media::playback::Source> source,
+                          int64_t transition_pts, int64_t start_pts) override;
 
   void CancelSourceTransition(
-      fidl::InterfaceRequest<fuchsia::media::playback::Source>
-          returned_source_request) override;
+      fidl::InterfaceRequest<fuchsia::media::playback::Source> returned_source_request) override;
 
  private:
   static constexpr int64_t kMinimumLeadTime = ZX_MSEC(30);
@@ -111,8 +99,7 @@ class PlayerImpl : public fuchsia::media::playback::Player {
 
   // Adds a binding to |bindings_| and fires the |OnStatusChanged| for the new
   // binding.
-  void AddBindingInternal(
-      fidl::InterfaceRequest<fuchsia::media::playback::Player> request);
+  void AddBindingInternal(fidl::InterfaceRequest<fuchsia::media::playback::Player> request);
 
   // Begins the process of setting a new source.
   void BeginSetSource(std::unique_ptr<SourceImpl> source);
@@ -137,13 +124,10 @@ class PlayerImpl : public fuchsia::media::playback::Player {
   }
 
   // Determines whether we should hold a frame when flushing.
-  bool ShouldHoldFrame() const {
-    return !setting_source_ && target_state_ != State::kFlushed;
-  }
+  bool ShouldHoldFrame() const { return !setting_source_ && target_state_ != State::kFlushed; }
 
   // Sets the timeline function.
-  void SetTimelineFunction(float rate, int64_t reference_time,
-                           fit::closure callback);
+  void SetTimelineFunction(float rate, int64_t reference_time, fit::closure callback);
 
   // Creates a |Source| that uses the specified reader. |source_request| is
   // optional. The optional |connection_failure_callback| is provided to the
@@ -215,13 +199,11 @@ class PlayerImpl : public fuchsia::media::playback::Player {
   // |SourceImpl| that wrapped the |SourceSegment| currently in use by |core_|
   // and the corresponding handle.
   std::unique_ptr<SourceImpl> current_source_;
-  fidl::InterfaceHandle<fuchsia::media::playback::Source>
-      current_source_handle_;
+  fidl::InterfaceHandle<fuchsia::media::playback::Source> current_source_handle_;
 
   // Stores all the sources that have been created and not destroyed or set
   // on the player via |SetSource| (which, actually, destroys the |SourceImpl|).
-  std::unordered_map<zx_koid_t, std::unique_ptr<SourceImpl>>
-      source_impls_by_koid_;
+  std::unordered_map<zx_koid_t, std::unique_ptr<SourceImpl>> source_impls_by_koid_;
 
   // Current status.
   fuchsia::media::playback::PlayerStatus status_;

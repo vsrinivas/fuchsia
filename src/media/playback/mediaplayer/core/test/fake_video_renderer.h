@@ -22,8 +22,7 @@ class FakeVideoRenderer : public Renderer {
   const char* label() const override { return "FakeVideoRenderer"; }
 
   // Renderer implementation.
-  void FlushInput(bool hold_frame, size_t input_index,
-                  fit::closure callback) override {
+  void FlushInput(bool hold_frame, size_t input_index, fit::closure callback) override {
     FXL_DCHECK(input_index == 0);
     FXL_DCHECK(callback);
     callback();
@@ -35,14 +34,11 @@ class FakeVideoRenderer : public Renderer {
     RequestInputPacket();
   }
 
-  const std::vector<std::unique_ptr<StreamTypeSet>>& GetSupportedStreamTypes()
-      override {
+  const std::vector<std::unique_ptr<StreamTypeSet>>& GetSupportedStreamTypes() override {
     return supported_stream_types_;
   }
 
-  void SetStreamType(const StreamType& stream_type) override {
-    stream_type_ = stream_type.Clone();
-  }
+  void SetStreamType(const StreamType& stream_type) override { stream_type_ = stream_type.Clone(); }
 
   void Prime(fit::closure callback) override { callback(); }
 
@@ -51,8 +47,7 @@ class FakeVideoRenderer : public Renderer {
     callback();
   }
 
-  void SetProgramRange(uint64_t program, int64_t min_pts,
-                       int64_t max_pts) override {}
+  void SetProgramRange(uint64_t program, int64_t min_pts, int64_t max_pts) override {}
 
  private:
   std::vector<std::unique_ptr<StreamTypeSet>> supported_stream_types_;

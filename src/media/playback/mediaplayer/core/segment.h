@@ -35,8 +35,7 @@ class Segment {
   // segment for state changes. The update callback is used to notify of changes
   // to the value returned by problem(). Subclasses of Segment may use this
   // callback to signal additional changes.
-  void Provision(Graph* graph, async_dispatcher_t* dispatcher,
-                 fit::closure update_callback);
+  void Provision(Graph* graph, async_dispatcher_t* dispatcher, fit::closure update_callback);
 
   // Revokes the graph, task runner and update callback provided in a previous
   // call to |Provision|.
@@ -50,9 +49,7 @@ class Segment {
 
   // Returns the current problem preventing intended operation or nullptr if
   // there is no such problem.
-  const fuchsia::media::playback::Problem* problem() const {
-    return problem_.get();
-  }
+  const fuchsia::media::playback::Problem* problem() const { return problem_.get(); }
 
  protected:
   Graph& graph() {

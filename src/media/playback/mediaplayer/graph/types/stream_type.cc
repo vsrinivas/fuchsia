@@ -12,8 +12,7 @@ namespace media_player {
 // These must match the definitions in media_types.fidl. This is verfied by
 // the KnownEncodingsMatch function in fidl/fidl_type_conversion.cc. Changes
 // to this list should be reflected there.
-const char StreamType::kMediaEncodingUnsupported[] =
-    "fuchsia.media.unsupported";
+const char StreamType::kMediaEncodingUnsupported[] = "fuchsia.media.unsupported";
 
 const char StreamType::kAudioEncodingAac[] = "fuchsia.media.aac";
 const char StreamType::kAudioEncodingAmrNb[] = "fuchsia.media.amrnb";
@@ -32,17 +31,14 @@ const char StreamType::kVideoEncodingH263[] = "fuchsia.media.h263";
 const char StreamType::kVideoEncodingH264[] = "fuchsia.media.h264";
 const char StreamType::kVideoEncodingMpeg4[] = "fuchsia.media.mpeg4";
 const char StreamType::kVideoEncodingTheora[] = "fuchsia.media.theora";
-const char StreamType::kVideoEncodingUncompressed[] =
-    "fuchsia.media.uncompressed_video";
+const char StreamType::kVideoEncodingUncompressed[] = "fuchsia.media.uncompressed_video";
 const char StreamType::kVideoEncodingVp3[] = "fuchsia.media.vp3";
 const char StreamType::kVideoEncodingVp8[] = "fuchsia.media.vp8";
 const char StreamType::kVideoEncodingVp9[] = "fuchsia.media.vp9";
 
 StreamType::StreamType(Medium medium, const std::string& encoding,
                        std::unique_ptr<Bytes> encoding_parameters)
-    : medium_(medium),
-      encoding_(encoding),
-      encoding_parameters_(std::move(encoding_parameters)) {}
+    : medium_(medium), encoding_(encoding), encoding_parameters_(std::move(encoding_parameters)) {}
 
 StreamType::~StreamType() {}
 
@@ -70,8 +66,7 @@ std::unique_ptr<StreamType> StreamType::Clone() const {
   return Create(medium(), encoding(), SafeClone(encoding_parameters()));
 }
 
-StreamTypeSet::StreamTypeSet(StreamType::Medium medium,
-                             const std::vector<std::string>& encodings)
+StreamTypeSet::StreamTypeSet(StreamType::Medium medium, const std::vector<std::string>& encodings)
     : medium_(medium), encodings_(encodings) {}
 
 StreamTypeSet::~StreamTypeSet() {}
@@ -92,8 +87,7 @@ const TextStreamTypeSet* StreamTypeSet::text() const {
 }
 
 const SubpictureStreamTypeSet* StreamTypeSet::subpicture() const {
-  FXL_LOG(ERROR)
-      << "subpicture method called on non-subpicture stream type set";
+  FXL_LOG(ERROR) << "subpicture method called on non-subpicture stream type set";
   return nullptr;
 }
 

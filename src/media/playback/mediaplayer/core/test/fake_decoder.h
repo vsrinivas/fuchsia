@@ -12,11 +12,9 @@ namespace test {
 
 class FakeDecoder : public Decoder {
  public:
-  static std::unique_ptr<StreamType> OutputStreamType(
-      const StreamType& stream_type);
+  static std::unique_ptr<StreamType> OutputStreamType(const StreamType& stream_type);
 
-  FakeDecoder(const StreamType& stream_type)
-      : output_stream_type_(OutputStreamType(stream_type)) {}
+  FakeDecoder(const StreamType& stream_type) : output_stream_type_(OutputStreamType(stream_type)) {}
 
   ~FakeDecoder() override {}
 
@@ -31,18 +29,13 @@ class FakeDecoder : public Decoder {
                                     0);  // max_payload_size
   }
 
-  void FlushInput(bool hold_frame, size_t input_index,
-                  fit::closure callback) override {
+  void FlushInput(bool hold_frame, size_t input_index, fit::closure callback) override {
     callback();
   }
 
-  void FlushOutput(size_t output_index, fit::closure callback) override {
-    callback();
-  }
+  void FlushOutput(size_t output_index, fit::closure callback) override { callback(); }
 
-  void PutInputPacket(PacketPtr packet, size_t input_index) override {
-    RequestInputPacket();
-  }
+  void PutInputPacket(PacketPtr packet, size_t input_index) override { RequestInputPacket(); }
 
   void RequestOutputPacket() override {}
 
@@ -61,9 +54,8 @@ class FakeDecoderFactory : public DecoderFactory {
 
   ~FakeDecoderFactory() override;
 
-  void CreateDecoder(
-      const StreamType& stream_type,
-      fit::function<void(std::shared_ptr<Decoder>)> callback) override;
+  void CreateDecoder(const StreamType& stream_type,
+                     fit::function<void(std::shared_ptr<Decoder>)> callback) override;
 };
 
 }  // namespace test

@@ -27,8 +27,7 @@ using AvIoContextPtr = ::std::unique_ptr<AVIOContext, AVIOContextDeleter>;
 class AvIoContext {
  public:
   // Creates an ffmpeg avio_context for a given reader.
-  static zx_status_t Create(std::shared_ptr<Reader> reader,
-                            AvIoContextPtr* context_ptr_out,
+  static zx_status_t Create(std::shared_ptr<Reader> reader, AvIoContextPtr* context_ptr_out,
                             async_dispatcher_t* dispatcher);
 };
 
@@ -57,8 +56,7 @@ class AvIoContextOpaque {
   ~AvIoContextOpaque();
 
  private:
-  AvIoContextOpaque(std::shared_ptr<Reader> reader,
-                    async_dispatcher_t* dispatcher);
+  AvIoContextOpaque(std::shared_ptr<Reader> reader, async_dispatcher_t* dispatcher);
 
   // Indicates whether the reader can seek
   bool can_seek() { return can_seek_; }

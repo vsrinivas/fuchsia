@@ -20,8 +20,7 @@ constexpr float kVideoElevation = 0.0f;
 
 // TODO(dalesat): |ZX_RIGHT_WRITE| shouldn't be required, but it is.
 static constexpr zx_rights_t kVmoDupRights =
-    ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER | ZX_RIGHT_DUPLICATE |
-    ZX_RIGHT_WRITE;
+    ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER | ZX_RIGHT_DUPLICATE | ZX_RIGHT_WRITE;
 
 static constexpr uint32_t kBlackImageId = 1;
 static constexpr uint32_t kBlackImageWidth = 2;
@@ -42,21 +41,18 @@ std::shared_ptr<FidlVideoRenderer> FidlVideoRenderer::Create(
 
 FidlVideoRenderer::FidlVideoRenderer(component::StartupContext* startup_context)
     : startup_context_(startup_context),
-      scenic_(startup_context_
-                  ->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>()),
+      scenic_(startup_context_->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>()),
       arrivals_(true) {
-  supported_stream_types_.push_back(VideoStreamTypeSet::Create(
-      {StreamType::kVideoEncodingUncompressed},
-      Range<uint32_t>(0, std::numeric_limits<uint32_t>::max()),
-      Range<uint32_t>(0, std::numeric_limits<uint32_t>::max())));
+  supported_stream_types_.push_back(
+      VideoStreamTypeSet::Create({StreamType::kVideoEncodingUncompressed},
+                                 Range<uint32_t>(0, std::numeric_limits<uint32_t>::max()),
+                                 Range<uint32_t>(0, std::numeric_limits<uint32_t>::max())));
 
   // Create the black image VMO.
-  size_t size =
-      kBlackImageInfo.width * kBlackImageInfo.height * sizeof(uint32_t);
+  size_t size = kBlackImageInfo.width * kBlackImageInfo.height * sizeof(uint32_t);
   fzl::VmoMapper mapper;
-  zx_status_t status =
-      mapper.CreateAndMap(size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr,
-                          &black_image_vmo_, kVmoDupRights);
+  zx_status_t status = mapper.CreateAndMap(size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr,
+                                           &black_image_vmo_, kVmoDupRights);
   if (status != ZX_OK) {
     FXL_LOG(FATAL) << "Failed to create and map VMO, status " << status;
   }
@@ -79,13 +75,12 @@ void FidlVideoRenderer::Dump(std::ostream& os) const {
      << AsNs(current_timeline_function()(zx::clock::get_monotonic().get()));
   os << fostr::NewLine << "video size:            " << video_size().width << "x"
      << video_size().height;
-  os << fostr::NewLine
-     << "pixel aspect ratio:    " << pixel_aspect_ratio().width << "x"
+  os << fostr::NewLine << "pixel aspect ratio:    " << pixel_aspect_ratio().width << "x"
      << pixel_aspect_ratio().height;
 
   if (arrivals_.count() != 0) {
-    os << fostr::NewLine << "video packet arrivals: " << fostr::Indent
-       << arrivals_ << fostr::Outdent;
+    os << fostr::NewLine << "video packet arrivals: " << fostr::Indent << arrivals_
+       << fostr::Outdent;
   }
 
   os << fostr::Outdent;
@@ -110,8 +105,7 @@ void FidlVideoRenderer::OnInputConnectionReady(size_t input_index) {
   }
 }
 
-void FidlVideoRenderer::FlushInput(bool hold_frame, size_t input_index,
-                                   fit::closure callback) {
+void FidlVideoRenderer::FlushInput(bool hold_frame, size_t input_index, fit::closure callback) {
   FXL_DCHECK(input_index == 0);
   FXL_DCHECK(callback);
 
@@ -178,14 +172,12 @@ void FidlVideoRenderer::PutInputPacket(PacketPtr packet, size_t input_index) {
 
   int64_t now = zx::clock::get_monotonic().get();
 
-  arrivals_.AddSample(now, current_timeline_function()(now), packet_pts_ns,
-                      Progressing());
+  arrivals_.AddSample(now, current_timeline_function()(now), packet_pts_ns, Progressing());
 
   if (current_timeline_function().invertible()) {
     // We have a non-zero rate, so we can translate the packet PTS to system
     // time.
-    PresentPacket(packet,
-                  current_timeline_function().ApplyInverse(packet_pts_ns));
+    PresentPacket(packet, current_timeline_function().ApplyInverse(packet_pts_ns));
   } else {
     // The rate is zero, so we can't translate the packet's PTS to system
     // time.
@@ -212,12 +204,11 @@ void FidlVideoRenderer::PutInputPacket(PacketPtr packet, size_t input_index) {
   }
 }
 
-void FidlVideoRenderer::PresentPacket(PacketPtr packet,
-                                      int64_t scenic_presentation_time) {
+void FidlVideoRenderer::PresentPacket(PacketPtr packet, int64_t scenic_presentation_time) {
   // fbl::MakeRefCounted doesn't seem to forward these parameters properly, so
   // do it the old-fashioned way.
-  auto release_tracker = fbl::AdoptRef(new ReleaseTracker(
-      packet, std::static_pointer_cast<FidlVideoRenderer>(shared_from_this())));
+  auto release_tracker = fbl::AdoptRef(
+      new ReleaseTracker(packet, std::static_pointer_cast<FidlVideoRenderer>(shared_from_this())));
 
   FXL_DCHECK(packet->payload_buffer()->vmo());
   uint32_t buffer_index = packet->payload_buffer()->vmo()->index();
@@ -225,8 +216,8 @@ void FidlVideoRenderer::PresentPacket(PacketPtr packet,
   for (auto& [view_raw_ptr, view_unique_ptr] : views_) {
     // |PresentImage| will keep its reference to |release_tracker| until the
     // release fence is signalled or the |ImagePipe| connection closes.
-    view_raw_ptr->PresentImage(buffer_index, scenic_presentation_time,
-                               release_tracker, dispatcher());
+    view_raw_ptr->PresentImage(buffer_index, scenic_presentation_time, release_tracker,
+                               dispatcher());
   }
 
   ++presented_packets_not_released_;
@@ -238,8 +229,7 @@ void FidlVideoRenderer::SetStreamType(const StreamType& stream_type) {
 
   const VideoStreamType& video_stream_type = *stream_type.video();
 
-  if (video_stream_type.pixel_format() ==
-          VideoStreamType::PixelFormat::kUnknown ||
+  if (video_stream_type.pixel_format() == VideoStreamType::PixelFormat::kUnknown ||
       video_stream_type.width() == 0 || video_stream_type.height() == 0) {
     // The decoder hasn't reported a real stream type yet.
     return;
@@ -300,8 +290,7 @@ void FidlVideoRenderer::SetStreamType(const StreamType& stream_type) {
 void FidlVideoRenderer::Prime(fit::closure callback) {
   flushed_ = false;
 
-  if (presented_packets_not_released_ >= kPacketDemand ||
-      end_of_stream_pending()) {
+  if (presented_packets_not_released_ >= kPacketDemand || end_of_stream_pending()) {
     callback();
     return;
   }
@@ -315,9 +304,7 @@ fuchsia::math::Size FidlVideoRenderer::video_size() const {
                              .height = static_cast<int32_t>(display_height_)};
 }
 
-fuchsia::math::Size FidlVideoRenderer::pixel_aspect_ratio() const {
-  return pixel_aspect_ratio_;
-}
+fuchsia::math::Size FidlVideoRenderer::pixel_aspect_ratio() const { return pixel_aspect_ratio_; }
 
 void FidlVideoRenderer::SetGeometryUpdateCallback(fit::closure callback) {
   geometry_update_callback_ = std::move(callback);
@@ -330,8 +317,7 @@ void FidlVideoRenderer::CreateView(fuchsia::ui::views::ViewToken view_token) {
       .view_token = std::move(view_token),
       .startup_context = startup_context_};
   auto view = std::make_unique<View>(
-      std::move(view_context),
-      std::static_pointer_cast<FidlVideoRenderer>(shared_from_this()));
+      std::move(view_context), std::static_pointer_cast<FidlVideoRenderer>(shared_from_this()));
   View* view_raw_ptr = view.get();
   views_.emplace(view_raw_ptr, std::move(view));
 
@@ -344,8 +330,7 @@ void FidlVideoRenderer::CreateView(fuchsia::ui::views::ViewToken view_token) {
     // We're ready to add images to the new view, so do so.
     std::vector<fbl::RefPtr<PayloadVmo>> vmos = UseInputVmos().GetVmos();
     FXL_DCHECK(!vmos.empty());
-    view_raw_ptr->UpdateImages(image_id_base_, image_info_, display_width_,
-                               display_height_, vmos);
+    view_raw_ptr->UpdateImages(image_id_base_, image_info_, display_width_, display_height_, vmos);
   }
 }
 
@@ -364,15 +349,13 @@ void FidlVideoRenderer::UpdateImages() {
   next_image_id_base_ = image_id_base_ + vmos.size();
 
   for (auto& [view_raw_ptr, view_unique_ptr] : views_) {
-    view_raw_ptr->UpdateImages(image_id_base_, image_info_, display_width_,
-                               display_height_, vmos);
+    view_raw_ptr->UpdateImages(image_id_base_, image_info_, display_width_, display_height_, vmos);
   }
 }
 
 void FidlVideoRenderer::PresentBlackImage() {
   for (auto& [view_raw_ptr, view_unique_ptr] : views_) {
-    view_raw_ptr->PresentBlackImage(kBlackImageId,
-                                    zx::clock::get_monotonic().get());
+    view_raw_ptr->PresentBlackImage(kBlackImageId, zx::clock::get_monotonic().get());
   }
 }
 
@@ -399,8 +382,7 @@ void FidlVideoRenderer::PacketReleased(PacketPtr packet) {
 }
 
 void FidlVideoRenderer::MaybeCompleteFlush() {
-  if (flush_callback_ &&
-      (presented_packets_not_released_ <= flush_hold_frame_ ? 1 : 0)) {
+  if (flush_callback_ && (presented_packets_not_released_ <= flush_hold_frame_ ? 1 : 0)) {
     flush_callback_();
     flush_callback_ = nullptr;
   }
@@ -417,8 +399,7 @@ void FidlVideoRenderer::OnTimelineTransition() {
     auto packet = packets_awaiting_presentation_.front();
     packets_awaiting_presentation_.pop();
     int64_t packet_pts_ns = packet->GetPts(media::TimelineRate::NsPerSecond);
-    PresentPacket(packet,
-                  current_timeline_function().ApplyInverse(packet_pts_ns));
+    PresentPacket(packet, current_timeline_function().ApplyInverse(packet_pts_ns));
   }
 
   if (need_more_packets()) {
@@ -452,27 +433,22 @@ void FidlVideoRenderer::CheckForRevisedStreamType(const PacketPtr& packet) {
 ////////////////////////////////////////////////////////////////////////////////
 // FidlVideoRenderer::ReleaseTracker implementation.
 
-FidlVideoRenderer::ReleaseTracker::ReleaseTracker(
-    PacketPtr packet, std::shared_ptr<FidlVideoRenderer> renderer)
+FidlVideoRenderer::ReleaseTracker::ReleaseTracker(PacketPtr packet,
+                                                  std::shared_ptr<FidlVideoRenderer> renderer)
     : packet_(packet), renderer_(renderer) {
   FXL_DCHECK(packet_);
   FXL_DCHECK(renderer_);
 }
 
-FidlVideoRenderer::ReleaseTracker::~ReleaseTracker() {
-  renderer_->PacketReleased(packet_);
-}
+FidlVideoRenderer::ReleaseTracker::~ReleaseTracker() { renderer_->PacketReleased(packet_); }
 
 ////////////////////////////////////////////////////////////////////////////////
 // FidlVideoRenderer::Image implementation.
 
-FidlVideoRenderer::Image::Image()
-    : wait_(this, ZX_HANDLE_INVALID, ZX_EVENT_SIGNALED) {}
+FidlVideoRenderer::Image::Image() : wait_(this, ZX_HANDLE_INVALID, ZX_EVENT_SIGNALED) {}
 
-void FidlVideoRenderer::Image::WaitHandler(async_dispatcher_t* dispatcher,
-                                           async::WaitBase* wait,
-                                           zx_status_t status,
-                                           const zx_packet_signal_t* signal) {
+void FidlVideoRenderer::Image::WaitHandler(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                                           zx_status_t status, const zx_packet_signal_t* signal) {
   wait_.set_object(ZX_HANDLE_INVALID);
   release_fence_ = zx::event();
 
@@ -523,9 +499,9 @@ FidlVideoRenderer::View::View(scenic::ViewContext context,
 
 FidlVideoRenderer::View::~View() {}
 
-void FidlVideoRenderer::View::AddBlackImage(
-    uint32_t image_id, fuchsia::images::ImageInfo image_info,
-    const zx::vmo& vmo) {
+void FidlVideoRenderer::View::AddBlackImage(uint32_t image_id,
+                                            fuchsia::images::ImageInfo image_info,
+                                            const zx::vmo& vmo) {
   FXL_DCHECK(vmo);
 
   if (!image_pipe_) {
@@ -547,14 +523,13 @@ void FidlVideoRenderer::View::AddBlackImage(
 
   // For now, we don't support non-zero memory offsets.
   image_pipe_->AddImage(image_id, image_info, std::move(duplicate),
-                        /*offset_bytes=*/0, size,
-                        fuchsia::images::MemoryType::HOST_MEMORY);
+                        /*offset_bytes=*/0, size, fuchsia::images::MemoryType::HOST_MEMORY);
 }
 
-void FidlVideoRenderer::View::UpdateImages(
-    uint32_t image_id_base, fuchsia::images::ImageInfo image_info,
-    uint32_t display_width, uint32_t display_height,
-    const std::vector<fbl::RefPtr<PayloadVmo>>& vmos) {
+void FidlVideoRenderer::View::UpdateImages(uint32_t image_id_base,
+                                           fuchsia::images::ImageInfo image_info,
+                                           uint32_t display_width, uint32_t display_height,
+                                           const std::vector<fbl::RefPtr<PayloadVmo>>& vmos) {
   FXL_DCHECK(!vmos.empty());
 
   if (!image_pipe_) {
@@ -583,30 +558,26 @@ void FidlVideoRenderer::View::UpdateImages(
     ++index;
 
     // For now, we don't support non-zero memory offsets.
-    image_pipe_->AddImage(image.image_id_, image_info,
-                          image.vmo_->Duplicate(kVmoDupRights),
+    image_pipe_->AddImage(image.image_id_, image_info, image.vmo_->Duplicate(kVmoDupRights),
                           /*offset_bytes=*/0, image.vmo_->size(),
                           fuchsia::images::MemoryType::HOST_MEMORY);
   }
 }
 
-void FidlVideoRenderer::View::PresentBlackImage(uint32_t image_id,
-                                                uint64_t presentation_time) {
+void FidlVideoRenderer::View::PresentBlackImage(uint32_t image_id, uint64_t presentation_time) {
   if (!image_pipe_) {
     FXL_LOG(FATAL) << "View::PresentBlackImage called with no ImagePipe.";
     return;
   }
 
-  image_pipe_->PresentImage(
-      image_id, presentation_time, std::vector<zx::event>(),
-      std::vector<zx::event>(),
-      [](fuchsia::images::PresentationInfo presentation_info) {});
+  image_pipe_->PresentImage(image_id, presentation_time, std::vector<zx::event>(),
+                            std::vector<zx::event>(),
+                            [](fuchsia::images::PresentationInfo presentation_info) {});
 }
 
-void FidlVideoRenderer::View::PresentImage(
-    uint32_t buffer_index, uint64_t presentation_time,
-    fbl::RefPtr<ReleaseTracker> release_tracker,
-    async_dispatcher_t* dispatcher) {
+void FidlVideoRenderer::View::PresentImage(uint32_t buffer_index, uint64_t presentation_time,
+                                           fbl::RefPtr<ReleaseTracker> release_tracker,
+                                           async_dispatcher_t* dispatcher) {
   FXL_DCHECK(dispatcher);
 
   if (!image_pipe_) {
@@ -627,8 +598,7 @@ void FidlVideoRenderer::View::PresentImage(
   }
 
   zx::event release_fence;
-  status = image.release_fence_.duplicate(ZX_RIGHT_SIGNAL | ZX_RIGHTS_BASIC,
-                                          &release_fence);
+  status = image.release_fence_.duplicate(ZX_RIGHT_SIGNAL | ZX_RIGHTS_BASIC, &release_fence);
   if (status != ZX_OK) {
     // The image won't get presented, but this is otherwise unharmful.
     // TODO(dalesat): Shut down playback and report the problem to the client.
@@ -646,10 +616,9 @@ void FidlVideoRenderer::View::PresentImage(
   image.wait_.set_object(image.release_fence_.get());
   image.wait_.Begin(dispatcher);
 
-  image_pipe_->PresentImage(
-      image.image_id_, presentation_time, std::move(acquire_fences),
-      std::move(release_fences),
-      [](fuchsia::images::PresentationInfo presentation_info) {});
+  image_pipe_->PresentImage(image.image_id_, presentation_time, std::move(acquire_fences),
+                            std::move(release_fences),
+                            [](fuchsia::images::PresentationInfo presentation_info) {});
 }
 
 void FidlVideoRenderer::View::OnSceneInvalidated(
@@ -668,12 +637,10 @@ void FidlVideoRenderer::View::OnSceneInvalidated(
   image_pipe_node_.SetMaterial(image_pipe_material_);
 
   // Position |image_pipe_node_| so the unwanted parts are clipped off.
-  image_pipe_node_.SetShape(
-      scenic::Rectangle(session(), image_width_, image_height_));
-  image_pipe_node_.SetTranslation(
-      static_cast<float>(image_width_ - display_width_) / 2.0f,
-      static_cast<float>(image_height_ - display_height_) / 2.0f,
-      kVideoElevation);
+  image_pipe_node_.SetShape(scenic::Rectangle(session(), image_width_, image_height_));
+  image_pipe_node_.SetTranslation(static_cast<float>(image_width_ - display_width_) / 2.0f,
+                                  static_cast<float>(image_height_ - display_height_) / 2.0f,
+                                  kVideoElevation);
 
   // Scale |entity_node_| to fill the view.
   float width_scale = logical_size().x / display_width_;
@@ -695,8 +662,7 @@ void FidlVideoRenderer::View::OnSceneInvalidated(
   //
   // TODO(dalesat): Remove this and update C++ parent views when SCN-1041 is
   // fixed.
-  entity_node_.SetTranslation(logical_size().x * .5f, logical_size().y * .5f,
-                              0.0f);
+  entity_node_.SetTranslation(logical_size().x * .5f, logical_size().y * .5f, 0.0f);
 
   // Clip |entity_node_| to get rid of the unwanted parts of the video on the
   // right and bottom. Each plane is described as a normal vector and a position
@@ -706,9 +672,8 @@ void FidlVideoRenderer::View::OnSceneInvalidated(
   // on the bottom, we use a normal that points in the -y (up) direction. The
   // scalars are negative to get a positive x and y offset, respectively, when
   // multiplied by the respective normals.
-  entity_node_.SetClipPlanes(
-      {{{-1.0f, 0.0f, 0.0f}, static_cast<float>(display_width_) / -2.0f},
-       {{0.0f, -1.0f, 0.0f}, static_cast<float>(display_height_) / -2.0f}});
+  entity_node_.SetClipPlanes({{{-1.0f, 0.0f, 0.0f}, static_cast<float>(display_width_) / -2.0f},
+                              {{0.0f, -1.0f, 0.0f}, static_cast<float>(display_height_) / -2.0f}});
 }
 
 }  // namespace media_player

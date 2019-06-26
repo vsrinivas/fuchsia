@@ -116,9 +116,7 @@ void Node::Release() {
   }
 
   FXL_DCHECK(dispatcher_);
-  async::PostTask(dispatcher_, [shared_this = shared_from_this()]() {
-    shared_this->RunTasks();
-  });
+  async::PostTask(dispatcher_, [shared_this = shared_from_this()]() { shared_this->RunTasks(); });
 }
 
 void Node::SetDispatcher(async_dispatcher_t* dispatcher) {
@@ -140,15 +138,13 @@ void Node::PostTask(fit::closure task) {
   }
 
   FXL_DCHECK(dispatcher_);
-  async::PostTask(dispatcher_, [shared_this = shared_from_this()]() {
-    shared_this->RunTasks();
-  });
+  async::PostTask(dispatcher_, [shared_this = shared_from_this()]() { shared_this->RunTasks(); });
 }
 
 void Node::PostShutdownTask(fit::closure task) {
   FXL_DCHECK(dispatcher_);
-  async::PostTask(dispatcher_, [shared_this = shared_from_this(),
-                                task = std::move(task)]() { task(); });
+  async::PostTask(dispatcher_,
+                  [shared_this = shared_from_this(), task = std::move(task)]() { task(); });
 }
 
 void Node::RunTasks() {
@@ -322,8 +318,7 @@ void Node::Update() {
   }
 }
 
-bool Node::MaybeTakePacketForOutput(const Output& output,
-                                    PacketPtr* packet_out) {
+bool Node::MaybeTakePacketForOutput(const Output& output, PacketPtr* packet_out) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
   FXL_DCHECK(packet_out);
 
@@ -349,35 +344,31 @@ bool Node::MaybeTakePacketForOutput(const Output& output,
   return request_packet;
 }
 
-void Node::FlushInputExternal(size_t input_index, bool hold_frame,
-                              fit::closure callback) {
+void Node::FlushInputExternal(size_t input_index, bool hold_frame, fit::closure callback) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
   FXL_DCHECK(input_index < inputs_.size());
 
   inputs_[input_index].Flush();
 
   FlushInput(hold_frame, input_index,
-             [this, callback = std::move(callback)]() mutable {
-               PostTask(std::move(callback));
-             });
+             [this, callback = std::move(callback)]() mutable { PostTask(std::move(callback)); });
 }
 
 void Node::FlushOutputExternal(size_t output_index, fit::closure callback) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
   FXL_DCHECK(output_index < outputs_.size());
 
-  FlushOutput(output_index,
-              [this, output_index, callback = std::move(callback)]() mutable {
-                {
-                  std::lock_guard<std::mutex> locker(packets_per_output_mutex_);
-                  auto& packets = packets_per_output_[output_index];
-                  while (!packets.empty()) {
-                    packets.pop_front();
-                  }
-                }
+  FlushOutput(output_index, [this, output_index, callback = std::move(callback)]() mutable {
+    {
+      std::lock_guard<std::mutex> locker(packets_per_output_mutex_);
+      auto& packets = packets_per_output_[output_index];
+      while (!packets.empty()) {
+        packets.pop_front();
+      }
+    }
 
-                PostTask(std::move(callback));
-              });
+    PostTask(std::move(callback));
+  });
 }
 
 void Node::ConfigureInputDeferred(size_t input_index) {
@@ -386,8 +377,7 @@ void Node::ConfigureInputDeferred(size_t input_index) {
 }
 
 bool Node::ConfigureInputToUseLocalMemory(uint64_t max_aggregate_payload_size,
-                                          uint32_t max_payload_count,
-                                          size_t input_index) {
+                                          uint32_t max_payload_count, size_t input_index) {
   // This method runs on an arbitrary thread.
   FXL_DCHECK(max_aggregate_payload_size != 0 || max_payload_count != 0);
 
@@ -402,17 +392,15 @@ bool Node::ConfigureInputToUseLocalMemory(uint64_t max_aggregate_payload_size,
   config.vmo_allocation_ = VmoAllocation::kNotApplicable;
   config.physically_contiguous_ = false;
 
-  input.payload_manager().ApplyInputConfiguration(config, zx::handle(),
-                                                  nullptr);
+  input.payload_manager().ApplyInputConfiguration(config, zx::handle(), nullptr);
 
   return NotifyConnectionReady(input);
 }
 
-bool Node::ConfigureInputToUseVmos(
-    uint64_t max_aggregate_payload_size, uint32_t max_payload_count,
-    uint64_t max_payload_size, VmoAllocation vmo_allocation,
-    bool physically_contiguous, zx::handle bti_handle,
-    AllocateCallback allocate_callback, size_t input_index) {
+bool Node::ConfigureInputToUseVmos(uint64_t max_aggregate_payload_size, uint32_t max_payload_count,
+                                   uint64_t max_payload_size, VmoAllocation vmo_allocation,
+                                   bool physically_contiguous, zx::handle bti_handle,
+                                   AllocateCallback allocate_callback, size_t input_index) {
   // This method runs on an arbitrary thread.
   FXL_DCHECK(max_aggregate_payload_size != 0 || max_payload_count != 0);
   FXL_DCHECK(physically_contiguous == bti_handle.is_valid());
@@ -434,10 +422,8 @@ bool Node::ConfigureInputToUseVmos(
   return NotifyConnectionReady(input);
 }
 
-bool Node::ConfigureInputToProvideVmos(VmoAllocation vmo_allocation,
-                                       bool physically_contiguous,
-                                       AllocateCallback allocate_callback,
-                                       size_t input_index) {
+bool Node::ConfigureInputToProvideVmos(VmoAllocation vmo_allocation, bool physically_contiguous,
+                                       AllocateCallback allocate_callback, size_t input_index) {
   // This method runs on an arbitrary thread.
   EnsureInput(input_index);
   Input& input = inputs_[input_index];
@@ -498,12 +484,10 @@ void Node::ConfigureOutputDeferred(size_t output_index) {
 }
 
 bool Node::ConfigureOutputToUseLocalMemory(uint64_t max_aggregate_payload_size,
-                                           uint32_t max_payload_count,
-                                           uint64_t max_payload_size,
+                                           uint32_t max_payload_count, uint64_t max_payload_size,
                                            size_t output_index) {
   // This method runs on an arbitrary thread.
-  FXL_DCHECK(max_aggregate_payload_size != 0 ||
-             (max_payload_count != 0 && max_payload_size != 0));
+  FXL_DCHECK(max_aggregate_payload_size != 0 || (max_payload_count != 0 && max_payload_size != 0));
 
   EnsureOutput(output_index);
   Output& output = outputs_[output_index];
@@ -517,8 +501,7 @@ bool Node::ConfigureOutputToUseLocalMemory(uint64_t max_aggregate_payload_size,
   config.physically_contiguous_ = false;
 
   if (output.connected()) {
-    output.mate()->payload_manager().ApplyOutputConfiguration(config,
-                                                              zx::handle());
+    output.mate()->payload_manager().ApplyOutputConfiguration(config, zx::handle());
   }
 
   return NotifyConnectionReady(output);
@@ -538,20 +521,18 @@ bool Node::ConfigureOutputToProvideLocalMemory(size_t output_index) {
   config.physically_contiguous_ = false;
 
   if (output.connected()) {
-    output.mate()->payload_manager().ApplyOutputConfiguration(config,
-                                                              zx::handle());
+    output.mate()->payload_manager().ApplyOutputConfiguration(config, zx::handle());
   }
 
   return NotifyConnectionReady(output);
 }
 
-bool Node::ConfigureOutputToUseVmos(
-    uint64_t max_aggregate_payload_size, uint32_t max_payload_count,
-    uint64_t max_payload_size, VmoAllocation vmo_allocation,
-    bool physically_contiguous, zx::handle bti_handle, size_t output_index) {
+bool Node::ConfigureOutputToUseVmos(uint64_t max_aggregate_payload_size, uint32_t max_payload_count,
+                                    uint64_t max_payload_size, VmoAllocation vmo_allocation,
+                                    bool physically_contiguous, zx::handle bti_handle,
+                                    size_t output_index) {
   // This method runs on an arbitrary thread.
-  FXL_DCHECK(max_aggregate_payload_size != 0 ||
-             (max_payload_count != 0 && max_payload_size != 0));
+  FXL_DCHECK(max_aggregate_payload_size != 0 || (max_payload_count != 0 && max_payload_size != 0));
   FXL_DCHECK(physically_contiguous == bti_handle.is_valid());
 
   EnsureOutput(output_index);
@@ -566,8 +547,7 @@ bool Node::ConfigureOutputToUseVmos(
   config.physically_contiguous_ = physically_contiguous;
 
   if (output.connected()) {
-    output.mate()->payload_manager().ApplyOutputConfiguration(
-        config, std::move(bti_handle));
+    output.mate()->payload_manager().ApplyOutputConfiguration(config, std::move(bti_handle));
   } else {
     // TODO: stash the bti handle
   }
@@ -575,8 +555,7 @@ bool Node::ConfigureOutputToUseVmos(
   return NotifyConnectionReady(output);
 }
 
-bool Node::ConfigureOutputToProvideVmos(VmoAllocation vmo_allocation,
-                                        bool physically_contiguous,
+bool Node::ConfigureOutputToProvideVmos(VmoAllocation vmo_allocation, bool physically_contiguous,
                                         size_t output_index) {
   // This method runs on an arbitrary thread.
   EnsureOutput(output_index);
@@ -591,8 +570,7 @@ bool Node::ConfigureOutputToProvideVmos(VmoAllocation vmo_allocation,
   config.physically_contiguous_ = physically_contiguous;
 
   if (output.connected()) {
-    output.mate()->payload_manager().ApplyOutputConfiguration(config,
-                                                              zx::handle());
+    output.mate()->payload_manager().ApplyOutputConfiguration(config, zx::handle());
   }
 
   return NotifyConnectionReady(output);
@@ -604,8 +582,7 @@ bool Node::OutputConnectionReady(size_t output_index) const {
   return outputs_[output_index].mate()->payload_manager().ready();
 }
 
-fbl::RefPtr<PayloadBuffer> Node::AllocatePayloadBuffer(uint64_t size,
-                                                       size_t output_index) {
+fbl::RefPtr<PayloadBuffer> Node::AllocatePayloadBuffer(uint64_t size, size_t output_index) {
   // This method runs on an arbitrary thread.
   FXL_DCHECK(output_index < outputs_.size());
   Output& output = outputs_[output_index];

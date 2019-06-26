@@ -71,8 +71,8 @@ uint64_t FifoAllocator::AllocateRegion(uint64_t size) {
 
 void FifoAllocator::ReleaseRegion(uint64_t offset) {
   // Start at active_->next. That's usually the region we're looking for.
-  bool __UNUSED released = Release(offset, active_->next, nullptr) ||
-                           Release(offset, front_, active_);
+  bool __UNUSED released =
+      Release(offset, active_->next, nullptr) || Release(offset, front_, active_);
   FXL_DCHECK(released);
 }
 
@@ -118,8 +118,7 @@ bool FifoAllocator::Release(uint64_t offset, Region* begin, Region* end) {
 
 bool FifoAllocator::AdvanceActive(uint64_t size) {
   FXL_DCHECK(size != 0);
-  return AdvanceActive(size, active_->next, nullptr) ||
-         AdvanceActive(size, front_, active_);
+  return AdvanceActive(size, active_->next, nullptr) || AdvanceActive(size, front_, active_);
 }
 
 bool FifoAllocator::AdvanceActive(uint64_t size, Region* begin, Region* end) {
@@ -142,8 +141,7 @@ void FifoAllocator::MakeActivePlaceholder() {
   // If the old active region was at the back of the list, we'll be inserting
   // at the front, so make the offset zero. We insert at the front, because it's
   // a bit more efficient and because we don't need to implement insert_after.
-  Region* new_active = get_free(
-      false, 0, active_ == back_ ? 0 : active_->offset + active_->size);
+  Region* new_active = get_free(false, 0, active_ == back_ ? 0 : active_->offset + active_->size);
 
   FXL_DCHECK((active_ == back_) == (active_->next == nullptr));
   insert_before(new_active, active_ == back_ ? front_ : active_->next);
@@ -186,8 +184,7 @@ void FifoAllocator::insert_before(Region* region, Region* before_this) {
   }
 }
 
-FifoAllocator::Region* FifoAllocator::get_free(bool allocated, uint64_t size,
-                                               uint64_t offset) {
+FifoAllocator::Region* FifoAllocator::get_free(bool allocated, uint64_t size, uint64_t offset) {
   FXL_DCHECK(size <= size_);
   FXL_DCHECK(offset <= size_ - size);
 

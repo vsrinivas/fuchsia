@@ -20,8 +20,7 @@ namespace media_player {
 // This class run single-threaded.
 class FidlAudioRenderer : public AudioRenderer {
  public:
-  static std::shared_ptr<FidlAudioRenderer> Create(
-      fuchsia::media::AudioRendererPtr audio_renderer);
+  static std::shared_ptr<FidlAudioRenderer> Create(fuchsia::media::AudioRendererPtr audio_renderer);
 
   FidlAudioRenderer(fuchsia::media::AudioRendererPtr audio_renderer);
 
@@ -34,13 +33,11 @@ class FidlAudioRenderer : public AudioRenderer {
 
   void OnInputConnectionReady(size_t input_index) override;
 
-  void FlushInput(bool hold_frame, size_t input_index,
-                  fit::closure callback) override;
+  void FlushInput(bool hold_frame, size_t input_index, fit::closure callback) override;
 
   void PutInputPacket(PacketPtr packet, size_t input_index) override;
 
-  const std::vector<std::unique_ptr<StreamTypeSet>>& GetSupportedStreamTypes()
-      override {
+  const std::vector<std::unique_ptr<StreamTypeSet>>& GetSupportedStreamTypes() override {
     return supported_stream_types_;
   }
 
@@ -52,8 +49,7 @@ class FidlAudioRenderer : public AudioRenderer {
                            fit::closure callback) override;
 
   void BindGainControl(
-      fidl::InterfaceRequest<fuchsia::media::audio::GainControl>
-          gain_control_request) override;
+      fidl::InterfaceRequest<fuchsia::media::audio::GainControl> gain_control_request) override;
 
  protected:
   // Renderer overrides.
@@ -70,14 +66,10 @@ class FidlAudioRenderer : public AudioRenderer {
   bool SignalCurrentDemand();
 
   // Converts a pts in |pts_rate_| units to ns.
-  int64_t to_ns(int64_t pts) {
-    return pts * (media::TimelineRate::NsPerSecond / pts_rate_);
-  }
+  int64_t to_ns(int64_t pts) { return pts * (media::TimelineRate::NsPerSecond / pts_rate_); }
 
   // Converts a pts in ns to |pts_rate_| units.
-  int64_t from_ns(int64_t pts) {
-    return pts * (pts_rate_ / media::TimelineRate::NsPerSecond);
-  }
+  int64_t from_ns(int64_t pts) { return pts * (pts_rate_ / media::TimelineRate::NsPerSecond); }
 
   std::vector<std::unique_ptr<StreamTypeSet>> supported_stream_types_;
   fuchsia::media::AudioRendererPtr audio_renderer_;

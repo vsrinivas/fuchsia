@@ -18,16 +18,13 @@ class PacketTimingTracker {
 
   // Adds a sample to the tracker. If |packet_pts_ns| is |Packet::kNoPts|,
   // the sample is counted as a 'no packet' case.
-  void AddSample(int64_t now, int64_t presentation_time, int64_t packet_pts_ns,
-                 bool progressing);
+  void AddSample(int64_t now, int64_t presentation_time, int64_t packet_pts_ns, bool progressing);
 
   // Resets the tracker to its initial state.
   void Reset();
 
   // Sample count (nominal, late, no packet and not progressing).
-  size_t count() const {
-    return earliness_.count() + no_packet_count_ + not_progressing_count_;
-  }
+  size_t count() const { return earliness_.count() + no_packet_count_ + not_progressing_count_; }
 
   // Nominal (progressing, not late) sample count.
   size_t nominal_count() const { return earliness_.count() - late_count(); }

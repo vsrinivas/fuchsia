@@ -141,10 +141,9 @@ void PlayerCore::Flush(bool hold_frame, fit::closure callback) {
   primed_ = false;
 
   if (source_segment_) {
-    source_segment_->Flush(hold_frame,
-                           [this, callback = std::move(callback)]() mutable {
-                             async::PostTask(dispatcher_, std::move(callback));
-                           });
+    source_segment_->Flush(hold_frame, [this, callback = std::move(callback)]() mutable {
+      async::PostTask(dispatcher_, std::move(callback));
+    });
   } else {
     async::PostTask(dispatcher_, std::move(callback));
   }
@@ -168,15 +167,14 @@ void PlayerCore::SetTimelineFunction(media::TimelineFunction timeline_function,
     subject_time = timeline_function_(reference_time);
   }
 
-  timeline_function_ = media::TimelineFunction(subject_time, reference_time,
-                                               timeline_function.rate());
+  timeline_function_ =
+      media::TimelineFunction(subject_time, reference_time, timeline_function.rate());
 
   auto callback_joiner = CallbackJoiner::Create();
 
   for (auto& stream : streams_) {
     if (stream.sink_segment_) {
-      stream.sink_segment_->SetTimelineFunction(timeline_function_,
-                                                callback_joiner->NewCallback());
+      stream.sink_segment_->SetTimelineFunction(timeline_function_, callback_joiner->NewCallback());
     }
   }
 
@@ -185,8 +183,7 @@ void PlayerCore::SetTimelineFunction(media::TimelineFunction timeline_function,
   });
 }
 
-void PlayerCore::SetProgramRange(uint64_t program, int64_t min_pts,
-                                 int64_t max_pts) {
+void PlayerCore::SetProgramRange(uint64_t program, int64_t min_pts, int64_t max_pts) {
   for (auto& stream : streams_) {
     if (stream.sink_segment_) {
       stream.sink_segment_->SetProgramRange(program, min_pts, max_pts);
@@ -198,10 +195,9 @@ void PlayerCore::Seek(int64_t position, fit::closure callback) {
   if (source_segment_) {
     FXL_DCHECK(can_seek());
 
-    source_segment_->Seek(position,
-                          [this, callback = std::move(callback)]() mutable {
-                            async::PostTask(dispatcher_, std::move(callback));
-                          });
+    source_segment_->Seek(position, [this, callback = std::move(callback)]() mutable {
+      async::PostTask(dispatcher_, std::move(callback));
+    });
   } else {
     async::PostTask(dispatcher_, std::move(callback));
   }
@@ -277,8 +273,7 @@ void PlayerCore::NotifyUpdate() {
   }
 }
 
-const PlayerCore::Stream* PlayerCore::GetStream(
-    StreamType::Medium medium) const {
+const PlayerCore::Stream* PlayerCore::GetStream(StreamType::Medium medium) const {
   for (auto& stream : streams_) {
     if (stream.stream_type_ && stream.stream_type_->medium() == medium) {
       return &stream;
@@ -303,8 +298,7 @@ SinkSegment* PlayerCore::GetParkedSinkSegment(StreamType::Medium medium) const {
   return iter == parked_sink_segments_.end() ? nullptr : iter->second.get();
 }
 
-void PlayerCore::OnStreamUpdated(size_t index,
-                                 const SourceSegment::Stream& update_stream) {
+void PlayerCore::OnStreamUpdated(size_t index, const SourceSegment::Stream& update_stream) {
   if (streams_.size() < index + 1) {
     streams_.resize(index + 1);
   }
@@ -317,8 +311,7 @@ void PlayerCore::OnStreamUpdated(size_t index,
     if (stream.stream_type_->medium() != update_stream.type().medium()) {
       // The sink segment for this stream is for the wrong medium. Park it.
       FXL_DCHECK(!GetParkedSinkSegment(stream.stream_type_->medium()));
-      parked_sink_segments_[stream.stream_type_->medium()] =
-          TakeSinkSegment(&stream);
+      parked_sink_segments_[stream.stream_type_->medium()] = TakeSinkSegment(&stream);
     }
   }
 
@@ -349,8 +342,7 @@ void PlayerCore::OnStreamRemoved(size_t index) {
 
     // Park this stream segment.
     FXL_DCHECK(!GetParkedSinkSegment(stream.stream_type_->medium()));
-    parked_sink_segments_[stream.stream_type_->medium()] =
-        TakeSinkSegment(&stream);
+    parked_sink_segments_[stream.stream_type_->medium()] = TakeSinkSegment(&stream);
   }
 
   stream.stream_type_ = nullptr;
@@ -373,8 +365,7 @@ void PlayerCore::MaybeCompleteSetSourceSegment() {
   }
 }
 
-std::unique_ptr<SinkSegment> PlayerCore::TakeSinkSegment(
-    StreamType::Medium medium) {
+std::unique_ptr<SinkSegment> PlayerCore::TakeSinkSegment(StreamType::Medium medium) {
   auto iter = parked_sink_segments_.find(medium);
 
   if (iter != parked_sink_segments_.end()) {
@@ -419,10 +410,8 @@ void PlayerCore::ConnectStream(Stream* stream) {
 
         if (primed_ && stream->sink_segment_) {
           stream->sink_segment_->Prime([this, stream]() {
-            if (timeline_function_.subject_delta() != 0 &&
-                stream->sink_segment_) {
-              stream->sink_segment_->SetTimelineFunction(timeline_function_,
-                                                         []() {});
+            if (timeline_function_.subject_delta() != 0 && stream->sink_segment_) {
+              stream->sink_segment_->SetTimelineFunction(timeline_function_, []() {});
             }
           });
         }
@@ -443,8 +432,7 @@ void PlayerCore::Dump(std::ostream& os) const {
     os << fostr::NewLine << fostr::NewLine;
     node.GetNode()->Dump(os);
 
-    for (size_t output_index = 0; output_index < node.output_count();
-         ++output_index) {
+    for (size_t output_index = 0; output_index < node.output_count(); ++output_index) {
       OutputRef output = node.output(output_index);
       if (!output.connected()) {
         continue;

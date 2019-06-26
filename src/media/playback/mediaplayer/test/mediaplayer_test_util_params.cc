@@ -11,8 +11,7 @@
 namespace media_player {
 namespace test {
 
-MediaPlayerTestUtilParams::MediaPlayerTestUtilParams(
-    const fxl::CommandLine& command_line) {
+MediaPlayerTestUtilParams::MediaPlayerTestUtilParams(const fxl::CommandLine& command_line) {
   is_valid_ = false;
 
   play_ = command_line.HasOption("play");
@@ -25,8 +24,7 @@ MediaPlayerTestUtilParams::MediaPlayerTestUtilParams(
       std::string url = "file://";
       url.append(arg);
       urls_.push_back(url);
-    } else if (arg.compare(0, 7, "http://") == 0 ||
-               arg.compare(0, 8, "https://") == 0 ||
+    } else if (arg.compare(0, 7, "http://") == 0 || arg.compare(0, 8, "https://") == 0 ||
                arg.compare(0, 8, "file:///") == 0) {
       urls_.push_back(arg);
     } else {
@@ -58,8 +56,7 @@ MediaPlayerTestUtilParams::MediaPlayerTestUtilParams(
 
 void MediaPlayerTestUtilParams::Usage() {
   std::cerr << "mediaplayer_test_util usage:\n";
-  std::cerr
-      << "    present_view mediaplayer_test_util [ options ] url-or-path*\n";
+  std::cerr << "    present_view mediaplayer_test_util [ options ] url-or-path*\n";
   std::cerr << "options:\n";
   std::cerr << "    --play       play on startup\n";
   std::cerr << "    --loop       play the files in a loop on startup\n";

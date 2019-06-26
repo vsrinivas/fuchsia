@@ -28,15 +28,13 @@ class CompositeDecoderFactory : public DecoderFactory {
   void AddFactory(std::unique_ptr<DecoderFactory> factory);
 
   // DecoderFactory implementation.
-  void CreateDecoder(
-      const StreamType& stream_type,
-      fit::function<void(std::shared_ptr<Decoder>)> callback) override;
+  void CreateDecoder(const StreamType& stream_type,
+                     fit::function<void(std::shared_ptr<Decoder>)> callback) override;
 
  private:
-  void ContinueCreateDecoder(
-      std::vector<std::unique_ptr<DecoderFactory>>::iterator iter,
-      const StreamType& stream_type,
-      fit::function<void(std::shared_ptr<Decoder>)> callback);
+  void ContinueCreateDecoder(std::vector<std::unique_ptr<DecoderFactory>>::iterator iter,
+                             const StreamType& stream_type,
+                             fit::function<void(std::shared_ptr<Decoder>)> callback);
 
   std::vector<std::unique_ptr<DecoderFactory>> children_;
 };
@@ -50,22 +48,19 @@ CompositeDecoderFactory::CompositeDecoderFactory() {}
 
 CompositeDecoderFactory::~CompositeDecoderFactory() {}
 
-void CompositeDecoderFactory::AddFactory(
-    std::unique_ptr<DecoderFactory> factory) {
+void CompositeDecoderFactory::AddFactory(std::unique_ptr<DecoderFactory> factory) {
   children_.push_back(std::move(factory));
 }
 
 void CompositeDecoderFactory::CreateDecoder(
-    const StreamType& stream_type,
-    fit::function<void(std::shared_ptr<Decoder>)> callback) {
+    const StreamType& stream_type, fit::function<void(std::shared_ptr<Decoder>)> callback) {
   FXL_DCHECK(callback);
 
   ContinueCreateDecoder(children_.begin(), stream_type, std::move(callback));
 }
 
 void CompositeDecoderFactory::ContinueCreateDecoder(
-    std::vector<std::unique_ptr<DecoderFactory>>::iterator iter,
-    const StreamType& stream_type,
+    std::vector<std::unique_ptr<DecoderFactory>>::iterator iter, const StreamType& stream_type,
     fit::function<void(std::shared_ptr<Decoder>)> callback) {
   FXL_DCHECK(callback);
 
@@ -76,22 +71,20 @@ void CompositeDecoderFactory::ContinueCreateDecoder(
 
   FXL_DCHECK(*iter);
 
-  (*iter)->CreateDecoder(
-      stream_type, [this, iter, &stream_type, callback = std::move(callback)](
-                       std::shared_ptr<Decoder> decoder) mutable {
-        if (decoder) {
-          callback(decoder);
-          return;
-        }
+  (*iter)->CreateDecoder(stream_type, [this, iter, &stream_type, callback = std::move(callback)](
+                                          std::shared_ptr<Decoder> decoder) mutable {
+    if (decoder) {
+      callback(decoder);
+      return;
+    }
 
-        ContinueCreateDecoder(++iter, stream_type, std::move(callback));
-      });
+    ContinueCreateDecoder(++iter, stream_type, std::move(callback));
+  });
 }
 
 }  // namespace
 
-std::unique_ptr<DecoderFactory> DecoderFactory::Create(
-    component::StartupContext* startup_context) {
+std::unique_ptr<DecoderFactory> DecoderFactory::Create(component::StartupContext* startup_context) {
   auto parent_factory = CompositeDecoderFactory::Create();
   parent_factory->AddFactory(FidlDecoderFactory::Create(startup_context));
   parent_factory->AddFactory(FfmpegDecoderFactory::Create(startup_context));

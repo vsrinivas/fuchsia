@@ -34,14 +34,12 @@ void VmoPayloadAllocator::SetVmoAllocation(VmoAllocation vmo_allocation) {
   vmo_allocation_ = vmo_allocation;
 }
 
-fbl::RefPtr<PayloadBuffer> VmoPayloadAllocator::AllocatePayloadBuffer(
-    uint64_t size) {
+fbl::RefPtr<PayloadBuffer> VmoPayloadAllocator::AllocatePayloadBuffer(uint64_t size) {
   std::lock_guard<std::mutex> locker(mutex_);
   FXL_DCHECK(vmo_allocation_ != VmoAllocation::kNotApplicable)
       << "SetVmoAllocation must be called before AllocatePayloadBuffer.";
   FXL_DCHECK(!payload_vmos_.empty());
-  FXL_DCHECK((vmo_allocation_ != VmoAllocation::kSingleVmo) ||
-             (payload_vmos_.size() == 1));
+  FXL_DCHECK((vmo_allocation_ != VmoAllocation::kSingleVmo) || (payload_vmos_.size() == 1));
 
   fbl::RefPtr<PayloadBuffer> payload_buffer;
   size_t vmo_index = suggested_allocation_vmo_;
@@ -76,16 +74,14 @@ void VmoPayloadAllocator::AddVmo(fbl::RefPtr<PayloadVmo> payload_vmo) {
   FXL_DCHECK(payload_vmo);
 
   std::lock_guard<std::mutex> locker(mutex_);
-  FXL_DCHECK(payload_vmos_.empty() ||
-             vmo_allocation_ != VmoAllocation::kSingleVmo)
+  FXL_DCHECK(payload_vmos_.empty() || vmo_allocation_ != VmoAllocation::kSingleVmo)
       << "Attempt to add more than one VMO to single-vmo allocator.";
 
   payload_vmo->SetIndex(payload_vmos_.size());
 
   payload_vmos_.push_back(payload_vmo);
   if (vmo_allocation_ != VmoAllocation::kVmoPerBuffer) {
-    payload_vmo->allocator_ =
-        std::make_unique<FifoAllocator>(payload_vmo->size());
+    payload_vmo->allocator_ = std::make_unique<FifoAllocator>(payload_vmo->size());
   }
 }
 
@@ -119,24 +115,24 @@ fbl::RefPtr<PayloadBuffer> VmoPayloadAllocator::TryAllocateFromVmo(
     }
 
     if (payload_vmo->size() < size) {
-      FXL_LOG(ERROR) << "VMO is too small (" << payload_vmo->size()
-                     << " bytes) for allocation (" << size << " bytes).";
+      FXL_LOG(ERROR) << "VMO is too small (" << payload_vmo->size() << " bytes) for allocation ("
+                     << size << " bytes).";
       return nullptr;
     }
 
     payload_vmo->allocated_ = true;
 
     // Success!
-    return PayloadBuffer::Create(size, payload_vmo->start(), payload_vmo, 0,
-                                 [this, this_refptr = fbl::WrapRefPtr(this)](
-                                     PayloadBuffer* payload_buffer) {
-                                   FXL_DCHECK(payload_buffer->vmo());
-                                   // Take the |VmoPayloadAllocator|'s mutex to
-                                   // serialize access to the |allocated_| field
-                                   // of the |PayloadVmo|.
-                                   std::lock_guard<std::mutex> locker(mutex_);
-                                   payload_buffer->vmo()->allocated_ = false;
-                                 });
+    return PayloadBuffer::Create(
+        size, payload_vmo->start(), payload_vmo, 0,
+        [this, this_refptr = fbl::WrapRefPtr(this)](PayloadBuffer* payload_buffer) {
+          FXL_DCHECK(payload_buffer->vmo());
+          // Take the |VmoPayloadAllocator|'s mutex to
+          // serialize access to the |allocated_| field
+          // of the |PayloadVmo|.
+          std::lock_guard<std::mutex> locker(mutex_);
+          payload_buffer->vmo()->allocated_ = false;
+        });
   }
 
   // Try to allocate a region from the VMO.
@@ -145,8 +141,7 @@ fbl::RefPtr<PayloadBuffer> VmoPayloadAllocator::TryAllocateFromVmo(
   // The region allocated at the top of the VMO will be aligned to 4096 bytes.
   // We ensure that subsequent allocations will be |kByteAlignment|-aligned by
   // aligning-up all the sizes.
-  uint64_t offset =
-      payload_vmo->allocator_->AllocateRegion(PayloadBuffer::AlignUp(size));
+  uint64_t offset = payload_vmo->allocator_->AllocateRegion(PayloadBuffer::AlignUp(size));
   if (offset == FifoAllocator::kNullOffset) {
     // Can't allocate.
     return nullptr;
@@ -154,10 +149,8 @@ fbl::RefPtr<PayloadBuffer> VmoPayloadAllocator::TryAllocateFromVmo(
 
   // Success!
   return PayloadBuffer::Create(
-      size, reinterpret_cast<uint8_t*>(payload_vmo->start()) + offset,
-      payload_vmo, offset,
-      [this, this_refptr = fbl::WrapRefPtr(this),
-       offset](PayloadBuffer* payload_buffer) {
+      size, reinterpret_cast<uint8_t*>(payload_vmo->start()) + offset, payload_vmo, offset,
+      [this, this_refptr = fbl::WrapRefPtr(this), offset](PayloadBuffer* payload_buffer) {
         FXL_DCHECK(payload_buffer->vmo());
         FXL_DCHECK(payload_buffer->vmo()->allocator_);
         // Take the |VmoPayloadAllocator|'s mutex to serialize access to the

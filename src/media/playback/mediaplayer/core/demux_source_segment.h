@@ -16,8 +16,7 @@ namespace media_player {
 // A source segment employing a demux.
 class DemuxSourceSegment : public SourceSegment {
  public:
-  static std::unique_ptr<DemuxSourceSegment> Create(
-      std::shared_ptr<Demux> demux);
+  static std::unique_ptr<DemuxSourceSegment> Create(std::shared_ptr<Demux> demux);
 
   DemuxSourceSegment(std::shared_ptr<Demux> demux);
 

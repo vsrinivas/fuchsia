@@ -21,8 +21,7 @@ namespace media_player {
 //
 // See callback_joiner.h for details about how this class is used.
 //
-class ThreadsafeCallbackJoiner
-    : public std::enable_shared_from_this<ThreadsafeCallbackJoiner> {
+class ThreadsafeCallbackJoiner : public std::enable_shared_from_this<ThreadsafeCallbackJoiner> {
  public:
   // Creates a ThreadsafeCallbackJoiner and returns a shared pointer to it.
   // CallbackJoiners created in this way can safely create callbacks via the

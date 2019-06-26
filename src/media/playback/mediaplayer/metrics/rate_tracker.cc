@@ -31,14 +31,10 @@ void RateTracker::AddSample(int64_t now, bool progressing) {
 }
 
 std::ostream& operator<<(std::ostream& os, const RateTracker& value) {
-  os << fostr::NewLine << "rate per second   "
-     << value.progress_samples_per_second();
-  os << fostr::NewLine << "minimum interval  "
-     << AsNs(value.min_progress_interval());
-  os << fostr::NewLine << "average interval  "
-     << AsNs(value.average_progress_interval());
-  return os << fostr::NewLine << "maximum interval  "
-            << AsNs(value.max_progress_interval());
+  os << fostr::NewLine << "rate per second   " << value.progress_samples_per_second();
+  os << fostr::NewLine << "minimum interval  " << AsNs(value.min_progress_interval());
+  os << fostr::NewLine << "average interval  " << AsNs(value.average_progress_interval());
+  return os << fostr::NewLine << "maximum interval  " << AsNs(value.max_progress_interval());
 }
 
 }  // namespace media_player

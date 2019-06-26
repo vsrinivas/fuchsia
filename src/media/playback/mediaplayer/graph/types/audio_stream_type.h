@@ -17,28 +17,18 @@ namespace media_player {
 // Describes the type of an audio stream.
 class AudioStreamType : public StreamType {
  public:
-  enum class SampleFormat {
-    kNone,
-    kAny,
-    kUnsigned8,
-    kSigned16,
-    kSigned24In32,
-    kFloat
-  };
+  enum class SampleFormat { kNone, kAny, kUnsigned8, kSigned16, kSigned24In32, kFloat };
 
-  static std::unique_ptr<StreamType> Create(
-      const std::string& encoding, std::unique_ptr<Bytes> encoding_parameters,
-      SampleFormat sample_format, uint32_t channels,
-      uint32_t frames_per_second) {
-    return std::unique_ptr<StreamType>(
-        new AudioStreamType(encoding, std::move(encoding_parameters),
-                            sample_format, channels, frames_per_second));
+  static std::unique_ptr<StreamType> Create(const std::string& encoding,
+                                            std::unique_ptr<Bytes> encoding_parameters,
+                                            SampleFormat sample_format, uint32_t channels,
+                                            uint32_t frames_per_second) {
+    return std::unique_ptr<StreamType>(new AudioStreamType(
+        encoding, std::move(encoding_parameters), sample_format, channels, frames_per_second));
   }
 
-  AudioStreamType(const std::string& encoding,
-                  std::unique_ptr<Bytes> encoding_parameters,
-                  SampleFormat sample_format, uint32_t channels,
-                  uint32_t frames_per_second);
+  AudioStreamType(const std::string& encoding, std::unique_ptr<Bytes> encoding_parameters,
+                  SampleFormat sample_format, uint32_t channels, uint32_t frames_per_second);
 
   AudioStreamType(const AudioStreamType& other);
 
@@ -56,9 +46,7 @@ class AudioStreamType : public StreamType {
 
   uint32_t bytes_per_frame() const { return sample_size_ * channels_; }
 
-  uint64_t min_buffer_size(uint64_t frame_count) const {
-    return frame_count * bytes_per_frame();
-  }
+  uint64_t min_buffer_size(uint64_t frame_count) const { return frame_count * bytes_per_frame(); }
 
   uint64_t frame_count(uint64_t size) const {
     FXL_DCHECK(bytes_per_frame() != 0);
@@ -80,17 +68,16 @@ class AudioStreamType : public StreamType {
 // Describes a set of audio stream types.
 class AudioStreamTypeSet : public StreamTypeSet {
  public:
-  static std::unique_ptr<StreamTypeSet> Create(
-      const std::vector<std::string>& encodings,
-      AudioStreamType::SampleFormat sample_format, Range<uint32_t> channels,
-      Range<uint32_t> frames_per_second) {
-    return std::unique_ptr<StreamTypeSet>(new AudioStreamTypeSet(
-        encodings, sample_format, channels, frames_per_second));
+  static std::unique_ptr<StreamTypeSet> Create(const std::vector<std::string>& encodings,
+                                               AudioStreamType::SampleFormat sample_format,
+                                               Range<uint32_t> channels,
+                                               Range<uint32_t> frames_per_second) {
+    return std::unique_ptr<StreamTypeSet>(
+        new AudioStreamTypeSet(encodings, sample_format, channels, frames_per_second));
   }
 
   AudioStreamTypeSet(const std::vector<std::string>& encodings,
-                     AudioStreamType::SampleFormat sample_format,
-                     Range<uint32_t> channels,
+                     AudioStreamType::SampleFormat sample_format, Range<uint32_t> channels,
                      Range<uint32_t> frames_per_second);
 
   ~AudioStreamTypeSet() override;

@@ -48,8 +48,7 @@ class MediaPlayerTestUtilParams {
   // Disallow copy, assign and move.
   MediaPlayerTestUtilParams(const MediaPlayerTestUtilParams&) = delete;
   MediaPlayerTestUtilParams(MediaPlayerTestUtilParams&&) = delete;
-  MediaPlayerTestUtilParams& operator=(const MediaPlayerTestUtilParams&) =
-      delete;
+  MediaPlayerTestUtilParams& operator=(const MediaPlayerTestUtilParams&) = delete;
   MediaPlayerTestUtilParams& operator=(MediaPlayerTestUtilParams&&) = delete;
 };
 

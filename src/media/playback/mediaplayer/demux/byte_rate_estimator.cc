@@ -9,8 +9,7 @@
 namespace media_player {
 
 // static
-ByteRateEstimator::ByteRateSampler
-ByteRateEstimator::ByteRateSampler::StartSample(size_t bytes) {
+ByteRateEstimator::ByteRateSampler ByteRateEstimator::ByteRateSampler::StartSample(size_t bytes) {
   return ByteRateEstimator::ByteRateSampler(ByteRateSample{
       .start_time = zx::clock::get_monotonic(),
       .stop_time = zx::time(0),
@@ -19,8 +18,7 @@ ByteRateEstimator::ByteRateSampler::StartSample(size_t bytes) {
 }
 
 // static
-ByteRateEstimator::ByteRateSample
-ByteRateEstimator::ByteRateSampler::FinishSample(
+ByteRateEstimator::ByteRateSample ByteRateEstimator::ByteRateSampler::FinishSample(
     ByteRateEstimator::ByteRateSampler sampler) {
   sampler.sample_.stop_time = zx::clock::get_monotonic();
   return sampler.sample_;

@@ -41,9 +41,8 @@ std::ostream& operator<<(std::ostream& os, AsNs value) {
     os << "-";
   }
 
-  return os << s << "." << std::setw(3) << std::setfill('0') << ms << ","
-            << std::setw(3) << std::setfill('0') << us << "," << std::setw(3)
-            << std::setfill('0') << ns;
+  return os << s << "." << std::setw(3) << std::setfill('0') << ms << "," << std::setw(3)
+            << std::setfill('0') << us << "," << std::setw(3) << std::setfill('0') << ns;
 }
 
 std::ostream& operator<<(std::ostream& os, Result value) {
@@ -74,8 +73,8 @@ std::ostream& operator<<(std::ostream& os, const PacketPtr& value) {
     return os << "<null>";
   }
 
-  os << AsNs(value->GetPts(media::TimelineRate::NsPerSecond)) << " ("
-     << AsNs(value->pts()) << "@" << value->pts_rate() << ")"
+  os << AsNs(value->GetPts(media::TimelineRate::NsPerSecond)) << " (" << AsNs(value->pts()) << "@"
+     << value->pts_rate() << ")"
      << " " << value->size() << " bytes";
 
   if (value->keyframe()) {
@@ -97,33 +96,24 @@ std::ostream& operator<<(std::ostream& os, const StreamType& value) {
   os << fostr::Indent;
   os << fostr::NewLine << "medium:               " << value.medium();
   os << fostr::NewLine << "encoding:             " << value.encoding();
-  os << fostr::NewLine
-     << "encoding parameters:  " << value.encoding_parameters();
+  os << fostr::NewLine << "encoding parameters:  " << value.encoding_parameters();
 
   switch (value.medium()) {
     case StreamType::Medium::kAudio:
-      os << fostr::NewLine
-         << "sample format:        " << value.audio()->sample_format();
-      os << fostr::NewLine
-         << "channels:             " << value.audio()->channels();
-      os << fostr::NewLine
-         << "frames per second:    " << value.audio()->frames_per_second();
+      os << fostr::NewLine << "sample format:        " << value.audio()->sample_format();
+      os << fostr::NewLine << "channels:             " << value.audio()->channels();
+      os << fostr::NewLine << "frames per second:    " << value.audio()->frames_per_second();
       break;
     case StreamType::Medium::kVideo:
-      os << fostr::NewLine
-         << "pixel format:         " << value.video()->pixel_format();
-      os << fostr::NewLine
-         << "color space:          " << value.video()->color_space();
-      os << fostr::NewLine << "size:                 " << value.video()->width()
-         << "x" << value.video()->height();
-      os << fostr::NewLine
-         << "coded size:           " << value.video()->coded_width() << "x"
+      os << fostr::NewLine << "pixel format:         " << value.video()->pixel_format();
+      os << fostr::NewLine << "color space:          " << value.video()->color_space();
+      os << fostr::NewLine << "size:                 " << value.video()->width() << "x"
+         << value.video()->height();
+      os << fostr::NewLine << "coded size:           " << value.video()->coded_width() << "x"
          << value.video()->coded_height();
-      os << fostr::NewLine << "pixel aspect ratio:   "
-         << value.video()->pixel_aspect_ratio_width() << "x"
-         << value.video()->pixel_aspect_ratio_height();
-      os << fostr::NewLine
-         << "line stride:          " << value.video()->line_stride();
+      os << fostr::NewLine << "pixel aspect ratio:   " << value.video()->pixel_aspect_ratio_width()
+         << "x" << value.video()->pixel_aspect_ratio_height();
+      os << fostr::NewLine << "line stride:          " << value.video()->line_stride();
       break;
     default:
       break;
@@ -138,12 +128,9 @@ std::ostream& operator<<(std::ostream& os, const StreamTypeSet& value) {
   os << fostr::NewLine << "encodings:         " << value.encodings();
   switch (value.medium()) {
     case StreamType::Medium::kAudio:
-      os << fostr::NewLine
-         << "sample format:     " << value.audio()->sample_format();
-      os << fostr::NewLine
-         << "channels:          " << value.audio()->channels();
-      os << fostr::NewLine
-         << "frames per second: " << value.audio()->frames_per_second();
+      os << fostr::NewLine << "sample format:     " << value.audio()->sample_format();
+      os << fostr::NewLine << "channels:          " << value.audio()->channels();
+      os << fostr::NewLine << "frames per second: " << value.audio()->frames_per_second();
       break;
     case StreamType::Medium::kVideo:
       os << fostr::NewLine << "width:             " << value.video()->width();
@@ -171,8 +158,7 @@ std::ostream& operator<<(std::ostream& os, StreamType::Medium value) {
   return os;
 }
 
-std::ostream& operator<<(std::ostream& os,
-                         AudioStreamType::SampleFormat value) {
+std::ostream& operator<<(std::ostream& os, AudioStreamType::SampleFormat value) {
   switch (value) {
     case AudioStreamType::SampleFormat::kNone:
       return os << "none";
@@ -234,13 +220,11 @@ std::ostream& operator<<(std::ostream& os, media::TimelineRate value) {
 }
 
 std::ostream& operator<<(std::ostream& os, media::TimelineFunction value) {
-  return os << AsNs(value.subject_time())
-            << "::" << AsNs(value.reference_time()) << "@" << value.rate();
+  return os << AsNs(value.subject_time()) << "::" << AsNs(value.reference_time()) << "@"
+            << value.rate();
 }
 
-std::ostream& operator<<(std::ostream& os, const Node& value) {
-  return os << value.label();
-}
+std::ostream& operator<<(std::ostream& os, const Node& value) { return os << value.label(); }
 
 std::ostream& operator<<(std::ostream& os, const Input& value) {
   FXL_DCHECK(value.node());
@@ -289,23 +273,18 @@ std::ostream& operator<<(std::ostream& os, VmoAllocation value) {
 std::ostream& operator<<(std::ostream& os, const PayloadConfig& value) {
   os << fostr::Indent;
   os << fostr::NewLine << "mode:                       " << value.mode_;
-  os << fostr::NewLine
-     << "max aggregate payload_size: " << value.max_aggregate_payload_size_;
-  os << fostr::NewLine
-     << "max payload count:          " << value.max_payload_count_;
-  os << fostr::NewLine
-     << "max payload size:           " << value.max_payload_size_;
-  os << fostr::NewLine
-     << "vmo allocation:             " << value.vmo_allocation_;
-  os << fostr::NewLine
-     << "physically contiguous:      " << value.physically_contiguous_;
+  os << fostr::NewLine << "max aggregate payload_size: " << value.max_aggregate_payload_size_;
+  os << fostr::NewLine << "max payload count:          " << value.max_payload_count_;
+  os << fostr::NewLine << "max payload size:           " << value.max_payload_size_;
+  os << fostr::NewLine << "vmo allocation:             " << value.vmo_allocation_;
+  os << fostr::NewLine << "physically contiguous:      " << value.physically_contiguous_;
 
   return os << fostr::Outdent;
 }
 
 std::ostream& operator<<(std::ostream& os, const PayloadVmo& value) {
-  return os << "size " << value.size() << ", start " << std::hex
-            << value.start() << std::dec << ", vmo " << value.vmo();
+  return os << "size " << value.size() << ", start " << std::hex << value.start() << std::dec
+            << ", vmo " << value.vmo();
 }
 
 }  // namespace media_player

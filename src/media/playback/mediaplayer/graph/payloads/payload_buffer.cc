@@ -14,8 +14,7 @@
 namespace media_player {
 
 // static
-fbl::RefPtr<PayloadVmo> PayloadVmo::Create(uint64_t vmo_size,
-                                           const zx::handle* bti_handle) {
+fbl::RefPtr<PayloadVmo> PayloadVmo::Create(uint64_t vmo_size, const zx::handle* bti_handle) {
   FXL_DCHECK(vmo_size != 0);
 
   zx::vmo vmo;
@@ -23,32 +22,29 @@ fbl::RefPtr<PayloadVmo> PayloadVmo::Create(uint64_t vmo_size,
   if (bti_handle != nullptr) {
     // Create a contiguous VMO. This is a hack that will be removed once the
     // FIDL buffer allocator is working an integrated.
-    zx_status_t status = zx_vmo_create_contiguous(
-        bti_handle->get(), vmo_size, 0, vmo.reset_and_get_address());
+    zx_status_t status =
+        zx_vmo_create_contiguous(bti_handle->get(), vmo_size, 0, vmo.reset_and_get_address());
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to create contiguous VMO of size " << vmo_size
-                     << ", status " << status << ".";
+      FXL_LOG(ERROR) << "Failed to create contiguous VMO of size " << vmo_size << ", status "
+                     << status << ".";
       return nullptr;
     }
   } else {
     zx_status_t status = zx::vmo::create(vmo_size, 0, &vmo);
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to create VMO of size " << vmo_size
-                     << ", status " << status << ".";
+      FXL_LOG(ERROR) << "Failed to create VMO of size " << vmo_size << ", status " << status << ".";
       return nullptr;
     }
   }
 
   zx_status_t status;
   auto result = fbl::MakeRefCounted<PayloadVmo>(
-      std::move(vmo), vmo_size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, bti_handle,
-      &status);
+      std::move(vmo), vmo_size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, bti_handle, &status);
   return status == ZX_OK ? result : nullptr;
 }
 
 // static
-fbl::RefPtr<PayloadVmo> PayloadVmo::Create(zx::vmo vmo,
-                                           zx_vm_option_t map_flags) {
+fbl::RefPtr<PayloadVmo> PayloadVmo::Create(zx::vmo vmo, zx_vm_option_t map_flags) {
   uint64_t vmo_size;
   zx_status_t status = vmo.get_size(&vmo_size);
   if (status != ZX_OK) {
@@ -56,8 +52,8 @@ fbl::RefPtr<PayloadVmo> PayloadVmo::Create(zx::vmo vmo,
     return nullptr;
   }
 
-  auto result = fbl::MakeRefCounted<PayloadVmo>(std::move(vmo), vmo_size,
-                                                map_flags, nullptr, &status);
+  auto result =
+      fbl::MakeRefCounted<PayloadVmo>(std::move(vmo), vmo_size, map_flags, nullptr, &status);
   return status == ZX_OK ? result : nullptr;
 }
 
@@ -89,18 +85,15 @@ zx::vmo PayloadVmo::Duplicate(zx_rights_t rights) {
 }
 
 // static
-fbl::RefPtr<PayloadBuffer> PayloadBuffer::Create(uint64_t size, void* data,
-                                                 Recycler recycler) {
+fbl::RefPtr<PayloadBuffer> PayloadBuffer::Create(uint64_t size, void* data, Recycler recycler) {
   return fbl::AdoptRef(new PayloadBuffer(size, data, std::move(recycler)));
 }
 
 // static
 fbl::RefPtr<PayloadBuffer> PayloadBuffer::Create(uint64_t size, void* data,
-                                                 fbl::RefPtr<PayloadVmo> vmo,
-                                                 uint64_t offset,
+                                                 fbl::RefPtr<PayloadVmo> vmo, uint64_t offset,
                                                  Recycler recycler) {
-  return fbl::AdoptRef(
-      new PayloadBuffer(size, data, vmo, offset, std::move(recycler)));
+  return fbl::AdoptRef(new PayloadBuffer(size, data, vmo, offset, std::move(recycler)));
 }
 
 // static
@@ -108,14 +101,13 @@ fbl::RefPtr<PayloadBuffer> PayloadBuffer::CreateWithMalloc(uint64_t size) {
   FXL_DCHECK(size > 0);
   // TODO: Once we use C++17, std::aligned_alloc should work.
   // |aligned_alloc| requires the size to the aligned.
-  return PayloadBuffer::Create(size,
-                               aligned_alloc(PayloadBuffer::kByteAlignment,
-                                             PayloadBuffer::AlignUp(size)),
-                               [](PayloadBuffer* payload_buffer) {
-                                 FXL_DCHECK(payload_buffer);
-                                 std::free(payload_buffer->data());
-                                 // The |PayloadBuffer| deletes itself.
-                               });
+  return PayloadBuffer::Create(
+      size, aligned_alloc(PayloadBuffer::kByteAlignment, PayloadBuffer::AlignUp(size)),
+      [](PayloadBuffer* payload_buffer) {
+        FXL_DCHECK(payload_buffer);
+        std::free(payload_buffer->data());
+        // The |PayloadBuffer| deletes itself.
+      });
 }
 
 PayloadBuffer::PayloadBuffer(uint64_t size, void* data, Recycler recycler)
@@ -125,19 +117,13 @@ PayloadBuffer::PayloadBuffer(uint64_t size, void* data, Recycler recycler)
   FXL_DCHECK(recycler_);
 }
 
-PayloadBuffer::PayloadBuffer(uint64_t size, void* data,
-                             fbl::RefPtr<PayloadVmo> vmo,
+PayloadBuffer::PayloadBuffer(uint64_t size, void* data, fbl::RefPtr<PayloadVmo> vmo,
                              uint64_t offset_in_vmo, Recycler recycler)
-    : size_(size),
-      data_(data),
-      vmo_(vmo),
-      offset_(offset_in_vmo),
-      recycler_(std::move(recycler)) {
+    : size_(size), data_(data), vmo_(vmo), offset_(offset_in_vmo), recycler_(std::move(recycler)) {
   FXL_DCHECK(size_ != 0);
   FXL_DCHECK(vmo_);
-  FXL_DCHECK((data_ == nullptr) ||
-             (reinterpret_cast<uint8_t*>(vmo_->start()) + offset_ ==
-              reinterpret_cast<uint8_t*>(data_)));
+  FXL_DCHECK((data_ == nullptr) || (reinterpret_cast<uint8_t*>(vmo_->start()) + offset_ ==
+                                    reinterpret_cast<uint8_t*>(data_)));
   FXL_DCHECK(recycler_);
 
   // TODO(dalesat): Remove this check when we support unmappable VMOs.

@@ -17,13 +17,10 @@ extern "C" {
 namespace media_player {
 
 struct AVCodecContextDeleter {
-  void operator()(AVCodecContext* context) const {
-    avcodec_free_context(&context);
-  }
+  void operator()(AVCodecContext* context) const { avcodec_free_context(&context); }
 };
 
-using AvCodecContextPtr =
-    std::unique_ptr<AVCodecContext, AVCodecContextDeleter>;
+using AvCodecContextPtr = std::unique_ptr<AVCodecContext, AVCodecContextDeleter>;
 
 struct AvCodecContext {
   static AvCodecContextPtr Create(const StreamType& stream_type);
@@ -34,12 +31,10 @@ struct AvCodecContext {
 };
 
 // Converts an AVPixelFormat to a PixelFormat.
-VideoStreamType::PixelFormat PixelFormatFromAVPixelFormat(
-    AVPixelFormat av_pixel_format);
+VideoStreamType::PixelFormat PixelFormatFromAVPixelFormat(AVPixelFormat av_pixel_format);
 
 // Converts a PixelFormat to an AVPixelFormat.
-AVPixelFormat AVPixelFormatFromPixelFormat(
-    VideoStreamType::PixelFormat pixel_format);
+AVPixelFormat AVPixelFormatFromPixelFormat(VideoStreamType::PixelFormat pixel_format);
 
 }  // namespace media_player
 

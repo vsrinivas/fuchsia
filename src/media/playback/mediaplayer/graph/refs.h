@@ -91,13 +91,9 @@ class InputRef {
   // an invalid reference if this input isn't connected to an output.
   OutputRef mate() const;
 
-  bool operator==(const InputRef& other) const {
-    return input_ == other.input_;
-  }
+  bool operator==(const InputRef& other) const { return input_ == other.input_; }
 
-  bool operator!=(const InputRef& other) const {
-    return input_ != other.input_;
-  }
+  bool operator!=(const InputRef& other) const { return input_ != other.input_; }
 
  private:
   explicit InputRef(Input* input) : input_(input) {}
@@ -142,13 +138,9 @@ class OutputRef {
   // an invalid reference if this output isn't connected to an input.
   InputRef mate() const;
 
-  bool operator==(const OutputRef& other) const {
-    return output_ == other.output_;
-  }
+  bool operator==(const OutputRef& other) const { return output_ == other.output_; }
 
-  bool operator!=(const OutputRef& other) const {
-    return output_ != other.output_;
-  }
+  bool operator!=(const OutputRef& other) const { return output_ != other.output_; }
 
  private:
   // Returns the actual input referenced by this object.

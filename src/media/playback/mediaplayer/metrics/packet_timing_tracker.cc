@@ -15,8 +15,8 @@ PacketTimingTracker::PacketTimingTracker(bool count_late_samples)
 
 PacketTimingTracker::~PacketTimingTracker() {}
 
-void PacketTimingTracker::AddSample(int64_t now, int64_t presentation_time,
-                                    int64_t packet_pts_ns, bool progressing) {
+void PacketTimingTracker::AddSample(int64_t now, int64_t presentation_time, int64_t packet_pts_ns,
+                                    bool progressing) {
   if (!progressing) {
     ++not_progressing_count_;
   } else if (packet_pts_ns == Packet::kNoPts) {
@@ -55,8 +55,7 @@ std::ostream& operator<<(std::ostream& os, const PacketTimingTracker& value) {
   if (value.nominal_count()) {
     os << fostr::NewLine << "presentation offset:";
     os << fostr::NewLine << "    minimum       " << AsNs(value.min_earliness());
-    os << fostr::NewLine << "    average       "
-       << AsNs(value.average_earliness());
+    os << fostr::NewLine << "    average       " << AsNs(value.average_earliness());
     os << fostr::NewLine << "    maximum       " << AsNs(value.max_earliness());
   }
 

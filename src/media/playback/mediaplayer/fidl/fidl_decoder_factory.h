@@ -17,16 +17,14 @@ namespace media_player {
 class FidlDecoderFactory : public DecoderFactory {
  public:
   // Creates a fidl decoder factory.
-  static std::unique_ptr<DecoderFactory> Create(
-      component::StartupContext* startup_context);
+  static std::unique_ptr<DecoderFactory> Create(component::StartupContext* startup_context);
 
   FidlDecoderFactory(component::StartupContext* startup_context);
 
   ~FidlDecoderFactory() override;
 
-  void CreateDecoder(
-      const StreamType& stream_type,
-      fit::function<void(std::shared_ptr<Decoder>)> callback) override;
+  void CreateDecoder(const StreamType& stream_type,
+                     fit::function<void(std::shared_ptr<Decoder>)> callback) override;
 
  private:
   fuchsia::mediacodec::CodecFactoryPtr codec_factory_;
