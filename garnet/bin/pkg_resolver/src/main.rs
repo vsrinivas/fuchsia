@@ -135,7 +135,7 @@ fn load_repo_manager(amber_connector: AmberConnector) -> RepositoryManager<Amber
 }
 
 fn load_rewrite_manager(node: inspect::Node) -> RewriteManager {
-    RewriteManagerBuilder::new(node, DYNAMIC_RULES_PATH)
+    RewriteManagerBuilder::new(DYNAMIC_RULES_PATH)
         .unwrap_or_else(|(builder, err)| {
             if err.kind() != io::ErrorKind::NotFound {
                 fx_log_err!(
@@ -145,6 +145,7 @@ fn load_rewrite_manager(node: inspect::Node) -> RewriteManager {
             }
             builder
         })
+        .inspect_node(node)
         .static_rules_path(STATIC_RULES_PATH)
         .unwrap_or_else(|(builder, err)| {
             if err.kind() != io::ErrorKind::NotFound {

@@ -309,8 +309,6 @@ mod tests {
 
     #[fasync::run_until_stalled(test)]
     async fn test_list() {
-        let inspector = fuchsia_inspect::Inspector::new();
-        let node = inspector.root().create_child("rewrite-manager");
         let dynamic_rules = vec![
             rule!("fuchsia.com" => "fuchsia.com", "/rolldice" => "/rolldice"),
             rule!("fuchsia.com" => "fuchsia.com", "/rolldice/" => "/rolldice/"),
@@ -321,7 +319,7 @@ mod tests {
             rule!("fuchsia.com" => "static.fuchsia.com", "/4" => "/4"),
         ];
         let state = Arc::new(RwLock::new(
-            RewriteManagerBuilder::new(node, &dynamic_config)
+            RewriteManagerBuilder::new(&dynamic_config)
                 .unwrap()
                 .static_rules(static_rules.clone())
                 .build(),
@@ -334,8 +332,6 @@ mod tests {
 
     #[fasync::run_until_stalled(test)]
     async fn test_list_static() {
-        let inspector = fuchsia_inspect::Inspector::new();
-        let node = inspector.root().create_child("rewrite-manager");
         let dynamic_config = make_rule_config(vec![
             rule!("fuchsia.com" => "dynamic.fuchsia.com", "/1" => "/1"),
             rule!("fuchsia.com" => "dynamic.fuchsia.com", "/2" => "/2"),
@@ -345,7 +341,7 @@ mod tests {
             rule!("fuchsia.com" => "static.fuchsia.com", "/4" => "/4"),
         ];
         let state = Arc::new(RwLock::new(
-            RewriteManagerBuilder::new(node, &dynamic_config)
+            RewriteManagerBuilder::new(&dynamic_config)
                 .unwrap()
                 .static_rules(static_rules.clone())
                 .build(),
@@ -356,16 +352,13 @@ mod tests {
 
     #[fasync::run_until_stalled(test)]
     async fn test_reset_all() {
-        let inspector = fuchsia_inspect::Inspector::new();
-        let node = inspector.root().create_child("rewrite-manager");
         let rules = vec![
             rule!("fuchsia.com" => "fuchsia.com", "/rolldice" => "/rolldice"),
             rule!("fuchsia.com" => "fuchsia.com", "/rolldice/" => "/rolldice/"),
         ];
         let dynamic_config = make_rule_config(rules.clone());
-        let state = Arc::new(RwLock::new(
-            RewriteManagerBuilder::new(node, &dynamic_config).unwrap().build(),
-        ));
+        let state =
+            Arc::new(RwLock::new(RewriteManagerBuilder::new(&dynamic_config).unwrap().build()));
         let mut service = RewriteService::new(state.clone(), UnreachableAmberSourceSelector);
 
         let (client, request_stream) = create_proxy_and_stream::<EditTransactionMarker>().unwrap();
@@ -379,8 +372,6 @@ mod tests {
 
     #[fasync::run_until_stalled(test)]
     async fn test_transaction_list_dynamic() {
-        let inspector = fuchsia_inspect::Inspector::new();
-        let node = inspector.root().create_child("rewrite-manager");
         let dynamic_rules = vec![
             rule!("fuchsia.com" => "fuchsia.com", "/rolldice" => "/rolldice"),
             rule!("fuchsia.com" => "fuchsia.com", "/rolldice/" => "/rolldice/"),
@@ -388,10 +379,7 @@ mod tests {
         let dynamic_config = make_rule_config(dynamic_rules.clone());
         let static_rules = vec![rule!("fuchsia.com" => "static.fuchsia.com", "/" => "/")];
         let state = Arc::new(RwLock::new(
-            RewriteManagerBuilder::new(node, &dynamic_config)
-                .unwrap()
-                .static_rules(static_rules)
-                .build(),
+            RewriteManagerBuilder::new(&dynamic_config).unwrap().static_rules(static_rules).build(),
         ));
         let mut service = RewriteService::new(state.clone(), UnreachableAmberSourceSelector);
 
@@ -417,16 +405,13 @@ mod tests {
 
     #[fasync::run_until_stalled(test)]
     async fn test_concurrent_edit() {
-        let inspector = fuchsia_inspect::Inspector::new();
-        let node = inspector.root().create_child("rewrite-manager");
         let rules = vec![
             rule!("fuchsia.com" => "fuchsia.com", "/rolldice" => "/rolldice"),
             rule!("fuchsia.com" => "fuchsia.com", "/rolldice/" => "/rolldice/"),
         ];
         let dynamic_config = make_rule_config(rules.clone());
-        let state = Arc::new(RwLock::new(
-            RewriteManagerBuilder::new(node, &dynamic_config).unwrap().build(),
-        ));
+        let state =
+            Arc::new(RwLock::new(RewriteManagerBuilder::new(&dynamic_config).unwrap().build()));
         let amber = FakeAmberSourceSelector::default();
         let mut service = RewriteService::new(state.clone(), amber);
 
@@ -468,12 +453,9 @@ mod tests {
 
     #[fasync::run_until_stalled(test)]
     async fn test_concurrent_list_and_edit() {
-        let inspector = fuchsia_inspect::Inspector::new();
-        let node = inspector.root().create_child("rewrite-manager");
         let dynamic_config = make_rule_config(vec![]);
-        let state = Arc::new(RwLock::new(
-            RewriteManagerBuilder::new(node, &dynamic_config).unwrap().build(),
-        ));
+        let state =
+            Arc::new(RwLock::new(RewriteManagerBuilder::new(&dynamic_config).unwrap().build()));
         let mut amber = FakeAmberSourceSelector::default();
         let mut service = RewriteService::new(state.clone(), amber.clone());
 
@@ -511,8 +493,6 @@ mod tests {
 
     #[fasync::run_until_stalled(test)]
     async fn test_rewrite() {
-        let inspector = fuchsia_inspect::Inspector::new();
-        let node = inspector.root().create_child("rewrite-manager");
         let dynamic_config = make_rule_config(vec![]);
         let static_rules = vec![
             rule!("fuchsia.com" => "fuchsia.com", "/old/" => "/new/"),
@@ -520,7 +500,7 @@ mod tests {
             rule!("fuchsia.com" => "fuchsia.com", "/identity" => "/identity"),
         ];
         let state = Arc::new(RwLock::new(
-            RewriteManagerBuilder::new(node, &dynamic_config)
+            RewriteManagerBuilder::new(&dynamic_config)
                 .unwrap()
                 .static_rules(static_rules.clone())
                 .build(),
@@ -546,12 +526,9 @@ mod tests {
 
     #[fasync::run_until_stalled(test)]
     async fn test_rewrite_rejects_invalid_inputs() {
-        let inspector = fuchsia_inspect::Inspector::new();
-        let node = inspector.root().create_child("rewrite-manager");
         let dynamic_config = make_rule_config(vec![]);
-        let state = Arc::new(RwLock::new(
-            RewriteManagerBuilder::new(node, &dynamic_config).unwrap().build(),
-        ));
+        let state =
+            Arc::new(RwLock::new(RewriteManagerBuilder::new(&dynamic_config).unwrap().build()));
         let service = RewriteService::new(state.clone(), UnreachableAmberSourceSelector);
 
         for url in &["not-fuchsia-pkg://fuchsia.com/test", "fuchsia-pkg://fuchsia.com/a*"] {
@@ -561,13 +538,10 @@ mod tests {
 
     #[fasync::run_until_stalled(test)]
     async fn test_concurrent_rewrite_and_edit() {
-        let inspector = fuchsia_inspect::Inspector::new();
-        let node = inspector.root().create_child("rewrite-manager");
         let dynamic_config =
             make_rule_config(vec![rule!("fuchsia.com" => "fuchsia.com", "/a" => "/b")]);
-        let state = Arc::new(RwLock::new(
-            RewriteManagerBuilder::new(node, &dynamic_config).unwrap().build(),
-        ));
+        let state =
+            Arc::new(RwLock::new(RewriteManagerBuilder::new(&dynamic_config).unwrap().build()));
         let mut service = RewriteService::new(state.clone(), UnreachableAmberSourceSelector);
 
         let (edit_client, request_stream) =
@@ -596,12 +570,9 @@ mod tests {
 
     #[fasync::run_until_stalled(test)]
     async fn test_enables_amber_source() {
-        let inspector = fuchsia_inspect::Inspector::new();
-        let node = inspector.root().create_child("rewrite-manager");
         let dynamic_config = make_rule_config(vec![]);
-        let state = Arc::new(RwLock::new(
-            RewriteManagerBuilder::new(node, &dynamic_config).unwrap().build(),
-        ));
+        let state =
+            Arc::new(RwLock::new(RewriteManagerBuilder::new(&dynamic_config).unwrap().build()));
         let mut amber = FakeAmberSourceSelector::default();
         let mut service = RewriteService::new(state.clone(), amber.clone());
 
@@ -649,12 +620,9 @@ mod tests {
     async fn test_disables_amber_sources() {
         let rules = vec![rule!("fuchsia.com" => "enabled.fuchsia.com", "/" => "/")];
 
-        let inspector = fuchsia_inspect::Inspector::new();
-        let node = inspector.root().create_child("rewrite-manager");
         let dynamic_config = make_rule_config(rules);
-        let state = Arc::new(RwLock::new(
-            RewriteManagerBuilder::new(node, &dynamic_config).unwrap().build(),
-        ));
+        let state =
+            Arc::new(RwLock::new(RewriteManagerBuilder::new(&dynamic_config).unwrap().build()));
         let mut amber = FakeAmberSourceSelector::default();
         let mut service = RewriteService::new(state.clone(), amber.clone());
 

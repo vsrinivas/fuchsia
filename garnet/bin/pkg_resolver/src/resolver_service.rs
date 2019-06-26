@@ -399,10 +399,8 @@ mod tests {
                 })
                 .expect("failed to spawn handler");
 
-            let inspector = fuchsia_inspect::Inspector::new();
-            let node = inspector.root().create_child("top-level-node");
             let dynamic_rule_config = make_rule_config(self.dynamic_rewrite_rules);
-            let rewrite_manager = RewriteManagerBuilder::new(node, &dynamic_rule_config)
+            let rewrite_manager = RewriteManagerBuilder::new(&dynamic_rule_config)
                 .unwrap()
                 .static_rules(self.static_rewrite_rules)
                 .build();
