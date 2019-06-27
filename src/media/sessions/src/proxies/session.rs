@@ -3,8 +3,9 @@
 // found in the LICENSE file.
 
 use crate::{
-    active_session_queue::ActiveSessionQueue, fidl_clones::*, log_error::log_error_discard_result,
-    mpmc, session_list::SessionList, Ref, Result, CHANNEL_BUFFER_SIZE,
+    fidl_clones::*, log_error::log_error_discard_result, mpmc,
+    state::active_session_queue::ActiveSessionQueue, state::session_list::SessionList, Ref, Result,
+    CHANNEL_BUFFER_SIZE,
 };
 use fidl::encoding::OutOfLine;
 use fidl::endpoints::*;

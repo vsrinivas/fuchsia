@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::session_proxy::SessionRegistration;
+use crate::proxies::session::SessionRegistration;
 use std::collections::VecDeque;
 
 /// Tracks which session most recently reported an active status.

@@ -7,18 +7,15 @@
 
 #[macro_use]
 mod log_error;
-mod active_session_queue;
 mod fidl_clones;
 mod mpmc;
-mod publisher;
-mod registry;
-mod session_list;
-mod session_proxy;
-mod subscriber;
+mod proxies;
+mod services;
+mod state;
 #[cfg(test)]
 mod test;
 
-use self::{publisher::Publisher, registry::Registry};
+use self::services::{publisher::Publisher, registry::Registry};
 use failure::Error;
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;

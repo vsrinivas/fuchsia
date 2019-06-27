@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::session_proxy::{Session, SessionRegistration};
+use crate::proxies::session::{Session, SessionRegistration};
 use fuchsia_zircon as zx;
 use std::collections::HashMap;
 

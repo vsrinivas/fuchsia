@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 use crate::{
-    active_session_queue::ActiveSessionQueue,
     clone_session_id_handle, mpmc,
-    session_list::SessionList,
-    session_proxy::{Session, SessionCollectionEvent, SessionRegistration},
+    proxies::session::{Session, SessionCollectionEvent, SessionRegistration},
+    state::active_session_queue::ActiveSessionQueue,
+    state::session_list::SessionList,
     Ref, Result,
 };
 use failure::ResultExt;

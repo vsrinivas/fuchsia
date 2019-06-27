@@ -2,9 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+mod subscriber;
+
+use self::subscriber::Subscriber;
 use crate::{
-    active_session_queue::ActiveSessionQueue, clone_session_id_handle, mpmc,
-    session_list::SessionList, session_proxy::*, subscriber::Subscriber, Ref, Result,
+    clone_session_id_handle, mpmc, proxies::session::*,
+    state::active_session_queue::ActiveSessionQueue, state::session_list::SessionList, Ref, Result,
 };
 use fidl::endpoints::RequestStream;
 use fidl_fuchsia_media_sessions::{
