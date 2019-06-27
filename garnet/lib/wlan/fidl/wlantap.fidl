@@ -81,6 +81,11 @@ struct WlanTxStatus {
     bool success;
 };
 
+// See also phy.fidl SetCountryRequest/Response.
+struct SetCountryArgs {
+    array<uint8>:2 alpha2;
+};
+
 protocol WlantapPhy {
     // wlanmac_ifc_t callbacks
     Rx(uint16 wlanmac_id, vector<uint8> data, WlanRxInfo info);
@@ -93,6 +98,7 @@ protocol WlantapPhy {
     // TODO: ConfigureBeacon
     -> SetKey(SetKeyArgs args);
     -> WlanmacStart(WlanmacStartArgs args);
+    -> SetCountry(SetCountryArgs args);
 };
 
 struct TxArgs {

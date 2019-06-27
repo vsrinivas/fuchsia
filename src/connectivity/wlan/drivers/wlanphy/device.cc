@@ -11,6 +11,7 @@
 #include <wlan/common/channel.h>
 #include <wlan/common/element.h>
 #include <wlan/common/logging.h>
+#include <wlan/common/phy.h>
 #include <wlan/protocol/ioctl.h>
 #include <zircon/status.h>
 
@@ -34,7 +35,8 @@ Device::Device(zx_device_t* device, wlanphy_impl_protocol_t wlanphy_impl_proto)
     // Assert minimum required functionality from the wlanphy_impl driver
     ZX_ASSERT(wlanphy_impl_.ops != nullptr && wlanphy_impl_.ops->query != nullptr &&
               wlanphy_impl_.ops->create_iface != nullptr &&
-              wlanphy_impl_.ops->destroy_iface != nullptr);
+              wlanphy_impl_.ops->destroy_iface != nullptr &&
+              wlanphy_impl_.ops->set_country != nullptr);
 }
 
 Device::~Device() {
@@ -287,6 +289,22 @@ void Device::DestroyIface(wlan_device::DestroyIfaceRequest req, DestroyIfaceCall
     wlan_device::DestroyIfaceResponse resp;
     resp.status = wlanphy_impl_.ops->destroy_iface(wlanphy_impl_.ctx, req.id);
     callback(std::move(resp));
+}
+
+void Device::SetCountry(wlan_device::SetCountryRequest req, SetCountryCallback callback) {
+    debugfn();
+    debugf("wlanphy: SetCountry to %s\n", wlan::common::Alpha2ToStr(req.alpha2).c_str());
+
+    wlanphy_country_t country;
+    memcpy(country.alpha2, req.alpha2.data(), WLANPHY_ALPHA2_LEN);
+    auto status = wlanphy_impl_.ops->set_country(wlanphy_impl_.ctx, &country);
+
+    if (status != ZX_OK) {
+        debugf("wlanphy: SetCountry to %s failed with error %s\n",
+               wlan::common::Alpha2ToStr(req.alpha2).c_str(),
+               zx_status_get_string(status));
+    }
+    callback(status);
 }
 
 }  // namespace wlanphy

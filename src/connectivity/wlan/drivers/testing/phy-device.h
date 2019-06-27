@@ -36,6 +36,8 @@ class PhyDevice : public ::fuchsia::wlan::device::Phy {
                              CreateIfaceCallback callback) override;
     virtual void DestroyIface(::fuchsia::wlan::device::DestroyIfaceRequest req,
                               DestroyIfaceCallback callback) override;
+    virtual void SetCountry(::fuchsia::wlan::device::SetCountryRequest req,
+                            SetCountryCallback callback) override;
 
    private:
     zx_status_t Connect(zx::channel request);

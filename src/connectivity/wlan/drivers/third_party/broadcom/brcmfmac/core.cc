@@ -27,6 +27,7 @@
 #include <ddk/protocol/usb.h>
 #include <ddk/protocol/wlanphyimpl.h>
 #include <netinet/if_ether.h>
+#include <wlan/common/phy.h>
 #include <zircon/status.h>
 
 #include "brcmu_utils.h"
@@ -533,10 +534,21 @@ zx_status_t brcmf_phy_destroy_iface(void* ctx, uint16_t id) {
     return ZX_ERR_IO;
 }
 
+zx_status_t brcmf_phy_set_country(void* ctx, const wlanphy_country_t* country) {
+    if (country == nullptr) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    brcmf_err("brcmf_phy_set_country() to [%s] not implemented",
+              wlan::common::Alpha2ToStr(country->alpha2).c_str());
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
 static wlanphy_impl_protocol_ops_t phy_impl_proto_ops = {
     .query = brcmf_phy_query,
     .create_iface = brcmf_phy_create_iface,
     .destroy_iface = brcmf_phy_destroy_iface,
+    .set_country = brcmf_phy_set_country,
 };
 
 zx_status_t brcmf_net_attach(struct brcmf_if* ifp, bool rtnl_locked) {

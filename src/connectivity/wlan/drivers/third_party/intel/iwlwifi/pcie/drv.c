@@ -997,6 +997,7 @@ static wlanphy_impl_protocol_ops_t wlanphy_ops = {
     .query = NULL,
     .create_iface = NULL,
     .destroy_iface = NULL,
+    .set_country = NULL,
 };
 
 static zx_status_t iwl_pci_bind(void* ctx, zx_device_t* dev) {

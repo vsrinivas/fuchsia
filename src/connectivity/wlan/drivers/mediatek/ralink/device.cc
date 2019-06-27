@@ -16,6 +16,7 @@
 #include <wlan/common/cipher.h>
 #include <wlan/common/logging.h>
 #include <wlan/common/mac_frame.h>
+#include <wlan/common/phy.h>
 #include <wlan/common/tx_vector.h>
 #include <wlan/mlme/debug.h>
 #include <wlan/protocol/mac.h>
@@ -137,7 +138,12 @@ static wlanphy_impl_protocol_ops_t wlanphy_impl_ops = {
     },
     .destroy_iface = [](void* ctx, uint16_t id) -> zx_status_t {
         return DEV(ctx)->DestroyIface(id);
-    }};
+    },
+
+    .set_country = [](void* ctx, const wlanphy_country_t* country) -> zx_status_t {
+        return DEV(ctx)->SetCountry(country);
+    },
+    };
 
 static wlanmac_protocol_ops_t wlanmac_ops = {
     .query = [](void* ctx, uint32_t options, wlanmac_info_t* info) -> zx_status_t {
@@ -3632,6 +3638,17 @@ zx_status_t Device::DestroyIface(uint16_t id) {
     device_remove(dev);
 
     return ZX_OK;
+}
+
+zx_status_t Device::SetCountry(const wlanphy_country_t* country) {
+    if (country == nullptr) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    // Nothing can be done in Ralink device driver level.
+    debugf("SetCountry to [%s] not implemented\n",
+           wlan::common::Alpha2ToStr(country->alpha2).c_str());
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t Device::WlanmacQuery(uint32_t options, wlanmac_info_t* info) {

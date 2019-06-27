@@ -3,6 +3,7 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
+#include <wlan/common/phy.h>
 #include <zircon/assert.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
@@ -56,6 +57,9 @@ zx_status_t WlanPhy::Create(zx_device_t* bus_device) {
         },
         .destroy_iface = [](void* ctx, uint16_t id) -> zx_status_t {
             return reinterpret_cast<WlanPhy*>(ctx)->DestroyIface(id);
+        },
+        .set_country = [](void* ctx, const wlanphy_country_t* country) -> zx_status_t {
+            return reinterpret_cast<WlanPhy*>(ctx)->SetCountry(country);
         },
     };
 
@@ -117,6 +121,15 @@ zx_status_t WlanPhy::DestroyIface(uint16_t id) {
     // The lifetime of `wlan_mac_` is managed by the devhost, so we do not delete it here.
     wlan_mac_ = nullptr;
     return ZX_OK;
+}
+
+zx_status_t WlanPhy::SetCountry(const wlanphy_country_t* country) {
+    if (country == nullptr) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    zxlogf(ERROR, "rtl88xx: SetCountry to [%s] not implemented\n",
+           wlan::common::Alpha2ToStr(country->alpha2).c_str());
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
 }  // namespace rtl88xx

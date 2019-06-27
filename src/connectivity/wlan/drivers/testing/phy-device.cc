@@ -10,6 +10,7 @@
 #include <ddk/debug.h>
 #include <ddk/protocol/wlanphy.h>
 #include <wlan/common/element.h>
+#include <wlan/common/phy.h>
 #include <wlan/protocol/ioctl.h>
 
 #include <fuchsia/wlan/device/c/fidl.h>
@@ -243,6 +244,11 @@ void PhyDevice::DestroyIface(wlan_device::DestroyIfaceRequest req, DestroyIfaceC
 
     resp.status = ZX_OK;
     callback(std::move(resp));
+}
+
+void PhyDevice::SetCountry(wlan_device::SetCountryRequest req, SetCountryCallback callback) {
+    zxlogf(INFO, "testing/PHY: SetCountry [%s]\n", wlan::common::Alpha2ToStr(req.alpha2).c_str());
+    callback(ZX_OK);
 }
 
 zx_status_t PhyDevice::Connect(zx::channel request) {

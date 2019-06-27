@@ -10,6 +10,7 @@
 #include <fuchsia/wlan/device/cpp/fidl.h>
 #include <fuchsia/wlan/tap/c/fidl.h>
 #include <wlan/common/dispatcher.h>
+#include <wlan/common/phy.h>
 #include <wlan/protocol/mac.h>
 #include <zircon/status.h>
 
@@ -235,6 +236,29 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
     return ZX_OK;
   }
 
+  zx_status_t SetCountry(const wlanphy_country_t* country) {
+    if (country == nullptr) {
+      zxlogf(ERROR, "wlantap phy: SetCountry() received nullptr\n");
+      return ZX_ERR_INVALID_ARGS;
+    }
+    zxlogf(INFO, "wlantap phy: SetCountry() to [%s]\n",
+           wlan::common::Alpha2ToStr(country->alpha2).c_str());
+    std::lock_guard<std::mutex> guard(lock_);
+    if (!user_binding_.is_bound()) {
+      zxlogf(ERROR, "wlantap phy: SetCountry() failed: user_binding not bound\n");
+      return ZX_ERR_BAD_STATE;
+    }
+
+    zxlogf(INFO, "wlantap phy: SetCountry() to [%s] received\n",
+           wlan::common::Alpha2ToStr(country->alpha2).c_str());
+
+    auto args = wlantap::SetCountryArgs{};
+    memcpy(&args.alpha2, country->alpha2, WLANPHY_ALPHA2_LEN);
+    user_binding_.events().SetCountry(args);
+
+    return ZX_OK;
+  }
+
   // wlantap::WlantapPhy impl
 
   virtual void Rx(uint16_t wlanmac_id, ::std::vector<uint8_t> data,
@@ -377,6 +401,8 @@ static wlanphy_impl_protocol_ops_t wlanphy_impl_ops = {
     .destroy_iface = [](void* ctx, uint16_t id) -> zx_status_t {
       return DEV(ctx)->DestroyIface(id);
     },
+    .set_country = [](void* ctx, const wlanphy_country_t* country)
+        -> zx_status_t { return DEV(ctx)->SetCountry(country); },
 };
 #undef DEV
 

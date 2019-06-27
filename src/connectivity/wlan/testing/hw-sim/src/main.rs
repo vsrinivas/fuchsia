@@ -254,8 +254,10 @@ mod simulation_tests {
         super::*,
         crate::{ap, minstrel},
         failure::ensure,
+        fidl_fuchsia_wlan_device_service as wlanstack_dev_svc,
         fidl_fuchsia_wlan_service as fidl_wlan_service, fuchsia_component as app,
-        fuchsia_zircon as zx,
+        fuchsia_zircon as zx, fuchsia_zircon_sys,
+        futures::channel::mpsc,
         pin_utils::pin_mut,
         std::{
             fs::{self, File},
@@ -281,6 +283,7 @@ mod simulation_tests {
         let mut ok = true;
         // client tests
         ok = run_test("verify_ethernet", test_verify_ethernet) && ok;
+        ok = run_test("set_country", test_set_country) && ok;
         ok = run_test("simulate_scan", test_simulate_scan) && ok;
         ok = run_test("connecting_to_ap", test_connecting_to_ap) && ok;
         ok = run_test("ethernet_tx_rx", test_ethernet_tx_rx) && ok;
@@ -314,6 +317,60 @@ mod simulation_tests {
         let wlan_service = app::client::connect_to_service::<fidl_wlan_service::WlanMarker>()
             .expect("connecting to wlan service");
         loop_until_iface_is_found(&mut exec, &wlan_service, &mut helper);
+    }
+
+    // Issue service.fidl:SetCountry() protocol to Wlanstack's service with a test country code.
+    // Test two things:
+    //  - If wlantap PHY device received the specified test country code
+    //  - If the SetCountry() returned successfully (ZX_OK).
+    fn test_set_country() {
+        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
+        let mut helper = test_utils::TestHelper::begin_test(&mut exec, create_wlantap_config());
+        let (mut sender, mut receiver) = mpsc::channel(1);
+        let svc = app::client::connect_to_service::<wlanstack_dev_svc::DeviceServiceMarker>()
+            .expect("Failed to connect to wlanstack_dev_svc");
+
+        let resp = helper
+            .run(&mut exec, 1.seconds(), "wlanstack_dev_svc set_country", |_| {}, svc.list_phys())
+            .unwrap();
+        assert!(resp.phys.len() > 0, "WLAN PHY device is created but ListPhys returned empty.");
+        let phy_id = resp.phys[0].phy_id;
+        let alpha2 = fake_alpha2();
+        let mut req = wlanstack_dev_svc::SetCountryRequest { phy_id, alpha2: alpha2.clone() };
+
+        // Employ a future to make sure this test does not end before WlantanPhyEvent is captured.
+        let set_country_fut = set_country_helper(&mut receiver, &svc, &mut req);
+        pin_mut!(set_country_fut);
+
+        let _result = helper.run(
+            &mut exec,
+            1.seconds(),
+            "wlanstack_dev_svc set_country",
+            |event| {
+                match event {
+                    wlantap::WlantapPhyEvent::SetCountry { args } => {
+                        //  Confirm what was sent down was what was received.
+                        assert_eq!(args.alpha2, alpha2);
+                        sender
+                            .try_send(())
+                            .expect("test_set_country confirmed matching alpha2 string");
+                    }
+                    _ => {}
+                }
+            },
+            set_country_fut,
+        ).expect("set_country() failed");
+    }
+
+    async fn set_country_helper<'a>(
+        receiver: &'a mut mpsc::Receiver<()>,
+        svc: &'a wlanstack_dev_svc::DeviceServiceProxy,
+        req: &'a mut wlanstack_dev_svc::SetCountryRequest,
+    ) -> Result<(), failure::Error> {
+        let status = await!(svc.set_country(req));
+        assert_eq!(status.unwrap(), fuchsia_zircon_sys::ZX_OK);
+        await!(receiver.next()).expect("error receiving set_country_helper mpsc message");
+        Ok(())
     }
 
     fn clear_ssid_and_ensure_iface_gone() {
@@ -703,6 +760,12 @@ mod simulation_tests {
 
         phy.rx(0, &mut buf.iter().cloned(), &mut create_rx_info(&CHANNEL))?;
         Ok(())
+    }
+
+    fn fake_alpha2() -> [u8; 2] {
+        let mut alpha2: [u8; 2] = [0, 0];
+        alpha2.copy_from_slice("RS".as_bytes());
+        alpha2
     }
 
     fn run_test<F>(name: &str, f: F) -> bool

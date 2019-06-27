@@ -455,6 +455,7 @@ void brcmf_free_net_device_vif(struct net_device* ndev);
 
 zx_status_t brcmf_phy_create_iface(void* ctx, const wlanphy_impl_create_iface_req_t* req,
                                    uint16_t* out_iface_id);
+zx_status_t brcmf_phy_set_country(void* ctx, const wlanphy_country_t* country);
 void brcmf_cfg80211_rx(struct brcmf_if* ifp, struct brcmf_netbuf* packet);
 
 // TODO: Move to core.h

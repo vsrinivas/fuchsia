@@ -150,6 +150,10 @@ pub async fn serve_device_requests(
                     .unwrap_or_else(|e| error!("error registering a device watcher: {}", e));
                 Ok(())
             }
+            DeviceServiceRequest::SetCountry { req, responder } => {
+                let status = await!(set_country(&phys, req));
+                responder.send(status.into_raw())
+            }
         }?;
     }
     Ok(())
@@ -251,6 +255,23 @@ fn query_iface(ifaces: &IfaceMap, id: u16) -> Result<fidl_svc::QueryIfaceRespons
     Ok(fidl_svc::QueryIfaceResponse { role, id, dev_path, mac_addr, phy_id, phy_assigned_id })
 }
 
+async fn set_country(phys: &PhyMap, req: fidl_svc::SetCountryRequest) -> zx::Status {
+    let phy_id = req.phy_id;
+    let phy = match phys.get(&req.phy_id) {
+        None => return zx::Status::NOT_FOUND,
+        Some(p) => p,
+    };
+
+    let mut phy_req = fidl_wlan_dev::SetCountryRequest { alpha2: req.alpha2 };
+    match await!(phy.proxy.set_country(&mut phy_req)) {
+        Ok(status) => zx::Status::from_raw(status),
+        Err(e) => {
+            error!("Error sending SetCountry set_country request to phy #{}: {}", phy_id, e);
+            zx::Status::INTERNAL
+        }
+    }
+}
+
 async fn create_iface<'a>(
     iface_counter: &'a IfaceCounter,
     phys: &'a PhyMap,
@@ -258,6 +279,7 @@ async fn create_iface<'a>(
 ) -> Result<NewIface, zx::Status> {
     let phy_id = req.phy_id;
     let phy = phys.get(&req.phy_id).ok_or(zx::Status::NOT_FOUND)?;
+
     let phy_info = await!(phy.proxy.query())
         .map_err(|e| {
             error!("error sending query request to phy #{}: {}", phy_id, e);
@@ -396,6 +418,7 @@ mod tests {
     use fidl_fuchsia_wlan_sme as fidl_sme;
     use fuchsia_async as fasync;
     use fuchsia_wlan_dev as wlan_dev;
+    use fuchsia_zircon as zx;
     use futures::channel::mpsc;
     use futures::task::Poll;
     use pin_utils::pin_mut;
@@ -896,6 +919,87 @@ mod tests {
         assert_eq!(zx::Status::NOT_SUPPORTED, super::get_ap_sme(&iface_map, 10, server));
     }
 
+    #[test]
+    fn test_set_country() {
+        // Setup environment
+        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
+        let (phy_map, _phy_map_events) = PhyMap::new();
+        let phy_map = Arc::new(phy_map);
+        let (phy, mut phy_stream) = fake_phy("/dev/null");
+        let phy_id = 10u16;
+        phy_map.insert(phy_id, phy);
+        let alpha2 = fake_alpah2();
+
+        // Initiate a QueryPhy request. The returned future should not be able
+        // to produce a result immediately
+        // Issue service.fidl::SetCountryRequest()
+        let req_msg = fidl_svc::SetCountryRequest { phy_id, alpha2: alpha2.clone() };
+        let req_fut = super::set_country(&phy_map, req_msg);
+        pin_mut!(req_fut);
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut req_fut));
+
+        let (req, responder) = match exec.run_until_stalled(&mut phy_stream.next()) {
+            Poll::Ready(Some(Ok(PhyRequest::SetCountry { req, responder }))) => (req, responder),
+            _ => panic!("phy_stream returned unexpected result"),
+        };
+        assert_eq!(req.alpha2, alpha2.clone());
+
+        // Pretend to be a WLAN PHY to return the result.
+        let resp = zx::Status::OK.into_raw();
+        responder.send(resp).expect("failed to send the response to SetCountry");
+
+        // req_fut should have completed by now. Test the result.
+        let status = match exec.run_until_stalled(&mut req_fut) {
+            Poll::Ready(status) => status,
+            other => panic!("req_fut returned unexpected result: {:?}", other),
+        };
+        assert_eq!(status, zx::Status::OK);
+    }
+
+    #[test]
+    fn test_set_country_failure() {
+        // Setup environment
+        let mut exec = fasync::Executor::new().expect("Failed to create an executor");
+        let (phy_map, _phy_map_events) = PhyMap::new();
+        let phy_map = Arc::new(phy_map);
+        let (phy, mut phy_stream) = fake_phy("/dev/null");
+        let phy_id = 10u16;
+        phy_map.insert(phy_id, phy);
+        let alpha2 = fake_alpah2();
+
+        // Initiate a QueryPhy request. The returned future should not be able
+        // to produce a result immediately
+        // Issue service.fidl::SetCountryRequest()
+        let req_msg = fidl_svc::SetCountryRequest { phy_id, alpha2: alpha2.clone() };
+        let req_fut = super::set_country(&phy_map, req_msg);
+        pin_mut!(req_fut);
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut req_fut));
+
+        let (req, responder) = match exec.run_until_stalled(&mut phy_stream.next()) {
+            Poll::Ready(Some(Ok(PhyRequest::SetCountry { req, responder }))) => (req, responder),
+            _ => panic!("phy_stream returned unexpected result"),
+        };
+        assert_eq!(req.alpha2, alpha2.clone());
+
+        // Failure case #1: WLAN PHY not responding
+        let _ = match exec.run_until_stalled(&mut req_fut) {
+            Poll::Ready(status) => {
+                panic!("responder did not respond. Not supposed to receive a status: {:?}", status);
+            }
+            _ => (),
+        };
+
+        // Failure case #2: WLAN PHY has not implemented the feature.
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut req_fut));
+        let resp = zx::Status::NOT_SUPPORTED.into_raw();
+        responder.send(resp).expect("failed to send the response to SetCountry");
+        let status = match exec.run_until_stalled(&mut req_fut) {
+            Poll::Ready(status) => status,
+            other => panic!("req_fut returned unexpected result: {:?}", other),
+        };
+        assert_eq!(status, zx::Status::NOT_SUPPORTED);
+    }
+
     fn fake_destroy_iface_env(phy_map: &mut PhyMap, iface_map: &mut IfaceMap) -> PhyRequestStream {
         let (phy, phy_stream) = fake_phy("/dev/null");
         phy_map.insert(10, phy);
@@ -1012,5 +1116,11 @@ mod tests {
             password: vec![],
             radio_cfg: RadioConfig::new(Phy::Ht, Cbw::Cbw20, 6).to_fidl(),
         }
+    }
+
+    fn fake_alpah2() -> [u8; 2] {
+        let mut alpha2: [u8; 2] = [0, 0];
+        alpha2.copy_from_slice("MX".as_bytes());
+        alpha2
     }
 }

@@ -55,6 +55,7 @@ class WlanPhy {
     zx_status_t Query(wlanphy_impl_info_t* info);
     zx_status_t CreateIface(const wlanphy_impl_create_iface_req_t* req, uint16_t* out_iface_id);
     zx_status_t DestroyIface(uint16_t id);
+    zx_status_t SetCountry(const wlanphy_country_t* country);
 
     std::unique_ptr<Device> device_;
     // `zx_device_` owns this WlanPhy instance; thus this pointer is unowned.

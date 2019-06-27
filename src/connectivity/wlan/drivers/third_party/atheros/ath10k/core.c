@@ -2325,10 +2325,20 @@ ret:
     return status;
 }
 
+static zx_status_t ath10k_core_set_country(void* ctx, const wlanphy_country_t* country) {
+    if (country == NULL) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    ath10k_err("ath10k_core_set_country() not implemented\n");
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
 static wlanphy_impl_protocol_ops_t wlanphy_ops = {
     .query = ath10k_core_phy_query,
     .create_iface = ath10k_core_create_iface,
     .destroy_iface = ath10k_core_destroy_iface,
+    .set_country = ath10k_core_set_country,
 };
 
 zx_status_t ath10k_core_add_phy_interface(struct ath10k* ar, zx_device_t* dev) {

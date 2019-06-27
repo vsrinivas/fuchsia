@@ -23,6 +23,17 @@ struct WlanphyImplInfo {
     ddk.hw.wlan.wlaninfo.WlanInfo wlan_info;
 };
 
+const uint8 WLANPHY_ALPHA2_LEN = 2;
+
+[Packed]
+union WlanphyCountry {
+    /// ISO Alpha-2 takes two octet alphabet characters.
+    /// This needs to be expanded if at least one WLAN device driver or firmware
+    /// requires more than two octets.
+    array<uint8>:WLANPHY_ALPHA2_LEN alpha2;
+    uint16 val;
+};
+
 [Layout = "ddk-protocol"]
 protocol WlanphyImpl {
     /// Get information about the capabilities of the physical device.
@@ -36,4 +47,7 @@ protocol WlanphyImpl {
 
     /// Destroy the interface with the matching id.
     DestroyIface(uint16 iface_id) -> (zx.status s);
+
+    /// Set country with a WlanphyCountry
+    SetCountry(WlanphyCountry country) -> (zx.status s);
 };

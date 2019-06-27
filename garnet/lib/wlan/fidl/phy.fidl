@@ -100,10 +100,17 @@ struct DestroyIfaceResponse {
     int32 status;
 };
 
+/// The country code for a target WLAN PHY device.
+/// alpha2 is ISO 3166-1 code to indicate a country. eg. AF for Afghanistan.
+struct SetCountryRequest {
+    array<byte>:2 alpha2;
+};
+
 protocol Phy {
     Query() -> (QueryResponse resp);
     CreateIface(CreateIfaceRequest req) -> (CreateIfaceResponse resp);
     DestroyIface(DestroyIfaceRequest req) -> (DestroyIfaceResponse resp);
+    SetCountry(SetCountryRequest req) -> (int32 status);
 };
 
 // Temporary interface for bridging between the devhost-owned channel model and
