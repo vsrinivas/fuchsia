@@ -22,5 +22,6 @@ group("dart_unittests") {
   testonly = true
   deps = [
     "bin:dart_unittests",
+    "session_shells:dart_unittests",
   ]
 }

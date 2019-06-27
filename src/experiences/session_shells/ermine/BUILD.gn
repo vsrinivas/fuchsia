@@ -6,6 +6,7 @@ import("//build/config.gni")
 import("//build/fidl/fidl.gni")
 import("//build/package.gni")
 import("//peridot/build/modular_config/modular_config.gni")
+import("//topaz/runtime/dart/flutter_test.gni")
 import("//topaz/runtime/flutter_runner/flutter_app.gni")
 
 flutter_app("ermine") {
@@ -61,13 +62,13 @@ dart_library("ermine_library") {
     "src/widgets/fullscreen_story.dart",
     "src/widgets/remove_button_target_widget.dart",
     "src/widgets/status.dart",
+    "src/widgets/status_graph_visualizer.dart",
+    "src/widgets/status_progress_bar_visualizer.dart",
+    "src/widgets/status_tick_bar_visualizer.dart",
     "src/widgets/story_widget.dart",
     "src/widgets/tile_chrome.dart",
     "src/widgets/tile_sizer.dart",
     "src/widgets/tile_tab.dart",
-    "src/widgets/status_graph_visualizer.dart",
-    "src/widgets/status_progress_bar_visualizer.dart",
-    "src/widgets/status_tick_bar_visualizer.dart"
   ]
 
   deps = [
@@ -146,5 +147,16 @@ config_data("ermine_fonts") {
 
   outputs = [
     "fonts/{{source_file_part}}",
+  ]
+}
+
+flutter_test("ermine_unittests") {
+  sources = [
+    "ermine_test.dart",
+  ]
+
+  deps = [
+    ":ermine_library",
+    "//third_party/dart-pkg/pub/test",
   ]
 }
