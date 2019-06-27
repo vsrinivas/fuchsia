@@ -10,7 +10,7 @@ To test that factory items are processed correctly, you need to add a BOOTFS_FAC
 item to the boot ZBI. Adding any file should work for this test as no processing
 of the payload occurs here:
 ```
-$ scripts/build-zircon-x64 &&
+$ fx set bringup.x64 && fx build &&
   build-gcc/tools/zbi -o build-gcc/x64.zbi build-gcc/x64.zbi \
     -T BOOTFS_FACTORY README.md &&
   scripts/run-zircon-x64 -k -c userboot=bin/bootsvc \
@@ -20,9 +20,9 @@ $ scripts/build-zircon-x64 &&
 To test that crashlogs are being added to bootfs, you need to add a CRASHLOG item
 to the boot zbi.  For example, to add the contents of README.md as the crashlog:
 ```
-$ scripts/build-zircon-x64 &&
+$ fx set bringup.x64 && fx build &&
   build-gcc/tools/zbi -o build-gcc/x64.zbi build-gcc/x64.zbi \
     -T CRASHLOG README.md &&
-  scripts/run-zircon-x64 -k -c userboot=bin/bootsvc \
+  fx run -k -c userboot=bin/bootsvc \
     -c bootsvc.next=bin/bootsvc-integration-test,testargument
 ```
