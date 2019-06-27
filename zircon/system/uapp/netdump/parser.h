@@ -26,6 +26,7 @@
 namespace netdump::parser {
 
 // ANSI escape sequences used for highlighting.
+constexpr auto ANSI_BOLD = "\033[1m";
 constexpr auto ANSI_HIGHLIGHT = "\033[1;30;43m";
 constexpr auto ANSI_HIGHLIGHT_ERROR = "\033[4;31;43m";
 constexpr auto ANSI_RESET = "\033[0m";
@@ -113,6 +114,6 @@ protected: // Protected instead of private for testing.
 
 // Write a human-readable description of the parser syntax to `output`,
 // such as for display on screen. No significant logic should be performed.
-void parser_syntax(std::ostream output);
+void parser_syntax(std::ostream* output);
 
 } // namespace netdump::parser

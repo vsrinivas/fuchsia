@@ -4,6 +4,7 @@
 
 #include "parser.h"
 
+#include <iostream>
 #include <sstream>
 
 #include <lib/mock-function/mock-function.h>
@@ -256,6 +257,12 @@ public:
 
 TEST(NetdumpParserTests, HighlightErrorTest) {
     TestParser(Tokenizer{}).highlight_error_test();
+}
+
+TEST(NetdumpParserTests, SyntaxDisplayTest) {
+    // Manual inspection only.
+    // TODO(xianglong): Remove once filter syntax usage display is integrated.
+    parser_syntax(&std::cerr);
 }
 
 } // namespace netdump::parser::test
