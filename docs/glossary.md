@@ -197,6 +197,8 @@ runtime configuration, services and directories it receives in its
 In [Components v2](#components-v2), a component manifest is a file with a `.cm`
 extension, that encodes a [component declaration](#component-declaration).
 
+-   [Component manifests v2](/docs/the-book/components/component_manifests.md)
+
 #### **Component Manifest Facet**
 
 Additional metadata that is carried in a
