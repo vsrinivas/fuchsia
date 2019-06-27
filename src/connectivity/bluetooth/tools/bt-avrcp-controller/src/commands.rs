@@ -174,6 +174,9 @@ gen_commands! {
     Cmd {
         AvcCommand = ("key", ["command"], "send an AVC passthrough keypress event"),
         GetMediaAttributes = ("get-media", [], "gets currently playing media attributes"),
+        SupportedEvents = ("get-supported-events", [], "gets the supported events of the target"),
+        SendRawVendorCommand = ("send-raw-vendor-command", ["pdu_id", "payload"], "send a raw vendor AVC command"),
+        IsConnected = ("connection-status", [], "checks if the current device is current connected"),
         Help = ("help", [], "This message"),
         Exit = ("exit", [], "Close REPL"),
         Quit = ("quit", [], "Close REPL"),
@@ -289,5 +292,20 @@ mod tests {
         assert!(cmdhelper.complete("ke", 0).unwrap().1.contains(&"key".to_string()));
         assert!(cmdhelper.complete("get", 0).unwrap().1.contains(&"get-media".to_string()));
         assert!(cmdhelper.complete("key ex", 0).unwrap().1.contains(&"key exit".to_string()));
+        assert!(cmdhelper
+            .complete("conne", 0)
+            .unwrap()
+            .1
+            .contains(&"connection-status".to_string()));
+        assert!(cmdhelper
+            .complete("send-ra", 0)
+            .unwrap()
+            .1
+            .contains(&"send-raw-vendor-command".to_string()));
+        assert!(cmdhelper
+            .complete("get-s", 0)
+            .unwrap()
+            .1
+            .contains(&"get-supported-events".to_string()));
     }
 }

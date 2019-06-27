@@ -20,6 +20,7 @@ use {
         channel::mpsc::{channel, SendError},
         select, FutureExt, Sink, SinkExt, Stream, StreamExt, TryStreamExt,
     },
+    hex::FromHex,
     pin_utils::pin_mut,
     rustyline::{error::ReadlineError, CompletionType, Config, EditMode, Editor},
     std::thread,
@@ -76,11 +77,100 @@ async fn get_media<'a>(
     }
 }
 
+async fn get_events_supported<'a>(
+    _args: &'a [&'a str],
+    controller: &'a ControllerExtProxy,
+) -> Result<String, Error> {
+    match await!(controller.get_events_supported())? {
+        Ok(events) => Ok(format!("Supported events: {:#?}", events)),
+        Err(e) => Ok(format!("Error fetching supported events: {:?}", e)),
+    }
+}
+
+async fn send_raw_vendor<'a>(
+    args: &'a [&'a str],
+    controller: &'a ControllerExtProxy,
+) -> Result<String, Error> {
+    if args.len() < 2 {
+        return Ok(format!("usage: {}", Cmd::SendRawVendorCommand.cmd_help()));
+    }
+
+    match parse_raw_packet(args) {
+        Ok((pdu_id, buf)) => {
+            eprintln!("Sending {:#?}", buf);
+
+            match await!(controller.send_raw_vendor_dependent_command(pdu_id, &mut buf.into_iter()))?
+            {
+                Ok(response) => Ok(format!("response: {:#?}", response)),
+                Err(e) => Ok(format!("Error sending raw dependent command: {:?}", e)),
+            }
+        }
+        Err(message) => Ok(message),
+    }
+}
+
+fn parse_raw_packet(args: &[&str]) -> Result<(u8, Vec<u8>), String> {
+    let pdu_id;
+
+    if args[0].starts_with("0x") || args[0].starts_with("0X") {
+        if let Ok(hex) = Vec::from_hex(&args[0][2..]) {
+            if hex.len() < 1 {
+                return Err(format!("invalid pdu_id {}", args[0]));
+            }
+            pdu_id = hex[0];
+        } else {
+            return Err(format!("invalid pdu_id {}", args[0]));
+        }
+    } else {
+        if let Ok(b) = args[0].parse::<u8>() {
+            pdu_id = b;
+        } else {
+            return Err(format!("invalid pdu_id {}", args[0]));
+        }
+    }
+
+    let byte_string = args[1..].join(" ").replace(",", " ");
+
+    let bytes = byte_string.split(" ");
+
+    let mut buf = vec![];
+    for b in bytes {
+        let b = b.trim();
+        if b.eq("") {
+            continue;
+        } else if b.starts_with("0x") || b.starts_with("0X") {
+            if let Ok(hex) = Vec::from_hex(&b[2..]) {
+                buf.extend_from_slice(&hex[..]);
+            } else {
+                return Err(format!("invalid hex string at {}", b));
+            }
+        } else {
+            if let Ok(hex) = Vec::from_hex(&b[..]) {
+                buf.extend_from_slice(&hex[..]);
+            } else {
+                return Err(format!("invalid hex string at {}", b));
+            }
+        }
+    }
+
+    Ok((pdu_id, buf))
+}
+
+async fn is_connected<'a>(
+    _args: &'a [&'a str],
+    controller: &'a ControllerExtProxy,
+) -> Result<String, Error> {
+    match await!(controller.is_connected()) {
+        Ok(status) => Ok(format!("Is Connected: {}", status)),
+        Err(e) => Ok(format!("Error fetching supported events: {:?}", e)),
+    }
+}
+
 /// Handle a single raw input command from a user and indicate whether the command should
 /// result in continuation or breaking of the read evaluate print loop.
 async fn handle_cmd<'a>(
     controller: &'a ControllerProxy,
-    _test_controller: &'a ControllerExtProxy,
+    test_controller: &'a ControllerExtProxy,
     line: String,
 ) -> Result<ReplControl, Error> {
     let components: Vec<_> = line.trim().split_whitespace().collect();
@@ -89,6 +179,9 @@ async fn handle_cmd<'a>(
         let res = match cmd {
             Ok(Cmd::AvcCommand) => await!(send_passthrough(args, &controller)),
             Ok(Cmd::GetMediaAttributes) => await!(get_media(args, &controller)),
+            Ok(Cmd::SendRawVendorCommand) => await!(send_raw_vendor(args, &test_controller)),
+            Ok(Cmd::SupportedEvents) => await!(get_events_supported(args, &test_controller)),
+            Ok(Cmd::IsConnected) => await!(is_connected(args, &test_controller)),
             Ok(Cmd::Help) => Ok(Cmd::help_msg().to_string()),
             Ok(Cmd::Exit) | Ok(Cmd::Quit) => return Ok(ReplControl::Break),
             Err(_) => Ok(format!("\"{}\" is not a valid command", raw_cmd)),
@@ -245,4 +338,78 @@ async fn main() -> Result<(), Error> {
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_raw_packet_parsing_01() {
+        assert_eq!(parse_raw_packet(&["0x40", "0xaaaa"]), Ok((0x40, vec![0xaa, 0xaa])));
+    }
+    #[test]
+    fn test_raw_packet_parsing_02() {
+        assert_eq!(parse_raw_packet(&["0x40", "0xaa", "0xaa"]), Ok((0x40, vec![0xaa, 0xaa])));
+    }
+    #[test]
+    fn test_raw_packet_parsing_03() {
+        assert_eq!(
+            parse_raw_packet(&["0x40", "0xAa", "0XaA", "0x1234"]),
+            Ok((0x40, vec![0xaa, 0xaa, 0x12, 0x34]))
+        );
+    }
+    #[test]
+    fn test_raw_packet_parsing_04() {
+        assert_eq!(
+            parse_raw_packet(&["40", "0xaa", "0xaa", "0x1234"]),
+            Ok((40, vec![0xaa, 0xaa, 0x12, 0x34]))
+        );
+    }
+    #[test]
+    fn test_raw_packet_parsing_05() {
+        assert_eq!(
+            parse_raw_packet(&["40", "aa", "aa", "1234"]),
+            Ok((40, vec![0xaa, 0xaa, 0x12, 0x34]))
+        );
+    }
+    #[test]
+    fn test_raw_packet_parsing_06() {
+        assert_eq!(parse_raw_packet(&["40", "aa,aa,1234"]), Ok((40, vec![0xaa, 0xaa, 0x12, 0x34])));
+    }
+    #[test]
+    fn test_raw_packet_parsing_07() {
+        assert_eq!(
+            parse_raw_packet(&["40", "0xaa, 0xaa,    0x1234"]),
+            Ok((40, vec![0xaa, 0xaa, 0x12, 0x34]))
+        );
+    }
+    #[test]
+    fn test_raw_packet_parsing_08_err_pdu_overflow() {
+        assert_eq!(
+            parse_raw_packet(&["300", "0xaa, 0xaa,    0x1234"]),
+            Err("invalid pdu_id 300".to_string())
+        );
+    }
+    #[test]
+    fn test_raw_packet_parsing_09_err_invalid_hex_long() {
+        assert_eq!(
+            parse_raw_packet(&["40", "0xzz, 0xaa,    0x1234"]),
+            Err("invalid hex string at 0xzz".to_string())
+        );
+    }
+    #[test]
+    fn test_raw_packet_parsing_10_err_invalid_hex_short() {
+        assert_eq!(
+            parse_raw_packet(&["40", "zz, 0xaa, 0xqqqq"]),
+            Err("invalid hex string at zz".to_string())
+        );
+    }
+    #[test]
+    fn test_raw_packet_parsing_11_err_invalid_hex() {
+        assert_eq!(
+            parse_raw_packet(&["40", "ab, 0xaa, 0xqqqq"]),
+            Err("invalid hex string at 0xqqqq".to_string())
+        );
+    }
 }
