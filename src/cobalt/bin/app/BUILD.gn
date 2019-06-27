@@ -83,12 +83,12 @@ package("cobalt") {
   resources = [
     {
       # Cobalt 1.0 analyzer public key.
-      path = rebase_path("//third_party/cobalt/keys/analyzer_public_key.tink")
+      path = rebase_path("//third_party/cobalt/keys/analyzer_public.cobalt_key")
       dest = "keys/analyzer_public"
     },
     {
       # Cobalt 1.0 shuffler public key.
-      path = rebase_path("//third_party/cobalt/keys/shuffler_public_key.tink")
+      path = rebase_path("//third_party/cobalt/keys/shuffler_public.cobalt_key")
       dest = "keys/shuffler_public"
     },
     {

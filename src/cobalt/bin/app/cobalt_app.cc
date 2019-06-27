@@ -86,11 +86,11 @@ CobaltApp::CobaltApp(
           max_bytes_per_observation_store, kObservationStorePath, "V1",
           use_memory_observation_store)),
       encrypt_to_analyzer_(
-          util::EncryptedMessageMaker::MakeHybridTinkForObservations(
+          util::EncryptedMessageMaker::MakeForObservations(
               ReadPublicKeyPem(kAnalyzerTinkPublicKeyPath))
               .ValueOrDie()),
       encrypt_to_shuffler_(
-          util::EncryptedMessageMaker::MakeHybridTinkForEnvelopes(
+          util::EncryptedMessageMaker::MakeForEnvelopes(
               ReadPublicKeyPem(kShufflerTinkPublicKeyPath))
               .ValueOrDie()),
 
