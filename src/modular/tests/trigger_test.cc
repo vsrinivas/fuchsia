@@ -2,14 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/modular/testing/cpp/fidl.h>
 #include <lib/message_queue/cpp/message_sender_client.h>
 #include <lib/modular_test_harness/cpp/fake_agent.h>
 #include <lib/modular_test_harness/cpp/fake_module.h>
 #include <lib/modular_test_harness/cpp/test_harness_fixture.h>
-#include <sdk/lib/sys/cpp/component_context.h>
-#include <sdk/lib/sys/cpp/service_directory.h>
 #include <src/lib/fxl/logging.h>
 
 namespace {
@@ -23,8 +20,7 @@ class TriggerTest : public modular::testing::TestHarnessFixture {
     builder_.InterceptComponent(
         fake_module_->GetOnCreateHandler(),
         {.url = fake_module_url_,
-         .sandbox_services =
-             modular::testing::FakeModule::GetSandboxServices()});
+         .sandbox_services = modular::testing::FakeModule::GetSandboxServices()});
 
     // Intercept |fake_agent_|
     fake_agent_ = std::make_unique<modular::testing::FakeAgent>();
@@ -32,22 +28,19 @@ class TriggerTest : public modular::testing::TestHarnessFixture {
     builder_.InterceptComponent(
         fake_agent_->GetOnCreateHandler(),
         {.url = fake_agent_url_,
-         .sandbox_services =
-             modular::testing::FakeAgent::GetSandboxServices()});
+         .sandbox_services = modular::testing::FakeAgent::GetSandboxServices()});
 
     builder_.BuildAndRun(test_harness());
 
     // Start a mod in a story.
-    modular::testing::AddModToStory(
-        test_harness(), "story_name", "mod_name",
-        fuchsia::modular::Intent{.handler = fake_module_url_});
+    modular::testing::AddModToStory(test_harness(), "story_name", "mod_name",
+                                    fuchsia::modular::Intent{.handler = fake_module_url_});
     RunLoopUntil([&] { return fake_module_->is_running(); });
 
     // Start an agent.
     fuchsia::sys::ServiceProviderPtr agent_services;
     fake_module_->modular_component_context()->ConnectToAgent(
-        fake_agent_url_, agent_services.NewRequest(),
-        agent_controller_.NewRequest());
+        fake_agent_url_, agent_services.NewRequest(), agent_controller_.NewRequest());
     RunLoopUntil([&] { return fake_agent_->is_running(); });
   }
 
@@ -64,8 +57,8 @@ TEST_F(TriggerTest, AgentWakesUpOnNewMessage) {
   // Create a message queue and schedule a task to be run on receiving a
   // message on it.
   fuchsia::modular::MessageQueuePtr msg_queue;
-  fake_agent_->modular_component_context()->ObtainMessageQueue(
-      "Trigger Queue", msg_queue.NewRequest());
+  fake_agent_->modular_component_context()->ObtainMessageQueue("Trigger Queue",
+                                                               msg_queue.NewRequest());
   fuchsia::modular::TaskInfo task_info;
   task_info.task_id = "message_queue_message";
   task_info.trigger_condition.set_message_on_queue("Trigger Queue");
@@ -73,8 +66,7 @@ TEST_F(TriggerTest, AgentWakesUpOnNewMessage) {
 
   bool schedule_task_complete = false;
   fake_agent_->agent_context()->ScheduleTaskWithCompletion(
-      std::move(task_info),
-      [&](bool finished) { schedule_task_complete = finished; });
+      std::move(task_info), [&](bool finished) { schedule_task_complete = finished; });
 
   // Wait for the schedule task to complete.
   RunLoopUntil([&] { return schedule_task_complete; });
@@ -83,8 +75,7 @@ TEST_F(TriggerTest, AgentWakesUpOnNewMessage) {
   // task.
   bool agent_received_message = false;
   fake_agent_->set_on_run_task(
-      [&](std::string task_id,
-          fuchsia::modular::Agent::RunTaskCallback callback) {
+      [&](std::string task_id, fuchsia::modular::Agent::RunTaskCallback callback) {
         if (task_id == "message_queue_message") {
           agent_received_message = true;
         }
@@ -99,8 +90,7 @@ TEST_F(TriggerTest, AgentWakesUpOnNewMessage) {
   // trigger it to start.
   modular::MessageSenderClient message_sender;
   msg_queue->GetToken([&](std::string token) {
-    fake_module_->modular_component_context()->GetMessageSender(
-        token, message_sender.NewRequest());
+    fake_module_->modular_component_context()->GetMessageSender(token, message_sender.NewRequest());
     message_sender.Send("Time to wake up...");
   });
 
@@ -112,8 +102,8 @@ TEST_F(TriggerTest, AgentWakesUpOnExplicitMessageQueueDelete) {
   // The message queue that is used to verify deletion triggers from explicit
   // deletes.
   fuchsia::modular::MessageQueuePtr explicit_msg_queue;
-  fake_module_->modular_component_context()->ObtainMessageQueue(
-      "explicit_test", explicit_msg_queue.NewRequest());
+  fake_module_->modular_component_context()->ObtainMessageQueue("explicit_test",
+                                                                explicit_msg_queue.NewRequest());
 
   // |schedule_task_complete| is used to ensure we register the deletion watcher
   // before calling delete on the message queue.
@@ -128,8 +118,7 @@ TEST_F(TriggerTest, AgentWakesUpOnExplicitMessageQueueDelete) {
     task_info.trigger_condition.set_queue_deleted(token);
     task_info.persistent = true;
     fake_agent_->agent_context()->ScheduleTaskWithCompletion(
-        std::move(task_info),
-        [&](bool finished) { schedule_task_complete = finished; });
+        std::move(task_info), [&](bool finished) { schedule_task_complete = finished; });
   });
 
   // Wait for the schedule task to complete.
@@ -139,8 +128,7 @@ TEST_F(TriggerTest, AgentWakesUpOnExplicitMessageQueueDelete) {
   // task.
   bool agent_proccessed_queue_deletion = false;
   fake_agent_->set_on_run_task(
-      [&](std::string task_id,
-          fuchsia::modular::Agent::RunTaskCallback callback) {
+      [&](std::string task_id, fuchsia::modular::Agent::RunTaskCallback callback) {
         if (task_id == explicit_msg_queue_token) {
           agent_proccessed_queue_deletion = true;
         }
@@ -151,8 +139,7 @@ TEST_F(TriggerTest, AgentWakesUpOnExplicitMessageQueueDelete) {
   agent_controller_.Unbind();
   RunLoopUntil([&] { return !fake_agent_->is_running(); });
 
-  fake_module_->modular_component_context()->DeleteMessageQueue(
-      "explicit_test");
+  fake_module_->modular_component_context()->DeleteMessageQueue("explicit_test");
 
   RunLoopUntil([&] { return agent_proccessed_queue_deletion; });
 }
@@ -163,8 +150,8 @@ TEST_F(TriggerTest, AgentWakesUpOnImplicitMessageQueueDelete) {
   // The message queue that is used to verify deletion triggers from explicit
   // deletes.
   fuchsia::modular::MessageQueuePtr implicit_msg_queue;
-  fake_module_->modular_component_context()->ObtainMessageQueue(
-      "implicit_test", implicit_msg_queue.NewRequest());
+  fake_module_->modular_component_context()->ObtainMessageQueue("implicit_test",
+                                                                implicit_msg_queue.NewRequest());
 
   // |schedule_task_complete| is used to ensure we register the deletion watcher
   // before calling delete on the message queue.
@@ -180,8 +167,7 @@ TEST_F(TriggerTest, AgentWakesUpOnImplicitMessageQueueDelete) {
     task_info.trigger_condition.set_queue_deleted(token);
     task_info.persistent = true;
     fake_agent_->agent_context()->ScheduleTaskWithCompletion(
-        std::move(task_info),
-        [&](bool finished) { schedule_task_complete = finished; });
+        std::move(task_info), [&](bool finished) { schedule_task_complete = finished; });
   });
 
   // Wait for the schedule task to complete.
@@ -191,8 +177,7 @@ TEST_F(TriggerTest, AgentWakesUpOnImplicitMessageQueueDelete) {
   // task.
   bool agent_proccessed_queue_deletion = false;
   fake_agent_->set_on_run_task(
-      [&](std::string task_id,
-          fuchsia::modular::Agent::RunTaskCallback callback) {
+      [&](std::string task_id, fuchsia::modular::Agent::RunTaskCallback callback) {
         if (task_id == implicit_msg_queue_token) {
           agent_proccessed_queue_deletion = true;
         }

@@ -7,9 +7,6 @@
 #include <lib/modular_test_harness/cpp/fake_session_shell.h>
 #include <lib/modular_test_harness/cpp/test_harness_fixture.h>
 #include <peridot/lib/modular_config/modular_config_constants.h>
-#include <sdk/lib/sys/cpp/component_context.h>
-#include <sdk/lib/sys/cpp/service_directory.h>
-#include <sdk/lib/sys/cpp/testing/test_with_environment.h>
 
 #include "gmock/gmock.h"
 
@@ -23,8 +20,7 @@ using fuchsia::modular::ViewIdentifier;
 using testing::IsNull;
 using testing::Not;
 
-constexpr char kFakeModuleUrl[] =
-    "fuchsia-pkg://example.com/FAKE_MODULE_PKG/fake_module.cmx";
+constexpr char kFakeModuleUrl[] = "fuchsia-pkg://example.com/FAKE_MODULE_PKG/fake_module.cmx";
 
 namespace {
 
@@ -40,10 +36,9 @@ class SessionShellTest : public modular::testing::TestHarnessFixture {
   // this is happening. Also, certain tests may want to change this flow.
   void RunHarnessAndInterceptSessionShell() {
     modular::testing::TestHarnessBuilder builder;
-    builder.InterceptSessionShell(
-        fake_session_shell_.GetOnCreateHandler(),
-        {.sandbox_services = {"fuchsia.modular.SessionShellContext",
-                              "fuchsia.modular.PuppetMaster"}});
+    builder.InterceptSessionShell(fake_session_shell_.GetOnCreateHandler(),
+                                  {.sandbox_services = {"fuchsia.modular.SessionShellContext",
+                                                        "fuchsia.modular.PuppetMaster"}});
     builder.BuildAndRun(test_harness());
 
     // Wait for our session shell to start.
@@ -74,16 +69,15 @@ TEST_F(SessionShellTest, GetPackageName) {
 TEST_F(SessionShellTest, GetStoryInfoNonexistentStory) {
   RunHarnessAndInterceptSessionShell();
 
-  fuchsia::modular::StoryProvider* story_provider =
-      fake_session_shell_.story_provider();
+  fuchsia::modular::StoryProvider* story_provider = fake_session_shell_.story_provider();
   ASSERT_TRUE(story_provider != nullptr);
 
   bool tried_get_story_info = false;
-  story_provider->GetStoryInfo(
-      "X", [&tried_get_story_info](fuchsia::modular::StoryInfoPtr story_info) {
-        EXPECT_THAT(story_info, IsNull());
-        tried_get_story_info = true;
-      });
+  story_provider->GetStoryInfo("X",
+                               [&tried_get_story_info](fuchsia::modular::StoryInfoPtr story_info) {
+                                 EXPECT_THAT(story_info, IsNull());
+                                 tried_get_story_info = true;
+                               });
 
   RunLoopUntil([&] { return tried_get_story_info; });
 }
@@ -98,10 +92,9 @@ TEST_F(SessionShellTest, GetLink) {
   fuchsia::modular::LinkPtr session_shell_link;
   session_shell_context->GetLink(session_shell_link.NewRequest());
   bool called_get_link = false;
-  session_shell_link->Get(
-      nullptr, [&called_get_link](std::unique_ptr<fuchsia::mem::Buffer> value) {
-        called_get_link = true;
-      });
+  session_shell_link->Get(nullptr, [&called_get_link](std::unique_ptr<fuchsia::mem::Buffer> value) {
+    called_get_link = true;
+  });
 
   RunLoopUntil([&] { return called_get_link; });
 }
@@ -109,14 +102,12 @@ TEST_F(SessionShellTest, GetLink) {
 TEST_F(SessionShellTest, GetStoriesEmpty) {
   RunHarnessAndInterceptSessionShell();
 
-  fuchsia::modular::StoryProvider* story_provider =
-      fake_session_shell_.story_provider();
+  fuchsia::modular::StoryProvider* story_provider = fake_session_shell_.story_provider();
   ASSERT_TRUE(story_provider != nullptr);
 
   bool called_get_stories = false;
   story_provider->GetStories(
-      nullptr,
-      [&called_get_stories](std::vector<fuchsia::modular::StoryInfo> stories) {
+      nullptr, [&called_get_stories](std::vector<fuchsia::modular::StoryInfo> stories) {
         EXPECT_THAT(stories, testing::IsEmpty());
         called_get_stories = true;
       });
@@ -136,8 +127,7 @@ TEST_F(SessionShellTest, StartAndStopStoryWithExtraInfoMod) {
   svc.set_puppet_master(puppet_master.NewRequest());
   test_harness()->ConnectToModularService(std::move(svc));
 
-  fuchsia::modular::StoryProvider* story_provider =
-      fake_session_shell_.story_provider();
+  fuchsia::modular::StoryProvider* story_provider = fake_session_shell_.story_provider();
   ASSERT_TRUE(story_provider != nullptr);
   const char kStoryId[] = "my_story";
 
@@ -146,8 +136,7 @@ TEST_F(SessionShellTest, StartAndStopStoryWithExtraInfoMod) {
   std::vector<StoryState> sequence_of_story_states;
   modular::testing::SimpleStoryProviderWatcher watcher;
   watcher.set_on_change([&sequence_of_story_states, kStoryId](
-                            StoryInfo story_info, StoryState story_state,
-                            StoryVisibilityState _) {
+                            StoryInfo story_info, StoryState story_state, StoryVisibilityState _) {
     EXPECT_EQ(story_info.id, kStoryId);
     sequence_of_story_states.push_back(story_state);
   });
@@ -174,9 +163,7 @@ TEST_F(SessionShellTest, StartAndStopStoryWithExtraInfoMod) {
   story_master->Enqueue(std::move(commands));
   bool execute_called = false;
   story_master->Execute(
-      [&execute_called](fuchsia::modular::ExecuteResult result) {
-        execute_called = true;
-      });
+      [&execute_called](fuchsia::modular::ExecuteResult result) { execute_called = true; });
   RunLoopUntil([&] { return execute_called; });
 
   // Stop the story. Check that the story went through the correct sequence
@@ -192,8 +179,8 @@ TEST_F(SessionShellTest, StartAndStopStoryWithExtraInfoMod) {
   // having called Stop() is not enough to guarantee seeing all updates.
   RunLoopUntil([&] { return sequence_of_story_states.size() == 4; });
   EXPECT_THAT(sequence_of_story_states,
-              testing::ElementsAre(StoryState::STOPPED, StoryState::RUNNING,
-                                   StoryState::STOPPING, StoryState::STOPPED));
+              testing::ElementsAre(StoryState::STOPPED, StoryState::RUNNING, StoryState::STOPPING,
+                                   StoryState::STOPPED));
 }
 
 TEST_F(SessionShellTest, StoryInfoBeforeAndAfterDelete) {
@@ -207,8 +194,7 @@ TEST_F(SessionShellTest, StoryInfoBeforeAndAfterDelete) {
   svc.set_puppet_master(puppet_master.NewRequest());
   test_harness()->ConnectToModularService(std::move(svc));
 
-  fuchsia::modular::StoryProvider* story_provider =
-      fake_session_shell_.story_provider();
+  fuchsia::modular::StoryProvider* story_provider = fake_session_shell_.story_provider();
   ASSERT_TRUE(story_provider != nullptr);
   const char kStoryId[] = "my_story";
   puppet_master->ControlStory(kStoryId, story_master.NewRequest());
@@ -226,31 +212,27 @@ TEST_F(SessionShellTest, StoryInfoBeforeAndAfterDelete) {
   story_master->Enqueue(std::move(commands));
 
   bool execute_and_get_story_info_called = false;
-  story_master->Execute(
-      [&execute_and_get_story_info_called, kStoryId,
-       story_provider](fuchsia::modular::ExecuteResult result) {
-        // Verify that the newly created story returns something for
-        // GetStoryInfo().
-        story_provider->GetStoryInfo(
-            kStoryId, [&execute_and_get_story_info_called,
-                       kStoryId](fuchsia::modular::StoryInfoPtr story_info) {
-              ASSERT_THAT(story_info, Not(IsNull()));
-              EXPECT_EQ(story_info->id, kStoryId);
-              execute_and_get_story_info_called = true;
-            });
-      });
+  story_master->Execute([&execute_and_get_story_info_called, kStoryId,
+                         story_provider](fuchsia::modular::ExecuteResult result) {
+    // Verify that the newly created story returns something for
+    // GetStoryInfo().
+    story_provider->GetStoryInfo(kStoryId, [&execute_and_get_story_info_called,
+                                            kStoryId](fuchsia::modular::StoryInfoPtr story_info) {
+      ASSERT_THAT(story_info, Not(IsNull()));
+      EXPECT_EQ(story_info->id, kStoryId);
+      execute_and_get_story_info_called = true;
+    });
+  });
   RunLoopUntil([&] { return execute_and_get_story_info_called; });
 
   // Delete the story and confirm that the story info is null now.
   bool delete_called = false;
-  puppet_master->DeleteStory(
-      kStoryId, [&delete_called, kStoryId, story_provider] {
-        story_provider->GetStoryInfo(
-            kStoryId, [](fuchsia::modular::StoryInfoPtr story_info) {
-              EXPECT_THAT(story_info, IsNull());
-            });
-        delete_called = true;
-      });
+  puppet_master->DeleteStory(kStoryId, [&delete_called, kStoryId, story_provider] {
+    story_provider->GetStoryInfo(kStoryId, [](fuchsia::modular::StoryInfoPtr story_info) {
+      EXPECT_THAT(story_info, IsNull());
+    });
+    delete_called = true;
+  });
   RunLoopUntil([&] { return delete_called; });
 }
 
@@ -266,8 +248,7 @@ TEST_F(SessionShellTest, KindOfProtoStoryNotInStoryList) {
   svc.set_puppet_master(puppet_master.NewRequest());
   test_harness()->ConnectToModularService(std::move(svc));
 
-  fuchsia::modular::StoryProvider* story_provider =
-      fake_session_shell_.story_provider();
+  fuchsia::modular::StoryProvider* story_provider = fake_session_shell_.story_provider();
   ASSERT_TRUE(story_provider != nullptr);
 
   const char kStoryId[] = "my_story";
@@ -278,17 +259,16 @@ TEST_F(SessionShellTest, KindOfProtoStoryNotInStoryList) {
   story_master->SetCreateOptions(std::move(story_options));
 
   bool called_get_stories = false;
-  story_master->Execute([&called_get_stories, story_provider](
-                            fuchsia::modular::ExecuteResult result) {
-    // Confirm that even after the story is created, GetStories() returns
-    // empty.
-    story_provider->GetStories(
-        nullptr, [&called_get_stories](
-                     std::vector<fuchsia::modular::StoryInfo> stories) {
-          EXPECT_THAT(stories, testing::IsEmpty());
-          called_get_stories = true;
-        });
-  });
+  story_master->Execute(
+      [&called_get_stories, story_provider](fuchsia::modular::ExecuteResult result) {
+        // Confirm that even after the story is created, GetStories() returns
+        // empty.
+        story_provider->GetStories(
+            nullptr, [&called_get_stories](std::vector<fuchsia::modular::StoryInfo> stories) {
+              EXPECT_THAT(stories, testing::IsEmpty());
+              called_get_stories = true;
+            });
+      });
 
   RunLoopUntil([&] { return called_get_stories; });
 }
@@ -305,8 +285,7 @@ TEST_F(SessionShellTest, AttachesAndDetachesView) {
   svc.set_puppet_master(puppet_master.NewRequest());
   test_harness()->ConnectToModularService(std::move(svc));
 
-  fuchsia::modular::StoryProvider* story_provider =
-      fake_session_shell_.story_provider();
+  fuchsia::modular::StoryProvider* story_provider = fake_session_shell_.story_provider();
   ASSERT_TRUE(story_provider != nullptr);
 
   const char kStoryId[] = "my_story";
@@ -315,8 +294,7 @@ TEST_F(SessionShellTest, AttachesAndDetachesView) {
   std::vector<StoryState> sequence_of_story_states;
   modular::testing::SimpleStoryProviderWatcher watcher;
   watcher.set_on_change([&sequence_of_story_states, kStoryId](
-                            StoryInfo story_info, StoryState story_state,
-                            StoryVisibilityState _) {
+                            StoryInfo story_info, StoryState story_state, StoryVisibilityState _) {
     EXPECT_EQ(story_info.id, kStoryId);
     sequence_of_story_states.push_back(story_state);
   });
@@ -361,8 +339,8 @@ TEST_F(SessionShellTest, AttachesAndDetachesView) {
   RunLoopUntil([&] { return sequence_of_story_states.size() == 4; });
   EXPECT_TRUE(called_detach_view);
   EXPECT_THAT(sequence_of_story_states,
-              testing::ElementsAre(StoryState::STOPPED, StoryState::RUNNING,
-                                   StoryState::STOPPING, StoryState::STOPPED));
+              testing::ElementsAre(StoryState::STOPPED, StoryState::RUNNING, StoryState::STOPPING,
+                                   StoryState::STOPPED));
 }
 
 TEST_F(SessionShellTest, StoryStopDoesntWaitOnDetachView) {
@@ -377,8 +355,7 @@ TEST_F(SessionShellTest, StoryStopDoesntWaitOnDetachView) {
   svc.set_puppet_master(puppet_master.NewRequest());
   test_harness()->ConnectToModularService(std::move(svc));
 
-  fuchsia::modular::StoryProvider* story_provider =
-      fake_session_shell_.story_provider();
+  fuchsia::modular::StoryProvider* story_provider = fake_session_shell_.story_provider();
   ASSERT_TRUE(story_provider != nullptr);
   const char kStoryId[] = "my_story";
 
@@ -387,8 +364,7 @@ TEST_F(SessionShellTest, StoryStopDoesntWaitOnDetachView) {
   std::vector<StoryState> sequence_of_story_states;
   modular::testing::SimpleStoryProviderWatcher watcher;
   watcher.set_on_change([&sequence_of_story_states, kStoryId](
-                            StoryInfo story_info, StoryState story_state,
-                            StoryVisibilityState _) {
+                            StoryInfo story_info, StoryState story_state, StoryVisibilityState _) {
     EXPECT_EQ(story_info.id, kStoryId);
     sequence_of_story_states.push_back(story_state);
   });
@@ -432,7 +408,7 @@ TEST_F(SessionShellTest, StoryStopDoesntWaitOnDetachView) {
   // having called Stop() is not enough to guarantee seeing all updates.
   RunLoopUntil([&] { return sequence_of_story_states.size() == 4; });
   EXPECT_THAT(sequence_of_story_states,
-              testing::ElementsAre(StoryState::STOPPED, StoryState::RUNNING,
-                                   StoryState::STOPPING, StoryState::STOPPED));
+              testing::ElementsAre(StoryState::STOPPED, StoryState::RUNNING, StoryState::STOPPING,
+                                   StoryState::STOPPED));
 }
 }  // namespace

@@ -2,17 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/modular/testing/cpp/fidl.h>
 #include <lib/fsl/vmo/strings.h>
 #include <lib/modular_test_harness/cpp/fake_module.h>
 #include <lib/modular_test_harness/cpp/fake_session_shell.h>
 #include <lib/modular_test_harness/cpp/test_harness_fixture.h>
-#include <sdk/lib/sys/cpp/testing/test_with_environment.h>
 #include <src/lib/fxl/logging.h>
 
 #include "gmock/gmock.h"
-#include "peridot/lib/testing/session_shell_impl.h"
 
 using testing::ElementsAre;
 
@@ -21,9 +18,8 @@ namespace {
 class ModuleContextTest : public modular::testing::TestHarnessFixture {
  protected:
   void StartSession(modular::testing::TestHarnessBuilder builder) {
-    builder.InterceptSessionShell(
-        session_shell_.GetOnCreateHandler(),
-        {.sandbox_services = {"fuchsia.modular.SessionShellContext"}});
+    builder.InterceptSessionShell(session_shell_.GetOnCreateHandler(),
+                                  {.sandbox_services = {"fuchsia.modular.SessionShellContext"}});
     builder.BuildAndRun(test_harness());
 
     // Wait for our session shell to start.
@@ -32,8 +28,7 @@ class ModuleContextTest : public modular::testing::TestHarnessFixture {
 
   void RestartStory(std::string story_name) {
     fuchsia::modular::StoryControllerPtr story_controller;
-    session_shell_.story_provider()->GetController(
-        story_name, story_controller.NewRequest());
+    session_shell_.story_provider()->GetController(story_name, story_controller.NewRequest());
 
     bool restarted = false;
     story_controller->Stop([&] {
@@ -43,9 +38,7 @@ class ModuleContextTest : public modular::testing::TestHarnessFixture {
     RunLoopUntil([&] { return restarted; });
   }
 
-  modular::testing::FakeSessionShell* session_shell() {
-    return &session_shell_;
-  }
+  modular::testing::FakeSessionShell* session_shell() { return &session_shell_; }
 
  private:
   modular::testing::FakeSessionShell session_shell_;
@@ -94,30 +87,23 @@ TEST_F(ModuleContextTest, AddModuleToStory) {
     fuchsia::modular::ModuleControllerPtr controller;
   };
 
-  FakeModuleInfo parent_module{
-      .url = modular::testing::GenerateFakeUrl("parent_module")};
-  FakeModuleInfo child_module1{
-      .url = modular::testing::GenerateFakeUrl("child_module1")};
-  FakeModuleInfo child_module2{
-      .url = modular::testing::GenerateFakeUrl("child_module2")};
+  FakeModuleInfo parent_module{.url = modular::testing::GenerateFakeUrl("parent_module")};
+  FakeModuleInfo child_module1{.url = modular::testing::GenerateFakeUrl("child_module1")};
+  FakeModuleInfo child_module2{.url = modular::testing::GenerateFakeUrl("child_module2")};
 
   builder.InterceptComponent(
       parent_module.component.GetOnCreateHandler(),
-      {.url = parent_module.url,
-       .sandbox_services = parent_module.component.GetSandboxServices()});
+      {.url = parent_module.url, .sandbox_services = parent_module.component.GetSandboxServices()});
   builder.InterceptComponent(
       child_module1.component.GetOnCreateHandler(),
-      {.url = child_module1.url,
-       .sandbox_services = child_module1.component.GetSandboxServices()});
+      {.url = child_module1.url, .sandbox_services = child_module1.component.GetSandboxServices()});
   builder.InterceptComponent(
       child_module2.component.GetOnCreateHandler(),
-      {.url = child_module2.url,
-       .sandbox_services = child_module2.component.GetSandboxServices()});
+      {.url = child_module2.url, .sandbox_services = child_module2.component.GetSandboxServices()});
 
   StartSession(std::move(builder));
-  modular::testing::AddModToStory(
-      test_harness(), "storyname", "modname",
-      {.action = "action", .handler = parent_module.url});
+  modular::testing::AddModToStory(test_harness(), "storyname", "modname",
+                                  {.action = "action", .handler = parent_module.url});
   RunLoopUntil([&] { return parent_module.component.is_running(); });
 
   // Add a single child module.
@@ -125,8 +111,7 @@ TEST_F(ModuleContextTest, AddModuleToStory) {
   parent_module.component.module_context()->AddModuleToStory(
       "childmodname", {.action = "action", .handler = child_module1.url},
       child_module1.controller.NewRequest(),
-      /*surface_relation=*/nullptr,
-      [&](fuchsia::modular::StartModuleStatus status) {
+      /*surface_relation=*/nullptr, [&](fuchsia::modular::StartModuleStatus status) {
         ASSERT_EQ(status, fuchsia::modular::StartModuleStatus::SUCCESS);
       });
   RunLoopUntil([&] {
@@ -141,12 +126,10 @@ TEST_F(ModuleContextTest, AddModuleToStory) {
   parent_module.component.module_context()->AddModuleToStory(
       "childmodname", {.action = "action2", .handler = child_module1.url},
       child_module1.controller.NewRequest(),
-      /*surface_relation=*/nullptr,
-      [&](fuchsia::modular::StartModuleStatus status) {
+      /*surface_relation=*/nullptr, [&](fuchsia::modular::StartModuleStatus status) {
         ASSERT_EQ(status, fuchsia::modular::StartModuleStatus::SUCCESS);
       });
-  RunLoopUntil(
-      [&] { return child_module1.component.handled_intents.size() == 2; });
+  RunLoopUntil([&] { return child_module1.component.handled_intents.size() == 2; });
   EXPECT_EQ(child_module1.component.handled_intents.at(1).action, "action2");
   // At no time should the child module have been destroyed.
   EXPECT_EQ(child_module1_destroyed, false);
@@ -156,8 +139,7 @@ TEST_F(ModuleContextTest, AddModuleToStory) {
   parent_module.component.module_context()->AddModuleToStory(
       "childmodname", {.action = "action", .handler = child_module2.url},
       child_module2.controller.NewRequest(),
-      /*surface_relation=*/nullptr,
-      [&](fuchsia::modular::StartModuleStatus status) {
+      /*surface_relation=*/nullptr, [&](fuchsia::modular::StartModuleStatus status) {
         ASSERT_EQ(status, fuchsia::modular::StartModuleStatus::SUCCESS);
       });
   RunLoopUntil([&] {
@@ -184,21 +166,17 @@ TEST_F(ModuleContextTest, RemoveSelfFromStory) {
 
   builder.InterceptComponent(
       module1.component.GetOnCreateHandler(),
-      {.url = module1.url,
-       .sandbox_services = module1.component.GetSandboxServices()});
+      {.url = module1.url, .sandbox_services = module1.component.GetSandboxServices()});
   builder.InterceptComponent(
       module2.component.GetOnCreateHandler(),
-      {.url = module2.url,
-       .sandbox_services = module2.component.GetSandboxServices()});
+      {.url = module2.url, .sandbox_services = module2.component.GetSandboxServices()});
 
   StartSession(std::move(builder));
   modular::testing::AddModToStory(test_harness(), "storyname", "modname1",
                                   {.action = "action", .handler = module1.url});
   modular::testing::AddModToStory(test_harness(), "storyname", "modname2",
                                   {.action = "action", .handler = module2.url});
-  RunLoopUntil([&] {
-    return module1.component.is_running() && module2.component.is_running();
-  });
+  RunLoopUntil([&] { return module1.component.is_running() && module2.component.is_running(); });
 
   // Instruct module1 to remove itself from the story. Expect to see that
   // module1 is terminated and module2 is not.
@@ -225,9 +203,8 @@ TEST_F(ModuleContextTest, CreateEntity) {
 
   auto module_url = modular::testing::GenerateFakeUrl("module");
   FakeModule module;
-  builder.InterceptComponent(
-      module.GetOnCreateHandler(),
-      {.url = module_url, .sandbox_services = module.GetSandboxServices()});
+  builder.InterceptComponent(module.GetOnCreateHandler(),
+                             {.url = module_url, .sandbox_services = module.GetSandboxServices()});
 
   StartSession(std::move(builder));
   modular::testing::AddModToStory(test_harness(), "storyname", "modname",
@@ -241,12 +218,11 @@ TEST_F(ModuleContextTest, CreateEntity) {
   {
     fuchsia::mem::Buffer buffer;
     ASSERT_TRUE(fsl::VmoFromString("42", &buffer));
-    module.module_context()->CreateEntity(
-        "entity_type", std::move(buffer), entity.NewRequest(),
-        [&](fidl::StringPtr new_reference) {
-          ASSERT_FALSE(new_reference.is_null());
-          reference = new_reference;
-        });
+    module.module_context()->CreateEntity("entity_type", std::move(buffer), entity.NewRequest(),
+                                          [&](fidl::StringPtr new_reference) {
+                                            ASSERT_FALSE(new_reference.is_null());
+                                            reference = new_reference;
+                                          });
     RunLoopUntil([&] { return !reference.is_null(); });
   }
 
@@ -277,8 +253,7 @@ TEST_F(ModuleContextTest, CreateEntity) {
   // Get an Entity handle using the reference returned by CreateEntity().
   {
     fuchsia::modular::EntityResolverPtr resolver;
-    module.modular_component_context()->GetEntityResolver(
-        resolver.NewRequest());
+    module.modular_component_context()->GetEntityResolver(resolver.NewRequest());
     fuchsia::modular::EntityPtr entity_from_reference;
     resolver->ResolveEntity(reference, entity_from_reference.NewRequest());
 
@@ -330,8 +305,8 @@ TEST_F(ModuleContextTest, CreateEntity) {
 // A simple story activity watcher implementation.
 class TestStoryActivityWatcher : fuchsia::modular::StoryActivityWatcher {
  public:
-  using ActivityChangeFn = fit::function<void(
-      std::string, std::vector<fuchsia::modular::OngoingActivityType>)>;
+  using ActivityChangeFn =
+      fit::function<void(std::string, std::vector<fuchsia::modular::OngoingActivityType>)>;
 
   TestStoryActivityWatcher(ActivityChangeFn on_change)
       : on_change_(std::move(on_change)), binding_(this) {}
@@ -368,27 +343,21 @@ TEST_F(ModuleContextTest, OngoingActivity_NotifyOnWatch) {
 
   builder.InterceptComponent(
       module1.component.GetOnCreateHandler(),
-      {.url = module1.url,
-       .sandbox_services = module1.component.GetSandboxServices()});
+      {.url = module1.url, .sandbox_services = module1.component.GetSandboxServices()});
   builder.InterceptComponent(
       module2.component.GetOnCreateHandler(),
-      {.url = module2.url,
-       .sandbox_services = module2.component.GetSandboxServices()});
+      {.url = module2.url, .sandbox_services = module2.component.GetSandboxServices()});
 
   StartSession(std::move(builder));
   modular::testing::AddModToStory(test_harness(), "storyname", "modname1",
                                   {.action = "action", .handler = module1.url});
   modular::testing::AddModToStory(test_harness(), "storyname", "modname2",
                                   {.action = "action", .handler = module2.url});
-  RunLoopUntil([&] {
-    return module1.component.is_running() && module2.component.is_running();
-  });
+  RunLoopUntil([&] { return module1.component.is_running() && module2.component.is_running(); });
 
-  std::vector<std::vector<fuchsia::modular::OngoingActivityType>>
-      on_change_updates;
+  std::vector<std::vector<fuchsia::modular::OngoingActivityType>> on_change_updates;
   TestStoryActivityWatcher activity_watcher(
-      [&](std::string story_id,
-          std::vector<fuchsia::modular::OngoingActivityType> activities) {
+      [&](std::string story_id, std::vector<fuchsia::modular::OngoingActivityType> activities) {
         ASSERT_EQ(story_id, "storyname");
         on_change_updates.push_back(std::move(activities));
       });
@@ -407,49 +376,40 @@ TEST_F(ModuleContextTest, OngoingActivity_NotifyOnWatch) {
   // Now instruct module1 to create an ongoing activity.
   fuchsia::modular::OngoingActivityPtr ongoing_activity1;
   module1.component.module_context()->StartOngoingActivity(
-      fuchsia::modular::OngoingActivityType::VIDEO,
-      ongoing_activity1.NewRequest());
+      fuchsia::modular::OngoingActivityType::VIDEO, ongoing_activity1.NewRequest());
   RunLoopUntilActivityUpdate();
   EXPECT_THAT(
       on_change_updates,
-      ElementsAre(ElementsAre(),
-                  ElementsAre(fuchsia::modular::OngoingActivityType::VIDEO)));
+      ElementsAre(ElementsAre(), ElementsAre(fuchsia::modular::OngoingActivityType::VIDEO)));
 
   // When module2 creates one also, expect to see both represented.
   fuchsia::modular::OngoingActivityPtr ongoing_activity2;
   module2.component.module_context()->StartOngoingActivity(
-      fuchsia::modular::OngoingActivityType::AUDIO,
-      ongoing_activity2.NewRequest());
+      fuchsia::modular::OngoingActivityType::AUDIO, ongoing_activity2.NewRequest());
   RunLoopUntilActivityUpdate();
-  EXPECT_THAT(
-      on_change_updates,
-      ElementsAre(ElementsAre(),
-                  ElementsAre(fuchsia::modular::OngoingActivityType::VIDEO),
-                  ElementsAre(fuchsia::modular::OngoingActivityType::VIDEO,
-                              fuchsia::modular::OngoingActivityType::AUDIO)));
+  EXPECT_THAT(on_change_updates,
+              ElementsAre(ElementsAre(), ElementsAre(fuchsia::modular::OngoingActivityType::VIDEO),
+                          ElementsAre(fuchsia::modular::OngoingActivityType::VIDEO,
+                                      fuchsia::modular::OngoingActivityType::AUDIO)));
 
   // module1 terminating its activity should result in a new notification.
   ongoing_activity1.Unbind();
   RunLoopUntilActivityUpdate();
-  EXPECT_THAT(
-      on_change_updates,
-      ElementsAre(ElementsAre(),
-                  ElementsAre(fuchsia::modular::OngoingActivityType::VIDEO),
-                  ElementsAre(fuchsia::modular::OngoingActivityType::VIDEO,
-                              fuchsia::modular::OngoingActivityType::AUDIO),
-                  ElementsAre(fuchsia::modular::OngoingActivityType::AUDIO)));
+  EXPECT_THAT(on_change_updates,
+              ElementsAre(ElementsAre(), ElementsAre(fuchsia::modular::OngoingActivityType::VIDEO),
+                          ElementsAre(fuchsia::modular::OngoingActivityType::VIDEO,
+                                      fuchsia::modular::OngoingActivityType::AUDIO),
+                          ElementsAre(fuchsia::modular::OngoingActivityType::AUDIO)));
 
   // And lastly terminating module2's activity results in no more activities.
   ongoing_activity2.Unbind();
   RunLoopUntilActivityUpdate();
   EXPECT_THAT(
       on_change_updates,
-      ElementsAre(ElementsAre(),
-                  ElementsAre(fuchsia::modular::OngoingActivityType::VIDEO),
+      ElementsAre(ElementsAre(), ElementsAre(fuchsia::modular::OngoingActivityType::VIDEO),
                   ElementsAre(fuchsia::modular::OngoingActivityType::VIDEO,
                               fuchsia::modular::OngoingActivityType::AUDIO),
-                  ElementsAre(fuchsia::modular::OngoingActivityType::AUDIO),
-                  ElementsAre()));
+                  ElementsAre(fuchsia::modular::OngoingActivityType::AUDIO), ElementsAre()));
 }
 
 }  // namespace

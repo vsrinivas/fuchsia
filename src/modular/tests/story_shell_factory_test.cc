@@ -4,12 +4,10 @@
 
 #include <fuchsia/modular/testing/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
-#include <lib/async/default.h>
 #include <lib/fsl/vmo/strings.h>
 #include <lib/modular_test_harness/cpp/fake_component.h>
 #include <lib/modular_test_harness/cpp/fake_story_shell.h>
 #include <lib/modular_test_harness/cpp/test_harness_fixture.h>
-#include <sdk/lib/sys/cpp/component_context.h>
 #include <src/lib/fxl/logging.h>
 
 #include "peridot/lib/testing/session_shell_impl.h"
@@ -20,8 +18,7 @@ namespace {
 // be used in session shell components in integration tests.
 class TestStoryShellFactory : fuchsia::modular::StoryShellFactory {
  public:
-  using StoryShellRequest =
-      fidl::InterfaceRequest<fuchsia::modular::StoryShell>;
+  using StoryShellRequest = fidl::InterfaceRequest<fuchsia::modular::StoryShell>;
 
   TestStoryShellFactory(sys::ComponentContext* const component_context) {
     component_context->outgoing()->AddPublicService(GetHandler());
@@ -31,16 +28,14 @@ class TestStoryShellFactory : fuchsia::modular::StoryShellFactory {
 
   // Produces a handler function that can be used in the outgoing service
   // provider.
-  fidl::InterfaceRequestHandler<fuchsia::modular::StoryShellFactory>
-  GetHandler() {
+  fidl::InterfaceRequestHandler<fuchsia::modular::StoryShellFactory> GetHandler() {
     return bindings_.GetHandler(this);
   }
 
   // Whenever StoryShellFactory.AttachStory() is called, the supplied callback
   // is invoked with the story ID and StoryShell request.
   void set_on_attach_story(
-      fit::function<void(std::string story_id, StoryShellRequest request)>
-          callback) {
+      fit::function<void(std::string story_id, StoryShellRequest request)> callback) {
     on_attach_story_ = std::move(callback);
   }
 
@@ -53,9 +48,7 @@ class TestStoryShellFactory : fuchsia::modular::StoryShellFactory {
 
   // Configures the delay after which the return callback of DetachStory() is
   // invoked. Used to test the timeout behavior of sessionmgr.
-  void set_detach_delay(zx::duration detach_delay) {
-    detach_delay_ = detach_delay;
-  }
+  void set_detach_delay(zx::duration detach_delay) { detach_delay_ = detach_delay; }
 
  private:
   // |StoryShellFactory|
@@ -68,13 +61,12 @@ class TestStoryShellFactory : fuchsia::modular::StoryShellFactory {
     on_detach_story_();
 
     // Used to simulate a sluggish shell that hits the timeout.
-    async::PostDelayedTask(async_get_default_dispatcher(), std::move(done),
-                           detach_delay_);
+    async::PostDelayedTask(async_get_default_dispatcher(), std::move(done), detach_delay_);
   }
 
   fidl::BindingSet<fuchsia::modular::StoryShellFactory> bindings_;
-  fit::function<void(std::string story_id, StoryShellRequest request)>
-      on_attach_story_{[](std::string, StoryShellRequest) {}};
+  fit::function<void(std::string story_id, StoryShellRequest request)> on_attach_story_{
+      [](std::string, StoryShellRequest) {}};
   fit::function<void()> on_detach_story_{[]() {}};
   zx::duration detach_delay_{};
 };
@@ -84,13 +76,9 @@ class TestStoryShellFactory : fuchsia::modular::StoryShellFactory {
 // implementation of fuchsia::modular::SessionShell built for tests.
 class TestSessionShell : public modular::testing::FakeComponent {
  public:
-  fuchsia::modular::StoryProvider* story_provider() {
-    return story_provider_.get();
-  }
+  fuchsia::modular::StoryProvider* story_provider() { return story_provider_.get(); }
 
-  TestStoryShellFactory* story_shell_factory() {
-    return story_shell_factory_.get();
-  }
+  TestStoryShellFactory* story_shell_factory() { return story_shell_factory_.get(); }
 
  private:
   // |modular::testing::FakeComponent|
@@ -98,11 +86,9 @@ class TestSessionShell : public modular::testing::FakeComponent {
     component_context()->svc()->Connect(session_shell_context_.NewRequest());
     session_shell_context_->GetStoryProvider(story_provider_.NewRequest());
 
-    component_context()->outgoing()->AddPublicService(
-        session_shell_impl_.GetHandler());
+    component_context()->outgoing()->AddPublicService(session_shell_impl_.GetHandler());
 
-    story_shell_factory_ =
-        std::make_unique<TestStoryShellFactory>(component_context());
+    story_shell_factory_ = std::make_unique<TestStoryShellFactory>(component_context());
   }
 
   modular::testing::SessionShellImpl session_shell_impl_;
@@ -123,21 +109,18 @@ class StoryShellFactoryTest : public modular::testing::TestHarnessFixture {
   void InitSession() {
     // The session shell provides the StoryShellFactory protocol.
     fuchsia::modular::testing::TestHarnessSpec spec;
-    spec.mutable_basemgr_config()
-        ->set_use_session_shell_for_story_shell_factory(true);
+    spec.mutable_basemgr_config()->set_use_session_shell_for_story_shell_factory(true);
 
     modular::testing::TestHarnessBuilder builder(std::move(spec));
     test_session_shell_ = std::make_unique<TestSessionShell>();
-    builder.InterceptSessionShell(
-        test_session_shell_->GetOnCreateHandler(),
-        {.sandbox_services = {"fuchsia.modular.SessionShellContext",
-                              "fuchsia.modular.PuppetMaster"}});
+    builder.InterceptSessionShell(test_session_shell_->GetOnCreateHandler(),
+                                  {.sandbox_services = {"fuchsia.modular.SessionShellContext",
+                                                        "fuchsia.modular.PuppetMaster"}});
 
     // Listen for the module that is created in CreateStory().
     test_module_ = std::make_unique<modular::testing::FakeComponent>();
     test_module_url_ = modular::testing::GenerateFakeUrl();
-    builder.InterceptComponent(test_module_->GetOnCreateHandler(),
-                               {.url = test_module_url_});
+    builder.InterceptComponent(test_module_->GetOnCreateHandler(), {.url = test_module_url_});
     builder.BuildAndRun(test_harness());
 
     // Wait for our session shell to start.
@@ -159,8 +142,7 @@ class StoryShellFactoryTest : public modular::testing::TestHarnessFixture {
     fuchsia::modular::Intent intent;
     intent.handler = test_module_url_;
     intent.action = "action";
-    modular::testing::AddModToStory(test_harness(), story_name, mod_name,
-                                    std::move(intent));
+    modular::testing::AddModToStory(test_harness(), story_name, mod_name, std::move(intent));
 
     // Wait for the story to be created.
     RunLoopUntil([this] { return test_module_->is_running(); });
@@ -184,8 +166,7 @@ class StoryShellFactoryTest : public modular::testing::TestHarnessFixture {
 
     // Get a story controller.
     fuchsia::modular::StoryControllerPtr story_controller;
-    test_session_shell_->story_provider()->GetController(
-        story_name, story_controller.NewRequest());
+    test_session_shell_->story_provider()->GetController(story_name, story_controller.NewRequest());
 
     return story_controller;
   }
@@ -208,8 +189,7 @@ TEST_F(StoryShellFactoryTest, AttachCalledOnStoryStart) {
   // is started.
   bool is_attached{false};
   test_session_shell()->story_shell_factory()->set_on_attach_story(
-      [&](std::string,
-          fidl::InterfaceRequest<fuchsia::modular::StoryShell> request) {
+      [&](std::string, fidl::InterfaceRequest<fuchsia::modular::StoryShell> request) {
         is_attached = true;
         fake_story_shell.GetHandler()(std::move(request));
       });
@@ -230,8 +210,7 @@ TEST_F(StoryShellFactoryTest, DetachCalledOnStoryStop) {
   // The StoryShellFactory will be asked to detach a StoryShell when the story
   // is stopped.
   bool is_detached{false};
-  test_session_shell()->story_shell_factory()->set_on_detach_story(
-      [&]() { is_detached = true; });
+  test_session_shell()->story_shell_factory()->set_on_detach_story([&]() { is_detached = true; });
 
   CreateStory();
 
@@ -252,8 +231,7 @@ TEST_F(StoryShellFactoryTest, DetachCalledOnStoryDelete) {
   // The StoryShellFactory will be asked to detach a StoryShell when the story
   // is deleted.
   bool is_detached{false};
-  test_session_shell()->story_shell_factory()->set_on_detach_story(
-      [&]() { is_detached = true; });
+  test_session_shell()->story_shell_factory()->set_on_detach_story([&]() { is_detached = true; });
 
   CreateStory();
 

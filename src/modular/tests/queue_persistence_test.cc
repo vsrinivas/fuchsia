@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/modular/testing/cpp/fidl.h>
 #include <lib/component/cpp/connect.h>
 #include <lib/fidl/cpp/binding_set.h>
@@ -12,14 +11,8 @@
 #include <lib/modular_test_harness/cpp/fake_module.h>
 #include <lib/modular_test_harness/cpp/test_harness_fixture.h>
 #include <lib/svc/cpp/service_namespace.h>
-#include <sdk/lib/sys/cpp/component_context.h>
-#include <sdk/lib/sys/cpp/service_directory.h>
-#include <sdk/lib/sys/cpp/testing/test_with_environment.h>
 #include <src/lib/fxl/logging.h>
 #include <test/modular/queuepersistence/cpp/fidl.h>
-
-#include "peridot/lib/testing/session_shell_impl.h"
-#include "peridot/public/lib/integration_testing/cpp/testing.h"
 
 namespace {
 
@@ -39,8 +32,7 @@ class TestAgent : public modular::testing::FakeComponent,
   std::string GetLastReceivedMessage() { return last_received_message_; }
 
   void Connect(std::string requestor_url,
-               fidl::InterfaceRequest<fuchsia::sys::ServiceProvider>
-                   services_request) override {
+               fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> services_request) override {
     services_.AddBinding(std::move(services_request));
   }
 
@@ -49,8 +41,8 @@ class TestAgent : public modular::testing::FakeComponent,
  private:
   // |test::modular::queuepersistence::QueuePersistenceTestService|
   void GetMessageQueueToken(GetMessageQueueTokenCallback callback) override {
-    msg_queue_.GetToken([callback = std::move(callback)](
-                            const fidl::StringPtr& token) { callback(token); });
+    msg_queue_.GetToken(
+        [callback = std::move(callback)](const fidl::StringPtr& token) { callback(token); });
   }
 
   // |modular::testing::FakeComponent|
@@ -65,21 +57,15 @@ class TestAgent : public modular::testing::FakeComponent,
 
     // Create a message queue and schedule a task to be run on receiving a
     // message on it.
-    component_context_->ObtainMessageQueue("Test Queue",
-                                           msg_queue_.NewRequest());
-    msg_queue_.RegisterReceiver(
-        [this](std::string message, fit::function<void()> ack) {
-          ack();
-          last_received_message_ = message;
-        });
+    component_context_->ObtainMessageQueue("Test Queue", msg_queue_.NewRequest());
+    msg_queue_.RegisterReceiver([this](std::string message, fit::function<void()> ack) {
+      ack();
+      last_received_message_ = message;
+    });
 
-    services_.AddService<
-        test::modular::queuepersistence::QueuePersistenceTestService>(
-        [this](fidl::InterfaceRequest<
-               test::modular::queuepersistence::QueuePersistenceTestService>
-                   request) {
-          services_bindings_.AddBinding(this, std::move(request));
-        });
+    services_.AddService<test::modular::queuepersistence::QueuePersistenceTestService>(
+        [this](fidl::InterfaceRequest<test::modular::queuepersistence::QueuePersistenceTestService>
+                   request) { services_bindings_.AddBinding(this, std::move(request)); });
   }
 
   fuchsia::modular::ComponentContextPtr component_context_;
@@ -87,8 +73,7 @@ class TestAgent : public modular::testing::FakeComponent,
   fidl::BindingSet<fuchsia::modular::Agent> bindings_;
   modular::MessageQueueClient msg_queue_;
   component::ServiceNamespace services_;
-  fidl::BindingSet<test::modular::queuepersistence::QueuePersistenceTestService>
-      services_bindings_;
+  fidl::BindingSet<test::modular::queuepersistence::QueuePersistenceTestService> services_bindings_;
 
   std::string last_received_message_;
 };
@@ -96,17 +81,15 @@ class TestAgent : public modular::testing::FakeComponent,
 // A module that can connect to a TestAgent to send messages.
 class TestModule : public modular::testing::FakeModule {
  public:
-  test::modular::queuepersistence::QueuePersistenceTestService*
-  agent_service() {
+  test::modular::queuepersistence::QueuePersistenceTestService* agent_service() {
     return agent_service_.get();
   }
 
   void ConnectToAgent(std::string agent_url) {
     fuchsia::sys::ServiceProviderPtr agent_services;
-    modular_component_context()->ConnectToAgent(
-        agent_url, agent_services.NewRequest(), agent_controller_.NewRequest());
-    component::ConnectToService(agent_services.get(),
-                                agent_service_.NewRequest());
+    modular_component_context()->ConnectToAgent(agent_url, agent_services.NewRequest(),
+                                                agent_controller_.NewRequest());
+    component::ConnectToService(agent_services.get(), agent_service_.NewRequest());
   }
 
   void DisconnectFromAgent() {
@@ -116,8 +99,7 @@ class TestModule : public modular::testing::FakeModule {
 
  private:
   fuchsia::modular::AgentControllerPtr agent_controller_;
-  test::modular::queuepersistence::QueuePersistenceTestServicePtr
-      agent_service_;
+  test::modular::queuepersistence::QueuePersistenceTestServicePtr agent_service_;
 };
 
 }  // namespace
@@ -141,15 +123,13 @@ TEST_F(QueuePersistenceTest, MessagePersistedToQueue) {
   builder.InterceptComponent(
       test_agent.GetOnCreateHandler(),
       {.url = test_agent_url,
-       .sandbox_services = {"fuchsia.modular.ComponentContext",
-                            "fuchsia.modular.AgentContext"}});
+       .sandbox_services = {"fuchsia.modular.ComponentContext", "fuchsia.modular.AgentContext"}});
   builder.BuildAndRun(test_harness());
 
   // Add the test mod.
   fuchsia::modular::Intent intent;
   intent.handler = test_module_url;
-  modular::testing::AddModToStory(test_harness(), kStoryName, kModuleName,
-                                  std::move(intent));
+  modular::testing::AddModToStory(test_harness(), kStoryName, kModuleName, std::move(intent));
   RunLoopUntil([&] { return test_module.is_running(); });
 
   // Connect to the test agent from the test mod.
@@ -169,8 +149,8 @@ TEST_F(QueuePersistenceTest, MessagePersistedToQueue) {
   // Send a message to the stopped agent which should be persisted to local
   // storage. No triggers are set so the agent won't be automatically started.
   modular::MessageSenderClient message_sender;
-  test_module.modular_component_context()->GetMessageSender(
-      queue_token, message_sender.NewRequest());
+  test_module.modular_component_context()->GetMessageSender(queue_token,
+                                                            message_sender.NewRequest());
   std::string kMessage = "message";
   message_sender.Send(kMessage);
 

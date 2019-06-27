@@ -2,15 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fs/pseudo-dir.h>
 #include <fuchsia/device/manager/cpp/fidl.h>
 #include <fuchsia/modular/testing/cpp/fidl.h>
 #include <lib/fsl/vmo/strings.h>
 #include <lib/modular_test_harness/cpp/fake_component.h>
+#include <lib/modular_test_harness/cpp/fake_session_shell.h>
 #include <lib/modular_test_harness/cpp/test_harness_fixture.h>
-#include <lib/sys/cpp/service_directory.h>
-#include <lib/sys/cpp/testing/test_with_environment.h>
-#include <peridot/lib/util/pseudo_dir_server.h>
 
 namespace {
 
@@ -31,25 +28,11 @@ class MockAdmin : public fuchsia::device::manager::Administrator {
   bool suspend_called_ = false;
 };
 
-class TestSessionShell : public modular::testing::FakeComponent {
- public:
-  TestSessionShell(fit::function<void()> on_created, fit::function<void()> on_destroyed)
-      : on_created_(std::move(on_created)), on_destroyed_(std::move(on_destroyed)) {}
-
- protected:
-  void OnCreate(fuchsia::sys::StartupInfo startup_info) override { on_created_(); }
-
-  void OnDestroy() override { on_destroyed_(); }
-
-  fit::function<void()> on_created_;
-  fit::function<void()> on_destroyed_;
-};
-
 TEST_F(SessionmgrIntegrationTest, DISABLED_RebootCalledIfSessionmgrCrashNumberReachesRetryLimit) {
   MockAdmin mock_admin;
   fidl::BindingSet<fuchsia::device::manager::Administrator> admin_bindings;
 
-  TestSessionShell session_shell([] {}, [] {});
+  modular::testing::FakeSessionShell session_shell;
   modular::testing::TestHarnessBuilder builder;
   builder.InterceptSessionShell(session_shell.GetOnCreateHandler(),
                                 {.url = modular::testing::GenerateFakeUrl()});

@@ -3,14 +3,10 @@
 // found in the LICENSE file.
 
 #include <fuchsia/modular/testing/cpp/fidl.h>
-#include <lib/app_driver/cpp/module_driver.h>
 #include <lib/component/cpp/connect.h>
 #include <lib/modular/testing/cpp/test_harness_builder.h>
-#include <lib/modular_test_harness/cpp/fake_module.h>
 #include <lib/modular_test_harness/cpp/test_harness_fixture.h>
 
-#include "fuchsia/modular/session/cpp/fidl.h"
-#include "gtest/gtest.h"
 #include "peridot/bin/agents/clipboard/clipboard_impl.h"
 #include "peridot/bin/basemgr/noop_clipboard_impl.h"
 #include "peridot/lib/testing/ledger_repository_for_testing.h"
@@ -23,11 +19,9 @@ class ClipboardTest : public modular::testing::TestHarnessFixture {};
 TEST_F(ClipboardTest, PushAndPeekToTheSameClipboard) {
   std::unique_ptr<modular::testing::LedgerRepositoryForTesting> ledger_app_ =
       std::make_unique<modular::testing::LedgerRepositoryForTesting>();
-  std::unique_ptr<modular::LedgerClient> ledger_client_ =
-      std::make_unique<modular::LedgerClient>(
-          ledger_app_->ledger_repository(), __FILE__, [](zx_status_t status) {
-            ASSERT_TRUE(false) << "Status: " << status;
-          });
+  std::unique_ptr<modular::LedgerClient> ledger_client_ = std::make_unique<modular::LedgerClient>(
+      ledger_app_->ledger_repository(), __FILE__,
+      [](zx_status_t status) { ASSERT_TRUE(false) << "Status: " << status; });
 
   modular::ClipboardImpl clipboard_impl(ledger_client_.get());
   fidl::BindingSet<fuchsia::modular::Clipboard> clipboard_bindings;
@@ -82,8 +76,7 @@ TEST_F(ClipboardTest, ClipboardAgentProvidesClipboard) {
   fuchsia::modular::AgentControllerPtr agent_controller_;
   fuchsia::modular::ClipboardPtr clipboard_ptr;
   fuchsia::sys::ServiceProviderPtr agent_services;
-  component_context->ConnectToAgent(kClipboardAgentUrl,
-                                    agent_services.NewRequest(),
+  component_context->ConnectToAgent(kClipboardAgentUrl, agent_services.NewRequest(),
                                     agent_controller_.NewRequest());
   component::ConnectToService(agent_services.get(), clipboard_ptr.NewRequest());
 

@@ -29,9 +29,8 @@ executable("agent_services_test") {
   deps = [
     "//peridot/public/lib/modular_test_harness/cpp:test_harness_fixture",
     "//sdk/fidl/fuchsia.modular.testing",
-    "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
-    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest_main",
   ]
 }
 
@@ -48,9 +47,6 @@ executable("last_focus_time_test") {
     "//peridot/lib/testing:session_shell_impl",
     "//peridot/public/lib/modular_test_harness/cpp:test_harness_fixture",
     "//sdk/fidl/fuchsia.modular.testing",
-    "//sdk/fidl/fuchsia.sys",
-    "//sdk/fidl/fuchsia.ui.views",
-    "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest_main",
@@ -69,15 +65,11 @@ executable("queue_persistence_test") {
   deps = [
     ":queue_persistence_test_service",
     "//garnet/public/lib/svc/cpp",
-    "//peridot/lib/testing:session_shell_impl",
     "//peridot/public/lib/message_queue/cpp",
     "//peridot/public/lib/modular_test_harness/cpp:test_harness_fixture",
     "//sdk/fidl/fuchsia.modular.testing",
-    "//sdk/fidl/fuchsia.sys",
-    "//sdk/fidl/fuchsia.ui.views",
-    "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
-    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest_main",
   ]
 }
 
@@ -89,15 +81,11 @@ executable("session_shell_test") {
   ]
 
   deps = [
-    "//garnet/public/lib/fsl",
-    "//peridot/lib/testing:session_shell_base",
     "//peridot/public/lib/modular_test_harness/cpp:test_harness_fixture",
     "//sdk/fidl/fuchsia.modular.testing",
-    "//sdk/fidl/fuchsia.sys",
-    "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
-    "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest_main",
   ]
 }
 
@@ -109,19 +97,10 @@ executable("intents_test") {
   ]
 
   deps = [
-    "//garnet/public/lib/callback",
-    "//peridot/lib/testing:session_shell_impl",
-    "//peridot/public/lib/app_driver/cpp:module_driver",
-    "//peridot/public/lib/async/cpp:future",
     "//peridot/public/lib/modular_test_harness/cpp:test_harness_fixture",
-    "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.testing",
-    "//sdk/fidl/fuchsia.sys",
-    "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
-    "//src/lib/fxl",
-    "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/async-loop-cpp",
+    "//third_party/googletest:gtest_main",
   ]
 }
 
@@ -135,13 +114,8 @@ executable("module_context_test") {
   ]
 
   deps = [
-    "//garnet/public/lib/fsl",
-    "//peridot/lib/testing:session_shell_impl",
     "//peridot/public/lib/modular_test_harness/cpp:test_harness_fixture",
     "//sdk/fidl/fuchsia.modular.testing",
-    "//sdk/fidl/fuchsia.sys",
-    "//sdk/fidl/fuchsia.ui.views",
-    "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest_main",
@@ -172,17 +146,11 @@ executable("sessionmgr_integration_test") {
   ]
 
   deps = [
-    "//garnet/public/lib/fsl",
-    "//peridot/lib/testing:session_shell_base",
     "//peridot/public/lib/modular_test_harness/cpp:test_harness_fixture",
     "//sdk/fidl/fuchsia.modular.testing",
-    "//sdk/fidl/fuchsia.sys",
-    "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
-    "//third_party/googletest:gmock",
     "//third_party/googletest:gtest_main",
     "//zircon/public/fidl/fuchsia-device-manager",
-    "//zircon/public/lib/fs",
   ]
 }
 
@@ -196,15 +164,11 @@ executable("story_shell_factory_test") {
   ]
 
   deps = [
-    "//garnet/public/lib/fsl",
     "//peridot/lib/testing:session_shell_impl",
     "//peridot/public/lib/modular_test_harness/cpp:test_harness_fixture",
     "//sdk/fidl/fuchsia.modular.testing",
-    "//sdk/fidl/fuchsia.sys",
-    "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
-    "//src/lib/fxl",
-    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest_main",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }
@@ -219,13 +183,8 @@ executable("story_shell_test") {
   ]
 
   deps = [
-    "//garnet/public/lib/fsl",
-    "//peridot/lib/testing:session_shell_impl",
     "//peridot/public/lib/modular_test_harness/cpp:test_harness_fixture",
     "//sdk/fidl/fuchsia.modular.testing",
-    "//sdk/fidl/fuchsia.sys",
-    "//sdk/fidl/fuchsia.ui.views",
-    "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest_main",
@@ -240,12 +199,8 @@ executable("story_shell_embedded_mod_test") {
   ]
 
   deps = [
-    "//peridot/lib/testing:session_shell_impl",
     "//peridot/public/lib/modular_test_harness/cpp:test_harness_fixture",
     "//sdk/fidl/fuchsia.modular.testing",
-    "//sdk/fidl/fuchsia.sys",
-    "//sdk/fidl/fuchsia.ui.views",
-    "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
     "//sdk/lib/ui/scenic/cpp",
     "//third_party/googletest:gtest_main",
@@ -260,15 +215,10 @@ executable("trigger_test") {
   ]
 
   deps = [
-    "//peridot/lib/testing:session_shell_impl",
     "//peridot/public/lib/message_queue/cpp",
     "//peridot/public/lib/modular_test_harness/cpp:test_harness_fixture",
     "//sdk/fidl/fuchsia.modular.testing",
-    "//sdk/fidl/fuchsia.sys",
-    "//sdk/fidl/fuchsia.ui.views",
-    "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
-    "//sdk/lib/ui/scenic/cpp",
     "//third_party/googletest:gtest_main",
     "//zircon/public/lib/fs",
   ]
@@ -286,13 +236,8 @@ executable("clipboard_test") {
     "//peridot/bin/basemgr:lib",
     "//peridot/lib/ledger_client:page_client",
     "//peridot/lib/testing:ledger_repository_for_testing",
-    "//peridot/public/lib/app_driver/cpp",
-    "//peridot/public/lib/modular_test_harness/cpp:test_harness_fixture",
     "//peridot/public/lib/modular_test_harness/cpp:test_harness_fixture",
     "//sdk/fidl/fuchsia.modular.testing",
-    "//sdk/fidl/fuchsia.sys",
-    "//sdk/fidl/fuchsia.ui.views",
-    "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
     "//third_party/googletest:gtest_main",
   ]
@@ -311,13 +256,10 @@ executable("login_override_test") {
     "//peridot/public/lib/modular_test_harness/cpp:test_harness_fixture",
     "//sdk/fidl/fuchsia.auth.account",
     "//sdk/fidl/fuchsia.devicesettings",
-    "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.testing",
     "//sdk/fidl/fuchsia.setui",
-    "//sdk/fidl/fuchsia.sys",
-    "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
-    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest_main",
   ]
 }
 
@@ -329,14 +271,9 @@ executable("component_context_test") {
   ]
 
   deps = [
-    "//peridot/lib/testing:session_shell_impl",
     "//peridot/public/lib/modular_test_harness/cpp:test_harness_fixture",
     "//sdk/fidl/fuchsia.modular.testing",
-    "//sdk/fidl/fuchsia.sys",
-    "//sdk/fidl/fuchsia.ui.views",
-    "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
-    "//sdk/lib/ui/scenic/cpp",
     "//third_party/googletest:gtest_main",
     "//zircon/public/lib/fs",
   ]
@@ -422,12 +359,6 @@ test_package("modular_integration_tests") {
     ":story_shell_factory_test",
     ":story_shell_test",
     ":trigger_test",
-    "//garnet/public/lib/callback",
-    "//peridot/public/lib/app_driver/cpp",
-    "//sdk/fidl/fuchsia.modular",
-    "//src/lib/fxl",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/trace",
   ]
 }
 

@@ -38,8 +38,7 @@ struct ConnectToAgentServiceTestConfig {
   template <typename Interface>
   fuchsia::modular::AgentServiceRequest MakeAgentServiceRequest(
       std::string service_name, Interface service_request,
-      fidl::InterfaceRequest<fuchsia::modular::AgentController>
-          agent_controller) {
+      fidl::InterfaceRequest<fuchsia::modular::AgentController> agent_controller) {
     fuchsia::modular::AgentServiceRequest agent_service_request;
     if (provide_service_name) {
       agent_service_request.set_service_name(service_name);
@@ -75,8 +74,7 @@ class AgentServicesTest : public modular::testing::TestHarnessFixture {
       ConnectToAgentServiceTestConfig test_config) {
     fuchsia::modular::testing::TestHarnessSpec spec;
 
-    std::vector<fuchsia::modular::session::AgentServiceIndexEntry>
-        agent_service_index;
+    std::vector<fuchsia::modular::session::AgentServiceIndexEntry> agent_service_index;
 
     for (const auto& entry : test_config.service_to_agent_map) {
       fuchsia::modular::session::AgentServiceIndexEntry agent_service;
@@ -85,8 +83,7 @@ class AgentServicesTest : public modular::testing::TestHarnessFixture {
       agent_service_index.emplace_back(std::move(agent_service));
     }
 
-    spec.mutable_sessionmgr_config()->set_agent_service_index(
-        std::move(agent_service_index));
+    spec.mutable_sessionmgr_config()->set_agent_service_index(std::move(agent_service_index));
 
     test_harness()->Run(std::move(spec));
 
@@ -104,13 +101,11 @@ class AgentServicesTest : public modular::testing::TestHarnessFixture {
   // |test_config| Input configurations and setup options.
   // |expect| Expected results to compare to actual results for the test to
   // confirm.
-  void ExecuteConnectToAgentServiceTest(
-      ConnectToAgentServiceTestConfig test_config,
-      ConnectToAgentServiceExpect expect) {
+  void ExecuteConnectToAgentServiceTest(ConnectToAgentServiceTestConfig test_config,
+                                        ConnectToAgentServiceExpect expect) {
     const std::string kTestContent("Test clipboard content");
 
-    fuchsia::modular::ComponentContextPtr component_context =
-        StartTestHarness(test_config);
+    fuchsia::modular::ComponentContextPtr component_context = StartTestHarness(test_config);
 
     // Client-side service pointer
     fuchsia::modular::ClipboardPtr clipboard_service_ptr;
@@ -124,13 +119,10 @@ class AgentServicesTest : public modular::testing::TestHarnessFixture {
     fuchsia::modular::AgentControllerPtr agent_controller;
     zx_status_t agent_controller_status = ZX_OK;
     agent_controller.set_error_handler(
-        [&agent_controller_status](zx_status_t status) {
-          agent_controller_status = status;
-        });
+        [&agent_controller_status](zx_status_t status) { agent_controller_status = status; });
 
     auto agent_service_request = test_config.MakeAgentServiceRequest(
-        service_name, std::move(service_request),
-        agent_controller.NewRequest());
+        service_name, std::move(service_request), agent_controller.NewRequest());
     component_context->ConnectToAgentService(std::move(agent_service_request));
 
     clipboard_service_ptr->Push(kTestContent);
@@ -142,8 +134,7 @@ class AgentServicesTest : public modular::testing::TestHarnessFixture {
 
     RunLoopUntil([&] {
       return got_peek_content || service_status != ZX_OK ||
-             (expect.service_status == ZX_OK &&
-              agent_controller_status != ZX_OK);
+             (expect.service_status == ZX_OK && agent_controller_status != ZX_OK);
       // The order of error callbacks is non-deterministic. If checking for a
       // specific service error, wait for it.
     });
@@ -241,8 +232,7 @@ TEST_F(AgentServicesTest, SpecificHandlerProvidedHasServiceButNotInIndex) {
 // Find service successfully, from a specific handler. The index specifies
 // a different agent as the handler, but that agent should not be used since
 // a specific agent was specified.
-TEST_F(AgentServicesTest,
-       SpecificHandlerProvidedHasServiceButIndexHasDifferentHandler) {
+TEST_F(AgentServicesTest, SpecificHandlerProvidedHasServiceButIndexHasDifferentHandler) {
   ConnectToAgentServiceTestConfig test_config;
   test_config.provide_service_name = true;
   test_config.provide_handler = true;
@@ -250,8 +240,7 @@ TEST_F(AgentServicesTest,
   test_config.provide_agent_controller = true;
 
   test_config.service_to_agent_map = {
-      {kTestServiceName,
-       "fuchsia-pkg://fuchsia.com/cast_agent#meta/cast_agent.cmx"},
+      {kTestServiceName, "fuchsia-pkg://fuchsia.com/cast_agent#meta/cast_agent.cmx"},
       {"fuchsia.feedback.DataProvider",
        "fuchsia-pkg://fuchsia.com/feedback_agent#meta/feedback_agent.cmx"},
   };
