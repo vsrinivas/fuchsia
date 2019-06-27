@@ -56,12 +56,11 @@ class Cluster extends StatelessWidget {
         return story.childViewConnection != null
             ? AnimatedBuilder(
                 animation: Listenable.merge([
-                  story.nameNotifier,
                   story.focusedNotifier,
                   story.editStateNotifier,
                 ]),
                 builder: (context, child) => TileChrome(
-                  name: story.name,
+                  name: story.id ?? '<title>',
                   showTitle: !custom,
                   editing: story.editStateNotifier.value &&
                       story.useInProcessStoryShell,
