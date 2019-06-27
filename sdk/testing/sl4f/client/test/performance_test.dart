@@ -14,21 +14,21 @@ class MockSl4f extends Mock implements Sl4f {}
 
 class MockDump extends Mock implements Dump {}
 
-class RunProcessorObserver {
-  void runTraceProcessor(String processor, List<String> args) {}
+class RunProcessObserver {
+  void runProcess(String executablePath, List<String> args) {}
 }
 
-class MockRunProcessorObserver extends Mock implements RunProcessorObserver {}
+class MockRunProcessObserver extends Mock implements RunProcessObserver {}
 
 class FakePerformanceTools extends Performance {
-  final RunProcessorObserver _observer;
-  FakePerformanceTools(Sl4f _sl4f, Dump _dump, RunProcessorObserver observer)
+  final RunProcessObserver _observer;
+  FakePerformanceTools(Sl4f _sl4f, Dump _dump, RunProcessObserver observer)
       : _observer = observer,
         super(_sl4f, _dump);
 
   @override
-  Future<bool> runTraceProcessor(String processor, List<String> args) async {
-    _observer.runTraceProcessor(processor, args);
+  Future<bool> runProcess(String executablePath, List<String> args) async {
+    _observer.runProcess(executablePath, args);
     return true;
   }
 }
@@ -102,17 +102,17 @@ void main(List<String> args) {
   });
 
   test('process trace', () async {
-    final mockRunProcessorObserver = MockRunProcessorObserver();
+    final mockRunProcessObserver = MockRunProcessObserver();
     final performance =
-        FakePerformanceTools(mockSl4f, mockDump, mockRunProcessorObserver);
+        FakePerformanceTools(mockSl4f, mockDump, mockRunProcessObserver);
 
     // Test trace processing with [appName] set.
     await performance.processTrace(
         '/bin/process_sample_trace', File('sample-trace.json'), 'test1',
         appName: 'test-app');
 
-    var verifyMockRunProcessObserver = verify(mockRunProcessorObserver
-        .runTraceProcessor('/bin/process_sample_trace', captureAny))
+    var verifyMockRunProcessObserver = verify(mockRunProcessObserver.runProcess(
+        '/bin/process_sample_trace', captureAny))
       ..called(1);
     var capturedArgs = verifyMockRunProcessObserver.captured.single;
     expect(capturedArgs[0], '-test_suite_name=test1');
@@ -124,13 +124,93 @@ void main(List<String> args) {
     await performance.processTrace(
         '/bin/process_sample_trace', File('sample-trace.json'), 'test1');
 
-    verifyMockRunProcessObserver = verify(mockRunProcessorObserver
-        .runTraceProcessor('/bin/process_sample_trace', captureAny))
+    verifyMockRunProcessObserver = verify(mockRunProcessObserver.runProcess(
+        '/bin/process_sample_trace', captureAny))
       ..called(1);
     capturedArgs = verifyMockRunProcessObserver.captured.single;
     expect(capturedArgs[0], '-test_suite_name=test1');
     expect(capturedArgs[1], endsWith('test1-benchmark.json'));
     expect(capturedArgs[2], endsWith('sample-trace.json'));
+  });
+
+  test('convert results', () async {
+    final mockRunProcessObserver = MockRunProcessObserver();
+    final performance =
+        FakePerformanceTools(mockSl4f, mockDump, mockRunProcessObserver);
+
+    // With no buildbucket id env variable, it should do a local run.
+    File convertedFile = await performance.convertResults(
+        '/bin/catapult_converter', File('test1-benchmark.json'), {});
+    expect(convertedFile.path, endsWith('test1-benchmark.catapult_json'));
+    var verifyMockRunProcessObserver = verify(mockRunProcessObserver.runProcess(
+        argThat(endsWith('catapult_converter')), captureAny))
+      ..called(1);
+    var capturedArgs = verifyMockRunProcessObserver.captured.single;
+    expect(capturedArgs[0], '--input');
+    expect(capturedArgs[1], endsWith('test1-benchmark.json'));
+    expect(capturedArgs[2], '--output');
+    expect(capturedArgs[3], endsWith('test1-benchmark.catapult_json'));
+    expect(capturedArgs[4], '--execution-timestamp-ms');
+    expect(int.parse(capturedArgs[5]) != null, true);
+    expect(capturedArgs[6], '--masters');
+    expect(capturedArgs[7], 'local-master');
+    expect(capturedArgs[8], '--log-url');
+    expect(capturedArgs[9], 'http://ci.example.com/build/300');
+    expect(capturedArgs[10], '--bots');
+    expect(capturedArgs[11], 'local-bot');
+
+    // Otherwise, it should do a bot run.
+    var environment = {
+      'FUCHSIA_BUILD_DIR': 'out/default',
+      'BUILDER_NAME': 'fuchsia-builder',
+      'BUILDBUCKET_ID': '8abc123',
+      'BUILD_CREATE_TIME': '1561234567890',
+      'INPUT_COMMIT_HOST': 'myhost.googlesource.com',
+      'INPUT_COMMIT_PROJECT': 'project1',
+      'INPUT_COMMIT_REF': 'refs/heads/master'
+    };
+
+    convertedFile = await performance.convertResults(
+        '/bin/catapult_converter', File('test2-benchmark.json'), environment);
+    expect(convertedFile.path, endsWith('test2-benchmark.catapult_json'));
+    verifyMockRunProcessObserver = verify(mockRunProcessObserver.runProcess(
+        argThat(endsWith('catapult_converter')), captureAny))
+      ..called(1);
+    capturedArgs = verifyMockRunProcessObserver.captured.single;
+    expect(capturedArgs[0], '--input');
+    expect(capturedArgs[1], endsWith('test2-benchmark.json'));
+    expect(capturedArgs[2], '--output');
+    expect(capturedArgs[3], endsWith('test2-benchmark.catapult_json'));
+    expect(capturedArgs[4], '--execution-timestamp-ms');
+    expect(capturedArgs[5], '1561234567890');
+    expect(capturedArgs[6], '--masters');
+    expect(capturedArgs[7], 'myhost.project1');
+    expect(capturedArgs[8], '--log-url');
+    expect(capturedArgs[9], 'https://ci.chromium.org/b/8abc123');
+    expect(capturedArgs[10], '--bots');
+    expect(capturedArgs[11], 'fuchsia-builder');
+
+    // If head is not on master, then it should be appended to master name.
+    environment['INPUT_COMMIT_REF'] = 'refs/heads/releases/rc1';
+    convertedFile = await performance.convertResults(
+        '/bin/catapult_converter', File('test3-benchmark.json'), environment);
+    expect(convertedFile.path, endsWith('test3-benchmark.catapult_json'));
+    verifyMockRunProcessObserver = verify(mockRunProcessObserver.runProcess(
+        argThat(endsWith('catapult_converter')), captureAny))
+      ..called(1);
+    capturedArgs = verifyMockRunProcessObserver.captured.single;
+    expect(capturedArgs[0], '--input');
+    expect(capturedArgs[1], endsWith('test3-benchmark.json'));
+    expect(capturedArgs[2], '--output');
+    expect(capturedArgs[3], endsWith('test3-benchmark.catapult_json'));
+    expect(capturedArgs[4], '--execution-timestamp-ms');
+    expect(capturedArgs[5], '1561234567890');
+    expect(capturedArgs[6], '--masters');
+    expect(capturedArgs[7], 'myhost.project1.rc1');
+    expect(capturedArgs[8], '--log-url');
+    expect(capturedArgs[9], 'https://ci.chromium.org/b/8abc123');
+    expect(capturedArgs[10], '--bots');
+    expect(capturedArgs[11], 'fuchsia-builder');
   });
 
   test('trace options', () async {
