@@ -1,0 +1,24 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#include <fuchsia/modular/testing/cpp/fidl.h>
+#include <lib/modular_test_harness/cpp/fake_component.h>
+#include <lib/modular_test_harness/cpp/test_harness_fixture.h>
+
+#include <iostream>
+
+#include "src/lib/files/glob.h"
+constexpr char kModularTestHarnessGlobPath[] =
+    "/hub/r/mth_*_test/*/c/sessionmgr.cmx/*/out/debug/sessionctl";
+
+class SessionctlTest : public modular::testing::TestHarnessFixture {};
+
+TEST_F(SessionctlTest, FindSessionCtlService) {
+  fuchsia::modular::testing::TestHarnessSpec spec;
+  spec.set_environment_suffix("test");
+  modular::testing::TestHarnessBuilder builder(std::move(spec));
+  builder.BuildAndRun(test_harness());
+
+  RunLoopUntil([&] { return files::Glob(kModularTestHarnessGlobPath).size() == 1; });
+}
