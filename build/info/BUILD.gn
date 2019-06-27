@@ -14,7 +14,7 @@ if (build_info_files.version != build_info_files.latest_commit_date) {
 
 package("build-info") {
   deps = [
-    ":latest-commit-date.txt",
+    ":latest-commit-date",
   ]
   resources = [
     {
@@ -40,8 +40,8 @@ package("build-info") {
   ]
 }
 
-action("latest-commit-date.txt") {
-  visibility = [ ":*" ]
+action("latest-commit-date") {
+  visibility = [ ":*", "//build/images:devmgr_config.txt" ]
 
   # The script at tools/gen-latest-commit-date.sh script runs the following
   # command to compute the latest commit date:
@@ -57,6 +57,7 @@ action("latest-commit-date.txt") {
   ]
   outputs = [
     build_info_files.latest_commit_date,
+    build_info_files.latest_unix_stamp,
   ]
   script = "gen-latest-commit-date.sh"
   args = rebase_path([ "//integration/" ] + outputs, root_build_dir)

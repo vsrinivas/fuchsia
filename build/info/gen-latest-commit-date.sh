@@ -19,6 +19,7 @@ set -eu
 
 INTEGRATION="$1"
 OUTPUT="$2"
+UNIX_OUTPUT="$3"
 
 # Set the following options to make the output as stable as possible:
 # - GIT_CONFIG_NOSYSTEM=1   - Don't check /etc/gitconfig
@@ -30,3 +31,4 @@ OUTPUT="$2"
 # - --format=%cd            - Print the CommitDate field only, respecting the
 #                             formatting given by the --date flag
 GIT_CONFIG_NOSYSTEM=1 TZ=UTC git --git-dir="$INTEGRATION"/.git log --date=iso-strict-local --format=%cd -n 1 > "$OUTPUT"
+GIT_CONFIG_NOSYSTEM=1 TZ=UTC git --git-dir="$INTEGRATION"/.git log --date=unix --format=%cd -n 1 > "$UNIX_OUTPUT"

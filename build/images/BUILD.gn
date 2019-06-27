@@ -548,6 +548,7 @@ action("devmgr_config.txt") {
         "$target_out_dir/system_image.meta/meta.far.merkle"
 
     deps += [
+      "//build/info:latest-commit-date",
       ":system_image.meta",
       pkgfs_label,
     ]
@@ -573,6 +574,14 @@ action("devmgr_config.txt") {
     args += [
       "--rewrite=*=zircon.system.pkgfs.file.{target}={source}",
       "--manifest=" + rebase_path(pkgfs_blob_manifest, root_build_dir),
+      "--reset-rewrite",
+    ]
+
+    # Add the backstop UTC value from the integration repo latest commit
+    args += [
+      "--contents",
+      "--entry=devmgr.epoch=" + rebase_path(build_info_files.latest_unix_stamp, root_build_dir),
+      "--no-contents",
       "--reset-rewrite",
     ]
   }
