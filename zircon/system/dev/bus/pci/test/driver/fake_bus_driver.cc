@@ -5,6 +5,7 @@
 #include "fake_bus_driver.h"
 #include "../../config.h"
 #include "../../device.h"
+#include "../fakes/test_device.h"
 #include "driver_tests.h"
 #include <ddk/binding.h>
 #include <ddk/platform-defs.h>
@@ -13,7 +14,7 @@ namespace pci {
 
 zx_status_t FakeBusDriver::Create(zx_device_t* parent, const char* name) {
     std::unique_ptr<FakePciroot> root;
-    zx_status_t st = FakePciroot::Create(0, 1, &root);
+    zx_status_t st = FakePciroot::Create(0, 0, &root);
     if (st != ZX_OK) {
         return st;
     }
@@ -23,31 +24,30 @@ zx_status_t FakeBusDriver::Create(zx_device_t* parent, const char* name) {
         return st;
     }
 
-    auto& dev = bus->GetDevice(bus->test_bdf());
-    dev.set_vendor_id(PCI_TEST_DRIVER_VID).set_device_id(PCI_TEST_DRIVER_DID);
-    st = bus->CreateDevice(bus->test_bdf());
+    auto cleanup = fbl::MakeAutoCall([&bus] { bus->DdkRemove(); });
+    st = bus->CreateDevice(bus->test_bdf(), (uint8_t*)kTestDeviceConfig, sizeof(kTestDeviceConfig));
     if (st != ZX_OK) {
-        bus->DdkRemove();
         return st;
     }
 
+    bus->upstream().ConfigureDownstreamBars();
+    cleanup.cancel();
     bus.release();
     return ZX_OK;
 }
 
-zx_status_t FakeBusDriver::CreateDevice(pci_bdf_t bdf) {
-    std::unique_ptr<Config> cfg;
-    zx_status_t st = MmioConfig::Create(bdf, &pciroot().ecam().get_mmio(), 0, 1, &cfg);
-    if (st != ZX_OK) {
-        return st;
+// Creates a device, seeding the configuration space with a given buffer if provided.
+zx_status_t FakeBusDriver::CreateDevice(pci_bdf_t bdf, uint8_t* base_cfg, size_t base_cfg_size) {
+    ddk::MmioView view = pciroot().ecam().mmio().View(bdf_to_ecam_offset(bdf, 0), ZX_PAGE_SIZE);
+    for (uint32_t off = 0; off < base_cfg_size; off++) {
+        view.Write(base_cfg[off], off);
     }
 
-    st = pci::Device::Create(this->zxdev(), std::move(cfg), &upstream(), bus().bli());
-    if (st != ZX_OK) {
-        return st;
-    }
-
-    return ZX_OK;
+    std::unique_ptr<Config> cfg = std::make_unique<FakeMmioConfig>(bdf, std::move(view));
+    cfg->Write(Config::kVendorId, PCI_TEST_DRIVER_VID);
+    cfg->Write(Config::kDeviceId, PCI_TEST_DRIVER_DID);
+    cfg->DumpConfig(4096);
+    return pci::Device::Create(this->zxdev(), std::move(cfg), &upstream(), bus().bli());
 }
 
 } // namespace pci

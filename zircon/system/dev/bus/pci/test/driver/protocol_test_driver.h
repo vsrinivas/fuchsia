@@ -10,7 +10,6 @@
 #include <fuchsia/device/test/c/fidl.h>
 #include <pretty/hexdump.h>
 #include <zxtest/base/observer.h>
-#include <zxtest/base/observer.h>
 #include <zxtest/zxtest.h>
 
 class TestObserver : public zxtest::LifecycleObserver {

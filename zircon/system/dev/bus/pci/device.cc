@@ -356,7 +356,7 @@ zx_status_t Device::AllocateBar(uint32_t bar_id) {
     // If we have an address it was found earlier in the probe and we'll try to
     // preserve it.
     if (bar_info.address) {
-        status = allocator->GetRegion(bar_info.address, bar_info.size, &bar_info.allocation);
+        status = allocator->AllocateWindow(bar_info.address, bar_info.size, &bar_info.allocation);
         if (status == ZX_OK) {
             // If we successfully grabbed the allocation then we're finished because
             // our metadata already matches what we requested from the allocator.
@@ -373,7 +373,7 @@ zx_status_t Device::AllocateBar(uint32_t bar_id) {
     // If we had no address, or we failed to preseve the address, then it's time
     // to take any allocation window possible.
     if (!bar_info.address) {
-        status = allocator->GetRegion(bar_info.size, &bar_info.allocation);
+        status = allocator->AllocateWindow(bar_info.size, &bar_info.allocation);
         // Request a base address of zero to signal we'll take any location in
         // the window.
         if (status != ZX_OK) {
@@ -429,19 +429,6 @@ zx_status_t Device::ConfigureBars() {
         }
     }
 
-    return ZX_OK;
-}
-
-zx_status_t Device::GetBarInfo(uint32_t bar_id, const BarInfo* out_info) const {
-    if (bar_id >= bar_count_ || out_info == nullptr) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-
-    if (disabled_) {
-        return ZX_ERR_BAD_STATE;
-    }
-
-    out_info = &bars_[bar_id];
     return ZX_OK;
 }
 
@@ -509,7 +496,7 @@ zx_status_t AllocateCapability(uint16_t offset,
                 fbl::DoublyLinkedList<std::unique_ptr<typename CapabilityType::BaseClass>>* list) {
     // If we find a duplicate of a singleton capability then either we've parsed incorrectly,
     // or the device configuration space is suspect.
-    if (out != nullptr) {
+    if (*out != nullptr) {
         return ZX_ERR_BAD_STATE;
     }
 
@@ -538,6 +525,7 @@ zx_status_t Device::ParseCapabilities() {
                    hdr.ptr);
 
         if (CapabilityCycleExists<Capability>(*cfg_, &caps_.list, cap_offset)) {
+            pci_tracef("%s capability cycle detected\n", cfg_->addr());
             return ZX_ERR_BAD_STATE;
         }
 
@@ -550,6 +538,8 @@ zx_status_t Device::ParseCapabilities() {
         case Capability::Id::kPciExpress:
             st = AllocateCapability<PciExpressCapability>(cap_offset, &caps_.pcie, &caps_.list);
             if (st != ZX_OK) {
+                pci_tracef("%s Error allocating PCIe capability: %d, %p\n", cfg_->addr(), st,
+                           caps_.pcie);
                 return st;
             }
             break;
@@ -579,7 +569,8 @@ zx_status_t Device::ParseCapabilities() {
         }
 
         cap_offset = hdr.ptr & 0xFC; // Lower two bits are reserved.
-        if (cap_offset && (cap_offset < PCI_CAP_PTR_MIN_VALID || cap_offset > PCI_CAP_PTR_MAX_VALID)) {
+        if (cap_offset && (cap_offset < PCI_CAP_PTR_MIN_VALID
+                    || cap_offset > PCI_CAP_PTR_MAX_VALID)) {
             pci_errorf("%s capability pointer out of range: %#02x, disabling device\n",
                        cfg_->addr(), cap_offset);
             return ZX_ERR_OUT_OF_RANGE;

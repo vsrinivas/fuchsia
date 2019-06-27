@@ -152,16 +152,6 @@ public:
     // @return A zx_status_t indicating success or failure of the operation.
     zx_status_t EnableMmio(bool enabled) TA_EXCL(dev_lock_);
 
-    // Return information about the requested base address register, if it has been
-    // allocated.
-    //
-    // @param bar_id The index of the BAR register to fetch info for
-    // @param out_info A pointer to a BarInfo buffer to store the bar info
-    //
-    // @return ZX_OK on success, ZX_INVALID_ARGS if bad a bar bar index or
-    // pointer is passed in, and ZX_BAD_STATE if the device is disabled.
-    zx_status_t GetBarInfo(uint32_t bar_id, const BarInfo* out_info) const;
-
     // Requests a device unplug itself from its UpstreamNode and the Bus list.
     virtual void Unplug() TA_EXCL(dev_lock_);
     // TODO(cja): port void SetQuirksDone() TA_REQ(dev_lock_) { quirks_done_ = true; }
@@ -229,15 +219,15 @@ protected:
     zx_status_t ParseCapabilities() TA_REQ(dev_lock_);
     // TODO(cja) port zx_status_t ParseExtendedCapabilities() TA_REQ(dev_lock_);
 
-    fbl::Mutex cmd_reg_lock_;       // Protection for access to the command register.
-    const bool is_bridge_;          // True if this device is also a bridge
+    fbl::Mutex cmd_reg_lock_;           // Protection for access to the command register.
+    const bool is_bridge_;              // True if this device is also a bridge
     const std::unique_ptr<Config> cfg_; // Pointer to the device's config interface.
-    uint16_t vendor_id_;            // The device's vendor ID, as read from config
-    uint16_t device_id_;            // The device's device ID, as read from config
-    uint8_t class_id_;              // The device's class ID, as read from config.
-    uint8_t subclass_;              // The device's subclass, as read from config.
-    uint8_t prog_if_;               // The device's programming interface (from cfg)
-    uint8_t rev_id_;                // The device's revision ID (from cfg)
+    uint16_t vendor_id_;                // The device's vendor ID, as read from config
+    uint16_t device_id_;                // The device's device ID, as read from config
+    uint8_t class_id_;                  // The device's class ID, as read from config.
+    uint8_t subclass_;                  // The device's subclass, as read from config.
+    uint8_t prog_if_;                   // The device's programming interface (from cfg)
+    uint8_t rev_id_;                    // The device's revision ID (from cfg)
 
     // State related to lifetime management.
     bool plugged_in_ = false;

@@ -3,13 +3,17 @@
 // found in the LICENSE file.
 #include "protocol_test_driver.h"
 #include "../../common.h"
+#include "../../config.h"
+#include "../fakes/test_device.h"
 
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/platform-defs.h>
 #include <ddktl/protocol/pci.h>
 #include <fuchsia/device/test/c/fidl.h>
+#include <lib/zx/object.h>
 #include <stdio.h>
+#include <zircon/hw/pci.h>
 
 ProtocolTestDriver* ProtocolTestDriver::instance_;
 
@@ -92,30 +96,30 @@ TEST_F(PciProtocolTests, ConfigPattern16) {
 
     // Clear it out. Important if this test runs out of order.
     for (uint16_t addr = kTestPatternStart;
-            addr < kTestPatternEnd - 1;
-            addr = static_cast<uint16_t>(addr + 2)) {
+         addr < kTestPatternEnd - 1;
+         addr = static_cast<uint16_t>(addr + 2)) {
         ASSERT_OK(pci().ConfigWrite16(addr, 0));
     }
 
     // Verify the clear.
     for (uint16_t addr = kTestPatternStart;
-            addr < kTestPatternEnd - 1;
-            addr = static_cast<uint16_t>(addr + 2)) {
+         addr < kTestPatternEnd - 1;
+         addr = static_cast<uint16_t>(addr + 2)) {
         ASSERT_OK(pci().ConfigRead16(addr, &rd_val));
         ASSERT_EQ(rd_val, 0);
     }
 
     // Write the pattern out.
     for (uint16_t addr = kTestPatternStart;
-            addr < kTestPatternEnd - 1;
-            addr = static_cast<uint16_t>(addr + 2)) {
+         addr < kTestPatternEnd - 1;
+         addr = static_cast<uint16_t>(addr + 2)) {
         ASSERT_OK(pci().ConfigWrite16(addr, PatternValue(addr)));
     }
 
     // Verify the pattern.
     for (uint16_t addr = kTestPatternStart;
-            addr < kTestPatternEnd - 1;
-            addr = static_cast<uint16_t>(addr + 2)) {
+         addr < kTestPatternEnd - 1;
+         addr = static_cast<uint16_t>(addr + 2)) {
         ASSERT_OK(pci().ConfigRead16(addr, &rd_val));
         ASSERT_EQ(rd_val, PatternValue(addr));
     }
@@ -132,30 +136,30 @@ TEST_F(PciProtocolTests, ConfigPattern32) {
 
     // Clear it out. Important if this test runs out of order.
     for (uint16_t addr = kTestPatternStart;
-            addr < kTestPatternEnd - 3;
-            addr = static_cast<uint16_t>(addr + 4)) {
+         addr < kTestPatternEnd - 3;
+         addr = static_cast<uint16_t>(addr + 4)) {
         ASSERT_OK(pci().ConfigWrite32(static_cast<uint16_t>(addr), 0));
     }
 
     // Verify the clear.
     for (uint16_t addr = kTestPatternStart;
-            addr < kTestPatternEnd - 3;
-            addr = static_cast<uint16_t>(addr + 4)) {
+         addr < kTestPatternEnd - 3;
+         addr = static_cast<uint16_t>(addr + 4)) {
         ASSERT_OK(pci().ConfigRead32(addr, &rd_val));
         ASSERT_EQ(rd_val, 0);
     }
 
     // Write the pattern out.
     for (uint16_t addr = kTestPatternStart;
-            addr < kTestPatternEnd - 3;
-            addr = static_cast<uint16_t>(addr + 4)) {
+         addr < kTestPatternEnd - 3;
+         addr = static_cast<uint16_t>(addr + 4)) {
         ASSERT_OK(pci().ConfigWrite32(addr, PatternValue(addr)));
     }
 
     // Verify the pattern.
     for (uint16_t addr = kTestPatternStart;
-            addr < kTestPatternEnd - 3;
-            addr = static_cast<uint16_t>(addr + 4)) {
+         addr < kTestPatternEnd - 3;
+         addr = static_cast<uint16_t>(addr + 4)) {
         ASSERT_OK(pci().ConfigRead32(addr, &rd_val));
         ASSERT_EQ(rd_val, PatternValue(addr));
     }
@@ -165,22 +169,100 @@ TEST_F(PciProtocolTests, EnableBusMaster) {
     struct pci::config::Command cmd_reg = {};
     uint16_t cached_value = 0;
 
-    // Ensure Bus master is disabled.
+    // Ensure Bus mastering is already enabled in our test quadro.
+    ASSERT_OK(pci().ConfigRead16(PCI_CONFIG_COMMAND, &cmd_reg.value));
+    ASSERT_EQ(true, cmd_reg.bus_master());
+    cached_value = cmd_reg.value; // cache so we can test other bits are preserved
+
+    // Ensure we can disable it.
+    ASSERT_OK(pci().EnableBusMaster(false));
     ASSERT_OK(pci().ConfigRead16(PCI_CONFIG_COMMAND, &cmd_reg.value));
     ASSERT_EQ(false, cmd_reg.bus_master());
-    cached_value = cmd_reg.value; // cache so we can test other bits are preserved
+    ASSERT_EQ(cached_value & ~PCI_COMMAND_BUS_MASTER_EN, cmd_reg.value);
 
     // Enable and confirm it.
     ASSERT_OK(pci().EnableBusMaster(true));
     ASSERT_OK(pci().ConfigRead16(PCI_CONFIG_COMMAND, &cmd_reg.value));
     ASSERT_EQ(true, cmd_reg.bus_master());
-    ASSERT_EQ(cached_value | PCI_COMMAND_BUS_MASTER_EN, cmd_reg.value);
-
-    // Ensure we can disable it again.
-    ASSERT_OK(pci().EnableBusMaster(false));
-    ASSERT_OK(pci().ConfigRead16(PCI_CONFIG_COMMAND, &cmd_reg.value));
-    ASSERT_EQ(false, cmd_reg.bus_master());
     ASSERT_EQ(cached_value, cmd_reg.value);
+}
+
+TEST_F(PciProtocolTests, GetBarArgumentCheck) {
+    zx_pci_bar_t info = {};
+    // Test that only valid BAR ids are accepted.
+    ASSERT_EQ(ZX_ERR_INVALID_ARGS, pci().GetBar(PCI_MAX_BAR_REGS, &info));
+}
+
+// These individual BAR tests are coupled closely to the device configuration
+// stored in test_device.h. If that configuration is changed in a way that
+// affects the expected BAR information then these tests also need to be
+// updated.
+TEST_F(PciProtocolTests, GetBar0) {
+    zx_pci_bar_t info = {};
+    zx::vmo vmo;
+    size_t size;
+
+    // BAR 0 (32-bit mmio, non-pf, size 16M)
+    ASSERT_OK(pci().GetBar(0, &info));
+    ASSERT_EQ(info.id, 0);
+    ASSERT_EQ(info.type, ZX_PCI_BAR_TYPE_MMIO);
+    vmo.reset(info.handle);
+    vmo.get_size(&size);
+    ASSERT_EQ(size, kTestDeviceBars[0].size);
+}
+
+TEST_F(PciProtocolTests, GetBar1) {
+    zx_pci_bar_t info = {};
+    zx::vmo vmo;
+    size_t size;
+
+    // BAR 1 (32-bit mmio, pf, size 256M)
+    ASSERT_OK(pci().GetBar(1, &info));
+    ASSERT_EQ(info.id, 1);
+    ASSERT_EQ(info.type, ZX_PCI_BAR_TYPE_MMIO);
+    vmo.reset(info.handle);
+    vmo.get_size(&size);
+    ASSERT_EQ(size, kTestDeviceBars[1].size);
+}
+
+TEST_F(PciProtocolTests, GetBar2) {
+    zx_pci_bar_t info = {};
+    // BAR 2 (unused)
+    ASSERT_EQ(ZX_ERR_NOT_FOUND, pci().GetBar(2, &info));
+}
+
+TEST_F(PciProtocolTests, GetBar3) {
+    zx_pci_bar_t info = {};
+    zx::vmo vmo;
+    size_t size;
+
+    // BAR 3 (64-bit mmio, pf, size 32M)
+    ASSERT_OK(pci().GetBar(3, &info));
+    ASSERT_EQ(info.id, 3);
+    ASSERT_EQ(info.type, ZX_PCI_BAR_TYPE_MMIO);
+    vmo.reset(info.handle);
+    vmo.get_size(&size);
+    ASSERT_EQ(size, kTestDeviceBars[3].size);
+}
+
+TEST_F(PciProtocolTests, GetBar4) {
+    zx_pci_bar_t info = {};
+    // BAR 4 (Bar 3 second half, should be NOT_FOUND)
+    ASSERT_EQ(ZX_ERR_NOT_FOUND, pci().GetBar(4, &info));
+}
+
+TEST_F(PciProtocolTests, GetBar5) {
+    zx_pci_bar_t info = {};
+    // BAR 5 (I/O ports @ 0x2000, size 128)
+#if __x86_64__
+    ASSERT_OK(pci().GetBar(5, &info));
+    ASSERT_EQ(info.type, ZX_PCI_BAR_TYPE_PIO);
+    ASSERT_EQ(info.id, 5);
+    ASSERT_EQ(info.addr, kTestDeviceBars[5].address);
+    ASSERT_EQ(info.size, kTestDeviceBars[5].size);
+#else
+    ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, pci().GetBar(5, &info));
+#endif
 }
 
 TEST_F(PciProtocolTests, GetDeviceInfo) {
@@ -188,6 +270,7 @@ TEST_F(PciProtocolTests, GetDeviceInfo) {
     uint16_t device_id;
     uint8_t base_class;
     uint8_t sub_class;
+
     uint8_t program_interface;
     uint8_t revision_id;
     uint8_t bus_id = PCI_TEST_BUS_ID;
@@ -198,7 +281,7 @@ TEST_F(PciProtocolTests, GetDeviceInfo) {
     ASSERT_OK(pci().ConfigRead16(PCI_CONFIG_DEVICE_ID, &device_id));
     ASSERT_EQ(vendor_id, PCI_TEST_DRIVER_VID);
     ASSERT_EQ(device_id, PCI_TEST_DRIVER_DID);
-    ASSERT_OK(pci().ConfigRead8(PCI_CONFIG_CLASS_CODE, &base_class));
+    ASSERT_OK(pci().ConfigRead8(PCI_CONFIG_CLASS_CODE_BASE, &base_class));
     ASSERT_OK(pci().ConfigRead8(PCI_CONFIG_CLASS_CODE_SUB, &sub_class));
     ASSERT_OK(pci().ConfigRead8(PCI_CONFIG_CLASS_CODE_INTR, &program_interface));
     ASSERT_OK(pci().ConfigRead8(PCI_CONFIG_REVISION_ID, &revision_id));

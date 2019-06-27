@@ -66,17 +66,7 @@ zx_status_t MmioConfig::Create(pci_bdf_t bdf,
         return ZX_ERR_INVALID_ARGS;
     }
 
-    // Find the offset into the ecam region for the given bdf address. Every bus
-    // has 32 devices, every device has 8 functions, and each function has an
-    // extended config space of 4096 bytes. The base address of the vmo provided
-    // to the bus driver corresponds to the start_bus_num, so offset the bdf address
-    // based on the bottom of our ecam.
-    zx_vaddr_t bdf_start = (bdf.bus_id - start_bus) * PCIE_ECAM_BYTES_PER_BUS;
-    bdf_start += bdf.device_id * PCI_MAX_FUNCTIONS_PER_DEVICE * PCIE_EXTENDED_CONFIG_SIZE;
-    bdf_start += bdf.function_id * PCIE_EXTENDED_CONFIG_SIZE;
-
-    ddk::MmioView view = ecam->View(bdf_start, ZX_PAGE_SIZE);
-    // Can't use std::make_unique because the constructor is private.
+    ddk::MmioView view = ecam->View(bdf_to_ecam_offset(bdf, start_bus), ZX_PAGE_SIZE);
     *config = std::unique_ptr<MmioConfig>(new MmioConfig(bdf, std::move(view)));
     return ZX_OK;
 }

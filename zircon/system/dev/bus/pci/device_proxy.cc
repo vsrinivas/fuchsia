@@ -77,7 +77,54 @@ zx_status_t DeviceProxy::DdkGetProtocol(uint32_t proto_id, void* out) {
 // TODO(ZX-3927): Convert this to using a better wire format when we no longer
 // have to support the kernel driver.
 zx_status_t DeviceProxy::PciGetBar(uint32_t bar_id, zx_pci_bar_t* out_bar) {
-    DEVICE_PROXY_UNIMPLEMENTED;
+    PciRpcMsg req = {};
+    PciRpcMsg resp = {};
+    zx_handle_t handle;
+
+    req.bar.id = bar_id;
+    zx_status_t st = RpcRequest(PCI_OP_GET_BAR, &handle, &req, &resp);
+    // |st| is the channel operation status, |resp.ret| is the RPC status.
+    if (st != ZX_OK) {
+        return st;
+    }
+
+    if (resp.ret != ZX_OK) {
+        return resp.ret;
+    }
+
+    out_bar->id = resp.bar.id;
+    if (!resp.bar.is_mmio) {
+        out_bar->type = ZX_PCI_BAR_TYPE_PIO;
+        // TODO(cja): Figure out once and for all what the story is with IO on ARM.
+#if __x86_64__
+        out_bar->addr = resp.bar.io_addr;
+        out_bar->size = resp.bar.io_size;
+        // x86 PIO space access requires permission in the I/O bitmap. If an IO BAR
+        // is used then the handle returned corresponds to a resource with access to
+        // this range of IO space.
+        //
+        // In a test environment we are not passed a handle back. We can still verify
+        // the I/O address and size.
+        if (handle != ZX_HANDLE_INVALID) {
+            st = zx_ioports_request(handle, static_cast<uint16_t>(out_bar->addr),
+                                    static_cast<uint32_t>(out_bar->size));
+            if (st != ZX_OK) {
+                zxlogf(ERROR, "Failed to map IO window for bar into process: %d\n", st);
+                return st;
+            }
+        }
+#else
+        zxlogf(INFO, "%s: PIO bars may not be supported correctly on this arch. "
+                     "Please have someone check this!\n",
+               __func__);
+        return ZX_ERR_NOT_SUPPORTED;
+#endif
+    } else {
+        out_bar->type = ZX_PCI_BAR_TYPE_MMIO;
+        out_bar->handle = handle;
+    }
+
+    return ZX_OK;
 }
 
 zx_status_t DeviceProxy::PciEnableBusMaster(bool enable) {

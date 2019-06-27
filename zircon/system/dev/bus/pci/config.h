@@ -1,17 +1,73 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-
 #pragma once
+
 #include <ddk/mmio-buffer.h>
 #include <ddktl/protocol/pciroot.h>
 #include <endian.h>
+#include <hwreg/bitfields.h>
 #include <lib/mmio/mmio.h>
 #include <stdio.h>
 #include <zircon/hw/pci.h>
 #include <zircon/types.h>
 
 namespace pci {
+namespace config {
+
+// Fields correspond to the name in the PCI Local Bus Spec section 6.2.
+struct Command {
+    uint16_t value;
+    // 15-11 are reserved preserve.
+    DEF_SUBBIT(value, 10, interrupt_disable);
+    DEF_SUBBIT(value, 9, fast_back_to_back_enable);
+    DEF_SUBBIT(value, 8, serr_enable);
+    // 7 is reserved preserve.
+    DEF_SUBBIT(value, 6, parity_error_response);
+    DEF_SUBBIT(value, 5, vga_palette_snoop);
+    DEF_SUBBIT(value, 4, memory_write_and_invalidate_enable);
+    DEF_SUBBIT(value, 3, special_cycles);
+    DEF_SUBBIT(value, 2, bus_master);
+    DEF_SUBBIT(value, 1, memory_space);
+    DEF_SUBBIT(value, 0, io_space);
+};
+
+// The layout of a Base Address Register changes based on its type.
+// PCI Local Bus Spec section 6.2.5.1.
+struct IoBaseAddress;
+struct MmioBaseAddress;
+struct BaseAddress : public hwreg::RegisterBase<BaseAddress, uint32_t> {
+    DEF_RSVDZ_BIT(1);
+    DEF_BIT(0, is_io_space);
+
+    IoBaseAddress* io() { return reinterpret_cast<IoBaseAddress*>(this); }
+    MmioBaseAddress* mmio() { return reinterpret_cast<MmioBaseAddress*>(this); }
+    static auto Get() { return hwreg::RegisterAddr<BaseAddress>(0); }
+};
+
+struct IoBaseAddress : public BaseAddress {
+    DEF_UNSHIFTED_FIELD(31, 2, base_address);
+};
+
+struct MmioBaseAddress : public BaseAddress {
+    DEF_UNSHIFTED_FIELD(31, 4, base_address);
+    DEF_BIT(3, is_prefetchable);
+    DEF_BIT(2, is_64_bit);
+};
+
+} // namespace config
+
+constexpr zx_paddr_t bdf_to_ecam_offset(pci_bdf_t bdf, uint8_t start_bus) {
+    // Find the offset into the ecam region for the given bdf address. Every bus
+    // has 32 devices, every device has 8 functions, and each function has an
+    // extended config space of 4096 bytes. The base address of the vmo provided
+    // to the bus driver corresponds to the start_bus_num, so offset the bdf address
+    // based on the bottom of our ecam.
+    zx_vaddr_t bdf_start = (bdf.bus_id - start_bus) * PCIE_ECAM_BYTES_PER_BUS;
+    bdf_start += bdf.device_id * PCI_MAX_FUNCTIONS_PER_DEVICE * PCIE_EXTENDED_CONFIG_SIZE;
+    bdf_start += bdf.function_id * PCIE_EXTENDED_CONFIG_SIZE;
+    return bdf_start;
+}
 
 class PciReg8 {
 public:
@@ -20,6 +76,9 @@ public:
     constexpr PciReg8()
         : offset_(0u) {}
     constexpr uint16_t offset() const { return offset_; }
+    inline bool operator==(const PciReg8& other) {
+        return (offset() == other.offset());
+    }
 
 private:
     uint16_t offset_;
@@ -32,6 +91,9 @@ public:
     constexpr PciReg16()
         : offset_(0u) {}
     constexpr uint16_t offset() const { return offset_; }
+    inline bool operator==(const PciReg8& other) {
+        return (offset() == other.offset());
+    }
 
 private:
     uint16_t offset_;
@@ -44,6 +106,9 @@ public:
     constexpr PciReg32()
         : offset_(0u) {}
     constexpr uint16_t offset() const { return offset_; }
+    inline bool operator==(const PciReg8& other) {
+        return (offset() == other.offset());
+    }
 
 private:
     uint16_t offset_;
@@ -145,7 +210,7 @@ protected:
 // MMIO config is the stardard method for accessing modern pci configuration space.
 // A device's configuration space is mapped to a specific place in a given pci root's
 // ecam and can be directly accessed with standard IO operations.t
-class MmioConfig final : public Config {
+class MmioConfig : public Config {
 public:
     static zx_status_t Create(pci_bdf_t bdf,
                               ddk::MmioBuffer* ecam_,
@@ -157,10 +222,11 @@ public:
     uint32_t Read(const PciReg32 addr) const final;
     void Write(const PciReg8 addr, uint8_t val) const final;
     void Write(const PciReg16 addr, uint16_t val) const final;
-    void Write(const PciReg32 addr, uint32_t val) const final;
-    const char* type(void) const final;
+    void Write(const PciReg32 addr, uint32_t val) const override;
+    const char* type(void) const override;
 
 private:
+    friend class FakeMmioConfig;
     MmioConfig(pci_bdf_t bdf, ddk::MmioView&& view)
         : Config(bdf), view_(std::move(view)) {}
     const ddk::MmioView view_;

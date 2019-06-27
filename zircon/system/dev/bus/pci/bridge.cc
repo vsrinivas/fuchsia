@@ -234,7 +234,7 @@ zx_status_t Bridge::AllocateBridgeWindowsLocked() {
                                 auto label) {
         if (base <= limit) {
             uint64_t size = static_cast<uint64_t>(limit) - base + 1;
-            status = upstream_alloc.GetRegion(base, size, &alloc);
+            status = upstream_alloc.AllocateWindow(base, size, &alloc);
 
             if (status != ZX_OK) {
                 pci_errorf("[%s] Failed to allocate bridge %s window [%016lx-%016lx]\n",
@@ -244,7 +244,7 @@ zx_status_t Bridge::AllocateBridgeWindowsLocked() {
             }
 
             ZX_DEBUG_ASSERT(alloc != nullptr);
-            return dest_alloc.AddAddressSpace(std::move(alloc));
+            return dest_alloc.GrantAddressSpace(std::move(alloc));
         }
         return ZX_OK;
     };

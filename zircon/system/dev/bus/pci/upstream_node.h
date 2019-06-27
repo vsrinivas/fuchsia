@@ -21,6 +21,7 @@
 
 namespace pci {
 
+class FakeBusDriver;
 class PciAllocator;
 class UpstreamNode {
 public:
@@ -45,7 +46,9 @@ public:
     void UnlinkDevice(pci::Device* device) { downstream_.erase(*device); }
 
 protected:
-    UpstreamNode(Type type, uint32_t mbus_id) : type_(type), managed_bus_id_(mbus_id) {}
+    friend FakeBusDriver;
+    UpstreamNode(Type type, uint32_t mbus_id)
+        : type_(type), managed_bus_id_(mbus_id) {}
     virtual ~UpstreamNode() = default;
 
     virtual void ConfigureDownstreamBars();

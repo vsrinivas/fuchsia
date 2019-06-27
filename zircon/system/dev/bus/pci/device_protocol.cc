@@ -43,6 +43,10 @@ zx_status_t Device::DdkRxrpc(zx_handle_t channel) {
         return ZX_ERR_INTERNAL;
     }
 
+    if (disabled_) {
+        return RpcReply(ch, ZX_ERR_BAD_STATE);
+    }
+
     switch (request_.op) {
     case PCI_OP_CONFIG_READ:
         return RpcConfigRead(ch);
@@ -171,7 +175,52 @@ zx_status_t Device::RpcGetAuxdata(const zx::unowned_channel& ch) {
 }
 
 zx_status_t Device::RpcGetBar(const zx::unowned_channel& ch) {
-    RPC_UNIMPLEMENTED;
+    if (request_.bar.id >= bar_count_) {
+        return RpcReply(ch, ZX_ERR_INVALID_ARGS);
+    }
+
+    // Both unused BARs and BARs that are the second half of a 64 bit
+    // BAR have a size of zero.
+    auto& bar = bars_[request_.bar.id];
+    if (bar.size == 0) {
+        return RpcReply(ch, ZX_ERR_NOT_FOUND);
+    }
+
+    zx_status_t st;
+    zx_handle_t handle = ZX_HANDLE_INVALID;
+    uint32_t handle_cnt = 0;
+    response_.bar.id = request_.bar.id;
+    // MMIO Bars have an associated VMO for the driver to map, whereas
+    // IO bars have a Resource corresponding to an IO range for the
+    // driver to access. These are mutually exclusive, so only one
+    // handle is ever needed.
+    if (bar.is_mmio) {
+        response_.bar.is_mmio = true;
+        zx::vmo vmo;
+        st = bar.allocation->CreateVmObject(&vmo);
+        if (st == ZX_OK) {
+            handle = vmo.release();
+            handle_cnt++;
+        } else {
+            return RpcReply(ch, ZX_ERR_INTERNAL);
+        }
+    } else {
+        zx::resource res;
+        response_.bar.is_mmio = false;
+        if (bar.allocation->resource().get() != ZX_HANDLE_INVALID) {
+            st = bar.allocation->resource().duplicate(ZX_RIGHT_SAME_RIGHTS, &res);
+            if (st != ZX_OK) {
+                return RpcReply(ch, ZX_ERR_INTERNAL);
+            }
+
+            handle = res.release();
+            handle_cnt++;
+        }
+        response_.bar.io_addr = static_cast<uint16_t>(bar.address);
+        response_.bar.io_size = static_cast<uint16_t>(bar.size);
+    }
+
+    return RpcReply(ch, ZX_OK, &handle, handle_cnt);
 }
 
 zx_status_t Device::RpcGetBti(const zx::unowned_channel& ch) {

@@ -51,7 +51,7 @@ TEST_F(PciDeviceTests, CreationTest) {
     // releasing all objects of upstream(). If creation succeeds here and no
     // asserts happen following the test it means the fakes are built properly
     // enough and the basic interface is fulfilled.
-    ASSERT_OK(MmioConfig::Create(default_bdf(), &pciroot_proto().ecam().get_mmio(), 0, 1, &cfg));
+    ASSERT_OK(MmioConfig::Create(default_bdf(), &pciroot_proto().ecam().mmio(), 0, 1, &cfg));
     ASSERT_OK(Device::Create(fake_ddk::kFakeParent, std::move(cfg), &upstream(), &bus()));
 
     // Verify the created device's BDF.
@@ -93,7 +93,7 @@ TEST_F(PciDeviceTests, BasicCapabilityTest) {
 
     // Copy the config dump into a device entry in the ecam.
     memcpy(pciroot_proto().ecam().get(default_bdf()).config, virtio_input, sizeof(virtio_input));
-    ASSERT_OK(MmioConfig::Create(default_bdf(), &pciroot_proto().ecam().get_mmio(), 0, 1, &cfg));
+    ASSERT_OK(MmioConfig::Create(default_bdf(), &pciroot_proto().ecam().mmio(), 0, 1, &cfg));
     ASSERT_OK(Device::Create(fake_ddk::kFakeParent, std::move(cfg), &upstream(), &bus()));
     auto& dev = bus().get_device(default_bdf());
 
@@ -140,7 +140,7 @@ TEST_F(PciDeviceTests, InvalidPtrCapabilityTest) {
     raw_cfg[kCap2 + 1] = kInvalidCap;
 
     std::unique_ptr<Config> cfg;
-    ASSERT_OK(MmioConfig::Create(default_bdf(), &pciroot_proto().ecam().get_mmio(), 0, 1, &cfg));
+    ASSERT_OK(MmioConfig::Create(default_bdf(), &pciroot_proto().ecam().mmio(), 0, 1, &cfg));
     EXPECT_EQ(ZX_ERR_OUT_OF_RANGE,
               Device::Create(fake_ddk::kFakeParent, std::move(cfg), &upstream(), &bus()));
 
@@ -174,7 +174,7 @@ TEST_F(PciDeviceTests, PtrCycleCapabilityTest) {
     raw_cfg[kCap3] = cap_id;
     raw_cfg[kCap3 + 1] = kCap1;
 
-    ASSERT_OK(MmioConfig::Create(default_bdf(), &pciroot_proto().ecam().get_mmio(), 0, 1, &cfg));
+    ASSERT_OK(MmioConfig::Create(default_bdf(), &pciroot_proto().ecam().mmio(), 0, 1, &cfg));
     EXPECT_EQ(ZX_ERR_BAD_STATE,
               Device::Create(fake_ddk::kFakeParent, std::move(cfg), &upstream(), &bus()));
 
@@ -209,7 +209,7 @@ TEST_F(PciDeviceTests, DuplicateFixedCapabilityTest) {
     raw_cfg[kCap3] = pcie_id;
     raw_cfg[kCap3 + 1] = 0;
 
-    ASSERT_OK(MmioConfig::Create(default_bdf(), &pciroot_proto().ecam().get_mmio(), 0, 1, &cfg));
+    ASSERT_OK(MmioConfig::Create(default_bdf(), &pciroot_proto().ecam().mmio(), 0, 1, &cfg));
     EXPECT_EQ(ZX_ERR_BAD_STATE,
               Device::Create(fake_ddk::kFakeParent, std::move(cfg), &upstream(), &bus()));
 

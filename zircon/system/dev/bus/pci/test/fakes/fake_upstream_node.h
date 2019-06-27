@@ -14,9 +14,9 @@ public:
     FakeUpstreamNode(Type type, uint32_t mbus_id)
         : UpstreamNode(type, mbus_id) {}
 
-    PciAllocator& pf_mmio_regions() { return fake_alloc_; }
-    PciAllocator& mmio_regions() { return fake_alloc_; }
-    PciAllocator& pio_regions() { return fake_alloc_; }
+    PciAllocator& pf_mmio_regions() final { return pf_mmio_alloc_; }
+    PciAllocator& mmio_regions() final { return mmio_alloc_; }
+    PciAllocator& pio_regions() final { return pio_alloc_; }
 
     void UnplugDownstream() final {
         UpstreamNode::UnplugDownstream();
@@ -29,7 +29,9 @@ public:
     PCI_IMPLEMENT_REFCOUNTED;
 
 private:
-    FakeAllocator fake_alloc_;
+    FakeAllocator pf_mmio_alloc_;
+    FakeAllocator mmio_alloc_;
+    FakeAllocator pio_alloc_;
 };
 
 } // namespace pci

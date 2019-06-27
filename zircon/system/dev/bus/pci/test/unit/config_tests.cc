@@ -193,16 +193,16 @@ void PciConfigTests::ConfigReadWriteImpl(Config* cfg) {
 
 TEST_F(PciConfigTests, MmioIntegration) {
     std::unique_ptr<Config> cfg1, cfg2;
-    ASSERT_EQ(ZX_OK, MmioConfig::Create(default_bdf1(), &pciroot_proto().ecam().get_mmio(), 0, 1,
+    ASSERT_EQ(ZX_OK, MmioConfig::Create(default_bdf1(), &pciroot_proto().ecam().mmio(), 0, 1,
                                         &cfg1));
-    ASSERT_EQ(ZX_OK, MmioConfig::Create(default_bdf2(), &pciroot_proto().ecam().get_mmio(), 0, 1,
+    ASSERT_EQ(ZX_OK, MmioConfig::Create(default_bdf2(), &pciroot_proto().ecam().mmio(), 0, 1,
                                         &cfg2));
     IntegrationTestImpl(cfg1.get(), cfg2.get());
 }
 
 TEST_F(PciConfigTests, MmioConfigReadWrite) {
     std::unique_ptr<Config> cfg;
-    ASSERT_EQ(ZX_OK, MmioConfig::Create(default_bdf1(), &pciroot_proto().ecam().get_mmio(), 0, 1,
+    ASSERT_EQ(ZX_OK, MmioConfig::Create(default_bdf1(), &pciroot_proto().ecam().mmio(), 0, 1,
                                         &cfg));
     ConfigReadWriteImpl(cfg.get());
 }
