@@ -15,6 +15,7 @@ test("blobfs-unit") {
   sources = [
     "allocated-extent-iterator-test.cc",
     "allocator-test.cc",
+    "background-executor-test.cc",
     "blob-cache-test.cc",
     "compressor-test.cc",
     "create-tests.cc",
