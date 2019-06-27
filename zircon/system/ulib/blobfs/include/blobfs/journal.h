@@ -300,12 +300,12 @@ private:
 
     // Returns the block at |index| within the buffer as a journal entry header block.
     HeaderBlock* GetHeaderBlock(uint64_t index) {
-        return reinterpret_cast<HeaderBlock*>(entries_->MutableData(index));
+        return reinterpret_cast<HeaderBlock*>(entries_->Data(index));
     }
 
     // Returns the block at |index| within the buffer as a journal entry commit block.
     CommitBlock* GetCommitBlock(uint64_t index) {
-        return reinterpret_cast<CommitBlock*>(entries_->MutableData(index));
+        return reinterpret_cast<CommitBlock*>(entries_->Data(index));
     }
 
     // Returns true if the header block at |header_index| and its corresponding commit block
@@ -330,7 +330,7 @@ private:
 
     // Returns data from the info buffer as a JournalInfo block.
     JournalInfo* GetInfo() {
-        return reinterpret_cast<JournalInfo*>(info_.MutableData(0));
+        return reinterpret_cast<JournalInfo*>(info_.Data(0));
     }
 
     // Blocks until |blocks| blocks of data are available within the entries buffer.

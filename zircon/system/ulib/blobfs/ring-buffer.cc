@@ -90,12 +90,11 @@ void internal::RingBufferState::CompleteFreeLocked(size_t start, size_t blocks) 
 
 RingBufferReservation::RingBufferReservation(internal::RingBufferState* buffer,
                                              size_t start, size_t length)
-    : buffer_(buffer), start_(start), length_(length) {}
+    : buffer_(buffer), view_(buffer->buffer(), start, length) {}
 
 RingBufferReservation::RingBufferReservation(RingBufferReservation&& other)
     : buffer_(other.buffer_),
-      start_(other.start_),
-      length_(other.length_) {
+      view_(std::move(other.view_)) {
     other.buffer_ = nullptr;
     other.Reset();
     ZX_DEBUG_ASSERT(!other.Reserved());
@@ -107,8 +106,7 @@ RingBufferReservation& RingBufferReservation::operator=(RingBufferReservation&& 
     }
     Reset();
     buffer_ = other.buffer_;
-    start_ = other.start_;
-    length_ = other.length_;
+    view_ = std::move(other.view_);
     other.buffer_ = nullptr;
     other.Reset();
     ZX_DEBUG_ASSERT(!other.Reserved());
@@ -124,8 +122,7 @@ void RingBufferReservation::Reset() {
         buffer_->Free(*this);
     }
     buffer_ = nullptr;
-    start_ = 0;
-    length_ = 0;
+    view_ = VmoBufferView();
 }
 
 zx_status_t RingBufferReservation::CopyRequests(
@@ -162,7 +159,7 @@ zx_status_t RingBufferReservation::CopyRequests(
         const zx::unowned_vmo& vmo = in_operations[i].vmo;
 
         // Write data from the vmo into the buffer.
-        void* ptr = MutableData(reservation_offset);
+        void* ptr = Data(reservation_offset);
 
         zx_status_t status = vmo->read(ptr, vmo_offset * kBlobfsBlockSize,
                                        buf_len * kBlobfsBlockSize);
@@ -188,7 +185,7 @@ zx_status_t RingBufferReservation::CopyRequests(
             buf_len = vmo_len - buf_len;
             ZX_DEBUG_ASSERT(buf_len > 0);
 
-            ptr = MutableData(reservation_offset);
+            ptr = Data(reservation_offset);
             status = vmo->read(ptr, vmo_offset * kBlobfsBlockSize, buf_len * kBlobfsBlockSize);
             if (status != ZX_OK) {
                 return status;
@@ -214,13 +211,17 @@ zx_status_t RingBufferReservation::CopyRequests(
 
 vmoid_t RingBufferReservation::vmoid() const {
     ZX_DEBUG_ASSERT(Reserved());
-    return buffer_->vmoid();
+    return view_.vmoid();
 }
 
-void* RingBufferReservation::MutableData(size_t index) {
+void* RingBufferReservation::Data(size_t index) {
     ZX_DEBUG_ASSERT(Reserved());
-    ZX_DEBUG_ASSERT_MSG(index < length_, "Accessing data outside the current reservation");
-    return buffer_->MutableData((start_ + index) % buffer_->capacity());
+    return view_.Data(index);
+}
+
+const void* RingBufferReservation::Data(size_t index) const {
+    ZX_DEBUG_ASSERT(Reserved());
+    return view_.Data(index);
 }
 
 zx_status_t RingBuffer::Create(VmoidRegistry* vmoid_registry, size_t blocks, const char* label,

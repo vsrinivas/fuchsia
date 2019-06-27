@@ -46,7 +46,10 @@ public:
     const zx::vmo& vmo() const { return mapper_.vmo(); }
 
     // Returns data starting at block |index| in the buffer.
-    void* MutableData(size_t index);
+    void* Data(size_t index);
+
+    // Returns data starting at block |index| in the buffer.
+    const void* Data(size_t index) const;
 
 private:
     void Reset();

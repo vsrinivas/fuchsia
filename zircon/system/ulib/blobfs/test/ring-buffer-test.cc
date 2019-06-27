@@ -78,6 +78,24 @@ TEST(RingBufferTest, ReserveMove) {
     EXPECT_EQ(0, reservation_b.length());
 }
 
+TEST(RingBufferTest, ReservationBufferView) {
+    MockVmoidRegistry vmoid_registry;
+    std::unique_ptr<RingBuffer> buffer;
+    const size_t kBlocks = 5;
+    ASSERT_OK(RingBuffer::Create(&vmoid_registry, kBlocks, "test-buffer", &buffer));
+    RingBufferReservation reservation_a;
+    RingBufferReservation reservation_b;
+    EXPECT_OK(buffer->Reserve(2, &reservation_a));
+    EXPECT_OK(buffer->Reserve(1, &reservation_b));
+    EXPECT_EQ(vmoid_registry.default_vmoid(), reservation_a.vmoid());
+    EXPECT_EQ(vmoid_registry.default_vmoid(), reservation_a.buffer_view().vmoid());
+
+    EXPECT_EQ(0, reservation_a.start());
+    EXPECT_EQ(2, reservation_a.length());
+    EXPECT_EQ(2, reservation_b.start());
+    EXPECT_EQ(1, reservation_b.length());
+}
+
 TEST(RingBufferTest, ReserveAndFreeOutOfOrder) {
     MockVmoidRegistry vmoid_registry;
     std::unique_ptr<RingBuffer> buffer;
@@ -147,7 +165,7 @@ void CheckVmoEquals(const zx::vmo& vmo, const void* addr, size_t offset, int val
 void CheckOperationInRingBuffer(const zx::vmo& vmo, RingBufferReservation* reservation,
                                 const UnbufferedOperation& operation, size_t offset, int value) {
     for (size_t i = 0; i < operation.op.length; i++) {
-        CheckVmoEquals(vmo, reservation->MutableData(i + offset), operation.op.vmo_offset + i,
+        CheckVmoEquals(vmo, reservation->Data(i + offset), operation.op.vmo_offset + i,
                        value + static_cast<int>(operation.op.vmo_offset + i));
     }
 }
@@ -580,8 +598,8 @@ TEST(RingBufferTest, CopyRequestAtOffsetWraparound) {
     builder.Add(operations[1]);
     ASSERT_OK(reservations[1].CopyRequests(builder.TakeOperations(), 0, &buffer_operation));
 
-    ASSERT_NO_FATAL_FAILURES(CheckVmoEquals(vmo, reservations[0].MutableData(0), 0, seed));
-    ASSERT_NO_FATAL_FAILURES(CheckVmoEquals(vmo, reservations[1].MutableData(0), 2, seed + 2));
+    ASSERT_NO_FATAL_FAILURES(CheckVmoEquals(vmo, reservations[0].Data(0), 0, seed));
+    ASSERT_NO_FATAL_FAILURES(CheckVmoEquals(vmo, reservations[1].Data(0), 2, seed + 2));
 
     ASSERT_EQ(ZX_ERR_NO_SPACE, buffer->Reserve(3, &reservations[2]));
     {
@@ -601,14 +619,14 @@ TEST(RingBufferTest, CopyRequestAtOffsetWraparound) {
     ASSERT_OK(reservations[2].CopyRequests(builder.TakeOperations(), reservation_offset,
                                            &buffer_operation));
 
-    ASSERT_NO_FATAL_FAILURES(CheckVmoEquals(vmo, reservations[1].MutableData(0), 2, seed + 2));
-    ASSERT_NO_FATAL_FAILURES(CheckVmoEquals(vmo, reservations[2].MutableData(reservation_offset),
+    ASSERT_NO_FATAL_FAILURES(CheckVmoEquals(vmo, reservations[1].Data(0), 2, seed + 2));
+    ASSERT_NO_FATAL_FAILURES(CheckVmoEquals(vmo, reservations[2].Data(reservation_offset),
                                             3, seed + 3));
 }
 
 // Tests manually adding header and footer around a payload.
 //
-//       VMO 1: [ A, _, C ] (Copied into buffer via MutableData)
+//       VMO 1: [ A, _, C ] (Copied into buffer via Data)
 //       VMO 2: [ _, B, _ ] (Copied into buffer via CopyRequests)
 //  VMO-BUFFER: [ A, B, C ]
 //         DEV: [ A, B, C ]
@@ -630,9 +648,9 @@ TEST(RingBufferTest, CopyRequestAtOffsetWithHeaderAndFooter) {
     RingBufferReservation reservation;
     ASSERT_OK(buffer->Reserve(3, &reservation));
     // Write header from source VMO into reservation.
-    ASSERT_OK(vmo_a.read(reservation.MutableData(0), 0, kBlobfsBlockSize));
+    ASSERT_OK(vmo_a.read(reservation.Data(0), 0, kBlobfsBlockSize));
     // Write footer.
-    ASSERT_OK(vmo_a.read(reservation.MutableData(2), 2 * kBlobfsBlockSize, kBlobfsBlockSize));
+    ASSERT_OK(vmo_a.read(reservation.Data(2), 2 * kBlobfsBlockSize, kBlobfsBlockSize));
 
     // Data "B" of the VMO.
     UnbufferedOperationsBuilder builder;
@@ -650,9 +668,9 @@ TEST(RingBufferTest, CopyRequestAtOffsetWithHeaderAndFooter) {
     ASSERT_EQ(1, buffer_operation[0].op.dev_offset);
     ASSERT_EQ(1, buffer_operation[0].op.length);
 
-    ASSERT_NO_FATAL_FAILURES(CheckVmoEquals(vmo_a, reservation.MutableData(0), 0, seed_a));
-    ASSERT_NO_FATAL_FAILURES(CheckVmoEquals(vmo_b, reservation.MutableData(1), 1, seed_b + 1));
-    ASSERT_NO_FATAL_FAILURES(CheckVmoEquals(vmo_a, reservation.MutableData(2), 2, seed_a + 2));
+    ASSERT_NO_FATAL_FAILURES(CheckVmoEquals(vmo_a, reservation.Data(0), 0, seed_a));
+    ASSERT_NO_FATAL_FAILURES(CheckVmoEquals(vmo_b, reservation.Data(1), 1, seed_b + 1));
+    ASSERT_NO_FATAL_FAILURES(CheckVmoEquals(vmo_a, reservation.Data(2), 2, seed_a + 2));
 }
 
 } // namespace

@@ -75,7 +75,7 @@ public:
     }
 
     // Returns data starting at block |index| in the buffer.
-    void* MutableData(size_t index) {
+    void* Data(size_t index) {
         ZX_DEBUG_ASSERT(index < capacity_);
         return reinterpret_cast<char*>(mapper_.start()) + (index * kBlobfsBlockSize);
     }

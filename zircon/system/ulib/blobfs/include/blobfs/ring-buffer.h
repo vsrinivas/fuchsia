@@ -12,6 +12,7 @@
 
 #include <blobfs/operation.h>
 #include <blobfs/vmo-buffer.h>
+#include <blobfs/vmo-buffer-view.h>
 #include <fbl/mutex.h>
 #include <lib/fzl/owned-vmo-mapper.h>
 
@@ -57,8 +58,15 @@ public:
     //
     // Only callable by |RingBufferReservation|, since this uses the previously created
     // reservation.
-    void* MutableData(size_t index) {
-        return buffer_.MutableData(index);
+    void* Data(size_t index) {
+        return buffer_.Data(index);
+    }
+
+    // Returns a pointer to the underlying buffer. Should only be accessible to the
+    // |RingBufferReservation|, which should take caution to only reference reserved portions
+    // of the buffer itself.
+    VmoBuffer* buffer() {
+        return &buffer_;
     }
 
     // Returns the vmoid of the underlying RingBuffer.
@@ -135,11 +143,13 @@ public:
     zx_status_t CopyRequests(const fbl::Vector<UnbufferedOperation>& requests, size_t offset,
                              fbl::Vector<BufferedOperation>* out);
 
+    VmoBufferView buffer_view() { return view_; }
+
     // The first reservation block, relative to the start of |RingBuffer|.
-    size_t start() const { return start_; }
+    size_t start() const { return view_.start(); }
 
     // The total length of this reservation, in blocks.
-    size_t length() const { return length_; }
+    size_t length() const { return view_.length(); }
 
     vmoid_t vmoid() const;
 
@@ -149,7 +159,8 @@ public:
     // Preconditions:
     // - |Reserved()| must be true.
     // - |index| < |length()|
-    void* MutableData(size_t index);
+    void* Data(size_t index);
+    const void* Data(size_t index) const;
 
 private:
     // Returns true if the reservation holds blocks in a |RingBuffer|.
@@ -158,8 +169,7 @@ private:
     }
 
     internal::RingBufferState* buffer_ = nullptr;
-    size_t start_ = 0;
-    size_t length_ = 0;
+    VmoBufferView view_;
 };
 
 // In-memory circular buffer.

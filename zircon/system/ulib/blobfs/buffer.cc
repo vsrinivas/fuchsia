@@ -76,7 +76,7 @@ void Buffer::CopyTransaction(WriteTxn* txn) {
         ZX_DEBUG_ASSERT(vmo != mapper_.vmo().get());
 
         // Write data from the vmo into the buffer.
-        void* ptr = MutableData(buf_offset);
+        void* ptr = Data(buf_offset);
 
         zx_status_t status;
         ZX_DEBUG_ASSERT((start_ <= buf_offset) ?
@@ -102,7 +102,7 @@ void Buffer::CopyTransaction(WriteTxn* txn) {
             buf_len = vmo_len - buf_len;
             ZX_DEBUG_ASSERT(buf_len > 0);
 
-            ptr = MutableData(0);
+            ptr = Data(0);
             ZX_DEBUG_ASSERT((start_ == 0) ? (start_ < buf_len) : (buf_len <= start_)); // Wraparound
             ZX_ASSERT(zx_vmo_read(vmo, ptr, vmo_offset * kBlobfsBlockSize,
                                   buf_len * kBlobfsBlockSize) == ZX_OK);

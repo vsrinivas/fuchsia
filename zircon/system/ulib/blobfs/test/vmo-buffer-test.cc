@@ -130,10 +130,10 @@ TEST(VmoBufferTest, MappingTest) {
     memset(buf, 'a', sizeof(buf));
 
     for (size_t i = 0; i < kCapacity; i++) {
-        memcpy(buffer.MutableData(i), buf, kBlobfsBlockSize);
+        memcpy(buffer.Data(i), buf, kBlobfsBlockSize);
     }
     for (size_t i = 0; i < kCapacity; i++) {
-        EXPECT_EQ(0, memcmp(buf, buffer.MutableData(i), kBlobfsBlockSize));
+        EXPECT_EQ(0, memcmp(buf, buffer.Data(i), kBlobfsBlockSize));
     }
 }
 
@@ -146,14 +146,14 @@ TEST(VmoBufferTest, CompareVmoToMapping) {
     char buf[kBlobfsBlockSize * 3];
     memset(buf, 'a', sizeof(buf));
     for (size_t i = 0; i < kCapacity; i++) {
-        memcpy(buffer.MutableData(i), buf, kBlobfsBlockSize);
+        memcpy(buffer.Data(i), buf, kBlobfsBlockSize);
     }
 
     // Check that we can read from the VMO directly.
     ASSERT_OK(buffer.vmo().read(buf, 0, kCapacity * kBlobfsBlockSize));
 
     // The data from the VMO is equivalent to the data from the mapping.
-    EXPECT_EQ(0, memcmp(buf, buffer.MutableData(0), kCapacity * kBlobfsBlockSize));
+    EXPECT_EQ(0, memcmp(buf, buffer.Data(0), kCapacity * kBlobfsBlockSize));
 }
 
 } // namespace

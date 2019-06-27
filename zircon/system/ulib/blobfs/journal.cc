@@ -420,7 +420,7 @@ void Journal::PrepareBuffer(JournalEntry* entry) {
 
     // Copy header block of the journal entry into the journal buffer. We must write the header
     // block into the buffer before the commit block so we can generate the checksum.
-    void* data = entries_->MutableData(header_index);
+    void* data = entries_->Data(header_index);
     memset(data, 0, kBlobfsBlockSize);
     memcpy(data, &entry->GetHeaderBlock(), sizeof(HeaderBlock));
 
@@ -429,7 +429,7 @@ void Journal::PrepareBuffer(JournalEntry* entry) {
     entry->SetChecksum(GenerateChecksum(header_index, commit_index));
 
     // Write the commit block (now with checksum) to the journal buffer.
-    data = entries_->MutableData(commit_index);
+    data = entries_->Data(commit_index);
     memset(data, 0, kBlobfsBlockSize);
     memcpy(data, &entry->GetCommitBlock(), sizeof(CommitBlock));
 }
@@ -449,8 +449,8 @@ void Journal::PrepareDelete(JournalEntry* entry, WritebackWork* work) {
     }
 
     // Overwrite the header & commit block in the buffer with empty data.
-    memset(entries_->MutableData(header_index), 0, kBlobfsBlockSize);
-    memset(entries_->MutableData(commit_index), 0, kBlobfsBlockSize);
+    memset(entries_->Data(header_index), 0, kBlobfsBlockSize);
+    memset(entries_->Data(commit_index), 0, kBlobfsBlockSize);
 
     // Enqueue transactions for the header/commit blocks.
     entries_->AddTransaction(header_index, start_block_ + 1 + header_index, 1,
@@ -556,7 +556,7 @@ zx_status_t Journal::CommitReplay() {
     // Overwrite the first journal entry block to 0. Since we are resetting the info block to point
     // to 0 as the first entry, we expect that block 0 will not contain a valid entry. Overwriting
     // it will ensure that this is not the case.
-    memset(entries_->MutableData(0), 0, kBlobfsBlockSize);
+    memset(entries_->Data(0), 0, kBlobfsBlockSize);
     fbl::unique_ptr<WritebackWork> work = CreateWork();
 
     entries_->AddTransaction(0, start_block_ + 1, 1, &work->Transaction());
@@ -678,12 +678,12 @@ uint32_t Journal::GenerateChecksum(size_t header_index, size_t commit_index) {
     ZX_DEBUG_ASSERT(first_length > 0);
 
     // Calculate checksum.
-    uint8_t* data_ptr = static_cast<uint8_t*>(entries_->MutableData(header_index));
+    uint8_t* data_ptr = static_cast<uint8_t*>(entries_->Data(header_index));
     uint32_t checksum = crc32(0, data_ptr, first_length * kBlobfsBlockSize);
 
     // If the transaction wraps around the buffer, update checksum for the second half.
     if (commit_index < header_index) {
-        data_ptr = static_cast<uint8_t*>(entries_->MutableData(0));
+        data_ptr = static_cast<uint8_t*>(entries_->Data(0));
         checksum = crc32(checksum, data_ptr, commit_index * kBlobfsBlockSize);
     }
 

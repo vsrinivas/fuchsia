@@ -29,6 +29,7 @@ test("blobfs-unit") {
     "utils.cc",
     "vector-extent-iterator-test.cc",
     "vmo-buffer-test.cc",
+    "vmo-buffer-view-test.cc",
     "writeback-test.cc",
   ]
   deps = [

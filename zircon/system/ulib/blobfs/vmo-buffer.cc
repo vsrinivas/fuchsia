@@ -70,10 +70,14 @@ zx_status_t VmoBuffer::Initialize(VmoidRegistry* vmoid_registry, size_t blocks, 
     return ZX_OK;
 }
 
-void* VmoBuffer::MutableData(size_t index) {
+void* VmoBuffer::Data(size_t index) {
+    return const_cast<void*>(const_cast<const VmoBuffer*>(this)->Data(index));
+}
+
+const void* VmoBuffer::Data(size_t index) const {
     ZX_DEBUG_ASSERT(index < capacity_);
-    return reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(mapper_.start()) +
-                                   (index * kBlobfsBlockSize));
+    return reinterpret_cast<const void*>(reinterpret_cast<uintptr_t>(mapper_.start()) +
+                                         (index * kBlobfsBlockSize));
 }
 
 } // namespace blobfs
