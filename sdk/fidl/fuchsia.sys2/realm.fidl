@@ -15,17 +15,17 @@ using fuchsia.io;
 protocol Realm {
     /// Binds to a child component instance, causing it to start running if it
     /// is not already. When this function successfully returns, `child` is
-    /// running and `exposed_capabilities` is bound to a directory that contains
-    /// the capabilities which the child exposed to its realm via
+    /// running and `exposed_dir` is bound to a directory that contains the
+    /// capabilities which the child exposed to its realm via
     /// `ComponentDecl.exposes` (specified via "expose" declarations in the
     /// component’s manifest).
     ///
-    /// `exposed_capabilities` is a valid channel as long as `child` is running.
-    /// `child` will remain running until it either stops on its own, or
-    /// `DestroyChild` causes the child instance to be destroyed.
+    /// `exposed_dir` is a valid channel as long as `child` is running. `child`
+    /// will remain running until it either stops on its own, or `DestroyChild`
+    /// causes the child instance to be destroyed.
     ///
     /// For example, if the child exposes a service `/svc/example.Echo` then
-    /// `exposed_capabilities` will contain that service at that path.
+    /// `exposed_dir` will contain that service at that path.
     ///
     /// NOTE: `BindChild` does not support pipelining with `CreateChild`. If
     /// `BindChild` is called on an instance before `CreateChild` successfully
@@ -34,10 +34,11 @@ protocol Realm {
     /// Errors:
     /// - INVALID_ARGUMENTS: `child` is not a valid child reference.  -
     /// - INSTANCE_NOT_FOUND: `child` does not exist.
-    /// - INSTANCE_CANNOT_START: Instance was not running and there was an error
+    /// - INSTANCE_CANNOT_START: `child` was not running and there was an error
     ///   starting it.
-    BindChild(ChildRef child, request<fuchsia.io.Directory>
-              exposed_capabilities) -> () error Error;
+    /// - INSTANCE_CANNOT_RESOLVE: `child`'s component declaration failed to resolve.
+    BindChild(ChildRef child,
+              request<fuchsia.io.Directory> exposed_dir) -> () error Error;
 
     /// Creates a child component instance dynamically. When this function
     /// returns successfully, the instance exists, but it may not be running.

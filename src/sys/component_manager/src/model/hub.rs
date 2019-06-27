@@ -210,7 +210,8 @@ impl Hub {
                 )?;
                 let mut in_dir = directory::simple::empty();
                 tree.install(&abs_moniker, &mut in_dir)?;
-                if let Some(pkg_dir) = execution.namespace.clone_package_dir()? {
+                let pkg_dir = execution.namespace.as_ref().and_then(|n| n.package_dir.as_ref());
+                if let Some(pkg_dir) = Self::clone_dir(pkg_dir) {
                     in_dir.add_node(
                         "pkg",
                         directory_broker::DirectoryBroker::new(Self::route_open_fn(pkg_dir)),
@@ -220,11 +221,7 @@ impl Hub {
                 execution_controlled.add_node("in", in_dir, &abs_moniker)?;
 
                 // Install the out directory if we can successfully clone it.
-                // TODO(fsamuel): We should probably preserve the original error messages
-                // instead of dropping them.
-                if let Ok(out_dir) =
-                    io_util::clone_directory(&execution.outgoing_dir, CLONE_FLAG_SAME_RIGHTS)
-                {
+                if let Some(out_dir) = Self::clone_dir(execution.outgoing_dir.as_ref()) {
                     execution_controlled.add_node(
                         "out",
                         directory_broker::DirectoryBroker::new(Self::route_open_fn(out_dir)),
@@ -233,11 +230,7 @@ impl Hub {
                 }
 
                 // Install the runtime directory if we can successfully clone it.
-                // TODO(fsamuel): We should probably preserve the original error messages
-                // instead of dropping them.
-                if let Ok(runtime_dir) =
-                    io_util::clone_directory(&execution.runtime_dir, CLONE_FLAG_SAME_RIGHTS)
-                {
+                if let Some(runtime_dir) = Self::clone_dir(execution.runtime_dir.as_ref()) {
                     execution_controlled.add_node(
                         "runtime",
                         directory_broker::DirectoryBroker::new(Self::route_open_fn(runtime_dir)),
@@ -260,6 +253,12 @@ impl Hub {
         }
 
         Ok(())
+    }
+
+    // TODO(fsamuel): We should probably preserve the original error messages
+    // instead of dropping them.
+    fn clone_dir(dir: Option<&DirectoryProxy>) -> Option<DirectoryProxy> {
+        dir.and_then(|d| io_util::clone_directory(d, CLONE_FLAG_SAME_RIGHTS).ok())
     }
 }
 

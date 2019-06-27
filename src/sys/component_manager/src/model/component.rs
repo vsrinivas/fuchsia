@@ -159,18 +159,18 @@ pub struct RealmState {
 // TODO: Hold the component instance's controller.
 pub struct Execution {
     pub resolved_url: String,
-    pub namespace: IncomingNamespace,
-    pub outgoing_dir: DirectoryProxy,
-    pub runtime_dir: DirectoryProxy,
+    pub namespace: Option<IncomingNamespace>,
+    pub outgoing_dir: Option<DirectoryProxy>,
+    pub runtime_dir: Option<DirectoryProxy>,
     pub exposed_dir: ExposedDir,
 }
 
 impl Execution {
     pub fn start_from(
         resolved_url: Option<String>,
-        namespace: IncomingNamespace,
-        outgoing_dir: DirectoryProxy,
-        runtime_dir: DirectoryProxy,
+        namespace: Option<IncomingNamespace>,
+        outgoing_dir: Option<DirectoryProxy>,
+        runtime_dir: Option<DirectoryProxy>,
         exposed_dir: ExposedDir,
     ) -> Result<Self, ModelError> {
         if resolved_url.is_none() {

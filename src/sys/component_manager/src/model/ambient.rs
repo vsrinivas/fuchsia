@@ -29,8 +29,8 @@ pub trait AmbientEnvironment: Send + Sync {
     /// Serve the ambient `fuchsia.sys2.Realm` service for `realm` over `stream`.
     fn serve_realm_service(
         &self,
+        model: Model,
         realm: Arc<Realm>,
-        hooks: Arc<Hooks>,
         stream: fsys::RealmRequestStream,
     ) -> FutureObj<Result<(), AmbientError>>;
 }
@@ -60,9 +60,8 @@ impl AmbientError {
 impl AmbientEnvironment {
     /// Serve the ambient service denoted by `path` over `server_chan`.
     pub async fn serve<'a>(
-        ambient: Arc<AmbientEnvironment>,
+        model: Model,
         realm: Arc<Realm>,
-        hooks: Arc<Hooks>,
         path: &'a CapabilityPath,
         server_chan: zx::Channel,
     ) -> Result<(), AmbientError> {
@@ -71,7 +70,9 @@ impl AmbientEnvironment {
                 .into_stream()
                 .expect("could not convert channel into stream");
             fasync::spawn(async move {
-                if let Err(e) = await!(ambient.serve_realm_service(realm, hooks, stream)) {
+                if let Err(e) =
+                    await!(model.ambient.serve_realm_service(model.clone(), realm, stream))
+                {
                     warn!("serve_realm failed: {}", e);
                 }
             });

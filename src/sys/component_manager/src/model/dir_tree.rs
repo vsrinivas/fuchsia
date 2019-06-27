@@ -21,10 +21,10 @@ pub struct DirTree {
 
 impl DirTree {
     /// Builds a directory hierarchy from a component's `uses` declarations.
-    /// `routing_facade` is a closure that generates the routing function that will be called
+    /// `routing_factory` is a closure that generates the routing function that will be called
     /// when a leaf node is opened.
     pub fn build_from_uses(
-        routing_facade: impl Fn(AbsoluteMoniker, Capability) -> RoutingFn,
+        routing_factory: impl Fn(AbsoluteMoniker, Capability) -> RoutingFn,
         abs_moniker: &AbsoluteMoniker,
         decl: ComponentDecl,
     ) -> Result<Self, ModelError> {
@@ -38,16 +38,16 @@ impl DirTree {
                     return Err(ModelError::ComponentInvalid);
                 }
             };
-            tree.add_capability(&routing_facade, abs_moniker, &capability);
+            tree.add_capability(&routing_factory, abs_moniker, &capability);
         }
         Ok(tree)
     }
 
     /// Builds a directory hierarchy from a component's `exposes` declarations.
-    /// `routing_facade` is a closure that generates the routing function that will be called
+    /// `routing_factory` is a closure that generates the routing function that will be called
     /// when a leaf node is opened.
     pub fn build_from_exposes(
-        routing_facade: impl Fn(AbsoluteMoniker, Capability) -> RoutingFn,
+        routing_factory: impl Fn(AbsoluteMoniker, Capability) -> RoutingFn,
         abs_moniker: &AbsoluteMoniker,
         decl: ComponentDecl,
     ) -> Self {
@@ -57,7 +57,7 @@ impl DirTree {
                 ExposeDecl::Service(d) => Capability::Service(d.target_path),
                 ExposeDecl::Directory(d) => Capability::Directory(d.target_path),
             };
-            tree.add_capability(&routing_facade, abs_moniker, &capability);
+            tree.add_capability(&routing_factory, abs_moniker, &capability);
         }
         tree
     }
@@ -82,7 +82,7 @@ impl DirTree {
 
     fn add_capability(
         &mut self,
-        routing_facade: &impl Fn(AbsoluteMoniker, Capability) -> RoutingFn,
+        routing_factory: &impl Fn(AbsoluteMoniker, Capability) -> RoutingFn,
         abs_moniker: &AbsoluteMoniker,
         capability: &Capability,
     ) {
@@ -96,7 +96,7 @@ impl DirTree {
                 ));
             }
         }
-        let routing_fn = routing_facade(abs_moniker.clone(), capability.clone());
+        let routing_fn = routing_factory(abs_moniker.clone(), capability.clone());
         tree.broker_nodes.insert(path.basename.to_string(), routing_fn);
     }
 }
@@ -123,7 +123,7 @@ mod tests {
     async fn build_from_uses() {
         // Call `build_from_uses` with a routing factory that routes to a mock directory or service,
         // and a `ComponentDecl` with `use` declarations.
-        let routing_facade = mocks::proxying_routing_facade();
+        let routing_factory = mocks::proxying_routing_factory();
         let decl = ComponentDecl {
             uses: vec![
                 UseDecl::Directory(UseDirectoryDecl {
@@ -142,7 +142,7 @@ mod tests {
             ..default_component_decl()
         };
         let abs_moniker = AbsoluteMoniker::root();
-        let tree = DirTree::build_from_uses(routing_facade, &abs_moniker, decl.clone())
+        let tree = DirTree::build_from_uses(routing_factory, &abs_moniker, decl.clone())
             .expect("Unable to build 'uses' directory");
 
         // Convert the tree to a directory.
@@ -179,7 +179,7 @@ mod tests {
     async fn build_from_exposes() {
         // Call `build_from_uses` with a routing factory that routes to a mock directory or service,
         // and a `ComponentDecl` with `expose` declarations.
-        let routing_facade = mocks::proxying_routing_facade();
+        let routing_factory = mocks::proxying_routing_factory();
         let decl = ComponentDecl {
             exposes: vec![
                 ExposeDecl::Directory(ExposeDirectoryDecl {
@@ -201,7 +201,7 @@ mod tests {
             ..default_component_decl()
         };
         let abs_moniker = AbsoluteMoniker::root();
-        let tree = DirTree::build_from_exposes(routing_facade, &abs_moniker, decl.clone());
+        let tree = DirTree::build_from_exposes(routing_factory, &abs_moniker, decl.clone());
 
         // Convert the tree to a directory.
         let mut expose_dir = directory::simple::empty();

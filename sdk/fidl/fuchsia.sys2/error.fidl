@@ -19,8 +19,10 @@ enum Error {
     INSTANCE_ALREADY_EXISTS = 5;
     /// The component instance could not be started.
     INSTANCE_CANNOT_START = 6;
+    /// Failed to resolve the component's declaration.
+    INSTANCE_CANNOT_RESOLVE = 7;
     /// The component collection was not found.
-    COLLECTION_NOT_FOUND = 7;
+    COLLECTION_NOT_FOUND = 8;
     /// There was insufficient space to perform the operation.
-    NO_SPACE = 8;
+    NO_SPACE = 9;
 };

@@ -107,8 +107,8 @@ impl Model {
         Ok(())
     }
 
-    /// Given a realm and path, lazily bind to the instance in the realm, open, then bind its eager
-    /// children.
+    /// Given a realm and path, lazily bind to the instance in the realm, open its outgoing
+    /// directory at that path, then bind its eager children.
     pub async fn bind_instance_open_outgoing<'a>(
         &'a self,
         realm: Arc<Realm>,
@@ -128,7 +128,12 @@ impl Model {
                     "component hosting capability isn't running: {}",
                     realm.abs_moniker
                 )))?
-                .outgoing_dir;
+                .outgoing_dir
+                .as_ref()
+                .ok_or(ModelError::capability_discovery_error(format_err!(
+                    "component hosting capability is non-executable: {}",
+                    realm.abs_moniker
+                )))?;
             let path = io_util::canonicalize_path(&path.to_string());
             out_dir.open(flags, open_mode, &path, server_end).expect("failed to send open message");
             eager_children
@@ -187,66 +192,6 @@ impl Model {
         Ok(cur_realm)
     }
 
-    // Populates the RealmState struct and starts the component instance.
-    async fn populate_realm_state<'a>(
-        &'a self,
-        state: &'a mut RealmState,
-        realm: Arc<Realm>,
-    ) -> Result<Vec<Arc<Realm>>, ModelError> {
-        if state.execution.is_some() {
-            return Ok(vec![]);
-        }
-
-        let component = await!(realm.resolver_registry.resolve(&realm.component_url))?;
-        state.populate_decl(component.decl, &*realm)?;
-        let decl = state.decl.as_ref().expect("ComponentDecl unavailable.");
-        if decl.program.is_some() {
-            let (outgoing_dir_client, outgoing_dir_server) =
-                zx::Channel::create().map_err(|e| ModelError::namespace_creation_failed(e))?;
-            let (runtime_dir_client, runtime_dir_server) =
-                zx::Channel::create().map_err(|e| ModelError::namespace_creation_failed(e))?;
-            let mut namespace = IncomingNamespace::new(component.package)?;
-            let ns = await!(namespace.populate(self.clone(), &realm.abs_moniker, decl))?;
-            let exposed_dir = ExposedDir::new(self, &realm.abs_moniker, state)?;
-            let execution = Execution::start_from(
-                component.resolved_url,
-                namespace,
-                DirectoryProxy::from_channel(
-                    fasync::Channel::from_channel(outgoing_dir_client).unwrap(),
-                ),
-                DirectoryProxy::from_channel(
-                    fasync::Channel::from_channel(runtime_dir_client).unwrap(),
-                ),
-                exposed_dir,
-            )?;
-
-            let start_info = fsys::ComponentStartInfo {
-                resolved_url: Some(execution.resolved_url.clone()),
-                program: data::clone_option_dictionary(&decl.program),
-                ns: Some(ns),
-                outgoing_dir: Some(ServerEnd::new(outgoing_dir_server)),
-                runtime_dir: Some(ServerEnd::new(runtime_dir_server)),
-            };
-            await!(realm.default_runner.start(start_info))?;
-            state.execution = Some(execution);
-        }
-
-        // Return children that need eager starting.
-        let mut eager_children: Vec<Arc<Realm>> = Vec::new();
-        for child_realm in
-            state.child_realms.as_ref().expect("Unable to access child realms.").values()
-        {
-            match child_realm.startup {
-                fsys::StartupMode::Eager => {
-                    eager_children.push(child_realm.clone());
-                }
-                fsys::StartupMode::Lazy => {}
-            }
-        }
-
-        Ok(eager_children)
-    }
-
     /// Binds to the component instance in the given realm, starting it if it's not
     /// already running. Returns the list of child realms whose instances need to be eagerly started
     /// after this function returns. The caller is responsible for calling
@@ -255,13 +200,16 @@ impl Model {
         &'a self,
         realm: Arc<Realm>,
     ) -> Result<Vec<Arc<Realm>>, ModelError> {
-        let mut state = await!(realm.state.lock());
-        let eager_children = await!(self.populate_realm_state(&mut *state, realm.clone()))?;
-        let routing_facade = RoutingFacade::new(self.clone());
-        for hook in self.hooks.iter() {
-            await!(hook.on_bind_instance(realm.clone(), &*state, routing_facade.clone()))?;
-        }
-
+        let eager_children = {
+            let mut state = await!(realm.state.lock());
+            let eager_children = await!(self.bind_inner(&mut *state, realm.clone()))?;
+            let routing_facade = RoutingFacade::new(self.clone());
+            // TODO: Don't hold the lock while calling the hooks.
+            for hook in self.hooks.iter() {
+                await!(hook.on_bind_instance(realm.clone(), &*state, routing_facade.clone()))?;
+            }
+            eager_children
+        };
         Ok(eager_children)
     }
 
@@ -289,5 +237,70 @@ impl Model {
             }
         }
         Ok(())
+    }
+
+    /// Updates the Execution struct, Populates the RealmState struct and starts the component
+    /// instance, returning a binding and all child realms that must be bound because they had
+    /// `eager` startup.
+    async fn bind_inner<'a>(
+        &'a self,
+        state: &'a mut RealmState,
+        realm: Arc<Realm>,
+    ) -> Result<Vec<Arc<Realm>>, ModelError> {
+        if let Some(_) = state.execution.as_ref() {
+            // TODO: Add binding to the execution once we track bindings.
+            Ok(vec![])
+        } else {
+            // Execution does not exist yet, create it.
+            let component = await!(realm.resolver_registry.resolve(&realm.component_url))?;
+            state.populate_decl(component.decl, &*realm)?;
+            let decl = state.decl.as_ref().expect("ComponentDecl unavailable.");
+            let exposed_dir = ExposedDir::new(self, &realm.abs_moniker, state)?;
+            let execution = if decl.program.is_some() {
+                let (outgoing_dir_client, outgoing_dir_server) =
+                    zx::Channel::create().map_err(|e| ModelError::namespace_creation_failed(e))?;
+                let (runtime_dir_client, runtime_dir_server) =
+                    zx::Channel::create().map_err(|e| ModelError::namespace_creation_failed(e))?;
+                let mut namespace = IncomingNamespace::new(component.package)?;
+                let ns = await!(namespace.populate(self.clone(), &realm.abs_moniker, decl))?;
+                let execution = Execution::start_from(
+                    component.resolved_url,
+                    Some(namespace),
+                    Some(DirectoryProxy::from_channel(
+                        fasync::Channel::from_channel(outgoing_dir_client).unwrap(),
+                    )),
+                    Some(DirectoryProxy::from_channel(
+                        fasync::Channel::from_channel(runtime_dir_client).unwrap(),
+                    )),
+                    exposed_dir,
+                )?;
+                let start_info = fsys::ComponentStartInfo {
+                    resolved_url: Some(execution.resolved_url.clone()),
+                    program: data::clone_option_dictionary(&decl.program),
+                    ns: Some(ns),
+                    outgoing_dir: Some(ServerEnd::new(outgoing_dir_server)),
+                    runtime_dir: Some(ServerEnd::new(runtime_dir_server)),
+                };
+                await!(realm.default_runner.start(start_info))?;
+                execution
+            } else {
+                // Although this component has no runtime environment, it is still possible to bind
+                // to it, which may trigger bindings to its children. For consistency, we still
+                // consider the component to be "executing" in this case.
+                Execution::start_from(component.resolved_url, None, None, None, exposed_dir)?
+            };
+            state.execution = Some(execution);
+            let eager_child_realms: Vec<_> = state
+                .child_realms
+                .as_ref()
+                .expect("empty child realms")
+                .values()
+                .filter_map(|r| match r.startup {
+                    fsys::StartupMode::Eager => Some(r.clone()),
+                    fsys::StartupMode::Lazy => None,
+                })
+                .collect();
+            Ok(eager_child_realms)
+        }
     }
 }

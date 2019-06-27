@@ -22,13 +22,18 @@ use {
     futures::future::FutureObj,
     futures::lock::Mutex,
     futures::prelude::*,
-    std::{collections::HashMap, convert::TryFrom, iter, sync::Arc},
+    std::{
+        collections::{HashMap, HashSet},
+        convert::TryFrom,
+        iter,
+        sync::Arc,
+    },
 };
 
 /// Creates a routing function generator that does the following:
 /// - Redirects all directory capabilities to a directory with the file "hello".
 /// - Redirects all service capabilities to the echo service.
-pub fn proxying_routing_facade() -> impl Fn(AbsoluteMoniker, Capability) -> RoutingFn {
+pub fn proxying_routing_factory() -> impl Fn(AbsoluteMoniker, Capability) -> RoutingFn {
     let mut sub_dir = directory::simple::empty();
     let (sub_dir_client, sub_dir_server) = zx::Channel::create().unwrap();
     sub_dir.open(
@@ -145,6 +150,7 @@ pub struct MockRunner {
     pub namespaces: Namespaces,
     pub host_fns: HashMap<String, Box<Fn(ServerEnd<DirectoryMarker>) + Send + Sync>>,
     pub runtime_host_fns: HashMap<String, Box<Fn(ServerEnd<DirectoryMarker>) + Send + Sync>>,
+    failing_urls: HashSet<String>,
 }
 
 pub type Namespaces = Arc<Mutex<HashMap<String, fsys::ComponentNamespace>>>;
@@ -156,11 +162,19 @@ impl MockRunner {
             namespaces: Arc::new(Mutex::new(HashMap::new())),
             host_fns: HashMap::new(),
             runtime_host_fns: HashMap::new(),
+            failing_urls: HashSet::new(),
         }
+    }
+
+    pub fn cause_failure(&mut self, name: &str) {
+        self.failing_urls.insert(format!("test:///{}_resolved", name));
     }
 
     async fn start_async(&self, start_info: fsys::ComponentStartInfo) -> Result<(), RunnerError> {
         let resolved_url = start_info.resolved_url.unwrap();
+        if self.failing_urls.contains(&resolved_url) {
+            return Err(RunnerError::component_launch_error(resolved_url, format_err!("ouch")));
+        }
         await!(self.urls_run.lock()).push(resolved_url.clone());
         await!(self.namespaces.lock()).insert(resolved_url.clone(), start_info.ns.unwrap());
         // If no host_fn was provided, then start_info.outgoing_dir will be
@@ -193,8 +207,8 @@ pub struct MockAmbientEnvironment {
 impl AmbientEnvironment for MockAmbientEnvironment {
     fn serve_realm_service(
         &self,
+        _model: Model,
         realm: Arc<Realm>,
-        _hooks: Arc<Hooks>,
         stream: fsys::RealmRequestStream,
     ) -> FutureObj<Result<(), AmbientError>> {
         FutureObj::new(Box::new(async move {

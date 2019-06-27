@@ -744,7 +744,7 @@ async fn use_from_component_manager_namespace() {
     let test = RoutingTest::new("a", components, ambient);
     test.install_hippo_dir();
     await!(test.check_use(vec!["b"].into(), default_directory_capability(), true));
-    //await!(test.check_use(vec!["b"].into(), default_service_capability(), true));
+    await!(test.check_use(vec!["b"].into(), default_service_capability(), true));
 }
 
 ///   a
@@ -1325,6 +1325,59 @@ async fn expose_from_self_and_child() {
         new_service_capability("/svc/bar/hippo"),
         true
     ));
+    await!(test.check_use_exposed_dir(vec!["b", "c"].into(), default_directory_capability(), true));
+    await!(test.check_use_exposed_dir(vec!["b", "c"].into(), default_service_capability(), true));
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn use_not_exposed() {
+    let components = vec![
+        (
+            "a",
+            ComponentDecl {
+                children: vec![ChildDecl {
+                    name: "b".to_string(),
+                    url: "test:///b".to_string(),
+                    startup: fsys::StartupMode::Lazy,
+                }],
+                ..default_component_decl()
+            },
+        ),
+        (
+            "b",
+            ComponentDecl {
+                children: vec![ChildDecl {
+                    name: "c".to_string(),
+                    url: "test:///c".to_string(),
+                    startup: fsys::StartupMode::Lazy,
+                }],
+                ..default_component_decl()
+            },
+        ),
+        (
+            "c",
+            ComponentDecl {
+                exposes: vec![
+                    ExposeDecl::Directory(ExposeDirectoryDecl {
+                        source: ExposeSource::Self_,
+                        source_path: CapabilityPath::try_from("/data/foo").unwrap(),
+                        target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                    }),
+                    ExposeDecl::Service(ExposeServiceDecl {
+                        source: ExposeSource::Self_,
+                        source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
+                        target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                    }),
+                ],
+                ..default_component_decl()
+            },
+        ),
+    ];
+    let ambient = Box::new(MockAmbientEnvironment::new());
+    let test = RoutingTest::new("a", components, ambient);
+    // Capability is only exposed from "c", so it only be usable from there.
+    await!(test.check_use_exposed_dir(vec!["b"].into(), default_directory_capability(), false,));
+    await!(test.check_use_exposed_dir(vec!["b"].into(), default_service_capability(), false,));
     await!(test.check_use_exposed_dir(vec!["b", "c"].into(), default_directory_capability(), true));
     await!(test.check_use_exposed_dir(vec!["b", "c"].into(), default_service_capability(), true));
 }

@@ -92,9 +92,8 @@ async fn open_capability_at_source<'a>(
         }
         CapabilitySource::AmbientService(source_capability_path, realm) => {
             await!(AmbientEnvironment::serve(
-                model.ambient.clone(),
+                model.clone(),
                 realm,
-                model.hooks.clone(),
                 &source_capability_path,
                 server_chan
             ))?;
