@@ -459,7 +459,7 @@ TEST_F(AudioPipelineTest, RenderWithPts) {
 // When DiscardAllPackets is issued during Playback, PTS should reset to zero.
 // If it doesn't, we will observe that the second set of packets is interpreted
 // as being in the past, and thus will be dropped.
-TEST_F(AudioPipelineTest, DiscardDuringRenderResetsPts) {
+TEST_F(AudioPipelineTest, DISABLED_DiscardDuringRenderResetsPts) {
   uint32_t num_packets = 10;
   int64_t initial_pts = 0;
   int16_t initial_data_value = 1;
