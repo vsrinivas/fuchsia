@@ -123,11 +123,7 @@ impl DeviceWatcher {
         assert!(!events.contains(&WatchEvent::REMOVE_FILE));
         while let Some(msg) = await!(self.watcher.try_next())? {
             if events.contains(&msg.event) {
-                let path = PathBuf::from(format!(
-                    "{}/{}",
-                    self.dir.to_string_lossy(),
-                    &msg.filename.to_string_lossy()
-                ));
+                let path = self.dir.join(msg.filename);
                 let dev = match DeviceFile::open(&path) {
                     Ok(d) => d,
                     Err(e) => {
@@ -165,12 +161,7 @@ impl DeviceWatcher {
         while let Some(msg) = await!(self.watcher.try_next())? {
             match msg.event {
                 WatchEvent::REMOVE_FILE => {
-                    let dev_path = PathBuf::from(format!(
-                        "{}/{}",
-                        self.dir.to_string_lossy(),
-                        &msg.filename.to_string_lossy()
-                    ));
-                    if dev_path == path {
+                    if self.dir.join(msg.filename) == path {
                         return Ok(());
                     }
                 }
