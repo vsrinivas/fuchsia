@@ -61,8 +61,11 @@ RollSumSplit::RollSumSplit(size_t min_length, size_t max_length,
 
 void RollSumSplit::Reset() {
   current_length_ = 0u;
-  s1_ = kWindowSize * kRollsumCharOffset;
-  s2_ = kWindowSize * (kWindowSize - 1) * kRollsumCharOffset;
+  s1_ = kCoefficientsSum1 * kRollsumCharOffset;
+  s2_ = kCoefficientsSum2 * kRollsumCharOffset;
+  s3_ = kCoefficientsSum3 * kRollsumCharOffset;
+  s4_ = kCoefficientsSum4 * kRollsumCharOffset;
+  ComputeDigest();
   window_index_ = 0;
   memset(window_, 0, kWindowSize);
 }
@@ -72,9 +75,10 @@ size_t RollSumSplit::Feed(fxl::StringView buffer, size_t* bits) {
     Roll(buffer[i]);
     ++current_length_;
     if (current_length_ >= min_length_ &&
-        ((p_s2_ & (kBlobSize - 1)) == ((~0) & (kBlobSize - 1)) || current_length_ >= max_length_)) {
+        ((digest_ & (kBlobSize - 1)) == ((~0) & (kBlobSize - 1)) ||
+         current_length_ >= max_length_)) {
       if (bits) {
-        uint32_t rsum = Digest();
+        uint64_t rsum = digest_;
         *bits = kBlobBits;
         rsum >>= kBlobBits;
         while ((rsum >>= 1) & 1) {
@@ -90,8 +94,10 @@ size_t RollSumSplit::Feed(fxl::StringView buffer, size_t* bits) {
 
 void RollSumSplit::Add(uint8_t drop, uint8_t add) {
   s1_ += add - drop;
-  s2_ += s1_ - (kWindowSize * (drop + kRollsumCharOffset));
-  p_s2_ = hash_permutation_ ? hash_permutation_(s2_) : s2_;
+  s2_ += s1_ - (kCoefficientsSum1 * (drop + kRollsumCharOffset));
+  s3_ += s2_ - (kCoefficientsSum2 * (drop + kRollsumCharOffset));
+  s4_ += s3_ - (kCoefficientsSum3 * (drop + kRollsumCharOffset));
+  ComputeDigest();
 }
 
 void RollSumSplit::Roll(uint8_t c) {
@@ -100,6 +106,12 @@ void RollSumSplit::Roll(uint8_t c) {
   window_index_ = (window_index_ + 1) % kWindowSize;
 }
 
-uint32_t RollSumSplit::Digest() { return (s1_ << 16) | (p_s2_ & 0xffff); }
+void RollSumSplit::ComputeDigest() {
+  digest_ =
+      ((s1_ & 0xffff) << 48) | ((s2_ & 0xffff) << 32) | ((s3_ & 0xffff) << 16) | (s4_ & 0xffff);
+  if (hash_permutation_) {
+    digest_ = hash_permutation_(digest_);
+  }
+}
 
 }  // namespace bup
