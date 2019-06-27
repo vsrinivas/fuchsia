@@ -916,6 +916,7 @@ RUN_TEST(suspend_thread_and_process_before_starting_process);
 RUN_TEST(suspend_twice);
 RUN_TEST(suspend_twice_before_creating_threads);
 RUN_TEST(suspend_with_dying_thread);
-RUN_TEST(process_start_write_thread_state)
+// TODO(FLK-370): deflake and reenable this test.
+// RUN_TEST(process_start_write_thread_state)
 RUN_TEST_LARGE(create_and_kill_job_race_stress);
 END_TEST_CASE(process_tests)
