@@ -127,6 +127,7 @@ group("fidl") {
   testonly = true
   public_deps = [
     "//garnet/examples/fidl/echo_client_cpp",
+    "//garnet/examples/fidl/echo_client_cpp_synchronous",
     "//garnet/examples/fidl/echo_client_go",
     "//garnet/examples/fidl/echo_client_llcpp",
     "//garnet/examples/fidl/echo_client_rust",
