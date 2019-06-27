@@ -10,6 +10,8 @@ variant("profile") {
     "-fcoverage-mapping",
   ]
 
-  # The statically-linked profiling runtime depends on libzircon.
-  libs = [ "zircon" ]
+  if (is_fuchsia) {
+    # The statically-linked profiling runtime depends on libzircon.
+    libs = [ "zircon" ]
+  }
 }
