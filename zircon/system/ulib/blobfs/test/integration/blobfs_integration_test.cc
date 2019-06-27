@@ -756,120 +756,148 @@ static bool CorruptedDigest(BlobfsTest* blobfsTest) {
     END_HELPER;
 }
 
-static bool EdgeAllocation(BlobfsTest* blobfsTest) {
-    BEGIN_HELPER;
+*/
 
+void RunEdgeAllocationTest() {
     // Powers of two...
     for (size_t i = 1; i < 16; i++) {
         // -1, 0, +1 offsets...
         for (size_t j = -1; j < 2; j++) {
-            fbl::unique_ptr<fs_test_utils::BlobInfo> info;
-            ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(MOUNT_PATH, (1 << i) + j, &info));
+            std::unique_ptr<fs_test_utils::BlobInfo> info;
+            ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, (1 << i) + j, &info));
             fbl::unique_fd fd;
-            ASSERT_TRUE(MakeBlob(info.get(), &fd));
-            ASSERT_EQ(unlink(info->path), 0);
-            ASSERT_EQ(close(fd.release()), 0);
+            ASSERT_NO_FAILURES(MakeBlob(info.get(), &fd));
+            ASSERT_EQ(0, unlink(info->path));
         }
     }
-    END_HELPER;
 }
 
-static bool UmountWithOpenFile(BlobfsTest* blobfsTest) {
-    BEGIN_HELPER;
-    fbl::unique_ptr<fs_test_utils::BlobInfo> info;
-    ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(MOUNT_PATH, 1 << 16, &info));
+TEST_F(BlobfsTest, EdgeAllocation) {
+    RunEdgeAllocationTest();
+}
+
+TEST_F(BlobfsTestWithFvm, EdgeAllocation) {
+    RunEdgeAllocationTest();
+}
+
+void RunUmountWithOpenFileTest(BlobfsTest* test) {
+    std::unique_ptr<fs_test_utils::BlobInfo> info;
+    ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 1 << 16, &info));
     fbl::unique_fd fd;
-    ASSERT_TRUE(MakeBlob(info.get(), &fd));
+    ASSERT_NO_FAILURES(MakeBlob(info.get(), &fd));
 
     // Intentionally don't close the file descriptor: Unmount anyway.
-    ASSERT_TRUE(blobfsTest->Remount());
+    ASSERT_NO_FAILURES(test->Remount());
     // Just closing our local handle; the connection should be disconnected.
-    ASSERT_EQ(close(fd.release()), -1);
-    ASSERT_EQ(errno, EPIPE);
+    int close_return = close(fd.release());
+    int close_error = errno;
+    ASSERT_EQ(-1, close_return);
+    ASSERT_EQ(EPIPE, close_error);
 
     fd.reset(open(info->path, O_RDONLY));
     ASSERT_TRUE(fd, "Failed to open blob");
     ASSERT_TRUE(fs_test_utils::VerifyContents(fd.get(), info->data.get(), info->size_data));
-    ASSERT_EQ(close(fd.release()), 0, "Could not close blob");
+    fd.reset();
 
-    ASSERT_EQ(unlink(info->path), 0);
-    END_HELPER;
+    ASSERT_EQ(0, unlink(info->path));
 }
 
-static bool UmountWithMappedFile(BlobfsTest* blobfsTest) {
-    BEGIN_HELPER;
-    fbl::unique_ptr<fs_test_utils::BlobInfo> info;
-    ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(MOUNT_PATH, 1 << 16, &info));
+TEST_F(BlobfsTest, UmountWithOpenFile) {
+    RunUmountWithOpenFileTest(this);
+}
+
+TEST_F(BlobfsTestWithFvm, UmountWithOpenFile) {
+    RunUmountWithOpenFileTest(this);
+}
+
+void RunUmountWithMappedFileTest(BlobfsTest* test) {
+    std::unique_ptr<fs_test_utils::BlobInfo> info;
+    ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 1 << 16, &info));
     fbl::unique_fd fd;
-    ASSERT_TRUE(MakeBlob(info.get(), &fd));
+    ASSERT_NO_FAILURES(MakeBlob(info.get(), &fd));
 
     void* addr = mmap(nullptr, info->size_data, PROT_READ, MAP_SHARED, fd.get(), 0);
-    ASSERT_NONNULL(addr);
-    ASSERT_EQ(close(fd.release()), 0);
+    ASSERT_NOT_NULL(addr);
+    fd.reset();
 
     // Intentionally don't unmap the file descriptor: Unmount anyway.
-    ASSERT_TRUE(blobfsTest->Remount());
-    // Just closing our local handle; the connection should be disconnected.
+    ASSERT_NO_FAILURES(test->Remount());
     ASSERT_EQ(munmap(addr, info->size_data), 0);
 
     fd.reset(open(info->path, O_RDONLY));
-    ASSERT_GE(fd.get(), 0, "Failed to open blob");
+    ASSERT_TRUE(fd.get(), "Failed to open blob");
     ASSERT_TRUE(fs_test_utils::VerifyContents(fd.get(), info->data.get(), info->size_data));
-    ASSERT_EQ(close(fd.release()), 0, "Could not close blob");
-
-    ASSERT_EQ(unlink(info->path), 0);
-    END_HELPER;
+    ASSERT_EQ(0, unlink(info->path));
 }
 
-static bool UmountWithOpenMappedFile(BlobfsTest* blobfsTest) {
-    BEGIN_HELPER;
-    fbl::unique_ptr<fs_test_utils::BlobInfo> info;
-    ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(MOUNT_PATH, 1 << 16, &info));
+TEST_F(BlobfsTest, UmountWithMappedFile) {
+    RunUmountWithMappedFileTest(this);
+}
+
+TEST_F(BlobfsTestWithFvm, UmountWithMappedFile) {
+    RunUmountWithMappedFileTest(this);
+}
+
+void RunUmountWithOpenMappedFileTest(BlobfsTest* test) {
+    std::unique_ptr<fs_test_utils::BlobInfo> info;
+    ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 1 << 16, &info));
     fbl::unique_fd fd;
-    ASSERT_TRUE(MakeBlob(info.get(), &fd));
+    ASSERT_NO_FAILURES(MakeBlob(info.get(), &fd));
 
     void* addr = mmap(nullptr, info->size_data, PROT_READ, MAP_SHARED, fd.get(), 0);
-    ASSERT_NONNULL(addr);
+    ASSERT_NOT_NULL(addr);
 
     // Intentionally don't close the file descriptor: Unmount anyway.
-    ASSERT_TRUE(blobfsTest->Remount());
+    ASSERT_NO_FAILURES(test->Remount());
     // Just closing our local handle; the connection should be disconnected.
-    ASSERT_EQ(munmap(addr, info->size_data), 0);
-    ASSERT_EQ(close(fd.release()), -1);
-    ASSERT_EQ(errno, EPIPE);
+    ASSERT_EQ(0, munmap(addr, info->size_data));
+    int close_return = close(fd.release());
+    int close_error = errno;
+    ASSERT_EQ(-1, close_return);
+    ASSERT_EQ(EPIPE, close_error);
 
     fd.reset(open(info->path, O_RDONLY));
-    ASSERT_GE(fd.get(), 0, "Failed to open blob");
+    ASSERT_TRUE(fd.get(), "Failed to open blob");
     ASSERT_TRUE(fs_test_utils::VerifyContents(fd.get(), info->data.get(), info->size_data));
-    ASSERT_EQ(close(fd.release()), 0, "Could not close blob");
-
-    ASSERT_EQ(unlink(info->path), 0);
-    END_HELPER;
+    ASSERT_EQ(0, unlink(info->path));
 }
 
-static bool CreateUmountRemountSmall(BlobfsTest* blobfsTest) {
-    BEGIN_HELPER;
+TEST_F(BlobfsTest, UmountWithOpenMappedFile) {
+    RunUmountWithOpenMappedFileTest(this);
+}
+
+TEST_F(BlobfsTestWithFvm, UmountWithOpenMappedFile) {
+    RunUmountWithOpenMappedFileTest(this);
+}
+
+void RunCreateUmountRemountSmallTest(BlobfsTest* test) {
     for (size_t i = 10; i < 16; i++) {
-        fbl::unique_ptr<fs_test_utils::BlobInfo> info;
-        ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(MOUNT_PATH, 1 << i, &info));
+        std::unique_ptr<fs_test_utils::BlobInfo> info;
+        ASSERT_TRUE(fs_test_utils::GenerateRandomBlob(kMountPath, 1 << i, &info));
 
         fbl::unique_fd fd;
-        ASSERT_TRUE(MakeBlob(info.get(), &fd));
-        // Close fd, unmount filesystem
-        ASSERT_EQ(close(fd.release()), 0);
+        ASSERT_NO_FAILURES(MakeBlob(info.get(), &fd));
 
-        ASSERT_TRUE(blobfsTest->Remount(), "Could not re-mount blobfs");
+        fd.reset();
+        ASSERT_NO_FAILURES(test->Remount(), "Could not re-mount blobfs");
 
         fd.reset(open(info->path, O_RDONLY));
         ASSERT_TRUE(fd, "Failed to open blob");
 
         ASSERT_TRUE(fs_test_utils::VerifyContents(fd.get(), info->data.get(), info->size_data));
-        ASSERT_EQ(close(fd.release()), 0, "Could not close blob");
-        ASSERT_EQ(unlink(info->path), 0);
+        ASSERT_EQ(0, unlink(info->path));
     }
-
-    END_HELPER;
 }
+
+TEST_F(BlobfsTest, CreateUmountRemountSmall) {
+    RunCreateUmountRemountSmallTest(this);
+}
+
+TEST_F(BlobfsTestWithFvm, CreateUmountRemountSmall) {
+    RunCreateUmountRemountSmallTest(this);
+}
+
+/*
 
 static bool check_not_readable(int fd) {
     BEGIN_HELPER;
@@ -2086,11 +2114,6 @@ BEGIN_TEST_CASE(blobfs_tests)
 RUN_TESTS(MEDIUM, TestDiskTooSmall)
 RUN_TESTS_SILENT(MEDIUM, CorruptedBlob)
 RUN_TESTS_SILENT(MEDIUM, CorruptedDigest)
-RUN_TESTS(MEDIUM, EdgeAllocation)
-RUN_TESTS(MEDIUM, UmountWithOpenFile)
-RUN_TESTS(MEDIUM, UmountWithMappedFile)
-RUN_TESTS(MEDIUM, UmountWithOpenMappedFile)
-RUN_TESTS(MEDIUM, CreateUmountRemountSmall)
 RUN_TESTS(MEDIUM, EarlyRead)
 RUN_TESTS(MEDIUM, WaitForRead)
 RUN_TESTS(MEDIUM, WriteSeekIgnored)
