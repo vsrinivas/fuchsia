@@ -27,7 +27,7 @@ This document is a description of the Fuchsia Interface Definition Language
 [C Language Bindings]: ../tutorial/tutorial-c.md#reference
 [Low-Level C++ Language Bindings]: ../tutorial/bindings-llcpp.md
 [High-Level C++ Language Bindings]: ../tutorial/tutorial-cpp.md#high_level-c_language-bindings
-[C/Low-Level/High-Level C++ Bindings Comparison]: tutorial/c-family-comparison.md
+[C/Low-Level/High-Level C++ Bindings Comparison]: ../tutorial/c-family-comparison.md
 [Examples]: /zircon/system/host/fidl/examples
 [Tutorial]: ../tutorial/README.md
 
