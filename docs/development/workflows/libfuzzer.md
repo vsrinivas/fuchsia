@@ -133,7 +133,7 @@ interesting and will stop generating them.
   parser.Parse(Data, Size);
 ```
 
-*__NOTE__: A small library to make this easier is under development.*
+Note: A small library to make this easier is under development.
 
 In some cases, you may have expensive set-up operations that you would like to do once.  The
 libFuzzer documentation has tips on how to do [startup initialization].  Be aware though that such
@@ -154,21 +154,27 @@ alternative in this case may be to develop a single fuzzer, and include examples
 requests in the initial [corpus].  In this way the single fuzz target can still bypass a large
 amount of shallow fuzzing by being guided towards the interesting inputs.
 
-*__NOTE:__ Currently, libFuzzer can be used in Fuchsia to fuzz C/C++ code.   Additional language
-support is [planned][todo].*
+Note: Currently, libFuzzer can be used in Fuchsia to fuzz C/C++ code. Additional language
+support is [planned][todo].
 
 ## Q: LibFuzzer isn't quite right; what else could I use?
 
 A: There's many other fuzzing engines out there:
+
 * If the code you want to fuzz isn't a library with linkable interfaces, but instead a standalone
 binary, then [AFL] may be a be better suited.
-  * *__NOTE:__ AFL support on Fuchsia is [not yest supported][todo].*
+
+Note: AFL support on Fuchsia is [not yet supported][todo].
+
 * If you want to fuzz a service via [FIDL] calls in the style of an integration test, consider using
 [syzkaller]'s FIDL support.
-  * *__NOTE:__ FIDL support is in [development][todo].*
+
+Note: FIDL support is in [development][todo].
+
 * If none of these options fit your needs, you can still write a custom fuzzer and have it run
 continuously under [ClusterFuzz].
-  * *__NOTE:__ ClusterFuzz integration is in [development][todo].*
+
+Note: ClusterFuzz integration is in [development][todo].
 
 ## Q: How do I create a Fuchsia fuzzer?
 
@@ -215,6 +221,7 @@ on this macro, e.g.:
 This can be useful to allow either more deterministic fuzzing and/or deeper coverage.
 
 The fuzzer template also allows you include additional inputs to control the fuzzer:
+
 * [Dictionaries] are files with tokens, one per line, that commonly appear in the target's input,
 e.g. "GET" and "POST" for HTTP.
 * An options file, made up a series of key-value pairs, one per line, of libFuzzer command line
@@ -269,6 +276,7 @@ A: Use the `fx fuzz` tool which knows how to find fuzzing related files and vari
 The fuzzer binary can be started directly, using the normal libFuzzer options, if you prefer.
 However, it is easier to use the `fx fuzz` devshell tool, which understands where to look for
 fuzzing related files and knows various common options.  Try one or more of the following:
+
 * To see available commands and options:
   `$ fx fuzz help`
 * To see available fuzzers:
@@ -286,6 +294,7 @@ useful if you need to manually reproduce the bug with modified libFuzzer [option
 ## Q: How can I reproduce crashes found by the fuzzer?
 
 A: Use the [fx fuzz tool]:
+
 * To check on the fuzzer and list found artifacts:
   `fx fuzz check [package]/[fuzzer]`
 * To run the fuzzer on just the found artifacts:
@@ -301,7 +310,7 @@ be useful if you need to manually reproduce the bug with modified parameters.
 
 A: File them, then fix them!
 
-*__NOTE:__ The bug tracker is currently only open to Googlers.*
+Note: The bug tracker is currently only open to Googlers.
 
 When filing bugs, __please__ use both the custom `found-by-libfuzzer` label, as well as the custom
 `Sec-TriageMe` label.  This will help the security team see where fuzzers are being used and stay
@@ -337,6 +346,7 @@ you can retrieve older versions of the corpus relating to a specific version of 
 ## Q: Can I use an existing third party corpus?
 
 A: Yes! by , and then performing a normal corpus update:
+
 1. Fetch from a directory rather than CIPD:
 * `fx fuzz fetch [package]/[fuzzer] /path/to/third/party/corpus`
 1. Upload the corpus to [CIPD].
@@ -367,9 +377,11 @@ A: Once crashes begin to become infrequent, it may be because almost all the bug
 fixed, but it may also be because the fuzzer isn't reaching new code that still has bugs.  Code
 coverage information is needed to determine the quality of the fuzzer.  Use
 [source-based code coverage] to see what your current corpus reaches.
-  * *__NOTE:__ Source-based code coverage is under [active development][todo].*
+
+Note: Source-based code coverage is under [active development][todo].
 
 If coverage in a certain area is low, there are a few options:
+
   * Improve the [corpus].  If there are types of inputs that aren't represented well, add some
   manually.  For code dealing with large inputs with complex types (e.g. X.509 certificates), you
   probably want to provide an initial corpus from the start.
@@ -386,11 +398,13 @@ needed to create a quality fuzzer.  Once ready, you'll need to upload your corpu
 [GN fuzzer] in the appropriate project.  At this point, others will be able use your fuzzer,
 This includes [ClusterFuzz] which will automatically find new fuzzers and continuously fuzz them,
 updating their corpora, filing bugs for crashes, and closing them when fixed.
-  * *__NOTE:__ ClusterFuzz integration is in [development][todo].*
+
+Note: ClusterFuzz integration is in [development][todo].
 
 ## Q: What can I expect in the future for fuzzing in Fuchsia?
 
 A: As you can see from the various notes in this document, there's still plenty more to do!
+
 * Add additional language support, e.g for [Rust][rust-fuzzing] and [Go][go-fuzzing].
 * Add support for [AFL]  on Fuchsia.  Some design questions need to be worked out, as processes will
 not typically be run executed from the shell in the long term.
