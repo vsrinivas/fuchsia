@@ -38,12 +38,12 @@ DockyardProxyStatus DockyardProxyGrpc::Init() {
 
   grpc::ClientContext context;
   grpc::Status status = stub_->Init(&context, request, &reply);
-  if (status.ok()) {
-    return DockyardProxyStatus::OK;
+  if (!status.ok()) {
+    FXL_LOG(ERROR) << status.error_code() << ": " << status.error_message();
+    FXL_LOG(ERROR) << "Unable to send to dockyard.";
+    return DockyardProxyStatus::ERROR;
   }
-  FXL_LOG(ERROR) << status.error_code() << ": " << status.error_message();
-  FXL_LOG(ERROR) << "Unable to send to dockyard.";
-  return DockyardProxyStatus::ERROR;
+  return DockyardProxyStatus::OK;
 }
 
 DockyardProxyStatus DockyardProxyGrpc::SendInspectJson(

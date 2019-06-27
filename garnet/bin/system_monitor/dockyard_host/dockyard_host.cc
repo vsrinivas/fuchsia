@@ -128,9 +128,9 @@ DockyardHost::GetSampleStringsForIds(
   }
   std::unique_ptr<AsyncQuery> query = future->get();
   GT_LOG(DEBUG) << "GetSampleStringsForIds query "
-               << dockyard::DebugPrintQuery(dockyard_, query->request,
-                                            query->response)
-                      .str();
+                << dockyard::DebugPrintQuery(dockyard_, query->request,
+                                             query->response)
+                       .str();
   std::vector<const std::string> result;
   for (const auto& sample_values : query->response.data_sets) {
     std::string string_as_path;

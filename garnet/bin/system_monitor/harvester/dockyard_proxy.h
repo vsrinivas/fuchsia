@@ -26,6 +26,8 @@ enum class DockyardProxyStatus : int {
 
 std::ostream& operator<<(std::ostream& out, const DockyardProxyStatus& status);
 
+// A proxy for a remote Dockyard.
+// See //garnet/lib/system_monitor/dockyard/dockyard.h
 class DockyardProxy {
  public:
   virtual ~DockyardProxy() {}

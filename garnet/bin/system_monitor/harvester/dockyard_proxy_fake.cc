@@ -9,6 +9,7 @@
 namespace harvester {
 
 DockyardProxyStatus DockyardProxyFake::Init() {
+  sent_json_.clear();
   sent_values_.clear();
   sent_strings_.clear();
   return DockyardProxyStatus::OK;
@@ -16,11 +17,13 @@ DockyardProxyStatus DockyardProxyFake::Init() {
 
 DockyardProxyStatus DockyardProxyFake::SendInspectJson(
     const std::string& stream_name, const std::string& json) {
+  sent_json_.emplace(stream_name, json);
   return DockyardProxyStatus::OK;
 }
 
 DockyardProxyStatus DockyardProxyFake::SendSample(
     const std::string& stream_name, uint64_t value) {
+  sent_values_.emplace(stream_name, value);
   return DockyardProxyStatus::OK;
 }
 
@@ -47,6 +50,16 @@ DockyardProxyStatus DockyardProxyFake::SendStringSampleList(
     sent_strings_.emplace(sample.first, sample.second);
   }
   return DockyardProxyStatus::OK;
+}
+
+bool DockyardProxyFake::CheckJsonSent(const std::string& dockyard_path,
+                                      std::string* json) const {
+  const auto& iter = sent_json_.find(dockyard_path);
+  if (iter == sent_json_.end()) {
+    return false;
+  }
+  *json = iter->second;
+  return true;
 }
 
 bool DockyardProxyFake::CheckValueSent(const std::string& dockyard_path,
