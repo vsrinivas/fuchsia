@@ -10,12 +10,13 @@ use {
 mod continuation;
 mod get_capabilities;
 mod get_element_attributes;
+mod get_play_status;
 mod notification;
 mod rejected;
 
 pub use {
     self::continuation::*, self::get_capabilities::*, self::get_element_attributes::*,
-    self::notification::*, self::rejected::*,
+    self::get_play_status::*, self::notification::*, self::rejected::*,
 };
 
 /// The error types for packet parsing.
