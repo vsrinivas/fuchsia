@@ -15,7 +15,7 @@ const MAX_RANGE_GAP: u32 = 2048;
 
 /// Represents an ordered set of code points that begin at [CharSetRange.start]. The largest
 /// allowed discontinuity between two consecutive code points in the set is [MAX_RANGE_GAP].
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct CharSetRange {
     start: u32,
     bitmap: Vec<BitmapElement>,
@@ -69,7 +69,7 @@ impl CharSetRange {
 ///
 /// TODO(kpozin): Evaluate replacing with `MultiCharRange`, which might be more space-efficient for
 /// large sets with few discontinuities.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct CharSet {
     ranges: Vec<CharSetRange>,
 }

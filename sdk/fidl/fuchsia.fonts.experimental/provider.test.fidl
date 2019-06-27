@@ -36,7 +36,10 @@ protocol Provider {
 
     /// Returns a list of `TypefaceInfo` for all typefaces that match
     /// the request, or an empty vector if no matches are found.
-    ListTypefaces(ListTypefacesRequest request) -> (TypefaceInfoResponse response);
+    ///
+    /// Possible errors:
+    /// |INTERNAL| if something bad happens.
+    ListTypefaces(ListTypefacesRequest request) -> (TypefaceInfoResponse response) error Error;
 
     /// Returns a `TypefaceInfo` for each font in the requested `family`. The
     /// results' `family` fields will hold the canonical family name, even if
@@ -61,6 +64,8 @@ table ListTypefacesRequest {
     /// collation parameters.
     2: uint32 max_results;
 
+    /// Optional flags to modify matching behavior. Ignored if |query| is not
+    /// set.
     3: ListTypefacesRequestFlags flags;
 };
 
@@ -77,10 +82,12 @@ bits ListTypefacesRequestFlags:uint32 {
 /// Query parameters for `ListTypefaces`. By default, results must match all
 /// fields. All fields are optional; omitted fields will match any font.
 /// Vector fields will match fonts that match any element of the vector.
-/// Essentially: `font.family == family && styles.contains(font.style) && ...`
+/// Essentially:
+/// `font.family.contains(family) && styles.contains(font.style) && ...`
 table ListTypefacesQuery {
-    /// The name or alias of a font family. For partial matching, set the
-    /// request's `PARTIAL_FAMILY` flag.
+    /// The name or alias of a font family. By default, families whose name
+    /// contains |family|. For exact matching, set the request's |EXACT_FAMILY|
+    /// flag.
     1: ff.FamilyName family;
 
     /// Styles to match. Note that combining styles will change results.

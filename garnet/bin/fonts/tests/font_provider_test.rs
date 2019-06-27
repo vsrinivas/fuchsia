@@ -7,8 +7,11 @@
 // methods as entry points, so it complains about the helper methods being "dead code".
 #![cfg(test)]
 
+const FONTS_CMX: &str = "fuchsia-pkg://fuchsia.com/fonts#meta/fonts.cmx";
+
 #[cfg(test)]
 mod old_api {
+    use crate::FONTS_CMX;
     use failure::{format_err, Error, ResultExt};
     use fidl_fuchsia_fonts as fonts;
     use fuchsia_async as fasync;
@@ -76,9 +79,8 @@ mod old_api {
 
     fn start_provider_with_default_fonts() -> Result<(App, fonts::ProviderProxy), Error> {
         let launcher = launcher().context("Failed to open launcher service")?;
-        let app =
-            launch(&launcher, "fuchsia-pkg://fuchsia.com/fonts#meta/fonts.cmx".to_string(), None)
-                .context("Failed to launch fonts::Provider")?;
+        let app = launch(&launcher, FONTS_CMX.to_string(), None)
+            .context("Failed to launch fonts::Provider")?;
 
         let font_provider = app
             .connect_to_service::<fonts::ProviderMarker>()
@@ -135,7 +137,7 @@ mod old_api {
         let launcher = launcher().context("Failed to open launcher service")?;
         let app = launch_with_options(
             &launcher,
-            "fuchsia-pkg://fuchsia.com/fonts#meta/fonts.cmx".to_string(),
+            FONTS_CMX.to_string(),
             Some(vec!["--font-manifest".to_string(), "/test_fonts/manifest.json".to_string()]),
             launch_options,
         )
@@ -258,6 +260,7 @@ mod old_api {
 #[cfg(test)]
 mod reviewed_api {
     use {
+        crate::FONTS_CMX,
         failure::{Error, ResultExt},
         fidl_fuchsia_fonts as fonts,
         fidl_fuchsia_fonts_ext::DecodableExt,
@@ -336,9 +339,8 @@ mod reviewed_api {
 
     fn start_provider_with_default_fonts() -> Result<(App, fonts::ProviderProxy), Error> {
         let launcher = launcher().context("Failed to open launcher service")?;
-        let app =
-            launch(&launcher, "fuchsia-pkg://fuchsia.com/fonts#meta/fonts.cmx".to_string(), None)
-                .context("Failed to launch fonts::Provider")?;
+        let app = launch(&launcher, FONTS_CMX.to_string(), None)
+            .context("Failed to launch fonts::Provider")?;
 
         let font_provider = app
             .connect_to_service::<fonts::ProviderMarker>()
@@ -396,7 +398,7 @@ mod reviewed_api {
         let launcher = launcher().context("Failed to open launcher service")?;
         let app = launch_with_options(
             &launcher,
-            "fuchsia-pkg://fuchsia.com/fonts#meta/fonts.cmx".to_string(),
+            FONTS_CMX.to_string(),
             Some(vec!["--font-manifest".to_string(), "/test_fonts/manifest.json".to_string()]),
             launch_options,
         )
@@ -518,17 +520,40 @@ mod reviewed_api {
 #[cfg(test)]
 mod experimental_api {
     use {
+        crate::FONTS_CMX,
         failure::{Error, ResultExt},
         fidl_fuchsia_fonts as fonts, fidl_fuchsia_fonts_experimental as fonts_exp,
         fuchsia_async as fasync,
-        fuchsia_component::client::{launch, launcher, App},
+        fuchsia_component::client::{launch, launch_with_options, launcher, App, LaunchOptions},
     };
 
     fn start_provider_with_default_fonts() -> Result<(App, fonts_exp::ProviderProxy), Error> {
         let launcher = launcher().context("Failed to open launcher service")?;
-        let app =
-            launch(&launcher, "fuchsia-pkg://fuchsia.com/fonts#meta/fonts.cmx".to_string(), None)
-                .context("Failed to launch fonts_exp::Provider")?;
+        let app = launch(&launcher, FONTS_CMX.to_string(), None)
+            .context("Failed to launch fonts_exp::Provider")?;
+
+        let font_provider = app
+            .connect_to_service::<fonts_exp::ProviderMarker>()
+            .context("Failed to connect to fonts_exp::Provider")?;
+
+        Ok((app, font_provider))
+    }
+
+    fn start_provider_with_test_fonts() -> Result<(App, fonts_exp::ProviderProxy), Error> {
+        let mut launch_options = LaunchOptions::new();
+        launch_options.add_dir_to_namespace(
+            "/test_fonts".to_string(),
+            std::fs::File::open("/pkg/data/testdata/test_fonts")?,
+        )?;
+
+        let launcher = launcher().context("Failed to open launcher service")?;
+        let app = launch_with_options(
+            &launcher,
+            FONTS_CMX.to_string(),
+            Some(vec!["--font-manifest".to_string(), "/test_fonts/manifest.json".to_string()]),
+            launch_options,
+        )
+        .context("Failed to launch fonts::Provider")?;
 
         let font_provider = app
             .connect_to_service::<fonts_exp::ProviderMarker>()
@@ -617,12 +642,122 @@ mod experimental_api {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_list_typefaces() -> Result<(), Error> {
-        let (_app, font_provider) = start_provider_with_default_fonts()?;
+    async fn test_list_typefaces_empty_request_gets_all() -> Result<(), Error> {
+        let (_app, font_provider) = start_provider_with_test_fonts()?;
+
         let request =
             fonts_exp::ListTypefacesRequest { flags: None, max_results: None, query: None };
-        let response = await!(font_provider.list_typefaces(request));
-        assert!(response.is_err());
+
+        let response = await!(font_provider.list_typefaces(request))?;
+        let results = response.unwrap().results.unwrap();
+
+        assert!(results.len() >= 12, "{:?}", results);
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_list_typefaces_max_results() -> Result<(), Error> {
+        let (_app, font_provider) = start_provider_with_test_fonts()?;
+
+        let request =
+            fonts_exp::ListTypefacesRequest { flags: None, max_results: Some(1), query: None };
+
+        let response = await!(font_provider.list_typefaces(request))?;
+        let results = response.unwrap().results.unwrap();
+
+        assert_eq!(results.len(), 1, "{:?}", results);
+        Ok(())
+    }
+
+    fn name_query(name: &str) -> Option<fonts_exp::ListTypefacesQuery> {
+        let query = fonts_exp::ListTypefacesQuery {
+            family: Some(fonts::FamilyName { name: String::from(name) }),
+            styles: None,
+            languages: None,
+            code_points: None,
+            generic_families: None,
+        };
+        Some(query)
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_list_typefaces_no_results() -> Result<(), Error> {
+        let (_app, font_provider) = start_provider_with_test_fonts()?;
+
+        let query = name_query("404FontNotFound");
+        let request = fonts_exp::ListTypefacesRequest { flags: None, max_results: None, query };
+
+        let response = await!(font_provider.list_typefaces(request))?;
+        let results = response.unwrap().results.unwrap();
+
+        assert!(results.is_empty(), "{:?}", results);
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_list_typefaces_by_name() -> Result<(), Error> {
+        let (_app, font_provider) = start_provider_with_test_fonts()?;
+
+        let query = name_query("Noto");
+        let request = fonts_exp::ListTypefacesRequest { flags: None, max_results: None, query };
+
+        let response = await!(font_provider.list_typefaces(request))?;
+        let results = response.unwrap().results.unwrap();
+
+        assert_eq!(results.len(), 8, "{:?}", results);
+        for result in &results {
+            assert!(result.family.as_ref().unwrap().name.contains("Noto"));
+        }
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_list_typefaces_by_alias() -> Result<(), Error> {
+        let (_app, font_provider) = start_provider_with_test_fonts()?;
+
+        let query = name_query("MaterialIcons");
+        let request = fonts_exp::ListTypefacesRequest { flags: None, max_results: None, query };
+
+        let response = await!(font_provider.list_typefaces(request))?;
+        let results = response.unwrap().results.unwrap();
+
+        assert_eq!(results.len(), 1, "{:?}", results);
+        assert_eq!(results[0].family.as_ref().unwrap().name, "Material Icons");
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_list_typefaces_by_name_ignores_case() -> Result<(), Error> {
+        let (_app, font_provider) = start_provider_with_test_fonts()?;
+
+        let query = name_query("noto");
+        let request = fonts_exp::ListTypefacesRequest { flags: None, max_results: None, query };
+
+        let response = await!(font_provider.list_typefaces(request))?;
+        let results = response.unwrap().results.unwrap();
+
+        assert_eq!(results.len(), 8, "{:?}", results);
+        for result in &results {
+            assert!(result.family.as_ref().unwrap().name.contains("Noto"));
+        }
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_list_typefaces_by_name_exact() -> Result<(), Error> {
+        let (_app, font_provider) = start_provider_with_test_fonts()?;
+
+        let query = name_query("Roboto");
+        let flags = Some(fonts_exp::ListTypefacesRequestFlags::ExactFamily);
+        let request = fonts_exp::ListTypefacesRequest { flags, max_results: None, query };
+
+        let response = await!(font_provider.list_typefaces(request))?;
+        let results = response.unwrap().results.unwrap();
+
+        assert_eq!(results.len(), 3, "{:?}", results);
+        for result in results {
+            assert_eq!(result.family.as_ref().unwrap().name, "Roboto");
+        }
         Ok(())
     }
 }

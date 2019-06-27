@@ -16,6 +16,7 @@ use {
     fidl_fuchsia_intl as intl, fidl_fuchsia_mem as mem,
     fuchsia_component::server::{ServiceFs, ServiceObj},
     futures::prelude::*,
+    itertools::Itertools,
     log,
     parking_lot::RwLock,
     std::{
@@ -115,6 +116,52 @@ impl AssetCollection {
     }
 }
 
+struct TypefaceInfoAndCharSet {
+    asset_id: u32,
+    font_index: u32,
+    family: fonts::FamilyName,
+    style: fonts::Style2,
+    languages: Vec<intl::LocaleId>,
+    generic_family: Option<fonts::GenericFontFamily>,
+    _char_set: font_info::CharSet, // Will be used to implement filtering in a future change
+}
+
+impl TypefaceInfoAndCharSet {
+    fn from_typeface(typeface: &Typeface, canonical_family: String) -> TypefaceInfoAndCharSet {
+        TypefaceInfoAndCharSet {
+            asset_id: typeface.asset_id,
+            font_index: typeface.font_index,
+            family: fonts::FamilyName { name: canonical_family },
+            style: fonts::Style2 {
+                slant: Some(typeface.slant),
+                weight: Some(typeface.weight),
+                width: Some(typeface.width),
+            },
+            // Convert BTreeSet<String> to Vec<LocaleId>
+            languages: typeface
+                .languages
+                .iter()
+                .map(|lang| intl::LocaleId { id: lang.clone() })
+                .collect(),
+            generic_family: typeface.generic_family,
+            _char_set: typeface.char_set.clone(),
+        }
+    }
+}
+
+impl Into<fonts_exp::TypefaceInfo> for TypefaceInfoAndCharSet {
+    fn into(self) -> fonts_exp::TypefaceInfo {
+        fonts_exp::TypefaceInfo {
+            asset_id: Some(self.asset_id),
+            font_index: Some(self.font_index),
+            family: Some(self.family),
+            style: Some(self.style),
+            languages: Some(self.languages),
+            generic_family: self.generic_family,
+        }
+    }
+}
+
 #[derive(Debug)]
 struct FontFamily {
     name: String,
@@ -125,6 +172,17 @@ struct FontFamily {
 impl FontFamily {
     fn new(name: String, generic_family: Option<fonts::GenericFontFamily>) -> FontFamily {
         FontFamily { name, faces: TypefaceCollection::new(), generic_family }
+    }
+
+    /// Get owned copies of the family's typefaces as `TypefaceInfo`
+    fn extract_faces(&self) -> Vec<TypefaceInfoAndCharSet> {
+        // Convert Vec<Arc<Typeface>> to Vec<TypefaceInfo>
+        self.faces
+            .faces
+            .iter()
+            // Copy most fields from `Typeface` and use the canonical family name
+            .map(|face| TypefaceInfoAndCharSet::from_typeface(face, self.name.clone()))
+            .collect()
     }
 }
 
@@ -269,16 +327,34 @@ impl FontService {
         Ok(())
     }
 
+    fn resolve_alias<'a>(&'a self, name: &'a FamilyOrAlias) -> Option<&'a FontFamily> {
+        match name {
+            FamilyOrAlias::Family(f) => Some(f),
+            FamilyOrAlias::Alias(a) => match self.families.get(a) {
+                Some(FamilyOrAlias::Family(f)) => Some(f),
+                _ => None,
+            },
+        }
+    }
+
     /// Get font family by name.
     fn match_family(&self, family_name: &UniCase<String>) -> Option<&FontFamily> {
-        let family = match self.families.get(family_name)? {
-            FamilyOrAlias::Family(f) => f,
-            FamilyOrAlias::Alias(a) => match self.families.get(a) {
-                Some(FamilyOrAlias::Family(f)) => f,
-                _ => panic!("Invalid font alias."),
-            },
-        };
-        Some(family)
+        self.resolve_alias(self.families.get(family_name)?)
+    }
+
+    /// Get all font families whose name contains the requested string
+    fn match_families_substr(&self, family_name: String) -> Vec<&FontFamily> {
+        self.families
+            .iter()
+            .filter_map(|(key, value)| {
+                // Note: This might not work for some non-Latin strings
+                if key.as_ref().to_lowercase().contains(&family_name.to_lowercase()) {
+                    return self.resolve_alias(value);
+                }
+                None
+            })
+            .unique_by(|family| &family.name)
+            .collect()
     }
 
     fn match_request(
@@ -370,15 +446,65 @@ impl FontService {
         let family = self
             .match_family(&UniCase::new(family_name.name.clone()))
             .ok_or(fonts_exp::Error::NotFound)?;
-        // Convert Vec<Arc<Typeface>> to Vec<TypefaceInfo>
-        let faces: Vec<fonts_exp::TypefaceInfo> = family
-            .faces
-            .faces
-            .iter()
-            // Copy most fields from `Typeface` and use the canonical family name
-            .map(|face| typefaceinfo_from_typeface(face, family.name.clone()))
-            .collect();
+        let faces = family.extract_faces().into_iter().map(|f| f.into()).collect();
         let response = fonts_exp::TypefaceInfoResponse { results: Some(faces) };
+        Ok(response)
+    }
+
+    /// Helper that runs the "match by family name" step of [`list_typefaces`].
+    /// Returns a vector of all available font families whose name or alias contains (or exactly
+    /// matches, if the `ExactFamily` flag is set) the name requested in `query`.
+    /// If `query` or `query.family` is `None`, all families are matched.
+    fn list_typefaces_match_families(
+        &self,
+        flags: fonts_exp::ListTypefacesRequestFlags,
+        query: Option<&fonts_exp::ListTypefacesQuery>,
+    ) -> Vec<&FontFamily> {
+        let get_all_families = || -> Vec<&FontFamily> {
+            self.families
+                .iter()
+                .filter_map(|(_, value)| match value {
+                    FamilyOrAlias::Family(family) => Some(family),
+                    FamilyOrAlias::Alias(_) => None,
+                })
+                .collect()
+        };
+
+        let filter_families = |name: String| -> Vec<&FontFamily> {
+            if flags.contains(fonts_exp::ListTypefacesRequestFlags::ExactFamily) {
+                return match self.match_family(&UniCase::new(name)) {
+                    Some(matched) => vec![matched],
+                    None => vec![],
+                };
+            }
+            self.match_families_substr(name)
+        };
+
+        query
+            .and_then(|q| q.family.as_ref())
+            .map_or_else(|| get_all_families(), |f| filter_families(f.name.clone()))
+    }
+
+    fn list_typefaces(
+        &self,
+        request: fonts_exp::ListTypefacesRequest,
+    ) -> Result<fonts_exp::TypefaceInfoResponse, fonts_exp::Error> {
+        let query = request.query.as_ref();
+        let max_results = request.max_results.unwrap_or(fonts_exp::MAX_TYPEFACE_RESULTS);
+        let flags = request.flags.unwrap_or(fonts_exp::ListTypefacesRequestFlags::new_empty());
+
+        let matched_families = self.list_typefaces_match_families(flags, query);
+
+        // Flatten matches into Iter<TypefaceInfoAndCharSet>
+        let matched_faces = matched_families.into_iter().flat_map(|family| family.extract_faces());
+
+        // Filter
+        let matched_faces = matched_faces
+            .take(max_results as usize) // TODO(seancuff): Paginate instead
+            .map(|f| f.into())
+            .collect();
+
+        let response = fonts_exp::TypefaceInfoResponse { results: Some(matched_faces) };
         Ok(response)
     }
 
@@ -427,7 +553,8 @@ impl FontService {
                 Ok(responder.send(&mut response)?)
             }
             fonts_exp::ProviderRequest::ListTypefaces { request, responder } => {
-                Err(format_err!("Unimplemented: ListTypefaces"))
+                let mut response = self.list_typefaces(request);
+                Ok(responder.send(&mut response)?)
             }
         }
     }
@@ -475,22 +602,4 @@ impl FontService {
 pub enum ProviderRequestStream {
     Stable(fonts::ProviderRequestStream),
     Experimental(fonts_exp::ProviderRequestStream),
-}
-
-fn typefaceinfo_from_typeface(face: &Typeface, family: String) -> fonts_exp::TypefaceInfo {
-    fonts_exp::TypefaceInfo {
-        asset_id: Some(face.asset_id),
-        font_index: Some(face.font_index),
-        family: Some(fonts::FamilyName { name: family }),
-        style: Some(fonts::Style2 {
-            slant: Some(face.slant),
-            weight: Some(face.weight),
-            width: Some(face.width),
-        }),
-        languages: Some(
-            // Convert BTreeSet<String> to Vec<LocaleId>
-            face.languages.iter().map(|lang| intl::LocaleId { id: lang.clone() }).collect(),
-        ),
-        generic_family: face.generic_family,
-    }
 }
