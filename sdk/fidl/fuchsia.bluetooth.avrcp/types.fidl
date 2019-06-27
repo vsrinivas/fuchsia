@@ -8,90 +8,93 @@ library fuchsia.bluetooth.avrcp;
 // and the 1394-TA AV\C Panel specification.
 // Deviations are called out in comments.
 
+/// Status codes for commands sent as the controller
+enum ControllerError : uint32 {
+    UNKOWN_FAILURE = 1;
+    TIMED_OUT = 2;
+    REMOTE_NOT_CONNECTED = 3;
+    COMMAND_NOT_IMPLEMENTED = 4;
+    COMMAND_REJECTED = 5;
+    COMMAND_UNEXPECTED = 6;
+    INVALID_ARGUMENTS = 7;
+    PACKET_ENCODING = 8;
+    PROTOCOL_ERROR = 9;
+    CONNECTION_ERROR = 10;
+    UNEXPECTED_RESPONSE = 11;
+};
+
 /// Defined by AVRCP 1.6.2 section 6.7.2 (RegisterNotification) and Appendix H.
+/// Style note: named exactly as they are in the specification with the "EVENT_" prefix.
 enum TargetEvent : uint8 {
-    /// EVENT_PLAYBACK_STATUS_CHANGED
-    PlaybackStatusChanged = 0x01;
-    /// EVENT_TRACK_CHANGED
-    TrackChanged = 0x02;
-    /// EVENT_TRACK_REACHED_END
-    TrackReachedEnd = 0x03;
-    /// EVENT_TRACK_REACHED_START
-    TrackReachedStart = 0x04;
-    /// EVENT_TRACK_POS_CHANGED
-    TrackPosChanged = 0x05;
-    /// EVENT_BATT_STATUS_CHANGED
-    BattStatusChanged = 0x06;
-    /// EVENT_SYSTEM_STATUS_CHANGED
-    SystemStatusChanged = 0x07;
-    /// EVENT_PLAYER_APPLICATION_SETTINGS_CHANGED
-    PlayerApplicationSettingsChanged = 0x08;
-    /// EVENT_NOW_PLAYING_CONTENT_CHANGED
-    NowPlayingContentChanged = 0x09;
-    /// EVENT_AVAILABLE_PLAYERS_CHANGED
-    AvailablePlayersChanged = 0x0a;
-    /// EVENT_ADDRESSED_PLAYER_CHANGED
-    AddressedPlayerChanged = 0x0b;
-    /// EVENT_UIDS_CHANGED
-    UidsChanged = 0x0c;
-    /// EVENT_VOLUME_CHANGED
-    VolumeChanged = 0x0d;
+    PLAYBACK_STATUS_CHANGED = 0x01;
+    TRACK_CHANGED = 0x02;
+    TRACK_REACHED_END = 0x03;
+    TRACK_REACHED_START = 0x04;
+    TRACK_POS_CHANGED = 0x05;
+    BATT_STATUS_CHANGED = 0x06;
+    SYSTEM_STATUS_CHANGED = 0x07;
+    PLAYER_APPLICATION_SETTINGS_CHANGED = 0x08;
+    NOW_PLAYING_CONTENT_CHANGED = 0x09;
+    AVAILABLE_PLAYERS_CHANGED = 0x0a;
+    ADDRESSED_PLAYER_CHANGED = 0x0b;
+    UIDS_CHANGED = 0x0c;
+    VOLUME_CHANGED = 0x0d;
 };
 
 /// Defined by AVRCP 1.6.2 section 6.7.2 (RegisterNotification).
 /// Format for EVENT_SYSTEM_STATUS_CHANGED.
 enum SystemStatus : uint8 {
-    PowerOn = 0x00;
-    PowerOff = 0x01;
-    Unplugged = 0x02;
+    POWER_ON = 0x00;
+    POWER_OFF = 0x01;
+    UNPLUGGED = 0x02;
 };
 
 /// Defined by AVRCP 1.6.2 section 6.7.2 (RegisterNotification).
 /// Format for EVENT_PLAYBACK_STATUS_CHANGED.
 enum PlaybackStatus : uint8 {
-    Stopped = 0x00;
-    Playing = 0x01;
-    Paused = 0x02;
-    FwdSeek = 0x03;
-    RevSeek = 0x04;
-    Error = 0xFF;
+    STOPPED = 0x00;
+    PLAYING = 0x01;
+    PAUSED = 0x02;
+    FWD_SEEK = 0x03;
+    REV_SEEK = 0x04;
+    ERROR = 0xFF;
 };
 
 /// Defined by AVRCP 1.6.2 section 6.7.2 (RegisterNotification).
 /// Format for EVENT_BATT_STATUS_CHANGED.
 /// Same encoding also defined by 6.5.8 (InformBatteryStatusOfCT).
 enum BatteryStatus : uint8 {
-    Normal = 0x00;
-    Warning = 0x01;
-    Critical = 0x02;
-    External = 0x03;
-    FullCharge = 0x04;
-    Reserved = 0x05;
+    NORMAL = 0x00;
+    WARNING = 0x01;
+    CRITICAL = 0x02;
+    EXTERNAL = 0x03;
+    FULL_CHARGE = 0x04;
+    RESERVED = 0x05;
 };
 
 /// Defined by AVRCP 1.6.2 Appendix F (player application settings).
 enum RepeatStatusMode : uint8 {
-    Off = 0x01;
-    SingleTrackRepeat = 0x02;
-    AllTrackRepeat = 0x03;
-    GroupRepeat = 0x04;
-    Reserved = 0xFF;
+    OFF = 0x01;
+    SINGLE_TRACK_REPEAT = 0x02;
+    ALL_TRACK_REPEAT = 0x03;
+    GROUP_REPEAT = 0x04;
+    RESERVED = 0xFF;
 };
 
 /// Defined by AVRCP 1.6.2 Appendix F (player application settings).
 enum ShuffleMode : uint8 {
-    Off = 0x01;
-    AllTracksShuffle = 0x02;
-    GroupShuffle = 0x03;
-    Reserved = 0xFF;
+    OFF = 0x01;
+    ALL_TRACK_SHUFFLE = 0x02;
+    GROUP_SHUFFLE = 0x03;
+    RESERVED = 0xFF;
 };
 
 /// Defined by AVRCP 1.6.2 Appendix F (player application settings).
 enum ScanMode : uint8 {
-    Off = 0x01;
-    AllTracksScan = 0x02;
-    GroupScan = 0x03;
-    Reserved = 0xFF;
+    OFF = 0x01;
+    ALL_TRACK_SCAN = 0x02;
+    GROUP_SCAN = 0x03;
+    RESERVED = 0xFF;
 };
 
 /// Defined by AVRCP 1.6.2 Appendix F (player application settings).
@@ -116,63 +119,63 @@ struct MediaAttributes {
 
 /// Defined by AV\C Panel specification.
 enum AvcPanelCommand : uint8 {
-    select = 0x00;
-    up = 0x01;
-    down = 0x02;
-    left = 0x03;
-    right = 0x04;
-    root_menu = 0x09;
-    contents_menu = 0x0b;
-    favorite_menu = 0x0c;
-    exit = 0x0d;
-    on_demand_menu = 0x0e;
-    apps_menu = 0x0f;
-    key_0 = 0x20;
-    key_1 = 0x21;
-    key_2 = 0x22;
-    key_3 = 0x23;
-    key_4 = 0x24;
-    key_5 = 0x25;
-    key_6 = 0x26;
-    key_7 = 0x27;
-    key_8 = 0x28;
-    key_9 = 0x29;
-    dot = 0x2a;
-    enter = 0x2b;
-    channel_up = 0x30;
-    channel_down = 0x31;
-    channel_previous = 0x32;
-    input_select = 0x34;
-    info = 0x35;
-    help = 0x36;
-    page_up = 0x37;
-    page_down = 0x38;
-    lock = 0x3a;
-    power = 0x40;
-    volume_up = 0x41;
-    volume_down = 0x42;
-    mute = 0x43;
-    play = 0x44;
-    stop = 0x45;
-    pause = 0x46;
-    record = 0x47;
-    rewind = 0x48;
-    fast_forward = 0x49;
-    eject = 0x4a;
-    forward = 0x4b;
-    backward = 0x4c;
-    list = 0x4d;
-    f1 = 0x71;
-    f2 = 0x72;
-    f3 = 0x73;
-    f4 = 0x74;
-    f5 = 0x75;
-    f6 = 0x76;
-    f7 = 0x77;
-    f8 = 0x78;
-    f9 = 0x79;
-    red = 0x7a;
-    green = 0x7b;
-    blue = 0x7c;
-    yellow = 0x7d;
+    SELECT = 0x00;
+    UP = 0x01;
+    DOWN = 0x02;
+    LEFT = 0x03;
+    RIGHT = 0x04;
+    ROOT_MENU = 0x09;
+    CONTENTS_MENU = 0x0b;
+    FAVORITE_MENU = 0x0c;
+    EXIT = 0x0d;
+    ON_DEMAND_MENU = 0x0e;
+    APPS_MENU = 0x0f;
+    KEY_0 = 0x20;
+    KEY_1 = 0x21;
+    KEY_2 = 0x22;
+    KEY_3 = 0x23;
+    KEY_4 = 0x24;
+    KEY_5 = 0x25;
+    KEY_6 = 0x26;
+    KEY_7 = 0x27;
+    KEY_8 = 0x28;
+    KEY_9 = 0x29;
+    DOT = 0x2a;
+    ENTER = 0x2b;
+    CHANNEL_UP = 0x30;
+    CHANNEL_DOWN = 0x31;
+    CHANNEL_PREVIOUS = 0x32;
+    INPUT_SELECT = 0x34;
+    INFO = 0x35;
+    HELP = 0x36;
+    PAGE_UP = 0x37;
+    PAGE_DOWN = 0x38;
+    LOCK = 0x3a;
+    POWER = 0x40;
+    VOLUME_UP = 0x41;
+    VOLUME_DOWN = 0x42;
+    MUTE = 0x43;
+    PLAY = 0x44;
+    STOP = 0x45;
+    PAUSE = 0x46;
+    RECORD = 0x47;
+    REWIND = 0x48;
+    FAST_FORWARD = 0x49;
+    EJECT = 0x4a;
+    FORWARD = 0x4b;
+    BACKWARD = 0x4c;
+    LIST = 0x4d;
+    F1 = 0x71;
+    F2 = 0x72;
+    F3 = 0x73;
+    F4 = 0x74;
+    F5 = 0x75;
+    F6 = 0x76;
+    F7 = 0x77;
+    F8 = 0x78;
+    F9 = 0x79;
+    RED = 0x7a;
+    GREEN = 0x7b;
+    BLUE = 0x7c;
+    YELLOW = 0x7d;
 };

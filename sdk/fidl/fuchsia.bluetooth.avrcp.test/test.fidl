@@ -1,0 +1,80 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.bluetooth.avrcp.test;
+
+using fuchsia.bluetooth.avrcp;
+using zx;
+
+[Discoverable]
+protocol PeerManagerExt {
+    /// Returns a test controller client to a remote target service at the peer specified by
+    /// `peer_id`. This client is to be used alongside the primary controller client.
+    /// The test protocol provides additional methods not exposed by primary controller protocol
+    /// that are designed to be used for PTS qualification testing and debugging purposes only.
+    /// WARNING: This test controller can cause breaking side-effects for other controller clients
+    /// connected to this the same peer. Use with caution and avoid having additional primary
+    /// controller clients interacting with the same remote peer while using the test controller.
+    /// TODO (BT-305): change peer_id to fuchsia.bluetooth.PeerId type after BrEdr profile service
+    /// switches.
+    GetControllerForTarget(string peer_id, request<ControllerExt> client) -> () error zx.status;
+
+    /// Sets an implementation of target handler that will vend delegates for each incoming
+    /// remote TG -> local CT connections to handle the commands being sent by the remote TG.
+    /// If no target handler is set, a default handler will be used internally that will
+    /// dispatch to the MediaSession service. This should only be used for PTS qualification testing
+    /// and debugging purposes only.
+    RegisterIncomingTargetHandler(TargetHandler handler);
+};
+
+/// An implementation of this interface is registered with the TestPeerManager service to handle
+/// incoming connections.
+protocol TargetHandler {
+    /// Called when an incoming target is connected. `delegate` should be fulfilled with an
+    /// interface that will be used to handle commands from the connected Controller.
+    /// TODO (BT-305): change peer_id to fuchsia.bluetooth.PeerId type after BrEdr profile service
+    /// switches.
+    OnControllerConnected(string peer_id, request<TargetDelegate> delegate);
+};
+
+/// Defined by the AV/C Digital Interface Command Set General Specification and AV/C Panel Subunit
+/// Specification (http://1394ta.org/specifications/)
+enum ResponseCode {
+    NOT_IMPLEMENTED = 0x08;
+    ACCEPTED = 0x09;
+    REJECTED = 0x0A;
+    IN_TRANSITION = 0x0B; // unused in AVRCP specification
+    IMPLEMENTED_STABLE = 0x0C;
+    CHANGED = 0x0D;
+    INTERIM = 0x0F;
+};
+
+/// Returned by an implementer of the TargetHandler interface.
+/// Handles incoming connection commands by a remote CT device.
+protocol TargetDelegate {
+    /// Called after Panel key down and up events.
+    OnCommand(fuchsia.bluetooth.avrcp.AvcPanelCommand command) -> (ResponseCode code);
+};
+
+/// Provides additional methods not in `Controller` that are strictly for testing and debug.
+protocol ControllerExt {
+    /// Returns whether there is an underlying connection open with the remote device currently.
+    IsConnected() -> (bool connected);
+
+    /// Queries the target and returns what events are supported for notification.
+    /// Sends GetCapabilties(0x03 (EVENTS_SUPPORTED)) command for all events supported by
+    /// the negoitated version of AVRCP.
+    GetEventsSupported() -> (vector<fuchsia.bluetooth.avrcp.TargetEvent> events_supported) error fuchsia.bluetooth.avrcp.ControllerError;
+
+    /// Explicitly attempt to connect to the remote peer.
+    Connect();
+
+    /// Explicitly disconnect any L2CAP channels, if any, to the remote peer.
+    Disconnect();
+
+    /// Send raw vendor depedent "Control" command packet to a specific PDU on the remote peer.
+    /// Returns the entire response packet including the headers or error if the remote endpoint
+    /// disconnects or does not return a response in set amount of time.
+    SendRawVendorDependentCommand(uint8 pdu_id, bytes command) -> (bytes response) error fuchsia.bluetooth.avrcp.ControllerError;
+};

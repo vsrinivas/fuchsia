@@ -17,7 +17,7 @@ rustc_binary("bt-avrcp-controller") {
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
     "//sdk/fidl/fuchsia.bluetooth.avrcp:fuchsia.bluetooth.avrcp-rustc",
-    "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
+    "//sdk/fidl/fuchsia.bluetooth.avrcp.test:fuchsia.bluetooth.avrcp.test-rustc",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:pin-utils",

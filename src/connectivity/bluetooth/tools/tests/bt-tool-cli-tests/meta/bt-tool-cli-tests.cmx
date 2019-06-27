@@ -8,8 +8,8 @@
             "test/test"
         ],
         "services": [
-            "fuchsia.bluetooth.avrcp.Avrcp",
-            "fuchsia.bluetooth.avrcp.AvrcpTest",
+            "fuchsia.bluetooth.avrcp.PeerManager",
+            "fuchsia.bluetooth.avrcp.test.TestPeerManager",
             "fuchsia.bluetooth.bredr.Profile",
             "fuchsia.bluetooth.snoop.Snoop",
             "fuchsia.logger.LogSink",

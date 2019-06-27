@@ -1,0 +1,133 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.bluetooth.avrcp;
+
+using zx;
+
+[Discoverable]
+protocol PeerManager {
+    /// Returns a controller client to a remote target (TG) service at the peer specified by
+    /// `peer_id`.
+    /// TODO (BT-305): change peer_id to fuchsia.bluetooth.PeerId type after BrEdr profile service
+    /// switches.
+    GetControllerForTarget(string peer_id, request<Controller> client) -> () error zx.status;
+};
+
+/// Change notifications that a controller client can register.
+bits Notifications : uint32 {
+    // AVRCP native notifications
+
+    /// AVRCP EVENT_PLAYBACK_STATUS_CHANGED Notification
+    PLAYBACK_STATUS = 0x1;
+
+    /// AVRCP EVENT_TRACK_CHANGED Notification
+    TRACK = 0x2;
+
+    /// AVRCP EVENT_TRACK_POS_CHANGED Notification
+    TRACK_POS = 0x4;
+
+    /// AVRCP EVENT_BATT_STATUS_CHANGED Notification
+    BATT_STATUS = 0x8;
+
+    /// AVRCP EVENT_SYSTEM_STATUS_CHANGED Notification
+    SYSTEM_STATUS = 0x10;
+
+    /// AVRCP EVENT_PLAYER_APPLICATION_SETTINGS_CHANGED Notification
+    PLAYER_APPLICATION_SETTINGS = 0x20;
+
+    /// AVRCP EVENT_ADDRESSED_PLAYER_CHANGED Notification
+    ADDRESSED_PLAYER = 0x40;
+
+    /// AVRCP EVENT_VOLUME_CHANGED Notification
+    VOLUME = 0x80;
+
+    // Internal notifications
+
+    /// Internal connection change event.
+    CONNECTION = 0x10000;
+};
+
+/// Event data from incoming target notifications.
+table Notification {
+    /// EVENT_PLAYBACK_STATUS_CHANGED event data
+    1: PlaybackStatus status;
+
+    /// EVENT_TRACK_CHANGED event data
+    2: uint64 track_id;
+
+    /// EVENT_TRACK_POS_CHANGED event data
+    3: uint32 pos;
+
+    /// EVENT_BATT_STATUS_CHANGED event data
+    4: BatteryStatus battery_status;
+
+    /// EVENT_SYSTEM_STATUS_CHANGED event data
+    5: SystemStatus system_status;
+
+    /// EVENT_PLAYER_APPLICATION_SETTINGS_CHANGED event data
+    6: PlayerApplicationSettings application_settings;
+
+    /// EVENT_ADDRESSED_PLAYER_CHANGED event data
+    7: uint16 player_id;
+
+    /// EVENT_VOLUME_CHANGED event data
+    8: uint8 volume;
+
+    /// CONNECTION_CHANGE event data
+    9: bool device_connected;
+};
+
+/// Client wrapper for local controller (CT) -> remote target (TG) AVCTP connections between devices.
+/// A client is high level construct and does not represent a connection with a device.
+/// Connections are internally managed and may be shared by multiple clients.
+/// The actual connection may be opened on-demand after any command here is called.
+protocol Controller {
+    /// Returns the remote PlayerApplicationSettings.
+    GetPlayerApplicationSettings() -> (PlayerApplicationSettings settings) error ControllerError;
+
+    /// Returns the currently playing media attributes.
+    /// May send either the GetElementAttributes or GetItemAttributes command depending on what
+    /// is supported.
+    GetMediaAttributes() -> (MediaAttributes attributes) error ControllerError;
+
+    /// Sets the absolute volume on the device. Values can range from 0x00 to 0x7F
+    /// (with 100% volume being 0x7F). This is in addition to the relative volume change
+    /// commands that can be sent over AV\C. You will get a volume changed notification event
+    /// as part of successfully sending this.
+    SetAbsoluteVolume(uint8 volume) -> () error ControllerError;
+
+    /// Inform target of the controller's battery level.
+    InformBatteryStatus(BatteryStatus battery_status) -> () error ControllerError;
+
+    /// Filters notifications that will be received with [`OnNotification`]. Not all notifications
+    /// are supported by all peers. Resetting the notification filter may trigger all requested
+    /// notification types to post their current value to [`OnNotification`] immediately.
+    ///
+    /// The `position_change_interval` argument is used to set the interval in seconds that the
+    /// controller client would like to be notified of TRACK_POS_CHANGED events.
+    /// `position_change_interval` is ignored if TRACK_POS is not set. The position change interval
+    /// is best effort and not a guarantee and events may arrive more frequently or less frequently
+    /// than requested.
+    SetNotificationFilter(Notifications notifications, uint32 position_change_interval);
+
+    /// Incoming notification events from the target peer. `timestamp` is monotonic wall time
+    /// of when the event was received by the peer.
+    /// You must call [`NotifyNotificationHandled`] after receving a notification event to
+    /// acknowledge delivery. Multiple non-discrete events may be combined into a single
+    /// notification if acknowledged after a new event arrives from a peer.
+    /// Call [`SetNotificationFilter`] to set the notifications that are requested of the peer.
+    /// All notifications are discrete state changes except volume change and position change
+    /// notifications.
+    -> OnNotification(zx.time timestamp, Notification notification);
+
+    /// Call to acknowledge handling of a notification from [`OnNotification`].
+    NotifyNotificationHandled();
+
+    /// Changes the addressed `player_id` on the target when multiple are supported.
+    SetAddressedPlayer(uint16 player_id) -> () error ControllerError;
+
+    /// Send an AV\C passthrough key command. Sends both a key down and key up event.
+    SendCommand(AvcPanelCommand command) -> () error ControllerError;
+};
