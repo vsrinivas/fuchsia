@@ -189,10 +189,7 @@ def collect_binaries(manifest, input_binaries, aux_binaries, examined):
                 soname = 'ld.so.1'
 
             # Translate the SONAME to a target file name.
-            target = ('lib/' +
-                      ('' if soname == context.variant.runtime
-                       else context.variant.libprefix) +
-                      soname)
+            target = context.variant.soname_target(soname)
             if add_auxiliary(target, auxiliary):
                 # We found it in an existing manifest.
                 continue

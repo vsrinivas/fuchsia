@@ -13,5 +13,7 @@ variant("profile") {
   if (is_fuchsia) {
     # The statically-linked profiling runtime depends on libzircon.
     libs = [ "zircon" ]
+
+    ldflags = [ "-Wl,-dynamic-linker=profile/ld.so.1" ]
   }
 }
