@@ -196,8 +196,14 @@ static enum x86_microarch_list get_microarch(struct x86_model_info* info) {
         case 0x8e: /* Kabylake Y/U */
         case 0x9e: /* Kabylake H/S */
             return X86_MICROARCH_INTEL_KABYLAKE;
-        case 0x4d: /* Silvermont */
+        case 0x37: /* Silvermont */
+        case 0x4a: /* Silvermont "Cherry View" */
+        case 0x4d: /* Silvermont "Avoton" */
+        case 0x4c: /* Airmont "Braswell" */
+        case 0x5a: /* Airmont */
             return X86_MICROARCH_INTEL_SILVERMONT;
+        case 0x5c: /* Goldmont */
+            return X86_MICROARCH_INTEL_GOLDMONT;
         }
     } else if (x86_vendor == X86_VENDOR_AMD && info->family == 0xf) {
         switch (info->display_family) { // zen
@@ -356,6 +362,9 @@ void x86_feature_debug(void) {
         break;
     case X86_MICROARCH_INTEL_SILVERMONT:
         microarch_string = "Silvermont";
+        break;
+    case X86_MICROARCH_INTEL_GOLDMONT:
+        microarch_string = "Goldmont";
         break;
     case X86_MICROARCH_AMD_BULLDOZER:
         microarch_string = "Bulldozer";
@@ -732,6 +741,9 @@ const x86_microarch_config_t* select_microarch_config(enum x86_microarch_list in
     case X86_MICROARCH_INTEL_KABYLAKE:
         return &kbl_config;
     case X86_MICROARCH_INTEL_SILVERMONT:
+        return &smt_config;
+    case X86_MICROARCH_INTEL_GOLDMONT:
+        // Placeholder; TODO(ZX-4201): Separate Goldmont/Goldmont Plus config from Silvermont.
         return &smt_config;
     case X86_MICROARCH_AMD_BULLDOZER:
         return &bulldozer_config;

@@ -125,8 +125,14 @@ bool x86_intel_cpu_has_meltdown(const cpu_id::CpuId* cpuid, MsrAccess* msr) {
 bool x86_intel_cpu_has_l1tf(const cpu_id::CpuId* cpuid, MsrAccess* msr) {
     // Silvermont/Airmont/Goldmont are not affected by L1TF.
     auto info = cpuid->ReadProcessorId();
-    if (info.family() == 6 && info.model() == 0x4C) {
-        return false;
+    if (info.family() == 6) {
+	switch (info.model()) {
+        case 0x4c:  // Silvermont
+        case 0x4d:  // Silvermont
+        case 0x5c:  // Goldmont
+        // TODO(ZX-4201): Switch to using the microarch functions.
+            return false;
+	}
     }
 
     if (cpuid->ReadFeatures().HasFeature(cpu_id::Features::ARCH_CAPABILITIES)) {
