@@ -549,6 +549,8 @@ table Profile {
 *   Unions contain one or more members. A union with no members would have
     no inhabitants and thus would make little sense in a wire format.
 
+> Unions are deprecated. New code should use [xunions](#Xunions).
+
 #### Declaration
 
 ```fidl
@@ -575,8 +577,9 @@ Unions are denoted by their declared name (eg. **Pattern**) and nullability:
 
 *   Record type consisting of an ordinal and an envelope.
 *   Ordinal indicates member selection, envelope holds contents.
-*   Declaration is not intended to be modified once deployed; use protocol
-    extension instead.
+*   Declaration can be modified after deployment, while maintaining ABI
+    compatibility. See the [Compatibility Guide](abi-compat.md#xunions) for
+    source-compatibility considerations.
 *   Reference may be nullable.
 *   Xunions contain one or more members. An xunion with no members would have
     no inhabitants and thus would make little sense in a wire format.
