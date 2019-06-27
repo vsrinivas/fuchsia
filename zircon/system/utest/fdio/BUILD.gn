@@ -15,7 +15,7 @@ test("fdio") {
     "fdio_open_max.c",
     "fdio_path_canonicalize.c",
     "fdio_root.c",
-    "fdio_socket.c",
+    "fdio_socket.cc",
     "fdio_socketpair.c",
     "fdio_stubs.cc",
     "fdio_unsafe.cc",
@@ -43,7 +43,7 @@ executable("accept-child") {
   visibility = [ ":*" ]
   testonly = true
   sources = [
-    "fdio_atexit_test_accept_child.c",
+    "fdio_atexit_test_accept_child.cc",
   ]
   deps = [
     "$zx/system/fidl/fuchsia-net:c",
