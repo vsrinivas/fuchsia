@@ -539,7 +539,7 @@ zx_status_t brcmf_phy_set_country(void* ctx, const wlanphy_country_t* country) {
         return ZX_ERR_INVALID_ARGS;
     }
 
-    brcmf_err("brcmf_phy_set_country() to [%s] not implemented",
+    BRCMF_ERR("brcmf_phy_set_country() to [%s] not implemented",
               wlan::common::Alpha2ToStr(country->alpha2).c_str());
     return ZX_ERR_NOT_SUPPORTED;
 }
