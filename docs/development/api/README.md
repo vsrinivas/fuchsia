@@ -21,7 +21,12 @@ below is not complete: as Fuchsia evolves, more rubrics will be added.
  * [CLI and GUI tools](tools.md)
  * Languages
    * [C API Readability](c.md)
-   * [FIDL API Readability](fidl.md)
+   * [FIDL Style][fidl-style]
+   * [FIDL API][fidl-api]
  * Domain-specific areas
    * [Zircon System Interface](system.md)
    * [Fuchsia Device Interface](device_interfaces.md)
+
+<!-- xrefs -->
+[fidl-style]: /docs/development/languages/fidl/style.md
+[fidl-api]: /docs/development/api/fidl.md

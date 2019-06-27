@@ -1,7 +1,8 @@
 # Fuchsia Device Interface Rubric
 
 The Fuchsia device interfaces are expressed as FIDL protocols.  These FIDL
-definitions should conform to the [FIDL Readability Rubric][fidl-rubric].
+definitions should conform to the [FIDL Style Rubric][fidl-style] and
+[FIDL API Rubric][fidl-api].
 
 ## Identifiers
 
@@ -49,5 +50,6 @@ any shared data structures with `struct` definitions and provide detailed
 documentation about participation in the protocol.  Packed structures are not
 currently supported.
 
-[fidl-rubric]: /docs/development/api/fidl.md
+[fidl-style]: /docs/development/languages/fidl/style.md
+[fidl-api]: /docs/development/api/fidl.md
 [bits]: /docs/development/api/fidl.md#bits

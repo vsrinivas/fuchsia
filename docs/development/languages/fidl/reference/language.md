@@ -73,7 +73,7 @@ struct struct { };
 
 > Note that while using keywords as identifiers is supported, it can lead to confusion,
 > and should the be considered on a case-by-case basis. See the `Names` section of the
-> [Readability Rubric](../../../api/fidl.md#Names)
+> [Style Rubric](/docs/development/languages/fidl/style.md#Names)
 
 ### Qualified Identifiers
 
@@ -374,9 +374,9 @@ struct Record {
 
 > Strings should not be used to pass arbitrary binary data since bindings enforce
 > valid UTF-8. Instead, consider `bytes` for small data or
-> [`fuchsia.mem.Buffer`](../../../api/fidl.md#consider-using-fuchsia_mem_buffer)
+> [`fuchsia.mem.Buffer`](/docs/development/api/fidl.md#consider-using-fuchsia_mem_buffer)
 > for blobs. See
-> [Should I use string or vector?](../../../api/fidl.md#should-i-use-string-or-vector)
+> [Should I use string or vector?](/docs/development/api/fidl.md#should-i-use-string-or-vector)
 > for details.
 
 ### Vectors

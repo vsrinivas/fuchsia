@@ -9,7 +9,7 @@ purpose, goals, and requirements, as well as links to related documents.
 
 The FIDL linter is a command line program that processes one or more FIDL
 files, and prints warnings about content that compiles (technically valid FIDL),
-but appears to violate rules from the [FIDL API Readability Rubric][fidl-rubric].
+but appears to violate rules from the [FIDL Style Rubric][fidl-style].
 Readability is important, and style is a component of that, but the FIDL Rubric
 also defines rules that help ensure the FIDL API does not include things that are
 known to hamper cross-language portability.
@@ -37,4 +37,4 @@ $ fx lint --help
 ```
 
 <!-- xrefs -->
-[fidl-rubric]: /docs/development/api/fidl.md
+[fidl-style]: /docs/development/languages/fidl/style.md

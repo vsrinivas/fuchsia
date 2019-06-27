@@ -39,7 +39,8 @@ and debugging Fuchsia and programs running on Fuchsia.
  - [README](api/README.md) - Developing APIs for Fuchsia
  - [Council](api/council.md) - Definition of the API council
  - [System](api/system.md) - Rubric for designing the Zircon System Interface
- - [FIDL](api/fidl.md) - Rubric for designing FIDL protocols
+ - [FIDL API][fidl-api] - Rubric for designing FIDL protocols
+ - [FIDL style][fidl-style] - FIDL style rubric
  - [C](api/c.md) - Rubric for designing C library interfaces
  - [Tools](api/tools.md) - Rubrics for designing developer tools
  - [Devices](api/device_interfaces.md) - Rubric for designing device interfaces
@@ -94,3 +95,5 @@ This section covers Fuchsia-wide conventions and best practices.
 [acer_12]: /zircon/docs/targets/acer12.md "Acer 12"
 [intel_nuc]: /zircon/docs/targets/nuc.md "Intel NUC"
 [pixelbook]: hardware/pixelbook.md "Pixelbook"
+[fidl-style]: /docs/development/languages/fidl/style.md
+[fidl-api]: /docs/development/api/fidl.md

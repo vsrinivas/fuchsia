@@ -48,7 +48,7 @@ The target name should be the name of the library.
 
 ### Style
 
-FIDL definitions in the SDK should follow the [FIDL API readability rubric].
+FIDL definitions in the SDK should follow the [FIDL API style rubric].
 
 ## Client Libraries
 
@@ -120,4 +120,4 @@ in `<zircon/assert.h>`, to assert invariants. Client libraries may also use the
 `_MSG` variants to provide a message when the assertion fails.
 
 
-[FIDL API readability rubric]: ../api/fidl.md
+[FIDL API style rubric]: ../languages/fidl/style.md

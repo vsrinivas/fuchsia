@@ -33,7 +33,8 @@ Please read the [CONTRIBUTING](CONTRIBUTING.md) chapter for more information.
 # References
 
 * [ABI and Source Compatibility Guide](reference/abi-compat.md) &mdash; how to evolve FIDL APIs
-* [API Readability Rubric][fidl-rubric] &mdash;  general advice and best practices
+* [API Rubric][fidl-api] &mdash; design patterns and best practices
+* [Style Rubric][fidl-style] &mdash; style guide
 * [Attributes](reference/attributes.md) &mdash; describes the available FIDL attributes
 * [Bindings](reference/bindings.md) &mdash; requirements for FIDL language bindings
 * [Compiler](reference/compiler.md) &mdash; describes the organization of the compiler
@@ -50,7 +51,8 @@ Please read the [CONTRIBUTING](CONTRIBUTING.md) chapter for more information.
   of data
 
 <!-- xrefs -->
-[fidl-rubric]: /docs/development/api/fidl.md
+[fidl-style]: /docs/development/languages/fidl/style.md
+[fidl-api]: /docs/development/api/fidl.md
 
 <!-- these in particular make the table manageable, and have the form:
      <language>-lang (the language part)
