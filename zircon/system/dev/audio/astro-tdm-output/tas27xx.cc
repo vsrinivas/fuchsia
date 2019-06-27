@@ -29,6 +29,11 @@ zx_status_t Tas27xx::Reset() {
     return WriteReg(SW_RESET, 0x01);
 }
 
+zx_status_t Tas27xx::Mute(bool mute) {
+    // Mutes and unmutes (a.k.a. active mode) keeping v and i sense disabled.
+    return WriteReg(PWR_CTL, (0x03 << 2) | (mute ? 0x01 : 0x00));
+}
+
 zx_status_t Tas27xx::SetGain(float gain) {
     gain = fbl::clamp(gain, GetMinGain(), GetMaxGain());
     uint8_t gain_reg = static_cast<uint8_t>(-gain / kGainStep);
@@ -80,11 +85,6 @@ zx_status_t Tas27xx::Init() {
 
     // Initial gain -20db
     SetGain(-20);
-
-    // Disable v and i sense, enter active mode
-    status = WriteReg(PWR_CTL, (0x03 << 2));
-    if (status != ZX_OK)
-        return status;
 
     return ZX_OK;
 }

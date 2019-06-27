@@ -41,6 +41,7 @@ public:
     zx_status_t Reset();
     zx_status_t Standby();
     zx_status_t ExitStandby();
+    zx_status_t Mute(bool mute);
 
 private:
     friend class std::default_delete<Tas27xx>;
