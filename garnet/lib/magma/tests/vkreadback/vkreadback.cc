@@ -271,9 +271,16 @@ bool VkReadbackTest::InitImage()
     if (memory_type >= 32)
         return DRETF(false, "Can't find compatible mappable memory for image");
 
+    VkExportMemoryAllocateInfoKHR export_info = {
+        .sType = VK_STRUCTURE_TYPE_EXPORT_MEMORY_ALLOCATE_INFO_KHR,
+        .pNext = nullptr,
+        .handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_TEMP_ZIRCON_VMO_BIT_FUCHSIA,
+    };
+
     VkMemoryAllocateInfo alloc_info = {
         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-        .pNext = nullptr,
+        .pNext =
+            (ext_ == VK_FUCHSIA_EXTERNAL_MEMORY && !device_memory_handle_) ? &export_info : nullptr,
         .allocationSize = memory_reqs.size + bind_offset_,
         .memoryTypeIndex = memory_type,
     };
