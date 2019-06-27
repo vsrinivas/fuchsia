@@ -5,6 +5,8 @@
 #include "magma.h"
 #include "garnet/lib/magma/include/virtio/virtio_magma.h"
 #include "garnet/lib/magma/src/libmagma_linux/virtmagma_util.h"
+#include <sys/mman.h>
+#include <vector>
 
 // TODO(MA-623): support an object that is a parent of magma_connection_t
 // This class is a temporary workaround to support magma APIs that do not
@@ -16,8 +18,90 @@ std::map<uint32_t, virtmagma_handle_t*>& GlobalHandleTable()
     return ht;
 }
 
+magma_status_t magma_map(magma_connection_t connection, magma_buffer_t buffer, void** addr_out)
+{
+    *addr_out = nullptr;
+
+    auto connection_wrapped = virtmagma_connection_t::Get(connection);
+    connection = connection_wrapped->Object();
+    int32_t file_descriptor = connection_wrapped->Parent().first;
+    int32_t file_descriptor_mmap = connection_wrapped->Parent().second;
+    auto buffer_wrapped = virtmagma_buffer_t::Get(buffer);
+    buffer = buffer_wrapped->Object();
+
+    virtio_magma_map_ctrl_t request{};
+    struct {
+        virtio_magma_map_resp_t virtio_response;
+        size_t size_to_mmap_out;
+    } response{};
+    request.hdr.type = VIRTIO_MAGMA_CMD_MAP;
+    request.connection = reinterpret_cast<decltype(request.connection)>(connection);
+    request.buffer = reinterpret_cast<decltype(request.buffer)>(buffer);
+
+    if (!virtmagma_send_command(file_descriptor, &request, sizeof(request), &response,
+                                sizeof(response))) {
+        return MAGMA_STATUS_INTERNAL_ERROR;
+    }
+    if (response.virtio_response.hdr.type != VIRTIO_MAGMA_RESP_MAP) {
+        return MAGMA_STATUS_INTERNAL_ERROR;
+    }
+
+    // The only simple way to construct a new vm_area_struct in the kernel is to reuse
+    // the mmap call path.
+    void* mapped_addr = mmap(nullptr, response.size_to_mmap_out, PROT_READ | PROT_WRITE, MAP_SHARED,
+                             file_descriptor_mmap, 0);
+    if (mapped_addr == MAP_FAILED) {
+        return MAGMA_STATUS_INTERNAL_ERROR;
+    }
+    *addr_out = mapped_addr;
+
+    magma_status_t result_return =
+        static_cast<decltype(result_return)>(response.virtio_response.result_return);
+    return result_return;
+}
+
+magma_status_t magma_map_aligned(magma_connection_t connection, magma_buffer_t buffer,
+                                 uint64_t alignment, void** addr_out)
+{
+    *addr_out = nullptr;
+    return MAGMA_STATUS_UNIMPLEMENTED;
+}
+
+magma_status_t magma_map_specific(magma_connection_t connection, magma_buffer_t buffer,
+                                  uint64_t addr, uint64_t offset, uint64_t length)
+{
+    return MAGMA_STATUS_UNIMPLEMENTED;
+}
+
 magma_status_t magma_wait_semaphores(const magma_semaphore_t* semaphores, uint32_t count,
                                      uint64_t timeout_ms, magma_bool_t wait_all)
 {
-    return MAGMA_STATUS_OK;
+    if (count == 0)
+        return MAGMA_STATUS_OK;
+
+    auto semaphore0_wrapped = virtmagma_semaphore_t::Get(semaphores[0]);
+    auto semaphore0_parent_wrapped = virtmagma_connection_t::Get(semaphore0_wrapped->Parent());
+    int32_t file_descriptor = semaphore0_parent_wrapped->Parent().first;
+
+    virtio_magma_wait_semaphores_ctrl_t request{};
+    virtio_magma_wait_semaphores_resp_t response{};
+    request.hdr.type = VIRTIO_MAGMA_CMD_WAIT_SEMAPHORES;
+    std::vector<magma_semaphore_t> unwrapped_semaphores(count);
+    for (uint32_t i = 0; i < count; ++i) {
+        unwrapped_semaphores[i] = virtmagma_semaphore_t::Get(semaphores[i])->Object();
+    }
+    request.semaphores =
+        reinterpret_cast<decltype(request.semaphores)>(unwrapped_semaphores.data());
+    request.count = count;
+    request.timeout_ms = timeout_ms;
+    request.wait_all = wait_all;
+
+    if (!virtmagma_send_command(file_descriptor, &request, sizeof(request), &response,
+                                sizeof(response)))
+        return MAGMA_STATUS_INTERNAL_ERROR;
+    if (response.hdr.type != VIRTIO_MAGMA_RESP_WAIT_SEMAPHORES)
+        return MAGMA_STATUS_INTERNAL_ERROR;
+
+    magma_status_t result_return = static_cast<decltype(result_return)>(response.result_return);
+    return result_return;
 }

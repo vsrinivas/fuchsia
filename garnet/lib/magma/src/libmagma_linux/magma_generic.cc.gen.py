@@ -9,10 +9,11 @@ import sys
 
 def usage():
   print 'Usage:'
-  print '  magma_generic.cc.gen.py INPUT EXISTING OUTPUT'
+  print '  magma_generic.cc.gen.py INPUT EXISTING OUTPUT [--debug]'
   print '    INPUT    json file containing the magma interface definition'
   print '    EXISTING cpp file implementing zero or more magma entrypoints'
   print '    OUTPUT   destination path for the cpp file to generate'
+  print '    --debug  optional flag to generate debug prints for entrypoints'
   print '  Example: magma_generic.cc.gen.py magma.json magma.cc magma_generic.cc'
   print '  Generates generic "glue" magma exports that directly translate between'
   print '  magma commands and virtmagma structs. Does not generate implementations'
@@ -121,21 +122,21 @@ def generate_unwrap(export, needs_connection):
       ret += '    auto _' + name + '_wrapped = virtmagma_connection_t::Get(' + name + ');\n'
       ret += '    ' + name + ' = _' + name + '_wrapped->Object();\n'
       if not have_fd:
-        ret += '    int32_t file_descriptor = _' + name + '_wrapped->Parent();\n'
+        ret += '    int32_t file_descriptor = _' + name + '_wrapped->Parent().first;\n'
         have_fd = True
     if argument['type'] == 'magma_buffer_t':
       ret += '    auto _' + name + '_wrapped = virtmagma_buffer_t::Get(' + name + ');\n'
       ret += '    ' + name + ' = _' + name + '_wrapped->Object();\n'
       if not have_fd:
         ret += '    auto _' + name + '_parent_wrapped = virtmagma_connection_t::Get(_' + name + '_wrapped->Parent());\n'
-        ret += '    int32_t file_descriptor = _' + name + '_parent_wrapped->Parent();\n'
+        ret += '    int32_t file_descriptor = _' + name + '_parent_wrapped->Parent().first;\n'
         have_fd = True
     if argument['type'] == 'magma_semaphore_t':
       ret += '    auto _' + name + '_wrapped = virtmagma_semaphore_t::Get(' + name + ');\n'
       ret += '    ' + name + ' = _' + name + '_wrapped->Object();\n'
       if not have_fd:
         ret += '    auto _' + name + '_parent_wrapped = virtmagma_connection_t::Get(_' + name + '_wrapped->Parent());\n'
-        ret += '    int32_t file_descriptor = _' + name + '_parent_wrapped->Parent();\n'
+        ret += '    int32_t file_descriptor = _' + name + '_parent_wrapped->Parent().first;\n'
         have_fd = True
     sub = 'handle'
     if name[-len(sub):] == sub:
@@ -158,7 +159,7 @@ def generate_wrap(export):
     type = argument['type']
     name = argument['name']
     if type == 'magma_connection_t*':
-      ret += '    *' + name + ' = virtmagma_connection_t::Create(*' + name + ', file_descriptor)->Wrap();\n'
+      ret += '    *' + name + ' = virtmagma_connection_t::Create(*' + name + ', virtmagma_fd_pair(file_descriptor))->Wrap();\n'
     if type == 'magma_buffer_t*':
       ret += '    *' + name + ' = virtmagma_buffer_t::Create(*' + name + ', _connection)->Wrap();\n'
       needs_connection = True
@@ -171,15 +172,16 @@ def generate_wrap(export):
   return ret, needs_connection
 
 # Generate an implementation for an export
-def generate_export(export):
+def generate_export(export, gen_debug_prints):
   name = get_name(export)
   inputs, outputs = split_arguments(export)
   err = error_return(export)
   ret = generate_signature(export)
   ret += '{\n'
-  ret += '    printf("%s\\n", __PRETTY_FUNCTION__);\n'
-  for argument in export['arguments']:
-    ret +='    printf("' + argument['name'] + ' = %ld\\n", (uint64_t)' + argument['name'] + ');\n'
+  if gen_debug_prints:
+    ret += '    printf("%s\\n", __PRETTY_FUNCTION__);\n'
+    for argument in export['arguments']:
+      ret +='    printf("' + argument['name'] + ' = %ld\\n", (uint64_t)' + argument['name'] + ');\n'
   wrap_code, needs_connection = generate_wrap(export)
   ret += generate_unwrap(export, needs_connection)
   ret += '    virtio_magma_' + name + '_ctrl_t request{};\n'
@@ -198,9 +200,16 @@ def generate_export(export):
   return ret
 
 def main():
-  if (len(sys.argv) != 4):
+  nargs = len(sys.argv)
+  debug = False
+  if (nargs < 4 or nargs > 5):
     usage()
     exit(-1)
+  if (nargs == 5):
+    if sys.argv[4] != '--debug':
+      usage()
+      exit(-1)
+    debug = True
   with open(sys.argv[1], 'r') as file:
     with open(sys.argv[2], 'r') as existing:
       with open(sys.argv[3], 'w') as dest:
@@ -210,7 +219,7 @@ def main():
         contents += codegen_warning() + '\n'
         contents += includes() + '\n'
         for export in exports:
-          contents += generate_export(export) + '\n'
+          contents += generate_export(export, debug) + '\n'
         dest.write(contents)
 
 if __name__ == '__main__':

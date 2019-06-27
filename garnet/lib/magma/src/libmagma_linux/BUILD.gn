@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//garnet/lib/magma/gnbuild/magma.gni")
+import("//garnet/lib/magma/include/virtio/virtmagma_debug.gni")
 
 static_library("libmagma_linux") {
   public_deps = [
@@ -33,6 +34,9 @@ action("magma_generic") {
                 root_build_dir),
     rebase_path(out_file, root_build_dir),
   ]
+  if (virtmagma_debug) {
+    args += [ "--debug" ]
+  }
   inputs = [
     "//garnet/lib/magma/include/magma_abi/magma.json",
     "//garnet/lib/magma/src/libmagma_linux/magma.cc",

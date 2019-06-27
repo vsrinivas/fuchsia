@@ -31,14 +31,12 @@ class VirtioMagma : public VirtioMagmaGeneric,
 
   // |fuchsia::virtualization::hardware::VirtioDevice|
   void Ready(uint32_t negotiated_features, ReadyCallback callback) override;
-  void ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc,
-                      zx_gpaddr_t avail, zx_gpaddr_t used,
-                      ConfigureQueueCallback callback) override;
+  void ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc, zx_gpaddr_t avail,
+                      zx_gpaddr_t used, ConfigureQueueCallback callback) override;
   void NotifyQueue(uint16_t queue) override;
 
   // |fuchsia::virtualization::hardware::VirtioMagma|
-  void Start(fuchsia::virtualization::hardware::StartInfo start_info,
-             zx::vmar vmar,
+  void Start(fuchsia::virtualization::hardware::StartInfo start_info, zx::vmar vmar,
              StartCallback callback) override;
 
  private:
@@ -47,10 +45,23 @@ class VirtioMagma : public VirtioMagmaGeneric,
   virtual zx_status_t Handle_create_connection(
       const virtio_magma_create_connection_ctrl_t* request,
       virtio_magma_create_connection_resp_t* response) override;
+  virtual zx_status_t Handle_create_buffer(const virtio_magma_create_buffer_ctrl_t* request,
+                                           virtio_magma_create_buffer_resp_t* response) override;
+  virtual zx_status_t Handle_create_command_buffer(
+      const virtio_magma_create_command_buffer_ctrl_t* request,
+      virtio_magma_create_command_buffer_resp_t* response) override;
   virtual zx_status_t Handle_map_aligned(const virtio_magma_map_aligned_ctrl_t* request,
                                          virtio_magma_map_aligned_resp_t* response) override;
   virtual zx_status_t Handle_map_specific(const virtio_magma_map_specific_ctrl_t* request,
                                           virtio_magma_map_specific_resp_t* response) override;
+  virtual zx_status_t Handle_wait_semaphores(
+      const virtio_magma_wait_semaphores_ctrl_t* request,
+      virtio_magma_wait_semaphores_resp_t* response) override;
+  virtual zx_status_t Handle_read_notification_channel(
+      const virtio_magma_read_notification_channel_ctrl_t* request,
+      virtio_magma_read_notification_channel_resp_t* response) override;
+  virtual zx_status_t Handle_export(const virtio_magma_export_ctrl_t* request,
+                                    virtio_magma_export_resp_t* response) override;
 
   fbl::unique_fd device_fd_;
   zx::vmar vmar_;

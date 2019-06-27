@@ -28,6 +28,10 @@ struct virtmagma_ioctl_args_handshake {
 	__u32 version_out;
 };
 
+struct virtmagma_ioctl_args_get_mmfd {
+	__s32 fd_out;
+};
+
 struct virtmagma_ioctl_args_magma_command {
 	__u64 request_address;
 	__u64 request_size;
@@ -36,6 +40,7 @@ struct virtmagma_ioctl_args_magma_command {
 };
 
 #define VIRTMAGMA_IOCTL_HANDSHAKE VIRTMAGMA_IOWR(0x00, struct virtmagma_ioctl_args_handshake)
-#define VIRTMAGMA_IOCTL_MAGMA_COMMAND VIRTMAGMA_IOWR(0x01, struct virtmagma_ioctl_args_magma_command)
+#define VIRTMAGMA_IOCTL_GET_MMFD VIRTMAGMA_IOWR(0x01, struct virtmagma_ioctl_args_get_mmfd)
+#define VIRTMAGMA_IOCTL_MAGMA_COMMAND VIRTMAGMA_IOWR(0x02, struct virtmagma_ioctl_args_magma_command)
 
 #endif /* _LINUX_VIRTMAGMA_H */
