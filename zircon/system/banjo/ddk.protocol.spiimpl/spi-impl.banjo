@@ -1,0 +1,21 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library ddk.protocol.spiimpl;
+
+using zx;
+
+/// Low-level protocol for spi drivers.
+[Layout = "ddk-protocol"]
+protocol SpiImpl {
+    /// Returns the number of chip select lines available or provided by the driver instance.
+    /// To be used as a limit on the acceptable values for the `cs' field in the Exchange() method.
+    GetChipSelectCount() -> (uint32 count);
+
+    /// Perform a SPI bus transaction of the specified length. Either txdata or rxdata may be
+    /// NULL, in which case the transaction will be half-duplex in the appropriate direction.
+    /// Regardless, both vectors must have the same length.
+    Exchange(uint32 cs, vector<uint8>? txdata) -> (zx.status status,
+        vector<uint8> rxdata);
+};

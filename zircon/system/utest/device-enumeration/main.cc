@@ -252,6 +252,7 @@ TEST_F(DeviceEnumerationTest, SherlockTest) {
         "ft5726-touch",
         "sys/platform/00:00:e/optee-tz",
         "sys/platform/00:00:f/fallback-rtc",
+        "spi/aml-spi-0/spi/spi-0-0"
     };
 
     ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, fbl::count_of(kDevicePaths)));

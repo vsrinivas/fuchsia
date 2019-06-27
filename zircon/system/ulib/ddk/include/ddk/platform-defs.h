@@ -116,6 +116,7 @@ __BEGIN_CDECLS
 #define PDEV_DID_SHERLOCK_PDM       22
 #define PDEV_DID_AMLOGIC_MALI_INIT  23
 #define PDEV_DID_AML_USB_PHY_V2     24
+#define PDEV_DID_AMLOGIC_SPI        25
 
 // Broadcom
 #define PDEV_VID_BROADCOM           6
@@ -244,6 +245,12 @@ __BEGIN_CDECLS
 #define PDEV_VID_MAXIM              21
 #define PDEV_DID_MAXIM_MAX98373      1
 // clang-format on
+
+// Nordic
+#define PDEV_VID_NORDIC             21
+#define PDEV_PID_NORDIC_NRF52840     1
+#define PDEV_DID_NORDIC_THREAD       1
+
 
 __END_CDECLS
 

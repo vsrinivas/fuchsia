@@ -1,0 +1,45 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+driver("spi") {
+  sources = [
+    "spi-child.cc",
+    "spi.cc",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk.protocol.spiimpl",
+    "$zx/system/fidl/fuchsia-hardware-spi:llcpp",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fidl-utils",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+  ]
+}
+
+test("spi-test") {
+  output_name = "spi-test"
+  sources = [
+    "spi-child.cc",
+    "spi-test.cc",
+    "spi.cc",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk.protocol.platform.bus",
+    "$zx/system/banjo/ddk.protocol.spiimpl",
+    "$zx/system/dev/lib/fake_ddk",
+    "$zx/system/fidl/fuchsia-hardware-spi:llcpp",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fidl-utils",
+    "$zx/system/ulib/spi",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
+  ]
+}

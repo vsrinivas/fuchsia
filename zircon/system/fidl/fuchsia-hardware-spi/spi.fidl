@@ -1,0 +1,21 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.hardware.spi;
+
+using zx;
+
+const uint32 MAX_TRANSFER_SIZE = 8196; // arbitrary - to be removed
+
+[Layout = "Simple"]
+protocol Device {
+    /// Half-duplex transmit data to a SPI device; always transmits the entire buffer on success.
+    Transmit(vector<uint8>:MAX_TRANSFER_SIZE data) -> (zx.status status);
+    /// Half-duplex receive data from a SPI device; always reads the full size requested.
+    Receive(uint32 size) -> (zx.status status, vector<uint8>:MAX_TRANSFER_SIZE data);
+    /// Full-duplex SPI transaction. Received data will exactly equal the length of the transmit
+    /// buffer.
+    Exchange(vector<uint8>:MAX_TRANSFER_SIZE txdata) -> (zx.status status,
+        vector<uint8>:MAX_TRANSFER_SIZE rxdata);
+};

@@ -94,6 +94,9 @@ static_assert(DEVICE_METADATA_BOARD_PRIVATE == ZBI_TYPE_DRV_BOARD_PRIVATE, "");
 // type: array of i2c_channel_t
 #define DEVICE_METADATA_I2C_CHANNELS              0x43433249 // I2CC
 
+// type: array of spi_channel_t
+#define DEVICE_METADATA_SPI_CHANNELS              0x43495053 // SPIC
+
 // type: display_driver_t
 #define DEVICE_METADATA_DISPLAY_DEVICE            0x4C505344 // DSPL
 

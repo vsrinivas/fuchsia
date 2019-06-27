@@ -52,6 +52,12 @@ enum {
     SHERLOCK_I2C_3,
 };
 
+// These should match the mmio table defined in sherlock-spi.c
+enum {
+    SHERLOCK_SPICC0,
+    SHERLOCK_SPICC1
+};
+
 // From the schematic.
 constexpr uint8_t BOARD_REV_P2 = 0x0B;
 constexpr uint8_t BOARD_REV_REWORK = 0x0C;
@@ -82,6 +88,7 @@ private:
     zx_status_t BoardInit();
     zx_status_t CanvasInit();
     zx_status_t I2cInit();
+    zx_status_t SpiInit();
     zx_status_t UsbInit();
     zx_status_t EmmcInit();
     zx_status_t BCM43458LpoClockInit(); // required for BCM43458 wifi/bluetooth chip.

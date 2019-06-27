@@ -136,6 +136,11 @@ __BEGIN_CDECLS
 // POWER binding variables at 0x0A3X
 #define BIND_CLOCK_ID       0x0A30
 
+// SPI binding variables at 0x0A4X
+#define BIND_SPI_CLASS       0x0A40
+#define BIND_SPI_BUS_ID      0x0A41
+#define BIND_SPI_CHIP_SELECT 0x0A42
+
 // Fuchsia-defined topological path properties are at 0x0B00 through 0x0B7F.
 // Vendor-defined topological path properties are at 0x0B80 to 0x0BFF.
 // For vendor properties, it is recommended that a vendor ID be included
@@ -143,6 +148,7 @@ __BEGIN_CDECLS
 #define BIND_TOPO_START 0x0B00
 #define BIND_TOPO_PCI 0x0B00
 #define BIND_TOPO_I2C 0x0B01
+#define BIND_TOPO_SPI 0x0B02
 #define BIND_TOPO_VENDOR_START 0x0B80
 #define BIND_TOPO_VENDOR_END 0x0BFF
 #define BIND_TOPO_END 0x0BFF
@@ -154,6 +160,10 @@ __BEGIN_CDECLS
 
 #define BIND_TOPO_I2C_PACK(addr) ((addr))
 #define BIND_TOPO_I2C_UNPACK(topo) ((topo))
+
+#define BIND_TOPO_SPI_PACK(bus, chip_select) (((bus) << 8) | (chip_select))
+#define BIND_TOPO_SPI_UNPACK_BUS_ID(topo) (((topo) >> 8) && 0xff)
+#define BIND_TOPO_SPI_UNPACK_CHIP_SELECT(topo) ((topo) & 0xff)
 
 typedef struct zx_bind_inst {
     uint32_t op;

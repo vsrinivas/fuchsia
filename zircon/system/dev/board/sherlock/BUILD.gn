@@ -18,6 +18,7 @@ driver("sherlock") {
     "sherlock-light.cc",
     "sherlock-mali.cc",
     "sherlock-sdio.cc",
+    "sherlock-spi.cc",
     "sherlock-sysmem.cc",
     "sherlock-tee.cc",
     "sherlock-thermal.cc",

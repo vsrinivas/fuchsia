@@ -85,6 +85,8 @@ static const gpio_pin_t gpio_pins[] = {
     {GPIO_VDIG_ENABLE},
     {GPIO_CAM_RESET},
     {GPIO_LIGHT_INTERRUPT},
+    // For SPI interface.
+    {GPIO_SPICC0_SS0},
 };
 
 static const pbus_metadata_t gpio_metadata[] = {

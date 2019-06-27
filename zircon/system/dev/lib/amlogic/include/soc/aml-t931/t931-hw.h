@@ -17,6 +17,8 @@
 #define T931_I2C1_BASE                  (T931_CBUS_BASE + 0x1e000)
 #define T931_I2C2_BASE                  (T931_CBUS_BASE + 0x1d000)
 #define T931_I2C3_BASE                  (T931_CBUS_BASE + 0x1c000)
+#define T931_SPICC0_BASE                (T931_CBUS_BASE + 0x13000)
+#define T931_SPICC1_BASE                (T931_CBUS_BASE + 0x15000)
 
 #define T931_PWM_LENGTH                 0x1000 // applies to each PWM bank
 #define T931_PWM_AB_BASE                0xffd1b000
@@ -200,7 +202,9 @@
 #define T931_GPIO_IRQ_6                 102
 #define T931_GPIO_IRQ_7                 103
 #define T931_UART_B_IRQ                 107
+#define T931_SPICC0_IRQ                 113
 #define T931_RDMA_DONE                  121
+#define T931_SPICC1_IRQ                 122
 #define T931_UART_C_IRQ                 125
 #define T931_MALI_ISP_IRQ               174
 #define T931_MALI_GDC_IRQ               176
