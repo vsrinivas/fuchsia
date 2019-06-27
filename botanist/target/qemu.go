@@ -15,7 +15,6 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"fuchsia.googlesource.com/tools/botanist"
 	"fuchsia.googlesource.com/tools/build"
 	"fuchsia.googlesource.com/tools/qemu"
 )
@@ -105,7 +104,7 @@ func (t *QEMUTarget) IPv4Addr() (net.IP, error) {
 }
 
 // Serial returns the serial device associated with the target for serial i/o.
-func (t *QEMUTarget) Serial() *botanist.SerialDevice {
+func (t *QEMUTarget) Serial() io.ReadWriteCloser {
 	return nil
 }
 
