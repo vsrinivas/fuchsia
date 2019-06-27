@@ -1,0 +1,54 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.accessibility.tts;
+
+using fuchsia.intl;
+
+/// Error codes for TTS operations.
+enum Error {
+    /// The underlying TTS engine does not support this operation.
+    NOT_IMPLEMENTED= 1;
+    /// The value is out of range for a particular TTS parameter.
+    OUT_OF_RANGE= 2;
+    /// The operation is impossible to be completed.
+    BAD_STATE = 3;
+    /// This operation can not be completed because the TTS service is in use.
+    BUSY = 4;
+};
+
+/// Parameters of a voice.
+/// TODO(MI4-2453): Add extra voice parameters such as speech rate and  pitch.
+table VoiceParameters {
+    /// The current selected language.
+    1: fuchsia.intl.LocaleId language;
+};
+
+/// An utterance holds information about its message and how it should be spoken.
+table Utterance {
+    /// The message to be spoken.
+    /// Clients should pay attention to the FIDL maximum size for a message,
+    /// splitting when necessary into several utterances.
+    1: string message;
+    /// Parameters that control the speech output.
+    2: VoiceParameters params;
+};
+
+/// An interface to produce speech output.
+/// Assistive technology use an Engine to start producing speech output and
+/// set configuration parameters that control the speech.
+/// TODO(MI4-2452): Implement pause, stop and resume.
+[Discoverable]
+protocol Engine {
+    /// Enqueues  an utterance to be spoken. Speech is not started until Speak
+    /// is called.
+    Enqueue(Utterance utterance) ->() error Error;
+
+    /// Speaks all enqueued utterances. The method returns the value when they
+    /// are all finished playing.
+    Speak() -> () error Error;
+
+    /// Cancels current speech and also empties the queue.
+    Cancel() -> ();
+};

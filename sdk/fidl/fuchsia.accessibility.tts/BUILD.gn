@@ -1,0 +1,19 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+
+fidl("fuchsia.accessibility.tts") {
+  sdk_category = "experimental"
+
+  sources = [
+    "tts.fidl",
+    "tts_manager.fidl",
+    "tts_registration.fidl",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.intl",
+  ]
+}

@@ -1,0 +1,18 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.accessibility.tts;
+
+/// An interface for TTS Engines provide speech output.
+[Discoverable]
+protocol EngineRegistry {
+    /// A TTS engine registers itself to start listening for incoming speech
+    /// output requests through |engine|.
+    /// At the moment, only one TTS Engine can be registered at a time.
+    /// This registry owners the first engine to register itself.
+    /// If an engine crashes and wants to register again, calling this method
+    /// will restart the connection. An error is returned if another engine is
+    /// already registered.
+    RegisterEngine(Engine engine) -> () error Error;
+};

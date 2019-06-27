@@ -1,0 +1,17 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.accessibility.tts;
+
+/// An interface to manage TTS for assistive technology.
+///
+/// The TTS Manager offers assistive technology a way to open a TTS engine to
+/// start producing speech output.
+[Discoverable]
+protocol TtsManager {
+    /// A speaker is an assistive technology that wants to produce speech
+    /// output. Only one speaker is allowed to have an open connection to the
+    /// engine at a time. If already in use, BUSY error is returned.
+    OpenEngine(request<Engine> engine_request) -> () error Error;
+};
