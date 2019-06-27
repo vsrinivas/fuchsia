@@ -504,7 +504,7 @@ func (c *compiler) compileLiteral(val types.Literal, typ types.Type) string {
 			return val.Value
 		}
 		if typ.Kind == types.PrimitiveType &&
-				(typ.PrimitiveSubtype == types.Float32 || typ.PrimitiveSubtype == types.Float64) {
+			(typ.PrimitiveSubtype == types.Float32 || typ.PrimitiveSubtype == types.Float64) {
 			return val.Value
 		}
 
@@ -648,7 +648,7 @@ func (c *compiler) compileType(val types.Type) Type {
 				r.OvernetEmbeddedDtor = r.Dtor
 			}
 		case types.InterfaceDeclType:
-			r.Decl = fmt.Sprintf("::fidl::InterfaceHandle<%s>", t)
+			r.Decl = fmt.Sprintf("::fidl::InterfaceHandle<class %s>", t)
 			r.Dtor = fmt.Sprintf("~InterfaceHandle")
 			r.LLDecl = "::zx::channel"
 			r.LLDtor = "~channel"

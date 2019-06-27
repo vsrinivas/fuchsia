@@ -230,6 +230,7 @@ source_set("test_sources") {
   sources = [
     "binding_set_unittest.cc",
     "binding_unittest.cc",
+    "collision_unittest.cc",
     "event_sender_unittest.cc",
     "interface_handle_unittest.cc",
     "interface_ptr_set_unittest.cc",

@@ -38,7 +38,7 @@ class Parent {
   using Sync_ = Parent_Sync;
   virtual ~Parent();
   using GetChildCallback =
-      fit::function<void(::fidl::InterfaceHandle<Child>)>;
+      fit::function<void(::fidl::InterfaceHandle<class Child>)>;
       
   virtual void GetChild(GetChildCallback callback) = 0;
   using GetChildRequestCallback =
@@ -46,7 +46,7 @@ class Parent {
       
   virtual void GetChildRequest(GetChildRequestCallback callback) = 0;
       
-  virtual void TakeChild(::fidl::InterfaceHandle<Child> c) = 0;
+  virtual void TakeChild(::fidl::InterfaceHandle<class Child> c) = 0;
       
   virtual void TakeChildRequest(::fidl::InterfaceRequest<Child> r) = 0;
 };
@@ -60,9 +60,9 @@ class Parent_Sync {
  public:
   using Proxy_ = Parent_SyncProxy;
   virtual ~Parent_Sync();
-  virtual zx_status_t GetChild(::fidl::InterfaceHandle<Child>* out_c) = 0;
+  virtual zx_status_t GetChild(::fidl::InterfaceHandle<class Child>* out_c) = 0;
   virtual zx_status_t GetChildRequest(::fidl::InterfaceRequest<Child>* out_r) = 0;
-  virtual zx_status_t TakeChild(::fidl::InterfaceHandle<Child> c) = 0;
+  virtual zx_status_t TakeChild(::fidl::InterfaceHandle<class Child> c) = 0;
   virtual zx_status_t TakeChildRequest(::fidl::InterfaceRequest<Child> r) = 0;
 };
 
@@ -74,7 +74,7 @@ class Parent_Proxy : public ::fidl::internal::Proxy, public Parent {
   zx_status_t Dispatch_(::fidl::Message message) override;
   void GetChild(GetChildCallback callback) override;
   void GetChildRequest(GetChildRequestCallback callback) override;
-  void TakeChild(::fidl::InterfaceHandle<Child> c) override;
+  void TakeChild(::fidl::InterfaceHandle<class Child> c) override;
   void TakeChildRequest(::fidl::InterfaceRequest<Child> r) override;
 
  private:
@@ -101,9 +101,9 @@ class Parent_SyncProxy : public Parent_Sync {
  public:
   explicit Parent_SyncProxy(::zx::channel channel);
   ~Parent_SyncProxy() override;
-  zx_status_t GetChild(::fidl::InterfaceHandle<Child>* out_c) override;
+  zx_status_t GetChild(::fidl::InterfaceHandle<class Child>* out_c) override;
   zx_status_t GetChildRequest(::fidl::InterfaceRequest<Child>* out_r) override;
-  zx_status_t TakeChild(::fidl::InterfaceHandle<Child> c) override;
+  zx_status_t TakeChild(::fidl::InterfaceHandle<class Child> c) override;
   zx_status_t TakeChildRequest(::fidl::InterfaceRequest<Child> r) override;
 
   private:

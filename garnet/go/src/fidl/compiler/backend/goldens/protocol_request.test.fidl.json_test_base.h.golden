@@ -17,7 +17,7 @@ class Parent_TestBase : public Parent {
   void GetChildRequest(GetChildRequestCallback callback) override {
     NotImplemented_("GetChildRequest");
   }
-  void TakeChild(::fidl::InterfaceHandle<Child> c) override {
+  void TakeChild(::fidl::InterfaceHandle<class Child> c) override {
     NotImplemented_("TakeChild");
   }
   void TakeChildRequest(::fidl::InterfaceRequest<Child> r) override {
