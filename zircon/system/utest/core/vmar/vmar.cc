@@ -17,7 +17,6 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/exception.h>
 #include <zircon/syscalls/object.h>
-#include <zircon/syscalls/port.h>
 
 #define ROUNDUP(a, b) (((a) + ((b)-1)) & ~((b)-1))
 
@@ -76,13 +75,9 @@ zx_status_t test_local_address(uintptr_t address, bool write, bool* success) {
 
     alignas(16) static uint8_t thread_stack[PAGE_SIZE];
 
-    zx_port_packet_t packet;
-    zx_info_handle_basic_t info;
-    zx_koid_t tid = ZX_KOID_INVALID;
-    bool saw_page_fault = false;
-
     zx_handle_t thread = ZX_HANDLE_INVALID;
-    zx_handle_t port = ZX_HANDLE_INVALID;
+    zx_handle_t exception_channel = ZX_HANDLE_INVALID;
+    zx_signals_t signals = 0;
     uintptr_t entry = reinterpret_cast<uintptr_t>(write ? TestWriteAddressThread :
                                                           TestReadAddressThread);
     uintptr_t stack = reinterpret_cast<uintptr_t>(thread_stack + sizeof(thread_stack));
@@ -92,25 +87,9 @@ zx_status_t test_local_address(uintptr_t address, bool write, bool* success) {
         goto err;
     }
 
-    status = zx_object_get_info(thread, ZX_INFO_HANDLE_BASIC,
-                                &info, sizeof(info), NULL, NULL);
-    if (status != ZX_OK) {
-        goto err;
-    }
-    tid = info.koid;
-
-    // Create an exception port and bind it to the thread to prevent the
-    // thread's illegal access from killing the process.
-    status = zx_port_create(0, &port);
-    if (status != ZX_OK) {
-        goto err;
-    }
-    status = zx_task_bind_exception_port(thread, port, 0, 0);
-    if (status != ZX_OK) {
-        goto err;
-    }
-    status = zx_object_wait_async(thread, port, tid, ZX_THREAD_TERMINATED,
-                                  ZX_WAIT_ASYNC_ONCE);
+    // Create an exception channel on the thread to prevent the thread's
+    // illegal access from killing the process.
+    status = zx_task_create_exception_channel(thread, 0, &exception_channel);
     if (status != ZX_OK) {
         goto err;
     }
@@ -121,50 +100,41 @@ zx_status_t test_local_address(uintptr_t address, bool write, bool* success) {
         goto err;
     }
 
-    // Wait for the thread to exit and identify its cause of death.
-    // Keep looping until the thread is gone so that crashlogger doesn't
-    // see the page fault.
-    while (true) {
-        zx_status_t s;
-
-        s = zx_port_wait(port, ZX_TIME_INFINITE, &packet);
-        if (s != ZX_OK && status != ZX_OK) {
-            status = s;
-            break;
-        }
-        if (ZX_PKT_IS_SIGNAL_ONE(packet.type)) {
-            if (packet.key != tid ||
-                !(packet.signal.observed & ZX_THREAD_TERMINATED)) {
-                status = ZX_ERR_BAD_STATE;
-                break;
-            }
-            // Leave status as is.
-            break;
-        }
-        if (!ZX_PKT_IS_EXCEPTION(packet.type)) {
-            status = ZX_ERR_BAD_STATE;
-            break;
-        }
-        if (packet.type == ZX_EXCP_FATAL_PAGE_FAULT) {
-            zx_task_kill(thread);
-            saw_page_fault = true;
-            // Leave status as is.
-        }
-        else {
-            zx_task_kill(thread);
-            if (status != ZX_OK)
-                status = ZX_ERR_BAD_STATE;
-        }
+    status = zx_object_wait_one(exception_channel, ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
+                                ZX_TIME_INFINITE, &signals);
+    if (status != ZX_OK) {
+        goto err;
     }
 
-    if (status == ZX_OK && !saw_page_fault)
+    if (signals & ZX_CHANNEL_READABLE) {
+        // Kill the task so the exception doesn't bubble up to the system
+        // crash handler.
+        status = zx_task_kill(thread);
+        if (status != ZX_OK) {
+            goto err;
+        }
+
+        zx_exception_info_t info;
+        zx_handle_t exception;
+        status = zx_channel_read(exception_channel, 0, &info, &exception, sizeof(info), 1,
+                                 nullptr, nullptr);
+        if (status != ZX_OK) {
+            goto err;
+        }
+
+        // We only expect a page fault exception here.
+        if (info.type != ZX_EXCP_FATAL_PAGE_FAULT) {
+            status = ZX_ERR_BAD_STATE;
+            goto err;
+        }
+    } else {
+        // The thread terminated without throwing any exceptions.
         *success = true;
+    }
 
     // fallthrough to cleanup
 err:
-    if (thread != ZX_HANDLE_INVALID)
-        zx_task_bind_exception_port(thread, ZX_HANDLE_INVALID, 0, 0);
-    zx_handle_close(port);
+    zx_handle_close(exception_channel);
     zx_handle_close(thread);
     return status;
 }
