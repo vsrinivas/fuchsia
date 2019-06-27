@@ -103,7 +103,7 @@ class LocalEnd : public fuchsia::net::mdns::ServiceSubscriber {
             return;
           }
 
-          if (*v4_address != kRemoteAddress) {
+          if (!fidl::Equals(*v4_address, kRemoteAddress)) {
             std::cerr << "FAILED: Host name resolution produced bad V4 address "
                       << *v4_address << "\n";
             Quit(1);
@@ -170,7 +170,7 @@ class LocalEnd : public fuchsia::net::mdns::ServiceSubscriber {
 
   bool VerifyRemoteEndpoint(const fuchsia::net::Endpoint& endpoint) {
     return endpoint.port == kPort && endpoint.addr.is_ipv4() &&
-           endpoint.addr.ipv4() == kRemoteAddress;
+           fidl::Equals(endpoint.addr.ipv4(), kRemoteAddress);
   }
 
   sys::ComponentContext* component_context_;
