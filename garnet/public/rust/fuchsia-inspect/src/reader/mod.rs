@@ -14,6 +14,8 @@ use {
     std::{cmp::min, collections::BTreeMap, convert::TryFrom},
 };
 
+pub use crate::block::ArrayFormat;
+
 pub mod snapshot;
 
 /// A hierarchy of Inspect Nodes.
@@ -50,19 +52,19 @@ pub enum Property {
     Int(String, i64),
 
     /// The value is an unsigned integer.
-    UInt(String, u64),
+    Uint(String, u64),
 
     /// The value is a double.
     Double(String, f64),
 
     /// The value is a double array.
-    DoubleArray(String, Vec<f64>),
+    DoubleArray(String, Vec<f64>, ArrayFormat),
 
     /// The value is an integer.
-    IntArray(String, Vec<i64>),
+    IntArray(String, Vec<i64>, ArrayFormat),
 
     /// The value is an unsigned integer.
-    UIntArray(String, Vec<u64>),
+    UintArray(String, Vec<u64>, ArrayFormat),
 }
 
 impl Property {
@@ -71,11 +73,11 @@ impl Property {
             Property::String(name, _)
             | Property::Bytes(name, _)
             | Property::Int(name, _)
-            | Property::IntArray(name, _)
-            | Property::UInt(name, _)
-            | Property::UIntArray(name, _)
+            | Property::IntArray(name, _, _)
+            | Property::Uint(name, _)
+            | Property::UintArray(name, _, _)
             | Property::Double(name, _)
-            | Property::DoubleArray(name, _) => &name,
+            | Property::DoubleArray(name, _, _) => &name,
         }
     }
 }
@@ -259,7 +261,7 @@ impl<'a> ScanResult<'a> {
             }
             BlockType::UintValue => {
                 let value = block.uint_value()?;
-                parent.hierarchy.properties.push(Property::UInt(name, value));
+                parent.hierarchy.properties.push(Property::Uint(name, value));
             }
             BlockType::DoubleValue => {
                 let value = block.double_value()?;
@@ -284,19 +286,31 @@ impl<'a> ScanResult<'a> {
                 let values = value_indexes
                     .map(|i| block.array_get_int_slot(i).unwrap())
                     .collect::<Vec<i64>>();
-                parent.hierarchy.properties.push(Property::IntArray(name, values));
+                parent.hierarchy.properties.push(Property::IntArray(
+                    name,
+                    values,
+                    block.array_format().unwrap(),
+                ));
             }
             BlockType::UintValue => {
                 let values = value_indexes
                     .map(|i| block.array_get_uint_slot(i).unwrap())
                     .collect::<Vec<u64>>();
-                parent.hierarchy.properties.push(Property::UIntArray(name, values));
+                parent.hierarchy.properties.push(Property::UintArray(
+                    name,
+                    values,
+                    block.array_format().unwrap(),
+                ));
             }
             BlockType::DoubleValue => {
                 let values = value_indexes
                     .map(|i| block.array_get_double_slot(i).unwrap())
                     .collect::<Vec<f64>>();
-                parent.hierarchy.properties.push(Property::DoubleArray(name, values));
+                parent.hierarchy.properties.push(Property::DoubleArray(
+                    name,
+                    values,
+                    block.array_format().unwrap(),
+                ));
             }
             _ => bail!("Unexpected array entry type format"),
         }
@@ -340,7 +354,10 @@ impl<'a> ScanResult<'a> {
 mod tests {
     use {
         super::*,
-        crate::{bitfields::Payload, constants, ArrayProperty},
+        crate::{
+            bitfields::Payload, constants, ArrayProperty, ExponentialHistogramParams,
+            HistogramProperty, LinearHistogramParams,
+        },
     };
 
     #[test]
@@ -362,10 +379,12 @@ mod tests {
         let string_data = chars.iter().cycle().take(6000).collect::<String>();
         let _string_prop = child1.create_string("property-string", &string_data);
 
-        let child1_int_array = child1.create_int_array("property-int-array", 3);
-        let int_array_data = vec![-1, 2, 3];
-        for (i, x) in int_array_data.iter().enumerate() {
-            child1_int_array.set(i, *x);
+        let child1_int_array = child1.create_int_linear_histogram(
+            "property-int-array",
+            LinearHistogramParams { floor: 1, step_size: 2, buckets: 3 },
+        );
+        for x in [-1, 2, 3, 5, 8].iter() {
+            child1_int_array.insert(*x);
         }
 
         let child2 = root.create_child("child-2");
@@ -376,10 +395,17 @@ mod tests {
         let bytes_data = (0u8..=9u8).cycle().take(5000).collect::<Vec<u8>>();
         let _bytes_prop = child3.create_bytes("property-bytes", &bytes_data);
 
-        let child3_int_array = child3.create_uint_array("property-uint-array", 4);
-        let uint_array_data = vec![1, 2, 3, 4];
-        for (i, x) in uint_array_data.iter().enumerate() {
-            child3_int_array.set(i, *x);
+        let child3_int_array = child3.create_uint_exponential_histogram(
+            "property-uint-array",
+            ExponentialHistogramParams {
+                floor: 1,
+                initial_step: 1,
+                step_multiplier: 2,
+                buckets: 4,
+            },
+        );
+        for x in [1, 2, 3, 4].iter() {
+            child3_int_array.insert(*x);
         }
 
         let result = NodeHierarchy::try_from(&inspector).unwrap();
@@ -390,25 +416,34 @@ mod tests {
                 name: "root".to_string(),
                 properties: vec![
                     Property::Int("int-root".to_string(), 3),
-                    Property::DoubleArray("property-double-array".to_string(), double_array_data),
+                    Property::DoubleArray(
+                        "property-double-array".to_string(),
+                        double_array_data,
+                        ArrayFormat::Default
+                    ),
                 ],
                 children: vec![
                     NodeHierarchy {
                         name: "child-1".to_string(),
                         properties: vec![
-                            Property::UInt("property-uint".to_string(), 10),
+                            Property::Uint("property-uint".to_string(), 10),
                             Property::Double("property-double".to_string(), -3.4),
                             Property::String("property-string".to_string(), string_data),
-                            Property::IntArray("property-int-array".to_string(), int_array_data),
+                            Property::IntArray(
+                                "property-int-array".to_string(),
+                                vec![1, 2, 1, 1, 1, 1, 1],
+                                ArrayFormat::LinearHistogram
+                            ),
                         ],
                         children: vec![NodeHierarchy {
                             name: "child-1-1".to_string(),
                             properties: vec![
                                 Property::Int("property-int".to_string(), -9),
                                 Property::Bytes("property-bytes".to_string(), bytes_data),
-                                Property::UIntArray(
+                                Property::UintArray(
                                     "property-uint-array".to_string(),
-                                    uint_array_data
+                                    vec![1, 1, 2, 0, 1, 2, 1, 0, 0],
+                                    ArrayFormat::ExponentialHistogram
                                 ),
                             ],
                             children: vec![],

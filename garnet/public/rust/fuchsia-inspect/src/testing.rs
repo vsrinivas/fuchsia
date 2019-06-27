@@ -37,7 +37,7 @@ use std::collections::HashSet;
 ///        NodeHierarchy {
 ///            name: "child2".to_string(),
 ///            properties: vec![
-///                Property::UInt("child2_sub".to_string(), 20u64),
+///                Property::Uint("child2_sub".to_string(), 20u64),
 ///            ],
 ///            children: vec![],
 ///        },
@@ -267,7 +267,7 @@ macro_rules! impl_property_assertion {
         $(
             impl PropertyAssertion for $ty {
                 fn run(&self, actual: &Property) -> Result<(), Error> {
-                    if let Property::$prop_variant(_key, value) = actual {
+                    if let Property::$prop_variant(_key, value, ..) = actual {
                         eq_or_bail!(self, value);
                     } else {
                         bail!("expected {}, found {}", stringify!($prop_variant), property_type_name(actual));
@@ -284,22 +284,22 @@ fn property_type_name(property: &Property) -> &str {
         Property::String(_, _) => "String",
         Property::Bytes(_, _) => "Bytes",
         Property::Int(_, _) => "Int",
-        Property::IntArray(_, _) => "IntArray",
-        Property::UInt(_, _) => "UInt",
-        Property::UIntArray(_, _) => "UIntArray",
+        Property::IntArray(_, _, _) => "IntArray",
+        Property::Uint(_, _) => "Uint",
+        Property::UintArray(_, _, _) => "UintArray",
         Property::Double(_, _) => "Double",
-        Property::DoubleArray(_, _) => "DoubleArray",
+        Property::DoubleArray(_, _, _) => "DoubleArray",
     }
 }
 
 impl_property_assertion!(String, &str, String);
 impl_property_assertion!(Bytes, Vec<u8>);
-impl_property_assertion!(UInt, u64);
+impl_property_assertion!(Uint, u64);
 impl_property_assertion!(Int, i64);
 impl_property_assertion!(Double, f64);
 impl_property_assertion!(DoubleArray, Vec<f64>);
 impl_property_assertion!(IntArray, Vec<i64>);
-impl_property_assertion!(UIntArray, Vec<u64>);
+impl_property_assertion!(UintArray, Vec<u64>);
 
 /// A PropertyAssertion that always passes
 pub struct AnyProperty;
@@ -312,7 +312,7 @@ impl PropertyAssertion for AnyProperty {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use {super::*, crate::reader::ArrayFormat};
 
     #[test]
     fn test_exact_match_simple() {
@@ -493,15 +493,67 @@ mod tests {
             name: "key".to_string(),
             children: vec![],
             properties: vec![
-                Property::UIntArray("@uints".to_string(), vec![1, 2, 3]),
-                Property::IntArray("@ints".to_string(), vec![-2, -4, 0]),
-                Property::DoubleArray("@doubles".to_string(), vec![1.3, 2.5, -3.6]),
+                Property::UintArray("@uints".to_string(), vec![1, 2, 3], ArrayFormat::Default),
+                Property::IntArray("@ints".to_string(), vec![-2, -4, 0], ArrayFormat::Default),
+                Property::DoubleArray(
+                    "@doubles".to_string(),
+                    vec![1.3, 2.5, -3.6],
+                    ArrayFormat::Default,
+                ),
             ],
         };
         assert_inspect_tree!(node_hierarchy, key: {
             "@uints": vec![1u64, 2, 3],
             "@ints": vec![-2i64, -4, 0],
             "@doubles": vec![1.3, 2.5, -3.6]
+        });
+    }
+
+    #[test]
+    fn test_histograms() {
+        let node_hierarchy = NodeHierarchy {
+            name: "key".to_string(),
+            children: vec![],
+            properties: vec![
+                Property::UintArray(
+                    "@linear-uints".to_string(),
+                    vec![1, 2, 3, 4, 5],
+                    ArrayFormat::LinearHistogram,
+                ),
+                Property::IntArray(
+                    "@linear-ints".to_string(),
+                    vec![6, 7, 8, 9],
+                    ArrayFormat::LinearHistogram,
+                ),
+                Property::DoubleArray(
+                    "@linear-doubles".to_string(),
+                    vec![1.0, 2.0, 4.0, 5.0],
+                    ArrayFormat::LinearHistogram,
+                ),
+                Property::UintArray(
+                    "@exp-uints".to_string(),
+                    vec![2, 4, 6, 8, 10],
+                    ArrayFormat::ExponentialHistogram,
+                ),
+                Property::IntArray(
+                    "@exp-ints".to_string(),
+                    vec![1, 3, 5, 7, 9],
+                    ArrayFormat::ExponentialHistogram,
+                ),
+                Property::DoubleArray(
+                    "@exp-doubles".to_string(),
+                    vec![1.0, 2.0, 3.0, 4.0, 5.0],
+                    ArrayFormat::ExponentialHistogram,
+                ),
+            ],
+        };
+        assert_inspect_tree!(node_hierarchy, key: {
+            "@linear-uints": vec![1u64, 2, 3, 4, 5],
+            "@linear-ints": vec![6i64, 7, 8, 9],
+            "@linear-doubles": vec![1.0, 2.0, 4.0, 5.0],
+            "@exp-uints": vec![2u64, 4, 6, 8, 10],
+            "@exp-ints": vec![1i64, 3, 5, 7, 9],
+            "@exp-doubles": vec![1.0, 2.0, 3.0, 4.0, 5.0]
         });
     }
 
@@ -543,7 +595,7 @@ mod tests {
                 },
                 NodeHierarchy {
                     name: "child2".to_string(),
-                    properties: vec![Property::UInt("child2_sub".to_string(), 20u64)],
+                    properties: vec![Property::Uint("child2_sub".to_string(), 20u64)],
                     children: vec![],
                 },
             ],

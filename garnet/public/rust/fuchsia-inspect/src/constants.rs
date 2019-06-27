@@ -44,4 +44,13 @@ pub const DEFAULT_VMO_SIZE_BYTES: usize = 256 * 1024;
 /// Minimum size for the VMO: 4K
 pub const MINIMUM_VMO_SIZE_BYTES: usize = 4 * 1024;
 
+/// Length in bytes of metadata in the payload of an array block.
 pub const ARRAY_PAYLOAD_METADATA_SIZE_BYTES: usize = 8;
+
+/// Extra slots for a linear histogram: 2 parameter slots (floor, step size) and
+/// 2 overflow slots.
+pub const LINEAR_HISTOGRAM_EXTRA_SLOTS: u8 = 4;
+
+/// Extra slots for an exponential histogram: 3 parameter slots (floor, initial
+/// step and step multiplier) and 2 overflow slots.
+pub const EXPONENTIAL_HISTOGRAM_EXTRA_SLOTS: u8 = 5;

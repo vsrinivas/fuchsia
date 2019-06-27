@@ -240,16 +240,86 @@ macro_rules! create_array_property_fn {
         paste::item! {
             pub fn [<create_ $name _array>](&self, name: impl AsRef<str>, slots: u8)
                 -> [<$name_cap ArrayProperty>] {
+                    self.[<create_ $name _array_internal>](name, slots, ArrayFormat::Default)
+            }
+
+            fn [<create_ $name _array_internal>](&self, name: impl AsRef<str>, slots: u8, format: ArrayFormat)
+                -> [<$name_cap ArrayProperty>] {
                     self.inner.as_ref().and_then(|inner| {
                         inner.state
                             .lock()
-                            .[<create_ $name _array>](name.as_ref(), slots, ArrayFormat::Default, inner.block_index)
+                            .[<create_ $name _array>](name.as_ref(), slots, format, inner.block_index)
                             .map(|block| {
                                 [<$name_cap ArrayProperty>]::new(inner.state.clone(), block.index())
                             })
                             .ok()
                     })
                     .unwrap_or([<$name_cap ArrayProperty>]::new_no_op())
+            }
+        }
+    };
+}
+
+pub struct LinearHistogramParams<T> {
+    floor: T,
+    step_size: T,
+    buckets: u8,
+}
+
+/// Utility for generating functions to create a linear histogram property.
+///   `name`: identifier for the name (example: double)
+///   `name_cap`: identifier for the name capitalized (example: Double)
+///   `type`: the type of the numeric property (example: f64)
+macro_rules! create_linear_histogram_property_fn {
+    ($name:ident, $name_cap:ident, $type:ident) => {
+        paste::item! {
+            pub fn [<create_ $name _linear_histogram>](
+                &self, name: impl AsRef<str>, params: LinearHistogramParams<$type>)
+                -> [<$name_cap LinearHistogramProperty>] {
+                let slots = params.buckets + constants::LINEAR_HISTOGRAM_EXTRA_SLOTS;
+                let array = self.[<create_ $name _array_internal>](name, slots, ArrayFormat::LinearHistogram);
+                array.set(0, params.floor);
+                array.set(1, params.step_size);
+                [<$name_cap LinearHistogramProperty>] {
+                    floor: params.floor,
+                    step_size: params.step_size,
+                    slots,
+                    array
+                }
+            }
+        }
+    };
+}
+
+pub struct ExponentialHistogramParams<T> {
+    floor: T,
+    initial_step: T,
+    step_multiplier: T,
+    buckets: u8,
+}
+
+/// Utility for generating functions to create an exponential histogram property.
+///   `name`: identifier for the name (example: double)
+///   `name_cap`: identifier for the name capitalized (example: Double)
+///   `type`: the type of the numeric property (example: f64)
+macro_rules! create_exponential_histogram_property_fn {
+    ($name:ident, $name_cap:ident, $type:ident) => {
+        paste::item! {
+            pub fn [<create_ $name _exponential_histogram>](
+              &self, name: impl AsRef<str>, params: ExponentialHistogramParams<$type>)
+              -> [<$name_cap ExponentialHistogramProperty>] {
+                let slots = params.buckets + constants::EXPONENTIAL_HISTOGRAM_EXTRA_SLOTS;
+                let array = self.[<create_ $name _array_internal>](name, slots, ArrayFormat::ExponentialHistogram);
+                array.set(0, params.floor);
+                array.set(1, params.initial_step);
+                array.set(2, params.step_multiplier);
+                [<$name_cap ExponentialHistogramProperty>] {
+                    floor: params.floor,
+                    initial_step: params.initial_step,
+                    step_multiplier: params.step_multiplier,
+                    slots,
+                    array
+                }
             }
         }
     };
@@ -296,6 +366,18 @@ impl Node {
     create_array_property_fn!(int, Int, i64);
     create_array_property_fn!(uint, Uint, u64);
     create_array_property_fn!(double, Double, f64);
+
+    /// Add a linear histogram property to this node: create_int_linear_histogram,
+    /// create_uint_linear_histogram, create_double_linear_histogram.
+    create_linear_histogram_property_fn!(int, Int, i64);
+    create_linear_histogram_property_fn!(uint, Uint, u64);
+    create_linear_histogram_property_fn!(double, Double, f64);
+
+    /// Add an exponential histogram property to this node: create_int_linear_histogram,
+    /// create_uint_linear_histogram, create_double_linear_histogram.
+    create_exponential_histogram_property_fn!(int, Int, i64);
+    create_exponential_histogram_property_fn!(uint, Uint, u64);
+    create_exponential_histogram_property_fn!(double, Double, f64);
 
     /// Add a string property to this node.
     pub fn create_string(&self, name: impl AsRef<str>, value: impl AsRef<str>) -> StringProperty {
@@ -556,6 +638,107 @@ array_property!(int, Int, i64);
 array_property!(uint, Uint, u64);
 array_property!(double, Double, f64);
 
+pub trait HistogramProperty {
+    type Type;
+
+    fn insert(&self, value: Self::Type);
+    fn insert_multiple(&self, value: Self::Type, count: usize);
+}
+
+macro_rules! histogram_property {
+    ($histogram_type:ident, $name_cap:ident, $type:ident) => {
+        paste::item! {
+            impl HistogramProperty for [<$name_cap $histogram_type HistogramProperty>] {
+                type Type = $type;
+
+                fn insert(&self, value: $type) {
+                    self.insert_multiple(value, 1);
+                }
+
+                fn insert_multiple(&self, value: $type, count: usize) {
+                    self.array.add(self.get_index(value), count as $type);
+                }
+            }
+        }
+    };
+}
+
+macro_rules! linear_histogram_property {
+    ($name_cap:ident, $type:ident) => {
+        paste::item! {
+            pub struct [<$name_cap LinearHistogramProperty>] {
+                array: [<$name_cap ArrayProperty>],
+                floor: $type,
+                slots: u8,
+                step_size: $type,
+            }
+
+            impl [<$name_cap LinearHistogramProperty>] {
+                fn get_index(&self, value: $type) -> usize {
+                    let mut current_floor = self.floor;
+                    // Start in the underflow index.
+                    let mut index = constants::LINEAR_HISTOGRAM_EXTRA_SLOTS - 2;
+                    while value >= current_floor && index < self.slots - 1 {
+                        current_floor += self.step_size;
+                        index += 1;
+                    }
+                    index as usize
+                }
+
+                #[cfg(test)]
+                fn get_block(&self) -> Option<crate::block::Block<Arc<Mapping>>> {
+                    self.array.get_block()
+                }
+            }
+
+            histogram_property!(Linear, $name_cap, $type);
+        }
+    };
+}
+
+macro_rules! exponential_histogram_property {
+    ($name_cap:ident, $type:ident) => {
+        paste::item! {
+            pub struct [<$name_cap ExponentialHistogramProperty>] {
+                array: [<$name_cap ArrayProperty>],
+                floor: $type,
+                initial_step: $type,
+                step_multiplier: $type,
+                slots: u8,
+            }
+
+            impl [<$name_cap ExponentialHistogramProperty>] {
+                fn get_index(&self, value: $type) -> usize {
+                    let mut current_floor = self.floor;
+                    let mut current_step = self.initial_step;
+                    // Start in the underflow index.
+                    let mut index = constants::EXPONENTIAL_HISTOGRAM_EXTRA_SLOTS - 2;
+                    while value >= current_floor && index < self.slots - 1 {
+                        current_floor += current_step;
+                        current_step *= self.step_multiplier;
+                        index += 1;
+                    }
+                    index as usize
+                }
+
+                #[cfg(test)]
+                fn get_block(&self) -> Option<crate::block::Block<Arc<Mapping>>> {
+                    self.array.get_block()
+                }
+            }
+
+            histogram_property!(Exponential, $name_cap, $type);
+        }
+    };
+}
+
+linear_histogram_property!(Double, f64);
+linear_histogram_property!(Int, i64);
+linear_histogram_property!(Uint, u64);
+exponential_histogram_property!(Double, f64);
+exponential_histogram_property!(Int, i64);
+exponential_histogram_property!(Uint, u64);
+
 #[cfg(test)]
 mod tests {
     use {
@@ -794,6 +977,115 @@ mod tests {
             }
 
             assert_eq!(root_block.child_count().unwrap(), 1);
+        }
+        assert_eq!(root_block.child_count().unwrap(), 0);
+    }
+
+    #[test]
+    fn linear_histograms() {
+        let inspector = Inspector::new();
+        let root = inspector.root();
+        let root_block = root.get_block().unwrap();
+        {
+            let int_histogram = root.create_int_linear_histogram(
+                "int-histogram",
+                LinearHistogramParams { floor: 10, step_size: 5, buckets: 5 },
+            );
+            int_histogram.insert_multiple(-1, 2); // underflow
+            int_histogram.insert(25);
+            int_histogram.insert(500); // overflow
+            let block = int_histogram.get_block().unwrap();
+            for (i, value) in [10, 5, 2, 0, 0, 0, 1, 0, 1].iter().enumerate() {
+                assert_eq!(block.array_get_int_slot(i).unwrap(), *value);
+            }
+
+            let uint_histogram = root.create_uint_linear_histogram(
+                "uint-histogram",
+                LinearHistogramParams { floor: 10, step_size: 5, buckets: 5 },
+            );
+            uint_histogram.insert_multiple(0, 2); // underflow
+            uint_histogram.insert(25);
+            uint_histogram.insert(500); // overflow
+            let block = uint_histogram.get_block().unwrap();
+            for (i, value) in [10, 5, 2, 0, 0, 0, 1, 0, 1].iter().enumerate() {
+                assert_eq!(block.array_get_uint_slot(i).unwrap(), *value);
+            }
+
+            let double_histogram = root.create_double_linear_histogram(
+                "double-histogram",
+                LinearHistogramParams { floor: 10.0, step_size: 5.0, buckets: 5 },
+            );
+            double_histogram.insert_multiple(0.0, 2); // underflow
+            double_histogram.insert(25.3);
+            double_histogram.insert(500.0); // overflow
+            let block = double_histogram.get_block().unwrap();
+            for (i, value) in [10.0, 5.0, 2.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0].iter().enumerate() {
+                assert_eq!(block.array_get_double_slot(i).unwrap(), *value);
+            }
+
+            assert_eq!(root_block.child_count().unwrap(), 3);
+        }
+        assert_eq!(root_block.child_count().unwrap(), 0);
+    }
+
+    #[test]
+    fn exponential_histograms() {
+        let inspector = Inspector::new();
+        let root = inspector.root();
+        let root_block = root.get_block().unwrap();
+        {
+            let int_histogram = root.create_int_exponential_histogram(
+                "int-histogram",
+                ExponentialHistogramParams {
+                    floor: 1,
+                    initial_step: 1,
+                    step_multiplier: 2,
+                    buckets: 4,
+                },
+            );
+            int_histogram.insert_multiple(-1, 2); // underflow
+            int_histogram.insert(8);
+            int_histogram.insert(500); // overflow
+            let block = int_histogram.get_block().unwrap();
+            for (i, value) in [1, 1, 2, 2, 0, 0, 0, 1, 1].iter().enumerate() {
+                assert_eq!(block.array_get_int_slot(i).unwrap(), *value);
+            }
+
+            let uint_histogram = root.create_uint_exponential_histogram(
+                "uint-histogram",
+                ExponentialHistogramParams {
+                    floor: 1,
+                    initial_step: 1,
+                    step_multiplier: 2,
+                    buckets: 4,
+                },
+            );
+            uint_histogram.insert_multiple(0, 2); // underflow
+            uint_histogram.insert(8);
+            uint_histogram.insert(500); // overflow
+            let block = uint_histogram.get_block().unwrap();
+            for (i, value) in [1, 1, 2, 2, 0, 0, 0, 1, 1].iter().enumerate() {
+                assert_eq!(block.array_get_uint_slot(i).unwrap(), *value);
+            }
+
+            let double_histogram = root.create_double_exponential_histogram(
+                "double-histogram",
+                ExponentialHistogramParams {
+                    floor: 1.0,
+                    initial_step: 1.0,
+                    step_multiplier: 2.0,
+                    buckets: 4,
+                },
+            );
+            double_histogram.insert_multiple(0.0, 2); // underflow
+            double_histogram.insert(8.3);
+            double_histogram.insert(500.0); // overflow
+            let block = double_histogram.get_block().unwrap();
+            for (i, value) in [1.0, 1.0, 2.0, 2.0, 0.0, 0.0, 0.0, 1.0, 1.0].iter().enumerate() {
+                assert_eq!(block.array_get_double_slot(i).unwrap(), *value);
+            }
+
+            assert_eq!(root_block.child_count().unwrap(), 3);
         }
         assert_eq!(root_block.child_count().unwrap(), 0);
     }

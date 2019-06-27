@@ -35,7 +35,7 @@ pub struct Block<T> {
 }
 
 /// Format in which the array will be read.
-#[derive(Debug, PartialEq, Eq, FromPrimitive, ToPrimitive)]
+#[derive(Clone, Debug, PartialEq, Eq, FromPrimitive, ToPrimitive)]
 pub enum ArrayFormat {
     /// Regular array, it stores N values in N slots.
     Default = 0,
