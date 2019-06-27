@@ -211,6 +211,7 @@ group("all") {
     "//garnet/packages/prod:bluetooth_a2dp",
     "//garnet/packages/prod:bluetooth_all",
     "//garnet/packages/prod:bluetooth_atheros",
+    "//garnet/packages/prod:bluetooth_avrcp",
     "//garnet/packages/prod:bluetooth_core",
     "//garnet/packages/prod:bluetooth_hci",
     "//garnet/packages/prod:bluetooth_hid",
@@ -598,6 +599,7 @@ group("bluetooth_profiles") {
   testonly = true
   public_deps = [
     "//garnet/packages/prod:bluetooth_a2dp",
+    "//garnet/packages/prod:bluetooth_avrcp",
     "//garnet/packages/prod:bluetooth_hid",
   ]
 }
@@ -731,6 +733,13 @@ group("chrealm") {
   testonly = true
   public_deps = [
     "//garnet/bin/chrealm",
+  ]
+}
+
+group("bluetooth_avrcp") {
+  testonly = true
+  public_deps = [
+    "//src/connectivity/bluetooth/profiles/bt-avrcp",
   ]
 }
 
