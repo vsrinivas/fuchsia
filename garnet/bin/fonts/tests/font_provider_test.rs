@@ -889,4 +889,37 @@ mod experimental_api {
         }
         Ok(())
     }
+
+    fn generic_family_query(
+        families: Vec<fonts::GenericFontFamily>,
+    ) -> Option<fonts_exp::ListTypefacesQuery> {
+        let query = fonts_exp::ListTypefacesQuery {
+            family: None,
+            styles: None,
+            languages: None,
+            code_points: None,
+            generic_families: Some(families),
+        };
+        Some(query)
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_list_typefaces_by_generic_family() -> Result<(), Error> {
+        let (_app, font_provider) = start_provider_with_test_fonts()?;
+
+        let query = generic_family_query(vec![fonts::GenericFontFamily::SansSerif]);
+        let request = fonts_exp::ListTypefacesRequest { flags: None, max_results: None, query };
+
+        let response = await!(font_provider.list_typefaces(request))?;
+        let results = response.unwrap().results.unwrap();
+
+        assert!(!results.is_empty());
+        for result in results {
+            assert_eq!(
+                result.generic_family.as_ref().unwrap(),
+                &fonts::GenericFontFamily::SansSerif
+            );
+        }
+        Ok(())
+    }
 }

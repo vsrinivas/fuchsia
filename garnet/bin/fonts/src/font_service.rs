@@ -541,11 +541,20 @@ impl FontService {
             }
         };
 
+        let generic_family_predicate = |face: &TypefaceInfoAndCharSet| -> bool {
+            match query.and_then(|q| q.generic_families.as_ref()) {
+                Some(generic_families) => {
+                    face.generic_family.map_or(false, |gf| generic_families.contains(&gf))
+                }
+                None => true,
+            }
+        };
+
         let total_predicate = |face: &TypefaceInfoAndCharSet| -> bool {
-            // TODO(seancuff): add remaining predicates
             styles_predicate(face)
                 && lang_predicate(face)
                 && code_point_predicate(face)
+                && generic_family_predicate(face)
         };
 
         // Filter
