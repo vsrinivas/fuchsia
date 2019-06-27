@@ -36,21 +36,17 @@ class SessionManager {
   // Finds and returns a pointer the session handler corresponding to the given
   // |id|. Returns nullptr if none found.
   SessionHandler* FindSessionHandler(SessionId id) const;
-  const std::unordered_map<SessionId, SessionHandler*> sessions() {
-    return session_handlers_;
-  }
+  const std::unordered_map<SessionId, SessionHandler*> sessions() { return session_handlers_; }
   size_t GetSessionCount() { return session_count_; }
 
   // Returns a SessionHandler, which is casted as a CommandDispatcher. Used by
   // ScenicSystem.
-  CommandDispatcherUniquePtr CreateCommandDispatcher(
-      CommandDispatcherContext dispatcher_context,
-      SessionContext session_context);
+  CommandDispatcherUniquePtr CreateCommandDispatcher(CommandDispatcherContext dispatcher_context,
+                                                     SessionContext session_context);
 
  private:
   // Insert a SessionHandler into the |session_handlers_| map
-  void InsertSessionHandler(SessionId session_id,
-                            SessionHandler* session_handler);
+  void InsertSessionHandler(SessionId session_id, SessionHandler* session_handler);
 
   // Removes the SessionHandler from the |session_handlers_| map. Only called by
   // the custom deleter provided by CreateCommandDispatcher.
@@ -58,9 +54,8 @@ class SessionManager {
 
   // Virtual for testing purposes
   virtual std::unique_ptr<SessionHandler> CreateSessionHandler(
-      CommandDispatcherContext dispatcher_context,
-      SessionContext session_context, SessionId session_id,
-      EventReporter* event_reporter, ErrorReporter* error_reporter);
+      CommandDispatcherContext dispatcher_context, SessionContext session_context,
+      SessionId session_id, EventReporter* event_reporter, ErrorReporter* error_reporter);
 
   // Map of all the sessions.
   std::unordered_map<SessionId, SessionHandler*> session_handlers_;

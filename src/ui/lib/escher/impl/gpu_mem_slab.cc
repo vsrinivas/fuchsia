@@ -11,8 +11,7 @@
 
 namespace {
 
-uint8_t* GetMappedPtr(vk::Device device, vk::DeviceMemory base,
-                      vk::DeviceSize size) {
+uint8_t* GetMappedPtr(vk::Device device, vk::DeviceMemory base, vk::DeviceSize size) {
   TRACE_DURATION("gfx", "escher::GpuMemSlab::New[map]");
   auto ptr = escher::ESCHER_CHECKED_VK_RESULT(device.mapMemory(base, 0, size));
   return reinterpret_cast<uint8_t*>(ptr);
@@ -23,11 +22,9 @@ uint8_t* GetMappedPtr(vk::Device device, vk::DeviceMemory base,
 namespace escher {
 namespace impl {
 
-GpuMemSlab::GpuMemSlab(vk::Device device, vk::DeviceMemory base,
-                       vk::DeviceSize size, bool needs_mapped_ptr,
-                       NaiveGpuAllocator* allocator)
-    : GpuMem(base, size, 0,
-             needs_mapped_ptr ? GetMappedPtr(device, base, size) : nullptr),
+GpuMemSlab::GpuMemSlab(vk::Device device, vk::DeviceMemory base, vk::DeviceSize size,
+                       bool needs_mapped_ptr, NaiveGpuAllocator* allocator)
+    : GpuMem(base, size, 0, needs_mapped_ptr ? GetMappedPtr(device, base, size) : nullptr),
       device_(device),
       allocator_(allocator) {
   if (allocator_) {

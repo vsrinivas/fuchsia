@@ -23,8 +23,7 @@ ShaderModule::~ShaderModule() {
 
 void ShaderModule::AddShaderModuleListener(ShaderModuleListener* listener) {
   FXL_DCHECK(listener);
-  FXL_DCHECK(std::find(listeners_.begin(), listeners_.end(), listener) ==
-             listeners_.end())
+  FXL_DCHECK(std::find(listeners_.begin(), listeners_.end(), listener) == listeners_.end())
       << "ShaderModule::AddShaderModuleListener(): listener already added.";
   listeners_.push_back(listener);
   if (is_valid()) {
@@ -39,8 +38,7 @@ void ShaderModule::RemoveShaderModuleListener(ShaderModuleListener* listener) {
   listeners_.erase(it);
 }
 
-void ShaderModule::RecreateModuleFromSpirvAndNotifyListeners(
-    std::vector<uint32_t> spirv) {
+void ShaderModule::RecreateModuleFromSpirvAndNotifyListeners(std::vector<uint32_t> spirv) {
   if (module_) {
     device_.destroyShaderModule(module_);
   }
@@ -50,8 +48,7 @@ void ShaderModule::RecreateModuleFromSpirvAndNotifyListeners(
   info.pCode = spirv.data();
   module_ = ESCHER_CHECKED_VK_RESULT(device_.createShaderModule(info));
 
-  GenerateShaderModuleResourceLayoutFromSpirv(std::move(spirv), stage_,
-                                              &layout_);
+  GenerateShaderModuleResourceLayoutFromSpirv(std::move(spirv), stage_, &layout_);
 
   for (auto listener : listeners_) {
     listener->OnShaderModuleUpdated(this);

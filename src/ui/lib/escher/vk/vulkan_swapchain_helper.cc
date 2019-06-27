@@ -13,8 +13,8 @@
 
 namespace escher {
 
-VulkanSwapchainHelper::VulkanSwapchainHelper(VulkanSwapchain swapchain,
-                                             vk::Device device, vk::Queue queue)
+VulkanSwapchainHelper::VulkanSwapchainHelper(VulkanSwapchain swapchain, vk::Device device,
+                                             vk::Queue queue)
     : swapchain_(swapchain), device_(device), queue_(queue) {
   for (size_t i = 0; i < swapchain_.images.size(); ++i) {
     image_available_semaphores_.push_back(Semaphore::New(device_));
@@ -25,18 +25,15 @@ VulkanSwapchainHelper::VulkanSwapchainHelper(VulkanSwapchain swapchain,
 VulkanSwapchainHelper::~VulkanSwapchainHelper() {}
 
 void VulkanSwapchainHelper::DrawFrame(DrawFrameCallback draw_callback) {
-  auto& image_available_semaphore =
-      image_available_semaphores_[next_semaphore_index_];
-  auto& render_finished_semaphore =
-      render_finished_semaphores_[next_semaphore_index_];
+  auto& image_available_semaphore = image_available_semaphores_[next_semaphore_index_];
+  auto& render_finished_semaphore = render_finished_semaphores_[next_semaphore_index_];
 
   uint32_t swapchain_index;
   {
     TRACE_DURATION("gfx", "escher::VulkanSwapchain::Acquire");
 
-    auto result = device_.acquireNextImageKHR(
-        swapchain_.swapchain, UINT64_MAX,
-        image_available_semaphore->vk_semaphore(), nullptr);
+    auto result = device_.acquireNextImageKHR(swapchain_.swapchain, UINT64_MAX,
+                                              image_available_semaphore->vk_semaphore(), nullptr);
 
     if (result.result == vk::Result::eSuboptimalKHR) {
       FXL_DLOG(WARNING) << "suboptimal swapchain configuration";
@@ -57,9 +54,8 @@ void VulkanSwapchainHelper::DrawFrame(DrawFrameCallback draw_callback) {
 
         device_.waitIdle();
 
-        result = device_.acquireNextImageKHR(
-            swapchain_.swapchain, UINT64_MAX,
-            image_available_semaphore->vk_semaphore(), nullptr);
+        result = device_.acquireNextImageKHR(swapchain_.swapchain, UINT64_MAX,
+                                             image_available_semaphore->vk_semaphore(), nullptr);
       }
 
     } else if (result.result != vk::Result::eSuccess) {
@@ -69,8 +65,7 @@ void VulkanSwapchainHelper::DrawFrame(DrawFrameCallback draw_callback) {
     }
 
     swapchain_index = result.value;
-    next_semaphore_index_ =
-        (next_semaphore_index_ + 1) % swapchain_.images.size();
+    next_semaphore_index_ = (next_semaphore_index_ + 1) % swapchain_.images.size();
   }
 
   // Render the scene.  The Renderer will wait for acquireNextImageKHR() to
@@ -88,8 +83,7 @@ void VulkanSwapchainHelper::DrawFrame(DrawFrameCallback draw_callback) {
   info.swapchainCount = 1;
   info.pSwapchains = &swapchain_.swapchain;
   info.pImageIndices = &swapchain_index;
-  ESCHER_LOG_VK_ERROR(queue_.presentKHR(info),
-                      "failed to present rendered image");
+  ESCHER_LOG_VK_ERROR(queue_.presentKHR(info), "failed to present rendered image");
 }
 
 }  // namespace escher

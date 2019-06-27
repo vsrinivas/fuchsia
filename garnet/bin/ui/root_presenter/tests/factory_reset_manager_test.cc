@@ -15,18 +15,15 @@
 namespace root_presenter {
 namespace testing {
 
-class FakeFactoryReset
-    : public fuchsia::recovery::testing::FactoryReset_TestBase {
+class FakeFactoryReset : public fuchsia::recovery::testing::FactoryReset_TestBase {
  public:
   void NotImplemented_(const std::string& name) final {}
 
   fidl::InterfaceRequestHandler<fuchsia::recovery::FactoryReset> GetHandler(
       async_dispatcher_t* dispatcher = nullptr) {
-    return
-        [this, dispatcher](
-            fidl::InterfaceRequest<fuchsia::recovery::FactoryReset> request) {
-          bindings_.AddBinding(this, std::move(request), dispatcher);
-        };
+    return [this, dispatcher](fidl::InterfaceRequest<fuchsia::recovery::FactoryReset> request) {
+      bindings_.AddBinding(this, std::move(request), dispatcher);
+    };
   }
 
   void Reset(ResetCallback callback) override {
@@ -48,8 +45,7 @@ class FactoryResetManagerTest : public component::testing::TestWithContext {
     controller().AddService(factory_reset_.GetHandler());
 
     startup_context_ = TakeContext();
-    factory_reset_manager_ =
-        std::make_unique<FactoryResetManager>(startup_context_.get());
+    factory_reset_manager_ = std::make_unique<FactoryResetManager>(startup_context_.get());
   }
 
   bool triggered() const { return factory_reset_.triggered(); }

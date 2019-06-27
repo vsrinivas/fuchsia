@@ -53,36 +53,30 @@ fn main() -> Result<(), Error> {
 }
 
 fn bind_text_tester(mut stream: txt_testing::TextFieldTestSuiteRequestStream) {
-    fasync::spawn(
-        async move {
-            while let Some(msg) = await!(stream.try_next())
-                .expect("error reading value from IME service request stream")
-            {
-                match msg {
-                    txt_testing::TextFieldTestSuiteRequest::RunTest {
-                        field,
-                        test_id,
-                        responder,
-                    } => {
-                        let res = await!(run_test(
-                            field.into_proxy().expect("failed to convert ClientEnd to proxy"),
-                            test_id
-                        ));
-                        let (ok, message) = match res {
-                            Ok(()) => (true, format!("passed")),
-                            Err(e) => (false, e),
-                        };
-                        responder.send(ok, &message).expect("failed to send response to RunTest");
-                    }
-                    txt_testing::TextFieldTestSuiteRequest::ListTests { responder } => {
-                        responder
-                            .send(&mut list_tests().iter_mut())
-                            .expect("failed to send response to ListTests");
-                    }
+    fasync::spawn(async move {
+        while let Some(msg) =
+            await!(stream.try_next()).expect("error reading value from IME service request stream")
+        {
+            match msg {
+                txt_testing::TextFieldTestSuiteRequest::RunTest { field, test_id, responder } => {
+                    let res = await!(run_test(
+                        field.into_proxy().expect("failed to convert ClientEnd to proxy"),
+                        test_id
+                    ));
+                    let (ok, message) = match res {
+                        Ok(()) => (true, format!("passed")),
+                        Err(e) => (false, e),
+                    };
+                    responder.send(ok, &message).expect("failed to send response to RunTest");
+                }
+                txt_testing::TextFieldTestSuiteRequest::ListTests { responder } => {
+                    responder
+                        .send(&mut list_tests().iter_mut())
+                        .expect("failed to send response to ListTests");
                 }
             }
-        },
-    );
+        }
+    });
 }
 
 async fn run_test(text_field: txt::TextFieldProxy, test_id: u64) -> Result<(), String> {

@@ -44,8 +44,7 @@ class TestObjObjectPoolPolicy {
   inline void DestroyPoolObject(TestObj* ptr) { ++destroy_object_count_; }
 
   // Construct an entire block of objects.
-  void InitializePoolObjectBlock(TestObj* objects, size_t block_index,
-                                 size_t num_objects) {
+  void InitializePoolObjectBlock(TestObj* objects, size_t block_index, size_t num_objects) {
     ++init_block_count_;
 
     ASSERT_EQ(num_objects, ObjectPool<TestObj>::NumObjectsInBlock(block_index));
@@ -66,8 +65,7 @@ class TestObjObjectPoolPolicy {
   // know that TestObj doesn't hold any resouces that can be leaked.  For many
   // use-cases, this will not suffice.  For example, DescriptorSetAllocator
   // would leak Vulkan objects if it followed this approach.
-  void DestroyPoolObjectBlock(TestObj* objects, size_t block_index,
-                              size_t num_objects) {
+  void DestroyPoolObjectBlock(TestObj* objects, size_t block_index, size_t num_objects) {
     ++destroy_block_count_;
   }
 

@@ -43,10 +43,8 @@ PlaneT TransformPlane(const mat4& model_to_world_matrix, const PlaneT& plane) {
 // of TransformPlane(): it computes the same result without needing a matrix
 // multiplication.
 template <typename PlaneT>
-PlaneT TranslatePlane(const typename PlaneT::VectorType& model_to_world_vec,
-                      const PlaneT& plane) {
-  return PlaneT(plane.dir(),
-                glm::dot(-model_to_world_vec, plane.dir()) + plane.dist());
+PlaneT TranslatePlane(const typename PlaneT::VectorType& model_to_world_vec, const PlaneT& plane) {
+  return PlaneT(plane.dir(), glm::dot(-model_to_world_vec, plane.dir()) + plane.dist());
 }
 
 // Transform the world-space plane into object space.  This is an optimization
@@ -68,14 +66,12 @@ float PlaneDistanceToPoint(const planeN<VecT>& plane, const VecT& point) {
 }
 
 // Promote |point| to 3D in order to be tested against 3D plane.
-inline float PlaneDistanceToPoint(const planeN<vec3>& plane,
-                                  const vec2& point) {
+inline float PlaneDistanceToPoint(const planeN<vec3>& plane, const vec2& point) {
   return PlaneDistanceToPoint(plane, vec3(point, 0));
 }
 
 // Demote |point| to 2D in order to be tested against 2D plane.
-inline float PlaneDistanceToPoint(const planeN<vec2>& plane,
-                                  const vec3& point) {
+inline float PlaneDistanceToPoint(const planeN<vec2>& plane, const vec3& point) {
   return PlaneDistanceToPoint(plane, vec2(point));
 }
 
@@ -84,8 +80,7 @@ inline float PlaneDistanceToPoint(const planeN<vec2>& plane,
 // Epsilon controls the aggressiveness of the clipping. A higher epsilon
 // means less aggressive clipping, with a minimum allowed value of 0.f.
 template <typename PlaneT, typename VecT>
-bool PlaneClipsPoint(const PlaneT& plane, const VecT& point,
-                     const float_t& epsilon = 0.f) {
+bool PlaneClipsPoint(const PlaneT& plane, const VecT& point, const float_t& epsilon = 0.f) {
   FXL_CHECK(epsilon >= 0.f);
   return PlaneDistanceToPoint(plane, point) < -epsilon;
 }

@@ -20,8 +20,7 @@ fuchsia::ui::input::DeviceDescriptor GenerateKeyboardDescriptor() {
   fuchsia::ui::input::KeyboardDescriptorPtr keyboard =
       fuchsia::ui::input::KeyboardDescriptor::New();
   keyboard->keys.resize(HID_USAGE_KEY_RIGHT_GUI - HID_USAGE_KEY_A);
-  for (size_t index = HID_USAGE_KEY_A; index < HID_USAGE_KEY_RIGHT_GUI;
-       ++index) {
+  for (size_t index = HID_USAGE_KEY_A; index < HID_USAGE_KEY_RIGHT_GUI; ++index) {
     keyboard->keys.at(index - HID_USAGE_KEY_A) = index;
   }
   fuchsia::ui::input::DeviceDescriptor descriptor;
@@ -30,15 +29,12 @@ fuchsia::ui::input::DeviceDescriptor GenerateKeyboardDescriptor() {
 }
 
 TEST_F(InputInterfaceTest, RegisterKeyboardTest) {
-  fuchsia::ui::input::DeviceDescriptor descriptor =
-      GenerateKeyboardDescriptor();
+  fuchsia::ui::input::DeviceDescriptor descriptor = GenerateKeyboardDescriptor();
 
   fuchsia::ui::input::InputDevicePtr input_device;
   uint32_t on_register_count = 0;
   ui_input::test::MockInputDeviceRegistry registry(
-      [&on_register_count](ui_input::test::MockInputDevice* input_device) {
-        on_register_count++;
-      },
+      [&on_register_count](ui_input::test::MockInputDevice* input_device) { on_register_count++; },
       nullptr);
 
   registry.RegisterDevice(std::move(descriptor), input_device.NewRequest());
@@ -48,8 +44,7 @@ TEST_F(InputInterfaceTest, RegisterKeyboardTest) {
 }
 
 TEST_F(InputInterfaceTest, InputKeyboardTest) {
-  fuchsia::ui::input::DeviceDescriptor descriptor =
-      GenerateKeyboardDescriptor();
+  fuchsia::ui::input::DeviceDescriptor descriptor = GenerateKeyboardDescriptor();
 
   fuchsia::ui::input::InputDevicePtr input_device;
   uint32_t on_report_count = 0;
@@ -63,8 +58,7 @@ TEST_F(InputInterfaceTest, InputKeyboardTest) {
   registry.RegisterDevice(std::move(descriptor), input_device.NewRequest());
 
   // PRESSED
-  fuchsia::ui::input::KeyboardReportPtr keyboard_report =
-      fuchsia::ui::input::KeyboardReport::New();
+  fuchsia::ui::input::KeyboardReportPtr keyboard_report = fuchsia::ui::input::KeyboardReport::New();
   keyboard_report->pressed_keys.push_back(HID_USAGE_KEY_A);
 
   fuchsia::ui::input::InputReport report;

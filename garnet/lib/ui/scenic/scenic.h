@@ -25,8 +25,8 @@ class Clock;
 //   - provide a host environment for Services
 class Scenic : public fuchsia::ui::scenic::Scenic {
  public:
-  explicit Scenic(sys::ComponentContext* app_context,
-                  inspect::Node inspect_node, fit::closure quit_callback);
+  explicit Scenic(sys::ComponentContext* app_context, inspect::Node inspect_node,
+                  fit::closure quit_callback);
   ~Scenic();
 
   // Create and register a new system of the specified type.  At most one System
@@ -40,8 +40,7 @@ class Scenic : public fuchsia::ui::scenic::Scenic {
   // |fuchsia::ui::scenic::Scenic|
   void CreateSession(
       ::fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session,
-      ::fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener)
-      override;
+      ::fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener) override;
 
   sys::ComponentContext* app_context() const { return app_context_; }
 
@@ -64,14 +63,11 @@ class Scenic : public fuchsia::ui::scenic::Scenic {
   // it is ready.
   void OnSystemInitialized(System* system);
 
-  void GetDisplayInfo(
-      fuchsia::ui::scenic::Scenic::GetDisplayInfoCallback callback) override;
-  void TakeScreenshot(
-      fuchsia::ui::scenic::Scenic::TakeScreenshotCallback callback) override;
+  void GetDisplayInfo(fuchsia::ui::scenic::Scenic::GetDisplayInfoCallback callback) override;
+  void TakeScreenshot(fuchsia::ui::scenic::Scenic::TakeScreenshotCallback callback) override;
 
   void GetDisplayOwnershipEvent(
-      fuchsia::ui::scenic::Scenic::GetDisplayOwnershipEventCallback callback)
-      override;
+      fuchsia::ui::scenic::Scenic::GetDisplayOwnershipEventCallback callback) override;
 
   sys::ComponentContext* const app_context_;
   fit::closure quit_callback_;
@@ -89,8 +85,7 @@ class Scenic : public fuchsia::ui::scenic::Scenic {
   std::vector<fit::closure> run_after_all_systems_initialized_;
 
   // Session bindings rely on setup of systems_; order matters.
-  fidl::BindingSet<fuchsia::ui::scenic::Session, std::unique_ptr<Session>>
-      session_bindings_;
+  fidl::BindingSet<fuchsia::ui::scenic::Session, std::unique_ptr<Session>> session_bindings_;
   fidl::BindingSet<fuchsia::ui::scenic::Scenic> scenic_bindings_;
 
   size_t next_session_id_ = 1;
@@ -103,10 +98,10 @@ SystemT* Scenic::RegisterSystem(Args&&... args) {
   FXL_DCHECK(systems_[SystemT::kTypeId] == nullptr)
       << "System of type: " << SystemT::kTypeId << "was already registered.";
 
-  SystemT* system = new SystemT(
-      SystemContext(app_context_, inspect_node_.CreateChild(SystemT::kName),
-                    quit_callback_.share()),
-      std::forward<Args>(args)...);
+  SystemT* system =
+      new SystemT(SystemContext(app_context_, inspect_node_.CreateChild(SystemT::kName),
+                                quit_callback_.share()),
+                  std::forward<Args>(args)...);
   systems_[SystemT::kTypeId] = std::unique_ptr<System>(system);
 
   // Listen for System to be initialized if it isn't already.

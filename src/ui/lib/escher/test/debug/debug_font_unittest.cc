@@ -23,8 +23,7 @@ class DebugFontTest : public ReadbackTest {
     ReadbackTest::SetUp();
 
     auto uploader = BatchGpuUploader::New(escher());
-    ImageFactoryAdapter factory(escher()->gpu_allocator(),
-                                escher()->resource_recycler());
+    ImageFactoryAdapter factory(escher()->gpu_allocator(), escher()->resource_recycler());
     debug_font_ = DebugFont::New(uploader.get(), &factory);
     uploader->Submit();
   }
@@ -44,8 +43,7 @@ class DebugFontTest : public ReadbackTest {
 
 VK_TEST_F(DebugFontTest, Digits) {
   // Constants relating to individual glyphs.
-  constexpr uint32_t kNumPixelsPerGlyph =
-      DebugFont::kGlyphWidth * DebugFont::kGlyphHeight;
+  constexpr uint32_t kNumPixelsPerGlyph = DebugFont::kGlyphWidth * DebugFont::kGlyphHeight;
 
   constexpr ColorBgra kBlack(0, 0, 0, 255);
   constexpr ColorBgra kWhite(255, 255, 255, 255);
@@ -62,28 +60,24 @@ VK_TEST_F(DebugFontTest, Digits) {
     // black pixels all in one vertical column (3 black, 1 white, 1 black)...
     // if the scale is 2 then both the width and height are doubled so the
     // number of black pixels in the glyph after scaling is 16.
-    std::function<void(std::string, size_t)> draw_and_check_histogram =
-        [&](std::string glyphs, size_t expected_black) {
-          debug_font()->Blit(frame->cmds(), glyphs, fd.color_attachment,
-                             {0, 10 * scale}, scale);
+    std::function<void(std::string, size_t)> draw_and_check_histogram = [&](std::string glyphs,
+                                                                            size_t expected_black) {
+      debug_font()->Blit(frame->cmds(), glyphs, fd.color_attachment, {0, 10 * scale}, scale);
 
-          size_t expected_white =
-              (glyphs.length() * kNumPixelsPerGlyph - expected_black) *
-              scale_squared;
+      size_t expected_white =
+          (glyphs.length() * kNumPixelsPerGlyph - expected_black) * scale_squared;
 
-          auto bytes = ReadbackFromColorAttachment(
-              frame, vk::ImageLayout::eTransferDstOptimal,
-              vk::ImageLayout::eTransferDstOptimal);
+      auto bytes = ReadbackFromColorAttachment(frame, vk::ImageLayout::eTransferDstOptimal,
+                                               vk::ImageLayout::eTransferDstOptimal);
 
-          const ColorHistogram<ColorBgra> histogram(
-              bytes.data(), kFramebufferWidth * kFramebufferHeight);
+      const ColorHistogram<ColorBgra> histogram(bytes.data(),
+                                                kFramebufferWidth * kFramebufferHeight);
 
-          EXPECT_EQ(2U, histogram.size());
-          EXPECT_EQ(histogram[kWhite], expected_white)
-              << "FAILED WHILE DRAWING \"" << glyphs
-              << "\" AT SCALE: " << scale;
-          EXPECT_EQ(histogram[kBlack], kNumFramebufferPixels - expected_white);
-        };
+      EXPECT_EQ(2U, histogram.size());
+      EXPECT_EQ(histogram[kWhite], expected_white)
+          << "FAILED WHILE DRAWING \"" << glyphs << "\" AT SCALE: " << scale;
+      EXPECT_EQ(histogram[kBlack], kNumFramebufferPixels - expected_white);
+    };
 
     // Each time, we draw on top of the previous glyph.
     draw_and_check_histogram(" ", 0);

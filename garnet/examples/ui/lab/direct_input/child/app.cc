@@ -4,16 +4,16 @@
 
 #include "garnet/examples/ui/lab/direct_input/child/app.h"
 
-#include <limits>
-#include <string>
-
 #include <fuchsia/math/cpp/fidl.h>
 #include <lib/fit/function.h>
 #include <lib/zx/time.h>
 
-#include "src/lib/fxl/logging.h"
+#include <limits>
+#include <string>
+
 #include "lib/ui/input/cpp/formatting.h"
 #include "lib/ui/scenic/cpp/resources.h"
+#include "src/lib/fxl/logging.h"
 
 namespace direct_input_child {
 
@@ -26,14 +26,12 @@ App::App(async::Loop* loop)
       view_provider_binding_(this) {
   FXL_DCHECK(startup_context_);
 
-  scenic_ = startup_context_
-                ->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
+  scenic_ = startup_context_->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
   scenic_.set_error_handler([this](zx_status_t status) { OnScenicError(); });
   FXL_LOG(INFO) << "Child - connect to Scenic.";
 
   session_ = std::make_unique<scenic::Session>(scenic_.get());
-  session_->set_error_handler(
-      [this](zx_status_t status) { this->OnSessionError(); });
+  session_->set_error_handler([this](zx_status_t status) { this->OnSessionError(); });
   session_->set_event_handler(fit::bind_member(this, &App::OnSessionEvents));
   FXL_LOG(INFO) << "Child - session setup.";
 
@@ -42,14 +40,11 @@ App::App(async::Loop* loop)
     UpdateScene(zx_clock_get_monotonic());
   });
 
-  startup_context_->outgoing()
-      .deprecated_services()
-      ->AddService<fuchsia::ui::app::ViewProvider>(
-          [this](
-              fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider> request) {
-            view_provider_binding_.Bind(std::move(request));
-          },
-          "view_provider");
+  startup_context_->outgoing().deprecated_services()->AddService<fuchsia::ui::app::ViewProvider>(
+      [this](fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider> request) {
+        view_provider_binding_.Bind(std::move(request));
+      },
+      "view_provider");
 
   {
     fuchsia::ui::input::SetHardKeyboardDeliveryCmd cmd;
@@ -190,8 +185,7 @@ void App::OnPointerEvent(const fuchsia::ui::input::PointerEvent& event) {
     if (focused_ && event.phase == Phase::DOWN) {
       // Nice to meet you. Add to known-fingers list.
       size_t idx = find_idx(pointer_id_, kNoFinger);
-      FXL_CHECK(idx != kNoFinger)
-          << "Pointer index full: " << contents(pointer_id_);
+      FXL_CHECK(idx != kNoFinger) << "Pointer index full: " << contents(pointer_id_);
       pointer_id_[idx] = event.pointer_id;
       view_->AddChild(*pointer_tracker_[idx]);
       pointer_tracker_[idx]->SetTranslation(event.x, event.y, -400.f);
@@ -214,13 +208,11 @@ void App::OnPointerEvent(const fuchsia::ui::input::PointerEvent& event) {
   }
 }
 
-void App::CreateView(
-    zx::eventpair view_token,
-    fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services,
-    fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> outgoing_services) {
+void App::CreateView(zx::eventpair view_token,
+                     fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services,
+                     fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> outgoing_services) {
   FXL_LOG(INFO) << "Child - CreateView invoked.";
-  view_ = std::make_unique<scenic::View>(session_.get(), std::move(view_token),
-                                         "child view");
+  view_ = std::make_unique<scenic::View>(session_.get(), std::move(view_token), "child view");
   view_->SetLabel("child view");
 
   if (root_node_) {
@@ -230,15 +222,13 @@ void App::CreateView(
 }
 
 void App::UpdateScene(uint64_t next_presentation_time) {
-  session_->Present(
-      next_presentation_time, [this](fuchsia::images::PresentationInfo info) {
-        UpdateScene(info.presentation_time + 2 * info.presentation_interval);
-      });
+  session_->Present(next_presentation_time, [this](fuchsia::images::PresentationInfo info) {
+    UpdateScene(info.presentation_time + 2 * info.presentation_interval);
+  });
 }
 
 void App::CreateScene(float display_width, float display_height) {
-  FXL_LOG(INFO) << "Child - display size: " << display_width << ", "
-                << display_height;
+  FXL_LOG(INFO) << "Child - display size: " << display_width << ", " << display_height;
 
   width_in_px_ = display_width;  // Store display size, not view size!
   height_in_px_ = display_height;
@@ -251,8 +241,7 @@ void App::CreateScene(float display_width, float display_height) {
 
   // Set up root node, expose it to outbound View.
   {
-    std::unique_ptr<scenic::EntityNode> root_node =
-        std::make_unique<scenic::EntityNode>(session);
+    std::unique_ptr<scenic::EntityNode> root_node = std::make_unique<scenic::EntityNode>(session);
     root_node->SetLabel("child root node");
     root_node->SetTranslation(0.f, 0.f, -100.f);
 
@@ -275,8 +264,7 @@ void App::CreateScene(float display_width, float display_height) {
 
   // Create frame to trigger on focus.
   {
-    std::unique_ptr<scenic::EntityNode> frame =
-        std::make_unique<scenic::EntityNode>(session);
+    std::unique_ptr<scenic::EntityNode> frame = std::make_unique<scenic::EntityNode>(session);
     frame->SetLabel("child focus frame");
 
     const float kElevation = 110.f;  // Z height

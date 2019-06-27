@@ -17,8 +17,7 @@
 namespace escher {
 namespace {
 
-std::vector<std::string> StrSplit(const std::string& str,
-                                  const std::string& delim) {
+std::vector<std::string> StrSplit(const std::string& str, const std::string& delim) {
   std::vector<std::string> items;
   for (size_t start = 0; start < str.length();) {
     size_t end = str.find(delim, start);
@@ -33,15 +32,13 @@ std::vector<std::string> StrSplit(const std::string& str,
 
 }  // namespace
 
-FuchsiaDataSource::FuchsiaDataSource(
-    const std::shared_ptr<vfs::PseudoDir>& root_dir)
+FuchsiaDataSource::FuchsiaDataSource(const std::shared_ptr<vfs::PseudoDir>& root_dir)
     : root_dir_(root_dir) {}
 
-FuchsiaDataSource::FuchsiaDataSource()
-    : root_dir_(std::make_shared<vfs::PseudoDir>()) {}
+FuchsiaDataSource::FuchsiaDataSource() : root_dir_(std::make_shared<vfs::PseudoDir>()) {}
 
-bool FuchsiaDataSource::InitializeWithRealFiles(
-    const std::vector<HackFilePath>& paths, const char* root) {
+bool FuchsiaDataSource::InitializeWithRealFiles(const std::vector<HackFilePath>& paths,
+                                                const char* root) {
   const std::string kRoot(root);
   bool success = true;
   for (const auto& path : paths) {
@@ -73,9 +70,8 @@ bool FuchsiaDataSource::InitializeWithRealFiles(
               auto out = ReadFile(path);
               size_t len = out.length();
               if (len > max_file_size) {
-                FXL_LOG(WARNING)
-                    << "File(" << path << ") size more than: " << max_file_size
-                    << ", truncating";
+                FXL_LOG(WARNING) << "File(" << path << ") size more than: " << max_file_size
+                                 << ", truncating";
                 len = max_file_size;
               }
               output->resize(len);
@@ -87,8 +83,7 @@ bool FuchsiaDataSource::InitializeWithRealFiles(
               // TODO(ES-98): The file is successfully updated, but the
               // terminal would complain "truncate: Invalid argument".
               HackFileContents content(input.size(), 0);
-              std::copy(input.begin(), input.begin() + input.size(),
-                        content.begin());
+              std::copy(input.begin(), input.begin() + input.size(), content.begin());
               FXL_LOG(INFO) << "Updated file: " << path;
               WriteFile(path, std::move(content));
               return ZX_OK;

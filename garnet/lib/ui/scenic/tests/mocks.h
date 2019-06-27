@@ -14,14 +14,11 @@ namespace test {
 
 class ReleaseFenceSignallerForTest : public escher::ReleaseFenceSignaller {
  public:
-  ReleaseFenceSignallerForTest(
-      escher::impl::CommandBufferSequencer* command_buffer_sequencer);
+  ReleaseFenceSignallerForTest(escher::impl::CommandBufferSequencer* command_buffer_sequencer);
 
   void AddCPUReleaseFence(zx::event fence) override;
 
-  uint32_t num_calls_to_add_cpu_release_fence() {
-    return num_calls_to_add_cpu_release_fence_;
-  }
+  uint32_t num_calls_to_add_cpu_release_fence() { return num_calls_to_add_cpu_release_fence_; }
 
  private:
   uint32_t num_calls_to_add_cpu_release_fence_ = 0;
@@ -29,8 +26,7 @@ class ReleaseFenceSignallerForTest : public escher::ReleaseFenceSignaller {
 
 class EngineForTest : public gfx::Engine {
  public:
-  EngineForTest(sys::ComponentContext* component_context,
-                gfx::DisplayManager* display_manager,
+  EngineForTest(sys::ComponentContext* component_context, gfx::DisplayManager* display_manager,
                 std::unique_ptr<escher::ReleaseFenceSignaller> release_signaler,
                 escher::EscherWeakPtr escher = escher::EscherWeakPtr());
 };
@@ -39,10 +35,9 @@ class GfxSystemForTest : public gfx::GfxSystem {
  public:
   static constexpr TypeId kTypeId = kGfx;
 
-  explicit GfxSystemForTest(
-      SystemContext context,
-      std::unique_ptr<gfx::DisplayManager> display_manager,
-      escher::impl::CommandBufferSequencer* command_buffer_sequencer)
+  explicit GfxSystemForTest(SystemContext context,
+                            std::unique_ptr<gfx::DisplayManager> display_manager,
+                            escher::impl::CommandBufferSequencer* command_buffer_sequencer)
       : GfxSystem(std::move(context), std::move(display_manager)),
         command_buffer_sequencer_(command_buffer_sequencer) {}
 
@@ -52,13 +47,10 @@ class GfxSystemForTest : public gfx::GfxSystem {
   std::unique_ptr<gfx::Engine> InitializeEngine() override {
     return std::make_unique<EngineForTest>(
         context()->app_context(), display_manager_.get(),
-        std::make_unique<ReleaseFenceSignallerForTest>(
-            command_buffer_sequencer_));
+        std::make_unique<ReleaseFenceSignallerForTest>(command_buffer_sequencer_));
   }
 
-  std::unique_ptr<escher::Escher> InitializeEscher() override {
-    return nullptr;
-  }
+  std::unique_ptr<escher::Escher> InitializeEscher() override { return nullptr; }
 
   escher::impl::CommandBufferSequencer* command_buffer_sequencer_;
 };

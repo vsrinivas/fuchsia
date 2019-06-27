@@ -28,8 +28,7 @@ class InputInterpreter;
 // process device input even if the console owns the display.
 class InputReader {
  public:
-  InputReader(fuchsia::ui::input::InputDeviceRegistry* registry,
-              bool ignore_console = false);
+  InputReader(fuchsia::ui::input::InputDeviceRegistry* registry, bool ignore_console = false);
   ~InputReader();
 
   // Starts the |InputReader| with the default FDIO device watcher.
@@ -46,12 +45,10 @@ class InputReader {
   void DeviceAdded(std::unique_ptr<InputInterpreter> interpreter);
   void DeviceRemoved(zx_handle_t handle);
 
-  void OnDeviceHandleReady(async_dispatcher_t* dispatcher,
-                           async::WaitBase* wait, zx_status_t status,
-                           const zx_packet_signal_t* signal);
-  void OnDisplayHandleReady(async_dispatcher_t* dispatcher,
-                            async::WaitBase* wait, zx_status_t status,
-                            const zx_packet_signal_t* signal);
+  void OnDeviceHandleReady(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                           zx_status_t status, const zx_packet_signal_t* signal);
+  void OnDisplayHandleReady(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                            zx_status_t status, const zx_packet_signal_t* signal);
 
   fuchsia::ui::input::InputDeviceRegistry* const registry_;
   const bool ignore_console_;
@@ -59,8 +56,8 @@ class InputReader {
   std::map<zx_handle_t, std::unique_ptr<DeviceInfo>> devices_;
   std::unique_ptr<DeviceWatcher> device_watcher_;
   zx::event display_ownership_event_;
-  async::WaitMethod<InputReader, &InputReader::OnDisplayHandleReady>
-      display_ownership_waiter_{this};
+  async::WaitMethod<InputReader, &InputReader::OnDisplayHandleReady> display_ownership_waiter_{
+      this};
   bool display_owned_ = true;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(InputReader);

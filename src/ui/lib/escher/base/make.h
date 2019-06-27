@@ -14,8 +14,7 @@ namespace escher {
 //   fxl::RefPtr<Foo> foo = Make<Foo>(int_arg, "string_arg");
 template <typename T, typename... Args>
 fxl::RefPtr<T> Make(Args&&... args) {
-  return fxl::internal::MakeRefCountedHelper<T>::MakeRefCounted(
-      std::forward<Args>(args)...);
+  return fxl::internal::MakeRefCountedHelper<T>::MakeRefCounted(std::forward<Args>(args)...);
 }
 
 }  // namespace escher

@@ -13,11 +13,11 @@
 
 #include "garnet/lib/ui/gfx/swapchain/swapchain.h"
 #include "garnet/lib/ui/gfx/util/event_timestamper.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/ui/lib/escher/flib/fence_listener.h"
 #include "src/ui/lib/escher/resources/resource_manager.h"
 #include "src/ui/lib/escher/resources/resource_recycler.h"
 #include "src/ui/lib/escher/vk/vulkan_device_queues.h"
-#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -31,8 +31,8 @@ class EventTimestamper;
 // display controller API.
 class DisplaySwapchain : public Swapchain {
  public:
-  DisplaySwapchain(DisplayManager* display_manager, Display* display,
-                   EventTimestamper* timestamper, escher::Escher* escher);
+  DisplaySwapchain(DisplayManager* display_manager, Display* display, EventTimestamper* timestamper,
+                   escher::Escher* escher);
   ~DisplaySwapchain() override;
 
   // Callback to call on every vsync. Arguments are:
@@ -40,8 +40,7 @@ class DisplaySwapchain : public Swapchain {
   using OnVsyncCallback = fit::function<void(zx_time_t vsync_timestamp)>;
 
   // |Swapchain|
-  bool DrawAndPresentFrame(const FrameTimingsPtr& frame_timings,
-                           const HardwareLayerAssignment& hla,
+  bool DrawAndPresentFrame(const FrameTimingsPtr& frame_timings, const HardwareLayerAssignment& hla,
                            DrawCallback draw_callback) override;
 
   // Register a callback to be called on each vsync.
@@ -79,8 +78,7 @@ class DisplaySwapchain : public Swapchain {
 
     bool presented = false;
   };
-  std::unique_ptr<FrameRecord> NewFrameRecord(
-      const FrameTimingsPtr& frame_timings);
+  std::unique_ptr<FrameRecord> NewFrameRecord(const FrameTimingsPtr& frame_timings);
 
   bool InitializeFramebuffers(escher::ResourceRecycler* resource_recycler);
 

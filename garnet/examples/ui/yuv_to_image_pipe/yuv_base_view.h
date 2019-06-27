@@ -18,8 +18,7 @@ namespace yuv_to_image_pipe {
 // inspection that a given PixelFormat is being displayed properly by Scenic.
 class YuvBaseView : public scenic::BaseView {
  public:
-  YuvBaseView(scenic::ViewContext context,
-              fuchsia::images::PixelFormat pixel_format);
+  YuvBaseView(scenic::ViewContext context, fuchsia::images::PixelFormat pixel_format);
   ~YuvBaseView() override = default;
 
  protected:
@@ -34,9 +33,7 @@ class YuvBaseView : public scenic::BaseView {
 
  private:
   // |scenic::SessionListener|
-  void OnScenicError(std::string error) override {
-    FXL_LOG(ERROR) << "Scenic Error " << error;
-  }
+  void OnScenicError(std::string error) override { FXL_LOG(ERROR) << "Scenic Error " << error; }
 
   void SetVmoPixels(uint8_t* vmo_base, uint8_t pixel_multiplier);
   void SetBgra8Pixels(uint8_t* vmo_base, uint8_t pixel_multiplier);
@@ -53,8 +50,7 @@ class YuvBaseView : public scenic::BaseView {
   fidl::InterfacePtr<fuchsia::images::ImagePipe> image_pipe_;
   std::map<uint32_t /* image_id */, uint8_t* /* vmo */> image_vmos_;
 
-  fuchsia::images::PixelFormat pixel_format_ =
-      fuchsia::images::PixelFormat::NV12;
+  fuchsia::images::PixelFormat pixel_format_ = fuchsia::images::PixelFormat::NV12;
   uint32_t stride_ = 0;
   uint32_t next_image_id_ = 0;
 

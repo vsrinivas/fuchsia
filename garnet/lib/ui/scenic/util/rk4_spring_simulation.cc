@@ -5,6 +5,7 @@
 #include "garnet/lib/ui/scenic/util/rk4_spring_simulation.h"
 
 #include <fbl/algorithm.h>
+
 #include <algorithm>
 #include <cmath>
 
@@ -12,8 +13,7 @@
 #include "src/lib/fxl/macros.h"
 
 namespace scenic_impl {
-RK4SpringSimulation::RK4SpringSimulation(float initial_value, float tension,
-                                         float friction)
+RK4SpringSimulation::RK4SpringSimulation(float initial_value, float tension, float friction)
     : tension_(tension),
       friction_(friction),
       start_value_(initial_value),
@@ -42,10 +42,8 @@ void RK4SpringSimulation::SetTargetValue(float target_value) {
 }
 
 float RK4SpringSimulation::GetValue() {
-  return fbl::clamp(
-      start_value_ + spring_value_ * (target_value_ - start_value_),
-      std::min(start_value_, target_value_),
-      std::max(start_value_, target_value_));
+  return fbl::clamp(start_value_ + spring_value_ * (target_value_ - start_value_),
+                    std::min(start_value_, target_value_), std::max(start_value_, target_value_));
 }
 
 void RK4SpringSimulation::ElapseTime(float seconds) {
@@ -55,8 +53,7 @@ void RK4SpringSimulation::ElapseTime(float seconds) {
   float seconds_remaining = seconds;
   while (seconds_remaining > 0.f) {
     float step_size = std::min(seconds_remaining, kMaxStepSize);
-    acceleration_multiplier_ =
-        std::min(1.f, acceleration_multiplier_ + step_size * 6.f);
+    acceleration_multiplier_ = std::min(1.f, acceleration_multiplier_ + step_size * 6.f);
     if (EvaluateRK(step_size)) {
       spring_value_ = 1.f;
       velocity_ = 0.f;

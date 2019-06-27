@@ -43,8 +43,7 @@ PaperDrawCallFactory::PaperDrawCallFactory(EscherWeakPtr weak_escher,
 
 PaperDrawCallFactory::~PaperDrawCallFactory() { FXL_DCHECK(!frame_); }
 
-void PaperDrawCallFactory::DrawCircle(float radius,
-                                      const PaperMaterial& material,
+void PaperDrawCallFactory::DrawCircle(float radius, const PaperMaterial& material,
                                       PaperDrawableFlags flags) {
   FXL_DCHECK(frame_);
 
@@ -52,10 +51,10 @@ void PaperDrawCallFactory::DrawCircle(float radius,
   // requires us to push a new transform.
 
   const bool scale_radius = (radius != 1.f);
-  const auto& transform = scale_radius ? transform_stack_->PushScale(radius)
-                                       : transform_stack_->Top();
-  const auto& entry = shape_cache_->GetCircleMesh(
-      1.f, transform.clip_planes.data(), transform.clip_planes.size());
+  const auto& transform =
+      scale_radius ? transform_stack_->PushScale(radius) : transform_stack_->Top();
+  const auto& entry =
+      shape_cache_->GetCircleMesh(1.f, transform.clip_planes.data(), transform.clip_planes.size());
 
   EnqueueDrawCalls(entry, material, flags);
 
@@ -63,14 +62,13 @@ void PaperDrawCallFactory::DrawCircle(float radius,
     transform_stack_->Pop();
 }
 
-void PaperDrawCallFactory::DrawRect(vec2 min, vec2 max,
-                                    const PaperMaterial& material,
+void PaperDrawCallFactory::DrawRect(vec2 min, vec2 max, const PaperMaterial& material,
                                     PaperDrawableFlags flags) {
   FXL_DCHECK(frame_);
 
   const auto& transform = transform_stack_->Top();
-  const auto& entry = shape_cache_->GetRectMesh(
-      min, max, transform.clip_planes.data(), transform.clip_planes.size());
+  const auto& entry = shape_cache_->GetRectMesh(min, max, transform.clip_planes.data(),
+                                                transform.clip_planes.size());
   EnqueueDrawCalls(entry, material, flags);
 }
 
@@ -80,14 +78,14 @@ void PaperDrawCallFactory::DrawRoundedRect(const RoundedRectSpec& spec,
   FXL_DCHECK(frame_);
 
   const auto& transform = transform_stack_->Top();
-  const auto& entry = shape_cache_->GetRoundedRectMesh(
-      spec, transform.clip_planes.data(), transform.clip_planes.size());
+  const auto& entry = shape_cache_->GetRoundedRectMesh(spec, transform.clip_planes.data(),
+                                                       transform.clip_planes.size());
   EnqueueDrawCalls(entry, material, flags);
 }
 
-void PaperDrawCallFactory::EnqueueDrawCalls(
-    const PaperShapeCacheEntry& cache_entry, const PaperMaterial& material,
-    PaperDrawableFlags drawable_flags) {
+void PaperDrawCallFactory::EnqueueDrawCalls(const PaperShapeCacheEntry& cache_entry,
+                                            const PaperMaterial& material,
+                                            PaperDrawableFlags drawable_flags) {
   FXL_DCHECK(frame_);
   if (!cache_entry) {
     return;
@@ -101,12 +99,10 @@ void PaperDrawCallFactory::EnqueueDrawCalls(
   }
 
   auto* mesh = cache_entry.mesh.get();
-  const auto& texture =
-      material.texture() ? material.texture() : white_texture_;
+  const auto& texture = material.texture() ? material.texture() : white_texture_;
   const auto& transform = transform_stack_->Top();
   const uint32_t num_indices = cache_entry.num_indices;
-  const uint32_t num_shadow_volume_indices =
-      cache_entry.num_shadow_volume_indices;
+  const uint32_t num_shadow_volume_indices = cache_entry.num_shadow_volume_indices;
 
   Hash pipeline_hash;
   Hash mesh_hash;
@@ -137,14 +133,14 @@ void PaperDrawCallFactory::EnqueueDrawCalls(
   if (it != object_data_.end()) {
     mesh_data = reinterpret_cast<PaperRenderFuncs::MeshData*>(it->second);
   } else {
-    mesh_data = PaperRenderFuncs::NewMeshData(
-        frame_, mesh, texture, num_indices, num_shadow_volume_indices);
+    mesh_data = PaperRenderFuncs::NewMeshData(frame_, mesh, texture, num_indices,
+                                              num_shadow_volume_indices);
     object_data_.insert(it, std::make_pair(mesh_hash, mesh_data));
   }
 
   // Allocate and initialize per-instance data.
-  PaperRenderFuncs::MeshDrawData* draw_data = PaperRenderFuncs::NewMeshDrawData(
-      frame_, transform.matrix, material.color(), drawable_flags);
+  PaperRenderFuncs::MeshDrawData* draw_data =
+      PaperRenderFuncs::NewMeshDrawData(frame_, transform.matrix, material.color(), drawable_flags);
 
   // TODO(ES-103): avoid reaching in to impl::CommandBuffer for keep-alive.
   frame_->command_buffer()->KeepAlive(texture.get());
@@ -165,20 +161,18 @@ void PaperDrawCallFactory::EnqueueDrawCalls(
   float depth = glm::dot(vec3(transform[3]) - camera_pos_, camera_dir_);
 #endif
 
-  auto sort_key =
-      material.opaque()
-          ? SortKey::NewOpaque(pipeline_hash, mesh_hash, depth).key()
-          : SortKey::NewTranslucent(pipeline_hash, mesh_hash, depth).key();
+  auto sort_key = material.opaque()
+                      ? SortKey::NewOpaque(pipeline_hash, mesh_hash, depth).key()
+                      : SortKey::NewTranslucent(pipeline_hash, mesh_hash, depth).key();
 
   auto queue_flags = material.opaque() ? PaperRenderQueueFlagBits::kOpaque
                                        : PaperRenderQueueFlagBits::kTranslucent;
 
   render_queue_->PushDrawCall(
-      {.render_queue_item =
-           {.sort_key = sort_key,
-            .object_data = mesh_data,
-            .instance_data = draw_data,
-            .render_queue_funcs = {PaperRenderFuncs::RenderMesh}},
+      {.render_queue_item = {.sort_key = sort_key,
+                             .object_data = mesh_data,
+                             .instance_data = draw_data,
+                             .render_queue_funcs = {PaperRenderFuncs::RenderMesh}},
        .render_queue_flags = queue_flags});
 }
 
@@ -189,11 +183,9 @@ void PaperDrawCallFactory::SetConfig(const PaperRendererConfig& config) {
 
 void PaperDrawCallFactory::BeginFrame(const FramePtr& frame, PaperScene* scene,
                                       PaperTransformStack* transform_stack,
-                                      PaperRenderQueue* render_queue,
-                                      PaperShapeCache* shape_cache,
+                                      PaperRenderQueue* render_queue, PaperShapeCache* shape_cache,
                                       vec3 camera_pos, vec3 camera_dir) {
-  FXL_DCHECK(!frame_ && frame && transform_stack && render_queue &&
-             shape_cache);
+  FXL_DCHECK(!frame_ && frame && transform_stack && render_queue && shape_cache);
   frame_ = frame;
   transform_stack_ = transform_stack;
   render_queue_ = render_queue;
@@ -215,8 +207,9 @@ void PaperDrawCallFactory::EndFrame() {
   camera_dir_ = vec3(0, 0, 0);
 }
 
-PaperDrawCallFactory::SortKey PaperDrawCallFactory::SortKey::NewOpaque(
-    Hash pipeline_hash, Hash draw_hash, float depth) {
+PaperDrawCallFactory::SortKey PaperDrawCallFactory::SortKey::NewOpaque(Hash pipeline_hash,
+                                                                       Hash draw_hash,
+                                                                       float depth) {
   // Depth must be non-negative, otherwise comparing the bit representations
   // won't work.
   if (depth < 0.f) {
@@ -236,12 +229,12 @@ PaperDrawCallFactory::SortKey PaperDrawCallFactory::SortKey::NewOpaque(
   // pixels that will later be overdrawn; this isn't guaranteed if we sort by
   // the pipeline hash.
   uint64_t depth_key(glm::floatBitsToUint(depth));
-  return SortKey((pipeline_hash.val << 48) | depth_key << 16 |
-                 (draw_hash.val & 0xffff));
+  return SortKey((pipeline_hash.val << 48) | depth_key << 16 | (draw_hash.val & 0xffff));
 }
 
-PaperDrawCallFactory::SortKey PaperDrawCallFactory::SortKey::NewTranslucent(
-    Hash pipeline_hash, Hash draw_hash, float depth) {
+PaperDrawCallFactory::SortKey PaperDrawCallFactory::SortKey::NewTranslucent(Hash pipeline_hash,
+                                                                            Hash draw_hash,
+                                                                            float depth) {
   // Depth must be non-negative, otherwise comparing the bit representations
   // won't work.
   if (depth < 0.f) {
@@ -250,8 +243,7 @@ PaperDrawCallFactory::SortKey PaperDrawCallFactory::SortKey::NewTranslucent(
 
   // Prioritize back-to-front order over state changes.
   uint64_t depth_key(glm::floatBitsToUint(depth) ^ 0xffffffffu);
-  return SortKey((depth_key << 32) | (pipeline_hash.val & 0xffff0000u) |
-                 (draw_hash.val & 0xffffu));
+  return SortKey((depth_key << 32) | (pipeline_hash.val & 0xffff0000u) | (draw_hash.val & 0xffffu));
 }
 
 }  // namespace escher

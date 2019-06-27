@@ -9,8 +9,8 @@
 #include "src/ui/lib/escher/util/trace_macros.h"
 
 #ifdef OS_FUCHSIA
-#include <zircon/syscalls.h>
 #include <lib/zx/time.h>
+#include <zircon/syscalls.h>
 #endif
 
 namespace escher {
@@ -21,12 +21,10 @@ TimestampProfiler::TimestampProfiler(vk::Device device, float timestamp_period)
     : device_(device), timestamp_period_(timestamp_period) {}
 
 TimestampProfiler::~TimestampProfiler() {
-  FXL_DCHECK(ranges_.empty() && pools_.empty() && query_count_ == 0 &&
-             current_pool_index_ == 0);
+  FXL_DCHECK(ranges_.empty() && pools_.empty() && query_count_ == 0 && current_pool_index_ == 0);
 }
 
-void TimestampProfiler::AddTimestamp(impl::CommandBuffer* cmd_buf,
-                                     vk::PipelineStageFlagBits flags,
+void TimestampProfiler::AddTimestamp(impl::CommandBuffer* cmd_buf, vk::PipelineStageFlagBits flags,
                                      const char* name) {
   QueryRange* range = ObtainRange(cmd_buf);
   cmd_buf->vk().writeTimestamp(flags, range->pool, current_pool_index_);
@@ -41,10 +39,10 @@ std::vector<TimestampProfiler::Result> TimestampProfiler::GetQueryResults() {
   for (auto& range : ranges_) {
     // We don't wait for results.  Crash if results aren't immediately
     // available.
-    vk::Result status = device_.getQueryPoolResults(
-        range.pool, range.start_index, range.count,
-        vk::ArrayProxy<Result>(range.count, &results_[result_index]),
-        sizeof(Result), vk::QueryResultFlagBits::e64);
+    vk::Result status =
+        device_.getQueryPoolResults(range.pool, range.start_index, range.count,
+                                    vk::ArrayProxy<Result>(range.count, &results_[result_index]),
+                                    sizeof(Result), vk::QueryResultFlagBits::e64);
     FXL_DCHECK(status == vk::Result::eSuccess);
 
     result_index += range.count;
@@ -68,12 +66,10 @@ std::vector<TimestampProfiler::Result> TimestampProfiler::GetQueryResults() {
     // Avoid precision issues that we would have if we simply multiplied by
     // timestamp_period_.
     results_[i].raw_nanoseconds =
-        1000 * static_cast<uint64_t>(results_[i].raw_nanoseconds *
-                                     microsecond_multiplier);
+        1000 * static_cast<uint64_t>(results_[i].raw_nanoseconds * microsecond_multiplier);
 
     // Microseconds since the beginning of this timing query.
-    results_[i].time =
-        (results_[i].raw_nanoseconds - results_[0].raw_nanoseconds) / 1000;
+    results_[i].time = (results_[i].raw_nanoseconds - results_[0].raw_nanoseconds) / 1000;
 
     // Microseconds since the previous event.
     results_[i].elapsed = i == 0 ? 0 : results_[i].time - results_[i - 1].time;
@@ -84,8 +80,8 @@ std::vector<TimestampProfiler::Result> TimestampProfiler::GetQueryResults() {
 
 #ifdef OS_FUCHSIA
 static inline uint64_t MicrosToTicks(zx_time_t microseconds) {
-    static const uint64_t ticks_per_microsecond = zx_ticks_per_second() / 1000000.0;
-    return microseconds * ticks_per_microsecond;
+  static const uint64_t ticks_per_microsecond = zx_ticks_per_second() / 1000000.0;
+  return microseconds * ticks_per_microsecond;
 }
 
 // ProcessTraceEvents transforms the data received from GetQueryResults into a
@@ -101,8 +97,7 @@ static inline uint64_t MicrosToTicks(zx_time_t microseconds) {
 // of the Vulkan implementation. If this occurs, we interpret those GPU events
 // as occurring during the same period of time, and output a single trace
 // event struct accordingly.
-std::vector<TimestampProfiler::TraceEvent>
-TimestampProfiler::ProcessTraceEvents(
+std::vector<TimestampProfiler::TraceEvent> TimestampProfiler::ProcessTraceEvents(
     const std::vector<TimestampProfiler::Result>& timestamps) {
   std::vector<TimestampProfiler::TraceEvent> traces;
 
@@ -146,9 +141,8 @@ TimestampProfiler::ProcessTraceEvents(
 // We utilize virtual duration events to represent this GPU work on a virtual
 // thread (vthread) since it is not local to any CPU thread.
 void TimestampProfiler::TraceGpuQueryResults(
-    const std::vector<TimestampProfiler::TraceEvent>& trace_events,
-    uint64_t frame_number, uint64_t escher_frame_number,
-    const char* trace_literal, const char* gpu_vthread_literal,
+    const std::vector<TimestampProfiler::TraceEvent>& trace_events, uint64_t frame_number,
+    uint64_t escher_frame_number, const char* trace_literal, const char* gpu_vthread_literal,
     uint64_t gpu_vthread_id) {
   constexpr static const char* kCategoryLiteral = "gfx";
 
@@ -176,16 +170,13 @@ void TimestampProfiler::TraceGpuQueryResults(
   // First, create the entire duration event. We can do this by creating an
   // event combining the start of the first event, and the end of the last
   // event.
-  TRACE_VTHREAD_DURATION_BEGIN(kCategoryLiteral, trace_literal,
-                               gpu_vthread_literal, gpu_vthread_id,
+  TRACE_VTHREAD_DURATION_BEGIN(kCategoryLiteral, trace_literal, gpu_vthread_literal, gpu_vthread_id,
                                real_start_ticks, "Frame number", frame_number,
                                "Escher frame number", escher_frame_number);
 
-  TRACE_VTHREAD_DURATION_END(kCategoryLiteral, trace_literal,
-                             gpu_vthread_literal, gpu_vthread_id,
-                             real_end_ticks, "Frame number", frame_number,
-                             "Escher frame number", escher_frame_number);
-
+  TRACE_VTHREAD_DURATION_END(kCategoryLiteral, trace_literal, gpu_vthread_literal, gpu_vthread_id,
+                             real_end_ticks, "Frame number", frame_number, "Escher frame number",
+                             escher_frame_number);
 
   // Now, output the more interesting events added by the application.
   for (size_t i = 0; i < trace_events.size(); ++i) {
@@ -196,52 +187,43 @@ void TimestampProfiler::TraceGpuQueryResults(
     switch (num_concurrent_events) {
       case 1: {
         TRACE_VTHREAD_DURATION_BEGIN(kCategoryLiteral, trace_events[i].names[0],
-                                     gpu_vthread_literal, gpu_vthread_id,
-                                     start_ticks);
-        TRACE_VTHREAD_DURATION_END(kCategoryLiteral, trace_events[i].names[0],
-                                   gpu_vthread_literal, gpu_vthread_id,
-                                   end_ticks);
+                                     gpu_vthread_literal, gpu_vthread_id, start_ticks);
+        TRACE_VTHREAD_DURATION_END(kCategoryLiteral, trace_events[i].names[0], gpu_vthread_literal,
+                                   gpu_vthread_id, end_ticks);
         break;
       }
       case 2: {
         TRACE_VTHREAD_DURATION_BEGIN(kCategoryLiteral, trace_events[i].names[0],
-                                     gpu_vthread_literal, gpu_vthread_id,
-                                     start_ticks,
+                                     gpu_vthread_literal, gpu_vthread_id, start_ticks,
                                      "Second Event", trace_events[i].names[1]);
 
-        TRACE_VTHREAD_DURATION_END(kCategoryLiteral, trace_events[i].names[0],
-                                   gpu_vthread_literal, gpu_vthread_id,
-                                   end_ticks, "Second Event",
+        TRACE_VTHREAD_DURATION_END(kCategoryLiteral, trace_events[i].names[0], gpu_vthread_literal,
+                                   gpu_vthread_id, end_ticks, "Second Event",
                                    trace_events[i].names[1]);
         break;
       }
       default: {
-        FXL_LOG(WARNING)
-            << "We have more than 2 concurrent Vulkan timestamp events, \
+        FXL_LOG(WARNING) << "We have more than 2 concurrent Vulkan timestamp events, \
                                    dropping some traces. "
-            << "Have: " << num_concurrent_events << ").";
+                         << "Have: " << num_concurrent_events << ").";
       }
     }
   }
 
   // Flow event tracking the progress of a Scenic frame.
-  TRACE_VTHREAD_FLOW_STEP(kCategoryLiteral, "scenic_frame",
-                          gpu_vthread_literal, gpu_vthread_id,
+  TRACE_VTHREAD_FLOW_STEP(kCategoryLiteral, "scenic_frame", gpu_vthread_literal, gpu_vthread_id,
                           frame_number, real_start_ticks);
 
-  TRACE_VTHREAD_FLOW_STEP(kCategoryLiteral, "scenic_frame",
-                          gpu_vthread_literal, gpu_vthread_id,
+  TRACE_VTHREAD_FLOW_STEP(kCategoryLiteral, "scenic_frame", gpu_vthread_literal, gpu_vthread_id,
                           frame_number, real_end_ticks);
 }
 #else
 void TimestampProfiler::TraceGpuQueryResults(
-    const std::vector<TimestampProfiler::TraceEvent>& trace_events,
-    uint64_t frame_number, uint64_t escher_frame_number,
-    const char* trace_literal, const char* gpu_vthread_literal,
+    const std::vector<TimestampProfiler::TraceEvent>& trace_events, uint64_t frame_number,
+    uint64_t escher_frame_number, const char* trace_literal, const char* gpu_vthread_literal,
     uint64_t gpu_vthread_id) {}
 
-std::vector<TimestampProfiler::TraceEvent>
-TimestampProfiler::ProcessTraceEvents(
+std::vector<TimestampProfiler::TraceEvent> TimestampProfiler::ProcessTraceEvents(
     const std::vector<TimestampProfiler::Result>& timestamps) {
   std::vector<TimestampProfiler::TraceEvent> t;
   return t;
@@ -249,8 +231,7 @@ TimestampProfiler::ProcessTraceEvents(
 #endif
 
 void TimestampProfiler::LogGpuQueryResults(
-    uint64_t escher_frame_number,
-    const std::vector<TimestampProfiler::Result>& timestamps) {
+    uint64_t escher_frame_number, const std::vector<TimestampProfiler::Result>& timestamps) {
   FXL_LOG(INFO) << "--------------------------------"
                    "----------------------";
   FXL_LOG(INFO) << "Timestamps for frame #" << escher_frame_number;
@@ -259,15 +240,14 @@ void TimestampProfiler::LogGpuQueryResults(
   FXL_LOG(INFO) << "--------------------------------"
                    "----------------------";
   for (size_t i = 0; i < timestamps.size(); ++i) {
-    FXL_LOG(INFO) << timestamps[i].time << " \t | \t" << timestamps[i].elapsed
-                  << "   \t" << timestamps[i].name;
+    FXL_LOG(INFO) << timestamps[i].time << " \t | \t" << timestamps[i].elapsed << "   \t"
+                  << timestamps[i].name;
   }
   FXL_LOG(INFO) << "--------------------------------"
                    "----------------------";
 }
 
-TimestampProfiler::QueryRange* TimestampProfiler::ObtainRange(
-    impl::CommandBuffer* cmd_buf) {
+TimestampProfiler::QueryRange* TimestampProfiler::ObtainRange(impl::CommandBuffer* cmd_buf) {
   if (ranges_.empty() || current_pool_index_ == kPoolSize) {
     return CreateRangeAndPool(cmd_buf);
   } else if (ranges_.back().command_buffer != cmd_buf->vk()) {
@@ -276,16 +256,14 @@ TimestampProfiler::QueryRange* TimestampProfiler::ObtainRange(
     auto range = &ranges_.back();
     FXL_DCHECK(current_pool_index_ < kPoolSize);
     if (current_pool_index_ != range->start_index + range->count) {
-      FXL_LOG(INFO) << current_pool_index_ << "  " << range->start_index << "  "
-                    << range->count;
+      FXL_LOG(INFO) << current_pool_index_ << "  " << range->start_index << "  " << range->count;
     }
     FXL_DCHECK(current_pool_index_ == range->start_index + range->count);
     return range;
   }
 }
 
-TimestampProfiler::QueryRange* TimestampProfiler::CreateRangeAndPool(
-    impl::CommandBuffer* cmd_buf) {
+TimestampProfiler::QueryRange* TimestampProfiler::CreateRangeAndPool(impl::CommandBuffer* cmd_buf) {
   vk::QueryPoolCreateInfo info;
   info.flags = vk::QueryPoolCreateFlags();  // no flags currently exist
   info.queryType = vk::QueryType::eTimestamp;
@@ -305,8 +283,7 @@ TimestampProfiler::QueryRange* TimestampProfiler::CreateRangeAndPool(
   return &ranges_.back();
 }
 
-TimestampProfiler::QueryRange* TimestampProfiler::CreateRange(
-    impl::CommandBuffer* cmd_buf) {
+TimestampProfiler::QueryRange* TimestampProfiler::CreateRange(impl::CommandBuffer* cmd_buf) {
   QueryRange& prev = ranges_.back();
   FXL_DCHECK(!ranges_.empty() && current_pool_index_ < kPoolSize);
   FXL_DCHECK(current_pool_index_ == prev.start_index + prev.count);

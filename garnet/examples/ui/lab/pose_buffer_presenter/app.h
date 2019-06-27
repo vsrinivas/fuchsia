@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_EXAMPLES_UI_LAB_POSE_BUFFER_PROVIDER_APP_H_
-#define GARNET_EXAMPLES_UI_LAB_POSE_BUFFER_PROVIDER_APP_H_
+#ifndef GARNET_EXAMPLES_UI_LAB_POSE_BUFFER_PRESENTER_APP_H_
+#define GARNET_EXAMPLES_UI_LAB_POSE_BUFFER_PRESENTER_APP_H_
 
 #include <lib/async-loop/cpp/loop.h>
 
@@ -55,4 +55,4 @@ class App {
 
 }  // namespace pose_buffer_presenter
 
-#endif  // GARNET_EXAMPLES_UI_LAB_POSE_BUFFER_PROVIDER_APP_H_
+#endif  // GARNET_EXAMPLES_UI_LAB_POSE_BUFFER_PRESENTER_APP_H_

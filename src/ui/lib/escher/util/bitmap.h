@@ -16,8 +16,7 @@ namespace escher {
 class Bitmap {
  public:
   // The caller is responsible for ensuring that |bits| outlives the Bitmap.
-  Bitmap(uint32_t* bits, uint32_t bits_size)
-      : bits_(bits), bits_size_(bits_size) {}
+  Bitmap(uint32_t* bits, uint32_t bits_size) : bits_(bits), bits_size_(bits_size) {}
 
   // Get the value of a single bit.
   bool Get(uint32_t offset) const {

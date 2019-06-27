@@ -25,9 +25,7 @@ inline ShapeModifiers operator|(ShapeModifier bit0, ShapeModifier bit1) {
   return ShapeModifiers(bit0) | bit1;
 }
 
-inline ShapeModifiers operator~(ShapeModifier bit) {
-  return ~ShapeModifiers(bit);
-}
+inline ShapeModifiers operator~(ShapeModifier bit) { return ~ShapeModifiers(bit); }
 
 // Debugging.
 ESCHER_DEBUG_PRINTABLE(ShapeModifier);

@@ -45,8 +45,7 @@ void PaperRenderQueue::PushDrawCall(const PaperDrawCall& draw_call) {
 
 #ifndef NDEBUG
   PaperRenderQueueFlags kOpaqueAndTranslucent =
-      PaperRenderQueueFlagBits::kOpaque |
-      PaperRenderQueueFlagBits::kTranslucent;
+      PaperRenderQueueFlagBits::kOpaque | PaperRenderQueueFlagBits::kTranslucent;
   // Can't use the same sort-key for the translucent and opaque queues.
   // TODO(ES-158): How should sort keys be handled in this situation?  This
   // relates to the question of how different shaders are specified; if the

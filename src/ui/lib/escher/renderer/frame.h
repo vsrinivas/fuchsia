@@ -39,25 +39,21 @@ class Frame : public Resource {
 
   // Obtain a CommandBuffer, to record commands for the current frame.
   void SubmitPartialFrame(const SemaphorePtr& partial_frame_done);
-  void EndFrame(const SemaphorePtr& frame_done,
-                FrameRetiredCallback frame_retired_callback);
+  void EndFrame(const SemaphorePtr& frame_done, FrameRetiredCallback frame_retired_callback);
 
   // If profiling is enabled, inserts a Vulkan timestamp query into the frame's
   // current CommandBuffer; the result will be inserted into the trace log.
   // |stages| denotes the set of pipeline stages that must be completed by all
   // previously-issued commands; see TimestampProfiler docs for more details.
   void AddTimestamp(const char* name,
-                    vk::PipelineStageFlagBits stages =
-                        vk::PipelineStageFlagBits::eBottomOfPipe);
+                    vk::PipelineStageFlagBits stages = vk::PipelineStageFlagBits::eBottomOfPipe);
 
   uint64_t frame_number() const { return frame_number_; }
 
   CommandBuffer* cmds() const { return command_buffer_.get(); }
   impl::CommandBuffer* command_buffer() const;
   vk::CommandBuffer vk_command_buffer() const;
-  uint64_t command_buffer_sequence_number() const {
-    return command_buffer_sequence_number_;
-  }
+  uint64_t command_buffer_sequence_number() const { return command_buffer_sequence_number_; }
   GpuAllocator* gpu_allocator();
 
   // Allocate temporary CPU memory that is valid until EndFrame() is called.
@@ -87,11 +83,9 @@ class Frame : public Resource {
   // NOTE: moving the BlockAllocator into the Frame (instead of e.g. passing a
   // unique_ptr) avoids an extra pointer indirection on each allocation.
   friend class impl::FrameManager;
-  Frame(impl::FrameManager* manager, CommandBuffer::Type requested_type,
-        BlockAllocator allocator,
-        impl::UniformBufferPoolWeakPtr uniform_buffer_pool,
-        uint64_t frame_number, const char* trace_literal,
-        const char* gpu_vthread_literal, uint64_t gpu_vthread_id,
+  Frame(impl::FrameManager* manager, CommandBuffer::Type requested_type, BlockAllocator allocator,
+        impl::UniformBufferPoolWeakPtr uniform_buffer_pool, uint64_t frame_number,
+        const char* trace_literal, const char* gpu_vthread_literal, uint64_t gpu_vthread_id,
         bool enable_gpu_logging);
   void BeginFrame();
 

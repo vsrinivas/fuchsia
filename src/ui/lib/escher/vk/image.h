@@ -20,17 +20,16 @@ struct ImageInfo {
   uint32_t height = 0;
   uint32_t sample_count = 1;
   vk::ImageUsageFlags usage;
-  vk::MemoryPropertyFlags memory_flags =
-      vk::MemoryPropertyFlagBits::eDeviceLocal;
+  vk::MemoryPropertyFlags memory_flags = vk::MemoryPropertyFlagBits::eDeviceLocal;
   vk::ImageTiling tiling = vk::ImageTiling::eOptimal;
   bool is_mutable = true;
   bool is_external = false;
 
   bool operator==(const ImageInfo& other) const {
-    return format == other.format && width == other.width &&
-           height == other.height && sample_count == other.sample_count &&
-           usage == other.usage && memory_flags == other.memory_flags &&
-           is_mutable == other.is_mutable && is_external == other.is_external;
+    return format == other.format && width == other.width && height == other.height &&
+           sample_count == other.sample_count && usage == other.usage &&
+           memory_flags == other.memory_flags && is_mutable == other.is_mutable &&
+           is_external == other.is_external;
   }
 
   // Transient images are neither loaded nor stored by render passes.  Instead
@@ -39,8 +38,7 @@ struct ImageInfo {
   // and depending on the hardware/driver) to avoid allocating any memory for
   // such images, so that it exists only transiently in tile-local storage.
   bool is_transient() const {
-    return static_cast<bool>(usage &
-                             vk::ImageUsageFlagBits::eTransientAttachment);
+    return static_cast<bool>(usage & vk::ImageUsageFlagBits::eTransientAttachment);
   }
 };
 #pragma pack(pop)
@@ -54,8 +52,7 @@ class Image : public WaitableResource {
   // Constructor. Wraps an existing image without claiming ownership. Useful
   // when the image is owned/maintained by another system (e.g.,
   // vk::SwapchainKHR).
-  static ImagePtr WrapVkImage(ResourceManager* image_owner, ImageInfo info,
-                              vk::Image image);
+  static ImagePtr WrapVkImage(ResourceManager* image_owner, ImageInfo info, vk::Image image);
 
   const ImageInfo& info() const { return info_; }
   vk::Image vk() const { return image_; }
@@ -79,21 +76,17 @@ class Image : public WaitableResource {
 
   // Specify the layout that should be transitioned to when this image is used
   // as a framebuffer attachment.
-  void set_swapchain_layout(vk::ImageLayout layout) {
-    swapchain_layout_ = layout;
-  }
+  void set_swapchain_layout(vk::ImageLayout layout) { swapchain_layout_ = layout; }
   vk::ImageLayout swapchain_layout() const { return swapchain_layout_; }
-  bool is_swapchain_image() const {
-    return swapchain_layout_ != vk::ImageLayout::eUndefined;
-  }
+  bool is_swapchain_image() const { return swapchain_layout_ != vk::ImageLayout::eUndefined; }
 
  protected:
   // Constructor.  In some cases it is necessary to wrap an un-owned vk::Image,
   // which should not be destroyed when this Image is destroyed (e.g. when
   // working with images associated with a vk::SwapchainKHR); this is done by
   // passing nullptr as the |mem| argument.
-  Image(ResourceManager* image_owner, ImageInfo info, vk::Image image,
-        vk::DeviceSize size_, uint8_t* host_ptr_);
+  Image(ResourceManager* image_owner, ImageInfo info, vk::Image image, vk::DeviceSize size_,
+        uint8_t* host_ptr_);
 
  private:
   const ImageInfo info_;

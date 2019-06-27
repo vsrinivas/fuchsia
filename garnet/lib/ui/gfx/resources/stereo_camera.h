@@ -16,8 +16,7 @@ class StereoCamera final : public Camera {
 
   StereoCamera(Session* session, ResourceId id, ScenePtr scene);
 
-  void SetStereoProjection(const glm::mat4 left_projection,
-                           const glm::mat4 right_projection);
+  void SetStereoProjection(const glm::mat4 left_projection, const glm::mat4 right_projection);
 
   enum Eye {
     LEFT = 0,

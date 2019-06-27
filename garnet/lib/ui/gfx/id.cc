@@ -15,9 +15,7 @@ bool operator==(const GlobalId& lhs, const GlobalId& rhs) {
   return lhs.session_id == rhs.session_id && lhs.resource_id == rhs.resource_id;
 }
 
-bool operator!=(const GlobalId& lhs, const GlobalId& rhs) {
-  return !(lhs == rhs);
-}
+bool operator!=(const GlobalId& lhs, const GlobalId& rhs) { return !(lhs == rhs); }
 
 std::ostream& operator<<(std::ostream& os, const GlobalId& value) {
   return os << value.session_id << "-" << value.resource_id;

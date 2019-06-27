@@ -24,22 +24,18 @@ class ManagerImpl : public fuchsia::accessibility::Manager {
   ManagerImpl() = default;
   ~ManagerImpl() = default;
 
-  void AddBinding(
-      fidl::InterfaceRequest<fuchsia::accessibility::Manager> request);
+  void AddBinding(fidl::InterfaceRequest<fuchsia::accessibility::Manager> request);
 
  private:
   // |fuchsia::accessibility::Manager|
-  void GetHitAccessibilityNode(
-      fuchsia::ui::viewsv1::ViewTreeToken token,
-      fuchsia::ui::input::PointerEvent input,
-      GetHitAccessibilityNodeCallback callback) override;
+  void GetHitAccessibilityNode(fuchsia::ui::viewsv1::ViewTreeToken token,
+                               fuchsia::ui::input::PointerEvent input,
+                               GetHitAccessibilityNodeCallback callback) override;
   void SetAccessibilityFocus(int32_t view_id, int32_t node_id) override;
-  void PerformAccessibilityAction(
-      fuchsia::accessibility::semantics::Action action) override;
+  void PerformAccessibilityAction(fuchsia::accessibility::semantics::Action action) override;
 
-  void BroadcastOnNodeAccessibilityAction(
-      int32_t id, fuchsia::accessibility::semantics::Node node,
-      fuchsia::accessibility::semantics::Action action);
+  void BroadcastOnNodeAccessibilityAction(int32_t id, fuchsia::accessibility::semantics::Node node,
+                                          fuchsia::accessibility::semantics::Action action);
 
   fidl::BindingSet<fuchsia::accessibility::Manager> bindings_;
 

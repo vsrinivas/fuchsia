@@ -5,13 +5,13 @@
 #ifndef GARNET_EXAMPLES_UI_SHADERTOY_SERVICE_COMPILER_H_
 #define GARNET_EXAMPLES_UI_SHADERTOY_SERVICE_COMPILER_H_
 
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/fit/function.h>
+
 #include <functional>
 #include <mutex>
 #include <queue>
 #include <thread>
-
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/fit/function.h>
 #include <vulkan/vulkan.hpp>
 
 #include "garnet/examples/ui/shadertoy/service/pipeline.h"
@@ -27,13 +27,11 @@ namespace shadertoy {
 class Compiler final {
  public:
   // |render_pass| is not owned by us; we don't need to destroy it.
-  explicit Compiler(async::Loop* loop, escher::EscherWeakPtr escher,
-                    vk::RenderPass render_pass,
+  explicit Compiler(async::Loop* loop, escher::EscherWeakPtr escher, vk::RenderPass render_pass,
                     vk::DescriptorSetLayout descriptor_set_layout);
   ~Compiler();
 
-  static const vk::DescriptorSetLayoutCreateInfo&
-  GetDescriptorSetLayoutCreateInfo();
+  static const vk::DescriptorSetLayoutCreateInfo& GetDescriptorSetLayoutCreateInfo();
 
   // Result that is asynchronously returned by the Compiler.
   struct Result {
@@ -53,8 +51,7 @@ class Compiler final {
     ResultCallback callback;
   };
 
-  PipelinePtr CompilePipeline(vk::ShaderModule vertex_module,
-                              vk::ShaderModule fragment_module,
+  PipelinePtr CompilePipeline(vk::ShaderModule vertex_module, vk::ShaderModule fragment_module,
                               const escher::MeshSpec& mesh_spec);
 
   escher::impl::GlslToSpirvCompiler* glsl_compiler();
@@ -67,8 +64,7 @@ class Compiler final {
   PipelinePtr CompileGlslToPipeline(const std::string& glsl_code);
 
   // Helper for CompileGlslToPipeline.
-  PipelinePtr ConstructPipeline(vk::ShaderModule vertex_module,
-                                vk::ShaderModule fragment_module,
+  PipelinePtr ConstructPipeline(vk::ShaderModule vertex_module, vk::ShaderModule fragment_module,
                                 const escher::MeshSpec& mesh_spec);
 
   async::Loop* const loop_;

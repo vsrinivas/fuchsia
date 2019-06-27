@@ -5,18 +5,18 @@
 #ifndef GARNET_LIB_UI_GFX_RESOURCES_IMAGE_PIPE_H_
 #define GARNET_LIB_UI_GFX_RESOURCES_IMAGE_PIPE_H_
 
+#include <fuchsia/images/cpp/fidl.h>
 #include <lib/zx/event.h>
 #include <lib/zx/vmo.h>
 
 #include <queue>
 
-#include <fuchsia/images/cpp/fidl.h>
 #include "garnet/lib/ui/gfx/resources/image.h"
 #include "garnet/lib/ui/gfx/resources/image_base.h"
 #include "garnet/lib/ui/gfx/resources/image_pipe_handler.h"
 #include "garnet/lib/ui/gfx/resources/resource.h"
-#include "src/ui/lib/escher/flib/fence_set_listener.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
+#include "src/ui/lib/escher/flib/fence_set_listener.h"
 
 namespace escher {
 class BatchGpuUploader;
@@ -44,8 +44,8 @@ class ImagePipe : public ImageBase {
             FrameScheduler* frame_scheduler);
 
   // Called by |ImagePipeHandler|, part of |ImagePipe| interface.
-  void AddImage(uint32_t image_id, fuchsia::images::ImageInfo image_info,
-                zx::vmo memory, uint64_t offset_bytes, uint64_t size_bytes,
+  void AddImage(uint32_t image_id, fuchsia::images::ImageInfo image_info, zx::vmo memory,
+                uint64_t offset_bytes, uint64_t size_bytes,
                 fuchsia::images::MemoryType memory_type);
   void RemoveImage(uint32_t image_id);
 
@@ -65,9 +65,8 @@ class ImagePipe : public ImageBase {
   // |release_fence_signaller| is a dependency required for signalling
   // release fences correctly, since it has knowledge of when command buffers
   // are released. Cannot be null.
-  ImagePipeUpdateResults Update(
-      escher::ReleaseFenceSignaller* release_fence_signaller,
-      uint64_t presentation_time);
+  ImagePipeUpdateResults Update(escher::ReleaseFenceSignaller* release_fence_signaller,
+                                uint64_t presentation_time);
 
   // Updates the Escher image to the current frame. This should be called after
   // Update() indicates the current Image changed, and before calling
@@ -92,10 +91,8 @@ class ImagePipe : public ImageBase {
   void CloseConnectionAndCleanUp();
 
   // Virtual so that test subclasses can override.
-  virtual ImagePtr CreateImage(Session* session, ResourceId id,
-                               MemoryPtr memory,
-                               const fuchsia::images::ImageInfo& image_info,
-                               uint64_t memory_offset,
+  virtual ImagePtr CreateImage(Session* session, ResourceId id, MemoryPtr memory,
+                               const fuchsia::images::ImageInfo& image_info, uint64_t memory_offset,
                                ErrorReporter* error_reporter);
 
   // A |Frame| stores the arguments passed to a particular invocation of

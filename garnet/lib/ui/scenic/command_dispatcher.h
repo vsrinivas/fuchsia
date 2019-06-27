@@ -19,8 +19,7 @@ class CommandDispatcherContext {
  public:
   explicit CommandDispatcherContext(Scenic* scenic, Session* session);
 
-  explicit CommandDispatcherContext(Scenic* scenic, Session* session,
-                                    SessionId id);
+  explicit CommandDispatcherContext(Scenic* scenic, Session* session, SessionId id);
 
   CommandDispatcherContext(CommandDispatcherContext&& context);
 
@@ -64,10 +63,9 @@ class TempSessionDelegate : public CommandDispatcher {
  public:
   explicit TempSessionDelegate(CommandDispatcherContext context);
 
-  virtual void Present(
-      uint64_t presentation_time, ::std::vector<zx::event> acquire_fences,
-      ::std::vector<zx::event> release_fences,
-      fuchsia::ui::scenic::Session::PresentCallback callback) = 0;
+  virtual void Present(uint64_t presentation_time, ::std::vector<zx::event> acquire_fences,
+                       ::std::vector<zx::event> release_fences,
+                       fuchsia::ui::scenic::Session::PresentCallback callback) = 0;
 
   virtual void SetDebugName(const std::string& debug_name) = 0;
 

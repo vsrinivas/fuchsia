@@ -31,28 +31,26 @@ bool Touch::ParseTouchDescriptor(const hid::ReportDescriptor &desc) {
     // Process the global items if we haven't seen them before
     if (!(caps & Capabilities::CONTACT_COUNT) &&
         (field.attr.usage ==
-         hid::USAGE(hid::usage::Page::kDigitizer,
-                    hid::usage::Digitizer::kContactCount))) {
+         hid::USAGE(hid::usage::Page::kDigitizer, hid::usage::Digitizer::kContactCount))) {
       contact_count = field.attr;
       caps |= Capabilities::CONTACT_COUNT;
     }
     if (!(caps & Capabilities::SCAN_TIME) &&
-        (field.attr.usage == hid::USAGE(hid::usage::Page::kDigitizer,
-                                        hid::usage::Digitizer::kScanTime))) {
+        (field.attr.usage ==
+         hid::USAGE(hid::usage::Page::kDigitizer, hid::usage::Digitizer::kScanTime))) {
       scan_time = field.attr;
       caps |= Capabilities::SCAN_TIME;
     }
 
-    if (!(caps & Capabilities::BUTTON) &&
-        (field.attr.usage.page == hid::usage::Page::kButton)) {
+    if (!(caps & Capabilities::BUTTON) && (field.attr.usage.page == hid::usage::Page::kButton)) {
       button = field.attr;
       caps |= Capabilities::BUTTON;
     }
 
     // Now we move on to processing touch points, so don't process the item if
     // it's not part of a touch point collection
-    if (field.col->usage != hid::USAGE(hid::usage::Page::kDigitizer,
-                                       hid::usage::Digitizer::kFinger)) {
+    if (field.col->usage !=
+        hid::USAGE(hid::usage::Page::kDigitizer, hid::usage::Digitizer::kFinger)) {
       continue;
     }
 
@@ -64,39 +62,36 @@ bool Touch::ParseTouchDescriptor(const hid::ReportDescriptor &desc) {
     }
 
     if (touch_points < 1) {
-      FXL_LOG(INFO)
-          << "Touch descriptor: No touch points found in a collection";
+      FXL_LOG(INFO) << "Touch descriptor: No touch points found in a collection";
       return false;
     }
     if (touch_points > MAX_TOUCH_POINTS) {
-      FXL_LOG(INFO) << "Touch descriptor: Current touchscreen has "
-                    << touch_points
-                    << " touch points which is above hardcoded limit of "
-                    << MAX_TOUCH_POINTS;
+      FXL_LOG(INFO) << "Touch descriptor: Current touchscreen has " << touch_points
+                    << " touch points which is above hardcoded limit of " << MAX_TOUCH_POINTS;
       return false;
     }
     TouchPointConfig *config = &configs[touch_points - 1];
 
-    if (field.attr.usage == hid::USAGE(hid::usage::Page::kDigitizer,
-                                       hid::usage::Digitizer::kContactID)) {
+    if (field.attr.usage ==
+        hid::USAGE(hid::usage::Page::kDigitizer, hid::usage::Digitizer::kContactID)) {
       config->contact_id = field.attr;
       config->capabilities |= Capabilities::CONTACT_ID;
       if (config->contact_id.logc_mm.max > contact_id_max_) {
         contact_id_max_ = config->contact_id.logc_mm.max;
       }
     }
-    if (field.attr.usage == hid::USAGE(hid::usage::Page::kDigitizer,
-                                       hid::usage::Digitizer::kTipSwitch)) {
+    if (field.attr.usage ==
+        hid::USAGE(hid::usage::Page::kDigitizer, hid::usage::Digitizer::kTipSwitch)) {
       config->tip_switch = field.attr;
       config->capabilities |= Capabilities::TIP_SWITCH;
     }
-    if (field.attr.usage == hid::USAGE(hid::usage::Page::kGenericDesktop,
-                                       hid::usage::GenericDesktop::kX)) {
+    if (field.attr.usage ==
+        hid::USAGE(hid::usage::Page::kGenericDesktop, hid::usage::GenericDesktop::kX)) {
       config->x = field.attr;
       config->capabilities |= Capabilities::X;
     }
-    if (field.attr.usage == hid::USAGE(hid::usage::Page::kGenericDesktop,
-                                       hid::usage::GenericDesktop::kY)) {
+    if (field.attr.usage ==
+        hid::USAGE(hid::usage::Page::kGenericDesktop, hid::usage::GenericDesktop::kY)) {
       config->y = field.attr;
       config->capabilities |= Capabilities::Y;
     }
@@ -110,11 +105,9 @@ bool Touch::ParseTouchDescriptor(const hid::ReportDescriptor &desc) {
   // Ensure that all touch points have the same capabilities.
   for (size_t i = 1; i < touch_points; i++) {
     if (configs[i].capabilities != configs[0].capabilities) {
-      FXL_LOG(INFO)
-          << "Touch descriptor: Touch point capabilities are different";
+      FXL_LOG(INFO) << "Touch descriptor: Touch point capabilities are different";
       for (size_t j = 0; j < touch_points; j++) {
-        FXL_LOG(INFO) << "Touch descriptor: touch_point[" << j
-                      << "] = " << configs[i].capabilities;
+        FXL_LOG(INFO) << "Touch descriptor: touch_point[" << j << "] = " << configs[i].capabilities;
       }
       return false;
     }
@@ -140,8 +133,8 @@ bool Touch::ParseReport(const uint8_t *data, size_t len, Report *report) const {
   assert(report != nullptr);
 
   if (len != report_size_) {
-    FXL_LOG(INFO) << "Touch HID Report is not correct size, (" << len
-                  << " != " << report_size_ << ")";
+    FXL_LOG(INFO) << "Touch HID Report is not correct size, (" << len << " != " << report_size_
+                  << ")";
     return false;
   }
 
@@ -157,8 +150,7 @@ bool Touch::ParseReport(const uint8_t *data, size_t len, Report *report) const {
 
     if (config->capabilities & Capabilities::TIP_SWITCH) {
       uint8_t tip_switch;
-      bool success =
-          hid::ExtractUint(data, len, config->tip_switch, &tip_switch);
+      bool success = hid::ExtractUint(data, len, config->tip_switch, &tip_switch);
       if (!success || !tip_switch) {
         continue;
       }
@@ -231,8 +223,7 @@ bool Touch::ParseReport(const uint8_t *data, size_t len, Report *report) const {
       hid::unit::SetTimeExp(time_unit, 1);
       // If this returns true, scan_time was converted. If it returns false,
       // scan_time is unchanged. Either way we return successfully.
-      hid::unit::ConvertUnits(scan_time_.unit, scan_time, time_unit,
-                              &scan_time);
+      hid::unit::ConvertUnits(scan_time_.unit, scan_time, time_unit, &scan_time);
 
       report->scan_time = static_cast<uint32_t>(scan_time);
     }
@@ -249,30 +240,30 @@ bool Touch::SetDescriptor(Touch::Descriptor *touch_desc) {
 
   double val_out;
 
-  if (hid::unit::ConvertUnits(configs_[0].x.unit, configs_[0].x.phys_mm.min,
-                              length_unit, &val_out)) {
+  if (hid::unit::ConvertUnits(configs_[0].x.unit, configs_[0].x.phys_mm.min, length_unit,
+                              &val_out)) {
     touch_desc->x_min = static_cast<int32_t>(val_out);
   } else {
     touch_desc->x_min = configs_[0].x.phys_mm.min;
   }
 
-  if (hid::unit::ConvertUnits(configs_[0].x.unit, configs_[0].x.phys_mm.max,
-                              length_unit, &val_out)) {
+  if (hid::unit::ConvertUnits(configs_[0].x.unit, configs_[0].x.phys_mm.max, length_unit,
+                              &val_out)) {
     touch_desc->x_max = static_cast<int32_t>(val_out);
   } else {
     touch_desc->x_max = configs_[0].x.phys_mm.max;
   }
   touch_desc->x_resolution = 1;
 
-  if (hid::unit::ConvertUnits(configs_[0].y.unit, configs_[0].y.phys_mm.min,
-                              length_unit, &val_out)) {
+  if (hid::unit::ConvertUnits(configs_[0].y.unit, configs_[0].y.phys_mm.min, length_unit,
+                              &val_out)) {
     touch_desc->y_min = static_cast<int32_t>(val_out);
   } else {
     touch_desc->y_min = configs_[0].y.phys_mm.min;
   }
 
-  if (hid::unit::ConvertUnits(configs_[0].y.unit, configs_[0].y.phys_mm.max,
-                              length_unit, &val_out)) {
+  if (hid::unit::ConvertUnits(configs_[0].y.unit, configs_[0].y.phys_mm.max, length_unit,
+                              &val_out)) {
     touch_desc->y_max = static_cast<int32_t>(val_out);
   } else {
     touch_desc->y_max = configs_[0].y.phys_mm.max;

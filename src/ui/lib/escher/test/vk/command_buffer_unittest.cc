@@ -33,37 +33,24 @@ VK_TEST_F(CommandBufferTest, Dirtyness) {
   auto escher = test::GetEscher();
   auto cb = CommandBuffer::NewForGraphics(escher);
 
-  EXPECT_EQ(GetDirty(cb, DirtyBits::kDirtyStaticStateBit),
-            DirtyBits::kDirtyStaticStateBit);
-  EXPECT_EQ(GetDirty(cb, DirtyBits::kDirtyPipelineBit),
-            DirtyBits::kDirtyPipelineBit);
-  EXPECT_EQ(GetDirty(cb, DirtyBits::kDirtyViewportBit),
-            DirtyBits::kDirtyViewportBit);
-  EXPECT_EQ(GetDirty(cb, DirtyBits::kDirtyScissorBit),
-            DirtyBits::kDirtyScissorBit);
-  EXPECT_EQ(GetDirty(cb, DirtyBits::kDirtyDepthBiasBit),
-            DirtyBits::kDirtyDepthBiasBit);
+  EXPECT_EQ(GetDirty(cb, DirtyBits::kDirtyStaticStateBit), DirtyBits::kDirtyStaticStateBit);
+  EXPECT_EQ(GetDirty(cb, DirtyBits::kDirtyPipelineBit), DirtyBits::kDirtyPipelineBit);
+  EXPECT_EQ(GetDirty(cb, DirtyBits::kDirtyViewportBit), DirtyBits::kDirtyViewportBit);
+  EXPECT_EQ(GetDirty(cb, DirtyBits::kDirtyScissorBit), DirtyBits::kDirtyScissorBit);
+  EXPECT_EQ(GetDirty(cb, DirtyBits::kDirtyDepthBiasBit), DirtyBits::kDirtyDepthBiasBit);
   EXPECT_EQ(GetDirty(cb, DirtyBits::kDirtyStencilMasksAndReferenceBit),
             DirtyBits::kDirtyStencilMasksAndReferenceBit);
-  EXPECT_EQ(GetDirty(cb, DirtyBits::kDirtyStaticVertexBit),
-            DirtyBits::kDirtyStaticVertexBit);
-  EXPECT_EQ(GetDirty(cb, DirtyBits::kDirtyPushConstantsBit),
-            DirtyBits::kDirtyPushConstantsBit);
-  EXPECT_EQ(GetDirty(cb, DirtyBits::kDirtyDynamicBits),
-            DirtyBits::kDirtyDynamicBits);
+  EXPECT_EQ(GetDirty(cb, DirtyBits::kDirtyStaticVertexBit), DirtyBits::kDirtyStaticVertexBit);
+  EXPECT_EQ(GetDirty(cb, DirtyBits::kDirtyPushConstantsBit), DirtyBits::kDirtyPushConstantsBit);
+  EXPECT_EQ(GetDirty(cb, DirtyBits::kDirtyDynamicBits), DirtyBits::kDirtyDynamicBits);
 
   // GetAndClearDirty() is the same as GetDirty(), except that the values are
   // also cleared.
-  EXPECT_EQ(GetAndClearDirty(cb, DirtyBits::kDirtyStaticStateBit),
-            DirtyBits::kDirtyStaticStateBit);
-  EXPECT_EQ(GetAndClearDirty(cb, DirtyBits::kDirtyPipelineBit),
-            DirtyBits::kDirtyPipelineBit);
-  EXPECT_EQ(GetAndClearDirty(cb, DirtyBits::kDirtyViewportBit),
-            DirtyBits::kDirtyViewportBit);
-  EXPECT_EQ(GetAndClearDirty(cb, DirtyBits::kDirtyScissorBit),
-            DirtyBits::kDirtyScissorBit);
-  EXPECT_EQ(GetAndClearDirty(cb, DirtyBits::kDirtyDepthBiasBit),
-            DirtyBits::kDirtyDepthBiasBit);
+  EXPECT_EQ(GetAndClearDirty(cb, DirtyBits::kDirtyStaticStateBit), DirtyBits::kDirtyStaticStateBit);
+  EXPECT_EQ(GetAndClearDirty(cb, DirtyBits::kDirtyPipelineBit), DirtyBits::kDirtyPipelineBit);
+  EXPECT_EQ(GetAndClearDirty(cb, DirtyBits::kDirtyViewportBit), DirtyBits::kDirtyViewportBit);
+  EXPECT_EQ(GetAndClearDirty(cb, DirtyBits::kDirtyScissorBit), DirtyBits::kDirtyScissorBit);
+  EXPECT_EQ(GetAndClearDirty(cb, DirtyBits::kDirtyDepthBiasBit), DirtyBits::kDirtyDepthBiasBit);
   EXPECT_EQ(GetAndClearDirty(cb, DirtyBits::kDirtyStencilMasksAndReferenceBit),
             DirtyBits::kDirtyStencilMasksAndReferenceBit);
   EXPECT_EQ(GetAndClearDirty(cb, DirtyBits::kDirtyStaticVertexBit),
@@ -99,10 +86,10 @@ VK_TEST_F(CommandBufferTest, StaticStateSetting) {
 
   {
     using vk::CompareOp;
-    for (auto& op : std::vector<CompareOp>{
-             CompareOp::eNever, CompareOp::eLess, CompareOp::eEqual,
-             CompareOp::eLessOrEqual, CompareOp::eGreater, CompareOp::eNotEqual,
-             CompareOp::eGreaterOrEqual, CompareOp::eAlways}) {
+    for (auto& op :
+         std::vector<CompareOp>{CompareOp::eNever, CompareOp::eLess, CompareOp::eEqual,
+                                CompareOp::eLessOrEqual, CompareOp::eGreater, CompareOp::eNotEqual,
+                                CompareOp::eGreaterOrEqual, CompareOp::eAlways}) {
       cb->SetDepthCompareOp(op);
       EXPECT_EQ(static_state->get_depth_compare(), op);
       EXPECT_EQ(vk::CompareOp(static_state->depth_compare), op);

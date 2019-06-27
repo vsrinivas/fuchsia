@@ -13,8 +13,7 @@
 namespace {
 using namespace escher;
 
-void CompareRenderPassWithInfo(const impl::RenderPassPtr& render_pass,
-                               const RenderPassInfo& info) {
+void CompareRenderPassWithInfo(const impl::RenderPassPtr& render_pass, const RenderPassInfo& info) {
   EXPECT_EQ(render_pass->num_color_attachments(), info.num_color_attachments);
   const uint32_t num_subpasses = render_pass->num_subpasses();
 
@@ -23,8 +22,7 @@ void CompareRenderPassWithInfo(const impl::RenderPassPtr& render_pass,
     // provided, then a default is created.
     ASSERT_EQ(num_subpasses, 1U);
     EXPECT_EQ(render_pass->GetInputAttachmentCountForSubpass(0), 0U);
-    EXPECT_EQ(render_pass->GetColorAttachmentCountForSubpass(0),
-              info.num_color_attachments);
+    EXPECT_EQ(render_pass->GetColorAttachmentCountForSubpass(0), info.num_color_attachments);
   } else {
     // Subpasses are explicitly specified in the RenderPassInfo.
     ASSERT_EQ(num_subpasses, info.subpasses.size());
@@ -46,12 +44,12 @@ VK_TEST(RenderPassCache, DefaultSubpass) {
   uint32_t width = 1024;
   uint32_t height = 1024;
 
-  TexturePtr depth_tex1 = escher->NewAttachmentTexture(
-      vk::Format::eD24UnormS8Uint, width, height, 1, vk::Filter::eNearest);
-  TexturePtr depth_tex2 = escher->NewAttachmentTexture(
-      vk::Format::eD24UnormS8Uint, width, height, 1, vk::Filter::eNearest);
-  TexturePtr color_tex = escher->NewAttachmentTexture(
-      vk::Format::eB8G8R8A8Unorm, width, height, 1, vk::Filter::eNearest);
+  TexturePtr depth_tex1 = escher->NewAttachmentTexture(vk::Format::eD24UnormS8Uint, width, height,
+                                                       1, vk::Filter::eNearest);
+  TexturePtr depth_tex2 = escher->NewAttachmentTexture(vk::Format::eD24UnormS8Uint, width, height,
+                                                       1, vk::Filter::eNearest);
+  TexturePtr color_tex = escher->NewAttachmentTexture(vk::Format::eB8G8R8A8Unorm, width, height, 1,
+                                                      vk::Filter::eNearest);
 
   RenderPassInfo info;
   info.num_color_attachments = 1;
@@ -68,8 +66,8 @@ VK_TEST(RenderPassCache, DefaultSubpass) {
   EXPECT_EQ(cache.size(), 1U);
 
   // Using a different image format should result in a different RenderPass.
-  depth_tex1 = escher->NewAttachmentTexture(vk::Format::eD32SfloatS8Uint, width,
-                                            height, 1, vk::Filter::eNearest);
+  depth_tex1 = escher->NewAttachmentTexture(vk::Format::eD32SfloatS8Uint, width, height, 1,
+                                            vk::Filter::eNearest);
   info.depth_stencil_attachment = depth_tex1;
   CompareRenderPassWithInfo(cache.ObtainRenderPass(info), info);
   EXPECT_EQ(cache.size(), 2U);

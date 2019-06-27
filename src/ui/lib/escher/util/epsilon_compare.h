@@ -16,8 +16,7 @@ static constexpr bool EPSILON_ERROR_DETAIL = false;
 bool CompareFloat(float f0, float f1, float epsilon = 0.0) {
   bool compare = glm::abs(f0 - f1) <= epsilon;
   if (!compare && EPSILON_ERROR_DETAIL)
-    FXL_LOG(WARNING) << "floats " << f0 << " and " << f1 << " differ by "
-                     << glm::abs(f0 - f1)
+    FXL_LOG(WARNING) << "floats " << f0 << " and " << f1 << " differ by " << glm::abs(f0 - f1)
                      << " which is greater than provided epsilon " << epsilon;
   return compare;
 }

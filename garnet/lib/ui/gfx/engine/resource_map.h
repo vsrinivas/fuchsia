@@ -16,8 +16,7 @@ namespace gfx {
 
 class ResourceMap {
  public:
-  explicit ResourceMap(
-      ErrorReporter* error_reporter = ErrorReporter::Default());
+  explicit ResourceMap(ErrorReporter* error_reporter = ErrorReporter::Default());
   ~ResourceMap();
 
   void Clear();
@@ -30,9 +29,7 @@ class ResourceMap {
   // false if the ID was not present in the map.
   bool RemoveResource(ResourceId id);
 
-  const std::unordered_map<ResourceId, ResourcePtr>& map() const {
-    return resources_;
-  }
+  const std::unordered_map<ResourceId, ResourcePtr>& map() const { return resources_; }
   size_t size() const { return resources_.size(); }
 
   enum class ErrorBehavior { kDontReportErrors, kReportErrors };
@@ -44,9 +41,8 @@ class ResourceMap {
   // example:
   // ResourceType someResource = map.FindResource<ResourceType>();
   template <class ResourceT>
-  fxl::RefPtr<ResourceT> FindResource(
-      ResourceId id,
-      ErrorBehavior report_errors = ErrorBehavior::kReportErrors) {
+  fxl::RefPtr<ResourceT> FindResource(ResourceId id,
+                                      ErrorBehavior report_errors = ErrorBehavior::kReportErrors) {
     auto it = resources_.find(id);
 
     if (it == resources_.end()) {
@@ -59,10 +55,9 @@ class ResourceMap {
     auto resource_ptr = it->second->GetDelegate(ResourceT::kTypeInfo);
     if (resource_ptr == nullptr) {
       if (report_errors == ErrorBehavior::kReportErrors) {
-        error_reporter_->ERROR()
-            << "Type mismatch for resource ID " << id << ": actual type is "
-            << it->second->type_info().name << ", expected a sub-type of "
-            << ResourceT::kTypeInfo.name;
+        error_reporter_->ERROR() << "Type mismatch for resource ID " << id << ": actual type is "
+                                 << it->second->type_info().name << ", expected a sub-type of "
+                                 << ResourceT::kTypeInfo.name;
       }
       return fxl::RefPtr<ResourceT>();
     }
@@ -82,19 +77,17 @@ class ResourceMap {
     auto resource_ptr = it->second->GetDelegate(Variable::kTypeInfo);
 
     if (resource_ptr == nullptr) {
-      error_reporter_->ERROR()
-          << "Type mismatch for resource ID " << id << ": actual type is "
-          << it->second->type_info().name << ", expected a sub-type of "
-          << Variable::kTypeInfo.name;
+      error_reporter_->ERROR() << "Type mismatch for resource ID " << id << ": actual type is "
+                               << it->second->type_info().name << ", expected a sub-type of "
+                               << Variable::kTypeInfo.name;
       return fxl::RefPtr<ResourceT>();
     }
 
     Variable* variable_ptr = static_cast<Variable*>(resource_ptr);
     if (ResourceT::ValueType() != variable_ptr->value_type()) {
-      error_reporter_->ERROR()
-          << "Type mismatch for Variable resource ID " << id
-          << ": actual type is " << variable_ptr->value_type() << ", expected "
-          << ResourceT::ValueType();
+      error_reporter_->ERROR() << "Type mismatch for Variable resource ID " << id
+                               << ": actual type is " << variable_ptr->value_type() << ", expected "
+                               << ResourceT::ValueType();
       return fxl::RefPtr<ResourceT>();
     }
 

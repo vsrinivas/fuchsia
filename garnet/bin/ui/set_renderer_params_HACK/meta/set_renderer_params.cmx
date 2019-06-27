@@ -3,6 +3,8 @@
         "binary": "bin/set_renderer_params"
     },
     "sandbox": {
-        "services": [ "fuchsia.ui.policy.Presenter" ]
+        "services": [
+            "fuchsia.ui.policy.Presenter"
+        ]
     }
 }

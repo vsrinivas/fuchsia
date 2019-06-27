@@ -23,8 +23,7 @@ void StereoCamera::SetStereoProjection(const glm::mat4 left_projection,
 }
 
 escher::Camera StereoCamera::GetEscherCamera(Eye eye) const {
-  escher::Camera camera(glm::lookAt(eye_position(), eye_look_at(), eye_up()),
-                        projection_[eye]);
+  escher::Camera camera(glm::lookAt(eye_position(), eye_look_at(), eye_up()), projection_[eye]);
 
   camera.SetViewport(viewports_[eye]);
 

@@ -29,12 +29,10 @@ using ShaderModuleTemplatePtr = fxl::RefPtr<ShaderModuleTemplate>;
 // preprocessor definitions.  The base file can #include other files, and
 // different variants may include different sets of files, depending on whether
 // various #include directives are "#ifdeffed out".
-class ShaderModuleTemplate
-    : public fxl::RefCountedThreadSafe<ShaderModuleTemplate> {
+class ShaderModuleTemplate : public fxl::RefCountedThreadSafe<ShaderModuleTemplate> {
  public:
-  ShaderModuleTemplate(vk::Device device, shaderc::Compiler* compiler,
-                       ShaderStage shader_stage, HackFilePath path,
-                       HackFilesystemPtr filesystem);
+  ShaderModuleTemplate(vk::Device device, shaderc::Compiler* compiler, ShaderStage shader_stage,
+                       HackFilePath path, HackFilesystemPtr filesystem);
 
   ~ShaderModuleTemplate();
 

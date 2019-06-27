@@ -15,8 +15,7 @@ VK_TEST(DescriptorSetAllocatorTest, General) {
   layout.storage_image_mask = 0x2;
   layout.input_attachment_mask = 0x8;
 
-  impl::DescriptorSetAllocator allocator(test::GetEscher()->vk_device(),
-                                         layout);
+  impl::DescriptorSetAllocator allocator(test::GetEscher()->vk_device(), layout);
 
   Hash hash1 = {1};
   Hash hash2 = {2};

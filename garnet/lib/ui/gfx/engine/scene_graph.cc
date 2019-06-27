@@ -28,10 +28,9 @@ void SceneGraph::AddCompositor(const CompositorWeakPtr& compositor) {
 
 void SceneGraph::RemoveCompositor(const CompositorWeakPtr& compositor) {
   FXL_DCHECK(compositor);
-  auto it = std::find_if(compositors_.begin(), compositors_.end(),
-                         [compositor](const auto& c) -> bool {
-                           return c.get() == compositor.get();
-                         });
+  auto it =
+      std::find_if(compositors_.begin(), compositors_.end(),
+                   [compositor](const auto& c) -> bool { return c.get() == compositor.get(); });
   FXL_DCHECK(it != compositors_.end());
   compositors_.erase(it);
 }

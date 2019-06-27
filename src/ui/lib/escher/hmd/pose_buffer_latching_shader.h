@@ -33,9 +33,8 @@ class PoseBufferLatchingShader {
   //
   // For details on pose buffers and the layout of the Pose struct see
   // //sdk/fidl/fuchsia.ui.gfx/commands.fidl
-  BufferPtr LatchPose(const FramePtr& frame, const Camera& camera,
-                      PoseBuffer pose_buffer, int64_t latch_time,
-                      bool host_accessible_output = false);
+  BufferPtr LatchPose(const FramePtr& frame, const Camera& camera, PoseBuffer pose_buffer,
+                      int64_t latch_time, bool host_accessible_output = false);
 
   // The same as LatchPose but takes two cameras and computes a ViewProjection
   // matrix for each.
@@ -47,13 +46,11 @@ class PoseBufferLatchingShader {
   //   mat4  right_vp_matrix;
   // }
   BufferPtr LatchStereoPose(const FramePtr& frame, const Camera& left_camera,
-                            const Camera& right_camera, PoseBuffer pose_buffer,
-                            int64_t latch_time,
+                            const Camera& right_camera, PoseBuffer pose_buffer, int64_t latch_time,
                             bool host_accessible_output = false);
 
   static constexpr uint32_t kLeftVpMatrixOffset = sizeof(Pose);
-  static constexpr uint32_t kRightVpMatrixOffset =
-      kLeftVpMatrixOffset + 16 * sizeof(float);
+  static constexpr uint32_t kRightVpMatrixOffset = kLeftVpMatrixOffset + 16 * sizeof(float);
 
  private:
   const EscherWeakPtr escher_;

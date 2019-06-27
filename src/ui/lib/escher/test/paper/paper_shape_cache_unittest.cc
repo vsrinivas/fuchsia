@@ -134,16 +134,15 @@ VK_TEST(PaperShapeCache, WaitSemaphores) {
 
   PaperShapeCache cache(escher, PaperRendererConfig());
 
-  auto texture = escher->NewTexture(
-      vk::Format::eR8G8B8A8Unorm, 100, 100, 1, vk::ImageUsageFlagBits::eSampled,
-      vk::Filter::eLinear, vk::ImageAspectFlagBits::eColor);
+  auto texture =
+      escher->NewTexture(vk::Format::eR8G8B8A8Unorm, 100, 100, 1, vk::ImageUsageFlagBits::eSampled,
+                         vk::Filter::eLinear, vk::ImageAspectFlagBits::eColor);
 
   uint64_t kFrameNumber = 1;
 
   // Convenient wrapper around PaperRenderFuncs::NewMeshData().
   auto NewMeshData = [&](PaperShapeCacheEntry& entry, const FramePtr& frame) {
-    return PaperRenderFuncs::NewMeshData(frame, entry.mesh.get(), texture,
-                                         entry.num_indices,
+    return PaperRenderFuncs::NewMeshData(frame, entry.mesh.get(), texture, entry.num_indices,
                                          entry.num_shadow_volume_indices);
   };
 
@@ -173,8 +172,7 @@ VK_TEST(PaperShapeCache, WaitSemaphores) {
 
     cache.BeginFrame(uploader.get(), kFrameNumber);
 
-    auto entry1 = cache.GetRoundedRectMesh(
-        RoundedRectSpec(100, 100, 5, 5, 5, 5), nullptr, 0);
+    auto entry1 = cache.GetRoundedRectMesh(RoundedRectSpec(100, 100, 5, 5, 5, 5), nullptr, 0);
     EXPECT_EQ(1U, cache.cache_miss_count());
     EXPECT_EQ(0U, cache.cache_hit_count());
 
@@ -192,8 +190,7 @@ VK_TEST(PaperShapeCache, WaitSemaphores) {
     EXPECT_EQ(0U, entry_sema_count);
 
     // Obtain the same cache entry.
-    auto entry2 = cache.GetRoundedRectMesh(
-        RoundedRectSpec(100, 100, 5, 5, 5, 5), nullptr, 0);
+    auto entry2 = cache.GetRoundedRectMesh(RoundedRectSpec(100, 100, 5, 5, 5, 5), nullptr, 0);
 
     EXPECT_EQ(1U, cache.cache_miss_count());
     EXPECT_EQ(1U, cache.cache_hit_count());

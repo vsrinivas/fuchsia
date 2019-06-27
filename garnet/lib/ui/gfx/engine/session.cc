@@ -32,14 +32,12 @@ namespace gfx {
 
 namespace {
 
-#define SESSION_TRACE_ID(session_id, count) \
-  (((uint64_t)(session_id) << 32) | (count))
+#define SESSION_TRACE_ID(session_id, count) (((uint64_t)(session_id) << 32) | (count))
 
 }  // anonymous namespace
 
-Session::Session(SessionId id, SessionContext session_context,
-                 EventReporter* event_reporter, ErrorReporter* error_reporter,
-                 inspect::Node inspect_node)
+Session::Session(SessionId id, SessionContext session_context, EventReporter* event_reporter,
+                 ErrorReporter* error_reporter, inspect::Node inspect_node)
     : id_(id),
       error_reporter_(error_reporter),
       event_reporter_(event_reporter),
@@ -50,17 +48,13 @@ Session::Session(SessionId id, SessionContext session_context,
              ternaries protect against null-pointer dispatching for these
              non-Vulkan tests. */
           {session_context_.vk_device,
-           session_context_.escher != nullptr
-               ? session_context_.escher->vk_physical_device()
-               : vk::PhysicalDevice(),
-           session_context_.escher != nullptr
-               ? session_context_.escher->device()->dispatch_loader()
-               : vk::DispatchLoaderDynamic(),
-           session_context_.escher != nullptr
-               ? session_context_.escher->device()->caps()
-               : escher::VulkanDeviceQueues::Caps(),
-           session_context_.escher_resource_recycler,
-           session_context_.escher_image_factory}),
+           session_context_.escher != nullptr ? session_context_.escher->vk_physical_device()
+                                              : vk::PhysicalDevice(),
+           session_context_.escher != nullptr ? session_context_.escher->device()->dispatch_loader()
+                                              : vk::DispatchLoaderDynamic(),
+           session_context_.escher != nullptr ? session_context_.escher->device()->caps()
+                                              : escher::VulkanDeviceQueues::Caps(),
+           session_context_.escher_resource_recycler, session_context_.escher_image_factory}),
       resources_(error_reporter),
       inspect_node_(std::move(inspect_node)),
       weak_factory_(this) {
@@ -68,11 +62,9 @@ Session::Session(SessionId id, SessionContext session_context,
 
   inspect_resource_count_ = inspect_node_.CreateUIntMetric("resource_count", 0);
   inspect_last_applied_target_presentation_time_ =
-      inspect_node_.CreateUIntMetric("last_applied_target_presentation_time",
-                                     0);
+      inspect_node_.CreateUIntMetric("last_applied_target_presentation_time", 0);
   inspect_last_applied_requested_presentation_time_ =
-      inspect_node_.CreateUIntMetric("last_applied_request_presentation_time",
-                                     0);
+      inspect_node_.CreateUIntMetric("last_applied_request_presentation_time", 0);
   inspect_last_requested_presentation_time_ =
       inspect_node_.CreateUIntMetric("last_requested_presentation_time", 0);
 }
@@ -89,13 +81,11 @@ Session::~Session() {
   fences_to_release_on_next_update_.clear();
 
   if (resource_count_ != 0) {
-    auto exported_count =
-        session_context_.resource_linker->NumExportsForSession(this);
+    auto exported_count = session_context_.resource_linker->NumExportsForSession(this);
     FXL_CHECK(resource_count_ == 0)
         << "Session::~Session(): Not all resources have been collected. "
            "Exported resources: "
-        << exported_count
-        << ", total outstanding resources: " << resource_count_;
+        << exported_count << ", total outstanding resources: " << resource_count_;
   }
   error_reporter_ = nullptr;
 }
@@ -106,100 +96,83 @@ ErrorReporter* Session::error_reporter() const {
 
 EventReporter* Session::event_reporter() const { return event_reporter_; }
 
-bool Session::ScheduleUpdate(
-    uint64_t requested_presentation_time,
-    std::vector<::fuchsia::ui::gfx::Command> commands,
-    std::vector<zx::event> acquire_fences,
-    std::vector<zx::event> release_events,
-    fuchsia::ui::scenic::Session::PresentCallback callback) {
-  TRACE_DURATION("gfx", "Session::ScheduleUpdate", "session_id", id_,
-                 "session_debug_name", debug_name_, "requested time",
-                 requested_presentation_time);
+bool Session::ScheduleUpdate(uint64_t requested_presentation_time,
+                             std::vector<::fuchsia::ui::gfx::Command> commands,
+                             std::vector<zx::event> acquire_fences,
+                             std::vector<zx::event> release_events,
+                             fuchsia::ui::scenic::Session::PresentCallback callback) {
+  TRACE_DURATION("gfx", "Session::ScheduleUpdate", "session_id", id_, "session_debug_name",
+                 debug_name_, "requested time", requested_presentation_time);
 
   // Logic verifying client requests presents in-order.
-  uint64_t last_scheduled_presentation_time =
-      last_applied_update_presentation_time_;
+  uint64_t last_scheduled_presentation_time = last_applied_update_presentation_time_;
   if (!scheduled_updates_.empty()) {
     last_scheduled_presentation_time =
-        std::max(last_scheduled_presentation_time,
-                 scheduled_updates_.back().presentation_time);
+        std::max(last_scheduled_presentation_time, scheduled_updates_.back().presentation_time);
   }
 
   if (requested_presentation_time < last_scheduled_presentation_time) {
-    error_reporter_->ERROR()
-        << "scenic_impl::gfx::Session: Present called with out-of-order "
-           "presentation time. "
-        << "requested presentation time=" << requested_presentation_time
-        << ", last scheduled presentation time="
-        << last_scheduled_presentation_time << ".";
+    error_reporter_->ERROR() << "scenic_impl::gfx::Session: Present called with out-of-order "
+                                "presentation time. "
+                             << "requested presentation time=" << requested_presentation_time
+                             << ", last scheduled presentation time="
+                             << last_scheduled_presentation_time << ".";
     return false;
   }
 
-  auto acquire_fence_set =
-      std::make_unique<escher::FenceSetListener>(std::move(acquire_fences));
-  acquire_fence_set->WaitReadyAsync(
-      [weak = GetWeakPtr(), requested_presentation_time] {
-        if (weak) {
-          weak->session_context_.frame_scheduler->ScheduleUpdateForSession(
-              requested_presentation_time, weak->id());
-        }
-      });
+  auto acquire_fence_set = std::make_unique<escher::FenceSetListener>(std::move(acquire_fences));
+  acquire_fence_set->WaitReadyAsync([weak = GetWeakPtr(), requested_presentation_time] {
+    if (weak) {
+      weak->session_context_.frame_scheduler->ScheduleUpdateForSession(requested_presentation_time,
+                                                                       weak->id());
+    }
+  });
 
   ++scheduled_update_count_;
-  TRACE_FLOW_BEGIN("gfx", "scheduled_update",
-                   SESSION_TRACE_ID(id_, scheduled_update_count_));
+  TRACE_FLOW_BEGIN("gfx", "scheduled_update", SESSION_TRACE_ID(id_, scheduled_update_count_));
 
-  scheduled_updates_.push(
-      Update{requested_presentation_time, std::move(commands),
-             std::move(acquire_fence_set), std::move(release_events),
-             std::move(callback)});
+  scheduled_updates_.push(Update{requested_presentation_time, std::move(commands),
+                                 std::move(acquire_fence_set), std::move(release_events),
+                                 std::move(callback)});
 
   inspect_last_requested_presentation_time_.Set(requested_presentation_time);
 
   return true;
 }
 
-void Session::ScheduleImagePipeUpdate(uint64_t presentation_time,
-                                      ImagePipePtr image_pipe) {
+void Session::ScheduleImagePipeUpdate(uint64_t presentation_time, ImagePipePtr image_pipe) {
   FXL_DCHECK(image_pipe);
-  scheduled_image_pipe_updates_.push(
-      {presentation_time, std::move(image_pipe)});
+  scheduled_image_pipe_updates_.push({presentation_time, std::move(image_pipe)});
 
-  session_context_.frame_scheduler->ScheduleUpdateForSession(presentation_time,
-                                                             id_);
+  session_context_.frame_scheduler->ScheduleUpdateForSession(presentation_time, id_);
 }
 
-Session::ApplyUpdateResult Session::ApplyScheduledUpdates(
-    CommandContext* command_context, uint64_t target_presentation_time,
-    uint64_t needs_render_id) {
+Session::ApplyUpdateResult Session::ApplyScheduledUpdates(CommandContext* command_context,
+                                                          uint64_t target_presentation_time,
+                                                          uint64_t needs_render_id) {
   FXL_DCHECK(target_presentation_time >= last_presentation_time_);
-  TRACE_DURATION("gfx", "Session::ApplyScheduledUpdates", "session_id", id_,
-                 "session_debug_name", debug_name_, "target_presentation_time",
-                 target_presentation_time);
+  TRACE_DURATION("gfx", "Session::ApplyScheduledUpdates", "session_id", id_, "session_debug_name",
+                 debug_name_, "target_presentation_time", target_presentation_time);
 
   ApplyUpdateResult update_results{
       .success = false, .needs_render = false, .all_fences_ready = true};
 
   while (!scheduled_updates_.empty() &&
-         scheduled_updates_.front().presentation_time <=
-             target_presentation_time) {
+         scheduled_updates_.front().presentation_time <= target_presentation_time) {
     auto& update = scheduled_updates_.front();
-    FXL_DCHECK(last_applied_update_presentation_time_ <=
-               update.presentation_time);
+    FXL_DCHECK(last_applied_update_presentation_time_ <= update.presentation_time);
 
     if (!update.acquire_fences->ready()) {
-      TRACE_INSTANT("gfx", "Session missed frame", TRACE_SCOPE_PROCESS,
-                    "session_id", id(), "session_debug_name", debug_name_,
-                    "target presentation time", target_presentation_time,
-                    "session target presentation time",
+      TRACE_INSTANT("gfx", "Session missed frame", TRACE_SCOPE_PROCESS, "session_id", id(),
+                    "session_debug_name", debug_name_, "target presentation time",
+                    target_presentation_time, "session target presentation time",
                     scheduled_updates_.front().presentation_time);
       update_results.all_fences_ready = false;
       break;
     }
 
     ++applied_update_count_;
-    TRACE_FLOW_END("gfx", "scheduled_update",
-                   SESSION_TRACE_ID(id_, applied_update_count_));
+    TRACE_FLOW_END("gfx", "scheduled_update", SESSION_TRACE_ID(id_, applied_update_count_));
 
     if (!ApplyUpdate(command_context, std::move(update.commands))) {
       // An error was encountered while applying the update.
@@ -226,18 +199,15 @@ Session::ApplyUpdateResult Session::ApplyScheduledUpdates(
 
     // TODO(SCN-1202): gather statistics about how close the actual
     // presentation_time was to the requested time.
-    inspect_last_applied_requested_presentation_time_.Set(
-        last_applied_update_presentation_time_);
-    inspect_last_applied_target_presentation_time_.Set(
-        target_presentation_time);
+    inspect_last_applied_requested_presentation_time_.Set(last_applied_update_presentation_time_);
+    inspect_last_applied_target_presentation_time_.Set(target_presentation_time);
     inspect_resource_count_.Set(resource_count_);
   }
 
   // TODO(SCN-1219): Unify with other session updates.
   std::unordered_map<ResourceId, ImagePipePtr> image_pipe_updates_to_upload;
   while (!scheduled_image_pipe_updates_.empty() &&
-         scheduled_image_pipe_updates_.top().presentation_time <=
-             target_presentation_time) {
+         scheduled_image_pipe_updates_.top().presentation_time <= target_presentation_time) {
     auto& update = scheduled_image_pipe_updates_.top();
     if (update.image_pipe) {
       auto image_pipe_update_results = update.image_pipe->Update(

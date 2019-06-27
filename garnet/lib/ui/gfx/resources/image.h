@@ -31,8 +31,8 @@ class Image : public ImageBase {
   //
   // Returns the created Image, or nullptr if there was an error.
   static ImagePtr New(Session* session, ResourceId id, MemoryPtr memory,
-                      const fuchsia::images::ImageInfo& image_info,
-                      uint64_t memory_offset, ErrorReporter* error_reporter);
+                      const fuchsia::images::ImageInfo& image_info, uint64_t memory_offset,
+                      ErrorReporter* error_reporter);
 
   void UpdateEscherImage(escher::BatchGpuUploader* gpu_uploader) override;
   const escher::ImagePtr& GetEscherImage() override;

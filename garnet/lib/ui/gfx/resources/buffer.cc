@@ -17,15 +17,12 @@ Buffer::Buffer(Session* session, ResourceId id, escher::GpuMemPtr gpu_mem,
     : Resource(session, id, Buffer::kTypeInfo),
       backing_resource_(std::move(backing_resource)),
       escher_buffer_(escher::impl::NaiveBuffer::New(
-          session->resource_context().escher_resource_recycler,
-          std::move(gpu_mem),
+          session->resource_context().escher_resource_recycler, std::move(gpu_mem),
           // TODO(SCN-1369): Clients have no way to know this set of bits, and
           // yet our code assumes that the imported VMO will bind successfully.
-          vk::BufferUsageFlagBits::eTransferSrc |
-              vk::BufferUsageFlagBits::eTransferDst |
+          vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eTransferDst |
               vk::BufferUsageFlagBits::eStorageTexelBuffer |
-              vk::BufferUsageFlagBits::eStorageBuffer |
-              vk::BufferUsageFlagBits::eIndexBuffer |
+              vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eIndexBuffer |
               vk::BufferUsageFlagBits::eVertexBuffer)) {}
 
 }  // namespace gfx

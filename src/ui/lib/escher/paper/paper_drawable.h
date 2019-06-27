@@ -24,8 +24,7 @@ class PaperDrawable {
   // Subclasses have a large amount of freedom when implementing this method.
   // The only constraint is that any items pushed onto |transform_stack| must be
   // popped before the method returns.
-  virtual void DrawInScene(const PaperScene* scene,
-                           PaperDrawCallFactory* draw_call_factory,
+  virtual void DrawInScene(const PaperScene* scene, PaperDrawCallFactory* draw_call_factory,
                            PaperTransformStack* transform_stack, Frame* frame,
                            PaperDrawableFlags flags) = 0;
 };

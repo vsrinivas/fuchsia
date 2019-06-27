@@ -63,27 +63,23 @@ CommandBufferPtr CommandBuffer::NewForType(Escher* escher, Type type) {
 }
 
 CommandBufferPtr CommandBuffer::NewForGraphics(Escher* escher) {
-  return fxl::AdoptRef(
-      new CommandBuffer(escher->GetWeakPtr(), Type::kGraphics,
-                        escher->command_buffer_pool()->GetCommandBuffer()));
+  return fxl::AdoptRef(new CommandBuffer(escher->GetWeakPtr(), Type::kGraphics,
+                                         escher->command_buffer_pool()->GetCommandBuffer()));
 }
 
 CommandBufferPtr CommandBuffer::NewForCompute(Escher* escher) {
-  return fxl::AdoptRef(
-      new CommandBuffer(escher->GetWeakPtr(), Type::kCompute,
-                        escher->command_buffer_pool()->GetCommandBuffer()));
+  return fxl::AdoptRef(new CommandBuffer(escher->GetWeakPtr(), Type::kCompute,
+                                         escher->command_buffer_pool()->GetCommandBuffer()));
 }
 
 CommandBufferPtr CommandBuffer::NewForTransfer(Escher* escher) {
-  auto pool = escher->transfer_command_buffer_pool()
-                  ? escher->transfer_command_buffer_pool()
-                  : escher->command_buffer_pool();
-  return fxl::AdoptRef(new CommandBuffer(escher->GetWeakPtr(), Type::kTransfer,
-                                         pool->GetCommandBuffer()));
+  auto pool = escher->transfer_command_buffer_pool() ? escher->transfer_command_buffer_pool()
+                                                     : escher->command_buffer_pool();
+  return fxl::AdoptRef(
+      new CommandBuffer(escher->GetWeakPtr(), Type::kTransfer, pool->GetCommandBuffer()));
 }
 
-CommandBuffer::CommandBuffer(EscherWeakPtr escher, Type type,
-                             impl::CommandBuffer* impl)
+CommandBuffer::CommandBuffer(EscherWeakPtr escher, Type type, impl::CommandBuffer* impl)
     : escher_(std::move(escher)),
       type_(type),
       impl_(impl),
@@ -165,8 +161,7 @@ void CommandBuffer::BeginRenderPass(const RenderPassInfo& info) {
   // requires clearing.
   if (info.depth_stencil_attachment &&
       (info.op_flags & RenderPassInfo::kClearDepthStencilOp) != 0) {
-    clear_values[info.num_color_attachments].depthStencil =
-        info.clear_depth_stencil;
+    clear_values[info.num_color_attachments].depthStencil = info.clear_depth_stencil;
     num_clear_values = info.num_color_attachments + 1;
   }
 
@@ -184,8 +179,7 @@ void CommandBuffer::BeginRenderPass(const RenderPassInfo& info) {
 
   // BeginGraphics() will dirty everything; no need to dirty anything here.
   scissor_ = rect;
-  viewport_ = vk::Viewport(0.0f, 0.0f, framebuffer_->width(),
-                           framebuffer_->height(), 0.0f, 1.0f);
+  viewport_ = vk::Viewport(0.0f, 0.0f, framebuffer_->width(), framebuffer_->height(), 0.0f, 1.0f);
 
   BeginGraphics();
 }
@@ -206,12 +200,9 @@ bool CommandBuffer::IsInRenderPass() {
   return static_cast<bool>(pipeline_state_.render_pass());
 }
 
-void CommandBuffer::ImageBarrier(const ImagePtr& image,
-                                 vk::ImageLayout old_layout,
-                                 vk::ImageLayout new_layout,
-                                 vk::PipelineStageFlags src_stages,
-                                 vk::AccessFlags src_access,
-                                 vk::PipelineStageFlags dst_stages,
+void CommandBuffer::ImageBarrier(const ImagePtr& image, vk::ImageLayout old_layout,
+                                 vk::ImageLayout new_layout, vk::PipelineStageFlags src_stages,
+                                 vk::AccessFlags src_access, vk::PipelineStageFlags dst_stages,
                                  vk::AccessFlags dst_access) {
   FXL_DCHECK(!IsInRenderPass());
   FXL_DCHECK(!image->is_transient());
@@ -231,32 +222,26 @@ void CommandBuffer::ImageBarrier(const ImagePtr& image,
   barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
   barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
-  vk().pipelineBarrier(src_stages, dst_stages, {}, 0, nullptr, 0, nullptr, 1,
-                       &barrier);
+  vk().pipelineBarrier(src_stages, dst_stages, {}, 0, nullptr, 0, nullptr, 1, &barrier);
 }
 
-void CommandBuffer::PushConstants(const void* data, vk::DeviceSize offset,
-                                  vk::DeviceSize range) {
+void CommandBuffer::PushConstants(const void* data, vk::DeviceSize offset, vk::DeviceSize range) {
   FXL_DCHECK(offset + range <= VulkanLimits::kPushConstantSize);
   memcpy(bindings_.push_constant_data + offset, data, range);
   SetDirty(kDirtyPushConstantsBit);
 }
 
-void CommandBuffer::BindUniformBuffer(uint32_t set, uint32_t binding,
-                                      const BufferPtr& buffer) {
+void CommandBuffer::BindUniformBuffer(uint32_t set, uint32_t binding, const BufferPtr& buffer) {
   BindUniformBuffer(set, binding, buffer.get(), 0, buffer->size());
 }
 
-void CommandBuffer::BindUniformBuffer(uint32_t set, uint32_t binding,
-                                      const BufferPtr& buffer,
-                                      vk::DeviceSize offset,
-                                      vk::DeviceSize range) {
+void CommandBuffer::BindUniformBuffer(uint32_t set, uint32_t binding, const BufferPtr& buffer,
+                                      vk::DeviceSize offset, vk::DeviceSize range) {
   BindUniformBuffer(set, binding, buffer.get(), offset, range);
 }
 
-void CommandBuffer::BindUniformBuffer(uint32_t set_index, uint32_t binding,
-                                      Buffer* buffer, vk::DeviceSize offset,
-                                      vk::DeviceSize range) {
+void CommandBuffer::BindUniformBuffer(uint32_t set_index, uint32_t binding, Buffer* buffer,
+                                      vk::DeviceSize offset, vk::DeviceSize range) {
   auto set = GetDescriptorSetBindings(set_index);
   auto b = GetDescriptorBindingInfo(set, binding);
 
@@ -272,8 +257,7 @@ void CommandBuffer::BindUniformBuffer(uint32_t set_index, uint32_t binding,
   dirty_descriptor_sets_ |= 1u << set_index;
 }
 
-void CommandBuffer::BindTexture(unsigned set_index, unsigned binding,
-                                Texture* texture) {
+void CommandBuffer::BindTexture(unsigned set_index, unsigned binding, Texture* texture) {
   auto set = GetDescriptorSetBindings(set_index);
   auto b = GetDescriptorBindingInfo(set, binding);
 
@@ -283,8 +267,7 @@ void CommandBuffer::BindTexture(unsigned set_index, unsigned binding,
   impl_->KeepAlive(texture);
 
   vk::ImageLayout vk_layout = image->layout();
-  if (texture->uid() == set->uids[binding] &&
-      b->image.fp.imageLayout == vk_layout &&
+  if (texture->uid() == set->uids[binding] && b->image.fp.imageLayout == vk_layout &&
       // TODO(ES-83): if we reify Samplers as a separate resource type, then use
       // the sampler's uid instead of the texture.
       texture->uid() == set->secondary_uids[binding]) {
@@ -306,21 +289,18 @@ void CommandBuffer::BindTexture(unsigned set_index, unsigned binding,
   dirty_descriptor_sets_ |= 1u << set_index;
 }
 
-void CommandBuffer::BindVertices(uint32_t binding, vk::Buffer buffer,
-                                 vk::DeviceSize offset, vk::DeviceSize stride,
-                                 vk::VertexInputRate step_rate) {
+void CommandBuffer::BindVertices(uint32_t binding, vk::Buffer buffer, vk::DeviceSize offset,
+                                 vk::DeviceSize stride, vk::VertexInputRate step_rate) {
   FXL_DCHECK(IsInRenderPass());
 
-  if (pipeline_state_.BindVertices(binding, buffer, offset, stride,
-                                   step_rate)) {
+  if (pipeline_state_.BindVertices(binding, buffer, offset, stride, step_rate)) {
     // Pipeline change is required.
     SetDirty(kDirtyStaticVertexBit);
   }
 }
 
-void CommandBuffer::BindVertices(uint32_t binding, Buffer* buffer,
-                                 vk::DeviceSize offset, vk::DeviceSize stride,
-                                 vk::VertexInputRate step_rate) {
+void CommandBuffer::BindVertices(uint32_t binding, Buffer* buffer, vk::DeviceSize offset,
+                                 vk::DeviceSize stride, vk::VertexInputRate step_rate) {
   impl_->KeepAlive(buffer);
   BindVertices(binding, buffer->vk(), offset, stride, step_rate);
 }
@@ -347,17 +327,15 @@ void CommandBuffer::BindIndices(const BufferPtr& buffer, vk::DeviceSize offset,
   impl_->KeepAlive(buffer.get());
 }
 
-void CommandBuffer::DrawIndexed(uint32_t index_count, uint32_t instance_count,
-                                uint32_t first_index, int32_t vertex_offset,
-                                uint32_t first_instance) {
+void CommandBuffer::DrawIndexed(uint32_t index_count, uint32_t instance_count, uint32_t first_index,
+                                int32_t vertex_offset, uint32_t first_instance) {
   TRACE_DURATION("gfx", "escher::CommandBuffer::DrawIndexed");
   FXL_DCHECK(current_program_);
   FXL_DCHECK(!is_compute_);
   FXL_DCHECK(index_binding_.buffer);
 
   FlushRenderState();
-  vk().drawIndexed(index_count, instance_count, first_index, vertex_offset,
-                   first_instance);
+  vk().drawIndexed(index_count, instance_count, first_index, vertex_offset, first_instance);
 }
 
 void CommandBuffer::FlushRenderState() {
@@ -367,8 +345,7 @@ void CommandBuffer::FlushRenderState() {
   FXL_DCHECK(current_program_);
 
   // We've invalidated pipeline state, update the VkPipeline.
-  if (GetAndClearDirty(kDirtyStaticStateBit | kDirtyPipelineBit |
-                       kDirtyStaticVertexBit)) {
+  if (GetAndClearDirty(kDirtyStaticStateBit | kDirtyPipelineBit | kDirtyStaticVertexBit)) {
     // Update |current_pipeline_|, keeping track of the old one so we can see if
     // there was a change.
     vk::Pipeline previous_pipeline = current_vk_pipeline_;
@@ -387,18 +364,15 @@ void CommandBuffer::FlushRenderState() {
 
   FlushDescriptorSets();
 
-  const PipelineStaticState* static_pipeline_state =
-      pipeline_state_.static_state();
+  const PipelineStaticState* static_pipeline_state = pipeline_state_.static_state();
 
   if (GetAndClearDirty(kDirtyPushConstantsBit)) {
     // The push constants were invalidated (perhaps by being explicitly set, or
     // perhaps by a change in the descriptor set layout; it doesn't matter).
-    uint32_t num_ranges =
-        current_pipeline_layout_->spec().num_push_constant_ranges();
+    uint32_t num_ranges = current_pipeline_layout_->spec().num_push_constant_ranges();
     for (unsigned i = 0; i < num_ranges; ++i) {
       auto& range = current_pipeline_layout_->spec().push_constant_ranges()[i];
-      vk().pushConstants(current_vk_pipeline_layout_, range.stageFlags,
-                         range.offset, range.size,
+      vk().pushConstants(current_vk_pipeline_layout_, range.stageFlags, range.offset, range.size,
                          bindings_.push_constant_data + range.offset);
     }
   }
@@ -408,25 +382,16 @@ void CommandBuffer::FlushRenderState() {
   if (GetAndClearDirty(kDirtyScissorBit)) {
     vk().setScissor(0, 1, &scissor_);
   }
-  if (static_pipeline_state->depth_bias_enable &&
-      GetAndClearDirty(kDirtyDepthBiasBit)) {
-    vk().setDepthBias(dynamic_state_.depth_bias_constant, 0.0f,
-                      dynamic_state_.depth_bias_slope);
+  if (static_pipeline_state->depth_bias_enable && GetAndClearDirty(kDirtyDepthBiasBit)) {
+    vk().setDepthBias(dynamic_state_.depth_bias_constant, 0.0f, dynamic_state_.depth_bias_slope);
   }
-  if (static_pipeline_state->stencil_test &&
-      GetAndClearDirty(kDirtyStencilMasksAndReferenceBit)) {
-    vk().setStencilCompareMask(vk::StencilFaceFlagBits::eFront,
-                               dynamic_state_.front_compare_mask);
-    vk().setStencilReference(vk::StencilFaceFlagBits::eFront,
-                             dynamic_state_.front_reference);
-    vk().setStencilWriteMask(vk::StencilFaceFlagBits::eFront,
-                             dynamic_state_.front_write_mask);
-    vk().setStencilCompareMask(vk::StencilFaceFlagBits::eBack,
-                               dynamic_state_.back_compare_mask);
-    vk().setStencilReference(vk::StencilFaceFlagBits::eBack,
-                             dynamic_state_.back_reference);
-    vk().setStencilWriteMask(vk::StencilFaceFlagBits::eBack,
-                             dynamic_state_.back_write_mask);
+  if (static_pipeline_state->stencil_test && GetAndClearDirty(kDirtyStencilMasksAndReferenceBit)) {
+    vk().setStencilCompareMask(vk::StencilFaceFlagBits::eFront, dynamic_state_.front_compare_mask);
+    vk().setStencilReference(vk::StencilFaceFlagBits::eFront, dynamic_state_.front_reference);
+    vk().setStencilWriteMask(vk::StencilFaceFlagBits::eFront, dynamic_state_.front_write_mask);
+    vk().setStencilCompareMask(vk::StencilFaceFlagBits::eBack, dynamic_state_.back_compare_mask);
+    vk().setStencilReference(vk::StencilFaceFlagBits::eBack, dynamic_state_.back_reference);
+    vk().setStencilWriteMask(vk::StencilFaceFlagBits::eBack, dynamic_state_.back_write_mask);
   }
 
   // Bind all vertex buffers that are both active and dirty.
@@ -435,17 +400,15 @@ void CommandBuffer::FlushRenderState() {
 
 void CommandBuffer::FlushGraphicsPipeline() {
   TRACE_DURATION("gfx", "escher::CommandBuffer::FlushGraphicsPipeline");
-  current_vk_pipeline_ = pipeline_state_.FlushGraphicsPipeline(
-      current_pipeline_layout_, current_program_);
+  current_vk_pipeline_ =
+      pipeline_state_.FlushGraphicsPipeline(current_pipeline_layout_, current_program_);
 }
 
 void CommandBuffer::FlushDescriptorSets() {
   TRACE_DURATION("gfx", "escher::CommandBuffer::FlushDescriptorSets");
   auto& spec = current_pipeline_layout_->spec();
   uint32_t sets_to_flush = spec.descriptor_set_mask() & dirty_descriptor_sets_;
-  ForEachBitIndex(sets_to_flush, [this](uint32_t set_index) {
-    FlushDescriptorSet(set_index);
-  });
+  ForEachBitIndex(sets_to_flush, [this](uint32_t set_index) { FlushDescriptorSet(set_index); });
   // All descriptor sets that weren't flushed remain dirty.
   dirty_descriptor_sets_ &= ~sets_to_flush;
 }
@@ -464,8 +427,7 @@ void CommandBuffer::FlushDescriptorSet(uint32_t set_index) {
   // UBOs
   ForEachBitIndex(set_layout.uniform_buffer_mask, [&](uint32_t binding) {
     const auto b = GetDescriptorBindingInfo(set_bindings, binding);
-    FXL_DCHECK(b->buffer.buffer)
-        << "No buffer for uniform binding " << set_index << "," << binding;
+    FXL_DCHECK(b->buffer.buffer) << "No buffer for uniform binding " << set_index << "," << binding;
     FXL_DCHECK(set_bindings->uids[binding]);
 
     h.u64(set_bindings->uids[binding]);
@@ -526,8 +488,7 @@ void CommandBuffer::FlushDescriptorSet(uint32_t set_index) {
   });
 
   Hash hash = h.value();
-  auto pair =
-      current_pipeline_layout_->GetDescriptorSetAllocator(set_index)->Get(hash);
+  auto pair = current_pipeline_layout_->GetDescriptorSetAllocator(set_index)->Get(hash);
   vk::DescriptorSet vk_set = pair.first;
 
   // The descriptor set was not found in the cache; rebuild.
@@ -535,15 +496,13 @@ void CommandBuffer::FlushDescriptorSet(uint32_t set_index) {
     WriteDescriptors(set_index, vk_set, set_layout);
   }
 
-  vk().bindDescriptorSets(IsInRenderPass() ? vk::PipelineBindPoint::eGraphics
-                                           : vk::PipelineBindPoint::eCompute,
-                          current_vk_pipeline_layout_, set_index, 1, &vk_set,
-                          num_dynamic_offsets, dynamic_offsets);
+  vk().bindDescriptorSets(
+      IsInRenderPass() ? vk::PipelineBindPoint::eGraphics : vk::PipelineBindPoint::eCompute,
+      current_vk_pipeline_layout_, set_index, 1, &vk_set, num_dynamic_offsets, dynamic_offsets);
 }
 
-void CommandBuffer::WriteDescriptors(
-    uint32_t set_index, vk::DescriptorSet vk_set,
-    const impl::DescriptorSetLayout& set_layout) {
+void CommandBuffer::WriteDescriptors(uint32_t set_index, vk::DescriptorSet vk_set,
+                                     const impl::DescriptorSetLayout& set_layout) {
   const auto set_bindings = GetDescriptorSetBindings(set_index);
   uint32_t write_count = 0;
   uint32_t buffer_info_count = 0;
@@ -669,8 +628,7 @@ void CommandBuffer::SaveState(CommandBuffer::SavedStateFlags flags,
     state->scissor = scissor_;
   }
   if (flags & kSavedRenderStateBit) {
-    memcpy(&state->static_state, pipeline_state_.static_state(),
-           sizeof(PipelineStaticState));
+    memcpy(&state->static_state, pipeline_state_.static_state(), sizeof(PipelineStaticState));
     state->potential_static_state = *pipeline_state_.potential_static_state();
     state->dynamic_state = dynamic_state_;
   }
@@ -688,11 +646,9 @@ void CommandBuffer::RestoreState(const CommandBuffer::SavedState& state) {
 
   for (unsigned i = 0; i < VulkanLimits::kNumDescriptorSets; ++i) {
     if (state.flags & (kSavedBindingsBit0 << i)) {
-      if (memcmp(&state.bindings.descriptor_sets[i],
-                 &bindings_.descriptor_sets[i],
+      if (memcmp(&state.bindings.descriptor_sets[i], &bindings_.descriptor_sets[i],
                  sizeof(bindings_.descriptor_sets[i]))) {
-        memcpy(&bindings_.descriptor_sets[i],
-               &state.bindings.descriptor_sets[i],
+        memcpy(&bindings_.descriptor_sets[i], &state.bindings.descriptor_sets[i],
                sizeof(bindings_.descriptor_sets[i]));
         dirty_descriptor_sets_ |= 1u << i;
       }
@@ -708,31 +664,25 @@ void CommandBuffer::RestoreState(const CommandBuffer::SavedState& state) {
     }
   }
 
-  if ((state.flags & kSavedViewportBit) &&
-      memcmp(&state.viewport, &viewport_, sizeof(viewport_))) {
+  if ((state.flags & kSavedViewportBit) && memcmp(&state.viewport, &viewport_, sizeof(viewport_))) {
     viewport_ = state.viewport;
     SetDirty(kDirtyViewportBit);
   }
 
-  if ((state.flags & kSavedScissorBit) &&
-      memcmp(&state.scissor, &scissor_, sizeof(scissor_))) {
+  if ((state.flags & kSavedScissorBit) && memcmp(&state.scissor, &scissor_, sizeof(scissor_))) {
     scissor_ = state.scissor;
     SetDirty(kDirtyScissorBit);
   }
 
   if (state.flags & kSavedRenderStateBit) {
-    if (memcmp(&state.static_state, pipeline_state_.static_state(),
-               sizeof(state.static_state))) {
-      memcpy(pipeline_state_.static_state(), &state.static_state,
-             sizeof(state.static_state));
+    if (memcmp(&state.static_state, pipeline_state_.static_state(), sizeof(state.static_state))) {
+      memcpy(pipeline_state_.static_state(), &state.static_state, sizeof(state.static_state));
       SetDirty(kDirtyStaticStateBit);
     }
 
-    if (memcmp(&state.potential_static_state,
-               pipeline_state_.potential_static_state(),
+    if (memcmp(&state.potential_static_state, pipeline_state_.potential_static_state(),
                sizeof(state.potential_static_state))) {
-      memcpy(pipeline_state_.potential_static_state(),
-             &state.potential_static_state,
+      memcpy(pipeline_state_.potential_static_state(), &state.potential_static_state,
              sizeof(state.potential_static_state));
       SetDirty(kDirtyStaticStateBit);
     }
@@ -744,10 +694,8 @@ void CommandBuffer::RestoreState(const CommandBuffer::SavedState& state) {
   }
 }
 
-void CommandBuffer::ClearAttachmentRect(uint32_t attachment,
-                                        const vk::ClearRect& rect,
-                                        const vk::ClearValue& value,
-                                        vk::ImageAspectFlags aspect) {
+void CommandBuffer::ClearAttachmentRect(uint32_t attachment, const vk::ClearRect& rect,
+                                        const vk::ClearValue& value, vk::ImageAspectFlags aspect) {
   FXL_DCHECK(IsInRenderPass());
   vk::ClearAttachment att = {};
   att.clearValue = value;
@@ -756,28 +704,26 @@ void CommandBuffer::ClearAttachmentRect(uint32_t attachment,
   vk().clearAttachments(1, &att, 1, &rect);
 }
 
-void CommandBuffer::ClearColorAttachmentRect(
-    uint32_t subpass_color_attachment_index, vk::Offset2D offset,
-    vk::Extent2D extent, const vk::ClearColorValue& value) {
-  ClearAttachmentRect(subpass_color_attachment_index,
-                      vk::ClearRect(vk::Rect2D(offset, extent),
-                                    0 /*baseArrayLayer*/, 1 /*layerCount*/),
-                      value, vk::ImageAspectFlagBits::eColor);
+void CommandBuffer::ClearColorAttachmentRect(uint32_t subpass_color_attachment_index,
+                                             vk::Offset2D offset, vk::Extent2D extent,
+                                             const vk::ClearColorValue& value) {
+  ClearAttachmentRect(
+      subpass_color_attachment_index,
+      vk::ClearRect(vk::Rect2D(offset, extent), 0 /*baseArrayLayer*/, 1 /*layerCount*/), value,
+      vk::ImageAspectFlagBits::eColor);
 }
 
-void CommandBuffer::ClearDepthStencilAttachmentRect(
-    vk::Offset2D offset, vk::Extent2D extent,
-    const vk::ClearDepthStencilValue& value, vk::ImageAspectFlags aspect) {
-  ClearAttachmentRect(0,
-                      vk::ClearRect(vk::Rect2D(offset, extent),
-                                    0 /*baseArrayLayer*/, 1 /*layerCount*/),
-                      value, aspect);
+void CommandBuffer::ClearDepthStencilAttachmentRect(vk::Offset2D offset, vk::Extent2D extent,
+                                                    const vk::ClearDepthStencilValue& value,
+                                                    vk::ImageAspectFlags aspect) {
+  ClearAttachmentRect(
+      0, vk::ClearRect(vk::Rect2D(offset, extent), 0 /*baseArrayLayer*/, 1 /*layerCount*/), value,
+      aspect);
 }
 
 void CommandBuffer::Blit(const ImagePtr& src_image, vk::Offset2D src_offset,
                          vk::Extent2D src_extent, const ImagePtr& dst_image,
-                         vk::Offset2D dst_offset, vk::Extent2D dst_extent,
-                         vk::Filter filter) {
+                         vk::Offset2D dst_offset, vk::Extent2D dst_extent, vk::Filter filter) {
   impl_->KeepAlive(src_image);
   impl_->KeepAlive(dst_image);
 
@@ -788,27 +734,23 @@ void CommandBuffer::Blit(const ImagePtr& src_image, vk::Offset2D src_offset,
   blit.srcSubresource.layerCount = 1;
   blit.dstSubresource = blit.srcSubresource;
   blit.srcOffsets[0] = vk::Offset3D(src_offset.x, src_offset.y, 0);
-  blit.srcOffsets[1] = vk::Offset3D(src_offset.x + src_extent.width,
-                                    src_offset.y + src_extent.height, 1);
+  blit.srcOffsets[1] =
+      vk::Offset3D(src_offset.x + src_extent.width, src_offset.y + src_extent.height, 1);
   blit.dstOffsets[0] = vk::Offset3D(dst_offset.x, dst_offset.y, 0);
-  blit.dstOffsets[1] = vk::Offset3D(dst_offset.x + dst_extent.width,
-                                    dst_offset.y + dst_extent.height, 1);
+  blit.dstOffsets[1] =
+      vk::Offset3D(dst_offset.x + dst_extent.width, dst_offset.y + dst_extent.height, 1);
 
-  vk().blitImage(src_image->vk(), vk::ImageLayout::eTransferSrcOptimal,
-                 dst_image->vk(), vk::ImageLayout::eTransferDstOptimal, 1,
-                 &blit, filter);
+  vk().blitImage(src_image->vk(), vk::ImageLayout::eTransferSrcOptimal, dst_image->vk(),
+                 vk::ImageLayout::eTransferDstOptimal, 1, &blit, filter);
 }
 
-void CommandBuffer::SetShaderProgram(ShaderProgram* program,
-                                     const SamplerPtr& immutable_sampler) {
+void CommandBuffer::SetShaderProgram(ShaderProgram* program, const SamplerPtr& immutable_sampler) {
   // TODO(ES-83): checking the uid() isn't really necessary since we're using
   // ref-counted pointers... a pointer comparison would be enough.  This is a
   // general difference between Escher and the original Granite code; we should
   // come up with a general design philosophy and stick to it.
-  if (current_program_ && current_program_->uid() == program->uid() &&
-      current_pipeline_layout_ &&
-      current_pipeline_layout_->spec().immutable_sampler() ==
-          immutable_sampler) {
+  if (current_program_ && current_program_->uid() == program->uid() && current_pipeline_layout_ &&
+      current_pipeline_layout_->spec().immutable_sampler() == immutable_sampler) {
     return;
   }
 
@@ -818,10 +760,9 @@ void CommandBuffer::SetShaderProgram(ShaderProgram* program,
 
   // If we're in a render pass, the program must have a vertex stage.  If we're
   // not, the program must have a compute stage.
-  FXL_DCHECK(pipeline_state_.render_pass() &&
-                 current_program_->GetModuleForStage(ShaderStage::kVertex) ||
-             !pipeline_state_.render_pass() &&
-                 current_program_->GetModuleForStage(ShaderStage::kCompute));
+  FXL_DCHECK(
+      pipeline_state_.render_pass() && current_program_->GetModuleForStage(ShaderStage::kVertex) ||
+      !pipeline_state_.render_pass() && current_program_->GetModuleForStage(ShaderStage::kCompute));
 
   SetDirty(kDirtyPipelineBit | kDirtyDynamicBits);
 
@@ -840,15 +781,13 @@ void CommandBuffer::SetShaderProgram(ShaderProgram* program,
 
     // If the push constant layout changes, all descriptor sets
     // are invalidated.
-    if (new_spec.push_constant_layout_hash() !=
-        old_spec.push_constant_layout_hash()) {
+    if (new_spec.push_constant_layout_hash() != old_spec.push_constant_layout_hash()) {
       dirty_descriptor_sets_ = ~0u;
       SetDirty(kDirtyPushConstantsBit);
     } else {
       // Find the first set whose descriptor set layout differs.  Set dirty bits
       // for that set and all subsequent sets.
-      for (uint32_t set_index = 0; set_index < VulkanLimits::kNumDescriptorSets;
-           ++set_index) {
+      for (uint32_t set_index = 0; set_index < VulkanLimits::kNumDescriptorSets; ++set_index) {
         if (current_pipeline_layout_->GetDescriptorSetAllocator(set_index) !=
             old_pipeline_layout->GetDescriptorSetAllocator(set_index)) {
           SetBitsAtAndAboveIndex(&dirty_descriptor_sets_, set_index);

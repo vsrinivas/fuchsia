@@ -16,13 +16,11 @@
 
 namespace escher {
 
-const ResourceTypeInfo ShaderProgram::kTypeInfo("ShaderProgram",
-                                                ResourceType::kResource,
+const ResourceTypeInfo ShaderProgram::kTypeInfo("ShaderProgram", ResourceType::kResource,
                                                 ResourceType::kShaderProgram);
 
-ShaderProgramPtr ShaderProgram::NewGraphics(
-    ResourceRecycler* resource_recycler,
-    std::vector<ShaderModulePtr> shader_modules) {
+ShaderProgramPtr ShaderProgram::NewGraphics(ResourceRecycler* resource_recycler,
+                                            std::vector<ShaderModulePtr> shader_modules) {
   auto prog = new ShaderProgram(resource_recycler, std::move(shader_modules));
   return fxl::AdoptRef(prog);
 }
@@ -45,11 +43,9 @@ ShaderProgram::ShaderProgram(ResourceRecycler* resource_recycler,
   }
 }
 
-ShaderProgram::ShaderProgram(ResourceRecycler* resource_recycler,
-                             ShaderModulePtr shader_module)
+ShaderProgram::ShaderProgram(ResourceRecycler* resource_recycler, ShaderModulePtr shader_module)
     : Resource(resource_recycler) {
-  FXL_DCHECK(shader_module &&
-             shader_module->shader_stage() == ShaderStage::kCompute);
+  FXL_DCHECK(shader_module && shader_module->shader_stage() == ShaderStage::kCompute);
   shader_module->AddShaderModuleListener(this);
   shader_modules_[EnumCast(ShaderStage::kCompute)] = std::move(shader_module);
 }
@@ -105,13 +101,11 @@ void ShaderProgram::ClearPipelineStash() {
   fxl::AdoptRef(keep_alive);
 }
 
-PipelineLayout* ShaderProgram::ObtainPipelineLayout(
-    const SamplerPtr& immutable_sampler) {
+PipelineLayout* ShaderProgram::ObtainPipelineLayout(const SamplerPtr& immutable_sampler) {
   TRACE_DURATION("gfx", "escher::ShaderProgram::ObtainPipelineLayout");
   // If we already have a pipeline layout, and the immutable sampler matches,
   // just use that.
-  if (pipeline_layout_ &&
-      pipeline_layout_->spec().immutable_sampler() == immutable_sampler) {
+  if (pipeline_layout_ && pipeline_layout_->spec().immutable_sampler() == immutable_sampler) {
     return pipeline_layout_.get();
   }
 
@@ -125,8 +119,7 @@ PipelineLayout* ShaderProgram::ObtainPipelineLayout(
 
   // TODO(ES-201): This code assumes we only need to cache a single pipeline
   // layout per shader program. Immutable samplers ruin that assumption.
-  pipeline_layout_ =
-      escher()->pipeline_layout_cache()->ObtainPipelineLayout(spec);
+  pipeline_layout_ = escher()->pipeline_layout_cache()->ObtainPipelineLayout(spec);
 
   return pipeline_layout_.get();
 }

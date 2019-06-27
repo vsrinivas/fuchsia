@@ -19,36 +19,31 @@ class SettingsProviderImpl : public fuchsia::accessibility::SettingsProvider {
   explicit SettingsProviderImpl();
   ~SettingsProviderImpl() = default;
 
-  void Bind(fidl::InterfaceRequest<fuchsia::accessibility::SettingsProvider>
-                settings_provider_request);
+  void Bind(
+      fidl::InterfaceRequest<fuchsia::accessibility::SettingsProvider> settings_provider_request);
 
-  void AddWatcher(
-      fidl::InterfaceHandle<fuchsia::accessibility::SettingsWatcher> watcher);
+  void AddWatcher(fidl::InterfaceHandle<fuchsia::accessibility::SettingsWatcher> watcher);
 
  private:
   // |fuchsia::accessibility::SettingsProvider|
-  void SetMagnificationEnabled(
-      bool magnification_enabled,
-      SetMagnificationEnabledCallback callback) override;
+  void SetMagnificationEnabled(bool magnification_enabled,
+                               SetMagnificationEnabledCallback callback) override;
 
   // |fuchsia::accessibility::SettingsProvider|
-  void SetMagnificationZoomFactor(
-      float magnification_zoom_factor,
-      SetMagnificationZoomFactorCallback callback) override;
+  void SetMagnificationZoomFactor(float magnification_zoom_factor,
+                                  SetMagnificationZoomFactorCallback callback) override;
 
   // |fuchsia::accessibility::SettingsProvider|
   void SetScreenReaderEnabled(bool screen_reader_enabled,
                               SetScreenReaderEnabledCallback callback) override;
 
   // |fuchsia::accessibility::SettingsProvider|
-  void SetColorInversionEnabled(
-      bool color_inversion_enabled,
-      SetColorInversionEnabledCallback callback) override;
+  void SetColorInversionEnabled(bool color_inversion_enabled,
+                                SetColorInversionEnabledCallback callback) override;
 
   // |fuchsia::accessibility::SettingsProvider|
-  void SetColorCorrection(
-      fuchsia::accessibility::ColorCorrection color_correction,
-      SetColorCorrectionCallback callback) override;
+  void SetColorCorrection(fuchsia::accessibility::ColorCorrection color_correction,
+                          SetColorCorrectionCallback callback) override;
 
   std::array<float, 9> GetColorAdjustmentMatrix();
 

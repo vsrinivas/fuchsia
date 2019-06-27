@@ -29,11 +29,9 @@ TileView::TileView(scenic::ViewContext context, TileParams params)
   ConnectViews();
 }
 
-void TileView::PresentView(
-    fuchsia::ui::views::ViewHolderToken view_holder_token,
-    fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation) {
-  AddChildView("tile_view child(Presented view)", std::move(view_holder_token),
-               nullptr);
+void TileView::PresentView(fuchsia::ui::views::ViewHolderToken view_holder_token,
+                           fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation) {
+  AddChildView("tile_view child(Presented view)", std::move(view_holder_token), nullptr);
 }
 
 void TileView::ConnectViews() {
@@ -44,8 +42,8 @@ void TileView::ConnectViews() {
     fuchsia::sys::LaunchInfo launch_info;
 
     // Pass arguments to children, if there are any.
-    std::vector<std::string> split_url = fxl::SplitStringCopy(
-        url, " ", fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
+    std::vector<std::string> split_url =
+        fxl::SplitStringCopy(url, " ", fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
     FXL_CHECK(split_url.size() >= 1);
     launch_info.url = split_url[0];
     launch_info.directory_request = services.NewRequest();
@@ -58,19 +56,17 @@ void TileView::ConnectViews() {
     }
 
     // |env_launcher_| launches the component with our nested environment.
-    env_launcher_->CreateComponent(std::move(launch_info),
-                                   controller.NewRequest());
+    env_launcher_->CreateComponent(std::move(launch_info), controller.NewRequest());
 
     // Create a View from the launched component.
     auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
-    auto view_provider =
-        services.ConnectToService<fuchsia::ui::app::ViewProvider>();
+    auto view_provider = services.ConnectToService<fuchsia::ui::app::ViewProvider>();
     view_provider->CreateView(std::move(view_token.value), nullptr, nullptr);
 
     // Add the view.
-    AddChildView("tile_view child(" + split_url[0] + ")",
-                 std::move(view_holder_token), std::move(controller));
+    AddChildView("tile_view child(" + split_url[0] + ")", std::move(view_holder_token),
+                 std::move(controller));
   }
 }
 
@@ -87,8 +83,7 @@ void TileView::CreateNestedEnvironment() {
   // Add a binding for the presenter service
   auto service = fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
     presenter_bindings_.AddBinding(
-        this, fidl::InterfaceRequest<fuchsia::ui::policy::Presenter>(
-                  std::move(channel)));
+        this, fidl::InterfaceRequest<fuchsia::ui::policy::Presenter>(std::move(channel)));
     return ZX_OK;
   }));
   services_dir_->AddEntry(fuchsia::ui::policy::Presenter::Name_, service);
@@ -97,8 +92,8 @@ void TileView::CreateNestedEnvironment() {
   service_list->names.push_back(fuchsia::ui::policy::Presenter::Name_);
   service_list->host_directory = OpenAsDirectory();
   startup_context()->environment()->CreateNestedEnvironment(
-      env_.NewRequest(), env_controller_.NewRequest(), "tile",
-      std::move(service_list), {.inherit_parent_services = true});
+      env_.NewRequest(), env_controller_.NewRequest(), "tile", std::move(service_list),
+      {.inherit_parent_services = true});
   env_->GetLauncher(env_launcher_.NewRequest());
 }
 
@@ -134,11 +129,11 @@ void TileView::OnScenicEvent(fuchsia::ui::scenic::Event event) {
   }
 }
 
-void TileView::AddChildView(
-    std::string label, fuchsia::ui::views::ViewHolderToken view_holder_token,
-    fuchsia::sys::ComponentControllerPtr controller) {
-  auto view_data = std::make_unique<ViewData>(
-      label, std::move(view_holder_token), std::move(controller), session());
+void TileView::AddChildView(std::string label,
+                            fuchsia::ui::views::ViewHolderToken view_holder_token,
+                            fuchsia::sys::ComponentControllerPtr controller) {
+  auto view_data = std::make_unique<ViewData>(label, std::move(view_holder_token),
+                                              std::move(controller), session());
 
   container_node_.AddChild(view_data->host_node);
 
@@ -161,14 +156,12 @@ void TileView::RemoveChildView(uint32_t view_holder_id) {
   InvalidateScene();
 }
 
-void TileView::OnSceneInvalidated(
-    fuchsia::images::PresentationInfo presentation_info) {
+void TileView::OnSceneInvalidated(fuchsia::images::PresentationInfo presentation_info) {
   if (!has_logical_size() || views_.empty())
     return;
 
   // Layout all children in a row.
-  const bool vertical =
-      (params_.orientation_mode == TileParams::OrientationMode::kVertical);
+  const bool vertical = (params_.orientation_mode == TileParams::OrientationMode::kVertical);
 
   uint32_t index = 0;
   uint32_t space = vertical ? logical_size().y : logical_size().x;
@@ -199,13 +192,11 @@ void TileView::OnSceneInvalidated(
     }
     offset += extent;
 
-    if (view_data->width != layout_bounds.width ||
-        view_data->height != layout_bounds.height) {
+    if (view_data->width != layout_bounds.width || view_data->height != layout_bounds.height) {
       view_data->width = layout_bounds.width;
       view_data->height = layout_bounds.height;
-      view_data->view_holder.SetViewProperties(0, 0, 0, view_data->width,
-                                               view_data->height, 1000.f, 0, 0,
-                                               0, 0, 0, 0);
+      view_data->view_holder.SetViewProperties(0, 0, 0, view_data->width, view_data->height, 1000.f,
+                                               0, 0, 0, 0, 0, 0);
     }
 
     view_data->host_node.SetTranslation(layout_bounds.x, layout_bounds.y, 0u);
@@ -221,9 +212,10 @@ void TileView::OnSceneInvalidated(
   }
 }
 
-TileView::ViewData::ViewData(
-    std::string label, fuchsia::ui::views::ViewHolderToken view_holder_token,
-    fuchsia::sys::ComponentControllerPtr controller, scenic::Session* session)
+TileView::ViewData::ViewData(std::string label,
+                             fuchsia::ui::views::ViewHolderToken view_holder_token,
+                             fuchsia::sys::ComponentControllerPtr controller,
+                             scenic::Session* session)
     : controller(std::move(controller)),
       host_node(session),
       clip_shape_node(session),

@@ -7,14 +7,9 @@
 namespace escher {
 
 const ResourceTypeInfo Buffer::kTypeInfo("Buffer", ResourceType::kResource,
-                                         ResourceType::kWaitableResource,
-                                         ResourceType::kBuffer);
+                                         ResourceType::kWaitableResource, ResourceType::kBuffer);
 
-Buffer::Buffer(ResourceManager* manager, vk::Buffer buffer, vk::DeviceSize size,
-               uint8_t* host_ptr)
-    : WaitableResource(manager),
-      buffer_(buffer),
-      size_(size),
-      host_ptr_(host_ptr) {}
+Buffer::Buffer(ResourceManager* manager, vk::Buffer buffer, vk::DeviceSize size, uint8_t* host_ptr)
+    : WaitableResource(manager), buffer_(buffer), size_(size), host_ptr_(host_ptr) {}
 
 }  // namespace escher

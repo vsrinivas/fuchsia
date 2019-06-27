@@ -18,8 +18,7 @@ float EstimateZTranslation(const Camera& camera, const mat4& object_transform);
 // |camera_transform| - a matrix concatenating a camera's projection and view
 //  matrices. The projection matrix may be omitted if it does not change the
 //  orientation of the world.
-float EstimateZTranslation(const mat4 camera_transform,
-                           const mat4& object_transform);
+float EstimateZTranslation(const mat4 camera_transform, const mat4& object_transform);
 
 // Returns |true| if object |a| is behind (has a greater z than) object |b|.
 //
@@ -36,10 +35,9 @@ bool ZCompare(const CameraDesc& camera_desc, const Object& a, const Object& b) {
 template <class Index, class CameraDesc>
 void ZSort(std::vector<Index>* indices, const std::vector<Object>& objects,
            const CameraDesc& camera_desc) {
-  std::sort(indices->begin(), indices->end(),
-            [&objects, &camera_desc](Index a, Index b) {
-              return ZCompare(camera_desc, objects[a], objects[b]);
-            });
+  std::sort(indices->begin(), indices->end(), [&objects, &camera_desc](Index a, Index b) {
+    return ZCompare(camera_desc, objects[a], objects[b]);
+  });
 }
 
 }  // namespace impl

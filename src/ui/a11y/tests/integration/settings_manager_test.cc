@@ -58,18 +58,14 @@ class SettingsManagerTest : public gtest::TestLoopFixture {
     TestLoopFixture::SetUp();
     context_provider_.service_directory_provider()
         ->AddService<fuchsia::accessibility::SettingsManager>(
-            [this](
-                fidl::InterfaceRequest<fuchsia::accessibility::SettingsManager>
-                    request) {
+            [this](fidl::InterfaceRequest<fuchsia::accessibility::SettingsManager> request) {
               settings_manager_impl_.AddBinding(std::move(request));
             });
 
     RunLoopUntilIdle();
   }
 
-  sys::testing::ComponentContextProvider* GetContextProvider() {
-    return &context_provider_;
-  }
+  sys::testing::ComponentContextProvider* GetContextProvider() { return &context_provider_; }
 
   static const fuchsia::accessibility::Settings default_settings_;
 
@@ -80,8 +76,7 @@ class SettingsManagerTest : public gtest::TestLoopFixture {
     settings.set_magnification_zoom_factor(1);
     settings.set_screen_reader_enabled(false);
     settings.set_color_inversion_enabled(false);
-    settings.set_color_correction(
-        fuchsia::accessibility::ColorCorrection::DISABLED);
+    settings.set_color_correction(fuchsia::accessibility::ColorCorrection::DISABLED);
     std::array<float, 9> matrix = kIdentityMatrix;
     settings.set_color_adjustment_matrix(matrix);
     return settings;
@@ -91,8 +86,7 @@ class SettingsManagerTest : public gtest::TestLoopFixture {
   a11y_manager::SettingsManagerImpl settings_manager_impl_;
 };
 
-const fuchsia::accessibility::Settings SettingsManagerTest::default_settings_ =
-    InitSettings();
+const fuchsia::accessibility::Settings SettingsManagerTest::default_settings_ = InitSettings();
 
 TEST_F(SettingsManagerTest, SetMagnificationEnabled) {
   auto status = SettingsManagerStatus::OK;
@@ -265,8 +259,7 @@ TEST_F(SettingsManagerTest, SetMagnificationDisabled_PreviouslyEnabled) {
 }
 
 // Setting Service cannot set ZoomFactor without Enabling Magnification.
-TEST_F(SettingsManagerTest,
-       SetMagnificationZoomFactor_MagnificationIsDisabled) {
+TEST_F(SettingsManagerTest, SetMagnificationZoomFactor_MagnificationIsDisabled) {
   auto status = SettingsManagerStatus::OK;
 
   // Create Settings Service.
@@ -465,9 +458,8 @@ TEST_F(SettingsManagerTest, SetColorCorrection) {
   RunLoopUntilIdle();
 
   // Enable Color Correction from Settings Service.
-  settings_service.SetColorCorrection(
-      fuchsia::accessibility::ColorCorrection::CORRECT_PROTANOMALY,
-      [&status](SettingsManagerStatus retval) { status = retval; });
+  settings_service.SetColorCorrection(fuchsia::accessibility::ColorCorrection::CORRECT_PROTANOMALY,
+                                      [&status](SettingsManagerStatus retval) { status = retval; });
   RunLoopUntilIdle();
   ASSERT_EQ(status, SettingsManagerStatus::OK);
 
@@ -493,9 +485,8 @@ TEST_F(SettingsManagerTest, SetColorCorrection_Disabled) {
   RunLoopUntilIdle();
 
   // Enable Color Correction from Settings Service.
-  settings_service.SetColorCorrection(
-      fuchsia::accessibility::ColorCorrection::CORRECT_PROTANOMALY,
-      [&status](SettingsManagerStatus retval) { status = retval; });
+  settings_service.SetColorCorrection(fuchsia::accessibility::ColorCorrection::CORRECT_PROTANOMALY,
+                                      [&status](SettingsManagerStatus retval) { status = retval; });
   RunLoopUntilIdle();
   ASSERT_EQ(status, SettingsManagerStatus::OK);
 
@@ -510,9 +501,8 @@ TEST_F(SettingsManagerTest, SetColorCorrection_Disabled) {
   }
 
   // Change Color Correction back to Disabled.
-  settings_service.SetColorCorrection(
-      fuchsia::accessibility::ColorCorrection::DISABLED,
-      [&status](SettingsManagerStatus retval) { status = retval; });
+  settings_service.SetColorCorrection(fuchsia::accessibility::ColorCorrection::DISABLED,
+                                      [&status](SettingsManagerStatus retval) { status = retval; });
   RunLoopUntilIdle();
   ASSERT_EQ(status, SettingsManagerStatus::OK);
 
@@ -520,8 +510,7 @@ TEST_F(SettingsManagerTest, SetColorCorrection_Disabled) {
   {
     auto expected_settings = fuchsia::accessibility::Settings::New();
     default_settings_.Clone(expected_settings.get());
-    expected_settings->set_color_correction(
-        fuchsia::accessibility::ColorCorrection::DISABLED);
+    expected_settings->set_color_correction(fuchsia::accessibility::ColorCorrection::DISABLED);
     ASSERT_TRUE(watcher.IsSame(std::move(expected_settings)));
   }
 }
@@ -691,18 +680,14 @@ TEST_F(SettingsManagerTest, ColorAdjustmentMatrix_ProtanomalyAndInversionOn) {
 
   // Enable Color Inversion from Settings Service.
   settings_service.SetColorInversionEnabled(
-      true, [&status](fuchsia::accessibility::SettingsManagerStatus retval) {
-        status = retval;
-      });
+      true, [&status](fuchsia::accessibility::SettingsManagerStatus retval) { status = retval; });
   RunLoopUntilIdle();
   ASSERT_EQ(status, fuchsia::accessibility::SettingsManagerStatus::OK);
 
   // Enable Color Correction - Protanomaly.
   settings_service.SetColorCorrection(
       fuchsia::accessibility::ColorCorrection::CORRECT_PROTANOMALY,
-      [&status](fuchsia::accessibility::SettingsManagerStatus retval) {
-        status = retval;
-      });
+      [&status](fuchsia::accessibility::SettingsManagerStatus retval) { status = retval; });
   RunLoopUntilIdle();
   ASSERT_EQ(status, fuchsia::accessibility::SettingsManagerStatus::OK);
 
@@ -731,18 +716,14 @@ TEST_F(SettingsManagerTest, ColorAdjustmentMatrix_DeuteranomalyAndInversionOn) {
 
   // Enable Color Inversion from Settings Service.
   settings_service.SetColorInversionEnabled(
-      true, [&status](fuchsia::accessibility::SettingsManagerStatus retval) {
-        status = retval;
-      });
+      true, [&status](fuchsia::accessibility::SettingsManagerStatus retval) { status = retval; });
   RunLoopUntilIdle();
   ASSERT_EQ(status, fuchsia::accessibility::SettingsManagerStatus::OK);
 
   // Enable Color Correction - Deuteranomaly.
   settings_service.SetColorCorrection(
       fuchsia::accessibility::ColorCorrection::CORRECT_DEUTERANOMALY,
-      [&status](fuchsia::accessibility::SettingsManagerStatus retval) {
-        status = retval;
-      });
+      [&status](fuchsia::accessibility::SettingsManagerStatus retval) { status = retval; });
   RunLoopUntilIdle();
   ASSERT_EQ(status, fuchsia::accessibility::SettingsManagerStatus::OK);
 
@@ -771,18 +752,14 @@ TEST_F(SettingsManagerTest, ColorAdjustmentMatrix_TritanomalyAndInversionOn) {
 
   // Enable Color Inversion from Settings Service.
   settings_service.SetColorInversionEnabled(
-      true, [&status](fuchsia::accessibility::SettingsManagerStatus retval) {
-        status = retval;
-      });
+      true, [&status](fuchsia::accessibility::SettingsManagerStatus retval) { status = retval; });
   RunLoopUntilIdle();
   ASSERT_EQ(status, fuchsia::accessibility::SettingsManagerStatus::OK);
 
   // Enable Color Correction - Tritanomaly.
   settings_service.SetColorCorrection(
       fuchsia::accessibility::ColorCorrection::CORRECT_TRITANOMALY,
-      [&status](fuchsia::accessibility::SettingsManagerStatus retval) {
-        status = retval;
-      });
+      [&status](fuchsia::accessibility::SettingsManagerStatus retval) { status = retval; });
   RunLoopUntilIdle();
   ASSERT_EQ(status, fuchsia::accessibility::SettingsManagerStatus::OK);
 

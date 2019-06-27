@@ -27,9 +27,7 @@ Semaphore::Semaphore(vk::Device device, bool exportable) : device_(device) {
 
 Semaphore::~Semaphore() { device_.destroySemaphore(value_); }
 
-SemaphorePtr Semaphore::New(vk::Device device) {
-  return fxl::MakeRefCounted<Semaphore>(device);
-}
+SemaphorePtr Semaphore::New(vk::Device device) { return fxl::MakeRefCounted<Semaphore>(device); }
 
 SemaphorePtr Semaphore::NewExportableSem(vk::Device device) {
   return fxl::MakeRefCounted<Semaphore>(device, true);

@@ -37,10 +37,9 @@
 
 namespace escher {
 
-#define ASSERT_NUM_STATE_BITS(BIT_COUNT, VALUE_COUNT)                  \
-  static_assert(                                                       \
-      (1 << CommandBufferPipelineState::StaticState::BIT_COUNT) - 1 >= \
-          (VALUE_COUNT - 1),                                           \
+#define ASSERT_NUM_STATE_BITS(BIT_COUNT, VALUE_COUNT)                                     \
+  static_assert(                                                                          \
+      (1 << CommandBufferPipelineState::StaticState::BIT_COUNT) - 1 >= (VALUE_COUNT - 1), \
       "not enough bits for " #VALUE_COUNT);
 
 ASSERT_NUM_STATE_BITS(kNumCompareOpBits, VK_COMPARE_OP_RANGE_SIZE);
@@ -51,14 +50,12 @@ ASSERT_NUM_STATE_BITS(kNumFrontFaceBits, VK_FRONT_FACE_RANGE_SIZE);
 ASSERT_NUM_STATE_BITS(kNumTopologyBits, VK_PRIMITIVE_TOPOLOGY_RANGE_SIZE);
 
 // Must adjust this in the unlikely case that more cull modes are added.
-ASSERT_NUM_STATE_BITS(kNumCullModeBits,
-                      VK_CULL_MODE_FRONT_AND_BACK - VK_CULL_MODE_NONE + 1);
+ASSERT_NUM_STATE_BITS(kNumCullModeBits, VK_CULL_MODE_FRONT_AND_BACK - VK_CULL_MODE_NONE + 1);
 
 #undef ASSERT_NUM_STATE_BITS
 
 // Compilation should pass, but fail if you increase the padding by 1.
-static_assert(sizeof(CommandBufferPipelineState::StaticState) == 16,
-              "incorrect padding.");
+static_assert(sizeof(CommandBufferPipelineState::StaticState) == 16, "incorrect padding.");
 
 CommandBufferPipelineState::CommandBufferPipelineState() = default;
 CommandBufferPipelineState::~CommandBufferPipelineState() = default;
@@ -94,17 +91,15 @@ vk::Pipeline CommandBufferPipelineState::FlushGraphicsPipeline(
 
   if (static_state_.blend_enable) {
     const auto needs_blend_constant = [](vk::BlendFactor factor) {
-      return factor == vk::BlendFactor::eConstantColor ||
-             factor == vk::BlendFactor::eConstantAlpha;
+      return factor == vk::BlendFactor::eConstantColor || factor == vk::BlendFactor::eConstantAlpha;
     };
     bool b0 = needs_blend_constant(static_state_.get_src_color_blend());
     bool b1 = needs_blend_constant(static_state_.get_src_alpha_blend());
     bool b2 = needs_blend_constant(static_state_.get_dst_color_blend());
     bool b3 = needs_blend_constant(static_state_.get_dst_alpha_blend());
     if (b0 || b1 || b2 || b3) {
-      h.data(
-          reinterpret_cast<uint32_t*>(potential_static_state_.blend_constants),
-          sizeof(potential_static_state_.blend_constants));
+      h.data(reinterpret_cast<uint32_t*>(potential_static_state_.blend_constants),
+             sizeof(potential_static_state_.blend_constants));
     }
   }
 
@@ -126,24 +121,21 @@ void CommandBufferPipelineState::InitPipelineColorBlendStateCreateInfo(
     vk::PipelineColorBlendAttachmentState* blend_attachments,
     const impl::PipelineLayoutSpec& pipeline_layout_spec,
     const CommandBufferPipelineState::StaticState& static_state,
-    const CommandBufferPipelineState::PotentialStaticState&
-        potential_static_state,
+    const CommandBufferPipelineState::PotentialStaticState& potential_static_state,
     const impl::RenderPass* render_pass, uint32_t current_subpass) {
   info->pAttachments = blend_attachments;
-  info->attachmentCount =
-      render_pass->GetColorAttachmentCountForSubpass(current_subpass);
+  info->attachmentCount = render_pass->GetColorAttachmentCountForSubpass(current_subpass);
   for (unsigned i = 0; i < info->attachmentCount; i++) {
     auto& att = blend_attachments[i];
-    auto& subpass_color_attachment =
-        render_pass->GetColorAttachmentForSubpass(current_subpass, i);
+    auto& subpass_color_attachment = render_pass->GetColorAttachmentForSubpass(current_subpass, i);
 
     if (subpass_color_attachment.attachment != VK_ATTACHMENT_UNUSED &&
         (pipeline_layout_spec.render_target_mask() & (1u << i))) {
-      static_assert(VulkanLimits::kNumColorAttachments * 4 <=
-                        sizeof(static_state.color_write_mask) * 8,
-                    "not enough bits for color mask.");
-      att.colorWriteMask = vk::ColorComponentFlags(
-          (static_state.color_write_mask >> (4 * i)) & 0xf);
+      static_assert(
+          VulkanLimits::kNumColorAttachments * 4 <= sizeof(static_state.color_write_mask) * 8,
+          "not enough bits for color mask.");
+      att.colorWriteMask =
+          vk::ColorComponentFlags((static_state.color_write_mask >> (4 * i)) & 0xf);
       att.blendEnable = static_state.blend_enable;
       if (att.blendEnable) {
         att.alphaBlendOp = vk::BlendOp(static_state.alpha_blend_op);
@@ -162,8 +154,7 @@ void CommandBufferPipelineState::InitPipelineColorBlendStateCreateInfo(
 // Helper function for BuildGraphicsPipeline().
 void CommandBufferPipelineState::InitPipelineDepthStencilStateCreateInfo(
     vk::PipelineDepthStencilStateCreateInfo* info,
-    const CommandBufferPipelineState::StaticState& static_state, bool has_depth,
-    bool has_stencil) {
+    const CommandBufferPipelineState::StaticState& static_state, bool has_depth, bool has_stencil) {
   info->stencilTestEnable = has_stencil && static_state.stencil_test;
   info->depthTestEnable = has_depth && static_state.depth_test;
   info->depthWriteEnable = has_depth && static_state.depth_write;
@@ -173,17 +164,14 @@ void CommandBufferPipelineState::InitPipelineDepthStencilStateCreateInfo(
   }
 
   if (info->stencilTestEnable) {
-    info->front.compareOp =
-        vk::CompareOp(static_state.stencil_front_compare_op);
+    info->front.compareOp = vk::CompareOp(static_state.stencil_front_compare_op);
     info->front.passOp = vk::StencilOp(static_state.stencil_front_pass);
     info->front.failOp = vk::StencilOp(static_state.stencil_front_fail);
-    info->front.depthFailOp =
-        vk::StencilOp(static_state.stencil_front_depth_fail);
+    info->front.depthFailOp = vk::StencilOp(static_state.stencil_front_depth_fail);
     info->back.compareOp = vk::CompareOp(static_state.stencil_back_compare_op);
     info->back.passOp = vk::StencilOp(static_state.stencil_back_pass);
     info->back.failOp = vk::StencilOp(static_state.stencil_back_fail);
-    info->back.depthFailOp =
-        vk::StencilOp(static_state.stencil_back_depth_fail);
+    info->back.depthFailOp = vk::StencilOp(static_state.stencil_back_depth_fail);
   }
 }
 
@@ -191,8 +179,7 @@ void CommandBufferPipelineState::InitPipelineDepthStencilStateCreateInfo(
 void CommandBufferPipelineState::InitPipelineVertexInputStateCreateInfo(
     vk::PipelineVertexInputStateCreateInfo* info,
     vk::VertexInputAttributeDescription* vertex_input_attribs,
-    vk::VertexInputBindingDescription* vertex_input_bindings,
-    uint32_t attr_mask,
+    vk::VertexInputBindingDescription* vertex_input_bindings, uint32_t attr_mask,
     const CommandBufferPipelineState::VertexAttributeState* vertex_attributes,
     const CommandBufferPipelineState::VertexBindingState& vertex_bindings) {
   info->pVertexAttributeDescriptions = vertex_input_attribs;
@@ -217,8 +204,8 @@ void CommandBufferPipelineState::InitPipelineVertexInputStateCreateInfo(
 
 // Helper function for BuildGraphicsPipeline().
 void CommandBufferPipelineState::InitPipelineMultisampleStateCreateInfo(
-    vk::PipelineMultisampleStateCreateInfo* info,
-    const StaticState& static_state, vk::SampleCountFlagBits subpass_samples) {
+    vk::PipelineMultisampleStateCreateInfo* info, const StaticState& static_state,
+    vk::SampleCountFlagBits subpass_samples) {
   info->rasterizationSamples = subpass_samples;
   if (impl::SampleCountFlagBitsToInt(subpass_samples) > 1) {
     info->alphaToCoverageEnable = static_state.alpha_to_coverage;
@@ -230,13 +217,11 @@ void CommandBufferPipelineState::InitPipelineMultisampleStateCreateInfo(
 
 // Helper function for BuildGraphicsPipeline().
 void CommandBufferPipelineState::InitPipelineRasterizationStateCreateInfo(
-    vk::PipelineRasterizationStateCreateInfo* info,
-    const StaticState& static_state) {
+    vk::PipelineRasterizationStateCreateInfo* info, const StaticState& static_state) {
   info->cullMode = vk::CullModeFlags(static_state.cull_mode);
   info->frontFace = vk::FrontFace(static_state.front_face);
   info->lineWidth = 1.0f;
-  info->polygonMode =
-      static_state.wireframe ? vk::PolygonMode::eLine : vk::PolygonMode::eFill;
+  info->polygonMode = static_state.wireframe ? vk::PolygonMode::eLine : vk::PolygonMode::eFill;
   info->depthBiasEnable = static_state.depth_bias_enable != 0;
 }
 
@@ -269,29 +254,24 @@ vk::Pipeline CommandBufferPipelineState::BuildGraphicsPipeline(
 
   // Blend state
   vk::PipelineColorBlendStateCreateInfo blend_info;
-  vk::PipelineColorBlendAttachmentState
-      blend_attachments[VulkanLimits::kNumColorAttachments];
-  InitPipelineColorBlendStateCreateInfo(
-      &blend_info, blend_attachments, pipeline_layout_spec, static_state_,
-      potential_static_state_, render_pass_, current_subpass_);
+  vk::PipelineColorBlendAttachmentState blend_attachments[VulkanLimits::kNumColorAttachments];
+  InitPipelineColorBlendStateCreateInfo(&blend_info, blend_attachments, pipeline_layout_spec,
+                                        static_state_, potential_static_state_, render_pass_,
+                                        current_subpass_);
 
   // Depth state
   vk::PipelineDepthStencilStateCreateInfo depth_stencil_info;
-  InitPipelineDepthStencilStateCreateInfo(
-      &depth_stencil_info, static_state_,
-      render_pass_->SubpassHasDepth(current_subpass_),
-      render_pass_->SubpassHasStencil(current_subpass_));
+  InitPipelineDepthStencilStateCreateInfo(&depth_stencil_info, static_state_,
+                                          render_pass_->SubpassHasDepth(current_subpass_),
+                                          render_pass_->SubpassHasStencil(current_subpass_));
 
   // Vertex input
   vk::PipelineVertexInputStateCreateInfo vertex_input_info;
-  vk::VertexInputAttributeDescription
-      vertex_input_attribs[VulkanLimits::kNumVertexAttributes];
-  vk::VertexInputBindingDescription
-      vertex_input_bindings[VulkanLimits::kNumVertexBuffers];
+  vk::VertexInputAttributeDescription vertex_input_attribs[VulkanLimits::kNumVertexAttributes];
+  vk::VertexInputBindingDescription vertex_input_bindings[VulkanLimits::kNumVertexBuffers];
   InitPipelineVertexInputStateCreateInfo(
       &vertex_input_info, vertex_input_attribs, vertex_input_bindings,
-      pipeline_layout_spec.attribute_mask(), vertex_attributes_,
-      vertex_bindings_);
+      pipeline_layout_spec.attribute_mask(), vertex_attributes_, vertex_bindings_);
 
   // Input assembly
   vk::PipelineInputAssemblyStateCreateInfo assembly_info;
@@ -300,9 +280,8 @@ vk::Pipeline CommandBufferPipelineState::BuildGraphicsPipeline(
 
   // Multisample
   vk::PipelineMultisampleStateCreateInfo multisample_info;
-  InitPipelineMultisampleStateCreateInfo(
-      &multisample_info, static_state_,
-      render_pass_->SubpassSamples(current_subpass_));
+  InitPipelineMultisampleStateCreateInfo(&multisample_info, static_state_,
+                                         render_pass_->SubpassSamples(current_subpass_));
 
   // Rasterization
   vk::PipelineRasterizationStateCreateInfo rasterization_info;
@@ -343,31 +322,25 @@ vk::Pipeline CommandBufferPipelineState::BuildGraphicsPipeline(
       program->vk_device().createGraphicsPipeline(nullptr, pipeline_info));
 }
 
-void CommandBufferPipelineState::SetVertexAttributes(uint32_t binding,
-                                                     uint32_t attrib,
-                                                     vk::Format format,
-                                                     vk::DeviceSize offset) {
+void CommandBufferPipelineState::SetVertexAttributes(uint32_t binding, uint32_t attrib,
+                                                     vk::Format format, vk::DeviceSize offset) {
   FXL_DCHECK(binding < VulkanLimits::kNumVertexBuffers);
   FXL_DCHECK(attrib < VulkanLimits::kNumVertexAttributes);
 
   auto& attr = vertex_attributes_[attrib];
-  if (attr.binding != binding || attr.format != format ||
-      attr.offset != offset) {
+  if (attr.binding != binding || attr.format != format || attr.offset != offset) {
     attr.binding = binding;
     attr.format = format;
     attr.offset = offset;
   }
 }
 
-bool CommandBufferPipelineState::BindVertices(uint32_t binding,
-                                              vk::Buffer buffer,
-                                              vk::DeviceSize offset,
-                                              vk::DeviceSize stride,
+bool CommandBufferPipelineState::BindVertices(uint32_t binding, vk::Buffer buffer,
+                                              vk::DeviceSize offset, vk::DeviceSize stride,
                                               vk::VertexInputRate step_rate) {
   FXL_DCHECK(binding < VulkanLimits::kNumVertexBuffers);
 
-  if (vertex_bindings_.buffers[binding] != buffer ||
-      vertex_bindings_.offsets[binding] != offset) {
+  if (vertex_bindings_.buffers[binding] != buffer || vertex_bindings_.offsets[binding] != offset) {
     dirty_vertex_bindings_ |= 1u << binding;
   }
 
@@ -383,17 +356,15 @@ bool CommandBufferPipelineState::BindVertices(uint32_t binding,
 
 void CommandBufferPipelineState::FlushVertexBuffers(vk::CommandBuffer cb) {
   uint32_t update_vbo_mask = dirty_vertex_bindings_ & active_vertex_bindings_;
-  ForEachBitRange(
-      update_vbo_mask, [&](uint32_t binding, uint32_t binding_count) {
+  ForEachBitRange(update_vbo_mask, [&](uint32_t binding, uint32_t binding_count) {
 #ifndef NDEBUG
-        for (unsigned i = binding; i < binding + binding_count; i++) {
-          FXL_DCHECK(vertex_bindings_.buffers[i]);
-        }
+    for (unsigned i = binding; i < binding + binding_count; i++) {
+      FXL_DCHECK(vertex_bindings_.buffers[i]);
+    }
 #endif
-        cb.bindVertexBuffers(binding, binding_count,
-                             vertex_bindings_.buffers + binding,
-                             vertex_bindings_.offsets + binding);
-      });
+    cb.bindVertexBuffers(binding, binding_count, vertex_bindings_.buffers + binding,
+                         vertex_bindings_.offsets + binding);
+  });
   dirty_vertex_bindings_ &= ~update_vbo_mask;
 }
 

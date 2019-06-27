@@ -48,8 +48,7 @@ template <typename T, typename BasePolicyT>
 class HashCacheObjectPoolPolicy : public BasePolicyT {
  public:
   template <typename... Args>
-  HashCacheObjectPoolPolicy(Args&&... args)
-      : BasePolicyT(std::forward<Args>(args)...) {}
+  HashCacheObjectPoolPolicy(Args&&... args) : BasePolicyT(std::forward<Args>(args)...) {}
 
   inline void DestroyPoolObject(T* ptr) {
 #ifndef NDEBUG

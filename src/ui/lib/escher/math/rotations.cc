@@ -12,8 +12,7 @@
 
 namespace escher {
 
-void RotationBetweenVectors(const glm::vec3& u, const glm::vec3& v,
-                            glm::quat* rotation) {
+void RotationBetweenVectors(const glm::vec3& u, const glm::vec3& v, glm::quat* rotation) {
   // http://lolengine.net/blog/2014/02/24/quaternion-from-two-vectors-final
   float norm_u_norm_v = sqrt(dot(u, u) * glm::dot(v, v));
   float real_part = norm_u_norm_v + glm::dot(u, v);
@@ -24,8 +23,7 @@ void RotationBetweenVectors(const glm::vec3& u, const glm::vec3& v,
     // orthogonal axis. Axis normalisation can happen later, when we normalise
     // the quaternion.
     real_part = 0.f;
-    w = abs(u.x) > abs(u.z) ? glm::vec3(-u.y, u.x, 0.f)
-                            : glm::vec3(0.f, -u.z, u.y);
+    w = abs(u.x) > abs(u.z) ? glm::vec3(-u.y, u.x, 0.f) : glm::vec3(0.f, -u.z, u.y);
   } else {
     // Otherwise, build quaternion the standard way.
     w = cross(u, v);

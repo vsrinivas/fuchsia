@@ -7,8 +7,8 @@
 namespace scenic_impl {
 namespace gfx {
 
-const ResourceTypeInfo PointLight::kTypeInfo = {
-    ResourceType::kLight | ResourceType::kPointLight, "PointLight"};
+const ResourceTypeInfo PointLight::kTypeInfo = {ResourceType::kLight | ResourceType::kPointLight,
+                                                "PointLight"};
 
 PointLight::PointLight(Session* session, ResourceId id)
     : Light(session, id, PointLight::kTypeInfo) {}

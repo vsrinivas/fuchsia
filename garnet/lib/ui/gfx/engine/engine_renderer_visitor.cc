@@ -4,9 +4,6 @@
 
 #include "garnet/lib/ui/gfx/engine/engine_renderer_visitor.h"
 
-#include "src/ui/lib/escher/paper/paper_renderer.h"
-#include "src/lib/fxl/logging.h"
-
 #include "garnet/lib/ui/gfx/resources/camera.h"
 #include "garnet/lib/ui/gfx/resources/import.h"
 #include "garnet/lib/ui/gfx/resources/material.h"
@@ -22,12 +19,14 @@
 #include "garnet/lib/ui/gfx/resources/shapes/shape.h"
 #include "garnet/lib/ui/gfx/resources/view.h"
 #include "garnet/lib/ui/gfx/resources/view_holder.h"
+#include "src/lib/fxl/logging.h"
+#include "src/ui/lib/escher/paper/paper_renderer.h"
 
 namespace scenic_impl {
 namespace gfx {
 
-EngineRendererVisitor::EngineRendererVisitor(
-    escher::PaperRenderer* renderer, escher::BatchGpuUploader* gpu_uploader)
+EngineRendererVisitor::EngineRendererVisitor(escher::PaperRenderer* renderer,
+                                             escher::BatchGpuUploader* gpu_uploader)
     : renderer_(renderer), gpu_uploader_(gpu_uploader) {}
 
 void EngineRendererVisitor::Visit(Memory* r) { FXL_CHECK(false); }
@@ -75,8 +74,7 @@ void EngineRendererVisitor::VisitNode(Node* r) {
   transform_stack->PushTransform(static_cast<escher::mat4>(r->transform()));
   transform_stack->AddClipPlanes(r->clip_planes());
 
-  ForEachDirectDescendantFrontToBack(
-      *r, [this](Node* node) { node->Accept(this); });
+  ForEachDirectDescendantFrontToBack(*r, [this](Node* node) { node->Accept(this); });
 
   transform_stack->Pop();
 }
@@ -122,11 +120,9 @@ void EngineRendererVisitor::Visit(ShapeNode* r) {
   if (shape->IsKindOf<RoundedRectangleShape>()) {
     auto rect = static_cast<RoundedRectangleShape*>(shape.get());
 
-    renderer_->DrawRoundedRect(rect->spec(), escher_material, flags,
-                               &transform);
+    renderer_->DrawRoundedRect(rect->spec(), escher_material, flags, &transform);
   } else {
-    auto escher_object =
-        shape->GenerateRenderObject(transform, escher_material);
+    auto escher_object = shape->GenerateRenderObject(transform, escher_material);
     renderer_->DrawLegacyObject(escher_object, flags);
   }
 
@@ -137,15 +133,11 @@ void EngineRendererVisitor::Visit(CircleShape* r) { FXL_CHECK(false); }
 
 void EngineRendererVisitor::Visit(RectangleShape* r) { FXL_CHECK(false); }
 
-void EngineRendererVisitor::Visit(RoundedRectangleShape* r) {
-  FXL_CHECK(false);
-}
+void EngineRendererVisitor::Visit(RoundedRectangleShape* r) { FXL_CHECK(false); }
 
 void EngineRendererVisitor::Visit(MeshShape* r) { FXL_CHECK(false); }
 
-void EngineRendererVisitor::Visit(Material* r) {
-  r->UpdateEscherMaterial(gpu_uploader_);
-}
+void EngineRendererVisitor::Visit(Material* r) { r->UpdateEscherMaterial(gpu_uploader_); }
 
 void EngineRendererVisitor::Visit(Import* r) { FXL_CHECK(false); }
 

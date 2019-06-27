@@ -11,10 +11,8 @@ using ::fuchsia::ui::input::InputEvent;
 using ::fuchsia::ui::input::KeyboardEventPhase;
 using ::fuchsia::ui::input::PointerEventPhase;
 
-ShadertoyEmbedderView::ShadertoyEmbedderView(scenic::ViewContext context,
-                                             async::Loop* message_loop)
-    : scenic::BaseView(std::move(context),
-                       "simplest_embedder ShadertoyEmbedderView"),
+ShadertoyEmbedderView::ShadertoyEmbedderView(scenic::ViewContext context, async::Loop* message_loop)
+    : scenic::BaseView(std::move(context), "simplest_embedder ShadertoyEmbedderView"),
       message_loop_(message_loop),
       background_(session()),
       focused_(false) {
@@ -48,8 +46,7 @@ void ShadertoyEmbedderView::LaunchShadertoyClient() {
   root_node().Attach(*(view_holder_.get()));
 }
 
-void ShadertoyEmbedderView::OnPropertiesChanged(
-    fuchsia::ui::gfx::ViewProperties old_properties) {
+void ShadertoyEmbedderView::OnPropertiesChanged(fuchsia::ui::gfx::ViewProperties old_properties) {
   if (view_holder_) {
     view_holder_->SetViewProperties(view_properties());
   }
@@ -67,8 +64,7 @@ void ShadertoyEmbedderView::OnSceneInvalidated(
   const float width = size.x;
   const float height = size.y;
 
-  scenic::RoundedRectangle background_shape(session(), width, height, 20, 20,
-                                            80, 10);
+  scenic::RoundedRectangle background_shape(session(), width, height, 20, 20, 80, 10);
   background_.SetShape(background_shape);
   background_.SetTranslation(width / 2.f, height / 2.f, -10.f);
 }
@@ -107,10 +103,8 @@ void ShadertoyEmbedderView::OnInputEvent(fuchsia::ui::input::InputEvent event) {
     }
     case InputEvent::Tag::kKeyboard: {
       const auto& key = event.keyboard();
-      if (key.hid_usage == /* Esc key*/ 0x29 &&
-          key.phase == KeyboardEventPhase::RELEASED) {
-        async::PostTask(message_loop_->dispatcher(),
-                        [this] { message_loop_->Quit(); });
+      if (key.hid_usage == /* Esc key*/ 0x29 && key.phase == KeyboardEventPhase::RELEASED) {
+        async::PostTask(message_loop_->dispatcher(), [this] { message_loop_->Quit(); });
       }
       break;
     }

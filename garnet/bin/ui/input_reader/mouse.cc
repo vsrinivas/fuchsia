@@ -18,9 +18,8 @@
 
 namespace ui_input {
 
-bool Mouse::ParseReportDescriptor(
-    const hid::ReportDescriptor& report_descriptor,
-    Descriptor* device_descriptor) {
+bool Mouse::ParseReportDescriptor(const hid::ReportDescriptor& report_descriptor,
+                                  Descriptor* device_descriptor) {
   hid::Attributes left_click = {};
   hid::Attributes middle_click = {};
   hid::Attributes right_click = {};
@@ -43,20 +42,19 @@ bool Mouse::ParseReportDescriptor(
       right_click = field.attr;
       caps |= Capabilities::RIGHT_CLICK;
 
-    } else if (field.attr.usage == hid::USAGE(hid::usage::Page::kGenericDesktop,
-                                              hid::usage::GenericDesktop::kX)) {
+    } else if (field.attr.usage ==
+               hid::USAGE(hid::usage::Page::kGenericDesktop, hid::usage::GenericDesktop::kX)) {
       x = field.attr;
       caps |= Capabilities::X;
 
-    } else if (field.attr.usage == hid::USAGE(hid::usage::Page::kGenericDesktop,
-                                              hid::usage::GenericDesktop::kY)) {
+    } else if (field.attr.usage ==
+               hid::USAGE(hid::usage::Page::kGenericDesktop, hid::usage::GenericDesktop::kY)) {
       y = field.attr;
       caps |= Capabilities::Y;
     }
   }
 
-  uint32_t base_caps =
-      (Capabilities::X | Capabilities::Y | Capabilities::LEFT_CLICK);
+  uint32_t base_caps = (Capabilities::X | Capabilities::Y | Capabilities::LEFT_CLICK);
   if ((caps & base_caps) != base_caps) {
     FXL_LOG(INFO) << "Mouse descriptor: Missing basic capabilities";
     return false;
@@ -77,8 +75,7 @@ bool Mouse::ParseReportDescriptor(
   device_descriptor->protocol = Protocol::Mouse;
   device_descriptor->has_mouse = true;
   device_descriptor->mouse_type = MouseDeviceType::HID;
-  device_descriptor->mouse_descriptor =
-      fuchsia::ui::input::MouseDescriptor::New();
+  device_descriptor->mouse_descriptor = fuchsia::ui::input::MouseDescriptor::New();
   // At the moment all mice send relative units, so these min and max values
   // do not affect anything. Set them to maximum range.
   device_descriptor->mouse_descriptor->rel_x.range.min = INT32_MIN;
@@ -89,31 +86,26 @@ bool Mouse::ParseReportDescriptor(
   device_descriptor->mouse_descriptor->rel_y.range.max = INT32_MAX;
   device_descriptor->mouse_descriptor->rel_y.resolution = 1;
 
-  device_descriptor->mouse_descriptor->buttons |=
-      fuchsia::ui::input::kMouseButtonPrimary;
-  device_descriptor->mouse_descriptor->buttons |=
-      fuchsia::ui::input::kMouseButtonSecondary;
-  device_descriptor->mouse_descriptor->buttons |=
-      fuchsia::ui::input::kMouseButtonTertiary;
+  device_descriptor->mouse_descriptor->buttons |= fuchsia::ui::input::kMouseButtonPrimary;
+  device_descriptor->mouse_descriptor->buttons |= fuchsia::ui::input::kMouseButtonSecondary;
+  device_descriptor->mouse_descriptor->buttons |= fuchsia::ui::input::kMouseButtonTertiary;
 
   return true;
 }
 
-bool Mouse::ParseReport(const uint8_t* data, size_t len,
-                        fuchsia::ui::input::InputReport* report) {
+bool Mouse::ParseReport(const uint8_t* data, size_t len, fuchsia::ui::input::InputReport* report) {
   FXL_CHECK(report);
   FXL_CHECK(report->mouse);
 
   if (data[0] != report_id_) {
     FXL_VLOG(0) << " Mouse report " << static_cast<uint32_t>(data[0])
-                << " does not match report id "
-                << static_cast<uint32_t>(report_id_);
+                << " does not match report id " << static_cast<uint32_t>(report_id_);
   }
 
   Report mouse_report = {};
   if (len != report_size_) {
-    FXL_LOG(INFO) << "Mouse HID Report is not correct size, (" << len
-                  << " != " << report_size_ << ")";
+    FXL_LOG(INFO) << "Mouse HID Report is not correct size, (" << len << " != " << report_size_
+                  << ")";
     return false;
   }
 

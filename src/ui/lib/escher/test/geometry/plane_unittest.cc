@@ -35,8 +35,7 @@ TEST(plane3, PointOnPlaneConstructor) {
         plane3 plane_through_point(dir, glm::length(pt));
         plane3 plane_through_point2(pt, dir);
         EXPECT_EQ(plane_through_point.dir(), plane_through_point2.dir());
-        EXPECT_NEAR(plane_through_point.dist(), plane_through_point2.dist(),
-                    kEpsilon);
+        EXPECT_NEAR(plane_through_point.dist(), plane_through_point2.dist(), kEpsilon);
 
         // Pick 3 other points on the same plane, and verify that they result in
         // the same plane through the point.
@@ -99,8 +98,7 @@ TEST(plane2, Clipping) {
 
     EXPECT_FALSE(PlaneClipsPoint(pl, vec2(axis_intersect * 1.01f, 0.f)));
     EXPECT_FALSE(PlaneClipsPoint(pl, vec2(0.f, axis_intersect * -1.01f)));
-    EXPECT_FALSE(
-        PlaneClipsPoint(pl, vec2(axis_project, -axis_project) * 1.01f));
+    EXPECT_FALSE(PlaneClipsPoint(pl, vec2(axis_project, -axis_project) * 1.01f));
     EXPECT_TRUE(PlaneClipsPoint(pl, vec2(axis_intersect * 0.99f, 0.f)));
     EXPECT_TRUE(PlaneClipsPoint(pl, vec2(0.f, axis_intersect * -0.99f)));
     EXPECT_TRUE(PlaneClipsPoint(pl, vec2(axis_project, -axis_project) * 0.99f));
@@ -117,10 +115,8 @@ TEST(plane3, Clipping) {
   EXPECT_EQ(axis_project, plane_vec.y * plane_distance);
   EXPECT_EQ(axis_project, plane_vec.y * plane_distance);
 
-  EXPECT_TRUE(PlaneClipsPoint(
-      plane, vec3(axis_project, axis_project, axis_project) * 1.01f));
-  EXPECT_FALSE(PlaneClipsPoint(
-      plane, vec3(axis_project, axis_project, axis_project) * 0.99f));
+  EXPECT_TRUE(PlaneClipsPoint(plane, vec3(axis_project, axis_project, axis_project) * 1.01f));
+  EXPECT_FALSE(PlaneClipsPoint(plane, vec3(axis_project, axis_project, axis_project) * 0.99f));
 
   // Let's say that (1,1,1) is a point on the plane parallel to our plane (i.e.
   // same normal, but different distance to origin).  What is the point (x,0,0)
@@ -178,31 +174,24 @@ TEST(plane3, Intersection) {
   // Generate a plethora of "should intersect" cases by geometric construction.
   for (float origin_dist = -400.f; origin_dist <= 400.f; origin_dist += 100.f) {
     for (float radians = 0.f; radians <= 2 * M_PI; radians += M_PI / 5.9) {
-      const vec3 plane_normal =
-          glm::normalize(vec3(cos(radians), sin(radians), 0.5f));
+      const vec3 plane_normal = glm::normalize(vec3(cos(radians), sin(radians), 0.5f));
       const plane3 plane(plane_normal, origin_dist);
       const vec3 plane_origin = plane.dir() * plane.dist();
       const vec3 tangent(-plane.dir().y, plane.dir().x, 0.f);
-      const vec3 bitangent_mix =
-          0.5f * (tangent + glm::cross(plane.dir(), tangent));
+      const vec3 bitangent_mix = 0.5f * (tangent + glm::cross(plane.dir(), tangent));
 
       // Compute some points on the plane, and then use the plane normal to
       // generate some points off the plane.
-      for (float on_plane_dist = -50.f; on_plane_dist < 50.f;
-           on_plane_dist += 5.f) {
+      for (float on_plane_dist = -50.f; on_plane_dist < 50.f; on_plane_dist += 5.f) {
         vec3 point_on_plane = plane_origin + bitangent_mix * on_plane_dist;
 
-        for (float dist_between_off_plane_points = -55.f;
-             dist_between_off_plane_points <= 55.f;
+        for (float dist_between_off_plane_points = -55.f; dist_between_off_plane_points <= 55.f;
              dist_between_off_plane_points += 10.f) {
-          for (float straddle_factor = 0.1f; straddle_factor <= 0.9f;
-               straddle_factor += 0.2f) {
-            vec3 pt1 = point_on_plane + straddle_factor *
-                                            dist_between_off_plane_points *
-                                            plane.dir();
-            vec3 pt2 = point_on_plane + (straddle_factor - 1.f) *
-                                            dist_between_off_plane_points *
-                                            plane.dir();
+          for (float straddle_factor = 0.1f; straddle_factor <= 0.9f; straddle_factor += 0.2f) {
+            vec3 pt1 =
+                point_on_plane + straddle_factor * dist_between_off_plane_points * plane.dir();
+            vec3 pt2 = point_on_plane +
+                       (straddle_factor - 1.f) * dist_between_off_plane_points * plane.dir();
 
             // Finally, let's intersect some points with the plane.
             auto result = TestPlaneIntersection(plane, pt1, pt2);
@@ -248,8 +237,7 @@ TEST(plane2, NonIntersection) {
 
 // Helper function for TEST(plane3, Transformation).
 template <typename PlaneT>
-void TestPlaneTransformation(const Transform& transform,
-                             const std::vector<PlaneT>& planes) {
+void TestPlaneTransformation(const Transform& transform, const std::vector<PlaneT>& planes) {
   using VecT = typename PlaneT::VectorType;
 
   // The planes start in world-space, and are transformed into object-space.
@@ -276,12 +264,10 @@ void TestPlaneTransformation(const Transform& transform,
               PlaneDistanceToPoint(world_space_plane, world_space_point);
           const float object_space_distance =
               PlaneDistanceToPoint(object_space_plane, object_space_point);
-          const float object_space_distance_scaled =
-              object_space_distance * transform.scale.x;
+          const float object_space_distance_scaled = object_space_distance * transform.scale.x;
 
           const float kFudgedEpsilon = kEpsilon * 1000.f;
-          EXPECT_NEAR(world_space_distance, object_space_distance_scaled,
-                      kFudgedEpsilon);
+          EXPECT_NEAR(world_space_distance, object_space_distance_scaled, kFudgedEpsilon);
         }
       }
     }
@@ -291,11 +277,10 @@ void TestPlaneTransformation(const Transform& transform,
 // Test matrix transformation of world-space planes into object-space.
 TEST(plane3, Transformation) {
   // Choose some arbtrary planes to transform.
-  std::vector<plane3> planes3(
-      {plane3(glm::normalize(vec3(1, 1, 1)), -5.f),
-       plane3(glm::normalize(vec3(1, 1, 1)), 5.f),
-       plane3(glm::normalize(vec3(-1, 10, 100)), -15.f),
-       plane3(glm::normalize(vec3(1, -10, -100)), -15.f)});
+  std::vector<plane3> planes3({plane3(glm::normalize(vec3(1, 1, 1)), -5.f),
+                               plane3(glm::normalize(vec3(1, 1, 1)), 5.f),
+                               plane3(glm::normalize(vec3(-1, 10, 100)), -15.f),
+                               plane3(glm::normalize(vec3(1, -10, -100)), -15.f)});
 
   // To test plane2 in addition to plane3, we drop the z-coordinate and then
   // renormalize.
@@ -312,16 +297,14 @@ TEST(plane3, Transformation) {
           for (float angle = 0.f; angle < M_PI; angle += M_PI / 2.9f) {
             // For 2D, test by rotating around Z-axis.
             TestPlaneTransformation(
-                Transform(vec3(trans_x, trans_y, trans_z),
-                          vec3(scale, scale, scale),
+                Transform(vec3(trans_x, trans_y, trans_z), vec3(scale, scale, scale),
                           glm::angleAxis(angle, vec3(0, 0, 1))),
                 planes2);
 
             // For 3D, test by rotating off the Z-axis.
             TestPlaneTransformation(
-                Transform(
-                    vec3(trans_x, trans_y, trans_z), vec3(scale, scale, scale),
-                    glm::angleAxis(angle, glm::normalize(vec3(0, .4f, 1)))),
+                Transform(vec3(trans_x, trans_y, trans_z), vec3(scale, scale, scale),
+                          glm::angleAxis(angle, glm::normalize(vec3(0, .4f, 1)))),
                 planes3);
           }
         }
@@ -341,8 +324,8 @@ TEST(plane3, Translation) {
       plane3(glm::normalize(vec3(1, -10, -100)), -15.f),
   });
 
-  std::vector<vec3> translations({vec3(30, 40, 50), vec3(30, 40, -50),
-                                  vec3(30, -40, 50), vec3(-30, 40, 50)});
+  std::vector<vec3> translations(
+      {vec3(30, 40, 50), vec3(30, 40, -50), vec3(30, -40, 50), vec3(-30, 40, 50)});
 
   for (auto& trans : translations) {
     mat4 trans_matrix = glm::translate(mat4(), trans);
@@ -350,8 +333,7 @@ TEST(plane3, Translation) {
     for (size_t i = 0; i < planes.size(); ++i) {
       plane3& world_space_plane = planes[i];
       plane3 translated_object_space_plane = TranslatePlane(trans, planes[i]);
-      plane3 transformed_object_space_plane =
-          TransformPlane(trans_matrix, planes[i]);
+      plane3 transformed_object_space_plane = TransformPlane(trans_matrix, planes[i]);
 
       // Compute a 3D grid of object-space points, in order to compare them
       // against the world-space and object-space planes.
@@ -366,18 +348,16 @@ TEST(plane3, Translation) {
             // specified by a vector or a matrix.
             const float world_space_distance =
                 PlaneDistanceToPoint(world_space_plane, world_space_point);
-            const float object_space_distance_1 = PlaneDistanceToPoint(
-                translated_object_space_plane, object_space_point);
-            const float object_space_distance_2 = PlaneDistanceToPoint(
-                transformed_object_space_plane, object_space_point);
+            const float object_space_distance_1 =
+                PlaneDistanceToPoint(translated_object_space_plane, object_space_point);
+            const float object_space_distance_2 =
+                PlaneDistanceToPoint(transformed_object_space_plane, object_space_point);
 
             // In many cases kEpsilon is sufficient, but in others there is less
             // precision.
             const float kFudgedEpsilon = kEpsilon * 100;
-            EXPECT_NEAR(world_space_distance, object_space_distance_1,
-                        kFudgedEpsilon);
-            EXPECT_NEAR(world_space_distance, object_space_distance_2,
-                        kFudgedEpsilon);
+            EXPECT_NEAR(world_space_distance, object_space_distance_1, kFudgedEpsilon);
+            EXPECT_NEAR(world_space_distance, object_space_distance_2, kFudgedEpsilon);
           }
         }
       }
@@ -404,8 +384,7 @@ TEST(plane3, UniformScale) {
     for (size_t i = 0; i < planes.size(); ++i) {
       plane3& world_space_plane = planes[i];
       plane3 scaled_object_space_plane = ScalePlane(scale, planes[i]);
-      plane3 transformed_object_space_plane =
-          TransformPlane(scale_matrix, planes[i]);
+      plane3 transformed_object_space_plane = TransformPlane(scale_matrix, planes[i]);
 
       // Compute a 3D grid of object-space points, in order to compare them
       // against the world-space and object-space planes.
@@ -420,10 +399,10 @@ TEST(plane3, UniformScale) {
             // specified by a scalar or a matrix.
             const float world_space_distance =
                 PlaneDistanceToPoint(world_space_plane, world_space_point);
-            const float object_space_distance_1 = PlaneDistanceToPoint(
-                scaled_object_space_plane, object_space_point);
-            const float object_space_distance_2 = PlaneDistanceToPoint(
-                transformed_object_space_plane, object_space_point);
+            const float object_space_distance_1 =
+                PlaneDistanceToPoint(scaled_object_space_plane, object_space_point);
+            const float object_space_distance_2 =
+                PlaneDistanceToPoint(transformed_object_space_plane, object_space_point);
 
             // In many cases kEpsilon is sufficient, but in others there is
             // less precision.
@@ -431,10 +410,8 @@ TEST(plane3, UniformScale) {
 
             // We first need to scale the object-space distances in order to
             // compare them to the world-space distance.
-            EXPECT_NEAR(world_space_distance, object_space_distance_1 * scale,
-                        kFudgedEpsilon);
-            EXPECT_NEAR(world_space_distance, object_space_distance_2 * scale,
-                        kFudgedEpsilon);
+            EXPECT_NEAR(world_space_distance, object_space_distance_1 * scale, kFudgedEpsilon);
+            EXPECT_NEAR(world_space_distance, object_space_distance_2 * scale, kFudgedEpsilon);
           }
         }
       }

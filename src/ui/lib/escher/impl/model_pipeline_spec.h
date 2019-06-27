@@ -42,18 +42,13 @@ struct ModelPipelineSpec {
 
 // Inline function definitions.
 
-inline bool operator==(const ModelPipelineSpec& spec1,
-                       const ModelPipelineSpec& spec2) {
-  return spec1.mesh_spec == spec2.mesh_spec &&
-         spec1.shape_modifiers == spec2.shape_modifiers &&
-         spec1.clipper_state == spec2.clipper_state &&
-         spec1.is_clippee == spec2.is_clippee &&
-         spec1.has_material == spec2.has_material &&
-         spec1.is_opaque == spec2.is_opaque;
+inline bool operator==(const ModelPipelineSpec& spec1, const ModelPipelineSpec& spec2) {
+  return spec1.mesh_spec == spec2.mesh_spec && spec1.shape_modifiers == spec2.shape_modifiers &&
+         spec1.clipper_state == spec2.clipper_state && spec1.is_clippee == spec2.is_clippee &&
+         spec1.has_material == spec2.has_material && spec1.is_opaque == spec2.is_opaque;
 }
 
-inline bool operator!=(const ModelPipelineSpec& spec1,
-                       const ModelPipelineSpec& spec2) {
+inline bool operator!=(const ModelPipelineSpec& spec1, const ModelPipelineSpec& spec2) {
   return !(spec1 == spec2);
 }
 

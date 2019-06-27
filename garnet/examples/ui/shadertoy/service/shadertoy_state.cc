@@ -15,12 +15,11 @@ namespace shadertoy {
 
 fxl::RefPtr<ShadertoyState> ShadertoyState::NewForImagePipe(
     App* app, fidl::InterfaceHandle<fuchsia::images::ImagePipe> image_pipe) {
-  return fxl::AdoptRef(
-      new ShadertoyStateForImagePipe(app, std::move(image_pipe)));
+  return fxl::AdoptRef(new ShadertoyStateForImagePipe(app, std::move(image_pipe)));
 }
 
-fxl::RefPtr<ShadertoyState> ShadertoyState::NewForView(
-    App* app, zx::eventpair view_token, bool handle_input_events) {
+fxl::RefPtr<ShadertoyState> ShadertoyState::NewForView(App* app, zx::eventpair view_token,
+                                                       bool handle_input_events) {
   FXL_CHECK(false) << "unimplemented.";
   return fxl::RefPtr<ShadertoyState>();
 #if 0
@@ -51,26 +50,24 @@ void ShadertoyState::SetPaused(bool paused) {
 }
 
 void ShadertoyState::SetShaderCode(
-    fidl::StringPtr glsl,
-    fuchsia::examples::shadertoy::Shadertoy::SetShaderCodeCallback callback) {
-  compiler_->Compile(std::string(glsl),
-                     [weak = weak_ptr_factory_.GetWeakPtr(),
-                      callback = std::move(callback)](Compiler::Result result) {
-                       if (weak) {
-                         if (result.pipeline) {
-                           // Notify client that the code was successfully
-                           // compiled.
-                           callback(true);
-                           // Start rendering with the new pipeline.
-                           weak->pipeline_ = std::move(result.pipeline);
-                           weak->RequestFrame(0);
-                         } else {
-                           // Notify client that the code could not be
-                           // successfully compiled.
-                           callback(false);
-                         }
-                       }
-                     });
+    fidl::StringPtr glsl, fuchsia::examples::shadertoy::Shadertoy::SetShaderCodeCallback callback) {
+  compiler_->Compile(std::string(glsl), [weak = weak_ptr_factory_.GetWeakPtr(),
+                                         callback = std::move(callback)](Compiler::Result result) {
+    if (weak) {
+      if (result.pipeline) {
+        // Notify client that the code was successfully
+        // compiled.
+        callback(true);
+        // Start rendering with the new pipeline.
+        weak->pipeline_ = std::move(result.pipeline);
+        weak->RequestFrame(0);
+      } else {
+        // Notify client that the code could not be
+        // successfully compiled.
+        callback(false);
+      }
+    }
+  });
 }
 
 void ShadertoyState::SetResolution(uint32_t width, uint32_t height) {
@@ -78,13 +75,11 @@ void ShadertoyState::SetResolution(uint32_t width, uint32_t height) {
     return;
   }
   if (width > kMaxWidth) {
-    FXL_LOG(ERROR) << "Resolution max width exceeded, " << width << " > "
-                   << kMaxWidth;
+    FXL_LOG(ERROR) << "Resolution max width exceeded, " << width << " > " << kMaxWidth;
     return;
   }
   if (height > kMaxHeight) {
-    FXL_LOG(ERROR) << "Resolution max height exceeded, " << height << " > "
-                   << kMaxHeight;
+    FXL_LOG(ERROR) << "Resolution max height exceeded, " << height << " > " << kMaxHeight;
     return;
   }
 
@@ -101,15 +96,13 @@ void ShadertoyState::SetMouse(glm::vec4 i_mouse) {
   }
 }
 
-void ShadertoyState::SetImage(
-    uint32_t channel,
-    fidl::InterfaceRequest<fuchsia::images::ImagePipe> request) {
+void ShadertoyState::SetImage(uint32_t channel,
+                              fidl::InterfaceRequest<fuchsia::images::ImagePipe> request) {
   FXL_CHECK(false) << "unimplemented";
 }
 
 void ShadertoyState::RequestFrame(uint64_t presentation_time) {
-  if (is_drawing_ || is_paused_ || is_closed_ || !pipeline_ ||
-      (width_ * height_ == 0)) {
+  if (is_drawing_ || is_paused_ || is_closed_ || !pipeline_ || (width_ * height_ == 0)) {
     return;
   }
   is_drawing_ = true;

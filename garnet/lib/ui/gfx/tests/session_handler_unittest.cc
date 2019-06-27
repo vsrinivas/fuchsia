@@ -3,16 +3,14 @@
 // found in the LICENSE file.
 
 #include "garnet/lib/ui/gfx/tests/session_handler_test.h"
-
 #include "gtest/gtest.h"
 
 namespace scenic_impl {
 namespace gfx {
 namespace test {
 
-TEST_F(
-    SessionHandlerTest,
-    WhenSessionHandlerDestroyed_ShouldRemoveSessionHandlerPtrFromSessionManager) {
+TEST_F(SessionHandlerTest,
+       WhenSessionHandlerDestroyed_ShouldRemoveSessionHandlerPtrFromSessionManager) {
   ASSERT_NE(session_handler(), nullptr);
 
   auto id = session_handler()->session()->id();

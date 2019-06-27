@@ -20,8 +20,7 @@ class FuchsiaDataSource : public HackFilesystem {
   FuchsiaDataSource();
 
   // |HackFilesystem|
-  bool InitializeWithRealFiles(const std::vector<HackFilePath>& paths,
-                               const char* root) override;
+  bool InitializeWithRealFiles(const std::vector<HackFilePath>& paths, const char* root) override;
 
  private:
   std::shared_ptr<vfs::PseudoDir> root_dir_;

@@ -6,21 +6,18 @@
 #define GARNET_LIB_UI_GFX_UTIL_UNWRAP_H_
 
 #include <fuchsia/ui/gfx/cpp/fidl.h>
+
+#include "src/lib/fxl/logging.h"
 #include "src/ui/lib/escher/geometry/bounding_box.h"
 #include "src/ui/lib/escher/geometry/transform.h"
 #include "src/ui/lib/escher/geometry/types.h"
-#include "src/lib/fxl/logging.h"
 
 namespace scenic_impl {
 namespace gfx {
 
-inline escher::vec2 Unwrap(::fuchsia::ui::gfx::vec2 args) {
-  return {args.x, args.y};
-}
+inline escher::vec2 Unwrap(::fuchsia::ui::gfx::vec2 args) { return {args.x, args.y}; }
 
-inline escher::vec3 Unwrap(::fuchsia::ui::gfx::vec3 args) {
-  return {args.x, args.y, args.z};
-}
+inline escher::vec3 Unwrap(::fuchsia::ui::gfx::vec3 args) { return {args.x, args.y, args.z}; }
 
 inline escher::vec4 Unwrap(::fuchsia::ui::gfx::vec4 args) {
   return {args.x, args.y, args.z, args.w};
@@ -45,8 +42,7 @@ inline escher::quat Unwrap(::fuchsia::ui::gfx::Quaternion args) {
 }
 
 inline escher::Transform Unwrap(::fuchsia::ui::gfx::FactoredTransform args) {
-  return {Unwrap(args.translation), Unwrap(args.scale), Unwrap(args.rotation),
-          Unwrap(args.anchor)};
+  return {Unwrap(args.translation), Unwrap(args.scale), Unwrap(args.rotation), Unwrap(args.anchor)};
 }
 
 inline escher::BoundingBox Unwrap(::fuchsia::ui::gfx::BoundingBox args) {
@@ -135,8 +131,7 @@ inline escher::vec4 UnwrapVector4(const ::fuchsia::ui::gfx::Vector4Value& val) {
   return Unwrap(val.value);
 }
 
-inline escher::quat UnwrapQuaternion(
-    const ::fuchsia::ui::gfx::QuaternionValue& val) {
+inline escher::quat UnwrapQuaternion(const ::fuchsia::ui::gfx::QuaternionValue& val) {
   FXL_DCHECK(!IsVariable(val)) << "variable values not yet implemented";
   return Unwrap(val.value);
 }
@@ -189,8 +184,7 @@ inline bool Unwrap(const ::fuchsia::ui::gfx::Value& value, escher::mat4* out) {
   return false;
 }
 
-inline bool Unwrap(const ::fuchsia::ui::gfx::Value& value,
-                   escher::Transform* out) {
+inline bool Unwrap(const ::fuchsia::ui::gfx::Value& value, escher::Transform* out) {
   if (!IsVariable(value) && IsTransform(value)) {
     (*out) = Unwrap(value.transform());
     return true;

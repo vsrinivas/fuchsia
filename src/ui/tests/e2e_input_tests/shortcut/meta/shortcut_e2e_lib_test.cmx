@@ -10,7 +10,6 @@
                 "fuchsia.ui.shortcut.Manager": "fuchsia-pkg://fuchsia.com/shortcut#meta/shortcut_manager.cmx",
                 "fuchsia.ui.shortcut.Registry": "fuchsia-pkg://fuchsia.com/shortcut#meta/shortcut_manager.cmx",
                 "fuchsia.vulkan.loader.Loader": "fuchsia-pkg://fuchsia.com/vulkan_loader#meta/vulkan_loader.cmx"
-
             }
         }
     },

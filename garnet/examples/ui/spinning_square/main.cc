@@ -14,8 +14,7 @@ int main(int argc, const char** argv) {
 
   scenic::ViewProviderComponent component(
       [](scenic::ViewContext context) {
-        return std::make_unique<examples::SpinningSquareView>(
-            std::move(context));
+        return std::make_unique<examples::SpinningSquareView>(std::move(context));
       },
       &loop);
 

@@ -21,8 +21,7 @@ TEST(ValidateEventpair, CorrectEventpair) {
   zx_status_t status = zx::eventpair::create(/*flags*/ 0u, &a, &b);
   ASSERT_EQ(status, ZX_OK);
 
-  EXPECT_TRUE(validate_eventpair(a, ZX_DEFAULT_EVENTPAIR_RIGHTS, b,
-                                 ZX_DEFAULT_EVENTPAIR_RIGHTS));
+  EXPECT_TRUE(validate_eventpair(a, ZX_DEFAULT_EVENTPAIR_RIGHTS, b, ZX_DEFAULT_EVENTPAIR_RIGHTS));
 }
 
 TEST(ValidateEventpair, SameEventpair) {
@@ -30,8 +29,8 @@ TEST(ValidateEventpair, SameEventpair) {
   zx_status_t status = zx::eventpair::create(/*flags*/ 0u, &a, &b);
   ASSERT_EQ(status, ZX_OK);
 
-  EXPECT_FALSE(validate_eventpair(a, ZX_DEFAULT_EVENTPAIR_RIGHTS, /*oops!*/ a,
-                                  ZX_DEFAULT_EVENTPAIR_RIGHTS));
+  EXPECT_FALSE(
+      validate_eventpair(a, ZX_DEFAULT_EVENTPAIR_RIGHTS, /*oops!*/ a, ZX_DEFAULT_EVENTPAIR_RIGHTS));
 }
 
 TEST(ValidateEventpair, DeadEventpair) {
@@ -41,8 +40,7 @@ TEST(ValidateEventpair, DeadEventpair) {
 
   b.reset();  // Kill b.
 
-  EXPECT_FALSE(validate_eventpair(a, ZX_DEFAULT_EVENTPAIR_RIGHTS, b,
-                                  ZX_DEFAULT_EVENTPAIR_RIGHTS));
+  EXPECT_FALSE(validate_eventpair(a, ZX_DEFAULT_EVENTPAIR_RIGHTS, b, ZX_DEFAULT_EVENTPAIR_RIGHTS));
 }
 
 TEST(ValidateEventpair, UncorrelatedEventpair) {
@@ -52,8 +50,8 @@ TEST(ValidateEventpair, UncorrelatedEventpair) {
   status = zx::eventpair::create(/*flags*/ 0u, &c, &d);
   ASSERT_EQ(status, ZX_OK);
 
-  EXPECT_FALSE(validate_eventpair(a, ZX_DEFAULT_EVENTPAIR_RIGHTS, /*oop!*/ c,
-                                  ZX_DEFAULT_EVENTPAIR_RIGHTS));
+  EXPECT_FALSE(
+      validate_eventpair(a, ZX_DEFAULT_EVENTPAIR_RIGHTS, /*oop!*/ c, ZX_DEFAULT_EVENTPAIR_RIGHTS));
 }
 
 TEST(ValidateEventpair, MissingCapability) {
@@ -64,8 +62,7 @@ TEST(ValidateEventpair, MissingCapability) {
   status = a.replace(ZX_RIGHTS_BASIC, &a);  // Fewer rights.
   ASSERT_EQ(status, ZX_OK);
 
-  EXPECT_FALSE(validate_eventpair(a, ZX_DEFAULT_EVENTPAIR_RIGHTS, b,
-                                  ZX_DEFAULT_EVENTPAIR_RIGHTS));
+  EXPECT_FALSE(validate_eventpair(a, ZX_DEFAULT_EVENTPAIR_RIGHTS, b, ZX_DEFAULT_EVENTPAIR_RIGHTS));
 }
 
 TEST(ValidateEventpair, ExcessCapability) {
@@ -74,8 +71,7 @@ TEST(ValidateEventpair, ExcessCapability) {
   ASSERT_EQ(status, ZX_OK);
 
   // a has more rights than expected.
-  EXPECT_FALSE(
-      validate_eventpair(a, ZX_RIGHTS_BASIC, b, ZX_DEFAULT_EVENTPAIR_RIGHTS));
+  EXPECT_FALSE(validate_eventpair(a, ZX_RIGHTS_BASIC, b, ZX_DEFAULT_EVENTPAIR_RIGHTS));
 }
 
 TEST(ValidateViewRefs, CorrectViewRef) {

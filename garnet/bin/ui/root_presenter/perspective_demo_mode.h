@@ -6,10 +6,10 @@
 #define GARNET_BIN_UI_ROOT_PRESENTER_PERSPECTIVE_DEMO_MODE_H_
 
 #include <fuchsia/ui/input/cpp/fidl.h>
-#include "src/lib/fxl/macros.h"
-#include "lib/ui/scenic/cpp/resources.h"
 
 #include "garnet/bin/ui/root_presenter/displays/display_metrics.h"
+#include "lib/ui/scenic/cpp/resources.h"
+#include "src/lib/fxl/macros.h"
 
 namespace root_presenter {
 
@@ -29,8 +29,7 @@ class PerspectiveDemoMode {
   // dispatched.
   //
   // Returns true if the event was consumed and the scene is to be invalidated.
-  bool OnEvent(const fuchsia::ui::input::InputEvent& event,
-               Presentation* presenter);
+  bool OnEvent(const fuchsia::ui::input::InputEvent& event, Presentation* presenter);
 
   // Returns true if an animation update happened and the scene is to be
   // invalidated.
@@ -62,8 +61,7 @@ class PerspectiveDemoMode {
   // pan_param will scrub through an animation to a three-quarters view, and
   // zoom_param will interpolate from a nearly-orthographic camera, to a
   // configurable perspective camera.
-  void UpdateCamera(Presentation* presentation, float pan_param,
-                    float zoom_param);
+  void UpdateCamera(Presentation* presentation, float pan_param, float zoom_param);
 
   enum AnimationState {
     kOrthographic,

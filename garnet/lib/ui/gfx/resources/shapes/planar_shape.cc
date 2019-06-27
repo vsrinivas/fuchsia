@@ -7,12 +7,10 @@
 namespace scenic_impl {
 namespace gfx {
 
-PlanarShape::PlanarShape(Session* session, ResourceId id,
-                         const ResourceTypeInfo& type_info)
+PlanarShape::PlanarShape(Session* session, ResourceId id, const ResourceTypeInfo& type_info)
     : Shape(session, id, type_info) {}
 
-bool PlanarShape::GetIntersection(const escher::ray4& ray,
-                                  float* out_distance) const {
+bool PlanarShape::GetIntersection(const escher::ray4& ray, float* out_distance) const {
   // Reject if the ray origin is behind the Z=0 plane.
   if (ray.origin.z > 0.f)
     return false;
@@ -26,8 +24,7 @@ bool PlanarShape::GetIntersection(const escher::ray4& ray,
   // vector and the point of intersection.
   float distance = ray.origin.z / delta_z;
   escher::vec2 point =
-      (escher::vec2(ray.origin) + distance * escher::vec2(ray.direction)) /
-      ray.origin.w;
+      (escher::vec2(ray.origin) + distance * escher::vec2(ray.direction)) / ray.origin.w;
 
   // Reject if the shape does not contain the point of intersection.
   if (!ContainsPoint(point))

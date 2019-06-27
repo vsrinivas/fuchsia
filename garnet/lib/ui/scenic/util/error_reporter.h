@@ -53,8 +53,7 @@ class ErrorReporter {
   static ErrorReporter* Default();
 
  private:
-  virtual void ReportError(fxl::LogSeverity severity,
-                           std::string error_string) = 0;
+  virtual void ReportError(fxl::LogSeverity severity, std::string error_string) = 0;
 };
 
 }  // namespace scenic_impl

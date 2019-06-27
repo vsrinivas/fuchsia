@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <string>
-
 #include <lib/async-loop/cpp/loop.h>
+
+#include <string>
 
 #include "garnet/examples/ui/lab/direct_input/app.h"
 #include "src/lib/fxl/command_line.h"

@@ -51,20 +51,17 @@ namespace test {
 
 TEST(MouseTest, BootMouse) {
   hid::DeviceDescriptor *dev_desc = nullptr;
-  auto parse_res = hid::ParseReportDescriptor(
-      boot_mouse_desc, sizeof(boot_mouse_desc), &dev_desc);
+  auto parse_res = hid::ParseReportDescriptor(boot_mouse_desc, sizeof(boot_mouse_desc), &dev_desc);
   ASSERT_EQ(hid::ParseResult::kParseOk, parse_res);
 
   ui_input::Mouse mouse = {};
   ui_input::Device::Descriptor device_descriptor = {};
-  bool success =
-      mouse.ParseReportDescriptor(dev_desc->report[0], &device_descriptor);
+  bool success = mouse.ParseReportDescriptor(dev_desc->report[0], &device_descriptor);
   ASSERT_TRUE(success);
   EXPECT_EQ(device_descriptor.has_mouse, true);
   EXPECT_EQ(device_descriptor.mouse_type, ui_input::MouseDeviceType::HID);
   EXPECT_EQ(device_descriptor.mouse_descriptor->buttons,
-            fuchsia::ui::input::kMouseButtonPrimary |
-                fuchsia::ui::input::kMouseButtonSecondary |
+            fuchsia::ui::input::kMouseButtonPrimary | fuchsia::ui::input::kMouseButtonSecondary |
                 fuchsia::ui::input::kMouseButtonTertiary);
 
   const uint8_t report_data[] = {
@@ -78,8 +75,7 @@ TEST(MouseTest, BootMouse) {
   success = mouse.ParseReport(report_data, sizeof(report_data), &report);
   EXPECT_EQ(true, success);
 
-  EXPECT_EQ(fuchsia::ui::input::kMouseButtonPrimary |
-                fuchsia::ui::input::kMouseButtonSecondary |
+  EXPECT_EQ(fuchsia::ui::input::kMouseButtonPrimary | fuchsia::ui::input::kMouseButtonSecondary |
                 fuchsia::ui::input::kMouseButtonTertiary,
             report.mouse->pressed_buttons);
   EXPECT_EQ(100, report.mouse->rel_x);

@@ -45,8 +45,7 @@ TEST_F(SizeChangeHintTest, SendingSizeChangeEventWorks) {
   ASSERT_TRUE(Apply(scenic::NewCreateEntityNodeCmd(node_id)));
   EXPECT_TRUE(Apply(scenic::NewExportResourceCmd(node_id, std::move(source))));
   EXPECT_TRUE(Apply(scenic::NewImportResourceCmd(
-      import_node_id, ::fuchsia::ui::gfx::ImportSpec::NODE,
-      std::move(destination))));
+      import_node_id, ::fuchsia::ui::gfx::ImportSpec::NODE, std::move(destination))));
 
   ResourceId root_node_id = 3;
   ResourceId child_1_id = 4;
@@ -59,11 +58,10 @@ TEST_F(SizeChangeHintTest, SendingSizeChangeEventWorks) {
   Apply(scenic::NewAddChildCmd(root_node_id, child_1_id));
   Apply(scenic::NewAddChildCmd(root_node_id, child_2_id));
 
-  EXPECT_TRUE(Apply(scenic::NewSetEventMaskCmd(
-      child_1_id, fuchsia::ui::gfx::kSizeChangeHintEventMask)));
-
   EXPECT_TRUE(
-      Apply(scenic::NewSendSizeChangeHintCmdHACK(node_id, 3.14f, 3.14f)));
+      Apply(scenic::NewSetEventMaskCmd(child_1_id, fuchsia::ui::gfx::kSizeChangeHintEventMask)));
+
+  EXPECT_TRUE(Apply(scenic::NewSendSizeChangeHintCmdHACK(node_id, 3.14f, 3.14f)));
 
   // Run the message loop until we get an event.
   RunLoopUntilIdle();
@@ -72,8 +70,7 @@ TEST_F(SizeChangeHintTest, SendingSizeChangeEventWorks) {
   EXPECT_EQ(1u, events().size());
   auto& event = std::move(events()[0]);
   EXPECT_EQ(fuchsia::ui::scenic::Event::Tag::kGfx, event.Which());
-  EXPECT_EQ(::fuchsia::ui::gfx::Event::Tag::kSizeChangeHint,
-            event.gfx().Which());
+  EXPECT_EQ(::fuchsia::ui::gfx::Event::Tag::kSizeChangeHint, event.gfx().Which());
   ASSERT_EQ(child_1_id, event.gfx().size_change_hint().node_id);
   EXPECT_EQ(3.14f, event.gfx().size_change_hint().width_change_factor);
   EXPECT_EQ(3.14f, event.gfx().size_change_hint().height_change_factor);

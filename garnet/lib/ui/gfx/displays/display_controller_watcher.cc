@@ -21,25 +21,23 @@ DisplayControllerWatcher::DisplayControllerWatcher() = default;
 
 DisplayControllerWatcher::~DisplayControllerWatcher() = default;
 
-void DisplayControllerWatcher::WaitForDisplayController(
-    DisplayControllerReadyCallback callback) {
+void DisplayControllerWatcher::WaitForDisplayController(DisplayControllerReadyCallback callback) {
   FXL_DCHECK(!device_watcher_);
   device_watcher_ = fsl::DeviceWatcher::Create(
-      kDisplayDir, [this, callback = std::move(callback)](
-                       int dir_fd, std::string filename) mutable {
+      kDisplayDir,
+      [this, callback = std::move(callback)](int dir_fd, std::string filename) mutable {
         HandleDevice(std::move(callback), dir_fd, filename);
       });
 }
 
-void DisplayControllerWatcher::HandleDevice(
-    DisplayControllerReadyCallback callback, int dir_fd, std::string filename) {
+void DisplayControllerWatcher::HandleDevice(DisplayControllerReadyCallback callback, int dir_fd,
+                                            std::string filename) {
   device_watcher_.reset();
 
   // Get display info.
   std::string path = kDisplayDir + "/" + filename;
 
-  FXL_LOG(INFO) << "Scenic: Acquired display controller " << path << ".("
-                << filename << ")";
+  FXL_LOG(INFO) << "Scenic: Acquired display controller " << path << ".(" << filename << ")";
   fbl::unique_fd fd(open(path.c_str(), O_RDWR));
   if (!fd.is_valid()) {
     FXL_DLOG(ERROR) << "Failed to open " << path << ": errno=" << errno;
@@ -50,8 +48,7 @@ void DisplayControllerWatcher::HandleDevice(
   zx::channel device_server, device_client;
   zx_status_t status = zx::channel::create(0, &device_server, &device_client);
   if (status != ZX_OK) {
-    FXL_DLOG(ERROR) << "Failed to create device channel: "
-                    << zx_status_get_string(status);
+    FXL_DLOG(ERROR) << "Failed to create device channel: " << zx_status_get_string(status);
     callback(zx::channel(), zx::channel());
     return;
   }
@@ -67,17 +64,14 @@ void DisplayControllerWatcher::HandleDevice(
 
   fzl::FdioCaller caller(std::move(fd));
   zx_status_t fidl_status = fuchsia_hardware_display_ProviderOpenController(
-      caller.borrow_channel(), device_server.release(), dc_server.release(),
-      &status);
+      caller.borrow_channel(), device_server.release(), dc_server.release(), &status);
   if (fidl_status != ZX_OK) {
-    FXL_DLOG(ERROR) << "Failed to call service handle: "
-                    << zx_status_get_string(fidl_status);
+    FXL_DLOG(ERROR) << "Failed to call service handle: " << zx_status_get_string(fidl_status);
     callback(zx::channel(), zx::channel());
     return;
   }
   if (status != ZX_OK) {
-    FXL_DLOG(ERROR) << "Failed to open display controller : "
-                    << zx_status_get_string(status);
+    FXL_DLOG(ERROR) << "Failed to open display controller : " << zx_status_get_string(status);
     callback(zx::channel(), zx::channel());
     return;
   }

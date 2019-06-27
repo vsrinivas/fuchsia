@@ -17,8 +17,7 @@ namespace escher {
 // the sequence numbers from a CommandBufferSequencer with the sequence numbers
 // of resources that it is keeping alive. The default implementation does not
 // recycle resources, instead destroying them as soon as it is safe.
-class ResourceRecycler : public ResourceManager,
-                         public impl::CommandBufferSequencerListener {
+class ResourceRecycler : public ResourceManager, public impl::CommandBufferSequencerListener {
  public:
   explicit ResourceRecycler(EscherWeakPtr escher);
 

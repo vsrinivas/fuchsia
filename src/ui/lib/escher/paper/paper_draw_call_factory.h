@@ -22,19 +22,15 @@ struct RoundedRectSpec;
 class PaperDrawCallFactory final {
  public:
   // |weak_escher| is used only to create |white_texture_|; it is not retained.
-  PaperDrawCallFactory(EscherWeakPtr weak_escher,
-                       const PaperRendererConfig& config);
+  PaperDrawCallFactory(EscherWeakPtr weak_escher, const PaperRendererConfig& config);
   PaperDrawCallFactory(const PaperDrawCallFactory&) = delete;
   ~PaperDrawCallFactory();
 
   // Draw the specified shape by obtaining a mesh from |PaperShapeCache| and
   // generating/enqueuing draw calls via |EnqueueDrawCalls()|.
-  void DrawCircle(float radius, const PaperMaterial& material,
-                  PaperDrawableFlags flags = {});
-  void DrawRect(vec2 min, vec2 max, const PaperMaterial& material,
-                PaperDrawableFlags flags = {});
-  void DrawRoundedRect(const RoundedRectSpec& spec,
-                       const PaperMaterial& material,
+  void DrawCircle(float radius, const PaperMaterial& material, PaperDrawableFlags flags = {});
+  void DrawRect(vec2 min, vec2 max, const PaperMaterial& material, PaperDrawableFlags flags = {});
+  void DrawRoundedRect(const RoundedRectSpec& spec, const PaperMaterial& material,
                        PaperDrawableFlags flags = {});
 
   // Generate and enqueue 0 or more draw calls for the mesh/material combo.
@@ -43,8 +39,7 @@ class PaperDrawCallFactory final {
   // NOTE: this should probably be private, but it is currently exposed
   // to allow PaperLegacyDrawable to draw arbitrary meshes (these can't cast
   // shadows, unfortunately).
-  void EnqueueDrawCalls(const PaperShapeCacheEntry& cache_entry,
-                        const PaperMaterial& material,
+  void EnqueueDrawCalls(const PaperShapeCacheEntry& cache_entry, const PaperMaterial& material,
                         PaperDrawableFlags flags);
 
   // TODO(ES203) - We will eventualy not need to do this as we will simply
@@ -64,8 +59,7 @@ class PaperDrawCallFactory final {
   class SortKey {
    public:
     static SortKey NewOpaque(Hash pipeline_hash, Hash draw_hash, float depth);
-    static SortKey NewTranslucent(Hash pipeline_hash, Hash draw_hash,
-                                  float depth);
+    static SortKey NewTranslucent(Hash pipeline_hash, Hash draw_hash, float depth);
     SortKey(const SortKey& other) : key_(other.key_) {}
 
     uint64_t key() const { return key_; }
@@ -103,10 +97,9 @@ class PaperDrawCallFactory final {
   //
   // |camera| and |transform_stack| could be used to obtain LOD-appropriate
   // meshes from |shape_cache|, but this is not currently implemented.
-  void BeginFrame(const FramePtr& frame, PaperScene* scene,
-                  PaperTransformStack* transform_stack,
-                  PaperRenderQueue* render_queue, PaperShapeCache* shape_cache,
-                  vec3 camera_pos, vec3 camera_dir);
+  void BeginFrame(const FramePtr& frame, PaperScene* scene, PaperTransformStack* transform_stack,
+                  PaperRenderQueue* render_queue, PaperShapeCache* shape_cache, vec3 camera_pos,
+                  vec3 camera_dir);
   // Cleanup.
   void EndFrame();
 

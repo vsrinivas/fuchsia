@@ -16,12 +16,10 @@ namespace escher {
 // Create a new escher::Semaphore and a corresponding zx::event using
 // the VK_KHR_EXTERNAL_SEMAPHORE_FD extension.  If it fails, both elements
 // of the pair will be null.
-std::pair<escher::SemaphorePtr, zx::event> NewSemaphoreEventPair(
-    escher::Escher* escher);
+std::pair<escher::SemaphorePtr, zx::event> NewSemaphoreEventPair(escher::Escher* escher);
 
 // Exports a Semaphore into an event.
-zx::event GetEventForSemaphore(VulkanDeviceQueues* device,
-                               const escher::SemaphorePtr& semaphore);
+zx::event GetEventForSemaphore(VulkanDeviceQueues* device, const escher::SemaphorePtr& semaphore);
 
 // Export the escher::GpuMem as a zx::vmo.
 zx::vmo ExportMemoryAsVmo(escher::Escher* escher, const escher::GpuMemPtr& mem);

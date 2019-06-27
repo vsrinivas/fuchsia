@@ -6,6 +6,7 @@
 #define GARNET_EXAMPLES_UI_SHADERTOY_SERVICE_SHADERTOY_IMPL_H_
 
 #include <fuchsia/examples/shadertoy/cpp/fidl.h>
+
 #include "garnet/examples/ui/shadertoy/service/shadertoy_state.h"
 
 namespace shadertoy {
@@ -26,8 +27,7 @@ class ShadertoyImpl : public fuchsia::examples::shadertoy::Shadertoy {
   // |Shadertoy|
   void SetShaderCode(
       ::std::string glsl,
-      fuchsia::examples::shadertoy::Shadertoy::SetShaderCodeCallback callback)
-      override;
+      fuchsia::examples::shadertoy::Shadertoy::SetShaderCodeCallback callback) override;
 
   // |Shadertoy|
   void SetResolution(uint32_t width, uint32_t height) override;
@@ -36,9 +36,8 @@ class ShadertoyImpl : public fuchsia::examples::shadertoy::Shadertoy {
   void SetMouse(fuchsia::ui::gfx::vec4 i_mouse) override;
 
   // |Shadertoy|
-  void SetImage(
-      uint32_t channel,
-      ::fidl::InterfaceRequest<fuchsia::images::ImagePipe> request) override;
+  void SetImage(uint32_t channel,
+                ::fidl::InterfaceRequest<fuchsia::images::ImagePipe> request) override;
 
   fxl::RefPtr<ShadertoyState> state_;
 

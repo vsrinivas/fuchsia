@@ -28,11 +28,9 @@ TEST_F(EventTimestamperTest, WatchingState) {
   bool callback_triggered = false;
   zx::event event;
   ASSERT_EQ(ZX_OK, zx::event::create(0u, &event));
-  EventTimestamper::Watch watch(timestamper.get(), CopyEvent(event),
-                                ZX_EVENT_SIGNALED,
-                                [&callback_triggered](zx_time_t timestamp) {
-                                  callback_triggered = true;
-                                });
+  EventTimestamper::Watch watch(
+      timestamper.get(), CopyEvent(event), ZX_EVENT_SIGNALED,
+      [&callback_triggered](zx_time_t timestamp) { callback_triggered = true; });
 
   // IsWatching() should only be true if the watcher has started..
   EXPECT_FALSE(watch.IsWatching());
@@ -62,8 +60,8 @@ TEST_F(EventTimestamperTest, DISABLED_SmokeTest) {
 
   for (size_t i = 0; i < kEventCount; ++i) {
     ASSERT_EQ(ZX_OK, zx::event::create(0u, &(events[i])));
-    watches.emplace_back(timestamper.get(), CopyEvent(events[i]),
-                         ZX_EVENT_SIGNALED, [&, i = i](zx_time_t timestamp) {
+    watches.emplace_back(timestamper.get(), CopyEvent(events[i]), ZX_EVENT_SIGNALED,
+                         [&, i = i](zx_time_t timestamp) {
                            ASSERT_GT(kEventCount, i);
                            EXPECT_GT(target_callback_times[i], 0u);
                            EXPECT_LE(target_callback_times[i], timestamp);

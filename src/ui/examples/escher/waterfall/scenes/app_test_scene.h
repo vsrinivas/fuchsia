@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_EXAMPLES_ESCHER_WATERFALL_SCENES_APP_TEST_SCENE_H_
-#define GARNET_EXAMPLES_ESCHER_WATERFALL_SCENES_APP_TEST_SCENE_H_
+#ifndef SRC_UI_EXAMPLES_ESCHER_WATERFALL_SCENES_APP_TEST_SCENE_H_
+#define SRC_UI_EXAMPLES_ESCHER_WATERFALL_SCENES_APP_TEST_SCENE_H_
 
+#include "src/lib/fxl/macros.h"
 #include "src/ui/lib/escher/gl/mesh.h"
 #include "src/ui/lib/escher/scene/model.h"
 #include "src/ui/lib/escher/scene/viewing_volume.h"
-#include "src/lib/fxl/macros.h"
 
 class AppTestScene {
  public:
@@ -18,8 +18,7 @@ class AppTestScene {
   // Initialize once OpenGL context is available.
   void InitGL();
 
-  escher::Model GetModel(const escher::ViewingVolume& volume,
-                         const escher::vec2& focus);
+  escher::Model GetModel(const escher::ViewingVolume& volume, const escher::vec2& focus);
 
  private:
   escher::Material app_bar_material_;
@@ -34,4 +33,4 @@ class AppTestScene {
   FXL_DISALLOW_COPY_AND_ASSIGN(AppTestScene);
 };
 
-#endif  // GARNET_EXAMPLES_ESCHER_WATERFALL_SCENES_APP_TEST_SCENE_H_
+#endif  // SRC_UI_EXAMPLES_ESCHER_WATERFALL_SCENES_APP_TEST_SCENE_H_

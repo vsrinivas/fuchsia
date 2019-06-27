@@ -40,8 +40,7 @@ class PaperShapeCache {
  public:
   static constexpr size_t kNumFramesBeforeEviction = 3;
 
-  explicit PaperShapeCache(EscherWeakPtr escher,
-                           const PaperRendererConfig& config);
+  explicit PaperShapeCache(EscherWeakPtr escher, const PaperRendererConfig& config);
   ~PaperShapeCache();
 
   // Return a (possibly cached) mesh that matches the shape parameters.  To
@@ -52,16 +51,12 @@ class PaperShapeCache {
   // configuration (e.g. perhaps adding a vertex attribute to allow
   // shadow-volume extrusion in the vertex shader).
   const PaperShapeCacheEntry& GetRoundedRectMesh(const RoundedRectSpec& spec,
-                                                 const plane3* clip_planes,
-                                                 size_t num_clip_planes);
-  const PaperShapeCacheEntry& GetCircleMesh(float radius,
-                                            const plane3* clip_planes,
+                                                 const plane3* clip_planes, size_t num_clip_planes);
+  const PaperShapeCacheEntry& GetCircleMesh(float radius, const plane3* clip_planes,
                                             size_t num_clip_planes);
-  const PaperShapeCacheEntry& GetRectMesh(vec2 min, vec2 max,
-                                          const plane3* clip_planes,
+  const PaperShapeCacheEntry& GetRectMesh(vec2 min, vec2 max, const plane3* clip_planes,
                                           size_t num_clip_planes);
-  const PaperShapeCacheEntry& GetRectMesh(float width, float height,
-                                          const plane3* clip_planes,
+  const PaperShapeCacheEntry& GetRectMesh(float width, float height, const plane3* clip_planes,
                                           size_t num_clip_planes) {
     vec2 half_extent(0.5f * width, 0.5f * height);
     return GetRectMesh(-half_extent, half_extent, clip_planes, num_clip_planes);
@@ -84,8 +79,8 @@ class PaperShapeCache {
   enum class ShapeType { kRect, kRoundedRect, kCircle };
 
   // Args: array of planes to clip the generated mesh, and size of the array.
-  using CacheMissMeshGenerator = fit::function<PaperShapeCacheEntry(
-      const plane3* planes, size_t num_planes)>;
+  using CacheMissMeshGenerator =
+      fit::function<PaperShapeCacheEntry(const plane3* planes, size_t num_planes)>;
 
   // Computes a lookup key by starting with |shape_hash| and then hashing the
   // list of |clip_planes|.  If no mesh is found with this key, a secondary key
@@ -100,10 +95,9 @@ class PaperShapeCache {
   //   For example, when an object is moving freely within a large clip region,
   //   the list of unculled planes will be empty; it would be a shame to
   //   continually regenerate the mesh in such a situation.
-  const PaperShapeCacheEntry& GetShapeMesh(
-      const Hash& shape_hash, const BoundingBox& bounding_box,
-      const plane3* clip_planes, size_t num_clip_planes,
-      CacheMissMeshGenerator mesh_generator);
+  const PaperShapeCacheEntry& GetShapeMesh(const Hash& shape_hash, const BoundingBox& bounding_box,
+                                           const plane3* clip_planes, size_t num_clip_planes,
+                                           CacheMissMeshGenerator mesh_generator);
 
   // Populates |unculled_planes_out| with the planes that clip at least one of
   // the bounding box corners; other planes are culled, because they cannot
@@ -117,10 +111,8 @@ class PaperShapeCache {
   // planes to clip (this final plane does appear in |unculled_planes_out|).
   //
   // Preserves the order of any unculled planes.
-  bool CullPlanesAgainstBoundingBox(const BoundingBox& bounding_box,
-                                    const plane3* planes,
-                                    plane3* unculled_planes_out,
-                                    size_t* num_planes_inout);
+  bool CullPlanesAgainstBoundingBox(const BoundingBox& bounding_box, const plane3* planes,
+                                    plane3* unculled_planes_out, size_t* num_planes_inout);
 
   // Called from EndFrame(); evicts all entries that have not been touched for
   // kNumFramesBeforeEviction.

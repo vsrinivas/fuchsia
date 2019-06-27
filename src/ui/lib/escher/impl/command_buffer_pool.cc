@@ -11,8 +11,7 @@ namespace escher {
 namespace impl {
 
 CommandBufferPool::CommandBufferPool(vk::Device device, vk::Queue queue,
-                                     uint32_t queue_family_index,
-                                     CommandBufferSequencer* sequencer,
+                                     uint32_t queue_family_index, CommandBufferSequencer* sequencer,
                                      bool supports_graphics_and_compute)
     : device_(device), queue_(queue), sequencer_(sequencer) {
   FXL_DCHECK(device);
@@ -26,12 +25,10 @@ CommandBufferPool::CommandBufferPool(vk::Device device, vk::Queue queue,
   pipeline_stage_mask_ = vk::PipelineStageFlagBits::eTopOfPipe |
                          vk::PipelineStageFlagBits::eTransfer |
                          vk::PipelineStageFlagBits::eBottomOfPipe |
-                         vk::PipelineStageFlagBits::eHost |
-                         vk::PipelineStageFlagBits::eAllCommands;
+                         vk::PipelineStageFlagBits::eHost | vk::PipelineStageFlagBits::eAllCommands;
   if (supports_graphics_and_compute) {
     pipeline_stage_mask_ |=
-        vk::PipelineStageFlagBits::eDrawIndirect |
-        vk::PipelineStageFlagBits::eVertexInput |
+        vk::PipelineStageFlagBits::eDrawIndirect | vk::PipelineStageFlagBits::eVertexInput |
         vk::PipelineStageFlagBits::eVertexShader |
         // TODO: cache supported stages at startup, otherwise
         //       validation layers would complain on devices that
@@ -43,8 +40,7 @@ CommandBufferPool::CommandBufferPool(vk::Device device, vk::Queue queue,
         vk::PipelineStageFlagBits::eEarlyFragmentTests |
         vk::PipelineStageFlagBits::eLateFragmentTests |
         vk::PipelineStageFlagBits::eColorAttachmentOutput |
-        vk::PipelineStageFlagBits::eComputeShader |
-        vk::PipelineStageFlagBits::eAllGraphics;
+        vk::PipelineStageFlagBits::eComputeShader | vk::PipelineStageFlagBits::eAllGraphics;
   }
 }
 
@@ -68,8 +64,7 @@ CommandBufferPool::~CommandBufferPool() {
       device_.destroyFence(buf->fence());
       free_buffers_.pop();
     }
-    device_.freeCommandBuffers(pool_,
-                               static_cast<uint32_t>(buffers_to_free.size()),
+    device_.freeCommandBuffers(pool_, static_cast<uint32_t>(buffers_to_free.size()),
                                buffers_to_free.data());
   }
   device_.destroyCommandPool(pool_);
@@ -86,14 +81,11 @@ CommandBuffer* CommandBufferPool::GetCommandBuffer() {
     info.commandPool = pool_;
     info.level = vk::CommandBufferLevel::ePrimary;
     info.commandBufferCount = 1;
-    auto allocated_vulkan_buffers =
-        ESCHER_CHECKED_VK_RESULT(device_.allocateCommandBuffers(info));
+    auto allocated_vulkan_buffers = ESCHER_CHECKED_VK_RESULT(device_.allocateCommandBuffers(info));
 
-    vk::Fence fence =
-        ESCHER_CHECKED_VK_RESULT(device_.createFence(vk::FenceCreateInfo()));
+    vk::Fence fence = ESCHER_CHECKED_VK_RESULT(device_.createFence(vk::FenceCreateInfo()));
 
-    buffer = new CommandBuffer(device_, allocated_vulkan_buffers[0], fence,
-                               pipeline_stage_mask_);
+    buffer = new CommandBuffer(device_, allocated_vulkan_buffers[0], fence, pipeline_stage_mask_);
     pending_buffers_.push(std::unique_ptr<CommandBuffer>(buffer));
   } else {
     buffer = free_buffers_.front().get();

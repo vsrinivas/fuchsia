@@ -13,8 +13,8 @@ namespace escher {
 
 void PaperLegacyDrawable::DrawInScene(const PaperScene* scene,
                                       PaperDrawCallFactory* draw_call_factory,
-                                      PaperTransformStack* transform_stack,
-                                      Frame* frame, PaperDrawableFlags flags) {
+                                      PaperTransformStack* transform_stack, Frame* frame,
+                                      PaperDrawableFlags flags) {
   TRACE_DURATION("gfx", "PaperLegacyDrawable::DrawInScene");
 
   if (!object_.material())

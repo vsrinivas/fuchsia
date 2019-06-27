@@ -36,13 +36,9 @@ class InputSystem : public System {
   virtual CommandDispatcherUniquePtr CreateCommandDispatcher(
       CommandDispatcherContext context) override;
 
-  fuchsia::ui::input::ImeServicePtr& text_sync_service() {
-    return text_sync_service_;
-  }
+  fuchsia::ui::input::ImeServicePtr& text_sync_service() { return text_sync_service_; }
 
-  std::unordered_set<SessionId>& hard_keyboard_requested() {
-    return hard_keyboard_requested_;
-  }
+  std::unordered_set<SessionId>& hard_keyboard_requested() { return hard_keyboard_requested_; }
 
  private:
   gfx::GfxSystem* const gfx_system_;
@@ -62,8 +58,8 @@ class InputSystem : public System {
 // Per-session treatment of input commands.
 class InputCommandDispatcher : public CommandDispatcher {
  public:
-  InputCommandDispatcher(CommandDispatcherContext context,
-                         gfx::GfxSystem* gfx_system, InputSystem* input_system);
+  InputCommandDispatcher(CommandDispatcherContext context, gfx::GfxSystem* gfx_system,
+                         InputSystem* input_system);
   ~InputCommandDispatcher() override = default;
 
   // |CommandDispatcher|
@@ -73,32 +69,24 @@ class InputCommandDispatcher : public CommandDispatcher {
   // Per-command dispatch logic.
   void DispatchCommand(const fuchsia::ui::input::SendPointerInputCmd command);
   void DispatchCommand(const fuchsia::ui::input::SendKeyboardInputCmd command);
-  void DispatchCommand(
-      const fuchsia::ui::input::SetHardKeyboardDeliveryCmd command);
-  void DispatchCommand(
-      const fuchsia::ui::input::SetParallelDispatchCmd command);
+  void DispatchCommand(const fuchsia::ui::input::SetHardKeyboardDeliveryCmd command);
+  void DispatchCommand(const fuchsia::ui::input::SetParallelDispatchCmd command);
 
   // Per-pointer-type dispatch logic.
-  void DispatchTouchCommand(
-      const fuchsia::ui::input::SendPointerInputCmd command);
-  void DispatchMouseCommand(
-      const fuchsia::ui::input::SendPointerInputCmd command);
+  void DispatchTouchCommand(const fuchsia::ui::input::SendPointerInputCmd command);
+  void DispatchMouseCommand(const fuchsia::ui::input::SendPointerInputCmd command);
 
   // Enqueue the focus event into the view's SessionListener.
-  void EnqueueEventToView(GlobalId view_id,
-                          fuchsia::ui::input::FocusEvent focus);
+  void EnqueueEventToView(GlobalId view_id, fuchsia::ui::input::FocusEvent focus);
 
   // Enqueue the pointer event into the view's SessionListener.
-  void EnqueueEventToView(GlobalId view_id,
-                          fuchsia::ui::input::PointerEvent pointer);
+  void EnqueueEventToView(GlobalId view_id, fuchsia::ui::input::PointerEvent pointer);
 
   // Enqueue the keyboard event into the view's SessionListener.
-  void EnqueueEventToView(GlobalId view_id,
-                          fuchsia::ui::input::KeyboardEvent keyboard);
+  void EnqueueEventToView(GlobalId view_id, fuchsia::ui::input::KeyboardEvent keyboard);
 
   // Enqueue the keyboard event to the Text Sync service.
-  void EnqueueEventToTextSync(GlobalId view_id,
-                              fuchsia::ui::input::KeyboardEvent keyboard);
+  void EnqueueEventToTextSync(GlobalId view_id, fuchsia::ui::input::KeyboardEvent keyboard);
 
   // FIELDS
 

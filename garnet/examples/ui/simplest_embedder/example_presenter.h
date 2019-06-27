@@ -30,20 +30,18 @@ class ExamplePresenter : private fuchsia::ui::policy::Presenter {
   ~ExamplePresenter() = default;
 
   // |Presenter|
-  void PresentView(fuchsia::ui::views::ViewHolderToken view_holder_token,
-                   fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
-                       presentation_request) override;
-  void HACK_SetRendererParams(
-      bool enable_clipping,
-      ::std::vector<::fuchsia::ui::gfx::RendererParam> params) override{};
+  void PresentView(
+      fuchsia::ui::views::ViewHolderToken view_holder_token,
+      fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request) override;
+  void HACK_SetRendererParams(bool enable_clipping,
+                              ::std::vector<::fuchsia::ui::gfx::RendererParam> params) override{};
 
   void Init(float width, float height);
 
  private:
   class Presentation {
    public:
-    Presentation(scenic::Session* session,
-                 fuchsia::ui::views::ViewHolderToken view_holder_token);
+    Presentation(scenic::Session* session, fuchsia::ui::views::ViewHolderToken view_holder_token);
 
     void SetSize(float width, float height);
 

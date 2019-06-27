@@ -41,8 +41,7 @@ const std::map<std::string, std::string> kServices = {
 class ViewEmbedderTest : public sys::testing::TestWithEnvironment {
  protected:
   ViewEmbedderTest() {
-    std::unique_ptr<sys::testing::EnvironmentServices> services =
-        CreateServices();
+    std::unique_ptr<sys::testing::EnvironmentServices> services = CreateServices();
 
     for (const auto& [service_name, url] : kServices) {
       fuchsia::sys::LaunchInfo launch_info;
@@ -51,13 +50,11 @@ class ViewEmbedderTest : public sys::testing::TestWithEnvironment {
     }
 
     constexpr char kEnvironment[] = "ViewEmbedderTest";
-    environment_ =
-        CreateNewEnclosingEnvironment(kEnvironment, std::move(services));
+    environment_ = CreateNewEnclosingEnvironment(kEnvironment, std::move(services));
 
     environment_->ConnectToService(scenic_.NewRequest());
-    scenic_.set_error_handler([](zx_status_t status) {
-      FAIL() << "Lost connection to Scenic: " << status;
-    });
+    scenic_.set_error_handler(
+        [](zx_status_t status) { FAIL() << "Lost connection to Scenic: " << status; });
   }
 
   // Create a |ViewContext| that allows us to present a view via
@@ -90,14 +87,12 @@ TEST_F(ViewEmbedderTest, BouncingBall) {
   scenic::EmbedderView embedder_view(CreatePresentationContext());
 
   bool view_state_changed_observed = false;
-  embedder_view.EmbedView(std::move(info),
-                          [&view_state_changed_observed](auto) {
-                            view_state_changed_observed = true;
-                          });
+  embedder_view.EmbedView(std::move(info), [&view_state_changed_observed](auto) {
+    view_state_changed_observed = true;
+  });
 
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&view_state_changed_observed] { return view_state_changed_observed; },
-      zx::sec(10)));
+      [&view_state_changed_observed] { return view_state_changed_observed; }, zx::sec(10)));
 }
 
 }  // namespace

@@ -11,18 +11,17 @@
 
 namespace escher {
 
-static std::pair<float, float> ComputeNearAndFarPlanes(
-    const ViewingVolume& volume, const mat4& camera_transform) {
+static std::pair<float, float> ComputeNearAndFarPlanes(const ViewingVolume& volume,
+                                                       const mat4& camera_transform) {
   float width = volume.width();
   float height = volume.height();
   float bottom = volume.bottom();
   float top = volume.top();
   FXL_DCHECK(bottom > top);
 
-  vec3 corners[] = {{0, 0, bottom},      {width, 0, bottom},
-                    {0, 0, top},         {width, 0, top},
-                    {0, height, bottom}, {width, height, bottom},
-                    {0, height, top},    {width, height, top}};
+  vec3 corners[] = {{0, 0, bottom},   {width, 0, bottom},  {0, 0, top},
+                    {width, 0, top},  {0, height, bottom}, {width, height, bottom},
+                    {0, height, top}, {width, height, top}};
 
   // Transform the corners into eye space, throwing away everything except the
   // negated Z-coordinate.  There are two reasons that we do this; both rely on
@@ -74,8 +73,8 @@ Camera Camera::NewOrtho(const ViewingVolume& volume) {
   // center of the stage.  Also, move the camera "upward"; since the Vulkan
   // camera points into the screen along the negative-Z axis, this is equivalent
   // to moving the entire stage by a negative amount in Z.
-  mat4 transform = glm::translate(
-      vec3(-volume.width() / 2, -volume.height() / 2, volume.top() - 10.f));
+  mat4 transform =
+      glm::translate(vec3(-volume.width() / 2, -volume.height() / 2, volume.top() - 10.f));
 
   // This method does not take the transform of the camera as input so there is
   // no way to reorient the view matrix outside of this method, so we point it
@@ -87,15 +86,14 @@ Camera Camera::NewOrtho(const ViewingVolume& volume) {
   transform = glm::scale(transform, glm::vec3(1.f, 1.f, -1.f));
 
   auto near_and_far = ComputeNearAndFarPlanes(volume, transform);
-  mat4 projection = glm::orthoRH(
-      -0.5f * volume.width(), 0.5f * volume.width(), -0.5f * volume.height(),
-      0.5f * volume.height(), near_and_far.first, near_and_far.second);
+  mat4 projection =
+      glm::orthoRH(-0.5f * volume.width(), 0.5f * volume.width(), -0.5f * volume.height(),
+                   0.5f * volume.height(), near_and_far.first, near_and_far.second);
 
   return Camera(transform, projection);
 }
 
-Camera Camera::NewForDirectionalShadowMap(const ViewingVolume& volume,
-                                          const glm::vec3& direction) {
+Camera Camera::NewForDirectionalShadowMap(const ViewingVolume& volume, const glm::vec3& direction) {
   glm::mat4 transform;
   RotationBetweenVectors(direction, glm::vec3(0.f, 0.f, -1.f), &transform);
   BoundingBox box = transform * volume.bounding_box();
@@ -105,18 +103,15 @@ Camera Camera::NewForDirectionalShadowMap(const ViewingVolume& volume,
   const float near = -box.max().z - (kStageFloorFudgeFactor * range);
   const float far = -box.min().z + (kStageFloorFudgeFactor * range);
 
-  glm::mat4 projection =
-      glm::ortho(box.min().x, box.max().x, box.min().y, box.max().y, near, far);
+  glm::mat4 projection = glm::ortho(box.min().x, box.max().x, box.min().y, box.max().y, near, far);
 
   return Camera(transform, projection);
 }
 
-Camera Camera::NewPerspective(const ViewingVolume& volume,
-                              const mat4& transform, float fovy) {
+Camera Camera::NewPerspective(const ViewingVolume& volume, const mat4& transform, float fovy) {
   auto near_and_far = ComputeNearAndFarPlanes(volume, transform);
   float aspect = volume.width() / volume.height();
-  mat4 projection =
-      glm::perspectiveRH(fovy, aspect, near_and_far.first, near_and_far.second);
+  mat4 projection = glm::perspectiveRH(fovy, aspect, near_and_far.first, near_and_far.second);
 
   // glm::perspectiveRH() generates "right handed" projection matrices but
   // since glm is intended to work with OpenGL, glm::perspectiveRH() generates
@@ -130,8 +125,7 @@ Camera Camera::NewPerspective(const ViewingVolume& volume,
   return Camera(transform, projection);
 }
 
-vk::Rect2D Camera::Viewport::vk_rect_2d(uint32_t fb_width,
-                                        uint32_t fb_height) const {
+vk::Rect2D Camera::Viewport::vk_rect_2d(uint32_t fb_width, uint32_t fb_height) const {
   vk::Rect2D result;
   result.offset.x = x * fb_width;
   result.offset.y = y * fb_height;

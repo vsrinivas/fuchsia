@@ -17,8 +17,7 @@
 namespace escher {
 namespace impl {
 
-CommandBuffer::CommandBuffer(vk::Device device,
-                             vk::CommandBuffer command_buffer, vk::Fence fence,
+CommandBuffer::CommandBuffer(vk::Device device, vk::CommandBuffer command_buffer, vk::Fence fence,
                              vk::PipelineStageFlags pipeline_stage_mask)
     : device_(device),
       command_buffer_(command_buffer),
@@ -39,8 +38,7 @@ void CommandBuffer::Begin(uint64_t sequence_number) {
   FXL_DCHECK(result == vk::Result::eSuccess);
 }
 
-bool CommandBuffer::Submit(vk::Queue queue,
-                           CommandBufferFinishedCallback callback) {
+bool CommandBuffer::Submit(vk::Queue queue, CommandBufferFinishedCallback callback) {
   // NOTE: this name is important for benchmarking.  Do not remove or modify it
   // without also updating the "process_gfx_trace.go" script.
   TRACE_DURATION("gfx", "escher::CommandBuffer::Submit");
@@ -80,8 +78,7 @@ vk::Result CommandBuffer::Wait(uint64_t nanoseconds) {
   return device_.waitForFences(1, &fence_, true, nanoseconds);
 }
 
-void CommandBuffer::AddWaitSemaphore(SemaphorePtr semaphore,
-                                     vk::PipelineStageFlags stage) {
+void CommandBuffer::AddWaitSemaphore(SemaphorePtr semaphore, vk::PipelineStageFlags stage) {
   FXL_DCHECK(is_active_);
   if (semaphore) {
     // Build up list that will be used when frame is submitted.
@@ -117,40 +114,33 @@ void CommandBuffer::DrawMesh(const MeshPtr& mesh) {
 
   mesh->TransferWaitSemaphores(this, vk::PipelineStageFlagBits::eVertexInput);
 
-  const uint32_t vbo_binding =
-      MeshShaderBinding::kTheOnlyCurrentlySupportedBinding;
+  const uint32_t vbo_binding = MeshShaderBinding::kTheOnlyCurrentlySupportedBinding;
   auto& attribute_buffer = mesh->attribute_buffer(vbo_binding);
   vk::Buffer vbo = attribute_buffer.vk_buffer;
   vk::DeviceSize vbo_offset = attribute_buffer.offset;
   command_buffer_.bindVertexBuffers(vbo_binding, 1, &vbo, &vbo_offset);
-  command_buffer_.bindIndexBuffer(mesh->vk_index_buffer(),
-                                  mesh->index_buffer_offset(),
+  command_buffer_.bindIndexBuffer(mesh->vk_index_buffer(), mesh->index_buffer_offset(),
                                   vk::IndexType::eUint32);
   command_buffer_.drawIndexed(mesh->num_indices(), 1, 0, 0, 0);
 }
 
-void CommandBuffer::CopyImage(const ImagePtr& src_image,
-                              const ImagePtr& dst_image,
-                              vk::ImageLayout src_layout,
-                              vk::ImageLayout dst_layout,
+void CommandBuffer::CopyImage(const ImagePtr& src_image, const ImagePtr& dst_image,
+                              vk::ImageLayout src_layout, vk::ImageLayout dst_layout,
                               vk::ImageCopy* region) {
-  command_buffer_.copyImage(src_image->vk(), src_layout, dst_image->vk(),
-                            dst_layout, 1, region);
+  command_buffer_.copyImage(src_image->vk(), src_layout, dst_image->vk(), dst_layout, 1, region);
   KeepAlive(src_image);
   KeepAlive(dst_image);
 }
 
-void CommandBuffer::CopyBuffer(const BufferPtr& src, const BufferPtr& dst,
-                               vk::BufferCopy region) {
-  command_buffer_.copyBuffer(src->vk(), dst->vk(), 1 /* region_count */,
-                             &region);
+void CommandBuffer::CopyBuffer(const BufferPtr& src, const BufferPtr& dst, vk::BufferCopy region) {
+  command_buffer_.copyBuffer(src->vk(), dst->vk(), 1 /* region_count */, &region);
   KeepAlive(src);
   KeepAlive(dst);
 }
 
-void CommandBuffer::CopyBufferAfterBarrier(
-    const BufferPtr& src, const BufferPtr& dst, vk::BufferCopy region,
-    vk::AccessFlags src_access_mask, vk::PipelineStageFlags src_stage_mask) {
+void CommandBuffer::CopyBufferAfterBarrier(const BufferPtr& src, const BufferPtr& dst,
+                                           vk::BufferCopy region, vk::AccessFlags src_access_mask,
+                                           vk::PipelineStageFlags src_stage_mask) {
   vk::BufferMemoryBarrier barrier;
   barrier.srcAccessMask = src_access_mask;
   barrier.dstAccessMask = vk::AccessFlagBits::eTransferRead;
@@ -159,14 +149,12 @@ void CommandBuffer::CopyBufferAfterBarrier(
   barrier.buffer = dst->vk();
   barrier.offset = 0;
   barrier.size = dst->size();
-  command_buffer_.pipelineBarrier(
-      src_stage_mask, vk::PipelineStageFlagBits::eTransfer,
-      vk::DependencyFlags(), 0, nullptr, 1, &barrier, 0, nullptr);
+  command_buffer_.pipelineBarrier(src_stage_mask, vk::PipelineStageFlagBits::eTransfer,
+                                  vk::DependencyFlags(), 0, nullptr, 1, &barrier, 0, nullptr);
   CopyBuffer(src, dst, region);
 }
 
-void CommandBuffer::TransitionImageLayout(const ImagePtr& image,
-                                          vk::ImageLayout old_layout,
+void CommandBuffer::TransitionImageLayout(const ImagePtr& image, vk::ImageLayout old_layout,
                                           vk::ImageLayout new_layout) {
   KeepAlive(image);
 
@@ -199,8 +187,8 @@ void CommandBuffer::TransitionImageLayout(const ImagePtr& image,
 
   switch (old_layout) {
     case vk::ImageLayout::eColorAttachmentOptimal:
-      barrier.srcAccessMask = vk::AccessFlagBits::eColorAttachmentRead |
-                              vk::AccessFlagBits::eColorAttachmentWrite;
+      barrier.srcAccessMask =
+          vk::AccessFlagBits::eColorAttachmentRead | vk::AccessFlagBits::eColorAttachmentWrite;
       src_stage_mask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
       break;
     case vk::ImageLayout::eDepthStencilAttachmentOptimal:
@@ -209,8 +197,7 @@ void CommandBuffer::TransitionImageLayout(const ImagePtr& image,
       src_stage_mask = vk::PipelineStageFlagBits::eLateFragmentTests;
       break;
     case vk::ImageLayout::eGeneral:
-      barrier.srcAccessMask =
-          vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite;
+      barrier.srcAccessMask = vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite;
       src_stage_mask = vk::PipelineStageFlagBits::eComputeShader;
       break;
     case vk::ImageLayout::ePreinitialized:
@@ -221,12 +208,11 @@ void CommandBuffer::TransitionImageLayout(const ImagePtr& image,
       barrier.srcAccessMask = vk::AccessFlagBits::eShaderRead;
       // TODO: investigate whether there are performance benefits to providing
       // a less-conservative mask.
-      src_stage_mask =
-          vk::PipelineStageFlagBits::eVertexShader |
-          vk::PipelineStageFlagBits::eTessellationControlShader |
-          vk::PipelineStageFlagBits::eTessellationEvaluationShader |
-          vk::PipelineStageFlagBits::eGeometryShader |
-          vk::PipelineStageFlagBits::eFragmentShader;
+      src_stage_mask = vk::PipelineStageFlagBits::eVertexShader |
+                       vk::PipelineStageFlagBits::eTessellationControlShader |
+                       vk::PipelineStageFlagBits::eTessellationEvaluationShader |
+                       vk::PipelineStageFlagBits::eGeometryShader |
+                       vk::PipelineStageFlagBits::eFragmentShader;
       break;
     case vk::ImageLayout::eTransferDstOptimal:
       barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
@@ -237,16 +223,15 @@ void CommandBuffer::TransitionImageLayout(const ImagePtr& image,
       src_stage_mask = vk::PipelineStageFlagBits::eAllCommands;
       break;
     default:
-      FXL_LOG(ERROR)
-          << "CommandBuffer does not know how to transition from layout: "
-          << vk::to_string(old_layout);
+      FXL_LOG(ERROR) << "CommandBuffer does not know how to transition from layout: "
+                     << vk::to_string(old_layout);
       FXL_DCHECK(false);
   }
 
   switch (new_layout) {
     case vk::ImageLayout::eColorAttachmentOptimal:
-      barrier.dstAccessMask = vk::AccessFlagBits::eColorAttachmentRead |
-                              vk::AccessFlagBits::eColorAttachmentWrite;
+      barrier.dstAccessMask =
+          vk::AccessFlagBits::eColorAttachmentRead | vk::AccessFlagBits::eColorAttachmentWrite;
       dst_stage_mask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
       break;
     case vk::ImageLayout::eDepthStencilAttachmentOptimal:
@@ -255,8 +240,7 @@ void CommandBuffer::TransitionImageLayout(const ImagePtr& image,
       dst_stage_mask = vk::PipelineStageFlagBits::eEarlyFragmentTests;
       break;
     case vk::ImageLayout::eGeneral:
-      barrier.dstAccessMask =
-          vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite;
+      barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite;
       dst_stage_mask = vk::PipelineStageFlagBits::eComputeShader;
       break;
     case vk::ImageLayout::ePresentSrcKHR:
@@ -267,10 +251,9 @@ void CommandBuffer::TransitionImageLayout(const ImagePtr& image,
       barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
       // TODO: investigate whether there are performance benefits to providing
       // a less-conservative mask.
-      dst_stage_mask =
-          (pipeline_stage_mask_ & vk::PipelineStageFlagBits::eAllCommands)
-              ? vk::PipelineStageFlagBits::eAllCommands
-              : vk::PipelineStageFlagBits::eAllGraphics;
+      dst_stage_mask = (pipeline_stage_mask_ & vk::PipelineStageFlagBits::eAllCommands)
+                           ? vk::PipelineStageFlagBits::eAllCommands
+                           : vk::PipelineStageFlagBits::eAllGraphics;
       break;
     case vk::ImageLayout::eTransferDstOptimal:
       barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
@@ -281,42 +264,37 @@ void CommandBuffer::TransitionImageLayout(const ImagePtr& image,
       dst_stage_mask = vk::PipelineStageFlagBits::eTransfer;
       break;
     default:
-      FXL_LOG(ERROR)
-          << "CommandBuffer does not know how to transition to layout: "
-          << vk::to_string(new_layout);
+      FXL_LOG(ERROR) << "CommandBuffer does not know how to transition to layout: "
+                     << vk::to_string(new_layout);
       FXL_DCHECK(false);
   }
 
   src_stage_mask = src_stage_mask & pipeline_stage_mask_;
   dst_stage_mask = dst_stage_mask & pipeline_stage_mask_;
 
-  command_buffer_.pipelineBarrier(src_stage_mask, dst_stage_mask,
-                                  vk::DependencyFlagBits::eByRegion, 0, nullptr,
-                                  0, nullptr, 1, &barrier);
+  command_buffer_.pipelineBarrier(src_stage_mask, dst_stage_mask, vk::DependencyFlagBits::eByRegion,
+                                  0, nullptr, 0, nullptr, 1, &barrier);
 }
 
-void CommandBuffer::BeginRenderPass(
-    const escher::RenderPassPtr& render_pass,
-    const escher::FramebufferPtr& framebuffer,
-    const std::vector<vk::ClearValue>& clear_values,
-    const vk::Rect2D viewport) {
+void CommandBuffer::BeginRenderPass(const escher::RenderPassPtr& render_pass,
+                                    const escher::FramebufferPtr& framebuffer,
+                                    const std::vector<vk::ClearValue>& clear_values,
+                                    const vk::Rect2D viewport) {
   KeepAlive(render_pass);
-  BeginRenderPass(render_pass->vk(), framebuffer, clear_values.data(),
-                  clear_values.size(), viewport);
-}
-
-void CommandBuffer::BeginRenderPass(
-    vk::RenderPass render_pass, const escher::FramebufferPtr& framebuffer,
-    const std::vector<vk::ClearValue>& clear_values,
-    const vk::Rect2D viewport) {
-  BeginRenderPass(render_pass, framebuffer, clear_values.data(),
-                  clear_values.size(), viewport);
+  BeginRenderPass(render_pass->vk(), framebuffer, clear_values.data(), clear_values.size(),
+                  viewport);
 }
 
 void CommandBuffer::BeginRenderPass(vk::RenderPass render_pass,
                                     const escher::FramebufferPtr& framebuffer,
-                                    const vk::ClearValue* clear_values,
-                                    size_t clear_value_count,
+                                    const std::vector<vk::ClearValue>& clear_values,
+                                    const vk::Rect2D viewport) {
+  BeginRenderPass(render_pass, framebuffer, clear_values.data(), clear_values.size(), viewport);
+}
+
+void CommandBuffer::BeginRenderPass(vk::RenderPass render_pass,
+                                    const escher::FramebufferPtr& framebuffer,
+                                    const vk::ClearValue* clear_values, size_t clear_value_count,
                                     vk::Rect2D viewport) {
   FXL_DCHECK(is_active_);
   KeepAlive(framebuffer);
@@ -353,8 +331,7 @@ void CommandBuffer::EndRenderPass() { command_buffer_.endRenderPass(); }
 bool CommandBuffer::Retire() {
   if (!is_active_) {
     // Submission failed, so proceed with cleanup.
-    FXL_DLOG(INFO)
-        << "CommandBuffer submission failed, proceeding with retirement";
+    FXL_DLOG(INFO) << "CommandBuffer submission failed, proceeding with retirement";
   } else if (!is_submitted_) {
     return false;
   } else {

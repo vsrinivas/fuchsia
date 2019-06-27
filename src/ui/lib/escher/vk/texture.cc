@@ -12,25 +12,21 @@
 namespace escher {
 
 const ResourceTypeInfo Texture::kTypeInfo("Texture", ResourceType::kResource,
-                                          ResourceType::kImageView,
-                                          ResourceType::kTexture);
+                                          ResourceType::kImageView, ResourceType::kTexture);
 
-TexturePtr Texture::New(ResourceRecycler* resource_recycler, ImagePtr image,
-                        vk::Filter filter, vk::ImageAspectFlags aspect_mask,
-                        bool use_unnormalized_coordinates) {
-  SamplerPtr sampler = fxl::MakeRefCounted<Sampler>(
-      resource_recycler, image->format(), filter, use_unnormalized_coordinates);
+TexturePtr Texture::New(ResourceRecycler* resource_recycler, ImagePtr image, vk::Filter filter,
+                        vk::ImageAspectFlags aspect_mask, bool use_unnormalized_coordinates) {
+  SamplerPtr sampler = fxl::MakeRefCounted<Sampler>(resource_recycler, image->format(), filter,
+                                                    use_unnormalized_coordinates);
 
   if (sampler->is_immutable()) {
-    FXL_LOG(WARNING)
-        << "An immutable sampler was created using Texture::New. If "
-           "this happens over and over again, the system will likely OOM. "
-           "Build a separate immutable Sampler object and share it across "
-           "multiple Texture objects.";
+    FXL_LOG(WARNING) << "An immutable sampler was created using Texture::New. If "
+                        "this happens over and over again, the system will likely OOM. "
+                        "Build a separate immutable Sampler object and share it across "
+                        "multiple Texture objects.";
   }
 
-  return fxl::MakeRefCounted<Texture>(resource_recycler, std::move(sampler),
-                                      image, aspect_mask);
+  return fxl::MakeRefCounted<Texture>(resource_recycler, std::move(sampler), image, aspect_mask);
 }
 
 Texture::Texture(ResourceRecycler* recycler, SamplerPtr sampler, ImagePtr image,

@@ -23,12 +23,10 @@ class ShadertoyEmbedderView : public scenic::BaseView {
   void LaunchShadertoyClient();
 
   // |scenic::BaseView|.
-  void OnPropertiesChanged(
-      fuchsia::ui::gfx::ViewProperties old_properties) override;
+  void OnPropertiesChanged(fuchsia::ui::gfx::ViewProperties old_properties) override;
 
   // |scenic::BaseView|.
-  void OnSceneInvalidated(
-      fuchsia::images::PresentationInfo presentation_info) override;
+  void OnSceneInvalidated(fuchsia::images::PresentationInfo presentation_info) override;
 
   // |scenic::BaseView|.
   void OnInputEvent(fuchsia::ui::input::InputEvent event) override;

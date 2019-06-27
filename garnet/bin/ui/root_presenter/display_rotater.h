@@ -31,11 +31,9 @@ class DisplayRotater {
   // |Presentation| is the root presenter.
   //
   // Returns true if the scene should be invalidated.
-  bool OnEvent(const fuchsia::ui::input::InputEvent& event,
-               Presentation* presentation);
+  bool OnEvent(const fuchsia::ui::input::InputEvent& event, Presentation* presentation);
 
-  void SetDisplayRotation(Presentation* p, float display_rotation_degrees,
-                          bool animate);
+  void SetDisplayRotation(Presentation* p, float display_rotation_degrees, bool animate);
 
   // Returns true if an animation update happened and the scene is to be
   // invalidated.

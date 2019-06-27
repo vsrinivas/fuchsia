@@ -6,15 +6,13 @@
 #include "garnet/lib/ui/scenic/tests/mocks.h"
 #include "garnet/lib/ui/scenic/tests/scenic_gfx_test.h"
 #include "garnet/lib/ui/scenic/tests/scenic_test.h"
-
 #include "gtest/gtest.h"
 
 namespace scenic_impl {
 namespace test {
 
 TEST_F(ScenicTest, SessionCreatedAfterAllSystemsInitialized) {
-  auto mock_system =
-      scenic()->RegisterSystem<MockSystemWithDelayedInitialization>();
+  auto mock_system = scenic()->RegisterSystem<MockSystemWithDelayedInitialization>();
 
   EXPECT_EQ(scenic()->num_sessions(), 0U);
 

@@ -5,10 +5,10 @@
 #include <zircon/syscalls.h>
 
 #include "garnet/lib/ui/gfx/tests/vk_session_test.h"
-#include "src/ui/lib/escher/impl/vulkan_utils.h"
 #include "gtest/gtest.h"
 #include "lib/ui/gfx/util/time.h"
 #include "lib/ui/scenic/cpp/commands.h"
+#include "src/ui/lib/escher/impl/vulkan_utils.h"
 #include "src/ui/lib/escher/test/gtest_vulkan.h"
 
 namespace scenic_impl {
@@ -36,67 +36,57 @@ VK_TEST_F(PoseBufferTest, Validation) {
   // TODO(SCN-1369): Scenic may use a different set of bits when creating a
   // buffer, resulting in a memory pool mismatch.
   const vk::BufferUsageFlags kUsageFlags =
-      vk::BufferUsageFlagBits::eTransferSrc |
-      vk::BufferUsageFlagBits::eTransferDst |
-      vk::BufferUsageFlagBits::eStorageTexelBuffer |
-      vk::BufferUsageFlagBits::eStorageBuffer |
-      vk::BufferUsageFlagBits::eIndexBuffer |
-      vk::BufferUsageFlagBits::eVertexBuffer;
+      vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eTransferDst |
+      vk::BufferUsageFlagBits::eStorageTexelBuffer | vk::BufferUsageFlagBits::eStorageBuffer |
+      vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eVertexBuffer;
 
-  auto memory_requirements =
-      GetBufferRequirements(device, kVmoSize, kUsageFlags);
-  auto memory =
-      AllocateExportableMemory(device, physical_device, memory_requirements,
-                               vk::MemoryPropertyFlagBits::eDeviceLocal |
-                                   vk::MemoryPropertyFlagBits::eHostVisible);
+  auto memory_requirements = GetBufferRequirements(device, kVmoSize, kUsageFlags);
+  auto memory = AllocateExportableMemory(
+      device, physical_device, memory_requirements,
+      vk::MemoryPropertyFlagBits::eDeviceLocal | vk::MemoryPropertyFlagBits::eHostVisible);
 
   // If we can't make memory that is both host-visible and device-local, we
   // can't run this test.
   if (!memory) {
-    FXL_LOG(INFO)
-        << "Could not find UMA compatible memory pool, aborting test.";
+    FXL_LOG(INFO) << "Could not find UMA compatible memory pool, aborting test.";
     return;
   }
 
-  zx::vmo vmo =
-      ExportMemoryAsVmo(device, vulkan_queues->dispatch_loader(), memory);
+  zx::vmo vmo = ExportMemoryAsVmo(device, vulkan_queues->dispatch_loader(), memory);
 
   zx_clock_t base_time = dispatcher_clock_now();
   uint64_t time_interval = 1024 * 1024;  // 1 ms
   uint32_t num_entries = 1;
 
-  ASSERT_TRUE(Apply(scenic::NewCreateMemoryCmd(
-      memory_id, std::move(vmo), kVmoSize,
-      fuchsia::images::MemoryType::VK_DEVICE_MEMORY)));
-  ASSERT_TRUE(
-      Apply(scenic::NewCreateBufferCmd(buffer_id, memory_id, 0, kVmoSize)));
+  ASSERT_TRUE(Apply(scenic::NewCreateMemoryCmd(memory_id, std::move(vmo), kVmoSize,
+                                               fuchsia::images::MemoryType::VK_DEVICE_MEMORY)));
+  ASSERT_TRUE(Apply(scenic::NewCreateBufferCmd(buffer_id, memory_id, 0, kVmoSize)));
 
   // Actual Tests
 
   // Basic case: all arguments valid
-  EXPECT_TRUE(Apply(scenic::NewSetCameraPoseBufferCmd(
-      camera_id, buffer_id, num_entries, base_time, time_interval)));
+  EXPECT_TRUE(Apply(scenic::NewSetCameraPoseBufferCmd(camera_id, buffer_id, num_entries, base_time,
+                                                      time_interval)));
 
   // Invalid base time 1 second in the future
   EXPECT_FALSE(Apply(scenic::NewSetCameraPoseBufferCmd(
-      camera_id, buffer_id, num_entries, base_time + 1024 * 1024 * 1024,
-      time_interval)));
+      camera_id, buffer_id, num_entries, base_time + 1024 * 1024 * 1024, time_interval)));
 
   // Invalid buffer id
-  EXPECT_FALSE(Apply(scenic::NewSetCameraPoseBufferCmd(
-      camera_id, invalid_id, num_entries, base_time, time_interval)));
+  EXPECT_FALSE(Apply(scenic::NewSetCameraPoseBufferCmd(camera_id, invalid_id, num_entries,
+                                                       base_time, time_interval)));
 
   // Invalid camera id
-  EXPECT_FALSE(Apply(scenic::NewSetCameraPoseBufferCmd(
-      invalid_id, buffer_id, num_entries, base_time, time_interval)));
+  EXPECT_FALSE(Apply(scenic::NewSetCameraPoseBufferCmd(invalid_id, buffer_id, num_entries,
+                                                       base_time, time_interval)));
 
   // num_entries too small
-  EXPECT_FALSE(Apply(scenic::NewSetCameraPoseBufferCmd(
-      camera_id, buffer_id, 0, base_time, time_interval)));
+  EXPECT_FALSE(
+      Apply(scenic::NewSetCameraPoseBufferCmd(camera_id, buffer_id, 0, base_time, time_interval)));
 
   // num_entries too large
-  EXPECT_FALSE(Apply(scenic::NewSetCameraPoseBufferCmd(
-      camera_id, buffer_id, UINT32_MAX, base_time, time_interval)));
+  EXPECT_FALSE(Apply(scenic::NewSetCameraPoseBufferCmd(camera_id, buffer_id, UINT32_MAX, base_time,
+                                                       time_interval)));
 
   device.freeMemory(memory);
 }

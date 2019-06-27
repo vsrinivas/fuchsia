@@ -10,7 +10,9 @@
         "binary": "test/input_unittests"
     },
     "sandbox": {
-        "features": [ "vulkan" ],
+        "features": [
+            "vulkan"
+        ],
         "services": [
             "fuchsia.scheduler.ProfileProvider",
             "fuchsia.ui.input.ImeService",

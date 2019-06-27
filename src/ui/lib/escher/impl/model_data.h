@@ -108,8 +108,7 @@ class ModelData : public fxl::RefCountedThreadSafe<ModelData> {
   vk::Device device_;
   UniformBufferPool uniform_buffer_pool_;
 
-  HashMap<MeshSpec, std::unique_ptr<MeshShaderBinding>>
-      mesh_shader_binding_cache_;
+  HashMap<MeshSpec, std::unique_ptr<MeshShaderBinding>> mesh_shader_binding_cache_;
 
   FRIEND_MAKE_REF_COUNTED(ModelData);
   FRIEND_REF_COUNTED_THREAD_SAFE(ModelData);

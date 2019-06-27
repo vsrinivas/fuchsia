@@ -5,13 +5,13 @@
 #ifndef GARNET_BIN_UI_INPUT_INVERSE_KEYMAP_H_
 #define GARNET_BIN_UI_INPUT_INVERSE_KEYMAP_H_
 
-#include <map>
-#include <utility>
-#include <vector>
-
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <hid/hid.h>
 #include <hid/usages.h>
+
+#include <map>
+#include <utility>
+#include <vector>
 
 namespace input {
 
@@ -55,8 +55,8 @@ InverseKeymap InvertKeymap(const keychar_t keymap[]);
 // keys that needs it.
 //
 // Returns { key sequence, success }.
-std::pair<KeySequence, bool> DeriveKeySequence(
-    const InverseKeymap& inverse_keymap, const std::string& text);
+std::pair<KeySequence, bool> DeriveKeySequence(const InverseKeymap& inverse_keymap,
+                                               const std::string& text);
 
 }  // namespace input
 #endif  // GARNET_BIN_UI_INPUT_INVERSE_KEYMAP_H_

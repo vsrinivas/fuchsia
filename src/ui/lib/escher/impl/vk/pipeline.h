@@ -20,8 +20,7 @@ class Pipeline : public fxl::RefCountedThreadSafe<Pipeline> {
   // The vk::Pipeline becomes owned by this Pipeline instance, and is destroyed
   // in the destructor.  The vk::Device is not owned; it is used for destroying
   // the pipeline.
-  Pipeline(vk::Device device, vk::Pipeline pipeline, PipelineLayoutPtr layout,
-           PipelineSpec spec);
+  Pipeline(vk::Device device, vk::Pipeline pipeline, PipelineLayoutPtr layout, PipelineSpec spec);
   ~Pipeline();
 
   vk::Pipeline vk() const { return pipeline_; }

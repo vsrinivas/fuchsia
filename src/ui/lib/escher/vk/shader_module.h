@@ -60,8 +60,7 @@ class ShaderModule : public fxl::RefCountedThreadSafe<ShaderModule> {
 
   // Return the module's resource layout. Escher clients never need to call
   // this; it is used internally by ShaderProgram.
-  const impl::ShaderModuleResourceLayout& shader_module_resource_layout()
-      const {
+  const impl::ShaderModuleResourceLayout& shader_module_resource_layout() const {
     FXL_DCHECK(is_valid());
     return layout_;
   }

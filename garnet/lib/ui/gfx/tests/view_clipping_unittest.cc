@@ -74,8 +74,8 @@ VK_TEST_F(ViewClippingTest, DISABLED_ClipSettingTest) {
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
   Apply(scenic::NewCreateSceneCmd(scene_id));
-  Apply(scenic::NewCreateViewHolderCmd(
-      view_holder_id, std::move(view_holder_token), "MyViewHolder"));
+  Apply(
+      scenic::NewCreateViewHolderCmd(view_holder_id, std::move(view_holder_token), "MyViewHolder"));
   Apply(scenic::NewCreateViewCmd(view_id, std::move(view_token), "MyView"));
 
   ViewHolder* view_holder = FindResource<ViewHolder>(view_holder_id).get();
@@ -94,8 +94,8 @@ VK_TEST_F(ViewClippingTest, DISABLED_ClipSettingTest) {
 
           BoundingBox bbox(vec3(i, j, k), vec3(i + m, j + m, k + m));
 
-          Apply(scenic::NewSetViewPropertiesCmd(
-              view_holder_id, bbox_min, bbox_max, inset_min, inset_max));
+          Apply(scenic::NewSetViewPropertiesCmd(view_holder_id, bbox_min, bbox_max, inset_min,
+                                                inset_max));
           const std::vector<plane3>& clip_planes = view_holder->clip_planes();
 
           std::vector<plane3> test_planes = bbox.CreatePlanes();
@@ -128,8 +128,8 @@ VK_TEST_F(ViewClippingTest, DISABLED_ClipSettingBeforeViewCreationTest) {
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
   Apply(scenic::NewCreateSceneCmd(scene_id));
-  Apply(scenic::NewCreateViewHolderCmd(
-      view_holder_id, std::move(view_holder_token), "MyViewHolder"));
+  Apply(
+      scenic::NewCreateViewHolderCmd(view_holder_id, std::move(view_holder_token), "MyViewHolder"));
 
   ViewHolder* view_holder = FindResource<ViewHolder>(view_holder_id).get();
   EXPECT_TRUE(view_holder);
@@ -141,8 +141,7 @@ VK_TEST_F(ViewClippingTest, DISABLED_ClipSettingBeforeViewCreationTest) {
   BoundingBox bbox(vec3(bbox_min[0], bbox_min[1], bbox_min[2]),
                    vec3(bbox_max[0], bbox_max[1], bbox_max[2]));
 
-  Apply(scenic::NewSetViewPropertiesCmd(view_holder_id, bbox_min, bbox_max,
-                                        inset, inset));
+  Apply(scenic::NewSetViewPropertiesCmd(view_holder_id, bbox_min, bbox_max, inset, inset));
   const std::vector<plane3>& clip_planes = view_holder->clip_planes();
 
   Apply(scenic::NewCreateViewCmd(view_id, std::move(view_token), "MyView"));
@@ -185,19 +184,17 @@ VK_TEST_F(ViewClippingTest, DISABLED_SceneTraversal) {
 
   Apply(scenic::NewCreateSceneCmd(scene_id));
 
-  Apply(scenic::NewCreateViewHolderCmd(
-      view_holder_id, std::move(view_holder_token), "MyViewHolder"));
+  Apply(
+      scenic::NewCreateViewHolderCmd(view_holder_id, std::move(view_holder_token), "MyViewHolder"));
 
   Apply(scenic::NewCreateViewCmd(view_id, std::move(view_token), "MyView"));
 
-  Apply(scenic::NewSetViewPropertiesCmd(view_holder_id, bbox_min, bbox_max,
-                                        inset_min, inset_max));
+  Apply(scenic::NewSetViewPropertiesCmd(view_holder_id, bbox_min, bbox_max, inset_min, inset_max));
 
   Apply(scenic::NewCreateShapeNodeCmd(shape_node_id));
 
   // Set shape to shape node.
-  EXPECT_TRUE(Apply(scenic::NewCreateRoundedRectangleCmd(rect_id, 30.f, 40.f,
-                                                         2.f, 4.f, 6.f, 8.f)));
+  EXPECT_TRUE(Apply(scenic::NewCreateRoundedRectangleCmd(rect_id, 30.f, 40.f, 2.f, 4.f, 6.f, 8.f)));
 
   Apply(scenic::NewSetShapeCmd(shape_node_id, rect_id));
 
@@ -213,8 +210,7 @@ VK_TEST_F(ViewClippingTest, DISABLED_SceneTraversal) {
 
   // Make default paper scene.
   PaperScenePtr paper_scene = fxl::MakeRefCounted<PaperScene>();
-  paper_scene->bounding_box =
-      BoundingBox(vec3(0.f, 0.f, kFar), vec3(kWidth, kHeight, kNear));
+  paper_scene->bounding_box = BoundingBox(vec3(0.f, 0.f, kFar), vec3(kWidth, kHeight, kNear));
 
   ViewingVolume volume(paper_scene->bounding_box);
 
@@ -280,8 +276,7 @@ VK_TEST_F(ViewClippingTest, DISABLED_SceneTraversal) {
   PaperShapeCache cache(escher, PaperRendererConfig());
   cache.BeginFrame(&gpu_uploader, 0);
 
-  const PaperShapeCacheEntry& entry2 =
-      cache.GetRoundedRectMesh(spec, planes.data(), 6);
+  const PaperShapeCacheEntry& entry2 = cache.GetRoundedRectMesh(spec, planes.data(), 6);
 
   // Cache entries should be identitcal.
   EXPECT_EQ(entry.mesh->num_vertices(), entry2.mesh->num_vertices());

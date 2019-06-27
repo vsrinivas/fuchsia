@@ -16,8 +16,7 @@ class RoundedRectangleShape final : public PlanarShape {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  RoundedRectangleShape(Session* session, ResourceId id,
-                        const escher::RoundedRectSpec& spec,
+  RoundedRectangleShape(Session* session, ResourceId id, const escher::RoundedRectSpec& spec,
                         escher::MeshPtr mesh);
 
   float width() const { return spec_.width; }
@@ -34,9 +33,8 @@ class RoundedRectangleShape final : public PlanarShape {
   bool ContainsPoint(const escher::vec2& point) const override;
 
   // |Shape|.
-  escher::Object GenerateRenderObject(
-      const escher::mat4& transform,
-      const escher::MaterialPtr& material) override;
+  escher::Object GenerateRenderObject(const escher::mat4& transform,
+                                      const escher::MaterialPtr& material) override;
 
   const escher::MeshPtr& escher_mesh() const {
     // During tests, this mesh can be null, but otherwise

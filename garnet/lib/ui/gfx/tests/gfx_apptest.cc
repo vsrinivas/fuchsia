@@ -2,13 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/lib/ui/gfx/tests/gfx_test.h"
-
 #include "garnet/lib/ui/gfx/gfx_system.h"
+#include "garnet/lib/ui/gfx/tests/gfx_test.h"
 #include "garnet/lib/ui/gfx/tests/util.h"
 #include "gtest/gtest.h"
-#include "src/ui/lib/escher/flib/release_fence_signaller.h"
 #include "lib/ui/scenic/cpp/commands.h"
+#include "src/ui/lib/escher/flib/release_fence_signaller.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -51,8 +50,7 @@ TEST_F(GfxSystemTest, ScheduleUpdateInOrder) {
 
 bool IsFenceSignalled(const zx::event& fence) {
   zx_signals_t signals = 0u;
-  zx_status_t status =
-      fence.wait_one(escher::kFenceSignalled, zx::time(), &signals);
+  zx_status_t status = fence.wait_one(escher::kFenceSignalled, zx::time(), &signals);
   FXL_DCHECK(status == ZX_OK || status == ZX_ERR_TIMED_OUT);
   return signals & escher::kFenceSignalled;
 }

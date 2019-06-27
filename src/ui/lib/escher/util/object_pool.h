@@ -35,13 +35,11 @@ class DefaultObjectPoolPolicy {
 
   // Default block initialization policy is to do nothing; each object is
   // constructed one-by-one via InitializePoolObject().
-  inline void InitializePoolObjectBlock(T* objects, size_t block_index,
-                                        size_t num_objects) {}
+  inline void InitializePoolObjectBlock(T* objects, size_t block_index, size_t num_objects) {}
 
   // Default block destruction policy is to do nothing; each object is destroyed
   // one-by-one via DestroyPoolObject().
-  inline void DestroyPoolObjectBlock(T* objects, size_t block_index,
-                                     size_t num_objects) {}
+  inline void DestroyPoolObjectBlock(T* objects, size_t block_index, size_t num_objects) {}
 };
 
 // An ObjectPool is an allocator for objects of type T.  The underlying memory
@@ -83,9 +81,7 @@ class ObjectPool {
 
   // Return the number of objects that can be held in the "block_index-th"
   // allocation.
-  static size_t NumObjectsInBlock(size_t block_index) {
-    return InitialBlockSize() << block_index;
-  }
+  static size_t NumObjectsInBlock(size_t block_index) { return InitialBlockSize() << block_index; }
 
   // Total number of objects that can be allocated from the pool without
   // changing the amount of underlying memory.

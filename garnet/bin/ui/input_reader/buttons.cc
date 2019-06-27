@@ -16,9 +16,8 @@
 
 namespace ui_input {
 
-bool Buttons::ParseReportDescriptor(
-    const hid::ReportDescriptor& report_descriptor,
-    Descriptor* device_descriptor) {
+bool Buttons::ParseReportDescriptor(const hid::ReportDescriptor& report_descriptor,
+                                    Descriptor* device_descriptor) {
   FXL_CHECK(device_descriptor);
 
   hid::Attributes volume_up = {};
@@ -30,22 +29,20 @@ bool Buttons::ParseReportDescriptor(
   for (size_t i = 0; i < report_descriptor.input_count; i++) {
     const hid::ReportField& field = report_descriptor.input_fields[i];
 
-    if (field.attr.usage == hid::USAGE(hid::usage::Page::kConsumer,
-                                       hid::usage::Consumer::kVolumeUp)) {
+    if (field.attr.usage ==
+        hid::USAGE(hid::usage::Page::kConsumer, hid::usage::Consumer::kVolumeUp)) {
       volume_up = field.attr;
       caps |= Capabilities::VOLUME_UP;
     } else if (field.attr.usage ==
-               hid::USAGE(hid::usage::Page::kConsumer,
-                          hid::usage::Consumer::kVolumeDown)) {
+               hid::USAGE(hid::usage::Page::kConsumer, hid::usage::Consumer::kVolumeDown)) {
       volume_down = field.attr;
       caps |= Capabilities::VOLUME_DOWN;
-    } else if (field.attr.usage == hid::USAGE(hid::usage::Page::kConsumer,
-                                              hid::usage::Consumer::kReset)) {
+    } else if (field.attr.usage ==
+               hid::USAGE(hid::usage::Page::kConsumer, hid::usage::Consumer::kReset)) {
       reset = field.attr;
       caps |= Capabilities::RESET;
     } else if (field.attr.usage ==
-               hid::USAGE(hid::usage::Page::kTelephony,
-                          hid::usage::Telephony::kPhoneMute)) {
+               hid::USAGE(hid::usage::Page::kTelephony, hid::usage::Telephony::kPhoneMute)) {
       phone_mute = field.attr;
       caps |= Capabilities::PHONE_MUTE;
     }
@@ -68,23 +65,18 @@ bool Buttons::ParseReportDescriptor(
   // Set the device descriptor.
   device_descriptor->protocol = Protocol::MediaButtons;
   device_descriptor->has_media_buttons = true;
-  device_descriptor->buttons_descriptor =
-      fuchsia::ui::input::MediaButtonsDescriptor::New();
+  device_descriptor->buttons_descriptor = fuchsia::ui::input::MediaButtonsDescriptor::New();
   if (caps & Capabilities::PHONE_MUTE) {
-    device_descriptor->buttons_descriptor->buttons |=
-        fuchsia::ui::input::kMicMute;
+    device_descriptor->buttons_descriptor->buttons |= fuchsia::ui::input::kMicMute;
   }
   if (caps & Capabilities::VOLUME_UP) {
-    device_descriptor->buttons_descriptor->buttons |=
-        fuchsia::ui::input::kVolumeUp;
+    device_descriptor->buttons_descriptor->buttons |= fuchsia::ui::input::kVolumeUp;
   }
   if (caps & Capabilities::VOLUME_DOWN) {
-    device_descriptor->buttons_descriptor->buttons |=
-        fuchsia::ui::input::kVolumeDown;
+    device_descriptor->buttons_descriptor->buttons |= fuchsia::ui::input::kVolumeDown;
   }
   if (caps & Capabilities::RESET) {
-    device_descriptor->buttons_descriptor->buttons |=
-        fuchsia::ui::input::kReset;
+    device_descriptor->buttons_descriptor->buttons |= fuchsia::ui::input::kReset;
   }
   return true;
 }
@@ -99,8 +91,7 @@ bool Buttons::ParseReport(const uint8_t* data, size_t len,
   double mic_mute = 0;
 
   if (report_size_ != len) {
-    FXL_LOG(INFO) << "Sensor report: Expected size " << report_size_
-                  << "Received size " << len;
+    FXL_LOG(INFO) << "Sensor report: Expected size " << report_size_ << "Received size " << len;
     return false;
   }
 

@@ -13,8 +13,7 @@ using fuchsia::accessibility::semantics::Node;
 
 const std::string kFileNotExistPath = "/some/random/path";
 const std::string kSemanticTreePath = "/pkg/data/semantic_tree_odd_nodes.json";
-const std::string kFileNotParseablePath =
-    "/pkg/data/semantic_tree_not_parseable.json";
+const std::string kFileNotParseablePath = "/pkg/data/semantic_tree_not_parseable.json";
 
 // Unit Test for src/ui/a11y/tests/integration/semantic_tree_parser.h
 class SemanticTreeParserTest : public gtest::TestLoopFixture {
@@ -24,22 +23,19 @@ class SemanticTreeParserTest : public gtest::TestLoopFixture {
 
 TEST_F(SemanticTreeParserTest, FileNotExist) {
   std::vector<Node> nodes;
-  ASSERT_FALSE(
-      semantic_tree_parser_.ParseSemanticTree(kFileNotExistPath, &nodes));
+  ASSERT_FALSE(semantic_tree_parser_.ParseSemanticTree(kFileNotExistPath, &nodes));
   ASSERT_TRUE(nodes.size() == 0);
 }
 
 TEST_F(SemanticTreeParserTest, SuccessfullyParseFile) {
   std::vector<Node> nodes;
-  ASSERT_TRUE(
-      semantic_tree_parser_.ParseSemanticTree(kSemanticTreePath, &nodes));
+  ASSERT_TRUE(semantic_tree_parser_.ParseSemanticTree(kSemanticTreePath, &nodes));
   ASSERT_TRUE(nodes.size() == 7);
 }
 
 TEST_F(SemanticTreeParserTest, ParsingFailed) {
   std::vector<Node> nodes;
-  ASSERT_FALSE(
-      semantic_tree_parser_.ParseSemanticTree(kFileNotParseablePath, &nodes));
+  ASSERT_FALSE(semantic_tree_parser_.ParseSemanticTree(kFileNotParseablePath, &nodes));
   ASSERT_TRUE(nodes.size() == 0);
 }
 

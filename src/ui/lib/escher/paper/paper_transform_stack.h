@@ -46,9 +46,7 @@ class PaperTransformStack final {
   const Item& PushTranslation(const vec2& translation) {
     return PushTranslation(vec3(translation, 0));
   }
-  const Item& PushElevation(float elevation) {
-    return PushTranslation(vec3(0, 0, elevation));
-  }
+  const Item& PushElevation(float elevation) { return PushTranslation(vec3(0, 0, elevation)); }
   const Item& PushScale(float scale);
   const Item& PushIdentity();
 
@@ -77,8 +75,7 @@ class PaperTransformStack final {
   // default).  Then, trim trailing clip-planes until only the specified number
   // remain (zero by default).  In both cases, the specified number must not
   // exceed the number of stack-entries/clip-planes that currently exist.
-  PaperTransformStack& Clear(
-      std::pair<size_t, size_t> stack_size_and_num_clip_planes = {0, 0});
+  PaperTransformStack& Clear(std::pair<size_t, size_t> stack_size_and_num_clip_planes = {0, 0});
 
   size_t size() const { return stack_.size(); }
   size_t empty() const { return stack_.empty(); }

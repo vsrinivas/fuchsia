@@ -34,8 +34,7 @@ SpinningSquareView::SpinningSquareView(scenic::ViewContext context)
 
 SpinningSquareView::~SpinningSquareView() {}
 
-void SpinningSquareView::OnSceneInvalidated(
-    fuchsia::images::PresentationInfo presentation_info) {
+void SpinningSquareView::OnSceneInvalidated(fuchsia::images::PresentationInfo presentation_info) {
   if (!has_logical_size())
     return;
 
@@ -46,21 +45,17 @@ void SpinningSquareView::OnSceneInvalidated(
   const float center_x = logical_size().x * .5f;
   const float center_y = logical_size().y * .5f;
   const float square_size = std::min(logical_size().x, logical_size().y) * .6f;
-  const float t = fmod(
-      (presentation_time - start_time_) * kSecondsPerNanosecond * kSpeed, 1.f);
+  const float t = fmod((presentation_time - start_time_) * kSecondsPerNanosecond * kSpeed, 1.f);
   const float angle = t * M_PI * 2;
 
-  scenic::Rectangle background_shape(session(), logical_size().x,
-                                     logical_size().y);
+  scenic::Rectangle background_shape(session(), logical_size().x, logical_size().y);
   background_node_.SetShape(background_shape);
-  background_node_.SetTranslation(
-      (float[]){center_x, center_y, -kBackgroundElevation});
+  background_node_.SetTranslation((float[]){center_x, center_y, -kBackgroundElevation});
 
   scenic::Rectangle square_shape(session(), square_size, square_size);
   square_node_.SetShape(square_shape);
   square_node_.SetTranslation((float[]){center_x, center_y, -kSquareElevation});
-  square_node_.SetRotation(
-      (float[]){0.f, 0.f, sinf(angle * .5f), cosf(angle * .5f)});
+  square_node_.SetRotation((float[]){0.f, 0.f, sinf(angle * .5f), cosf(angle * .5f)});
 
   InvalidateScene();
 }

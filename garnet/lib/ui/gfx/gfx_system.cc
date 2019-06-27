@@ -24,10 +24,8 @@ namespace gfx {
 static const uint32_t kDumpScenesBufferCapacity = 1024 * 64;
 const char* GfxSystem::kName = "GfxSystem";
 
-GfxSystem::GfxSystem(SystemContext context,
-                     std::unique_ptr<DisplayManager> display_manager)
-    : TempSystemDelegate(std::move(context), false),
-      display_manager_(std::move(display_manager)) {
+GfxSystem::GfxSystem(SystemContext context, std::unique_ptr<DisplayManager> display_manager)
+    : TempSystemDelegate(std::move(context), false), display_manager_(std::move(display_manager)) {
   // TODO(SCN-1111): what are the intended implications of there being a test
   // display?  In this case, could we make DisplayManager signal that the
   // display is ready, even though it it is a test display?
@@ -47,15 +45,14 @@ GfxSystem::~GfxSystem() {
     escher::GlslangFinalizeProcess();
   }
   if (vulkan_instance_) {
-    vulkan_instance_->proc_addrs().DestroyDebugReportCallbackEXT(
-        vulkan_instance_->vk_instance(), debug_report_callback_, nullptr);
+    vulkan_instance_->proc_addrs().DestroyDebugReportCallbackEXT(vulkan_instance_->vk_instance(),
+                                                                 debug_report_callback_, nullptr);
   }
 }
 
-CommandDispatcherUniquePtr GfxSystem::CreateCommandDispatcher(
-    CommandDispatcherContext context) {
-  return engine_->session_manager()->CreateCommandDispatcher(
-      std::move(context), engine_->session_context());
+CommandDispatcherUniquePtr GfxSystem::CreateCommandDispatcher(CommandDispatcherContext context) {
+  return engine_->session_manager()->CreateCommandDispatcher(std::move(context),
+                                                             engine_->session_context());
 }
 
 std::unique_ptr<Engine> GfxSystem::InitializeEngine() {
@@ -66,8 +63,7 @@ std::unique_ptr<Engine> GfxSystem::InitializeEngine() {
           std::make_unique<FramePredictor>(DefaultFrameScheduler::kInitialRenderDuration,
                                            DefaultFrameScheduler::kInitialUpdateDuration),
           context()->inspect_node()->CreateChild("FrameScheduler")),
-      std::make_unique<SessionManager>(
-          context()->inspect_node()->CreateChild("SessionManager")),
+      std::make_unique<SessionManager>(context()->inspect_node()->CreateChild("SessionManager")),
       display_manager_.get(), escher_->GetWeakPtr(),
       context()->inspect_node()->CreateChild("Engine"));
 }
@@ -125,8 +121,7 @@ std::unique_ptr<escher::Escher> GfxSystem::InitializeEscher() {
        },
        surface_,
        escher::VulkanDeviceQueues::Params::kDisableQueueFilteringForPresent});
-  vulkan_device_queues_ =
-      escher::VulkanDeviceQueues::New(vulkan_instance_, device_queues_params);
+  vulkan_device_queues_ = escher::VulkanDeviceQueues::New(vulkan_instance_, device_queues_params);
 
   {
     VkDebugReportCallbackCreateInfoEXT dbgCreateInfo;
@@ -134,22 +129,18 @@ std::unique_ptr<escher::Escher> GfxSystem::InitializeEscher() {
     dbgCreateInfo.pNext = NULL;
     dbgCreateInfo.pfnCallback = RedirectDebugReport;
     dbgCreateInfo.pUserData = this;
-    dbgCreateInfo.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT |
-                          VK_DEBUG_REPORT_WARNING_BIT_EXT |
+    dbgCreateInfo.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT |
                           VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT;
 
     // We use the C API here due to dynamically loading the extension function.
-    VkResult result =
-        vulkan_instance_->proc_addrs().CreateDebugReportCallbackEXT(
-            vulkan_instance_->vk_instance(), &dbgCreateInfo, nullptr,
-            &debug_report_callback_);
+    VkResult result = vulkan_instance_->proc_addrs().CreateDebugReportCallbackEXT(
+        vulkan_instance_->vk_instance(), &dbgCreateInfo, nullptr, &debug_report_callback_);
     FXL_CHECK(result == VK_SUCCESS);
   }
 
   // Provide a PseudoDir where the gfx system can register debugging services.
   auto debug_dir = std::make_shared<vfs::PseudoDir>();
-  context()->app_context()->outgoing()->debug_dir()->AddSharedEntry("gfx",
-                                                                    debug_dir);
+  context()->app_context()->outgoing()->debug_dir()->AddSharedEntry("gfx", debug_dir);
   auto shader_fs = escher::HackFilesystem::New(debug_dir);
   {
     bool success = shader_fs->InitializeWithRealFiles(
@@ -157,10 +148,8 @@ std::unique_ptr<escher::Escher> GfxSystem::InitializeEscher() {
          "shaders/model_renderer/default_position.vert",
          "shaders/model_renderer/shadow_map_generation.frag",
          "shaders/model_renderer/shadow_map_lighting.frag",
-         "shaders/model_renderer/wobble_position.vert",
-         "shaders/paper/common/use.glsl",
-         "shaders/paper/frag/main_ambient_light.frag",
-         "shaders/paper/frag/main_point_light.frag",
+         "shaders/model_renderer/wobble_position.vert", "shaders/paper/common/use.glsl",
+         "shaders/paper/frag/main_ambient_light.frag", "shaders/paper/frag/main_point_light.frag",
          "shaders/paper/vert/compute_model_space_position.vert",
          "shaders/paper/vert/compute_world_space_position.vert",
          "shaders/paper/vert/main_shadow_volume_extrude.vert",
@@ -170,8 +159,7 @@ std::unique_ptr<escher::Escher> GfxSystem::InitializeEscher() {
 
   // Initialize Escher.
   escher::GlslangInitializeProcess();
-  return std::make_unique<escher::Escher>(vulkan_device_queues_,
-                                          std::move(shader_fs));
+  return std::make_unique<escher::Escher>(vulkan_device_queues_, std::move(shader_fs));
 }
 
 fit::closure GfxSystem::DelayedInitClosure() {
@@ -214,17 +202,16 @@ void GfxSystem::Initialize() {
 
   // Create a pseudo-file that dumps alls the Scenic scenes.
   context()->app_context()->outgoing()->debug_dir()->AddEntry(
-      "dump-scenes",
-      std::make_unique<vfs::PseudoFile>(
-          kDumpScenesBufferCapacity,
-          [this](std::vector<uint8_t>* output, size_t max_file_size) {
-            auto out = engine_->DumpScenes();
-            ZX_DEBUG_ASSERT(out.length() <= max_file_size);
-            output->resize(out.length());
-            std::copy(out.begin(), out.end(), output->begin());
-            return ZX_OK;
-          },
-          nullptr));
+      "dump-scenes", std::make_unique<vfs::PseudoFile>(
+                         kDumpScenesBufferCapacity,
+                         [this](std::vector<uint8_t>* output, size_t max_file_size) {
+                           auto out = engine_->DumpScenes();
+                           ZX_DEBUG_ASSERT(out.length() <= max_file_size);
+                           output->resize(out.length());
+                           std::copy(out.begin(), out.end(), output->begin());
+                           return ZX_OK;
+                         },
+                         nullptr));
 
   SetToInitialized();
 };
@@ -242,27 +229,23 @@ void GfxSystem::GetDisplayInfoImmediately(
   callback(std::move(info));
 }
 
-void GfxSystem::GetDisplayInfo(
-    fuchsia::ui::scenic::Scenic::GetDisplayInfoCallback callback) {
+void GfxSystem::GetDisplayInfo(fuchsia::ui::scenic::Scenic::GetDisplayInfoCallback callback) {
   if (initialized_) {
     GetDisplayInfoImmediately(std::move(callback));
   } else {
-    run_after_initialized_.push_back(
-        [this, callback = std::move(callback)]() mutable {
-          GetDisplayInfoImmediately(std::move(callback));
-        });
+    run_after_initialized_.push_back([this, callback = std::move(callback)]() mutable {
+      GetDisplayInfoImmediately(std::move(callback));
+    });
   }
 };
 
-void GfxSystem::TakeScreenshot(
-    fuchsia::ui::scenic::Scenic::TakeScreenshotCallback callback) {
+void GfxSystem::TakeScreenshot(fuchsia::ui::scenic::Scenic::TakeScreenshotCallback callback) {
   if (initialized_) {
     Screenshotter::TakeScreenshot(engine_.get(), std::move(callback));
   } else {
-    run_after_initialized_.push_back(
-        [this, callback = std::move(callback)]() mutable {
-          Screenshotter::TakeScreenshot(engine_.get(), std::move(callback));
-        });
+    run_after_initialized_.push_back([this, callback = std::move(callback)]() mutable {
+      Screenshotter::TakeScreenshot(engine_.get(), std::move(callback));
+    });
   }
 }
 
@@ -276,10 +259,8 @@ void GfxSystem::GetDisplayOwnershipEventImmediately(
     FXL_CHECK(display) << "There must be a default display.";
   }
 
-  static_assert(fuchsia::ui::scenic::displayNotOwnedSignal == ZX_USER_SIGNAL_0,
-                "Bad constant");
-  static_assert(fuchsia::ui::scenic::displayOwnedSignal == ZX_USER_SIGNAL_1,
-                "Bad constant");
+  static_assert(fuchsia::ui::scenic::displayNotOwnedSignal == ZX_USER_SIGNAL_0, "Bad constant");
+  static_assert(fuchsia::ui::scenic::displayOwnedSignal == ZX_USER_SIGNAL_1, "Bad constant");
 
   zx::event dup;
   if (display->ownership_event().duplicate(ZX_RIGHTS_BASIC, &dup) != ZX_OK) {
@@ -294,34 +275,29 @@ void GfxSystem::GetDisplayOwnershipEvent(
   if (initialized_) {
     GetDisplayOwnershipEventImmediately(std::move(callback));
   } else {
-    run_after_initialized_.push_back(
-        [this, callback = std::move(callback)]() mutable {
-          GetDisplayOwnershipEventImmediately(std::move(callback));
-        });
+    run_after_initialized_.push_back([this, callback = std::move(callback)]() mutable {
+      GetDisplayOwnershipEventImmediately(std::move(callback));
+    });
   }
 }
 
 VkBool32 GfxSystem::HandleDebugReport(VkDebugReportFlagsEXT flags_in,
-                                      VkDebugReportObjectTypeEXT object_type_in,
-                                      uint64_t object, size_t location,
-                                      int32_t message_code,
-                                      const char* pLayerPrefix,
-                                      const char* pMessage) {
-  vk::DebugReportFlagsEXT flags(
-      static_cast<vk::DebugReportFlagBitsEXT>(flags_in));
+                                      VkDebugReportObjectTypeEXT object_type_in, uint64_t object,
+                                      size_t location, int32_t message_code,
+                                      const char* pLayerPrefix, const char* pMessage) {
+  vk::DebugReportFlagsEXT flags(static_cast<vk::DebugReportFlagBitsEXT>(flags_in));
   vk::DebugReportObjectTypeEXT object_type(
       static_cast<vk::DebugReportObjectTypeEXT>(object_type_in));
 
   // TODO(SCN-704) remove this block
-  if (object_type == vk::DebugReportObjectTypeEXT::eDeviceMemory &&
-      message_code == 385878038) {
+  if (object_type == vk::DebugReportObjectTypeEXT::eDeviceMemory && message_code == 385878038) {
     FXL_LOG(WARNING) << "Ignoring Vulkan Memory Type Error, see SCN-704";
   }
 
-#define VK_DEBUG_REPORT_MESSAGE                                         \
-  pMessage << " (layer: " << pLayerPrefix << "  code: " << message_code \
-           << "  object-type: " << vk::to_string(object_type)           \
-           << "  object: " << object << ")" << std::endl;
+#define VK_DEBUG_REPORT_MESSAGE                                                                \
+  pMessage << " (layer: " << pLayerPrefix << "  code: " << message_code                        \
+           << "  object-type: " << vk::to_string(object_type) << "  object: " << object << ")" \
+           << std::endl;
 
   bool fatal = false;
   if (flags == vk::DebugReportFlagBitsEXT::eInformation) {
@@ -329,8 +305,7 @@ VkBool32 GfxSystem::HandleDebugReport(VkDebugReportFlagsEXT flags_in,
   } else if (flags == vk::DebugReportFlagBitsEXT::eWarning) {
     FXL_LOG(WARNING) << "## Vulkan Warning: " << VK_DEBUG_REPORT_MESSAGE;
   } else if (flags == vk::DebugReportFlagBitsEXT::ePerformanceWarning) {
-    FXL_LOG(WARNING) << "## Vulkan Performance Warning: "
-                     << VK_DEBUG_REPORT_MESSAGE;
+    FXL_LOG(WARNING) << "## Vulkan Performance Warning: " << VK_DEBUG_REPORT_MESSAGE;
   } else if (flags == vk::DebugReportFlagBitsEXT::eError) {
     // Treat all errors as fatal.
     fatal = true;
@@ -341,8 +316,7 @@ VkBool32 GfxSystem::HandleDebugReport(VkDebugReportFlagsEXT flags_in,
     // This should never happen, unless a new value has been added to
     // vk::DebugReportFlagBitsEXT.  In that case, add a new if-clause above.
     fatal = true;
-    FXL_LOG(ERROR) << "## Vulkan Unknown Message Type (flags: "
-                   << vk::to_string(flags) << "): ";
+    FXL_LOG(ERROR) << "## Vulkan Unknown Message Type (flags: " << vk::to_string(flags) << "): ";
   }
 
   // Crash immediately on fatal errors.
@@ -358,8 +332,7 @@ CompositorWeakPtr GfxSystem::GetCompositor(GlobalId compositor_id) const {
 }
 
 gfx::Session* GfxSystem::GetSession(SessionId session_id) const {
-  SessionHandler* handler =
-      engine_->session_manager()->FindSessionHandler(session_id);
+  SessionHandler* handler = engine_->session_manager()->FindSessionHandler(session_id);
   return handler ? handler->session() : nullptr;
 }
 

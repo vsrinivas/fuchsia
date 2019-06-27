@@ -64,9 +64,7 @@ void CircleShape::Accept(ResourceVisitor* visitor) { visitor->Visit(this); }
 
 void RectangleShape::Accept(ResourceVisitor* visitor) { visitor->Visit(this); }
 
-void RoundedRectangleShape::Accept(ResourceVisitor* visitor) {
-  visitor->Visit(this);
-}
+void RoundedRectangleShape::Accept(ResourceVisitor* visitor) { visitor->Visit(this); }
 
 void MeshShape::Accept(ResourceVisitor* visitor) { visitor->Visit(this); }
 
@@ -74,9 +72,7 @@ void Material::Accept(ResourceVisitor* visitor) { visitor->Visit(this); }
 
 void Compositor::Accept(ResourceVisitor* visitor) { visitor->Visit(this); }
 
-void DisplayCompositor::Accept(ResourceVisitor* visitor) {
-  visitor->Visit(this);
-}
+void DisplayCompositor::Accept(ResourceVisitor* visitor) { visitor->Visit(this); }
 
 void LayerStack::Accept(ResourceVisitor* visitor) { visitor->Visit(this); }
 
@@ -92,9 +88,7 @@ void Light::Accept(ResourceVisitor* visitor) { visitor->Visit(this); }
 
 void AmbientLight::Accept(ResourceVisitor* visitor) { visitor->Visit(this); }
 
-void DirectionalLight::Accept(ResourceVisitor* visitor) {
-  visitor->Visit(this);
-}
+void DirectionalLight::Accept(ResourceVisitor* visitor) { visitor->Visit(this); }
 
 void PointLight::Accept(ResourceVisitor* visitor) { visitor->Visit(this); }
 

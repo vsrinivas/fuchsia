@@ -21,8 +21,7 @@ namespace escher {
 // identical VkPipelines.
 class ShaderVariantArgs : public Hashable {
  public:
-  explicit ShaderVariantArgs(
-      std::vector<std::pair<std::string, std::string>> defs)
+  explicit ShaderVariantArgs(std::vector<std::pair<std::string, std::string>> defs)
       : definitions_(std::move(defs)) {}
 
   ShaderVariantArgs() {}
@@ -49,18 +48,16 @@ class ShaderVariantArgs : public Hashable {
 
 // Inline function definitions.
 
-inline bool ShaderVariantArgs::operator==(
-    const ShaderVariantArgs& other) const {
+inline bool ShaderVariantArgs::operator==(const ShaderVariantArgs& other) const {
   return hash() == other.hash() && definitions_ == other.definitions_;
 }
 
-inline bool ShaderVariantArgs::operator!=(
-    const ShaderVariantArgs& other) const {
+inline bool ShaderVariantArgs::operator!=(const ShaderVariantArgs& other) const {
   return !(*this == other);
 }
 
-inline const std::vector<std::pair<std::string, std::string>>&
-ShaderVariantArgs::definitions() const {
+inline const std::vector<std::pair<std::string, std::string>>& ShaderVariantArgs::definitions()
+    const {
   return definitions_;
 }
 

@@ -19,8 +19,7 @@ class PipelineLayoutCache {
 
   // Return a layout corresponding to the spec, creating a new one if none is
   // already present in the cache.
-  const PipelineLayoutPtr& ObtainPipelineLayout(
-      const PipelineLayoutSpec& layout);
+  const PipelineLayoutPtr& ObtainPipelineLayout(const PipelineLayoutSpec& layout);
 
   // TODO(ES-201): There is currently no eviction policy for this cache, as
   // Escher never calls this function.

@@ -68,13 +68,9 @@ class EnumFlags {
 
   bool operator!() const { return mask_ == 0; }
 
-  bool operator==(const EnumFlags<BitType>& other) const {
-    return mask_ == other.mask_;
-  }
+  bool operator==(const EnumFlags<BitType>& other) const { return mask_ == other.mask_; }
 
-  bool operator!=(const EnumFlags<BitType>& other) const {
-    return mask_ != other.mask_;
-  }
+  bool operator!=(const EnumFlags<BitType>& other) const { return mask_ != other.mask_; }
 
   explicit operator bool() const { return mask_ != 0; }
   explicit operator MaskType() const { return mask_; }
@@ -101,11 +97,9 @@ EnumFlags<BitT> operator^(BitT bit, const EnumFlags<BitT>& flags) {
 // Reduce boilerplate by bundling two things that clients always want anyway:
 // - a more convenient name: e.g. MyFlags instead of EnumFlags<MyFlagBits>
 // - two inline functions for implicitly going from "Bits" to "Flags".
-#define ESCHER_DECLARE_ENUM_FLAGS(FLAGS_NAME, BITS_NAME)        \
-  using FLAGS_NAME = EnumFlags<BITS_NAME>;                      \
-  inline FLAGS_NAME operator|(BITS_NAME bit1, BITS_NAME bit2) { \
-    return FLAGS_NAME(bit1) | bit2;                             \
-  }                                                             \
+#define ESCHER_DECLARE_ENUM_FLAGS(FLAGS_NAME, BITS_NAME)                                          \
+  using FLAGS_NAME = EnumFlags<BITS_NAME>;                                                        \
+  inline FLAGS_NAME operator|(BITS_NAME bit1, BITS_NAME bit2) { return FLAGS_NAME(bit1) | bit2; } \
   inline FLAGS_NAME operator~(BITS_NAME bit) { return ~(FLAGS_NAME(bit)); }
 
 }  // namespace escher

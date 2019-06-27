@@ -6,6 +6,7 @@
 #define GARNET_BIN_UI_ROOT_PRESENTER_RENDERER_PARAMS_H_
 
 #include <fuchsia/ui/gfx/cpp/fidl.h>
+
 #include <optional>
 
 #include "src/lib/fxl/command_line.h"

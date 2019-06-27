@@ -40,9 +40,8 @@ namespace impl {
 // which can be used by clients to automate some aspects of pipeline
 // generation.
 struct ShaderModuleResourceLayout;
-void GenerateShaderModuleResourceLayoutFromSpirv(
-    std::vector<uint32_t> spirv, ShaderStage stage,
-    ShaderModuleResourceLayout* layout_out);
+void GenerateShaderModuleResourceLayoutFromSpirv(std::vector<uint32_t> spirv, ShaderStage stage,
+                                                 ShaderModuleResourceLayout* layout_out);
 
 // Generate a PipelineLayoutSpec using each non-null ShaderStage's
 // ShaderModuleResourceLayout.

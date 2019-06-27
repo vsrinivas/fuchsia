@@ -29,8 +29,7 @@ TEST_F(FrameSchedulerTest, PresentTimeZero_ShouldBeScheduledBeforeNextVsync) {
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 1u);
 }
 
-TEST_F(FrameSchedulerTest,
-       PresentBiggerThanNextVsync_ShouldBeScheduledAfterNextVsync) {
+TEST_F(FrameSchedulerTest, PresentBiggerThanNextVsync_ShouldBeScheduledAfterNextVsync) {
   auto scheduler = CreateDefaultFrameScheduler();
 
   EXPECT_EQ(Now().get(), fake_display_->GetLastVsyncTime());
@@ -39,8 +38,8 @@ TEST_F(FrameSchedulerTest,
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
 
   // Schedule an update for in between the next two vsyncs.
-  zx_time_t time_after_vsync = fake_display_->GetLastVsyncTime() +
-                               (1.5 * fake_display_->GetVsyncInterval());
+  zx_time_t time_after_vsync =
+      fake_display_->GetLastVsyncTime() + (1.5 * fake_display_->GetVsyncInterval());
 
   scheduler->ScheduleUpdateForSession(/* presentation time*/ time_after_vsync,
                                       /* session id */ 1);
@@ -107,8 +106,8 @@ TEST_F(FrameSchedulerTest, SinglePresent_ShouldGetSingleRenderCallExactlyOnTime)
   //
   // We want to test our ability to schedule a frame "next time" given an arbitrary start,
   // vs in a certain duration from Now() = 0, so this makes that distinction clear.
-  zx::time future_vsync_time = zx::time(fake_display_->GetLastVsyncTime() +
-                                        6 * fake_display_->GetVsyncInterval());
+  zx::time future_vsync_time =
+      zx::time(fake_display_->GetLastVsyncTime() + 6 * fake_display_->GetVsyncInterval());
 
   fake_display_->SetLastVsyncTime(future_vsync_time.get());
 
@@ -120,7 +119,8 @@ TEST_F(FrameSchedulerTest, SinglePresent_ShouldGetSingleRenderCallExactlyOnTime)
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
   EXPECT_EQ(mock_updater_->signal_successful_present_callback_count(), 0u);
 
-  scheduler->ScheduleUpdateForSession(future_vsync_time.get() + fake_display_->GetVsyncInterval(), session_id);
+  scheduler->ScheduleUpdateForSession(future_vsync_time.get() + fake_display_->GetVsyncInterval(),
+                                      session_id);
 
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 0u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
@@ -186,8 +186,7 @@ TEST_F(FrameSchedulerTest, PresentsForTheSameFrame_ShouldGetSingleRenderCall) {
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 1u);
 }
 
-TEST_F(FrameSchedulerTest,
-       PresentsForDifferentFrames_ShouldGetSeparateRenderCalls) {
+TEST_F(FrameSchedulerTest, PresentsForDifferentFrames_ShouldGetSeparateRenderCalls) {
   auto scheduler = CreateDefaultFrameScheduler();
 
   EXPECT_EQ(Now().get(), fake_display_->GetLastVsyncTime());
@@ -202,8 +201,8 @@ TEST_F(FrameSchedulerTest,
   scheduler->ScheduleUpdateForSession(now, session_id);
 
   // Schedule an update for in between the next two vsyncs.
-  zx_time_t time_after_vsync = fake_display_->GetLastVsyncTime() +
-                               (1.5 * fake_display_->GetVsyncInterval());
+  zx_time_t time_after_vsync =
+      fake_display_->GetLastVsyncTime() + (1.5 * fake_display_->GetVsyncInterval());
   scheduler->ScheduleUpdateForSession(time_after_vsync, session_id);
 
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 0u);
@@ -227,8 +226,7 @@ TEST_F(FrameSchedulerTest,
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 2u);
 }
 
-TEST_F(FrameSchedulerTest,
-       SecondPresentDuringRender_ShouldApplyUpdatesAndReschedule) {
+TEST_F(FrameSchedulerTest, SecondPresentDuringRender_ShouldApplyUpdatesAndReschedule) {
   auto scheduler = CreateDefaultFrameScheduler();
 
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 0u);
@@ -298,12 +296,10 @@ TEST_F(FrameSchedulerTest, RenderCalls_ShouldNotExceed_MaxOutstandingFrames) {
     mock_renderer_->SignalFrameRendered(i, now + schedule_frame_wait.get());
   }
 
-  EXPECT_LE(mock_renderer_->render_frame_call_count(),
-            maximum_allowed_render_calls);
+  EXPECT_LE(mock_renderer_->render_frame_call_count(), maximum_allowed_render_calls);
 }
 
-TEST_F(FrameSchedulerTest,
-       SignalSuccessfulPresentCallbackOnlyWhenFramePresented) {
+TEST_F(FrameSchedulerTest, SignalSuccessfulPresentCallbackOnlyWhenFramePresented) {
   auto scheduler = CreateDefaultFrameScheduler();
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 0u);
   EXPECT_EQ(mock_updater_->signal_successful_present_callback_count(), 0u);
@@ -358,8 +354,7 @@ TEST_F(FrameSchedulerTest, FailedUpdate_ShouldNotTriggerRenderCall) {
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
 }
 
-TEST_F(FrameSchedulerTest,
-       NoOpUpdateWithSecondPendingUpdate_ShouldBeRescheduled) {
+TEST_F(FrameSchedulerTest, NoOpUpdateWithSecondPendingUpdate_ShouldBeRescheduled) {
   auto scheduler = CreateDefaultFrameScheduler();
   SessionId session_id = 1;
 
@@ -372,8 +367,8 @@ TEST_F(FrameSchedulerTest,
   scheduler->ScheduleUpdateForSession(Now().get() + fake_display_->GetVsyncInterval(), session_id);
 
   // Schedule one update 1.5 vsyncs away.
-  scheduler->ScheduleUpdateForSession(
-      Now().get() + (3 * fake_display_->GetVsyncInterval()) / 2, session_id);
+  scheduler->ScheduleUpdateForSession(Now().get() + (3 * fake_display_->GetVsyncInterval()) / 2,
+                                      session_id);
 
   RunLoopFor(zx::duration(fake_display_->GetVsyncInterval()));
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 1u);

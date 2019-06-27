@@ -11,27 +11,21 @@ App::App()
       a11y_manager_(std::make_unique<ManagerImpl>()),
       settings_manager_impl_(std::make_unique<SettingsManagerImpl>()),
       semantics_manager_impl_(std::make_unique<SemanticsManagerImpl>()) {
-  startup_context_->outgoing()
-      ->AddPublicService<fuchsia::accessibility::Manager>(
-          [this](
-              fidl::InterfaceRequest<fuchsia::accessibility::Manager> request) {
-            a11y_manager_->AddBinding(std::move(request));
-          });
+  startup_context_->outgoing()->AddPublicService<fuchsia::accessibility::Manager>(
+      [this](fidl::InterfaceRequest<fuchsia::accessibility::Manager> request) {
+        a11y_manager_->AddBinding(std::move(request));
+      });
 
-  startup_context_->outgoing()
-      ->AddPublicService<fuchsia::accessibility::SettingsManager>(
-          [this](fidl::InterfaceRequest<fuchsia::accessibility::SettingsManager>
-                     request) {
-            settings_manager_impl_->AddBinding(std::move(request));
-          });
+  startup_context_->outgoing()->AddPublicService<fuchsia::accessibility::SettingsManager>(
+      [this](fidl::InterfaceRequest<fuchsia::accessibility::SettingsManager> request) {
+        settings_manager_impl_->AddBinding(std::move(request));
+      });
 
-  semantics_manager_impl_->SetDebugDirectory(
-      startup_context_->outgoing()->debug_dir());
+  semantics_manager_impl_->SetDebugDirectory(startup_context_->outgoing()->debug_dir());
   startup_context_->outgoing()
       ->AddPublicService<fuchsia::accessibility::semantics::SemanticsManager>(
-          [this](fidl::InterfaceRequest<
-                 fuchsia::accessibility::semantics::SemanticsManager>
-                     request) {
+          [this](
+              fidl::InterfaceRequest<fuchsia::accessibility::semantics::SemanticsManager> request) {
             semantics_manager_impl_->AddBinding(std::move(request));
           });
 }

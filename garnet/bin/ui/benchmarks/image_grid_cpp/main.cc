@@ -14,8 +14,7 @@ int main(int argc, const char** argv) {
 
   scenic::ViewProviderComponent component(
       [](scenic::ViewContext view_context) {
-        return std::make_unique<image_grid::ImageGridView>(
-            std::move(view_context));
+        return std::make_unique<image_grid::ImageGridView>(std::move(view_context));
       },
       &loop);
 

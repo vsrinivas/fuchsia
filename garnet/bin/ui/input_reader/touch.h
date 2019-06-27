@@ -61,12 +61,7 @@ class Touch {
     int32_t max_finger_id;
   };
 
-  Touch()
-      : touch_points_(0),
-        scan_time_(),
-        contact_count_(),
-        capabilities_(0),
-        report_size_(0) {
+  Touch() : touch_points_(0), scan_time_(), contact_count_(), capabilities_(0), report_size_(0) {
     for (size_t i = 0; i < MAX_TOUCH_POINTS; i++) {
       configs_[i] = {};
     }

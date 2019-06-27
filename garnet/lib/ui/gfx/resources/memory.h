@@ -11,8 +11,8 @@
 
 #include "garnet/lib/ui/gfx/resources/resource.h"
 #include "garnet/lib/ui/scenic/util/error_reporter.h"
-#include "src/ui/lib/escher/vk/gpu_mem.h"
 #include "lib/fsl/vmo/shared_vmo.h"
+#include "src/ui/lib/escher/vk/gpu_mem.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -31,8 +31,7 @@ class Memory : public Resource {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  static MemoryPtr New(Session* session, ResourceId id,
-                       ::fuchsia::ui::gfx::MemoryArgs args,
+  static MemoryPtr New(Session* session, ResourceId id, ::fuchsia::ui::gfx::MemoryArgs args,
                        ErrorReporter* error_reporter);
 
   // TODO(SCN-1012): Temporary solution to determine which image class to use.
@@ -64,8 +63,7 @@ class Memory : public Resource {
 
   // This function is used for tests, so they can easily detect if they should
   // bother trying to test UMA memory flows.
-  static uint32_t HasSharedMemoryPools(vk::Device device,
-                                       vk::PhysicalDevice physical_device);
+  static uint32_t HasSharedMemoryPools(vk::Device device, vk::PhysicalDevice physical_device);
 
  private:
   Memory(Session* session, ResourceId id, ::fuchsia::ui::gfx::MemoryArgs args);

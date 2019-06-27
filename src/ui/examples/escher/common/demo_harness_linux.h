@@ -17,15 +17,12 @@ class DemoHarnessLinux : public DemoHarness {
   // |DemoHarness|
   // Called by Init().
   void InitWindowSystem() override;
-  vk::SurfaceKHR CreateWindowAndSurface(
-      const WindowParams& window_params) override;
+  vk::SurfaceKHR CreateWindowAndSurface(const WindowParams& window_params) override;
 
   // |DemoHarness|
   // Called by Init() via CreateInstance().
-  void AppendPlatformSpecificInstanceExtensionNames(
-      InstanceParams* params) override;
-  void AppendPlatformSpecificDeviceExtensionNames(
-      std::set<std::string>* names) override;
+  void AppendPlatformSpecificInstanceExtensionNames(InstanceParams* params) override;
+  void AppendPlatformSpecificDeviceExtensionNames(std::set<std::string>* names) override;
 
   // Called by Shutdown().
   void ShutdownWindowSystem() override;

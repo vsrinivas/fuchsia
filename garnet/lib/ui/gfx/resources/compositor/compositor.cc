@@ -14,20 +14,15 @@
 namespace scenic_impl {
 namespace gfx {
 
-const ResourceTypeInfo Compositor::kTypeInfo = {ResourceType::kCompositor,
-                                                "Compositor"};
+const ResourceTypeInfo Compositor::kTypeInfo = {ResourceType::kCompositor, "Compositor"};
 const CompositorWeakPtr Compositor::kNullWeakPtr = CompositorWeakPtr();
 
-CompositorPtr Compositor::New(Session* session, ResourceId id,
-                              SceneGraphWeakPtr scene_graph) {
-  return fxl::AdoptRef(
-      new Compositor(session, id, Compositor::kTypeInfo, scene_graph, nullptr));
+CompositorPtr Compositor::New(Session* session, ResourceId id, SceneGraphWeakPtr scene_graph) {
+  return fxl::AdoptRef(new Compositor(session, id, Compositor::kTypeInfo, scene_graph, nullptr));
 }
 
-Compositor::Compositor(Session* session, ResourceId id,
-                       const ResourceTypeInfo& type_info,
-                       SceneGraphWeakPtr scene_graph,
-                       std::unique_ptr<Swapchain> swapchain)
+Compositor::Compositor(Session* session, ResourceId id, const ResourceTypeInfo& type_info,
+                       SceneGraphWeakPtr scene_graph, std::unique_ptr<Swapchain> swapchain)
     : Resource(session, id, type_info),
       scene_graph_(scene_graph),
       swapchain_(std::move(swapchain)),
@@ -61,9 +56,7 @@ std::pair<uint32_t, uint32_t> Compositor::GetBottomLayerSize() const {
   return {drawable_layers[0]->width(), drawable_layers[0]->height()};
 }
 
-int Compositor::GetNumDrawableLayers() const {
-  return GetDrawableLayers().size();
-}
+int Compositor::GetNumDrawableLayers() const { return GetDrawableLayers().size(); }
 
 std::vector<Layer*> Compositor::GetDrawableLayers() const {
   if (!layer_stack_) {
@@ -76,9 +69,8 @@ std::vector<Layer*> Compositor::GetDrawableLayers() const {
     }
   }
   // Sort the layers from bottom to top.
-  std::sort(drawable_layers.begin(), drawable_layers.end(), [](auto a, auto b) {
-    return a->translation().z < b->translation().z;
-  });
+  std::sort(drawable_layers.begin(), drawable_layers.end(),
+            [](auto a, auto b) { return a->translation().z < b->translation().z; });
 
   return drawable_layers;
 }

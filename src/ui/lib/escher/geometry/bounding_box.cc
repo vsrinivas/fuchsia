@@ -32,25 +32,20 @@ BoundingBox::BoundingBox(vec3 min, vec3 max) : min_(min), max_(max) {
   FXL_DCHECK(min.x <= max.x) << min << " " << max;
   FXL_DCHECK(min.y <= max.y) << min << " " << max;
   FXL_DCHECK(min.z <= max.z) << min << " " << max;
-  int dimensions = (min.x != max.x ? 1 : 0) + (min.y != max.y ? 1 : 0) +
-                   (min.z != max.z ? 1 : 0);
+  int dimensions = (min.x != max.x ? 1 : 0) + (min.y != max.y ? 1 : 0) + (min.z != max.z ? 1 : 0);
   // Should use empty bounding-box if box is 1D or 0D.
   FXL_DCHECK(dimensions >= 2);
 #endif
 }
 
-BoundingBox BoundingBox::NewChecked(vec3 min, vec3 max,
-                                    uint32_t max_degenerate_dimensions) {
+BoundingBox BoundingBox::NewChecked(vec3 min, vec3 max, uint32_t max_degenerate_dimensions) {
   vec3 diff = max - min;
   if (diff.x < 0.f || diff.y < 0.f || diff.z < 0.f)
     return BoundingBox();
 
-  uint32_t degenerate_dimensions = (diff.x == 0.f ? 1 : 0) +
-                                   (diff.y == 0.f ? 1 : 0) +
-                                   (diff.z == 0.f ? 1 : 0);
-  return degenerate_dimensions > max_degenerate_dimensions
-             ? BoundingBox()
-             : BoundingBox(min, max);
+  uint32_t degenerate_dimensions =
+      (diff.x == 0.f ? 1 : 0) + (diff.y == 0.f ? 1 : 0) + (diff.z == 0.f ? 1 : 0);
+  return degenerate_dimensions > max_degenerate_dimensions ? BoundingBox() : BoundingBox(min, max);
 }
 
 BoundingBox& BoundingBox::Join(const BoundingBox& box) {
@@ -75,8 +70,8 @@ BoundingBox& BoundingBox::Intersect(const BoundingBox& box) {
     if (min_.x > max_.x || min_.y > max_.y || min_.z > max_.z) {
       *this = BoundingBox();
     } else {
-      int dimensions = (min_.x != max_.x ? 1 : 0) + (min_.y != max_.y ? 1 : 0) +
-                       (min_.z != max_.z ? 1 : 0);
+      int dimensions =
+          (min_.x != max_.x ? 1 : 0) + (min_.y != max_.y ? 1 : 0) + (min_.z != max_.z ? 1 : 0);
       if (dimensions < 2) {
         // We consider the intersection between boxes that touch at only one
         // point or an edge to be empty.
@@ -131,57 +126,27 @@ std::vector<plane3> BoundingBox::CreatePlanes() const {
   return result;
 }
 
-uint32_t BoundingBox::NumClippedCorners(const plane2& plane,
-                                        const float_t& epsilon) const {
+uint32_t BoundingBox::NumClippedCorners(const plane2& plane, const float_t& epsilon) const {
   uint32_t count = 0;
   float_t adjusted_epsilon = std::max(epsilon, 0.f);
-  count +=
-      PlaneClipsPoint(plane, vec2(min_.x, min_.y), adjusted_epsilon) ? 2 : 0;
-  count +=
-      PlaneClipsPoint(plane, vec2(min_.x, max_.y), adjusted_epsilon) ? 2 : 0;
-  count +=
-      PlaneClipsPoint(plane, vec2(max_.x, max_.y), adjusted_epsilon) ? 2 : 0;
-  count +=
-      PlaneClipsPoint(plane, vec2(max_.x, min_.y), adjusted_epsilon) ? 2 : 0;
+  count += PlaneClipsPoint(plane, vec2(min_.x, min_.y), adjusted_epsilon) ? 2 : 0;
+  count += PlaneClipsPoint(plane, vec2(min_.x, max_.y), adjusted_epsilon) ? 2 : 0;
+  count += PlaneClipsPoint(plane, vec2(max_.x, max_.y), adjusted_epsilon) ? 2 : 0;
+  count += PlaneClipsPoint(plane, vec2(max_.x, min_.y), adjusted_epsilon) ? 2 : 0;
   return count;
 }
 
-uint32_t BoundingBox::NumClippedCorners(const plane3& plane,
-                                        const float_t& epsilon) const {
+uint32_t BoundingBox::NumClippedCorners(const plane3& plane, const float_t& epsilon) const {
   uint32_t count = 0;
   float_t adjusted_epsilon = std::max(epsilon, 0.f);
-  count +=
-      PlaneClipsPoint(plane, vec3(min_.x, min_.y, min_.z), adjusted_epsilon)
-          ? 1
-          : 0;
-  count +=
-      PlaneClipsPoint(plane, vec3(min_.x, min_.y, max_.z), adjusted_epsilon)
-          ? 1
-          : 0;
-  count +=
-      PlaneClipsPoint(plane, vec3(min_.x, max_.y, min_.z), adjusted_epsilon)
-          ? 1
-          : 0;
-  count +=
-      PlaneClipsPoint(plane, vec3(min_.x, max_.y, max_.z), adjusted_epsilon)
-          ? 1
-          : 0;
-  count +=
-      PlaneClipsPoint(plane, vec3(max_.x, min_.y, min_.z), adjusted_epsilon)
-          ? 1
-          : 0;
-  count +=
-      PlaneClipsPoint(plane, vec3(max_.x, min_.y, max_.z), adjusted_epsilon)
-          ? 1
-          : 0;
-  count +=
-      PlaneClipsPoint(plane, vec3(max_.x, max_.y, min_.z), adjusted_epsilon)
-          ? 1
-          : 0;
-  count +=
-      PlaneClipsPoint(plane, vec3(max_.x, max_.y, max_.z), adjusted_epsilon)
-          ? 1
-          : 0;
+  count += PlaneClipsPoint(plane, vec3(min_.x, min_.y, min_.z), adjusted_epsilon) ? 1 : 0;
+  count += PlaneClipsPoint(plane, vec3(min_.x, min_.y, max_.z), adjusted_epsilon) ? 1 : 0;
+  count += PlaneClipsPoint(plane, vec3(min_.x, max_.y, min_.z), adjusted_epsilon) ? 1 : 0;
+  count += PlaneClipsPoint(plane, vec3(min_.x, max_.y, max_.z), adjusted_epsilon) ? 1 : 0;
+  count += PlaneClipsPoint(plane, vec3(max_.x, min_.y, min_.z), adjusted_epsilon) ? 1 : 0;
+  count += PlaneClipsPoint(plane, vec3(max_.x, min_.y, max_.z), adjusted_epsilon) ? 1 : 0;
+  count += PlaneClipsPoint(plane, vec3(max_.x, max_.y, min_.z), adjusted_epsilon) ? 1 : 0;
+  count += PlaneClipsPoint(plane, vec3(max_.x, max_.y, max_.z), adjusted_epsilon) ? 1 : 0;
 
   return count;
 }

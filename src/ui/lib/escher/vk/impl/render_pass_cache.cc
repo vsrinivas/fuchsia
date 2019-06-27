@@ -15,13 +15,11 @@
 namespace escher {
 namespace impl {
 
-RenderPassCache::RenderPassCache(ResourceRecycler* recycler)
-    : recycler_(recycler) {}
+RenderPassCache::RenderPassCache(ResourceRecycler* recycler) : recycler_(recycler) {}
 
 RenderPassCache::~RenderPassCache() = default;
 
-const impl::RenderPassPtr& RenderPassCache::ObtainRenderPass(
-    const RenderPassInfo& info) {
+const impl::RenderPassPtr& RenderPassCache::ObtainRenderPass(const RenderPassInfo& info) {
   TRACE_DURATION("gfx", "escher::impl::RenderPassCache::ObtainRenderPass");
 
   Hasher h;
@@ -78,8 +76,8 @@ const impl::RenderPassPtr& RenderPassCache::ObtainRenderPass(
   }
 
   TRACE_DURATION("gfx", "escher::RenderPassCache::ObtainRenderPass (creation)");
-  auto pair = render_passes_.insert(std::make_pair(
-      hash, fxl::MakeRefCounted<impl::RenderPass>(recycler_, info)));
+  auto pair = render_passes_.insert(
+      std::make_pair(hash, fxl::MakeRefCounted<impl::RenderPass>(recycler_, info)));
   FXL_DCHECK(pair.second);
   return pair.first->second;
 }

@@ -20,11 +20,9 @@ namespace escher {
 // Signals a fence when all CommandBuffers started before the time of the
 // fence's submission are finished. Used to ensure it is safe to release
 // resources.
-class ReleaseFenceSignaller
-    : public escher::impl::CommandBufferSequencerListener {
+class ReleaseFenceSignaller : public escher::impl::CommandBufferSequencerListener {
  public:
-  explicit ReleaseFenceSignaller(
-      escher::impl::CommandBufferSequencer* command_buffer_sequencer);
+  explicit ReleaseFenceSignaller(escher::impl::CommandBufferSequencer* command_buffer_sequencer);
 
   ~ReleaseFenceSignaller();
 

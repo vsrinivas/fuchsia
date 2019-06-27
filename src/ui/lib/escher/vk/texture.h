@@ -26,10 +26,9 @@ class Texture : public ImageView {
   // and |use_unnormalized_coordinates| are used to create the VkSampler.
   // |resource_recycler| guarantees that the underlying Vulkan resources are not
   // destroyed while still referenced by a pending command buffer.
-  static TexturePtr New(
-      ResourceRecycler* resource_recycler, ImagePtr image, vk::Filter filter,
-      vk::ImageAspectFlags aspect_mask = vk::ImageAspectFlagBits::eColor,
-      bool use_unnormalized_coordinates = false);
+  static TexturePtr New(ResourceRecycler* resource_recycler, ImagePtr image, vk::Filter filter,
+                        vk::ImageAspectFlags aspect_mask = vk::ImageAspectFlagBits::eColor,
+                        bool use_unnormalized_coordinates = false);
 
   vk::Image vk_image() const { return image()->vk(); }
   vk::ImageView vk_image_view() const { return vk(); }

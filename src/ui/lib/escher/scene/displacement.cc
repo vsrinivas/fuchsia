@@ -10,8 +10,7 @@ Displacement::Displacement() {}
 
 Displacement::~Displacement() {}
 
-Displacement Displacement::MakeWave(const vec2& start, const vec2& end,
-                                    float max, float theta_min,
+Displacement Displacement::MakeWave(const vec2& start, const vec2& end, float max, float theta_min,
                                     float theta_max) {
   Displacement displacement;
   displacement.type_ = Type::kWave;

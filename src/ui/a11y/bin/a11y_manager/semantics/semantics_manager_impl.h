@@ -13,15 +13,13 @@
 #include "src/ui/a11y/bin/a11y_manager/semantics/semantic_tree_impl.h"
 
 namespace a11y_manager {
-class SemanticsManagerImpl
-    : public fuchsia::accessibility::semantics::SemanticsManager {
+class SemanticsManagerImpl : public fuchsia::accessibility::semantics::SemanticsManager {
  public:
   explicit SemanticsManagerImpl() = default;
   ~SemanticsManagerImpl() = default;
 
-  void AddBinding(fidl::InterfaceRequest<
-                  fuchsia::accessibility::semantics::SemanticsManager>
-                      request);
+  void AddBinding(
+      fidl::InterfaceRequest<fuchsia::accessibility::semantics::SemanticsManager> request);
 
   void SetDebugDirectory(vfs::PseudoDir* debug_dir);
 
@@ -35,14 +33,11 @@ class SemanticsManagerImpl
   // |fuchsia::accessibility::semantics::SemanticsManager|:
   void RegisterView(
       fuchsia::ui::views::ViewRef view_ref,
-      fidl::InterfaceHandle<
-          fuchsia::accessibility::semantics::SemanticActionListener>
-          handle,
-      fidl::InterfaceRequest<fuchsia::accessibility::semantics::SemanticTree>
-          semantic_tree) override;
+      fidl::InterfaceHandle<fuchsia::accessibility::semantics::SemanticActionListener> handle,
+      fidl::InterfaceRequest<fuchsia::accessibility::semantics::SemanticTree> semantic_tree)
+      override;
 
-  fidl::BindingSet<fuchsia::accessibility::semantics::SemanticsManager>
-      bindings_;
+  fidl::BindingSet<fuchsia::accessibility::semantics::SemanticsManager> bindings_;
 
   fidl::BindingSet<fuchsia::accessibility::semantics::SemanticTree,
                    std::unique_ptr<SemanticTreeImpl>>

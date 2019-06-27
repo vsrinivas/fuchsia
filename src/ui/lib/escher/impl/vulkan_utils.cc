@@ -7,13 +7,12 @@
 namespace escher {
 namespace impl {
 
-std::vector<vk::Format> GetSupportedDepthFormats(
-    vk::PhysicalDevice device, std::vector<vk::Format> desired_formats) {
+std::vector<vk::Format> GetSupportedDepthFormats(vk::PhysicalDevice device,
+                                                 std::vector<vk::Format> desired_formats) {
   std::vector<vk::Format> result;
   for (auto& fmt : desired_formats) {
     vk::FormatProperties props = device.getFormatProperties(fmt);
-    if (props.optimalTilingFeatures &
-        vk::FormatFeatureFlagBits::eDepthStencilAttachment) {
+    if (props.optimalTilingFeatures & vk::FormatFeatureFlagBits::eDepthStencilAttachment) {
       result.push_back(fmt);
     }
   }
@@ -21,8 +20,8 @@ std::vector<vk::Format> GetSupportedDepthFormats(
 }
 
 FormatResult GetSupportedDepthFormat(vk::PhysicalDevice device) {
-  auto supported_formats = GetSupportedDepthFormats(
-      device, {vk::Format::eD16Unorm, vk::Format::eD32Sfloat});
+  auto supported_formats =
+      GetSupportedDepthFormats(device, {vk::Format::eD16Unorm, vk::Format::eD32Sfloat});
   if (supported_formats.empty()) {
     auto undefined = vk::Format::eUndefined;
     return FormatResult(vk::Result::eErrorFeatureNotPresent, undefined);
@@ -33,8 +32,8 @@ FormatResult GetSupportedDepthFormat(vk::PhysicalDevice device) {
 
 FormatResult GetSupportedDepthStencilFormat(vk::PhysicalDevice device) {
   auto supported_formats = GetSupportedDepthFormats(
-      device, {vk::Format::eD16UnormS8Uint, vk::Format::eD24UnormS8Uint,
-               vk::Format::eD32SfloatS8Uint});
+      device,
+      {vk::Format::eD16UnormS8Uint, vk::Format::eD24UnormS8Uint, vk::Format::eD32SfloatS8Uint});
   if (supported_formats.empty()) {
     auto undefined = vk::Format::eUndefined;
     return FormatResult(vk::Result::eErrorFeatureNotPresent, undefined);
@@ -45,8 +44,7 @@ FormatResult GetSupportedDepthStencilFormat(vk::PhysicalDevice device) {
 
 uint32_t GetMemoryTypeIndex(vk::PhysicalDevice device, uint32_t type_bits,
                             vk::MemoryPropertyFlags required_properties) {
-  vk::PhysicalDeviceMemoryProperties memory_types =
-      device.getMemoryProperties();
+  vk::PhysicalDeviceMemoryProperties memory_types = device.getMemoryProperties();
   for (uint32_t i = 0; i < memory_types.memoryTypeCount; ++i) {
     if ((type_bits & 1) == 1) {
       auto available_properties = memory_types.memoryTypes[i].propertyFlags;
@@ -62,8 +60,7 @@ uint32_t GetMemoryTypeIndex(vk::PhysicalDevice device, uint32_t type_bits,
 uint32_t SampleCountFlagBitsToInt(vk::SampleCountFlagBits bits) {
   static_assert(VK_SAMPLE_COUNT_1_BIT == 1 && VK_SAMPLE_COUNT_2_BIT == 2 &&
                     VK_SAMPLE_COUNT_4_BIT == 4 && VK_SAMPLE_COUNT_8_BIT == 8 &&
-                    VK_SAMPLE_COUNT_16_BIT == 16 &&
-                    VK_SAMPLE_COUNT_32_BIT == 32 &&
+                    VK_SAMPLE_COUNT_16_BIT == 16 && VK_SAMPLE_COUNT_32_BIT == 32 &&
                     VK_SAMPLE_COUNT_64_BIT == 64,
                 "unexpected sample count values");
 

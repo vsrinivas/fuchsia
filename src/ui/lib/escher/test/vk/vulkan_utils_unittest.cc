@@ -9,10 +9,8 @@
 namespace {
 using namespace escher;
 
-bool IsEnclosedBy(const vk::Rect2D& rect,
-                  const vk::Rect2D& potential_encloser) {
-  int64_t left, right, top, bottom, encloser_left, encloser_right, encloser_top,
-      encloser_bottom;
+bool IsEnclosedBy(const vk::Rect2D& rect, const vk::Rect2D& potential_encloser) {
+  int64_t left, right, top, bottom, encloser_left, encloser_right, encloser_top, encloser_bottom;
 
   left = rect.offset.x;
   right = left + rect.extent.width;
@@ -24,8 +22,8 @@ bool IsEnclosedBy(const vk::Rect2D& rect,
   encloser_top = potential_encloser.offset.y;
   encloser_bottom = encloser_top + potential_encloser.extent.height;
 
-  return left >= encloser_left && right <= encloser_right &&
-         top >= encloser_top && bottom <= encloser_bottom;
+  return left >= encloser_left && right <= encloser_right && top >= encloser_top &&
+         bottom <= encloser_bottom;
 }
 
 TEST(VulkanUtils, ClipToRect) {

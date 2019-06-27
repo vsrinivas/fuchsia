@@ -54,8 +54,7 @@ class CommandBuffer {
   // For convenience, calls TakeWaitSemaphore() on the resource, and passes the
   // result to AddWaitSemaphore().
   template <typename ResourcePtrT>
-  void TakeWaitSemaphore(const ResourcePtrT& resource,
-                         vk::PipelineStageFlags stage) {
+  void TakeWaitSemaphore(const ResourcePtrT& resource, vk::PipelineStageFlags stage) {
     AddWaitSemaphore(resource->TakeWaitSemaphore(), stage);
   }
 
@@ -77,19 +76,16 @@ class CommandBuffer {
 
   // Copy pixels from one image to another.  No image barriers or other
   // synchronization is used.  Retain both images in used_resources.
-  void CopyImage(const ImagePtr& src_image, const ImagePtr& dst_image,
-                 vk::ImageLayout src_layout, vk::ImageLayout dst_layout,
-                 vk::ImageCopy* region);
+  void CopyImage(const ImagePtr& src_image, const ImagePtr& dst_image, vk::ImageLayout src_layout,
+                 vk::ImageLayout dst_layout, vk::ImageCopy* region);
 
   // Copy memory from one buffer to another.
-  void CopyBuffer(const BufferPtr& src, const BufferPtr& dst,
-                  vk::BufferCopy region);
+  void CopyBuffer(const BufferPtr& src, const BufferPtr& dst, vk::BufferCopy region);
 
   // Copy the specified region of |src| into |dst| after inserting a
   // memory-barrier to use the memory on the same queue (i.e. the barrier's
   // queue family indices are VK_QUEUE_FAMILY_IGNORED).
-  void CopyBufferAfterBarrier(const BufferPtr& src, const BufferPtr& dst,
-                              vk::BufferCopy region,
+  void CopyBufferAfterBarrier(const BufferPtr& src, const BufferPtr& dst, vk::BufferCopy region,
                               vk::AccessFlags src_access_mask,
                               vk::PipelineStageFlags src_stage_mask);
 
@@ -102,16 +98,12 @@ class CommandBuffer {
   // (i.e. width/height of viewport and scissors are obtained from framebuffer).
   void BeginRenderPass(const escher::RenderPassPtr& render_pass,
                        const escher::FramebufferPtr& framebuffer,
-                       const std::vector<vk::ClearValue>& clear_values,
+                       const std::vector<vk::ClearValue>& clear_values, const vk::Rect2D viewport);
+  void BeginRenderPass(vk::RenderPass render_pass, const escher::FramebufferPtr& framebuffer,
+                       const std::vector<vk::ClearValue>& clear_values, const vk::Rect2D viewport);
+  void BeginRenderPass(vk::RenderPass render_pass, const escher::FramebufferPtr& framebuffer,
+                       const vk::ClearValue* clear_values, size_t clear_value_count,
                        const vk::Rect2D viewport);
-  void BeginRenderPass(vk::RenderPass render_pass,
-                       const escher::FramebufferPtr& framebuffer,
-                       const std::vector<vk::ClearValue>& clear_values,
-                       const vk::Rect2D viewport);
-  void BeginRenderPass(vk::RenderPass render_pass,
-                       const escher::FramebufferPtr& framebuffer,
-                       const vk::ClearValue* clear_values,
-                       size_t clear_value_count, const vk::Rect2D viewport);
 
   // Simple wrapper around endRenderPass().
   void EndRenderPass();
@@ -135,8 +127,8 @@ class CommandBuffer {
   // Called by CommandBufferPool, which is responsible for eventually destroying
   // the Vulkan command buffer and fence.  Submit() and Retire() use the fence
   // to determine when the command buffer has finished executing on the GPU.
-  CommandBuffer(vk::Device device, vk::CommandBuffer command_buffer,
-                vk::Fence fence, vk::PipelineStageFlags pipeline_stage_mask);
+  CommandBuffer(vk::Device device, vk::CommandBuffer command_buffer, vk::Fence fence,
+                vk::PipelineStageFlags pipeline_stage_mask);
   vk::Fence fence() const { return fence_; }
 
   // Called by CommandBufferPool when this buffer is obtained from it.

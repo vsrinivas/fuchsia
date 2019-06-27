@@ -12,8 +12,6 @@ Stage::Stage() : clear_color_(0.f, 0.f, 0.f, 0.f) {}
 
 Stage::~Stage() {}
 
-void Stage::set_viewing_volume(ViewingVolume value) {
-  viewing_volume_ = std::move(value);
-}
+void Stage::set_viewing_volume(ViewingVolume value) { viewing_volume_ = std::move(value); }
 
 }  // namespace escher

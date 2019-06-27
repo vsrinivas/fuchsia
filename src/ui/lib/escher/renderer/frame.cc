@@ -26,16 +26,12 @@ static uint64_t NextFrameNumber() {
 
 }  // anonymous namespace
 
-const ResourceTypeInfo Frame::kTypeInfo("Frame", ResourceType::kResource,
-                                        ResourceType::kFrame);
+const ResourceTypeInfo Frame::kTypeInfo("Frame", ResourceType::kResource, ResourceType::kFrame);
 
-Frame::Frame(impl::FrameManager* manager,
-             escher::CommandBuffer::Type requested_type,
-             BlockAllocator allocator,
-             impl::UniformBufferPoolWeakPtr uniform_buffer_pool,
-             uint64_t frame_number, const char* trace_literal,
-             const char* gpu_vthread_literal, uint64_t gpu_vthread_id,
-             bool enable_gpu_logging)
+Frame::Frame(impl::FrameManager* manager, escher::CommandBuffer::Type requested_type,
+             BlockAllocator allocator, impl::UniformBufferPoolWeakPtr uniform_buffer_pool,
+             uint64_t frame_number, const char* trace_literal, const char* gpu_vthread_literal,
+             uint64_t gpu_vthread_id, bool enable_gpu_logging)
     : Resource(manager),
       frame_number_(frame_number),
       escher_frame_number_(NextFrameNumber()),
@@ -48,8 +44,8 @@ Frame::Frame(impl::FrameManager* manager,
       block_allocator_(std::move(allocator)),
       uniform_block_allocator_(std::move(uniform_buffer_pool)),
       profiler_(escher()->supports_timer_queries()
-                    ? fxl::MakeRefCounted<TimestampProfiler>(
-                          escher()->vk_device(), escher()->timestamp_period())
+                    ? fxl::MakeRefCounted<TimestampProfiler>(escher()->vk_device(),
+                                                             escher()->timestamp_period())
                     : TimestampProfilerPtr()) {
   FXL_DCHECK(queue_);
 }
@@ -76,8 +72,8 @@ vk::CommandBuffer Frame::vk_command_buffer() const {
 }
 
 void Frame::BeginFrame() {
-  TRACE_DURATION("gfx", "escher::Frame::BeginFrame", "frame_number",
-                 frame_number_, "escher_frame_number", escher_frame_number_);
+  TRACE_DURATION("gfx", "escher::Frame::BeginFrame", "frame_number", frame_number_,
+                 "escher_frame_number", escher_frame_number_);
   FXL_DCHECK(state_ == State::kReadyToBegin);
   IssueCommandBuffer();
   AddTimestamp("start of frame");
@@ -95,9 +91,9 @@ void Frame::SubmitPartialFrame(const SemaphorePtr& frame_done) {
   FXL_DCHECK(command_buffer_);
 
   ++submission_count_;
-  TRACE_DURATION("gfx", "escher::Frame::SubmitPartialFrame", "frame_number",
-                 frame_number_, "escher_frame_number", escher_frame_number_,
-                 "submission_index", submission_count_);
+  TRACE_DURATION("gfx", "escher::Frame::SubmitPartialFrame", "frame_number", frame_number_,
+                 "escher_frame_number", escher_frame_number_, "submission_index",
+                 submission_count_);
   FXL_DCHECK(state_ == State::kInProgress);
 
   command_buffer_->impl()->AddSignalSemaphore(frame_done);
@@ -111,14 +107,13 @@ void Frame::SubmitPartialFrame(const SemaphorePtr& frame_done) {
   IssueCommandBuffer();
 }
 
-void Frame::EndFrame(const SemaphorePtr& frame_done,
-                     FrameRetiredCallback frame_retired_callback) {
+void Frame::EndFrame(const SemaphorePtr& frame_done, FrameRetiredCallback frame_retired_callback) {
   FXL_DCHECK(command_buffer_);
 
   ++submission_count_;
-  TRACE_DURATION("gfx", "escher::Frame::EndFrame", "frame_number",
-                 frame_number_, "escher_frame_number", escher_frame_number_,
-                 "submission_index", submission_count_);
+  TRACE_DURATION("gfx", "escher::Frame::EndFrame", "frame_number", frame_number_,
+                 "escher_frame_number", escher_frame_number_, "submission_index",
+                 submission_count_);
   FXL_DCHECK(state_ == State::kInProgress);
   state_ = State::kFinishing;
 
@@ -132,13 +127,10 @@ void Frame::EndFrame(const SemaphorePtr& frame_done,
   // NOTE: this closure refs this Frame via a FramePtr, guaranteeing that it
   // will not be destroyed until the frame is finished rendering.
   command_buffer_->impl()->Submit(
-      queue_, [client_callback{std::move(frame_retired_callback)},
-               profiler{std::move(profiler_)}, frame_number = frame_number_,
-               escher_frame_number = escher_frame_number_,
-               trace_literal = trace_literal_,
-               gpu_vthread_literal = gpu_vthread_literal_,
-               gpu_vthread_id = gpu_vthread_id_,
-               enable_gpu_logging = enable_gpu_logging_,
+      queue_, [client_callback{std::move(frame_retired_callback)}, profiler{std::move(profiler_)},
+               frame_number = frame_number_, escher_frame_number = escher_frame_number_,
+               trace_literal = trace_literal_, gpu_vthread_literal = gpu_vthread_literal_,
+               gpu_vthread_id = gpu_vthread_id_, enable_gpu_logging = enable_gpu_logging_,
                this_frame = FramePtr(this)]() {
         // Run the client-specified callback.
         if (client_callback) {
@@ -152,9 +144,8 @@ void Frame::EndFrame(const SemaphorePtr& frame_done,
           auto timestamps = profiler->GetQueryResults();
           auto trace_events = profiler->ProcessTraceEvents(timestamps);
 
-          profiler->TraceGpuQueryResults(trace_events, frame_number,
-                                         escher_frame_number, trace_literal,
-                                         gpu_vthread_literal, gpu_vthread_id);
+          profiler->TraceGpuQueryResults(trace_events, frame_number, escher_frame_number,
+                                         trace_literal, gpu_vthread_literal, gpu_vthread_id);
 
           if (enable_gpu_logging) {
             profiler->LogGpuQueryResults(escher_frame_number, timestamps);
@@ -192,18 +183,13 @@ void Frame::AddTimestamp(const char* name, vk::PipelineStageFlagBits stages) {
     profiler_->AddTimestamp(command_buffer_->impl(), stages, name);
 }
 
-void Frame::KeepAlive(ResourcePtr resource) {
-  keep_alive_.push_back(std::move(resource));
-}
+void Frame::KeepAlive(ResourcePtr resource) { keep_alive_.push_back(std::move(resource)); }
 
-CommandBufferPtr Frame::TakeCommandBuffer() {
-  return std::move(command_buffer_);
-}
+CommandBufferPtr Frame::TakeCommandBuffer() { return std::move(command_buffer_); }
 
 void Frame::PutCommandBuffer(CommandBufferPtr command_buffer) {
   FXL_DCHECK(!command_buffer_ && command_buffer);
-  FXL_DCHECK(command_buffer_sequence_number_ ==
-             command_buffer->impl()->sequence_number());
+  FXL_DCHECK(command_buffer_sequence_number_ == command_buffer->impl()->sequence_number());
 
   command_buffer_ = std::move(command_buffer);
 }

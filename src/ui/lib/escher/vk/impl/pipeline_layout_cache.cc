@@ -9,21 +9,19 @@
 namespace escher {
 namespace impl {
 
-PipelineLayoutCache::PipelineLayoutCache(ResourceRecycler* recycler)
-    : recycler_(recycler) {}
+PipelineLayoutCache::PipelineLayoutCache(ResourceRecycler* recycler) : recycler_(recycler) {}
 
 PipelineLayoutCache::~PipelineLayoutCache() = default;
 
-const PipelineLayoutPtr& PipelineLayoutCache::ObtainPipelineLayout(
-    const PipelineLayoutSpec& spec) {
+const PipelineLayoutPtr& PipelineLayoutCache::ObtainPipelineLayout(const PipelineLayoutSpec& spec) {
   auto it = layouts_.find(spec.hash());
   if (it != end(layouts_)) {
     FXL_DCHECK(it->second->spec() == spec);
     return it->second;
   }
 
-  auto pair = layouts_.insert(std::make_pair(
-      spec.hash(), fxl::MakeRefCounted<PipelineLayout>(recycler_, spec)));
+  auto pair = layouts_.insert(
+      std::make_pair(spec.hash(), fxl::MakeRefCounted<PipelineLayout>(recycler_, spec)));
   return pair.first->second;
 }
 

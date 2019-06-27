@@ -5,10 +5,10 @@
 #ifndef GARNET_EXAMPLES_UI_SPINNING_SQUARE_SPINNING_SQUARE_VIEW_H_
 #define GARNET_EXAMPLES_UI_SPINNING_SQUARE_SPINNING_SQUARE_VIEW_H_
 
-#include "src/lib/fxl/logging.h"
-#include "src/lib/fxl/macros.h"
 #include "lib/ui/base_view/cpp/base_view.h"
 #include "lib/ui/scenic/cpp/resources.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/macros.h"
 
 namespace examples {
 
@@ -19,13 +19,10 @@ class SpinningSquareView : public scenic::BaseView {
 
  private:
   // |scenic::BaseView|
-  void OnSceneInvalidated(
-      fuchsia::images::PresentationInfo presentation_info) override;
+  void OnSceneInvalidated(fuchsia::images::PresentationInfo presentation_info) override;
 
   // |scenic::SessionListener|
-  void OnScenicError(std::string error) override {
-    FXL_LOG(ERROR) << "Scenic Error " << error;
-  }
+  void OnScenicError(std::string error) override { FXL_LOG(ERROR) << "Scenic Error " << error; }
 
   scenic::ShapeNode background_node_;
   scenic::ShapeNode square_node_;

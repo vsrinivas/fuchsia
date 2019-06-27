@@ -23,12 +23,8 @@ class MockFrameScheduler : public FrameScheduler {
   void ScheduleUpdateForSession(zx_time_t presentation_time,
                                 scenic_impl::SessionId session) override{};
 
-  void OnFramePresented(const FrameTimings& timings) override {
-    ++frame_presented_call_count_;
-  };
-  void OnFrameRendered(const FrameTimings& timings) override {
-    ++frame_rendered_call_count_;
-  };
+  void OnFramePresented(const FrameTimings& timings) override { ++frame_presented_call_count_; };
+  void OnFrameRendered(const FrameTimings& timings) override { ++frame_rendered_call_count_; };
 
   uint32_t frame_presented_call_count() { return frame_presented_call_count_; }
   uint32_t frame_rendered_call_count() { return frame_rendered_call_count_; }
@@ -47,26 +43,21 @@ class FakeDisplay : public Display {
 
   // Manually sets the values returned by
   // GetVsyncInterval() and GetLastVsyncTime().
-  void SetVsyncInterval(zx_duration_t new_interval) {
-    vsync_interval_ = new_interval;
-  }
-  void SetLastVsyncTime(zx_duration_t new_last_vsync) {
-    last_vsync_time_ = new_last_vsync;
-  }
+  void SetVsyncInterval(zx_duration_t new_interval) { vsync_interval_ = new_interval; }
+  void SetLastVsyncTime(zx_duration_t new_last_vsync) { last_vsync_time_ = new_last_vsync; }
 };
 
 class MockSessionUpdater : public SessionUpdater {
  public:
   MockSessionUpdater() : weak_factory_(this) {}
 
-  SessionUpdater::UpdateResults UpdateSessions(
-      std::unordered_set<SessionId> sessions_to_update,
-      zx_time_t presentation_time, uint64_t trace_id = 0) override;
+  SessionUpdater::UpdateResults UpdateSessions(std::unordered_set<SessionId> sessions_to_update,
+                                               zx_time_t presentation_time,
+                                               uint64_t trace_id = 0) override;
 
   void RatchetPresentCallbacks() override { ++ratchet_present_call_count_; }
 
-  void SignalSuccessfulPresentCallbacks(
-      fuchsia::images::PresentationInfo) override {
+  void SignalSuccessfulPresentCallbacks(fuchsia::images::PresentationInfo) override {
     ++signal_successful_present_callback_count_;
   }
 
@@ -83,13 +74,10 @@ class MockSessionUpdater : public SessionUpdater {
     return signal_successful_present_callback_count_;
   }
 
-  fxl::WeakPtr<MockSessionUpdater> GetWeakPtr() {
-    return weak_factory_.GetWeakPtr();
-  }
+  fxl::WeakPtr<MockSessionUpdater> GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
 
  private:
-  SessionUpdater::UpdateResults update_sessions_return_value_ = {.needs_render =
-                                                                     true};
+  SessionUpdater::UpdateResults update_sessions_return_value_ = {.needs_render = true};
 
   uint32_t update_sessions_call_count_ = 0;
   uint32_t signal_successful_present_callback_count_ = 0;
@@ -103,8 +91,7 @@ class MockFrameRenderer : public FrameRenderer {
   MockFrameRenderer() : weak_factory_(this) {}
 
   // |FrameRenderer|
-  bool RenderFrame(const FrameTimingsPtr& frame_timings,
-                   zx_time_t presentation_time);
+  bool RenderFrame(const FrameTimingsPtr& frame_timings, zx_time_t presentation_time);
 
   // Need to call this in order to trigger the OnFramePresented() callback in
   // FrameScheduler, but is not valid to do until after RenderFrame has returned
@@ -121,15 +108,11 @@ class MockFrameRenderer : public FrameRenderer {
   void SignalFrameDropped(uint64_t frame_number);
 
   // Manually set value returned from RenderFrame.
-  void SetRenderFrameReturnValue(bool new_value) {
-    render_frame_return_value_ = new_value;
-  }
+  void SetRenderFrameReturnValue(bool new_value) { render_frame_return_value_ = new_value; }
   uint32_t render_frame_call_count() { return render_frame_call_count_; }
   size_t pending_frames() { return frames_.size(); }
 
-  fxl::WeakPtr<MockFrameRenderer> GetWeakPtr() {
-    return weak_factory_.GetWeakPtr();
-  }
+  fxl::WeakPtr<MockFrameRenderer> GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
 
  private:
   void CleanUpFrame(uint64_t frame_number);

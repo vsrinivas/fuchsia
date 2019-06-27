@@ -34,15 +34,15 @@ FrameManager::FrameManager(EscherWeakPtr escher)
 
 FrameManager::~FrameManager() = default;
 
-FramePtr FrameManager::NewFrame(const char* trace_literal,
-                                uint64_t frame_number, bool enable_gpu_logging,
+FramePtr FrameManager::NewFrame(const char* trace_literal, uint64_t frame_number,
+                                bool enable_gpu_logging,
                                 escher::CommandBuffer::Type requested_type) {
   TRACE_DURATION("gfx", "escher::FrameManager::NewFrame");
   uniform_buffer_pool_.BeginFrame();
-  FramePtr frame = fxl::AdoptRef<Frame>(
-      new Frame(this, requested_type, std::move(*GetBlockAllocator().get()),
-                uniform_buffer_pool_.GetWeakPtr(), frame_number, trace_literal,
-                gpu_vthread_literal_, gpu_vthread_id_, enable_gpu_logging));
+  FramePtr frame =
+      fxl::AdoptRef<Frame>(new Frame(this, requested_type, std::move(*GetBlockAllocator().get()),
+                                     uniform_buffer_pool_.GetWeakPtr(), frame_number, trace_literal,
+                                     gpu_vthread_literal_, gpu_vthread_id_, enable_gpu_logging));
   frame->BeginFrame();
   return frame;
 }
@@ -50,8 +50,7 @@ FramePtr FrameManager::NewFrame(const char* trace_literal,
 void FrameManager::OnReceiveOwnable(std::unique_ptr<Resource> resource) {
   FXL_DCHECK(resource->IsKindOf<Frame>());
   auto frame = static_cast<Frame*>(resource.get());
-  block_allocators_.push(
-      std::make_unique<BlockAllocator>(frame->TakeBlockAllocator()));
+  block_allocators_.push(std::make_unique<BlockAllocator>(frame->TakeBlockAllocator()));
 }
 
 std::unique_ptr<BlockAllocator> FrameManager::GetBlockAllocator() {

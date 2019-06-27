@@ -11,8 +11,8 @@ namespace gfx {
 namespace test {
 
 SessionUpdater::UpdateResults MockSessionUpdater::UpdateSessions(
-    std::unordered_set<SessionId> sessions_to_update,
-    zx_time_t presentation_time, uint64_t trace_id) {
+    std::unordered_set<SessionId> sessions_to_update, zx_time_t presentation_time,
+    uint64_t trace_id) {
   ++update_sessions_call_count_;
   return update_sessions_return_value_;
 }
@@ -37,8 +37,7 @@ void MockFrameRenderer::EndFrame(uint64_t frame_number, zx_time_t time_done) {
   SignalFramePresented(frame_number, time_done);
 }
 
-void MockFrameRenderer::SignalFrameRendered(uint64_t frame_number,
-                                            zx_time_t time_done) {
+void MockFrameRenderer::SignalFrameRendered(uint64_t frame_number, zx_time_t time_done) {
   auto find_it = frames_.find(frame_number);
   FXL_DCHECK(find_it != frames_.end());
 
@@ -50,8 +49,7 @@ void MockFrameRenderer::SignalFrameRendered(uint64_t frame_number,
   CleanUpFrame(frame_number);
 }
 
-void MockFrameRenderer::SignalFramePresented(uint64_t frame_number,
-                                             zx_time_t time_done) {
+void MockFrameRenderer::SignalFramePresented(uint64_t frame_number, zx_time_t time_done) {
   auto find_it = frames_.find(frame_number);
   FXL_DCHECK(find_it != frames_.end());
 

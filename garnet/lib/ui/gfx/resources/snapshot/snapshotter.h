@@ -69,10 +69,8 @@ class Snapshotter : public ResourceVisitor {
   void VisitMesh(escher::MeshPtr mesh);
   void VisitImage(escher::ImagePtr i);
 
-  void ReadImage(escher::ImagePtr image,
-                 fit::function<void(escher::BufferPtr buffer)> callback);
-  void ReadBuffer(escher::BufferPtr buffer,
-                  fit::function<void(escher::BufferPtr buffer)> callback);
+  void ReadImage(escher::ImagePtr image, fit::function<void(escher::BufferPtr buffer)> callback);
+  void ReadBuffer(escher::BufferPtr buffer, fit::function<void(escher::BufferPtr buffer)> callback);
 
   std::unique_ptr<escher::BatchGpuUploader> gpu_uploader_;
 

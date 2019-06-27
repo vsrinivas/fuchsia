@@ -33,8 +33,8 @@
 #include "src/ui/lib/escher/vk/vulkan_limits.h"
 
 // TODO(ES-83): maybe move to .cc file, along with definitions of SubpassHas*().
-#include "src/ui/lib/escher/util/image_utils.h"
 #include "src/lib/fxl/logging.h"
+#include "src/ui/lib/escher/util/image_utils.h"
 
 namespace escher {
 namespace impl {
@@ -70,11 +70,9 @@ class RenderPass : public Resource {
   ~RenderPass() override;
 
   struct SubpassInfo {
-    vk::AttachmentReference
-        color_attachments[VulkanLimits::kNumColorAttachments];
+    vk::AttachmentReference color_attachments[VulkanLimits::kNumColorAttachments];
     uint32_t num_color_attachments;
-    vk::AttachmentReference
-        input_attachments[VulkanLimits::kNumColorAttachments];
+    vk::AttachmentReference input_attachments[VulkanLimits::kNumColorAttachments];
     uint32_t num_input_attachments;
     vk::AttachmentReference depth_stencil_attachment;
 
@@ -91,11 +89,11 @@ class RenderPass : public Resource {
   uint32_t GetColorAttachmentCountForSubpass(uint32_t subpass) const;
   uint32_t GetInputAttachmentCountForSubpass(uint32_t subpass) const;
 
-  const vk::AttachmentReference& GetColorAttachmentForSubpass(
-      uint32_t subpass, uint32_t index) const;
+  const vk::AttachmentReference& GetColorAttachmentForSubpass(uint32_t subpass,
+                                                              uint32_t index) const;
 
-  const vk::AttachmentReference& GetInputAttachmentForSubpass(
-      uint32_t subpass, uint32_t index) const;
+  const vk::AttachmentReference& GetInputAttachmentForSubpass(uint32_t subpass,
+                                                              uint32_t index) const;
 
   bool SubpassHasDepth(uint32_t subpass_index) const;
   bool SubpassHasStencil(uint32_t subpass_index) const;
@@ -110,20 +108,17 @@ class RenderPass : public Resource {
 
 // Inline method definitions.
 
-inline vk::SampleCountFlagBits RenderPass::SubpassSamples(
-    uint32_t subpass) const {
+inline vk::SampleCountFlagBits RenderPass::SubpassSamples(uint32_t subpass) const {
   FXL_DCHECK(subpass < subpasses_.size());
   return subpasses_[subpass].samples;
 }
 
-inline uint32_t RenderPass::GetColorAttachmentCountForSubpass(
-    uint32_t subpass) const {
+inline uint32_t RenderPass::GetColorAttachmentCountForSubpass(uint32_t subpass) const {
   FXL_DCHECK(subpass < subpasses_.size());
   return subpasses_[subpass].num_color_attachments;
 }
 
-inline uint32_t RenderPass::GetInputAttachmentCountForSubpass(
-    uint32_t subpass) const {
+inline uint32_t RenderPass::GetInputAttachmentCountForSubpass(uint32_t subpass) const {
   FXL_DCHECK(subpass < subpasses_.size());
   return subpasses_[subpass].num_input_attachments;
 }
@@ -144,15 +139,13 @@ inline const vk::AttachmentReference& RenderPass::GetInputAttachmentForSubpass(
 
 inline bool RenderPass::SubpassHasDepth(uint32_t subpass) const {
   FXL_DCHECK(subpass < subpasses_.size());
-  return subpasses_[subpass].depth_stencil_attachment.attachment !=
-             VK_ATTACHMENT_UNUSED &&
+  return subpasses_[subpass].depth_stencil_attachment.attachment != VK_ATTACHMENT_UNUSED &&
          image_utils::IsDepthFormat(depth_stencil_format_);
 }
 
 inline bool RenderPass::SubpassHasStencil(uint32_t subpass) const {
   FXL_DCHECK(subpass < subpasses_.size());
-  return subpasses_[subpass].depth_stencil_attachment.attachment !=
-             VK_ATTACHMENT_UNUSED &&
+  return subpasses_[subpass].depth_stencil_attachment.attachment != VK_ATTACHMENT_UNUSED &&
          image_utils::IsStencilFormat(depth_stencil_format_);
 }
 

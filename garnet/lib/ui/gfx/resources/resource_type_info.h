@@ -83,9 +83,7 @@ struct ResourceTypeInfo {
     return base_type.flags == (flags & base_type.flags);
   }
 
-  bool operator==(const ResourceTypeInfo& type) const {
-    return flags == type.flags;
-  }
+  bool operator==(const ResourceTypeInfo& type) const { return flags == type.flags; }
 };
 
 }  // namespace gfx

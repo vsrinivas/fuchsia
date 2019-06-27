@@ -17,9 +17,8 @@
 
 namespace ui_input {
 
-bool TouchScreen::ParseReportDescriptor(
-    const hid::ReportDescriptor& report_descriptor,
-    Device::Descriptor* device_descriptor) {
+bool TouchScreen::ParseReportDescriptor(const hid::ReportDescriptor& report_descriptor,
+                                        Device::Descriptor* device_descriptor) {
   if (!touch_.ParseTouchDescriptor(report_descriptor)) {
     return false;
   }
@@ -31,20 +30,16 @@ bool TouchScreen::ParseReportDescriptor(
   Touch::Descriptor touch_desc;
   touch_.SetDescriptor(&touch_desc);
 
-  device_descriptor->touchscreen_descriptor =
-      fuchsia::ui::input::TouchscreenDescriptor::New();
+  device_descriptor->touchscreen_descriptor = fuchsia::ui::input::TouchscreenDescriptor::New();
   device_descriptor->touchscreen_descriptor->x.range.min = touch_desc.x_min;
   device_descriptor->touchscreen_descriptor->x.range.max = touch_desc.x_max;
-  device_descriptor->touchscreen_descriptor->x.resolution =
-      touch_desc.x_resolution;
+  device_descriptor->touchscreen_descriptor->x.resolution = touch_desc.x_resolution;
 
   device_descriptor->touchscreen_descriptor->y.range.min = touch_desc.y_min;
   device_descriptor->touchscreen_descriptor->y.range.max = touch_desc.y_max;
-  device_descriptor->touchscreen_descriptor->y.resolution =
-      touch_desc.x_resolution;
+  device_descriptor->touchscreen_descriptor->y.resolution = touch_desc.x_resolution;
 
-  device_descriptor->touchscreen_descriptor->max_finger_id =
-      touch_desc.max_finger_id;
+  device_descriptor->touchscreen_descriptor->max_finger_id = touch_desc.max_finger_id;
   return true;
 }
 

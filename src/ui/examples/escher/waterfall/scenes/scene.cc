@@ -17,8 +17,8 @@ void Scene::Init(escher::PaperScene* scene) {
   FXL_DCHECK(!box.is_empty());
 
   escher::Stage stage;
-  stage.set_viewing_volume(escher::ViewingVolume(box.width(), box.height(),
-                                                 box.max().z, box.min().z));
+  stage.set_viewing_volume(
+      escher::ViewingVolume(box.width(), box.height(), box.max().z, box.min().z));
   Init(&stage);
 }
 
@@ -28,8 +28,8 @@ void Scene::Update(const escher::Stopwatch& stopwatch, uint64_t frame_count,
   FXL_DCHECK(!box.is_empty());
 
   escher::Stage stage;
-  stage.set_viewing_volume(escher::ViewingVolume(box.width(), box.height(),
-                                                 box.max().z, box.min().z));
+  stage.set_viewing_volume(
+      escher::ViewingVolume(box.width(), box.height(), box.max().z, box.min().z));
 
   escher::Model* model = Update(stopwatch, frame_count, &stage, renderer);
   for (auto& obj : model->objects()) {

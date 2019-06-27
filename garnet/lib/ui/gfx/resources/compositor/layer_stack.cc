@@ -10,16 +10,14 @@
 namespace scenic_impl {
 namespace gfx {
 
-const ResourceTypeInfo LayerStack::kTypeInfo = {ResourceType::kLayerStack,
-                                                "LayerStack"};
+const ResourceTypeInfo LayerStack::kTypeInfo = {ResourceType::kLayerStack, "LayerStack"};
 
 LayerStack::LayerStack(Session* session, ResourceId id)
     : Resource(session, id, LayerStack::kTypeInfo) {}
 
 LayerStack::~LayerStack() = default;
 
-std::vector<Hit> LayerStack::HitTest(const escher::ray4& ray,
-                                     HitTester* hit_tester) const {
+std::vector<Hit> LayerStack::HitTest(const escher::ray4& ray, HitTester* hit_tester) const {
   FXL_CHECK(hit_tester);
 
   std::vector<Hit> hits;
@@ -33,8 +31,7 @@ std::vector<Hit> LayerStack::HitTest(const escher::ray4& ray,
 
 bool LayerStack::AddLayer(LayerPtr layer) {
   if (layer->layer_stack_) {
-    error_reporter()->ERROR()
-        << "LayerStack::AddLayer(): layer already belongs to a LayerStack.";
+    error_reporter()->ERROR() << "LayerStack::AddLayer(): layer already belongs to a LayerStack.";
     return false;
   }
   layer->layer_stack_ = this;
@@ -44,8 +41,7 @@ bool LayerStack::AddLayer(LayerPtr layer) {
 
 bool LayerStack::RemoveLayer(LayerPtr layer) {
   if (layer->layer_stack_ != this) {
-    error_reporter()->ERROR()
-        << "LayerStack::RemoveLayer(): layer doesn't belong to this stack.";
+    error_reporter()->ERROR() << "LayerStack::RemoveLayer(): layer doesn't belong to this stack.";
     return false;
   }
   layer->layer_stack_ = nullptr;
@@ -62,9 +58,8 @@ bool LayerStack::RemoveAllLayers() {
 }
 
 void LayerStack::RemoveLayer(Layer* layer) {
-  auto it = std::find_if(
-      layers_.begin(), layers_.end(),
-      [layer](const LayerPtr& layer_ptr) { return layer == layer_ptr.get(); });
+  auto it = std::find_if(layers_.begin(), layers_.end(),
+                         [layer](const LayerPtr& layer_ptr) { return layer == layer_ptr.get(); });
   FXL_DCHECK(it != layers_.end());
   layers_.erase(it);
   (*it)->layer_stack_ = nullptr;

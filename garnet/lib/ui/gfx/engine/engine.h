@@ -56,9 +56,7 @@ class CommandContext {
  public:
   CommandContext(std::unique_ptr<escher::BatchGpuUploader> uploader);
 
-  escher::BatchGpuUploader* batch_gpu_uploader() const {
-    return batch_gpu_uploader_.get();
-  }
+  escher::BatchGpuUploader* batch_gpu_uploader() const { return batch_gpu_uploader_.get(); }
 
   // Flush any work accumulated during command processing.
   void Flush();
@@ -73,20 +71,16 @@ class CommandContext {
 // which belong to different engines to communicate with one another.
 class Engine : public SessionUpdater, public FrameRenderer {
  public:
-  Engine(sys::ComponentContext* component_context,
-         std::unique_ptr<FrameScheduler> frame_scheduler,
-         std::unique_ptr<SessionManager> session_manager,
-         DisplayManager* display_manager, escher::EscherWeakPtr escher,
-         inspect::Node inspect_node);
+  Engine(sys::ComponentContext* component_context, std::unique_ptr<FrameScheduler> frame_scheduler,
+         std::unique_ptr<SessionManager> session_manager, DisplayManager* display_manager,
+         escher::EscherWeakPtr escher, inspect::Node inspect_node);
 
   ~Engine() override = default;
 
   escher::Escher* escher() const { return escher_.get(); }
   escher::EscherWeakPtr GetEscherWeakPtr() const { return escher_; }
 
-  vk::Device vk_device() {
-    return escher_ ? escher_->vulkan_context().device : vk::Device();
-  }
+  vk::Device vk_device() { return escher_ ? escher_->vulkan_context().device : vk::Device(); }
 
   bool has_vulkan() const { return has_vulkan_; }
 
@@ -131,9 +125,9 @@ class Engine : public SessionUpdater, public FrameRenderer {
   //
   // Applies scheduled updates to a session. If the update fails, the session is
   // killed. Returns true if a new render is needed, false otherwise.
-  SessionUpdater::UpdateResults UpdateSessions(
-      std::unordered_set<SessionId> sessions_to_update,
-      zx_time_t presentation_time, uint64_t trace_id = 0) override;
+  SessionUpdater::UpdateResults UpdateSessions(std::unordered_set<SessionId> sessions_to_update,
+                                               zx_time_t presentation_time,
+                                               uint64_t trace_id = 0) override;
 
   // |SessionUpdater|
   //
@@ -151,17 +145,14 @@ class Engine : public SessionUpdater, public FrameRenderer {
   // |FrameRenderer|
   //
   // Renders a new frame. Returns true if successful, false otherwise.
-  bool RenderFrame(const FrameTimingsPtr& frame,
-                   zx_time_t presentation_time) override;
+  bool RenderFrame(const FrameTimingsPtr& frame, zx_time_t presentation_time) override;
 
  protected:
   // Only used by subclasses used in testing.
-  Engine(sys::ComponentContext* component_context,
-         std::unique_ptr<FrameScheduler> frame_scheduler,
+  Engine(sys::ComponentContext* component_context, std::unique_ptr<FrameScheduler> frame_scheduler,
          DisplayManager* display_manager,
          std::unique_ptr<escher::ReleaseFenceSignaller> release_fence_signaller,
-         std::unique_ptr<SessionManager> session_manager,
-         escher::EscherWeakPtr escher);
+         std::unique_ptr<SessionManager> session_manager, escher::EscherWeakPtr escher);
 
  private:
   void InitializeFrameScheduler();
@@ -184,9 +175,7 @@ class Engine : public SessionUpdater, public FrameRenderer {
 
   escher::ImageFactory* escher_image_factory() { return image_factory_.get(); }
 
-  escher::RoundedRectFactory* escher_rounded_rect_factory() {
-    return rounded_rect_factory_.get();
-  }
+  escher::RoundedRectFactory* escher_rounded_rect_factory() { return rounded_rect_factory_.get(); }
 
   escher::ReleaseFenceSignaller* release_fence_signaller() {
     return release_fence_signaller_.get();
@@ -200,8 +189,7 @@ class Engine : public SessionUpdater, public FrameRenderer {
 
   // Update reported metrics for nodes which subscribe to metrics events.
   // If anything changed, append the node to |updated_nodes|.
-  void UpdateMetrics(Node* node,
-                     const ::fuchsia::ui::gfx::Metrics& parent_metrics,
+  void UpdateMetrics(Node* node, const ::fuchsia::ui::gfx::Metrics& parent_metrics,
                      std::vector<Node*>* updated_nodes);
 
   DisplayManager* const display_manager_;

@@ -5,14 +5,13 @@
 #ifndef GARNET_LIB_UI_GFX_RESOURCES_DUMP_VISITOR_H_
 #define GARNET_LIB_UI_GFX_RESOURCES_DUMP_VISITOR_H_
 
-#include "src/ui/lib/escher/vk/image.h"
-
 #include <cstdint>
 #include <iosfwd>
 #include <unordered_set>
 
 #include "garnet/lib/ui/gfx/id.h"
 #include "garnet/lib/ui/gfx/resources/resource_visitor.h"
+#include "src/ui/lib/escher/vk/image.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -27,11 +26,9 @@ class DumpVisitor : public ResourceVisitor {
   // The VisitorContext is only valid during a DumpVisitor pass, and should not
   // be accessed outside of that.
   struct VisitorContext {
-    VisitorContext(std::ostream& out,
-                   std::unordered_set<GlobalId, GlobalId::Hash>* visited_list)
+    VisitorContext(std::ostream& out, std::unordered_set<GlobalId, GlobalId::Hash>* visited_list)
         : output(out), visited(visited_list) {}
-    VisitorContext(const VisitorContext&& other)
-        : output(other.output), visited(other.visited) {}
+    VisitorContext(const VisitorContext&& other) : output(other.output), visited(other.visited) {}
 
     std::ostream& output;
     std::unordered_set<GlobalId, GlobalId::Hash>* visited;

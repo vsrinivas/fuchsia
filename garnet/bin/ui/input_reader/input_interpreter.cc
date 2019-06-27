@@ -25,12 +25,9 @@
 
 namespace {
 
-int64_t InputEventTimestampNow() {
-  return fxl::TimePoint::Now().ToEpochDelta().ToNanoseconds();
-}
+int64_t InputEventTimestampNow() { return fxl::TimePoint::Now().ToEpochDelta().ToNanoseconds(); }
 
-fuchsia::ui::input::InputReport CloneReport(
-    const fuchsia::ui::input::InputReport& report) {
+fuchsia::ui::input::InputReport CloneReport(const fuchsia::ui::input::InputReport& report) {
   fuchsia::ui::input::InputReport result;
   fidl::Clone(report, &result);
   return result;
@@ -40,9 +37,8 @@ fuchsia::ui::input::InputReport CloneReport(
 
 namespace ui_input {
 
-InputInterpreter::InputInterpreter(
-    std::unique_ptr<HidDecoder> hid_decoder,
-    fuchsia::ui::input::InputDeviceRegistry* registry)
+InputInterpreter::InputInterpreter(std::unique_ptr<HidDecoder> hid_decoder,
+                                   fuchsia::ui::input::InputDeviceRegistry* registry)
     : registry_(registry), hid_decoder_(std::move(hid_decoder)) {
   FXL_DCHECK(hid_decoder_);
 }
@@ -69,9 +65,8 @@ bool InputInterpreter::Initialize() {
     // If we are a media button then query for an initial report.
     if (device.descriptor.protocol == Protocol::MediaButtons) {
       std::vector<uint8_t> initial_input;
-      zx_status_t status =
-          hid_decoder_->GetReport(HidDecoder::ReportType::INPUT,
-                                  device.device->ReportId(), &initial_input);
+      zx_status_t status = hid_decoder_->GetReport(HidDecoder::ReportType::INPUT,
+                                                   device.device->ReportId(), &initial_input);
       if (status != ZX_OK) {
         return false;
       }
@@ -79,8 +74,7 @@ bool InputInterpreter::Initialize() {
                                      device.report.get())) {
         device.report->event_time = InputEventTimestampNow();
         device.report->trace_id = TRACE_NONCE();
-        TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
-                         device.report->trace_id);
+        TRACE_FLOW_BEGIN("input", "hid_read_to_listener", device.report->trace_id);
         device.input_device->DispatchReport(CloneReport(*device.report));
       }
     }
@@ -106,18 +100,15 @@ void InputInterpreter::NotifyRegistry() {
       fidl::Clone(device.descriptor.stylus_descriptor, &descriptor.stylus);
     }
     if (device.descriptor.has_touchscreen) {
-      fidl::Clone(device.descriptor.touchscreen_descriptor,
-                  &descriptor.touchscreen);
+      fidl::Clone(device.descriptor.touchscreen_descriptor, &descriptor.touchscreen);
     }
     if (device.descriptor.has_sensor) {
       fidl::Clone(device.descriptor.sensor_descriptor, &descriptor.sensor);
     }
     if (device.descriptor.has_media_buttons) {
-      fidl::Clone(device.descriptor.buttons_descriptor,
-                  &descriptor.media_buttons);
+      fidl::Clone(device.descriptor.buttons_descriptor, &descriptor.media_buttons);
     }
-    registry_->RegisterDevice(std::move(descriptor),
-                              device.input_device.NewRequest());
+    registry_->RegisterDevice(std::move(descriptor), device.input_device.NewRequest());
   }
 }
 
@@ -139,16 +130,14 @@ bool InputInterpreter::Read(bool discard) {
 
   for (size_t i = 0; i < devices_.size(); i++) {
     InputDevice& device = devices_[i];
-    if (device.device->ReportId() != 0 &&
-        device.device->ReportId() != report[0]) {
+    if (device.device->ReportId() != 0 && device.device->ReportId() != report[0]) {
       continue;
     }
     if (device.device->ParseReport(report.data(), rc, device.report.get())) {
       if (!discard) {
         device.report->event_time = InputEventTimestampNow();
         device.report->trace_id = TRACE_NONCE();
-        TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
-                         device.report->trace_id);
+        TRACE_FLOW_BEGIN("input", "hid_read_to_listener", device.report->trace_id);
         device.input_device->DispatchReport(CloneReport(*device.report));
       }
     }
@@ -167,20 +156,15 @@ Protocol InputInterpreter::ExtractProtocol(hid::Usage input) {
     hid::Usage usage;
     Protocol protocol;
   } usage_to_protocol[] = {
-      {{static_cast<uint16_t>(Page::kConsumer),
-        static_cast<uint32_t>(Consumer::kConsumerControl)},
+      {{static_cast<uint16_t>(Page::kConsumer), static_cast<uint32_t>(Consumer::kConsumerControl)},
        Protocol::MediaButtons},
-      {{static_cast<uint16_t>(Page::kDigitizer),
-        static_cast<uint32_t>(Digitizer::kTouchScreen)},
+      {{static_cast<uint16_t>(Page::kDigitizer), static_cast<uint32_t>(Digitizer::kTouchScreen)},
        Protocol::Touch},
-      {{static_cast<uint16_t>(Page::kDigitizer),
-        static_cast<uint32_t>(Digitizer::kTouchPad)},
+      {{static_cast<uint16_t>(Page::kDigitizer), static_cast<uint32_t>(Digitizer::kTouchPad)},
        Protocol::Touchpad},
-      {{static_cast<uint16_t>(Page::kDigitizer),
-        static_cast<uint32_t>(Digitizer::kStylus)},
+      {{static_cast<uint16_t>(Page::kDigitizer), static_cast<uint32_t>(Digitizer::kStylus)},
        Protocol::Stylus},
-      {{static_cast<uint16_t>(Page::kDigitizer),
-        static_cast<uint32_t>(Digitizer::kPen)},
+      {{static_cast<uint16_t>(Page::kDigitizer), static_cast<uint32_t>(Digitizer::kPen)},
        Protocol::Stylus},
       {{static_cast<uint16_t>(Page::kGenericDesktop),
         static_cast<uint32_t>(GenericDesktop::kMouse)},
@@ -203,8 +187,7 @@ Protocol InputInterpreter::ExtractProtocol(hid::Usage input) {
   return Protocol::Other;
 }
 
-bool InputInterpreter::ParseHidFeatureReportDescriptor(
-    const hid::ReportDescriptor& report_desc) {
+bool InputInterpreter::ParseHidFeatureReportDescriptor(const hid::ReportDescriptor& report_desc) {
   // Traverse up the nested collections to the Application collection.
   auto collection = report_desc.input_fields[0].col;
   while (collection != nullptr) {
@@ -215,15 +198,14 @@ bool InputInterpreter::ParseHidFeatureReportDescriptor(
   }
 
   if (collection == nullptr) {
-    FXL_LOG(INFO) << "Can't process HID feature report descriptor for "
-                  << name() << "; Needed a valid Collection but didn't get one";
+    FXL_LOG(INFO) << "Can't process HID feature report descriptor for " << name()
+                  << "; Needed a valid Collection but didn't get one";
     return false;
   }
 
   // If we have a touchscreen feature report then we enable multitouch mode.
   if (collection->usage ==
-      hid::USAGE(hid::usage::Page::kDigitizer,
-                 hid::usage::Digitizer::kTouchScreenConfiguration)) {
+      hid::USAGE(hid::usage::Page::kDigitizer, hid::usage::Digitizer::kTouchScreenConfiguration)) {
     std::vector<uint8_t> feature_report(report_desc.feature_byte_sz);
     if (report_desc.report_id != 0) {
       feature_report[0] = report_desc.report_id;
@@ -231,21 +213,17 @@ bool InputInterpreter::ParseHidFeatureReportDescriptor(
     for (size_t i = 0; i < report_desc.feature_count; i++) {
       const hid::ReportField& field = report_desc.input_fields[i];
       if (field.attr.usage ==
-          hid::USAGE(hid::usage::Page::kDigitizer,
-                     hid::usage::Digitizer::kTouchScreenInputMode)) {
+          hid::USAGE(hid::usage::Page::kDigitizer, hid::usage::Digitizer::kTouchScreenInputMode)) {
         InsertUint(feature_report.data(), feature_report.size(), field.attr,
-                   static_cast<uint32_t>(
-                       hid::usage::TouchScreenInputMode::kMultipleInput));
+                   static_cast<uint32_t>(hid::usage::TouchScreenInputMode::kMultipleInput));
       }
     }
-    hid_decoder_->Send(HidDecoder::ReportType::FEATURE, report_desc.report_id,
-                       feature_report);
+    hid_decoder_->Send(HidDecoder::ReportType::FEATURE, report_desc.report_id, feature_report);
   }
   return true;
 }
 
-bool InputInterpreter::ParseHidInputReportDescriptor(
-    const hid::ReportDescriptor* input_desc) {
+bool InputInterpreter::ParseHidInputReportDescriptor(const hid::ReportDescriptor* input_desc) {
   FXL_CHECK(input_desc);
 
   // Traverse up the nested collections to the Application collection.
@@ -269,31 +247,27 @@ bool InputInterpreter::ParseHidInputReportDescriptor(
   // Most modern gamepads report themselves as Joysticks. Madness.
   if (collection->usage.page == hid::usage::Page::kGenericDesktop &&
       collection->usage.usage == hid::usage::GenericDesktop::kJoystick &&
-      hardcoded_.ParseGamepadDescriptor(input_desc->input_fields,
-                                        input_desc->input_count)) {
+      hardcoded_.ParseGamepadDescriptor(input_desc->input_fields, input_desc->input_count)) {
     protocol_ = Protocol::Gamepad;
     return true;
   } else {
     protocol_ = ExtractProtocol(collection->usage);
     switch (protocol_) {
       case Protocol::LightSensor:
-        hardcoded_.ParseAmbientLightDescriptor(input_desc->input_fields,
-                                               input_desc->input_count);
+        hardcoded_.ParseAmbientLightDescriptor(input_desc->input_fields, input_desc->input_count);
         return true;
       case Protocol::MediaButtons: {
         FXL_VLOG(2) << "Device " << name() << " has HID media buttons";
 
         input_device.device = std::make_unique<Buttons>();
-        input_device.report->media_buttons =
-            fuchsia::ui::input::MediaButtonsReport::New();
+        input_device.report->media_buttons = fuchsia::ui::input::MediaButtonsReport::New();
         break;
       }
       case Protocol::Pointer: {
         FXL_VLOG(2) << "Device " << name() << " has HID pointer";
 
         input_device.device = std::make_unique<Pointer>();
-        input_device.report->touchscreen =
-            fuchsia::ui::input::TouchscreenReport::New();
+        input_device.report->touchscreen = fuchsia::ui::input::TouchscreenReport::New();
         break;
       }
       case Protocol::Sensor: {
@@ -314,8 +288,7 @@ bool InputInterpreter::ParseHidInputReportDescriptor(
         FXL_VLOG(2) << "Device " << name() << " has HID touch";
 
         input_device.device = std::make_unique<TouchScreen>();
-        input_device.report->touchscreen =
-            fuchsia::ui::input::TouchscreenReport::New();
+        input_device.report->touchscreen = fuchsia::ui::input::TouchscreenReport::New();
         break;
       }
       case Protocol::Mouse: {
@@ -341,8 +314,7 @@ bool InputInterpreter::ParseHidInputReportDescriptor(
     }
   }
 
-  if (!input_device.device->ParseReportDescriptor(*input_desc,
-                                                  &input_device.descriptor)) {
+  if (!input_device.device->ParseReportDescriptor(*input_desc, &input_device.descriptor)) {
     FXL_LOG(INFO) << "Can't process HID report descriptor for " << name()
                   << "; Failed to do generic device parsing";
     return false;
@@ -350,8 +322,7 @@ bool InputInterpreter::ParseHidInputReportDescriptor(
   devices_.push_back(std::move(input_device));
 
   FXL_LOG(INFO) << "hid-parser successful for " << name() << " with usage page "
-                << collection->usage.page << " and usage "
-                << collection->usage.usage;
+                << collection->usage.page << " and usage " << collection->usage.usage;
 
   return true;
 }
@@ -387,11 +358,10 @@ bool InputInterpreter::ParseProtocol() {
   // library.
 
   hid::DeviceDescriptor* dev_desc = nullptr;
-  auto parse_res =
-      hid::ParseReportDescriptor(desc.data(), desc.size(), &dev_desc);
+  auto parse_res = hid::ParseReportDescriptor(desc.data(), desc.size(), &dev_desc);
   if (parse_res != hid::ParseResult::kParseOk) {
-    FXL_LOG(INFO) << "hid-parser: error " << int(parse_res)
-                  << " parsing report descriptor for " << name();
+    FXL_LOG(INFO) << "hid-parser: error " << int(parse_res) << " parsing report descriptor for "
+                  << name();
     return false;
   }
 

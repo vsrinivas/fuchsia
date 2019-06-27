@@ -15,40 +15,34 @@
 #include "garnet/bin/ui/input_reader/input_reader.h"
 #include "src/ui/examples/escher/common/demo_harness.h"
 
-class DemoHarnessFuchsia : public DemoHarness,
-                           fuchsia::ui::input::InputDeviceRegistry {
+class DemoHarnessFuchsia : public DemoHarness, fuchsia::ui::input::InputDeviceRegistry {
  public:
   DemoHarnessFuchsia(async::Loop* loop, WindowParams window_params);
 
   // |DemoHarness|
   void Run(Demo* demo) override;
 
-  sys::ComponentContext* component_context() {
-    return component_context_.get();
-  }
+  sys::ComponentContext* component_context() { return component_context_.get(); }
 
  private:
   // |DemoHarness|
   // Called by Init().
   void InitWindowSystem() override;
-  vk::SurfaceKHR CreateWindowAndSurface(
-      const WindowParams& window_params) override;
+  vk::SurfaceKHR CreateWindowAndSurface(const WindowParams& window_params) override;
 
   // |DemoHarness|
   // Called by Init() via CreateInstance().
-  void AppendPlatformSpecificInstanceExtensionNames(
-      InstanceParams* params) override;
-  void AppendPlatformSpecificDeviceExtensionNames(
-      std::set<std::string>* names) override;
+  void AppendPlatformSpecificInstanceExtensionNames(InstanceParams* params) override;
+  void AppendPlatformSpecificDeviceExtensionNames(std::set<std::string>* names) override;
 
   // |DemoHarness|
   // Called by Shutdown().
   void ShutdownWindowSystem() override;
 
   // |fuchsia::ui::input::InputDeviceRegistry|
-  void RegisterDevice(fuchsia::ui::input::DeviceDescriptor descriptor,
-                      fidl::InterfaceRequest<fuchsia::ui::input::InputDevice>
-                          input_device) override;
+  void RegisterDevice(
+      fuchsia::ui::input::DeviceDescriptor descriptor,
+      fidl::InterfaceRequest<fuchsia::ui::input::InputDevice> input_device) override;
 
   void RenderFrameOrQuit();
 

@@ -53,8 +53,7 @@ TEST_F(ImportTest, ExportsResourceViaCmd) {
   ASSERT_EQ(1u, session()->GetMappedResourceCount());
 
   // Apply the export command.
-  ASSERT_TRUE(
-      Apply(scenic::NewExportResourceCmd(resource_id, std::move(source))));
+  ASSERT_TRUE(Apply(scenic::NewExportResourceCmd(resource_id, std::move(source))));
 }
 
 TEST_F(ImportTest, ImportsUnlinkedImportViaCmd) {
@@ -63,10 +62,9 @@ TEST_F(ImportTest, ImportsUnlinkedImportViaCmd) {
   ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &source, &destination));
 
   // Apply the import command.
-  ASSERT_TRUE(Apply(scenic::NewImportResourceCmd(
-      1 /* import resource ID */,
-      ::fuchsia::ui::gfx::ImportSpec::NODE, /* spec */
-      std::move(destination))               /* endpoint */
+  ASSERT_TRUE(Apply(scenic::NewImportResourceCmd(1 /* import resource ID */,
+                                                 ::fuchsia::ui::gfx::ImportSpec::NODE, /* spec */
+                                                 std::move(destination)) /* endpoint */
                     ));
 
   // Assert that the import node was correctly mapped in. It has not been linked
@@ -93,10 +91,9 @@ TEST_F(ImportTest, PerformsFullLinking) {
   // Perform the import
   {
     // Apply the import command.
-    ASSERT_TRUE(Apply(scenic::NewImportResourceCmd(
-        1 /* import resource ID */,
-        ::fuchsia::ui::gfx::ImportSpec::NODE, /* spec */
-        std::move(destination))               /* endpoint */
+    ASSERT_TRUE(Apply(scenic::NewImportResourceCmd(1 /* import resource ID */,
+                                                   ::fuchsia::ui::gfx::ImportSpec::NODE, /* spec */
+                                                   std::move(destination)) /* endpoint */
                       ));
 
     // Assert that the import node was correctly mapped in. It has not been
@@ -149,8 +146,7 @@ TEST_F(ImportTest, PerformsFullLinking) {
     ASSERT_TRUE(entity);
     ASSERT_EQ(import_node->imported_resource(), entity.get());
     ASSERT_TRUE(import_node->delegate());
-    ASSERT_EQ(import_node->delegate()->type_info().flags,
-              entity->type_info().flags);
+    ASSERT_EQ(import_node->delegate()->type_info().flags, entity->type_info().flags);
     ASSERT_EQ(1u, entity->imports().size());
     ASSERT_EQ(import_node.get(), *(entity->imports().begin()));
   }
@@ -168,8 +164,7 @@ TEST_F(ImportTest, HandlesDeadSourceHandle) {
 
   // Export an entity node with a dead handle.
   ASSERT_TRUE(Apply(scenic::NewCreateEntityNodeCmd(1)));
-  EXPECT_FALSE(Apply(scenic::NewExportResourceCmd(1 /* resource id */,
-                                                  std::move(source_out))));
+  EXPECT_FALSE(Apply(scenic::NewExportResourceCmd(1 /* resource id */, std::move(source_out))));
 }
 
 TEST_F(ImportTest, HandlesDeadDestinationHandle) {
@@ -187,8 +182,7 @@ TEST_F(ImportTest, HandlesDeadDestinationHandle) {
   // Import an entity node with a dead handle.
   ASSERT_TRUE(Apply(scenic::NewCreateEntityNodeCmd(1)));
   EXPECT_FALSE(Apply(scenic::NewImportResourceCmd(
-      1 /* resource id */, ::fuchsia::ui::gfx::ImportSpec::NODE,
-      std::move(destination_out))));
+      1 /* resource id */, ::fuchsia::ui::gfx::ImportSpec::NODE, std::move(destination_out))));
 }
 
 TEST_F(ImportTest, DestroyingExportedResourceSendsEvent) {
@@ -201,9 +195,8 @@ TEST_F(ImportTest, DestroyingExportedResourceSendsEvent) {
   ResourceId import_node = 2;
   ASSERT_TRUE(Apply(scenic::NewCreateEntityNodeCmd(node_id)));
   EXPECT_TRUE(Apply(scenic::NewExportResourceCmd(node_id, std::move(source))));
-  EXPECT_TRUE(Apply(scenic::NewImportResourceCmd(
-      import_node, ::fuchsia::ui::gfx::ImportSpec::NODE,
-      std::move(destination))));
+  EXPECT_TRUE(Apply(scenic::NewImportResourceCmd(import_node, ::fuchsia::ui::gfx::ImportSpec::NODE,
+                                                 std::move(destination))));
 
   // Release the entity node.
   EXPECT_TRUE(Apply(scenic::NewReleaseResourceCmd(node_id)));
@@ -215,8 +208,7 @@ TEST_F(ImportTest, DestroyingExportedResourceSendsEvent) {
   EXPECT_EQ(1u, events().size());
   auto& event = std::move(events()[0]);
   EXPECT_EQ(fuchsia::ui::scenic::Event::Tag::kGfx, event.Which());
-  EXPECT_EQ(::fuchsia::ui::gfx::Event::Tag::kImportUnbound,
-            event.gfx().Which());
+  EXPECT_EQ(::fuchsia::ui::gfx::Event::Tag::kImportUnbound, event.gfx().Which());
   ASSERT_EQ(import_node, event.gfx().import_unbound().resource_id);
 }
 
@@ -235,9 +227,8 @@ TEST_F(ImportTest, ImportingNodeAfterDestroyingExportedResourceSendsEvent) {
   EXPECT_TRUE(Apply(scenic::NewReleaseResourceCmd(node_id)));
 
   // Try to import after the entity node has been released.
-  EXPECT_TRUE(Apply(scenic::NewImportResourceCmd(
-      import_node, ::fuchsia::ui::gfx::ImportSpec::NODE,
-      std::move(destination))));
+  EXPECT_TRUE(Apply(scenic::NewImportResourceCmd(import_node, ::fuchsia::ui::gfx::ImportSpec::NODE,
+                                                 std::move(destination))));
 
   // Run the message loop until we get an event.
   RunLoopUntilIdle();
@@ -246,8 +237,7 @@ TEST_F(ImportTest, ImportingNodeAfterDestroyingExportedResourceSendsEvent) {
   EXPECT_EQ(1u, events().size());
   auto& event = std::move(events()[0]);
   EXPECT_EQ(fuchsia::ui::scenic::Event::Tag::kGfx, event.Which());
-  EXPECT_EQ(::fuchsia::ui::gfx::Event::Tag::kImportUnbound,
-            event.gfx().Which());
+  EXPECT_EQ(::fuchsia::ui::gfx::Event::Tag::kImportUnbound, event.gfx().Which());
   ASSERT_EQ(import_node, event.gfx().import_unbound().resource_id);
 }
 
@@ -267,10 +257,9 @@ TEST_F(ImportTest, KillingImportedResourceEvictsFromResourceLinker) {
     ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &source, &destination));
 
     // Apply the import command.
-    ASSERT_TRUE(Apply(scenic::NewImportResourceCmd(
-        1 /* import resource ID */,
-        ::fuchsia::ui::gfx::ImportSpec::NODE, /* spec */
-        std::move(destination))               /* endpoint */
+    ASSERT_TRUE(Apply(scenic::NewImportResourceCmd(1 /* import resource ID */,
+                                                   ::fuchsia::ui::gfx::ImportSpec::NODE, /* spec */
+                                                   std::move(destination)) /* endpoint */
                       ));
 
     // Assert that the import node was correctly mapped in. It has not been
@@ -293,8 +282,7 @@ TEST_F(ImportTest, KillingImportedResourceEvictsFromResourceLinker) {
     ASSERT_EQ(::fuchsia::ui::gfx::ImportSpec::NODE, import_node->import_spec());
 
     // Release the import resource.
-    ASSERT_TRUE(
-        Apply(scenic::NewReleaseResourceCmd(1 /* import resource ID */)));
+    ASSERT_TRUE(Apply(scenic::NewReleaseResourceCmd(1 /* import resource ID */)));
   });
 
   // Make sure the expiry handle tells us that the resource has expired.
@@ -317,24 +305,23 @@ TEST_F(ImportTest, ResourceUnexportedAfterImportsAndImportHandlesDie1) {
   bool destination_handle_released = false;
   bool import_node_released = false;
   bool called = false;
-  resource_linker_->SetOnExpiredCallback(
-      [&](Resource*, ResourceLinker::ExpirationCause cause) {
-        ASSERT_EQ(ResourceLinker::ExpirationCause::kNoImportsBound, cause);
-        ASSERT_EQ(0u, resource_linker_->NumExports());
-        ASSERT_EQ(0u, resource_linker_->NumUnresolvedImports());
+  resource_linker_->SetOnExpiredCallback([&](Resource*, ResourceLinker::ExpirationCause cause) {
+    ASSERT_EQ(ResourceLinker::ExpirationCause::kNoImportsBound, cause);
+    ASSERT_EQ(0u, resource_linker_->NumExports());
+    ASSERT_EQ(0u, resource_linker_->NumUnresolvedImports());
 
-        // Ensure that our export was unbound after all the necessary
-        // preconditions were met.
-        ASSERT_EQ(1u, session()->GetMappedResourceCount());
-        ASSERT_TRUE(destination_handle_released);
-        ASSERT_TRUE(import_node_released);
+    // Ensure that our export was unbound after all the necessary
+    // preconditions were met.
+    ASSERT_EQ(1u, session()->GetMappedResourceCount());
+    ASSERT_TRUE(destination_handle_released);
+    ASSERT_TRUE(import_node_released);
 
-        // Ensure the node is no longer marked as exported.
-        auto exported_node = FindResource<EntityNode>(exported_node_id);
-        ASSERT_TRUE(exported_node);
-        ASSERT_EQ(false, exported_node->is_exported());
-        called = true;
-      });
+    // Ensure the node is no longer marked as exported.
+    auto exported_node = FindResource<EntityNode>(exported_node_id);
+    ASSERT_TRUE(exported_node);
+    ASSERT_EQ(false, exported_node->is_exported());
+    called = true;
+  });
 
   // Create the event pair.
   zx::eventpair source, destination;
@@ -348,14 +335,13 @@ TEST_F(ImportTest, ResourceUnexportedAfterImportsAndImportHandlesDie1) {
     ASSERT_EQ(false, exported_node->is_exported());
 
     // Apply the export command.
-    ASSERT_TRUE(Apply(
-        scenic::NewExportResourceCmd(exported_node_id, std::move(source))));
+    ASSERT_TRUE(Apply(scenic::NewExportResourceCmd(exported_node_id, std::move(source))));
     ASSERT_EQ(true, exported_node->is_exported());
 
     // Apply the import command.
-    ASSERT_TRUE(Apply(scenic::NewImportResourceCmd(
-        import_node_id, ::fuchsia::ui::gfx::ImportSpec::NODE, /* spec */
-        CopyEventPair(destination))                           /* endpoint */
+    ASSERT_TRUE(Apply(scenic::NewImportResourceCmd(import_node_id,
+                                                   ::fuchsia::ui::gfx::ImportSpec::NODE, /* spec */
+                                                   CopyEventPair(destination)) /* endpoint */
                       ));
     auto import_node = FindResource<Import>(import_node_id);
     ASSERT_TRUE(import_node);
@@ -405,25 +391,24 @@ TEST_F(ImportTest, ResourceUnexportedAfterImportsAndImportHandlesDie2) {
   bool destination_handle_released = false;
   bool import_node_released = false;
   bool called = false;
-  resource_linker_->SetOnExpiredCallback(
-      [&](Resource*, ResourceLinker::ExpirationCause cause) {
-        ASSERT_EQ(ResourceLinker::ExpirationCause::kNoImportsBound, cause);
-        ASSERT_EQ(0u, resource_linker_->NumExports());
-        ASSERT_EQ(0u, resource_linker_->NumUnresolvedImports());
+  resource_linker_->SetOnExpiredCallback([&](Resource*, ResourceLinker::ExpirationCause cause) {
+    ASSERT_EQ(ResourceLinker::ExpirationCause::kNoImportsBound, cause);
+    ASSERT_EQ(0u, resource_linker_->NumExports());
+    ASSERT_EQ(0u, resource_linker_->NumUnresolvedImports());
 
-        // Ensure that our export was unbound after all the necessary
-        // preconditions were met.
-        ASSERT_EQ(1u, session()->GetMappedResourceCount());
-        ASSERT_TRUE(destination_handle_released);
-        ASSERT_TRUE(import_node_released);
+    // Ensure that our export was unbound after all the necessary
+    // preconditions were met.
+    ASSERT_EQ(1u, session()->GetMappedResourceCount());
+    ASSERT_TRUE(destination_handle_released);
+    ASSERT_TRUE(import_node_released);
 
-        // Ensure the node is no longer marked as exported.
-        auto exported_node = FindResource<EntityNode>(exported_node_id);
-        ASSERT_TRUE(exported_node);
-        ASSERT_EQ(false, exported_node->is_exported());
-        ASSERT_EQ(0u, exported_node->imports().size());
-        called = true;
-      });
+    // Ensure the node is no longer marked as exported.
+    auto exported_node = FindResource<EntityNode>(exported_node_id);
+    ASSERT_TRUE(exported_node);
+    ASSERT_EQ(false, exported_node->is_exported());
+    ASSERT_EQ(0u, exported_node->imports().size());
+    called = true;
+  });
 
   // Create the event pair.
   zx::eventpair source, destination;
@@ -437,14 +422,13 @@ TEST_F(ImportTest, ResourceUnexportedAfterImportsAndImportHandlesDie2) {
     ASSERT_EQ(false, exported_node->is_exported());
 
     // Apply the export command.
-    ASSERT_TRUE(Apply(
-        scenic::NewExportResourceCmd(exported_node_id, std::move(source))));
+    ASSERT_TRUE(Apply(scenic::NewExportResourceCmd(exported_node_id, std::move(source))));
     ASSERT_EQ(true, exported_node->is_exported());
 
     // Apply the import command.
-    ASSERT_TRUE(Apply(scenic::NewImportResourceCmd(
-        import_node_id, ::fuchsia::ui::gfx::ImportSpec::NODE, /* spec */
-        CopyEventPair(destination))                           /* endpoint */
+    ASSERT_TRUE(Apply(scenic::NewImportResourceCmd(import_node_id,
+                                                   ::fuchsia::ui::gfx::ImportSpec::NODE, /* spec */
+                                                   CopyEventPair(destination)) /* endpoint */
                       ));
     auto import_node = FindResource<Import>(import_node_id);
     ASSERT_TRUE(import_node);
@@ -494,26 +478,25 @@ TEST_F(ImportTest, ResourceUnexportedAfterImportsAndImportHandlesDie3) {
   bool import_node_released = false;
   bool called = false;
 
-  resource_linker_->SetOnExpiredCallback(
-      [&](Resource*, ResourceLinker::ExpirationCause cause) {
-        ASSERT_EQ(ResourceLinker::ExpirationCause::kNoImportsBound, cause);
-        ASSERT_EQ(0u, resource_linker_->NumExports());
-        ASSERT_EQ(0u, resource_linker_->NumUnresolvedImports());
+  resource_linker_->SetOnExpiredCallback([&](Resource*, ResourceLinker::ExpirationCause cause) {
+    ASSERT_EQ(ResourceLinker::ExpirationCause::kNoImportsBound, cause);
+    ASSERT_EQ(0u, resource_linker_->NumExports());
+    ASSERT_EQ(0u, resource_linker_->NumUnresolvedImports());
 
-        // Ensure that our export was unbound after all the necessary
-        // preconditions were met.
-        ASSERT_EQ(1u, session()->GetMappedResourceCount());
-        ASSERT_TRUE(destination_handle1_released);
-        ASSERT_TRUE(destination_handle2_released);
-        ASSERT_TRUE(import_node_released);
+    // Ensure that our export was unbound after all the necessary
+    // preconditions were met.
+    ASSERT_EQ(1u, session()->GetMappedResourceCount());
+    ASSERT_TRUE(destination_handle1_released);
+    ASSERT_TRUE(destination_handle2_released);
+    ASSERT_TRUE(import_node_released);
 
-        // Ensure the node is no longer marked as exported.
-        auto exported_node = FindResource<EntityNode>(exported_node_id);
-        ASSERT_TRUE(exported_node);
-        ASSERT_EQ(false, exported_node->is_exported());
-        ASSERT_EQ(0u, exported_node->imports().size());
-        called = true;
-      });
+    // Ensure the node is no longer marked as exported.
+    auto exported_node = FindResource<EntityNode>(exported_node_id);
+    ASSERT_TRUE(exported_node);
+    ASSERT_EQ(false, exported_node->is_exported());
+    ASSERT_EQ(0u, exported_node->imports().size());
+    called = true;
+  });
 
   // Create the event pair.
   zx::eventpair source, destination1;
@@ -528,14 +511,13 @@ TEST_F(ImportTest, ResourceUnexportedAfterImportsAndImportHandlesDie3) {
     ASSERT_EQ(false, exported_node->is_exported());
 
     // Apply the export command.
-    ASSERT_TRUE(Apply(
-        scenic::NewExportResourceCmd(exported_node_id, std::move(source))));
+    ASSERT_TRUE(Apply(scenic::NewExportResourceCmd(exported_node_id, std::move(source))));
     ASSERT_EQ(true, exported_node->is_exported());
 
     // Apply the import command.
-    ASSERT_TRUE(Apply(scenic::NewImportResourceCmd(
-        import_node_id, ::fuchsia::ui::gfx::ImportSpec::NODE, /* spec */
-        CopyEventPair(destination1))                          /* endpoint */
+    ASSERT_TRUE(Apply(scenic::NewImportResourceCmd(import_node_id,
+                                                   ::fuchsia::ui::gfx::ImportSpec::NODE, /* spec */
+                                                   CopyEventPair(destination1)) /* endpoint */
                       ));
     auto import_node = FindResource<Import>(import_node_id);
     ASSERT_TRUE(import_node);
@@ -603,27 +585,26 @@ TEST_F(ImportTest, ResourceUnexportedAfterImportsAndImportHandlesDie4) {
   bool import_node2_released = false;
   bool called = false;
 
-  resource_linker_->SetOnExpiredCallback(
-      [&](Resource*, ResourceLinker::ExpirationCause cause) {
-        ASSERT_EQ(ResourceLinker::ExpirationCause::kNoImportsBound, cause);
-        ASSERT_EQ(0u, resource_linker_->NumExports());
-        ASSERT_EQ(0u, resource_linker_->NumUnresolvedImports());
+  resource_linker_->SetOnExpiredCallback([&](Resource*, ResourceLinker::ExpirationCause cause) {
+    ASSERT_EQ(ResourceLinker::ExpirationCause::kNoImportsBound, cause);
+    ASSERT_EQ(0u, resource_linker_->NumExports());
+    ASSERT_EQ(0u, resource_linker_->NumUnresolvedImports());
 
-        // Ensure that our export was unbound after all the necessary
-        // preconditions were met.
-        ASSERT_EQ(1u, session()->GetMappedResourceCount());
-        ASSERT_TRUE(destination_handle1_released);
-        ASSERT_TRUE(destination_handle2_released);
-        ASSERT_TRUE(import_node1_released);
-        ASSERT_TRUE(import_node2_released);
+    // Ensure that our export was unbound after all the necessary
+    // preconditions were met.
+    ASSERT_EQ(1u, session()->GetMappedResourceCount());
+    ASSERT_TRUE(destination_handle1_released);
+    ASSERT_TRUE(destination_handle2_released);
+    ASSERT_TRUE(import_node1_released);
+    ASSERT_TRUE(import_node2_released);
 
-        // Ensure the node is no longer marked as exported.
-        auto exported_node = FindResource<EntityNode>(exported_node_id);
-        ASSERT_TRUE(exported_node);
-        ASSERT_EQ(false, exported_node->is_exported());
-        ASSERT_EQ(0u, exported_node->imports().size());
-        called = true;
-      });
+    // Ensure the node is no longer marked as exported.
+    auto exported_node = FindResource<EntityNode>(exported_node_id);
+    ASSERT_TRUE(exported_node);
+    ASSERT_EQ(false, exported_node->is_exported());
+    ASSERT_EQ(0u, exported_node->imports().size());
+    called = true;
+  });
 
   // Create the event pair.
   zx::eventpair source, destination1;
@@ -638,18 +619,17 @@ TEST_F(ImportTest, ResourceUnexportedAfterImportsAndImportHandlesDie4) {
     ASSERT_EQ(false, exported_node->is_exported());
 
     // Apply the export command.
-    ASSERT_TRUE(Apply(
-        scenic::NewExportResourceCmd(exported_node_id, std::move(source))));
+    ASSERT_TRUE(Apply(scenic::NewExportResourceCmd(exported_node_id, std::move(source))));
     ASSERT_EQ(true, exported_node->is_exported());
 
     // Apply the import commands.
-    ASSERT_TRUE(Apply(scenic::NewImportResourceCmd(
-        import_node_id1, ::fuchsia::ui::gfx::ImportSpec::NODE, /* spec */
-        CopyEventPair(destination1))                           /* endpoint */
+    ASSERT_TRUE(Apply(scenic::NewImportResourceCmd(import_node_id1,
+                                                   ::fuchsia::ui::gfx::ImportSpec::NODE, /* spec */
+                                                   CopyEventPair(destination1)) /* endpoint */
                       ));
-    ASSERT_TRUE(Apply(scenic::NewImportResourceCmd(
-        import_node_id2, ::fuchsia::ui::gfx::ImportSpec::NODE, /* spec */
-        CopyEventPair(destination1))                           /* endpoint */
+    ASSERT_TRUE(Apply(scenic::NewImportResourceCmd(import_node_id2,
+                                                   ::fuchsia::ui::gfx::ImportSpec::NODE, /* spec */
+                                                   CopyEventPair(destination1)) /* endpoint */
                       ));
     auto import_node1 = FindResource<Import>(import_node_id1);
     ASSERT_TRUE(import_node1);
@@ -715,18 +695,16 @@ TEST_F(ImportTest, ResourceUnexportedAfterImportsAndImportHandlesDie4) {
   ASSERT_TRUE(called);
 }
 
-TEST_F(ImportTest,
-       ProxiesCanBeFoundByTheirContainerOrTheirUnderlyingEntityType) {
+TEST_F(ImportTest, ProxiesCanBeFoundByTheirContainerOrTheirUnderlyingEntityType) {
   // Create an unlinked import resource.
   zx::eventpair source, destination;
 
   ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &source, &destination));
 
   // Apply the import command.
-  ASSERT_TRUE(Apply(scenic::NewImportResourceCmd(
-      1 /* import resource ID */,
-      ::fuchsia::ui::gfx::ImportSpec::NODE, /* spec */
-      std::move(destination))               /* endpoint */
+  ASSERT_TRUE(Apply(scenic::NewImportResourceCmd(1 /* import resource ID */,
+                                                 ::fuchsia::ui::gfx::ImportSpec::NODE, /* spec */
+                                                 std::move(destination)) /* endpoint */
                     ));
 
   // Assert that the import node was correctly mapped in. It has not been
@@ -768,10 +746,9 @@ TEST_F(ImportTest, UnlinkedImportedResourceCanAcceptCommands) {
     ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &source, &destination));
 
     // Apply the import command.
-    ASSERT_TRUE(Apply(scenic::NewImportResourceCmd(
-        1 /* import resource ID */,
-        ::fuchsia::ui::gfx::ImportSpec::NODE, /* spec */
-        std::move(destination))               /* endpoint */
+    ASSERT_TRUE(Apply(scenic::NewImportResourceCmd(1 /* import resource ID */,
+                                                   ::fuchsia::ui::gfx::ImportSpec::NODE, /* spec */
+                                                   std::move(destination)) /* endpoint */
                       ));
 
     // Assert that the import node was correctly mapped in. It has not been
@@ -793,12 +770,11 @@ TEST_F(ImportTest, UnlinkedImportedResourceCanAcceptCommands) {
   // Attempt to add an entity node as a child to an unlinked resource.
   {
     // Create the entity node.
-    ASSERT_TRUE(
-        Apply(scenic::NewCreateEntityNodeCmd(2 /* child resource id */)));
+    ASSERT_TRUE(Apply(scenic::NewCreateEntityNodeCmd(2 /* child resource id */)));
 
     // Add the entity node to the import.
-    ASSERT_TRUE(Apply(scenic::NewAddChildCmd(1 /* unlinked import resource */,
-                                             2 /* child resource */)));
+    ASSERT_TRUE(
+        Apply(scenic::NewAddChildCmd(1 /* unlinked import resource */, 2 /* child resource */)));
   }
 }
 
@@ -810,10 +786,9 @@ TEST_F(ImportTest, LinkedResourceShouldBeAbleToAcceptCommands) {
   // Perform the import
   {
     // Apply the import command.
-    ASSERT_TRUE(Apply(scenic::NewImportResourceCmd(
-        1 /* import resource ID */,
-        ::fuchsia::ui::gfx::ImportSpec::NODE, /* spec */
-        std::move(destination))               /* endpoint */
+    ASSERT_TRUE(Apply(scenic::NewImportResourceCmd(1 /* import resource ID */,
+                                                   ::fuchsia::ui::gfx::ImportSpec::NODE, /* spec */
+                                                   std::move(destination)) /* endpoint */
                       ));
 
     // Assert that the import node was correctly mapped in. It has not been
@@ -864,12 +839,11 @@ TEST_F(ImportTest, LinkedResourceShouldBeAbleToAcceptCommands) {
   // Attempt to add an entity node as a child to an linked resource.
   {
     // Create the entity node.
-    ASSERT_TRUE(
-        Apply(scenic::NewCreateEntityNodeCmd(3 /* child resource id */)));
+    ASSERT_TRUE(Apply(scenic::NewCreateEntityNodeCmd(3 /* child resource id */)));
 
     // Add the entity node to the import.
-    ASSERT_TRUE(Apply(scenic::NewAddChildCmd(1 /* unlinked import resource */,
-                                             3 /* child resource */)));
+    ASSERT_TRUE(
+        Apply(scenic::NewAddChildCmd(1 /* unlinked import resource */, 3 /* child resource */)));
   }
 }
 
@@ -913,8 +887,7 @@ TEST_F(ImportTest, EmbedderCanEmbedNodesFromElsewhere) {
     ASSERT_TRUE(Apply(scenic::NewAddChildCmd(2, 3)));
 
     // Export.
-    ASSERT_TRUE(
-        Apply(scenic::NewExportResourceCmd(1, std::move(export_token))));
+    ASSERT_TRUE(Apply(scenic::NewExportResourceCmd(1, std::move(export_token))));
     ASSERT_EQ(1u, resource_linker_->NumExports());
   }
 
@@ -927,8 +900,8 @@ TEST_F(ImportTest, EmbedderCanEmbedNodesFromElsewhere) {
     ASSERT_TRUE(Apply(scenic::NewAddChildCmd(1002, 1003)));
 
     // Import.
-    ASSERT_TRUE(Apply(scenic::NewImportResourceCmd(
-        500, ::fuchsia::ui::gfx::ImportSpec::NODE, std::move(import_token))));
+    ASSERT_TRUE(Apply(scenic::NewImportResourceCmd(500, ::fuchsia::ui::gfx::ImportSpec::NODE,
+                                                   std::move(import_token))));
     ASSERT_TRUE(Apply(scenic::NewAddChildCmd(500, 1001)));
   }
 

@@ -19,13 +19,11 @@ TEST(ImageCache, SmokeTest) {
 
   static const vk::Format kFormat = vk::Format::eR8G8B8A8Unorm;
   static const vk::ImageUsageFlags kUsage =
-      vk::ImageUsageFlagBits::eTransferSrc |
-      vk::ImageUsageFlagBits::eTransferDst;
+      vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst;
 
   static const int kWidth = 16;
   static const int kHeight = 16;
-  static const size_t kMemorySize =
-      kWidth * kHeight * image_utils::BytesPerPixel(kFormat);
+  static const size_t kMemorySize = kWidth * kHeight * image_utils::BytesPerPixel(kFormat);
 
   ImageInfo info;
   info.format = kFormat;
@@ -52,8 +50,7 @@ TEST(ImageCache, SmokeTest) {
 
   static const int kBigWidth = 1024;
   static const int kBigHeight = 1024;
-  static const size_t kBigMemorySize =
-      kBigWidth * kBigHeight * image_utils::BytesPerPixel(kFormat);
+  static const size_t kBigMemorySize = kBigWidth * kBigHeight * image_utils::BytesPerPixel(kFormat);
 
   ImageInfo big_info;
   big_info.format = kFormat;
@@ -64,16 +61,13 @@ TEST(ImageCache, SmokeTest) {
   // Allocating an image with different parameters results in a new allocation.
   // All old memory is still allocated.
   auto big_image0 = cache.NewImage(big_info);
-  EXPECT_EQ(kBigMemorySize + 2 * kMemorySize,
-            allocator.GetTotalBytesAllocated());
+  EXPECT_EQ(kBigMemorySize + 2 * kMemorySize, allocator.GetTotalBytesAllocated());
 
   // Requesting the old image info results in memory being reused.
   image0 = cache.NewImage(info);
-  EXPECT_EQ(kBigMemorySize + 2 * kMemorySize,
-            allocator.GetTotalBytesAllocated());
+  EXPECT_EQ(kBigMemorySize + 2 * kMemorySize, allocator.GetTotalBytesAllocated());
   image1 = cache.NewImage(info);
-  EXPECT_EQ(kBigMemorySize + 2 * kMemorySize,
-            allocator.GetTotalBytesAllocated());
+  EXPECT_EQ(kBigMemorySize + 2 * kMemorySize, allocator.GetTotalBytesAllocated());
 }
 
 }  // namespace

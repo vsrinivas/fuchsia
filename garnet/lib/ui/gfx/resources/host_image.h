@@ -16,8 +16,7 @@ namespace gfx {
 
 class HostImage;
 using HostImagePtr = fxl::RefPtr<Image>;
-using ImageConversionFunction =
-    fit::function<void(void*, void*, uint32_t, uint32_t)>;
+using ImageConversionFunction = fit::function<void(void*, void*, uint32_t, uint32_t)>;
 
 // An Image whose contents come from host-accessible memory.
 class HostImage : public Image {
@@ -38,8 +37,8 @@ class HostImage : public Image {
   //
   // Returns the created Image, or nullptr if there was an error.
   static ImagePtr New(Session* session, ResourceId id, MemoryPtr memory,
-                      const fuchsia::images::ImageInfo& image_info,
-                      uint64_t memory_offset, ErrorReporter* error_reporter);
+                      const fuchsia::images::ImageInfo& image_info, uint64_t memory_offset,
+                      ErrorReporter* error_reporter);
 
   void Accept(class ResourceVisitor* visitor) override;
 
@@ -58,17 +57,15 @@ class HostImage : public Image {
   // |image| is the escher::Image that is being wrapped.
   // |memory_offset| specifies the offset into |memory| where the image is
   // stored.
-  HostImage(Session* session, ResourceId id, MemoryPtr memory,
-            escher::ImagePtr image, uint64_t memory_offset,
-            fuchsia::images::ImageInfo image_format);
+  HostImage(Session* session, ResourceId id, MemoryPtr memory, escher::ImagePtr image,
+            uint64_t memory_offset, fuchsia::images::ImageInfo image_format);
 
   MemoryPtr memory_;
   // The offset into |memory_| where the image is stored, in bytes.
   uint64_t memory_offset_;
   // The format of the image stored in host memory.
   fuchsia::images::ImageInfo image_format_;
-  escher::image_utils::ImageConversionFunction image_conversion_function_ =
-      nullptr;
+  escher::image_utils::ImageConversionFunction image_conversion_function_ = nullptr;
 
   bool is_directly_mapped_ = false;
 };

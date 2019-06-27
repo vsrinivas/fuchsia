@@ -18,8 +18,7 @@ vk::Instance CreateVulkanInstance() {
   instance_info.ppEnabledExtensionNames = nullptr;
 
   vk::Instance instance;
-  if (vk::Result::eSuccess ==
-      vk::createInstance(&instance_info, nullptr, &instance)) {
+  if (vk::Result::eSuccess == vk::createInstance(&instance_info, nullptr, &instance)) {
     return instance;
   }
   return vk::Instance();
@@ -29,14 +28,13 @@ vk::Device CreateVulkanDevice(vk::Instance instance) {
   constexpr uint32_t kMaxPhysicalDevices = 100;
   vk::PhysicalDevice physical_devices[kMaxPhysicalDevices];
   uint32_t num_physical_devices = kMaxPhysicalDevices;
-  if (vk::Result::eSuccess != instance.enumeratePhysicalDevices(
-                                  &num_physical_devices, physical_devices)) {
+  if (vk::Result::eSuccess !=
+      instance.enumeratePhysicalDevices(&num_physical_devices, physical_devices)) {
     return vk::Device();
   }
 
-  const auto kRequiredQueueFlags = vk::QueueFlagBits::eTransfer |
-                                   vk::QueueFlagBits::eGraphics |
-                                   vk::QueueFlagBits::eCompute;
+  const auto kRequiredQueueFlags =
+      vk::QueueFlagBits::eTransfer | vk::QueueFlagBits::eGraphics | vk::QueueFlagBits::eCompute;
   for (uint32_t i = 0; i < num_physical_devices; ++i) {
     auto& physical_device = physical_devices[i];
     auto queues = physical_device.getQueueFamilyProperties();
@@ -55,8 +53,7 @@ vk::Device CreateVulkanDevice(vk::Instance instance) {
         device_info.ppEnabledExtensionNames = nullptr;
 
         vk::Device device;
-        if (vk::Result::eSuccess ==
-            physical_device.createDevice(&device_info, nullptr, &device)) {
+        if (vk::Result::eSuccess == physical_device.createDevice(&device_info, nullptr, &device)) {
           return device;
         }
       }

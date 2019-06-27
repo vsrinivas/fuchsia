@@ -78,16 +78,13 @@ void main() {
 namespace escher {
 namespace impl {
 
-Gaussian3x3f16::Gaussian3x3f16(EscherWeakPtr escher)
-    : escher_(std::move(escher)) {}
+Gaussian3x3f16::Gaussian3x3f16(EscherWeakPtr escher) : escher_(std::move(escher)) {}
 
-void Gaussian3x3f16::Apply(CommandBuffer* command_buffer,
-                           const TexturePtr& input, const TexturePtr& output) {
+void Gaussian3x3f16::Apply(CommandBuffer* command_buffer, const TexturePtr& input,
+                           const TexturePtr& output) {
   if (!kernel_) {
     kernel_ = std::make_unique<ComputeShader>(
-        escher_,
-        std::vector<vk::ImageLayout>{vk::ImageLayout::eGeneral,
-                                     vk::ImageLayout::eGeneral},
+        escher_, std::vector<vk::ImageLayout>{vk::ImageLayout::eGeneral, vk::ImageLayout::eGeneral},
         std::vector<vk::DescriptorType>{},
         /* push_constants_size= */ 0, kShaderCode);
   }

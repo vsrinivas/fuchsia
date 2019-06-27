@@ -32,16 +32,14 @@ class DemoHarness {
 
   using InstanceParams = escher::VulkanInstance::Params;
 
-  static std::unique_ptr<DemoHarness> New(
-      DemoHarness::WindowParams window_params, InstanceParams instance_params);
+  static std::unique_ptr<DemoHarness> New(DemoHarness::WindowParams window_params,
+                                          InstanceParams instance_params);
   virtual ~DemoHarness();
 
   const WindowParams& GetWindowParams() const { return window_params_; }
   escher::VulkanContext GetVulkanContext();
   escher::VulkanSwapchain GetVulkanSwapchain() { return swapchain_; }
-  const escher::VulkanDeviceQueuesPtr& device_queues() const {
-    return device_queues_;
-  }
+  const escher::VulkanDeviceQueuesPtr& device_queues() const { return device_queues_; }
   const escher::HackFilesystemPtr& filesystem() const { return filesystem_; }
 
   // Notify the demo that it should stop looping and quit.
@@ -71,21 +69,13 @@ class DemoHarness {
   escher::HackFilesystemPtr filesystem_;
 
   vk::Device device() const { return device_queues_->vk_device(); }
-  vk::PhysicalDevice physical_device() const {
-    return device_queues_->vk_physical_device();
-  }
+  vk::PhysicalDevice physical_device() const { return device_queues_->vk_physical_device(); }
   vk::Instance instance() const { return instance_->vk_instance(); }
   vk::SurfaceKHR surface() const { return device_queues_->vk_surface(); }
   vk::Queue main_queue() const { return device_queues_->vk_main_queue(); }
-  uint32_t main_queue_family() const {
-    return device_queues_->vk_main_queue_family();
-  }
-  vk::Queue transfer_queue() const {
-    return device_queues_->vk_transfer_queue();
-  }
-  uint32_t transfer_queue_family() const {
-    return device_queues_->vk_transfer_queue_family();
-  }
+  uint32_t main_queue_family() const { return device_queues_->vk_main_queue_family(); }
+  vk::Queue transfer_queue() const { return device_queues_->vk_transfer_queue(); }
+  uint32_t transfer_queue_family() const { return device_queues_->vk_transfer_queue_family(); }
 
   const escher::VulkanInstance::ProcAddrs& instance_proc_addrs() const {
     return instance_->proc_addrs();
@@ -109,16 +99,13 @@ class DemoHarness {
   // Called by Init().
   virtual void InitWindowSystem() = 0;
   void CreateInstance(InstanceParams params);
-  virtual vk::SurfaceKHR CreateWindowAndSurface(
-      const WindowParams& window_params) = 0;
+  virtual vk::SurfaceKHR CreateWindowAndSurface(const WindowParams& window_params) = 0;
   void CreateDeviceAndQueue(escher::VulkanDeviceQueues::Params params);
   void CreateSwapchain();
 
   // Called by Init() via CreateInstance() and CreateDeviceAndQueue().
-  virtual void AppendPlatformSpecificInstanceExtensionNames(
-      InstanceParams* params) = 0;
-  virtual void AppendPlatformSpecificDeviceExtensionNames(
-      std::set<std::string>* names) = 0;
+  virtual void AppendPlatformSpecificInstanceExtensionNames(InstanceParams* params) = 0;
+  virtual void AppendPlatformSpecificDeviceExtensionNames(std::set<std::string>* names) = 0;
 
   // Called by Shutdown().
   void DestroySwapchain();
@@ -128,21 +115,17 @@ class DemoHarness {
 
   // Redirect to instance method.
   static VkBool32 RedirectDebugReport(VkDebugReportFlagsEXT flags,
-                                      VkDebugReportObjectTypeEXT objectType,
-                                      uint64_t object, size_t location,
-                                      int32_t messageCode,
-                                      const char* pLayerPrefix,
-                                      const char* pMessage, void* pUserData) {
+                                      VkDebugReportObjectTypeEXT objectType, uint64_t object,
+                                      size_t location, int32_t messageCode,
+                                      const char* pLayerPrefix, const char* pMessage,
+                                      void* pUserData) {
     return reinterpret_cast<DemoHarness*>(pUserData)->HandleDebugReport(
-        flags, objectType, object, location, messageCode, pLayerPrefix,
-        pMessage);
+        flags, objectType, object, location, messageCode, pLayerPrefix, pMessage);
   }
 
-  VkBool32 HandleDebugReport(VkDebugReportFlagsEXT flags,
-                             VkDebugReportObjectTypeEXT objectType,
-                             uint64_t object, size_t location,
-                             int32_t messageCode, const char* pLayerPrefix,
-                             const char* pMessage);
+  VkBool32 HandleDebugReport(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objectType,
+                             uint64_t object, size_t location, int32_t messageCode,
+                             const char* pLayerPrefix, const char* pMessage);
 
   WindowParams window_params_;
 

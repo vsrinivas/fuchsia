@@ -40,9 +40,8 @@ class RenderPass : public Resource {
   // subpasses, and subpass-dependencies.  The subclass is responsible for
   // calling CreateRenderPass() before returning from its constructor.
   RenderPass(ResourceManager* manager, uint32_t color_attachment_count,
-             uint32_t depth_attachment_count,
-             uint32_t attachment_reference_count, uint32_t subpass_count,
-             uint32_t subpass_dependency_count);
+             uint32_t depth_attachment_count, uint32_t attachment_reference_count,
+             uint32_t subpass_count, uint32_t subpass_dependency_count);
 
   // Called by subclasses after all subpasses/attachments/etc. have been set up.
   void CreateRenderPass();

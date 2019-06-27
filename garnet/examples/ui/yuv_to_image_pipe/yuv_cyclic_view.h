@@ -12,8 +12,7 @@ namespace yuv_to_image_pipe {
 // Displays a YUV frame that moves around the screen in a cycle.
 class YuvCyclicView : public YuvBaseView {
  public:
-  YuvCyclicView(scenic::ViewContext context,
-                fuchsia::images::PixelFormat pixel_format);
+  YuvCyclicView(scenic::ViewContext context, fuchsia::images::PixelFormat pixel_format);
   ~YuvCyclicView() override = default;
 
  private:
@@ -21,8 +20,7 @@ class YuvCyclicView : public YuvBaseView {
   // Called when the scene is "invalidated". Invalidation happens when surface
   // dimensions or metrics change, but not necessarily when surface contents
   // change.
-  void OnSceneInvalidated(
-      fuchsia::images::PresentationInfo presentation_info) override;
+  void OnSceneInvalidated(fuchsia::images::PresentationInfo presentation_info) override;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(YuvCyclicView);
 };

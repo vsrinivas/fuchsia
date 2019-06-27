@@ -7,15 +7,13 @@
 #include "garnet/lib/ui/gfx/engine/session.h"
 #include "garnet/lib/ui/gfx/resources/nodes/traversal.h"
 #include "garnet/lib/ui/gfx/resources/view.h"
-#include "src/ui/lib/escher/geometry/types.h"
 #include "src/lib/fxl/logging.h"
+#include "src/ui/lib/escher/geometry/types.h"
 
 namespace scenic_impl {
 namespace gfx {
 
-SessionHitTester::SessionHitTester(Session* session) : session_(session) {
-  FXL_CHECK(session_);
-}
+SessionHitTester::SessionHitTester(Session* session) : session_(session) { FXL_CHECK(session_); }
 
 bool SessionHitTester::should_participate(Node* node) {
   FXL_DCHECK(node);
@@ -37,9 +35,8 @@ std::vector<Hit> HitTester::HitTest(Node* node, const escher::ray4& ray) {
   FXL_DCHECK(tag_info_ == nullptr);
 
   // Sort by distance, preserving traversal order in case of ties.
-  std::stable_sort(hits_.begin(), hits_.end(), [](const Hit& a, const Hit& b) {
-    return a.distance < b.distance;
-  });
+  std::stable_sort(hits_.begin(), hits_.end(),
+                   [](const Hit& a, const Hit& b) { return a.distance < b.distance; });
   return std::move(hits_);
 }
 
@@ -51,8 +48,7 @@ void HitTester::AccumulateHitsOuter(Node* node) {
   }
 
   // Apply the node's transformation to derive a new local ray.
-  auto inverse_transform =
-      glm::inverse(static_cast<glm::mat4>(node->transform()));
+  auto inverse_transform = glm::inverse(static_cast<glm::mat4>(node->transform()));
   RayInfo* outer_ray_info = ray_info_;
   RayInfo local_ray_info{inverse_transform * outer_ray_info->ray,
                          inverse_transform * outer_ray_info->inverse_transform};
@@ -64,8 +60,7 @@ void HitTester::AccumulateHitsOuter(Node* node) {
 
 void HitTester::AccumulateHitsLocal(Node* node) {
   // Bail if hit testing is suppressed.
-  if (node->hit_test_behavior() ==
-      ::fuchsia::ui::gfx::HitTestBehavior::kSuppress)
+  if (node->hit_test_behavior() == ::fuchsia::ui::gfx::HitTestBehavior::kSuppress)
     return;
 
   // Session-based hit testing may encounter nodes that don't participate.
@@ -83,8 +78,7 @@ void HitTester::AccumulateHitsLocal(Node* node) {
   tag_info_ = outer_tag_info;
 
   if (local_tag_info.is_hit()) {
-    hits_.emplace_back(Hit{node->tag_value(), node, ray_info_->ray,
-                           ray_info_->inverse_transform,
+    hits_.emplace_back(Hit{node->tag_value(), node, ray_info_->ray, ray_info_->inverse_transform,
                            local_tag_info.distance});
     if (outer_tag_info)
       outer_tag_info->ReportIntersection(local_tag_info.distance);
@@ -100,30 +94,25 @@ void HitTester::AccumulateHitsInner(Node* node) {
     tag_info_->ReportIntersection(distance);
   }
 
-  ForEachDirectDescendantFrontToBack(
-      *node, [this](Node* node) { AccumulateHitsOuter(node); });
+  ForEachDirectDescendantFrontToBack(*node, [this](Node* node) { AccumulateHitsOuter(node); });
 }
 
 bool HitTester::IsRayWithinPartsInner(Node* node, const escher::ray4& ray) {
-  return ForEachPartFrontToBackUntilTrue(*node, [&ray](Node* node) {
-    return IsRayWithinClippedContentOuter(node, ray);
-  });
+  return ForEachPartFrontToBackUntilTrue(
+      *node, [&ray](Node* node) { return IsRayWithinClippedContentOuter(node, ray); });
 }
 
-bool HitTester::IsRayWithinClippedContentOuter(Node* node,
-                                               const escher::ray4& ray) {
+bool HitTester::IsRayWithinClippedContentOuter(Node* node, const escher::ray4& ray) {
   if (node->transform().IsIdentity()) {
     return IsRayWithinClippedContentInner(node, ray);
   }
 
-  auto inverse_transform =
-      glm::inverse(static_cast<glm::mat4>(node->transform()));
+  auto inverse_transform = glm::inverse(static_cast<glm::mat4>(node->transform()));
   escher::ray4 local_ray = inverse_transform * ray;
   return IsRayWithinClippedContentInner(node, local_ray);
 }
 
-bool HitTester::IsRayWithinClippedContentInner(Node* node,
-                                               const escher::ray4& ray) {
+bool HitTester::IsRayWithinClippedContentInner(Node* node, const escher::ray4& ray) {
   float distance;
   if (node->GetIntersection(ray, &distance))
     return true;
@@ -134,9 +123,8 @@ bool HitTester::IsRayWithinClippedContentInner(Node* node,
   if (node->clip_to_self())
     return false;
 
-  return ForEachChildAndImportFrontToBackUntilTrue(*node, [&ray](Node* node) {
-    return IsRayWithinClippedContentOuter(node, ray);
-  });
+  return ForEachChildAndImportFrontToBackUntilTrue(
+      *node, [&ray](Node* node) { return IsRayWithinClippedContentOuter(node, ray); });
 }
 
 }  // namespace gfx

@@ -24,8 +24,7 @@ class BufferFactory {
   // VkMemoryDedicatedRequirements.requiresDedicatedAllocation
   // == true). That memory must be accessable through the GpuMem returned in
   // |out_ptr|.
-  virtual BufferPtr NewBuffer(vk::DeviceSize size,
-                              vk::BufferUsageFlags usage_flags,
+  virtual BufferPtr NewBuffer(vk::DeviceSize size, vk::BufferUsageFlags usage_flags,
                               vk::MemoryPropertyFlags memory_property_flags,
                               GpuMemPtr* out_ptr = nullptr) = 0;
 };
@@ -45,8 +44,7 @@ class BufferFactoryAdapter final : public BufferFactory {
                       vk::MemoryPropertyFlags memory_property_flags,
                       GpuMemPtr* out_ptr = nullptr) final {
     FXL_DCHECK(allocator_);
-    return allocator_->AllocateBuffer(manager_, size, usage_flags,
-                                      memory_property_flags, out_ptr);
+    return allocator_->AllocateBuffer(manager_, size, usage_flags, memory_property_flags, out_ptr);
   }
 
  private:

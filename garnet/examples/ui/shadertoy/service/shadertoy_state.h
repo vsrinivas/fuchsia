@@ -36,24 +36,21 @@ class ShadertoyState : public escher::Resource {
       App* app, fidl::InterfaceHandle<fuchsia::images::ImagePipe> image_pipe);
 
   // Factory constructor.
-  static fxl::RefPtr<ShadertoyState> NewForView(App* app,
-                                                zx::eventpair view_token,
+  static fxl::RefPtr<ShadertoyState> NewForView(App* app, zx::eventpair view_token,
                                                 bool handle_input_events);
 
   virtual ~ShadertoyState();
 
   void SetPaused(bool paused);
 
-  void SetShaderCode(
-      fidl::StringPtr glsl,
-      fuchsia::examples::shadertoy::Shadertoy::SetShaderCodeCallback callback);
+  void SetShaderCode(fidl::StringPtr glsl,
+                     fuchsia::examples::shadertoy::Shadertoy::SetShaderCodeCallback callback);
 
   void SetResolution(uint32_t width, uint32_t height);
 
   void SetMouse(glm::vec4 i_mouse);
 
-  void SetImage(uint32_t channel,
-                fidl::InterfaceRequest<fuchsia::images::ImagePipe> request);
+  void SetImage(uint32_t channel, fidl::InterfaceRequest<fuchsia::images::ImagePipe> request);
 
  protected:
   explicit ShadertoyState(App* app);
@@ -74,9 +71,7 @@ class ShadertoyState : public escher::Resource {
   escher::Texture* channel2() const { return nullptr; }
   escher::Texture* channel3() const { return nullptr; }
   glm::vec4 i_mouse() const { return i_mouse_; }
-  fxl::WeakPtrFactory<ShadertoyState>* weak_ptr_factory() {
-    return &weak_ptr_factory_;
-  }
+  fxl::WeakPtrFactory<ShadertoyState>* weak_ptr_factory() { return &weak_ptr_factory_; }
 
  private:
   // Subclasses must implement this, and call OnFramePresented() from it.

@@ -11,11 +11,11 @@
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <src/lib/fxl/logging.h>
 #include <trace/event.h>
+#include <zircon/status.h>
 
 #include <algorithm>
 #include <cstdlib>
 #include <string>
-#include <zircon/status.h>
 
 #include "src/lib/files/file.h"
 
@@ -24,30 +24,26 @@ namespace root_presenter {
 App::App(const fxl::CommandLine& command_line)
     : startup_context_(component::StartupContext::CreateFromStartupInfo()),
       input_reader_(this),
-      fdr_manager_(
-          std::make_unique<FactoryResetManager>(startup_context_.get())) {
+      fdr_manager_(std::make_unique<FactoryResetManager>(startup_context_.get())) {
   FXL_DCHECK(startup_context_);
 
   input_reader_.Start();
 
-  startup_context_->outgoing().AddPublicService(
-      presenter_bindings_.GetHandler(this));
-  startup_context_->outgoing().AddPublicService(
-      input_receiver_bindings_.GetHandler(this));
+  startup_context_->outgoing().AddPublicService(presenter_bindings_.GetHandler(this));
+  startup_context_->outgoing().AddPublicService(input_receiver_bindings_.GetHandler(this));
 }
 
 App::~App() {}
 
-void App::PresentView(fuchsia::ui::views::ViewHolderToken view_holder_token,
-                      fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
-                          presentation_request) {
+void App::PresentView(
+    fuchsia::ui::views::ViewHolderToken view_holder_token,
+    fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request) {
   InitializeServices();
 
   int32_t display_startup_rotation_adjustment = 0;
   {
     std::string rotation_value;
-    if (files::ReadFileToString("/config/data/display_rotation",
-                                &rotation_value)) {
+    if (files::ReadFileToString("/config/data/display_rotation", &rotation_value)) {
       display_startup_rotation_adjustment = atoi(rotation_value.c_str());
       FXL_LOG(INFO) << "Display rotation adjustment applied: "
                     << display_startup_rotation_adjustment << " degrees.";
@@ -58,9 +54,8 @@ void App::PresentView(fuchsia::ui::views::ViewHolderToken view_holder_token,
       shortcut_manager_ ? shortcut_manager_.get() : nullptr;
 
   auto presentation = std::make_unique<Presentation>(
-      scenic_.get(), session_.get(), compositor_->id(),
-      std::move(view_holder_token), std::move(presentation_request),
-      shortcut_manager, renderer_params_,
+      scenic_.get(), session_.get(), compositor_->id(), std::move(view_holder_token),
+      std::move(presentation_request), shortcut_manager, renderer_params_,
       display_startup_rotation_adjustment, [this](bool yield_to_next) {
         if (yield_to_next) {
           SwitchToNextPresentation();
@@ -81,32 +76,27 @@ void App::AddPresentation(std::unique_ptr<Presentation> presentation) {
   SwitchToPresentation(presentations_.size() - 1);
 }
 
-void App::HACK_SetRendererParams(
-    bool enable_clipping,
-    ::std::vector<fuchsia::ui::gfx::RendererParam> params) {
+void App::HACK_SetRendererParams(bool enable_clipping,
+                                 ::std::vector<fuchsia::ui::gfx::RendererParam> params) {
   renderer_params_.clipping_enabled = enable_clipping;
-  FXL_LOG(INFO)
-      << "Presenter::HACK_SetRendererParams: Setting clipping enabled to "
-      << (enable_clipping ? "true" : "false");
+  FXL_LOG(INFO) << "Presenter::HACK_SetRendererParams: Setting clipping enabled to "
+                << (enable_clipping ? "true" : "false");
   for (auto& param : params) {
     switch (param.Which()) {
       case ::fuchsia::ui::gfx::RendererParam::Tag::kShadowTechnique:
         renderer_params_.shadow_technique = param.shadow_technique();
-        FXL_LOG(INFO)
-            << "Presenter::HACK_SetRendererParams: Setting shadow technique to "
-            << fidl::ToUnderlying(param.shadow_technique());
+        FXL_LOG(INFO) << "Presenter::HACK_SetRendererParams: Setting shadow technique to "
+                      << fidl::ToUnderlying(param.shadow_technique());
         continue;
       case fuchsia::ui::gfx::RendererParam::Tag::kRenderFrequency:
         renderer_params_.render_frequency = param.render_frequency();
-        FXL_LOG(INFO)
-            << "Presenter::HACK_SetRendererParams: Setting render frequency to "
-            << fidl::ToUnderlying(param.render_frequency());
+        FXL_LOG(INFO) << "Presenter::HACK_SetRendererParams: Setting render frequency to "
+                      << fidl::ToUnderlying(param.render_frequency());
         continue;
       case fuchsia::ui::gfx::RendererParam::Tag::kEnableDebugging:
         renderer_params_.debug_enabled = param.enable_debugging();
-        FXL_LOG(INFO)
-            << "Presenter::HACK_SetRendererParams: Setting debug enabled to "
-            << param.enable_debugging();
+        FXL_LOG(INFO) << "Presenter::HACK_SetRendererParams: Setting debug enabled to "
+                      << param.enable_debugging();
         continue;
       case fuchsia::ui::gfx::RendererParam::Tag::Invalid:
         continue;
@@ -158,16 +148,15 @@ void App::SwitchToPreviousPresentation() {
                        presentations_.size());
 }
 
-void App::RegisterDevice(fuchsia::ui::input::DeviceDescriptor descriptor,
-                         fidl::InterfaceRequest<fuchsia::ui::input::InputDevice>
-                             input_device_request) {
+void App::RegisterDevice(
+    fuchsia::ui::input::DeviceDescriptor descriptor,
+    fidl::InterfaceRequest<fuchsia::ui::input::InputDevice> input_device_request) {
   uint32_t device_id = ++next_device_token_;
 
   FXL_VLOG(1) << "RegisterDevice " << device_id << " " << descriptor;
   std::unique_ptr<ui_input::InputDeviceImpl> input_device =
-      std::make_unique<ui_input::InputDeviceImpl>(
-          device_id, std::move(descriptor), std::move(input_device_request),
-          this);
+      std::make_unique<ui_input::InputDeviceImpl>(device_id, std::move(descriptor),
+                                                  std::move(input_device_request), this);
 
   for (auto& presentation : presentations_) {
     presentation->OnDeviceAdded(input_device.get());
@@ -194,8 +183,7 @@ void App::OnReport(ui_input::InputDeviceImpl* input_device,
   TRACE_FLOW_END("input", "report_to_presenter", report.trace_id);
 
   FXL_VLOG(3) << "OnReport from " << input_device->id() << " " << report;
-  if (devices_by_id_.count(input_device->id()) == 0 ||
-      presentations_.size() == 0)
+  if (devices_by_id_.count(input_device->id()) == 0 || presentations_.size() == 0)
     return;
 
   FXL_DCHECK(active_presentation_idx_ < presentations_.size());
@@ -209,8 +197,7 @@ void App::OnReport(ui_input::InputDeviceImpl* input_device,
 
   // Input events are only reported to the active presentation.
   TRACE_FLOW_BEGIN("input", "report_to_presentation", report.trace_id);
-  presentations_[active_presentation_idx_]->OnReport(input_device->id(),
-                                                     std::move(report));
+  presentations_[active_presentation_idx_]->OnReport(input_device->id(), std::move(report));
 }
 
 void App::InitializeServices() {
@@ -226,12 +213,11 @@ void App::InitializeServices() {
       FXL_LOG(ERROR) << "Session died, destroying all presentations.";
       Reset();
     });
-    session_->set_event_handler(
-        [this](std::vector<fuchsia::ui::scenic::Event> events) {
-          for (auto& event : events) {
-            HandleScenicEvent(event);
-          }
-        });
+    session_->set_event_handler([this](std::vector<fuchsia::ui::scenic::Event> events) {
+      for (auto& event : events) {
+        HandleScenicEvent(event);
+      }
+    });
     // Globally disable parallel dispatch of input events.
     // TODO(SCN-1047): Enable parallel dispatch.
     {
@@ -247,16 +233,13 @@ void App::InitializeServices() {
     compositor_->SetLayerStack(*layer_stack_.get());
     session_->Present(0, [](fuchsia::images::PresentationInfo info) {});
 
-    scenic_->GetDisplayOwnershipEvent([this](zx::event event) {
-      input_reader_.SetOwnershipEvent(std::move(event));
-    });
+    scenic_->GetDisplayOwnershipEvent(
+        [this](zx::event event) { input_reader_.SetOwnershipEvent(std::move(event)); });
 
     shortcut_manager_ =
-        startup_context_
-            ->ConnectToEnvironmentService<fuchsia::ui::shortcut::Manager>();
+        startup_context_->ConnectToEnvironmentService<fuchsia::ui::shortcut::Manager>();
     shortcut_manager_.set_error_handler([this](zx_status_t error) {
-      FXL_LOG(ERROR) << "Shortcut manager unavailable: "
-                     << zx_status_get_string(error);
+      FXL_LOG(ERROR) << "Shortcut manager unavailable: " << zx_status_get_string(error);
       shortcut_manager_ = nullptr;
       for (const auto& presentation : presentations_) {
         presentation->ResetShortcutManager();

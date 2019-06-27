@@ -23,8 +23,7 @@ struct UniformBinding {
   vk::DeviceSize size = 0;
 
   void Bind(CommandBuffer* cb) const {
-    cb->BindUniformBuffer(descriptor_set_index, binding_index, buffer, offset,
-                          size);
+    cb->BindUniformBuffer(descriptor_set_index, binding_index, buffer, offset, size);
   }
 };
 

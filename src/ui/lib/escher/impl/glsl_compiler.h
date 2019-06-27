@@ -28,19 +28,18 @@ class GlslToSpirvCompiler {
   // empty strings.  If an error is encountered during compilation, an empty
   // string is returned.
   std::future<SpirvData> Compile(vk::ShaderStageFlagBits stage,
-                                 std::vector<std::string> glsl_source_code,
-                                 std::string preamble, std::string entry_point);
+                                 std::vector<std::string> glsl_source_code, std::string preamble,
+                                 std::string entry_point);
 
  private:
   // Same as Compile(), but completes synchronously.
   SpirvData SynchronousCompile(vk::ShaderStageFlagBits stage,
-                               std::vector<std::string> glsl_source_code,
-                               std::string preamble, std::string entry_point);
+                               std::vector<std::string> glsl_source_code, std::string preamble,
+                               std::string entry_point);
 
   // Helper for SynchronousCompile.
   SpirvData SynchronousCompileImpl(vk::ShaderStageFlagBits stage,
-                                   std::vector<std::string> glsl_source_code,
-                                   std::string preamble,
+                                   std::vector<std::string> glsl_source_code, std::string preamble,
                                    std::string entry_point);
 
   std::atomic<uint32_t> active_compile_count_;

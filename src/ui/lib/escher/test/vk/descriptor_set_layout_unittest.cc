@@ -37,8 +37,7 @@ TEST(DescriptorSetLayout, Validate) {
   FXL_LOG(INFO) << "==== NOTE: no additional validation warnings are expected";
 
   // No problem to add an additional binding anywhere else, of any type.
-  for (size_t bit_index = 6U; bit_index < VulkanLimits::kNumBindings;
-       ++bit_index) {
+  for (size_t bit_index = 6U; bit_index < VulkanLimits::kNumBindings; ++bit_index) {
     for (size_t type_index = 0; type_index <= 5U; ++type_index) {
       layout = original_layout;
       integers[type_index] |= 1 << bit_index;

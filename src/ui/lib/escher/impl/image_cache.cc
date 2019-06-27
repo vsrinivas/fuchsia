@@ -23,8 +23,7 @@ ImagePtr ImageCache::NewImage(const ImageInfo& info, GpuMemPtr* out_ptr) {
   if (out_ptr) {
     FXL_DCHECK(false) << "ImageCache does not support dedicated allocations, "
                          "creating a non-cached image";
-    return allocator_->AllocateImage(escher()->resource_recycler(), info,
-                                     out_ptr);
+    return allocator_->AllocateImage(escher()->resource_recycler(), info, out_ptr);
   }
 
   if (ImagePtr result = FindImage(info)) {

@@ -18,22 +18,19 @@ namespace test {
 
 class SessionHandlerForTest : public SessionHandler {
  public:
-  SessionHandlerForTest(
-      SessionContext session_context, SessionId session_id, Scenic* scenic,
-      EventReporter* event_reporter = EventReporter::Default(),
-      ErrorReporter* error_reporter = ErrorReporter::Default());
+  SessionHandlerForTest(SessionContext session_context, SessionId session_id, Scenic* scenic,
+                        EventReporter* event_reporter = EventReporter::Default(),
+                        ErrorReporter* error_reporter = ErrorReporter::Default());
 
   SessionHandlerForTest(CommandDispatcherContext command_dispatcher_context,
-                        SessionContext session_context,
-                        EventReporter* event_reporter,
+                        SessionContext session_context, EventReporter* event_reporter,
                         ErrorReporter* error_reporter);
 
   // |scenic::CommandDispatcher|
   void DispatchCommand(fuchsia::ui::scenic::Command command) override;
 
   // |fuchsia::ui::scenic::Session / scenic::TempSessionDelegate|
-  void Present(uint64_t presentation_time,
-               ::std::vector<zx::event> acquire_fences,
+  void Present(uint64_t presentation_time, ::std::vector<zx::event> acquire_fences,
                ::std::vector<zx::event> release_fences,
                fuchsia::ui::scenic::Session::PresentCallback callback) override;
 
@@ -50,14 +47,11 @@ class SessionHandlerForTest : public SessionHandler {
 
 class ReleaseFenceSignallerForTest : public escher::ReleaseFenceSignaller {
  public:
-  ReleaseFenceSignallerForTest(
-      escher::impl::CommandBufferSequencer* command_buffer_sequencer);
+  ReleaseFenceSignallerForTest(escher::impl::CommandBufferSequencer* command_buffer_sequencer);
 
   void AddCPUReleaseFence(zx::event fence) override;
 
-  uint32_t num_calls_to_add_cpu_release_fence() {
-    return num_calls_to_add_cpu_release_fence_;
-  }
+  uint32_t num_calls_to_add_cpu_release_fence() { return num_calls_to_add_cpu_release_fence_; }
 
  private:
   uint32_t num_calls_to_add_cpu_release_fence_ = 0;
@@ -70,19 +64,17 @@ class SessionManagerForTest : public SessionManager {
   ~SessionManagerForTest() override = default;
 
   // Publicly accessible for tests.
-  void InsertSessionHandler(SessionId session_id,
-                            SessionHandler* session_handler);
+  void InsertSessionHandler(SessionId session_id, SessionHandler* session_handler);
 
  protected:
   // Override CreateSessionHandler so that calling CreateCommandDispatcher
   // creates the test version of SessionHandler.
   std::unique_ptr<SessionHandler> CreateSessionHandler(
-      CommandDispatcherContext dispatcher_context,
-      SessionContext session_context, SessionId session_id,
+      CommandDispatcherContext dispatcher_context, SessionContext session_context,
+      SessionId session_id,
       // If tests instances of reporters were provided at SessionManager
       // creation, those are used instead of the ones provided here
-      EventReporter* error_reporter,
-      ErrorReporter* event_reporter) override;
+      EventReporter* error_reporter, ErrorReporter* event_reporter) override;
 
  private:
   EventReporter* event_reporter_;
@@ -91,11 +83,9 @@ class SessionManagerForTest : public SessionManager {
 
 class EngineForTest : public Engine {
  public:
-  EngineForTest(sys::ComponentContext* component_context,
-                DisplayManager* display_manager,
+  EngineForTest(sys::ComponentContext* component_context, DisplayManager* display_manager,
                 std::unique_ptr<escher::ReleaseFenceSignaller> r,
-                EventReporter* event_reporter = nullptr,
-                ErrorReporter* error_reporter = nullptr);
+                EventReporter* event_reporter = nullptr, ErrorReporter* error_reporter = nullptr);
 };
 
 }  // namespace test

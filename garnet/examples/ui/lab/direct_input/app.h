@@ -36,9 +36,9 @@ class App : public fuchsia::ui::input::InputDeviceRegistry,
   ~App();
 
   // |fuchsia::ui::input::InputDeviceRegistry|
-  void RegisterDevice(fuchsia::ui::input::DeviceDescriptor descriptor,
-                      fidl::InterfaceRequest<fuchsia::ui::input::InputDevice>
-                          input_device) override;
+  void RegisterDevice(
+      fuchsia::ui::input::DeviceDescriptor descriptor,
+      fidl::InterfaceRequest<fuchsia::ui::input::InputDevice> input_device) override;
 
   // |ui_input::InputDeviceImpl::Listener|
   void OnDeviceDisconnected(ui_input::InputDeviceImpl* input_device) override;
@@ -74,11 +74,9 @@ class App : public fuchsia::ui::input::InputDeviceRegistry,
   // Display a finger tracker for each finger captured by this View.
   void OnPointerEvent(const fuchsia::ui::input::PointerEvent& event);
   // Deal with sensor reports received from Zircon.
-  void OnDeviceSensorEvent(uint32_t device_id,
-                           fuchsia::ui::input::InputReport event);
+  void OnDeviceSensorEvent(uint32_t device_id, fuchsia::ui::input::InputReport event);
   // Route input events from Zircon to Scenic.
-  void OnDeviceInputEvent(uint32_t compositor_id,
-                          fuchsia::ui::input::InputEvent event);
+  void OnDeviceInputEvent(uint32_t compositor_id, fuchsia::ui::input::InputEvent event);
 
   // Application fields
   std::unique_ptr<component::StartupContext> startup_context_;
@@ -86,13 +84,10 @@ class App : public fuchsia::ui::input::InputDeviceRegistry,
 
   // Input fields
   ui_input::InputReader input_reader_;
-  fidl::BindingSet<fuchsia::ui::input::InputDeviceRegistry>
-      input_device_registry_bindings_;
+  fidl::BindingSet<fuchsia::ui::input::InputDeviceRegistry> input_device_registry_bindings_;
   uint32_t next_device_token_;
-  std::unordered_map<uint32_t, std::unique_ptr<ui_input::InputDeviceImpl>>
-      device_by_id_;
-  std::unordered_map<uint32_t, std::unique_ptr<ui_input::DeviceState>>
-      device_state_by_id_;
+  std::unordered_map<uint32_t, std::unique_ptr<ui_input::InputDeviceImpl>> device_by_id_;
+  std::unordered_map<uint32_t, std::unique_ptr<ui_input::DeviceState>> device_state_by_id_;
 
   // DirectInput's Scene
   fuchsia::ui::scenic::ScenicPtr scenic_;

@@ -7,8 +7,7 @@
 namespace escher {
 
 Object::Object(const Transform& transform, MeshPtr mesh, MaterialPtr material)
-    : Object(static_cast<mat4>(transform), std::move(mesh),
-             std::move(material)) {}
+    : Object(static_cast<mat4>(transform), std::move(mesh), std::move(material)) {}
 
 Object::Object(const mat4& transform, MeshPtr mesh, MaterialPtr material)
     : Object(transform, Shape(std::move(mesh)), std::move(material)) {}
@@ -28,8 +27,7 @@ Object Object::NewRect(const vec2& top_left_position, const vec2& size, float z,
   return NewRect(vec3(top_left_position, z), size, std::move(material));
 }
 
-Object Object::NewRect(const vec3& top_left_position, const vec2& size,
-                       MaterialPtr material) {
+Object Object::NewRect(const vec3& top_left_position, const vec2& size, MaterialPtr material) {
   mat4 transform(1);
   transform[0][0] = size.x;
   transform[1][1] = size.y;
@@ -40,21 +38,18 @@ Object Object::NewRect(const vec3& top_left_position, const vec2& size,
 }
 
 Object Object::NewRect(const Transform& transform, MaterialPtr material) {
-  return Object(static_cast<mat4>(transform), Shape(Shape::Type::kRect),
-                std::move(material));
+  return Object(static_cast<mat4>(transform), Shape(Shape::Type::kRect), std::move(material));
 }
 
 Object Object::NewRect(const mat4& transform, MaterialPtr material) {
   return Object(transform, Shape(Shape::Type::kRect), std::move(material));
 }
 
-Object Object::NewCircle(const vec2& center_position, float radius, float z,
-                         MaterialPtr material) {
+Object Object::NewCircle(const vec2& center_position, float radius, float z, MaterialPtr material) {
   return NewCircle(vec3(center_position, z), radius, std::move(material));
 }
 
-Object Object::NewCircle(const vec3& center_position, float radius,
-                         MaterialPtr material) {
+Object Object::NewCircle(const vec3& center_position, float radius, MaterialPtr material) {
   mat4 transform(1);
   transform[0][0] = radius;
   transform[1][1] = radius;
@@ -64,10 +59,9 @@ Object Object::NewCircle(const vec3& center_position, float radius,
   return Object(transform, Shape(Shape::Type::kCircle), std::move(material));
 }
 
-Object Object::NewCircle(const mat4& transform, float radius,
-                         MaterialPtr material) {
-  return Object(glm::scale(transform, glm::vec3(radius, radius, 1)),
-                Shape(Shape::Type::kCircle), std::move(material));
+Object Object::NewCircle(const mat4& transform, float radius, MaterialPtr material) {
+  return Object(glm::scale(transform, glm::vec3(radius, radius, 1)), Shape(Shape::Type::kCircle),
+                std::move(material));
 }
 
 BoundingBox Object::bounding_box() const {

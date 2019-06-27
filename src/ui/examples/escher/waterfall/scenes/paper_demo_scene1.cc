@@ -37,10 +37,8 @@ void PaperDemoScene1::Init(escher::Stage* stage) {
   FXL_DCHECK(false) << "Use PaperScene* version instead.";
 }
 
-escher::Model* PaperDemoScene1::Update(const escher::Stopwatch& stopwatch,
-                                       uint64_t frame_count,
-                                       escher::Stage* stage,
-                                       escher::PaperRenderer* renderer) {
+escher::Model* PaperDemoScene1::Update(const escher::Stopwatch& stopwatch, uint64_t frame_count,
+                                       escher::Stage* stage, escher::PaperRenderer* renderer) {
   FXL_DCHECK(false) << "Use PaperScene* version instead.";
   return nullptr;
 }
@@ -119,9 +117,8 @@ void PaperDemoScene1::Init(escher::PaperScene* scene) {
 
 PaperDemoScene1::~PaperDemoScene1() {}
 
-void PaperDemoScene1::Update(const escher::Stopwatch& stopwatch,
-                             uint64_t frame_count, escher::PaperScene* scene,
-                             escher::PaperRenderer* renderer) {
+void PaperDemoScene1::Update(const escher::Stopwatch& stopwatch, uint64_t frame_count,
+                             escher::PaperScene* scene, escher::PaperRenderer* renderer) {
   const float current_time_sec = stopwatch.GetElapsedSeconds();
   const float screen_width = scene->bounding_box.width();
   const float screen_height = scene->bounding_box.height();
@@ -135,8 +132,7 @@ void PaperDemoScene1::Update(const escher::Stopwatch& stopwatch,
   transform_stack->PushTranslation(0.5f * vec2(screen_width, screen_height));
   constexpr float kCornerRadius = 30.f;
   renderer->DrawRoundedRect(
-      {screen_width, screen_height, kCornerRadius, kCornerRadius, kCornerRadius,
-       kCornerRadius},
+      {screen_width, screen_height, kCornerRadius, kCornerRadius, kCornerRadius, kCornerRadius},
       bg_, escher::PaperDrawableFlagBits::kDisableShadowCasting);
   transform_stack->Pop();  // pop translation only
 
@@ -154,12 +150,10 @@ void PaperDemoScene1::Update(const escher::Stopwatch& stopwatch,
 
     // Animate the clip-planes.
     for (size_t i = 0; i < num_object_space_planes; ++i) {
-      object_space_planes[i] =
-          object_space_clip_planes_[i].Update(current_time_sec);
+      object_space_planes[i] = object_space_clip_planes_[i].Update(current_time_sec);
     }
     for (size_t i = 0; i < num_world_space_planes; ++i) {
-      world_space_planes[i] =
-          world_space_clip_planes_[i].Update(current_time_sec);
+      world_space_planes[i] = world_space_clip_planes_[i].Update(current_time_sec);
     }
 
     transform_stack->AddClipPlanes(world_space_planes, num_world_space_planes);
@@ -171,8 +165,7 @@ void PaperDemoScene1::Update(const escher::Stopwatch& stopwatch,
       const RoundedRectSpec rect_spec = escher::Lerp(rect.spec1, rect.spec2, t);
 
       transform_stack->PushTranslation(position);
-      transform_stack->AddClipPlanes(object_space_planes,
-                                     num_object_space_planes);
+      transform_stack->AddClipPlanes(object_space_planes, num_object_space_planes);
       renderer->DrawRoundedRect(rect_spec, rect.material);
       transform_stack->Pop();
     }
@@ -185,15 +178,13 @@ void PaperDemoScene1::Update(const escher::Stopwatch& stopwatch,
       const float t = translucent_rectangle_.animation.Update(current_time_sec);
       const vec3 base_position(screen_width * 0.5f, screen_height * 0.5f, 0.f);
       const vec3 position =
-          base_position + escher::Lerp(translucent_rectangle_.pos1,
-                                       translucent_rectangle_.pos2, t);
-      const RoundedRectSpec rect_spec = escher::Lerp(
-          translucent_rectangle_.spec1, translucent_rectangle_.spec2, t);
+          base_position + escher::Lerp(translucent_rectangle_.pos1, translucent_rectangle_.pos2, t);
+      const RoundedRectSpec rect_spec =
+          escher::Lerp(translucent_rectangle_.spec1, translucent_rectangle_.spec2, t);
 
       transform_stack->PushTranslation(position);
-      renderer->DrawRoundedRect(
-          rect_spec, translucent_,
-          escher::PaperDrawableFlagBits::kDisableShadowCasting);
+      renderer->DrawRoundedRect(rect_spec, translucent_,
+                                escher::PaperDrawableFlagBits::kDisableShadowCasting);
       transform_stack->Pop();
     }
   }
@@ -204,8 +195,7 @@ void PaperDemoScene1::Update(const escher::Stopwatch& stopwatch,
   transform_stack->PushTranslation(kInitialCenterOfStack);
   plane3 circle_stack_clip_plane(vec3(0, 0, 0), glm::normalize(vec3(1, 1, 0)));
   transform_stack->AddClipPlanes(&circle_stack_clip_plane, 1);
-  transform_stack->PushTranslation(
-      vec3(70.f + 70.f * sin(current_time_sec * 1.5), 0, 0));
+  transform_stack->PushTranslation(vec3(70.f + 70.f * sin(current_time_sec * 1.5), 0, 0));
 
   transform_stack->PushElevation(35);
   renderer->DrawCircle(90, red_);

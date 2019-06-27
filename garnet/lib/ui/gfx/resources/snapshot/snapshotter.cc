@@ -33,18 +33,18 @@
 #include "garnet/lib/ui/gfx/resources/snapshot/version.h"
 #include "garnet/lib/ui/gfx/resources/view.h"
 #include "garnet/lib/ui/gfx/resources/view_holder.h"
-#include "src/ui/lib/escher/util/trace_macros.h"
-#include "src/ui/lib/escher/vk/image.h"
 #include "lib/fsl/vmo/sized_vmo.h"
 #include "lib/fsl/vmo/vector.h"
 #include "src/lib/fxl/logging.h"
+#include "src/ui/lib/escher/util/trace_macros.h"
+#include "src/ui/lib/escher/vk/image.h"
 
 namespace scenic_impl {
 namespace gfx {
 
 // Helper function to create a |SizedVmo| from bytes of certain size.
-bool VmoFromBytes(const uint8_t* bytes, size_t num_bytes, uint32_t type,
-                  uint32_t version, fsl::SizedVmo* sized_vmo_ptr) {
+bool VmoFromBytes(const uint8_t* bytes, size_t num_bytes, uint32_t type, uint32_t version,
+                  fsl::SizedVmo* sized_vmo_ptr) {
   FXL_CHECK(sized_vmo_ptr);
 
   zx::vmo vmo;
@@ -81,29 +81,28 @@ bool VmoFromBytes(const uint8_t* bytes, size_t num_bytes, uint32_t type,
 Snapshotter::Snapshotter(std::unique_ptr<escher::BatchGpuUploader> gpu_uploader)
     : gpu_uploader_(std::move(gpu_uploader)) {}
 
-void Snapshotter::TakeSnapshot(Resource* resource,
-                               TakeSnapshotCallback callback) {
+void Snapshotter::TakeSnapshot(Resource* resource, TakeSnapshotCallback callback) {
   FXL_DCHECK(resource) << "Cannot snapshot null resource.";
   // Visit the scene graph starting with |resource| and collecting images
   // and buffers to read from the GPU.
   resource->Accept(this);
 
   // Submit all images/buffers to be read from GPU.
-  gpu_uploader_->Submit([node_serializer = current_node_serializer_,
-                         callback = std::move(callback)]() {
-    TRACE_DURATION("gfx", "Snapshotter::Serialize");
-    auto builder = std::make_shared<flatbuffers::FlatBufferBuilder>();
-    builder->Finish(node_serializer->serialize(*builder));
+  gpu_uploader_->Submit(
+      [node_serializer = current_node_serializer_, callback = std::move(callback)]() {
+        TRACE_DURATION("gfx", "Snapshotter::Serialize");
+        auto builder = std::make_shared<flatbuffers::FlatBufferBuilder>();
+        builder->Finish(node_serializer->serialize(*builder));
 
-    fsl::SizedVmo sized_vmo;
-    if (!VmoFromBytes(builder->GetBufferPointer(), builder->GetSize(),
-                      SnapshotData::SnapshotType::kFlatBuffer,
-                      SnapshotData::SnapshotVersion::v1_0, &sized_vmo)) {
-      return callback(fuchsia::mem::Buffer{});
-    } else {
-      return callback(std::move(sized_vmo).ToTransport());
-    }
-  });
+        fsl::SizedVmo sized_vmo;
+        if (!VmoFromBytes(builder->GetBufferPointer(), builder->GetSize(),
+                          SnapshotData::SnapshotType::kFlatBuffer,
+                          SnapshotData::SnapshotVersion::v1_0, &sized_vmo)) {
+          return callback(fuchsia::mem::Buffer{});
+        } else {
+          return callback(std::move(sized_vmo).ToTransport());
+        }
+      });
 }
 
 void Snapshotter::Visit(EntityNode* r) { VisitNode(r); }
@@ -197,9 +196,7 @@ void Snapshotter::Visit(ViewNode* r) { VisitNode(r); }
 void Snapshotter::Visit(ViewHolder* r) { VisitNode(r); }
 void Snapshotter::Visit(Compositor* r) { r->layer_stack()->Accept(this); }
 
-void Snapshotter::Visit(DisplayCompositor* r) {
-  r->layer_stack()->Accept(this);
-}
+void Snapshotter::Visit(DisplayCompositor* r) { r->layer_stack()->Accept(this); }
 void Snapshotter::Visit(LayerStack* r) {
   for (auto& layer : r->layers()) {
     layer->Accept(this);
@@ -230,15 +227,13 @@ void Snapshotter::VisitNode(Node* r) {
     node_serializer->transform = transform;
 
     auto& translation = r->translation();
-    transform->translation =
-        snapshot::Vec3(translation.x, translation.y, translation.z);
+    transform->translation = snapshot::Vec3(translation.x, translation.y, translation.z);
 
     auto& scale = r->scale();
     transform->scale = snapshot::Vec3(scale.x, scale.y, scale.z);
 
     auto& rotation = r->rotation();
-    transform->rotation =
-        snapshot::Quat(rotation.x, rotation.y, rotation.z, rotation.w);
+    transform->rotation = snapshot::Quat(rotation.x, rotation.y, rotation.z, rotation.w);
 
     auto& anchor = r->anchor();
     transform->anchor = snapshot::Vec3(anchor.x, anchor.y, anchor.z);
@@ -282,43 +277,38 @@ void Snapshotter::VisitImage(escher::ImagePtr image) {
   auto width = image->width();
   auto height = image->height();
 
-  ReadImage(image,
-            [format, width, height, node_serializer = current_node_serializer_](
-                escher::BufferPtr buffer) {
-              auto image = std::make_shared<ImageSerializer>();
-              image->buffer = buffer;
-              image->format = format;
-              image->width = width;
-              image->height = height;
+  ReadImage(image, [format, width, height,
+                    node_serializer = current_node_serializer_](escher::BufferPtr buffer) {
+    auto image = std::make_shared<ImageSerializer>();
+    image->buffer = buffer;
+    image->format = format;
+    image->width = width;
+    image->height = height;
 
-              node_serializer->material = image;
-            });
+    node_serializer->material = image;
+  });
 }
 
 void Snapshotter::VisitMesh(escher::MeshPtr mesh) {
   FXL_DCHECK(current_node_serializer_);
 
   auto geometry = std::make_shared<GeometrySerializer>();
-  geometry->bbox_min =
-      snapshot::Vec3(mesh->bounding_box().min().x, mesh->bounding_box().min().y,
-                     mesh->bounding_box().min().z);
-  geometry->bbox_max =
-      snapshot::Vec3(mesh->bounding_box().max().x, mesh->bounding_box().max().y,
-                     mesh->bounding_box().max().z);
+  geometry->bbox_min = snapshot::Vec3(mesh->bounding_box().min().x, mesh->bounding_box().min().y,
+                                      mesh->bounding_box().min().z);
+  geometry->bbox_max = snapshot::Vec3(mesh->bounding_box().max().x, mesh->bounding_box().max().y,
+                                      mesh->bounding_box().max().z);
   current_node_serializer_->mesh = geometry;
 
   for (int i = -1; i < (int)mesh->attribute_buffers().size(); i++) {
     // -1 implies index buffer, >=0 is attribute buffer.
     bool is_index_buffer = i == -1;
-    auto src_buffer = is_index_buffer ? mesh->index_buffer()
-                                      : mesh->attribute_buffer(i).buffer;
+    auto src_buffer = is_index_buffer ? mesh->index_buffer() : mesh->attribute_buffer(i).buffer;
     // Attribute buffer other than primarily attribute buffers can be null.
     if (!src_buffer) {
       continue;
     }
 
-    ReadBuffer(src_buffer, [geometry, is_index_buffer,
-                            mesh](escher::BufferPtr buffer) {
+    ReadBuffer(src_buffer, [geometry, is_index_buffer, mesh](escher::BufferPtr buffer) {
       if (is_index_buffer) {
         auto indices = std::make_shared<IndexBufferSerializer>();
         indices->buffer = buffer;
@@ -337,9 +327,8 @@ void Snapshotter::VisitMesh(escher::MeshPtr mesh) {
   }
 }
 
-void Snapshotter::ReadImage(
-    escher::ImagePtr image,
-    fit::function<void(escher::BufferPtr buffer)> callback) {
+void Snapshotter::ReadImage(escher::ImagePtr image,
+                            fit::function<void(escher::BufferPtr buffer)> callback) {
   vk::BufferImageCopy region;
   region.imageSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
   region.imageSubresource.mipLevel = 0;
@@ -355,9 +344,8 @@ void Snapshotter::ReadImage(
   gpu_uploader_->PostReader(std::move(reader), std::move(callback));
 }
 
-void Snapshotter::ReadBuffer(
-    escher::BufferPtr buffer,
-    fit::function<void(escher::BufferPtr buffer)> callback) {
+void Snapshotter::ReadBuffer(escher::BufferPtr buffer,
+                             fit::function<void(escher::BufferPtr buffer)> callback) {
   auto reader = gpu_uploader_->AcquireReader(buffer->size());
   reader->ReadBuffer(buffer, {0, 0, buffer->size()});
   gpu_uploader_->PostReader(std::move(reader), std::move(callback));

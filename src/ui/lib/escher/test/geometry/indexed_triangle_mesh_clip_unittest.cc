@@ -12,10 +12,9 @@ using namespace escher;
 
 // Very simple test that is easy to understand.
 TEST(IndexedTriangleMeshClip, OneTriangle2d) {
-  IndexedTriangleMesh2d<nullptr_t, vec2> mesh{
-      .indices = {0, 1, 2},
-      .positions = {vec2(0, 0), vec2(1, 0), vec2(0, 3)},
-      .attributes2 = {vec2(0, 0), vec2(1, 0), vec2(0, 1)}};
+  IndexedTriangleMesh2d<nullptr_t, vec2> mesh{.indices = {0, 1, 2},
+                                              .positions = {vec2(0, 0), vec2(1, 0), vec2(0, 3)},
+                                              .attributes2 = {vec2(0, 0), vec2(1, 0), vec2(0, 1)}};
 
   // Clip two vertices, keeping one tip of the original triangle.
   std::vector<plane2> planes = {plane2(vec2(1, 0), 0.5f)};
@@ -76,10 +75,8 @@ TEST(IndexedTriangleMeshClip, OneTriangle2d) {
 //  (-2,1)    (0,1)     (2,1)
 IndexedTriangleMesh2d<vec2> GetStandardTestMesh2d() {
   return IndexedTriangleMesh2d<vec2>{
-      .positions = {vec2(-2, 1), vec2(0, 1), vec2(2, 1), vec2(-1, -1),
-                    vec2(1, -1)},
-      .attributes1 = {vec2(0, 1), vec2(0.5f, 1), vec2(1, 1), vec2(0, 0),
-                      vec2(1, 0)},
+      .positions = {vec2(-2, 1), vec2(0, 1), vec2(2, 1), vec2(-1, -1), vec2(1, -1)},
+      .attributes1 = {vec2(0, 1), vec2(0.5f, 1), vec2(1, 1), vec2(0, 0), vec2(1, 0)},
       .indices = {0, 1, 3, 3, 1, 4, 4, 1, 2}};
 }
 IndexedTriangleMesh3d<vec2> GetStandardTestMesh3d() {
@@ -138,13 +135,11 @@ void TestUnclippedMesh(const MeshT& mesh, const std::vector<PlaneT>& planes) {
 }
 
 TEST(IndexedTriangleMeshClip, Unclipped2d) {
-  TestUnclippedMesh(GetStandardTestMesh2d(),
-                    GetStandardTestMeshBoundingPlanes2d());
+  TestUnclippedMesh(GetStandardTestMesh2d(), GetStandardTestMeshBoundingPlanes2d());
 }
 
 TEST(IndexedTriangleMeshClip, Unclipped3d) {
-  TestUnclippedMesh(GetStandardTestMesh3d(),
-                    GetStandardTestMeshBoundingPlanes3d());
+  TestUnclippedMesh(GetStandardTestMesh3d(), GetStandardTestMeshBoundingPlanes3d());
 }
 
 // Verify expected behavior when insetting the top and bottom bounding planes
@@ -159,16 +154,14 @@ void TestMultipleClips(const MeshT& mesh, const std::vector<PlaneT>& planes) {
   // Clipping with an inset bottom plane results in two "case 2" clips, and one
   // "case 1" clip.  As a result, we expect one extra triangle and one extra
   // vertex.
-  auto bottom_result =
-      IndexedTriangleMeshClip(mesh, std::vector<PlaneT>{bottom_plane});
+  auto bottom_result = IndexedTriangleMeshClip(mesh, std::vector<PlaneT>{bottom_plane});
   EXPECT_EQ(4U, bottom_result.first.triangle_count());
   EXPECT_EQ(6U, bottom_result.first.vertex_count());
 
   // Clipping with an inset top plane results in two "case 1" clips, and one
   // "case 2" clip.  As a result, we expect two extra triangles and two extra
   // vertices.
-  auto top_result =
-      IndexedTriangleMeshClip(mesh, std::vector<PlaneT>{top_plane});
+  auto top_result = IndexedTriangleMeshClip(mesh, std::vector<PlaneT>{top_plane});
   EXPECT_EQ(5U, top_result.first.triangle_count());
   EXPECT_EQ(7U, top_result.first.vertex_count());
 
@@ -177,10 +170,10 @@ void TestMultipleClips(const MeshT& mesh, const std::vector<PlaneT>& planes) {
   // in two "case 1" diagonal edges being added, which are then clipped by the
   // bottom_plane.  When clipping by the bottom plane first, only one "case 1"
   // diagonal edge is added to later be clipped by the top plane.
-  auto bottom_top_result = IndexedTriangleMeshClip(
-      mesh, std::vector<PlaneT>{bottom_plane, top_plane});
-  auto top_bottom_result = IndexedTriangleMeshClip(
-      mesh, std::vector<PlaneT>{top_plane, bottom_plane});
+  auto bottom_top_result =
+      IndexedTriangleMeshClip(mesh, std::vector<PlaneT>{bottom_plane, top_plane});
+  auto top_bottom_result =
+      IndexedTriangleMeshClip(mesh, std::vector<PlaneT>{top_plane, bottom_plane});
   EXPECT_EQ(7U, bottom_top_result.first.triangle_count());
   EXPECT_EQ(9U, bottom_top_result.first.vertex_count());
   EXPECT_EQ(8U, top_bottom_result.first.triangle_count());
@@ -201,13 +194,11 @@ void TestMultipleClips(const MeshT& mesh, const std::vector<PlaneT>& planes) {
 }
 
 TEST(IndexedTriangleMeshClip, MultipleClips2d) {
-  TestMultipleClips(GetStandardTestMesh2d(),
-                    GetStandardTestMeshBoundingPlanes2d());
+  TestMultipleClips(GetStandardTestMesh2d(), GetStandardTestMeshBoundingPlanes2d());
 }
 
 TEST(IndexedTriangleMeshClip, MultipleClips3d) {
-  TestMultipleClips(GetStandardTestMesh3d(),
-                    GetStandardTestMeshBoundingPlanes3d());
+  TestMultipleClips(GetStandardTestMesh3d(), GetStandardTestMeshBoundingPlanes3d());
 }
 
 }  // namespace

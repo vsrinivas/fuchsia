@@ -23,8 +23,7 @@ namespace gfx {
 // work Scenic is doing.
 class DurationPredictor {
  public:
-  DurationPredictor(size_t window_size,
-                    zx::duration initial_prediction);
+  DurationPredictor(size_t window_size, zx::duration initial_prediction);
   ~DurationPredictor() = default;
 
   zx::duration GetPrediction() const;

@@ -34,10 +34,8 @@ WaterfallDemo::WaterfallDemo(DemoHarness* harness, int argc, char** argv)
        "shaders/model_renderer/default_position.vert",
        "shaders/model_renderer/shadow_map_generation.frag",
        "shaders/model_renderer/shadow_map_lighting.frag",
-       "shaders/model_renderer/wobble_position.vert",
-       "shaders/paper/common/use.glsl",
-       "shaders/paper/frag/main_ambient_light.frag",
-       "shaders/paper/frag/main_point_light.frag",
+       "shaders/model_renderer/wobble_position.vert", "shaders/paper/common/use.glsl",
+       "shaders/paper/frag/main_ambient_light.frag", "shaders/paper/frag/main_point_light.frag",
        "shaders/paper/vert/compute_model_space_position.vert",
        "shaders/paper/vert/compute_world_space_position.vert",
        "shaders/paper/vert/main_shadow_volume_extrude.vert",
@@ -48,11 +46,9 @@ WaterfallDemo::WaterfallDemo(DemoHarness* harness, int argc, char** argv)
   renderer_config_.debug_frame_number = true;
   renderer_config_.shadow_type = PaperRendererShadowType::kShadowVolume;
   renderer_config_.msaa_sample_count = 2;
-  renderer_config_.num_depth_buffers =
-      harness->GetVulkanSwapchain().images.size();
-  renderer_config_.depth_stencil_format =
-      escher()->device()->caps().GetMatchingDepthStencilFormat(
-          {vk::Format::eD24UnormS8Uint, vk::Format::eD32SfloatS8Uint});
+  renderer_config_.num_depth_buffers = harness->GetVulkanSwapchain().images.size();
+  renderer_config_.depth_stencil_format = escher()->device()->caps().GetMatchingDepthStencilFormat(
+      {vk::Format::eD24UnormS8Uint, vk::Format::eD32SfloatS8Uint});
 
   renderer_->SetConfig(renderer_config_);
 
@@ -62,14 +58,12 @@ WaterfallDemo::WaterfallDemo(DemoHarness* harness, int argc, char** argv)
 
 WaterfallDemo::~WaterfallDemo() {
   FXL_LOG(INFO) << "Average frame rate: " << ComputeFps();
-  FXL_LOG(INFO) << "First frame took: " << first_frame_microseconds_ / 1000.0
-                << " milliseconds";
+  FXL_LOG(INFO) << "First frame took: " << first_frame_microseconds_ / 1000.0 << " milliseconds";
 
   escher()->Cleanup();
 }
 
-void WaterfallDemo::InitializePaperScene(
-    const DemoHarness::WindowParams& window_params) {
+void WaterfallDemo::InitializePaperScene(const DemoHarness::WindowParams& window_params) {
   paper_scene_ = fxl::MakeRefCounted<PaperScene>();
 
   // Number of lights can be cycled via keyboard event.  Light positions and
@@ -77,8 +71,7 @@ void WaterfallDemo::InitializePaperScene(
   paper_scene_->point_lights.resize(1);
 
   paper_scene_->bounding_box = escher::BoundingBox(
-      vec3(0.f, 0.f, kFar),
-      vec3(window_params.width, window_params.height, kNear));
+      vec3(0.f, 0.f, kFar), vec3(window_params.width, window_params.height, kNear));
 }
 
 void WaterfallDemo::InitializeDemoScenes() {
@@ -113,22 +106,17 @@ bool WaterfallDemo::HandleKeyPress(std::string key) {
       case 'C': {
         camera_projection_mode_ = (camera_projection_mode_ + 1) % 5;
         const char* kCameraModeStrings[5] = {
-            "orthographic",
-            "perspective",
-            "tilted perspective",
-            "tilted perspective from corner",
+            "orthographic", "perspective", "tilted perspective", "tilted perspective from corner",
             "stereo",
         };
-        FXL_LOG(INFO) << "Camera projection mode: "
-                      << kCameraModeStrings[camera_projection_mode_];
+        FXL_LOG(INFO) << "Camera projection mode: " << kCameraModeStrings[camera_projection_mode_];
         return true;
       }
       // Toggle display of debug information.
       case 'D': {
         show_debug_info_ = !show_debug_info_;
         renderer_config_.debug = show_debug_info_;
-        FXL_LOG(INFO) << "WaterfallDemo "
-                      << (show_debug_info_ ? "enabled" : "disabled")
+        FXL_LOG(INFO) << "WaterfallDemo " << (show_debug_info_ ? "enabled" : "disabled")
                       << " debugging.";
         renderer_->SetConfig(renderer_config_);
         return true;
@@ -165,13 +153,11 @@ bool WaterfallDemo::HandleKeyPress(std::string key) {
         auto& shadow_type = renderer_config_.shadow_type;
         shadow_type = EnumCycle(shadow_type);
         while (!renderer_->SupportsShadowType(shadow_type)) {
-          FXL_LOG(INFO) << "WaterfallDemo skipping unsupported shadow type: "
-                        << shadow_type;
+          FXL_LOG(INFO) << "WaterfallDemo skipping unsupported shadow type: " << shadow_type;
           shadow_type = EnumCycle(shadow_type);
         }
         renderer_->SetConfig(renderer_config_);
-        FXL_LOG(INFO) << "WaterfallDemo changed shadow type: "
-                      << renderer_config_;
+        FXL_LOG(INFO) << "WaterfallDemo changed shadow type: " << renderer_config_;
         return true;
       }
       case '1':
@@ -184,8 +170,7 @@ bool WaterfallDemo::HandleKeyPress(std::string key) {
       case '8':
       case '9':
       case '0':
-        current_scene_ =
-            (demo_scenes_.size() + (key_char - '0') - 1) % demo_scenes_.size();
+        current_scene_ = (demo_scenes_.size() + (key_char - '0') - 1) % demo_scenes_.size();
         FXL_LOG(INFO) << "Current scene index: " << current_scene_;
         return true;
       default:
@@ -195,9 +180,9 @@ bool WaterfallDemo::HandleKeyPress(std::string key) {
 }
 
 // Helper function for DrawFrame().
-static std::vector<escher::Camera> GenerateCameras(
-    int camera_projection_mode, const escher::ViewingVolume& volume,
-    const escher::FramePtr& frame) {
+static std::vector<escher::Camera> GenerateCameras(int camera_projection_mode,
+                                                   const escher::ViewingVolume& volume,
+                                                   const escher::FramePtr& frame) {
   switch (camera_projection_mode) {
     // Orthographic full-screen.
     case 0: {
@@ -208,24 +193,24 @@ static std::vector<escher::Camera> GenerateCameras(
       vec3 eye(volume.width() / 2, volume.height() / 2, -10000);
       vec3 target(volume.width() / 2, volume.height() / 2, 0);
       vec3 up(0, -1, 0);
-      return {escher::Camera::NewPerspective(
-          volume, glm::lookAt(eye, target, up), glm::radians(8.f))};
+      return {
+          escher::Camera::NewPerspective(volume, glm::lookAt(eye, target, up), glm::radians(8.f))};
     }
     // Perspective from tilted viewpoint (from x-center of stage).
     case 2: {
       vec3 eye(volume.width() / 2, 6000, -2000);
       vec3 target(volume.width() / 2, volume.height() / 2, 0);
       vec3 up(0, -1, 0);
-      return {escher::Camera::NewPerspective(
-          volume, glm::lookAt(eye, target, up), glm::radians(15.f))};
+      return {
+          escher::Camera::NewPerspective(volume, glm::lookAt(eye, target, up), glm::radians(15.f))};
     } break;
     // Perspective from tilted viewpoint (from corner).
     case 3: {
       vec3 eye(volume.width() / 3, 6000, -3000);
       vec3 target(volume.width() / 2, volume.height() / 3, 0);
       vec3 up(0, -1, 0);
-      return {escher::Camera::NewPerspective(
-          volume, glm::lookAt(eye, target, up), glm::radians(15.f))};
+      return {
+          escher::Camera::NewPerspective(volume, glm::lookAt(eye, target, up), glm::radians(15.f))};
     } break;
     // Stereo/Perspective from tilted viewpoint (from corner).  This also
     // demonstrates the ability to provide the view-projection matrix in a
@@ -240,19 +225,17 @@ static std::vector<escher::Camera> GenerateCameras(
       vec3 target(volume.width() / 2, volume.height() / 2, 0);
       vec3 up(0, -1, 0);
       float fov = glm::radians(15.f);
-      auto left_camera = escher::Camera::NewPerspective(
-          volume, glm::lookAt(eye - eye_offset, target, up), fov);
-      auto right_camera = escher::Camera::NewPerspective(
-          volume, glm::lookAt(eye + eye_offset, target, up), fov);
+      auto left_camera =
+          escher::Camera::NewPerspective(volume, glm::lookAt(eye - eye_offset, target, up), fov);
+      auto right_camera =
+          escher::Camera::NewPerspective(volume, glm::lookAt(eye + eye_offset, target, up), fov);
 
       // Obtain a buffer and populate it as though it were obtained by invoking
       // PoseBufferLatchingShader.
-      auto binding = escher::NewPaperShaderUniformBinding<
-          escher::PaperShaderLatchedPoseBuffer>(frame);
-      binding.first->vp_matrix[0] =
-          left_camera.projection() * left_camera.transform();
-      binding.first->vp_matrix[1] =
-          right_camera.projection() * right_camera.transform();
+      auto binding =
+          escher::NewPaperShaderUniformBinding<escher::PaperShaderLatchedPoseBuffer>(frame);
+      binding.first->vp_matrix[0] = left_camera.projection() * left_camera.transform();
+      binding.first->vp_matrix[1] = right_camera.projection() * right_camera.transform();
       escher::BufferPtr latched_pose_buffer(binding.second.buffer);
 
       // Both cameras use the same buffer, but index into it using a different
@@ -260,10 +243,8 @@ static std::vector<escher::Camera> GenerateCameras(
       // visible difference, because PaperRenderer will compute/upload the same
       // project * transform matrix.  What would happen if you swap the kLeft
       // and kRight?
-      left_camera.SetLatchedPoseBuffer(latched_pose_buffer,
-                                       escher::CameraEye::kLeft);
-      right_camera.SetLatchedPoseBuffer(latched_pose_buffer,
-                                        escher::CameraEye::kRight);
+      left_camera.SetLatchedPoseBuffer(latched_pose_buffer, escher::CameraEye::kLeft);
+      right_camera.SetLatchedPoseBuffer(latched_pose_buffer, escher::CameraEye::kRight);
 
       left_camera.SetViewport({0.f, 0.25f, 0.5f, 0.5f});
       right_camera.SetViewport({0.5f, 0.25f, 0.5f, 0.5f});
@@ -276,8 +257,7 @@ static std::vector<escher::Camera> GenerateCameras(
   }
 }
 
-static void UpdateLighting(PaperScene* paper_scene,
-                           const escher::Stopwatch& stopwatch,
+static void UpdateLighting(PaperScene* paper_scene, const escher::Stopwatch& stopwatch,
                            PaperRendererShadowType shadow_type) {
   const size_t num_point_lights = paper_scene->num_point_lights();
   if (num_point_lights == 0 || shadow_type == PaperRendererShadowType::kNone) {
@@ -292,8 +272,7 @@ static void UpdateLighting(PaperScene* paper_scene,
   paper_scene->ambient_light.color = kAmbientLightColor;
 
   for (auto& pl : paper_scene->point_lights) {
-    pl.color =
-        (vec3(1.f, 1.f, 1.f) - kAmbientLightColor) / float(num_point_lights);
+    pl.color = (vec3(1.f, 1.f, 1.f) - kAmbientLightColor) / float(num_point_lights);
 
     // Choose a light intensity that looks good with the falloff.  If an object
     // is too close to the light it will appear washed out.
@@ -306,23 +285,19 @@ static void UpdateLighting(PaperScene* paper_scene,
   const float width = paper_scene->width();
   const float height = paper_scene->height();
   if (num_point_lights == 1) {
-    paper_scene->point_lights[0].position =
-        vec3(width * .3f, height * .3f,
-             -(800.f + 200.f * sin(stopwatch.GetElapsedSeconds() * 1.2f)));
+    paper_scene->point_lights[0].position = vec3(
+        width * .3f, height * .3f, -(800.f + 200.f * sin(stopwatch.GetElapsedSeconds() * 1.2f)));
   } else {
     FXL_DCHECK(num_point_lights == 2);
 
-    paper_scene->point_lights[0].position =
-        vec3(width * .3f, height * .3f,
-             -(800.f + 300.f * sin(stopwatch.GetElapsedSeconds() * 1.2f)));
+    paper_scene->point_lights[0].position = vec3(
+        width * .3f, height * .3f, -(800.f + 300.f * sin(stopwatch.GetElapsedSeconds() * 1.2f)));
     paper_scene->point_lights[1].position =
         vec3(width * (0.6f + 0.3f * sin(stopwatch.GetElapsedSeconds() * 0.7f)),
-             height * (0.4f + 0.2f * sin(stopwatch.GetElapsedSeconds() * 0.6f)),
-             -900.f);
+             height * (0.4f + 0.2f * sin(stopwatch.GetElapsedSeconds() * 0.6f)), -900.f);
 
     // Make the light colors subtly different.
-    vec3 color_diff =
-        vec3(.02f, -.01f, .04f) * paper_scene->point_lights[0].color;
+    vec3 color_diff = vec3(.02f, -.01f, .04f) * paper_scene->point_lights[0].color;
     paper_scene->point_lights[0].color += color_diff;
     paper_scene->point_lights[1].color -= color_diff;
   }
@@ -339,17 +314,14 @@ double WaterfallDemo::ComputeFps() {
   // on Linux the swapchain allows us to queue up many DrawFrame() calls so if
   // we quit after a short time then the FPS will be artificially high.
   auto microseconds = stopwatch_.GetElapsedMicroseconds();
-  return (frame_count_ - 2) * 1000000.0 /
-         (microseconds - first_frame_microseconds_);
+  return (frame_count_ - 2) * 1000000.0 / (microseconds - first_frame_microseconds_);
 }
 
-void WaterfallDemo::DrawFrame(const FramePtr& frame,
-                              const ImagePtr& output_image) {
+void WaterfallDemo::DrawFrame(const FramePtr& frame, const ImagePtr& output_image) {
   TRACE_DURATION("gfx", "WaterfallDemo::DrawFrame");
 
   std::vector<Camera> cameras =
-      GenerateCameras(camera_projection_mode_,
-                      ViewingVolume(paper_scene_->bounding_box), frame);
+      GenerateCameras(camera_projection_mode_, ViewingVolume(paper_scene_->bounding_box), frame);
 
   // Animate light positions and intensities.
   UpdateLighting(paper_scene_.get(), stopwatch_, renderer_config_.shadow_type);
@@ -357,8 +329,8 @@ void WaterfallDemo::DrawFrame(const FramePtr& frame,
   renderer_->BeginFrame(frame, paper_scene_, std::move(cameras), output_image);
   {
     TRACE_DURATION("gfx", "WaterfallDemo::DrawFrame[scene]");
-    demo_scenes_[current_scene_]->Update(animation_stopwatch_, frame_count(),
-                                         paper_scene_.get(), renderer_.get());
+    demo_scenes_[current_scene_]->Update(animation_stopwatch_, frame_count(), paper_scene_.get(),
+                                         renderer_.get());
   }
   renderer_->EndFrame();
 
@@ -370,8 +342,8 @@ void WaterfallDemo::DrawFrame(const FramePtr& frame,
 
     // Print out FPS and memory stats.
     FXL_LOG(INFO) << "---- Average frame rate: " << ComputeFps();
-    FXL_LOG(INFO) << "---- Total GPU memory: "
-                  << (escher()->GetNumGpuBytesAllocated() / 1024) << "kB";
+    FXL_LOG(INFO) << "---- Total GPU memory: " << (escher()->GetNumGpuBytesAllocated() / 1024)
+                  << "kB";
   } else {
     set_enable_gpu_logging(false);
   }

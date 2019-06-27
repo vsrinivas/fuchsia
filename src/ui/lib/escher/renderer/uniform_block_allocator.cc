@@ -10,14 +10,12 @@
 
 namespace escher {
 
-UniformBlockAllocator::UniformBlockAllocator(
-    impl::UniformBufferPoolWeakPtr pool)
+UniformBlockAllocator::UniformBlockAllocator(impl::UniformBufferPoolWeakPtr pool)
     : pool_(std::move(pool)), buffer_size_(pool_->buffer_size()) {
   Reset();
 }
 
-UniformAllocation UniformBlockAllocator::Allocate(size_t size,
-                                                  size_t alignment) {
+UniformAllocation UniformBlockAllocator::Allocate(size_t size, size_t alignment) {
   write_index_ = AlignedToNext(write_index_, alignment);
   if (write_index_ + size > buffer_size_) {
     buffers_.push_back(pool_->Allocate());

@@ -19,8 +19,7 @@ namespace escher {
 class ShaderProgramFactory : public Trait {
  public:
   // Return a compute program whose code is specified by |compute_shader_path|.
-  ShaderProgramPtr GetComputeProgram(std::string compute_shader_path,
-                                     ShaderVariantArgs args = {});
+  ShaderProgramPtr GetComputeProgram(std::string compute_shader_path, ShaderVariantArgs args = {});
 
   // Return a graphics program which has only vertex and fragment shader stages;
   // The fragment shader path may be empty: this is used for depth-only passes.
@@ -30,12 +29,11 @@ class ShaderProgramFactory : public Trait {
 
   // Return a graphics program containing all shader stages that a non-empty
   // path is provided for.
-  ShaderProgramPtr GetGraphicsProgram(
-      std::string vertex_shader_path,
-      std::string tessellation_control_shader_path,
-      std::string tessellation_evaluation_shader_path,
-      std::string geometry_shader_path, std::string fragment_shader_path,
-      ShaderVariantArgs args);
+  ShaderProgramPtr GetGraphicsProgram(std::string vertex_shader_path,
+                                      std::string tessellation_control_shader_path,
+                                      std::string tessellation_evaluation_shader_path,
+                                      std::string geometry_shader_path,
+                                      std::string fragment_shader_path, ShaderVariantArgs args);
 
  protected:
   virtual ~ShaderProgramFactory();
@@ -43,9 +41,8 @@ class ShaderProgramFactory : public Trait {
   // Subclasses must implement this.  The array index of each path corresponds
   // to a value in the ShaderStage enum; each non-empty path provides the source
   // code for the corresponding shader stage.
-  virtual ShaderProgramPtr GetProgram(
-      const std::string shader_paths[EnumCount<ShaderStage>()],
-      ShaderVariantArgs args) = 0;
+  virtual ShaderProgramPtr GetProgram(const std::string shader_paths[EnumCount<ShaderStage>()],
+                                      ShaderVariantArgs args) = 0;
 };
 
 }  // namespace escher

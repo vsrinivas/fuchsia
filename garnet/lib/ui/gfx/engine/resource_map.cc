@@ -7,8 +7,7 @@
 namespace scenic_impl {
 namespace gfx {
 
-ResourceMap::ResourceMap(ErrorReporter* error_reporter)
-    : error_reporter_(error_reporter) {}
+ResourceMap::ResourceMap(ErrorReporter* error_reporter) : error_reporter_(error_reporter) {}
 
 ResourceMap::~ResourceMap() {}
 
@@ -19,9 +18,8 @@ bool ResourceMap::AddResource(ResourceId id, ResourcePtr resource) {
 
   auto result = resources_.insert(std::make_pair(id, std::move(resource)));
   if (!result.second) {
-    error_reporter_->ERROR()
-        << "scenic::gfx::ResourceMap::AddResource(): resource with ID " << id
-        << " already exists.";
+    error_reporter_->ERROR() << "scenic::gfx::ResourceMap::AddResource(): resource with ID " << id
+                             << " already exists.";
     return false;
   }
   return true;
@@ -30,9 +28,8 @@ bool ResourceMap::AddResource(ResourceId id, ResourcePtr resource) {
 bool ResourceMap::RemoveResource(ResourceId id) {
   size_t erased_count = resources_.erase(id);
   if (erased_count == 0) {
-    error_reporter_->ERROR()
-        << "scenic::gfx::ResourceMap::RemoveResource(): no resource with ID "
-        << id;
+    error_reporter_->ERROR() << "scenic::gfx::ResourceMap::RemoveResource(): no resource with ID "
+                             << id;
     return false;
   }
   return true;

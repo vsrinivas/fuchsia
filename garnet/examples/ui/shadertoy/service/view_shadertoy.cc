@@ -12,8 +12,6 @@ ShadertoyStateForView::ShadertoyStateForView(App* app, zx::eventpair view_token,
   FXL_CHECK(false) << "not implemented";
 }
 
-void ShadertoyStateForView::OnSetResolution() {
-  FXL_CHECK(false) << "not implemented";
-}
+void ShadertoyStateForView::OnSetResolution() { FXL_CHECK(false) << "not implemented"; }
 
 }  // namespace shadertoy

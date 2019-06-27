@@ -40,10 +40,8 @@ void PaperRenderFuncs::MeshData::Bind(CommandBuffer* cb) const {
   cb->BindTexture(1, 1, texture);
 }
 
-void PaperRenderFuncs::RenderMesh(CommandBuffer* cb,
-                                  const RenderQueueContext* context_in,
-                                  const RenderQueueItem* items,
-                                  uint32_t instance_count) {
+void PaperRenderFuncs::RenderMesh(CommandBuffer* cb, const RenderQueueContext* context_in,
+                                  const RenderQueueItem* items, uint32_t instance_count) {
   TRACE_DURATION("gfx", "PaperRenderFuncs::RenderMesh");
   FXL_DCHECK(cb && items && instance_count > 0);
   FXL_DCHECK(context_in);
@@ -51,10 +49,9 @@ void PaperRenderFuncs::RenderMesh(CommandBuffer* cb,
   auto* mesh_data = static_cast<const MeshData*>(items[0].object_data);
   const PaperRendererDrawMode draw_mode = context->draw_mode();
 
-  uint32_t num_indices =
-      draw_mode == PaperRendererDrawMode::kShadowVolumeGeometry
-          ? mesh_data->num_shadow_volume_indices
-          : mesh_data->num_indices;
+  uint32_t num_indices = draw_mode == PaperRendererDrawMode::kShadowVolumeGeometry
+                             ? mesh_data->num_shadow_volume_indices
+                             : mesh_data->num_indices;
   if (num_indices == 0) {
     // The only way this should happen is when rendering shadow-volume geometry
     // for a non-shadow-caster.
@@ -67,17 +64,15 @@ void PaperRenderFuncs::RenderMesh(CommandBuffer* cb,
 
   // TODO(ES-158): this assumes that all meshes in this render-queue pass are
   // drawn exactly the same way.  We will need something better soon.
-  cb->SetShaderProgram(context->shader_program(),
-                       mesh_data->texture->sampler()->is_immutable()
-                           ? mesh_data->texture->sampler()
-                           : nullptr);
+  cb->SetShaderProgram(context->shader_program(), mesh_data->texture->sampler()->is_immutable()
+                                                      ? mesh_data->texture->sampler()
+                                                      : nullptr);
 
   // For each instance, set up per-instance state and draw.
   for (uint32_t i = 0; i < instance_count; ++i) {
     FXL_DCHECK(items[i].object_data == mesh_data);
 
-    const MeshDrawData* instance_data =
-        static_cast<const MeshDrawData*>(items[i].instance_data);
+    const MeshDrawData* instance_data = static_cast<const MeshDrawData*>(items[i].instance_data);
 
     if (draw_mode == PaperRendererDrawMode::kShadowVolumeGeometry &&
         (instance_data->flags & PaperDrawableFlagBits::kDisableShadowCasting)) {
@@ -86,8 +81,7 @@ void PaperRenderFuncs::RenderMesh(CommandBuffer* cb,
     }
 
     auto& b = instance_data->object_properties;
-    cb->BindUniformBuffer(b.descriptor_set_index, b.binding_index, b.buffer,
-                          b.offset, b.size);
+    cb->BindUniformBuffer(b.descriptor_set_index, b.binding_index, b.buffer, b.offset, b.size);
     cb->DrawIndexed(num_indices);
   }
 }
@@ -103,54 +97,50 @@ static PaperRenderFuncs::VertexAttributeBinding* FillVertexAttributeBindings(
         .binding_index = binding_index,
         .attribute_index = kMeshAttributeBindingLocation_Position2D,
         .format = vk::Format::eR32G32Sfloat,
-        .offset =
-            GetMeshAttributeOffset(attributes, MeshAttribute::kPosition2D)};
+        .offset = GetMeshAttributeOffset(attributes, MeshAttribute::kPosition2D)};
   }
   if (attributes & MeshAttribute::kPosition3D) {
     *binding++ = VertexAttributeBinding{
         .binding_index = binding_index,
         .attribute_index = kMeshAttributeBindingLocation_Position3D,
         .format = vk::Format::eR32G32B32Sfloat,
-        .offset =
-            GetMeshAttributeOffset(attributes, MeshAttribute::kPosition3D)};
+        .offset = GetMeshAttributeOffset(attributes, MeshAttribute::kPosition3D)};
   }
   if (attributes & MeshAttribute::kPositionOffset) {
     *binding++ = VertexAttributeBinding{
         .binding_index = binding_index,
         .attribute_index = kMeshAttributeBindingLocation_PositionOffset,
         .format = vk::Format::eR32G32Sfloat,
-        .offset =
-            GetMeshAttributeOffset(attributes, MeshAttribute::kPositionOffset)};
+        .offset = GetMeshAttributeOffset(attributes, MeshAttribute::kPositionOffset)};
   }
   if (attributes & MeshAttribute::kUV) {
-    *binding++ = VertexAttributeBinding{
-        .binding_index = binding_index,
-        .attribute_index = kMeshAttributeBindingLocation_UV,
-        .format = vk::Format::eR32G32Sfloat,
-        .offset = GetMeshAttributeOffset(attributes, MeshAttribute::kUV)};
+    *binding++ =
+        VertexAttributeBinding{.binding_index = binding_index,
+                               .attribute_index = kMeshAttributeBindingLocation_UV,
+                               .format = vk::Format::eR32G32Sfloat,
+                               .offset = GetMeshAttributeOffset(attributes, MeshAttribute::kUV)};
   }
   if (attributes & MeshAttribute::kPerimeterPos) {
     *binding++ = VertexAttributeBinding{
         .binding_index = binding_index,
         .attribute_index = kMeshAttributeBindingLocation_PerimeterPos,
         .format = vk::Format::eR32G32Sfloat,
-        .offset =
-            GetMeshAttributeOffset(attributes, MeshAttribute::kPerimeterPos)};
+        .offset = GetMeshAttributeOffset(attributes, MeshAttribute::kPerimeterPos)};
   }
   if (attributes & MeshAttribute::kBlendWeight1) {
     *binding++ = VertexAttributeBinding{
         .binding_index = binding_index,
         .attribute_index = kMeshAttributeBindingLocation_BlendWeight,
         .format = vk::Format::eR32Sfloat,
-        .offset =
-            GetMeshAttributeOffset(attributes, MeshAttribute::kBlendWeight1)};
+        .offset = GetMeshAttributeOffset(attributes, MeshAttribute::kBlendWeight1)};
   }
   return binding;
 }
 
-PaperRenderFuncs::MeshData* PaperRenderFuncs::NewMeshData(
-    const FramePtr& frame, Mesh* mesh, const TexturePtr& texture,
-    uint32_t num_indices, uint32_t num_shadow_volume_indices) {
+PaperRenderFuncs::MeshData* PaperRenderFuncs::NewMeshData(const FramePtr& frame, Mesh* mesh,
+                                                          const TexturePtr& texture,
+                                                          uint32_t num_indices,
+                                                          uint32_t num_shadow_volume_indices) {
   TRACE_DURATION("gfx", "PaperRenderFuncs::NewMeshData");
   FXL_DCHECK(mesh);
   FXL_DCHECK(texture);
@@ -164,8 +154,7 @@ PaperRenderFuncs::MeshData* PaperRenderFuncs::NewMeshData(
   // single wait semaphore from PaperRenderer's per-frame BatchGpuUploader.
   // Once this is done, should probably DCHECK here that none of the buffers
   // have wait semaphores.
-  mesh->TransferWaitSemaphores(frame->command_buffer(),
-                               vk::PipelineStageFlagBits::eVertexInput);
+  mesh->TransferWaitSemaphores(frame->command_buffer(), vk::PipelineStageFlagBits::eVertexInput);
 
   auto* obj = frame->Allocate<MeshData>();
 
@@ -177,8 +166,7 @@ PaperRenderFuncs::MeshData* PaperRenderFuncs::NewMeshData(
 
   // Set up vertex buffer bindings.
   obj->vertex_binding_count = mesh_spec.vertex_buffer_count();
-  obj->vertex_bindings =
-      frame->AllocateMany<VertexBinding>(obj->vertex_binding_count);
+  obj->vertex_bindings = frame->AllocateMany<VertexBinding>(obj->vertex_binding_count);
 
   {
     uint32_t binding_count = 0;
@@ -200,20 +188,17 @@ PaperRenderFuncs::MeshData* PaperRenderFuncs::NewMeshData(
 
   // Set up vertex attribute bindings.
   obj->vertex_attribute_count = mesh_spec.total_attribute_count();
-  obj->vertex_attributes =
-      frame->AllocateMany<VertexAttributeBinding>(obj->vertex_attribute_count);
+  obj->vertex_attributes = frame->AllocateMany<VertexAttributeBinding>(obj->vertex_attribute_count);
   {
     VertexAttributeBinding* current = obj->vertex_attributes;
     for (uint32_t i = 0; i < VulkanLimits::kNumVertexBuffers; ++i) {
       if (mesh_spec.attribute_count(i) > 0) {
-        current =
-            FillVertexAttributeBindings(current, i, mesh_spec.attributes[i]);
+        current = FillVertexAttributeBindings(current, i, mesh_spec.attributes[i]);
       }
     }
 
     // Sanity check that we filled in the correct number of attributes.
-    FXL_DCHECK(current ==
-               (obj->vertex_attributes + obj->vertex_attribute_count));
+    FXL_DCHECK(current == (obj->vertex_attributes + obj->vertex_attribute_count));
   }
 
   obj->uniform_binding_count = 0;
@@ -222,13 +207,13 @@ PaperRenderFuncs::MeshData* PaperRenderFuncs::NewMeshData(
   return obj;
 }
 
-PaperRenderFuncs::MeshDrawData* PaperRenderFuncs::NewMeshDrawData(
-    const FramePtr& frame, const mat4& transform, const vec4& color,
-    PaperDrawableFlags flags) {
+PaperRenderFuncs::MeshDrawData* PaperRenderFuncs::NewMeshDrawData(const FramePtr& frame,
+                                                                  const mat4& transform,
+                                                                  const vec4& color,
+                                                                  PaperDrawableFlags flags) {
   MeshDrawData* draw_data = frame->Allocate<MeshDrawData>();
 
-  auto writable_binding =
-      NewPaperShaderUniformBinding<PaperShaderMeshInstance>(frame);
+  auto writable_binding = NewPaperShaderUniformBinding<PaperShaderMeshInstance>(frame);
   writable_binding.first->model_transform = transform;
   writable_binding.first->color = color;
   // TODO(ES-152): populate field for vertex-shader clip-planes.

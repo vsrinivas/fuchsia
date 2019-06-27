@@ -32,8 +32,8 @@ class GpuMemSlab final : public GpuMem {
   // NaiveGpuAllocator::AllocateMemory() and GpuMem::AdoptMemory.
   friend class ::escher::NaiveGpuAllocator;
   friend class ::escher::GpuMem;
-  GpuMemSlab(vk::Device device, vk::DeviceMemory base, vk::DeviceSize size,
-             bool needs_mapped_ptr, NaiveGpuAllocator* allocator);
+  GpuMemSlab(vk::Device device, vk::DeviceMemory base, vk::DeviceSize size, bool needs_mapped_ptr,
+             NaiveGpuAllocator* allocator);
 
   vk::Device device_;
   NaiveGpuAllocator* allocator_;

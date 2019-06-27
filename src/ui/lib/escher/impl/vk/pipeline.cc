@@ -7,12 +7,9 @@
 namespace escher {
 namespace impl {
 
-Pipeline::Pipeline(vk::Device device, vk::Pipeline pipeline,
-                   PipelineLayoutPtr layout, PipelineSpec spec)
-    : device_(device),
-      pipeline_(pipeline),
-      layout_(std::move(layout)),
-      spec_(std::move(spec)) {
+Pipeline::Pipeline(vk::Device device, vk::Pipeline pipeline, PipelineLayoutPtr layout,
+                   PipelineSpec spec)
+    : device_(device), pipeline_(pipeline), layout_(std::move(layout)), spec_(std::move(spec)) {
   FXL_DCHECK(pipeline_);
   FXL_DCHECK(layout_);
 }

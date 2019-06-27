@@ -18,8 +18,7 @@ class FakeSwapchain : public Swapchain {
  public:
   ~FakeSwapchain() override {}
   // Fake DrawAndPresentFrame always returns draw as successful.
-  bool DrawAndPresentFrame(const FrameTimingsPtr& frame,
-                           const HardwareLayerAssignment& hla,
+  bool DrawAndPresentFrame(const FrameTimingsPtr& frame, const HardwareLayerAssignment& hla,
                            DrawCallback draw_callback) override {
     return true;
   }

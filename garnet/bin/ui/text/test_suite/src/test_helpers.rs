@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use text_common::text_field_state::TextFieldState;
 use failure::{bail, err_msg, Error, ResultExt};
 use fidl_fuchsia_ui_text as txt;
 use fuchsia_async::TimeoutExt;
 use futures::prelude::*;
 use std::collections::HashSet;
 use std::convert::TryInto;
+use text_common::text_field_state::TextFieldState;
 
 pub struct TextFieldWrapper {
     proxy: txt::TextFieldProxy,
@@ -264,13 +264,11 @@ mod test {
             .into_stream_and_control_handle()
             .expect("Should have created stream and control handle");
         control_handle.send_on_update(default_state(0).into()).expect("Should have sent update");
-        fuchsia_async::spawn(
-            async {
-                let mut wrapper = await!(TextFieldWrapper::new(proxy))
-                    .expect("Should have created text field wrapper");
-                await!(wrapper.simple_insert("meow!")).expect("Should have inserted successfully");
-            },
-        );
+        fuchsia_async::spawn(async {
+            let mut wrapper = await!(TextFieldWrapper::new(proxy))
+                .expect("Should have created text field wrapper");
+            await!(wrapper.simple_insert("meow!")).expect("Should have inserted successfully");
+        });
         let (revision, _ch) = await!(stream.try_next())
             .expect("Waiting for message failed")
             .expect("Should have sent message")

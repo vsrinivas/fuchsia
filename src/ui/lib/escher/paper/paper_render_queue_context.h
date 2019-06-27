@@ -29,9 +29,7 @@ class PaperRenderQueueContext final : public RenderQueueContext {
   ~PaperRenderQueueContext();
 
   PaperRendererDrawMode draw_mode() const { return draw_mode_; }
-  void set_draw_mode(PaperRendererDrawMode draw_mode) {
-    draw_mode_ = draw_mode;
-  }
+  void set_draw_mode(PaperRendererDrawMode draw_mode) { draw_mode_ = draw_mode; }
 
   // TODO(ES-158): Providing the shader-program to the render-func via the
   // context works fine for now, but we will need a new approach.

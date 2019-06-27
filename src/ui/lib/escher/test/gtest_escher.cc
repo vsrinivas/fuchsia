@@ -24,21 +24,17 @@ void SetUpEscher() {
     ASSERT_EQ(g_escher.get(), nullptr);
 
     VulkanInstance::Params instance_params(
-        {{"VK_LAYER_LUNARG_standard_validation"},
-         {VK_EXT_DEBUG_REPORT_EXTENSION_NAME},
-         false});
+        {{"VK_LAYER_LUNARG_standard_validation"}, {VK_EXT_DEBUG_REPORT_EXTENSION_NAME}, false});
 
     VulkanDeviceQueues::Params device_params({{}, {}, vk::SurfaceKHR()});
 
 #ifdef OS_FUCHSIA
-    device_params.required_extension_names.insert(
-        VK_FUCHSIA_EXTERNAL_SEMAPHORE_EXTENSION_NAME);
+    device_params.required_extension_names.insert(VK_FUCHSIA_EXTERNAL_SEMAPHORE_EXTENSION_NAME);
 #endif
 
     auto vulkan_instance = VulkanInstance::New(instance_params);
 
-    auto vulkan_device =
-        VulkanDeviceQueues::New(vulkan_instance, device_params);
+    auto vulkan_device = VulkanDeviceQueues::New(vulkan_instance, device_params);
 
     g_escher = std::make_unique<Escher>(vulkan_device);
   }

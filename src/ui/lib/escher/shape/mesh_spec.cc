@@ -41,18 +41,14 @@ uint32_t MeshSpec::attribute_count(uint32_t vertex_buffer_index) const {
   return CountOnes(uint32_t(attributes[vertex_buffer_index]));
 }
 
-uint32_t MeshSpec::total_attribute_count() const {
-  return CountOnes(uint32_t(all_attributes()));
-}
+uint32_t MeshSpec::total_attribute_count() const { return CountOnes(uint32_t(all_attributes())); }
 
-uint32_t MeshSpec::attribute_offset(uint32_t vertex_buffer_index,
-                                    MeshAttribute flag) const {
+uint32_t MeshSpec::attribute_offset(uint32_t vertex_buffer_index, MeshAttribute flag) const {
   FXL_DCHECK(vertex_buffer_index < VulkanLimits::kNumVertexBuffers);
   return GetMeshAttributeOffset(attributes[vertex_buffer_index], flag);
 }
 
-uint32_t GetMeshAttributeOffset(const MeshAttributes& attrs,
-                                MeshAttribute attr) {
+uint32_t GetMeshAttributeOffset(const MeshAttributes& attrs, MeshAttribute attr) {
   FXL_DCHECK(attrs & attr || attr == MeshAttribute::kStride);
   uint32_t offset = 0;
 
@@ -96,14 +92,12 @@ uint32_t GetMeshAttributeOffset(const MeshAttributes& attrs,
   return offset;
 }
 
-bool MeshSpec::has_attribute(uint32_t vertex_buffer_index,
-                             MeshAttribute attr) const {
+bool MeshSpec::has_attribute(uint32_t vertex_buffer_index, MeshAttribute attr) const {
   FXL_DCHECK(vertex_buffer_index < VulkanLimits::kNumVertexBuffers);
   return bool(attributes[vertex_buffer_index] & attr);
 }
 
-bool MeshSpec::has_attributes(uint32_t vertex_buffer_index,
-                              MeshAttributes attrs) const {
+bool MeshSpec::has_attributes(uint32_t vertex_buffer_index, MeshAttributes attrs) const {
   FXL_DCHECK(vertex_buffer_index < VulkanLimits::kNumVertexBuffers);
   return (attributes[vertex_buffer_index] & attrs) == attrs;
 }

@@ -22,8 +22,7 @@ class RoundedRectFactory : private ResourceRecycler {
                          BatchGpuUploader* gpu_uploader);
 
  private:
-  BufferPtr GetIndexBuffer(const RoundedRectSpec& spec,
-                           const MeshSpec& mesh_spec,
+  BufferPtr GetIndexBuffer(const RoundedRectSpec& spec, const MeshSpec& mesh_spec,
                            BatchGpuUploader* gpu_uploader);
 
   BufferFactoryAdapter buffer_factory_;

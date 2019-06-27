@@ -10,8 +10,8 @@
 
 #include "garnet/lib/ui/scenic/util/error_reporter.h"
 #include "gtest/gtest.h"
-#include "src/lib/fxl/logging.h"
 #include "lib/gtest/test_loop_fixture.h"
+#include "src/lib/fxl/logging.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -27,8 +27,7 @@ class TestErrorReporter : public ErrorReporter {
 
  private:
   // |ErrorReporter|
-  void ReportError(fxl::LogSeverity severity,
-                   std::string error_string) override;
+  void ReportError(fxl::LogSeverity severity, std::string error_string) override;
 
   std::vector<std::string> reported_errors_;
 };

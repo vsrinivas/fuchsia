@@ -23,16 +23,13 @@ VK_TEST(Frame, CreateDestroyFrame) {
 VK_TEST(Frame, ValidCommandBufferTypes) {
   auto escher = test::GetEscher()->GetWeakPtr();
 
-  auto graphics_frame =
-      escher->NewFrame("test_frame", 0, false, CommandBuffer::Type::kGraphics);
+  auto graphics_frame = escher->NewFrame("test_frame", 0, false, CommandBuffer::Type::kGraphics);
   EXPECT_EQ(CommandBuffer::Type::kGraphics, graphics_frame->cmds()->type());
 
-  auto compute_frame =
-      escher->NewFrame("test_frame", 0, false, CommandBuffer::Type::kCompute);
+  auto compute_frame = escher->NewFrame("test_frame", 0, false, CommandBuffer::Type::kCompute);
   EXPECT_EQ(CommandBuffer::Type::kCompute, compute_frame->cmds()->type());
 
-  auto transfer_frame =
-      escher->NewFrame("test_frame", 0, false, CommandBuffer::Type::kTransfer);
+  auto transfer_frame = escher->NewFrame("test_frame", 0, false, CommandBuffer::Type::kTransfer);
   EXPECT_EQ(CommandBuffer::Type::kTransfer, transfer_frame->cmds()->type());
 
   // End frames to clean up properly.
@@ -45,25 +42,20 @@ VK_TEST(Frame, InvalidCommandBufferType) {
   auto escher = test::GetEscher()->GetWeakPtr();
 
   EXPECT_DEATH_IF_SUPPORTED(
-      escher->NewFrame("test_frame", 0, false, CommandBuffer::Type::kEnumCount),
-      "");
+      escher->NewFrame("test_frame", 0, false, CommandBuffer::Type::kEnumCount), "");
 }
 
 VK_TEST(Frame, SubmitPartialFrameCreatesCleanCommandBuffer) {
   auto escher = test::GetEscher()->GetWeakPtr();
-  auto frame =
-      escher->NewFrame("test_frame", 0, false, CommandBuffer::Type::kTransfer);
+  auto frame = escher->NewFrame("test_frame", 0, false, CommandBuffer::Type::kTransfer);
   EXPECT_EQ(CommandBuffer::Type::kTransfer, frame->cmds()->type());
-  uint64_t command_buffer_sequence_number =
-      frame->command_buffer_sequence_number();
+  uint64_t command_buffer_sequence_number = frame->command_buffer_sequence_number();
 
   frame->SubmitPartialFrame(SemaphorePtr());
 
   EXPECT_EQ(CommandBuffer::Type::kTransfer, frame->cmds()->type());
-  EXPECT_NE(command_buffer_sequence_number,
-            frame->command_buffer_sequence_number());
-  EXPECT_EQ(frame->command_buffer_sequence_number(),
-            frame->command_buffer()->sequence_number());
+  EXPECT_NE(command_buffer_sequence_number, frame->command_buffer_sequence_number());
+  EXPECT_EQ(frame->command_buffer_sequence_number(), frame->command_buffer()->sequence_number());
   frame->EndFrame(SemaphorePtr(), [] {});
 }
 

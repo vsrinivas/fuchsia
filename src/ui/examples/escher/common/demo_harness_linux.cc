@@ -22,12 +22,10 @@ static bool g_touching = false;
 
 // Helper for DemoHarness::InitWindowSystem().
 static void DemoGlfwErrorCallback(int err_code, const char* err_desc) {
-  FXL_LOG(WARNING) << "GLFW ERROR: " << err_code << " " << err_desc
-                   << std::endl;
+  FXL_LOG(WARNING) << "GLFW ERROR: " << err_code << " " << err_desc << std::endl;
 }
 
-static void DemoGlfwKeyCallback(GLFWwindow* window, int key, int scancode,
-                                int action, int mods) {
+static void DemoGlfwKeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
   auto demo = g_harness->GetRunningDemo();
   if (!demo)
     return;
@@ -95,8 +93,7 @@ static void DemoGlfwKeyCallback(GLFWwindow* window, int key, int scancode,
   }
 }
 
-static void DemoGlfwCursorPosCallback(GLFWwindow* window, double x_pos,
-                                      double y_pos) {
+static void DemoGlfwCursorPosCallback(GLFWwindow* window, double x_pos, double y_pos) {
   g_x_pos = x_pos;
   g_y_pos = y_pos;
   if (!g_touching) {
@@ -110,8 +107,7 @@ static void DemoGlfwCursorPosCallback(GLFWwindow* window, double x_pos,
   }
 }
 
-static void DemoGlfwMouseButtonCallback(GLFWwindow* window, int button,
-                                        int action, int mods) {
+static void DemoGlfwMouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
   if (button != GLFW_MOUSE_BUTTON_1) {
     // We only handle the primary mouse button.
     return;
@@ -131,16 +127,14 @@ static void DemoGlfwMouseButtonCallback(GLFWwindow* window, int button,
 }
 
 // When running on Linux, New() instantiates a DemoHarnessLinux.
-std::unique_ptr<DemoHarness> DemoHarness::New(
-    DemoHarness::WindowParams window_params,
-    DemoHarness::InstanceParams instance_params) {
+std::unique_ptr<DemoHarness> DemoHarness::New(DemoHarness::WindowParams window_params,
+                                              DemoHarness::InstanceParams instance_params) {
   auto harness = new DemoHarnessLinux(window_params);
   harness->Init(std::move(instance_params));
   return std::unique_ptr<DemoHarness>(harness);
 }
 
-DemoHarnessLinux::DemoHarnessLinux(WindowParams window_params)
-    : DemoHarness(window_params) {
+DemoHarnessLinux::DemoHarnessLinux(WindowParams window_params) : DemoHarness(window_params) {
   filesystem_ = escher::HackFilesystem::New();
 }
 
@@ -152,16 +146,14 @@ void DemoHarnessLinux::InitWindowSystem() {
   FXL_CHECK(glfwInit());
 }
 
-vk::SurfaceKHR DemoHarnessLinux::CreateWindowAndSurface(
-    const WindowParams& params) {
+vk::SurfaceKHR DemoHarnessLinux::CreateWindowAndSurface(const WindowParams& params) {
   FXL_CHECK(!g_window);
 
   glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
-  GLFWmonitor* monitor =
-      params.use_fullscreen ? glfwGetPrimaryMonitor() : nullptr;
-  g_window = glfwCreateWindow(params.width, params.height,
-                              params.window_name.c_str(), monitor, NULL);
+  GLFWmonitor* monitor = params.use_fullscreen ? glfwGetPrimaryMonitor() : nullptr;
+  g_window =
+      glfwCreateWindow(params.width, params.height, params.window_name.c_str(), monitor, NULL);
   FXL_CHECK(g_window);
 
   VkSurfaceKHR surface;
@@ -175,19 +167,16 @@ vk::SurfaceKHR DemoHarnessLinux::CreateWindowAndSurface(
   return surface;
 }
 
-void DemoHarnessLinux::AppendPlatformSpecificInstanceExtensionNames(
-    InstanceParams* params) {
+void DemoHarnessLinux::AppendPlatformSpecificInstanceExtensionNames(InstanceParams* params) {
   // Get names of extensions required by GLFW.
   uint32_t extensions_count;
-  const char** extensions =
-      glfwGetRequiredInstanceExtensions(&extensions_count);
+  const char** extensions = glfwGetRequiredInstanceExtensions(&extensions_count);
   for (uint32_t i = 0; i < extensions_count; ++i) {
     params->extension_names.insert(extensions[i]);
   }
 }
 
-void DemoHarnessLinux::AppendPlatformSpecificDeviceExtensionNames(
-    std::set<std::string>* names) {}
+void DemoHarnessLinux::AppendPlatformSpecificDeviceExtensionNames(std::set<std::string>* names) {}
 
 void DemoHarnessLinux::ShutdownWindowSystem() {
   FXL_CHECK(g_harness);

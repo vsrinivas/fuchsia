@@ -15,8 +15,7 @@ using ::fuchsia::math::PointF;
 // Returns a pair of points, {ray_origin, ray_direction}, in that order.
 // The ray is constructed to point directly into the scene at the
 // provided device coordinate.
-std::pair<Point3F, Point3F> DefaultRayForHitTestingScreenPoint(
-    const PointF& point) {
+std::pair<Point3F, Point3F> DefaultRayForHitTestingScreenPoint(const PointF& point) {
   Point3F origin;
   origin.x = point.x;
   origin.y = point.y;
@@ -41,18 +40,15 @@ std::pair<Point3F, Point3F> DefaultRayForHitTestingScreenPoint(
 // |ray_direction| is the direction of the ray in the device coordinate space.
 // |hit| is the view hit representation returned by Scenic hit-testing.
 // TODO(SCN-1124): This logic should move inside Scenic.
-fuchsia::math::PointF TransformPointerEvent(const Point3F& ray_origin,
-                                            const Point3F& ray_direction,
+fuchsia::math::PointF TransformPointerEvent(const Point3F& ray_origin, const Point3F& ray_direction,
                                             fuchsia::ui::gfx::Hit hit) {
-  escher::mat4 hit_node_to_device_transform =
-      scenic_impl::gfx::Unwrap(hit.inverse_transform);
+  escher::mat4 hit_node_to_device_transform = scenic_impl::gfx::Unwrap(hit.inverse_transform);
   escher::ray4 ray{{ray_origin.x, ray_origin.y, ray_origin.z, 1.f},
                    {ray_direction.x, ray_direction.y, ray_direction.z, 0.f}};
-  escher::ray4 transformed_ray =
-      glm::inverse(hit_node_to_device_transform) * ray;
+  escher::ray4 transformed_ray = glm::inverse(hit_node_to_device_transform) * ray;
 
-  escher::vec4 hit_point = escher::homogenize(
-      transformed_ray.origin + hit.distance * transformed_ray.direction);
+  escher::vec4 hit_point =
+      escher::homogenize(transformed_ray.origin + hit.distance * transformed_ray.direction);
 
   PointF point;
   point.x = hit_point[0];
@@ -60,15 +56,13 @@ fuchsia::math::PointF TransformPointerEvent(const Point3F& ray_origin,
   return point;
 }
 
-void ManagerImpl::AddBinding(
-    fidl::InterfaceRequest<fuchsia::accessibility::Manager> request) {
+void ManagerImpl::AddBinding(fidl::InterfaceRequest<fuchsia::accessibility::Manager> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 
-void ManagerImpl::GetHitAccessibilityNode(
-    fuchsia::ui::viewsv1::ViewTreeToken token,
-    fuchsia::ui::input::PointerEvent input,
-    GetHitAccessibilityNodeCallback callback) {
+void ManagerImpl::GetHitAccessibilityNode(fuchsia::ui::viewsv1::ViewTreeToken token,
+                                          fuchsia::ui::input::PointerEvent input,
+                                          GetHitAccessibilityNodeCallback callback) {
   // TODO(SCN-1124): wire hit tests through scenic a11y component
 }
 
@@ -76,8 +70,7 @@ void ManagerImpl::SetAccessibilityFocus(int32_t view_id, int32_t node_id) {
   // TODO(MI4-1736): implement focus change with KOID-based semantic tree
 }
 
-void ManagerImpl::PerformAccessibilityAction(
-    fuchsia::accessibility::semantics::Action action) {
+void ManagerImpl::PerformAccessibilityAction(fuchsia::accessibility::semantics::Action action) {
   // TODO(MI4-1736): implement action with KOID-based semantic tree
 }
 

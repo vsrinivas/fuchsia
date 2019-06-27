@@ -12,8 +12,7 @@ namespace escher {
 // Generate a quaternion that will rotate between two unnormalized vectors, i.e.
 // it will transform |from| to be parallel to |to|.  Store the output quaternion
 // in |rotation|.
-void RotationBetweenVectors(const glm::vec3& from, const glm::vec3& to,
-                            glm::quat* rotation);
+void RotationBetweenVectors(const glm::vec3& from, const glm::vec3& to, glm::quat* rotation);
 
 // Generate a matrix that will rotate between two unnormalized vectors, i.e.
 // it will transform |from| to be parallel to |to|.  Store the output matrix

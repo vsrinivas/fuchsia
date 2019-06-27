@@ -7,6 +7,7 @@
 
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <hid/usages.h>
+
 #include <tuple>
 
 namespace root_presenter {

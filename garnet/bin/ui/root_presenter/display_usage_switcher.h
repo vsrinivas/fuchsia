@@ -7,10 +7,10 @@
 
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
-#include "src/lib/fxl/macros.h"
-#include "lib/ui/scenic/cpp/resources.h"
 
 #include "garnet/bin/ui/root_presenter/displays/display_metrics.h"
+#include "lib/ui/scenic/cpp/resources.h"
+#include "src/lib/fxl/macros.h"
 
 namespace root_presenter {
 
@@ -30,8 +30,7 @@ class DisplayUsageSwitcher {
   // |presenter| is the root presenter.
   //
   // Returns true if the scene should be invalidated.
-  bool OnEvent(const fuchsia::ui::input::InputEvent& event,
-               Presentation* presenter);
+  bool OnEvent(const fuchsia::ui::input::InputEvent& event, Presentation* presenter);
 
  private:
   uint32_t current_display_usage_index_ = 0;

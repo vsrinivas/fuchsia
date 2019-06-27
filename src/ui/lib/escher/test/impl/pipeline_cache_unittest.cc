@@ -59,8 +59,7 @@ void TestPipelineFactory::ServiceOneRequest() {
   reinterpret_cast<uint32_t*>(&fake_pipeline)[0] = 1U;
 
   auto layout = fxl::MakeRefCounted<PipelineLayout>(nullptr, fake_layout);
-  auto pipeline = fxl::MakeRefCounted<Pipeline>(nullptr, fake_pipeline, layout,
-                                                request.spec);
+  auto pipeline = fxl::MakeRefCounted<Pipeline>(nullptr, fake_pipeline, layout, request.spec);
   request.promise.set_value(pipeline);
 }
 

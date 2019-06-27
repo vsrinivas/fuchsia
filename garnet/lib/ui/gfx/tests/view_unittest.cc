@@ -21,13 +21,10 @@ namespace gfx {
 
 namespace test {
 
-void VerifyViewState(const fuchsia::ui::scenic::Event& event,
-                     bool is_rendering_expected) {
+void VerifyViewState(const fuchsia::ui::scenic::Event& event, bool is_rendering_expected) {
   EXPECT_EQ(fuchsia::ui::scenic::Event::Tag::kGfx, event.Which());
-  EXPECT_EQ(::fuchsia::ui::gfx::Event::Tag::kViewStateChanged,
-            event.gfx().Which());
-  const ::fuchsia::ui::gfx::ViewState& view_state =
-      event.gfx().view_state_changed().state;
+  EXPECT_EQ(::fuchsia::ui::gfx::Event::Tag::kViewStateChanged, event.gfx().Which());
+  const ::fuchsia::ui::gfx::ViewState& view_state = event.gfx().view_state_changed().state;
   EXPECT_EQ(is_rendering_expected, view_state.is_rendering);
 }
 
@@ -57,20 +54,17 @@ class ViewTest : public SessionTest {
 
 // TODO(ES-179): Only seems to die in debug builds.
 TEST_F(ViewTest, DISABLED_CreateViewWithBadTokenDies) {
-  EXPECT_DEATH_IF_SUPPORTED(
-      Apply(scenic::NewCreateViewCmd(1, fuchsia::ui::views::ViewToken(), "")),
-      "");
-  EXPECT_DEATH_IF_SUPPORTED(Apply(scenic::NewCreateViewHolderCmd(
-                                2, fuchsia::ui::views::ViewHolderToken(), "")),
+  EXPECT_DEATH_IF_SUPPORTED(Apply(scenic::NewCreateViewCmd(1, fuchsia::ui::views::ViewToken(), "")),
                             "");
+  EXPECT_DEATH_IF_SUPPORTED(
+      Apply(scenic::NewCreateViewHolderCmd(2, fuchsia::ui::views::ViewHolderToken(), "")), "");
 }
 
 TEST_F(ViewTest, ChildrenCanBeAddedToViewWithoutViewHolder) {
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
   const ResourceId view_id = 1;
-  EXPECT_TRUE(
-      Apply(scenic::NewCreateViewCmd(view_id, std::move(view_token), "Test")));
+  EXPECT_TRUE(Apply(scenic::NewCreateViewCmd(view_id, std::move(view_token), "Test")));
   EXPECT_ERROR_COUNT(0);
 
   const ResourceId node1_id = 2;
@@ -97,8 +91,8 @@ TEST_F(ViewTest, ExportsViewHolderViaCmd) {
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
   const ResourceId view_holder_id = 1;
-  EXPECT_TRUE(Apply(scenic::NewCreateViewHolderCmd(
-      view_holder_id, std::move(view_holder_token), "Test")));
+  EXPECT_TRUE(
+      Apply(scenic::NewCreateViewHolderCmd(view_holder_id, std::move(view_holder_token), "Test")));
   EXPECT_ERROR_COUNT(0);
 
   auto view_holder = FindResource<ViewHolder>(view_holder_id);
@@ -115,8 +109,7 @@ TEST_F(ViewTest, ImportsViewViaCmd) {
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
   const ResourceId view_id = 1;
-  EXPECT_TRUE(
-      Apply(scenic::NewCreateViewCmd(view_id, std::move(view_token), "Test")));
+  EXPECT_TRUE(Apply(scenic::NewCreateViewCmd(view_id, std::move(view_token), "Test")));
   EXPECT_ERROR_COUNT(0);
 
   auto view = FindResource<View>(view_id);
@@ -133,8 +126,8 @@ TEST_F(ViewTest, PairedViewAndHolderAreLinked) {
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
   const ResourceId view_holder_id = 1u;
-  EXPECT_TRUE(Apply(scenic::NewCreateViewHolderCmd(
-      view_holder_id, std::move(view_holder_token), "Holder [Test]")));
+  EXPECT_TRUE(Apply(scenic::NewCreateViewHolderCmd(view_holder_id, std::move(view_holder_token),
+                                                   "Holder [Test]")));
   EXPECT_ERROR_COUNT(0);
 
   auto view_holder = FindResource<ViewHolder>(view_holder_id);
@@ -147,8 +140,7 @@ TEST_F(ViewTest, PairedViewAndHolderAreLinked) {
   EXPECT_EQ(0u, view_linker_->UnresolvedImportCount());
 
   const ResourceId view_id = 2u;
-  EXPECT_TRUE(
-      Apply(scenic::NewCreateViewCmd(view_id, std::move(view_token), "Test")));
+  EXPECT_TRUE(Apply(scenic::NewCreateViewCmd(view_id, std::move(view_token), "Test")));
   EXPECT_ERROR_COUNT(0);
 
   auto view = FindResource<View>(view_id);
@@ -163,8 +155,7 @@ TEST_F(ViewTest, PairedViewAndHolderAreLinked) {
 
   EXPECT_NE(0u, events().size());
   const fuchsia::ui::scenic::Event& event = events()[0];
-  EXPECT_EQ(::fuchsia::ui::gfx::Event::Tag::kViewConnected,
-            event.gfx().Which());
+  EXPECT_EQ(::fuchsia::ui::gfx::Event::Tag::kViewConnected, event.gfx().Which());
 }
 
 TEST_F(ViewTest, ExportViewHolderWithDeadHandleFails) {
@@ -176,8 +167,8 @@ TEST_F(ViewTest, ExportViewHolderWithDeadHandleFails) {
   }
 
   const ResourceId view_holder_id = 1;
-  EXPECT_FALSE(Apply(scenic::NewCreateViewHolderCmd(
-      view_holder_id, std::move(view_holder_token_out), "Test")));
+  EXPECT_FALSE(Apply(
+      scenic::NewCreateViewHolderCmd(view_holder_id, std::move(view_holder_token_out), "Test")));
   EXPECT_ERROR_COUNT(1);  // Dead handles cause a session error.
 
   auto view_holder = FindResource<ViewHolder>(view_holder_id);
@@ -193,8 +184,8 @@ TEST_F(ViewTest, ViewHolderDestroyedBeforeView) {
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
   const ResourceId view_holder_id = 1u;
-  Apply(scenic::NewCreateViewHolderCmd(
-      view_holder_id, std::move(view_holder_token), "Holder [Test]"));
+  Apply(scenic::NewCreateViewHolderCmd(view_holder_id, std::move(view_holder_token),
+                                       "Holder [Test]"));
   const ResourceId view_id = 2u;
   Apply(scenic::NewCreateViewCmd(view_id, std::move(view_token), "Test"));
   uint32_t next_event_id = events().size();
@@ -204,16 +195,15 @@ TEST_F(ViewTest, ViewHolderDestroyedBeforeView) {
 
   EXPECT_ERROR_COUNT(0);
   const fuchsia::ui::scenic::Event& event = events()[next_event_id];
-  EXPECT_EQ(fuchsia::ui::gfx::Event::Tag::kViewHolderDisconnected,
-            event.gfx().Which());
+  EXPECT_EQ(fuchsia::ui::gfx::Event::Tag::kViewHolderDisconnected, event.gfx().Which());
 }
 
 TEST_F(ViewTest, ViewDestroyedBeforeViewHolder) {
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
   const ResourceId view_holder_id = 1u;
-  Apply(scenic::NewCreateViewHolderCmd(
-      view_holder_id, std::move(view_holder_token), "Holder [Test]"));
+  Apply(scenic::NewCreateViewHolderCmd(view_holder_id, std::move(view_holder_token),
+                                       "Holder [Test]"));
   const ResourceId view_id = 2u;
   Apply(scenic::NewCreateViewCmd(view_id, std::move(view_token), "Test"));
   uint32_t next_event_id = events().size();
@@ -223,15 +213,14 @@ TEST_F(ViewTest, ViewDestroyedBeforeViewHolder) {
 
   EXPECT_ERROR_COUNT(0);
   const fuchsia::ui::scenic::Event& event = events()[next_event_id];
-  EXPECT_EQ(fuchsia::ui::gfx::Event::Tag::kViewDisconnected,
-            event.gfx().Which());
+  EXPECT_EQ(fuchsia::ui::gfx::Event::Tag::kViewDisconnected, event.gfx().Which());
 }
 
 TEST_F(ViewTest, ViewAndViewHolderConnectedEvents) {
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
   const ResourceId view_holder_id = 1u;
-  Apply(scenic::NewCreateViewHolderCmd(
-      view_holder_id, std::move(view_holder_token), "Holder [Test]"));
+  Apply(scenic::NewCreateViewHolderCmd(view_holder_id, std::move(view_holder_token),
+                                       "Holder [Test]"));
   const ResourceId view_id = 2u;
   Apply(scenic::NewCreateViewCmd(view_id, std::move(view_token), "Test"));
 
@@ -239,11 +228,9 @@ TEST_F(ViewTest, ViewAndViewHolderConnectedEvents) {
   bool view_holder_connected_event = false;
   bool view_connected_event = false;
   for (const fuchsia::ui::scenic::Event& event : events()) {
-    if (event.gfx().Which() ==
-        fuchsia::ui::gfx::Event::Tag::kViewHolderConnected) {
+    if (event.gfx().Which() == fuchsia::ui::gfx::Event::Tag::kViewHolderConnected) {
       view_holder_connected_event = true;
-    } else if (event.gfx().Which() ==
-               fuchsia::ui::gfx::Event::Tag::kViewConnected) {
+    } else if (event.gfx().Which() == fuchsia::ui::gfx::Event::Tag::kViewConnected) {
       view_connected_event = true;
     }
   }
@@ -255,8 +242,8 @@ TEST_F(ViewTest, ViewHolderConnectsToScene) {
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
   const ResourceId view_holder_id = 1u;
-  Apply(scenic::NewCreateViewHolderCmd(
-      view_holder_id, std::move(view_holder_token), "Holder [Test]"));
+  Apply(scenic::NewCreateViewHolderCmd(view_holder_id, std::move(view_holder_token),
+                                       "Holder [Test]"));
   const ResourceId view_id = 2u;
   Apply(scenic::NewCreateViewCmd(view_id, std::move(view_token), "Test"));
   EXPECT_ERROR_COUNT(0);
@@ -273,16 +260,15 @@ TEST_F(ViewTest, ViewHolderConnectsToScene) {
 
   // Verify the scene was successfully set.
   const fuchsia::ui::scenic::Event& event = events()[next_event_id];
-  EXPECT_EQ(::fuchsia::ui::gfx::Event::Tag::kViewAttachedToScene,
-            event.gfx().Which());
+  EXPECT_EQ(::fuchsia::ui::gfx::Event::Tag::kViewAttachedToScene, event.gfx().Which());
 }
 
 TEST_F(ViewTest, ViewHolderDetachedAndReleased) {
   // Create ViewHolder and View.
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
   const ResourceId view_holder_id = 1u;
-  Apply(scenic::NewCreateViewHolderCmd(
-      view_holder_id, std::move(view_holder_token), "Holder [Test]"));
+  Apply(scenic::NewCreateViewHolderCmd(view_holder_id, std::move(view_holder_token),
+                                       "Holder [Test]"));
   const ResourceId view_id = 2u;
   Apply(scenic::NewCreateViewCmd(view_id, std::move(view_token), "Test"));
   EXPECT_ERROR_COUNT(0);
@@ -315,8 +301,7 @@ TEST_F(ViewTest, ViewHolderDetachedAndReleased) {
     bool detached_from_scene_event = false;
     for (const fuchsia::ui::scenic::Event& event : events()) {
       detached_from_scene_event |=
-          (event.gfx().Which() ==
-           fuchsia::ui::gfx::Event::Tag::kViewDetachedFromScene);
+          (event.gfx().Which() == fuchsia::ui::gfx::Event::Tag::kViewDetachedFromScene);
     }
     EXPECT_TRUE(detached_from_scene_event);
   }  // view_holder out of scope, release reference.
@@ -327,8 +312,7 @@ TEST_F(ViewTest, ViewHolderDetachedAndReleased) {
   EXPECT_ERROR_COUNT(0);
   bool view_holder_disconnected_event = false;
   for (uint32_t i = next_event_id; i < events().size(); ++i) {
-    if (events()[i].gfx().Which() ==
-        fuchsia::ui::gfx::Event::Tag::kViewHolderDisconnected) {
+    if (events()[i].gfx().Which() == fuchsia::ui::gfx::Event::Tag::kViewHolderDisconnected) {
       view_holder_disconnected_event = true;
       break;
     }
@@ -343,8 +327,8 @@ TEST_F(ViewTest, ViewHolderChildrenReleasedFromSceneGraphWhenViewDestroyed) {
   // Create ViewHolder and View.
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
   const ResourceId view_holder_id = 1u;
-  Apply(scenic::NewCreateViewHolderCmd(
-      view_holder_id, std::move(view_holder_token), "Holder [Test]"));
+  Apply(scenic::NewCreateViewHolderCmd(view_holder_id, std::move(view_holder_token),
+                                       "Holder [Test]"));
   const ResourceId view_id = 2u;
   Apply(scenic::NewCreateViewCmd(view_id, std::move(view_token), "Test"));
   EXPECT_ERROR_COUNT(0);
@@ -389,8 +373,8 @@ TEST_F(ViewTest, ViewNodeChildAddedToViewHolder) {
   // Create ViewHolder and View.
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
   const ResourceId view_holder_id = 1u;
-  Apply(scenic::NewCreateViewHolderCmd(
-      view_holder_id, std::move(view_holder_token), "Holder [Test]"));
+  Apply(scenic::NewCreateViewHolderCmd(view_holder_id, std::move(view_holder_token),
+                                       "Holder [Test]"));
   const ResourceId view_id = 2u;
   Apply(scenic::NewCreateViewCmd(view_id, std::move(view_token), "Test"));
   EXPECT_ERROR_COUNT(0);
@@ -407,8 +391,8 @@ TEST_F(ViewTest, ViewHolderCannotAddArbitraryChildNodes) {
   // Create ViewHolder.
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
   const ResourceId view_holder_id = 1u;
-  Apply(scenic::NewCreateViewHolderCmd(
-      view_holder_id, std::move(view_holder_token), "Holder [Test]"));
+  Apply(scenic::NewCreateViewHolderCmd(view_holder_id, std::move(view_holder_token),
+                                       "Holder [Test]"));
   // Create an EntityNode.
   const ResourceId node_id = 2u;
   EXPECT_TRUE(Apply(scenic::NewCreateEntityNodeCmd(node_id)));
@@ -423,8 +407,8 @@ TEST_F(ViewTest, ViewNodePairedToView) {
   // Create View.
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
   const ResourceId view_holder_id = 1u;
-  Apply(scenic::NewCreateViewHolderCmd(
-      view_holder_id, std::move(view_holder_token), "Holder [Test]"));
+  Apply(scenic::NewCreateViewHolderCmd(view_holder_id, std::move(view_holder_token),
+                                       "Holder [Test]"));
   const ResourceId view_id = 2u;
   Apply(scenic::NewCreateViewCmd(view_id, std::move(view_token), "Test"));
   EXPECT_ERROR_COUNT(0);
@@ -442,8 +426,8 @@ TEST_F(ViewTest, ViewNodeNotInResourceMap) {
   // Create ViewHolder and View.
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
   const ResourceId view_holder_id = 1u;
-  Apply(scenic::NewCreateViewHolderCmd(
-      view_holder_id, std::move(view_holder_token), "Holder [Test]"));
+  Apply(scenic::NewCreateViewHolderCmd(view_holder_id, std::move(view_holder_token),
+                                       "Holder [Test]"));
   const ResourceId view_id = 2u;
   Apply(scenic::NewCreateViewCmd(view_id, std::move(view_token), "Test"));
   EXPECT_ERROR_COUNT(0);
@@ -459,8 +443,7 @@ TEST_F(ViewTest, ViewHolderGrandchildGetsSceneRefreshed) {
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
   const ResourceId kViewHolderId = 1u;
-  Apply(scenic::NewCreateViewHolderCmd(
-      kViewHolderId, std::move(view_holder_token), "ViewHolder"));
+  Apply(scenic::NewCreateViewHolderCmd(kViewHolderId, std::move(view_holder_token), "ViewHolder"));
   const ResourceId kViewId = 2u;
   Apply(scenic::NewCreateViewCmd(kViewId, std::move(view_token), "View"));
 
@@ -480,16 +463,15 @@ TEST_F(ViewTest, ViewHolderGrandchildGetsSceneRefreshed) {
 
   // Verify scene was set on ViewHolder
   const fuchsia::ui::scenic::Event& event = events().back();
-  EXPECT_EQ(::fuchsia::ui::gfx::Event::Tag::kViewAttachedToScene,
-            event.gfx().Which());
+  EXPECT_EQ(::fuchsia::ui::gfx::Event::Tag::kViewAttachedToScene, event.gfx().Which());
 }
 
 TEST_F(ViewTest, ViewLinksAfterViewHolderConnectsToScene) {
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
   const ResourceId view_holder_id = 1u;
-  Apply(scenic::NewCreateViewHolderCmd(
-      view_holder_id, std::move(view_holder_token), "Holder [Test]"));
+  Apply(scenic::NewCreateViewHolderCmd(view_holder_id, std::move(view_holder_token),
+                                       "Holder [Test]"));
   auto view_holder = FindResource<ViewHolder>(view_holder_id);
 
   // Create a Scene and connect the ViewHolder to the Scene.
@@ -510,13 +492,11 @@ TEST_F(ViewTest, ViewLinksAfterViewHolderConnectsToScene) {
   EXPECT_EQ(4u, events().size());
   EXPECT_ERROR_COUNT(0);
   const fuchsia::ui::scenic::Event& event = events()[0];
-  EXPECT_EQ(::fuchsia::ui::gfx::Event::Tag::kViewConnected,
-            event.gfx().Which());
+  EXPECT_EQ(::fuchsia::ui::gfx::Event::Tag::kViewConnected, event.gfx().Which());
 
   bool view_attached_to_scene_event = false;
   for (const fuchsia::ui::scenic::Event& event : events()) {
-    if (event.gfx().Which() ==
-        fuchsia::ui::gfx::Event::Tag::kViewAttachedToScene) {
+    if (event.gfx().Which() == fuchsia::ui::gfx::Event::Tag::kViewAttachedToScene) {
       view_attached_to_scene_event = true;
     }
   }
@@ -527,8 +507,8 @@ TEST_F(ViewTest, ViewStateChangeNotifiesViewHolder) {
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
   const ResourceId view_holder_id = 1u;
-  Apply(scenic::NewCreateViewHolderCmd(
-      view_holder_id, std::move(view_holder_token), "Holder [Test]"));
+  Apply(scenic::NewCreateViewHolderCmd(view_holder_id, std::move(view_holder_token),
+                                       "Holder [Test]"));
   const ResourceId view_id = 2u;
   Apply(scenic::NewCreateViewCmd(view_id, std::move(view_token), "Test"));
   EXPECT_ERROR_COUNT(0);
@@ -553,8 +533,8 @@ TEST_F(ViewTest, RenderStateAcrossManyFrames) {
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
   const ResourceId view_holder_id = 1u;
-  Apply(scenic::NewCreateViewHolderCmd(
-      view_holder_id, std::move(view_holder_token), "Holder [Test]"));
+  Apply(scenic::NewCreateViewHolderCmd(view_holder_id, std::move(view_holder_token),
+                                       "Holder [Test]"));
   const ResourceId view_id = 2u;
   Apply(scenic::NewCreateViewCmd(view_id, std::move(view_token), "Test"));
   EXPECT_ERROR_COUNT(0);
@@ -585,8 +565,8 @@ TEST_F(ViewTest, RenderStateFalseWhenViewDisconnects) {
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
   const ResourceId view_holder_id = 1u;
-  Apply(scenic::NewCreateViewHolderCmd(
-      view_holder_id, std::move(view_holder_token), "Holder [Test]"));
+  Apply(scenic::NewCreateViewHolderCmd(view_holder_id, std::move(view_holder_token),
+                                       "Holder [Test]"));
   auto view_holder = FindResource<ViewHolder>(view_holder_id);
   const ResourceId view_id = 2u;
   Apply(scenic::NewCreateViewCmd(view_id, std::move(view_token), "Test"));
@@ -610,16 +590,15 @@ TEST_F(ViewTest, RenderStateFalseWhenViewDisconnects) {
 
   const fuchsia::ui::scenic::Event& event2 = events().back();
   EXPECT_EQ(fuchsia::ui::scenic::Event::Tag::kGfx, event2.Which());
-  EXPECT_EQ(::fuchsia::ui::gfx::Event::Tag::kViewDisconnected,
-            event2.gfx().Which());
+  EXPECT_EQ(::fuchsia::ui::gfx::Event::Tag::kViewDisconnected, event2.gfx().Which());
 }
 
 TEST_F(ViewTest, ViewHolderRenderWaitClearedWhenViewDestroyed) {
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
   const ResourceId view_holder_id = 1u;
-  Apply(scenic::NewCreateViewHolderCmd(
-      view_holder_id, std::move(view_holder_token), "Holder [Test]"));
+  Apply(scenic::NewCreateViewHolderCmd(view_holder_id, std::move(view_holder_token),
+                                       "Holder [Test]"));
   auto view_holder = FindResource<ViewHolder>(view_holder_id);
   const ResourceId view_id = 2u;
   Apply(scenic::NewCreateViewCmd(view_id, std::move(view_token), "Test"));
@@ -637,16 +616,15 @@ TEST_F(ViewTest, ViewHolderRenderWaitClearedWhenViewDestroyed) {
   EXPECT_LT(next_event_id, events().size());
   const fuchsia::ui::scenic::Event& event = events().back();
   EXPECT_EQ(fuchsia::ui::scenic::Event::Tag::kGfx, event.Which());
-  EXPECT_EQ(::fuchsia::ui::gfx::Event::Tag::kViewDisconnected,
-            event.gfx().Which());
+  EXPECT_EQ(::fuchsia::ui::gfx::Event::Tag::kViewDisconnected, event.gfx().Which());
 }
 
 TEST_F(ViewTest, RenderSignalDoesntCrashWhenViewHolderDestroyed) {
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
   const ResourceId view_holder_id = 1u;
-  Apply(scenic::NewCreateViewHolderCmd(
-      view_holder_id, std::move(view_holder_token), "Holder [Test]"));
+  Apply(scenic::NewCreateViewHolderCmd(view_holder_id, std::move(view_holder_token),
+                                       "Holder [Test]"));
   const ResourceId view_id = 2u;
   Apply(scenic::NewCreateViewCmd(view_id, std::move(view_token), "Test"));
 
@@ -668,8 +646,8 @@ TEST_F(ViewTest, RenderStateFalseWhenViewHolderDisconnectsFromScene) {
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
   const ResourceId view_holder_id = 2u;
-  Apply(scenic::NewCreateViewHolderCmd(
-      view_holder_id, std::move(view_holder_token), "Holder [Test]"));
+  Apply(scenic::NewCreateViewHolderCmd(view_holder_id, std::move(view_holder_token),
+                                       "Holder [Test]"));
   const ResourceId view_id = 1u;
   Apply(scenic::NewCreateViewCmd(view_id, std::move(view_token), "Test"));
   EXPECT_ERROR_COUNT(0);
@@ -696,8 +674,7 @@ TEST_F(ViewTest, RenderStateFalseWhenViewHolderDisconnectsFromScene) {
   const fuchsia::ui::scenic::Event& event = events()[next_event_id];
   VerifyViewState(event, false);
   const fuchsia::ui::scenic::Event& event2 = events().back();
-  EXPECT_EQ(::fuchsia::ui::gfx::Event::Tag::kViewDetachedFromScene,
-            event2.gfx().Which());
+  EXPECT_EQ(::fuchsia::ui::gfx::Event::Tag::kViewDetachedFromScene, event2.gfx().Which());
 }
 
 }  // namespace test

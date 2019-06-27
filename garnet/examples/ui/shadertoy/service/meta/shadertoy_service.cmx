@@ -3,11 +3,12 @@
         "binary": "bin/app"
     },
     "sandbox": {
-        "features": [ "vulkan" ],
+        "features": [
+            "vulkan"
+        ],
         "services": [
-          "fuchsia.tracing.provider.Registry",
-          "fuchsia.vulkan.loader.Loader"
+            "fuchsia.tracing.provider.Registry",
+            "fuchsia.vulkan.loader.Loader"
         ]
     }
 }
-

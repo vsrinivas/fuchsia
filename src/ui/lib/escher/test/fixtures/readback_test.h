@@ -22,8 +22,7 @@ class ReadbackTest : public ::testing::Test {
  protected:
   static constexpr uint32_t kFramebufferWidth = 512;
   static constexpr uint32_t kFramebufferHeight = 512;
-  static constexpr uint32_t kNumFramebufferPixels =
-      kFramebufferWidth * kFramebufferHeight;
+  static constexpr uint32_t kNumFramebufferPixels = kFramebufferWidth * kFramebufferHeight;
   static constexpr uint32_t kFramebufferBytesPerPixel = 4;
   static constexpr uint32_t kNumFramebufferBytes =
       kNumFramebufferPixels * kFramebufferBytesPerPixel;
@@ -44,9 +43,9 @@ class ReadbackTest : public ::testing::Test {
   // Submits the frame's commands via SubmitPartialFrame(), after first adding
   // commands to readback the output image.  Waits until the Vulkan device is
   // idle, then memcpys the image bytes into the returned result.
-  std::vector<uint8_t> ReadbackFromColorAttachment(
-      const FramePtr& frame, vk::ImageLayout current_image_layout,
-      vk::ImageLayout final_image_layout);
+  std::vector<uint8_t> ReadbackFromColorAttachment(const FramePtr& frame,
+                                                   vk::ImageLayout current_image_layout,
+                                                   vk::ImageLayout final_image_layout);
 
   const EscherWeakPtr& escher() const { return escher_; }
 

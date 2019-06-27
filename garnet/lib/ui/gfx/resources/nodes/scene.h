@@ -40,17 +40,11 @@ class Scene final : public Node {
   // |Resource|.
   bool Detach() override;
 
-  const std::vector<AmbientLightPtr>& ambient_lights() const {
-    return ambient_lights_;
-  }
+  const std::vector<AmbientLightPtr>& ambient_lights() const { return ambient_lights_; }
 
-  const std::vector<DirectionalLightPtr>& directional_lights() const {
-    return directional_lights_;
-  }
+  const std::vector<DirectionalLightPtr>& directional_lights() const { return directional_lights_; }
 
-  const std::vector<PointLightPtr>& point_lights() const {
-    return point_lights_;
-  }
+  const std::vector<PointLightPtr>& point_lights() const { return point_lights_; }
 
  protected:
   // |Node|

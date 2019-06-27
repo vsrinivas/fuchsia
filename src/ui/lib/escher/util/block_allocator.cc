@@ -11,8 +11,8 @@ namespace escher {
 
 BlockAllocator::BlockAllocator(size_t fixed_size_block_size)
     : fixed_size_block_size_(fixed_size_block_size),
-      current_fixed_size_block_(fixed_size_blocks_.emplace(
-          fixed_size_blocks_.end(), fixed_size_block_size_)) {}
+      current_fixed_size_block_(
+          fixed_size_blocks_.emplace(fixed_size_blocks_.end(), fixed_size_block_size_)) {}
 
 void* BlockAllocator::Allocate(size_t size, size_t alignment) {
   // Any allocation bigger than 1/4 of the fixed-block size is treated as a
@@ -23,8 +23,7 @@ void* BlockAllocator::Allocate(size_t size, size_t alignment) {
     void* result = AllocateFromBlock(it, size, alignment);
     FXL_DCHECK(result);
     return result;
-  } else if (void* result = AllocateFromBlock(current_fixed_size_block_, size,
-                                              alignment)) {
+  } else if (void* result = AllocateFromBlock(current_fixed_size_block_, size, alignment)) {
     return result;
   } else {
     result = AllocateFromBlock(ObtainNextFixedSizeBlock(), size, alignment);
@@ -41,8 +40,8 @@ void BlockAllocator::Reset() {
   current_fixed_size_block_ = fixed_size_blocks_.begin();
 }
 
-BlockAllocator::BlockList::iterator BlockAllocator::InsertLargeBlock(
-    size_t size, size_t alignment) {
+BlockAllocator::BlockList::iterator BlockAllocator::InsertLargeBlock(size_t size,
+                                                                     size_t alignment) {
   // TODO(ES-89): Is there a standard way to find/specify alignment of data in
   // std::vector?.  If we had this we wouldn't need to overallocate in many
   // cases.  Another approach would be to not use vectors for large block data;
@@ -55,14 +54,13 @@ BlockAllocator::BlockList::iterator BlockAllocator::ObtainNextFixedSizeBlock() {
   FXL_DCHECK(current_fixed_size_block_ != fixed_size_blocks_.end());
   if (++current_fixed_size_block_ == fixed_size_blocks_.end()) {
     // No next block was available, so allocate another one.
-    current_fixed_size_block_ = fixed_size_blocks_.emplace(
-        current_fixed_size_block_, fixed_size_block_size_);
+    current_fixed_size_block_ =
+        fixed_size_blocks_.emplace(current_fixed_size_block_, fixed_size_block_size_);
   }
   return current_fixed_size_block_;
 }
 
-void* BlockAllocator::AllocateFromBlock(BlockList::iterator it, size_t size,
-                                        size_t alignment) {
+void* BlockAllocator::AllocateFromBlock(BlockList::iterator it, size_t size, size_t alignment) {
   Block& block = *it;
   uint8_t* next = AlignedToNext(block.current_ptr, alignment);
   uint8_t* end_of_next = next + size;
@@ -76,9 +74,6 @@ void* BlockAllocator::AllocateFromBlock(BlockList::iterator it, size_t size,
 }
 
 BlockAllocator::Block::Block(size_t size)
-    : bytes(size),
-      current_ptr(bytes.data()),
-      start(current_ptr),
-      end(start + size) {}
+    : bytes(size), current_ptr(bytes.data()), start(current_ptr), end(start + size) {}
 
 }  // namespace escher

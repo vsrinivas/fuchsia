@@ -40,8 +40,7 @@ VK_TEST(BufferCache, RecycleBuffer) {
   uint64_t buffer_id = buffer->uid();
 
   // Recycle the buffer and request a new buffer of equal or smaller size.
-  buffer_cache.RecycleResource(
-      std::unique_ptr<Resource>(static_cast<Resource*>(buffer.get())));
+  buffer_cache.RecycleResource(std::unique_ptr<Resource>(static_cast<Resource*>(buffer.get())));
   vk::DeviceSize requested_size2 = 256;
   BufferPtr buffer2 = buffer_cache.NewHostBuffer(requested_size2);
 

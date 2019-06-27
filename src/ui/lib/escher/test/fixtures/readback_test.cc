@@ -14,34 +14,30 @@ namespace escher {
 void ReadbackTest::SetUp() {
   escher_ = test::GetEscher()->GetWeakPtr();
 
-  ImageFactoryAdapter image_factory(escher_->gpu_allocator(),
-                                    escher_->resource_recycler());
+  ImageFactoryAdapter image_factory(escher_->gpu_allocator(), escher_->resource_recycler());
 
   color_attachment_ = image_utils::NewImage(
       &image_factory, kColorFormat, kFramebufferWidth, kFramebufferHeight,
-      vk::ImageUsageFlagBits::eColorAttachment |
-          vk::ImageUsageFlagBits::eTransferSrc |
+      vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferSrc |
           vk::ImageUsageFlagBits::eTransferDst);
 
-  depth_attachment_ = image_utils::NewDepthImage(
-      &image_factory, kDepthFormat, kFramebufferWidth, kFramebufferHeight,
-      vk::ImageUsageFlags());
+  depth_attachment_ = image_utils::NewDepthImage(&image_factory, kDepthFormat, kFramebufferWidth,
+                                                 kFramebufferHeight, vk::ImageUsageFlags());
 
   // Create 1-pixel black image that will be used for clearing the framebuffer.
   // See NewFrame() for details.
   {
     auto uploader = BatchGpuUploader::New(escher_);
     uint8_t kBlack[] = {0, 0, 0, 255};
-    black_ =
-        image_utils::NewRgbaImage(&image_factory, uploader.get(), 1, 1, kBlack,
-                                  vk::ImageLayout::eTransferSrcOptimal);
+    black_ = image_utils::NewRgbaImage(&image_factory, uploader.get(), 1, 1, kBlack,
+                                       vk::ImageLayout::eTransferSrcOptimal);
     uploader->Submit();
   }
 
   // |readback_buffer_| contains the data that is read back from |color_attachment_| to
   // verify the correctness of its contents.
-  readback_buffer_ = escher_->buffer_cache()->NewHostBuffer(
-      kFramebufferWidth * kFramebufferHeight * kFramebufferBytesPerPixel);
+  readback_buffer_ = escher_->buffer_cache()->NewHostBuffer(kFramebufferWidth * kFramebufferHeight *
+                                                            kFramebufferBytesPerPixel);
 
   frame_number_ = 0;
 }
@@ -54,8 +50,7 @@ void ReadbackTest::TearDown() {
   readback_buffer_.reset();
 }
 
-ReadbackTest::FrameData ReadbackTest::NewFrame(
-    vk::ImageLayout framebuffer_layout) {
+ReadbackTest::FrameData ReadbackTest::NewFrame(vk::ImageLayout framebuffer_layout) {
   auto frame = escher_->NewFrame("ReadbackTest", ++frame_number_);
   CommandBuffer* cb = frame->cmds();
 
@@ -68,12 +63,9 @@ ReadbackTest::FrameData ReadbackTest::NewFrame(
   // only be done during a render-pass.  We're not in a render-pass yet, and
   // there may not even be one.
   cb->ImageBarrier(color_attachment_, vk::ImageLayout::eUndefined,
-                   vk::ImageLayout::eTransferDstOptimal,
-                   vk::PipelineStageFlagBits::eAllCommands,
-                   vk::AccessFlagBits::eColorAttachmentWrite |
-                       vk::AccessFlagBits::eTransferWrite,
-                   vk::PipelineStageFlagBits::eTransfer,
-                   vk::AccessFlagBits::eTransferWrite);
+                   vk::ImageLayout::eTransferDstOptimal, vk::PipelineStageFlagBits::eAllCommands,
+                   vk::AccessFlagBits::eColorAttachmentWrite | vk::AccessFlagBits::eTransferWrite,
+                   vk::PipelineStageFlagBits::eTransfer, vk::AccessFlagBits::eTransferWrite);
 
   // Clear the color attachment image to black.
   cb->Blit(black_, {0, 0}, {1, 1}, color_attachment_, {0, 0},
@@ -83,22 +75,19 @@ ReadbackTest::FrameData ReadbackTest::NewFrame(
   // commands (we conservatively use vk::PipelineStageFlagBits::eAllCommands
   // because we don't know for sure what the client will do).  Afterward,
   // the image layout is whatever the client requested.
-  cb->ImageBarrier(color_attachment_, vk::ImageLayout::eTransferDstOptimal,
-                   framebuffer_layout, vk::PipelineStageFlagBits::eTransfer,
-                   vk::AccessFlagBits::eTransferWrite,
+  cb->ImageBarrier(color_attachment_, vk::ImageLayout::eTransferDstOptimal, framebuffer_layout,
+                   vk::PipelineStageFlagBits::eTransfer, vk::AccessFlagBits::eTransferWrite,
                    vk::PipelineStageFlagBits::eAllCommands,
-                   vk::AccessFlagBits::eTransferWrite |
-                       vk::AccessFlagBits::eTransferRead |
+                   vk::AccessFlagBits::eTransferWrite | vk::AccessFlagBits::eTransferRead |
                        vk::AccessFlagBits::eColorAttachmentWrite);
 
-  return FrameData{.frame = frame,
-                   .color_attachment = color_attachment_,
-                   .depth_attachment = depth_attachment_};
+  return FrameData{
+      .frame = frame, .color_attachment = color_attachment_, .depth_attachment = depth_attachment_};
 }
 
-std::vector<uint8_t> ReadbackTest::ReadbackFromColorAttachment(
-    const FramePtr& frame, vk::ImageLayout current_image_layout,
-    vk::ImageLayout final_image_layout) {
+std::vector<uint8_t> ReadbackTest::ReadbackFromColorAttachment(const FramePtr& frame,
+                                                               vk::ImageLayout current_image_layout,
+                                                               vk::ImageLayout final_image_layout) {
   CommandBuffer* cb = frame->cmds();
 
   cb->impl()->KeepAlive(readback_buffer_);
@@ -106,13 +95,10 @@ std::vector<uint8_t> ReadbackTest::ReadbackFromColorAttachment(
 
   // Allow previous cmds to finish modifying the color attachment.  Also,
   // transition to eTransferSrcOptimal before copying the bytes.
-  cb->ImageBarrier(color_attachment_, current_image_layout,
-                   vk::ImageLayout::eTransferSrcOptimal,
+  cb->ImageBarrier(color_attachment_, current_image_layout, vk::ImageLayout::eTransferSrcOptimal,
                    vk::PipelineStageFlagBits::eAllCommands,
-                   vk::AccessFlagBits::eColorAttachmentWrite |
-                       vk::AccessFlagBits::eTransferWrite,
-                   vk::PipelineStageFlagBits::eTransfer,
-                   vk::AccessFlagBits::eTransferRead);
+                   vk::AccessFlagBits::eColorAttachmentWrite | vk::AccessFlagBits::eTransferWrite,
+                   vk::PipelineStageFlagBits::eTransfer, vk::AccessFlagBits::eTransferRead);
 
   // Read back the data.
   vk::BufferImageCopy readback_cmd;
@@ -123,18 +109,15 @@ std::vector<uint8_t> ReadbackTest::ReadbackFromColorAttachment(
   readback_cmd.imageExtent.width = kFramebufferWidth;
   readback_cmd.imageExtent.height = kFramebufferHeight;
   readback_cmd.imageExtent.depth = 1;
-  cb->vk().copyImageToBuffer(color_attachment_->vk(),
-                             vk::ImageLayout::eTransferSrcOptimal,
+  cb->vk().copyImageToBuffer(color_attachment_->vk(), vk::ImageLayout::eTransferSrcOptimal,
                              readback_buffer_->vk(), 1, &readback_cmd);
 
   // Since we call waitIdle() below, this is not about synchronization, only
   // changing to the image layout requested by the caller.
-  cb->ImageBarrier(color_attachment_, vk::ImageLayout::eTransferSrcOptimal,
-                   final_image_layout, vk::PipelineStageFlagBits::eTransfer,
-                   vk::AccessFlagBits::eTransferRead,
+  cb->ImageBarrier(color_attachment_, vk::ImageLayout::eTransferSrcOptimal, final_image_layout,
+                   vk::PipelineStageFlagBits::eTransfer, vk::AccessFlagBits::eTransferRead,
                    vk::PipelineStageFlagBits::eAllCommands,
-                   vk::AccessFlagBits::eTransferWrite |
-                       vk::AccessFlagBits::eTransferRead |
+                   vk::AccessFlagBits::eTransferWrite | vk::AccessFlagBits::eTransferRead |
                        vk::AccessFlagBits::eColorAttachmentWrite);
 
   // Submit the commands, wait for them to finish, and then copy and return the

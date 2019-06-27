@@ -20,25 +20,20 @@ namespace gfx {
 
 namespace {
 
-constexpr ResourceTypeFlags kHasChildren =
-    ResourceType::kEntityNode | ResourceType::kOpacityNode |
-    ResourceType::kScene | ResourceType::kView;
-constexpr ResourceTypeFlags kHasParts = ResourceType::kEntityNode |
-                                        ResourceType::kOpacityNode |
-                                        ResourceType::kClipNode;
-constexpr ResourceTypeFlags kHasTransform =
-    ResourceType::kClipNode | ResourceType::kEntityNode |
-    ResourceType::kOpacityNode | ResourceType::kScene |
-    ResourceType::kShapeNode | ResourceType::kViewHolder;
-constexpr ResourceTypeFlags kHasClip =
-    ResourceType::kEntityNode | ResourceType::kViewHolder;
+constexpr ResourceTypeFlags kHasChildren = ResourceType::kEntityNode | ResourceType::kOpacityNode |
+                                           ResourceType::kScene | ResourceType::kView;
+constexpr ResourceTypeFlags kHasParts =
+    ResourceType::kEntityNode | ResourceType::kOpacityNode | ResourceType::kClipNode;
+constexpr ResourceTypeFlags kHasTransform = ResourceType::kClipNode | ResourceType::kEntityNode |
+                                            ResourceType::kOpacityNode | ResourceType::kScene |
+                                            ResourceType::kShapeNode | ResourceType::kViewHolder;
+constexpr ResourceTypeFlags kHasClip = ResourceType::kEntityNode | ResourceType::kViewHolder;
 
 }  // anonymous namespace
 
 const ResourceTypeInfo Node::kTypeInfo = {ResourceType::kNode, "Node"};
 
-Node::Node(Session* session, ResourceId node_id,
-           const ResourceTypeInfo& type_info)
+Node::Node(Session* session, ResourceId node_id, const ResourceTypeInfo& type_info)
     : Resource(session, node_id, type_info) {
   FXL_DCHECK(type_info.IsKindOf(Node::kTypeInfo));
 }
@@ -64,23 +59,19 @@ bool Node::SetEventMask(uint32_t event_mask) {
   return true;
 }
 
-bool Node::CanAddChild(NodePtr child_node) {
-  return type_flags() & kHasChildren;
-}
+bool Node::CanAddChild(NodePtr child_node) { return type_flags() & kHasChildren; }
 
 bool Node::AddChild(NodePtr child_node) {
   if (child_node->type_flags() & ResourceType::kScene) {
     return false;
   }
   if (!CanAddChild(child_node)) {
-    error_reporter()->ERROR()
-        << "scenic::gfx::Node::AddChild(): node of type '" << type_name()
-        << "' cannot have children of type " << child_node->type_name();
+    error_reporter()->ERROR() << "scenic::gfx::Node::AddChild(): node of type '" << type_name()
+                              << "' cannot have children of type " << child_node->type_name();
     return false;
   }
 
-  if (child_node->parent_relation_ == ParentRelation::kChild &&
-      child_node->parent_ == this) {
+  if (child_node->parent_relation_ == ParentRelation::kChild && child_node->parent_ == this) {
     return true;  // no change
   }
 
@@ -93,13 +84,12 @@ bool Node::AddChild(NodePtr child_node) {
 
 bool Node::AddPart(NodePtr part_node) {
   if (!(type_flags() & kHasParts)) {
-    error_reporter()->ERROR() << "scenic::gfx::Node::AddPart(): node of type "
-                              << type_name() << " cannot have parts.";
+    error_reporter()->ERROR() << "scenic::gfx::Node::AddPart(): node of type " << type_name()
+                              << " cannot have parts.";
     return false;
   }
 
-  if (part_node->parent_relation_ == ParentRelation::kPart &&
-      part_node->parent_ == this) {
+  if (part_node->parent_relation_ == ParentRelation::kPart && part_node->parent_ == this) {
     return true;  // no change
   }
 
@@ -144,9 +134,8 @@ bool Node::Detach() {
 
 bool Node::DetachChildren() {
   if (!(type_flags() & kHasChildren)) {
-    error_reporter()->ERROR()
-        << "scenic::gfx::Node::DetachChildren(): node of type '" << type_name()
-        << "' cannot have children.";
+    error_reporter()->ERROR() << "scenic::gfx::Node::DetachChildren(): node of type '"
+                              << type_name() << "' cannot have children.";
     return false;
   }
 
@@ -170,9 +159,8 @@ bool Node::SetTagValue(uint32_t tag_value) {
 
 bool Node::SetTransform(const escher::Transform& transform) {
   if (!(type_flags() & kHasTransform)) {
-    error_reporter()->ERROR()
-        << "scenic::gfx::Node::SetTransform(): node of type " << type_name()
-        << " cannot have transform set.";
+    error_reporter()->ERROR() << "scenic::gfx::Node::SetTransform(): node of type " << type_name()
+                              << " cannot have transform set.";
     return false;
   }
   transform_ = transform;
@@ -182,9 +170,8 @@ bool Node::SetTransform(const escher::Transform& transform) {
 
 bool Node::SetTranslation(const escher::vec3& translation) {
   if (!(type_flags() & kHasTransform)) {
-    error_reporter()->ERROR()
-        << "scenic::gfx::Node::SetTranslation(): node of type " << type_name()
-        << " cannot have translation set.";
+    error_reporter()->ERROR() << "scenic::gfx::Node::SetTranslation(): node of type " << type_name()
+                              << " cannot have translation set.";
     return false;
   }
   bound_variables_.erase(NodeProperty::kTranslation);
@@ -196,25 +183,23 @@ bool Node::SetTranslation(const escher::vec3& translation) {
 
 bool Node::SetTranslation(Vector3VariablePtr translation_variable) {
   if (!(type_flags() & kHasTransform)) {
-    error_reporter()->ERROR()
-        << "scenic::gfx::Node::SetTranslation(): node of type " << type_name()
-        << " cannot have translation set.";
+    error_reporter()->ERROR() << "scenic::gfx::Node::SetTranslation(): node of type " << type_name()
+                              << " cannot have translation set.";
     return false;
   }
 
   bound_variables_[NodeProperty::kTranslation] =
-      std::make_unique<Vector3VariableBinding>(translation_variable,
-                                               [this](escher::vec3 value) {
-                                                 transform_.translation = value;
-                                                 InvalidateGlobalTransform();
-                                               });
+      std::make_unique<Vector3VariableBinding>(translation_variable, [this](escher::vec3 value) {
+        transform_.translation = value;
+        InvalidateGlobalTransform();
+      });
   return true;
 }
 
 bool Node::SetScale(const escher::vec3& scale) {
   if (!(type_flags() & kHasTransform)) {
-    error_reporter()->ERROR() << "scenic::gfx::Node::SetScale(): node of type "
-                              << type_name() << " cannot have scale set.";
+    error_reporter()->ERROR() << "scenic::gfx::Node::SetScale(): node of type " << type_name()
+                              << " cannot have scale set.";
     return false;
   }
   bound_variables_.erase(NodeProperty::kScale);
@@ -225,16 +210,15 @@ bool Node::SetScale(const escher::vec3& scale) {
 
 bool Node::SetScale(Vector3VariablePtr scale_variable) {
   if (!(type_flags() & kHasTransform)) {
-    error_reporter()->ERROR() << "scenic::gfx::Node::SetScale(): node of type "
-                              << type_name() << " cannot have scale set.";
+    error_reporter()->ERROR() << "scenic::gfx::Node::SetScale(): node of type " << type_name()
+                              << " cannot have scale set.";
     return false;
   }
   bound_variables_[NodeProperty::kScale] =
-      std::make_unique<Vector3VariableBinding>(scale_variable,
-                                               [this](escher::vec3 value) {
-                                                 transform_.scale = value;
-                                                 InvalidateGlobalTransform();
-                                               });
+      std::make_unique<Vector3VariableBinding>(scale_variable, [this](escher::vec3 value) {
+        transform_.scale = value;
+        InvalidateGlobalTransform();
+      });
   return true;
 }
 
@@ -242,9 +226,8 @@ bool Node::SetRotation(const escher::quat& rotation) {
   // TODO(SCN-967): Safer handling of quats.  Put DCHECK here; validation
   // should happen elsewhere, before reaching this point.
   if (!(type_flags() & kHasTransform)) {
-    error_reporter()->ERROR()
-        << "scenic::gfx::Node::SetRotation(): node of type " << type_name()
-        << " cannot have rotation set.";
+    error_reporter()->ERROR() << "scenic::gfx::Node::SetRotation(): node of type " << type_name()
+                              << " cannot have rotation set.";
     return false;
   }
   bound_variables_.erase(NodeProperty::kRotation);
@@ -255,24 +238,22 @@ bool Node::SetRotation(const escher::quat& rotation) {
 
 bool Node::SetRotation(QuaternionVariablePtr rotation_variable) {
   if (!(type_flags() & kHasTransform)) {
-    error_reporter()->ERROR()
-        << "scenic::gfx::Node::SetRotation(): node of type " << type_name()
-        << " cannot have rotation set.";
+    error_reporter()->ERROR() << "scenic::gfx::Node::SetRotation(): node of type " << type_name()
+                              << " cannot have rotation set.";
     return false;
   }
   bound_variables_[NodeProperty::kRotation] =
-      std::make_unique<QuaternionVariableBinding>(rotation_variable,
-                                                  [this](escher::quat value) {
-                                                    transform_.rotation = value;
-                                                    InvalidateGlobalTransform();
-                                                  });
+      std::make_unique<QuaternionVariableBinding>(rotation_variable, [this](escher::quat value) {
+        transform_.rotation = value;
+        InvalidateGlobalTransform();
+      });
   return true;
 }
 
 bool Node::SetAnchor(const escher::vec3& anchor) {
   if (!(type_flags() & kHasTransform)) {
-    error_reporter()->ERROR() << "scenic::gfx::Node::SetAnchor(): node of type "
-                              << type_name() << " cannot have anchor set.";
+    error_reporter()->ERROR() << "scenic::gfx::Node::SetAnchor(): node of type " << type_name()
+                              << " cannot have anchor set.";
     return false;
   }
   bound_variables_.erase(NodeProperty::kAnchor);
@@ -283,24 +264,22 @@ bool Node::SetAnchor(const escher::vec3& anchor) {
 
 bool Node::SetAnchor(Vector3VariablePtr anchor_variable) {
   if (!(type_flags() & kHasTransform)) {
-    error_reporter()->ERROR() << "scenic::gfx::Node::SetAnchor(): node of type "
-                              << type_name() << " cannot have anchor set.";
+    error_reporter()->ERROR() << "scenic::gfx::Node::SetAnchor(): node of type " << type_name()
+                              << " cannot have anchor set.";
     return false;
   }
   bound_variables_[NodeProperty::kAnchor] =
-      std::make_unique<Vector3VariableBinding>(anchor_variable,
-                                               [this](escher::vec3 value) {
-                                                 transform_.anchor = value;
-                                                 InvalidateGlobalTransform();
-                                               });
+      std::make_unique<Vector3VariableBinding>(anchor_variable, [this](escher::vec3 value) {
+        transform_.anchor = value;
+        InvalidateGlobalTransform();
+      });
   return true;
 }
 
 bool Node::SetClipToSelf(bool clip_to_self) {
   if (!(type_flags() & kHasClip)) {
-    error_reporter()->ERROR()
-        << "scenic::gfx::Node::SetClipToSelf(): node of type " << type_name()
-        << " cannot have clip params set.";
+    error_reporter()->ERROR() << "scenic::gfx::Node::SetClipToSelf(): node of type " << type_name()
+                              << " cannot have clip params set.";
     return false;
   }
   clip_to_self_ = clip_to_self;
@@ -313,23 +292,20 @@ bool Node::SetClipPlanesFromBBox(const escher::BoundingBox& box) {
 
 bool Node::SetClipPlanes(std::vector<escher::plane3> clip_planes) {
   if (!(type_flags() & kHasClip)) {
-    error_reporter()->ERROR()
-        << "scenic::gfx::Node::SetClipPlanes(): node of type " << type_name()
-        << " cannot have clip params set.";
+    error_reporter()->ERROR() << "scenic::gfx::Node::SetClipPlanes(): node of type " << type_name()
+                              << " cannot have clip params set.";
     return false;
   }
   clip_planes_ = std::move(clip_planes);
   return true;
 }
 
-bool Node::SetHitTestBehavior(
-    ::fuchsia::ui::gfx::HitTestBehavior hit_test_behavior) {
+bool Node::SetHitTestBehavior(::fuchsia::ui::gfx::HitTestBehavior hit_test_behavior) {
   hit_test_behavior_ = hit_test_behavior;
   return true;
 }
 
-bool Node::SendSizeChangeHint(float width_change_factor,
-                              float height_change_factor) {
+bool Node::SendSizeChangeHint(float width_change_factor, float height_change_factor) {
   if (event_mask() & ::fuchsia::ui::gfx::kSizeChangeHintEventMask) {
     auto event = ::fuchsia::ui::gfx::Event();
     event.set_size_change_hint(::fuchsia::ui::gfx::SizeChangeHintEvent());
@@ -368,39 +344,34 @@ void Node::RemoveImport(Import* import) {
   delegate->InvalidateGlobalTransform();
 }
 
-bool Node::GetIntersection(const escher::ray4& ray, float* out_distance) const {
-  return false;
-}
+bool Node::GetIntersection(const escher::ray4& ray, float* out_distance) const { return false; }
 
 void Node::InvalidateGlobalTransform() {
   if (!global_transform_dirty_) {
     global_transform_dirty_ = true;
-    ForEachDirectDescendantFrontToBack(
-        *this, [](Node* node) { node->InvalidateGlobalTransform(); });
+    ForEachDirectDescendantFrontToBack(*this,
+                                       [](Node* node) { node->InvalidateGlobalTransform(); });
   }
 }
 
 void Node::ComputeGlobalTransform() const {
   if (parent_) {
-    global_transform_ =
-        parent_->GetGlobalTransform() * static_cast<escher::mat4>(transform_);
+    global_transform_ = parent_->GetGlobalTransform() * static_cast<escher::mat4>(transform_);
   } else {
     global_transform_ = static_cast<escher::mat4>(transform_);
   }
 }
 
 void Node::EraseChild(Node* child) {
-  auto it =
-      std::find_if(children_.begin(), children_.end(),
-                   [child](const NodePtr& ptr) { return child == ptr.get(); });
+  auto it = std::find_if(children_.begin(), children_.end(),
+                         [child](const NodePtr& ptr) { return child == ptr.get(); });
   FXL_DCHECK(it != children_.end());
   children_.erase(it);
 }
 
 void Node::ErasePart(Node* part) {
-  auto it =
-      std::find_if(parts_.begin(), parts_.end(),
-                   [part](const NodePtr& ptr) { return part == ptr.get(); });
+  auto it = std::find_if(parts_.begin(), parts_.end(),
+                         [part](const NodePtr& ptr) { return part == ptr.get(); });
   FXL_DCHECK(it != parts_.end());
   parts_.erase(it);
 }
@@ -423,8 +394,7 @@ void Node::RefreshScene(Scene* new_scene) {
   scene_ = new_scene;
   OnSceneChanged();
 
-  ForEachDirectDescendantFrontToBack(
-      *this, [this](Node* node) { node->RefreshScene(scene_); });
+  ForEachDirectDescendantFrontToBack(*this, [this](Node* node) { node->RefreshScene(scene_); });
 }
 
 ViewPtr Node::FindOwningView() const {

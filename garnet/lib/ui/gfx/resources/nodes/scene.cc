@@ -11,11 +11,9 @@
 namespace scenic_impl {
 namespace gfx {
 
-const ResourceTypeInfo Scene::kTypeInfo = {
-    ResourceType::kNode | ResourceType::kScene, "Scene"};
+const ResourceTypeInfo Scene::kTypeInfo = {ResourceType::kNode | ResourceType::kScene, "Scene"};
 
-Scene::Scene(Session* session, ResourceId node_id)
-    : Node(session, node_id, Scene::kTypeInfo) {
+Scene::Scene(Session* session, ResourceId node_id) : Node(session, node_id, Scene::kTypeInfo) {
   scene_ = this;
 }
 
@@ -41,8 +39,7 @@ bool Scene::AddLight(const LightPtr& light) {
     point_lights_.push_back(light->As<PointLight>());
     return true;
   }
-  error_reporter()->ERROR()
-      << "scenic::gfx::Scene::AddLight(): unrecognized light type.";
+  error_reporter()->ERROR() << "scenic::gfx::Scene::AddLight(): unrecognized light type.";
   return false;
 }
 

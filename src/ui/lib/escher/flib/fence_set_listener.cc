@@ -36,9 +36,8 @@ void FenceSetListener::WaitReadyAsync(fit::closure ready_callback) {
     auto wait = std::make_unique<async::Wait>(fence.get(),     // handle
                                               kFenceSignalled  // trigger
     );
-    wait->set_handler(std::bind(&FenceSetListener::OnFenceSignalled, this,
-                                waiter_index, std::placeholders::_3,
-                                std::placeholders::_4));
+    wait->set_handler(std::bind(&FenceSetListener::OnFenceSignalled, this, waiter_index,
+                                std::placeholders::_3, std::placeholders::_4));
     zx_status_t status = wait->Begin(async_get_default_dispatcher());
     FXL_CHECK(status == ZX_OK);
 

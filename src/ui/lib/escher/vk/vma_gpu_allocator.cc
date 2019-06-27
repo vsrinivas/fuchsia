@@ -10,10 +10,8 @@ namespace {
 
 class VmaGpuMem : public escher::GpuMem {
  public:
-  VmaGpuMem(VmaAllocator allocator, VmaAllocation allocation,
-            VmaAllocationInfo info)
-      : GpuMem(info.deviceMemory, info.size, info.offset,
-               static_cast<uint8_t*>(info.pMappedData)),
+  VmaGpuMem(VmaAllocator allocator, VmaAllocation allocation, VmaAllocationInfo info)
+      : GpuMem(info.deviceMemory, info.size, info.offset, static_cast<uint8_t*>(info.pMappedData)),
         allocator_(allocator),
         allocation_(allocation) {}
 
@@ -26,10 +24,9 @@ class VmaGpuMem : public escher::GpuMem {
 
 class VmaBuffer : public escher::Buffer {
  public:
-  VmaBuffer(escher::ResourceManager* manager, VmaAllocator allocator,
-            VmaAllocation allocation, VmaAllocationInfo info, vk::Buffer buffer)
-      : Buffer(manager, buffer, info.size,
-               static_cast<uint8_t*>(info.pMappedData)),
+  VmaBuffer(escher::ResourceManager* manager, VmaAllocator allocator, VmaAllocation allocation,
+            VmaAllocationInfo info, vk::Buffer buffer)
+      : Buffer(manager, buffer, info.size, static_cast<uint8_t*>(info.pMappedData)),
         allocator_(allocator),
         allocation_(allocation) {}
 
@@ -48,10 +45,8 @@ class VmaBuffer : public escher::Buffer {
 // offset, and size parameters.
 class VmaMappedGpuMem : public escher::GpuMem {
  public:
-  VmaMappedGpuMem(VmaAllocationInfo info,
-                  const fxl::RefPtr<escher::WaitableResource>& keep_alive)
-      : GpuMem(info.deviceMemory, info.size, info.offset,
-               static_cast<uint8_t*>(info.pMappedData)),
+  VmaMappedGpuMem(VmaAllocationInfo info, const fxl::RefPtr<escher::WaitableResource>& keep_alive)
+      : GpuMem(info.deviceMemory, info.size, info.offset, static_cast<uint8_t*>(info.pMappedData)),
         keep_alive_(keep_alive) {}
 
  private:
@@ -60,9 +55,8 @@ class VmaMappedGpuMem : public escher::GpuMem {
 
 class VmaImage : public escher::Image {
  public:
-  VmaImage(escher::ResourceManager* manager, escher::ImageInfo image_info,
-           vk::Image image, VmaAllocator allocator, VmaAllocation allocation,
-           VmaAllocationInfo allocation_info)
+  VmaImage(escher::ResourceManager* manager, escher::ImageInfo image_info, vk::Image image,
+           VmaAllocator allocator, VmaAllocation allocation, VmaAllocationInfo allocation_info)
       : Image(manager, image_info, image, allocation_info.size,
               static_cast<uint8_t*>(allocation_info.pMappedData)),
         allocator_(allocator),
@@ -97,33 +91,30 @@ GpuMemPtr VmaGpuAllocator::AllocateMemory(vk::MemoryRequirements reqs,
   VkMemoryRequirements c_reqs = reqs;
 
   // VMA specific allocation parameters.
-  VmaAllocationCreateInfo create_info = {
-      VMA_ALLOCATION_CREATE_MAPPED_BIT,
-      VMA_MEMORY_USAGE_UNKNOWN,
-      static_cast<VkMemoryPropertyFlags>(flags),
-      0u,
-      0u,
-      VK_NULL_HANDLE,
-      nullptr};
+  VmaAllocationCreateInfo create_info = {VMA_ALLOCATION_CREATE_MAPPED_BIT,
+                                         VMA_MEMORY_USAGE_UNKNOWN,
+                                         static_cast<VkMemoryPropertyFlags>(flags),
+                                         0u,
+                                         0u,
+                                         VK_NULL_HANDLE,
+                                         nullptr};
 
   // Output structs.
   VmaAllocation allocation;
   VmaAllocationInfo allocation_info;
-  auto status = vmaAllocateMemory(allocator_, &c_reqs, &create_info,
-                                  &allocation, &allocation_info);
+  auto status = vmaAllocateMemory(allocator_, &c_reqs, &create_info, &allocation, &allocation_info);
 
-  FXL_DCHECK(status == VK_SUCCESS)
-      << "vmaAllocateMemory failed with status code " << status;
+  FXL_DCHECK(status == VK_SUCCESS) << "vmaAllocateMemory failed with status code " << status;
   if (status != VK_SUCCESS)
     return nullptr;
 
   return fxl::AdoptRef(new VmaGpuMem(allocator_, allocation, allocation_info));
 }
 
-BufferPtr VmaGpuAllocator::AllocateBuffer(
-    ResourceManager* manager, vk::DeviceSize size,
-    vk::BufferUsageFlags usage_flags,
-    vk::MemoryPropertyFlags memory_property_flags, GpuMemPtr* out_ptr) {
+BufferPtr VmaGpuAllocator::AllocateBuffer(ResourceManager* manager, vk::DeviceSize size,
+                                          vk::BufferUsageFlags usage_flags,
+                                          vk::MemoryPropertyFlags memory_property_flags,
+                                          GpuMemPtr* out_ptr) {
   vk::BufferCreateInfo info;
   info.size = size;
   info.usage = usage_flags;
@@ -132,14 +123,13 @@ BufferPtr VmaGpuAllocator::AllocateBuffer(
   // Needed so we can have a pointer to the C-style type.
   VkBufferCreateInfo c_buffer_info = info;
 
-  VmaAllocationCreateInfo create_info = {
-      VMA_ALLOCATION_CREATE_MAPPED_BIT,
-      VMA_MEMORY_USAGE_UNKNOWN,
-      static_cast<VkMemoryPropertyFlags>(memory_property_flags),
-      0u,
-      0u,
-      VK_NULL_HANDLE,
-      nullptr};
+  VmaAllocationCreateInfo create_info = {VMA_ALLOCATION_CREATE_MAPPED_BIT,
+                                         VMA_MEMORY_USAGE_UNKNOWN,
+                                         static_cast<VkMemoryPropertyFlags>(memory_property_flags),
+                                         0u,
+                                         0u,
+                                         VK_NULL_HANDLE,
+                                         nullptr};
 
   if (out_ptr) {
     create_info.flags |= VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
@@ -149,16 +139,15 @@ BufferPtr VmaGpuAllocator::AllocateBuffer(
   VkBuffer buffer;
   VmaAllocation allocation;
   VmaAllocationInfo allocation_info;
-  auto status = vmaCreateBuffer(allocator_, &c_buffer_info, &create_info,
-                                &buffer, &allocation, &allocation_info);
+  auto status = vmaCreateBuffer(allocator_, &c_buffer_info, &create_info, &buffer, &allocation,
+                                &allocation_info);
 
-  FXL_DCHECK(status == VK_SUCCESS)
-      << "vmaAllocateMemory failed with status code " << status;
+  FXL_DCHECK(status == VK_SUCCESS) << "vmaAllocateMemory failed with status code " << status;
   if (status != VK_SUCCESS)
     return nullptr;
 
-  auto retval = fxl::AdoptRef(
-      new VmaBuffer(manager, allocator_, allocation, allocation_info, buffer));
+  auto retval =
+      fxl::AdoptRef(new VmaBuffer(manager, allocator_, allocation, allocation_info, buffer));
 
   if (out_ptr) {
     FXL_DCHECK(allocation_info.offset == 0);
@@ -168,20 +157,18 @@ BufferPtr VmaGpuAllocator::AllocateBuffer(
   return retval;
 }
 
-ImagePtr VmaGpuAllocator::AllocateImage(ResourceManager* manager,
-                                        const ImageInfo& info,
+ImagePtr VmaGpuAllocator::AllocateImage(ResourceManager* manager, const ImageInfo& info,
                                         GpuMemPtr* out_ptr) {
   // Needed so we have a pointer to the C-style type.
   VkImageCreateInfo c_image_info = image_utils::CreateVkImageCreateInfo(info);
 
-  VmaAllocationCreateInfo create_info = {
-      VMA_ALLOCATION_CREATE_MAPPED_BIT,
-      VMA_MEMORY_USAGE_UNKNOWN,
-      static_cast<VkMemoryPropertyFlags>(info.memory_flags),
-      0u,
-      0u,
-      VK_NULL_HANDLE,
-      nullptr};
+  VmaAllocationCreateInfo create_info = {VMA_ALLOCATION_CREATE_MAPPED_BIT,
+                                         VMA_MEMORY_USAGE_UNKNOWN,
+                                         static_cast<VkMemoryPropertyFlags>(info.memory_flags),
+                                         0u,
+                                         0u,
+                                         VK_NULL_HANDLE,
+                                         nullptr};
 
   if (out_ptr) {
     create_info.flags |= VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
@@ -191,16 +178,15 @@ ImagePtr VmaGpuAllocator::AllocateImage(ResourceManager* manager,
   VkImage image;
   VmaAllocation allocation;
   VmaAllocationInfo allocation_info;
-  auto status = vmaCreateImage(allocator_, &c_image_info, &create_info, &image,
-                               &allocation, &allocation_info);
+  auto status = vmaCreateImage(allocator_, &c_image_info, &create_info, &image, &allocation,
+                               &allocation_info);
 
-  FXL_DCHECK(status == VK_SUCCESS)
-      << "vmaAllocateMemory failed with status code " << status;
+  FXL_DCHECK(status == VK_SUCCESS) << "vmaAllocateMemory failed with status code " << status;
   if (status != VK_SUCCESS)
     return nullptr;
 
-  auto retval = fxl::AdoptRef(new VmaImage(manager, info, image, allocator_,
-                                           allocation, allocation_info));
+  auto retval =
+      fxl::AdoptRef(new VmaImage(manager, info, image, allocator_, allocation, allocation_info));
 
   if (out_ptr) {
     FXL_DCHECK(allocation_info.offset == 0);

@@ -64,9 +64,9 @@ namespace escher {
 //   - |PaperRenderQueueContext|, used by draw calls to emit Vulkan commands.
 class PaperRenderer final : public Renderer {
  public:
-  static PaperRendererPtr New(
-      EscherWeakPtr escher, const PaperRendererConfig& config = {
-                                .shadow_type = PaperRendererShadowType::kNone});
+  static PaperRendererPtr New(EscherWeakPtr escher,
+                              const PaperRendererConfig& config = {
+                                  .shadow_type = PaperRendererShadowType::kNone});
   ~PaperRenderer() override;
 
   // Set configuration parameters which affect how the renderer will render
@@ -96,8 +96,7 @@ class PaperRenderer final : public Renderer {
   // problem, however there can be problems with e.g. translucent objects if two
   // cameras have dramatically different positions.
   void BeginFrame(const FramePtr& frame, const PaperScenePtr& scene,
-                  const std::vector<Camera>& cameras,
-                  const escher::ImagePtr& output_image);
+                  const std::vector<Camera>& cameras, const escher::ImagePtr& output_image);
 
   // See |BeginFrame()|.  After telling the renderer to draw the scene content,
   // |EndFrame()| emits commands into a Vulkan command buffer.  Submitting this
@@ -116,18 +115,16 @@ class PaperRenderer final : public Renderer {
 
   // Invokes DrawInScene() on the drawable object to generate and enqueue the
   // draw-calls that be transformed into Vulkan commands during EndFrame().
-  void Draw(PaperDrawable* drawable, PaperDrawableFlags flags = {},
-            mat4* matrix = nullptr);
+  void Draw(PaperDrawable* drawable, PaperDrawableFlags flags = {}, mat4* matrix = nullptr);
 
   // Draw predefined shapes: circles, rectangles, and rounded-rectangles.
   // Generates and enqueues draw-calls that will emit Vulkan commands during
   // EndFrame().
-  void DrawCircle(float radius, const PaperMaterialPtr& material,
-                  PaperDrawableFlags flags = {}, mat4* matrix = nullptr);
-  void DrawRect(vec2 min, vec2 max, const PaperMaterialPtr& material,
-                PaperDrawableFlags flags = {}, mat4* matrix = nullptr);
-  void DrawRoundedRect(const RoundedRectSpec& spec,
-                       const PaperMaterialPtr& material,
+  void DrawCircle(float radius, const PaperMaterialPtr& material, PaperDrawableFlags flags = {},
+                  mat4* matrix = nullptr);
+  void DrawRect(vec2 min, vec2 max, const PaperMaterialPtr& material, PaperDrawableFlags flags = {},
+                mat4* matrix = nullptr);
+  void DrawRoundedRect(const RoundedRectSpec& spec, const PaperMaterialPtr& material,
                        PaperDrawableFlags flags = {}, mat4* matrix = nullptr);
 
   // Convenient way to draw "legacy" escher::Objects.  Generates and enqueues
@@ -140,8 +137,7 @@ class PaperRenderer final : public Renderer {
   PaperDrawCallFactory* draw_call_factory() { return &draw_call_factory_; }
 
  private:
-  explicit PaperRenderer(EscherWeakPtr escher,
-                         const PaperRendererConfig& config);
+  explicit PaperRenderer(EscherWeakPtr escher, const PaperRendererConfig& config);
   PaperRenderer(const PaperRenderer&) = delete;
 
   // Store relevant info from cameras passed to BeginFrame().
@@ -154,8 +150,7 @@ class PaperRenderer final : public Renderer {
 
   // Stores all per-frame data in one place.
   struct FrameData {
-    FrameData(const FramePtr& frame, const PaperScenePtr& scene,
-              const ImagePtr& output_image,
+    FrameData(const FramePtr& frame, const PaperScenePtr& scene, const ImagePtr& output_image,
               std::pair<TexturePtr, TexturePtr> depth_and_msaa_textures,
               const std::vector<Camera>& cameras);
     ~FrameData();
@@ -181,17 +176,15 @@ class PaperRenderer final : public Renderer {
 
   // Called in BeginFrame() to obtain suitable render targets.
   // NOTE: call only once per frame.
-  std::pair<TexturePtr, TexturePtr> ObtainDepthAndMsaaTextures(
-      const FramePtr& frame, const ImageInfo& info);
+  std::pair<TexturePtr, TexturePtr> ObtainDepthAndMsaaTextures(const FramePtr& frame,
+                                                               const ImageInfo& info);
 
   // Called during EndFrame().
   void BindSceneAndCameraUniforms(uint32_t camera_index);
   void GenerateCommandsForNoShadows(uint32_t camera_index);
   void GenerateCommandsForShadowVolumes(uint32_t camera_index);
-  static void InitRenderPassInfo(RenderPassInfo* render_pass_info,
-                                 ResourceRecycler* recycler,
-                                 const FrameData& frame_data,
-                                 uint32_t camera_index);
+  static void InitRenderPassInfo(RenderPassInfo* render_pass_info, ResourceRecycler* recycler,
+                                 const FrameData& frame_data, uint32_t camera_index);
 
   // Called when |config_.debug_frame_number| is true.  Uses |debug_font_| to
   // blit the current frame number to the output image.

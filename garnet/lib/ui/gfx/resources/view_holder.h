@@ -49,9 +49,7 @@ class ViewHolder final : public Node {
 
   // ViewProperties management.
   void SetViewProperties(fuchsia::ui::gfx::ViewProperties props);
-  const fuchsia::ui::gfx::ViewProperties& GetViewProperties() {
-    return view_properties_;
-  }
+  const fuchsia::ui::gfx::ViewProperties& GetViewProperties() { return view_properties_; }
 
  protected:
   // |Node|

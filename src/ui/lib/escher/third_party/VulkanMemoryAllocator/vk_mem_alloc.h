@@ -20,6 +20,8 @@
 // THE SOFTWARE.
 //
 
+// clang-format off
+
 #ifndef AMD_VULKAN_MEMORY_ALLOCATOR_H
 #define AMD_VULKAN_MEMORY_ALLOCATOR_H
 
@@ -14341,3 +14343,5 @@ void vmaDestroyImage(
 }
 
 #endif // #ifdef VMA_IMPLEMENTATION
+
+// clang-format on

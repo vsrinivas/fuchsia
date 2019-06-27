@@ -4,30 +4,25 @@
 
 #include "garnet/examples/ui/embedder/example_view_provider_service.h"
 
-#include <src/lib/fxl/logging.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
+#include <src/lib/fxl/logging.h>
 
 namespace embedder {
 
-ExampleViewProviderService::ExampleViewProviderService(
-    component::StartupContext* startup_ctx, ViewFactory factory)
+ExampleViewProviderService::ExampleViewProviderService(component::StartupContext* startup_ctx,
+                                                       ViewFactory factory)
     : startup_ctx_(startup_ctx), view_factory_fn_(std::move(factory)) {
   FXL_DCHECK(startup_ctx_);
 
-  startup_ctx->outgoing()
-      .deprecated_services()
-      ->AddService<fuchsia::ui::app::ViewProvider>(
-          [this](
-              fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider> request) {
-            bindings_.AddBinding(this, std::move(request));
-          },
-          "view_provider");
+  startup_ctx->outgoing().deprecated_services()->AddService<fuchsia::ui::app::ViewProvider>(
+      [this](fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider> request) {
+        bindings_.AddBinding(this, std::move(request));
+      },
+      "view_provider");
 }
 
 ExampleViewProviderService::~ExampleViewProviderService() {
-  startup_ctx_->outgoing()
-      .deprecated_services()
-      ->RemoveService<fuchsia::ui::app::ViewProvider>();
+  startup_ctx_->outgoing().deprecated_services()->RemoveService<fuchsia::ui::app::ViewProvider>();
 }
 
 void ExampleViewProviderService::CreateView(

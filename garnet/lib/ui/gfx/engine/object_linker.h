@@ -10,6 +10,7 @@
 #include <lib/zx/handle.h>
 #include <lib/zx/object_traits.h>
 #include <zircon/types.h>
+
 #include <memory>
 #include <type_traits>
 #include <unordered_map>
@@ -61,8 +62,7 @@ class ObjectLinkerBase {
   //
   // Returns a zx_koid_t that uniquely identifies the registered Endpoint, or
   // ZX_KOID_INVALID if creation failed.
-  zx_koid_t CreateEndpoint(zx::handle token, ErrorReporter* error_reporter,
-                           bool is_import);
+  zx_koid_t CreateEndpoint(zx::handle token, ErrorReporter* error_reporter, bool is_import);
 
   // Destroys the Endpoint pointed to by |endpoint_id| and removes all traces
   // of it from the linker.  If the Endpoint is linked to a peer, the peer
@@ -72,23 +72,20 @@ class ObjectLinkerBase {
   // Puts the Endpoint pointed to by |endpoint_id| into an initialized state
   // by supplying it with an object and connection callbacks.  The Endpoint
   // will not be linked until its peer is also initialized.
-  void InitializeEndpoint(
-      zx_koid_t endpoint_id, void* object,
-      fit::function<void(void* linked_object)> link_resolved,
-      fit::closure link_failed, bool is_import);
+  void InitializeEndpoint(zx_koid_t endpoint_id, void* object,
+                          fit::function<void(void* linked_object)> link_resolved,
+                          fit::closure link_failed, bool is_import);
 
   // Attempts linking of the endpoints associated with |endpoint_id| and
   // |peer_endpoint_id|.
   //
   // The operation will only succeed if both endpoints have been initialized
   // first.
-  void AttemptLinking(zx_koid_t endpoint_id, zx_koid_t peer_endpoint_id,
-                      bool is_import);
+  void AttemptLinking(zx_koid_t endpoint_id, zx_koid_t peer_endpoint_id, bool is_import);
 
   // Sets up an async::Wait on |Endpoint| that will fire a callback if the
   // Endpoint peer's token is destroyed before a link has been established.
-  std::unique_ptr<async::Wait> WaitForPeerDeath(zx_handle_t endpoint_handle,
-                                                zx_koid_t endpoint_id,
+  std::unique_ptr<async::Wait> WaitForPeerDeath(zx_handle_t endpoint_handle, zx_koid_t endpoint_id,
                                                 bool is_import);
 
   std::unordered_map<zx_koid_t, Endpoint> exports_;
@@ -158,9 +155,7 @@ class ObjectLinker : public ObjectLinkerBase {
     // and |link_failed| events, making it ready for connection to its
     // peer.
     void Initialize(
-        Obj* object,
-        fit::function<void(PeerObj* peer_object)> link_resolved =
-            [](PeerObj*) {},
+        Obj* object, fit::function<void(PeerObj* peer_object)> link_resolved = [](PeerObj*) {},
         fit::closure link_failed = []() {});
 
    private:
@@ -196,11 +191,9 @@ class ObjectLinker : public ObjectLinkerBase {
   //
   // The objects are linked as soon as the |Initialize()| method is called on
   // the links for both objects.
-  template <typename T,
-            typename = std::enable_if_t<zx::object_traits<T>::has_peer_handle>>
+  template <typename T, typename = std::enable_if_t<zx::object_traits<T>::has_peer_handle>>
   ExportLink CreateExport(T token, ErrorReporter* error_reporter) {
-    const zx_koid_t endpoint_id =
-        CreateEndpoint(std::move(token), error_reporter, false);
+    const zx_koid_t endpoint_id = CreateEndpoint(std::move(token), error_reporter, false);
     return ExportLink(endpoint_id, weak_factory_.GetWeakPtr());
   }
 
@@ -215,11 +208,9 @@ class ObjectLinker : public ObjectLinkerBase {
   // If a link cannot be created, |error_reporter| will be used to flag an
 
   // the links for both objects.
-  template <typename T,
-            typename = std::enable_if_t<zx::object_traits<T>::has_peer_handle>>
+  template <typename T, typename = std::enable_if_t<zx::object_traits<T>::has_peer_handle>>
   ImportLink CreateImport(T token, ErrorReporter* error_reporter) {
-    const zx_koid_t endpoint_id =
-        CreateEndpoint(std::move(token), error_reporter, true);
+    const zx_koid_t endpoint_id = CreateEndpoint(std::move(token), error_reporter, true);
     return ImportLink(endpoint_id, weak_factory_.GetWeakPtr());
   }
 
@@ -230,8 +221,7 @@ class ObjectLinker : public ObjectLinkerBase {
 
 template <typename Export, typename Import>
 template <bool is_import>
-auto ObjectLinker<Export, Import>::Link<is_import>::operator=(Link&& other)
-    -> Link& {
+auto ObjectLinker<Export, Import>::Link<is_import>::operator=(Link&& other) -> Link& {
   // Invalidate the existing Link if its still valid.
   Invalidate();
 
@@ -279,8 +269,7 @@ void ObjectLinker<Export, Import>::Link<is_import>::Initialize(
 
 template <typename Export, typename Import>
 template <bool is_import>
-void ObjectLinker<Export, Import>::Link<is_import>::Invalidate(
-    bool destroy_endpoint) {
+void ObjectLinker<Export, Import>::Link<is_import>::Invalidate(bool destroy_endpoint) {
   if (valid() && destroy_endpoint) {
     linker_->DestroyEndpoint(endpoint_id_, is_import);
   }

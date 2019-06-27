@@ -7,11 +7,11 @@
 namespace scenic_impl {
 namespace gfx {
 
-const ResourceTypeInfo RectangleShape::kTypeInfo = {
-    ResourceType::kShape | ResourceType::kRectangle, "RectangleShape"};
+const ResourceTypeInfo RectangleShape::kTypeInfo = {ResourceType::kShape | ResourceType::kRectangle,
+                                                    "RectangleShape"};
 
-RectangleShape::RectangleShape(Session* session, ResourceId id,
-                               float initial_width, float initial_height)
+RectangleShape::RectangleShape(Session* session, ResourceId id, float initial_width,
+                               float initial_height)
     : PlanarShape(session, id, RectangleShape::kTypeInfo),
       width_(initial_width),
       height_(initial_height) {}
@@ -21,8 +21,8 @@ bool RectangleShape::ContainsPoint(const escher::vec2& point) const {
   return pt.x >= 0.f && pt.y >= 0.f && pt.x <= width_ && pt.y <= height_;
 }
 
-escher::Object RectangleShape::GenerateRenderObject(
-    const escher::mat4& transform, const escher::MaterialPtr& material) {
+escher::Object RectangleShape::GenerateRenderObject(const escher::mat4& transform,
+                                                    const escher::MaterialPtr& material) {
   // Scale Escher's built-in rect mesh to have bounds (0,0),(width,height), then
   // translate it so that it is centered at (0,0).
   // TODO: optimize.

@@ -27,8 +27,7 @@ class TestHashable : public Hashable {
   }
 
   bool operator==(const TestHashable& other) const {
-    return hash() == other.hash() && number_ == other.number_ &&
-           name_ == other.name_;
+    return hash() == other.hash() && number_ == other.number_ && name_ == other.name_;
   }
   bool operator!=(const TestHashable& other) const { return !(*this == other); }
 

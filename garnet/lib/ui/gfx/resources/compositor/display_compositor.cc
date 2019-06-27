@@ -11,18 +11,16 @@ namespace scenic_impl {
 namespace gfx {
 
 const ResourceTypeInfo DisplayCompositor::kTypeInfo = {
-    ResourceType::kCompositor | ResourceType::kDisplayCompositor,
-    "DisplayCompositor"};
+    ResourceType::kCompositor | ResourceType::kDisplayCompositor, "DisplayCompositor"};
 
-DisplayCompositor::DisplayCompositor(
-    Session* session, ResourceId id, SceneGraphWeakPtr scene_graph,
-    Display* display, std::unique_ptr<DisplaySwapchain> display_swapchain)
-    : Compositor(session, id, DisplayCompositor::kTypeInfo,
-                 std::move(scene_graph), std::move(display_swapchain)) {
+DisplayCompositor::DisplayCompositor(Session* session, ResourceId id, SceneGraphWeakPtr scene_graph,
+                                     Display* display,
+                                     std::unique_ptr<DisplaySwapchain> display_swapchain)
+    : Compositor(session, id, DisplayCompositor::kTypeInfo, std::move(scene_graph),
+                 std::move(display_swapchain)) {
   FXL_CHECK(display);
   static_cast<DisplaySwapchain*>(this->swapchain())
-      ->RegisterVsyncListener(
-          [display](zx_time_t timestamp) { display->OnVsync(timestamp); });
+      ->RegisterVsyncListener([display](zx_time_t timestamp) { display->OnVsync(timestamp); });
 }
 
 }  // namespace gfx

@@ -12,9 +12,8 @@
 namespace escher {
 namespace impl {
 
-const ResourceTypeInfo impl::Framebuffer::kTypeInfo(
-    "impl::Framebuffer", ResourceType::kResource,
-    ResourceType::kImplFramebuffer);
+const ResourceTypeInfo impl::Framebuffer::kTypeInfo("impl::Framebuffer", ResourceType::kResource,
+                                                    ResourceType::kImplFramebuffer);
 
 Framebuffer::Framebuffer(ResourceRecycler* recycler, RenderPassPtr pass,
                          const RenderPassInfo& pass_info)
@@ -26,8 +25,7 @@ Framebuffer::Framebuffer(ResourceRecycler* recycler, RenderPassPtr pass,
   vk::ImageView views[VulkanLimits::kNumColorAttachments + 1];
   uint32_t num_views = 0;
 
-  FXL_DCHECK(pass_info.num_color_attachments ||
-             pass_info.depth_stencil_attachment);
+  FXL_DCHECK(pass_info.num_color_attachments || pass_info.depth_stencil_attachment);
 
   // TODO(ES-79): handle LOD (whatever that means, precisely).  Perhaps LOD
   // should be added explicitly so that e.g. if Scenic wants to render a
@@ -56,8 +54,7 @@ Framebuffer::Framebuffer(ResourceRecycler* recycler, RenderPassPtr pass,
   fb_info.height = height_;
   fb_info.layers = 1;
 
-  framebuffer_ = ESCHER_CHECKED_VK_RESULT(
-      recycler->vk_device().createFramebuffer(fb_info));
+  framebuffer_ = ESCHER_CHECKED_VK_RESULT(recycler->vk_device().createFramebuffer(fb_info));
 }
 
 Framebuffer::~Framebuffer() { vk_device().destroyFramebuffer(framebuffer_); }

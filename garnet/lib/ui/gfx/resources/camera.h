@@ -8,7 +8,6 @@
 #include "garnet/lib/ui/gfx/resources/buffer.h"
 #include "garnet/lib/ui/gfx/resources/nodes/scene.h"
 #include "garnet/lib/ui/gfx/resources/resource.h"
-
 #include "src/ui/lib/escher/scene/camera.h"
 #include "src/ui/lib/escher/scene/stage.h"
 
@@ -34,8 +33,8 @@ class Camera : public Resource {
 
   // Sets the buffer for this camera. For details see SetCameraPoseBufferCmd
   // in //sdk/fidl/fuchsia.ui.gfx/commands.fidl
-  void SetPoseBuffer(fxl::RefPtr<Buffer> buffer, uint32_t num_entries,
-                     uint64_t base_time, uint64_t time_interval);
+  void SetPoseBuffer(fxl::RefPtr<Buffer> buffer, uint32_t num_entries, uint64_t base_time,
+                     uint64_t time_interval);
 
   const glm::vec3& eye_position() const { return eye_position_; }
   const glm::vec3& eye_look_at() const { return eye_look_at_; }
@@ -52,13 +51,11 @@ class Camera : public Resource {
   // The first entry in the pair is the projected ray, and the second entry
   // is the transformation that was applied to the passed in ray.
   std::pair<escher::ray4, escher::mat4> ProjectRayIntoScene(
-      const escher::ray4& ray,
-      const escher::ViewingVolume& viewing_volume) const;
+      const escher::ray4& ray, const escher::ViewingVolume& viewing_volume) const;
 
  protected:
   // Note: StereoCamera subclasses Camera and provides its own ResourceTypeInfo.
-  Camera(Session* session, ResourceId id, ScenePtr scene,
-         const ResourceTypeInfo& type_info);
+  Camera(Session* session, ResourceId id, ScenePtr scene, const ResourceTypeInfo& type_info);
 
   ScenePtr scene_;
 

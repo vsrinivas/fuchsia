@@ -65,8 +65,7 @@ const std::map<std::string, std::string> kServices = {
      "fuchsia-pkg://fuchsia.com/trace_manager#meta/trace_manager.cmx"},
     {"fuchsia.ui.policy.Presenter",
      "fuchsia-pkg://fuchsia.com/root_presenter#meta/root_presenter.cmx"},
-    {"fuchsia.ui.scenic.Scenic",
-     "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"},
+    {"fuchsia.ui.scenic.Scenic", "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"},
     {"fuchsia.vulkan.loader.Loader",
      "fuchsia-pkg://fuchsia.com/vulkan_loader#meta/vulkan_loader.cmx"},
     {"fuchsia.sysmem.Allocator",
@@ -78,8 +77,7 @@ const std::map<std::string, std::string> kServices = {
 class ScenicPixelTest : public sys::testing::TestWithEnvironment {
  protected:
   ScenicPixelTest() {
-    std::unique_ptr<sys::testing::EnvironmentServices> services =
-        CreateServices();
+    std::unique_ptr<sys::testing::EnvironmentServices> services = CreateServices();
 
     for (const auto& entry : kServices) {
       fuchsia::sys::LaunchInfo launch_info;
@@ -87,8 +85,7 @@ class ScenicPixelTest : public sys::testing::TestWithEnvironment {
       services->AddServiceWithLaunchInfo(std::move(launch_info), entry.first);
     }
 
-    environment_ =
-        CreateNewEnclosingEnvironment(kEnvironment, std::move(services));
+    environment_ = CreateNewEnclosingEnvironment(kEnvironment, std::move(services));
 
     environment_->ConnectToService(scenic_.NewRequest());
     scenic_.set_error_handler([](zx_status_t status) {
@@ -102,14 +99,12 @@ class ScenicPixelTest : public sys::testing::TestWithEnvironment {
   fuchsia::ui::scenic::ScreenshotData TakeScreenshot() {
     fuchsia::ui::scenic::ScreenshotData screenshot_out;
     scenic_->TakeScreenshot(
-        [this, &screenshot_out](fuchsia::ui::scenic::ScreenshotData screenshot,
-                                bool status) {
+        [this, &screenshot_out](fuchsia::ui::scenic::ScreenshotData screenshot, bool status) {
           EXPECT_TRUE(status) << "Failed to take screenshot";
           screenshot_out = std::move(screenshot);
           QuitLoop();
         });
-    EXPECT_FALSE(RunLoopWithTimeout(kTimeout))
-        << "Timed out waiting for screenshot.";
+    EXPECT_FALSE(RunLoopWithTimeout(kTimeout)) << "Timed out waiting for screenshot.";
     return screenshot_out;
   }
 
@@ -152,12 +147,10 @@ class ScenicPixelTest : public sys::testing::TestWithEnvironment {
 
     bool present_received = false;
     view->set_present_callback(
-        [&present_received](fuchsia::images::PresentationInfo info) {
-          present_received = true;
-        });
+        [&present_received](fuchsia::images::PresentationInfo info) { present_received = true; });
 
-    ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
-        [&present_received] { return present_received; }, zx::sec(10)));
+    ASSERT_TRUE(
+        RunLoopWithTimeoutOrUntil([&present_received] { return present_received; }, zx::sec(10)));
   }
 
   fuchsia::ui::scenic::ScenicPtr scenic_;
@@ -183,8 +176,7 @@ TEST_F(ScenicPixelTest, SolidColor) {
   histogram.erase(scenic::BackgroundView::kBackgroundColor);
   // This assert is written this way so that, when it fails, it prints out all
   // the unexpected colors
-  EXPECT_EQ((std::map<scenic::Color, size_t>){}, histogram)
-      << "Unexpected colors";
+  EXPECT_EQ((std::map<scenic::Color, size_t>){}, histogram) << "Unexpected colors";
 }
 
 TEST_F(ScenicPixelTest, NV12Texture) {
@@ -193,8 +185,7 @@ TEST_F(ScenicPixelTest, NV12Texture) {
       .width = kYuvSize,
       .height = kYuvSize,
       .stride = static_cast<uint32_t>(
-          kYuvSize *
-          images::StrideBytesPerWidthPixel(fuchsia::images::PixelFormat::NV12)),
+          kYuvSize * images::StrideBytesPerWidthPixel(fuchsia::images::PixelFormat::NV12)),
       .pixel_format = fuchsia::images::PixelFormat::NV12,
   };
 
@@ -246,20 +237,19 @@ TEST_F(ScenicPixelTest, NV12Texture) {
 
   // This assert is written this way so that, when it fails, it prints out all
   // the unexpected colors
-  EXPECT_EQ((std::map<scenic::Color, size_t>){}, histogram)
-      << "Unexpected colors";
+  EXPECT_EQ((std::map<scenic::Color, size_t>){}, histogram) << "Unexpected colors";
 }
 
 TEST_F(ScenicPixelTest, ViewCoordinates) {
   // Synchronously get display dimensions
   float display_width;
   float display_height;
-  scenic_->GetDisplayInfo([this, &display_width, &display_height](
-                              fuchsia::ui::gfx::DisplayInfo display_info) {
-    display_width = static_cast<float>(display_info.width_in_px);
-    display_height = static_cast<float>(display_info.height_in_px);
-    QuitLoop();
-  });
+  scenic_->GetDisplayInfo(
+      [this, &display_width, &display_height](fuchsia::ui::gfx::DisplayInfo display_info) {
+        display_width = static_cast<float>(display_info.width_in_px);
+        display_height = static_cast<float>(display_info.height_in_px);
+        QuitLoop();
+      });
   RunLoop();
 
   scenic::CoordinateTestView view(CreatePresentationContext());
@@ -267,8 +257,7 @@ TEST_F(ScenicPixelTest, ViewCoordinates) {
 
   fuchsia::ui::scenic::ScreenshotData screenshot = TakeScreenshot();
   std::vector<uint8_t> data;
-  EXPECT_TRUE(fsl::VectorFromVmo(screenshot.data, &data))
-      << "Failed to read screenshot";
+  EXPECT_TRUE(fsl::VectorFromVmo(screenshot.data, &data)) << "Failed to read screenshot";
 
   auto get_color_at_coordinates = [&display_width, &display_height, &data](
                                       float x, float y) -> scenic::Color {
@@ -279,16 +268,11 @@ TEST_F(ScenicPixelTest, ViewCoordinates) {
     return pixels[index];
   };
 
-  EXPECT_EQ(scenic::Color({0, 0, 0, 255}),
-            get_color_at_coordinates(.25f, .25f));
-  EXPECT_EQ(scenic::Color({0, 0, 255, 255}),
-            get_color_at_coordinates(.25f, .75f));
-  EXPECT_EQ(scenic::Color({255, 0, 0, 255}),
-            get_color_at_coordinates(.75f, .25f));
-  EXPECT_EQ(scenic::Color({255, 0, 255, 255}),
-            get_color_at_coordinates(.75f, .75f));
-  EXPECT_EQ(scenic::Color({0, 255, 0, 255}),
-            get_color_at_coordinates(.5f, .5f));
+  EXPECT_EQ(scenic::Color({0, 0, 0, 255}), get_color_at_coordinates(.25f, .25f));
+  EXPECT_EQ(scenic::Color({0, 0, 255, 255}), get_color_at_coordinates(.25f, .75f));
+  EXPECT_EQ(scenic::Color({255, 0, 0, 255}), get_color_at_coordinates(.75f, .25f));
+  EXPECT_EQ(scenic::Color({255, 0, 255, 255}), get_color_at_coordinates(.75f, .75f));
+  EXPECT_EQ(scenic::Color({0, 255, 0, 255}), get_color_at_coordinates(.5f, .5f));
 }
 
 // Draws and tests the following coordinate test pattern without views:
@@ -306,12 +290,12 @@ TEST_F(ScenicPixelTest, GlobalCoordinates) {
   // Synchronously get display dimensions
   float display_width;
   float display_height;
-  scenic_->GetDisplayInfo([this, &display_width, &display_height](
-                              fuchsia::ui::gfx::DisplayInfo display_info) {
-    display_width = static_cast<float>(display_info.width_in_px);
-    display_height = static_cast<float>(display_info.height_in_px);
-    QuitLoop();
-  });
+  scenic_->GetDisplayInfo(
+      [this, &display_width, &display_height](fuchsia::ui::gfx::DisplayInfo display_info) {
+        display_width = static_cast<float>(display_info.width_in_px);
+        display_height = static_cast<float>(display_info.height_in_px);
+        QuitLoop();
+      });
   RunLoop();
 
   // Initialize session
@@ -361,8 +345,7 @@ TEST_F(ScenicPixelTest, GlobalCoordinates) {
       scenic::ShapeNode pane_node(session);
       pane_node.SetShape(pane_shape);
       pane_node.SetMaterial(pane_material);
-      pane_node.SetTranslation((i + 0.5) * pane_width, (j + 0.5) * pane_height,
-                               -20);
+      pane_node.SetTranslation((i + 0.5) * pane_width, (j + 0.5) * pane_height, -20);
       root_node.AddChild(pane_node);
     }
   }
@@ -386,14 +369,12 @@ TEST_F(ScenicPixelTest, GlobalCoordinates) {
     FXL_LOG(INFO) << "Testing " << camera_type[i] << " camera";
     camera.SetProjection(fov[i]);
 
-    session->Present(
-        0, [this](fuchsia::images::PresentationInfo info) { QuitLoop(); });
+    session->Present(0, [this](fuchsia::images::PresentationInfo info) { QuitLoop(); });
     RunLoop();
 
     fuchsia::ui::scenic::ScreenshotData screenshot = TakeScreenshot();
     std::vector<uint8_t> data;
-    EXPECT_TRUE(fsl::VectorFromVmo(screenshot.data, &data))
-        << "Failed to read screenshot";
+    EXPECT_TRUE(fsl::VectorFromVmo(screenshot.data, &data)) << "Failed to read screenshot";
 
     auto get_color_at_coordinates = [&display_width, &display_height, &data](
                                         float x, float y) -> scenic::Color {
@@ -404,16 +385,11 @@ TEST_F(ScenicPixelTest, GlobalCoordinates) {
       return pixels[index];
     };
 
-    EXPECT_EQ(scenic::Color({0, 0, 0, 255}),
-              get_color_at_coordinates(.25f, .25f));
-    EXPECT_EQ(scenic::Color({0, 0, 255, 255}),
-              get_color_at_coordinates(.25f, .75f));
-    EXPECT_EQ(scenic::Color({255, 0, 0, 255}),
-              get_color_at_coordinates(.75f, .25f));
-    EXPECT_EQ(scenic::Color({255, 0, 255, 255}),
-              get_color_at_coordinates(.75f, .75f));
-    EXPECT_EQ(scenic::Color({0, 255, 0, 255}),
-              get_color_at_coordinates(.5f, .5f));
+    EXPECT_EQ(scenic::Color({0, 0, 0, 255}), get_color_at_coordinates(.25f, .25f));
+    EXPECT_EQ(scenic::Color({0, 0, 255, 255}), get_color_at_coordinates(.25f, .75f));
+    EXPECT_EQ(scenic::Color({255, 0, 0, 255}), get_color_at_coordinates(.75f, .25f));
+    EXPECT_EQ(scenic::Color({255, 0, 255, 255}), get_color_at_coordinates(.75f, .75f));
+    EXPECT_EQ(scenic::Color({0, 255, 0, 255}), get_color_at_coordinates(.5f, .5f));
   }
 }
 
@@ -435,12 +411,12 @@ TEST_F(ScenicPixelTest, StereoCamera) {
   // Synchronously get display dimensions
   float display_width;
   float display_height;
-  scenic_->GetDisplayInfo([this, &display_width, &display_height](
-                              fuchsia::ui::gfx::DisplayInfo display_info) {
-    display_width = static_cast<float>(display_info.width_in_px);
-    display_height = static_cast<float>(display_info.height_in_px);
-    QuitLoop();
-  });
+  scenic_->GetDisplayInfo(
+      [this, &display_width, &display_height](fuchsia::ui::gfx::DisplayInfo display_info) {
+        display_width = static_cast<float>(display_info.width_in_px);
+        display_height = static_cast<float>(display_info.height_in_px);
+        QuitLoop();
+      });
   RunLoop();
 
   static const float viewport_width = display_width / 2;
@@ -462,19 +438,17 @@ TEST_F(ScenicPixelTest, StereoCamera) {
   scenic::StereoCamera camera(scene);
 
   float camera_offset = 1001;
-  float eye_position[3] = {display_width / 2.f, display_height / 2.f,
-                           -camera_offset};
+  float eye_position[3] = {display_width / 2.f, display_height / 2.f, -camera_offset};
   float look_at[3] = {display_width / 2.f, display_height / 2.f, 1};
   float up[3] = {0, -1, 0};
   camera.SetTransform(eye_position, look_at, up);
 
   float fovy = 2 * atan((display_height / 2.f) / abs(eye_position[2]));
-  glm::mat4 projection = glm::perspective(
-      fovy, viewport_width / viewport_height, 0.1f, camera_offset);
+  glm::mat4 projection =
+      glm::perspective(fovy, viewport_width / viewport_height, 0.1f, camera_offset);
   projection = glm::scale(projection, glm::vec3(1.f, -1.f, 1.f));
 
-  camera.SetStereoProjection(glm::value_ptr(projection),
-                             glm::value_ptr(projection));
+  camera.SetStereoProjection(glm::value_ptr(projection), glm::value_ptr(projection));
 
   compositor.SetLayerStack(layer_stack);
   layer_stack.AddLayer(layer);
@@ -507,14 +481,12 @@ TEST_F(ScenicPixelTest, StereoCamera) {
   pane_shape_node.SetTranslation(translation.x, translation.y, translation.z);
   root_node.AddChild(pane_shape_node);
 
-  session->Present(
-      0, [this](fuchsia::images::PresentationInfo info) { QuitLoop(); });
+  session->Present(0, [this](fuchsia::images::PresentationInfo info) { QuitLoop(); });
   RunLoop();
 
   fuchsia::ui::scenic::ScreenshotData screenshot = TakeScreenshot();
   std::vector<uint8_t> data;
-  EXPECT_TRUE(fsl::VectorFromVmo(screenshot.data, &data))
-      << "Failed to read screenshot";
+  EXPECT_TRUE(fsl::VectorFromVmo(screenshot.data, &data)) << "Failed to read screenshot";
 
   auto get_color_at_coordinates = [&display_width, &display_height, &data](
                                       float x, float y) -> scenic::Color {
@@ -526,8 +498,7 @@ TEST_F(ScenicPixelTest, StereoCamera) {
   };
 
   // Color array to index 0=BLACK 1=WHITE
-  scenic::Color colors[2] = {scenic::Color({0, 0, 0, 0}),
-                             scenic::Color({255, 255, 255, 255})};
+  scenic::Color colors[2] = {scenic::Color({0, 0, 0, 0}), scenic::Color({255, 255, 255, 255})};
 
   // Expected results by index into colors array. Column major.
   // Note how this is a transposed, low-res version of the scene being drawn.
@@ -553,8 +524,7 @@ TEST_F(ScenicPixelTest, StereoCamera) {
       float x = x_step / 2 + i * x_step;
       float y = y_step / 2 + j * y_step;
       EXPECT_EQ(colors[expected[i][j]], get_color_at_coordinates(x, y))
-          << "i = " << i << ", j = " << j << ", Sample Location: {" << x << ", "
-          << y << "}";
+          << "i = " << i << ", j = " << j << ", Sample Location: {" << x << ", " << y << "}";
     }
   }
 }
@@ -567,12 +537,12 @@ VK_TEST_F(ScenicPixelTest, PoseBuffer) {
   // Synchronously get display dimensions
   float display_width;
   float display_height;
-  scenic_->GetDisplayInfo([this, &display_width, &display_height](
-                              fuchsia::ui::gfx::DisplayInfo display_info) {
-    display_width = static_cast<float>(display_info.width_in_px);
-    display_height = static_cast<float>(display_info.height_in_px);
-    QuitLoop();
-  });
+  scenic_->GetDisplayInfo(
+      [this, &display_width, &display_height](fuchsia::ui::gfx::DisplayInfo display_info) {
+        display_width = static_cast<float>(display_info.width_in_px);
+        display_height = static_cast<float>(display_info.height_in_px);
+        QuitLoop();
+      });
   RunLoop();
 
   // Initialize session
@@ -594,27 +564,23 @@ VK_TEST_F(ScenicPixelTest, PoseBuffer) {
   static const float viewport_height = display_height;
   static const float camera_offset = 500;
   // View matrix matches vulkan clip space +Y down, looking in direction of +Z
-  static const glm::vec3 eye(display_width / 2.f, display_height / 2.f,
-                             -camera_offset);
+  static const glm::vec3 eye(display_width / 2.f, display_height / 2.f, -camera_offset);
   static const glm::vec3 look_at(eye + glm::vec3(0, 0, 1));
   static const glm::vec3 up(0, -1, 0);
 
-  camera.SetTransform(glm::value_ptr(eye), glm::value_ptr(look_at),
-                      glm::value_ptr(up));
+  camera.SetTransform(glm::value_ptr(eye), glm::value_ptr(look_at), glm::value_ptr(up));
 
   glm::mat4 projection =
-      glm::perspective(glm::radians(120.f), viewport_width / viewport_height,
-                       0.1f, camera_offset);
+      glm::perspective(glm::radians(120.f), viewport_width / viewport_height, 0.1f, camera_offset);
   // projection = glm::scale(projection, glm::vec3(1.f, -1.f, 1.f));
 
-  glm::mat4 clip(1.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-                 0.5f, 0.0f, 0.0f, 0.0f, 0.5f, 1.0f);
+  glm::mat4 clip(1.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.5f, 0.0f, 0.0f,
+                 0.0f, 0.5f, 1.0f);
   projection = clip * projection;
 
   glm::mat4 view = glm::lookAt(eye, look_at, up);
 
-  camera.SetStereoProjection(glm::value_ptr(projection),
-                             glm::value_ptr(projection));
+  camera.SetStereoProjection(glm::value_ptr(projection), glm::value_ptr(projection));
 
   compositor.SetLayerStack(layer_stack);
   layer_stack.AddLayer(layer);
@@ -636,40 +602,32 @@ VK_TEST_F(ScenicPixelTest, PoseBuffer) {
   const size_t kVmoSize = PAGE_SIZE;
   zx_status_t status;
 
-  auto vulkan_queues =
-      scenic_impl::gfx::test::VkSessionTest::CreateVulkanDeviceQueues();
+  auto vulkan_queues = scenic_impl::gfx::test::VkSessionTest::CreateVulkanDeviceQueues();
   auto device = vulkan_queues->vk_device();
   auto physical_device = vulkan_queues->vk_physical_device();
 
   // TODO(SCN-1369): Scenic may use a different set of bits when creating a
   // buffer, resulting in a memory pool mismatch.
   const vk::BufferUsageFlags kUsageFlags =
-      vk::BufferUsageFlagBits::eTransferSrc |
-      vk::BufferUsageFlagBits::eTransferDst |
-      vk::BufferUsageFlagBits::eStorageTexelBuffer |
-      vk::BufferUsageFlagBits::eStorageBuffer |
-      vk::BufferUsageFlagBits::eIndexBuffer |
-      vk::BufferUsageFlagBits::eVertexBuffer;
+      vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eTransferDst |
+      vk::BufferUsageFlagBits::eStorageTexelBuffer | vk::BufferUsageFlagBits::eStorageBuffer |
+      vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eVertexBuffer;
 
   auto memory_requirements =
-      scenic_impl::gfx::test::VkSessionTest::GetBufferRequirements(
-          device, kVmoSize, kUsageFlags);
+      scenic_impl::gfx::test::VkSessionTest::GetBufferRequirements(device, kVmoSize, kUsageFlags);
   auto memory = scenic_impl::gfx::test::VkSessionTest::AllocateExportableMemory(
       device, physical_device, memory_requirements,
-      vk::MemoryPropertyFlagBits::eDeviceLocal |
-          vk::MemoryPropertyFlagBits::eHostVisible);
+      vk::MemoryPropertyFlagBits::eDeviceLocal | vk::MemoryPropertyFlagBits::eHostVisible);
 
   // If we can't make memory that is both host-visible and device-local, we
   // can't run this test.
   if (!memory) {
-    FXL_LOG(INFO)
-        << "Could not find UMA compatible memory pool, aborting test.";
+    FXL_LOG(INFO) << "Could not find UMA compatible memory pool, aborting test.";
     return;
   }
 
-  zx::vmo pose_buffer_vmo =
-      scenic_impl::gfx::test::VkSessionTest::ExportMemoryAsVmo(
-          device, vulkan_queues->dispatch_loader(), memory);
+  zx::vmo pose_buffer_vmo = scenic_impl::gfx::test::VkSessionTest::ExportMemoryAsVmo(
+      device, vulkan_queues->dispatch_loader(), memory);
 
   zx::vmo remote_vmo;
   status = pose_buffer_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &remote_vmo);
@@ -739,19 +697,18 @@ VK_TEST_F(ScenicPixelTest, PoseBuffer) {
     pane_shape_node.SetShape(pane_shape);
     pane_shape_node.SetMaterial(pane_material);
     pane_shape_node.SetTranslation(translation.x, translation.y, translation.z);
-    pane_shape_node.SetRotation(orientation.x, orientation.y, orientation.z,
-                                orientation.w);
+    pane_shape_node.SetRotation(orientation.x, orientation.y, orientation.z, orientation.w);
     root_node.AddChild(pane_shape_node);
   }
 
   static const int num_quaternions = 8;
 
   glm::quat quaternions[num_quaternions] = {
-      glm::quat(),                                 // dead ahead
-      glm::angleAxis(pi, glm::vec3(0, 0, 1)),      // dead ahead but upside down
-      glm::angleAxis(pi, glm::vec3(1, 0, 0)),      // behind around X
-      glm::angleAxis(pi, glm::vec3(0, 1, 0)),      // behind around Y
-      glm::angleAxis(pi / 2, glm::vec3(0, 1, 0)),  // left
+      glm::quat(),                                  // dead ahead
+      glm::angleAxis(pi, glm::vec3(0, 0, 1)),       // dead ahead but upside down
+      glm::angleAxis(pi, glm::vec3(1, 0, 0)),       // behind around X
+      glm::angleAxis(pi, glm::vec3(0, 1, 0)),       // behind around Y
+      glm::angleAxis(pi / 2, glm::vec3(0, 1, 0)),   // left
       glm::angleAxis(-pi / 2, glm::vec3(0, 1, 0)),  // right
       glm::angleAxis(pi / 2, glm::vec3(1, 0, 0)),   // up
       glm::angleAxis(-pi / 2, glm::vec3(1, 0, 0)),  // down
@@ -768,18 +725,15 @@ VK_TEST_F(ScenicPixelTest, PoseBuffer) {
 
     // Use vmo::write here for test simplicity. In a real case the vmo should be
     // mapped into a vmar so we dont need a syscall per write
-    zx_status_t status =
-        pose_buffer_vmo.write(&pose, 0, sizeof(escher::hmd::Pose));
+    zx_status_t status = pose_buffer_vmo.write(&pose, 0, sizeof(escher::hmd::Pose));
     FXL_DCHECK(status == ZX_OK);
 
-    session->Present(
-        0, [this](fuchsia::images::PresentationInfo info) { QuitLoop(); });
+    session->Present(0, [this](fuchsia::images::PresentationInfo info) { QuitLoop(); });
     RunLoop();
 
     fuchsia::ui::scenic::ScreenshotData screenshot = TakeScreenshot();
     std::vector<uint8_t> data;
-    EXPECT_TRUE(fsl::VectorFromVmo(screenshot.data, &data))
-        << "Failed to read screenshot";
+    EXPECT_TRUE(fsl::VectorFromVmo(screenshot.data, &data)) << "Failed to read screenshot";
 
     auto get_color_at_coordinates = [&display_width, &display_height, &data](
                                         float x, float y) -> scenic::Color {
@@ -790,9 +744,7 @@ VK_TEST_F(ScenicPixelTest, PoseBuffer) {
       return pixels[index];
     };
 
-    EXPECT_EQ(colors[expected_color_index[i]],
-              get_color_at_coordinates(0.25, 0.5))
-        << "i = " << i;
+    EXPECT_EQ(colors[expected_color_index[i]], get_color_at_coordinates(0.25, 0.5)) << "i = " << i;
   }
   device.freeMemory(memory);
 }
@@ -805,9 +757,8 @@ TEST_F(ScenicPixelTest, Opacity) {
   // color, and when it is 100% we expect the pure foreground color.  When
   // opacity is 50% we expect a blend of the two.
   float opacities[kNumTests] = {0.f, 0.5f, 1.f};
-  scenic::Color expected_colors[kNumTests] = {{0xff, 0x00, 0xf0, 0xff},
-                                              {0x80, 0x80, 0x80, 0xff},
-                                              {0x00, 0xff, 0x0f, 0xff}};
+  scenic::Color expected_colors[kNumTests] = {
+      {0xff, 0x00, 0xf0, 0xff}, {0x80, 0x80, 0x80, 0xff}, {0x00, 0xff, 0x0f, 0xff}};
 
   for (int i = 0; i < kNumTests; ++i) {
     scenic::OpacityView view(CreatePresentationContext());
@@ -828,8 +779,7 @@ TEST_F(ScenicPixelTest, Opacity) {
 
     EXPECT_GT(histogram[expected_colors[i]], 0u);
     histogram.erase(expected_colors[i]);
-    EXPECT_EQ((std::map<scenic::Color, size_t>){}, histogram)
-        << "Unexpected colors";
+    EXPECT_EQ((std::map<scenic::Color, size_t>){}, histogram) << "Unexpected colors";
   }
 }
 
@@ -841,12 +791,12 @@ TEST_F(ScenicPixelTest, DISABLED_ViewBoundClipping) {
   // Synchronously get display dimensions.
   float display_width;
   float display_height;
-  scenic_->GetDisplayInfo([this, &display_width, &display_height](
-                              fuchsia::ui::gfx::DisplayInfo display_info) {
-    display_width = static_cast<float>(display_info.width_in_px);
-    display_height = static_cast<float>(display_info.height_in_px);
-    QuitLoop();
-  });
+  scenic_->GetDisplayInfo(
+      [this, &display_width, &display_height](fuchsia::ui::gfx::DisplayInfo display_info) {
+        display_width = static_cast<float>(display_info.width_in_px);
+        display_height = static_cast<float>(display_info.height_in_px);
+        QuitLoop();
+      });
   RunLoop();
 
   // Initialize session.
@@ -891,8 +841,7 @@ TEST_F(ScenicPixelTest, DISABLED_ViewBoundClipping) {
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
   scenic::View view(session, std::move(view_token), "ClipView");
-  scenic::ViewHolder view_holder(session, std::move(view_holder_token),
-                                 "ClipViewHolder");
+  scenic::ViewHolder view_holder(session, std::move(view_holder_token), "ClipViewHolder");
 
   const float bmin[3] = {0.f, 0.f, -2.f};
   const float bmax[3] = {display_width / 2, display_height, 1.f};
@@ -920,27 +869,23 @@ TEST_F(ScenicPixelTest, DISABLED_ViewBoundClipping) {
   scenic::Material pane_material2(session);
   pane_material2.SetColor(0, 255, 255, 255);  // Another color.
   pane_node2.SetMaterial(pane_material2);
-  pane_node2.SetTranslation(0.5 * pane_width,
-                            display_height - 0.5 * pane_height, 3);
+  pane_node2.SetTranslation(0.5 * pane_width, display_height - 0.5 * pane_height, 3);
 
   root_node.Attach(view_holder);
   view.AddChild(pane_node);
   view.AddChild(pane_node2);
 
-  session->Present(
-      0, [this](fuchsia::images::PresentationInfo info) { QuitLoop(); });
+  session->Present(0, [this](fuchsia::images::PresentationInfo info) { QuitLoop(); });
   RunLoop();
 
   // Take screenshot.
   fuchsia::ui::scenic::ScreenshotData prev_screenshot = TakeScreenshot();
   std::vector<uint8_t> data;
-  EXPECT_TRUE(fsl::VectorFromVmo(prev_screenshot.data, &data))
-      << "Failed to read screenshot";
+  EXPECT_TRUE(fsl::VectorFromVmo(prev_screenshot.data, &data)) << "Failed to read screenshot";
 
   // Lambda function for getting pixel based on normalized coordintes.
-  auto get_color = [&display_width, &display_height](
-                       std::vector<uint8_t>& pixel_data, float x,
-                       float y) -> scenic::Color {
+  auto get_color = [&display_width, &display_height](std::vector<uint8_t>& pixel_data, float x,
+                                                     float y) -> scenic::Color {
     auto pixels = reinterpret_cast<scenic::Color*>(pixel_data.data());
     uint32_t index_x = x * display_width;
     uint32_t index_y = y * display_height;
@@ -995,12 +940,12 @@ TEST_F(ScenicPixelTest, DISABLED_ViewBoundClippingWithTransforms) {
   // Synchronously get display dimensions.
   float display_width;
   float display_height;
-  scenic_->GetDisplayInfo([this, &display_width, &display_height](
-                              fuchsia::ui::gfx::DisplayInfo display_info) {
-    display_width = static_cast<float>(display_info.width_in_px);
-    display_height = static_cast<float>(display_info.height_in_px);
-    QuitLoop();
-  });
+  scenic_->GetDisplayInfo(
+      [this, &display_width, &display_height](fuchsia::ui::gfx::DisplayInfo display_info) {
+        display_width = static_cast<float>(display_info.width_in_px);
+        display_height = static_cast<float>(display_info.height_in_px);
+        QuitLoop();
+      });
   RunLoop();
 
   // Initialize session.
@@ -1077,12 +1022,10 @@ TEST_F(ScenicPixelTest, DISABLED_ViewBoundClippingWithTransforms) {
   auto [view_token_2, view_holder_token_2] = scenic::ViewTokenPair::New();
 
   scenic::View view(session2, std::move(view_token), "ClipView");
-  scenic::ViewHolder view_holder(session, std::move(view_holder_token),
-                                 "ClipViewHolder");
+  scenic::ViewHolder view_holder(session, std::move(view_holder_token), "ClipViewHolder");
 
   scenic::View view2(session3, std::move(view_token_2), "ClipView2");
-  scenic::ViewHolder view_holder2(session, std::move(view_holder_token_2),
-                                  "ClipViewHolder2");
+  scenic::ViewHolder view_holder2(session, std::move(view_holder_token_2), "ClipViewHolder2");
 
   // Bounds of each view should be the size of a quarter of the display with
   // origin at 0,0 relative to its transform node.
@@ -1128,28 +1071,23 @@ TEST_F(ScenicPixelTest, DISABLED_ViewBoundClippingWithTransforms) {
   transform_node_2.Attach(view_holder2);
   view2.AddChild(pane_node2);
 
-  session->Present(
-      0, [this](fuchsia::images::PresentationInfo info) { QuitLoop(); });
+  session->Present(0, [this](fuchsia::images::PresentationInfo info) { QuitLoop(); });
   RunLoop();
 
-  session2->Present(
-      1, [this](fuchsia::images::PresentationInfo info) { QuitLoop(); });
+  session2->Present(1, [this](fuchsia::images::PresentationInfo info) { QuitLoop(); });
   RunLoop();
 
-  session3->Present(
-      2, [this](fuchsia::images::PresentationInfo info) { QuitLoop(); });
+  session3->Present(2, [this](fuchsia::images::PresentationInfo info) { QuitLoop(); });
   RunLoop();
 
   // Take screenshot.
   fuchsia::ui::scenic::ScreenshotData prev_screenshot = TakeScreenshot();
   std::vector<uint8_t> data;
-  EXPECT_TRUE(fsl::VectorFromVmo(prev_screenshot.data, &data))
-      << "Failed to read screenshot";
+  EXPECT_TRUE(fsl::VectorFromVmo(prev_screenshot.data, &data)) << "Failed to read screenshot";
 
   // Lambda function for getting pixel based on normalized coordintes.
-  auto get_color = [&display_width, &display_height](
-                       std::vector<uint8_t>& pixel_data, float x,
-                       float y) -> scenic::Color {
+  auto get_color = [&display_width, &display_height](std::vector<uint8_t>& pixel_data, float x,
+                                                     float y) -> scenic::Color {
     auto pixels = reinterpret_cast<scenic::Color*>(pixel_data.data());
     uint32_t index_x = x * display_width;
     uint32_t index_y = y * display_height;
@@ -1180,12 +1118,12 @@ VK_TEST_F(ScenicPixelTest, DISABLED_Compositor) {
   // Synchronously get display dimensions.
   float display_width;
   float display_height;
-  scenic_->GetDisplayInfo([this, &display_width, &display_height](
-                              fuchsia::ui::gfx::DisplayInfo display_info) {
-    display_width = static_cast<float>(display_info.width_in_px);
-    display_height = static_cast<float>(display_info.height_in_px);
-    QuitLoop();
-  });
+  scenic_->GetDisplayInfo(
+      [this, &display_width, &display_height](fuchsia::ui::gfx::DisplayInfo display_info) {
+        display_width = static_cast<float>(display_info.width_in_px);
+        display_height = static_cast<float>(display_info.height_in_px);
+        QuitLoop();
+      });
   RunLoop();
 
   // Initialize session.
@@ -1206,14 +1144,13 @@ VK_TEST_F(ScenicPixelTest, DISABLED_Compositor) {
 
   // Color correction data
   std::array<float, 3> preoffsets = {0, 0, 0};
-  std::array<float, 9> matrix = {.288299,  0.052709,  -0.257912,
-                                 0.711701, 0.947291,  0.257912,
-                                 0.000000, -0.000000, 1.000000};
+  std::array<float, 9> matrix = {.288299,  0.052709, -0.257912, 0.711701, 0.947291,
+                                 0.257912, 0.000000, -0.000000, 1.000000};
   std::array<float, 3> postoffsets = {0, 0, 0};
 
-  glm::mat4 glm_matrix(.288299, 0.052709, -0.257912, 0.00000, 0.711701,
-                       0.947291, 0.257912, 0.00000, 0.000000, -0.000000,
-                       1.000000, 0.00000, 0.000000, 0.000000, 0.00000, 1.00000);
+  glm::mat4 glm_matrix(.288299, 0.052709, -0.257912, 0.00000, 0.711701, 0.947291, 0.257912, 0.00000,
+                       0.000000, -0.000000, 1.000000, 0.00000, 0.000000, 0.000000, 0.00000,
+                       1.00000);
 
   // Position camera at the center of the display, looking down
   float eye_position[3] = {display_width / 2.f, display_height / 2.f, -1001};
@@ -1246,8 +1183,8 @@ VK_TEST_F(ScenicPixelTest, DISABLED_Compositor) {
   for (uint32_t i = 0; i < 5; i++) {
     scenic::Rectangle pane_shape(session, pane_width, pane_height);
     scenic::Material pane_material(session);
-    pane_material.SetColor(255 * colors[3 * i], 255 * colors[3 * i + 1],
-                           255 * colors[3 * i + 2], 255);
+    pane_material.SetColor(255 * colors[3 * i], 255 * colors[3 * i + 1], 255 * colors[3 * i + 2],
+                           255);
 
     scenic::ShapeNode pane_node(session);
     pane_node.SetShape(pane_shape);
@@ -1257,34 +1194,29 @@ VK_TEST_F(ScenicPixelTest, DISABLED_Compositor) {
   }
 
   // Display uncorrected version first.
-  session->Present(
-      0, [this](fuchsia::images::PresentationInfo info) { QuitLoop(); });
+  session->Present(0, [this](fuchsia::images::PresentationInfo info) { QuitLoop(); });
   RunLoop();
 
   // Take screenshot.
   fuchsia::ui::scenic::ScreenshotData prev_screenshot = TakeScreenshot();
   std::vector<uint8_t> prev_data;
-  EXPECT_TRUE(fsl::VectorFromVmo(prev_screenshot.data, &prev_data))
-      << "Failed to read screenshot";
+  EXPECT_TRUE(fsl::VectorFromVmo(prev_screenshot.data, &prev_data)) << "Failed to read screenshot";
 
   // Apply color correction.
   compositor.SetColorConversion(preoffsets, matrix, postoffsets);
 
   // Display color corrected version.
-  session->Present(
-      1000000, [this](fuchsia::images::PresentationInfo info) { QuitLoop(); });
+  session->Present(1000000, [this](fuchsia::images::PresentationInfo info) { QuitLoop(); });
   RunLoop();
 
   // Take screenshot.
   fuchsia::ui::scenic::ScreenshotData post_screenshot = TakeScreenshot();
   std::vector<uint8_t> post_data;
-  EXPECT_TRUE(fsl::VectorFromVmo(post_screenshot.data, &post_data))
-      << "Failed to read screenshot";
+  EXPECT_TRUE(fsl::VectorFromVmo(post_screenshot.data, &post_data)) << "Failed to read screenshot";
 
   // Lambda function for getting pixel based on normalized coordintes.
-  auto get_color = [&display_width, &display_height](
-                       std::vector<uint8_t>& pixel_data, float x,
-                       float y) -> scenic::Color {
+  auto get_color = [&display_width, &display_height](std::vector<uint8_t>& pixel_data, float x,
+                                                     float y) -> scenic::Color {
     auto pixels = reinterpret_cast<scenic::Color*>(pixel_data.data());
     uint32_t index_x = x * display_width;
     uint32_t index_y = y * display_height;
@@ -1296,8 +1228,7 @@ VK_TEST_F(ScenicPixelTest, DISABLED_Compositor) {
     scenic::Color prev_color = get_color(prev_data, i * .2, 0.5);
     scenic::Color post_color = get_color(post_data, i * .2, 0.5);
 
-    glm::vec4 vec =
-        glm_matrix * glm::vec4(prev_color.r, prev_color.g, prev_color.b, 1);
+    glm::vec4 vec = glm_matrix * glm::vec4(prev_color.r, prev_color.g, prev_color.b, 1);
     scenic::Color res(vec.x, vec.y, vec.z, vec.w);
     EXPECT_EQ(res, post_color);
   }
@@ -1310,12 +1241,12 @@ VK_TEST_F(ScenicPixelTest, RotationTest) {
   // Synchronously get display dimensions.
   float display_width;
   float display_height;
-  scenic_->GetDisplayInfo([this, &display_width, &display_height](
-                              fuchsia::ui::gfx::DisplayInfo display_info) {
-    display_width = static_cast<float>(display_info.width_in_px);
-    display_height = static_cast<float>(display_info.height_in_px);
-    QuitLoop();
-  });
+  scenic_->GetDisplayInfo(
+      [this, &display_width, &display_height](fuchsia::ui::gfx::DisplayInfo display_info) {
+        display_width = static_cast<float>(display_info.width_in_px);
+        display_height = static_cast<float>(display_info.height_in_px);
+        QuitLoop();
+      });
   RunLoop();
 
   // Initialize session.
@@ -1368,8 +1299,8 @@ VK_TEST_F(ScenicPixelTest, RotationTest) {
   for (uint32_t i = 0; i < 5; i++) {
     scenic::Rectangle pane_shape(session, pane_width, pane_height);
     scenic::Material pane_material(session);
-    pane_material.SetColor(255 * colors[3 * i], 255 * colors[3 * i + 1],
-                           255 * colors[3 * i + 2], 255);
+    pane_material.SetColor(255 * colors[3 * i], 255 * colors[3 * i + 1], 255 * colors[3 * i + 2],
+                           255);
 
     scenic::ShapeNode pane_node(session);
     pane_node.SetShape(pane_shape);
@@ -1379,8 +1310,7 @@ VK_TEST_F(ScenicPixelTest, RotationTest) {
   }
 
   // Display unrotated version first.
-  session->Present(
-      0, [this](fuchsia::images::PresentationInfo info) { QuitLoop(); });
+  session->Present(0, [this](fuchsia::images::PresentationInfo info) { QuitLoop(); });
   RunLoop();
 
   // Take screenshot.
@@ -1388,15 +1318,13 @@ VK_TEST_F(ScenicPixelTest, RotationTest) {
   std::vector<uint8_t> prev_data;
   uint32_t prev_width = prev_screenshot.info.width;
   uint32_t prev_height = prev_screenshot.info.height;
-  EXPECT_TRUE(fsl::VectorFromVmo(prev_screenshot.data, &prev_data))
-      << "Failed to read screenshot";
+  EXPECT_TRUE(fsl::VectorFromVmo(prev_screenshot.data, &prev_data)) << "Failed to read screenshot";
 
   // Rotate 90 degrees
   compositor.SetLayoutRotation(90);
 
   // Display rotated version.
-  session->Present(
-      1000000, [this](fuchsia::images::PresentationInfo info) { QuitLoop(); });
+  session->Present(1000000, [this](fuchsia::images::PresentationInfo info) { QuitLoop(); });
   RunLoop();
 
   // Take screenshot.
@@ -1404,24 +1332,21 @@ VK_TEST_F(ScenicPixelTest, RotationTest) {
   std::vector<uint8_t> post_data;
   uint32_t post_width = post_screenshot.info.width;
   uint32_t post_height = post_screenshot.info.height;
-  EXPECT_TRUE(fsl::VectorFromVmo(post_screenshot.data, &post_data))
-      << "Failed to read screenshot";
+  EXPECT_TRUE(fsl::VectorFromVmo(post_screenshot.data, &post_data)) << "Failed to read screenshot";
 
   // The pre and post width and height should be the reverse of eachother.
   EXPECT_TRUE(prev_width == post_height);
   EXPECT_TRUE(prev_height == post_width);
 
   // Lambda function for getting pixel values from the pre-rotated screenshot.
-  auto get_prev_color = [&prev_width, &prev_data](float x,
-                                                  float y) -> scenic::Color {
+  auto get_prev_color = [&prev_width, &prev_data](float x, float y) -> scenic::Color {
     auto pixels = reinterpret_cast<scenic::Color*>(prev_data.data());
     uint32_t index = y * prev_width + x;
     return pixels[index];
   };
 
   // Lambda function for getting pixel values from the post-rotated screenshot.
-  auto get_post_color = [&post_width, &post_data](float x,
-                                                  float y) -> scenic::Color {
+  auto get_post_color = [&post_width, &post_data](float x, float y) -> scenic::Color {
     auto pixels = reinterpret_cast<scenic::Color*>(post_data.data());
     uint32_t index = y * post_width + x;
     return pixels[index];

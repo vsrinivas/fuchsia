@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "garnet/bin/ui/presentation_mode/detector.h"
+
 #include <array>
 #include <limits>
 
-#include "garnet/bin/ui/presentation_mode/detector.h"
 #include "gtest/gtest.h"
 
 namespace presentation_mode {
 namespace test {
 
-fuchsia::ui::input::SensorDescriptor CreateAccelerometer(
-    fuchsia::ui::input::SensorLocation loc) {
+fuchsia::ui::input::SensorDescriptor CreateAccelerometer(fuchsia::ui::input::SensorLocation loc) {
   fuchsia::ui::input::SensorDescriptor desc;
   desc.type = fuchsia::ui::input::SensorType::ACCELEROMETER;
   desc.loc = loc;

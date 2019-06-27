@@ -20,12 +20,11 @@ class PipelineCache {
   PipelineCache();
   ~PipelineCache();
 
-  std::shared_future<PipelinePtr> GetPipeline(
-      const PipelineSpec& spec, const PipelineFactoryPtr& factory);
+  std::shared_future<PipelinePtr> GetPipeline(const PipelineSpec& spec,
+                                              const PipelineFactoryPtr& factory);
 
  private:
-  std::unordered_map<PipelineSpec, std::shared_future<PipelinePtr>,
-                     PipelineSpec::HashMapHasher>
+  std::unordered_map<PipelineSpec, std::shared_future<PipelinePtr>, PipelineSpec::HashMapHasher>
       map_;
   std::mutex mutex_;
 

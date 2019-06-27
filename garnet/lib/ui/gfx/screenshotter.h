@@ -18,14 +18,12 @@ namespace gfx {
 
 class Screenshotter {
  public:
-  static void TakeScreenshot(
-      Engine* engine,
-      fuchsia::ui::scenic::Scenic::TakeScreenshotCallback callback);
+  static void TakeScreenshot(Engine* engine,
+                             fuchsia::ui::scenic::Scenic::TakeScreenshotCallback callback);
 
  private:
   static void OnCommandBufferDone(
-      const escher::BufferPtr& buffer, uint32_t width, uint32_t height,
-      uint32_t rotation,
+      const escher::BufferPtr& buffer, uint32_t width, uint32_t height, uint32_t rotation,
       fuchsia::ui::scenic::Scenic::TakeScreenshotCallback done_callback);
 };
 

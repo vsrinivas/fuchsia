@@ -20,8 +20,7 @@ namespace escher {
 namespace test {
 
 // Returns true iff |a| and |b| are the same within optional |epsilon|.
-bool ComparePose(escher::hmd::Pose* p0, escher::hmd::Pose* p1,
-                 float epsilon = 0.0) {
+bool ComparePose(escher::hmd::Pose* p0, escher::hmd::Pose* p1, float epsilon = 0.0) {
   bool compare = true;
 
   EXPECT_TRUE(CompareFloat(p0->a, p1->a, epsilon));
@@ -56,12 +55,9 @@ glm::mat4 MatrixFromPose(const hmd::Pose& pose) {
 VK_TEST(PoseBuffer, ComputeShaderLatching) {
   // Initialize Vulkan.
   escher::VulkanInstance::Params instance_params(
-      {{"VK_LAYER_LUNARG_standard_validation"},
-       {VK_EXT_DEBUG_REPORT_EXTENSION_NAME},
-       false});
+      {{"VK_LAYER_LUNARG_standard_validation"}, {VK_EXT_DEBUG_REPORT_EXTENSION_NAME}, false});
 
-  auto vulkan_instance =
-      escher::VulkanInstance::New(std::move(instance_params));
+  auto vulkan_instance = escher::VulkanInstance::New(std::move(instance_params));
   auto vulkan_device = escher::VulkanDeviceQueues::New(vulkan_instance, {});
 
   auto escher = std::make_unique<escher::Escher>(vulkan_device);
@@ -73,24 +69,21 @@ VK_TEST(PoseBuffer, ComputeShaderLatching) {
 
   vk::DeviceSize pose_buffer_size = num_entries * sizeof(escher::hmd::Pose);
   vk::MemoryPropertyFlags memory_property_flags =
-      vk::MemoryPropertyFlagBits::eHostVisible |
-      vk::MemoryPropertyFlagBits::eHostCoherent;
+      vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
   vk::BufferUsageFlags buffer_usage_flags =
-      vk::BufferUsageFlagBits::eUniformBuffer |
-      vk::BufferUsageFlagBits::eStorageBuffer;
+      vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eStorageBuffer;
 
   // Create the shader.
-  hmd::PoseBuffer pose_buffer(escher->gpu_allocator()->AllocateBuffer(
-                                  escher->resource_recycler(), pose_buffer_size,
-                                  buffer_usage_flags, memory_property_flags),
-                              num_entries, base_time, time_interval);
+  hmd::PoseBuffer pose_buffer(
+      escher->gpu_allocator()->AllocateBuffer(escher->resource_recycler(), pose_buffer_size,
+                                              buffer_usage_flags, memory_property_flags),
+      num_entries, base_time, time_interval);
 
   hmd::PoseBufferLatchingShader test_shader(escher->GetWeakPtr());
 
   // Fill the pose buffer.
   ASSERT_NE(nullptr, pose_buffer.buffer->host_ptr());
-  hmd::Pose* poses =
-      reinterpret_cast<hmd::Pose*>(pose_buffer.buffer->host_ptr());
+  hmd::Pose* poses = reinterpret_cast<hmd::Pose*>(pose_buffer.buffer->host_ptr());
   float pi = glm::pi<float>();
   for (uint32_t i = 0; i < num_entries; i++) {
     // Change pose each interation. The goal is to have unique poses in each
@@ -111,14 +104,12 @@ VK_TEST(PoseBuffer, ComputeShaderLatching) {
     Camera camera(glm::mat4(1), glm::mat4(1));
     // Use identity camera for first iteration only, change for all others.
     if (i != 0) {
-      camera = Camera(
-          glm::rotate(glm::mat4(), 2 * pi / num_dispatches * i, vec3(1, 1, 1)),
-          glm::perspective(45.0f, 1.0f, 0.1f, 100.0f));
+      camera = Camera(glm::rotate(glm::mat4(), 2 * pi / num_dispatches * i, vec3(1, 1, 1)),
+                      glm::perspective(45.0f, 1.0f, 0.1f, 100.0f));
     }
 
     uint64_t latch_time = base_time + (time_interval * (0.5 + i));
-    output_buffers.push_back(
-        test_shader.LatchPose(frame, camera, pose_buffer, latch_time, true));
+    output_buffers.push_back(test_shader.LatchPose(frame, camera, pose_buffer, latch_time, true));
     cameras.push_back(camera);
   }
 
@@ -127,8 +118,8 @@ VK_TEST(PoseBuffer, ComputeShaderLatching) {
   // Identity Camera.
   Camera left_camera(glm::mat4(1), glm::mat4(2));
   Camera right_camera(glm::mat4(1), glm::mat4(3));
-  BufferPtr stereo_output_buffer = test_shader.LatchStereoPose(
-      frame, left_camera, right_camera, pose_buffer, base_time, true);
+  BufferPtr stereo_output_buffer =
+      test_shader.LatchStereoPose(frame, left_camera, right_camera, pose_buffer, base_time, true);
 
   // Execute shaders.
   frame->EndFrame(nullptr, []() {});
@@ -143,10 +134,10 @@ VK_TEST(PoseBuffer, ComputeShaderLatching) {
     auto pose_in = &poses[index];
     auto pose_out = reinterpret_cast<hmd::Pose*>(output_buffer->host_ptr());
     EXPECT_TRUE(ComparePose(pose_in, pose_out, 0.0));
-    glm::mat4 vp_matrix_in = cameras[i].projection() *
-                             MatrixFromPose(*pose_in) * cameras[i].transform();
-    glm::mat4 vp_matrix_out = glm::make_mat4(reinterpret_cast<float*>(
-        output_buffer->host_ptr() + sizeof(hmd::Pose)));
+    glm::mat4 vp_matrix_in =
+        cameras[i].projection() * MatrixFromPose(*pose_in) * cameras[i].transform();
+    glm::mat4 vp_matrix_out =
+        glm::make_mat4(reinterpret_cast<float*>(output_buffer->host_ptr() + sizeof(hmd::Pose)));
     EXPECT_TRUE(CompareMatrix(vp_matrix_in, vp_matrix_out, 0.00001));
 
     // Pose zero uses all identity params so VP result should be identity.
@@ -156,19 +147,16 @@ VK_TEST(PoseBuffer, ComputeShaderLatching) {
   }
 
   // Stereo flow:
-  glm::mat4 left_vp_matrix_in = left_camera.projection() *
-                                MatrixFromPose(poses[0]) *
-                                left_camera.transform();
-  glm::mat4 left_vp_matrix_out = glm::make_mat4(reinterpret_cast<float*>(
-      stereo_output_buffer->host_ptr() + sizeof(hmd::Pose)));
+  glm::mat4 left_vp_matrix_in =
+      left_camera.projection() * MatrixFromPose(poses[0]) * left_camera.transform();
+  glm::mat4 left_vp_matrix_out = glm::make_mat4(
+      reinterpret_cast<float*>(stereo_output_buffer->host_ptr() + sizeof(hmd::Pose)));
   EXPECT_TRUE(CompareMatrix(left_vp_matrix_in, left_vp_matrix_out, 0.00001));
 
-  glm::mat4 right_vp_matrix_in = right_camera.projection() *
-                                 MatrixFromPose(poses[0]) *
-                                 right_camera.transform();
-  glm::mat4 right_vp_matrix_out = glm::make_mat4(
-      reinterpret_cast<float*>(stereo_output_buffer->host_ptr() +
-                               sizeof(hmd::Pose) + 16 * sizeof(float)));
+  glm::mat4 right_vp_matrix_in =
+      right_camera.projection() * MatrixFromPose(poses[0]) * right_camera.transform();
+  glm::mat4 right_vp_matrix_out = glm::make_mat4(reinterpret_cast<float*>(
+      stereo_output_buffer->host_ptr() + sizeof(hmd::Pose) + 16 * sizeof(float)));
   EXPECT_TRUE(CompareMatrix(right_vp_matrix_in, right_vp_matrix_out, 0.00001));
 
   escher->Cleanup();

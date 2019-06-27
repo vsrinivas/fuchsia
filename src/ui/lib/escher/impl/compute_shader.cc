@@ -33,18 +33,15 @@ inline std::vector<vk::DescriptorSetLayoutBinding> CreateLayoutBindings(
         descriptor_type = vk::DescriptorType::eStorageImage;
         break;
       default:
-        FXL_LOG(ERROR) << "unsupported layout: "
-                       << vk::to_string(layouts[index]);
+        FXL_LOG(ERROR) << "unsupported layout: " << vk::to_string(layouts[index]);
         FXL_CHECK(false);
         descriptor_type = vk::DescriptorType::eStorageImage;
     }
-    result.push_back({index, descriptor_type, 1,
-                      vk::ShaderStageFlagBits::eCompute, nullptr});
+    result.push_back({index, descriptor_type, 1, vk::ShaderStageFlagBits::eCompute, nullptr});
   }
   for (uint32_t i = 0; i < buffer_types.size(); ++i) {
     uint32_t binding = i + static_cast<uint32_t>(layouts.size());
-    result.push_back({binding, buffer_types[i], 1,
-                      vk::ShaderStageFlagBits::eCompute, nullptr});
+    result.push_back({binding, buffer_types[i], 1, vk::ShaderStageFlagBits::eCompute, nullptr});
   }
   return result;
 }
@@ -59,17 +56,14 @@ inline vk::DescriptorSetLayoutCreateInfo CreateDescriptorSetLayoutCreateInfo(
 }
 
 // Used by ComputeShader constructor.
-PipelinePtr CreatePipeline(vk::Device device,
-                           vk::DescriptorSetLayout descriptor_set_layout,
-                           uint32_t push_constants_size,
-                           const char* source_code,
+PipelinePtr CreatePipeline(vk::Device device, vk::DescriptorSetLayout descriptor_set_layout,
+                           uint32_t push_constants_size, const char* source_code,
                            GlslToSpirvCompiler* compiler) {
   vk::ShaderModule module;
   {
-    SpirvData spirv = compiler
-                          ->Compile(vk::ShaderStageFlagBits::eCompute,
-                                    {{source_code}}, std::string(), "main")
-                          .get();
+    SpirvData spirv =
+        compiler->Compile(vk::ShaderStageFlagBits::eCompute, {{source_code}}, std::string(), "main")
+            .get();
 
     vk::ShaderModuleCreateInfo module_info;
     module_info.codeSize = spirv.size() * sizeof(uint32_t);
@@ -86,12 +80,10 @@ PipelinePtr CreatePipeline(vk::Device device,
   pipeline_layout_info.setLayoutCount = 1;
   pipeline_layout_info.pSetLayouts = &descriptor_set_layout;
   pipeline_layout_info.pushConstantRangeCount = push_constants_size > 0 ? 1 : 0;
-  pipeline_layout_info.pPushConstantRanges =
-      push_constants_size > 0 ? &push_constants : nullptr;
+  pipeline_layout_info.pPushConstantRanges = push_constants_size > 0 ? &push_constants : nullptr;
 
   auto pipeline_layout = fxl::MakeRefCounted<PipelineLayout>(
-      device, ESCHER_CHECKED_VK_RESULT(
-                  device.createPipelineLayout(pipeline_layout_info, nullptr)));
+      device, ESCHER_CHECKED_VK_RESULT(device.createPipelineLayout(pipeline_layout_info, nullptr)));
 
   vk::PipelineShaderStageCreateInfo shader_stage_info;
   shader_stage_info.stage = vk::ShaderStageFlagBits::eCompute;
@@ -102,10 +94,10 @@ PipelinePtr CreatePipeline(vk::Device device,
   pipeline_info.stage = shader_stage_info;
   pipeline_info.layout = pipeline_layout->vk();
 
-  vk::Pipeline vk_pipeline = ESCHER_CHECKED_VK_RESULT(
-      device.createComputePipeline(nullptr, pipeline_info));
-  auto pipeline = fxl::MakeRefCounted<Pipeline>(
-      device, vk_pipeline, pipeline_layout, PipelineSpec());
+  vk::Pipeline vk_pipeline =
+      ESCHER_CHECKED_VK_RESULT(device.createComputePipeline(nullptr, pipeline_info));
+  auto pipeline =
+      fxl::MakeRefCounted<Pipeline>(device, vk_pipeline, pipeline_layout, PipelineSpec());
 
   device.destroyShaderModule(module);
 
@@ -115,8 +107,7 @@ PipelinePtr CreatePipeline(vk::Device device,
 // Used by ComputeShader constructor.
 inline void InitWriteDescriptorSet(
     vk::WriteDescriptorSet& write,
-    const std::vector<vk::DescriptorSetLayoutBinding>& layout_bindings,
-    uint32_t binding_id) {
+    const std::vector<vk::DescriptorSetLayoutBinding>& layout_bindings, uint32_t binding_id) {
   write.dstArrayElement = 0;
   write.descriptorType = layout_bindings[binding_id].descriptorType;
   write.descriptorCount = 1;
@@ -125,19 +116,17 @@ inline void InitWriteDescriptorSet(
 
 }  // namespace
 
-ComputeShader::ComputeShader(
-    EscherWeakPtr escher, const std::vector<vk::ImageLayout>& layouts,
-    const std::vector<vk::DescriptorType>& buffer_types,
-    size_t push_constants_size, const char* source_code)
+ComputeShader::ComputeShader(EscherWeakPtr escher, const std::vector<vk::ImageLayout>& layouts,
+                             const std::vector<vk::DescriptorType>& buffer_types,
+                             size_t push_constants_size, const char* source_code)
     : device_(escher->vulkan_context().device),
-      descriptor_set_layout_bindings_(
-          CreateLayoutBindings(layouts, buffer_types)),
+      descriptor_set_layout_bindings_(CreateLayoutBindings(layouts, buffer_types)),
       descriptor_set_layout_create_info_(
           CreateDescriptorSetLayoutCreateInfo(descriptor_set_layout_bindings_)),
       push_constants_size_(static_cast<uint32_t>(push_constants_size)),
       pool_(escher, descriptor_set_layout_create_info_),
-      pipeline_(CreatePipeline(device_, pool_.layout(), push_constants_size_,
-                               source_code, escher->glsl_compiler())) {
+      pipeline_(CreatePipeline(device_, pool_.layout(), push_constants_size_, source_code,
+                               escher->glsl_compiler())) {
   FXL_DCHECK(push_constants_size == push_constants_size_);  // detect overflow
   descriptor_image_info_.reserve(layouts.size());
   descriptor_buffer_info_.reserve(buffer_types.size());
@@ -169,25 +158,21 @@ ComputeShader::ComputeShader(
 ComputeShader::~ComputeShader() {}
 
 void ComputeShader::Dispatch(const std::vector<TexturePtr>& textures,
-                             const std::vector<BufferPtr>& buffers,
-                             CommandBuffer* command_buffer, uint32_t x,
-                             uint32_t y, uint32_t z,
-                             const void* push_constants) {
+                             const std::vector<BufferPtr>& buffers, CommandBuffer* command_buffer,
+                             uint32_t x, uint32_t y, uint32_t z, const void* push_constants) {
   std::vector<BufferRange> buffer_ranges;
   buffer_ranges.reserve(buffers.size());
   for (const auto& buffer : buffers) {
     buffer_ranges.push_back({0, buffer->size()});
   }
-  DispatchWithRanges(textures, buffers, buffer_ranges, command_buffer, x, y, z,
-                     push_constants);
+  DispatchWithRanges(textures, buffers, buffer_ranges, command_buffer, x, y, z, push_constants);
 }
 
-void ComputeShader::DispatchWithRanges(
-    const std::vector<TexturePtr>& textures,
-    const std::vector<BufferPtr>& buffers,
-    const std::vector<BufferRange>& buffer_ranges,
-    CommandBuffer* command_buffer, uint32_t x, uint32_t y, uint32_t z,
-    const void* push_constants) {
+void ComputeShader::DispatchWithRanges(const std::vector<TexturePtr>& textures,
+                                       const std::vector<BufferPtr>& buffers,
+                                       const std::vector<BufferRange>& buffer_ranges,
+                                       CommandBuffer* command_buffer, uint32_t x, uint32_t y,
+                                       uint32_t z, const void* push_constants) {
   // Push constants must be provided if and only if the pipeline is configured
   // to use them.
   FXL_DCHECK((push_constants_size_ == 0) == (push_constants == nullptr));
@@ -208,22 +193,18 @@ void ComputeShader::DispatchWithRanges(
     descriptor_buffer_info_[i].range = buffer_ranges[i].size;
     command_buffer->KeepAlive(buffers[i]);
   }
-  device_.updateDescriptorSets(
-      static_cast<uint32_t>(descriptor_set_writes_.size()),
-      descriptor_set_writes_.data(), 0, nullptr);
+  device_.updateDescriptorSets(static_cast<uint32_t>(descriptor_set_writes_.size()),
+                               descriptor_set_writes_.data(), 0, nullptr);
 
   auto vk_command_buffer = command_buffer->vk();
   auto vk_pipeline_layout = pipeline_->vk_layout();
 
   if (push_constants) {
-    vk_command_buffer.pushConstants(vk_pipeline_layout,
-                                    vk::ShaderStageFlagBits::eCompute, 0,
+    vk_command_buffer.pushConstants(vk_pipeline_layout, vk::ShaderStageFlagBits::eCompute, 0,
                                     push_constants_size_, push_constants);
   }
-  vk_command_buffer.bindPipeline(vk::PipelineBindPoint::eCompute,
-                                 pipeline_->vk());
-  vk_command_buffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute,
-                                       vk_pipeline_layout, 0, 1,
+  vk_command_buffer.bindPipeline(vk::PipelineBindPoint::eCompute, pipeline_->vk());
+  vk_command_buffer.bindDescriptorSets(vk::PipelineBindPoint::eCompute, vk_pipeline_layout, 0, 1,
                                        &descriptor_set, 0, nullptr);
   vk_command_buffer.dispatch(x, y, z);
 }

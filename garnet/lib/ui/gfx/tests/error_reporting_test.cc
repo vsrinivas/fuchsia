@@ -8,8 +8,7 @@ namespace scenic_impl {
 namespace gfx {
 namespace test {
 
-void TestErrorReporter::ReportError(fxl::LogSeverity severity,
-                                    std::string error_string) {
+void TestErrorReporter::ReportError(fxl::LogSeverity severity, std::string error_string) {
   // Typically, we don't want to log expected errors when running the tests.
   // However, it is useful to print these errors while writing the tests.
 #ifndef NDEBUG
@@ -35,8 +34,7 @@ void TestErrorReporter::ReportError(fxl::LogSeverity severity,
   reported_errors_.push_back(error_string);
 }
 
-void ErrorReportingTest::ExpectErrorAt(size_t pos,
-                                       const char* expected_error_string) {
+void ErrorReportingTest::ExpectErrorAt(size_t pos, const char* expected_error_string) {
   if (expected_error_string) {
     // Ensure pos is inside the array and references the error string.
     EXPECT_LT(pos, error_reporter_.errors().size());
@@ -48,8 +46,7 @@ void ErrorReportingTest::ExpectErrorAt(size_t pos,
   }
 }
 
-void ErrorReportingTest::ExpectLastReportedError(
-    const char* expected_error_string) {
+void ErrorReportingTest::ExpectLastReportedError(const char* expected_error_string) {
   if (error_reporter_.errors().empty()) {
     EXPECT_EQ(nullptr, expected_error_string);
   } else {

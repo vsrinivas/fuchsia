@@ -33,8 +33,7 @@ class Buffer : public WaitableResource {
   uint8_t* host_ptr() const { return host_ptr_; }
 
  protected:
-  Buffer(ResourceManager* manager, vk::Buffer buffer, vk::DeviceSize size,
-         uint8_t* host_ptr);
+  Buffer(ResourceManager* manager, vk::Buffer buffer, vk::DeviceSize size, uint8_t* host_ptr);
 
  private:
   // Underlying Vulkan buffer object.

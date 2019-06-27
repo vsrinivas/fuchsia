@@ -20,8 +20,8 @@ class GpuMem : public fxl::RefCountedThreadSafe<GpuMem> {
  public:
   // Create a GpuMem that takes ownership of |mem|, which will be destroyed when
   // the GpuMem dies. Guaranteed to return a non-null result.
-  static GpuMemPtr AdoptVkMemory(vk::Device device, vk::DeviceMemory mem,
-                                 vk::DeviceSize size, bool needs_mapped_ptr);
+  static GpuMemPtr AdoptVkMemory(vk::Device device, vk::DeviceMemory mem, vk::DeviceSize size,
+                                 bool needs_mapped_ptr);
 
   // Sub-allocate a GpuMem that represents a sub-range of the memory in this
   // GpuMem.  Since these sub-allocations reference the parent GpuMem, the
@@ -39,8 +39,7 @@ class GpuMem : public fxl::RefCountedThreadSafe<GpuMem> {
  protected:
   // |offset| + |size| must be <= the size of |base|. This class does not
   // takes ownership of |base| by default.
-  GpuMem(vk::DeviceMemory base, vk::DeviceSize size, vk::DeviceSize offset,
-         uint8_t* mapped_ptr);
+  GpuMem(vk::DeviceMemory base, vk::DeviceSize size, vk::DeviceSize offset, uint8_t* mapped_ptr);
 
   FRIEND_REF_COUNTED_THREAD_SAFE(GpuMem);
   virtual ~GpuMem();

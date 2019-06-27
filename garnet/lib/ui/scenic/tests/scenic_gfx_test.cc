@@ -15,11 +15,9 @@ namespace test {
 
 void ScenicGfxTest::InitializeScenic(Scenic* scenic) {
   auto display_manager = std::make_unique<gfx::DisplayManager>();
-  display_manager->SetDefaultDisplayForTests(
-      std::make_unique<test::TestDisplay>(
-          /*id*/ 0, /* width */ 0, /* height */ 0));
-  command_buffer_sequencer_ =
-      std::make_unique<escher::impl::CommandBufferSequencer>();
+  display_manager->SetDefaultDisplayForTests(std::make_unique<test::TestDisplay>(
+      /*id*/ 0, /* width */ 0, /* height */ 0));
+  command_buffer_sequencer_ = std::make_unique<escher::impl::CommandBufferSequencer>();
   scenic_->RegisterSystem<GfxSystemForTest>(std::move(display_manager),
                                             command_buffer_sequencer_.get());
 

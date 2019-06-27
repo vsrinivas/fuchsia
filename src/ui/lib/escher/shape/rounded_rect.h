@@ -17,9 +17,8 @@ struct MeshSpec;
 // Specify a rounded-rect that is centered at (0,0).
 struct RoundedRectSpec {
   // Note: radii are in clockwise order, starting from top-left.
-  RoundedRectSpec(float width, float height, float top_left_radius,
-                  float top_right_radius, float bottom_right_radius,
-                  float bottom_left_radius);
+  RoundedRectSpec(float width, float height, float top_left_radius, float top_right_radius,
+                  float bottom_right_radius, float bottom_left_radius);
   // Set all values to 0.
   RoundedRectSpec();
 
@@ -40,21 +39,16 @@ struct RoundedRectSpec {
 // Return the number of vertices and indices that are required to tessellate the
 // specified rounded-rect.  The first element of the pair is the vertex count,
 // and the second element is the index count.
-std::pair<uint32_t, uint32_t> GetRoundedRectMeshVertexAndIndexCounts(
-    const RoundedRectSpec& spec);
+std::pair<uint32_t, uint32_t> GetRoundedRectMeshVertexAndIndexCounts(const RoundedRectSpec& spec);
 
-void GenerateRoundedRectIndices(const RoundedRectSpec& spec,
-                                const MeshSpec& mesh_spec, void* indices_out,
-                                uint32_t max_bytes);
+void GenerateRoundedRectIndices(const RoundedRectSpec& spec, const MeshSpec& mesh_spec,
+                                void* indices_out, uint32_t max_bytes);
 
-void GenerateRoundedRectVertices(const RoundedRectSpec& spec,
-                                 const MeshSpec& mesh_spec, void* vertices_out,
-                                 uint32_t max_bytes);
+void GenerateRoundedRectVertices(const RoundedRectSpec& spec, const MeshSpec& mesh_spec,
+                                 void* vertices_out, uint32_t max_bytes);
 
-void GenerateRoundedRectVertices(const RoundedRectSpec& spec,
-                                 const MeshSpec& mesh_spec,
-                                 void* primary_attributes_out,
-                                 uint32_t max_primary_attribute_bytes,
+void GenerateRoundedRectVertices(const RoundedRectSpec& spec, const MeshSpec& mesh_spec,
+                                 void* primary_attributes_out, uint32_t max_primary_attribute_bytes,
                                  void* secondary_attributes_out,
                                  uint32_t max_secondary_attribute_bytes);
 
@@ -62,9 +56,7 @@ void GenerateRoundedRectVertices(const RoundedRectSpec& spec,
 
 // Provide a corresponding function to RoundedRectSpec::operator*, so that
 // scalar multiplication is commutative.
-inline RoundedRectSpec operator*(float t, const RoundedRectSpec& spec) {
-  return spec * t;
-}
+inline RoundedRectSpec operator*(float t, const RoundedRectSpec& spec) { return spec * t; }
 
 }  // namespace escher
 

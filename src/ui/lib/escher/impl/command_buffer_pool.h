@@ -23,10 +23,8 @@ class CommandBuffer;
 class CommandBufferPool {
  public:
   // The CommandBufferPool does not take ownership of the device and queue.
-  CommandBufferPool(vk::Device device, vk::Queue queue,
-                    uint32_t queue_family_index,
-                    CommandBufferSequencer* sequencer,
-                    bool supports_graphics_and_compute);
+  CommandBufferPool(vk::Device device, vk::Queue queue, uint32_t queue_family_index,
+                    CommandBufferSequencer* sequencer, bool supports_graphics_and_compute);
 
   // If there are still any pending buffers, this will block until they are
   // finished.

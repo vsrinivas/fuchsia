@@ -49,8 +49,7 @@ class View final : public Resource {
   static const ResourceTypeInfo kTypeInfo;
 
   View(Session* session, ResourceId id, ViewLinker::ImportLink link,
-       fuchsia::ui::views::ViewRefControl control_ref,
-       fuchsia::ui::views::ViewRef view_ref);
+       fuchsia::ui::views::ViewRefControl control_ref, fuchsia::ui::views::ViewRef view_ref);
   ~View() override;
 
   fxl::WeakPtr<View> GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
@@ -72,9 +71,7 @@ class View final : public Resource {
 
   // Called by |ViewHolder| to set the handle of the render event. It is
   // triggered on the next render pass this View is involved in.
-  void SetOnRenderEventHandle(zx_handle_t render_handle) {
-    render_handle_ = render_handle;
-  }
+  void SetOnRenderEventHandle(zx_handle_t render_handle) { render_handle_ = render_handle; }
   // Called by |ViewHolder| to invalidate the event handle when the event is
   // closed.
   void InvalidateRenderEventHandle() { render_handle_ = ZX_HANDLE_INVALID; }

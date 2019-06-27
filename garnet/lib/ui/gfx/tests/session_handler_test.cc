@@ -30,8 +30,7 @@ void SessionHandlerTest::InitializeScenic() {
   // TODO(SCN-720): Wrap Create using ::gtest::Environment
   // instead of this hack.  This code has the chance to break non-ScenicTests.
   app_context_ = sys::ComponentContext::Create();
-  scenic_ =
-      std::make_unique<Scenic>(app_context_.get(), inspect::Node(), [] {});
+  scenic_ = std::make_unique<Scenic>(app_context_.get(), inspect::Node(), [] {});
 }
 
 void SessionHandlerTest::InitializeSessionHandler() {
@@ -41,8 +40,7 @@ void SessionHandlerTest::InitializeSessionHandler() {
 
   InitializeScenicSession(session_id);
   command_dispatcher_ = session_manager->CreateCommandDispatcher(
-      CommandDispatcherContext(scenic_.get(), scenic_session_.get()),
-      std::move(session_context));
+      CommandDispatcherContext(scenic_.get(), scenic_session_.get()), std::move(session_context));
 }
 
 void SessionHandlerTest::InitializeDisplayManager() {
@@ -52,23 +50,19 @@ void SessionHandlerTest::InitializeDisplayManager() {
 }
 
 void SessionHandlerTest::InitializeEngine() {
-  command_buffer_sequencer_ =
-      std::make_unique<escher::impl::CommandBufferSequencer>();
+  command_buffer_sequencer_ = std::make_unique<escher::impl::CommandBufferSequencer>();
 
   auto mock_release_fence_signaller =
-      std::make_unique<ReleaseFenceSignallerForTest>(
-          command_buffer_sequencer_.get());
+      std::make_unique<ReleaseFenceSignallerForTest>(command_buffer_sequencer_.get());
 
-  engine_ = std::make_unique<EngineForTest>(
-      app_context_.get(), display_manager_.get(),
-      std::move(mock_release_fence_signaller),
-      /*event reporter*/ this, this->error_reporter());
+  engine_ = std::make_unique<EngineForTest>(app_context_.get(), display_manager_.get(),
+                                            std::move(mock_release_fence_signaller),
+                                            /*event reporter*/ this, this->error_reporter());
 }
 
 void SessionHandlerTest::InitializeScenicSession(SessionId session_id) {
   fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener;
-  scenic_session_ =
-      std::make_unique<scenic_impl::Session>(session_id, std::move(listener));
+  scenic_session_ = std::make_unique<scenic_impl::Session>(session_id, std::move(listener));
 }
 
 void SessionHandlerTest::EnqueueEvent(fuchsia::ui::gfx::Event event) {

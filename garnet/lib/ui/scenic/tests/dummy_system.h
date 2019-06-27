@@ -15,12 +15,10 @@ class DummySystem : public System {
   static constexpr TypeId kTypeId = kDummySystem;
   static const char* kName;
 
-  explicit DummySystem(SystemContext context,
-                       bool initialized_after_construction = true);
+  explicit DummySystem(SystemContext context, bool initialized_after_construction = true);
   ~DummySystem() override;
 
-  CommandDispatcherUniquePtr CreateCommandDispatcher(
-      CommandDispatcherContext context) override;
+  CommandDispatcherUniquePtr CreateCommandDispatcher(CommandDispatcherContext context) override;
 
  private:
 };

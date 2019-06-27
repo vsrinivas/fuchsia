@@ -6,7 +6,6 @@
 #define GARNET_LIB_UI_GFX_ENGINE_ENGINE_RENDERER_VISITOR_H_
 
 #include "garnet/lib/ui/gfx/resources/resource_visitor.h"
-
 #include "src/ui/lib/escher/paper/paper_readme.h"
 
 namespace scenic_impl {
@@ -26,8 +25,7 @@ class Node;
 class EngineRendererVisitor : public ResourceVisitor {
  public:
   // Both the renderer and gpu_uploader must outlive this visitor.
-  EngineRendererVisitor(escher::PaperRenderer* renderer,
-                        escher::BatchGpuUploader* gpu_uploader);
+  EngineRendererVisitor(escher::PaperRenderer* renderer, escher::BatchGpuUploader* gpu_uploader);
 
   // Main entry point.
   // TODO(SCN-1256): EngineRenderer should visit the whole scene-graph, not just

@@ -15,8 +15,7 @@ void SettingsManagerImpl::AddBinding(
 }
 
 void SettingsManagerImpl::RegisterSettingProvider(
-    fidl::InterfaceRequest<fuchsia::accessibility::SettingsProvider>
-        settings_provider_request) {
+    fidl::InterfaceRequest<fuchsia::accessibility::SettingsProvider> settings_provider_request) {
   settings_provider_impl_.Bind(std::move(settings_provider_request));
 }
 

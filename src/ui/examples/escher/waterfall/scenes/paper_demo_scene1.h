@@ -21,13 +21,11 @@ class PaperDemoScene1 : public Scene {
   void Init(escher::Stage* stage) override;
 
   // Illegal, use the PaperScene version instead.
-  escher::Model* Update(const escher::Stopwatch& stopwatch,
-                        uint64_t frame_count, escher::Stage* stage,
-                        escher::PaperRenderer* renderer) override;
+  escher::Model* Update(const escher::Stopwatch& stopwatch, uint64_t frame_count,
+                        escher::Stage* stage, escher::PaperRenderer* renderer) override;
 
   void Init(escher::PaperScene* scene) override;
-  void Update(const escher::Stopwatch& stopwatch, uint64_t frame_count,
-              escher::PaperScene* scene,
+  void Update(const escher::Stopwatch& stopwatch, uint64_t frame_count, escher::PaperScene* scene,
               escher::PaperRenderer* renderer) override;
 
  private:

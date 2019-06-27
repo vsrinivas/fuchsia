@@ -48,15 +48,7 @@ enum class TouchDeviceType {
   FT3X27,
 };
 
-enum class MouseDeviceType {
-  NONE,
-  BOOT,
-  HID,
-  TOUCH,
-  PARADISEv1,
-  PARADISEv2,
-  GAMEPAD
-};
+enum class MouseDeviceType { NONE, BOOT, HID, TOUCH, PARADISEv1, PARADISEv2, GAMEPAD };
 
 enum class SensorDeviceType {
   NONE,

@@ -21,15 +21,12 @@ class BoundingBox {
   // Return an empty box if max < min along any of the coordinate axes,
   // or if max == min along more than |max_degenerate_dimensions| of the
   // coordinate axes.  Otherwise return a non-empty box.
-  static BoundingBox NewChecked(vec3 min, vec3 max,
-                                uint32_t max_degenerate_dimensions = 0);
+  static BoundingBox NewChecked(vec3 min, vec3 max, uint32_t max_degenerate_dimensions = 0);
 
   const vec3& min() const { return min_; }
   const vec3& max() const { return max_; }
 
-  bool operator==(const BoundingBox& box) const {
-    return min_ == box.min_ && max_ == box.max_;
-  }
+  bool operator==(const BoundingBox& box) const { return min_ == box.min_ && max_ == box.max_; }
   bool operator!=(const BoundingBox& box) const { return !(*this == box); }
 
   // Expand this bounding box to encompass the other.  Return this box.
@@ -56,13 +53,11 @@ class BoundingBox {
   // Return the number of bounding box corners that are clipped by the
   // specified plane (between 0 and 8).  Since this is a 2D plane, the z
   // coordinate is ignored, and only 4 corners need to be tested.
-  uint32_t NumClippedCorners(const plane2& plane,
-                             const float_t& epsilon = kEpsilon) const;
+  uint32_t NumClippedCorners(const plane2& plane, const float_t& epsilon = kEpsilon) const;
 
   // Return the number of bounding box corners that are clipped by the
   // specified plane (between 0 and 8).
-  uint32_t NumClippedCorners(const plane3& plane,
-                             const float_t& epsilon = kEpsilon) const;
+  uint32_t NumClippedCorners(const plane3& plane, const float_t& epsilon = kEpsilon) const;
 
   std::vector<plane3> CreatePlanes() const;
 
@@ -78,9 +73,8 @@ BoundingBox operator*(const mat4& matrix, const BoundingBox& box);
 
 // Return a new Bounding box by translating the input box.
 inline BoundingBox operator+(const vec3& translation, const BoundingBox& box) {
-  return box.is_empty()
-             ? BoundingBox()
-             : BoundingBox(box.min() + translation, box.max() + translation);
+  return box.is_empty() ? BoundingBox()
+                        : BoundingBox(box.min() + translation, box.max() + translation);
 }
 
 // Return a new Bounding box by translating the input box.

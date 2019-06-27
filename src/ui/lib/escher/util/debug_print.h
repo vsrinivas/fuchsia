@@ -10,8 +10,7 @@
 namespace escher {
 
 // Declare here, and implement elsewhere.
-#define ESCHER_DEBUG_PRINTABLE(X) \
-  std::ostream& operator<<(std::ostream& str, const X&);
+#define ESCHER_DEBUG_PRINTABLE(X) std::ostream& operator<<(std::ostream& str, const X&);
 
 }  // namespace escher
 

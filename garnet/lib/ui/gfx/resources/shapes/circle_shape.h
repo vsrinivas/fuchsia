@@ -25,9 +25,8 @@ class CircleShape final : public PlanarShape {
   bool ContainsPoint(const escher::vec2& point) const override;
 
   // |Shape|.
-  escher::Object GenerateRenderObject(
-      const escher::mat4& transform,
-      const escher::MaterialPtr& material) override;
+  escher::Object GenerateRenderObject(const escher::mat4& transform,
+                                      const escher::MaterialPtr& material) override;
 
  private:
   float radius_;

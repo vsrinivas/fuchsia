@@ -52,11 +52,9 @@ class BufferCache : public ResourceRecycler {
   // TODO(SCN-851) Grow this class to handle different buffer usage and memory
   // flags. It should work with the UniformBlockAllocator.
   const vk::BufferUsageFlags kUsageFlags =
-      vk::BufferUsageFlagBits::eTransferSrc |
-      vk::BufferUsageFlagBits::eTransferDst;
+      vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eTransferDst;
   const vk::MemoryPropertyFlags kMemoryPropertyFlags =
-      vk::MemoryPropertyFlagBits::eHostVisible |
-      vk::MemoryPropertyFlagBits::eHostCoherent;
+      vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
 
   struct CacheInfo {
     uint64_t id;

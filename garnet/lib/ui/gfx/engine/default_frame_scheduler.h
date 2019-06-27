@@ -12,8 +12,8 @@
 
 #include <queue>
 
-#include "garnet/lib/ui/gfx/engine/frame_scheduler.h"
 #include "garnet/lib/ui/gfx/engine/frame_predictor.h"
+#include "garnet/lib/ui/gfx/engine/frame_scheduler.h"
 #include "garnet/lib/ui/gfx/id.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
@@ -28,15 +28,12 @@ class Display;
 // concerning the frame scheduler should be added to it as well.
 class DefaultFrameScheduler : public FrameScheduler {
  public:
-  explicit DefaultFrameScheduler(const Display* display,
-                                 std::unique_ptr<FramePredictor> predictor,
+  explicit DefaultFrameScheduler(const Display* display, std::unique_ptr<FramePredictor> predictor,
                                  inspect::Node inspect_node = inspect::Node());
   ~DefaultFrameScheduler();
 
   // |FrameScheduler|
-  void SetDelegate(FrameSchedulerDelegate delegate) override {
-    delegate_ = delegate;
-  };
+  void SetDelegate(FrameSchedulerDelegate delegate) override { delegate_ = delegate; };
 
   // |FrameScheduler|
   //
@@ -81,8 +78,7 @@ class DefaultFrameScheduler : public FrameScheduler {
   // and a wake-up time that is early enough to start rendering in order to hit
   // the target presentation time. These times are guaranteed to be in the
   // future.
-  std::pair<zx_time_t, zx_time_t>
-  ComputePresentationAndWakeupTimesForTargetTime(
+  std::pair<zx_time_t, zx_time_t> ComputePresentationAndWakeupTimesForTargetTime(
       zx_time_t requested_presentation_time) const;
 
   // Executes updates that are scheduled up to and including a given
@@ -105,14 +101,12 @@ class DefaultFrameScheduler : public FrameScheduler {
   std::unique_ptr<FramePredictor> frame_predictor_;
 
   // The async task that wakes up to start rendering.
-  async::TaskMethod<DefaultFrameScheduler,
-                    &DefaultFrameScheduler::MaybeRenderFrame>
+  async::TaskMethod<DefaultFrameScheduler, &DefaultFrameScheduler::MaybeRenderFrame>
       frame_render_task_{this};
 
   // Sessions that have updates to apply, sorted by requested presentation time
   // from earliest to latest.
-  std::priority_queue<SessionUpdate, std::vector<SessionUpdate>,
-                      std::greater<SessionUpdate>>
+  std::priority_queue<SessionUpdate, std::vector<SessionUpdate>, std::greater<SessionUpdate>>
       updatable_sessions_;
 
   inspect::Node inspect_node_;

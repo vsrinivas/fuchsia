@@ -40,8 +40,7 @@ class Compositor : public Resource {
 
   // TODO(SCN-452): there is currently no way to create/attach a display, so
   // this compositor will never render anything.
-  static CompositorPtr New(Session* session, ResourceId id,
-                           SceneGraphWeakPtr scene_graph);
+  static CompositorPtr New(Session* session, ResourceId id, SceneGraphWeakPtr scene_graph);
 
   ~Compositor() override;
 
@@ -73,8 +72,7 @@ class Compositor : public Resource {
 
  protected:
   Compositor(Session* session, ResourceId id, const ResourceTypeInfo& type_info,
-             SceneGraphWeakPtr scene_graph,
-             std::unique_ptr<Swapchain> swapchain);
+             SceneGraphWeakPtr scene_graph, std::unique_ptr<Swapchain> swapchain);
 
  private:
   SceneGraphWeakPtr scene_graph_;

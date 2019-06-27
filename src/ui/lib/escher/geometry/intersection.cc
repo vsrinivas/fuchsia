@@ -6,8 +6,7 @@
 
 namespace escher {
 
-bool IntersectRayBox(const escher::ray4& ray, const escher::BoundingBox& box,
-                     float* out_distance) {
+bool IntersectRayBox(const escher::ray4& ray, const escher::BoundingBox& box, float* out_distance) {
   // This algorithm is from "An Efficient and Robust Ray–Box Intersection
   // Algorithm" by Amy Williams et al. 2004. Division by zero is handled via
   // IEEE floating-point arithmetic. See paper for details.

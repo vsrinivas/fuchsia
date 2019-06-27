@@ -14,12 +14,10 @@ namespace test {
 
 class ReleaseFenceSignallerTest : public ::testing::Test {
  public:
-  uint64_t GenerateNextCommandBufferSequenceNumber(
-      impl::CommandBufferSequencer* sequencer) {
+  uint64_t GenerateNextCommandBufferSequenceNumber(impl::CommandBufferSequencer* sequencer) {
     return sequencer->GenerateNextCommandBufferSequenceNumber();
   }
-  void CommandBufferFinished(impl::CommandBufferSequencer* sequencer,
-                             uint64_t num) {
+  void CommandBufferFinished(impl::CommandBufferSequencer* sequencer, uint64_t num) {
     sequencer->CommandBufferFinished(num);
   }
 };

@@ -9,8 +9,7 @@ namespace impl {
 
 PipelineSpec::PipelineSpec() : type_(0), hash_(0) {}
 
-PipelineSpec::PipelineSpec(size_t type, std::vector<uint8_t> data)
-    : type_(type), data_(data) {
+PipelineSpec::PipelineSpec(size_t type, std::vector<uint8_t> data) : type_(type), data_(data) {
   hash_ = type_;
   for (uint8_t i : data) {
     // TODO: use better hash function

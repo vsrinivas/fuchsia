@@ -24,18 +24,14 @@ class Object {
   Object(std::vector<Object> clippers, std::vector<Object> clippees);
   Object(const Object& other) = default;
   Object(Object&& other) = default;
-  static Object NewRect(const vec2& top_left_position, const vec2& size,
-                        float z, MaterialPtr material);
-  static Object NewRect(const vec3& top_left_position, const vec2& size,
+  static Object NewRect(const vec2& top_left_position, const vec2& size, float z,
                         MaterialPtr material);
+  static Object NewRect(const vec3& top_left_position, const vec2& size, MaterialPtr material);
   static Object NewRect(const Transform& transform, MaterialPtr material);
   static Object NewRect(const mat4& transform, MaterialPtr material);
-  static Object NewCircle(const vec2& center_position, float radius, float z,
-                          MaterialPtr material);
-  static Object NewCircle(const vec3& center_position, float radius,
-                          MaterialPtr material);
-  static Object NewCircle(const mat4& transform, float radius,
-                          MaterialPtr material);
+  static Object NewCircle(const vec2& center_position, float radius, float z, MaterialPtr material);
+  static Object NewCircle(const vec3& center_position, float radius, MaterialPtr material);
+  static Object NewCircle(const mat4& transform, float radius, MaterialPtr material);
 
   // Return the object's 4x4 transformation matrix.
   const mat4& transform() const { return transform_; }
@@ -84,9 +80,7 @@ class Object {
 
  private:
   Object(mat4 transform, Shape shape, MaterialPtr material)
-      : transform_(transform),
-        shape_(std::move(shape)),
-        material_(std::move(material)) {}
+      : transform_(transform), shape_(std::move(shape)), material_(std::move(material)) {}
 
   mat4 transform_;
   Shape shape_;

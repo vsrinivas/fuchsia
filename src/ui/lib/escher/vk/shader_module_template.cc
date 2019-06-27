@@ -49,10 +49,8 @@ class Includer : public shaderc::CompileOptions::IncluderInterface {
   };
 
   // |shaderc::CompileOptions::IncluderInterface|.
-  shaderc_include_result* GetInclude(const char* requested_source,
-                                     shaderc_include_type type,
-                                     const char* requesting_source,
-                                     size_t include_depth) override {
+  shaderc_include_result* GetInclude(const char* requested_source, shaderc_include_type type,
+                                     const char* requesting_source, size_t include_depth) override {
     // Create a Result and stash it in result_map_, where it will stay until
     // released.  Keep a direct pointer to it, to use for the rest of this
     // method.
@@ -70,33 +68,26 @@ class Includer : public shaderc::CompileOptions::IncluderInterface {
 
     if (record->file_contents.empty()) {
       record->error_msg = "ShaderModuleTemplate: file not found.";
-      *result = {"", 0, record->error_msg.data(), record->error_msg.length(),
-                 nullptr};
+      *result = {"", 0, record->error_msg.data(), record->error_msg.length(), nullptr};
     } else {
-      *result = {record->file_path.data(), record->file_path.length(),
-                 record->file_contents.data(), record->file_contents.length(),
-                 nullptr};
+      *result = {record->file_path.data(), record->file_path.length(), record->file_contents.data(),
+                 record->file_contents.length(), nullptr};
     }
     return result;
   }
 
   // |shaderc::CompileOptions::IncluderInterface|.
-  void ReleaseInclude(shaderc_include_result* data) override {
-    result_map_.erase(data);
-  }
+  void ReleaseInclude(shaderc_include_result* data) override { result_map_.erase(data); }
 
  private:
   HackFilesystemWatcher* const filesystem_watcher_;
-  std::unordered_map<shaderc_include_result*, std::unique_ptr<ResultRecord>>
-      result_map_;
+  std::unordered_map<shaderc_include_result*, std::unique_ptr<ResultRecord>> result_map_;
 };
 
 }  // anonymous namespace
 
-ShaderModuleTemplate::ShaderModuleTemplate(vk::Device device,
-                                           shaderc::Compiler* compiler,
-                                           ShaderStage shader_stage,
-                                           HackFilePath path,
+ShaderModuleTemplate::ShaderModuleTemplate(vk::Device device, shaderc::Compiler* compiler,
+                                           ShaderStage shader_stage, HackFilePath path,
                                            HackFilesystemPtr filesystem)
     : device_(device),
       compiler_(compiler),
@@ -106,8 +97,7 @@ ShaderModuleTemplate::ShaderModuleTemplate(vk::Device device,
 
 ShaderModuleTemplate::~ShaderModuleTemplate() { FXL_DCHECK(variants_.empty()); }
 
-ShaderModulePtr ShaderModuleTemplate::GetShaderModuleVariant(
-    const ShaderVariantArgs& args) {
+ShaderModulePtr ShaderModuleTemplate::GetShaderModuleVariant(const ShaderVariantArgs& args) {
   if (Variant* variant = variants_[args]) {
     return ShaderModulePtr(variant);
   }
@@ -119,8 +109,7 @@ ShaderModulePtr ShaderModuleTemplate::GetShaderModuleVariant(
 }
 
 void ShaderModuleTemplate::RegisterVariant(Variant* variant) {
-  FXL_DCHECK(variants_.find(variant->args()) != variants_.end())
-      << "Variant already registered.";
+  FXL_DCHECK(variants_.find(variant->args()) != variants_.end()) << "Variant already registered.";
   variants_[variant->args()] = variant;
 }
 
@@ -131,8 +120,7 @@ void ShaderModuleTemplate::UnregisterVariant(Variant* variant) {
   variants_.erase(it);
 }
 
-void ShaderModuleTemplate::ScheduleVariantCompilation(
-    fxl::WeakPtr<Variant> variant) {
+void ShaderModuleTemplate::ScheduleVariantCompilation(fxl::WeakPtr<Variant> variant) {
   // TODO(SCN-672): Recompile immediately.  Eventually we might want to
   // momentarily defer this, so that we don't recompile multiple times if
   // several files are changing at once (as when all changed files are pushed to
@@ -142,8 +130,7 @@ void ShaderModuleTemplate::ScheduleVariantCompilation(
   }
 }
 
-ShaderModuleTemplate::Variant::Variant(ShaderModuleTemplate* tmplate,
-                                       ShaderVariantArgs args)
+ShaderModuleTemplate::Variant::Variant(ShaderModuleTemplate* tmplate, ShaderVariantArgs args)
     : ShaderModule(tmplate->device_, tmplate->shader_stage_),
       template_(tmplate),
       args_(std::move(args)),
@@ -152,17 +139,15 @@ ShaderModuleTemplate::Variant::Variant(ShaderModuleTemplate* tmplate,
   // been initialized, and weak_factory_ must be initialized last (at least if
   // we don't want to invite trouble).
   auto& fs = template_->filesystem_;
-  filesystem_watcher_ = fs->RegisterWatcher(
-      [weak = weak_factory_.GetWeakPtr()](HackFilePath changed_path) {
+  filesystem_watcher_ =
+      fs->RegisterWatcher([weak = weak_factory_.GetWeakPtr()](HackFilePath changed_path) {
         if (weak) {
           weak->template_->ScheduleVariantCompilation(weak);
         }
       });
 }
 
-ShaderModuleTemplate::Variant::~Variant() {
-  template_->UnregisterVariant(this);
-}
+ShaderModuleTemplate::Variant::~Variant() { template_->UnregisterVariant(this); }
 
 void ShaderModuleTemplate::Variant::ScheduleCompilation() {
   template_->ScheduleVariantCompilation(weak_factory_.GetWeakPtr());
@@ -180,16 +165,15 @@ void ShaderModuleTemplate::Variant::Compile() {
   options.SetOptimizationLevel(shaderc_optimization_level_performance);
   options.SetIncluder(std::make_unique<Includer>(filesystem_watcher_.get()));
   // TODO(SCN-665): update this once we can rely upon Vulkan 1.1.
-  options.SetTargetEnvironment(shaderc_target_env_vulkan,
-                               shaderc_env_version_vulkan_1_0);
+  options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_0);
   options.SetWarningsAsErrors();
 
   // Compile GLSL to SPIR-V, keeping track of paths as we go.
   auto main_file = filesystem_watcher_->ReadFile(template_->path_);
 
-  auto result = template_->compiler_->CompileGlslToSpv(
-      main_file.data(), main_file.size(), ShaderStageToKind(shader_stage()),
-      template_->path_.c_str(), "main", options);
+  auto result = template_->compiler_->CompileGlslToSpv(main_file.data(), main_file.size(),
+                                                       ShaderStageToKind(shader_stage()),
+                                                       template_->path_.c_str(), "main", options);
 
   auto status = result.GetCompilationStatus();
   if (status == shaderc_compilation_status_success) {

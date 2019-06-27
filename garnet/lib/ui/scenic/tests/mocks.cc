@@ -19,15 +19,16 @@ void ReleaseFenceSignallerForTest::AddCPUReleaseFence(zx::event fence) {
   fence.signal(0u, escher::kFenceSignalled);
 }
 
-EngineForTest::EngineForTest(
-    sys::ComponentContext* component_context,
-    gfx::DisplayManager* display_manager,
-    std::unique_ptr<escher::ReleaseFenceSignaller> release_signaler,
-    escher::EscherWeakPtr escher)
+EngineForTest::EngineForTest(sys::ComponentContext* component_context,
+                             gfx::DisplayManager* display_manager,
+                             std::unique_ptr<escher::ReleaseFenceSignaller> release_signaler,
+                             escher::EscherWeakPtr escher)
     : gfx::Engine(component_context,
                   std::make_unique<gfx::DefaultFrameScheduler>(
                       display_manager->default_display(),
-                      std::make_unique<gfx::FramePredictor>(gfx::DefaultFrameScheduler::kInitialRenderDuration, gfx::DefaultFrameScheduler::kInitialUpdateDuration)),
+                      std::make_unique<gfx::FramePredictor>(
+                          gfx::DefaultFrameScheduler::kInitialRenderDuration,
+                          gfx::DefaultFrameScheduler::kInitialUpdateDuration)),
                   display_manager, std::move(release_signaler),
                   std::make_unique<gfx::SessionManager>(), std::move(escher)) {}
 

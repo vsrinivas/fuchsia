@@ -15,9 +15,7 @@ fxl::WeakPtr<MockDeviceWatcher> MockDeviceWatcher::GetWeakPtr() {
   return weak_ptr_factory_.GetWeakPtr();
 }
 
-void MockDeviceWatcher::Watch(ExistsCallback callback) {
-  callback_ = std::move(callback);
-}
+void MockDeviceWatcher::Watch(ExistsCallback callback) { callback_ = std::move(callback); }
 
 void MockDeviceWatcher::AddDevice(std::unique_ptr<HidDecoder> hid_decoder) {
   callback_(std::move(hid_decoder));

@@ -13,8 +13,7 @@
 
 namespace accessibility_test {
 
-MockSettingsWatcher::MockSettingsWatcher(
-    sys::testing::ComponentContextProvider* context)
+MockSettingsWatcher::MockSettingsWatcher(sys::testing::ComponentContextProvider* context)
     : context_provider_(context) {
   context_provider_->context()->svc()->Connect(manager_.NewRequest());
   manager_.set_error_handler([](zx_status_t status) {
@@ -26,54 +25,40 @@ MockSettingsWatcher::MockSettingsWatcher(
   manager_->Watch(std::move(watcher_handle));
 }
 
-void MockSettingsWatcher::OnSettingsChange(
-    fuchsia::accessibility::Settings new_settings) {
+void MockSettingsWatcher::OnSettingsChange(fuchsia::accessibility::Settings new_settings) {
   SaveSettings(std::move(new_settings));
 }
 
-void MockSettingsWatcher::SaveSettings(
-    fuchsia::accessibility::Settings provided_settings) {
-  settings_.set_magnification_enabled(
-      provided_settings.magnification_enabled());
+void MockSettingsWatcher::SaveSettings(fuchsia::accessibility::Settings provided_settings) {
+  settings_.set_magnification_enabled(provided_settings.magnification_enabled());
   if (provided_settings.has_magnification_zoom_factor()) {
-    settings_.set_magnification_zoom_factor(
-        provided_settings.magnification_zoom_factor());
+    settings_.set_magnification_zoom_factor(provided_settings.magnification_zoom_factor());
   }
-  settings_.set_screen_reader_enabled(
-      provided_settings.screen_reader_enabled());
-  settings_.set_color_inversion_enabled(
-      provided_settings.color_inversion_enabled());
+  settings_.set_screen_reader_enabled(provided_settings.screen_reader_enabled());
+  settings_.set_color_inversion_enabled(provided_settings.color_inversion_enabled());
   settings_.set_color_correction(provided_settings.color_correction());
   if (provided_settings.has_color_adjustment_matrix()) {
-    settings_.set_color_adjustment_matrix(
-        provided_settings.color_adjustment_matrix());
+    settings_.set_color_adjustment_matrix(provided_settings.color_adjustment_matrix());
   }
 }
 
-bool MockSettingsWatcher::CompareFloatArray(
-    std::array<float, 9> first_array, std::array<float, 9> second_array) const {
+bool MockSettingsWatcher::CompareFloatArray(std::array<float, 9> first_array,
+                                            std::array<float, 9> second_array) const {
   const float float_comparison_epsilon = 0.00001;
   for (int i = 0; i < 9; i++) {
-    if ((std::fabs(first_array[i] - second_array[i]) >
-         float_comparison_epsilon)) {
+    if ((std::fabs(first_array[i] - second_array[i]) > float_comparison_epsilon)) {
       return false;
     }
   }
   return true;
 }
 
-bool MockSettingsWatcher::IsSame(
-    fuchsia::accessibility::SettingsPtr provided_settings) {
-  return settings_.magnification_enabled() ==
-             provided_settings->magnification_enabled() &&
-         settings_.magnification_zoom_factor() ==
-             provided_settings->magnification_zoom_factor() &&
-         settings_.screen_reader_enabled() ==
-             provided_settings->screen_reader_enabled() &&
-         settings_.color_inversion_enabled() ==
-             provided_settings->color_inversion_enabled() &&
-         settings_.color_correction() ==
-             provided_settings->color_correction() &&
+bool MockSettingsWatcher::IsSame(fuchsia::accessibility::SettingsPtr provided_settings) {
+  return settings_.magnification_enabled() == provided_settings->magnification_enabled() &&
+         settings_.magnification_zoom_factor() == provided_settings->magnification_zoom_factor() &&
+         settings_.screen_reader_enabled() == provided_settings->screen_reader_enabled() &&
+         settings_.color_inversion_enabled() == provided_settings->color_inversion_enabled() &&
+         settings_.color_correction() == provided_settings->color_correction() &&
          settings_.has_color_adjustment_matrix() ==
              provided_settings->has_color_adjustment_matrix() &&
          (settings_.has_color_adjustment_matrix()

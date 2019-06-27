@@ -45,12 +45,7 @@ class ViewImpl {
 
   std::vector<scenic::ShapeNode> nodes_;
 
-  enum AnimationState {
-    kFourCorners,
-    kSwirling,
-    kChangingToFourCorners,
-    kChangingToSwirling
-  };
+  enum AnimationState { kFourCorners, kSwirling, kChangingToFourCorners, kChangingToSwirling };
   AnimationState animation_state_ = kFourCorners;
 
   // Output a parameter that represents the progress through the current
@@ -73,18 +68,15 @@ class ViewImpl {
 // animation and a static layout.
 class ShadertoyClientView : public scenic::BaseView {
  public:
-  ShadertoyClientView(scenic::ViewContext context,
-                      const std::string& debug_name);
+  ShadertoyClientView(scenic::ViewContext context, const std::string& debug_name);
   ~ShadertoyClientView() = default;
 
  private:
   // |scenic::BaseView|.
-  void OnSceneInvalidated(
-      fuchsia::images::PresentationInfo presentation_info) override;
+  void OnSceneInvalidated(fuchsia::images::PresentationInfo presentation_info) override;
 
   // |scenic::BaseView|.
-  void OnPropertiesChanged(
-      fuchsia::ui::gfx::ViewProperties old_properties) override;
+  void OnPropertiesChanged(fuchsia::ui::gfx::ViewProperties old_properties) override;
 
   // |scenic::BaseView|.
   void OnMetricsChanged(fuchsia::ui::gfx::Metrics old_metrics) override;

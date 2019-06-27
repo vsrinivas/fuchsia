@@ -23,9 +23,7 @@ class ShaderModuleTemplateTest : public ::testing::Test {
   void TearDown() override;
 
   const HackFilesystemPtr& filesystem() const { return filesystem_; }
-  const ShaderModuleTemplatePtr& module_template() const {
-    return module_template_;
-  }
+  const ShaderModuleTemplatePtr& module_template() const { return module_template_; }
 
  private:
   HackFilesystemPtr filesystem_;
@@ -123,18 +121,15 @@ void ShaderModuleTemplateTest::SetUp() {
   filesystem_->WriteFile(HackFilePath(kMainPath), kMain);
   filesystem_->WriteFile(HackFilePath(kPerVertexOutPath), kPerVertexOut);
   filesystem_->WriteFile(HackFilePath(kDescriptorSetsPath), kDescriptorSets);
-  filesystem_->WriteFile(HackFilePath(kVertexAttributesPath),
-                         kVertexAttributes);
-  filesystem_->WriteFile(HackFilePath(kComputeIdentityPositionPath),
-                         kComputeIdentityPosition);
-  filesystem_->WriteFile(HackFilePath(kComputeShiftedPositionPath),
-                         kComputeShiftedPosition);
+  filesystem_->WriteFile(HackFilePath(kVertexAttributesPath), kVertexAttributes);
+  filesystem_->WriteFile(HackFilePath(kComputeIdentityPositionPath), kComputeIdentityPosition);
+  filesystem_->WriteFile(HackFilePath(kComputeShiftedPositionPath), kComputeShiftedPosition);
 
   // Initialize module template.
   auto escher = test::GetEscher();
-  module_template_ = fxl::MakeRefCounted<ShaderModuleTemplate>(
-      escher->vk_device(), escher->shaderc_compiler(), ShaderStage::kVertex,
-      kMainPath, filesystem());
+  module_template_ =
+      fxl::MakeRefCounted<ShaderModuleTemplate>(escher->vk_device(), escher->shaderc_compiler(),
+                                                ShaderStage::kVertex, kMainPath, filesystem());
 }
 
 void ShaderModuleTemplateTest::TearDown() {
@@ -160,8 +155,7 @@ VK_TEST_F(ShaderModuleTemplateTest, SameAndDifferentVariants) {
 
 class TestShaderModuleListener : public ShaderModuleListener {
  public:
-  explicit TestShaderModuleListener(ShaderModulePtr module)
-      : module_(std::move(module)) {
+  explicit TestShaderModuleListener(ShaderModulePtr module) : module_(std::move(module)) {
     module_->AddShaderModuleListener(this);
   }
 
@@ -189,15 +183,13 @@ VK_TEST_F(ShaderModuleTemplateTest, Listeners) {
 
   // This doesn't cause any problems because no variants use this file, because
   // SHIFTED_MODEL_POSITION isn't defined.
-  filesystem()->WriteFile(HackFilePath(kComputeShiftedPositionPath),
-                          "garbage glsl code");
+  filesystem()->WriteFile(HackFilePath(kComputeShiftedPositionPath), "garbage glsl code");
   EXPECT_EQ(listener.update_count(), 1);
 
   // Changing a file that was transitively included causes the module's SPIR-V
   // to be regenerated. (NOTE: HackFilesystem could be smarter and only notify
   // when something has actually changed, but it doesn't).
-  filesystem()->WriteFile(HackFilePath(kComputeIdentityPositionPath),
-                          kComputeIdentityPosition);
+  filesystem()->WriteFile(HackFilePath(kComputeIdentityPositionPath), kComputeIdentityPosition);
   EXPECT_EQ(listener.update_count(), 2);
 }
 

@@ -53,26 +53,24 @@ class Escher : public MeshBuilderFactory, public ShaderProgramFactory {
   // command buffers, to add timestamps for GPU profiling, etc.  If
   // |enable_gpu_logging| is true, GPU profiling timestamps will be logged via
   // FXL_LOG().
-  FramePtr NewFrame(const char* trace_literal, uint64_t frame_number,
-                    bool enable_gpu_logging = false,
-                    escher::CommandBuffer::Type requested_type =
-                        escher::CommandBuffer::Type::kGraphics);
+  FramePtr NewFrame(
+      const char* trace_literal, uint64_t frame_number, bool enable_gpu_logging = false,
+      escher::CommandBuffer::Type requested_type = escher::CommandBuffer::Type::kGraphics);
 
   // Construct a new Texture, which encapsulates a newly-created VkImageView and
   // VkSampler.  |aspect_mask| is used to create the VkImageView, and |filter|
   // and |use_unnormalized_coordinates| are used to create the VkSampler.
-  TexturePtr NewTexture(
-      ImagePtr image, vk::Filter filter,
-      vk::ImageAspectFlags aspect_mask = vk::ImageAspectFlagBits::eColor,
-      bool use_unnormalized_coordinates = false);
+  TexturePtr NewTexture(ImagePtr image, vk::Filter filter,
+                        vk::ImageAspectFlags aspect_mask = vk::ImageAspectFlagBits::eColor,
+                        bool use_unnormalized_coordinates = false);
 
   // Construct a new Texture, which encapsulates a newly-created VkImage,
   // VkImageView and VkSampler.  |aspect_mask| is used to create the
   // VkImageView, and |filter| and |use_unnormalized_coordinates| are used to
   // create the VkSampler.
-  TexturePtr NewTexture(vk::Format format, uint32_t width, uint32_t height,
-                        uint32_t sample_count, vk::ImageUsageFlags usage_flags,
-                        vk::Filter filter, vk::ImageAspectFlags aspect_flags,
+  TexturePtr NewTexture(vk::Format format, uint32_t width, uint32_t height, uint32_t sample_count,
+                        vk::ImageUsageFlags usage_flags, vk::Filter filter,
+                        vk::ImageAspectFlags aspect_flags,
                         bool use_unnormalized_coordinates = false);
 
   // Construct a new Buffer, which encapsulates a newly-created VkBuffer.
@@ -89,17 +87,15 @@ class Escher : public MeshBuilderFactory, public ShaderProgramFactory {
   //   - optionally eTransientAttachment, depending on |is_transient|
   //   - optionally eInputAttachment, depending on |is_input|
   TexturePtr NewAttachmentTexture(
-      vk::Format format, uint32_t width, uint32_t height, uint32_t sample_count,
-      vk::Filter filter,
+      vk::Format format, uint32_t width, uint32_t height, uint32_t sample_count, vk::Filter filter,
       vk::ImageUsageFlags additional_usage_flags = vk::ImageUsageFlags(),
       bool is_transient_attachment = false, bool is_input_attachment = false,
       bool use_unnormalized_coordinates = false);
 
   uint64_t GetNumGpuBytesAllocated();
 
-  impl::DescriptorSetAllocator* GetDescriptorSetAllocator(
-      const impl::DescriptorSetLayout& layout,
-      const SamplerPtr& immutable_sampler);
+  impl::DescriptorSetAllocator* GetDescriptorSetAllocator(const impl::DescriptorSetLayout& layout,
+                                                          const SamplerPtr& immutable_sampler);
 
   // Do periodic housekeeping.  This is called by Renderer::EndFrame(), so you
   // don't need to call it if your application is constantly rendering.
@@ -112,9 +108,7 @@ class Escher : public MeshBuilderFactory, public ShaderProgramFactory {
 
   VulkanDeviceQueues* device() const { return device_.get(); }
   vk::Device vk_device() const { return device_->vk_device(); }
-  vk::PhysicalDevice vk_physical_device() const {
-    return device_->vk_physical_device();
-  }
+  vk::PhysicalDevice vk_physical_device() const { return device_->vk_physical_device(); }
   const VulkanContext& vulkan_context() const { return vulkan_context_; }
 
   ResourceRecycler* resource_recycler() { return resource_recycler_.get(); }
@@ -130,28 +124,18 @@ class Escher : public MeshBuilderFactory, public ShaderProgramFactory {
   ImageFactory* image_cache() { return image_cache_.get(); }
   BufferCache* buffer_cache() { return buffer_cache_.get(); }
   impl::MeshManager* mesh_manager() { return mesh_manager_.get(); }
-  impl::PipelineLayoutCache* pipeline_layout_cache() {
-    return pipeline_layout_cache_.get();
-  }
-  impl::RenderPassCache* render_pass_cache() const {
-    return render_pass_cache_.get();
-  }
-  impl::FramebufferAllocator* framebuffer_allocator() const {
-    return framebuffer_allocator_.get();
-  }
+  impl::PipelineLayoutCache* pipeline_layout_cache() { return pipeline_layout_cache_.get(); }
+  impl::RenderPassCache* render_pass_cache() const { return render_pass_cache_.get(); }
+  impl::FramebufferAllocator* framebuffer_allocator() const { return framebuffer_allocator_.get(); }
 
   // Pool for CommandBuffers submitted on the main queue.
-  impl::CommandBufferPool* command_buffer_pool() {
-    return command_buffer_pool_.get();
-  }
+  impl::CommandBufferPool* command_buffer_pool() { return command_buffer_pool_.get(); }
   // Pool for CommandBuffers submitted on the transfer queue (if one exists).
   impl::CommandBufferPool* transfer_command_buffer_pool() {
     return transfer_command_buffer_pool_.get();
   }
 
-  DefaultShaderProgramFactory* shader_program_factory() {
-    return shader_program_factory_.get();
-  }
+  DefaultShaderProgramFactory* shader_program_factory() { return shader_program_factory_.get(); }
 
   // Check if GPU performance profiling is supported.
   bool supports_timer_queries() const { return supports_timer_queries_; }
@@ -165,9 +149,8 @@ class Escher : public MeshBuilderFactory, public ShaderProgramFactory {
   std::atomic<uint32_t> renderer_count_;
 
   // |ShaderProgramFactory|
-  ShaderProgramPtr GetProgram(
-      const std::string shader_paths[EnumCount<ShaderStage>()],
-      ShaderVariantArgs args) override;
+  ShaderProgramPtr GetProgram(const std::string shader_paths[EnumCount<ShaderStage>()],
+                              ShaderVariantArgs args) override;
 
   VulkanDeviceQueuesPtr device_;
   VulkanContext vulkan_context_;
@@ -196,8 +179,7 @@ class Escher : public MeshBuilderFactory, public ShaderProgramFactory {
   std::unique_ptr<impl::FramebufferAllocator> framebuffer_allocator_;
   std::unique_ptr<impl::FrameManager> frame_manager_;
 
-  HashMap<Hash, std::unique_ptr<impl::DescriptorSetAllocator>>
-      descriptor_set_allocators_;
+  HashMap<Hash, std::unique_ptr<impl::DescriptorSetAllocator>> descriptor_set_allocators_;
 
   bool supports_timer_queries_ = false;
   float timestamp_period_ = 0.f;

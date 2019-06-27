@@ -8,9 +8,9 @@
 #include <lib/async-loop/cpp/loop.h>
 
 #include "lib/component/cpp/startup_context.h"
-#include "src/lib/fxl/command_line.h"
 #include "lib/ui/scenic/cpp/resources.h"
 #include "lib/ui/scenic/cpp/session.h"
+#include "src/lib/fxl/command_line.h"
 
 namespace standalone_app {
 

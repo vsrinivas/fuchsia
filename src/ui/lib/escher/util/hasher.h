@@ -17,8 +17,7 @@ namespace escher {
 // various data types.
 class Hasher {
  public:
-  explicit Hasher(uint64_t initial_hash = kHashFnv1OffsetBasis64)
-      : value_(initial_hash) {}
+  explicit Hasher(uint64_t initial_hash = kHashFnv1OffsetBasis64) : value_(initial_hash) {}
   explicit Hasher(const Hash& hash) : value_(hash.val) {}
 
   // Return the current Hash value.
@@ -104,9 +103,7 @@ class Hasher {
     u64(u.u64);
   }
 
-  inline void pointer(const void* ptr) {
-    u64(reinterpret_cast<uintptr_t>(ptr));
-  }
+  inline void pointer(const void* ptr) { u64(reinterpret_cast<uintptr_t>(ptr)); }
 
   inline void const_chars(const char* str) {
     // Ensure that even empty strings affect the hash, otherwise {"","","foo"}

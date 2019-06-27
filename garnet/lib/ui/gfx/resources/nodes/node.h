@@ -54,8 +54,7 @@ class Node : public Resource {
   bool SetClipPlanes(std::vector<escher::plane3> clip_planes);
   bool SetClipPlanesFromBBox(const escher::BoundingBox& box);
   bool SetHitTestBehavior(::fuchsia::ui::gfx::HitTestBehavior behavior);
-  bool SendSizeChangeHint(float width_change_factor,
-                          float height_change_factor);
+  bool SendSizeChangeHint(float width_change_factor, float height_change_factor);
 
   const escher::mat4& GetGlobalTransform() const;
 
@@ -65,20 +64,12 @@ class Node : public Resource {
   const escher::quat& rotation() const { return transform_.rotation; }
   const escher::vec3& anchor() const { return transform_.anchor; }
   bool clip_to_self() const { return clip_to_self_; }
-  const std::vector<escher::plane3>& clip_planes() const {
-    return clip_planes_;
-  }
-  ::fuchsia::ui::gfx::HitTestBehavior hit_test_behavior() const {
-    return hit_test_behavior_;
-  }
+  const std::vector<escher::plane3>& clip_planes() const { return clip_planes_; }
+  ::fuchsia::ui::gfx::HitTestBehavior hit_test_behavior() const { return hit_test_behavior_; }
 
   // The node's metrics as reported to the session listener.
-  ::fuchsia::ui::gfx::Metrics reported_metrics() const {
-    return reported_metrics_;
-  }
-  void set_reported_metrics(::fuchsia::ui::gfx::Metrics metrics) {
-    reported_metrics_ = metrics;
-  }
+  ::fuchsia::ui::gfx::Metrics reported_metrics() const { return reported_metrics_; }
+  void set_reported_metrics(::fuchsia::ui::gfx::Metrics metrics) { reported_metrics_ = metrics; }
 
   // |Resource|, DetachCmd.
   bool Detach() override;
@@ -107,8 +98,7 @@ class Node : public Resource {
   //
   // Returns true if there is an intersection, otherwise returns false and
   // leaves |out_distance| unmodified.
-  virtual bool GetIntersection(const escher::ray4& ray,
-                               float* out_distance) const;
+  virtual bool GetIntersection(const escher::ray4& ray, float* out_distance) const;
 
   // Walk up tree until we find the responsible View; otherwise return nullptr.
   // N.B. Typically the view and node are in the same session, but it's possible
@@ -158,8 +148,7 @@ class Node : public Resource {
   std::vector<NodePtr> children_;
   std::vector<NodePtr> parts_;
 
-  std::unordered_map<NodeProperty, std::unique_ptr<VariableBinding>>
-      bound_variables_;
+  std::unordered_map<NodeProperty, std::unique_ptr<VariableBinding>> bound_variables_;
 
   escher::Transform transform_;
   mutable escher::mat4 global_transform_;

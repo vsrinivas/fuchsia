@@ -5,9 +5,8 @@
 #include "garnet/lib/ui/gfx/resources/nodes/entity_node.h"
 #include "garnet/lib/ui/gfx/resources/nodes/shape_node.h"
 #include "garnet/lib/ui/gfx/tests/session_test.h"
-#include "lib/ui/scenic/cpp/commands.h"
-
 #include "gtest/gtest.h"
+#include "lib/ui/scenic/cpp/commands.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -90,13 +89,11 @@ TEST_F(NodeTest, SettingHitTestBehavior) {
   EXPECT_TRUE(Apply(scenic::NewCreateShapeNodeCmd(kNodeId)));
 
   auto shape_node = FindResource<ShapeNode>(kNodeId);
-  EXPECT_EQ(::fuchsia::ui::gfx::HitTestBehavior::kDefault,
-            shape_node->hit_test_behavior());
+  EXPECT_EQ(::fuchsia::ui::gfx::HitTestBehavior::kDefault, shape_node->hit_test_behavior());
 
-  EXPECT_TRUE(Apply(scenic::NewSetHitTestBehaviorCmd(
-      kNodeId, ::fuchsia::ui::gfx::HitTestBehavior::kSuppress)));
-  EXPECT_EQ(::fuchsia::ui::gfx::HitTestBehavior::kSuppress,
-            shape_node->hit_test_behavior());
+  EXPECT_TRUE(Apply(
+      scenic::NewSetHitTestBehaviorCmd(kNodeId, ::fuchsia::ui::gfx::HitTestBehavior::kSuppress)));
+  EXPECT_EQ(::fuchsia::ui::gfx::HitTestBehavior::kSuppress, shape_node->hit_test_behavior());
 }
 
 TEST_F(NodeTest, SettingClipPlanes) {

@@ -18,8 +18,8 @@ class Sampler : public Resource {
   static const ResourceTypeInfo kTypeInfo;
   const ResourceTypeInfo& type_info() const override { return kTypeInfo; }
 
-  Sampler(ResourceRecycler* resource_recycler, vk::Format format,
-          vk::Filter filter, bool use_unnormalized_coordinates = false);
+  Sampler(ResourceRecycler* resource_recycler, vk::Format format, vk::Filter filter,
+          bool use_unnormalized_coordinates = false);
   ~Sampler() override;
 
   const vk::Sampler& vk() const { return sampler_; }
@@ -30,9 +30,7 @@ class Sampler : public Resource {
 
   // If this sampler has extension data, then any ImageViews that use this
   // sampler must be initialized with the same extension data.
-  void* GetExtensionData() {
-    return is_immutable_ ? &ycbcr_conversion_ : nullptr;
-  }
+  void* GetExtensionData() { return is_immutable_ ? &ycbcr_conversion_ : nullptr; }
 
  private:
   vk::Sampler sampler_;

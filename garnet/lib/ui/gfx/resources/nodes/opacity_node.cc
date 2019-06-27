@@ -9,8 +9,8 @@
 namespace scenic_impl {
 namespace gfx {
 
-const ResourceTypeInfo OpacityNode::kTypeInfo = {
-    ResourceType::kNode | ResourceType::kOpacityNode, "OpacityNode"};
+const ResourceTypeInfo OpacityNode::kTypeInfo = {ResourceType::kNode | ResourceType::kOpacityNode,
+                                                 "OpacityNode"};
 
 OpacityNode::OpacityNode(Session* session, ResourceId node_id)
     : Node(session, node_id, OpacityNode::kTypeInfo) {

@@ -25,8 +25,7 @@ class MockSemanticActionListener
                                       fuchsia::ui::views::ViewRef view_ref);
   ~MockSemanticActionListener() override = default;
 
-  void UpdateSemanticNodes(
-      std::vector<fuchsia::accessibility::semantics::Node> nodes);
+  void UpdateSemanticNodes(std::vector<fuchsia::accessibility::semantics::Node> nodes);
   void DeleteSemanticNodes(std::vector<uint32_t> node_ids);
   void Commit();
 
@@ -40,8 +39,7 @@ class MockSemanticActionListener
   sys::ComponentContext* context_;
   fuchsia::accessibility::semantics::SemanticsManagerPtr manager_;
   fuchsia::accessibility::semantics::SemanticTreePtr tree_ptr_;
-  fidl::BindingSet<fuchsia::accessibility::semantics::SemanticActionListener>
-      bindings_;
+  fidl::BindingSet<fuchsia::accessibility::semantics::SemanticActionListener> bindings_;
   fuchsia::ui::views::ViewRef view_ref_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(MockSemanticActionListener);

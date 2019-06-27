@@ -13,8 +13,7 @@
 
 namespace escher {
 
-const ResourceTypeInfo ImageView::kTypeInfo("ImageView",
-                                            ResourceType::kResource,
+const ResourceTypeInfo ImageView::kTypeInfo("ImageView", ResourceType::kResource,
                                             ResourceType::kImageView);
 
 ImageView::ImageView(ResourceRecycler* resource_recycler, ImagePtr image,
@@ -48,22 +47,20 @@ ImageView::ImageView(ResourceRecycler* resource_recycler, ImagePtr image,
   view_info.subresourceRange.aspectMask = aspect_mask;
   view_info.format = image_->format();
   view_info.image = image_->vk();
-  image_view_ =
-      ESCHER_CHECKED_VK_RESULT(vk_device().createImageView(view_info));
+  image_view_ = ESCHER_CHECKED_VK_RESULT(vk_device().createImageView(view_info));
 }
 
 ImageView::~ImageView() { vk_device().destroyImageView(image_view_); }
 
 ImageViewPtr ImageView::New(ImagePtr image, vk::ImageAspectFlags aspect_mask) {
   FXL_CHECK(image && image->escher());
-  return fxl::MakeRefCounted<ImageView>(image->escher()->resource_recycler(),
-                                        std::move(image), aspect_mask);
+  return fxl::MakeRefCounted<ImageView>(image->escher()->resource_recycler(), std::move(image),
+                                        aspect_mask);
 }
 
 ImageViewPtr ImageView::New(ResourceRecycler* recycler, ImagePtr image,
                             vk::ImageAspectFlags aspect_mask) {
-  return fxl::MakeRefCounted<ImageView>(recycler, std::move(image),
-                                        aspect_mask);
+  return fxl::MakeRefCounted<ImageView>(recycler, std::move(image), aspect_mask);
 }
 
 }  // namespace escher

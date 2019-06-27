@@ -35,13 +35,9 @@ class DescriptorSetAllocator {
     return std::make_pair(pair.first->set, pair.second);
   }
 
-  const DescriptorSetLayout& layout() const {
-    return cache_.object_pool().policy().layout();
-  }
+  const DescriptorSetLayout& layout() const { return cache_.object_pool().policy().layout(); }
 
-  vk::DescriptorSetLayout vk_layout() const {
-    return cache_.object_pool().policy().vk_layout();
-  }
+  vk::DescriptorSetLayout vk_layout() const { return cache_.object_pool().policy().vk_layout(); }
 
   size_t cache_hits() const { return cache_.cache_hits(); }
   size_t cache_misses() const { return cache_.cache_misses(); }
@@ -56,15 +52,12 @@ class DescriptorSetAllocator {
   // time. Each block is associated with a separate vk::DescriptorPool.
   class PoolPolicy {
    public:
-    PoolPolicy(vk::Device device, DescriptorSetLayout layout,
-               const SamplerPtr& immutable_sampler);
+    PoolPolicy(vk::Device device, DescriptorSetLayout layout, const SamplerPtr& immutable_sampler);
     ~PoolPolicy();
 
-    void InitializePoolObjectBlock(CacheItem* objects, size_t block_index,
-                                   size_t num_objects);
+    void InitializePoolObjectBlock(CacheItem* objects, size_t block_index, size_t num_objects);
 
-    void DestroyPoolObjectBlock(CacheItem* objects, size_t block_index,
-                                size_t num_objects);
+    void DestroyPoolObjectBlock(CacheItem* objects, size_t block_index, size_t num_objects);
 
     inline void InitializePoolObject(CacheItem* ptr) {}
     inline void DestroyPoolObject(CacheItem* ptr) {}

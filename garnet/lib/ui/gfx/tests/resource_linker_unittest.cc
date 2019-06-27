@@ -45,8 +45,7 @@ TEST_F(ResourceLinkerTest, AllowsExport) {
   zx::eventpair source, destination;
   ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &source, &destination));
 
-  auto resource =
-      fxl::MakeRefCounted<EntityNode>(session(), 1 /* resource id */);
+  auto resource = fxl::MakeRefCounted<EntityNode>(session(), 1 /* resource id */);
 
   ASSERT_TRUE(linker->ExportResource(resource.get(), std::move(source)));
 
@@ -59,8 +58,7 @@ TEST_F(ResourceLinkerTest, AllowsImport) {
   zx::eventpair source, destination;
   ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &source, &destination));
 
-  auto exported =
-      fxl::MakeRefCounted<EntityNode>(session(), 1 /* resource id */);
+  auto exported = fxl::MakeRefCounted<EntityNode>(session(), 1 /* resource id */);
   ASSERT_EQ(1u, session()->GetTotalResourceCount());
   ASSERT_TRUE(linker->ExportResource(exported.get(), std::move(source)));
 
@@ -73,16 +71,16 @@ TEST_F(ResourceLinkerTest, AllowsImport) {
   // SetOnImportResolvedCallback should not capture reference to exported
   // node.
   linker->SetOnImportResolvedCallback(
-      [exported_ptr = exported.get(), &did_resolve](
-          Import*, Resource* resource, ImportResolutionResult cause) -> void {
+      [exported_ptr = exported.get(), &did_resolve](Import*, Resource* resource,
+                                                    ImportResolutionResult cause) -> void {
         did_resolve = true;
         ASSERT_TRUE(resource);
         ASSERT_EQ(exported_ptr, resource);
         ASSERT_NE(0u, resource->type_flags() & kEntityNode);
         ASSERT_EQ(ImportResolutionResult::kSuccess, cause);
       });
-  ImportPtr import = fxl::MakeRefCounted<Import>(
-      session(), 2, ::fuchsia::ui::gfx::ImportSpec::NODE, linker->GetWeakPtr());
+  ImportPtr import = fxl::MakeRefCounted<Import>(session(), 2, ::fuchsia::ui::gfx::ImportSpec::NODE,
+                                                 linker->GetWeakPtr());
   // Expect three resources: The exported node, import, and the import's
   // delegate.
   ASSERT_EQ(3u, session()->GetTotalResourceCount());
@@ -112,16 +110,14 @@ TEST_F(ResourceLinkerTest, CannotImportWithDeadSourceAndDestinationHandles) {
 
   bool did_resolve = false;
   linker->SetOnImportResolvedCallback(
-      [&did_resolve](Import* import, Resource* resource,
-                     ImportResolutionResult cause) -> void {
+      [&did_resolve](Import* import, Resource* resource, ImportResolutionResult cause) -> void {
         did_resolve = true;
       });
-  ImportPtr import = fxl::MakeRefCounted<Import>(
-      session(), 1, ::fuchsia::ui::gfx::ImportSpec::NODE, linker->GetWeakPtr());
-  ASSERT_FALSE(linker->ImportResource(
-      import.get(),
-      ::fuchsia::ui::gfx::ImportSpec::NODE,  // import spec
-      std::move(destination_out)));          // import handle
+  ImportPtr import = fxl::MakeRefCounted<Import>(session(), 1, ::fuchsia::ui::gfx::ImportSpec::NODE,
+                                                 linker->GetWeakPtr());
+  ASSERT_FALSE(linker->ImportResource(import.get(),
+                                      ::fuchsia::ui::gfx::ImportSpec::NODE,  // import spec
+                                      std::move(destination_out)));          // import handle
 
   ASSERT_EQ(0u, linker->NumUnresolvedImports());
   ASSERT_FALSE(did_resolve);
@@ -142,16 +138,14 @@ TEST_F(ResourceLinkerTest, CannotImportWithDeadDestinationHandles) {
 
   bool did_resolve = false;
   linker->SetOnImportResolvedCallback(
-      [&did_resolve](Import* import, Resource* resource,
-                     ImportResolutionResult cause) -> void {
+      [&did_resolve](Import* import, Resource* resource, ImportResolutionResult cause) -> void {
         did_resolve = true;
       });
-  ImportPtr import = fxl::MakeRefCounted<Import>(
-      session(), 1, ::fuchsia::ui::gfx::ImportSpec::NODE, linker->GetWeakPtr());
-  ASSERT_FALSE(linker->ImportResource(
-      import.get(),
-      ::fuchsia::ui::gfx::ImportSpec::NODE,  // import spec
-      std::move(destination_out)));          // import handle
+  ImportPtr import = fxl::MakeRefCounted<Import>(session(), 1, ::fuchsia::ui::gfx::ImportSpec::NODE,
+                                                 linker->GetWeakPtr());
+  ASSERT_FALSE(linker->ImportResource(import.get(),
+                                      ::fuchsia::ui::gfx::ImportSpec::NODE,  // import spec
+                                      std::move(destination_out)));          // import handle
 
   ASSERT_EQ(0u, linker->NumUnresolvedImports());
   ASSERT_FALSE(did_resolve);
@@ -177,8 +171,7 @@ TEST_F(ResourceLinkerTest, CanImportWithDeadSourceHandle) {
   // Set an expiry callback that checks the resource expired for the right
   // reason and signal the latch.
   linker->SetOnExpiredCallback(
-      [&linker, &expiry_cb_called](Resource*,
-                                   ResourceLinker::ExpirationCause cause) {
+      [&linker, &expiry_cb_called](Resource*, ResourceLinker::ExpirationCause cause) {
         ASSERT_EQ(ResourceLinker::ExpirationCause::kExportTokenClosed, cause);
         ASSERT_EQ(0u, linker->NumUnresolvedImports());
         ASSERT_EQ(0u, linker->NumExports());
@@ -186,25 +179,21 @@ TEST_F(ResourceLinkerTest, CanImportWithDeadSourceHandle) {
       });
 
   linker->SetOnImportResolvedCallback(
-      [&did_resolve](Import* import, Resource* resource,
-                     ImportResolutionResult cause) -> void {
+      [&did_resolve](Import* import, Resource* resource, ImportResolutionResult cause) -> void {
         did_resolve = true;
       });
 
-  async::PostTask(dispatcher(),
-                  [this, &import, linker, &did_resolve,
-                   destination = std::move(destination)]() mutable {
-                    import = fxl::MakeRefCounted<Import>(
-                        session(), 1, ::fuchsia::ui::gfx::ImportSpec::NODE,
-                        linker->GetWeakPtr());
-                    ASSERT_TRUE(linker->ImportResource(
-                        import.get(),
-                        ::fuchsia::ui::gfx::ImportSpec::NODE,  // import spec
-                        std::move(destination)));              // import handle
+  async::PostTask(dispatcher(), [this, &import, linker, &did_resolve,
+                                 destination = std::move(destination)]() mutable {
+    import = fxl::MakeRefCounted<Import>(session(), 1, ::fuchsia::ui::gfx::ImportSpec::NODE,
+                                         linker->GetWeakPtr());
+    ASSERT_TRUE(linker->ImportResource(import.get(),
+                                       ::fuchsia::ui::gfx::ImportSpec::NODE,  // import spec
+                                       std::move(destination)));              // import handle
 
-                    ASSERT_EQ(1u, linker->NumUnresolvedImports());
-                    ASSERT_FALSE(did_resolve);
-                  });
+    ASSERT_EQ(1u, linker->NumUnresolvedImports());
+    ASSERT_FALSE(did_resolve);
+  });
 
   EXPECT_TRUE(RunLoopUntilIdle());
   ASSERT_TRUE(expiry_cb_called);
@@ -222,8 +211,7 @@ TEST_F(ResourceLinkerTest, CannotExportWithDeadSourceAndDestinationHandles) {
     // source and destination dies now.
   }
 
-  auto resource =
-      fxl::MakeRefCounted<EntityNode>(session(), 1 /* resource id */);
+  auto resource = fxl::MakeRefCounted<EntityNode>(session(), 1 /* resource id */);
   ASSERT_FALSE(linker->ExportResource(resource.get(), std::move(source_out)));
   ASSERT_EQ(0u, linker->NumExports());
 }
@@ -240,8 +228,7 @@ TEST_F(ResourceLinkerTest, CannotExportWithDeadSourceHandle) {
     // source dies now.
   }
 
-  auto resource =
-      fxl::MakeRefCounted<EntityNode>(session(), 1 /* resource id */);
+  auto resource = fxl::MakeRefCounted<EntityNode>(session(), 1 /* resource id */);
 
   ASSERT_FALSE(linker->ExportResource(resource.get(), std::move(source_out)));
   ASSERT_EQ(0u, linker->NumExports());
@@ -262,30 +249,28 @@ TEST_F(ResourceLinkerTest, CanExportWithDeadDestinationHandle) {
   scenic_impl::gfx::ResourcePtr resource;
   bool called = false;
 
-  async::PostTask(dispatcher(), [this, &resource, linker,
-                                 source = std::move(source),
-                                 &called]() mutable {
-    resource = fxl::MakeRefCounted<EntityNode>(session(), 1 /* resource id */);
+  async::PostTask(dispatcher(),
+                  [this, &resource, linker, source = std::move(source), &called]() mutable {
+                    resource = fxl::MakeRefCounted<EntityNode>(session(), 1 /* resource id */);
 
-    ASSERT_TRUE(linker->ExportResource(resource.get(), std::move(source)));
-    ASSERT_EQ(1u, linker->NumExports());
+                    ASSERT_TRUE(linker->ExportResource(resource.get(), std::move(source)));
+                    ASSERT_EQ(1u, linker->NumExports());
 
-    // Set an expiry callback that checks the resource expired for the right
-    // reason and signal the latch.
-    linker->SetOnExpiredCallback(
-        [linker, &called](Resource*, ResourceLinker::ExpirationCause cause) {
-          ASSERT_EQ(ResourceLinker::ExpirationCause::kNoImportsBound, cause);
-          ASSERT_EQ(0u, linker->NumUnresolvedImports());
-          ASSERT_EQ(0u, linker->NumExports());
-          called = true;
-        });
-  });
+                    // Set an expiry callback that checks the resource expired for the right
+                    // reason and signal the latch.
+                    linker->SetOnExpiredCallback(
+                        [linker, &called](Resource*, ResourceLinker::ExpirationCause cause) {
+                          ASSERT_EQ(ResourceLinker::ExpirationCause::kNoImportsBound, cause);
+                          ASSERT_EQ(0u, linker->NumUnresolvedImports());
+                          ASSERT_EQ(0u, linker->NumExports());
+                          called = true;
+                        });
+                  });
   EXPECT_TRUE(RunLoopUntilIdle());
   ASSERT_TRUE(called);
 }
 
-TEST_F(ResourceLinkerTest,
-       DestinationHandleDeathAutomaticallyCleansUpResourceExport) {
+TEST_F(ResourceLinkerTest, DestinationHandleDeathAutomaticallyCleansUpResourceExport) {
   zx::eventpair source, destination;
   ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &source, &destination));
 
@@ -293,8 +278,7 @@ TEST_F(ResourceLinkerTest,
   scenic_impl::gfx::ResourcePtr resource;
   bool called = false;
 
-  async::PostTask(dispatcher(), [this, &resource, linker,
-                                 source = std::move(source), &destination,
+  async::PostTask(dispatcher(), [this, &resource, linker, source = std::move(source), &destination,
                                  &called]() mutable {
     // Register the resource.
     resource = fxl::MakeRefCounted<EntityNode>(session(), 1 /* resource id */);
@@ -319,8 +303,7 @@ TEST_F(ResourceLinkerTest,
   ASSERT_TRUE(called);
 }
 
-TEST_F(ResourceLinkerTest,
-       SourceHandleDeathAutomaticallyCleansUpUnresolvedImports) {
+TEST_F(ResourceLinkerTest, SourceHandleDeathAutomaticallyCleansUpUnresolvedImports) {
   zx::eventpair source, destination;
   ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &source, &destination));
 
@@ -329,9 +312,8 @@ TEST_F(ResourceLinkerTest,
   ImportPtr import;
   bool did_resolve = false;
 
-  async::PostTask(dispatcher(), [this, &import, &resource, linker,
-                                 source = std::move(source), &destination,
-                                 &did_resolve]() mutable {
+  async::PostTask(dispatcher(), [this, &import, &resource, linker, source = std::move(source),
+                                 &destination, &did_resolve]() mutable {
     // Register the resource.
     resource = fxl::MakeRefCounted<EntityNode>(session(), 1 /* resource id */);
 
@@ -345,12 +327,11 @@ TEST_F(ResourceLinkerTest,
           ASSERT_EQ(0u, linker->NumUnresolvedImports());
         });
 
-    import = fxl::MakeRefCounted<Import>(session(), 2,
-                                         ::fuchsia::ui::gfx::ImportSpec::NODE,
+    import = fxl::MakeRefCounted<Import>(session(), 2, ::fuchsia::ui::gfx::ImportSpec::NODE,
                                          linker->GetWeakPtr());
     linker->ImportResource(import.get(),
                            ::fuchsia::ui::gfx::ImportSpec::NODE,  // import spec
-                           CopyEventPair(destination));  // import handle
+                           CopyEventPair(destination));           // import handle
 
     ASSERT_EQ(1u, linker->NumUnresolvedImports());
 
@@ -370,11 +351,9 @@ TEST_F(ResourceLinkerTest, ResourceDeathAutomaticallyCleansUpResourceExport) {
   ResourceLinker* linker = resource_linker_.get();
   bool called = false;
 
-  async::PostTask(dispatcher(), [this, linker, source = std::move(source),
-                                 &called]() mutable {
+  async::PostTask(dispatcher(), [this, linker, source = std::move(source), &called]() mutable {
     // Register the resource.
-    auto resource =
-        fxl::MakeRefCounted<EntityNode>(session(), 1 /* resource id */);
+    auto resource = fxl::MakeRefCounted<EntityNode>(session(), 1 /* resource id */);
     ASSERT_TRUE(linker->ExportResource(resource.get(), std::move(source)));
     ASSERT_EQ(1u, linker->NumExports());
 
@@ -400,23 +379,21 @@ TEST_F(ResourceLinkerTest, ImportsBeforeExportsAreServiced) {
   zx::eventpair source, destination;
   ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &source, &destination));
 
-  auto exported =
-      fxl::MakeRefCounted<EntityNode>(session(), 1 /* resource id */);
+  auto exported = fxl::MakeRefCounted<EntityNode>(session(), 1 /* resource id */);
 
   // Import.
   bool did_resolve = false;
   linker->SetOnImportResolvedCallback(
-      [exported_ptr = exported.get(), &did_resolve](
-          Import* import, Resource* resource,
-          ImportResolutionResult cause) -> void {
+      [exported_ptr = exported.get(), &did_resolve](Import* import, Resource* resource,
+                                                    ImportResolutionResult cause) -> void {
         did_resolve = true;
         ASSERT_TRUE(resource);
         ASSERT_EQ(exported_ptr, resource);
         ASSERT_NE(0u, resource->type_flags() & kEntityNode);
         ASSERT_EQ(ImportResolutionResult::kSuccess, cause);
       });
-  ImportPtr import = fxl::MakeRefCounted<Import>(
-      session(), 2, ::fuchsia::ui::gfx::ImportSpec::NODE, linker->GetWeakPtr());
+  ImportPtr import = fxl::MakeRefCounted<Import>(session(), 2, ::fuchsia::ui::gfx::ImportSpec::NODE,
+                                                 linker->GetWeakPtr());
   linker->ImportResource(import.get(),
                          ::fuchsia::ui::gfx::ImportSpec::NODE,  // import spec
                          std::move(destination));               // import handle
@@ -441,13 +418,11 @@ TEST_F(ResourceLinkerTest, ImportAfterReleasedExportedResourceFails) {
 
   bool did_resolve = false;
   {
-    auto exported =
-        fxl::MakeRefCounted<EntityNode>(session(), 1 /* resource id */);
+    auto exported = fxl::MakeRefCounted<EntityNode>(session(), 1 /* resource id */);
 
     // Import.
     linker->SetOnImportResolvedCallback(
-        [&did_resolve](Import* import, Resource* resource,
-                       ImportResolutionResult cause) -> void {
+        [&did_resolve](Import* import, Resource* resource, ImportResolutionResult cause) -> void {
           did_resolve = true;
           ASSERT_EQ(nullptr, resource);
           ASSERT_EQ(ImportResolutionResult::kExportHandleDiedBeforeBind, cause);
@@ -464,8 +439,8 @@ TEST_F(ResourceLinkerTest, ImportAfterReleasedExportedResourceFails) {
   ASSERT_EQ(0u, linker->NumExports());
 
   // Now try to import. We should get a resolution callback that it failed.
-  ImportPtr import = fxl::MakeRefCounted<Import>(
-      session(), 2, ::fuchsia::ui::gfx::ImportSpec::NODE, linker->GetWeakPtr());
+  ImportPtr import = fxl::MakeRefCounted<Import>(session(), 2, ::fuchsia::ui::gfx::ImportSpec::NODE,
+                                                 linker->GetWeakPtr());
   linker->ImportResource(import.get(),
                          ::fuchsia::ui::gfx::ImportSpec::NODE,  // import spec
                          std::move(destination));               // import handle
@@ -480,15 +455,13 @@ TEST_F(ResourceLinkerTest, DuplicatedDestinationHandlesAllowMultipleImports) {
   zx::eventpair source, destination;
   ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &source, &destination));
 
-  auto exported =
-      fxl::MakeRefCounted<EntityNode>(session(), 1 /* resource id */);
+  auto exported = fxl::MakeRefCounted<EntityNode>(session(), 1 /* resource id */);
 
   // Import multiple times.
   size_t resolution_count = 0;
   linker->SetOnImportResolvedCallback(
-      [exported_ptr = exported.get(), &resolution_count](
-          Import* import, Resource* resource,
-          ImportResolutionResult cause) -> void {
+      [exported_ptr = exported.get(), &resolution_count](Import* import, Resource* resource,
+                                                         ImportResolutionResult cause) -> void {
         ASSERT_EQ(ImportResolutionResult::kSuccess, cause);
         resolution_count++;
         ASSERT_TRUE(resource);
@@ -503,13 +476,12 @@ TEST_F(ResourceLinkerTest, DuplicatedDestinationHandlesAllowMultipleImports) {
     zx::eventpair duplicate_destination = CopyEventPair(destination);
 
     ImportPtr import = fxl::MakeRefCounted<Import>(
-        session(), i + 1, ::fuchsia::ui::gfx::ImportSpec::NODE,
-        linker->GetWeakPtr());
+        session(), i + 1, ::fuchsia::ui::gfx::ImportSpec::NODE, linker->GetWeakPtr());
     // Need to keep the import alive.
     imports.push_back(import);
     linker->ImportResource(import.get(),
                            ::fuchsia::ui::gfx::ImportSpec::NODE,  // import spec
-                           std::move(duplicate_destination));  // import handle
+                           std::move(duplicate_destination));     // import handle
 
     ASSERT_EQ(0u, resolution_count);
     ASSERT_EQ(0u, linker->NumExports());
@@ -530,15 +502,13 @@ TEST_F(ResourceLinkerTest, UnresolvedImportIsRemovedIfDestroyed) {
   zx::eventpair source, destination;
   ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &source, &destination));
 
-  auto exported =
-      fxl::MakeRefCounted<EntityNode>(session(), 1 /* resource id */);
+  auto exported = fxl::MakeRefCounted<EntityNode>(session(), 1 /* resource id */);
 
   // Import multiple times.
   size_t resolution_count = 0;
   linker->SetOnImportResolvedCallback(
-      [exported_ptr = exported.get(), &resolution_count](
-          Import* import, Resource* resource,
-          ImportResolutionResult cause) -> void {
+      [exported_ptr = exported.get(), &resolution_count](Import* import, Resource* resource,
+                                                         ImportResolutionResult cause) -> void {
         ASSERT_EQ(ImportResolutionResult::kImportDestroyedBeforeBind, cause);
         resolution_count++;
       });
@@ -549,11 +519,10 @@ TEST_F(ResourceLinkerTest, UnresolvedImportIsRemovedIfDestroyed) {
     zx::eventpair duplicate_destination = CopyEventPair(destination);
 
     ImportPtr import = fxl::MakeRefCounted<Import>(
-        session(), i + 1, ::fuchsia::ui::gfx::ImportSpec::NODE,
-        linker->GetWeakPtr());
+        session(), i + 1, ::fuchsia::ui::gfx::ImportSpec::NODE, linker->GetWeakPtr());
     linker->ImportResource(import.get(),
                            ::fuchsia::ui::gfx::ImportSpec::NODE,  // import spec
-                           std::move(duplicate_destination));  // import handle
+                           std::move(duplicate_destination));     // import handle
 
     ASSERT_EQ(0u, linker->NumExports());
     ASSERT_EQ(1u, linker->NumUnresolvedImports());

@@ -31,14 +31,13 @@ const PaperShapeCacheEntry kNullCacheEntry;
 // Helper used by GetRoundedRectMesh() and others.  Defined as a standalone
 // function instead of a private method on PaperShapeCache to avoid needing to
 // include any IndexedTriangleMesh headers in our header.
-PaperShapeCacheEntry ProcessTriangleMesh2d(
-    IndexedTriangleMesh2d<vec2> mesh, const MeshSpec& mesh_spec,
-    const plane3* clip_planes3, size_t num_clip_planes,
-    const BoundingBox& bounding_box, PaperRendererShadowType shadow_type,
-    Escher* escher, BatchGpuUploader* uploader) {
+PaperShapeCacheEntry ProcessTriangleMesh2d(IndexedTriangleMesh2d<vec2> mesh,
+                                           const MeshSpec& mesh_spec, const plane3* clip_planes3,
+                                           size_t num_clip_planes, const BoundingBox& bounding_box,
+                                           PaperRendererShadowType shadow_type, Escher* escher,
+                                           BatchGpuUploader* uploader) {
   TRACE_DURATION("gfx", "PaperShapeCache::ProcessTriangleMesh2d");
-  FXL_DCHECK((mesh_spec ==
-              MeshSpec{{MeshAttribute::kPosition2D, MeshAttribute::kUV}}));
+  FXL_DCHECK((mesh_spec == MeshSpec{{MeshAttribute::kPosition2D, MeshAttribute::kUV}}));
 
   // Convert 3d clip planes to 2d before clipping.
   std::vector<plane2> clip_planes_vec;
@@ -62,8 +61,7 @@ PaperShapeCacheEntry ProcessTriangleMesh2d(
 
   switch (shadow_type) {
     case PaperRendererShadowType::kShadowVolume: {
-      TRACE_DURATION("gfx",
-                     "PaperShapeCache::ProcessTriangleMesh2d[shadow_volume]");
+      TRACE_DURATION("gfx", "PaperShapeCache::ProcessTriangleMesh2d[shadow_volume]");
 
       using Edge = IndexedTriangleMesh2d<vec2>::EdgeType;
       std::unordered_set<Edge, PairHasher> silhouette_edges;
@@ -74,16 +72,14 @@ PaperShapeCacheEntry ProcessTriangleMesh2d(
 
       // Find silhouette edges, and generate opposite face of the shadow volume.
       {
-        TRACE_DURATION(
-            "gfx", "PaperShapeCache::ProcessTriangleMesh2d[shadow_volume_1]");
+        TRACE_DURATION("gfx", "PaperShapeCache::ProcessTriangleMesh2d[shadow_volume_1]");
 
         // We're going to double the number of indices in order to mirror the
         // opposite face of the shadow volume, and then add 6 indices (two
         // triangles) per silhouette edge to connect the two faces together with
         // quads.  Empirically, we estimate that there is about one silhouette
         // edge per triangle of the original mesh.
-        indices.reserve(tri_mesh.index_count() * 2 +
-                        tri_mesh.triangle_count() * 6);
+        indices.reserve(tri_mesh.index_count() * 2 + tri_mesh.triangle_count() * 6);
 
         for (size_t i = 0; i < original_index_count; i += 3) {
           MeshSpec::IndexType* tri = indices.data() + i;
@@ -116,8 +112,7 @@ PaperShapeCacheEntry ProcessTriangleMesh2d(
       // of the volume in the vertex shader.
       IndexedTriangleMesh2d<vec2, float> out_mesh;
       {
-        TRACE_DURATION(
-            "gfx", "PaperShapeCache::ProcessTriangleMesh2d[shadow_volume_2]");
+        TRACE_DURATION("gfx", "PaperShapeCache::ProcessTriangleMesh2d[shadow_volume_2]");
 
         // Extrude side faces between matching silhouette edges.  Flip the edge
         // direction in order to maintain the desired winding order.
@@ -154,8 +149,7 @@ PaperShapeCacheEntry ProcessTriangleMesh2d(
       }
 
       FXL_DCHECK(out_mesh.IsValid());
-      FXL_DCHECK((mesh_spec ==
-                  MeshSpec{{MeshAttribute::kPosition2D, MeshAttribute::kUV}}));
+      FXL_DCHECK((mesh_spec == MeshSpec{{MeshAttribute::kPosition2D, MeshAttribute::kUV}}));
       MeshSpec new_mesh_spec{{
           MeshAttribute::kPosition2D,
           MeshAttribute::kUV,
@@ -163,16 +157,15 @@ PaperShapeCacheEntry ProcessTriangleMesh2d(
       }};
 
       return PaperShapeCacheEntry{
-          .mesh = IndexedTriangleMeshUpload(escher, uploader, new_mesh_spec,
-                                            bounding_box, out_mesh),
+          .mesh =
+              IndexedTriangleMeshUpload(escher, uploader, new_mesh_spec, bounding_box, out_mesh),
           .num_indices = original_index_count,
           .num_shadow_volume_indices = out_mesh.index_count(),
       };
     } break;
     default:
       return PaperShapeCacheEntry{
-          .mesh = IndexedTriangleMeshUpload(escher, uploader, mesh_spec,
-                                            bounding_box, tri_mesh),
+          .mesh = IndexedTriangleMeshUpload(escher, uploader, mesh_spec, bounding_box, tri_mesh),
           .num_indices = tri_mesh.index_count(),
           .num_shadow_volume_indices = 0,
       };
@@ -181,14 +174,12 @@ PaperShapeCacheEntry ProcessTriangleMesh2d(
 
 }  // namespace
 
-PaperShapeCache::PaperShapeCache(EscherWeakPtr escher,
-                                 const PaperRendererConfig& config)
+PaperShapeCache::PaperShapeCache(EscherWeakPtr escher, const PaperRendererConfig& config)
     : escher_(std::move(escher)), shadow_type_(config.shadow_type) {}
 
 PaperShapeCache::~PaperShapeCache() { FXL_DCHECK(!uploader_); }
 
-void PaperShapeCache::BeginFrame(BatchGpuUploader* uploader,
-                                 uint64_t frame_number) {
+void PaperShapeCache::BeginFrame(BatchGpuUploader* uploader, uint64_t frame_number) {
   FXL_DCHECK(uploader && !uploader_);
   uploader_ = uploader;
 
@@ -206,9 +197,8 @@ void PaperShapeCache::EndFrame() {
 
   TRACE_DURATION("gfx", "PaperShapeCache::EndFrame", "cache_hits",
                  cache_hit_count_ + cache_hit_after_plane_culling_count_,
-                 "cache_hits_after_plane_culling",
-                 cache_hit_after_plane_culling_count_, "cache_misses",
-                 cache_miss_count_);
+                 "cache_hits_after_plane_culling", cache_hit_after_plane_culling_count_,
+                 "cache_misses", cache_miss_count_);
   cache_hit_count_ = 0;
   cache_hit_after_plane_culling_count_ = 0;
   cache_miss_count_ = 0;
@@ -229,9 +219,9 @@ void PaperShapeCache::SetConfig(const PaperRendererConfig& config) {
   cache_.clear();
 }
 
-const PaperShapeCacheEntry& PaperShapeCache::GetRoundedRectMesh(
-    const RoundedRectSpec& spec, const plane3* clip_planes,
-    size_t num_clip_planes) {
+const PaperShapeCacheEntry& PaperShapeCache::GetRoundedRectMesh(const RoundedRectSpec& spec,
+                                                                const plane3* clip_planes,
+                                                                size_t num_clip_planes) {
   TRACE_DURATION("gfx", "PaperShapeCache::GetRoundedRectMesh");
   if (spec.width <= 0.f || spec.height <= 0.f)
     return kNullCacheEntry;
@@ -255,29 +245,26 @@ const PaperShapeCacheEntry& PaperShapeCache::GetRoundedRectMesh(
 
         uint32_t vertex_count;
         uint32_t index_count;
-        std::tie(vertex_count, index_count) =
-            GetRoundedRectMeshVertexAndIndexCounts(spec);
+        std::tie(vertex_count, index_count) = GetRoundedRectMeshVertexAndIndexCounts(spec);
 
         MeshSpec mesh_spec{{MeshAttribute::kPosition2D, MeshAttribute::kUV}};
         IndexedTriangleMesh2d<vec2> mesh;
         mesh.resize_indices(index_count);
         mesh.resize_vertices(vertex_count);
 
-        GenerateRoundedRectIndices(spec, mesh_spec, mesh.indices.data(),
-                                   mesh.total_index_bytes());
-        GenerateRoundedRectVertices(
-            spec, mesh_spec, mesh.positions.data(), mesh.total_position_bytes(),
-            mesh.attributes1.data(), mesh.total_attribute1_bytes());
+        GenerateRoundedRectIndices(spec, mesh_spec, mesh.indices.data(), mesh.total_index_bytes());
+        GenerateRoundedRectVertices(spec, mesh_spec, mesh.positions.data(),
+                                    mesh.total_position_bytes(), mesh.attributes1.data(),
+                                    mesh.total_attribute1_bytes());
 
-        return ProcessTriangleMesh2d(std::move(mesh), mesh_spec,
-                                     unculled_clip_planes,
-                                     num_unculled_clip_planes, bounding_box,
-                                     shadow_type_, escher_.get(), uploader_);
+        return ProcessTriangleMesh2d(std::move(mesh), mesh_spec, unculled_clip_planes,
+                                     num_unculled_clip_planes, bounding_box, shadow_type_,
+                                     escher_.get(), uploader_);
       });
 }
 
-const PaperShapeCacheEntry& PaperShapeCache::GetCircleMesh(
-    float radius, const plane3* clip_planes, size_t num_clip_planes) {
+const PaperShapeCacheEntry& PaperShapeCache::GetCircleMesh(float radius, const plane3* clip_planes,
+                                                           size_t num_clip_planes) {
   TRACE_DURATION("gfx", "PaperShapeCache::GetCircleMesh");
   if (radius <= 0.f)
     return kNullCacheEntry;
@@ -290,8 +277,7 @@ const PaperShapeCacheEntry& PaperShapeCache::GetCircleMesh(
     circle_hash = h.value();
   }
 
-  const BoundingBox bounding_box(-vec3(radius, radius, 0),
-                                 vec3(radius, radius, 0));
+  const BoundingBox bounding_box(-vec3(radius, radius, 0), vec3(radius, radius, 0));
 
   return GetShapeMesh(
       circle_hash, bounding_box, clip_planes, num_clip_planes,
@@ -301,22 +287,21 @@ const PaperShapeCacheEntry& PaperShapeCache::GetCircleMesh(
 
         MeshSpec mesh_spec{{MeshAttribute::kPosition2D, MeshAttribute::kUV}};
         constexpr uint32_t kCircleSubdivisions = 3;
-        IndexedTriangleMesh2d<vec2> mesh = NewCircleIndexedTriangleMesh(
-            mesh_spec, kCircleSubdivisions, vec2(0, 0), radius);
+        IndexedTriangleMesh2d<vec2> mesh =
+            NewCircleIndexedTriangleMesh(mesh_spec, kCircleSubdivisions, vec2(0, 0), radius);
 
-        return ProcessTriangleMesh2d(std::move(mesh), mesh_spec,
-                                     unculled_clip_planes,
-                                     num_unculled_clip_planes, bounding_box,
-                                     shadow_type_, escher_.get(), uploader_);
+        return ProcessTriangleMesh2d(std::move(mesh), mesh_spec, unculled_clip_planes,
+                                     num_unculled_clip_planes, bounding_box, shadow_type_,
+                                     escher_.get(), uploader_);
       });
 }
 
-const PaperShapeCacheEntry& PaperShapeCache::GetRectMesh(
-    vec2 min, vec2 max, const plane3* clip_planes, size_t num_clip_planes) {
+const PaperShapeCacheEntry& PaperShapeCache::GetRectMesh(vec2 min, vec2 max,
+                                                         const plane3* clip_planes,
+                                                         size_t num_clip_planes) {
   TRACE_DURATION("gfx", "PaperShapeCache::GetRectMesh");
 
-  const BoundingBox bounding_box =
-      BoundingBox::NewChecked(vec3(min, 0), vec3(max, 0), 1);
+  const BoundingBox bounding_box = BoundingBox::NewChecked(vec3(min, 0), vec3(max, 0), 1);
   if (bounding_box.is_empty()) {
     return kNullCacheEntry;
   }
@@ -341,23 +326,21 @@ const PaperShapeCacheEntry& PaperShapeCache::GetRectMesh(
         MeshSpec mesh_spec{{MeshAttribute::kPosition2D, MeshAttribute::kUV}};
         IndexedTriangleMesh2d<vec2> mesh;
         mesh.indices = std::vector<MeshSpec::IndexType>{0, 1, 2, 0, 2, 3};
-        mesh.positions =
-            std::vector<vec2>{vec2(min.x, min.y), vec2(max.x, min.y),
-                              vec2(max.x, max.y), vec2(min.x, max.y)};
-        mesh.attributes1 =
-            std::vector<vec2>{vec2(0, 0), vec2(1, 0), vec2(1, 1), vec2(0, 1)};
+        mesh.positions = std::vector<vec2>{vec2(min.x, min.y), vec2(max.x, min.y),
+                                           vec2(max.x, max.y), vec2(min.x, max.y)};
+        mesh.attributes1 = std::vector<vec2>{vec2(0, 0), vec2(1, 0), vec2(1, 1), vec2(0, 1)};
 
-        return ProcessTriangleMesh2d(std::move(mesh), mesh_spec,
-                                     unculled_clip_planes,
-                                     num_unculled_clip_planes, bounding_box,
-                                     shadow_type_, escher_.get(), uploader_);
+        return ProcessTriangleMesh2d(std::move(mesh), mesh_spec, unculled_clip_planes,
+                                     num_unculled_clip_planes, bounding_box, shadow_type_,
+                                     escher_.get(), uploader_);
       });
 }
 
-const PaperShapeCacheEntry& PaperShapeCache::GetShapeMesh(
-    const Hash& shape_hash, const BoundingBox& bounding_box,
-    const plane3* clip_planes, size_t num_clip_planes,
-    CacheMissMeshGenerator mesh_generator) {
+const PaperShapeCacheEntry& PaperShapeCache::GetShapeMesh(const Hash& shape_hash,
+                                                          const BoundingBox& bounding_box,
+                                                          const plane3* clip_planes,
+                                                          size_t num_clip_planes,
+                                                          CacheMissMeshGenerator mesh_generator) {
   TRACE_DURATION("gfx", "PaperShapeCache::GetShapeMesh");
   FXL_DCHECK(clip_planes || num_clip_planes == 0);
 
@@ -395,8 +378,7 @@ const PaperShapeCacheEntry& PaperShapeCache::GetShapeMesh(
   size_t num_unculled_clip_planes = num_clip_planes;
   plane3* unculled_clip_planes = ESCHER_ALLOCA(plane3, num_clip_planes);
   if (auto bbox_was_completely_clipped = CullPlanesAgainstBoundingBox(
-          bounding_box, clip_planes, unculled_clip_planes,
-          &num_unculled_clip_planes)) {
+          bounding_box, clip_planes, unculled_clip_planes, &num_unculled_clip_planes)) {
     // Cache a null MeshPtr, so that a subsequent lookup won't have to do
     // the CPU work of testing planes against the bounding box.
     ++cache_hit_count_;
@@ -477,9 +459,10 @@ const PaperShapeCacheEntry& PaperShapeCache::GetShapeMesh(
   return *FindEntry(lookup_hash);
 }
 
-bool PaperShapeCache::CullPlanesAgainstBoundingBox(
-    const BoundingBox& bounding_box, const plane3* planes,
-    plane3* unculled_planes_out, size_t* num_planes_inout) {
+bool PaperShapeCache::CullPlanesAgainstBoundingBox(const BoundingBox& bounding_box,
+                                                   const plane3* planes,
+                                                   plane3* unculled_planes_out,
+                                                   size_t* num_planes_inout) {
   TRACE_DURATION("gfx", "PaperShapeCache::CullPlanesAgainstBoundingBox");
   const size_t num_planes = *num_planes_inout;
   size_t& num_unculled_planes_out = *num_planes_inout = 0;
@@ -520,11 +503,9 @@ void PaperShapeCache::AddEntry(const Hash& hash, PaperShapeCacheEntry entry) {
 // (which is already a performance bottleneck) we should plug in a reusable
 // cache that performs better and is well-tested.
 void PaperShapeCache::TrimCache() {
-  TRACE_DURATION("gfx", "PaperShapeCache::TrimCache", "num_entries",
-                 cache_.size());
+  TRACE_DURATION("gfx", "PaperShapeCache::TrimCache", "num_entries", cache_.size());
   for (auto it = cache_.begin(); it != cache_.end();) {
-    if (frame_number_ - it->second.last_touched_frame >=
-        kNumFramesBeforeEviction) {
+    if (frame_number_ - it->second.last_touched_frame >= kNumFramesBeforeEviction) {
       TRACE_DURATION("gfx", "PaperShapeCache::TrimCache[erase]");
       it = cache_.erase(it);
     } else {

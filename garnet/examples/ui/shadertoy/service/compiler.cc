@@ -103,8 +103,7 @@ void main() {
 
 namespace shadertoy {
 
-Compiler::Compiler(async::Loop* loop, escher::EscherWeakPtr weak_escher,
-                   vk::RenderPass render_pass,
+Compiler::Compiler(async::Loop* loop, escher::EscherWeakPtr weak_escher, vk::RenderPass render_pass,
                    vk::DescriptorSetLayout descriptor_set_layout)
     : loop_(loop),
       escher_(std::move(weak_escher)),
@@ -129,8 +128,7 @@ Compiler::~Compiler() {
   }
 }
 
-const vk::DescriptorSetLayoutCreateInfo&
-Compiler::GetDescriptorSetLayoutCreateInfo() {
+const vk::DescriptorSetLayoutCreateInfo& Compiler::GetDescriptorSetLayoutCreateInfo() {
   constexpr uint32_t kNumBindings = 4;
   static vk::DescriptorSetLayoutBinding bindings[kNumBindings];
   static vk::DescriptorSetLayoutCreateInfo info;
@@ -142,26 +140,22 @@ Compiler::GetDescriptorSetLayoutCreateInfo() {
     auto& texture_binding_3 = bindings[3];
 
     texture_binding_0.binding = 0;
-    texture_binding_0.descriptorType =
-        vk::DescriptorType::eCombinedImageSampler;
+    texture_binding_0.descriptorType = vk::DescriptorType::eCombinedImageSampler;
     texture_binding_0.descriptorCount = 1;
     texture_binding_0.stageFlags = vk::ShaderStageFlagBits::eFragment;
 
     texture_binding_1.binding = 1;
-    texture_binding_1.descriptorType =
-        vk::DescriptorType::eCombinedImageSampler;
+    texture_binding_1.descriptorType = vk::DescriptorType::eCombinedImageSampler;
     texture_binding_1.descriptorCount = 1;
     texture_binding_1.stageFlags = vk::ShaderStageFlagBits::eFragment;
 
     texture_binding_2.binding = 2;
-    texture_binding_2.descriptorType =
-        vk::DescriptorType::eCombinedImageSampler;
+    texture_binding_2.descriptorType = vk::DescriptorType::eCombinedImageSampler;
     texture_binding_2.descriptorCount = 1;
     texture_binding_2.stageFlags = vk::ShaderStageFlagBits::eFragment;
 
     texture_binding_3.binding = 3;
-    texture_binding_3.descriptorType =
-        vk::DescriptorType::eCombinedImageSampler;
+    texture_binding_3.descriptorType = vk::DescriptorType::eCombinedImageSampler;
     texture_binding_3.descriptorCount = 1;
     texture_binding_3.stageFlags = vk::ShaderStageFlagBits::eFragment;
 
@@ -195,26 +189,22 @@ void Compiler::ProcessRequestQueue() {
 
     auto pipeline = CompileGlslToPipeline(req.glsl);
 
-    async::PostTask(loop_->dispatcher(), [result = Result{std::move(pipeline)},
-                                          callback = std::move(req.callback)] {
-      callback(std::move(result));
-    });
+    async::PostTask(loop_->dispatcher(),
+                    [result = Result{std::move(pipeline)}, callback = std::move(req.callback)] {
+                      callback(std::move(result));
+                    });
   }
 }
 
 PipelinePtr Compiler::CompileGlslToPipeline(const std::string& glsl_code) {
   auto vk_device = escher_->vulkan_context().device;
 
-  std::future<escher::impl::SpirvData> vertex_spirv_future =
-      glsl_compiler()->Compile(vk::ShaderStageFlagBits::eVertex,
-                               {std::string(kVertexShaderSrc)}, std::string(),
-                               "main");
+  std::future<escher::impl::SpirvData> vertex_spirv_future = glsl_compiler()->Compile(
+      vk::ShaderStageFlagBits::eVertex, {std::string(kVertexShaderSrc)}, std::string(), "main");
 
-  std::future<escher::impl::SpirvData> fragment_spirv_future =
-      glsl_compiler()->Compile(
-          vk::ShaderStageFlagBits::eFragment,
-          {std::string(kFragmentShaderHeaderSrc) + glsl_code}, std::string(),
-          "main");
+  std::future<escher::impl::SpirvData> fragment_spirv_future = glsl_compiler()->Compile(
+      vk::ShaderStageFlagBits::eFragment, {std::string(kFragmentShaderHeaderSrc) + glsl_code},
+      std::string(), "main");
 
   vk::ShaderModule vertex_module;
   {
@@ -245,8 +235,7 @@ PipelinePtr Compiler::CompileGlslToPipeline(const std::string& glsl_code) {
     fragment_module = result.value;
   }
 
-  escher::MeshSpec mesh_spec{escher::MeshAttribute::kPosition2D |
-                             escher::MeshAttribute::kUV};
+  escher::MeshSpec mesh_spec{escher::MeshAttribute::kPosition2D | escher::MeshAttribute::kUV};
 
   auto pipeline = ConstructPipeline(vertex_module, fragment_module, mesh_spec);
   vk_device.destroyShaderModule(vertex_module);
@@ -275,19 +264,16 @@ PipelinePtr Compiler::ConstructPipeline(vk::ShaderModule vertex_module,
   fragment_stage_info.pName = "main";
 
   constexpr size_t kShaderStageCount = 2;
-  vk::PipelineShaderStageCreateInfo shader_stages[kShaderStageCount] = {
-      vertex_stage_info, fragment_stage_info};
+  vk::PipelineShaderStageCreateInfo shader_stages[kShaderStageCount] = {vertex_stage_info,
+                                                                        fragment_stage_info};
 
   vk::PipelineVertexInputStateCreateInfo vertex_input_info;
   {
     auto& mesh_shader_binding = model_data_->GetMeshShaderBinding(mesh_spec);
     vertex_input_info.vertexBindingDescriptionCount = 1;
-    vertex_input_info.pVertexBindingDescriptions =
-        mesh_shader_binding.binding();
-    vertex_input_info.vertexAttributeDescriptionCount =
-        mesh_shader_binding.attributes().size();
-    vertex_input_info.pVertexAttributeDescriptions =
-        mesh_shader_binding.attributes().data();
+    vertex_input_info.pVertexBindingDescriptions = mesh_shader_binding.binding();
+    vertex_input_info.vertexAttributeDescriptionCount = mesh_shader_binding.attributes().size();
+    vertex_input_info.pVertexAttributeDescriptions = mesh_shader_binding.attributes().data();
   }
 
   vk::PipelineInputAssemblyStateCreateInfo input_assembly_info;
@@ -368,8 +354,7 @@ PipelinePtr Compiler::ConstructPipeline(vk::ShaderModule vertex_module,
   }
 
   // All dynamic states have been accumulated, so finalize them.
-  dynamic_state_info.dynamicStateCount =
-      static_cast<uint32_t>(dynamic_states.size());
+  dynamic_state_info.dynamicStateCount = static_cast<uint32_t>(dynamic_states.size());
   dynamic_state_info.pDynamicStates = dynamic_states.data();
 
   vk::GraphicsPipelineCreateInfo pipeline_info;
@@ -398,8 +383,6 @@ PipelinePtr Compiler::ConstructPipeline(vk::ShaderModule vertex_module,
   return fxl::MakeRefCounted<Pipeline>(device, pipeline, pipeline_layout);
 }
 
-escher::impl::GlslToSpirvCompiler* Compiler::glsl_compiler() {
-  return escher_->glsl_compiler();
-}
+escher::impl::GlslToSpirvCompiler* Compiler::glsl_compiler() { return escher_->glsl_compiler(); }
 
 }  // namespace shadertoy

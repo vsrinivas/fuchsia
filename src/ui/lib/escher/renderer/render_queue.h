@@ -33,8 +33,8 @@ class RenderQueue final {
   // example, any CPU memory must be valid until Clear() is called, and any GPU
   // resources must be kept alive until all Vulkan command buffers that
   // reference them are finished.
-  void Push(uint64_t sort_key, const void* object_data,
-            const void* instance_data, const RenderQueueItem::Funcs& funcs);
+  void Push(uint64_t sort_key, const void* object_data, const void* instance_data,
+            const RenderQueueItem::Funcs& funcs);
   void Push(const RenderQueueItem& item);
 
   // Performs a stable sort of all items, according to the |sort_key| provided
@@ -53,17 +53,14 @@ class RenderQueue final {
   // This is typically called after Sort(), but this is not necessary.  For
   // example, clients may choose to not call Sort() in order to profile the
   // performance difference of sorting vs. not sorting.
-  void GenerateCommands(CommandBuffer* cmd_buf,
-                        const CommandBuffer::SavedState* state,
+  void GenerateCommands(CommandBuffer* cmd_buf, const CommandBuffer::SavedState* state,
                         const RenderQueueContext* context = nullptr) const;
 
   // This variant of GenerateCommands() behaves similarly to the one above,
   // except that it only generates commands for a sub-range of the items in the
   // queue.  This is typically used for debugging.
-  void GenerateCommands(CommandBuffer* cmd_buf,
-                        const CommandBuffer::SavedState* state,
-                        const RenderQueueContext* context, size_t start_index,
-                        size_t count) const;
+  void GenerateCommands(CommandBuffer* cmd_buf, const CommandBuffer::SavedState* state,
+                        const RenderQueueContext* context, size_t start_index, size_t count) const;
 
   void clear() { items_.clear(); }
   size_t size() const { return items_.size(); }
@@ -74,15 +71,12 @@ class RenderQueue final {
 
 // Inline function definitions.
 
-inline void RenderQueue::Push(uint64_t sort_key, const void* object_data,
-                              const void* instance_data,
+inline void RenderQueue::Push(uint64_t sort_key, const void* object_data, const void* instance_data,
                               const RenderQueueItem::Funcs& funcs) {
   items_.push_back({sort_key, object_data, instance_data, funcs});
 }
 
-inline void RenderQueue::Push(const RenderQueueItem& item) {
-  items_.push_back(item);
-}
+inline void RenderQueue::Push(const RenderQueueItem& item) { items_.push_back(item); }
 
 }  // namespace escher
 

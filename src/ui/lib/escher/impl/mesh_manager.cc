@@ -17,9 +17,8 @@
 namespace escher {
 namespace impl {
 
-MeshManager::MeshManager(CommandBufferPool* command_buffer_pool,
-                         GpuAllocator* allocator, GpuUploader* uploader,
-                         ResourceRecycler* resource_recycler)
+MeshManager::MeshManager(CommandBufferPool* command_buffer_pool, GpuAllocator* allocator,
+                         GpuUploader* uploader, ResourceRecycler* resource_recycler)
     : command_buffer_pool_(command_buffer_pool),
       allocator_(allocator),
       uploader_(uploader),
@@ -30,25 +29,21 @@ MeshManager::MeshManager(CommandBufferPool* command_buffer_pool,
 
 MeshManager::~MeshManager() { FXL_DCHECK(builder_count_ == 0); }
 
-MeshBuilderPtr MeshManager::NewMeshBuilder(const MeshSpec& spec,
-                                           size_t max_vertex_count,
+MeshBuilderPtr MeshManager::NewMeshBuilder(const MeshSpec& spec, size_t max_vertex_count,
                                            size_t max_index_count) {
   FXL_DCHECK(spec.IsValidOneBufferMesh());
   size_t stride = spec.stride(0);
-  return AdoptRef(new MeshManager::MeshBuilder(
-      this, spec, max_vertex_count, max_index_count,
-      uploader_->GetWriter(max_vertex_count * stride),
-      uploader_->GetWriter(max_index_count * sizeof(uint32_t))));
+  return AdoptRef(
+      new MeshManager::MeshBuilder(this, spec, max_vertex_count, max_index_count,
+                                   uploader_->GetWriter(max_vertex_count * stride),
+                                   uploader_->GetWriter(max_index_count * sizeof(uint32_t))));
 }
 
-MeshManager::MeshBuilder::MeshBuilder(MeshManager* manager,
-                                      const MeshSpec& spec,
-                                      size_t max_vertex_count,
-                                      size_t max_index_count,
+MeshManager::MeshBuilder::MeshBuilder(MeshManager* manager, const MeshSpec& spec,
+                                      size_t max_vertex_count, size_t max_index_count,
                                       GpuUploader::Writer vertex_writer,
                                       GpuUploader::Writer index_writer)
-    : escher::MeshBuilder(max_vertex_count, max_index_count, spec.stride(0),
-                          vertex_writer.ptr(),
+    : escher::MeshBuilder(max_vertex_count, max_index_count, spec.stride(0), vertex_writer.ptr(),
                           reinterpret_cast<uint32_t*>(index_writer.ptr())),
       manager_(manager),
       spec_(spec),
@@ -99,9 +94,8 @@ BoundingBox MeshManager::MeshBuilder::ComputeBoundingBox3D() const {
 BoundingBox MeshManager::MeshBuilder::ComputeBoundingBox() const {
   FXL_DCHECK(vertex_count_ > 0);
   FXL_DCHECK(spec_.IsValidOneBufferMesh());
-  return spec_.has_attribute(0, MeshAttribute::kPosition2D)
-             ? ComputeBoundingBox2D()
-             : ComputeBoundingBox3D();
+  return spec_.has_attribute(0, MeshAttribute::kPosition2D) ? ComputeBoundingBox2D()
+                                                            : ComputeBoundingBox3D();
 }
 
 MeshPtr MeshManager::MeshBuilder::Build() {
@@ -117,28 +111,24 @@ MeshPtr MeshManager::MeshBuilder::Build() {
   // TODO: use eTransferDstOptimal instead of eTransferDst?
   auto vertex_buffer = allocator->AllocateBuffer(
       manager_->resource_recycler(), vertex_count_ * vertex_stride_,
-      vk::BufferUsageFlagBits::eVertexBuffer |
-          vk::BufferUsageFlagBits::eTransferSrc |
+      vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eTransferSrc |
           vk::BufferUsageFlagBits::eTransferDst,
       vk::MemoryPropertyFlagBits::eDeviceLocal);
   auto index_buffer = allocator->AllocateBuffer(
       manager_->resource_recycler(), index_count_ * sizeof(uint32_t),
-      vk::BufferUsageFlagBits::eIndexBuffer |
-          vk::BufferUsageFlagBits::eTransferSrc |
+      vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eTransferSrc |
           vk::BufferUsageFlagBits::eTransferDst,
       vk::MemoryPropertyFlagBits::eDeviceLocal);
 
-  vertex_writer_.WriteBuffer(vertex_buffer, {0, 0, vertex_buffer->size()},
-                             Semaphore::New(device));
+  vertex_writer_.WriteBuffer(vertex_buffer, {0, 0, vertex_buffer->size()}, Semaphore::New(device));
   vertex_writer_.Submit();
 
-  index_writer_.WriteBuffer(index_buffer, {0, 0, index_buffer->size()},
-                            Semaphore::New(device));
+  index_writer_.WriteBuffer(index_buffer, {0, 0, index_buffer->size()}, Semaphore::New(device));
   index_writer_.Submit();
 
-  return fxl::MakeRefCounted<Mesh>(
-      manager_->resource_recycler(), spec_, ComputeBoundingBox(), vertex_count_,
-      index_count_, vertex_buffer, std::move(index_buffer));
+  return fxl::MakeRefCounted<Mesh>(manager_->resource_recycler(), spec_, ComputeBoundingBox(),
+                                   vertex_count_, index_count_, vertex_buffer,
+                                   std::move(index_buffer));
 }
 
 }  // namespace impl

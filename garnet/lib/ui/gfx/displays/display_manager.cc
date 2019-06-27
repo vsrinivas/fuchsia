@@ -15,9 +15,8 @@ namespace scenic_impl {
 namespace gfx {
 
 DisplayManager::DisplayManager() {
-  zx_status_t status = fdio_service_connect(
-      "/svc/fuchsia.sysmem.Allocator",
-      sysmem_allocator_.NewRequest().TakeChannel().release());
+  zx_status_t status = fdio_service_connect("/svc/fuchsia.sysmem.Allocator",
+                                            sysmem_allocator_.NewRequest().TakeChannel().release());
   if (status != ZX_OK) {
     sysmem_allocator_.Unbind();
     FXL_LOG(ERROR) << "Unable to connect to sysmem: " << status;
@@ -34,39 +33,34 @@ void DisplayManager::WaitForDefaultDisplayController(fit::closure callback) {
   FXL_DCHECK(!default_display_);
 
   display_available_cb_ = std::move(callback);
-  dc_watcher_.WaitForDisplayController(
-      [this](zx::channel dc_device, zx::channel dc_channel) {
-        dc_device_ = std::move(dc_device);
-        dc_channel_ = dc_channel.get();
-        display_controller_.Bind(std::move(dc_channel));
+  dc_watcher_.WaitForDisplayController([this](zx::channel dc_device, zx::channel dc_channel) {
+    dc_device_ = std::move(dc_device);
+    dc_channel_ = dc_channel.get();
+    display_controller_.Bind(std::move(dc_channel));
 
-        // TODO(FIDL-183): Resolve this hack when synchronous interfaces
-        // support events.
-        auto dispatcher =
-            static_cast<fuchsia::hardware::display::Controller::Proxy_*>(
-                dc_event_dispatcher_.get());
-        dispatcher->DisplaysChanged = [this](auto added, auto removed) {
-          DisplaysChanged(std::move(added), std::move(removed));
-        };
-        dispatcher->ClientOwnershipChange = [this](auto change) {
-          ClientOwnershipChange(change);
-        };
-        dispatcher->Vsync = [this](uint64_t display_id, uint64_t timestamp,
-                                   ::std::vector<uint64_t> images) {
-          if (display_id == default_display_->display_id() && vsync_cb_) {
-            vsync_cb_(timestamp, images);
-          }
-        };
+    // TODO(FIDL-183): Resolve this hack when synchronous interfaces
+    // support events.
+    auto dispatcher =
+        static_cast<fuchsia::hardware::display::Controller::Proxy_*>(dc_event_dispatcher_.get());
+    dispatcher->DisplaysChanged = [this](auto added, auto removed) {
+      DisplaysChanged(std::move(added), std::move(removed));
+    };
+    dispatcher->ClientOwnershipChange = [this](auto change) { ClientOwnershipChange(change); };
+    dispatcher->Vsync = [this](uint64_t display_id, uint64_t timestamp,
+                               ::std::vector<uint64_t> images) {
+      if (display_id == default_display_->display_id() && vsync_cb_) {
+        vsync_cb_(timestamp, images);
+      }
+    };
 
-        wait_.set_object(dc_channel_);
-        wait_.set_trigger(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED);
-        wait_.Begin(async_get_default_dispatcher());
-      });
+    wait_.set_object(dc_channel_);
+    wait_.set_trigger(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED);
+    wait_.Begin(async_get_default_dispatcher());
+  });
 }
 
-void DisplayManager::OnAsync(async_dispatcher_t* dispatcher,
-                             async::WaitBase* self, zx_status_t status,
-                             const zx_packet_signal_t* signal) {
+void DisplayManager::OnAsync(async_dispatcher_t* dispatcher, async::WaitBase* self,
+                             zx_status_t status, const zx_packet_signal_t* signal) {
   if (status & ZX_CHANNEL_PEER_CLOSED) {
     // TODO(SCN-244): handle this more robustly.
     FXL_DCHECK(false) << "Display controller channel lost";
@@ -75,8 +69,7 @@ void DisplayManager::OnAsync(async_dispatcher_t* dispatcher,
 
   // Read FIDL message.
   uint8_t byte_buffer[ZX_CHANNEL_MAX_MSG_BYTES];
-  fidl::Message msg(fidl::BytePart(byte_buffer, ZX_CHANNEL_MAX_MSG_BYTES),
-                    fidl::HandlePart());
+  fidl::Message msg(fidl::BytePart(byte_buffer, ZX_CHANNEL_MAX_MSG_BYTES), fidl::HandlePart());
   if (msg.Read(dc_channel_, 0) != ZX_OK || !msg.has_header()) {
     FXL_LOG(WARNING) << "Display controller callback read failed";
     return;
@@ -86,14 +79,12 @@ void DisplayManager::OnAsync(async_dispatcher_t* dispatcher,
 
   // TODO(FIDL-183): Resolve this hack when synchronous interfaces
   // support events.
-  static_cast<fuchsia::hardware::display::Controller::Proxy_*>(
-      dc_event_dispatcher_.get())
+  static_cast<fuchsia::hardware::display::Controller::Proxy_*>(dc_event_dispatcher_.get())
       ->Dispatch_(std::move(msg));
 }
 
-void DisplayManager::DisplaysChanged(
-    ::std::vector<fuchsia::hardware::display::Info> added,
-    ::std::vector<uint64_t> removed) {
+void DisplayManager::DisplaysChanged(::std::vector<fuchsia::hardware::display::Info> added,
+                                     ::std::vector<uint64_t> removed) {
   if (!default_display_) {
     FXL_DCHECK(added.size());
 
@@ -101,8 +92,7 @@ void DisplayManager::DisplaysChanged(
     auto& mode = display.modes[0];
 
     zx_status_t status;
-    zx_status_t transport_status =
-        display_controller_->CreateLayer(&status, &layer_id_);
+    zx_status_t transport_status = display_controller_->CreateLayer(&status, &layer_id_);
     if (transport_status != ZX_OK || status != ZX_OK) {
       FXL_LOG(ERROR) << "Failed to create layer";
       return;
@@ -111,16 +101,15 @@ void DisplayManager::DisplaysChanged(
     std::vector<uint64_t> layers;
     layers.push_back(layer_id_);
     ::fidl::VectorPtr<uint64_t> fidl_layers(std::move(layers));
-    status = display_controller_->SetDisplayLayers(display.id,
-                                                   std::move(fidl_layers));
+    status = display_controller_->SetDisplayLayers(display.id, std::move(fidl_layers));
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "Failed to configure display layers";
       return;
     }
 
-    default_display_ = std::make_unique<Display>(
-        display.id, mode.horizontal_resolution, mode.vertical_resolution,
-        std::move(display.pixel_format));
+    default_display_ =
+        std::make_unique<Display>(display.id, mode.horizontal_resolution, mode.vertical_resolution,
+                                  std::move(display.pixel_format));
     ClientOwnershipChange(owns_display_controller_);
 
     display_available_cb_();
@@ -141,13 +130,11 @@ void DisplayManager::ClientOwnershipChange(bool has_ownership) {
   owns_display_controller_ = has_ownership;
   if (default_display_) {
     if (has_ownership) {
-      default_display_->ownership_event().signal(
-          fuchsia::ui::scenic::displayNotOwnedSignal,
-          fuchsia::ui::scenic::displayOwnedSignal);
+      default_display_->ownership_event().signal(fuchsia::ui::scenic::displayNotOwnedSignal,
+                                                 fuchsia::ui::scenic::displayOwnedSignal);
     } else {
-      default_display_->ownership_event().signal(
-          fuchsia::ui::scenic::displayOwnedSignal,
-          fuchsia::ui::scenic::displayNotOwnedSignal);
+      default_display_->ownership_event().signal(fuchsia::ui::scenic::displayOwnedSignal,
+                                                 fuchsia::ui::scenic::displayNotOwnedSignal);
     }
   }
 }
@@ -162,12 +149,9 @@ uint64_t DisplayManager::ImportEvent(const zx::event& event) {
   return fuchsia::hardware::display::invalidId;
 }
 
-void DisplayManager::ReleaseEvent(uint64_t id) {
-  display_controller_->ReleaseEvent(id);
-}
+void DisplayManager::ReleaseEvent(uint64_t id) { display_controller_->ReleaseEvent(id); }
 
-void DisplayManager::SetImageConfig(int32_t width, int32_t height,
-                                    zx_pixel_format_t format) {
+void DisplayManager::SetImageConfig(int32_t width, int32_t height, zx_pixel_format_t format) {
   image_config_.height = height;
   image_config_.width = width;
   image_config_.pixel_format = format;
@@ -187,23 +171,19 @@ void DisplayManager::SetImageConfig(int32_t width, int32_t height,
 uint64_t DisplayManager::ImportImage(uint64_t collection_id, uint32_t index) {
   zx_status_t status, result_status = ZX_OK;
   uint64_t id;
-  status = display_controller_->ImportImage(image_config_, collection_id, index,
-                                            &result_status, &id);
+  status =
+      display_controller_->ImportImage(image_config_, collection_id, index, &result_status, &id);
   if (status != ZX_OK || result_status != ZX_OK) {
     return fuchsia::hardware::display::invalidId;
   }
   return id;
 }
 
-void DisplayManager::ReleaseImage(uint64_t id) {
-  display_controller_->ReleaseImage(id);
-}
+void DisplayManager::ReleaseImage(uint64_t id) { display_controller_->ReleaseImage(id); }
 
-fuchsia::sysmem::BufferCollectionTokenSyncPtr
-DisplayManager::CreateBufferCollection() {
+fuchsia::sysmem::BufferCollectionTokenSyncPtr DisplayManager::CreateBufferCollection() {
   fuchsia::sysmem::BufferCollectionTokenSyncPtr local_token;
-  zx_status_t status =
-      sysmem_allocator_->AllocateSharedCollection(local_token.NewRequest());
+  zx_status_t status = sysmem_allocator_->AllocateSharedCollection(local_token.NewRequest());
   if (status != ZX_OK) {
     FXL_DLOG(ERROR) << "CreateBufferCollection failed " << status;
     return nullptr;
@@ -214,8 +194,8 @@ DisplayManager::CreateBufferCollection() {
 fuchsia::sysmem::BufferCollectionSyncPtr DisplayManager::GetCollectionFromToken(
     fuchsia::sysmem::BufferCollectionTokenSyncPtr token) {
   fuchsia::sysmem::BufferCollectionSyncPtr collection;
-  zx_status_t status = sysmem_allocator_->BindSharedCollection(
-      std::move(token), collection.NewRequest());
+  zx_status_t status =
+      sysmem_allocator_->BindSharedCollection(std::move(token), collection.NewRequest());
   if (status != ZX_OK) {
     FXL_DLOG(ERROR) << "BindSharedCollection failed " << status;
     return nullptr;
@@ -227,15 +207,15 @@ uint64_t DisplayManager::ImportBufferCollection(
     fuchsia::sysmem::BufferCollectionTokenSyncPtr token) {
   uint64_t buffer_collection_id = next_buffer_collection_id_++;
   zx_status_t status;
-  if (display_controller_->ImportBufferCollection(
-          buffer_collection_id, std::move(token), &status) != ZX_OK ||
+  if (display_controller_->ImportBufferCollection(buffer_collection_id, std::move(token),
+                                                  &status) != ZX_OK ||
       status != ZX_OK) {
     FXL_DLOG(ERROR) << "ImportBufferCollection failed - status: " << status;
     return 0;
   }
 
-  if (display_controller_->SetBufferCollectionConstraints(
-          buffer_collection_id, image_config_, &status) != ZX_OK ||
+  if (display_controller_->SetBufferCollectionConstraints(buffer_collection_id, image_config_,
+                                                          &status) != ZX_OK ||
       status != ZX_OK) {
     FXL_DLOG(ERROR) << "SetBufferCollectionConstraints failed.";
     display_controller_->ReleaseBufferCollection(buffer_collection_id);
@@ -249,8 +229,7 @@ void DisplayManager::ReleaseBufferCollection(uint64_t id) {
   display_controller_->ReleaseBufferCollection(id);
 }
 
-void DisplayManager::Flip(Display* display, uint64_t buffer,
-                          uint64_t render_finished_event_id,
+void DisplayManager::Flip(Display* display, uint64_t buffer, uint64_t render_finished_event_id,
                           uint64_t signal_event_id) {
   zx_status_t status = display_controller_->SetLayerImage(
       layer_id_, buffer, render_finished_event_id, signal_event_id);
@@ -262,16 +241,14 @@ void DisplayManager::Flip(Display* display, uint64_t buffer,
   FXL_DCHECK(status == ZX_OK) << "DisplayManager::Flip failed";
 }
 
-void DisplayManager::SetDisplayColorConversion(
-    Display* display, const ColorTransform& transform) {
+void DisplayManager::SetDisplayColorConversion(Display* display, const ColorTransform& transform) {
   FXL_CHECK(display);
   uint64_t display_id = display->display_id();
 
   // For testing purposes, display_controller_ can be null
   if (display_controller_) {
-    display_controller_->SetDisplayColorConversion(
-        display_id, transform.preoffsets, transform.matrix,
-        transform.postoffsets);
+    display_controller_->SetDisplayColorConversion(display_id, transform.preoffsets,
+                                                   transform.matrix, transform.postoffsets);
   }
 
   // For testing and future-proofing purposes.

@@ -7,27 +7,29 @@
 // This header is intentionally out of order because it contains a workaround
 // for both glm and zircon defining countof(), and must be included before
 // the glm headers to work.
-#include "src/ui/lib/escher/geometry/types.h"
-
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
+
+// clang-format off
+#include "src/ui/lib/glm_workaround/glm_workaround.h"
+// clang-format on
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/quaternion.hpp>
 #include <glm/gtx/string_cast.hpp>
-
 #include <iostream>
 
 #include "lib/component/cpp/connect.h"
-#include "src/ui/lib/escher/hmd/pose_buffer.h"
-#include "src/ui/lib/escher/util/image_utils.h"
 #include "lib/ui/scenic/cpp/commands.h"
 #include "lib/ui/scenic/cpp/host_memory.h"
 #include "lib/ui/scenic/cpp/util/mesh_utils.h"
 #include "src/lib/fxl/logging.h"
+#include "src/ui/lib/escher/geometry/types.h"
+#include "src/ui/lib/escher/hmd/pose_buffer.h"
+#include "src/ui/lib/escher/util/image_utils.h"
 
 #define DEBUG_BOX 0
 
@@ -63,18 +65,15 @@ static const uint32_t kIndexBufferData[] = {
 }  // namespace
 
 App::App(async::Loop* loop)
-    : startup_context_(component::StartupContext::CreateFromStartupInfo()),
-      loop_(loop) {
+    : startup_context_(component::StartupContext::CreateFromStartupInfo()), loop_(loop) {
   // Connect to the Scenic service.
-  scenic_ = startup_context_
-                ->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
+  scenic_ = startup_context_->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
   scenic_.set_error_handler([this](zx_status_t status) {
     FXL_LOG(INFO) << "Lost connection to Scenic service. Status: " << status;
     loop_->Quit();
   });
-  scenic_->GetDisplayInfo([this](fuchsia::ui::gfx::DisplayInfo display_info) {
-    Init(std::move(display_info));
-  });
+  scenic_->GetDisplayInfo(
+      [this](fuchsia::ui::gfx::DisplayInfo display_info) { Init(std::move(display_info)); });
 }
 
 void App::CreateExampleScene(float display_width, float display_height) {
@@ -95,8 +94,7 @@ void App::CreateExampleScene(float display_width, float display_height) {
   static const glm::vec3 eye(0, 0, 0);
   static const glm::vec3 look_at(0, 0, -1);
   static const glm::vec3 up(0, 1, 0);
-  camera_->SetTransform(glm::value_ptr(eye), glm::value_ptr(look_at),
-                        glm::value_ptr(up));
+  camera_->SetTransform(glm::value_ptr(eye), glm::value_ptr(look_at), glm::value_ptr(up));
 
   float fovy = glm::radians(30.f);
   float f = 1.0f / tan(0.5f * fovy);
@@ -113,8 +111,7 @@ void App::CreateExampleScene(float display_width, float display_height) {
                         0.0f,              0.0f, (near * far) / (near - far), 0.0f);
   // clang-format on
 
-  camera_->SetStereoProjection(glm::value_ptr(projection),
-                               glm::value_ptr(projection));
+  camera_->SetStereoProjection(glm::value_ptr(projection), glm::value_ptr(projection));
 
   compositor_->SetLayerStack(layer_stack);
   layer_stack.AddLayer(layer);
@@ -141,10 +138,8 @@ void App::CreateExampleScene(float display_width, float display_height) {
   cube_material.SetColor(0xf5, 0x00, 0x57, 0xff);  // Pink A400
   cube_node_->SetMaterial(cube_material);
 
-  std::vector<float> vertices(std::begin(kVertexBufferData),
-                              std::end(kVertexBufferData));
-  std::vector<uint32_t> indices(std::begin(kIndexBufferData),
-                                std::end(kIndexBufferData));
+  std::vector<float> vertices(std::begin(kVertexBufferData), std::end(kVertexBufferData));
+  std::vector<uint32_t> indices(std::begin(kIndexBufferData), std::end(kIndexBufferData));
   auto cube_shape = mesh_utils::NewMeshWithVertices(session, vertices, indices);
 
   cube_node_->SetShape(*cube_shape);
@@ -205,8 +200,7 @@ void App::CreateExampleScene(float display_width, float display_height) {
     pane_shape_node.SetShape(pane_shape);
     pane_shape_node.SetMaterial(pane_material);
     pane_shape_node.SetTranslation(translation.x, translation.y, translation.z);
-    pane_shape_node.SetRotation(orientation.x, orientation.y, orientation.z,
-                                orientation.w);
+    pane_shape_node.SetRotation(orientation.x, orientation.y, orientation.z, orientation.w);
     root_node.AddChild(pane_shape_node);
   }
 #endif
@@ -220,8 +214,7 @@ void App::StartPoseBufferProvider() {
       "fuchsia-pkg://fuchsia.com/pose_buffer_provider#meta/"
       "pose_buffer_provider.cmx";
   launch_info.directory_request = services_.NewRequest();
-  startup_context_->launcher()->CreateComponent(std::move(launch_info),
-                                                controller_.NewRequest());
+  startup_context_->launcher()->CreateComponent(std::move(launch_info), controller_.NewRequest());
   controller_.set_error_handler([](zx_status_t status) {
     FXL_LOG(ERROR) << "Lost connection to controller_. Status: " << status;
   });
@@ -230,8 +223,7 @@ void App::StartPoseBufferProvider() {
                              fuchsia::ui::gfx::PoseBufferProvider::Name_);
 
   provider_.set_error_handler([](zx_status_t status) {
-    FXL_LOG(ERROR) << "Lost connection to PoseBufferProvider service. Status: "
-                   << status;
+    FXL_LOG(ERROR) << "Lost connection to PoseBufferProvider service. Status: " << status;
   });
 }
 
@@ -253,8 +245,7 @@ void App::ConfigurePoseBuffer() {
   zx_time_t time_interval = 1;
   uint32_t num_entries = 1;
 
-  Memory mem(session, std::move(vmo), vmo_size,
-             fuchsia::images::MemoryType::VK_DEVICE_MEMORY);
+  Memory mem(session, std::move(vmo), vmo_size, fuchsia::images::MemoryType::VK_DEVICE_MEMORY);
   Buffer pose_buffer(mem, 0, vmo_size);
 
   camera_->SetPoseBuffer(pose_buffer, num_entries, base_time, time_interval);
@@ -262,8 +253,7 @@ void App::ConfigurePoseBuffer() {
   status = pose_buffer_vmo_.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo);
   FXL_DCHECK(status == ZX_OK);
 
-  provider_->SetPoseBuffer(std::move(vmo), num_entries, base_time,
-                           time_interval);
+  provider_->SetPoseBuffer(std::move(vmo), num_entries, base_time, time_interval);
 }
 
 void App::Init(fuchsia::ui::gfx::DisplayInfo display_info) {
@@ -290,17 +280,14 @@ void App::Init(fuchsia::ui::gfx::DisplayInfo display_info) {
 void App::Update(uint64_t next_presentation_time) {
   float secs = zx_clock_get_monotonic() * kSecondsPerNanosecond;
 
-  glm::quat quaternion =
-      glm::angleAxis(secs / 2.0f, glm::normalize(glm::vec3(0, 1, 0)));
+  glm::quat quaternion = glm::angleAxis(secs / 2.0f, glm::normalize(glm::vec3(0, 1, 0)));
 
-  cube_node_->SetRotation(quaternion.x, quaternion.y, quaternion.z,
-                          quaternion.w);
+  cube_node_->SetRotation(quaternion.x, quaternion.y, quaternion.z, quaternion.w);
 
   // Present
-  session_->Present(
-      next_presentation_time, [this](fuchsia::images::PresentationInfo info) {
-        Update(info.presentation_time + info.presentation_interval);
-      });
+  session_->Present(next_presentation_time, [this](fuchsia::images::PresentationInfo info) {
+    Update(info.presentation_time + info.presentation_interval);
+  });
 }
 
 void App::ReleaseSessionResources() {

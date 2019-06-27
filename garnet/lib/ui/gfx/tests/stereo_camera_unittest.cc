@@ -2,18 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "garnet/lib/ui/gfx/resources/stereo_camera.h"
+
 #include <math.h>
+
 #include <chrono>
+#include <glm/gtc/type_ptr.hpp>
 #include <thread>
 
-#include "gtest/gtest.h"
-
-#include <glm/gtc/type_ptr.hpp>
-#include "garnet/lib/ui/gfx/resources/stereo_camera.h"
 #include "garnet/lib/ui/gfx/tests/session_test.h"
 #include "garnet/lib/ui/gfx/tests/util.h"
-#include "src/ui/lib/escher/util/epsilon_compare.h"
+#include "gtest/gtest.h"
 #include "lib/ui/scenic/cpp/commands.h"
+#include "src/ui/lib/escher/util/epsilon_compare.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -34,18 +35,15 @@ TEST_F(StereoCameraTest, Basic) {
   glm::mat4 right_projection = glm::mat4(3);
 
   EXPECT_TRUE(Apply(scenic::NewSetStereoCameraProjectionCmd(
-      camera_id, glm::value_ptr(left_projection),
-      glm::value_ptr(right_projection))));
+      camera_id, glm::value_ptr(left_projection), glm::value_ptr(right_projection))));
 
   auto camera = session()->resources()->FindResource<StereoCamera>(camera_id);
   EXPECT_TRUE(camera);
 
+  EXPECT_TRUE(escher::CompareMatrix(left_projection,
+                                    camera->GetEscherCamera(StereoCamera::Eye::LEFT).projection()));
   EXPECT_TRUE(escher::CompareMatrix(
-      left_projection,
-      camera->GetEscherCamera(StereoCamera::Eye::LEFT).projection()));
-  EXPECT_TRUE(escher::CompareMatrix(
-      right_projection,
-      camera->GetEscherCamera(StereoCamera::Eye::RIGHT).projection()));
+      right_projection, camera->GetEscherCamera(StereoCamera::Eye::RIGHT).projection()));
 }
 
 }  // namespace test

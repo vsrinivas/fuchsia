@@ -31,9 +31,7 @@ class Stage {
 
   const vec4& clear_color() const { return clear_color_; };
   void set_clear_color(vec4 clear_color) { clear_color_ = clear_color; };
-  void set_clear_color(vec3 clear_color) {
-    set_clear_color(vec4(clear_color, 1.f));
-  }
+  void set_clear_color(vec3 clear_color) { set_clear_color(vec4(clear_color, 1.f)); }
 
   float width() const { return viewing_volume_.width(); }
   float height() const { return viewing_volume_.height(); }

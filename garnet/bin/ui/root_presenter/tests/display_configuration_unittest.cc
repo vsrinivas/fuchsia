@@ -16,8 +16,7 @@ TEST(DisplayConfiguration, Basic_2160x1440) {
   InitializeModelForDisplay(2160, 1440, &model);
 
   EXPECT_EQ(model.display_info().density_in_px_per_mm, 8.5f);
-  EXPECT_EQ(model.environment_info().usage,
-            fuchsia::ui::policy::DisplayUsage::kClose);
+  EXPECT_EQ(model.environment_info().usage, fuchsia::ui::policy::DisplayUsage::kClose);
 }
 
 TEST(DisplayConfiguration, Basic_2400x1600) {
@@ -25,8 +24,7 @@ TEST(DisplayConfiguration, Basic_2400x1600) {
   InitializeModelForDisplay(2400, 1600, &model);
 
   EXPECT_EQ(model.display_info().density_in_px_per_mm, 9.252f);
-  EXPECT_EQ(model.environment_info().usage,
-            fuchsia::ui::policy::DisplayUsage::kClose);
+  EXPECT_EQ(model.environment_info().usage, fuchsia::ui::policy::DisplayUsage::kClose);
 }
 
 TEST(DisplayConfiguration, Basic_3840x2160) {
@@ -34,8 +32,7 @@ TEST(DisplayConfiguration, Basic_3840x2160) {
   InitializeModelForDisplay(3840, 2160, &model);
 
   EXPECT_EQ(model.display_info().density_in_px_per_mm, 7.323761f);
-  EXPECT_EQ(model.environment_info().usage,
-            fuchsia::ui::policy::DisplayUsage::kNear);
+  EXPECT_EQ(model.environment_info().usage, fuchsia::ui::policy::DisplayUsage::kNear);
 }
 
 TEST(DisplayConfiguration, Basic_1920x1200) {
@@ -43,8 +40,7 @@ TEST(DisplayConfiguration, Basic_1920x1200) {
   InitializeModelForDisplay(1920, 1200, &model);
 
   EXPECT_EQ(model.display_info().density_in_px_per_mm, 4.16f);
-  EXPECT_EQ(model.environment_info().usage,
-            fuchsia::ui::policy::DisplayUsage::kNear);
+  EXPECT_EQ(model.environment_info().usage, fuchsia::ui::policy::DisplayUsage::kNear);
 }
 }  // namespace
 }  // namespace display_configuration

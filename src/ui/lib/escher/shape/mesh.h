@@ -21,22 +21,17 @@ class Mesh : public Resource {
   static const ResourceTypeInfo kTypeInfo;
   const ResourceTypeInfo& type_info() const override { return kTypeInfo; }
 
-  Mesh(ResourceRecycler* resource_recycler, MeshSpec spec,
-       BoundingBox bounding_box, uint32_t num_vertices, uint32_t num_indices,
-       BufferPtr primary_attribute_buffer, BufferPtr index_buffer,
-       vk::DeviceSize primary_attribute_buffer_offset = 0,
+  Mesh(ResourceRecycler* resource_recycler, MeshSpec spec, BoundingBox bounding_box,
+       uint32_t num_vertices, uint32_t num_indices, BufferPtr primary_attribute_buffer,
+       BufferPtr index_buffer, vk::DeviceSize primary_attribute_buffer_offset = 0,
        vk::DeviceSize index_buffer_offset = 0);
 
-  Mesh(ResourceRecycler* resource_recycler, MeshSpec spec,
-       BoundingBox bounding_box, uint32_t num_indices, BufferPtr index_buffer,
-       vk::DeviceSize index_buffer_offset, uint32_t num_vertices,
-       BufferPtr attribute_buffer0, vk::DeviceSize attribute_buffer0_offset,
-       BufferPtr attribute_buffer1 = nullptr,
-       vk::DeviceSize attribute_buffer1_offset = 0,
-       BufferPtr attribute_buffer2 = nullptr,
-       vk::DeviceSize attribute_buffer2_offset = 0,
-       BufferPtr attribute_buffer3 = nullptr,
-       vk::DeviceSize attribute_buffer3_offset = 0);
+  Mesh(ResourceRecycler* resource_recycler, MeshSpec spec, BoundingBox bounding_box,
+       uint32_t num_indices, BufferPtr index_buffer, vk::DeviceSize index_buffer_offset,
+       uint32_t num_vertices, BufferPtr attribute_buffer0, vk::DeviceSize attribute_buffer0_offset,
+       BufferPtr attribute_buffer1 = nullptr, vk::DeviceSize attribute_buffer1_offset = 0,
+       BufferPtr attribute_buffer2 = nullptr, vk::DeviceSize attribute_buffer2_offset = 0,
+       BufferPtr attribute_buffer3 = nullptr, vk::DeviceSize attribute_buffer3_offset = 0);
 
   ~Mesh() override;
 
@@ -62,26 +57,21 @@ class Mesh : public Resource {
 
     explicit operator bool() const { return buffer.get() != nullptr; }
   };
-  using AttributeBufferArray =
-      std::array<AttributeBuffer, VulkanLimits::kNumVertexBuffers>;
+  using AttributeBufferArray = std::array<AttributeBuffer, VulkanLimits::kNumVertexBuffers>;
 
   const AttributeBuffer& attribute_buffer(size_t buffer_index) const {
     return attribute_buffers_[buffer_index];
   }
 
-  const AttributeBufferArray& attribute_buffers() const {
-    return attribute_buffers_;
-  }
+  const AttributeBufferArray& attribute_buffers() const { return attribute_buffers_; }
 
   // Transfer wait semaphores from all buffers to the specified CommandBuffer.
-  void TransferWaitSemaphores(impl::CommandBuffer* cb,
-                              vk::PipelineStageFlags stages);
+  void TransferWaitSemaphores(impl::CommandBuffer* cb, vk::PipelineStageFlags stages);
 
  private:
-  Mesh(ResourceRecycler* resource_recycler, MeshSpec spec,
-       BoundingBox bounding_box, uint32_t num_vertices, uint32_t num_indices,
-       std::array<AttributeBuffer, VulkanLimits::kNumVertexBuffers>
-           attribute_buffers,
+  Mesh(ResourceRecycler* resource_recycler, MeshSpec spec, BoundingBox bounding_box,
+       uint32_t num_vertices, uint32_t num_indices,
+       std::array<AttributeBuffer, VulkanLimits::kNumVertexBuffers> attribute_buffers,
        BufferPtr index_buffer, vk::DeviceSize index_buffer_offset);
 
   const MeshSpec spec_;

@@ -12,8 +12,7 @@ class RK4SpringSimulation {
   // |initial_value| is the starting point for the value that's being animated
   // (using the spring-like physics).
   // |tension| and |friction| are parameters for the spring simulation.
-  RK4SpringSimulation(float initial_value, float tension = 300.0,
-                      float friction = 25.0);
+  RK4SpringSimulation(float initial_value, float tension = 300.0, float friction = 25.0);
 
   // The simulation will iteratively approach |target_value|.
   void SetTargetValue(float target_value);

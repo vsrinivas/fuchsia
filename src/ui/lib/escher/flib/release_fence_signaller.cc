@@ -24,16 +24,14 @@ void ReleaseFenceSignaller::AddVulkanReleaseFence(zx::event fence) {
   FXL_DCHECK(false);
 }
 
-void ReleaseFenceSignaller::AddVulkanReleaseFences(
-    fidl::VectorPtr<zx::event> fences) {
+void ReleaseFenceSignaller::AddVulkanReleaseFences(fidl::VectorPtr<zx::event> fences) {
   // TODO: Submit a command buffer with the vulkan fence as a semaphore
   FXL_LOG(ERROR) << "Vulkan Release Fences not yet supported.";
   FXL_DCHECK(false);
 }
 
 void ReleaseFenceSignaller::AddCPUReleaseFence(zx::event fence) {
-  uint64_t latest_sequence_number =
-      command_buffer_sequencer_->latest_sequence_number();
+  uint64_t latest_sequence_number = command_buffer_sequencer_->latest_sequence_number();
 
   if (latest_sequence_number > last_finished_sequence_number_) {
     pending_fences_.push({latest_sequence_number, std::move(fence)});
@@ -48,8 +46,7 @@ void ReleaseFenceSignaller::AddCPUReleaseFence(zx::event fence) {
 }
 
 // Must be called on the same thread that we're submitting frames to Escher.
-void ReleaseFenceSignaller::AddCPUReleaseFences(
-    fidl::VectorPtr<zx::event> fences) {
+void ReleaseFenceSignaller::AddCPUReleaseFences(fidl::VectorPtr<zx::event> fences) {
   for (size_t i = 0; i < fences->size(); ++i) {
     AddCPUReleaseFence(std::move(fences->at(i)));
   }
@@ -60,8 +57,7 @@ void ReleaseFenceSignaller::OnCommandBufferFinished(uint64_t sequence_number) {
   // greater than |sequence_number|.
   last_finished_sequence_number_ = sequence_number;
 
-  while (!pending_fences_.empty() &&
-         pending_fences_.front().sequence_number <= sequence_number) {
+  while (!pending_fences_.empty() && pending_fences_.front().sequence_number <= sequence_number) {
     pending_fences_.front().fence.signal(0u, kFenceSignalled);
     pending_fences_.pop();
   }

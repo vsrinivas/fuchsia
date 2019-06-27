@@ -101,8 +101,7 @@ const MeshShaderBinding& ModelData::GetMeshShaderBinding(MeshSpec spec) {
   binding.stride = stride;
   binding.inputRate = vk::VertexInputRate::eVertex;
 
-  auto msb = std::make_unique<MeshShaderBinding>(std::move(binding),
-                                                 std::move(attributes));
+  auto msb = std::make_unique<MeshShaderBinding>(std::move(binding), std::move(attributes));
   ptr = msb.get();
   mesh_shader_binding_cache_[spec] = std::move(msb);
   return *ptr;

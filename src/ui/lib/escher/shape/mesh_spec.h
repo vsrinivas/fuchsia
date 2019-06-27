@@ -55,8 +55,7 @@ uint32_t GetMeshAttributeSize(MeshAttribute attr);
 // example, if we replace |attr| with "kStride", then the result will be 20,
 // because the vertex consists of a vec3 position followed by vec2 UV coords,
 // and sizeof(vec3) + sizeof(vec2) == 20.
-uint32_t GetMeshAttributeOffset(const MeshAttributes& attributes,
-                                MeshAttribute attr);
+uint32_t GetMeshAttributeOffset(const MeshAttributes& attributes, MeshAttribute attr);
 
 // Describes the format of a mesh with either one or two attribute buffers,
 // and the layout of attributes within those buffers.
@@ -79,8 +78,7 @@ struct MeshSpec {
 
   // Delegates to GetMeshAttributeOffset() after verifying that
   // |vertex_buffer_index| is sane.
-  uint32_t attribute_offset(uint32_t vertex_buffer_index,
-                            MeshAttribute attr) const;
+  uint32_t attribute_offset(uint32_t vertex_buffer_index, MeshAttribute attr) const;
 
   // Return true if the specified vertex buffer has the specifed attribute, and
   // false otherwise.

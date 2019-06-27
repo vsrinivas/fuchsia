@@ -25,14 +25,12 @@ bool PerspectiveDemoMode::OnEvent(const fuchsia::ui::input::InputEvent& event,
                                   Presentation* presenter) {
   if (event.is_pointer()) {
     const fuchsia::ui::input::PointerEvent& pointer = event.pointer();
-    if (animation_state_ == kThreeQuarters ||
-        animation_state_ == kPerspective) {
+    if (animation_state_ == kThreeQuarters || animation_state_ == kPerspective) {
       if (pointer.phase == fuchsia::ui::input::PointerEventPhase::DOWN) {
         // If we're not already panning/rotating the camera, then start, but
         // only if the touch-down is in the bottom 10% of the screen.
         if (!trackball_pointer_down_ &&
-            pointer.y > 0.9f * presenter->display_model_actual_.display_info()
-                                   .height_in_px) {
+            pointer.y > 0.9f * presenter->display_model_actual_.display_info().height_in_px) {
           trackball_pointer_down_ = true;
           trackball_device_id_ = pointer.device_id;
           trackball_pointer_id_ = pointer.pointer_id;
@@ -41,12 +39,9 @@ bool PerspectiveDemoMode::OnEvent(const fuchsia::ui::input::InputEvent& event,
       } else if (pointer.phase == fuchsia::ui::input::PointerEventPhase::MOVE) {
         // If the moved pointer is the one that is currently panning/rotating
         // the camera, then update the camera position.
-        if (trackball_pointer_down_ &&
-            trackball_device_id_ == pointer.device_id &&
+        if (trackball_pointer_down_ && trackball_device_id_ == pointer.device_id &&
             trackball_device_id_ == pointer.device_id) {
-          float rate =
-              -2.5f /
-              presenter->display_model_actual_.display_info().width_in_px;
+          float rate = -2.5f / presenter->display_model_actual_.display_info().width_in_px;
           float change = rate * (pointer.x - trackball_previous_x_);
           trackball_previous_x_ = pointer.x;
 
@@ -56,8 +51,7 @@ bool PerspectiveDemoMode::OnEvent(const fuchsia::ui::input::InputEvent& event,
           } else if (animation_state_ == kPerspective) {
             target_camera_zoom_ += change;
             target_camera_zoom_ = glm::clamp(target_camera_zoom_, 0.0f, 1.0f);
-            float fov =
-                360.f * ComputeHalfFov(presenter, target_camera_zoom_) / kPi;
+            float fov = 360.f * ComputeHalfFov(presenter, target_camera_zoom_) / kPi;
             FXL_LOG(INFO) << "Current perspective fov is " << fov << "degrees";
           }
         }
@@ -67,8 +61,7 @@ bool PerspectiveDemoMode::OnEvent(const fuchsia::ui::input::InputEvent& event,
     // Pointer release should be handled no matter which state we are in.
     if (pointer.phase == fuchsia::ui::input::PointerEventPhase::UP) {
       // The pointer was released.
-      if (trackball_pointer_down_ &&
-          trackball_device_id_ == pointer.device_id &&
+      if (trackball_pointer_down_ && trackball_device_id_ == pointer.device_id &&
           trackball_device_id_ == pointer.device_id) {
         trackball_pointer_down_ = false;
       }
@@ -77,9 +70,8 @@ bool PerspectiveDemoMode::OnEvent(const fuchsia::ui::input::InputEvent& event,
     // Alt-Backspace cycles through modes.
     const fuchsia::ui::input::KeyboardEvent& kbd = event.keyboard();
     if ((kbd.modifiers & fuchsia::ui::input::kModifierAlt) &&
-        kbd.phase == fuchsia::ui::input::KeyboardEventPhase::PRESSED &&
-        kbd.code_point == 0 && kbd.hid_usage == 42 &&
-        !trackball_pointer_down_) {
+        kbd.phase == fuchsia::ui::input::KeyboardEventPhase::PRESSED && kbd.code_point == 0 &&
+        kbd.hid_usage == 42 && !trackball_pointer_down_) {
       HandleAltBackspace(presenter);
       return true;
     }
@@ -110,8 +102,7 @@ void PerspectiveDemoMode::HandleAltBackspace(Presentation* presenter) {
   UpdateAnimation(presenter, animation_start_time_);
 }
 
-float PerspectiveDemoMode::ComputeHalfFov(Presentation* presenter,
-                                          float zoom) const {
+float PerspectiveDemoMode::ComputeHalfFov(Presentation* presenter, float zoom) const {
   // The default camera emulates an orthographic camera, by creating a .1-degree
   // half angle camera, at the appropriate distance.
   constexpr float kMinHalfFov = .1f * kPi / 180.f;
@@ -121,18 +112,14 @@ float PerspectiveDemoMode::ComputeHalfFov(Presentation* presenter,
   // escher::Camera::NewOrtho() and scenic::gfx::Layer::GetViewingVolume(). For
   // a 1600px height display, this works out to ~76 degrees.
   float max_half_fov =
-      atan(presenter->display_model_actual_.display_info().height_in_px * 0.5f /
-           1010.f);
+      atan(presenter->display_model_actual_.display_info().height_in_px * 0.5f / 1010.f);
 
   return glm::lerp(kMinHalfFov, max_half_fov, zoom);
 }
 
-void PerspectiveDemoMode::UpdateCamera(Presentation* presenter, float pan_param,
-                                       float zoom_param) {
-  const float half_width =
-      presenter->display_model_actual_.display_info().width_in_px * 0.5f;
-  const float half_height =
-      presenter->display_model_actual_.display_info().height_in_px * 0.5f;
+void PerspectiveDemoMode::UpdateCamera(Presentation* presenter, float pan_param, float zoom_param) {
+  const float half_width = presenter->display_model_actual_.display_info().width_in_px * 0.5f;
+  const float half_height = presenter->display_model_actual_.display_info().height_in_px * 0.5f;
 
   // Always look at the middle of the stage.
   const float target[3] = {half_width, half_height, 0};
@@ -150,12 +137,8 @@ void PerspectiveDemoMode::UpdateCamera(Presentation* presenter, float pan_param,
   glm::vec3 eye_start(half_width, half_height, eye_z);
 
   constexpr float kMaxCameraPan = kPi / 4;
-  float eye_end_x =
-      sin(glm::lerp(0.f, kMaxCameraPan, target_camera_pan_)) * eye_dist +
-      half_width;
-  float eye_end_y =
-      cos(glm::lerp(0.f, kMaxCameraPan, target_camera_pan_)) * eye_dist +
-      half_height;
+  float eye_end_x = sin(glm::lerp(0.f, kMaxCameraPan, target_camera_pan_)) * eye_dist + half_width;
+  float eye_end_y = cos(glm::lerp(0.f, kMaxCameraPan, target_camera_pan_)) * eye_dist + half_height;
 
   glm::vec3 eye_end(eye_end_x, eye_end_y, 0.75f * eye_z);
 
@@ -168,8 +151,7 @@ void PerspectiveDemoMode::UpdateCamera(Presentation* presenter, float pan_param,
   glm::vec3 eye = glm::mix(glm::mix(eye_start, eye_mid, pan_param),
                            glm::mix(eye_mid, eye_end, pan_param), pan_param);
 
-  glm::vec3 glm_up =
-      glm::mix(glm::vec3(0, -1.f, 0.f), glm::vec3(0, -0.1f, -0.9f), pan_param);
+  glm::vec3 glm_up = glm::mix(glm::vec3(0, -1.f, 0.f), glm::vec3(0, -0.1f, -0.9f), pan_param);
   glm_up = glm::normalize(glm_up);
 
   float up[3] = {glm_up[0], glm_up[1], glm_up[2]};
@@ -177,14 +159,12 @@ void PerspectiveDemoMode::UpdateCamera(Presentation* presenter, float pan_param,
   presenter->camera_.SetProjection(2.f * half_fovy);
 }
 
-bool PerspectiveDemoMode::UpdateAnimation(Presentation* presenter,
-                                          uint64_t presentation_time) {
+bool PerspectiveDemoMode::UpdateAnimation(Presentation* presenter, uint64_t presentation_time) {
   if (animation_state_ == kOrthographic) {
     return false;
   }
 
-  double secs = static_cast<double>(presentation_time - animation_start_time_) /
-                1'000'000'000;
+  double secs = static_cast<double>(presentation_time - animation_start_time_) / 1'000'000'000;
   constexpr double kAnimationDuration = 1.3;
   float time_param = secs / kAnimationDuration;
 
@@ -200,8 +180,7 @@ bool PerspectiveDemoMode::UpdateAnimation(Presentation* presenter,
       case kAnimateToOrthographic: {
         animation_state_ = kOrthographic;
 
-        const float half_width =
-            presenter->display_model_actual_.display_info().width_in_px * 0.5f;
+        const float half_width = presenter->display_model_actual_.display_info().width_in_px * 0.5f;
         const float half_height =
             presenter->display_model_actual_.display_info().height_in_px * 0.5f;
 

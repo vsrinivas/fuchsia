@@ -28,15 +28,12 @@ uint32_t GetBufferMemoryBits(vk::Device device) {
   buffer_create_info.size = kUnimportantBufferSize;
   // TODO(SCN-1369): Buffer creation parameters currently need to be the same
   // across all Scenic import flows, as well as in client export objects.
-  buffer_create_info.usage = vk::BufferUsageFlagBits::eTransferSrc |
-                             vk::BufferUsageFlagBits::eTransferDst |
-                             vk::BufferUsageFlagBits::eStorageTexelBuffer |
-                             vk::BufferUsageFlagBits::eStorageBuffer |
-                             vk::BufferUsageFlagBits::eIndexBuffer |
-                             vk::BufferUsageFlagBits::eVertexBuffer;
+  buffer_create_info.usage =
+      vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eTransferDst |
+      vk::BufferUsageFlagBits::eStorageTexelBuffer | vk::BufferUsageFlagBits::eStorageBuffer |
+      vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eVertexBuffer;
   buffer_create_info.sharingMode = vk::SharingMode::eExclusive;
-  auto vk_buffer =
-      escher::ESCHER_CHECKED_VK_RESULT(device.createBuffer(buffer_create_info));
+  auto vk_buffer = escher::ESCHER_CHECKED_VK_RESULT(device.createBuffer(buffer_create_info));
 
   vk::MemoryRequirements reqs = device.getBufferMemoryRequirements(vk_buffer);
   device.destroyBuffer(vk_buffer);
@@ -62,10 +59,8 @@ uint32_t GetImageMemoryBits(vk::Device device) {
   // src/ui/lib/escher/util/image_utils.cc) or else the different vulkan
   // devices may interpret the bytes differently.
   // TODO(SCN-1369): Use API to coordinate this with scenic.
-  info.usage = vk::ImageUsageFlagBits::eTransferSrc |
-               vk::ImageUsageFlagBits::eTransferDst |
-               vk::ImageUsageFlagBits::eSampled |
-               vk::ImageUsageFlagBits::eColorAttachment;
+  info.usage = vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst |
+               vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eColorAttachment;
   vk::Image image = escher::image_utils::CreateVkImage(device, info);
   vk::MemoryRequirements reqs = device.getImageMemoryRequirements(image);
   device.destroyImage(image);
@@ -81,22 +76,19 @@ namespace gfx {
 
 const ResourceTypeInfo Memory::kTypeInfo = {ResourceType::kMemory, "Memory"};
 
-Memory::Memory(Session* session, ResourceId id,
-               ::fuchsia::ui::gfx::MemoryArgs args)
+Memory::Memory(Session* session, ResourceId id, ::fuchsia::ui::gfx::MemoryArgs args)
     : Resource(session, id, kTypeInfo),
       is_host_(args.memory_type == fuchsia::images::MemoryType::HOST_MEMORY),
-      shared_vmo_(fxl::MakeRefCounted<fsl::SharedVmo>(std::move(args.vmo),
-                                                      ZX_VM_PERM_READ)),
+      shared_vmo_(fxl::MakeRefCounted<fsl::SharedVmo>(std::move(args.vmo), ZX_VM_PERM_READ)),
       allocation_size_(args.allocation_size) {
   FXL_DCHECK(args.allocation_size > 0);
 }
 
-MemoryPtr Memory::New(Session* session, ResourceId id,
-                      ::fuchsia::ui::gfx::MemoryArgs args,
+MemoryPtr Memory::New(Session* session, ResourceId id, ::fuchsia::ui::gfx::MemoryArgs args,
                       ErrorReporter* error_reporter) {
   if (args.allocation_size == 0) {
-    error_reporter->ERROR() << "Memory::New(): allocation_size argument ("
-                            << args.allocation_size << ") is not valid.";
+    error_reporter->ERROR() << "Memory::New(): allocation_size argument (" << args.allocation_size
+                            << ") is not valid.";
     return nullptr;
   }
 
@@ -104,16 +96,14 @@ MemoryPtr Memory::New(Session* session, ResourceId id,
   auto status = args.vmo.get_size(&size);
 
   if (status != ZX_OK) {
-    error_reporter->ERROR()
-        << "Memory::New(): zx_vmo_get_size failed (err=" << status << ").";
+    error_reporter->ERROR() << "Memory::New(): zx_vmo_get_size failed (err=" << status << ").";
     return nullptr;
   }
 
   if (args.allocation_size > size) {
-    error_reporter->ERROR()
-        << "Memory::New(): allocation_size (" << args.allocation_size
-        << ") is larger than the size of the corresponding vmo (" << size
-        << ").";
+    error_reporter->ERROR() << "Memory::New(): allocation_size (" << args.allocation_size
+                            << ") is larger than the size of the corresponding vmo (" << size
+                            << ").";
     return nullptr;
   }
 
@@ -143,21 +133,18 @@ escher::GpuMemPtr Memory::ImportGpuMemory() {
   // uncover the bug.
   vk::MemoryZirconHandlePropertiesFUCHSIA handle_properties;
   vk::Result err = vk_device.getMemoryZirconHandlePropertiesFUCHSIA(
-      vk::ExternalMemoryHandleTypeFlagBits::eTempZirconVmoFUCHSIA,
-      shared_vmo_->vmo().get(), &handle_properties,
-      session()->resource_context().vk_loader);
+      vk::ExternalMemoryHandleTypeFlagBits::eTempZirconVmoFUCHSIA, shared_vmo_->vmo().get(),
+      &handle_properties, session()->resource_context().vk_loader);
   if (err != vk::Result::eSuccess) {
-    error_reporter()->ERROR()
-        << "scenic_impl::gfx::Memory::ImportGpuMemory(): "
-           "VkGetMemoryFuchsiaHandlePropertiesKHR failed.";
+    error_reporter()->ERROR() << "scenic_impl::gfx::Memory::ImportGpuMemory(): "
+                                 "VkGetMemoryFuchsiaHandlePropertiesKHR failed.";
     return nullptr;
   }
   if (handle_properties.memoryTypeBits == 0) {
     if (!is_host_) {
-      error_reporter()->ERROR()
-          << "scenic_impl::gfx::Memory::ImportGpuMemory(): "
-             "VkGetMemoryFuchsiaHandlePropertiesKHR "
-             "returned zero valid memory types.";
+      error_reporter()->ERROR() << "scenic_impl::gfx::Memory::ImportGpuMemory(): "
+                                   "VkGetMemoryFuchsiaHandlePropertiesKHR "
+                                   "returned zero valid memory types.";
     } else {
       // Importing read-only host memory into the Vulkan driver should not work,
       // but it is not an error to try to do so. Returning a nullptr here should
@@ -175,8 +162,7 @@ escher::GpuMemPtr Memory::ImportGpuMemory() {
   // valid UMA-style memory pool -- one that can be used as both host and device
   // memory.
   vk::MemoryPropertyFlags required_flags =
-      is_host_ ? vk::MemoryPropertyFlagBits::eDeviceLocal |
-                     vk::MemoryPropertyFlagBits::eHostVisible
+      is_host_ ? vk::MemoryPropertyFlagBits::eDeviceLocal | vk::MemoryPropertyFlagBits::eHostVisible
                : vk::MemoryPropertyFlagBits::eDeviceLocal;
 
   auto vk_physical_device = session()->resource_context().vk_physical_device;
@@ -193,23 +179,20 @@ escher::GpuMemPtr Memory::ImportGpuMemory() {
          "both images and buffers. Please fix SCN-1368.";
 #endif  // __x86_64__
 
-  uint32_t memory_type_index = escher::impl::GetMemoryTypeIndex(
-      vk_physical_device, memory_type_bits, required_flags);
+  uint32_t memory_type_index =
+      escher::impl::GetMemoryTypeIndex(vk_physical_device, memory_type_bits, required_flags);
 
-  vk::PhysicalDeviceMemoryProperties memory_types =
-      vk_physical_device.getMemoryProperties();
+  vk::PhysicalDeviceMemoryProperties memory_types = vk_physical_device.getMemoryProperties();
   if (memory_type_index >= memory_types.memoryTypeCount) {
     if (!is_host_) {
       // Because vkGetMemoryZirconHandlePropertiesFUCHSIA may work on normal CPU
       // memory on UMA platforms, importation failure is only an error for
       // device memory.
-      error_reporter()->ERROR()
-          << "scenic_impl::gfx::Memory::ImportGpuMemory(): could not find a "
-             "valid memory type for importation.";
+      error_reporter()->ERROR() << "scenic_impl::gfx::Memory::ImportGpuMemory(): could not find a "
+                                   "valid memory type for importation.";
     } else {
       // TODO(SCN-1012): Error message is UMA specific.
-      FXL_LOG(INFO)
-          << "Host memory VMO could not find a UMA-style memory type.";
+      FXL_LOG(INFO) << "Host memory VMO could not find a UMA-style memory type.";
     }
     return nullptr;
   }
@@ -217,8 +200,7 @@ escher::GpuMemPtr Memory::ImportGpuMemory() {
   // Import a VkDeviceMemory from the VMO. VkAllocateMemory takes ownership of
   // the VMO handle it is passed.
   vk::ImportMemoryZirconHandleInfoFUCHSIA memory_import_info(
-      vk::ExternalMemoryHandleTypeFlagBits::eTempZirconVmoFUCHSIA,
-      DuplicateVmo().release());
+      vk::ExternalMemoryHandleTypeFlagBits::eTempZirconVmoFUCHSIA, DuplicateVmo().release());
   vk::MemoryAllocateInfo memory_allocate_info(size(), memory_type_index);
   memory_allocate_info.setPNext(&memory_import_info);
 
@@ -234,33 +216,27 @@ escher::GpuMemPtr Memory::ImportGpuMemory() {
   // (either as host or device memory), then we can always make a GpuMem
   // object, and rely on its mapped pointer accessor instead of storing our
   // own local uint8_t*.
-  return escher::GpuMem::AdoptVkMemory(vk_device, vk::DeviceMemory(memory),
-                                       vk::DeviceSize(size()),
+  return escher::GpuMem::AdoptVkMemory(vk_device, vk::DeviceMemory(memory), vk::DeviceSize(size()),
                                        is_host_ /* needs_mapped_ptr */);
 }
 
 zx::vmo Memory::DuplicateVmo() {
   zx::vmo the_clone;
-  zx_status_t status =
-      shared_vmo_->vmo().duplicate(ZX_RIGHT_SAME_RIGHTS, &the_clone);
+  zx_status_t status = shared_vmo_->vmo().duplicate(ZX_RIGHT_SAME_RIGHTS, &the_clone);
   ZX_ASSERT_MSG(status == ZX_OK, "duplicate failed: status=%d", status);
   return the_clone;
 }
 
-uint32_t Memory::HasSharedMemoryPools(vk::Device device,
-                                      vk::PhysicalDevice physical_device) {
+uint32_t Memory::HasSharedMemoryPools(vk::Device device, vk::PhysicalDevice physical_device) {
   vk::MemoryPropertyFlags required_flags =
-      vk::MemoryPropertyFlagBits::eDeviceLocal |
-      vk::MemoryPropertyFlagBits::eHostVisible;
+      vk::MemoryPropertyFlagBits::eDeviceLocal | vk::MemoryPropertyFlagBits::eHostVisible;
 
-  uint32_t memory_type_bits =
-      GetBufferMemoryBits(device) & GetImageMemoryBits(device);
+  uint32_t memory_type_bits = GetBufferMemoryBits(device) & GetImageMemoryBits(device);
 
-  uint32_t memory_type_index = escher::impl::GetMemoryTypeIndex(
-      physical_device, memory_type_bits, required_flags);
+  uint32_t memory_type_index =
+      escher::impl::GetMemoryTypeIndex(physical_device, memory_type_bits, required_flags);
 
-  vk::PhysicalDeviceMemoryProperties memory_types =
-      physical_device.getMemoryProperties();
+  vk::PhysicalDeviceMemoryProperties memory_types = physical_device.getMemoryProperties();
   return memory_type_index < memory_types.memoryTypeCount;
 }
 

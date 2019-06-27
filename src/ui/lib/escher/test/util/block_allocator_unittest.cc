@@ -20,8 +20,7 @@ TEST(BlockAllocator, InitialCounts) {
             allocator.current_fixed_size_block().end);
 
   // Other tests will rely on block memory being at least 4-byte aligned.
-  ASSERT_EQ(0u, reinterpret_cast<size_t>(
-                    allocator.current_fixed_size_block().current_ptr) %
+  ASSERT_EQ(0u, reinterpret_cast<size_t>(allocator.current_fixed_size_block().current_ptr) %
                     alignof(uint32_t));
 }
 
@@ -107,8 +106,7 @@ TEST(BlockAllocator, LargeAllocations) {
 
   // Anything larger than kLargestFixedSizeBlockAllocation will be treated as a
   // large allocation, which gets its own block.
-  EXPECT_NE(nullptr,
-            allocator.Allocate(kLargestFixedSizeBlockAllocation + 1, 4));
+  EXPECT_NE(nullptr, allocator.Allocate(kLargestFixedSizeBlockAllocation + 1, 4));
   EXPECT_NE(nullptr, allocator.Allocate(kFixedBlockSize / 3, 4));
   EXPECT_NE(nullptr, allocator.Allocate(kFixedBlockSize / 2, 4));
   EXPECT_NE(nullptr, allocator.Allocate(kFixedBlockSize, 4));

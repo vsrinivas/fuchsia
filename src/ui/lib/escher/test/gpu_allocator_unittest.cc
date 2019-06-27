@@ -13,18 +13,15 @@ using namespace escher::test;
 
 VulkanDeviceQueuesPtr CreateVulkanDeviceQueues() {
   VulkanInstance::Params instance_params(
-      {{"VK_LAYER_LUNARG_standard_validation"},
-       {VK_EXT_DEBUG_REPORT_EXTENSION_NAME},
-       false});
+      {{"VK_LAYER_LUNARG_standard_validation"}, {VK_EXT_DEBUG_REPORT_EXTENSION_NAME}, false});
 
   auto vulkan_instance = VulkanInstance::New(std::move(instance_params));
   // This extension is necessary for the VMA to support dedicated allocations.
-  return VulkanDeviceQueues::New(
-      vulkan_instance,
-      {{VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME},
-       {},
-       vk::SurfaceKHR(),
-       VulkanDeviceQueues::Params::kDisableQueueFilteringForPresent});
+  return VulkanDeviceQueues::New(vulkan_instance,
+                                 {{VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME},
+                                  {},
+                                  vk::SurfaceKHR(),
+                                  VulkanDeviceQueues::Params::kDisableQueueFilteringForPresent});
 }
 
 // vk_mem_alloc allocates power of 2 buffers by default, so this makes the
@@ -36,8 +33,8 @@ void TestAllocationOfMemory(GpuAllocator* allocator) {
   EXPECT_EQ(0u, allocator->GetTotalBytesAllocated());
 
   // Standard sub-allocation tests.
-  auto alloc = allocator->AllocateMemory(
-      {kMemorySize, 0, 0xffffffff}, vk::MemoryPropertyFlagBits::eDeviceLocal);
+  auto alloc = allocator->AllocateMemory({kMemorySize, 0, 0xffffffff},
+                                         vk::MemoryPropertyFlagBits::eDeviceLocal);
 
   // Adding sub-allocations doesn't increase slab-count.
   EXPECT_EQ(kMemorySize, allocator->GetTotalBytesAllocated());
@@ -50,8 +47,8 @@ void TestAllocationOfMemory(GpuAllocator* allocator) {
   EXPECT_EQ(kMemorySize, allocator->GetTotalBytesAllocated());
 
   // Allocating then freeing increases/decreases the slab-count.
-  auto alloc2 = allocator->AllocateMemory(
-      {kMemorySize, 0, 0xffffffff}, vk::MemoryPropertyFlagBits::eHostVisible);
+  auto alloc2 = allocator->AllocateMemory({kMemorySize, 0, 0xffffffff},
+                                          vk::MemoryPropertyFlagBits::eHostVisible);
   EXPECT_EQ(2U * kMemorySize, allocator->GetTotalBytesAllocated());
   alloc2 = nullptr;
   EXPECT_EQ(kMemorySize, allocator->GetTotalBytesAllocated());
@@ -73,20 +70,20 @@ void TestAllocationOfBuffers(GpuAllocator* allocator) {
   // Confirm that all memory has been released.
   EXPECT_EQ(0u, allocator->GetTotalBytesAllocated());
 
-  const auto kBufferUsageFlags = vk::BufferUsageFlagBits::eTransferSrc |
-                                 vk::BufferUsageFlagBits::eTransferDst;
-  const auto kMemoryPropertyFlags = vk::MemoryPropertyFlagBits::eHostVisible |
-                                    vk::MemoryPropertyFlagBits::eHostCoherent;
+  const auto kBufferUsageFlags =
+      vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eTransferDst;
+  const auto kMemoryPropertyFlags =
+      vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
 
   // Allocate some buffers, and confirm that the allocator is tracking the bytes
   // allocated.
-  auto buffer0 = allocator->AllocateBuffer(
-      nullptr, kMemorySize, kBufferUsageFlags, kMemoryPropertyFlags, nullptr);
+  auto buffer0 = allocator->AllocateBuffer(nullptr, kMemorySize, kBufferUsageFlags,
+                                           kMemoryPropertyFlags, nullptr);
   EXPECT_EQ(kMemorySize, allocator->GetTotalBytesAllocated());
   EXPECT_NE(nullptr, buffer0->host_ptr());
   EXPECT_EQ(kMemorySize, buffer0->size());
-  auto buffer1 = allocator->AllocateBuffer(
-      nullptr, kMemorySize, kBufferUsageFlags, kMemoryPropertyFlags, nullptr);
+  auto buffer1 = allocator->AllocateBuffer(nullptr, kMemorySize, kBufferUsageFlags,
+                                           kMemoryPropertyFlags, nullptr);
   EXPECT_EQ(2 * kMemorySize, allocator->GetTotalBytesAllocated());
   EXPECT_NE(nullptr, buffer1->host_ptr());
   EXPECT_EQ(kMemorySize, buffer1->size());
@@ -94,8 +91,8 @@ void TestAllocationOfBuffers(GpuAllocator* allocator) {
   // Allocate a buffer using dedicated memory and getting a separate managed
   // pointer to the memory.
   GpuMemPtr ptr;
-  auto buffer_dedicated0 = allocator->AllocateBuffer(
-      nullptr, kMemorySize, kBufferUsageFlags, kMemoryPropertyFlags, &ptr);
+  auto buffer_dedicated0 = allocator->AllocateBuffer(nullptr, kMemorySize, kBufferUsageFlags,
+                                                     kMemoryPropertyFlags, &ptr);
   EXPECT_TRUE(ptr);
   EXPECT_EQ(kMemorySize, ptr->size());
   EXPECT_EQ(0u, ptr->offset());
@@ -110,8 +107,8 @@ void TestAllocationOfBuffers(GpuAllocator* allocator) {
   EXPECT_EQ(2 * kMemorySize, allocator->GetTotalBytesAllocated());
 
   // Allocate another dedicated memory object.
-  buffer_dedicated0 = allocator->AllocateBuffer(
-      nullptr, kMemorySize, kBufferUsageFlags, kMemoryPropertyFlags, &ptr);
+  buffer_dedicated0 = allocator->AllocateBuffer(nullptr, kMemorySize, kBufferUsageFlags,
+                                                kMemoryPropertyFlags, &ptr);
   EXPECT_TRUE(ptr);
   EXPECT_EQ(kMemorySize, ptr->size());
   EXPECT_EQ(0u, ptr->offset());
@@ -128,24 +125,24 @@ void TestAllocationOfBuffers(GpuAllocator* allocator) {
   // could partition out a small pool, the requirement of an output memory
   // pointer forces unique allocations (i.e., offset == 0) for all objects.
   const auto kSmallBufferSize = 5u;
-  auto buffer_dedicated1 = allocator->AllocateBuffer(
-      nullptr, kSmallBufferSize, kBufferUsageFlags, kMemoryPropertyFlags, &ptr);
+  auto buffer_dedicated1 = allocator->AllocateBuffer(nullptr, kSmallBufferSize, kBufferUsageFlags,
+                                                     kMemoryPropertyFlags, &ptr);
   EXPECT_EQ(0u, ptr->offset());
   EXPECT_NE(nullptr, ptr->mapped_ptr());
-  auto buffer_dedicated2 = allocator->AllocateBuffer(
-      nullptr, kSmallBufferSize, kBufferUsageFlags, kMemoryPropertyFlags, &ptr);
+  auto buffer_dedicated2 = allocator->AllocateBuffer(nullptr, kSmallBufferSize, kBufferUsageFlags,
+                                                     kMemoryPropertyFlags, &ptr);
   EXPECT_EQ(0u, ptr->offset());
   EXPECT_NE(nullptr, ptr->mapped_ptr());
-  auto buffer_dedicated3 = allocator->AllocateBuffer(
-      nullptr, kSmallBufferSize, kBufferUsageFlags, kMemoryPropertyFlags, &ptr);
+  auto buffer_dedicated3 = allocator->AllocateBuffer(nullptr, kSmallBufferSize, kBufferUsageFlags,
+                                                     kMemoryPropertyFlags, &ptr);
   EXPECT_EQ(0u, ptr->offset());
   EXPECT_NE(nullptr, ptr->mapped_ptr());
-  auto buffer_dedicated4 = allocator->AllocateBuffer(
-      nullptr, kSmallBufferSize, kBufferUsageFlags, kMemoryPropertyFlags, &ptr);
+  auto buffer_dedicated4 = allocator->AllocateBuffer(nullptr, kSmallBufferSize, kBufferUsageFlags,
+                                                     kMemoryPropertyFlags, &ptr);
   EXPECT_EQ(0u, ptr->offset());
   EXPECT_NE(nullptr, ptr->mapped_ptr());
-  auto buffer_dedicated5 = allocator->AllocateBuffer(
-      nullptr, kSmallBufferSize, kBufferUsageFlags, kMemoryPropertyFlags, &ptr);
+  auto buffer_dedicated5 = allocator->AllocateBuffer(nullptr, kSmallBufferSize, kBufferUsageFlags,
+                                                     kMemoryPropertyFlags, &ptr);
   EXPECT_EQ(0u, ptr->offset());
   EXPECT_NE(nullptr, ptr->mapped_ptr());
 
@@ -167,17 +164,15 @@ void TestAllocationOfImages(GpuAllocator* allocator) {
   // Confirm that all memory has been released.
   EXPECT_EQ(0u, allocator->GetTotalBytesAllocated());
 
-  const auto kMemoryPropertyFlags = vk::MemoryPropertyFlagBits::eHostVisible |
-                                    vk::MemoryPropertyFlagBits::eHostCoherent;
+  const auto kMemoryPropertyFlags =
+      vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
 
   static const int kWidth = 64;
   static const int kHeight = 64;
   static const vk::Format kFormat = vk::Format::eR8G8B8A8Unorm;
-  static const size_t kMemorySize =
-      kWidth * kHeight * image_utils::BytesPerPixel(kFormat);
+  static const size_t kMemorySize = kWidth * kHeight * image_utils::BytesPerPixel(kFormat);
   static const vk::ImageUsageFlags kUsage =
-      vk::ImageUsageFlagBits::eTransferSrc |
-      vk::ImageUsageFlagBits::eTransferDst;
+      vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst;
 
   ImageInfo info;
   info.format = kFormat;

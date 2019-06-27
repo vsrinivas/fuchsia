@@ -8,8 +8,7 @@
 
 namespace scenic_impl {
 
-SystemContext::SystemContext(sys::ComponentContext* app_context,
-                             inspect::Node inspect_node,
+SystemContext::SystemContext(sys::ComponentContext* app_context, inspect::Node inspect_node,
                              fit::closure quit_callback)
     : app_context_(app_context),
       quit_callback_(std::move(quit_callback)),
@@ -20,14 +19,12 @@ SystemContext::SystemContext(sys::ComponentContext* app_context,
 SystemContext::SystemContext(SystemContext&& context)
     : SystemContext(context.app_context_, std::move(context.inspect_node_),
                     std::move(context.quit_callback_)) {
-  auto& other_app_context =
-      const_cast<sys::ComponentContext*&>(context.app_context_);
+  auto& other_app_context = const_cast<sys::ComponentContext*&>(context.app_context_);
   other_app_context = nullptr;
 }
 
 System::System(SystemContext context, bool initialized_after_construction)
-    : initialized_(initialized_after_construction),
-      context_(std::move(context)) {}
+    : initialized_(initialized_after_construction), context_(std::move(context)) {}
 
 void System::SetToInitialized() {
   initialized_ = true;
@@ -39,8 +36,7 @@ void System::SetToInitialized() {
 
 System::~System() = default;
 
-TempSystemDelegate::TempSystemDelegate(SystemContext context,
-                                       bool initialized_after_construction)
+TempSystemDelegate::TempSystemDelegate(SystemContext context, bool initialized_after_construction)
     : System(std::move(context), initialized_after_construction) {}
 
 }  // namespace scenic_impl

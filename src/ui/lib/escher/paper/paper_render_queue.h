@@ -29,8 +29,7 @@ class PaperRenderQueue final {
   // GenerateCommands() on the opaque RenderQueue.  Then, set the
   // CommandBuffer state for translucent rendering and invoke GenerateCommands()
   // on the translucent RenderQueue.
-  void GenerateCommands(CommandBuffer* cmd_buf,
-                        const PaperRenderQueueContext* context,
+  void GenerateCommands(CommandBuffer* cmd_buf, const PaperRenderQueueContext* context,
                         PaperRenderQueueFlags flags) const;
 
   // Clear per-frame data, as well as the opaque/translucent RenderQueues.

@@ -22,8 +22,7 @@ Demo::Demo(DemoHarness* harness, const char* name)
       name_(name),
       vulkan_context_(harness->GetVulkanContext()),
       escher_(harness->device_queues(), harness->filesystem()),
-      swapchain_helper_(harness->GetVulkanSwapchain(),
-                        escher()->vulkan_context().device,
+      swapchain_helper_(harness->GetVulkanSwapchain(), escher()->vulkan_context().device,
                         escher()->vulkan_context().queue) {}
 
 Demo::~Demo() {}
@@ -114,25 +113,21 @@ bool Demo::MaybeDrawFrame() {
 
   {
     TRACE_DURATION("gfx", "escher::Demo::MaybeDrawFrame (drawing)");
-    auto frame =
-        escher()->NewFrame(name(), ++frame_count_, enable_gpu_logging_);
+    auto frame = escher()->NewFrame(name(), ++frame_count_, enable_gpu_logging_);
     OnFrameCreated();
 
-    swapchain_helper_.DrawFrame(
-        [&, this](const escher::ImagePtr& output_image,
-                  const escher::SemaphorePtr& render_finished) {
-          this->DrawFrame(frame, output_image);
-          frame->EndFrame(render_finished, [this]() { OnFrameDestroyed(); });
-        });
+    swapchain_helper_.DrawFrame([&, this](const escher::ImagePtr& output_image,
+                                          const escher::SemaphorePtr& render_finished) {
+      this->DrawFrame(frame, output_image);
+      frame->EndFrame(render_finished, [this]() { OnFrameDestroyed(); });
+    });
   }
   escher()->Cleanup();
   return true;
 }
 
-void Demo::RunOffscreenBenchmark(uint32_t framebuffer_width,
-                                 uint32_t framebuffer_height,
-                                 vk::Format framebuffer_format,
-                                 size_t frame_count) {
+void Demo::RunOffscreenBenchmark(uint32_t framebuffer_width, uint32_t framebuffer_height,
+                                 vk::Format framebuffer_format, size_t frame_count) {
   constexpr uint64_t kSecondsToNanoseconds = 1000000000;
   const char* kTraceLiteral = "RunOffscreenBenchmark";
 
@@ -150,8 +145,7 @@ void Demo::RunOffscreenBenchmark(uint32_t framebuffer_width,
     for (size_t i = 0; i < kSwapchainSize; ++i) {
       auto im = image_cache->NewImage(
           {framebuffer_format, framebuffer_width, framebuffer_height, 1,
-           vk::ImageUsageFlagBits::eColorAttachment |
-               vk::ImageUsageFlagBits::eTransferSrc});
+           vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferSrc});
       images[i] = std::move(im);
       semaphores[i] = escher::Semaphore::New(vulkan_context_.device);
 
@@ -179,11 +173,11 @@ void Demo::RunOffscreenBenchmark(uint32_t framebuffer_width,
 
     size_t image_index = current_frame % kSwapchainSize;
 
-    auto frame = escher()->NewFrame(kTraceLiteral, ++frame_number,
-                                    current_frame == frame_count - 1);
+    auto frame =
+        escher()->NewFrame(kTraceLiteral, ++frame_number, current_frame == frame_count - 1);
     OnFrameCreated();
-    frame->command_buffer()->AddWaitSemaphore(
-        semaphores[image_index], vk::PipelineStageFlagBits::eBottomOfPipe);
+    frame->command_buffer()->AddWaitSemaphore(semaphores[image_index],
+                                              vk::PipelineStageFlagBits::eBottomOfPipe);
     this->DrawFrame(frame, images[image_index]);
     frame->EndFrame(semaphores[image_index], [this]() { OnFrameDestroyed(); });
 
@@ -192,18 +186,16 @@ void Demo::RunOffscreenBenchmark(uint32_t framebuffer_width,
 
   // Wait for the last frame to finish.
   auto command_buffer = escher()->command_buffer_pool()->GetCommandBuffer();
-  command_buffer->AddWaitSemaphore(
-      semaphores[(frame_count - 1) % kSwapchainSize],
-      vk::PipelineStageFlagBits::eBottomOfPipe);
+  command_buffer->AddWaitSemaphore(semaphores[(frame_count - 1) % kSwapchainSize],
+                                   vk::PipelineStageFlagBits::eBottomOfPipe);
   command_buffer->Submit(vulkan_context_.queue, nullptr);
-  FXL_CHECK(vk::Result::eSuccess ==
-            command_buffer->Wait(kSwapchainSize * kSecondsToNanoseconds));
+  FXL_CHECK(vk::Result::eSuccess == command_buffer->Wait(kSwapchainSize * kSecondsToNanoseconds));
   stopwatch.Stop();
 
   FXL_LOG(INFO) << "------------------------------------------------------";
   FXL_LOG(INFO) << "Offscreen benchmark";
-  FXL_LOG(INFO) << "Rendered " << frame_count << " frames in "
-                << stopwatch.GetElapsedSeconds() << " seconds";
+  FXL_LOG(INFO) << "Rendered " << frame_count << " frames in " << stopwatch.GetElapsedSeconds()
+                << " seconds";
   FXL_LOG(INFO) << (frame_count / stopwatch.GetElapsedSeconds()) << " FPS";
   FXL_LOG(INFO) << "------------------------------------------------------";
 }

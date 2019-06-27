@@ -19,8 +19,7 @@ bool SemanticTreeParser::ParseSemanticTree(
     return false;
   }
   for (auto &node_object : document.GetArray()) {
-    fuchsia::accessibility::semantics::Node node =
-        fuchsia::accessibility::semantics::Node();
+    fuchsia::accessibility::semantics::Node node = fuchsia::accessibility::semantics::Node();
     node.set_node_id(node_object["id"].GetInt());
     for (auto &child_id : node_object["child_ids"].GetArray()) {
       node.mutable_child_ids()->push_back(child_id.GetInt());

@@ -14,8 +14,7 @@ class RectangleShape final : public PlanarShape {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  RectangleShape(Session* session, ResourceId id, float initial_width,
-                 float initial_height);
+  RectangleShape(Session* session, ResourceId id, float initial_width, float initial_height);
 
   float width() const { return width_; }
   float height() const { return height_; }
@@ -27,9 +26,8 @@ class RectangleShape final : public PlanarShape {
   bool ContainsPoint(const escher::vec2& point) const override;
 
   // |Shape|.
-  escher::Object GenerateRenderObject(
-      const escher::mat4& transform,
-      const escher::MaterialPtr& material) override;
+  escher::Object GenerateRenderObject(const escher::mat4& transform,
+                                      const escher::MaterialPtr& material) override;
 
  private:
   float width_;

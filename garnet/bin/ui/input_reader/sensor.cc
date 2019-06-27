@@ -17,45 +17,32 @@
 namespace {
 
 bool IsXUsage(const hid::Usage& u) {
-  return (u == hid::USAGE(hid::usage::Page::kSensor,
-                          hid::usage::Sensor::kAccelerationAxisX)) ||
-         (u == hid::USAGE(hid::usage::Page::kSensor,
-                          hid::usage::Sensor::kDistanceAxisX)) ||
-         (u == hid::USAGE(hid::usage::Page::kSensor,
-                          hid::usage::Sensor::kTiltAxisX)) ||
-         (u == hid::USAGE(hid::usage::Page::kSensor,
-                          hid::usage::Sensor::kMagneticFluxAxisX));
+  return (u == hid::USAGE(hid::usage::Page::kSensor, hid::usage::Sensor::kAccelerationAxisX)) ||
+         (u == hid::USAGE(hid::usage::Page::kSensor, hid::usage::Sensor::kDistanceAxisX)) ||
+         (u == hid::USAGE(hid::usage::Page::kSensor, hid::usage::Sensor::kTiltAxisX)) ||
+         (u == hid::USAGE(hid::usage::Page::kSensor, hid::usage::Sensor::kMagneticFluxAxisX));
 }
 
 bool IsYUsage(const hid::Usage& u) {
-  return (u == hid::USAGE(hid::usage::Page::kSensor,
-                          hid::usage::Sensor::kAccelerationAxisY)) ||
-         (u == hid::USAGE(hid::usage::Page::kSensor,
-                          hid::usage::Sensor::kDistanceAxisY)) ||
-         (u == hid::USAGE(hid::usage::Page::kSensor,
-                          hid::usage::Sensor::kTiltAxisY)) ||
-         (u == hid::USAGE(hid::usage::Page::kSensor,
-                          hid::usage::Sensor::kMagneticFluxAxisY));
+  return (u == hid::USAGE(hid::usage::Page::kSensor, hid::usage::Sensor::kAccelerationAxisY)) ||
+         (u == hid::USAGE(hid::usage::Page::kSensor, hid::usage::Sensor::kDistanceAxisY)) ||
+         (u == hid::USAGE(hid::usage::Page::kSensor, hid::usage::Sensor::kTiltAxisY)) ||
+         (u == hid::USAGE(hid::usage::Page::kSensor, hid::usage::Sensor::kMagneticFluxAxisY));
 }
 
 bool IsZUsage(const hid::Usage& u) {
-  return (u == hid::USAGE(hid::usage::Page::kSensor,
-                          hid::usage::Sensor::kAccelerationAxisZ)) ||
-         (u == hid::USAGE(hid::usage::Page::kSensor,
-                          hid::usage::Sensor::kDistanceAxisZ)) ||
-         (u == hid::USAGE(hid::usage::Page::kSensor,
-                          hid::usage::Sensor::kTiltAxisZ)) ||
-         (u == hid::USAGE(hid::usage::Page::kSensor,
-                          hid::usage::Sensor::kMagneticFluxAxisZ));
+  return (u == hid::USAGE(hid::usage::Page::kSensor, hid::usage::Sensor::kAccelerationAxisZ)) ||
+         (u == hid::USAGE(hid::usage::Page::kSensor, hid::usage::Sensor::kDistanceAxisZ)) ||
+         (u == hid::USAGE(hid::usage::Page::kSensor, hid::usage::Sensor::kTiltAxisZ)) ||
+         (u == hid::USAGE(hid::usage::Page::kSensor, hid::usage::Sensor::kMagneticFluxAxisZ));
 }
 
 }  // namespace
 
 namespace ui_input {
 
-bool Sensor::ParseReportDescriptor(
-    const hid::ReportDescriptor& report_descriptor,
-    Descriptor* device_descriptor) {
+bool Sensor::ParseReportDescriptor(const hid::ReportDescriptor& report_descriptor,
+                                   Descriptor* device_descriptor) {
   FXL_CHECK(device_descriptor);
 
   fuchsia::ui::input::SensorType sensor_type;
@@ -66,25 +53,24 @@ bool Sensor::ParseReportDescriptor(
   uint32_t caps = 0;
 
   auto sensor_usage = report_descriptor.input_fields[0].col->usage;
-  if (sensor_usage == hid::USAGE(hid::usage::Page::kSensor,
-                                 hid::usage::Sensor::kAccelerometer3D)) {
+  if (sensor_usage == hid::USAGE(hid::usage::Page::kSensor, hid::usage::Sensor::kAccelerometer3D)) {
     sensor_type = fuchsia::ui::input::SensorType::ACCELEROMETER;
 
-  } else if (sensor_usage == hid::USAGE(hid::usage::Page::kSensor,
-                                        hid::usage::Sensor::kGyrometer3D)) {
+  } else if (sensor_usage ==
+             hid::USAGE(hid::usage::Page::kSensor, hid::usage::Sensor::kGyrometer3D)) {
     sensor_type = fuchsia::ui::input::SensorType::GYROSCOPE;
 
-  } else if (sensor_usage == hid::USAGE(hid::usage::Page::kSensor,
-                                        hid::usage::Sensor::kMagnetometer)) {
+  } else if (sensor_usage ==
+             hid::USAGE(hid::usage::Page::kSensor, hid::usage::Sensor::kMagnetometer)) {
     sensor_type = fuchsia::ui::input::SensorType::MAGNETOMETER;
 
-  } else if (sensor_usage == hid::USAGE(hid::usage::Page::kSensor,
-                                        hid::usage::Sensor::kAmbientLight)) {
+  } else if (sensor_usage ==
+             hid::USAGE(hid::usage::Page::kSensor, hid::usage::Sensor::kAmbientLight)) {
     sensor_type = fuchsia::ui::input::SensorType::LIGHTMETER;
 
   } else {
-    FXL_LOG(INFO) << "Sensor report descriptor: Sensor page not supported (0x"
-                  << std::hex << sensor_usage.usage << ")";
+    FXL_LOG(INFO) << "Sensor report descriptor: Sensor page not supported (0x" << std::hex
+                  << sensor_usage.usage << ")";
     return false;
   }
 
@@ -138,14 +124,12 @@ bool Sensor::ParseReportDescriptor(
   // Set the device descriptor.
   device_descriptor->protocol = Protocol::Sensor;
   device_descriptor->has_sensor = true;
-  device_descriptor->sensor_descriptor =
-      fuchsia::ui::input::SensorDescriptor::New();
+  device_descriptor->sensor_descriptor = fuchsia::ui::input::SensorDescriptor::New();
   device_descriptor->sensor_descriptor->type = sensor_type;
   return true;
 }
 
-bool Sensor::ParseReport(const uint8_t* data, size_t len,
-                         fuchsia::ui::input::InputReport* report) {
+bool Sensor::ParseReport(const uint8_t* data, size_t len, fuchsia::ui::input::InputReport* report) {
   FXL_CHECK(report);
   FXL_CHECK(report->sensor);
   double x = 0;
@@ -154,8 +138,7 @@ bool Sensor::ParseReport(const uint8_t* data, size_t len,
   double scalar = 0;
 
   if (report_size_ != len) {
-    FXL_LOG(INFO) << "Sensor report: Expected size " << report_size_
-                  << "Recieved size " << len;
+    FXL_LOG(INFO) << "Sensor report: Expected size " << report_size_ << "Recieved size " << len;
     return false;
   }
 
@@ -184,12 +167,9 @@ bool Sensor::ParseReport(const uint8_t* data, size_t len,
     }
   }
 
-  FXL_DCHECK(x >= INT16_MIN && x <= INT16_MAX)
-      << "X sensor value is truncated.";
-  FXL_DCHECK(y >= INT16_MIN && y <= INT16_MAX)
-      << "Y sensor value is truncated.";
-  FXL_DCHECK(z >= INT16_MIN && z <= INT16_MAX)
-      << "Z sensor value is truncated.";
+  FXL_DCHECK(x >= INT16_MIN && x <= INT16_MAX) << "X sensor value is truncated.";
+  FXL_DCHECK(y >= INT16_MIN && y <= INT16_MAX) << "Y sensor value is truncated.";
+  FXL_DCHECK(z >= INT16_MIN && z <= INT16_MAX) << "Z sensor value is truncated.";
 
   if (capabilities_ & (Capabilities::X | Capabilities::Y | Capabilities::Z)) {
     std::array<int16_t, 3> axis;

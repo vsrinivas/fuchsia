@@ -35,12 +35,9 @@ namespace {
 bool USE_TOUCHPAD_HARDCODED_REPORTS = false;
 bool USE_TOUCHSCREEN_HARDCODED_REPORTS = false;
 
-int64_t InputEventTimestampNow() {
-  return fxl::TimePoint::Now().ToEpochDelta().ToNanoseconds();
-}
+int64_t InputEventTimestampNow() { return fxl::TimePoint::Now().ToEpochDelta().ToNanoseconds(); }
 
-fuchsia::ui::input::InputReport CloneReport(
-    const fuchsia::ui::input::InputReport& report) {
+fuchsia::ui::input::InputReport CloneReport(const fuchsia::ui::input::InputReport& report) {
   fuchsia::ui::input::InputReport result;
   fidl::Clone(report, &result);
   return result;
@@ -73,8 +70,7 @@ static uint16_t extract_uint16(const uint8_t* v, uint32_t begin) {
 // Extracts up to 8 bits sign extended to int32_t from a byte array |v|.
 // Both |begin| and |count| are in bits units. This function does not
 // check for the array being long enough.
-static int32_t extract_int8_ext(const uint8_t* v, uint32_t begin,
-                                uint32_t count) {
+static int32_t extract_int8_ext(const uint8_t* v, uint32_t begin, uint32_t count) {
   uint8_t val = extract_uint8(v, begin, count);
   return signed_bit_cast(val);
 }
@@ -88,8 +84,7 @@ const size_t kAmbientLight = 2;
 
 namespace ui_input {
 
-bool Hardcoded::ParseGamepadDescriptor(const hid::ReportField* fields,
-                                       size_t count) {
+bool Hardcoded::ParseGamepadDescriptor(const hid::ReportField* fields, size_t count) {
   // Need to recover the five fields as seen in HidGamepadSimple and put
   // them into the decoder_ in the same order.
   if (count < 5u)
@@ -125,8 +120,7 @@ bool Hardcoded::ParseGamepadDescriptor(const hid::ReportField* fields,
     for (size_t iy = 0; iy != arraysize(table); iy++) {
       if (fields[ix].attr.usage.usage == table[iy]) {
         // Found a required usage.
-        decoder_[iy + 1] =
-            DataLocator{bit_count + offset, fields[ix].attr.bit_sz, 0};
+        decoder_[iy + 1] = DataLocator{bit_count + offset, fields[ix].attr.bit_sz, 0};
         break;
       }
     }
@@ -141,8 +135,7 @@ bool Hardcoded::ParseGamepadDescriptor(const hid::ReportField* fields,
   return true;
 }
 
-bool Hardcoded::ParseAmbientLightDescriptor(const hid::ReportField* fields,
-                                            size_t count) {
+bool Hardcoded::ParseAmbientLightDescriptor(const hid::ReportField* fields, size_t count) {
   if (count == 0u)
     return false;
 
@@ -177,9 +170,8 @@ bool Hardcoded::ParseAmbientLightDescriptor(const hid::ReportField* fields,
   return false;
 }
 
-bool Hardcoded::ParseKeyboardReport(
-    uint8_t* report, size_t len,
-    fuchsia::ui::input::InputReport* keyboard_report) {
+bool Hardcoded::ParseKeyboardReport(uint8_t* report, size_t len,
+                                    fuchsia::ui::input::InputReport* keyboard_report) {
   hid_keys_t key_state;
   uint8_t keycode;
   hid_kbd_parse_report(report, &key_state);
@@ -200,8 +192,8 @@ bool Hardcoded::ParseKeyboardReport(
   return true;
 }
 
-void Hardcoded::ParseMouseReport(
-    uint8_t* r, size_t len, fuchsia::ui::input::InputReport* mouse_report) {
+void Hardcoded::ParseMouseReport(uint8_t* r, size_t len,
+                                 fuchsia::ui::input::InputReport* mouse_report) {
   auto report = reinterpret_cast<hid_boot_mouse_report_t*>(r);
   mouse_report->event_time = InputEventTimestampNow();
   mouse_report->trace_id = TRACE_NONCE();
@@ -212,8 +204,7 @@ void Hardcoded::ParseMouseReport(
   FXL_VLOG(2) << name() << " parsed: " << *mouse_report;
 }
 
-bool Hardcoded::ParseReport(const uint8_t* report, size_t len,
-                            HidGamepadSimple* gamepad) {
+bool Hardcoded::ParseReport(const uint8_t* report, size_t len, HidGamepadSimple* gamepad) {
   auto cur = &decoder_[0];
   if ((cur->match != 0) && (cur->count == 8u)) {
     // The first byte is the report id.
@@ -238,9 +229,8 @@ bool Hardcoded::ParseReport(const uint8_t* report, size_t len,
   return true;
 }
 
-bool Hardcoded::ParseGamepadMouseReport(
-    uint8_t* report, size_t len,
-    fuchsia::ui::input::InputReport* mouse_report) {
+bool Hardcoded::ParseGamepadMouseReport(uint8_t* report, size_t len,
+                                        fuchsia::ui::input::InputReport* mouse_report) {
   HidGamepadSimple gamepad = {};
   if (!ParseReport(report, len, &gamepad))
     return false;
@@ -253,9 +243,8 @@ bool Hardcoded::ParseGamepadMouseReport(
   return true;
 }
 
-bool Hardcoded::ParseAcer12TouchscreenReport(
-    uint8_t* r, size_t len,
-    fuchsia::ui::input::InputReport* touchscreen_report) {
+bool Hardcoded::ParseAcer12TouchscreenReport(uint8_t* r, size_t len,
+                                             fuchsia::ui::input::InputReport* touchscreen_report) {
   if (len != sizeof(acer12_touch_t)) {
     return false;
   }
@@ -296,8 +285,8 @@ bool Hardcoded::ParseAcer12TouchscreenReport(
   return true;
 }
 
-bool Hardcoded::ParseAcer12StylusReport(
-    uint8_t* r, size_t len, fuchsia::ui::input::InputReport* stylus_report) {
+bool Hardcoded::ParseAcer12StylusReport(uint8_t* r, size_t len,
+                                        fuchsia::ui::input::InputReport* stylus_report) {
   if (len != sizeof(acer12_stylus_t)) {
     return false;
   }
@@ -312,14 +301,11 @@ bool Hardcoded::ParseAcer12StylusReport(
 
   stylus_report->stylus->is_in_contact =
       acer12_stylus_status_inrange(report->status) &&
-      (acer12_stylus_status_tswitch(report->status) ||
-       acer12_stylus_status_eraser(report->status));
+      (acer12_stylus_status_tswitch(report->status) || acer12_stylus_status_eraser(report->status));
 
-  stylus_report->stylus->in_range =
-      acer12_stylus_status_inrange(report->status);
+  stylus_report->stylus->in_range = acer12_stylus_status_inrange(report->status);
 
-  if (acer12_stylus_status_invert(report->status) ||
-      acer12_stylus_status_eraser(report->status)) {
+  if (acer12_stylus_status_invert(report->status) || acer12_stylus_status_eraser(report->status)) {
     stylus_report->stylus->is_inverted = true;
   }
 
@@ -331,9 +317,8 @@ bool Hardcoded::ParseAcer12StylusReport(
   return true;
 }
 
-bool Hardcoded::ParseSamsungTouchscreenReport(
-    uint8_t* r, size_t len,
-    fuchsia::ui::input::InputReport* touchscreen_report) {
+bool Hardcoded::ParseSamsungTouchscreenReport(uint8_t* r, size_t len,
+                                              fuchsia::ui::input::InputReport* touchscreen_report) {
   if (len != sizeof(samsung_touch_t)) {
     return false;
   }
@@ -365,23 +350,18 @@ bool Hardcoded::ParseSamsungTouchscreenReport(
 }
 
 bool Hardcoded::ParseParadiseTouchscreenReportV1(
-    uint8_t* r, size_t len,
-    fuchsia::ui::input::InputReport* touchscreen_report) {
-  return ParseParadiseTouchscreenReport<paradise_touch_t>(r, len,
-                                                          touchscreen_report);
+    uint8_t* r, size_t len, fuchsia::ui::input::InputReport* touchscreen_report) {
+  return ParseParadiseTouchscreenReport<paradise_touch_t>(r, len, touchscreen_report);
 }
 
 bool Hardcoded::ParseParadiseTouchscreenReportV2(
-    uint8_t* r, size_t len,
-    fuchsia::ui::input::InputReport* touchscreen_report) {
-  return ParseParadiseTouchscreenReport<paradise_touch_v2_t>(
-      r, len, touchscreen_report);
+    uint8_t* r, size_t len, fuchsia::ui::input::InputReport* touchscreen_report) {
+  return ParseParadiseTouchscreenReport<paradise_touch_v2_t>(r, len, touchscreen_report);
 }
 
 template <typename ReportT>
 bool Hardcoded::ParseParadiseTouchscreenReport(
-    uint8_t* r, size_t len,
-    fuchsia::ui::input::InputReport* touchscreen_report) {
+    uint8_t* r, size_t len, fuchsia::ui::input::InputReport* touchscreen_report) {
   if (len != sizeof(ReportT)) {
     FXL_LOG(INFO) << "paradise wrong size " << len;
     return false;
@@ -412,12 +392,10 @@ bool Hardcoded::ParseParadiseTouchscreenReport(
   return true;
 }
 
-bool Hardcoded::ParseEGalaxTouchscreenReport(
-    uint8_t* r, size_t len,
-    fuchsia::ui::input::InputReport* touchscreen_report) {
+bool Hardcoded::ParseEGalaxTouchscreenReport(uint8_t* r, size_t len,
+                                             fuchsia::ui::input::InputReport* touchscreen_report) {
   if (len != sizeof(egalax_touch_t)) {
-    FXL_LOG(INFO) << "egalax wrong size " << len << " expected "
-                  << sizeof(egalax_touch_t);
+    FXL_LOG(INFO) << "egalax wrong size " << len << " expected " << sizeof(egalax_touch_t);
     return false;
   }
 
@@ -443,21 +421,19 @@ bool Hardcoded::ParseEGalaxTouchscreenReport(
   return true;
 }
 
-bool Hardcoded::ParseParadiseTouchpadReportV1(
-    uint8_t* r, size_t len, fuchsia::ui::input::InputReport* touchpad_report) {
-  return ParseParadiseTouchpadReport<paradise_touchpad_v1_t>(r, len,
-                                                             touchpad_report);
+bool Hardcoded::ParseParadiseTouchpadReportV1(uint8_t* r, size_t len,
+                                              fuchsia::ui::input::InputReport* touchpad_report) {
+  return ParseParadiseTouchpadReport<paradise_touchpad_v1_t>(r, len, touchpad_report);
 }
 
-bool Hardcoded::ParseParadiseTouchpadReportV2(
-    uint8_t* r, size_t len, fuchsia::ui::input::InputReport* touchpad_report) {
-  return ParseParadiseTouchpadReport<paradise_touchpad_v1_t>(r, len,
-                                                             touchpad_report);
+bool Hardcoded::ParseParadiseTouchpadReportV2(uint8_t* r, size_t len,
+                                              fuchsia::ui::input::InputReport* touchpad_report) {
+  return ParseParadiseTouchpadReport<paradise_touchpad_v1_t>(r, len, touchpad_report);
 }
 
 template <typename ReportT>
-bool Hardcoded::ParseParadiseTouchpadReport(
-    uint8_t* r, size_t len, fuchsia::ui::input::InputReport* mouse_report) {
+bool Hardcoded::ParseParadiseTouchpadReport(uint8_t* r, size_t len,
+                                            fuchsia::ui::input::InputReport* mouse_report) {
   if (len != sizeof(ReportT)) {
     FXL_LOG(INFO) << "paradise wrong size " << len;
     return false;
@@ -497,8 +473,8 @@ bool Hardcoded::ParseParadiseTouchpadReport(
   return true;
 }
 
-bool Hardcoded::ParseParadiseStylusReport(
-    uint8_t* r, size_t len, fuchsia::ui::input::InputReport* stylus_report) {
+bool Hardcoded::ParseParadiseStylusReport(uint8_t* r, size_t len,
+                                          fuchsia::ui::input::InputReport* stylus_report) {
   if (len != sizeof(paradise_stylus_t)) {
     FXL_LOG(INFO) << "paradise wrong stylus report size " << len;
     return false;
@@ -512,13 +488,11 @@ bool Hardcoded::ParseParadiseStylusReport(
   stylus_report->stylus->y = report->y;
   stylus_report->stylus->pressure = report->pressure;
 
-  stylus_report->stylus->is_in_contact =
-      paradise_stylus_status_inrange(report->status) &&
-      (paradise_stylus_status_tswitch(report->status) ||
-       paradise_stylus_status_eraser(report->status));
+  stylus_report->stylus->is_in_contact = paradise_stylus_status_inrange(report->status) &&
+                                         (paradise_stylus_status_tswitch(report->status) ||
+                                          paradise_stylus_status_eraser(report->status));
 
-  stylus_report->stylus->in_range =
-      paradise_stylus_status_inrange(report->status);
+  stylus_report->stylus->in_range = paradise_stylus_status_inrange(report->status);
 
   if (paradise_stylus_status_invert(report->status) ||
       paradise_stylus_status_eraser(report->status)) {
@@ -533,9 +507,8 @@ bool Hardcoded::ParseParadiseStylusReport(
   return true;
 }
 
-bool Hardcoded::ParseEyoyoTouchscreenReport(
-    uint8_t* r, size_t len,
-    fuchsia::ui::input::InputReport* touchscreen_report) {
+bool Hardcoded::ParseEyoyoTouchscreenReport(uint8_t* r, size_t len,
+                                            fuchsia::ui::input::InputReport* touchscreen_report) {
   if (len != sizeof(eyoyo_touch_t)) {
     return false;
   }
@@ -567,9 +540,8 @@ bool Hardcoded::ParseEyoyoTouchscreenReport(
   return true;
 }
 
-bool Hardcoded::ParseFt3x27TouchscreenReport(
-    uint8_t* r, size_t len,
-    fuchsia::ui::input::InputReport* touchscreen_report) {
+bool Hardcoded::ParseFt3x27TouchscreenReport(uint8_t* r, size_t len,
+                                             fuchsia::ui::input::InputReport* touchscreen_report) {
   if (len != sizeof(ft3x27_touch_t)) {
     return false;
   }
@@ -595,17 +567,15 @@ bool Hardcoded::ParseFt3x27TouchscreenReport(
     touch.height = 5;
     touchscreen_report->touchscreen->touches.resize(index + 1);
     touchscreen_report->touchscreen->touches.at(index++) = std::move(touch);
-    FXL_VLOG(2) << name()
-                << " parsed (sensor=" << static_cast<uint16_t>(touch.finger_id)
+    FXL_VLOG(2) << name() << " parsed (sensor=" << static_cast<uint16_t>(touch.finger_id)
                 << ") x=" << touch.x << ", y=" << touch.y;
   }
 
   return true;
 }
 
-bool Hardcoded::ParseParadiseSensorReport(
-    uint8_t* r, size_t len, uint8_t* sensor_idx,
-    fuchsia::ui::input::InputReport* sensor_report) {
+bool Hardcoded::ParseParadiseSensorReport(uint8_t* r, size_t len, uint8_t* sensor_idx,
+                                          fuchsia::ui::input::InputReport* sensor_report) {
   if (len != sizeof(paradise_sensor_vector_data_t) &&
       len != sizeof(paradise_sensor_scalar_data_t)) {
     FXL_LOG(INFO) << "paradise sensor data: wrong size " << len << ", expected "
@@ -620,8 +590,7 @@ bool Hardcoded::ParseParadiseSensorReport(
   switch (*sensor_idx) {
     case kParadiseAccLid:
     case kParadiseAccBase: {
-      const auto& report =
-          *(reinterpret_cast<paradise_sensor_vector_data_t*>(r));
+      const auto& report = *(reinterpret_cast<paradise_sensor_vector_data_t*>(r));
       std::array<int16_t, 3> data;
       data[0] = report.vector[0];
       data[1] = report.vector[1];
@@ -638,14 +607,12 @@ bool Hardcoded::ParseParadiseSensorReport(
       return false;
   }
 
-  FXL_VLOG(3) << name()
-              << " parsed (sensor=" << static_cast<uint16_t>(*sensor_idx)
+  FXL_VLOG(3) << name() << " parsed (sensor=" << static_cast<uint16_t>(*sensor_idx)
               << "): " << *sensor_report;
   return true;
 }
 
-bool Hardcoded::ParseReport(const uint8_t* report, size_t len,
-                            HidAmbientLightSimple* data) {
+bool Hardcoded::ParseReport(const uint8_t* report, size_t len, HidAmbientLightSimple* data) {
   auto cur = &decoder_[0];
   if ((cur->match != 0) && (cur->count == 8u)) {
     // The first byte is the report id.
@@ -658,17 +625,16 @@ bool Hardcoded::ParseReport(const uint8_t* report, size_t len,
     ++cur;
   }
   if (cur->count != 16u) {
-    FXL_LOG(ERROR) << "Unexpected count in report from ambient light:"
-                   << cur->count;
+    FXL_LOG(ERROR) << "Unexpected count in report from ambient light:" << cur->count;
     return false;
   }
   data->illuminance = extract_uint16(report, cur->begin);
   return true;
 }
 
-bool Hardcoded::ParseAmbientLightSensorReport(
-    const uint8_t* report, size_t len, uint8_t* sensor_idx,
-    fuchsia::ui::input::InputReport* sensor_report) {
+bool Hardcoded::ParseAmbientLightSensorReport(const uint8_t* report, size_t len,
+                                              uint8_t* sensor_idx,
+                                              fuchsia::ui::input::InputReport* sensor_report) {
   HidAmbientLightSimple data;
   if (!ParseReport(report, len, &data)) {
     FXL_LOG(ERROR) << " failed reading from ambient light sensor";
@@ -679,14 +645,12 @@ bool Hardcoded::ParseAmbientLightSensorReport(
   sensor_report->trace_id = TRACE_NONCE();
   *sensor_idx = kAmbientLight;
 
-  FXL_VLOG(2) << name()
-              << " parsed (sensor=" << static_cast<uint16_t>(*sensor_idx)
+  FXL_VLOG(2) << name() << " parsed (sensor=" << static_cast<uint16_t>(*sensor_idx)
               << "): " << *sensor_report;
   return true;
 }
 
-Protocol Hardcoded::MatchProtocol(const std::vector<uint8_t> desc,
-                                  HidDecoder* hid_decoder) {
+Protocol Hardcoded::MatchProtocol(const std::vector<uint8_t> desc, HidDecoder* hid_decoder) {
   if (USE_TOUCHSCREEN_HARDCODED_REPORTS) {
     FXL_VLOG(2) << name() << " Using Hardcoded Touchscreen descriptors";
     if (is_acer12_touch_report_desc(desc.data(), desc.size())) {
@@ -738,10 +702,8 @@ void Hardcoded::Initialize(Protocol protocol) {
     FXL_VLOG(2) << "Device " << name() << " has keyboard";
     has_keyboard_ = true;
     keyboard_descriptor_ = fuchsia::ui::input::KeyboardDescriptor::New();
-    keyboard_descriptor_->keys.resize(HID_USAGE_KEY_RIGHT_GUI -
-                                      HID_USAGE_KEY_A + 1);
-    for (size_t index = HID_USAGE_KEY_A; index <= HID_USAGE_KEY_RIGHT_GUI;
-         ++index) {
+    keyboard_descriptor_->keys.resize(HID_USAGE_KEY_RIGHT_GUI - HID_USAGE_KEY_A + 1);
+    for (size_t index = HID_USAGE_KEY_A; index <= HID_USAGE_KEY_RIGHT_GUI; ++index) {
       keyboard_descriptor_->keys.at(index - HID_USAGE_KEY_A) = index;
     }
 
@@ -750,9 +712,8 @@ void Hardcoded::Initialize(Protocol protocol) {
   } else if (protocol == Protocol::BootMouse || protocol == Protocol::Gamepad) {
     FXL_VLOG(2) << "Device " << name() << " has mouse";
     has_mouse_ = true;
-    mouse_device_type_ = (protocol == Protocol::BootMouse)
-                             ? MouseDeviceType::BOOT
-                             : MouseDeviceType::GAMEPAD;
+    mouse_device_type_ =
+        (protocol == Protocol::BootMouse) ? MouseDeviceType::BOOT : MouseDeviceType::GAMEPAD;
 
     mouse_descriptor_ = fuchsia::ui::input::MouseDescriptor::New();
     mouse_descriptor_->rel_x.range.min = INT32_MIN;
@@ -805,8 +766,7 @@ void Hardcoded::Initialize(Protocol protocol) {
     touchscreen_descriptor_->max_finger_id = 255;
 
     touchscreen_report_ = fuchsia::ui::input::InputReport::New();
-    touchscreen_report_->touchscreen =
-        fuchsia::ui::input::TouchscreenReport::New();
+    touchscreen_report_->touchscreen = fuchsia::ui::input::TouchscreenReport::New();
 
     touch_device_type_ = TouchDeviceType::ACER12;
   } else if (protocol == Protocol::SamsungTouch) {
@@ -826,8 +786,7 @@ void Hardcoded::Initialize(Protocol protocol) {
     touchscreen_descriptor_->max_finger_id = 255;
 
     touchscreen_report_ = fuchsia::ui::input::InputReport::New();
-    touchscreen_report_->touchscreen =
-        fuchsia::ui::input::TouchscreenReport::New();
+    touchscreen_report_->touchscreen = fuchsia::ui::input::TouchscreenReport::New();
 
     touch_device_type_ = TouchDeviceType::SAMSUNG;
   } else if (protocol == Protocol::ParadiseV1Touch) {
@@ -848,8 +807,7 @@ void Hardcoded::Initialize(Protocol protocol) {
     touchscreen_descriptor_->max_finger_id = 255;
 
     touchscreen_report_ = fuchsia::ui::input::InputReport::New();
-    touchscreen_report_->touchscreen =
-        fuchsia::ui::input::TouchscreenReport::New();
+    touchscreen_report_->touchscreen = fuchsia::ui::input::TouchscreenReport::New();
 
     touch_device_type_ = TouchDeviceType::PARADISEv1;
   } else if (protocol == Protocol::ParadiseV2Touch) {
@@ -888,8 +846,7 @@ void Hardcoded::Initialize(Protocol protocol) {
     touchscreen_descriptor_->max_finger_id = 255;
 
     touchscreen_report_ = fuchsia::ui::input::InputReport::New();
-    touchscreen_report_->touchscreen =
-        fuchsia::ui::input::TouchscreenReport::New();
+    touchscreen_report_->touchscreen = fuchsia::ui::input::TouchscreenReport::New();
 
     touch_device_type_ = TouchDeviceType::PARADISEv2;
   } else if (protocol == Protocol::ParadiseV3Touch) {
@@ -928,8 +885,7 @@ void Hardcoded::Initialize(Protocol protocol) {
     touchscreen_descriptor_->max_finger_id = 255;
 
     touchscreen_report_ = fuchsia::ui::input::InputReport::New();
-    touchscreen_report_->touchscreen =
-        fuchsia::ui::input::TouchscreenReport::New();
+    touchscreen_report_->touchscreen = fuchsia::ui::input::TouchscreenReport::New();
 
     touch_device_type_ = TouchDeviceType::PARADISEv3;
   } else if (protocol == Protocol::ParadiseV1TouchPad) {
@@ -986,8 +942,7 @@ void Hardcoded::Initialize(Protocol protocol) {
     touchscreen_descriptor_->max_finger_id = 1;
 
     touchscreen_report_ = fuchsia::ui::input::InputReport::New();
-    touchscreen_report_->touchscreen =
-        fuchsia::ui::input::TouchscreenReport::New();
+    touchscreen_report_->touchscreen = fuchsia::ui::input::TouchscreenReport::New();
 
     touch_device_type_ = TouchDeviceType::EGALAX;
   } else if (protocol == Protocol::ParadiseSensor) {
@@ -995,14 +950,12 @@ void Hardcoded::Initialize(Protocol protocol) {
     sensor_device_type_ = SensorDeviceType::PARADISE;
     has_sensors_ = true;
 
-    fuchsia::ui::input::SensorDescriptorPtr acc_base =
-        fuchsia::ui::input::SensorDescriptor::New();
+    fuchsia::ui::input::SensorDescriptorPtr acc_base = fuchsia::ui::input::SensorDescriptor::New();
     acc_base->type = fuchsia::ui::input::SensorType::ACCELEROMETER;
     acc_base->loc = fuchsia::ui::input::SensorLocation::BASE;
     sensor_descriptors_[kParadiseAccBase] = std::move(acc_base);
 
-    fuchsia::ui::input::SensorDescriptorPtr acc_lid =
-        fuchsia::ui::input::SensorDescriptor::New();
+    fuchsia::ui::input::SensorDescriptorPtr acc_lid = fuchsia::ui::input::SensorDescriptor::New();
     acc_lid->type = fuchsia::ui::input::SensorType::ACCELEROMETER;
     acc_lid->loc = fuchsia::ui::input::SensorLocation::LID;
     sensor_descriptors_[kParadiseAccLid] = std::move(acc_lid);
@@ -1026,8 +979,7 @@ void Hardcoded::Initialize(Protocol protocol) {
     touchscreen_descriptor_->max_finger_id = 255;
 
     touchscreen_report_ = fuchsia::ui::input::InputReport::New();
-    touchscreen_report_->touchscreen =
-        fuchsia::ui::input::TouchscreenReport::New();
+    touchscreen_report_->touchscreen = fuchsia::ui::input::TouchscreenReport::New();
 
     touch_device_type_ = TouchDeviceType::EYOYO;
   } else if (protocol == Protocol::LightSensor) {
@@ -1035,8 +987,7 @@ void Hardcoded::Initialize(Protocol protocol) {
     sensor_device_type_ = SensorDeviceType::AMBIENT_LIGHT;
     has_sensors_ = true;
 
-    fuchsia::ui::input::SensorDescriptorPtr desc =
-        fuchsia::ui::input::SensorDescriptor::New();
+    fuchsia::ui::input::SensorDescriptorPtr desc = fuchsia::ui::input::SensorDescriptor::New();
     desc->type = fuchsia::ui::input::SensorType::LIGHTMETER;
     desc->loc = fuchsia::ui::input::SensorLocation::UNKNOWN;
     sensor_descriptors_[kAmbientLight] = std::move(desc);
@@ -1060,8 +1011,7 @@ void Hardcoded::Initialize(Protocol protocol) {
     touchscreen_descriptor_->max_finger_id = 255;
 
     touchscreen_report_ = fuchsia::ui::input::InputReport::New();
-    touchscreen_report_->touchscreen =
-        fuchsia::ui::input::TouchscreenReport::New();
+    touchscreen_report_->touchscreen = fuchsia::ui::input::TouchscreenReport::New();
 
     touch_device_type_ = TouchDeviceType::EYOYO;
   } else if (protocol == Protocol::Ft3x27Touch) {
@@ -1080,27 +1030,22 @@ void Hardcoded::Initialize(Protocol protocol) {
     touchscreen_descriptor_->max_finger_id = 255;
 
     touchscreen_report_ = fuchsia::ui::input::InputReport::New();
-    touchscreen_report_->touchscreen =
-        fuchsia::ui::input::TouchscreenReport::New();
+    touchscreen_report_->touchscreen = fuchsia::ui::input::TouchscreenReport::New();
 
     touch_device_type_ = TouchDeviceType::FT3X27;
   }
 }
 
-void Hardcoded::NotifyRegistry(
-    fuchsia::ui::input::InputDeviceRegistry* registry) {
+void Hardcoded::NotifyRegistry(fuchsia::ui::input::InputDeviceRegistry* registry) {
   if (has_sensors_) {
     FXL_DCHECK(kMaxSensorCount == sensor_descriptors_.size());
     FXL_DCHECK(kMaxSensorCount == sensor_devices_.size());
     for (size_t i = 0; i < kMaxSensorCount; ++i) {
       if (sensor_descriptors_[i]) {
         fuchsia::ui::input::DeviceDescriptor descriptor;
-        zx_status_t status =
-            fidl::Clone(sensor_descriptors_[i], &descriptor.sensor);
-        FXL_DCHECK(status == ZX_OK)
-            << "Sensor descriptor: clone failed (status=" << status << ")";
-        registry->RegisterDevice(std::move(descriptor),
-                                 sensor_devices_[i].NewRequest());
+        zx_status_t status = fidl::Clone(sensor_descriptors_[i], &descriptor.sensor);
+        FXL_DCHECK(status == ZX_OK) << "Sensor descriptor: clone failed (status=" << status << ")";
+        registry->RegisterDevice(std::move(descriptor), sensor_devices_[i].NewRequest());
       }
     }
     // Sensor devices can't be anything else, so don't bother with other types.
@@ -1126,13 +1071,11 @@ void Hardcoded::NotifyRegistry(
   }
 }
 
-void Hardcoded::Read(std::vector<uint8_t> report, int report_len,
-                     bool discard) {
+void Hardcoded::Read(std::vector<uint8_t> report, int report_len, bool discard) {
   if (has_keyboard_) {
     bool parsed = ParseKeyboardReport(report.data(), report_len, keyboard_report_.get());
     if (!discard && parsed) {
-      TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
-                       keyboard_report_->trace_id);
+      TRACE_FLOW_BEGIN("input", "hid_read_to_listener", keyboard_report_->trace_id);
       input_device_->DispatchReport(CloneReport(*keyboard_report_));
     }
   }
@@ -1141,38 +1084,31 @@ void Hardcoded::Read(std::vector<uint8_t> report, int report_len,
     case MouseDeviceType::BOOT:
       ParseMouseReport(report.data(), report_len, mouse_report_.get());
       if (!discard) {
-        TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
-                         mouse_report_->trace_id);
+        TRACE_FLOW_BEGIN("input", "hid_read_to_listener", mouse_report_->trace_id);
         input_device_->DispatchReport(CloneReport(*mouse_report_));
       }
       break;
     case MouseDeviceType::PARADISEv1:
-      if (ParseParadiseTouchpadReportV1(report.data(), report_len,
-                                        mouse_report_.get())) {
+      if (ParseParadiseTouchpadReportV1(report.data(), report_len, mouse_report_.get())) {
         if (!discard) {
-          TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
-                           mouse_report_->trace_id);
+          TRACE_FLOW_BEGIN("input", "hid_read_to_listener", mouse_report_->trace_id);
           input_device_->DispatchReport(CloneReport(*mouse_report_));
         }
       }
       break;
     case MouseDeviceType::PARADISEv2:
-      if (ParseParadiseTouchpadReportV2(report.data(), report_len,
-                                        mouse_report_.get())) {
+      if (ParseParadiseTouchpadReportV2(report.data(), report_len, mouse_report_.get())) {
         if (!discard) {
-          TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
-                           mouse_report_->trace_id);
+          TRACE_FLOW_BEGIN("input", "hid_read_to_listener", mouse_report_->trace_id);
           input_device_->DispatchReport(CloneReport(*mouse_report_));
         }
       }
       break;
     case MouseDeviceType::GAMEPAD:
       // TODO(cpu): remove this once we have a good way to test gamepad.
-      if (ParseGamepadMouseReport(report.data(), report_len,
-                                  mouse_report_.get())) {
+      if (ParseGamepadMouseReport(report.data(), report_len, mouse_report_.get())) {
         if (!discard) {
-          TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
-                           mouse_report_->trace_id);
+          TRACE_FLOW_BEGIN("input", "hid_read_to_listener", mouse_report_->trace_id);
           input_device_->DispatchReport(CloneReport(*mouse_report_));
         }
       }
@@ -1186,20 +1122,16 @@ void Hardcoded::Read(std::vector<uint8_t> report, int report_len,
   switch (touch_device_type_) {
     case TouchDeviceType::ACER12:
       if (report[0] == ACER12_RPT_ID_STYLUS) {
-        if (ParseAcer12StylusReport(report.data(), report_len,
-                                    stylus_report_.get())) {
+        if (ParseAcer12StylusReport(report.data(), report_len, stylus_report_.get())) {
           if (!discard) {
-            TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
-                             stylus_report_->trace_id);
+            TRACE_FLOW_BEGIN("input", "hid_read_to_listener", stylus_report_->trace_id);
             input_device_->DispatchReport(CloneReport(*stylus_report_));
           }
         }
       } else if (report[0] == ACER12_RPT_ID_TOUCH) {
-        if (ParseAcer12TouchscreenReport(report.data(), report_len,
-                                         touchscreen_report_.get())) {
+        if (ParseAcer12TouchscreenReport(report.data(), report_len, touchscreen_report_.get())) {
           if (!discard) {
-            TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
-                             touchscreen_report_->trace_id);
+            TRACE_FLOW_BEGIN("input", "hid_read_to_listener", touchscreen_report_->trace_id);
             input_device_->DispatchReport(CloneReport(*touchscreen_report_));
           }
         }
@@ -1207,11 +1139,9 @@ void Hardcoded::Read(std::vector<uint8_t> report, int report_len,
       break;
     case TouchDeviceType::SAMSUNG:
       if (report[0] == SAMSUNG_RPT_ID_TOUCH) {
-        if (ParseSamsungTouchscreenReport(report.data(), report_len,
-                                          touchscreen_report_.get())) {
+        if (ParseSamsungTouchscreenReport(report.data(), report_len, touchscreen_report_.get())) {
           if (!discard) {
-            TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
-                             touchscreen_report_->trace_id);
+            TRACE_FLOW_BEGIN("input", "hid_read_to_listener", touchscreen_report_->trace_id);
             input_device_->DispatchReport(CloneReport(*touchscreen_report_));
           }
         }
@@ -1223,8 +1153,7 @@ void Hardcoded::Read(std::vector<uint8_t> report, int report_len,
         if (ParseParadiseTouchscreenReportV1(report.data(), report_len,
                                              touchscreen_report_.get())) {
           if (!discard) {
-            TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
-                             touchscreen_report_->trace_id);
+            TRACE_FLOW_BEGIN("input", "hid_read_to_listener", touchscreen_report_->trace_id);
             input_device_->DispatchReport(CloneReport(*touchscreen_report_));
           }
         }
@@ -1235,17 +1164,14 @@ void Hardcoded::Read(std::vector<uint8_t> report, int report_len,
         if (ParseParadiseTouchscreenReportV2(report.data(), report_len,
                                              touchscreen_report_.get())) {
           if (!discard) {
-            TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
-                             touchscreen_report_->trace_id);
+            TRACE_FLOW_BEGIN("input", "hid_read_to_listener", touchscreen_report_->trace_id);
             input_device_->DispatchReport(CloneReport(*touchscreen_report_));
           }
         }
       } else if (report[0] == PARADISE_RPT_ID_STYLUS) {
-        if (ParseParadiseStylusReport(report.data(), report_len,
-                                      stylus_report_.get())) {
+        if (ParseParadiseStylusReport(report.data(), report_len, stylus_report_.get())) {
           if (!discard) {
-            TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
-                             stylus_report_->trace_id);
+            TRACE_FLOW_BEGIN("input", "hid_read_to_listener", stylus_report_->trace_id);
             input_device_->DispatchReport(CloneReport(*stylus_report_));
           }
         }
@@ -1257,17 +1183,14 @@ void Hardcoded::Read(std::vector<uint8_t> report, int report_len,
         if (ParseParadiseTouchscreenReportV1(report.data(), report_len,
                                              touchscreen_report_.get())) {
           if (!discard) {
-            TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
-                             touchscreen_report_->trace_id);
+            TRACE_FLOW_BEGIN("input", "hid_read_to_listener", touchscreen_report_->trace_id);
             input_device_->DispatchReport(CloneReport(*touchscreen_report_));
           }
         }
       } else if (report[0] == PARADISE_RPT_ID_STYLUS) {
-        if (ParseParadiseStylusReport(report.data(), report_len,
-                                      stylus_report_.get())) {
+        if (ParseParadiseStylusReport(report.data(), report_len, stylus_report_.get())) {
           if (!discard) {
-            TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
-                             stylus_report_->trace_id);
+            TRACE_FLOW_BEGIN("input", "hid_read_to_listener", stylus_report_->trace_id);
             input_device_->DispatchReport(CloneReport(*stylus_report_));
           }
         }
@@ -1275,11 +1198,9 @@ void Hardcoded::Read(std::vector<uint8_t> report, int report_len,
       break;
     case TouchDeviceType::EGALAX:
       if (report[0] == EGALAX_RPT_ID_TOUCH) {
-        if (ParseEGalaxTouchscreenReport(report.data(), report_len,
-                                         touchscreen_report_.get())) {
+        if (ParseEGalaxTouchscreenReport(report.data(), report_len, touchscreen_report_.get())) {
           if (!discard) {
-            TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
-                             touchscreen_report_->trace_id);
+            TRACE_FLOW_BEGIN("input", "hid_read_to_listener", touchscreen_report_->trace_id);
             input_device_->DispatchReport(CloneReport(*touchscreen_report_));
           }
         }
@@ -1288,11 +1209,9 @@ void Hardcoded::Read(std::vector<uint8_t> report, int report_len,
 
     case TouchDeviceType::EYOYO:
       if (report[0] == EYOYO_RPT_ID_TOUCH) {
-        if (ParseEyoyoTouchscreenReport(report.data(), report_len,
-                                        touchscreen_report_.get())) {
+        if (ParseEyoyoTouchscreenReport(report.data(), report_len, touchscreen_report_.get())) {
           if (!discard) {
-            TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
-                             touchscreen_report_->trace_id);
+            TRACE_FLOW_BEGIN("input", "hid_read_to_listener", touchscreen_report_->trace_id);
             input_device_->DispatchReport(CloneReport(*touchscreen_report_));
           }
         }
@@ -1300,11 +1219,9 @@ void Hardcoded::Read(std::vector<uint8_t> report, int report_len,
       break;
     case TouchDeviceType::FT3X27:
       if (report[0] == FT3X27_RPT_ID_TOUCH) {
-        if (ParseFt3x27TouchscreenReport(report.data(), report_len,
-                                         touchscreen_report_.get())) {
+        if (ParseFt3x27TouchscreenReport(report.data(), report_len, touchscreen_report_.get())) {
           if (!discard) {
-            TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
-                             touchscreen_report_->trace_id);
+            TRACE_FLOW_BEGIN("input", "hid_read_to_listener", touchscreen_report_->trace_id);
             input_device_->DispatchReport(CloneReport(*touchscreen_report_));
           }
         }
@@ -1322,10 +1239,8 @@ void Hardcoded::Read(std::vector<uint8_t> report, int report_len,
         if (!discard) {
           FXL_DCHECK(sensor_idx_ < kMaxSensorCount);
           FXL_DCHECK(sensor_devices_[sensor_idx_]);
-          TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
-                           sensor_report_->trace_id);
-          sensor_devices_[sensor_idx_]->DispatchReport(
-              CloneReport(*sensor_report_));
+          TRACE_FLOW_BEGIN("input", "hid_read_to_listener", sensor_report_->trace_id);
+          sensor_devices_[sensor_idx_]->DispatchReport(CloneReport(*sensor_report_));
         }
       }
       break;
@@ -1335,10 +1250,8 @@ void Hardcoded::Read(std::vector<uint8_t> report, int report_len,
         if (!discard) {
           FXL_DCHECK(sensor_idx_ < kMaxSensorCount);
           FXL_DCHECK(sensor_devices_[sensor_idx_]);
-          TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
-                           sensor_report_->trace_id);
-          sensor_devices_[sensor_idx_]->DispatchReport(
-              CloneReport(*sensor_report_));
+          TRACE_FLOW_BEGIN("input", "hid_read_to_listener", sensor_report_->trace_id);
+          sensor_devices_[sensor_idx_]->DispatchReport(CloneReport(*sensor_report_));
         }
       }
       break;

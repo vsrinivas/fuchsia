@@ -50,15 +50,13 @@ App::App(async::Loop* loop, const fxl::CommandLine& command_line)
     : startup_context_(component::StartupContext::CreateFromStartupInfo()),
       loop_(loop),
       shadow_technique_(GetShadowTechniqueFromCommandLine(command_line)) {
-  scenic_ = startup_context_
-                ->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
+  scenic_ = startup_context_->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
   scenic_.set_error_handler([this](zx_status_t status) {
     FXL_LOG(INFO) << "Lost connection to Scenic service.";
     loop_->Quit();
   });
-  scenic_->GetDisplayInfo([this](fuchsia::ui::gfx::DisplayInfo display_info) {
-    Init(std::move(display_info));
-  });
+  scenic_->GetDisplayInfo(
+      [this](fuchsia::ui::gfx::DisplayInfo display_info) { Init(std::move(display_info)); });
 }
 
 void App::InitCheckerboardMaterial(Material* uninitialized_material) {
@@ -75,8 +73,7 @@ void App::InitCheckerboardMaterial(Material* uninitialized_material) {
       checkerboard_width, checkerboard_height, &checkerboard_pixels_size);
 
   HostMemory checkerboard_memory(session_.get(), checkerboard_pixels_size);
-  memcpy(checkerboard_memory.data_ptr(), checkerboard_pixels.get(),
-         checkerboard_pixels_size);
+  memcpy(checkerboard_memory.data_ptr(), checkerboard_pixels.get(), checkerboard_pixels_size);
 
   // Create an Image to wrap the checkerboard.
   fuchsia::images::ImageInfo checkerboard_image_info;
@@ -88,8 +85,7 @@ void App::InitCheckerboardMaterial(Material* uninitialized_material) {
   checkerboard_image_info.color_space = fuchsia::images::ColorSpace::SRGB;
   checkerboard_image_info.tiling = fuchsia::images::Tiling::LINEAR;
 
-  HostImage checkerboard_image(checkerboard_memory, 0,
-                               std::move(checkerboard_image_info));
+  HostImage checkerboard_image(checkerboard_memory, 0, std::move(checkerboard_image_info));
 
   uninitialized_material->SetTexture(checkerboard_image.id());
 }
@@ -121,8 +117,7 @@ void App::CreateExampleScene(float display_width, float display_height) {
     AmbientLight ambient_light(session);
     ambient_light.SetColor(1.f, 1.f, 1.f);
     scene.AddLight(ambient_light);
-  } else if (shadow_technique_ ==
-             fuchsia::ui::gfx::ShadowTechnique::STENCIL_SHADOW_VOLUME) {
+  } else if (shadow_technique_ == fuchsia::ui::gfx::ShadowTechnique::STENCIL_SHADOW_VOLUME) {
     AmbientLight ambient_light(session);
     PointLight point_light1(session);
     PointLight point_light2(session);
@@ -137,18 +132,14 @@ void App::CreateExampleScene(float display_width, float display_height) {
     // the two point lights to differ in color from each other.
     const glm::vec3 kAmbientLightColor(0.4f, 0.4f, 0.4f);
     const glm::vec3 kPointLightColorDiff(0.05f, -0.1f, 0.f);
-    const glm::vec3 kPointLightAverageColor =
-        0.5f * (glm::vec3(1, 1, 1) - kAmbientLightColor);
-    const glm::vec3 kPointLight1Color =
-        kPointLightAverageColor + kPointLightColorDiff;
-    const glm::vec3 kPointLight2Color =
-        kPointLightAverageColor - kPointLightColorDiff;
+    const glm::vec3 kPointLightAverageColor = 0.5f * (glm::vec3(1, 1, 1) - kAmbientLightColor);
+    const glm::vec3 kPointLight1Color = kPointLightAverageColor + kPointLightColorDiff;
+    const glm::vec3 kPointLight2Color = kPointLightAverageColor - kPointLightColorDiff;
 
     ambient_light.SetColor(&kAmbientLightColor[0]);
     point_light1.SetColor(&kPointLight1Color[0]);
     point_light2.SetColor(&kPointLight2Color[0]);
-    point_light1.SetPosition(0.3f * display_width, 0.3f * display_height,
-                             -1000.f);
+    point_light1.SetPosition(0.3f * display_width, 0.3f * display_height, -1000.f);
     point_light2.SetPosition(display_width, 0.2f * display_height, -1000.f);
     point_light1.SetFalloff(0.f);
     point_light2.SetFalloff(0.f);
@@ -181,8 +172,7 @@ void App::CreateExampleScene(float display_width, float display_height) {
   pane_bg_1.SetShape(pane_shape);
   pane_bg_1.SetMaterial(pane_material);
   pane_node_1.AddChild(pane_bg_1);
-  pane_node_1.SetTranslation(kPaneMargin + pane_width * 0.5,
-                             kPaneMargin + pane_height * 0.5, -20);
+  pane_node_1.SetTranslation(kPaneMargin + pane_width * 0.5, kPaneMargin + pane_height * 0.5, -20);
   root_node.AddChild(pane_node_1);
 
   EntityNode pane_node_2(session);
@@ -190,8 +180,8 @@ void App::CreateExampleScene(float display_width, float display_height) {
   pane_bg_2.SetShape(pane_shape);
   pane_bg_2.SetMaterial(pane_material);
   pane_node_2.AddChild(pane_bg_2);
-  pane_node_2.SetTranslation(kPaneMargin * 2 + pane_width * 1.5,
-                             kPaneMargin + pane_height * 0.5, -20);
+  pane_node_2.SetTranslation(kPaneMargin * 2 + pane_width * 1.5, kPaneMargin + pane_height * 0.5,
+                             -20);
   root_node.AddChild(pane_node_2);
 
   // Create a Material with the checkerboard image.  This will be used for
@@ -244,8 +234,7 @@ void App::Init(fuchsia::ui::gfx::DisplayInfo display_info) {
   // Wait kSessionDuration seconds, and close the session.
   constexpr int kSessionDuration = 40;
   async::PostDelayedTask(
-      loop_->dispatcher(), [this] { ReleaseSessionResources(); },
-      zx::sec(kSessionDuration));
+      loop_->dispatcher(), [this] { ReleaseSessionResources(); }, zx::sec(kSessionDuration));
 
   // Set up initial scene.
   const float display_width = static_cast<float>(display_info.width_in_px);
@@ -259,17 +248,13 @@ void App::Init(fuchsia::ui::gfx::DisplayInfo display_info) {
 
 void App::Update(uint64_t next_presentation_time) {
   {
-    double secs =
-        static_cast<double>(next_presentation_time - start_time_) / kBillion;
+    double secs = static_cast<double>(next_presentation_time - start_time_) / kBillion;
 
     // Translate / rotate the rounded rect.
-    rrect_node_->SetTranslation(sin(secs * 0.8) * 500.f,
-                                sin(secs * 0.6) * 570.f, -200.f);
+    rrect_node_->SetTranslation(sin(secs * 0.8) * 500.f, sin(secs * 0.6) * 570.f, -200.f);
 
-    auto quaternion =
-        glm::angleAxis(static_cast<float>(secs / 2.0), glm::vec3(0, 0, 1));
-    rrect_node_->SetRotation(quaternion.x, quaternion.y, quaternion.z,
-                             quaternion.w);
+    auto quaternion = glm::angleAxis(static_cast<float>(secs / 2.0), glm::vec3(0, 0, 1));
+    rrect_node_->SetRotation(quaternion.x, quaternion.y, quaternion.z, quaternion.w);
 
     // Set a moving clip plane, clipping only the two circles.
     fuchsia::ui::gfx::Plane3 clip_plane;
@@ -282,9 +267,7 @@ void App::Update(uint64_t next_presentation_time) {
 
   // Move the camera.
   {
-    double secs =
-        static_cast<double>(next_presentation_time - camera_anim_start_time_) /
-        kBillion;
+    double secs = static_cast<double>(next_presentation_time - camera_anim_start_time_) / kBillion;
     const double kCameraModeDuration = 5.0;
     float param = secs / kCameraModeDuration;
     if (param > 1.0) {
@@ -299,8 +282,7 @@ void App::Update(uint64_t next_presentation_time) {
     // Animate the eye position.
     glm::vec3 eye_start(1080, 720, -6000);
     glm::vec3 eye_end(0, 10000, -7000);
-    glm::vec3 eye =
-        glm::mix(eye_start, eye_end, glm::smoothstep(0.f, 1.f, param));
+    glm::vec3 eye = glm::mix(eye_start, eye_end, glm::smoothstep(0.f, 1.f, param));
 
     // Always look at the middle of the stage.
     float target[3] = {1080, 720, 0};
@@ -311,10 +293,9 @@ void App::Update(uint64_t next_presentation_time) {
   }
 
   // Present
-  session_->Present(
-      next_presentation_time, [this](fuchsia::images::PresentationInfo info) {
-        Update(info.presentation_time + info.presentation_interval);
-      });
+  session_->Present(next_presentation_time, [this](fuchsia::images::PresentationInfo info) {
+    Update(info.presentation_time + info.presentation_interval);
+  });
 }
 
 void App::ReleaseSessionResources() {

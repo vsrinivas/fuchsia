@@ -42,12 +42,11 @@ void Display::OnVsync(zx_time_t timestamp) {
 
   // Estimate current vsync interval. Need to include a maximum to mitigate any
   // potential issues during startup and long breaks.
-  vsync_interval_ = time_since_last_vsync < kMaximumVsyncInterval
-                        ? time_since_last_vsync
-                        : vsync_interval_;
+  vsync_interval_ =
+      time_since_last_vsync < kMaximumVsyncInterval ? time_since_last_vsync : vsync_interval_;
 
-  TRACE_INSTANT("gfx", "Display::OnVsync", TRACE_SCOPE_PROCESS, "Timestamp",
-                timestamp, "Vsync interval", vsync_interval_);
+  TRACE_INSTANT("gfx", "Display::OnVsync", TRACE_SCOPE_PROCESS, "Timestamp", timestamp,
+                "Vsync interval", vsync_interval_);
 }
 
 }  // namespace gfx

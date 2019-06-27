@@ -10,8 +10,7 @@
 #include "src/ui/lib/escher/util/align.h"
 
 // Type-safe wrapper around alloca().
-#define ESCHER_ALLOCA(T, COUNT)                   \
-  escher::NextAlignedTriviallyDestructiblePtr<T>( \
-      alloca(((COUNT) + 1) * sizeof(T)));
+#define ESCHER_ALLOCA(T, COUNT) \
+  escher::NextAlignedTriviallyDestructiblePtr<T>(alloca(((COUNT) + 1) * sizeof(T)));
 
 #endif  // SRC_UI_LIB_ESCHER_UTIL_ALLOCA_H_

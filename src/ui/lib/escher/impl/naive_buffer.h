@@ -19,8 +19,7 @@ namespace impl {
 // object.
 class NaiveBuffer : public Buffer {
  public:
-  static BufferPtr New(ResourceManager* manager, GpuMemPtr mem,
-                       vk::BufferUsageFlags usage_flags);
+  static BufferPtr New(ResourceManager* manager, GpuMemPtr mem, vk::BufferUsageFlags usage_flags);
 
   NaiveBuffer(ResourceManager* manager, GpuMemPtr mem, vk::Buffer buffer);
   ~NaiveBuffer() override;

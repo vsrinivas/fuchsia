@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 #include "garnet/lib/ui/gfx/tests/frame_scheduler_test.h"
+
 #include <lib/gtest/test_loop_fixture.h>
+
 #include "garnet/lib/ui/gfx/engine/default_frame_scheduler.h"
 #include "garnet/lib/ui/gfx/engine/frame_predictor.h"
 
@@ -24,10 +26,11 @@ void FrameSchedulerTest::TearDown() {
   mock_renderer_.reset();
 }
 
-std::unique_ptr<DefaultFrameScheduler>
-FrameSchedulerTest::CreateDefaultFrameScheduler() {
-  auto scheduler = std::make_unique<DefaultFrameScheduler>(fake_display_.get(),
-               std::make_unique<FramePredictor>(DefaultFrameScheduler::kInitialRenderDuration, DefaultFrameScheduler::kInitialUpdateDuration));
+std::unique_ptr<DefaultFrameScheduler> FrameSchedulerTest::CreateDefaultFrameScheduler() {
+  auto scheduler = std::make_unique<DefaultFrameScheduler>(
+      fake_display_.get(),
+      std::make_unique<FramePredictor>(DefaultFrameScheduler::kInitialRenderDuration,
+                                       DefaultFrameScheduler::kInitialUpdateDuration));
   scheduler->SetDelegate({.session_updater = mock_updater_->GetWeakPtr(),
                           .frame_renderer = mock_renderer_->GetWeakPtr()});
   return scheduler;

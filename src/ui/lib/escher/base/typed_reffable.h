@@ -43,9 +43,7 @@ class TypedReffable : public Reffable {
 
   // Return true if the specified type is identical or a base type of this
   // TypedReffable; return false otherwise.
-  bool IsKindOf(const TypeInfo& base_type) const {
-    return type_info().IsKindOf(base_type);
-  }
+  bool IsKindOf(const TypeInfo& base_type) const { return type_info().IsKindOf(base_type); }
 
   // Return true if the specified type is identical or a base type of this
   // TypedReffable; return false otherwise.

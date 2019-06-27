@@ -27,14 +27,13 @@ class ImageView : public Resource {
             void* extension_data = nullptr);
   ~ImageView() override;
 
-  static ImageViewPtr New(ImagePtr image, vk::ImageAspectFlags aspect_mask =
-                                              vk::ImageAspectFlags());
+  static ImageViewPtr New(ImagePtr image,
+                          vk::ImageAspectFlags aspect_mask = vk::ImageAspectFlags());
 
   // TODO(ES-83): unfortunately we can't just get the recycler from
   // image->escher(), because that is null for Vulkan swapchain images.
-  static ImageViewPtr New(
-      ResourceRecycler* resource_recycler, ImagePtr image,
-      vk::ImageAspectFlags aspect_mask = vk::ImageAspectFlags());
+  static ImageViewPtr New(ResourceRecycler* resource_recycler, ImagePtr image,
+                          vk::ImageAspectFlags aspect_mask = vk::ImageAspectFlags());
 
   const ImagePtr& image() const { return image_; }
   vk::ImageView vk() const { return image_view_; }

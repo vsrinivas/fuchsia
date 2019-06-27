@@ -23,17 +23,14 @@ const size_t SIZE_OF_BGRA8 = sizeof(uint32_t);
 
 class View : public fuchsia::ui::scenic::SessionListener {
  public:
-  View(component::StartupContext* startup_context,
-       fuchsia::ui::views::ViewToken view_token)
+  View(component::StartupContext* startup_context, fuchsia::ui::views::ViewToken view_token)
       : session_listener_binding_(this) {
     // Connect to Scenic.
     fuchsia::ui::scenic::ScenicPtr scenic =
-        startup_context
-            ->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
+        startup_context->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
 
     // Create a Scenic Session and a Scenic SessionListener.
-    scenic->CreateSession(session_.NewRequest(),
-                          session_listener_binding_.NewBinding());
+    scenic->CreateSession(session_.NewRequest(), session_listener_binding_.NewBinding());
 
     InitializeScene(std::move(view_token));
   }
@@ -57,8 +54,7 @@ class View : public fuchsia::ui::scenic::SessionListener {
     fuchsia::images::ImageInfo image_info{
         .width = width,
         .height = height,
-        .stride = static_cast<uint32_t>(
-            width * images::StrideBytesPerWidthPixel(kFormat)),
+        .stride = static_cast<uint32_t>(width * images::StrideBytesPerWidthPixel(kFormat)),
         .pixel_format = kFormat,
     };
 
@@ -72,21 +68,19 @@ class View : public fuchsia::ui::scenic::SessionListener {
     }
 
     uint8_t* vmo_base;
-    status = zx::vmar::root_self()->map(
-        0, image_vmo, 0, image_vmo_bytes, ZX_VM_PERM_WRITE | ZX_VM_PERM_READ,
-        reinterpret_cast<uintptr_t*>(&vmo_base));
+    status = zx::vmar::root_self()->map(0, image_vmo, 0, image_vmo_bytes,
+                                        ZX_VM_PERM_WRITE | ZX_VM_PERM_READ,
+                                        reinterpret_cast<uintptr_t*>(&vmo_base));
 
     SetBgra8Pixels(vmo_base, image_info);
 
     std::vector<fuchsia::ui::scenic::Command> cmds;
 
     uint32_t memory_id = new_resource_id_++;
-    PushCommand(&cmds, scenic::NewCreateMemoryCmd(
-                           memory_id, std::move(image_vmo), image_vmo_bytes,
-                           fuchsia::images::MemoryType::HOST_MEMORY));
+    PushCommand(&cmds, scenic::NewCreateMemoryCmd(memory_id, std::move(image_vmo), image_vmo_bytes,
+                                                  fuchsia::images::MemoryType::HOST_MEMORY));
     uint32_t image_id = new_resource_id_++;
-    PushCommand(&cmds,
-                scenic::NewCreateImageCmd(image_id, memory_id, 0, image_info));
+    PushCommand(&cmds, scenic::NewCreateImageCmd(image_id, memory_id, 0, image_info));
 
     session_->Enqueue(std::move(cmds));
     return image_id;
@@ -122,47 +116,36 @@ class View : public fuchsia::ui::scenic::SessionListener {
     // frame we call Present with a presentation_time = 0 which means it the
     // commands should be applied immediately. For future frames, we'll use the
     // timing information we receive to have precise presentation times.
-    session_->Present(0, {}, {},
-                      [this](fuchsia::images::PresentationInfo info) {
-                        OnPresent(std::move(info));
-                      });
+    session_->Present(
+        0, {}, {}, [this](fuchsia::images::PresentationInfo info) { OnPresent(std::move(info)); });
   }
 
   // |fuchsia::ui::scenic::SessionListener|
-  void OnScenicError(std::string error) override {
-    FXL_LOG(INFO) << "ERROR: " << error;
+  void OnScenicError(std::string error) override { FXL_LOG(INFO) << "ERROR: " << error; }
+
+  static bool IsViewAttachedToSceneEvent(const fuchsia::ui::scenic::Event& event) {
+    return event.Which() == fuchsia::ui::scenic::Event::Tag::kGfx &&
+           event.gfx().Which() == fuchsia::ui::gfx::Event::Tag::kViewAttachedToScene;
   }
 
-  static bool IsViewAttachedToSceneEvent(
-      const fuchsia::ui::scenic::Event& event) {
+  static bool IsViewPropertiesChangedEvent(const fuchsia::ui::scenic::Event& event) {
     return event.Which() == fuchsia::ui::scenic::Event::Tag::kGfx &&
-           event.gfx().Which() ==
-               fuchsia::ui::gfx::Event::Tag::kViewAttachedToScene;
-  }
-
-  static bool IsViewPropertiesChangedEvent(
-      const fuchsia::ui::scenic::Event& event) {
-    return event.Which() == fuchsia::ui::scenic::Event::Tag::kGfx &&
-           event.gfx().Which() ==
-               fuchsia::ui::gfx::Event::Tag::kViewPropertiesChanged;
+           event.gfx().Which() == fuchsia::ui::gfx::Event::Tag::kViewPropertiesChanged;
   }
 
   static bool IsPointerEvent(const fuchsia::ui::scenic::Event& event) {
     return event.Which() == fuchsia::ui::scenic::Event::Tag::kInput &&
-           event.input().Which() ==
-               fuchsia::ui::input::InputEvent::Tag::kPointer;
+           event.input().Which() == fuchsia::ui::input::InputEvent::Tag::kPointer;
   }
 
   static bool IsPointerDownEvent(const fuchsia::ui::scenic::Event& event) {
     return IsPointerEvent(event) &&
-           event.input().pointer().phase ==
-               fuchsia::ui::input::PointerEventPhase::DOWN;
+           event.input().pointer().phase == fuchsia::ui::input::PointerEventPhase::DOWN;
   }
 
   static bool IsPointerUpEvent(const fuchsia::ui::scenic::Event& event) {
     return IsPointerEvent(event) &&
-           event.input().pointer().phase ==
-               fuchsia::ui::input::PointerEventPhase::UP;
+           event.input().pointer().phase == fuchsia::ui::input::PointerEventPhase::UP;
   }
 
   bool attached_ = false;
@@ -175,8 +158,7 @@ class View : public fuchsia::ui::scenic::SessionListener {
         attached_ = true;
       }
       if (IsViewPropertiesChangedEvent(event)) {
-        OnViewPropertiesChanged(
-            event.gfx().view_properties_changed().properties);
+        OnViewPropertiesChanged(event.gfx().view_properties_changed().properties);
         sized_ = true;
       } else if (IsPointerDownEvent(event)) {
         pointer_down_ = true;
@@ -197,8 +179,7 @@ class View : public fuchsia::ui::scenic::SessionListener {
     view_height_ = (vp.bounding_box.max.y - vp.inset_from_max.y) -
                    (vp.bounding_box.min.y + vp.inset_from_min.y);
 
-    FXL_LOG(INFO) << "OnViewPropertiesChanged " << view_width_ << " "
-                  << view_height_;
+    FXL_LOG(INFO) << "OnViewPropertiesChanged " << view_width_ << " " << view_height_;
 
     if (view_width_ == 0 || view_height_ == 0)
       return;
@@ -209,8 +190,7 @@ class View : public fuchsia::ui::scenic::SessionListener {
     float offset = 1.0f;
     for (auto shape_node_id : full_screen_shape_nodes_) {
       int rectangle_id = new_resource_id_++;
-      PushCommand(&cmds, scenic::NewCreateRectangleCmd(
-                             rectangle_id, view_width_, view_height_));
+      PushCommand(&cmds, scenic::NewCreateRectangleCmd(rectangle_id, view_width_, view_height_));
       PushCommand(&cmds, scenic::NewSetShapeCmd(shape_node_id, rectangle_id));
       offset += 1.0f;
     }
@@ -253,8 +233,7 @@ class View : public fuchsia::ui::scenic::SessionListener {
     }
   }
 
-  void Tile(std::vector<fuchsia::ui::scenic::Command>* cmds, int width,
-            int height, int depth) {
+  void Tile(std::vector<fuchsia::ui::scenic::Command>* cmds, int width, int height, int depth) {
     // Position is relative to the View's origin system.
     const float center_x = view_width_ * .5f;
     const float center_y = view_height_ * .5f;
@@ -267,18 +246,14 @@ class View : public fuchsia::ui::scenic::SessionListener {
       static const float PI = 3.14159;
 
       PushCommand(cmds, scenic::NewSetRotationCmd(
-                            id, (float[]){0, 0, std::sin(PI / 2.0f),
-                                          std::cos(PI / 2.0f)}));
-      PushCommand(cmds,
-                  scenic::NewSetTranslationCmd(
-                      id, (float[]){center_x + x * view_width_,
-                                    center_y + y * view_height_, z * -1.0f}));
+                            id, (float[]){0, 0, std::sin(PI / 2.0f), std::cos(PI / 2.0f)}));
+      PushCommand(cmds, scenic::NewSetTranslationCmd(
+                            id, (float[]){center_x + x * view_width_, center_y + y * view_height_,
+                                          z * -1.0f}));
     }
   }
 
-  void InitBlank(std::vector<fuchsia::ui::scenic::Command>* cmds) {
-    DetachAll(cmds);
-  }
+  void InitBlank(std::vector<fuchsia::ui::scenic::Command>* cmds) { DetachAll(cmds); }
 
   bool Blank(std::vector<fuchsia::ui::scenic::Command>* cmds, int level) {
     return level >= kFullScreenLayers;
@@ -297,10 +272,8 @@ class View : public fuchsia::ui::scenic::SessionListener {
     DetachAll(cmds);
     Tile(cmds, 1, 1, kFullScreenLayers);
     for (int i = 0; i < kFullScreenLayers; i++) {
-      PushCommand(cmds, scenic::NewSetTextureCmd(shape_node_materials_[i],
-                                                 full_res_textures_[i]));
-      PushCommand(cmds, scenic::NewSetColorCmd(shape_node_materials_[i], 0xff,
-                                               0xff, 0xff, 0xff));
+      PushCommand(cmds, scenic::NewSetTextureCmd(shape_node_materials_[i], full_res_textures_[i]));
+      PushCommand(cmds, scenic::NewSetColorCmd(shape_node_materials_[i], 0xff, 0xff, 0xff, 0xff));
     }
   }
 
@@ -313,27 +286,21 @@ class View : public fuchsia::ui::scenic::SessionListener {
     }
   }
 
-  void InitAlphaWithSameTexture(
-      std::vector<fuchsia::ui::scenic::Command>* cmds) {
+  void InitAlphaWithSameTexture(std::vector<fuchsia::ui::scenic::Command>* cmds) {
     DetachAll(cmds);
     Tile(cmds, 1, 1, kFullScreenLayers);
     for (int i = 0; i < kFullScreenLayers; i++) {
-      PushCommand(cmds, scenic::NewSetTextureCmd(shape_node_materials_[i],
-                                                 full_res_textures_[0]));
-      PushCommand(cmds, scenic::NewSetColorCmd(shape_node_materials_[i], 0xff,
-                                               0xff, 0xff, 0x80));
+      PushCommand(cmds, scenic::NewSetTextureCmd(shape_node_materials_[i], full_res_textures_[0]));
+      PushCommand(cmds, scenic::NewSetColorCmd(shape_node_materials_[i], 0xff, 0xff, 0xff, 0x80));
     }
   }
 
-  void InitAlphaWithSeparateTextures(
-      std::vector<fuchsia::ui::scenic::Command>* cmds) {
+  void InitAlphaWithSeparateTextures(std::vector<fuchsia::ui::scenic::Command>* cmds) {
     DetachAll(cmds);
     Tile(cmds, 1, 1, kFullScreenLayers);
     for (int i = 0; i < kFullScreenLayers; i++) {
-      PushCommand(cmds, scenic::NewSetTextureCmd(shape_node_materials_[i],
-                                                 full_res_textures_[i]));
-      PushCommand(cmds, scenic::NewSetColorCmd(shape_node_materials_[i], 0xff,
-                                               0xff, 0xff, 0x80));
+      PushCommand(cmds, scenic::NewSetTextureCmd(shape_node_materials_[i], full_res_textures_[i]));
+      PushCommand(cmds, scenic::NewSetColorCmd(shape_node_materials_[i], 0xff, 0xff, 0xff, 0x80));
     }
   }
 
@@ -351,8 +318,7 @@ class View : public fuchsia::ui::scenic::SessionListener {
     uint64_t presentation_time = presentation_info.presentation_time;
     constexpr float kSecondsPerNanosecond = .000'000'001f;
 
-    float t =
-        (presentation_time - last_presentation_time_) * kSecondsPerNanosecond;
+    float t = (presentation_time - last_presentation_time_) * kSecondsPerNanosecond;
     if (last_presentation_time_ == 0) {
       t = 0;
     }
@@ -390,8 +356,7 @@ class View : public fuchsia::ui::scenic::SessionListener {
                       << ", avg time: " << time;
         saved_times_[state_] = time;
         saved_levels_[state_] = level_;
-        done = saved_times_[state_] >
-               FRAMEDROP_DETECTION_FACTOR * saved_times_[BLANK];
+        done = saved_times_[state_] > FRAMEDROP_DETECTION_FACTOR * saved_times_[BLANK];
       }
       sample_ = 0;
       level_++;
@@ -435,23 +400,20 @@ class View : public fuchsia::ui::scenic::SessionListener {
     session_->Enqueue(std::move(cmds));
 
     zx_time_t next_presentation_time = presentation_info.presentation_time + 1;
-    session_->Present(next_presentation_time, {}, {},
-                      [this](fuchsia::images::PresentationInfo info) {
-                        OnPresent(std::move(info));
-                      });
+    session_->Present(
+        next_presentation_time, {}, {},
+        [this](fuchsia::images::PresentationInfo info) { OnPresent(std::move(info)); });
   }
 
   void PrintReport() {
     FXL_LOG(INFO) << "----- REPORT -----";
     for (int i = 0; i < NUM_STATES; i++) {
       if (saved_levels_[i] == kFullScreenLayers - 1) {
-        FXL_LOG(INFO) << "State " << state_names_[i]
-                      << " completed with a running time of "
+        FXL_LOG(INFO) << "State " << state_names_[i] << " completed with a running time of "
                       << saved_times_[i];
       } else {
-        FXL_LOG(INFO) << "State " << state_names_[i] << " failed at level "
-                      << saved_levels_[i] << " with a running time of "
-                      << saved_times_[i];
+        FXL_LOG(INFO) << "State " << state_names_[i] << " failed at level " << saved_levels_[i]
+                      << " with a running time of " << saved_times_[i];
       }
     }
     FXL_LOG(INFO) << "--- END REPORT ---";
@@ -499,18 +461,15 @@ class ViewProviderService : public fuchsia::ui::app::ViewProvider {
       : startup_context_(startup_context) {}
 
   // |fuchsia::ui::app::ViewProvider|
-  void CreateView(
-      zx::eventpair view_token,
-      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services,
-      fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> outgoing_services)
-      override {
-    auto view = std::make_unique<View>(
-        startup_context_, scenic::ToViewToken(std::move(view_token)));
+  void CreateView(zx::eventpair view_token,
+                  fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services,
+                  fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> outgoing_services) override {
+    auto view =
+        std::make_unique<View>(startup_context_, scenic::ToViewToken(std::move(view_token)));
     views_.push_back(std::move(view));
   }
 
-  void HandleViewProviderRequest(
-      fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider> request) {
+  void HandleViewProviderRequest(fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider> request) {
     bindings_.AddBinding(this, std::move(request));
   }
 
@@ -531,8 +490,7 @@ int main(int argc, const char** argv) {
 
   // Add our ViewProvider service to the outgoing services.
   startup_context->outgoing().AddPublicService<fuchsia::ui::app::ViewProvider>(
-      [&view_provider](
-          fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider> request) {
+      [&view_provider](fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider> request) {
         view_provider.HandleViewProviderRequest(std::move(request));
       });
 

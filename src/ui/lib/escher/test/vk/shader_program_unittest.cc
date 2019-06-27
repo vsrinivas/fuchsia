@@ -46,15 +46,12 @@ class ShaderProgramTest : public ::testing::Test, public VulkanTester {
     });
     EXPECT_TRUE(success);
 
-    ring_mesh1_ = NewRingMesh(
-        escher, MeshSpec{MeshAttribute::kPosition2D | MeshAttribute::kUV}, 8,
-        vec2(0.f, 0.f), 300.f, 200.f);
-    ring_mesh2_ = NewRingMesh(
-        escher, MeshSpec{MeshAttribute::kPosition2D | MeshAttribute::kUV}, 8,
-        vec2(0.f, 0.f), 400.f, 300.f);
-    sphere_mesh_ = NewSphereMesh(
-        escher, MeshSpec{MeshAttribute::kPosition3D | MeshAttribute::kUV}, 8,
-        vec3(0.f, 0.f, 0.f), 300.f);
+    ring_mesh1_ = NewRingMesh(escher, MeshSpec{MeshAttribute::kPosition2D | MeshAttribute::kUV}, 8,
+                              vec2(0.f, 0.f), 300.f, 200.f);
+    ring_mesh2_ = NewRingMesh(escher, MeshSpec{MeshAttribute::kPosition2D | MeshAttribute::kUV}, 8,
+                              vec2(0.f, 0.f), 400.f, 300.f);
+    sphere_mesh_ = NewSphereMesh(escher, MeshSpec{MeshAttribute::kPosition3D | MeshAttribute::kUV},
+                                 8, vec3(0.f, 0.f, 0.f), 300.f);
   }
 
   void TearDown() override {
@@ -115,16 +112,15 @@ VK_TEST_F(ShaderProgramTest, DISABLED_GeneratePipelines) {
                              {"USE_ATTRIBUTE_UV", "1"},
                              {"USE_PAPER_SHADER_PUSH_CONSTANTS", "1"}});
 
-  auto program =
-      escher->GetGraphicsProgram("shaders/model_renderer/main.vert",
-                                 "shaders/model_renderer/main.frag", variant);
+  auto program = escher->GetGraphicsProgram("shaders/model_renderer/main.vert",
+                                            "shaders/model_renderer/main.frag", variant);
 
   auto cb = CommandBuffer::NewForGraphics(escher);
 
-  auto color_attachment = escher->NewAttachmentTexture(
-      vk::Format::eB8G8R8A8Unorm, 512, 512, 1, vk::Filter::eNearest);
-  auto depth_attachment = escher->NewAttachmentTexture(
-      vk::Format::eD24UnormS8Uint, 512, 512, 1, vk::Filter::eNearest);
+  auto color_attachment =
+      escher->NewAttachmentTexture(vk::Format::eB8G8R8A8Unorm, 512, 512, 1, vk::Filter::eNearest);
+  auto depth_attachment =
+      escher->NewAttachmentTexture(vk::Format::eD24UnormS8Uint, 512, 512, 1, vk::Filter::eNearest);
 
   // TODO(ES-83): add support for setting an initial image layout (is there
   // already a bug for this?  If not, add one).  Then, use this so we don't need
@@ -133,12 +129,11 @@ VK_TEST_F(ShaderProgramTest, DISABLED_GeneratePipelines) {
   // attachment (because we aren't loading it we can treat it as initially
   // eUndefined)... there's no reason that we shouldn't be able to do this for
   // the color attachment too.
-  cb->ImageBarrier(color_attachment->image(), vk::ImageLayout::eUndefined,
-                   vk::ImageLayout::eColorAttachmentOptimal,
-                   vk::PipelineStageFlagBits::eTopOfPipe, vk::AccessFlags(),
-                   vk::PipelineStageFlagBits::eColorAttachmentOutput,
-                   vk::AccessFlagBits::eColorAttachmentRead |
-                       vk::AccessFlagBits::eColorAttachmentWrite);
+  cb->ImageBarrier(
+      color_attachment->image(), vk::ImageLayout::eUndefined,
+      vk::ImageLayout::eColorAttachmentOptimal, vk::PipelineStageFlagBits::eTopOfPipe,
+      vk::AccessFlags(), vk::PipelineStageFlagBits::eColorAttachmentOutput,
+      vk::AccessFlagBits::eColorAttachmentRead | vk::AccessFlagBits::eColorAttachmentWrite);
 
   RenderPassInfo render_pass_info;
   render_pass_info.color_attachments[0] = color_attachment;
@@ -155,8 +150,7 @@ VK_TEST_F(ShaderProgramTest, DISABLED_GeneratePipelines) {
   // TODO(ES-83): move into ShaderProgramTest.
   auto noise_image = escher->NewNoiseImage(512, 512);
   auto noise_texture = escher->NewTexture(noise_image, vk::Filter::eLinear);
-  cb->impl()->TakeWaitSemaphore(noise_image,
-                                vk::PipelineStageFlagBits::eFragmentShader);
+  cb->impl()->TakeWaitSemaphore(noise_image, vk::PipelineStageFlagBits::eFragmentShader);
 
   cb->BeginRenderPass(render_pass_info);
 
@@ -170,13 +164,11 @@ VK_TEST_F(ShaderProgramTest, DISABLED_GeneratePipelines) {
   auto mesh = ring_mesh1();
   auto ab = &mesh->attribute_buffer(0);
 
-  cb->BindIndices(mesh->index_buffer(), mesh->index_buffer_offset(),
-                  vk::IndexType::eUint32);
+  cb->BindIndices(mesh->index_buffer(), mesh->index_buffer_offset(), vk::IndexType::eUint32);
 
   cb->BindVertices(0, ab->buffer, ab->offset, ab->stride);
-  cb->SetVertexAttributes(
-      0, 0, vk::Format::eR32G32Sfloat,
-      mesh->spec().attribute_offset(0, MeshAttribute::kPosition2D));
+  cb->SetVertexAttributes(0, 0, vk::Format::eR32G32Sfloat,
+                          mesh->spec().attribute_offset(0, MeshAttribute::kPosition2D));
   cb->SetVertexAttributes(0, 2, vk::Format::eR32G32Sfloat,
                           mesh->spec().attribute_offset(0, MeshAttribute::kUV));
 
@@ -205,14 +197,12 @@ VK_TEST_F(ShaderProgramTest, DISABLED_GeneratePipelines) {
   mesh = ring_mesh2();
   ab = &mesh->attribute_buffer(0);
 
-  cb->BindIndices(mesh->index_buffer(), mesh->index_buffer_offset(),
-                  vk::IndexType::eUint32);
+  cb->BindIndices(mesh->index_buffer(), mesh->index_buffer_offset(), vk::IndexType::eUint32);
 
   cb->BindVertices(0, ab->buffer, ab->offset, ab->stride);
 
-  cb->SetVertexAttributes(
-      0, 0, vk::Format::eR32G32Sfloat,
-      mesh->spec().attribute_offset(0, MeshAttribute::kPosition2D));
+  cb->SetVertexAttributes(0, 0, vk::Format::eR32G32Sfloat,
+                          mesh->spec().attribute_offset(0, MeshAttribute::kPosition2D));
   cb->SetVertexAttributes(0, 2, vk::Format::eR32G32Sfloat,
                           mesh->spec().attribute_offset(0, MeshAttribute::kUV));
 
@@ -222,14 +212,12 @@ VK_TEST_F(ShaderProgramTest, DISABLED_GeneratePipelines) {
   mesh = sphere_mesh();
   ab = &mesh->attribute_buffer(0);
 
-  cb->BindIndices(mesh->index_buffer(), mesh->index_buffer_offset(),
-                  vk::IndexType::eUint32);
+  cb->BindIndices(mesh->index_buffer(), mesh->index_buffer_offset(), vk::IndexType::eUint32);
 
   cb->BindVertices(0, ab->buffer, ab->offset, ab->stride);
 
-  cb->SetVertexAttributes(
-      0, 0, vk::Format::eR32G32B32Sfloat,
-      mesh->spec().attribute_offset(0, MeshAttribute::kPosition3D));
+  cb->SetVertexAttributes(0, 0, vk::Format::eR32G32B32Sfloat,
+                          mesh->spec().attribute_offset(0, MeshAttribute::kPosition3D));
   cb->SetVertexAttributes(2, 0, vk::Format::eR32G32Sfloat,
                           mesh->spec().attribute_offset(0, MeshAttribute::kUV));
 

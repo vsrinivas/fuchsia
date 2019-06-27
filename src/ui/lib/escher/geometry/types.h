@@ -153,8 +153,7 @@ struct plane2 : public planeN<vec2> {
 
 struct plane3 : public planeN<vec3> {
   using planeN::planeN;
-  explicit plane3(const planeN<vec2>& p)
-      : planeN<vec3>(vec3(p.dir(), 0.f), p.dist()) {}
+  explicit plane3(const planeN<vec2>& p) : planeN<vec3>(vec3(p.dir(), 0.f), p.dist()) {}
 };
 
 ESCHER_DEBUG_PRINTABLE(plane2);

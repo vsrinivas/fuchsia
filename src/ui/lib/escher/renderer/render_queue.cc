@@ -12,22 +12,19 @@ RenderQueue::RenderQueue() = default;
 RenderQueue::~RenderQueue() = default;
 
 void RenderQueue::Sort() {
-  std::stable_sort(items_.begin(), items_.end(),
-                   [](const RenderQueueItem& a, const RenderQueueItem& b) {
-                     return a.sort_key < b.sort_key;
-                   });
+  std::stable_sort(
+      items_.begin(), items_.end(),
+      [](const RenderQueueItem& a, const RenderQueueItem& b) { return a.sort_key < b.sort_key; });
 }
 
-void RenderQueue::GenerateCommands(CommandBuffer* cmd_buf,
-                                   const CommandBuffer::SavedState* state,
+void RenderQueue::GenerateCommands(CommandBuffer* cmd_buf, const CommandBuffer::SavedState* state,
                                    const RenderQueueContext* context) const {
   GenerateCommands(cmd_buf, state, context, 0, items_.size());
 }
 
-void RenderQueue::GenerateCommands(CommandBuffer* cmd_buf,
-                                   const CommandBuffer::SavedState* state,
-                                   const RenderQueueContext* context,
-                                   size_t start_index, size_t count) const {
+void RenderQueue::GenerateCommands(CommandBuffer* cmd_buf, const CommandBuffer::SavedState* state,
+                                   const RenderQueueContext* context, size_t start_index,
+                                   size_t count) const {
   size_t end_index = start_index + count;
   FXL_DCHECK(end_index <= items_.size());
 
@@ -45,9 +42,8 @@ void RenderQueue::GenerateCommands(CommandBuffer* cmd_buf,
 
     // Determine the number of instances to render.
     size_t instance_count = 1;
-    for (size_t i = start_index + 1;
-         i < end_index && item.object_data == items_[i].object_data &&
-         render_func == items_[i].render_queue_funcs[func_index];
+    for (size_t i = start_index + 1; i < end_index && item.object_data == items_[i].object_data &&
+                                     render_func == items_[i].render_queue_funcs[func_index];
          ++i) {
       ++instance_count;
     }

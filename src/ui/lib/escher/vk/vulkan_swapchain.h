@@ -22,10 +22,8 @@ struct VulkanSwapchain {
   vk::Format format;
   vk::ColorSpaceKHR color_space;
 
-  VulkanSwapchain(vk::SwapchainKHR swapchain_in,
-                  std::vector<ImagePtr> images_in, uint32_t width_in,
-                  uint32_t height_in, vk::Format format_in,
-                  vk::ColorSpaceKHR color_space_in);
+  VulkanSwapchain(vk::SwapchainKHR swapchain_in, std::vector<ImagePtr> images_in, uint32_t width_in,
+                  uint32_t height_in, vk::Format format_in, vk::ColorSpaceKHR color_space_in);
 
   VulkanSwapchain();
 };

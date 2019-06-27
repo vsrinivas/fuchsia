@@ -10,8 +10,7 @@
 
 namespace snapshot {
 
-View::View(scenic::ViewContext view_context)
-    : BaseView(std::move(view_context), "Snapshot View") {
+View::View(scenic::ViewContext view_context) : BaseView(std::move(view_context), "Snapshot View") {
   outgoing_services().AddService(loader_bindings_.GetHandler(this));
 }
 
@@ -34,25 +33,24 @@ void View::Load(::fuchsia::mem::Buffer payload) {
   LoadNode(root_node(), flat_node);
 }
 
-void View::LoadNode(scenic::ContainerNode& parent_node,
-                    const snapshot::Node* flat_node) {
+void View::LoadNode(scenic::ContainerNode& parent_node, const snapshot::Node* flat_node) {
   scenic::EntityNode entity_node(session());
 
   if (flat_node->transform()) {
     auto transform = flat_node->transform();
-    entity_node.SetTranslation(transform->translation()->x(),     // x
-                               transform->translation()->y(),     // y
-                               transform->translation()->z());    // z
-    entity_node.SetScale(transform->scale()->x(),                 // x
-                         transform->scale()->y(),                 // y
-                         transform->scale()->z());                // z
-    entity_node.SetRotation(transform->rotation()->x(),           // x
-                            transform->rotation()->y(),           // y
-                            transform->rotation()->z(),           // z
-                            transform->rotation()->w());          // w
-    entity_node.SetAnchor(transform->anchor()->x(),               // x
-                          transform->anchor()->y(),               // y
-                          transform->anchor()->z());              // z
+    entity_node.SetTranslation(transform->translation()->x(),   // x
+                               transform->translation()->y(),   // y
+                               transform->translation()->z());  // z
+    entity_node.SetScale(transform->scale()->x(),               // x
+                         transform->scale()->y(),               // y
+                         transform->scale()->z());              // z
+    entity_node.SetRotation(transform->rotation()->x(),         // x
+                            transform->rotation()->y(),         // y
+                            transform->rotation()->z(),         // z
+                            transform->rotation()->w());        // w
+    entity_node.SetAnchor(transform->anchor()->x(),             // x
+                          transform->anchor()->y(),             // y
+                          transform->anchor()->z());            // z
   }
 
   if (flat_node->shape()) {
@@ -68,8 +66,7 @@ void View::LoadNode(scenic::ContainerNode& parent_node,
   }
 }
 
-void View::LoadShape(scenic::EntityNode& parent_node,
-                     const snapshot::Node* flat_node) {
+void View::LoadShape(scenic::EntityNode& parent_node, const snapshot::Node* flat_node) {
   scenic::ShapeNode shape_node(session());
 
   switch (flat_node->shape_type()) {
@@ -94,16 +91,14 @@ void View::LoadShape(scenic::EntityNode& parent_node,
     } break;
 
     case snapshot::Shape_RoundedRectangle: {
-      auto shape =
-          static_cast<const snapshot::RoundedRectangle*>(flat_node->shape());
-      scenic::RoundedRectangle rounded_rectangle(
-          session(),
-          shape->width(),                // width
-          shape->height(),               // height
-          shape->top_left_radius(),      // top-left
-          shape->top_right_radius(),     // top-right
-          shape->bottom_right_radius(),  // bottom-right
-          shape->bottom_left_radius());  // bottom-left
+      auto shape = static_cast<const snapshot::RoundedRectangle*>(flat_node->shape());
+      scenic::RoundedRectangle rounded_rectangle(session(),
+                                                 shape->width(),                // width
+                                                 shape->height(),               // height
+                                                 shape->top_left_radius(),      // top-left
+                                                 shape->top_right_radius(),     // top-right
+                                                 shape->bottom_right_radius(),  // bottom-right
+                                                 shape->bottom_left_radius());  // bottom-left
       shape_node.SetShape(rounded_rectangle);
     } break;
 
@@ -120,8 +115,7 @@ void View::LoadShape(scenic::EntityNode& parent_node,
   parent_node.AddPart(shape_node);
 }
 
-void View::LoadMaterial(scenic::ShapeNode& shape_node,
-                        const snapshot::Node* flat_node) {
+void View::LoadMaterial(scenic::ShapeNode& shape_node, const snapshot::Node* flat_node) {
   if (flat_node->material_type() == snapshot::Material_Color) {
     auto color = static_cast<const snapshot::Color*>(flat_node->material());
 

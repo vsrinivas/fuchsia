@@ -55,8 +55,7 @@ void ShadertoyStateForImagePipe::OnSetResolution() {
   escher_image_info.sample_count = 1;
   escher_image_info.usage = vk::ImageUsageFlagBits::eColorAttachment;
 
-  escher::ImageFactoryAdapter factory(escher()->gpu_allocator(),
-                                      escher()->resource_recycler());
+  escher::ImageFactoryAdapter factory(escher()->gpu_allocator(), escher()->resource_recycler());
   for (size_t i = 0; i < kNumFramebuffers; ++i) {
     auto& fb = framebuffers_[i];
 
@@ -88,9 +87,9 @@ void ShadertoyStateForImagePipe::OnSetResolution() {
       return;
     }
 
-    fb.framebuffer = fxl::MakeRefCounted<escher::Framebuffer>(
-        escher(), width(), height(), std::vector<escher::ImagePtr>{image},
-        renderer()->render_pass());
+    fb.framebuffer = fxl::MakeRefCounted<escher::Framebuffer>(escher(), width(), height(),
+                                                              std::vector<escher::ImagePtr>{image},
+                                                              renderer()->render_pass());
     fb.acquire_semaphore = std::move(acquire_semaphore_pair.first);
     fb.release_semaphore = std::move(release_semaphore_pair.first);
     fb.acquire_fence = std::move(acquire_semaphore_pair.second);
@@ -103,9 +102,8 @@ void ShadertoyStateForImagePipe::OnSetResolution() {
     image_info.stride = 0;  // inapplicable to GPU_OPTIMAL tiling.
     image_info.tiling = fuchsia::images::Tiling::GPU_OPTIMAL;
 
-    image_pipe_->AddImage(fb.image_pipe_id, std::move(image_info),
-                          std::move(vmo), memory->offset(), memory->size(),
-                          fuchsia::images::MemoryType::VK_DEVICE_MEMORY);
+    image_pipe_->AddImage(fb.image_pipe_id, std::move(image_info), std::move(vmo), memory->offset(),
+                          memory->size(), fuchsia::images::MemoryType::VK_DEVICE_MEMORY);
   }
 }
 
@@ -118,8 +116,7 @@ static zx::event DuplicateEvent(const zx::event& evt) {
   return dup;
 }
 
-void ShadertoyStateForImagePipe::DrawFrame(uint64_t presentation_time,
-                                           float animation_time) {
+void ShadertoyStateForImagePipe::DrawFrame(uint64_t presentation_time, float animation_time) {
   TRACE_DURATION("gfx", "ShadertoyStateForImagePipe::DrawFrame");
   // Prepare arguments.
   auto& fb = framebuffers_[next_framebuffer_index_];
@@ -143,26 +140,24 @@ void ShadertoyStateForImagePipe::DrawFrame(uint64_t presentation_time,
   // TODO(SCN-241): params.iDate = ??;
   // TODO(SCN-241): params.iSampleRate = ??;
 
-  renderer()->DrawFrame(fb.framebuffer, pipeline(), params, channel0(),
-                        channel1(), channel2(), channel3(),
-                        fb.release_semaphore, fb.acquire_semaphore);
+  renderer()->DrawFrame(fb.framebuffer, pipeline(), params, channel0(), channel1(), channel2(),
+                        channel3(), fb.release_semaphore, fb.acquire_semaphore);
 
   // Present the image and request another frame.
-  auto present_image_callback = [weak = weak_ptr_factory()->GetWeakPtr()](
-                                    fuchsia::images::PresentationInfo info) {
-    // Need this cast in order to call protected member of superclass.
-    if (auto self = static_cast<ShadertoyStateForImagePipe*>(weak.get())) {
-      self->OnFramePresented(std::move(info));
-    }
-  };
+  auto present_image_callback =
+      [weak = weak_ptr_factory()->GetWeakPtr()](fuchsia::images::PresentationInfo info) {
+        // Need this cast in order to call protected member of superclass.
+        if (auto self = static_cast<ShadertoyStateForImagePipe*>(weak.get())) {
+          self->OnFramePresented(std::move(info));
+        }
+      };
 
   std::vector<zx::event> acquire_fences;
   acquire_fences.push_back(std::move(acquire_fence));
   std::vector<zx::event> release_fences;
   release_fences.push_back(std::move(release_fence));
   TRACE_FLOW_BEGIN("gfx", "image_pipe_present_image", fb.image_pipe_id);
-  image_pipe_->PresentImage(fb.image_pipe_id, presentation_time,
-                            std::move(acquire_fences),
+  image_pipe_->PresentImage(fb.image_pipe_id, presentation_time, std::move(acquire_fences),
                             std::move(release_fences), present_image_callback);
 }
 

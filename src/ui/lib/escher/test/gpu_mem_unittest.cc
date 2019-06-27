@@ -20,8 +20,8 @@ const vk::DeviceSize kTestMemorySize = 1000;
 
 class FakeGpuMem : public GpuMem {
  public:
-  FakeGpuMem(vk::DeviceMemory base, vk::DeviceSize size, vk::DeviceSize offset,
-             uint8_t* mapped_ptr, int* obj_count = nullptr)
+  FakeGpuMem(vk::DeviceMemory base, vk::DeviceSize size, vk::DeviceSize offset, uint8_t* mapped_ptr,
+             int* obj_count = nullptr)
       : GpuMem(base, size, offset, mapped_ptr), obj_count_(obj_count) {
     if (obj_count_)
       ++(*obj_count_);
@@ -38,8 +38,8 @@ class FakeGpuMem : public GpuMem {
 
 TEST(GpuMem, ErroneousSuballocations) {
   int obj_count = 0;
-  GpuMemPtr mem = fxl::AdoptRef(new FakeGpuMem(
-      vk::DeviceMemory(), kTestMemorySize, 0u, nullptr, &obj_count));
+  GpuMemPtr mem =
+      fxl::AdoptRef(new FakeGpuMem(vk::DeviceMemory(), kTestMemorySize, 0u, nullptr, &obj_count));
   EXPECT_EQ(1, obj_count);
 
   auto sub_alloc1 = mem->Suballocate(kTestMemorySize, 0);
@@ -60,8 +60,7 @@ TEST(GpuMem, ErroneousSuballocations) {
   EXPECT_NE(nullptr, sub_alloc4.get());
 
   // Can sub-allocate from a sub-allocation...
-  auto sub_alloc5 =
-      sub_alloc1->Suballocate(kTestMemorySize / 2, kTestMemorySize / 2);
+  auto sub_alloc5 = sub_alloc1->Suballocate(kTestMemorySize / 2, kTestMemorySize / 2);
   EXPECT_NE(nullptr, sub_alloc5.get());
   // ... and sub-allocate again from that sub-allocation.  As before, the size
   // and offset of the sub-allocation must fit within the parent.
@@ -97,9 +96,7 @@ TEST(GpuMem, ErroneousSuballocations) {
 // This test should be updated to include all hashed types used by Escher.
 VK_TEST(GpuMem, AdoptVkMemory) {
   VulkanInstance::Params instance_params(
-      {{"VK_LAYER_LUNARG_standard_validation"},
-       {VK_EXT_DEBUG_REPORT_EXTENSION_NAME},
-       false});
+      {{"VK_LAYER_LUNARG_standard_validation"}, {VK_EXT_DEBUG_REPORT_EXTENSION_NAME}, false});
 
   auto vulkan_instance = VulkanInstance::New(std::move(instance_params));
   auto vulkan_queues = VulkanDeviceQueues::New(vulkan_instance, {});
@@ -108,15 +105,13 @@ VK_TEST(GpuMem, AdoptVkMemory) {
 
   vk::MemoryAllocateInfo info;
   info.allocationSize = kTestMemorySize;
-  info.memoryTypeIndex = impl::GetMemoryTypeIndex(
-      physical_device, INT32_MAX, vk::MemoryPropertyFlagBits::eHostVisible);
-  vk::DeviceMemory vk_mem =
-      ESCHER_CHECKED_VK_RESULT(device.allocateMemory(info));
+  info.memoryTypeIndex = impl::GetMemoryTypeIndex(physical_device, INT32_MAX,
+                                                  vk::MemoryPropertyFlagBits::eHostVisible);
+  vk::DeviceMemory vk_mem = ESCHER_CHECKED_VK_RESULT(device.allocateMemory(info));
 
   // This test only checks for valid creation and destruction. It would need
   // a mock Vulkan to test for memory usage.
-  auto mem = GpuMem::AdoptVkMemory(device, vk_mem, kTestMemorySize,
-                                   true /* needs_mapped_ptr */);
+  auto mem = GpuMem::AdoptVkMemory(device, vk_mem, kTestMemorySize, true /* needs_mapped_ptr */);
   EXPECT_EQ(vk_mem, mem->base());
   EXPECT_EQ(kTestMemorySize, mem->size());
   EXPECT_EQ(0u, mem->offset());
@@ -135,8 +130,7 @@ TEST(GpuMem, RecursiveAllocations) {
   const vk::DeviceSize kSize3 = 5;
   const vk::DeviceSize kOffset3 = 10;
 
-  GpuMemPtr mem =
-      fxl::MakeRefCounted<FakeGpuMem>(kVkMem, kSize0, kOffset0, nullptr);
+  GpuMemPtr mem = fxl::MakeRefCounted<FakeGpuMem>(kVkMem, kSize0, kOffset0, nullptr);
   auto sub = mem->Suballocate(kSize1, kOffset1);
   auto subsub = sub->Suballocate(kSize2, kOffset2);
   auto subsubsub = subsub->Suballocate(kSize3, kOffset3);
@@ -163,25 +157,20 @@ TEST(GpuMem, MappedPointer) {
   const vk::DeviceSize kSize3 = 20;
   const vk::DeviceSize kOffset3 = 20;
 
-  GpuMemPtr mem = fxl::MakeRefCounted<FakeGpuMem>(vk::DeviceMemory(), kSize1,
-                                                  kOffset1, kNullPtr);
+  GpuMemPtr mem = fxl::MakeRefCounted<FakeGpuMem>(vk::DeviceMemory(), kSize1, kOffset1, kNullPtr);
   GpuMemPtr sub = mem->Suballocate(kSize2, kOffset2);
   GpuMemPtr subsub = sub->Suballocate(kSize3, kOffset3);
   EXPECT_EQ(nullptr, mem->mapped_ptr());
   EXPECT_EQ(nullptr, sub->mapped_ptr());
   EXPECT_EQ(nullptr, subsub->mapped_ptr());
 
-  mem = fxl::MakeRefCounted<FakeGpuMem>(vk::DeviceMemory(), kSize1, kOffset1,
-                                        kFakePtr);
+  mem = fxl::MakeRefCounted<FakeGpuMem>(vk::DeviceMemory(), kSize1, kOffset1, kFakePtr);
   sub = mem->Suballocate(kSize2, kOffset2);
   subsub = sub->Suballocate(kSize3, kOffset3);
   EXPECT_EQ(kFakePtr, mem->mapped_ptr());
-  EXPECT_EQ(static_cast<ptrdiff_t>(kOffset2),
-            sub->mapped_ptr() - mem->mapped_ptr());
-  EXPECT_EQ(static_cast<ptrdiff_t>(kOffset3 + kOffset2),
-            subsub->mapped_ptr() - mem->mapped_ptr());
-  EXPECT_EQ(static_cast<ptrdiff_t>(kOffset3),
-            subsub->mapped_ptr() - sub->mapped_ptr());
+  EXPECT_EQ(static_cast<ptrdiff_t>(kOffset2), sub->mapped_ptr() - mem->mapped_ptr());
+  EXPECT_EQ(static_cast<ptrdiff_t>(kOffset3 + kOffset2), subsub->mapped_ptr() - mem->mapped_ptr());
+  EXPECT_EQ(static_cast<ptrdiff_t>(kOffset3), subsub->mapped_ptr() - sub->mapped_ptr());
 }
 
 }  // namespace

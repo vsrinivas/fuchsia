@@ -6,8 +6,8 @@
 
 #include "garnet/lib/ui/scenic/util/print_event.h"
 #include "lib/fostr/fidl/fuchsia/ui/scenic/formatting.h"
-#include "src/lib/fxl/logging.h"
 #include "lib/ui/input/cpp/formatting.h"
+#include "src/lib/fxl/logging.h"
 
 namespace scenic_impl {
 namespace {
@@ -28,8 +28,7 @@ class IdleEventReporter : public EventReporter {
   }
 
   void EnqueueEvent(fuchsia::ui::scenic::Command unhandled) override {
-    FXL_LOG(WARNING) << "EventReporter not set up, dropped event: "
-                     << unhandled;
+    FXL_LOG(WARNING) << "EventReporter not set up, dropped event: " << unhandled;
   }
 };
 

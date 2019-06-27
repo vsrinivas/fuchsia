@@ -13,11 +13,10 @@
 namespace scenic_impl {
 namespace gfx {
 
-const ResourceTypeInfo ViewHolder::kTypeInfo = {
-    ResourceType::kNode | ResourceType::kViewHolder, "ViewHolder"};
+const ResourceTypeInfo ViewHolder::kTypeInfo = {ResourceType::kNode | ResourceType::kViewHolder,
+                                                "ViewHolder"};
 
-ViewHolder::ViewHolder(Session* session, ResourceId node_id,
-                       ViewLinker::ExportLink link)
+ViewHolder::ViewHolder(Session* session, ResourceId node_id, ViewLinker::ExportLink link)
     : Node(session, node_id, ViewHolder::kTypeInfo), link_(std::move(link)) {
   FXL_DCHECK(link_.valid());
   FXL_DCHECK(!link_.initialized());
@@ -134,18 +133,17 @@ void ViewHolder::ResetRenderEvent() {
   // Re-arm the wait.
   render_waiter_.set_object(render_event_.get());
   render_waiter_.set_trigger(ZX_EVENT_SIGNALED);
-  render_waiter_.set_handler([this](async_dispatcher_t*, async::Wait*,
-                                    zx_status_t status,
-                                    const zx_packet_signal_t*) {
-    ZX_ASSERT(status == ZX_OK || status == ZX_ERR_CANCELED);
-    if (status == ZX_OK) {
-      SetIsViewRendering(true);
-    }
+  render_waiter_.set_handler(
+      [this](async_dispatcher_t*, async::Wait*, zx_status_t status, const zx_packet_signal_t*) {
+        ZX_ASSERT(status == ZX_OK || status == ZX_ERR_CANCELED);
+        if (status == ZX_OK) {
+          SetIsViewRendering(true);
+        }
 
-    // The first frame has been signaled. Clear the event as it is not used
-    // for subsequent frames.
-    CloseRenderEvent();
-  });
+        // The first frame has been signaled. Clear the event as it is not used
+        // for subsequent frames.
+        CloseRenderEvent();
+      });
   status = render_waiter_.Begin(async_get_default_dispatcher());
   ZX_ASSERT(status == ZX_OK);
 
@@ -179,8 +177,7 @@ void ViewHolder::SendViewPropertiesChangedEvent() {
     return;
   }
   fuchsia::ui::gfx::Event event;
-  event.set_view_properties_changed(
-      {.view_id = view_->id(), .properties = view_properties_});
+  event.set_view_properties_changed({.view_id = view_->id(), .properties = view_properties_});
   view_->session()->EnqueueEvent(std::move(event));
 }
 
@@ -201,8 +198,7 @@ void ViewHolder::SendViewAttachedToSceneEvent() {
     return;
   }
   fuchsia::ui::gfx::Event event;
-  event.set_view_attached_to_scene(
-      {.view_id = view_->id(), .properties = view_properties_});
+  event.set_view_attached_to_scene({.view_id = view_->id(), .properties = view_properties_});
   view_->session()->EnqueueEvent(std::move(event));
 }
 

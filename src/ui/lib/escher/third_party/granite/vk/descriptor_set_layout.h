@@ -60,8 +60,8 @@ struct DescriptorSetLayout {
            uniform_buffer_mask == other.uniform_buffer_mask &&
            storage_buffer_mask == other.storage_buffer_mask &&
            sampled_buffer_mask == other.sampled_buffer_mask &&
-           input_attachment_mask == other.input_attachment_mask &&
-           fp_mask == other.fp_mask && stages == other.stages;
+           input_attachment_mask == other.input_attachment_mask && fp_mask == other.fp_mask &&
+           stages == other.stages;
   }
 
   // Return false if the layout is invalid in any way (multiple descriptors

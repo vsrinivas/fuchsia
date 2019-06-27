@@ -66,8 +66,7 @@ BufferPtr BufferCache::NewHostBuffer(vk::DeviceSize vk_size) {
     free_buffers_by_id_.erase(info_itr);
   } else {
     // Construct a new buffer of the requested size.
-    buffer = gpu_allocator_->AllocateBuffer(this, vk_size, kUsageFlags,
-                                            kMemoryPropertyFlags);
+    buffer = gpu_allocator_->AllocateBuffer(this, vk_size, kUsageFlags, kMemoryPropertyFlags);
   }
 
   return buffer;
@@ -82,8 +81,7 @@ void BufferCache::RecycleResource(std::unique_ptr<Resource> resource) {
   cache_info.allocation_time = fxl::TimePoint::Now();
   cache_info.size = buffer->size();
   // Ensure this buffer is not already tracked.
-  FXL_DCHECK(free_buffers_by_id_.find(cache_info.id) ==
-             free_buffers_by_id_.end())
+  FXL_DCHECK(free_buffers_by_id_.find(cache_info.id) == free_buffers_by_id_.end())
       << "uid: " << buffer->uid();
 
   // Add to the map.
@@ -113,11 +111,10 @@ void BufferCache::RecycleResource(std::unique_ptr<Resource> resource) {
     FXL_DCHECK(find_map_for_size_itr != free_buffers_.end());
 
     auto& buffer_list_at_size = find_map_for_size_itr->second;
-    auto find_buf_itr =
-        std::find_if(buffer_list_at_size.begin(), buffer_list_at_size.end(),
-                     [id_to_free](const std::unique_ptr<Buffer>& buffer) {
-                       return buffer->uid() == id_to_free;
-                     });
+    auto find_buf_itr = std::find_if(buffer_list_at_size.begin(), buffer_list_at_size.end(),
+                                     [id_to_free](const std::unique_ptr<Buffer>& buffer) {
+                                       return buffer->uid() == id_to_free;
+                                     });
     FXL_DCHECK(find_buf_itr != buffer_list_at_size.end());
     // Release the buffer.
     buffer_list_at_size.erase(find_buf_itr);

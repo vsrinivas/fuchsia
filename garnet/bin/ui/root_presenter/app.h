@@ -8,8 +8,8 @@
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
-#include <fuchsia/ui/views/cpp/fidl.h>
 #include <fuchsia/ui/shortcut/cpp/fidl.h>
+#include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/ui/input/input_device_impl.h>
@@ -48,17 +48,16 @@ class App : public fuchsia::ui::policy::Presenter,
 
  private:
   // |Presenter|
-  void PresentView(fuchsia::ui::views::ViewHolderToken view_holder_token,
-                   fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
-                       presentation_request) override;
-  void HACK_SetRendererParams(
-      bool enable_clipping,
-      std::vector<fuchsia::ui::gfx::RendererParam> params) override;
+  void PresentView(
+      fuchsia::ui::views::ViewHolderToken view_holder_token,
+      fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request) override;
+  void HACK_SetRendererParams(bool enable_clipping,
+                              std::vector<fuchsia::ui::gfx::RendererParam> params) override;
 
   // |InputDeviceRegistry|
-  void RegisterDevice(fuchsia::ui::input::DeviceDescriptor descriptor,
-                      fidl::InterfaceRequest<fuchsia::ui::input::InputDevice>
-                          input_device_request) override;
+  void RegisterDevice(
+      fuchsia::ui::input::DeviceDescriptor descriptor,
+      fidl::InterfaceRequest<fuchsia::ui::input::InputDevice> input_device_request) override;
 
   void InitializeServices();
   void Reset();
@@ -75,8 +74,7 @@ class App : public fuchsia::ui::policy::Presenter,
 
   std::unique_ptr<component::StartupContext> startup_context_;
   fidl::BindingSet<fuchsia::ui::policy::Presenter> presenter_bindings_;
-  fidl::BindingSet<fuchsia::ui::input::InputDeviceRegistry>
-      input_receiver_bindings_;
+  fidl::BindingSet<fuchsia::ui::input::InputDeviceRegistry> input_receiver_bindings_;
   ui_input::InputReader input_reader_;
   std::unique_ptr<FactoryResetManager> fdr_manager_;
 
@@ -103,8 +101,7 @@ class App : public fuchsia::ui::policy::Presenter,
   size_t active_presentation_idx_ = std::numeric_limits<size_t>::max();
 
   uint32_t next_device_token_ = 0;
-  std::unordered_map<uint32_t, std::unique_ptr<ui_input::InputDeviceImpl>>
-      devices_by_id_;
+  std::unordered_map<uint32_t, std::unique_ptr<ui_input::InputDeviceImpl>> devices_by_id_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(App);
 };

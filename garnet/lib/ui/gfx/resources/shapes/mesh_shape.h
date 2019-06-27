@@ -6,9 +6,9 @@
 #define GARNET_LIB_UI_GFX_RESOURCES_SHAPES_MESH_SHAPE_H_
 
 #include <fuchsia/ui/gfx/cpp/fidl.h>
+
 #include "garnet/lib/ui/gfx/resources/buffer.h"
 #include "garnet/lib/ui/gfx/resources/shapes/shape.h"
-
 #include "src/ui/lib/escher/shape/mesh.h"
 
 namespace scenic_impl {
@@ -23,25 +23,20 @@ class MeshShape final : public Shape {
   MeshShape(Session* session, ResourceId id);
 
   // These correspond to BindMeshBuffersCmd in commands.fidl.
-  bool BindBuffers(BufferPtr index_buffer,
-                   ::fuchsia::ui::gfx::MeshIndexFormat index_format,
-                   uint64_t index_offset, uint32_t index_count,
-                   BufferPtr vertex_buffer,
+  bool BindBuffers(BufferPtr index_buffer, ::fuchsia::ui::gfx::MeshIndexFormat index_format,
+                   uint64_t index_offset, uint32_t index_count, BufferPtr vertex_buffer,
                    const ::fuchsia::ui::gfx::MeshVertexFormat& vertex_format,
-                   uint64_t vertex_offset, uint32_t vertex_count,
-                   escher::BoundingBox bounding_box);
+                   uint64_t vertex_offset, uint32_t vertex_count, escher::BoundingBox bounding_box);
 
   // |Resource|.
   void Accept(class ResourceVisitor* visitor) override;
 
   // |Shape|.
-  bool GetIntersection(const escher::ray4& ray,
-                       float* out_distance) const override;
+  bool GetIntersection(const escher::ray4& ray, float* out_distance) const override;
 
   // |Shape|.
-  escher::Object GenerateRenderObject(
-      const escher::mat4& transform,
-      const escher::MaterialPtr& material) override;
+  escher::Object GenerateRenderObject(const escher::mat4& transform,
+                                      const escher::MaterialPtr& material) override;
 
   const escher::MeshPtr& escher_mesh() const { return mesh_; }
   const BufferPtr& index_buffer() const { return index_buffer_; }

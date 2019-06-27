@@ -6,8 +6,7 @@
 
 namespace escher {
 
-const ResourceTypeInfo RenderPass::kTypeInfo("RenderPass",
-                                             ResourceType::kResource,
+const ResourceTypeInfo RenderPass::kTypeInfo("RenderPass", ResourceType::kResource,
                                              ResourceType::kRenderPass);
 
 RenderPass::RenderPass(ResourceManager* manager, vk::RenderPass render_pass)
@@ -24,12 +23,9 @@ RenderPass::RenderPass(ResourceManager* manager, vk::RenderPass render_pass)
   create_info_.pDependencies = nullptr;
 }
 
-RenderPass::RenderPass(ResourceManager* manager,
-                       uint32_t color_attachment_count,
-                       uint32_t depth_attachment_count,
-                       uint32_t attachment_reference_count,
-                       uint32_t subpass_count,
-                       uint32_t subpass_dependency_count)
+RenderPass::RenderPass(ResourceManager* manager, uint32_t color_attachment_count,
+                       uint32_t depth_attachment_count, uint32_t attachment_reference_count,
+                       uint32_t subpass_count, uint32_t subpass_dependency_count)
     : Resource(manager),
       color_attachment_count_(color_attachment_count),
       depth_attachment_count_(depth_attachment_count) {

@@ -6,8 +6,6 @@
 
 #include <fuchsia/math/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
-#include "src/ui/lib/escher/geometry/types.h"
-#include "src/ui/lib/escher/util/type_utils.h"
 #include <lib/fidl/cpp/clone.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/ui/geometry/cpp/formatting.h>
@@ -30,6 +28,8 @@
 #include "garnet/lib/ui/gfx/util/unwrap.h"
 #include "garnet/lib/ui/scenic/event_reporter.h"
 #include "garnet/lib/ui/scenic/session.h"
+#include "src/ui/lib/escher/geometry/types.h"
+#include "src/ui/lib/escher/util/type_utils.h"
 
 namespace scenic_impl {
 namespace input {
@@ -53,9 +53,7 @@ using fuchsia::ui::input::SetParallelDispatchCmd;
 
 namespace {
 // Helper for Dispatch[Touch|Mouse]Command.
-int64_t NowInNs() {
-  return fxl::TimePoint::Now().ToEpochDelta().ToNanoseconds();
-}
+int64_t NowInNs() { return fxl::TimePoint::Now().ToEpochDelta().ToNanoseconds(); }
 
 // TODO(SCN-1278): Remove this.
 // Turn two floats (high bits, low bits) into a 64-bit uint.
@@ -87,17 +85,15 @@ escher::ray4 CreateScreenPerpendicularRay(float x, float y) {
 }
 
 // Helper for Dispatch[Touch|Mouse]Command.
-escher::vec2 TransformPointerEvent(const escher::ray4& ray,
-                                   const escher::mat4& transform) {
+escher::vec2 TransformPointerEvent(const escher::ray4& ray, const escher::mat4& transform) {
   escher::ray4 local_ray = glm::inverse(transform) * ray;
 
   // We treat distance as 0 to simplify; otherwise the formula is:
   // hit = homogenize(local_ray.origin + distance * local_ray.direction);
   escher::vec2 hit(escher::homogenize(local_ray.origin));
 
-  FXL_VLOG(2) << "Coordinate transform (device->view): (" << ray.origin.x
-              << ", " << ray.origin.x << ")->(" << hit.x << ", " << hit.y
-              << ")";
+  FXL_VLOG(2) << "Coordinate transform (device->view): (" << ray.origin.x << ", " << ray.origin.x
+              << ")->(" << hit.x << ", " << hit.y << ")";
   return hit;
 }
 
@@ -120,14 +116,12 @@ glm::mat4 FindGlobalTransform(gfx::ViewPtr view) {
 // This invariant means this dispatcher context's session, handling an input
 // command, also originally created the compositor.
 //
-std::vector<gfx::Hit> PerformGlobalHitTest(gfx::GfxSystem* gfx_system,
-                                           GlobalId compositor_id, float x,
-                                           float y) {
+std::vector<gfx::Hit> PerformGlobalHitTest(gfx::GfxSystem* gfx_system, GlobalId compositor_id,
+                                           float x, float y) {
   FXL_DCHECK(gfx_system);
 
   escher::ray4 ray = CreateScreenPerpendicularRay(x, y);
-  FXL_VLOG(1) << "HitTest: device point (" << ray.origin.x << ", "
-              << ray.origin.y << ")";
+  FXL_VLOG(1) << "HitTest: device point (" << ray.origin.x << ", " << ray.origin.y << ")";
 
   gfx::CompositorWeakPtr compositor = gfx_system->GetCompositor(compositor_id);
   FXL_DCHECK(compositor) << "No compositor, violated invariant.";
@@ -150,8 +144,7 @@ std::vector<gfx::Hit> PerformGlobalHitTest(gfx::GfxSystem* gfx_system,
 }
 
 // Helper for DispatchCommand.
-PointerEvent ClonePointerWithCoords(const PointerEvent& event, float x,
-                                    float y) {
+PointerEvent ClonePointerWithCoords(const PointerEvent& event, float x, float y) {
   PointerEvent clone;
   fidl::Clone(event, &clone);
   clone.x = x;
@@ -194,27 +187,24 @@ InputSystem::InputSystem(SystemContext context, gfx::GfxSystem* gfx_system)
   gfx_system_->AddInitClosure([this]() {
     SetToInitialized();
 
-    text_sync_service_ =
-        this->context()->app_context()->svc()->Connect<ImeService>();
-    text_sync_service_.set_error_handler([](zx_status_t status) {
-      FXL_LOG(ERROR) << "Scenic lost connection to TextSync";
-    });
+    text_sync_service_ = this->context()->app_context()->svc()->Connect<ImeService>();
+    text_sync_service_.set_error_handler(
+        [](zx_status_t status) { FXL_LOG(ERROR) << "Scenic lost connection to TextSync"; });
 
     FXL_LOG(INFO) << "Scenic input system initialized.";
   });
 }
 
-CommandDispatcherUniquePtr InputSystem::CreateCommandDispatcher(
-    CommandDispatcherContext context) {
+CommandDispatcherUniquePtr InputSystem::CreateCommandDispatcher(CommandDispatcherContext context) {
   return CommandDispatcherUniquePtr(
       new InputCommandDispatcher(std::move(context), gfx_system_, this),
       // Custom deleter.
       [](CommandDispatcher* cd) { delete cd; });
 }
 
-InputCommandDispatcher::InputCommandDispatcher(
-    CommandDispatcherContext command_dispatcher_context,
-    gfx::GfxSystem* gfx_system, InputSystem* input_system)
+InputCommandDispatcher::InputCommandDispatcher(CommandDispatcherContext command_dispatcher_context,
+                                               gfx::GfxSystem* gfx_system,
+                                               InputSystem* input_system)
     : CommandDispatcher(std::move(command_dispatcher_context)),
       gfx_system_(gfx_system),
       input_system_(input_system) {
@@ -233,8 +223,7 @@ void InputCommandDispatcher::DispatchCommand(ScenicCommand command) {
     // Compositor and layer stack required for dispatch.
     GlobalId compositor_id(command_dispatcher_context()->session_id(),
                            input.send_pointer_input().compositor_id);
-    gfx::CompositorWeakPtr compositor =
-        gfx_system_->GetCompositor(compositor_id);
+    gfx::CompositorWeakPtr compositor = gfx_system_->GetCompositor(compositor_id);
     if (!compositor)
       return;  // It's legal to race against GFX's compositor setup.
 
@@ -250,8 +239,7 @@ void InputCommandDispatcher::DispatchCommand(ScenicCommand command) {
   }
 }
 
-void InputCommandDispatcher::DispatchCommand(
-    const SendPointerInputCmd command) {
+void InputCommandDispatcher::DispatchCommand(const SendPointerInputCmd command) {
   TRACE_DURATION("input", "dispatch_command", "command", "PointerCmd");
   const PointerEventType& event_type = command.pointer_event.type;
   if (event_type == PointerEventType::TOUCH) {
@@ -273,11 +261,10 @@ void InputCommandDispatcher::DispatchCommand(
 //    disambiguation, we perform parallel dispatch to all clients.
 //  - Touch DOWN triggers a focus change, but honors the no-focus property.
 //  - Touch REMOVE drops the association between event stream and client.
-void InputCommandDispatcher::DispatchTouchCommand(
-    const SendPointerInputCmd command) {
+void InputCommandDispatcher::DispatchTouchCommand(const SendPointerInputCmd command) {
   TRACE_DURATION("input", "dispatch_command", "command", "TouchCmd");
-  trace_flow_id_t trace_id = PointerTraceHACK(
-      command.pointer_event.radius_major, command.pointer_event.radius_minor);
+  trace_flow_id_t trace_id =
+      PointerTraceHACK(command.pointer_event.radius_major, command.pointer_event.radius_minor);
   TRACE_FLOW_END("input", "dispatch_event_to_scenic", trace_id);
 
   const uint32_t pointer_id = command.pointer_event.pointer_id;
@@ -286,12 +273,10 @@ void InputCommandDispatcher::DispatchTouchCommand(
   const float pointer_y = command.pointer_event.y;
 
   FXL_DCHECK(command.pointer_event.type == PointerEventType::TOUCH);
-  FXL_DCHECK(pointer_phase != Phase::HOVER)
-      << "Oops, touch device had unexpected HOVER event.";
+  FXL_DCHECK(pointer_phase != Phase::HOVER) << "Oops, touch device had unexpected HOVER event.";
 
   if (pointer_phase == Phase::ADD) {
-    GlobalId compositor_id(command_dispatcher_context()->session_id(),
-                           command.compositor_id);
+    GlobalId compositor_id(command_dispatcher_context()->session_id(), command.compositor_id);
     const std::vector<gfx::Hit> hits =
         PerformGlobalHitTest(gfx_system_, compositor_id, pointer_x, pointer_y);
 
@@ -310,8 +295,7 @@ void InputCommandDispatcher::DispatchTouchCommand(
       // Find the global transform for each hit, fill out hit_views.
       for (size_t i = 0; i < hits.size(); ++i) {
         if (gfx::ViewPtr view = views[i]) {
-          hit_views.stack.push_back(
-              {view->global_id(), FindGlobalTransform(view)});
+          hit_views.stack.push_back({view->global_id(), FindGlobalTransform(view)});
           if (/*TODO(SCN-919): view_id may mask input */ false) {
             break;
           }
@@ -366,10 +350,8 @@ void InputCommandDispatcher::DispatchTouchCommand(
 
   // Input delivery must be parallel; needed for gesture disambiguation.
   for (const auto& entry : touch_targets_[pointer_id].stack) {
-    escher::ray4 screen_ray =
-        CreateScreenPerpendicularRay(pointer_x, pointer_y);
-    escher::vec2 hit =
-        TransformPointerEvent(screen_ray, entry.global_transform);
+    escher::ray4 screen_ray = CreateScreenPerpendicularRay(pointer_x, pointer_y);
+    escher::vec2 hit = TransformPointerEvent(screen_ray, entry.global_transform);
 
     auto clone = ClonePointerWithCoords(command.pointer_event, hit.x, hit.y);
     EnqueueEventToView(entry.view_id, std::move(clone));
@@ -400,8 +382,7 @@ void InputCommandDispatcher::DispatchTouchCommand(
 //    cursors(!) do not roll up to any View (as expected), but may appear in the
 //    hit test; our dispatch needs to account for such behavior.
 // TODO(SCN-1078): Enhance trackpad support.
-void InputCommandDispatcher::DispatchMouseCommand(
-    const SendPointerInputCmd command) {
+void InputCommandDispatcher::DispatchMouseCommand(const SendPointerInputCmd command) {
   const uint32_t device_id = command.pointer_event.device_id;
   const Phase pointer_phase = command.pointer_event.phase;
   const float pointer_x = command.pointer_event.x;
@@ -410,12 +391,10 @@ void InputCommandDispatcher::DispatchMouseCommand(
   FXL_DCHECK(command.pointer_event.type == PointerEventType::MOUSE);
   FXL_DCHECK(pointer_phase != Phase::ADD && pointer_phase != Phase::REMOVE &&
              pointer_phase != Phase::HOVER)
-      << "Oops, mouse device (id=" << device_id
-      << ") had an unexpected event: " << pointer_phase;
+      << "Oops, mouse device (id=" << device_id << ") had an unexpected event: " << pointer_phase;
 
   if (pointer_phase == Phase::DOWN) {
-    GlobalId compositor_id(command_dispatcher_context()->session_id(),
-                           command.compositor_id);
+    GlobalId compositor_id(command_dispatcher_context()->session_id(), command.compositor_id);
     const std::vector<gfx::Hit> hits =
         PerformGlobalHitTest(gfx_system_, compositor_id, pointer_x, pointer_y);
 
@@ -426,8 +405,7 @@ void InputCommandDispatcher::DispatchMouseCommand(
     for (gfx::Hit hit : hits) {
       FXL_DCHECK(hit.node);  // Raw ptr, use it and let go.
       if (gfx::ViewPtr view = hit.node->FindOwningView()) {
-        hit_view.stack.push_back(
-            {view->global_id(), FindGlobalTransform(view)});
+        hit_view.stack.push_back({view->global_id(), FindGlobalTransform(view)});
         hit_view.focus_change = IsFocusChange(view);
         break;  // Just need the first one.
       }
@@ -470,14 +448,12 @@ void InputCommandDispatcher::DispatchMouseCommand(
     mouse_targets_[device_id] = hit_view;
   }
 
-  if (mouse_targets_.count(device_id) > 0 &&  // Tracking this device, and
+  if (mouse_targets_.count(device_id) > 0 &&         // Tracking this device, and
       mouse_targets_[device_id].stack.size() > 0) {  // target view exists.
     const auto& entry = mouse_targets_[device_id].stack[0];
 
-    escher::ray4 screen_ray =
-        CreateScreenPerpendicularRay(pointer_x, pointer_y);
-    escher::vec2 hit =
-        TransformPointerEvent(screen_ray, entry.global_transform);
+    escher::ray4 screen_ray = CreateScreenPerpendicularRay(pointer_x, pointer_y);
+    escher::vec2 hit = TransformPointerEvent(screen_ray, entry.global_transform);
 
     auto clone = ClonePointerWithCoords(command.pointer_event, hit.x, hit.y);
     EnqueueEventToView(entry.view_id, std::move(clone));
@@ -489,8 +465,7 @@ void InputCommandDispatcher::DispatchMouseCommand(
 
   // Deal with unassociated MOVE events.
   if (pointer_phase == Phase::MOVE && mouse_targets_.count(device_id) == 0) {
-    GlobalId compositor_id(command_dispatcher_context()->session_id(),
-                           command.compositor_id);
+    GlobalId compositor_id(command_dispatcher_context()->session_id(), command.compositor_id);
     const std::vector<gfx::Hit> hits =
         PerformGlobalHitTest(gfx_system_, compositor_id, pointer_x, pointer_y);
     // Find top-hit target and send it this move event.
@@ -502,13 +477,11 @@ void InputCommandDispatcher::DispatchMouseCommand(
       if (gfx::ViewPtr view = hit.node->FindOwningView()) {
         view_id = view->global_id();
 
-        escher::ray4 screen_ray =
-            CreateScreenPerpendicularRay(pointer_x, pointer_y);
+        escher::ray4 screen_ray = CreateScreenPerpendicularRay(pointer_x, pointer_y);
         glm::mat4 global_transform = FindGlobalTransform(view);
         escher::vec2 hit = TransformPointerEvent(screen_ray, global_transform);
 
-        auto clone =
-            ClonePointerWithCoords(command.pointer_event, hit.x, hit.y);
+        auto clone = ClonePointerWithCoords(command.pointer_event, hit.x, hit.y);
         EnqueueEventToView(view_id, std::move(clone));
         break;  // Just need the first one.
       }
@@ -518,8 +491,7 @@ void InputCommandDispatcher::DispatchMouseCommand(
   }
 }
 
-void InputCommandDispatcher::DispatchCommand(
-    const SendKeyboardInputCmd command) {
+void InputCommandDispatcher::DispatchCommand(const SendKeyboardInputCmd command) {
   // Send keyboard events to the active focus via Text Sync.
   EnqueueEventToTextSync(focus_, command.keyboard_event);
 
@@ -530,12 +502,10 @@ void InputCommandDispatcher::DispatchCommand(
   }
 }
 
-void InputCommandDispatcher::DispatchCommand(
-    const SetHardKeyboardDeliveryCmd command) {
+void InputCommandDispatcher::DispatchCommand(const SetHardKeyboardDeliveryCmd command) {
   const SessionId session_id = command_dispatcher_context()->session_id();
   FXL_VLOG(2) << "Hard keyboard events, session_id=" << session_id
-              << ", delivery_request="
-              << (command.delivery_request ? "on" : "off");
+              << ", delivery_request=" << (command.delivery_request ? "on" : "off");
 
   if (command.delivery_request) {
     // Take this opportunity to remove dead sessions.
@@ -551,15 +521,13 @@ void InputCommandDispatcher::DispatchCommand(
   }
 }
 
-void InputCommandDispatcher::DispatchCommand(
-    const SetParallelDispatchCmd command) {
+void InputCommandDispatcher::DispatchCommand(const SetParallelDispatchCmd command) {
   FXL_LOG(INFO) << "Scenic: Parallel dispatch is turned "
                 << (command.parallel_dispatch ? "ON" : "OFF");
   parallel_dispatch_ = command.parallel_dispatch;
 }
 
-void InputCommandDispatcher::EnqueueEventToView(GlobalId view_id,
-                                                FocusEvent focus) {
+void InputCommandDispatcher::EnqueueEventToView(GlobalId view_id, FocusEvent focus) {
   if (gfx::Session* session = gfx_system_->GetSession(view_id.session_id)) {
     InputEvent event;
     event.set_focus(std::move(focus));
@@ -568,12 +536,10 @@ void InputCommandDispatcher::EnqueueEventToView(GlobalId view_id,
   }
 }
 
-void InputCommandDispatcher::EnqueueEventToView(GlobalId view_id,
-                                                PointerEvent pointer) {
+void InputCommandDispatcher::EnqueueEventToView(GlobalId view_id, PointerEvent pointer) {
   TRACE_DURATION("input", "dispatch_event_to_client", "event_type", "pointer");
   if (gfx::Session* session = gfx_system_->GetSession(view_id.session_id)) {
-    trace_flow_id_t trace_id =
-        PointerTraceHACK(pointer.radius_major, pointer.radius_minor);
+    trace_flow_id_t trace_id = PointerTraceHACK(pointer.radius_major, pointer.radius_minor);
     TRACE_FLOW_BEGIN("input", "dispatch_event_to_client", trace_id);
 
     InputEvent event;
@@ -583,8 +549,7 @@ void InputCommandDispatcher::EnqueueEventToView(GlobalId view_id,
   }
 }
 
-void InputCommandDispatcher::EnqueueEventToView(GlobalId view_id,
-                                                KeyboardEvent keyboard) {
+void InputCommandDispatcher::EnqueueEventToView(GlobalId view_id, KeyboardEvent keyboard) {
   if (gfx::Session* session = gfx_system_->GetSession(view_id.session_id)) {
     InputEvent event;
     event.set_keyboard(std::move(keyboard));
@@ -593,8 +558,7 @@ void InputCommandDispatcher::EnqueueEventToView(GlobalId view_id,
   }
 }
 
-void InputCommandDispatcher::EnqueueEventToTextSync(GlobalId view_id,
-                                                    KeyboardEvent keyboard) {
+void InputCommandDispatcher::EnqueueEventToTextSync(GlobalId view_id, KeyboardEvent keyboard) {
   ImeServicePtr& text_sync = input_system_->text_sync_service();
   if (text_sync && text_sync.is_bound()) {
     InputEvent event;

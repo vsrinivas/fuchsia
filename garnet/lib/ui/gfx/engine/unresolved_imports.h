@@ -5,9 +5,9 @@
 #ifndef GARNET_LIB_UI_GFX_ENGINE_UNRESOLVED_IMPORTS_H_
 #define GARNET_LIB_UI_GFX_ENGINE_UNRESOLVED_IMPORTS_H_
 
-#include <unordered_map>
-
 #include <lib/async/cpp/wait.h>
+
+#include <unordered_map>
 
 #include "garnet/lib/ui/gfx/resources/import.h"
 
@@ -21,8 +21,7 @@ class UnresolvedImports {
 
   // Adds an entry for an unresolved import. |import_koid| must be the koid
   // for |import_token|.
-  void AddUnresolvedImport(Import* import, zx::eventpair import_token,
-                           zx_koid_t import_koid);
+  void AddUnresolvedImport(Import* import, zx::eventpair import_token, zx_koid_t import_koid);
 
   // Listen for the death of the corresponding export token and removes any
   // matching imports if that happens.
@@ -31,8 +30,7 @@ class UnresolvedImports {
   void ListenForTokenPeerDeath(Import* import);
 
   // Removes and returns all imports corresponding to |import_koid|.
-  std::vector<Import*> GetAndRemoveUnresolvedImportsForKoid(
-      zx_koid_t import_koid);
+  std::vector<Import*> GetAndRemoveUnresolvedImportsForKoid(zx_koid_t import_koid);
 
   // A callback that informs us when an import has been destroyed.
   void OnImportDestroyed(Import* import);
@@ -49,15 +47,13 @@ class UnresolvedImports {
     std::unique_ptr<async::Wait> token_peer_death_waiter;
   };
 
-  void OnTokenPeerDeath(zx_koid_t import_koid, zx_status_t status,
-                        const zx_packet_signal* signal);
+  void OnTokenPeerDeath(zx_koid_t import_koid, zx_status_t status, const zx_packet_signal* signal);
 
   std::vector<Import*> RemoveUnresolvedImportsForKoid(zx_koid_t import_koid);
 
   using ImportKoid = zx_koid_t;
   using ImportPtrsToImportEntries = std::unordered_map<Import*, ImportEntry>;
-  using KoidsToImportPtrs =
-      std::unordered_map<ImportKoid, std::vector<Import*>>;
+  using KoidsToImportPtrs = std::unordered_map<ImportKoid, std::vector<Import*>>;
 
   ImportPtrsToImportEntries imports_;
   KoidsToImportPtrs koids_to_import_ptrs_;

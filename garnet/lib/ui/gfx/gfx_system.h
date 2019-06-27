@@ -23,21 +23,16 @@ class GfxSystem : public TempSystemDelegate {
   static constexpr TypeId kTypeId = kGfx;
   static const char* kName;
 
-  explicit GfxSystem(SystemContext context,
-                     std::unique_ptr<DisplayManager> display_manager);
+  explicit GfxSystem(SystemContext context, std::unique_ptr<DisplayManager> display_manager);
   ~GfxSystem();
 
-  CommandDispatcherUniquePtr CreateCommandDispatcher(
-      CommandDispatcherContext context) override;
+  CommandDispatcherUniquePtr CreateCommandDispatcher(CommandDispatcherContext context) override;
 
   // TODO(SCN-452): Remove this when we externalize Displays.
-  void GetDisplayInfo(
-      fuchsia::ui::scenic::Scenic::GetDisplayInfoCallback callback) override;
-  void TakeScreenshot(
-      fuchsia::ui::scenic::Scenic::TakeScreenshotCallback callback) override;
+  void GetDisplayInfo(fuchsia::ui::scenic::Scenic::GetDisplayInfoCallback callback) override;
+  void TakeScreenshot(fuchsia::ui::scenic::Scenic::TakeScreenshotCallback callback) override;
   void GetDisplayOwnershipEvent(
-      fuchsia::ui::scenic::Scenic::GetDisplayOwnershipEventCallback callback)
-      override;
+      fuchsia::ui::scenic::Scenic::GetDisplayOwnershipEventCallback callback) override;
 
   // TODO(SCN-906): Break out Engine, instead of coupling it to GfxSystem.
   CompositorWeakPtr GetCompositor(GlobalId compositor_id) const;
@@ -59,28 +54,23 @@ class GfxSystem : public TempSystemDelegate {
   void Initialize();
 
   // TODO(SCN-452): Remove this when we externalize Displays.
-  void GetDisplayInfoImmediately(
-      fuchsia::ui::scenic::Scenic::GetDisplayInfoCallback callback);
+  void GetDisplayInfoImmediately(fuchsia::ui::scenic::Scenic::GetDisplayInfoCallback callback);
   void GetDisplayOwnershipEventImmediately(
       fuchsia::ui::scenic::Scenic::GetDisplayOwnershipEventCallback callback);
 
   // Redirect to instance method.
   static VkBool32 RedirectDebugReport(VkDebugReportFlagsEXT flags,
-                                      VkDebugReportObjectTypeEXT objectType,
-                                      uint64_t object, size_t location,
-                                      int32_t messageCode,
-                                      const char* pLayerPrefix,
-                                      const char* pMessage, void* pUserData) {
+                                      VkDebugReportObjectTypeEXT objectType, uint64_t object,
+                                      size_t location, int32_t messageCode,
+                                      const char* pLayerPrefix, const char* pMessage,
+                                      void* pUserData) {
     return reinterpret_cast<GfxSystem*>(pUserData)->HandleDebugReport(
-        flags, objectType, object, location, messageCode, pLayerPrefix,
-        pMessage);
+        flags, objectType, object, location, messageCode, pLayerPrefix, pMessage);
   }
 
-  VkBool32 HandleDebugReport(VkDebugReportFlagsEXT flags,
-                             VkDebugReportObjectTypeEXT objectType,
-                             uint64_t object, size_t location,
-                             int32_t messageCode, const char* pLayerPrefix,
-                             const char* pMessage);
+  VkBool32 HandleDebugReport(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objectType,
+                             uint64_t object, size_t location, int32_t messageCode,
+                             const char* pLayerPrefix, const char* pMessage);
 
   // TODO(SCN-452): Remove this when we externalize Displays.
   bool initialized_ = false;

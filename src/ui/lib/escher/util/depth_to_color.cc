@@ -38,8 +38,7 @@ namespace escher {
 DepthToColor::DepthToColor(EscherWeakPtr escher, ImageFactory* image_factory)
     : escher_(std::move(escher)), image_factory_(image_factory) {}
 
-TexturePtr DepthToColor::Convert(const FramePtr& frame,
-                                 const TexturePtr& depth_texture,
+TexturePtr DepthToColor::Convert(const FramePtr& frame, const TexturePtr& depth_texture,
                                  vk::ImageUsageFlags image_flags) {
   auto command_buffer = frame->command_buffer();
   uint32_t width = depth_texture->width();
@@ -53,12 +52,11 @@ TexturePtr DepthToColor::Convert(const FramePtr& frame,
   uint32_t work_groups_x = width / kSize + (width % kSize > 0 ? 1 : 0);
   uint32_t work_groups_y = height / kSize + (height % kSize > 0 ? 1 : 0);
 
-  ImagePtr tmp_image = image_factory_->NewImage(
-      {vk::Format::eR8G8B8A8Unorm, width, width, 1,
-       image_flags | vk::ImageUsageFlagBits::eStorage});
+  ImagePtr tmp_image = image_factory_->NewImage({vk::Format::eR8G8B8A8Unorm, width, width, 1,
+                                                 image_flags | vk::ImageUsageFlagBits::eStorage});
   TexturePtr tmp_texture =
-      Texture::New(escher_->resource_recycler(), tmp_image,
-                   vk::Filter::eNearest, vk::ImageAspectFlagBits::eColor, true);
+      Texture::New(escher_->resource_recycler(), tmp_image, vk::Filter::eNearest,
+                   vk::ImageAspectFlagBits::eColor, true);
   command_buffer->TransitionImageLayout(tmp_image, vk::ImageLayout::eUndefined,
                                         vk::ImageLayout::eGeneral);
 
@@ -71,8 +69,8 @@ TexturePtr DepthToColor::Convert(const FramePtr& frame,
         std::vector<vk::DescriptorType>{}, 0, g_kernel_src);
   }
 
-  kernel_->Dispatch({depth_texture, tmp_texture}, {}, command_buffer,
-                    work_groups_x, work_groups_y, 1, nullptr);
+  kernel_->Dispatch({depth_texture, tmp_texture}, {}, command_buffer, work_groups_x, work_groups_y,
+                    1, nullptr);
 
   frame->AddTimestamp("converted depth image to color image");
   return tmp_texture;

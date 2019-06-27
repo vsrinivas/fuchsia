@@ -44,73 +44,61 @@ namespace escher {
 // data, by ensuring that indices are reused when multiple triangles share the
 // same vertices.
 template <typename MeshT, typename PlaneT>
-auto IndexedTriangleMeshClip(MeshT input_mesh,
-                             const std::vector<PlaneT>& planes)
+auto IndexedTriangleMeshClip(MeshT input_mesh, const std::vector<PlaneT>& planes)
     -> std::pair<MeshT, std::vector<PlaneT>> {
-  return IndexedTriangleMeshClip<MeshT, PlaneT>(std::move(input_mesh),
-                                                planes.data(), planes.size());
+  return IndexedTriangleMeshClip<MeshT, PlaneT>(std::move(input_mesh), planes.data(),
+                                                planes.size());
 }
 
 // Helper functions that interpolate two attributes from a source mesh, and push
 // the interpolated value to a target mesh.
 template <typename AttrT>
 void IndexedTriangleMeshPushLerpedAttribute(std::vector<AttrT>* target,
-                                            std::vector<AttrT>* source_ptr,
-                                            size_t index1, size_t index2,
-                                            float interp_param) {
+                                            std::vector<AttrT>* source_ptr, size_t index1,
+                                            size_t index2, float interp_param) {
   auto& source = *source_ptr;
   target->push_back(Lerp(source[index1], source[index2], interp_param));
 }
 template <>
-inline void IndexedTriangleMeshPushLerpedAttribute(
-    std::vector<nullptr_t>* target, std::vector<nullptr_t>* source,
-    size_t index1, size_t index2, float interp_param) {}
+inline void IndexedTriangleMeshPushLerpedAttribute(std::vector<nullptr_t>* target,
+                                                   std::vector<nullptr_t>* source, size_t index1,
+                                                   size_t index2, float interp_param) {}
 template <typename MeshT>
-void IndexedTriangleMeshPushLerpedAttributes(MeshT* target, MeshT* source,
-                                             size_t index1, size_t index2,
-                                             float interp_param) {
-  IndexedTriangleMeshPushLerpedAttribute(&target->positions, &source->positions,
-                                         index1, index2, interp_param);
-  IndexedTriangleMeshPushLerpedAttribute(
-      &target->attributes1, &source->attributes1, index1, index2, interp_param);
-  IndexedTriangleMeshPushLerpedAttribute(
-      &target->attributes2, &source->attributes2, index1, index2, interp_param);
-  IndexedTriangleMeshPushLerpedAttribute(
-      &target->attributes3, &source->attributes3, index1, index2, interp_param);
+void IndexedTriangleMeshPushLerpedAttributes(MeshT* target, MeshT* source, size_t index1,
+                                             size_t index2, float interp_param) {
+  IndexedTriangleMeshPushLerpedAttribute(&target->positions, &source->positions, index1, index2,
+                                         interp_param);
+  IndexedTriangleMeshPushLerpedAttribute(&target->attributes1, &source->attributes1, index1, index2,
+                                         interp_param);
+  IndexedTriangleMeshPushLerpedAttribute(&target->attributes2, &source->attributes2, index1, index2,
+                                         interp_param);
+  IndexedTriangleMeshPushLerpedAttribute(&target->attributes3, &source->attributes3, index1, index2,
+                                         interp_param);
 }
 
 // Helper functions that copy an attribute from a source mesh, pushing it to
 // the back of a target mesh.
 template <typename AttrT>
-void IndexedTriangleMeshPushCopiedAttribute(std::vector<AttrT>* target,
-                                            std::vector<AttrT>* source,
+void IndexedTriangleMeshPushCopiedAttribute(std::vector<AttrT>* target, std::vector<AttrT>* source,
                                             size_t index) {
   target->push_back((*source)[index]);
 }
 template <>
-inline void IndexedTriangleMeshPushCopiedAttribute(
-    std::vector<nullptr_t>* target, std::vector<nullptr_t>* source,
-    size_t index) {}
+inline void IndexedTriangleMeshPushCopiedAttribute(std::vector<nullptr_t>* target,
+                                                   std::vector<nullptr_t>* source, size_t index) {}
 template <typename MeshT>
-void IndexedTriangleMeshPushCopiedAttributes(MeshT* target, MeshT* source,
-                                             size_t index) {
-  IndexedTriangleMeshPushCopiedAttribute(&target->positions, &source->positions,
-                                         index);
-  IndexedTriangleMeshPushCopiedAttribute(&target->attributes1,
-                                         &source->attributes1, index);
-  IndexedTriangleMeshPushCopiedAttribute(&target->attributes2,
-                                         &source->attributes2, index);
-  IndexedTriangleMeshPushCopiedAttribute(&target->attributes3,
-                                         &source->attributes3, index);
+void IndexedTriangleMeshPushCopiedAttributes(MeshT* target, MeshT* source, size_t index) {
+  IndexedTriangleMeshPushCopiedAttribute(&target->positions, &source->positions, index);
+  IndexedTriangleMeshPushCopiedAttribute(&target->attributes1, &source->attributes1, index);
+  IndexedTriangleMeshPushCopiedAttribute(&target->attributes2, &source->attributes2, index);
+  IndexedTriangleMeshPushCopiedAttribute(&target->attributes3, &source->attributes3, index);
 }
 
 template <typename MeshT, typename PlaneT>
-auto IndexedTriangleMeshClip(MeshT input_mesh, const PlaneT* planes,
-                             size_t num_planes)
+auto IndexedTriangleMeshClip(MeshT input_mesh, const PlaneT* planes, size_t num_planes)
     -> std::pair<MeshT, std::vector<PlaneT>> {
-  TRACE_DURATION("gfx", "escher::IndexedTriangleMeshClip", "triangles",
-                 input_mesh.triangle_count(), "vertices",
-                 input_mesh.vertex_count(), "num_planes", num_planes);
+  TRACE_DURATION("gfx", "escher::IndexedTriangleMeshClip", "triangles", input_mesh.triangle_count(),
+                 "vertices", input_mesh.vertex_count(), "num_planes", num_planes);
   FXL_DCHECK(input_mesh.IsValid());
   using Edge = typename MeshT::EdgeType;
   using Index = typename MeshT::IndexType;
@@ -136,8 +124,7 @@ auto IndexedTriangleMeshClip(MeshT input_mesh, const PlaneT* planes,
   std::unordered_map<Edge, Index, PairHasher> new_edge_vertex_indices;
 
   for (size_t plane_index = 0; plane_index < num_planes; ++plane_index) {
-    TRACE_DURATION("gfx", "escher::IndexedTriangleMeshClip[loop]",
-                   "plane_index", plane_index);
+    TRACE_DURATION("gfx", "escher::IndexedTriangleMeshClip[loop]", "plane_index", plane_index);
     auto& plane = planes[plane_index];
 
     // If the plane from the previous pass clipped any vertices, then the output
@@ -188,9 +175,8 @@ auto IndexedTriangleMeshClip(MeshT input_mesh, const PlaneT* planes,
     // output mesh, and map the input index to the new highest index of the
     // output mesh.  When the same input index is seen again, the corresponding
     // output index is returned.
-    auto remapped_index_for_unclipped_vertex =
-        [&reordered_indices, &input_mesh,
-         &output_mesh](Index original_index) -> Index {
+    auto remapped_index_for_unclipped_vertex = [&reordered_indices, &input_mesh,
+                                                &output_mesh](Index original_index) -> Index {
       auto it = reordered_indices.find(original_index);
       if (it != reordered_indices.end()) {
         // The input vertex was already seen, so return the index of the
@@ -202,8 +188,7 @@ auto IndexedTriangleMeshClip(MeshT input_mesh, const PlaneT* planes,
       // - map the input index to the corresponding index of the output mesh
       Index new_index = output_mesh.positions.size();
       FXL_DCHECK(original_index < input_mesh.vertex_count());
-      IndexedTriangleMeshPushCopiedAttributes(&output_mesh, &input_mesh,
-                                              original_index);
+      IndexedTriangleMeshPushCopiedAttributes(&output_mesh, &input_mesh, original_index);
       reordered_indices.insert(it, {original_index, new_index});
       return new_index;
     };
@@ -218,8 +203,7 @@ auto IndexedTriangleMeshClip(MeshT input_mesh, const PlaneT* planes,
     // we establish a mapping from this edge to the index of the newly-generated
     // vertex; when the same edge is seen in a subsequent triangle, we simply
     // return the index instead of generating a new interpolated vertex.
-    auto get_index_for_split_edge_vertex = [&new_edge_vertex_indices, &plane,
-                                            &input_mesh,
+    auto get_index_for_split_edge_vertex = [&new_edge_vertex_indices, &plane, &input_mesh,
                                             &output_mesh](Edge edge) -> Index {
       // Use canonical sorting of edge indices so that the split-vertex can be
       // found regardless of the orientation of the edge.
@@ -237,8 +221,7 @@ auto IndexedTriangleMeshClip(MeshT input_mesh, const PlaneT* planes,
       // This edge has not previously been encountered, so we generate a new
       // vertex at the point of intersection with the plane.
       const Position edge_origin = input_mesh.positions[edge.first];
-      const Position edge_vector =
-          input_mesh.positions[edge.second] - edge_origin;
+      const Position edge_vector = input_mesh.positions[edge.second] - edge_origin;
       float t = IntersectLinePlane(edge_origin, edge_vector, plane);
       if (t == FLT_MAX) {
         // Since |get_index_for_split_edge_vertex| is only called when one of
@@ -251,8 +234,8 @@ auto IndexedTriangleMeshClip(MeshT input_mesh, const PlaneT* planes,
         t = 0.5f;
       }
       const Index new_index = output_mesh.vertex_count();
-      IndexedTriangleMeshPushLerpedAttributes(&output_mesh, &input_mesh,
-                                              edge.first, edge.second, t);
+      IndexedTriangleMeshPushLerpedAttributes(&output_mesh, &input_mesh, edge.first, edge.second,
+                                              t);
 
       // Cache the index in case a subsequent triangle shares the same edge.
       new_edge_vertex_indices.insert(it, {edge, new_index});
@@ -273,19 +256,15 @@ auto IndexedTriangleMeshClip(MeshT input_mesh, const PlaneT* planes,
       const bool v0_clipped = clipped_vertices.Get(tri[0]);
       const bool v1_clipped = clipped_vertices.Get(tri[1]);
       const bool v2_clipped = clipped_vertices.Get(tri[2]);
-      const int clipped_count =
-          (v0_clipped ? 1 : 0) + (v1_clipped ? 1 : 0) + (v2_clipped ? 1 : 0);
+      const int clipped_count = (v0_clipped ? 1 : 0) + (v1_clipped ? 1 : 0) + (v2_clipped ? 1 : 0);
       switch (clipped_count) {
         case 0: {
           // This triangle is completely unclipped.  All vertices are copied
           // directly to the output mesh (albeit with possibly-remapped
           // indices).
-          output_mesh.indices.push_back(
-              remapped_index_for_unclipped_vertex(tri[0]));
-          output_mesh.indices.push_back(
-              remapped_index_for_unclipped_vertex(tri[1]));
-          output_mesh.indices.push_back(
-              remapped_index_for_unclipped_vertex(tri[2]));
+          output_mesh.indices.push_back(remapped_index_for_unclipped_vertex(tri[0]));
+          output_mesh.indices.push_back(remapped_index_for_unclipped_vertex(tri[1]));
+          output_mesh.indices.push_back(remapped_index_for_unclipped_vertex(tri[2]));
         } break;
         case 1: {
           // A single vertex was clipped from the triangle, resulting in a
@@ -299,10 +278,10 @@ auto IndexedTriangleMeshClip(MeshT input_mesh, const PlaneT* planes,
           // two vertices in the next triangle (some more work will be required
           // to determine the triangle's final vertex: there are two ways we can
           // split the quad).
-          Index edge_index_1 = get_index_for_split_edge_vertex(
-              {tri[clipped_tip], tri[(clipped_tip + 2) % 3]});
-          Index edge_index_2 = get_index_for_split_edge_vertex(
-              {tri[clipped_tip], tri[(clipped_tip + 1) % 3]});
+          Index edge_index_1 =
+              get_index_for_split_edge_vertex({tri[clipped_tip], tri[(clipped_tip + 2) % 3]});
+          Index edge_index_2 =
+              get_index_for_split_edge_vertex({tri[clipped_tip], tri[(clipped_tip + 1) % 3]});
           output_mesh.indices.push_back(edge_index_1);
           output_mesh.indices.push_back(edge_index_2);
 
@@ -310,37 +289,33 @@ auto IndexedTriangleMeshClip(MeshT input_mesh, const PlaneT* planes,
           // decide which diagonal to use to split the quad.  We pick the
           // shorter diagonal, with the intention of minimizing long, skinny
           // triangles.
-          Position vector_from_edge_index_1 =
-              input_mesh.positions[tri[(clipped_tip + 1) % 3]] -
-              output_mesh.positions[edge_index_1];
-          Position vector_from_edge_index_2 =
-              input_mesh.positions[tri[(clipped_tip + 2) % 3]] -
-              output_mesh.positions[edge_index_2];
+          Position vector_from_edge_index_1 = input_mesh.positions[tri[(clipped_tip + 1) % 3]] -
+                                              output_mesh.positions[edge_index_1];
+          Position vector_from_edge_index_2 = input_mesh.positions[tri[(clipped_tip + 2) % 3]] -
+                                              output_mesh.positions[edge_index_2];
 
           if (glm::dot(vector_from_edge_index_1, vector_from_edge_index_1) <
               glm::dot(vector_from_edge_index_2, vector_from_edge_index_2)) {
             // The quad-diagonal originating from edge_index_1 is the shorter of
             // the two, so split quad along that diagonal.
-            Index diagonal_index =
-                remapped_index_for_unclipped_vertex(tri[(clipped_tip + 1) % 3]);
+            Index diagonal_index = remapped_index_for_unclipped_vertex(tri[(clipped_tip + 1) % 3]);
             output_mesh.indices.push_back(diagonal_index);
 
             // Now we also know the indices for the other triangle.
             output_mesh.indices.push_back(edge_index_1);
             output_mesh.indices.push_back(diagonal_index);
-            output_mesh.indices.push_back(remapped_index_for_unclipped_vertex(
-                tri[(clipped_tip + 2) % 3]));
+            output_mesh.indices.push_back(
+                remapped_index_for_unclipped_vertex(tri[(clipped_tip + 2) % 3]));
           } else {
             // Split along the diagonal originating from edge_index_2.  This is
             // the shorter of the two diagonals, see above.
-            Index diagonal_index =
-                remapped_index_for_unclipped_vertex(tri[(clipped_tip + 2) % 3]);
+            Index diagonal_index = remapped_index_for_unclipped_vertex(tri[(clipped_tip + 2) % 3]);
             output_mesh.indices.push_back(diagonal_index);
 
             // Now we also know the indices for the other triangle.
             output_mesh.indices.push_back(edge_index_2);
-            output_mesh.indices.push_back(remapped_index_for_unclipped_vertex(
-                tri[(clipped_tip + 1) % 3]));
+            output_mesh.indices.push_back(
+                remapped_index_for_unclipped_vertex(tri[(clipped_tip + 1) % 3]));
             output_mesh.indices.push_back(diagonal_index);
           }
         } break;
@@ -356,12 +331,11 @@ auto IndexedTriangleMeshClip(MeshT input_mesh, const PlaneT* planes,
           // Determine which of the triangle vertices is the unclipped tip.
           Index unclipped_tip = v0_clipped ? (v1_clipped ? 2 : 1) : 0;
 
+          output_mesh.indices.push_back(remapped_index_for_unclipped_vertex(tri[unclipped_tip]));
           output_mesh.indices.push_back(
-              remapped_index_for_unclipped_vertex(tri[unclipped_tip]));
-          output_mesh.indices.push_back(get_index_for_split_edge_vertex(
-              {tri[unclipped_tip], tri[(unclipped_tip + 1) % 3]}));
-          output_mesh.indices.push_back(get_index_for_split_edge_vertex(
-              {tri[unclipped_tip], tri[(unclipped_tip + 2) % 3]}));
+              get_index_for_split_edge_vertex({tri[unclipped_tip], tri[(unclipped_tip + 1) % 3]}));
+          output_mesh.indices.push_back(
+              get_index_for_split_edge_vertex({tri[unclipped_tip], tri[(unclipped_tip + 2) % 3]}));
         } break;
         default:
           // This triangle is completely clipped; move on to the next

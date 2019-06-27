@@ -29,13 +29,11 @@ ImageGridView::ImageGridView(scenic::ViewContext view_context)
     : BaseView(std::move(view_context), "Image Grid Benchmark (cpp)"),
       background_node_(session()),
       cards_parent_node_(session()),
-      spring_(0.0 /* initial value */, 10.0 /* tension */,
-              50.0 /* friction */) {}
+      spring_(0.0 /* initial value */, 10.0 /* tension */, 50.0 /* friction */) {}
 
 ImageGridView::~ImageGridView() {}
 
-void ImageGridView::OnSceneInvalidated(
-    fuchsia::images::PresentationInfo presentation_info) {
+void ImageGridView::OnSceneInvalidated(fuchsia::images::PresentationInfo presentation_info) {
   if (!has_logical_size()) {
     return;
   }
@@ -66,12 +64,11 @@ void ImageGridView::CreateScene() {
   background_node_.SetMaterial(background_material);
   root_node().AddChild(background_node_);
 
-  scenic::Rectangle background_shape(session(), logical_size().x,
-                                     logical_size().y);
+  scenic::Rectangle background_shape(session(), logical_size().x, logical_size().y);
   background_node_.SetShape(background_shape);
 
-  background_node_.SetTranslation(
-      logical_size().x * .5f, logical_size().y * .5f, -kBackgroundElevation);
+  background_node_.SetTranslation(logical_size().x * .5f, logical_size().y * .5f,
+                                  -kBackgroundElevation);
 
   root_node().AddChild(cards_parent_node_);
 
@@ -93,9 +90,8 @@ void ImageGridView::CreateScene() {
       card_node.SetMaterial(card_material);
       cards_parent_node_.AddChild(card_node);
 
-      scenic::RoundedRectangle card_shape(session(), card_width, card_height,
-                                          kCardCornerRadius, kCardCornerRadius,
-                                          kCardCornerRadius, kCardCornerRadius);
+      scenic::RoundedRectangle card_shape(session(), card_width, card_height, kCardCornerRadius,
+                                          kCardCornerRadius, kCardCornerRadius, kCardCornerRadius);
       card_node.SetShape(card_shape);
       card_node.SetTranslation((float[]){center_x, center_y, -kCardElevation});
 
@@ -113,8 +109,7 @@ void ImageGridView::UpdateScene(uint64_t presentation_time) {
     start_time_ = presentation_time;
     last_update_time_ = presentation_time;
   }
-  spring_.ElapseTime((presentation_time - last_update_time_) *
-                     kSecondsPerNanosecond);
+  spring_.ElapseTime((presentation_time - last_update_time_) * kSecondsPerNanosecond);
   last_update_time_ = presentation_time;
   x_offset_ = -spring_.GetValue();
 

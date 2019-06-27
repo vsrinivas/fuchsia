@@ -23,11 +23,10 @@ namespace impl {
 // only eHostVisible is used.  Not thread-safe.
 class UniformBufferPool : public ResourceManager {
  public:
-  UniformBufferPool(
-      EscherWeakPtr escher, size_t ring_size,
-      // If no allocator is provided, Escher's default allocator will be used.
-      GpuAllocator* allocator = nullptr,
-      vk::MemoryPropertyFlags additional_flags = vk::MemoryPropertyFlags());
+  UniformBufferPool(EscherWeakPtr escher, size_t ring_size,
+                    // If no allocator is provided, Escher's default allocator will be used.
+                    GpuAllocator* allocator = nullptr,
+                    vk::MemoryPropertyFlags additional_flags = vk::MemoryPropertyFlags());
   ~UniformBufferPool();
 
   UniformBufferPoolWeakPtr GetWeakPtr() { return weak_factory_.GetWeakPtr(); }

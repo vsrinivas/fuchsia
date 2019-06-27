@@ -51,8 +51,7 @@ void UniformBufferPool::InternalAllocate() {
   }
 
   // Determine the memory requirements for a single buffer.
-  vk::MemoryRequirements reqs =
-      vk_device().getBufferMemoryRequirements(new_buffers[0]);
+  vk::MemoryRequirements reqs = vk_device().getBufferMemoryRequirements(new_buffers[0]);
   // If necessary, we can write the logic to deal with the conditions below.
   FXL_CHECK(buffer_size_ == reqs.size);
   FXL_CHECK(buffer_size_ % reqs.alignment == 0);
@@ -79,8 +78,7 @@ void UniformBufferPool::InternalAllocate() {
     // Workaround for dealing with RefPtr/Reffable Adopt() semantics.  Let the
     // RefPtr go out of scope immediately; the Buffer will be added to
     // free_buffers_ via OnReceiveOwnable().
-    fxl::MakeRefCounted<impl::NaiveBuffer>(this, std::move(mem),
-                                           new_buffers[i]);
+    fxl::MakeRefCounted<impl::NaiveBuffer>(this, std::move(mem), new_buffers[i]);
   }
 
   is_allocating_ = false;

@@ -49,23 +49,21 @@ App::App(async::Loop* loop, AppType type)
     launch_info.err = sys::CloneFileDescriptor(STDERR_FILENO);
     launch_info.url = "fuchsia-pkg://fuchsia.com/embedder#meta/subview.cmx";
     launch_info.directory_request = subview_services.NewRequest();
-    startup_context_->launcher()->CreateComponent(
-        std::move(launch_info), s_subview_controller.NewRequest());
+    startup_context_->launcher()->CreateComponent(std::move(launch_info),
+                                                  s_subview_controller.NewRequest());
 
-    subview_services.ConnectToService(view_provider_.NewRequest(),
-                                      "view_provider");
+    subview_services.ConnectToService(view_provider_.NewRequest(), "view_provider");
   } else if (type_ == AppType::SUBVIEW) {
     view_provider_impl_ = std::make_unique<ExampleViewProviderService>(
         startup_context_.get(), [this](ViewContext context) {
           // Bind the ServiceProviders, ourselves as the ourgoing one.
           incoming_services_.Bind(std::move(context.incoming_services));
-          service_bindings_.AddBinding(this,
-                                       std::move(context.outgoing_services));
+          service_bindings_.AddBinding(this, std::move(context.outgoing_services));
 
           // Create the View resource.
           view_id_ = session_->AllocResourceId();
-          session_->Enqueue(scenic::NewCreateViewCmd(
-              view_id_, std::move(context.token), "Subview"));
+          session_->Enqueue(
+              scenic::NewCreateViewCmd(view_id_, std::move(context.token), "Subview"));
 
           if (root_node_id_ != 0) {
             session_->Enqueue(scenic::NewAddChildCmd(view_id_, root_node_id_));
@@ -75,11 +73,9 @@ App::App(async::Loop* loop, AppType type)
 
   // Connect to the global Scenic service and begin a session.
   FXL_LOG(INFO) << AppTypeString(type_) << "Connecting to Scenic service.";
-  scenic_ = startup_context_
-                ->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
+  scenic_ = startup_context_->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
   scenic_.set_error_handler([this](zx_status_t status) {
-    FXL_LOG(INFO) << AppTypeString(type_)
-                  << "Scenic error.  Connection dropped.";
+    FXL_LOG(INFO) << AppTypeString(type_) << "Scenic error.  Connection dropped.";
     ReleaseSessionResources();
     loop_->Quit();
   });
@@ -87,8 +83,7 @@ App::App(async::Loop* loop, AppType type)
   session_ = std::make_unique<scenic::Session>(scenic_.get());
   session_->SetDebugName("Embedder");
   session_->set_error_handler([this](zx_status_t status) {
-    FXL_LOG(INFO) << AppTypeString(type_)
-                  << "Session error.  Connection dropped.";
+    FXL_LOG(INFO) << AppTypeString(type_) << "Session error.  Connection dropped.";
     ReleaseSessionResources();
     loop_->Quit();
   });
@@ -100,14 +95,13 @@ App::App(async::Loop* loop, AppType type)
     FXL_LOG(INFO) << AppTypeString(type_) << "Creating view.";
     fuchsia::sys::ServiceProviderPtr outgoing_services;
     outgoing_services.Bind(service_bindings_.AddBinding(this));
-    view_provider_->CreateView(std::move(view_token.value),
-                               incoming_services_.NewRequest(),
+    view_provider_->CreateView(std::move(view_token.value), incoming_services_.NewRequest(),
                                std::move(outgoing_services));
 
     // Create the ViewHolder resource that will proxy the view.
     view_id_ = session_->AllocResourceId();
-    session_->Enqueue(scenic::NewCreateViewHolderCmd(
-        view_id_, std::move(view_holder_token), "Subview-Holder"));
+    session_->Enqueue(
+        scenic::NewCreateViewHolderCmd(view_id_, std::move(view_holder_token), "Subview-Holder"));
   }
 
   // Close the session and quit after several seconds.
@@ -146,10 +140,9 @@ void App::ReleaseSessionResources() {
 }
 
 void App::Update(uint64_t next_presentation_time) {
-  session_->Present(
-      next_presentation_time, [this](fuchsia::images::PresentationInfo info) {
-        Update(info.presentation_time + info.presentation_interval);
-      });
+  session_->Present(next_presentation_time, [this](fuchsia::images::PresentationInfo info) {
+    Update(info.presentation_time + info.presentation_interval);
+  });
 }
 
 void App::CreateScene(float display_width, float display_height) {
@@ -187,14 +180,12 @@ void App::CreateScene(float display_width, float display_height) {
     scene.AddChild(root_node_id_);
   }
 
-  static const float kBackgroundMargin =
-      (type_ == AppType::CONTAINER) ? 100.f : 250.f;
+  static const float kBackgroundMargin = (type_ == AppType::CONTAINER) ? 100.f : 250.f;
   static const float background_width = display_width - 2.f * kBackgroundMargin;
-  static const float background_height =
-      display_height - 2.f * kBackgroundMargin;
+  static const float background_height = display_height - 2.f * kBackgroundMargin;
   scenic::ShapeNode background_node(session_ptr);
-  scenic::RoundedRectangle background_shape(
-      session_ptr, background_width, background_height, 20.f, 20.f, 80.f, 10.f);
+  scenic::RoundedRectangle background_shape(session_ptr, background_width, background_height, 20.f,
+                                            20.f, 80.f, 10.f);
   scenic::Material background_material(session_ptr);
   if (type_ == AppType::CONTAINER) {
     background_material.SetColor(120, 255, 120, 255);
@@ -206,8 +197,7 @@ void App::CreateScene(float display_width, float display_height) {
   root_node.SetClip(0, true);
   if (type_ == AppType::CONTAINER) {
     root_node.SetTranslation(kBackgroundMargin + background_width * 0.5f,
-                             kBackgroundMargin + background_height * 0.5f,
-                             -1.f);
+                             kBackgroundMargin + background_height * 0.5f, -1.f);
   } else {
     root_node.SetTranslation(0.f, 0.f, -1.f);
   }

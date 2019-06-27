@@ -21,13 +21,10 @@ enum class OwnableTypes {
 
 typedef escher::TypeInfo<OwnableTypes> OwnableTypeInfo;
 
-class OwnableBaseClassForTest
-    : public escher::Ownable<OwnableBaseClassForTest, OwnableTypeInfo> {
+class OwnableBaseClassForTest : public escher::Ownable<OwnableBaseClassForTest, OwnableTypeInfo> {
  public:
   static const TypeInfo kTypeInfo;
-  const TypeInfo& type_info() const override {
-    return OwnableBaseClassForTest::kTypeInfo;
-  }
+  const TypeInfo& type_info() const override { return OwnableBaseClassForTest::kTypeInfo; }
 };
 
 class Ownable1 : public OwnableBaseClassForTest {
@@ -35,8 +32,7 @@ class Ownable1 : public OwnableBaseClassForTest {
   static const TypeInfo kTypeInfo;
   const TypeInfo& type_info() const override { return Ownable1::kTypeInfo; }
 
-  explicit Ownable1(size_t& destroyed_count)
-      : destroyed_count_(destroyed_count) {}
+  explicit Ownable1(size_t& destroyed_count) : destroyed_count_(destroyed_count) {}
 
   ~Ownable1() override { ++destroyed_count_; }
 
@@ -64,26 +60,20 @@ class SubOwnable2 : public Ownable2 {
   const TypeInfo& type_info() const override { return SubOwnable2::kTypeInfo; }
 };
 
-const OwnableTypeInfo OwnableBaseClassForTest::kTypeInfo(
-    "OwnableBaseClassForTest", OwnableTypes::kOwnableBaseClassForTest);
-const OwnableTypeInfo Ownable1::kTypeInfo(
-    "Ownable1", OwnableTypes::kOwnableBaseClassForTest,
-    OwnableTypes::kOwnable1);
-const OwnableTypeInfo Ownable2::kTypeInfo(
-    "Ownable2", OwnableTypes::kOwnableBaseClassForTest,
-    OwnableTypes::kOwnable2);
-const OwnableTypeInfo SubOwnable1::kTypeInfo(
-    "SubOwnable1", OwnableTypes::kOwnableBaseClassForTest,
-    OwnableTypes::kOwnable1, OwnableTypes::kSubOwnable1);
-const OwnableTypeInfo SubOwnable2::kTypeInfo(
-    "SubOwnable2", OwnableTypes::kOwnableBaseClassForTest,
-    OwnableTypes::kOwnable2, OwnableTypes::kSubOwnable2);
+const OwnableTypeInfo OwnableBaseClassForTest::kTypeInfo("OwnableBaseClassForTest",
+                                                         OwnableTypes::kOwnableBaseClassForTest);
+const OwnableTypeInfo Ownable1::kTypeInfo("Ownable1", OwnableTypes::kOwnableBaseClassForTest,
+                                          OwnableTypes::kOwnable1);
+const OwnableTypeInfo Ownable2::kTypeInfo("Ownable2", OwnableTypes::kOwnableBaseClassForTest,
+                                          OwnableTypes::kOwnable2);
+const OwnableTypeInfo SubOwnable1::kTypeInfo("SubOwnable1", OwnableTypes::kOwnableBaseClassForTest,
+                                             OwnableTypes::kOwnable1, OwnableTypes::kSubOwnable1);
+const OwnableTypeInfo SubOwnable2::kTypeInfo("SubOwnable2", OwnableTypes::kOwnableBaseClassForTest,
+                                             OwnableTypes::kOwnable2, OwnableTypes::kSubOwnable2);
 
-class TestOwner
-    : public escher::Owner<OwnableBaseClassForTest, OwnableTypeInfo> {
+class TestOwner : public escher::Owner<OwnableBaseClassForTest, OwnableTypeInfo> {
  public:
-  explicit TestOwner(size_t& destroyed_count)
-      : destroyed_count_(destroyed_count) {}
+  explicit TestOwner(size_t& destroyed_count) : destroyed_count_(destroyed_count) {}
 
   fxl::RefPtr<Ownable1> NewOwnable1() {
     auto result = escher::Make<Ownable1>(destroyed_count_);
@@ -92,11 +82,9 @@ class TestOwner
     return result;
   }
 
-  void OnReceiveOwnable(
-      std::unique_ptr<OwnableBaseClassForTest> unreffed) override {
+  void OnReceiveOwnable(std::unique_ptr<OwnableBaseClassForTest> unreffed) override {
     EXPECT_EQ(0U, unreffed->ref_count());
-    unreffed_.push_back(
-        fxl::RefPtr<OwnableBaseClassForTest>(unreffed.release()));
+    unreffed_.push_back(fxl::RefPtr<OwnableBaseClassForTest>(unreffed.release()));
   }
 
   size_t GetUnreffedCount() const { return unreffed_.size(); }

@@ -19,8 +19,7 @@ struct RenderQueueContext;
 // into a Vulkan command buffer.
 struct RenderQueueItem {
   static constexpr uint8_t kNumRenderQueueFuncChoiceBits = 1U;
-  static constexpr size_t kNumRenderQueueFuncs =
-      1U << kNumRenderQueueFuncChoiceBits;
+  static constexpr size_t kNumRenderQueueFuncs = 1U << kNumRenderQueueFuncChoiceBits;
 
   // Render callback that knows how to interpret the |object_data| and
   // |instance_data| fields of a RenderQueueItem.  The number of instances to be
@@ -30,10 +29,8 @@ struct RenderQueueItem {
   //     "items[i].instance_data".
   //   - each of the items "items[0]" to "items[instance_count - 1]" are
   //     guaranteed to have the same |object_data| and |render| function.
-  typedef void (*Func)(CommandBuffer* cmd_buf,
-                       const RenderQueueContext* context,
-                       const RenderQueueItem* instances,
-                       uint32_t instance_count);
+  typedef void (*Func)(CommandBuffer* cmd_buf, const RenderQueueContext* context,
+                       const RenderQueueItem* instances, uint32_t instance_count);
   using Funcs = std::array<Func, kNumRenderQueueFuncs>;
 
   uint64_t sort_key;

@@ -56,8 +56,7 @@ void ForEachChildAndImportFrontToBack(const Node& node, const Callable& func) {
 }
 
 template <typename Callable>
-void ForEachDirectDescendantFrontToBack(const Node& node,
-                                        const Callable& func) {
+void ForEachDirectDescendantFrontToBack(const Node& node, const Callable& func) {
   ForEachChildAndImportFrontToBack(node, func);
   ForEachPartFrontToBack(node, func);
 }
@@ -99,8 +98,7 @@ bool ForEachImportFrontToBackUntilTrue(const Node& node, const Callable& func) {
 }
 
 template <typename Callable>
-bool ForEachChildAndImportFrontToBackUntilTrue(const Node& node,
-                                               const Callable& func) {
+bool ForEachChildAndImportFrontToBackUntilTrue(const Node& node, const Callable& func) {
   return ForEachChildFrontToBackUntilTrue(node, func) ||
          ForEachImportFrontToBackUntilTrue(node, func);
 }

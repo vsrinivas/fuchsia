@@ -30,15 +30,13 @@ App::App(async::Loop* loop)
       focused_(false) {
   FXL_DCHECK(startup_context_);
 
-  scenic_ = startup_context_
-                ->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
+  scenic_ = startup_context_->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
   scenic_.set_error_handler([this](zx_status_t status) { OnScenicError(); });
   FXL_LOG(INFO) << "DirectInput - scenic connection";
 
   session_ = std::make_unique<scenic::Session>(scenic_.get());
   session_->SetDebugName("Direct Input");
-  session_->set_error_handler(
-      [this](zx_status_t status) { this->OnSessionError(); });
+  session_->set_error_handler([this](zx_status_t status) { this->OnSessionError(); });
   session_->set_event_handler(fit::bind_member(this, &App::OnSessionEvents));
   FXL_LOG(INFO) << "DirectInput - session set up";
 
@@ -46,8 +44,7 @@ App::App(async::Loop* loop)
   FXL_LOG(INFO) << "DirectInput - compositor set up";
 
   input_reader_.Start();
-  startup_context_->outgoing().AddPublicService(
-      input_device_registry_bindings_.GetHandler(this));
+  startup_context_->outgoing().AddPublicService(input_device_registry_bindings_.GetHandler(this));
   FXL_LOG(INFO) << "DirectInput - input set up (Press ESC to quit).";
 
   scenic_->GetDisplayInfo([this](fuchsia::ui::gfx::DisplayInfo display_info) {
@@ -64,10 +61,9 @@ App::App(async::Loop* loop)
         "fuchsia-pkg://fuchsia.com/direct_input_child#meta/"
         "direct_input_child.cmx";
     launch_info.directory_request = child_services.NewRequest();
-    startup_context_->launcher()->CreateComponent(
-        std::move(launch_info), child_controller_.NewRequest());
-    child_services.ConnectToService(child_view_provider_.NewRequest(),
-                                    "view_provider");
+    startup_context_->launcher()->CreateComponent(std::move(launch_info),
+                                                  child_controller_.NewRequest());
+    child_services.ConnectToService(child_view_provider_.NewRequest(), "view_provider");
   }
 
   {
@@ -108,8 +104,7 @@ void App::CheckQuit(const fuchsia::ui::input::InputEvent& event) {
         key_event.phase == fuchsia::ui::input::KeyboardEventPhase::RELEASED) {
       FXL_LOG(INFO) << "DirectInput - shutting down.";
       child_controller_->Kill();
-      async::PostTask(message_loop_->dispatcher(),
-                      [this]() { OnSessionClose(); });
+      async::PostTask(message_loop_->dispatcher(), [this]() { OnSessionClose(); });
     }
   }
 }
@@ -220,8 +215,7 @@ void App::OnPointerEvent(const fuchsia::ui::input::PointerEvent& event) {
     if (focused_ && event.phase == Phase::DOWN) {
       // Nice to meet you. Add to known-fingers list.
       size_t idx = find_idx(pointer_id_, kNoFinger);
-      FXL_CHECK(idx != kNoFinger)
-          << "Pointer index full: " << contents(pointer_id_);
+      FXL_CHECK(idx != kNoFinger) << "Pointer index full: " << contents(pointer_id_);
       pointer_id_[idx] = event.pointer_id;
       view_->AddChild(*pointer_tracker_[idx]);
       pointer_tracker_[idx]->SetTranslation(event.x, event.y, -400.f);
@@ -245,15 +239,13 @@ void App::OnPointerEvent(const fuchsia::ui::input::PointerEvent& event) {
 }
 
 void App::UpdateScene(uint64_t next_presentation_time) {
-  session_->Present(
-      next_presentation_time, [this](fuchsia::images::PresentationInfo info) {
-        UpdateScene(info.presentation_time + 2 * info.presentation_interval);
-      });
+  session_->Present(next_presentation_time, [this](fuchsia::images::PresentationInfo info) {
+    UpdateScene(info.presentation_time + 2 * info.presentation_interval);
+  });
 }
 
 void App::CreateScene(float display_width, float display_height) {
-  FXL_LOG(INFO) << "DirectInput - display size: " << display_width << ", "
-                << display_height;
+  FXL_LOG(INFO) << "DirectInput - display size: " << display_width << ", " << display_height;
 
   const float kMargin = 100.f;
   const float kRootWidth = display_width - 2.f * kMargin;
@@ -298,8 +290,7 @@ void App::CreateScene(float display_width, float display_height) {
 
     root_node.SetLabel("root_node");
     root_node.SetClip(0, true);
-    root_node.SetTranslation(display_width * 0.5f, display_height * 0.5f,
-                             -kElevation);
+    root_node.SetTranslation(display_width * 0.5f, display_height * 0.5f, -kElevation);
 
     scenic::ShapeNode background(session);
     scenic::Rectangle shape(session, kRootWidth, kRootHeight);
@@ -317,11 +308,10 @@ void App::CreateScene(float display_width, float display_height) {
   {
     auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
-    view_holder_ = std::make_unique<scenic::ViewHolder>(
-        session, std::move(view_holder_token), "view_holder");
+    view_holder_ =
+        std::make_unique<scenic::ViewHolder>(session, std::move(view_holder_token), "view_holder");
     view_holder_->SetLabel("main view_holder");
-    view_ =
-        std::make_unique<scenic::View>(session, std::move(view_token), "view");
+    view_ = std::make_unique<scenic::View>(session, std::move(view_token), "view");
     view_->SetLabel("main view");
 
     root_node.Attach(*view_holder_);
@@ -349,8 +339,7 @@ void App::CreateScene(float display_width, float display_height) {
 
   // Create frame to trigger on focus to main node.
   {
-    std::unique_ptr<scenic::EntityNode> frame =
-        std::make_unique<scenic::EntityNode>(session);
+    std::unique_ptr<scenic::EntityNode> frame = std::make_unique<scenic::EntityNode>(session);
     frame->SetLabel("focus frame");
 
     const float kElevation = 30.f;  // Z height
@@ -421,8 +410,8 @@ void App::CreateScene(float display_width, float display_height) {
     FXL_CHECK(status == ZX_OK);
     child_view_provider_->CreateView(std::move(view), nullptr, nullptr);
 
-    child_view_holder_ = std::make_unique<scenic::ViewHolder>(
-        session, std::move(view_holder), "child view holder");
+    child_view_holder_ =
+        std::make_unique<scenic::ViewHolder>(session, std::move(view_holder), "child view holder");
     child_view_holder_->SetLabel("child_view_holder");
 
     root_node.Attach(*child_view_holder_);
@@ -430,14 +419,11 @@ void App::CreateScene(float display_width, float display_height) {
   }
 }
 
-void App::OnDeviceSensorEvent(uint32_t device_id,
-                              fuchsia::ui::input::InputReport event) {
-  FXL_VLOG(3) << "DirectInput - OnDeviceSensorEvent(device_id=" << device_id
-              << "): " << event;
+void App::OnDeviceSensorEvent(uint32_t device_id, fuchsia::ui::input::InputReport event) {
+  FXL_VLOG(3) << "DirectInput - OnDeviceSensorEvent(device_id=" << device_id << "): " << event;
 }
 
-void App::OnDeviceInputEvent(uint32_t compositor_id,
-                             fuchsia::ui::input::InputEvent event) {
+void App::OnDeviceInputEvent(uint32_t compositor_id, fuchsia::ui::input::InputEvent event) {
   FXL_VLOG(1) << "DirectInput - OnDeviceInputEvent: " << event;
 
   CheckQuit(event);
@@ -459,34 +445,32 @@ void App::OnDeviceInputEvent(uint32_t compositor_id,
   session_->Enqueue(std::move(command));
 }
 
-void App::RegisterDevice(fuchsia::ui::input::DeviceDescriptor descriptor,
-                         fidl::InterfaceRequest<fuchsia::ui::input::InputDevice>
-                             input_device_request) {
+void App::RegisterDevice(
+    fuchsia::ui::input::DeviceDescriptor descriptor,
+    fidl::InterfaceRequest<fuchsia::ui::input::InputDevice> input_device_request) {
   uint32_t device_id = ++next_device_token_;
 
-  FXL_VLOG(2) << "DirectInput - RegisterDevice: " << device_id << " "
-              << descriptor;
+  FXL_VLOG(2) << "DirectInput - RegisterDevice: " << device_id << " " << descriptor;
   std::unique_ptr<ui_input::InputDeviceImpl> input_device =
-      std::make_unique<ui_input::InputDeviceImpl>(
-          device_id, std::move(descriptor), std::move(input_device_request),
-          this);
+      std::make_unique<ui_input::InputDeviceImpl>(device_id, std::move(descriptor),
+                                                  std::move(input_device_request), this);
 
   std::unique_ptr<ui_input::DeviceState> state;
   if (input_device->descriptor()->sensor) {
-    ui_input::OnSensorEventCallback callback =
-        [this](uint32_t device_id, fuchsia::ui::input::InputReport event) {
-          OnDeviceSensorEvent(device_id, std::move(event));
-        };
-    state = std::make_unique<ui_input::DeviceState>(
-        input_device->id(), input_device->descriptor(), std::move(callback));
+    ui_input::OnSensorEventCallback callback = [this](uint32_t device_id,
+                                                      fuchsia::ui::input::InputReport event) {
+      OnDeviceSensorEvent(device_id, std::move(event));
+    };
+    state = std::make_unique<ui_input::DeviceState>(input_device->id(), input_device->descriptor(),
+                                                    std::move(callback));
   } else {
     uint32_t compositor_id = compositor_->id();  // Input destination.
-    ui_input::OnEventCallback callback =
-        [this, compositor_id](fuchsia::ui::input::InputEvent event) {
-          OnDeviceInputEvent(compositor_id, std::move(event));
-        };
-    state = std::make_unique<ui_input::DeviceState>(
-        input_device->id(), input_device->descriptor(), std::move(callback));
+    ui_input::OnEventCallback callback = [this,
+                                          compositor_id](fuchsia::ui::input::InputEvent event) {
+      OnDeviceInputEvent(compositor_id, std::move(event));
+    };
+    state = std::make_unique<ui_input::DeviceState>(input_device->id(), input_device->descriptor(),
+                                                    std::move(callback));
   }
 
   state->OnRegistered();

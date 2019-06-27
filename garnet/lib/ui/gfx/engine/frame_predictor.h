@@ -64,9 +64,8 @@ class FramePredictor {
   // |last_sync_time| The last known good sync time.
   // |sync_interval| The expected time between syncs.
   // |min_sync_time| The minimum time allowed to return.
-  static zx::time ComputeNextSyncTime(zx::time last_sync_time,
-                                       zx::duration sync_interval,
-                                       zx::time min_sync_time);
+  static zx::time ComputeNextSyncTime(zx::time last_sync_time, zx::duration sync_interval,
+                                      zx::time min_sync_time);
   // Returns a prediction for how long in total the next frame will take to
   // update and render.
   zx::duration PredictTotalRequiredDuration() const;
@@ -79,7 +78,7 @@ class FramePredictor {
   // Rarely, it is possible for abnormally long GPU contexts to occur, and
   // when they occur we do not want them to mess up future predictions by
   // too much. We therefore clamp RenderDurations by this much.
-  const zx::duration kMaxFrameTime = zx::usec(16'666); // 16.66ms
+  const zx::duration kMaxFrameTime = zx::usec(16'666);  // 16.66ms
 
   // Render time prediction.
   const size_t kRenderPredictionWindowSize = 3;

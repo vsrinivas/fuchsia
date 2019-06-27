@@ -48,9 +48,7 @@ class Renderer : public Resource {
 
   Camera* camera() const { return camera_.get(); }
 
-  ::fuchsia::ui::gfx::ShadowTechnique shadow_technique() const {
-    return shadow_technique_;
-  }
+  ::fuchsia::ui::gfx::ShadowTechnique shadow_technique() const { return shadow_technique_; }
 
   void set_enable_debugging(bool enable) { enable_debugging_ = enable; }
   bool enable_debugging() const { return enable_debugging_; }

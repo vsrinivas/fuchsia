@@ -18,8 +18,7 @@ void ScenicTest::SetUp() {
   if (app_context_.get() == nullptr) {
     app_context_ = sys::ComponentContext::Create();
   }
-  scenic_ = std::make_unique<Scenic>(app_context_.get(), inspect::Node(),
-                                     [this] { QuitLoop(); });
+  scenic_ = std::make_unique<Scenic>(app_context_.get(), inspect::Node(), [this] { QuitLoop(); });
   InitializeScenic(scenic_.get());
 }
 
@@ -35,15 +34,13 @@ void ScenicTest::InitializeScenic(Scenic* scenic) {}
 std::unique_ptr<::scenic::Session> ScenicTest::CreateSession() {
   fuchsia::ui::scenic::SessionPtr session_ptr;
   fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener_handle;
-  fidl::InterfaceRequest<fuchsia::ui::scenic::SessionListener>
-      listener_request = listener_handle.NewRequest();
+  fidl::InterfaceRequest<fuchsia::ui::scenic::SessionListener> listener_request =
+      listener_handle.NewRequest();
   scenic()->CreateSession(session_ptr.NewRequest(), std::move(listener_handle));
-  return std::make_unique<::scenic::Session>(std::move(session_ptr),
-                                             std::move(listener_request));
+  return std::make_unique<::scenic::Session>(std::move(session_ptr), std::move(listener_request));
 }
 
-void ScenicTest::ReportError(fxl::LogSeverity severity,
-                             std::string error_string) {
+void ScenicTest::ReportError(fxl::LogSeverity severity, std::string error_string) {
 // Typically, we don't want to log expected errors when running the tests.
 // However, it is useful to print these errors while writing the tests.
 #if 0

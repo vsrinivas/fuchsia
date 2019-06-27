@@ -47,9 +47,8 @@ class Device {
   virtual ~Device() = default;
   // This needs to be called to initialize the device.
   // Returns false if the report descriptor does not match the given device.
-  virtual bool ParseReportDescriptor(
-      const hid::ReportDescriptor& report_descriptor,
-      Descriptor* device_descriptor) = 0;
+  virtual bool ParseReportDescriptor(const hid::ReportDescriptor& report_descriptor,
+                                     Descriptor* device_descriptor) = 0;
 
   // This parses |data| which is the given raw report, into |report|.
   // Returns false if the report does not match the given device.

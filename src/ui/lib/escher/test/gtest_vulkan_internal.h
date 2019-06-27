@@ -32,28 +32,24 @@ TestFactoryBase* ConcreteTestFactoryFactory() {
 }  // namespace testing
 
 // Helper macro for defining tests.
-#define VK_GTEST_TEST_(test_case_name, test_name, parent_class, parent_id)    \
-  class GTEST_TEST_CLASS_NAME_(test_case_name, test_name)                     \
-      : public parent_class {                                                 \
-   public:                                                                    \
-    GTEST_TEST_CLASS_NAME_(test_case_name, test_name)() {}                    \
-                                                                              \
-   private:                                                                   \
-    virtual void TestBody();                                                  \
-    static ::testing::TestInfo* const test_info_ GTEST_ATTRIBUTE_UNUSED_;     \
-    GTEST_DISALLOW_COPY_AND_ASSIGN_(GTEST_TEST_CLASS_NAME_(test_case_name,    \
-                                                           test_name));       \
-  };                                                                          \
-                                                                              \
-  ::testing::TestInfo* const GTEST_TEST_CLASS_NAME_(test_case_name,           \
-                                                    test_name)::test_info_ =  \
-      ::testing::RegisterTest(                                                \
-          #test_case_name,                                                    \
-          ::testing::internal::escher::PrependDisabledIfNecessary(#test_name) \
-              .c_str(),                                                       \
-          nullptr, nullptr, __FILE__, __LINE__, []() -> parent_class* {       \
-            return new GTEST_TEST_CLASS_NAME_(test_case_name, test_name);     \
-          });                                                                 \
+#define VK_GTEST_TEST_(test_case_name, test_name, parent_class, parent_id)                      \
+  class GTEST_TEST_CLASS_NAME_(test_case_name, test_name) : public parent_class {               \
+   public:                                                                                      \
+    GTEST_TEST_CLASS_NAME_(test_case_name, test_name)() {}                                      \
+                                                                                                \
+   private:                                                                                     \
+    virtual void TestBody();                                                                    \
+    static ::testing::TestInfo* const test_info_ GTEST_ATTRIBUTE_UNUSED_;                       \
+    GTEST_DISALLOW_COPY_AND_ASSIGN_(GTEST_TEST_CLASS_NAME_(test_case_name, test_name));         \
+  };                                                                                            \
+                                                                                                \
+  ::testing::TestInfo* const GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::test_info_ =    \
+      ::testing::RegisterTest(                                                                  \
+          #test_case_name,                                                                      \
+          ::testing::internal::escher::PrependDisabledIfNecessary(#test_name).c_str(), nullptr, \
+          nullptr, __FILE__, __LINE__, []() -> parent_class* {                                  \
+            return new GTEST_TEST_CLASS_NAME_(test_case_name, test_name);                       \
+          });                                                                                   \
   void GTEST_TEST_CLASS_NAME_(test_case_name, test_name)::TestBody()
 
 #endif  // SRC_UI_LIB_ESCHER_TEST_GTEST_VULKAN_INTERNAL_H_

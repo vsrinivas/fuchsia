@@ -28,8 +28,7 @@ enum class ImportResolutionResult {
   kImportDestroyedBeforeBind    // Import was destroyed before binding could
                                 // occur.
 };
-using OnImportResolvedCallback =
-    fit::function<void(Resource*, ImportResolutionResult)>;
+using OnImportResolvedCallback = fit::function<void(Resource*, ImportResolutionResult)>;
 
 /// Acts as a placeholder for resources imported from other sessions. Once a
 /// binding between the import and the resource has been established, the

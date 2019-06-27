@@ -16,16 +16,13 @@ EventTimestamper::EventTimestamper(sys::ComponentContext* component_context)
       background_loop_(&kAsyncLoopConfigNoAttachToThread),
       task_([component_context] {
         auto profile_provider =
-            component_context->svc()
-                ->Connect<fuchsia::scheduler::ProfileProvider>();
+            component_context->svc()->Connect<fuchsia::scheduler::ProfileProvider>();
         profile_provider->GetProfile(
-            24 /* HIGH_PRIORITY in LK */,
-            "garnet/lib/ui/gfx/util/event_timestamper",
+            24 /* HIGH_PRIORITY in LK */, "garnet/lib/ui/gfx/util/event_timestamper",
             [](zx_status_t fidl_status, zx::profile profile) {
               FXL_DCHECK(fidl_status == ZX_OK);
               if (fidl_status == ZX_OK) {
-                zx_status_t status =
-                    zx_object_set_profile(zx_thread_self(), profile.get(), 0);
+                zx_status_t status = zx_object_set_profile(zx_thread_self(), profile.get(), 0);
                 FXL_DCHECK(status == ZX_OK);
               }
             });
@@ -49,10 +46,9 @@ void EventTimestamper::IncreaseBackgroundThreadPriority() {
 
 EventTimestamper::Watch::Watch() : waiter_(nullptr), timestamper_(nullptr) {}
 
-EventTimestamper::Watch::Watch(EventTimestamper* ts, zx::event event,
-                               zx_status_t trigger, Callback callback)
-    : waiter_(new EventTimestamper::Waiter(ts->main_dispatcher_,
-                                           std::move(event), trigger,
+EventTimestamper::Watch::Watch(EventTimestamper* ts, zx::event event, zx_status_t trigger,
+                               Callback callback)
+    : waiter_(new EventTimestamper::Waiter(ts->main_dispatcher_, std::move(event), trigger,
                                            std::move(callback))),
       timestamper_(ts) {
   FXL_DCHECK(timestamper_);
@@ -61,14 +57,12 @@ EventTimestamper::Watch::Watch(EventTimestamper* ts, zx::event event,
 #endif
 }
 
-EventTimestamper::Watch::Watch(Watch&& rhs)
-    : waiter_(rhs.waiter_), timestamper_(rhs.timestamper_) {
+EventTimestamper::Watch::Watch(Watch&& rhs) : waiter_(rhs.waiter_), timestamper_(rhs.timestamper_) {
   rhs.waiter_ = nullptr;
   rhs.timestamper_ = nullptr;
 }
 
-EventTimestamper::Watch& EventTimestamper::Watch::operator=(
-    EventTimestamper::Watch&& rhs) {
+EventTimestamper::Watch& EventTimestamper::Watch::operator=(EventTimestamper::Watch&& rhs) {
   FXL_DCHECK(!waiter_ && !timestamper_);
   waiter_ = rhs.waiter_;
   timestamper_ = rhs.timestamper_;
@@ -124,9 +118,8 @@ bool EventTimestamper::Watch::IsWatching() const {
   return waiter_->state() == Waiter::State::STARTED;
 }
 
-EventTimestamper::Waiter::Waiter(async_dispatcher_t* dispatcher,
-                                 zx::event event, zx_status_t trigger,
-                                 Callback callback)
+EventTimestamper::Waiter::Waiter(async_dispatcher_t* dispatcher, zx::event event,
+                                 zx_status_t trigger, Callback callback)
     : dispatcher_(dispatcher),
       event_(std::move(event)),
       callback_(std::move(callback)),
@@ -136,9 +129,8 @@ EventTimestamper::Waiter::~Waiter() {
   FXL_DCHECK(state_ == State::STOPPED || state_ == State::ABANDONED);
 }
 
-void EventTimestamper::Waiter::Handle(async_dispatcher_t* dispatcher,
-                                      async::WaitBase* wait, zx_status_t status,
-                                      const zx_packet_signal_t* signal) {
+void EventTimestamper::Waiter::Handle(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                                      zx_status_t status, const zx_packet_signal_t* signal) {
   FXL_DCHECK(dispatcher);
   zx_time_t now = async_now(dispatcher);
   async::PostTask(dispatcher_, [now, this] {

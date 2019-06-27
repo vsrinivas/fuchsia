@@ -14,6 +14,8 @@
 ** limitations under the License.
 */
 
+// clang-format off
+
 #include <vulkan/vulkan.h>
 
 #ifdef __cplusplus
@@ -1571,3 +1573,5 @@ VKAPI_ATTR VkResult VKAPI_CALL vkGetMemoryHostPointerPropertiesEXT(
 #ifdef __cplusplus
 }
 #endif
+
+// clang-format on

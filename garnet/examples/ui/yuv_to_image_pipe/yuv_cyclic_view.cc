@@ -16,23 +16,20 @@ constexpr float kDisplayHeight = 50;
 
 }  // namespace
 
-YuvCyclicView::YuvCyclicView(scenic::ViewContext context,
-                             fuchsia::images::PixelFormat pixel_format)
+YuvCyclicView::YuvCyclicView(scenic::ViewContext context, fuchsia::images::PixelFormat pixel_format)
     : YuvBaseView(std::move(context), pixel_format) {
   const auto image_id = AddImage();
   PaintImage(image_id, 255);
   PresentImage(image_id);
 }
 
-void YuvCyclicView::OnSceneInvalidated(
-    fuchsia::images::PresentationInfo presentation_info) {
+void YuvCyclicView::OnSceneInvalidated(fuchsia::images::PresentationInfo presentation_info) {
   if (!has_logical_size()) {
     return;
   }
 
   // Compute the amount of time that has elapsed since the view was created.
-  double seconds =
-      static_cast<double>(presentation_info.presentation_time) / 1'000'000'000;
+  double seconds = static_cast<double>(presentation_info.presentation_time) / 1'000'000'000;
 
   const float kHalfWidth = logical_size().x * 0.5f;
   const float kHalfHeight = logical_size().y * 0.5f;
@@ -41,8 +38,7 @@ void YuvCyclicView::OnSceneInvalidated(
   // Why do this?  Well, this is an example of what a View can do, and it helps
   // debug to know if scenic is still running.
   node_.SetTranslation(kHalfWidth * (1. + .1 * sin(seconds * 0.8)),
-                       kHalfHeight * (1. + .1 * sin(seconds * 0.6)),
-                       -kDisplayHeight);
+                       kHalfHeight * (1. + .1 * sin(seconds * 0.6)), -kDisplayHeight);
 
   // The recangle is constantly animating; invoke InvalidateScene() to guarantee
   // that OnSceneInvalidated() will be called again.

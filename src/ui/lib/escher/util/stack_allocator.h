@@ -57,8 +57,7 @@ class StackAllocator {
   void Reset() { used_ = 0; }
 
  private:
-  static_assert(std::is_trivially_destructible<T>::value,
-                "T is not trivially destructable");
+  static_assert(std::is_trivially_destructible<T>::value, "T is not trivially destructable");
 
   size_t used_ = 0;
 

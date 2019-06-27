@@ -27,13 +27,11 @@ TEST(RoundedRect, Tessellation) {
 
   std::vector<Vertex> vertices;
   vertices.resize(vertex_count);
-  GenerateRoundedRectVertices(rect_spec, mesh_spec, vertices.data(),
-                              vertex_count * sizeof(Vertex));
+  GenerateRoundedRectVertices(rect_spec, mesh_spec, vertices.data(), vertex_count * sizeof(Vertex));
 
   std::vector<uint32_t> indices;
   indices.resize(index_count);
-  GenerateRoundedRectIndices(rect_spec, mesh_spec, indices.data(),
-                             index_count * sizeof(uint32_t));
+  GenerateRoundedRectIndices(rect_spec, mesh_spec, indices.data(), index_count * sizeof(uint32_t));
 
   // Guarantee that all vertices are referenced by index at least once, and no
   // non-existent vertices are referenced.

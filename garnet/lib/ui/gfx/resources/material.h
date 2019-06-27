@@ -35,9 +35,7 @@ class Material : public Resource {
   float blue() const { return escher_material_->color().z; }
   float alpha() const { return escher_material_->color().w; }
   const ImageBasePtr& texture_image() const { return texture_; }
-  const escher::MaterialPtr& escher_material() const {
-    return escher_material_;
-  }
+  const escher::MaterialPtr& escher_material() const { return escher_material_; }
 
   void Accept(class ResourceVisitor* visitor) override;
 

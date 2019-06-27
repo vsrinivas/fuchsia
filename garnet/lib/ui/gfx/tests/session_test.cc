@@ -62,8 +62,7 @@ CommandContext SessionTest::CreateCommandContext() {
 
 std::unique_ptr<Session> SessionTest::CreateSession() {
   static uint32_t next_id = 1;
-  return std::make_unique<Session>(next_id++, session_context_, this,
-                                   error_reporter());
+  return std::make_unique<Session>(next_id++, session_context_, this, error_reporter());
 }
 
 bool SessionTest::Apply(::fuchsia::ui::gfx::Command command) {

@@ -24,9 +24,7 @@ class SceneGraph {
 
   SceneGraphWeakPtr GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
 
-  const std::vector<CompositorWeakPtr>& compositors() const {
-    return compositors_;
-  }
+  const std::vector<CompositorWeakPtr>& compositors() const { return compositors_; }
 
   // Returns the first compositor from the current compositors,  or invalid
   // WeakPtr if there are no compositors.

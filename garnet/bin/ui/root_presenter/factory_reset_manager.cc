@@ -40,8 +40,7 @@ void FactoryResetManager::TriggerFactoryReset() {
   FXL_DCHECK(factory_reset_);
   factory_reset_->Reset([](zx_status_t status) {
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Factory service failed with status: "
-                     << zx_status_get_string(status);
+      FXL_LOG(ERROR) << "Factory service failed with status: " << zx_status_get_string(status);
     }
   });
 }
@@ -54,10 +53,9 @@ void FactoryResetManager::StartFactoryResetCountdown() {
   FXL_LOG(WARNING) << "Starting factory reset countdown";
   countdown_started_ = true;
 
-  reset_after_timeout_.Reset(
-      fit::bind_member(this, &FactoryResetManager::TriggerFactoryReset));
-  async::PostDelayedTask(async_get_default_dispatcher(),
-                         reset_after_timeout_.callback(), kCountdownDuration);
+  reset_after_timeout_.Reset(fit::bind_member(this, &FactoryResetManager::TriggerFactoryReset));
+  async::PostDelayedTask(async_get_default_dispatcher(), reset_after_timeout_.callback(),
+                         kCountdownDuration);
 }
 
 void FactoryResetManager::CancelFactoryResetCountdown() {

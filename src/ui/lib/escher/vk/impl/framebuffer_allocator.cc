@@ -14,14 +14,12 @@
 namespace escher {
 namespace impl {
 
-FramebufferAllocator::FramebufferAllocator(
-    ResourceRecycler* recycler, impl::RenderPassCache* render_pass_cache)
+FramebufferAllocator::FramebufferAllocator(ResourceRecycler* recycler,
+                                           impl::RenderPassCache* render_pass_cache)
     : recycler_(recycler), render_pass_cache_(render_pass_cache) {}
 
-const impl::FramebufferPtr& FramebufferAllocator::ObtainFramebuffer(
-    const RenderPassInfo& info) {
-  TRACE_DURATION("gfx",
-                 "escher::impl::FramebufferAllocator::ObtainFramebuffer");
+const impl::FramebufferPtr& FramebufferAllocator::ObtainFramebuffer(const RenderPassInfo& info) {
+  TRACE_DURATION("gfx", "escher::impl::FramebufferAllocator::ObtainFramebuffer");
 
   // TODO(ES-75): consider making RenderPassInfo a subclass of Hashable
   // so that we can directly look up the Framebuffer without first looking up
@@ -52,11 +50,9 @@ const impl::FramebufferPtr& FramebufferAllocator::ObtainFramebuffer(
     // TODO(ES-76): it smells weird to use an ObjectPool to hold possibly-null
     // RefPtrs and then fill them in here.  Maybe ObjectPool can be rejiggered
     // to make this more elegant?
-    TRACE_DURATION(
-        "gfx", "escher::FramebufferAllocator::ObtainFramebuffer (creation)");
+    TRACE_DURATION("gfx", "escher::FramebufferAllocator::ObtainFramebuffer (creation)");
     FXL_DCHECK(!pair.first->framebuffer);
-    pair.first->framebuffer =
-        fxl::MakeRefCounted<impl::Framebuffer>(recycler_, render_pass, info);
+    pair.first->framebuffer = fxl::MakeRefCounted<impl::Framebuffer>(recycler_, render_pass, info);
   }
   FXL_DCHECK(pair.first->framebuffer);
   return pair.first->framebuffer;

@@ -22,8 +22,7 @@ class NaiveGpuAllocator : public GpuAllocator {
   ~NaiveGpuAllocator();
 
   // |GpuAllocator|
-  GpuMemPtr AllocateMemory(vk::MemoryRequirements reqs,
-                           vk::MemoryPropertyFlags flags) override;
+  GpuMemPtr AllocateMemory(vk::MemoryRequirements reqs, vk::MemoryPropertyFlags flags) override;
 
   // |GpuAllocator|
   BufferPtr AllocateBuffer(ResourceManager* manager, vk::DeviceSize size,
@@ -32,8 +31,7 @@ class NaiveGpuAllocator : public GpuAllocator {
                            GpuMemPtr* out_ptr) override;
 
   // |GpuAllocator|
-  ImagePtr AllocateImage(ResourceManager* manager,
-                         const escher::ImageInfo& info,
+  ImagePtr AllocateImage(ResourceManager* manager, const escher::ImageInfo& info,
                          GpuMemPtr* out_ptr) override;
 
   // |GpuAllocator|

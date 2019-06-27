@@ -24,12 +24,11 @@ class Shape : public Resource {
   //
   // Returns true if there is an intersection, otherwise returns false and
   // leaves |out_distance| unmodified.
-  virtual bool GetIntersection(const escher::ray4& ray,
-                               float* out_distance) const = 0;
+  virtual bool GetIntersection(const escher::ray4& ray, float* out_distance) const = 0;
 
   // Generate an object to add to an escher::Model.
-  virtual escher::Object GenerateRenderObject(
-      const escher::mat4& transform, const escher::MaterialPtr& material) = 0;
+  virtual escher::Object GenerateRenderObject(const escher::mat4& transform,
+                                              const escher::MaterialPtr& material) = 0;
 
  protected:
   Shape(Session* session, ResourceId id, const ResourceTypeInfo& type_info);

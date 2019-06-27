@@ -25,19 +25,17 @@ constexpr float kInitialWindowYPos = 240;
 
 }  // namespace
 
-YuvBaseView::YuvBaseView(scenic::ViewContext context,
-                         fuchsia::images::PixelFormat pixel_format)
+YuvBaseView::YuvBaseView(scenic::ViewContext context, fuchsia::images::PixelFormat pixel_format)
     : BaseView(std::move(context), "YuvBaseView Example"),
       node_(session()),
       pixel_format_(pixel_format),
-      stride_(static_cast<uint32_t>(
-          kShapeWidth * images::StrideBytesPerWidthPixel(pixel_format_))) {
+      stride_(
+          static_cast<uint32_t>(kShapeWidth * images::StrideBytesPerWidthPixel(pixel_format_))) {
   FXL_VLOG(4) << "Creating View";
 
   // Create an ImagePipe and use it.
   uint32_t image_pipe_id = session()->AllocResourceId();
-  session()->Enqueue(
-      scenic::NewCreateImagePipeCmd(image_pipe_id, image_pipe_.NewRequest()));
+  session()->Enqueue(scenic::NewCreateImagePipeCmd(image_pipe_id, image_pipe_.NewRequest()));
 
   // Create a material that has our image pipe mapped onto it:
   scenic::Material material(session());
@@ -79,9 +77,8 @@ uint32_t YuvBaseView::AddImage() {
                                       reinterpret_cast<uintptr_t*>(&vmo_base));
 
   constexpr uint64_t kMemoryOffset = 0;
-  image_pipe_->AddImage(next_image_id_, image_info, std::move(image_vmo),
-                        kMemoryOffset, image_vmo_bytes,
-                        fuchsia::images::MemoryType::HOST_MEMORY);
+  image_pipe_->AddImage(next_image_id_, image_info, std::move(image_vmo), kMemoryOffset,
+                        image_vmo_bytes, fuchsia::images::MemoryType::HOST_MEMORY);
   image_vmos_[next_image_id_] = vmo_base;
   return next_image_id_;
 }
@@ -100,11 +97,10 @@ void YuvBaseView::PresentImage(uint32_t image_id) {
   ::std::vector<::zx::event> release_fences;
   uint64_t now_ns = zx_clock_get_monotonic();
   TRACE_FLOW_BEGIN("gfx", "image_pipe_present_image", image_id);
-  image_pipe_->PresentImage(
-      image_id, now_ns, std::move(acquire_fences), std::move(release_fences),
-      [](fuchsia::images::PresentationInfo presentation_info) {
-        std::cout << "PresentImageCallback() called" << std::endl;
-      });
+  image_pipe_->PresentImage(image_id, now_ns, std::move(acquire_fences), std::move(release_fences),
+                            [](fuchsia::images::PresentationInfo presentation_info) {
+                              std::cout << "PresentImageCallback() called" << std::endl;
+                            });
 }
 
 void YuvBaseView::SetVmoPixels(uint8_t* vmo_base, uint8_t pixel_multiplier) {
@@ -144,8 +140,7 @@ void YuvBaseView::SetYuy2Pixels(uint8_t* vmo_base, uint8_t pixel_multiplier) {
     for (uint32_t x_iter = 0; x_iter < kShapeWidth; x_iter += 2) {
       double x0 = static_cast<double>(x_iter) / kShapeWidth;
       double x1 = static_cast<double>(x_iter + 1) / kShapeWidth;
-      uint8_t* two_pixels =
-          &vmo_base[y_iter * stride_ + x_iter * sizeof(uint16_t)];
+      uint8_t* two_pixels = &vmo_base[y_iter * stride_ + x_iter * sizeof(uint16_t)];
       two_pixels[0] = GetYValue(x0, y) * pixel_multiplier;
       two_pixels[1] = GetUValue(x0, y) * pixel_multiplier;
       two_pixels[2] = GetYValue(x1, y) * pixel_multiplier;
@@ -170,10 +165,8 @@ void YuvBaseView::SetNv12Pixels(uint8_t* vmo_base, uint8_t pixel_multiplier) {
     double y = static_cast<double>(y_iter * 2) / kShapeHeight;
     for (uint32_t x_iter = 0; x_iter < kShapeWidth / 2; x_iter++) {
       double x = static_cast<double>(x_iter * 2) / kShapeWidth;
-      uv_base[y_iter * stride_ + x_iter * 2] =
-          GetUValue(x, y) * pixel_multiplier;
-      uv_base[y_iter * stride_ + x_iter * 2 + 1] =
-          GetVValue(x, y) * pixel_multiplier;
+      uv_base[y_iter * stride_ + x_iter * 2] = GetUValue(x, y) * pixel_multiplier;
+      uv_base[y_iter * stride_ + x_iter * 2 + 1] = GetVValue(x, y) * pixel_multiplier;
     }
   }
 }
@@ -189,17 +182,14 @@ void YuvBaseView::SetYv12Pixels(uint8_t* vmo_base, uint8_t pixel_multiplier) {
     }
   }
   // U and V work the same as each other, so do them together
-  uint8_t* u_base =
-      y_base + kShapeHeight * stride_ + kShapeHeight / 2 * stride_ / 2;
+  uint8_t* u_base = y_base + kShapeHeight * stride_ + kShapeHeight / 2 * stride_ / 2;
   uint8_t* v_base = y_base + kShapeHeight * stride_;
   for (uint32_t y_iter = 0; y_iter < kShapeHeight / 2; y_iter++) {
     double y = static_cast<double>(y_iter * 2) / kShapeHeight;
     for (uint32_t x_iter = 0; x_iter < kShapeWidth / 2; x_iter++) {
       double x = static_cast<double>(x_iter * 2) / kShapeWidth;
-      u_base[y_iter * stride_ / 2 + x_iter] =
-          GetUValue(x, y) * pixel_multiplier;
-      v_base[y_iter * stride_ / 2 + x_iter] =
-          GetVValue(x, y) * pixel_multiplier;
+      u_base[y_iter * stride_ / 2 + x_iter] = GetUValue(x, y) * pixel_multiplier;
+      v_base[y_iter * stride_ / 2 + x_iter] = GetVValue(x, y) * pixel_multiplier;
     }
   }
 }

@@ -9,8 +9,8 @@
 namespace scenic_impl {
 namespace gfx {
 
-const ResourceTypeInfo ViewNode::kTypeInfo = {
-    ResourceType::kNode | ResourceType::kView, "ViewNode"};
+const ResourceTypeInfo ViewNode::kTypeInfo = {ResourceType::kNode | ResourceType::kView,
+                                              "ViewNode"};
 
 ViewNode::ViewNode(Session* session, ResourceId view_id)
     : Node(session, /* node_id */ 0, ViewNode::kTypeInfo), view_id_(view_id) {}

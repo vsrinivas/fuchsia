@@ -13,26 +13,21 @@
 
 namespace escher {
 
-std::unique_ptr<DebugFont> DebugFont::New(BatchGpuUploader* uploader,
-                                          ImageFactory* factory) {
+std::unique_ptr<DebugFont> DebugFont::New(BatchGpuUploader* uploader, ImageFactory* factory) {
   auto bytes = DebugFont::GetFontPixels();
 
-  auto image = image_utils::NewRgbaImage(factory, uploader, kGlyphWidth,
-                                         kGlyphHeight * kNumGlyphs, bytes.get(),
-                                         vk::ImageLayout::eTransferSrcOptimal);
+  auto image = image_utils::NewRgbaImage(factory, uploader, kGlyphWidth, kGlyphHeight * kNumGlyphs,
+                                         bytes.get(), vk::ImageLayout::eTransferSrcOptimal);
   return std::unique_ptr<DebugFont>(new DebugFont(std::move(image)));
 }
 
-DebugFont::DebugFont(ImagePtr image) : image_(std::move(image)) {
-  FXL_DCHECK(image_);
-}
+DebugFont::DebugFont(ImagePtr image) : image_(std::move(image)) { FXL_DCHECK(image_); }
 
 void DebugFont::Blit(CommandBuffer* cb, const std::string& text, const ImagePtr& target,
                      vk::Offset2D offset, int32_t scale) {
   cb->impl()->TakeWaitSemaphore(image_, vk::PipelineStageFlagBits::eTransfer);
-  cb->impl()->TakeWaitSemaphore(
-      target, vk::PipelineStageFlagBits::eColorAttachmentOutput |
-                  vk::PipelineStageFlagBits::eTransfer);
+  cb->impl()->TakeWaitSemaphore(target, vk::PipelineStageFlagBits::eColorAttachmentOutput |
+                                            vk::PipelineStageFlagBits::eTransfer);
   cb->impl()->KeepAlive(target);
 
   vk::ImageBlit* regions = ESCHER_ALLOCA(vk::ImageBlit, text.length());
@@ -67,9 +62,9 @@ void DebugFont::Blit(CommandBuffer* cb, const std::string& text, const ImagePtr&
   }
 
   if (region_count > 0) {
-    cb->vk().blitImage(image_->vk(), vk::ImageLayout::eTransferSrcOptimal,
-                       target->vk(), vk::ImageLayout::eTransferDstOptimal,
-                       region_count, regions, vk::Filter::eNearest);
+    cb->vk().blitImage(image_->vk(), vk::ImageLayout::eTransferSrcOptimal, target->vk(),
+                       vk::ImageLayout::eTransferDstOptimal, region_count, regions,
+                       vk::Filter::eNearest);
   }
 }
 
@@ -270,8 +265,7 @@ std::unique_ptr<uint8_t[]> DebugFont::GetFontPixels() {
   constexpr ColorRgba kBlack(0, 0, 0, 0xff);
   constexpr ColorRgba kWhite(0xff, 0xff, 0xff, 0xff);
   for (size_t i = 0; i < kNumGlyphs; ++i) {
-    ColorRgba* glyph =
-        reinterpret_cast<ColorRgba*>(output.get() + i * kBytesPerGlyph);
+    ColorRgba* glyph = reinterpret_cast<ColorRgba*>(output.get() + i * kBytesPerGlyph);
 
     // Fill the entire glyph with white, including the padding.
     // We could just fill the padding, but the performance improvement

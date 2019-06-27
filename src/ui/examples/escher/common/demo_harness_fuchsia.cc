@@ -34,8 +34,7 @@ class DemoKeyDispatcher : public fuchsia::ui::input::InputDevice {
     for (uint32_t key : pressed_keys) {
       // Since this is a demo harness, we can assume a small number of pressed
       // keys. However, if this assumption breaks, we can switch to std::bitset.
-      if (std::find(pressed_keys_.begin(), pressed_keys_.end(), key) ==
-          pressed_keys_.end()) {
+      if (std::find(pressed_keys_.begin(), pressed_keys_.end(), key) == pressed_keys_.end()) {
         DispatchKey(key);
       }
     }
@@ -76,27 +75,23 @@ class DemoKeyDispatcher : public fuchsia::ui::input::InputDevice {
 }  // namespace
 
 // When running on Fuchsia, New() instantiates a DemoHarnessFuchsia.
-std::unique_ptr<DemoHarness> DemoHarness::New(
-    DemoHarness::WindowParams window_params,
-    DemoHarness::InstanceParams instance_params) {
+std::unique_ptr<DemoHarness> DemoHarness::New(DemoHarness::WindowParams window_params,
+                                              DemoHarness::InstanceParams instance_params) {
   auto harness = new DemoHarnessFuchsia(nullptr, window_params);
   harness->Init(std::move(instance_params));
   return std::unique_ptr<DemoHarness>(harness);
 }
 
-DemoHarnessFuchsia::DemoHarnessFuchsia(async::Loop* loop,
-                                       WindowParams window_params)
+DemoHarnessFuchsia::DemoHarnessFuchsia(async::Loop* loop, WindowParams window_params)
     : DemoHarness(window_params),
       loop_(loop),
-      owned_loop_(loop_ ? nullptr
-                        : new async::Loop(&kAsyncLoopConfigAttachToThread)),
+      owned_loop_(loop_ ? nullptr : new async::Loop(&kAsyncLoopConfigAttachToThread)),
       trace_provider_((loop_ ? loop_ : owned_loop_.get())->dispatcher()),
       component_context_(sys::ComponentContext::Create()),
       input_reader_(this) {
   // Provide a PseudoDir where the demo can register debugging services.
   auto debug_dir = std::make_shared<vfs::PseudoDir>();
-  component_context()->outgoing()->debug_dir()->AddSharedEntry("demo",
-                                                               debug_dir);
+  component_context()->outgoing()->debug_dir()->AddSharedEntry("demo", debug_dir);
   filesystem_ = escher::HackFilesystem::New(debug_dir);
 
   if (!loop_) {
@@ -106,32 +101,26 @@ DemoHarnessFuchsia::DemoHarnessFuchsia(async::Loop* loop,
 
 void DemoHarnessFuchsia::InitWindowSystem() { input_reader_.Start(); }
 
-vk::SurfaceKHR DemoHarnessFuchsia::CreateWindowAndSurface(
-    const WindowParams& params) {
+vk::SurfaceKHR DemoHarnessFuchsia::CreateWindowAndSurface(const WindowParams& params) {
   VkImagePipeSurfaceCreateInfoFUCHSIA create_info = {
       .sType = VK_STRUCTURE_TYPE_IMAGEPIPE_SURFACE_CREATE_INFO_FUCHSIA,
       .pNext = nullptr,
   };
   VkSurfaceKHR surface;
-  VkResult err = vkCreateImagePipeSurfaceFUCHSIA(instance(), &create_info,
-                                                 nullptr, &surface);
+  VkResult err = vkCreateImagePipeSurfaceFUCHSIA(instance(), &create_info, nullptr, &surface);
   FXL_CHECK(!err);
   return surface;
 }
 
-void DemoHarnessFuchsia::AppendPlatformSpecificInstanceExtensionNames(
-    InstanceParams* params) {
+void DemoHarnessFuchsia::AppendPlatformSpecificInstanceExtensionNames(InstanceParams* params) {
   params->extension_names.insert(VK_KHR_SURFACE_EXTENSION_NAME);
   params->extension_names.insert(VK_FUCHSIA_IMAGEPIPE_SURFACE_EXTENSION_NAME);
-  params->extension_names.insert(
-      VK_KHR_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME);
-  params->extension_names.insert(
-      VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+  params->extension_names.insert(VK_KHR_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME);
+  params->extension_names.insert(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
   params->layer_names.insert("VK_LAYER_FUCHSIA_imagepipe_swapchain_fb");
 }
 
-void DemoHarnessFuchsia::AppendPlatformSpecificDeviceExtensionNames(
-    std::set<std::string>* names) {
+void DemoHarnessFuchsia::AppendPlatformSpecificDeviceExtensionNames(std::set<std::string>* names) {
   names->insert(VK_FUCHSIA_EXTERNAL_MEMORY_EXTENSION_NAME);
 }
 
@@ -148,8 +137,7 @@ void DemoHarnessFuchsia::RegisterDevice(
     fuchsia::ui::input::DeviceDescriptor descriptor,
     fidl::InterfaceRequest<fuchsia::ui::input::InputDevice> input_device) {
   if (descriptor.keyboard) {
-    input_devices_.AddBinding(std::make_unique<DemoKeyDispatcher>(demo_),
-                              std::move(input_device));
+    input_devices_.AddBinding(std::make_unique<DemoKeyDispatcher>(demo_), std::move(input_device));
   }
 }
 
@@ -161,7 +149,6 @@ void DemoHarnessFuchsia::RenderFrameOrQuit() {
   } else {
     demo_->MaybeDrawFrame();
     async::PostDelayedTask(
-        loop_->dispatcher(), [this] { this->RenderFrameOrQuit(); },
-        zx::msec(1));
+        loop_->dispatcher(), [this] { this->RenderFrameOrQuit(); }, zx::msec(1));
   }
 }

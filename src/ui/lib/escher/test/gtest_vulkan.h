@@ -10,9 +10,8 @@
 
 // Tests declared using this macro are only registered with GTest when Vulkan
 // is available.
-#define VK_TEST(test_case_name, test_name)                   \
-  VK_GTEST_TEST_(test_case_name, test_name, ::testing::Test, \
-                 ::testing::internal::GetTestTypeId())
+#define VK_TEST(test_case_name, test_name) \
+  VK_GTEST_TEST_(test_case_name, test_name, ::testing::Test, ::testing::internal::GetTestTypeId())
 
 // Tests declared using this macro are only registered with GTest when Vulkan
 // is available.

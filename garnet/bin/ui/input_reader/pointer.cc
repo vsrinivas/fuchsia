@@ -16,9 +16,8 @@
 
 namespace ui_input {
 
-bool Pointer::ParseReportDescriptor(
-    const hid::ReportDescriptor& report_descriptor,
-    Descriptor* device_descriptor) {
+bool Pointer::ParseReportDescriptor(const hid::ReportDescriptor& report_descriptor,
+                                    Descriptor* device_descriptor) {
   hid::Attributes button = {};
   hid::Attributes x = {};
   hid::Attributes y = {};
@@ -31,20 +30,19 @@ bool Pointer::ParseReportDescriptor(
       button = field.attr;
       caps |= Capabilities::BUTTON;
 
-    } else if (field.attr.usage == hid::USAGE(hid::usage::Page::kGenericDesktop,
-                                              hid::usage::GenericDesktop::kX)) {
+    } else if (field.attr.usage ==
+               hid::USAGE(hid::usage::Page::kGenericDesktop, hid::usage::GenericDesktop::kX)) {
       x = field.attr;
       caps |= Capabilities::X;
 
-    } else if (field.attr.usage == hid::USAGE(hid::usage::Page::kGenericDesktop,
-                                              hid::usage::GenericDesktop::kY)) {
+    } else if (field.attr.usage ==
+               hid::USAGE(hid::usage::Page::kGenericDesktop, hid::usage::GenericDesktop::kY)) {
       y = field.attr;
       caps |= Capabilities::Y;
     }
   }
 
-  uint32_t base_caps =
-      (Capabilities::X | Capabilities::Y | Capabilities::BUTTON);
+  uint32_t base_caps = (Capabilities::X | Capabilities::Y | Capabilities::BUTTON);
   if ((caps & base_caps) != base_caps) {
     FXL_LOG(INFO) << "Pointer descriptor: Missing basic capabilities";
     return false;
@@ -63,8 +61,7 @@ bool Pointer::ParseReportDescriptor(
   device_descriptor->has_touchscreen = true;
   device_descriptor->touch_type = TouchDeviceType::HID;
 
-  device_descriptor->touchscreen_descriptor =
-      fuchsia::ui::input::TouchscreenDescriptor::New();
+  device_descriptor->touchscreen_descriptor = fuchsia::ui::input::TouchscreenDescriptor::New();
   device_descriptor->touchscreen_descriptor->x.range.min = x.phys_mm.min;
   device_descriptor->touchscreen_descriptor->x.range.max = x.phys_mm.max;
   device_descriptor->touchscreen_descriptor->x.resolution = 1;
@@ -84,8 +81,8 @@ bool Pointer::ParseReport(const uint8_t* data, size_t len,
   FXL_CHECK(report->touchscreen);
 
   if (len != report_size_) {
-    FXL_LOG(INFO) << "Pointer HID Report is not correct size, (" << len
-                  << " != " << report_size_ << ")";
+    FXL_LOG(INFO) << "Pointer HID Report is not correct size, (" << len << " != " << report_size_
+                  << ")";
     return false;
   }
 

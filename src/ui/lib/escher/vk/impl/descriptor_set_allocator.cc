@@ -10,21 +10,16 @@
 namespace escher {
 namespace impl {
 
-DescriptorSetAllocator::DescriptorSetAllocator(
-    vk::Device device, DescriptorSetLayout layout,
-    const SamplerPtr& immutable_sampler)
+DescriptorSetAllocator::DescriptorSetAllocator(vk::Device device, DescriptorSetLayout layout,
+                                               const SamplerPtr& immutable_sampler)
     : cache_(device, layout, immutable_sampler) {}
 
-DescriptorSetAllocator::PoolPolicy::PoolPolicy(
-    vk::Device device, DescriptorSetLayout layout,
-    const SamplerPtr& immutable_sampler)
-    : vk_device_(device),
-      layout_(layout),
-      immutable_sampler_(immutable_sampler) {
+DescriptorSetAllocator::PoolPolicy::PoolPolicy(vk::Device device, DescriptorSetLayout layout,
+                                               const SamplerPtr& immutable_sampler)
+    : vk_device_(device), layout_(layout), immutable_sampler_(immutable_sampler) {
   FXL_DCHECK(layout.IsValid());
 
-  std::array<vk::DescriptorSetLayoutBinding, VulkanLimits::kNumBindings>
-      bindings;
+  std::array<vk::DescriptorSetLayoutBinding, VulkanLimits::kNumBindings> bindings;
   size_t num_bindings = 0;
 
   bool has_sampled_image = false;
@@ -33,23 +28,21 @@ DescriptorSetAllocator::PoolPolicy::PoolPolicy(
 
     if (index_mask & layout.sampled_image_mask) {
       has_sampled_image = true;
-      bindings[num_bindings++] = {
-          i, vk::DescriptorType::eCombinedImageSampler, 1, layout.stages,
-          immutable_sampler ? &(immutable_sampler->vk()) : nullptr};
+      bindings[num_bindings++] = {i, vk::DescriptorType::eCombinedImageSampler, 1, layout.stages,
+                                  immutable_sampler ? &(immutable_sampler->vk()) : nullptr};
       pool_sizes_.push_back({vk::DescriptorType::eCombinedImageSampler, 0});
       continue;
     }
 
     if (index_mask & layout.sampled_buffer_mask) {
-      bindings[num_bindings++] = {i, vk::DescriptorType::eUniformTexelBuffer, 1,
-                                  layout.stages, nullptr};
+      bindings[num_bindings++] = {i, vk::DescriptorType::eUniformTexelBuffer, 1, layout.stages,
+                                  nullptr};
       pool_sizes_.push_back({vk::DescriptorType::eUniformTexelBuffer, 0});
       continue;
     }
 
     if (index_mask & layout.storage_image_mask) {
-      bindings[num_bindings++] = {i, vk::DescriptorType::eStorageImage, 1,
-                                  layout.stages, nullptr};
+      bindings[num_bindings++] = {i, vk::DescriptorType::eStorageImage, 1, layout.stages, nullptr};
       pool_sizes_.push_back({vk::DescriptorType::eStorageImage, 0});
       continue;
     }
@@ -57,8 +50,8 @@ DescriptorSetAllocator::PoolPolicy::PoolPolicy(
     // TODO(SCN-699): Consider allowing both static and dynamic offsets for
     // uniform buffers.
     if (index_mask & layout.uniform_buffer_mask) {
-      bindings[num_bindings++] = {i, vk::DescriptorType::eUniformBufferDynamic,
-                                  1, layout.stages, nullptr};
+      bindings[num_bindings++] = {i, vk::DescriptorType::eUniformBufferDynamic, 1, layout.stages,
+                                  nullptr};
       pool_sizes_.push_back({vk::DescriptorType::eUniformBufferDynamic, 0});
       continue;
     }
@@ -66,15 +59,14 @@ DescriptorSetAllocator::PoolPolicy::PoolPolicy(
     // TODO(SCN-699): Consider allowing both static and dynamic offsets for
     // storage buffers.
     if (index_mask & layout.storage_buffer_mask) {
-      bindings[num_bindings++] = {i, vk::DescriptorType::eStorageBuffer, 1,
-                                  layout.stages, nullptr};
+      bindings[num_bindings++] = {i, vk::DescriptorType::eStorageBuffer, 1, layout.stages, nullptr};
       pool_sizes_.push_back({vk::DescriptorType::eStorageBuffer, 0});
       continue;
     }
 
     if (index_mask & layout.input_attachment_mask) {
-      bindings[num_bindings++] = {i, vk::DescriptorType::eInputAttachment, 1,
-                                  layout.stages, nullptr};
+      bindings[num_bindings++] = {i, vk::DescriptorType::eInputAttachment, 1, layout.stages,
+                                  nullptr};
       pool_sizes_.push_back({vk::DescriptorType::eInputAttachment, 0});
       continue;
     }
@@ -101,14 +93,15 @@ DescriptorSetAllocator::PoolPolicy::~PoolPolicy() {
   vk_device_.destroyDescriptorSetLayout(vk_layout_);
 }
 
-void DescriptorSetAllocator::PoolPolicy::InitializePoolObjectBlock(
-    CacheItem* objects, size_t block_index, size_t num_objects) {
+void DescriptorSetAllocator::PoolPolicy::InitializePoolObjectBlock(CacheItem* objects,
+                                                                   size_t block_index,
+                                                                   size_t num_objects) {
   vk::DescriptorPool pool = CreatePool(block_index, num_objects);
   AllocateDescriptorSetBlock(pool, objects, num_objects);
 }
 
-vk::DescriptorPool DescriptorSetAllocator::PoolPolicy::CreatePool(
-    size_t block_index, size_t num_objects) {
+vk::DescriptorPool DescriptorSetAllocator::PoolPolicy::CreatePool(size_t block_index,
+                                                                  size_t num_objects) {
   FXL_DCHECK(!pools_[block_index]);
   for (auto& sz : pool_sizes_) {
     sz.descriptorCount = num_objects;
@@ -125,8 +118,9 @@ vk::DescriptorPool DescriptorSetAllocator::PoolPolicy::CreatePool(
   return pool;
 }
 
-void DescriptorSetAllocator::PoolPolicy::AllocateDescriptorSetBlock(
-    vk::DescriptorPool pool, CacheItem* objects, size_t num_objects) {
+void DescriptorSetAllocator::PoolPolicy::AllocateDescriptorSetBlock(vk::DescriptorPool pool,
+                                                                    CacheItem* objects,
+                                                                    size_t num_objects) {
   constexpr size_t kSetsPerAllocation = 64;
   std::array<vk::DescriptorSetLayout, kSetsPerAllocation> layouts;
   for (auto& layout : layouts) {
@@ -141,10 +135,8 @@ void DescriptorSetAllocator::PoolPolicy::AllocateDescriptorSetBlock(
   while (remaining) {
     alloc_info.descriptorSetCount = std::min(remaining, kSetsPerAllocation);
 
-    vk::Result result =
-        vk_device_.allocateDescriptorSets(&alloc_info, allocated_sets.data());
-    FXL_CHECK(result == vk::Result::eSuccess)
-        << "DescriptorSetAllocator failed to allocate block.";
+    vk::Result result = vk_device_.allocateDescriptorSets(&alloc_info, allocated_sets.data());
+    FXL_CHECK(result == vk::Result::eSuccess) << "DescriptorSetAllocator failed to allocate block.";
 
     for (size_t i = 0; i < alloc_info.descriptorSetCount; ++i) {
       new (objects + i) CacheItem();
@@ -156,12 +148,12 @@ void DescriptorSetAllocator::PoolPolicy::AllocateDescriptorSetBlock(
   }
 }
 
-void DescriptorSetAllocator::PoolPolicy::DestroyPoolObjectBlock(
-    CacheItem* objects, size_t block_index, size_t num_objects) {
+void DescriptorSetAllocator::PoolPolicy::DestroyPoolObjectBlock(CacheItem* objects,
+                                                                size_t block_index,
+                                                                size_t num_objects) {
   auto it = pools_.find(block_index);
   if (it == pools_.end()) {
-    FXL_DCHECK(false)
-        << "DescriptorSetAllocator could not find pool to destroy.";
+    FXL_DCHECK(false) << "DescriptorSetAllocator could not find pool to destroy.";
     return;
   }
   vk::DescriptorPool pool = it->second;

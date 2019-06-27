@@ -14,8 +14,7 @@ using fuchsia::ui::gfx::ViewDetachedFromSceneEvent;
 using fuchsia::ui::gfx::ViewDisconnectedEvent;
 using fuchsia::ui::gfx::ViewPropertiesChangedEvent;
 
-std::ostream& operator<<(std::ostream& stream,
-                         const fuchsia::ui::gfx::Event& event) {
+std::ostream& operator<<(std::ostream& stream, const fuchsia::ui::gfx::Event& event) {
   switch (event.Which()) {
     case Event::Tag::kMetrics:
       return stream << event.metrics();
@@ -44,69 +43,50 @@ std::ostream& operator<<(std::ostream& stream,
   }
 }
 
-std::ostream& operator<<(std::ostream& stream,
-                         const fuchsia::ui::gfx::MetricsEvent& event) {
-  return stream << "MetricsEvent(node_id=" << event.node_id
-                << ", metrics=<TBD>)";
+std::ostream& operator<<(std::ostream& stream, const fuchsia::ui::gfx::MetricsEvent& event) {
+  return stream << "MetricsEvent(node_id=" << event.node_id << ", metrics=<TBD>)";
 }
 
-std::ostream& operator<<(std::ostream& stream,
-                         const fuchsia::ui::gfx::SizeChangeHintEvent& event) {
-  return stream << "SizeChangeHintEvent(node_id=" << event.node_id
-                << ", size_change_factor=<TBD>)";
+std::ostream& operator<<(std::ostream& stream, const fuchsia::ui::gfx::SizeChangeHintEvent& event) {
+  return stream << "SizeChangeHintEvent(node_id=" << event.node_id << ", size_change_factor=<TBD>)";
 }
 
-std::ostream& operator<<(std::ostream& stream,
-                         const fuchsia::ui::gfx::ImportUnboundEvent& event) {
-  return stream << "ImportUnboundEvent(resource_id=" << event.resource_id
-                << ")";
+std::ostream& operator<<(std::ostream& stream, const fuchsia::ui::gfx::ImportUnboundEvent& event) {
+  return stream << "ImportUnboundEvent(resource_id=" << event.resource_id << ")";
 }
 
-std::ostream& operator<<(std::ostream& stream,
-                         const fuchsia::ui::gfx::ViewConnectedEvent& event) {
-  return stream << "ViewConnectedEvent(view_holder_id=" << event.view_holder_id
-                << ")";
+std::ostream& operator<<(std::ostream& stream, const fuchsia::ui::gfx::ViewConnectedEvent& event) {
+  return stream << "ViewConnectedEvent(view_holder_id=" << event.view_holder_id << ")";
 }
 
 std::ostream& operator<<(std::ostream& stream,
                          const fuchsia::ui::gfx::ViewDisconnectedEvent& event) {
-  return stream << "ViewDisconnectedEvent(view_holder_id=" << event.view_holder_id
-                << ")";
+  return stream << "ViewDisconnectedEvent(view_holder_id=" << event.view_holder_id << ")";
 }
 
-std::ostream& operator<<(
-    std::ostream& stream,
-    const fuchsia::ui::gfx::ViewHolderConnectedEvent& event) {
-  return stream << "ViewHolderConnectedEvent(view_id="
-                << event.view_id << ")";
+std::ostream& operator<<(std::ostream& stream,
+                         const fuchsia::ui::gfx::ViewHolderConnectedEvent& event) {
+  return stream << "ViewHolderConnectedEvent(view_id=" << event.view_id << ")";
 }
 
-std::ostream& operator<<(
-    std::ostream& stream,
-    const fuchsia::ui::gfx::ViewHolderDisconnectedEvent& event) {
-  return stream << "ViewHolderDisconnectedEvent(view_id="
-                << event.view_id << ")";
+std::ostream& operator<<(std::ostream& stream,
+                         const fuchsia::ui::gfx::ViewHolderDisconnectedEvent& event) {
+  return stream << "ViewHolderDisconnectedEvent(view_id=" << event.view_id << ")";
 }
 
-std::ostream& operator<<(
-    std::ostream& stream,
-    const fuchsia::ui::gfx::ViewAttachedToSceneEvent& event) {
-  return stream << "ViewAttachedToSceneEvent(view_id=" << event.view_id
-                << ", properties=<TBD>";
+std::ostream& operator<<(std::ostream& stream,
+                         const fuchsia::ui::gfx::ViewAttachedToSceneEvent& event) {
+  return stream << "ViewAttachedToSceneEvent(view_id=" << event.view_id << ", properties=<TBD>";
 }
 
-std::ostream& operator<<(
-    std::ostream& stream,
-    const fuchsia::ui::gfx::ViewDetachedFromSceneEvent& event) {
-  return stream << "ViewDetachedFromSceneEvent(view_id=" << event.view_id
-                << ")";
+std::ostream& operator<<(std::ostream& stream,
+                         const fuchsia::ui::gfx::ViewDetachedFromSceneEvent& event) {
+  return stream << "ViewDetachedFromSceneEvent(view_id=" << event.view_id << ")";
 }
 
-std::ostream& operator<<(
-    std::ostream& stream,
-    const fuchsia::ui::gfx::ViewPropertiesChangedEvent& event) {
-  return stream << "ViewPropertiesChangedEvent(view_id=" << event.view_id
-                << ", properties=<TBD>)";
+std::ostream& operator<<(std::ostream& stream,
+                         const fuchsia::ui::gfx::ViewPropertiesChangedEvent& event) {
+  return stream << "ViewPropertiesChangedEvent(view_id=" << event.view_id << ", properties=<TBD>)";
 }
 
 std::ostream& operator<<(std::ostream& stream,

@@ -55,10 +55,9 @@ ESCHER_DECLARE_ENUM_FLAGS(SparseEnumFlags, SparseEnumBits);
 
 // Arrays to iterate over during testing.
 static const std::array<LargeEnumBits, 13> large_enum_array = {
-    LargeEnumBits::large1,  LargeEnumBits::large2,  LargeEnumBits::large3,
-    LargeEnumBits::large4,  LargeEnumBits::large5,  LargeEnumBits::large6,
-    LargeEnumBits::large7,  LargeEnumBits::large8,  LargeEnumBits::large9,
-    LargeEnumBits::large10, LargeEnumBits::large11, LargeEnumBits::large12,
+    LargeEnumBits::large1,  LargeEnumBits::large2,  LargeEnumBits::large3,  LargeEnumBits::large4,
+    LargeEnumBits::large5,  LargeEnumBits::large6,  LargeEnumBits::large7,  LargeEnumBits::large8,
+    LargeEnumBits::large9,  LargeEnumBits::large10, LargeEnumBits::large11, LargeEnumBits::large12,
     LargeEnumBits::large13,
 };
 
@@ -78,12 +77,9 @@ TEST(EnumTest, Construction) {
   SparseEnumFlags sparse_flags;
 
   // Assert masks have the correct C++ type.
-  static_assert(std::is_same<TestEnumFlags::MaskType, uint8_t>::value,
-                "MaskType Mismatch");
-  static_assert(std::is_same<LargeEnumFlags::MaskType, uint16_t>::value,
-                "Masktype Mismatch");
-  static_assert(std::is_same<SparseEnumFlags::MaskType, uint32_t>::value,
-                "Masktype Mismatch");
+  static_assert(std::is_same<TestEnumFlags::MaskType, uint8_t>::value, "MaskType Mismatch");
+  static_assert(std::is_same<LargeEnumFlags::MaskType, uint16_t>::value, "Masktype Mismatch");
+  static_assert(std::is_same<SparseEnumFlags::MaskType, uint32_t>::value, "Masktype Mismatch");
 
   // Assert default mask value is 0.
   EXPECT_TRUE(TestEnumFlags::MaskType(flags) == 0);
@@ -93,8 +89,7 @@ TEST(EnumTest, Construction) {
   // Assert that construction with an argument results in a
   // flag with a value equal to the argument that was passed in.
   flags = TestEnumFlags(TestEnumBits::test1);
-  EXPECT_TRUE(TestEnumFlags::MaskType(flags) ==
-              static_cast<uint8_t>(TestEnumBits::test1));
+  EXPECT_TRUE(TestEnumFlags::MaskType(flags) == static_cast<uint8_t>(TestEnumBits::test1));
 
   large_flags = LargeEnumFlags(LargeEnumBits::large7);
   EXPECT_TRUE(LargeEnumFlags::MaskType(large_flags) ==
@@ -110,9 +105,8 @@ TEST(EnumTest, BitwiseORTest) {
   using namespace escher;
   TestEnumFlags flags = TestEnumBits::test1 | TestEnumBits::test2;
 
-  EXPECT_TRUE(TestEnumFlags::MaskType(flags) ==
-              static_cast<uint8_t>(TestEnumBits::test1) +
-                  static_cast<uint8_t>(TestEnumBits::test2));
+  EXPECT_TRUE(TestEnumFlags::MaskType(flags) == static_cast<uint8_t>(TestEnumBits::test1) +
+                                                    static_cast<uint8_t>(TestEnumBits::test2));
 
   flags |= TestEnumBits::test3;
   EXPECT_TRUE(flags == TestEnumFlags(TestEnumBits::kAllFlags));
@@ -121,9 +115,8 @@ TEST(EnumTest, BitwiseORTest) {
     LargeEnumFlags flag1(large_enum_array[i]);
     LargeEnumFlags flag2(large_enum_array[i + 1]);
     LargeEnumFlags result = flag1 | flag2;
-    EXPECT_TRUE(
-        LargeEnumFlags::MaskType(result) ==
-        (LargeEnumFlags::MaskType(flag1) | LargeEnumFlags::MaskType(flag2)));
+    EXPECT_TRUE(LargeEnumFlags::MaskType(result) ==
+                (LargeEnumFlags::MaskType(flag1) | LargeEnumFlags::MaskType(flag2)));
   }
 
   // Or-ing all the bits together should equal 'kAllFlags'.
@@ -154,8 +147,7 @@ TEST(EnumTest, BitwiseANDTest) {
     LargeEnumFlags flag2(large_enum_array[i + 1]);
     LargeEnumFlags result1 = flag1 & flag1;
     LargeEnumFlags result2 = flag1 & flag2;
-    EXPECT_TRUE(LargeEnumFlags::MaskType(result1) ==
-                static_cast<uint16_t>(flag1));
+    EXPECT_TRUE(LargeEnumFlags::MaskType(result1) == static_cast<uint16_t>(flag1));
     EXPECT_TRUE(LargeEnumFlags::MaskType(result2) == 0);
   }
 
@@ -164,8 +156,7 @@ TEST(EnumTest, BitwiseANDTest) {
     SparseEnumFlags flag2(sparse_enum_array[i + 1]);
     SparseEnumFlags result1 = flag1 & flag1;
     SparseEnumFlags result2 = flag1 & flag2;
-    EXPECT_TRUE(SparseEnumFlags::MaskType(result1) ==
-                static_cast<uint32_t>(flag1));
+    EXPECT_TRUE(SparseEnumFlags::MaskType(result1) == static_cast<uint32_t>(flag1));
     EXPECT_TRUE(SparseEnumFlags::MaskType(result2) == 0);
   }
 }
@@ -216,11 +207,10 @@ TEST(EnumTest, StressTest) {
   EXPECT_TRUE(large_flags == LargeEnumFlags(LargeEnumBits::kAllFlags));
   EXPECT_TRUE(sparse_flags == SparseEnumFlags(SparseEnumBits::kAllFlags));
 
-  large_flags =
-      (LargeEnumBits::large1 | LargeEnumBits::large3 | LargeEnumBits::large5 |
-       LargeEnumBits::large7 | LargeEnumBits::large9 | LargeEnumBits::large11 |
-       LargeEnumBits::large13) ^
-      LargeEnumBits::kAllFlags;
+  large_flags = (LargeEnumBits::large1 | LargeEnumBits::large3 | LargeEnumBits::large5 |
+                 LargeEnumBits::large7 | LargeEnumBits::large9 | LargeEnumBits::large11 |
+                 LargeEnumBits::large13) ^
+                LargeEnumBits::kAllFlags;
   LargeEnumFlags large_result = LargeEnumBits::large2 | LargeEnumBits::large4 |
                                 LargeEnumBits::large6 | LargeEnumBits::large8 |
                                 LargeEnumBits::large10 | LargeEnumBits::large12;
@@ -231,10 +221,8 @@ TEST(EnumTest, StressTest) {
                  (~(SparseEnumBits::sparse4 | SparseEnumBits::sparse3));
   EXPECT_TRUE(sparse_flags == SparseEnumFlags(SparseEnumBits::sparse6));
 
-  sparse_flags =
-      (~SparseEnumFlags(SparseEnumBits::sparse3) ^
-       SparseEnumFlags(SparseEnumBits::sparse1 | SparseEnumBits::sparse5));
-  EXPECT_TRUE(sparse_flags == SparseEnumFlags(SparseEnumBits::sparse2 |
-                                              SparseEnumBits::sparse4 |
+  sparse_flags = (~SparseEnumFlags(SparseEnumBits::sparse3) ^
+                  SparseEnumFlags(SparseEnumBits::sparse1 | SparseEnumBits::sparse5));
+  EXPECT_TRUE(sparse_flags == SparseEnumFlags(SparseEnumBits::sparse2 | SparseEnumBits::sparse4 |
                                               SparseEnumBits::sparse6));
 }

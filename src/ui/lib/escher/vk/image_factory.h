@@ -24,8 +24,7 @@ class ImageFactory {
   // VkMemoryDedicatedRequirements.requiresDedicatedAllocation
   // == true). That memory must be accessable through the GpuMem returned in
   // |out_ptr|.
-  virtual ImagePtr NewImage(const ImageInfo& info,
-                            GpuMemPtr* out_ptr = nullptr) = 0;
+  virtual ImagePtr NewImage(const ImageInfo& info, GpuMemPtr* out_ptr = nullptr) = 0;
 };
 
 // This default implementation allocates memory and creates a new

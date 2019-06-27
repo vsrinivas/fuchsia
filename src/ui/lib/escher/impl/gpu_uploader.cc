@@ -16,9 +16,8 @@
 namespace escher {
 namespace impl {
 
-GpuUploader::Writer::Writer(BufferPtr buffer, CommandBuffer* command_buffer,
-                            vk::Queue queue, vk::DeviceSize size,
-                            vk::DeviceSize offset)
+GpuUploader::Writer::Writer(BufferPtr buffer, CommandBuffer* command_buffer, vk::Queue queue,
+                            vk::DeviceSize size, vk::DeviceSize offset)
     : buffer_(std::move(buffer)),
       command_buffer_(command_buffer),
       queue_(queue),
@@ -69,8 +68,7 @@ void GpuUploader::Writer::Submit() {
 
 GpuUploader::Writer::~Writer() { FXL_CHECK(!command_buffer_); }
 
-void GpuUploader::Writer::WriteBuffer(const BufferPtr& target,
-                                      vk::BufferCopy region,
+void GpuUploader::Writer::WriteBuffer(const BufferPtr& target, vk::BufferCopy region,
                                       SemaphorePtr semaphore) {
   has_writes_ = true;
   region.srcOffset += offset_;
@@ -82,8 +80,7 @@ void GpuUploader::Writer::WriteBuffer(const BufferPtr& target,
   command_buffer_->vk().copyBuffer(buffer_->vk(), target->vk(), 1, &region);
 }
 
-void GpuUploader::Writer::WriteImage(const ImagePtr& target,
-                                     vk::BufferImageCopy region,
+void GpuUploader::Writer::WriteImage(const ImagePtr& target, vk::BufferImageCopy region,
                                      SemaphorePtr semaphore) {
   has_writes_ = true;
   region.bufferOffset += offset_;
@@ -91,11 +88,9 @@ void GpuUploader::Writer::WriteImage(const ImagePtr& target,
   command_buffer_->TransitionImageLayout(target, vk::ImageLayout::eUndefined,
                                          vk::ImageLayout::eTransferDstOptimal);
   command_buffer_->vk().copyBufferToImage(buffer_->vk(), target->vk(),
-                                          vk::ImageLayout::eTransferDstOptimal,
-                                          1, &region);
-  command_buffer_->TransitionImageLayout(
-      target, vk::ImageLayout::eTransferDstOptimal,
-      vk::ImageLayout::eShaderReadOnlyOptimal);
+                                          vk::ImageLayout::eTransferDstOptimal, 1, &region);
+  command_buffer_->TransitionImageLayout(target, vk::ImageLayout::eTransferDstOptimal,
+                                         vk::ImageLayout::eShaderReadOnlyOptimal);
 
   if (semaphore) {
     if (target->HasWaitSemaphore()) {
@@ -108,13 +103,11 @@ void GpuUploader::Writer::WriteImage(const ImagePtr& target,
   command_buffer_->KeepAlive(target);
 }
 
-GpuUploader::GpuUploader(EscherWeakPtr weak_escher,
-                         CommandBufferPool* command_buffer_pool,
+GpuUploader::GpuUploader(EscherWeakPtr weak_escher, CommandBufferPool* command_buffer_pool,
                          GpuAllocator* allocator)
     : ResourceRecycler(std::move(weak_escher)),
-      command_buffer_pool_(command_buffer_pool
-                               ? command_buffer_pool
-                               : escher()->command_buffer_pool()),
+      command_buffer_pool_(command_buffer_pool ? command_buffer_pool
+                                               : escher()->command_buffer_pool()),
       device_(command_buffer_pool_->device()),
       queue_(command_buffer_pool_->queue()),
       allocator_(allocator ? allocator : escher()->gpu_allocator()),
@@ -129,8 +122,8 @@ GpuUploader::Writer GpuUploader::GetWriter(size_t s) {
   vk::DeviceSize size = s;
   FXL_DCHECK(size == s);
   PrepareForWriterOfSize(size);
-  Writer writer(current_buffer_, command_buffer_pool_->GetCommandBuffer(),
-                queue_, size, current_offset_);
+  Writer writer(current_buffer_, command_buffer_pool_->GetCommandBuffer(), queue_, size,
+                current_offset_);
   current_offset_ += size;
 
   // Not all clients will require this alignment, but let's be safe for now.
@@ -168,10 +161,10 @@ void GpuUploader::PrepareForWriterOfSize(vk::DeviceSize size) {
   constexpr vk::DeviceSize kMinBufferSize = 1024 * 1024;
   constexpr vk::DeviceSize kOverAllocationFactor = 2;
   size = std::max(kMinBufferSize, size * kOverAllocationFactor);
-  auto memory_properties = vk::MemoryPropertyFlagBits::eHostVisible |
-                           vk::MemoryPropertyFlagBits::eHostCoherent;
-  current_buffer_ = allocator_->AllocateBuffer(
-      this, size, vk::BufferUsageFlagBits::eTransferSrc, memory_properties);
+  auto memory_properties =
+      vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
+  current_buffer_ = allocator_->AllocateBuffer(this, size, vk::BufferUsageFlagBits::eTransferSrc,
+                                               memory_properties);
 }
 
 void GpuUploader::RecycleResource(std::unique_ptr<Resource> resource) {

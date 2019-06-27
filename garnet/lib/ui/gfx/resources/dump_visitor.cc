@@ -37,8 +37,7 @@ namespace gfx {
 
 using escher::operator<<;
 
-DumpVisitor::DumpVisitor(VisitorContext context)
-    : context_(std::move(context)) {}
+DumpVisitor::DumpVisitor(VisitorContext context) : context_(std::move(context)) {}
 
 void DumpVisitor::Visit(Memory* r) {
   // To prevent address space layout leakage, we don't print the pointers.
@@ -91,8 +90,7 @@ void DumpVisitor::Visit(ImagePipe* r) {
 
 void DumpVisitor::Visit(View* r) {
   ViewHolder* vh = r->view_holder();
-  WriteProperty("view") << r->global_id() << "->"
-                        << (vh ? vh->global_id() : GlobalId());
+  WriteProperty("view") << r->global_id() << "->" << (vh ? vh->global_id() : GlobalId());
   VisitResource(r);
 }
 
@@ -108,8 +106,7 @@ void DumpVisitor::Visit(ViewNode* r) {
 void DumpVisitor::Visit(ViewHolder* r) {
   BeginItem("ViewHolder", r);
   View* v = r->view();
-  WriteProperty("view_holder")
-      << r->global_id() << "->" << (v ? v->global_id() : GlobalId());
+  WriteProperty("view_holder") << r->global_id() << "->" << (v ? v->global_id() : GlobalId());
   WriteProperty("focus_change") << r->GetViewProperties().focus_change;
   VisitNode(r);
   EndItem();
@@ -147,8 +144,7 @@ void DumpVisitor::Visit(ShapeNode* r) {
 void DumpVisitor::Visit(Scene* r) {
   BeginItem("Scene", r);
 
-  const bool has_lights = !r->ambient_lights().empty() ||
-                          !r->directional_lights().empty() ||
+  const bool has_lights = !r->ambient_lights().empty() || !r->directional_lights().empty() ||
                           !r->point_lights().empty();
   if (has_lights) {
     BeginSection("lights");
@@ -173,8 +169,7 @@ void DumpVisitor::VisitNode(Node* r) {
     WriteProperty("tag_value") << r->tag_value();
   }
   if (r->hit_test_behavior() != ::fuchsia::ui::gfx::HitTestBehavior::kDefault) {
-    WriteProperty("hit_test_behavior")
-        << static_cast<int>(r->hit_test_behavior());
+    WriteProperty("hit_test_behavior") << static_cast<int>(r->hit_test_behavior());
   }
   if (r->clip_to_self()) {
     WriteProperty("clip_to_self") << r->clip_to_self();
@@ -357,9 +352,7 @@ void DumpVisitor::Visit(Renderer* r) {
   EndItem();
 }
 
-void DumpVisitor::Visit(Light* r) {
-  FXL_CHECK(false) << "implement Visit() in Light subclasses";
-}
+void DumpVisitor::Visit(Light* r) { FXL_CHECK(false) << "implement Visit() in Light subclasses"; }
 
 void DumpVisitor::Visit(AmbientLight* r) {
   BeginItem("AmbientLight", r);

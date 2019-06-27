@@ -30,8 +30,7 @@ class DisplayControllerWatcher {
   void WaitForDisplayController(DisplayControllerReadyCallback callback);
 
  private:
-  void HandleDevice(DisplayControllerReadyCallback callback, int dir_fd,
-                    std::string filename);
+  void HandleDevice(DisplayControllerReadyCallback callback, int dir_fd, std::string filename);
 
   std::unique_ptr<fsl::DeviceWatcher> device_watcher_;
 

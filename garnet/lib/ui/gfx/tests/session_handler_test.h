@@ -45,8 +45,7 @@ class SessionHandlerTest : public ErrorReportingTest, public EventReporter {
 
   std::unique_ptr<sys::ComponentContext> app_context_;
   std::unique_ptr<Scenic> scenic_;
-  std::unique_ptr<escher::impl::CommandBufferSequencer>
-      command_buffer_sequencer_;
+  std::unique_ptr<escher::impl::CommandBufferSequencer> command_buffer_sequencer_;
   std::unique_ptr<EngineForTest> engine_;
   std::unique_ptr<DisplayManager> display_manager_;
   std::unique_ptr<scenic_impl::Session> scenic_session_;

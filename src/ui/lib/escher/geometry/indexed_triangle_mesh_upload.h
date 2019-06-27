@@ -18,11 +18,10 @@ namespace escher {
 // returns a new Mesh that is bound to this buffer.
 template <typename IndexedTriangleMeshT>
 MeshPtr IndexedTriangleMeshUpload(Escher* escher, BatchGpuUploader* uploader,
-                                  const MeshSpec& mesh_spec,
-                                  const BoundingBox& bounding_box,
+                                  const MeshSpec& mesh_spec, const BoundingBox& bounding_box,
                                   const IndexedTriangleMeshT& mesh) {
-  TRACE_DURATION("gfx", "escher::IndexedTriangleMeshUpload", "triangles",
-                 mesh.triangle_count(), "vertices", mesh.vertex_count());
+  TRACE_DURATION("gfx", "escher::IndexedTriangleMeshUpload", "triangles", mesh.triangle_count(),
+                 "vertices", mesh.vertex_count());
   if (mesh.index_count() == 0)
     return MeshPtr();
 
@@ -31,8 +30,7 @@ MeshPtr IndexedTriangleMeshUpload(Escher* escher, BatchGpuUploader* uploader,
   const size_t attr1_bytes = mesh.total_attribute1_bytes();
   const size_t attr2_bytes = mesh.total_attribute2_bytes();
   const size_t attr3_bytes = mesh.total_attribute3_bytes();
-  const size_t total_bytes =
-      ind_bytes + pos_bytes + attr1_bytes + attr2_bytes + attr3_bytes;
+  const size_t total_bytes = ind_bytes + pos_bytes + attr1_bytes + attr2_bytes + attr3_bytes;
 
   const size_t ind_offset = 0;
   const size_t pos_offset = ind_bytes;
@@ -66,12 +64,11 @@ MeshPtr IndexedTriangleMeshUpload(Escher* escher, BatchGpuUploader* uploader,
   writer->WriteBuffer(buffer, {0, 0, total_bytes});
   uploader->PostWriter(std::move(writer));
 
-  return fxl::MakeRefCounted<Mesh>(
-      escher->resource_recycler(), mesh_spec, bounding_box, mesh.index_count(),
-      buffer, ind_offset, mesh.vertex_count(), buffer, pos_offset,
-      (attr1_bytes ? buffer : nullptr), attr1_offset,
-      (attr2_bytes ? buffer : nullptr), attr2_offset,
-      (attr3_bytes ? buffer : nullptr), attr3_offset);
+  return fxl::MakeRefCounted<Mesh>(escher->resource_recycler(), mesh_spec, bounding_box,
+                                   mesh.index_count(), buffer, ind_offset, mesh.vertex_count(),
+                                   buffer, pos_offset, (attr1_bytes ? buffer : nullptr),
+                                   attr1_offset, (attr2_bytes ? buffer : nullptr), attr2_offset,
+                                   (attr3_bytes ? buffer : nullptr), attr3_offset);
 }
 
 }  // namespace escher

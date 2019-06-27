@@ -22,10 +22,9 @@ Tracer::Tracer() {
 }
 
 inline void WriteEvent(std::ostream& str, const Tracer::Event& event) {
-  str << "\t\t{ \"name\": \"" << event.name << "\", \"cat\": \""
-      << event.category << "\", \"ph\": \"" << event.phase << "\", \"pid\": \""
-      << 1 << "\", \"tid\": \"" << 1 << "\", \"ts\": \"" << event.microseconds
-      << "\" }";
+  str << "\t\t{ \"name\": \"" << event.name << "\", \"cat\": \"" << event.category
+      << "\", \"ph\": \"" << event.phase << "\", \"pid\": \"" << 1 << "\", \"tid\": \"" << 1
+      << "\", \"ts\": \"" << event.microseconds << "\" }";
 }
 
 Tracer::~Tracer() {
@@ -51,8 +50,7 @@ Tracer::~Tracer() {
 }
 
 void Tracer::AddTraceEvent(char phase, const char* category, const char* name) {
-  events_.push_back(
-      {phase, category, name, stopwatch_.GetElapsedMicroseconds()});
+  events_.push_back({phase, category, name, stopwatch_.GetElapsedMicroseconds()});
 }
 
 Tracer* GetTracer() { return g_tracer; }

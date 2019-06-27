@@ -12,8 +12,7 @@ namespace {
 class FakeGpuMem : public escher::GpuMem {
  public:
   FakeGpuMem(vk::DeviceSize size, escher::test::FakeGpuAllocator* allocator)
-      : GpuMem(vk::DeviceMemory(), size, 0, new uint8_t[size]),
-        allocator_(allocator) {
+      : GpuMem(vk::DeviceMemory(), size, 0, new uint8_t[size]), allocator_(allocator) {
     allocator_->OnAllocation(static_cast<uint64_t>(size));
   }
 
@@ -29,8 +28,7 @@ class FakeGpuMem : public escher::GpuMem {
 class FakeBuffer : public escher::Buffer {
  public:
   FakeBuffer(escher::ResourceManager* manager, const escher::GpuMemPtr& mem)
-      : Buffer(manager, vk::Buffer(), mem->size(), mem->mapped_ptr()),
-        memory_(mem) {}
+      : Buffer(manager, vk::Buffer(), mem->size(), mem->mapped_ptr()), memory_(mem) {}
 
  private:
   escher::GpuMemPtr memory_;
@@ -38,10 +36,8 @@ class FakeBuffer : public escher::Buffer {
 
 class FakeImage : public escher::Image {
  public:
-  FakeImage(escher::ResourceManager* manager, escher::ImageInfo info,
-            const escher::GpuMemPtr& mem)
-      : Image(manager, info, vk::Image(), mem->size(), mem->mapped_ptr()),
-        memory_(mem) {}
+  FakeImage(escher::ResourceManager* manager, escher::ImageInfo info, const escher::GpuMemPtr& mem)
+      : Image(manager, info, vk::Image(), mem->size(), mem->mapped_ptr()), memory_(mem) {}
 
  private:
   escher::GpuMemPtr memory_;
@@ -60,10 +56,10 @@ GpuMemPtr FakeGpuAllocator::AllocateMemory(vk::MemoryRequirements reqs,
   return fxl::AdoptRef(new FakeGpuMem(reqs.size, this));
 }
 
-BufferPtr FakeGpuAllocator::AllocateBuffer(
-    ResourceManager* manager, vk::DeviceSize size,
-    vk::BufferUsageFlags usage_flags,
-    vk::MemoryPropertyFlags memory_property_flags, GpuMemPtr* out_ptr) {
+BufferPtr FakeGpuAllocator::AllocateBuffer(ResourceManager* manager, vk::DeviceSize size,
+                                           vk::BufferUsageFlags usage_flags,
+                                           vk::MemoryPropertyFlags memory_property_flags,
+                                           GpuMemPtr* out_ptr) {
   auto memory = fxl::AdoptRef(new FakeGpuMem(size, this));
 
   if (out_ptr)
@@ -72,8 +68,7 @@ BufferPtr FakeGpuAllocator::AllocateBuffer(
   return fxl::AdoptRef(new FakeBuffer(manager, memory));
 }
 
-ImagePtr FakeGpuAllocator::AllocateImage(ResourceManager* manager,
-                                         const ImageInfo& info,
+ImagePtr FakeGpuAllocator::AllocateImage(ResourceManager* manager, const ImageInfo& info,
                                          GpuMemPtr* out_ptr) {
   size_t bytes_per_pixel = image_utils::BytesPerPixel(info.format);
   size_t size = info.width * info.height * info.sample_count * bytes_per_pixel;
@@ -86,15 +81,11 @@ ImagePtr FakeGpuAllocator::AllocateImage(ResourceManager* manager,
   return fxl::AdoptRef(new FakeImage(manager, info, memory));
 }
 
-uint32_t FakeGpuAllocator::GetTotalBytesAllocated() const {
-  return bytes_allocated_;
-}
+uint32_t FakeGpuAllocator::GetTotalBytesAllocated() const { return bytes_allocated_; }
 
 void FakeGpuAllocator::OnAllocation(uint64_t size) { bytes_allocated_ += size; }
 
-void FakeGpuAllocator::OnDeallocation(uint64_t size) {
-  bytes_allocated_ -= size;
-}
+void FakeGpuAllocator::OnDeallocation(uint64_t size) { bytes_allocated_ -= size; }
 
 }  // namespace test
 }  // namespace escher

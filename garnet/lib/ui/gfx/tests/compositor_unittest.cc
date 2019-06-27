@@ -76,8 +76,8 @@ TEST_F(CompositorTest, Validation) {
 
   ASSERT_TRUE(Apply(scenic::NewCreateDisplayCompositorCmd(CompositorId)));
 
-  ASSERT_TRUE(Apply(scenic::NewSetDisplayColorConversionCmdHACK(
-      CompositorId, preoffsets, matrix, postoffsets)));
+  ASSERT_TRUE(Apply(
+      scenic::NewSetDisplayColorConversionCmdHACK(CompositorId, preoffsets, matrix, postoffsets)));
 
   Display* display = display_manager()->default_display();
   ASSERT_TRUE(display != nullptr);

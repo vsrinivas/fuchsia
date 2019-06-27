@@ -27,10 +27,8 @@ struct VertexAttributePointers {
 // (looked up in the MeshBuilder).
 // If the |MeshSpec| does not include an attribute, its corresponding pointer
 // will be null.
-VertexAttributePointers GetVertexAttributePointers(uint8_t* vertex,
-                                                   size_t vertex_size,
-                                                   const MeshSpec& spec,
-                                                   MeshBuilderPtr builder) {
+VertexAttributePointers GetVertexAttributePointers(uint8_t* vertex, size_t vertex_size,
+                                                   const MeshSpec& spec, MeshBuilderPtr builder) {
   FXL_CHECK(builder->vertex_stride() <= vertex_size);
   FXL_DCHECK(spec.IsValidOneBufferMesh());
 
@@ -38,34 +36,32 @@ VertexAttributePointers GetVertexAttributePointers(uint8_t* vertex,
 
   // Compute the offset of each vertex attribute.
   if (spec.has_attribute(0, MeshAttribute::kPosition2D)) {
-    attribute_pointers.pos2 = reinterpret_cast<vec2*>(
-        vertex + spec.attribute_offset(0, MeshAttribute::kPosition2D));
+    attribute_pointers.pos2 =
+        reinterpret_cast<vec2*>(vertex + spec.attribute_offset(0, MeshAttribute::kPosition2D));
   }
   if (spec.has_attribute(0, MeshAttribute::kPosition3D)) {
-    attribute_pointers.pos3 = reinterpret_cast<vec3*>(
-        vertex + spec.attribute_offset(0, MeshAttribute::kPosition3D));
+    attribute_pointers.pos3 =
+        reinterpret_cast<vec3*>(vertex + spec.attribute_offset(0, MeshAttribute::kPosition3D));
   }
   if (spec.has_attribute(0, MeshAttribute::kUV)) {
-    attribute_pointers.uv = reinterpret_cast<vec2*>(
-        vertex + spec.attribute_offset(0, MeshAttribute::kUV));
+    attribute_pointers.uv =
+        reinterpret_cast<vec2*>(vertex + spec.attribute_offset(0, MeshAttribute::kUV));
   }
   if (spec.has_attribute(0, MeshAttribute::kPositionOffset)) {
-    attribute_pointers.pos_offset = reinterpret_cast<vec2*>(
-        vertex + spec.attribute_offset(0, MeshAttribute::kPositionOffset));
+    attribute_pointers.pos_offset =
+        reinterpret_cast<vec2*>(vertex + spec.attribute_offset(0, MeshAttribute::kPositionOffset));
   }
   if (spec.has_attribute(0, MeshAttribute::kPerimeterPos)) {
-    attribute_pointers.perim = reinterpret_cast<float*>(
-        vertex + spec.attribute_offset(0, MeshAttribute::kPerimeterPos));
+    attribute_pointers.perim =
+        reinterpret_cast<float*>(vertex + spec.attribute_offset(0, MeshAttribute::kPerimeterPos));
   }
   return attribute_pointers;
 }
 
 IndexedTriangleMesh2d<vec2> NewCircleIndexedTriangleMesh(const MeshSpec& spec,
-                                                         uint32_t subdivisions,
-                                                         vec2 center,
+                                                         uint32_t subdivisions, vec2 center,
                                                          float radius) {
-  FXL_DCHECK((spec == MeshSpec{.attributes = {MeshAttribute::kPosition2D,
-                                              MeshAttribute::kUV}}));
+  FXL_DCHECK((spec == MeshSpec{.attributes = {MeshAttribute::kPosition2D, MeshAttribute::kUV}}));
   IndexedTriangleMesh2d<vec2> mesh;
 
   // Compute the number of vertices in the tessellated circle.
@@ -119,9 +115,8 @@ IndexedTriangleMesh2d<vec2> NewCircleIndexedTriangleMesh(const MeshSpec& spec,
   return mesh;
 }
 
-MeshPtr NewCircleMesh(MeshBuilderFactory* factory, const MeshSpec& spec,
-                      int subdivisions, vec2 center, float radius,
-                      float offset_magnitude) {
+MeshPtr NewCircleMesh(MeshBuilderFactory* factory, const MeshSpec& spec, int subdivisions,
+                      vec2 center, float radius, float offset_magnitude) {
   // Compute the number of vertices in the tessellated circle.
   FXL_DCHECK(subdivisions >= 0);
   FXL_DCHECK(spec.IsValidOneBufferMesh());
@@ -138,8 +133,7 @@ MeshPtr NewCircleMesh(MeshBuilderFactory* factory, const MeshSpec& spec,
   // Generate vertex positions.
   constexpr size_t kMaxVertexSize = 100;
   uint8_t vertex[kMaxVertexSize];
-  auto vertex_p =
-      GetVertexAttributePointers(vertex, kMaxVertexSize, spec, builder);
+  auto vertex_p = GetVertexAttributePointers(vertex, kMaxVertexSize, spec, builder);
 
   // Build center vertex.
   FXL_CHECK(vertex_p.pos2);
@@ -186,16 +180,14 @@ MeshPtr NewCircleMesh(MeshBuilderFactory* factory, const MeshSpec& spec,
 
   auto mesh = builder->Build();
   FXL_DCHECK(mesh->num_indices() == index_count);
-  FXL_DCHECK(mesh->bounding_box() ==
-             BoundingBox(vec3(center.x - radius, center.y - radius, 0),
-                         vec3(center.x + radius, center.y + radius, 0)));
+  FXL_DCHECK(mesh->bounding_box() == BoundingBox(vec3(center.x - radius, center.y - radius, 0),
+                                                 vec3(center.x + radius, center.y + radius, 0)));
   return mesh;
 }
 
-MeshPtr NewRingMesh(MeshBuilderFactory* factory, const MeshSpec& spec,
-                    int subdivisions, vec2 center, float outer_radius,
-                    float inner_radius, float outer_offset_magnitude,
-                    float inner_offset_magnitude) {
+MeshPtr NewRingMesh(MeshBuilderFactory* factory, const MeshSpec& spec, int subdivisions,
+                    vec2 center, float outer_radius, float inner_radius,
+                    float outer_offset_magnitude, float inner_offset_magnitude) {
   // Compute the number of vertices in the tessellated circle.
   FXL_DCHECK(subdivisions >= 0);
   FXL_DCHECK(spec.IsValidOneBufferMesh());
@@ -212,8 +204,7 @@ MeshPtr NewRingMesh(MeshBuilderFactory* factory, const MeshSpec& spec,
   // Generate vertex positions.
   constexpr size_t kMaxVertexSize = 100;
   uint8_t vertex[kMaxVertexSize];
-  auto vertex_p =
-      GetVertexAttributePointers(vertex, kMaxVertexSize, spec, builder);
+  auto vertex_p = GetVertexAttributePointers(vertex, kMaxVertexSize, spec, builder);
   FXL_CHECK(vertex_p.pos2);
 
   const float outer_vertex_count_reciprocal = 1.f / outer_vertex_count;
@@ -270,10 +261,9 @@ MeshPtr NewRingMesh(MeshBuilderFactory* factory, const MeshSpec& spec,
 
   auto mesh = builder->Build();
   FXL_DCHECK(mesh->num_indices() == index_count);
-  FXL_DCHECK(
-      mesh->bounding_box() ==
-      BoundingBox(vec3(center.x - outer_radius, center.y - outer_radius, 0),
-                  vec3(center.x + outer_radius, center.y + outer_radius, 0)));
+  FXL_DCHECK(mesh->bounding_box() ==
+             BoundingBox(vec3(center.x - outer_radius, center.y - outer_radius, 0),
+                         vec3(center.x + outer_radius, center.y + outer_radius, 0)));
   return mesh;
 }
 
@@ -301,9 +291,8 @@ MeshPtr NewSimpleRectangleMesh(MeshBuilderFactory* factory) {
       .Build();
 }
 
-MeshPtr NewRectangleMesh(MeshBuilderFactory* factory, const MeshSpec& spec,
-                         int subdivisions, vec2 size, vec2 top_left,
-                         float top_offset_magnitude,
+MeshPtr NewRectangleMesh(MeshBuilderFactory* factory, const MeshSpec& spec, int subdivisions,
+                         vec2 size, vec2 top_left, float top_offset_magnitude,
                          float bottom_offset_magnitude) {
   // Compute the number of vertices in the tessellated circle.
   FXL_DCHECK(subdivisions >= 0);
@@ -320,15 +309,13 @@ MeshPtr NewRectangleMesh(MeshBuilderFactory* factory, const MeshSpec& spec,
   // Generate vertex positions.
   constexpr size_t kMaxVertexSize = 100;
   uint8_t vertex[kMaxVertexSize];
-  auto vertex_p =
-      GetVertexAttributePointers(vertex, kMaxVertexSize, spec, builder);
+  auto vertex_p = GetVertexAttributePointers(vertex, kMaxVertexSize, spec, builder);
   FXL_CHECK(vertex_p.pos2);
 
   const float vertices_per_side_reciprocal = 1.f / (vertices_per_side - 1);
   for (size_t i = 0; i < vertices_per_side; ++i) {
     // Build bottom vertex.
-    (*vertex_p.pos2) =
-        top_left + vec2(size.x * i * vertices_per_side_reciprocal, size.y);
+    (*vertex_p.pos2) = top_left + vec2(size.x * i * vertices_per_side_reciprocal, size.y);
     if (vertex_p.uv)
       (*vertex_p.uv) = vec2(i * vertices_per_side_reciprocal, 1.f);
     if (vertex_p.pos_offset)
@@ -338,8 +325,7 @@ MeshPtr NewRectangleMesh(MeshBuilderFactory* factory, const MeshSpec& spec,
     builder->AddVertexData(vertex, builder->vertex_stride());
 
     // Build top vertex.
-    (*vertex_p.pos2) =
-        top_left + vec2(size.x * i * vertices_per_side_reciprocal, 0);
+    (*vertex_p.pos2) = top_left + vec2(size.x * i * vertices_per_side_reciprocal, 0);
     if (vertex_p.uv)
       (*vertex_p.uv) = vec2(i * vertices_per_side_reciprocal, 0);
     if (vertex_p.pos_offset)
@@ -383,8 +369,8 @@ MeshPtr NewFullScreenMesh(MeshBuilderFactory* factory) {
       .Build();
 }
 
-MeshPtr NewSphereMesh(MeshBuilderFactory* factory, const MeshSpec& spec,
-                      int subdivisions, vec3 center, float radius) {
+MeshPtr NewSphereMesh(MeshBuilderFactory* factory, const MeshSpec& spec, int subdivisions,
+                      vec3 center, float radius) {
   FXL_DCHECK(subdivisions >= 0);
   FXL_DCHECK(spec.IsValidOneBufferMesh());
   size_t vertex_count = 9;
@@ -397,23 +383,20 @@ MeshPtr NewSphereMesh(MeshBuilderFactory* factory, const MeshSpec& spec,
   }
 
   // Populate initial octahedron.
-  auto builder =
-      factory->NewMeshBuilder(spec, vertex_count, triangle_count * 3);
+  auto builder = factory->NewMeshBuilder(spec, vertex_count, triangle_count * 3);
   constexpr size_t kMaxVertexSize = 100;
   uint8_t vertex[kMaxVertexSize];
-  auto vertex_p =
-      GetVertexAttributePointers(vertex, kMaxVertexSize, spec, builder);
+  auto vertex_p = GetVertexAttributePointers(vertex, kMaxVertexSize, spec, builder);
   FXL_CHECK(vertex_p.pos3);
 
   // Positions and UV-coordinates for the initial octahedron.  The vertex with
   // position (-radius, 0, 0) is replicated 4 times, with different UV-coords
   // each time.  This is a consequence of surface parameterization that is
   // described in the header file.
-  const vec3 positions[] = {vec3(radius, 0.f, 0.f),  vec3(0.f, 0.f, radius),
-                            vec3(0.f, -radius, 0.f), vec3(0.f, 0.f, -radius),
-                            vec3(0.f, radius, 0.f),  vec3(-radius, 0.f, 0.f),
-                            vec3(-radius, 0.f, 0.f), vec3(-radius, 0.f, 0.f),
-                            vec3(-radius, 0.f, 0.f)};
+  const vec3 positions[] = {
+      vec3(radius, 0.f, 0.f),  vec3(0.f, 0.f, radius),  vec3(0.f, -radius, 0.f),
+      vec3(0.f, 0.f, -radius), vec3(0.f, radius, 0.f),  vec3(-radius, 0.f, 0.f),
+      vec3(-radius, 0.f, 0.f), vec3(-radius, 0.f, 0.f), vec3(-radius, 0.f, 0.f)};
   const vec2 uv_coords[] = {vec2(.5f, .5f), vec2(1.f, .5f), vec2(.5f, 0.f),
                             vec2(0.f, .5f), vec2(.5f, 1.f), vec2(0.f, 0.f),
                             vec2(1.f, 0.f), vec2(1.f, 1.f), vec2(0.f, 1.f)};
@@ -437,8 +420,7 @@ MeshPtr NewSphereMesh(MeshBuilderFactory* factory, const MeshSpec& spec,
   // TODO(ES-32): this is a hack to ease implementation.  We don't currently
   // need any tessellated spheres; this is just a way to verify that 3D meshes
   // are working properly.
-  FXL_DCHECK(spec.attributes[0] ==
-             (MeshAttribute::kPosition3D | MeshAttribute::kUV))
+  FXL_DCHECK(spec.attributes[0] == (MeshAttribute::kPosition3D | MeshAttribute::kUV))
       << "Tessellated sphere must have UV-coordinates.";
   size_t position_offset = reinterpret_cast<uint8_t*>(vertex_p.pos3) - vertex;
   size_t uv_offset = reinterpret_cast<uint8_t*>(vertex_p.uv) - vertex;
@@ -468,8 +450,7 @@ MeshPtr NewSphereMesh(MeshBuilderFactory* factory, const MeshSpec& spec,
       vec2 uv2 = *reinterpret_cast<vec2*>(vert2 + uv_offset);
 
       // Create a new vertex by averaging the existing vertex attributes.
-      (*vertex_p.pos3) =
-          center + radius * glm::normalize((pos0 + pos1 + pos2) / 3.f - center);
+      (*vertex_p.pos3) = center + radius * glm::normalize((pos0 + pos1 + pos2) / 3.f - center);
       (*vertex_p.uv) = (uv0 + uv1 + uv2) / 3.f;
       builder->AddVertexData(vertex, builder->vertex_stride());
 
@@ -478,8 +459,7 @@ MeshPtr NewSphereMesh(MeshBuilderFactory* factory, const MeshSpec& spec,
       // new vertex.
       uint32_t new_ind = builder->vertex_count() - 1;
       tri[2] = new_ind;
-      builder->AddTriangle(ind1, ind2, new_ind)
-          .AddTriangle(ind2, ind0, new_ind);
+      builder->AddTriangle(ind1, ind2, new_ind).AddTriangle(ind2, ind0, new_ind);
     }
   }
   return builder->Build();

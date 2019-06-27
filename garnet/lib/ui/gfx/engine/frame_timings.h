@@ -95,9 +95,7 @@ class FrameTimings : public escher::Reffable {
 
   // Provide direct access to FrameTimings constant values.
   uint64_t frame_number() const { return frame_number_; }
-  zx_time_t target_presentation_time() const {
-    return target_presentation_time_;
-  }
+  zx_time_t target_presentation_time() const { return target_presentation_time_; }
   zx_time_t latch_point_time() const { return latch_point_time_; }
   zx_time_t rendering_started_time() const { return rendering_started_time_; }
 

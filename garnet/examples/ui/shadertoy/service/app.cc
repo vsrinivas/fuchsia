@@ -14,8 +14,7 @@ App::App(async::Loop* loop, component::StartupContext* app_context,
          escher::EscherWeakPtr weak_escher)
     : escher_(std::move(weak_escher)),
       renderer_(escher_, kDefaultImageFormat),
-      compiler_(loop, escher_, renderer_.render_pass(),
-                renderer_.descriptor_set_layout()) {
+      compiler_(loop, escher_, renderer_.render_pass(), renderer_.descriptor_set_layout()) {
   app_context->outgoing().AddPublicService(factory_bindings_.GetHandler(this));
 }
 
@@ -25,18 +24,16 @@ void App::NewImagePipeShadertoy(
     fidl::InterfaceRequest<fuchsia::examples::shadertoy::Shadertoy> toy_request,
     fidl::InterfaceHandle<fuchsia::images::ImagePipe> image_pipe) {
   shadertoy_bindings_.AddBinding(
-      std::make_unique<ShadertoyImpl>(
-          ShadertoyState::NewForImagePipe(this, std::move(image_pipe))),
+      std::make_unique<ShadertoyImpl>(ShadertoyState::NewForImagePipe(this, std::move(image_pipe))),
       std::move(toy_request));
 }
 
 void App::NewViewShadertoy(
     fidl::InterfaceRequest<fuchsia::examples::shadertoy::Shadertoy> toy_request,
     zx::eventpair view_token, bool handle_input_events) {
-  shadertoy_bindings_.AddBinding(
-      std::make_unique<ShadertoyImpl>(ShadertoyState::NewForView(
-          this, std::move(view_token), handle_input_events)),
-      std::move(toy_request));
+  shadertoy_bindings_.AddBinding(std::make_unique<ShadertoyImpl>(ShadertoyState::NewForView(
+                                     this, std::move(view_token), handle_input_events)),
+                                 std::move(toy_request));
 }
 
 void App::CloseShadertoy(ShadertoyState* shadertoy) {

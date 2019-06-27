@@ -19,8 +19,7 @@ class SimplestAppView : public scenic::BaseView {
   ~SimplestAppView() = default;
 
   // |scenic::BaseView|.
-  void OnPropertiesChanged(
-      fuchsia::ui::gfx::ViewProperties old_properties) override;
+  void OnPropertiesChanged(fuchsia::ui::gfx::ViewProperties old_properties) override;
 
   // |scenic::BaseView|.
   void OnInputEvent(fuchsia::ui::input::InputEvent event) override;

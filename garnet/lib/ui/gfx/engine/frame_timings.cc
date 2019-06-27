@@ -9,10 +9,8 @@
 namespace scenic_impl {
 namespace gfx {
 
-FrameTimings::FrameTimings(FrameScheduler* frame_scheduler,
-                           uint64_t frame_number,
-                           zx_time_t target_presentation_time,
-                           zx_time_t latch_time,
+FrameTimings::FrameTimings(FrameScheduler* frame_scheduler, uint64_t frame_number,
+                           zx_time_t target_presentation_time, zx_time_t latch_time,
                            zx_time_t rendering_started_time)
     : frame_scheduler_(frame_scheduler),
       frame_number_(frame_number),
@@ -37,8 +35,7 @@ void FrameTimings::OnFrameUpdated(zx_time_t time) {
       << "Error, update time already recorded.";
   updates_finished_time_ = time;
 
-  FXL_DCHECK(updates_finished_time_ >= latch_point_time_)
-      << "Error, updates took negative time";
+  FXL_DCHECK(updates_finished_time_ >= latch_point_time_) << "Error, updates took negative time";
 }
 
 void FrameTimings::OnFrameRendered(size_t swapchain_index, zx_time_t time) {

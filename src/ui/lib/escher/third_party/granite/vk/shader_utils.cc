@@ -36,9 +36,8 @@
 namespace escher {
 namespace impl {
 
-void GenerateShaderModuleResourceLayoutFromSpirv(
-    std::vector<uint32_t> spirv, ShaderStage stage,
-    ShaderModuleResourceLayout* layout) {
+void GenerateShaderModuleResourceLayoutFromSpirv(std::vector<uint32_t> spirv, ShaderStage stage,
+                                                 ShaderModuleResourceLayout* layout) {
   FXL_DCHECK(layout);
 
   // Clear layout before populating it.
@@ -58,8 +57,7 @@ void GenerateShaderModuleResourceLayoutFromSpirv(
       layout->sets[set].sampled_image_mask |= 1u << binding;
     layout->sets[set].stages |= stage_flags;
 
-    if (compiler.get_type(type.image.type).basetype ==
-        spirv_cross::SPIRType::BaseType::Float)
+    if (compiler.get_type(type.image.type).basetype == spirv_cross::SPIRType::BaseType::Float)
       layout->sets[set].fp_mask |= 1u << binding;
   }
 
@@ -70,8 +68,7 @@ void GenerateShaderModuleResourceLayoutFromSpirv(
     layout->sets[set].stages |= stage_flags;
 
     auto& type = compiler.get_type(image.base_type_id);
-    if (compiler.get_type(type.image.type).basetype ==
-        spirv_cross::SPIRType::BaseType::Float)
+    if (compiler.get_type(type.image.type).basetype == spirv_cross::SPIRType::BaseType::Float)
       layout->sets[set].fp_mask |= 1u << binding;
   }
 
@@ -82,8 +79,7 @@ void GenerateShaderModuleResourceLayoutFromSpirv(
     layout->sets[set].stages |= stage_flags;
 
     auto& type = compiler.get_type(image.base_type_id);
-    if (compiler.get_type(type.image.type).basetype ==
-        spirv_cross::SPIRType::BaseType::Float)
+    if (compiler.get_type(type.image.type).basetype == spirv_cross::SPIRType::BaseType::Float)
       layout->sets[set].fp_mask |= 1u << binding;
   }
 
@@ -105,22 +101,20 @@ void GenerateShaderModuleResourceLayoutFromSpirv(
   // such as tessellation and geometry shaders.
   if (stage == ShaderStage::kVertex) {
     for (auto& attrib : resources.stage_inputs) {
-      auto location =
-          compiler.get_decoration(attrib.id, spv::DecorationLocation);
+      auto location = compiler.get_decoration(attrib.id, spv::DecorationLocation);
       layout->attribute_mask |= 1u << location;
     }
   } else if (stage == ShaderStage::kFragment) {
     for (auto& attrib : resources.stage_outputs) {
-      auto location =
-          compiler.get_decoration(attrib.id, spv::DecorationLocation);
+      auto location = compiler.get_decoration(attrib.id, spv::DecorationLocation);
       layout->render_target_mask |= 1u << location;
     }
   }
 
   if (!resources.push_constant_buffers.empty()) {
     // Need to declare the entire block.
-    size_t size = compiler.get_declared_struct_size(compiler.get_type(
-        resources.push_constant_buffers.front().base_type_id));
+    size_t size = compiler.get_declared_struct_size(
+        compiler.get_type(resources.push_constant_buffers.front().base_type_id));
     layout->push_constant_offset = 0;
     layout->push_constant_range = size;
   }
@@ -131,22 +125,17 @@ PipelineLayoutSpec GeneratePipelineLayoutSpec(
     const SamplerPtr& immutable_sampler) {
   uint32_t attribute_mask = 0;
   if (auto& vertex_module = shader_modules[EnumCast(ShaderStage::kVertex)]) {
-    attribute_mask =
-        vertex_module->shader_module_resource_layout().attribute_mask;
+    attribute_mask = vertex_module->shader_module_resource_layout().attribute_mask;
   }
   uint32_t render_target_mask = 0;
-  if (auto& fragment_module =
-          shader_modules[EnumCast(ShaderStage::kFragment)]) {
-    render_target_mask =
-        fragment_module->shader_module_resource_layout().render_target_mask;
+  if (auto& fragment_module = shader_modules[EnumCast(ShaderStage::kFragment)]) {
+    render_target_mask = fragment_module->shader_module_resource_layout().render_target_mask;
   }
 
-  std::array<DescriptorSetLayout, VulkanLimits::kNumDescriptorSets>
-      descriptor_set_layouts;
+  std::array<DescriptorSetLayout, VulkanLimits::kNumDescriptorSets> descriptor_set_layouts;
 
   // Store the initial push constant ranges locally, then de-dup further down.
-  std::array<vk::PushConstantRange, PipelineLayoutSpec::kMaxPushConstantRanges>
-      raw_ranges = {};
+  std::array<vk::PushConstantRange, PipelineLayoutSpec::kMaxPushConstantRanges> raw_ranges = {};
   std::array<vk::PushConstantRange, PipelineLayoutSpec::kMaxPushConstantRanges>
       push_constant_ranges = {};
   for (uint32_t i = 0; i < EnumCount<ShaderStage>(); ++i) {
@@ -197,9 +186,8 @@ PipelineLayoutSpec GeneratePipelineLayoutSpec(
 
   uint32_t num_push_constant_ranges = num_ranges;
 
-  return PipelineLayoutSpec(attribute_mask, render_target_mask,
-                            descriptor_set_layouts, push_constant_ranges,
-                            num_push_constant_ranges, immutable_sampler);
+  return PipelineLayoutSpec(attribute_mask, render_target_mask, descriptor_set_layouts,
+                            push_constant_ranges, num_push_constant_ranges, immutable_sampler);
 }
 
 }  // namespace impl

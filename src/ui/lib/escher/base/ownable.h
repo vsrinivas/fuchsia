@@ -44,8 +44,7 @@ class Ownable : public TypedReffable<TypeInfoT> {
   bool OnZeroRefCount() final override {
     if (owner_) {
       // FXL_DCHECK(this->IsKindOf<OwnableT>());
-      owner_->OnReceiveOwnable(
-          std::unique_ptr<OwnableT>(static_cast<OwnableT*>(this)));
+      owner_->OnReceiveOwnable(std::unique_ptr<OwnableT>(static_cast<OwnableT*>(this)));
       return false;
     } else {
       // No owner: destroy immediately.

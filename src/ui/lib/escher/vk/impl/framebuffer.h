@@ -21,8 +21,7 @@ class Framebuffer : public Resource {
   static const ResourceTypeInfo kTypeInfo;
   const ResourceTypeInfo& type_info() const override { return kTypeInfo; }
 
-  Framebuffer(ResourceRecycler* recycler, RenderPassPtr pass,
-              const RenderPassInfo& pass_info);
+  Framebuffer(ResourceRecycler* recycler, RenderPassPtr pass, const RenderPassInfo& pass_info);
   ~Framebuffer() override;
 
   vk::Framebuffer vk() const { return framebuffer_; }
@@ -40,9 +39,8 @@ class Framebuffer : public Resource {
   // and the index of the depth-stencil attachment (if any) is one greater than
   // the highest color attachment index.
   const ImageViewPtr& GetAttachment(uint32_t index) {
-    FXL_DCHECK(index <
-               render_pass_info_.num_color_attachments +
-                   (render_pass_info_.depth_stencil_attachment ? 1 : 0));
+    FXL_DCHECK(index < render_pass_info_.num_color_attachments +
+                           (render_pass_info_.depth_stencil_attachment ? 1 : 0));
     return index < render_pass_info_.num_color_attachments
                ? render_pass_info_.color_attachments[index]
                : render_pass_info_.depth_stencil_attachment;

@@ -39,29 +39,25 @@ class Scene {
   // near-ish future, Waterfall will be deleted, and the |render_queue| argument
   // to this method will become non-optional.
   // TODO(ES-155): deprecated, use PaperScene instead.
-  virtual escher::Model* Update(const escher::Stopwatch& stopwatch,
-                                uint64_t frame_count, escher::Stage* stage,
+  virtual escher::Model* Update(const escher::Stopwatch& stopwatch, uint64_t frame_count,
+                                escher::Stage* stage,
                                 escher::PaperRenderer* renderer = nullptr) = 0;
 
   // Default implementation delegates to the escher::Stage version.
   // TODO(ES-155): make this pure virtual when Init(Stage*) dies.
   virtual void Update(const escher::Stopwatch& stopwatch, uint64_t frame_count,
-                      escher::PaperScene* scene,
-                      escher::PaperRenderer* renderer);
+                      escher::PaperScene* scene, escher::PaperRenderer* renderer);
 
   // Optionally returns a |Model| for the specified time, frame_count, and
   // screen dimensions.  The returned Model only needs to be valid for the
   // duration of the frame.
-  virtual escher::Model* UpdateOverlay(const escher::Stopwatch& stopwatch,
-                                       uint64_t frame_count, uint32_t width,
-                                       uint32_t height) {
+  virtual escher::Model* UpdateOverlay(const escher::Stopwatch& stopwatch, uint64_t frame_count,
+                                       uint32_t width, uint32_t height) {
     return nullptr;
   }
 
  protected:
-  const escher::VulkanContext& vulkan_context() const {
-    return demo_->vulkan_context();
-  }
+  const escher::VulkanContext& vulkan_context() const { return demo_->vulkan_context(); }
   escher::Escher* escher() { return demo_->escher(); }
 
  private:

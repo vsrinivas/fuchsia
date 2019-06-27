@@ -35,20 +35,19 @@
 namespace escher {
 namespace impl {
 
-const ResourceTypeInfo impl::RenderPass::kTypeInfo(
-    "impl::RenderPass", ResourceType::kResource, ResourceType::kImplRenderPass);
+const ResourceTypeInfo impl::RenderPass::kTypeInfo("impl::RenderPass", ResourceType::kResource,
+                                                   ResourceType::kImplRenderPass);
 
 namespace {
 // Helper function for constructor.  If |info| has explicit subpasses, return a
 // pointer to the first one.  Otherwise, populate |default_subpass| and return
 // the pointer to it.
-const RenderPassInfo::Subpass* GetPointerToFirstSubpass(
-    const RenderPassInfo& info, RenderPassInfo::Subpass* default_subpass) {
+const RenderPassInfo::Subpass* GetPointerToFirstSubpass(const RenderPassInfo& info,
+                                                        RenderPassInfo::Subpass* default_subpass) {
   if (info.subpasses.empty()) {
     // Populate default subpass.
     default_subpass->num_color_attachments = info.num_color_attachments;
-    default_subpass->depth_stencil_mode =
-        RenderPassInfo::DepthStencil::kReadWrite;
+    default_subpass->depth_stencil_mode = RenderPassInfo::DepthStencil::kReadWrite;
     for (uint32_t i = 0; i < info.num_color_attachments; i++) {
       default_subpass->color_attachments[i] = i;
     }
@@ -60,15 +59,13 @@ const RenderPassInfo::Subpass* GetPointerToFirstSubpass(
 // Helper function for constructor.  Return true if the attachment requires
 // an implicit layout transition (because it is a swapchain image or transient
 // attachment), and false otherwise.
-bool FillColorAttachmentDescription(
-    const RenderPassInfo& info,
-    vk::AttachmentDescription* attachment_descriptions, uint32_t index) {
+bool FillColorAttachmentDescription(const RenderPassInfo& info,
+                                    vk::AttachmentDescription* attachment_descriptions,
+                                    uint32_t index) {
 #ifndef NDEBUG
   FXL_DCHECK(info.color_attachments[index]);
-  auto pair = image_utils::IsDepthStencilFormat(
-      info.color_attachments[index]->image()->format());
-  FXL_DCHECK(!pair.first && !pair.second)
-      << "Color attachment cannot use depth/stencil format.";
+  auto pair = image_utils::IsDepthStencilFormat(info.color_attachments[index]->image()->format());
+  FXL_DCHECK(!pair.first && !pair.second) << "Color attachment cannot use depth/stencil format.";
 #endif
 
   auto& image = info.color_attachments[index]->image();
@@ -172,9 +169,8 @@ bool FillDepthStencilAttachmentDescription(const RenderPassInfo& info,
   // more flexible regarding the attachments it will accept by setting the
   // layout to eUndefined.  This should incur no additional
   // performance cost.
-  desc->initialLayout = desc->loadOp == vk::AttachmentLoadOp::eLoad
-                            ? layout
-                            : vk::ImageLayout::eUndefined;
+  desc->initialLayout =
+      desc->loadOp == vk::AttachmentLoadOp::eLoad ? layout : vk::ImageLayout::eUndefined;
 
   // TODO(ES-83): If the attachment is not being stored, then the most
   // performant choice is to leave it in the same layout as the last subpass
@@ -205,8 +201,8 @@ vk::AttachmentReference* FindColorAttachmentRef(vk::SubpassDescription* subpass,
 // Find and return the vk::AttachmentReference that references the specified
 // attachment in the specified subpass, or nullptr if the attachment is not
 // referenced as a resolve attachment in that subpass.
-vk::AttachmentReference* FindResolveAttachmentRef(
-    vk::SubpassDescription* subpass, uint32_t attachment_index) {
+vk::AttachmentReference* FindResolveAttachmentRef(vk::SubpassDescription* subpass,
+                                                  uint32_t attachment_index) {
   if (auto* resolves = subpass->pResolveAttachments) {
     const uint32_t count = subpass->colorAttachmentCount;
     for (uint32_t i = 0; i < count; i++) {
@@ -236,11 +232,10 @@ vk::AttachmentReference* FindInputAttachmentRef(vk::SubpassDescription* subpass,
 // Find and return the vk::AttachmentReference that references the specified
 // attachment in the specified subpass, or nullptr if the attachment is not
 // the depth-stencil attachment for that subpass.
-vk::AttachmentReference* FindDepthStencilAttachmentRef(
-    vk::SubpassDescription* subpass, uint32_t attachment_index) {
+vk::AttachmentReference* FindDepthStencilAttachmentRef(vk::SubpassDescription* subpass,
+                                                       uint32_t attachment_index) {
   if (subpass->pDepthStencilAttachment->attachment == attachment_index) {
-    return const_cast<vk::AttachmentReference*>(
-        subpass->pDepthStencilAttachment);
+    return const_cast<vk::AttachmentReference*>(subpass->pDepthStencilAttachment);
   }
   return nullptr;
 };
@@ -257,10 +252,8 @@ RenderPass::RenderPass(ResourceRecycler* recycler, const RenderPassInfo& info)
   // will use |info_subpasses| and |num_info_subpasses| without considering
   // where they came from.
   RenderPassInfo::Subpass default_subpass;
-  const RenderPassInfo::Subpass* info_subpasses =
-      GetPointerToFirstSubpass(info, &default_subpass);
-  const uint32_t num_info_subpasses =
-      info.subpasses.empty() ? 1 : info.subpasses.size();
+  const RenderPassInfo::Subpass* info_subpasses = GetPointerToFirstSubpass(info, &default_subpass);
+  const uint32_t num_info_subpasses = info.subpasses.empty() ? 1 : info.subpasses.size();
   FXL_DCHECK(num_info_subpasses <= 32);
 
   vk::AttachmentDescription attachments[VulkanLimits::kNumColorAttachments + 1];
@@ -290,8 +283,7 @@ RenderPass::RenderPass(ResourceRecycler* recycler, const RenderPassInfo& info)
                image_utils::IsStencilFormat(depth_stencil_format_));
   }
 
-  std::vector<vk::SubpassDescription> vk_subpass_descriptions(
-      num_info_subpasses);
+  std::vector<vk::SubpassDescription> vk_subpass_descriptions(num_info_subpasses);
   std::vector<vk::SubpassDependency> vk_subpass_dependencies;
 
   // Initialize a vk::SubpassDescription for each subpass.  For each of the
@@ -303,12 +295,12 @@ RenderPass::RenderPass(ResourceRecycler* recycler, const RenderPassInfo& info)
   for (uint32_t i = 0; i < num_info_subpasses; i++) {
     // Allocate enough vk::AttachmentReferences for all of the
     // color/input/resolve/depth attachments used by the i-th subpass.
-    auto* color_att_refs = reference_allocator.AllocateFilled(
-        info_subpasses[i].num_color_attachments);
-    auto* input_att_refs = reference_allocator.AllocateFilled(
-        info_subpasses[i].num_input_attachments);
-    auto* resolve_att_refs = reference_allocator.AllocateFilled(
-        info_subpasses[i].num_color_attachments);
+    auto* color_att_refs =
+        reference_allocator.AllocateFilled(info_subpasses[i].num_color_attachments);
+    auto* input_att_refs =
+        reference_allocator.AllocateFilled(info_subpasses[i].num_input_attachments);
+    auto* resolve_att_refs =
+        reference_allocator.AllocateFilled(info_subpasses[i].num_color_attachments);
     auto* depth_att_ref = reference_allocator.AllocateFilled(1);
 
     auto& subpass = vk_subpass_descriptions[i];
@@ -355,11 +347,11 @@ RenderPass::RenderPass(ResourceRecycler* recycler, const RenderPassInfo& info)
       }
     }
 
-    depth_att_ref->attachment = (info.depth_stencil_attachment &&
-                                 info_subpasses[i].depth_stencil_mode !=
-                                     RenderPassInfo::DepthStencil::kNone)
-                                    ? info.num_color_attachments
-                                    : VK_ATTACHMENT_UNUSED;
+    depth_att_ref->attachment =
+        (info.depth_stencil_attachment &&
+         info_subpasses[i].depth_stencil_mode != RenderPassInfo::DepthStencil::kNone)
+            ? info.num_color_attachments
+            : VK_ATTACHMENT_UNUSED;
     // To be filled in later.
     depth_att_ref->layout = vk::ImageLayout::eUndefined;
   }
@@ -370,8 +362,7 @@ RenderPass::RenderPass(ResourceRecycler* recycler, const RenderPassInfo& info)
   uint32_t preserve_masks[VulkanLimits::kNumColorAttachments + 1] = {};
 
   // Last subpass which makes use of an attachment.
-  uint32_t last_subpass_for_attachment[VulkanLimits::kNumColorAttachments + 1] =
-      {};
+  uint32_t last_subpass_for_attachment[VulkanLimits::kNumColorAttachments + 1] = {};
 
   // 1 << subpass bit set if there are color attachment self-dependencies in
   // the subpass.
@@ -510,8 +501,8 @@ RenderPass::RenderPass(ResourceRecycler* recycler, const RenderPassInfo& info)
 
         // If the attachment is first used as an input attachment, the initial
         // layout should actually be vk::ImageLayout::eShaderReadOnlyOptimal.
-        if (!used && attachments[attachment].initialLayout ==
-                         vk::ImageLayout::eColorAttachmentOptimal) {
+        if (!used &&
+            attachments[attachment].initialLayout == vk::ImageLayout::eColorAttachmentOptimal) {
           attachments[attachment].initialLayout = current_layout;
         }
 
@@ -520,8 +511,7 @@ RenderPass::RenderPass(ResourceRecycler* recycler, const RenderPassInfo& info)
         FXL_DCHECK(false) << "Unhandled attachment usage.";
       }
     }
-    FXL_DCHECK(used) << "attachment[" << attachment
-                     << "] was not used in any subpass.";
+    FXL_DCHECK(used) << "attachment[" << attachment << "] was not used in any subpass.";
 
     // If we don't have a specific layout we need to end up in, use the last one
     // to avoid unnecessary layout transitions.
@@ -537,11 +527,9 @@ RenderPass::RenderPass(ResourceRecycler* recycler, const RenderPassInfo& info)
     // As mentioned above, do not preserve attachments beyond the last subpass
     // where they are used.
     // TODO(ES-83): add ClearBitsAtAndAboveIndex() to bit_ops.h
-    preserve_masks[attachment] &=
-        (1u << last_subpass_for_attachment[attachment]) - 1;
+    preserve_masks[attachment] &= (1u << last_subpass_for_attachment[attachment]) - 1;
   }
-  for (uint32_t subpass_index = 0; subpass_index < num_info_subpasses;
-       subpass_index++) {
+  for (uint32_t subpass_index = 0; subpass_index < num_info_subpasses; subpass_index++) {
     // Count the number of attachments to be preserved in this subpass.
     uint32_t preserve_count = 0;
     for (uint32_t attachment = 0; attachment < num_attachments; attachment++) {
@@ -574,8 +562,7 @@ RenderPass::RenderPass(ResourceRecycler* recycler, const RenderPassInfo& info)
   // can be more efficient (perhaps this can be addressed as part of the future
   // "frame graph" design).
   ForEachBitIndex(
-      external_color_dependencies | external_depth_dependencies |
-          external_input_dependencies,
+      external_color_dependencies | external_depth_dependencies | external_input_dependencies,
       [&](uint32_t subpass_index) {
         vk_subpass_dependencies.emplace_back();
         auto& dep = vk_subpass_dependencies.back();
@@ -586,8 +573,8 @@ RenderPass::RenderPass(ResourceRecycler* recycler, const RenderPassInfo& info)
           dep.srcStageMask |= vk::PipelineStageFlagBits::eColorAttachmentOutput;
           dep.dstStageMask |= vk::PipelineStageFlagBits::eColorAttachmentOutput;
           dep.srcAccessMask |= vk::AccessFlagBits::eColorAttachmentWrite;
-          dep.dstAccessMask |= vk::AccessFlagBits::eColorAttachmentRead |
-                               vk::AccessFlagBits::eColorAttachmentWrite;
+          dep.dstAccessMask |=
+              vk::AccessFlagBits::eColorAttachmentRead | vk::AccessFlagBits::eColorAttachmentWrite;
         }
 
         if (external_depth_dependencies & (1u << subpass_index)) {
@@ -596,9 +583,8 @@ RenderPass::RenderPass(ResourceRecycler* recycler, const RenderPassInfo& info)
           dep.dstStageMask |= vk::PipelineStageFlagBits::eEarlyFragmentTests |
                               vk::PipelineStageFlagBits::eLateFragmentTests;
           dep.srcAccessMask |= vk::AccessFlagBits::eDepthStencilAttachmentWrite;
-          dep.dstAccessMask |=
-              vk::AccessFlagBits::eDepthStencilAttachmentWrite |
-              vk::AccessFlagBits::eDepthStencilAttachmentRead;
+          dep.dstAccessMask |= vk::AccessFlagBits::eDepthStencilAttachmentWrite |
+                               vk::AccessFlagBits::eDepthStencilAttachmentRead;
         }
 
         if (external_input_dependencies & (1u << subpass_index)) {
@@ -613,28 +599,27 @@ RenderPass::RenderPass(ResourceRecycler* recycler, const RenderPassInfo& info)
   // We previously identified subpasses where an input attachment depends on
   // color/depth data generated by a previous subpass.  For each of these, we
   // now generate the necessary VkSubpassDependency structs.
-  ForEachBitIndex(
-      color_self_dependencies | depth_self_dependencies, [&](uint32_t subpass) {
-        vk_subpass_dependencies.emplace_back();
-        auto& dep = vk_subpass_dependencies.back();
-        dep.srcSubpass = subpass;
-        dep.dstSubpass = subpass;
-        dep.dependencyFlags = vk::DependencyFlagBits::eByRegion;
+  ForEachBitIndex(color_self_dependencies | depth_self_dependencies, [&](uint32_t subpass) {
+    vk_subpass_dependencies.emplace_back();
+    auto& dep = vk_subpass_dependencies.back();
+    dep.srcSubpass = subpass;
+    dep.dstSubpass = subpass;
+    dep.dependencyFlags = vk::DependencyFlagBits::eByRegion;
 
-        if (color_self_dependencies & (1u << subpass)) {
-          dep.srcStageMask |= vk::PipelineStageFlagBits::eColorAttachmentOutput;
-          dep.srcAccessMask |= vk::AccessFlagBits::eColorAttachmentWrite;
-        }
+    if (color_self_dependencies & (1u << subpass)) {
+      dep.srcStageMask |= vk::PipelineStageFlagBits::eColorAttachmentOutput;
+      dep.srcAccessMask |= vk::AccessFlagBits::eColorAttachmentWrite;
+    }
 
-        if (depth_self_dependencies & (1u << subpass)) {
-          dep.srcStageMask |= vk::PipelineStageFlagBits::eEarlyFragmentTests |
-                              vk::PipelineStageFlagBits::eLateFragmentTests;
-          dep.srcAccessMask |= vk::AccessFlagBits::eDepthStencilAttachmentWrite;
-        }
+    if (depth_self_dependencies & (1u << subpass)) {
+      dep.srcStageMask |= vk::PipelineStageFlagBits::eEarlyFragmentTests |
+                          vk::PipelineStageFlagBits::eLateFragmentTests;
+      dep.srcAccessMask |= vk::AccessFlagBits::eDepthStencilAttachmentWrite;
+    }
 
-        dep.dstStageMask = vk::PipelineStageFlagBits::eFragmentShader;
-        dep.dstAccessMask = vk::AccessFlagBits::eInputAttachmentRead;
-      });
+    dep.dstStageMask = vk::PipelineStageFlagBits::eFragmentShader;
+    dep.dstAccessMask = vk::AccessFlagBits::eInputAttachmentRead;
+  });
 
   // Flush and invalidate caches between each subpass.
   for (uint32_t subpass = 1; subpass < num_info_subpasses; subpass++) {
@@ -657,8 +642,8 @@ RenderPass::RenderPass(ResourceRecycler* recycler, const RenderPassInfo& info)
 
     if (color_attachment_read_write & (1u << subpass)) {
       dep.dstStageMask |= vk::PipelineStageFlagBits::eColorAttachmentOutput;
-      dep.dstAccessMask |= vk::AccessFlagBits::eColorAttachmentWrite |
-                           vk::AccessFlagBits::eColorAttachmentRead;
+      dep.dstAccessMask |=
+          vk::AccessFlagBits::eColorAttachmentWrite | vk::AccessFlagBits::eColorAttachmentRead;
     }
 
     if (depth_stencil_attachment_read & (1u << subpass)) {
@@ -693,8 +678,7 @@ RenderPass::RenderPass(ResourceRecycler* recycler, const RenderPassInfo& info)
 
     uint32_t samples = 0;
     for (uint32_t i = 0; i < subpass_info.num_color_attachments; i++) {
-      if (subpass_info.color_attachments[i].attachment ==
-          VK_ATTACHMENT_UNUSED) {
+      if (subpass_info.color_attachments[i].attachment == VK_ATTACHMENT_UNUSED) {
         continue;
       }
 
@@ -706,11 +690,9 @@ RenderPass::RenderPass(ResourceRecycler* recycler, const RenderPassInfo& info)
       samples = samp;
     }
 
-    if (subpass_info.depth_stencil_attachment.attachment !=
-        VK_ATTACHMENT_UNUSED) {
+    if (subpass_info.depth_stencil_attachment.attachment != VK_ATTACHMENT_UNUSED) {
       uint32_t samp = SampleCountFlagBitsToInt(
-          attachments[subpass_info.depth_stencil_attachment.attachment]
-              .samples);
+          attachments[subpass_info.depth_stencil_attachment.attachment].samples);
       if (samples && (samp != samples)) {
         FXL_DCHECK(samp == samples);
       }
@@ -729,11 +711,9 @@ RenderPass::RenderPass(ResourceRecycler* recycler, const RenderPassInfo& info)
   render_pass_create_info.pAttachments = attachments;
   render_pass_create_info.attachmentCount = num_attachments;
   render_pass_create_info.dependencyCount = vk_subpass_dependencies.size();
-  render_pass_create_info.pDependencies = vk_subpass_dependencies.empty()
-                                              ? nullptr
-                                              : vk_subpass_dependencies.data();
-  render_pass_ = ESCHER_CHECKED_VK_RESULT(
-      vk_device().createRenderPass(render_pass_create_info));
+  render_pass_create_info.pDependencies =
+      vk_subpass_dependencies.empty() ? nullptr : vk_subpass_dependencies.data();
+  render_pass_ = ESCHER_CHECKED_VK_RESULT(vk_device().createRenderPass(render_pass_create_info));
 }
 
 RenderPass::~RenderPass() { vk_device().destroyRenderPass(render_pass_); }

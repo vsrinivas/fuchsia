@@ -16,8 +16,7 @@ namespace gfx {
 namespace test {
 
 #define ERROR_IF_CALLED(str) \
-  std::bind(                 \
-      []() { EXPECT_TRUE(false) << "Delegate called unexpectedly: " << str; })
+  std::bind([]() { EXPECT_TRUE(false) << "Delegate called unexpectedly: " << str; })
 
 class ObjectLinkerTest : public ErrorReportingTest {
  protected:
@@ -97,8 +96,7 @@ TEST_F(ObjectLinkerTest, CanExportWithDeadImportToken) {
 TEST_F(ObjectLinkerTest, CannotExportSameTokenTwice) {
   zx::eventpair export_token, export_token2, import_token;
   EXPECT_EQ(ZX_OK, zx::eventpair::create(0, &export_token, &import_token));
-  EXPECT_EQ(ZX_OK,
-            export_token.duplicate(ZX_RIGHT_SAME_RIGHTS, &export_token2));
+  EXPECT_EQ(ZX_OK, export_token.duplicate(ZX_RIGHT_SAME_RIGHTS, &export_token2));
 
   TestObjectLinker::ExportLink export_link =
       object_linker_.CreateExport(std::move(export_token), error_reporter());
@@ -201,8 +199,7 @@ TEST_F(ObjectLinkerTest, CanImportWithDeadExportToken) {
 TEST_F(ObjectLinkerTest, CannotImportSameTokenTwice) {
   zx::eventpair export_token, import_token, import_token2;
   EXPECT_EQ(ZX_OK, zx::eventpair::create(0, &export_token, &import_token));
-  EXPECT_EQ(ZX_OK,
-            import_token.duplicate(ZX_RIGHT_SAME_RIGHTS, &import_token2));
+  EXPECT_EQ(ZX_OK, import_token.duplicate(ZX_RIGHT_SAME_RIGHTS, &import_token2));
 
   TestObjectLinker::ImportLink import_link =
       object_linker_.CreateImport(std::move(import_token), error_reporter());
@@ -259,8 +256,7 @@ TEST_F(ObjectLinkerTest, DISABLED_InitializingLinkTwiceCausesDeath) {
 
   // 2nd Initialize() attempt dies with a DCHECK.
   EXPECT_DEATH_IF_SUPPORTED(
-      export_link.Initialize(&export_obj2,
-                             ERROR_IF_CALLED("export.link_resolved"),
+      export_link.Initialize(&export_obj2, ERROR_IF_CALLED("export.link_resolved"),
                              ERROR_IF_CALLED("export.link_disconnected")),
       "");
 }

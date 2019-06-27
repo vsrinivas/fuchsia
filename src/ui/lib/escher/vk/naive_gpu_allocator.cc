@@ -44,8 +44,7 @@ GpuMemPtr NaiveGpuAllocator::AllocateMemory(vk::MemoryRequirements reqs,
 
   // TODO (SCN-1161): cache flags for efficiency? Or perhaps change signature of
   // this method to directly take the memory-type index.
-  memory_type_index =
-      impl::GetMemoryTypeIndex(physical_device_, reqs.memoryTypeBits, flags);
+  memory_type_index = impl::GetMemoryTypeIndex(physical_device_, reqs.memoryTypeBits, flags);
 
   {
     TRACE_DURATION("gfx", "vk::Device::allocateMemory");
@@ -55,14 +54,13 @@ GpuMemPtr NaiveGpuAllocator::AllocateMemory(vk::MemoryRequirements reqs,
     vk_mem = ESCHER_CHECKED_VK_RESULT(device_.allocateMemory(info));
   }
 
-  return fxl::AdoptRef(
-      new impl::GpuMemSlab(device_, vk_mem, reqs.size, needs_mapped_ptr, this));
+  return fxl::AdoptRef(new impl::GpuMemSlab(device_, vk_mem, reqs.size, needs_mapped_ptr, this));
 }
 
-BufferPtr NaiveGpuAllocator::AllocateBuffer(
-    ResourceManager* manager, vk::DeviceSize size,
-    vk::BufferUsageFlags usage_flags,
-    vk::MemoryPropertyFlags memory_property_flags, GpuMemPtr* out_ptr) {
+BufferPtr NaiveGpuAllocator::AllocateBuffer(ResourceManager* manager, vk::DeviceSize size,
+                                            vk::BufferUsageFlags usage_flags,
+                                            vk::MemoryPropertyFlags memory_property_flags,
+                                            GpuMemPtr* out_ptr) {
   TRACE_DURATION("gfx", "escher::NaiveGpuAllocator::AllocateBuffer");
   // NaiveBuffer requires a real manager pointer to properly function.
   FXL_DCHECK(manager);
@@ -72,8 +70,7 @@ BufferPtr NaiveGpuAllocator::AllocateBuffer(
   buffer_create_info.size = size;
   buffer_create_info.usage = usage_flags;
   buffer_create_info.sharingMode = vk::SharingMode::eExclusive;
-  auto vk_buffer =
-      ESCHER_CHECKED_VK_RESULT(device_.createBuffer(buffer_create_info));
+  auto vk_buffer = ESCHER_CHECKED_VK_RESULT(device_.createBuffer(buffer_create_info));
 
   auto memory_requirements = device_.getBufferMemoryRequirements(vk_buffer);
 
@@ -82,12 +79,10 @@ BufferPtr NaiveGpuAllocator::AllocateBuffer(
   if (out_ptr) {
     *out_ptr = mem;
   }
-  return fxl::AdoptRef(
-      new impl::NaiveBuffer(manager, std::move(mem), vk_buffer));
+  return fxl::AdoptRef(new impl::NaiveBuffer(manager, std::move(mem), vk_buffer));
 }
 
-ImagePtr NaiveGpuAllocator::AllocateImage(ResourceManager* manager,
-                                          const ImageInfo& info,
+ImagePtr NaiveGpuAllocator::AllocateImage(ResourceManager* manager, const ImageInfo& info,
                                           GpuMemPtr* out_ptr) {
   vk::Image image = image_utils::CreateVkImage(device_, info);
 
@@ -98,15 +93,12 @@ ImagePtr NaiveGpuAllocator::AllocateImage(ResourceManager* manager,
   if (out_ptr) {
     *out_ptr = mem;
   }
-  ImagePtr escher_image =
-      impl::NaiveImage::AdoptVkImage(manager, info, image, std::move(mem));
+  ImagePtr escher_image = impl::NaiveImage::AdoptVkImage(manager, info, image, std::move(mem));
   FXL_CHECK(escher_image);
   return escher_image;
 }
 
-uint32_t NaiveGpuAllocator::GetTotalBytesAllocated() const {
-  return total_slab_bytes_;
-}
+uint32_t NaiveGpuAllocator::GetTotalBytesAllocated() const { return total_slab_bytes_; }
 
 void NaiveGpuAllocator::OnSlabCreated(vk::DeviceSize slab_size) {
   ++slab_count_;

@@ -43,8 +43,8 @@ bool DescriptorSetLayout::IsValid() {
   conflicts |= (seen_bits & input_attachment_mask);
 
   if (conflicts != 0) {
-    FXL_LOG(WARNING) << "multiple descriptors in set share binding indices: "
-                     << std::hex << conflicts;
+    FXL_LOG(WARNING) << "multiple descriptors in set share binding indices: " << std::hex
+                     << conflicts;
     return false;
   }
   return true;

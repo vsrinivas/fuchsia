@@ -34,8 +34,8 @@ class GpuImage : public Image {
   //
   // Returns the created Image, or nullptr if there was an error.
   static GpuImagePtr New(Session* session, ResourceId id, MemoryPtr memory,
-                         const fuchsia::images::ImageInfo& image_info,
-                         uint64_t memory_offset, ErrorReporter* error_reporter);
+                         const fuchsia::images::ImageInfo& image_info, uint64_t memory_offset,
+                         ErrorReporter* error_reporter);
 
   void Accept(class ResourceVisitor* visitor) override;
 
@@ -51,8 +51,8 @@ class GpuImage : public Image {
   // |image_info| specifies size, format, and other properties.
   // |vk_image| is the VkImage, whose lifetime is now controlled by this
   // object.
-  GpuImage(Session* session, ResourceId id, escher::GpuMemPtr gpu_mem,
-           escher::ImageInfo image_info, vk::Image vk_image);
+  GpuImage(Session* session, ResourceId id, escher::GpuMemPtr gpu_mem, escher::ImageInfo image_info,
+           vk::Image vk_image);
 };
 
 }  // namespace gfx

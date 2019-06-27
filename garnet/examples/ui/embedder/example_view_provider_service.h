@@ -32,19 +32,16 @@ using ViewFactory = fit::function<void(ViewContext context)>;
 // can use to create and expose custom Views to other Scenic clients.
 class ExampleViewProviderService : public fuchsia::ui::app::ViewProvider {
  public:
-  ExampleViewProviderService(::component::StartupContext* startup_ctx,
-                             ViewFactory factory);
+  ExampleViewProviderService(::component::StartupContext* startup_ctx, ViewFactory factory);
   ~ExampleViewProviderService() override;
   ExampleViewProviderService(const ExampleViewProviderService&) = delete;
-  ExampleViewProviderService& operator=(const ExampleViewProviderService&) =
-      delete;
+  ExampleViewProviderService& operator=(const ExampleViewProviderService&) = delete;
 
   // |fuchsia::ui::app::ViewProvider|
   void CreateView(
       ::zx::eventpair token,
       ::fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services,
-      ::fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> outgoing_services)
-      override;
+      ::fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> outgoing_services) override;
 
  private:
   fidl::BindingSet<fuchsia::ui::app::ViewProvider> bindings_;

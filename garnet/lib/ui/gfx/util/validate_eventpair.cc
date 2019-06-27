@@ -20,8 +20,7 @@ bool validate_eventpair(const zx::eventpair& a_object, zx_rights_t a_rights,
   }
 
   zx_info_handle_basic_t a_info{};
-  if (a_object.get_info(ZX_INFO_HANDLE_BASIC, &a_info, sizeof(a_info), nullptr,
-                        nullptr) != ZX_OK) {
+  if (a_object.get_info(ZX_INFO_HANDLE_BASIC, &a_info, sizeof(a_info), nullptr, nullptr) != ZX_OK) {
     return false;  // no info
   }
   if (a_info.rights != a_rights) {
@@ -29,8 +28,7 @@ bool validate_eventpair(const zx::eventpair& a_object, zx_rights_t a_rights,
   }
 
   zx_info_handle_basic_t b_info{};
-  if (b_object.get_info(ZX_INFO_HANDLE_BASIC, &b_info, sizeof(b_info), nullptr,
-                        nullptr) != ZX_OK) {
+  if (b_object.get_info(ZX_INFO_HANDLE_BASIC, &b_info, sizeof(b_info), nullptr, nullptr) != ZX_OK) {
     return false;  // no info
   }
   if (b_info.rights != b_rights) {
@@ -46,8 +44,8 @@ bool validate_eventpair(const zx::eventpair& a_object, zx_rights_t a_rights,
 
 bool validate_viewref(const fuchsia::ui::views::ViewRefControl& control_ref,
                       const fuchsia::ui::views::ViewRef& view_ref) {
-  return validate_eventpair(control_ref.reference, ZX_DEFAULT_EVENTPAIR_RIGHTS,
-                            view_ref.reference, ZX_RIGHTS_BASIC);
+  return validate_eventpair(control_ref.reference, ZX_DEFAULT_EVENTPAIR_RIGHTS, view_ref.reference,
+                            ZX_RIGHTS_BASIC);
 }
 
 }  // namespace gfx

@@ -17,10 +17,8 @@ class DisplayMetrics {
  public:
   constexpr DisplayMetrics() {}
 
-  constexpr DisplayMetrics(uint32_t width_in_px, uint32_t height_in_px,
-                           float x_scale_in_px_per_pp,
-                           float y_scale_in_px_per_pp,
-                           float density_in_pp_per_mm)
+  constexpr DisplayMetrics(uint32_t width_in_px, uint32_t height_in_px, float x_scale_in_px_per_pp,
+                           float y_scale_in_px_per_pp, float density_in_pp_per_mm)
       : width_in_px_(width_in_px),
         height_in_px_(height_in_px),
         x_scale_in_px_per_pp_(x_scale_in_px_per_pp),
@@ -34,8 +32,7 @@ class DisplayMetrics {
   }
 
   bool operator==(const DisplayMetrics& other) const {
-    return this->width_in_px_ == other.width_in_px_ &&
-           this->height_in_px_ == other.height_in_px_ &&
+    return this->width_in_px_ == other.width_in_px_ && this->height_in_px_ == other.height_in_px_ &&
            this->x_scale_in_px_per_pp_ == other.x_scale_in_px_per_pp_ &&
            this->y_scale_in_px_per_pp_ == other.y_scale_in_px_per_pp_ &&
            this->density_in_pp_per_mm_ == other.density_in_pp_per_mm_;

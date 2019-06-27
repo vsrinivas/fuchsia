@@ -23,28 +23,23 @@ class MockSettingsService {
 
   void SetMagnificationEnabled(
       bool magnification_enabled,
-      fuchsia::accessibility::SettingsProvider::SetMagnificationEnabledCallback
-          callback);
+      fuchsia::accessibility::SettingsProvider::SetMagnificationEnabledCallback callback);
 
   void SetMagnificationZoomFactor(
       float magnification_zoom_factor,
-      fuchsia::accessibility::SettingsProvider::
-          SetMagnificationZoomFactorCallback callback);
+      fuchsia::accessibility::SettingsProvider::SetMagnificationZoomFactorCallback callback);
 
   void SetScreenReaderEnabled(
       bool screen_reader_enabled,
-      fuchsia::accessibility::SettingsProvider::SetScreenReaderEnabledCallback
-          callback);
+      fuchsia::accessibility::SettingsProvider::SetScreenReaderEnabledCallback callback);
 
   void SetColorInversionEnabled(
       bool color_inversion_enabled,
-      fuchsia::accessibility::SettingsProvider::SetColorInversionEnabledCallback
-          callback);
+      fuchsia::accessibility::SettingsProvider::SetColorInversionEnabledCallback callback);
 
   void SetColorCorrection(
       fuchsia::accessibility::ColorCorrection color_correction,
-      fuchsia::accessibility::SettingsProvider::SetColorCorrectionCallback
-          callback);
+      fuchsia::accessibility::SettingsProvider::SetColorCorrectionCallback callback);
 
  private:
   sys::testing::ComponentContextProvider* context_;

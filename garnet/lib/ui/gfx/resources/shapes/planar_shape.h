@@ -16,15 +16,13 @@ namespace gfx {
 class PlanarShape : public Shape {
  public:
   // |Shape|
-  bool GetIntersection(const escher::ray4& ray,
-                       float* out_distance) const override;
+  bool GetIntersection(const escher::ray4& ray, float* out_distance) const override;
 
   // Returns if the given point lies within its bounds of this shape.
   virtual bool ContainsPoint(const escher::vec2& point) const = 0;
 
  protected:
-  PlanarShape(Session* session, ResourceId id,
-              const ResourceTypeInfo& type_info);
+  PlanarShape(Session* session, ResourceId id, const ResourceTypeInfo& type_info);
 };
 
 }  // namespace gfx

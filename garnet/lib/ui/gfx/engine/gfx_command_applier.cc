@@ -61,15 +61,13 @@ namespace {
 // TODO: There should also be a convenient way of type-checking a variable;
 // this will necessarily involve looking up the value in the ResourceMap.
 constexpr std::array<fuchsia::ui::gfx::Value::Tag, 2> kFloatValueTypes{
-    {fuchsia::ui::gfx::Value::Tag::kVector1,
-     fuchsia::ui::gfx::Value::Tag::kVariableId}};
+    {fuchsia::ui::gfx::Value::Tag::kVector1, fuchsia::ui::gfx::Value::Tag::kVariableId}};
 
 }  // anonymous namespace
 
-bool GfxCommandApplier::AssertValueIsOfType(
-    const fuchsia::ui::gfx::Value& value,
-    const fuchsia::ui::gfx::Value::Tag* tags, size_t tag_count,
-    Session* session) {
+bool GfxCommandApplier::AssertValueIsOfType(const fuchsia::ui::gfx::Value& value,
+                                            const fuchsia::ui::gfx::Value::Tag* tags,
+                                            size_t tag_count, Session* session) {
   FXL_DCHECK(tag_count > 0);
   for (size_t i = 0; i < tag_count; ++i) {
     if (value.Which() == tags[i]) {
@@ -87,29 +85,23 @@ bool GfxCommandApplier::AssertValueIsOfType(
     str << ").";
   }
   session->error_reporter()->ERROR()
-      << "scenic_impl::gfx::Session: received value of type: " << value.Which()
-      << str.str();
+      << "scenic_impl::gfx::Session: received value of type: " << value.Which() << str.str();
   return false;
 }
 
-bool GfxCommandApplier::ApplyCommand(Session* session,
-                                     CommandContext* command_context,
+bool GfxCommandApplier::ApplyCommand(Session* session, CommandContext* command_context,
                                      fuchsia::ui::gfx::Command command) {
   TRACE_DURATION("gfx", "GfxCommandApplier::ApplyCommand");
 
   switch (command.Which()) {
     case fuchsia::ui::gfx::Command::Tag::kCreateResource:
-      return ApplyCreateResourceCmd(session, command_context,
-                                    std::move(command.create_resource()));
+      return ApplyCreateResourceCmd(session, command_context, std::move(command.create_resource()));
     case fuchsia::ui::gfx::Command::Tag::kReleaseResource:
-      return ApplyReleaseResourceCmd(session,
-                                     std::move(command.release_resource()));
+      return ApplyReleaseResourceCmd(session, std::move(command.release_resource()));
     case fuchsia::ui::gfx::Command::Tag::kExportResource:
-      return ApplyExportResourceCmd(session,
-                                    std::move(command.export_resource()));
+      return ApplyExportResourceCmd(session, std::move(command.export_resource()));
     case fuchsia::ui::gfx::Command::Tag::kImportResource:
-      return ApplyImportResourceCmd(session,
-                                    std::move(command.import_resource()));
+      return ApplyImportResourceCmd(session, std::move(command.import_resource()));
     case fuchsia::ui::gfx::Command::Tag::kSetImportFocus: {
       return false;
     }
@@ -120,13 +112,11 @@ bool GfxCommandApplier::ApplyCommand(Session* session,
     case fuchsia::ui::gfx::Command::Tag::kDetach:
       return ApplyDetachCmd(session, std::move(command.detach()));
     case fuchsia::ui::gfx::Command::Tag::kDetachChildren:
-      return ApplyDetachChildrenCmd(session,
-                                    std::move(command.detach_children()));
+      return ApplyDetachChildrenCmd(session, std::move(command.detach_children()));
     case fuchsia::ui::gfx::Command::Tag::kSetTag:
       return ApplySetTagCmd(session, std::move(command.set_tag()));
     case fuchsia::ui::gfx::Command::Tag::kSetTranslation:
-      return ApplySetTranslationCmd(session,
-                                    std::move(command.set_translation()));
+      return ApplySetTranslationCmd(session, std::move(command.set_translation()));
     case fuchsia::ui::gfx::Command::Tag::kSetScale:
       return ApplySetScaleCmd(session, std::move(command.set_scale()));
     case fuchsia::ui::gfx::Command::Tag::kSetRotation:
@@ -138,8 +128,7 @@ bool GfxCommandApplier::ApplyCommand(Session* session,
     case fuchsia::ui::gfx::Command::Tag::kSetOpacity:
       return ApplySetOpacityCmd(session, command.set_opacity());
     case fuchsia::ui::gfx::Command::Tag::kSendSizeChangeHintHack:
-      return ApplySendSizeChangeHintCmd(session,
-                                        command.send_size_change_hint_hack());
+      return ApplySendSizeChangeHintCmd(session, command.send_size_change_hint_hack());
     case fuchsia::ui::gfx::Command::Tag::kSetShape:
       return ApplySetShapeCmd(session, std::move(command.set_shape()));
     case fuchsia::ui::gfx::Command::Tag::kSetMaterial:
@@ -147,51 +136,39 @@ bool GfxCommandApplier::ApplyCommand(Session* session,
     case fuchsia::ui::gfx::Command::Tag::kSetClip:
       return ApplySetClipCmd(session, std::move(command.set_clip()));
     case ::fuchsia::ui::gfx::Command::Tag::kSetClipPlanes:
-      return ApplySetClipPlanesCmd(session,
-                                   std::move(command.set_clip_planes()));
+      return ApplySetClipPlanesCmd(session, std::move(command.set_clip_planes()));
     case fuchsia::ui::gfx::Command::Tag::kSetHitTestBehavior:
-      return ApplySetHitTestBehaviorCmd(
-          session, std::move(command.set_hit_test_behavior()));
+      return ApplySetHitTestBehaviorCmd(session, std::move(command.set_hit_test_behavior()));
     case fuchsia::ui::gfx::Command::Tag::kSetViewProperties:
-      return ApplySetViewPropertiesCmd(
-          session, std::move(command.set_view_properties()));
+      return ApplySetViewPropertiesCmd(session, std::move(command.set_view_properties()));
     case fuchsia::ui::gfx::Command::Tag::kSetCamera:
       return ApplySetCameraCmd(session, std::move(command.set_camera()));
     case fuchsia::ui::gfx::Command::Tag::kSetCameraTransform:
-      return ApplySetCameraTransformCmd(
-          session, std::move(command.set_camera_transform()));
+      return ApplySetCameraTransformCmd(session, std::move(command.set_camera_transform()));
     case fuchsia::ui::gfx::Command::Tag::kSetCameraProjection:
-      return ApplySetCameraProjectionCmd(
-          session, std::move(command.set_camera_projection()));
+      return ApplySetCameraProjectionCmd(session, std::move(command.set_camera_projection()));
     case fuchsia::ui::gfx::Command::Tag::kSetStereoCameraProjection:
-      return ApplySetStereoCameraProjectionCmd(
-          session, std::move(command.set_stereo_camera_projection()));
+      return ApplySetStereoCameraProjectionCmd(session,
+                                               std::move(command.set_stereo_camera_projection()));
     case fuchsia::ui::gfx::Command::Tag::kSetCameraPoseBuffer:
-      return ApplySetCameraPoseBufferCmd(
-          session, std::move(command.set_camera_pose_buffer()));
+      return ApplySetCameraPoseBufferCmd(session, std::move(command.set_camera_pose_buffer()));
     case fuchsia::ui::gfx::Command::Tag::kSetLightColor:
-      return ApplySetLightColorCmd(session,
-                                   std::move(command.set_light_color()));
+      return ApplySetLightColorCmd(session, std::move(command.set_light_color()));
     case fuchsia::ui::gfx::Command::Tag::kSetLightDirection:
-      return ApplySetLightDirectionCmd(
-          session, std::move(command.set_light_direction()));
+      return ApplySetLightDirectionCmd(session, std::move(command.set_light_direction()));
     case fuchsia::ui::gfx::Command::Tag::kSetPointLightPosition:
-      return ApplySetPointLightPositionCmd(
-          session, std::move(command.set_point_light_position()));
+      return ApplySetPointLightPositionCmd(session, std::move(command.set_point_light_position()));
     case fuchsia::ui::gfx::Command::Tag::kSetPointLightFalloff:
-      return ApplySetPointLightFalloffCmd(
-          session, std::move(command.set_point_light_falloff()));
+      return ApplySetPointLightFalloffCmd(session, std::move(command.set_point_light_falloff()));
     case fuchsia::ui::gfx::Command::Tag::kAddLight:
       return ApplyAddLightCmd(session, std::move(command.add_light()));
     case fuchsia::ui::gfx::Command::Tag::kScene_AddAmbientLight:
-      return ApplySceneAddAmbientLightCmd(
-          session, std::move(command.scene__add_ambient_light()));
+      return ApplySceneAddAmbientLightCmd(session, std::move(command.scene__add_ambient_light()));
     case fuchsia::ui::gfx::Command::Tag::kScene_AddDirectionalLight:
-      return ApplySceneAddDirectionalLightCmd(
-          session, std::move(command.scene__add_directional_light()));
+      return ApplySceneAddDirectionalLightCmd(session,
+                                              std::move(command.scene__add_directional_light()));
     case fuchsia::ui::gfx::Command::Tag::kScene_AddPointLight:
-      return ApplySceneAddPointLightCmd(
-          session, std::move(command.scene__add_point_light()));
+      return ApplySceneAddPointLightCmd(session, std::move(command.scene__add_point_light()));
     case fuchsia::ui::gfx::Command::Tag::kDetachLight:
       return ApplyDetachLightCmd(session, std::move(command.detach_light()));
     case fuchsia::ui::gfx::Command::Tag::kDetachLights:
@@ -201,39 +178,32 @@ bool GfxCommandApplier::ApplyCommand(Session* session,
     case fuchsia::ui::gfx::Command::Tag::kSetColor:
       return ApplySetColorCmd(session, std::move(command.set_color()));
     case fuchsia::ui::gfx::Command::Tag::kBindMeshBuffers:
-      return ApplyBindMeshBuffersCmd(session,
-                                     std::move(command.bind_mesh_buffers()));
+      return ApplyBindMeshBuffersCmd(session, std::move(command.bind_mesh_buffers()));
     case fuchsia::ui::gfx::Command::Tag::kAddLayer:
       return ApplyAddLayerCmd(session, std::move(command.add_layer()));
     case fuchsia::ui::gfx::Command::Tag::kRemoveLayer:
       return ApplyRemoveLayerCmd(session, std::move(command.remove_layer()));
     case fuchsia::ui::gfx::Command::Tag::kRemoveAllLayers:
-      return ApplyRemoveAllLayersCmd(session,
-                                     std::move(command.remove_all_layers()));
+      return ApplyRemoveAllLayersCmd(session, std::move(command.remove_all_layers()));
     case fuchsia::ui::gfx::Command::Tag::kSetLayerStack:
-      return ApplySetLayerStackCmd(session,
-                                   std::move(command.set_layer_stack()));
+      return ApplySetLayerStackCmd(session, std::move(command.set_layer_stack()));
     case fuchsia::ui::gfx::Command::Tag::kSetRenderer:
       return ApplySetRendererCmd(session, std::move(command.set_renderer()));
     case fuchsia::ui::gfx::Command::Tag::kSetRendererParam:
-      return ApplySetRendererParamCmd(session,
-                                      std::move(command.set_renderer_param()));
+      return ApplySetRendererParamCmd(session, std::move(command.set_renderer_param()));
     case fuchsia::ui::gfx::Command::Tag::kSetEventMask:
       return ApplySetEventMaskCmd(session, std::move(command.set_event_mask()));
     case fuchsia::ui::gfx::Command::Tag::kSetLabel:
       return ApplySetLabelCmd(session, std::move(command.set_label()));
     case fuchsia::ui::gfx::Command::Tag::kSetDisableClipping:
-      return ApplySetDisableClippingCmd(
-          session, std::move(command.set_disable_clipping()));
+      return ApplySetDisableClippingCmd(session, std::move(command.set_disable_clipping()));
     case fuchsia::ui::gfx::Command::Tag::kTakeSnapshotCmd:
-      return ApplyTakeSnapshotCmdHACK(session,
-                                      std::move(command.take_snapshot_cmd()));
+      return ApplyTakeSnapshotCmdHACK(session, std::move(command.take_snapshot_cmd()));
     case fuchsia::ui::gfx::Command::Tag::kSetDisplayColorConversion:
-      return ApplySetDisplayColorConversionCmd(
-          session, std::move(command.set_display_color_conversion()));
+      return ApplySetDisplayColorConversionCmd(session,
+                                               std::move(command.set_display_color_conversion()));
     case fuchsia::ui::gfx::Command::Tag::kSetDisplayRotation:
-      return ApplySetDisplayRotationCmd(
-          session, std::move(command.set_display_rotation()));
+      return ApplySetDisplayRotationCmd(session, std::move(command.set_display_rotation()));
     case fuchsia::ui::gfx::Command::Tag::Invalid:
       // FIDL validation should make this impossible.
       FXL_CHECK(false);
@@ -241,116 +211,92 @@ bool GfxCommandApplier::ApplyCommand(Session* session,
   }
 }
 
-bool GfxCommandApplier::ApplyCreateResourceCmd(
-    Session* session, CommandContext* command_context,
-    fuchsia::ui::gfx::CreateResourceCmd command) {
+bool GfxCommandApplier::ApplyCreateResourceCmd(Session* session, CommandContext* command_context,
+                                               fuchsia::ui::gfx::CreateResourceCmd command) {
   const ResourceId id = command.id;
   if (id == 0) {
-    session->error_reporter()->ERROR()
-        << "scenic_impl::gfx::GfxCommandApplier::"
-           "ApplyCreateResourceCmd(): invalid ID: "
-        << command;
+    session->error_reporter()->ERROR() << "scenic_impl::gfx::GfxCommandApplier::"
+                                          "ApplyCreateResourceCmd(): invalid ID: "
+                                       << command;
     return false;
   }
 
   switch (command.resource.Which()) {
     case fuchsia::ui::gfx::ResourceArgs::Tag::kMemory:
-      return ApplyCreateMemory(session, id,
-                               std::move(command.resource.memory()));
+      return ApplyCreateMemory(session, id, std::move(command.resource.memory()));
     case fuchsia::ui::gfx::ResourceArgs::Tag::kImage:
       return ApplyCreateImage(session, id, std::move(command.resource.image()));
     case fuchsia::ui::gfx::ResourceArgs::Tag::kImagePipe:
-      return ApplyCreateImagePipe(session, id,
-                                  std::move(command.resource.image_pipe()));
+      return ApplyCreateImagePipe(session, id, std::move(command.resource.image_pipe()));
     case fuchsia::ui::gfx::ResourceArgs::Tag::kBuffer:
-      return ApplyCreateBuffer(session, id,
-                               std::move(command.resource.buffer()));
+      return ApplyCreateBuffer(session, id, std::move(command.resource.buffer()));
     case fuchsia::ui::gfx::ResourceArgs::Tag::kScene:
       return ApplyCreateScene(session, id, std::move(command.resource.scene()));
     case fuchsia::ui::gfx::ResourceArgs::Tag::kCamera:
-      return ApplyCreateCamera(session, id,
-                               std::move(command.resource.camera()));
+      return ApplyCreateCamera(session, id, std::move(command.resource.camera()));
     case fuchsia::ui::gfx::ResourceArgs::Tag::kStereoCamera:
-      return ApplyCreateStereoCamera(
-          session, id, std::move(command.resource.stereo_camera()));
+      return ApplyCreateStereoCamera(session, id, std::move(command.resource.stereo_camera()));
     case fuchsia::ui::gfx::ResourceArgs::Tag::kRenderer:
-      return ApplyCreateRenderer(session, id,
-                                 std::move(command.resource.renderer()));
+      return ApplyCreateRenderer(session, id, std::move(command.resource.renderer()));
     case fuchsia::ui::gfx::ResourceArgs::Tag::kAmbientLight:
-      return ApplyCreateAmbientLight(
-          session, id, std::move(command.resource.ambient_light()));
+      return ApplyCreateAmbientLight(session, id, std::move(command.resource.ambient_light()));
     case fuchsia::ui::gfx::ResourceArgs::Tag::kDirectionalLight:
-      return ApplyCreateDirectionalLight(
-          session, id, std::move(command.resource.directional_light()));
+      return ApplyCreateDirectionalLight(session, id,
+                                         std::move(command.resource.directional_light()));
     case fuchsia::ui::gfx::ResourceArgs::Tag::kPointLight:
-      return ApplyCreatePointLight(session, id,
-                                   std::move(command.resource.point_light()));
+      return ApplyCreatePointLight(session, id, std::move(command.resource.point_light()));
     case fuchsia::ui::gfx::ResourceArgs::Tag::kRectangle:
-      return ApplyCreateRectangle(session, id,
-                                  std::move(command.resource.rectangle()));
+      return ApplyCreateRectangle(session, id, std::move(command.resource.rectangle()));
     case fuchsia::ui::gfx::ResourceArgs::Tag::kRoundedRectangle:
-      return ApplyCreateRoundedRectangle(
-          session, command_context, id,
-          std::move(command.resource.rounded_rectangle()));
+      return ApplyCreateRoundedRectangle(session, command_context, id,
+                                         std::move(command.resource.rounded_rectangle()));
     case fuchsia::ui::gfx::ResourceArgs::Tag::kCircle:
-      return ApplyCreateCircle(session, id,
-                               std::move(command.resource.circle()));
+      return ApplyCreateCircle(session, id, std::move(command.resource.circle()));
     case fuchsia::ui::gfx::ResourceArgs::Tag::kMesh:
       return ApplyCreateMesh(session, id, std::move(command.resource.mesh()));
     case fuchsia::ui::gfx::ResourceArgs::Tag::kMaterial:
-      return ApplyCreateMaterial(session, id,
-                                 std::move(command.resource.material()));
+      return ApplyCreateMaterial(session, id, std::move(command.resource.material()));
     case fuchsia::ui::gfx::ResourceArgs::Tag::kView:
       return ApplyCreateView(session, id, std::move(command.resource.view()));
     case fuchsia::ui::gfx::ResourceArgs::Tag::kViewHolder:
-      return ApplyCreateViewHolder(session, id,
-                                   std::move(command.resource.view_holder()));
+      return ApplyCreateViewHolder(session, id, std::move(command.resource.view_holder()));
     case fuchsia::ui::gfx::ResourceArgs::Tag::kView2:
-      return ApplyCreateView(
-          session, id,
-          fuchsia::ui::gfx::ViewArgs{
-              .token = std::move(command.resource.view2().token),
-              .debug_name = std::move(command.resource.view2().debug_name),
-          });
+      return ApplyCreateView(session, id,
+                             fuchsia::ui::gfx::ViewArgs{
+                                 .token = std::move(command.resource.view2().token),
+                                 .debug_name = std::move(command.resource.view2().debug_name),
+                             });
     case fuchsia::ui::gfx::ResourceArgs::Tag::kViewHolder2:
       return ApplyCreateViewHolder(
           session, id,
           fuchsia::ui::gfx::ViewHolderArgs{
               .token = std::move(command.resource.view_holder2().token),
-              .debug_name =
-                  std::move(command.resource.view_holder2().debug_name),
+              .debug_name = std::move(command.resource.view_holder2().debug_name),
           });
     case fuchsia::ui::gfx::ResourceArgs::Tag::kView3:
       return ApplyCreateView(session, id, std::move(command.resource.view3()));
     case fuchsia::ui::gfx::ResourceArgs::Tag::kClipNode:
-      return ApplyCreateClipNode(session, id,
-                                 std::move(command.resource.clip_node()));
+      return ApplyCreateClipNode(session, id, std::move(command.resource.clip_node()));
     case fuchsia::ui::gfx::ResourceArgs::Tag::kOpacityNode:
-      return ApplyCreateOpacityNode(session, id,
-                                    command.resource.opacity_node());
+      return ApplyCreateOpacityNode(session, id, command.resource.opacity_node());
     case fuchsia::ui::gfx::ResourceArgs::Tag::kEntityNode:
-      return ApplyCreateEntityNode(session, id,
-                                   std::move(command.resource.entity_node()));
+      return ApplyCreateEntityNode(session, id, std::move(command.resource.entity_node()));
     case fuchsia::ui::gfx::ResourceArgs::Tag::kShapeNode:
-      return ApplyCreateShapeNode(session, id,
-                                  std::move(command.resource.shape_node()));
+      return ApplyCreateShapeNode(session, id, std::move(command.resource.shape_node()));
     case fuchsia::ui::gfx::ResourceArgs::Tag::kCompositor:
-      return ApplyCreateCompositor(session, id,
-                                   std::move(command.resource.compositor()));
+      return ApplyCreateCompositor(session, id, std::move(command.resource.compositor()));
     case fuchsia::ui::gfx::ResourceArgs::Tag::kDisplayCompositor:
-      return ApplyCreateDisplayCompositor(
-          session, id, std::move(command.resource.display_compositor()));
+      return ApplyCreateDisplayCompositor(session, id,
+                                          std::move(command.resource.display_compositor()));
     case fuchsia::ui::gfx::ResourceArgs::Tag::kImagePipeCompositor:
-      return ApplyCreateImagePipeCompositor(
-          session, id, std::move(command.resource.image_pipe_compositor()));
+      return ApplyCreateImagePipeCompositor(session, id,
+                                            std::move(command.resource.image_pipe_compositor()));
     case fuchsia::ui::gfx::ResourceArgs::Tag::kLayerStack:
-      return ApplyCreateLayerStack(session, id,
-                                   std::move(command.resource.layer_stack()));
+      return ApplyCreateLayerStack(session, id, std::move(command.resource.layer_stack()));
     case fuchsia::ui::gfx::ResourceArgs::Tag::kLayer:
       return ApplyCreateLayer(session, id, std::move(command.resource.layer()));
     case fuchsia::ui::gfx::ResourceArgs::Tag::kVariable:
-      return ApplyCreateVariable(session, id,
-                                 std::move(command.resource.variable()));
+      return ApplyCreateVariable(session, id, std::move(command.resource.variable()));
     case fuchsia::ui::gfx::ResourceArgs::Tag::Invalid:
       // FIDL validation should make this impossible.
       FXL_CHECK(false);
@@ -358,29 +304,28 @@ bool GfxCommandApplier::ApplyCreateResourceCmd(
   }
 }
 
-bool GfxCommandApplier::ApplyReleaseResourceCmd(
-    Session* session, fuchsia::ui::gfx::ReleaseResourceCmd command) {
+bool GfxCommandApplier::ApplyReleaseResourceCmd(Session* session,
+                                                fuchsia::ui::gfx::ReleaseResourceCmd command) {
   return session->resources()->RemoveResource(command.id);
 }
 
-bool GfxCommandApplier::ApplyExportResourceCmd(
-    Session* session, fuchsia::ui::gfx::ExportResourceCmd command) {
+bool GfxCommandApplier::ApplyExportResourceCmd(Session* session,
+                                               fuchsia::ui::gfx::ExportResourceCmd command) {
   if (!command.token) {
     session->error_reporter()->ERROR()
         << "scenic_impl::gfx::GfxCommandApplier::ApplyExportResourceCmd(): "
            "no token provided.";
     return false;
   }
-  if (auto resource =
-          session->resources()->FindResource<Resource>(command.id)) {
-    return session->session_context().resource_linker->ExportResource(
-        resource.get(), std::move(command.token));
+  if (auto resource = session->resources()->FindResource<Resource>(command.id)) {
+    return session->session_context().resource_linker->ExportResource(resource.get(),
+                                                                      std::move(command.token));
   }
   return false;
 }
 
-bool GfxCommandApplier::ApplyImportResourceCmd(
-    Session* session, fuchsia::ui::gfx::ImportResourceCmd command) {
+bool GfxCommandApplier::ApplyImportResourceCmd(Session* session,
+                                               fuchsia::ui::gfx::ImportResourceCmd command) {
   if (!command.token) {
     session->error_reporter()->ERROR()
         << "scenic_impl::gfx::GfxCommandApplier::ApplyImportResourceCmd(): "
@@ -388,15 +333,13 @@ bool GfxCommandApplier::ApplyImportResourceCmd(
     return false;
   }
   auto import = fxl::MakeRefCounted<Import>(
-      session, command.id, command.spec,
-      session->session_context().resource_linker->GetWeakPtr());
-  return session->session_context().resource_linker->ImportResource(
-             import.get(), command.spec, std::move(command.token)) &&
+      session, command.id, command.spec, session->session_context().resource_linker->GetWeakPtr());
+  return session->session_context().resource_linker->ImportResource(import.get(), command.spec,
+                                                                    std::move(command.token)) &&
          session->resources()->AddResource(command.id, std::move(import));
 }
 
-bool GfxCommandApplier::ApplyAddChildCmd(
-    Session* session, fuchsia::ui::gfx::AddChildCmd command) {
+bool GfxCommandApplier::ApplyAddChildCmd(Session* session, fuchsia::ui::gfx::AddChildCmd command) {
   // Find the parent and child nodes. We can add:
   // - Nodes to Nodes
   // - ViewHolders to Nodes
@@ -412,82 +355,71 @@ bool GfxCommandApplier::ApplyAddChildCmd(
           command.node_id, ResourceMap::ErrorBehavior::kDontReportErrors)) {
     return parent->AddChild(std::move(child));
   } else if (auto view = session->resources()->FindResource<View>(
-                 command.node_id,
-                 ResourceMap::ErrorBehavior::kDontReportErrors)) {
+                 command.node_id, ResourceMap::ErrorBehavior::kDontReportErrors)) {
     // Children are added to a View. Add them the corresponding ViewNode.
     return view->GetViewNode()->AddChild(std::move(child));
   }
-  session->error_reporter()->ERROR()
-      << "No View or Node found with id " << command.node_id;
+  session->error_reporter()->ERROR() << "No View or Node found with id " << command.node_id;
   return false;
 }
 
-bool GfxCommandApplier::ApplyAddPartCmd(Session* session,
-                                        fuchsia::ui::gfx::AddPartCmd command) {
+bool GfxCommandApplier::ApplyAddPartCmd(Session* session, fuchsia::ui::gfx::AddPartCmd command) {
   // Find the parent and part nodes.
-  if (auto parent_node =
-          session->resources()->FindResource<Node>(command.node_id)) {
-    if (auto part_node =
-            session->resources()->FindResource<Node>(command.part_id)) {
+  if (auto parent_node = session->resources()->FindResource<Node>(command.node_id)) {
+    if (auto part_node = session->resources()->FindResource<Node>(command.part_id)) {
       return parent_node->AddPart(std::move(part_node));
     }
   }
   return false;
 }
 
-bool GfxCommandApplier::ApplyTakeSnapshotCmdHACK(
-    Session* session, fuchsia::ui::gfx::TakeSnapshotCmdHACK command) {
-  async::PostTask(
-      async_get_default_dispatcher(),
-      [weak = session->GetWeakPtr(), command = std::move(command)]() mutable {
-        if (!weak) {
-          if (auto callback = command.callback.Bind()) {
-            // TODO(SCN-978): Return an error to the caller for invalid data.
-            callback->OnData(fuchsia::mem::Buffer{});
-          }
-          return;
-        }
+bool GfxCommandApplier::ApplyTakeSnapshotCmdHACK(Session* session,
+                                                 fuchsia::ui::gfx::TakeSnapshotCmdHACK command) {
+  async::PostTask(async_get_default_dispatcher(), [weak = session->GetWeakPtr(),
+                                                   command = std::move(command)]() mutable {
+    if (!weak) {
+      if (auto callback = command.callback.Bind()) {
+        // TODO(SCN-978): Return an error to the caller for invalid data.
+        callback->OnData(fuchsia::mem::Buffer{});
+      }
+      return;
+    }
 
-        const auto& context = weak->session_context();
-        Resource* resource = nullptr;
-        if (auto node =
-                weak->resources()->FindResource<Node>(command.node_id)) {
-          resource = node.get();
-        } else if (command.node_id == 0) {
-          // TODO(SCN-1170): get rid of SceneGraph::first_compositor().
-          const auto& first_compositor_weak =
-              context.scene_graph->first_compositor();
-          if (first_compositor_weak) {
-            resource = first_compositor_weak.get();
-          }
-        }
+    const auto& context = weak->session_context();
+    Resource* resource = nullptr;
+    if (auto node = weak->resources()->FindResource<Node>(command.node_id)) {
+      resource = node.get();
+    } else if (command.node_id == 0) {
+      // TODO(SCN-1170): get rid of SceneGraph::first_compositor().
+      const auto& first_compositor_weak = context.scene_graph->first_compositor();
+      if (first_compositor_weak) {
+        resource = first_compositor_weak.get();
+      }
+    }
 
-        if (resource == nullptr) {
-          if (auto callback = command.callback.Bind()) {
-            callback->OnData(fuchsia::mem::Buffer{});
-          }
-          return;
-        }
+    if (resource == nullptr) {
+      if (auto callback = command.callback.Bind()) {
+        callback->OnData(fuchsia::mem::Buffer{});
+      }
+      return;
+    }
 
-        auto gpu_uploader =
-            escher::BatchGpuUploader::New(context.escher->GetWeakPtr());
-        Snapshotter snapshotter(std::move(gpu_uploader));
-        // Take a snapshot and return the data in callback. The closure does
-        // not need the snapshotter instance and is invoked after the instance
-        // is destroyed.
-        snapshotter.TakeSnapshot(resource, [callback = command.callback.Bind()](
-                                               fuchsia::mem::Buffer snapshot) {
-          callback->OnData(std::move(snapshot));
-        });
-      });
+    auto gpu_uploader = escher::BatchGpuUploader::New(context.escher->GetWeakPtr());
+    Snapshotter snapshotter(std::move(gpu_uploader));
+    // Take a snapshot and return the data in callback. The closure does
+    // not need the snapshotter instance and is invoked after the instance
+    // is destroyed.
+    snapshotter.TakeSnapshot(resource,
+                             [callback = command.callback.Bind()](fuchsia::mem::Buffer snapshot) {
+                               callback->OnData(std::move(snapshot));
+                             });
+  });
   return true;
 }
 
 bool GfxCommandApplier::ApplySetDisplayColorConversionCmd(
-    Session* session,
-    fuchsia::ui::gfx::SetDisplayColorConversionCmdHACK command) {
-  if (auto compositor = session->resources()->FindResource<Compositor>(
-          command.compositor_id)) {
+    Session* session, fuchsia::ui::gfx::SetDisplayColorConversionCmdHACK command) {
+  if (auto compositor = session->resources()->FindResource<Compositor>(command.compositor_id)) {
     if (auto swapchain = compositor->swapchain()) {
       ColorTransform transform;
       transform.preoffsets = command.preoffsets;
@@ -502,45 +434,40 @@ bool GfxCommandApplier::ApplySetDisplayColorConversionCmd(
 
 bool GfxCommandApplier::ApplySetDisplayRotationCmd(
     Session* session, fuchsia::ui::gfx::SetDisplayRotationCmdHACK command) {
-  if (auto compositor = session->resources()->FindResource<Compositor>(
-          command.compositor_id)) {
+  if (auto compositor = session->resources()->FindResource<Compositor>(command.compositor_id)) {
     return compositor->SetLayoutRotation(command.rotation_degrees);
   }
   return false;
 }
 
-bool GfxCommandApplier::ApplyDetachCmd(Session* session,
-                                       fuchsia::ui::gfx::DetachCmd command) {
-  if (auto resource =
-          session->resources()->FindResource<Resource>(command.id)) {
+bool GfxCommandApplier::ApplyDetachCmd(Session* session, fuchsia::ui::gfx::DetachCmd command) {
+  if (auto resource = session->resources()->FindResource<Resource>(command.id)) {
     return resource->Detach();
   }
   return false;
 }
 
-bool GfxCommandApplier::ApplyDetachChildrenCmd(
-    Session* session, fuchsia::ui::gfx::DetachChildrenCmd command) {
+bool GfxCommandApplier::ApplyDetachChildrenCmd(Session* session,
+                                               fuchsia::ui::gfx::DetachChildrenCmd command) {
   if (auto node = session->resources()->FindResource<Node>(command.node_id)) {
     return node->DetachChildren();
   }
   return false;
 }
 
-bool GfxCommandApplier::ApplySetTagCmd(Session* session,
-                                       fuchsia::ui::gfx::SetTagCmd command) {
+bool GfxCommandApplier::ApplySetTagCmd(Session* session, fuchsia::ui::gfx::SetTagCmd command) {
   if (auto node = session->resources()->FindResource<Node>(command.node_id)) {
     return node->SetTagValue(command.tag_value);
   }
   return false;
 }
 
-bool GfxCommandApplier::ApplySetTranslationCmd(
-    Session* session, fuchsia::ui::gfx::SetTranslationCmd command) {
+bool GfxCommandApplier::ApplySetTranslationCmd(Session* session,
+                                               fuchsia::ui::gfx::SetTranslationCmd command) {
   if (auto node = session->resources()->FindResource<Node>(command.id)) {
     if (IsVariable(command.value)) {
-      if (auto variable =
-              session->resources()->FindVariableResource<Vector3Variable>(
-                  command.value.variable_id)) {
+      if (auto variable = session->resources()->FindVariableResource<Vector3Variable>(
+              command.value.variable_id)) {
         return node->SetTranslation(variable);
       }
     } else {
@@ -550,13 +477,11 @@ bool GfxCommandApplier::ApplySetTranslationCmd(
   return false;
 }
 
-bool GfxCommandApplier::ApplySetScaleCmd(
-    Session* session, fuchsia::ui::gfx::SetScaleCmd command) {
+bool GfxCommandApplier::ApplySetScaleCmd(Session* session, fuchsia::ui::gfx::SetScaleCmd command) {
   if (auto node = session->resources()->FindResource<Node>(command.id)) {
     if (IsVariable(command.value)) {
-      if (auto variable =
-              session->resources()->FindVariableResource<Vector3Variable>(
-                  command.value.variable_id)) {
+      if (auto variable = session->resources()->FindVariableResource<Vector3Variable>(
+              command.value.variable_id)) {
         return node->SetScale(variable);
       }
     } else {
@@ -566,13 +491,12 @@ bool GfxCommandApplier::ApplySetScaleCmd(
   return false;
 }
 
-bool GfxCommandApplier::ApplySetRotationCmd(
-    Session* session, fuchsia::ui::gfx::SetRotationCmd command) {
+bool GfxCommandApplier::ApplySetRotationCmd(Session* session,
+                                            fuchsia::ui::gfx::SetRotationCmd command) {
   if (auto node = session->resources()->FindResource<Node>(command.id)) {
     if (IsVariable(command.value)) {
-      if (auto variable =
-              session->resources()->FindVariableResource<QuaternionVariable>(
-                  command.value.variable_id)) {
+      if (auto variable = session->resources()->FindVariableResource<QuaternionVariable>(
+              command.value.variable_id)) {
         return node->SetRotation(variable);
       }
     } else {
@@ -582,13 +506,12 @@ bool GfxCommandApplier::ApplySetRotationCmd(
   return false;
 }
 
-bool GfxCommandApplier::ApplySetAnchorCmd(
-    Session* session, fuchsia::ui::gfx::SetAnchorCmd command) {
+bool GfxCommandApplier::ApplySetAnchorCmd(Session* session,
+                                          fuchsia::ui::gfx::SetAnchorCmd command) {
   if (auto node = session->resources()->FindResource<Node>(command.id)) {
     if (IsVariable(command.value)) {
-      if (auto variable =
-              session->resources()->FindVariableResource<Vector3Variable>(
-                  command.value.variable_id)) {
+      if (auto variable = session->resources()->FindVariableResource<Vector3Variable>(
+              command.value.variable_id)) {
         return node->SetAnchor(variable);
       }
     }
@@ -597,8 +520,7 @@ bool GfxCommandApplier::ApplySetAnchorCmd(
   return false;
 }
 
-bool GfxCommandApplier::ApplySetSizeCmd(Session* session,
-                                        fuchsia::ui::gfx::SetSizeCmd command) {
+bool GfxCommandApplier::ApplySetSizeCmd(Session* session, fuchsia::ui::gfx::SetSizeCmd command) {
   if (auto layer = session->resources()->FindResource<Layer>(command.id)) {
     if (IsVariable(command.value)) {
       session->error_reporter()->ERROR()
@@ -611,10 +533,9 @@ bool GfxCommandApplier::ApplySetSizeCmd(Session* session,
   return false;
 }
 
-bool GfxCommandApplier::ApplySetOpacityCmd(
-    Session* session, fuchsia::ui::gfx::SetOpacityCmd command) {
-  if (auto node =
-          session->resources()->FindResource<OpacityNode>(command.node_id)) {
+bool GfxCommandApplier::ApplySetOpacityCmd(Session* session,
+                                           fuchsia::ui::gfx::SetOpacityCmd command) {
+  if (auto node = session->resources()->FindResource<OpacityNode>(command.node_id)) {
     node->SetOpacity(command.opacity);
     return true;
   }
@@ -624,18 +545,14 @@ bool GfxCommandApplier::ApplySetOpacityCmd(
 bool GfxCommandApplier::ApplySendSizeChangeHintCmd(
     Session* session, fuchsia::ui::gfx::SendSizeChangeHintCmdHACK command) {
   if (auto node = session->resources()->FindResource<Node>(command.node_id)) {
-    return node->SendSizeChangeHint(command.width_change_factor,
-                                    command.height_change_factor);
+    return node->SendSizeChangeHint(command.width_change_factor, command.height_change_factor);
   }
   return false;
 }
 
-bool GfxCommandApplier::ApplySetShapeCmd(
-    Session* session, fuchsia::ui::gfx::SetShapeCmd command) {
-  if (auto node =
-          session->resources()->FindResource<ShapeNode>(command.node_id)) {
-    if (auto shape =
-            session->resources()->FindResource<Shape>(command.shape_id)) {
+bool GfxCommandApplier::ApplySetShapeCmd(Session* session, fuchsia::ui::gfx::SetShapeCmd command) {
+  if (auto node = session->resources()->FindResource<ShapeNode>(command.node_id)) {
+    if (auto shape = session->resources()->FindResource<Shape>(command.shape_id)) {
       node->SetShape(std::move(shape));
       return true;
     }
@@ -643,12 +560,10 @@ bool GfxCommandApplier::ApplySetShapeCmd(
   return false;
 }
 
-bool GfxCommandApplier::ApplySetMaterialCmd(
-    Session* session, fuchsia::ui::gfx::SetMaterialCmd command) {
-  if (auto node =
-          session->resources()->FindResource<ShapeNode>(command.node_id)) {
-    if (auto material =
-            session->resources()->FindResource<Material>(command.material_id)) {
+bool GfxCommandApplier::ApplySetMaterialCmd(Session* session,
+                                            fuchsia::ui::gfx::SetMaterialCmd command) {
+  if (auto node = session->resources()->FindResource<ShapeNode>(command.node_id)) {
+    if (auto material = session->resources()->FindResource<Material>(command.material_id)) {
       node->SetMaterial(std::move(material));
       return true;
     }
@@ -656,8 +571,7 @@ bool GfxCommandApplier::ApplySetMaterialCmd(
   return false;
 }
 
-bool GfxCommandApplier::ApplySetClipCmd(Session* session,
-                                        fuchsia::ui::gfx::SetClipCmd command) {
+bool GfxCommandApplier::ApplySetClipCmd(Session* session, fuchsia::ui::gfx::SetClipCmd command) {
   if (command.clip_id != 0) {
     // TODO(SCN-167): Support non-zero clip_id.
     session->error_reporter()->ERROR()
@@ -673,8 +587,8 @@ bool GfxCommandApplier::ApplySetClipCmd(Session* session,
   return false;
 }
 
-bool GfxCommandApplier::ApplySetClipPlanesCmd(
-    Session* session, fuchsia::ui::gfx::SetClipPlanesCmd command) {
+bool GfxCommandApplier::ApplySetClipPlanesCmd(Session* session,
+                                              fuchsia::ui::gfx::SetClipPlanesCmd command) {
   if (auto node = session->resources()->FindResource<Node>(command.node_id)) {
     std::vector<escher::plane3> clip_planes;
     clip_planes.reserve(command.clip_planes.size());
@@ -696,25 +610,22 @@ bool GfxCommandApplier::ApplySetHitTestBehaviorCmd(
   return false;
 }
 
-bool GfxCommandApplier::ApplySetViewPropertiesCmd(
-    Session* session, fuchsia::ui::gfx::SetViewPropertiesCmd command) {
-  if (auto view_holder = session->resources()->FindResource<ViewHolder>(
-          command.view_holder_id)) {
+bool GfxCommandApplier::ApplySetViewPropertiesCmd(Session* session,
+                                                  fuchsia::ui::gfx::SetViewPropertiesCmd command) {
+  if (auto view_holder = session->resources()->FindResource<ViewHolder>(command.view_holder_id)) {
     view_holder->SetViewProperties(std::move(command.properties));
     return true;
   }
   return false;
 }
 
-bool GfxCommandApplier::ApplySetCameraCmd(
-    Session* session, fuchsia::ui::gfx::SetCameraCmd command) {
-  if (auto renderer =
-          session->resources()->FindResource<Renderer>(command.renderer_id)) {
+bool GfxCommandApplier::ApplySetCameraCmd(Session* session,
+                                          fuchsia::ui::gfx::SetCameraCmd command) {
+  if (auto renderer = session->resources()->FindResource<Renderer>(command.renderer_id)) {
     if (command.camera_id == 0) {
       renderer->SetCamera(nullptr);
       return true;
-    } else if (auto camera = session->resources()->FindResource<Camera>(
-                   command.camera_id)) {
+    } else if (auto camera = session->resources()->FindResource<Camera>(command.camera_id)) {
       renderer->SetCamera(std::move(camera));
       return true;
     }
@@ -722,15 +633,13 @@ bool GfxCommandApplier::ApplySetCameraCmd(
   return false;
 }
 
-bool GfxCommandApplier::ApplySetTextureCmd(
-    Session* session, fuchsia::ui::gfx::SetTextureCmd command) {
-  if (auto material =
-          session->resources()->FindResource<Material>(command.material_id)) {
+bool GfxCommandApplier::ApplySetTextureCmd(Session* session,
+                                           fuchsia::ui::gfx::SetTextureCmd command) {
+  if (auto material = session->resources()->FindResource<Material>(command.material_id)) {
     if (command.texture_id == 0) {
       material->SetTexture(nullptr);
       return true;
-    } else if (auto image = session->resources()->FindResource<ImageBase>(
-                   command.texture_id)) {
+    } else if (auto image = session->resources()->FindResource<ImageBase>(command.texture_id)) {
       material->SetTexture(std::move(image));
       return true;
     }
@@ -738,10 +647,8 @@ bool GfxCommandApplier::ApplySetTextureCmd(
   return false;
 }
 
-bool GfxCommandApplier::ApplySetColorCmd(
-    Session* session, fuchsia::ui::gfx::SetColorCmd command) {
-  if (auto material =
-          session->resources()->FindResource<Material>(command.material_id)) {
+bool GfxCommandApplier::ApplySetColorCmd(Session* session, fuchsia::ui::gfx::SetColorCmd command) {
+  if (auto material = session->resources()->FindResource<Material>(command.material_id)) {
     if (IsVariable(command.color)) {
       session->error_reporter()->ERROR()
           << "scenic_impl::gfx::GfxCommandApplier::ApplySetColorCmd(): "
@@ -760,27 +667,22 @@ bool GfxCommandApplier::ApplySetColorCmd(
   return false;
 }
 
-bool GfxCommandApplier::ApplyBindMeshBuffersCmd(
-    Session* session, fuchsia::ui::gfx::BindMeshBuffersCmd command) {
+bool GfxCommandApplier::ApplyBindMeshBuffersCmd(Session* session,
+                                                fuchsia::ui::gfx::BindMeshBuffersCmd command) {
   auto mesh = session->resources()->FindResource<MeshShape>(command.mesh_id);
-  auto index_buffer =
-      session->resources()->FindResource<Buffer>(command.index_buffer_id);
-  auto vertex_buffer =
-      session->resources()->FindResource<Buffer>(command.vertex_buffer_id);
+  auto index_buffer = session->resources()->FindResource<Buffer>(command.index_buffer_id);
+  auto vertex_buffer = session->resources()->FindResource<Buffer>(command.vertex_buffer_id);
   if (mesh && index_buffer && vertex_buffer) {
-    return mesh->BindBuffers(std::move(index_buffer), command.index_format,
-                             command.index_offset, command.index_count,
-                             std::move(vertex_buffer), command.vertex_format,
+    return mesh->BindBuffers(std::move(index_buffer), command.index_format, command.index_offset,
+                             command.index_count, std::move(vertex_buffer), command.vertex_format,
                              command.vertex_offset, command.vertex_count,
                              Unwrap(command.bounding_box));
   }
   return false;
 }
 
-bool GfxCommandApplier::ApplyAddLayerCmd(
-    Session* session, fuchsia::ui::gfx::AddLayerCmd command) {
-  auto layer_stack =
-      session->resources()->FindResource<LayerStack>(command.layer_stack_id);
+bool GfxCommandApplier::ApplyAddLayerCmd(Session* session, fuchsia::ui::gfx::AddLayerCmd command) {
+  auto layer_stack = session->resources()->FindResource<LayerStack>(command.layer_stack_id);
   auto layer = session->resources()->FindResource<Layer>(command.layer_id);
   if (layer_stack && layer) {
     return layer_stack->AddLayer(std::move(layer));
@@ -788,10 +690,9 @@ bool GfxCommandApplier::ApplyAddLayerCmd(
   return false;
 }
 
-bool GfxCommandApplier::ApplyRemoveLayerCmd(
-    Session* session, fuchsia::ui::gfx::RemoveLayerCmd command) {
-  auto layer_stack =
-      session->resources()->FindResource<LayerStack>(command.layer_stack_id);
+bool GfxCommandApplier::ApplyRemoveLayerCmd(Session* session,
+                                            fuchsia::ui::gfx::RemoveLayerCmd command) {
+  auto layer_stack = session->resources()->FindResource<LayerStack>(command.layer_stack_id);
   auto layer = session->resources()->FindResource<Layer>(command.layer_id);
   if (layer_stack && layer) {
     return layer_stack->RemoveLayer(std::move(layer));
@@ -799,33 +700,29 @@ bool GfxCommandApplier::ApplyRemoveLayerCmd(
   return false;
 }
 
-bool GfxCommandApplier::ApplyRemoveAllLayersCmd(
-    Session* session, fuchsia::ui::gfx::RemoveAllLayersCmd command) {
-  auto layer_stack =
-      session->resources()->FindResource<LayerStack>(command.layer_stack_id);
+bool GfxCommandApplier::ApplyRemoveAllLayersCmd(Session* session,
+                                                fuchsia::ui::gfx::RemoveAllLayersCmd command) {
+  auto layer_stack = session->resources()->FindResource<LayerStack>(command.layer_stack_id);
   if (layer_stack) {
     return layer_stack->RemoveAllLayers();
   }
   return false;
 }
 
-bool GfxCommandApplier::ApplySetLayerStackCmd(
-    Session* session, fuchsia::ui::gfx::SetLayerStackCmd command) {
-  auto compositor =
-      session->resources()->FindResource<Compositor>(command.compositor_id);
-  auto layer_stack =
-      session->resources()->FindResource<LayerStack>(command.layer_stack_id);
+bool GfxCommandApplier::ApplySetLayerStackCmd(Session* session,
+                                              fuchsia::ui::gfx::SetLayerStackCmd command) {
+  auto compositor = session->resources()->FindResource<Compositor>(command.compositor_id);
+  auto layer_stack = session->resources()->FindResource<LayerStack>(command.layer_stack_id);
   if (compositor && layer_stack) {
     return compositor->SetLayerStack(std::move(layer_stack));
   }
   return false;
 }
 
-bool GfxCommandApplier::ApplySetRendererCmd(
-    Session* session, fuchsia::ui::gfx::SetRendererCmd command) {
+bool GfxCommandApplier::ApplySetRendererCmd(Session* session,
+                                            fuchsia::ui::gfx::SetRendererCmd command) {
   auto layer = session->resources()->FindResource<Layer>(command.layer_id);
-  auto renderer =
-      session->resources()->FindResource<Renderer>(command.renderer_id);
+  auto renderer = session->resources()->FindResource<Renderer>(command.renderer_id);
 
   if (layer && renderer) {
     return layer->SetRenderer(std::move(renderer));
@@ -833,10 +730,9 @@ bool GfxCommandApplier::ApplySetRendererCmd(
   return false;
 }
 
-bool GfxCommandApplier::ApplySetRendererParamCmd(
-    Session* session, fuchsia::ui::gfx::SetRendererParamCmd command) {
-  auto renderer =
-      session->resources()->FindResource<Renderer>(command.renderer_id);
+bool GfxCommandApplier::ApplySetRendererParamCmd(Session* session,
+                                                 fuchsia::ui::gfx::SetRendererParamCmd command) {
+  auto renderer = session->resources()->FindResource<Renderer>(command.renderer_id);
   if (renderer) {
     switch (command.param.Which()) {
       case fuchsia::ui::gfx::RendererParam::Tag::kShadowTechnique:
@@ -845,24 +741,22 @@ bool GfxCommandApplier::ApplySetRendererParamCmd(
         // TODO(SCN-1169): SetRenderContinuously should only affect the
         // compositor that has the renderer attached to it.
         session->session_context().frame_scheduler->SetRenderContinuously(
-            command.param.render_frequency() ==
-            fuchsia::ui::gfx::RenderFrequency::CONTINUOUSLY);
+            command.param.render_frequency() == fuchsia::ui::gfx::RenderFrequency::CONTINUOUSLY);
         return true;
       case fuchsia::ui::gfx::RendererParam::Tag::kEnableDebugging:
         renderer->set_enable_debugging(command.param.enable_debugging());
         return true;
       case fuchsia::ui::gfx::RendererParam::Tag::Invalid:
-        session->error_reporter()->ERROR()
-            << "scenic_impl::gfx::GfxCommandApplier::"
-               "ApplySetRendererParamCmd(): "
-               "invalid param.";
+        session->error_reporter()->ERROR() << "scenic_impl::gfx::GfxCommandApplier::"
+                                              "ApplySetRendererParamCmd(): "
+                                              "invalid param.";
     }
   }
   return false;
 }
 
-bool GfxCommandApplier::ApplySetEventMaskCmd(
-    Session* session, fuchsia::ui::gfx::SetEventMaskCmd command) {
+bool GfxCommandApplier::ApplySetEventMaskCmd(Session* session,
+                                             fuchsia::ui::gfx::SetEventMaskCmd command) {
   if (auto r = session->resources()->FindResource<Resource>(command.id)) {
     return r->SetEventMask(command.event_mask);
   }
@@ -874,15 +768,12 @@ bool GfxCommandApplier::ApplySetCameraTransformCmd(
   // TODO(SCN-123): support variables.
   if (IsVariable(command.eye_position) || IsVariable(command.eye_look_at) ||
       IsVariable(command.eye_up)) {
-    session->error_reporter()->ERROR()
-        << "scenic_impl::gfx::GfxCommandApplier::"
-           "ApplySetCameraTransformCmd(): "
-           "unimplemented: variable properties.";
+    session->error_reporter()->ERROR() << "scenic_impl::gfx::GfxCommandApplier::"
+                                          "ApplySetCameraTransformCmd(): "
+                                          "unimplemented: variable properties.";
     return false;
-  } else if (auto camera = session->resources()->FindResource<Camera>(
-                 command.camera_id)) {
-    camera->SetTransform(UnwrapVector3(command.eye_position),
-                         UnwrapVector3(command.eye_look_at),
+  } else if (auto camera = session->resources()->FindResource<Camera>(command.camera_id)) {
+    camera->SetTransform(UnwrapVector3(command.eye_position), UnwrapVector3(command.eye_look_at),
                          UnwrapVector3(command.eye_up));
     return true;
   }
@@ -893,13 +784,11 @@ bool GfxCommandApplier::ApplySetCameraProjectionCmd(
     Session* session, fuchsia::ui::gfx::SetCameraProjectionCmd command) {
   // TODO(SCN-123): support variables.
   if (IsVariable(command.fovy)) {
-    session->error_reporter()->ERROR()
-        << "scenic_impl::gfx::GfxCommandApplier::"
-           "ApplySetCameraProjectionCmd(): "
-           "unimplemented: variable properties.";
+    session->error_reporter()->ERROR() << "scenic_impl::gfx::GfxCommandApplier::"
+                                          "ApplySetCameraProjectionCmd(): "
+                                          "unimplemented: variable properties.";
     return false;
-  } else if (auto camera = session->resources()->FindResource<Camera>(
-                 command.camera_id)) {
+  } else if (auto camera = session->resources()->FindResource<Camera>(command.camera_id)) {
     camera->SetProjection(UnwrapFloat(command.fovy));
     return true;
   }
@@ -908,16 +797,13 @@ bool GfxCommandApplier::ApplySetCameraProjectionCmd(
 
 bool GfxCommandApplier::ApplySetStereoCameraProjectionCmd(
     Session* session, fuchsia::ui::gfx::SetStereoCameraProjectionCmd command) {
-  if (IsVariable(command.left_projection) ||
-      IsVariable(command.right_projection)) {
-    session->error_reporter()->ERROR()
-        << "scenic_impl::gfx::GfxCommandApplier::"
-           "ApplySetStereoCameraProjectionOp(): "
-           "unimplemented: variable properties.";
+  if (IsVariable(command.left_projection) || IsVariable(command.right_projection)) {
+    session->error_reporter()->ERROR() << "scenic_impl::gfx::GfxCommandApplier::"
+                                          "ApplySetStereoCameraProjectionOp(): "
+                                          "unimplemented: variable properties.";
     return false;
   } else if (auto stereo_camera =
-                 session->resources()->FindResource<StereoCamera>(
-                     command.camera_id)) {
+                 session->resources()->FindResource<StereoCamera>(command.camera_id)) {
     stereo_camera->SetStereoProjection(Unwrap(command.left_projection.value),
                                        Unwrap(command.right_projection.value));
     return true;
@@ -928,79 +814,70 @@ bool GfxCommandApplier::ApplySetStereoCameraProjectionCmd(
 bool GfxCommandApplier::ApplySetCameraPoseBufferCmd(
     Session* session, fuchsia::ui::gfx::SetCameraPoseBufferCmd command) {
   if (command.base_time > dispatcher_clock_now()) {
-    session->error_reporter()->ERROR()
-        << "scenic_impl::gfx::GfxCommandApplier::"
-           "ApplySetCameraPoseBufferCmd(): "
-           "base time not in the past";
+    session->error_reporter()->ERROR() << "scenic_impl::gfx::GfxCommandApplier::"
+                                          "ApplySetCameraPoseBufferCmd(): "
+                                          "base time not in the past";
     return false;
   }
 
   auto buffer = session->resources()->FindResource<Buffer>(command.buffer_id);
   if (!buffer) {
-    session->error_reporter()->ERROR()
-        << "scenic_impl::gfx::GfxCommandApplier::"
-           "ApplySetCameraPoseBufferCmd(S): "
-           "invalid buffer ID";
+    session->error_reporter()->ERROR() << "scenic_impl::gfx::GfxCommandApplier::"
+                                          "ApplySetCameraPoseBufferCmd(S): "
+                                          "invalid buffer ID";
     return false;
   }
 
   if (command.num_entries < 1) {
-    session->error_reporter()->ERROR()
-        << "scenic_impl::gfx::GfxCommandApplier::"
-           "ApplySetCameraPoseBufferCmd(): "
-           "must have at least one entry in the pose buffer";
+    session->error_reporter()->ERROR() << "scenic_impl::gfx::GfxCommandApplier::"
+                                          "ApplySetCameraPoseBufferCmd(): "
+                                          "must have at least one entry in the pose buffer";
     return false;
   }
 
   if (buffer->size() < command.num_entries * sizeof(escher::hmd::Pose)) {
-    session->error_reporter()->ERROR()
-        << "scenic_impl::gfx::GfxCommandApplier::"
-           "ApplySetCameraPoseBufferCmd(): "
-           "buffer is not large enough";
+    session->error_reporter()->ERROR() << "scenic_impl::gfx::GfxCommandApplier::"
+                                          "ApplySetCameraPoseBufferCmd(): "
+                                          "buffer is not large enough";
     return false;
   }
 
   auto camera = session->resources()->FindResource<Camera>(command.camera_id);
   if (!camera) {
-    session->error_reporter()->ERROR()
-        << "scenic_impl::gfx::GfxCommandApplier::"
-           "ApplySetCameraPoseBufferCmd(): "
-           "invalid camera ID";
+    session->error_reporter()->ERROR() << "scenic_impl::gfx::GfxCommandApplier::"
+                                          "ApplySetCameraPoseBufferCmd(): "
+                                          "invalid camera ID";
     return false;
   }
 
-  camera->SetPoseBuffer(buffer, command.num_entries, command.base_time,
-                        command.time_interval);
+  camera->SetPoseBuffer(buffer, command.num_entries, command.base_time, command.time_interval);
 
   return true;
 }
 
-bool GfxCommandApplier::ApplySetLightColorCmd(
-    Session* session, fuchsia::ui::gfx::SetLightColorCmd command) {
+bool GfxCommandApplier::ApplySetLightColorCmd(Session* session,
+                                              fuchsia::ui::gfx::SetLightColorCmd command) {
   // TODO(SCN-123): support variables.
   if (command.color.variable_id) {
     session->error_reporter()->ERROR()
         << "scenic_impl::gfx::GfxCommandApplier::ApplySetLightColorCmd(): "
            "unimplemented: variable color.";
     return false;
-  } else if (auto light =
-                 session->resources()->FindResource<Light>(command.light_id)) {
+  } else if (auto light = session->resources()->FindResource<Light>(command.light_id)) {
     return light->SetColor(Unwrap(command.color.value));
   }
   return false;
 }
 
-bool GfxCommandApplier::ApplySetLightDirectionCmd(
-    Session* session, fuchsia::ui::gfx::SetLightDirectionCmd command) {
+bool GfxCommandApplier::ApplySetLightDirectionCmd(Session* session,
+                                                  fuchsia::ui::gfx::SetLightDirectionCmd command) {
   // TODO(SCN-123): support variables.
   if (command.direction.variable_id) {
-    session->error_reporter()->ERROR()
-        << "scenic_impl::gfx::GfxCommandApplier::"
-           "ApplySetLightDirectionCmd(): "
-           "unimplemented: variable direction.";
+    session->error_reporter()->ERROR() << "scenic_impl::gfx::GfxCommandApplier::"
+                                          "ApplySetLightDirectionCmd(): "
+                                          "unimplemented: variable direction.";
     return false;
-  } else if (auto light = session->resources()->FindResource<DirectionalLight>(
-                 command.light_id)) {
+  } else if (auto light = session->resources()->FindResource<DirectionalLight>(command.light_id)) {
     return light->SetDirection(Unwrap(command.direction.value));
   }
   return false;
@@ -1014,8 +891,7 @@ bool GfxCommandApplier::ApplySetPointLightPositionCmd(
                                           ":ApplySetPointLightPositionCmd(): "
                                           "unimplemented: variable position.";
     return false;
-  } else if (auto light = session->resources()->FindResource<PointLight>(
-                 command.light_id)) {
+  } else if (auto light = session->resources()->FindResource<PointLight>(command.light_id)) {
     return light->SetPosition(Unwrap(command.position.value));
   }
   return false;
@@ -1029,19 +905,15 @@ bool GfxCommandApplier::ApplySetPointLightFalloffCmd(
                                           ":ApplySetPointLightFalloffCmd(): "
                                           "unimplemented: variable falloff.";
     return false;
-  } else if (auto light = session->resources()->FindResource<PointLight>(
-                 command.light_id)) {
+  } else if (auto light = session->resources()->FindResource<PointLight>(command.light_id)) {
     return light->SetFalloff(command.falloff.value);
   }
   return false;
 }
 
-bool GfxCommandApplier::ApplyAddLightCmd(
-    Session* session, fuchsia::ui::gfx::AddLightCmd command) {
-  if (auto scene =
-          session->resources()->FindResource<Scene>(command.scene_id)) {
-    if (auto light =
-            session->resources()->FindResource<Light>(command.light_id)) {
+bool GfxCommandApplier::ApplyAddLightCmd(Session* session, fuchsia::ui::gfx::AddLightCmd command) {
+  if (auto scene = session->resources()->FindResource<Scene>(command.scene_id)) {
+    if (auto light = session->resources()->FindResource<Light>(command.light_id)) {
       return scene->AddLight(std::move(light));
     }
   }
@@ -1053,69 +925,58 @@ bool GfxCommandApplier::ApplyAddLightCmd(
 
 bool GfxCommandApplier::ApplySceneAddAmbientLightCmd(
     Session* session, fuchsia::ui::gfx::SceneAddAmbientLightCmd command) {
-  if (auto scene =
-          session->resources()->FindResource<Scene>(command.scene_id)) {
-    if (auto light = session->resources()->FindResource<AmbientLight>(
-            command.light_id)) {
+  if (auto scene = session->resources()->FindResource<Scene>(command.scene_id)) {
+    if (auto light = session->resources()->FindResource<AmbientLight>(command.light_id)) {
       return scene->AddAmbientLight(std::move(light));
     }
   }
 
-  session->error_reporter()->ERROR()
-      << "scenic_impl::gfx::GfxCommandApplier::"
-         "ApplySceneAddAmbientLightCmd(): unimplemented.";
+  session->error_reporter()->ERROR() << "scenic_impl::gfx::GfxCommandApplier::"
+                                        "ApplySceneAddAmbientLightCmd(): unimplemented.";
   return false;
 }
 
 bool GfxCommandApplier::ApplySceneAddDirectionalLightCmd(
     Session* session, fuchsia::ui::gfx::SceneAddDirectionalLightCmd command) {
-  if (auto scene =
-          session->resources()->FindResource<Scene>(command.scene_id)) {
-    if (auto light = session->resources()->FindResource<DirectionalLight>(
-            command.light_id)) {
+  if (auto scene = session->resources()->FindResource<Scene>(command.scene_id)) {
+    if (auto light = session->resources()->FindResource<DirectionalLight>(command.light_id)) {
       return scene->AddDirectionalLight(std::move(light));
     }
   }
 
-  session->error_reporter()->ERROR()
-      << "scenic_impl::gfx::GfxCommandApplier::"
-         "ApplySceneAddDirectionalLightCmd(): unimplemented.";
+  session->error_reporter()->ERROR() << "scenic_impl::gfx::GfxCommandApplier::"
+                                        "ApplySceneAddDirectionalLightCmd(): unimplemented.";
   return false;
 }
 
 bool GfxCommandApplier::ApplySceneAddPointLightCmd(
     Session* session, fuchsia::ui::gfx::SceneAddPointLightCmd command) {
-  if (auto scene =
-          session->resources()->FindResource<Scene>(command.scene_id)) {
-    if (auto light =
-            session->resources()->FindResource<PointLight>(command.light_id)) {
+  if (auto scene = session->resources()->FindResource<Scene>(command.scene_id)) {
+    if (auto light = session->resources()->FindResource<PointLight>(command.light_id)) {
       return scene->AddPointLight(std::move(light));
     }
   }
 
-  session->error_reporter()->ERROR()
-      << "scenic_impl::gfx::GfxCommandApplier::"
-         "ApplySceneAddPointLightCmd(): unimplemented.";
+  session->error_reporter()->ERROR() << "scenic_impl::gfx::GfxCommandApplier::"
+                                        "ApplySceneAddPointLightCmd(): unimplemented.";
   return false;
 }
 
-bool GfxCommandApplier::ApplyDetachLightCmd(
-    Session* session, fuchsia::ui::gfx::DetachLightCmd command) {
+bool GfxCommandApplier::ApplyDetachLightCmd(Session* session,
+                                            fuchsia::ui::gfx::DetachLightCmd command) {
   session->error_reporter()->ERROR() << "scenic_impl::gfx::GfxCommandApplier::"
                                         "ApplyDetachLightCmd(): unimplemented.";
   return false;
 }
 
-bool GfxCommandApplier::ApplyDetachLightsCmd(
-    Session* session, fuchsia::ui::gfx::DetachLightsCmd command) {
-  session->error_reporter()->ERROR()
-      << "scenic_impl::gfx::GfxCommandApplier::"
-         "ApplyDetachLightsCmd(): unimplemented.";
+bool GfxCommandApplier::ApplyDetachLightsCmd(Session* session,
+                                             fuchsia::ui::gfx::DetachLightsCmd command) {
+  session->error_reporter()->ERROR() << "scenic_impl::gfx::GfxCommandApplier::"
+                                        "ApplyDetachLightsCmd(): unimplemented.";
   return false;
 }
 
-bool GfxCommandApplier::ApplySetLabelCmd(
-    Session* session, fuchsia::ui::gfx::SetLabelCmd command) {
+bool GfxCommandApplier::ApplySetLabelCmd(Session* session, fuchsia::ui::gfx::SetLabelCmd command) {
   if (auto r = session->resources()->FindResource<Resource>(command.id)) {
     return r->SetLabel(command.label);
   }
@@ -1124,8 +985,7 @@ bool GfxCommandApplier::ApplySetLabelCmd(
 
 bool GfxCommandApplier::ApplySetDisableClippingCmd(
     Session* session, fuchsia::ui::gfx::SetDisableClippingCmd command) {
-  if (auto r =
-          session->resources()->FindResource<Renderer>(command.renderer_id)) {
+  if (auto r = session->resources()->FindResource<Renderer>(command.renderer_id)) {
     r->DisableClipping(command.disable_clipping);
     return true;
   }
@@ -1135,14 +995,12 @@ bool GfxCommandApplier::ApplySetDisableClippingCmd(
 bool GfxCommandApplier::ApplyCreateMemory(Session* session, ResourceId id,
                                           fuchsia::ui::gfx::MemoryArgs args) {
   auto memory = CreateMemory(session, id, std::move(args));
-  return memory ? session->resources()->AddResource(id, std::move(memory))
-                : false;
+  return memory ? session->resources()->AddResource(id, std::move(memory)) : false;
 }
 
 bool GfxCommandApplier::ApplyCreateImage(Session* session, ResourceId id,
                                          fuchsia::ui::gfx::ImageArgs args) {
-  if (auto memory =
-          session->resources()->FindResource<Memory>(args.memory_id)) {
+  if (auto memory = session->resources()->FindResource<Memory>(args.memory_id)) {
     if (auto image = CreateImage(session, id, std::move(memory), args)) {
       return session->resources()->AddResource(id, std::move(image));
     }
@@ -1151,20 +1009,18 @@ bool GfxCommandApplier::ApplyCreateImage(Session* session, ResourceId id,
   return false;
 }
 
-bool GfxCommandApplier::ApplyCreateImagePipe(
-    Session* session, ResourceId id, fuchsia::ui::gfx::ImagePipeArgs args) {
-  auto image_pipe = fxl::MakeRefCounted<ImagePipe>(
-      session, id, std::move(args.image_pipe_request),
-      session->session_context().frame_scheduler);
+bool GfxCommandApplier::ApplyCreateImagePipe(Session* session, ResourceId id,
+                                             fuchsia::ui::gfx::ImagePipeArgs args) {
+  auto image_pipe = fxl::MakeRefCounted<ImagePipe>(session, id, std::move(args.image_pipe_request),
+                                                   session->session_context().frame_scheduler);
   return session->resources()->AddResource(id, image_pipe);
 }
 
 bool GfxCommandApplier::ApplyCreateBuffer(Session* session, ResourceId id,
                                           fuchsia::ui::gfx::BufferArgs args) {
-  if (auto memory =
-          session->resources()->FindResource<Memory>(args.memory_id)) {
-    if (auto buffer = CreateBuffer(session, id, std::move(memory),
-                                   args.memory_offset, args.num_bytes)) {
+  if (auto memory = session->resources()->FindResource<Memory>(args.memory_id)) {
+    if (auto buffer =
+            CreateBuffer(session, id, std::move(memory), args.memory_offset, args.num_bytes)) {
       return session->resources()->AddResource(id, std::move(buffer));
     }
   }
@@ -1174,41 +1030,35 @@ bool GfxCommandApplier::ApplyCreateBuffer(Session* session, ResourceId id,
 bool GfxCommandApplier::ApplyCreateScene(Session* session, ResourceId id,
                                          fuchsia::ui::gfx::SceneArgs args) {
   auto scene = CreateScene(session, id, std::move(args));
-  return scene ? session->resources()->AddResource(id, std::move(scene))
-               : false;
+  return scene ? session->resources()->AddResource(id, std::move(scene)) : false;
 }
 
 bool GfxCommandApplier::ApplyCreateCamera(Session* session, ResourceId id,
                                           fuchsia::ui::gfx::CameraArgs args) {
   auto camera = CreateCamera(session, id, std::move(args));
-  return camera ? session->resources()->AddResource(id, std::move(camera))
-                : false;
+  return camera ? session->resources()->AddResource(id, std::move(camera)) : false;
 }
 
-bool GfxCommandApplier::ApplyCreateStereoCamera(
-    Session* session, ResourceId id, fuchsia::ui::gfx::StereoCameraArgs args) {
+bool GfxCommandApplier::ApplyCreateStereoCamera(Session* session, ResourceId id,
+                                                fuchsia::ui::gfx::StereoCameraArgs args) {
   auto camera = CreateStereoCamera(session, id, args);
-  return camera ? session->resources()->AddResource(id, std::move(camera))
-                : false;
+  return camera ? session->resources()->AddResource(id, std::move(camera)) : false;
 }
 
-bool GfxCommandApplier::ApplyCreateRenderer(
-    Session* session, ResourceId id, fuchsia::ui::gfx::RendererArgs args) {
+bool GfxCommandApplier::ApplyCreateRenderer(Session* session, ResourceId id,
+                                            fuchsia::ui::gfx::RendererArgs args) {
   auto renderer = CreateRenderer(session, id, std::move(args));
-  return renderer ? session->resources()->AddResource(id, std::move(renderer))
-                  : false;
+  return renderer ? session->resources()->AddResource(id, std::move(renderer)) : false;
 }
 
-bool GfxCommandApplier::ApplyCreateAmbientLight(
-    Session* session, ResourceId id, fuchsia::ui::gfx::AmbientLightArgs args) {
+bool GfxCommandApplier::ApplyCreateAmbientLight(Session* session, ResourceId id,
+                                                fuchsia::ui::gfx::AmbientLightArgs args) {
   auto light = CreateAmbientLight(session, id);
-  return light ? session->resources()->AddResource(id, std::move(light))
-               : false;
+  return light ? session->resources()->AddResource(id, std::move(light)) : false;
 }
 
-bool GfxCommandApplier::ApplyCreateDirectionalLight(
-    Session* session, ResourceId id,
-    fuchsia::ui::gfx::DirectionalLightArgs args) {
+bool GfxCommandApplier::ApplyCreateDirectionalLight(Session* session, ResourceId id,
+                                                    fuchsia::ui::gfx::DirectionalLightArgs args) {
   // TODO(SCN-1255): temporarily disable directional light creation ASAP, so
   // that people don't try to use them before we decide whether we want them.
   // They are currently only used by RootPresenter and example programs.
@@ -1217,19 +1067,17 @@ bool GfxCommandApplier::ApplyCreateDirectionalLight(
   //     disabled";
   // return false;
   auto light = CreateDirectionalLight(session, id);
-  return light ? session->resources()->AddResource(id, std::move(light))
-               : false;
+  return light ? session->resources()->AddResource(id, std::move(light)) : false;
 }
 
-bool GfxCommandApplier::ApplyCreatePointLight(
-    Session* session, ResourceId id, fuchsia::ui::gfx::PointLightArgs args) {
+bool GfxCommandApplier::ApplyCreatePointLight(Session* session, ResourceId id,
+                                              fuchsia::ui::gfx::PointLightArgs args) {
   auto light = CreatePointLight(session, id);
-  return light ? session->resources()->AddResource(id, std::move(light))
-               : false;
+  return light ? session->resources()->AddResource(id, std::move(light)) : false;
 }
 
-bool GfxCommandApplier::ApplyCreateRectangle(
-    Session* session, ResourceId id, fuchsia::ui::gfx::RectangleArgs args) {
+bool GfxCommandApplier::ApplyCreateRectangle(Session* session, ResourceId id,
+                                             fuchsia::ui::gfx::RectangleArgs args) {
   if (!AssertValueIsOfType(args.width, kFloatValueTypes, session) ||
       !AssertValueIsOfType(args.height, kFloatValueTypes, session)) {
     return false;
@@ -1243,35 +1091,29 @@ bool GfxCommandApplier::ApplyCreateRectangle(
     return false;
   }
 
-  auto rectangle =
-      CreateRectangle(session, id, args.width.vector1(), args.height.vector1());
-  return rectangle ? session->resources()->AddResource(id, std::move(rectangle))
-                   : false;
+  auto rectangle = CreateRectangle(session, id, args.width.vector1(), args.height.vector1());
+  return rectangle ? session->resources()->AddResource(id, std::move(rectangle)) : false;
 }
 
-bool GfxCommandApplier::ApplyCreateRoundedRectangle(
-    Session* session, CommandContext* command_context, ResourceId id,
-    fuchsia::ui::gfx::RoundedRectangleArgs args) {
+bool GfxCommandApplier::ApplyCreateRoundedRectangle(Session* session,
+                                                    CommandContext* command_context, ResourceId id,
+                                                    fuchsia::ui::gfx::RoundedRectangleArgs args) {
   if (!AssertValueIsOfType(args.width, kFloatValueTypes, session) ||
       !AssertValueIsOfType(args.height, kFloatValueTypes, session) ||
       !AssertValueIsOfType(args.top_left_radius, kFloatValueTypes, session) ||
       !AssertValueIsOfType(args.top_right_radius, kFloatValueTypes, session) ||
-      !AssertValueIsOfType(args.bottom_left_radius, kFloatValueTypes,
-                           session) ||
-      !AssertValueIsOfType(args.bottom_right_radius, kFloatValueTypes,
-                           session)) {
+      !AssertValueIsOfType(args.bottom_left_radius, kFloatValueTypes, session) ||
+      !AssertValueIsOfType(args.bottom_right_radius, kFloatValueTypes, session)) {
     return false;
   }
 
   // TODO(SCN-123): support variables.
-  if (IsVariable(args.width) || IsVariable(args.height) ||
-      IsVariable(args.top_left_radius) || IsVariable(args.top_right_radius) ||
-      IsVariable(args.bottom_left_radius) ||
+  if (IsVariable(args.width) || IsVariable(args.height) || IsVariable(args.top_left_radius) ||
+      IsVariable(args.top_right_radius) || IsVariable(args.bottom_left_radius) ||
       IsVariable(args.bottom_right_radius)) {
-    session->error_reporter()->ERROR()
-        << "scenic_impl::gfx::GfxCommandApplier::"
-           "ApplyCreateRoundedRectangle(): "
-           "unimplemented: variable width/height/radii.";
+    session->error_reporter()->ERROR() << "scenic_impl::gfx::GfxCommandApplier::"
+                                          "ApplyCreateRoundedRectangle(): "
+                                          "unimplemented: variable width/height/radii.";
     return false;
   }
 
@@ -1282,11 +1124,10 @@ bool GfxCommandApplier::ApplyCreateRoundedRectangle(
   const float bottom_right_radius = args.bottom_right_radius.vector1();
   const float bottom_left_radius = args.bottom_left_radius.vector1();
 
-  auto rectangle = CreateRoundedRectangle(
-      session, command_context, id, width, height, top_left_radius,
-      top_right_radius, bottom_right_radius, bottom_left_radius);
-  return rectangle ? session->resources()->AddResource(id, std::move(rectangle))
-                   : false;
+  auto rectangle =
+      CreateRoundedRectangle(session, command_context, id, width, height, top_left_radius,
+                             top_right_radius, bottom_right_radius, bottom_left_radius);
+  return rectangle ? session->resources()->AddResource(id, std::move(rectangle)) : false;
 }
 
 bool GfxCommandApplier::ApplyCreateCircle(Session* session, ResourceId id,
@@ -1304,8 +1145,7 @@ bool GfxCommandApplier::ApplyCreateCircle(Session* session, ResourceId id,
   }
 
   auto circle = CreateCircle(session, id, args.radius.vector1());
-  return circle ? session->resources()->AddResource(id, std::move(circle))
-                : false;
+  return circle ? session->resources()->AddResource(id, std::move(circle)) : false;
 }
 
 bool GfxCommandApplier::ApplyCreateMesh(Session* session, ResourceId id,
@@ -1314,11 +1154,10 @@ bool GfxCommandApplier::ApplyCreateMesh(Session* session, ResourceId id,
   return mesh ? session->resources()->AddResource(id, std::move(mesh)) : false;
 }
 
-bool GfxCommandApplier::ApplyCreateMaterial(
-    Session* session, ResourceId id, fuchsia::ui::gfx::MaterialArgs args) {
+bool GfxCommandApplier::ApplyCreateMaterial(Session* session, ResourceId id,
+                                            fuchsia::ui::gfx::MaterialArgs args) {
   auto material = CreateMaterial(session, id);
-  return material ? session->resources()->AddResource(id, std::move(material))
-                  : false;
+  return material ? session->resources()->AddResource(id, std::move(material)) : false;
 }
 
 bool GfxCommandApplier::ApplyCreateView(Session* session, ResourceId id,
@@ -1365,13 +1204,12 @@ bool GfxCommandApplier::ApplyCreateView(Session* session, ResourceId id,
   return false;
 }
 
-bool GfxCommandApplier::ApplyCreateViewHolder(
-    Session* session, ResourceId id, fuchsia::ui::gfx::ViewHolderArgs args) {
+bool GfxCommandApplier::ApplyCreateViewHolder(Session* session, ResourceId id,
+                                              fuchsia::ui::gfx::ViewHolderArgs args) {
   // Sanity check.  We also rely on FIDL to enforce this for us, although it
   // does not at the moment
-  FXL_DCHECK(args.token.value)
-      << "scenic_impl::gfx::GfxCommandApplier::ApplyCreateViewHolder()"
-         ": no token provided.";
+  FXL_DCHECK(args.token.value) << "scenic_impl::gfx::GfxCommandApplier::ApplyCreateViewHolder()"
+                                  ": no token provided.";
 
   if (auto view_holder = CreateViewHolder(session, id, std::move(args))) {
     view_holder->As<ViewHolder>()->Connect();  // Initiate the ViewHolder link.
@@ -1381,77 +1219,64 @@ bool GfxCommandApplier::ApplyCreateViewHolder(
   return false;
 }
 
-bool GfxCommandApplier::ApplyCreateClipNode(
-    Session* session, ResourceId id, fuchsia::ui::gfx::ClipNodeArgs args) {
+bool GfxCommandApplier::ApplyCreateClipNode(Session* session, ResourceId id,
+                                            fuchsia::ui::gfx::ClipNodeArgs args) {
   auto node = CreateClipNode(session, id, std::move(args));
   return node ? session->resources()->AddResource(id, std::move(node)) : false;
 }
 
-bool GfxCommandApplier::ApplyCreateEntityNode(
-    Session* session, ResourceId id, fuchsia::ui::gfx::EntityNodeArgs args) {
+bool GfxCommandApplier::ApplyCreateEntityNode(Session* session, ResourceId id,
+                                              fuchsia::ui::gfx::EntityNodeArgs args) {
   auto node = CreateEntityNode(session, id, std::move(args));
   return node ? session->resources()->AddResource(id, std::move(node)) : false;
 }
 
-bool GfxCommandApplier::ApplyCreateOpacityNode(
-    Session* session, ResourceId id,
-    fuchsia::ui::gfx::OpacityNodeArgsHACK args) {
+bool GfxCommandApplier::ApplyCreateOpacityNode(Session* session, ResourceId id,
+                                               fuchsia::ui::gfx::OpacityNodeArgsHACK args) {
   auto node = CreateOpacityNode(session, id, args);
   return node ? session->resources()->AddResource(id, std::move(node)) : false;
 }
 
-bool GfxCommandApplier::ApplyCreateShapeNode(
-    Session* session, ResourceId id, fuchsia::ui::gfx::ShapeNodeArgs args) {
+bool GfxCommandApplier::ApplyCreateShapeNode(Session* session, ResourceId id,
+                                             fuchsia::ui::gfx::ShapeNodeArgs args) {
   auto node = CreateShapeNode(session, id, std::move(args));
   return node ? session->resources()->AddResource(id, std::move(node)) : false;
 }
 
-bool GfxCommandApplier::ApplyCreateCompositor(
-    Session* session, ResourceId id, fuchsia::ui::gfx::CompositorArgs args) {
+bool GfxCommandApplier::ApplyCreateCompositor(Session* session, ResourceId id,
+                                              fuchsia::ui::gfx::CompositorArgs args) {
   auto compositor = CreateCompositor(session, id, std::move(args));
-  return compositor
-             ? session->resources()->AddResource(id, std::move(compositor))
-             : false;
+  return compositor ? session->resources()->AddResource(id, std::move(compositor)) : false;
 }
 
-bool GfxCommandApplier::ApplyCreateDisplayCompositor(
-    Session* session, ResourceId id,
-    fuchsia::ui::gfx::DisplayCompositorArgs args) {
+bool GfxCommandApplier::ApplyCreateDisplayCompositor(Session* session, ResourceId id,
+                                                     fuchsia::ui::gfx::DisplayCompositorArgs args) {
   auto compositor = CreateDisplayCompositor(session, id, std::move(args));
-  return compositor
-             ? session->resources()->AddResource(id, std::move(compositor))
-             : false;
+  return compositor ? session->resources()->AddResource(id, std::move(compositor)) : false;
 }
 
 bool GfxCommandApplier::ApplyCreateImagePipeCompositor(
-    Session* session, ResourceId id,
-    fuchsia::ui::gfx::ImagePipeCompositorArgs args) {
+    Session* session, ResourceId id, fuchsia::ui::gfx::ImagePipeCompositorArgs args) {
   auto compositor = CreateImagePipeCompositor(session, id, std::move(args));
-  return compositor
-             ? session->resources()->AddResource(id, std::move(compositor))
-             : false;
+  return compositor ? session->resources()->AddResource(id, std::move(compositor)) : false;
 }
 
-bool GfxCommandApplier::ApplyCreateLayerStack(
-    Session* session, ResourceId id, fuchsia::ui::gfx::LayerStackArgs args) {
+bool GfxCommandApplier::ApplyCreateLayerStack(Session* session, ResourceId id,
+                                              fuchsia::ui::gfx::LayerStackArgs args) {
   auto layer_stack = CreateLayerStack(session, id, std::move(args));
-  return layer_stack
-             ? session->resources()->AddResource(id, std::move(layer_stack))
-             : false;
+  return layer_stack ? session->resources()->AddResource(id, std::move(layer_stack)) : false;
 }
 
 bool GfxCommandApplier::ApplyCreateLayer(Session* session, ResourceId id,
                                          fuchsia::ui::gfx::LayerArgs args) {
   auto layer = CreateLayer(session, id, std::move(args));
-  return layer ? session->resources()->AddResource(id, std::move(layer))
-               : false;
+  return layer ? session->resources()->AddResource(id, std::move(layer)) : false;
 }
 
-bool GfxCommandApplier::ApplyCreateVariable(
-    Session* session, ResourceId id, fuchsia::ui::gfx::VariableArgs args) {
+bool GfxCommandApplier::ApplyCreateVariable(Session* session, ResourceId id,
+                                            fuchsia::ui::gfx::VariableArgs args) {
   auto variable = CreateVariable(session, id, std::move(args));
-  return variable ? session->resources()->AddResource(id, std::move(variable))
-                  : false;
+  return variable ? session->resources()->AddResource(id, std::move(variable)) : false;
 }
 
 ResourcePtr GfxCommandApplier::CreateMemory(Session* session, ResourceId id,
@@ -1459,35 +1284,28 @@ ResourcePtr GfxCommandApplier::CreateMemory(Session* session, ResourceId id,
   return Memory::New(session, id, std::move(args), session->error_reporter());
 }
 
-ResourcePtr GfxCommandApplier::CreateImage(Session* session, ResourceId id,
-                                           MemoryPtr memory,
+ResourcePtr GfxCommandApplier::CreateImage(Session* session, ResourceId id, MemoryPtr memory,
                                            fuchsia::ui::gfx::ImageArgs args) {
-  return Image::New(session, id, memory, args.info, args.memory_offset,
-                    session->error_reporter());
+  return Image::New(session, id, memory, args.info, args.memory_offset, session->error_reporter());
 }
 
-ResourcePtr GfxCommandApplier::CreateBuffer(Session* session, ResourceId id,
-                                            MemoryPtr memory,
-                                            uint32_t memory_offset,
-                                            uint32_t num_bytes) {
+ResourcePtr GfxCommandApplier::CreateBuffer(Session* session, ResourceId id, MemoryPtr memory,
+                                            uint32_t memory_offset, uint32_t num_bytes) {
   if (memory_offset + num_bytes > memory->size()) {
-    session->error_reporter()->ERROR()
-        << "scenic_impl::gfx::GfxCommandApplier::CreateBuffer(): "
-           "buffer does not fit within memory (buffer "
-           "offset: "
-        << memory_offset << ", buffer size: " << num_bytes
-        << ", memory size: " << memory->size() << ")";
+    session->error_reporter()->ERROR() << "scenic_impl::gfx::GfxCommandApplier::CreateBuffer(): "
+                                          "buffer does not fit within memory (buffer "
+                                          "offset: "
+                                       << memory_offset << ", buffer size: " << num_bytes
+                                       << ", memory size: " << memory->size() << ")";
     return ResourcePtr();
   }
 
   // Make a pointer to a subregion of the memory, if necessary.
-  escher::GpuMemPtr gpu_mem =
-      (memory_offset > 0 || num_bytes < memory->size())
-          ? memory->GetGpuMem()->Suballocate(num_bytes, memory_offset)
-          : memory->GetGpuMem();
+  escher::GpuMemPtr gpu_mem = (memory_offset > 0 || num_bytes < memory->size())
+                                  ? memory->GetGpuMem()->Suballocate(num_bytes, memory_offset)
+                                  : memory->GetGpuMem();
 
-  return fxl::MakeRefCounted<Buffer>(session, id, std::move(gpu_mem),
-                                     std::move(memory));
+  return fxl::MakeRefCounted<Buffer>(session, id, std::move(gpu_mem), std::move(memory));
 }
 
 ResourcePtr GfxCommandApplier::CreateScene(Session* session, ResourceId id,
@@ -1503,40 +1321,36 @@ ResourcePtr GfxCommandApplier::CreateCamera(Session* session, ResourceId id,
   return ResourcePtr();
 }
 
-ResourcePtr GfxCommandApplier::CreateStereoCamera(
-    Session* session, ResourceId id,
-    const fuchsia::ui::gfx::StereoCameraArgs args) {
+ResourcePtr GfxCommandApplier::CreateStereoCamera(Session* session, ResourceId id,
+                                                  const fuchsia::ui::gfx::StereoCameraArgs args) {
   if (auto scene = session->resources()->FindResource<Scene>(args.scene_id)) {
     return fxl::MakeRefCounted<StereoCamera>(session, id, std::move(scene));
   }
   return ResourcePtr();
 }
 
-ResourcePtr GfxCommandApplier::CreateRenderer(
-    Session* session, ResourceId id, fuchsia::ui::gfx::RendererArgs args) {
+ResourcePtr GfxCommandApplier::CreateRenderer(Session* session, ResourceId id,
+                                              fuchsia::ui::gfx::RendererArgs args) {
   return fxl::MakeRefCounted<Renderer>(session, id);
 }
 
-ResourcePtr GfxCommandApplier::CreateAmbientLight(Session* session,
-                                                  ResourceId id) {
+ResourcePtr GfxCommandApplier::CreateAmbientLight(Session* session, ResourceId id) {
   return fxl::MakeRefCounted<AmbientLight>(session, id);
 }
 
-ResourcePtr GfxCommandApplier::CreateDirectionalLight(Session* session,
-                                                      ResourceId id) {
+ResourcePtr GfxCommandApplier::CreateDirectionalLight(Session* session, ResourceId id) {
   return fxl::MakeRefCounted<DirectionalLight>(session, id);
 }
 
-ResourcePtr GfxCommandApplier::CreatePointLight(Session* session,
-                                                ResourceId id) {
+ResourcePtr GfxCommandApplier::CreatePointLight(Session* session, ResourceId id) {
   return fxl::MakeRefCounted<PointLight>(session, id);
 }
 
 ResourcePtr GfxCommandApplier::CreateView(Session* session, ResourceId id,
                                           fuchsia::ui::gfx::ViewArgs args) {
   ViewLinker* view_linker = session->session_context().view_linker;
-  ViewLinker::ImportLink link = view_linker->CreateImport(
-      std::move(args.token.value), session->error_reporter());
+  ViewLinker::ImportLink link =
+      view_linker->CreateImport(std::move(args.token.value), session->error_reporter());
 
   if (!link.valid()) {
     return nullptr;  // Error out: link could not be registered.
@@ -1556,8 +1370,8 @@ ResourcePtr GfxCommandApplier::CreateView(Session* session, ResourceId id,
   }
 
   // Create a View: Link was successful, view ref is valid.
-  return fxl::MakeRefCounted<View>(session, id, std::move(link),
-                                   std::move(control_ref), std::move(view_ref));
+  return fxl::MakeRefCounted<View>(session, id, std::move(link), std::move(control_ref),
+                                   std::move(view_ref));
 }
 
 ResourcePtr GfxCommandApplier::CreateView(Session* session, ResourceId id,
@@ -1567,24 +1381,23 @@ ResourcePtr GfxCommandApplier::CreateView(Session* session, ResourceId id,
   }
 
   ViewLinker* view_linker = session->session_context().view_linker;
-  ViewLinker::ImportLink link = view_linker->CreateImport(
-      std::move(args.token.value), session->error_reporter());
+  ViewLinker::ImportLink link =
+      view_linker->CreateImport(std::move(args.token.value), session->error_reporter());
 
   if (!link.valid()) {
     return nullptr;  // Error out: link could not be registered.
   }
 
   // Create a View: Link was successful, view ref is valid.
-  return fxl::MakeRefCounted<View>(session, id, std::move(link),
-                                   std::move(args.control_ref),
+  return fxl::MakeRefCounted<View>(session, id, std::move(link), std::move(args.control_ref),
                                    std::move(args.view_ref));
 }
 
-ResourcePtr GfxCommandApplier::CreateViewHolder(
-    Session* session, ResourceId id, fuchsia::ui::gfx::ViewHolderArgs args) {
+ResourcePtr GfxCommandApplier::CreateViewHolder(Session* session, ResourceId id,
+                                                fuchsia::ui::gfx::ViewHolderArgs args) {
   ViewLinker* view_linker = session->session_context().view_linker;
-  ViewLinker::ExportLink link = view_linker->CreateExport(
-      std::move(args.token.value), session->error_reporter());
+  ViewLinker::ExportLink link =
+      view_linker->CreateExport(std::move(args.token.value), session->error_reporter());
 
   // Create a ViewHolder if the Link was successfully registered.
   if (link.valid()) {
@@ -1593,64 +1406,56 @@ ResourcePtr GfxCommandApplier::CreateViewHolder(
   return nullptr;
 }
 
-ResourcePtr GfxCommandApplier::CreateClipNode(
-    Session* session, ResourceId id, fuchsia::ui::gfx::ClipNodeArgs args) {
-  session->error_reporter()->ERROR()
-      << "scenic_impl::gfx::GfxCommandApplier::CreateClipNode(): "
-         "unimplemented.";
+ResourcePtr GfxCommandApplier::CreateClipNode(Session* session, ResourceId id,
+                                              fuchsia::ui::gfx::ClipNodeArgs args) {
+  session->error_reporter()->ERROR() << "scenic_impl::gfx::GfxCommandApplier::CreateClipNode(): "
+                                        "unimplemented.";
   return ResourcePtr();
 }
 
-ResourcePtr GfxCommandApplier::CreateEntityNode(
-    Session* session, ResourceId id, fuchsia::ui::gfx::EntityNodeArgs args) {
+ResourcePtr GfxCommandApplier::CreateEntityNode(Session* session, ResourceId id,
+                                                fuchsia::ui::gfx::EntityNodeArgs args) {
   return fxl::MakeRefCounted<EntityNode>(session, id);
 }
 
-ResourcePtr GfxCommandApplier::CreateOpacityNode(
-    Session* session, ResourceId id,
-    fuchsia::ui::gfx::OpacityNodeArgsHACK args) {
+ResourcePtr GfxCommandApplier::CreateOpacityNode(Session* session, ResourceId id,
+                                                 fuchsia::ui::gfx::OpacityNodeArgsHACK args) {
   return fxl::MakeRefCounted<OpacityNode>(session, id);
 }
 
-ResourcePtr GfxCommandApplier::CreateShapeNode(
-    Session* session, ResourceId id, fuchsia::ui::gfx::ShapeNodeArgs args) {
+ResourcePtr GfxCommandApplier::CreateShapeNode(Session* session, ResourceId id,
+                                               fuchsia::ui::gfx::ShapeNodeArgs args) {
   return fxl::MakeRefCounted<ShapeNode>(session, id);
 }
 
-ResourcePtr GfxCommandApplier::CreateCompositor(
-    Session* session, ResourceId id, fuchsia::ui::gfx::CompositorArgs args) {
+ResourcePtr GfxCommandApplier::CreateCompositor(Session* session, ResourceId id,
+                                                fuchsia::ui::gfx::CompositorArgs args) {
   return Compositor::New(session, id, session->session_context().scene_graph);
 }
 
 ResourcePtr GfxCommandApplier::CreateDisplayCompositor(
-    Session* session, ResourceId id,
-    fuchsia::ui::gfx::DisplayCompositorArgs args) {
-  Display* display =
-      session->session_context().display_manager->default_display();
+    Session* session, ResourceId id, fuchsia::ui::gfx::DisplayCompositorArgs args) {
+  Display* display = session->session_context().display_manager->default_display();
   if (!display) {
-    session->error_reporter()->ERROR()
-        << "There is no default display available.";
+    session->error_reporter()->ERROR() << "There is no default display available.";
     return nullptr;
   }
 
   if (display->is_claimed()) {
-    session->error_reporter()->ERROR()
-        << "The default display has already been claimed "
-           "by another compositor.";
+    session->error_reporter()->ERROR() << "The default display has already been claimed "
+                                          "by another compositor.";
     return nullptr;
   }
 
   return fxl::AdoptRef(new DisplayCompositor(
       session, id, session->session_context().scene_graph, display,
-      SwapchainFactory::CreateDisplaySwapchain(
-          display, session->session_context().display_manager,
-          session->session_context().event_timestamper,
-          session->session_context().escher)));
+      SwapchainFactory::CreateDisplaySwapchain(display, session->session_context().display_manager,
+                                               session->session_context().event_timestamper,
+                                               session->session_context().escher)));
 }
 
 ResourcePtr GfxCommandApplier::CreateImagePipeCompositor(
-    Session* session, ResourceId id,
-    fuchsia::ui::gfx::ImagePipeCompositorArgs args) {
+    Session* session, ResourceId id, fuchsia::ui::gfx::ImagePipeCompositorArgs args) {
   // TODO(SCN-179)
   session->error_reporter()->ERROR() << "scenic_impl::gfx::GfxCommandApplier::"
                                         "ApplyCreateImagePipeCompositor() "
@@ -1658,13 +1463,13 @@ ResourcePtr GfxCommandApplier::CreateImagePipeCompositor(
   return ResourcePtr();
 }
 
-ResourcePtr GfxCommandApplier::CreateLayerStack(
-    Session* session, ResourceId id, fuchsia::ui::gfx::LayerStackArgs args) {
+ResourcePtr GfxCommandApplier::CreateLayerStack(Session* session, ResourceId id,
+                                                fuchsia::ui::gfx::LayerStackArgs args) {
   return fxl::MakeRefCounted<LayerStack>(session, id);
 }
 
-ResourcePtr GfxCommandApplier::CreateVariable(
-    Session* session, ResourceId id, fuchsia::ui::gfx::VariableArgs args) {
+ResourcePtr GfxCommandApplier::CreateVariable(Session* session, ResourceId id,
+                                              fuchsia::ui::gfx::VariableArgs args) {
   fxl::RefPtr<Variable> variable;
   switch (args.type) {
     case fuchsia::ui::gfx::ValueType::kVector1:
@@ -1711,20 +1516,21 @@ ResourcePtr GfxCommandApplier::CreateLayer(Session* session, ResourceId id,
   return fxl::MakeRefCounted<Layer>(session, id);
 }
 
-ResourcePtr GfxCommandApplier::CreateCircle(Session* session, ResourceId id,
-                                            float initial_radius) {
+ResourcePtr GfxCommandApplier::CreateCircle(Session* session, ResourceId id, float initial_radius) {
   return fxl::MakeRefCounted<CircleShape>(session, id, initial_radius);
 }
 
-ResourcePtr GfxCommandApplier::CreateRectangle(Session* session, ResourceId id,
-                                               float width, float height) {
+ResourcePtr GfxCommandApplier::CreateRectangle(Session* session, ResourceId id, float width,
+                                               float height) {
   return fxl::MakeRefCounted<RectangleShape>(session, id, width, height);
 }
 
-ResourcePtr GfxCommandApplier::CreateRoundedRectangle(
-    Session* session, CommandContext* command_context, ResourceId id,
-    float width, float height, float top_left_radius, float top_right_radius,
-    float bottom_right_radius, float bottom_left_radius) {
+ResourcePtr GfxCommandApplier::CreateRoundedRectangle(Session* session,
+                                                      CommandContext* command_context,
+                                                      ResourceId id, float width, float height,
+                                                      float top_left_radius, float top_right_radius,
+                                                      float bottom_right_radius,
+                                                      float bottom_left_radius) {
   // If radii sum exceeds width or height, scale them down.
   float top_radii_sum = top_left_radius + top_right_radius;
   float top_scale = std::min(width / top_radii_sum, 1.f);
@@ -1743,11 +1549,9 @@ ResourcePtr GfxCommandApplier::CreateRoundedRectangle(
   bottom_left_radius *= std::min(bottom_scale, left_scale);
   bottom_right_radius *= std::min(bottom_scale, right_scale);
 
-  escher::RoundedRectSpec rect_spec(width, height, top_left_radius,
-                                    top_right_radius, bottom_right_radius,
-                                    bottom_left_radius);
-  escher::MeshSpec mesh_spec{escher::MeshAttribute::kPosition2D |
-                             escher::MeshAttribute::kUV};
+  escher::RoundedRectSpec rect_spec(width, height, top_left_radius, top_right_radius,
+                                    bottom_right_radius, bottom_left_radius);
+  escher::MeshSpec mesh_spec{escher::MeshAttribute::kPosition2D | escher::MeshAttribute::kUV};
 
   // TODO(SCN-1429) - Once we remove the default rounded rect that is created
   // from the factory and instead just use the mesh generated by the paper
@@ -1755,12 +1559,10 @@ ResourcePtr GfxCommandApplier::CreateRoundedRectangle(
   escher::MeshPtr mesh;
   auto factory = session->session_context().escher_rounded_rect_factory;
   if (factory && command_context->batch_gpu_uploader()) {
-    mesh = factory->NewRoundedRect(rect_spec, mesh_spec,
-                                   command_context->batch_gpu_uploader());
+    mesh = factory->NewRoundedRect(rect_spec, mesh_spec, command_context->batch_gpu_uploader());
   }
 
-  return fxl::MakeRefCounted<RoundedRectangleShape>(session, id, rect_spec,
-                                                    mesh);
+  return fxl::MakeRefCounted<RoundedRectangleShape>(session, id, rect_spec, mesh);
 }
 
 ResourcePtr GfxCommandApplier::CreateMesh(Session* session, ResourceId id) {

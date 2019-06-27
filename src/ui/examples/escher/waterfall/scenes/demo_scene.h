@@ -15,9 +15,8 @@ class DemoScene : public Scene {
 
   void Init(escher::Stage* stage) override;
 
-  escher::Model* Update(const escher::Stopwatch& stopwatch,
-                        uint64_t frame_count, escher::Stage* stage,
-                        escher::PaperRenderer* renderer) override;
+  escher::Model* Update(const escher::Stopwatch& stopwatch, uint64_t frame_count,
+                        escher::Stage* stage, escher::PaperRenderer* renderer) override;
 
  private:
   std::unique_ptr<escher::Model> model_;

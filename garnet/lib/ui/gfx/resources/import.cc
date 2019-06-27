@@ -11,8 +11,7 @@
 namespace scenic_impl {
 namespace gfx {
 namespace {
-ResourcePtr CreateDelegate(Session* session, ResourceId id,
-                           ::fuchsia::ui::gfx::ImportSpec spec) {
+ResourcePtr CreateDelegate(Session* session, ResourceId id, ::fuchsia::ui::gfx::ImportSpec spec) {
   switch (spec) {
     case ::fuchsia::ui::gfx::ImportSpec::NODE:
       return fxl::MakeRefCounted<EntityNode>(session, id);
@@ -21,11 +20,9 @@ ResourcePtr CreateDelegate(Session* session, ResourceId id,
 }
 }  // namespace
 
-constexpr ResourceTypeInfo Import::kTypeInfo = {ResourceType::kImport,
-                                                "Import"};
+constexpr ResourceTypeInfo Import::kTypeInfo = {ResourceType::kImport, "Import"};
 
-Import::Import(Session* session, ResourceId id,
-               fuchsia::ui::gfx::ImportSpec spec,
+Import::Import(Session* session, ResourceId id, fuchsia::ui::gfx::ImportSpec spec,
                const fxl::WeakPtr<ResourceLinker>& resource_linker_weak)
     : Resource(session, id, Import::kTypeInfo),
       import_spec_(spec),
@@ -51,9 +48,7 @@ Resource* Import::GetDelegate(const ResourceTypeInfo& type_info) {
   return delegate_->GetDelegate(type_info);
 }
 
-void Import::BindImportedResource(Resource* resource) {
-  imported_resource_ = resource;
-}
+void Import::BindImportedResource(Resource* resource) { imported_resource_ = resource; }
 
 void Import::UnbindImportedResource() {
   imported_resource_ = nullptr;

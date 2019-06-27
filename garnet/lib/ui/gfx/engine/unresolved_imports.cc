@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <algorithm>
-
 #include <lib/async/default.h>
+
+#include <algorithm>
 
 #include "garnet/lib/ui/gfx/engine/resource_linker.h"
 
@@ -24,8 +24,7 @@ static zx_signals_t kEventPairDeathSignals = ZX_EVENTPAIR_PEER_CLOSED;
 UnresolvedImports::UnresolvedImports(ResourceLinker* resource_linker)
     : resource_linker_(resource_linker){};
 
-void UnresolvedImports::AddUnresolvedImport(Import* import,
-                                            zx::eventpair import_token,
+void UnresolvedImports::AddUnresolvedImport(Import* import, zx::eventpair import_token,
                                             zx_koid_t import_koid) {
   // Make sure the import koid we've been passed is valid.
   FXL_DCHECK(import_koid != ZX_KOID_INVALID);
@@ -35,9 +34,8 @@ void UnresolvedImports::AddUnresolvedImport(Import* import,
   FXL_DCHECK(imports_.find(import) == imports_.end());
 
   // Add to our data structures.
-  imports_[import] = ImportEntry{.import_ptr = import,
-                                 .import_token = std::move(import_token),
-                                 .import_koid = import_koid};
+  imports_[import] = ImportEntry{
+      .import_ptr = import, .import_token = std::move(import_token), .import_koid = import_koid};
   koids_to_import_ptrs_[import_koid].push_back(import);
 
   ASSERT_INTERNAL_EXPORTS_CONSISTENCY;
@@ -51,11 +49,9 @@ void UnresolvedImports::ListenForTokenPeerDeath(Import* import) {
 
     // The resource must be removed from being considered for import
     // if its peer is closed.
-    auto wait =
-        std::make_unique<async::Wait>(import_handle, kEventPairDeathSignals);
-    wait->set_handler(std::bind(&UnresolvedImports::OnTokenPeerDeath, this,
-                                import_koid, std::placeholders::_3,
-                                std::placeholders::_4));
+    auto wait = std::make_unique<async::Wait>(import_handle, kEventPairDeathSignals);
+    wait->set_handler(std::bind(&UnresolvedImports::OnTokenPeerDeath, this, import_koid,
+                                std::placeholders::_3, std::placeholders::_4));
     zx_status_t status = wait->Begin(async_get_default_dispatcher());
     FXL_CHECK(status == ZX_OK);
 
@@ -64,8 +60,7 @@ void UnresolvedImports::ListenForTokenPeerDeath(Import* import) {
   ASSERT_INTERNAL_EXPORTS_CONSISTENCY;
 }
 
-std::vector<Import*> UnresolvedImports::RemoveUnresolvedImportsForKoid(
-    zx_koid_t import_koid) {
+std::vector<Import*> UnresolvedImports::RemoveUnresolvedImportsForKoid(zx_koid_t import_koid) {
   auto imports = GetAndRemoveUnresolvedImportsForKoid(import_koid);
 
   for (auto& entry : imports) {
@@ -115,8 +110,8 @@ void UnresolvedImports::OnImportDestroyed(Import* import) {
     return;
 
   // Call the resolution callback.
-  resource_linker_->OnImportResolvedForResource(
-      import, nullptr, ImportResolutionResult::kImportDestroyedBeforeBind);
+  resource_linker_->OnImportResolvedForResource(import, nullptr,
+                                                ImportResolutionResult::kImportDestroyedBeforeBind);
 
   // Remove from |koids_to_import_ptrs_|.
   zx_koid_t import_koid = entry_iter->second.import_koid;
@@ -125,14 +120,13 @@ void UnresolvedImports::OnImportDestroyed(Import* import) {
   // Remove from |imports_|.
   imports_.erase(entry_iter);
 
-  resource_linker_->InvokeExpirationCallback(
-      import, ResourceLinker::ExpirationCause::kResourceDestroyed);
+  resource_linker_->InvokeExpirationCallback(import,
+                                             ResourceLinker::ExpirationCause::kResourceDestroyed);
 
   ASSERT_INTERNAL_EXPORTS_CONSISTENCY;
 }
 
-size_t UnresolvedImports::NumUnresolvedImportsForKoid(
-    zx_koid_t import_koid) const {
+size_t UnresolvedImports::NumUnresolvedImportsForKoid(zx_koid_t import_koid) const {
   // Look up the import entries for this koid.
   auto import_ptr_collection_iter = koids_to_import_ptrs_.find(import_koid);
   if (import_ptr_collection_iter == koids_to_import_ptrs_.end()) {
@@ -142,17 +136,15 @@ size_t UnresolvedImports::NumUnresolvedImportsForKoid(
   }
 }
 
-void UnresolvedImports::OnTokenPeerDeath(zx_koid_t import_koid,
-                                         zx_status_t status,
+void UnresolvedImports::OnTokenPeerDeath(zx_koid_t import_koid, zx_status_t status,
                                          const zx_packet_signal* signal) {
   // Remove |import_koid|, even if there was an error (i.e. status != ZX_OK).
   auto imports = RemoveUnresolvedImportsForKoid(import_koid);
 
   for (auto& import : imports) {
     resource_linker_->InvokeExpirationCallback(
-        import, status == ZX_OK
-                    ? ResourceLinker::ExpirationCause::kExportTokenClosed
-                    : ResourceLinker::ExpirationCause::kInternalError);
+        import, status == ZX_OK ? ResourceLinker::ExpirationCause::kExportTokenClosed
+                                : ResourceLinker::ExpirationCause::kInternalError);
   }
 }
 

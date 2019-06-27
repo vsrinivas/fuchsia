@@ -19,11 +19,9 @@
 class ScreenshotTaker {
  public:
   explicit ScreenshotTaker(async::Loop* loop)
-      : loop_(loop),
-        context_(component::StartupContext::CreateFromStartupInfo()) {
+      : loop_(loop), context_(component::StartupContext::CreateFromStartupInfo()) {
     // Connect to the Scenic service.
-    scenic_ =
-        context_->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
+    scenic_ = context_->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
     scenic_.set_error_handler([this](zx_status_t status) {
       FXL_LOG(ERROR) << "Lost connection to Scenic service.";
       encountered_error_ = true;
@@ -38,41 +36,37 @@ class ScreenshotTaker {
     // If we wait for a call back from GetDisplayInfo, we are guaranteed that
     // the GFX system is initialized, which is a prerequisite for taking a
     // screenshot. TODO(SCN-678): Remove call to GetDisplayInfo once bug done.
-    scenic_->GetDisplayInfo([this](fuchsia::ui::gfx::DisplayInfo /*unused*/) {
-      TakeScreenshotInternal();
-    });
+    scenic_->GetDisplayInfo(
+        [this](fuchsia::ui::gfx::DisplayInfo /*unused*/) { TakeScreenshotInternal(); });
   }
 
  private:
   void TakeScreenshotInternal() {
     FXL_LOG(INFO) << "start TakeScreenshotInternal";
-    scenic_->TakeScreenshot(
-        [this](fuchsia::ui::scenic::ScreenshotData screenshot, bool status) {
-          FXL_LOG(INFO) << "start pixel capture";
-          std::vector<uint8_t> imgdata;
-          if (!status || !fsl::VectorFromVmo(screenshot.data, &imgdata)) {
-            FXL_LOG(ERROR) << "TakeScreenshot failed";
-            encountered_error_ = true;
-            loop_->Quit();
-            return;
-          }
+    scenic_->TakeScreenshot([this](fuchsia::ui::scenic::ScreenshotData screenshot, bool status) {
+      FXL_LOG(INFO) << "start pixel capture";
+      std::vector<uint8_t> imgdata;
+      if (!status || !fsl::VectorFromVmo(screenshot.data, &imgdata)) {
+        FXL_LOG(ERROR) << "TakeScreenshot failed";
+        encountered_error_ = true;
+        loop_->Quit();
+        return;
+      }
 
-          std::cout << "P6\n";
-          std::cout << screenshot.info.width << "\n";
-          std::cout << screenshot.info.height << "\n";
-          std::cout << 255 << "\n";
+      std::cout << "P6\n";
+      std::cout << screenshot.info.width << "\n";
+      std::cout << screenshot.info.height << "\n";
+      std::cout << 255 << "\n";
 
-          FXL_LOG(INFO) << "capturing pixels";
-          const uint8_t* pchannel = &imgdata[0];
-          for (uint32_t pixel = 0;
-               pixel < screenshot.info.width * screenshot.info.height;
-               pixel++) {
-            uint8_t rgb[] = {pchannel[2], pchannel[1], pchannel[0]};
-            std::cout.write(reinterpret_cast<const char*>(rgb), 3);
-            pchannel += 4;
-          }
-          loop_->Quit();
-        });
+      FXL_LOG(INFO) << "capturing pixels";
+      const uint8_t* pchannel = &imgdata[0];
+      for (uint32_t pixel = 0; pixel < screenshot.info.width * screenshot.info.height; pixel++) {
+        uint8_t rgb[] = {pchannel[2], pchannel[1], pchannel[0]};
+        std::cout.write(reinterpret_cast<const char*>(rgb), 3);
+        pchannel += 4;
+      }
+      loop_->Quit();
+    });
   }
   async::Loop* loop_;
   std::unique_ptr<component::StartupContext> context_;

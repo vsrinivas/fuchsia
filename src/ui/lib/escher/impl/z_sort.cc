@@ -16,10 +16,8 @@ float EstimateZTranslation(const Camera& camera, const mat4& object_transform) {
                   glm::column(object_transform, 3));
 }
 
-float EstimateZTranslation(const mat4 camera_transform,
-                           const mat4& object_transform) {
-  return glm::dot(glm::row(camera_transform, 2),
-                  glm::column(object_transform, 3));
+float EstimateZTranslation(const mat4 camera_transform, const mat4& object_transform) {
+  return glm::dot(glm::row(camera_transform, 2), glm::column(object_transform, 3));
 }
 
 }  // namespace impl

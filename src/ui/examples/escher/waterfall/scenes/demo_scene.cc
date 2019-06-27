@@ -27,8 +27,8 @@ using escher::vec3;
 DemoScene::DemoScene(Demo* demo) : Scene(demo) {}
 
 void DemoScene::Init(escher::Stage* stage) {
-  TexturePtr checkerboard = escher()->NewTexture(
-      escher()->NewCheckerboardImage(16, 16), vk::Filter::eNearest);
+  TexturePtr checkerboard =
+      escher()->NewTexture(escher()->NewCheckerboardImage(16, 16), vk::Filter::eNearest);
 
   purple_ = fxl::MakeRefCounted<escher::Material>();
   purple_->SetTexture(checkerboard);
@@ -37,15 +37,14 @@ void DemoScene::Init(escher::Stage* stage) {
 
 DemoScene::~DemoScene() {}
 
-escher::Model* DemoScene::Update(const escher::Stopwatch& stopwatch,
-                                 uint64_t frame_count, escher::Stage* stage,
-                                 escher::PaperRenderer* renderer) {
+escher::Model* DemoScene::Update(const escher::Stopwatch& stopwatch, uint64_t frame_count,
+                                 escher::Stage* stage, escher::PaperRenderer* renderer) {
   stage->set_clear_color(vec3(0.f, 0.f, 0.f));
   float current_time_sec = stopwatch.GetElapsedSeconds();
   float t = sin(current_time_sec);
   vec3 rect_scale(abs(800.f * t), abs(800.f * t), 1);
-  Transform transform(vec3(112.f + 100 * t, 112.f, 8.f), rect_scale,
-                      current_time_sec * 0.5, vec3(0, 0, 1), vec3(0.5, 0.5, 0));
+  Transform transform(vec3(112.f + 100 * t, 112.f, 8.f), rect_scale, current_time_sec * 0.5,
+                      vec3(0, 0, 1), vec3(0.5, 0.5, 0));
   Object rectangle(Object::NewRect(transform, purple_));
   std::vector<Object> objects{rectangle};
   model_ = std::unique_ptr<escher::Model>(new escher::Model(objects));

@@ -23,8 +23,7 @@ bool HardwareLayerAssignment::IsValid() {
   std::unordered_set<uint8_t> layer_ids;
   for (auto& item : items) {
     if (item.layers.empty()) {
-      FXL_LOG(WARNING)
-          << "Invalid HardwareLayerAssignment: item with no layers.";
+      FXL_LOG(WARNING) << "Invalid HardwareLayerAssignment: item with no layers.";
       return false;
     }
     auto result = layer_ids.insert(item.hardware_layer_id);

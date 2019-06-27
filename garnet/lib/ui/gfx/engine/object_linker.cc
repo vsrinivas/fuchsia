@@ -5,6 +5,7 @@
 #include "garnet/lib/ui/gfx/engine/object_linker.h"
 
 #include <lib/async/default.h>
+
 #include <functional>
 
 #include "lib/fsl/handles/object_info.h"
@@ -13,13 +14,11 @@
 namespace scenic_impl {
 namespace gfx {
 
-zx_koid_t ObjectLinkerBase::CreateEndpoint(zx::handle token,
-                                           ErrorReporter* error_reporter,
+zx_koid_t ObjectLinkerBase::CreateEndpoint(zx::handle token, ErrorReporter* error_reporter,
                                            bool is_import) {
   // Select imports or exports to operate on based on the flag.
   auto& endpoints = is_import ? imports_ : exports_;
-  auto& unresolved_endpoints =
-      is_import ? unresolved_imports_ : unresolved_exports_;
+  auto& unresolved_endpoints = is_import ? unresolved_imports_ : unresolved_exports_;
 
   if (!token) {
     error_reporter->ERROR() << "Token is invalid";
@@ -30,8 +29,7 @@ zx_koid_t ObjectLinkerBase::CreateEndpoint(zx::handle token,
   zx_koid_t peer_endpoint_id;
   std::tie(endpoint_id, peer_endpoint_id) = fsl::GetKoids(token.get());
   if (endpoint_id == ZX_KOID_INVALID || peer_endpoint_id == ZX_KOID_INVALID) {
-    error_reporter->ERROR()
-        << "Token with ID " << token.get() << " refers to invalid objects";
+    error_reporter->ERROR() << "Token with ID " << token.get() << " refers to invalid objects";
     return ZX_KOID_INVALID;
   }
 
@@ -48,13 +46,11 @@ zx_koid_t ObjectLinkerBase::CreateEndpoint(zx::handle token,
   Endpoint new_endpoint;
   UnresolvedEndpoint new_unresolved_endpoint;
   new_endpoint.peer_endpoint_id = peer_endpoint_id;
-  new_unresolved_endpoint.peer_death_waiter =
-      WaitForPeerDeath(token.get(), endpoint_id, is_import);
+  new_unresolved_endpoint.peer_death_waiter = WaitForPeerDeath(token.get(), endpoint_id, is_import);
   new_unresolved_endpoint.token = std::move(token);
-  auto emplaced_endpoint =
-      endpoints.emplace(endpoint_id, std::move(new_endpoint));
-  auto emplaced_unresolved_endpoint = unresolved_endpoints.emplace(
-      endpoint_id, std::move(new_unresolved_endpoint));
+  auto emplaced_endpoint = endpoints.emplace(endpoint_id, std::move(new_endpoint));
+  auto emplaced_unresolved_endpoint =
+      unresolved_endpoints.emplace(endpoint_id, std::move(new_unresolved_endpoint));
   FXL_DCHECK(emplaced_endpoint.second);
   FXL_DCHECK(emplaced_unresolved_endpoint.second);
 
@@ -64,8 +60,7 @@ zx_koid_t ObjectLinkerBase::CreateEndpoint(zx::handle token,
 void ObjectLinkerBase::DestroyEndpoint(zx_koid_t endpoint_id, bool is_import) {
   auto& endpoints = is_import ? imports_ : exports_;
   auto& peer_endpoints = is_import ? exports_ : imports_;
-  auto& unresolved_endpoints =
-      is_import ? unresolved_imports_ : unresolved_exports_;
+  auto& unresolved_endpoints = is_import ? unresolved_imports_ : unresolved_exports_;
 
   auto endpoint_iter = endpoints.find(endpoint_id);
   if (endpoint_iter == endpoints.end()) {
@@ -103,10 +98,9 @@ void ObjectLinkerBase::DestroyEndpoint(zx_koid_t endpoint_id, bool is_import) {
   endpoints.erase(endpoint_iter);
 }
 
-void ObjectLinkerBase::InitializeEndpoint(
-    zx_koid_t endpoint_id, void* object,
-    fit::function<void(void* linked_object)> link_resolved,
-    fit::closure link_failed, bool is_import) {
+void ObjectLinkerBase::InitializeEndpoint(zx_koid_t endpoint_id, void* object,
+                                          fit::function<void(void* linked_object)> link_resolved,
+                                          fit::closure link_failed, bool is_import) {
   FXL_DCHECK(object);
   FXL_DCHECK(link_resolved);
   FXL_DCHECK(link_failed);
@@ -141,15 +135,12 @@ void ObjectLinkerBase::InitializeEndpoint(
   AttemptLinking(endpoint_id, peer_endpoint_id, is_import);
 }
 
-void ObjectLinkerBase::AttemptLinking(zx_koid_t endpoint_id,
-                                      zx_koid_t peer_endpoint_id,
+void ObjectLinkerBase::AttemptLinking(zx_koid_t endpoint_id, zx_koid_t peer_endpoint_id,
                                       bool is_import) {
   auto& endpoints = is_import ? imports_ : exports_;
   auto& peer_endpoints = is_import ? exports_ : imports_;
-  auto& unresolved_endpoints =
-      is_import ? unresolved_imports_ : unresolved_exports_;
-  auto& peer_unresolved_endpoints =
-      is_import ? unresolved_exports_ : unresolved_imports_;
+  auto& unresolved_endpoints = is_import ? unresolved_imports_ : unresolved_exports_;
+  auto& peer_unresolved_endpoints = is_import ? unresolved_exports_ : unresolved_imports_;
 
   auto endpoint_iter = endpoints.find(endpoint_id);
   FXL_DCHECK(endpoint_iter != endpoints.end());
@@ -184,8 +175,9 @@ void ObjectLinkerBase::AttemptLinking(zx_koid_t endpoint_id,
   }
 }
 
-std::unique_ptr<async::Wait> ObjectLinkerBase::WaitForPeerDeath(
-    zx_handle_t endpoint_handle, zx_koid_t endpoint_id, bool is_import) {
+std::unique_ptr<async::Wait> ObjectLinkerBase::WaitForPeerDeath(zx_handle_t endpoint_handle,
+                                                                zx_koid_t endpoint_id,
+                                                                bool is_import) {
   // Each endpoint must be removed from being considered for linking if its
   // peer's handle is closed before the two entries are successfully linked.
   // This communication happens via the link_failed callback.
@@ -193,17 +185,12 @@ std::unique_ptr<async::Wait> ObjectLinkerBase::WaitForPeerDeath(
   // Once linking has occurred, this communication happens via UnregisterExport
   // or UnregisterImport and the peer_destroyed callback.
   // TODO(SCN-982): Follow up on __ZX_OBJECT_PEER_CLOSED with Zircon.
-  static_assert(ZX_CHANNEL_PEER_CLOSED == __ZX_OBJECT_PEER_CLOSED,
-                "enum mismatch");
-  static_assert(ZX_EVENTPAIR_PEER_CLOSED == __ZX_OBJECT_PEER_CLOSED,
-                "enum mismatch");
-  static_assert(ZX_FIFO_PEER_CLOSED == __ZX_OBJECT_PEER_CLOSED,
-                "enum mismatch");
-  static_assert(ZX_SOCKET_PEER_CLOSED == __ZX_OBJECT_PEER_CLOSED,
-                "enum mismatch");
+  static_assert(ZX_CHANNEL_PEER_CLOSED == __ZX_OBJECT_PEER_CLOSED, "enum mismatch");
+  static_assert(ZX_EVENTPAIR_PEER_CLOSED == __ZX_OBJECT_PEER_CLOSED, "enum mismatch");
+  static_assert(ZX_FIFO_PEER_CLOSED == __ZX_OBJECT_PEER_CLOSED, "enum mismatch");
+  static_assert(ZX_SOCKET_PEER_CLOSED == __ZX_OBJECT_PEER_CLOSED, "enum mismatch");
   auto waiter = std::make_unique<async::Wait>(
-      endpoint_handle, __ZX_OBJECT_PEER_CLOSED,
-      std::bind([this, endpoint_id, is_import]() {
+      endpoint_handle, __ZX_OBJECT_PEER_CLOSED, std::bind([this, endpoint_id, is_import]() {
         auto& endpoints = is_import ? imports_ : exports_;
         auto endpoint_iter = endpoints.find(endpoint_id);
         FXL_DCHECK(endpoint_iter != endpoints.end());

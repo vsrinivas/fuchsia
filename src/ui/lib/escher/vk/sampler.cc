@@ -12,8 +12,8 @@ namespace escher {
 const ResourceTypeInfo Sampler::kTypeInfo("Sampler", ResourceType::kResource,
                                           ResourceType::kSampler);
 
-Sampler::Sampler(ResourceRecycler* resource_recycler, vk::Format format,
-                 vk::Filter filter, bool use_unnormalized_coordinates)
+Sampler::Sampler(ResourceRecycler* resource_recycler, vk::Format format, vk::Filter filter,
+                 bool use_unnormalized_coordinates)
     : Resource(resource_recycler), is_immutable_(false) {
   auto device = resource_recycler->vulkan_context().device;
 
@@ -36,10 +36,8 @@ Sampler::Sampler(ResourceRecycler* resource_recycler, vk::Format format,
     ycbcr_create_info.chromaFilter = filter;
     ycbcr_create_info.forceExplicitReconstruction = VK_FALSE;
 
-    ycbcr_conversion_ =
-        ESCHER_CHECKED_VK_RESULT(device.createSamplerYcbcrConversion(
-            ycbcr_create_info, nullptr,
-            resource_recycler->vulkan_context().loader));
+    ycbcr_conversion_ = ESCHER_CHECKED_VK_RESULT(device.createSamplerYcbcrConversion(
+        ycbcr_create_info, nullptr, resource_recycler->vulkan_context().loader));
     is_immutable_ = true;
   }
 
@@ -73,8 +71,8 @@ Sampler::Sampler(ResourceRecycler* resource_recycler, vk::Format format,
 
 Sampler::~Sampler() {
   if (is_immutable_) {
-    vk_device().destroySamplerYcbcrConversion(ycbcr_conversion_.conversion,
-                                              nullptr, vulkan_context().loader);
+    vk_device().destroySamplerYcbcrConversion(ycbcr_conversion_.conversion, nullptr,
+                                              vulkan_context().loader);
   }
   vk_device().destroySampler(sampler_);
 }

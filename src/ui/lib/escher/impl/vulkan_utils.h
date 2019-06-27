@@ -38,8 +38,8 @@ namespace impl {
 
 // Filter the |desired_formats| list to contain only those formats which support
 // optimal tiling.
-std::vector<vk::Format> GetSupportedDepthFormats(
-    vk::PhysicalDevice device, std::vector<vk::Format> desired_formats);
+std::vector<vk::Format> GetSupportedDepthFormats(vk::PhysicalDevice device,
+                                                 std::vector<vk::Format> desired_formats);
 
 // Pick the lowest precision depth format that supports optimal tiling.
 typedef vk::ResultValueType<vk::Format>::type FormatResult;

@@ -57,8 +57,7 @@ class HostImageTest : public VkSessionTest {
 
     FXL_DCHECK(!listener);
 
-    listener =
-        std::make_unique<ImageFactoryListener>(context.escher_image_factory);
+    listener = std::make_unique<ImageFactoryListener>(context.escher_image_factory);
     context.escher_image_factory = listener.get();
 
     return context;
@@ -72,25 +71,21 @@ VK_TEST_F(HostImageTest, FindResource) {
   zx_status_t status = zx::vmo::create(kVmoSize, 0u, &vmo);
   ASSERT_EQ(ZX_OK, status);
 
-  ASSERT_TRUE(Apply(
-      scenic::NewCreateMemoryCmd(kMemoryId, std::move(vmo), kVmoSize,
-                                 fuchsia::images::MemoryType::HOST_MEMORY)));
+  ASSERT_TRUE(Apply(scenic::NewCreateMemoryCmd(kMemoryId, std::move(vmo), kVmoSize,
+                                               fuchsia::images::MemoryType::HOST_MEMORY)));
 
   fuchsia::images::ImageInfo image_info{
       .width = kSize,
       .height = kSize,
       .stride = static_cast<uint32_t>(
-          kSize * images::StrideBytesPerWidthPixel(
-                      fuchsia::images::PixelFormat::BGRA_8)),
+          kSize * images::StrideBytesPerWidthPixel(fuchsia::images::PixelFormat::BGRA_8)),
       .pixel_format = fuchsia::images::PixelFormat::BGRA_8,
   };
 
-  ASSERT_TRUE(
-      Apply(scenic::NewCreateImageCmd(kImageId, kMemoryId, 0, image_info)));
+  ASSERT_TRUE(Apply(scenic::NewCreateImageCmd(kImageId, kMemoryId, 0, image_info)));
 
   fidl::InterfacePtr<fuchsia::images::ImagePipe> image_pipe;
-  ASSERT_TRUE(Apply(
-      scenic::NewCreateImagePipeCmd(kImagePipeId, image_pipe.NewRequest())));
+  ASSERT_TRUE(Apply(scenic::NewCreateImagePipeCmd(kImagePipeId, image_pipe.NewRequest())));
 
   // Host images should be findable as their concrete sub-class.
   auto host_image_resource = FindResource<HostImage>(kImageId);
@@ -112,21 +107,18 @@ VK_TEST_F(HostImageTest, RgbaImport) {
   zx_status_t status = zx::vmo::create(kVmoSize, 0u, &vmo);
   ASSERT_EQ(ZX_OK, status);
 
-  ASSERT_TRUE(Apply(
-      scenic::NewCreateMemoryCmd(kMemoryId, std::move(vmo), kVmoSize,
-                                 fuchsia::images::MemoryType::HOST_MEMORY)));
+  ASSERT_TRUE(Apply(scenic::NewCreateMemoryCmd(kMemoryId, std::move(vmo), kVmoSize,
+                                               fuchsia::images::MemoryType::HOST_MEMORY)));
 
   fuchsia::images::ImageInfo image_info{
       .width = kSize,
       .height = kSize,
       .stride = static_cast<uint32_t>(
-          kSize * images::StrideBytesPerWidthPixel(
-                      fuchsia::images::PixelFormat::BGRA_8)),
+          kSize * images::StrideBytesPerWidthPixel(fuchsia::images::PixelFormat::BGRA_8)),
       .pixel_format = fuchsia::images::PixelFormat::BGRA_8,
   };
 
-  ASSERT_TRUE(
-      Apply(scenic::NewCreateImageCmd(kImageId, kMemoryId, 0, image_info)));
+  ASSERT_TRUE(Apply(scenic::NewCreateImageCmd(kImageId, kMemoryId, 0, image_info)));
 
   auto image_resource = FindResource<HostImage>(kImageId);
   ASSERT_TRUE(image_resource);
@@ -153,29 +145,25 @@ VK_TEST_F(HostImageTest, YuvImportOnUmaPlatform) {
   auto physical_device = vulkan_queues->vk_physical_device();
 
   if (!Memory::HasSharedMemoryPools(device, physical_device)) {
-    FXL_LOG(INFO)
-        << "Could not find UMA compatible memory pool, aborting test.";
+    FXL_LOG(INFO) << "Could not find UMA compatible memory pool, aborting test.";
   }
 
   zx::vmo vmo;
   zx_status_t status = zx::vmo::create(kVmoSize, 0u, &vmo);
   ASSERT_EQ(ZX_OK, status);
 
-  ASSERT_TRUE(Apply(
-      scenic::NewCreateMemoryCmd(kMemoryId, std::move(vmo), kVmoSize,
-                                 fuchsia::images::MemoryType::HOST_MEMORY)));
+  ASSERT_TRUE(Apply(scenic::NewCreateMemoryCmd(kMemoryId, std::move(vmo), kVmoSize,
+                                               fuchsia::images::MemoryType::HOST_MEMORY)));
 
   fuchsia::images::ImageInfo image_info{
       .width = kSize,
       .height = kSize,
       .stride = static_cast<uint32_t>(
-          kSize *
-          images::StrideBytesPerWidthPixel(fuchsia::images::PixelFormat::NV12)),
+          kSize * images::StrideBytesPerWidthPixel(fuchsia::images::PixelFormat::NV12)),
       .pixel_format = fuchsia::images::PixelFormat::NV12,
   };
 
-  ASSERT_TRUE(
-      Apply(scenic::NewCreateImageCmd(kImageId, kMemoryId, 0, image_info)));
+  ASSERT_TRUE(Apply(scenic::NewCreateImageCmd(kImageId, kMemoryId, 0, image_info)));
 
   auto image_resource = FindResource<HostImage>(kImageId);
   ASSERT_TRUE(image_resource);

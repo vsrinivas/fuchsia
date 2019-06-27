@@ -6,9 +6,9 @@
 #include <trace-provider/provider.h>
 
 #include "garnet/examples/ui/shadertoy/client/view.h"
+#include "lib/ui/base_view/cpp/view_provider_component.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
-#include "lib/ui/base_view/cpp/view_provider_component.h"
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
@@ -20,8 +20,8 @@ int main(int argc, const char** argv) {
 
   scenic::ViewProviderComponent component(
       [](scenic::ViewContext context) {
-        return std::make_unique<shadertoy_client::ShadertoyClientView>(
-            std::move(context), "Shadertoy Client Example");
+        return std::make_unique<shadertoy_client::ShadertoyClientView>(std::move(context),
+                                                                       "Shadertoy Client Example");
       },
       &loop);
 

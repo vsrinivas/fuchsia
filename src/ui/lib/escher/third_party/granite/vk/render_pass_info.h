@@ -126,8 +126,8 @@ struct RenderPassInfo {
   // - load_attachments
   // - store attachments
   // Convenience method, primarily used by the impl::RenderPass constructor.
-  std::pair<vk::AttachmentLoadOp, vk::AttachmentStoreOp>
-  LoadStoreOpsForColorAttachment(uint32_t index) const;
+  std::pair<vk::AttachmentLoadOp, vk::AttachmentStoreOp> LoadStoreOpsForColorAttachment(
+      uint32_t index) const;
 
   // Return appropriate load/store ops, depending on which of these flags are
   // set:
@@ -135,8 +135,8 @@ struct RenderPassInfo {
   // - kLoadDepthStencilOp
   // - kStoreDepthStencilOp
   // Convenience method, primarily used by the impl::RenderPass constructor.
-  std::pair<vk::AttachmentLoadOp, vk::AttachmentStoreOp>
-  LoadStoreOpsForDepthStencilAttachment() const;
+  std::pair<vk::AttachmentLoadOp, vk::AttachmentStoreOp> LoadStoreOpsForDepthStencilAttachment()
+      const;
 
   // Run a series of sanity checks on the RenderPassInfo, and return true if it
   // passes.  For example:

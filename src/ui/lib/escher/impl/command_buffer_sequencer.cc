@@ -50,19 +50,15 @@ void CommandBufferSequencer::CommandBufferFinished(uint64_t sequence_number) {
   }
 }
 
-void CommandBufferSequencer::AddListener(
-    CommandBufferSequencerListener* listener) {
+void CommandBufferSequencer::AddListener(CommandBufferSequencerListener* listener) {
   FXL_DCHECK(listener);
-  FXL_DCHECK(std::find(listeners_.begin(), listeners_.end(), listener) ==
-             listeners_.end());
+  FXL_DCHECK(std::find(listeners_.begin(), listeners_.end(), listener) == listeners_.end());
   listeners_.push_back(listener);
 }
 
-void CommandBufferSequencer::RemoveListener(
-    CommandBufferSequencerListener* listener) {
+void CommandBufferSequencer::RemoveListener(CommandBufferSequencerListener* listener) {
   FXL_DCHECK(listener);
-  listeners_.erase(std::remove(listeners_.begin(), listeners_.end(), listener),
-                   listeners_.end());
+  listeners_.erase(std::remove(listeners_.begin(), listeners_.end(), listener), listeners_.end());
 }
 
 }  // namespace impl

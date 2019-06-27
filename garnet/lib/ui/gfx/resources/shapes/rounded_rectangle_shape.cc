@@ -11,12 +11,11 @@ namespace scenic_impl {
 namespace gfx {
 
 const ResourceTypeInfo RoundedRectangleShape::kTypeInfo = {
-    ResourceType::kShape | ResourceType::kRoundedRectangle,
-    "RoundedRectangleShape"};
+    ResourceType::kShape | ResourceType::kRoundedRectangle, "RoundedRectangleShape"};
 
-RoundedRectangleShape::RoundedRectangleShape(
-    Session* session, ResourceId id, const escher::RoundedRectSpec& spec,
-    escher::MeshPtr mesh)
+RoundedRectangleShape::RoundedRectangleShape(Session* session, ResourceId id,
+                                             const escher::RoundedRectSpec& spec,
+                                             escher::MeshPtr mesh)
     : PlanarShape(session, id, RoundedRectangleShape::kTypeInfo),
       spec_(spec),
       mesh_(std::move(mesh)) {}
@@ -25,8 +24,8 @@ bool RoundedRectangleShape::ContainsPoint(const escher::vec2& point) const {
   return spec_.ContainsPoint(point);
 }
 
-escher::Object RoundedRectangleShape::GenerateRenderObject(
-    const escher::mat4& transform, const escher::MaterialPtr& material) {
+escher::Object RoundedRectangleShape::GenerateRenderObject(const escher::mat4& transform,
+                                                           const escher::MaterialPtr& material) {
   return escher::Object(transform, mesh_, material);
 }
 

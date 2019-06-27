@@ -19,8 +19,7 @@
 
 namespace shadertoy {
 
-static vk::RenderPass CreateRenderPass(vk::Device device,
-                                       vk::Format framebuffer_format) {
+static vk::RenderPass CreateRenderPass(vk::Device device, vk::Format framebuffer_format) {
   constexpr uint32_t kAttachmentCount = 1;
   const uint32_t kColorAttachment = 0;
   vk::AttachmentDescription attachments[kAttachmentCount];
@@ -55,22 +54,20 @@ static vk::RenderPass CreateRenderPass(vk::Device device,
   input_dependency.srcSubpass = VK_SUBPASS_EXTERNAL;  // not in vulkan.hpp ?!?
   input_dependency.dstSubpass = 0;
   input_dependency.srcStageMask = vk::PipelineStageFlagBits::eBottomOfPipe;
-  input_dependency.dstStageMask =
-      vk::PipelineStageFlagBits::eColorAttachmentOutput;
+  input_dependency.dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
   input_dependency.srcAccessMask = vk::AccessFlagBits::eMemoryRead;
-  input_dependency.dstAccessMask = vk::AccessFlagBits::eColorAttachmentRead |
-                                   vk::AccessFlagBits::eColorAttachmentWrite;
+  input_dependency.dstAccessMask =
+      vk::AccessFlagBits::eColorAttachmentRead | vk::AccessFlagBits::eColorAttachmentWrite;
   input_dependency.dependencyFlags = vk::DependencyFlagBits::eByRegion;
 
   // The second dependency describes the transition from the initial to final
   // layout.
   output_dependency.srcSubpass = 0;  // our sole subpass
   output_dependency.dstSubpass = VK_SUBPASS_EXTERNAL;
-  output_dependency.srcStageMask =
-      vk::PipelineStageFlagBits::eColorAttachmentOutput;
+  output_dependency.srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
   output_dependency.dstStageMask = vk::PipelineStageFlagBits::eBottomOfPipe;
-  output_dependency.srcAccessMask = vk::AccessFlagBits::eColorAttachmentRead |
-                                    vk::AccessFlagBits::eColorAttachmentWrite;
+  output_dependency.srcAccessMask =
+      vk::AccessFlagBits::eColorAttachmentRead | vk::AccessFlagBits::eColorAttachmentWrite;
   output_dependency.dstAccessMask = vk::AccessFlagBits::eMemoryRead;
   output_dependency.dependencyFlags = vk::DependencyFlagBits::eByRegion;
 
@@ -90,16 +87,14 @@ static vk::RenderPass CreateRenderPass(vk::Device device,
   return result.value;
 }
 
-Renderer::Renderer(escher::EscherWeakPtr weak_escher,
-                   vk::Format framebuffer_format)
+Renderer::Renderer(escher::EscherWeakPtr weak_escher, vk::Format framebuffer_format)
     : escher::Renderer(std::move(weak_escher)),
       device_(escher()->vulkan_context().device),
       framebuffer_format_(framebuffer_format),
       render_pass_(CreateRenderPass(device_, framebuffer_format)),
       full_screen_(NewFullScreenMesh(escher()->mesh_manager())),
       white_texture_(CreateWhiteTexture()),
-      descriptor_set_pool_(escher()->GetWeakPtr(),
-                           Compiler::GetDescriptorSetLayoutCreateInfo()) {}
+      descriptor_set_pool_(escher()->GetWeakPtr(), Compiler::GetDescriptorSetLayoutCreateInfo()) {}
 
 escher::Texture* Renderer::GetChannelTexture(const escher::FramePtr& frame,
                                              escher::Texture* texture_or_null) {
@@ -110,20 +105,18 @@ escher::Texture* Renderer::GetChannelTexture(const escher::FramePtr& frame,
   return texture_or_null;
 }
 
-vk::DescriptorSet Renderer::GetUpdatedDescriptorSet(
-    const escher::FramePtr& frame, escher::Texture* channel0,
-    escher::Texture* channel1, escher::Texture* channel2,
-    escher::Texture* channel3) {
-  TRACE_DURATION(
-      "gfx", "fuchsia::examples::shadertoy::Renderer::GetUpdatedDescriptorSet");
+vk::DescriptorSet Renderer::GetUpdatedDescriptorSet(const escher::FramePtr& frame,
+                                                    escher::Texture* channel0,
+                                                    escher::Texture* channel1,
+                                                    escher::Texture* channel2,
+                                                    escher::Texture* channel3) {
+  TRACE_DURATION("gfx", "fuchsia::examples::shadertoy::Renderer::GetUpdatedDescriptorSet");
 
   constexpr uint32_t kChannelCount = 4;
   vk::DescriptorImageInfo channel_image_info[kChannelCount];
   vk::WriteDescriptorSet writes[kChannelCount];
-  escher::Texture* textures[kChannelCount] = {channel0, channel1, channel2,
-                                              channel3};
-  auto descriptor_set =
-      descriptor_set_pool_.Allocate(1, frame->command_buffer())->get(0);
+  escher::Texture* textures[kChannelCount] = {channel0, channel1, channel2, channel3};
+  auto descriptor_set = descriptor_set_pool_.Allocate(1, frame->command_buffer())->get(0);
 
   for (uint32_t i = 0; i < kChannelCount; ++i) {
     auto channel_texture = GetChannelTexture(frame, textures[i]);
@@ -145,12 +138,10 @@ vk::DescriptorSet Renderer::GetUpdatedDescriptorSet(
   return descriptor_set;
 }
 
-void Renderer::DrawFrame(const escher::FramebufferPtr& framebuffer,
-                         const PipelinePtr& pipeline, const Params& params,
-                         escher::Texture* channel0, escher::Texture* channel1,
+void Renderer::DrawFrame(const escher::FramebufferPtr& framebuffer, const PipelinePtr& pipeline,
+                         const Params& params, escher::Texture* channel0, escher::Texture* channel1,
                          escher::Texture* channel2, escher::Texture* channel3,
-                         escher::SemaphorePtr framebuffer_ready,
-                         escher::SemaphorePtr frame_done) {
+                         escher::SemaphorePtr framebuffer_ready, escher::SemaphorePtr frame_done) {
   TRACE_DURATION("gfx", "fuchsia::examples::shadertoy::Renderer::DrawFrame");
 
   auto frame = escher()->NewFrame("Shadertoy Renderer", ++frame_number_);
@@ -158,37 +149,32 @@ void Renderer::DrawFrame(const escher::FramebufferPtr& framebuffer,
   auto vk_command_buffer = frame->vk_command_buffer();
 
   command_buffer->KeepAlive(framebuffer);
-  command_buffer->AddWaitSemaphore(
-      std::move(framebuffer_ready),
-      vk::PipelineStageFlagBits::eColorAttachmentOutput);
+  command_buffer->AddWaitSemaphore(std::move(framebuffer_ready),
+                                   vk::PipelineStageFlagBits::eColorAttachmentOutput);
 
   vk::Viewport viewport;
   viewport.width = framebuffer->width();
   viewport.height = framebuffer->height();
   vk_command_buffer.setViewport(0, 1, &viewport);
 
-  auto descriptor_set =
-      GetUpdatedDescriptorSet(frame, channel0, channel1, channel2, channel3);
+  auto descriptor_set = GetUpdatedDescriptorSet(frame, channel0, channel1, channel2, channel3);
 
   command_buffer->BeginRenderPass(
       render_pass_, framebuffer, {},
-      escher::Camera::Viewport().vk_rect_2d(framebuffer->width(),
-                                            framebuffer->height()));
-  vk_command_buffer.bindPipeline(vk::PipelineBindPoint::eGraphics,
-                                 pipeline->vk_pipeline());
+      escher::Camera::Viewport().vk_rect_2d(framebuffer->width(), framebuffer->height()));
+  vk_command_buffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline->vk_pipeline());
   vk_command_buffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics,
-                                       pipeline->vk_pipeline_layout(), 0, 1,
-                                       &descriptor_set, 0, nullptr);
+                                       pipeline->vk_pipeline_layout(), 0, 1, &descriptor_set, 0,
+                                       nullptr);
   vk_command_buffer.pushConstants(pipeline->vk_pipeline_layout(),
-                                  vk::ShaderStageFlagBits::eFragment, 0,
-                                  sizeof(Params), &params);
+                                  vk::ShaderStageFlagBits::eFragment, 0, sizeof(Params), &params);
   command_buffer->DrawMesh(full_screen_);
 
   command_buffer->EndRenderPass();
 
-  command_buffer->TransitionImageLayout(
-      framebuffer->get_image(0), vk::ImageLayout::eColorAttachmentOptimal,
-      vk::ImageLayout::ePresentSrcKHR);
+  command_buffer->TransitionImageLayout(framebuffer->get_image(0),
+                                        vk::ImageLayout::eColorAttachmentOptimal,
+                                        vk::ImageLayout::ePresentSrcKHR);
 
   frame->EndFrame(frame_done, nullptr);
 }
@@ -201,8 +187,7 @@ escher::TexturePtr Renderer::CreateWhiteTexture() {
                                             escher()->resource_recycler());
   escher::BatchGpuUploader uploader =
       escher::BatchGpuUploader(escher()->GetWeakPtr(), /* frame_number= */ 0);
-  auto image = escher::image_utils::NewRgbaImage(&image_factory, &uploader, 1,
-                                                 1, channels);
+  auto image = escher::image_utils::NewRgbaImage(&image_factory, &uploader, 1, 1, channels);
   uploader.Submit();
 
   return escher::Texture::New(escher()->resource_recycler(), std::move(image),
@@ -215,8 +200,7 @@ Renderer::Params::Params()
       iTimeDelta(0.f),
       iFrame(0),
       iChannelTime{0.f, 0.f, 0.f, 0.f},
-      iChannelResolution{glm::vec3(0), glm::vec3(0), glm::vec3(0),
-                         glm::vec3(0)},
+      iChannelResolution{glm::vec3(0), glm::vec3(0), glm::vec3(0), glm::vec3(0)},
       iMouse(0.f),
       iDate(0.f),
       iSampleRate(0.f) {}

@@ -20,20 +20,19 @@ namespace escher {
 // kDescriptorSet and kDescriptorSetBinding; this requirement is fulfilled by
 // all structs defined below.
 template <typename StructT>
-static std::pair<StructT*, UniformBinding> NewPaperShaderUniformBinding(
-    const FramePtr& frame, size_t count = 1) {
+static std::pair<StructT*, UniformBinding> NewPaperShaderUniformBinding(const FramePtr& frame,
+                                                                        size_t count = 1) {
   // TODO(ES-102): should be queried from device.
   constexpr vk::DeviceSize kMinUniformBufferOffsetAlignment = 256;
-  UniformAllocation allocation = frame->AllocateUniform(
-      count * sizeof(StructT), kMinUniformBufferOffsetAlignment);
+  UniformAllocation allocation =
+      frame->AllocateUniform(count * sizeof(StructT), kMinUniformBufferOffsetAlignment);
 
-  return std::make_pair(
-      reinterpret_cast<StructT*>(allocation.host_ptr),
-      UniformBinding{.descriptor_set_index = StructT::kDescriptorSet,
-                     .binding_index = StructT::kDescriptorBinding,
-                     .buffer = allocation.buffer,
-                     .offset = allocation.offset,
-                     .size = allocation.size});
+  return std::make_pair(reinterpret_cast<StructT*>(allocation.host_ptr),
+                        UniformBinding{.descriptor_set_index = StructT::kDescriptorSet,
+                                       .binding_index = StructT::kDescriptorBinding,
+                                       .buffer = allocation.buffer,
+                                       .offset = allocation.offset,
+                                       .size = allocation.size});
 
   static_assert(sizeof(StructT) % alignof(StructT) == 0, "must be packed.");
 }
@@ -66,8 +65,7 @@ struct PaperShaderLatchedPoseBuffer {
   static constexpr size_t kDescriptorBinding = 1;
 };
 
-static_assert(sizeof(hmd::Pose) ==
-              PaperShaderLatchedPoseBuffer::kNumPoseFloats * sizeof(float));
+static_assert(sizeof(hmd::Pose) == PaperShaderLatchedPoseBuffer::kNumPoseFloats * sizeof(float));
 
 // Struct that defines a grepable common layout for C++ and GLSL code.
 struct PaperShaderPointLight {

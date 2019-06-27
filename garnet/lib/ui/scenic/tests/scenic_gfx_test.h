@@ -17,8 +17,7 @@ class ScenicGfxTest : public ScenicTest {
   void TearDown() override;
   void InitializeScenic(Scenic* scenic) override;
 
-  std::unique_ptr<escher::impl::CommandBufferSequencer>
-      command_buffer_sequencer_;
+  std::unique_ptr<escher::impl::CommandBufferSequencer> command_buffer_sequencer_;
 };
 
 }  // namespace test

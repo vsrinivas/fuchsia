@@ -56,14 +56,12 @@ class TestObjPreinitializePolicy {
 
   void InitializePoolObject(TestObj* ptr) {}
   void DestroyPoolObject(TestObj* ptr) {}
-  void InitializePoolObjectBlock(TestObj* objects, size_t block_index,
-                                 size_t num_objects) {
+  void InitializePoolObjectBlock(TestObj* objects, size_t block_index, size_t num_objects) {
     for (size_t i = 0; i < num_objects; ++i) {
       new (objects + i) TestObj(leak_count_, block_index, i);
     }
   }
-  void DestroyPoolObjectBlock(TestObj* objects, size_t block_index,
-                              size_t num_objects) {
+  void DestroyPoolObjectBlock(TestObj* objects, size_t block_index, size_t num_objects) {
     for (size_t i = 0; i < num_objects; ++i) {
       EXPECT_EQ(objects[i].one(), block_index);
       EXPECT_EQ(objects[i].two(), i);
@@ -97,8 +95,7 @@ TEST(ObjectPool, PreinitializePolicy) {
     size_t block_index = 0;
     while (total_size < kAllocated) {
       total_size +=
-          ObjectPool<TestObj, TestObjPreinitializePolicy>::NumObjectsInBlock(
-              block_index++);
+          ObjectPool<TestObj, TestObjPreinitializePolicy>::NumObjectsInBlock(block_index++);
     }
     EXPECT_GT(leak_count, kAllocated);
     EXPECT_EQ(leak_count, total_size);

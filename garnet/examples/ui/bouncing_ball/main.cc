@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <math.h>
-
 #include <fuchsia/ui/app/cpp/fidl.h>
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
@@ -11,9 +9,10 @@
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/component/cpp/startup_context.h>
-#include <src/lib/fxl/logging.h>
 #include <lib/ui/scenic/cpp/commands.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
+#include <math.h>
+#include <src/lib/fxl/logging.h>
 
 class BouncingBallView : public fuchsia::ui::scenic::SessionListener {
  public:
@@ -22,12 +21,10 @@ class BouncingBallView : public fuchsia::ui::scenic::SessionListener {
       : session_listener_binding_(this) {
     // Connect to Scenic.
     fuchsia::ui::scenic::ScenicPtr scenic =
-        startup_context
-            ->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
+        startup_context->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
 
     // Create a Scenic Session and a Scenic SessionListener.
-    scenic->CreateSession(session_.NewRequest(),
-                          session_listener_binding_.NewBinding());
+    scenic->CreateSession(session_.NewRequest(), session_listener_binding_.NewBinding());
 
     InitializeScene(std::move(view_token));
   }
@@ -44,8 +41,8 @@ class BouncingBallView : public fuchsia::ui::scenic::SessionListener {
     std::vector<fuchsia::ui::scenic::Command> cmds;
 
     // View: Use |view_token| to create a View in the Session.
-    PushCommand(&cmds, scenic::NewCreateViewCmd(kViewId, std::move(view_token),
-                                                "bouncing_circle_view"));
+    PushCommand(&cmds,
+                scenic::NewCreateViewCmd(kViewId, std::move(view_token), "bouncing_circle_view"));
 
     // Root Node.
     PushCommand(&cmds, scenic::NewCreateEntityNodeCmd(kRootNodeId));
@@ -63,14 +60,12 @@ class BouncingBallView : public fuchsia::ui::scenic::SessionListener {
 
     // Circle's Material.
     PushCommand(&cmds, scenic::NewCreateMaterialCmd(kCircleMaterialId));
-    PushCommand(&cmds,
-                scenic::NewSetColorCmd(kCircleMaterialId, 0x67, 0x3a, 0xb7,
-                                       0xff));  // Deep Purple 500
+    PushCommand(&cmds, scenic::NewSetColorCmd(kCircleMaterialId, 0x67, 0x3a, 0xb7,
+                                              0xff));  // Deep Purple 500
 
     // Circle's ShapeNode.
     PushCommand(&cmds, scenic::NewCreateShapeNodeCmd(kCircleNodeId));
-    PushCommand(&cmds,
-                scenic::NewSetMaterialCmd(kCircleNodeId, kCircleMaterialId));
+    PushCommand(&cmds, scenic::NewSetMaterialCmd(kCircleNodeId, kCircleMaterialId));
     PushCommand(&cmds, scenic::NewAddChildCmd(kRootNodeId, kCircleNodeId));
 
     session_->Enqueue(std::move(cmds));
@@ -79,46 +74,38 @@ class BouncingBallView : public fuchsia::ui::scenic::SessionListener {
     // frame we call Present with a presentation_time = 0 which means it the
     // commands should be applied immediately. For future frames, we'll use the
     // timing information we receive to have precise presentation times.
-    session_->Present(0, {}, {},
-                      [this](fuchsia::images::PresentationInfo info) {
-                        OnPresent(std::move(info));
-                      });
+    session_->Present(
+        0, {}, {}, [this](fuchsia::images::PresentationInfo info) { OnPresent(std::move(info)); });
   }
 
   // |fuchsia::ui::scenic::SessionListener|
   void OnScenicError(std::string error) override {}
 
-  static bool IsViewPropertiesChangedEvent(
-      const fuchsia::ui::scenic::Event& event) {
+  static bool IsViewPropertiesChangedEvent(const fuchsia::ui::scenic::Event& event) {
     return event.Which() == fuchsia::ui::scenic::Event::Tag::kGfx &&
-           event.gfx().Which() ==
-               fuchsia::ui::gfx::Event::Tag::kViewPropertiesChanged;
+           event.gfx().Which() == fuchsia::ui::gfx::Event::Tag::kViewPropertiesChanged;
   }
 
   static bool IsPointerEvent(const fuchsia::ui::scenic::Event& event) {
     return event.Which() == fuchsia::ui::scenic::Event::Tag::kInput &&
-           event.input().Which() ==
-               fuchsia::ui::input::InputEvent::Tag::kPointer;
+           event.input().Which() == fuchsia::ui::input::InputEvent::Tag::kPointer;
   }
 
   static bool IsPointerDownEvent(const fuchsia::ui::scenic::Event& event) {
     return IsPointerEvent(event) &&
-           event.input().pointer().phase ==
-               fuchsia::ui::input::PointerEventPhase::DOWN;
+           event.input().pointer().phase == fuchsia::ui::input::PointerEventPhase::DOWN;
   }
 
   static bool IsPointerUpEvent(const fuchsia::ui::scenic::Event& event) {
     return IsPointerEvent(event) &&
-           event.input().pointer().phase ==
-               fuchsia::ui::input::PointerEventPhase::UP;
+           event.input().pointer().phase == fuchsia::ui::input::PointerEventPhase::UP;
   }
 
   // |fuchsia::ui::scenic::SessionListener|
   void OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events) override {
     for (auto& event : events) {
       if (IsViewPropertiesChangedEvent(event)) {
-        OnViewPropertiesChanged(
-            event.gfx().view_properties_changed().properties);
+        OnViewPropertiesChanged(event.gfx().view_properties_changed().properties);
       } else if (IsPointerDownEvent(event)) {
         pointer_down_ = true;
         pointer_id_ = event.input().pointer().pointer_id;
@@ -147,8 +134,7 @@ class BouncingBallView : public fuchsia::ui::scenic::SessionListener {
 
     // Background Shape.
     const int bg_shape_id = new_resource_id_++;
-    PushCommand(&cmds, scenic::NewCreateRectangleCmd(bg_shape_id, view_width_,
-                                                     view_height_));
+    PushCommand(&cmds, scenic::NewCreateRectangleCmd(bg_shape_id, view_width_, view_height_));
     PushCommand(&cmds, scenic::NewSetShapeCmd(kBgNodeId, bg_shape_id));
 
     // We release the Shape Resource here, but it continues to stay alive in
@@ -163,14 +149,12 @@ class BouncingBallView : public fuchsia::ui::scenic::SessionListener {
     // Translate the background node.
     constexpr float kBackgroundElevation = 0.f;
     PushCommand(&cmds, scenic::NewSetTranslationCmd(
-                           kBgNodeId, (float[]){center_x, center_y,
-                                                -kBackgroundElevation}));
+                           kBgNodeId, (float[]){center_x, center_y, -kBackgroundElevation}));
 
     // Circle Shape.
     circle_radius_ = std::min(view_width_, view_height_) * .1f;
     const int circle_shape_id = new_resource_id_++;
-    PushCommand(&cmds,
-                scenic::NewCreateCircleCmd(circle_shape_id, circle_radius_));
+    PushCommand(&cmds, scenic::NewCreateCircleCmd(circle_shape_id, circle_radius_));
     PushCommand(&cmds, scenic::NewSetShapeCmd(kCircleNodeId, circle_shape_id));
 
     // We release the Shape Resource here, but it continues to stay alive in
@@ -225,8 +209,7 @@ class BouncingBallView : public fuchsia::ui::scenic::SessionListener {
     uint64_t presentation_time = presentation_info.presentation_time;
 
     constexpr float kSecondsPerNanosecond = .000'000'001f;
-    float t =
-        (presentation_time - last_presentation_time_) * kSecondsPerNanosecond;
+    float t = (presentation_time - last_presentation_time_) * kSecondsPerNanosecond;
     if (last_presentation_time_ == 0) {
       t = 0;
     }
@@ -236,23 +219,20 @@ class BouncingBallView : public fuchsia::ui::scenic::SessionListener {
 
     UpdateCirclePosition(t);
     const float circle_pos_x_absolute = circle_pos_x_ * view_width_;
-    const float circle_pos_y_absolute =
-        circle_pos_y_ * view_height_ - circle_radius_;
+    const float circle_pos_y_absolute = circle_pos_y_ * view_height_ - circle_radius_;
 
     // Translate the circle's node.
     constexpr float kCircleElevation = 8.f;
     PushCommand(&cmds, scenic::NewSetTranslationCmd(
-                           kCircleNodeId, (float[]){circle_pos_x_absolute,
-                                                    circle_pos_y_absolute,
+                           kCircleNodeId, (float[]){circle_pos_x_absolute, circle_pos_y_absolute,
                                                     -kCircleElevation}));
     session_->Enqueue(std::move(cmds));
 
-    zx_time_t next_presentation_time = presentation_info.presentation_time +
-                                       presentation_info.presentation_interval;
-    session_->Present(next_presentation_time, {}, {},
-                      [this](fuchsia::images::PresentationInfo info) {
-                        OnPresent(std::move(info));
-                      });
+    zx_time_t next_presentation_time =
+        presentation_info.presentation_time + presentation_info.presentation_interval;
+    session_->Present(
+        next_presentation_time, {}, {},
+        [this](fuchsia::images::PresentationInfo info) { OnPresent(std::move(info)); });
   }
 
   const int kViewId = 1;
@@ -300,18 +280,15 @@ class ViewProviderService : public fuchsia::ui::app::ViewProvider {
       : startup_context_(startup_context) {}
 
   // |fuchsia::ui::app::ViewProvider|
-  void CreateView(
-      zx::eventpair view_token,
-      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services,
-      fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> outgoing_services)
-      override {
-    auto view = std::make_unique<BouncingBallView>(
-        startup_context_, scenic::ToViewToken(std::move(view_token)));
+  void CreateView(zx::eventpair view_token,
+                  fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services,
+                  fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> outgoing_services) override {
+    auto view = std::make_unique<BouncingBallView>(startup_context_,
+                                                   scenic::ToViewToken(std::move(view_token)));
     views_.push_back(std::move(view));
   }
 
-  void HandleViewProviderRequest(
-      fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider> request) {
+  void HandleViewProviderRequest(fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider> request) {
     bindings_.AddBinding(this, std::move(request));
   }
 
@@ -331,8 +308,7 @@ int main(int argc, const char** argv) {
 
   // Add our ViewProvider service to the outgoing services.
   startup_context->outgoing().AddPublicService<fuchsia::ui::app::ViewProvider>(
-      [&view_provider](
-          fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider> request) {
+      [&view_provider](fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider> request) {
         view_provider.HandleViewProviderRequest(std::move(request));
       });
 

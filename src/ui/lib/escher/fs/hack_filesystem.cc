@@ -11,20 +11,15 @@
 #ifdef __Fuchsia__
 #include "src/ui/lib/escher/fs/fuchsia_data_source.h"
 namespace escher {
-HackFilesystemPtr HackFilesystem::New(
-    const std::shared_ptr<vfs::PseudoDir>& root_dir) {
+HackFilesystemPtr HackFilesystem::New(const std::shared_ptr<vfs::PseudoDir>& root_dir) {
   return fxl::MakeRefCounted<FuchsiaDataSource>(root_dir);
 }
-HackFilesystemPtr HackFilesystem::New() {
-  return fxl::MakeRefCounted<FuchsiaDataSource>();
-}
+HackFilesystemPtr HackFilesystem::New() { return fxl::MakeRefCounted<FuchsiaDataSource>(); }
 }  // namespace escher
 #else
 #include "src/ui/lib/escher/fs/linux_data_source.h"
 namespace escher {
-HackFilesystemPtr HackFilesystem::New() {
-  return fxl::MakeRefCounted<LinuxDataSource>();
-}
+HackFilesystemPtr HackFilesystem::New() { return fxl::MakeRefCounted<LinuxDataSource>(); }
 }  // namespace escher
 #endif
 
@@ -40,8 +35,7 @@ HackFileContents HackFilesystem::ReadFile(const HackFilePath& path) const {
   return "";
 }
 
-void HackFilesystem::WriteFile(const HackFilePath& path,
-                               HackFileContents new_contents) {
+void HackFilesystem::WriteFile(const HackFilePath& path, HackFileContents new_contents) {
   files_[path] = std::move(new_contents);
   for (auto w : watchers_) {
     if (w->IsWatchingPath(path)) {

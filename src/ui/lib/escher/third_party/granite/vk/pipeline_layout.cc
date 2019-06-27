@@ -32,8 +32,7 @@
 
 namespace escher {
 
-const ResourceTypeInfo PipelineLayout::kTypeInfo("PipelineLayout",
-                                                 ResourceType::kResource,
+const ResourceTypeInfo PipelineLayout::kTypeInfo("PipelineLayout", ResourceType::kResource,
                                                  ResourceType::kPipelineLayout);
 
 PipelineLayout::PipelineLayout(ResourceRecycler* resource_recycler,
@@ -72,8 +71,7 @@ PipelineLayout::PipelineLayout(ResourceRecycler* resource_recycler,
     info.pPushConstantRanges = spec.push_constant_ranges().data();
   }
 
-  pipeline_layout_ =
-      ESCHER_CHECKED_VK_RESULT(vk_device().createPipelineLayout(info, nullptr));
+  pipeline_layout_ = ESCHER_CHECKED_VK_RESULT(vk_device().createPipelineLayout(info, nullptr));
 }
 
 PipelineLayout::~PipelineLayout() {

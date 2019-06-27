@@ -27,9 +27,8 @@ namespace gfx {
 // TODO(SCN-709): Unify SessionHandler and Session.
 class SessionHandler : public TempSessionDelegate {
  public:
-  SessionHandler(CommandDispatcherContext context,
-                 SessionContext session_context, EventReporter* event_reporter,
-                 ErrorReporter* error_reporter,
+  SessionHandler(CommandDispatcherContext context, SessionContext session_context,
+                 EventReporter* event_reporter, ErrorReporter* error_reporter,
                  inspect::Node inspect_node = inspect::Node());
   ~SessionHandler() = default;
 
@@ -42,15 +41,12 @@ class SessionHandler : public TempSessionDelegate {
 
  protected:
   // |fuchsia::ui::scenic::Session / scenic::TempSessionDelegate|
-  void Present(uint64_t presentation_time,
-               ::std::vector<zx::event> acquire_fences,
+  void Present(uint64_t presentation_time, ::std::vector<zx::event> acquire_fences,
                ::std::vector<zx::event> release_fences,
                fuchsia::ui::scenic::Session::PresentCallback callback) override;
 
   // |fuchsia::ui::scenic::Session / scenic::TempSessionDelegate|
-  void SetDebugName(const std::string& debug_name) override {
-    session_->SetDebugName(debug_name);
-  }
+  void SetDebugName(const std::string& debug_name) override { session_->SetDebugName(debug_name); }
 
   // |scenic::CommandDispatcher|
   void DispatchCommand(fuchsia::ui::scenic::Command command) override;

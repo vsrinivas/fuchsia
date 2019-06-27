@@ -22,26 +22,21 @@ struct Transform {
   // Allow static_cast<mat4>(*this).
   explicit operator mat4() const;
 
-  Transform(vec3 translation, vec3 scale = vec3(1, 1, 1),
-            quat rotation = quat(), vec3 anchor = vec3(0, 0, 0))
-      : translation(translation),
-        scale(scale),
-        rotation(rotation),
-        anchor(anchor) {}
+  Transform(vec3 translation, vec3 scale = vec3(1, 1, 1), quat rotation = quat(),
+            vec3 anchor = vec3(0, 0, 0))
+      : translation(translation), scale(scale), rotation(rotation), anchor(anchor) {}
 
-  Transform(vec3 translation, vec3 scale, float rotation_radians,
-            vec3 rotation_axis, vec3 anchor = vec3(0, 0, 0))
-      : Transform(translation, scale,
-                  glm::angleAxis(rotation_radians, rotation_axis), anchor) {
-    FXL_DCHECK(std::abs(1.f - glm::dot(rotation_axis, rotation_axis)) <
-               kEpsilon);
+  Transform(vec3 translation, vec3 scale, float rotation_radians, vec3 rotation_axis,
+            vec3 anchor = vec3(0, 0, 0))
+      : Transform(translation, scale, glm::angleAxis(rotation_radians, rotation_axis), anchor) {
+    FXL_DCHECK(std::abs(1.f - glm::dot(rotation_axis, rotation_axis)) < kEpsilon);
   }
 
   Transform() : scale(vec3(1, 1, 1)) {}
 
   bool IsIdentity() const {
-    return translation == vec3() && scale == vec3(1, 1, 1) &&
-           rotation == quat() && anchor == vec3();
+    return translation == vec3() && scale == vec3(1, 1, 1) && rotation == quat() &&
+           anchor == vec3();
   }
 };
 

@@ -98,8 +98,7 @@ vk::ImageAspectFlags FormatToColorOrDepthStencilAspectFlags(vk::Format format) {
 
   if (is_depth) {
     // Maybe also stencil?
-    return is_stencil ? vk::ImageAspectFlagBits::eDepth |
-                            vk::ImageAspectFlagBits::eStencil
+    return is_stencil ? vk::ImageAspectFlagBits::eDepth | vk::ImageAspectFlagBits::eStencil
                       : vk::ImageAspectFlagBits::eDepth;
   } else if (is_stencil) {
     // Only stencil, not depth.
@@ -123,34 +122,30 @@ vk::ImageCreateInfo CreateVkImageCreateInfo(ImageInfo info) {
   create_info.usage = info.usage;
   create_info.sharingMode = vk::SharingMode::eExclusive;
   create_info.initialLayout = vk::ImageLayout::eUndefined;
-  create_info.flags = info.is_mutable ? vk::ImageCreateFlagBits::eMutableFormat
-                                      : vk::ImageCreateFlags();
+  create_info.flags =
+      info.is_mutable ? vk::ImageCreateFlagBits::eMutableFormat : vk::ImageCreateFlags();
   return create_info;
 }
 
 vk::Image CreateVkImage(const vk::Device& device, ImageInfo info) {
-  vk::Image image = ESCHER_CHECKED_VK_RESULT(
-      device.createImage(CreateVkImageCreateInfo(info)));
+  vk::Image image = ESCHER_CHECKED_VK_RESULT(device.createImage(CreateVkImageCreateInfo(info)));
   return image;
 }
 
-ImagePtr NewDepthImage(ImageFactory* image_factory, vk::Format format,
-                       uint32_t width, uint32_t height,
-                       vk::ImageUsageFlags additional_flags) {
+ImagePtr NewDepthImage(ImageFactory* image_factory, vk::Format format, uint32_t width,
+                       uint32_t height, vk::ImageUsageFlags additional_flags) {
   FXL_DCHECK(image_factory);
   ImageInfo info;
   info.format = format;
   info.width = width;
   info.height = height;
   info.sample_count = 1;
-  info.usage =
-      additional_flags | vk::ImageUsageFlagBits::eDepthStencilAttachment;
+  info.usage = additional_flags | vk::ImageUsageFlagBits::eDepthStencilAttachment;
 
   return image_factory->NewImage(info);
 }
 
-ImagePtr NewColorAttachmentImage(ImageFactory* image_factory, uint32_t width,
-                                 uint32_t height,
+ImagePtr NewColorAttachmentImage(ImageFactory* image_factory, uint32_t width, uint32_t height,
                                  vk::ImageUsageFlags additional_flags) {
   FXL_DCHECK(image_factory);
   ImageInfo info;
@@ -163,8 +158,7 @@ ImagePtr NewColorAttachmentImage(ImageFactory* image_factory, uint32_t width,
   return image_factory->NewImage(info);
 }
 
-ImagePtr NewImage(ImageFactory* image_factory, vk::Format format,
-                  uint32_t width, uint32_t height,
+ImagePtr NewImage(ImageFactory* image_factory, vk::Format format, uint32_t width, uint32_t height,
                   vk::ImageUsageFlags additional_flags) {
   FXL_DCHECK(image_factory);
 
@@ -174,8 +168,7 @@ ImagePtr NewImage(ImageFactory* image_factory, vk::Format format,
   info.height = height;
   info.sample_count = 1;
   info.usage = additional_flags | vk::ImageUsageFlagBits::eTransferDst |
-               vk::ImageUsageFlagBits::eTransferSrc |
-               vk::ImageUsageFlagBits::eSampled;
+               vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eSampled;
 
   // Create the new image.
   auto image = image_factory->NewImage(info);
@@ -183,9 +176,8 @@ ImagePtr NewImage(ImageFactory* image_factory, vk::Format format,
   return image;
 }
 
-void WritePixelsToImage(BatchGpuUploader* batch_gpu_uploader,
-                        const uint8_t* pixels, const ImagePtr& image,
-                        vk::ImageLayout final_layout,
+void WritePixelsToImage(BatchGpuUploader* batch_gpu_uploader, const uint8_t* pixels,
+                        const ImagePtr& image, vk::ImageLayout final_layout,
                         const ImageConversionFunction& conversion_func) {
   FXL_DCHECK(batch_gpu_uploader);
   FXL_DCHECK(image);
@@ -195,8 +187,7 @@ void WritePixelsToImage(BatchGpuUploader* batch_gpu_uploader,
   size_t width = image->info().width;
   size_t height = image->info().height;
 
-  auto writer =
-      batch_gpu_uploader->AcquireWriter(width * height * bytes_per_pixel);
+  auto writer = batch_gpu_uploader->AcquireWriter(width * height * bytes_per_pixel);
   if (!conversion_func) {
     std::memcpy(writer->host_ptr(), pixels, width * height * bytes_per_pixel);
   } else {
@@ -217,65 +208,55 @@ void WritePixelsToImage(BatchGpuUploader* batch_gpu_uploader,
   batch_gpu_uploader->PostWriter(std::move(writer));
 }
 
-ImagePtr NewRgbaImage(ImageFactory* image_factory,
-                      BatchGpuUploader* gpu_uploader, uint32_t width,
-                      uint32_t height, const uint8_t* pixels,
-                      vk::ImageLayout final_layout) {
+ImagePtr NewRgbaImage(ImageFactory* image_factory, BatchGpuUploader* gpu_uploader, uint32_t width,
+                      uint32_t height, const uint8_t* pixels, vk::ImageLayout final_layout) {
   FXL_DCHECK(image_factory);
   FXL_DCHECK(gpu_uploader);
 
-  auto image =
-      NewImage(image_factory, vk::Format::eR8G8B8A8Unorm, width, height);
+  auto image = NewImage(image_factory, vk::Format::eR8G8B8A8Unorm, width, height);
 
   WritePixelsToImage(gpu_uploader, pixels, image, final_layout);
   return image;
 }
 
-ImagePtr NewCheckerboardImage(ImageFactory* image_factory,
-                              BatchGpuUploader* gpu_uploader, uint32_t width,
-                              uint32_t height) {
+ImagePtr NewCheckerboardImage(ImageFactory* image_factory, BatchGpuUploader* gpu_uploader,
+                              uint32_t width, uint32_t height) {
   FXL_DCHECK(image_factory);
   FXL_DCHECK(gpu_uploader);
 
-  auto image =
-      NewImage(image_factory, vk::Format::eR8G8B8A8Unorm, width, height);
+  auto image = NewImage(image_factory, vk::Format::eR8G8B8A8Unorm, width, height);
 
   auto pixels = NewCheckerboardPixels(width, height);
   WritePixelsToImage(gpu_uploader, pixels.get(), image);
   return image;
 }
 
-ImagePtr NewGradientImage(ImageFactory* image_factory,
-                          BatchGpuUploader* gpu_uploader, uint32_t width,
-                          uint32_t height) {
+ImagePtr NewGradientImage(ImageFactory* image_factory, BatchGpuUploader* gpu_uploader,
+                          uint32_t width, uint32_t height) {
   FXL_DCHECK(image_factory);
   FXL_DCHECK(gpu_uploader);
 
   auto pixels = NewGradientPixels(width, height);
   // TODO(SCN-839): are SRGB formats slow on Mali?
-  auto image =
-      NewImage(image_factory, vk::Format::eR8G8B8A8Srgb, width, height);
+  auto image = NewImage(image_factory, vk::Format::eR8G8B8A8Srgb, width, height);
 
   WritePixelsToImage(gpu_uploader, pixels.get(), image);
   return image;
 }
 
-ImagePtr NewNoiseImage(ImageFactory* image_factory,
-                       BatchGpuUploader* gpu_uploader, uint32_t width,
+ImagePtr NewNoiseImage(ImageFactory* image_factory, BatchGpuUploader* gpu_uploader, uint32_t width,
                        uint32_t height, vk::ImageUsageFlags additional_flags) {
   FXL_DCHECK(image_factory);
   FXL_DCHECK(gpu_uploader);
 
   auto pixels = NewNoisePixels(width, height);
-  auto image = NewImage(image_factory, vk::Format::eR8Unorm, width, height,
-                        additional_flags);
+  auto image = NewImage(image_factory, vk::Format::eR8Unorm, width, height, additional_flags);
 
   WritePixelsToImage(gpu_uploader, pixels.get(), image);
   return image;
 }
 
-std::unique_ptr<uint8_t[]> NewCheckerboardPixels(uint32_t width,
-                                                 uint32_t height,
+std::unique_ptr<uint8_t[]> NewCheckerboardPixels(uint32_t width, uint32_t height,
                                                  size_t* out_size) {
   FXL_DCHECK(width % 2 == 0);
   FXL_DCHECK(height % 2 == 0);
@@ -299,8 +280,7 @@ std::unique_ptr<uint8_t[]> NewCheckerboardPixels(uint32_t width,
   return ptr;
 }
 
-std::unique_ptr<uint8_t[]> NewGradientPixels(uint32_t width, uint32_t height,
-                                             size_t* out_size) {
+std::unique_ptr<uint8_t[]> NewGradientPixels(uint32_t width, uint32_t height, size_t* out_size) {
   FXL_DCHECK(width % 2 == 0);
   FXL_DCHECK(height % 2 == 0);
 
@@ -325,8 +305,7 @@ std::unique_ptr<uint8_t[]> NewGradientPixels(uint32_t width, uint32_t height,
   return ptr;
 }
 
-std::unique_ptr<uint8_t[]> NewNoisePixels(uint32_t width, uint32_t height,
-                                          size_t* out_size) {
+std::unique_ptr<uint8_t[]> NewNoisePixels(uint32_t width, uint32_t height, size_t* out_size) {
   size_t size_in_bytes = width * height;
   auto ptr = std::make_unique<uint8_t[]>(size_in_bytes);
   if (out_size) {

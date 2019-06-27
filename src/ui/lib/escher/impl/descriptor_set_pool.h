@@ -36,8 +36,7 @@ class DescriptorSetAllocation : public Resource {
 
  private:
   friend class DescriptorSetPool;
-  DescriptorSetAllocation(DescriptorSetPool* pool,
-                          std::vector<vk::DescriptorSet> descriptor_sets);
+  DescriptorSetAllocation(DescriptorSetPool* pool, std::vector<vk::DescriptorSet> descriptor_sets);
 
   std::vector<vk::DescriptorSet> sets_;
 };
@@ -50,8 +49,7 @@ typedef fxl::RefPtr<DescriptorSetAllocation> DescriptorSetAllocationPtr;
 // they can be reused.
 class DescriptorSetPool : public ResourceRecycler {
  public:
-  DescriptorSetPool(EscherWeakPtr escher,
-                    const vk::DescriptorSetLayoutCreateInfo& layout_info,
+  DescriptorSetPool(EscherWeakPtr escher, const vk::DescriptorSetLayoutCreateInfo& layout_info,
                     uint32_t initial_capacity = 10);
   ~DescriptorSetPool();
 
@@ -59,8 +57,7 @@ class DescriptorSetPool : public ResourceRecycler {
   // form of a DescriptorSetAllocation.  All such allocations must be destroyed
   // before this DescriptorSetPool is destroyed.  If command_buffer is not null,
   // it will retain the new allocation until it is retired.
-  DescriptorSetAllocationPtr Allocate(uint32_t count,
-                                      CommandBuffer* command_buffer);
+  DescriptorSetAllocationPtr Allocate(uint32_t count, CommandBuffer* command_buffer);
 
   vk::DescriptorSetLayout layout() const { return layout_; }
 

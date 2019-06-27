@@ -22,11 +22,9 @@ class ImageFactory;
 namespace image_utils {
 
 #ifdef __Fuchsia__
-using ImageConversionFunction =
-    fit::function<void(void*, const void*, uint32_t, uint32_t)>;
+using ImageConversionFunction = fit::function<void(void*, const void*, uint32_t, uint32_t)>;
 #else
-using ImageConversionFunction =
-    fit::function<void(void*, const void*, uint32_t, uint32_t)>;
+using ImageConversionFunction = fit::function<void(void*, const void*, uint32_t, uint32_t)>;
 #endif
 
 // Returns the number of bytes per pixel for the given format.
@@ -58,16 +56,14 @@ vk::Image CreateVkImage(const vk::Device& device, ImageInfo info);
 // |image_factory| is a generic interface that could be an Image cache (in which
 // case a new Image might be created, or an existing one reused). Alternatively
 // the factory could allocate a new Image every time.
-ImagePtr NewDepthImage(ImageFactory* image_factory, vk::Format format,
-                       uint32_t width, uint32_t height,
-                       vk::ImageUsageFlags additional_flags);
+ImagePtr NewDepthImage(ImageFactory* image_factory, vk::Format format, uint32_t width,
+                       uint32_t height, vk::ImageUsageFlags additional_flags);
 
 // Return a new Image that is suitable for use as a color attachment.
 // |image_factory| is a generic interface that could be an Image cache (in which
 // case a new Image might be created, or an existing one reused). Alternatively
 // the factory could allocate a new Image every time.
-ImagePtr NewColorAttachmentImage(ImageFactory* image_factory, uint32_t width,
-                                 uint32_t height,
+ImagePtr NewColorAttachmentImage(ImageFactory* image_factory, uint32_t width, uint32_t height,
                                  vk::ImageUsageFlags additional_flags);
 
 // Return new Image containing the provided pixels. Uses transfer queue to
@@ -75,8 +71,7 @@ ImagePtr NewColorAttachmentImage(ImageFactory* image_factory, uint32_t width,
 // |image_factory| is a generic interface that could be an Image cache (in which
 // case a new Image might be created, or an existing one reused). Alternatively
 // the factory could allocate a new Image every time.
-ImagePtr NewImage(ImageFactory* image_factory, vk::Format format,
-                  uint32_t width, uint32_t height,
+ImagePtr NewImage(ImageFactory* image_factory, vk::Format format, uint32_t width, uint32_t height,
                   vk::ImageUsageFlags additional_flags = vk::ImageUsageFlags());
 
 // Write the contents of |pixels| into an existing |gpu_image|.
@@ -89,11 +84,9 @@ ImagePtr NewImage(ImageFactory* image_factory, vk::Format format,
 // here is to specifically differentiate it from pixels, which may be stored in
 // host_memory.
 void WritePixelsToImage(
-    escher::BatchGpuUploader* batch_gpu_uploader, const uint8_t* pixels,
-    const ImagePtr& gpu_image,
+    escher::BatchGpuUploader* batch_gpu_uploader, const uint8_t* pixels, const ImagePtr& gpu_image,
     vk::ImageLayout final_layout = vk::ImageLayout::eShaderReadOnlyOptimal,
-    const escher::image_utils::ImageConversionFunction& convertion_func =
-        nullptr);
+    const escher::image_utils::ImageConversionFunction& convertion_func = nullptr);
 
 // Return new Image containing the provided pixels.  Uses transfer queue to
 // efficiently transfer image data to GPU.  If bytes is null, don't bother
@@ -101,40 +94,35 @@ void WritePixelsToImage(
 // |image_factory| is a generic interface that could be an Image cache (in which
 // case a new Image might be created, or an existing one reused). Alternatively
 // the factory could allocate a new Image every time.
-ImagePtr NewRgbaImage(
-    ImageFactory* image_factory, BatchGpuUploader* gpu_uploader, uint32_t width,
-    uint32_t height, const uint8_t* bytes,
-    vk::ImageLayout final_layout = vk::ImageLayout::eShaderReadOnlyOptimal);
+ImagePtr NewRgbaImage(ImageFactory* image_factory, BatchGpuUploader* gpu_uploader, uint32_t width,
+                      uint32_t height, const uint8_t* bytes,
+                      vk::ImageLayout final_layout = vk::ImageLayout::eShaderReadOnlyOptimal);
 
 // Returns RGBA image.
 // |image_factory| is a generic interface that could be an Image cache (in which
 // case a new Image might be created, or an existing one reused). Alternatively
 // the factory could allocate a new Image every time.
-ImagePtr NewCheckerboardImage(ImageFactory* image_factory,
-                              BatchGpuUploader* gpu_uploader, uint32_t width,
-                              uint32_t height);
+ImagePtr NewCheckerboardImage(ImageFactory* image_factory, BatchGpuUploader* gpu_uploader,
+                              uint32_t width, uint32_t height);
 
 // Returns RGBA image.
 // |image_factory| is a generic interface that could be an Image cache (in which
 // case a new Image might be created, or an existing one reused). Alternatively
 // the factory could allocate a new Image every time.
-ImagePtr NewGradientImage(ImageFactory* image_factory,
-                          BatchGpuUploader* gpu_uploader, uint32_t width,
-                          uint32_t height);
+ImagePtr NewGradientImage(ImageFactory* image_factory, BatchGpuUploader* gpu_uploader,
+                          uint32_t width, uint32_t height);
 
 // Returns single-channel luminance image containing white noise.
 // |image_factory| is a generic interface that could be an Image cache (in which
 // case a new Image might be created, or an existing one reused). Alternatively
 // the factory could allocate a new Image every time.
-ImagePtr NewNoiseImage(
-    ImageFactory* image_factory, BatchGpuUploader* gpu_uploader, uint32_t width,
-    uint32_t height,
-    vk::ImageUsageFlags additional_flags = vk::ImageUsageFlags());
+ImagePtr NewNoiseImage(ImageFactory* image_factory, BatchGpuUploader* gpu_uploader, uint32_t width,
+                       uint32_t height,
+                       vk::ImageUsageFlags additional_flags = vk::ImageUsageFlags());
 
 // Return RGBA pixels containing a checkerboard pattern, where each white/black
 // region is a single pixel.  Only works for even values of width/height.
-std::unique_ptr<uint8_t[]> NewCheckerboardPixels(uint32_t width,
-                                                 uint32_t height,
+std::unique_ptr<uint8_t[]> NewCheckerboardPixels(uint32_t width, uint32_t height,
                                                  size_t* out_size = nullptr);
 
 // Return RGBA pixels containing a gradient where the top row is white and the

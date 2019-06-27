@@ -9,15 +9,14 @@
 
 namespace escher {
 
-DefaultShaderProgramFactory::DefaultShaderProgramFactory(
-    EscherWeakPtr escher, HackFilesystemPtr filesystem)
+DefaultShaderProgramFactory::DefaultShaderProgramFactory(EscherWeakPtr escher,
+                                                         HackFilesystemPtr filesystem)
     : escher_(std::move(escher)), filesystem_(std::move(filesystem)) {}
 
 DefaultShaderProgramFactory::~DefaultShaderProgramFactory() = default;
 
 ShaderProgramPtr DefaultShaderProgramFactory::GetProgram(
-    const std::string shader_paths[EnumCount<ShaderStage>()],
-    ShaderVariantArgs args) {
+    const std::string shader_paths[EnumCount<ShaderStage>()], ShaderVariantArgs args) {
   Hasher hasher(args.hash().val);
   for (size_t i = 0; i < EnumCount<ShaderStage>(); ++i) {
     hasher.string(shader_paths[i]);
@@ -39,10 +38,8 @@ ShaderProgramPtr DefaultShaderProgramFactory::GetProgram(
   // No existing program was found; need to create a new one, either a graphics
   // program or a compute program, depending on the module paths that are
   // provided.
-  const bool has_compute_stage =
-      !shader_paths[EnumCast(ShaderStage::kCompute)].empty();
-  const bool has_vertex_stage =
-      !shader_paths[EnumCast(ShaderStage::kVertex)].empty();
+  const bool has_compute_stage = !shader_paths[EnumCast(ShaderStage::kCompute)].empty();
+  const bool has_vertex_stage = !shader_paths[EnumCast(ShaderStage::kVertex)].empty();
 
   // Obtain a ShaderModule variant for each non-empty path.
   std::vector<ShaderModulePtr> modules;
@@ -50,8 +47,8 @@ ShaderProgramPtr DefaultShaderProgramFactory::GetProgram(
   for (size_t i = 0; i < EnumCount<ShaderStage>(); ++i) {
     if (!shader_paths[i].empty()) {
       ShaderStage stage = static_cast<ShaderStage>(i);
-      modules.push_back(ObtainShaderModuleTemplate(stage, shader_paths[i])
-                            ->GetShaderModuleVariant(args));
+      modules.push_back(
+          ObtainShaderModuleTemplate(stage, shader_paths[i])->GetShaderModuleVariant(args));
     }
   }
 
@@ -63,8 +60,7 @@ ShaderProgramPtr DefaultShaderProgramFactory::GetProgram(
   ShaderProgramPtr program =
       has_compute_stage
           ? ShaderProgram::NewCompute(escher_->resource_recycler(), modules[0])
-          : ShaderProgram::NewGraphics(escher_->resource_recycler(),
-                                       std::move(modules));
+          : ShaderProgram::NewGraphics(escher_->resource_recycler(), std::move(modules));
 
   // Remember the program in case it is requested again.
   record.ptr = program;
@@ -86,8 +82,7 @@ ShaderModuleTemplatePtr DefaultShaderProgramFactory::ObtainShaderModuleTemplate(
   }
 
   auto t = fxl::MakeRefCounted<ShaderModuleTemplate>(
-      escher_->vk_device(), escher_->shaderc_compiler(), stage, source_path,
-      filesystem_);
+      escher_->vk_device(), escher_->shaderc_compiler(), stage, source_path, filesystem_);
   templates_[source_path] = t;
   return t;
 }

@@ -21,8 +21,7 @@ bool usage_is_stylus(hid::Usage usage) {
   return ((usage == hid::USAGE(Page::kDigitizer, Digitizer::kStylus)) ||
           (usage == hid::USAGE(Page::kDigitizer, Digitizer::kPen)));
 }
-const hid::ReportDescriptor *get_stylus_descriptor(
-    const hid::DeviceDescriptor *dev_desc) {
+const hid::ReportDescriptor *get_stylus_descriptor(const hid::DeviceDescriptor *dev_desc) {
   const hid::ReportDescriptor *desc = nullptr;
   for (size_t rep = 0; rep < dev_desc->rep_count; rep++) {
     const hid::ReportDescriptor *tmp_desc = &dev_desc->report[rep];
@@ -53,11 +52,9 @@ namespace test {
 TEST(StylusTest, Paradise) {
   hid::DeviceDescriptor *dev_desc = nullptr;
   size_t desc_size;
-  const uint8_t *paradise_touch_v1_report_desc =
-      get_paradise_touch_report_desc(&desc_size);
+  const uint8_t *paradise_touch_v1_report_desc = get_paradise_touch_report_desc(&desc_size);
 
-  auto parse_res = hid::ParseReportDescriptor(paradise_touch_v1_report_desc,
-                                              desc_size, &dev_desc);
+  auto parse_res = hid::ParseReportDescriptor(paradise_touch_v1_report_desc, desc_size, &dev_desc);
   ASSERT_EQ(hid::ParseResult::kParseOk, parse_res);
 
   auto desc = get_stylus_descriptor(dev_desc);
@@ -76,8 +73,7 @@ TEST(StylusTest, Paradise) {
   EXPECT_EQ(17280, device_descriptor.stylus_descriptor->y.range.max);
 
   EXPECT_TRUE(device_descriptor.stylus_descriptor->is_invertible);
-  EXPECT_EQ(fuchsia::ui::input::kStylusBarrel,
-            device_descriptor.stylus_descriptor->buttons);
+  EXPECT_EQ(fuchsia::ui::input::kStylusBarrel, device_descriptor.stylus_descriptor->buttons);
 
   const uint8_t report_data[20] = {
       0x06,        // Report ID
@@ -105,11 +101,9 @@ TEST(StylusTest, Paradise) {
 TEST(StylusTest, Acer12) {
   hid::DeviceDescriptor *dev_desc = nullptr;
   size_t desc_size;
-  const uint8_t *acer12_touch_report_desc =
-      get_acer12_touch_report_desc(&desc_size);
+  const uint8_t *acer12_touch_report_desc = get_acer12_touch_report_desc(&desc_size);
 
-  auto parse_res = hid::ParseReportDescriptor(acer12_touch_report_desc,
-                                              desc_size, &dev_desc);
+  auto parse_res = hid::ParseReportDescriptor(acer12_touch_report_desc, desc_size, &dev_desc);
   ASSERT_EQ(hid::ParseResult::kParseOk, parse_res);
 
   auto desc = get_stylus_descriptor(dev_desc);
@@ -128,8 +122,7 @@ TEST(StylusTest, Acer12) {
   EXPECT_EQ(169, device_descriptor.stylus_descriptor->y.range.max);
 
   EXPECT_TRUE(device_descriptor.stylus_descriptor->is_invertible);
-  EXPECT_EQ(fuchsia::ui::input::kStylusBarrel,
-            device_descriptor.stylus_descriptor->buttons);
+  EXPECT_EQ(fuchsia::ui::input::kStylusBarrel, device_descriptor.stylus_descriptor->buttons);
 
   const uint8_t report_data[8] = {
       0x07,        // Report ID

@@ -29,11 +29,11 @@
 #include <cstdint>
 #include <vulkan/vulkan.hpp>
 
+#include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/ui/lib/escher/forward_declarations.h"
 #include "src/ui/lib/escher/third_party/granite/vk/pipeline_layout.h"
 #include "src/ui/lib/escher/util/hash.h"
 #include "src/ui/lib/escher/vk/vulkan_limits.h"
-#include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace escher {
 
@@ -52,20 +52,15 @@ class CommandBufferPipelineState {
 
   void BeginGraphicsOrComputeContext();
 
-  vk::Pipeline FlushGraphicsPipeline(const PipelineLayout* layout,
-                                     ShaderProgram* program);
+  vk::Pipeline FlushGraphicsPipeline(const PipelineLayout* layout, ShaderProgram* program);
 
   struct StaticState;
   StaticState* static_state() { return &static_state_; }
   const StaticState* static_state() const { return &static_state_; }
 
   struct PotentialStaticState;
-  PotentialStaticState* potential_static_state() {
-    return &potential_static_state_;
-  }
-  const PotentialStaticState* potential_static_state() const {
-    return &potential_static_state_;
-  }
+  PotentialStaticState* potential_static_state() { return &potential_static_state_; }
+  const PotentialStaticState* potential_static_state() const { return &potential_static_state_; }
 
   // Called by CommandBuffer::SetVertexAttributes().
   void SetVertexAttributes(uint32_t binding, uint32_t attrib, vk::Format format,
@@ -140,18 +135,10 @@ class CommandBufferPipelineState {
     bool get_depth_write() const { return static_cast<bool>(depth_write); }
     bool get_depth_test() const { return static_cast<bool>(depth_test); }
     bool get_blend_enable() const { return static_cast<bool>(blend_enable); }
-    vk::CullModeFlags get_cull_mode() const {
-      return static_cast<vk::CullModeFlags>(cull_mode);
-    }
-    vk::FrontFace get_front_face() const {
-      return static_cast<vk::FrontFace>(front_face);
-    }
-    bool get_depth_bias_enable() const {
-      return static_cast<bool>(depth_bias_enable);
-    }
-    vk::CompareOp get_depth_compare() const {
-      return static_cast<vk::CompareOp>(depth_compare);
-    }
+    vk::CullModeFlags get_cull_mode() const { return static_cast<vk::CullModeFlags>(cull_mode); }
+    vk::FrontFace get_front_face() const { return static_cast<vk::FrontFace>(front_face); }
+    bool get_depth_bias_enable() const { return static_cast<bool>(depth_bias_enable); }
+    vk::CompareOp get_depth_compare() const { return static_cast<vk::CompareOp>(depth_compare); }
     bool get_stencil_test() const { return static_cast<bool>(stencil_test); }
     vk::StencilOp get_stencil_front_fail() const {
       return static_cast<vk::StencilOp>(stencil_front_fail);
@@ -178,13 +165,9 @@ class CommandBufferPipelineState {
       return static_cast<vk::CompareOp>(stencil_back_compare_op);
     }
 
-    bool get_alpha_to_coverage() const {
-      return static_cast<bool>(alpha_to_coverage);
-    }
+    bool get_alpha_to_coverage() const { return static_cast<bool>(alpha_to_coverage); }
     bool get_alpha_to_one() const { return static_cast<bool>(alpha_to_one); }
-    bool get_sample_shading() const {
-      return static_cast<bool>(sample_shading);
-    }
+    bool get_sample_shading() const { return static_cast<bool>(sample_shading); }
 
     vk::BlendFactor get_src_color_blend() const {
       return static_cast<vk::BlendFactor>(src_color_blend);
@@ -192,21 +175,15 @@ class CommandBufferPipelineState {
     vk::BlendFactor get_dst_color_blend() const {
       return static_cast<vk::BlendFactor>(dst_color_blend);
     }
-    vk::BlendOp get_color_blend_op() const {
-      return static_cast<vk::BlendOp>(color_blend_op);
-    }
+    vk::BlendOp get_color_blend_op() const { return static_cast<vk::BlendOp>(color_blend_op); }
     vk::BlendFactor get_src_alpha_blend() const {
       return static_cast<vk::BlendFactor>(src_alpha_blend);
     }
     vk::BlendFactor get_dst_alpha_blend() const {
       return static_cast<vk::BlendFactor>(dst_alpha_blend);
     }
-    vk::BlendOp get_alpha_blend_op() const {
-      return static_cast<vk::BlendOp>(alpha_blend_op);
-    }
-    bool get_primitive_restart() const {
-      return static_cast<bool>(primitive_restart);
-    }
+    vk::BlendOp get_alpha_blend_op() const { return static_cast<vk::BlendOp>(alpha_blend_op); }
+    bool get_primitive_restart() const { return static_cast<bool>(primitive_restart); }
     vk::PrimitiveTopology get_primitive_topology() const {
       return static_cast<vk::PrimitiveTopology>(primitive_topology);
     }
@@ -234,32 +211,28 @@ class CommandBufferPipelineState {
     vk::VertexInputRate input_rates[VulkanLimits::kNumVertexBuffers];
   };
 
-  vk::Pipeline BuildGraphicsPipeline(const PipelineLayout* layout,
-                                     ShaderProgram* program);
+  vk::Pipeline BuildGraphicsPipeline(const PipelineLayout* layout, ShaderProgram* program);
 
   // Helper functions for BuildGraphicsPipeline().
   static void InitPipelineColorBlendStateCreateInfo(
       vk::PipelineColorBlendStateCreateInfo* info,
       vk::PipelineColorBlendAttachmentState* blend_attachments,
-      const impl::PipelineLayoutSpec& pipeline_layout_spec,
-      const StaticState& static_state,
-      const PotentialStaticState& potential_static_state,
-      const impl::RenderPass* render_pass, uint32_t current_subpass);
-  static void InitPipelineDepthStencilStateCreateInfo(
-      vk::PipelineDepthStencilStateCreateInfo* info,
-      const StaticState& static_state, bool has_depth, bool has_stencil);
+      const impl::PipelineLayoutSpec& pipeline_layout_spec, const StaticState& static_state,
+      const PotentialStaticState& potential_static_state, const impl::RenderPass* render_pass,
+      uint32_t current_subpass);
+  static void InitPipelineDepthStencilStateCreateInfo(vk::PipelineDepthStencilStateCreateInfo* info,
+                                                      const StaticState& static_state,
+                                                      bool has_depth, bool has_stencil);
   static void InitPipelineVertexInputStateCreateInfo(
       vk::PipelineVertexInputStateCreateInfo* info,
       vk::VertexInputAttributeDescription* vertex_input_attribs,
-      vk::VertexInputBindingDescription* vertex_input_bindings,
-      uint32_t attr_mask, const VertexAttributeState* vertex_attributes,
-      const VertexBindingState& vertex_bindings);
-  static void InitPipelineMultisampleStateCreateInfo(
-      vk::PipelineMultisampleStateCreateInfo* info,
-      const StaticState& static_state, vk::SampleCountFlagBits subpass_samples);
+      vk::VertexInputBindingDescription* vertex_input_bindings, uint32_t attr_mask,
+      const VertexAttributeState* vertex_attributes, const VertexBindingState& vertex_bindings);
+  static void InitPipelineMultisampleStateCreateInfo(vk::PipelineMultisampleStateCreateInfo* info,
+                                                     const StaticState& static_state,
+                                                     vk::SampleCountFlagBits subpass_samples);
   static void InitPipelineRasterizationStateCreateInfo(
-      vk::PipelineRasterizationStateCreateInfo* info,
-      const StaticState& static_state);
+      vk::PipelineRasterizationStateCreateInfo* info, const StaticState& static_state);
 
   impl::RenderPass* render_pass_ = nullptr;
 
@@ -268,8 +241,7 @@ class CommandBufferPipelineState {
 
   StaticState static_state_ = {};
   PotentialStaticState potential_static_state_ = {};
-  VertexAttributeState vertex_attributes_[VulkanLimits::kNumVertexAttributes] =
-      {};
+  VertexAttributeState vertex_attributes_[VulkanLimits::kNumVertexAttributes] = {};
   VertexBindingState vertex_bindings_ = {};
   uint32_t active_vertex_bindings_ = 0;
   uint32_t dirty_vertex_bindings_ = 0;

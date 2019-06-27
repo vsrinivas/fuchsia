@@ -57,10 +57,8 @@ TEST(TouchpadTest, ParadiseV1) {
   EXPECT_EQ(5UL, ts.touch_points());
   EXPECT_EQ(ui_input::Touch::Capabilities::CONTACT_ID |
                 ui_input::Touch::Capabilities::CONTACT_COUNT |
-                ui_input::Touch::Capabilities::BUTTON |
-                ui_input::Touch::Capabilities::TIP_SWITCH |
-                ui_input::Touch::Capabilities::X |
-                ui_input::Touch::Capabilities::Y,
+                ui_input::Touch::Capabilities::BUTTON | ui_input::Touch::Capabilities::TIP_SWITCH |
+                ui_input::Touch::Capabilities::X | ui_input::Touch::Capabilities::Y,
             ts.capabilities());
   EXPECT_EQ(0, ts_desc.x_min);
   EXPECT_EQ(1030000, ts_desc.x_max);
@@ -83,8 +81,7 @@ TEST(TouchpadTest, ParadiseV1) {
   uint8_t *report_data = reinterpret_cast<uint8_t *>(&touchpad_v1_report);
 
   ui_input::Touch::Report report;
-  auto success =
-      ts.ParseReport(report_data, sizeof(touchpad_v1_report), &report);
+  auto success = ts.ParseReport(report_data, sizeof(touchpad_v1_report), &report);
   EXPECT_EQ(true, success);
 
   EXPECT_EQ(2UL, report.contact_count);
@@ -113,10 +110,8 @@ TEST(TouchpadTest, ParadiseV2) {
   EXPECT_EQ(5UL, ts.touch_points());
   EXPECT_EQ(ui_input::Touch::Capabilities::CONTACT_ID |
                 ui_input::Touch::Capabilities::CONTACT_COUNT |
-                ui_input::Touch::Capabilities::BUTTON |
-                ui_input::Touch::Capabilities::TIP_SWITCH |
-                ui_input::Touch::Capabilities::X |
-                ui_input::Touch::Capabilities::Y,
+                ui_input::Touch::Capabilities::BUTTON | ui_input::Touch::Capabilities::TIP_SWITCH |
+                ui_input::Touch::Capabilities::X | ui_input::Touch::Capabilities::Y,
             ts.capabilities());
   EXPECT_EQ(0, ts_desc.x_min);
   EXPECT_EQ(1030000, ts_desc.x_max);
@@ -139,8 +134,7 @@ TEST(TouchpadTest, ParadiseV2) {
   uint8_t *report_data = reinterpret_cast<uint8_t *>(&touchpad_v2_report);
 
   ui_input::Touch::Report report;
-  auto success =
-      ts.ParseReport(report_data, sizeof(touchpad_v2_report), &report);
+  auto success = ts.ParseReport(report_data, sizeof(touchpad_v2_report), &report);
   EXPECT_EQ(true, success);
 
   EXPECT_EQ(2UL, report.contact_count);

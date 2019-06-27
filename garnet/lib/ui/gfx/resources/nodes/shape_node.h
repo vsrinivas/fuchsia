@@ -5,9 +5,8 @@
 #ifndef GARNET_LIB_UI_GFX_RESOURCES_NODES_SHAPE_NODE_H_
 #define GARNET_LIB_UI_GFX_RESOURCES_NODES_SHAPE_NODE_H_
 
-#include "garnet/lib/ui/gfx/resources/nodes/node.h"
-
 #include "garnet/lib/ui/gfx/resources/material.h"
+#include "garnet/lib/ui/gfx/resources/nodes/node.h"
 #include "garnet/lib/ui/gfx/resources/shapes/shape.h"
 
 namespace scenic_impl {
@@ -27,8 +26,7 @@ class ShapeNode final : public Node {
 
   void Accept(class ResourceVisitor* visitor) override;
 
-  bool GetIntersection(const escher::ray4& ray,
-                       float* out_distance) const override;
+  bool GetIntersection(const escher::ray4& ray, float* out_distance) const override;
 
  private:
   MaterialPtr material_;

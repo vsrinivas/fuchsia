@@ -51,17 +51,15 @@ struct PipelineLayoutSpec : public Hashable {
 
   PipelineLayoutSpec(
       uint32_t attribute_mask, uint32_t render_target_mask,
-      const std::array<DescriptorSetLayout, VulkanLimits::kNumDescriptorSets>&
-          layouts,
-      const std::array<vk::PushConstantRange, kMaxPushConstantRanges>& ranges,
-      uint32_t num_ranges, SamplerPtr immutable_sampler)
+      const std::array<DescriptorSetLayout, VulkanLimits::kNumDescriptorSets>& layouts,
+      const std::array<vk::PushConstantRange, kMaxPushConstantRanges>& ranges, uint32_t num_ranges,
+      SamplerPtr immutable_sampler)
       : immutable_sampler_(immutable_sampler),
         attribute_mask_(attribute_mask),
         render_target_mask_(render_target_mask),
         descriptor_set_layouts_(layouts),
         num_push_constant_ranges_(num_ranges),
         push_constant_ranges_(ranges) {
-
     FXL_DCHECK(num_ranges < kMaxPushConstantRanges);
     for (uint32_t i = 0; i < VulkanLimits::kNumDescriptorSets; ++i) {
       if (descriptor_set_layouts_[i].stages) {
@@ -84,15 +82,11 @@ struct PipelineLayoutSpec : public Hashable {
   uint32_t render_target_mask() const { return render_target_mask_; }
 
   uint32_t descriptor_set_mask() const { return descriptor_set_mask_; }
-  const DescriptorSetLayout&
-  descriptor_set_layouts(uint32_t index) const {
+  const DescriptorSetLayout& descriptor_set_layouts(uint32_t index) const {
     return descriptor_set_layouts_[index];
   }
-  uint32_t num_push_constant_ranges() const {
-    return num_push_constant_ranges_;
-  }
-  const std::array<vk::PushConstantRange, kMaxPushConstantRanges>&
-  push_constant_ranges() const {
+  uint32_t num_push_constant_ranges() const { return num_push_constant_ranges_; }
+  const std::array<vk::PushConstantRange, kMaxPushConstantRanges>& push_constant_ranges() const {
     return push_constant_ranges_;
   }
 
@@ -109,11 +103,9 @@ struct PipelineLayoutSpec : public Hashable {
   // TODO(ES-83): document.
   uint32_t render_target_mask_ = 0;
   uint32_t descriptor_set_mask_ = 0;
-  std::array<DescriptorSetLayout, VulkanLimits::kNumDescriptorSets>
-      descriptor_set_layouts_ = {};
+  std::array<DescriptorSetLayout, VulkanLimits::kNumDescriptorSets> descriptor_set_layouts_ = {};
   uint32_t num_push_constant_ranges_ = 0;
-  std::array<vk::PushConstantRange, kMaxPushConstantRanges>
-      push_constant_ranges_ = {};
+  std::array<vk::PushConstantRange, kMaxPushConstantRanges> push_constant_ranges_ = {};
 
   // Allows quick comparison to decide whether the push constant ranges have
   // changed.  If so, all descriptor sets are invalidated.
@@ -139,16 +131,14 @@ class PipelineLayout : public Resource {
   static const ResourceTypeInfo kTypeInfo;
   const ResourceTypeInfo& type_info() const override { return kTypeInfo; }
 
-  PipelineLayout(ResourceRecycler* resource_recycler,
-                 const impl::PipelineLayoutSpec& spec);
+  PipelineLayout(ResourceRecycler* resource_recycler, const impl::PipelineLayoutSpec& spec);
   ~PipelineLayout();
 
   vk::PipelineLayout vk() const { return pipeline_layout_; }
 
   const impl::PipelineLayoutSpec& spec() const { return spec_; }
 
-  impl::DescriptorSetAllocator* GetDescriptorSetAllocator(
-      unsigned set_index) const {
+  impl::DescriptorSetAllocator* GetDescriptorSetAllocator(unsigned set_index) const {
     FXL_DCHECK(set_index < VulkanLimits::kNumDescriptorSets);
     return descriptor_set_allocators_[set_index];
   }
@@ -158,16 +148,14 @@ class PipelineLayout : public Resource {
   // This PipelineLayoutSpec will be used for hashes and equality tests, so it
   // should match the construction parameter and not be mutated.
   const impl::PipelineLayoutSpec spec_;
-  impl::DescriptorSetAllocator*
-      descriptor_set_allocators_[VulkanLimits::kNumDescriptorSets] = {};
+  impl::DescriptorSetAllocator* descriptor_set_allocators_[VulkanLimits::kNumDescriptorSets] = {};
 };
 
 using PipelineLayoutPtr = fxl::RefPtr<PipelineLayout>;
 
 // Inline function definitions.
 
-inline bool impl::PipelineLayoutSpec::operator==(
-    const impl::PipelineLayoutSpec& other) const {
+inline bool impl::PipelineLayoutSpec::operator==(const impl::PipelineLayoutSpec& other) const {
   return immutable_sampler_ == other.immutable_sampler_ &&
          attribute_mask_ == other.attribute_mask_ &&
          render_target_mask_ == other.render_target_mask_ &&
@@ -186,9 +174,8 @@ inline Hash impl::PipelineLayoutSpec::GenerateHash() const {
   h.u32(render_target_mask_);
 
   h.u32(descriptor_set_mask_);
-  ForEachBitIndex(descriptor_set_mask_, [&](uint32_t index) {
-    h.struc(descriptor_set_layouts_[index]);
-  });
+  ForEachBitIndex(descriptor_set_mask_,
+                  [&](uint32_t index) { h.struc(descriptor_set_layouts_[index]); });
 
   // Instead of hashing the push constant ranges again, just hash the hash of
   // the push constant ranges that was already computed in the constructor.

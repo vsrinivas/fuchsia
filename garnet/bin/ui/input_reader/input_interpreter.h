@@ -42,9 +42,8 @@ class InputInterpreter {
     kTouchscreen,
   };
 
-  static std::unique_ptr<InputInterpreter> Open(
-      int dirfd, std::string filename,
-      fuchsia::ui::input::InputDeviceRegistry* registry);
+  static std::unique_ptr<InputInterpreter> Open(int dirfd, std::string filename,
+                                                fuchsia::ui::input::InputDeviceRegistry* registry);
 
   InputInterpreter(std::unique_ptr<HidDecoder> hid_decoder,
                    fuchsia::ui::input::InputDeviceRegistry* registry);
@@ -84,8 +83,7 @@ class InputInterpreter {
   // order to initialize the device. Returns true if the report descriptor
   // doesn't match, or if it matches and successfully initializes the device.
   // Only returns false if there is an error.
-  bool ParseHidFeatureReportDescriptor(
-      const hid::ReportDescriptor& report_desc);
+  bool ParseHidFeatureReportDescriptor(const hid::ReportDescriptor& report_desc);
 
   // Helper function called during Init() that determines which protocol
   // is going to be used. It is responsible for reading the HID device's

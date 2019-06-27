@@ -10,7 +10,9 @@
         "binary": "test/gfx_apptests"
     },
     "sandbox": {
-        "features": [ "vulkan" ],
+        "features": [
+            "vulkan"
+        ],
         "services": [
             "fuchsia.vulkan.loader.Loader",
             "fuchsia.scheduler.ProfileProvider"

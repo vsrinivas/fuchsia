@@ -19,8 +19,8 @@ TEST(SensorTest, LightMeter) {
   ui_input::Sensor sensor;
   hid::DeviceDescriptor *hid_desc = nullptr;
 
-  auto parse_res = hid::ParseReportDescriptor(
-      lightmeter_report_desc, sizeof(lightmeter_report_desc), &hid_desc);
+  auto parse_res =
+      hid::ParseReportDescriptor(lightmeter_report_desc, sizeof(lightmeter_report_desc), &hid_desc);
   ASSERT_EQ(hid::ParseResult::kParseOk, parse_res);
   ASSERT_NE(0UL, hid_desc->rep_count);
   ASSERT_NE(0UL, hid_desc->report[0].input_count);
@@ -32,8 +32,7 @@ TEST(SensorTest, LightMeter) {
   ASSERT_EQ(ui_input::Protocol::Sensor, descriptor.protocol);
   ASSERT_EQ(true, descriptor.has_sensor);
   ASSERT_NE(nullptr, descriptor.sensor_descriptor);
-  ASSERT_EQ(fuchsia::ui::input::SensorType::LIGHTMETER,
-            descriptor.sensor_descriptor->type);
+  ASSERT_EQ(fuchsia::ui::input::SensorType::LIGHTMETER, descriptor.sensor_descriptor->type);
 
   uint8_t report_data[] = {
       0x04,        // Report ID
@@ -43,8 +42,7 @@ TEST(SensorTest, LightMeter) {
   auto sensor_report = fuchsia::ui::input::InputReport::New();
   sensor_report->sensor = fuchsia::ui::input::SensorReport::New();
 
-  success =
-      sensor.ParseReport(report_data, sizeof(report_data), sensor_report.get());
+  success = sensor.ParseReport(report_data, sizeof(report_data), sensor_report.get());
   EXPECT_EQ(true, success);
 
   EXPECT_EQ(0x2412, sensor_report->sensor->scalar());
@@ -54,8 +52,8 @@ TEST(SensorTest, Accelerometer) {
   ui_input::Sensor sensor;
   hid::DeviceDescriptor *hid_desc = nullptr;
 
-  auto parse_res = hid::ParseReportDescriptor(
-      accelerometer_report_desc, sizeof(accelerometer_report_desc), &hid_desc);
+  auto parse_res = hid::ParseReportDescriptor(accelerometer_report_desc,
+                                              sizeof(accelerometer_report_desc), &hid_desc);
   ASSERT_EQ(hid::ParseResult::kParseOk, parse_res);
   ASSERT_NE(0UL, hid_desc->rep_count);
   ASSERT_NE(0UL, hid_desc->report[0].input_count);
@@ -67,8 +65,7 @@ TEST(SensorTest, Accelerometer) {
   ASSERT_EQ(ui_input::Protocol::Sensor, descriptor.protocol);
   ASSERT_EQ(true, descriptor.has_sensor);
   ASSERT_NE(nullptr, descriptor.sensor_descriptor);
-  ASSERT_EQ(fuchsia::ui::input::SensorType::ACCELEROMETER,
-            descriptor.sensor_descriptor->type);
+  ASSERT_EQ(fuchsia::ui::input::SensorType::ACCELEROMETER, descriptor.sensor_descriptor->type);
 
   uint8_t report_data[] = {
       0x01,        // Report ID
@@ -80,8 +77,7 @@ TEST(SensorTest, Accelerometer) {
   auto sensor_report = fuchsia::ui::input::InputReport::New();
   sensor_report->sensor = fuchsia::ui::input::SensorReport::New();
 
-  success =
-      sensor.ParseReport(report_data, sizeof(report_data), sensor_report.get());
+  success = sensor.ParseReport(report_data, sizeof(report_data), sensor_report.get());
   EXPECT_EQ(true, success);
 
   EXPECT_EQ(0xFF, sensor_report->sensor->vector()[0]);

@@ -25,8 +25,7 @@
 
 namespace examples {
 
-class TileView : public scenic::BaseView,
-                 public fuchsia::ui::policy::Presenter {
+class TileView : public scenic::BaseView, public fuchsia::ui::policy::Presenter {
  public:
   TileView(scenic::ViewContext context, TileParams tile_params);
 
@@ -34,10 +33,8 @@ class TileView : public scenic::BaseView,
 
  private:
   struct ViewData {
-    explicit ViewData(std::string label,
-                      fuchsia::ui::views::ViewHolderToken view_holder_token,
-                      fuchsia::sys::ComponentControllerPtr controller,
-                      scenic::Session* session);
+    explicit ViewData(std::string label, fuchsia::ui::views::ViewHolderToken view_holder_token,
+                      fuchsia::sys::ComponentControllerPtr controller, scenic::Session* session);
     ~ViewData() = default;
 
     fuchsia::sys::ComponentControllerPtr controller;
@@ -50,29 +47,24 @@ class TileView : public scenic::BaseView,
   };
 
   // |scenic::SessionListener|
-  void OnScenicError(std::string error) override {
-    FXL_LOG(ERROR) << "Scenic Error " << error;
-  }
+  void OnScenicError(std::string error) override { FXL_LOG(ERROR) << "Scenic Error " << error; }
 
   void OnChildAttached(uint32_t view_holder_id);
 
   void OnChildUnavailable(uint32_t view_holder_id);
 
   // |scenic::BaseView|
-  void OnSceneInvalidated(
-      fuchsia::images::PresentationInfo presentation_info) override;
+  void OnSceneInvalidated(fuchsia::images::PresentationInfo presentation_info) override;
 
   // |scenic::BaseView|
   void OnScenicEvent(fuchsia::ui::scenic::Event event) override;
 
   // |fuchsia::ui::policy::Presenter|
   void PresentView(fuchsia::ui::views::ViewHolderToken view_holder_token,
-                   fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>
-                       presentation) final;
+                   fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation) final;
 
-  void HACK_SetRendererParams(
-      bool enable_clipping,
-      std::vector<fuchsia::ui::gfx::RendererParam> params) override {}
+  void HACK_SetRendererParams(bool enable_clipping,
+                              std::vector<fuchsia::ui::gfx::RendererParam> params) override {}
 
   // Set up environment with a |Presenter| service.
   // We launch apps with this environment.
@@ -83,8 +75,7 @@ class TileView : public scenic::BaseView,
 
   zx::channel OpenAsDirectory();
 
-  void AddChildView(std::string label,
-                    fuchsia::ui::views::ViewHolderToken view_holder_token,
+  void AddChildView(std::string label, fuchsia::ui::views::ViewHolderToken view_holder_token,
                     fuchsia::sys::ComponentControllerPtr);
   void RemoveChildView(uint32_t child_key);
 

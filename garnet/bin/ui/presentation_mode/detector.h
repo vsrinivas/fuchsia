@@ -5,13 +5,13 @@
 #ifndef GARNET_BIN_UI_PRESENTATION_MODE_DETECTOR_H_
 #define GARNET_BIN_UI_PRESENTATION_MODE_DETECTOR_H_
 
+#include <fuchsia/ui/input/cpp/fidl.h>
+#include <fuchsia/ui/policy/cpp/fidl.h>
+
 #include <array>
 #include <memory>
 #include <utility>
 #include <vector>
-
-#include <fuchsia/ui/input/cpp/fidl.h>
-#include <fuchsia/ui/policy/cpp/fidl.h>
 
 namespace presentation_mode {
 
@@ -42,8 +42,7 @@ class Detector final {
   // Return <true,mode> if a mode was recognized and stable.
   // Otherwise return <false,_>, where the second value is undefined.
   std::pair<bool, fuchsia::ui::policy::PresentationMode> Update(
-      const fuchsia::ui::input::SensorDescriptor& sensor,
-      fuchsia::ui::input::InputReport event);
+      const fuchsia::ui::input::SensorDescriptor& sensor, fuchsia::ui::input::InputReport event);
 
  private:
   // Interpretation of X, Y, Z, based on reading words on the base (keyboard) or

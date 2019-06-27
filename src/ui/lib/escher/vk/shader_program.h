@@ -32,9 +32,8 @@ class ShaderProgram : public Resource, private ShaderModuleListener {
   const ResourceTypeInfo& type_info() const override { return kTypeInfo; }
 
   // Graphics program.
-  static ShaderProgramPtr NewGraphics(
-      ResourceRecycler* resource_recycler,
-      std::vector<ShaderModulePtr> shader_modules);
+  static ShaderProgramPtr NewGraphics(ResourceRecycler* resource_recycler,
+                                      std::vector<ShaderModulePtr> shader_modules);
 
   // Compute program.
   static ShaderProgramPtr NewCompute(ResourceRecycler* resource_recycler,
@@ -64,10 +63,8 @@ class ShaderProgram : public Resource, private ShaderModuleListener {
 
  private:
   // Called by NewGraphics() and NewCompute(), respectively.
-  ShaderProgram(ResourceRecycler* resource_recycler,
-                std::vector<ShaderModulePtr> shader_modules);
-  ShaderProgram(ResourceRecycler* resource_recycler,
-                ShaderModulePtr shader_module);
+  ShaderProgram(ResourceRecycler* resource_recycler, std::vector<ShaderModulePtr> shader_modules);
+  ShaderProgram(ResourceRecycler* resource_recycler, ShaderModulePtr shader_module);
 
   // Used by ClearCurrentPipelineLayout() and ClearPipelineStash() as an easy
   // way to have the ResourceRecycler keep the obsolete pipelines alive until
@@ -89,8 +86,7 @@ class ShaderProgram : public Resource, private ShaderModuleListener {
 };
 
 // Inline function definitions.
-inline const ShaderModulePtr& ShaderProgram::GetModuleForStage(
-    ShaderStage stage) const {
+inline const ShaderModulePtr& ShaderProgram::GetModuleForStage(ShaderStage stage) const {
   FXL_DCHECK(stage != ShaderStage::kEnumCount);
   return shader_modules_[EnumCast(stage)];
 }

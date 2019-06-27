@@ -26,19 +26,15 @@
 
 namespace {
 
-int64_t InputEventTimestampNow() {
-  return fxl::TimePoint::Now().ToEpochDelta().ToNanoseconds();
-}
+int64_t InputEventTimestampNow() { return fxl::TimePoint::Now().ToEpochDelta().ToNanoseconds(); }
 
 }  // namespace
 
 namespace input {
 class InputApp {
  public:
-  InputApp(async::Loop* loop)
-      : loop_(loop), component_context_(sys::ComponentContext::Create()) {
-    registry_ = component_context_->svc()
-                    ->Connect<fuchsia::ui::input::InputDeviceRegistry>();
+  InputApp(async::Loop* loop) : loop_(loop), component_context_(sys::ComponentContext::Create()) {
+    registry_ = component_context_->svc()->Connect<fuchsia::ui::input::InputDeviceRegistry>();
   }
 
   ~InputApp() {}
@@ -87,10 +83,8 @@ class InputApp {
       if (positional_args[0] == "tap") {
         uint32_t tap_event_count = 1;
         std::string tap_event_count_str;
-        if (command_line.GetOptionValue("tap_event_count",
-                                        &tap_event_count_str)) {
-          if (!fxl::StringToNumberWithError(tap_event_count_str,
-                                            &tap_event_count)) {
+        if (command_line.GetOptionValue("tap_event_count", &tap_event_count_str)) {
+          if (!fxl::StringToNumberWithError(tap_event_count_str, &tap_event_count)) {
             Error("Invalid tap_event_count parameter");
             return;
           }
@@ -99,10 +93,8 @@ class InputApp {
       } else {  // "swipe"
         uint32_t move_event_count = 100;
         std::string move_event_count_str;
-        if (command_line.GetOptionValue("move_event_count",
-                                        &move_event_count_str)) {
-          if (!fxl::StringToNumberWithError(move_event_count_str,
-                                            &move_event_count)) {
+        if (command_line.GetOptionValue("move_event_count", &move_event_count_str)) {
+          if (!fxl::StringToNumberWithError(move_event_count_str, &move_event_count)) {
             Error("Invalid move_event_count parameter");
             return;
           }
@@ -124,8 +116,7 @@ class InputApp {
   void Usage() {
     // Keep this up to date with README.md.
     // Until we have standardized usage doc formatting, let's do 100 cols.
-    std::cout
-        << R"END(usage: input [<options>] text|keyevent|tap|swipe|media_button <args>
+    std::cout << R"END(usage: input [<options>] text|keyevent|tap|swipe|media_button <args>
   input text <text>
   input keyevent <hid_usage (int)>
   input tap <x> <y>
@@ -187,8 +178,7 @@ For further details, see README.md.
     loop_->Quit();
   }
 
-  fuchsia::ui::input::InputDevicePtr RegisterTouchscreen(uint32_t width,
-                                                         uint32_t height) {
+  fuchsia::ui::input::InputDevicePtr RegisterTouchscreen(uint32_t width, uint32_t height) {
     fuchsia::ui::input::InputDevicePtr input_device;
 
     fuchsia::ui::input::TouchscreenDescriptorPtr touchscreen =
@@ -211,8 +201,7 @@ For further details, see README.md.
     fuchsia::ui::input::KeyboardDescriptorPtr keyboard =
         fuchsia::ui::input::KeyboardDescriptor::New();
     keyboard->keys.reserve(HID_USAGE_KEY_RIGHT_GUI - HID_USAGE_KEY_A);
-    for (uint32_t usage = HID_USAGE_KEY_A; usage < HID_USAGE_KEY_RIGHT_GUI;
-         ++usage) {
+    for (uint32_t usage = HID_USAGE_KEY_A; usage < HID_USAGE_KEY_RIGHT_GUI; ++usage) {
       keyboard->keys.push_back(usage);
     }
     fuchsia::ui::input::DeviceDescriptor descriptor;
@@ -227,8 +216,7 @@ For further details, see README.md.
   fuchsia::ui::input::InputDevicePtr RegisterMediaButtons() {
     fuchsia::ui::input::MediaButtonsDescriptorPtr mediabuttons =
         fuchsia::ui::input::MediaButtonsDescriptor::New();
-    mediabuttons->buttons = fuchsia::ui::input::kMicMute |
-                            fuchsia::ui::input::kVolumeUp |
+    mediabuttons->buttons = fuchsia::ui::input::kMicMute | fuchsia::ui::input::kVolumeUp |
                             fuchsia::ui::input::kVolumeDown;
     fuchsia::ui::input::DeviceDescriptor descriptor;
     descriptor.media_buttons = std::move(mediabuttons);
@@ -280,13 +268,11 @@ For further details, see README.md.
     }
 
     fuchsia::ui::input::InputDevicePtr input_device = RegisterMediaButtons();
-    SendMediaButton(std::move(input_device), mic_mute, volume_up, volume_down,
-                    reset);
+    SendMediaButton(std::move(input_device), mic_mute, volume_up, volume_down, reset);
   }
 
-  void SendMediaButton(fuchsia::ui::input::InputDevicePtr input_device,
-                       bool mic_mute, bool volume_up, bool volume_down,
-                       bool reset) {
+  void SendMediaButton(fuchsia::ui::input::InputDevicePtr input_device, bool mic_mute,
+                       bool volume_up, bool volume_down, bool reset) {
     TRACE_DURATION("input", "SendMediaButton");
     fuchsia::ui::input::MediaButtonsReportPtr media_buttons =
         fuchsia::ui::input::MediaButtonsReport::New();
@@ -305,8 +291,8 @@ For further details, see README.md.
     loop_->Quit();
   }
 
-  void TapEventCommand(const std::vector<std::string>& args,
-                       zx::duration duration, uint32_t tap_event_count) {
+  void TapEventCommand(const std::vector<std::string>& args, zx::duration duration,
+                       uint32_t tap_event_count) {
     if (args.size() != 3) {
       Usage();
       return;
@@ -332,8 +318,7 @@ For further details, see README.md.
     SendTap(x, y, tap_duration, tap_event_count, 0);
   }
 
-  void KeyEventCommand(const std::vector<std::string>& args,
-                       zx::duration duration) {
+  void KeyEventCommand(const std::vector<std::string>& args, zx::duration duration) {
     if (args.size() != 2) {
       Usage();
       return;
@@ -357,8 +342,7 @@ For further details, see README.md.
     SendKeyPress(std::move(input_device), usage, duration);
   }
 
-  void TextCommand(const std::vector<std::string>& args,
-                   zx::duration duration) {
+  void TextCommand(const std::vector<std::string>& args, zx::duration duration) {
     if (args.size() != 2) {
       Usage();
       return;
@@ -369,8 +353,7 @@ For further details, see README.md.
     // TODO(SCN-1068): Pull default keymap from environment if possible.
     KeySequence key_sequence;
     bool ok;
-    std::tie(key_sequence, ok) =
-        DeriveKeySequence(InvertKeymap(qwerty_map), args[1]);
+    std::tie(key_sequence, ok) = DeriveKeySequence(InvertKeymap(qwerty_map), args[1]);
     if (!ok) {
       Error("Cannot translate text to key sequence");
       return;
@@ -382,8 +365,8 @@ For further details, see README.md.
     SendText(std::move(input_device), std::move(key_sequence), duration);
   }
 
-  void SwipeEventCommand(const std::vector<std::string>& args,
-                         zx::duration duration, uint32_t move_event_count) {
+  void SwipeEventCommand(const std::vector<std::string>& args, zx::duration duration,
+                         uint32_t move_event_count) {
     if (args.size() != 5) {
       Usage();
       return;
@@ -408,14 +391,13 @@ For further details, see README.md.
       return;
     }
 
-    FXL_VLOG(1) << "SwipeEvent " << x0 << "x" << y0 << " -> " << x1 << "x"
-                << y1;
+    FXL_VLOG(1) << "SwipeEvent " << x0 << "x" << y0 << " -> " << x1 << "x" << y1;
 
     SendSwipe(x0, y0, x1, y1, duration, move_event_count);
   }
 
-  void SendTap(int32_t x, int32_t y, zx::duration tap_duration,
-               uint32_t max_tap_count, uint32_t cur_tap_count) {
+  void SendTap(int32_t x, int32_t y, zx::duration tap_duration, uint32_t max_tap_count,
+               uint32_t cur_tap_count) {
     TRACE_DURATION("input", "SendTap");
 
     // DOWN
@@ -460,12 +442,11 @@ For further details, see README.md.
         tap_duration);
   }
 
-  void SendKeyPress(fuchsia::ui::input::InputDevicePtr input_device,
-                    uint32_t usage, zx::duration duration) {
+  void SendKeyPress(fuchsia::ui::input::InputDevicePtr input_device, uint32_t usage,
+                    zx::duration duration) {
     TRACE_DURATION("input", "SendKeyPress");
     // PRESSED
-    fuchsia::ui::input::KeyboardReportPtr keyboard =
-        fuchsia::ui::input::KeyboardReport::New();
+    fuchsia::ui::input::KeyboardReportPtr keyboard = fuchsia::ui::input::KeyboardReport::New();
     keyboard->pressed_keys.push_back(usage);
 
     fuchsia::ui::input::InputReport report;
@@ -503,8 +484,7 @@ For further details, see README.md.
       loop_->Quit();
       return;
     }
-    fuchsia::ui::input::KeyboardReportPtr keyboard =
-        std::move(key_sequence[at]);
+    fuchsia::ui::input::KeyboardReportPtr keyboard = std::move(key_sequence[at]);
 
     fuchsia::ui::input::InputReport report;
     report.event_time = InputEventTimestampNow();
@@ -520,18 +500,15 @@ For further details, see README.md.
 
     async::PostDelayedTask(
         async_get_default_dispatcher(),
-        [this, device = std::move(input_device),
-         key_sequence = std::move(key_sequence), duration, at]() mutable {
-          SendText(std::move(device), std::move(key_sequence), duration,
-                   at + 1);
-        },
+        [this, device = std::move(input_device), key_sequence = std::move(key_sequence), duration,
+         at]() mutable { SendText(std::move(device), std::move(key_sequence), duration, at + 1); },
         stroke_duration);
     // If the sequence is empty at this point, the next iteration (Quit) is
     // scheduled asap.
   }
 
-  void SendSwipe(int32_t x0, int32_t y0, int32_t x1, int32_t y1,
-                 zx::duration duration, uint32_t move_event_count) {
+  void SendSwipe(int32_t x0, int32_t y0, int32_t x1, int32_t y1, zx::duration duration,
+                 uint32_t move_event_count) {
     TRACE_DURATION("input", "SendSwipe");
 
     zx::duration swipe_event_delay = duration;
@@ -571,8 +548,7 @@ For further details, see README.md.
               fuchsia::ui::input::TouchscreenReport::New();
           touchscreen->touches.resize(0);
 
-          fuchsia::ui::input::InputReport report =
-              fuchsia::ui::input::InputReport();
+          fuchsia::ui::input::InputReport report = fuchsia::ui::input::InputReport();
           report.event_time = InputEventTimestampNow();
           report.touchscreen = std::move(touchscreen);
           FXL_VLOG(1) << "SendSwipe " << report;
@@ -618,8 +594,7 @@ int main(int argc, char** argv) {
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   input::InputApp app(&loop);
-  async::PostTask(loop.dispatcher(),
-                  [&app, command_line] { app.Run(command_line); });
+  async::PostTask(loop.dispatcher(), [&app, command_line] { app.Run(command_line); });
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher(), "input");
   loop.Run();
   return 0;

@@ -17,9 +17,7 @@ const std::string kDeviceName = "MockHidDecoder";
 
 MockHidDecoder::~MockHidDecoder() = default;
 
-fxl::WeakPtr<MockHidDecoder> MockHidDecoder::GetWeakPtr() {
-  return weak_ptr_factory_.GetWeakPtr();
-}
+fxl::WeakPtr<MockHidDecoder> MockHidDecoder::GetWeakPtr() { return weak_ptr_factory_.GetWeakPtr(); }
 
 const std::string& MockHidDecoder::name() const { return kDeviceName; }
 
@@ -38,8 +36,7 @@ HidDecoder::BootMode MockHidDecoder::ReadBootMode() const { return boot_mode_; }
 // We don't test this function so it is a stub for now.
 void MockHidDecoder::SetupDevice(Device device) { return; }
 
-const std::vector<uint8_t>& MockHidDecoder::ReadReportDescriptor(
-    int* bytes_read) {
+const std::vector<uint8_t>& MockHidDecoder::ReadReportDescriptor(int* bytes_read) {
   FXL_CHECK(report_descriptor_.length != 0);
   *bytes_read = report_descriptor_.length;
   return report_descriptor_.data;
@@ -58,9 +55,7 @@ zx_status_t MockHidDecoder::Send(ReportType type, uint8_t report_id,
   return ZX_OK;
 }
 
-std::vector<uint8_t> MockHidDecoder::GetLastOutputReport() {
-  return last_output_report_;
-}
+std::vector<uint8_t> MockHidDecoder::GetLastOutputReport() { return last_output_report_; }
 
 zx_status_t MockHidDecoder::GetReport(ReportType type, uint8_t report_id,
                                       std::vector<uint8_t>* report) {
@@ -78,16 +73,13 @@ void MockHidDecoder::SetHidDecoderRead(std::vector<uint8_t> bytes, int length) {
   Signal();
 }
 
-void MockHidDecoder::SetReportDescriptor(std::vector<uint8_t> bytes,
-                                         int length) {
+void MockHidDecoder::SetReportDescriptor(std::vector<uint8_t> bytes, int length) {
   FXL_CHECK(report_descriptor_.length == 0);
   report_descriptor_.data = std::move(bytes);
   report_descriptor_.length = length;
 }
 
-void MockHidDecoder::SetBootMode(HidDecoder::BootMode boot_mode) {
-  boot_mode_ = boot_mode;
-}
+void MockHidDecoder::SetBootMode(HidDecoder::BootMode boot_mode) { boot_mode_ = boot_mode; }
 
 void MockHidDecoder::Close() {
   // Signalling while the device is not readable indicates that it should be
@@ -96,9 +88,7 @@ void MockHidDecoder::Close() {
   Signal();
 }
 
-void MockHidDecoder::Signal() {
-  FXL_CHECK(event_.signal(0, ZX_USER_SIGNAL_0) == ZX_OK);
-}
+void MockHidDecoder::Signal() { FXL_CHECK(event_.signal(0, ZX_USER_SIGNAL_0) == ZX_OK); }
 
 void MockHidDecoder::ClearReport() {
   report_.length = 0;

@@ -27,8 +27,7 @@ Quad::Quad(vec3 p0, vec3 p1, vec3 p2, vec3 p3) {
 Quad Quad::CreateFromRect(vec2 position, vec2 size, float z) {
   return Quad(vec3(position.x, position.y + size.y, z),
               vec3(position.x + size.x, position.y + size.y, z),
-              vec3(position.x + size.x, position.y, z),
-              vec3(position.x, position.y, z));
+              vec3(position.x + size.x, position.y, z), vec3(position.x, position.y, z));
 }
 
 Quad Quad::CreateFillClipSpace(float z) {

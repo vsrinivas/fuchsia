@@ -18,8 +18,7 @@ struct HashMapCollisionKey {
   int32_t unhashed_int;
 
   bool operator==(const HashMapCollisionKey& other) const {
-    return hashed_int == other.hashed_int &&
-           hashed_float == other.hashed_float &&
+    return hashed_int == other.hashed_int && hashed_float == other.hashed_float &&
            unhashed_int == other.unhashed_int;
   }
 

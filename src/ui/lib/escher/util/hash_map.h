@@ -21,16 +21,15 @@ namespace escher {
 template <typename T, class Enable = void>
 struct HashMapHasher {
   inline size_t operator()(const T& hashee) const {
-    return hash_fnv_1a_64(reinterpret_cast<const uint8_t*>(&hashee),
-                          sizeof(hashee));
+    return hash_fnv_1a_64(reinterpret_cast<const uint8_t*>(&hashee), sizeof(hashee));
   }
 };
 
 // Use SFINAE to provide a specialized implementation for any type that declares
 // a HashMapHasher type.
 template <typename T>
-struct HashMapHasher<T, typename std::enable_if<std::is_class<
-                            typename T::HashMapHasher>::value>::type> {
+struct HashMapHasher<
+    T, typename std::enable_if<std::is_class<typename T::HashMapHasher>::value>::type> {
   inline size_t operator()(const T& hashee) const {
     typename T::HashMapHasher h;
     return h(hashee);

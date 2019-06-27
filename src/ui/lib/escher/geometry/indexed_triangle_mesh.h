@@ -18,8 +18,8 @@ namespace escher {
 // as splitting an edge where it intersects a plane then using the same
 // interpolation parameter used to generate the new position to also interpolate
 // the other attribute values.
-template <typename PositionT, typename AttrT1 = nullptr_t,
-          typename AttrT2 = nullptr_t, typename AttrT3 = nullptr_t>
+template <typename PositionT, typename AttrT1 = nullptr_t, typename AttrT2 = nullptr_t,
+          typename AttrT3 = nullptr_t>
 struct IndexedTriangleMesh {
   using PositionType = PositionT;
   using AttributeType1 = AttrT1;
@@ -66,9 +66,7 @@ struct IndexedTriangleMesh {
   }
 
   // Return the total number of bytes used by vertex indices.
-  size_t total_index_bytes() const {
-    return index_count() * sizeof(MeshSpec::IndexType);
-  }
+  size_t total_index_bytes() const { return index_count() * sizeof(MeshSpec::IndexType); }
 
   size_t sizeof_attribute1() const {
     return std::is_same<AttrT1, nullptr_t>::value ? 0 : sizeof(AttrT1);
@@ -83,74 +81,60 @@ struct IndexedTriangleMesh {
   };
 
   // Return the total number of bytes used by vertex position data.
-  size_t total_position_bytes() const {
-    return vertex_count() * sizeof(PositionT);
-  }
+  size_t total_position_bytes() const { return vertex_count() * sizeof(PositionT); }
 
   // Return the total number of bytes used by non-position vertex attributes.
-  size_t total_attribute1_bytes() const {
-    return vertex_count() * sizeof_attribute1();
-  }
-  size_t total_attribute2_bytes() const {
-    return vertex_count() * sizeof_attribute2();
-  }
-  size_t total_attribute3_bytes() const {
-    return vertex_count() * sizeof_attribute3();
-  }
+  size_t total_attribute1_bytes() const { return vertex_count() * sizeof_attribute1(); }
+  size_t total_attribute2_bytes() const { return vertex_count() * sizeof_attribute2(); }
+  size_t total_attribute3_bytes() const { return vertex_count() * sizeof_attribute3(); }
 
   // Return the total number of bytes used by indices, positions, and other
   // attributes.
   size_t total_bytes() const {
-    return total_index_bytes() + total_position_bytes() +
-           total_attribute1_bytes() + total_attribute2_bytes() +
-           total_attribute3_bytes();
+    return total_index_bytes() + total_position_bytes() + total_attribute1_bytes() +
+           total_attribute2_bytes() + total_attribute3_bytes();
   }
 
   // Return true if the mesh passes basic sanity checks, and false otherwise.
   bool IsValid() const {
     if (index_count() % 3 != 0) {
-      FXL_LOG(ERROR) << "index-count must be a multiple of 3: "
-                     << index_count();
+      FXL_LOG(ERROR) << "index-count must be a multiple of 3: " << index_count();
       return false;
     }
     for (auto i : indices) {
       if (i >= vertex_count()) {
-        FXL_LOG(ERROR) << "index exceeds vertex-count: " << i << ", "
-                       << vertex_count();
+        FXL_LOG(ERROR) << "index exceeds vertex-count: " << i << ", " << vertex_count();
         return false;
       }
     }
     if (std::is_same<AttrT1, nullptr_t>::value) {
       if (attributes1.size() != 0) {
-        FXL_LOG(ERROR) << "count of null attribute1 must be zero: "
-                       << attributes1.size();
+        FXL_LOG(ERROR) << "count of null attribute1 must be zero: " << attributes1.size();
         return false;
       }
     } else if (attributes1.size() != vertex_count()) {
-      FXL_LOG(ERROR) << "count of attribute1 must match vertex-count: "
-                     << attributes1.size() << ", " << vertex_count();
+      FXL_LOG(ERROR) << "count of attribute1 must match vertex-count: " << attributes1.size()
+                     << ", " << vertex_count();
       return false;
     }
     if (std::is_same<AttrT2, nullptr_t>::value) {
       if (attributes2.size() != 0) {
-        FXL_LOG(ERROR) << "count of null attribute2 must be zero: "
-                       << attributes2.size();
+        FXL_LOG(ERROR) << "count of null attribute2 must be zero: " << attributes2.size();
         return false;
       }
     } else if (attributes2.size() != vertex_count()) {
-      FXL_LOG(ERROR) << "count of attribute2 must match vertex-count: "
-                     << attributes2.size() << ", " << vertex_count();
+      FXL_LOG(ERROR) << "count of attribute2 must match vertex-count: " << attributes2.size()
+                     << ", " << vertex_count();
       return false;
     }
     if (std::is_same<AttrT3, nullptr_t>::value) {
       if (attributes3.size() != 0) {
-        FXL_LOG(ERROR) << "count of null attribute3 must be zero: "
-                       << attributes3.size();
+        FXL_LOG(ERROR) << "count of null attribute3 must be zero: " << attributes3.size();
         return false;
       }
     } else if (attributes3.size() != vertex_count()) {
-      FXL_LOG(ERROR) << "count of attribute3 must match vertex-count: "
-                     << attributes3.size() << ", " << vertex_count();
+      FXL_LOG(ERROR) << "count of attribute3 must match vertex-count: " << attributes3.size()
+                     << ", " << vertex_count();
       return false;
     }
     // Valid!
@@ -162,44 +146,40 @@ struct IndexedTriangleMesh {
   // rotated clockwise.
   bool operator==(const IndexedTriangleMesh<PositionT, AttrT1>& other) const {
     return indices == other.indices && positions == other.positions &&
-           attributes1 == other.attributes1 &&
-           attributes2 == other.attributes2 && attributes3 == other.attributes3;
+           attributes1 == other.attributes1 && attributes2 == other.attributes2 &&
+           attributes3 == other.attributes3;
   }
 };
 
-template <typename AttrT1 = nullptr_t, typename AttrT2 = nullptr_t,
-          typename AttrT3 = nullptr_t>
+template <typename AttrT1 = nullptr_t, typename AttrT2 = nullptr_t, typename AttrT3 = nullptr_t>
 using IndexedTriangleMesh2d = IndexedTriangleMesh<vec2, AttrT1, AttrT2, AttrT3>;
 
-template <typename AttrT1 = nullptr_t, typename AttrT2 = nullptr_t,
-          typename AttrT3 = nullptr_t>
+template <typename AttrT1 = nullptr_t, typename AttrT2 = nullptr_t, typename AttrT3 = nullptr_t>
 using IndexedTriangleMesh3d = IndexedTriangleMesh<vec3, AttrT1, AttrT2, AttrT3>;
 
 // Print IndexedTriangleMesh on ostream.
 
 template <typename AttrT>
-void IndexedTriangleMeshPrintAttribute(std::ostream& str,
-                                       const std::vector<AttrT>& attributes,
+void IndexedTriangleMeshPrintAttribute(std::ostream& str, const std::vector<AttrT>& attributes,
                                        size_t index, const char* prefix) {
   str << prefix << attributes[index];
 }
 template <>
-inline void IndexedTriangleMeshPrintAttribute(
-    std::ostream& str, const std::vector<nullptr_t>& attributes, size_t index,
-    const char* prefix) {}
+inline void IndexedTriangleMeshPrintAttribute(std::ostream& str,
+                                              const std::vector<nullptr_t>& attributes,
+                                              size_t index, const char* prefix) {}
 template <typename PositionT, typename AttrT1, typename AttrT2, typename AttrT3>
-std::ostream& operator<<(
-    std::ostream& str,
-    const IndexedTriangleMesh<PositionT, AttrT1, AttrT2, AttrT3>& mesh) {
+std::ostream& operator<<(std::ostream& str,
+                         const IndexedTriangleMesh<PositionT, AttrT1, AttrT2, AttrT3>& mesh) {
   str << "IndexedTriangleMesh[indices: " << mesh.index_count()
       << " vertices:" << mesh.vertex_count() << "\n";
   for (size_t tri = 0; tri + 2 < mesh.index_count(); tri += 3) {
     uint32_t ind0 = mesh.indices[tri];
     uint32_t ind1 = mesh.indices[tri + 1];
     uint32_t ind2 = mesh.indices[tri + 2];
-    str << "tri " << tri / 3 << ": " << ind0 << "," << ind1 << "," << ind2
-        << "    " << mesh.positions[ind0] << "," << mesh.positions[ind1] << ","
-        << mesh.positions[ind2] << "\n";
+    str << "tri " << tri / 3 << ": " << ind0 << "," << ind1 << "," << ind2 << "    "
+        << mesh.positions[ind0] << "," << mesh.positions[ind1] << "," << mesh.positions[ind2]
+        << "\n";
   }
   for (size_t i = 0; i < mesh.vertex_count(); ++i) {
     str << "vert " << i << " pos: " << mesh.positions[i];

@@ -20,11 +20,9 @@
 
 namespace {
 
-#define HID_REPORT_TRACE_ID(trace_id, report_id) \
-  (((uint64_t)(report_id) << 32) | (trace_id))
+#define HID_REPORT_TRACE_ID(trace_id, report_id) (((uint64_t)(report_id) << 32) | (trace_id))
 
-bool log_err(zx_status_t status, const std::string& what,
-             const std::string& name) {
+bool log_err(zx_status_t status, const std::string& what, const std::string& name) {
   FXL_LOG(ERROR) << "hid: could not get " << what << " from " << name
                  << " (status=" << zx_status_get_string(status) << ")";
   return false;
@@ -41,8 +39,8 @@ FdioHidDecoder::~FdioHidDecoder() = default;
 
 bool FdioHidDecoder::Init() {
   uint16_t max_len = 0;
-  zx_status_t status = fuchsia_hardware_input_DeviceGetMaxInputReportSize(
-      caller_.borrow_channel(), &max_len);
+  zx_status_t status =
+      fuchsia_hardware_input_DeviceGetMaxInputReportSize(caller_.borrow_channel(), &max_len);
   report_.resize(max_len);
 
   zx_handle_t svc = caller_.borrow_channel();
@@ -64,23 +62,21 @@ bool FdioHidDecoder::Init() {
 
   // Get the report descriptor.
   uint16_t report_desc_len;
-  status =
-      fuchsia_hardware_input_DeviceGetReportDescSize(svc, &report_desc_len);
+  status = fuchsia_hardware_input_DeviceGetReportDescSize(svc, &report_desc_len);
   if (status != ZX_OK)
     return log_err(status, "report descriptor length", name_);
 
   report_descriptor_.resize(report_desc_len);
   size_t actual;
-  status = fuchsia_hardware_input_DeviceGetReportDesc(
-      svc, report_descriptor_.data(), report_descriptor_.size(), &actual);
+  status = fuchsia_hardware_input_DeviceGetReportDesc(svc, report_descriptor_.data(),
+                                                      report_descriptor_.size(), &actual);
   if (status != ZX_OK)
     return log_err(status, "report descriptor", name_);
   report_descriptor_.resize(actual);
 
   // Use lower 32 bits of channel koid as trace ID.
   zx_info_handle_basic_t info;
-  zx_object_get_info(svc, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr,
-                     nullptr);
+  zx_object_get_info(svc, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
   trace_id_ = info.koid & 0xffffffff;
   status = fuchsia_hardware_input_DeviceSetTraceId(svc, trace_id_);
   if (status != ZX_OK)
@@ -121,8 +117,7 @@ void FdioHidDecoder::SetupDevice(Device device) {
   }
 }
 
-const std::vector<uint8_t>& FdioHidDecoder::ReadReportDescriptor(
-    int* bytes_read) {
+const std::vector<uint8_t>& FdioHidDecoder::ReadReportDescriptor(int* bytes_read) {
   *bytes_read = report_descriptor_.size();
   return report_descriptor_;
 }
@@ -130,8 +125,7 @@ const std::vector<uint8_t>& FdioHidDecoder::ReadReportDescriptor(
 const std::vector<uint8_t>& FdioHidDecoder::Read(int* bytes_read) {
   *bytes_read = read(caller_.fd().get(), report_.data(), report_.size());
 
-  TRACE_FLOW_END("input", "hid_report",
-                 HID_REPORT_TRACE_ID(trace_id_, reports_read_));
+  TRACE_FLOW_END("input", "hid_report", HID_REPORT_TRACE_ID(trace_id_, reports_read_));
   ++reports_read_;
 
   return report_;
@@ -158,8 +152,7 @@ zx_status_t FdioHidDecoder::Send(ReportType type, uint8_t report_id,
 
   zx_status_t call_status;
   zx_status_t status = fuchsia_hardware_input_DeviceSetReport(
-      svc, fidl_report_type, report_id, report.data(), report.size(),
-      &call_status);
+      svc, fidl_report_type, report_id, report.data(), report.size(), &call_status);
 
   if (status != ZX_OK) {
     return status;
@@ -187,11 +180,10 @@ zx_status_t FdioHidDecoder::GetReport(ReportType type, uint8_t report_id,
       break;
   }
 
-  res = fuchsia_hardware_input_DeviceGetReportSize(
-      caller_.borrow_channel(), real_type, report_id, &call_status, &size);
+  res = fuchsia_hardware_input_DeviceGetReportSize(caller_.borrow_channel(), real_type, report_id,
+                                                   &call_status, &size);
   if (res != ZX_OK || call_status != ZX_OK) {
-    FXL_LOG(ERROR) << "hid: could not get report (id " << report_id << " type "
-                   << real_type
+    FXL_LOG(ERROR) << "hid: could not get report (id " << report_id << " type " << real_type
                    << ") size (status=" << zx_status_get_string(res) << ", "
                    << zx_status_get_string(call_status) << ")";
     return call_status;
@@ -200,12 +192,12 @@ zx_status_t FdioHidDecoder::GetReport(ReportType type, uint8_t report_id,
   report->resize(size);
 
   size_t actual;
-  res = fuchsia_hardware_input_DeviceGetReport(
-      caller_.borrow_channel(), real_type, report_id, &call_status,
-      report->data(), report->size(), &actual);
+  res =
+      fuchsia_hardware_input_DeviceGetReport(caller_.borrow_channel(), real_type, report_id,
+                                             &call_status, report->data(), report->size(), &actual);
   if (res != ZX_OK || call_status != ZX_OK) {
-    FXL_LOG(ERROR) << "hid: could not get report: " << zx_status_get_string(res)
-                   << " " << zx_status_get_string(call_status);
+    FXL_LOG(ERROR) << "hid: could not get report: " << zx_status_get_string(res) << " "
+                   << zx_status_get_string(call_status);
     return call_status;
   }
   report->resize(actual);

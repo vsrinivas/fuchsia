@@ -30,8 +30,8 @@ escher::SamplerPtr CreateNV12Sampler(escher::ResourceRecycler* recycler) {
   }
 
   last_device = recycler->vulkan_context().device;
-  last_sampler = fxl::MakeRefCounted<escher::Sampler>(
-      recycler, vk::Format::eG8B8R82Plane420Unorm, vk::Filter::eLinear);
+  last_sampler = fxl::MakeRefCounted<escher::Sampler>(recycler, vk::Format::eG8B8R82Plane420Unorm,
+                                                      vk::Filter::eLinear);
   return last_sampler;
 }
 
@@ -40,8 +40,7 @@ escher::SamplerPtr CreateNV12Sampler(escher::ResourceRecycler* recycler) {
 namespace scenic_impl {
 namespace gfx {
 
-const ResourceTypeInfo Material::kTypeInfo = {ResourceType::kMaterial,
-                                              "Material"};
+const ResourceTypeInfo Material::kTypeInfo = {ResourceType::kMaterial, "Material"};
 
 Material::Material(Session* session, ResourceId id)
     : Resource(session, id, Material::kTypeInfo),
@@ -55,9 +54,7 @@ void Material::SetColor(float red, float green, float blue, float alpha) {
   escher_material_->set_opaque(alpha == 1);
 }
 
-void Material::SetTexture(ImageBasePtr texture_image) {
-  texture_ = std::move(texture_image);
-}
+void Material::SetTexture(ImageBasePtr texture_image) { texture_ = std::move(texture_image); }
 
 void Material::UpdateEscherMaterial(escher::BatchGpuUploader* gpu_uploader) {
   // Update our escher::Material if our texture's presented image changed.
@@ -76,11 +73,10 @@ void Material::UpdateEscherMaterial(escher::BatchGpuUploader* gpu_uploader) {
       // assume NV12, but it's currently the only format we support at the
       // sampler level.
       if (escher_image->format() == vk::Format::eG8B8R82Plane420Unorm) {
-        texture = fxl::MakeRefCounted<escher::Texture>(
-            recycler, CreateNV12Sampler(recycler), escher_image);
+        texture = fxl::MakeRefCounted<escher::Texture>(recycler, CreateNV12Sampler(recycler),
+                                                       escher_image);
       } else {
-        texture =
-            escher::Texture::New(recycler, escher_image, vk::Filter::eLinear);
+        texture = escher::Texture::New(recycler, escher_image, vk::Filter::eLinear);
         // TODO(ES-199, ES-200): Reusing samplers is just good policy, but it is
         // required for immutable samplers because, until these bugs are fixed,
         // Escher will keep these samplers around forever.

@@ -17,8 +17,7 @@ class VulkanTester {
   using DirtyFlags = CommandBuffer::DirtyFlags;
 
   template <typename CommandBufferT>  // CommandBuffer* or CommandBufferPtr
-  static CommandBufferPipelineState::StaticState* GetStaticState(
-      CommandBufferT cb) {
+  static CommandBufferPipelineState::StaticState* GetStaticState(CommandBufferT cb) {
     return &cb->pipeline_state_.static_state_;
   }
 
@@ -28,14 +27,14 @@ class VulkanTester {
   }
 
   template <typename CommandBufferT>  // CommandBuffer* or CommandBufferPtr
-  static CommandBuffer::DirtyFlags GetAndClearDirty(
-      CommandBufferT cb, CommandBuffer::DirtyFlags flags) {
+  static CommandBuffer::DirtyFlags GetAndClearDirty(CommandBufferT cb,
+                                                    CommandBuffer::DirtyFlags flags) {
     return cb->GetAndClearDirty(flags);
   }
 
   template <typename CommandBufferT>  // CommandBuffer* or CommandBufferPtr
-  static CommandBuffer::DirtyFlags GetDirty(
-      CommandBufferT cb, CommandBuffer::DirtyFlags flags = ~0u) {
+  static CommandBuffer::DirtyFlags GetDirty(CommandBufferT cb,
+                                            CommandBuffer::DirtyFlags flags = ~0u) {
     return cb->dirty_ & flags;
   }
 
@@ -50,8 +49,8 @@ class VulkanTester {
   static vk::Pipeline ObtainGraphicsPipeline(CommandBufferT cb) {
     FXL_DCHECK(cb->current_pipeline_layout_);
     FXL_DCHECK(cb->current_program_);
-    return cb->pipeline_state_.FlushGraphicsPipeline(
-        cb->current_pipeline_layout_, cb->current_program_);
+    return cb->pipeline_state_.FlushGraphicsPipeline(cb->current_pipeline_layout_,
+                                                     cb->current_program_);
   }
 };
 

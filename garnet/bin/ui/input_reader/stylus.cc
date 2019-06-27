@@ -18,9 +18,8 @@
 
 namespace ui_input {
 
-bool Stylus::ParseReportDescriptor(
-    const hid::ReportDescriptor& report_descriptor,
-    Descriptor* device_descriptor) {
+bool Stylus::ParseReportDescriptor(const hid::ReportDescriptor& report_descriptor,
+                                   Descriptor* device_descriptor) {
   hid::Attributes x = {};
   hid::Attributes y = {};
   hid::Attributes pressure = {};
@@ -33,35 +32,32 @@ bool Stylus::ParseReportDescriptor(
 
   for (size_t i = 0; i < report_descriptor.input_count; i++) {
     const hid::ReportField& field = report_descriptor.input_fields[i];
-    if (field.attr.usage == hid::USAGE(hid::usage::Page::kGenericDesktop,
-                                       hid::usage::GenericDesktop::kX)) {
+    if (field.attr.usage ==
+        hid::USAGE(hid::usage::Page::kGenericDesktop, hid::usage::GenericDesktop::kX)) {
       x = field.attr;
       caps |= Capabilities::X;
-    } else if (field.attr.usage == hid::USAGE(hid::usage::Page::kGenericDesktop,
-                                              hid::usage::GenericDesktop::kY)) {
+    } else if (field.attr.usage ==
+               hid::USAGE(hid::usage::Page::kGenericDesktop, hid::usage::GenericDesktop::kY)) {
       y = field.attr;
       caps |= Capabilities::Y;
     } else if (field.attr.usage ==
-               hid::USAGE(hid::usage::Page::kDigitizer,
-                          hid::usage::Digitizer::kTipPressure)) {
+               hid::USAGE(hid::usage::Page::kDigitizer, hid::usage::Digitizer::kTipPressure)) {
       pressure = field.attr;
       caps |= Capabilities::PRESSURE;
     } else if (field.attr.usage ==
-               hid::USAGE(hid::usage::Page::kDigitizer,
-                          hid::usage::Digitizer::kBarrelSwitch)) {
+               hid::USAGE(hid::usage::Page::kDigitizer, hid::usage::Digitizer::kBarrelSwitch)) {
       barrel_switch = field.attr;
       caps |= Capabilities::BARREL_SWITCH;
-    } else if (field.attr.usage == hid::USAGE(hid::usage::Page::kDigitizer,
-                                              hid::usage::Digitizer::kInvert)) {
+    } else if (field.attr.usage ==
+               hid::USAGE(hid::usage::Page::kDigitizer, hid::usage::Digitizer::kInvert)) {
       invert = field.attr;
       caps |= Capabilities::INVERT;
-    } else if (field.attr.usage == hid::USAGE(hid::usage::Page::kDigitizer,
-                                              hid::usage::Digitizer::kEraser)) {
+    } else if (field.attr.usage ==
+               hid::USAGE(hid::usage::Page::kDigitizer, hid::usage::Digitizer::kEraser)) {
       eraser = field.attr;
       caps |= Capabilities::ERASER;
     } else if (field.attr.usage ==
-               hid::USAGE(hid::usage::Page::kDigitizer,
-                          hid::usage::Digitizer::kInRange)) {
+               hid::USAGE(hid::usage::Page::kDigitizer, hid::usage::Digitizer::kInRange)) {
       in_range = field.attr;
       caps |= Capabilities::IN_RANGE;
     }
@@ -83,8 +79,7 @@ bool Stylus::ParseReportDescriptor(
 
   device_descriptor->protocol = Protocol::Stylus;
   device_descriptor->has_stylus = true;
-  device_descriptor->stylus_descriptor =
-      fuchsia::ui::input::StylusDescriptor::New();
+  device_descriptor->stylus_descriptor = fuchsia::ui::input::StylusDescriptor::New();
 
   device_descriptor->stylus_descriptor->x.range.min = x_.phys_mm.min;
   device_descriptor->stylus_descriptor->x.range.max = x_.phys_mm.max;
@@ -99,15 +94,13 @@ bool Stylus::ParseReportDescriptor(
 
   device_descriptor->stylus_descriptor->buttons = 0;
   if (capabilities_ & Capabilities::BARREL_SWITCH) {
-    device_descriptor->stylus_descriptor->buttons |=
-        fuchsia::ui::input::kStylusBarrel;
+    device_descriptor->stylus_descriptor->buttons |= fuchsia::ui::input::kStylusBarrel;
   }
 
   return true;
 }
 
-bool Stylus::ParseReport(const uint8_t* data, size_t len,
-                         fuchsia::ui::input::InputReport* report) {
+bool Stylus::ParseReport(const uint8_t* data, size_t len, fuchsia::ui::input::InputReport* report) {
   FXL_CHECK(report);
   FXL_CHECK(report->stylus);
 
@@ -122,8 +115,8 @@ bool Stylus::ParseReport(const uint8_t* data, size_t len,
   uint8_t tmp_val;
 
   if (len != report_size_) {
-    FXL_LOG(INFO) << "Stylus HID Report is not correct size, (" << len
-                  << " != " << report_size_ << ")";
+    FXL_LOG(INFO) << "Stylus HID Report is not correct size, (" << len << " != " << report_size_
+                  << ")";
     return false;
   }
 

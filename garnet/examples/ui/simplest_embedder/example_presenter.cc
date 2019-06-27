@@ -4,8 +4,8 @@
 
 #include "garnet/examples/ui/simplest_embedder/example_presenter.h"
 
-#include <src/lib/fxl/logging.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
+#include <src/lib/fxl/logging.h>
 
 namespace simplest_embedder {
 
@@ -31,15 +31,12 @@ void ExamplePresenter::Init(float width, float height) {
 
 void ExamplePresenter::PresentView(
     fuchsia::ui::views::ViewHolderToken view_holder_token,
-    fidl::InterfaceRequest<
-        fuchsia::ui::policy::Presentation> /*presentation_request*/) {
-  FXL_CHECK(!presentation_)
-      << "simplest_embedder: only a single Presentation is supported.";
+    fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> /*presentation_request*/) {
+  FXL_CHECK(!presentation_) << "simplest_embedder: only a single Presentation is supported.";
 
   FXL_LOG(INFO) << "Presenting View.";
 
-  presentation_ =
-      std::make_unique<Presentation>(&session_, std::move(view_holder_token));
+  presentation_ = std::make_unique<Presentation>(&session_, std::move(view_holder_token));
   layers_.AddLayer(presentation_->layer());
 
   MaybeSetPresentationSize();
@@ -53,14 +50,11 @@ void ExamplePresenter::MaybeSetPresentationSize() {
 }
 
 void ExamplePresenter::ScenicSessionPresent() {
-  session_.Present(0, [this](fuchsia::images::PresentationInfo info) {
-    ScenicSessionPresent();
-  });
+  session_.Present(0, [this](fuchsia::images::PresentationInfo info) { ScenicSessionPresent(); });
 }
 
-ExamplePresenter::Presentation::Presentation(
-    scenic::Session* session,
-    fuchsia::ui::views::ViewHolderToken view_holder_token)
+ExamplePresenter::Presentation::Presentation(scenic::Session* session,
+                                             fuchsia::ui::views::ViewHolderToken view_holder_token)
     : layer_(session),
       view_holder_node_(session),
       view_holder_(session, std::move(view_holder_token),
@@ -94,8 +88,8 @@ ExamplePresenter::Presentation::Presentation(
 void ExamplePresenter::Presentation::SetSize(float width, float height) {
   layer_.SetSize(static_cast<int32_t>(width), static_cast<int32_t>(height));
   // TODO(SCN-1276): Don't hardcode Z bounds in multiple locations.
-  view_holder_.SetViewProperties(0.f, 0.f, -1000.f, width, height, 0.f, 0.f,
-                                 0.f, 0.f, 0.f, 0.f, 0.f);
+  view_holder_.SetViewProperties(0.f, 0.f, -1000.f, width, height, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f,
+                                 0.f);
 }
 
 }  // namespace simplest_embedder

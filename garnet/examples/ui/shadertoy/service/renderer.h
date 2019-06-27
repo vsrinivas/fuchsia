@@ -5,11 +5,10 @@
 #ifndef GARNET_EXAMPLES_UI_SHADERTOY_SERVICE_RENDERER_H_
 #define GARNET_EXAMPLES_UI_SHADERTOY_SERVICE_RENDERER_H_
 
-#include "src/ui/lib/escher/renderer/renderer.h"
-
 #include "garnet/examples/ui/shadertoy/service/pipeline.h"
 #include "src/ui/lib/escher/geometry/types.h"
 #include "src/ui/lib/escher/impl/descriptor_set_pool.h"
+#include "src/ui/lib/escher/renderer/renderer.h"
 #include "src/ui/lib/escher/vk/texture.h"
 
 namespace shadertoy {
@@ -35,26 +34,20 @@ class Renderer : public escher::Renderer {
 
   explicit Renderer(escher::EscherWeakPtr escher, vk::Format color_format);
 
-  void DrawFrame(const escher::FramebufferPtr& framebuffer,
-                 const PipelinePtr& pipeline, const Params& params,
-                 escher::Texture* channel0, escher::Texture* channel1,
+  void DrawFrame(const escher::FramebufferPtr& framebuffer, const PipelinePtr& pipeline,
+                 const Params& params, escher::Texture* channel0, escher::Texture* channel1,
                  escher::Texture* channel2, escher::Texture* channel3,
-                 escher::SemaphorePtr framebuffer_ready,
-                 escher::SemaphorePtr frame_done);
+                 escher::SemaphorePtr framebuffer_ready, escher::SemaphorePtr frame_done);
 
   vk::Format framebuffer_format() const { return framebuffer_format_; }
   vk::RenderPass render_pass() const { return render_pass_; }
-  vk::DescriptorSetLayout descriptor_set_layout() const {
-    return descriptor_set_pool_.layout();
-  }
+  vk::DescriptorSetLayout descriptor_set_layout() const { return descriptor_set_pool_.layout(); }
 
  private:
   // Update descriptor set with current channel textures.
   vk::DescriptorSet GetUpdatedDescriptorSet(const escher::FramePtr& frame,
-                                            escher::Texture* channel0,
-                                            escher::Texture* channel1,
-                                            escher::Texture* channel2,
-                                            escher::Texture* channel3);
+                                            escher::Texture* channel0, escher::Texture* channel1,
+                                            escher::Texture* channel2, escher::Texture* channel3);
 
   // Obtain a texture to bind to a descriptor set, either |texture_or_null| or
   // (if it is null) the default white texture.

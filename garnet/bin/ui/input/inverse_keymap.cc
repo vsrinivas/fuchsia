@@ -14,9 +14,8 @@ InverseKeymap InvertKeymap(const keychar_t keymap[]) {
     if (mapping.c) {
       Keystroke& keystroke = inverse[mapping.c];
       keystroke.usage = usage;
-      keystroke.shift = mapping.c == mapping.shift_c
-                            ? Keystroke::Shift::kDontCare
-                            : Keystroke::Shift::kNo;
+      keystroke.shift =
+          mapping.c == mapping.shift_c ? Keystroke::Shift::kDontCare : Keystroke::Shift::kNo;
     }
 
     if (mapping.shift_c && mapping.shift_c != mapping.c) {
@@ -27,8 +26,8 @@ InverseKeymap InvertKeymap(const keychar_t keymap[]) {
   return inverse;
 }
 
-std::pair<KeySequence, bool> DeriveKeySequence(
-    const InverseKeymap& inverse_keymap, const std::string& text) {
+std::pair<KeySequence, bool> DeriveKeySequence(const InverseKeymap& inverse_keymap,
+                                               const std::string& text) {
   uint32_t last_key = 0;
   bool shift = false;
   KeySequence key_sequence;

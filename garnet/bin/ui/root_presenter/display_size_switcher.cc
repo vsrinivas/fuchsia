@@ -44,8 +44,8 @@ bool DisplaySizeSwitcher::OnEvent(const fuchsia::ui::input::InputEvent& event,
 
         // Check if display size can be applied (e.g. can return false the
         // requested size is bigger than the actual display size).
-        if (presenter->SetDisplaySizeInMmWithoutApplyingChanges(
-                display_size.first, display_size.second, false)) {
+        if (presenter->SetDisplaySizeInMmWithoutApplyingChanges(display_size.first,
+                                                                display_size.second, false)) {
           // Found a suitable display size to switch to.
           current_display_size_index_ = display_size_index;
 

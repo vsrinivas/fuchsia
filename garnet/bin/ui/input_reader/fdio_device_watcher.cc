@@ -24,8 +24,7 @@ void FdioDeviceWatcher::Watch(ExistsCallback callback) {
         if (fd < 0) {
           FXL_LOG(ERROR) << "Failed to open device " << filename;
         } else {
-          callback(
-              std::make_unique<FdioHidDecoder>(filename, fbl::unique_fd(fd)));
+          callback(std::make_unique<FdioHidDecoder>(filename, fbl::unique_fd(fd)));
         }
       });
 }

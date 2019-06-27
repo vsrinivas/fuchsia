@@ -18,11 +18,11 @@ namespace test {
 
 TEST_F(SessionTest, ScheduleUpdateOutOfOrder) {
   EXPECT_TRUE(session()->ScheduleUpdate(
-      /*presentation_time*/ 1, std::vector<::fuchsia::ui::gfx::Command>(),
-      std::vector<zx::event>(), std::vector<zx::event>(), [](auto) {}));
+      /*presentation_time*/ 1, std::vector<::fuchsia::ui::gfx::Command>(), std::vector<zx::event>(),
+      std::vector<zx::event>(), [](auto) {}));
   EXPECT_FALSE(session()->ScheduleUpdate(
-      /*presentation_time*/ 0, std::vector<::fuchsia::ui::gfx::Command>(),
-      std::vector<zx::event>(), std::vector<zx::event>(), [](auto) {}));
+      /*presentation_time*/ 0, std::vector<::fuchsia::ui::gfx::Command>(), std::vector<zx::event>(),
+      std::vector<zx::event>(), [](auto) {}));
   ExpectLastReportedError(
       "scenic_impl::gfx::Session: Present called with out-of-order "
       "presentation "
@@ -32,11 +32,11 @@ TEST_F(SessionTest, ScheduleUpdateOutOfOrder) {
 
 TEST_F(SessionTest, ScheduleUpdateInOrder) {
   EXPECT_TRUE(session()->ScheduleUpdate(
-      /*presentation_time*/ 1, std::vector<::fuchsia::ui::gfx::Command>(),
-      std::vector<zx::event>(), std::vector<zx::event>(), [](auto) {}));
+      /*presentation_time*/ 1, std::vector<::fuchsia::ui::gfx::Command>(), std::vector<zx::event>(),
+      std::vector<zx::event>(), [](auto) {}));
   EXPECT_TRUE(session()->ScheduleUpdate(
-      /*presentation_time*/ 1, std::vector<::fuchsia::ui::gfx::Command>(),
-      std::vector<zx::event>(), std::vector<zx::event>(), [](auto) {}));
+      /*presentation_time*/ 1, std::vector<::fuchsia::ui::gfx::Command>(), std::vector<zx::event>(),
+      std::vector<zx::event>(), [](auto) {}));
   ExpectLastReportedError(nullptr);
 }
 
@@ -88,10 +88,8 @@ TEST_F(SessionTest, AddAndRemoveResource) {
 TEST_F(SessionTest, Labeling) {
   const ResourceId kNodeId = 1;
   const std::string kShortLabel = "test!";
-  const std::string kLongLabel =
-      std::string(::fuchsia::ui::gfx::kLabelMaxLength, 'x');
-  const std::string kTooLongLabel =
-      std::string(::fuchsia::ui::gfx::kLabelMaxLength + 1, '?');
+  const std::string kLongLabel = std::string(::fuchsia::ui::gfx::kLabelMaxLength, 'x');
+  const std::string kTooLongLabel = std::string(::fuchsia::ui::gfx::kLabelMaxLength + 1, '?');
 
   EXPECT_TRUE(Apply(scenic::NewCreateShapeNodeCmd(kNodeId)));
   auto shape_node = FindResource<ShapeNode>(kNodeId);
@@ -101,15 +99,13 @@ TEST_F(SessionTest, Labeling) {
   EXPECT_TRUE(Apply(scenic::NewSetLabelCmd(kNodeId, kLongLabel)));
   EXPECT_EQ(kLongLabel, shape_node->label());
   EXPECT_TRUE(Apply(scenic::NewSetLabelCmd(kNodeId, kTooLongLabel)));
-  EXPECT_EQ(kTooLongLabel.substr(0, fuchsia::ui::gfx::kLabelMaxLength),
-            shape_node->label());
+  EXPECT_EQ(kTooLongLabel.substr(0, fuchsia::ui::gfx::kLabelMaxLength), shape_node->label());
   EXPECT_TRUE(Apply(scenic::NewSetLabelCmd(kNodeId, "")));
   EXPECT_TRUE(shape_node->label().empty());
 
   // Bypass the truncation performed by session helpers.
   shape_node->SetLabel(kTooLongLabel);
-  EXPECT_EQ(kTooLongLabel.substr(0, fuchsia::ui::gfx::kLabelMaxLength),
-            shape_node->label());
+  EXPECT_EQ(kTooLongLabel.substr(0, fuchsia::ui::gfx::kLabelMaxLength), shape_node->label());
 }
 
 using BufferSessionTest = VkSessionTest;
@@ -125,42 +121,33 @@ VK_TEST_F(BufferSessionTest, BufferAliasing) {
   // TODO(SCN-1369): Scenic may use a different set of bits when creating a
   // buffer, resulting in a memory pool mismatch.
   const vk::BufferUsageFlags kUsageFlags =
-      vk::BufferUsageFlagBits::eTransferSrc |
-      vk::BufferUsageFlagBits::eTransferDst |
-      vk::BufferUsageFlagBits::eStorageTexelBuffer |
-      vk::BufferUsageFlagBits::eStorageBuffer |
-      vk::BufferUsageFlagBits::eIndexBuffer |
-      vk::BufferUsageFlagBits::eVertexBuffer;
+      vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eTransferDst |
+      vk::BufferUsageFlagBits::eStorageTexelBuffer | vk::BufferUsageFlagBits::eStorageBuffer |
+      vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eVertexBuffer;
 
-  auto memory_requirements =
-      GetBufferRequirements(device, kVmoSize, kUsageFlags);
-  auto memory =
-      AllocateExportableMemory(device, physical_device, memory_requirements,
-                               vk::MemoryPropertyFlagBits::eDeviceLocal |
-                                   vk::MemoryPropertyFlagBits::eHostVisible);
+  auto memory_requirements = GetBufferRequirements(device, kVmoSize, kUsageFlags);
+  auto memory = AllocateExportableMemory(
+      device, physical_device, memory_requirements,
+      vk::MemoryPropertyFlagBits::eDeviceLocal | vk::MemoryPropertyFlagBits::eHostVisible);
 
   // If we can't make memory that is both host-visible and device-local, we
   // can't run this test.
   if (!memory) {
     device.freeMemory(memory);
-    FXL_LOG(INFO)
-        << "Could not find UMA compatible memory pool, aborting test.";
+    FXL_LOG(INFO) << "Could not find UMA compatible memory pool, aborting test.";
     return;
   }
 
-  zx::vmo vmo =
-      ExportMemoryAsVmo(device, vulkan_queues->dispatch_loader(), memory);
+  zx::vmo vmo = ExportMemoryAsVmo(device, vulkan_queues->dispatch_loader(), memory);
 
   zx::vmo dup_vmo;
   zx_status_t status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup_vmo);
   ASSERT_EQ(ZX_OK, status);
 
-  EXPECT_TRUE(Apply(
-      scenic::NewCreateMemoryCmd(1, std::move(dup_vmo), kVmoSize,
-                                 fuchsia::images::MemoryType::HOST_MEMORY)));
+  EXPECT_TRUE(Apply(scenic::NewCreateMemoryCmd(1, std::move(dup_vmo), kVmoSize,
+                                               fuchsia::images::MemoryType::HOST_MEMORY)));
   EXPECT_TRUE(Apply(scenic::NewCreateBufferCmd(2, 1, 0, kVmoSize)));
-  EXPECT_TRUE(
-      Apply(scenic::NewCreateBufferCmd(3, 1, kOffset, kVmoSize - kOffset)));
+  EXPECT_TRUE(Apply(scenic::NewCreateBufferCmd(3, 1, kOffset, kVmoSize - kOffset)));
 
   auto base_buffer = FindResource<Buffer>(2);
   auto offset_buffer = FindResource<Buffer>(3);
@@ -173,8 +160,8 @@ VK_TEST_F(BufferSessionTest, BufferAliasing) {
   EXPECT_TRUE(offset_buffer->escher_buffer());
   EXPECT_TRUE(offset_buffer->escher_buffer()->host_ptr());
 
-  auto shared_vmo = fxl::AdoptRef(
-      new fsl::SharedVmo(std::move(vmo), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE));
+  auto shared_vmo =
+      fxl::AdoptRef(new fsl::SharedVmo(std::move(vmo), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE));
   uint8_t* raw_memory = static_cast<uint8_t*>(shared_vmo->Map());
   EXPECT_TRUE(raw_memory);
 

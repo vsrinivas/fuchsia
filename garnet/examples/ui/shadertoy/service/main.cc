@@ -28,8 +28,7 @@ int main(int argc, const char** argv) {
 #if !defined(NDEBUG)
     instance_params.layer_names.insert("VK_LAYER_LUNARG_standard_validation");
 #endif
-    auto vulkan_instance =
-        escher::VulkanInstance::New(std::move(instance_params));
+    auto vulkan_instance = escher::VulkanInstance::New(std::move(instance_params));
 
     auto vulkan_device = escher::VulkanDeviceQueues::New(
         vulkan_instance, {{

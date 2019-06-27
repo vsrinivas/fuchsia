@@ -16,10 +16,8 @@ const uint32_t kGlobalShortcutKeyCodePoint = 61;  // '=' key
 const uint32_t kGlobalShortcutKeyHidUsage = 46;   // '=' key
 
 static const std::array<fuchsia::ui::policy::DisplayUsage, 5> kDisplayUsages = {
-    fuchsia::ui::policy::DisplayUsage::kHandheld,
-    fuchsia::ui::policy::DisplayUsage::kClose,
-    fuchsia::ui::policy::DisplayUsage::kNear,
-    fuchsia::ui::policy::DisplayUsage::kMidrange,
+    fuchsia::ui::policy::DisplayUsage::kHandheld, fuchsia::ui::policy::DisplayUsage::kClose,
+    fuchsia::ui::policy::DisplayUsage::kNear, fuchsia::ui::policy::DisplayUsage::kMidrange,
     fuchsia::ui::policy::DisplayUsage::kFar};
 }  // namespace
 
@@ -51,8 +49,7 @@ bool DisplayUsageSwitcher::OnEvent(const fuchsia::ui::input::InputEvent& event,
         kbd.code_point == kGlobalShortcutKeyCodePoint &&
         kbd.hid_usage == kGlobalShortcutKeyHidUsage) {
       // Switch to the next display usage value.
-      current_display_usage_index_ =
-          (current_display_usage_index_ + 1) % kDisplayUsages.size();
+      current_display_usage_index_ = (current_display_usage_index_ + 1) % kDisplayUsages.size();
       presenter->SetDisplayUsage(kDisplayUsages[current_display_usage_index_]);
 
       return true;

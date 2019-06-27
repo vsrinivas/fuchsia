@@ -33,8 +33,7 @@ class VulkanInstance : public fxl::RefCountedThreadSafe<VulkanInstance> {
 
     PFN_vkCreateDebugReportCallbackEXT CreateDebugReportCallbackEXT = nullptr;
     PFN_vkDestroyDebugReportCallbackEXT DestroyDebugReportCallbackEXT = nullptr;
-    PFN_vkGetPhysicalDeviceSurfaceSupportKHR
-        GetPhysicalDeviceSurfaceSupportKHR = nullptr;
+    PFN_vkGetPhysicalDeviceSurfaceSupportKHR GetPhysicalDeviceSurfaceSupportKHR = nullptr;
   };
 
   // Constructor.
@@ -50,9 +49,8 @@ class VulkanInstance : public fxl::RefCountedThreadSafe<VulkanInstance> {
   // extensions are present, and false otherwise.  NOTE: if an extension isn't
   // found at first, we look in all required layers to see if it is implemented
   // there.
-  static bool ValidateExtensions(
-      const std::set<std::string>& required_extension_names,
-      const std::set<std::string>& required_layer_names);
+  static bool ValidateExtensions(const std::set<std::string>& required_extension_names,
+                                 const std::set<std::string>& required_layer_names);
 
   vk::Instance vk_instance() const { return instance_; }
 

@@ -14,8 +14,7 @@ namespace shadertoy {
 // use the Shadertoy API.
 class ShadertoyStateForView : public ShadertoyState {
  public:
-  ShadertoyStateForView(App* app, zx::eventpair view_token,
-                        bool handle_input_events);
+  ShadertoyStateForView(App* app, zx::eventpair view_token, bool handle_input_events);
 
  private:
   void OnSetResolution() override;

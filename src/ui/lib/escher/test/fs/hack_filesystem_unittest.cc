@@ -11,8 +11,7 @@ using namespace escher;
 
 TEST(HackFilesystem, Init) {
   auto fs = HackFilesystem::New();
-  bool success =
-      fs->InitializeWithRealFiles({"shaders/model_renderer/main.vert"});
+  bool success = fs->InitializeWithRealFiles({"shaders/model_renderer/main.vert"});
 
   EXPECT_TRUE(success);
   HackFileContents contents = fs->ReadFile("shaders/model_renderer/main.vert");

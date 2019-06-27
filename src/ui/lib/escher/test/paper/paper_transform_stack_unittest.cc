@@ -61,15 +61,12 @@ void TestPushIdentity(PaperTransformStack* stack) {
 
 TEST(PaperTransformStack, Transform) {
   std::vector<Transform> transforms{
-      Transform(vec3(5, 7, 9), vec3(5, 5, 5),
-                glm::angleAxis(2.1f, glm::normalize(vec3(1, 2, -5))),
+      Transform(vec3(5, 7, 9), vec3(5, 5, 5), glm::angleAxis(2.1f, glm::normalize(vec3(1, 2, -5))),
                 vec3(2, 1, 2)),
       Transform(vec3(-2, 7, 13), vec3(.5f, .5f, .5f),
-                glm::angleAxis(.9f, glm::normalize(vec3(3, -1, -2))),
-                vec3(2, 1, 2)),
+                glm::angleAxis(.9f, glm::normalize(vec3(3, -1, -2))), vec3(2, 1, 2)),
       Transform(vec3(-2, -3, -5), vec3(.75f, .75f, .75f),
-                glm::angleAxis(.4f, glm::normalize(vec3(4, 1, -2))),
-                vec3(2, 1, 2)),
+                glm::angleAxis(.4f, glm::normalize(vec3(4, 1, -2))), vec3(2, 1, 2)),
   };
 
   PaperTransformStack stack;
@@ -126,8 +123,8 @@ TEST(PaperTransformStack, Translation) {
   stack2.PushIdentity();
   stack2.AddClipPlanes(clip_planes);
 
-  std::vector<vec3> translations{vec3(10, 19, 31), vec3(-1, 3, 17),
-                                 vec3(-17, -14, 13), vec3(2, 4, 6)};
+  std::vector<vec3> translations{vec3(10, 19, 31), vec3(-1, 3, 17), vec3(-17, -14, 13),
+                                 vec3(2, 4, 6)};
   for (auto& t : translations) {
     // Generate matrix that has the same effect as the translation.
     mat4 m = glm::translate(mat4(), t);

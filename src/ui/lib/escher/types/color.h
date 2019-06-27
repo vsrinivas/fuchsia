@@ -10,12 +10,9 @@
 namespace escher {
 
 struct ColorRgba {
-  constexpr ColorRgba(uint8_t r, uint8_t g, uint8_t b, uint8_t a)
-      : r(r), g(g), b(b), a(a) {}
+  constexpr ColorRgba(uint8_t r, uint8_t g, uint8_t b, uint8_t a) : r(r), g(g), b(b), a(a) {}
 
-  const uint8_t* bytes() const {
-    return reinterpret_cast<const uint8_t*>(this);
-  }
+  const uint8_t* bytes() const { return reinterpret_cast<const uint8_t*>(this); }
 
   uint8_t r;
   uint8_t g;
@@ -25,12 +22,9 @@ struct ColorRgba {
 
 struct ColorBgra {
   // Constructor is idiomatic RGBA, but memory layout is native BGRA.
-  constexpr ColorBgra(uint8_t r, uint8_t g, uint8_t b, uint8_t a)
-      : b(b), g(g), r(r), a(a) {}
+  constexpr ColorBgra(uint8_t r, uint8_t g, uint8_t b, uint8_t a) : b(b), g(g), r(r), a(a) {}
 
-  const uint8_t* bytes() const {
-    return reinterpret_cast<const uint8_t*>(this);
-  }
+  const uint8_t* bytes() const { return reinterpret_cast<const uint8_t*>(this); }
 
   uint8_t b;
   uint8_t g;

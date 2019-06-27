@@ -68,8 +68,7 @@ class Layer : public Resource {
   // the layer's coordinate system.
   //
   // The hit collection behavior depends on the hit tester.
-  std::vector<Hit> HitTest(const escher::ray4& ray,
-                           HitTester* hit_tester) const;
+  std::vector<Hit> HitTest(const escher::ray4& ray, HitTester* hit_tester) const;
 
   // Returns the current viewing volume of the layer. Used by the compositor
   // when initializing the stage, as well as for hit testing.

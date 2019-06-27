@@ -40,8 +40,7 @@ struct ColorHistogram {
 };
 
 template <typename ColorT>
-std::ostream& operator<<(std::ostream& os,
-                         const ColorHistogram<ColorT>& histogram) {
+std::ostream& operator<<(std::ostream& os, const ColorHistogram<ColorT>& histogram) {
   if (histogram.values.size() <= 5) {
     // Print everything on one line.
     os << "ColorHistogram[";

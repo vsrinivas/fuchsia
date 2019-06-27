@@ -28,8 +28,7 @@ using ::fuchsia::ui::input::InputEvent;
 using ::fuchsia::ui::input::KeyboardEventPhase;
 using ::fuchsia::ui::input::PointerEventPhase;
 
-YuvInputView::YuvInputView(scenic::ViewContext context,
-                           fuchsia::images::PixelFormat pixel_format)
+YuvInputView::YuvInputView(scenic::ViewContext context, fuchsia::images::PixelFormat pixel_format)
     : YuvBaseView(std::move(context), pixel_format) {
   for (int i = 0; i < kNumImages; ++i) {
     image_ids_.push_back(AddImage());
@@ -38,8 +37,7 @@ YuvInputView::YuvInputView(scenic::ViewContext context,
   PresentImage(GetNextImageId());
 }
 
-void YuvInputView::OnSceneInvalidated(
-    fuchsia::images::PresentationInfo presentation_info) {
+void YuvInputView::OnSceneInvalidated(fuchsia::images::PresentationInfo presentation_info) {
   if (!has_logical_size()) {
     return;
   }
@@ -56,8 +54,7 @@ void YuvInputView::OnInputEvent(fuchsia::ui::input::InputEvent event) {
     }
     case InputEvent::Tag::kPointer: {
       const auto& pointer = event.pointer();
-      trace_flow_id_t trace_id =
-          PointerTraceHACK(pointer.radius_major, pointer.radius_minor);
+      trace_flow_id_t trace_id = PointerTraceHACK(pointer.radius_major, pointer.radius_minor);
       TRACE_FLOW_END("input", "dispatch_event_to_client", trace_id);
       switch (pointer.phase) {
         case PointerEventPhase::DOWN: {

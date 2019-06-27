@@ -6,6 +6,7 @@
 #define GARNET_LIB_UI_GFX_UTIL_WRAP_H_
 
 #include <fuchsia/ui/gfx/cpp/fidl.h>
+
 #include "src/ui/lib/escher/geometry/transform.h"
 
 namespace scenic_impl {

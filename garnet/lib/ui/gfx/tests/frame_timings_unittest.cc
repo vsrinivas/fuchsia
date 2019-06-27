@@ -16,12 +16,11 @@ class FrameTimingsTest : public ErrorReportingTest {
   // | ::testing::Test |
   void SetUp() override {
     frame_scheduler_ = std::make_unique<MockFrameScheduler>();
-    frame_timings_ =
-        fxl::MakeRefCounted<FrameTimings>(frame_scheduler_.get(),
-                                          /* frame number */ 1,
-                                          /* target presentation time */ 1,
-                                          /* latch_point_time */ 0,
-                                          /* render started time */ 0);
+    frame_timings_ = fxl::MakeRefCounted<FrameTimings>(frame_scheduler_.get(),
+                                                       /* frame number */ 1,
+                                                       /* target presentation time */ 1,
+                                                       /* latch_point_time */ 0,
+                                                       /* render started time */ 0);
     swapchain_index_ = frame_timings_->RegisterSwapchain();
   }
   void TearDown() override { frame_scheduler_.reset(); }
@@ -31,8 +30,7 @@ class FrameTimingsTest : public ErrorReportingTest {
   size_t swapchain_index_;
 };
 
-TEST_F(FrameTimingsTest,
-       ReceivingCallsInOrder_ShouldTriggerFrameSchedulerCallsInOrder) {
+TEST_F(FrameTimingsTest, ReceivingCallsInOrder_ShouldTriggerFrameSchedulerCallsInOrder) {
   EXPECT_EQ(frame_scheduler_->frame_rendered_call_count(), 0u);
   EXPECT_EQ(frame_scheduler_->frame_presented_call_count(), 0u);
 
@@ -51,8 +49,7 @@ TEST_F(FrameTimingsTest,
   EXPECT_LE(timestamps.render_done_time, timestamps.actual_presentation_time);
 }
 
-TEST_F(FrameTimingsTest,
-       ReceivingCallsOutOfOrder_ShouldTriggerFrameSchedulerCallsInOrder) {
+TEST_F(FrameTimingsTest, ReceivingCallsOutOfOrder_ShouldTriggerFrameSchedulerCallsInOrder) {
   EXPECT_EQ(frame_scheduler_->frame_rendered_call_count(), 0u);
   EXPECT_EQ(frame_scheduler_->frame_presented_call_count(), 0u);
 
@@ -72,9 +69,7 @@ TEST_F(FrameTimingsTest,
   EXPECT_LE(timestamps.render_done_time, timestamps.actual_presentation_time);
 }
 
-TEST_F(
-    FrameTimingsTest,
-    ReceivingCallsAndTimesOutOfOrder_ShouldTriggerFrameSchedulerCallsInOrder) {
+TEST_F(FrameTimingsTest, ReceivingCallsAndTimesOutOfOrder_ShouldTriggerFrameSchedulerCallsInOrder) {
   EXPECT_EQ(frame_scheduler_->frame_rendered_call_count(), 0u);
   EXPECT_EQ(frame_scheduler_->frame_presented_call_count(), 0u);
 
@@ -114,8 +109,7 @@ TEST_F(FrameTimingsTest, ReceivingTimesOutOfOrder_ShouldRecordTimesInOrder) {
   EXPECT_LE(timestamps.render_done_time, timestamps.actual_presentation_time);
 }
 
-TEST_F(FrameTimingsTest,
-       FrameDroppedAfterRender_ShouldNotTriggerSecondFrameRenderedCall) {
+TEST_F(FrameTimingsTest, FrameDroppedAfterRender_ShouldNotTriggerSecondFrameRenderedCall) {
   EXPECT_EQ(frame_scheduler_->frame_rendered_call_count(), 0u);
   EXPECT_EQ(frame_scheduler_->frame_presented_call_count(), 0u);
 
@@ -140,8 +134,7 @@ TEST_F(FrameTimingsTest,
   EXPECT_TRUE(frame_timings_->FrameWasDropped());
 }
 
-TEST_F(FrameTimingsTest,
-       FrameDroppedBeforeRender_ShouldStillTriggerFrameRenderedCall) {
+TEST_F(FrameTimingsTest, FrameDroppedBeforeRender_ShouldStillTriggerFrameRenderedCall) {
   EXPECT_EQ(frame_scheduler_->frame_rendered_call_count(), 0u);
   EXPECT_EQ(frame_scheduler_->frame_presented_call_count(), 0u);
 
@@ -175,8 +168,8 @@ TEST(FrameTimings, InitTimestamps) {
   const zx_time_t render_start_time = zx::msec(12).get();
   const uint64_t frame_number = 5;
   auto timings = fxl::MakeRefCounted<FrameTimings>(
-      /* frame_scheduler */ nullptr, frame_number, target_present_time,
-      latch_time, render_start_time);
+      /* frame_scheduler */ nullptr, frame_number, target_present_time, latch_time,
+      render_start_time);
 
   FrameTimings::Timestamps init_timestamps = timings->GetTimestamps();
   // Inputs should be recorded in the timestamps.
@@ -187,8 +180,7 @@ TEST(FrameTimings, InitTimestamps) {
   EXPECT_FALSE(timings->finalized());
   EXPECT_EQ(init_timestamps.update_done_time, FrameTimings::kTimeUninitialized);
   EXPECT_EQ(init_timestamps.render_done_time, FrameTimings::kTimeUninitialized);
-  EXPECT_EQ(init_timestamps.actual_presentation_time,
-            FrameTimings::kTimeUninitialized);
+  EXPECT_EQ(init_timestamps.actual_presentation_time, FrameTimings::kTimeUninitialized);
 
   EXPECT_FALSE(timings->FrameWasDropped());
   EXPECT_EQ(frame_number, timings->frame_number());

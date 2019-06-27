@@ -16,10 +16,10 @@
 #include "garnet/lib/ui/gfx/tests/mocks.h"
 #include "garnet/lib/ui/input/input_system.h"
 #include "garnet/lib/ui/scenic/scenic.h"
-#include "src/ui/lib/escher/impl/command_buffer_sequencer.h"
 #include "lib/ui/gfx/tests/gfx_test.h"
 #include "lib/ui/scenic/cpp/resources.h"
 #include "lib/ui/scenic/cpp/session.h"
+#include "src/ui/lib/escher/impl/command_buffer_sequencer.h"
 
 namespace lib_ui_input_tests {
 
@@ -63,8 +63,7 @@ class InputSystemTest : public scenic_impl::test::ScenicTest {
   void InitializeScenic(scenic_impl::Scenic* scenic) override;
 
  private:
-  std::unique_ptr<escher::impl::CommandBufferSequencer>
-      command_buffer_sequencer_;
+  std::unique_ptr<escher::impl::CommandBufferSequencer> command_buffer_sequencer_;
   scenic_impl::gfx::test::GfxSystemForTest* gfx_ = nullptr;
   scenic_impl::input::InputSystem* input_ = nullptr;
 };
@@ -76,15 +75,12 @@ class SessionWrapper {
   ~SessionWrapper();
 
   // Allow caller to run some code in the context of this particular session.
-  void RunNow(fit::function<void(scenic::Session* session,
-                                 scenic::EntityNode* root_node)>
+  void RunNow(fit::function<void(scenic::Session* session, scenic::EntityNode* root_node)>
                   create_scene_callback);
 
   // Allow caller to examine the events received by this particular session.
-  void ExamineEvents(
-      fit::function<
-          void(const std::vector<fuchsia::ui::input::InputEvent>& events)>
-          examine_events_callback);
+  void ExamineEvents(fit::function<void(const std::vector<fuchsia::ui::input::InputEvent>& events)>
+                         examine_events_callback);
 
  protected:
   // Collects input events conveyed to this session.
@@ -104,9 +100,8 @@ class SessionWrapper {
 // sending ADD ADD.  Client is responsible for ensuring desired usage.
 class PointerCommandGenerator {
  public:
-  PointerCommandGenerator(scenic_impl::ResourceId compositor_id,
-                          uint32_t device_id, uint32_t pointer_id,
-                          fuchsia::ui::input::PointerEventType type);
+  PointerCommandGenerator(scenic_impl::ResourceId compositor_id, uint32_t device_id,
+                          uint32_t pointer_id, fuchsia::ui::input::PointerEventType type);
   ~PointerCommandGenerator() = default;
 
   fuchsia::ui::input::Command Add(float x, float y);
@@ -116,8 +111,7 @@ class PointerCommandGenerator {
   fuchsia::ui::input::Command Remove(float x, float y);
 
  private:
-  fuchsia::ui::input::Command MakeInputCommand(
-      fuchsia::ui::input::PointerEvent event);
+  fuchsia::ui::input::Command MakeInputCommand(fuchsia::ui::input::PointerEvent event);
 
   scenic_impl::ResourceId compositor_id_;
   fuchsia::ui::input::PointerEvent blank_;
@@ -129,8 +123,7 @@ class PointerCommandGenerator {
 // inconsistent state. Client is responsible for ensuring desired usage.
 class KeyboardCommandGenerator {
  public:
-  KeyboardCommandGenerator(scenic_impl::ResourceId compositor_id,
-                           uint32_t device_id);
+  KeyboardCommandGenerator(scenic_impl::ResourceId compositor_id, uint32_t device_id);
   ~KeyboardCommandGenerator() = default;
 
   fuchsia::ui::input::Command Pressed(uint32_t hid_usage, uint32_t modifiers);
@@ -139,17 +132,14 @@ class KeyboardCommandGenerator {
   fuchsia::ui::input::Command Repeat(uint32_t hid_usage, uint32_t modifiers);
 
  private:
-  fuchsia::ui::input::Command MakeInputCommand(
-      fuchsia::ui::input::KeyboardEvent event);
+  fuchsia::ui::input::Command MakeInputCommand(fuchsia::ui::input::KeyboardEvent event);
 
   scenic_impl::ResourceId compositor_id_;
   fuchsia::ui::input::KeyboardEvent blank_;
 };
 
-bool PointerMatches(const fuchsia::ui::input::PointerEvent& event,
-                    uint32_t pointer_id,
-                    fuchsia::ui::input::PointerEventPhase phase, float x,
-                    float y);
+bool PointerMatches(const fuchsia::ui::input::PointerEvent& event, uint32_t pointer_id,
+                    fuchsia::ui::input::PointerEventPhase phase, float x, float y);
 
 }  // namespace lib_ui_input_tests
 

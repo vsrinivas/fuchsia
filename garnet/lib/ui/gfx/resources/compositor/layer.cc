@@ -32,8 +32,7 @@ bool Layer::SetRenderer(RendererPtr renderer) {
 bool Layer::SetSize(const escher::vec2& size) {
   if (size.x <= 0 || size.y <= 0) {
     if (size != escher::vec2(0, 0)) {
-      error_reporter()->ERROR()
-          << "scenic::gfx::Layer::SetSize(): size must be positive";
+      error_reporter()->ERROR() << "scenic::gfx::Layer::SetSize(): size must be positive";
       return false;
     }
   }
@@ -69,8 +68,7 @@ bool Layer::IsDrawable() const {
   return renderer_ && renderer_->camera() && renderer_->camera()->scene();
 }
 
-std::vector<Hit> Layer::HitTest(const escher::ray4& ray,
-                                HitTester* hit_tester) const {
+std::vector<Hit> Layer::HitTest(const escher::ray4& ray, HitTester* hit_tester) const {
   FXL_CHECK(hit_tester);
 
   Camera* camera = renderer()->camera();
@@ -81,8 +79,7 @@ std::vector<Hit> Layer::HitTest(const escher::ray4& ray,
 
   // Normalize the origin of the ray with respect to the width and height of the
   // layer before passing it to the camera.
-  escher::mat4 layer_normalization =
-      glm::scale(glm::vec3(1.f / width(), 1.f / height(), 1.f));
+  escher::mat4 layer_normalization = glm::scale(glm::vec3(1.f / width(), 1.f / height(), 1.f));
 
   auto local_ray = layer_normalization * ray;
 
@@ -90,8 +87,7 @@ std::vector<Hit> Layer::HitTest(const escher::ray4& ray,
   std::pair<escher::ray4, escher::mat4> camera_projection_pair =
       camera->ProjectRayIntoScene(local_ray, GetViewingVolume());
 
-  std::vector<Hit> hits =
-      hit_tester->HitTest(camera->scene().get(), camera_projection_pair.first);
+  std::vector<Hit> hits = hit_tester->HitTest(camera->scene().get(), camera_projection_pair.first);
 
   escher::mat4 inverse_layer_transform =
       glm::inverse(camera_projection_pair.second * layer_normalization);
@@ -100,8 +96,7 @@ std::vector<Hit> Layer::HitTest(const escher::ray4& ray,
   // inverse_transform goes from the passed in ray's coordinate system to the
   // hit nodes' coordinate system.
   for (auto& hit : hits) {
-    hit.inverse_transform =
-        inverse_layer_transform * glm::inverse(hit.inverse_transform);
+    hit.inverse_transform = inverse_layer_transform * glm::inverse(hit.inverse_transform);
   }
 
   return hits;

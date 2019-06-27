@@ -35,8 +35,7 @@ void TestBitmap(Bitmap* bm) {
   for (uint32_t i = kFiftySix + 1; i < kOneHundredTwentyTwo; ++i) {
     EXPECT_FALSE(bm->Get(i));
   }
-  for (uint32_t i = kOneHundredTwentyTwo + 1; i < kSevenHundredSixtyEight;
-       ++i) {
+  for (uint32_t i = kOneHundredTwentyTwo + 1; i < kSevenHundredSixtyEight; ++i) {
     EXPECT_FALSE(bm->Get(i));
   }
   for (uint32_t i = kSevenHundredSixtyEight + 1; i < size; ++i) {

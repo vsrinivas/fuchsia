@@ -14,8 +14,7 @@ namespace impl {
 
 class GpuUploader : public ResourceRecycler {
  public:
-  explicit GpuUploader(EscherWeakPtr escher,
-                       CommandBufferPool* command_buffer_pool = nullptr,
+  explicit GpuUploader(EscherWeakPtr escher, CommandBufferPool* command_buffer_pool = nullptr,
                        GpuAllocator* allocator = nullptr);
 
   ~GpuUploader();
@@ -31,14 +30,12 @@ class GpuUploader : public ResourceRecycler {
     // Schedule a buffer-to-buffer copy that will be submitted when Submit()
     // is called.  Retains a reference to the target until the submission's
     // CommandBuffer is retired.
-    void WriteBuffer(const BufferPtr& target, vk::BufferCopy region,
-                     SemaphorePtr semaphore);
+    void WriteBuffer(const BufferPtr& target, vk::BufferCopy region, SemaphorePtr semaphore);
 
     // Schedule a buffer-to-image copy that will be submitted when Submit()
     // is called.  Retains a reference to the target until the submission's
     // CommandBuffer is retired.
-    void WriteImage(const ImagePtr& target, vk::BufferImageCopy region,
-                    SemaphorePtr semaphore);
+    void WriteImage(const ImagePtr& target, vk::BufferImageCopy region, SemaphorePtr semaphore);
 
     // Submit all image/buffer writes that been made on this Writer.  It is an
     // error to call this more than once.
@@ -50,8 +47,8 @@ class GpuUploader : public ResourceRecycler {
    private:
     // Constructor called by GpuUploader.
     friend class GpuUploader;
-    Writer(BufferPtr buffer, CommandBuffer* command_buffer, vk::Queue queue,
-           vk::DeviceSize size, vk::DeviceSize offset);
+    Writer(BufferPtr buffer, CommandBuffer* command_buffer, vk::Queue queue, vk::DeviceSize size,
+           vk::DeviceSize offset);
 
     BufferPtr buffer_;
     CommandBuffer* command_buffer_;

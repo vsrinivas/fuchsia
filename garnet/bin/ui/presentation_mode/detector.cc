@@ -5,6 +5,7 @@
 #include "garnet/bin/ui/presentation_mode/detector.h"
 
 #include <assert.h>
+
 #include <limits>
 
 #include "src/lib/fxl/logging.h"
@@ -12,16 +13,13 @@
 namespace presentation_mode {
 
 Detector::Detector(size_t history_size)
-    : base_accelerometer_(
-          std::make_unique<internal::MovingAverage>(history_size)),
-      lid_accelerometer_(
-          std::make_unique<internal::MovingAverage>(history_size)) {
+    : base_accelerometer_(std::make_unique<internal::MovingAverage>(history_size)),
+      lid_accelerometer_(std::make_unique<internal::MovingAverage>(history_size)) {
   FXL_CHECK(history_size > 0);
 }
 
 std::pair<bool, fuchsia::ui::policy::PresentationMode> Detector::Update(
-    const fuchsia::ui::input::SensorDescriptor& sensor,
-    fuchsia::ui::input::InputReport event) {
+    const fuchsia::ui::input::SensorDescriptor& sensor, fuchsia::ui::input::InputReport event) {
   if (sensor.type != fuchsia::ui::input::SensorType::ACCELEROMETER)
     return {false, {}};
 
@@ -63,8 +61,7 @@ std::pair<bool, fuchsia::ui::policy::PresentationMode> Detector::Update(
   }
 
   if (result.first)
-    FXL_VLOG(3) << "Presentation mode detected: "
-                << fidl::ToUnderlying(result.second);
+    FXL_VLOG(3) << "Presentation mode detected: " << fidl::ToUnderlying(result.second);
 
   return result;
 }

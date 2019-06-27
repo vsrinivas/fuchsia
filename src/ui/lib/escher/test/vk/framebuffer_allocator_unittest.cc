@@ -24,24 +24,23 @@ struct FramebufferTextures {
 };
 
 std::vector<FramebufferTextures> MakeFramebufferTextures(
-    Escher* escher, size_t count, uint32_t width, uint32_t height,
-    uint32_t sample_count, vk::Format color_format1, vk::Format color_format2,
-    vk::Format depth_format) {
+    Escher* escher, size_t count, uint32_t width, uint32_t height, uint32_t sample_count,
+    vk::Format color_format1, vk::Format color_format2, vk::Format depth_format) {
   std::vector<FramebufferTextures> result;
   result.reserve(count);
   for (size_t i = 0; i < count; ++i) {
     FramebufferTextures textures;
     if (color_format1 != vk::Format::eUndefined) {
-      textures.color1 = escher->NewAttachmentTexture(
-          color_format1, width, height, 1, vk::Filter::eNearest);
+      textures.color1 =
+          escher->NewAttachmentTexture(color_format1, width, height, 1, vk::Filter::eNearest);
     }
     if (color_format2 != vk::Format::eUndefined) {
-      textures.color2 = escher->NewAttachmentTexture(
-          color_format2, width, height, 1, vk::Filter::eNearest);
+      textures.color2 =
+          escher->NewAttachmentTexture(color_format2, width, height, 1, vk::Filter::eNearest);
     }
     if (depth_format != vk::Format::eUndefined) {
-      textures.depth = escher->NewAttachmentTexture(depth_format, width, height,
-                                                    1, vk::Filter::eNearest);
+      textures.depth =
+          escher->NewAttachmentTexture(depth_format, width, height, 1, vk::Filter::eNearest);
     }
     result.push_back(std::move(textures));
   }
@@ -62,8 +61,7 @@ RenderPassInfo MakeRenderPassInfo(const FramebufferTextures& textures) {
 }
 
 std::vector<impl::FramebufferPtr> ObtainFramebuffers(
-    impl::FramebufferAllocator* allocator,
-    const std::vector<FramebufferTextures>& textures) {
+    impl::FramebufferAllocator* allocator, const std::vector<FramebufferTextures>& textures) {
   std::vector<impl::FramebufferPtr> result;
   result.reserve(textures.size());
   for (auto& texs : textures) {
@@ -83,44 +81,35 @@ VK_TEST(FramebufferAllocator, Basic) {
   uint32_t height = 1024;
 
   // Create a pair of each of three types of framebuffers.
-  auto textures_2colors_D24 = MakeFramebufferTextures(
-      escher, 2, width, height, 1, vk::Format::eB8G8R8A8Unorm,
-      vk::Format::eB8G8R8A8Unorm, vk::Format::eD24UnormS8Uint);
-  auto textures_2colors_D32 = MakeFramebufferTextures(
-      escher, 2, width, height, 1, vk::Format::eB8G8R8A8Unorm,
-      vk::Format::eB8G8R8A8Unorm, vk::Format::eD32SfloatS8Uint);
-  auto textures_1color_D32 = MakeFramebufferTextures(
-      escher, 2, width, height, 1, vk::Format::eB8G8R8A8Unorm,
-      vk::Format::eUndefined, vk::Format::eD32SfloatS8Uint);
+  auto textures_2colors_D24 =
+      MakeFramebufferTextures(escher, 2, width, height, 1, vk::Format::eB8G8R8A8Unorm,
+                              vk::Format::eB8G8R8A8Unorm, vk::Format::eD24UnormS8Uint);
+  auto textures_2colors_D32 =
+      MakeFramebufferTextures(escher, 2, width, height, 1, vk::Format::eB8G8R8A8Unorm,
+                              vk::Format::eB8G8R8A8Unorm, vk::Format::eD32SfloatS8Uint);
+  auto textures_1color_D32 =
+      MakeFramebufferTextures(escher, 2, width, height, 1, vk::Format::eB8G8R8A8Unorm,
+                              vk::Format::eUndefined, vk::Format::eD32SfloatS8Uint);
 
-  auto framebuffers_2colors_D24 =
-      ObtainFramebuffers(&allocator, textures_2colors_D24);
-  auto framebuffers_2colors_D32 =
-      ObtainFramebuffers(&allocator, textures_2colors_D32);
-  auto framebuffers_1color_D32 =
-      ObtainFramebuffers(&allocator, textures_1color_D32);
+  auto framebuffers_2colors_D24 = ObtainFramebuffers(&allocator, textures_2colors_D24);
+  auto framebuffers_2colors_D32 = ObtainFramebuffers(&allocator, textures_2colors_D32);
+  auto framebuffers_1color_D32 = ObtainFramebuffers(&allocator, textures_1color_D32);
 
   // Each pair should have two different Framebuffers which share the same
   // RenderPass.
   EXPECT_NE(framebuffers_2colors_D24[0], framebuffers_2colors_D24[1]);
-  EXPECT_EQ(framebuffers_2colors_D24[0]->render_pass(),
-            framebuffers_2colors_D24[1]->render_pass());
+  EXPECT_EQ(framebuffers_2colors_D24[0]->render_pass(), framebuffers_2colors_D24[1]->render_pass());
   EXPECT_NE(framebuffers_2colors_D32[0], framebuffers_2colors_D32[1]);
-  EXPECT_EQ(framebuffers_2colors_D32[0]->render_pass(),
-            framebuffers_2colors_D32[1]->render_pass());
+  EXPECT_EQ(framebuffers_2colors_D32[0]->render_pass(), framebuffers_2colors_D32[1]->render_pass());
   EXPECT_NE(framebuffers_1color_D32[0], framebuffers_1color_D32[1]);
-  EXPECT_EQ(framebuffers_1color_D32[0]->render_pass(),
-            framebuffers_1color_D32[1]->render_pass());
+  EXPECT_EQ(framebuffers_1color_D32[0]->render_pass(), framebuffers_1color_D32[1]->render_pass());
 
   // Each pair of Framebuffers should have a different RenderPass from the other
   // pairs.
   EXPECT_EQ(cache.size(), 3U);
-  EXPECT_NE(framebuffers_2colors_D24[0]->render_pass(),
-            framebuffers_2colors_D32[0]->render_pass());
-  EXPECT_NE(framebuffers_2colors_D24[0]->render_pass(),
-            framebuffers_1color_D32[0]->render_pass());
-  EXPECT_NE(framebuffers_2colors_D32[0]->render_pass(),
-            framebuffers_1color_D32[0]->render_pass());
+  EXPECT_NE(framebuffers_2colors_D24[0]->render_pass(), framebuffers_2colors_D32[0]->render_pass());
+  EXPECT_NE(framebuffers_2colors_D24[0]->render_pass(), framebuffers_1color_D32[0]->render_pass());
+  EXPECT_NE(framebuffers_2colors_D32[0]->render_pass(), framebuffers_1color_D32[0]->render_pass());
 }
 
 VK_TEST(FramebufferAllocator, CacheReclamation) {
@@ -135,9 +124,8 @@ VK_TEST(FramebufferAllocator, CacheReclamation) {
 
   // Make a single set of textures (depth and 2 color attachments) that will be
   // used to make a framebuffer.
-  auto textures = MakeFramebufferTextures(
-      escher, 1, width, height, 1, vk::Format::eB8G8R8A8Unorm,
-      vk::Format::eB8G8R8A8Unorm, vk::Format::eD24UnormS8Uint);
+  auto textures = MakeFramebufferTextures(escher, 1, width, height, 1, vk::Format::eB8G8R8A8Unorm,
+                                          vk::Format::eB8G8R8A8Unorm, vk::Format::eD24UnormS8Uint);
   auto framebuffer = ObtainFramebuffers(&allocator, textures);
 
   // Obtaining a Framebuffer using the same textures should result in the same
@@ -158,8 +146,7 @@ VK_TEST(FramebufferAllocator, CacheReclamation) {
 
   // ... but one more frame than that will cause a different Framebuffer to be
   // obtained from the allocator.
-  constexpr uint32_t kJustEnoughFramesForEviction =
-      kNotEnoughFramesForEviction + 1;
+  constexpr uint32_t kJustEnoughFramesForEviction = kNotEnoughFramesForEviction + 1;
   for (uint32_t i = 0; i < kJustEnoughFramesForEviction; ++i) {
     allocator.BeginFrame();
   }

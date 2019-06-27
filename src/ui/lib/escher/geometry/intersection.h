@@ -15,8 +15,7 @@ namespace escher {
 // Returns whether a ray intersects an axis-aligned bounding box. Upon return,
 // |out_distance| contains the distance from the ray origin to the intersection
 // point in units of ray length.
-bool IntersectRayBox(const escher::ray4& ray, const escher::BoundingBox& box,
-                     float* out_distance);
+bool IntersectRayBox(const escher::ray4& ray, const escher::BoundingBox& box, float* out_distance);
 
 // Return the distance from the ray origin to the intersection point in units
 // of ray length, or FLT_MAX if the line and plane are (nearly) parallel.  This
@@ -28,8 +27,7 @@ template <typename VecT>
 float IntersectLinePlane(const VecT& ray_origin, const VecT& ray_direction,
                          const planeN<VecT>& plane) {
   float denominator = glm::dot(ray_direction, plane.dir());
-  return std::abs(denominator) <
-                 kEpsilon * glm::dot(ray_direction, ray_direction)
+  return std::abs(denominator) < kEpsilon * glm::dot(ray_direction, ray_direction)
              ? FLT_MAX
              : (plane.dist() - glm::dot(ray_origin, plane.dir())) / denominator;
 }

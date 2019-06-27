@@ -22,8 +22,7 @@ inline size_t AlignedToNext(size_t position, size_t alignment) {
 }
 
 inline uint8_t* AlignedToNext(uint8_t* ptr, size_t alignment) {
-  return reinterpret_cast<uint8_t*>(
-      AlignedToNext(reinterpret_cast<size_t>(ptr), alignment));
+  return reinterpret_cast<uint8_t*>(AlignedToNext(reinterpret_cast<size_t>(ptr), alignment));
 }
 
 template <typename T>
@@ -34,8 +33,7 @@ T* NextAlignedPtr(void* ptr) {
 
 template <typename T>
 T* NextAlignedTriviallyDestructiblePtr(void* ptr) {
-  static_assert(std::is_trivially_destructible<T>::value,
-                "Type must be trivially destructible.");
+  static_assert(std::is_trivially_destructible<T>::value, "Type must be trivially destructible.");
   return NextAlignedPtr<T>(ptr);
 }
 

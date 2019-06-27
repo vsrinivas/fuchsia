@@ -22,8 +22,7 @@ using namespace simplest_app;
 
 int main(int argc, const char** argv) {
   constexpr char kProcessName[] = "simplest_app";
-  zx::process::self()->set_property(ZX_PROP_NAME, kProcessName,
-                                    sizeof(kProcessName));
+  zx::process::self()->set_property(ZX_PROP_NAME, kProcessName, sizeof(kProcessName));
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
@@ -52,11 +51,10 @@ int main(int argc, const char** argv) {
   std::unique_ptr<component::StartupContext> startup_context =
       component::StartupContext::CreateFromStartupInfo();
   fuchsia::ui::scenic::ScenicPtr scenic =
-      startup_context
-          ->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
+      startup_context->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
   scenic.set_error_handler([&loop](zx_status_t status) {
-    FXL_LOG(ERROR) << "Lost connection to Scenic with error "
-                   << zx_status_get_string(status) << ".";
+    FXL_LOG(ERROR) << "Lost connection to Scenic with error " << zx_status_get_string(status)
+                   << ".";
     loop.Quit();
   });
 
@@ -73,8 +71,7 @@ int main(int argc, const char** argv) {
 
   // Display the newly-created view using root_presenter.
   fuchsia::ui::policy::PresenterPtr root_presenter =
-      startup_context
-          ->ConnectToEnvironmentService<fuchsia::ui::policy::Presenter>();
+      startup_context->ConnectToEnvironmentService<fuchsia::ui::policy::Presenter>();
   root_presenter->PresentView(std::move(view_holder_token), nullptr);
 
   loop.Run();

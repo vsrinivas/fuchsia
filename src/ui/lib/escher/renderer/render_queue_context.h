@@ -35,10 +35,8 @@ struct RenderQueueContext {
   // Bits to be interpreted arbitrarily by the invoked RenderQueueFunc.
   uint64_t client_data : kNumClientDataBits;
 
-  static_assert(64U == kNumPrivateBits + kNumClientDataBits,
-                "wrong number of bits");
-  static_assert(kNumPrivateBits ==
-                    kNumRenderQueueFuncChoiceBits + kNumReservedBits,
+  static_assert(64U == kNumPrivateBits + kNumClientDataBits, "wrong number of bits");
+  static_assert(kNumPrivateBits == kNumRenderQueueFuncChoiceBits + kNumReservedBits,
                 "wrong number of bits");
 };
 static_assert(8U == sizeof(RenderQueueContext), "size mismatch");

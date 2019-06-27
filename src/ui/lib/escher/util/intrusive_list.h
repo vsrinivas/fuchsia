@@ -54,12 +54,8 @@ class IntrusiveList {
 
     explicit operator bool() const { return item_ != nullptr; }
 
-    bool operator==(const Iterator& other) const {
-      return item_ == other.item_;
-    }
-    bool operator!=(const Iterator& other) const {
-      return item_ != other.item_;
-    }
+    bool operator==(const Iterator& other) const { return item_ == other.item_; }
+    bool operator!=(const Iterator& other) const { return item_ != other.item_; }
 
     T& operator*() { return *static_cast<T*>(item_); }
     const T& operator*() const { return *static_cast<T*>(item_); }

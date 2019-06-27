@@ -14,21 +14,19 @@
 namespace scenic_impl {
 namespace gfx {
 
-const ResourceTypeInfo ImagePipe::kTypeInfo = {
-    ResourceType::kImagePipe | ResourceType::kImageBase, "ImagePipe"};
+const ResourceTypeInfo ImagePipe::kTypeInfo = {ResourceType::kImagePipe | ResourceType::kImageBase,
+                                               "ImagePipe"};
 
-ImagePipe::ImagePipe(Session* session, ResourceId id,
-                     FrameScheduler* frame_scheduler)
+ImagePipe::ImagePipe(Session* session, ResourceId id, FrameScheduler* frame_scheduler)
     : ImageBase(session, id, ImagePipe::kTypeInfo),
       frame_scheduler_(frame_scheduler),
       weak_ptr_factory_(this) {
   FXL_DCHECK(frame_scheduler);
 }
 
-ImagePipe::ImagePipe(
-    Session* session, ResourceId id,
-    ::fidl::InterfaceRequest<fuchsia::images::ImagePipe> request,
-    FrameScheduler* frame_scheduler)
+ImagePipe::ImagePipe(Session* session, ResourceId id,
+                     ::fidl::InterfaceRequest<fuchsia::images::ImagePipe> request,
+                     FrameScheduler* frame_scheduler)
     : ImageBase(session, id, ImagePipe::kTypeInfo),
       handler_(std::make_unique<ImagePipeHandler>(std::move(request), this)),
       frame_scheduler_(frame_scheduler),
@@ -36,8 +34,7 @@ ImagePipe::ImagePipe(
   FXL_DCHECK(frame_scheduler);
 }
 
-void ImagePipe::AddImage(uint32_t image_id,
-                         fuchsia::images::ImageInfo image_info, zx::vmo vmo,
+void ImagePipe::AddImage(uint32_t image_id, fuchsia::images::ImageInfo image_info, zx::vmo vmo,
                          uint64_t offset_bytes, uint64_t size_bytes,
                          fuchsia::images::MemoryType memory_type) {
   if (image_id == 0) {
@@ -51,8 +48,7 @@ void ImagePipe::AddImage(uint32_t image_id,
 
   if (status != ZX_OK) {
     session()->error_reporter()->ERROR()
-        << "ImagePipe::AddImage(): zx_vmo_get_size failed (err=" << status
-        << ").";
+        << "ImagePipe::AddImage(): zx_vmo_get_size failed (err=" << status << ").";
     CloseConnectionAndCleanUp();
     return;
   }
@@ -60,21 +56,20 @@ void ImagePipe::AddImage(uint32_t image_id,
   memory_args.memory_type = memory_type;
   memory_args.vmo = std::move(vmo);
   memory_args.allocation_size = vmo_size;
-  MemoryPtr memory = Memory::New(session(), 0u, std::move(memory_args),
-                                 session()->error_reporter());
+  MemoryPtr memory =
+      Memory::New(session(), 0u, std::move(memory_args), session()->error_reporter());
   if (!memory) {
     session()->error_reporter()->ERROR()
         << "ImagePipe::AddImage: Unable to create a memory object.";
     CloseConnectionAndCleanUp();
     return;
   }
-  auto image = CreateImage(session(), image_id, memory, image_info,
-                           offset_bytes, session()->error_reporter());
+  auto image = CreateImage(session(), image_id, memory, image_info, offset_bytes,
+                           session()->error_reporter());
   auto result = images_.insert({image_id, std::move(image)});
   if (!result.second) {
     session()->error_reporter()->ERROR()
-        << "ImagePipe::AddImage(): resource with ID " << image_id
-        << " already exists.";
+        << "ImagePipe::AddImage(): resource with ID " << image_id << " already exists.";
     CloseConnectionAndCleanUp();
     return;
   }
@@ -92,13 +87,10 @@ void ImagePipe::CloseConnectionAndCleanUp() {
 
 void ImagePipe::OnConnectionError() { CloseConnectionAndCleanUp(); }
 
-ImagePtr ImagePipe::CreateImage(Session* session, ResourceId id,
-                                MemoryPtr memory,
+ImagePtr ImagePipe::CreateImage(Session* session, ResourceId id, MemoryPtr memory,
                                 const fuchsia::images::ImageInfo& image_info,
-                                uint64_t memory_offset,
-                                ErrorReporter* error_reporter) {
-  return Image::New(session, id, memory, image_info, memory_offset,
-                    error_reporter);
+                                uint64_t memory_offset, ErrorReporter* error_reporter) {
+  return Image::New(session, id, memory, image_info, memory_offset, error_reporter);
 }
 
 void ImagePipe::RemoveImage(uint32_t image_id) {
@@ -106,28 +98,24 @@ void ImagePipe::RemoveImage(uint32_t image_id) {
   size_t erased_count = images_.erase(image_id);
   if (erased_count == 0) {
     session()->error_reporter()->ERROR()
-        << "ImagePipe::RemoveImage(): Could not find image with id=" << image_id
-        << ".";
+        << "ImagePipe::RemoveImage(): Could not find image with id=" << image_id << ".";
     CloseConnectionAndCleanUp();
   }
 };
 
-void ImagePipe::PresentImage(
-    uint32_t image_id, uint64_t presentation_time,
-    ::std::vector<zx::event> acquire_fences,
-    ::std::vector<zx::event> release_fences,
-    fuchsia::images::ImagePipe::PresentImageCallback callback) {
+void ImagePipe::PresentImage(uint32_t image_id, uint64_t presentation_time,
+                             ::std::vector<zx::event> acquire_fences,
+                             ::std::vector<zx::event> release_fences,
+                             fuchsia::images::ImagePipe::PresentImageCallback callback) {
   TRACE_DURATION("gfx", "ImagePipe::PresentImage", "image_id", image_id);
   TRACE_FLOW_END("gfx", "image_pipe_present_image", image_id);
 
-  if (!frames_.empty() &&
-      presentation_time < frames_.back().presentation_time) {
+  if (!frames_.empty() && presentation_time < frames_.back().presentation_time) {
     session()->error_reporter()->ERROR()
         << "ImagePipe: Present called with out-of-order "
            "presentation time."
         << "presentation_time=" << presentation_time
-        << ", last scheduled presentation time="
-        << frames_.back().presentation_time;
+        << ", last scheduled presentation time=" << frames_.back().presentation_time;
     CloseConnectionAndCleanUp();
     return;
   }
@@ -146,19 +134,16 @@ void ImagePipe::PresentImage(
   acquire_fences_listener->WaitReadyAsync(
       [weak = weak_ptr_factory_.GetWeakPtr(), presentation_time] {
         if (weak) {
-          weak->session()->ScheduleImagePipeUpdate(presentation_time,
-                                                   ImagePipePtr(weak.get()));
+          weak->session()->ScheduleImagePipeUpdate(presentation_time, ImagePipePtr(weak.get()));
         }
       });
   TRACE_FLOW_BEGIN("gfx", "image_pipe_present_image_to_update", image_id);
-  frames_.push(Frame{
-      image_it->second, presentation_time, std::move(acquire_fences_listener),
-      fidl::VectorPtr(std::move(release_fences)), std::move(callback)});
+  frames_.push(Frame{image_it->second, presentation_time, std::move(acquire_fences_listener),
+                     fidl::VectorPtr(std::move(release_fences)), std::move(callback)});
 };
 
-ImagePipeUpdateResults ImagePipe::Update(
-    escher::ReleaseFenceSignaller* release_fence_signaller,
-    uint64_t presentation_time) {
+ImagePipeUpdateResults ImagePipe::Update(escher::ReleaseFenceSignaller* release_fence_signaller,
+                                         uint64_t presentation_time) {
   FXL_DCHECK(release_fence_signaller);
 
   ImagePipeUpdateResults results{.image_updated = false};
@@ -168,8 +153,7 @@ ImagePipeUpdateResults ImagePipe::Update(
   ::fidl::VectorPtr<zx::event> next_release_fences;
 
   ImagePtr next_image = nullptr;
-  while (!frames_.empty() &&
-         frames_.front().presentation_time <= presentation_time &&
+  while (!frames_.empty() && frames_.front().presentation_time <= presentation_time &&
          frames_.front().acquire_fences->ready()) {
     if (next_image) {
       // We're skipping a frame, so we should also mark the image as dirty, in
@@ -217,8 +201,7 @@ ImagePipeUpdateResults ImagePipe::Update(
   // fence to the |ReleaseFenceSignaller|, which will signal it as soon as
   // all work previously submitted to the GPU is finished.
   if (current_release_fences_) {
-    release_fence_signaller->AddCPUReleaseFences(
-        std::move(current_release_fences_));
+    release_fence_signaller->AddCPUReleaseFences(std::move(current_release_fences_));
   }
   current_release_fences_ = std::move(next_release_fences);
   current_image_id_ = next_image_id;

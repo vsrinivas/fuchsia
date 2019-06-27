@@ -21,8 +21,7 @@ class MockPoseBufferProviderApp : public fuchsia::ui::gfx::PoseBufferProvider {
 
  private:
   MockPoseBufferProviderApp(const MockPoseBufferProviderApp&) = delete;
-  MockPoseBufferProviderApp& operator=(const MockPoseBufferProviderApp&) =
-      delete;
+  MockPoseBufferProviderApp& operator=(const MockPoseBufferProviderApp&) = delete;
 
   std::unique_ptr<sys::ComponentContext> context_;
   fidl::BindingSet<PoseBufferProvider> bindings_;

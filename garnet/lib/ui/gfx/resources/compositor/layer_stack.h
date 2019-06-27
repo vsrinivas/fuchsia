@@ -32,8 +32,7 @@ class LayerStack : public Resource {
   // in the layer stack's coordinate system.
   //
   // The hit collection behavior depends on the hit tester.
-  std::vector<Hit> HitTest(const escher::ray4& ray,
-                           HitTester* hit_tester) const;
+  std::vector<Hit> HitTest(const escher::ray4& ray, HitTester* hit_tester) const;
 
   // AddLayerCmd.
   bool AddLayer(LayerPtr layer);

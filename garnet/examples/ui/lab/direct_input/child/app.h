@@ -5,14 +5,14 @@
 #ifndef GARNET_EXAMPLES_UI_LAB_DIRECT_INPUT_CHILD_APP_H_
 #define GARNET_EXAMPLES_UI_LAB_DIRECT_INPUT_CHILD_APP_H_
 
-#include <array>
-#include <memory>
-
 #include <fuchsia/ui/app/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/zx/eventpair.h>
+
+#include <array>
+#include <memory>
 
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding.h"
@@ -30,11 +30,9 @@ class App : public fuchsia::ui::app::ViewProvider {
   ~App() override;
 
   // |fuchsia::ui::app::ViewProvider|
-  void CreateView(
-      zx::eventpair view_token,
-      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services,
-      fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> outgoing_services)
-      override;
+  void CreateView(zx::eventpair view_token,
+                  fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services,
+                  fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> outgoing_services) override;
 
  private:
   const static std::size_t kMaxFingers = 10;

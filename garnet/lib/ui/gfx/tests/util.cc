@@ -72,8 +72,7 @@ fxl::RefPtr<fsl::SharedVmo> CreateSharedVmo(size_t size) {
   zx::vmo vmo;
   zx_status_t status = zx::vmo::create(size, 0u, &vmo);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to create vmo: status=" << status
-                   << ", size=" << size;
+    FXL_LOG(ERROR) << "Failed to create vmo: status=" << status << ", size=" << size;
     return nullptr;
   }
 
@@ -81,8 +80,7 @@ fxl::RefPtr<fsl::SharedVmo> CreateSharedVmo(size_t size) {
   // allocate physical memory for it eagerly.
   status = vmo.op_range(ZX_VMO_OP_COMMIT, 0u, size, nullptr, 0u);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to commit all pages of vmo: status=" << status
-                   << ", size=" << size;
+    FXL_LOG(ERROR) << "Failed to commit all pages of vmo: status=" << status << ", size=" << size;
     return nullptr;
   }
 

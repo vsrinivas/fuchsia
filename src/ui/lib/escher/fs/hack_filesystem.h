@@ -48,26 +48,24 @@ class HackFilesystem : public fxl::RefCountedThreadSafe<HackFilesystem> {
 
   // The watcher will be notified whenever any of the paths that it cares
   // about change.  To stop watching, simply release the unique_ptr.
-  std::unique_ptr<HackFilesystemWatcher> RegisterWatcher(
-      HackFilesystemWatcherFunc func);
+  std::unique_ptr<HackFilesystemWatcher> RegisterWatcher(HackFilesystemWatcherFunc func);
 
   // Load the specified files from the real filesystem, given a root directory.
   // On Fuchsia the default root is "/pkg/data/"; on Linux, the default is
   // "../test_data/escher", which points to a directory of escher test data
   // relative to the test binary itself.
-  virtual bool InitializeWithRealFiles(const std::vector<HackFilePath>& paths,
-                                       const char* root =
+  virtual bool InitializeWithRealFiles(const std::vector<HackFilePath>& paths, const char* root =
 #ifdef __Fuchsia__
-                                           "/pkg/data"
+                                                                                   "/pkg/data"
 #else
-                                           "../test_data/escher"
+                                                                                   "../test_data/"
+                                                                                   "escher"
 #endif
                                        ) = 0;
 
  protected:
   HackFilesystem() = default;
-  static bool LoadFile(HackFilesystem* fs, const HackFilePath& root,
-                       const HackFilePath& path);
+  static bool LoadFile(HackFilesystem* fs, const HackFilePath& root, const HackFilePath& path);
 
  private:
   friend class HackFilesystemWatcher;
@@ -105,8 +103,7 @@ class HackFilesystemWatcher final {
  private:
   friend class HackFilesystem;
 
-  explicit HackFilesystemWatcher(HackFilesystem* filesystem,
-                                 HackFilesystemWatcherFunc callback);
+  explicit HackFilesystemWatcher(HackFilesystem* filesystem, HackFilesystemWatcherFunc callback);
 
   HackFilesystem* const filesystem_;
   HackFilesystemWatcherFunc callback_;

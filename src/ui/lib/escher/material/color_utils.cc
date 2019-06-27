@@ -30,8 +30,7 @@ vec3 LinearToSrgb(vec3 linear_color) {
 }
 
 vec3 SrgbToLinear(vec3 srgb_color) {
-  return vec3(SrgbToLinear(srgb_color.x), SrgbToLinear(srgb_color.y),
-              SrgbToLinear(srgb_color.z));
+  return vec3(SrgbToLinear(srgb_color.x), SrgbToLinear(srgb_color.y), SrgbToLinear(srgb_color.z));
 }
 
 vec3 HsvToLinear(vec3 hsv_color) {

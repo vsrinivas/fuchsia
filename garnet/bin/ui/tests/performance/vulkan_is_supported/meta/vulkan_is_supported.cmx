@@ -3,9 +3,11 @@
         "binary": "bin/vulkan_is_supported"
     },
     "sandbox": {
-        "features": [ "vulkan" ],
+        "features": [
+            "vulkan"
+        ],
         "services": [
-          "fuchsia.vulkan.loader.Loader"
+            "fuchsia.vulkan.loader.Loader"
         ]
     }
 }

@@ -48,8 +48,7 @@ namespace test {
 class CustomSession {
  public:
   CustomSession(SessionId id, SessionContext session_context) {
-    session_ = std::make_unique<Session>(id, std::move(session_context),
-                                         EventReporter::Default(),
+    session_ = std::make_unique<Session>(id, std::move(session_context), EventReporter::Default(),
                                          ErrorReporter::Default());
   }
 
@@ -57,8 +56,7 @@ class CustomSession {
 
   void Apply(::fuchsia::ui::gfx::Command command) {
     CommandContext empty_command_context(nullptr);
-    bool result =
-        session_->ApplyCommand(&empty_command_context, std::move(command));
+    bool result = session_->ApplyCommand(&empty_command_context, std::move(command));
     ASSERT_TRUE(result) << "Failed to apply: " << command;  // Fail fast.
   }
 
@@ -77,9 +75,9 @@ TEST_F(MultiSessionHitTestTest, GlobalHits) {
   display_manager.SetDefaultDisplayForTests(std::make_unique<Display>(
       /*id*/ 0, /*px-width*/ 9, /*px-height*/ 9));
   sys::testing::ComponentContextProvider context_provider_;
-  std::unique_ptr<Engine> engine = std::make_unique<EngineForTest>(
-      context_provider_.context(), &display_manager,
-      /*release fence signaller*/ nullptr);
+  std::unique_ptr<Engine> engine =
+      std::make_unique<EngineForTest>(context_provider_.context(), &display_manager,
+                                      /*release fence signaller*/ nullptr);
 
   // Create our tokens for View/ViewHolder creation.
   auto [view_token_1, view_holder_token_1] = scenic::ViewTokenPair::New();
@@ -95,8 +93,7 @@ TEST_F(MultiSessionHitTestTest, GlobalHits) {
     s_r.Apply(scenic::NewCreateLayerStackCmd(kLayerStackId));
     s_r.Apply(scenic::NewSetLayerStackCmd(kCompositorId, kLayerStackId));
     s_r.Apply(scenic::NewCreateLayerCmd(kLayerId));
-    s_r.Apply(scenic::NewSetSizeCmd(
-        kLayerId, (float[2]){/*px-width*/ 9, /*px-height*/ 9}));
+    s_r.Apply(scenic::NewSetSizeCmd(kLayerId, (float[2]){/*px-width*/ 9, /*px-height*/ 9}));
     s_r.Apply(scenic::NewAddLayerCmd(kLayerStackId, kLayerId));
 
     const uint32_t kSceneId = 1004;  // Hit
@@ -114,13 +111,13 @@ TEST_F(MultiSessionHitTestTest, GlobalHits) {
 
     const uint32_t kViewHolder1Id = 1008;  // Hit
     s_r.Apply(scenic::NewAddChildCmd(kSceneId, kRootNodeId));
-    s_r.Apply(scenic::NewCreateViewHolderCmd(
-        kViewHolder1Id, std::move(view_holder_token_1), "viewholder_1"));
+    s_r.Apply(scenic::NewCreateViewHolderCmd(kViewHolder1Id, std::move(view_holder_token_1),
+                                             "viewholder_1"));
     s_r.Apply(scenic::NewAddChildCmd(kRootNodeId, kViewHolder1Id));
 
     const uint32_t kViewHolder2Id = 1009;  // Hit
-    s_r.Apply(scenic::NewCreateViewHolderCmd(
-        kViewHolder2Id, std::move(view_holder_token_2), "viewholder_2"));
+    s_r.Apply(scenic::NewCreateViewHolderCmd(kViewHolder2Id, std::move(view_holder_token_2),
+                                             "viewholder_2"));
     s_r.Apply(scenic::NewAddChildCmd(kRootNodeId, kViewHolder2Id));
   }
 
@@ -128,8 +125,7 @@ TEST_F(MultiSessionHitTestTest, GlobalHits) {
   CustomSession s_1(1, engine->session_context());
   {
     const uint32_t kViewId = 2001;  // Hit
-    s_1.Apply(
-        scenic::NewCreateViewCmd(kViewId, std::move(view_token_1), "view_1"));
+    s_1.Apply(scenic::NewCreateViewCmd(kViewId, std::move(view_token_1), "view_1"));
 
     const uint32_t kRootNodeId = 2002;  // Hit
     s_1.Apply(scenic::NewCreateEntityNodeCmd(kRootNodeId));
@@ -138,8 +134,7 @@ TEST_F(MultiSessionHitTestTest, GlobalHits) {
     const uint32_t kChildId = 2003;  // Hit
     s_1.Apply(scenic::NewCreateShapeNodeCmd(kChildId));
     s_1.Apply(scenic::NewAddChildCmd(kRootNodeId, kChildId));
-    s_1.Apply(scenic::NewSetTranslationCmd(kChildId,
-                                           (float[3]){4.f, 4.f, /*z*/ -2.f}));
+    s_1.Apply(scenic::NewSetTranslationCmd(kChildId, (float[3]){4.f, 4.f, /*z*/ -2.f}));
 
     const uint32_t kShapeId = 2004;
     s_1.Apply(scenic::NewCreateRectangleCmd(kShapeId, /*px-width*/ 9.f,
@@ -150,8 +145,7 @@ TEST_F(MultiSessionHitTestTest, GlobalHits) {
   CustomSession s_2(2, engine->session_context());
   {
     const uint32_t kViewId = 3001;  // Hit
-    s_2.Apply(
-        scenic::NewCreateViewCmd(kViewId, std::move(view_token_2), "view_2"));
+    s_2.Apply(scenic::NewCreateViewCmd(kViewId, std::move(view_token_2), "view_2"));
 
     const uint32_t kRootNodeId = 3002;  // Hit
     s_2.Apply(scenic::NewCreateEntityNodeCmd(kRootNodeId));
@@ -160,8 +154,7 @@ TEST_F(MultiSessionHitTestTest, GlobalHits) {
     const uint32_t kChildId = 3003;  // Hit
     s_2.Apply(scenic::NewCreateShapeNodeCmd(kChildId));
     s_2.Apply(scenic::NewAddChildCmd(kRootNodeId, kChildId));
-    s_2.Apply(scenic::NewSetTranslationCmd(kChildId,
-                                           (float[3]){4.f, 4.f, /*z*/ -3.f}));
+    s_2.Apply(scenic::NewSetTranslationCmd(kChildId, (float[3]){4.f, 4.f, /*z*/ -3.f}));
 
     const uint32_t kShapeId = 3004;
     s_2.Apply(scenic::NewCreateRectangleCmd(kShapeId, /*px-width*/ 9.f,
@@ -177,8 +170,7 @@ TEST_F(MultiSessionHitTestTest, GlobalHits) {
   {
     // Models input subsystem's access to Engine internals.
     // For simplicity, we use the first (and only) compositor and layer stack.
-    const CompositorWeakPtr& compositor =
-        engine->scene_graph()->first_compositor();
+    const CompositorWeakPtr& compositor = engine->scene_graph()->first_compositor();
     ASSERT_TRUE(compositor);
     LayerStackPtr layer_stack = compositor->layer_stack();
     ASSERT_NE(layer_stack.get(), nullptr);

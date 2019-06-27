@@ -120,13 +120,10 @@ VK_TEST(BatchGpuUploader, WriteBuffer) {
   const size_t buffer_size = 3 * sizeof(vec3);
   auto writer = uploader->AcquireWriter(buffer_size);
   // Create buffer to write to.
-  BufferFactoryAdapter buffer_factory(escher->gpu_allocator(),
-                                      escher->resource_recycler());
-  BufferPtr vertex_buffer =
-      buffer_factory.NewBuffer(buffer_size,
-                               vk::BufferUsageFlagBits::eVertexBuffer |
-                                   vk::BufferUsageFlagBits::eTransferDst,
-                               vk::MemoryPropertyFlagBits::eDeviceLocal);
+  BufferFactoryAdapter buffer_factory(escher->gpu_allocator(), escher->resource_recycler());
+  BufferPtr vertex_buffer = buffer_factory.NewBuffer(
+      buffer_size, vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eTransferDst,
+      vk::MemoryPropertyFlagBits::eDeviceLocal);
 
   // Do write.
   void* host_ptr = writer->host_ptr();
@@ -153,10 +150,8 @@ VK_TEST(BatchGpuUploader, WriteImage) {
   auto writer = uploader->AcquireWriter(image_size);
 
   // Create a 1x1 RGBA (8-bit channels) image to write to.
-  ImageFactoryAdapter image_factory(escher->gpu_allocator(),
-                                    escher->resource_recycler());
-  ImagePtr image =
-      image_utils::NewImage(&image_factory, vk::Format::eR8G8B8A8Unorm, 1, 1);
+  ImageFactoryAdapter image_factory(escher->gpu_allocator(), escher->resource_recycler());
+  ImagePtr image = image_utils::NewImage(&image_factory, vk::Format::eR8G8B8A8Unorm, 1, 1);
   vk::BufferImageCopy region;
   region.imageSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
   region.imageSubresource.mipLevel = 0;
@@ -229,14 +224,12 @@ VK_TEST(BatchGpuUploader, DISABLED_ReadAWriteSucceeds) {
   const size_t buffer_size = 3 * sizeof(vec3);
   auto writer = uploader->AcquireWriter(buffer_size);
   // Create buffer to write to.
-  BufferFactoryAdapter buffer_factory(escher->gpu_allocator(),
-                                      escher->resource_recycler());
-  BufferPtr vertex_buffer =
-      buffer_factory.NewBuffer(buffer_size,
-                               vk::BufferUsageFlagBits::eVertexBuffer |
-                                   vk::BufferUsageFlagBits::eTransferSrc |
-                                   vk::BufferUsageFlagBits::eTransferDst,
-                               vk::MemoryPropertyFlagBits::eDeviceLocal);
+  BufferFactoryAdapter buffer_factory(escher->gpu_allocator(), escher->resource_recycler());
+  BufferPtr vertex_buffer = buffer_factory.NewBuffer(buffer_size,
+                                                     vk::BufferUsageFlagBits::eVertexBuffer |
+                                                         vk::BufferUsageFlagBits::eTransferSrc |
+                                                         vk::BufferUsageFlagBits::eTransferDst,
+                                                     vk::MemoryPropertyFlagBits::eDeviceLocal);
   EXPECT_FALSE(vertex_buffer->HasWaitSemaphore());
 
   // Do write.
@@ -257,16 +250,15 @@ VK_TEST(BatchGpuUploader, DISABLED_ReadAWriteSucceeds) {
   EXPECT_TRUE(vertex_buffer->HasWaitSemaphore());
 
   bool read_buffer_done = false;
-  uploader->PostReader(std::move(reader),
-                       [&read_buffer_done, &write_verts](BufferPtr buffer) {
-                         void* host_ptr = buffer->host_ptr();
-                         vec3* const read_verts = static_cast<vec3*>(host_ptr);
-                         EXPECT_EQ(read_verts[0], write_verts[0]);
-                         EXPECT_EQ(read_verts[1], write_verts[1]);
-                         EXPECT_EQ(read_verts[2], write_verts[2]);
+  uploader->PostReader(std::move(reader), [&read_buffer_done, &write_verts](BufferPtr buffer) {
+    void* host_ptr = buffer->host_ptr();
+    vec3* const read_verts = static_cast<vec3*>(host_ptr);
+    EXPECT_EQ(read_verts[0], write_verts[0]);
+    EXPECT_EQ(read_verts[1], write_verts[1]);
+    EXPECT_EQ(read_verts[2], write_verts[2]);
 
-                         read_buffer_done = true;
-                       });
+    read_buffer_done = true;
+  });
 
   // Submit all the work.
   uploader->Submit();
@@ -296,9 +288,8 @@ VK_TEST(BatchGpuUploader, ReadImageTest) {
   EXPECT_TRUE(image->HasWaitSemaphore());
 
   bool read_image_done = false;
-  uploader.PostReader(std::move(reader), [&read_image_done](BufferPtr buffer) {
-    read_image_done = true;
-  });
+  uploader.PostReader(std::move(reader),
+                      [&read_image_done](BufferPtr buffer) { read_image_done = true; });
 
   uploader.Submit([]() {});
 
@@ -311,14 +302,12 @@ VK_TEST(BatchGpuUploader, ReadBufferTest) {
   auto escher = test::GetEscher()->GetWeakPtr();
   // Create buffer to read from.
   const size_t buffer_size = 3 * sizeof(vec3);
-  BufferFactoryAdapter buffer_factory(escher->gpu_allocator(),
-                                      escher->resource_recycler());
-  BufferPtr vertex_buffer =
-      buffer_factory.NewBuffer(buffer_size,
-                               vk::BufferUsageFlagBits::eVertexBuffer |
-                                   vk::BufferUsageFlagBits::eTransferSrc |
-                                   vk::BufferUsageFlagBits::eTransferDst,
-                               vk::MemoryPropertyFlagBits::eHostVisible);
+  BufferFactoryAdapter buffer_factory(escher->gpu_allocator(), escher->resource_recycler());
+  BufferPtr vertex_buffer = buffer_factory.NewBuffer(buffer_size,
+                                                     vk::BufferUsageFlagBits::eVertexBuffer |
+                                                         vk::BufferUsageFlagBits::eTransferSrc |
+                                                         vk::BufferUsageFlagBits::eTransferDst,
+                                                     vk::MemoryPropertyFlagBits::eHostVisible);
   void* host_ptr = vertex_buffer->host_ptr();
   vec3* const verts = static_cast<vec3*>(host_ptr);
   verts[0] = vec3(0.f, 0.f, 0.f);
@@ -333,16 +322,15 @@ VK_TEST(BatchGpuUploader, ReadBufferTest) {
   EXPECT_TRUE(vertex_buffer->HasWaitSemaphore());
 
   bool read_buffer_done = false;
-  uploader->PostReader(std::move(reader),
-                       [&read_buffer_done](BufferPtr buffer) {
-                         void* host_ptr = buffer->host_ptr();
-                         vec3* const verts = static_cast<vec3*>(host_ptr);
-                         EXPECT_EQ(verts[0], vec3(0.f, 0.f, 0.f));
-                         EXPECT_EQ(verts[1], vec3(0.f, 1.f, 0.f));
-                         EXPECT_EQ(verts[2], vec3(1.f, 0.f, 0.f));
+  uploader->PostReader(std::move(reader), [&read_buffer_done](BufferPtr buffer) {
+    void* host_ptr = buffer->host_ptr();
+    vec3* const verts = static_cast<vec3*>(host_ptr);
+    EXPECT_EQ(verts[0], vec3(0.f, 0.f, 0.f));
+    EXPECT_EQ(verts[1], vec3(0.f, 1.f, 0.f));
+    EXPECT_EQ(verts[2], vec3(1.f, 0.f, 0.f));
 
-                         read_buffer_done = true;
-                       });
+    read_buffer_done = true;
+  });
   uploader->Submit();
 
   escher->vk_device().waitIdle();

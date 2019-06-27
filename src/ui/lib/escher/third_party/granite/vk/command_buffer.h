@@ -100,16 +100,12 @@ class CommandBuffer : public Reffable {
 
   // Wraps vkCmdPipelineBarrier(), using a barrier consisting of a single
   // VkImageMemoryBarrier.  Keeps |image| alive while command buffer is pending.
-  void ImageBarrier(const ImagePtr& image, vk::ImageLayout old_layout,
-                    vk::ImageLayout new_layout,
-                    vk::PipelineStageFlags src_stages,
-                    vk::AccessFlags src_access,
-                    vk::PipelineStageFlags dst_stages,
-                    vk::AccessFlags dst_access);
+  void ImageBarrier(const ImagePtr& image, vk::ImageLayout old_layout, vk::ImageLayout new_layout,
+                    vk::PipelineStageFlags src_stages, vk::AccessFlags src_access,
+                    vk::PipelineStageFlags dst_stages, vk::AccessFlags dst_access);
 
   // Defers call to vkCmdPushConstants() via kDirtyPushConstantsBit.
-  void PushConstants(const void* data, vk::DeviceSize offset,
-                     vk::DeviceSize range);
+  void PushConstants(const void* data, vk::DeviceSize offset, vk::DeviceSize range);
   template <typename StructT>
   void PushConstants(const StructT* data, vk::DeviceSize offset = 0U) {
     PushConstants(data, offset, sizeof(StructT));
@@ -122,13 +118,11 @@ class CommandBuffer : public Reffable {
   // Set/dirty a uniform buffer binding that will later be flushed, causing
   // descriptor sets to be written/bound as necessary.  Keeps |buffer| alive
   // while command buffer is pending.
-  void BindUniformBuffer(uint32_t set, uint32_t binding,
-                         const BufferPtr& buffer);
-  void BindUniformBuffer(uint32_t set, uint32_t binding,
-                         const BufferPtr& buffer, vk::DeviceSize offset,
-                         vk::DeviceSize range);
-  void BindUniformBuffer(uint32_t set, uint32_t binding, Buffer* buffer,
+  void BindUniformBuffer(uint32_t set, uint32_t binding, const BufferPtr& buffer);
+  void BindUniformBuffer(uint32_t set, uint32_t binding, const BufferPtr& buffer,
                          vk::DeviceSize offset, vk::DeviceSize range);
+  void BindUniformBuffer(uint32_t set, uint32_t binding, Buffer* buffer, vk::DeviceSize offset,
+                         vk::DeviceSize range);
 
   // Set/dirty a texture binding that will later be flushed, causing descriptor
   // sets to be written/bound as necessary.  Keeps |texture| alive while command
@@ -140,31 +134,25 @@ class CommandBuffer : public Reffable {
 
   // Set/dirty a vertex buffer binding that will later be flushed, causing
   // descriptor sets to be written/bound as necessary.
-  void BindVertices(
-      uint32_t binding, vk::Buffer buffer, vk::DeviceSize offset,
-      vk::DeviceSize stride,
-      vk::VertexInputRate step_rate = vk::VertexInputRate::eVertex);
+  void BindVertices(uint32_t binding, vk::Buffer buffer, vk::DeviceSize offset,
+                    vk::DeviceSize stride,
+                    vk::VertexInputRate step_rate = vk::VertexInputRate::eVertex);
   // These two variants keep |buffer| alive while the command buffer is pending;
   // the one above makes this the responsibility of the caller.
-  void BindVertices(
-      uint32_t binding, Buffer* buffer, vk::DeviceSize offset,
-      vk::DeviceSize stride,
-      vk::VertexInputRate step_rate = vk::VertexInputRate::eVertex);
-  void BindVertices(
-      uint32_t binding, const BufferPtr& buffer, vk::DeviceSize offset,
-      vk::DeviceSize stride,
-      vk::VertexInputRate step_rate = vk::VertexInputRate::eVertex) {
+  void BindVertices(uint32_t binding, Buffer* buffer, vk::DeviceSize offset, vk::DeviceSize stride,
+                    vk::VertexInputRate step_rate = vk::VertexInputRate::eVertex);
+  void BindVertices(uint32_t binding, const BufferPtr& buffer, vk::DeviceSize offset,
+                    vk::DeviceSize stride,
+                    vk::VertexInputRate step_rate = vk::VertexInputRate::eVertex) {
     BindVertices(binding, buffer.get(), offset, stride, step_rate);
   }
 
   // Sets the current index buffer binding; this happens immediately because
   // index buffer changes never require descriptor sets to be written or new
   // pipelines to be generated.
-  void BindIndices(vk::Buffer buffer, vk::DeviceSize offset,
-                   vk::IndexType index_type);
+  void BindIndices(vk::Buffer buffer, vk::DeviceSize offset, vk::IndexType index_type);
   // This variant keeps |buffer| alive while command buffer is pending.
-  void BindIndices(const BufferPtr& buffer, vk::DeviceSize offset,
-                   vk::IndexType index_type);
+  void BindIndices(const BufferPtr& buffer, vk::DeviceSize offset, vk::IndexType index_type);
 
   // Set/dirty the attributes that will be used to interpret the vertex buffer
   // at |binding| (see BindVertices() above) when the next draw call is made.
@@ -177,22 +165,18 @@ class CommandBuffer : public Reffable {
 
   // Wraps vkCmdDrawIndexed(), first flushing any dirty render state; this may
   // cause descriptor sets to be written/bound, or a new pipeline to be created.
-  void DrawIndexed(uint32_t index_count, uint32_t instance_count = 1,
-                   uint32_t first_index = 0, int32_t vertex_offset = 0,
-                   uint32_t first_instance = 0);
+  void DrawIndexed(uint32_t index_count, uint32_t instance_count = 1, uint32_t first_index = 0,
+                   int32_t vertex_offset = 0, uint32_t first_instance = 0);
 
   // Wraps vkCmdClearAttachments().  Clears the specified rectangle of the
   // specified attachment (see RenderPassInfo), filling it with the specified
   // values.
-  void ClearAttachmentRect(uint32_t subpass_color_attachment_index,
-                           const vk::ClearRect& rect,
-                           const vk::ClearValue& value,
-                           vk::ImageAspectFlags aspect);
+  void ClearAttachmentRect(uint32_t subpass_color_attachment_index, const vk::ClearRect& rect,
+                           const vk::ClearValue& value, vk::ImageAspectFlags aspect);
   // Convenient version of ClearAttachmentRect() for color attachments.
   // NOTE: uses baseArrayLayer == 0 and layerCount == 1.
-  void ClearColorAttachmentRect(uint32_t subpass_color_attachment_index,
-                                vk::Offset2D offset, vk::Extent2D extent,
-                                const vk::ClearColorValue& value);
+  void ClearColorAttachmentRect(uint32_t subpass_color_attachment_index, vk::Offset2D offset,
+                                vk::Extent2D extent, const vk::ClearColorValue& value);
   // Convenient version of ClearAttachmentRect() for depth/stencil attachments.
   // NOTE: uses baseArrayLayer == 0 and layerCount == 1.
   void ClearDepthStencilAttachmentRect(vk::Offset2D offset, vk::Extent2D extent,
@@ -200,9 +184,8 @@ class CommandBuffer : public Reffable {
                                        vk::ImageAspectFlags aspect);
 
   // Simple blit between base layers of two images.
-  void Blit(const ImagePtr& src_image, vk::Offset2D src_offset,
-            vk::Extent2D src_extent, const ImagePtr& dst_image,
-            vk::Offset2D dst_offset, vk::Extent2D dst_extent,
+  void Blit(const ImagePtr& src_image, vk::Offset2D src_offset, vk::Extent2D src_extent,
+            const ImagePtr& dst_image, vk::Offset2D dst_offset, vk::Extent2D dst_extent,
             vk::Filter filter);
 
   // Convenient way to bring CommandBuffer to a known default state.  See the
@@ -237,8 +220,7 @@ class CommandBuffer : public Reffable {
   // TODO(ES-202): This code-flow assumes that ShaderPrograms source from, at
   // most, a single sampler. This is a blocking bug for implementing, e.g.,
   // ES-159.
-  void SetShaderProgram(ShaderProgram* program,
-                        const SamplerPtr& immutable_sampler = nullptr);
+  void SetShaderProgram(ShaderProgram* program, const SamplerPtr& immutable_sampler = nullptr);
   void SetShaderProgram(const ShaderProgramPtr& program,
                         const SamplerPtr& immutable_sampler = nullptr) {
     SetShaderProgram(program.get(), immutable_sampler);
@@ -255,10 +237,8 @@ class CommandBuffer : public Reffable {
 
   void SetBlendConstants(const float blend_constants[4]);
   void SetBlendEnable(bool blend_enable);
-  void SetBlendFactors(vk::BlendFactor src_color_blend,
-                       vk::BlendFactor src_alpha_blend,
-                       vk::BlendFactor dst_color_blend,
-                       vk::BlendFactor dst_alpha_blend);
+  void SetBlendFactors(vk::BlendFactor src_color_blend, vk::BlendFactor src_alpha_blend,
+                       vk::BlendFactor dst_color_blend, vk::BlendFactor dst_alpha_blend);
   void SetBlendFactors(vk::BlendFactor src_blend, vk::BlendFactor dst_blend);
   void SetBlendOp(vk::BlendOp color_blend_op, vk::BlendOp alpha_blend_op);
   void SetBlendOp(vk::BlendOp blend_op);
@@ -282,22 +262,16 @@ class CommandBuffer : public Reffable {
   void SetMultisampleState(bool alpha_to_coverage, bool alpha_to_one = false,
                            bool sample_shading = false);
 
-  void SetStencilBackOps(vk::CompareOp stencil_back_compare_op,
-                         vk::StencilOp stencil_back_pass,
-                         vk::StencilOp stencil_back_fail,
-                         vk::StencilOp stencil_back_depth_fail);
-  void SetStencilBackReference(uint8_t back_compare_mask,
-                               uint8_t back_write_mask, uint8_t back_reference);
-  void SetStencilFrontOps(vk::CompareOp stencil_front_compare_op,
-                          vk::StencilOp stencil_front_pass,
-                          vk::StencilOp stencil_front_fail,
-                          vk::StencilOp stencil_front_depth_fail);
-  void SetStencilFrontReference(uint8_t front_compare_mask,
-                                uint8_t front_write_mask,
+  void SetStencilBackOps(vk::CompareOp stencil_back_compare_op, vk::StencilOp stencil_back_pass,
+                         vk::StencilOp stencil_back_fail, vk::StencilOp stencil_back_depth_fail);
+  void SetStencilBackReference(uint8_t back_compare_mask, uint8_t back_write_mask,
+                               uint8_t back_reference);
+  void SetStencilFrontOps(vk::CompareOp stencil_front_compare_op, vk::StencilOp stencil_front_pass,
+                          vk::StencilOp stencil_front_fail, vk::StencilOp stencil_front_depth_fail);
+  void SetStencilFrontReference(uint8_t front_compare_mask, uint8_t front_write_mask,
                                 uint8_t front_reference);
-  void SetStencilOps(vk::CompareOp stencil_compare_op,
-                     vk::StencilOp stencil_pass, vk::StencilOp stencil_fail,
-                     vk::StencilOp stencil_depth_fail);
+  void SetStencilOps(vk::CompareOp stencil_compare_op, vk::StencilOp stencil_pass,
+                     vk::StencilOp stencil_fail, vk::StencilOp stencil_depth_fail);
   void SetStencilTest(bool stencil_test);
 
   void SetPrimitiveRestart(bool primitive_restart);
@@ -352,8 +326,7 @@ class CommandBuffer : public Reffable {
   };
 
   using PipelineStaticState = CommandBufferPipelineState::StaticState;
-  using PipelinePotentialStaticState =
-      CommandBufferPipelineState::PotentialStaticState;
+  using PipelinePotentialStaticState = CommandBufferPipelineState::PotentialStaticState;
 
   // State that can be changed dynamically without requiring pipeline changes.
   struct DynamicState {
@@ -384,9 +357,8 @@ class CommandBuffer : public Reffable {
   // SavedStateFlags sets aside only 4 bits to indicate which descriptor set
   // bindings are to be saved.  Should we desire a larger number of descriptor
   // sets in the future, more bits must be allocated for this purpose.
-  static_assert(
-      VulkanLimits::kNumDescriptorSets == 4,
-      "Not enough bits to indicate which descriptor set bindings to save.");
+  static_assert(VulkanLimits::kNumDescriptorSets == 4,
+                "Not enough bits to indicate which descriptor set bindings to save.");
 
   // Saves state so that it can be restored later.
   struct SavedState {
@@ -421,14 +393,13 @@ class CommandBuffer : public Reffable {
     // The pipelines that CommandBufferPipelineState::BuildGraphicsPipeline()
     // produces always treats viewport, scissor, stencil, and depth-bias as
     // dynamic state.
-    kDirtyDynamicBits = kDirtyViewportBit | kDirtyScissorBit |
-                        kDirtyDepthBiasBit | kDirtyStencilMasksAndReferenceBit,
+    kDirtyDynamicBits = kDirtyViewportBit | kDirtyScissorBit | kDirtyDepthBiasBit |
+                        kDirtyStencilMasksAndReferenceBit,
   };
   using DirtyFlags = uint32_t;
 
   // TODO(ES-83): impl::CommandBuffer is deprecated from the get-go.
-  CommandBuffer(EscherWeakPtr escher, Type type,
-                impl::CommandBuffer* command_buffer);
+  CommandBuffer(EscherWeakPtr escher, Type type, impl::CommandBuffer* command_buffer);
 
   // Sets all flags to dirty, and zeros out DescriptorSetBindings uids.
   void BeginGraphicsOrComputeContext();
@@ -481,23 +452,21 @@ class CommandBuffer : public Reffable {
   }
 
   // Used internally by the various Bind*() methods.
-  CommandBuffer::DescriptorSetBindings* GetDescriptorSetBindings(
-      uint32_t set_index) {
+  CommandBuffer::DescriptorSetBindings* GetDescriptorSetBindings(uint32_t set_index) {
     FXL_DCHECK(set_index < VulkanLimits::kNumDescriptorSets);
     return &(bindings_.descriptor_sets[set_index]);
   }
 
   // Used internally by the various Bind*() methods.
-  CommandBuffer::DescriptorBindingInfo* GetDescriptorBindingInfo(
-      uint32_t set_index, uint32_t binding_index) {
+  CommandBuffer::DescriptorBindingInfo* GetDescriptorBindingInfo(uint32_t set_index,
+                                                                 uint32_t binding_index) {
     FXL_DCHECK(binding_index < VulkanLimits::kNumBindings);
     return &(GetDescriptorSetBindings(set_index)->infos[binding_index]);
   }
 
   // Used internally by the various Bind*() methods.
   CommandBuffer::DescriptorBindingInfo* GetDescriptorBindingInfo(
-      CommandBuffer::DescriptorSetBindings* set_bindings,
-      uint32_t binding_index) {
+      CommandBuffer::DescriptorSetBindings* set_bindings, uint32_t binding_index) {
     FXL_DCHECK(binding_index < VulkanLimits::kNumBindings);
     return &(set_bindings->infos[binding_index]);
   }
@@ -593,23 +562,18 @@ inline void CommandBuffer::SetScissor(const vk::Rect2D& rect) {
   SetDirty(kDirtyScissorBit);
 }
 
-inline void CommandBuffer::SetDepthTestAndWrite(bool depth_test,
-                                                bool depth_write) {
+inline void CommandBuffer::SetDepthTestAndWrite(bool depth_test, bool depth_write) {
   SET_STATIC_STATE(depth_test);
   SET_STATIC_STATE(depth_write);
 }
 
-inline void CommandBuffer::SetWireframe(bool wireframe) {
-  SET_STATIC_STATE(wireframe);
-}
+inline void CommandBuffer::SetWireframe(bool wireframe) { SET_STATIC_STATE(wireframe); }
 
 inline void CommandBuffer::SetDepthCompareOp(vk::CompareOp depth_compare) {
   SET_STATIC_STATE_ENUM(depth_compare);
 }
 
-inline void CommandBuffer::SetBlendEnable(bool blend_enable) {
-  SET_STATIC_STATE(blend_enable);
-}
+inline void CommandBuffer::SetBlendEnable(bool blend_enable) { SET_STATIC_STATE(blend_enable); }
 
 inline void CommandBuffer::SetBlendFactors(vk::BlendFactor src_color_blend,
                                            vk::BlendFactor src_alpha_blend,
@@ -621,20 +585,16 @@ inline void CommandBuffer::SetBlendFactors(vk::BlendFactor src_color_blend,
   SET_STATIC_STATE_ENUM(dst_alpha_blend);
 }
 
-inline void CommandBuffer::SetBlendFactors(vk::BlendFactor src_blend,
-                                           vk::BlendFactor dst_blend) {
+inline void CommandBuffer::SetBlendFactors(vk::BlendFactor src_blend, vk::BlendFactor dst_blend) {
   SetBlendFactors(src_blend, src_blend, dst_blend, dst_blend);
 }
 
-inline void CommandBuffer::SetBlendOp(vk::BlendOp color_blend_op,
-                                      vk::BlendOp alpha_blend_op) {
+inline void CommandBuffer::SetBlendOp(vk::BlendOp color_blend_op, vk::BlendOp alpha_blend_op) {
   SET_STATIC_STATE_ENUM(color_blend_op);
   SET_STATIC_STATE_ENUM(alpha_blend_op);
 }
 
-inline void CommandBuffer::SetBlendOp(vk::BlendOp blend_op) {
-  SetBlendOp(blend_op, blend_op);
-}
+inline void CommandBuffer::SetBlendOp(vk::BlendOp blend_op) { SetBlendOp(blend_op, blend_op); }
 
 inline void CommandBuffer::SetColorWriteMask(uint32_t color_write_mask) {
   SET_STATIC_STATE(color_write_mask);
@@ -644,22 +604,22 @@ inline void CommandBuffer::SetDepthBias(bool depth_bias_enable) {
   SET_STATIC_STATE(depth_bias_enable);
 }
 
-inline void CommandBuffer::SetStencilTest(bool stencil_test) {
-  SET_STATIC_STATE(stencil_test);
-}
+inline void CommandBuffer::SetStencilTest(bool stencil_test) { SET_STATIC_STATE(stencil_test); }
 
-inline void CommandBuffer::SetStencilFrontOps(
-    vk::CompareOp stencil_front_compare_op, vk::StencilOp stencil_front_pass,
-    vk::StencilOp stencil_front_fail, vk::StencilOp stencil_front_depth_fail) {
+inline void CommandBuffer::SetStencilFrontOps(vk::CompareOp stencil_front_compare_op,
+                                              vk::StencilOp stencil_front_pass,
+                                              vk::StencilOp stencil_front_fail,
+                                              vk::StencilOp stencil_front_depth_fail) {
   SET_STATIC_STATE_ENUM(stencil_front_compare_op);
   SET_STATIC_STATE_ENUM(stencil_front_pass);
   SET_STATIC_STATE_ENUM(stencil_front_fail);
   SET_STATIC_STATE_ENUM(stencil_front_depth_fail);
 }
 
-inline void CommandBuffer::SetStencilBackOps(
-    vk::CompareOp stencil_back_compare_op, vk::StencilOp stencil_back_pass,
-    vk::StencilOp stencil_back_fail, vk::StencilOp stencil_back_depth_fail) {
+inline void CommandBuffer::SetStencilBackOps(vk::CompareOp stencil_back_compare_op,
+                                             vk::StencilOp stencil_back_pass,
+                                             vk::StencilOp stencil_back_fail,
+                                             vk::StencilOp stencil_back_depth_fail) {
   SET_STATIC_STATE_ENUM(stencil_back_compare_op);
   SET_STATIC_STATE_ENUM(stencil_back_pass);
   SET_STATIC_STATE_ENUM(stencil_back_fail);
@@ -667,17 +627,13 @@ inline void CommandBuffer::SetStencilBackOps(
 }
 
 inline void CommandBuffer::SetStencilOps(vk::CompareOp stencil_compare_op,
-                                         vk::StencilOp stencil_pass,
-                                         vk::StencilOp stencil_fail,
+                                         vk::StencilOp stencil_pass, vk::StencilOp stencil_fail,
                                          vk::StencilOp stencil_depth_fail) {
-  SetStencilFrontOps(stencil_compare_op, stencil_pass, stencil_fail,
-                     stencil_depth_fail);
-  SetStencilBackOps(stencil_compare_op, stencil_pass, stencil_fail,
-                    stencil_depth_fail);
+  SetStencilFrontOps(stencil_compare_op, stencil_pass, stencil_fail, stencil_depth_fail);
+  SetStencilBackOps(stencil_compare_op, stencil_pass, stencil_fail, stencil_depth_fail);
 }
 
-inline void CommandBuffer::SetPrimitiveTopology(
-    vk::PrimitiveTopology primitive_topology) {
+inline void CommandBuffer::SetPrimitiveTopology(vk::PrimitiveTopology primitive_topology) {
   SET_STATIC_STATE_ENUM(primitive_topology);
 }
 
@@ -685,8 +641,7 @@ inline void CommandBuffer::SetPrimitiveRestart(bool primitive_restart) {
   SET_STATIC_STATE(primitive_restart);
 }
 
-inline void CommandBuffer::SetMultisampleState(bool alpha_to_coverage,
-                                               bool alpha_to_one,
+inline void CommandBuffer::SetMultisampleState(bool alpha_to_coverage, bool alpha_to_one,
                                                bool sample_shading) {
   SET_STATIC_STATE(alpha_to_coverage);
   SET_STATIC_STATE(alpha_to_one);
@@ -709,8 +664,7 @@ inline void CommandBuffer::SetBlendConstants(const float blend_constants[4]) {
   SET_POTENTIALLY_STATIC_STATE(blend_constants[3]);
 }
 
-inline void CommandBuffer::SetDepthBias(float depth_bias_constant,
-                                        float depth_bias_slope) {
+inline void CommandBuffer::SetDepthBias(float depth_bias_constant, float depth_bias_slope) {
   SET_DYNAMIC_STATE(depth_bias_constant, kDirtyDepthBiasBit);
   SET_DYNAMIC_STATE(depth_bias_slope, kDirtyDepthBiasBit);
 }

@@ -23,9 +23,7 @@ namespace gfx {
 // directly from that dispatcher. E.g.,
 //   zx_time_t now = async_now(dispatcher);
 //   zx::time now = async::Now(dispatcher);
-inline zx_time_t dispatcher_clock_now() {
-  return async_now(async_get_default_dispatcher());
-}
+inline zx_time_t dispatcher_clock_now() { return async_now(async_get_default_dispatcher()); }
 
 }  // namespace gfx
 }  // namespace scenic_impl

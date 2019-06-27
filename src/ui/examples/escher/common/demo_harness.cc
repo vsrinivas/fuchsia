@@ -17,8 +17,7 @@
 
 #define VK_CHECK_RESULT(XXX) FXL_CHECK(XXX.result == vk::Result::eSuccess)
 
-DemoHarness::DemoHarness(WindowParams window_params)
-    : window_params_(window_params) {
+DemoHarness::DemoHarness(WindowParams window_params) : window_params_(window_params) {
   // Init() is called by DemoHarness::New().
 }
 
@@ -26,8 +25,7 @@ DemoHarness::~DemoHarness() { FXL_DCHECK(shutdown_complete_); }
 
 void DemoHarness::Init(InstanceParams instance_params) {
   FXL_LOG(INFO) << "Initializing " << window_params_.window_name
-                << (window_params_.use_fullscreen ? " (fullscreen "
-                                                  : " (windowed ")
+                << (window_params_.use_fullscreen ? " (fullscreen " : " (windowed ")
                 << window_params_.width << "x" << window_params_.height << ")";
   InitWindowSystem();
   CreateInstance(std::move(instance_params));
@@ -73,8 +71,7 @@ void DemoHarness::CreateInstance(InstanceParams params) {
     dbgCreateInfo.pNext = NULL;
     dbgCreateInfo.pfnCallback = RedirectDebugReport;
     dbgCreateInfo.pUserData = this;
-    dbgCreateInfo.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT |
-                          VK_DEBUG_REPORT_WARNING_BIT_EXT |
+    dbgCreateInfo.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT |
                           VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT;
 
     // We use the C API here due to dynamically loading the extension function.
@@ -84,10 +81,8 @@ void DemoHarness::CreateInstance(InstanceParams params) {
   }
 }
 
-void DemoHarness::CreateDeviceAndQueue(
-    escher::VulkanDeviceQueues::Params params) {
-  device_queues_ =
-      escher::VulkanDeviceQueues::New(instance_, std::move(params));
+void DemoHarness::CreateDeviceAndQueue(escher::VulkanDeviceQueues::Params params) {
+  device_queues_ = escher::VulkanDeviceQueues::New(instance_, std::move(params));
 }
 
 void DemoHarness::CreateSwapchain() {
@@ -194,9 +189,9 @@ void DemoHarness::CreateSwapchain() {
   // Using eTransferDst allows us to blit debug info onto the surface.
   // Using eSampled allows us to save memory by using the color attachment
   // for intermediate computation.
-  const vk::ImageUsageFlags kImageUsageFlags =
-      vk::ImageUsageFlagBits::eColorAttachment |
-      vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled;
+  const vk::ImageUsageFlags kImageUsageFlags = vk::ImageUsageFlagBits::eColorAttachment |
+                                               vk::ImageUsageFlagBits::eTransferDst |
+                                               vk::ImageUsageFlagBits::eSampled;
 
   // Create the swapchain.
   vk::SwapchainKHR swapchain;
@@ -243,14 +238,12 @@ void DemoHarness::CreateSwapchain() {
       image_info.height = swapchain_extent.height;
       image_info.usage = kImageUsageFlags;
 
-      auto escher_image = escher::Image::WrapVkImage(
-          swapchain_image_owner_.get(), image_info, im);
+      auto escher_image = escher::Image::WrapVkImage(swapchain_image_owner_.get(), image_info, im);
       FXL_CHECK(escher_image);
       escher_images.push_back(escher_image);
     }
-    swapchain_ = escher::VulkanSwapchain(
-        swapchain, escher_images, swapchain_extent.width,
-        swapchain_extent.height, format, color_space);
+    swapchain_ = escher::VulkanSwapchain(swapchain, escher_images, swapchain_extent.width,
+                                         swapchain_extent.height, format, color_space);
   }
 }
 
@@ -272,18 +265,16 @@ void DemoHarness::DestroyDevice() {
 void DemoHarness::DestroyInstance() {
   // Destroy the debug callback.  We use the C API here because we need to
   // dynamically load the destruction function.
-  instance_proc_addrs().DestroyDebugReportCallbackEXT(
-      instance(), debug_report_callback_, nullptr);
+  instance_proc_addrs().DestroyDebugReportCallbackEXT(instance(), debug_report_callback_, nullptr);
 
   instance_ = nullptr;
 }
 
-VkBool32 DemoHarness::HandleDebugReport(
-    VkDebugReportFlagsEXT flags_in, VkDebugReportObjectTypeEXT object_type_in,
-    uint64_t object, size_t location, int32_t message_code,
-    const char* pLayerPrefix, const char* pMessage) {
-  vk::DebugReportFlagsEXT flags(
-      static_cast<vk::DebugReportFlagBitsEXT>(flags_in));
+VkBool32 DemoHarness::HandleDebugReport(VkDebugReportFlagsEXT flags_in,
+                                        VkDebugReportObjectTypeEXT object_type_in, uint64_t object,
+                                        size_t location, int32_t message_code,
+                                        const char* pLayerPrefix, const char* pMessage) {
+  vk::DebugReportFlagsEXT flags(static_cast<vk::DebugReportFlagBitsEXT>(flags_in));
   vk::DebugReportObjectTypeEXT object_type(
       static_cast<vk::DebugReportObjectTypeEXT>(object_type_in));
 
@@ -308,14 +299,12 @@ VkBool32 DemoHarness::HandleDebugReport(
     // This should never happen, unless a new value has been added to
     // vk::DebugReportFlagBitsEXT.  In that case, add a new if-clause above.
     fatal = true;
-    std::cerr << "## Vulkan Unknown Message Type (flags: "
-              << vk::to_string(flags) << "): ";
+    std::cerr << "## Vulkan Unknown Message Type (flags: " << vk::to_string(flags) << "): ";
   }
 
-  std::cerr << pMessage << " (layer: " << pLayerPrefix
-            << "  code: " << message_code
-            << "  object-type: " << vk::to_string(object_type)
-            << "  object: " << object << ")" << std::endl;
+  std::cerr << pMessage << " (layer: " << pLayerPrefix << "  code: " << message_code
+            << "  object-type: " << vk::to_string(object_type) << "  object: " << object << ")"
+            << std::endl;
 
   // Crash immediately on fatal errors.
   FXL_CHECK(!fatal);
@@ -323,9 +312,7 @@ VkBool32 DemoHarness::HandleDebugReport(
   return false;
 }
 
-escher::VulkanContext DemoHarness::GetVulkanContext() {
-  return device_queues_->GetVulkanContext();
-}
+escher::VulkanContext DemoHarness::GetVulkanContext() { return device_queues_->GetVulkanContext(); }
 
 DemoHarness::SwapchainImageOwner::SwapchainImageOwner()
     : escher::ResourceManager(escher::EscherWeakPtr()) {}

@@ -42,9 +42,8 @@ class MeshManager : public MeshBuilderFactory {
 
   class MeshBuilder : public escher::MeshBuilder {
    public:
-    MeshBuilder(MeshManager* manager, const MeshSpec& spec,
-                size_t max_vertex_count, size_t max_index_count,
-                GpuUploader::Writer vertex_writer,
+    MeshBuilder(MeshManager* manager, const MeshSpec& spec, size_t max_vertex_count,
+                size_t max_index_count, GpuUploader::Writer vertex_writer,
                 GpuUploader::Writer index_writer);
     ~MeshBuilder() override;
 

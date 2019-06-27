@@ -10,9 +10,8 @@
 namespace escher {
 namespace impl {
 
-MeshShaderBinding::MeshShaderBinding(
-    vk::VertexInputBindingDescription binding,
-    std::vector<vk::VertexInputAttributeDescription> attributes)
+MeshShaderBinding::MeshShaderBinding(vk::VertexInputBindingDescription binding,
+                                     std::vector<vk::VertexInputAttributeDescription> attributes)
     : binding_(std::move(binding)), attributes_(std::move(attributes)) {
   FXL_DCHECK(binding.binding == kTheOnlyCurrentlySupportedBinding);
 }

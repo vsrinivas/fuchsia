@@ -47,9 +47,7 @@ class PaperRenderFuncs {
     uint64_t offset;
     uint32_t stride;
 
-    void Bind(CommandBuffer* cb) const {
-      cb->BindVertices(binding_index, buffer, offset, stride);
-    }
+    void Bind(CommandBuffer* cb) const { cb->BindVertices(binding_index, buffer, offset, stride); }
   };
 
   // Struct referenced by |MeshData|, see below.
@@ -94,15 +92,15 @@ class PaperRenderFuncs {
 
   // Helper function for allocating/populating a |MeshData|.  Both CPU and
   // uniform GPU memory is allocated using per-Frame allocators.
-  static PaperRenderFuncs::MeshData* NewMeshData(
-      const FramePtr& frame, Mesh* mesh, const TexturePtr& texture,
-      uint32_t num_indices, uint32_t num_shadow_volume_indices);
+  static PaperRenderFuncs::MeshData* NewMeshData(const FramePtr& frame, Mesh* mesh,
+                                                 const TexturePtr& texture, uint32_t num_indices,
+                                                 uint32_t num_shadow_volume_indices);
 
   // Helper function for allocating/populating a |MeshDrawData|.  Both CPU and
   // uniform GPU memory is allocated using per-Frame allocators.
-  static PaperRenderFuncs::MeshDrawData* NewMeshDrawData(
-      const FramePtr& frame, const mat4& transform, const vec4& color,
-      PaperDrawableFlags flags);
+  static PaperRenderFuncs::MeshDrawData* NewMeshDrawData(const FramePtr& frame,
+                                                         const mat4& transform, const vec4& color,
+                                                         PaperDrawableFlags flags);
 };
 
 }  // namespace escher

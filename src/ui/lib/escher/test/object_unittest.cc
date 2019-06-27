@@ -12,8 +12,7 @@ using namespace escher;
 
 TEST(Object, BoundingBox) {
   auto circle = Object::NewCircle(vec3{200, 200, 100}, 100, MaterialPtr());
-  EXPECT_EQ(BoundingBox({100, 100, 100}, {300, 300, 100}),
-            circle.bounding_box());
+  EXPECT_EQ(BoundingBox({100, 100, 100}, {300, 300, 100}), circle.bounding_box());
 
   auto rect = Object::NewRect({100, 100, 100}, {150, 250}, MaterialPtr());
   EXPECT_EQ(BoundingBox({100, 100, 100}, {250, 350, 100}), rect.bounding_box());

@@ -28,8 +28,7 @@ class FactoryResetManager {
   FactoryResetManager(component::StartupContext* startup_context);
 
   // Returns true if the event is handled.
-  bool OnMediaButtonReport(
-      const fuchsia::ui::input::MediaButtonsReport& report);
+  bool OnMediaButtonReport(const fuchsia::ui::input::MediaButtonsReport& report);
 
   bool countdown_started() const { return countdown_started_; }
 

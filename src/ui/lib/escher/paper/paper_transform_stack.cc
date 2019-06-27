@@ -10,10 +10,9 @@
 namespace escher {
 PaperTransformStack::PaperTransformStack() = default;
 
-const PaperTransformStack::Item& PaperTransformStack::PushTransform(
-    const mat4& transform) {
-  TRACE_DURATION("gfx", "PaperTransformStack::PushTransform", "stack_size",
-                 size(), "num_clip_planes", num_clip_planes());
+const PaperTransformStack::Item& PaperTransformStack::PushTransform(const mat4& transform) {
+  TRACE_DURATION("gfx", "PaperTransformStack::PushTransform", "stack_size", size(),
+                 "num_clip_planes", num_clip_planes());
 
   const auto& cur = Top();
 
@@ -28,10 +27,9 @@ const PaperTransformStack::Item& PaperTransformStack::PushTransform(
   return stack_.top();
 }
 
-const PaperTransformStack::Item& PaperTransformStack::PushTranslation(
-    const vec3& translation) {
-  TRACE_DURATION("gfx", "PaperTransformStack::PushTranslation", "stack_size",
-                 size(), "num_clip_planes", num_clip_planes());
+const PaperTransformStack::Item& PaperTransformStack::PushTranslation(const vec3& translation) {
+  TRACE_DURATION("gfx", "PaperTransformStack::PushTranslation", "stack_size", size(),
+                 "num_clip_planes", num_clip_planes());
 
   const auto& cur = Top();
 
@@ -47,8 +45,8 @@ const PaperTransformStack::Item& PaperTransformStack::PushTranslation(
 }
 
 const PaperTransformStack::Item& PaperTransformStack::PushScale(float scale) {
-  TRACE_DURATION("gfx", "PaperTransformStack::PushScale", "stack_size", size(),
-                 "num_clip_planes", num_clip_planes());
+  TRACE_DURATION("gfx", "PaperTransformStack::PushScale", "stack_size", size(), "num_clip_planes",
+                 num_clip_planes());
 
   const auto& cur = Top();
 
@@ -68,8 +66,8 @@ const PaperTransformStack::Item& PaperTransformStack::PushIdentity() {
   return stack_.top();
 }
 
-const PaperTransformStack::Item& PaperTransformStack::AddClipPlanes(
-    const plane3* clip_planes, size_t num_clip_planes) {
+const PaperTransformStack::Item& PaperTransformStack::AddClipPlanes(const plane3* clip_planes,
+                                                                    size_t num_clip_planes) {
   FXL_DCHECK(clip_planes || num_clip_planes == 0);
   if (!clip_planes) {
     return Top();
@@ -93,8 +91,7 @@ PaperTransformStack& PaperTransformStack::Pop() {
 
 PaperTransformStack& PaperTransformStack::Clear(
     std::pair<size_t, size_t> stack_size_and_num_clip_planes) {
-  auto [target_stack_size, target_num_clip_planes] =
-      stack_size_and_num_clip_planes;
+  auto [target_stack_size, target_num_clip_planes] = stack_size_and_num_clip_planes;
   FXL_DCHECK(stack_.size() >= target_stack_size);
   while (stack_.size() > target_stack_size) {
     stack_.pop();
@@ -105,8 +102,7 @@ PaperTransformStack& PaperTransformStack::Clear(
     auto& clip_planes = stack_.top().clip_planes;
     FXL_DCHECK(target_num_clip_planes <= clip_planes.size())
         << "stack currently has " << clip_planes.size()
-        << " clip-planes, which is fewer than the target: "
-        << target_num_clip_planes << ".";
+        << " clip-planes, which is fewer than the target: " << target_num_clip_planes << ".";
     clip_planes.resize(target_num_clip_planes);
   }
   return *this;

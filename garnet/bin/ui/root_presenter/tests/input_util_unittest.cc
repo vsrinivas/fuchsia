@@ -19,8 +19,8 @@ TEST(InputUtil, IntoKeyEvent) {
   EXPECT_TRUE(key);
   EXPECT_EQ(key->phase(), fuchsia::ui::input::KeyEventPhase::PRESSED);
   EXPECT_EQ(key->key(), fuchsia::ui::input::Key::A);
-  EXPECT_EQ(key->modifiers(), fuchsia::ui::input::Modifiers::SHIFT |
-                                  fuchsia::ui::input::Modifiers::LEFT_SHIFT);
+  EXPECT_EQ(key->modifiers(),
+            fuchsia::ui::input::Modifiers::SHIFT | fuchsia::ui::input::Modifiers::LEFT_SHIFT);
 }
 
 TEST(InputUtil, IntoKeyEventUnknown) {

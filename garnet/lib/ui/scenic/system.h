@@ -27,8 +27,7 @@ class Session;
 // exposing the system's host (typically a Scenic, except for testing).
 class SystemContext final {
  public:
-  explicit SystemContext(sys::ComponentContext* app_context,
-                         inspect::Node inspect_object,
+  explicit SystemContext(sys::ComponentContext* app_context, inspect::Node inspect_object,
                          fit::closure quit_callback);
   SystemContext(SystemContext&& context);
 
@@ -69,12 +68,10 @@ class System {
 
   // If |initialized_after_construction| is false, the System must call
   // SetToInitialized() after initialization is complete.
-  explicit System(SystemContext context,
-                  bool initialized_after_construction = true);
+  explicit System(SystemContext context, bool initialized_after_construction = true);
   virtual ~System();
 
-  virtual CommandDispatcherUniquePtr CreateCommandDispatcher(
-      CommandDispatcherContext context) = 0;
+  virtual CommandDispatcherUniquePtr CreateCommandDispatcher(CommandDispatcherContext context) = 0;
 
   SystemContext* context() { return &context_; }
 
@@ -103,21 +100,16 @@ class System {
 // TODO(SCN-452): Remove when we get rid of Scenic.GetDisplayInfo().
 class TempSystemDelegate : public System {
  public:
-  explicit TempSystemDelegate(SystemContext context,
-                              bool initialized_after_construction);
-  virtual void GetDisplayInfo(
-      fuchsia::ui::scenic::Scenic::GetDisplayInfoCallback callback) = 0;
-  virtual void TakeScreenshot(
-      fuchsia::ui::scenic::Scenic::TakeScreenshotCallback callback) = 0;
+  explicit TempSystemDelegate(SystemContext context, bool initialized_after_construction);
+  virtual void GetDisplayInfo(fuchsia::ui::scenic::Scenic::GetDisplayInfoCallback callback) = 0;
+  virtual void TakeScreenshot(fuchsia::ui::scenic::Scenic::TakeScreenshotCallback callback) = 0;
   virtual void GetDisplayOwnershipEvent(
-      fuchsia::ui::scenic::Scenic::GetDisplayOwnershipEventCallback
-          callback) = 0;
+      fuchsia::ui::scenic::Scenic::GetDisplayOwnershipEventCallback callback) = 0;
 };
 
 // Return the system type that knows how to handle the specified command.
 // Used by Session to choose a CommandDispatcher.
-inline System::TypeId SystemTypeForCmd(
-    const fuchsia::ui::scenic::Command& command) {
+inline System::TypeId SystemTypeForCmd(const fuchsia::ui::scenic::Command& command) {
   switch (command.Which()) {
     case fuchsia::ui::scenic::Command::Tag::kGfx:
       return System::TypeId::kGfx;

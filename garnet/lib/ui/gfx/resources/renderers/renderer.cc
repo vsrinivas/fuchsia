@@ -28,13 +28,10 @@
 namespace scenic_impl {
 namespace gfx {
 
-const ResourceTypeInfo Renderer::kTypeInfo = {ResourceType::kRenderer,
-                                              "Renderer"};
+const ResourceTypeInfo Renderer::kTypeInfo = {ResourceType::kRenderer, "Renderer"};
 
-Renderer::Renderer(Session* session, ResourceId id)
-    : Resource(session, id, Renderer::kTypeInfo) {
-  escher::MaterialPtr default_material_ =
-      fxl::MakeRefCounted<escher::Material>();
+Renderer::Renderer(Session* session, ResourceId id) : Resource(session, id, Renderer::kTypeInfo) {
+  escher::MaterialPtr default_material_ = fxl::MakeRefCounted<escher::Material>();
   default_material_->set_color(escher::vec3(0.f, 0.f, 0.f));
 }
 
@@ -42,15 +39,12 @@ Renderer::~Renderer() = default;
 
 void Renderer::SetCamera(CameraPtr camera) { camera_ = std::move(camera); }
 
-bool Renderer::SetShadowTechnique(
-    ::fuchsia::ui::gfx::ShadowTechnique technique) {
+bool Renderer::SetShadowTechnique(::fuchsia::ui::gfx::ShadowTechnique technique) {
   shadow_technique_ = technique;
   return true;
 }
 
-void Renderer::DisableClipping(bool disable_clipping) {
-  disable_clipping_ = disable_clipping;
-}
+void Renderer::DisableClipping(bool disable_clipping) { disable_clipping_ = disable_clipping; }
 
 }  // namespace gfx
 }  // namespace scenic_impl

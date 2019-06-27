@@ -2,25 +2,25 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <cstdlib>
-#include <iostream>
-#include <memory>
-
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <png.h>
 #include <trace-provider/provider.h>
 
+#include <cstdlib>
+#include <iostream>
+#include <memory>
+
 #include "garnet/lib/ui/gfx/resources/snapshot/snapshot_generated.h"
 #include "garnet/lib/ui/gfx/resources/snapshot/version.h"
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fsl/vmo/vector.h"
-#include "src/lib/fxl/command_line.h"
-#include "src/lib/fxl/log_settings_command_line.h"
-#include "src/lib/fxl/logging.h"
 #include "rapidjson/document.h"
 #include "rapidjson/prettywriter.h"
 #include "rapidjson/stringbuffer.h"
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/log_settings_command_line.h"
+#include "src/lib/fxl/logging.h"
 #include "third_party/cobalt/util/crypto_util/base64.h"
 
 using cobalt::crypto::Base64Encode;
@@ -64,8 +64,7 @@ const char *EMPTY_COLOR_MATERIAL = R"glTF({
 })glTF";
 
 // Converts uncompressed raw image to PNG.
-bool RawToPNG(size_t width, size_t height, const uint8_t *data,
-              std::vector<uint8_t> &out);
+bool RawToPNG(size_t width, size_t height, const uint8_t *data, std::vector<uint8_t> &out);
 
 // Dumps rapidjson Value to ostream.
 std::ostream &operator<<(std::ostream &os, const Value &v) {
@@ -79,11 +78,9 @@ std::ostream &operator<<(std::ostream &os, const Value &v) {
 class SnapshotTaker {
  public:
   explicit SnapshotTaker(async::Loop *loop)
-      : loop_(loop),
-        context_(component::StartupContext::CreateFromStartupInfo()) {
+      : loop_(loop), context_(component::StartupContext::CreateFromStartupInfo()) {
     // Connect to the Scenic service.
-    scenic_ =
-        context_->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
+    scenic_ = context_->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
     scenic_.set_error_handler([this](zx_status_t status) {
       FXL_LOG(ERROR) << "Lost connection to Scenic service.";
       encountered_error_ = true;
@@ -91,9 +88,7 @@ class SnapshotTaker {
     });
 
     // Connect to the ViewSnapshot service.
-    view_snapshot_ =
-        context_
-            ->ConnectToEnvironmentService<fuchsia::ui::viewsv1::ViewSnapshot>();
+    view_snapshot_ = context_->ConnectToEnvironmentService<fuchsia::ui::viewsv1::ViewSnapshot>();
     view_snapshot_.set_error_handler([this](zx_status_t status) {
       FXL_LOG(ERROR) << "Lost connection to Snapshot service.";
       encountered_error_ = true;
@@ -161,8 +156,7 @@ class SnapshotTaker {
 
     if (node->transform()) {
       auto translation = node->transform()->translation();
-      if (translation->x() != 0.0 || translation->y() != 0.0 ||
-          translation->z() != 0.0) {
+      if (translation->x() != 0.0 || translation->y() != 0.0 || translation->z() != 0.0) {
         auto gltf_translation = Value(kArrayType);
         gltf_translation.PushBack(translation->x(), allocator);
         gltf_translation.PushBack(translation->y(), allocator);
@@ -171,8 +165,8 @@ class SnapshotTaker {
       }
 
       auto rotation = node->transform()->rotation();
-      if (rotation->x() != 0.0 || rotation->y() != 0.0 ||
-          rotation->z() != 0.0 || rotation->w() != 1.0) {
+      if (rotation->x() != 0.0 || rotation->y() != 0.0 || rotation->z() != 0.0 ||
+          rotation->w() != 1.0) {
         auto gltf_rotation = Value(kArrayType);
         gltf_rotation.PushBack(rotation->x(), allocator);
         gltf_rotation.PushBack(rotation->y(), allocator);
@@ -222,10 +216,8 @@ class SnapshotTaker {
 
     auto gltf_primitive = Value(kObjectType);
     gltf_primitive.AddMember("material", glTF_export_material(node), allocator);
-    gltf_primitive.AddMember("attributes",
-                             glTF_export_buffer(node->mesh(), true), allocator);
-    gltf_primitive.AddMember("indices", glTF_export_buffer(node->mesh(), false),
-                             allocator);
+    gltf_primitive.AddMember("attributes", glTF_export_buffer(node->mesh(), true), allocator);
+    gltf_primitive.AddMember("indices", glTF_export_buffer(node->mesh(), false), allocator);
 
     auto gltf_primitives = Value(kArrayType);
     gltf_primitives.PushBack(gltf_primitive, allocator);
@@ -240,16 +232,13 @@ class SnapshotTaker {
     return index;
   }
 
-  Value glTF_export_buffer(const snapshot::Geometry *mesh,
-                           bool is_vertex_buffer) {
+  Value glTF_export_buffer(const snapshot::Geometry *mesh, bool is_vertex_buffer) {
     auto &allocator = document_.GetAllocator();
 
-    const uint8_t *bytes = is_vertex_buffer
-                               ? mesh->attributes()->Get(0)->buffer()->Data()
-                               : mesh->indices()->buffer()->Data();
-    size_t size = is_vertex_buffer
-                      ? mesh->attributes()->Get(0)->buffer()->Length()
-                      : mesh->indices()->buffer()->Length();
+    const uint8_t *bytes = is_vertex_buffer ? mesh->attributes()->Get(0)->buffer()->Data()
+                                            : mesh->indices()->buffer()->Data();
+    size_t size = is_vertex_buffer ? mesh->attributes()->Get(0)->buffer()->Length()
+                                   : mesh->indices()->buffer()->Length();
     int count = is_vertex_buffer ? mesh->attributes()->Get(0)->vertex_count()
                                  : mesh->indices()->index_count();
 
@@ -276,11 +265,9 @@ class SnapshotTaker {
     gltf_bufferView.AddMember("buffer", Value(buffer_index), allocator);
     gltf_bufferView.AddMember("byteOffset", Value(0), allocator);
     gltf_bufferView.AddMember("byteLength", size, allocator);
-    gltf_bufferView.AddMember(
-        "target", is_vertex_buffer ? Value(34962) : Value(34963), allocator);
+    gltf_bufferView.AddMember("target", is_vertex_buffer ? Value(34962) : Value(34963), allocator);
     if (is_vertex_buffer) {
-      gltf_bufferView.AddMember(
-          "byteStride", mesh->attributes()->Get(0)->stride(), allocator);
+      gltf_bufferView.AddMember("byteStride", mesh->attributes()->Get(0)->stride(), allocator);
     }
 
     auto &gltf_bufferViews = document_["bufferViews"];
@@ -291,12 +278,10 @@ class SnapshotTaker {
     Value gltf_accessor(kObjectType);
     gltf_accessor.AddMember("bufferView", Value(buffer_view_index), allocator);
     gltf_accessor.AddMember("byteOffset", Value(0), allocator);
-    gltf_accessor.AddMember("componentType",
-                            is_vertex_buffer ? Value(5126) : Value(5125),
+    gltf_accessor.AddMember("componentType", is_vertex_buffer ? Value(5126) : Value(5125),
                             allocator);
     gltf_accessor.AddMember("count", count, allocator);
-    gltf_accessor.AddMember(
-        "type", is_vertex_buffer ? Value("VEC3") : Value("SCALAR"), allocator);
+    gltf_accessor.AddMember("type", is_vertex_buffer ? Value("VEC3") : Value("SCALAR"), allocator);
     if (is_vertex_buffer) {
       Value gltf_max(kArrayType);
       gltf_max.PushBack(mesh->bbox_max()->x(), allocator);
@@ -321,8 +306,7 @@ class SnapshotTaker {
     // Add texture accessor for vertex buffer.
     if (is_vertex_buffer) {
       Value gltf_accessor(kObjectType);
-      gltf_accessor.AddMember("bufferView", Value(buffer_view_index),
-                              allocator);
+      gltf_accessor.AddMember("bufferView", Value(buffer_view_index), allocator);
       gltf_accessor.AddMember("byteOffset", Value(8), allocator);
       gltf_accessor.AddMember("componentType", Value(5126), allocator);
       gltf_accessor.AddMember("count", count, allocator);
@@ -346,8 +330,7 @@ class SnapshotTaker {
     if (is_vertex_buffer) {
       auto gltf_attributes = Value(kObjectType);
       gltf_attributes.AddMember("POSITION", accessor_index, allocator);
-      gltf_attributes.AddMember("TEXCOORD_0", texture_accessor_index,
-                                allocator);
+      gltf_attributes.AddMember("TEXCOORD_0", texture_accessor_index, allocator);
       return gltf_attributes;
     } else {
       return Value(accessor_index);
@@ -360,8 +343,7 @@ class SnapshotTaker {
       auto color = static_cast<const snapshot::Color *>(node->material());
       Document gltf_material(kObjectType, &allocator);
       gltf_material.Parse(EMPTY_COLOR_MATERIAL);
-      auto &gltf_color =
-          gltf_material["pbrMetallicRoughness"]["baseColorFactor"];
+      auto &gltf_color = gltf_material["pbrMetallicRoughness"]["baseColorFactor"];
       gltf_color.Clear();
       gltf_color.PushBack(color->red(), allocator);
       gltf_color.PushBack(color->green(), allocator);
@@ -414,8 +396,7 @@ class SnapshotTaker {
 
       Document gltf_material(kObjectType, &allocator);
       gltf_material.Parse(EMPTY_TEXTURE_MATERIAL);
-      auto &gltf_baseColorTexture =
-          gltf_material["pbrMetallicRoughness"]["baseColorTexture"];
+      auto &gltf_baseColorTexture = gltf_material["pbrMetallicRoughness"]["baseColorTexture"];
       gltf_baseColorTexture.AddMember("index", texture_index, allocator);
 
       auto &gltf_materials = document_["materials"];
@@ -441,11 +422,10 @@ int main(int argc, const char **argv) {
 
   const auto &positional_args = command_line.positional_args();
   if (positional_args.size() != 0) {
-    FXL_LOG(ERROR)
-        << "Usage: gltf_export\n"
-        << "Takes a snapshot in glTF format and writes it to stdout.\n"
-        << "To write to a file, redirect stdout, e.g.: "
-        << "gltf_export > \"${DST}\"";
+    FXL_LOG(ERROR) << "Usage: gltf_export\n"
+                   << "Takes a snapshot in glTF format and writes it to stdout.\n"
+                   << "To write to a file, redirect stdout, e.g.: "
+                   << "gltf_export > \"${DST}\"";
     return 1;
   }
 
@@ -462,12 +442,10 @@ int main(int argc, const char **argv) {
 ////////////////////////////////////////////////////////////////////////////////
 // PNG encode.
 
-bool RawToPNG(size_t width, size_t height, const uint8_t *data,
-              std::vector<uint8_t> &out) {
+bool RawToPNG(size_t width, size_t height, const uint8_t *data, std::vector<uint8_t> &out) {
   out.clear();
 
-  png_structp png_ptr =
-      png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+  png_structp png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
   png_infop info_ptr = png_create_info_struct(png_ptr);
 
   if (setjmp(png_jmpbuf(png_ptr))) {
@@ -476,9 +454,8 @@ bool RawToPNG(size_t width, size_t height, const uint8_t *data,
     return false;
   }
 
-  png_set_IHDR(png_ptr, info_ptr, width, height, 8, PNG_COLOR_TYPE_RGBA,
-               PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT,
-               PNG_FILTER_TYPE_DEFAULT);
+  png_set_IHDR(png_ptr, info_ptr, width, height, 8, PNG_COLOR_TYPE_RGBA, PNG_INTERLACE_NONE,
+               PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
 
   std::vector<uint8_t *> rows(height);
   for (size_t y = 0; y < height; ++y) {
@@ -488,8 +465,7 @@ bool RawToPNG(size_t width, size_t height, const uint8_t *data,
   png_set_write_fn(
       png_ptr, &out,
       [](png_structp png_ptr, png_bytep data, png_size_t length) {
-        std::vector<uint8_t> *p =
-            (std::vector<uint8_t> *)png_get_io_ptr(png_ptr);
+        std::vector<uint8_t> *p = (std::vector<uint8_t> *)png_get_io_ptr(png_ptr);
         p->insert(p->end(), data, data + length);
       },
       NULL);

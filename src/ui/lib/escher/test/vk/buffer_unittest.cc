@@ -17,17 +17,16 @@ VK_TEST(BufferTest, CreateWithPreExistingMemory) {
   constexpr vk::DeviceSize kDummyBufferSize = 10000;
   // TODO(SCN-1369): Scenic may use a different set of bits when creating a
   // buffer, resulting in a memory pool mismatch.
-  const auto kBufferUsageFlags = vk::BufferUsageFlagBits::eTransferSrc |
-                                 vk::BufferUsageFlagBits::eTransferDst;
-  const auto kMemoryPropertyFlags = vk::MemoryPropertyFlagBits::eHostVisible |
-                                    vk::MemoryPropertyFlagBits::eHostCoherent;
+  const auto kBufferUsageFlags =
+      vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eTransferDst;
+  const auto kMemoryPropertyFlags =
+      vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
 
   // This is silly, but without creating a buffer, I don't understand how to
   // populate vk::MemoryRequirements::memoryTypeBits.
-  auto dummy_buffer = allocator->AllocateBuffer(
-      recycler, kDummyBufferSize, kBufferUsageFlags, kMemoryPropertyFlags);
-  vk::MemoryRequirements reqs =
-      escher->vk_device().getBufferMemoryRequirements(dummy_buffer->vk());
+  auto dummy_buffer = allocator->AllocateBuffer(recycler, kDummyBufferSize, kBufferUsageFlags,
+                                                kMemoryPropertyFlags);
+  vk::MemoryRequirements reqs = escher->vk_device().getBufferMemoryRequirements(dummy_buffer->vk());
 
   // Now that we have the memory requirements, we can allocate some memory, so
   // that we can test creating a buffer with pre-existing memory.

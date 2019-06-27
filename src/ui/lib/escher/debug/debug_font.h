@@ -16,8 +16,7 @@ namespace escher {
 // maximal performance.
 class DebugFont {
  public:
-  static std::unique_ptr<DebugFont> New(BatchGpuUploader* uploader,
-                                        ImageFactory* factory);
+  static std::unique_ptr<DebugFont> New(BatchGpuUploader* uploader, ImageFactory* factory);
 
   // Return RGBA pixels containing a monospace bitmap ASCII font.  Each glyph is
   // 7x7 pixels (including 1 pixel of padding around each edge of the glyph).
@@ -34,9 +33,8 @@ class DebugFont {
   // that scales the width and height of each displayed glyph.  The caller is
   // responsible for setting memory barriers; |output_image| must have layout
   // vk::ImageLayout::eTransferDstOptimal before Blit() is called.
-  void Blit(CommandBuffer* cb, const std::string& text,
-            const ImagePtr& output_image, vk::Offset2D target_offset,
-            int32_t scale);
+  void Blit(CommandBuffer* cb, const std::string& text, const ImagePtr& output_image,
+            vk::Offset2D target_offset, int32_t scale);
 
  private:
   explicit DebugFont(ImagePtr image);

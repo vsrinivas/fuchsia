@@ -18,11 +18,9 @@ static FuncT GetInstanceProcAddr(vk::Instance inst, const char *func_name) {
   return func;
 }
 
-#define GET_INSTANCE_PROC_ADDR(XXX) \
-  XXX = GetInstanceProcAddr<PFN_vk##XXX>(instance, "vk" #XXX)
+#define GET_INSTANCE_PROC_ADDR(XXX) XXX = GetInstanceProcAddr<PFN_vk##XXX>(instance, "vk" #XXX)
 
-VulkanInstance::ProcAddrs::ProcAddrs(vk::Instance instance,
-                                     bool requires_surface) {
+VulkanInstance::ProcAddrs::ProcAddrs(vk::Instance instance, bool requires_surface) {
   GET_INSTANCE_PROC_ADDR(CreateDebugReportCallbackEXT);
   GET_INSTANCE_PROC_ADDR(DestroyDebugReportCallbackEXT);
   if (requires_surface) {
@@ -31,15 +29,13 @@ VulkanInstance::ProcAddrs::ProcAddrs(vk::Instance instance,
 }
 
 fxl::RefPtr<VulkanInstance> VulkanInstance::New(Params params) {
-  params.extension_names.insert(
-      VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+  params.extension_names.insert(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 #ifdef __Fuchsia__
   // TODO(ES-143): It's quite possible that this would work on Linux if we
   // uploaded a new Vulkan SDK to the cloud, but there are obstacles to doing
   // this immediately, hence this workaround.  Or, it may be the NVIDIA Vulkan
   // driver itself.
-  params.extension_names.insert(
-      VK_KHR_EXTERNAL_SEMAPHORE_CAPABILITIES_EXTENSION_NAME);
+  params.extension_names.insert(VK_KHR_EXTERNAL_SEMAPHORE_CAPABILITIES_EXTENSION_NAME);
 #endif
   FXL_DCHECK(ValidateLayers(params.layer_names));
   FXL_DCHECK(ValidateExtensions(params.extension_names, params.layer_names));
@@ -76,17 +72,14 @@ VulkanInstance::VulkanInstance(vk::Instance instance, Params params)
 
 VulkanInstance::~VulkanInstance() { instance_.destroy(); }
 
-bool VulkanInstance::ValidateLayers(
-    const std::set<std::string> &required_layer_names) {
-  auto properties =
-      ESCHER_CHECKED_VK_RESULT(vk::enumerateInstanceLayerProperties());
+bool VulkanInstance::ValidateLayers(const std::set<std::string> &required_layer_names) {
+  auto properties = ESCHER_CHECKED_VK_RESULT(vk::enumerateInstanceLayerProperties());
 
   for (auto &name : required_layer_names) {
-    auto found = std::find_if(properties.begin(), properties.end(),
-                              [&name](vk::LayerProperties &layer) {
-                                return !strncmp(layer.layerName, name.c_str(),
-                                                VK_MAX_EXTENSION_NAME_SIZE);
-                              });
+    auto found =
+        std::find_if(properties.begin(), properties.end(), [&name](vk::LayerProperties &layer) {
+          return !strncmp(layer.layerName, name.c_str(), VK_MAX_EXTENSION_NAME_SIZE);
+        });
     if (found == properties.end()) {
       FXL_LOG(WARNING) << "Vulkan has no instance layer named: " << name;
       return false;
@@ -96,33 +89,30 @@ bool VulkanInstance::ValidateLayers(
 }
 
 // Helper for ValidateExtensions().
-static bool ValidateExtension(
-    const std::string name,
-    const std::vector<vk::ExtensionProperties> &base_extensions,
-    const std::set<std::string> &required_layer_names) {
-  auto found =
-      std::find_if(base_extensions.begin(), base_extensions.end(),
-                   [&name](const vk::ExtensionProperties &extension) {
-                     return !strncmp(extension.extensionName, name.c_str(),
-                                     VK_MAX_EXTENSION_NAME_SIZE);
-                   });
+static bool ValidateExtension(const std::string name,
+                              const std::vector<vk::ExtensionProperties> &base_extensions,
+                              const std::set<std::string> &required_layer_names) {
+  auto found = std::find_if(base_extensions.begin(), base_extensions.end(),
+                            [&name](const vk::ExtensionProperties &extension) {
+                              return !strncmp(extension.extensionName, name.c_str(),
+                                              VK_MAX_EXTENSION_NAME_SIZE);
+                            });
   if (found != base_extensions.end())
     return true;
 
   // Didn't find the extension in the base list of extensions.  Perhaps it is
   // implemented in a layer.
   for (auto &layer_name : required_layer_names) {
-    auto layer_extensions = ESCHER_CHECKED_VK_RESULT(
-        vk::enumerateInstanceExtensionProperties(layer_name));
+    auto layer_extensions =
+        ESCHER_CHECKED_VK_RESULT(vk::enumerateInstanceExtensionProperties(layer_name));
     FXL_LOG(INFO) << "Looking for Vulkan instance extension: " << name
                   << " in layer: " << layer_name;
 
-    auto found =
-        std::find_if(layer_extensions.begin(), layer_extensions.end(),
-                     [&name](vk::ExtensionProperties &extension) {
-                       return !strncmp(extension.extensionName, name.c_str(),
-                                       VK_MAX_EXTENSION_NAME_SIZE);
-                     });
+    auto found = std::find_if(layer_extensions.begin(), layer_extensions.end(),
+                              [&name](vk::ExtensionProperties &extension) {
+                                return !strncmp(extension.extensionName, name.c_str(),
+                                                VK_MAX_EXTENSION_NAME_SIZE);
+                              });
     if (found != layer_extensions.end())
       return true;
   }
@@ -130,11 +120,9 @@ static bool ValidateExtension(
   return false;
 }
 
-bool VulkanInstance::ValidateExtensions(
-    const std::set<std::string> &required_extension_names,
-    const std::set<std::string> &required_layer_names) {
-  auto extensions =
-      ESCHER_CHECKED_VK_RESULT(vk::enumerateInstanceExtensionProperties());
+bool VulkanInstance::ValidateExtensions(const std::set<std::string> &required_extension_names,
+                                        const std::set<std::string> &required_layer_names) {
+  auto extensions = ESCHER_CHECKED_VK_RESULT(vk::enumerateInstanceExtensionProperties());
 
   for (auto &name : required_extension_names) {
     if (!ValidateExtension(name, extensions, required_layer_names)) {

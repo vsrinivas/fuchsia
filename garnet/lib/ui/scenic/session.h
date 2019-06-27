@@ -31,23 +31,18 @@ class Session final : public fuchsia::ui::scenic::Session,
                       public EventReporter,
                       public ErrorReporter {
  public:
-  Session(
-      SessionId id,
-      ::fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener);
+  Session(SessionId id, ::fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener);
   ~Session() override { valid_ = false; };
 
   void SetCommandDispatchers(
-      std::array<CommandDispatcherUniquePtr, System::TypeId::kMaxSystems>
-          dispatchers);
+      std::array<CommandDispatcherUniquePtr, System::TypeId::kMaxSystems> dispatchers);
 
   // |fuchsia::ui::scenic::Session|
   void Enqueue(::std::vector<fuchsia::ui::scenic::Command> cmds) override;
 
   // |fuchsia::ui::scenic::Session|
-  void Present(uint64_t presentation_time,
-               ::std::vector<zx::event> acquire_fences,
-               ::std::vector<zx::event> release_fences,
-               PresentCallback callback) override;
+  void Present(uint64_t presentation_time, ::std::vector<zx::event> acquire_fences,
+               ::std::vector<zx::event> release_fences, PresentCallback callback) override;
 
   // |fuchsia::ui::scenic::Session|
   void SetDebugName(std::string debug_name) override;
@@ -63,16 +58,14 @@ class Session final : public fuchsia::ui::scenic::Session,
 
   // |ErrorReporter|
   // Customize behavior of ErrorReporter::ReportError().
-  void ReportError(fxl::LogSeverity severity,
-                   std::string error_string) override;
+  void ReportError(fxl::LogSeverity severity, std::string error_string) override;
 
   SessionId id() const { return id_; }
 
   ErrorReporter* error_reporter() { return this; }
 
   // For tests.  See FlushEvents() below.
-  void set_event_callback(
-      fit::function<void(fuchsia::ui::scenic::Event)> callback) {
+  void set_event_callback(fit::function<void(fuchsia::ui::scenic::Event)> callback) {
     event_callback_ = std::move(callback);
   }
 
@@ -96,8 +89,7 @@ class Session final : public fuchsia::ui::scenic::Session,
   const SessionId id_;
   ::fidl::InterfacePtr<fuchsia::ui::scenic::SessionListener> listener_;
 
-  std::array<CommandDispatcherUniquePtr, System::TypeId::kMaxSystems>
-      dispatchers_;
+  std::array<CommandDispatcherUniquePtr, System::TypeId::kMaxSystems> dispatchers_;
 
   // Holds events from EnqueueEvent() until they are flushed by FlushEvents().
   std::vector<fuchsia::ui::scenic::Event> buffered_events_;

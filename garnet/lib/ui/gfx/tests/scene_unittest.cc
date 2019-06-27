@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 
 #include "garnet/lib/ui/gfx/resources/nodes/scene.h"
+
 #include "garnet/lib/ui/gfx/resources/lights/ambient_light.h"
 #include "garnet/lib/ui/gfx/resources/lights/directional_light.h"
 #include "garnet/lib/ui/gfx/resources/lights/point_light.h"
 #include "garnet/lib/ui/gfx/tests/session_test.h"
-#include "lib/ui/scenic/cpp/commands.h"
-
 #include "gtest/gtest.h"
+#include "lib/ui/scenic/cpp/commands.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -39,10 +39,8 @@ TEST_F(SceneTest, Lighting) {
   EXPECT_EQ(0U, scene->directional_lights().size());
   EXPECT_EQ(0U, scene->point_lights().size());
 
-  EXPECT_TRUE(
-      Apply(scenic::NewSceneAddAmbientLightCmd(kSceneId, kAmbientLightId)));
-  EXPECT_TRUE(Apply(
-      scenic::NewSceneAddDirectionalLightCmd(kSceneId, kDirectionalLightId)));
+  EXPECT_TRUE(Apply(scenic::NewSceneAddAmbientLightCmd(kSceneId, kAmbientLightId)));
+  EXPECT_TRUE(Apply(scenic::NewSceneAddDirectionalLightCmd(kSceneId, kDirectionalLightId)));
   EXPECT_TRUE(Apply(scenic::NewSceneAddPointLightCmd(kSceneId, kPointLightId)));
   EXPECT_TRUE(Apply(scenic::NewAddLightCmd(kSceneId, kPointLight2Id)));
   EXPECT_EQ(1U, scene->ambient_lights().size());
@@ -71,8 +69,7 @@ TEST_F(SceneTest, Lighting) {
     EXPECT_EQ(point->position().y, pos[1]);
     EXPECT_EQ(point->position().z, pos[2]);
     const float kFalloff = 0.6f;
-    EXPECT_TRUE(
-        Apply(scenic::NewSetPointLightFalloffCmd(kPointLightId, kFalloff)));
+    EXPECT_TRUE(Apply(scenic::NewSetPointLightFalloffCmd(kPointLightId, kFalloff)));
     EXPECT_EQ(kFalloff, point->falloff());
   }
 }

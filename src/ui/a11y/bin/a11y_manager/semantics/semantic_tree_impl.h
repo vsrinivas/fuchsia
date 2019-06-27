@@ -20,13 +20,11 @@
 
 namespace a11y_manager {
 
-class SemanticTreeImpl
-    : public fuchsia::accessibility::semantics::SemanticTree {
+class SemanticTreeImpl : public fuchsia::accessibility::semantics::SemanticTree {
  public:
   explicit SemanticTreeImpl(
       fuchsia::ui::views::ViewRef view_ref,
-      fuchsia::accessibility::semantics::SemanticActionListenerPtr
-          client_action_listener,
+      fuchsia::accessibility::semantics::SemanticActionListenerPtr client_action_listener,
       vfs::PseudoDir* debug_dir)
       : view_ref_(std::move(view_ref)),
         client_action_listener_(std::move(client_action_listener)),
@@ -38,15 +36,14 @@ class SemanticTreeImpl
 
   // Provides a way to query a node with node id. This method returns
   // a copy of the queried node. It may return a nullptr if no node is found.
-  fuchsia::accessibility::semantics::NodePtr GetAccessibilityNode(
-      uint32_t node_id);
+  fuchsia::accessibility::semantics::NodePtr GetAccessibilityNode(uint32_t node_id);
 
   // Asks the semantics provider to perform an accessibility action on the
   // node with node id in the front-end.
-  void OnAccessibilityActionRequested(
-      uint32_t node_id, fuchsia::accessibility::semantics::Action action,
-      fuchsia::accessibility::semantics::SemanticActionListener::
-          OnAccessibilityActionRequestedCallback callback);
+  void OnAccessibilityActionRequested(uint32_t node_id,
+                                      fuchsia::accessibility::semantics::Action action,
+                                      fuchsia::accessibility::semantics::SemanticActionListener::
+                                          OnAccessibilityActionRequestedCallback callback);
 
   // Compares a view with the current view of the semantic tree, based on KOID.
   bool IsSameView(const fuchsia::ui::views::ViewRef& view_ref);
@@ -70,8 +67,7 @@ class SemanticTreeImpl
   void Commit() override;
 
   // |fuchsia::accessibility::semantics::SemanticsTree|
-  void UpdateSemanticNodes(
-      std::vector<fuchsia::accessibility::semantics::Node> nodes) override;
+  void UpdateSemanticNodes(std::vector<fuchsia::accessibility::semantics::Node> nodes) override;
 
   // |fuchsia::accessibility::semantics::SemanticsTree|
   void DeleteSemanticNodes(std::vector<uint32_t> node_ids) override;
@@ -81,9 +77,8 @@ class SemanticTreeImpl
 
   // Helper function to traverse semantic tree with a root node, and for
   // creating string with tree information.
-  void LogSemanticTreeHelper(
-      fuchsia::accessibility::semantics::NodePtr root_node, int current_level,
-      std::string* tree_log);
+  void LogSemanticTreeHelper(fuchsia::accessibility::semantics::NodePtr root_node,
+                             int current_level, std::string* tree_log);
 
   // Detect directed and undirected cycles in the tree rooted at "node".
   bool IsCyclic(fuchsia::accessibility::semantics::NodePtr node,
@@ -96,8 +91,7 @@ class SemanticTreeImpl
   void DeletePointerFromParent(uint32_t node_id);
 
   // Internal helper function to check if a point is within a bounding box.
-  bool BoxContainsPoint(const fuchsia::ui::gfx::BoundingBox& box,
-                        const escher::vec2& point) const;
+  bool BoxContainsPoint(const fuchsia::ui::gfx::BoundingBox& box, const escher::vec2& point) const;
 
   // Function to create per view Log files under debug directory for debugging
   // semantic tree.
@@ -106,16 +100,13 @@ class SemanticTreeImpl
   // List of committed, cached nodes for each front-end. We represent semantics
   // tree as a map of local node ids to the actual node objects. All query
   // operations should use the node information from these trees.
-  std::unordered_map<uint32_t /*node_id*/,
-                     fuchsia::accessibility::semantics::Node>
-      nodes_;
+  std::unordered_map<uint32_t /*node_id*/, fuchsia::accessibility::semantics::Node> nodes_;
 
   // List of pending semantic tree transactions.
   std::vector<SemanticTreeTransaction> pending_transactions_;
 
   fuchsia::ui::views::ViewRef view_ref_;
-  fuchsia::accessibility::semantics::SemanticActionListenerPtr
-      client_action_listener_;
+  fuchsia::accessibility::semantics::SemanticActionListenerPtr client_action_listener_;
   vfs::PseudoDir* const debug_dir_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SemanticTreeImpl);

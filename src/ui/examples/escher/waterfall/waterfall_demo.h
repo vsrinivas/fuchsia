@@ -37,8 +37,7 @@ class WaterfallDemo : public Demo {
 
   bool HandleKeyPress(std::string key) override;
 
-  void DrawFrame(const escher::FramePtr& frame,
-                 const escher::ImagePtr& output_image) override;
+  void DrawFrame(const escher::FramePtr& frame, const escher::ImagePtr& output_image) override;
 
  private:
   void ProcessCommandLineArgs(int argc, char** argv);

@@ -22,8 +22,7 @@ class FrameManager : public ResourceManager {
   explicit FrameManager(EscherWeakPtr escher);
   ~FrameManager();
 
-  FramePtr NewFrame(const char* trace_literal, uint64_t frame_number,
-                    bool enable_gpu_logging,
+  FramePtr NewFrame(const char* trace_literal, uint64_t frame_number, bool enable_gpu_logging,
                     escher::CommandBuffer::Type requested_type);
 
  private:

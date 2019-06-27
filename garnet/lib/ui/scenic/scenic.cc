@@ -50,35 +50,31 @@ void Scenic::CloseSession(Session* session) {
   }
 }
 
-void Scenic::CreateSession(
-    ::fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session_request,
-    ::fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener) {
+void Scenic::CreateSession(::fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session_request,
+                           ::fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener) {
   if (uninitialized_systems_.empty()) {
     CreateSessionImmediately(std::move(session_request), std::move(listener));
   } else {
-    run_after_all_systems_initialized_.push_back(
-        [this, session_request = std::move(session_request),
-         listener = std::move(listener)]() mutable {
-          CreateSessionImmediately(std::move(session_request),
-                                   std::move(listener));
-        });
+    run_after_all_systems_initialized_.push_back([this,
+                                                  session_request = std::move(session_request),
+                                                  listener = std::move(listener)]() mutable {
+      CreateSessionImmediately(std::move(session_request), std::move(listener));
+    });
   }
 }
 
 void Scenic::CreateSessionImmediately(
     ::fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session_request,
     ::fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener) {
-  auto session =
-      std::make_unique<Session>(next_session_id_++, std::move(listener));
+  auto session = std::make_unique<Session>(next_session_id_++, std::move(listener));
 
   // Give each installed System an opportunity to install a CommandDispatcher in
   // the newly-created Session.
-  std::array<CommandDispatcherUniquePtr, System::TypeId::kMaxSystems>
-      dispatchers;
+  std::array<CommandDispatcherUniquePtr, System::TypeId::kMaxSystems> dispatchers;
   for (size_t i = 0; i < System::TypeId::kMaxSystems; ++i) {
     if (auto& system = systems_[i]) {
-      dispatchers[i] = system->CreateCommandDispatcher(
-          CommandDispatcherContext(this, session.get()));
+      dispatchers[i] =
+          system->CreateCommandDispatcher(CommandDispatcherContext(this, session.get()));
     }
   }
   session->SetCommandDispatchers(std::move(dispatchers));
@@ -86,16 +82,14 @@ void Scenic::CreateSessionImmediately(
   session_bindings_.AddBinding(std::move(session), std::move(session_request));
 }
 
-void Scenic::GetDisplayInfo(
-    fuchsia::ui::scenic::Scenic::GetDisplayInfoCallback callback) {
+void Scenic::GetDisplayInfo(fuchsia::ui::scenic::Scenic::GetDisplayInfoCallback callback) {
   FXL_DCHECK(systems_[System::kGfx]);
   TempSystemDelegate* delegate =
       reinterpret_cast<TempSystemDelegate*>(systems_[System::kGfx].get());
   delegate->GetDisplayInfo(std::move(callback));
 }
 
-void Scenic::TakeScreenshot(
-    fuchsia::ui::scenic::Scenic::TakeScreenshotCallback callback) {
+void Scenic::TakeScreenshot(fuchsia::ui::scenic::Scenic::TakeScreenshotCallback callback) {
   FXL_DCHECK(systems_[System::kGfx]);
   TempSystemDelegate* delegate =
       reinterpret_cast<TempSystemDelegate*>(systems_[System::kGfx].get());

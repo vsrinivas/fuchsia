@@ -18,8 +18,7 @@ class PaperLegacyDrawable : public PaperDrawable {
   PaperLegacyDrawable(Object object) : object_(std::move(object)) {}
 
   // |PaperDrawable|
-  void DrawInScene(const PaperScene* scene,
-                   PaperDrawCallFactory* draw_call_factory,
+  void DrawInScene(const PaperScene* scene, PaperDrawCallFactory* draw_call_factory,
                    PaperTransformStack* transform_stack, Frame* frame,
                    PaperDrawableFlags flags) override;
 

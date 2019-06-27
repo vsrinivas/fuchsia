@@ -17,8 +17,7 @@
 namespace snapshot {
 
 // A view that displays saved snapshot of views.
-class View final : public scenic::BaseView,
-                   public fuchsia::scenic::snapshot::Loader {
+class View final : public scenic::BaseView, public fuchsia::scenic::snapshot::Loader {
  public:
   View(scenic::ViewContext view_context);
   ~View() override = default;
@@ -28,18 +27,13 @@ class View final : public scenic::BaseView,
 
  private:
   // |scenic::SessionListener|
-  void OnScenicError(std::string error) override {
-    FXL_LOG(ERROR) << "Scenic Error " << error;
-  }
+  void OnScenicError(std::string error) override { FXL_LOG(ERROR) << "Scenic Error " << error; }
 
   fidl::BindingSet<fuchsia::scenic::snapshot::Loader> loader_bindings_;
 
-  void LoadNode(scenic::ContainerNode& parent_node,
-                const snapshot::Node* flat_node);
-  void LoadShape(scenic::EntityNode& parent_node,
-                 const snapshot::Node* flat_node);
-  void LoadMaterial(scenic::ShapeNode& parent_node,
-                    const snapshot::Node* flat_node);
+  void LoadNode(scenic::ContainerNode& parent_node, const snapshot::Node* flat_node);
+  void LoadShape(scenic::EntityNode& parent_node, const snapshot::Node* flat_node);
+  void LoadMaterial(scenic::ShapeNode& parent_node, const snapshot::Node* flat_node);
 
   FXL_DISALLOW_COPY_AND_ASSIGN(View);
 };

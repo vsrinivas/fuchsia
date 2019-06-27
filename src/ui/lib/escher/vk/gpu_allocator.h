@@ -31,23 +31,20 @@ class GpuAllocator {
 
   fxl::WeakPtr<GpuAllocator> GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
 
-  virtual GpuMemPtr AllocateMemory(
-      vk::MemoryRequirements reqs,
-      vk::MemoryPropertyFlags memory_property_flags) = 0;
+  virtual GpuMemPtr AllocateMemory(vk::MemoryRequirements reqs,
+                                   vk::MemoryPropertyFlags memory_property_flags) = 0;
 
   // If |out_ptr| is non-null, this buffer must be backed by a dedicated
   // piece of memory (i.e.,
   // VkMemoryDedicatedRequirements.requiresDedicatedAllocation
   // == true). That memory must be accessible through the GpuMem returned in
   // |out_ptr|.
-  virtual BufferPtr AllocateBuffer(
-      ResourceManager* manager, vk::DeviceSize size,
-      vk::BufferUsageFlags usage_flags,
-      vk::MemoryPropertyFlags memory_property_flags,
-      GpuMemPtr* out_ptr = nullptr) = 0;
+  virtual BufferPtr AllocateBuffer(ResourceManager* manager, vk::DeviceSize size,
+                                   vk::BufferUsageFlags usage_flags,
+                                   vk::MemoryPropertyFlags memory_property_flags,
+                                   GpuMemPtr* out_ptr = nullptr) = 0;
 
-  virtual ImagePtr AllocateImage(ResourceManager* manager,
-                                 const escher::ImageInfo& info,
+  virtual ImagePtr AllocateImage(ResourceManager* manager, const escher::ImageInfo& info,
                                  GpuMemPtr* out_ptr = nullptr) = 0;
 
   virtual uint32_t GetTotalBytesAllocated() const = 0;

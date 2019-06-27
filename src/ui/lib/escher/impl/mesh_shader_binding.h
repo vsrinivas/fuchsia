@@ -22,14 +22,11 @@ class MeshShaderBinding {
   // to track all of the places that will need to be changed.
   static constexpr uint32_t kTheOnlyCurrentlySupportedBinding = 0;
 
-  MeshShaderBinding(
-      vk::VertexInputBindingDescription binding,
-      std::vector<vk::VertexInputAttributeDescription> attributes);
+  MeshShaderBinding(vk::VertexInputBindingDescription binding,
+                    std::vector<vk::VertexInputAttributeDescription> attributes);
 
   const vk::VertexInputBindingDescription* binding() const { return &binding_; }
-  const std::vector<vk::VertexInputAttributeDescription>& attributes() const {
-    return attributes_;
-  }
+  const std::vector<vk::VertexInputAttributeDescription>& attributes() const { return attributes_; }
 
  private:
   vk::VertexInputBindingDescription binding_;

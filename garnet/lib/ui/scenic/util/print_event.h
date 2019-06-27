@@ -5,47 +5,37 @@
 #ifndef GARNET_LIB_UI_SCENIC_UTIL_PRINT_EVENT_H_
 #define GARNET_LIB_UI_SCENIC_UTIL_PRINT_EVENT_H_
 
-#include <ostream>
-
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 
-std::ostream& operator<<(std::ostream& stream,
-                         const fuchsia::ui::gfx::Event& event);
+#include <ostream>
 
-std::ostream& operator<<(std::ostream& stream,
-                         const fuchsia::ui::gfx::SizeChangeHintEvent& event);
+std::ostream& operator<<(std::ostream& stream, const fuchsia::ui::gfx::Event& event);
 
-std::ostream& operator<<(std::ostream& stream,
-                         const fuchsia::ui::gfx::MetricsEvent& event);
+std::ostream& operator<<(std::ostream& stream, const fuchsia::ui::gfx::SizeChangeHintEvent& event);
 
-std::ostream& operator<<(std::ostream& stream,
-                         const fuchsia::ui::gfx::ImportUnboundEvent& event);
+std::ostream& operator<<(std::ostream& stream, const fuchsia::ui::gfx::MetricsEvent& event);
 
-std::ostream& operator<<(std::ostream& stream,
-                         const fuchsia::ui::gfx::ViewConnectedEvent& event);
+std::ostream& operator<<(std::ostream& stream, const fuchsia::ui::gfx::ImportUnboundEvent& event);
+
+std::ostream& operator<<(std::ostream& stream, const fuchsia::ui::gfx::ViewConnectedEvent& event);
 
 std::ostream& operator<<(std::ostream& stream,
                          const fuchsia::ui::gfx::ViewDisconnectedEvent& event);
 
-std::ostream& operator<<(
-    std::ostream& stream,
-    const fuchsia::ui::gfx::ViewHolderConnectedEvent& event);
+std::ostream& operator<<(std::ostream& stream,
+                         const fuchsia::ui::gfx::ViewHolderConnectedEvent& event);
 
-std::ostream& operator<<(
-    std::ostream& stream,
-    const fuchsia::ui::gfx::ViewHolderDisconnectedEvent& event);
+std::ostream& operator<<(std::ostream& stream,
+                         const fuchsia::ui::gfx::ViewHolderDisconnectedEvent& event);
 
-std::ostream& operator<<(
-    std::ostream& stream,
-    const fuchsia::ui::gfx::ViewAttachedToSceneEvent& event);
+std::ostream& operator<<(std::ostream& stream,
+                         const fuchsia::ui::gfx::ViewAttachedToSceneEvent& event);
 
-std::ostream& operator<<(
-    std::ostream& stream,
-    const fuchsia::ui::gfx::ViewDetachedFromSceneEvent& event);
+std::ostream& operator<<(std::ostream& stream,
+                         const fuchsia::ui::gfx::ViewDetachedFromSceneEvent& event);
 
-std::ostream& operator<<(
-    std::ostream& stream,
-    const fuchsia::ui::gfx::ViewPropertiesChangedEvent& event);
+std::ostream& operator<<(std::ostream& stream,
+                         const fuchsia::ui::gfx::ViewPropertiesChangedEvent& event);
 
 std::ostream& operator<<(std::ostream& stream,
                          const fuchsia::ui::gfx::ViewStateChangedEvent& event);

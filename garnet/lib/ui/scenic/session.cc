@@ -10,9 +10,8 @@
 
 namespace scenic_impl {
 
-Session::Session(
-    SessionId id,
-    ::fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener)
+Session::Session(SessionId id,
+                 ::fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener)
     : id_(id), listener_(listener.Bind()), weak_factory_(this) {}
 
 void Session::Enqueue(::std::vector<fuchsia::ui::scenic::Command> cmds) {
@@ -24,9 +23,7 @@ void Session::Enqueue(::std::vector<fuchsia::ui::scenic::Command> cmds) {
     // TODO(SCN-710): This dispatch is far from optimal in terms of performance.
     // We need to benchmark it to figure out whether it matters.
     System::TypeId type_id = SystemTypeForCmd(cmd);
-    auto dispatcher = type_id != System::TypeId::kInvalid
-                          ? dispatchers_[type_id].get()
-                          : nullptr;
+    auto dispatcher = type_id != System::TypeId::kInvalid ? dispatchers_[type_id].get() : nullptr;
     if (dispatcher) {
       dispatcher->DispatchCommand(std::move(cmd));
     } else {
@@ -35,10 +32,8 @@ void Session::Enqueue(::std::vector<fuchsia::ui::scenic::Command> cmds) {
   }
 }
 
-void Session::Present(uint64_t presentation_time,
-                      ::std::vector<zx::event> acquire_fences,
-                      ::std::vector<zx::event> release_fences,
-                      PresentCallback callback) {
+void Session::Present(uint64_t presentation_time, ::std::vector<zx::event> acquire_fences,
+                      ::std::vector<zx::event> release_fences, PresentCallback callback) {
   TRACE_DURATION("gfx", "scenic_impl::Session::Present");
   TRACE_FLOW_END("gfx", "Session::Present", next_present_trace_id_);
   next_present_trace_id_++;
@@ -49,15 +44,13 @@ void Session::Present(uint64_t presentation_time,
   // TODO(SCN-469): Move Present logic into Session.
   auto& dispatcher = dispatchers_[System::TypeId::kGfx];
   FXL_DCHECK(dispatcher);
-  TempSessionDelegate* delegate =
-      static_cast<TempSessionDelegate*>(dispatcher.get());
-  delegate->Present(presentation_time, std::move(acquire_fences),
-                    std::move(release_fences), std::move(callback));
+  TempSessionDelegate* delegate = static_cast<TempSessionDelegate*>(dispatcher.get());
+  delegate->Present(presentation_time, std::move(acquire_fences), std::move(release_fences),
+                    std::move(callback));
 }
 
 void Session::SetCommandDispatchers(
-    std::array<CommandDispatcherUniquePtr, System::TypeId::kMaxSystems>
-        dispatchers) {
+    std::array<CommandDispatcherUniquePtr, System::TypeId::kMaxSystems> dispatchers) {
   for (size_t i = 0; i < System::TypeId::kMaxSystems; ++i) {
     dispatchers_[i] = std::move(dispatchers[i]);
   }
@@ -70,8 +63,7 @@ void Session::SetDebugName(std::string debug_name) {
     return;
   auto& dispatcher = dispatchers_[System::TypeId::kGfx];
   FXL_DCHECK(dispatcher);
-  TempSessionDelegate* delegate =
-      static_cast<TempSessionDelegate*>(dispatcher.get());
+  TempSessionDelegate* delegate = static_cast<TempSessionDelegate*>(dispatcher.get());
   delegate->SetDebugName(debug_name);
 }
 
@@ -79,12 +71,11 @@ void Session::PostFlushTask() {
   // If this is the first EnqueueEvent() since the last FlushEvent(), post a
   // task to ensure that FlushEvents() is called.
   if (buffered_events_.empty()) {
-    async::PostTask(async_get_default_dispatcher(),
-                    [weak = weak_factory_.GetWeakPtr()] {
-                      if (weak) {
-                        weak->FlushEvents();
-                      }
-                    });
+    async::PostTask(async_get_default_dispatcher(), [weak = weak_factory_.GetWeakPtr()] {
+      if (weak) {
+        weak->FlushEvents();
+      }
+    });
   }
 }
 

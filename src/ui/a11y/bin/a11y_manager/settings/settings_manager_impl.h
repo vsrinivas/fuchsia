@@ -17,18 +17,15 @@ class SettingsManagerImpl : public fuchsia::accessibility::SettingsManager {
   explicit SettingsManagerImpl() = default;
   ~SettingsManagerImpl() = default;
 
-  void AddBinding(
-      fidl::InterfaceRequest<fuchsia::accessibility::SettingsManager> request);
+  void AddBinding(fidl::InterfaceRequest<fuchsia::accessibility::SettingsManager> request);
 
  private:
   // |fuchsia::accessibility::SettingsManager|:
-  void RegisterSettingProvider(
-      fidl::InterfaceRequest<fuchsia::accessibility::SettingsProvider>
-          settings_provider_request) override;
+  void RegisterSettingProvider(fidl::InterfaceRequest<fuchsia::accessibility::SettingsProvider>
+                                   settings_provider_request) override;
 
   // |fuchsia::accessibility::SettingsManager|:
-  void Watch(fidl::InterfaceHandle<fuchsia::accessibility::SettingsWatcher>
-                 watcher) override;
+  void Watch(fidl::InterfaceHandle<fuchsia::accessibility::SettingsWatcher> watcher) override;
 
   fidl::BindingSet<fuchsia::accessibility::SettingsManager> bindings_;
 

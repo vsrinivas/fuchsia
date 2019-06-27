@@ -9,25 +9,18 @@
 
 namespace a11y_manager {
 
-void SemanticsManagerImpl::SetDebugDirectory(vfs::PseudoDir* debug_dir) {
-  debug_dir_ = debug_dir;
-}
+void SemanticsManagerImpl::SetDebugDirectory(vfs::PseudoDir* debug_dir) { debug_dir_ = debug_dir; }
 
 void SemanticsManagerImpl::AddBinding(
-    fidl::InterfaceRequest<fuchsia::accessibility::semantics::SemanticsManager>
-        request) {
+    fidl::InterfaceRequest<fuchsia::accessibility::semantics::SemanticsManager> request) {
   bindings_.AddBinding(this, std::move(request));
 }
 
 void SemanticsManagerImpl::RegisterView(
     fuchsia::ui::views::ViewRef view_ref,
-    fidl::InterfaceHandle<
-        fuchsia::accessibility::semantics::SemanticActionListener>
-        handle,
-    fidl::InterfaceRequest<fuchsia::accessibility::semantics::SemanticTree>
-        semantic_tree_request) {
-  fuchsia::accessibility::semantics::SemanticActionListenerPtr action_listener =
-      handle.Bind();
+    fidl::InterfaceHandle<fuchsia::accessibility::semantics::SemanticActionListener> handle,
+    fidl::InterfaceRequest<fuchsia::accessibility::semantics::SemanticTree> semantic_tree_request) {
+  fuchsia::accessibility::semantics::SemanticActionListenerPtr action_listener = handle.Bind();
   // TODO(MI4-1736): Log View information in below error handler, once ViewRef
   // support is added.
   action_listener.set_error_handler([](zx_status_t status) {
@@ -42,8 +35,7 @@ void SemanticsManagerImpl::RegisterView(
                                      std::move(semantic_tree_request));
 }
 
-fuchsia::accessibility::semantics::NodePtr
-SemanticsManagerImpl::GetAccessibilityNode(
+fuchsia::accessibility::semantics::NodePtr SemanticsManagerImpl::GetAccessibilityNode(
     const fuchsia::ui::views::ViewRef& view_ref, const int32_t node_id) {
   for (auto& binding : semantic_tree_bindings_.bindings()) {
     if (binding->impl()->IsSameView(view_ref))

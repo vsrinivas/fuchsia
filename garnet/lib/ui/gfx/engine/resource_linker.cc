@@ -13,12 +13,10 @@ namespace gfx {
 
 static zx_signals_t kEventPairDeathSignals = ZX_EVENTPAIR_PEER_CLOSED;
 
-#define ASSERT_INTERNAL_EXPORTS_CONSISTENCY                \
-  FXL_DCHECK(exported_resources_to_import_koids_.size() == \
-             export_entries_.size());
+#define ASSERT_INTERNAL_EXPORTS_CONSISTENCY \
+  FXL_DCHECK(exported_resources_to_import_koids_.size() == export_entries_.size());
 
-ResourceLinker::ResourceLinker()
-    : unresolved_imports_(this), weak_factory_(this){};
+ResourceLinker::ResourceLinker() : unresolved_imports_(this), weak_factory_(this){};
 
 ResourceLinker::~ResourceLinker() {
   for (const auto& item : export_entries_) {
@@ -30,8 +28,7 @@ ResourceLinker::~ResourceLinker() {
   }
 }
 
-bool ResourceLinker::ExportResource(Resource* resource,
-                                    zx::eventpair export_token) {
+bool ResourceLinker::ExportResource(Resource* resource, zx::eventpair export_token) {
   // Basic sanity checks for resource validity.
   FXL_DCHECK(resource);
 
@@ -54,9 +51,8 @@ bool ResourceLinker::ExportResource(Resource* resource,
   auto wait = std::make_unique<async::Wait>(export_token.get(),     // handle
                                             kEventPairDeathSignals  // trigger
   );
-  wait->set_handler(std::bind(&ResourceLinker::OnTokenPeerDeath, this,
-                              import_koid, std::placeholders::_3,
-                              std::placeholders::_4));
+  wait->set_handler(std::bind(&ResourceLinker::OnTokenPeerDeath, this, import_koid,
+                              std::placeholders::_3, std::placeholders::_4));
   zx_status_t status = wait->Begin(async_get_default_dispatcher());
   FXL_CHECK(status == ZX_OK);
 
@@ -91,9 +87,8 @@ void ResourceLinker::OnImportDestroyed(Import* import) {
   }
 }
 
-void ResourceLinker::OnImportResolvedForResource(
-    Import* import, Resource* exported_resource,
-    ImportResolutionResult resolution_result) {
+void ResourceLinker::OnImportResolvedForResource(Import* import, Resource* exported_resource,
+                                                 ImportResolutionResult resolution_result) {
   switch (resolution_result) {
     case ImportResolutionResult::kSuccess:
       exported_resource->AddImport(import);
@@ -109,8 +104,7 @@ void ResourceLinker::OnImportResolvedForResource(
   }
 }
 
-void ResourceLinker::RemoveExportedResourceIfUnbound(
-    Resource* exported_resource) {
+void ResourceLinker::RemoveExportedResourceIfUnbound(Resource* exported_resource) {
   FXL_DCHECK(exported_resource);
 
   if (!exported_resource->imports().empty()) {
@@ -118,8 +112,7 @@ void ResourceLinker::RemoveExportedResourceIfUnbound(
     return;
   }
 
-  auto range =
-      exported_resources_to_import_koids_.equal_range(exported_resource);
+  auto range = exported_resources_to_import_koids_.equal_range(exported_resource);
   if (range.first != range.second) {
     // There are outstanding import tokens that could be used to import the
     // device.
@@ -136,8 +129,7 @@ void ResourceLinker::RemoveExportedResourceIfUnbound(
   InvokeExpirationCallback(exported_resource, ExpirationCause::kNoImportsBound);
 }
 
-bool ResourceLinker::ImportResource(Import* import,
-                                    ::fuchsia::ui::gfx::ImportSpec import_spec,
+bool ResourceLinker::ImportResource(Import* import, ::fuchsia::ui::gfx::ImportSpec import_spec,
                                     zx::eventpair import_token) {
   // Make sure the import handle is valid.
   zx_koid_t import_koid = fsl::GetKoid(import_token.get());
@@ -147,8 +139,7 @@ bool ResourceLinker::ImportResource(Import* import,
   }
 
   // Register the import entry.
-  unresolved_imports_.AddUnresolvedImport(import, std::move(import_token),
-                                          import_koid);
+  unresolved_imports_.AddUnresolvedImport(import, std::move(import_token), import_koid);
 
   // Always perform linking last because it involves firing resolution callbacks
   // which may access the linker. We need that view to be consistent.
@@ -168,15 +159,13 @@ void ResourceLinker::OnTokenPeerDeath(zx_koid_t import_koid, zx_status_t status,
   RemoveExportEntryForExpiredKoid(import_koid);
 }
 
-void ResourceLinker::InvokeExpirationCallback(Resource* resource,
-                                              ExpirationCause cause) {
+void ResourceLinker::InvokeExpirationCallback(Resource* resource, ExpirationCause cause) {
   if (expiration_callback_) {
     expiration_callback_(resource, cause);
   }
 }
 
-Resource* ResourceLinker::RemoveExportEntryForExpiredKoid(
-    zx_koid_t import_koid) {
+Resource* ResourceLinker::RemoveExportEntryForExpiredKoid(zx_koid_t import_koid) {
   auto export_entry_iter = export_entries_.find(import_koid);
   FXL_DCHECK(export_entry_iter != export_entries_.end());
   Resource* resource = export_entry_iter->second.resource;
@@ -211,8 +200,7 @@ void ResourceLinker::OnExportedResourceDestroyed(Resource* resource) {
     export_entries_.erase(export_entry_iter);
 
     // Remove from |resources_to_import_koids_|, and advance iterator.
-    import_koid_iter =
-        exported_resources_to_import_koids_.erase(import_koid_iter);
+    import_koid_iter = exported_resources_to_import_koids_.erase(import_koid_iter);
   }
 
   // Mark the resource as not exported, so it doesn't have to
@@ -234,16 +222,13 @@ size_t ResourceLinker::NumExports() const {
   return exported_resources_.size();
 }
 
-size_t ResourceLinker::NumUnresolvedImports() const {
-  return unresolved_imports_.size();
-}
+size_t ResourceLinker::NumUnresolvedImports() const { return unresolved_imports_.size(); }
 
 void ResourceLinker::SetOnExpiredCallback(OnExpiredCallback callback) {
   expiration_callback_ = std::move(callback);
 }
 
-void ResourceLinker::SetOnImportResolvedCallback(
-    OnImportResolvedCallback callback) {
+void ResourceLinker::SetOnImportResolvedCallback(OnImportResolvedCallback callback) {
   import_resolved_callback_ = std::move(callback);
 }
 
@@ -259,8 +244,7 @@ size_t ResourceLinker::NumExportsForSession(Session* session) {
 
 bool ResourceLinker::PerformLinkingNow(zx_koid_t import_koid) {
   // Find the unresolved import entries if present.
-  size_t num_imports =
-      unresolved_imports_.NumUnresolvedImportsForKoid(import_koid);
+  size_t num_imports = unresolved_imports_.NumUnresolvedImportsForKoid(import_koid);
 
   if (num_imports == 0) {
     // Nothing to resolve yet.
@@ -276,23 +260,21 @@ bool ResourceLinker::PerformLinkingNow(zx_koid_t import_koid) {
 
   // We have import and export entries that match for the same import_koid.
   // Collect all the resolution callbacks that need to be invoked.
-  auto imports =
-      unresolved_imports_.GetAndRemoveUnresolvedImportsForKoid(import_koid);
+  auto imports = unresolved_imports_.GetAndRemoveUnresolvedImportsForKoid(import_koid);
 
   // Finally, invoke the resolution callbacks last. This is
   // important because we want to ensure that any code that runs
   // within the callbacks sees a consistent view of the linker.
   auto matched_resource = export_entry_iter->second.resource;
   for (const auto& import : imports) {
-    OnImportResolvedForResource(import, matched_resource,
-                                ImportResolutionResult::kSuccess);
+    OnImportResolvedForResource(import, matched_resource, ImportResolutionResult::kSuccess);
   }
 
   return true;
 }
 
-void ResourceLinker::RemoveFromExportedResourceToImportKoidsMap(
-    Resource* resource, zx_koid_t import_koid) {
+void ResourceLinker::RemoveFromExportedResourceToImportKoidsMap(Resource* resource,
+                                                                zx_koid_t import_koid) {
   // Remove this specific export from |export_entries_by_resource_|. (The
   // same resource can be exported multiple times).
   auto range = exported_resources_to_import_koids_.equal_range(resource);

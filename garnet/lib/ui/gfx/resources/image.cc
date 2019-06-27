@@ -13,8 +13,8 @@
 namespace scenic_impl {
 namespace gfx {
 
-const ResourceTypeInfo Image::kTypeInfo = {
-    ResourceType::kImage | ResourceType::kImageBase, "Image"};
+const ResourceTypeInfo Image::kTypeInfo = {ResourceType::kImage | ResourceType::kImageBase,
+                                           "Image"};
 
 Image::Image(Session* session, ResourceId id, const ResourceTypeInfo& type_info)
     : ImageBase(session, id, type_info) {
@@ -22,17 +22,15 @@ Image::Image(Session* session, ResourceId id, const ResourceTypeInfo& type_info)
 }
 
 ImagePtr Image::New(Session* session, ResourceId id, MemoryPtr memory,
-                    const fuchsia::images::ImageInfo& image_info,
-                    uint64_t memory_offset, ErrorReporter* error_reporter) {
+                    const fuchsia::images::ImageInfo& image_info, uint64_t memory_offset,
+                    ErrorReporter* error_reporter) {
   // Create from host memory.
   if (memory->is_host()) {
-    return HostImage::New(session, id, memory, image_info, memory_offset,
-                          error_reporter);
+    return HostImage::New(session, id, memory, image_info, memory_offset, error_reporter);
 
     // Create from GPU memory.
   } else {
-    return GpuImage::New(session, id, memory, image_info, memory_offset,
-                         error_reporter);
+    return GpuImage::New(session, id, memory, image_info, memory_offset, error_reporter);
   }
 }
 

@@ -35,8 +35,7 @@ class ImageCache : public ImageFactory, private ResourceManager {
   //
   // Obtain an unused Image with the required properties.  A new Image might be
   // created, or an existing one reused.
-  ImagePtr NewImage(const ImageInfo& info,
-                    GpuMemPtr* out_ptr = nullptr) override;
+  ImagePtr NewImage(const ImageInfo& info, GpuMemPtr* out_ptr = nullptr) override;
 
  private:
   // |Owner|

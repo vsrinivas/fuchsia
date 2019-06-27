@@ -6,10 +6,10 @@
 #define GARNET_LIB_UI_GFX_RESOURCES_VARIABLE_H_
 
 #include <fuchsia/ui/gfx/cpp/fidl.h>
+
 #include <set>
 
 #include "garnet/lib/ui/gfx/resources/resource.h"
-
 #include "garnet/lib/ui/scenic/util/error_reporter.h"
 #include "src/ui/lib/escher/geometry/transform.h"
 #include "src/ui/lib/escher/geometry/types.h"
@@ -53,9 +53,7 @@ class TypedVariable : public Variable {
   void SetValue(T value);
   bool SetValue(const ::fuchsia::ui::gfx::Value& value) override;
 
-  void AddListener(OnVariableValueChangedListener<VT, T>* listener) {
-    listeners_.insert(listener);
-  }
+  void AddListener(OnVariableValueChangedListener<VT, T>* listener) { listeners_.insert(listener); }
 
   void RemoveListener(OnVariableValueChangedListener<VT, T>* listener) {
     auto it = listeners_.find(listener);
@@ -71,18 +69,12 @@ class TypedVariable : public Variable {
   std::set<OnVariableValueChangedListener<VT, T>*> listeners_;
 };
 
-using FloatVariable =
-    TypedVariable<::fuchsia::ui::gfx::Value::Tag::kVector1, float>;
-using Vector2Variable =
-    TypedVariable<::fuchsia::ui::gfx::Value::Tag::kVector2, escher::vec2>;
-using Vector3Variable =
-    TypedVariable<::fuchsia::ui::gfx::Value::Tag::kVector3, escher::vec3>;
-using Vector4Variable =
-    TypedVariable<::fuchsia::ui::gfx::Value::Tag::kVector4, escher::vec4>;
-using Matrix4x4Variable =
-    TypedVariable<::fuchsia::ui::gfx::Value::Tag::kMatrix4x4, escher::mat4>;
-using QuaternionVariable =
-    TypedVariable<::fuchsia::ui::gfx::Value::Tag::kQuaternion, escher::quat>;
+using FloatVariable = TypedVariable<::fuchsia::ui::gfx::Value::Tag::kVector1, float>;
+using Vector2Variable = TypedVariable<::fuchsia::ui::gfx::Value::Tag::kVector2, escher::vec2>;
+using Vector3Variable = TypedVariable<::fuchsia::ui::gfx::Value::Tag::kVector3, escher::vec3>;
+using Vector4Variable = TypedVariable<::fuchsia::ui::gfx::Value::Tag::kVector4, escher::vec4>;
+using Matrix4x4Variable = TypedVariable<::fuchsia::ui::gfx::Value::Tag::kMatrix4x4, escher::mat4>;
+using QuaternionVariable = TypedVariable<::fuchsia::ui::gfx::Value::Tag::kQuaternion, escher::quat>;
 // using TransformVariable =
 //    TypedVariable<::fuchsia::ui::gfx::Value::Tag::kTransform,
 //    escher::Transform>;

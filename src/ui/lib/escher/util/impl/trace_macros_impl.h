@@ -18,8 +18,7 @@
 // on line numbers in order to prevent name collisions.
 #define TRACE_INTERNAL_EVENT_UID3(a, b) trace_event_unique_##a##b
 #define TRACE_INTERNAL_EVENT_UID2(a, b) TRACE_INTERNAL_EVENT_UID3(a, b)
-#define TRACE_INTERNAL_EVENT_UID(name_prefix) \
-  TRACE_INTERNAL_EVENT_UID2(name_prefix, __LINE__)
+#define TRACE_INTERNAL_EVENT_UID(name_prefix) TRACE_INTERNAL_EVENT_UID2(name_prefix, __LINE__)
 
 // For this simple implementation, all categories are always enabled.
 //
@@ -49,8 +48,7 @@ class TraceEndOnScopeClose {
   const char* name_ = nullptr;
 };
 
-static inline void AddTraceEvent(char phase, const char* category,
-                                 const char* name) {
+static inline void AddTraceEvent(char phase, const char* category, const char* name) {
   if (auto tracer = GetTracer()) {
     tracer->AddTraceEvent(phase, category, name);
   }

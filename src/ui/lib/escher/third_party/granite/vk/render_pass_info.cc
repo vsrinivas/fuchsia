@@ -60,8 +60,7 @@ RenderPassInfo::LoadStoreOpsForColorAttachment(uint32_t index) const {
     store_op = vk::AttachmentStoreOp::eStore;
   } else {
     FXL_DCHECK(!color_attachments[index]->image()->is_swapchain_image())
-        << "Swapchain attachment image " << index
-        << " must be marked as eStore.";
+        << "Swapchain attachment image " << index << " must be marked as eStore.";
   }
 
   return {load_op, store_op};
@@ -107,25 +106,21 @@ bool RenderPassInfo::Validate() const {
   if (auto load_clear_conflicts = clear_attachments & load_attachments) {
     success = false;
     ForEachBitIndex(load_clear_conflicts, [](uint32_t i) {
-      FXL_LOG(ERROR) << "RenderPass color attachment " << i
-                     << " load/clear conflict.";
+      FXL_LOG(ERROR) << "RenderPass color attachment " << i << " load/clear conflict.";
     });
   }
 
   // Any attachment marked as clear, load or store must be non-null.
-  ForEachBitIndex(clear_attachments | load_attachments | store_attachments,
-                  [&](uint32_t i) {
-                    if (i >= num_color_attachments) {
-                      success = false;
-                      FXL_LOG(ERROR) << "Color attachment bit " << i
-                                     << " is > num_color_attachments ("
-                                     << num_color_attachments << ").";
-                    } else if (!color_attachments[i]) {
-                      success = false;
-                      FXL_LOG(ERROR) << "Color attachment bit " << i
-                                     << " is set but attachment is null.";
-                    }
-                  });
+  ForEachBitIndex(clear_attachments | load_attachments | store_attachments, [&](uint32_t i) {
+    if (i >= num_color_attachments) {
+      success = false;
+      FXL_LOG(ERROR) << "Color attachment bit " << i << " is > num_color_attachments ("
+                     << num_color_attachments << ").";
+    } else if (!color_attachments[i]) {
+      success = false;
+      FXL_LOG(ERROR) << "Color attachment bit " << i << " is set but attachment is null.";
+    }
+  });
 
   // |num_color_attachments| must match the number of non-null attachments.
   for (uint32_t i = 0; i < num_color_attachments; ++i) {
@@ -134,8 +129,7 @@ bool RenderPassInfo::Validate() const {
       FXL_LOG(ERROR) << "Color attachment " << i << " should not be null.";
     }
   }
-  for (uint32_t i = num_color_attachments;
-       i < VulkanLimits::kNumColorAttachments; ++i) {
+  for (uint32_t i = num_color_attachments; i < VulkanLimits::kNumColorAttachments; ++i) {
     if (color_attachments[i]) {
       success = false;
       FXL_LOG(ERROR) << "Color attachment " << i << " should be null.";
@@ -149,26 +143,22 @@ bool RenderPassInfo::Validate() const {
   }
 
   if (depth_stencil_attachment) {
-    constexpr auto kLoadAndClearDepthStencil =
-        kLoadDepthStencilOp | kClearDepthStencilOp;
+    constexpr auto kLoadAndClearDepthStencil = kLoadDepthStencilOp | kClearDepthStencilOp;
     // Cannot load and clear the same attachment.
     if (kLoadAndClearDepthStencil == (op_flags & kLoadAndClearDepthStencil)) {
       success = false;
-      FXL_LOG(ERROR)
-          << "RenderPass depth-stencil attachment load/clear conflict.";
+      FXL_LOG(ERROR) << "RenderPass depth-stencil attachment load/clear conflict.";
     }
 
     // Cannot load or store transient image attachments.
     if (depth_stencil_attachment->image()->is_transient()) {
       if (op_flags & kLoadDepthStencilOp) {
         success = false;
-        FXL_LOG(ERROR)
-            << "Load flag specified for transient depth/stencil attachment.";
+        FXL_LOG(ERROR) << "Load flag specified for transient depth/stencil attachment.";
       }
       if (op_flags & kStoreDepthStencilOp) {
         success = false;
-        FXL_LOG(ERROR)
-            << "Load flag specified for transient depth/stencil attachment.";
+        FXL_LOG(ERROR) << "Load flag specified for transient depth/stencil attachment.";
       }
     }
 
@@ -180,13 +170,11 @@ bool RenderPassInfo::Validate() const {
       FXL_LOG(ERROR) << "Depth attachment is specified as both optimal "
                         "read-only and read-write.";
     }
-  } else if (op_flags & (kClearDepthStencilOp | kLoadDepthStencilOp |
-                         kStoreDepthStencilOp | kOptimalDepthStencilLayoutOp |
-                         kDepthStencilReadOnlyLayoutOp)) {
+  } else if (op_flags & (kClearDepthStencilOp | kLoadDepthStencilOp | kStoreDepthStencilOp |
+                         kOptimalDepthStencilLayoutOp | kDepthStencilReadOnlyLayoutOp)) {
     success = false;
-    FXL_LOG(ERROR)
-        << "RenderPass has no depth-stencil attachment, but depth-stencil "
-           "ops are specified.";
+    FXL_LOG(ERROR) << "RenderPass has no depth-stencil attachment, but depth-stencil "
+                      "ops are specified.";
   }
 
   return success;

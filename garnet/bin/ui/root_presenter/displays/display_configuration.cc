@@ -13,11 +13,10 @@ namespace display_configuration {
 void LogDisplayMetrics(const DisplayMetrics& metrics);
 
 float LookupPixelDensityForDisplay(uint32_t width_in_px, uint32_t height_in_px);
-fuchsia::ui::policy::DisplayUsage LookupDisplayUsageForDisplay(
-    uint32_t width_in_px, uint32_t height_in_px);
+fuchsia::ui::policy::DisplayUsage LookupDisplayUsageForDisplay(uint32_t width_in_px,
+                                                               uint32_t height_in_px);
 
-void InitializeModelForDisplay(uint32_t width_in_px, uint32_t height_in_px,
-                               DisplayModel* model) {
+void InitializeModelForDisplay(uint32_t width_in_px, uint32_t height_in_px, DisplayModel* model) {
   FXL_DCHECK(width_in_px != 0u);
   FXL_DCHECK(height_in_px != 0u);
   FXL_DCHECK(model != nullptr);
@@ -27,30 +26,25 @@ void InitializeModelForDisplay(uint32_t width_in_px, uint32_t height_in_px,
 
   model->display_info().density_in_px_per_mm =
       LookupPixelDensityForDisplay(width_in_px, height_in_px);
-  model->environment_info().usage =
-      LookupDisplayUsageForDisplay(width_in_px, height_in_px);
+  model->environment_info().usage = LookupDisplayUsageForDisplay(width_in_px, height_in_px);
 
   FXL_DCHECK(model->display_info().density_in_px_per_mm != 0.f);
-  FXL_DCHECK(model->environment_info().usage !=
-             fuchsia::ui::policy::DisplayUsage::kUnknown);
+  FXL_DCHECK(model->environment_info().usage != fuchsia::ui::policy::DisplayUsage::kUnknown);
 }
 
 // Returns density_in_px_per_mm. This will be replaced by something that
 // talks to the display API.
-float LookupPixelDensityForDisplay(uint32_t width_in_px,
-                                   uint32_t height_in_px) {
+float LookupPixelDensityForDisplay(uint32_t width_in_px, uint32_t height_in_px) {
   {
     std::string pixel_density;
-    if (files::ReadFileToString("/config/data/display_pixel_density",
-                                &pixel_density)) {
+    if (files::ReadFileToString("/config/data/display_pixel_density", &pixel_density)) {
       auto pixel_density_value = atof(pixel_density.c_str());
       if (pixel_density_value != 0.0) {
-        FXL_LOG(INFO) << "Display pixel density applied: "
-                      << pixel_density_value << " px/mm.";
+        FXL_LOG(INFO) << "Display pixel density applied: " << pixel_density_value << " px/mm.";
         return pixel_density_value;
       } else {
-        FXL_LOG(WARNING) << "Invalid display pixel density in configuration: "
-                         << pixel_density << " px/mm.";
+        FXL_LOG(WARNING) << "Invalid display pixel density in configuration: " << pixel_density
+                         << " px/mm.";
       }
     }
   }
@@ -59,8 +53,7 @@ float LookupPixelDensityForDisplay(uint32_t width_in_px,
   // of identifying and classifying them.
   if (width_in_px == 2160 && height_in_px == 1440) {
     // Assume that the device is an Acer Switch 12 Alpha.
-    FXL_LOG(INFO)
-        << "RootPresenter: treating device as an Acer Switch 12 Alpha.";
+    FXL_LOG(INFO) << "RootPresenter: treating device as an Acer Switch 12 Alpha.";
     return 8.5f;
   } else if (width_in_px == 2400 && height_in_px == 1600) {
     // Assume that the device is a Google Pixelbook.
@@ -81,8 +74,8 @@ float LookupPixelDensityForDisplay(uint32_t width_in_px,
   }
 }
 
-fuchsia::ui::policy::DisplayUsage LookupDisplayUsageForDisplay(
-    uint32_t width_in_px, uint32_t height_in_px) {
+fuchsia::ui::policy::DisplayUsage LookupDisplayUsageForDisplay(uint32_t width_in_px,
+                                                               uint32_t height_in_px) {
   // TODO(SCN-16): Need to have a database of devices and a more robust way
   // of identifying and classifying them.
   {
@@ -99,8 +92,7 @@ fuchsia::ui::policy::DisplayUsage LookupDisplayUsageForDisplay(
       } else if (display_usage == "far") {
         return fuchsia::ui::policy::DisplayUsage::kFar;
       } else {
-        FXL_LOG(WARNING) << "Invalid display usage in configuration: "
-                         << display_usage << ".";
+        FXL_LOG(WARNING) << "Invalid display usage in configuration: " << display_usage << ".";
       }
     }
   }

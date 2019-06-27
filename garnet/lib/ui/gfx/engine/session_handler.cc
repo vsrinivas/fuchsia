@@ -13,25 +13,20 @@ namespace scenic_impl {
 namespace gfx {
 
 SessionHandler::SessionHandler(CommandDispatcherContext dispatcher_context,
-                               SessionContext session_context,
-                               EventReporter* event_reporter,
-                               ErrorReporter* error_reporter,
-                               inspect::Node inspect_object)
+                               SessionContext session_context, EventReporter* event_reporter,
+                               ErrorReporter* error_reporter, inspect::Node inspect_object)
     : TempSessionDelegate(std::move(dispatcher_context)),
 
-      session_(std::make_unique<Session>(
-          command_dispatcher_context()->session_id(),
-          std::move(session_context), event_reporter, error_reporter,
-          std::move(inspect_object))) {}
+      session_(std::make_unique<Session>(command_dispatcher_context()->session_id(),
+                                         std::move(session_context), event_reporter, error_reporter,
+                                         std::move(inspect_object))) {}
 
-void SessionHandler::Present(
-    uint64_t presentation_time, std::vector<zx::event> acquire_fences,
-    std::vector<zx::event> release_fences,
-    fuchsia::ui::scenic::Session::PresentCallback callback) {
-  if (!session_->ScheduleUpdate(
-          presentation_time, std::move(buffered_commands_),
-          std::move(acquire_fences), std::move(release_fences),
-          std::move(callback))) {
+void SessionHandler::Present(uint64_t presentation_time, std::vector<zx::event> acquire_fences,
+                             std::vector<zx::event> release_fences,
+                             fuchsia::ui::scenic::Session::PresentCallback callback) {
+  if (!session_->ScheduleUpdate(presentation_time, std::move(buffered_commands_),
+                                std::move(acquire_fences), std::move(release_fences),
+                                std::move(callback))) {
     KillSession();
   } else {
     buffered_commands_.clear();

@@ -50,9 +50,8 @@ class BatchGpuUploader {
     // is called.  Retains a reference to the target until the submission's
     // CommandBuffer is retired. Places a wait semaphore on the target,
     // which is signaled when the batched commands are done.
-    void WriteImage(
-        const ImagePtr& target, vk::BufferImageCopy region,
-        vk::ImageLayout final_layout = vk::ImageLayout::eShaderReadOnlyOptimal);
+    void WriteImage(const ImagePtr& target, vk::BufferImageCopy region,
+                    vk::ImageLayout final_layout = vk::ImageLayout::eShaderReadOnlyOptimal);
 
     uint8_t* host_ptr() const { return buffer_->host_ptr(); }
     vk::DeviceSize size() const { return buffer_->size(); }
@@ -127,8 +126,7 @@ class BatchGpuUploader {
   void Submit(fit::function<void()> callback = nullptr);
 
  private:
-  static void SemaphoreAssignmentHelper(WaitableResource* resource,
-                                        CommandBuffer* command_buffer);
+  static void SemaphoreAssignmentHelper(WaitableResource* resource, CommandBuffer* command_buffer);
 
   void Initialize();
 
@@ -143,8 +141,7 @@ class BatchGpuUploader {
   BufferCacheWeakPtr buffer_cache_;
   FramePtr frame_;
 
-  std::vector<std::pair<BufferPtr, fit::function<void(BufferPtr)>>>
-      read_callbacks_;
+  std::vector<std::pair<BufferPtr, fit::function<void(BufferPtr)>>> read_callbacks_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(BatchGpuUploader);
 };

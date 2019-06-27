@@ -6,22 +6,18 @@
 
 namespace root_presenter {
 
-RendererParams RendererParams::FromCommandLine(
-    const fxl::CommandLine& command_line) {
+RendererParams RendererParams::FromCommandLine(const fxl::CommandLine& command_line) {
   RendererParams params;
 
   std::pair<std::string, fuchsia::ui::gfx::ShadowTechnique> shadow_args[] = {
       {"unshadowed", fuchsia::ui::gfx::ShadowTechnique::UNSHADOWED},
       {"screen_space_shadows", fuchsia::ui::gfx::ShadowTechnique::SCREEN_SPACE},
       {"shadow_map", fuchsia::ui::gfx::ShadowTechnique::SHADOW_MAP},
-      {"moment_shadow_map",
-       fuchsia::ui::gfx::ShadowTechnique::MOMENT_SHADOW_MAP},
-      {"stencil_shadow_volume",
-       fuchsia::ui::gfx::ShadowTechnique::STENCIL_SHADOW_VOLUME}};
+      {"moment_shadow_map", fuchsia::ui::gfx::ShadowTechnique::MOMENT_SHADOW_MAP},
+      {"stencil_shadow_volume", fuchsia::ui::gfx::ShadowTechnique::STENCIL_SHADOW_VOLUME}};
   for (auto& arg : shadow_args) {
     if (command_line.HasOption(arg.first)) {
-      FXL_CHECK(!params.shadow_technique.has_value())
-          << "Cannot specify multiple shadow args.";
+      FXL_CHECK(!params.shadow_technique.has_value()) << "Cannot specify multiple shadow args.";
       params.shadow_technique = arg.second;
     }
   }

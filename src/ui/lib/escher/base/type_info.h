@@ -77,9 +77,7 @@ struct TypeInfo {
   }
 
   // Return true if the two TypeInfos represent the same type.
-  bool operator==(const TypeInfo<EnumT>& type) const {
-    return flags == type.flags;
-  }
+  bool operator==(const TypeInfo<EnumT>& type) const { return flags == type.flags; }
 
  private:
   // Helper function for the TypeInfo constructor.  Flattens type flags by

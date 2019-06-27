@@ -32,18 +32,15 @@ class Camera {
 
   // Create an orthographic camera looking at the viewing volume in the
   // specified direction.
-  static Camera NewForDirectionalShadowMap(const ViewingVolume& volume,
-                                           const glm::vec3& direction);
+  static Camera NewForDirectionalShadowMap(const ViewingVolume& volume, const glm::vec3& direction);
 
   // Create a camera with a perspective projection.
-  static Camera NewPerspective(const ViewingVolume& volume,
-                               const mat4& transform, float fovy);
+  static Camera NewPerspective(const ViewingVolume& volume, const mat4& transform, float fovy);
 
   const mat4& transform() const { return transform_; }
   const mat4& projection() const { return projection_; }
 
-  void SetLatchedPoseBuffer(const BufferPtr& latched_pose_buffer,
-                            CameraEye eye) {
+  void SetLatchedPoseBuffer(const BufferPtr& latched_pose_buffer, CameraEye eye) {
     latched_pose_buffer_ = latched_pose_buffer;
     latched_camera_eye_ = eye;
   }

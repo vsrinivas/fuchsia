@@ -7,8 +7,8 @@
 namespace scenic_impl {
 namespace gfx {
 
-const ResourceTypeInfo EntityNode::kTypeInfo = {
-    ResourceType::kNode | ResourceType::kEntityNode, "EntityNode"};
+const ResourceTypeInfo EntityNode::kTypeInfo = {ResourceType::kNode | ResourceType::kEntityNode,
+                                                "EntityNode"};
 
 EntityNode::EntityNode(Session* session, ResourceId node_id)
     : Node(session, node_id, EntityNode::kTypeInfo) {}

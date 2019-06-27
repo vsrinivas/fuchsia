@@ -19,9 +19,7 @@ namespace test {
 
 // Base class that can be specialized to configure a Scenic with the systems
 // required for a set of tests.
-class ScenicTest : public ::gtest::TestLoopFixture,
-                   public ErrorReporter,
-                   public EventReporter {
+class ScenicTest : public ::gtest::TestLoopFixture, public ErrorReporter, public EventReporter {
  public:
   std::unique_ptr<::scenic::Session> CreateSession();
 
@@ -39,8 +37,7 @@ class ScenicTest : public ::gtest::TestLoopFixture,
   virtual void InitializeScenic(Scenic* scenic);
 
   // |ErrorReporter|
-  void ReportError(fxl::LogSeverity severity,
-                   std::string error_string) override;
+  void ReportError(fxl::LogSeverity severity, std::string error_string) override;
 
   // |EventReporter|
   void EnqueueEvent(fuchsia::ui::gfx::Event event) override;

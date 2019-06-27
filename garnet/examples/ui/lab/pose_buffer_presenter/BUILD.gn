@@ -19,6 +19,7 @@ executable("pose_buffer_presenter") {
     "//sdk/lib/fidl/cpp",
     "//src/lib/fxl",
     "//src/ui/lib/escher",
+    "//src/ui/lib/glm_workaround",
   ]
 
   include_dirs = [

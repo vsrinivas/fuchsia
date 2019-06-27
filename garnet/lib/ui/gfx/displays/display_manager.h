@@ -27,8 +27,8 @@ class DisplayManager {
   DisplayManager();
   ~DisplayManager();
 
-  using VsyncCallback = fit::function<void(
-      zx_time_t timestamp, const std::vector<uint64_t>& images)>;
+  using VsyncCallback =
+      fit::function<void(zx_time_t timestamp, const std::vector<uint64_t>& images)>;
 
   // Waits for the default display to become available then invokes the
   // callback.
@@ -50,8 +50,7 @@ class DisplayManager {
   // Import a buffer collection token into the display controller so the
   // constraints will be set on it. Returns an id that can be used to refer to
   // the collection.
-  uint64_t ImportBufferCollection(
-      fuchsia::sysmem::BufferCollectionTokenSyncPtr token);
+  uint64_t ImportBufferCollection(fuchsia::sysmem::BufferCollectionTokenSyncPtr token);
   void ReleaseBufferCollection(uint64_t id);
 
   uint64_t ImportImage(uint64_t collection_id, uint32_t index);
@@ -63,12 +62,11 @@ class DisplayManager {
   //
   // fuchsia::hardware::display::invalidId can be passed for any of the
   // event_ids if there is no corresponding event to signal.
-  void Flip(Display* display, uint64_t buffer,
-            uint64_t render_finished_event_id, uint64_t frame_signal_event_id);
+  void Flip(Display* display, uint64_t buffer, uint64_t render_finished_event_id,
+            uint64_t frame_signal_event_id);
 
   // Passes along color conversion information to the provided display.
-  void SetDisplayColorConversion(Display* display,
-                                 const ColorTransform& transform);
+  void SetDisplayColorConversion(Display* display, const ColorTransform& transform);
 
   // Gets information about the default display.
   // May return null if there isn't one.
@@ -85,8 +83,8 @@ class DisplayManager {
   bool is_initialized() { return sysmem_allocator_.is_bound(); }
 
  private:
-  void OnAsync(async_dispatcher_t* dispatcher, async::WaitBase* self,
-               zx_status_t status, const zx_packet_signal_t* signal);
+  void OnAsync(async_dispatcher_t* dispatcher, async::WaitBase* self, zx_status_t status,
+               const zx_packet_signal_t* signal);
 
   void DisplaysChanged(::std::vector<fuchsia::hardware::display::Info> added,
                        ::std::vector<uint64_t> removed);
@@ -96,15 +94,13 @@ class DisplayManager {
 
   zx::channel dc_device_;
   fuchsia::hardware::display::ControllerSyncPtr display_controller_;
-  fidl::InterfacePtr<fuchsia::hardware::display::Controller>
-      dc_event_dispatcher_;
+  fidl::InterfacePtr<fuchsia::hardware::display::Controller> dc_event_dispatcher_;
   zx_handle_t dc_channel_;  // display_controller_ owns the zx::channel
 
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
 
   uint64_t next_event_id_ = fuchsia::hardware::display::invalidId + 1;
-  uint64_t next_buffer_collection_id_ =
-      fuchsia::hardware::display::invalidId + 1;
+  uint64_t next_buffer_collection_id_ = fuchsia::hardware::display::invalidId + 1;
 
   DisplayControllerWatcher dc_watcher_;
   fit::closure display_available_cb_;

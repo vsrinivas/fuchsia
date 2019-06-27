@@ -21,20 +21,16 @@ BufferPtr NaiveBuffer::New(ResourceManager* manager, GpuMemPtr mem,
   buffer_create_info.size = mem->size();
   buffer_create_info.usage = usage_flags;
   buffer_create_info.sharingMode = vk::SharingMode::eExclusive;
-  auto vk_buffer =
-      ESCHER_CHECKED_VK_RESULT(device.createBuffer(buffer_create_info));
+  auto vk_buffer = ESCHER_CHECKED_VK_RESULT(device.createBuffer(buffer_create_info));
 
   return fxl::AdoptRef(new NaiveBuffer(manager, std::move(mem), vk_buffer));
 }
 
-NaiveBuffer::NaiveBuffer(ResourceManager* manager, GpuMemPtr mem,
-                         vk::Buffer buffer)
-    : Buffer(manager, buffer, mem->size(), mem->mapped_ptr()),
-      mem_(std::move(mem)) {
+NaiveBuffer::NaiveBuffer(ResourceManager* manager, GpuMemPtr mem, vk::Buffer buffer)
+    : Buffer(manager, buffer, mem->size(), mem->mapped_ptr()), mem_(std::move(mem)) {
   FXL_CHECK(vk());
   FXL_CHECK(mem_);
-  auto status = vulkan_context().device.bindBufferMemory(vk(), mem_->base(),
-                                                         mem_->offset());
+  auto status = vulkan_context().device.bindBufferMemory(vk(), mem_->base(), mem_->offset());
   FXL_CHECK(status == vk::Result::eSuccess)
       << "bindBufferMemory failed with status " << (VkResult)status;
 }

@@ -35,13 +35,11 @@ TEST(BoundingBox, Transform) {
 }
 
 TEST(BoundingBox, Contains) {
-  EXPECT_FALSE(
-      BoundingBox().Contains(BoundingBox({0.1, 0.1, 0.1}, {0.2, 0.2, 0.2})));
+  EXPECT_FALSE(BoundingBox().Contains(BoundingBox({0.1, 0.1, 0.1}, {0.2, 0.2, 0.2})));
 
   EXPECT_FALSE(BoundingBox().Contains(BoundingBox()));
 
-  EXPECT_FALSE(BoundingBox(vec3(-10, -10, -10), vec3(10, 10, 10))
-                   .Contains(BoundingBox()));
+  EXPECT_FALSE(BoundingBox(vec3(-10, -10, -10), vec3(10, 10, 10)).Contains(BoundingBox()));
 
   BoundingBox unit({0, 0, 0}, {1, 1, 1});
   EXPECT_TRUE(unit.Contains(unit));
@@ -53,10 +51,8 @@ TEST(BoundingBox, Contains) {
   EXPECT_TRUE(unit.Contains(BoundingBox({0, 0, 0.1}, {1, 1, 1})));
 
   BoundingBox out_there({1000, 1000, 1000}, {3000, 3000, 3000});
-  EXPECT_TRUE(
-      out_there.Contains(BoundingBox({1500, 1500, 1500}, {2500, 2500, 2500})));
-  EXPECT_FALSE(
-      out_there.Contains(BoundingBox({1500, 1500, 1500}, {2500, 2500, 3500})));
+  EXPECT_TRUE(out_there.Contains(BoundingBox({1500, 1500, 1500}, {2500, 2500, 2500})));
+  EXPECT_FALSE(out_there.Contains(BoundingBox({1500, 1500, 1500}, {2500, 2500, 3500})));
 }
 
 TEST(BoundingBox, IntersectEmpty) {
@@ -97,11 +93,9 @@ TEST(BoundingBox, Intersect) {
 
   {
     BoundingBox b2 = box2;
-    EXPECT_EQ(BoundingBox({200, 200, 200}, {300, 300, 300}),
-              b2.Intersect(box1));
+    EXPECT_EQ(BoundingBox({200, 200, 200}, {300, 300, 300}), b2.Intersect(box1));
     BoundingBox b1 = box1;
-    EXPECT_EQ(BoundingBox({200, 200, 200}, {300, 300, 300}),
-              b1.Intersect(box2));
+    EXPECT_EQ(BoundingBox({200, 200, 200}, {300, 300, 300}), b1.Intersect(box2));
   }
 }
 

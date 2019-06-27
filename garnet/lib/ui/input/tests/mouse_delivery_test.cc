@@ -2,20 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <memory>
-
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/async/cpp/time.h>
 #include <lib/zx/eventpair.h>
 
+#include <memory>
+
 #include "garnet/lib/ui/input/tests/util.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "src/lib/fxl/logging.h"
 #include "lib/gtest/test_loop_fixture.h"
 #include "lib/ui/input/cpp/formatting.h"
 #include "lib/ui/scenic/cpp/resources.h"
 #include "lib/ui/scenic/cpp/session.h"
+#include "src/lib/fxl/logging.h"
 
 // This test exercises the event delivery logic for mouse and touchpad events.
 // The mouse moves from the bottom left corner to the upper right corner.  While
@@ -73,9 +73,8 @@ class MouseDeliveryTest : public InputSystemTest {
 
 namespace {
 // Every client in this test file set up the same way.
-void CreateClient(scenic::Session* session, zx::eventpair view_token,
-                  scenic::EntityNode* root_node, std::string client_name,
-                  InputSystemTest* test) {
+void CreateClient(scenic::Session* session, zx::eventpair view_token, scenic::EntityNode* root_node,
+                  std::string client_name, InputSystemTest* test) {
   // Connect our root node to the presenter's node.
   scenic::View view(session, std::move(view_token), client_name);
   view.AddChild(*root_node);
@@ -107,8 +106,7 @@ TEST_F(MouseDeliveryTest, StandardTest) {
   // "Presenter" sets up a scene with two views.
   uint32_t compositor_id = 0;
   presenter.RunNow(
-      [this, &compositor_id, vh1_token = std::move(vh1_token),
-       vh2_token = std::move(vh2_token)](
+      [this, &compositor_id, vh1_token = std::move(vh1_token), vh2_token = std::move(vh2_token)](
           scenic::Session* session, scenic::EntityNode* root_node) mutable {
         // Minimal scene.
         scenic::Compositor compositor(session);
@@ -160,23 +158,20 @@ TEST_F(MouseDeliveryTest, StandardTest) {
 
   // Client 1 sets up its content.
   SessionWrapper client_1(scenic());
-  client_1.RunNow(
-      [this, v1_token = std::move(v1_token)](
-          scenic::Session* session, scenic::EntityNode* root_node) mutable {
-        CreateClient(session, std::move(v1_token), root_node, "View 1", this);
-      });
+  client_1.RunNow([this, v1_token = std::move(v1_token)](scenic::Session* session,
+                                                         scenic::EntityNode* root_node) mutable {
+    CreateClient(session, std::move(v1_token), root_node, "View 1", this);
+  });
 
   // Client 2 sets up its content.
   SessionWrapper client_2(scenic());
-  client_2.RunNow(
-      [this, v2_token = std::move(v2_token)](
-          scenic::Session* session, scenic::EntityNode* root_node) mutable {
-        CreateClient(session, std::move(v2_token), root_node, "View 2", this);
-      });
+  client_2.RunNow([this, v2_token = std::move(v2_token)](scenic::Session* session,
+                                                         scenic::EntityNode* root_node) mutable {
+    CreateClient(session, std::move(v2_token), root_node, "View 2", this);
+  });
 
   // Scene is now set up, send in the input.
-  presenter.RunNow([this, compositor_id](scenic::Session* session,
-                                         scenic::EntityNode* root_node) {
+  presenter.RunNow([this, compositor_id](scenic::Session* session, scenic::EntityNode* root_node) {
     PointerCommandGenerator pointer(compositor_id, /*device id*/ 1,
                                     /*pointer id*/ 1, PointerEventType::MOUSE);
     // A touch sequence that starts at the (0,6) location of the 7x7 display and
@@ -201,18 +196,15 @@ TEST_F(MouseDeliveryTest, StandardTest) {
 
     // MOVE
     EXPECT_TRUE(events[0].is_pointer());
-    EXPECT_TRUE(
-        PointerMatches(events[0].pointer(), 1u, PointerEventPhase::MOVE, 0, 4));
+    EXPECT_TRUE(PointerMatches(events[0].pointer(), 1u, PointerEventPhase::MOVE, 0, 4));
 
     // MOVE
     EXPECT_TRUE(events[1].is_pointer());
-    EXPECT_TRUE(
-        PointerMatches(events[1].pointer(), 1u, PointerEventPhase::MOVE, 1, 3));
+    EXPECT_TRUE(PointerMatches(events[1].pointer(), 1u, PointerEventPhase::MOVE, 1, 3));
 
     // MOVE
     EXPECT_TRUE(events[2].is_pointer());
-    EXPECT_TRUE(
-        PointerMatches(events[2].pointer(), 1u, PointerEventPhase::MOVE, 2, 2));
+    EXPECT_TRUE(PointerMatches(events[2].pointer(), 1u, PointerEventPhase::MOVE, 2, 2));
 
     // FOCUS
     EXPECT_TRUE(events[3].is_focus());
@@ -220,18 +212,15 @@ TEST_F(MouseDeliveryTest, StandardTest) {
 
     // DOWN
     EXPECT_TRUE(events[4].is_pointer());
-    EXPECT_TRUE(
-        PointerMatches(events[4].pointer(), 1u, PointerEventPhase::DOWN, 3, 1));
+    EXPECT_TRUE(PointerMatches(events[4].pointer(), 1u, PointerEventPhase::DOWN, 3, 1));
 
     // MOVE
     EXPECT_TRUE(events[5].is_pointer());
-    EXPECT_TRUE(
-        PointerMatches(events[5].pointer(), 1u, PointerEventPhase::MOVE, 4, 0));
+    EXPECT_TRUE(PointerMatches(events[5].pointer(), 1u, PointerEventPhase::MOVE, 4, 0));
 
     // UP
     EXPECT_TRUE(events[6].is_pointer());
-    EXPECT_TRUE(
-        PointerMatches(events[6].pointer(), 1u, PointerEventPhase::UP, 5, -1));
+    EXPECT_TRUE(PointerMatches(events[6].pointer(), 1u, PointerEventPhase::UP, 5, -1));
   });
 
   // Verify client 2's input has one mouse event.
@@ -240,8 +229,7 @@ TEST_F(MouseDeliveryTest, StandardTest) {
 
     // MOVE
     EXPECT_TRUE(events[0].is_pointer());
-    EXPECT_TRUE(
-        PointerMatches(events[0].pointer(), 1u, PointerEventPhase::MOVE, 4, 0));
+    EXPECT_TRUE(PointerMatches(events[0].pointer(), 1u, PointerEventPhase::MOVE, 4, 0));
   });
 }
 
@@ -258,8 +246,7 @@ TEST_F(MouseDeliveryTest, NoFocusTest) {
   // "Presenter" sets up a scene with two views.
   uint32_t compositor_id = 0;
   presenter.RunNow(
-      [this, &compositor_id, vh1_token = std::move(vh1_token),
-       vh2_token = std::move(vh2_token)](
+      [this, &compositor_id, vh1_token = std::move(vh1_token), vh2_token = std::move(vh2_token)](
           scenic::Session* session, scenic::EntityNode* root_node) mutable {
         // Minimal scene.
         scenic::Compositor compositor(session);
@@ -318,23 +305,20 @@ TEST_F(MouseDeliveryTest, NoFocusTest) {
 
   // Client 1 sets up its content.
   SessionWrapper client_1(scenic());
-  client_1.RunNow(
-      [this, v1_token = std::move(v1_token)](
-          scenic::Session* session, scenic::EntityNode* root_node) mutable {
-        CreateClient(session, std::move(v1_token), root_node, "View 1", this);
-      });
+  client_1.RunNow([this, v1_token = std::move(v1_token)](scenic::Session* session,
+                                                         scenic::EntityNode* root_node) mutable {
+    CreateClient(session, std::move(v1_token), root_node, "View 1", this);
+  });
 
   // Client 2 sets up its content.
   SessionWrapper client_2(scenic());
-  client_2.RunNow(
-      [this, v2_token = std::move(v2_token)](
-          scenic::Session* session, scenic::EntityNode* root_node) mutable {
-        CreateClient(session, std::move(v2_token), root_node, "View 2", this);
-      });
+  client_2.RunNow([this, v2_token = std::move(v2_token)](scenic::Session* session,
+                                                         scenic::EntityNode* root_node) mutable {
+    CreateClient(session, std::move(v2_token), root_node, "View 2", this);
+  });
 
   // Scene is now set up, send in the input.
-  presenter.RunNow([this, compositor_id](scenic::Session* session,
-                                         scenic::EntityNode* root_node) {
+  presenter.RunNow([this, compositor_id](scenic::Session* session, scenic::EntityNode* root_node) {
     PointerCommandGenerator pointer(compositor_id, /*device id*/ 1,
                                     /*pointer id*/ 1, PointerEventType::MOUSE);
     // A touch sequence that starts at the (0,6) location of the 7x7 display and
@@ -359,33 +343,27 @@ TEST_F(MouseDeliveryTest, NoFocusTest) {
 
     // MOVE
     EXPECT_TRUE(events[0].is_pointer());
-    EXPECT_TRUE(
-        PointerMatches(events[0].pointer(), 1u, PointerEventPhase::MOVE, 0, 4));
+    EXPECT_TRUE(PointerMatches(events[0].pointer(), 1u, PointerEventPhase::MOVE, 0, 4));
 
     // MOVE
     EXPECT_TRUE(events[1].is_pointer());
-    EXPECT_TRUE(
-        PointerMatches(events[1].pointer(), 1u, PointerEventPhase::MOVE, 1, 3));
+    EXPECT_TRUE(PointerMatches(events[1].pointer(), 1u, PointerEventPhase::MOVE, 1, 3));
 
     // MOVE
     EXPECT_TRUE(events[2].is_pointer());
-    EXPECT_TRUE(
-        PointerMatches(events[2].pointer(), 1u, PointerEventPhase::MOVE, 2, 2));
+    EXPECT_TRUE(PointerMatches(events[2].pointer(), 1u, PointerEventPhase::MOVE, 2, 2));
 
     // DOWN
     EXPECT_TRUE(events[3].is_pointer());
-    EXPECT_TRUE(
-        PointerMatches(events[3].pointer(), 1u, PointerEventPhase::DOWN, 3, 1));
+    EXPECT_TRUE(PointerMatches(events[3].pointer(), 1u, PointerEventPhase::DOWN, 3, 1));
 
     // MOVE
     EXPECT_TRUE(events[4].is_pointer());
-    EXPECT_TRUE(
-        PointerMatches(events[4].pointer(), 1u, PointerEventPhase::MOVE, 4, 0));
+    EXPECT_TRUE(PointerMatches(events[4].pointer(), 1u, PointerEventPhase::MOVE, 4, 0));
 
     // UP
     EXPECT_TRUE(events[5].is_pointer());
-    EXPECT_TRUE(
-        PointerMatches(events[5].pointer(), 1u, PointerEventPhase::UP, 5, -1));
+    EXPECT_TRUE(PointerMatches(events[5].pointer(), 1u, PointerEventPhase::UP, 5, -1));
   });
 
   // Verify client 2's input has one mouse event.
@@ -394,8 +372,7 @@ TEST_F(MouseDeliveryTest, NoFocusTest) {
 
     // MOVE
     EXPECT_TRUE(events[0].is_pointer());
-    EXPECT_TRUE(
-        PointerMatches(events[0].pointer(), 1u, PointerEventPhase::MOVE, 4, 0));
+    EXPECT_TRUE(PointerMatches(events[0].pointer(), 1u, PointerEventPhase::MOVE, 4, 0));
   });
 }
 

@@ -17,9 +17,8 @@
 
 namespace ui_input {
 
-bool Touchpad::ParseReportDescriptor(
-    const hid::ReportDescriptor& report_descriptor,
-    Device::Descriptor* device_descriptor) {
+bool Touchpad::ParseReportDescriptor(const hid::ReportDescriptor& report_descriptor,
+                                     Device::Descriptor* device_descriptor) {
   if (!touch_.ParseTouchDescriptor(report_descriptor)) {
     return false;
   }
@@ -27,8 +26,7 @@ bool Touchpad::ParseReportDescriptor(
   device_descriptor->protocol = Protocol::Touchpad;
   device_descriptor->has_mouse = true;
   device_descriptor->mouse_type = MouseDeviceType::TOUCH;
-  device_descriptor->mouse_descriptor =
-      fuchsia::ui::input::MouseDescriptor::New();
+  device_descriptor->mouse_descriptor = fuchsia::ui::input::MouseDescriptor::New();
 
   // At the moment all mice send relative units, so these min and max values
   // do not affect anything. Set them to maximum range.
@@ -40,8 +38,7 @@ bool Touchpad::ParseReportDescriptor(
   device_descriptor->mouse_descriptor->rel_y.range.max = INT32_MAX;
   device_descriptor->mouse_descriptor->rel_y.resolution = 1;
 
-  device_descriptor->mouse_descriptor->buttons |=
-      fuchsia::ui::input::kMouseButtonPrimary;
+  device_descriptor->mouse_descriptor->buttons |= fuchsia::ui::input::kMouseButtonPrimary;
 
   return true;
 }
@@ -98,8 +95,7 @@ bool Touchpad::ParseTouchpadReport(const Touch::Report& touchpad,
   report->mouse->rel_x = (contact->x - mouse_abs_x_) / 400;
   report->mouse->rel_y = (contact->y - mouse_abs_y_) / 400;
 
-  report->mouse->pressed_buttons =
-      touchpad.button ? fuchsia::ui::input::kMouseButtonPrimary : 0;
+  report->mouse->pressed_buttons = touchpad.button ? fuchsia::ui::input::kMouseButtonPrimary : 0;
 
   mouse_abs_x_ = touchpad.contacts[0].x;
   mouse_abs_y_ = touchpad.contacts[0].y;

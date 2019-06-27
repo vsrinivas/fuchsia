@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "garnet/bin/ui/input/inverse_keymap.h"
+
 #include <hid/hid.h>
 #include <hid/usages.h>
 
-#include "garnet/bin/ui/input/inverse_keymap.h"
 #include "gtest/gtest.h"
 
 namespace input {
@@ -29,8 +30,7 @@ struct SimpleKeystroke {
 // Runs checks on a key sequence, using |SimpleKeystroke|s as a convenience
 // representation. Null usages on the expectation indicate that no (non-shift)
 // key is expected to be pressed. (Shift is governed separately.)
-void CheckKeySequence(const KeySequence& actual,
-                      const std::vector<SimpleKeystroke>& expected) {
+void CheckKeySequence(const KeySequence& actual, const std::vector<SimpleKeystroke>& expected) {
   ASSERT_EQ(actual.size(), expected.size());
 
   for (size_t i = 0; i < actual.size(); ++i) {

@@ -16,8 +16,7 @@ namespace impl {
 // Vulkan framebuffers.
 class FramebufferAllocator {
  public:
-  FramebufferAllocator(ResourceRecycler* recycler,
-                       impl::RenderPassCache* render_pass_cache);
+  FramebufferAllocator(ResourceRecycler* recycler, impl::RenderPassCache* render_pass_cache);
   const impl::FramebufferPtr& ObtainFramebuffer(const RenderPassInfo& info);
 
   void BeginFrame() { framebuffer_cache_.BeginFrame(); }

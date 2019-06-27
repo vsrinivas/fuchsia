@@ -22,9 +22,8 @@ class SemanticTreeParser {
   // nodes. Nodes parsed from the file are appended to the given vector.
   // Function assumes passed pointer to point to a read std::vector<Node>.
   // Function returns false, if the parsing of the file fails.
-  bool ParseSemanticTree(
-      const std::string& file_path,
-      std::vector<fuchsia::accessibility::semantics::Node>* semantic_tree);
+  bool ParseSemanticTree(const std::string& file_path,
+                         std::vector<fuchsia::accessibility::semantics::Node>* semantic_tree);
 
  private:
   json::JSONParser json_parser_;

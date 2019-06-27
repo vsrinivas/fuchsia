@@ -113,8 +113,7 @@ class Resource : public fxl::RefCountedThreadSafe<Resource> {
   // Sets a flag that indicates if this resource is exported in ResourceLinker.
   // If so, this resource is responsible for notifying ResourceLinker when it
   // dies.
-  void SetExported(bool exported,
-                   const fxl::WeakPtr<ResourceLinker>& resource_linker_weak);
+  void SetExported(bool exported, const fxl::WeakPtr<ResourceLinker>& resource_linker_weak);
 
  private:
   Session* const session_;

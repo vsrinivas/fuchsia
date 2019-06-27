@@ -5,17 +5,16 @@
 #ifndef GARNET_LIB_UI_GFX_ENGINE_RESOURCE_LINKER_H_
 #define GARNET_LIB_UI_GFX_ENGINE_RESOURCE_LINKER_H_
 
-#include <unordered_map>
-#include <unordered_set>
-
+#include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fit/function.h>
 
-#include "lib/fsl/handles/object_info.h"
+#include <unordered_map>
+#include <unordered_set>
 
-#include <fuchsia/ui/gfx/cpp/fidl.h>
 #include "garnet/lib/ui/gfx/engine/unresolved_imports.h"
 #include "garnet/lib/ui/gfx/resources/resource.h"
+#include "lib/fsl/handles/object_info.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -74,17 +73,14 @@ class ResourceLinker {
   };
   using OnExpiredCallback = fit::function<void(Resource*, ExpirationCause)>;
   void SetOnExpiredCallback(OnExpiredCallback callback);
-  using OnImportResolvedCallback =
-      fit::function<void(Import*, Resource*, ImportResolutionResult)>;
+  using OnImportResolvedCallback = fit::function<void(Import*, Resource*, ImportResolutionResult)>;
   void SetOnImportResolvedCallback(OnImportResolvedCallback callback);
 
   size_t NumExportsForSession(Session* session);
 
   // To prevent making any requirements about the lifecycle of ResourceLinker
   // compared to resources, always refer to ResourceLinker with a weak pointer.
-  fxl::WeakPtr<ResourceLinker> GetWeakPtr() {
-    return weak_factory_.GetWeakPtr();
-  }
+  fxl::WeakPtr<ResourceLinker> GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
 
  private:
   friend class UnresolvedImports;
@@ -101,8 +97,7 @@ class ResourceLinker {
   void OnImportResolvedForResource(Import* import, Resource* actual,
                                    ImportResolutionResult resolution_result);
 
-  void OnTokenPeerDeath(zx_koid_t import_koid, zx_status_t status,
-                        const zx_packet_signal* signal);
+  void OnTokenPeerDeath(zx_koid_t import_koid, zx_status_t status, const zx_packet_signal* signal);
 
   void InvokeExpirationCallback(Resource* resource, ExpirationCause cause);
 
@@ -114,8 +109,7 @@ class ResourceLinker {
   bool PerformLinkingNow(zx_koid_t import_koid);
 
   // Helper method to remove |import_koid| from |resources_to_import_koids_|.
-  void RemoveFromExportedResourceToImportKoidsMap(Resource* resource,
-                                                  zx_koid_t import_koid);
+  void RemoveFromExportedResourceToImportKoidsMap(Resource* resource, zx_koid_t import_koid);
 
   struct ExportEntry {
     zx::eventpair export_token;

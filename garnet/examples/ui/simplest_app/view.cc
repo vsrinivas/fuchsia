@@ -37,8 +37,7 @@ scenic::Material NextColor(scenic::Session* session) {
 
 }  // namespace
 
-SimplestAppView::SimplestAppView(scenic::ViewContext context,
-                                 async::Loop* message_loop)
+SimplestAppView::SimplestAppView(scenic::ViewContext context, async::Loop* message_loop)
     : scenic::BaseView(std::move(context), "simplest_app SimplestAppView"),
       message_loop_(message_loop),
       background_(session()),
@@ -59,8 +58,7 @@ SimplestAppView::SimplestAppView(scenic::ViewContext context,
   // Consider breaking out into a discrete initializer if more work is added.
 }
 
-void SimplestAppView::OnPropertiesChanged(
-    fuchsia::ui::gfx::ViewProperties old_properties) {
+void SimplestAppView::OnPropertiesChanged(fuchsia::ui::gfx::ViewProperties old_properties) {
   if (view_holder_) {
     view_holder_->SetViewProperties(view_properties());
   }
@@ -78,8 +76,7 @@ void SimplestAppView::OnInputEvent(fuchsia::ui::input::InputEvent event) {
     }
     case InputEvent::Tag::kPointer: {
       const auto& pointer = event.pointer();
-      trace_flow_id_t trace_id =
-          PointerTraceHACK(pointer.radius_major, pointer.radius_minor);
+      trace_flow_id_t trace_id = PointerTraceHACK(pointer.radius_major, pointer.radius_minor);
       TRACE_FLOW_END("input", "dispatch_event_to_client", trace_id);
       switch (pointer.phase) {
         case PointerEventPhase::DOWN: {
@@ -95,10 +92,8 @@ void SimplestAppView::OnInputEvent(fuchsia::ui::input::InputEvent event) {
     }
     case InputEvent::Tag::kKeyboard: {
       const auto& key = event.keyboard();
-      if (key.hid_usage == /* Esc key*/ 0x29 &&
-          key.phase == KeyboardEventPhase::RELEASED) {
-        async::PostTask(message_loop_->dispatcher(),
-                        [this] { message_loop_->Quit(); });
+      if (key.hid_usage == /* Esc key*/ 0x29 && key.phase == KeyboardEventPhase::RELEASED) {
+        async::PostTask(message_loop_->dispatcher(), [this] { message_loop_->Quit(); });
       }
       break;
     }
@@ -118,8 +113,7 @@ void SimplestAppView::UpdateBackground() {
   const float width = size.x;
   const float height = size.y;
 
-  scenic::RoundedRectangle background_shape(session(), width, height, 20, 20,
-                                            80, 10);
+  scenic::RoundedRectangle background_shape(session(), width, height, 20, 20, 80, 10);
   background_.SetMaterial(NextColor(session()));
   background_.SetShape(background_shape);
   background_.SetTranslation(width / 2.f, height / 2.f, -10.f);

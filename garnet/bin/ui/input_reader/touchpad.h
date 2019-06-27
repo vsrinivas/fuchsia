@@ -28,8 +28,7 @@ class Touchpad : public Device {
   uint8_t ReportId() const override { return touch_.ReportId(); }
 
  private:
-  bool ParseTouchpadReport(const Touch::Report& touchpad,
-                           fuchsia::ui::input::InputReport* report);
+  bool ParseTouchpadReport(const Touch::Report& touchpad, fuchsia::ui::input::InputReport* report);
   Touch touch_ = {};
 
   // These variables do conversion from touchpad information

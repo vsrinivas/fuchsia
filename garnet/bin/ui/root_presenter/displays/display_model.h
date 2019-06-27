@@ -5,11 +5,11 @@
 #ifndef GARNET_BIN_UI_ROOT_PRESENTER_DISPLAYS_DISPLAY_MODEL_H_
 #define GARNET_BIN_UI_ROOT_PRESENTER_DISPLAYS_DISPLAY_MODEL_H_
 
+#include <fuchsia/ui/policy/cpp/fidl.h>
+
 #include <cstdint>
 
 #include "garnet/bin/ui/root_presenter/displays/display_metrics.h"
-
-#include <fuchsia/ui/policy/cpp/fidl.h>
 #include "src/lib/fxl/macros.h"
 
 namespace root_presenter {
@@ -50,8 +50,7 @@ class DisplayModel {
   struct EnvironmentInfo {
     // The intended usage of the display.
     // Value is |kUnknown| if unknown.
-    fuchsia::ui::policy::DisplayUsage usage =
-        fuchsia::ui::policy::DisplayUsage::kUnknown;
+    fuchsia::ui::policy::DisplayUsage usage = fuchsia::ui::policy::DisplayUsage::kUnknown;
 
     // The nominal apparent viewing distance in millimeters.
     // Value is 0.0 if unknown.

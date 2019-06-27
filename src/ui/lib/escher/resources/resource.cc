@@ -31,8 +31,7 @@ const VulkanContext& Resource::vulkan_context() const {
 }
 
 ResourceManager* Resource::owner() const {
-  return static_cast<ResourceManager*>(
-      Ownable<Resource, ResourceTypeInfo>::owner());
+  return static_cast<ResourceManager*>(Ownable<Resource, ResourceTypeInfo>::owner());
 }
 
 uint64_t Resource::GetUniqueId() {

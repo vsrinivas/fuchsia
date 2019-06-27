@@ -16,8 +16,7 @@ namespace input {
 
 namespace {
 
-void ParseTouchscreen(const uint8_t *desc, size_t desc_len,
-                      ui_input::Touch *ts) {
+void ParseTouchscreen(const uint8_t *desc, size_t desc_len, ui_input::Touch *ts) {
   hid::DeviceDescriptor *dev_desc = nullptr;
   auto parse_res = hid::ParseReportDescriptor(desc, desc_len, &dev_desc);
   ASSERT_EQ(hid::ParseResult::kParseOk, parse_res);
@@ -49,16 +48,13 @@ namespace test {
 
 TEST(TouchscreenTest, Gechic1101) {
   ui_input::Touch ts;
-  ParseTouchscreen(gechic1101_hid_descriptor, sizeof(gechic1101_hid_descriptor),
-                   &ts);
+  ParseTouchscreen(gechic1101_hid_descriptor, sizeof(gechic1101_hid_descriptor), &ts);
   ui_input::Touch::Descriptor ts_desc;
   EXPECT_TRUE(ts.SetDescriptor(&ts_desc));
 
   EXPECT_EQ(10UL, ts.touch_points());
-  EXPECT_EQ(ui_input::Touch::Capabilities::CONTACT_ID |
-                ui_input::Touch::Capabilities::TIP_SWITCH |
-                ui_input::Touch::Capabilities::X |
-                ui_input::Touch::Capabilities::Y |
+  EXPECT_EQ(ui_input::Touch::Capabilities::CONTACT_ID | ui_input::Touch::Capabilities::TIP_SWITCH |
+                ui_input::Touch::Capabilities::X | ui_input::Touch::Capabilities::Y |
                 ui_input::Touch::Capabilities::CONTACT_COUNT |
                 ui_input::Touch::Capabilities::SCAN_TIME,
             ts.capabilities());
@@ -100,17 +96,14 @@ TEST(TouchscreenTest, Gechic1101) {
 
 TEST(TouchscreenTest, CoolTouch) {
   ui_input::Touch ts;
-  ParseTouchscreen(cooltouch_10x_hid_descriptor,
-                   sizeof(cooltouch_10x_hid_descriptor), &ts);
+  ParseTouchscreen(cooltouch_10x_hid_descriptor, sizeof(cooltouch_10x_hid_descriptor), &ts);
 
   ui_input::Touch::Descriptor ts_desc;
   EXPECT_TRUE(ts.SetDescriptor(&ts_desc));
 
   EXPECT_EQ(5UL, ts.touch_points());
-  EXPECT_EQ(ui_input::Touch::Capabilities::CONTACT_ID |
-                ui_input::Touch::Capabilities::TIP_SWITCH |
-                ui_input::Touch::Capabilities::X |
-                ui_input::Touch::Capabilities::Y |
+  EXPECT_EQ(ui_input::Touch::Capabilities::CONTACT_ID | ui_input::Touch::Capabilities::TIP_SWITCH |
+                ui_input::Touch::Capabilities::X | ui_input::Touch::Capabilities::Y |
                 ui_input::Touch::Capabilities::CONTACT_COUNT |
                 ui_input::Touch::Capabilities::SCAN_TIME,
             ts.capabilities());
@@ -146,17 +139,14 @@ TEST(TouchscreenTest, CoolTouch) {
 
 TEST(TouchscreenTest, WaveShare) {
   ui_input::Touch ts;
-  ParseTouchscreen(waveshare_hid_descriptor, sizeof(waveshare_hid_descriptor),
-                   &ts);
+  ParseTouchscreen(waveshare_hid_descriptor, sizeof(waveshare_hid_descriptor), &ts);
 
   ui_input::Touch::Descriptor ts_desc;
   EXPECT_TRUE(ts.SetDescriptor(&ts_desc));
 
   EXPECT_EQ(1UL, ts.touch_points());
-  EXPECT_EQ(ui_input::Touch::Capabilities::CONTACT_ID |
-                ui_input::Touch::Capabilities::TIP_SWITCH |
-                ui_input::Touch::Capabilities::X |
-                ui_input::Touch::Capabilities::Y |
+  EXPECT_EQ(ui_input::Touch::Capabilities::CONTACT_ID | ui_input::Touch::Capabilities::TIP_SWITCH |
+                ui_input::Touch::Capabilities::X | ui_input::Touch::Capabilities::Y |
                 ui_input::Touch::Capabilities::CONTACT_COUNT |
                 ui_input::Touch::Capabilities::SCAN_TIME,
             ts.capabilities());
@@ -192,17 +182,14 @@ TEST(TouchscreenTest, WaveShare) {
 
 TEST(TouchscreenTest, Gechic1303) {
   ui_input::Touch ts;
-  ParseTouchscreen(gechic_1303_hid_descriptor,
-                   sizeof(gechic_1303_hid_descriptor), &ts);
+  ParseTouchscreen(gechic_1303_hid_descriptor, sizeof(gechic_1303_hid_descriptor), &ts);
 
   ui_input::Touch::Descriptor ts_desc;
   EXPECT_TRUE(ts.SetDescriptor(&ts_desc));
 
   EXPECT_EQ(10UL, ts.touch_points());
-  EXPECT_EQ(ui_input::Touch::Capabilities::CONTACT_ID |
-                ui_input::Touch::Capabilities::TIP_SWITCH |
-                ui_input::Touch::Capabilities::X |
-                ui_input::Touch::Capabilities::Y |
+  EXPECT_EQ(ui_input::Touch::Capabilities::CONTACT_ID | ui_input::Touch::Capabilities::TIP_SWITCH |
+                ui_input::Touch::Capabilities::X | ui_input::Touch::Capabilities::Y |
                 ui_input::Touch::Capabilities::CONTACT_COUNT |
                 ui_input::Touch::Capabilities::SCAN_TIME,
             ts.capabilities());
@@ -245,18 +232,15 @@ TEST(TouchscreenTest, Gechic1303) {
 TEST(TouchscreenTest, ParadiseV1) {
   ui_input::Touch ts;
   size_t desc_size;
-  const uint8_t *paradise_touch_v1_report_desc =
-      get_paradise_touch_report_desc(&desc_size);
+  const uint8_t *paradise_touch_v1_report_desc = get_paradise_touch_report_desc(&desc_size);
 
   ParseTouchscreen(paradise_touch_v1_report_desc, desc_size, &ts);
   ui_input::Touch::Descriptor ts_desc;
   EXPECT_TRUE(ts.SetDescriptor(&ts_desc));
 
   EXPECT_EQ(5UL, ts.touch_points());
-  EXPECT_EQ(ui_input::Touch::Capabilities::CONTACT_ID |
-                ui_input::Touch::Capabilities::TIP_SWITCH |
-                ui_input::Touch::Capabilities::X |
-                ui_input::Touch::Capabilities::Y |
+  EXPECT_EQ(ui_input::Touch::Capabilities::CONTACT_ID | ui_input::Touch::Capabilities::TIP_SWITCH |
+                ui_input::Touch::Capabilities::X | ui_input::Touch::Capabilities::Y |
                 ui_input::Touch::Capabilities::CONTACT_COUNT |
                 ui_input::Touch::Capabilities::SCAN_TIME,
             ts.capabilities());
@@ -292,18 +276,15 @@ TEST(TouchscreenTest, ParadiseV1) {
 TEST(TouchscreenTest, ParadiseV2) {
   ui_input::Touch ts;
   size_t desc_size;
-  const uint8_t *paradise_touch_v2_report_desc =
-      get_paradise_touch_v2_report_desc(&desc_size);
+  const uint8_t *paradise_touch_v2_report_desc = get_paradise_touch_v2_report_desc(&desc_size);
 
   ParseTouchscreen(paradise_touch_v2_report_desc, desc_size, &ts);
   ui_input::Touch::Descriptor ts_desc;
   EXPECT_TRUE(ts.SetDescriptor(&ts_desc));
 
   EXPECT_EQ(5UL, ts.touch_points());
-  EXPECT_EQ(ui_input::Touch::Capabilities::CONTACT_ID |
-                ui_input::Touch::Capabilities::TIP_SWITCH |
-                ui_input::Touch::Capabilities::X |
-                ui_input::Touch::Capabilities::Y |
+  EXPECT_EQ(ui_input::Touch::Capabilities::CONTACT_ID | ui_input::Touch::Capabilities::TIP_SWITCH |
+                ui_input::Touch::Capabilities::X | ui_input::Touch::Capabilities::Y |
                 ui_input::Touch::Capabilities::CONTACT_COUNT |
                 ui_input::Touch::Capabilities::SCAN_TIME,
             ts.capabilities());
@@ -339,18 +320,15 @@ TEST(TouchscreenTest, ParadiseV2) {
 TEST(TouchscreenTest, ParadiseV3) {
   ui_input::Touch ts;
   size_t desc_size;
-  const uint8_t *paradise_touch_v3_report_desc =
-      get_paradise_touch_v3_report_desc(&desc_size);
+  const uint8_t *paradise_touch_v3_report_desc = get_paradise_touch_v3_report_desc(&desc_size);
 
   ParseTouchscreen(paradise_touch_v3_report_desc, desc_size, &ts);
   ui_input::Touch::Descriptor ts_desc;
   EXPECT_TRUE(ts.SetDescriptor(&ts_desc));
 
   EXPECT_EQ(5UL, ts.touch_points());
-  EXPECT_EQ(ui_input::Touch::Capabilities::CONTACT_ID |
-                ui_input::Touch::Capabilities::TIP_SWITCH |
-                ui_input::Touch::Capabilities::X |
-                ui_input::Touch::Capabilities::Y |
+  EXPECT_EQ(ui_input::Touch::Capabilities::CONTACT_ID | ui_input::Touch::Capabilities::TIP_SWITCH |
+                ui_input::Touch::Capabilities::X | ui_input::Touch::Capabilities::Y |
                 ui_input::Touch::Capabilities::CONTACT_COUNT |
                 ui_input::Touch::Capabilities::SCAN_TIME,
             ts.capabilities());
@@ -394,10 +372,8 @@ TEST(TouchscreenTest, Ft3x27) {
   EXPECT_TRUE(ts.SetDescriptor(&ts_desc));
 
   EXPECT_EQ(5UL, ts.touch_points());
-  EXPECT_EQ(ui_input::Touch::Capabilities::CONTACT_ID |
-                ui_input::Touch::Capabilities::TIP_SWITCH |
-                ui_input::Touch::Capabilities::X |
-                ui_input::Touch::Capabilities::Y |
+  EXPECT_EQ(ui_input::Touch::Capabilities::CONTACT_ID | ui_input::Touch::Capabilities::TIP_SWITCH |
+                ui_input::Touch::Capabilities::X | ui_input::Touch::Capabilities::Y |
                 ui_input::Touch::Capabilities::CONTACT_COUNT,
             ts.capabilities());
   EXPECT_EQ(0, ts_desc.x_min);

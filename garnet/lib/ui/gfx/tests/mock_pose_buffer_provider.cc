@@ -9,15 +9,12 @@
 
 namespace mock_pose_buffer_provider {
 
-MockPoseBufferProviderApp::MockPoseBufferProviderApp()
-    : context_(sys::ComponentContext::Create()) {
+MockPoseBufferProviderApp::MockPoseBufferProviderApp() : context_(sys::ComponentContext::Create()) {
   context_->outgoing()->AddPublicService(bindings_.GetHandler(this));
 }
 
-void MockPoseBufferProviderApp::SetPoseBuffer(::zx::vmo buffer,
-                                              uint32_t num_entries,
-                                              int64_t base_time,
-                                              uint64_t time_interval) {
+void MockPoseBufferProviderApp::SetPoseBuffer(::zx::vmo buffer, uint32_t num_entries,
+                                              int64_t base_time, uint64_t time_interval) {
   buffer_ = std::move(buffer);
   num_entries_ = num_entries;
   base_time_ = base_time;

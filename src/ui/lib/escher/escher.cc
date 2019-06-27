@@ -35,9 +35,8 @@ namespace {
 // Constructor helper.
 std::unique_ptr<impl::CommandBufferPool> NewCommandBufferPool(
     const VulkanContext& context, impl::CommandBufferSequencer* sequencer) {
-  return std::make_unique<impl::CommandBufferPool>(
-      context.device, context.queue, context.queue_family_index, sequencer,
-      true);
+  return std::make_unique<impl::CommandBufferPool>(context.device, context.queue,
+                                                   context.queue_family_index, sequencer, true);
 }
 
 // Constructor helper.
@@ -46,46 +45,44 @@ std::unique_ptr<impl::CommandBufferPool> NewTransferCommandBufferPool(
   if (!context.transfer_queue) {
     return nullptr;
   } else {
-    return std::make_unique<impl::CommandBufferPool>(
-        context.device, context.transfer_queue,
-        context.transfer_queue_family_index, sequencer, false);
+    return std::make_unique<impl::CommandBufferPool>(context.device, context.transfer_queue,
+                                                     context.transfer_queue_family_index, sequencer,
+                                                     false);
   }
 }
 
 // Constructor helper.
-std::unique_ptr<impl::GpuUploader> NewGpuUploader(
-    EscherWeakPtr escher, impl::CommandBufferPool* main_pool,
-    impl::CommandBufferPool* transfer_pool, GpuAllocator* allocator) {
-  return std::make_unique<impl::GpuUploader>(
-      std::move(escher), transfer_pool ? transfer_pool : main_pool, allocator);
+std::unique_ptr<impl::GpuUploader> NewGpuUploader(EscherWeakPtr escher,
+                                                  impl::CommandBufferPool* main_pool,
+                                                  impl::CommandBufferPool* transfer_pool,
+                                                  GpuAllocator* allocator) {
+  return std::make_unique<impl::GpuUploader>(std::move(escher),
+                                             transfer_pool ? transfer_pool : main_pool, allocator);
 }
 
 // Constructor helper.
-std::unique_ptr<impl::MeshManager> NewMeshManager(
-    impl::CommandBufferPool* main_pool, impl::CommandBufferPool* transfer_pool,
-    GpuAllocator* allocator, impl::GpuUploader* uploader,
-    ResourceRecycler* resource_recycler) {
-  return std::make_unique<impl::MeshManager>(
-      transfer_pool ? transfer_pool : main_pool, allocator, uploader,
-      resource_recycler);
+std::unique_ptr<impl::MeshManager> NewMeshManager(impl::CommandBufferPool* main_pool,
+                                                  impl::CommandBufferPool* transfer_pool,
+                                                  GpuAllocator* allocator,
+                                                  impl::GpuUploader* uploader,
+                                                  ResourceRecycler* resource_recycler) {
+  return std::make_unique<impl::MeshManager>(transfer_pool ? transfer_pool : main_pool, allocator,
+                                             uploader, resource_recycler);
 }
 
 }  // anonymous namespace
 
-Escher::Escher(VulkanDeviceQueuesPtr device)
-    : Escher(std::move(device), HackFilesystem::New()) {}
+Escher::Escher(VulkanDeviceQueuesPtr device) : Escher(std::move(device), HackFilesystem::New()) {}
 
 Escher::Escher(VulkanDeviceQueuesPtr device, HackFilesystemPtr filesystem)
     : renderer_count_(0),
       device_(std::move(device)),
       vulkan_context_(device_->GetVulkanContext()),
       gpu_allocator_(std::make_unique<VmaGpuAllocator>(vulkan_context_)),
-      command_buffer_sequencer_(
-          std::make_unique<impl::CommandBufferSequencer>()),
-      command_buffer_pool_(NewCommandBufferPool(
-          vulkan_context_, command_buffer_sequencer_.get())),
-      transfer_command_buffer_pool_(NewTransferCommandBufferPool(
-          vulkan_context_, command_buffer_sequencer_.get())),
+      command_buffer_sequencer_(std::make_unique<impl::CommandBufferSequencer>()),
+      command_buffer_pool_(NewCommandBufferPool(vulkan_context_, command_buffer_sequencer_.get())),
+      transfer_command_buffer_pool_(
+          NewTransferCommandBufferPool(vulkan_context_, command_buffer_sequencer_.get())),
       glsl_compiler_(std::make_unique<impl::GlslToSpirvCompiler>()),
       shaderc_compiler_(std::make_unique<shaderc::Compiler>()),
       pipeline_cache_(std::make_unique<impl::PipelineCache>()),
@@ -99,24 +96,19 @@ Escher::Escher(VulkanDeviceQueuesPtr device, HackFilesystemPtr filesystem)
 
   // Initialize instance variables that require |weak_factory_| to already have
   // been initialized.
-  image_cache_ =
-      std::make_unique<impl::ImageCache>(GetWeakPtr(), gpu_allocator());
+  image_cache_ = std::make_unique<impl::ImageCache>(GetWeakPtr(), gpu_allocator());
   buffer_cache_ = std::make_unique<BufferCache>(GetWeakPtr());
-  gpu_uploader_ =
-      NewGpuUploader(GetWeakPtr(), command_buffer_pool(),
-                     transfer_command_buffer_pool(), gpu_allocator());
+  gpu_uploader_ = NewGpuUploader(GetWeakPtr(), command_buffer_pool(),
+                                 transfer_command_buffer_pool(), gpu_allocator());
   resource_recycler_ = std::make_unique<ResourceRecycler>(GetWeakPtr());
-  mesh_manager_ =
-      NewMeshManager(command_buffer_pool(), transfer_command_buffer_pool(),
-                     gpu_allocator(), gpu_uploader(), resource_recycler());
-  pipeline_layout_cache_ =
-      std::make_unique<impl::PipelineLayoutCache>(resource_recycler());
-  render_pass_cache_ =
-      std::make_unique<impl::RenderPassCache>(resource_recycler());
-  framebuffer_allocator_ = std::make_unique<impl::FramebufferAllocator>(
-      resource_recycler(), render_pass_cache_.get());
-  shader_program_factory_ = std::make_unique<DefaultShaderProgramFactory>(
-      GetWeakPtr(), std::move(filesystem));
+  mesh_manager_ = NewMeshManager(command_buffer_pool(), transfer_command_buffer_pool(),
+                                 gpu_allocator(), gpu_uploader(), resource_recycler());
+  pipeline_layout_cache_ = std::make_unique<impl::PipelineLayoutCache>(resource_recycler());
+  render_pass_cache_ = std::make_unique<impl::RenderPassCache>(resource_recycler());
+  framebuffer_allocator_ =
+      std::make_unique<impl::FramebufferAllocator>(resource_recycler(), render_pass_cache_.get());
+  shader_program_factory_ =
+      std::make_unique<DefaultShaderProgramFactory>(GetWeakPtr(), std::move(filesystem));
 
   frame_manager_ = std::make_unique<impl::FrameManager>(GetWeakPtr());
 
@@ -124,8 +116,7 @@ Escher::Escher(VulkanDeviceQueuesPtr device, HackFilesystemPtr filesystem)
   auto device_properties = vk_physical_device().getProperties();
   timestamp_period_ = device_properties.limits.timestampPeriod;
   auto queue_properties =
-      vk_physical_device()
-          .getQueueFamilyProperties()[vulkan_context_.queue_family_index];
+      vk_physical_device().getQueueFamilyProperties()[vulkan_context_.queue_family_index];
   supports_timer_queries_ = queue_properties.timestampValidBits > 0;
 }
 
@@ -159,66 +150,56 @@ bool Escher::Cleanup() {
   return finished;
 }
 
-MeshBuilderPtr Escher::NewMeshBuilder(const MeshSpec& spec,
-                                      size_t max_vertex_count,
+MeshBuilderPtr Escher::NewMeshBuilder(const MeshSpec& spec, size_t max_vertex_count,
                                       size_t max_index_count) {
-  return mesh_manager()->NewMeshBuilder(spec, max_vertex_count,
-                                        max_index_count);
+  return mesh_manager()->NewMeshBuilder(spec, max_vertex_count, max_index_count);
 }
 
 ImagePtr Escher::NewRgbaImage(uint32_t width, uint32_t height, uint8_t* bytes) {
   BatchGpuUploader uploader(GetWeakPtr(), 0);
-  ImagePtr image =
-      image_utils::NewRgbaImage(image_cache(), &uploader, width, height, bytes);
+  ImagePtr image = image_utils::NewRgbaImage(image_cache(), &uploader, width, height, bytes);
   uploader.Submit();
   return image;
 }
 
 ImagePtr Escher::NewCheckerboardImage(uint32_t width, uint32_t height) {
   BatchGpuUploader uploader(GetWeakPtr(), 0);
-  ImagePtr image = image_utils::NewCheckerboardImage(image_cache(), &uploader,
-                                                     width, height);
+  ImagePtr image = image_utils::NewCheckerboardImage(image_cache(), &uploader, width, height);
   uploader.Submit();
   return image;
 }
 
 ImagePtr Escher::NewGradientImage(uint32_t width, uint32_t height) {
   BatchGpuUploader uploader(GetWeakPtr(), 0);
-  ImagePtr image =
-      image_utils::NewGradientImage(image_cache(), &uploader, width, height);
+  ImagePtr image = image_utils::NewGradientImage(image_cache(), &uploader, width, height);
   uploader.Submit();
   return image;
 }
 
 ImagePtr Escher::NewNoiseImage(uint32_t width, uint32_t height) {
   BatchGpuUploader uploader(GetWeakPtr(), 0);
-  ImagePtr image =
-      image_utils::NewNoiseImage(image_cache(), &uploader, width, height);
+  ImagePtr image = image_utils::NewNoiseImage(image_cache(), &uploader, width, height);
   uploader.Submit();
   return image;
 }
 
-TexturePtr Escher::NewTexture(ImagePtr image, vk::Filter filter,
-                              vk::ImageAspectFlags aspect_mask,
+TexturePtr Escher::NewTexture(ImagePtr image, vk::Filter filter, vk::ImageAspectFlags aspect_mask,
                               bool use_unnormalized_coordinates) {
   TRACE_DURATION("gfx", "Escher::NewTexture (from image)");
-  return Texture::New(resource_recycler(), std::move(image), filter,
-                      aspect_mask, use_unnormalized_coordinates);
+  return Texture::New(resource_recycler(), std::move(image), filter, aspect_mask,
+                      use_unnormalized_coordinates);
 }
 
-BufferPtr Escher::NewBuffer(vk::DeviceSize size,
-                            vk::BufferUsageFlags usage_flags,
+BufferPtr Escher::NewBuffer(vk::DeviceSize size, vk::BufferUsageFlags usage_flags,
                             vk::MemoryPropertyFlags memory_property_flags) {
   TRACE_DURATION("gfx", "Escher::NewBuffer");
   return gpu_allocator()->AllocateBuffer(resource_recycler(), size, usage_flags,
                                          memory_property_flags);
 }
 
-TexturePtr Escher::NewTexture(vk::Format format, uint32_t width,
-                              uint32_t height, uint32_t sample_count,
-                              vk::ImageUsageFlags usage_flags,
-                              vk::Filter filter,
-                              vk::ImageAspectFlags aspect_flags,
+TexturePtr Escher::NewTexture(vk::Format format, uint32_t width, uint32_t height,
+                              uint32_t sample_count, vk::ImageUsageFlags usage_flags,
+                              vk::Filter filter, vk::ImageAspectFlags aspect_flags,
                               bool use_unnormalized_coordinates) {
   TRACE_DURATION("gfx", "Escher::NewTexture (new image)");
   ImageInfo image_info{.format = format,
@@ -226,23 +207,19 @@ TexturePtr Escher::NewTexture(vk::Format format, uint32_t width,
                        .height = height,
                        .sample_count = sample_count,
                        .usage = usage_flags};
-  ImagePtr image =
-      gpu_allocator()->AllocateImage(resource_recycler(), image_info);
-  return Texture::New(resource_recycler(), std::move(image), filter,
-                      aspect_flags, use_unnormalized_coordinates);
+  ImagePtr image = gpu_allocator()->AllocateImage(resource_recycler(), image_info);
+  return Texture::New(resource_recycler(), std::move(image), filter, aspect_flags,
+                      use_unnormalized_coordinates);
 }
 
-TexturePtr Escher::NewAttachmentTexture(vk::Format format, uint32_t width,
-                                        uint32_t height, uint32_t sample_count,
-                                        vk::Filter filter,
+TexturePtr Escher::NewAttachmentTexture(vk::Format format, uint32_t width, uint32_t height,
+                                        uint32_t sample_count, vk::Filter filter,
                                         vk::ImageUsageFlags usage_flags,
-                                        bool is_transient_attachment,
-                                        bool is_input_attachment,
+                                        bool is_transient_attachment, bool is_input_attachment,
                                         bool use_unnormalized_coordinates) {
   const auto pair = image_utils::IsDepthStencilFormat(format);
-  usage_flags |= (pair.first || pair.second)
-                     ? vk::ImageUsageFlagBits::eDepthStencilAttachment
-                     : vk::ImageUsageFlagBits::eColorAttachment;
+  usage_flags |= (pair.first || pair.second) ? vk::ImageUsageFlagBits::eDepthStencilAttachment
+                                             : vk::ImageUsageFlagBits::eColorAttachment;
   if (is_transient_attachment) {
     // TODO(SCN-634): when specifying that it is being used as a transient
     // attachment, we should use lazy memory if supported by the Vulkan
@@ -259,14 +236,12 @@ TexturePtr Escher::NewAttachmentTexture(vk::Format format, uint32_t width,
                     use_unnormalized_coordinates);
 }
 
-ShaderProgramPtr Escher::GetProgram(
-    const std::string shader_paths[EnumCount<ShaderStage>()],
-    ShaderVariantArgs args) {
+ShaderProgramPtr Escher::GetProgram(const std::string shader_paths[EnumCount<ShaderStage>()],
+                                    ShaderVariantArgs args) {
   return shader_program_factory_->GetProgram(shader_paths, std::move(args));
 }
 
-FramePtr Escher::NewFrame(const char* trace_literal, uint64_t frame_number,
-                          bool enable_gpu_logging,
+FramePtr Escher::NewFrame(const char* trace_literal, uint64_t frame_number, bool enable_gpu_logging,
                           escher::CommandBuffer::Type requested_type) {
   TRACE_DURATION("gfx", "escher::Escher::NewFrame ");
 
@@ -287,20 +262,15 @@ FramePtr Escher::NewFrame(const char* trace_literal, uint64_t frame_number,
     framebuffer_allocator_->BeginFrame();
   }
 
-  return frame_manager_->NewFrame(trace_literal, frame_number,
-                                  enable_gpu_logging, requested_type);
+  return frame_manager_->NewFrame(trace_literal, frame_number, enable_gpu_logging, requested_type);
 }
 
-uint64_t Escher::GetNumGpuBytesAllocated() {
-  return gpu_allocator()->GetTotalBytesAllocated();
-}
+uint64_t Escher::GetNumGpuBytesAllocated() { return gpu_allocator()->GetTotalBytesAllocated(); }
 
 impl::DescriptorSetAllocator* Escher::GetDescriptorSetAllocator(
-    const impl::DescriptorSetLayout& layout,
-    const SamplerPtr& immutable_sampler) {
+    const impl::DescriptorSetLayout& layout, const SamplerPtr& immutable_sampler) {
   TRACE_DURATION("gfx", "escher::Escher::GetDescriptorSetAllocator");
-  static_assert(sizeof(impl::DescriptorSetLayout) == 32,
-                "hash code below must be updated");
+  static_assert(sizeof(impl::DescriptorSetLayout) == 32, "hash code below must be updated");
   Hasher h;
   if (immutable_sampler)
     h.struc(immutable_sampler->vk());
@@ -321,8 +291,7 @@ impl::DescriptorSetAllocator* Escher::GetDescriptorSetAllocator(
   }
 
   TRACE_DURATION("gfx", "escher::Escher::GetDescriptorSetAllocator[creation]");
-  auto new_allocator =
-      new impl::DescriptorSetAllocator(vk_device(), layout, immutable_sampler);
+  auto new_allocator = new impl::DescriptorSetAllocator(vk_device(), layout, immutable_sampler);
 
   // TODO(ES-200): This hash table never decreases in size. Users of Escher that
   // generate unique descriptor set layouts (e.g., with immutable samplers) can
