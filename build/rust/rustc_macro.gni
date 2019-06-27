@@ -53,7 +53,7 @@ template("rustc_macro") {
   # Compiling procedural macros is... a bit awkward.
   #
   # Even though they're provided to crates that use them as if they were normal
-  # external crates, they're actually '.so'/'.dylib's that are compiled for the host machine
+  # external crates, they're actually '.so's that are compiled for the host machine,
   # and then linked into the compiler, so they and all their dependencies should
   # be built for the host target.
   #
@@ -82,24 +82,20 @@ template("rustc_macro") {
   }
 
   # The actual host-target build of the proc macro crate.
-  if (current_toolchain == host_toolchain) {
-    rustc_artifact(proc_macro_target) {
-      forward_variables_from(invoker,
-                             [
-                               "deps",
-                               "version",
-                               "edition",
-                               "source_root",
-                               "testonly",
-                               "with_lto",
-                               "features",
-                             ])
-      name = rustc_artifact_name
-      type = "proc-macro"
-      output_file_override = "lib${crate_name}_proc_macro${macro_extension}"
-    }
-  } else {
-    not_needed(invoker, "*")
+  rustc_artifact(proc_macro_target) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "version",
+                             "edition",
+                             "source_root",
+                             "testonly",
+                             "with_lto",
+                             "features",
+                           ])
+    name = rustc_artifact_name
+    type = "proc-macro"
+    output_file_override = "lib${crate_name}_proc_macro${macro_extension}"
   }
 
   # Copy the generated Cargo.toml
