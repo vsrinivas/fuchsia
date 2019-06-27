@@ -17,8 +17,7 @@ namespace media::audio::test {
 // This set of tests verifies asynchronous usage of audio_core protocols.
 class AudioTestBase : public TestFixture {
  public:
-  static void SetStartupContext(
-      std::unique_ptr<sys::ComponentContext> startup_context) {
+  static void SetStartupContext(std::unique_ptr<sys::ComponentContext> startup_context) {
     startup_context_ = std::move(startup_context);
   }
 

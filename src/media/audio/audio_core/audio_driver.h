@@ -86,9 +86,7 @@ class AudioDriver {
   // there was a good way to use the static lock analysis to ensure this, I
   // would do so, but unfortunately the compiler is unable to figure out that
   // the owner calling these methods is always the same as owner_.
-  const std::vector<audio_stream_format_range_t>& format_ranges() const {
-    return format_ranges_;
-  }
+  const std::vector<audio_stream_format_range_t>& format_ranges() const { return format_ranges_; }
 
   State state() const { return state_; }
   uint32_t frames_per_sec() const { return frames_per_sec_; }
@@ -104,9 +102,7 @@ class AudioDriver {
   // The following properties are only safe to access after the driver is beyond
   // the MissingDriverInfo state.  After that state, these members must be
   // treated as immutable, and the driver class may no longer change them.
-  const audio_stream_unique_id_t& persistent_unique_id() const {
-    return persistent_unique_id_;
-  }
+  const audio_stream_unique_id_t& persistent_unique_id() const { return persistent_unique_id_; }
   const std::string& manufacturer_name() const { return manufacturer_name_; }
   const std::string& product_name() const { return product_name_; }
 
@@ -134,14 +130,13 @@ class AudioDriver {
   static constexpr uint32_t kDriverInfoHasProdStr = (1u << 2);
   static constexpr uint32_t kDriverInfoHasGainState = (1u << 3);
   static constexpr uint32_t kDriverInfoHasFormats = (1u << 4);
-  static constexpr uint32_t kDriverInfoHasAll =
-      kDriverInfoHasUniqueId | kDriverInfoHasMfrStr | kDriverInfoHasProdStr |
-      kDriverInfoHasGainState | kDriverInfoHasFormats;
+  static constexpr uint32_t kDriverInfoHasAll = kDriverInfoHasUniqueId | kDriverInfoHasMfrStr |
+                                                kDriverInfoHasProdStr | kDriverInfoHasGainState |
+                                                kDriverInfoHasFormats;
 
   // Dispatchers for messages received over stream and ring buffer channels.
-  zx_status_t ReadMessage(dispatcher::Channel* channel, void* buf,
-                          uint32_t buf_size, uint32_t* bytes_read_out,
-                          zx::handle* handle_out)
+  zx_status_t ReadMessage(dispatcher::Channel* channel, void* buf, uint32_t buf_size,
+                          uint32_t* bytes_read_out, zx::handle* handle_out)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain_->token());
   zx_status_t ProcessStreamChannelMessage()
       FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain_->token());
@@ -153,19 +148,16 @@ class AudioDriver {
       FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain_->token());
   zx_status_t ProcessGetGainResponse(audio_stream_cmd_get_gain_resp_t& resp)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain_->token());
-  zx_status_t ProcessGetFormatsResponse(
-      const audio_stream_cmd_get_formats_resp_t& resp)
+  zx_status_t ProcessGetFormatsResponse(const audio_stream_cmd_get_formats_resp_t& resp)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain_->token());
-  zx_status_t ProcessSetFormatResponse(
-      const audio_stream_cmd_set_format_resp_t& resp, zx::channel rb_channel)
+  zx_status_t ProcessSetFormatResponse(const audio_stream_cmd_set_format_resp_t& resp,
+                                       zx::channel rb_channel)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain_->token());
 
   // Ring buffer message handlers.
-  zx_status_t ProcessGetFifoDepthResponse(
-      const audio_rb_cmd_get_fifo_depth_resp_t& resp)
+  zx_status_t ProcessGetFifoDepthResponse(const audio_rb_cmd_get_fifo_depth_resp_t& resp)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain_->token());
-  zx_status_t ProcessGetBufferResponse(
-      const audio_rb_cmd_get_buffer_resp_t& resp, zx::vmo rb_vmo)
+  zx_status_t ProcessGetBufferResponse(const audio_rb_cmd_get_buffer_resp_t& resp, zx::vmo rb_vmo)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain_->token());
   zx_status_t ProcessStartResponse(const audio_rb_cmd_start_resp_t& resp)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain_->token());
@@ -175,14 +167,12 @@ class AudioDriver {
       FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain_->token());
 
   // Transition to the Shutdown state and begin the process of shutting down.
-  void ShutdownSelf(const char* debug_reason = nullptr,
-                    zx_status_t debug_status = ZX_OK)
+  void ShutdownSelf(const char* debug_reason = nullptr, zx_status_t debug_status = ZX_OK)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain_->token());
 
   // Evaluate each of our currently pending timeouts and program the command
   // timeout timer appropriately.
-  void SetupCommandTimeout()
-      FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain_->token());
+  void SetupCommandTimeout() FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain_->token());
 
   // Update internal plug state bookkeeping and report up to our owner (if
   // enabled)
@@ -194,13 +184,11 @@ class AudioDriver {
       FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain_->token());
 
   // Simple accessors
-  bool operational() const
-      FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain_->token()) {
+  bool operational() const FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain_->token()) {
     return (state_ != State::Uninitialized) && (state_ != State::Shutdown);
   }
 
-  bool fetching_driver_info() const
-      FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain_->token()) {
+  bool fetching_driver_info() const FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain_->token()) {
     return (fetch_driver_info_timeout_ != ZX_TIME_INFINITE);
   }
 
@@ -220,13 +208,11 @@ class AudioDriver {
   //
   // This should be a strong enough guarantee to warrant disabling the thread
   // safety analysis here.
-  const fbl::RefPtr<DriverRingBuffer>& ring_buffer() const
-      FXL_NO_THREAD_SAFETY_ANALYSIS {
+  const fbl::RefPtr<DriverRingBuffer>& ring_buffer() const FXL_NO_THREAD_SAFETY_ANALYSIS {
     return ring_buffer_;
   };
 
-  const TimelineFunction& clock_mono_to_ring_pos_bytes() const
-      FXL_NO_THREAD_SAFETY_ANALYSIS {
+  const TimelineFunction& clock_mono_to_ring_pos_bytes() const FXL_NO_THREAD_SAFETY_ANALYSIS {
     return clock_mono_to_ring_pos_bytes_;
   }
 
@@ -239,8 +225,7 @@ class AudioDriver {
   zx_time_t last_set_timeout_ = ZX_TIME_INFINITE;
   zx_koid_t stream_channel_koid_ = ZX_KOID_INVALID;
   zx_time_t fetch_driver_info_timeout_ = ZX_TIME_INFINITE;
-  uint32_t fetched_driver_info_ FXL_GUARDED_BY(owner_->mix_domain_->token()) =
-      0;
+  uint32_t fetched_driver_info_ FXL_GUARDED_BY(owner_->mix_domain_->token()) = 0;
 
   // State fetched at driver startup time.
   audio_stream_unique_id_t persistent_unique_id_ = {0};
@@ -263,19 +248,15 @@ class AudioDriver {
   // A stashed copy of current format, queryable by destinations (outputs or
   // AudioCapturers) when determining which mixer to use.
   mutable std::mutex configured_format_lock_;
-  fuchsia::media::AudioStreamTypePtr configured_format_
-      FXL_GUARDED_BY(configured_format_lock_);
+  fuchsia::media::AudioStreamTypePtr configured_format_ FXL_GUARDED_BY(configured_format_lock_);
 
   // Ring buffer state. Note: ring-buffer state details are lock-protected and
   // changes are tracked with generation counter. This allows AudioCapturer
   // clients to snapshot ring-buffer state during mix/resample operations.
   mutable std::mutex ring_buffer_state_lock_;
-  fbl::RefPtr<DriverRingBuffer> ring_buffer_
-      FXL_GUARDED_BY(ring_buffer_state_lock_);
-  TimelineFunction clock_mono_to_ring_pos_bytes_
-      FXL_GUARDED_BY(ring_buffer_state_lock_);
-  uint32_t end_fence_to_start_fence_frames_
-      FXL_GUARDED_BY(ring_buffer_state_lock_) = 0;
+  fbl::RefPtr<DriverRingBuffer> ring_buffer_ FXL_GUARDED_BY(ring_buffer_state_lock_);
+  TimelineFunction clock_mono_to_ring_pos_bytes_ FXL_GUARDED_BY(ring_buffer_state_lock_);
+  uint32_t end_fence_to_start_fence_frames_ FXL_GUARDED_BY(ring_buffer_state_lock_) = 0;
   GenerationId ring_buffer_state_gen_ FXL_GUARDED_BY(ring_buffer_state_lock_);
 
   // Plug detection state.

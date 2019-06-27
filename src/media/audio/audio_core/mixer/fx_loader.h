@@ -33,28 +33,22 @@ class FxLoader {
   // The following methods map directly to SO exports
   zx_status_t GetNumFx(uint32_t* num_effects_out);
 
-  zx_status_t GetFxInfo(uint32_t effect_id,
-                        fuchsia_audio_dfx_description* fx_desc);
-  zx_status_t GetFxControlInfo(
-      uint32_t effect_id, uint16_t ctrl_num,
-      fuchsia_audio_dfx_control_description* fx_ctrl_desc);
+  zx_status_t GetFxInfo(uint32_t effect_id, fuchsia_audio_dfx_description* fx_desc);
+  zx_status_t GetFxControlInfo(uint32_t effect_id, uint16_t ctrl_num,
+                               fuchsia_audio_dfx_control_description* fx_ctrl_desc);
 
-  fx_token_t CreateFx(uint32_t effect_id, uint32_t frame_rate,
-                      uint16_t channels_in, uint16_t channels_out);
+  fx_token_t CreateFx(uint32_t effect_id, uint32_t frame_rate, uint16_t channels_in,
+                      uint16_t channels_out);
   zx_status_t DeleteFx(fx_token_t fx_token);
-  zx_status_t FxGetParameters(fx_token_t fx_token,
-                              fuchsia_audio_dfx_parameters* fx_params);
+  zx_status_t FxGetParameters(fx_token_t fx_token, fuchsia_audio_dfx_parameters* fx_params);
 
-  zx_status_t FxGetControlValue(fx_token_t fx_token, uint16_t ctrl_num,
-                                float* value_out);
-  zx_status_t FxSetControlValue(fx_token_t fx_token, uint16_t ctrl_num,
-                                float value);
+  zx_status_t FxGetControlValue(fx_token_t fx_token, uint16_t ctrl_num, float* value_out);
+  zx_status_t FxSetControlValue(fx_token_t fx_token, uint16_t ctrl_num, float value);
   zx_status_t FxReset(fx_token_t fx_token);
 
-  zx_status_t FxProcessInPlace(fx_token_t fx_token, uint32_t num_frames,
-                               float* audio_buff_in_out);
-  zx_status_t FxProcess(fx_token_t fx_token, uint32_t num_frames,
-                        const float* audio_buff_in, float* audio_buff_out);
+  zx_status_t FxProcessInPlace(fx_token_t fx_token, uint32_t num_frames, float* audio_buff_in_out);
+  zx_status_t FxProcess(fx_token_t fx_token, uint32_t num_frames, const float* audio_buff_in,
+                        float* audio_buff_out);
   zx_status_t FxFlush(fx_token_t fx_token);
 
  protected:
@@ -71,8 +65,7 @@ class FxLoader {
 
   bool (*fn_get_num_fx_)(uint32_t*);
   bool (*fn_get_info_)(uint32_t, fuchsia_audio_dfx_description*);
-  bool (*fn_get_ctrl_info_)(uint32_t, uint16_t,
-                            fuchsia_audio_dfx_control_description*);
+  bool (*fn_get_ctrl_info_)(uint32_t, uint16_t, fuchsia_audio_dfx_control_description*);
 
   fx_token_t (*fn_create_)(uint32_t, uint32_t, uint16_t, uint16_t);
   bool (*fn_delete_)(fx_token_t);

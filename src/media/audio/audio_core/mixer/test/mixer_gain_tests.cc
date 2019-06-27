@@ -48,12 +48,10 @@ class GainTest : public testing::Test {
   }
 
   // Used for debugging purposes.
-  static void DisplayScaleVals(const Gain::AScale* scale_arr,
-                               uint32_t buf_size) {
+  static void DisplayScaleVals(const Gain::AScale* scale_arr, uint32_t buf_size) {
     printf("\n    ********************************************************");
     printf("\n **************************************************************");
-    printf("\n ***    Displaying raw scale array data for length %5d    ***",
-           buf_size);
+    printf("\n ***    Displaying raw scale array data for length %5d    ***", buf_size);
     printf("\n **************************************************************");
     for (uint32_t idx = 0; idx < buf_size; ++idx) {
       if (idx % 10 == 0) {
@@ -95,8 +93,8 @@ TEST_F(GainTest, GainScaleToDb) {
   // 1/2x scale-down by calculation: -6.020600... dB.
   const float half_scale = -6.0206001f;
   // Because of float imprecision, use our Compare...() with float tolerance.
-  EXPECT_TRUE(CompareBufferToVal(
-      &half_scale, Gain::ScaleToDb(Gain::kUnityScale * 0.5f), 1, true, true));
+  EXPECT_TRUE(
+      CompareBufferToVal(&half_scale, Gain::ScaleToDb(Gain::kUnityScale * 0.5f), 1, true, true));
 }
 
 // Test the inline function that converts a numerical value to dB.
@@ -425,8 +423,7 @@ TEST_F(ScaleArrayTest, GetScaleArrayNoRampEqualsGetScale) {
 
   gain_.GetScaleArray(scale_arr, fbl::count_of(scale_arr), rate_1khz_output_);
   Gain::AScale expect_scale = gain_.GetGainScale();
-  EXPECT_TRUE(
-      CompareBufferToVal(scale_arr, expect_scale, fbl::count_of(scale_arr)));
+  EXPECT_TRUE(CompareBufferToVal(scale_arr, expect_scale, fbl::count_of(scale_arr)));
 
   EXPECT_FALSE(gain_.IsUnity());
   EXPECT_FALSE(gain_.IsRamping());
@@ -442,8 +439,7 @@ TEST_F(ScaleArrayTest, GetScaleArrayRamp) {
   gain_.GetScaleArray(scale_arr, fbl::count_of(scale_arr), rate_1khz_output_);
 
   // When comparing buffers, do it within the tolerance of 32-bit float
-  EXPECT_TRUE(CompareBuffers(scale_arr, expect_arr, fbl::count_of(scale_arr),
-                             true, true));
+  EXPECT_TRUE(CompareBuffers(scale_arr, expect_arr, fbl::count_of(scale_arr), true, true));
 
   EXPECT_FALSE(gain_.IsUnity());
   EXPECT_TRUE(gain_.IsRamping());
@@ -459,8 +455,7 @@ TEST_F(ScaleArrayTest, GetScaleArrayLongRamp) {
   gain_.GetScaleArray(scale_arr, fbl::count_of(scale_arr), rate_1khz_output_);
 
   // When comparing buffers, do it within the tolerance of 32-bit float
-  EXPECT_TRUE(CompareBuffers(scale_arr, expect_arr, fbl::count_of(scale_arr),
-                             true, true));
+  EXPECT_TRUE(CompareBuffers(scale_arr, expect_arr, fbl::count_of(scale_arr), true, true));
 
   EXPECT_FALSE(gain_.IsUnity());
   EXPECT_TRUE(gain_.IsRamping());
@@ -470,15 +465,13 @@ TEST_F(ScaleArrayTest, GetScaleArrayLongRamp) {
 // Validate when ramp duration is shorter than GetScaleArray.
 TEST_F(ScaleArrayTest, GetScaleArrayShortRamp) {
   Gain::AScale scale_arr[9];  // At 1kHz this is longer than the ramp duration.
-  Gain::AScale expect_arr[9] = {1.0, 0.82, 0.64, 0.46, 0.28,
-                                0.1, 0.1,  0.1,  0.1};
+  Gain::AScale expect_arr[9] = {1.0, 0.82, 0.64, 0.46, 0.28, 0.1, 0.1, 0.1, 0.1};
 
   gain_.SetSourceGainWithRamp(-20, ZX_MSEC(5));
   gain_.GetScaleArray(scale_arr, fbl::count_of(scale_arr), rate_1khz_output_);
 
   // When comparing buffers, do it within the tolerance of 32-bit float
-  EXPECT_TRUE(CompareBuffers(scale_arr, expect_arr, fbl::count_of(scale_arr),
-                             true, true));
+  EXPECT_TRUE(CompareBuffers(scale_arr, expect_arr, fbl::count_of(scale_arr), true, true));
 
   EXPECT_FALSE(gain_.IsUnity());
   EXPECT_TRUE(gain_.IsRamping());
@@ -506,8 +499,7 @@ TEST_F(ScaleArrayTest, GetScaleArrayBigAdvance) {
   gain_.SetSourceGainWithRamp(6.0205999, ZX_MSEC(5));
   gain_.GetScaleArray(scale_arr, fbl::count_of(scale_arr), rate_1khz_output_);
 
-  EXPECT_FALSE(CompareBufferToVal(scale_arr, expect, fbl::count_of(scale_arr),
-                                  false, true));
+  EXPECT_FALSE(CompareBufferToVal(scale_arr, expect, fbl::count_of(scale_arr), false, true));
   EXPECT_FALSE(gain_.IsUnity());
   EXPECT_TRUE(gain_.IsRamping());
   EXPECT_FALSE(gain_.IsSilent());
@@ -529,8 +521,8 @@ TEST_F(ScaleArrayTest, ClearSourceRamp) {
   gain_.SetSourceGainWithRamp(-30.1029995, ZX_MSEC(5));
   gain_.GetScaleArray(scale_arr, fbl::count_of(scale_arr), rate_1khz_output_);
 
-  EXPECT_FALSE(CompareBufferToVal(scale_arr, Gain::kUnityScale,
-                                  fbl::count_of(scale_arr), false, true));
+  EXPECT_FALSE(
+      CompareBufferToVal(scale_arr, Gain::kUnityScale, fbl::count_of(scale_arr), false, true));
   EXPECT_FALSE(gain_.IsUnity());
   EXPECT_TRUE(gain_.IsRamping());
   EXPECT_FALSE(gain_.IsSilent());
@@ -539,8 +531,7 @@ TEST_F(ScaleArrayTest, ClearSourceRamp) {
   gain_.ClearSourceRamp();
   gain_.GetScaleArray(scale_arr, fbl::count_of(scale_arr), rate_1khz_output_);
 
-  EXPECT_TRUE(CompareBufferToVal(scale_arr, Gain::kUnityScale,
-                                 fbl::count_of(scale_arr)));
+  EXPECT_TRUE(CompareBufferToVal(scale_arr, Gain::kUnityScale, fbl::count_of(scale_arr)));
   EXPECT_FALSE(gain_.IsSilent());
   EXPECT_FALSE(gain_.IsRamping());
   EXPECT_TRUE(gain_.IsUnity());
@@ -549,8 +540,7 @@ TEST_F(ScaleArrayTest, ClearSourceRamp) {
   gain_.Advance(10, rate_1khz_output_);
   gain_.GetScaleArray(scale_arr2, fbl::count_of(scale_arr2), rate_1khz_output_);
 
-  EXPECT_TRUE(CompareBufferToVal(scale_arr2, Gain::kUnityScale,
-                                 fbl::count_of(scale_arr2)));
+  EXPECT_TRUE(CompareBufferToVal(scale_arr2, Gain::kUnityScale, fbl::count_of(scale_arr2)));
   EXPECT_FALSE(gain_.IsRamping());
   EXPECT_TRUE(gain_.IsUnity());
   EXPECT_FALSE(gain_.IsSilent());
@@ -572,8 +562,7 @@ TEST_F(ScaleArrayTest, AdvanceHalfwayThroughRamp) {
     val = expect_scale;
     expect_scale -= 0.1;
   }
-  EXPECT_TRUE(CompareBuffers(scale_arr, expect_arr, fbl::count_of(scale_arr),
-                             true, true));
+  EXPECT_TRUE(CompareBuffers(scale_arr, expect_arr, fbl::count_of(scale_arr), true, true));
   EXPECT_FALSE(gain_.IsSilent());
   EXPECT_FALSE(gain_.IsUnity());
   EXPECT_TRUE(gain_.IsRamping());
@@ -585,15 +574,13 @@ TEST_F(ScaleArrayTest, AdvanceHalfwayThroughRamp) {
   // DisplayScaleVals(scale_arr, fbl::count_of(scale_arr));
 
   expect_scale = expect_arr[kFramesToAdvance];
-  EXPECT_TRUE(
-      CompareBufferToVal(&expect_scale, gain_.GetGainScale(), 1, true, true));
+  EXPECT_TRUE(CompareBufferToVal(&expect_scale, gain_.GetGainScale(), 1, true, true));
 
   for (auto& val : expect_arr) {
     val = expect_scale;
     expect_scale -= 0.1;
   }
-  EXPECT_TRUE(CompareBuffers(scale_arr, expect_arr, fbl::count_of(scale_arr),
-                             true, true));
+  EXPECT_TRUE(CompareBuffers(scale_arr, expect_arr, fbl::count_of(scale_arr), true, true));
   EXPECT_TRUE(gain_.IsRamping());
   EXPECT_FALSE(gain_.IsUnity());
   EXPECT_FALSE(gain_.IsSilent());
@@ -616,8 +603,7 @@ TEST_F(ScaleArrayTest, MuteDuringRamp) {
     expect_scale -= 0.1;
   }
   // When comparing buffers, do it within the tolerance of 32-bit float
-  EXPECT_TRUE(CompareBuffers(scale_arr, expect_arr, fbl::count_of(scale_arr),
-                             true, true));
+  EXPECT_TRUE(CompareBuffers(scale_arr, expect_arr, fbl::count_of(scale_arr), true, true));
 
   // Advance only partially through the duration of the ramp.
   const uint32_t kFramesToAdvance = 2;
@@ -630,15 +616,13 @@ TEST_F(ScaleArrayTest, MuteDuringRamp) {
   // DisplayScaleVals(scale_arr, fbl::count_of(scale_arr));
 
   expect_scale = expect_arr[kFramesToAdvance];
-  EXPECT_TRUE(
-      CompareBufferToVal(&expect_scale, gain_.GetGainScale(), 1, true, true));
+  EXPECT_TRUE(CompareBufferToVal(&expect_scale, gain_.GetGainScale(), 1, true, true));
 
   for (auto& val : expect_arr) {
     val = expect_scale;
     expect_scale -= 0.1;
   }
-  EXPECT_TRUE(CompareBuffers(scale_arr, expect_arr, fbl::count_of(scale_arr),
-                             true, true));
+  EXPECT_TRUE(CompareBuffers(scale_arr, expect_arr, fbl::count_of(scale_arr), true, true));
   EXPECT_TRUE(gain_.IsRamping());
   EXPECT_FALSE(gain_.IsUnity());
   EXPECT_FALSE(gain_.IsSilent());
@@ -669,10 +653,9 @@ TEST(MixGain, Scaling_Linearity) {
   // Validate that +20.00 dB leads to exactly 10x in value (within limits)
   float stream_gain_db = 20.0f;
 
-  auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1,
-                           44100, 1, 44100, Resampler::SampleAndHold);
-  DoMix(mixer.get(), source, accum, false, fbl::count_of(accum),
-        stream_gain_db);
+  auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 44100, 1, 44100,
+                           Resampler::SampleAndHold);
+  DoMix(mixer.get(), source, accum, false, fbl::count_of(accum), stream_gain_db);
 
   float expect[] = {0x080E8000,  0x07FF8000,  0x015E000,   0x00028000,
                     -0x0008C000, -0x000FA000, -0x07FF8000, -0x0808E000};
@@ -684,10 +667,9 @@ TEST(MixGain, Scaling_Linearity) {
   // Validate that -12.0411998 dB leads to exactly 0.25x in value
   stream_gain_db = -12.0411998f;
 
-  mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 44100, 1,
-                      44100, Resampler::SampleAndHold);
-  DoMix(mixer.get(), source, accum, false, fbl::count_of(accum),
-        stream_gain_db);
+  mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 44100, 1, 44100,
+                      Resampler::SampleAndHold);
+  DoMix(mixer.get(), source, accum, false, fbl::count_of(accum), stream_gain_db);
 
   float expect2[] = {0x00339000,  0x00333000,  0x00008C00,  0x00001000,
                      -0x00003800, -0x00006400, -0x00333000, -0x00336C00};
@@ -705,10 +687,9 @@ TEST(MixGain, Scaling_Precision) {
   // kMinGainDbUnity is the lowest (furthest-from-Unity) with no observable
   // attenuation on full-scale (i.e. the smallest indistinguishable from Unity).
   // At this gain_scale, audio should be unchanged.
-  auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1,
-                           48000, 1, 48000, Resampler::SampleAndHold);
-  DoMix(mixer.get(), max_source, accum, false, fbl::count_of(accum),
-        AudioResult::kMinGainDbUnity);
+  auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
+                           Resampler::SampleAndHold);
+  DoMix(mixer.get(), max_source, accum, false, fbl::count_of(accum), AudioResult::kMinGainDbUnity);
 
   //  At this gain_scale, resulting audio should be unchanged.
   float max_expect1[] = {0x07FFF000, -0x08000000};  // left-shift source by 12.
@@ -717,8 +698,8 @@ TEST(MixGain, Scaling_Precision) {
 
   // This is the highest (closest-to-Unity) AScale with an observable effect on
   // full-scale (i.e. the largest sub-Unity AScale distinguishable from Unity).
-  mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 48000, 1,
-                      48000, Resampler::SampleAndHold);
+  mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
+                      Resampler::SampleAndHold);
   DoMix(mixer.get(), max_source, accum, false, fbl::count_of(accum),
         AudioResult::kMaxGainDbNonUnity);
 
@@ -732,8 +713,8 @@ TEST(MixGain, Scaling_Precision) {
   // the results may be smaller than we can represent in our 28-bit test data
   // representation, they are still non-zero and thus validate our scalar limit.
   int16_t min_source[] = {1, -1};
-  mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 48000, 1,
-                      48000, Resampler::SampleAndHold);
+  mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
+                      Resampler::SampleAndHold);
   DoMix(mixer.get(), min_source, accum, false, fbl::count_of(accum),
         AudioResult::kMinGainDbNonMute);
 
@@ -752,10 +733,9 @@ TEST(MixGain, Scaling_Precision) {
   // optimization, if gain is Mute-equivalent, we skip mixing altogether. This
   // is equivalent to setting 'accumulate' and adding zeroes, so set that flag
   // here and expect no change in the accumulator, even with max inputs.
-  mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 48000, 1,
-                      48000, Resampler::SampleAndHold);
-  DoMix(mixer.get(), max_source, accum, true, fbl::count_of(accum),
-        AudioResult::kMaxGainDbMute);
+  mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
+                      Resampler::SampleAndHold);
+  DoMix(mixer.get(), max_source, accum, true, fbl::count_of(accum), AudioResult::kMaxGainDbMute);
 
   EXPECT_TRUE(CompareBuffers(accum, min_expect, fbl::count_of(accum)));
 }
@@ -778,14 +758,14 @@ TEST(MixGain, Accumulator) {
   NormalizeInt28ToPipelineBitwidth(expect2, fbl::count_of(expect2));
 
   // These values exceed the per-stream range of int16
-  auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1,
-                           48000, 1, 48000, Resampler::SampleAndHold);
+  auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
+                           Resampler::SampleAndHold);
   DoMix(mixer.get(), source, accum, true, fbl::count_of(accum));
   EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
 
   // these values even exceed uint16
-  mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 2, 48000, 2,
-                      48000, Resampler::SampleAndHold);
+  mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 2, 48000, 2, 48000,
+                      Resampler::SampleAndHold);
   DoMix(mixer.get(), source, accum, true, 1);
   EXPECT_TRUE(CompareBuffers(accum, expect2, fbl::count_of(accum)));
 }
@@ -797,30 +777,24 @@ void TestAccumulatorClear(Resampler sampler_type) {
   float accum[] = {-32768, 32767, -16384, 16383};
   float expect[] = {-32768, 32767, -16384, 16383};
 
-  auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1,
-                           48000, 1, 48000, sampler_type);
+  auto mixer =
+      SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000, sampler_type);
   // Use a gain guaranteed to silence any signal -- Gain::kMinGainDb.
-  DoMix(mixer.get(), source, accum, true, fbl::count_of(accum),
-        Gain::kMinGainDb);
+  DoMix(mixer.get(), source, accum, true, fbl::count_of(accum), Gain::kMinGainDb);
   EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
 
   // When accumulate = false but gain is sufficiently low, overwriting previous
   // contents is skipped. This should lead to the same results as above.
-  mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 48000, 1,
-                      48000, sampler_type);
-  DoMix(mixer.get(), source, accum, false, fbl::count_of(accum),
-        Gain::kMinGainDb);
+  mixer =
+      SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000, sampler_type);
+  DoMix(mixer.get(), source, accum, false, fbl::count_of(accum), Gain::kMinGainDb);
   EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
 }
 
 // Validate the SampleAndHold interpolator for this behavior.
-TEST(MixGain, Accumulator_Clear_Point) {
-  TestAccumulatorClear(Resampler::SampleAndHold);
-}
+TEST(MixGain, Accumulator_Clear_Point) { TestAccumulatorClear(Resampler::SampleAndHold); }
 
 // Validate the same assertions, with LinearInterpolation interpolator.
-TEST(MixGain, Accumulator_Clear_Linear) {
-  TestAccumulatorClear(Resampler::LinearInterpolation);
-}
+TEST(MixGain, Accumulator_Clear_Linear) { TestAccumulatorClear(Resampler::LinearInterpolation); }
 
 }  // namespace media::audio::test

@@ -19,10 +19,8 @@ using Resampler = ::media::audio::Mixer::Resampler;
 // a dest_format. Actual frame rate values are unimportant, but inter-rate RATIO
 // is VERY important: required SRC is the primary factor in Mix selection.
 std::unique_ptr<Mixer> SelectMixer(fuchsia::media::AudioSampleFormat src_format,
-                                   uint32_t src_channels,
-                                   uint32_t src_frame_rate,
-                                   uint32_t dest_channels,
-                                   uint32_t dest_frame_rate,
+                                   uint32_t src_channels, uint32_t src_frame_rate,
+                                   uint32_t dest_channels, uint32_t dest_frame_rate,
                                    Resampler resampler) {
   fuchsia::media::AudioStreamType src_details;
   src_details.sample_format = src_format;
@@ -42,10 +40,9 @@ std::unique_ptr<Mixer> SelectMixer(fuchsia::media::AudioSampleFormat src_format,
 // destination format. They perform no SRC, gain scaling or rechannelization, so
 // frames_per_second is unimportant and num_channels is only needed so that they
 // can calculate the size of a (multi-channel) audio frame.
-std::unique_ptr<OutputProducer> SelectOutputProducer(
-    fuchsia::media::AudioSampleFormat dest_format, uint32_t num_channels) {
-  fuchsia::media::AudioStreamTypePtr dest_details =
-      fuchsia::media::AudioStreamType::New();
+std::unique_ptr<OutputProducer> SelectOutputProducer(fuchsia::media::AudioSampleFormat dest_format,
+                                                     uint32_t num_channels) {
+  fuchsia::media::AudioStreamTypePtr dest_details = fuchsia::media::AudioStreamType::New();
   dest_details->sample_format = dest_format;
   dest_details->channels = num_channels;
   dest_details->frames_per_second = 48000;
@@ -67,22 +64,21 @@ void NormalizeInt28ToPipelineBitwidth(float* source, uint32_t source_len) {
 // Use the supplied mixer to scale from src into accum buffers.  Assumes a
 // specific buffer size, with no SRC, starting at the beginning of each buffer.
 // By default, does not gain-scale or accumulate (both can be overridden).
-void DoMix(Mixer* mixer, const void* src_buf, float* accum_buf, bool accumulate,
-           int32_t num_frames, float gain_db) {
+void DoMix(Mixer* mixer, const void* src_buf, float* accum_buf, bool accumulate, int32_t num_frames,
+           float gain_db) {
   uint32_t dest_offset = 0;
   int32_t frac_src_offset = 0;
 
   Bookkeeping info;
   info.gain.SetSourceGain(gain_db);
 
-  bool mix_result = mixer->Mix(accum_buf, num_frames, &dest_offset, src_buf,
-                               num_frames << kPtsFractionalBits,
-                               &frac_src_offset, accumulate, &info);
+  bool mix_result =
+      mixer->Mix(accum_buf, num_frames, &dest_offset, src_buf, num_frames << kPtsFractionalBits,
+                 &frac_src_offset, accumulate, &info);
 
   EXPECT_TRUE(mix_result);
   EXPECT_EQ(static_cast<uint32_t>(num_frames), dest_offset);
-  EXPECT_EQ(dest_offset << kPtsFractionalBits,
-            static_cast<uint32_t>(frac_src_offset));
+  EXPECT_EQ(dest_offset << kPtsFractionalBits, static_cast<uint32_t>(frac_src_offset));
 }
 
 }  // namespace media::audio::test

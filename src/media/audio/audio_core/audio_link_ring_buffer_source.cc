@@ -11,12 +11,11 @@ namespace media::audio {
 // static
 fbl::RefPtr<AudioLinkRingBufferSource> AudioLinkRingBufferSource::Create(
     fbl::RefPtr<AudioDevice> source, fbl::RefPtr<AudioObject> dest) {
-  return fbl::AdoptRef(
-      new AudioLinkRingBufferSource(std::move(source), std::move(dest)));
+  return fbl::AdoptRef(new AudioLinkRingBufferSource(std::move(source), std::move(dest)));
 }
 
-AudioLinkRingBufferSource::AudioLinkRingBufferSource(
-    fbl::RefPtr<AudioDevice> source, fbl::RefPtr<AudioObject> dest)
+AudioLinkRingBufferSource::AudioLinkRingBufferSource(fbl::RefPtr<AudioDevice> source,
+                                                     fbl::RefPtr<AudioObject> dest)
     : AudioLink(SourceType::RingBuffer, std::move(source), std::move(dest)) {}
 
 }  // namespace media::audio

@@ -13,14 +13,12 @@ constexpr zx_duration_t kMinFenceDistance = ZX_MSEC(200);
 constexpr zx_duration_t kMaxFenceDistance = kMinFenceDistance + ZX_MSEC(20);
 
 // static
-fbl::RefPtr<AudioInput> AudioInput::Create(zx::channel channel,
-                                           AudioDeviceManager* manager) {
+fbl::RefPtr<AudioInput> AudioInput::Create(zx::channel channel, AudioDeviceManager* manager) {
   return fbl::AdoptRef(new AudioInput(std::move(channel), manager));
 }
 
 AudioInput::AudioInput(zx::channel channel, AudioDeviceManager* manager)
-    : AudioDevice(Type::Input, manager),
-      initial_stream_channel_(std::move(channel)) {}
+    : AudioDevice(Type::Input, manager), initial_stream_channel_(std::move(channel)) {}
 
 zx_status_t AudioInput::Init() {
   zx_status_t res = AudioDevice::Init();
@@ -55,24 +53,21 @@ void AudioInput::OnDriverInfoFetched() {
 
   uint32_t pref_fps = 48000;
   uint32_t pref_chan = 1;
-  fuchsia::media::AudioSampleFormat pref_fmt =
-      fuchsia::media::AudioSampleFormat::SIGNED_16;
+  fuchsia::media::AudioSampleFormat pref_fmt = fuchsia::media::AudioSampleFormat::SIGNED_16;
 
-  zx_status_t res = SelectBestFormat(driver_->format_ranges(), &pref_fps,
-                                     &pref_chan, &pref_fmt);
+  zx_status_t res = SelectBestFormat(driver_->format_ranges(), &pref_fps, &pref_chan, &pref_fmt);
   if (res != ZX_OK) {
-    FXL_LOG(ERROR)
-        << "Audio input failed to find any compatible driver formats.  Req was "
-        << pref_fps << " Hz " << pref_chan << " channel(s) sample format(0x"
-        << std::hex << static_cast<uint32_t>(pref_fmt) << ")";
+    FXL_LOG(ERROR) << "Audio input failed to find any compatible driver formats.  Req was "
+                   << pref_fps << " Hz " << pref_chan << " channel(s) sample format(0x" << std::hex
+                   << static_cast<uint32_t>(pref_fmt) << ")";
     ShutdownSelf();
     return;
   }
 
   const auto& hw_gain = driver()->hw_gain_state();
   if (hw_gain.min_gain > hw_gain.max_gain) {
-    FXL_LOG(ERROR) << "Audio input has invalid gain limits ["
-                   << hw_gain.min_gain << ", " << hw_gain.max_gain << "].";
+    FXL_LOG(ERROR) << "Audio input has invalid gain limits [" << hw_gain.min_gain << ", "
+                   << hw_gain.max_gain << "].";
     ShutdownSelf();
     return;
   }
@@ -90,9 +85,7 @@ void AudioInput::OnDriverInfoFetched() {
   ActivateSelf();
 }
 
-void AudioInput::OnDriverConfigComplete() {
-  driver_->SetPlugDetectEnabled(true);
-}
+void AudioInput::OnDriverConfigComplete() { driver_->SetPlugDetectEnabled(true); }
 
 void AudioInput::OnDriverStartComplete() {
   // If we were unplugged while starting, stop now.
@@ -117,15 +110,13 @@ void AudioInput::OnDriverPlugStateChange(bool plugged, zx_time_t plug_time) {
 
   // Reflect this message to the AudioDeviceManager so it can deal with the
   // routing consequences of the plug state change.
-  manager_->ScheduleMainThreadTask([manager = manager_,
-                                    output = fbl::WrapRefPtr(this), plugged,
-                                    plug_time]() {
-    manager->HandlePlugStateChange(std::move(output), plugged, plug_time);
-  });
+  manager_->ScheduleMainThreadTask(
+      [manager = manager_, output = fbl::WrapRefPtr(this), plugged, plug_time]() {
+        manager->HandlePlugStateChange(std::move(output), plugged, plug_time);
+      });
 }
 
-void AudioInput::ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info,
-                                 uint32_t set_flags) {
+void AudioInput::ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info, uint32_t set_flags) {
   // By the time anyone is calling "ApplyGainLimits", we need to have our basic
   // audio gain control capabilities established.
   ZX_DEBUG_ASSERT(driver()->state() != AudioDriver::State::Uninitialized);
@@ -156,14 +147,12 @@ void AudioInput::ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info,
     // ridiculously small step size, just apply a clamp based on min/max.
     constexpr float kStepSizeLimit = 1e-6;
     if (caps.gain_step <= kStepSizeLimit) {
-      in_out_info->gain_db =
-          fbl::clamp(in_out_info->gain_db, caps.min_gain, caps.max_gain);
+      in_out_info->gain_db = fbl::clamp(in_out_info->gain_db, caps.min_gain, caps.max_gain);
     } else {
       auto min_steps = static_cast<int32_t>(caps.min_gain / caps.gain_step);
       auto max_steps = static_cast<int32_t>(caps.max_gain / caps.gain_step);
-      int32_t steps = fbl::clamp(
-          static_cast<int32_t>(in_out_info->gain_db / caps.gain_step),
-          min_steps, max_steps);
+      int32_t steps = fbl::clamp(static_cast<int32_t>(in_out_info->gain_db / caps.gain_step),
+                                 min_steps, max_steps);
       in_out_info->gain_db = static_cast<float>(steps) * caps.gain_step;
     }
   }
@@ -175,8 +164,7 @@ void AudioInput::UpdateDriverGainState() {
   }
 
   AudioDeviceSettings::GainState state;
-  audio_set_gain_flags_t dirty_flags =
-      device_settings_->SnapshotGainState(&state);
+  audio_set_gain_flags_t dirty_flags = device_settings_->SnapshotGainState(&state);
   if (!dirty_flags) {
     return;
   }

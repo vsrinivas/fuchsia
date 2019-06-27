@@ -47,8 +47,7 @@ class AudioOutput : public AudioDevice {
 
   // TODO(mpuryear): per MTWN-129, integrate it into the Mixer class itself.
   // TODO(mpuryear): Rationalize naming/usage of bookkeeping and MixJob structs.
-  void UpdateSourceTrans(const fbl::RefPtr<AudioRendererImpl>& audio_renderer,
-                         Bookkeeping* bk);
+  void UpdateSourceTrans(const fbl::RefPtr<AudioRendererImpl>& audio_renderer, Bookkeeping* bk);
   void UpdateDestTrans(const MixJob& job, Bookkeeping* bk);
 
   zx_status_t Init() override;
@@ -70,8 +69,7 @@ class AudioOutput : public AudioDevice {
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token()) = 0;
   virtual bool FinishMixJob(const MixJob& job)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token()) = 0;
-  void SetupMixBuffer(uint32_t max_mix_frames)
-      FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
+  void SetupMixBuffer(uint32_t max_mix_frames) FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
 
   // Details about the final output format
   std::unique_ptr<OutputProducer> output_producer_;
@@ -84,21 +82,17 @@ class AudioOutput : public AudioDevice {
  private:
   enum class TaskType { Mix, Trim };
 
-  void ForEachLink(TaskType task_type)
+  void ForEachLink(TaskType task_type) FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
+
+  bool SetupMix(const fbl::RefPtr<AudioRendererImpl>& audio_renderer, Bookkeeping* info)
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
+  bool ProcessMix(const fbl::RefPtr<AudioRendererImpl>& audio_renderer, Bookkeeping* info,
+                  const fbl::RefPtr<AudioPacketRef>& pkt_ref)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
 
-  bool SetupMix(const fbl::RefPtr<AudioRendererImpl>& audio_renderer,
-                Bookkeeping* info)
+  bool SetupTrim(const fbl::RefPtr<AudioRendererImpl>& audio_renderer, Bookkeeping* info)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
-  bool ProcessMix(const fbl::RefPtr<AudioRendererImpl>& audio_renderer,
-                  Bookkeeping* info, const fbl::RefPtr<AudioPacketRef>& pkt_ref)
-      FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
-
-  bool SetupTrim(const fbl::RefPtr<AudioRendererImpl>& audio_renderer,
-                 Bookkeeping* info)
-      FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
-  bool ProcessTrim(const fbl::RefPtr<AudioRendererImpl>& audio_renderer,
-                   Bookkeeping* info,
+  bool ProcessTrim(const fbl::RefPtr<AudioRendererImpl>& audio_renderer, Bookkeeping* info,
                    const fbl::RefPtr<AudioPacketRef>& pkt_ref)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
 
@@ -107,8 +101,7 @@ class AudioOutput : public AudioDevice {
 
   // Vector used to hold references to source links while mixing (instead of
   // holding a lock, preventing source_links_ mutation for the entire mix job).
-  std::vector<fbl::RefPtr<AudioLink>> source_link_refs_
-      FXL_GUARDED_BY(mix_domain_->token());
+  std::vector<fbl::RefPtr<AudioLink>> source_link_refs_ FXL_GUARDED_BY(mix_domain_->token());
 
   // State for the internal buffer which holds intermediate mix results.
   std::unique_ptr<float[]> mix_buf_ FXL_GUARDED_BY(mix_domain_->token());

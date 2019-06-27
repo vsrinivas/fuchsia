@@ -106,9 +106,9 @@ class Gain {
   }
 
   // Smoothly change the source gain over the specified period of playback time.
-  void SetSourceGainWithRamp(float gain_db, zx_duration_t duration_ns,
-                             fuchsia::media::audio::RampType ramp_type =
-                                 fuchsia::media::audio::RampType::SCALE_LINEAR);
+  void SetSourceGainWithRamp(
+      float gain_db, zx_duration_t duration_ns,
+      fuchsia::media::audio::RampType ramp_type = fuchsia::media::audio::RampType::SCALE_LINEAR);
 
   void ClearSourceRamp() { source_ramp_duration_ns_ = 0; }
 
@@ -142,8 +142,7 @@ class Gain {
 
   // Calculate the stream's gain-scale, from cached source and dest values.
   AScale GetGainScale() {
-    return GetGainScale(target_src_gain_db_.load(),
-                        target_dest_gain_db_.load());
+    return GetGainScale(target_src_gain_db_.load(), target_dest_gain_db_.load());
   }
 
   // Retrieve combined amplitude scale for a mix stream, given gain for a mix's
@@ -153,8 +152,7 @@ class Gain {
     return GetGainScale(target_src_gain_db_.load(), dest_gain_db);
   }
 
-  void GetScaleArray(AScale* scale_arr, uint32_t num_frames,
-                     const TimelineRate& rate);
+  void GetScaleArray(AScale* scale_arr, uint32_t num_frames, const TimelineRate& rate);
 
   // Advance the state of any gain ramp by the specified number of frames.
   void Advance(uint32_t num_frames, const TimelineRate& rate);
@@ -163,15 +161,14 @@ class Gain {
   // NOTE: These methods expect the caller to use SetDestGain, NOT the
   // GetGainScale(dest_gain_db) variant -- it doesn't cache dest_gain_db.
   bool IsUnity() {
-    return (target_src_gain_db_.load() == -(target_dest_gain_db_.load())) &&
-           !src_mute_ && !dest_mute_ && !IsRamping();
+    return (target_src_gain_db_.load() == -(target_dest_gain_db_.load())) && !src_mute_ &&
+           !dest_mute_ && !IsRamping();
   }
 
   bool IsSilent() {
     return src_mute_ || dest_mute_ ||
-           (IsSilentNow() &&
-            (!IsRamping() || start_src_gain_db_ >= end_src_gain_db_ ||
-             end_src_gain_db_ <= kMinGainDb));
+           (IsSilentNow() && (!IsRamping() || start_src_gain_db_ >= end_src_gain_db_ ||
+                              end_src_gain_db_ <= kMinGainDb));
   }
 
   // Note: a Gain object can be considered "ramping" even if it is Muted.
@@ -186,8 +183,7 @@ class Gain {
   bool IsSilentNow() {
     return (target_src_gain_db_.load() <= kMinGainDb) ||
            (target_dest_gain_db_.load() <= kMinGainDb) ||
-           (target_src_gain_db_.load() + target_dest_gain_db_.load() <=
-            kMinGainDb);
+           (target_src_gain_db_.load() + target_dest_gain_db_.load() <= kMinGainDb);
   }
 
   // TODO(mpuryear): at some point, examine whether using a lock provides better

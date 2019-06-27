@@ -20,9 +20,7 @@ class DriverRingBuffer : public fbl::RefCounted<DriverRingBuffer> {
   uint64_t size() const { return vmo_mapper_.size(); }
   uint32_t frames() const { return frames_; }
   uint32_t frame_size() const { return frame_size_; }
-  uint8_t* virt() const {
-    return reinterpret_cast<uint8_t*>(vmo_mapper_.start());
-  }
+  uint8_t* virt() const { return reinterpret_cast<uint8_t*>(vmo_mapper_.start()); }
 
  private:
   friend class fbl::RefPtr<DriverRingBuffer>;
@@ -30,8 +28,7 @@ class DriverRingBuffer : public fbl::RefCounted<DriverRingBuffer> {
   DriverRingBuffer() {}
   ~DriverRingBuffer() {}
 
-  zx_status_t Init(zx::vmo vmo, uint32_t frame_size, uint32_t frame_count,
-                   bool input);
+  zx_status_t Init(zx::vmo vmo, uint32_t frame_size, uint32_t frame_count, bool input);
 
   fzl::VmoMapper vmo_mapper_;
   uint32_t frames_ = 0;

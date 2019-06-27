@@ -31,9 +31,8 @@ class AudioObject : public fbl::RefCounted<AudioObject> {
     AudioCapturer,
   };
 
-  static fbl::RefPtr<AudioLink> LinkObjects(
-      const fbl::RefPtr<AudioObject>& source,
-      const fbl::RefPtr<AudioObject>& dest);
+  static fbl::RefPtr<AudioLink> LinkObjects(const fbl::RefPtr<AudioObject>& source,
+                                            const fbl::RefPtr<AudioObject>& dest);
   static void RemoveLink(const fbl::RefPtr<AudioLink>& link);
 
   void UnlinkSources();
@@ -91,8 +90,7 @@ class AudioObject : public fbl::RefCounted<AudioObject> {
   // The set of links which this audio device is acting as a source for (eg; the
   // destinations that this object is sending to).  The target of each of these
   // links must be a either an Output or a AudioCapturer.
-  typename AudioLink::Set<AudioLink::Dest> dest_links_
-      FXL_GUARDED_BY(links_lock_);
+  typename AudioLink::Set<AudioLink::Dest> dest_links_ FXL_GUARDED_BY(links_lock_);
 
   // The set of links which this audio device is acting as a destination for
   // (eg; the sources that that the object is receiving from).  The target of
@@ -104,8 +102,7 @@ class AudioObject : public fbl::RefCounted<AudioObject> {
   //
   // Right now, we have no priorities, so this is just a set of
   // AudioRenderer/output links.
-  typename AudioLink::Set<AudioLink::Source> source_links_
-      FXL_GUARDED_BY(links_lock_);
+  typename AudioLink::Set<AudioLink::Source> source_links_ FXL_GUARDED_BY(links_lock_);
 
   // The following iterator functions accept a function (see below) and call it
   // sequentially with each destination link as a parameter. As described below,
@@ -128,29 +125,24 @@ class AudioObject : public fbl::RefCounted<AudioObject> {
   // This can be increased as needed (but should NOT be needed any time soon).
   //
   // LinkFunction has no return value and is used with ForEach[Source|Dest]Link.
-  using LinkFunction =
-      fit::inline_function<void(AudioLink& link), sizeof(void*) * 4>;
+  using LinkFunction = fit::inline_function<void(AudioLink& link), sizeof(void*) * 4>;
   // Same as LinkFunction, but returns bool for early termination. This
   // return val is used by ForAnyDestLink (or a future ForAllDestLinks).
   // Currently stack space for one ptr is provided (the one caller needs 0).
-  using LinkBoolFunction =
-      fit::inline_function<bool(AudioLink& link), sizeof(void*) * 1>;
+  using LinkBoolFunction = fit::inline_function<bool(AudioLink& link), sizeof(void*) * 1>;
 
   // Link Iterators - these functions iterate upon LinkPacketSource types only.
   //
   // Run this task on AudioLinks in source_links_. All links will be called.
-  void ForEachSourceLink(const LinkFunction& source_task)
-      FXL_LOCKS_EXCLUDED(links_lock_);
+  void ForEachSourceLink(const LinkFunction& source_task) FXL_LOCKS_EXCLUDED(links_lock_);
 
   // Run this task on every AudioLink in dest_links_. All links will be called.
-  void ForEachDestLink(const LinkFunction& dest_task)
-      FXL_LOCKS_EXCLUDED(links_lock_);
+  void ForEachDestLink(const LinkFunction& dest_task) FXL_LOCKS_EXCLUDED(links_lock_);
 
   // Run this task on each dest link. If any returns 'true', ForAnyDestLink
   // immediately returns 'true' without calling the remaining links. If none
   // returns 'true' or if link set is empty, ForAnyDestLink returns 'false'.
-  bool ForAnyDestLink(const LinkBoolFunction& dest_task)
-      FXL_LOCKS_EXCLUDED(links_lock_);
+  bool ForAnyDestLink(const LinkBoolFunction& dest_task) FXL_LOCKS_EXCLUDED(links_lock_);
 
   // TODO(mpuryear): it might be a good idea to introduce an auto-lock like
   // object to fbl::, to behave like a lock token for situations like this. With

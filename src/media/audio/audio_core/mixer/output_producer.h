@@ -34,8 +34,7 @@ class OutputProducer {
    *
    * @param frames The number of frames to produce.
    */
-  virtual void ProduceOutput(const float* source, void* dest,
-                             uint32_t frames) const = 0;
+  virtual void ProduceOutput(const float* source, void* dest, uint32_t frames) const = 0;
 
   /**
    * Fill a destination buffer with silence.

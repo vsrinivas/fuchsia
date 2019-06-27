@@ -2,16 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_MEDIA_WAV_WRITER_WAV_WRITER_H_
-#define GARNET_LIB_MEDIA_WAV_WRITER_WAV_WRITER_H_
+#ifndef SRC_MEDIA_AUDIO_LIB_WAV_WRITER_WAV_WRITER_H_
+#define SRC_MEDIA_AUDIO_LIB_WAV_WRITER_WAV_WRITER_H_
 
-#include "src/lib/files/unique_fd.h"
 #include <fuchsia/media/cpp/fidl.h>
+#include <stdint.h>
+#include <zircon/types.h>
+
 #include <memory>
 #include <optional>
-#include <stdint.h>
 #include <string>
-#include <zircon/types.h>
+
+#include "src/lib/files/unique_fd.h"
 
 namespace media {
 namespace audio {
@@ -44,10 +46,8 @@ namespace audio {
 template <bool enabled = true>
 class WavWriter {
  public:
-  bool Initialize(const char* const file_name,
-                  fuchsia::media::AudioSampleFormat sample_format,
-                  uint32_t channel_count, uint32_t frame_rate,
-                  uint32_t bits_per_sample);
+  bool Initialize(const char* const file_name, fuchsia::media::AudioSampleFormat sample_format,
+                  uint32_t channel_count, uint32_t frame_rate, uint32_t bits_per_sample);
 
   bool Write(void* const buffer, uint32_t num_bytes);
   bool UpdateHeader();
@@ -71,8 +71,8 @@ class WavWriter {
 template <>
 class WavWriter<false> {
  public:
-  bool Initialize(const char* const, fuchsia::media::AudioSampleFormat,
-                  uint32_t, uint32_t, uint32_t) {
+  bool Initialize(const char* const, fuchsia::media::AudioSampleFormat, uint32_t, uint32_t,
+                  uint32_t) {
     return true;
   };
   bool Write(void* const, uint32_t) { return true; };
@@ -85,4 +85,4 @@ class WavWriter<false> {
 }  // namespace audio
 }  // namespace media
 
-#endif  // GARNET_LIB_MEDIA_WAV_WRITER_WAV_WRITER_H_
+#endif  // SRC_MEDIA_AUDIO_LIB_WAV_WRITER_WAV_WRITER_H_

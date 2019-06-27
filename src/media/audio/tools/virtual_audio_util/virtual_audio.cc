@@ -97,12 +97,10 @@ class VirtualAudioUtil {
       {"wait", Command::WAIT},
   };
   static constexpr char kDefaultDeviceName[] = "Vertex";
-  static constexpr char kDefaultManufacturer[] =
-      "Puerile Virtual Functions, Incorporated";
+  static constexpr char kDefaultManufacturer[] = "Puerile Virtual Functions, Incorporated";
   static constexpr char kDefaultProductName[] = "Virgil, version 1.0";
-  static constexpr uint8_t kDefaultUniqueId[16] = {
-      0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF,
-      0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88};
+  static constexpr uint8_t kDefaultUniqueId[16] = {0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF,
+                                                   0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88};
 
   static constexpr uint8_t kDefaultFormatRangeOption = 0;
 
@@ -178,21 +176,17 @@ class VirtualAudioUtil {
   static void DisableCallback();
   static void NumDevicesCallback(uint32_t num_inputs, uint32_t num_outputs);
   template <bool is_out>
-  static void FormatNotification(uint32_t fps, uint32_t fmt, uint32_t chans,
-                                 zx_duration_t delay);
+  static void FormatNotification(uint32_t fps, uint32_t fmt, uint32_t chans, zx_duration_t delay);
   template <bool is_out>
-  static void FormatCallback(uint32_t fps, uint32_t fmt, uint32_t chans,
-                             zx_duration_t delay);
+  static void FormatCallback(uint32_t fps, uint32_t fmt, uint32_t chans, zx_duration_t delay);
 
   template <bool is_out>
-  static void GainNotification(bool current_mute, bool current_agc,
-                               float gain_db);
+  static void GainNotification(bool current_mute, bool current_agc, float gain_db);
   template <bool is_out>
   static void GainCallback(bool current_mute, bool current_agc, float gain_db);
 
   template <bool is_out>
-  static void BufferNotification(zx::vmo buff, uint32_t rb_frames,
-                                 uint32_t notifs);
+  static void BufferNotification(zx::vmo buff, uint32_t rb_frames, uint32_t notifs);
   template <bool is_out>
   static void BufferCallback(zx::vmo buff, uint32_t rb_frames, uint32_t notifs);
 
@@ -202,8 +196,7 @@ class VirtualAudioUtil {
   static void StopNotification(zx_time_t stop_time, uint32_t ring_position);
 
   template <bool is_out>
-  static void PositionNotification(uint32_t ring_position,
-                                   zx_time_t clock_time);
+  static void PositionNotification(uint32_t ring_position, zx_time_t clock_time);
   template <bool is_out>
   static void PositionCallback(uint32_t ring_position, zx_time_t clock_time);
 };
@@ -600,13 +593,11 @@ bool VirtualAudioUtil::SetUniqueId(const std::string& unique_id_str) {
   bool use_default = (unique_id_str == "");
 
   for (uint8_t index = 0; index < 16; ++index) {
-    unique_id[index] =
-        use_default
-            ? kDefaultUniqueId[index]
-            : unique_id_str.size() <= (2 * index + 1)
-                  ? 0
-                  : fxl::StringToNumber<uint8_t>(
-                        unique_id_str.substr(index * 2, 2), fxl::Base::k16);
+    unique_id[index] = use_default ? kDefaultUniqueId[index]
+                                   : unique_id_str.size() <= (2 * index + 1)
+                                         ? 0
+                                         : fxl::StringToNumber<uint8_t>(
+                                               unique_id_str.substr(index * 2, 2), fxl::Base::k16);
   }
   if (configuring_output_) {
     output_->SetUniqueId(unique_id);
@@ -631,8 +622,7 @@ constexpr Format kFormatSpecs[4] = {
      .max_rate = 44100,
      .min_chans = 1,
      .max_chans = 2,
-     .rate_family_flags =
-         ASF_RANGE_FLAG_FPS_44100_FAMILY | ASF_RANGE_FLAG_FPS_48000_FAMILY},
+     .rate_family_flags = ASF_RANGE_FLAG_FPS_44100_FAMILY | ASF_RANGE_FLAG_FPS_48000_FAMILY},
     {.flags = AUDIO_SAMPLE_FORMAT_32BIT_FLOAT,
      .min_rate = 32000,
      .max_rate = 96000,
@@ -657,29 +647,23 @@ bool VirtualAudioUtil::AddFormatRange(const std::string& format_range_str) {
     return false;
   }
 
-  uint8_t format_option =
-      (format_range_str == "" ? kDefaultFormatRangeOption
-                              : fxl::StringToNumber<uint8_t>(format_range_str));
+  uint8_t format_option = (format_range_str == "" ? kDefaultFormatRangeOption
+                                                  : fxl::StringToNumber<uint8_t>(format_range_str));
   if (format_option >= fbl::count_of(kFormatSpecs)) {
-    printf("Format range option must be %lu or less.\n",
-           fbl::count_of(kFormatSpecs) - 1);
+    printf("Format range option must be %lu or less.\n", fbl::count_of(kFormatSpecs) - 1);
     return false;
   }
 
   if (configuring_output_) {
-    output_->AddFormatRange(kFormatSpecs[format_option].flags,
-                            kFormatSpecs[format_option].min_rate,
-                            kFormatSpecs[format_option].max_rate,
-                            kFormatSpecs[format_option].min_chans,
-                            kFormatSpecs[format_option].max_chans,
-                            kFormatSpecs[format_option].rate_family_flags);
+    output_->AddFormatRange(
+        kFormatSpecs[format_option].flags, kFormatSpecs[format_option].min_rate,
+        kFormatSpecs[format_option].max_rate, kFormatSpecs[format_option].min_chans,
+        kFormatSpecs[format_option].max_chans, kFormatSpecs[format_option].rate_family_flags);
   } else {
-    input_->AddFormatRange(kFormatSpecs[format_option].flags,
-                           kFormatSpecs[format_option].min_rate,
-                           kFormatSpecs[format_option].max_rate,
-                           kFormatSpecs[format_option].min_chans,
-                           kFormatSpecs[format_option].max_chans,
-                           kFormatSpecs[format_option].rate_family_flags);
+    input_->AddFormatRange(
+        kFormatSpecs[format_option].flags, kFormatSpecs[format_option].min_rate,
+        kFormatSpecs[format_option].max_rate, kFormatSpecs[format_option].min_chans,
+        kFormatSpecs[format_option].max_chans, kFormatSpecs[format_option].rate_family_flags);
   }
   return WaitForNoCallback();
 }
@@ -703,8 +687,7 @@ bool VirtualAudioUtil::SetFifoDepth(const std::string& fifo_str) {
   }
 
   uint32_t fifo_depth =
-      (fifo_str == "" ? kDefaultFifoDepth
-                      : fxl::StringToNumber<uint32_t>(fifo_str));
+      (fifo_str == "" ? kDefaultFifoDepth : fxl::StringToNumber<uint32_t>(fifo_str));
   if (configuring_output_) {
     output_->SetFifoDepth(fifo_depth);
   } else {
@@ -720,8 +703,7 @@ bool VirtualAudioUtil::SetExternalDelay(const std::string& delay_str) {
   }
 
   zx_duration_t external_delay =
-      (delay_str == "" ? kDefaultExternalDelayNsec
-                       : fxl::StringToNumber<zx_duration_t>(delay_str));
+      (delay_str == "" ? kDefaultExternalDelayNsec : fxl::StringToNumber<zx_duration_t>(delay_str));
   if (configuring_output_) {
     output_->SetExternalDelay(external_delay);
   } else {
@@ -744,18 +726,15 @@ constexpr BufferSpec kBufferSpecs[] = {
     {.min_frames = 9600, .max_frames = 28800, .mod_frames = 480},
     {.min_frames = 288000, .max_frames = 288000, .mod_frames = 288000}};
 
-bool VirtualAudioUtil::SetRingBufferRestrictions(
-    const std::string& rb_restr_str) {
+bool VirtualAudioUtil::SetRingBufferRestrictions(const std::string& rb_restr_str) {
   if (!ConnectToDevice()) {
     return false;
   }
 
   uint8_t rb_option =
-      (rb_restr_str == "" ? kDefaultRingBufferOption
-                          : fxl::StringToNumber<uint8_t>(rb_restr_str));
+      (rb_restr_str == "" ? kDefaultRingBufferOption : fxl::StringToNumber<uint8_t>(rb_restr_str));
   if (rb_option >= fbl::count_of(kBufferSpecs)) {
-    printf("Ring buffer option must be %lu or less.\n",
-           fbl::count_of(kBufferSpecs) - 1);
+    printf("Ring buffer option must be %lu or less.\n", fbl::count_of(kBufferSpecs) - 1);
     return false;
   }
 
@@ -826,33 +805,25 @@ bool VirtualAudioUtil::SetGainProperties(const std::string& gain_props_str) {
     return false;
   }
 
-  uint8_t gain_props_option =
-      (gain_props_str == "" ? kDefaultGainPropsOption
-                            : fxl::StringToNumber<uint8_t>(gain_props_str));
+  uint8_t gain_props_option = (gain_props_str == "" ? kDefaultGainPropsOption
+                                                    : fxl::StringToNumber<uint8_t>(gain_props_str));
   if (gain_props_option >= fbl::count_of(kGainSpecs)) {
-    printf("Gain properties option must be %lu or less.\n",
-           fbl::count_of(kGainSpecs));
+    printf("Gain properties option must be %lu or less.\n", fbl::count_of(kGainSpecs));
     return false;
   }
 
   if (configuring_output_) {
-    output_->SetGainProperties(kGainSpecs[gain_props_option].min_gain_db,
-                               kGainSpecs[gain_props_option].max_gain_db,
-                               kGainSpecs[gain_props_option].gain_step_db,
-                               kGainSpecs[gain_props_option].cur_gain_db,
-                               kGainSpecs[gain_props_option].can_mute,
-                               kGainSpecs[gain_props_option].cur_mute,
-                               kGainSpecs[gain_props_option].can_agc,
-                               kGainSpecs[gain_props_option].cur_agc);
+    output_->SetGainProperties(
+        kGainSpecs[gain_props_option].min_gain_db, kGainSpecs[gain_props_option].max_gain_db,
+        kGainSpecs[gain_props_option].gain_step_db, kGainSpecs[gain_props_option].cur_gain_db,
+        kGainSpecs[gain_props_option].can_mute, kGainSpecs[gain_props_option].cur_mute,
+        kGainSpecs[gain_props_option].can_agc, kGainSpecs[gain_props_option].cur_agc);
   } else {
-    input_->SetGainProperties(kGainSpecs[gain_props_option].min_gain_db,
-                              kGainSpecs[gain_props_option].max_gain_db,
-                              kGainSpecs[gain_props_option].gain_step_db,
-                              kGainSpecs[gain_props_option].cur_gain_db,
-                              kGainSpecs[gain_props_option].can_mute,
-                              kGainSpecs[gain_props_option].cur_mute,
-                              kGainSpecs[gain_props_option].can_agc,
-                              kGainSpecs[gain_props_option].cur_agc);
+    input_->SetGainProperties(
+        kGainSpecs[gain_props_option].min_gain_db, kGainSpecs[gain_props_option].max_gain_db,
+        kGainSpecs[gain_props_option].gain_step_db, kGainSpecs[gain_props_option].cur_gain_db,
+        kGainSpecs[gain_props_option].can_mute, kGainSpecs[gain_props_option].cur_mute,
+        kGainSpecs[gain_props_option].can_agc, kGainSpecs[gain_props_option].cur_agc);
   }
 
   return WaitForNoCallback();
@@ -877,26 +848,22 @@ bool VirtualAudioUtil::SetPlugProperties(const std::string& plug_props_str) {
     return false;
   }
 
-  uint8_t plug_props_option =
-      (plug_props_str == "" ? kDefaultPlugPropsOption
-                            : fxl::StringToNumber<uint8_t>(plug_props_str));
+  uint8_t plug_props_option = (plug_props_str == "" ? kDefaultPlugPropsOption
+                                                    : fxl::StringToNumber<uint8_t>(plug_props_str));
 
   if (plug_props_option >= fbl::count_of(kPlugFlags)) {
-    printf("Plug properties option must be %lu or less.\n",
-           fbl::count_of(kPlugFlags) - 1);
+    printf("Plug properties option must be %lu or less.\n", fbl::count_of(kPlugFlags) - 1);
     return false;
   }
 
-  zx_time_t plug_change_time =
-      (kPlugTime[plug_props_option] == -1 ? zx_clock_get_monotonic()
-                                          : kPlugTime[plug_props_option]);
+  zx_time_t plug_change_time = (kPlugTime[plug_props_option] == -1 ? zx_clock_get_monotonic()
+                                                                   : kPlugTime[plug_props_option]);
   bool plugged = (kPlugFlags[plug_props_option] & AUDIO_PDNF_PLUGGED);
   bool hardwired = (kPlugFlags[plug_props_option] & AUDIO_PDNF_HARDWIRED);
   bool can_notify = (kPlugFlags[plug_props_option] & AUDIO_PDNF_CAN_NOTIFY);
 
   if (configuring_output_) {
-    output_->SetPlugProperties(plug_change_time, plugged, hardwired,
-                               can_notify);
+    output_->SetPlugProperties(plug_change_time, plugged, hardwired, can_notify);
   } else {
     input_->SetPlugProperties(plug_change_time, plugged, hardwired, can_notify);
   }
@@ -946,8 +913,7 @@ bool VirtualAudioUtil::RemoveDevice() {
   return WaitForNoCallback();
 }
 
-bool VirtualAudioUtil::ChangePlugState(const std::string& plug_time_str,
-                                       bool plugged) {
+bool VirtualAudioUtil::ChangePlugState(const std::string& plug_time_str, bool plugged) {
   if (!ConnectToDevice()) {
     return false;
   }
@@ -1026,9 +992,8 @@ bool VirtualAudioUtil::SetNotificationFrequency(const std::string& notifs_str) {
     return false;
   }
 
-  uint32_t notifications_per_ring =
-      (notifs_str == "" ? kDefaultNotificationFrequency
-                        : fxl::StringToNumber<uint32_t>(notifs_str));
+  uint32_t notifications_per_ring = (notifs_str == "" ? kDefaultNotificationFrequency
+                                                      : fxl::StringToNumber<uint32_t>(notifs_str));
   if (configuring_output_) {
     output_->SetNotificationFrequency(notifications_per_ring);
   } else {
@@ -1055,31 +1020,29 @@ void VirtualAudioUtil::DisableCallback() {
   printf("--Received Disable callback\n");
 }
 
-void VirtualAudioUtil::NumDevicesCallback(uint32_t num_inputs,
-                                          uint32_t num_outputs) {
+void VirtualAudioUtil::NumDevicesCallback(uint32_t num_inputs, uint32_t num_outputs) {
   VirtualAudioUtil::CallbackReceived();
 
-  printf("--Received NumDevices (%u inputs, %u outputs)\n", num_inputs,
-         num_outputs);
+  printf("--Received NumDevices (%u inputs, %u outputs)\n", num_inputs, num_outputs);
 }
 
 template <bool is_out>
-void VirtualAudioUtil::FormatNotification(uint32_t fps, uint32_t fmt,
-                                          uint32_t chans, zx_duration_t delay) {
-  printf("--Received Format (%u fps, %x fmt, %u chan, %zu delay) for %s\n", fps,
-         fmt, chans, delay, (is_out ? "output" : "input"));
+void VirtualAudioUtil::FormatNotification(uint32_t fps, uint32_t fmt, uint32_t chans,
+                                          zx_duration_t delay) {
+  printf("--Received Format (%u fps, %x fmt, %u chan, %zu delay) for %s\n", fps, fmt, chans, delay,
+         (is_out ? "output" : "input"));
 }
 template <bool is_out>
-void VirtualAudioUtil::FormatCallback(uint32_t fps, uint32_t fmt,
-                                      uint32_t chans, zx_duration_t delay) {
+void VirtualAudioUtil::FormatCallback(uint32_t fps, uint32_t fmt, uint32_t chans,
+                                      zx_duration_t delay) {
   VirtualAudioUtil::CallbackReceived();
   VirtualAudioUtil::FormatNotification<is_out>(fps, fmt, chans, delay);
 }
 
 template <bool is_out>
 void VirtualAudioUtil::GainNotification(bool mute, bool agc, float gain_db) {
-  printf("--Received Gain (mute: %u, agc: %u, gain: %f dB) for %s\n", mute, agc,
-         gain_db, (is_out ? "output" : "input"));
+  printf("--Received Gain (mute: %u, agc: %u, gain: %f dB) for %s\n", mute, agc, gain_db,
+         (is_out ? "output" : "input"));
 }
 template <bool is_out>
 void VirtualAudioUtil::GainCallback(bool mute, bool agc, float gain_db) {
@@ -1088,28 +1051,23 @@ void VirtualAudioUtil::GainCallback(bool mute, bool agc, float gain_db) {
 }
 
 template <bool is_out>
-void VirtualAudioUtil::BufferNotification(zx::vmo ring_buffer_vmo,
-                                          uint32_t num_ring_buffer_frames,
+void VirtualAudioUtil::BufferNotification(zx::vmo ring_buffer_vmo, uint32_t num_ring_buffer_frames,
                                           uint32_t notifications_per_ring) {
   uint64_t vmo_size;
   ring_buffer_vmo.get_size(&vmo_size);
 
-  printf("--Received SetBuffer (size: %zu, frames: %u, notifs: %u) for %s\n",
-         vmo_size, num_ring_buffer_frames, notifications_per_ring,
-         (is_out ? "output" : "input"));
+  printf("--Received SetBuffer (size: %zu, frames: %u, notifs: %u) for %s\n", vmo_size,
+         num_ring_buffer_frames, notifications_per_ring, (is_out ? "output" : "input"));
 }
 template <bool is_out>
-void VirtualAudioUtil::BufferCallback(zx::vmo buff, uint32_t rb_frames,
-                                      uint32_t notifs) {
+void VirtualAudioUtil::BufferCallback(zx::vmo buff, uint32_t rb_frames, uint32_t notifs) {
   VirtualAudioUtil::CallbackReceived();
-  VirtualAudioUtil::BufferNotification<is_out>(std::move(buff), rb_frames,
-                                               notifs);
+  VirtualAudioUtil::BufferNotification<is_out>(std::move(buff), rb_frames, notifs);
 }
 
 template <bool is_out>
 void VirtualAudioUtil::StartNotification(zx_time_t start_time) {
-  printf("--Received Start (time: %zu) for %s\n", start_time,
-         (is_out ? "output" : "input"));
+  printf("--Received Start (time: %zu) for %s\n", start_time, (is_out ? "output" : "input"));
 }
 
 template <bool is_out>
@@ -1119,14 +1077,12 @@ void VirtualAudioUtil::StopNotification(zx_time_t stop_time, uint32_t rb_pos) {
 }
 
 template <bool is_out>
-void VirtualAudioUtil::PositionNotification(uint32_t rb_pos,
-                                            zx_time_t time_for_pos) {
-  printf("--Received Position (pos: %u, time: %zu) for %s\n", rb_pos,
-         time_for_pos, (is_out ? "output" : "input"));
+void VirtualAudioUtil::PositionNotification(uint32_t rb_pos, zx_time_t time_for_pos) {
+  printf("--Received Position (pos: %u, time: %zu) for %s\n", rb_pos, time_for_pos,
+         (is_out ? "output" : "input"));
 }
 template <bool is_out>
-void VirtualAudioUtil::PositionCallback(uint32_t rb_pos,
-                                        zx_time_t time_for_pos) {
+void VirtualAudioUtil::PositionCallback(uint32_t rb_pos, zx_time_t time_for_pos) {
   VirtualAudioUtil::CallbackReceived();
   VirtualAudioUtil::PositionNotification<is_out>(rb_pos, time_for_pos);
 }

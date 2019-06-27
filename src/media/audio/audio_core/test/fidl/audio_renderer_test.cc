@@ -85,9 +85,7 @@ void AudioRendererTest::AssertConnectedAndDiscardAllPackets() {
 void AudioRendererTest::CreateAndAddPayloadBuffer(uint32_t id) {
   zx::vmo payload_buffer;
   constexpr uint32_t kVmoOptionsNone = 0;
-  ASSERT_EQ(zx::vmo::create(kDefaultPayloadBufferSize, kVmoOptionsNone,
-                            &payload_buffer),
-            ZX_OK);
+  ASSERT_EQ(zx::vmo::create(kDefaultPayloadBufferSize, kVmoOptionsNone, &payload_buffer), ZX_OK);
   audio_renderer_->AddPayloadBuffer(id, std::move(payload_buffer));
 }
 
@@ -205,8 +203,7 @@ TEST_F(AudioRendererTest, SendPacketNoReply) {
   AssertConnectedAndDiscardAllPackets();
 }
 
-TEST_F(AudioRendererTest,
-       SendPacketNoReplyInvalidPayloadBufferIdCausesDisconnect) {
+TEST_F(AudioRendererTest, SendPacketNoReplyInvalidPayloadBufferIdCausesDisconnect) {
   // Configure with one buffer and a valid stream type.
   CreateAndAddPayloadBuffer(0);
   audio_renderer_->SetPcmStreamType(kTestStreamType);
@@ -239,8 +236,7 @@ TEST_F(AudioRendererTest, SendPacketBeforeSetStreamTypeCausesDisconnect) {
 }
 
 // SendPacket with a |payload_size| that is invalid.
-TEST_F(AudioRendererTest,
-       SendPacketNoReplyInvalidPayloadBufferSizeCausesDisconnect) {
+TEST_F(AudioRendererTest, SendPacketNoReplyInvalidPayloadBufferSizeCausesDisconnect) {
   // Configure with one buffer and a valid stream type.
   CreateAndAddPayloadBuffer(0);
   audio_renderer_->SetPcmStreamType(kTestStreamType);
@@ -372,10 +368,8 @@ TEST_F(AudioRendererTest, Play) {
 
   int64_t ref_time_received = -1;
   int64_t media_time_received = -1;
-  audio_renderer_->Play(fuchsia::media::NO_TIMESTAMP,
-                        fuchsia::media::NO_TIMESTAMP,
-                        [&ref_time_received, &media_time_received](
-                            auto ref_time, auto media_time) {
+  audio_renderer_->Play(fuchsia::media::NO_TIMESTAMP, fuchsia::media::NO_TIMESTAMP,
+                        [&ref_time_received, &media_time_received](auto ref_time, auto media_time) {
                           ref_time_received = ref_time;
                           media_time_received = media_time;
                         });
@@ -400,8 +394,7 @@ TEST_F(AudioRendererTest, PlayNoReply) {
   packet.payload_size = kValidPayloadSize;
   audio_renderer_->SendPacket(std::move(packet), CompletionCallback());
 
-  audio_renderer_->PlayNoReply(fuchsia::media::NO_TIMESTAMP,
-                               fuchsia::media::NO_TIMESTAMP);
+  audio_renderer_->PlayNoReply(fuchsia::media::NO_TIMESTAMP, fuchsia::media::NO_TIMESTAMP);
   ExpectCallback();
 }
 
@@ -416,19 +409,16 @@ TEST_F(AudioRendererTest, PlayNoReply) {
 // Validate MinLeadTime events, when enabled.
 TEST_F(AudioRendererTest, EnableMinLeadTimeEvents) {
   int64_t min_lead_time = -1;
-  audio_renderer_.events().OnMinLeadTimeChanged =
-      [&min_lead_time](int64_t min_lead_time_nsec) {
-        min_lead_time = min_lead_time_nsec;
-      };
+  audio_renderer_.events().OnMinLeadTimeChanged = [&min_lead_time](int64_t min_lead_time_nsec) {
+    min_lead_time = min_lead_time_nsec;
+  };
 
   audio_renderer_->EnableMinLeadTimeEvents(true);
 
   // After enabling MinLeadTime events, we expect an initial notification.
   // Because we have not yet set the format, we expect MinLeadTime to be 0.
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
-      [this, &min_lead_time]() {
-        return error_occurred_ || (min_lead_time >= 0);
-      },
+      [this, &min_lead_time]() { return error_occurred_ || (min_lead_time >= 0); },
       kDurationResponseExpected, kDurationGranularity))
       << kTimeoutErr;
 
@@ -457,15 +447,12 @@ TEST_F(AudioRendererTest, DisableMinLeadTimeEvents) {
 // Before SetPcmStreamType is called, MinLeadTime should equal zero.
 TEST_F(AudioRendererTest, GetMinLeadTime) {
   int64_t min_lead_time = -1;
-  audio_renderer_->GetMinLeadTime([&min_lead_time](int64_t min_lead_time_nsec) {
-    min_lead_time = min_lead_time_nsec;
-  });
+  audio_renderer_->GetMinLeadTime(
+      [&min_lead_time](int64_t min_lead_time_nsec) { min_lead_time = min_lead_time_nsec; });
 
   // Wait to receive Lead time callback (will loop timeout? EXPECT_FALSE)
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
-      [this, &min_lead_time]() {
-        return error_occurred_ || (min_lead_time >= 0);
-      },
+      [this, &min_lead_time]() { return error_occurred_ || (min_lead_time >= 0); },
       kDurationResponseExpected, kDurationGranularity))
       << kTimeoutErr;
   EXPECT_EQ(min_lead_time, 0);
@@ -478,25 +465,19 @@ TEST_F(AudioRendererTest, BindGainControl) {
   // Validate AudioRenderers can create GainControl interfaces.
   audio_renderer_->BindGainControl(gain_control_.NewRequest());
   bool gc_error_occurred = false;
-  auto gc_err_handler = [&gc_error_occurred](zx_status_t error) {
-    gc_error_occurred = true;
-  };
+  auto gc_err_handler = [&gc_error_occurred](zx_status_t error) { gc_error_occurred = true; };
   gain_control_.set_error_handler(gc_err_handler);
 
   fuchsia::media::AudioRendererPtr audio_renderer_2;
   audio_core_->CreateAudioRenderer(audio_renderer_2.NewRequest());
   bool ar2_error_occurred = false;
-  auto ar2_err_handler = [&ar2_error_occurred](zx_status_t error) {
-    ar2_error_occurred = true;
-  };
+  auto ar2_err_handler = [&ar2_error_occurred](zx_status_t error) { ar2_error_occurred = true; };
   audio_renderer_2.set_error_handler(ar2_err_handler);
 
   fuchsia::media::audio::GainControlPtr gain_control_2;
   audio_renderer_2->BindGainControl(gain_control_2.NewRequest());
   bool gc2_error_occurred = false;
-  auto gc2_err_handler = [&gc2_error_occurred](zx_status_t error) {
-    gc2_error_occurred = true;
-  };
+  auto gc2_err_handler = [&gc2_error_occurred](zx_status_t error) { gc2_error_occurred = true; };
   gain_control_2.set_error_handler(gc2_err_handler);
 
   // Validate GainControl2 does NOT persist after audio_renderer_2 is unbound
@@ -508,8 +489,7 @@ TEST_F(AudioRendererTest, BindGainControl) {
   // Give audio_renderer_2 a chance to disconnect gain_control_2
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
       [this, &ar2_error_occurred, &gc_error_occurred, &gc2_error_occurred]() {
-        return (error_occurred_ || ar2_error_occurred || gc_error_occurred ||
-                gc2_error_occurred);
+        return (error_occurred_ || ar2_error_occurred || gc_error_occurred || gc2_error_occurred);
       },
       kDurationResponseExpected, kDurationGranularity));
 
@@ -553,13 +533,12 @@ TEST_F(AudioRendererTest, PlayWithoutFormat) {
   int64_t ref_time_received = -1;
   int64_t media_time_received = -1;
 
-  audio_renderer_->Play(fuchsia::media::NO_TIMESTAMP,
-                        fuchsia::media::NO_TIMESTAMP,
-                        [&ref_time_received, &media_time_received](
-                            int64_t ref_time, int64_t media_time) {
-                          ref_time_received = ref_time;
-                          media_time_received = media_time;
-                        });
+  audio_renderer_->Play(
+      fuchsia::media::NO_TIMESTAMP, fuchsia::media::NO_TIMESTAMP,
+      [&ref_time_received, &media_time_received](int64_t ref_time, int64_t media_time) {
+        ref_time_received = ref_time;
+        media_time_received = media_time;
+      });
 
   // Disconnect callback should be received
   ExpectDisconnect();
@@ -578,13 +557,12 @@ TEST_F(AudioRendererTest, PlayWithoutBuffers) {
   int64_t ref_time_received = -1;
   int64_t media_time_received = -1;
 
-  audio_renderer_->Play(fuchsia::media::NO_TIMESTAMP,
-                        fuchsia::media::NO_TIMESTAMP,
-                        [&ref_time_received, &media_time_received](
-                            int64_t ref_time, int64_t media_time) {
-                          ref_time_received = ref_time;
-                          media_time_received = media_time;
-                        });
+  audio_renderer_->Play(
+      fuchsia::media::NO_TIMESTAMP, fuchsia::media::NO_TIMESTAMP,
+      [&ref_time_received, &media_time_received](int64_t ref_time, int64_t media_time) {
+        ref_time_received = ref_time;
+        media_time_received = media_time;
+      });
 
   // Disconnect callback should be received
   ExpectDisconnect();
@@ -594,8 +572,7 @@ TEST_F(AudioRendererTest, PlayWithoutBuffers) {
 
 // Before setting format, PlayNoReply should cause a Disconnect.
 TEST_F(AudioRendererTest, PlayNoReplyWithoutFormat) {
-  audio_renderer_->PlayNoReply(fuchsia::media::NO_TIMESTAMP,
-                               fuchsia::media::NO_TIMESTAMP);
+  audio_renderer_->PlayNoReply(fuchsia::media::NO_TIMESTAMP, fuchsia::media::NO_TIMESTAMP);
 
   // Disconnect callback should be received.
   ExpectDisconnect();
@@ -606,11 +583,11 @@ TEST_F(AudioRendererTest, PauseWithoutFormat) {
   int64_t ref_time_received = -1;
   int64_t media_time_received = -1;
 
-  audio_renderer_->Pause([&ref_time_received, &media_time_received](
-                             int64_t ref_time, int64_t media_time) {
-    ref_time_received = ref_time;
-    media_time_received = media_time;
-  });
+  audio_renderer_->Pause(
+      [&ref_time_received, &media_time_received](int64_t ref_time, int64_t media_time) {
+        ref_time_received = ref_time;
+        media_time_received = media_time;
+      });
 
   // Disconnect callback should be received
   ExpectDisconnect();
@@ -629,11 +606,11 @@ TEST_F(AudioRendererTest, PauseWithoutBuffers) {
   int64_t ref_time_received = -1;
   int64_t media_time_received = -1;
 
-  audio_renderer_->Pause([&ref_time_received, &media_time_received](
-                             int64_t ref_time, int64_t media_time) {
-    ref_time_received = ref_time;
-    media_time_received = media_time;
-  });
+  audio_renderer_->Pause(
+      [&ref_time_received, &media_time_received](int64_t ref_time, int64_t media_time) {
+        ref_time_received = ref_time;
+        media_time_received = media_time;
+      });
 
   // Disconnect callback should be received
   ExpectDisconnect();

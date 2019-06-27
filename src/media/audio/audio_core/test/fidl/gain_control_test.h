@@ -145,9 +145,7 @@ class IndependentGainControlsTest : public GainControlTestBase {
 class TwoRenderersGainControlsTest : public IndependentGainControlsTest {
  protected:
   void SetUp() override;
-  bool ApiIsNull() final {
-    return !audio_renderer_.is_bound() && audio_renderer_2_.is_bound();
-  }
+  bool ApiIsNull() final { return !audio_renderer_.is_bound() && audio_renderer_2_.is_bound(); }
 };
 
 // RendererCapturerGainControlsTest
@@ -156,9 +154,7 @@ class TwoRenderersGainControlsTest : public IndependentGainControlsTest {
 class RendererCapturerGainControlsTest : public IndependentGainControlsTest {
  protected:
   void SetUp() override;
-  bool ApiIsNull() final {
-    return !audio_renderer_.is_bound() && audio_capturer_.is_bound();
-  }
+  bool ApiIsNull() final { return !audio_renderer_.is_bound() && audio_capturer_.is_bound(); }
 };
 
 // CapturerRendererGainControlsTest
@@ -167,9 +163,7 @@ class RendererCapturerGainControlsTest : public IndependentGainControlsTest {
 class CapturerRendererGainControlsTest : public IndependentGainControlsTest {
  protected:
   void SetUp() override;
-  bool ApiIsNull() final {
-    return !audio_capturer_.is_bound() && audio_renderer_.is_bound();
-  }
+  bool ApiIsNull() final { return !audio_capturer_.is_bound() && audio_renderer_.is_bound(); }
 };
 
 // TwoCapturersGainControlsTest
@@ -178,9 +172,7 @@ class CapturerRendererGainControlsTest : public IndependentGainControlsTest {
 class TwoCapturersGainControlsTest : public IndependentGainControlsTest {
  protected:
   void SetUp() override;
-  bool ApiIsNull() final {
-    return !audio_capturer_.is_bound() && audio_capturer_2_.is_bound();
-  }
+  bool ApiIsNull() final { return !audio_capturer_.is_bound() && audio_capturer_2_.is_bound(); }
 };
 
 }  // namespace media::audio::test

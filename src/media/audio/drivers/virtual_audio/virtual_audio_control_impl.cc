@@ -42,8 +42,7 @@ void VirtualAudioControlImpl::DdkRelease(void* ctx) {
   // DevMgr has returned ownership of whatever we provided as driver ctx (our
   // VirtualAudioControlImpl). When this functions returns, this unique_ptr will
   // go out of scope, triggering ~VirtualAudioControlImpl.
-  std::unique_ptr<VirtualAudioControlImpl> control_ptr(
-      static_cast<VirtualAudioControlImpl*>(ctx));
+  std::unique_ptr<VirtualAudioControlImpl> control_ptr(static_cast<VirtualAudioControlImpl*>(ctx));
 
   // By now, all our lists should be empty.
   ZX_DEBUG_ASSERT(control_ptr->bindings_.size() == 0);
@@ -53,8 +52,7 @@ void VirtualAudioControlImpl::DdkRelease(void* ctx) {
 
 // static
 //
-zx_status_t VirtualAudioControlImpl::DdkMessage(void* ctx, fidl_msg_t* msg,
-                                                fidl_txn_t* txn) {
+zx_status_t VirtualAudioControlImpl::DdkMessage(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
   ZX_DEBUG_ASSERT(ctx != nullptr);
 
   return fuchsia_virtualaudio_Forwarder_dispatch(ctx, txn, msg, &fidl_ops_);
@@ -72,8 +70,7 @@ fuchsia_virtualaudio_Forwarder_ops_t VirtualAudioControlImpl::fidl_ops_ = {
     .SendInput =
         [](void* ctx, zx_handle_t input_request) {
           ZX_DEBUG_ASSERT(ctx != nullptr);
-          return static_cast<VirtualAudioControlImpl*>(ctx)->SendInput(
-              zx::channel(input_request));
+          return static_cast<VirtualAudioControlImpl*>(ctx)->SendInput(zx::channel(input_request));
         },
     .SendOutput =
         [](void* ctx, zx_handle_t output_request) {
@@ -85,8 +82,7 @@ fuchsia_virtualaudio_Forwarder_ops_t VirtualAudioControlImpl::fidl_ops_ = {
 
 // A client connected to fuchsia.virtualaudio.Control hosted by the virtual
 // audio service, which is forwarding the server-side binding to us.
-zx_status_t VirtualAudioControlImpl::SendControl(
-    zx::channel control_request_channel) {
+zx_status_t VirtualAudioControlImpl::SendControl(zx::channel control_request_channel) {
   if (!control_request_channel.is_valid()) {
     zxlogf(ERROR, "%s: channel from request handle is invalid\n", __func__);
     return ZX_ERR_INVALID_ARGS;
@@ -96,16 +92,14 @@ zx_status_t VirtualAudioControlImpl::SendControl(
   // Note, using the default dispatcher means that we will be running on the
   // same that drives all of our peer devices in the /dev/test device host.
   // We should ensure there are no long VirtualAudioControl operations.
-  bindings_.AddBinding(this,
-                       fidl::InterfaceRequest<fuchsia::virtualaudio::Control>(
-                           std::move(control_request_channel)));
+  bindings_.AddBinding(this, fidl::InterfaceRequest<fuchsia::virtualaudio::Control>(
+                                 std::move(control_request_channel)));
   return ZX_OK;
 }
 
 // A client connected to fuchsia.virtualaudio.Input hosted by the
 // virtual audio service, which is forwarding the server-side binding to us.
-zx_status_t VirtualAudioControlImpl::SendInput(
-    zx::channel input_request_channel) {
+zx_status_t VirtualAudioControlImpl::SendInput(zx::channel input_request_channel) {
   if (!input_request_channel.is_valid()) {
     zxlogf(ERROR, "%s: channel from request handle is invalid\n", __func__);
     return ZX_ERR_INVALID_ARGS;
@@ -117,8 +111,7 @@ zx_status_t VirtualAudioControlImpl::SendInput(
   // We should be mindful of this if doing long VirtualAudioInput operations.
   input_bindings_.AddBinding(
       VirtualAudioDeviceImpl::Create(this, true),
-      fidl::InterfaceRequest<fuchsia::virtualaudio::Input>(
-          std::move(input_request_channel)));
+      fidl::InterfaceRequest<fuchsia::virtualaudio::Input>(std::move(input_request_channel)));
 
   auto* binding = input_bindings_.bindings().back().get();
   binding->impl()->SetBinding(binding);
@@ -126,8 +119,7 @@ zx_status_t VirtualAudioControlImpl::SendInput(
   return ZX_OK;
 }
 
-zx_status_t VirtualAudioControlImpl::SendOutput(
-    zx::channel output_request_channel) {
+zx_status_t VirtualAudioControlImpl::SendOutput(zx::channel output_request_channel) {
   if (!output_request_channel.is_valid()) {
     zxlogf(ERROR, "%s: channel from request handle is invalid\n", __func__);
     return ZX_ERR_INVALID_ARGS;
@@ -139,8 +131,7 @@ zx_status_t VirtualAudioControlImpl::SendOutput(
   // We should be mindful of this if doing long VirtualAudioOutput operations.
   output_bindings_.AddBinding(
       VirtualAudioDeviceImpl::Create(this, false),
-      fidl::InterfaceRequest<fuchsia::virtualaudio::Output>(
-          std::move(output_request_channel)));
+      fidl::InterfaceRequest<fuchsia::virtualaudio::Output>(std::move(output_request_channel)));
 
   auto* binding = output_bindings_.bindings().back().get();
   binding->impl()->SetBinding(binding);
@@ -157,8 +148,7 @@ void VirtualAudioControlImpl::ReleaseBindings() {
   output_bindings_.CloseAll();
 }
 
-void VirtualAudioControlImpl::PostToDispatcher(
-    fit::closure task_to_post) const {
+void VirtualAudioControlImpl::PostToDispatcher(fit::closure task_to_post) const {
   async::PostTask(dispatcher(), std::move(task_to_post));
 }
 
@@ -195,8 +185,7 @@ void VirtualAudioControlImpl::Disable(DisableCallback disable_callback) {
 
 // Return the number of active input and output streams. The callback is used to
 // synchronize with other in-flight asynchronous operations.
-void VirtualAudioControlImpl::GetNumDevices(
-    GetNumDevicesCallback get_num_devices_callback) {
+void VirtualAudioControlImpl::GetNumDevices(GetNumDevicesCallback get_num_devices_callback) {
   uint32_t num_inputs = 0, num_outputs = 0;
 
   for (auto& binding : input_bindings_.bindings()) {

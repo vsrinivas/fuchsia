@@ -35,46 +35,37 @@ template <typename DType, typename Enable = void>
 class DestConverter;
 
 template <typename DType>
-class DestConverter<
-    DType, typename std::enable_if<std::is_same<DType, uint8_t>::value>::type> {
+class DestConverter<DType, typename std::enable_if<std::is_same<DType, uint8_t>::value>::type> {
  public:
   static inline constexpr DType Convert(float sample) {
-    return fbl::clamp<int32_t>(
-        round(sample * kFloatToInt8) + kOffsetInt8ToUint8,
-        std::numeric_limits<uint8_t>::min(),
-        std::numeric_limits<uint8_t>::max());
+    return fbl::clamp<int32_t>(round(sample * kFloatToInt8) + kOffsetInt8ToUint8,
+                               std::numeric_limits<uint8_t>::min(),
+                               std::numeric_limits<uint8_t>::max());
   }
 };
 
 template <typename DType>
-class DestConverter<
-    DType, typename std::enable_if<std::is_same<DType, int16_t>::value>::type> {
+class DestConverter<DType, typename std::enable_if<std::is_same<DType, int16_t>::value>::type> {
  public:
   static inline constexpr DType Convert(float sample) {
-    return fbl::clamp<int32_t>(round(sample * kFloatToInt16),
-                               std::numeric_limits<int16_t>::min(),
+    return fbl::clamp<int32_t>(round(sample * kFloatToInt16), std::numeric_limits<int16_t>::min(),
                                std::numeric_limits<int16_t>::max());
   }
 };
 
 template <typename DType>
-class DestConverter<
-    DType, typename std::enable_if<std::is_same<DType, int32_t>::value>::type> {
+class DestConverter<DType, typename std::enable_if<std::is_same<DType, int32_t>::value>::type> {
  public:
   static inline constexpr DType Convert(float sample) {
-    return fbl::clamp<int64_t>(round(sample * kFloatToInt24In32), kMinInt24In32,
-                               kMaxInt24In32);
+    return fbl::clamp<int64_t>(round(sample * kFloatToInt24In32), kMinInt24In32, kMaxInt24In32);
   }
 };
 
 template <typename DType>
-class DestConverter<
-    DType, typename std::enable_if<std::is_same<DType, float>::value>::type> {
+class DestConverter<DType, typename std::enable_if<std::is_same<DType, float>::value>::type> {
  public:
   // This will emit +1.0 values, which are legal per WAV format custom.
-  static inline constexpr DType Convert(float sample) {
-    return fbl::clamp(sample, -1.0f, 1.0f);
-  }
+  static inline constexpr DType Convert(float sample) { return fbl::clamp(sample, -1.0f, 1.0f); }
 };
 
 // Template to fill samples with silence based on sample type.
@@ -82,10 +73,9 @@ template <typename DType, typename Enable = void>
 class SilenceMaker;
 
 template <typename DType>
-class SilenceMaker<
-    DType, typename std::enable_if<std::is_same<DType, int16_t>::value ||
-                                   std::is_same<DType, int32_t>::value ||
-                                   std::is_same<DType, float>::value>::type> {
+class SilenceMaker<DType, typename std::enable_if<std::is_same<DType, int16_t>::value ||
+                                                  std::is_same<DType, int32_t>::value ||
+                                                  std::is_same<DType, float>::value>::type> {
  public:
   static inline void Fill(void* dest, size_t samples) {
     // This works even if DType is float/double: per IEEE-754, all 0s == +0.0.
@@ -94,8 +84,7 @@ class SilenceMaker<
 };
 
 template <typename DType>
-class SilenceMaker<
-    DType, typename std::enable_if<std::is_same<DType, uint8_t>::value>::type> {
+class SilenceMaker<DType, typename std::enable_if<std::is_same<DType, uint8_t>::value>::type> {
  public:
   static inline void Fill(void* dest, size_t samples) {
     memset(dest, kOffsetInt8ToUint8, samples * sizeof(DType));
@@ -110,8 +99,7 @@ class OutputProducerImpl : public OutputProducer {
   explicit OutputProducerImpl(const fuchsia::media::AudioStreamTypePtr& format)
       : OutputProducer(format, sizeof(DType)) {}
 
-  void ProduceOutput(const float* source, void* dest_void,
-                     uint32_t frames) const override {
+  void ProduceOutput(const float* source, void* dest_void, uint32_t frames) const override {
     using DC = DestConverter<DType>;
     auto* dest = static_cast<DType*>(dest_void);
 
@@ -155,8 +143,7 @@ std::unique_ptr<OutputProducer> OutputProducer::Select(
     case fuchsia::media::AudioSampleFormat::FLOAT:
       return std::make_unique<OutputProducerImpl<float>>(format);
     default:
-      FXL_LOG(ERROR) << "Unsupported output format "
-                     << (uint32_t)format->sample_format;
+      FXL_LOG(ERROR) << "Unsupported output format " << (uint32_t)format->sample_format;
       return nullptr;
   }
 }

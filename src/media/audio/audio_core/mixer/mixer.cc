@@ -19,8 +19,7 @@ constexpr uint32_t Bookkeeping::kScaleArrLen;
 Mixer::~Mixer() = default;
 
 Mixer::Mixer(uint32_t pos_filter_width, uint32_t neg_filter_width)
-    : pos_filter_width_(pos_filter_width),
-      neg_filter_width_(neg_filter_width) {}
+    : pos_filter_width_(pos_filter_width), neg_filter_width_(neg_filter_width) {}
 
 //
 // Select an appropriate instance of a mixer based on the user-specified
@@ -30,9 +29,9 @@ Mixer::Mixer(uint32_t pos_filter_width, uint32_t neg_filter_width)
 // specified, or if Resampler::Default, the existing selection algorithm is
 // used. Note that requiring a specific resampler may cause Mixer::Select() to
 // fail (i.e. return nullptr), even in cases where 'Default' would succeed.
-std::unique_ptr<Mixer> Mixer::Select(
-    const fuchsia::media::AudioStreamType& src_format,
-    const fuchsia::media::AudioStreamType& dest_format, Resampler resampler) {
+std::unique_ptr<Mixer> Mixer::Select(const fuchsia::media::AudioStreamType& src_format,
+                                     const fuchsia::media::AudioStreamType& dest_format,
+                                     Resampler resampler) {
   // If user specified a particular Resampler, directly select it.
   switch (resampler) {
     case Resampler::SampleAndHold:
@@ -47,8 +46,7 @@ std::unique_ptr<Mixer> Mixer::Select(
 
   // If source sample rate is an integer multiple of destination sample rate,
   // just use point sampler. Otherwise, use linear as a quality-cost compromise.
-  TimelineRate src_to_dest(src_format.frames_per_second,
-                           dest_format.frames_per_second);
+  TimelineRate src_to_dest(src_format.frames_per_second, dest_format.frames_per_second);
   if (src_to_dest.reference_delta() == 1) {
     return mixer::PointSampler::Select(src_format, dest_format);
   } else {

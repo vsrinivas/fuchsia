@@ -24,10 +24,9 @@ class AudioCoreImpl;
 // pattern.  They are the most frequently allocated object in the mixer (easily
 // 100s per second) and they do not live very long at all (300-400mSec at most),
 // so they could easily be causing heap fragmentation issues.
-class AudioPacketRef
-    : public fbl::RefCounted<AudioPacketRef>,
-      public fbl::Recyclable<AudioPacketRef>,
-      public fbl::DoublyLinkedListable<std::unique_ptr<AudioPacketRef>> {
+class AudioPacketRef : public fbl::RefCounted<AudioPacketRef>,
+                       public fbl::Recyclable<AudioPacketRef>,
+                       public fbl::DoublyLinkedListable<std::unique_ptr<AudioPacketRef>> {
  public:
   AudioPacketRef(fbl::RefPtr<RefCountedVmoMapper> vmo_ref,
                  fuchsia::media::AudioRenderer::SendPacketCallback callback,

@@ -9,8 +9,7 @@
 
 namespace media::audio {
 
-AudioRendererFormatInfo::AudioRendererFormatInfo(
-    fuchsia::media::AudioStreamType format)
+AudioRendererFormatInfo::AudioRendererFormatInfo(fuchsia::media::AudioStreamType format)
     : format_(format) {
   // Precompute some useful timing/format stuff.
   //

@@ -18,12 +18,11 @@ class AudioDevice;
 //
 class AudioLinkRingBufferSource : public AudioLink {
  public:
-  static fbl::RefPtr<AudioLinkRingBufferSource> Create(
-      fbl::RefPtr<AudioDevice> source, fbl::RefPtr<AudioObject> dest);
+  static fbl::RefPtr<AudioLinkRingBufferSource> Create(fbl::RefPtr<AudioDevice> source,
+                                                       fbl::RefPtr<AudioObject> dest);
 
  private:
-  AudioLinkRingBufferSource(fbl::RefPtr<AudioDevice> source,
-                            fbl::RefPtr<AudioObject> dest);
+  AudioLinkRingBufferSource(fbl::RefPtr<AudioDevice> source, fbl::RefPtr<AudioObject> dest);
 };
 
 }  // namespace media::audio

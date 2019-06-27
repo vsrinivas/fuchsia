@@ -38,8 +38,8 @@ constexpr double kFloatPrecisionLowerBound = 1.0 / kFloatPrecisionUpperBound;
 //
 // TODO(mpuryear): Consider using the googletest Array Matchers for this
 template <typename T>
-bool CompareBuffers(const T* actual, const T* expect, uint32_t buf_size,
-                    bool expect_to_pass, bool float_tolerance) {
+bool CompareBuffers(const T* actual, const T* expect, uint32_t buf_size, bool expect_to_pass,
+                    bool float_tolerance) {
   // uint8_t is interpreted as char. Cast into larger int for correct display.
   constexpr bool is_uint8 = std::is_same<T, uint8_t>::value;
 
@@ -51,22 +51,18 @@ bool CompareBuffers(const T* actual, const T* expect, uint32_t buf_size,
         if (float_tolerance) {
           // If expect[idx] is negative, then upper bound is closer to zero
           // (hence multiplied by the .99999... kFloatPrecisionLowerBound).
-          T low_val =
-              expect[idx] * (expect[idx] >= 0 ? kFloatPrecisionLowerBound
-                                              : kFloatPrecisionUpperBound);
-          T high_val =
-              expect[idx] * (expect[idx] >= 0 ? kFloatPrecisionUpperBound
-                                              : kFloatPrecisionLowerBound);
+          T low_val = expect[idx] *
+                      (expect[idx] >= 0 ? kFloatPrecisionLowerBound : kFloatPrecisionUpperBound);
+          T high_val = expect[idx] *
+                       (expect[idx] >= 0 ? kFloatPrecisionUpperBound : kFloatPrecisionLowerBound);
           if (actual[idx] >= low_val && actual[idx] <= high_val) {
             continue;
           }
         }
         FXL_LOG(ERROR) << "[" << idx << "] was " << std::setprecision(10)
-                       << (is_uint8 ? static_cast<int32_t>(actual[idx])
-                                    : actual[idx])
+                       << (is_uint8 ? static_cast<int32_t>(actual[idx]) : actual[idx])
                        << ", should be "
-                       << (is_uint8 ? static_cast<int32_t>(expect[idx])
-                                    : expect[idx]);
+                       << (is_uint8 ? static_cast<int32_t>(expect[idx]) : expect[idx]);
       }
       return false;
     }
@@ -81,8 +77,8 @@ bool CompareBuffers(const T* actual, const T* expect, uint32_t buf_size,
 // Numerically compares a buffer of integers to a specific value. For
 // testability, 'expect_to_pass' represents whether we expect the comp to fail.
 template <typename T>
-bool CompareBufferToVal(const T* buf, T val, uint32_t buf_size,
-                        bool expect_to_pass, bool float_tolerance) {
+bool CompareBufferToVal(const T* buf, T val, uint32_t buf_size, bool expect_to_pass,
+                        bool float_tolerance) {
   // uint8_t is interpreted as char. Cast into larger int for correct display.
   constexpr bool is_uint8 = std::is_same<T, uint8_t>::value;
 
@@ -99,18 +95,15 @@ bool CompareBufferToVal(const T* buf, T val, uint32_t buf_size,
           }
         }
         FXL_LOG(ERROR) << "[" << idx << "] was " << std::setprecision(10)
-                       << (is_uint8 ? static_cast<int32_t>(buf[idx]) : buf[idx])
-                       << ", should be "
+                       << (is_uint8 ? static_cast<int32_t>(buf[idx]) : buf[idx]) << ", should be "
                        << (is_uint8 ? static_cast<int32_t>(val) : val);
       }
       return false;
     }
   }
   if (!expect_to_pass) {
-    FXL_LOG(ERROR) << "We expected buffer (length " << buf_size
-                   << ") to differ from value "
-                   << (is_uint8 ? static_cast<int32_t>(val) : val)
-                   << ", but it was equal!";
+    FXL_LOG(ERROR) << "We expected buffer (length " << buf_size << ") to differ from value "
+                   << (is_uint8 ? static_cast<int32_t>(val) : val) << ", but it was equal!";
   }
   return true;
 }
@@ -119,8 +112,7 @@ bool CompareBufferToVal(const T* buf, T val, uint32_t buf_size,
 void DisplayVals(const double* buf, uint32_t buf_size) {
   printf("\n    ********************************************************");
   printf("\n **************************************************************");
-  printf("\n ***       Displaying raw array data for length %5d       ***",
-         buf_size);
+  printf("\n ***       Displaying raw array data for length %5d       ***", buf_size);
   printf("\n **************************************************************");
   for (uint32_t idx = 0; idx < buf_size; ++idx) {
     if (idx % 8 == 0) {
@@ -168,14 +160,13 @@ inline double Finalize(double value) {
 // repeats itself 'freq' times within buffer length; 'magn' specifies peak
 // value. Accumulates these values with preexisting array vals, if bool is set.
 template <typename T>
-void GenerateCosine(T* buffer, uint32_t buf_size, double freq, bool accumulate,
-                    double magn, double phase) {
+void GenerateCosine(T* buffer, uint32_t buf_size, double freq, bool accumulate, double magn,
+                    double phase) {
   // If frequency is 0 (constant val), phase offset causes reduced amplitude
   FXL_DCHECK(freq > 0.0 || (freq == 0.0 && phase == 0.0));
 
   // Freqs above buf_size/2 (Nyquist limit) will alias into lower frequencies.
-  FXL_DCHECK(freq * 2.0 <= buf_size)
-      << "Buffer too short--requested frequency will be aliased";
+  FXL_DCHECK(freq * 2.0 <= buf_size) << "Buffer too short--requested frequency will be aliased";
 
   // freq is defined as: cosine recurs exactly 'freq' times within buf_size.
   const double mult = 2.0 * M_PI / buf_size * freq;
@@ -277,8 +268,7 @@ void FFT(double* reals, double* imags, uint32_t buf_size) {
     // being combined with 'even' values. These coefficients help the real and
     // imaginary factors advance correctly, within each sub_dft.
     const double real_coef = std::cos(M_PI / static_cast<double>(sub_dft_sz_2));
-    const double imag_coef =
-        -std::sin(M_PI / static_cast<double>(sub_dft_sz_2));
+    const double imag_coef = -std::sin(M_PI / static_cast<double>(sub_dft_sz_2));
 
     // For each point in this signal (for each complex pair in this 'sub_dft'),
     double real_factor = 1.0, imag_factor = 0.0;
@@ -326,8 +316,8 @@ double GetPhase(double real, double imag) {
 
 // Convert 2 incoming arrs (reals & imags == x & y) into magnitude and phase
 // arrs. Magnitude is absolute value, phase is in radians with range (-PI, PI].
-void RectangularToPolar(const double* reals, const double* imags,
-                        uint32_t buf_size, double* magn, double* phase) {
+void RectangularToPolar(const double* reals, const double* imags, uint32_t buf_size, double* magn,
+                        double* phase) {
   for (uint32_t freq = 0; freq < buf_size; ++freq) {
     double sum_sq = (reals[freq] * reals[freq]) + (imags[freq] * imags[freq]);
     magn[freq] = std::sqrt(sum_sq);
@@ -342,8 +332,7 @@ void RectangularToPolar(const double* reals, const double* imags,
 // Perform the Discrete Fourier Transform, converting time-domain reals[] (len
 // buf_size) into freq-domain real_freq[] & imag_freq[], both (buf_size/2 + 1).
 // This is a simple, unoptimized (N^2)/2 implementation.
-void RealDFT(const double* reals, uint32_t buf_size, double* real_freq,
-             double* imag_freq) {
+void RealDFT(const double* reals, uint32_t buf_size, double* real_freq, double* imag_freq) {
   FXL_DCHECK((buf_size & 1u) == 0) << "DFT buffer size must be even";
 
   const double multiplier = M_PI * 2.0 / static_cast<double>(buf_size);
@@ -368,8 +357,7 @@ void RealDFT(const double* reals, uint32_t buf_size, double* real_freq,
 // into time-domain array reals (len buf_size). This is a simple, unoptimized
 // (N^2)/2 implementation.
 
-void InverseDFT(double* real_freq, double* imag_freq, uint32_t buf_size,
-                double* reals) {
+void InverseDFT(double* real_freq, double* imag_freq, uint32_t buf_size, double* reals) {
   uint32_t buf_sz_2 = buf_size >> 1;
 
   for (uint32_t idx = 0; idx <= buf_sz_2; ++idx) {
@@ -415,9 +403,8 @@ void InverseFFT(double* reals, double* imags, uint32_t buf_size) {
 // of all other content. Useful for frequency response and signal-to-noise.
 // Internally uses an FFT, so buf_size must be a power-of-two.
 template <typename T>
-void MeasureAudioFreq(T* audio, uint32_t buf_size, uint32_t freq,
-                      double* magn_signal, double* magn_other,
-                      double* phase_signal) {
+void MeasureAudioFreq(T* audio, uint32_t buf_size, uint32_t freq, double* magn_signal,
+                      double* magn_other, double* phase_signal) {
   FXL_DCHECK(fbl::is_pow2(buf_size));
 
   uint32_t buf_sz_2 = buf_size >> 1;
@@ -466,16 +453,14 @@ void MeasureAudioFreq(T* audio, uint32_t buf_size, uint32_t freq,
       freq = buf_size - freq;
     }
   }
-  *magn_signal =
-      std::sqrt(reals[freq] * reals[freq] + imags[freq] * imags[freq]);
+  *magn_signal = std::sqrt(reals[freq] * reals[freq] + imags[freq] * imags[freq]);
 
   // Calculate magnitude of all other frequencies
   if (magn_other) {
     double sum_sq_magn_other = 0.0;
     for (uint32_t bin = 0; bin <= buf_sz_2; ++bin) {
       if (bin != freq || freq_out_of_range) {
-        sum_sq_magn_other +=
-            (reals[bin] * reals[bin] + imags[bin] * imags[bin]);
+        sum_sq_magn_other += (reals[bin] * reals[bin] + imags[bin] * imags[bin]);
       }
     }
     *magn_other = std::sqrt(sum_sq_magn_other);
@@ -487,55 +472,36 @@ void MeasureAudioFreq(T* audio, uint32_t buf_size, uint32_t freq,
   }
 }
 
-template bool CompareBuffers<uint8_t>(const uint8_t*, const uint8_t*, uint32_t,
-                                      bool, bool);
-template bool CompareBuffers<int16_t>(const int16_t*, const int16_t*, uint32_t,
-                                      bool, bool);
-template bool CompareBuffers<int32_t>(const int32_t*, const int32_t*, uint32_t,
-                                      bool, bool);
-template bool CompareBuffers<float>(const float*, const float*, uint32_t, bool,
-                                    bool);
-template bool CompareBuffers<double>(const double*, const double*, uint32_t,
-                                     bool, bool);
+template bool CompareBuffers<uint8_t>(const uint8_t*, const uint8_t*, uint32_t, bool, bool);
+template bool CompareBuffers<int16_t>(const int16_t*, const int16_t*, uint32_t, bool, bool);
+template bool CompareBuffers<int32_t>(const int32_t*, const int32_t*, uint32_t, bool, bool);
+template bool CompareBuffers<float>(const float*, const float*, uint32_t, bool, bool);
+template bool CompareBuffers<double>(const double*, const double*, uint32_t, bool, bool);
 
-template bool CompareBufferToVal<uint8_t>(const uint8_t*, uint8_t, uint32_t,
-                                          bool, bool);
-template bool CompareBufferToVal<int16_t>(const int16_t*, int16_t, uint32_t,
-                                          bool, bool);
-template bool CompareBufferToVal<int32_t>(const int32_t*, int32_t, uint32_t,
-                                          bool, bool);
-template bool CompareBufferToVal<float>(const float*, float, uint32_t, bool,
-                                        bool);
-template bool CompareBufferToVal<double>(const double*, double, uint32_t, bool,
-                                         bool);
+template bool CompareBufferToVal<uint8_t>(const uint8_t*, uint8_t, uint32_t, bool, bool);
+template bool CompareBufferToVal<int16_t>(const int16_t*, int16_t, uint32_t, bool, bool);
+template bool CompareBufferToVal<int32_t>(const int32_t*, int32_t, uint32_t, bool, bool);
+template bool CompareBufferToVal<float>(const float*, float, uint32_t, bool, bool);
+template bool CompareBufferToVal<double>(const double*, double, uint32_t, bool, bool);
 
-template void GenerateCosine<uint8_t>(uint8_t*, uint32_t, double, bool, double,
-                                      double);
-template void GenerateCosine<int16_t>(int16_t*, uint32_t, double, bool, double,
-                                      double);
-template void GenerateCosine<int32_t>(int32_t*, uint32_t, double, bool, double,
-                                      double);
-template void GenerateCosine<float>(float*, uint32_t, double, bool, double,
-                                    double);
-template void GenerateCosine<double>(double*, uint32_t, double, bool, double,
-                                     double);
+template void GenerateCosine<uint8_t>(uint8_t*, uint32_t, double, bool, double, double);
+template void GenerateCosine<int16_t>(int16_t*, uint32_t, double, bool, double, double);
+template void GenerateCosine<int32_t>(int32_t*, uint32_t, double, bool, double, double);
+template void GenerateCosine<float>(float*, uint32_t, double, bool, double, double);
+template void GenerateCosine<double>(double*, uint32_t, double, bool, double, double);
 
-template void MeasureAudioFreq<uint8_t>(uint8_t* audio, uint32_t buf_size,
-                                        uint32_t freq, double* magn_signal,
-                                        double* magn_other = nullptr,
+template void MeasureAudioFreq<uint8_t>(uint8_t* audio, uint32_t buf_size, uint32_t freq,
+                                        double* magn_signal, double* magn_other = nullptr,
                                         double* phase_signal = nullptr);
-template void MeasureAudioFreq<int16_t>(int16_t* audio, uint32_t buf_size,
-                                        uint32_t freq, double* magn_signal,
-                                        double* magn_other = nullptr,
+template void MeasureAudioFreq<int16_t>(int16_t* audio, uint32_t buf_size, uint32_t freq,
+                                        double* magn_signal, double* magn_other = nullptr,
                                         double* phase_signal = nullptr);
-template void MeasureAudioFreq<int32_t>(int32_t* audio, uint32_t buf_size,
-                                        uint32_t freq, double* magn_signal,
-                                        double* magn_other = nullptr,
+template void MeasureAudioFreq<int32_t>(int32_t* audio, uint32_t buf_size, uint32_t freq,
+                                        double* magn_signal, double* magn_other = nullptr,
                                         double* phase_signal = nullptr);
 
-template void MeasureAudioFreq<float>(float* audio, uint32_t buf_size,
-                                      uint32_t freq, double* magn_signal,
-                                      double* magn_other = nullptr,
+template void MeasureAudioFreq<float>(float* audio, uint32_t buf_size, uint32_t freq,
+                                      double* magn_signal, double* magn_other = nullptr,
                                       double* phase_signal = nullptr);
 
 }  // namespace media::audio::test

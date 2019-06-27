@@ -71,8 +71,7 @@ class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator {
   void SelectOutputsForAudioRenderer(AudioRendererImpl* audio_renderer);
 
   // Link an output to an AudioRenderer.
-  void LinkOutputToAudioRenderer(AudioOutput* output,
-                                 AudioRendererImpl* audio_renderer);
+  void LinkOutputToAudioRenderer(AudioOutput* output, AudioRendererImpl* audio_renderer);
 
   // Add/remove an AudioCapturer to/from the set of active AudioCapturers.
   void AddAudioCapturer(const fbl::RefPtr<AudioCapturerImpl>& audio_capturer);
@@ -95,13 +94,12 @@ class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator {
   void RemoveDevice(const fbl::RefPtr<AudioDevice>& device);
 
   // Handles a plugged/unplugged state change for the supplied audio device.
-  void HandlePlugStateChange(const fbl::RefPtr<AudioDevice>& device,
-                             bool plugged, zx_time_t plug_time);
+  void HandlePlugStateChange(const fbl::RefPtr<AudioDevice>& device, bool plugged,
+                             zx_time_t plug_time);
 
   void SetRoutingPolicy(fuchsia::media::AudioOutputRoutingPolicy policy);
 
-  static inline bool ValidateRoutingPolicy(
-      fuchsia::media::AudioOutputRoutingPolicy policy) {
+  static inline bool ValidateRoutingPolicy(fuchsia::media::AudioOutputRoutingPolicy policy) {
     switch (policy) {
       case fuchsia::media::AudioOutputRoutingPolicy::LAST_PLUGGED_OUTPUT:
       case fuchsia::media::AudioOutputRoutingPolicy::ALL_PLUGGED_OUTPUTS:
@@ -122,46 +120,38 @@ class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator {
   // Implementation of the AudioDeviceEnumerator FIDL interface.
   void GetDevices(GetDevicesCallback cbk) final;
   void GetDeviceGain(uint64_t device_token, GetDeviceGainCallback cbk) final;
-  void SetDeviceGain(uint64_t device_token,
-                     fuchsia::media::AudioGainInfo gain_info,
+  void SetDeviceGain(uint64_t device_token, fuchsia::media::AudioGainInfo gain_info,
                      uint32_t set_flags) final;
   void GetDefaultInputDevice(GetDefaultInputDeviceCallback cbk) final;
   void GetDefaultOutputDevice(GetDefaultOutputDeviceCallback cbk) final;
 
-  void EnableDeviceSettings(bool enabled) {
-    AudioDeviceSettings::EnableDeviceSettings(enabled);
-  }
+  void EnableDeviceSettings(bool enabled) { AudioDeviceSettings::EnableDeviceSettings(enabled); }
 
  private:
   // KeyTraits we use to sort our AudioDeviceSettings set to ensure uniqueness.
   struct AudioDeviceSettingsKeyTraits {
-    static const AudioDeviceSettings* GetKey(const AudioDeviceSettings& obj) {
-      return &obj;
-    }
+    static const AudioDeviceSettings* GetKey(const AudioDeviceSettings& obj) { return &obj; }
 
-    static bool LessThan(const AudioDeviceSettings* k1,
-                         const AudioDeviceSettings* k2) {
+    static bool LessThan(const AudioDeviceSettings* k1, const AudioDeviceSettings* k2) {
       return (k1->is_input() && !k2->is_input()) ||
              ((k1->is_input() == k2->is_input()) &&
               (memcmp(&k1->uid(), &k2->uid(), sizeof(k1->uid())) < 0));
     }
 
-    static bool EqualTo(const AudioDeviceSettings* k1,
-                        const AudioDeviceSettings* k2) {
+    static bool EqualTo(const AudioDeviceSettings* k1, const AudioDeviceSettings* k2) {
       return (k1->is_input() == k2->is_input()) &&
              (memcmp(&k1->uid(), &k2->uid(), sizeof(k1->uid())) == 0);
     }
   };
 
-  using DeviceSettingsSet = ::fbl::WAVLTree<const AudioDeviceSettings*,
-                                            fbl::RefPtr<AudioDeviceSettings>,
-                                            AudioDeviceSettingsKeyTraits>;
+  using DeviceSettingsSet =
+      ::fbl::WAVLTree<const AudioDeviceSettings*, fbl::RefPtr<AudioDeviceSettings>,
+                      AudioDeviceSettingsKeyTraits>;
 
   // Find the most-recently plugged device (per type: input or output) excluding
   // throttle_output. If allow_unplugged, return the most-recently UNplugged
   // device if no plugged devices are found -- otherwise return nullptr.
-  fbl::RefPtr<AudioDevice> FindLastPlugged(AudioObject::Type type,
-                                           bool allow_unplugged = false);
+  fbl::RefPtr<AudioDevice> FindLastPlugged(AudioObject::Type type, bool allow_unplugged = false);
 
   fbl::RefPtr<AudioOutput> FindLastPluggedOutput(bool allow_unplugged = false) {
     auto dev = FindLastPlugged(AudioObject::Type::Output, allow_unplugged);
@@ -177,10 +167,8 @@ class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator {
 
   // Methods to handle routing policy -- when an existing device is unplugged or
   // completely removed, or when a new device is plugged or added to the system.
-  void OnDeviceUnplugged(const fbl::RefPtr<AudioDevice>& device,
-                         zx_time_t plug_time);
-  void OnDevicePlugged(const fbl::RefPtr<AudioDevice>& device,
-                       zx_time_t plug_time);
+  void OnDeviceUnplugged(const fbl::RefPtr<AudioDevice>& device, zx_time_t plug_time);
+  void OnDevicePlugged(const fbl::RefPtr<AudioDevice>& device, zx_time_t plug_time);
 
   void LinkToAudioCapturers(const fbl::RefPtr<AudioDevice>& device);
 
@@ -201,8 +189,7 @@ class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator {
 
   // Commit any dirty settings to storage, (re)scheduling the timer as needed.
   void CommitDirtySettings();
-  void CommitDirtySettingsThunk(async_dispatcher_t*, async::TaskBase*,
-                                zx_status_t) {
+  void CommitDirtySettingsThunk(async_dispatcher_t*, async::TaskBase*, zx_status_t) {
     CommitDirtySettings();
   }
 
@@ -237,8 +224,7 @@ class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator {
 
   // The unique AudioDeviceSettings subset we track that needs disk-persistence.
   DeviceSettingsSet persisted_device_settings_;
-  async::TaskMethod<AudioDeviceManager,
-                    &AudioDeviceManager::CommitDirtySettingsThunk>
+  async::TaskMethod<AudioDeviceManager, &AudioDeviceManager::CommitDirtySettingsThunk>
       commit_settings_task_{this};
 
   FxLoader fx_loader_;

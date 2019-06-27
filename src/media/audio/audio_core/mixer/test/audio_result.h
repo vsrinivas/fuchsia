@@ -174,34 +174,24 @@ class AudioResult {
   // are the currently-measured results (in dBFS) for level response at a set of
   // reference frequencies. The input sinusoid is sent at 0 dBFS: thus, output
   // results closer to 0 are better.
-  static std::array<double, FrequencySet::kNumReferenceFreqs>
-      FreqRespPointUnity;
-  static std::array<double, FrequencySet::kNumReferenceFreqs>
-      FreqRespPointDown0;
-  static std::array<double, FrequencySet::kNumReferenceFreqs>
-      FreqRespPointDown1;
-  static std::array<double, FrequencySet::kNumReferenceFreqs>
-      FreqRespPointDown2;
+  static std::array<double, FrequencySet::kNumReferenceFreqs> FreqRespPointUnity;
+  static std::array<double, FrequencySet::kNumReferenceFreqs> FreqRespPointDown0;
+  static std::array<double, FrequencySet::kNumReferenceFreqs> FreqRespPointDown1;
+  static std::array<double, FrequencySet::kNumReferenceFreqs> FreqRespPointDown2;
   static std::array<double, FrequencySet::kNumReferenceFreqs> FreqRespPointUp1;
   static std::array<double, FrequencySet::kNumReferenceFreqs> FreqRespPointUp2;
   static std::array<double, FrequencySet::kNumReferenceFreqs> FreqRespPointUp3;
-  static std::array<double, FrequencySet::kNumReferenceFreqs>
-      FreqRespPointMicro;
+  static std::array<double, FrequencySet::kNumReferenceFreqs> FreqRespPointMicro;
 
   // Same as the above section, but for LinearSampler
-  static std::array<double, FrequencySet::kNumReferenceFreqs>
-      FreqRespLinearUnity;
-  static std::array<double, FrequencySet::kNumReferenceFreqs>
-      FreqRespLinearDown0;
-  static std::array<double, FrequencySet::kNumReferenceFreqs>
-      FreqRespLinearDown1;
-  static std::array<double, FrequencySet::kNumReferenceFreqs>
-      FreqRespLinearDown2;
+  static std::array<double, FrequencySet::kNumReferenceFreqs> FreqRespLinearUnity;
+  static std::array<double, FrequencySet::kNumReferenceFreqs> FreqRespLinearDown0;
+  static std::array<double, FrequencySet::kNumReferenceFreqs> FreqRespLinearDown1;
+  static std::array<double, FrequencySet::kNumReferenceFreqs> FreqRespLinearDown2;
   static std::array<double, FrequencySet::kNumReferenceFreqs> FreqRespLinearUp1;
   static std::array<double, FrequencySet::kNumReferenceFreqs> FreqRespLinearUp2;
   static std::array<double, FrequencySet::kNumReferenceFreqs> FreqRespLinearUp3;
-  static std::array<double, FrequencySet::kNumReferenceFreqs>
-      FreqRespLinearMicro;
+  static std::array<double, FrequencySet::kNumReferenceFreqs> FreqRespLinearMicro;
 
   //
   // Val-being-checked (in dBFS) must be greater than or equal to this value.
@@ -215,40 +205,24 @@ class AudioResult {
   // These are the previous-cached results for frequency response, for this
   // sampler and this rate conversion. If any result magnitude is LESS than this
   // value, then the test case fails. Ideal results are 0.0 for all.
-  static const std::array<double, FrequencySet::kNumReferenceFreqs>
-      kPrevFreqRespPointUnity;
-  static const std::array<double, FrequencySet::kNumReferenceFreqs>
-      kPrevFreqRespPointDown0;
-  static const std::array<double, FrequencySet::kNumReferenceFreqs>
-      kPrevFreqRespPointDown1;
-  static const std::array<double, FrequencySet::kNumReferenceFreqs>
-      kPrevFreqRespPointDown2;
-  static const std::array<double, FrequencySet::kNumReferenceFreqs>
-      kPrevFreqRespPointUp1;
-  static const std::array<double, FrequencySet::kNumReferenceFreqs>
-      kPrevFreqRespPointUp2;
-  static const std::array<double, FrequencySet::kNumReferenceFreqs>
-      kPrevFreqRespPointUp3;
-  static const std::array<double, FrequencySet::kNumReferenceFreqs>
-      kPrevFreqRespPointMicro;
+  static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevFreqRespPointUnity;
+  static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevFreqRespPointDown0;
+  static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevFreqRespPointDown1;
+  static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevFreqRespPointDown2;
+  static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevFreqRespPointUp1;
+  static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevFreqRespPointUp2;
+  static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevFreqRespPointUp3;
+  static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevFreqRespPointMicro;
 
   // Same as the above section, but for LinearSampler
-  static const std::array<double, FrequencySet::kNumReferenceFreqs>
-      kPrevFreqRespLinearUnity;
-  static const std::array<double, FrequencySet::kNumReferenceFreqs>
-      kPrevFreqRespLinearDown0;
-  static const std::array<double, FrequencySet::kNumReferenceFreqs>
-      kPrevFreqRespLinearDown1;
-  static const std::array<double, FrequencySet::kNumReferenceFreqs>
-      kPrevFreqRespLinearDown2;
-  static const std::array<double, FrequencySet::kNumReferenceFreqs>
-      kPrevFreqRespLinearUp1;
-  static const std::array<double, FrequencySet::kNumReferenceFreqs>
-      kPrevFreqRespLinearUp2;
-  static const std::array<double, FrequencySet::kNumReferenceFreqs>
-      kPrevFreqRespLinearUp3;
-  static const std::array<double, FrequencySet::kNumReferenceFreqs>
-      kPrevFreqRespLinearMicro;
+  static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevFreqRespLinearUnity;
+  static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevFreqRespLinearDown0;
+  static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevFreqRespLinearDown1;
+  static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevFreqRespLinearDown2;
+  static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevFreqRespLinearUp1;
+  static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevFreqRespLinearUp2;
+  static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevFreqRespLinearUp3;
+  static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevFreqRespLinearMicro;
 
   static std::array<double, FrequencySet::kNumReferenceFreqs> FreqRespPointNxN;
   static std::array<double, FrequencySet::kNumReferenceFreqs> FreqRespLinearNxN;
@@ -289,40 +263,24 @@ class AudioResult {
 
   // Previous-cached SINAD results for this sampler and rate conversion ratio,
   // in dBr. If current result is LESS than this value, the test case fails.
-  static const std::array<double, FrequencySet::kNumReferenceFreqs>
-      kPrevSinadPointUnity;
-  static const std::array<double, FrequencySet::kNumReferenceFreqs>
-      kPrevSinadPointDown0;
-  static const std::array<double, FrequencySet::kNumReferenceFreqs>
-      kPrevSinadPointDown1;
-  static const std::array<double, FrequencySet::kNumReferenceFreqs>
-      kPrevSinadPointDown2;
-  static const std::array<double, FrequencySet::kNumReferenceFreqs>
-      kPrevSinadPointUp1;
-  static const std::array<double, FrequencySet::kNumReferenceFreqs>
-      kPrevSinadPointUp2;
-  static const std::array<double, FrequencySet::kNumReferenceFreqs>
-      kPrevSinadPointUp3;
-  static const std::array<double, FrequencySet::kNumReferenceFreqs>
-      kPrevSinadPointMicro;
+  static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevSinadPointUnity;
+  static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevSinadPointDown0;
+  static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevSinadPointDown1;
+  static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevSinadPointDown2;
+  static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevSinadPointUp1;
+  static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevSinadPointUp2;
+  static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevSinadPointUp3;
+  static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevSinadPointMicro;
 
   // Same as the above section, but for LinearSampler
-  static const std::array<double, FrequencySet::kNumReferenceFreqs>
-      kPrevSinadLinearUnity;
-  static const std::array<double, FrequencySet::kNumReferenceFreqs>
-      kPrevSinadLinearDown0;
-  static const std::array<double, FrequencySet::kNumReferenceFreqs>
-      kPrevSinadLinearDown1;
-  static const std::array<double, FrequencySet::kNumReferenceFreqs>
-      kPrevSinadLinearDown2;
-  static const std::array<double, FrequencySet::kNumReferenceFreqs>
-      kPrevSinadLinearUp1;
-  static const std::array<double, FrequencySet::kNumReferenceFreqs>
-      kPrevSinadLinearUp2;
-  static const std::array<double, FrequencySet::kNumReferenceFreqs>
-      kPrevSinadLinearUp3;
-  static const std::array<double, FrequencySet::kNumReferenceFreqs>
-      kPrevSinadLinearMicro;
+  static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevSinadLinearUnity;
+  static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevSinadLinearDown0;
+  static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevSinadLinearDown1;
+  static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevSinadLinearDown2;
+  static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevSinadLinearUp1;
+  static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevSinadLinearUp2;
+  static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevSinadLinearUp3;
+  static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevSinadLinearMicro;
 
   // SINAD results measured for a few frequencies during the NxN tests.
   static std::array<double, FrequencySet::kNumReferenceFreqs> SinadPointNxN;
@@ -552,10 +510,8 @@ class AudioResult {
   static void DumpLevelToleranceValues();
   static void DumpDynamicRangeValues();
 
-  static void DumpFreqRespValueSet(double* freq_resp_vals,
-                                   const std::string& arr_name);
-  static void DumpSinadValueSet(double* sinad_vals,
-                                const std::string& arr_name);
+  static void DumpFreqRespValueSet(double* freq_resp_vals, const std::string& arr_name);
+  static void DumpSinadValueSet(double* sinad_vals, const std::string& arr_name);
 };
 
 }  // namespace media::audio::test

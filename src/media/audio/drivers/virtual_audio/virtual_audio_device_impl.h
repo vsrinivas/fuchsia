@@ -25,8 +25,8 @@ class VirtualAudioDeviceImpl : public fuchsia::virtualaudio::Input,
       "Fuchsia Virtual Audio Group (default manufacturer name********)";
   static constexpr char kDefaultProductName[] =
       "Virgil v1 (default unchanged product name*********************)";
-  static constexpr uint8_t kDefaultUniqueId[16] = {
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0};
+  static constexpr uint8_t kDefaultUniqueId[16] = {1, 2,  3,  4,  5,  6,  7,  8,
+                                                   9, 10, 11, 12, 13, 14, 15, 0};
 
   // One very limited range for basic audio support by default.
   static constexpr audio_stream_format_range_t kDefaultFormatRange = {
@@ -47,35 +47,30 @@ class VirtualAudioDeviceImpl : public fuchsia::virtualaudio::Input,
   static constexpr uint32_t kDefaultMaxBufferFrames = 1 << 19;
   static constexpr uint32_t kDefaultModuloBufferFrames = 1;
 
-  static constexpr audio::audio_proto::GetGainResp kDefaultGainState = {
-      .cur_mute = false,
-      .cur_agc = false,
-      .cur_gain = -0.75f,
-      .can_mute = true,
-      .can_agc = false,
-      .min_gain = -160.0f,
-      .max_gain = 24.0f,
-      .gain_step = 0.25f};
+  static constexpr audio::audio_proto::GetGainResp kDefaultGainState = {.cur_mute = false,
+                                                                        .cur_agc = false,
+                                                                        .cur_gain = -0.75f,
+                                                                        .can_mute = true,
+                                                                        .can_agc = false,
+                                                                        .min_gain = -160.0f,
+                                                                        .max_gain = 24.0f,
+                                                                        .gain_step = 0.25f};
 
   static constexpr bool kDefaultPlugged = true;
   static constexpr bool kDefaultHardwired = false;
   static constexpr bool kDefaultPlugCanNotify = true;
 
-  static fbl::unique_ptr<VirtualAudioDeviceImpl> Create(
-      VirtualAudioControlImpl* owner, bool is_input);
+  static fbl::unique_ptr<VirtualAudioDeviceImpl> Create(VirtualAudioControlImpl* owner,
+                                                        bool is_input);
 
   // Execute the given task on the FIDL channel's main dispatcher thread.
   // Used to deliver callbacks or events, from the driver execution domain.
   void PostToDispatcher(fit::closure task_to_post);
 
-  void SetBinding(
-      fidl::Binding<fuchsia::virtualaudio::Input,
-                    fbl::unique_ptr<virtual_audio::VirtualAudioDeviceImpl>>*
-          binding);
-  void SetBinding(
-      fidl::Binding<fuchsia::virtualaudio::Output,
-                    fbl::unique_ptr<virtual_audio::VirtualAudioDeviceImpl>>*
-          binding);
+  void SetBinding(fidl::Binding<fuchsia::virtualaudio::Input,
+                                fbl::unique_ptr<virtual_audio::VirtualAudioDeviceImpl>>* binding);
+  void SetBinding(fidl::Binding<fuchsia::virtualaudio::Output,
+                                fbl::unique_ptr<virtual_audio::VirtualAudioDeviceImpl>>* binding);
 
   virtual bool CreateStream(zx_device_t* devnode);
   void RemoveStream();
@@ -92,9 +87,8 @@ class VirtualAudioDeviceImpl : public fuchsia::virtualaudio::Input,
   void SetProduct(std::string product_name) override;
   void SetUniqueId(std::array<uint8_t, 16> unique_id) override;
 
-  void AddFormatRange(uint32_t format_flags, uint32_t min_rate,
-                      uint32_t max_rate, uint8_t min_chans, uint8_t max_chans,
-                      uint16_t rate_family_flags) override;
+  void AddFormatRange(uint32_t format_flags, uint32_t min_rate, uint32_t max_rate,
+                      uint8_t min_chans, uint8_t max_chans, uint16_t rate_family_flags) override;
   void ClearFormatRanges() override;
 
   void SetFifoDepth(uint32_t fifo_depth_bytes) override;
@@ -102,13 +96,12 @@ class VirtualAudioDeviceImpl : public fuchsia::virtualaudio::Input,
   void SetRingBufferRestrictions(uint32_t min_frames, uint32_t max_frames,
                                  uint32_t modulo_frames) override;
 
-  void SetGainProperties(float min_gain_db, float max_gain_db,
-                         float gain_step_db, float current_gain_db,
-                         bool can_mute, bool current_mute, bool can_agc,
+  void SetGainProperties(float min_gain_db, float max_gain_db, float gain_step_db,
+                         float current_gain_db, bool can_mute, bool current_mute, bool can_agc,
                          bool current_agc) override;
 
-  void SetPlugProperties(zx_time_t plug_change_time, bool plugged,
-                         bool hardwired, bool can_notify) override;
+  void SetPlugProperties(zx_time_t plug_change_time, bool plugged, bool hardwired,
+                         bool can_notify) override;
 
   void ResetConfiguration() override;
 
@@ -118,21 +111,15 @@ class VirtualAudioDeviceImpl : public fuchsia::virtualaudio::Input,
   void Add() override;
   void Remove() override;
 
-  void GetFormat(
-      fuchsia::virtualaudio::Device::GetFormatCallback callback) override;
-  virtual void NotifySetFormat(uint32_t frames_per_second,
-                               uint32_t sample_format, uint32_t num_channels,
-                               zx_duration_t external_delay);
+  void GetFormat(fuchsia::virtualaudio::Device::GetFormatCallback callback) override;
+  virtual void NotifySetFormat(uint32_t frames_per_second, uint32_t sample_format,
+                               uint32_t num_channels, zx_duration_t external_delay);
 
-  void GetGain(
-      fuchsia::virtualaudio::Device::GetGainCallback callback) override;
-  virtual void NotifySetGain(bool current_mute, bool current_agc,
-                             float current_gain_db);
+  void GetGain(fuchsia::virtualaudio::Device::GetGainCallback callback) override;
+  virtual void NotifySetGain(bool current_mute, bool current_agc, float current_gain_db);
 
-  void GetBuffer(
-      fuchsia::virtualaudio::Device::GetBufferCallback callback) override;
-  virtual void NotifyBufferCreated(zx::vmo ring_buffer_vmo,
-                                   uint32_t num_ring_buffer_frames,
+  void GetBuffer(fuchsia::virtualaudio::Device::GetBufferCallback callback) override;
+  virtual void NotifyBufferCreated(zx::vmo ring_buffer_vmo, uint32_t num_ring_buffer_frames,
                                    uint32_t notifications_per_ring);
 
   void SetNotificationFrequency(uint32_t notifications_per_ring) override;
@@ -140,10 +127,8 @@ class VirtualAudioDeviceImpl : public fuchsia::virtualaudio::Input,
   virtual void NotifyStart(zx_time_t start_time);
   virtual void NotifyStop(zx_time_t stop_time, uint32_t ring_buffer_position);
 
-  void GetPosition(
-      fuchsia::virtualaudio::Device::GetPositionCallback callback) override;
-  virtual void NotifyPosition(uint32_t ring_buffer_position,
-                              zx_time_t start_time);
+  void GetPosition(fuchsia::virtualaudio::Device::GetPositionCallback callback) override;
+  virtual void NotifyPosition(uint32_t ring_buffer_position, zx_time_t start_time);
 
   void ChangePlugState(zx_time_t plug_change_time, bool plugged) override;
 
@@ -164,11 +149,9 @@ class VirtualAudioDeviceImpl : public fuchsia::virtualaudio::Input,
   // get dispatched from another thread at around this time, so we always check
   // the binding __once we get to our main thread__, wherever these are used.
   fidl::Binding<fuchsia::virtualaudio::Input,
-                fbl::unique_ptr<virtual_audio::VirtualAudioDeviceImpl>>*
-      input_binding_ = nullptr;
+                fbl::unique_ptr<virtual_audio::VirtualAudioDeviceImpl>>* input_binding_ = nullptr;
   fidl::Binding<fuchsia::virtualaudio::Output,
-                fbl::unique_ptr<virtual_audio::VirtualAudioDeviceImpl>>*
-      output_binding_ = nullptr;
+                fbl::unique_ptr<virtual_audio::VirtualAudioDeviceImpl>>* output_binding_ = nullptr;
 
   // We initialize no member variables here, nor in the constructor -- we do
   // everything within Init() so that ResetConfiguration() has the same effect.

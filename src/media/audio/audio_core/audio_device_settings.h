@@ -21,9 +21,8 @@ namespace media::audio {
 class AudioDevice;
 class AudioDriver;
 
-class AudioDeviceSettings
-    : public fbl::RefCounted<AudioDeviceSettings>,
-      public fbl::WAVLTreeContainable<fbl::RefPtr<AudioDeviceSettings>> {
+class AudioDeviceSettings : public fbl::RefCounted<AudioDeviceSettings>,
+                            public fbl::WAVLTreeContainable<fbl::RefPtr<AudioDeviceSettings>> {
  public:
   struct GainState {
     float gain_db = 0.0f;
@@ -32,8 +31,7 @@ class AudioDeviceSettings
     bool agc_enabled = false;
   };
 
-  static fbl::RefPtr<AudioDeviceSettings> Create(const AudioDriver& drv,
-                                                 bool is_input) {
+  static fbl::RefPtr<AudioDeviceSettings> Create(const AudioDriver& drv, bool is_input) {
     return fbl::AdoptRef(new AudioDeviceSettings(drv, is_input));
   }
 
@@ -80,8 +78,8 @@ class AudioDeviceSettings
   // and return true if there was a meaningful change to the internal gain
   // state which would warrant waking up the AudioDevice.  Otherwise, return
   // false.
-  bool SetGainInfo(const fuchsia::media::AudioGainInfo& info,
-                   uint32_t set_flags) FXL_LOCKS_EXCLUDED(settings_lock_);
+  bool SetGainInfo(const fuchsia::media::AudioGainInfo& info, uint32_t set_flags)
+      FXL_LOCKS_EXCLUDED(settings_lock_);
 
   // GetGainInfo
   // Fetch a copy of the current gain state packed into a FIDL structure
@@ -103,8 +101,7 @@ class AudioDeviceSettings
 
   // Snapshot the current gain state and return flags which indicate which of
   // the gain settings have changed since the last observation.
-  audio_set_gain_flags_t SnapshotGainState(GainState* out_state)
-      FXL_LOCKS_EXCLUDED(settings_lock_);
+  audio_set_gain_flags_t SnapshotGainState(GainState* out_state) FXL_LOCKS_EXCLUDED(settings_lock_);
 
   //////////////////////////////////////////////////////////////////////////////
   //
@@ -119,8 +116,7 @@ class AudioDeviceSettings
   zx_status_t Serialize();
   void UpdateCommitTimeouts();
   void CancelCommitTimeouts();
-  void CreateSettingsPath(const std::string& prefix, char* out_path,
-                          size_t out_path_len);
+  void CreateSettingsPath(const std::string& prefix, char* out_path, size_t out_path_len);
 
   static bool writes_enabled_;
   static bool initialized_;
@@ -165,8 +161,8 @@ class AudioDeviceSettings
   // settings_lock_.
   mutable fbl::Mutex settings_lock_;
   GainState gain_state_ FXL_GUARDED_BY(settings_lock_);
-  audio_set_gain_flags_t gain_state_dirty_flags_
-      FXL_GUARDED_BY(settings_lock_) = static_cast<audio_set_gain_flags_t>(0);
+  audio_set_gain_flags_t gain_state_dirty_flags_ FXL_GUARDED_BY(settings_lock_) =
+      static_cast<audio_set_gain_flags_t>(0);
 };
 
 }  // namespace media::audio

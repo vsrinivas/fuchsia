@@ -32,9 +32,7 @@ class MediaApp {
   void set_int16_format(bool use_int16) { use_int16_ = use_int16; }
   void set_int24_format(bool use_int24) { use_int24_ = use_int24; }
 
-  void set_output_type(OutputSignalType output_type) {
-    output_signal_type_ = output_type;
-  }
+  void set_output_type(OutputSignalType output_type) { output_signal_type_ = output_type; }
   void set_frequency(double frequency) { frequency_ = frequency; }
   void set_amplitude(float amplitude) { amplitude_ = amplitude; }
 
@@ -64,12 +62,8 @@ class MediaApp {
   }
 
   void set_will_ramp_stream_gain() { ramp_stream_gain_ = true; }
-  void set_ramp_duration_nsec(zx_duration_t duration_nsec) {
-    ramp_duration_nsec_ = duration_nsec;
-  }
-  void set_ramp_target_gain_db(float gain_db) {
-    ramp_target_gain_db_ = gain_db;
-  }
+  void set_ramp_duration_nsec(zx_duration_t duration_nsec) { ramp_duration_nsec_ = duration_nsec; }
+  void set_ramp_target_gain_db(float gain_db) { ramp_target_gain_db_ = gain_db; }
 
   void set_system_gain(float gain_db) {
     set_system_gain_ = true;
@@ -102,15 +96,11 @@ class MediaApp {
   zx_status_t CreateMemoryMapping();
 
   fuchsia::media::StreamPacket CreateAudioPacket(uint64_t packet_num);
-  void GenerateAudioForPacket(fuchsia::media::StreamPacket packet,
-                              uint64_t payload_num);
+  void GenerateAudioForPacket(fuchsia::media::StreamPacket packet, uint64_t payload_num);
   template <typename SampleType>
-  static void WriteAudioIntoBuffer(SampleType* audio_buffer,
-                                   uint32_t num_frames,
-                                   uint64_t frames_since_start,
-                                   OutputSignalType signal_type,
-                                   uint32_t num_chans, double frames_per_period,
-                                   double amp_scalar);
+  static void WriteAudioIntoBuffer(SampleType* audio_buffer, uint32_t num_frames,
+                                   uint64_t frames_since_start, OutputSignalType signal_type,
+                                   uint32_t num_chans, double frames_per_period, double amp_scalar);
 
   void SendPacket(uint64_t payload_num);
   void OnSendPacketComplete();

@@ -16,17 +16,13 @@
 
 namespace media::audio {
 
-class AudioRendererFormatInfo
-    : public fbl::RefCounted<AudioRendererFormatInfo> {
+class AudioRendererFormatInfo : public fbl::RefCounted<AudioRendererFormatInfo> {
  public:
-  static fbl::RefPtr<AudioRendererFormatInfo> Create(
-      fuchsia::media::AudioStreamType format);
+  static fbl::RefPtr<AudioRendererFormatInfo> Create(fuchsia::media::AudioStreamType format);
 
   const fuchsia::media::AudioStreamType& format() const { return format_; }
   const TimelineRate& frames_per_ns() const { return frames_per_ns_; }
-  const TimelineRate& frame_to_media_ratio() const {
-    return frame_to_media_ratio_;
-  }
+  const TimelineRate& frame_to_media_ratio() const { return frame_to_media_ratio_; }
   uint32_t bytes_per_frame() const { return bytes_per_frame_; }
 
  private:

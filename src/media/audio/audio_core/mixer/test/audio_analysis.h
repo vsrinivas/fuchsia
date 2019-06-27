@@ -20,8 +20,7 @@ bool CompareBuffers(const T* actual, const T* expected, uint32_t buf_size,
 // Numerically compare buffer of integers to a specific value. A bool represents
 // whether we expect the comparison to fail (for error logging purposes).
 template <typename T>
-bool CompareBufferToVal(const T* buf, T val, uint32_t buf_size,
-                        bool expect_to_pass = true,
+bool CompareBufferToVal(const T* buf, T val, uint32_t buf_size, bool expect_to_pass = true,
                         bool float_tolerance = false);
 
 // Print values of a double-float array -- used during debugging, not test-runs
@@ -37,18 +36,18 @@ void DisplayVals(const double* buf, uint32_t buf_size);
 // in radians, so runs from -M_PI to +M_PI); 'accum' represents whether to add
 // the results to current contents of the buffer, or to overwrite it.
 template <typename T>
-void GenerateCosine(T* buffer, uint32_t buf_size, double freq, bool accumulate,
-                    double magn = 1.0, double phase = 0.0);
+void GenerateCosine(T* buffer, uint32_t buf_size, double freq, bool accumulate, double magn = 1.0,
+                    double phase = 0.0);
 
 template <typename T>
-void AccumulateCosine(T* buffer, uint32_t buf_size, double freq,
-                      double magn = 1.0, double phase = 0.0) {
+void AccumulateCosine(T* buffer, uint32_t buf_size, double freq, double magn = 1.0,
+                      double phase = 0.0) {
   GenerateCosine(buffer, buf_size, freq, true, magn, phase);
 }
 
 template <typename T>
-void OverwriteCosine(T* buffer, uint32_t buf_size, double freq,
-                     double magn = 1.0, double phase = 0.0) {
+void OverwriteCosine(T* buffer, uint32_t buf_size, double freq, double magn = 1.0,
+                     double phase = 0.0) {
   GenerateCosine(buffer, buf_size, freq, false, magn, phase);
 }
 
@@ -68,14 +67,12 @@ double GetPhase(double real, double imag);
 // Convert provided real-imag (cartesian) data into magn-phase (polar) format.
 // This is done with 2 in-buffers 2 two out-buffers -- NOT 2 in-out-buffers.
 // TODO(mpuryear): will clients (tests) want this transformed in-place?
-void RectangularToPolar(const double* real, const double* imag,
-                        uint32_t buf_size, double* magn,
+void RectangularToPolar(const double* real, const double* imag, uint32_t buf_size, double* magn,
                         double* phase = nullptr);
 
 void RealDFT(const double* reals, uint32_t len, double* r_freq, double* i_freq);
 
-void InverseDFT(double* real, double* imag, uint32_t buf_size,
-                double* real_out);
+void InverseDFT(double* real, double* imag, uint32_t buf_size, double* real_out);
 
 void InverseFFT(double* real, double* imag, uint32_t buf_size);
 
@@ -85,9 +82,8 @@ void InverseFFT(double* real, double* imag, uint32_t buf_size);
 // all other content. Useful for frequency response and signal-to-noise.
 // Internally uses an FFT, so buf_size must be a power-of-two.
 template <typename T>
-void MeasureAudioFreq(T* audio, uint32_t buf_size, uint32_t freq,
-                      double* magn_signal, double* magn_other = nullptr,
-                      double* phase_signal = nullptr);
+void MeasureAudioFreq(T* audio, uint32_t buf_size, uint32_t freq, double* magn_signal,
+                      double* magn_other = nullptr, double* phase_signal = nullptr);
 
 }  // namespace media::audio::test
 

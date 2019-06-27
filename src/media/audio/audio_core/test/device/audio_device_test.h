@@ -14,10 +14,9 @@
 
 namespace media::audio::test {
 
-constexpr uint32_t kGainFlagMask =
-    fuchsia::media::AudioGainInfoFlag_Mute |
-    fuchsia::media::AudioGainInfoFlag_AgcSupported |
-    fuchsia::media::AudioGainInfoFlag_AgcEnabled;
+constexpr uint32_t kGainFlagMask = fuchsia::media::AudioGainInfoFlag_Mute |
+                                   fuchsia::media::AudioGainInfoFlag_AgcSupported |
+                                   fuchsia::media::AudioGainInfoFlag_AgcEnabled;
 constexpr uint32_t kSetFlagMask = fuchsia::media::SetAudioGainFlag_GainValid |
                                   fuchsia::media::SetAudioGainFlag_MuteValid |
                                   fuchsia::media::SetAudioGainFlag_AgcValid;
@@ -25,8 +24,8 @@ constexpr uint32_t kSetFlagMask = fuchsia::media::SetAudioGainFlag_GainValid |
 // We set vars to these values before async callbacks, to detect no-response.
 constexpr uint16_t kInvalidDeviceCount = -1;
 constexpr uint64_t kInvalidDeviceToken = -1;
-constexpr fuchsia::media::AudioGainInfo kInvalidGainInfo = {
-    .gain_db = NAN, .flags = ~kGainFlagMask};
+constexpr fuchsia::media::AudioGainInfo kInvalidGainInfo = {.gain_db = NAN,
+                                                            .flags = ~kGainFlagMask};
 const fuchsia::media::AudioDeviceInfo kInvalidDeviceInfo = {
     .name = "Invalid name",
     .unique_id = "Invalid unique_id (len 32 chars)",
@@ -37,12 +36,10 @@ const fuchsia::media::AudioDeviceInfo kInvalidDeviceInfo = {
 
 class AudioDeviceTest : public AudioTestBase {
  public:
-  static void SetStartupContext(
-      std::unique_ptr<sys::ComponentContext> startup_context);
+  static void SetStartupContext(std::unique_ptr<sys::ComponentContext> startup_context);
 
  protected:
-  static std::string PopulateUniqueIdStr(
-      const std::array<uint8_t, 16>& unique_id);
+  static std::string PopulateUniqueIdStr(const std::array<uint8_t, 16>& unique_id);
 
   void SetUp() override;
   void TearDown() override;
@@ -62,14 +59,12 @@ class AudioDeviceTest : public AudioTestBase {
   void ExpectDefaultChanged(uint64_t default_token);
   void ExpectGainChanged(uint64_t gain_token);
 
-  uint32_t GainFlagsFromBools(bool cur_mute, bool cur_agc, bool can_mute,
-                              bool can_agc);
+  uint32_t GainFlagsFromBools(bool cur_mute, bool cur_agc, bool can_mute, bool can_agc);
   uint32_t SetFlagsFromBools(bool set_gain, bool set_mute, bool set_agc);
 
   void RetrieveDefaultDevInfoUsingGetDevices(bool get_input);
   void RetrieveGainInfoUsingGetDevices(uint64_t token);
-  void RetrieveGainInfoUsingGetDeviceGain(uint64_t token,
-                                          bool valid_token = true);
+  void RetrieveGainInfoUsingGetDeviceGain(uint64_t token, bool valid_token = true);
   void RetrieveTokenUsingGetDefault(bool is_input);
   void RetrievePreExistingDevices();
   bool HasPreExistingDevices();

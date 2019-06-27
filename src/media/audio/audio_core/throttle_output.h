@@ -15,8 +15,7 @@
 
 namespace media::audio {
 
-static constexpr fxl::TimeDelta TRIM_PERIOD =
-    fxl::TimeDelta::FromMilliseconds(10);
+static constexpr fxl::TimeDelta TRIM_PERIOD = fxl::TimeDelta::FromMilliseconds(10);
 
 class ThrottleOutput : public AudioOutput {
  public:
@@ -71,8 +70,7 @@ class ThrottleOutput : public AudioOutput {
 
   // AudioDevice implementation.
   // No one should ever be trying to apply gain limits for a throttle output.
-  void ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info,
-                       uint32_t set_flags) override {
+  void ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info, uint32_t set_flags) override {
     FXL_DCHECK(false);
   }
 

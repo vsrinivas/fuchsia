@@ -72,17 +72,14 @@ class AudioPipelineTest : public AudioCoreTestBase {
   void SetUpBuffers();
 
   uint64_t RingBufferSize() const { return kDefaultFrameSize * num_rb_frames_; }
-  uint8_t* RingBufferStart() const {
-    return reinterpret_cast<uint8_t*>(ring_buffer_.start());
-  }
+  uint8_t* RingBufferStart() const { return reinterpret_cast<uint8_t*>(ring_buffer_.start()); }
   void SnapshotRingBuffer();
   uint32_t FirstSnapshotFrameSilence();
   bool RemainingSnapshotIsSilence(uint32_t frame_num);
 
   void MapAndAddRendererBuffer(uint32_t buffer_id);
 
-  void CreateAndSendPackets(uint32_t num_packets, int64_t initial_pts,
-                            int16_t data_val);
+  void CreateAndSendPackets(uint32_t num_packets, int64_t initial_pts, int16_t data_val);
   void WaitForPacket(uint32_t packet_num);
 
   void SynchronizedPlay();

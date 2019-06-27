@@ -18,8 +18,7 @@
 
 namespace media::audio {
 
-AudioDeviceManager::AudioDeviceManager(AudioCoreImpl* service)
-    : service_(service) {}
+AudioDeviceManager::AudioDeviceManager(AudioCoreImpl* service) : service_(service) {}
 
 AudioDeviceManager::~AudioDeviceManager() {
   Shutdown();
@@ -34,15 +33,13 @@ zx_status_t AudioDeviceManager::Init() {
   // Instantiate and initialize the default throttle output.
   auto throttle_output = ThrottleOutput::Create(this);
   if (throttle_output == nullptr) {
-    FXL_LOG(ERROR)
-        << "AudioDeviceManager failed to create default throttle output!";
+    FXL_LOG(ERROR) << "AudioDeviceManager failed to create default throttle output!";
     return ZX_ERR_NO_MEMORY;
   }
 
   zx_status_t res = throttle_output->Startup();
   if (res != ZX_OK) {
-    FXL_PLOG(ERROR, res)
-        << "AudioDeviceManager failed to initialize the throttle output";
+    FXL_PLOG(ERROR, res) << "AudioDeviceManager failed to initialize the throttle output";
     throttle_output->Shutdown();
   }
   throttle_output_ = std::move(throttle_output);
@@ -110,8 +107,7 @@ void AudioDeviceManager::AddDeviceEnumeratorClient(
   bindings_.AddBinding(this, std::move(request));
 }
 
-zx_status_t AudioDeviceManager::AddDevice(
-    const fbl::RefPtr<AudioDevice>& device) {
+zx_status_t AudioDeviceManager::AddDevice(const fbl::RefPtr<AudioDevice>& device) {
   FXL_DCHECK(device != nullptr);
   FXL_DCHECK(device != throttle_output_);
   FXL_DCHECK(!device->InContainer());
@@ -127,8 +123,7 @@ zx_status_t AudioDeviceManager::AddDevice(
   return res;
 }
 
-void AudioDeviceManager::ActivateDevice(
-    const fbl::RefPtr<AudioDevice>& device) {
+void AudioDeviceManager::ActivateDevice(const fbl::RefPtr<AudioDevice>& device) {
   FXL_DCHECK(device != nullptr);
   FXL_DCHECK(device != throttle_output_);
 
@@ -162,16 +157,14 @@ void AudioDeviceManager::ActivateDevice(
   } else {
     const uint8_t* id = settings->uid().data;
     char id_buf[33];
-    std::snprintf(
-        id_buf, sizeof(id_buf),
-        "%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
-        id[0], id[1], id[2], id[3], id[4], id[5], id[6], id[7], id[8], id[9],
-        id[10], id[11], id[12], id[13], id[14], id[15]);
-    FXL_LOG(WARNING)
-        << "Warning: Device ID (" << device->token()
-        << ") shares a persistent unique ID (" << id_buf
-        << ") with another device in the system.  Initial Settings "
-           "will be cloned from this device, and not persisted";
+    std::snprintf(id_buf, sizeof(id_buf),
+                  "%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x", id[0], id[1],
+                  id[2], id[3], id[4], id[5], id[6], id[7], id[8], id[9], id[10], id[11], id[12],
+                  id[13], id[14], id[15]);
+    FXL_LOG(WARNING) << "Warning: Device ID (" << device->token()
+                     << ") shares a persistent unique ID (" << id_buf
+                     << ") with another device in the system.  Initial Settings "
+                        "will be cloned from this device, and not persisted";
     settings->InitFromClone(*collision);
   }
 
@@ -216,8 +209,7 @@ void AudioDeviceManager::ActivateDevice(
   device->GetDeviceInfo(&info);
 
   auto last_plugged = FindLastPlugged(device->type());
-  info.is_default =
-      (last_plugged && (last_plugged->token() == device->token()));
+  info.is_default = (last_plugged && (last_plugged->token() == device->token()));
 
   for (auto& client : bindings_.bindings()) {
     client->events().OnDeviceAdded(info);
@@ -271,8 +263,8 @@ void AudioDeviceManager::RemoveDevice(const fbl::RefPtr<AudioDevice>& device) {
   }
 }
 
-void AudioDeviceManager::HandlePlugStateChange(
-    const fbl::RefPtr<AudioDevice>& device, bool plugged, zx_time_t plug_time) {
+void AudioDeviceManager::HandlePlugStateChange(const fbl::RefPtr<AudioDevice>& device, bool plugged,
+                                               zx_time_t plug_time) {
   FXL_DCHECK(device != nullptr);
 
   // Update our bookkeeping for device's plug state. If no change, we're done.
@@ -316,8 +308,7 @@ void AudioDeviceManager::GetDevices(GetDevicesCallback cbk) {
       fuchsia::media::AudioDeviceInfo info;
       dev.GetDeviceInfo(&info);
       info.is_default =
-          (dev.token() ==
-           (dev.is_input() ? default_input_token_ : default_output_token_));
+          (dev.token() == (dev.is_input() ? default_input_token_ : default_output_token_));
       ret.push_back(std::move(info));
     }
   }
@@ -325,8 +316,7 @@ void AudioDeviceManager::GetDevices(GetDevicesCallback cbk) {
   cbk(fidl::VectorPtr<fuchsia::media::AudioDeviceInfo>(std::move(ret)));
 }
 
-void AudioDeviceManager::GetDeviceGain(uint64_t device_token,
-                                       GetDeviceGainCallback cbk) {
+void AudioDeviceManager::GetDeviceGain(uint64_t device_token, GetDeviceGainCallback cbk) {
   auto dev = devices_.find(device_token);
 
   fuchsia::media::AudioGainInfo info = {0};
@@ -349,10 +339,8 @@ void AudioDeviceManager::SetDeviceGain(uint64_t device_token,
   }
   // SetGainInfo clamps out-of-range values (e.g. +infinity) into the device-
   // allowed gain range. NAN is undefined (signless); handle it here and exit.
-  if ((set_flags & fuchsia::media::SetAudioGainFlag_GainValid) &&
-      isnan(gain_info.gain_db)) {
-    FXL_DLOG(WARNING) << "Invalid device gain " << gain_info.gain_db
-                      << " dB -- making no change";
+  if ((set_flags & fuchsia::media::SetAudioGainFlag_GainValid) && isnan(gain_info.gain_db)) {
+    FXL_DLOG(WARNING) << "Invalid device gain " << gain_info.gain_db << " dB -- making no change";
     return;
   }
 
@@ -365,18 +353,15 @@ void AudioDeviceManager::SetDeviceGain(uint64_t device_token,
   CommitDirtySettings();
 }
 
-void AudioDeviceManager::GetDefaultInputDevice(
-    GetDefaultInputDeviceCallback cbk) {
+void AudioDeviceManager::GetDefaultInputDevice(GetDefaultInputDeviceCallback cbk) {
   cbk(default_input_token_);
 }
 
-void AudioDeviceManager::GetDefaultOutputDevice(
-    GetDefaultOutputDeviceCallback cbk) {
+void AudioDeviceManager::GetDefaultOutputDevice(GetDefaultOutputDeviceCallback cbk) {
   cbk(default_output_token_);
 }
 
-void AudioDeviceManager::SelectOutputsForAudioRenderer(
-    AudioRendererImpl* audio_renderer) {
+void AudioDeviceManager::SelectOutputsForAudioRenderer(AudioRendererImpl* audio_renderer) {
   FXL_DCHECK(audio_renderer);
   FXL_DCHECK(audio_renderer->format_info_valid());
   FXL_DCHECK(ValidateRoutingPolicy(routing_policy_));
@@ -391,8 +376,7 @@ void AudioDeviceManager::SelectOutputsForAudioRenderer(
       for (auto& device : devices_) {
         FXL_DCHECK(device.is_input() || device.is_output());
         if (device.is_output() && device.plugged()) {
-          LinkOutputToAudioRenderer(static_cast<AudioOutput*>(&device),
-                                    audio_renderer);
+          LinkOutputToAudioRenderer(static_cast<AudioOutput*>(&device), audio_renderer);
         }
       }
     } break;
@@ -410,8 +394,8 @@ void AudioDeviceManager::SelectOutputsForAudioRenderer(
   audio_renderer->RecomputeMinClockLeadTime();
 }
 
-void AudioDeviceManager::LinkOutputToAudioRenderer(
-    AudioOutput* output, AudioRendererImpl* audio_renderer) {
+void AudioDeviceManager::LinkOutputToAudioRenderer(AudioOutput* output,
+                                                   AudioRendererImpl* audio_renderer) {
   FXL_DCHECK(output);
   FXL_DCHECK(audio_renderer);
 
@@ -421,8 +405,8 @@ void AudioDeviceManager::LinkOutputToAudioRenderer(
   if (!audio_renderer->format_info_valid())
     return;
 
-  fbl::RefPtr<AudioLink> link = AudioObject::LinkObjects(
-      fbl::WrapRefPtr(audio_renderer), fbl::WrapRefPtr(output));
+  fbl::RefPtr<AudioLink> link =
+      AudioObject::LinkObjects(fbl::WrapRefPtr(audio_renderer), fbl::WrapRefPtr(output));
   // TODO(johngro): get rid of the throttle output.  See MTWN-52
   if ((link != nullptr) && (output == throttle_output_.get())) {
     FXL_DCHECK(link->source_type() == AudioLink::SourceType::Packet);
@@ -431,8 +415,7 @@ void AudioDeviceManager::LinkOutputToAudioRenderer(
   }
 }
 
-void AudioDeviceManager::AddAudioCapturer(
-    const fbl::RefPtr<AudioCapturerImpl>& audio_capturer) {
+void AudioDeviceManager::AddAudioCapturer(const fbl::RefPtr<AudioCapturerImpl>& audio_capturer) {
   FXL_DCHECK(audio_capturer != nullptr);
   FXL_DCHECK(!audio_capturer->InContainer());
   audio_capturers_.push_back(audio_capturer);
@@ -458,8 +441,7 @@ void AudioDeviceManager::AddAudioCapturer(
   }
 }
 
-void AudioDeviceManager::RemoveAudioCapturer(
-    AudioCapturerImpl* audio_capturer) {
+void AudioDeviceManager::RemoveAudioCapturer(AudioCapturerImpl* audio_capturer) {
   FXL_DCHECK(audio_capturer != nullptr);
   FXL_DCHECK(audio_capturer->InContainer());
   audio_capturers_.erase(*audio_capturer);
@@ -470,10 +452,9 @@ void AudioDeviceManager::ScheduleMainThreadTask(fit::closure task) {
   service_->ScheduleMainThreadTask(std::move(task));
 }
 
-fbl::RefPtr<AudioDevice> AudioDeviceManager::FindLastPlugged(
-    AudioObject::Type type, bool allow_unplugged) {
-  FXL_DCHECK((type == AudioObject::Type::Output) ||
-             (type == AudioObject::Type::Input));
+fbl::RefPtr<AudioDevice> AudioDeviceManager::FindLastPlugged(AudioObject::Type type,
+                                                             bool allow_unplugged) {
+  FXL_DCHECK((type == AudioObject::Type::Output) || (type == AudioObject::Type::Input));
   AudioDevice* best = nullptr;
 
   // TODO(johngro): Consider tracking last-plugged times in a fbl::WAVLTree, so
@@ -481,14 +462,12 @@ fbl::RefPtr<AudioDevice> AudioDeviceManager::FindLastPlugged(
   // not currently outweigh the complexity of maintaining this index.
   for (auto& obj : devices_) {
     auto& device = static_cast<AudioDevice&>(obj);
-    if ((device.type() != type) ||
-        device.device_settings()->disallow_auto_routing()) {
+    if ((device.type() != type) || device.device_settings()->disallow_auto_routing()) {
       continue;
     }
 
     if ((best == nullptr) || (!best->plugged() && device.plugged()) ||
-        ((best->plugged() == device.plugged()) &&
-         (best->plug_time() < device.plug_time()))) {
+        ((best->plugged() == device.plugged()) && (best->plug_time() < device.plug_time()))) {
       best = &device;
     }
   }
@@ -503,11 +482,9 @@ fbl::RefPtr<AudioDevice> AudioDeviceManager::FindLastPlugged(
 // Our policy governing the routing of audio outputs has changed. For the output
 // considered "preferred" (because it was most-recently-added), nothing changes;
 // all other outputs will toggle on or off, depending on the policy chosen.
-void AudioDeviceManager::SetRoutingPolicy(
-    fuchsia::media::AudioOutputRoutingPolicy routing_policy) {
+void AudioDeviceManager::SetRoutingPolicy(fuchsia::media::AudioOutputRoutingPolicy routing_policy) {
   if (!ValidateRoutingPolicy(routing_policy)) {
-    FXL_LOG(ERROR) << "Out-of-range RoutingPolicy("
-                   << fidl::ToUnderlying(routing_policy) << ")";
+    FXL_LOG(ERROR) << "Out-of-range RoutingPolicy(" << fidl::ToUnderlying(routing_policy) << ")";
     // TODO(mpuryear): Once AudioCore has a way to know which connection made
     // this request, terminate that connection now rather than doing nothing.
     return;
@@ -542,8 +519,7 @@ void AudioDeviceManager::SetRoutingPolicy(
 
     // We've excluded inputs, unplugged outputs and the most-recently-plugged
     // output. For each remaining output (based on the new policy), we ...
-    if (routing_policy ==
-        fuchsia::media::AudioOutputRoutingPolicy::LAST_PLUGGED_OUTPUT) {
+    if (routing_policy == fuchsia::media::AudioOutputRoutingPolicy::LAST_PLUGGED_OUTPUT) {
       // ...disconnect it (i.e. link each AudioRenderer to Last-Plugged only),
       // or...
       dev_obj.UnlinkSources();
@@ -565,8 +541,8 @@ void AudioDeviceManager::SetRoutingPolicy(
   }
 }
 
-void AudioDeviceManager::OnDeviceUnplugged(
-    const fbl::RefPtr<AudioDevice>& device, zx_time_t plug_time) {
+void AudioDeviceManager::OnDeviceUnplugged(const fbl::RefPtr<AudioDevice>& device,
+                                           zx_time_t plug_time) {
   FXL_DCHECK(device);
   FXL_DCHECK(ValidateRoutingPolicy(routing_policy_));
 
@@ -590,13 +566,11 @@ void AudioDeviceManager::OnDeviceUnplugged(
       // AudioRenderer to the most-recently-plugged output (if any). Then do the
       // same for each 'loopback' AudioCapturer. Note: our current (hack)
       // routing policy for inputs is always 'last plugged'.
-      FXL_DCHECK(static_cast<AudioOutput*>(device.get()) !=
-                 throttle_output_.get());
+      FXL_DCHECK(static_cast<AudioOutput*>(device.get()) != throttle_output_.get());
 
       fbl::RefPtr<AudioOutput> replacement = FindLastPluggedOutput();
       if (replacement) {
-        if (routing_policy_ ==
-            fuchsia::media::AudioOutputRoutingPolicy::LAST_PLUGGED_OUTPUT) {
+        if (routing_policy_ == fuchsia::media::AudioOutputRoutingPolicy::LAST_PLUGGED_OUTPUT) {
           for (auto& audio_renderer : audio_renderers_) {
             LinkOutputToAudioRenderer(replacement.get(), &audio_renderer);
           }
@@ -644,8 +618,7 @@ void AudioDeviceManager::OnDevicePlugged(const fbl::RefPtr<AudioDevice>& device,
     FXL_DCHECK(ValidateRoutingPolicy(routing_policy_));
 
     bool lp_policy =
-        (routing_policy_ ==
-         fuchsia::media::AudioOutputRoutingPolicy::LAST_PLUGGED_OUTPUT);
+        (routing_policy_ == fuchsia::media::AudioOutputRoutingPolicy::LAST_PLUGGED_OUTPUT);
     bool is_lp = (output == last_plugged);
 
     if (is_lp && lp_policy) {
@@ -700,15 +673,13 @@ void AudioDeviceManager::OnDevicePlugged(const fbl::RefPtr<AudioDevice>& device,
 // output going forward (it is the default output).
 // * If device is an input, then all NON-'loopback' AudioCapturers should listen
 // to this input going forward (it is the default input).
-void AudioDeviceManager::LinkToAudioCapturers(
-    const fbl::RefPtr<AudioDevice>& device) {
+void AudioDeviceManager::LinkToAudioCapturers(const fbl::RefPtr<AudioDevice>& device) {
   bool link_to_loopbacks = device->is_output();
 
   for (auto& audio_capturer : audio_capturers_) {
     if (audio_capturer.loopback() == link_to_loopbacks) {
       audio_capturer.UnlinkSources();
-      AudioObject::LinkObjects(std::move(device),
-                               fbl::WrapRefPtr(&audio_capturer));
+      AudioObject::LinkObjects(std::move(device), fbl::WrapRefPtr(&audio_capturer));
     }
   }
 }
@@ -734,8 +705,8 @@ void AudioDeviceManager::NotifyDeviceGainChanged(const AudioDevice& device) {
 }
 
 void AudioDeviceManager::UpdateDefaultDevice(bool input) {
-  const auto new_dev = FindLastPlugged(input ? AudioObject::Type::Input
-                                             : AudioObject::Type::Output);
+  const auto new_dev =
+      FindLastPlugged(input ? AudioObject::Type::Input : AudioObject::Type::Output);
   uint64_t new_id = new_dev ? new_dev->token() : ZX_KOID_INVALID;
   uint64_t& old_id = input ? default_input_token_ : default_output_token_;
 
@@ -747,10 +718,9 @@ void AudioDeviceManager::UpdateDefaultDevice(bool input) {
   }
 }
 
-void AudioDeviceManager::UpdateDeviceToSystemGain(
-    const fbl::RefPtr<AudioDevice>& device) {
-  constexpr uint32_t set_flags = fuchsia::media::SetAudioGainFlag_GainValid |
-                                 fuchsia::media::SetAudioGainFlag_MuteValid;
+void AudioDeviceManager::UpdateDeviceToSystemGain(const fbl::RefPtr<AudioDevice>& device) {
+  constexpr uint32_t set_flags =
+      fuchsia::media::SetAudioGainFlag_GainValid | fuchsia::media::SetAudioGainFlag_MuteValid;
   fuchsia::media::AudioGainInfo set_cmd = {
       service_->system_gain_db(),
       service_->system_muted() ? fuchsia::media::AudioGainInfoFlag_Mute : 0u};

@@ -109,14 +109,10 @@ void SystemGainMuteTest::PresetSystemGainMute() {
 }
 
 // Set Gain, first resetting state so error can be detected.
-void SystemGainMuteTest::SetSystemGain(float gain_db) {
-  audio_core_->SetSystemGain(gain_db);
-}
+void SystemGainMuteTest::SetSystemGain(float gain_db) { audio_core_->SetSystemGain(gain_db); }
 
 // Set Mute, first resetting state variable so error can be detected.
-void SystemGainMuteTest::SetSystemMute(bool mute) {
-  audio_core_->SetSystemMute(mute);
-}
+void SystemGainMuteTest::SetSystemMute(bool mute) { audio_core_->SetSystemMute(mute); }
 
 // Expecting to receive a callback, wait for it and check for errors.
 void SystemGainMuteTest::ExpectGainCallback(float gain_db, bool mute) {
@@ -204,8 +200,7 @@ TEST_F(AudioTest, CreateAudioCapturer) {
   audio_capturer_.Unbind();
 
   // ...allow them to completely unbind. Will it affect their parent/child?
-  audio_capturer_2->GetStreamType(
-      CompletionCallback([](fuchsia::media::StreamType) {}));
+  audio_capturer_2->GetStreamType(CompletionCallback([](fuchsia::media::StreamType) {}));
   ExpectCallback();
 
   // Validate AudioCapturerSync was successfully created.
@@ -223,20 +218,16 @@ TEST_F(AudioTest, CreateAudioCapturer) {
 
 // Test setting (and re-setting) the audio output routing policy.
 TEST_F(AudioTest, SetRoutingPolicy) {
-  audio_core_->SetRoutingPolicy(
-      fuchsia::media::AudioOutputRoutingPolicy::ALL_PLUGGED_OUTPUTS);
+  audio_core_->SetRoutingPolicy(fuchsia::media::AudioOutputRoutingPolicy::ALL_PLUGGED_OUTPUTS);
 
   // Setting policy again should have no effect.
-  audio_core_->SetRoutingPolicy(
-      fuchsia::media::AudioOutputRoutingPolicy::ALL_PLUGGED_OUTPUTS);
+  audio_core_->SetRoutingPolicy(fuchsia::media::AudioOutputRoutingPolicy::ALL_PLUGGED_OUTPUTS);
 
   // Setting policy to different mode.
-  audio_core_->SetRoutingPolicy(
-      fuchsia::media::AudioOutputRoutingPolicy::LAST_PLUGGED_OUTPUT);
+  audio_core_->SetRoutingPolicy(fuchsia::media::AudioOutputRoutingPolicy::LAST_PLUGGED_OUTPUT);
 
   // Give time for Disconnect to occur if it must, but we expect this callback.
-  audio_core_.events().SystemGainMuteChanged =
-      CompletionCallback([](float, bool) {});
+  audio_core_.events().SystemGainMuteChanged = CompletionCallback([](float, bool) {});
 
   audio_core_->SetSystemGain(-1.0f);
   audio_core_->SetSystemGain(0.0f);
@@ -246,12 +237,10 @@ TEST_F(AudioTest, SetRoutingPolicy) {
 // Out-of-range enum should be blocked at sender-side with a debug message
 // printed to stderr, and not disconnect.
 TEST_F(AudioTest, SetBadRoutingPolicy) {
-  audio_core_->SetRoutingPolicy(
-      static_cast<fuchsia::media::AudioOutputRoutingPolicy>(-1u));
+  audio_core_->SetRoutingPolicy(static_cast<fuchsia::media::AudioOutputRoutingPolicy>(-1u));
 
   // Give time for Disconnect to occur if it must, but we expect this callback.
-  audio_core_.events().SystemGainMuteChanged =
-      CompletionCallback([](float gain_db, bool muted) {});
+  audio_core_.events().SystemGainMuteChanged = CompletionCallback([](float gain_db, bool muted) {});
 
   audio_core_->SetSystemGain(-1.0f);
   audio_core_->SetSystemGain(0.0f);

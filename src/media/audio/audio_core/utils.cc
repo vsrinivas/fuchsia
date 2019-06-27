@@ -14,10 +14,9 @@
 
 namespace media::audio {
 
-zx_status_t SelectBestFormat(
-    const std::vector<audio_stream_format_range_t>& fmts,
-    uint32_t* frames_per_second_inout, uint32_t* channels_inout,
-    fuchsia::media::AudioSampleFormat* sample_format_inout) {
+zx_status_t SelectBestFormat(const std::vector<audio_stream_format_range_t>& fmts,
+                             uint32_t* frames_per_second_inout, uint32_t* channels_inout,
+                             fuchsia::media::AudioSampleFormat* sample_format_inout) {
   if ((frames_per_second_inout == nullptr) || (channels_inout == nullptr) ||
       (sample_format_inout == nullptr)) {
     return ZX_ERR_INVALID_ARGS;
@@ -27,11 +26,10 @@ zx_status_t SelectBestFormat(
   uint32_t pref_channels = *channels_inout;
   audio_sample_format_t pref_sample_format;
 
-  if (!driver_utils::AudioSampleFormatToDriverSampleFormat(
-          *sample_format_inout, &pref_sample_format)) {
+  if (!driver_utils::AudioSampleFormatToDriverSampleFormat(*sample_format_inout,
+                                                           &pref_sample_format)) {
     FXL_LOG(WARNING) << "Failed to convert FIDL sample format ("
-                     << static_cast<uint32_t>(*sample_format_inout)
-                     << ") to driver sample format.";
+                     << static_cast<uint32_t>(*sample_format_inout) << ") to driver sample format.";
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -41,8 +39,7 @@ zx_status_t SelectBestFormat(
   uint32_t best_score = 0;
   uint32_t best_frame_rate_delta = std::numeric_limits<uint32_t>::max();
 
-  constexpr uint32_t U8_FMT =
-      AUDIO_SAMPLE_FORMAT_8BIT | AUDIO_SAMPLE_FORMAT_FLAG_UNSIGNED;
+  constexpr uint32_t U8_FMT = AUDIO_SAMPLE_FORMAT_8BIT | AUDIO_SAMPLE_FORMAT_FLAG_UNSIGNED;
   constexpr uint32_t S16_FMT = AUDIO_SAMPLE_FORMAT_16BIT;
   constexpr uint32_t S24_FMT = AUDIO_SAMPLE_FORMAT_24BIT_IN32;
   constexpr uint32_t F32_FMT = AUDIO_SAMPLE_FORMAT_32BIT_FLOAT;
@@ -52,8 +49,7 @@ zx_status_t SelectBestFormat(
   //
   // TODO(johngro) : clean this up as part of fixing MTWN-54
   if ((pref_sample_format & AUDIO_SAMPLE_FORMAT_FLAG_INVERT_ENDIAN) ||
-      (((pref_sample_format & U8_FMT) != U8_FMT) &&
-       ((pref_sample_format & S16_FMT) != S16_FMT) &&
+      (((pref_sample_format & U8_FMT) != U8_FMT) && ((pref_sample_format & S16_FMT) != S16_FMT) &&
        ((pref_sample_format & S24_FMT) != S24_FMT) &&
        ((pref_sample_format & F32_FMT) != F32_FMT))) {
     pref_sample_format = AUDIO_SAMPLE_FORMAT_16BIT;
@@ -102,8 +98,7 @@ zx_status_t SelectBestFormat(
     // channel range and score 1 point.
     uint32_t this_channels;
     int channel_count_score;
-    if ((pref_channels >= range.min_channels) &&
-        (pref_channels <= range.max_channels)) {
+    if ((pref_channels >= range.min_channels) && (pref_channels <= range.max_channels)) {
       this_channels = pref_channels;
       channel_count_score = 3;
     } else if ((2 >= range.min_channels) && (2 <= range.max_channels)) {
@@ -120,8 +115,7 @@ zx_status_t SelectBestFormat(
     //
     if (range.min_frames_per_second > range.max_frames_per_second) {
       // Skip this frame rate range entirely if it is empty.
-      FXL_LOG(INFO) << "Skipping empty frame rate range ["
-                    << range.min_frames_per_second << ", "
+      FXL_LOG(INFO) << "Skipping empty frame rate range [" << range.min_frames_per_second << ", "
                     << range.max_frames_per_second
                     << "] while searching for best format in driver list.";
       continue;
@@ -166,8 +160,7 @@ zx_status_t SelectBestFormat(
           // before, just choose it.  If we were already going to scale up,
           // pick the frame rate which is closer to our preference.
           // Otherwise, do nothing.
-          if ((frame_rate_score < 2) ||
-              ((frame_rate_score == 2) && (rate < this_frame_rate))) {
+          if ((frame_rate_score < 2) || ((frame_rate_score == 2) && (rate < this_frame_rate))) {
             this_frame_rate = rate;
             frame_rate_score = 2;
             frame_rate_delta = rate - pref_frame_rate;
@@ -179,8 +172,7 @@ zx_status_t SelectBestFormat(
           // before, just choose it.  If we were already going to scale down,
           // pick the frame rate which is closer to our preference.
           // Otherwise, do nothing.
-          if ((frame_rate_score < 1) ||
-              ((frame_rate_score == 1) && (rate > this_frame_rate))) {
+          if ((frame_rate_score < 1) || ((frame_rate_score == 1) && (rate > this_frame_rate))) {
             this_frame_rate = rate;
             frame_rate_score = 1;
             frame_rate_delta = pref_frame_rate - rate;
@@ -194,9 +186,8 @@ zx_status_t SelectBestFormat(
     // though min was <= max as it should be)  Debug log a warning, then skip
     // the range entirely.
     if (frame_rate_score == 0) {
-      FXL_LOG(INFO) << "Skipping empty discrete frame rate range ["
-                    << range.min_frames_per_second << ", "
-                    << range.max_frames_per_second << "] (flags " << range.flags
+      FXL_LOG(INFO) << "Skipping empty discrete frame rate range [" << range.min_frames_per_second
+                    << ", " << range.max_frames_per_second << "] (flags " << range.flags
                     << ") while searching for best format";
       continue;
     }
@@ -210,8 +201,8 @@ zx_status_t SelectBestFormat(
             + frame_rate_score;           // frame rate is the least important.
 
     FXL_DCHECK(score > 0);
-    FXL_DCHECK(::audio::utils::FormatIsCompatible(
-        this_frame_rate, this_channels, this_sample_format, range));
+    FXL_DCHECK(::audio::utils::FormatIsCompatible(this_frame_rate, this_channels,
+                                                  this_sample_format, range));
 
     // If this score is better than the current best score, or this score ties
     // the current best score but the frame rate distance is less, then this is
@@ -233,8 +224,7 @@ zx_status_t SelectBestFormat(
   }
 
   __UNUSED bool convert_res =
-      driver_utils::DriverSampleFormatToAudioSampleFormat(best_sample_format,
-                                                          sample_format_inout);
+      driver_utils::DriverSampleFormatToAudioSampleFormat(best_sample_format, sample_format_inout);
   FXL_DCHECK(convert_res);
 
   *channels_inout = best_channels;
@@ -257,9 +247,7 @@ zx_status_t AcquireHighPriorityProfile(zx::profile* profile) {
     }
 
     res = fdio_service_connect(
-        (std::string("/svc/") + fuchsia::scheduler::ProfileProvider::Name_)
-            .c_str(),
-        ch0.get());
+        (std::string("/svc/") + fuchsia::scheduler::ProfileProvider::Name_).c_str(), ch0.get());
     if (res != ZX_OK) {
       FXL_LOG(ERROR) << "Failed to connect to ProfileProvider, res=" << res;
       return res;
@@ -269,8 +257,7 @@ zx_status_t AcquireHighPriorityProfile(zx::profile* profile) {
 
     zx_status_t fidl_status;
     zx::profile res_profile;
-    res = provider.GetProfile(24 /* HIGH_PRIORITY */,
-                              "src/media/audio/audio_core", &fidl_status,
+    res = provider.GetProfile(24 /* HIGH_PRIORITY */, "src/media/audio/audio_core", &fidl_status,
                               &res_profile);
     if (res != ZX_OK) {
       FXL_LOG(ERROR) << "Failed to create profile, res=" << res;

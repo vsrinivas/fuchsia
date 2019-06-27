@@ -20,9 +20,7 @@ namespace media::audio::test {
 // These tests verifies async usage of AudioDeviceEnumerator w/SystemGain.
 class VirtualAudioSystemGainTest : public VirtualAudioDeviceTest {
  public:
-  static void TearDownTestSuite() {
-    VirtualAudioDeviceTest::DisableVirtualDevices();
-  }
+  static void TearDownTestSuite() { VirtualAudioDeviceTest::DisableVirtualDevices(); }
 
  protected:
   void SetUp() override;
@@ -34,10 +32,8 @@ class VirtualAudioSystemGainTest : public VirtualAudioDeviceTest {
   void AddDeviceForSystemGainTesting(bool is_input);
   void ChangeAndVerifySystemGain();
   void ChangeAndVerifySystemMute();
-  void TestDeviceGainAfterChangeSystemGainMute(bool use_get_devices,
-                                               bool is_input, bool set_gain);
-  void TestOnDeviceGainChangedAfterChangeSystemGainMute(bool is_input,
-                                                        bool set_gain);
+  void TestDeviceGainAfterChangeSystemGainMute(bool use_get_devices, bool is_input, bool set_gain);
+  void TestOnDeviceGainChangedAfterChangeSystemGainMute(bool is_input, bool set_gain);
 
   static constexpr float kInitialSystemGainDb = -12.0f;
   static constexpr float kChangedSystemGainDb = -2.0f;
@@ -95,8 +91,7 @@ void VirtualAudioSystemGainTest::ExpectCallback() {
 void VirtualAudioSystemGainTest::ExpectSystemGainMuteChanged() {
   received_system_gain_db_ = NAN;
 
-  ExpectCondition(
-      [this]() { return error_occurred_ || !isnan(received_system_gain_db_); });
+  ExpectCondition([this]() { return error_occurred_ || !isnan(received_system_gain_db_); });
 
   ASSERT_FALSE(error_occurred_);
   ASSERT_FALSE(isnan(received_system_gain_db_));
@@ -111,13 +106,13 @@ void VirtualAudioSystemGainTest::AddDeviceForSystemGainTesting(bool is_input) {
   VirtualAudioDeviceTest::PopulateUniqueIdArr(is_input, unique_id.data());
 
   if (is_input) {
-    input_->SetGainProperties(-160.0f, 24.0f, 0.25f, kInitialSystemGainDb, true,
-                              false, false, false);
+    input_->SetGainProperties(-160.0f, 24.0f, 0.25f, kInitialSystemGainDb, true, false, false,
+                              false);
     input_->SetUniqueId(unique_id);
     input_->Add();
   } else {
-    output_->SetGainProperties(-160.0f, 24.0f, 0.25f, kInitialSystemGainDb,
-                               true, false, false, false);
+    output_->SetGainProperties(-160.0f, 24.0f, 0.25f, kInitialSystemGainDb, true, false, false,
+                               false);
     output_->SetUniqueId(unique_id);
     output_->Add();
   }
@@ -127,12 +122,9 @@ void VirtualAudioSystemGainTest::AddDeviceForSystemGainTesting(bool is_input) {
 
   // If the device is different than expected, set it up as we expect.
   if ((received_device_.gain_info.gain_db != kInitialSystemGainDb) ||
-      ((received_device_.gain_info.flags &
-        fuchsia::media::AudioGainInfoFlag_Mute) != 0) ||
-      ((received_device_.gain_info.flags &
-        fuchsia::media::AudioGainInfoFlag_AgcEnabled) != 0)) {
-    fuchsia::media::AudioGainInfo gain_info = {.gain_db = kInitialSystemGainDb,
-                                               .flags = 0};
+      ((received_device_.gain_info.flags & fuchsia::media::AudioGainInfoFlag_Mute) != 0) ||
+      ((received_device_.gain_info.flags & fuchsia::media::AudioGainInfoFlag_AgcEnabled) != 0)) {
+    fuchsia::media::AudioGainInfo gain_info = {.gain_db = kInitialSystemGainDb, .flags = 0};
     uint32_t set_flags = fuchsia::media::SetAudioGainFlag_GainValid |
                          fuchsia::media::SetAudioGainFlag_MuteValid |
                          fuchsia::media::SetAudioGainFlag_AgcValid;
@@ -178,8 +170,9 @@ void VirtualAudioSystemGainTest::ChangeAndVerifySystemMute() {
 // Add device, get its token and gain baseline
 // Change System Gain or Mute, verify System change
 // Get device gain via GetDevices, verify the change(s?)
-void VirtualAudioSystemGainTest::TestDeviceGainAfterChangeSystemGainMute(
-    bool use_get_devices, bool is_input, bool set_gain) {
+void VirtualAudioSystemGainTest::TestDeviceGainAfterChangeSystemGainMute(bool use_get_devices,
+                                                                         bool is_input,
+                                                                         bool set_gain) {
   if (HasPreExistingDevices()) {
     FXL_DLOG(INFO) << "Test case requires an environment with no audio devices";
     return;
@@ -200,17 +193,15 @@ void VirtualAudioSystemGainTest::TestDeviceGainAfterChangeSystemGainMute(
     RetrieveGainInfoUsingGetDeviceGain(added_token);
   }
 
-  float expect_gain_db =
-      ((set_gain && !is_input) ? kChangedSystemGainDb : kInitialSystemGainDb);
+  float expect_gain_db = ((set_gain && !is_input) ? kChangedSystemGainDb : kInitialSystemGainDb);
   uint32_t expect_gain_flags =
       ((set_gain || is_input) ? 0 : fuchsia::media::AudioGainInfoFlag_Mute);
   EXPECT_EQ(received_gain_info_.gain_db, expect_gain_db);
   EXPECT_EQ(received_gain_info_.flags, expect_gain_flags);
 }
 
-void VirtualAudioSystemGainTest::
-    TestOnDeviceGainChangedAfterChangeSystemGainMute(bool is_input,
-                                                     bool set_gain) {
+void VirtualAudioSystemGainTest::TestOnDeviceGainChangedAfterChangeSystemGainMute(bool is_input,
+                                                                                  bool set_gain) {
   if (HasPreExistingDevices()) {
     FXL_DLOG(INFO) << "Test case requires an environment with no audio devices";
     return;
@@ -248,15 +239,15 @@ void VirtualAudioSystemGainTest::
   } else {
     // For outputs, expect both callbacks (in indeterminate order).
     ExpectCondition([this, added_token]() {
-      return error_occurred_ || (received_gain_token_ == added_token &&
-                                 !isnan(received_system_gain_db_));
+      return error_occurred_ ||
+             (received_gain_token_ == added_token && !isnan(received_system_gain_db_));
     });
 
     // Verify the device gain notification
     ASSERT_NE(received_gain_token_, kInvalidDeviceToken);
     EXPECT_EQ(expect_gain_db, received_gain_info_.gain_db);
-    EXPECT_EQ(expect_mute, ((received_gain_info_.flags &
-                             fuchsia::media::AudioGainInfoFlag_Mute) != 0));
+    EXPECT_EQ(expect_mute,
+              ((received_gain_info_.flags & fuchsia::media::AudioGainInfoFlag_Mute) != 0));
   }
 
   // Verify the system gain notification
@@ -286,23 +277,19 @@ TEST_F(VirtualAudioSystemGainTest, GetDeviceGainMatchesAddInputSetSystemMute) {
   TestDeviceGainAfterChangeSystemGainMute(false, true, false);
 }
 
-TEST_F(VirtualAudioSystemGainTest,
-       OnDeviceGainChangedMatchesAddInputSetSystemGain) {
+TEST_F(VirtualAudioSystemGainTest, OnDeviceGainChangedMatchesAddInputSetSystemGain) {
   TestOnDeviceGainChangedAfterChangeSystemGainMute(true, true);
 }
 
-TEST_F(VirtualAudioSystemGainTest,
-       OnDeviceGainChangedMatchesAddOutputSetSystemGain) {
+TEST_F(VirtualAudioSystemGainTest, OnDeviceGainChangedMatchesAddOutputSetSystemGain) {
   TestOnDeviceGainChangedAfterChangeSystemGainMute(false, true);
 }
 
-TEST_F(VirtualAudioSystemGainTest,
-       OnDeviceGainChangedMatchesAddInputSetSystemMute) {
+TEST_F(VirtualAudioSystemGainTest, OnDeviceGainChangedMatchesAddInputSetSystemMute) {
   TestOnDeviceGainChangedAfterChangeSystemGainMute(true, false);
 }
 
-TEST_F(VirtualAudioSystemGainTest,
-       OnDeviceGainChangedMatchesAddOutputSetSystemMute) {
+TEST_F(VirtualAudioSystemGainTest, OnDeviceGainChangedMatchesAddOutputSetSystemMute) {
   TestOnDeviceGainChangedAfterChangeSystemGainMute(false, false);
 }
 

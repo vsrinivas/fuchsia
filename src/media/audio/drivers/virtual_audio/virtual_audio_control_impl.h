@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_DRIVERS_AUDIO_VIRTUAL_AUDIO_VIRTUAL_AUDIO_CONTROL_IMPL_H_
-#define GARNET_DRIVERS_AUDIO_VIRTUAL_AUDIO_VIRTUAL_AUDIO_CONTROL_IMPL_H_
+#ifndef SRC_MEDIA_AUDIO_DRIVERS_VIRTUAL_AUDIO_VIRTUAL_AUDIO_CONTROL_IMPL_H_
+#define SRC_MEDIA_AUDIO_DRIVERS_VIRTUAL_AUDIO_VIRTUAL_AUDIO_CONTROL_IMPL_H_
 
 #include <ddk/device.h>
 #include <fbl/unique_ptr.h>
@@ -17,8 +17,7 @@ class VirtualAudioDeviceImpl;
 
 class VirtualAudioControlImpl : public fuchsia::virtualaudio::Control {
  public:
-  VirtualAudioControlImpl(async_dispatcher_t* dispatcher)
-      : dev_host_dispatcher_(dispatcher) {
+  VirtualAudioControlImpl(async_dispatcher_t* dispatcher) : dev_host_dispatcher_(dispatcher) {
     ZX_ASSERT(dev_host_dispatcher_ != nullptr);
   }
 
@@ -68,14 +67,12 @@ class VirtualAudioControlImpl : public fuchsia::virtualaudio::Control {
   bool enabled_ = true;
 
   fidl::BindingSet<fuchsia::virtualaudio::Control> bindings_;
-  fidl::BindingSet<fuchsia::virtualaudio::Input,
-                   fbl::unique_ptr<VirtualAudioDeviceImpl>>
+  fidl::BindingSet<fuchsia::virtualaudio::Input, fbl::unique_ptr<VirtualAudioDeviceImpl>>
       input_bindings_;
-  fidl::BindingSet<fuchsia::virtualaudio::Output,
-                   fbl::unique_ptr<VirtualAudioDeviceImpl>>
+  fidl::BindingSet<fuchsia::virtualaudio::Output, fbl::unique_ptr<VirtualAudioDeviceImpl>>
       output_bindings_;
 };
 
 }  // namespace virtual_audio
 
-#endif  // GARNET_DRIVERS_AUDIO_VIRTUAL_AUDIO_VIRTUAL_AUDIO_CONTROL_IMPL_H_
+#endif  // SRC_MEDIA_AUDIO_DRIVERS_VIRTUAL_AUDIO_VIRTUAL_AUDIO_CONTROL_IMPL_H_

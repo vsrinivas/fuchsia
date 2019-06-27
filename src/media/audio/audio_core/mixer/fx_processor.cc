@@ -20,10 +20,9 @@ FxProcessor::~FxProcessor() {
 
 // Create and insert an effect instance, at the specified position.
 // If position is out-of-range, return an error (don't clamp).
-fx_token_t FxProcessor::CreateFx(uint32_t effect_id, uint16_t channels_in,
-                                 uint16_t channels_out, uint8_t position) {
-  fx_token_t fx_token =
-      fx_loader_->CreateFx(effect_id, frame_rate_, channels_in, channels_out);
+fx_token_t FxProcessor::CreateFx(uint32_t effect_id, uint16_t channels_in, uint16_t channels_out,
+                                 uint8_t position) {
+  fx_token_t fx_token = fx_loader_->CreateFx(effect_id, frame_rate_, channels_in, channels_out);
 
   if (fx_token == FUCHSIA_AUDIO_DFX_INVALID_TOKEN) {
     return fx_token;
@@ -83,8 +82,7 @@ zx_status_t FxProcessor::DeleteFx(fx_token_t fx_token) {
 // Per spec, fail if audio_buff_in_out is nullptr (even if num_frames is 0).
 // Also, if any instance fails Process, exit without calling the others.
 // TODO(mpuryear): Should we still call the other instances, if one fails?
-zx_status_t FxProcessor::ProcessInPlace(uint32_t num_frames,
-                                        float* audio_buff_in_out) {
+zx_status_t FxProcessor::ProcessInPlace(uint32_t num_frames, float* audio_buff_in_out) {
   if (audio_buff_in_out == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -97,8 +95,7 @@ zx_status_t FxProcessor::ProcessInPlace(uint32_t num_frames,
       return ZX_ERR_INTERNAL;
     }
 
-    zx_status_t ret_val =
-        fx_loader_->FxProcessInPlace(fx_token, num_frames, audio_buff_in_out);
+    zx_status_t ret_val = fx_loader_->FxProcessInPlace(fx_token, num_frames, audio_buff_in_out);
     if (ret_val != ZX_OK) {
       return ret_val;
     }

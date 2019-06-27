@@ -42,14 +42,12 @@ class AudioRendererSyncTest : public AudioTestBase {
   fuchsia::media::AudioRendererSyncPtr audio_renderer_sync_;
 };
 
-fuchsia::media::AudioCoreSyncPtr AudioRendererSyncTest::audio_core_sync_ =
-    nullptr;
+fuchsia::media::AudioCoreSyncPtr AudioRendererSyncTest::audio_core_sync_ = nullptr;
 
 void AudioRendererSyncTest::SetUp() {
   AudioTestBase::SetUp();
 
-  ASSERT_EQ(ZX_OK, audio_core_sync_->CreateAudioRenderer(
-                       audio_renderer_sync_.NewRequest()));
+  ASSERT_EQ(ZX_OK, audio_core_sync_->CreateAudioRenderer(audio_renderer_sync_.NewRequest()));
 }
 
 void AudioRendererSyncTest::TearDown() {
@@ -66,8 +64,7 @@ void AudioRendererSyncTest::TearDown() {
 // from this call is our only way of verifying that the connection survived.
 TEST_F(AudioRendererSyncTest, GetMinLeadTime) {
   int64_t min_lead_time = -1;
-  ASSERT_EQ(ZX_OK, audio_renderer_sync_->GetMinLeadTime(&min_lead_time))
-      << kDisconnectErr;
+  ASSERT_EQ(ZX_OK, audio_renderer_sync_->GetMinLeadTime(&min_lead_time)) << kDisconnectErr;
   EXPECT_GE(min_lead_time, 0) << "No MinLeadTime update received";
 }
 
@@ -87,8 +84,7 @@ TEST_F(AudioRendererSyncTest, SetPcmFormat) {
   EXPECT_EQ(ZX_OK, audio_renderer_sync_->SetPcmStreamType(format));
 
   int64_t min_lead_time = -1;
-  ASSERT_EQ(ZX_OK, audio_renderer_sync_->GetMinLeadTime(&min_lead_time))
-      << kDisconnectErr;
+  ASSERT_EQ(ZX_OK, audio_renderer_sync_->GetMinLeadTime(&min_lead_time)) << kDisconnectErr;
   EXPECT_GE(min_lead_time, 0);
 
   fuchsia::media::AudioStreamType format2;
@@ -110,12 +106,10 @@ TEST_F(AudioRendererSyncTest, PlayNoReplyNoFormatCausesDisconnect) {
   // First, make sure we still have a renderer at all.
   ASSERT_EQ(ZX_OK, audio_renderer_sync_->GetMinLeadTime(&min_lead_time));
 
-  EXPECT_EQ(ZX_OK,
-            audio_renderer_sync_->PlayNoReply(fuchsia::media::NO_TIMESTAMP,
-                                              fuchsia::media::NO_TIMESTAMP));
+  EXPECT_EQ(ZX_OK, audio_renderer_sync_->PlayNoReply(fuchsia::media::NO_TIMESTAMP,
+                                                     fuchsia::media::NO_TIMESTAMP));
 
-  EXPECT_EQ(ZX_ERR_PEER_CLOSED,
-            audio_renderer_sync_->GetMinLeadTime(&min_lead_time));
+  EXPECT_EQ(ZX_ERR_PEER_CLOSED, audio_renderer_sync_->GetMinLeadTime(&min_lead_time));
 
   // Although the connection has disconnected, the proxy should still exist.
   EXPECT_TRUE(audio_renderer_sync_.is_bound());
@@ -131,8 +125,7 @@ TEST_F(AudioRendererSyncTest, PauseNoReplyWithoutFormatCausesDisconnect) {
 
   EXPECT_EQ(ZX_OK, audio_renderer_sync_->PauseNoReply());
 
-  EXPECT_EQ(ZX_ERR_PEER_CLOSED,
-            audio_renderer_sync_->GetMinLeadTime(&min_lead_time));
+  EXPECT_EQ(ZX_ERR_PEER_CLOSED, audio_renderer_sync_->GetMinLeadTime(&min_lead_time));
 
   // Although the connection has disconnected, the proxy should still exist.
   EXPECT_TRUE(audio_renderer_sync_.is_bound());

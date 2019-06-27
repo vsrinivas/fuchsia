@@ -14,19 +14,15 @@ namespace virtual_audio {
 
 class VirtualAudioServiceImpl {
  public:
-  VirtualAudioServiceImpl(
-      std::unique_ptr<sys::ComponentContext> startup_context);
+  VirtualAudioServiceImpl(std::unique_ptr<sys::ComponentContext> startup_context);
   ~VirtualAudioServiceImpl();
 
   zx_status_t Init();
 
  private:
-  zx_status_t ForwardControlRequest(
-      fidl::InterfaceRequest<fuchsia::virtualaudio::Control> request);
-  zx_status_t ForwardInputRequest(
-      fidl::InterfaceRequest<fuchsia::virtualaudio::Input> request);
-  zx_status_t ForwardOutputRequest(
-      fidl::InterfaceRequest<fuchsia::virtualaudio::Output> request);
+  zx_status_t ForwardControlRequest(fidl::InterfaceRequest<fuchsia::virtualaudio::Control> request);
+  zx_status_t ForwardInputRequest(fidl::InterfaceRequest<fuchsia::virtualaudio::Input> request);
+  zx_status_t ForwardOutputRequest(fidl::InterfaceRequest<fuchsia::virtualaudio::Output> request);
 
   bool OpenControlDriver();
 

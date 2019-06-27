@@ -15,9 +15,7 @@ int main(int argc, const char** argv) {
   // interfaces before we run the event loop.
   auto ctx = sys::ComponentContext::Create();
 
-  auto closer = [&loop]() {
-    async::PostTask(loop.dispatcher(), [&loop]() { loop.Quit(); });
-  };
+  auto closer = [&loop]() { async::PostTask(loop.dispatcher(), [&loop]() { loop.Quit(); }); };
   media::audio::AudioCoreClient audio_core(ctx.get(), closer);
 
   loop.Run();

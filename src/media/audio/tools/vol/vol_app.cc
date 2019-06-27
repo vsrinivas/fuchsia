@@ -136,8 +136,7 @@ class VolApp {
         return;
       }
 
-      non_interactive_actions_.emplace_back(
-          [this, val]() { SetDeviceMute(val); });
+      non_interactive_actions_.emplace_back([this, val]() { SetDeviceMute(val); });
     }
 
     if (command_line.GetOptionValue("agc", &string_value)) {
@@ -148,8 +147,7 @@ class VolApp {
         return;
       }
 
-      non_interactive_actions_.emplace_back(
-          [this, val]() { SetDeviceAgc(val); });
+      non_interactive_actions_.emplace_back([this, val]() { SetDeviceAgc(val); });
     }
 
     if (command_line.GetOptionValue("gain", &string_value)) {
@@ -160,23 +158,19 @@ class VolApp {
         return;
       }
 
-      non_interactive_actions_.emplace_back(
-          [this, val]() { SetDeviceGain(val, false); });
+      non_interactive_actions_.emplace_back([this, val]() { SetDeviceGain(val, false); });
     }
 
-    audio_ = startup_context_->svc()
-                 ->Connect<fuchsia::media::AudioDeviceEnumerator>();
+    audio_ = startup_context_->svc()->Connect<fuchsia::media::AudioDeviceEnumerator>();
     audio_.set_error_handler([this](zx_status_t status) {
-      FXL_LOG(ERROR)
-          << "Client connection to fuchsia.media.AudioDeviceEnumerator failed: "
-          << status;
+      FXL_LOG(ERROR) << "Client connection to fuchsia.media.AudioDeviceEnumerator failed: "
+                     << status;
       quit_callback_();
     });
 
     // Get this party started by fetching the current list of audio devices.
-    audio_->GetDevices([this](std::vector<AudioDeviceInfo> devices) {
-      OnGetDevices(std::move(devices));
-    });
+    audio_->GetDevices(
+        [this](std::vector<AudioDeviceInfo> devices) { OnGetDevices(std::move(devices)); });
   }
 
  private:
@@ -210,8 +204,7 @@ class VolApp {
     std::cout << "    --gain=<db>      set this device's audio gain\n";
     std::cout << "    --mute=(on|off)  mute/unmute this device\n";
     std::cout << "    --agc=(on|off)   enable/disable AGC for this device\n\n";
-    std::cout
-        << "Given no arguments, vol waits for the following keystrokes:\n";
+    std::cout << "Given no arguments, vol waits for the following keystrokes:\n";
     InteractiveKeystrokes();
     std::cout << "\n";
 
@@ -262,17 +255,14 @@ class VolApp {
     bool can_agc = (info.flags & flag::AudioGainInfoFlag_AgcSupported) != 0;
     bool agc = (info.flags & flag::AudioGainInfoFlag_AgcEnabled) != 0;
 
-    os << std::string(level, '=') << "|" << std::string(kLevelMax - level, '-')
-       << " :: [" << (muted ? " muted " : "unmuted") << "]"
-       << (can_agc ? (agc ? "[agc]" : "[   ]") : "") << " " << std::fixed
-       << std::setprecision(2) << info.gain_db << " dB";
+    os << std::string(level, '=') << "|" << std::string(kLevelMax - level, '-') << " :: ["
+       << (muted ? " muted " : "unmuted") << "]" << (can_agc ? (agc ? "[agc]" : "[   ]") : "")
+       << " " << std::fixed << std::setprecision(2) << info.gain_db << " dB";
   }
 
   // Calls |HandleKeystroke| on the message loop when console input is ready.
   void WaitForKeystroke() {
-    fd_waiter_.Wait(
-        [this](zx_status_t status, uint32_t events) { HandleKeystroke(); }, 0,
-        POLLIN);
+    fd_waiter_.Wait([this](zx_status_t status, uint32_t events) { HandleKeystroke(); }, 0, POLLIN);
   }
 
   // Handles a keystroke, possibly calling |WaitForKeystroke| to wait for the
@@ -319,13 +309,11 @@ class VolApp {
       namespace flag = ::fuchsia::media;
 
       bool muted = (dev.gain_info.flags & flag::AudioGainInfoFlag_Mute) != 0;
-      bool can_agc =
-          (dev.gain_info.flags & flag::AudioGainInfoFlag_AgcSupported) != 0;
-      bool agc_enb =
-          (dev.gain_info.flags & flag::AudioGainInfoFlag_AgcEnabled) != 0;
+      bool can_agc = (dev.gain_info.flags & flag::AudioGainInfoFlag_AgcSupported) != 0;
+      bool agc_enb = (dev.gain_info.flags & flag::AudioGainInfoFlag_AgcEnabled) != 0;
 
-      std::cout << "Audio " << (dev.is_input ? "Input" : "Output") << " (id "
-                << dev.token_id << ")" << std::endl;
+      std::cout << "Audio " << (dev.is_input ? "Input" : "Output") << " (id " << dev.token_id << ")"
+                << std::endl;
       std::cout << "Name    : " << dev.name << std::endl;
       std::cout << "UID     : " << dev.unique_id << std::endl;
       std::cout << "Default : " << (dev.is_default ? "yes" : "no") << std::endl;
@@ -342,8 +330,7 @@ class VolApp {
 
     if (iter == devices_.end()) {
       if (!interactive()) {
-        std::cout << "No appropriate device found for setting gain"
-                  << std::endl;
+        std::cout << "No appropriate device found for setting gain" << std::endl;
       }
       return;
     }
@@ -353,13 +340,12 @@ class VolApp {
     cmd.gain_db = relative ? (cmd.gain_db + val) : val;
 
     if (!interactive()) {
-      std::cout << "Setting audio " << (dev_state.is_input ? "input" : "output")
-                << " \"" << dev_state.name << "\" gain to "
-                << std::setprecision(2) << cmd.gain_db << " dB" << std::endl;
+      std::cout << "Setting audio " << (dev_state.is_input ? "input" : "output") << " \""
+                << dev_state.name << "\" gain to " << std::setprecision(2) << cmd.gain_db << " dB"
+                << std::endl;
     }
 
-    audio_->SetDeviceGain(control_token_, cmd,
-                          fuchsia::media::SetAudioGainFlag_GainValid);
+    audio_->SetDeviceGain(control_token_, cmd, fuchsia::media::SetAudioGainFlag_GainValid);
   }
 
   void SetDeviceMute(BoolAction action) {
@@ -367,8 +353,7 @@ class VolApp {
 
     if (iter == devices_.end()) {
       if (!interactive()) {
-        std::cout << "No appropriate device found for setting mute"
-                  << std::endl;
+        std::cout << "No appropriate device found for setting mute" << std::endl;
       }
       return;
     }
@@ -386,13 +371,12 @@ class VolApp {
     // clang-format on
 
     if (!interactive()) {
-      std::cout << "Setting audio " << (dev_state.is_input ? "input" : "output")
-                << " \"" << dev_state.name << "\" mute to "
-                << ((cmd.flags & flag) ? "on" : "off") << "." << std::endl;
+      std::cout << "Setting audio " << (dev_state.is_input ? "input" : "output") << " \""
+                << dev_state.name << "\" mute to " << ((cmd.flags & flag) ? "on" : "off") << "."
+                << std::endl;
     }
 
-    audio_->SetDeviceGain(control_token_, cmd,
-                          fuchsia::media::SetAudioGainFlag_MuteValid);
+    audio_->SetDeviceGain(control_token_, cmd, fuchsia::media::SetAudioGainFlag_MuteValid);
   }
 
   void SetDeviceAgc(BoolAction action) {
@@ -410,9 +394,8 @@ class VolApp {
 
     if (!(cmd.flags & fuchsia::media::AudioGainInfoFlag_AgcSupported)) {
       if (!interactive()) {
-        std::cout << "Audio " << (dev_state.is_input ? "input" : "output")
-                  << " \"" << dev_state.name << "\" does not support AGC."
-                  << std::endl;
+        std::cout << "Audio " << (dev_state.is_input ? "input" : "output") << " \""
+                  << dev_state.name << "\" does not support AGC." << std::endl;
       }
       return;
     }
@@ -427,21 +410,19 @@ class VolApp {
     // clang-format on
 
     if (!interactive()) {
-      std::cout << "Setting audio " << (dev_state.is_input ? "input" : "output")
-                << " \"" << dev_state.name << "\" AGC to "
-                << ((cmd.flags & flag) ? "on" : "off") << "." << std::endl;
+      std::cout << "Setting audio " << (dev_state.is_input ? "input" : "output") << " \""
+                << dev_state.name << "\" AGC to " << ((cmd.flags & flag) ? "on" : "off") << "."
+                << std::endl;
     }
 
-    audio_->SetDeviceGain(control_token_, cmd,
-                          fuchsia::media::SetAudioGainFlag_AgcValid);
+    audio_->SetDeviceGain(control_token_, cmd, fuchsia::media::SetAudioGainFlag_AgcValid);
   }
 
   void ShowSelectedDevice() {
     if (control_token_ != ZX_KOID_INVALID) {
       const auto& dev = devices_[control_token_];
-      std::cout << "\rCurrently controlling audio "
-                << (input_ ? "input" : "output") << " (id " << dev.token_id
-                << "): " << dev.name << std::endl;
+      std::cout << "\rCurrently controlling audio " << (input_ ? "input" : "output") << " (id "
+                << dev.token_id << "): " << dev.name << std::endl;
     } else {
       std::cout << "\rNo appropriate audio " << (input_ ? "input" : "output")
                 << " exists to control" << std::endl;
@@ -481,20 +462,18 @@ class VolApp {
   bool ChooseDeviceToControl() {
     if (selected_uid_.length()) {
       return ChooseDeviceToControl(
-          [uid_ptr = selected_uid_.c_str(), uid_len = selected_uid_.length()](
-              const AudioDeviceInfo& info) -> bool {
+          [uid_ptr = selected_uid_.c_str(),
+           uid_len = selected_uid_.length()](const AudioDeviceInfo& info) -> bool {
             return (strncmp(info.unique_id.c_str(), uid_ptr, uid_len) == 0);
           });
     } else if (selected_token_ != ZX_KOID_INVALID) {
-      return ChooseDeviceToControl(
-          [token = selected_token_](const AudioDeviceInfo& info) -> bool {
-            return info.token_id == token;
-          });
+      return ChooseDeviceToControl([token = selected_token_](const AudioDeviceInfo& info) -> bool {
+        return info.token_id == token;
+      });
     } else {
-      return ChooseDeviceToControl(
-          [input = input_](const AudioDeviceInfo& info) -> bool {
-            return (info.is_input == input) && info.is_default;
-          });
+      return ChooseDeviceToControl([input = input_](const AudioDeviceInfo& info) -> bool {
+        return (info.is_input == input) && info.is_default;
+      });
     }
   }
 
@@ -504,8 +483,7 @@ class VolApp {
       auto id = dev.token_id;
       auto result = devices_.emplace(std::make_pair(id, std::move(dev)));
       if (!result.second) {
-        std::cerr << "<WARNING>: Duplicate audio device token ID (" << id
-                  << std::endl;
+        std::cerr << "<WARNING>: Duplicate audio device token ID (" << id << std::endl;
         continue;
       }
     }
@@ -530,15 +508,11 @@ class VolApp {
       audio_.events().OnDeviceAdded = [this](AudioDeviceInfo dev) {
         OnDeviceAdded(std::move(dev));
       };
-      audio_.events().OnDeviceRemoved = [this](uint64_t dev_token) {
-        OnDeviceRemoved(dev_token);
-      };
-      audio_.events().OnDeviceGainChanged = [this](uint64_t dev_token,
-                                                   AudioGainInfo info) {
+      audio_.events().OnDeviceRemoved = [this](uint64_t dev_token) { OnDeviceRemoved(dev_token); };
+      audio_.events().OnDeviceGainChanged = [this](uint64_t dev_token, AudioGainInfo info) {
         OnDeviceGainChanged(dev_token, info);
       };
-      audio_.events().OnDefaultDeviceChanged = [this](uint64_t old_id,
-                                                      uint64_t new_id) {
+      audio_.events().OnDefaultDeviceChanged = [this](uint64_t old_id, uint64_t new_id) {
         OnDefaultDeviceChanged(old_id, new_id);
       };
 
@@ -552,12 +526,10 @@ class VolApp {
 
   void OnDeviceAdded(AudioDeviceInfo device_to_add, bool skip_update = false) {
     uint64_t token = device_to_add.token_id;
-    auto result =
-        devices_.emplace(std::make_pair(token, std::move(device_to_add)));
+    auto result = devices_.emplace(std::make_pair(token, std::move(device_to_add)));
 
     if (!result.second) {
-      std::cerr << "\r<WARNING>: Duplicate audio device token ID (" << token
-                << ")" << std::endl;
+      std::cerr << "\r<WARNING>: Duplicate audio device token ID (" << token << ")" << std::endl;
       return;
     }
 
@@ -635,9 +607,8 @@ class VolApp {
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  media::VolApp app(argc, argv, [&loop]() {
-    async::PostTask(loop.dispatcher(), [&loop]() { loop.Quit(); });
-  });
+  media::VolApp app(argc, argv,
+                    [&loop]() { async::PostTask(loop.dispatcher(), [&loop]() { loop.Quit(); }); });
   loop.Run();
   return 0;
 }

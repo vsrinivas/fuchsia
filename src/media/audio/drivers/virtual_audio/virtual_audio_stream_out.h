@@ -13,9 +13,8 @@ namespace virtual_audio {
 
 class VirtualAudioDeviceImpl;
 
-class VirtualAudioStreamOut
-    : public VirtualAudioStream,
-      public fbl::DoublyLinkedListable<fbl::RefPtr<VirtualAudioStreamOut>> {
+class VirtualAudioStreamOut : public VirtualAudioStream,
+                              public fbl::DoublyLinkedListable<fbl::RefPtr<VirtualAudioStreamOut>> {
  private:
   friend class SimpleAudioStream;
   friend class fbl::RefPtr<VirtualAudioStreamOut>;

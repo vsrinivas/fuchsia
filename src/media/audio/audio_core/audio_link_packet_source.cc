@@ -11,9 +11,9 @@
 
 namespace media::audio {
 
-AudioLinkPacketSource::AudioLinkPacketSource(
-    fbl::RefPtr<AudioObject> source, fbl::RefPtr<AudioObject> dest,
-    fbl::RefPtr<AudioRendererFormatInfo> format_info)
+AudioLinkPacketSource::AudioLinkPacketSource(fbl::RefPtr<AudioObject> source,
+                                             fbl::RefPtr<AudioObject> dest,
+                                             fbl::RefPtr<AudioRendererFormatInfo> format_info)
     : AudioLink(SourceType::Packet, std::move(source), std::move(dest)),
       format_info_(std::move(format_info)) {}
 
@@ -24,8 +24,8 @@ AudioLinkPacketSource::~AudioLinkPacketSource() {
 }
 
 // static
-fbl::RefPtr<AudioLinkPacketSource> AudioLinkPacketSource::Create(
-    fbl::RefPtr<AudioObject> source, fbl::RefPtr<AudioObject> dest) {
+fbl::RefPtr<AudioLinkPacketSource> AudioLinkPacketSource::Create(fbl::RefPtr<AudioObject> source,
+                                                                 fbl::RefPtr<AudioObject> dest) {
   FXL_DCHECK(source);
   FXL_DCHECK(dest);
 
@@ -39,18 +39,16 @@ fbl::RefPtr<AudioLinkPacketSource> AudioLinkPacketSource::Create(
   auto& audio_renderer = *fbl::RefPtr<AudioRendererImpl>::Downcast(source);
 
   FXL_DCHECK(audio_renderer.format_info_valid());
-  return fbl::AdoptRef(new AudioLinkPacketSource(
-      std::move(source), std::move(dest), audio_renderer.format_info()));
+  return fbl::AdoptRef(
+      new AudioLinkPacketSource(std::move(source), std::move(dest), audio_renderer.format_info()));
 }
 
-void AudioLinkPacketSource::PushToPendingQueue(
-    const fbl::RefPtr<AudioPacketRef>& packet) {
+void AudioLinkPacketSource::PushToPendingQueue(const fbl::RefPtr<AudioPacketRef>& packet) {
   std::lock_guard<std::mutex> locker(pending_mutex_);
   pending_packet_queue_.emplace_back(std::move(packet));
 }
 
-void AudioLinkPacketSource::FlushPendingQueue(
-    const fbl::RefPtr<PendingFlushToken>& flush_token) {
+void AudioLinkPacketSource::FlushPendingQueue(const fbl::RefPtr<PendingFlushToken>& flush_token) {
   std::deque<fbl::RefPtr<AudioPacketRef>> flushed_packets;
 
   {
@@ -91,8 +89,7 @@ void AudioLinkPacketSource::FlushPendingQueue(
   }
 }
 
-void AudioLinkPacketSource::CopyPendingQueue(
-    const fbl::RefPtr<AudioLinkPacketSource>& other) {
+void AudioLinkPacketSource::CopyPendingQueue(const fbl::RefPtr<AudioLinkPacketSource>& other) {
   FXL_DCHECK(other != nullptr);
   FXL_DCHECK(this != other.get());
 
@@ -105,8 +102,7 @@ void AudioLinkPacketSource::CopyPendingQueue(
   pending_packet_queue_ = other->pending_packet_queue_;
 }
 
-fbl::RefPtr<AudioPacketRef> AudioLinkPacketSource::LockPendingQueueFront(
-    bool* was_flushed) {
+fbl::RefPtr<AudioPacketRef> AudioLinkPacketSource::LockPendingQueueFront(bool* was_flushed) {
   FXL_DCHECK(was_flushed);
   std::lock_guard<std::mutex> locker(pending_mutex_);
 
@@ -132,8 +128,7 @@ void AudioLinkPacketSource::UnlockPendingQueueFront(bool release_packet) {
     // Did a flush take place while we were working?  If so release each of the
     // packets waiting to be flushed back to the service thread, then release
     // each of the flush tokens.
-    if (!pending_flush_packet_queue_.empty() ||
-        !pending_flush_token_queue_.empty()) {
+    if (!pending_flush_packet_queue_.empty() || !pending_flush_token_queue_.empty()) {
       for (auto& ptr : pending_flush_packet_queue_) {
         ptr.reset();
       }

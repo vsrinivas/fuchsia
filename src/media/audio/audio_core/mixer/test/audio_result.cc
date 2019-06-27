@@ -69,44 +69,26 @@ constexpr double AudioResult::kPrevFloorStereoMono;
 double AudioResult::LevelToleranceInterpolation = 0.0;
 constexpr double AudioResult::kPrevLevelToleranceInterpolation;
 
-std::array<double, FrequencySet::kNumReferenceFreqs>
-    AudioResult::FreqRespPointUnity = {NAN};
-std::array<double, FrequencySet::kNumReferenceFreqs>
-    AudioResult::FreqRespPointDown0 = {NAN};
-std::array<double, FrequencySet::kNumReferenceFreqs>
-    AudioResult::FreqRespPointDown1 = {NAN};
-std::array<double, FrequencySet::kNumReferenceFreqs>
-    AudioResult::FreqRespPointDown2 = {NAN};
-std::array<double, FrequencySet::kNumReferenceFreqs>
-    AudioResult::FreqRespPointUp1 = {NAN};
-std::array<double, FrequencySet::kNumReferenceFreqs>
-    AudioResult::FreqRespPointUp2 = {NAN};
-std::array<double, FrequencySet::kNumReferenceFreqs>
-    AudioResult::FreqRespPointUp3 = {NAN};
-std::array<double, FrequencySet::kNumReferenceFreqs>
-    AudioResult::FreqRespPointMicro = {NAN};
+std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::FreqRespPointUnity = {NAN};
+std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::FreqRespPointDown0 = {NAN};
+std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::FreqRespPointDown1 = {NAN};
+std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::FreqRespPointDown2 = {NAN};
+std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::FreqRespPointUp1 = {NAN};
+std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::FreqRespPointUp2 = {NAN};
+std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::FreqRespPointUp3 = {NAN};
+std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::FreqRespPointMicro = {NAN};
 
-std::array<double, FrequencySet::kNumReferenceFreqs>
-    AudioResult::FreqRespLinearUnity = {NAN};
-std::array<double, FrequencySet::kNumReferenceFreqs>
-    AudioResult::FreqRespLinearDown0 = {NAN};
-std::array<double, FrequencySet::kNumReferenceFreqs>
-    AudioResult::FreqRespLinearDown1 = {NAN};
-std::array<double, FrequencySet::kNumReferenceFreqs>
-    AudioResult::FreqRespLinearDown2 = {NAN};
-std::array<double, FrequencySet::kNumReferenceFreqs>
-    AudioResult::FreqRespLinearUp1 = {NAN};
-std::array<double, FrequencySet::kNumReferenceFreqs>
-    AudioResult::FreqRespLinearUp2 = {NAN};
-std::array<double, FrequencySet::kNumReferenceFreqs>
-    AudioResult::FreqRespLinearUp3 = {NAN};
-std::array<double, FrequencySet::kNumReferenceFreqs>
-    AudioResult::FreqRespLinearMicro = {NAN};
+std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::FreqRespLinearUnity = {NAN};
+std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::FreqRespLinearDown0 = {NAN};
+std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::FreqRespLinearDown1 = {NAN};
+std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::FreqRespLinearDown2 = {NAN};
+std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::FreqRespLinearUp1 = {NAN};
+std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::FreqRespLinearUp2 = {NAN};
+std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::FreqRespLinearUp3 = {NAN};
+std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::FreqRespLinearMicro = {NAN};
 
-std::array<double, FrequencySet::kNumReferenceFreqs>
-    AudioResult::FreqRespPointNxN = {NAN};
-std::array<double, FrequencySet::kNumReferenceFreqs>
-    AudioResult::FreqRespLinearNxN = {NAN};
+std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::FreqRespPointNxN = {NAN};
+std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::FreqRespLinearNxN = {NAN};
 
 // We test our interpolation fidelity across these six rate-conversion ratios:
 // - 1:1 (referred to in these variables and constants as Unity)
@@ -298,44 +280,26 @@ const std::array<double, FrequencySet::kNumReferenceFreqs>
         -INFINITY,      -INFINITY,      -INFINITY,      -INFINITY,      -INFINITY        };
 // clang-format on
 
-std::array<double, FrequencySet::kNumReferenceFreqs>
-    AudioResult::SinadPointUnity = {NAN};
-std::array<double, FrequencySet::kNumReferenceFreqs>
-    AudioResult::SinadPointDown0 = {NAN};
-std::array<double, FrequencySet::kNumReferenceFreqs>
-    AudioResult::SinadPointDown1 = {NAN};
-std::array<double, FrequencySet::kNumReferenceFreqs>
-    AudioResult::SinadPointDown2 = {NAN};
-std::array<double, FrequencySet::kNumReferenceFreqs>
-    AudioResult::SinadPointUp1 = {NAN};
-std::array<double, FrequencySet::kNumReferenceFreqs>
-    AudioResult::SinadPointUp2 = {NAN};
-std::array<double, FrequencySet::kNumReferenceFreqs>
-    AudioResult::SinadPointUp3 = {NAN};
-std::array<double, FrequencySet::kNumReferenceFreqs>
-    AudioResult::SinadPointMicro = {NAN};
+std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::SinadPointUnity = {NAN};
+std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::SinadPointDown0 = {NAN};
+std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::SinadPointDown1 = {NAN};
+std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::SinadPointDown2 = {NAN};
+std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::SinadPointUp1 = {NAN};
+std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::SinadPointUp2 = {NAN};
+std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::SinadPointUp3 = {NAN};
+std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::SinadPointMicro = {NAN};
 
-std::array<double, FrequencySet::kNumReferenceFreqs>
-    AudioResult::SinadLinearUnity = {NAN};
-std::array<double, FrequencySet::kNumReferenceFreqs>
-    AudioResult::SinadLinearDown0 = {NAN};
-std::array<double, FrequencySet::kNumReferenceFreqs>
-    AudioResult::SinadLinearDown1 = {NAN};
-std::array<double, FrequencySet::kNumReferenceFreqs>
-    AudioResult::SinadLinearDown2 = {NAN};
-std::array<double, FrequencySet::kNumReferenceFreqs>
-    AudioResult::SinadLinearUp1 = {NAN};
-std::array<double, FrequencySet::kNumReferenceFreqs>
-    AudioResult::SinadLinearUp2 = {NAN};
-std::array<double, FrequencySet::kNumReferenceFreqs>
-    AudioResult::SinadLinearUp3 = {NAN};
-std::array<double, FrequencySet::kNumReferenceFreqs>
-    AudioResult::SinadLinearMicro = {NAN};
+std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::SinadLinearUnity = {NAN};
+std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::SinadLinearDown0 = {NAN};
+std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::SinadLinearDown1 = {NAN};
+std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::SinadLinearDown2 = {NAN};
+std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::SinadLinearUp1 = {NAN};
+std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::SinadLinearUp2 = {NAN};
+std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::SinadLinearUp3 = {NAN};
+std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::SinadLinearMicro = {NAN};
 
-std::array<double, FrequencySet::kNumReferenceFreqs>
-    AudioResult::SinadPointNxN = {-INFINITY};
-std::array<double, FrequencySet::kNumReferenceFreqs>
-    AudioResult::SinadLinearNxN = {-INFINITY};
+std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::SinadPointNxN = {-INFINITY};
+std::array<double, FrequencySet::kNumReferenceFreqs> AudioResult::SinadLinearNxN = {-INFINITY};
 
 // We test our interpolation fidelity across these six rate-conversion ratios:
 // - 1:1 (referred to in these variables and constants as Unity)
@@ -657,19 +621,14 @@ void AudioResult::DumpFreqRespValues() {
   DumpFreqRespValueSet(AudioResult::FreqRespPointUp3.data(), "FR-PointUp3");
   DumpFreqRespValueSet(AudioResult::FreqRespPointMicro.data(), "FR-PointMicro");
 
-  DumpFreqRespValueSet(AudioResult::FreqRespLinearUnity.data(),
-                       "FR-LinearUnity");
-  DumpFreqRespValueSet(AudioResult::FreqRespLinearDown0.data(),
-                       "FR-LinearDown0");
-  DumpFreqRespValueSet(AudioResult::FreqRespLinearDown1.data(),
-                       "FR-LinearDown1");
-  DumpFreqRespValueSet(AudioResult::FreqRespLinearDown2.data(),
-                       "FR-LinearDown2");
+  DumpFreqRespValueSet(AudioResult::FreqRespLinearUnity.data(), "FR-LinearUnity");
+  DumpFreqRespValueSet(AudioResult::FreqRespLinearDown0.data(), "FR-LinearDown0");
+  DumpFreqRespValueSet(AudioResult::FreqRespLinearDown1.data(), "FR-LinearDown1");
+  DumpFreqRespValueSet(AudioResult::FreqRespLinearDown2.data(), "FR-LinearDown2");
   DumpFreqRespValueSet(AudioResult::FreqRespLinearUp1.data(), "FR-LinearUp1");
   DumpFreqRespValueSet(AudioResult::FreqRespLinearUp2.data(), "FR-LinearUp2");
   DumpFreqRespValueSet(AudioResult::FreqRespLinearUp3.data(), "FR-LinearUp3");
-  DumpFreqRespValueSet(AudioResult::FreqRespLinearMicro.data(),
-                       "FR-LinearMicro");
+  DumpFreqRespValueSet(AudioResult::FreqRespLinearMicro.data(), "FR-LinearMicro");
 
   DumpFreqRespValueSet(AudioResult::FreqRespPointNxN.data(), "FR-PointNxN");
   DumpFreqRespValueSet(AudioResult::FreqRespLinearNxN.data(), "FR-LinearNxN");
@@ -702,8 +661,7 @@ void AudioResult::DumpSinadValues() {
 }
 
 // Display a single frequency response results array, for import and processing.
-void AudioResult::DumpFreqRespValueSet(double* freq_resp_vals,
-                                       const std::string& arr_name) {
+void AudioResult::DumpFreqRespValueSet(double* freq_resp_vals, const std::string& arr_name) {
   printf("\n   %s", arr_name.c_str());
   for (size_t freq = 0; freq < FrequencySet::kReferenceFreqs.size(); ++freq) {
     if (freq % 6 == 0) {
@@ -715,37 +673,31 @@ void AudioResult::DumpFreqRespValueSet(double* freq_resp_vals,
 }
 
 // Display a single sinad results array, for import and processing.
-void AudioResult::DumpSinadValueSet(double* sinad_vals,
-                                    const std::string& arr_name) {
+void AudioResult::DumpSinadValueSet(double* sinad_vals, const std::string& arr_name) {
   printf("\n   %s", arr_name.c_str());
   for (size_t freq = 0; freq < FrequencySet::kReferenceFreqs.size(); ++freq) {
     if (freq % 6 == 0) {
       printf("\n     ");
     }
-    printf("   %11.7lf,", ((isinf(sinad_vals[freq]) && sinad_vals[freq] > 0.0)
-                               ? 160.0
-                               : sinad_vals[freq]));
+    printf("   %11.7lf,",
+           ((isinf(sinad_vals[freq]) && sinad_vals[freq] > 0.0) ? 160.0 : sinad_vals[freq]));
   }
   printf("\n");
 }
 
 void AudioResult::DumpLevelValues() {
   printf("\n\n Level (in dB)");
-  printf("\n       8-bit:   Source %15.8le  Mix %15.8le  Output %15.8le",
-         AudioResult::LevelSource8, AudioResult::LevelMix8,
-         AudioResult::LevelOutput8);
+  printf("\n       8-bit:   Source %15.8le  Mix %15.8le  Output %15.8le", AudioResult::LevelSource8,
+         AudioResult::LevelMix8, AudioResult::LevelOutput8);
 
   printf("\n       16-bit:  Source %15.8le  Mix %15.8le  Output %15.8le",
-         AudioResult::LevelSource16, AudioResult::LevelMix16,
-         AudioResult::LevelOutput16);
+         AudioResult::LevelSource16, AudioResult::LevelMix16, AudioResult::LevelOutput16);
 
   printf("\n       24-bit:  Source %15.8le  Mix %15.8le  Output %15.8le",
-         AudioResult::LevelSource24, AudioResult::LevelMix24,
-         AudioResult::LevelOutput24);
+         AudioResult::LevelSource24, AudioResult::LevelMix24, AudioResult::LevelOutput24);
 
   printf("\n       Float:   Source %15.8le  Mix %15.8le  Output %15.8le",
-         AudioResult::LevelSourceFloat, AudioResult::LevelMixFloat,
-         AudioResult::LevelOutputFloat);
+         AudioResult::LevelSourceFloat, AudioResult::LevelMixFloat, AudioResult::LevelOutputFloat);
   printf("\n       Stereo-to-Mono: %15.8le", AudioResult::LevelStereoMono);
 
   printf("\n");
@@ -766,12 +718,10 @@ void AudioResult::DumpLevelToleranceValues() {
          AudioResult::LevelToleranceOutput24);
 
   printf("\n       Float:   Source %15.8le  Mix %15.8le  Output %15.8le",
-         AudioResult::LevelToleranceSourceFloat,
-         AudioResult::LevelToleranceMixFloat,
+         AudioResult::LevelToleranceSourceFloat, AudioResult::LevelToleranceMixFloat,
          AudioResult::LevelToleranceOutputFloat);
 
-  printf("\n       Stereo-to-Mono: %15.8le               ",
-         AudioResult::LevelToleranceStereoMono);
+  printf("\n       Stereo-to-Mono: %15.8le               ", AudioResult::LevelToleranceStereoMono);
   printf("Interpolation: %15.8le", LevelToleranceInterpolation);
 
   printf("\n");
@@ -779,18 +729,14 @@ void AudioResult::DumpLevelToleranceValues() {
 
 void AudioResult::DumpNoiseFloorValues() {
   printf("\n\n Noise Floor (in dB)");
-  printf("\n       8-bit:   Source %11.7lf  Mix %11.7lf  Output %11.7lf",
-         AudioResult::FloorSource8, AudioResult::FloorMix8,
-         AudioResult::FloorOutput8);
+  printf("\n       8-bit:   Source %11.7lf  Mix %11.7lf  Output %11.7lf", AudioResult::FloorSource8,
+         AudioResult::FloorMix8, AudioResult::FloorOutput8);
   printf("\n       16-bit:  Source %11.7lf  Mix %11.7lf  Output %11.7lf",
-         AudioResult::FloorSource16, AudioResult::FloorMix16,
-         AudioResult::FloorOutput16);
+         AudioResult::FloorSource16, AudioResult::FloorMix16, AudioResult::FloorOutput16);
   printf("\n       24-bit:  Source %11.7lf  Mix %11.7lf  Output %11.7lf",
-         AudioResult::FloorSource24, AudioResult::FloorMix24,
-         AudioResult::FloorOutput24);
+         AudioResult::FloorSource24, AudioResult::FloorMix24, AudioResult::FloorOutput24);
   printf("\n       Float:   Source %11.7lf  Mix %11.7lf  Output %11.7lf",
-         AudioResult::FloorSourceFloat, AudioResult::FloorMixFloat,
-         AudioResult::FloorOutputFloat);
+         AudioResult::FloorSourceFloat, AudioResult::FloorMixFloat, AudioResult::FloorOutputFloat);
   printf("\n       Stereo-to-Mono: %11.7lf", AudioResult::FloorStereoMono);
 
   printf("\n");
@@ -800,8 +746,8 @@ void AudioResult::DumpDynamicRangeValues() {
   printf("\n\n Dynamic Range");
   printf("\n       Epsilon:  %10.7e  (%13.6le dB)", AudioResult::ScaleEpsilon,
          Gain::ScaleToDb(1.0 - AudioResult::ScaleEpsilon));
-  printf("  Level: %15.8le dB  Sinad: %10.6lf dB",
-         AudioResult::LevelEpsilonDown, AudioResult::SinadEpsilonDown);
+  printf("  Level: %15.8le dB  Sinad: %10.6lf dB", AudioResult::LevelEpsilonDown,
+         AudioResult::SinadEpsilonDown);
 
   printf("\n       -30 dB down:                                ");
   printf("  Level: %15.8lf dB  Sinad: %10.6lf dB", AudioResult::Level30Down,
@@ -815,8 +761,7 @@ void AudioResult::DumpDynamicRangeValues() {
   printf("  Level: %15.8lf dB  Sinad: %10.6lf dB", AudioResult::Level90Down,
          AudioResult::Sinad90Down);
 
-  printf("\n       Gain Accuracy:   +/- %12.7le dB",
-         AudioResult::DynRangeTolerance);
+  printf("\n       Gain Accuracy:   +/- %12.7le dB", AudioResult::DynRangeTolerance);
 
   printf("\n       MinScale: %10.8f  (%11.8f dB)", AudioResult::MinScaleNonZero,
          Gain::ScaleToDb(AudioResult::MinScaleNonZero));

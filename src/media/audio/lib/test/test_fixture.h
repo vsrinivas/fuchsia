@@ -32,8 +32,7 @@ namespace media::audio::test {
 constexpr zx::duration kDurationResponseExpected = zx::sec(60);
 constexpr zx::duration kDurationGranularity = zx::duration::infinite();
 
-constexpr char kDisconnectErr[] =
-    "Connection to fuchsia.media FIDL interface was lost!\n";
+constexpr char kDisconnectErr[] = "Connection to fuchsia.media FIDL interface was lost!\n";
 constexpr char kTimeoutErr[] = "Timeout -- no callback received!\n";
 constexpr char kCallbackErr[] = "Unexpected callback received!\n";
 

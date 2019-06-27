@@ -14,8 +14,7 @@
 
 namespace media::tools {
 
-MediaApp::MediaApp(fit::closure quit_callback)
-    : quit_callback_(std::move(quit_callback)) {
+MediaApp::MediaApp(fit::closure quit_callback) : quit_callback_(std::move(quit_callback)) {
   FXL_DCHECK(quit_callback_);
 }
 
@@ -39,13 +38,12 @@ void MediaApp::Run(sys::ComponentContext* app_context) {
   // 24-bit buffers use 32-bit samples (lowest byte zero), and when this
   // particular utility saves to .wav file, we save the entire 32 bits.
   if (save_to_file_) {
-    if (!wav_writer_.Initialize(
-            file_name_.c_str(),
-            use_int24_
-                ? fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32
-                : (use_int16_ ? fuchsia::media::AudioSampleFormat::SIGNED_16
-                              : fuchsia::media::AudioSampleFormat::FLOAT),
-            num_channels_, frame_rate_, sample_size_ * 8)) {
+    if (!wav_writer_.Initialize(file_name_.c_str(),
+                                use_int24_
+                                    ? fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32
+                                    : (use_int16_ ? fuchsia::media::AudioSampleFormat::SIGNED_16
+                                                  : fuchsia::media::AudioSampleFormat::FLOAT),
+                                num_channels_, frame_rate_, sample_size_ * 8)) {
       FXL_LOG(ERROR) << "WavWriter::Initialize() failed";
     } else {
       wav_writer_is_initialized_ = true;
@@ -55,8 +53,7 @@ void MediaApp::Run(sys::ComponentContext* app_context) {
   if (num_packets_to_send_ > 0) {
     uint32_t num_packets_to_prime =
         fbl::min<uint64_t>(payloads_per_total_mapping_, num_packets_to_send_);
-    for (uint32_t packet_num = 0; packet_num < num_packets_to_prime;
-         ++packet_num) {
+    for (uint32_t packet_num = 0; packet_num < num_packets_to_prime; ++packet_num) {
       SendPacket(packet_num);
     }
 
@@ -82,8 +79,7 @@ bool MediaApp::ParameterRangeChecks() {
   }
 
   if (frame_rate_ < fuchsia::media::MIN_PCM_FRAMES_PER_SECOND) {
-    FXL_LOG(ERROR) << "Frame rate must be at least "
-                   << fuchsia::media::MIN_PCM_FRAMES_PER_SECOND;
+    FXL_LOG(ERROR) << "Frame rate must be at least " << fuchsia::media::MIN_PCM_FRAMES_PER_SECOND;
     ret_val = false;
   }
   if (frame_rate_ > fuchsia::media::MAX_PCM_FRAMES_PER_SECOND) {
@@ -120,12 +116,10 @@ bool MediaApp::ParameterRangeChecks() {
     ret_val = false;
   }
 
-  stream_gain_db_ =
-      fbl::clamp<float>(stream_gain_db_, fuchsia::media::audio::MUTED_GAIN_DB,
-                        fuchsia::media::audio::MAX_GAIN_DB);
+  stream_gain_db_ = fbl::clamp<float>(stream_gain_db_, fuchsia::media::audio::MUTED_GAIN_DB,
+                                      fuchsia::media::audio::MAX_GAIN_DB);
 
-  system_gain_db_ = fbl::clamp<float>(
-      system_gain_db_, fuchsia::media::audio::MUTED_GAIN_DB, 0.0f);
+  system_gain_db_ = fbl::clamp<float>(system_gain_db_, fuchsia::media::audio::MUTED_GAIN_DB, 0.0f);
 
   return ret_val;
 }
@@ -156,8 +150,7 @@ void MediaApp::SetupPayloadCoefficients() {
   }
 
   // As mentioned above, for 24-bit audio we use 32-bit samples (low byte 0).
-  sample_size_ = use_int24_ ? sizeof(int32_t)
-                            : (use_int16_ ? sizeof(int16_t) : sizeof(float));
+  sample_size_ = use_int24_ ? sizeof(int32_t) : (use_int16_ ? sizeof(int16_t) : sizeof(float));
   frame_size_ = num_channels_ * sample_size_;
 
   payload_size_ = frames_per_payload_ * frame_size_;
@@ -171,14 +164,11 @@ void MediaApp::SetupPayloadCoefficients() {
 
 void MediaApp::DisplayConfigurationSettings() {
   if (set_device_settings_) {
-    printf("\nSetting device settings to %s.",
-           (settings_enabled_ ? "ON" : "OFF"));
+    printf("\nSetting device settings to %s.", (settings_enabled_ ? "ON" : "OFF"));
   }
 
-  printf("\nAudioRenderer configured for %d-channel %s at %u Hz.\nContent is ",
-         num_channels_,
-         (use_int24_ ? "int24" : (use_int16_ ? "int16" : "float32")),
-         frame_rate_);
+  printf("\nAudioRenderer configured for %d-channel %s at %u Hz.\nContent is ", num_channels_,
+         (use_int24_ ? "int24" : (use_int16_ ? "int16" : "float32")), frame_rate_);
 
   if (output_signal_type_ == kOutputTypeNoise) {
     printf("white noise");
@@ -186,8 +176,7 @@ void MediaApp::DisplayConfigurationSettings() {
     printf("a %f Hz %s wave", frequency_,
            (output_signal_type_ == kOutputTypeSquare)
                ? "square"
-               : (output_signal_type_ == kOutputTypeSawtooth) ? "triangle"
-                                                              : "sine");
+               : (output_signal_type_ == kOutputTypeSawtooth) ? "triangle" : "sine");
   }
 
   printf(", amplitude %f", amplitude_);
@@ -196,8 +185,7 @@ void MediaApp::DisplayConfigurationSettings() {
         ",\nramping stream gain from %.3f dB to %.3f dB over %.6lf seconds "
         "(%ld nanoseconds)",
         stream_gain_db_, ramp_target_gain_db_,
-        static_cast<double>(ramp_duration_nsec_) / 1000000000,
-        ramp_duration_nsec_);
+        static_cast<double>(ramp_duration_nsec_) / 1000000000, ramp_duration_nsec_);
   } else if (set_stream_gain_) {
     printf(", at stream gain %.3f dB", stream_gain_db_);
   }
@@ -208,8 +196,7 @@ void MediaApp::DisplayConfigurationSettings() {
   printf(
       ".\nSignal will play for %.3f seconds, using %u %stimestamped buffers of "
       "%u frames",
-      duration_secs_, payloads_per_total_mapping_, (!use_pts_ ? "non-" : ""),
-      frames_per_payload_);
+      duration_secs_, payloads_per_total_mapping_, (!use_pts_ ? "non-" : ""), frames_per_payload_);
 
   if (set_continuity_threshold_) {
     printf(", having set the PTS continuity threshold to %f seconds",
@@ -219,8 +206,7 @@ void MediaApp::DisplayConfigurationSettings() {
     printf(", after setting ");
   }
   if (set_system_gain_) {
-    printf("System Gain to %.3f dB%s", system_gain_db_,
-           set_system_mute_ ? " and " : "");
+    printf("System Gain to %.3f dB%s", system_gain_db_, set_system_mute_ ? " and " : "");
   }
   if (set_system_mute_) {
     printf("System Mute to %s", system_mute_ ? "TRUE" : "FALSE");
@@ -258,15 +244,13 @@ void MediaApp::AcquireAudioRenderer(sys::ComponentContext* app_context) {
 
   audio->CreateAudioRenderer(audio_renderer_.NewRequest());
   audio_renderer_.set_error_handler([this](zx_status_t status) {
-    FXL_PLOG(ERROR, status)
-        << "Client connection to fuchsia.media.AudioRenderer failed";
+    FXL_PLOG(ERROR, status) << "Client connection to fuchsia.media.AudioRenderer failed";
     Shutdown();
   });
 
   audio_renderer_->BindGainControl(gain_control_.NewRequest());
   gain_control_.set_error_handler([this](zx_status_t status) {
-    FXL_PLOG(ERROR, status)
-        << "Client connection to fuchsia.media.GainControl failed";
+    FXL_PLOG(ERROR, status) << "Client connection to fuchsia.media.GainControl failed";
     Shutdown();
   });
 
@@ -279,10 +263,9 @@ void MediaApp::SetStreamType() {
 
   fuchsia::media::AudioStreamType format;
 
-  format.sample_format =
-      (use_int24_ ? fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32
-                  : (use_int16_ ? fuchsia::media::AudioSampleFormat::SIGNED_16
-                                : fuchsia::media::AudioSampleFormat::FLOAT));
+  format.sample_format = (use_int24_ ? fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32
+                                     : (use_int16_ ? fuchsia::media::AudioSampleFormat::SIGNED_16
+                                                   : fuchsia::media::AudioSampleFormat::FLOAT));
   format.channels = num_channels_;
   format.frames_per_second = frame_rate_;
 
@@ -303,9 +286,8 @@ void MediaApp::SetStreamType() {
     gain_control_->SetGain(stream_gain_db_);
   }
   if (ramp_stream_gain_) {
-    gain_control_->SetGainWithRamp(
-        ramp_target_gain_db_, ramp_duration_nsec_,
-        fuchsia::media::audio::RampType::SCALE_LINEAR);
+    gain_control_->SetGainWithRamp(ramp_target_gain_db_, ramp_duration_nsec_,
+                                   fuchsia::media::audio::RampType::SCALE_LINEAR);
   }
 }
 
@@ -313,9 +295,9 @@ void MediaApp::SetStreamType() {
 // Reduce rights and send handle to AudioRenderer: this is our shared buffer.
 zx_status_t MediaApp::CreateMemoryMapping() {
   zx::vmo payload_vmo;
-  zx_status_t status = payload_buffer_.CreateAndMap(
-      total_mapping_size_, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr,
-      &payload_vmo, ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER);
+  zx_status_t status =
+      payload_buffer_.CreateAndMap(total_mapping_size_, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr,
+                                   &payload_vmo, ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER);
 
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "VmoMapper:::CreateAndMap failed - " << status;
@@ -332,14 +314,12 @@ zx_status_t MediaApp::CreateMemoryMapping() {
 fuchsia::media::StreamPacket MediaApp::CreateAudioPacket(uint64_t payload_num) {
   fuchsia::media::StreamPacket packet;
 
-  packet.payload_offset =
-      (payload_num % payloads_per_total_mapping_) * payload_size_;
+  packet.payload_offset = (payload_num % payloads_per_total_mapping_) * payload_size_;
 
   // If last payload, send exactly what remains (otherwise send a full payload).
   packet.payload_size =
       (payload_num + 1 == num_packets_to_send_)
-          ? (total_frames_to_send_ - (payload_num * frames_per_payload_)) *
-                frame_size_
+          ? (total_frames_to_send_ - (payload_num * frames_per_payload_)) * frame_size_
           : payload_size_;
 
   // packet.pts is NO_TIMESTAMP by default unless we override it.
@@ -350,10 +330,8 @@ fuchsia::media::StreamPacket MediaApp::CreateAudioPacket(uint64_t payload_num) {
   return packet;
 }
 
-void MediaApp::GenerateAudioForPacket(fuchsia::media::StreamPacket packet,
-                                      uint64_t payload_num) {
-  auto audio_buff = reinterpret_cast<uint8_t*>(payload_buffer_.start()) +
-                    packet.payload_offset;
+void MediaApp::GenerateAudioForPacket(fuchsia::media::StreamPacket packet, uint64_t payload_num) {
+  auto audio_buff = reinterpret_cast<uint8_t*>(payload_buffer_.start()) + packet.payload_offset;
 
   // Recompute payload_frames each time, since the final packet may be
   // 'short'.
@@ -364,20 +342,17 @@ void MediaApp::GenerateAudioForPacket(fuchsia::media::StreamPacket packet,
   uint32_t payload_frames = packet.payload_size / frame_size_;
 
   if (use_int24_) {
-    WriteAudioIntoBuffer<int32_t>(
-        reinterpret_cast<int32_t*>(audio_buff), payload_frames,
-        frames_per_payload_ * payload_num, output_signal_type_, num_channels_,
-        frames_per_period_, amplitude_scalar_);
+    WriteAudioIntoBuffer<int32_t>(reinterpret_cast<int32_t*>(audio_buff), payload_frames,
+                                  frames_per_payload_ * payload_num, output_signal_type_,
+                                  num_channels_, frames_per_period_, amplitude_scalar_);
   } else if (use_int16_) {
-    WriteAudioIntoBuffer<int16_t>(
-        reinterpret_cast<int16_t*>(audio_buff), payload_frames,
-        frames_per_payload_ * payload_num, output_signal_type_, num_channels_,
-        frames_per_period_, amplitude_scalar_);
+    WriteAudioIntoBuffer<int16_t>(reinterpret_cast<int16_t*>(audio_buff), payload_frames,
+                                  frames_per_payload_ * payload_num, output_signal_type_,
+                                  num_channels_, frames_per_period_, amplitude_scalar_);
   } else {
-    WriteAudioIntoBuffer<float>(
-        reinterpret_cast<float*>(audio_buff), payload_frames,
-        frames_per_payload_ * payload_num, output_signal_type_, num_channels_,
-        frames_per_period_, amplitude_scalar_);
+    WriteAudioIntoBuffer<float>(reinterpret_cast<float*>(audio_buff), payload_frames,
+                                frames_per_payload_ * payload_num, output_signal_type_,
+                                num_channels_, frames_per_period_, amplitude_scalar_);
   }
 }
 
@@ -385,10 +360,10 @@ void MediaApp::GenerateAudioForPacket(fuchsia::media::StreamPacket packet,
 // frames since playback started, to handle arbitrary frequencies of type
 // double.
 template <typename SampleType>
-void MediaApp::WriteAudioIntoBuffer(
-    SampleType* audio_buffer, uint32_t num_frames, uint64_t frames_since_start,
-    OutputSignalType signal_type, uint32_t num_chans, double frames_per_period,
-    double amp_scalar) {
+void MediaApp::WriteAudioIntoBuffer(SampleType* audio_buffer, uint32_t num_frames,
+                                    uint64_t frames_since_start, OutputSignalType signal_type,
+                                    uint32_t num_chans, double frames_per_period,
+                                    double amp_scalar) {
   double raw_val;  // Generated signal val, before applying amplitude scaling.
   double rads_per_frame = 2.0 * M_PI / frames_per_period;  // Radians/Frame.
 
@@ -398,14 +373,11 @@ void MediaApp::WriteAudioIntoBuffer(
         raw_val = sin(rads_per_frame * frames_since_start);
         break;
       case kOutputTypeSquare:
-        raw_val = (fmod(frames_since_start, frames_per_period) >=
-                   frames_per_period / 2)
-                      ? -1.0
-                      : 1.0;
+        raw_val =
+            (fmod(frames_since_start, frames_per_period) >= frames_per_period / 2) ? -1.0 : 1.0;
         break;
       case kOutputTypeSawtooth:
-        raw_val =
-            (fmod(frames_since_start / frames_per_period, 1.0) * 2.0) - 1.0;
+        raw_val = (fmod(frames_since_start / frames_per_period, 1.0) * 2.0) - 1.0;
         break;
       case kOutputTypeNoise:
         // TODO(mpuryear): consider making the white noise generator even more
@@ -438,8 +410,7 @@ void MediaApp::SendPacket(uint64_t payload_num) {
   GenerateAudioForPacket(packet, payload_num);
 
   if (save_to_file_) {
-    if (!wav_writer_.Write(reinterpret_cast<char*>(payload_buffer_.start()) +
-                               packet.payload_offset,
+    if (!wav_writer_.Write(reinterpret_cast<char*>(payload_buffer_.start()) + packet.payload_offset,
                            packet.payload_size)) {
       FXL_LOG(ERROR) << "WavWriter::Write() failed";
     }

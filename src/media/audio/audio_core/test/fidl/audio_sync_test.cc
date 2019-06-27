@@ -32,8 +32,7 @@ void AudioSyncTest::SetUp() {
   AudioTestBase::SetUp();
 
   startup_context_->svc()->Connect(audio_core_sync_.NewRequest());
-  ASSERT_TRUE(audio_core_sync_.is_bound())
-      << "Unable to bind to AudioCoreSync interface";
+  ASSERT_TRUE(audio_core_sync_.is_bound()) << "Unable to bind to AudioCoreSync interface";
 }
 
 void AudioSyncTest::TearDown() {
@@ -57,13 +56,11 @@ void AudioSyncTest::TearDown() {
 // Test creation and interface independence of AudioRenderer.
 TEST_F(AudioSyncTest, CreateAudioRenderer) {
   // Validate Audio can create AudioRenderer interface.
-  EXPECT_EQ(ZX_OK, audio_core_sync_->CreateAudioRenderer(
-                       audio_renderer_sync_.NewRequest()));
+  EXPECT_EQ(ZX_OK, audio_core_sync_->CreateAudioRenderer(audio_renderer_sync_.NewRequest()));
 
   // Validate synchronous Audio can create asynchronous AudioRenderers, too.
   fuchsia::media::AudioRendererPtr audio_renderer;
-  EXPECT_EQ(ZX_OK,
-            audio_core_sync_->CreateAudioRenderer(audio_renderer.NewRequest()));
+  EXPECT_EQ(ZX_OK, audio_core_sync_->CreateAudioRenderer(audio_renderer.NewRequest()));
 
   // Validate that Audio persists without AudioRenderer.
   // Before unbinding this, make sure it survived this far.
@@ -71,8 +68,7 @@ TEST_F(AudioSyncTest, CreateAudioRenderer) {
   audio_renderer_sync_.Unbind();
 
   // Validate AudioRenderer persists after Audio is unbound.
-  EXPECT_EQ(ZX_OK, audio_core_sync_->CreateAudioRenderer(
-                       audio_renderer_sync_.NewRequest()));
+  EXPECT_EQ(ZX_OK, audio_core_sync_->CreateAudioRenderer(audio_renderer_sync_.NewRequest()));
 
   // Before unbinding this, make sure it survived this far.
   EXPECT_TRUE(audio_core_sync_.is_bound());
@@ -86,13 +82,11 @@ TEST_F(AudioSyncTest, CreateAudioRenderer) {
 // Test creation and interface independence of AudioCapturer.
 TEST_F(AudioSyncTest, CreateAudioCapturer) {
   // Validate Audio can create AudioCapturer interface.
-  EXPECT_EQ(ZX_OK, audio_core_sync_->CreateAudioCapturer(
-                       true, audio_capturer_sync_.NewRequest()));
+  EXPECT_EQ(ZX_OK, audio_core_sync_->CreateAudioCapturer(true, audio_capturer_sync_.NewRequest()));
 
   // Validate synchronous Audio can create asynchronous AudioCapturers too.
   fuchsia::media::AudioCapturerPtr audio_capturer;
-  EXPECT_EQ(ZX_OK, audio_core_sync_->CreateAudioCapturer(
-                       false, audio_capturer.NewRequest()));
+  EXPECT_EQ(ZX_OK, audio_core_sync_->CreateAudioCapturer(false, audio_capturer.NewRequest()));
 
   // Validate that Audio persists without AudioCapturer.
   // Before unbinding this, make sure it survived this far.
@@ -100,8 +94,7 @@ TEST_F(AudioSyncTest, CreateAudioCapturer) {
   audio_capturer_sync_.Unbind();
 
   // Validate AudioCapturer persists after Audio is unbound.
-  audio_core_sync_->CreateAudioCapturer(false,
-                                        audio_capturer_sync_.NewRequest());
+  audio_core_sync_->CreateAudioCapturer(false, audio_capturer_sync_.NewRequest());
 
   // Before unbinding this, make sure it survived this far.
   EXPECT_TRUE(audio_core_sync_.is_bound());
@@ -119,25 +112,21 @@ TEST_F(AudioSyncTest, CreateAudioCapturer) {
 // Test the setting of audio output routing policy.
 TEST_F(AudioSyncTest, SetRoutingPolicy) {
   // Validate Audio can set last-plugged routing policy synchronously.
-  EXPECT_EQ(ZX_OK,
-            audio_core_sync_->SetRoutingPolicy(
-                fuchsia::media::AudioOutputRoutingPolicy::LAST_PLUGGED_OUTPUT));
+  EXPECT_EQ(ZX_OK, audio_core_sync_->SetRoutingPolicy(
+                       fuchsia::media::AudioOutputRoutingPolicy::LAST_PLUGGED_OUTPUT));
 
   // Validate Audio can set all-outputs routing policy synchronously.
-  EXPECT_EQ(ZX_OK,
-            audio_core_sync_->SetRoutingPolicy(
-                fuchsia::media::AudioOutputRoutingPolicy::ALL_PLUGGED_OUTPUTS));
+  EXPECT_EQ(ZX_OK, audio_core_sync_->SetRoutingPolicy(
+                       fuchsia::media::AudioOutputRoutingPolicy::ALL_PLUGGED_OUTPUTS));
 
   // Out-of-range enum should be blocked at sender-side.
-  EXPECT_EQ(ZX_ERR_INVALID_ARGS,
-            audio_core_sync_->SetRoutingPolicy(
-                static_cast<fuchsia::media::AudioOutputRoutingPolicy>(-1u)));
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, audio_core_sync_->SetRoutingPolicy(
+                                     static_cast<fuchsia::media::AudioOutputRoutingPolicy>(-1u)));
 
   // These tests should be running hermetically, but if not (if running on the
   // system's global audio_core), reset persistent system settings to defaults!
-  EXPECT_EQ(ZX_OK,
-            audio_core_sync_->SetRoutingPolicy(
-                fuchsia::media::AudioOutputRoutingPolicy::LAST_PLUGGED_OUTPUT));
+  EXPECT_EQ(ZX_OK, audio_core_sync_->SetRoutingPolicy(
+                       fuchsia::media::AudioOutputRoutingPolicy::LAST_PLUGGED_OUTPUT));
   EXPECT_TRUE(audio_core_sync_.is_bound());
 }
 

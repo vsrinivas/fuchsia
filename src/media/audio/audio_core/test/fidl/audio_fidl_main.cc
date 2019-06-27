@@ -44,8 +44,7 @@ class AudioFidlEnvironment : public testing::Environment {
     // This is not the case for sync calls WITHOUT callback (nor async calls),
     // because of the pipelining inherent in FIDL's design.
     zx_duration_t lead_time;
-    bool connected_to_audio_service =
-        (audio_renderer_sync->GetMinLeadTime(&lead_time) == ZX_OK);
+    bool connected_to_audio_service = (audio_renderer_sync->GetMinLeadTime(&lead_time) == ZX_OK);
 
     // On assert-false, no test cases run, and they may display as passed.
     // However, the overall binary returns non-zero (fail).
@@ -68,8 +67,7 @@ int main(int argc, char** argv) {
   testing::InitGoogleTest(&argc, argv);
 
   // gtest takes ownership of registered environments: **do not delete them**!
-  testing::AddGlobalTestEnvironment(
-      new media::audio::test::AudioFidlEnvironment);
+  testing::AddGlobalTestEnvironment(new media::audio::test::AudioFidlEnvironment);
 
   // TODO(mpuryear): create and use a '--stress' switch here, to execute a set
   // of longhaul resource-exhaustion-focused tests on these interfaces.

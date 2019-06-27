@@ -34,12 +34,12 @@ class AudioCoreImpl : public fuchsia::media::AudioCore {
   ~AudioCoreImpl() override;
 
   // Audio implementation.
-  void CreateAudioRenderer(fidl::InterfaceRequest<fuchsia::media::AudioRenderer>
-                               audio_renderer_request) final;
+  void CreateAudioRenderer(
+      fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request) final;
 
-  void CreateAudioCapturer(bool loopback,
-                           fidl::InterfaceRequest<fuchsia::media::AudioCapturer>
-                               audio_capturer_request) final;
+  void CreateAudioCapturer(
+      bool loopback,
+      fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request) final;
 
   void SetSystemGain(float gain_db) final;
   void SetSystemMute(bool muted) final;

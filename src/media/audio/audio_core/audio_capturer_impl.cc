@@ -15,8 +15,7 @@
 // Allow (at most) 256 slabs of pending capture buffers. At 16KB per slab, this
 // means we will deny allocations after 4MB. If we ever need more than 4MB of
 // pending capture buffer bookkeeping, something has gone seriously wrong.
-DECLARE_STATIC_SLAB_ALLOCATOR_STORAGE(
-    media::audio::AudioCapturerImpl::PcbAllocatorTraits, 0x100);
+DECLARE_STATIC_SLAB_ALLOCATOR_STORAGE(media::audio::AudioCapturerImpl::PcbAllocatorTraits, 0x100);
 
 namespace media::audio {
 
@@ -28,16 +27,13 @@ constexpr float kInitialCaptureGainDb = Gain::kUnityGainDb;
 AtomicGenerationId AudioCapturerImpl::PendingCaptureBuffer::sequence_generator;
 
 fbl::RefPtr<AudioCapturerImpl> AudioCapturerImpl::Create(
-    fidl::InterfaceRequest<fuchsia::media::AudioCapturer>
-        audio_capturer_request,
+    fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request,
     AudioCoreImpl* owner, bool loopback) {
-  return fbl::AdoptRef(new AudioCapturerImpl(std::move(audio_capturer_request),
-                                             owner, loopback));
+  return fbl::AdoptRef(new AudioCapturerImpl(std::move(audio_capturer_request), owner, loopback));
 }
 
 AudioCapturerImpl::AudioCapturerImpl(
-    fidl::InterfaceRequest<fuchsia::media::AudioCapturer>
-        audio_capturer_request,
+    fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request,
     AudioCoreImpl* owner, bool loopback)
     : AudioObject(Type::AudioCapturer),
       binding_(this, std::move(audio_capturer_request)),
@@ -75,8 +71,7 @@ AudioCapturerImpl::~AudioCapturerImpl() {
   REP(RemovingCapturer(*this));
 }
 
-void AudioCapturerImpl::SetInitialFormat(
-    fuchsia::media::AudioStreamType format) {
+void AudioCapturerImpl::SetInitialFormat(fuchsia::media::AudioStreamType format) {
   UpdateFormat(format.sample_format, format.channels, format.frames_per_second);
 }
 
@@ -104,8 +99,7 @@ void AudioCapturerImpl::Shutdown() {
   // RingBufferHelper, since this would be a use which is not driver specific).
   if (payload_buf_virt_ != nullptr) {
     FXL_DCHECK(payload_buf_size_ != 0);
-    zx::vmar::root_self()->unmap(reinterpret_cast<uintptr_t>(payload_buf_virt_),
-                                 payload_buf_size_);
+    zx::vmar::root_self()->unmap(reinterpret_cast<uintptr_t>(payload_buf_virt_), payload_buf_size_);
     payload_buf_virt_ = nullptr;
     payload_buf_size_ = 0;
     payload_buf_frames_ = 0;
@@ -121,8 +115,7 @@ void AudioCapturerImpl::Shutdown() {
   state_.store(State::Shutdown);
 }
 
-zx_status_t AudioCapturerImpl::InitializeSourceLink(
-    const fbl::RefPtr<AudioLink>& link) {
+zx_status_t AudioCapturerImpl::InitializeSourceLink(const fbl::RefPtr<AudioLink>& link) {
   zx_status_t res;
 
   // Allocate our bookkeeping for our link.
@@ -162,8 +155,7 @@ void AudioCapturerImpl::GetStreamType(GetStreamTypeCallback cbk) {
   cbk(std::move(ret));
 }
 
-void AudioCapturerImpl::SetPcmStreamType(
-    fuchsia::media::AudioStreamType stream_type) {
+void AudioCapturerImpl::SetPcmStreamType(fuchsia::media::AudioStreamType stream_type) {
   // If something goes wrong, hang up the phone and shutdown.
   auto cleanup = fit::defer([this]() { Shutdown(); });
 
@@ -180,20 +172,16 @@ void AudioCapturerImpl::SetPcmStreamType(
   // Sanity check the details of the mode request.
   if ((stream_type.channels < fuchsia::media::MIN_PCM_CHANNEL_COUNT) ||
       (stream_type.channels > fuchsia::media::MAX_PCM_CHANNEL_COUNT)) {
-    FXL_LOG(ERROR) << "Bad channel count, " << stream_type.channels
-                   << " is not in the range ["
+    FXL_LOG(ERROR) << "Bad channel count, " << stream_type.channels << " is not in the range ["
                    << fuchsia::media::MIN_PCM_CHANNEL_COUNT << ", "
                    << fuchsia::media::MAX_PCM_CHANNEL_COUNT << "]";
     return;
   }
 
-  if ((stream_type.frames_per_second <
-       fuchsia::media::MIN_PCM_FRAMES_PER_SECOND) ||
-      (stream_type.frames_per_second >
-       fuchsia::media::MAX_PCM_FRAMES_PER_SECOND)) {
+  if ((stream_type.frames_per_second < fuchsia::media::MIN_PCM_FRAMES_PER_SECOND) ||
+      (stream_type.frames_per_second > fuchsia::media::MAX_PCM_FRAMES_PER_SECOND)) {
     FXL_LOG(ERROR) << "Bad frame rate, " << stream_type.frames_per_second
-                   << " is not in the range ["
-                   << fuchsia::media::MIN_PCM_FRAMES_PER_SECOND << ", "
+                   << " is not in the range [" << fuchsia::media::MIN_PCM_FRAMES_PER_SECOND << ", "
                    << fuchsia::media::MAX_PCM_FRAMES_PER_SECOND << "]";
     return;
   }
@@ -206,16 +194,14 @@ void AudioCapturerImpl::SetPcmStreamType(
       break;
 
     default:
-      FXL_LOG(ERROR) << "Bad sample format "
-                     << fidl::ToUnderlying(stream_type.sample_format);
+      FXL_LOG(ERROR) << "Bad sample format " << fidl::ToUnderlying(stream_type.sample_format);
       return;
   }
 
   REP(SettingCapturerStreamType(*this, stream_type));
 
   // Success, record our new format.
-  UpdateFormat(stream_type.sample_format, stream_type.channels,
-               stream_type.frames_per_second);
+  UpdateFormat(stream_type.sample_format, stream_type.channels, stream_type.frames_per_second);
 
   cleanup.cancel();
 }
@@ -260,16 +246,14 @@ void AudioCapturerImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) {
   constexpr uint64_t max_uint32 = std::numeric_limits<uint32_t>::max();
   if ((payload_buf_size_ < bytes_per_frame_) ||
       (payload_buf_size_ > (max_uint32 * bytes_per_frame_))) {
-    FXL_LOG(ERROR) << "Bad payload buffer VMO size (size = "
-                   << payload_buf_size_
+    FXL_LOG(ERROR) << "Bad payload buffer VMO size (size = " << payload_buf_size_
                    << ", bytes per frame = " << bytes_per_frame_ << ")";
     return;
   }
 
   REP(AddingCapturerPayloadBuffer(*this, id, payload_buf_size_));
 
-  payload_buf_frames_ =
-      static_cast<uint32_t>(payload_buf_size_ / bytes_per_frame_);
+  payload_buf_frames_ = static_cast<uint32_t>(payload_buf_size_ / bytes_per_frame_);
 
   // Allocate our intermediate buffer for mixing.
   //
@@ -289,24 +273,22 @@ void AudioCapturerImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) {
   payload_buf_virt_ = reinterpret_cast<void*>(tmp);
 
   // Activate the dispatcher primitives we will use to drive the mixing process.
-  res = mix_wakeup_->Activate(
-      mix_domain_, [this](dispatcher::WakeupEvent* event) -> zx_status_t {
-        OBTAIN_EXECUTION_DOMAIN_TOKEN(token, mix_domain_);
-        FXL_DCHECK(event == mix_wakeup_.get());
-        return Process();
-      });
+  res = mix_wakeup_->Activate(mix_domain_, [this](dispatcher::WakeupEvent* event) -> zx_status_t {
+    OBTAIN_EXECUTION_DOMAIN_TOKEN(token, mix_domain_);
+    FXL_DCHECK(event == mix_wakeup_.get());
+    return Process();
+  });
 
   if (res != ZX_OK) {
     FXL_PLOG(ERROR, res) << "Failed activate wakeup event";
     return;
   }
 
-  res = mix_timer_->Activate(
-      mix_domain_, [this](dispatcher::Timer* timer) -> zx_status_t {
-        OBTAIN_EXECUTION_DOMAIN_TOKEN(token, mix_domain_);
-        FXL_DCHECK(timer == mix_timer_.get());
-        return Process();
-      });
+  res = mix_timer_->Activate(mix_domain_, [this](dispatcher::Timer* timer) -> zx_status_t {
+    OBTAIN_EXECUTION_DOMAIN_TOKEN(token, mix_domain_);
+    FXL_DCHECK(timer == mix_timer_.get());
+    return Process();
+  });
 
   if (res != ZX_OK) {
     FXL_PLOG(ERROR, res) << "Failed activate timer";
@@ -378,9 +360,8 @@ void AudioCapturerImpl::RemovePayloadBuffer(uint32_t id) {
   Shutdown();
 }
 
-void AudioCapturerImpl::CaptureAt(uint32_t payload_buffer_id,
-                                  uint32_t offset_frames, uint32_t num_frames,
-                                  CaptureAtCallback cbk) {
+void AudioCapturerImpl::CaptureAt(uint32_t payload_buffer_id, uint32_t offset_frames,
+                                  uint32_t num_frames, CaptureAtCallback cbk) {
   if (payload_buffer_id != 0) {
     FXL_LOG(ERROR) << "payload_buffer_id must be 0 for now.";
     return;
@@ -404,14 +385,12 @@ void AudioCapturerImpl::CaptureAt(uint32_t payload_buffer_id,
   if (!num_frames || (buffer_end > payload_buf_frames_)) {
     FXL_LOG(ERROR) << "Bad buffer range submitted. "
                    << " offset " << offset_frames << " length " << num_frames
-                   << ". Shared buffer is " << payload_buf_frames_
-                   << " frames long.";
+                   << ". Shared buffer is " << payload_buf_frames_ << " frames long.";
     return;
   }
 
   // Allocate bookkeeping to track this pending capture operation.
-  auto pending_capture_buffer =
-      PcbAllocator::New(offset_frames, num_frames, std::move(cbk));
+  auto pending_capture_buffer = PcbAllocator::New(offset_frames, num_frames, std::move(cbk));
   if (pending_capture_buffer == nullptr) {
     FXL_LOG(ERROR) << "Failed to allocate pending capture buffer!";
     return;
@@ -440,9 +419,7 @@ void AudioCapturerImpl::ReleasePacket(fuchsia::media::StreamPacket packet) {
   Shutdown();
 }
 
-void AudioCapturerImpl::DiscardAllPacketsNoReply() {
-  DiscardAllPackets(nullptr);
-}
+void AudioCapturerImpl::DiscardAllPacketsNoReply() { DiscardAllPackets(nullptr); }
 
 void AudioCapturerImpl::DiscardAllPackets(DiscardAllPacketsCallback cbk) {
   // It is illegal to call Flush unless we are currently operating in
@@ -495,8 +472,7 @@ void AudioCapturerImpl::StartAsyncCapture(uint32_t frames_per_packet) {
   bool queues_empty;
   {
     fbl::AutoLock pending_lock(&pending_lock_);
-    queues_empty = pending_capture_buffers_.is_empty() &&
-                   finished_capture_buffers_.is_empty();
+    queues_empty = pending_capture_buffers_.is_empty() && finished_capture_buffers_.is_empty();
   }
 
   if (!queues_empty) {
@@ -619,8 +595,7 @@ zx_status_t AudioCapturerImpl::Process() {
 
         // This should have been established by CaptureAt; it had better still
         // be true.
-        FXL_DCHECK((static_cast<uint64_t>(p.offset_frames) + p.num_frames) <=
-                   payload_buf_frames_);
+        FXL_DCHECK((static_cast<uint64_t>(p.offset_frames) + p.num_frames) <= payload_buf_frames_);
         FXL_DCHECK(p.filled_frames < p.num_frames);
 
         // If we don't know our timeline transformation, then the next buffer we
@@ -635,11 +610,10 @@ zx_status_t AudioCapturerImpl::Process() {
         FXL_DCHECK(payload_buf_virt_ != nullptr);
 
         uint64_t offset_bytes =
-            bytes_per_frame_ *
-            static_cast<uint64_t>(p.offset_frames + p.filled_frames);
+            bytes_per_frame_ * static_cast<uint64_t>(p.offset_frames + p.filled_frames);
 
-        mix_target = reinterpret_cast<void*>(
-            reinterpret_cast<uintptr_t>(payload_buf_virt_) + offset_bytes);
+        mix_target =
+            reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(payload_buf_virt_) + offset_bytes);
         mix_frames = p.num_frames - p.filled_frames;
         buffer_sequence_number = p.sequence_number;
       }
@@ -694,8 +668,7 @@ zx_status_t AudioCapturerImpl::Process() {
       // re-reduce the ratio between frames_per_second_ and nanoseconds every
       // time. Since the frame rate we supply is already reduced, this step
       // should go pretty quickly.
-      frames_to_clock_mono_ =
-          TimelineFunction(now, frame_count_, frames_to_clock_mono_rate_);
+      frames_to_clock_mono_ = TimelineFunction(now, frame_count_, frames_to_clock_mono_rate_);
       frames_to_clock_mono_gen_.Next();
       FXL_DCHECK(frames_to_clock_mono_.invertible());
     }
@@ -706,11 +679,9 @@ zx_status_t AudioCapturerImpl::Process() {
     }
 
     // Figure out when we can finish the job. If in the future, wait until then.
-    int64_t last_frame_time =
-        frames_to_clock_mono_.Apply(frame_count_ + mix_frames);
+    int64_t last_frame_time = frames_to_clock_mono_.Apply(frame_count_ + mix_frames);
     if (last_frame_time == TimelineRate::kOverflow) {
-      FXL_LOG(ERROR)
-          << "Fatal timeline overflow in capture mixer, shutting down capture.";
+      FXL_LOG(ERROR) << "Fatal timeline overflow in capture mixer, shutting down capture.";
       ShutdownFromMixDomain();
       return ZX_ERR_INTERNAL;
     }
@@ -725,10 +696,8 @@ zx_status_t AudioCapturerImpl::Process() {
       // a new source shows up and pushes the largest fence time out, the next
       // time we wake up, it will be early. We will need to recognize this
       // condition and go back to sleep for a little bit before actually mixing.
-      if (mix_timer_->Arm(last_frame_time + kAssumedWorstSourceFenceTime) !=
-          ZX_OK) {
-        FXL_LOG(ERROR)
-            << "Could not arm mix timer for capture, shutting down capture.";
+      if (mix_timer_->Arm(last_frame_time + kAssumedWorstSourceFenceTime) != ZX_OK) {
+        FXL_LOG(ERROR) << "Could not arm mix timer for capture, shutting down capture.";
         ShutdownFromMixDomain();
         return ZX_ERR_INTERNAL;
       }
@@ -771,15 +740,13 @@ zx_status_t AudioCapturerImpl::Process() {
           buffer_finished = p.filled_frames >= p.num_frames;
           if (buffer_finished) {
             wakeup_service_thread = finished_capture_buffers_.is_empty();
-            finished_capture_buffers_.push_back(
-                pending_capture_buffers_.pop_front());
+            finished_capture_buffers_.push_back(pending_capture_buffers_.pop_front());
           }
         } else {
           // It looks like we were flushed while we were mixing. Invalidate our
           // timeline function, we will re-establish it and flag a discontinuity
           // next time we have work to do.
-          frames_to_clock_mono_ =
-              TimelineFunction(now, frame_count_, frames_to_clock_mono_rate_);
+          frames_to_clock_mono_ = TimelineFunction(now, frame_count_, frames_to_clock_mono_rate_);
           frames_to_clock_mono_gen_.Next();
         }
       }
@@ -829,16 +796,15 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
   //    MixToIntermediate is running in the mixer execution domain, which is
   //    what guards the source_link_refs_ member.
   // For this reason, we manually disable thread analysis on the cleanup lambda.
-  auto release_snapshot_refs = fit::defer(
-      [this]() FXL_NO_THREAD_SAFETY_ANALYSIS { source_link_refs_.clear(); });
+  auto release_snapshot_refs =
+      fit::defer([this]() FXL_NO_THREAD_SAFETY_ANALYSIS { source_link_refs_.clear(); });
 
   // Silence our intermediate buffer.
   size_t job_bytes = sizeof(mix_buf_[0]) * mix_frames * format_->channels;
   std::memset(mix_buf_.get(), 0u, job_bytes);
 
   // If our capturer is mute, we have nothing to do after filling with silence.
-  if (mute_ ||
-      (stream_gain_db_.load() <= fuchsia::media::audio::MUTED_GAIN_DB)) {
+  if (mute_ || (stream_gain_db_.load() <= fuchsia::media::audio::MUTED_GAIN_DB)) {
     return true;
   }
 
@@ -858,9 +824,8 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
     // down. Once MTWN-52 is resolved, we can come back here and remove this.
     const auto& driver = device.driver();
     if (driver == nullptr) {
-      FXL_LOG(ERROR)
-          << "AudioCapturer appears to be linked to throttle output!  "
-             "Shutting down";
+      FXL_LOG(ERROR) << "AudioCapturer appears to be linked to throttle output!  "
+                        "Shutting down";
       return false;
     }
 
@@ -880,8 +845,7 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
     // If a driver does not have its ring buffer, or a valid clock monotonic to
     // ring buffer position transformation, then there is nothing to do (at the
     // moment). Just skip this source and move on to the next one.
-    if ((rb_snap.ring_buffer == nullptr) ||
-        (!rb_snap.clock_mono_to_ring_pos_bytes.invertible())) {
+    if ((rb_snap.ring_buffer == nullptr) || (!rb_snap.clock_mono_to_ring_pos_bytes.invertible())) {
       continue;
     }
 
@@ -906,11 +870,9 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
     zx_time_t now = zx_clock_get_monotonic();
 
     int64_t end_fence_frames =
-        (info.clock_mono_to_frac_source_frames.Apply(now)) >>
-        kPtsFractionalBits;
+        (info.clock_mono_to_frac_source_frames.Apply(now)) >> kPtsFractionalBits;
 
-    int64_t start_fence_frames =
-        end_fence_frames - rb_snap.end_fence_to_start_fence_frames;
+    int64_t start_fence_frames = end_fence_frames - rb_snap.end_fence_to_start_fence_frames;
     start_fence_frames = std::max<int64_t>(start_fence_frames, 0);
     FXL_DCHECK(end_fence_frames >= 0);
     FXL_DCHECK(end_fence_frames - start_fence_frames < rb->frames());
@@ -921,10 +883,8 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
       int64_t sfrac_pts;  // start fractional frame pts
     } regions[2];
 
-    auto start_frames_mod =
-        static_cast<uint32_t>(start_fence_frames % rb->frames());
-    auto end_frames_mod =
-        static_cast<uint32_t>(end_fence_frames % rb->frames());
+    auto start_frames_mod = static_cast<uint32_t>(start_fence_frames % rb->frames());
+    auto end_frames_mod = static_cast<uint32_t>(end_fence_frames % rb->frames());
 
     if (start_frames_mod <= end_frames_mod) {
       // One region
@@ -941,8 +901,7 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
 
       regions[1].srb_pos = 0;
       regions[1].len = end_frames_mod;
-      regions[1].sfrac_pts =
-          regions[0].sfrac_pts + (regions[0].len << kPtsFractionalBits);
+      regions[1].sfrac_pts = regions[0].sfrac_pts + (regions[0].len << kPtsFractionalBits);
     }
 
     uint32_t frames_left = mix_frames;
@@ -988,11 +947,9 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
       // region, this sample will be taken from.
       int64_t source_offset_64 = job_start - region.sfrac_pts;
       int64_t output_offset_64 = 0;
-      int64_t first_sample_pos_window_edge =
-          job_start + info.mixer->pos_filter_width();
+      int64_t first_sample_pos_window_edge = job_start + info.mixer->pos_filter_width();
 
-      const TimelineRate& dest_to_src =
-          info.dest_frames_to_frac_source_frames.rate();
+      const TimelineRate& dest_to_src = info.dest_frames_to_frac_source_frames.rate();
       // If first frame in this source region comes after positive edge of
       // filter window, we must skip output frames before producing data.
       if (region.sfrac_pts > first_sample_pos_window_edge) {
@@ -1015,11 +972,9 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
       auto output_offset = static_cast<uint32_t>(output_offset_64);
       auto frac_source_offset = static_cast<int32_t>(source_offset_64);
 
-      FXL_DCHECK(frac_source_offset <
-                 static_cast<int32_t>(region_frac_frame_len));
+      FXL_DCHECK(frac_source_offset < static_cast<int32_t>(region_frac_frame_len));
 
-      const uint8_t* region_source =
-          rb->virt() + (region.srb_pos * rb->frame_size());
+      const uint8_t* region_source = rb->virt() + (region.srb_pos * rb->frame_size());
 
       // Invalidate the region of the cache we are just about to read on
       // architectures who require it.
@@ -1033,10 +988,8 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
       // Also, at some point I need to come back and double check that the
       // mixer's filter width is being accounted for properly here.
       FXL_DCHECK(output_offset <= frames_left);
-      uint64_t cache_target_frac_frames =
-          dest_to_src.Scale(frames_left - output_offset);
-      uint32_t cache_target_frames =
-          ((cache_target_frac_frames - 1) >> kPtsFractionalBits) + 1;
+      uint64_t cache_target_frac_frames = dest_to_src.Scale(frames_left - output_offset);
+      uint32_t cache_target_frames = ((cache_target_frac_frames - 1) >> kPtsFractionalBits) + 1;
       cache_target_frames = std::min(cache_target_frames, region.len);
       zx_cache_flush(region_source, cache_target_frames * rb->frame_size(),
                      ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE);
@@ -1068,9 +1021,9 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
       // measurable and attributable to this jitter, we will defer this work.
       //
       // Update: src_pos_modulo is added to Mix(), but for now we omit it here.
-      bool consumed_source = info.mixer->Mix(
-          buf, frames_left, &output_offset, region_source,
-          region_frac_frame_len, &frac_source_offset, accumulate, &info);
+      bool consumed_source =
+          info.mixer->Mix(buf, frames_left, &output_offset, region_source, region_frac_frame_len,
+                          &frac_source_offset, accumulate, &info);
       FXL_DCHECK(output_offset <= frames_left);
 
       if (!consumed_source) {
@@ -1096,8 +1049,8 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
   return true;
 }
 
-void AudioCapturerImpl::UpdateTransformation(
-    Bookkeeping* info, const AudioDriver::RingBufferSnapshot& rb_snap) {
+void AudioCapturerImpl::UpdateTransformation(Bookkeeping* info,
+                                             const AudioDriver::RingBufferSnapshot& rb_snap) {
   FXL_DCHECK(info != nullptr);
 
   if ((info->dest_trans_gen_id == frames_to_clock_mono_gen_.get()) &&
@@ -1112,28 +1065,24 @@ void AudioCapturerImpl::UpdateTransformation(
   TimelineRate src_bytes_to_frac_frames(1u << kPtsFractionalBits,
                                         rb_snap.ring_buffer->frame_size());
 
-  auto src_clock_mono_to_ring_pos_frac_frames =
-      TimelineFunction::Compose(TimelineFunction(src_bytes_to_frac_frames),
-                                rb_snap.clock_mono_to_ring_pos_bytes);
+  auto src_clock_mono_to_ring_pos_frac_frames = TimelineFunction::Compose(
+      TimelineFunction(src_bytes_to_frac_frames), rb_snap.clock_mono_to_ring_pos_bytes);
 
-  info->dest_frames_to_frac_source_frames = TimelineFunction::Compose(
-      src_clock_mono_to_ring_pos_frac_frames, frames_to_clock_mono_);
+  info->dest_frames_to_frac_source_frames =
+      TimelineFunction::Compose(src_clock_mono_to_ring_pos_frac_frames, frames_to_clock_mono_);
 
   auto offset = static_cast<int64_t>(rb_snap.position_to_end_fence_frames);
 
   info->clock_mono_to_frac_source_frames = TimelineFunction::Compose(
-      TimelineFunction(-offset, 0, TimelineRate(1u, 1u)),
-      src_clock_mono_to_ring_pos_frac_frames);
+      TimelineFunction(-offset, 0, TimelineRate(1u, 1u)), src_clock_mono_to_ring_pos_frac_frames);
 
-  int64_t tmp_step_size =
-      info->dest_frames_to_frac_source_frames.rate().Scale(1);
+  int64_t tmp_step_size = info->dest_frames_to_frac_source_frames.rate().Scale(1);
   FXL_DCHECK(tmp_step_size >= 0);
   FXL_DCHECK(tmp_step_size <= std::numeric_limits<uint32_t>::max());
   info->step_size = static_cast<uint32_t>(tmp_step_size);
   info->denominator = info->SnapshotDenominatorFromDestTrans();
-  info->rate_modulo =
-      info->dest_frames_to_frac_source_frames.rate().subject_delta() -
-      (info->denominator * info->step_size);
+  info->rate_modulo = info->dest_frames_to_frac_source_frames.rate().subject_delta() -
+                      (info->denominator * info->step_size);
 
   FXL_DCHECK(info->denominator > 0);
   info->dest_trans_gen_id = frames_to_clock_mono_gen_.get();
@@ -1185,14 +1134,13 @@ bool AudioCapturerImpl::QueueNextAsyncPendingBuffer() {
   // Sanity check our async offset bookkeeping.
   FXL_DCHECK(async_next_frame_offset_ < payload_buf_frames_);
   FXL_DCHECK(async_frames_per_packet_ <= (payload_buf_frames_ / 2));
-  FXL_DCHECK(async_next_frame_offset_ <=
-             (payload_buf_frames_ - async_frames_per_packet_));
+  FXL_DCHECK(async_next_frame_offset_ <= (payload_buf_frames_ - async_frames_per_packet_));
 
   // Allocate bookkeeping to track this pending capture operation. If we cannot
   // allocate a new pending capture buffer, it is a fatal error and we need to
   // start the process of shutting down.
-  auto pending_capture_buffer = PcbAllocator::New(
-      async_next_frame_offset_, async_frames_per_packet_, nullptr);
+  auto pending_capture_buffer =
+      PcbAllocator::New(async_next_frame_offset_, async_frames_per_packet_, nullptr);
   if (pending_capture_buffer == nullptr) {
     FXL_LOG(ERROR) << "Failed to allocate pending capture buffer during async "
                       "capture mode!";
@@ -1224,8 +1172,7 @@ void AudioCapturerImpl::ShutdownFromMixDomain() {
   mix_domain_->DeactivateFromWithinDomain();
   state_.store(State::Shutdown);
 
-  owner_->ScheduleMainThreadTask(
-      [thiz = fbl::WrapRefPtr(this)]() { thiz->Shutdown(); });
+  owner_->ScheduleMainThreadTask([thiz = fbl::WrapRefPtr(this)]() { thiz->Shutdown(); });
 }
 
 void AudioCapturerImpl::FinishAsyncStopThunk() {
@@ -1303,9 +1250,8 @@ void AudioCapturerImpl::FinishBuffers(const PcbList& finished_buffers) {
   }
 }
 
-void AudioCapturerImpl::UpdateFormat(
-    fuchsia::media::AudioSampleFormat sample_format, uint32_t channels,
-    uint32_t frames_per_second) {
+void AudioCapturerImpl::UpdateFormat(fuchsia::media::AudioSampleFormat sample_format,
+                                     uint32_t channels, uint32_t frames_per_second) {
   // Record our new format.
   FXL_DCHECK(state_.load() == State::WaitingForVmo);
   format_->sample_format = sample_format;
@@ -1327,8 +1273,7 @@ void AudioCapturerImpl::UpdateFormat(
   // constant, strictly speaking). We should move it somewhere else.
   constexpr int64_t kMaxTimePerCapture = ZX_MSEC(50);
   int64_t tmp;
-  frames_to_clock_mono_rate_ =
-      TimelineRate(ZX_SEC(1), format_->frames_per_second);
+  frames_to_clock_mono_rate_ = TimelineRate(ZX_SEC(1), format_->frames_per_second);
   tmp = frames_to_clock_mono_rate_.Inverse().Scale(kMaxTimePerCapture);
   max_frames_per_capture_ = static_cast<uint32_t>(tmp);
 
@@ -1360,8 +1305,7 @@ zx_status_t AudioCapturerImpl::ChooseMixer(const fbl::RefPtr<AudioLink>& link) {
   fuchsia::media::AudioStreamTypePtr source_format;
   source_format = device.driver()->GetSourceFormat();
   if (!source_format) {
-    FXL_LOG(WARNING)
-        << "Failed to find mixer. Source currently has no configured format";
+    FXL_LOG(WARNING) << "Failed to find mixer. Source currently has no configured format";
     return ZX_ERR_BAD_STATE;
   }
 
@@ -1374,11 +1318,11 @@ zx_status_t AudioCapturerImpl::ChooseMixer(const fbl::RefPtr<AudioLink>& link) {
 
   if (info.mixer == nullptr) {
     FXL_LOG(WARNING) << "Failed to find mixer for capturer.";
-    FXL_LOG(WARNING) << "Source cfg: rate " << source_format->frames_per_second
-                     << " ch " << source_format->channels << " sample fmt "
+    FXL_LOG(WARNING) << "Source cfg: rate " << source_format->frames_per_second << " ch "
+                     << source_format->channels << " sample fmt "
                      << fidl::ToUnderlying(source_format->sample_format);
-    FXL_LOG(WARNING) << "Dest cfg  : rate " << format_->frames_per_second
-                     << " ch " << format_->channels << " sample fmt "
+    FXL_LOG(WARNING) << "Dest cfg  : rate " << format_->frames_per_second << " ch "
+                     << format_->channels << " sample fmt "
                      << fidl::ToUnderlying(format_->sample_format);
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -1392,8 +1336,7 @@ zx_status_t AudioCapturerImpl::ChooseMixer(const fbl::RefPtr<AudioLink>& link) {
     fuchsia::media::AudioDeviceInfo device_info;
     device.GetDeviceInfo(&device_info);
 
-    info.gain.SetSourceMute(device_info.gain_info.flags &
-                            fuchsia::media::AudioGainInfoFlag_Mute);
+    info.gain.SetSourceMute(device_info.gain_info.flags & fuchsia::media::AudioGainInfoFlag_Mute);
     info.gain.SetSourceGain(device_info.gain_info.gain_db);
   }
   // Else (if device is an Audio Output), use default SourceGain (Unity). Device
@@ -1449,8 +1392,7 @@ void AudioCapturerImpl::SetMute(bool mute) {
 
   mute_ = mute;
 
-  ForEachSourceLink(
-      [mute](auto& link) { link.bookkeeping()->gain.SetDestMute(mute); });
+  ForEachSourceLink([mute](auto& link) { link.bookkeeping()->gain.SetDestMute(mute); });
 
   NotifyGainMuteChanged();
 }

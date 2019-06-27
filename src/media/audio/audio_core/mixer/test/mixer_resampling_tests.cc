@@ -37,8 +37,7 @@ TEST(Bookkeeping, Defaults) {
 TEST(Bookkeeping, Clocks) {
   Bookkeeping info;
 
-  info.dest_frames_to_frac_source_frames =
-      TimelineFunction(0, 1, 44100u, 48000u);
+  info.dest_frames_to_frac_source_frames = TimelineFunction(0, 1, 44100u, 48000u);
   EXPECT_EQ(info.SnapshotDenominatorFromDestTrans(), 160u);
 }
 
@@ -82,8 +81,8 @@ TEST(Bookkeeping, Reset) {
 void TestBasicPosition(Resampler samplerType) {
   bool mix_result;
 
-  auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1,
-                           48000, 1, 48000, samplerType);
+  auto mixer =
+      SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000, samplerType);
 
   //
   // Check: source supply equals destination demand.
@@ -93,17 +92,14 @@ void TestBasicPosition(Resampler samplerType) {
   int16_t source[] = {1, 0xC, 0x7B, 0x4D2, 0x3039};
 
   // Mix will add source[2,3,4] to accum[1,2,3]
-  float accum[] = {-0x00002000, -0x00017000, -0x000EA000, -0x00929000,
-                   -0x05BA0000};
-  float expect[] = {-0x00002000, 0x00064000, 0x003E8000, 0x02710000,
-                    -0x05BA0000};
+  float accum[] = {-0x00002000, -0x00017000, -0x000EA000, -0x00929000, -0x05BA0000};
+  float expect[] = {-0x00002000, 0x00064000, 0x003E8000, 0x02710000, -0x05BA0000};
   NormalizeInt28ToPipelineBitwidth(accum, fbl::count_of(accum));
   NormalizeInt28ToPipelineBitwidth(expect, fbl::count_of(expect));
 
   Bookkeeping info;
-  mix_result =
-      mixer->Mix(accum, 4, &dest_offset, source, 5 << kPtsFractionalBits,
-                 &frac_src_offset, true, &info);
+  mix_result = mixer->Mix(accum, 4, &dest_offset, source, 5 << kPtsFractionalBits, &frac_src_offset,
+                          true, &info);
 
   EXPECT_TRUE(mix_result);
   EXPECT_EQ(4u, dest_offset);
@@ -116,16 +112,13 @@ void TestBasicPosition(Resampler samplerType) {
   frac_src_offset = 0;
   dest_offset = 2;
   // Mix will add source[0,1] to accum2[2,3]
-  float accum2[] = {-0x00002000, -0x00017000, -0x000EA000, -0x00929000,
-                    -0x05BA0000};
-  float expect2[] = {-0x00002000, -0x00017000, -0x000E9000, -0x0091D000,
-                     -0x05BA0000};
+  float accum2[] = {-0x00002000, -0x00017000, -0x000EA000, -0x00929000, -0x05BA0000};
+  float expect2[] = {-0x00002000, -0x00017000, -0x000E9000, -0x0091D000, -0x05BA0000};
   NormalizeInt28ToPipelineBitwidth(accum2, fbl::count_of(accum2));
   NormalizeInt28ToPipelineBitwidth(expect2, fbl::count_of(expect2));
 
-  mix_result =
-      mixer->Mix(accum2, 4, &dest_offset, source, 4 << kPtsFractionalBits,
-                 &frac_src_offset, true, &info);
+  mix_result = mixer->Mix(accum2, 4, &dest_offset, source, 4 << kPtsFractionalBits,
+                          &frac_src_offset, true, &info);
 
   EXPECT_FALSE(mix_result);
   EXPECT_EQ(4u, dest_offset);
@@ -138,13 +131,11 @@ void TestBasicPosition(Resampler samplerType) {
   frac_src_offset = 2 << kPtsFractionalBits;
   dest_offset = 0;
   // Mix will move source[2] to accum[0]
-  float expect3[] = {0x0007B000, -0x00017000, -0x000E9000, -0x0091D000,
-                     -0x05BA0000};
+  float expect3[] = {0x0007B000, -0x00017000, -0x000E9000, -0x0091D000, -0x05BA0000};
   NormalizeInt28ToPipelineBitwidth(expect3, fbl::count_of(expect3));
 
-  mix_result =
-      mixer->Mix(accum2, 4, &dest_offset, source, 3 << kPtsFractionalBits,
-                 &frac_src_offset, false, &info);
+  mix_result = mixer->Mix(accum2, 4, &dest_offset, source, 3 << kPtsFractionalBits,
+                          &frac_src_offset, false, &info);
 
   EXPECT_TRUE(mix_result);
   EXPECT_EQ(1u, dest_offset);
@@ -153,14 +144,10 @@ void TestBasicPosition(Resampler samplerType) {
 }
 
 // Validate basic (frame-level) position for SampleAndHold resampler.
-TEST(Resampling, Position_Basic_Point) {
-  TestBasicPosition(Resampler::SampleAndHold);
-}
+TEST(Resampling, Position_Basic_Point) { TestBasicPosition(Resampler::SampleAndHold); }
 
 // Validate basic (frame-level) position for Linear resampler.
-TEST(Resampling, Position_Basic_Linear) {
-  TestBasicPosition(Resampler::LinearInterpolation);
-}
+TEST(Resampling, Position_Basic_Linear) { TestBasicPosition(Resampler::LinearInterpolation); }
 
 // For PointSampler, test sample placement when given fractional position.
 // Ensure it doesn't touch other buffer sections, regardless of 'accumulate'
@@ -169,8 +156,8 @@ TEST(Resampling, Position_Basic_Linear) {
 // TODO(mpuryear): Change frac_src_frames parameter to be (integer) src_frames,
 // as number of frames was never intended to be fractional.
 TEST(Resampling, Position_Fractional_Point) {
-  auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1,
-                           44100, 1, 44100, Resampler::SampleAndHold);
+  auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 44100, 1, 44100,
+                           Resampler::SampleAndHold);
 
   //
   // Check: source supply exceeds destination demand
@@ -179,17 +166,14 @@ TEST(Resampling, Position_Fractional_Point) {
   uint32_t dest_offset = 1;
   int16_t source[] = {1, 0xC, 0x7B, 0x4D2, 0x3039};
   // Mix will accumulate source[1:2,2:3] into accum[1,2]
-  float accum[] = {-0x00002000, -0x00017000, -0x000EA000, -0x00929000,
-                   -0x05BA0000};
-  float expect[] = {-0x00002000, -0x0000B000, -0x0006F000, -0x00929000,
-                    -0x05BA0000};
+  float accum[] = {-0x00002000, -0x00017000, -0x000EA000, -0x00929000, -0x05BA0000};
+  float expect[] = {-0x00002000, -0x0000B000, -0x0006F000, -0x00929000, -0x05BA0000};
   NormalizeInt28ToPipelineBitwidth(accum, fbl::count_of(accum));
   NormalizeInt28ToPipelineBitwidth(expect, fbl::count_of(expect));
 
   Bookkeeping info;
-  bool mix_result =
-      mixer->Mix(accum, 3, &dest_offset, source, 5 << kPtsFractionalBits,
-                 &frac_src_offset, true, &info);
+  bool mix_result = mixer->Mix(accum, 3, &dest_offset, source, 5 << kPtsFractionalBits,
+                               &frac_src_offset, true, &info);
 
   EXPECT_FALSE(mix_result);
   EXPECT_EQ(3u, dest_offset);
@@ -202,13 +186,11 @@ TEST(Resampling, Position_Fractional_Point) {
   frac_src_offset = 5 << (kPtsFractionalBits - 1);
   dest_offset = 1;
   // Mix will move source[2:3,3:4] to accum[1,2]
-  float expect2[] = {-0x00002000, 0x0007B000, 0x004D2000, -0x00929000,
-                     -0x05BA0000};
+  float expect2[] = {-0x00002000, 0x0007B000, 0x004D2000, -0x00929000, -0x05BA0000};
   NormalizeInt28ToPipelineBitwidth(expect2, fbl::count_of(expect2));
 
-  mix_result =
-      mixer->Mix(accum, 4, &dest_offset, source, 4 << kPtsFractionalBits,
-                 &frac_src_offset, false, &info);
+  mix_result = mixer->Mix(accum, 4, &dest_offset, source, 4 << kPtsFractionalBits, &frac_src_offset,
+                          false, &info);
 
   EXPECT_TRUE(mix_result);
   EXPECT_EQ(3u, dest_offset);
@@ -222,8 +204,8 @@ TEST(Resampling, Position_Fractional_Point) {
 // where supply equals demand are well-covered elsewhere.) This test uses
 // fractional offsets, still with a step_size of ONE.
 TEST(Resampling, Position_Fractional_Linear) {
-  auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1,
-                           48000, 1, 48000, Resampler::LinearInterpolation);
+  auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
+                           Resampler::LinearInterpolation);
 
   //
   // Check: Source supply exceeds destination demand
@@ -233,19 +215,16 @@ TEST(Resampling, Position_Fractional_Linear) {
   int16_t source[] = {-1, -0xB, -0x7C, 0x4D2, 0x3039};
 
   // Mix (accumulate) source[0:1,1:2] into accum[2,3].
-  float accum[] = {-0x000DEFA0, -0x0014D840, -0x00017920, 0x0007BFF0,
-                   -0x0022BB00};
-  float expect[] = {-0x000DEFA0, -0x0014D840, -0x0001D920, 0x000387F0,
-                    -0x0022BB00};
+  float accum[] = {-0x000DEFA0, -0x0014D840, -0x00017920, 0x0007BFF0, -0x0022BB00};
+  float expect[] = {-0x000DEFA0, -0x0014D840, -0x0001D920, 0x000387F0, -0x0022BB00};
   NormalizeInt28ToPipelineBitwidth(accum, fbl::count_of(accum));
   NormalizeInt28ToPipelineBitwidth(expect, fbl::count_of(expect));
   // TODO(mpuryear): round correctly if accumulating fractional result with
   // previous opposite-polarity result. Ideally round -67.5+123 (55.5) to 56.
 
   Bookkeeping info;
-  bool mix_result =
-      mixer->Mix(accum, 4, &dest_offset, source, 3 << kPtsFractionalBits,
-                 &frac_src_offset, true, &info);
+  bool mix_result = mixer->Mix(accum, 4, &dest_offset, source, 3 << kPtsFractionalBits,
+                               &frac_src_offset, true, &info);
 
   // Less than one frame of the source buffer remains, and we cached the final
   // sample, so mix_result should be TRUE.
@@ -261,13 +240,11 @@ TEST(Resampling, Position_Fractional_Linear) {
   frac_src_offset = -(1 << (kPtsFractionalBits - 1));
   dest_offset = 1;
   // Mix src[2:0,0:1] into accum[1,2].  [1] = (-124:-1), [2] = (-1:-11)
-  float expect2[] = {-0x000DEFA0, -0x0003E800, -0x00006000, 0x000387F0,
-                     -0x0022BB00};
+  float expect2[] = {-0x000DEFA0, -0x0003E800, -0x00006000, 0x000387F0, -0x0022BB00};
   NormalizeInt28ToPipelineBitwidth(expect2, fbl::count_of(expect2));
 
-  mix_result =
-      mixer->Mix(accum, 4, &dest_offset, source, 2 << kPtsFractionalBits,
-                 &frac_src_offset, false, &info);
+  mix_result = mixer->Mix(accum, 4, &dest_offset, source, 2 << kPtsFractionalBits, &frac_src_offset,
+                          false, &info);
 
   EXPECT_TRUE(mix_result);
   EXPECT_EQ(3u, dest_offset);
@@ -276,8 +253,8 @@ TEST(Resampling, Position_Fractional_Linear) {
 }
 
 void TestRateModulo(Resampler sampler_type) {
-  auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1, 32000,
-                           1, 48000, sampler_type);
+  auto mixer =
+      SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1, 32000, 1, 48000, sampler_type);
 
   float source[] = {0.0f, 0.1f, 0.2f};
   float accum[3];
@@ -291,8 +268,7 @@ void TestRateModulo(Resampler sampler_type) {
   info.step_size = (Mixer::FRAC_ONE * 2) / 3;
 
   mixer->Mix(accum, fbl::count_of(accum), &dest_offset, source,
-             fbl::count_of(source) << kPtsFractionalBits, &frac_src_offset,
-             false, &info);
+             fbl::count_of(source) << kPtsFractionalBits, &frac_src_offset, false, &info);
 
   EXPECT_EQ(fbl::count_of(accum), dest_offset);
   EXPECT_LT(frac_src_offset, expected_frac_src_offset);
@@ -306,8 +282,7 @@ void TestRateModulo(Resampler sampler_type) {
   info.src_pos_modulo = 0;
 
   mixer->Mix(accum, fbl::count_of(accum), &dest_offset, source,
-             fbl::count_of(source) << kPtsFractionalBits, &frac_src_offset,
-             false, &info);
+             fbl::count_of(source) << kPtsFractionalBits, &frac_src_offset, false, &info);
 
   EXPECT_EQ(fbl::count_of(accum), dest_offset);
   EXPECT_EQ(frac_src_offset, expected_frac_src_offset);
@@ -315,20 +290,16 @@ void TestRateModulo(Resampler sampler_type) {
 
 // Verify PointSampler correctly incorporates rate_modulo & denominator
 // parameters into position and interpolation results.
-TEST(Resampling, Rate_Modulo_Point) {
-  TestRateModulo(Resampler::SampleAndHold);
-}
+TEST(Resampling, Rate_Modulo_Point) { TestRateModulo(Resampler::SampleAndHold); }
 
 // Verify LinearSampler correctly incorporates rate_modulo & denominator
 // parameters into position and interpolation results.
-TEST(Resampling, Rate_Modulo_Linear) {
-  TestRateModulo(Resampler::LinearInterpolation);
-}
+TEST(Resampling, Rate_Modulo_Linear) { TestRateModulo(Resampler::LinearInterpolation); }
 
 // For provided sampler, validate src_pos_modulo for zero/non-zero no rollover.
 void TestPositionModuloNoRollover(Resampler sampler_type, bool mute = false) {
-  auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1, 44100,
-                           1, 44100, sampler_type);
+  auto mixer =
+      SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1, 44100, 1, 44100, sampler_type);
 
   float accum[3];
   uint32_t dest_offset;
@@ -354,8 +325,7 @@ void TestPositionModuloNoRollover(Resampler sampler_type, bool mute = false) {
   }
 
   mixer->Mix(accum, fbl::count_of(accum), &dest_offset, source,
-             fbl::count_of(source) << kPtsFractionalBits, &frac_src_offset,
-             false, &info);
+             fbl::count_of(source) << kPtsFractionalBits, &frac_src_offset, false, &info);
   EXPECT_EQ(fbl::count_of(accum), dest_offset);
   EXPECT_TRUE(3 * Mixer::FRAC_ONE == frac_src_offset);
   EXPECT_EQ(9999u, info.src_pos_modulo);
@@ -373,8 +343,7 @@ void TestPositionModuloNoRollover(Resampler sampler_type, bool mute = false) {
   }
 
   mixer->Mix(accum, fbl::count_of(accum), &dest_offset, source,
-             fbl::count_of(source) << kPtsFractionalBits, &frac_src_offset,
-             false, &info);
+             fbl::count_of(source) << kPtsFractionalBits, &frac_src_offset, false, &info);
   EXPECT_EQ(fbl::count_of(accum), dest_offset);
   EXPECT_TRUE(3 * Mixer::FRAC_ONE == frac_src_offset);
   EXPECT_EQ(9999u, info.src_pos_modulo);
@@ -382,8 +351,8 @@ void TestPositionModuloNoRollover(Resampler sampler_type, bool mute = false) {
 
 // For provided sampler, validate src_pos_modulo for zero/non-zero w/rollover.
 void TestPositionModuloRollover(Resampler sampler_type, bool mute = false) {
-  auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1, 44100,
-                           1, 44100, sampler_type);
+  auto mixer =
+      SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1, 44100, 1, 44100, sampler_type);
 
   float accum[3];
   uint32_t dest_offset;
@@ -407,8 +376,7 @@ void TestPositionModuloRollover(Resampler sampler_type, bool mute = false) {
   }
 
   mixer->Mix(accum, fbl::count_of(accum), &dest_offset, source,
-             fbl::count_of(source) << kPtsFractionalBits, &frac_src_offset,
-             false, &info);
+             fbl::count_of(source) << kPtsFractionalBits, &frac_src_offset, false, &info);
   EXPECT_EQ(fbl::count_of(accum), dest_offset);
   EXPECT_TRUE(3 * Mixer::FRAC_ONE == frac_src_offset);
   EXPECT_EQ(0u, info.src_pos_modulo);
@@ -426,8 +394,7 @@ void TestPositionModuloRollover(Resampler sampler_type, bool mute = false) {
   }
 
   mixer->Mix(accum, fbl::count_of(accum), &dest_offset, source,
-             fbl::count_of(source) << kPtsFractionalBits, &frac_src_offset,
-             false, &info);
+             fbl::count_of(source) << kPtsFractionalBits, &frac_src_offset, false, &info);
   EXPECT_EQ(fbl::count_of(accum), dest_offset);
   EXPECT_TRUE(3 * Mixer::FRAC_ONE == frac_src_offset);
   EXPECT_EQ(0u, info.src_pos_modulo);
@@ -435,8 +402,8 @@ void TestPositionModuloRollover(Resampler sampler_type, bool mute = false) {
 
 // For provided sampler, validate src_pos_modulo for early rollover.
 void TestPositionModuloEarlyRolloverPoint(bool mute = false) {
-  auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1, 44100,
-                           1, 44100, Resampler::SampleAndHold);
+  auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1, 44100, 1, 44100,
+                           Resampler::SampleAndHold);
   float accum[3];
   uint32_t dest_offset;
   int32_t frac_src_offset;
@@ -456,8 +423,7 @@ void TestPositionModuloEarlyRolloverPoint(bool mute = false) {
   }
 
   mixer->Mix(accum, fbl::count_of(accum), &dest_offset, source,
-             fbl::count_of(source) << kPtsFractionalBits, &frac_src_offset,
-             false, &info);
+             fbl::count_of(source) << kPtsFractionalBits, &frac_src_offset, false, &info);
   EXPECT_EQ(2u, dest_offset);
   EXPECT_TRUE(3 * Mixer::FRAC_ONE == frac_src_offset);
   EXPECT_EQ(0u, info.src_pos_modulo);
@@ -465,8 +431,8 @@ void TestPositionModuloEarlyRolloverPoint(bool mute = false) {
 
 // For provided sampler, validate src_pos_modulo for early rollover.
 void TestPositionModuloEarlyRolloverLinear(bool mute = false) {
-  auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1, 44100,
-                           1, 44100, Resampler::LinearInterpolation);
+  auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1, 44100, 1, 44100,
+                           Resampler::LinearInterpolation);
   float accum[3];
   uint32_t dest_offset;
   int32_t frac_src_offset;
@@ -486,8 +452,7 @@ void TestPositionModuloEarlyRolloverLinear(bool mute = false) {
   }
 
   mixer->Mix(accum, fbl::count_of(accum), &dest_offset, source,
-             fbl::count_of(source) << kPtsFractionalBits, &frac_src_offset,
-             false, &info);
+             fbl::count_of(source) << kPtsFractionalBits, &frac_src_offset, false, &info);
   EXPECT_EQ(2u, dest_offset);
   EXPECT_TRUE((2 * Mixer::FRAC_ONE) + 1 == frac_src_offset);
   EXPECT_EQ(0u, info.src_pos_modulo);
@@ -495,17 +460,13 @@ void TestPositionModuloEarlyRolloverLinear(bool mute = false) {
 
 // Verify PointSampler correctly incorporates src_pos_modulo (along with
 // rate_modulo and denominator) into position and interpolation results.
-TEST(Resampling, Position_Modulo_Point) {
-  TestPositionModuloNoRollover(Resampler::SampleAndHold);
-}
+TEST(Resampling, Position_Modulo_Point) { TestPositionModuloNoRollover(Resampler::SampleAndHold); }
 
 TEST(Resampling, Position_Modulo_Point_Rollover) {
   TestPositionModuloRollover(Resampler::SampleAndHold);
 }
 
-TEST(Resampling, Position_Modulo_Point_Early_Rollover) {
-  TestPositionModuloEarlyRolloverPoint();
-}
+TEST(Resampling, Position_Modulo_Point_Early_Rollover) { TestPositionModuloEarlyRolloverPoint(); }
 
 // Verify LinearSampler correctly incorporates src_pos_modulo (along with
 // rate_modulo and denominator) into position and interpolation results.
@@ -517,9 +478,7 @@ TEST(Resampling, Position_Modulo_Linear_Rollover) {
   TestPositionModuloRollover(Resampler::LinearInterpolation);
 }
 
-TEST(Resampling, Position_Modulo_Linear_Early_Rollover) {
-  TestPositionModuloEarlyRolloverLinear();
-}
+TEST(Resampling, Position_Modulo_Linear_Early_Rollover) { TestPositionModuloEarlyRolloverLinear(); }
 
 // Verify PointSampler correctly incorporates src_pos_modulo (along with
 // rate_modulo and denominator) into position and interpolation results.
@@ -554,11 +513,9 @@ TEST(Resampling, Position_Modulo_Linear_Mute_Early_Rollover) {
 //
 // With these six precise spot checks, we verify interpolation accuracy to the
 // fullest extent possible with 32-bit float and 13-bit subframe timestamps.
-void TestLinearInterpolation(uint32_t source_frames_per_second,
-                             uint32_t dest_frames_per_second) {
-  auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1,
-                           source_frames_per_second, 1, dest_frames_per_second,
-                           Resampler::LinearInterpolation);
+void TestLinearInterpolation(uint32_t source_frames_per_second, uint32_t dest_frames_per_second) {
+  auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1, source_frames_per_second, 1,
+                           dest_frames_per_second, Resampler::LinearInterpolation);
 
   //
   // Base check: interpolated value is exactly calculated, no rounding.
@@ -571,13 +528,12 @@ void TestLinearInterpolation(uint32_t source_frames_per_second,
   float accum_result = 0xCAFE;  // value will be overwritten
 
   Bookkeeping info;
-  info.step_size =
-      (static_cast<uint64_t>(source_frames_per_second) << kPtsFractionalBits) /
-      dest_frames_per_second;
+  info.step_size = (static_cast<uint64_t>(source_frames_per_second) << kPtsFractionalBits) /
+                   dest_frames_per_second;
   int32_t expected_src_offset = frac_src_offset + info.step_size;
 
-  mixer->Mix(&accum_result, 1, &dest_offset, source1, frac_src_frames,
-             &frac_src_offset, false, &info);
+  mixer->Mix(&accum_result, 1, &dest_offset, source1, frac_src_frames, &frac_src_offset, false,
+             &info);
   EXPECT_EQ(1u, dest_offset);
   EXPECT_EQ(expected_src_offset, frac_src_offset);
   EXPECT_EQ(expect1, accum_result);
@@ -595,8 +551,8 @@ void TestLinearInterpolation(uint32_t source_frames_per_second,
   dest_offset = 0;
   accum_result = 0xCAFE;  // Value will be overwritten.
 
-  mixer->Mix(&accum_result, 1, &dest_offset, source1, frac_src_frames,
-             &frac_src_offset, false, &info);
+  mixer->Mix(&accum_result, 1, &dest_offset, source1, frac_src_frames, &frac_src_offset, false,
+             &info);
   EXPECT_EQ(1u, dest_offset);
   EXPECT_EQ(expected_src_offset, frac_src_offset);
   EXPECT_EQ(expect1, accum_result);
@@ -612,8 +568,8 @@ void TestLinearInterpolation(uint32_t source_frames_per_second,
   dest_offset = 0;
   accum_result = 0xCAFE;  // Value will be overwritten.
 
-  mixer->Mix(&accum_result, 1, &dest_offset, source2, frac_src_frames,
-             &frac_src_offset, false, &info);
+  mixer->Mix(&accum_result, 1, &dest_offset, source2, frac_src_frames, &frac_src_offset, false,
+             &info);
   EXPECT_EQ(1u, dest_offset);
   EXPECT_EQ(expected_src_offset, frac_src_offset);
   EXPECT_EQ(expect2, accum_result);
@@ -631,8 +587,8 @@ void TestLinearInterpolation(uint32_t source_frames_per_second,
   dest_offset = 0;
   accum_result = 0xCAFE;  // Value will be overwritten.
 
-  mixer->Mix(&accum_result, 1, &dest_offset, source2, frac_src_frames,
-             &frac_src_offset, false, &info);
+  mixer->Mix(&accum_result, 1, &dest_offset, source2, frac_src_frames, &frac_src_offset, false,
+             &info);
   EXPECT_EQ(1u, dest_offset);
   EXPECT_EQ(expected_src_offset, frac_src_offset);
   EXPECT_EQ(expect2, accum_result);
@@ -652,8 +608,8 @@ void TestLinearInterpolation(uint32_t source_frames_per_second,
   dest_offset = 0;
   accum_result = 0xCAFE;  // Value will be overwritten.
 
-  mixer->Mix(&accum_result, 1, &dest_offset, source3, frac_src_frames,
-             &frac_src_offset, false, &info);
+  mixer->Mix(&accum_result, 1, &dest_offset, source3, frac_src_frames, &frac_src_offset, false,
+             &info);
   EXPECT_EQ(1u, dest_offset);
   EXPECT_EQ(expected_src_offset, frac_src_offset);
   EXPECT_EQ(expect3, accum_result);
@@ -673,17 +629,15 @@ void TestLinearInterpolation(uint32_t source_frames_per_second,
   dest_offset = 0;
   accum_result = 0xCAFE;  // Value will be overwritten.
 
-  mixer->Mix(&accum_result, 1, &dest_offset, source4, frac_src_frames,
-             &frac_src_offset, false, &info);
+  mixer->Mix(&accum_result, 1, &dest_offset, source4, frac_src_frames, &frac_src_offset, false,
+             &info);
   EXPECT_EQ(1u, dest_offset);
   EXPECT_EQ(expected_src_offset, frac_src_offset);
   EXPECT_EQ(expect4, accum_result);
 }
 
 // This test varies the fractional starting offsets, still with rate ratio ONE.
-TEST(Resampling, Linear_Interp_Values) {
-  TestLinearInterpolation(48000, 48000);
-}
+TEST(Resampling, Linear_Interp_Values) { TestLinearInterpolation(48000, 48000); }
 
 // Various checks similar to above, while varying rate ratio. Interp results
 // should not change: they depend only on frac_src_pos, not the rate ratio.
@@ -703,29 +657,23 @@ TEST(Resampling, Linear_Interp_Rate_48_441) {
 
 // Power-of-3 rate ratio 1:3 is guaranteed to have fractional rate error, since
 // 1/3 cannot be perfectly represented by a single binary value.
-TEST(Resampling, Linear_Interp_Rate_16_48) {
-  TestLinearInterpolation(16000, 48000);
-}
+TEST(Resampling, Linear_Interp_Rate_16_48) { TestLinearInterpolation(16000, 48000); }
 
 // Rate change by the smallest-possible increment will be used as micro-SRC, to
 // synchronize multiple physically-distinct output devices. This rate ratio also
 // has the maximum fractional error when converting to the standard 48000 rate.
-TEST(Resampling, Linear_Interp_Rate_MicroSRC) {
-  TestLinearInterpolation(47999, 48000);
-}
+TEST(Resampling, Linear_Interp_Rate_MicroSRC) { TestLinearInterpolation(47999, 48000); }
 
 // This rate ratio, when translated into a step_size based on 4096 subframes,
 // equates to 3568.999909, generating a maximal fractional value [0.999909].
 // Because the callers of Mix() [audio_output and audio_capturer_impl]
 // truncate, a maximal fractional value represents maximal fractional error.
-TEST(Resampling, Linear_Interp_Rate_Max_Error) {
-  TestLinearInterpolation(38426, 44100);
-}
+TEST(Resampling, Linear_Interp_Rate_Max_Error) { TestLinearInterpolation(38426, 44100); }
 
 // Verify PointSampler filter widths.
 TEST(Resampling, FilterWidth_Point) {
-  auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::UNSIGNED_8, 1,
-                           48000, 1, 48000, Resampler::SampleAndHold);
+  auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::UNSIGNED_8, 1, 48000, 1, 48000,
+                           Resampler::SampleAndHold);
 
   EXPECT_EQ(mixer->pos_filter_width(), 0u);
   EXPECT_EQ(mixer->neg_filter_width(), Mixer::FRAC_ONE - 1);
@@ -738,8 +686,8 @@ TEST(Resampling, FilterWidth_Point) {
 
 // Verify LinearSampler filter widths.
 TEST(Resampling, FilterWidth_Linear) {
-  auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1, 44100,
-                           1, 48000, Resampler::LinearInterpolation);
+  auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1, 44100, 1, 48000,
+                           Resampler::LinearInterpolation);
 
   EXPECT_EQ(mixer->pos_filter_width(), Mixer::FRAC_ONE - 1);
   EXPECT_EQ(mixer->neg_filter_width(), Mixer::FRAC_ONE - 1);
@@ -755,8 +703,8 @@ TEST(Resampling, FilterWidth_Linear) {
 // LinearSampler correctly caches edge values, so just validate Reset.
 TEST(Resampling, Reset_Linear) {
   Bookkeeping info;
-  info.mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1,
-                           48000, 1, 48000, Resampler::LinearInterpolation);
+  info.mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 48000, 1, 48000,
+                           Resampler::LinearInterpolation);
 
   // When src_offset ends on fractional val, it caches that sample for next mix
   // Source (offset 0.5 of 3) has 2.5. Destination (offset 2 of 4) wants 2.
@@ -765,15 +713,13 @@ TEST(Resampling, Reset_Linear) {
 
   uint32_t dest_offset = 2;
   // Mix (accumulate) source[0:1,1:2] into accum[2,3].
-  float accum[] = {-0x0006F000, -0x000DE000, -0x0014D000, -0x001BC000,
-                   -0x0022B000};
+  float accum[] = {-0x0006F000, -0x000DE000, -0x0014D000, -0x001BC000, -0x0022B000};
   float expect[] = {-0x0006F000, -0x000DE000, 0, 0, -0x0022B000};
   NormalizeInt28ToPipelineBitwidth(accum, fbl::count_of(accum));
   NormalizeInt28ToPipelineBitwidth(expect, fbl::count_of(expect));
 
-  EXPECT_TRUE(info.mixer->Mix(accum, 4, &dest_offset, source,
-                              3 << kPtsFractionalBits, &frac_src_offset, true,
-                              &info));
+  EXPECT_TRUE(info.mixer->Mix(accum, 4, &dest_offset, source, 3 << kPtsFractionalBits,
+                              &frac_src_offset, true, &info));
   EXPECT_EQ(4u, dest_offset);
   EXPECT_EQ(5 << (kPtsFractionalBits - 1), frac_src_offset);
   EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
@@ -790,9 +736,8 @@ TEST(Resampling, Reset_Linear) {
   expect[0] = 0x000D8000;  // Mix(:1B0)=D8 to [0]. W/out Reset, = (28E:1B0)=21F.
   NormalizeInt28ToPipelineBitwidth(&expect[0], 1);
 
-  EXPECT_FALSE(info.mixer->Mix(accum, 1, &dest_offset, source,
-                               2 << kPtsFractionalBits, &frac_src_offset, false,
-                               &info));
+  EXPECT_FALSE(info.mixer->Mix(accum, 1, &dest_offset, source, 2 << kPtsFractionalBits,
+                               &frac_src_offset, false, &info));
   EXPECT_EQ(1u, dest_offset);
   EXPECT_EQ(1 << (kPtsFractionalBits - 1), frac_src_offset);
   EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));

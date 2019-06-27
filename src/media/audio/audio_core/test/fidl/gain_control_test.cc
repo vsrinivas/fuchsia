@@ -56,11 +56,10 @@ void GainControlTestBase::SetUpCapturer2() {
 void GainControlTestBase::SetUpGainControl() {
   gain_control_.set_error_handler(ErrorHandler());
 
-  gain_control_.events().OnGainMuteChanged =
-      CompletionCallback([this](float gain_db, bool muted) {
-        received_gain_db_ = gain_db;
-        received_mute_ = muted;
-      });
+  gain_control_.events().OnGainMuteChanged = CompletionCallback([this](float gain_db, bool muted) {
+    received_gain_db_ = gain_db;
+    received_mute_ = muted;
+  });
 
   null_gain_control_expected_ = false;
 }
@@ -117,9 +116,7 @@ void GainControlTestBase::SetNegativeExpectations() {
 }
 
 // Set Gain, asserting that state is already reset so error can be detected.
-void GainControlTestBase::SetGain(float gain_db) {
-  gain_control_->SetGain(gain_db);
-}
+void GainControlTestBase::SetGain(float gain_db) { gain_control_->SetGain(gain_db); }
 
 // Set Mute, asserting that state is already reset so error can be detected.
 void GainControlTestBase::SetMute(bool mute) { gain_control_->SetMute(mute); }
@@ -329,9 +326,8 @@ void SiblingGainControlsTest::ExpectGainCallback(float gain_db, bool mute) {
   received_gain_db_2_ = kTooLowGainDb;
 
   ExpectCondition([this, gain_db, mute]() {
-    return error_occurred_ ||
-           (received_gain_db_ == gain_db && received_gain_db_2_ == gain_db &&
-            received_mute_ == mute && received_mute_2_ == mute);
+    return error_occurred_ || (received_gain_db_ == gain_db && received_gain_db_2_ == gain_db &&
+                               received_mute_ == mute && received_mute_2_ == mute);
   });
 
   EXPECT_FALSE(error_occurred_) << kDisconnectErr;
@@ -383,17 +379,11 @@ void RendererTwoGainControlsTest::SetUp() {
   SetUpGainControlOnRenderer();
 }
 
-TEST_F(RendererTwoGainControlsTest, BothControlsReceiveGainNotifications) {
-  TestSetGain();
-}
+TEST_F(RendererTwoGainControlsTest, BothControlsReceiveGainNotifications) { TestSetGain(); }
 
-TEST_F(RendererTwoGainControlsTest, BothControlsReceiveMuteNotifications) {
-  TestSetMute();
-}
+TEST_F(RendererTwoGainControlsTest, BothControlsReceiveMuteNotifications) { TestSetMute(); }
 
-TEST_F(RendererTwoGainControlsTest, DuplicateSetGain) {
-  TestDuplicateSetGain();
-}
+TEST_F(RendererTwoGainControlsTest, DuplicateSetGain) { TestDuplicateSetGain(); }
 
 // N.B. DuplicateSetMute behavior is tested in RendererGainControlTest.
 
@@ -414,18 +404,12 @@ void CapturerTwoGainControlsTest::SetUp() {
   SetUpGainControlOnCapturer();
 }
 
-TEST_F(CapturerTwoGainControlsTest, BothControlsReceiveGainNotifications) {
-  TestSetGain();
-}
+TEST_F(CapturerTwoGainControlsTest, BothControlsReceiveGainNotifications) { TestSetGain(); }
 
-TEST_F(CapturerTwoGainControlsTest, BothControlsReceiveMuteNotifications) {
-  TestSetMute();
-}
+TEST_F(CapturerTwoGainControlsTest, BothControlsReceiveMuteNotifications) { TestSetMute(); }
 
 // N.B. DuplicateSetGain behavior is tested in CapturerGainControlTest.
-TEST_F(CapturerTwoGainControlsTest, DuplicateSetMute) {
-  TestDuplicateSetMute();
-}
+TEST_F(CapturerTwoGainControlsTest, DuplicateSetMute) { TestDuplicateSetMute(); }
 
 TEST_F(CapturerTwoGainControlsTest, SetGainTooHigh) { TestSetGainTooHigh(); }
 
@@ -450,8 +434,7 @@ void IndependentGainControlsTest::ExpectGainCallback(float gain_db, bool mute) {
 
   // Even if we did get the gain callback we wanted, now we check for other
   // gain callbacks -- or a disconnect. If any of these occur, then we fail.
-  if (!error_occurred_ && received_gain_db_ == gain_db &&
-      received_gain_db_2_ == kTooLowGainDb) {
+  if (!error_occurred_ && received_gain_db_ == gain_db && received_gain_db_2_ == kTooLowGainDb) {
     received_gain_db_ = kTooLowGainDb;
 
     RunLoopUntilIdle();
@@ -498,9 +481,7 @@ void TwoRenderersGainControlsTest::SetUp() {
   SetUpGainControlOnRenderer();
 }
 
-TEST_F(TwoRenderersGainControlsTest, OtherInstanceReceivesNoMuteNotification) {
-  TestSetMute();
-}
+TEST_F(TwoRenderersGainControlsTest, OtherInstanceReceivesNoMuteNotification) { TestSetMute(); }
 
 // We expect primary GainControl/Renderer to disconnect.
 TEST_F(TwoRenderersGainControlsTest, SetGainTooLow) { TestSetGainTooLow(); }
@@ -518,15 +499,10 @@ void RendererCapturerGainControlsTest::SetUp() {
   SetUpGainControlOnRenderer();
 }
 
-TEST_F(RendererCapturerGainControlsTest,
-       OtherInstanceReceivesNoGainNotification) {
-  TestSetGain();
-}
+TEST_F(RendererCapturerGainControlsTest, OtherInstanceReceivesNoGainNotification) { TestSetGain(); }
 
 // We expect primary GainControl/Renderer to disconnect.
-TEST_F(RendererCapturerGainControlsTest, SetGainTooHigh) {
-  TestSetGainTooHigh();
-}
+TEST_F(RendererCapturerGainControlsTest, SetGainTooHigh) { TestSetGainTooHigh(); }
 
 // CapturerRendererGainControlsTest
 // Capturer gain control should not affect renderer gain control.
@@ -541,15 +517,10 @@ void CapturerRendererGainControlsTest::SetUp() {
   SetUpGainControlOnCapturer();
 }
 
-TEST_F(CapturerRendererGainControlsTest,
-       OtherInstanceReceivesNoGainNotification) {
-  TestSetGain();
-}
+TEST_F(CapturerRendererGainControlsTest, OtherInstanceReceivesNoGainNotification) { TestSetGain(); }
 
 // We expect primary GainControl/Capturer to disconnect.
-TEST_F(CapturerRendererGainControlsTest, SetGainTooHigh) {
-  TestSetGainTooHigh();
-}
+TEST_F(CapturerRendererGainControlsTest, SetGainTooHigh) { TestSetGainTooHigh(); }
 
 // TwoCapturersGainControlsTest
 // Two capturers, each with a gain control: we expect no cross-impact.
@@ -564,9 +535,7 @@ void TwoCapturersGainControlsTest::SetUp() {
   SetUpGainControlOnCapturer();
 }
 
-TEST_F(TwoCapturersGainControlsTest, OtherInstanceReceivesNoMuteNotification) {
-  TestSetMute();
-}
+TEST_F(TwoCapturersGainControlsTest, OtherInstanceReceivesNoMuteNotification) { TestSetMute(); }
 
 // We expect primary GainControl/Capturer to disconnect.
 TEST_F(TwoCapturersGainControlsTest, SetGainTooLow) { TestSetGainTooLow(); }

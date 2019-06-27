@@ -9,10 +9,8 @@
 namespace media::audio {
 
 // static
-fbl::RefPtr<DriverRingBuffer> DriverRingBuffer::Create(zx::vmo vmo,
-                                                       uint32_t frame_size,
-                                                       uint32_t frame_count,
-                                                       bool input) {
+fbl::RefPtr<DriverRingBuffer> DriverRingBuffer::Create(zx::vmo vmo, uint32_t frame_size,
+                                                       uint32_t frame_count, bool input) {
   auto ret = fbl::AdoptRef(new DriverRingBuffer());
 
   if (ret->Init(std::move(vmo), frame_size, frame_count, input) != ZX_OK) {
@@ -22,8 +20,8 @@ fbl::RefPtr<DriverRingBuffer> DriverRingBuffer::Create(zx::vmo vmo,
   return ret;
 }
 
-zx_status_t DriverRingBuffer::Init(zx::vmo vmo, uint32_t frame_size,
-                                   uint32_t frame_count, bool input) {
+zx_status_t DriverRingBuffer::Init(zx::vmo vmo, uint32_t frame_size, uint32_t frame_count,
+                                   bool input) {
   if (!vmo.is_valid()) {
     FXL_LOG(ERROR) << "Invalid VMO!";
     return ZX_ERR_INVALID_ARGS;
@@ -44,8 +42,8 @@ zx_status_t DriverRingBuffer::Init(zx::vmo vmo, uint32_t frame_size,
 
   uint64_t size = static_cast<uint64_t>(frame_size) * frame_count;
   if (size > vmo_size) {
-    FXL_LOG(ERROR) << "Driver-reported ring buffer size (" << size
-                   << ") is greater than VMO size (" << vmo_size << ")";
+    FXL_LOG(ERROR) << "Driver-reported ring buffer size (" << size << ") is greater than VMO size ("
+                   << vmo_size << ")";
     return res;
   }
 

@@ -39,28 +39,21 @@ class AudioPerformance {
   static void DisplayMixerConfigLegend();
 
   static void ProfileSampler(Mixer::Resampler sampler_type);
-  static void ProfileSamplerIn(uint32_t in_chans,
-                               Mixer::Resampler sampler_type);
+  static void ProfileSamplerIn(uint32_t in_chans, Mixer::Resampler sampler_type);
   static void ProfileSamplerChans(uint32_t in_chans, uint32_t out_chans,
                                   Mixer::Resampler sampler_type);
   static void ProfileSamplerChansRate(uint32_t in_chans, uint32_t out_chans,
-                                      Mixer::Resampler sampler_type,
-                                      uint32_t source_rate);
-  static void ProfileSamplerChansRateScale(uint32_t in_chans,
-                                           uint32_t out_chans,
-                                           Mixer::Resampler sampler_type,
-                                           uint32_t source_rate,
+                                      Mixer::Resampler sampler_type, uint32_t source_rate);
+  static void ProfileSamplerChansRateScale(uint32_t in_chans, uint32_t out_chans,
+                                           Mixer::Resampler sampler_type, uint32_t source_rate,
                                            GainType gain_type);
-  static void ProfileSamplerChansRateScaleMix(uint32_t num_input_chans,
-                                              uint32_t num_output_chans,
-                                              Mixer::Resampler sampler_type,
-                                              uint32_t source_rate,
-                                              GainType gain_type,
-                                              bool accumulate);
+  static void ProfileSamplerChansRateScaleMix(uint32_t num_input_chans, uint32_t num_output_chans,
+                                              Mixer::Resampler sampler_type, uint32_t source_rate,
+                                              GainType gain_type, bool accumulate);
   template <typename SampleType>
   static void ProfileMixer(uint32_t num_input_chans, uint32_t num_output_chans,
-                           Mixer::Resampler sampler_type, uint32_t source_rate,
-                           GainType gain_type, bool accumulate);
+                           Mixer::Resampler sampler_type, uint32_t source_rate, GainType gain_type,
+                           bool accumulate);
 
   static void ProfileOutputProducers();
 
@@ -68,8 +61,7 @@ class AudioPerformance {
   static void DisplayOutputConfigLegend();
 
   static void ProfileOutputChans(uint32_t num_chans);
-  static void ProfileOutputRange(uint32_t num_chans,
-                                 OutputDataRange data_range);
+  static void ProfileOutputRange(uint32_t num_chans, OutputDataRange data_range);
   template <typename SampleType>
   static void ProfileOutputType(uint32_t num_chans, OutputDataRange data_range);
 };

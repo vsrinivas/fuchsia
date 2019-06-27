@@ -23,8 +23,8 @@ namespace media::audio {
 //
 class AudioLinkPacketSource : public AudioLink {
  public:
-  static fbl::RefPtr<AudioLinkPacketSource> Create(
-      fbl::RefPtr<AudioObject> source, fbl::RefPtr<AudioObject> dest);
+  static fbl::RefPtr<AudioLinkPacketSource> Create(fbl::RefPtr<AudioObject> source,
+                                                   fbl::RefPtr<AudioObject> dest);
   ~AudioLinkPacketSource() override;
 
   // Accessor for the format info assigned to this link.
@@ -47,8 +47,7 @@ class AudioLinkPacketSource : public AudioLink {
   // PendingQueue operations used by the packet source. Never call these from
   // the destination.
   void PushToPendingQueue(const fbl::RefPtr<AudioPacketRef>& packet);
-  void FlushPendingQueue(
-      const fbl::RefPtr<PendingFlushToken>& flush_token = nullptr);
+  void FlushPendingQueue(const fbl::RefPtr<PendingFlushToken>& flush_token = nullptr);
   void CopyPendingQueue(const fbl::RefPtr<AudioLinkPacketSource>& other);
 
   // PendingQueue operations used by the destination. Never call these from the
@@ -68,8 +67,7 @@ class AudioLinkPacketSource : public AudioLink {
   void UnlockPendingQueueFront(bool release_packet);
 
  private:
-  AudioLinkPacketSource(fbl::RefPtr<AudioObject> source,
-                        fbl::RefPtr<AudioObject> dest,
+  AudioLinkPacketSource(fbl::RefPtr<AudioObject> source, fbl::RefPtr<AudioObject> dest,
                         fbl::RefPtr<AudioRendererFormatInfo> format_info);
 
   fbl::RefPtr<AudioRendererFormatInfo> format_info_;
@@ -77,8 +75,7 @@ class AudioLinkPacketSource : public AudioLink {
   std::mutex flush_mutex_;
   mutable std::mutex pending_mutex_;
 
-  std::deque<fbl::RefPtr<AudioPacketRef>> pending_packet_queue_
-      FXL_GUARDED_BY(pending_mutex_);
+  std::deque<fbl::RefPtr<AudioPacketRef>> pending_packet_queue_ FXL_GUARDED_BY(pending_mutex_);
   std::deque<fbl::RefPtr<AudioPacketRef>> pending_flush_packet_queue_
       FXL_GUARDED_BY(pending_mutex_);
   std::deque<fbl::RefPtr<PendingFlushToken>> pending_flush_token_queue_

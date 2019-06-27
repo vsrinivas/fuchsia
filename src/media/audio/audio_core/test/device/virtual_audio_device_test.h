@@ -35,9 +35,7 @@ class AtomicDeviceId {
 class VirtualAudioDeviceTest : public AudioDeviceTest {
  public:
   // Per-test-suite tear-down. Called after last test in this suite.
-  static void TearDownTestSuite() {
-    VirtualAudioDeviceTest::DisableVirtualDevices();
-  }
+  static void TearDownTestSuite() { VirtualAudioDeviceTest::DisableVirtualDevices(); }
 
   // Set up once when binary loaded; this is used at start/end of each suite.
   static void SetControl(fuchsia::virtualaudio::ControlSyncPtr control_sync);

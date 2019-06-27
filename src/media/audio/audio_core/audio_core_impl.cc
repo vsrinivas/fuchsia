@@ -26,12 +26,11 @@ constexpr zx_vm_option_t kAudioRendererVmarFlags =
 
 constexpr float AudioCoreImpl::kMaxSystemAudioGainDb;
 
-AudioCoreImpl::AudioCoreImpl(
-    std::unique_ptr<sys::ComponentContext> startup_context)
+AudioCoreImpl::AudioCoreImpl(std::unique_ptr<sys::ComponentContext> startup_context)
     : device_manager_(this),
       ctx_(std::move(startup_context)),
-      vmar_manager_(fzl::VmarManager::Create(kAudioRendererVmarSize, nullptr,
-                                             kAudioRendererVmarFlags)) {
+      vmar_manager_(
+          fzl::VmarManager::Create(kAudioRendererVmarSize, nullptr, kAudioRendererVmarFlags)) {
   FXL_DCHECK(vmar_manager_ != nullptr) << "Failed to allocate VMAR";
   fxl::LogSettings settings;
 
@@ -58,18 +57,16 @@ AudioCoreImpl::AudioCoreImpl(
   // (even non-realtime ones).  This, however, will take more significant
   // restructuring.  We will cross that bridge when we have the TBD way to deal
   // with realtime requirements in place.
-  auto profile_provider =
-      ctx_->svc()->Connect<fuchsia::scheduler::ProfileProvider>();
-  profile_provider->GetProfile(
-      24 /* HIGH_PRIORITY in LK */,
-      "src/media/audio/audio_core/audio_core_impl",
-      [](zx_status_t fidl_status, zx::profile profile) {
-        FXL_DCHECK(fidl_status == ZX_OK);
-        if (fidl_status == ZX_OK) {
-          zx_status_t status = zx::thread::self()->set_profile(profile, 0);
-          FXL_DCHECK(status == ZX_OK);
-        }
-      });
+  auto profile_provider = ctx_->svc()->Connect<fuchsia::scheduler::ProfileProvider>();
+  profile_provider->GetProfile(24 /* HIGH_PRIORITY in LK */,
+                               "src/media/audio/audio_core/audio_core_impl",
+                               [](zx_status_t fidl_status, zx::profile profile) {
+                                 FXL_DCHECK(fidl_status == ZX_OK);
+                                 if (fidl_status == ZX_OK) {
+                                   zx_status_t status = zx::thread::self()->set_profile(profile, 0);
+                                   FXL_DCHECK(status == ZX_OK);
+                                 }
+                               });
 
   // Set up our output manager.
   zx_status_t res = device_manager_.Init();
@@ -89,14 +86,12 @@ void AudioCoreImpl::PublishServices() {
   ctx_->outgoing()->AddPublicService<fuchsia::media::AudioCore>(
       [this](fidl::InterfaceRequest<fuchsia::media::AudioCore> request) {
         bindings_.AddBinding(this, std::move(request));
-        bindings_.bindings().back()->events().SystemGainMuteChanged(
-            system_gain_db_, system_muted_);
+        bindings_.bindings().back()->events().SystemGainMuteChanged(system_gain_db_, system_muted_);
       });
   // TODO(dalesat): Load the gain/mute values.
 
   ctx_->outgoing()->AddPublicService<fuchsia::media::AudioDeviceEnumerator>(
-      [this](fidl::InterfaceRequest<fuchsia::media::AudioDeviceEnumerator>
-                 request) {
+      [this](fidl::InterfaceRequest<fuchsia::media::AudioDeviceEnumerator> request) {
         device_manager_.AddDeviceEnumeratorClient(std::move(request));
       });
 }
@@ -108,28 +103,25 @@ void AudioCoreImpl::Shutdown() {
 }
 
 void AudioCoreImpl::CreateAudioRenderer(
-    fidl::InterfaceRequest<fuchsia::media::AudioRenderer>
-        audio_renderer_request) {
+    fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request) {
   device_manager_.AddAudioRenderer(
       AudioRendererImpl::Create(std::move(audio_renderer_request), this));
 }
 
 void AudioCoreImpl::CreateAudioCapturer(
-    bool loopback, fidl::InterfaceRequest<fuchsia::media::AudioCapturer>
-                       audio_capturer_request) {
-  device_manager_.AddAudioCapturer(AudioCapturerImpl::Create(
-      std::move(audio_capturer_request), this, loopback));
+    bool loopback, fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request) {
+  device_manager_.AddAudioCapturer(
+      AudioCapturerImpl::Create(std::move(audio_capturer_request), this, loopback));
 }
 
 void AudioCoreImpl::SetSystemGain(float gain_db) {
   // NAN is undefined and "signless". We cannot simply clamp it into range.
   if (isnan(gain_db)) {
-    FXL_LOG(ERROR) << "Invalid system gain " << gain_db
-                   << " dB -- making no change";
+    FXL_LOG(ERROR) << "Invalid system gain " << gain_db << " dB -- making no change";
     return;
   }
-  gain_db = std::max(std::min(gain_db, kMaxSystemAudioGainDb),
-                     fuchsia::media::audio::MUTED_GAIN_DB);
+  gain_db =
+      std::max(std::min(gain_db, kMaxSystemAudioGainDb), fuchsia::media::audio::MUTED_GAIN_DB);
 
   if (system_gain_db_ == gain_db) {
     // This system gain is the same as the last one we broadcast.
@@ -167,8 +159,7 @@ void AudioCoreImpl::NotifyGainMuteChanged() {
   }
 }
 
-void AudioCoreImpl::SetRoutingPolicy(
-    fuchsia::media::AudioOutputRoutingPolicy policy) {
+void AudioCoreImpl::SetRoutingPolicy(fuchsia::media::AudioOutputRoutingPolicy policy) {
   device_manager_.SetRoutingPolicy(policy);
 }
 
@@ -212,8 +203,7 @@ void AudioCoreImpl::DoPacketCleanup() {
   }
 }
 
-void AudioCoreImpl::SchedulePacketCleanup(
-    std::unique_ptr<AudioPacketRef> packet) {
+void AudioCoreImpl::SchedulePacketCleanup(std::unique_ptr<AudioPacketRef> packet) {
   std::lock_guard<std::mutex> locker(cleanup_queue_mutex_);
 
   packet_cleanup_queue_.push_back(std::move(packet));
@@ -225,8 +215,7 @@ void AudioCoreImpl::SchedulePacketCleanup(
   }
 }
 
-void AudioCoreImpl::ScheduleFlushCleanup(
-    std::unique_ptr<PendingFlushToken> token) {
+void AudioCoreImpl::ScheduleFlushCleanup(std::unique_ptr<PendingFlushToken> token) {
   std::lock_guard<std::mutex> locker(cleanup_queue_mutex_);
 
   flush_cleanup_queue_.push_back(std::move(token));

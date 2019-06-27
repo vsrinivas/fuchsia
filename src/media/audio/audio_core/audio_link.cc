@@ -10,10 +10,7 @@ namespace media::audio {
 
 AudioLink::AudioLink(SourceType source_type, fbl::RefPtr<AudioObject> source,
                      fbl::RefPtr<AudioObject> dest)
-    : source_type_(source_type),
-      source_(std::move(source)),
-      dest_(std::move(dest)),
-      valid_(true) {
+    : source_type_(source_type), source_(std::move(source)), dest_(std::move(dest)), valid_(true) {
   // Only outputs and AudioCapturers may be destinations.
   FXL_DCHECK(dest_ != nullptr);
   FXL_DCHECK((dest_->type() == AudioObject::Type::Output) ||

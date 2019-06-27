@@ -76,8 +76,7 @@ int main(int argc, char** argv) {
   testing::InitGoogleTest(&argc, argv);
 
   // gtest takes ownership of registered environments: **do not delete them**!
-  testing::AddGlobalTestEnvironment(
-      new media::audio::test::AudioPipelineEnvironment);
+  testing::AddGlobalTestEnvironment(new media::audio::test::AudioPipelineEnvironment);
 
   // TODO(mpuryear): create and use a '--stress' switch here, to execute a set
   // of longhaul resource-exhaustion-focused tests on these interfaces.

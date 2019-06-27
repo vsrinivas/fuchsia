@@ -15,25 +15,21 @@
 namespace media::audio {
 class AudioCoreClient : public fuchsia::media::Audio {
  public:
-  AudioCoreClient(sys::ComponentContext* startup_context,
-                  fit::closure quit_callback);
+  AudioCoreClient(sys::ComponentContext* startup_context, fit::closure quit_callback);
 
   // Audio implementation.
-  void CreateAudioRenderer(fidl::InterfaceRequest<fuchsia::media::AudioRenderer>
-                               audio_renderer_request) final {
+  void CreateAudioRenderer(
+      fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request) final {
     audio_core_->CreateAudioRenderer(std::move(audio_renderer_request));
   };
 
-  void CreateAudioCapturer(fidl::InterfaceRequest<fuchsia::media::AudioCapturer>
-                               audio_capturer_request,
-                           bool loopback) final {
-    audio_core_->CreateAudioCapturer(loopback,
-                                     std::move(audio_capturer_request));
+  void CreateAudioCapturer(
+      fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request,
+      bool loopback) final {
+    audio_core_->CreateAudioCapturer(loopback, std::move(audio_capturer_request));
   };
 
-  void SetSystemGain(float gain_db) final {
-    audio_core_->SetSystemGain(gain_db);
-  };
+  void SetSystemGain(float gain_db) final { audio_core_->SetSystemGain(gain_db); };
 
   void SetSystemMute(bool muted) final { audio_core_->SetSystemMute(muted); };
 

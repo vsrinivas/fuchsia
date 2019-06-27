@@ -23,8 +23,7 @@ AtomicDeviceId VirtualAudioDeviceTest::sequential_devices_;
 // VirtualAudioDeviceTest static methods
 //
 // static
-void VirtualAudioDeviceTest::SetControl(
-    fuchsia::virtualaudio::ControlSyncPtr control_sync) {
+void VirtualAudioDeviceTest::SetControl(fuchsia::virtualaudio::ControlSyncPtr control_sync) {
   VirtualAudioDeviceTest::control_sync_ = std::move(control_sync);
 }
 
@@ -41,9 +40,7 @@ void VirtualAudioDeviceTest::ResetVirtualDevices() {
 }
 
 // static
-void VirtualAudioDeviceTest::DisableVirtualDevices() {
-  ASSERT_EQ(control_sync_->Disable(), ZX_OK);
-}
+void VirtualAudioDeviceTest::DisableVirtualDevices() { ASSERT_EQ(control_sync_->Disable(), ZX_OK); }
 
 // static
 // Generate a unique id array for each virtual device created during the
@@ -51,8 +48,7 @@ void VirtualAudioDeviceTest::DisableVirtualDevices() {
 // F1 for input device. In bytes [8] thru [15], place a monotonically
 // incrementing atomic value, split into bytes. Thus, the very first device, if
 // an input, would have a unique_id of F1000000 00000000 00000000 00000001.
-void VirtualAudioDeviceTest::PopulateUniqueIdArr(bool is_input,
-                                                 uint8_t* unique_id_arr) {
+void VirtualAudioDeviceTest::PopulateUniqueIdArr(bool is_input, uint8_t* unique_id_arr) {
   uint64_t sequential_value = sequential_devices_.Next();
 
   unique_id_arr[0] = (is_input ? 0xF1 : 0xF0);
@@ -124,18 +120,16 @@ void VirtualAudioDeviceTest::TestGetDevicesAfterAdd(bool is_input) {
     input_->SetProduct(product);
     input_->SetUniqueId(unique_id);
 
-    input_->SetGainProperties(min_gain_db, max_gain_db, gain_step_db,
-                              cur_gain_db, can_mute, cur_mute, can_agc,
-                              cur_agc);
+    input_->SetGainProperties(min_gain_db, max_gain_db, gain_step_db, cur_gain_db, can_mute,
+                              cur_mute, can_agc, cur_agc);
     input_->Add();
   } else {
     output_->SetManufacturer(mfr);
     output_->SetProduct(product);
     output_->SetUniqueId(unique_id);
 
-    output_->SetGainProperties(min_gain_db, max_gain_db, gain_step_db,
-                               cur_gain_db, can_mute, cur_mute, can_agc,
-                               cur_agc);
+    output_->SetGainProperties(min_gain_db, max_gain_db, gain_step_db, cur_gain_db, can_mute,
+                               cur_mute, can_agc, cur_agc);
     output_->Add();
 
     // Output AGC is not supported on output devices; can_agc and cur_agc will
@@ -154,8 +148,7 @@ void VirtualAudioDeviceTest::TestGetDevicesAfterAdd(bool is_input) {
 
   uint16_t num_devs = kInvalidDeviceCount;
   audio_dev_enum_->GetDevices(CompletionCallback(
-      [this, added_token,
-       &num_devs](const std::vector<fuchsia::media::AudioDeviceInfo>& devices) {
+      [this, added_token, &num_devs](const std::vector<fuchsia::media::AudioDeviceInfo>& devices) {
         num_devs = devices.size();
 
         for (auto& dev : devices) {
@@ -182,8 +175,7 @@ void VirtualAudioDeviceTest::TestGetDevicesAfterAdd(bool is_input) {
   // that there is now one device in the list.
   // Our device count should now be exactly one more than our initial count.
   size_t preexisting_device_count =
-      AudioDeviceTest::initial_input_device_count_ +
-      AudioDeviceTest::initial_output_device_count_;
+      AudioDeviceTest::initial_input_device_count_ + AudioDeviceTest::initial_output_device_count_;
   size_t expected_num_devs = preexisting_device_count + 1;
   EXPECT_EQ(num_devs, expected_num_devs);
 }
@@ -259,13 +251,10 @@ void VirtualAudioDeviceTest::AddTwoDevices(bool is_input, bool is_plugged) {
 // To test GetDevices after a device removal, we first add two devices, then
 // remove one (and see if GetDevices reflects the removal). Why? Certain error
 // modes emerge when the removed-device is NOT the final remaining device.
-void VirtualAudioDeviceTest::TestGetDevicesAfterRemove(bool is_input,
-                                                       bool most_recent) {
+void VirtualAudioDeviceTest::TestGetDevicesAfterRemove(bool is_input, bool most_recent) {
   AddTwoDevices(is_input);
-  uint64_t expect_remove_token =
-      (most_recent ? received_default_token_ : received_old_token_);
-  uint64_t expect_default_token =
-      (most_recent ? received_old_token_ : received_default_token_);
+  uint64_t expect_remove_token = (most_recent ? received_default_token_ : received_old_token_);
+  uint64_t expect_default_token = (most_recent ? received_old_token_ : received_default_token_);
 
   SetOnDeviceRemovedEvent();
   if (most_recent) {
@@ -287,9 +276,9 @@ void VirtualAudioDeviceTest::TestGetDevicesAfterRemove(bool is_input,
 
   uint16_t num_devs = kInvalidDeviceCount;
   received_device_ = kInvalidDeviceInfo;
-  audio_dev_enum_->GetDevices(CompletionCallback(
-      [this, expect_remove_token,
-       &num_devs](const std::vector<fuchsia::media::AudioDeviceInfo>& devices) {
+  audio_dev_enum_->GetDevices(
+      CompletionCallback([this, expect_remove_token,
+                          &num_devs](const std::vector<fuchsia::media::AudioDeviceInfo>& devices) {
         num_devs = devices.size();
 
         for (auto& dev : devices) {
@@ -315,19 +304,15 @@ void VirtualAudioDeviceTest::TestGetDevicesAfterRemove(bool is_input,
   // that there is now one device in the list.
   // Our device count should now be exactly one more than our initial count.
   size_t preexisting_device_count =
-      AudioDeviceTest::initial_input_device_count_ +
-      AudioDeviceTest::initial_output_device_count_;
+      AudioDeviceTest::initial_input_device_count_ + AudioDeviceTest::initial_output_device_count_;
   size_t expected_num_devs = preexisting_device_count + 1;
   EXPECT_EQ(num_devs, expected_num_devs);
 }
 
-void VirtualAudioDeviceTest::TestGetDevicesAfterUnplug(bool is_input,
-                                                       bool most_recent) {
+void VirtualAudioDeviceTest::TestGetDevicesAfterUnplug(bool is_input, bool most_recent) {
   AddTwoDevices(is_input);
-  uint64_t to_unplug_token =
-      (most_recent ? received_default_token_ : received_old_token_);
-  uint64_t expect_default_token =
-      (most_recent ? received_old_token_ : received_default_token_);
+  uint64_t to_unplug_token = (most_recent ? received_default_token_ : received_old_token_);
+  uint64_t expect_default_token = (most_recent ? received_old_token_ : received_default_token_);
 
   SetOnDefaultDeviceChangedEvent();
   zx_time_t now = zx_clock_get_monotonic();
@@ -350,9 +335,9 @@ void VirtualAudioDeviceTest::TestGetDevicesAfterUnplug(bool is_input,
 
   uint16_t num_devs = kInvalidDeviceCount;
   received_device_ = kInvalidDeviceInfo;
-  audio_dev_enum_->GetDevices(CompletionCallback(
-      [this, to_unplug_token,
-       &num_devs](const std::vector<fuchsia::media::AudioDeviceInfo>& devices) {
+  audio_dev_enum_->GetDevices(
+      CompletionCallback([this, to_unplug_token,
+                          &num_devs](const std::vector<fuchsia::media::AudioDeviceInfo>& devices) {
         num_devs = devices.size();
 
         for (auto& dev : devices) {
@@ -378,14 +363,12 @@ void VirtualAudioDeviceTest::TestGetDevicesAfterUnplug(bool is_input,
   // Our device count should now be exactly two more than our initial count.
   // Yes, the unplugged device should still show up in the list!
   size_t preexisting_device_count =
-      AudioDeviceTest::initial_input_device_count_ +
-      AudioDeviceTest::initial_output_device_count_;
+      AudioDeviceTest::initial_input_device_count_ + AudioDeviceTest::initial_output_device_count_;
   size_t expected_num_devs = preexisting_device_count + 2;
   EXPECT_EQ(num_devs, expected_num_devs);
 }
 
-void VirtualAudioDeviceTest::TestGetDefaultDeviceUsingAddGetDevices(
-    bool is_input) {
+void VirtualAudioDeviceTest::TestGetDefaultDeviceUsingAddGetDevices(bool is_input) {
   SetOnDeviceAddedEvent();
 
   std::array<uint8_t, 16> unique_id{0};
@@ -443,8 +426,7 @@ void VirtualAudioDeviceTest::TestGetDefaultDeviceAfterAdd(bool is_input) {
 
 // From no-devices, adding an unplugged device should not make it the new
 // default.
-void VirtualAudioDeviceTest::TestGetDefaultDeviceAfterUnpluggedAdd(
-    bool is_input) {
+void VirtualAudioDeviceTest::TestGetDefaultDeviceAfterUnpluggedAdd(bool is_input) {
   if (HasPreExistingDevices()) {
     FXL_DLOG(INFO) << "Test case requires an environment with no audio devices";
     return;
@@ -475,13 +457,10 @@ void VirtualAudioDeviceTest::TestGetDefaultDeviceAfterUnpluggedAdd(
   EXPECT_EQ(received_default_token_, ZX_KOID_INVALID);
 }
 
-void VirtualAudioDeviceTest::TestGetDefaultDeviceAfterRemove(bool is_input,
-                                                             bool most_recent) {
+void VirtualAudioDeviceTest::TestGetDefaultDeviceAfterRemove(bool is_input, bool most_recent) {
   AddTwoDevices(is_input);
-  uint64_t expect_remove_token =
-      (most_recent ? received_default_token_ : received_old_token_);
-  uint64_t expect_default_token =
-      (most_recent ? received_old_token_ : received_default_token_);
+  uint64_t expect_remove_token = (most_recent ? received_default_token_ : received_old_token_);
+  uint64_t expect_default_token = (most_recent ? received_old_token_ : received_default_token_);
 
   if (most_recent) {
     SetOnDefaultDeviceChangedEvent();
@@ -510,11 +489,9 @@ void VirtualAudioDeviceTest::TestGetDefaultDeviceAfterRemove(bool is_input,
   EXPECT_EQ(received_default_token_, expect_default_token);
 }
 
-void VirtualAudioDeviceTest::TestGetDefaultDeviceAfterUnplug(bool is_input,
-                                                             bool most_recent) {
+void VirtualAudioDeviceTest::TestGetDefaultDeviceAfterUnplug(bool is_input, bool most_recent) {
   AddTwoDevices(is_input);
-  uint64_t expect_default_token =
-      (most_recent ? received_old_token_ : received_default_token_);
+  uint64_t expect_default_token = (most_recent ? received_old_token_ : received_default_token_);
 
   zx_time_t now = zx_clock_get_monotonic();
   SetOnDefaultDeviceChangedEvent();
@@ -559,9 +536,8 @@ void VirtualAudioDeviceTest::TestGetDeviceGainAfterAdd(bool is_input) {
     cur_mute = true;
     can_agc = true;
     cur_agc = false;
-    input_->SetGainProperties(min_gain_db, max_gain_db, gain_step_db,
-                              cur_gain_db, can_mute, cur_mute, can_agc,
-                              cur_agc);
+    input_->SetGainProperties(min_gain_db, max_gain_db, gain_step_db, cur_gain_db, can_mute,
+                              cur_mute, can_agc, cur_agc);
     input_->Add();
     // Our audio device manager allows input devices to expose AGC, and does not
     // automatically add a Mute node, so we don't expect the can_agc or can_mute
@@ -584,9 +560,8 @@ void VirtualAudioDeviceTest::TestGetDeviceGainAfterAdd(bool is_input) {
     cur_mute = true;
     can_agc = false;
     cur_agc = false;
-    output_->SetGainProperties(min_gain_db, max_gain_db, gain_step_db,
-                               cur_gain_db, can_mute, cur_mute, can_agc,
-                               cur_agc);
+    output_->SetGainProperties(min_gain_db, max_gain_db, gain_step_db, cur_gain_db, can_mute,
+                               cur_mute, can_agc, cur_agc);
     output_->Add();
 
     // Output AGC is not supported on output devices; can_agc and cur_agc will
@@ -600,8 +575,7 @@ void VirtualAudioDeviceTest::TestGetDeviceGainAfterAdd(bool is_input) {
     cur_gain_db = -12.0f;
   }
 
-  uint32_t gain_flags =
-      GainFlagsFromBools(can_mute, cur_mute, can_agc, cur_agc);
+  uint32_t gain_flags = GainFlagsFromBools(can_mute, cur_mute, can_agc, cur_agc);
 
   ExpectDeviceAdded(unique_id);
 
@@ -617,8 +591,7 @@ void VirtualAudioDeviceTest::TestGetDeviceGainAfterAdd(bool is_input) {
 }
 
 // From GetDeviceGain, does gain/mute/agc matches what was set?
-void VirtualAudioDeviceTest::TestGetDeviceGainAfterSetDeviceGain(
-    bool is_input) {
+void VirtualAudioDeviceTest::TestGetDeviceGainAfterSetDeviceGain(bool is_input) {
   SetOnDeviceAddedEvent();
   std::array<uint8_t, 16> unique_id{0};
   PopulateUniqueIdArr(is_input, unique_id.data());
@@ -638,9 +611,8 @@ void VirtualAudioDeviceTest::TestGetDeviceGainAfterSetDeviceGain(
     cur_mute = false;
     can_agc = true;
     cur_agc = false;
-    input_->SetGainProperties(min_gain_db, max_gain_db, gain_step_db,
-                              cur_gain_db, can_mute, cur_mute, can_agc,
-                              cur_agc);
+    input_->SetGainProperties(min_gain_db, max_gain_db, gain_step_db, cur_gain_db, can_mute,
+                              cur_mute, can_agc, cur_agc);
 
     input_->Add();
 
@@ -662,17 +634,16 @@ void VirtualAudioDeviceTest::TestGetDeviceGainAfterSetDeviceGain(
     cur_mute = false;
     can_agc = false;
     cur_agc = false;
-    output_->SetGainProperties(min_gain_db, max_gain_db, gain_step_db,
-                               cur_gain_db, can_mute, cur_mute, can_agc,
-                               cur_agc);
+    output_->SetGainProperties(min_gain_db, max_gain_db, gain_step_db, cur_gain_db, can_mute,
+                               cur_mute, can_agc, cur_agc);
 
     output_->Add();
 
     // After Add, we'll set gain to -7.0 dB and enable Mute.
     cur_gain_db = -7.0f;
     cur_mute = true;
-    set_flags = fuchsia::media::SetAudioGainFlag_GainValid |
-                fuchsia::media::SetAudioGainFlag_MuteValid;
+    set_flags =
+        fuchsia::media::SetAudioGainFlag_GainValid | fuchsia::media::SetAudioGainFlag_MuteValid;
   }
   gain_flags = GainFlagsFromBools(can_mute, cur_mute, can_agc, cur_agc);
 
@@ -682,8 +653,7 @@ void VirtualAudioDeviceTest::TestGetDeviceGainAfterSetDeviceGain(
   uint64_t added_token = received_device_.token_id;
 
   // SetDeviceGain to the new values
-  fuchsia::media::AudioGainInfo gain_info = {.gain_db = cur_gain_db,
-                                             .flags = gain_flags};
+  fuchsia::media::AudioGainInfo gain_info = {.gain_db = cur_gain_db, .flags = gain_flags};
   audio_dev_enum_->SetDeviceGain(added_token, gain_info, set_flags);
 
   // Receive these changed values through GetDeviceGain
@@ -713,9 +683,8 @@ void VirtualAudioDeviceTest::TestGetDevicesAfterSetDeviceGain(bool is_input) {
     cur_mute = true;
     can_agc = true;
     cur_agc = false;
-    input_->SetGainProperties(min_gain_db, max_gain_db, gain_step_db,
-                              cur_gain_db, can_mute, cur_mute, can_agc,
-                              cur_agc);
+    input_->SetGainProperties(min_gain_db, max_gain_db, gain_step_db, cur_gain_db, can_mute,
+                              cur_mute, can_agc, cur_agc);
 
     input_->Add();
 
@@ -737,17 +706,16 @@ void VirtualAudioDeviceTest::TestGetDevicesAfterSetDeviceGain(bool is_input) {
     cur_mute = true;
     can_agc = false;
     cur_agc = false;
-    output_->SetGainProperties(min_gain_db, max_gain_db, gain_step_db,
-                               cur_gain_db, can_mute, cur_mute, can_agc,
-                               cur_agc);
+    output_->SetGainProperties(min_gain_db, max_gain_db, gain_step_db, cur_gain_db, can_mute,
+                               cur_mute, can_agc, cur_agc);
 
     output_->Add();
 
     // After Add, we'll set gain to -17.0 dB and disable Mute.
     cur_gain_db = -17.0f;
     cur_mute = false;
-    set_flags = fuchsia::media::SetAudioGainFlag_GainValid |
-                fuchsia::media::SetAudioGainFlag_MuteValid;
+    set_flags =
+        fuchsia::media::SetAudioGainFlag_GainValid | fuchsia::media::SetAudioGainFlag_MuteValid;
   }
   gain_flags = GainFlagsFromBools(can_mute, cur_mute, can_agc, cur_agc);
 
@@ -757,8 +725,7 @@ void VirtualAudioDeviceTest::TestGetDevicesAfterSetDeviceGain(bool is_input) {
   uint64_t added_token = received_device_.token_id;
 
   // SetDeviceGain to the new values
-  fuchsia::media::AudioGainInfo gain_info = {.gain_db = cur_gain_db,
-                                             .flags = gain_flags};
+  fuchsia::media::AudioGainInfo gain_info = {.gain_db = cur_gain_db, .flags = gain_flags};
   audio_dev_enum_->SetDeviceGain(added_token, gain_info, set_flags);
 
   // Receive these changed values through GetDevices
@@ -780,8 +747,7 @@ void VirtualAudioDeviceTest::TestGetDevicesAfterSetDeviceGain(bool is_input) {
 // accurate. Info matches the virtual device we added? (name, id, token,
 // input, gain, flags) is_default TRUE? (and does plug status matter at all?)
 // Can Add only partially succeed -- if so, is callback received?
-void VirtualAudioDeviceTest::TestOnDeviceAddedAfterAdd(bool is_input,
-                                                       bool is_plugged) {
+void VirtualAudioDeviceTest::TestOnDeviceAddedAfterAdd(bool is_input, bool is_plugged) {
   SetOnDeviceAddedEvent();
 
   std::string mfr = "Royal Testing";
@@ -791,8 +757,7 @@ void VirtualAudioDeviceTest::TestOnDeviceAddedAfterAdd(bool is_input,
   float min_gain_db = -42.0f, max_gain_db = 2.5f, gain_step_db = 0.5f;
   float cur_gain_db = -13.5f;
   bool can_mute = true, cur_mute = true, can_agc = true, cur_agc = true;
-  uint32_t expect_flags =
-      GainFlagsFromBools(can_mute, cur_mute, can_agc, cur_agc);
+  uint32_t expect_flags = GainFlagsFromBools(can_mute, cur_mute, can_agc, cur_agc);
 
   std::array<uint8_t, 16> unique_id{0};
   PopulateUniqueIdArr(is_input, unique_id.data());
@@ -802,11 +767,9 @@ void VirtualAudioDeviceTest::TestOnDeviceAddedAfterAdd(bool is_input,
     input_->SetProduct(product);
     input_->SetUniqueId(unique_id);
 
-    input_->SetGainProperties(min_gain_db, max_gain_db, gain_step_db,
-                              cur_gain_db, can_mute, cur_mute, can_agc,
-                              cur_agc);
-    input_->SetPlugProperties(zx_clock_get_monotonic(), is_plugged, false,
-                              true);
+    input_->SetGainProperties(min_gain_db, max_gain_db, gain_step_db, cur_gain_db, can_mute,
+                              cur_mute, can_agc, cur_agc);
+    input_->SetPlugProperties(zx_clock_get_monotonic(), is_plugged, false, true);
 
     input_->Add();
   } else {
@@ -814,11 +777,9 @@ void VirtualAudioDeviceTest::TestOnDeviceAddedAfterAdd(bool is_input,
     output_->SetProduct(product);
     output_->SetUniqueId(unique_id);
 
-    output_->SetGainProperties(min_gain_db, max_gain_db, gain_step_db,
-                               cur_gain_db, can_mute, cur_mute, can_agc,
-                               cur_agc);
-    output_->SetPlugProperties(zx_clock_get_monotonic(), is_plugged, false,
-                               true);
+    output_->SetGainProperties(min_gain_db, max_gain_db, gain_step_db, cur_gain_db, can_mute,
+                               cur_mute, can_agc, cur_agc);
+    output_->SetPlugProperties(zx_clock_get_monotonic(), is_plugged, false, true);
 
     output_->Add();
   }
@@ -867,8 +828,7 @@ void VirtualAudioDeviceTest::TestOnDeviceAddedAfterPlug(bool is_input) {
   RunLoopUntilIdle();
 }
 
-void VirtualAudioDeviceTest::TestOnDeviceRemovedAfterRemove(bool is_input,
-                                                            bool is_plugged) {
+void VirtualAudioDeviceTest::TestOnDeviceRemovedAfterRemove(bool is_input, bool is_plugged) {
   SetOnDeviceAddedEvent();
 
   std::array<uint8_t, 16> unique_id{0};
@@ -983,8 +943,7 @@ void VirtualAudioDeviceTest::TestOnDefaultDeviceChangedAfterAdd(bool is_input) {
 // plugged-time that makes it most-recently-plugged (and thus should become the
 // new default). If most_recent is false, then we make the plugged-time for this
 // second device _immediately_ before the plugged-time for the first device.
-void VirtualAudioDeviceTest::TestOnDefaultDeviceChangedAfterPlug(
-    bool is_input, bool most_recent) {
+void VirtualAudioDeviceTest::TestOnDefaultDeviceChangedAfterPlug(bool is_input, bool most_recent) {
   AddTwoDevices(is_input, false);
   uint64_t token1 = received_old_token_;
   uint64_t token2 = received_default_token_;
@@ -1022,13 +981,11 @@ void VirtualAudioDeviceTest::TestOnDefaultDeviceChangedAfterPlug(
   }
 }
 
-void VirtualAudioDeviceTest::TestOnDefaultDeviceChangedAfterRemove(
-    bool is_input, bool most_recent) {
+void VirtualAudioDeviceTest::TestOnDefaultDeviceChangedAfterRemove(bool is_input,
+                                                                   bool most_recent) {
   AddTwoDevices(is_input);
-  uint64_t expect_remove_token =
-      (most_recent ? received_default_token_ : received_old_token_);
-  uint64_t expect_default_token =
-      (most_recent ? received_old_token_ : received_default_token_);
+  uint64_t expect_remove_token = (most_recent ? received_default_token_ : received_old_token_);
+  uint64_t expect_default_token = (most_recent ? received_old_token_ : received_default_token_);
 
   SetOnDefaultDeviceChangedEvent();
   if (most_recent) {
@@ -1051,13 +1008,11 @@ void VirtualAudioDeviceTest::TestOnDefaultDeviceChangedAfterRemove(
   }
 }
 
-void VirtualAudioDeviceTest::TestOnDefaultDeviceChangedAfterUnplug(
-    bool is_input, bool most_recent) {
+void VirtualAudioDeviceTest::TestOnDefaultDeviceChangedAfterUnplug(bool is_input,
+                                                                   bool most_recent) {
   AddTwoDevices(is_input);
-  uint64_t to_unplug_token =
-      (most_recent ? received_default_token_ : received_old_token_);
-  uint64_t expect_default_token =
-      (most_recent ? received_old_token_ : received_default_token_);
+  uint64_t to_unplug_token = (most_recent ? received_default_token_ : received_old_token_);
+  uint64_t expect_default_token = (most_recent ? received_old_token_ : received_default_token_);
 
   zx_time_t now = zx_clock_get_monotonic();
   SetOnDefaultDeviceChangedEvent();
@@ -1102,9 +1057,8 @@ void VirtualAudioDeviceTest::TestOnDeviceGainChanged(bool is_input) {
     cur_mute = true;
     can_agc = true;
     cur_agc = false;
-    input_->SetGainProperties(min_gain_db, max_gain_db, gain_step_db,
-                              cur_gain_db, can_mute, cur_mute, can_agc,
-                              cur_agc);
+    input_->SetGainProperties(min_gain_db, max_gain_db, gain_step_db, cur_gain_db, can_mute,
+                              cur_mute, can_agc, cur_agc);
 
     input_->Add();
 
@@ -1126,17 +1080,16 @@ void VirtualAudioDeviceTest::TestOnDeviceGainChanged(bool is_input) {
     cur_mute = true;
     can_agc = false;
     cur_agc = false;
-    output_->SetGainProperties(min_gain_db, max_gain_db, gain_step_db,
-                               cur_gain_db, can_mute, cur_mute, can_agc,
-                               cur_agc);
+    output_->SetGainProperties(min_gain_db, max_gain_db, gain_step_db, cur_gain_db, can_mute,
+                               cur_mute, can_agc, cur_agc);
 
     output_->Add();
 
     // After Add, we'll set gain to -17.0 dB and disable Mute.
     cur_gain_db = -17.0f;
     cur_mute = false;
-    set_flags = fuchsia::media::SetAudioGainFlag_GainValid |
-                fuchsia::media::SetAudioGainFlag_MuteValid;
+    set_flags =
+        fuchsia::media::SetAudioGainFlag_GainValid | fuchsia::media::SetAudioGainFlag_MuteValid;
   }
   gain_flags = GainFlagsFromBools(can_mute, cur_mute, can_agc, cur_agc);
 
@@ -1146,8 +1099,7 @@ void VirtualAudioDeviceTest::TestOnDeviceGainChanged(bool is_input) {
   uint64_t added_token = received_device_.token_id;
 
   // SetDeviceGain to the new values
-  fuchsia::media::AudioGainInfo gain_info = {.gain_db = cur_gain_db,
-                                             .flags = gain_flags};
+  fuchsia::media::AudioGainInfo gain_info = {.gain_db = cur_gain_db, .flags = gain_flags};
   SetOnDeviceGainChangedEvent();
   audio_dev_enum_->SetDeviceGain(added_token, gain_info, set_flags);
 
@@ -1161,9 +1113,7 @@ void VirtualAudioDeviceTest::TestOnDeviceGainChanged(bool is_input) {
 //
 // VirtualAudioDeviceTest -- test cases that use the virtualaudio mechanism
 //
-TEST_F(VirtualAudioDeviceTest, GetDevicesMatchesAddInput) {
-  TestGetDevicesAfterAdd(true);
-}
+TEST_F(VirtualAudioDeviceTest, GetDevicesMatchesAddInput) { TestGetDevicesAfterAdd(true); }
 
 // Remove input (default changed) then GetDevices
 TEST_F(VirtualAudioDeviceTest, GetDevicesMatchesRemoveDefaultInput) {
@@ -1192,9 +1142,7 @@ TEST_F(VirtualAudioDeviceTest, GetDevicesMatchesSetDeviceGainInput) {
 }
 
 // Using virtualaudio, validate that device list matches what was added.
-TEST_F(VirtualAudioDeviceTest, GetDevicesMatchesAddOutput) {
-  TestGetDevicesAfterAdd(false);
-}
+TEST_F(VirtualAudioDeviceTest, GetDevicesMatchesAddOutput) { TestGetDevicesAfterAdd(false); }
 
 // Remove output (default changed) then GetDevices
 TEST_F(VirtualAudioDeviceTest, GetDevicesMatchesRemoveDefaultOutput) {
@@ -1321,31 +1269,28 @@ TEST_F(VirtualAudioDeviceTest, SetDeviceGainOfBadValues) {
   uint64_t out_token = received_device_.token_id;
 
   // The explicitly-invalid token_id
-  audio_dev_enum_->SetDeviceGain(
-      ZX_KOID_INVALID, {.gain_db = 0.0f, .flags = kGainFlagMask}, kSetFlagMask);
+  audio_dev_enum_->SetDeviceGain(ZX_KOID_INVALID, {.gain_db = 0.0f, .flags = kGainFlagMask},
+                                 kSetFlagMask);
 
   // A device token_id that does not correctly refer to a device
-  audio_dev_enum_->SetDeviceGain(kInvalidDeviceToken,
-                                 {.gain_db = 0.0f, .flags = kGainFlagMask},
+  audio_dev_enum_->SetDeviceGain(kInvalidDeviceToken, {.gain_db = 0.0f, .flags = kGainFlagMask},
                                  kSetFlagMask);
 
   // An invalid gain_db value
-  audio_dev_enum_->SetDeviceGain(
-      in_token, {.gain_db = NAN, .flags = kGainFlagMask}, kSetFlagMask);
-  audio_dev_enum_->SetDeviceGain(
-      out_token, {.gain_db = NAN, .flags = kGainFlagMask}, kSetFlagMask);
+  audio_dev_enum_->SetDeviceGain(in_token, {.gain_db = NAN, .flags = kGainFlagMask}, kSetFlagMask);
+  audio_dev_enum_->SetDeviceGain(out_token, {.gain_db = NAN, .flags = kGainFlagMask}, kSetFlagMask);
 
   // Invalid gain flags (set bits outside the defined ones)
-  audio_dev_enum_->SetDeviceGain(
-      in_token, {.gain_db = 0.0f, .flags = ~kGainFlagMask}, kSetFlagMask);
-  audio_dev_enum_->SetDeviceGain(
-      out_token, {.gain_db = 0.0f, .flags = ~kGainFlagMask}, kSetFlagMask);
+  audio_dev_enum_->SetDeviceGain(in_token, {.gain_db = 0.0f, .flags = ~kGainFlagMask},
+                                 kSetFlagMask);
+  audio_dev_enum_->SetDeviceGain(out_token, {.gain_db = 0.0f, .flags = ~kGainFlagMask},
+                                 kSetFlagMask);
 
   // Invalid set flags (set bits outside the defined ones)
-  audio_dev_enum_->SetDeviceGain(
-      in_token, {.gain_db = 0.0f, .flags = kGainFlagMask}, ~kSetFlagMask);
-  audio_dev_enum_->SetDeviceGain(
-      out_token, {.gain_db = 0.0f, .flags = kGainFlagMask}, ~kSetFlagMask);
+  audio_dev_enum_->SetDeviceGain(in_token, {.gain_db = 0.0f, .flags = kGainFlagMask},
+                                 ~kSetFlagMask);
+  audio_dev_enum_->SetDeviceGain(out_token, {.gain_db = 0.0f, .flags = kGainFlagMask},
+                                 ~kSetFlagMask);
 
   // We should not disconnect.
   RunLoopUntilIdle();
@@ -1372,8 +1317,7 @@ TEST_F(VirtualAudioDeviceTest, SetDeviceGainOfRemovedInput) {
   uint64_t removed_dev_token = received_removed_token_;
 
   SetOnDeviceGainChangedEvent();
-  audio_dev_enum_->SetDeviceGain(removed_dev_token,
-                                 {.gain_db = 0.0f, .flags = 0}, kSetFlagMask);
+  audio_dev_enum_->SetDeviceGain(removed_dev_token, {.gain_db = 0.0f, .flags = 0}, kSetFlagMask);
 
   // We should receive neither callback nor disconnect.
   RunLoopUntilIdle();
@@ -1438,26 +1382,22 @@ TEST_F(VirtualAudioDeviceTest, OnDefaultDeviceChangedMatchesPlugDefaultInput) {
 }
 
 // Remove (default changed) -> OnDefaultDeviceChanged
-TEST_F(VirtualAudioDeviceTest,
-       OnDefaultDeviceChangedMatchesRemoveDefaultInput) {
+TEST_F(VirtualAudioDeviceTest, OnDefaultDeviceChangedMatchesRemoveDefaultInput) {
   TestOnDefaultDeviceChangedAfterRemove(true, true);
 }
 
 // Remove (default didn't change) -> OnDefaultDeviceChanged
-TEST_F(VirtualAudioDeviceTest,
-       OnDefaultDeviceChangedMatchesRemoveNotDefaultInput) {
+TEST_F(VirtualAudioDeviceTest, OnDefaultDeviceChangedMatchesRemoveNotDefaultInput) {
   TestOnDefaultDeviceChangedAfterRemove(true, false);
 }
 
 // Unplug (default changed) -> OnDefaultDeviceChanged
-TEST_F(VirtualAudioDeviceTest,
-       OnDefaultDeviceChangedMatchesUnplugDefaultInput) {
+TEST_F(VirtualAudioDeviceTest, OnDefaultDeviceChangedMatchesUnplugDefaultInput) {
   TestOnDefaultDeviceChangedAfterUnplug(true, true);
 }
 
 // Unplug (default didn't change) -> OnDefaultDeviceChanged
-TEST_F(VirtualAudioDeviceTest,
-       OnDefaultDeviceChangedMatchesUnplugNotDefaultInput) {
+TEST_F(VirtualAudioDeviceTest, OnDefaultDeviceChangedMatchesUnplugNotDefaultInput) {
   TestOnDefaultDeviceChangedAfterUnplug(true, false);
 }
 
@@ -1470,26 +1410,22 @@ TEST_F(VirtualAudioDeviceTest, OnDefaultDeviceChangedMatchesPlugDefaultOutput) {
 }
 
 // Remove (default changed) -> OnDefaultDeviceChanged
-TEST_F(VirtualAudioDeviceTest,
-       OnDefaultDeviceChangedMatchesRemoveDefaultOutput) {
+TEST_F(VirtualAudioDeviceTest, OnDefaultDeviceChangedMatchesRemoveDefaultOutput) {
   TestOnDefaultDeviceChangedAfterRemove(false, true);
 }
 
 // Remove (default didn't change) -> OnDefaultDeviceChanged
-TEST_F(VirtualAudioDeviceTest,
-       OnDefaultDeviceChangedMatchesRemoveNotDefaultOutput) {
+TEST_F(VirtualAudioDeviceTest, OnDefaultDeviceChangedMatchesRemoveNotDefaultOutput) {
   TestOnDefaultDeviceChangedAfterRemove(false, false);
 }
 
 // Unplug (default changed) -> OnDefaultDeviceChanged
-TEST_F(VirtualAudioDeviceTest,
-       OnDefaultDeviceChangedMatchesUnplugDefaultOutput) {
+TEST_F(VirtualAudioDeviceTest, OnDefaultDeviceChangedMatchesUnplugDefaultOutput) {
   TestOnDefaultDeviceChangedAfterUnplug(false, true);
 }
 
 // Unplug (default didn't change) -> OnDefaultDeviceChanged
-TEST_F(VirtualAudioDeviceTest,
-       OnDefaultDeviceChangedMatchesUnplugNotDefaultOutput) {
+TEST_F(VirtualAudioDeviceTest, OnDefaultDeviceChangedMatchesUnplugNotDefaultOutput) {
   TestOnDefaultDeviceChangedAfterUnplug(false, false);
 }
 

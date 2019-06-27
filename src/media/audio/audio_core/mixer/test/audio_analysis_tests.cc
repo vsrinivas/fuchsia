@@ -71,11 +71,10 @@ TEST(AnalysisHelpers, CompareBuffToVal_8) {
   uint8_t source[] = {0xBB, 0xBB};
 
   // No match ...
-  EXPECT_FALSE(CompareBufferToVal(source, static_cast<uint8_t>(0xBC),
-                                  fbl::count_of(source), false));
+  EXPECT_FALSE(
+      CompareBufferToVal(source, static_cast<uint8_t>(0xBC), fbl::count_of(source), false));
   // Match
-  EXPECT_TRUE(CompareBufferToVal(source, static_cast<uint8_t>(0xBB),
-                                 fbl::count_of(source)));
+  EXPECT_TRUE(CompareBufferToVal(source, static_cast<uint8_t>(0xBB), fbl::count_of(source)));
 }
 
 // Test int16 version of this func, which we use to test output buffers
@@ -83,8 +82,8 @@ TEST(AnalysisHelpers, CompareBuffToVal_16) {
   int16_t source[] = {0xBAD, 0xCAD};
 
   // No match ...
-  EXPECT_FALSE(CompareBufferToVal(source, static_cast<int16_t>(0xBAD),
-                                  fbl::count_of(source), false));
+  EXPECT_FALSE(
+      CompareBufferToVal(source, static_cast<int16_t>(0xBAD), fbl::count_of(source), false));
   // Match - if we only look at the second value
   EXPECT_TRUE(CompareBufferToVal(source + 1, static_cast<int16_t>(0xCAD), 1));
 }
@@ -94,8 +93,7 @@ TEST(AnalysisHelpers, CompareBuffToVal_32) {
   int32_t source[] = {0xF00CAFE, 0xBADF00D};
 
   // No match ...
-  EXPECT_FALSE(
-      CompareBufferToVal(source, 0xF00CAFE, fbl::count_of(source), false));
+  EXPECT_FALSE(CompareBufferToVal(source, 0xF00CAFE, fbl::count_of(source), false));
   // Match - if we only look at the first value
   EXPECT_TRUE(CompareBufferToVal(source, 0xF00CAFE, 1));
 }
@@ -105,8 +103,7 @@ TEST(AnalysisHelpers, CompareBuffToVal_Float) {
   float source[] = {3.1415926f, 2.7182818f};
 
   // No match ...
-  EXPECT_FALSE(
-      CompareBufferToVal(source, 3.1415926f, fbl::count_of(source), false));
+  EXPECT_FALSE(CompareBufferToVal(source, 3.1415926f, fbl::count_of(source), false));
   // Match - if we only look at the first value
   EXPECT_TRUE(CompareBufferToVal(source, 3.1415926f, 1));
 }
@@ -123,8 +120,7 @@ TEST(AnalysisHelpers, GenerateCosine_8) {
   GenerateCosine(source, fbl::count_of(source), 0.0, false, 0.0, 0.0);
 
   // Frequency 0.0 produces constant value. Val 0 is shifted to 0x80.
-  EXPECT_TRUE(CompareBufferToVal(source, static_cast<uint8_t>(0x80),
-                                 fbl::count_of(source)));
+  EXPECT_TRUE(CompareBufferToVal(source, static_cast<uint8_t>(0x80), fbl::count_of(source)));
 }
 
 TEST(AnalysisHelpers, GenerateCosine_16) {
@@ -132,8 +128,7 @@ TEST(AnalysisHelpers, GenerateCosine_16) {
   GenerateCosine(source, fbl::count_of(source), 0.0, false, -32766.4);
 
   // Frequency of 0.0 produces constant value, with -.4 rounded toward zero.
-  EXPECT_TRUE(CompareBufferToVal(source, static_cast<int16_t>(-32766),
-                                 fbl::count_of(source)));
+  EXPECT_TRUE(CompareBufferToVal(source, static_cast<int16_t>(-32766), fbl::count_of(source)));
 
   // Test default bool value (false): also overwrite
   OverwriteCosine(source, 1, 0.0, -41.5, 0.0);
@@ -186,9 +181,8 @@ TEST(AnalysisHelpers, GenerateCosine_Double) {
 TEST(AnalysisHelpers, GetPhase) {
   double reals[] = {0.5, 23, 0, -42, -0.1, -123, 0, 68, 0};
   double imags[] = {0, 23, 243, 42, 0, -123, -243, -68, 0};
-  double expect[] = {0,    M_PI / 4,      M_PI / 2,  3 * M_PI / 4,
-                     M_PI, -3 * M_PI / 4, -M_PI / 2, -M_PI / 4,
-                     0};
+  double expect[] = {0,         M_PI / 4,  M_PI / 2, 3 * M_PI / 4, M_PI, -3 * M_PI / 4,
+                     -M_PI / 2, -M_PI / 4, 0};
   static_assert(fbl::count_of(imags) == fbl::count_of(reals), "buf mismatch");
   static_assert(fbl::count_of(expect) == fbl::count_of(reals), "buf mismatch");
 
@@ -207,9 +201,8 @@ TEST(AnalysisHelpers, RectToPolar) {
   RectangularToPolar(real, imag, fbl::count_of(real), magn, phase);
   double expect_magn[] = {1.0, RT_2, 1.0, RT_2, 1.0, RT_2, 1.0, RT_2, 0.0, 0.0};
 
-  double expect_phase[] = {
-      0.0,           M_PI / 4,  M_PI / 2,  3 * M_PI / 4, M_PI,
-      -3 * M_PI / 4, -M_PI / 2, -M_PI / 4, 0.0,          0.0};
+  double expect_phase[] = {0.0,           M_PI / 4,  M_PI / 2,  3 * M_PI / 4, M_PI,
+                           -3 * M_PI / 4, -M_PI / 2, -M_PI / 4, 0.0,          0.0};
 
   // We used double here; below are acceptable and reliable tolerances
   for (uint32_t idx = 0; idx < fbl::count_of(expect_magn); ++idx) {
@@ -229,10 +222,8 @@ TEST(AnalysisHelpers, RealDFT) {
   const uint32_t buf_sz_2 = buf_size >> 1;
   double real_freq[9];
   double imag_freq[9];
-  static_assert(fbl::count_of(real_freq) == buf_sz_2 + 1,
-                "buf sizes must match");
-  static_assert(fbl::count_of(imag_freq) == buf_sz_2 + 1,
-                "buf sizes must match");
+  static_assert(fbl::count_of(real_freq) == buf_sz_2 + 1, "buf sizes must match");
+  static_assert(fbl::count_of(imag_freq) == buf_sz_2 + 1, "buf sizes must match");
 
   // impulse
   OverwriteCosine(reals, buf_size, 0.0, 0.0);
@@ -253,8 +244,7 @@ TEST(AnalysisHelpers, RealDFT) {
   RealDFT(reals, buf_size, real_freq, imag_freq);
 
   for (uint32_t idx = 0; idx <= buf_sz_2; ++idx) {
-    const double expect =
-        (idx == 0 ? 700000.0 * static_cast<double>(buf_size) : 0.0);
+    const double expect = (idx == 0 ? 700000.0 * static_cast<double>(buf_size) : 0.0);
     EXPECT_LE(real_freq[idx], expect + epsilon) << idx;
     EXPECT_GE(real_freq[idx], expect - epsilon) << idx;
 
@@ -267,9 +257,7 @@ TEST(AnalysisHelpers, RealDFT) {
   RealDFT(reals, buf_size, real_freq, imag_freq);
 
   for (uint32_t idx = 0; idx <= buf_sz_2; ++idx) {
-    const double expect = (idx == buf_size / 2)
-                              ? (1001001.0 * static_cast<double>(buf_size))
-                              : 0.0;
+    const double expect = (idx == buf_size / 2) ? (1001001.0 * static_cast<double>(buf_size)) : 0.0;
     EXPECT_LE(real_freq[idx], expect + epsilon) << idx;
     EXPECT_GE(real_freq[idx], expect - epsilon) << idx;
 
@@ -282,8 +270,7 @@ TEST(AnalysisHelpers, RealDFT) {
   RealDFT(reals, buf_size, real_freq, imag_freq);
 
   for (uint32_t idx = 0; idx <= buf_sz_2; ++idx) {
-    const double expect =
-        (idx == 1) ? (20202020.0 * static_cast<double>(buf_size) / 2.0) : 0.0;
+    const double expect = (idx == 1) ? (20202020.0 * static_cast<double>(buf_size) / 2.0) : 0.0;
     EXPECT_LE(real_freq[idx], expect + epsilon) << idx;
     EXPECT_GE(real_freq[idx], expect - epsilon) << idx;
 
@@ -299,8 +286,7 @@ TEST(AnalysisHelpers, RealDFT) {
     EXPECT_LE(real_freq[idx], epsilon) << idx;
     EXPECT_GE(real_freq[idx], -epsilon) << idx;
 
-    const double expect =
-        (idx == 1) ? (20202020.0 * static_cast<double>(buf_size) / 2.0) : 0.0;
+    const double expect = (idx == 1) ? (20202020.0 * static_cast<double>(buf_size) / 2.0) : 0.0;
     EXPECT_LE(imag_freq[idx], -expect + epsilon) << idx;
     EXPECT_GE(imag_freq[idx], -expect - epsilon) << idx;
   }
@@ -413,8 +399,7 @@ TEST(AnalysisHelpers, FFT) {
   FFT(reals, imags, buf_size);
 
   for (uint32_t idx = 0; idx <= buf_sz_2; ++idx) {
-    const double expect =
-        (idx == 0 ? 700000.0 * static_cast<double>(buf_size) : 0.0);
+    const double expect = (idx == 0 ? 700000.0 * static_cast<double>(buf_size) : 0.0);
     EXPECT_LE(reals[idx], expect + epsilon) << idx;
     EXPECT_GE(reals[idx], expect - epsilon) << idx;
 

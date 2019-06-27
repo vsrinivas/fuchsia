@@ -17,8 +17,8 @@ void TestFixture::TearDown() {
 }
 
 bool TestFixture::RunUntilComplete(fit::function<bool()> condition) {
-  return RunLoopWithTimeoutOrUntil(
-      std::move(condition), kDurationResponseExpected, kDurationGranularity);
+  return RunLoopWithTimeoutOrUntil(std::move(condition), kDurationResponseExpected,
+                                   kDurationGranularity);
 }
 
 void TestFixture::ExpectCondition(fit::function<bool()> condition) {

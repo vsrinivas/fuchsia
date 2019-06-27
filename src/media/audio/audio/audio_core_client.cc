@@ -5,12 +5,10 @@
 #include "src/media/audio/audio/audio_core_client.h"
 
 namespace media::audio {
-AudioCoreClient::AudioCoreClient(sys::ComponentContext* startup_context,
-                                 fit::closure quit_callback)
+AudioCoreClient::AudioCoreClient(sys::ComponentContext* startup_context, fit::closure quit_callback)
     : quit_callback_(std::move(quit_callback)) {
   audio_core_.set_error_handler([this](zx_status_t status) {
-    FXL_LOG(ERROR) << "Connection to fuchsia.media.AudioCore failed: "
-                   << status;
+    FXL_LOG(ERROR) << "Connection to fuchsia.media.AudioCore failed: " << status;
     quit_callback_();
   });
 
@@ -24,11 +22,9 @@ AudioCoreClient::AudioCoreClient(sys::ComponentContext* startup_context,
 
   startup_context->outgoing()->AddPublicService<fuchsia::media::Audio>(
       [this](fidl::InterfaceRequest<fuchsia::media::Audio> request) {
-        bindings_.AddBinding(
-            this,
-            fidl::InterfaceRequest<fuchsia::media::Audio>(std::move(request)));
-        bindings_.bindings().back()->events().SystemGainMuteChanged(
-            system_gain_db_, system_muted_);
+        bindings_.AddBinding(this,
+                             fidl::InterfaceRequest<fuchsia::media::Audio>(std::move(request)));
+        bindings_.bindings().back()->events().SystemGainMuteChanged(system_gain_db_, system_muted_);
       });
 }
 

@@ -17,11 +17,9 @@
 
 namespace media::audio {
 
-static constexpr fxl::TimeDelta kMaxTrimPeriod =
-    fxl::TimeDelta::FromMilliseconds(10);
+static constexpr fxl::TimeDelta kMaxTrimPeriod = fxl::TimeDelta::FromMilliseconds(10);
 
-AudioOutput::AudioOutput(AudioDeviceManager* manager)
-    : AudioDevice(Type::Output, manager) {
+AudioOutput::AudioOutput(AudioDeviceManager* manager) : AudioDevice(Type::Output, manager) {
   next_sched_time_ = fxl::TimePoint::Now();
   next_sched_time_known_ = true;
   source_link_refs_.reserve(16u);
@@ -39,8 +37,7 @@ zx_status_t AudioOutput::Init() {
   }
 
   dispatcher::Timer::ProcessHandler process_handler(
-      [output =
-           fbl::WrapRefPtr(this)](dispatcher::Timer* timer) -> zx_status_t {
+      [output = fbl::WrapRefPtr(this)](dispatcher::Timer* timer) -> zx_status_t {
         OBTAIN_EXECUTION_DOMAIN_TOKEN(token, output->mix_domain_);
         output->Process();
         return ZX_OK;
@@ -92,19 +89,17 @@ void AudioOutput::Process() {
       // (something that happens automatically if we mix).
       if (!cur_mix_job_.sw_output_muted) {
         // Fill the intermediate buffer with silence.
-        size_t bytes_to_zero = sizeof(mix_buf_[0]) * cur_mix_job_.buf_frames *
-                               output_producer_->channels();
+        size_t bytes_to_zero =
+            sizeof(mix_buf_[0]) * cur_mix_job_.buf_frames * output_producer_->channels();
         std::memset(mix_buf_.get(), 0, bytes_to_zero);
 
         // Mix each renderer into the intermediate accumulator buffer, then
         // reformat (and clip) into the final output buffer.
         ForEachLink(TaskType::Mix);
-        output_producer_->ProduceOutput(mix_buf_.get(), cur_mix_job_.buf,
-                                        cur_mix_job_.buf_frames);
+        output_producer_->ProduceOutput(mix_buf_.get(), cur_mix_job_.buf, cur_mix_job_.buf_frames);
         mixed = true;
       } else {
-        output_producer_->FillWithSilence(cur_mix_job_.buf,
-                                          cur_mix_job_.buf_frames);
+        output_producer_->FillWithSilence(cur_mix_job_.buf, cur_mix_job_.buf_frames);
       }
 
     } while (FinishMixJob(cur_mix_job_));
@@ -132,15 +127,13 @@ void AudioOutput::Process() {
     next_sched_time_ = max_sched_time;
   }
 
-  zx_time_t next_time =
-      static_cast<zx_time_t>(next_sched_time_.ToEpochDelta().ToNanoseconds());
+  zx_time_t next_time = static_cast<zx_time_t>(next_sched_time_.ToEpochDelta().ToNanoseconds());
   if (mix_timer_->Arm(next_time) != ZX_OK) {
     ShutdownSelf();
   }
 }
 
-zx_status_t AudioOutput::InitializeSourceLink(
-    const fbl::RefPtr<AudioLink>& link) {
+zx_status_t AudioOutput::InitializeSourceLink(const fbl::RefPtr<AudioLink>& link) {
   auto mix_bookkeeping = std::make_unique<Bookkeeping>();
 
   // For now, refuse to link to anything but a packet source.  This code does
@@ -153,8 +146,8 @@ zx_status_t AudioOutput::InitializeSourceLink(
   // Otherwise, we only need a NoOp mixer (for the time being).
   auto& packet_link = static_cast<AudioLinkPacketSource&>(*link);
   if (output_producer_) {
-    mix_bookkeeping->mixer = Mixer::Select(packet_link.format_info().format(),
-                                           *(output_producer_->format()));
+    mix_bookkeeping->mixer =
+        Mixer::Select(packet_link.format_info().format(), *(output_producer_->format()));
   } else {
     mix_bookkeeping->mixer = std::make_unique<audio::mixer::NoOp>();
   }
@@ -190,8 +183,7 @@ zx_status_t AudioOutput::InitializeSourceLink(
 void AudioOutput::SetupMixBuffer(uint32_t max_mix_frames) {
   FXL_DCHECK(output_producer_->channels() > 0u);
   FXL_DCHECK(max_mix_frames > 0u);
-  FXL_DCHECK(static_cast<uint64_t>(max_mix_frames) *
-                 output_producer_->channels() <=
+  FXL_DCHECK(static_cast<uint64_t>(max_mix_frames) * output_producer_->channels() <=
              std::numeric_limits<uint32_t>::max());
 
   mix_buf_frames_ = max_mix_frames;
@@ -215,8 +207,7 @@ void AudioOutput::ForEachLink(TaskType task_type) {
   }
 
   // In all cases, release our temporary references upon leaving this method.
-  auto cleanup = fit::defer(
-      [this]() FXL_NO_THREAD_SAFETY_ANALYSIS { source_link_refs_.clear(); });
+  auto cleanup = fit::defer([this]() FXL_NO_THREAD_SAFETY_ANALYSIS { source_link_refs_.clear(); });
 
   for (const auto& link : source_link_refs_) {
     // Quit early if we should be shutting down.
@@ -232,8 +223,7 @@ void AudioOutput::ForEachLink(TaskType task_type) {
     FXL_DCHECK(link->source_type() == AudioLink::SourceType::Packet);
     FXL_DCHECK(link->GetSource()->type() == AudioObject::Type::AudioRenderer);
     auto packet_link = fbl::RefPtr<AudioLinkPacketSource>::Downcast(link);
-    auto audio_renderer =
-        fbl::RefPtr<AudioRendererImpl>::Downcast(link->GetSource());
+    auto audio_renderer = fbl::RefPtr<AudioRendererImpl>::Downcast(link->GetSource());
 
     // It would be nice to be able to use a dynamic cast for this, but currently
     // we are building with no-rtti
@@ -265,9 +255,8 @@ void AudioOutput::ForEachLink(TaskType task_type) {
       // If we have not set up for this renderer yet, do so. If the setup
       // fails for any reason, stop processing packets for this renderer.
       if (!setup_done) {
-        setup_done = (task_type == TaskType::Mix)
-                         ? SetupMix(audio_renderer, &info)
-                         : SetupTrim(audio_renderer, &info);
+        setup_done = (task_type == TaskType::Mix) ? SetupMix(audio_renderer, &info)
+                                                  : SetupTrim(audio_renderer, &info);
         if (!setup_done) {
           // Clear our ramps, if we exit with error?
           break;
@@ -277,10 +266,9 @@ void AudioOutput::ForEachLink(TaskType task_type) {
       // Now process the packet which is at the front of the renderer's queue.
       // If the packet has been entirely consumed, pop it off the front and
       // proceed to the next one. Otherwise, we are finished.
-      release_audio_renderer_packet =
-          (task_type == TaskType::Mix)
-              ? ProcessMix(audio_renderer, &info, pkt_ref)
-              : ProcessTrim(audio_renderer, &info, pkt_ref);
+      release_audio_renderer_packet = (task_type == TaskType::Mix)
+                                          ? ProcessMix(audio_renderer, &info, pkt_ref)
+                                          : ProcessTrim(audio_renderer, &info, pkt_ref);
 
       // If we have mixed enough output frames, we are done with this mix,
       // regardless of what we should now do with the renderer packet.
@@ -320,9 +308,8 @@ bool AudioOutput::SetupMix(const fbl::RefPtr<AudioRendererImpl>& audio_renderer,
   return true;
 }
 
-bool AudioOutput::ProcessMix(
-    const fbl::RefPtr<AudioRendererImpl>& audio_renderer, Bookkeeping* info,
-    const fbl::RefPtr<AudioPacketRef>& packet) {
+bool AudioOutput::ProcessMix(const fbl::RefPtr<AudioRendererImpl>& audio_renderer,
+                             Bookkeeping* info, const fbl::RefPtr<AudioPacketRef>& packet) {
   // Bookkeeping should contain: the rechannel matrix (eventually).
 
   // Sanity check our parameters.
@@ -350,17 +337,15 @@ bool AudioOutput::ProcessMix(
   }
 
   uint32_t frames_left = cur_mix_job_.buf_frames - cur_mix_job_.frames_produced;
-  float* buf = mix_buf_.get() +
-               (cur_mix_job_.frames_produced * output_producer_->channels());
+  float* buf = mix_buf_.get() + (cur_mix_job_.frames_produced * output_producer_->channels());
 
   // Calculate this job's first and last sampling points, in source sub-frames.
-  int64_t first_sample_ftf = info->dest_frames_to_frac_source_frames(
-      cur_mix_job_.start_pts_of + cur_mix_job_.frames_produced);
+  int64_t first_sample_ftf = info->dest_frames_to_frac_source_frames(cur_mix_job_.start_pts_of +
+                                                                     cur_mix_job_.frames_produced);
 
   // Without the "-1", this would be the first output frame of the NEXT job.
   int64_t final_sample_ftf =
-      first_sample_ftf +
-      info->dest_frames_to_frac_source_frames.rate().Scale(frames_left - 1);
+      first_sample_ftf + info->dest_frames_to_frac_source_frames.rate().Scale(frames_left - 1);
 
   // If packet has no frames, there's no need to mix it; it may be skipped.
   if (packet->end_pts() == packet->start_pts()) {
@@ -375,12 +360,10 @@ bool AudioOutput::ProcessMix(
   // window edge of our filter centered at our first sampling point, then this
   // packet is entirely in the past and may be skipped.
   if (final_pts < (first_sample_ftf - mixer.neg_filter_width())) {
-    FXL_LOG(ERROR) << __func__ << " ("
-                   << reinterpret_cast<void*>(audio_renderer.get())
-                   << ") skipped entire packet ending at PTS " << std::hex
-                   << final_pts << "; missed packet start by "
-                   << static_cast<float>(first_sample_ftf -
-                                         mixer.neg_filter_width() -
+    FXL_LOG(ERROR) << __func__ << " (" << reinterpret_cast<void*>(audio_renderer.get())
+                   << ") skipped entire packet ending at PTS " << std::hex << final_pts
+                   << "; missed packet start by "
+                   << static_cast<float>(first_sample_ftf - mixer.neg_filter_width() -
                                          packet->start_pts()) /
                           (48.0 * Mixer::FRAC_ONE)
                    << "ms";
@@ -399,30 +382,24 @@ bool AudioOutput::ProcessMix(
   // input packet) we should start sampling the input.
   int64_t input_offset_64 = first_sample_ftf - packet->start_pts();
   int64_t output_offset_64 = 0;
-  int64_t first_sample_pos_window_edge =
-      first_sample_ftf + mixer.pos_filter_width();
+  int64_t first_sample_pos_window_edge = first_sample_ftf + mixer.pos_filter_width();
 
   // If the packet's first frame comes after the filter window's positive edge,
   // then we should skip some output frames before starting to produce data.
   if (packet->start_pts() > first_sample_pos_window_edge) {
-    const TimelineRate& dest_to_src =
-        info->dest_frames_to_frac_source_frames.rate();
+    const TimelineRate& dest_to_src = info->dest_frames_to_frac_source_frames.rate();
     // In determining output_offset and input_offset, we want to "round up" any
     // subframes that are present, to the next integer frame. To do this, we
     // subtract a single subframe (to handle the no-subframes case), then scale
     // (which truncates any subframes), then add an additional 'round-up' frame.
     output_offset_64 =
-        dest_to_src.Inverse().Scale(packet->start_pts() -
-                                    first_sample_pos_window_edge - 1) +
-        1;
+        dest_to_src.Inverse().Scale(packet->start_pts() - first_sample_pos_window_edge - 1) + 1;
     input_offset_64 += dest_to_src.Scale(output_offset_64);
   }
 
   if (output_offset_64) {
-    FXL_LOG(WARNING) << __func__ << " ("
-                     << reinterpret_cast<void*>(audio_renderer.get())
-                     << ") skipped " << std::dec << output_offset_64
-                     << " output frames";
+    FXL_LOG(WARNING) << __func__ << " (" << reinterpret_cast<void*>(audio_renderer.get())
+                     << ") skipped " << std::dec << output_offset_64 << " output frames";
   }
 
   FXL_DCHECK(output_offset_64 >= 0);
@@ -468,34 +445,29 @@ bool AudioOutput::ProcessMix(
     // Check whether we are still ramping
     bool ramping = info->gain.IsRamping();
     if (ramping) {
-      info->gain.GetScaleArray(
-          info->scale_arr.get(),
-          std::min(frames_left - output_offset, Bookkeeping::kScaleArrLen),
-          cur_mix_job_.local_to_output->rate());
+      info->gain.GetScaleArray(info->scale_arr.get(),
+                               std::min(frames_left - output_offset, Bookkeeping::kScaleArrLen),
+                               cur_mix_job_.local_to_output->rate());
     }
 
-    consumed_source =
-        info->mixer->Mix(buf, frames_left, &output_offset, packet->payload(),
-                         packet->frac_frame_len(), &frac_input_offset,
-                         cur_mix_job_.accumulate, info);
+    consumed_source = info->mixer->Mix(buf, frames_left, &output_offset, packet->payload(),
+                                       packet->frac_frame_len(), &frac_input_offset,
+                                       cur_mix_job_.accumulate, info);
     FXL_DCHECK(output_offset <= frames_left);
 
     // If src is ramping, advance by delta of output_offset
     if (ramping) {
-      info->gain.Advance(output_offset - prev_output_offset,
-                         cur_mix_job_.local_to_output->rate());
+      info->gain.Advance(output_offset - prev_output_offset, cur_mix_job_.local_to_output->rate());
     }
   } else {
     consumed_source = true;
-    FXL_LOG(ERROR) << "Skipping packet (frac_input_offset " << std::hex
-                   << frac_input_offset << " < frac_frame_len "
-                   << static_cast<int32_t>(packet->frac_frame_len())
+    FXL_LOG(ERROR) << "Skipping packet (frac_input_offset " << std::hex << frac_input_offset
+                   << " < frac_frame_len " << static_cast<int32_t>(packet->frac_frame_len())
                    << "); didn't catch this in earlier check";
   }
 
   if (consumed_source) {
-    FXL_DCHECK(frac_input_offset + info->mixer->pos_filter_width() >=
-               packet->frac_frame_len());
+    FXL_DCHECK(frac_input_offset + info->mixer->pos_filter_width() >= packet->frac_frame_len());
   }
 
   cur_mix_job_.frames_produced += output_offset;
@@ -504,14 +476,13 @@ bool AudioOutput::ProcessMix(
   return consumed_source;
 }
 
-bool AudioOutput::SetupTrim(
-    const fbl::RefPtr<AudioRendererImpl>& audio_renderer, Bookkeeping* info) {
+bool AudioOutput::SetupTrim(const fbl::RefPtr<AudioRendererImpl>& audio_renderer,
+                            Bookkeeping* info) {
   // Compute the cutoff time used to decide whether to trim packets. ForEachLink
   // has already updated our transformation, no need for us to do so here.
   FXL_DCHECK(info);
 
-  int64_t local_now_ticks =
-      (fxl::TimePoint::Now() - fxl::TimePoint()).ToNanoseconds();
+  int64_t local_now_ticks = (fxl::TimePoint::Now() - fxl::TimePoint()).ToNanoseconds();
 
   // RateControlBase guarantees that the transformation into the media timeline
   // is never singular.  If a forward transformation fails it must be because of
@@ -522,9 +493,8 @@ bool AudioOutput::SetupTrim(
   return true;
 }
 
-bool AudioOutput::ProcessTrim(
-    const fbl::RefPtr<AudioRendererImpl>& audio_renderer, Bookkeeping* info,
-    const fbl::RefPtr<AudioPacketRef>& pkt_ref) {
+bool AudioOutput::ProcessTrim(const fbl::RefPtr<AudioRendererImpl>& audio_renderer,
+                              Bookkeeping* info, const fbl::RefPtr<AudioPacketRef>& pkt_ref) {
   FXL_DCHECK(pkt_ref);
 
   // If the presentation end of this packet is in the future, stop trimming.
@@ -535,14 +505,13 @@ bool AudioOutput::ProcessTrim(
   return true;
 }
 
-void AudioOutput::UpdateSourceTrans(
-    const fbl::RefPtr<AudioRendererImpl>& audio_renderer, Bookkeeping* bk) {
+void AudioOutput::UpdateSourceTrans(const fbl::RefPtr<AudioRendererImpl>& audio_renderer,
+                                    Bookkeeping* bk) {
   FXL_DCHECK(audio_renderer != nullptr);
   uint32_t gen = bk->source_trans_gen_id;
 
-  audio_renderer->SnapshotCurrentTimelineFunction(
-      zx::clock::get_monotonic().get(), &bk->clock_mono_to_frac_source_frames,
-      &gen);
+  audio_renderer->SnapshotCurrentTimelineFunction(zx::clock::get_monotonic().get(),
+                                                  &bk->clock_mono_to_frac_source_frames, &gen);
 
   // If local->media transformation hasn't changed since last time, we're done.
   if (bk->source_trans_gen_id == gen) {
@@ -589,8 +558,7 @@ void AudioOutput::UpdateDestTrans(const MixJob& job, Bookkeeping* bk) {
 
     bk->step_size = static_cast<uint32_t>(tmp_step_size);
     bk->denominator = bk->SnapshotDenominatorFromDestTrans();
-    bk->rate_modulo =
-        dest.rate().subject_delta() - (bk->denominator * bk->step_size);
+    bk->rate_modulo = dest.rate().subject_delta() - (bk->denominator * bk->step_size);
   }
 
   // Done, update our dest_trans generation.

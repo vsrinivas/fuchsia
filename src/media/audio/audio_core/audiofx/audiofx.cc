@@ -16,8 +16,7 @@ struct FxPass {
   uint32_t frame_rate_;
   uint16_t channels_;
 
-  FxPass(uint32_t frame_rate, uint16_t channels)
-      : frame_rate_(frame_rate), channels_(channels) {}
+  FxPass(uint32_t frame_rate, uint16_t channels) : frame_rate_(frame_rate), channels_(channels) {}
 };
 }  // namespace
 
@@ -34,8 +33,7 @@ bool fuchsia_audio_dfx_get_num_effects(uint32_t* num_fx_out) {
 }
 
 // Returns information about this type of effect
-bool fuchsia_audio_dfx_get_info(uint32_t effect_id,
-                                fuchsia_audio_dfx_description* fx_desc) {
+bool fuchsia_audio_dfx_get_info(uint32_t effect_id, fuchsia_audio_dfx_description* fx_desc) {
   if (effect_id != 0 || fx_desc == nullptr) {
     return false;
   }
@@ -49,15 +47,14 @@ bool fuchsia_audio_dfx_get_info(uint32_t effect_id,
 
 // Returns information about a specific control, on this type of effect.
 // This library has no effects with controls, so this call always returns false.
-bool fuchsia_audio_dfx_get_control_info(
-    uint32_t, uint16_t, fuchsia_audio_dfx_control_description*) {
+bool fuchsia_audio_dfx_get_control_info(uint32_t, uint16_t,
+                                        fuchsia_audio_dfx_control_description*) {
   return false;
 }
 
 // Returns fx_token representing active instance of ‘effect_id’ (0 if fail).
 // If channels_in==out, effect must process in-place.
-fx_token_t fuchsia_audio_dfx_create(uint32_t effect_id, uint32_t frame_rate,
-                                    uint16_t channels_in,
+fx_token_t fuchsia_audio_dfx_create(uint32_t effect_id, uint32_t frame_rate, uint16_t channels_in,
                                     uint16_t channels_out) {
   if (effect_id != 0 || channels_in != channels_out ||
       channels_in > FUCHSIA_AUDIO_DFX_CHANNELS_MAX) {
@@ -101,15 +98,11 @@ bool fuchsia_audio_dfx_get_parameters(fx_token_t fx_token,
 
 // Returns the value of the specified control, on this active effect instance.
 // This library has no effects with controls, so this call always returns false.
-bool fuchsia_audio_dfx_get_control_value(fx_token_t, uint16_t, float*) {
-  return false;
-}
+bool fuchsia_audio_dfx_get_control_value(fx_token_t, uint16_t, float*) { return false; }
 
 // Sets the value of the specified control, on this active effect instance.
 // This library has no effects with controls, so this call always returns false.
-bool fuchsia_audio_dfx_set_control_value(fx_token_t, uint16_t, float) {
-  return false;
-}
+bool fuchsia_audio_dfx_set_control_value(fx_token_t, uint16_t, float) { return false; }
 
 // Returns this active effect instance to its initial state and settings.
 // This library has no effects with controls, so this call performs no work.
@@ -123,10 +116,8 @@ bool fuchsia_audio_dfx_reset(fx_token_t fx_token) {
 
 // Synchronously processes the buffer of ‘num_frames’ audio data, in-place.
 // This library effect performs no work, so this call immediately returns true.
-bool fuchsia_audio_dfx_process_inplace(fx_token_t fx_token, uint32_t,
-                                       float* audio_buff_in_out) {
-  if (fx_token == FUCHSIA_AUDIO_DFX_INVALID_TOKEN ||
-      audio_buff_in_out == nullptr) {
+bool fuchsia_audio_dfx_process_inplace(fx_token_t fx_token, uint32_t, float* audio_buff_in_out) {
+  if (fx_token == FUCHSIA_AUDIO_DFX_INVALID_TOKEN || audio_buff_in_out == nullptr) {
     return false;
   }
 
@@ -135,9 +126,7 @@ bool fuchsia_audio_dfx_process_inplace(fx_token_t fx_token, uint32_t,
 
 // Synchronously processes ‘num_frames’ from audio_buff_in to audio_buff_out.
 // This library has only in-place effects, so this call always returns false.
-bool fuchsia_audio_dfx_process(fx_token_t, uint32_t, const float*, float*) {
-  return false;
-}
+bool fuchsia_audio_dfx_process(fx_token_t, uint32_t, const float*, float*) { return false; }
 
 // Flushes any cached state, but retains settings, on this active effect.
 // This lib has no effects with cached history, so this call performs no work.

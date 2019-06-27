@@ -29,8 +29,8 @@ class FxProcessor {
   ~FxProcessor();
 
   // This maps to the corresponding Create ABI call, inserting it at [position].
-  fx_token_t CreateFx(uint32_t effect_id, uint16_t channels_in,
-                      uint16_t channels_out, uint8_t position);
+  fx_token_t CreateFx(uint32_t effect_id, uint16_t channels_in, uint16_t channels_out,
+                      uint8_t position);
 
   // Returns the number of active instances in the enclosed effect chain.
   uint16_t GetNumFx();

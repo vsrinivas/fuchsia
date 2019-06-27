@@ -14,9 +14,8 @@
 namespace media::audio {
 
 // static
-fbl::RefPtr<AudioLink> AudioObject::LinkObjects(
-    const fbl::RefPtr<AudioObject>& source,
-    const fbl::RefPtr<AudioObject>& dest) {
+fbl::RefPtr<AudioLink> AudioObject::LinkObjects(const fbl::RefPtr<AudioObject>& source,
+                                                const fbl::RefPtr<AudioObject>& dest) {
   // Assert this source is valid (AudioCapturers are disallowed).
   FXL_DCHECK(source != nullptr);
   FXL_DCHECK((source->type() == AudioObject::Type::AudioRenderer) ||
@@ -35,11 +34,9 @@ fbl::RefPtr<AudioLink> AudioObject::LinkObjects(
   // Create a link of the appropriate type based on our source.
   fbl::RefPtr<AudioLink> link;
   if (source->type() == AudioObject::Type::AudioRenderer) {
-    link = AudioLinkPacketSource::Create(
-        fbl::RefPtr<AudioRendererImpl>::Downcast(source), dest);
+    link = AudioLinkPacketSource::Create(fbl::RefPtr<AudioRendererImpl>::Downcast(source), dest);
   } else {
-    link = AudioLinkRingBufferSource::Create(
-        fbl::RefPtr<AudioDevice>::Downcast(source), dest);
+    link = AudioLinkRingBufferSource::Create(fbl::RefPtr<AudioDevice>::Downcast(source), dest);
   }
 
   // Give source and destination a chance to initialize (or reject) the link.
@@ -158,13 +155,9 @@ void AudioObject::UnlinkDestinations() {
   UnlinkCleanup<AudioLink::Dest>(&old_links);
 }
 
-zx_status_t AudioObject::InitializeSourceLink(const fbl::RefPtr<AudioLink>&) {
-  return ZX_OK;
-}
+zx_status_t AudioObject::InitializeSourceLink(const fbl::RefPtr<AudioLink>&) { return ZX_OK; }
 
-zx_status_t AudioObject::InitializeDestLink(const fbl::RefPtr<AudioLink>&) {
-  return ZX_OK;
-}
+zx_status_t AudioObject::InitializeDestLink(const fbl::RefPtr<AudioLink>&) { return ZX_OK; }
 
 template <typename TagType>
 void AudioObject::UnlinkCleanup(typename AudioLink::Set<TagType>* links) {

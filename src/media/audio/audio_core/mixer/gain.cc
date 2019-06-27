@@ -20,9 +20,8 @@ constexpr float Gain::kMaxGainDb;
 
 // TODO(mpuryear): When we add ramping of another gain stage (dest, or a new
 // stage), refactor to accept a stage index or a pointer to a ramp-struct.
-void Gain::SetSourceGainWithRamp(
-    float source_gain_db, zx_duration_t duration_ns,
-    __UNUSED fuchsia::media::audio::RampType ramp_type) {
+void Gain::SetSourceGainWithRamp(float source_gain_db, zx_duration_t duration_ns,
+                                 __UNUSED fuchsia::media::audio::RampType ramp_type) {
   FXL_DCHECK(source_gain_db <= kMaxGainDb);
   FXL_DCHECK(duration_ns >= 0) << "Ramp duration cannot be negative";
 
@@ -44,8 +43,8 @@ void Gain::SetSourceGainWithRamp(
     ClearSourceRamp();
   }
   if constexpr (kVerboseRampDebug) {
-    FXL_LOG(INFO) << "Gain(" << this << "): SetSourceGainWithRamp("
-                  << source_gain_db << " dB, " << duration_ns << " nsec)";
+    FXL_LOG(INFO) << "Gain(" << this << "): SetSourceGainWithRamp(" << source_gain_db << " dB, "
+                  << duration_ns << " nsec)";
   }
 }
 
@@ -64,9 +63,8 @@ void Gain::Advance(uint32_t num_frames, const TimelineRate& local_to_output) {
 
   if (source_ramp_duration_ns_ > advance_ns) {
     AScale src_scale =
-        start_src_scale_ +
-        (static_cast<double>(end_src_scale_ - start_src_scale_) * advance_ns) /
-            source_ramp_duration_ns_;
+        start_src_scale_ + (static_cast<double>(end_src_scale_ - start_src_scale_) * advance_ns) /
+                               source_ramp_duration_ns_;
     src_gain_db = ScaleToDb(src_scale);
 
   } else {
@@ -81,8 +79,7 @@ void Gain::Advance(uint32_t num_frames, const TimelineRate& local_to_output) {
     FXL_LOG(INFO) << "Advanced " << advance_ns << " nsec for " << num_frames
                   << " frames. Total frames ramped: " << frames_ramped_ << ".";
     FXL_LOG(INFO) << "Src_gain is now " << src_gain_db << " dB for this "
-                  << source_ramp_duration_ns_ << "-nsec ramp to "
-                  << end_src_gain_db_ << " dB.";
+                  << source_ramp_duration_ns_ << "-nsec ramp to " << end_src_gain_db_ << " dB.";
   }
 }
 
@@ -118,10 +115,8 @@ void Gain::GetScaleArray(AScale* scale_arr, uint32_t num_frames,
       if (frame_time >= source_ramp_duration_ns_) {
         scale_arr[idx] = end_scale;
       } else {
-        scale_arr[idx] =
-            start_scale +
-            (static_cast<double>(end_scale - start_scale) * frame_time) /
-                source_ramp_duration_ns_;
+        scale_arr[idx] = start_scale + (static_cast<double>(end_scale - start_scale) * frame_time) /
+                                           source_ramp_duration_ns_;
       }
     }
   }
@@ -135,8 +130,7 @@ Gain::AScale Gain::GetGainScale(float src_gain_db, float dest_gain_db) {
   }
 
   // If nothing changed, return the previously-computed amplitude scale value.
-  if ((current_src_gain_db_ == src_gain_db) &&
-      (current_dest_gain_db_ == dest_gain_db)) {
+  if ((current_src_gain_db_ == src_gain_db) && (current_dest_gain_db_ == dest_gain_db)) {
     return combined_gain_scale_;
   }
 
@@ -151,8 +145,7 @@ Gain::AScale Gain::GetGainScale(float src_gain_db, float dest_gain_db) {
   // If source and dest gains cancel each other, the combined is kUnityScale.
   if (current_dest_gain_db_ == -current_src_gain_db_) {
     combined_gain_scale_ = kUnityScale;
-  } else if ((current_src_gain_db_ <= kMinGainDb) ||
-             (current_dest_gain_db_ <= kMinGainDb)) {
+  } else if ((current_src_gain_db_ <= kMinGainDb) || (current_dest_gain_db_ <= kMinGainDb)) {
     // If source or dest are at the mute point, then silence the stream.
     combined_gain_scale_ = kMuteScale;
   } else {

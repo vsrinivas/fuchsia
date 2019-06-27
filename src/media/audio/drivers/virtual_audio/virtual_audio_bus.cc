@@ -26,8 +26,7 @@ class VirtualAudioBus {
   // The parent /dev/test node auto-triggers this Bind call. The Bus driver's
   // job is to create the virtual audio control driver, and publish its devnode.
   static zx_status_t DdkBind(void* ctx, zx_device_t* parent_test_bus) {
-    auto control = std::make_unique<VirtualAudioControlImpl>(
-        async_get_default_dispatcher());
+    auto control = std::make_unique<VirtualAudioControlImpl>(async_get_default_dispatcher());
 
     // Define entry-point operations for this control device.
     static zx_protocol_device_t device_ops = {
@@ -45,11 +44,9 @@ class VirtualAudioBus {
     args.ops = &device_ops;
 
     // Add the virtual_audio device node, under parent /dev/test.
-    zx_status_t status =
-        device_add(parent_test_bus, &args, &control->dev_node_);
+    zx_status_t status = device_add(parent_test_bus, &args, &control->dev_node_);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "*** %s: could not add device '%s': %d\n", __func__,
-             args.name, status);
+      zxlogf(ERROR, "*** %s: could not add device '%s': %d\n", __func__, args.name, status);
       return status;
     }
 
@@ -65,10 +62,10 @@ class VirtualAudioBus {
 
 // Define a bus driver that binds to the everpresent /dev/test devnode.
 static constexpr zx_driver_ops_t virtual_audio_bus_driver_ops = []() {
-    zx_driver_ops_t ops = {};
-    ops.version = DRIVER_OPS_VERSION;
-    ops.bind = &virtual_audio::VirtualAudioBus::DdkBind;
-    return ops;
+  zx_driver_ops_t ops = {};
+  ops.version = DRIVER_OPS_VERSION;
+  ops.bind = &virtual_audio::VirtualAudioBus::DdkBind;
+  return ops;
 }();
 
 __BEGIN_CDECLS

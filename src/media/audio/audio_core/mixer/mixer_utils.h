@@ -37,8 +37,7 @@ class SampleNormalizer;
 
 template <typename SrcSampleType>
 class SampleNormalizer<SrcSampleType,
-                       typename std::enable_if<
-                           std::is_same<SrcSampleType, uint8_t>::value>::type> {
+                       typename std::enable_if<std::is_same<SrcSampleType, uint8_t>::value>::type> {
  public:
   static inline float Read(const SrcSampleType* src) {
     return kInt8ToFloat * (static_cast<int32_t>(*src) - kOffsetInt8ToUint8);
@@ -47,28 +46,21 @@ class SampleNormalizer<SrcSampleType,
 
 template <typename SrcSampleType>
 class SampleNormalizer<SrcSampleType,
-                       typename std::enable_if<
-                           std::is_same<SrcSampleType, int16_t>::value>::type> {
+                       typename std::enable_if<std::is_same<SrcSampleType, int16_t>::value>::type> {
  public:
-  static inline float Read(const SrcSampleType* src) {
-    return kInt16ToFloat * (*src);
-  }
+  static inline float Read(const SrcSampleType* src) { return kInt16ToFloat * (*src); }
 };
 
 template <typename SrcSampleType>
 class SampleNormalizer<SrcSampleType,
-                       typename std::enable_if<
-                           std::is_same<SrcSampleType, int32_t>::value>::type> {
+                       typename std::enable_if<std::is_same<SrcSampleType, int32_t>::value>::type> {
  public:
-  static inline float Read(const SrcSampleType* src) {
-    return kInt24In32ToFloat * (*src);
-  }
+  static inline float Read(const SrcSampleType* src) { return kInt24In32ToFloat * (*src); }
 };
 
 template <typename SrcSampleType>
-class SampleNormalizer<
-    SrcSampleType,
-    typename std::enable_if<std::is_same<SrcSampleType, float>::value>::type> {
+class SampleNormalizer<SrcSampleType,
+                       typename std::enable_if<std::is_same<SrcSampleType, float>::value>::type> {
  public:
   static inline float Read(const SrcSampleType* src) { return *src; }
 };
@@ -81,25 +73,20 @@ template <ScalerType ScaleType, typename Enable = void>
 class SampleScaler;
 
 template <ScalerType ScaleType>
-class SampleScaler<ScaleType, typename std::enable_if<(
-                                  ScaleType == ScalerType::MUTED)>::type> {
+class SampleScaler<ScaleType, typename std::enable_if<(ScaleType == ScalerType::MUTED)>::type> {
  public:
   static inline float Scale(float, Gain::AScale) { return 0.0f; }
 };
 
 template <ScalerType ScaleType>
-class SampleScaler<ScaleType, typename std::enable_if<
-                                  (ScaleType == ScalerType::NE_UNITY) ||
-                                  (ScaleType == ScalerType::RAMPING)>::type> {
+class SampleScaler<ScaleType, typename std::enable_if<(ScaleType == ScalerType::NE_UNITY) ||
+                                                      (ScaleType == ScalerType::RAMPING)>::type> {
  public:
-  static inline float Scale(float val, Gain::AScale scale) {
-    return scale * val;
-  }
+  static inline float Scale(float val, Gain::AScale scale) { return scale * val; }
 };
 
 template <ScalerType ScaleType>
-class SampleScaler<ScaleType, typename std::enable_if<(
-                                  ScaleType == ScalerType::EQ_UNITY)>::type> {
+class SampleScaler<ScaleType, typename std::enable_if<(ScaleType == ScalerType::EQ_UNITY)>::type> {
  public:
   static inline float Scale(float val, Gain::AScale) { return val; }
 };
@@ -108,16 +95,14 @@ class SampleScaler<ScaleType, typename std::enable_if<(
 // SrcReader
 //
 // Template to read normalized source samples, and combine channels if required.
-template <typename SrcSampleType, size_t SrcChanCount, size_t DestChanCount,
-          typename Enable = void>
+template <typename SrcSampleType, size_t SrcChanCount, size_t DestChanCount, typename Enable = void>
 class SrcReader;
 
 template <typename SrcSampleType, size_t SrcChanCount, size_t DestChanCount>
-class SrcReader<
-    SrcSampleType, SrcChanCount, DestChanCount,
-    typename std::enable_if<(SrcChanCount == DestChanCount) ||
-                                ((SrcChanCount == 1) && (DestChanCount == 2)),
-                            void>::type> {
+class SrcReader<SrcSampleType, SrcChanCount, DestChanCount,
+                typename std::enable_if<(SrcChanCount == DestChanCount) ||
+                                            ((SrcChanCount == 1) && (DestChanCount == 2)),
+                                        void>::type> {
  public:
   static constexpr size_t DestPerSrc = DestChanCount / SrcChanCount;
   static inline float Read(const SrcSampleType* src) {
@@ -127,8 +112,7 @@ class SrcReader<
 
 template <typename SrcSampleType, size_t SrcChanCount, size_t DestChanCount>
 class SrcReader<SrcSampleType, SrcChanCount, DestChanCount,
-                typename std::enable_if<(SrcChanCount == 2) &&
-                                        (DestChanCount == 1)>::type> {
+                typename std::enable_if<(SrcChanCount == 2) && (DestChanCount == 1)>::type> {
  public:
   static constexpr size_t DestPerSrc = 1;
   static inline float Read(const SrcSampleType* src) {
@@ -159,8 +143,7 @@ template <ScalerType ScaleType, bool DoAccumulate, typename Enable = void>
 class DestMixer;
 
 template <ScalerType ScaleType, bool DoAccumulate>
-class DestMixer<ScaleType, DoAccumulate,
-                typename std::enable_if<DoAccumulate == false>::type> {
+class DestMixer<ScaleType, DoAccumulate, typename std::enable_if<DoAccumulate == false>::type> {
  public:
   static inline constexpr float Mix(float, float sample, Gain::AScale scale) {
     return SampleScaler<ScaleType>::Scale(sample, scale);
@@ -168,11 +151,9 @@ class DestMixer<ScaleType, DoAccumulate,
 };
 
 template <ScalerType ScaleType, bool DoAccumulate>
-class DestMixer<ScaleType, DoAccumulate,
-                typename std::enable_if<DoAccumulate == true>::type> {
+class DestMixer<ScaleType, DoAccumulate, typename std::enable_if<DoAccumulate == true>::type> {
  public:
-  static inline constexpr float Mix(float dest, float sample,
-                                    Gain::AScale scale) {
+  static inline constexpr float Mix(float dest, float sample, Gain::AScale scale) {
     return SampleScaler<ScaleType>::Scale(sample, scale) + dest;
   }
 };

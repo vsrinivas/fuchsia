@@ -15,24 +15,20 @@
 namespace virtual_audio {
 
 // static
-fbl::RefPtr<VirtualAudioStream> VirtualAudioStream::CreateStream(
-    VirtualAudioDeviceImpl* owner, zx_device_t* devnode, bool is_input) {
+fbl::RefPtr<VirtualAudioStream> VirtualAudioStream::CreateStream(VirtualAudioDeviceImpl* owner,
+                                                                 zx_device_t* devnode,
+                                                                 bool is_input) {
   if (is_input) {
-    return audio::SimpleAudioStream::Create<VirtualAudioStreamIn>(owner,
-                                                                  devnode);
+    return audio::SimpleAudioStream::Create<VirtualAudioStreamIn>(owner, devnode);
   } else {
-    return audio::SimpleAudioStream::Create<VirtualAudioStreamOut>(owner,
-                                                                   devnode);
+    return audio::SimpleAudioStream::Create<VirtualAudioStreamOut>(owner, devnode);
   }
 }
 
-VirtualAudioStream::~VirtualAudioStream() {
-  ZX_DEBUG_ASSERT(domain_->deactivated());
-}
+VirtualAudioStream::~VirtualAudioStream() { ZX_DEBUG_ASSERT(domain_->deactivated()); }
 
 zx_status_t VirtualAudioStream::Init() {
-  if (!strlcpy(device_name_, parent_->device_name_.c_str(),
-               sizeof(device_name_))) {
+  if (!strlcpy(device_name_, parent_->device_name_.c_str(), sizeof(device_name_))) {
     return ZX_ERR_INTERNAL;
   }
 
@@ -91,8 +87,7 @@ zx_status_t VirtualAudioStream::InitPost() {
         HandlePlugChanges();
         return ZX_OK;
       });
-  zx_status_t status =
-      plug_change_wakeup_->Activate(domain_, std::move(plug_wake_handler));
+  zx_status_t status = plug_change_wakeup_->Activate(domain_, std::move(plug_wake_handler));
   if (status != ZX_OK) {
     zxlogf(ERROR, "Plug WakeupEvent activate failed (%d)\n", status);
     return status;
@@ -108,8 +103,7 @@ zx_status_t VirtualAudioStream::InitPost() {
         HandleGainRequests();
         return ZX_OK;
       });
-  status =
-      gain_request_wakeup_->Activate(domain_, std::move(gain_wake_handler));
+  status = gain_request_wakeup_->Activate(domain_, std::move(gain_wake_handler));
   if (status != ZX_OK) {
     zxlogf(ERROR, "GetGain WakeupEvent activate failed (%d)\n", status);
     return status;
@@ -125,8 +119,7 @@ zx_status_t VirtualAudioStream::InitPost() {
         HandleFormatRequests();
         return ZX_OK;
       });
-  status =
-      format_request_wakeup_->Activate(domain_, std::move(format_wake_handler));
+  status = format_request_wakeup_->Activate(domain_, std::move(format_wake_handler));
   if (status != ZX_OK) {
     zxlogf(ERROR, "GetFormat WakeupEvent activate failed (%d)\n", status);
     return status;
@@ -142,8 +135,7 @@ zx_status_t VirtualAudioStream::InitPost() {
         HandleBufferRequests();
         return ZX_OK;
       });
-  status =
-      buffer_request_wakeup_->Activate(domain_, std::move(buffer_wake_handler));
+  status = buffer_request_wakeup_->Activate(domain_, std::move(buffer_wake_handler));
   if (status != ZX_OK) {
     zxlogf(ERROR, "GetBuffer WakeupEvent activate failed (%d)\n", status);
     return status;
@@ -159,8 +151,7 @@ zx_status_t VirtualAudioStream::InitPost() {
         HandlePositionRequests();
         return ZX_OK;
       });
-  status = position_request_wakeup_->Activate(domain_,
-                                              std::move(position_wake_handler));
+  status = position_request_wakeup_->Activate(domain_, std::move(position_wake_handler));
   if (status != ZX_OK) {
     zxlogf(ERROR, "GetPosition WakeupEvent activate failed (%d)\n", status);
     return status;
@@ -176,11 +167,9 @@ zx_status_t VirtualAudioStream::InitPost() {
         HandleSetNotifications();
         return ZX_OK;
       });
-  status = set_notifications_wakeup_->Activate(
-      domain_, std::move(notifications_wake_handler));
+  status = set_notifications_wakeup_->Activate(domain_, std::move(notifications_wake_handler));
   if (status != ZX_OK) {
-    zxlogf(ERROR, "SetNotifications WakeupEvent activate failed (%d)\n",
-           status);
+    zxlogf(ERROR, "SetNotifications WakeupEvent activate failed (%d)\n", status);
     return status;
   }
 
@@ -188,11 +177,10 @@ zx_status_t VirtualAudioStream::InitPost() {
   if (notify_timer_ == nullptr) {
     return ZX_ERR_NO_MEMORY;
   }
-  dispatcher::Timer::ProcessHandler timer_handler(
-      [this](dispatcher::Timer* timer) -> zx_status_t {
-        OBTAIN_EXECUTION_DOMAIN_TOKEN(t, domain_);
-        return ProcessRingNotification();
-      });
+  dispatcher::Timer::ProcessHandler timer_handler([this](dispatcher::Timer* timer) -> zx_status_t {
+    OBTAIN_EXECUTION_DOMAIN_TOKEN(t, domain_);
+    return ProcessRingNotification();
+  });
   status = notify_timer_->Activate(domain_, std::move(timer_handler));
   if (status != ZX_OK) {
     zxlogf(ERROR, "PositionNotify Timer activate failed (%d)\n", status);
@@ -210,8 +198,7 @@ zx_status_t VirtualAudioStream::InitPost() {
       });
   status = alt_notify_timer_->Activate(domain_, std::move(alt_timer_handler));
   if (status != ZX_OK) {
-    zxlogf(ERROR, "AlternatePositionNotify Timer activate failed (%d)\n",
-           status);
+    zxlogf(ERROR, "AlternatePositionNotify Timer activate failed (%d)\n", status);
     return status;
   }
 
@@ -268,8 +255,7 @@ void VirtualAudioStream::EnqueuePositionRequest(
   position_request_wakeup_->Signal();
 }
 
-void VirtualAudioStream::EnqueueNotificationOverride(
-    uint32_t notifications_per_ring) {
+void VirtualAudioStream::EnqueueNotificationOverride(uint32_t notifications_per_ring) {
   {
     fbl::AutoLock lock(&wakeup_queue_lock_);
     notifs_queue_.push_back(notifications_per_ring);
@@ -322,10 +308,10 @@ void VirtualAudioStream::HandleGainRequests() {
       break;
     }
 
-    parent_->PostToDispatcher([gain_callback = std::move(gain_callback),
-                               current_mute, current_agc, current_gain_db]() {
-      gain_callback(current_mute, current_agc, current_gain_db);
-    });
+    parent_->PostToDispatcher(
+        [gain_callback = std::move(gain_callback), current_mute, current_agc, current_gain_db]() {
+          gain_callback(current_mute, current_agc, current_gain_db);
+        });
   }
 }
 
@@ -352,11 +338,9 @@ void VirtualAudioStream::HandleFormatRequests() {
       return;
     }
 
-    parent_->PostToDispatcher([format_callback = std::move(format_callback),
-                               frames_per_second, sample_format, num_channels,
-                               external_delay]() {
-      format_callback(frames_per_second, sample_format, num_channels,
-                      external_delay);
+    parent_->PostToDispatcher([format_callback = std::move(format_callback), frames_per_second,
+                               sample_format, num_channels, external_delay]() {
+      format_callback(frames_per_second, sample_format, num_channels, external_delay);
     });
   }
 }
@@ -371,8 +355,7 @@ void VirtualAudioStream::HandleBufferRequests() {
 
     if (fbl::AutoLock lock(&wakeup_queue_lock_); !buffer_queue_.empty()) {
       if (!ring_buffer_vmo_.is_valid()) {
-        zxlogf(WARN,
-               "Buffer is not set - should not be retrieving ring buffer\n");
+        zxlogf(WARN, "Buffer is not set - should not be retrieving ring buffer\n");
         return;
       }
       status = ring_buffer_vmo_.duplicate(
@@ -388,17 +371,14 @@ void VirtualAudioStream::HandleBufferRequests() {
     }
 
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s failed to duplicate VMO handle - %d\n", __func__,
-             status);
+      zxlogf(ERROR, "%s failed to duplicate VMO handle - %d\n", __func__, status);
       return;
     }
 
     parent_->PostToDispatcher([buffer_callback = std::move(buffer_callback),
                                rb_vmo = std::move(duplicate_ring_buffer_vmo),
-                               num_ring_buffer_frames,
-                               notifications_per_ring]() mutable {
-      buffer_callback(std::move(rb_vmo), num_ring_buffer_frames,
-                      notifications_per_ring);
+                               num_ring_buffer_frames, notifications_per_ring]() mutable {
+      buffer_callback(std::move(rb_vmo), num_ring_buffer_frames, notifications_per_ring);
     });
   }
 }
@@ -422,8 +402,7 @@ void VirtualAudioStream::HandlePositionRequests() {
     }
 
     if (start_time.get() == 0) {
-      zxlogf(WARN,
-             "Stream is not started -- should not be calling GetPosition\n");
+      zxlogf(WARN, "Stream is not started -- should not be calling GetPosition\n");
       return;
     }
 
@@ -433,10 +412,9 @@ void VirtualAudioStream::HandlePositionRequests() {
     uint32_t ring_buffer_position = (frames % num_rb_frames) * frame_size;
     zx_time_t time_for_position = now.get();
 
-    parent_->PostToDispatcher([position_callback = std::move(position_callback),
-                               ring_buffer_position, time_for_position]() {
-      position_callback(ring_buffer_position, time_for_position);
-    });
+    parent_->PostToDispatcher(
+        [position_callback = std::move(position_callback), ring_buffer_position,
+         time_for_position]() { position_callback(ring_buffer_position, time_for_position); });
   }
 }
 
@@ -456,9 +434,8 @@ void VirtualAudioStream::HandleSetNotifications() {
       if (alt_notifications_per_ring_ == 0) {
         alt_notification_period_ = zx::duration(0);
       } else {
-        alt_notification_period_ =
-            zx::duration((ZX_SEC(1) * num_ring_buffer_frames_) /
-                         (frame_rate_ * alt_notifications_per_ring_));
+        alt_notification_period_ = zx::duration((ZX_SEC(1) * num_ring_buffer_frames_) /
+                                                (frame_rate_ * alt_notifications_per_ring_));
       }
     } else {
       break;
@@ -479,9 +456,8 @@ void VirtualAudioStream::HandleSetNotifications() {
 //
 // Format must already be set: a ring buffer channel (over which this command
 // arrived) is provided as the return value from a successful SetFormat call.
-zx_status_t VirtualAudioStream::GetBuffer(
-    const audio::audio_proto::RingBufGetBufferReq& req,
-    uint32_t* out_num_rb_frames, zx::vmo* out_buffer) {
+zx_status_t VirtualAudioStream::GetBuffer(const audio::audio_proto::RingBufGetBufferReq& req,
+                                          uint32_t* out_num_rb_frames, zx::vmo* out_buffer) {
   if (req.notifications_per_ring > req.min_ring_buffer_frames) {
     zxlogf(ERROR, "req.notifications_per_ring too big");
     return ZX_ERR_OUT_OF_RANGE;
@@ -491,34 +467,28 @@ zx_status_t VirtualAudioStream::GetBuffer(
     return ZX_ERR_OUT_OF_RANGE;
   }
 
-  num_ring_buffer_frames_ =
-      std::max(min_buffer_frames_,
-               fbl::round_up<uint32_t, uint32_t>(req.min_ring_buffer_frames,
-                                                 modulo_buffer_frames_));
-  uint32_t ring_buffer_size = fbl::round_up<size_t, size_t>(
-      num_ring_buffer_frames_ * frame_size_, ZX_PAGE_SIZE);
+  num_ring_buffer_frames_ = std::max(
+      min_buffer_frames_,
+      fbl::round_up<uint32_t, uint32_t>(req.min_ring_buffer_frames, modulo_buffer_frames_));
+  uint32_t ring_buffer_size =
+      fbl::round_up<size_t, size_t>(num_ring_buffer_frames_ * frame_size_, ZX_PAGE_SIZE);
 
   if (ring_buffer_mapper_.start() != nullptr) {
     ring_buffer_mapper_.Unmap();
   }
 
   zx_status_t status = ring_buffer_mapper_.CreateAndMap(
-      ring_buffer_size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr,
-      &ring_buffer_vmo_,
-      ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_MAP | ZX_RIGHT_DUPLICATE |
-          ZX_RIGHT_TRANSFER);
+      ring_buffer_size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr, &ring_buffer_vmo_,
+      ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_MAP | ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER);
 
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to create ring buffer vmo - %d\n", __func__,
-           status);
+    zxlogf(ERROR, "%s failed to create ring buffer vmo - %d\n", __func__, status);
     return status;
   }
   status = ring_buffer_vmo_.duplicate(
-      ZX_RIGHT_TRANSFER | ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_MAP,
-      out_buffer);
+      ZX_RIGHT_TRANSFER | ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_MAP, out_buffer);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to duplicate VMO handle for out param - %d\n",
-           __func__, status);
+    zxlogf(ERROR, "%s failed to duplicate VMO handle for out param - %d\n", __func__, status);
     return status;
   }
 
@@ -527,17 +497,15 @@ zx_status_t VirtualAudioStream::GetBuffer(
   if (notifications_per_ring_ == 0) {
     notification_period_ = zx::duration(0);
   } else {
-    notification_period_ =
-        zx::duration((ZX_SEC(1) * num_ring_buffer_frames_) /
-                     (frame_rate_ * notifications_per_ring_));
+    notification_period_ = zx::duration((ZX_SEC(1) * num_ring_buffer_frames_) /
+                                        (frame_rate_ * notifications_per_ring_));
   }
   if (using_alt_notifications_) {
     if (alt_notifications_per_ring_ == 0) {
       alt_notification_period_ = zx::duration(0);
     } else {
-      alt_notification_period_ =
-          zx::duration((ZX_SEC(1) * num_ring_buffer_frames_) /
-                       (frame_rate_ * alt_notifications_per_ring_));
+      alt_notification_period_ = zx::duration((ZX_SEC(1) * num_ring_buffer_frames_) /
+                                              (frame_rate_ * alt_notifications_per_ring_));
     }
   }
 
@@ -545,22 +513,18 @@ zx_status_t VirtualAudioStream::GetBuffer(
 
   zx::vmo duplicate_vmo;
   status = ring_buffer_vmo_.duplicate(
-      ZX_RIGHT_TRANSFER | ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_MAP,
-      &duplicate_vmo);
+      ZX_RIGHT_TRANSFER | ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_MAP, &duplicate_vmo);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s failed to duplicate VMO handle for notification - %d\n",
-           __func__, status);
+    zxlogf(ERROR, "%s failed to duplicate VMO handle for notification - %d\n", __func__, status);
     return status;
   }
-  parent_->NotifyBufferCreated(std::move(duplicate_vmo),
-                               num_ring_buffer_frames_,
+  parent_->NotifyBufferCreated(std::move(duplicate_vmo), num_ring_buffer_frames_,
                                notifications_per_ring_);
 
   return ZX_OK;
 }
 
-zx_status_t VirtualAudioStream::ChangeFormat(
-    const audio::audio_proto::StreamSetFmtReq& req) {
+zx_status_t VirtualAudioStream::ChangeFormat(const audio::audio_proto::StreamSetFmtReq& req) {
   // frame_size_ is already set, automatically
   ZX_DEBUG_ASSERT(frame_size_);
 
@@ -574,14 +538,12 @@ zx_status_t VirtualAudioStream::ChangeFormat(
 
   // (Re)set external_delay_nsec_ and fifo_depth_ before leaving, if needed.
 
-  parent_->NotifySetFormat(frame_rate_, sample_format_, num_channels_,
-                           external_delay_nsec_);
+  parent_->NotifySetFormat(frame_rate_, sample_format_, num_channels_, external_delay_nsec_);
 
   return ZX_OK;
 }
 
-zx_status_t VirtualAudioStream::SetGain(
-    const audio::audio_proto::SetGainReq& req) {
+zx_status_t VirtualAudioStream::SetGain(const audio::audio_proto::SetGainReq& req) {
   if (req.flags & AUDIO_SGF_GAIN_VALID) {
     cur_gain_state_.cur_gain =
         trunc(req.gain / cur_gain_state_.gain_step) * cur_gain_state_.gain_step;
@@ -605,8 +567,8 @@ zx_status_t VirtualAudioStream::SetGain(
 // on the CLOCK_MONOTONIC timeline, not including any external delay.
 zx_status_t VirtualAudioStream::Start(uint64_t* out_start_time) {
   // Incorporate delay caused by fifo_depth_
-  start_time_ = zx::clock::get_monotonic() +
-                zx::duration((ZX_SEC(1) * fifo_depth_) / bytes_per_sec_);
+  start_time_ =
+      zx::clock::get_monotonic() + zx::duration((ZX_SEC(1) * fifo_depth_) / bytes_per_sec_);
 
   // Set the timer here (if notifications are enabled).
   if (notification_period_.get() > 0) {
@@ -634,8 +596,7 @@ zx_status_t VirtualAudioStream::ProcessRingNotification() {
   // TODO(mpuryear): use a proper Timeline object here. Reference MTWN-57.
   zx::duration running_duration = target_notification_time_ - start_time_;
   uint64_t frames = (running_duration.get() * frame_rate_) / ZX_SEC(1);
-  uint32_t ring_buffer_position =
-      (frames % num_ring_buffer_frames_) * frame_size_;
+  uint32_t ring_buffer_position = (frames % num_ring_buffer_frames_) * frame_size_;
 
   audio::audio_proto::RingBufPositionNotify resp = {};
   resp.hdr.cmd = AUDIO_RB_POSITION_NOTIFY;
@@ -644,8 +605,7 @@ zx_status_t VirtualAudioStream::ProcessRingNotification() {
   zx_status_t status = NotifyPosition(resp);
 
   if (!using_alt_notifications_) {
-    parent_->NotifyPosition(ring_buffer_position,
-                            target_notification_time_.get());
+    parent_->NotifyPosition(ring_buffer_position, target_notification_time_.get());
   }
 
   target_notification_time_ += notification_period_;
@@ -665,11 +625,9 @@ zx_status_t VirtualAudioStream::ProcessAltRingNotification() {
   // TODO(mpuryear): use a proper Timeline object here. Reference MTWN-57.
   zx::duration running_duration = target_alt_notification_time_ - start_time_;
   uint64_t frames = (running_duration.get() * frame_rate_) / ZX_SEC(1);
-  uint32_t ring_buffer_position =
-      (frames % num_ring_buffer_frames_) * frame_size_;
+  uint32_t ring_buffer_position = (frames % num_ring_buffer_frames_) * frame_size_;
 
-  parent_->NotifyPosition(ring_buffer_position,
-                          target_alt_notification_time_.get());
+  parent_->NotifyPosition(ring_buffer_position, target_alt_notification_time_.get());
 
   target_alt_notification_time_ += alt_notification_period_;
   alt_notify_timer_->Arm(target_alt_notification_time_.get());

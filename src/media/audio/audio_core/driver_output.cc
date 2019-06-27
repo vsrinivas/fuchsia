@@ -35,10 +35,8 @@ fbl::RefPtr<AudioOutput> DriverOutput::Create(zx::channel stream_channel,
   return fbl::AdoptRef(new DriverOutput(manager, std::move(stream_channel)));
 }
 
-DriverOutput::DriverOutput(AudioDeviceManager* manager,
-                           zx::channel initial_stream_channel)
-    : AudioOutput(manager),
-      initial_stream_channel_(std::move(initial_stream_channel)) {}
+DriverOutput::DriverOutput(AudioDeviceManager* manager, zx::channel initial_stream_channel)
+    : AudioOutput(manager), initial_stream_channel_(std::move(initial_stream_channel)) {}
 
 DriverOutput::~DriverOutput() { wav_writer_.Close(); }
 
@@ -76,8 +74,7 @@ void DriverOutput::OnWakeup() {
 
 bool DriverOutput::StartMixJob(MixJob* job, fxl::TimePoint process_start) {
   if (state_ != State::Started) {
-    FXL_LOG(ERROR) << "Bad state during StartMixJob "
-                   << static_cast<uint32_t>(state_);
+    FXL_LOG(ERROR) << "Bad state during StartMixJob " << static_cast<uint32_t>(state_);
     state_ = State::Shutdown;
     ShutdownSelf();
     return false;
@@ -135,14 +132,13 @@ bool DriverOutput::StartMixJob(MixJob* job, fxl::TimePoint process_start) {
         int64_t fifo_limit_miss = rd_limit_miss + fifo_frames;
         int64_t low_water_limit_miss = rd_limit_miss + low_water_frames_;
 
-        FXL_LOG(ERROR)
-            << "UNDERFLOW: Missed mix target by (Rd, Fifo, LowWater) = ("
-            << std::fixed << std::setprecision(3)
-            << cm2frames.Inverse().Scale(rd_limit_miss) / 1000000.0 << ", "
-            << cm2frames.Inverse().Scale(fifo_limit_miss) / 1000000.0 << ", "
-            << cm2frames.Inverse().Scale(low_water_limit_miss) / 1000000.0
-            << ") mSec.  Cooling down for at least "
-            << kUnderflowCooldown / 1000000.0 << " mSec.";
+        FXL_LOG(ERROR) << "UNDERFLOW: Missed mix target by (Rd, Fifo, LowWater) = (" << std::fixed
+                       << std::setprecision(3)
+                       << cm2frames.Inverse().Scale(rd_limit_miss) / 1000000.0 << ", "
+                       << cm2frames.Inverse().Scale(fifo_limit_miss) / 1000000.0 << ", "
+                       << cm2frames.Inverse().Scale(low_water_limit_miss) / 1000000.0
+                       << ") mSec.  Cooling down for at least " << kUnderflowCooldown / 1000000.0
+                       << " mSec.";
 
         underflow_start_time_ = now;
         output_producer_->FillWithSilence(rb.virt(), rb.frames());
@@ -157,8 +153,7 @@ bool DriverOutput::StartMixJob(MixJob* job, fxl::TimePoint process_start) {
       underflow_cooldown_deadline_ = zx_deadline_after(kUnderflowCooldown);
     }
 
-    int64_t fill_target =
-        fifo_frames + cm2rd_pos.Apply(now + kDefaultHighWaterNsec);
+    int64_t fill_target = fifo_frames + cm2rd_pos.Apply(now + kDefaultHighWaterNsec);
 
     // Are we in the middle of an underflow cooldown?  If so, check to see if we
     // have recovered yet.
@@ -171,11 +166,8 @@ bool DriverOutput::StartMixJob(MixJob* job, fxl::TimePoint process_start) {
         return false;
       } else {
         // Looks like we recovered.  Log and go back to mixing.
-        FXL_LOG(INFO) << "UNDERFLOW: Recovered after " << std::fixed
-                      << std::setprecision(3)
-                      << static_cast<double>(now - underflow_start_time_) /
-                             1000000.0
-                      << " mSec.";
+        FXL_LOG(INFO) << "UNDERFLOW: Recovered after " << std::fixed << std::setprecision(3)
+                      << static_cast<double>(now - underflow_start_time_) / 1000000.0 << " mSec.";
         underflow_start_time_ = 0;
         underflow_cooldown_deadline_ = 0;
       }
@@ -194,13 +186,11 @@ bool DriverOutput::StartMixJob(MixJob* job, fxl::TimePoint process_start) {
     uint32_t rb_space = rb.frames() - static_cast<uint32_t>(frames_in_flight);
     if (desired_frames > rb.frames()) {
       FXL_LOG(ERROR) << "Fatal underflow: want to produce " << desired_frames
-                     << " but the ring buffer is only " << rb.frames()
-                     << " frames long.";
+                     << " but the ring buffer is only " << rb.frames() << " frames long.";
       return false;
     }
 
-    frames_to_mix_ =
-        static_cast<uint32_t>(fbl::min<int64_t>(rb_space, desired_frames));
+    frames_to_mix_ = static_cast<uint32_t>(fbl::min<int64_t>(rb_space, desired_frames));
   }
 
   uint32_t to_mix = frames_to_mix_;
@@ -239,10 +229,9 @@ bool DriverOutput::FinishMixJob(const MixJob& job) {
     int64_t dma_lead_start = playback_lead_start - fifo_frames;
     int64_t dma_lead_end = playback_lead_end - fifo_frames;
 
-    FXL_LOG(INFO) << "PLead [" << std::setw(4) << playback_lead_start << ", "
-                  << std::setw(4) << playback_lead_end << "] DLead ["
-                  << std::setw(4) << dma_lead_start << ", " << std::setw(4)
-                  << dma_lead_end << "]";
+    FXL_LOG(INFO) << "PLead [" << std::setw(4) << playback_lead_start << ", " << std::setw(4)
+                  << playback_lead_end << "] DLead [" << std::setw(4) << dma_lead_start << ", "
+                  << std::setw(4) << dma_lead_end << "]";
   }
 
   FXL_DCHECK(frames_to_mix_ >= job.buf_frames);
@@ -257,8 +246,7 @@ bool DriverOutput::FinishMixJob(const MixJob& job) {
   return true;
 }
 
-void DriverOutput::ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info,
-                                   uint32_t set_flags) {
+void DriverOutput::ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info, uint32_t set_flags) {
   // See the comment at the start of StartMixJob.  The actual limits we set here
   // are going to eventually depend on what our HW gain control capabilities
   // are, and how we choose to apply them (based on policy)
@@ -278,8 +266,7 @@ void DriverOutput::ScheduleNextLowWaterWakeup() {
   const auto& cm2rd_pos = clock_mono_to_ring_buf_pos_frames_;
   int64_t low_water_frames = frames_sent_ - low_water_frames_;
   int64_t low_water_time = cm2rd_pos.ApplyInverse(low_water_frames);
-  SetNextSchedTime(fxl::TimePoint::FromEpochDelta(
-      fxl::TimeDelta::FromNanoseconds(low_water_time)));
+  SetNextSchedTime(fxl::TimePoint::FromEpochDelta(fxl::TimeDelta::FromNanoseconds(low_water_time)));
 }
 
 void DriverOutput::OnDriverInfoFetched() {
@@ -300,17 +287,14 @@ void DriverOutput::OnDriverInfoFetched() {
   uint32_t pref_fps = kDefaultFramesPerSec;
   uint32_t pref_chan = kDefaultChannelCount;
   fuchsia::media::AudioSampleFormat pref_fmt = kDefaultAudioFmt;
-  zx_duration_t min_rb_duration = kDefaultHighWaterNsec +
-                                  kDefaultMaxRetentionNsec +
-                                  kDefaultRetentionGapNsec;
+  zx_duration_t min_rb_duration =
+      kDefaultHighWaterNsec + kDefaultMaxRetentionNsec + kDefaultRetentionGapNsec;
 
-  res = SelectBestFormat(driver_->format_ranges(), &pref_fps, &pref_chan,
-                         &pref_fmt);
+  res = SelectBestFormat(driver_->format_ranges(), &pref_fps, &pref_chan, &pref_fmt);
 
   if (res != ZX_OK) {
-    FXL_LOG(ERROR) << "Output: cannot match a driver format to this request: "
-                   << pref_fps << " Hz, " << pref_chan
-                   << "-channel, sample format 0x" << std::hex
+    FXL_LOG(ERROR) << "Output: cannot match a driver format to this request: " << pref_fps
+                   << " Hz, " << pref_chan << "-channel, sample format 0x" << std::hex
                    << static_cast<uint32_t>(pref_fmt);
     return;
   }
@@ -321,21 +305,18 @@ void DriverOutput::OnDriverInfoFetched() {
   int64_t retention_frames = ns_to_frames.Scale(kDefaultMaxRetentionNsec);
   FXL_DCHECK(retention_frames != TimelineRate::kOverflow);
   FXL_DCHECK(retention_frames <= std::numeric_limits<uint32_t>::max());
-  driver_->SetEndFenceToStartFenceFrames(
-      static_cast<uint32_t>(retention_frames));
+  driver_->SetEndFenceToStartFenceFrames(static_cast<uint32_t>(retention_frames));
 
   // Select our output producer
-  fuchsia::media::AudioStreamTypePtr config(
-      fuchsia::media::AudioStreamType::New());
+  fuchsia::media::AudioStreamTypePtr config(fuchsia::media::AudioStreamType::New());
   config->frames_per_second = pref_fps;
   config->channels = pref_chan;
   config->sample_format = pref_fmt;
 
   output_producer_ = OutputProducer::Select(config);
   if (!output_producer_) {
-    FXL_LOG(ERROR) << "Output: OutputProducer cannot support this request: "
-                   << pref_fps << " Hz, " << pref_chan
-                   << "-channel, sample format 0x" << std::hex
+    FXL_LOG(ERROR) << "Output: OutputProducer cannot support this request: " << pref_fps << " Hz, "
+                   << pref_chan << "-channel, sample format 0x" << std::hex
                    << static_cast<uint32_t>(pref_fmt);
     return;
   }
@@ -343,10 +324,9 @@ void DriverOutput::OnDriverInfoFetched() {
   // Start the process of configuring our driver
   res = driver_->Configure(pref_fps, pref_chan, pref_fmt, min_rb_duration);
   if (res != ZX_OK) {
-    FXL_LOG(ERROR) << "Output: failed to configure driver for: " << pref_fps
-                   << " Hz, " << pref_chan << "-channel, sample format 0x"
-                   << std::hex << static_cast<uint32_t>(pref_fmt) << " (res "
-                   << std::dec << res << ")";
+    FXL_LOG(ERROR) << "Output: failed to configure driver for: " << pref_fps << " Hz, " << pref_chan
+                   << "-channel, sample format 0x" << std::hex << static_cast<uint32_t>(pref_fmt)
+                   << " (res " << std::dec << res << ")";
     return;
   }
 
@@ -368,15 +348,14 @@ void DriverOutput::OnDriverConfigComplete() {
   });
 
   if (state_ != State::Configuring) {
-    FXL_LOG(ERROR) << "Unexpected ConfigComplete while in state "
-                   << static_cast<uint32_t>(state_);
+    FXL_LOG(ERROR) << "Unexpected ConfigComplete while in state " << static_cast<uint32_t>(state_);
     return;
   }
 
   // Now that our driver is completely configured, we have all the info needed
   // to compute the minimum clock lead time requrirement for this output.
-  int64_t fifo_depth_nsec = TimelineRate::Scale(
-      driver_->fifo_depth_frames(), ZX_SEC(1), driver_->frames_per_sec());
+  int64_t fifo_depth_nsec =
+      TimelineRate::Scale(driver_->fifo_depth_frames(), ZX_SEC(1), driver_->frames_per_sec());
   min_clock_lead_time_nsec_ =
       driver_->external_delay_nsec() + fifo_depth_nsec + kDefaultHighWaterNsec;
 
@@ -419,8 +398,7 @@ void DriverOutput::OnDriverConfigComplete() {
 
 void DriverOutput::OnDriverStartComplete() {
   if (state_ != State::Starting) {
-    FXL_LOG(ERROR) << "Unexpected StartComplete while in state "
-                   << static_cast<uint32_t>(state_);
+    FXL_LOG(ERROR) << "Unexpected StartComplete while in state " << static_cast<uint32_t>(state_);
     return;
   }
 
@@ -433,8 +411,7 @@ void DriverOutput::OnDriverStartComplete() {
   const TimelineFunction bytes_to_frames(0, offset, 1, bytes_per_frame);
   const TimelineFunction& t_bytes = driver_clock_mono_to_ring_pos_bytes();
 
-  clock_mono_to_ring_buf_pos_frames_ =
-      TimelineFunction::Compose(bytes_to_frames, t_bytes);
+  clock_mono_to_ring_buf_pos_frames_ = TimelineFunction::Compose(bytes_to_frames, t_bytes);
   clock_mono_to_ring_buf_pos_id_.Next();
 
   const TimelineFunction& trans = clock_mono_to_ring_buf_pos_frames_;
@@ -444,13 +421,11 @@ void DriverOutput::OnDriverStartComplete() {
   frames_to_mix_ = 0;
 
   if (VERBOSE_TIMING_DEBUG) {
-    FXL_LOG(INFO) << "Audio output: FIFO depth (" << fd_frames << " frames "
-                  << std::fixed << std::setprecision(3)
-                  << trans.rate().Inverse().Scale(fd_frames) / 1000000.0
-                  << " mSec) Low Water (" << low_water_frames_ << " frames "
-                  << std::fixed << std::setprecision(3)
-                  << trans.rate().Inverse().Scale(low_water_frames_) / 1000000.0
-                  << " mSec)";
+    FXL_LOG(INFO) << "Audio output: FIFO depth (" << fd_frames << " frames " << std::fixed
+                  << std::setprecision(3) << trans.rate().Inverse().Scale(fd_frames) / 1000000.0
+                  << " mSec) Low Water (" << low_water_frames_ << " frames " << std::fixed
+                  << std::setprecision(3)
+                  << trans.rate().Inverse().Scale(low_water_frames_) / 1000000.0 << " mSec)";
   }
 
   state_ = State::Started;
@@ -460,11 +435,10 @@ void DriverOutput::OnDriverStartComplete() {
 void DriverOutput::OnDriverPlugStateChange(bool plugged, zx_time_t plug_time) {
   // Reflect this message to the AudioDeviceManager so it can deal with the plug
   // state change.
-  manager_->ScheduleMainThreadTask([manager = manager_,
-                                    output = fbl::WrapRefPtr(this), plugged,
-                                    plug_time]() {
-    manager->HandlePlugStateChange(std::move(output), plugged, plug_time);
-  });
+  manager_->ScheduleMainThreadTask(
+      [manager = manager_, output = fbl::WrapRefPtr(this), plugged, plug_time]() {
+        manager->HandlePlugStateChange(std::move(output), plugged, plug_time);
+      });
 }
 
 }  // namespace media::audio

@@ -19,32 +19,26 @@ class AudioDeviceManager;
 
 class AudioInput : public AudioDevice {
  public:
-  static fbl::RefPtr<AudioInput> Create(zx::channel channel,
-                                        AudioDeviceManager* manager);
+  static fbl::RefPtr<AudioInput> Create(zx::channel channel, AudioDeviceManager* manager);
 
  protected:
   zx_status_t Init() override FXL_LOCKS_EXCLUDED(mix_domain_->token());
 
   void OnWakeup() override FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
 
-  void OnDriverInfoFetched() override
-      FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
+  void OnDriverInfoFetched() override FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
 
-  void OnDriverConfigComplete() override
-      FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
+  void OnDriverConfigComplete() override FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
 
-  void OnDriverStartComplete() override
-      FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
+  void OnDriverStartComplete() override FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
 
-  void OnDriverStopComplete() override
-      FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
+  void OnDriverStopComplete() override FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
 
   void OnDriverPlugStateChange(bool plugged, zx_time_t plug_time) override
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
 
   // AudioDevice impl
-  void ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info,
-                       uint32_t set_flags) override;
+  void ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info, uint32_t set_flags) override;
 
  private:
   enum class State {
@@ -59,8 +53,7 @@ class AudioInput : public AudioDevice {
   AudioInput(zx::channel channel, AudioDeviceManager* manager);
   ~AudioInput() override{};
 
-  void UpdateDriverGainState()
-      FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
+  void UpdateDriverGainState() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
 
   zx::channel initial_stream_channel_;
   State state_ = State::Uninitialized;

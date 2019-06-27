@@ -138,25 +138,21 @@ TEST_F(AudioCapturerTest, BindGainControl) {
   bool gain_error_occurred_2 = false;
 
   audio_capturer_.set_error_handler(
-      ErrorHandler([&capturer_error_occurred](zx_status_t) {
-        capturer_error_occurred = true;
-      }));
+      ErrorHandler([&capturer_error_occurred](zx_status_t) { capturer_error_occurred = true; }));
 
   audio_capturer_->BindGainControl(gain_control_.NewRequest());
-  gain_control_.set_error_handler(ErrorHandler(
-      [&gain_error_occurred](zx_status_t) { gain_error_occurred = true; }));
+  gain_control_.set_error_handler(
+      ErrorHandler([&gain_error_occurred](zx_status_t) { gain_error_occurred = true; }));
 
   fuchsia::media::AudioCapturerPtr audio_capturer_2;
   audio_core_->CreateAudioCapturer(true, audio_capturer_2.NewRequest());
-  audio_capturer_2.set_error_handler(
-      ErrorHandler([&capturer_error_occurred_2](zx_status_t) {
-        capturer_error_occurred_2 = true;
-      }));
+  audio_capturer_2.set_error_handler(ErrorHandler(
+      [&capturer_error_occurred_2](zx_status_t) { capturer_error_occurred_2 = true; }));
 
   fuchsia::media::audio::GainControlPtr gain_control_2;
   audio_capturer_2->BindGainControl(gain_control_2.NewRequest());
-  gain_control_2.set_error_handler(ErrorHandler(
-      [&gain_error_occurred_2](zx_status_t) { gain_error_occurred_2 = true; }));
+  gain_control_2.set_error_handler(
+      ErrorHandler([&gain_error_occurred_2](zx_status_t) { gain_error_occurred_2 = true; }));
 
   // What happens to a child gain_control, when a capturer is unbound?
   audio_capturer_.Unbind();
@@ -174,8 +170,7 @@ TEST_F(AudioCapturerTest, BindGainControl) {
   }
 
   // Give time for other Disconnects to occur, if they must.
-  audio_capturer_2->GetStreamType(
-      CompletionCallback([](fuchsia::media::StreamType) {}));
+  audio_capturer_2->GetStreamType(CompletionCallback([](fuchsia::media::StreamType) {}));
   ExpectCallback();
 
   // Explicitly unbinding audio_capturer_ should disconnect gain_control_.
@@ -194,8 +189,7 @@ TEST_F(AudioCapturerTest, BindGainControlNull) {
   audio_capturer_->BindGainControl(nullptr);
 
   // Give time for Disconnect to occur, if it must.
-  audio_capturer_->GetStreamType(
-      CompletionCallback([](fuchsia::media::StreamType) {}));
+  audio_capturer_->GetStreamType(CompletionCallback([](fuchsia::media::StreamType) {}));
   ExpectCallback();
 }
 

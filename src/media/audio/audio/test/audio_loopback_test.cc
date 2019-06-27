@@ -24,14 +24,12 @@ class AudioLoopbackTest : public media::audio::test::AudioTestBase {
 
   static void SetVirtualAudioControlSync(
       fuchsia::virtualaudio::ControlSyncPtr virtual_audio_control_sync) {
-    AudioLoopbackTest::virtual_audio_control_sync_ =
-        std::move(virtual_audio_control_sync);
+    AudioLoopbackTest::virtual_audio_control_sync_ = std::move(virtual_audio_control_sync);
   }
 
   static void SetVirtualAudioOutputSync(
       fuchsia::virtualaudio::OutputSyncPtr virtual_audio_output_sync) {
-    AudioLoopbackTest::virtual_audio_output_sync_ =
-        std::move(virtual_audio_output_sync);
+    AudioLoopbackTest::virtual_audio_output_sync_ = std::move(virtual_audio_output_sync);
   }
 
  protected:
@@ -40,9 +38,9 @@ class AudioLoopbackTest : public media::audio::test::AudioTestBase {
   static constexpr int kSampleSeconds = 1;
   static constexpr int16_t kInitialCaptureData = 0x7fff;
   static constexpr unsigned int kMaxNumRenderers = 16;
-  static constexpr int16_t kPlaybackData[] = {
-      0x1000, 0xfff,  -0x2345, -0x0123, 0x100,  0xff,   -0x234, -0x04b7,
-      0x0310, 0x0def, -0x0101, -0x2020, 0x1357, 0x1324, 0x0135, 0x0132};
+  static constexpr int16_t kPlaybackData[] = {0x1000, 0xfff,   -0x2345, -0x0123, 0x100,   0xff,
+                                              -0x234, -0x04b7, 0x0310,  0x0def,  -0x0101, -0x2020,
+                                              0x1357, 0x1324,  0x0135,  0x0132};
 
   void SetUp() override;
   void TearDown() override;
@@ -74,10 +72,8 @@ class AudioLoopbackTest : public media::audio::test::AudioTestBase {
 };
 
 fuchsia::media::AudioSyncPtr AudioLoopbackTest::audio_sync_;
-fuchsia::virtualaudio::ControlSyncPtr
-    AudioLoopbackTest::virtual_audio_control_sync_;
-fuchsia::virtualaudio::OutputSyncPtr
-    AudioLoopbackTest::virtual_audio_output_sync_;
+fuchsia::virtualaudio::ControlSyncPtr AudioLoopbackTest::virtual_audio_control_sync_;
+fuchsia::virtualaudio::OutputSyncPtr AudioLoopbackTest::virtual_audio_output_sync_;
 
 // The AudioLoopbackEnvironment class allows us to make configuration changes
 // before any test case begins, and after all test cases complete.
@@ -109,14 +105,12 @@ class AudioLoopbackEnvironment : public testing::Environment {
     fuchsia::virtualaudio::ControlSyncPtr virtual_audio_control_sync;
     startup_context->svc()->Connect(virtual_audio_control_sync.NewRequest());
     ASSERT_TRUE(virtual_audio_control_sync.is_bound());
-    AudioLoopbackTest::SetVirtualAudioControlSync(
-        std::move(virtual_audio_control_sync));
+    AudioLoopbackTest::SetVirtualAudioControlSync(std::move(virtual_audio_control_sync));
 
     fuchsia::virtualaudio::OutputSyncPtr virtual_audio_output_sync;
     startup_context->svc()->Connect(virtual_audio_output_sync.NewRequest());
     ASSERT_TRUE(virtual_audio_output_sync.is_bound());
-    AudioLoopbackTest::SetVirtualAudioOutputSync(
-        std::move(virtual_audio_output_sync));
+    AudioLoopbackTest::SetVirtualAudioOutputSync(std::move(virtual_audio_output_sync));
 
     AudioTestBase::SetStartupContext(std::move(startup_context));
   }
@@ -139,24 +133,23 @@ void AudioLoopbackTest::SetUp() {
   AudioTestBase::SetUp();
 
   std::string dev_uuid_read = "4a41494a4a41494a4a41494a4a41494a";
-  std::array<uint8_t, 16> dev_uuid{0x4a, 0x41, 0x49, 0x4a, 0x4a, 0x41,
-                                   0x49, 0x4a, 0x4a, 0x41, 0x49, 0x4a,
-                                   0x4a, 0x41, 0x49, 0x4a};
+  std::array<uint8_t, 16> dev_uuid{0x4a, 0x41, 0x49, 0x4a, 0x4a, 0x41, 0x49, 0x4a,
+                                   0x4a, 0x41, 0x49, 0x4a, 0x4a, 0x41, 0x49, 0x4a};
 
   // Connect to audio device enumerator to handle device topology changes during
   // test execution.
-  audio_dev_enum_.events().OnDeviceAdded =
-      [this, dev_uuid_read](fuchsia::media::AudioDeviceInfo dev) {
-        if (dev.unique_id == dev_uuid_read) {
-          virtual_audio_output_token_ = dev.token_id;
-        }
-      };
+  audio_dev_enum_.events().OnDeviceAdded = [this,
+                                            dev_uuid_read](fuchsia::media::AudioDeviceInfo dev) {
+    if (dev.unique_id == dev_uuid_read) {
+      virtual_audio_output_token_ = dev.token_id;
+    }
+  };
 
   uint64_t default_dev = 0;
-  audio_dev_enum_.events().OnDefaultDeviceChanged =
-      [&default_dev](uint64_t old_default_token, uint64_t new_default_token) {
-        default_dev = new_default_token;
-      };
+  audio_dev_enum_.events().OnDefaultDeviceChanged = [&default_dev](uint64_t old_default_token,
+                                                                   uint64_t new_default_token) {
+    default_dev = new_default_token;
+  };
 
   audio_dev_enum_.set_error_handler(ErrorHandler());
 
@@ -176,8 +169,8 @@ void AudioLoopbackTest::SetUp() {
   // device add.  Without this call, the add for the virtual output may be
   // picked up and processed in the device_manager in audio_core before it's
   // added our listener for events.
-  audio_dev_enum_->GetDevices(CompletionCallback(
-      [](std::vector<fuchsia::media::AudioDeviceInfo> devices) {}));
+  audio_dev_enum_->GetDevices(
+      CompletionCallback([](std::vector<fuchsia::media::AudioDeviceInfo> devices) {}));
   ExpectCallback();
 
   // Create an output device using default settings, save it while tests run.
@@ -190,8 +183,7 @@ void AudioLoopbackTest::SetUp() {
   // Wait for OnDeviceAdded and OnDefaultDeviceChanged callback.  These will
   // both need to have happened for the new device to be used for the test.
   ExpectCondition([this, &default_dev]() {
-    return virtual_audio_output_token_ != 0 &&
-           default_dev == virtual_audio_output_token_;
+    return virtual_audio_output_token_ != 0 && default_dev == virtual_audio_output_token_;
   });
 
   ASSERT_EQ(virtual_audio_output_token_, default_dev)
@@ -203,14 +195,13 @@ void AudioLoopbackTest::SetUp() {
         ASSERT_TRUE(false) << "Audio device added while test was running";
       });
 
-  audio_dev_enum_.events().OnDeviceRemoved =
-      CompletionCallback([this](uint64_t token) {
-        ASSERT_FALSE(token == virtual_audio_output_token_)
-            << "Audio device removed while test was running";
-      });
+  audio_dev_enum_.events().OnDeviceRemoved = CompletionCallback([this](uint64_t token) {
+    ASSERT_FALSE(token == virtual_audio_output_token_)
+        << "Audio device removed while test was running";
+  });
 
-  audio_dev_enum_.events().OnDefaultDeviceChanged = CompletionCallback(
-      [](uint64_t old_default_token, uint64_t new_default_token) {
+  audio_dev_enum_.events().OnDefaultDeviceChanged =
+      CompletionCallback([](uint64_t old_default_token, uint64_t new_default_token) {
         ASSERT_TRUE(false) << "Default route changed while test was running.";
       });
 
@@ -220,8 +211,8 @@ void AudioLoopbackTest::SetUp() {
 
 void AudioLoopbackTest::TearDown() {
   bool removed = false;
-  audio_dev_enum_.events().OnDeviceRemoved = CompletionCallback(
-      [&removed, want_token = virtual_audio_output_token_](uint64_t token) {
+  audio_dev_enum_.events().OnDeviceRemoved =
+      CompletionCallback([&removed, want_token = virtual_audio_output_token_](uint64_t token) {
         if (token == want_token) {
           removed = true;
         }
@@ -277,14 +268,14 @@ void AudioLoopbackTest::SetUpRenderer(unsigned int index, int16_t data) {
 
   playback_sample_size_[index] = sizeof(int16_t);
 
-  playback_size_[index] = format.frames_per_second * format.channels *
-                          playback_sample_size_[index] * kSampleSeconds;
+  playback_size_[index] =
+      format.frames_per_second * format.channels * playback_sample_size_[index] * kSampleSeconds;
 
   zx_status_t status = payload_buffer_[index].CreateAndMap(
-      playback_size_[index], ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr,
-      &payload_vmo, ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER);
-  ASSERT_EQ(status, ZX_OK) << "Renderer VmoMapper:::CreateAndMap(" << index
-                           << ") failed - " << status;
+      playback_size_[index], ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr, &payload_vmo,
+      ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER);
+  ASSERT_EQ(status, ZX_OK) << "Renderer VmoMapper:::CreateAndMap(" << index << ") failed - "
+                           << status;
 
   buffer = reinterpret_cast<int16_t*>(payload_buffer_[index].start());
   for (int32_t i = 0; i < kSampleRate * kSampleSeconds; i++)
@@ -335,8 +326,7 @@ void AudioLoopbackTest::SetUpCapturer(int16_t data) {
   zx_status_t status = capture_buffer_.CreateAndMap(
       capture_size_, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr, &capture_vmo,
       ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER);
-  ASSERT_EQ(status, ZX_OK) << "Capturer VmoMapper:::CreateAndMap failed - "
-                           << status;
+  ASSERT_EQ(status, ZX_OK) << "Capturer VmoMapper:::CreateAndMap failed - " << status;
 
   buffer = reinterpret_cast<int16_t*>(capture_buffer_.start());
   for (int32_t i = 0; i < kSampleRate * kSampleSeconds; i++)
@@ -368,10 +358,8 @@ void AudioLoopbackTest::TestLoopback(unsigned int num_renderers) {
     // latency will be the same for both playback streams.  This happens to be
     // true for this test as we create the renderers with the same parameters,
     // but is not a safe assumption for the general users of this API to make.
-    audio_renderer_[renderer_num]->GetMinLeadTime(
-        CompletionCallback([&sleep_duration](zx_duration_t t) {
-          sleep_duration = std::max(sleep_duration, t);
-        }));
+    audio_renderer_[renderer_num]->GetMinLeadTime(CompletionCallback(
+        [&sleep_duration](zx_duration_t t) { sleep_duration = std::max(sleep_duration, t); }));
     ExpectCallback();
 
     packet[renderer_num].payload_offset = 0;
@@ -393,13 +381,12 @@ void AudioLoopbackTest::TestLoopback(unsigned int num_renderers) {
     audio_renderer_[renderer_num]->PlayNoReply(play_at, 0);
   }
   // Only get the callback for one renderer -- arbitrarily, renderer 0.
-  audio_renderer_[0]->Play(
-      play_at, 0,
-      CompletionCallback([&ref_time_received, &media_time_received](
-                             int64_t ref_time, int64_t media_time) {
-        ref_time_received = ref_time;
-        media_time_received = media_time;
-      }));
+  audio_renderer_[0]->Play(play_at, 0,
+                           CompletionCallback([&ref_time_received, &media_time_received](
+                                                  int64_t ref_time, int64_t media_time) {
+                             ref_time_received = ref_time;
+                             media_time_received = media_time;
+                           }));
   ExpectCallback();
 
   // We expect that media_time 0 played back at some point after the 'zero'
@@ -409,8 +396,8 @@ void AudioLoopbackTest::TestLoopback(unsigned int num_renderers) {
 
   // Add a callback for when we get our captured packet.
   fuchsia::media::StreamPacket captured;
-  audio_capturer_.events().OnPacketProduced = CompletionCallback(
-      [this, &captured](fuchsia::media::StreamPacket packet) {
+  audio_capturer_.events().OnPacketProduced =
+      CompletionCallback([this, &captured](fuchsia::media::StreamPacket packet) {
         // We only care about the first set of captured samples
         if (captured.payload_size == 0) {
           captured = packet;
@@ -460,8 +447,7 @@ int main(int argc, char** argv) {
   testing::InitGoogleTest(&argc, argv);
 
   // gtest takes ownership of registered environments: *do not delete them*
-  testing::AddGlobalTestEnvironment(
-      new media::audio::test::AudioLoopbackEnvironment);
+  testing::AddGlobalTestEnvironment(new media::audio::test::AudioLoopbackEnvironment);
 
   int result = RUN_ALL_TESTS();
 

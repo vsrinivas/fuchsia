@@ -11,8 +11,7 @@
 namespace media::audio {
 
 // Private internal method
-bool FxLoader::TryLoad(void* lib, const char* export_name,
-                       void** export_func_ptr) {
+bool FxLoader::TryLoad(void* lib, const char* export_name, void** export_func_ptr) {
   FXL_DCHECK(lib != nullptr);
   FXL_DCHECK(export_name != nullptr);
   FXL_DCHECK(export_func_ptr != nullptr);
@@ -78,15 +77,15 @@ zx_status_t FxLoader::LoadLibrary() {
   // operator "short-circuits" (exits early), so we use bitwise &= instead.
   load_success &= TryLoad(fx_lib_, "fuchsia_audio_dfx_get_num_effects",
                           reinterpret_cast<void**>(&fn_get_num_fx_));
-  load_success &= TryLoad(fx_lib_, "fuchsia_audio_dfx_get_info",
-                          reinterpret_cast<void**>(&fn_get_info_));
+  load_success &=
+      TryLoad(fx_lib_, "fuchsia_audio_dfx_get_info", reinterpret_cast<void**>(&fn_get_info_));
   load_success &= TryLoad(fx_lib_, "fuchsia_audio_dfx_get_control_info",
                           reinterpret_cast<void**>(&fn_get_ctrl_info_));
 
-  load_success &= TryLoad(fx_lib_, "fuchsia_audio_dfx_create",
-                          reinterpret_cast<void**>(&fn_create_));
-  load_success &= TryLoad(fx_lib_, "fuchsia_audio_dfx_delete",
-                          reinterpret_cast<void**>(&fn_delete_));
+  load_success &=
+      TryLoad(fx_lib_, "fuchsia_audio_dfx_create", reinterpret_cast<void**>(&fn_create_));
+  load_success &=
+      TryLoad(fx_lib_, "fuchsia_audio_dfx_delete", reinterpret_cast<void**>(&fn_delete_));
   load_success &= TryLoad(fx_lib_, "fuchsia_audio_dfx_get_parameters",
                           reinterpret_cast<void**>(&fn_get_params_));
 
@@ -94,15 +93,13 @@ zx_status_t FxLoader::LoadLibrary() {
                           reinterpret_cast<void**>(&fn_get_ctrl_val_));
   load_success &= TryLoad(fx_lib_, "fuchsia_audio_dfx_set_control_value",
                           reinterpret_cast<void**>(&fn_set_ctrl_val_));
-  load_success &= TryLoad(fx_lib_, "fuchsia_audio_dfx_reset",
-                          reinterpret_cast<void**>(&fn_reset_));
+  load_success &= TryLoad(fx_lib_, "fuchsia_audio_dfx_reset", reinterpret_cast<void**>(&fn_reset_));
 
   load_success &= TryLoad(fx_lib_, "fuchsia_audio_dfx_process_inplace",
                           reinterpret_cast<void**>(&fn_process_inplace_));
-  load_success &= TryLoad(fx_lib_, "fuchsia_audio_dfx_process",
-                          reinterpret_cast<void**>(&fn_process_));
-  load_success &= TryLoad(fx_lib_, "fuchsia_audio_dfx_flush",
-                          reinterpret_cast<void**>(&fn_flush_));
+  load_success &=
+      TryLoad(fx_lib_, "fuchsia_audio_dfx_process", reinterpret_cast<void**>(&fn_process_));
+  load_success &= TryLoad(fx_lib_, "fuchsia_audio_dfx_flush", reinterpret_cast<void**>(&fn_flush_));
 
   if (!load_success) {
     ClearExports();
@@ -151,8 +148,7 @@ zx_status_t FxLoader::GetNumFx(uint32_t* num_fx_out) {
   return ZX_OK;
 }
 
-zx_status_t FxLoader::GetFxInfo(uint32_t effect_id,
-                                fuchsia_audio_dfx_description* fx_desc) {
+zx_status_t FxLoader::GetFxInfo(uint32_t effect_id, fuchsia_audio_dfx_description* fx_desc) {
   if (!exports_loaded_) {
     return ZX_ERR_NOT_FOUND;
   }
@@ -169,9 +165,8 @@ zx_status_t FxLoader::GetFxInfo(uint32_t effect_id,
   return ZX_OK;
 }
 
-zx_status_t FxLoader::GetFxControlInfo(
-    uint32_t effect_id, uint16_t ctrl_num,
-    fuchsia_audio_dfx_control_description* fx_ctrl_desc) {
+zx_status_t FxLoader::GetFxControlInfo(uint32_t effect_id, uint16_t ctrl_num,
+                                       fuchsia_audio_dfx_control_description* fx_ctrl_desc) {
   if (!exports_loaded_) {
     return ZX_ERR_NOT_FOUND;
   }
@@ -188,8 +183,8 @@ zx_status_t FxLoader::GetFxControlInfo(
   return ZX_OK;
 }
 
-fx_token_t FxLoader::CreateFx(uint32_t effect_id, uint32_t frame_rate,
-                              uint16_t channels_in, uint16_t channels_out) {
+fx_token_t FxLoader::CreateFx(uint32_t effect_id, uint32_t frame_rate, uint16_t channels_in,
+                              uint16_t channels_out) {
   if (!exports_loaded_) {
     return FUCHSIA_AUDIO_DFX_INVALID_TOKEN;
   }
@@ -244,8 +239,7 @@ zx_status_t FxLoader::FxGetControlValue(fx_token_t fx_token, uint16_t ctrl_num,
   return ZX_OK;
 }
 
-zx_status_t FxLoader::FxSetControlValue(fx_token_t fx_token, uint16_t ctrl_num,
-                                        float ctrl_val) {
+zx_status_t FxLoader::FxSetControlValue(fx_token_t fx_token, uint16_t ctrl_num, float ctrl_val) {
   if (!exports_loaded_) {
     return ZX_ERR_NOT_FOUND;
   }
@@ -278,8 +272,7 @@ zx_status_t FxLoader::FxProcessInPlace(fx_token_t fx_token, uint32_t num_frames,
   if (!exports_loaded_) {
     return ZX_ERR_NOT_FOUND;
   }
-  if (fx_token == FUCHSIA_AUDIO_DFX_INVALID_TOKEN ||
-      audio_buff_in_out == nullptr) {
+  if (fx_token == FUCHSIA_AUDIO_DFX_INVALID_TOKEN || audio_buff_in_out == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
   if (fn_process_inplace_(fx_token, num_frames, audio_buff_in_out) == false) {
@@ -290,8 +283,7 @@ zx_status_t FxLoader::FxProcessInPlace(fx_token_t fx_token, uint32_t num_frames,
 }
 
 zx_status_t FxLoader::FxProcess(fx_token_t fx_token, uint32_t num_frames,
-                                const float* audio_buff_in,
-                                float* audio_buff_out) {
+                                const float* audio_buff_in, float* audio_buff_out) {
   if (!exports_loaded_) {
     return ZX_ERR_NOT_FOUND;
   }
@@ -299,8 +291,7 @@ zx_status_t FxLoader::FxProcess(fx_token_t fx_token, uint32_t num_frames,
       audio_buff_out == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
-  if (fn_process_(fx_token, num_frames, audio_buff_in, audio_buff_out) ==
-      false) {
+  if (fn_process_(fx_token, num_frames, audio_buff_in, audio_buff_out) == false) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 

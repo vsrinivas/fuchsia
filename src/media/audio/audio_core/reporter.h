@@ -64,34 +64,29 @@ class Reporter {
 
   // Devices.
   void FailedToOpenDevice(const std::string& name, bool is_input, int err);
-  void FailedToObtainFdioServiceChannel(const std::string& name, bool is_input,
-                                        zx_status_t status);
-  void FailedToObtainStreamChannel(const std::string& name, bool is_input,
-                                   zx_status_t status);
+  void FailedToObtainFdioServiceChannel(const std::string& name, bool is_input, zx_status_t status);
+  void FailedToObtainStreamChannel(const std::string& name, bool is_input, zx_status_t status);
   void AddingDevice(const std::string& name, const AudioDevice& device);
   void RemovingDevice(const AudioDevice& device);
   void DeviceStartupFailed(const AudioDevice& device);
   void IgnoringDevice(const AudioDevice& device);
   void ActivatingDevice(const AudioDevice& device);
   void SettingDeviceGainInfo(const AudioDevice& device,
-                             const fuchsia::media::AudioGainInfo& gain_info,
-                             uint32_t set_flags);
+                             const fuchsia::media::AudioGainInfo& gain_info, uint32_t set_flags);
 
   // Renderers.
   void AddingRenderer(const AudioRendererImpl& renderer);
   void RemovingRenderer(const AudioRendererImpl& renderer);
-  void SettingRendererStreamType(
-      const AudioRendererImpl& renderer,
-      const fuchsia::media::AudioStreamType& stream_type);
-  void AddingRendererPayloadBuffer(const AudioRendererImpl& renderer,
-                                   uint32_t buffer_id, uint64_t size);
-  void RemovingRendererPayloadBuffer(const AudioRendererImpl& renderer,
-                                     uint32_t buffer_id);
+  void SettingRendererStreamType(const AudioRendererImpl& renderer,
+                                 const fuchsia::media::AudioStreamType& stream_type);
+  void AddingRendererPayloadBuffer(const AudioRendererImpl& renderer, uint32_t buffer_id,
+                                   uint64_t size);
+  void RemovingRendererPayloadBuffer(const AudioRendererImpl& renderer, uint32_t buffer_id);
   void SendingRendererPacket(const AudioRendererImpl& renderer,
                              const fuchsia::media::StreamPacket& packet);
   void SettingRendererGain(const AudioRendererImpl& renderer, float gain_db);
-  void SettingRendererGainWithRamp(const AudioRendererImpl& renderer,
-                                   float gain_db, zx_duration_t duration_ns,
+  void SettingRendererGainWithRamp(const AudioRendererImpl& renderer, float gain_db,
+                                   zx_duration_t duration_ns,
                                    fuchsia::media::audio::RampType ramp_type);
   void SettingRendererMute(const AudioRendererImpl& renderer, bool muted);
   void SettingRendererMinClockLeadTime(const AudioRendererImpl& renderer,
@@ -102,16 +97,15 @@ class Reporter {
   // Capturers.
   void AddingCapturer(const AudioCapturerImpl& capturer);
   void RemovingCapturer(const AudioCapturerImpl& capturer);
-  void SettingCapturerStreamType(
-      const AudioCapturerImpl& capturer,
-      const fuchsia::media::AudioStreamType& stream_type);
-  void AddingCapturerPayloadBuffer(const AudioCapturerImpl& capturer,
-                                   uint32_t buffer_id, uint64_t size);
+  void SettingCapturerStreamType(const AudioCapturerImpl& capturer,
+                                 const fuchsia::media::AudioStreamType& stream_type);
+  void AddingCapturerPayloadBuffer(const AudioCapturerImpl& capturer, uint32_t buffer_id,
+                                   uint64_t size);
   void SendingCapturerPacket(const AudioCapturerImpl& capturer,
                              const fuchsia::media::StreamPacket& packet);
   void SettingCapturerGain(const AudioCapturerImpl& capturer, float gain_db);
-  void SettingCapturerGainWithRamp(const AudioCapturerImpl& capturer,
-                                   float gain_db, zx_duration_t duration_ns,
+  void SettingCapturerGainWithRamp(const AudioCapturerImpl& capturer, float gain_db,
+                                   zx_duration_t duration_ns,
                                    fuchsia::media::audio::RampType ramp_type);
   void SettingCapturerMute(const AudioCapturerImpl& capturer, bool muted);
 
@@ -157,8 +151,7 @@ class Reporter {
       payload_buffers_node_ = node_.CreateChild("payload buffers");
       gain_db_ = node_.CreateDoubleMetric("gain db", 0.0);
       muted_ = node_.CreateUIntMetric("muted", 0);
-      set_gain_with_ramp_calls_ =
-          node_.CreateUIntMetric("calls to SetGainWithRamp", 0);
+      set_gain_with_ramp_calls_ = node_.CreateUIntMetric("calls to SetGainWithRamp", 0);
     }
     inspect::Node node_;
     inspect::UIntMetric sample_format_;
@@ -178,8 +171,7 @@ class Reporter {
 
   struct Renderer : ClientPort {
     Renderer(inspect::Node node) : ClientPort(std::move(node)) {
-      min_clock_lead_time_ns_ =
-          node_.CreateUIntMetric("min clock lead time (ns)", 0);
+      min_clock_lead_time_ns_ = node_.CreateUIntMetric("min clock lead time (ns)", 0);
       pts_continuity_threshold_seconds_ =
           node_.CreateDoubleMetric("pts continuity threshold (s)", 0.0);
     }

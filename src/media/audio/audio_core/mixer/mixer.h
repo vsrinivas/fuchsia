@@ -53,10 +53,9 @@ class Mixer {
   // For optimum system performance across changing conditions, callers should
   // take care when directly specifying a resampler type, if they do so at all.
   // The default should be allowed whenever possible.
-  static std::unique_ptr<Mixer> Select(
-      const fuchsia::media::AudioStreamType& src_format,
-      const fuchsia::media::AudioStreamType& dest_format,
-      Resampler resampler_type = Resampler::Default);
+  static std::unique_ptr<Mixer> Select(const fuchsia::media::AudioStreamType& src_format,
+                                       const fuchsia::media::AudioStreamType& dest_format,
+                                       Resampler resampler_type = Resampler::Default);
 
   //
   // Mix
@@ -104,9 +103,8 @@ class Mixer {
   //
   // TODO(mpuryear): Change parameter frac_src_frames to src_frames (change
   // subframes to int frames), as this was never intended to be fractional.
-  virtual bool Mix(float* dest, uint32_t dest_frames, uint32_t* dest_offset,
-                   const void* src, uint32_t frac_src_frames,
-                   int32_t* frac_src_offset, bool accumulate,
+  virtual bool Mix(float* dest, uint32_t dest_frames, uint32_t* dest_offset, const void* src,
+                   uint32_t frac_src_frames, int32_t* frac_src_offset, bool accumulate,
                    Bookkeeping* info) = 0;
   //
   // Reset
@@ -267,8 +265,7 @@ struct Bookkeeping {
   // TODO(mpuryear): move this into the Mixer or Gain class, along with the
   // other Bookkeeping parameters.
   static constexpr uint32_t kScaleArrLen = 960;
-  std::unique_ptr<Gain::AScale[]> scale_arr =
-      std::make_unique<Gain::AScale[]>(kScaleArrLen);
+  std::unique_ptr<Gain::AScale[]> scale_arr = std::make_unique<Gain::AScale[]>(kScaleArrLen);
 };
 
 }  // namespace media::audio
