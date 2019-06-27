@@ -26,7 +26,7 @@
 #include "pinned-buffer.h"
 
 // clang-format off
-typedef volatile struct dw_mac_regs {
+typedef struct dw_mac_regs {
     uint32_t conf;            /*0 0x00 */
     uint32_t framefilt;       /*1 0x04 */
     uint32_t hashtablehigh;   /*2 0x08 */
@@ -66,7 +66,7 @@ typedef volatile struct dw_mac_regs {
 // Offset of DMA regs into dwmac register block
 #define DW_DMA_BASE_OFFSET    (0x1000)
 
-typedef volatile struct dw_dma_regs {
+typedef struct dw_dma_regs {
     uint32_t busmode;              /*0  0x00 */
     uint32_t txpolldemand;         /*1  0x04 */
     uint32_t rxpolldemand;         /*2  0x08 */

@@ -134,9 +134,9 @@ zx_status_t DWMacDevice::InitPdev() {
         return status;
     }
 
-    dwmac_regs_ = static_cast<dw_mac_regs_t*>(dwmac_regs_iobuff_->get());
-    dwmac_mmc_regs_ = offset_ptr<uint32_t>(dwmac_regs_, DW_MAC_MMC_BASE_OFFSET);
-    dwdma_regs_ = offset_ptr<dw_dma_regs_t>(dwmac_regs_, DW_DMA_BASE_OFFSET);
+    dwmac_regs_ = static_cast<volatile dw_mac_regs_t*>(dwmac_regs_iobuff_->get());
+    dwmac_mmc_regs_ = offset_ptr<volatile uint32_t>(dwmac_regs_, DW_MAC_MMC_BASE_OFFSET);
+    dwdma_regs_ = offset_ptr<volatile dw_dma_regs_t>(dwmac_regs_, DW_DMA_BASE_OFFSET);
 
     // Map dma interrupt.
     status = pdev_.GetInterrupt(0, &dma_irq_);
