@@ -213,12 +213,18 @@ will not resume the thread or pass the exception to another handler.
 
 [Signals](signals.md) are the core Zircon mechanism for observing state changes
 on kernel objects (a channel becoming readable, a process terminating, an event
-becoming signaled, etc). A common pattern in Zircon is to have a message loop
-that waits for signals on one or more objects and handles them as they come in.
+becoming signaled, etc).
 
-To incorporate exception handling into this pattern, use
-[`zx_object_wait_async()`] to wait for `ZX_CHANNEL_READABLE` (and optionally
-`ZX_CHANNEL_PEER_CLOSED`) on the exception channel.
+Unlike exceptions, signals do not require a response from an exception handler.
+On the other hand signals are sent to whomever is waiting on the thread's
+handle, instead of being sent to the exception channel that could be bound to
+the thread's process.
+
+A common pattern in Zircon is to have a message loop that waits for signals on
+one or more objects and handles them as they come in. To incorporate exception
+handling into this pattern, use [`zx_object_wait_async()`] to wait for
+`ZX_CHANNEL_READABLE` (and optionally `ZX_CHANNEL_PEER_CLOSED`) on the
+exception channel:
 
 ```cpp
 zx_handle_t port;
@@ -256,6 +262,10 @@ while (1) {
   }
 }
 ```
+
+*Note:* There is both an exception and a signal for thread termination. The
+`ZX_EXCP_THREAD_EXITING` exception is sent first. When the thread is finally
+terminated the `ZX_THREAD_TERMINATED` signal is set.
 
 ## Comparison with Posix (and Linux)
 
@@ -299,17 +309,19 @@ Zircon code that uses exceptions can be viewed for futher examples, including:
 - `system/utest/exception`: exception unit tests
 - `system/utest/debugger`: debugger-related functionality unit tests
 
-## SEE ALSO
+## See Also
 
 - [`zx_task_create_exception_channel()`]
 - [`zx_exception_get_thread()`]
 - [`zx_exception_get_process()`]
 - [`zx_object_set_property()`]
+- [`zx_port_wait()`]
 
 [`zx_exception_get_process()`]: syscalls/exception_get_process.md
 [`zx_exception_get_thread()`]: syscalls/exception_get_thread.md
 [`zx_object_get_info()`]: syscalls/object_get_info.md
 [`zx_object_set_property()`]: syscalls/object_set_property.md
 [`zx_object_wait_async()`]: syscalls/object_wait_async.md
+[`zx_port_wait()`]: syscalls/port_wait.md
 [`zx_task_create_exception_channel()`]: syscalls/task_create_exception_channel.md
 [`zx_task_kill()`]: syscalls/task_kill.md

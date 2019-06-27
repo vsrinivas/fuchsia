@@ -46,6 +46,23 @@ Fuchsia native threads are always *detached*. That is, there is no *join()* oper
 needed to do a clean termination. However, some runtimes above the kernel, such as
 C11 or POSIX might require threads to be joined.
 
+### Signals
+Threads provide the following signals:
++ `ZX_THREAD_TERMINATED`
++ `ZX_THREAD_SUSPENDED`
++ `ZX_THREAD_RUNNING`
+
+When a thread is started `ZX_THREAD_RUNNING` is asserted. When it is suspended
+`ZX_THREAD_RUNNING` is deasserted, and `ZX_THREAD_SUSPENDED` is asserted. When
+the thread is resumed `ZX_THREAD_SUSPENDED` is deasserted and
+`ZX_THREAD_RUNNING` is asserted. When a thread terminates both
+`ZX_THREAD_RUNNING` and `ZX_THREAD_SUSPENDED` are deasserted and
+`ZX_THREAD_TERMINATED` is asserted.
+
+Note that signals are OR'd into the state maintained by the
+[`zx_object_wait_*()`](../syscalls/object_wait_one.md) family of functions thus
+you may see any combination of requested signals when they return.
+
 ## SYSCALLS
 
  - [`zx_thread_create()`] - create a new thread within a process
