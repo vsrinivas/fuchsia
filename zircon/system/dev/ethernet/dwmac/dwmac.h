@@ -176,9 +176,9 @@ private:
 
     std::optional<ddk::MmioBuffer> dwmac_regs_iobuff_;
 
-    dw_mac_regs_t* dwmac_regs_ = nullptr;
-    dw_dma_regs_t* dwdma_regs_ = nullptr;
-    uint32_t* dwmac_mmc_regs_ = nullptr;
+    volatile dw_mac_regs_t* dwmac_regs_ = nullptr;
+    volatile dw_dma_regs_t* dwdma_regs_ = nullptr;
+    volatile uint32_t* dwmac_mmc_regs_ = nullptr;
 
     fbl::Mutex lock_;
     ddk::EthmacIfcProtocolClient ethmac_client_ __TA_GUARDED(lock_);
