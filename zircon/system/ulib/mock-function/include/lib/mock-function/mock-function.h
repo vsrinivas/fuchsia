@@ -1,20 +1,29 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+// Copyright 2019 The Fuchsia Authors. All rights reserved. Use of this source code is governed by a
+// BSD-style license that can be found in the LICENSE file.
 
 #pragma once
 
-#include <tuple>
-
-#include <fbl/vector.h>
 #include <zxtest/zxtest.h>
+
+#include <memory>
+#include <tuple>
+#include <utility>
+#include <vector>
 
 namespace mock_function {
 
-// This class mocks a single function. The first template argument is the return type (or void), and
-// the rest are the function arguments. ExpectCall(return_value, arg1, arg2, ...) and
-// ExpectNoCall() are used by the test to set expectations, and Call(arg1, arg2, ...) is used by
-// the code under test. See the following example:
+// This class mocks a single function.  The Expect*() functions are used by the test to set
+// expectations, and Call() is used by the code under test.  There are three variants:
+//
+// * ExpectCall(return_value, arg1, arg2, ...) sets the expecation that the call will be made with
+//   arguments `arg1`, `arg2`, etc., each compared using operator==. `return_value` will be returned
+//   unconditionally, or is omitted if the function returns void.
+// * ExpectCallWithMatcher(matcher, return_value, arg1, arg2) uses a `matcher` functor to compare
+//   the arguments. The matcher takes two tuple parameters, holding the expected and actual
+//   arguments.
+// * ExpectNoCall() expects that the function will not be called.
+//
+// Example:
 //
 // class SomeClassTest : SomeClass {
 // public:
@@ -43,90 +52,156 @@ namespace mock_function {
 
 template <typename R, typename... Ts>
 class MockFunction {
-public:
-    MockFunction& ExpectCall(R ret, Ts... args) {
-        has_expectations_ = true;
-        std::tuple<Ts...> args_tuple = std::make_tuple(std::forward<Ts>(args)...);
-        expectations_.push_back(Expectation{std::move(ret), std::move(args_tuple)});
-        return *this;
+ public:
+  template <typename... As>
+  MockFunction& ExpectCall(R ret, As&&... args) {
+    static_assert(sizeof...(As) == sizeof...(Ts), "wrong number of arguments to ExpectCall");
+    has_expectations_ = true;
+    expectations_.emplace_back(
+        std::make_unique<Expectation>(std::move(ret), std::forward<As>(args)...));
+    return *this;
+  }
+
+  template <typename M, typename... As>
+  MockFunction& ExpectCallWithMatcher(M matcher, R ret, As&&... args) {
+    static_assert(sizeof...(As) == sizeof...(Ts),
+                  "wrong number of arguments to ExpectCallWithMatcher");
+    has_expectations_ = true;
+    expectations_.emplace_back(std::make_unique<ExpectationWithMatcher<M>>(
+        std::move(matcher), std::move(ret), std::forward<As>(args)...));
+    return *this;
+  }
+
+  MockFunction& ExpectNoCall() {
+    has_expectations_ = true;
+    return *this;
+  }
+
+  template <typename... As>
+  R Call(As&&... args) {
+    std::unique_ptr<Expectation> exp;
+    CallHelper(&exp);
+    EXPECT_TRUE(exp->MatchArgs({std::forward<As>(args)...}));
+    return std::move(exp->retval);
+  }
+
+  bool HasExpectations() const { return has_expectations_; }
+
+  void VerifyAndClear() {
+    EXPECT_EQ(expectation_index_, expectations_.size());
+    expectations_.clear();
+    expectation_index_ = 0;
+  }
+
+ private:
+  struct Expectation {
+    template <typename... As>
+    Expectation(R ret, As&&... args)
+        : retval(std::move(ret)), expected_args(std::forward<As>(args)...) {}
+    virtual ~Expectation() = default;
+
+    virtual bool MatchArgs(std::tuple<Ts...> actual_args) { return actual_args == expected_args; }
+
+    R retval;
+    std::tuple<Ts...> expected_args;
+  };
+
+  template <typename Matcher>
+  struct ExpectationWithMatcher : public Expectation {
+    template <typename M, typename... As>
+    ExpectationWithMatcher(M&& mat, R ret, As&&... args)
+        : Expectation(std::move(ret), std::forward<As>(args)...), matcher(std::forward<M>(mat)) {}
+
+    bool MatchArgs(std::tuple<Ts...> actual_args) override {
+      return matcher(actual_args, this->expected_args);
     }
 
-    MockFunction& ExpectNoCall() {
-        has_expectations_ = true;
-        return *this;
-    }
+    Matcher matcher;
+  };
 
-    R Call(Ts... args) {
-        R ret = {};
-        CallHelper(&ret, std::forward<Ts>(args)...);
-        return ret;
-    }
+  void CallHelper(std::unique_ptr<Expectation>* exp) {
+    ASSERT_LT(expectation_index_, expectations_.size());
+    *exp = std::move(expectations_[expectation_index_++]);
+  }
 
-    bool HasExpectations() const { return has_expectations_; }
-
-    void VerifyAndClear() {
-        EXPECT_EQ(expectation_index_, expectations_.size());
-
-        expectations_.reset();
-        expectation_index_ = 0;
-    }
-
-private:
-    struct Expectation {
-        R ret_value;
-        std::tuple<Ts...> args;
-    };
-
-    void CallHelper(R* ret, Ts... args) {
-        ASSERT_LT(expectation_index_, expectations_.size());
-
-        Expectation exp = std::move(expectations_[expectation_index_++]);
-        EXPECT_TRUE(exp.args == std::make_tuple(std::forward<Ts>(args)...));
-        *ret = std::move(exp.ret_value);
-    }
-
-    bool has_expectations_ = false;
-    fbl::Vector<Expectation> expectations_;
-    size_t expectation_index_ = 0;
+  bool has_expectations_ = false;
+  std::vector<std::unique_ptr<Expectation>> expectations_;
+  size_t expectation_index_ = 0;
 };
 
 template <typename... Ts>
 class MockFunction<void, Ts...> {
-public:
-    MockFunction& ExpectCall(Ts... args) {
-        has_expectations_ = true;
-        std::tuple<Ts...> args_tuple = std::make_tuple(std::forward<Ts>(args)...);
-        expectations_.push_back(std::move(args_tuple));
-        return *this;
+ public:
+  template <typename... As>
+  MockFunction& ExpectCall(As&&... args) {
+    static_assert(sizeof...(As) == sizeof...(Ts), "wrong number of arguments to ExpectCall");
+    has_expectations_ = true;
+    expectations_.emplace_back(std::make_unique<Expectation>(std::forward<As>(args)...));
+    return *this;
+  }
+
+  template <typename M, typename... As>
+  MockFunction& ExpectCallWithMatcher(M matcher, As&&... args) {
+    static_assert(sizeof...(As) == sizeof...(Ts),
+                  "wrong number of arguments to ExpectCallWithMatcher");
+    has_expectations_ = true;
+    expectations_.emplace_back(
+        std::make_unique<ExpectationWithMatcher<M>>(std::move(matcher), std::forward<As>(args)...));
+    return *this;
+  }
+
+  MockFunction& ExpectNoCall() {
+    has_expectations_ = true;
+    return *this;
+  }
+
+  template <typename... As>
+  void Call(As&&... args) {
+    std::unique_ptr<Expectation> exp;
+    CallHelper(&exp);
+    EXPECT_TRUE(exp->MatchArgs({std::forward<As>(args)...}));
+  }
+
+  bool HasExpectations() const { return has_expectations_; }
+
+  void VerifyAndClear() {
+    ASSERT_EQ(expectation_index_, expectations_.size());
+    expectations_.clear();
+    expectation_index_ = 0;
+  }
+
+ private:
+  struct Expectation {
+    template <typename... As>
+    Expectation(As&&... args) : expected_args(std::forward<As>(args)...) {}
+    virtual ~Expectation() = default;
+
+    virtual bool MatchArgs(std::tuple<Ts...> actual_args) { return actual_args == expected_args; }
+
+    std::tuple<Ts...> expected_args;
+  };
+
+  template <typename Matcher>
+  struct ExpectationWithMatcher : public Expectation {
+    template <typename M, typename... As>
+    ExpectationWithMatcher(M&& mat, As&&... args)
+        : Expectation(std::forward<As>(args)...), matcher(std::forward<M>(mat)) {}
+
+    bool MatchArgs(std::tuple<Ts...> actual_args) override {
+      return matcher(actual_args, this->expected_args);
     }
 
-    MockFunction& ExpectNoCall() {
-        has_expectations_ = true;
-        return *this;
-    }
+    Matcher matcher;
+  };
 
-    void Call(Ts... args) { CallHelper(std::forward<Ts>(args)...); }
+  void CallHelper(std::unique_ptr<Expectation>* exp) {
+    ASSERT_LT(expectation_index_, expectations_.size());
+    *exp = std::move(expectations_[expectation_index_++]);
+  }
 
-    bool HasExpectations() const { return has_expectations_; }
-
-    void VerifyAndClear() {
-        ASSERT_EQ(expectation_index_, expectations_.size());
-
-        expectations_.reset();
-        expectation_index_ = 0;
-    }
-
-private:
-    void CallHelper(Ts... args) {
-        ASSERT_LT(expectation_index_, expectations_.size());
-
-        std::tuple<Ts...> exp = std::move(expectations_[expectation_index_++]);
-        EXPECT_TRUE(exp == std::make_tuple(std::forward<Ts>(args)...));
-    }
-
-    bool has_expectations_ = false;
-    fbl::Vector<std::tuple<Ts...>> expectations_;
-    size_t expectation_index_ = 0;
+  bool has_expectations_ = false;
+  std::vector<std::unique_ptr<Expectation>> expectations_;
+  size_t expectation_index_ = 0;
 };
 
 }  // namespace mock_function
