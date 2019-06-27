@@ -1,11 +1,11 @@
-Magma: A gpu driver architecture for Fuchsia
+Magma: A GPU driver architecture for Fuchsia
 ============================================
 
-Magma is a framework for building gpu drivers for the Fuchsia operating system.
+Magma is a framework for building GPU drivers for the Fuchsia operating system.
 
 ## Overview
 
-See [Magma: Overview](/docs/the-book/magma/overview.md).
+See [Magma: Overview](/docs/the-book/magma).
 
 ## Design
 
