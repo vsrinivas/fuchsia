@@ -1,7 +1,7 @@
 {{#if maybe_attributes ~}}
     {{~ #each maybe_attributes ~}}
         {{~ #if (eq name "Doc") ~}}
-            {{~ value ~}}
+            {{~ docLink value @root.name ~}}
         {{~ /if ~}}
     {{~ /each ~}}
 {{~ /if}}

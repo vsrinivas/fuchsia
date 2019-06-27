@@ -98,9 +98,8 @@ fn run(opt: Opt) -> Result<(), Error> {
     }
 
     // Read in fidldoc.config.json
-    let fidl_config = read_fidldoc_config(&opt.config).with_context(|e| {
-        format!("Error parsing {}: {}", &opt.config, e)
-    })?;
+    let fidl_config = read_fidldoc_config(&opt.config)
+        .with_context(|e| format!("Error parsing {}: {}", &opt.config, e))?;
 
     create_output_dir(&output_path).with_context(|e| {
         format!("Unable to create output directory {}: {}", output_path.display(), e)
@@ -178,9 +177,8 @@ fn select_template(
 }
 
 fn read_fidldoc_config(config_path_str: &str) -> Result<Value, Error> {
-    let fidl_config_str = fs::read_to_string(config_path_str).with_context(|e| {
-        format!("Couldn't open file {}: {}", config_path_str, e)
-    })?;
+    let fidl_config_str = fs::read_to_string(config_path_str)
+        .with_context(|e| format!("Couldn't open file {}: {}", config_path_str, e))?;
     Ok(serde_json::from_str(&fidl_config_str)?)
 }
 
@@ -343,7 +341,8 @@ mod test {
         });
         // Write this to a temporary file
         let mut fidl_config_file = NamedTempFile::new().unwrap();
-        fidl_config_file.write(fidl_config_sample.to_string().as_bytes())
+        fidl_config_file
+            .write(fidl_config_sample.to_string().as_bytes())
             .expect("Unable to write to temporary file");
 
         // Read in file

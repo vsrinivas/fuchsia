@@ -9,7 +9,7 @@ use failure::Error;
 use handlebars::{Context, Handlebars, Helper, JsonRender, Output, RenderContext, RenderError};
 use lazy_static::lazy_static;
 use log::debug;
-use regex::Regex;
+use regex::{Captures, Regex};
 use serde_json::Value;
 
 pub trait FidldocTemplate {
@@ -125,6 +125,35 @@ fn pl(name: &str, base: &str) -> String {
     }
 }
 
+fn doc_link(
+    h: &Helper,
+    _: &Handlebars,
+    _: &Context,
+    _: &mut RenderContext,
+    out: &mut Output,
+) -> Result<(), RenderError> {
+    // get parameter from helper or throw an error
+    let docs =
+        h.param(0).ok_or_else(|| RenderError::new("Param 0 is required for doc_link helper"))?;
+    let base =
+        h.param(1).ok_or_else(|| RenderError::new("Param 1 is required for doc_link helper"))?;
+    let docstring = docs.value().render();
+    debug!("doc_link called on {} and {}", docstring, base.value().render());
+    out.write(&dl(&docstring, &base.value().render()))?;
+    Ok(())
+}
+
+fn dl(docstring: &str, base: &str) -> String {
+    lazy_static! {
+        static ref RE: Regex = Regex::new(r"\[`(.*?)`\]").unwrap();
+    }
+    RE.replace_all(&docstring, |caps: &Captures| {
+        let package = caps.get(1).unwrap().as_str();
+        pl(package, base)
+    })
+    .to_string()
+}
+
 pub fn remove_parent_folders(
     h: &Helper,
     _: &Handlebars,
@@ -155,8 +184,13 @@ fn source_link(
 ) -> Result<(), RenderError> {
     let fidl_json =
         h.param(0).ok_or_else(|| RenderError::new("Param 0 is required for sl helper"))?;
-    let location = h.param(1).ok_or_else(|| RenderError::new("Param 1 is required for sl helper"))?;
-    debug!("source_link called on {} and {}", fidl_json.value().to_string(), location.value().to_string());
+    let location =
+        h.param(1).ok_or_else(|| RenderError::new("Param 1 is required for sl helper"))?;
+    debug!(
+        "source_link called on {} and {}",
+        fidl_json.value().to_string(),
+        location.value().to_string()
+    );
     out.write(&sl(&fidl_json.value(), &location.value()))?;
     Ok(())
 }
@@ -214,6 +248,19 @@ mod test {
     }
 
     #[test]
+    fn dl_test() {
+        let docs = "This is the the documentation for [`fuchsia.media/Audio`]";
+        let base = "fuchsia.media";
+        let expected = "This is the the documentation for <a class='link' href='../fuchsia.media/index.html#Audio'>Audio</a>";
+        assert_eq!(dl(docs, base), expected.to_string());
+
+        let docs = "This is [`fuchsia.media/Audio`] and this is [`fuchsia.media.sessions/Publisher`], while this is not a link to fuchsia.io/Node.";
+        let base = "fuchsia.media.sessions";
+        let expected = "This is <a class='link' href='../fuchsia.media/index.html'>fuchsia.media</a>/<a class='link' href='../fuchsia.media/index.html#Audio'>Audio</a> and this is <a class='link' href='../fuchsia.media.sessions/index.html#Publisher'>Publisher</a>, while this is not a link to fuchsia.io/Node.";
+        assert_eq!(dl(docs, base), expected.to_string());
+    }
+
+    #[test]
     fn rpf_test() {
         let path = "../../sdk/fidl/fuchsia-web/frame.fidl";
         assert_eq!(rpf(path), "sdk/fidl/fuchsia-web/frame.fidl");
@@ -242,18 +289,12 @@ mod test {
             "line": "42"
         });
 
-        assert_eq!(
-            sl(&fidl_json, &location_line),
-            "https://example.com/master/sample.fidl#42"
-        );
+        assert_eq!(sl(&fidl_json, &location_line), "https://example.com/master/sample.fidl#42");
 
         let location_no_line = json!({
             "filename": "foobar.fidl"
         });
 
-        assert_eq!(
-            sl(&fidl_json, &location_no_line),
-            "https://example.com/master/foobar.fidl"
-        );
+        assert_eq!(sl(&fidl_json, &location_no_line), "https://example.com/master/foobar.fidl");
     }
 }
