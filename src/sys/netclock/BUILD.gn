@@ -63,11 +63,13 @@ rustc_binary("bin") {
     "//garnet/public/rust/fuchsia-inspect",
     "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.timezone:fuchsia.timezone-rustc",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:parking_lot",
+    "//zircon/public/fidl/fuchsia-net:fuchsia-net-rustc",
   ]
 }
 

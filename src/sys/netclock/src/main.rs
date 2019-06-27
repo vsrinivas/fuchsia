@@ -6,10 +6,11 @@
 
 use {
     failure::Error,
-    fidl_fuchsia_time as ftime, fuchsia_async as fasync,
+    fidl_fuchsia_net as fnet, fidl_fuchsia_time as ftime, fidl_fuchsia_timezone as ftz,
+    fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_zircon as zx,
-    futures::StreamExt,
+    futures::{StreamExt, TryStreamExt},
     log::{debug, error, info, warn},
     parking_lot::Mutex,
     std::sync::Arc,
@@ -27,11 +28,13 @@ async fn main() -> Result<(), Error> {
 
     let notifier = Notifier::new();
 
-    // TODO(CF-835): uncomment when this service can actually be connected to
-    // info!("connecting to external update service");
-    // let proxy =
-    //     fuchsia_component::client::connect_to_service::<ftime::DeprecatedNetworkSyncMarker>()?;
-    // notifier.handle_update_events(proxy);
+    info!("connecting to external update service");
+    let time_service =
+        fuchsia_component::client::connect_to_service::<ftz::TimeServiceMarker>().unwrap();
+    let connectivity_service =
+        fuchsia_component::client::connect_to_service::<fnet::ConnectivityMarker>().unwrap();
+
+    fasync::spawn(maintain_utc(notifier.clone(), time_service, connectivity_service));
 
     fs.dir("svc").add_fidl_service(move |requests: ftime::UtcRequestStream| {
         notifier.handle_request_stream(requests);
@@ -41,6 +44,50 @@ async fn main() -> Result<(), Error> {
     fs.take_and_serve_directory_handle()?;
     let () = await!(fs.collect());
     Ok(())
+}
+
+/// The top-level control loop for time synchronization.
+///
+/// Checks for network connectivity before attempting any time updates.
+///
+/// Actual updates are performed by calls to  `fuchsia.timezone.TimeService` which we plan
+/// to deprecate.
+async fn maintain_utc(
+    notifs: Notifier,
+    time_service: ftz::TimeServiceProxy,
+    connectivity: fnet::ConnectivityProxy,
+) {
+    // TODO(CF-838) enforce a backstop time here before we start network_time_service
+
+    // wait for the network to come up before we start checking for time
+    let mut conn_events = connectivity.take_event_stream();
+    loop {
+        if let Ok(Some(fnet::ConnectivityEvent::OnNetworkReachable { reachable: true })) =
+            await!(conn_events.try_next())
+        {
+            break;
+        }
+    }
+
+    for i in 0.. {
+        match await!(time_service.update(1)) {
+            Ok(true) => {
+                notifs.0.lock().set_source(
+                    ftime::UtcSource::External,
+                    zx::Time::get(zx::ClockId::Monotonic).into_nanos(),
+                );
+                break;
+            }
+            Ok(false) => {
+                debug!("failed to update time, probably a network error. retrying.");
+            }
+            Err(why) => {
+                error!("couldn't make request to update time: {:?}", why);
+            }
+        }
+        let sleep_duration = zx::Duration::from_seconds(2i64.pow(i)); // exponential backoff
+        await!(fasync::Timer::new(sleep_duration.after_now()));
+    }
 }
 
 /// Notifies waiting clients when the clock has been updated, wrapped in a lock to allow
@@ -54,27 +101,6 @@ impl Notifier {
             source: ftime::UtcSource::None,
             clients: Vec::new(),
         })))
-    }
-
-    // this code is unused in the actual binary, it'll be included when we have an external
-    // implementor of DeprecatedNetworkSync to connect to in `main`
-    #[cfg_attr(not(test), allow(dead_code))]
-    fn handle_update_events(&self, update_events: ftime::DeprecatedNetworkSyncProxy) {
-        let notifier = self.clone();
-        fasync::spawn(async move {
-            let mut events = update_events.take_event_stream();
-
-            info!("listening for UTC updates from external service");
-            while let Some(event) = await!(events.next()) {
-                match event {
-                    Ok(ftime::DeprecatedNetworkSyncEvent::UtcUpdated { update_time }) => {
-                        diagnostics::utc_updated(update_time);
-                        notifier.0.lock().set_source(ftime::UtcSource::External, update_time);
-                    }
-                    Err(why) => error!("problem receiving utc updated notif: {:?}", why),
-                }
-            }
-        });
     }
 
     /// Spawns an async task to handle requests on this channel.
@@ -132,7 +158,7 @@ impl NotifyInner {
         if self.source != source {
             self.source = source;
             let clients = std::mem::replace(&mut self.clients, vec![]);
-            debug!("UTC source changed, notifying {} clients", clients.len());
+            info!("UTC source changed to {:?}, notifying {} clients", source, clients.len());
             for responder in clients {
                 self.reply(responder, update_time);
             }
@@ -162,15 +188,30 @@ mod tests {
 
         let (utc, utc_requests) =
             fidl::endpoints::create_proxy_and_stream::<ftime::UtcMarker>().unwrap();
-        let (depsync, depsync_server) =
-            fidl::endpoints::create_proxy::<ftime::DeprecatedNetworkSyncMarker>().unwrap();
+        let (time_service, mut time_requests) =
+            fidl::endpoints::create_proxy_and_stream::<ftz::TimeServiceMarker>().unwrap();
+        let (reachability, reachability_server) =
+            fidl::endpoints::create_proxy::<fnet::ConnectivityMarker>().unwrap();
 
-        let (_, depsync_control) = depsync_server.into_stream_and_control_handle().unwrap();
+        // the "network" the time sync server uses is de facto reachable here
+        let (_, reachability_control) =
+            reachability_server.into_stream_and_control_handle().unwrap();
+        reachability_control.send_on_network_reachable(true).unwrap();
 
         let notifier = Notifier::new();
+        let (mut allow_update, mut wait_for_update) = futures::channel::mpsc::channel(1);
         info!("spawning test notifier");
         notifier.handle_request_stream(utc_requests);
-        notifier.handle_update_events(depsync);
+        fasync::spawn(maintain_utc(notifier.clone(), time_service, reachability));
+
+        fasync::spawn(async move {
+            while let Some(Ok(ftz::TimeServiceRequest::Update { responder, .. })) =
+                await!(time_requests.next())
+            {
+                let () = await!(wait_for_update.next()).unwrap();
+                responder.send(true).unwrap();
+            }
+        });
 
         info!("checking that the time source has not been initialized yet");
         assert_eq!(await!(utc.watch_state()).unwrap().source.unwrap(), ftime::UtcSource::None);
@@ -185,9 +226,7 @@ mod tests {
         );
 
         info!("sending network update event");
-        depsync_control
-            .send_utc_updated(zx::Time::get(zx::ClockId::Monotonic).into_nanos())
-            .unwrap();
+        allow_update.try_send(()).unwrap();
 
         info!("waiting for time source update");
         assert_eq!(await!(hanging).unwrap().source.unwrap(), ftime::UtcSource::External);
