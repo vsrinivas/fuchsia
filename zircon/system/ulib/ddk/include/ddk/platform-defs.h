@@ -9,6 +9,7 @@
 
 __BEGIN_CDECLS
 
+// clang-format off
 // Vendor, Product and Device IDs for generic platform drivers
 #define PDEV_VID_GENERIC            0
 #define PDEV_PID_GENERIC            0
@@ -237,10 +238,12 @@ __BEGIN_CDECLS
 #define PDEV_DID_AS370_USB_PHY       2
 #define PDEV_DID_AS370_AUDIO_OUT     3
 #define PDEV_DID_AS370_AUDIO_IN      4
+#define PDEV_DID_AS370_CLOCK         5
 
 // Maxim
 #define PDEV_VID_MAXIM              21
 #define PDEV_DID_MAXIM_MAX98373      1
+// clang-format on
 
 __END_CDECLS
 

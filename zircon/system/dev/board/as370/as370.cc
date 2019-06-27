@@ -60,6 +60,12 @@ int As370::Thread() {
         return thrd_error;
     }
 
+    status = ClockInit();
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: ClkInit() failed: %s\n", __func__, zx_status_get_string(status));
+        return thrd_error;
+    }
+
     status = I2cInit();
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: I2cInit() failed: %s\n", __func__, zx_status_get_string(status));

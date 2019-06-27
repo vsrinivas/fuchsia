@@ -36,6 +36,7 @@ private:
     zx_status_t I2cInit();
     zx_status_t UsbInit();
     zx_status_t AudioInit();
+    zx_status_t ClockInit();
 
     const ddk::PBusProtocolClient pbus_;
     const pdev_board_info_t board_info_;

@@ -11,7 +11,9 @@
 #include <ddktl/metadata/audio.h>
 #include <fbl/algorithm.h>
 #include <limits.h>
+#include <soc/as370/as370-clk.h>
 #include <soc/as370/as370-gpio.h>
+#include <soc/as370/as370-hw.h>
 #include <soc/as370/as370-i2c.h>
 
 #include "as370.h"
@@ -31,6 +33,10 @@ static const zx_bind_inst_t ref_out_codec_match[] = {
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_MAXIM),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_MAXIM_MAX98373),
 };
+static const zx_bind_inst_t ref_out_clk_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
+    BI_MATCH_IF(EQ, BIND_CLOCK_ID, as370::As370Clk::kClkAvpll0),
+};
 static const device_component_part_t ref_out_i2c_component[] = {
     {fbl::count_of(root_match), root_match},
     {fbl::count_of(ref_out_i2c_match), ref_out_i2c_match},
@@ -48,6 +54,10 @@ static const device_component_part_t ref_out_enable_gpio_component[] = {
     {countof(root_match), root_match},
     {countof(ref_out_enable_gpio_match), ref_out_enable_gpio_match},
 };
+static const device_component_part_t ref_out_clk_component[] = {
+    {countof(root_match), root_match},
+    {countof(ref_out_clk_match), ref_out_clk_match},
+};
 
 static const device_component_t codec_components[] = {
     {countof(ref_out_i2c_component), ref_out_i2c_component},
@@ -55,15 +65,35 @@ static const device_component_t codec_components[] = {
 };
 static const device_component_t controller_components[] = {
     {countof(ref_out_codec_component), ref_out_codec_component},
+    {countof(ref_out_clk_component), ref_out_clk_component},
 };
 
 zx_status_t As370::AudioInit() {
+    constexpr pbus_mmio_t mmios[] = {
+        {
+            .base = as370::kGlobalBase,
+            .length = as370::kGlobalSize,
+        },
+        {
+            .base = as370::kAudioDhubBase,
+            .length = as370::kAudioDhubSize,
+        },
+        {
+            .base = as370::kAudioGlobalBase,
+            .length = as370::kAudioGlobalSize,
+        },
+        {
+            .base = as370::kAudioI2sBase,
+            .length = as370::kAudioI2sSize,
+        }};
 
     pbus_dev_t controller_out = {};
     controller_out.name = "as370-audio-out";
     controller_out.vid = PDEV_VID_SYNAPTICS;
     controller_out.pid = PDEV_PID_SYNAPTICS_AS370;
     controller_out.did = PDEV_DID_AS370_AUDIO_OUT;
+    controller_out.mmio_list = mmios;
+    controller_out.mmio_count = countof(mmios);
 
     // Output pin assignments.
     // AMP_EN.

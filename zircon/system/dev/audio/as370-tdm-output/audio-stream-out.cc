@@ -15,6 +15,8 @@
 #include <ddk/protocol/composite.h>
 #include <ddktl/metadata/audio.h>
 #include <fbl/array.h>
+#include <lib/mmio/mmio.h>
+#include <soc/as370/as370-audio-regs.h>
 
 // TODO(andresoportus): Implement this controller.
 
@@ -23,6 +25,7 @@ namespace {
 enum {
     COMPONENT_PDEV,
     COMPONENT_CODEC,
+    COMPONENT_CLOCK,
     COMPONENT_COUNT,
 };
 
@@ -57,9 +60,44 @@ zx_status_t As370AudioStreamOut::InitPdev() {
     if (!pdev_.is_valid()) {
         return ZX_ERR_NO_RESOURCES;
     }
+    clks_[kAvpll0Clk] = components[COMPONENT_CLOCK];
+    if (!clks_[kAvpll0Clk].is_valid()) {
+        zxlogf(ERROR, "%s GetClk failed\n", __FILE__);
+        return status;
+    }
+    clks_[kAvpll0Clk].Enable();
+
+    std::optional<ddk::MmioBuffer> mmio_global, mmio_dhub, mmio_avio_global, mmio_i2s;
+    status = pdev_.MapMmio(0, &mmio_global);
+    if (status != ZX_OK) {
+        return status;
+    }
+    status = pdev_.MapMmio(1, &mmio_dhub);
+    if (status != ZX_OK) {
+        return status;
+    }
+    status = pdev_.MapMmio(2, &mmio_avio_global);
+    if (status != ZX_OK) {
+        return status;
+    }
+    status = pdev_.MapMmio(3, &mmio_i2s);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    ddk::MmioBuffer i2s(*std::move(mmio_i2s));
+
+    // Enable audio channel 0.
+    AIO_PRI_TSD0_PRI_CTRL::Get().ReadFrom(&i2s).set_ENABLE(1).WriteTo(&i2s);
+
+    // Enable primary port.
+    AIO_PRI_PRIPORT::Get().ReadFrom(&i2s).set_ENABLE(1).WriteTo(&i2s);
+
+    constexpr uint32_t divider = 9; // MCLK = APLL0 / 512.
+    AIO_PRI_PRIAUD_CLKDIV::Get().ReadFrom(&i2s).set_SETTING(divider).WriteTo(&i2s);
+    AIO_MCLKPRI_ACLK_CTRL::Get().ReadFrom(&i2s).set_clk_Enable(1).WriteTo(&i2s);
 
     codec_.proto_client_ = components[COMPONENT_CODEC];
-
     // TODO(andresoportus) configure controller and codec per codec protocol.
     status = codec_.GetInfo();
     if (status != ZX_OK) {

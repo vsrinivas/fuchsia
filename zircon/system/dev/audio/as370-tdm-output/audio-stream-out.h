@@ -43,6 +43,12 @@ protected:
     zx_status_t InitPost() TA_REQ(domain_->token()) override;
 
 private:
+    enum {
+        kAvpll0Clk,
+        kAvpll1Clk,
+        kClockCount,
+    };
+
     friend class SimpleAudioStream;
     friend class fbl::RefPtr<As370AudioStreamOut>;
 
@@ -53,6 +59,7 @@ private:
 
     ddk::PDev pdev_ TA_GUARDED(domain_->token());
     Codec codec_ TA_GUARDED(domain_->token());
+    ddk::ClockProtocolClient clks_[kClockCount] TA_GUARDED(domain_->token());
 };
 
 } // namespace as370

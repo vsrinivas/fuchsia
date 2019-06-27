@@ -9,5 +9,6 @@ group("clk") {
     "hisi3660",
     "msm8x53-clk",
     "mtk-clk",
+    "syn-clk",
   ]
 }

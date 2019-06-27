@@ -5,6 +5,7 @@
 driver("as370") {
   sources = [
     "as370-audio.cc",
+    "as370-clock.cc",
     "as370-gpio.cc",
     "as370-i2c.cc",
     "as370-usb.cc",
