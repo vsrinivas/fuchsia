@@ -111,7 +111,7 @@ void AudioCoreImpl::CreateAudioRenderer(
 void AudioCoreImpl::CreateAudioCapturer(
     bool loopback, fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request) {
   device_manager_.AddAudioCapturer(
-      AudioCapturerImpl::Create(std::move(audio_capturer_request), this, loopback));
+      AudioCapturerImpl::Create(loopback, std::move(audio_capturer_request), this));
 }
 
 void AudioCoreImpl::SetSystemGain(float gain_db) {
@@ -157,6 +157,44 @@ void AudioCoreImpl::NotifyGainMuteChanged() {
   for (auto& binding : bindings_.bindings()) {
     binding->events().SystemGainMuteChanged(system_gain_db_, system_muted_);
   }
+}
+
+float AudioCoreImpl::GetRenderUsageGain(fuchsia::media::AudioRenderUsage usage) {
+  auto usage_index = fidl::ToUnderlying(usage);
+
+  if (usage_index >= fuchsia::media::RENDER_USAGE_COUNT) {
+    FXL_LOG(ERROR) << "Unexpected Render Usage: " << usage_index;
+    return Gain::kUnityGainDb;
+  }
+  return Gain::GetRenderUsageGain(usage);
+}
+
+float AudioCoreImpl::GetCaptureUsageGain(fuchsia::media::AudioCaptureUsage usage) {
+  auto usage_index = fidl::ToUnderlying(usage);
+
+  if (usage_index >= fuchsia::media::CAPTURE_USAGE_COUNT) {
+    FXL_LOG(ERROR) << "Unexpected Capture Usage: " << usage_index;
+    return Gain::kUnityGainDb;
+  }
+  return Gain::GetCaptureUsageGain(usage);
+}
+
+void AudioCoreImpl::SetRenderUsageGain(fuchsia::media::AudioRenderUsage usage, float gain_db) {
+  auto usage_index = fidl::ToUnderlying(usage);
+  if (usage_index >= fuchsia::media::RENDER_USAGE_COUNT) {
+    FXL_LOG(ERROR) << "Unexpected Render Usage: " << usage_index;
+    return;
+  }
+  Gain::SetRenderUsageGain(usage, gain_db);
+}
+
+void AudioCoreImpl::SetCaptureUsageGain(fuchsia::media::AudioCaptureUsage usage, float gain_db) {
+  auto usage_index = fidl::ToUnderlying(usage);
+  if (usage_index >= fuchsia::media::CAPTURE_USAGE_COUNT) {
+    FXL_LOG(ERROR) << "Unexpected Capture Usage: " << usage_index;
+    return;
+  }
+  Gain::SetCaptureUsageGain(usage, gain_db);
 }
 
 void AudioCoreImpl::SetRoutingPolicy(fuchsia::media::AudioOutputRoutingPolicy policy) {

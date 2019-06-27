@@ -27,15 +27,16 @@ constexpr float kInitialCaptureGainDb = Gain::kUnityGainDb;
 AtomicGenerationId AudioCapturerImpl::PendingCaptureBuffer::sequence_generator;
 
 fbl::RefPtr<AudioCapturerImpl> AudioCapturerImpl::Create(
-    fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request,
-    AudioCoreImpl* owner, bool loopback) {
-  return fbl::AdoptRef(new AudioCapturerImpl(std::move(audio_capturer_request), owner, loopback));
+    bool loopback, fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request,
+    AudioCoreImpl* owner) {
+  return fbl::AdoptRef(new AudioCapturerImpl(loopback, std::move(audio_capturer_request), owner));
 }
 
 AudioCapturerImpl::AudioCapturerImpl(
-    fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request,
-    AudioCoreImpl* owner, bool loopback)
+    bool loopback, fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request,
+    AudioCoreImpl* owner)
     : AudioObject(Type::AudioCapturer),
+      usage_(fuchsia::media::AudioCaptureUsage::FOREGROUND),
       binding_(this, std::move(audio_capturer_request)),
       owner_(owner),
       state_(State::WaitingForVmo),
@@ -43,6 +44,14 @@ AudioCapturerImpl::AudioCapturerImpl(
       stream_gain_db_(kInitialCaptureGainDb),
       mute_(false) {
   REP(AddingCapturer(*this));
+
+  fidl::VectorPtr<fuchsia::media::AudioCaptureUsage> allowed_usages;
+  allowed_usages.push_back(fuchsia::media::AudioCaptureUsage::FOREGROUND);
+  allowed_usages.push_back(fuchsia::media::AudioCaptureUsage::BACKGROUND);
+  allowed_usages.push_back(fuchsia::media::AudioCaptureUsage::COMMUNICATION);
+  allowed_usages.push_back(fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT);
+  allowed_usages_ = std::move(allowed_usages);
+
   // TODO(johngro) : See ZX-940. Eliminate this priority boost as soon as we
   // have a more official way of meeting real-time latency requirements.
   zx::profile profile;
@@ -120,6 +129,9 @@ zx_status_t AudioCapturerImpl::InitializeSourceLink(const fbl::RefPtr<AudioLink>
 
   // Allocate our bookkeeping for our link.
   std::unique_ptr<Bookkeeping> info(new Bookkeeping());
+  fuchsia::media::Usage usage;
+  usage.set_capture_usage(usage_);
+  info->gain.SetUsage(std::move(usage));
   link->set_bookkeeping(std::move(info));
 
   // Choose a mixer
@@ -772,6 +784,25 @@ zx_status_t AudioCapturerImpl::Process() {
   }  // while (true)
 }
 
+void AudioCapturerImpl::SetUsage(fuchsia::media::AudioCaptureUsage usage) {
+  if (usage == usage_) {
+    return;
+  }
+  for (auto allowed : allowed_usages_) {
+    if (allowed == usage) {
+      usage_ = usage;
+      ForEachSourceLink([usage](auto& link) {
+        fuchsia::media::Usage new_usage;
+        new_usage.set_capture_usage(usage);
+        link.bookkeeping()->gain.SetUsage(std::move(new_usage));
+      });
+      return;
+    }
+  }
+  FXL_LOG(ERROR) << "Disallowed or unknown usage - terminating the stream";
+  Shutdown();
+}
+
 bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
   // Take a snapshot of our source link references; skip the packet based
   // sources, we don't know how to sample from them yet.
@@ -1345,6 +1376,9 @@ zx_status_t AudioCapturerImpl::ChooseMixer(const fbl::RefPtr<AudioLink>& link) {
   // Second, set the destination gain -- based on stream gain/mute settings.
   info.gain.SetDestMute(mute_);
   info.gain.SetDestGain(stream_gain_db_.load());
+  fuchsia::media::Usage usage;
+  usage.set_capture_usage(usage_);
+  info.gain.SetUsage(std::move(usage));
 
   return ZX_OK;
 }

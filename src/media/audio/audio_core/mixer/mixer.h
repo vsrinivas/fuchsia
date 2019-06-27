@@ -189,7 +189,7 @@ class Mixer {
 // source gain and a snapshot of destination gain (Gain objects correspond with
 // source streams, so the definitive value for destination gain is naturally
 // owned elsewhere). In the future, this object may include explicit Mute
-// states for source and dest stages, a separately controlled Category gain
+// states for source and dest stages, a separately controlled Usage gain
 // stage, and/or the ability to ramp one or more of these gains over time.
 // Gain accepts level in dB, and provides gainscale as float multiplier.
 //

@@ -14,9 +14,7 @@ protocol AudioCore {
 
     // Create an AudioCapturer which either captures from the current default
     // audio input device, or loops-back from the current default audio output
-    // device based on value passed for the loopback flag.  AudioCaptureUsage
-    // is used by AudioPolicy to dictate how streams interact with each other. A
-    // AudioCapturer may change its usage at any time.
+    // device based on value passed for the loopback flag.
     //
     // TODO(mpuryear): Get rid of the loopback flag ASAP. Routing decisions (and
     // security surrounding routing decisions) should be much more sophisticated
@@ -85,6 +83,66 @@ protocol AudioCore {
     // client to temporarily disable, then later enable, that reading/writing.
     // TODO(mpuryear): Move this to the hub, instead of being a FIDL API.
     EnableDeviceSettings(bool enabled);
+
+    // Set the Usage gain applied to Renderers and Capturers. By default the
+    // gain for all render and capture usages is set to Unity(0.0db).
+    SetRenderUsageGain(AudioRenderUsage usage, float32 gain_db);
+    SetCaptureUsageGain(AudioCaptureUsage usage, float32 gain_db);
+};
+
+/// Usage annotating the purpose of the stream being used to render audio.
+enum AudioRenderUsage {
+    /// Stream is intended to be used for ambient or background sound. Streams
+    /// that can be interrupted without consequence should use this.
+    BACKGROUND = 0;
+
+    /// Stream is intended to be used for normal functionality. Streams that
+    /// are part of normal functionality should use this.
+    MEDIA = 1;
+
+    /// Stream is intended to interrupt any ongoing function of the device.
+    /// Streams that are used for interruptions like notifications should use
+    /// this.
+    INTERRUPTION = 2;
+
+    /// Stream is for interaction with a system agent.  This should be used
+    /// in response to a user initiated trigger.
+    SYSTEM_AGENT = 3;
+
+    /// Stream is intended to be used for some form of real time user to user
+    /// communication. Voice/Video chat should use this.
+    COMMUNICATION = 4;
+};
+const uint8 RENDER_USAGE_COUNT = 5;
+
+/// Usages annotating the purpose of the stream being used to capture audio.
+enum AudioCaptureUsage {
+    /// Stream is used to capture audio while in the background.  These streams
+    /// may be active at any the time and are considered privileged.
+    /// Example: Listening for Hotwords
+    BACKGROUND = 0;
+
+    /// Stream is intended to be used for normal capture functionality. Streams
+    /// that are used for audio capture while the stream creator is in the
+    /// foreground should use this.
+    /// Example: Voice Recorder
+    FOREGROUND = 1;
+
+    /// Stream is for interaction with a system agent.  This should only be used
+    /// once a user has signalled their intent to have the interaction with an
+    /// interested party.
+    /// Examples: Assistant, Siri, Alexa
+    SYSTEM_AGENT = 2;
+
+    /// Stream is intended to be used for some form of real time user to user
+    /// communication. Voice/Video chat should use this.
+    COMMUNICATION = 3;
+};
+const uint8 CAPTURE_USAGE_COUNT = 4;
+
+union Usage {
+    AudioRenderUsage render_usage;
+    AudioCaptureUsage capture_usage;
 };
 
 // A placeholder for various types of simple routing policies. This should be

@@ -35,13 +35,16 @@ class AudioCapturerImpl : public AudioObject,
                           public fbl::DoublyLinkedListable<fbl::RefPtr<AudioCapturerImpl>> {
  public:
   static fbl::RefPtr<AudioCapturerImpl> Create(
-      fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request,
-      AudioCoreImpl* owner, bool loopback);
+      bool loopback, fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request,
+      AudioCoreImpl* owner);
 
   bool loopback() const { return loopback_; }
   void SetInitialFormat(fuchsia::media::AudioStreamType format)
       FXL_LOCKS_EXCLUDED(mix_domain_->token());
   void Shutdown() FXL_LOCKS_EXCLUDED(mix_domain_->token());
+
+  void SetUsage(fuchsia::media::AudioCaptureUsage usage) override;
+  fuchsia::media::AudioCaptureUsage GetUsage() { return usage_; };
 
  protected:
   friend class fbl::RefPtr<AudioCapturerImpl>;
@@ -135,8 +138,12 @@ class AudioCapturerImpl : public AudioObject,
 
   friend PcbAllocator;
 
-  AudioCapturerImpl(fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request,
-                    AudioCoreImpl* owner, bool loopback);
+  std::vector<fuchsia::media::AudioCaptureUsage> allowed_usages_;
+  fuchsia::media::AudioCaptureUsage usage_;
+
+  AudioCapturerImpl(bool loopback,
+                    fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request,
+                    AudioCoreImpl* owner);
 
   // AudioCapturer FIDL implementation
   void GetStreamType(GetStreamTypeCallback cbk) final;

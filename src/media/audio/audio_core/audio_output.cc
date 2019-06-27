@@ -174,6 +174,12 @@ zx_status_t AudioOutput::InitializeSourceLink(const fbl::RefPtr<AudioLink>& link
   }
   // Settings should exist but if they don't, we use default DestGain (Unity).
 
+  // Connect usage gain from the source to the gain object.
+  auto audio_renderer = fbl::RefPtr<AudioRendererImpl>::Downcast(link->GetSource());
+  fuchsia::media::Usage usage;
+  usage.set_render_usage(audio_renderer->GetUsage());
+  mix_bookkeeping->gain.SetUsage(std::move(usage));
+
   // Things went well. Stash a reference to our bookkeeping and get out.
   packet_link.set_bookkeeping(std::move(mix_bookkeeping));
   return ZX_OK;

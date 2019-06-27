@@ -35,11 +35,21 @@ AudioRendererImpl::AudioRendererImpl(
     fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request,
     AudioCoreImpl* owner)
     : AudioObject(Type::AudioRenderer),
+      usage_(fuchsia::media::AudioRenderUsage::MEDIA),
       owner_(owner),
       audio_renderer_binding_(this, std::move(audio_renderer_request)),
       pts_ticks_per_second_(1000000000, 1),
       ref_clock_to_frac_frames_(0, 0, {0, 1}) {
   REP(AddingRenderer(*this));
+
+  fidl::VectorPtr<fuchsia::media::AudioRenderUsage> allowed_usages;
+  allowed_usages.push_back(fuchsia::media::AudioRenderUsage::MEDIA);
+  allowed_usages.push_back(fuchsia::media::AudioRenderUsage::BACKGROUND);
+  allowed_usages.push_back(fuchsia::media::AudioRenderUsage::COMMUNICATION);
+  allowed_usages.push_back(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT);
+  allowed_usages.push_back(fuchsia::media::AudioRenderUsage::INTERRUPTION);
+  allowed_usages_ = std::move(allowed_usages);
+
   audio_renderer_binding_.set_error_handler([this](zx_status_t status) {
     audio_renderer_binding_.Unbind();
     Shutdown();
@@ -114,6 +124,27 @@ void AudioRendererImpl::RecomputeMinClockLeadTime() {
     min_clock_lead_nsec_ = cur_lead_time;
     ReportNewMinClockLeadTime();
   }
+}
+
+void AudioRendererImpl::SetUsage(fuchsia::media::AudioRenderUsage usage) {
+  if (usage == usage_) {
+    return;
+  }
+  for (auto allowed : allowed_usages_) {
+    if (allowed == usage) {
+      ForEachDestLink([throttle_ptr = throttle_output_link_.get(), usage](auto& link) {
+        if (&link != throttle_ptr) {
+          fuchsia::media::Usage new_usage;
+          new_usage.set_render_usage(usage);
+          link.bookkeeping()->gain.SetUsage(std::move(new_usage));
+        }
+      });
+      usage_ = usage;
+      return;
+    }
+  }
+  FXL_LOG(ERROR) << "Disallowed or unknown usage - terminating the stream";
+  Shutdown();
 }
 
 // IsOperating is true any time we have any packets in flight. Most

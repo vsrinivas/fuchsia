@@ -18,6 +18,65 @@ constexpr float Gain::kMinGainDb;
 constexpr float Gain::kUnityGainDb;
 constexpr float Gain::kMaxGainDb;
 
+std::atomic<float> Gain::render_usage_gain_[fuchsia::media::RENDER_USAGE_COUNT];
+std::atomic<float> Gain::capture_usage_gain_[fuchsia::media::CAPTURE_USAGE_COUNT];
+
+inline float Gain::GetRenderUsageGain(fuchsia::media::AudioRenderUsage usage) {
+  auto usage_index = fidl::ToUnderlying(usage);
+
+  if (usage_index >= fuchsia::media::RENDER_USAGE_COUNT) {
+    FXL_LOG(ERROR) << "Unexpected Render Usage: " << usage_index;
+    return Gain::kUnityGainDb;
+  }
+
+  return render_usage_gain_[usage_index].load();
+}
+
+inline float Gain::GetCaptureUsageGain(fuchsia::media::AudioCaptureUsage usage) {
+  auto usage_index = fidl::ToUnderlying(usage);
+
+  if (usage_index >= fuchsia::media::CAPTURE_USAGE_COUNT) {
+    FXL_LOG(ERROR) << "Unexpected Capture Usage: " << usage_index;
+    return Gain::kUnityGainDb;
+  }
+
+  return capture_usage_gain_[usage_index].load();
+}
+
+void Gain::SetRenderUsageGain(fuchsia::media::AudioRenderUsage usage, float gain_db) {
+  auto usage_index = fidl::ToUnderlying(usage);
+  if (usage_index >= fuchsia::media::RENDER_USAGE_COUNT) {
+    FXL_LOG(ERROR) << "Unexpected Render Usage: " << usage_index;
+    return;
+  }
+
+  float clamped_gain_db = fbl::clamp(gain_db, kMinGainDb, kUnityGainDb);
+
+  render_usage_gain_[usage_index].store(clamped_gain_db);
+}
+
+void Gain::SetCaptureUsageGain(fuchsia::media::AudioCaptureUsage usage, float gain_db) {
+  auto usage_index = fidl::ToUnderlying(usage);
+  if (usage_index >= fuchsia::media::CAPTURE_USAGE_COUNT) {
+    FXL_LOG(ERROR) << "Unexpected Capture Usage: " << usage_index;
+    return;
+  }
+
+  float clamped_gain_db = fbl::clamp(gain_db, kMinGainDb, kUnityGainDb);
+
+  capture_usage_gain_[usage_index].store(clamped_gain_db);
+}
+
+inline float Gain::GetUsageGain() {
+  if (usage_.is_render_usage()) {
+    return GetRenderUsageGain(usage_.render_usage());
+  } else {
+    return GetCaptureUsageGain(usage_.capture_usage());
+  }
+}
+
+void Gain::SetUsage(fuchsia::media::Usage usage) { usage_ = std::move(usage); }
+
 // TODO(mpuryear): When we add ramping of another gain stage (dest, or a new
 // stage), refactor to accept a stage index or a pointer to a ramp-struct.
 void Gain::SetSourceGainWithRamp(float source_gain_db, zx_duration_t duration_ns,
@@ -124,13 +183,14 @@ void Gain::GetScaleArray(AScale* scale_arr, uint32_t num_frames,
 
 // Calculate a stream's gain-scale multiplier from source and dest gains in
 // dB. Optimize to avoid doing the full calculation unless we must.
-Gain::AScale Gain::GetGainScale(float src_gain_db, float dest_gain_db) {
+Gain::AScale Gain::GetGainScale(float src_gain_db, float usage_gain_db, float dest_gain_db) {
   if (src_mute_ || dest_mute_) {
     return kMuteScale;
   }
 
   // If nothing changed, return the previously-computed amplitude scale value.
-  if ((current_src_gain_db_ == src_gain_db) && (current_dest_gain_db_ == dest_gain_db)) {
+  if ((current_src_gain_db_ == src_gain_db) && (current_dest_gain_db_ == dest_gain_db) &&
+      (current_usage_gain_db_ == usage_gain_db)) {
     return combined_gain_scale_;
   }
 
@@ -138,18 +198,22 @@ Gain::AScale Gain::GetGainScale(float src_gain_db, float dest_gain_db) {
   // We only clamp these to kMaxGainDb, despite the fact that master (or device)
   // gain is limited to a max of 0 dB. This is because the roles played by
   // src_gain and dest_gain during playback are reversed during capture (i.e.
-  // during capture the master/device gain is the src_gain).
+  // during capture the master/device gain is the src_gain).  We clamp usage
+  // gain to 0 db because we only intend for it to be used to attenuate streams.
   current_src_gain_db_ = fbl::clamp(src_gain_db, kMinGainDb, kMaxGainDb);
+  current_usage_gain_db_ = usage_gain_db;
   current_dest_gain_db_ = fbl::clamp(dest_gain_db, kMinGainDb, kMaxGainDb);
 
-  // If source and dest gains cancel each other, the combined is kUnityScale.
-  if (current_dest_gain_db_ == -current_src_gain_db_) {
+  // If sum of the src, dest, and usage gains cancel each other, the
+  // combined is kUnityScale.
+  if ((current_dest_gain_db_ + current_src_gain_db_ + current_usage_gain_db_) == kUnityGainDb) {
     combined_gain_scale_ = kUnityScale;
-  } else if ((current_src_gain_db_ <= kMinGainDb) || (current_dest_gain_db_ <= kMinGainDb)) {
+  } else if ((current_src_gain_db_ <= kMinGainDb) || (current_dest_gain_db_ <= kMinGainDb) ||
+             (current_usage_gain_db_ <= kMinGainDb)) {
     // If source or dest are at the mute point, then silence the stream.
     combined_gain_scale_ = kMuteScale;
   } else {
-    float effective_gain_db = current_src_gain_db_ + current_dest_gain_db_;
+    float effective_gain_db = current_src_gain_db_ + current_dest_gain_db_ + current_usage_gain_db_;
     // Likewise, silence the stream if the combined gain is at the mute point.
     if (effective_gain_db <= kMinGainDb) {
       combined_gain_scale_ = kMuteScale;

@@ -78,6 +78,12 @@ class AudioCoreImpl : public fuchsia::media::AudioCore {
 
   fbl::RefPtr<fzl::VmarManager> vmar() const { return vmar_manager_; }
 
+  void SetRenderUsageGain(fuchsia::media::AudioRenderUsage usage, float gain_db) final;
+  void SetCaptureUsageGain(fuchsia::media::AudioCaptureUsage usage, float gain_db) final;
+
+  float GetRenderUsageGain(fuchsia::media::AudioRenderUsage usage);
+  float GetCaptureUsageGain(fuchsia::media::AudioCaptureUsage usage);
+
  private:
   static constexpr float kDefaultSystemGainDb = -12.0f;
   static constexpr bool kDefaultSystemMuted = false;

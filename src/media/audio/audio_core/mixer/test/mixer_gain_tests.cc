@@ -25,6 +25,12 @@ class GainTest : public testing::Test {
   void SetUp() override {
     testing::Test::SetUp();
 
+    // Setup a render usage for the gain object during test.
+    fuchsia::media::Usage usage;
+    usage.set_render_usage(fuchsia::media::AudioRenderUsage::MEDIA);
+    gain_.SetUsage(std::move(usage));
+    gain_.SetRenderUsageGain(fuchsia::media::AudioRenderUsage::MEDIA, Gain::kUnityGainDb);
+
     rate_1khz_output_ = TimelineRate(1000, ZX_SEC(1));
   }
 
@@ -43,6 +49,18 @@ class GainTest : public testing::Test {
 
     gain_.SetDestGain(dest_gain_db);
     EXPECT_EQ(Gain::kMuteScale, gain_.GetGainScale());
+
+    EXPECT_FALSE(gain_.IsUnity());
+    EXPECT_TRUE(gain_.IsSilent());
+  }
+
+  void TestMinMuteGain(float source_gain_db, float dest_gain_db, float usage_gain_db) {
+    gain_.SetSourceGain(source_gain_db);
+    gain_.SetDestGain(dest_gain_db);
+    gain_.SetRenderUsageGain(fuchsia::media::AudioRenderUsage::MEDIA, usage_gain_db);
+
+    EXPECT_EQ(Gain::kMuteScale, gain_.GetGainScale());
+
     EXPECT_FALSE(gain_.IsUnity());
     EXPECT_TRUE(gain_.IsSilent());
   }
@@ -156,6 +174,10 @@ TEST_F(GainTest, SourceGainCaching) {
 // We independently limit stream and device gains to kMaxGainDb/0, respectively.
 // MTWN-70 concerns Gain's statefulness. Does it need this complexity?
 TEST_F(GainTest, MaxClamp) {
+  // Verify that Usage gain is clamped to 0.0db
+  gain_.SetRenderUsageGain(fuchsia::media::AudioRenderUsage::MEDIA, Gain::kMaxGainDb);
+  EXPECT_EQ(Gain::kUnityScale, gain_.GetGainScale());
+
   // Renderer Gain of 2 * kMaxGainDb is clamped to kMaxGainDb (+24 dB).
   gain_.SetSourceGain(Gain::kMaxGainDb * 2);
   EXPECT_EQ(Gain::kMaxScale, gain_.GetGainScale(Gain::kUnityGainDb));
@@ -185,6 +207,7 @@ TEST_F(GainTest, MaxClamp) {
 // System independently limits stream and master/device Gains to kMinGainDb
 // (-160dB). Assert scale is zero, if either (or combo) are kMinGainDb or less.
 TEST_F(GainTest, MinMute) {
+  // First, test for source/dest interactions.
   // if OutputGain <= kMinGainDb, scale must be 0, regardless of renderer gain.
   TestMinMuteGain(-2 * Gain::kMinGainDb, Gain::kMinGainDb);
 
@@ -194,6 +217,26 @@ TEST_F(GainTest, MinMute) {
   // if sum of renderer gain and Output gain <= kMinGainDb, scale should be 0.
   // Output gain is just slightly above MinGain; renderer takes us below it.
   TestMinMuteGain(-2.0f, Gain::kMinGainDb + 1.0f);
+
+  // Next, test for source/usage/dest interactions.
+  // Check if source alone mutes.
+  TestMinMuteGain(Gain::kMinGainDb, Gain::kUnityGainDb + 1, Gain::kUnityGainDb);
+  TestMinMuteGain(Gain::kMinGainDb, Gain::kUnityGainDb, Gain::kUnityGainDb + 1);
+  // Check if dest alone mutes.
+  TestMinMuteGain(Gain::kUnityGainDb + 1, Gain::kMinGainDb, Gain::kUnityGainDb);
+  TestMinMuteGain(Gain::kUnityGainDb, Gain::kMinGainDb, Gain::kUnityGainDb + 1);
+  // Check if usage alone mutes.
+  TestMinMuteGain(Gain::kUnityGainDb + 1, Gain::kUnityGainDb, Gain::kMinGainDb);
+  TestMinMuteGain(Gain::kUnityGainDb, Gain::kUnityGainDb + 1, Gain::kMinGainDb);
+
+  // Check if usage + source mutes.
+  TestMinMuteGain(Gain::kMinGainDb / 2, Gain::kUnityGainDb, Gain::kMinGainDb / 2);
+
+  // Check if usage + dest mutes.
+  TestMinMuteGain(Gain::kUnityGainDb, Gain::kMinGainDb / 2, Gain::kMinGainDb / 2);
+
+  // Check if all three adding up to mute mutes.
+  TestMinMuteGain(Gain::kMinGainDb / 4, Gain::kMinGainDb / 4, Gain::kMinGainDb / 2);
 }
 
 // Mute-related tests

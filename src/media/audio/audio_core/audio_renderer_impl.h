@@ -73,6 +73,9 @@ class AudioRendererImpl : public AudioObject,
   void EnableMinLeadTimeEvents(bool enabled) final;
   void GetMinLeadTime(GetMinLeadTimeCallback callback) final;
 
+  void SetUsage(fuchsia::media::AudioRenderUsage usage) override;
+  fuchsia::media::AudioRenderUsage GetUsage() { return usage_; };
+
   // GainControl interface.
   void SetGain(float gain_db) final;
   void SetGainWithRamp(float gain_db, zx_duration_t duration_ns,
@@ -87,6 +90,10 @@ class AudioRendererImpl : public AudioObject,
   void ReportNewMinClockLeadTime();
 
   fbl::RefPtr<AudioRendererFormatInfo> format_info_;
+
+  std::vector<fuchsia::media::AudioRenderUsage> allowed_usages_;
+  fuchsia::media::AudioRenderUsage usage_;
+
   float stream_gain_db_ = 0.0;
   bool mute_ = false;
   fbl::RefPtr<AudioLinkPacketSource> throttle_output_link_;

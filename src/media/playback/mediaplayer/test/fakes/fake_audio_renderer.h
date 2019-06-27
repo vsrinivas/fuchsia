@@ -97,6 +97,10 @@ class FakeAudioRenderer : public fuchsia::media::AudioRenderer,
 
   void GetMinLeadTime(GetMinLeadTimeCallback callback) override;
 
+  void SetUsage(fuchsia::media::AudioRenderUsage usage) final {
+    FXL_NOTIMPLEMENTED();
+  }
+
   // GainControl interface.
   void SetGain(float gain_db) override;
   void SetGainWithRamp(float gain_db, zx_duration_t duration_ns,
