@@ -5,7 +5,7 @@
 The kernel manages a number of different types of Objects. Those which are
 accessible directly via system calls are C++ classes which implement the
 Dispatcher interface. These are implemented in
-[kernel/object](../kernel/object). Many are self-contained higher-level Objects.
+[kernel/object](/zircon/kernel/object). Many are self-contained higher-level Objects.
 Some wrap lower-level [lk](../../docs/glossary.md#lk) primitives.
 
 ## [System Calls](syscalls.md)
