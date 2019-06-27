@@ -19,7 +19,7 @@ std::vector<uint32_t> TryParseSuperframeHeader(const uint8_t* data,
   // Split out superframes into separate frames - see
   // https://storage.googleapis.com/downloads.webmproject.org/docs/vp9/vp9-bitstream-specification-v0.6-20160331-draft.pdf
   // Annex B.
-  if ((superframe_header & 0xc0) != 0xc0)
+  if ((superframe_header & 0xe0) != 0xc0)
     return frame_sizes;
   uint8_t bytes_per_framesize = ((superframe_header >> 3) & 3) + 1;
   uint8_t superframe_count = (superframe_header & 7) + 1;
@@ -43,7 +43,7 @@ std::vector<uint32_t> TryParseSuperframeHeader(const uint8_t* data,
       case 3:
         sub_frame_size = 0;
         for (uint32_t j = 0; j < 3; ++j) {
-          sub_frame_size |= index_data[i * 3 + j] << (j * 8);
+          sub_frame_size |= static_cast<uint32_t>(index_data[i * 3 + j]) << (j * 8);
         }
         break;
       case 4:
