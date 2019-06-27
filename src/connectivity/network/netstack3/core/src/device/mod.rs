@@ -14,6 +14,7 @@ use std::fmt::{self, Debug, Display, Formatter};
 use log::debug;
 use packet::{MtuError, Serializer};
 
+use crate::data_structures::id_map_collection::IdMapCollectionKey;
 use crate::device::ethernet::{EthernetDeviceState, Mac};
 use crate::ip::{ext, AddrSubnet, IpAddress, Ipv4Addr, Ipv6Addr};
 use crate::{Context, EventDispatcher};
@@ -46,6 +47,20 @@ impl Display for DeviceId {
 impl Debug for DeviceId {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
         Display::fmt(self, f)
+    }
+}
+
+impl IdMapCollectionKey for DeviceId {
+    const VARIANT_COUNT: usize = 1;
+
+    fn get_variant(&self) -> usize {
+        match self.protocol {
+            DeviceProtocol::Ethernet => 0,
+        }
+    }
+
+    fn get_id(&self) -> usize {
+        self.id as usize
     }
 }
 
