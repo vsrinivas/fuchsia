@@ -87,3 +87,9 @@ void my_function() {
   ...
 }
 ```
+
+### Inspecting FIDL messages
+
+Fuchsia has a tool for viewing FIDL messages as they are sent and received. See
+details at [the doc page for fidl inspection](../fidl_inspecting/README.md).
+
