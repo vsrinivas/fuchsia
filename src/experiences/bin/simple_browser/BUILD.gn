@@ -7,7 +7,7 @@
 group("simple_browser") {
   testonly = true
   public_deps = [
-    "//topaz/packages/prod:simple_browser",
+    "//topaz/bin/simple_browser",
   ]
 }
 
