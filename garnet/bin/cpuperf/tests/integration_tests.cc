@@ -22,7 +22,8 @@ TEST(Cpuperf, FixedCounters) {
   RunAndVerify("/pkg/data/fixed_counters.cpspec");
 }
 
-TEST(Cpuperf, OsFlag) {
+// TODO(FLK-397): Re-enable.
+TEST(Cpuperf, DISABLED_OsFlag) {
   RunAndVerify("/pkg/data/os_flag.cpspec");
 }
 
