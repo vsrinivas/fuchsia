@@ -396,7 +396,7 @@ func TestListRoot(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := []string{"garbage", "install", "needs", "packages", "system", "versions", "validation"}
+	want := []string{"garbage", "install", "needs", "packages", "system", "versions", "validation", "ctl"}
 	sort.Strings(names)
 	sort.Strings(want)
 
@@ -411,6 +411,53 @@ func TestListRoot(t *testing.T) {
 		}
 	}
 
+}
+
+func TestListCtl(t *testing.T) {
+	f, err := pkgfsOpen("ctl", zxio.OpenRightReadable, zxio.ModeTypeDirectory)
+	if err != nil {
+		t.Fatal(err)
+	}
+	names, err := f.Readdirnames(-1)
+	f.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"garbage", "validation"}
+	sort.Strings(names)
+	sort.Strings(want)
+
+	if len(names) != len(want) {
+		t.Fatalf("got %v, want %v", names, want)
+	}
+
+	for i, name := range names {
+		got := filepath.Base(name)
+		if want := want[i]; got != want {
+			t.Errorf("got %q, want %q", got, want)
+		}
+	}
+}
+
+func TestTriggerGC(t *testing.T) {
+	if err := pkgfsDir.Unlink("notgarbage"); err == nil {
+		t.Fatal("expected error, got nil")
+	}
+
+	// unlinking garbage triggers a GC but doesn't remove the file.
+	if err := pkgfsDir.Unlink("garbage"); err != nil {
+		t.Fatal(err)
+	}
+	if err := pkgfsDir.Unlink("garbage"); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := pkgfsDir.Unlink("ctl/garbage"); err != nil {
+		t.Fatal(err)
+	}
+	if err := pkgfsDir.Unlink("ctl/garbage"); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestVersions(t *testing.T) {

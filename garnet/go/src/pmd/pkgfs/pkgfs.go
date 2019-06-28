@@ -63,6 +63,17 @@ func New(indexDir string, blobDir string) (*Filesystem, error) {
 		fs:                   f,
 
 		dirs: map[string]fs.Directory{
+			"ctl": &rootDirectory{
+				unsupportedDirectory: unsupportedDirectory("/ctl"),
+				fs:                   f,
+				dirs: map[string]fs.Directory{
+					"garbage": unsupportedDirectory("/ctl/garbage"),
+					"validation": &validationDir{
+						unsupportedDirectory: unsupportedDirectory("/ctl/validation"),
+						fs:                   f,
+					},
+				},
+			},
 			"install": &installDir{
 				unsupportedDirectory: unsupportedDirectory("/install"),
 				fs:                   f,
@@ -81,8 +92,9 @@ func New(indexDir string, blobDir string) (*Filesystem, error) {
 				fs:                   f,
 			},
 			"system": unsupportedDirectory("/system"),
-			"validation": &validationDir{unsupportedDirectory: unsupportedDirectory("/validation"),
-				fs: f,
+			"validation": &validationDir{
+				unsupportedDirectory: unsupportedDirectory("/validation"),
+				fs:                   f,
 			},
 		},
 	}
