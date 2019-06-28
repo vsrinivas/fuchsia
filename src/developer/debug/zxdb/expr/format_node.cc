@@ -9,7 +9,7 @@
 
 namespace zxdb {
 
-FormatNode::FormatNode() : weak_factory_(this) {}
+FormatNode::FormatNode(const std::string& name) : name_(name), weak_factory_(this) {}
 
 FormatNode::FormatNode(const std::string& name, ExprValue value)
     : source_(kValue),
@@ -21,8 +21,12 @@ FormatNode::FormatNode(const std::string& name, ExprValue value)
 FormatNode::FormatNode(const std::string& name, Err err)
     : source_(kValue), state_(kDescribed), name_(name), err_(std::move(err)), weak_factory_(this) {}
 
-FormatNode::FormatNode(const std::string& expression)
-    : source_(kExpression), state_(kUnevaluated), expression_(expression), weak_factory_(this) {}
+FormatNode::FormatNode(const std::string& name, const std::string& expression)
+    : source_(kExpression),
+      state_(kUnevaluated),
+      name_(name),
+      expression_(expression),
+      weak_factory_(this) {}
 
 FormatNode::FormatNode(const std::string& name, GetProgramaticValue get_value)
     : source_(kProgramatic),

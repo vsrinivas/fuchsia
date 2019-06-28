@@ -15,11 +15,13 @@
 #include "src/developer/debug/zxdb/expr/resolve_ptr_ref.h"
 #include "src/developer/debug/zxdb/expr/resolve_variant.h"
 #include "src/developer/debug/zxdb/symbols/arch.h"
+#include "src/developer/debug/zxdb/symbols/array_type.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
 #include "src/developer/debug/zxdb/symbols/collection.h"
 #include "src/developer/debug/zxdb/symbols/enumeration.h"
 #include "src/developer/debug/zxdb/symbols/inherited_from.h"
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
+#include "src/developer/debug/zxdb/symbols/symbol_data_provider.h"
 #include "src/developer/debug/zxdb/symbols/variant.h"
 #include "src/developer/debug/zxdb/symbols/variant_part.h"
 #include "src/lib/fxl/logging.h"
@@ -31,8 +33,8 @@ namespace {
 
 using NumFormat = FormatExprValueOptions::NumFormat;
 
-// Returns true if the base type is some kind of number such that the NumFormat
-// of the format options should be applied.
+// Returns true if the base type is some kind of number such that the NumFormat of the format
+// options should be applied.
 bool IsNumericBaseType(int base_type) {
   return base_type == BaseType::kBaseTypeSigned || base_type == BaseType::kBaseTypeUnsigned ||
          base_type == BaseType::kBaseTypeBoolean || base_type == BaseType::kBaseTypeFloat ||
@@ -106,6 +108,25 @@ void FormatUnsignedInt(FormatNode* node, const FormatExprValueOptions& options) 
     node->set_description(fxl::StringPrintf("0x%" PRIx64, int_val));
   else
     node->set_description(fxl::StringPrintf("%" PRIu64, int_val));
+}
+
+// Returns true if the given symbol points to a character type that would appear in a pretty-printed
+// string.
+bool IsCharacterType(fxl::RefPtr<EvalContext>& eval_context, const Type* type) {
+  if (!type)
+    return false;
+  fxl::RefPtr<Type> concrete = eval_context->GetConcreteType(type);
+
+  // Expect a 1-byte character type.
+  // TODO(brettw) handle Unicode.
+  if (concrete->byte_size() != 1)
+    return false;
+  const BaseType* base_type = concrete->AsBaseType();
+  if (!base_type)
+    return false;
+
+  return base_type->base_type() == BaseType::kBaseTypeSignedChar ||
+         base_type->base_type() == BaseType::kBaseTypeUnsignedChar;
 }
 
 void FormatChar(FormatNode* node) {
@@ -218,9 +239,9 @@ void FormatEnum(FormatNode* node, const Enumeration* enum_type,
 
 // Rust enums are formatted with the enum name in the description.
 //
-// The active variant will have a set of data members of which only one will be
-// used. It will refer to a collection which will have the set of members.
-// This structure will vary according to the type of enum:
+// The active variant will have a set of data members of which only one will be used. It will refer
+// to a collection which will have the set of members. This structure will vary according to the
+// type of enum:
 //   EnumWithNoValue
 //       The struct will have no members.
 //   OneValue(u32)
@@ -246,16 +267,16 @@ void FormatRustEnum(FormatNode* node, const Collection* coll, const FormatExprVa
     return;
   }
 
-  // Add each variant data member as a child of this node. In Rust we expect
-  // exactly one but it can't hurt to be general.
+  // Add each variant data member as a child of this node. In Rust we expect exactly one but it
+  // can't hurt to be general.
   std::string enum_name;
   for (const auto& lazy_member : variant->data_members()) {
     const DataMember* member = lazy_member.Get()->AsDataMember();
     if (!member)
       continue;
 
-    // Save the first member's name to be the name of the whole enum, even if
-    // there are no data members. Normally there will be exactly one.
+    // Save the first member's name to be the name of the whole enum, even if there are no data
+    // members. Normally there will be exactly one.
     if (enum_name.empty())
       enum_name = member->GetAssignedName();
 
@@ -267,10 +288,9 @@ void FormatRustEnum(FormatNode* node, const Collection* coll, const FormatExprVa
       // the error associated with it.
       node->children().push_back(std::make_unique<FormatNode>(member->GetAssignedName(), err));
     } else {
-      // Only append as a child if the variant has "stuff". The case here is
-      // to skip adding children for enums with no data like
-      // "Optional<Foo>::None" which will have a struct called "None" with no
-      // members.
+      // Only append as a child if the variant has "stuff". The case here is to skip adding children
+      // for enums with no data like "Optional<Foo>::None" which will have a struct called "None"
+      // with no members.
       auto member_type = member_value.GetConcreteType(eval_context.get());
       const Collection* member_coll_type = member_type->AsCollection();
       if (!member_coll_type || !member_coll_type->data_members().empty()) {
@@ -288,8 +308,7 @@ void FormatRustTuple(FormatNode* node, const Collection* coll,
                      const FormatExprValueOptions& options, fxl::RefPtr<EvalContext> eval_context) {
   node->set_description_kind(FormatNode::kRustTuple);
 
-  // Rust tuple (and tuple struct) symbols have the tuple members encoded as
-  // "__0", "__1", etc.
+  // Rust tuple (and tuple struct) symbols have the tuple members encoded as "__0", "__1", etc.
   for (const auto& lazy_member : coll->data_members()) {
     const DataMember* member = lazy_member.Get()->AsDataMember();
     if (!member)
@@ -304,24 +323,23 @@ void FormatRustTuple(FormatNode* node, const Collection* coll,
       name.erase(name.begin(), name.begin() + 2);
 
     if (err.has_error()) {
-      // In the error case, still append a child so that the child can have
-      // the error associated with it.
+      // In the error case, still append a child so that the child can have the error associated
+      // with it.
       node->children().push_back(std::make_unique<FormatNode>(name, err));
     } else {
       node->children().push_back(std::make_unique<FormatNode>(name, member_value));
     }
   }
 
-  // When we have a use for the short description, this should be set to:
-  // "(<0>, <1>, ...)"
+  // When we have a use for the short description, this should be set to: "(<0>, <1>, ...)"
 }
 
 void FormatCollection(FormatNode* node, const Collection* coll,
                       const FormatExprValueOptions& options,
                       fxl::RefPtr<EvalContext> eval_context) {
   if (coll->is_declaration()) {
-    // Sometimes a value will have a type that's a forward declaration and we
-    // couldn't resolve its concrete type. Print an error instead of "{}".
+    // Sometimes a value will have a type that's a forward declaration and we couldn't resolve its
+    // concrete type. Print an error instead of "{}".
     node->set_err(Err("No definition."));
     return;
   }
@@ -349,8 +367,8 @@ void FormatCollection(FormatNode* node, const Collection* coll,
     if (!from)
       continue;
 
-    // Some base classes are empty. Only show if this base class or any of
-    // its base classes have member values.
+    // Some base classes are empty. Only show if this base class or any of its base classes have
+    // member values.
     VisitResult has_members_result = VisitClassHierarchy(from, [](const Collection* cur, uint64_t) {
       if (cur->data_members().empty())
         return VisitResult::kContinue;
@@ -398,9 +416,8 @@ void FormatPointer(FormatNode* node, const FormatExprValueOptions& options,
                    fxl::RefPtr<EvalContext> eval_context) {
   node->set_description_kind(FormatNode::kPointer);
 
-  // Note: don't make assumptions about the type of value.type() since it isn't
-  // necessarily a ModifiedType representing a pointer, but could be other
-  // things like a pointer to a member.
+  // Note: don't make assumptions about the type of value.type() since it isn't necessarily a
+  // ModifiedType representing a pointer, but could be other things like a pointer to a member.
 
   Err err = node->value().EnsureSizeIs(kTargetPointerSize);
   if (err.has_error()) {
@@ -411,10 +428,9 @@ void FormatPointer(FormatNode* node, const FormatExprValueOptions& options,
   // The address goes in the description.
   node->set_description(fxl::StringPrintf("0x%" PRIx64, node->value().GetAs<TargetPointer>()));
 
-  // Make a child node that's the dereferenced pointer value. If/when we
-  // support GUIs, we should probably remove the intermediate node and put the
-  // dereferenced struct members directly as children on this node. Otherwise
-  // it's an annoying extra step to expand to things.
+  // Make a child node that's the dereferenced pointer value. If/when we support GUIs, we should
+  // probably remove the intermediate node and put the dereferenced struct members directly as
+  // children on this node. Otherwise it's an annoying extra step to expand to things.
 
   // Use our name but with a "*" to show it dereferenced.
   auto deref_node = std::make_unique<FormatNode>(
@@ -426,14 +442,13 @@ void FormatPointer(FormatNode* node, const FormatExprValueOptions& options,
   node->children().push_back(std::move(deref_node));
 }
 
-// For now a reference is formatted like a pointer where the outer node is
-// the address, and the inner node is the "dereferenced" value. This is nice
-// because it keeps the formatting code synchronous, while only the value
-// resolution (in the child node) needs to be asynchronous.
+// For now a reference is formatted like a pointer where the outer node is the address, and the
+// inner node is the "dereferenced" value. This is nice because it keeps the formatting code
+// synchronous, while only the value resolution (in the child node) needs to be asynchronous.
 //
-// If this is put into a GUI, we'll want the reference value to be in the
-// main description and not have any children. Visual Studio shows references
-// the same as if it was a value which is probably the correct behavior.
+// If this is put into a GUI, we'll want the reference value to be in the main description and not
+// have any children. Visual Studio shows references the same as if it was a value which is probably
+// the correct behavior.
 void FormatReference(FormatNode* node, const FormatExprValueOptions& options,
                      fxl::RefPtr<EvalContext> eval_context) {
   node->set_description_kind(FormatNode::kReference);
@@ -456,6 +471,176 @@ void FormatReference(FormatNode* node, const FormatExprValueOptions& options,
   node->children().push_back(std::move(deref_node));
 }
 
+// Sometimes we know the real length of the array as in c "char[12]" type. In this case the expanded
+// children should always include all elements, even if there is a null in the middle. This is what
+// length_was_known means. When unset we assume a guessed length (as in "char*"), stop at the first
+// null, and don't include it.
+//
+// TODO(brettw) currently this handles 8-bit chracters only.
+void FormatCharArray(FormatNode* node, fxl::RefPtr<Type> char_type, const uint8_t* data,
+                     size_t length, bool length_was_known, bool truncated) {
+  // Expect the string to be null-terminated. If we didn't find a null before the end of the buffer,
+  // mark as truncated.
+  size_t output_len = strnlen(reinterpret_cast<const char*>(data), length);
+
+  // It's possible a null happened before the end of the buffer, in which case it's no longer
+  // truncated.
+  if (output_len < length)
+    truncated = false;
+
+  // Generate the string in the desciption. Stop at the first null (computed above) and don't
+  // include it.
+  std::string result("\"");
+  for (size_t i = 0; i < output_len; i++)
+    AppendEscapedChar(data[i], &result);
+  result.push_back('"');
+
+  // Add children to the first null unless the length was known in advance.
+  size_t child_len = length_was_known ? length : output_len;
+  for (size_t i = 0; i < child_len; i++) {
+    node->children().push_back(std::make_unique<FormatNode>(fxl::StringPrintf("[%zu]", i),
+                                                            ExprValue(char_type, {data[i]})));
+  }
+
+  // Add an indication if the string was truncated to the max size.
+  if (truncated) {
+    result += "...";
+    node->children().push_back(std::make_unique<FormatNode>("..."));
+  }
+
+  node->set_description(result);
+}
+
+void FormatCharPointer(FormatNode* node, const Type* char_type,
+                       const FormatExprValueOptions& options, fxl::RefPtr<EvalContext> eval_context,
+                       fit::deferred_callback cb) {
+  if (node->value().data().size() != kTargetPointerSize) {
+    node->set_err(Err("Bad pointer data."));
+    return;
+  }
+
+  TargetPointer address = node->value().GetAs<TargetPointer>();
+  if (!address) {
+    // Special-case null pointers to just print a null address.
+    node->set_description("0x0");
+    return;
+  }
+
+  // Speculatively request the max string size.
+  uint32_t bytes_to_fetch = options.max_array_size;
+  if (bytes_to_fetch == 0) {
+    // No array data should be fetched. Indicate that the result was truncated.
+    node->set_description("\"\"...");
+    return;
+  }
+
+  fxl::RefPtr<SymbolDataProvider> data_provider = eval_context->GetDataProvider();
+
+  // TODO(brettw) When GetMemoryAsync takes a move-only fit::callback the cb can just be
+  // std::move-ed into the lambda.
+  auto shared_cb = std::make_shared<fit::deferred_callback>(std::move(cb));
+  data_provider->GetMemoryAsync(
+      address, bytes_to_fetch,
+      [address, bytes_to_fetch, char_type = fxl::RefPtr<Type>(const_cast<Type*>(char_type)),
+       weak_node = node->GetWeakPtr(), shared_cb](const Err& err, std::vector<uint8_t> data) {
+        if (!weak_node)
+          return;
+
+        if (data.empty()) {
+          // Should not have requested 0 size, so it if came back empty the pointer was invalid.
+          weak_node->set_err(Err("0x%" PRIx64 " «invalid pointer»", address));
+          return;
+        }
+
+        // Report as truncated because if the string goes to the end of this array it will be.
+        // FormatCharArray will clear this flag if it finds a null before the end of the buffer.
+        //
+        // Don't want to set truncated if the data ended before the requested size, this means it
+        // hit the end of valid memory, so we're not omitting data by only showing that part of it.
+        bool truncated = data.size() == bytes_to_fetch;
+        FormatCharArray(weak_node.get(), char_type, &data[0], data.size(), false, truncated);
+      });
+}
+
+// Formats an array with a known length. This is for non-char arrays (which are special-cased in
+// FormatCharArray).
+void FormatArray(FormatNode* node, int elt_count, const FormatExprValueOptions& options,
+                 fxl::RefPtr<EvalContext> eval_context) {
+  node->set_description_kind(FormatNode::kArray);
+
+  // Arrays should have known non-zero sizes.
+  FXL_DCHECK(elt_count >= 0);
+  int print_count = std::min(static_cast<int>(options.max_array_size), elt_count);
+
+  std::vector<ExprValue> items;
+  Err err = ResolveArray(eval_context, node->value(), 0, print_count, &items);
+  if (err.has_error()) {
+    node->set_err(err);
+    return;
+  }
+
+  for (size_t i = 0; i < items.size(); i++) {
+    node->children().push_back(
+        std::make_unique<FormatNode>(fxl::StringPrintf("[%zu]", i), std::move(items[i])));
+  }
+
+  if (static_cast<uint32_t>(elt_count) > items.size()) {
+    // Add "..." annotation to show some things were clipped.
+    node->children().push_back(std::make_unique<FormatNode>("..."));
+  }
+}
+
+// Attempts to format arrays, char arrays, and char pointers. Because these are many different types
+// this is handled by a separate helper function.
+//
+// Returns true if the node was formatted by this function. If the operation is asynchronous the
+// callback will be moved from to defer it until the async operation is complete.
+//
+// A false return value means this was not an array or a string and other types of formatting should
+// be attempted. The callback will be unmodified.
+bool TryFormatArrayOrString(FormatNode* node, const Type* type,
+                            const FormatExprValueOptions& options,
+                            fxl::RefPtr<EvalContext> eval_context, fit::deferred_callback& cb) {
+  FXL_DCHECK(type == type->StripCVT());
+
+  if (type->tag() == DwarfTag::kPointerType) {
+    // Any pointer type (we only char about char*).
+    const ModifiedType* modified = type->AsModifiedType();
+    if (!modified)
+      return false;
+
+    const Type* char_type = modified->modified().Get()->AsType();
+    if (IsCharacterType(eval_context, char_type)) {
+      FormatCharPointer(node, char_type, options, eval_context, std::move(cb));
+      return true;
+    }
+    return false;  // All other pointer types are unhandled.
+  } else if (type->tag() == DwarfTag::kArrayType) {
+    // Any array type with a known size (we care about both).
+    const ArrayType* array = type->AsArrayType();
+    if (!array)
+      return false;
+
+    auto value_type = eval_context->GetConcreteType(array->value_type());
+    if (!value_type)
+      return false;
+
+    if (IsCharacterType(eval_context, value_type.get())) {
+      size_t length = array->num_elts();
+      bool truncated = false;
+      if (length > options.max_array_size) {
+        length = options.max_array_size;
+        truncated = true;
+      }
+      FormatCharArray(node, value_type, node->value().data().data(), length, true, truncated);
+    } else {
+      FormatArray(node, array->num_elts(), options, eval_context);
+    }
+    return true;
+  }
+  return false;
+}
+
 }  // namespace
 
 void FillFormatNodeValue(FormatNode* node, fxl::RefPtr<EvalContext> context,
@@ -466,8 +651,7 @@ void FillFormatNodeValue(FormatNode* node, fxl::RefPtr<EvalContext> context,
       return;
     case FormatNode::kExpression: {
       // Evaluate the expression.
-      // TODO(brettw) remove this make_shared when EvalExpression takes a
-      // fit::callback.
+      // TODO(brettw) remove this make_shared when EvalExpression takes a fit::callback.
       auto shared_cb = std::make_shared<fit::deferred_callback>(std::move(cb));
       EvalExpression(node->expression(), context, true,
                      [weak_node = node->GetWeakPtr(), shared_cb](const Err& err, ExprValue value) {
@@ -523,11 +707,14 @@ void FillFormatNodeDescription(FormatNode* node, const FormatExprValueOptions& o
     return;
   }
 
-  // Trim "const", "volatile", etc. and follow typedef and using for the type
-  // checking below.
+  // Trim "const", "volatile", etc. and follow typedef and using for the type checking below.
   //
   // Always use this variable below instead of value.type().
   fxl::RefPtr<Type> type = node->value().GetConcreteType(context.get());
+
+  // Arrays and strings.
+  if (TryFormatArrayOrString(node, type.get(), options, context, cb))
+    return;
 
   if (const ModifiedType* modified_type = type->AsModifiedType()) {
     // Modified types (references were handled above).

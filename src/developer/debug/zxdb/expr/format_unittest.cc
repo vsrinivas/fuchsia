@@ -9,6 +9,7 @@
 #include "src/developer/debug/zxdb/expr/format_expr_value_options.h"
 #include "src/developer/debug/zxdb/expr/format_node.h"
 #include "src/developer/debug/zxdb/expr/mock_eval_context.h"
+#include "src/developer/debug/zxdb/symbols/array_type.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
 #include "src/developer/debug/zxdb/symbols/collection.h"
 #include "src/developer/debug/zxdb/symbols/enumeration.h"
@@ -475,6 +476,111 @@ TEST_F(FormatTest, Reference) {
       SyncTreeTypeDesc(value, opts));
 }
 
+TEST_F(FormatTest, GoodStrings) {
+  FormatExprValueOptions opts;
+
+  constexpr uint64_t kAddress = 0x1100;
+  std::vector<uint8_t> data = {'A', 'B', 'C', 'D', 'E', 'F', '\n', 0x01, 'z', '\\', '"', 0};
+  provider()->AddMemory(kAddress, data);
+
+  // The expected children of the string, not counting the null terminator.
+  std::string expected_members_no_null =
+      R"(  [0] = char, 'A'
+  [1] = char, 'B'
+  [2] = char, 'C'
+  [3] = char, 'D'
+  [4] = char, 'E'
+  [5] = char, 'F'
+  [6] = char, '\n'
+  [7] = char, '\x01'
+  [8] = char, 'z'
+  [9] = char, '\\'
+  [10] = char, '\"'
+)";
+
+  // The expected children of the string, including the null terminator.
+  std::string expected_members_with_null = expected_members_no_null + "  [11] = char, '\\x00'\n";
+
+  std::string expected_desc_string = R"("ABCDEF\n\x01z\\\"")";
+
+  // Little-endian version of the address.
+  std::vector<uint8_t> address_data = {0x00, 0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+
+  // This string is a char*. It should show the string contents (stopping before the null
+  // terminator). Note that Visual Studio shows the same thing in the description that we do, but
+  // the children is like a normal pointer so there is only see the first character.
+  auto ptr_type = MakeCharPointerType();
+  EXPECT_EQ(" = char*, " + expected_desc_string + "\n" + expected_members_no_null,
+            SyncTreeTypeDesc(ExprValue(ptr_type, address_data), opts));
+
+  // This string has the same data but is type encoded as char[12], it should
+  // give the same output (except for type info).
+  auto array_type = fxl::MakeRefCounted<ArrayType>(MakeSignedChar8Type(), 12);
+  EXPECT_EQ(" = char[12], " + expected_desc_string + "\n" + expected_members_with_null,
+            SyncTreeTypeDesc(ExprValue(array_type, data), opts));
+
+  // This type is a "const array of const char". I don't know how to type this
+  // in C (most related things end up as "const pointer to const char") and the
+  // type name looks wrong but GCC will generate this for the type of
+  // compiler-generated variables like __func__.
+  auto char_type = MakeSignedChar8Type();
+  auto const_char = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kConstType, LazySymbol(char_type));
+  auto array_const_char = fxl::MakeRefCounted<ArrayType>(const_char, 12);
+  auto const_array_const_char =
+      fxl::MakeRefCounted<ModifiedType>(DwarfTag::kConstType, LazySymbol(array_const_char));
+  EXPECT_EQ(std::string(" = const const char[12], ") + expected_desc_string + "\n" +
+                expected_members_with_null,
+            SyncTreeTypeDesc(ExprValue(const_array_const_char, data), opts));
+}
+
+TEST_F(FormatTest, BadStrings) {
+  FormatExprValueOptions opts;
+  std::vector<uint8_t> address_data = {0x00, 0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+
+  // Should report invalid pointer.
+  auto ptr_type = MakeCharPointerType();
+  ExprValue ptr_value(ptr_type, address_data);
+  EXPECT_EQ(" = Err: 0x1100 «invalid pointer»\n", SyncTreeTypeDesc(ptr_value, opts));
+
+  // A null string should print just the null and not say invalid.
+  ExprValue null_value(ptr_type, std::vector<uint8_t>(sizeof(uint64_t)));
+  EXPECT_EQ(" = char*, 0x0\n", SyncTreeTypeDesc(null_value, opts));
+}
+
+TEST_F(FormatTest, TruncatedString) {
+  FormatExprValueOptions opts;
+
+  constexpr uint64_t kAddress = 0x1100;
+  provider()->AddMemory(kAddress, {'A', 'B', 'C', 'D', 'E', 'F'});
+
+  // Little-endian version of kAddress.
+  std::vector<uint8_t> address_data = {0x00, 0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+
+  // This string doesn't end in a null terminator but rather invalid memory.
+  // We should print as much as we have.
+  auto ptr_type = MakeCharPointerType();
+  EXPECT_EQ(
+      " = char*, \"ABCDEF\"\n"
+      "  [0] = char, 'A'\n"
+      "  [1] = char, 'B'\n"
+      "  [2] = char, 'C'\n"
+      "  [3] = char, 'D'\n"
+      "  [4] = char, 'E'\n"
+      "  [5] = char, 'F'\n",
+      SyncTreeTypeDesc(ExprValue(ptr_type, address_data), opts));
+
+  // Should only report the first 4 chars with a ... indicator.
+  opts.max_array_size = 4;  // Truncate past this value.
+  EXPECT_EQ(
+      " = char*, \"ABCD\"...\n"
+      "  [0] = char, 'A'\n"
+      "  [1] = char, 'B'\n"
+      "  [2] = char, 'C'\n"
+      "  [3] = char, 'D'\n"
+      "  ... = , \n",
+      SyncTreeTypeDesc(ExprValue(ptr_type, address_data), opts));
+}
+
 TEST_F(FormatTest, RustEnum) {
   auto rust_enum = MakeTestRustEnum();
 
@@ -608,6 +714,51 @@ TEST_F(FormatTest, ZxStatusT) {
   opts.num_format = FormatExprValueOptions::NumFormat::kHex;
   EXPECT_EQ(" = zx_status_t, 0xfffffff1 (ZX_ERR_BUFFER_TOO_SMALL)\n",
             SyncTreeTypeDesc(status_too_small, opts));
+}
+
+TEST_F(FormatTest, EmptyAndBadArray) {
+  FormatExprValueOptions opts;
+
+  // Array of two int32's: [1, 2]
+  constexpr uint64_t kAddress = 0x1100;
+  ExprValueSource source(kAddress);
+
+  // Empty array with valid pointer.
+  auto empty_array_type = fxl::MakeRefCounted<ArrayType>(MakeInt32Type(), 0);
+  EXPECT_EQ(" = int32_t[0], \n",
+            SyncTreeTypeDesc(ExprValue(empty_array_type, std::vector<uint8_t>(), source), opts));
+
+  // Array type declares a size but there's no data.
+  auto array_type = fxl::MakeRefCounted<ArrayType>(MakeInt32Type(), 1);
+  EXPECT_EQ(" = Err: Array data (0 bytes) is too small for the expected size (4 bytes).\n",
+            SyncTreeTypeDesc(ExprValue(array_type, std::vector<uint8_t>(), source), opts));
+}
+
+TEST_F(FormatTest, TruncatedArray) {
+  FormatExprValueOptions opts;
+  opts.max_array_size = 2;
+
+  // Array of two int32's: {1, 2}
+  constexpr uint64_t kAddress = 0x1100;
+  ExprValueSource source(kAddress);
+  std::vector<uint8_t> data = {0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00};
+
+  auto array_type = fxl::MakeRefCounted<ArrayType>(MakeInt32Type(), 2);
+
+  // This array has exactly the max size, we shouldn't mark it as truncated.
+  EXPECT_EQ(
+      " = int32_t[2], \n"
+      "  [0] = int32_t, 1\n"
+      "  [1] = int32_t, 2\n",
+      SyncTreeTypeDesc(ExprValue(array_type, data, source), opts));
+
+  // This one is truncated.
+  opts.max_array_size = 1;
+  EXPECT_EQ(
+      " = int32_t[2], \n"
+      "  [0] = int32_t, 1\n"
+      "  ... = , \n",
+      SyncTreeTypeDesc(ExprValue(array_type, data, source), opts));
 }
 
 }  // namespace zxdb

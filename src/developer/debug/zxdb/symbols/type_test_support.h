@@ -26,6 +26,11 @@ fxl::RefPtr<BaseType> MakeUint32Type();
 fxl::RefPtr<BaseType> MakeInt64Type();
 fxl::RefPtr<BaseType> MakeUint64Type();
 
+fxl::RefPtr<BaseType> MakeSignedChar8Type();
+
+// Makes a "char*" as for C strings using a signed 8-bit character.
+fxl::RefPtr<ModifiedType> MakeCharPointerType();
+
 // Creates a collection type with the given members.
 //
 // type_tag is one of DwarfTag::k*Type appropriate for collections (class,

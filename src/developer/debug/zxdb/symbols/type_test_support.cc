@@ -9,6 +9,7 @@
 #include "src/developer/debug/zxdb/symbols/compile_unit.h"
 #include "src/developer/debug/zxdb/symbols/data_member.h"
 #include "src/developer/debug/zxdb/symbols/inherited_from.h"
+#include "src/developer/debug/zxdb/symbols/modified_type.h"
 #include "src/developer/debug/zxdb/symbols/variant.h"
 #include "src/developer/debug/zxdb/symbols/variant_part.h"
 #include "src/lib/fxl/strings/string_printf.h"
@@ -33,6 +34,15 @@ fxl::RefPtr<BaseType> MakeInt64Type() {
 
 fxl::RefPtr<BaseType> MakeUint64Type() {
   return fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsigned, 8, "uint64_t");
+}
+
+fxl::RefPtr<BaseType> MakeSignedChar8Type() {
+  return fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeSignedChar, 1, "char");
+}
+
+fxl::RefPtr<ModifiedType> MakeCharPointerType() {
+  return fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType,
+                                           LazySymbol(MakeSignedChar8Type()));
 }
 
 fxl::RefPtr<Collection> MakeCollectionType(DwarfTag type_tag, const std::string& type_name,

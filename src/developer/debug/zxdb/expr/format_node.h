@@ -94,6 +94,7 @@ class FormatNode {
   // The format of the description.
   enum DescriptionKind {
     kNone,
+    kArray,
     kBaseType,    // Integers, characters, bools, etc.
     kCollection,  // Structs, classes.
     kRustEnum,    // Rust-style enum (can have values associated with enums).
@@ -116,13 +117,15 @@ class FormatNode {
 
   // See the class comment above about the lifecycle.
   enum State {
-    kEmpty,        // Nothing set, default constructed.
+    kEmpty,        // No value, default constructed. An empty node can have a name to indicate
+                   // "nothing with that name.".
     kUnevaluated,  // Unevaluated expression.
     kHasValue,     // Have the value but not converted to a string.
     kDescribed     // Have the full type and value description.
   };
 
-  FormatNode();
+  // Constructor for an empty node. Empty nodes have optional names.
+  FormatNode(const std::string& name = std::string());
 
   // Constructor for a known value.
   FormatNode(const std::string& name, ExprValue value);
@@ -131,7 +134,7 @@ class FormatNode {
   FormatNode(const std::string& name, Err err);
 
   // Constructor with an expression.
-  explicit FormatNode(const std::string& expression);
+  explicit FormatNode(const std::string& name, const std::string& expression);
 
   // Constructor for a programatically-filled value.
   FormatNode(const std::string& name, GetProgramaticValue get_value);
