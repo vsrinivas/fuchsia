@@ -66,7 +66,6 @@ fit::promise<void> LogListener::CollectLogs(zx::duration timeout) {
 
     FX_PLOGS(ERROR, status) << "LogListener error";
     done_.completer.complete_error();
-    Reset();
   });
 
   logger_ = services_->Connect<fuchsia::logger::Log>();
@@ -77,7 +76,6 @@ fit::promise<void> LogListener::CollectLogs(zx::duration timeout) {
 
     FX_PLOGS(ERROR, status) << "Lost connection to Log service";
     done_.completer.complete_error();
-    Reset();
   });
   // Resets |log_many_called_| for the new call to DumpLogs().
   log_many_called_ = false;
@@ -106,7 +104,11 @@ fit::promise<void> LogListener::CollectLogs(zx::duration timeout) {
     FX_PLOGS(ERROR, post_status) << "Failed to post delayed task, no timeout for log collection";
   }
 
-  return done_.consumer.promise_or(fit::error());
+  return done_.consumer.promise_or(fit::error()).then([this](fit::result<void>& result) {
+    done_after_timeout_.Cancel();
+    binding_.Unbind();
+    return std::move(result);
+  });
 }
 
 void LogListener::LogMany(::std::vector<fuchsia::logger::LogMessage> messages) {
@@ -163,13 +165,6 @@ void LogListener::Done() {
   }
 
   done_.completer.complete_ok();
-  Reset();
-}
-
-void LogListener::Reset() {
-  done_after_timeout_.Cancel();
-  binding_.Unbind();
-  logger_.Unbind();
 }
 
 }  // namespace feedback
