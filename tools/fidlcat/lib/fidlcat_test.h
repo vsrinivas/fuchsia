@@ -57,8 +57,7 @@ class AsyncLoopForTestImpl {
 // This binds |invoke| to one end of a channel, invokes it, and drops the wire
 // format bits it picks up off the other end into |message|.
 template <class T>
-void InterceptRequest(fidl::Message& message,
-                      std::function<void(fidl::InterfacePtr<T>&)> invoke) {
+void InterceptRequest(fidl::Message& message, std::function<void(fidl::InterfacePtr<T>&)> invoke) {
   AsyncLoopForTest loop;
 
   zx::channel h1, h2;

@@ -29,8 +29,8 @@ enum class Direction { kUnknown, kClient, kServer };
 constexpr int kTabSize = 2;
 
 struct Colors {
-  Colors(const char* new_reset, const char* new_red, const char* new_green,
-         const char* new_blue, const char* new_white_on_magenta)
+  Colors(const char* new_reset, const char* new_red, const char* new_green, const char* new_blue,
+         const char* new_white_on_magenta)
       : reset(new_reset),
         red(new_red),
         green(new_green),
@@ -50,8 +50,7 @@ extern const Colors WithColors;
 // Class which is able to decode all the messages received/sent.
 class MessageDecoderDispatcher {
  public:
-  MessageDecoderDispatcher(LibraryLoader* loader,
-                           const DisplayOptions& display_options)
+  MessageDecoderDispatcher(LibraryLoader* loader, const DisplayOptions& display_options)
       : loader_(loader),
         display_options_(display_options),
         colors_(display_options.needs_colors ? WithColors : WithoutColors) {}
@@ -63,9 +62,8 @@ class MessageDecoderDispatcher {
     return handle_directions_;
   }
 
-  bool DecodeMessage(uint64_t process_koid, zx_handle_t handle,
-                     const uint8_t* bytes, uint32_t num_bytes,
-                     const zx_handle_t* handles, uint32_t num_handles,
+  bool DecodeMessage(uint64_t process_koid, zx_handle_t handle, const uint8_t* bytes,
+                     uint32_t num_bytes, const zx_handle_t* handles, uint32_t num_handles,
                      bool read, std::ostream& os, int tabs = 0);
 
  private:
@@ -78,9 +76,8 @@ class MessageDecoderDispatcher {
 // Helper to decode a message (request or response). It generates an Object.
 class MessageDecoder {
  public:
-  MessageDecoder(const uint8_t* bytes, uint32_t num_bytes,
-                 const zx_handle_t* handles, uint32_t num_handles,
-                 bool output_errors = false);
+  MessageDecoder(const uint8_t* bytes, uint32_t num_bytes, const zx_handle_t* handles,
+                 uint32_t num_handles, bool output_errors = false);
   MessageDecoder(const MessageDecoder* container, uint64_t num_bytes_remaining,
                  uint64_t num_handles_remaining);
 
@@ -110,11 +107,9 @@ class MessageDecoder {
   const uint8_t* GetAddress(uint64_t offset, uint64_t size) {
     if (byte_pos_ + offset + size > end_byte_pos_) {
       if (output_errors_) {
-        FXL_LOG(ERROR) << "not enough data to decode (needs " << size
-                       << " at offset "
-                       << ((byte_pos_ - start_byte_pos_) + offset)
-                       << ", remains " << (end_byte_pos_ - byte_pos_ - offset)
-                       << ")";
+        FXL_LOG(ERROR) << "not enough data to decode (needs " << size << " at offset "
+                       << ((byte_pos_ - start_byte_pos_) + offset) << ", remains "
+                       << (end_byte_pos_ - byte_pos_ - offset) << ")";
       }
       ++error_count_;
       return nullptr;
@@ -200,8 +195,7 @@ template <typename T>
 bool MessageDecoder::GetValueAt(uint64_t offset, T* value) {
   if (byte_pos_ + offset + sizeof(T) > end_byte_pos_) {
     if (output_errors_) {
-      FXL_LOG(ERROR) << "not enough data to decode (needs " << sizeof(T)
-                     << " at offset "
+      FXL_LOG(ERROR) << "not enough data to decode (needs " << sizeof(T) << " at offset "
                      << ((byte_pos_ - start_byte_pos_) + offset) << ", remains "
                      << (end_byte_pos_ - byte_pos_ - offset) << ")";
     }

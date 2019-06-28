@@ -65,8 +65,7 @@ class SyscallUse {
   virtual ~SyscallUse() = default;
 
   virtual void SyscallDecoded(SyscallDecoder* syscall);
-  virtual void SyscallDecodingError(const SyscallDecoderError& error,
-                                    SyscallDecoder* syscall);
+  virtual void SyscallDecodingError(const SyscallDecoderError& error, SyscallDecoder* syscall);
 };
 
 // Handles the decoding of a syscall argument. At the end, it holds the value
@@ -104,10 +103,9 @@ class SyscallDecoderArgument {
 // and the following methods).
 class SyscallDecoder {
  public:
-  SyscallDecoder(SyscallDecoderDispatcher* dispatcher,
-                 InterceptingThreadObserver* thread_observer,
-                 zxdb::Thread* thread, uint64_t thread_id,
-                 const Syscall* syscall, std::unique_ptr<SyscallUse> use)
+  SyscallDecoder(SyscallDecoderDispatcher* dispatcher, InterceptingThreadObserver* thread_observer,
+                 zxdb::Thread* thread, uint64_t thread_id, const Syscall* syscall,
+                 std::unique_ptr<SyscallUse> use)
       : dispatcher_(dispatcher),
         thread_observer_(thread_observer),
         thread_(thread->GetWeakPtr()),
@@ -123,9 +121,7 @@ class SyscallDecoder {
   uint64_t return_address() const { return return_address_; }
   uint64_t syscall_return_value() const { return syscall_return_value_; }
 
-  std::stringstream& Error(SyscallDecoderError::Type type) {
-    return error_.Set(type);
-  }
+  std::stringstream& Error(SyscallDecoderError::Type type) { return error_.Set(type); }
 
   // Loads the value for a buffer, a struct or an output argument.
   bool LoadArgument(int argument_index, size_t size);
@@ -136,9 +132,7 @@ class SyscallDecoder {
   }
 
   // Returns the value of an argument for basic types.
-  uint64_t Value(int argument_index) const {
-    return decoded_arguments_[argument_index].value();
-  }
+  uint64_t Value(int argument_index) const { return decoded_arguments_[argument_index].value(); }
 
   // Returns a pointer on the argument content for buffers, structs or
   // output arguments.
@@ -218,8 +212,7 @@ class SyscallDisplay : public SyscallUse {
       : dispatcher_(dispatcher), os_(os) {}
 
   void SyscallDecoded(SyscallDecoder* syscall) override;
-  void SyscallDecodingError(const SyscallDecoderError& error,
-                            SyscallDecoder* syscall) override;
+  void SyscallDecodingError(const SyscallDecoderError& error, SyscallDecoder* syscall) override;
 
  private:
   SyscallDisplayDispatcher* const dispatcher_;

@@ -35,17 +35,14 @@ class SyscallDecoder;
 
 class InterceptingThreadObserver : public zxdb::ThreadObserver {
  public:
-  explicit InterceptingThreadObserver(InterceptionWorkflow* workflow)
-      : workflow_(workflow) {}
+  explicit InterceptingThreadObserver(InterceptionWorkflow* workflow) : workflow_(workflow) {}
 
   InterceptingThreadObserver(const InterceptingThreadObserver&) = delete;
-  InterceptingThreadObserver& operator=(const InterceptingThreadObserver&) =
-      delete;
+  InterceptingThreadObserver& operator=(const InterceptingThreadObserver&) = delete;
 
   virtual void OnThreadStopped(
       zxdb::Thread* thread, debug_ipc::NotifyException::Type type,
-      const std::vector<fxl::WeakPtr<zxdb::Breakpoint>>& hit_breakpoints)
-      override;
+      const std::vector<fxl::WeakPtr<zxdb::Breakpoint>>& hit_breakpoints) override;
 
   virtual ~InterceptingThreadObserver() {}
 
@@ -60,15 +57,12 @@ class InterceptingThreadObserver : public zxdb::ThreadObserver {
 
 class InterceptingProcessObserver : public zxdb::ProcessObserver {
  public:
-  explicit InterceptingProcessObserver(InterceptionWorkflow* workflow)
-      : dispatcher_(workflow) {}
+  explicit InterceptingProcessObserver(InterceptionWorkflow* workflow) : dispatcher_(workflow) {}
 
   InterceptingProcessObserver(const InterceptingProcessObserver&) = delete;
-  InterceptingProcessObserver& operator=(const InterceptingProcessObserver&) =
-      delete;
+  InterceptingProcessObserver& operator=(const InterceptingProcessObserver&) = delete;
 
-  virtual void DidCreateThread(zxdb::Process* process,
-                               zxdb::Thread* thread) override {
+  virtual void DidCreateThread(zxdb::Process* process, zxdb::Thread* thread) override {
     thread->AddObserver(&dispatcher_);
   }
 
@@ -86,8 +80,7 @@ class InterceptingTargetObserver : public zxdb::TargetObserver {
       : dispatcher_(workflow), workflow_(workflow) {}
 
   InterceptingTargetObserver(const InterceptingTargetObserver&) = delete;
-  InterceptingTargetObserver& operator=(const InterceptingTargetObserver&) =
-      delete;
+  InterceptingTargetObserver& operator=(const InterceptingTargetObserver&) = delete;
 
   virtual void DidCreateProcess(zxdb::Target* target, zxdb::Process* process,
                                 bool autoattached_to_new_process) override;
@@ -124,20 +117,17 @@ class InterceptionWorkflow {
   ~InterceptionWorkflow();
 
   // For testing, you can provide your own |session| and |loop|
-  InterceptionWorkflow(zxdb::Session* session,
-                       debug_ipc::PlatformMessageLoop* loop);
+  InterceptionWorkflow(zxdb::Session* session, debug_ipc::PlatformMessageLoop* loop);
 
   // Some initialization steps:
   // - Set the paths for the zxdb client to look for symbols.
   // - Make sure that the data are routed from the client to the session
-  void Initialize(
-      const std::vector<std::string>& symbol_paths,
-      std::unique_ptr<SyscallDecoderDispatcher> syscall_decoder_dispatcher);
+  void Initialize(const std::vector<std::string>& symbol_paths,
+                  std::unique_ptr<SyscallDecoderDispatcher> syscall_decoder_dispatcher);
 
   // Connect the workflow to the host/port pair given.  |and_then| is posted to
   // the loop on completion.
-  void Connect(const std::string& host, uint16_t port,
-               SimpleErrorFunction and_then);
+  void Connect(const std::string& host, uint16_t port, SimpleErrorFunction and_then);
 
   // Attach the workflow to the given koid.  Must be connected.  |and_then| is
   // posted to the loop on completion.
@@ -150,13 +140,11 @@ class InterceptionWorkflow {
 
   // Run the given |command| and attach to it.  Must be connected.  |and_then|
   // is posted to the loop on completion.
-  void Launch(const std::vector<std::string>& command,
-              SimpleErrorFunction and_then);
+  void Launch(const std::vector<std::string>& command, SimpleErrorFunction and_then);
 
   // Run when a process matching the given |filter| regexp is started.  Must be
   // connected.  |and_then| is posted to the loop on completion.
-  void Filter(const std::vector<std::string>& filter,
-              SimpleErrorFunction and_then);
+  void Filter(const std::vector<std::string>& filter, SimpleErrorFunction and_then);
 
   // Sets breakpoints for the various methods we intercept (zx_channel_*, etc)
   // for the given |target|

@@ -37,21 +37,18 @@ std::string Enum::GetNameFromBytes(const uint8_t* bytes) const {
   return "(Unknown enum member)";
 }
 
-UnionMember::UnionMember(const Library& enclosing_library,
-                         const rapidjson::Value& value)
+UnionMember::UnionMember(const Library& enclosing_library, const rapidjson::Value& value)
     : name_(value["name"].GetString()),
       offset_(std::strtoll(value["offset"].GetString(), nullptr, 10)),
       size_(std::strtoll(value["size"].GetString(), nullptr, 10)),
-      ordinal_(value.HasMember("ordinal")
-                   ? std::strtoll(value["ordinal"].GetString(), nullptr, 10)
-                   : 0) {
+      ordinal_(value.HasMember("ordinal") ? std::strtoll(value["ordinal"].GetString(), nullptr, 10)
+                                          : 0) {
   if (!value.HasMember("type")) {
     FXL_LOG(ERROR) << "Type missing";
     type_ = std::make_unique<RawType>(size_);
     return;
   }
-  type_ =
-      Type::GetType(enclosing_library.enclosing_loader(), value["type"], size_);
+  type_ = Type::GetType(enclosing_library.enclosing_loader(), value["type"], size_);
 }
 
 UnionMember::~UnionMember() {}
@@ -70,8 +67,7 @@ void Union::DecodeTypes() {
   auto member_arr = value_["members"].GetArray();
   members_.reserve(member_arr.Size());
   for (auto& member : member_arr) {
-    members_.push_back(
-        std::make_unique<UnionMember>(enclosing_library_, member));
+    members_.push_back(std::make_unique<UnionMember>(enclosing_library_, member));
   }
 }
 
@@ -91,13 +87,10 @@ const UnionMember* Union::MemberWithOrdinal(Ordinal32 ordinal) const {
   return nullptr;
 }
 
-std::unique_ptr<UnionField> Union::DecodeUnion(MessageDecoder* decoder,
-                                               std::string_view name,
-                                               const Type* type,
-                                               uint64_t offset,
+std::unique_ptr<UnionField> Union::DecodeUnion(MessageDecoder* decoder, std::string_view name,
+                                               const Type* type, uint64_t offset,
                                                bool nullable) const {
-  std::unique_ptr<UnionField> result =
-      std::make_unique<UnionField>(name, type, *this);
+  std::unique_ptr<UnionField> result = std::make_unique<UnionField>(name, type, *this);
   if (nullable) {
     result->DecodeNullable(decoder, offset);
   } else {
@@ -106,8 +99,7 @@ std::unique_ptr<UnionField> Union::DecodeUnion(MessageDecoder* decoder,
   return result;
 }
 
-StructMember::StructMember(const Library& enclosing_library,
-                           const rapidjson::Value& value)
+StructMember::StructMember(const Library& enclosing_library, const rapidjson::Value& value)
     : name_(value["name"].GetString()),
       offset_(std::strtoll(value["offset"].GetString(), nullptr, 10)),
       size_(std::strtoll(value["size"].GetString(), nullptr, 10)) {
@@ -116,8 +108,7 @@ StructMember::StructMember(const Library& enclosing_library,
     type_ = std::make_unique<RawType>(size());
     return;
   }
-  type_ =
-      Type::GetType(enclosing_library.enclosing_loader(), value["type"], size_);
+  type_ = Type::GetType(enclosing_library.enclosing_loader(), value["type"], size_);
 }
 
 StructMember::~StructMember() {}
@@ -146,8 +137,7 @@ void Struct::DecodeResponseTypes() {
   DecodeTypes("maybe_response_size", "maybe_response");
 }
 
-std::unique_ptr<Object> Struct::DecodeObject(MessageDecoder* decoder,
-                                             std::string_view name,
+std::unique_ptr<Object> Struct::DecodeObject(MessageDecoder* decoder, std::string_view name,
                                              const Type* type, uint64_t offset,
                                              bool nullable) const {
   std::unique_ptr<Object> result = std::make_unique<Object>(name, type, *this);
@@ -167,13 +157,11 @@ void Struct::DecodeTypes(std::string size_name, std::string member_name) {
   auto member_arr = value_[member_name].GetArray();
   members_.reserve(member_arr.Size());
   for (auto& member : member_arr) {
-    members_.push_back(
-        std::make_unique<StructMember>(enclosing_library_, member));
+    members_.push_back(std::make_unique<StructMember>(enclosing_library_, member));
   }
 }
 
-TableMember::TableMember(const Library& enclosing_library,
-                         const rapidjson::Value& value)
+TableMember::TableMember(const Library& enclosing_library, const rapidjson::Value& value)
     : name_(value["name"].GetString()),
       ordinal_(std::strtoll(value["ordinal"].GetString(), nullptr, 10)),
       size_(std::strtoll(value["size"].GetString(), nullptr, 10)) {
@@ -182,8 +170,7 @@ TableMember::TableMember(const Library& enclosing_library,
     type_ = std::make_unique<RawType>(size_);
     return;
   }
-  type_ =
-      Type::GetType(enclosing_library.enclosing_loader(), value["type"], size_);
+  type_ = Type::GetType(enclosing_library.enclosing_loader(), value["type"], size_);
 }
 
 TableMember::~TableMember() {}
@@ -204,8 +191,7 @@ void Table::DecodeTypes() {
   auto member_arr = value_["members"].GetArray();
   Ordinal32 max_ordinal = 0;
   for (auto& member : member_arr) {
-    backing_members_.push_back(
-        std::make_unique<TableMember>(enclosing_library_, member));
+    backing_members_.push_back(std::make_unique<TableMember>(enclosing_library_, member));
     max_ordinal = std::max(max_ordinal, backing_members_.back()->ordinal());
   }
 
@@ -217,8 +203,7 @@ void Table::DecodeTypes() {
   }
 }
 
-InterfaceMethod::InterfaceMethod(const Interface& interface,
-                                 const rapidjson::Value& value)
+InterfaceMethod::InterfaceMethod(const Interface& interface, const rapidjson::Value& value)
     : enclosing_interface_(interface),
       value_(value),
       ordinal_(std::strtoll(value["ordinal"].GetString(), nullptr, 10)),
@@ -226,13 +211,11 @@ InterfaceMethod::InterfaceMethod(const Interface& interface,
       old_ordinal_(std::strtoll(value["generated_ordinal"].GetString(), nullptr, 10) << 32),
       name_(value["name"].GetString()) {
   if (value_["has_request"].GetBool()) {
-    request_ = std::unique_ptr<Struct>(
-        new Struct(interface.enclosing_library(), value));
+    request_ = std::unique_ptr<Struct>(new Struct(interface.enclosing_library(), value));
   }
 
   if (value_["has_response"].GetBool()) {
-    response_ = std::unique_ptr<Struct>(
-        new Struct(interface.enclosing_library(), value));
+    response_ = std::unique_ptr<Struct>(new Struct(interface.enclosing_library(), value));
   }
 }
 
@@ -256,10 +239,8 @@ bool Interface::GetMethodByFullName(const std::string& name,
 
 Library::Library(LibraryLoader* enclosing_loader, rapidjson::Document& document,
                  std::map<Ordinal64, const InterfaceMethod*>& index)
-    : enclosing_loader_(enclosing_loader),
-      backing_document_(std::move(document)) {
-  auto interfaces_array =
-      backing_document_["interface_declarations"].GetArray();
+    : enclosing_loader_(enclosing_loader), backing_document_(std::move(document)) {
+  auto interfaces_array = backing_document_["interface_declarations"].GetArray();
   interfaces_.reserve(interfaces_array.Size());
 
   for (auto& decl : interfaces_array) {
@@ -275,40 +256,33 @@ void Library::DecodeTypes() {
   decoded_ = true;
   name_ = backing_document_["name"].GetString();
   for (auto& enu : backing_document_["enum_declarations"].GetArray()) {
-    enums_.emplace(std::piecewise_construct,
-                   std::forward_as_tuple(enu["name"].GetString()),
+    enums_.emplace(std::piecewise_construct, std::forward_as_tuple(enu["name"].GetString()),
                    std::forward_as_tuple(new Enum(enu)));
   }
   for (auto& str : backing_document_["struct_declarations"].GetArray()) {
-    structs_.emplace(std::piecewise_construct,
-                     std::forward_as_tuple(str["name"].GetString()),
+    structs_.emplace(std::piecewise_construct, std::forward_as_tuple(str["name"].GetString()),
                      std::forward_as_tuple(new Struct(*this, str)));
   }
   for (auto& tab : backing_document_["table_declarations"].GetArray()) {
-    tables_.emplace(std::piecewise_construct,
-                    std::forward_as_tuple(tab["name"].GetString()),
+    tables_.emplace(std::piecewise_construct, std::forward_as_tuple(tab["name"].GetString()),
                     std::forward_as_tuple(new Table(*this, tab)));
   }
   for (auto& uni : backing_document_["union_declarations"].GetArray()) {
-    unions_.emplace(std::piecewise_construct,
-                    std::forward_as_tuple(uni["name"].GetString()),
+    unions_.emplace(std::piecewise_construct, std::forward_as_tuple(uni["name"].GetString()),
                     std::forward_as_tuple(new Union(*this, uni)));
   }
   for (auto& xuni : backing_document_["xunion_declarations"].GetArray()) {
-    xunions_.emplace(std::piecewise_construct,
-                     std::forward_as_tuple(xuni["name"].GetString()),
+    xunions_.emplace(std::piecewise_construct, std::forward_as_tuple(xuni["name"].GetString()),
                      std::forward_as_tuple(new XUnion(*this, xuni)));
   }
 }
 
-std::unique_ptr<Type> Library::TypeFromIdentifier(bool is_nullable,
-                                                  std::string& identifier,
+std::unique_ptr<Type> Library::TypeFromIdentifier(bool is_nullable, std::string& identifier,
                                                   size_t inline_size) {
   auto str = structs_.find(identifier);
   if (str != structs_.end()) {
     str->second->DecodeStructTypes();
-    std::unique_ptr<Type> type(
-        new StructType(std::ref(*str->second), is_nullable));
+    std::unique_ptr<Type> type(new StructType(std::ref(*str->second), is_nullable));
     return type;
   }
   auto enu = enums_.find(identifier);
@@ -339,8 +313,7 @@ std::unique_ptr<Type> Library::TypeFromIdentifier(bool is_nullable,
   return std::make_unique<RawType>(inline_size);
 }
 
-bool Library::GetInterfaceByName(const std::string& name,
-                                 const Interface** ptr) const {
+bool Library::GetInterfaceByName(const std::string& name, const Interface** ptr) const {
   for (const auto& interface : interfaces()) {
     if (interface->name() == name) {
       *ptr = interface.get();
@@ -350,9 +323,8 @@ bool Library::GetInterfaceByName(const std::string& name,
   return false;
 }
 
-LibraryLoader::LibraryLoader(
-    std::vector<std::unique_ptr<std::istream>>& library_streams,
-    LibraryReadError* err) {
+LibraryLoader::LibraryLoader(std::vector<std::unique_ptr<std::istream>>& library_streams,
+                             LibraryReadError* err) {
   err->value = LibraryReadError::kOk;
   for (size_t i = 0; i < library_streams.size(); i++) {
     std::string ir(std::istreambuf_iterator<char>(*library_streams[i]), {});
@@ -363,8 +335,8 @@ LibraryLoader::LibraryLoader(
     Add(ir, err);
     if (err->value != LibraryReadError::kOk) {
       FXL_LOG(ERROR) << "JSON parse error: "
-                     << rapidjson::GetParseError_En(err->parse_result.Code())
-                     << " at offset " << err->parse_result.Offset();
+                     << rapidjson::GetParseError_En(err->parse_result.Code()) << " at offset "
+                     << err->parse_result.Offset();
       return;
     }
   }

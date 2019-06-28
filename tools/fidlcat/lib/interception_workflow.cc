@@ -27,8 +27,7 @@ namespace fidlcat {
 void InterceptingThreadObserver::OnThreadStopped(
     zxdb::Thread* thread, debug_ipc::NotifyException::Type type,
     const std::vector<fxl::WeakPtr<zxdb::Breakpoint>>& hit_breakpoints) {
-  FXL_CHECK(thread)
-      << "Internal error: Stopped in a breakpoint without a thread?";
+  FXL_CHECK(thread) << "Internal error: Stopped in a breakpoint without a thread?";
 
   // There a two possible breakpoints we can hit:
   //  - A breakpoint right before a system call (zx_channel_read,
@@ -56,36 +55,28 @@ void InterceptingThreadObserver::OnThreadStopped(
     zxdb::BreakpointSettings settings = bp_ptr->GetSettings();
     if (settings.location.type == zxdb::InputLocation::Type::kSymbol &&
         settings.location.symbol.components().size() == 1u) {
-      for (auto& syscall :
-           workflow_->syscall_decoder_dispatcher()->syscalls()) {
-        if (settings.location.symbol.components()[0].name() ==
-            syscall->breakpoint_name()) {
-          workflow_->syscall_decoder_dispatcher()->DecodeSyscall(this, thread,
-                                                                 syscall.get());
+      for (auto& syscall : workflow_->syscall_decoder_dispatcher()->syscalls()) {
+        if (settings.location.symbol.components()[0].name() == syscall->breakpoint_name()) {
+          workflow_->syscall_decoder_dispatcher()->DecodeSyscall(this, thread, syscall.get());
           return;
         }
       }
       FXL_LOG(INFO) << "Internal error: breakpoint "
-                    << settings.location.symbol.components()[0].name()
-                    << " not managed";
+                    << settings.location.symbol.components()[0].name() << " not managed";
       thread->Continue();
       return;
     }
   }
-  FXL_LOG(INFO)
-      << "Internal error: Thread stopped on exception with no breakpoint set";
+  FXL_LOG(INFO) << "Internal error: Thread stopped on exception with no breakpoint set";
   thread->Continue();
 }
 
-void InterceptingThreadObserver::Register(int64_t koid,
-                                          SyscallDecoder* decoder) {
+void InterceptingThreadObserver::Register(int64_t koid, SyscallDecoder* decoder) {
   breakpoint_map_[koid] = decoder;
 }
 
-void InterceptingThreadObserver::CreateNewBreakpoint(
-    zxdb::BreakpointSettings& settings) {
-  zxdb::Breakpoint* breakpoint =
-      workflow_->session_->system().CreateNewBreakpoint();
+void InterceptingThreadObserver::CreateNewBreakpoint(zxdb::BreakpointSettings& settings) {
+  zxdb::Breakpoint* breakpoint = workflow_->session_->system().CreateNewBreakpoint();
 
   breakpoint->SetSettings(settings, [](const zxdb::Err& err) {
     if (!err.ok()) {
@@ -94,17 +85,14 @@ void InterceptingThreadObserver::CreateNewBreakpoint(
   });
 }
 
-void InterceptingTargetObserver::DidCreateProcess(
-    zxdb::Target* target, zxdb::Process* process,
-    bool autoattached_to_new_process) {
+void InterceptingTargetObserver::DidCreateProcess(zxdb::Target* target, zxdb::Process* process,
+                                                  bool autoattached_to_new_process) {
   process->AddObserver(&dispatcher_);
   workflow_->SetBreakpoints(target);
 }
 
-void InterceptingTargetObserver::WillDestroyProcess(zxdb::Target* target,
-                                                    zxdb::Process* process,
-                                                    DestroyReason reason,
-                                                    int exit_code) {
+void InterceptingTargetObserver::WillDestroyProcess(zxdb::Target* target, zxdb::Process* process,
+                                                    DestroyReason reason, int exit_code) {
   workflow_->Detach();
 }
 
@@ -144,8 +132,7 @@ void InterceptionWorkflow::Initialize(
   std::vector<std::string> paths;
 
   // At this moment, the build index has all the "default" paths.
-  zxdb::BuildIDIndex& build_id_index =
-      session_->system().GetSymbols()->build_id_index();
+  zxdb::BuildIDIndex& build_id_index = session_->system().GetSymbols()->build_id_index();
 
   for (const auto& build_id_file : build_id_index.build_id_files()) {
     paths.push_back(build_id_file);
@@ -159,12 +146,11 @@ void InterceptionWorkflow::Initialize(
 
   // Adding it to the settings will trigger the loading of the symbols.
   // Redundant adds are ignored.
-  session_->system().settings().SetList(
-      zxdb::ClientSettings::System::kSymbolPaths, std::move(paths));
+  session_->system().settings().SetList(zxdb::ClientSettings::System::kSymbolPaths,
+                                        std::move(paths));
 
   // 2) Ensure that the session correctly reads data off of the loop.
-  buffer_.set_data_available_callback(
-      [this]() { session_->OnStreamReadable(); });
+  buffer_.set_data_available_callback([this]() { session_->OnStreamReadable(); });
 
   // 3) Provide a loop, if none exists.
   if (debug_ipc::MessageLoop::Current() == nullptr) {
@@ -174,8 +160,7 @@ void InterceptionWorkflow::Initialize(
 
 void InterceptionWorkflow::Connect(const std::string& host, uint16_t port,
                                    SimpleErrorFunction and_then) {
-  session_->Connect(host, port,
-                    [and_then](const zxdb::Err& err) { and_then(err); });
+  session_->Connect(host, port, [and_then](const zxdb::Err& err) { and_then(err); });
 }
 
 // Helper function that finds a target for fidlcat to attach itself to. The
@@ -184,8 +169,7 @@ void InterceptionWorkflow::Connect(const std::string& host, uint16_t port,
 zxdb::Target* InterceptionWorkflow::GetTarget(uint64_t process_koid) {
   if (process_koid != ULLONG_MAX) {
     for (zxdb::Target* target : session_->system().GetTargets()) {
-      if (target->GetProcess() &&
-          target->GetProcess()->GetKoid() == process_koid) {
+      if (target->GetProcess() && target->GetProcess()->GetKoid() == process_koid) {
         return target;
       }
     }
@@ -205,8 +189,7 @@ void InterceptionWorkflow::AddObserver(zxdb::Target* target) {
   target_count_++;
 }
 
-void InterceptionWorkflow::Attach(uint64_t process_koid,
-                                  SimpleErrorFunction and_then) {
+void InterceptionWorkflow::Attach(uint64_t process_koid, SimpleErrorFunction and_then) {
   zxdb::Target* target = GetTarget(process_koid);
   if (target->GetProcess() && target->GetProcess()->GetKoid() == process_koid) {
     return;
@@ -214,18 +197,16 @@ void InterceptionWorkflow::Attach(uint64_t process_koid,
 
   // TODO: Remove observer when appropriate.
   AddObserver(target);
-  target->Attach(
-      process_koid, [process_koid, and_then = std::move(and_then)](
-                        fxl::WeakPtr<zxdb::Target>, const zxdb::Err& err) {
-        if (!err.ok()) {
-          FXL_LOG(INFO) << "Unable to attach to koid " << process_koid << ": "
-                        << err.msg();
-          return;
-        } else {
-          FXL_LOG(INFO) << "Attached to process with koid " << process_koid;
-        }
-        and_then(err);
-      });
+  target->Attach(process_koid, [process_koid, and_then = std::move(and_then)](
+                                   fxl::WeakPtr<zxdb::Target>, const zxdb::Err& err) {
+    if (!err.ok()) {
+      FXL_LOG(INFO) << "Unable to attach to koid " << process_koid << ": " << err.msg();
+      return;
+    } else {
+      FXL_LOG(INFO) << "Attached to process with koid " << process_koid;
+    }
+    and_then(err);
+  });
 }
 
 void InterceptionWorkflow::Detach() {
@@ -290,15 +271,14 @@ void InterceptionWorkflow::Launch(const std::vector<std::string>& command,
     request.argv = std::vector<std::string>(command.begin() + 1, command.end());
     session_->remote_api()->Launch(
         std::move(request),
-        [target = target->GetWeakPtr(), on_err = std::move(on_err),
-         and_then = std::move(and_then)](const zxdb::Err& err,
-                                         debug_ipc::LaunchReply reply) {
+        [target = target->GetWeakPtr(), on_err = std::move(on_err), and_then = std::move(and_then)](
+            const zxdb::Err& err, debug_ipc::LaunchReply reply) {
           if (!on_err(err)) {
             return;
           }
           if (reply.status != debug_ipc::kZxOk) {
-            FXL_LOG(INFO) << "Could not start component " << reply.process_name
-                          << ": error " << reply.status;
+            FXL_LOG(INFO) << "Could not start component " << reply.process_name << ": error "
+                          << reply.status;
           }
           target->session()->ExpectComponent(reply.component_id);
           and_then(err);

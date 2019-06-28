@@ -15,8 +15,7 @@
 
 namespace fidlcat {
 
-bool Type::ValueEquals(const uint8_t* bytes, size_t length,
-                       const rapidjson::Value& value) const {
+bool Type::ValueEquals(const uint8_t* bytes, size_t length, const rapidjson::Value& value) const {
   FXL_LOG(FATAL) << "Equality operator for type not implemented";
   return false;
 }
@@ -26,22 +25,19 @@ size_t Type::InlineSize() const {
   return 0;
 }
 
-std::unique_ptr<Field> Type::Decode(MessageDecoder* decoder,
-                                    std::string_view name,
+std::unique_ptr<Field> Type::Decode(MessageDecoder* decoder, std::string_view name,
                                     uint64_t offset) const {
   FXL_LOG(ERROR) << "Decode not implemented for field '" << name << "'";
   return nullptr;
 }
 
-std::unique_ptr<Field> RawType::Decode(MessageDecoder* decoder,
-                                       std::string_view name,
+std::unique_ptr<Field> RawType::Decode(MessageDecoder* decoder, std::string_view name,
                                        uint64_t offset) const {
-  return std::make_unique<RawField>(
-      name, this, decoder->GetAddress(offset, inline_size_), inline_size_);
+  return std::make_unique<RawField>(name, this, decoder->GetAddress(offset, inline_size_),
+                                    inline_size_);
 }
 
-std::unique_ptr<Field> StringType::Decode(MessageDecoder* decoder,
-                                          std::string_view name,
+std::unique_ptr<Field> StringType::Decode(MessageDecoder* decoder, std::string_view name,
                                           uint64_t offset) const {
   uint64_t string_length = 0;
   decoder->GetValueAt(offset, &string_length);
@@ -55,25 +51,21 @@ std::unique_ptr<Field> StringType::Decode(MessageDecoder* decoder,
   return result;
 }
 
-std::unique_ptr<Field> BoolType::Decode(MessageDecoder* decoder,
-                                        std::string_view name,
+std::unique_ptr<Field> BoolType::Decode(MessageDecoder* decoder, std::string_view name,
                                         uint64_t offset) const {
-  return std::make_unique<BoolField>(
-      name, this, decoder->GetAddress(offset, sizeof(uint8_t)));
+  return std::make_unique<BoolField>(name, this, decoder->GetAddress(offset, sizeof(uint8_t)));
 }
 
 size_t StructType::InlineSize() const { return struct_.size(); }
 
-std::unique_ptr<Field> StructType::Decode(MessageDecoder* decoder,
-                                          std::string_view name,
+std::unique_ptr<Field> StructType::Decode(MessageDecoder* decoder, std::string_view name,
                                           uint64_t offset) const {
   return struct_.DecodeObject(decoder, name, this, offset, nullable_);
 }
 
 size_t TableType::InlineSize() const { return table_.size(); }
 
-std::unique_ptr<Field> TableType::Decode(MessageDecoder* decoder,
-                                         std::string_view name,
+std::unique_ptr<Field> TableType::Decode(MessageDecoder* decoder, std::string_view name,
                                          uint64_t offset) const {
   uint64_t size = 0;
   decoder->GetValueAt(offset, &size);
@@ -88,13 +80,11 @@ std::unique_ptr<Field> TableType::Decode(MessageDecoder* decoder,
   return result;
 }
 
-UnionType::UnionType(const Union& uni, bool nullable)
-    : union_(uni), nullable_(nullable) {}
+UnionType::UnionType(const Union& uni, bool nullable) : union_(uni), nullable_(nullable) {}
 
 size_t UnionType::InlineSize() const { return union_.size(); }
 
-std::unique_ptr<Field> UnionType::Decode(MessageDecoder* decoder,
-                                         std::string_view name,
+std::unique_ptr<Field> UnionType::Decode(MessageDecoder* decoder, std::string_view name,
                                          uint64_t offset) const {
   return union_.DecodeUnion(decoder, name, this, offset, nullable_);
 }
@@ -104,8 +94,7 @@ XUnionType::XUnionType(const XUnion& uni, bool is_nullable)
 
 size_t XUnionType::InlineSize() const { return xunion_.size(); }
 
-std::unique_ptr<Field> XUnionType::Decode(MessageDecoder* decoder,
-                                          std::string_view name,
+std::unique_ptr<Field> XUnionType::Decode(MessageDecoder* decoder, std::string_view name,
                                           uint64_t offset) const {
   uint32_t ordinal = 0;
   if (decoder->GetValueAt(offset, &ordinal)) {
@@ -115,8 +104,7 @@ std::unique_ptr<Field> XUnionType::Decode(MessageDecoder* decoder,
   }
   offset += sizeof(uint64_t);  // Skips ordinal + padding.
 
-  std::unique_ptr<XUnionField> result =
-      std::make_unique<XUnionField>(name, this, xunion_);
+  std::unique_ptr<XUnionField> result = std::make_unique<XUnionField>(name, this, xunion_);
 
   std::unique_ptr<EnvelopeField> envelope;
   const UnionMember* member = xunion_.MemberWithOrdinal(ordinal);
@@ -139,8 +127,7 @@ ElementSequenceType::ElementSequenceType(std::unique_ptr<Type>&& component_type)
 ArrayType::ArrayType(std::unique_ptr<Type>&& component_type, uint32_t count)
     : ElementSequenceType(std::move(component_type)), count_(count) {}
 
-std::unique_ptr<Field> ArrayType::Decode(MessageDecoder* decoder,
-                                         std::string_view name,
+std::unique_ptr<Field> ArrayType::Decode(MessageDecoder* decoder, std::string_view name,
                                          uint64_t offset) const {
   auto result = std::make_unique<ArrayField>(name, this);
   for (uint64_t i = 0; i < count_; ++i) {
@@ -153,15 +140,13 @@ std::unique_ptr<Field> ArrayType::Decode(MessageDecoder* decoder,
 VectorType::VectorType(std::unique_ptr<Type>&& component_type)
     : ElementSequenceType(std::move(component_type)) {}
 
-std::unique_ptr<Field> VectorType::Decode(MessageDecoder* decoder,
-                                          std::string_view name,
+std::unique_ptr<Field> VectorType::Decode(MessageDecoder* decoder, std::string_view name,
                                           uint64_t offset) const {
   uint64_t size = 0;
   decoder->GetValueAt(offset, &size);
   offset += sizeof(size);
 
-  auto result =
-      std::make_unique<VectorField>(name, this, size, component_type_.get());
+  auto result = std::make_unique<VectorField>(name, this, size, component_type_.get());
 
   // Don't need to check return value because the effects of returning false are
   // dealt with in DecodeNullable.
@@ -171,21 +156,17 @@ std::unique_ptr<Field> VectorType::Decode(MessageDecoder* decoder,
 
 EnumType::EnumType(const Enum& e) : enum_(e) {}
 
-std::unique_ptr<Field> EnumType::Decode(MessageDecoder* decoder,
-                                        std::string_view name,
+std::unique_ptr<Field> EnumType::Decode(MessageDecoder* decoder, std::string_view name,
                                         uint64_t offset) const {
-  return std::make_unique<EnumField>(
-      name, this, decoder->GetAddress(offset, enum_.size()), enum_);
+  return std::make_unique<EnumField>(name, this, decoder->GetAddress(offset, enum_.size()), enum_);
 }
 
-std::unique_ptr<Field> HandleType::Decode(MessageDecoder* decoder,
-                                          std::string_view name,
+std::unique_ptr<Field> HandleType::Decode(MessageDecoder* decoder, std::string_view name,
                                           uint64_t offset) const {
   zx_handle_t handle = FIDL_HANDLE_ABSENT;
   decoder->GetValueAt(offset, &handle);
   if ((handle != FIDL_HANDLE_ABSENT) && (handle != FIDL_HANDLE_PRESENT)) {
-    FXL_LOG(ERROR) << "invalid value <" << std::hex << handle << std::dec
-                   << "> for handle";
+    FXL_LOG(ERROR) << "invalid value <" << std::hex << handle << std::dec << "> for handle";
     return std::make_unique<HandleField>(name, this, FIDL_HANDLE_ABSENT);
   }
   if (handle != FIDL_HANDLE_ABSENT) {
@@ -194,22 +175,20 @@ std::unique_ptr<Field> HandleType::Decode(MessageDecoder* decoder,
   return std::make_unique<HandleField>(name, this, handle);
 }
 
-std::unique_ptr<Type> Type::ScalarTypeFromName(const std::string& type_name,
-                                               size_t inline_size) {
-  static std::map<std::string, std::function<std::unique_ptr<Type>()>>
-      scalar_type_map_{
-          {"bool", []() { return std::make_unique<BoolType>(); }},
-          {"float32", []() { return std::make_unique<Float32Type>(); }},
-          {"float64", []() { return std::make_unique<Float64Type>(); }},
-          {"int8", []() { return std::make_unique<Int8Type>(); }},
-          {"int16", []() { return std::make_unique<Int16Type>(); }},
-          {"int32", []() { return std::make_unique<Int32Type>(); }},
-          {"int64", []() { return std::make_unique<Int64Type>(); }},
-          {"uint8", []() { return std::make_unique<Uint8Type>(); }},
-          {"uint16", []() { return std::make_unique<Uint16Type>(); }},
-          {"uint32", []() { return std::make_unique<Uint32Type>(); }},
-          {"uint64", []() { return std::make_unique<Uint64Type>(); }},
-      };
+std::unique_ptr<Type> Type::ScalarTypeFromName(const std::string& type_name, size_t inline_size) {
+  static std::map<std::string, std::function<std::unique_ptr<Type>()>> scalar_type_map_{
+      {"bool", []() { return std::make_unique<BoolType>(); }},
+      {"float32", []() { return std::make_unique<Float32Type>(); }},
+      {"float64", []() { return std::make_unique<Float64Type>(); }},
+      {"int8", []() { return std::make_unique<Int8Type>(); }},
+      {"int16", []() { return std::make_unique<Int16Type>(); }},
+      {"int32", []() { return std::make_unique<Int32Type>(); }},
+      {"int64", []() { return std::make_unique<Int64Type>(); }},
+      {"uint8", []() { return std::make_unique<Uint8Type>(); }},
+      {"uint16", []() { return std::make_unique<Uint16Type>(); }},
+      {"uint32", []() { return std::make_unique<Uint32Type>(); }},
+      {"uint64", []() { return std::make_unique<Uint64Type>(); }},
+  };
   auto it = scalar_type_map_.find(type_name);
   if (it != scalar_type_map_.end()) {
     return it->second();
@@ -217,8 +196,7 @@ std::unique_ptr<Type> Type::ScalarTypeFromName(const std::string& type_name,
   return std::make_unique<RawType>(inline_size);
 }
 
-std::unique_ptr<Type> Type::TypeFromPrimitive(const rapidjson::Value& type,
-                                              size_t inline_size) {
+std::unique_ptr<Type> Type::TypeFromPrimitive(const rapidjson::Value& type, size_t inline_size) {
   if (!type.HasMember("subtype")) {
     FXL_LOG(ERROR) << "Invalid type";
     return std::make_unique<RawType>(inline_size);
@@ -228,8 +206,7 @@ std::unique_ptr<Type> Type::TypeFromPrimitive(const rapidjson::Value& type,
   return ScalarTypeFromName(subtype, inline_size);
 }
 
-std::unique_ptr<Type> Type::TypeFromIdentifier(LibraryLoader* loader,
-                                               const rapidjson::Value& type,
+std::unique_ptr<Type> Type::TypeFromIdentifier(LibraryLoader* loader, const rapidjson::Value& type,
                                                size_t inline_size) {
   if (!type.HasMember("identifier")) {
     FXL_LOG(ERROR) << "Invalid type";
@@ -251,8 +228,7 @@ std::unique_ptr<Type> Type::TypeFromIdentifier(LibraryLoader* loader,
   return library->TypeFromIdentifier(is_nullable, id, inline_size);
 }
 
-std::unique_ptr<Type> Type::GetType(LibraryLoader* loader,
-                                    const rapidjson::Value& type,
+std::unique_ptr<Type> Type::GetType(LibraryLoader* loader, const rapidjson::Value& type,
                                     size_t inline_size) {
   // TODO: This is creating a new type every time we need one.  That's pretty
   // inefficient.  Find a way of caching them if it becomes a problem.
@@ -263,10 +239,8 @@ std::unique_ptr<Type> Type::GetType(LibraryLoader* loader,
   std::string kind = type["kind"].GetString();
   if (kind == "array") {
     const rapidjson::Value& element_type = type["element_type"];
-    uint32_t element_count =
-        std::strtol(type["element_count"].GetString(), nullptr, 10);
-    return std::make_unique<ArrayType>(GetType(loader, element_type, 0),
-                                       element_count);
+    uint32_t element_count = std::strtol(type["element_count"].GetString(), nullptr, 10);
+    return std::make_unique<ArrayType>(GetType(loader, element_type, 0), element_count);
   } else if (kind == "vector") {
     const rapidjson::Value& element_type = type["element_type"];
     return std::make_unique<VectorType>(GetType(loader, element_type, 0));

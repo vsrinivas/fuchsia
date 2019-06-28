@@ -51,35 +51,30 @@ class Type {
 
   // Decodes the type's inline part. It generates a Field and, eventually,
   // registers the field for further decoding (secondary objects).
-  virtual std::unique_ptr<Field> Decode(MessageDecoder* decoder,
-                                        std::string_view name,
+  virtual std::unique_ptr<Field> Decode(MessageDecoder* decoder, std::string_view name,
                                         uint64_t offset) const;
 
   // Gets a Type object representing the |type|.  |type| is a JSON object a
   // field "kind" that states the type (e.g., "array", "vector", "foo.bar/Baz").
   // |loader| is the set of libraries to use to find types that need to be given
   // by identifier (e.g., "foo.bar/Baz").
-  static std::unique_ptr<Type> GetType(LibraryLoader* loader,
-                                       const rapidjson::Value& type,
+  static std::unique_ptr<Type> GetType(LibraryLoader* loader, const rapidjson::Value& type,
                                        size_t inline_size);
 
   // Gets a Type object representing the |type|.  |type| is a JSON object with a
   // "subtype" field that represents a scalar type (e.g., "float64", "uint32")
-  static std::unique_ptr<Type> TypeFromPrimitive(const rapidjson::Value& type,
-                                                 size_t inline_size);
+  static std::unique_ptr<Type> TypeFromPrimitive(const rapidjson::Value& type, size_t inline_size);
 
   // Gets a Type object representing the |type_name|.  |type| is a string that
   // represents a scalar type (e.g., "float64", "uint32").
-  static std::unique_ptr<Type> ScalarTypeFromName(const std::string& type_name,
-                                                  size_t inline_size);
+  static std::unique_ptr<Type> ScalarTypeFromName(const std::string& type_name, size_t inline_size);
 
   // Gets a Type object representing the |type|.  |type| is a JSON object a
   // field "kind" that states the type.  "kind" is an identifier
   // (e.g.,"foo.bar/Baz").  |loader| is the set of libraries to use to lookup
   // that identifier.
   static std::unique_ptr<Type> TypeFromIdentifier(LibraryLoader* loader,
-                                                  const rapidjson::Value& type,
-                                                  size_t inline_size);
+                                                  const rapidjson::Value& type, size_t inline_size);
 
   Type& operator=(const Type& other) = default;
   Type(const Type& other) = default;
@@ -108,9 +103,7 @@ class StringType : public Type {
  public:
   std::string Name() const override { return "string"; }
 
-  virtual size_t InlineSize() const override {
-    return sizeof(uint64_t) + sizeof(uint64_t);
-  }
+  virtual size_t InlineSize() const override { return sizeof(uint64_t) + sizeof(uint64_t); }
 
   std::unique_ptr<Field> Decode(MessageDecoder* decoder, std::string_view name,
                                 uint64_t offset) const override;
@@ -129,8 +122,7 @@ class NumericType : public Type {
     T lhs = internal::MemoryFrom<T, const uint8_t*>(bytes);
     std::istringstream input(value["value"].GetString());
     // Because int8_t is really char, and we don't want to read that.
-    using R =
-        typename std::conditional<std::is_same<T, int8_t>::value, int, T>::type;
+    using R = typename std::conditional<std::is_same<T, int8_t>::value, int, T>::type;
     R rhs;
     input >> rhs;
     return lhs == rhs;
@@ -140,8 +132,7 @@ class NumericType : public Type {
 
   std::unique_ptr<Field> Decode(MessageDecoder* decoder, std::string_view name,
                                 uint64_t offset) const override {
-    return std::make_unique<NumericField<T>>(
-        name, this, decoder->GetAddress(offset, sizeof(T)));
+    return std::make_unique<NumericField<T>>(name, this, decoder->GetAddress(offset, sizeof(T)));
   }
 };
 
@@ -207,8 +198,7 @@ class BoolType : public Type {
 
 class StructType : public Type {
  public:
-  StructType(const Struct& str, bool nullable)
-      : struct_(str), nullable_(nullable) {}
+  StructType(const Struct& str, bool nullable) : struct_(str), nullable_(nullable) {}
 
   std::string Name() const override { return struct_.name(); }
 
@@ -285,9 +275,7 @@ class ArrayType : public ElementSequenceType {
     return std::string("array<") + component_type_->Name() + ">";
   }
 
-  virtual size_t InlineSize() const override {
-    return component_type_->InlineSize() * count_;
-  }
+  virtual size_t InlineSize() const override { return component_type_->InlineSize() * count_; }
 
   std::unique_ptr<Field> Decode(MessageDecoder* decoder, std::string_view name,
                                 uint64_t offset) const override;
@@ -304,9 +292,7 @@ class VectorType : public ElementSequenceType {
     return std::string("vector<") + component_type_->Name() + ">";
   }
 
-  virtual size_t InlineSize() const override {
-    return sizeof(uint64_t) + sizeof(uint64_t);
-  }
+  virtual size_t InlineSize() const override { return sizeof(uint64_t) + sizeof(uint64_t); }
 
   std::unique_ptr<Field> Decode(MessageDecoder* decoder, std::string_view name,
                                 uint64_t offset) const override;

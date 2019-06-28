@@ -39,8 +39,7 @@ bool NullableField::DecodeNullable(MessageDecoder* decoder, uint64_t offset) {
     return true;
   }
   if (data != FIDL_ALLOC_PRESENT) {
-    FXL_LOG(ERROR) << "invalid value <" << std::hex << data << std::dec
-                   << "> for nullable";
+    FXL_LOG(ERROR) << "invalid value <" << std::hex << data << std::dec << "> for nullable";
     return false;
   }
   decoder->AddSecondaryObject(this);
@@ -53,8 +52,8 @@ void InlineField::DecodeContent(MessageDecoder* decoder) {
 
 int RawField::DisplaySize(int remaining_size) const { return size_ * 3 - 1; }
 
-void RawField::PrettyPrint(std::ostream& os, const Colors& colors, int tabs,
-                           int remaining_size, int max_line_size) const {
+void RawField::PrettyPrint(std::ostream& os, const Colors& colors, int tabs, int remaining_size,
+                           int max_line_size) const {
   if (size_ == 0) {
     return;
   }
@@ -91,30 +90,27 @@ void StringField::ExtractJson(rapidjson::Document::AllocatorType& allocator,
   } else if (data_ == nullptr) {
     result.SetString("(invalid)", allocator);
   } else {
-    result.SetString(reinterpret_cast<const char*>(data_), string_length_,
-                     allocator);
+    result.SetString(reinterpret_cast<const char*>(data_), string_length_, allocator);
   }
 }
 
-void StringField::PrettyPrint(std::ostream& os, const Colors& colors, int tabs,
-                              int remaining_size, int max_line_size) const {
+void StringField::PrettyPrint(std::ostream& os, const Colors& colors, int tabs, int remaining_size,
+                              int max_line_size) const {
   os << colors.red;
   if (is_null()) {
     os << "null";
   } else if (data_ == nullptr) {
     os << "invalid";
   } else {
-    os << '"'
-       << std::string_view(reinterpret_cast<const char*>(data_), string_length_)
-       << '"';
+    os << '"' << std::string_view(reinterpret_cast<const char*>(data_), string_length_) << '"';
   }
   os << colors.reset;
 }
 
 int BoolField::DisplaySize(int remaining_size) const { return *data() ? 4 : 5; }
 
-void BoolField::PrettyPrint(std::ostream& os, const Colors& colors, int tabs,
-                            int remaining_size, int max_line_size) const {
+void BoolField::PrettyPrint(std::ostream& os, const Colors& colors, int tabs, int remaining_size,
+                            int max_line_size) const {
   if (data() == nullptr) {
     os << colors.red << "invalid" << colors.reset;
   } else {
@@ -152,8 +148,8 @@ void Object::DecodeContent(MessageDecoder* decoder) {
 
 void Object::DecodeAt(MessageDecoder* decoder, uint64_t base_offset) {
   for (const auto& member : struct_definition_.members()) {
-    std::unique_ptr<Field> field = member->type()->Decode(
-        decoder, member->name(), base_offset + member->offset());
+    std::unique_ptr<Field> field =
+        member->type()->Decode(decoder, member->name(), base_offset + member->offset());
     if (field != nullptr) {
       fields_.push_back(std::move(field));
     }
@@ -175,8 +171,8 @@ void Object::ExtractJson(rapidjson::Document::AllocatorType& allocator,
   }
 }
 
-void Object::PrettyPrint(std::ostream& os, const Colors& colors, int tabs,
-                         int remaining_size, int max_line_size) const {
+void Object::PrettyPrint(std::ostream& os, const Colors& colors, int tabs, int remaining_size,
+                         int max_line_size) const {
   if (is_null()) {
     os << colors.blue << "null" << colors.reset;
   } else if (fields_.empty()) {
@@ -207,16 +203,14 @@ void Object::PrettyPrint(std::ostream& os, const Colors& colors, int tabs,
       }
       size += 3;
       os << " = ";
-      field->PrettyPrint(os, colors, tabs + 1, max_line_size - size,
-                         max_line_size);
+      field->PrettyPrint(os, colors, tabs + 1, max_line_size - size, max_line_size);
       os << "\n";
     }
     os << std::string(tabs * kTabSize, ' ') << '}';
   }
 }
 
-EnvelopeField::EnvelopeField(std::string_view name, const Type* type)
-    : NullableField(name, type) {}
+EnvelopeField::EnvelopeField(std::string_view name, const Type* type) : NullableField(name, type) {}
 
 int EnvelopeField::DisplaySize(int remaining_size) const {
   return field_->DisplaySize(remaining_size);
@@ -252,14 +246,13 @@ void EnvelopeField::ExtractJson(rapidjson::Document::AllocatorType& allocator,
   field_->ExtractJson(allocator, result);
 }
 
-void EnvelopeField::PrettyPrint(std::ostream& os, const Colors& colors,
-                                int tabs, int remaining_size,
-                                int max_line_size) const {
+void EnvelopeField::PrettyPrint(std::ostream& os, const Colors& colors, int tabs,
+                                int remaining_size, int max_line_size) const {
   field_->PrettyPrint(os, colors, tabs, remaining_size, max_line_size);
 }
 
-TableField::TableField(std::string_view name, const Type* type,
-                       const Table& table_definition, uint64_t envelope_count)
+TableField::TableField(std::string_view name, const Type* type, const Table& table_definition,
+                       uint64_t envelope_count)
     : NullableField(name, type),
       table_definition_(table_definition),
       envelope_count_(envelope_count) {}
@@ -288,19 +281,15 @@ int TableField::DisplaySize(int remaining_size) const {
 void TableField::DecodeContent(MessageDecoder* decoder) {
   uint64_t offset = 0;
   for (uint64_t envelope_id = 0; envelope_id < envelope_count_; ++envelope_id) {
-    const TableMember* member =
-        (envelope_id < table_definition_.members().size() - 1)
-            ? table_definition_.members()[envelope_id + 1]
-            : nullptr;
+    const TableMember* member = (envelope_id < table_definition_.members().size() - 1)
+                                    ? table_definition_.members()[envelope_id + 1]
+                                    : nullptr;
     std::unique_ptr<EnvelopeField> envelope;
     if (member == nullptr) {
-      std::string key_name =
-          std::string("unknown$") + std::to_string(envelope_id + 1);
-      envelope = std::make_unique<EnvelopeField>(
-          key_name, table_definition_.unknown_member_type());
+      std::string key_name = std::string("unknown$") + std::to_string(envelope_id + 1);
+      envelope = std::make_unique<EnvelopeField>(key_name, table_definition_.unknown_member_type());
     } else {
-      envelope =
-          std::make_unique<EnvelopeField>(member->name(), member->type());
+      envelope = std::make_unique<EnvelopeField>(member->name(), member->type());
     }
     envelope->DecodeAt(decoder, offset);
     envelopes_.push_back(std::move(envelope));
@@ -322,8 +311,8 @@ void TableField::ExtractJson(rapidjson::Document::AllocatorType& allocator,
   }
 }
 
-void TableField::PrettyPrint(std::ostream& os, const Colors& colors, int tabs,
-                             int remaining_size, int max_line_size) const {
+void TableField::PrettyPrint(std::ostream& os, const Colors& colors, int tabs, int remaining_size,
+                             int max_line_size) const {
   int display_size = DisplaySize(remaining_size);
   if (display_size == 2) {
     os << "{}";
@@ -338,8 +327,7 @@ void TableField::PrettyPrint(std::ostream& os, const Colors& colors, int tabs,
           os << ": " << colors.green << type_name << colors.reset;
         }
         os << " = ";
-        envelope->PrettyPrint(os, colors, tabs + 1, max_line_size,
-                              max_line_size);
+        envelope->PrettyPrint(os, colors, tabs + 1, max_line_size, max_line_size);
       }
     }
     os << " }";
@@ -355,8 +343,7 @@ void TableField::PrettyPrint(std::ostream& os, const Colors& colors, int tabs,
           os << ": " << colors.green << type_name << colors.reset;
         }
         os << " = ";
-        envelope->PrettyPrint(os, colors, tabs + 1, max_line_size - size,
-                              max_line_size);
+        envelope->PrettyPrint(os, colors, tabs + 1, max_line_size - size, max_line_size);
         os << "\n";
       }
     }
@@ -389,11 +376,10 @@ void UnionField::DecodeAt(MessageDecoder* decoder, uint64_t base_offset) {
   decoder->GetValueAt(base_offset, &tag);
   const UnionMember* member = union_definition_.MemberWithTag(tag);
   if (member == nullptr) {
-    field_ = std::make_unique<RawField>(
-        std::string("unknown$") + std::to_string(tag), nullptr, nullptr, 0);
+    field_ = std::make_unique<RawField>(std::string("unknown$") + std::to_string(tag), nullptr,
+                                        nullptr, 0);
   } else {
-    field_ = member->type()->Decode(decoder, member->name(),
-                                    base_offset + member->offset());
+    field_ = member->type()->Decode(decoder, member->name(), base_offset + member->offset());
   }
 }
 
@@ -410,8 +396,8 @@ void UnionField::ExtractJson(rapidjson::Document::AllocatorType& allocator,
   }
 }
 
-void UnionField::PrettyPrint(std::ostream& os, const Colors& colors, int tabs,
-                             int remaining_size, int max_line_size) const {
+void UnionField::PrettyPrint(std::ostream& os, const Colors& colors, int tabs, int remaining_size,
+                             int max_line_size) const {
   if (is_null()) {
     os << colors.blue << "null" << colors.reset;
   } else if (DisplaySize(remaining_size) <= remaining_size) {
@@ -426,8 +412,7 @@ void UnionField::PrettyPrint(std::ostream& os, const Colors& colors, int tabs,
       os << ": " << colors.green << type_name << colors.reset;
     }
     os << " = ";
-    field_->PrettyPrint(os, colors, tabs + 1, max_line_size - size,
-                        max_line_size);
+    field_->PrettyPrint(os, colors, tabs + 1, max_line_size - size, max_line_size);
     os << " }";
   } else {
     os << "{\n";
@@ -441,8 +426,7 @@ void UnionField::PrettyPrint(std::ostream& os, const Colors& colors, int tabs,
       os << ": " << colors.green << type_name << colors.reset;
     }
     os << " = ";
-    field_->PrettyPrint(os, colors, tabs + 1, max_line_size - size,
-                        max_line_size);
+    field_->PrettyPrint(os, colors, tabs + 1, max_line_size - size, max_line_size);
     os << '\n';
     os << std::string(tabs * kTabSize, ' ') << "}";
   }
@@ -474,8 +458,8 @@ void ArrayField::ExtractJson(rapidjson::Document::AllocatorType& allocator,
   }
 }
 
-void ArrayField::PrettyPrint(std::ostream& os, const Colors& colors, int tabs,
-                             int remaining_size, int max_line_size) const {
+void ArrayField::PrettyPrint(std::ostream& os, const Colors& colors, int tabs, int remaining_size,
+                             int max_line_size) const {
   if (fields_.empty()) {
     os << "[]";
   } else if (DisplaySize(remaining_size) <= remaining_size) {
@@ -491,8 +475,7 @@ void ArrayField::PrettyPrint(std::ostream& os, const Colors& colors, int tabs,
     for (const auto& field : fields_) {
       int size = (tabs + 1) * kTabSize;
       os << std::string((tabs + 1) * kTabSize, ' ');
-      field->PrettyPrint(os, colors, tabs + 1, max_line_size - size,
-                         max_line_size);
+      field->PrettyPrint(os, colors, tabs + 1, max_line_size - size, max_line_size);
       os << "\n";
     }
     os << std::string(tabs * kTabSize, ' ') << ']';
@@ -542,8 +525,8 @@ void VectorField::ExtractJson(rapidjson::Document::AllocatorType& allocator,
   }
 }
 
-void VectorField::PrettyPrint(std::ostream& os, const Colors& colors, int tabs,
-                              int remaining_size, int max_line_size) const {
+void VectorField::PrettyPrint(std::ostream& os, const Colors& colors, int tabs, int remaining_size,
+                              int max_line_size) const {
   if (is_null()) {
     os << colors.blue << "null" << colors.reset;
   } else if (fields_.empty()) {
@@ -561,8 +544,7 @@ void VectorField::PrettyPrint(std::ostream& os, const Colors& colors, int tabs,
     for (const auto& field : fields_) {
       int size = (tabs + 1) * kTabSize;
       os << std::string((tabs + 1) * kTabSize, ' ');
-      field->PrettyPrint(os, colors, tabs + 1, max_line_size - size,
-                         max_line_size);
+      field->PrettyPrint(os, colors, tabs + 1, max_line_size - size, max_line_size);
       os << "\n";
     }
     os << std::string(tabs * kTabSize, ' ') << ']';
@@ -586,26 +568,23 @@ void EnumField::ExtractJson(rapidjson::Document::AllocatorType& allocator,
   }
 }
 
-void EnumField::PrettyPrint(std::ostream& os, const Colors& colors, int tabs,
-                            int remaining_size, int max_line_size) const {
+void EnumField::PrettyPrint(std::ostream& os, const Colors& colors, int tabs, int remaining_size,
+                            int max_line_size) const {
   if (data() == nullptr) {
     os << colors.red << "invalid" << colors.reset;
   } else {
-    os << colors.blue << enum_definition_.GetNameFromBytes(data())
-       << colors.reset;
+    os << colors.blue << enum_definition_.GetNameFromBytes(data()) << colors.reset;
   }
 }
 
-int HandleField::DisplaySize(int remaining_size) const {
-  return std::to_string(handle_).size();
-}
+int HandleField::DisplaySize(int remaining_size) const { return std::to_string(handle_).size(); }
 
 void HandleField::DecodeContent(MessageDecoder* decoder) {
   FXL_LOG(FATAL) << "Handle field is defined inline";
 }
 
-void HandleField::PrettyPrint(std::ostream& os, const Colors& colors, int tabs,
-                              int remaining_size, int max_line_size) const {
+void HandleField::PrettyPrint(std::ostream& os, const Colors& colors, int tabs, int remaining_size,
+                              int max_line_size) const {
   os << colors.red << handle_ << colors.reset;
 }
 

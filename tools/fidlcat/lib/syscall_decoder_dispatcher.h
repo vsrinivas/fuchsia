@@ -63,9 +63,7 @@ class SyscallArgumentBaseTyped : public SyscallArgumentBase {
   virtual void LoadArray(SyscallDecoder* decoder, size_t size) const {}
 
   // For buffers, true if the buffer is available.
-  virtual bool ArrayLoaded(SyscallDecoder* decoder, size_t size) const {
-    return false;
-  }
+  virtual bool ArrayLoaded(SyscallDecoder* decoder, size_t size) const { return false; }
 
   // For buffers, get a pointer on the buffer data.
   virtual Type* Content(SyscallDecoder* decoder) const { return nullptr; }
@@ -86,9 +84,7 @@ class SyscallArgument : public SyscallArgumentBaseTyped<Type> {
 
   bool ValueValid(SyscallDecoder* decoder) const override { return true; }
 
-  Type Value(SyscallDecoder* decoder) const override {
-    return Type(decoder->Value(index()));
-  }
+  Type Value(SyscallDecoder* decoder) const override { return Type(decoder->Value(index())); }
 };
 
 // Defines a buffer argument for a system call.
@@ -169,8 +165,8 @@ class Access {
   virtual Type* Content(SyscallDecoder* decoder) const = 0;
 
   // Display the data on a stream.
-  void Display(SyscallDisplayDispatcher* dispatcher, SyscallDecoder* decoder,
-               std::string_view name, std::ostream& os) const;
+  void Display(SyscallDisplayDispatcher* dispatcher, SyscallDecoder* decoder, std::string_view name,
+               std::ostream& os) const;
 };
 
 // Access to a system call argument. There is a direct access to the value
@@ -184,28 +180,17 @@ class Access {
 template <typename Type>
 class ArgumentAccess : public Access<Type> {
  public:
-  explicit ArgumentAccess(const SyscallArgumentBaseTyped<Type>* argument)
-      : argument_(argument) {}
+  explicit ArgumentAccess(const SyscallArgumentBaseTyped<Type>* argument) : argument_(argument) {}
 
-  SyscallType GetSyscallType() const override {
-    return argument_->syscall_type();
-  }
+  SyscallType GetSyscallType() const override { return argument_->syscall_type(); }
 
-  void Load(SyscallDecoder* decoder) const override {
-    argument_->Load(decoder);
-  }
+  void Load(SyscallDecoder* decoder) const override { argument_->Load(decoder); }
 
-  bool Loaded(SyscallDecoder* decoder) const override {
-    return argument_->Loaded(decoder);
-  }
+  bool Loaded(SyscallDecoder* decoder) const override { return argument_->Loaded(decoder); }
 
-  bool ValueValid(SyscallDecoder* decoder) const override {
-    return argument_->ValueValid(decoder);
-  }
+  bool ValueValid(SyscallDecoder* decoder) const override { return argument_->ValueValid(decoder); }
 
-  Type Value(SyscallDecoder* decoder) const override {
-    return argument_->Value(decoder);
-  }
+  Type Value(SyscallDecoder* decoder) const override { return argument_->Value(decoder); }
 
   void LoadArray(SyscallDecoder* decoder, size_t size) const override {
     argument_->LoadArray(decoder, size);
@@ -215,9 +200,7 @@ class ArgumentAccess : public Access<Type> {
     return argument_->ArrayLoaded(decoder, size);
   }
 
-  Type* Content(SyscallDecoder* decoder) const override {
-    return argument_->Content(decoder);
-  }
+  Type* Content(SyscallDecoder* decoder) const override { return argument_->Content(decoder); }
 
  private:
   const SyscallArgumentBaseTyped<Type>* const argument_;
@@ -241,17 +224,14 @@ class SyscallInputOutputBase {
   virtual void Load(SyscallDecoder* decoder) const = 0;
 
   // Displays small inputs or outputs.
-  virtual const char* DisplayInline(SyscallDisplayDispatcher* dispatcher,
-                                    SyscallDecoder* decoder,
-                                    const char* separator,
-                                    std::ostream& os) const {
+  virtual const char* DisplayInline(SyscallDisplayDispatcher* dispatcher, SyscallDecoder* decoder,
+                                    const char* separator, std::ostream& os) const {
     return separator;
   }
 
   // Displays large (multi lines) inputs or outputs.
-  virtual void DisplayOutline(SyscallDisplayDispatcher* dispatcher,
-                              SyscallDecoder* decoder, int tabs, bool read,
-                              std::ostream& os) const {}
+  virtual void DisplayOutline(SyscallDisplayDispatcher* dispatcher, SyscallDecoder* decoder,
+                              int tabs, bool read, std::ostream& os) const {}
 
  private:
   const int64_t error_code_;
@@ -269,9 +249,8 @@ class SyscallInputOutput : public SyscallInputOutputBase {
 
   void Load(SyscallDecoder* decoder) const override { access_->Load(decoder); }
 
-  const char* DisplayInline(SyscallDisplayDispatcher* dispatcher,
-                            SyscallDecoder* decoder, const char* separator,
-                            std::ostream& os) const override {
+  const char* DisplayInline(SyscallDisplayDispatcher* dispatcher, SyscallDecoder* decoder,
+                            const char* separator, std::ostream& os) const override {
     os << separator;
     access_->Display(dispatcher, decoder, name(), os);
     return ", ";
@@ -317,9 +296,8 @@ class SyscallFidlMessage : public SyscallInputOutputBase {
     }
   }
 
-  void DisplayOutline(SyscallDisplayDispatcher* dispatcher,
-                      SyscallDecoder* decoder, int tabs, bool read,
-                      std::ostream& os) const override;
+  void DisplayOutline(SyscallDisplayDispatcher* dispatcher, SyscallDecoder* decoder, int tabs,
+                      bool read, std::ostream& os) const override;
 
  private:
   const std::unique_ptr<Access<zx_handle_t>> handle_;
@@ -332,8 +310,7 @@ class SyscallFidlMessage : public SyscallInputOutputBase {
 // Defines a syscall we want to decode/display.
 class Syscall {
  public:
-  explicit Syscall(std::string_view name)
-      : name_(name), breakpoint_name_(name_ + "@plt") {}
+  explicit Syscall(std::string_view name) : name_(name), breakpoint_name_(name_ + "@plt") {}
 
   // Name of the syscall.
   const std::string& name() const { return name_; }
@@ -342,26 +319,19 @@ class Syscall {
   const std::string& breakpoint_name() const { return breakpoint_name_; }
 
   // All arguments for the syscall.
-  const std::vector<std::unique_ptr<SyscallArgumentBase>>& arguments() const {
-    return arguments_;
-  }
+  const std::vector<std::unique_ptr<SyscallArgumentBase>>& arguments() const { return arguments_; }
 
   // All the data we want to display at the syscall entry.
-  const std::vector<std::unique_ptr<SyscallInputOutputBase>>& inputs() const {
-    return inputs_;
-  }
+  const std::vector<std::unique_ptr<SyscallInputOutputBase>>& inputs() const { return inputs_; }
 
   // All the data we want to display at the syscall exit. These data are
   // conditionally displayed depending on the syscall error code.
-  const std::vector<std::unique_ptr<SyscallInputOutputBase>>& outputs() const {
-    return outputs_;
-  }
+  const std::vector<std::unique_ptr<SyscallInputOutputBase>>& outputs() const { return outputs_; }
 
   // Adds an argument definition to the syscall.
   template <typename Type>
   SyscallArgument<Type>* Argument(SyscallType syscall_type) {
-    auto argument = std::make_unique<SyscallArgument<Type>>(arguments_.size(),
-                                                            syscall_type);
+    auto argument = std::make_unique<SyscallArgument<Type>>(arguments_.size(), syscall_type);
     auto result = argument.get();
     arguments_.push_back(std::move(argument));
     return result;
@@ -371,8 +341,7 @@ class Syscall {
   // argument is Type*).
   template <typename Type>
   SyscallPointerArgument<Type>* PointerArgument(SyscallType syscall_type) {
-    auto argument = std::make_unique<SyscallPointerArgument<Type>>(
-        arguments_.size(), syscall_type);
+    auto argument = std::make_unique<SyscallPointerArgument<Type>>(arguments_.size(), syscall_type);
     auto result = argument.get();
     arguments_.push_back(std::move(argument));
     return result;
@@ -381,28 +350,25 @@ class Syscall {
   // Adds an inline input to display.
   template <typename Type>
   void Input(std::string_view name, std::unique_ptr<Access<Type>> access) {
-    inputs_.push_back(
-        std::make_unique<SyscallInputOutput<Type>>(0, name, std::move(access)));
+    inputs_.push_back(std::make_unique<SyscallInputOutput<Type>>(0, name, std::move(access)));
   }
 
   // Adds an input FIDL message to display.
-  void InputFidlMessage(std::string_view name,
-                        std::unique_ptr<Access<zx_handle_t>> handle,
+  void InputFidlMessage(std::string_view name, std::unique_ptr<Access<zx_handle_t>> handle,
                         std::unique_ptr<Access<uint8_t>> bytes,
                         std::unique_ptr<Access<uint32_t>> num_bytes,
                         std::unique_ptr<Access<zx_handle_t>> handles,
                         std::unique_ptr<Access<uint32_t>> num_handles) {
     inputs_.push_back(std::make_unique<SyscallFidlMessage>(
-        0, name, std::move(handle), std::move(bytes), std::move(num_bytes),
-        std::move(handles), std::move(num_handles)));
+        0, name, std::move(handle), std::move(bytes), std::move(num_bytes), std::move(handles),
+        std::move(num_handles)));
   }
 
   // Adds an inline output to display.
   template <typename Type>
-  void Output(int64_t error_code, std::string_view name,
-              std::unique_ptr<Access<Type>> access) {
-    outputs_.push_back(std::make_unique<SyscallInputOutput<Type>>(
-        error_code, name, std::move(access)));
+  void Output(int64_t error_code, std::string_view name, std::unique_ptr<Access<Type>> access) {
+    outputs_.push_back(
+        std::make_unique<SyscallInputOutput<Type>>(error_code, name, std::move(access)));
   }
 
   // Add an output FIDL message to display.
@@ -413,8 +379,8 @@ class Syscall {
                          std::unique_ptr<Access<zx_handle_t>> handles,
                          std::unique_ptr<Access<uint32_t>> num_handles) {
     outputs_.push_back(std::make_unique<SyscallFidlMessage>(
-        error_code, name, std::move(handle), std::move(bytes),
-        std::move(num_bytes), std::move(handles), std::move(num_handles)));
+        error_code, name, std::move(handle), std::move(bytes), std::move(num_bytes),
+        std::move(handles), std::move(num_handles)));
   }
 
  private:
@@ -433,21 +399,19 @@ class SyscallDecoderDispatcher {
   SyscallDecoderDispatcher() { Populate(); }
   virtual ~SyscallDecoderDispatcher() = default;
 
-  const std::vector<std::unique_ptr<Syscall>>& syscalls() const {
-    return syscalls_;
-  }
+  const std::vector<std::unique_ptr<Syscall>>& syscalls() const { return syscalls_; }
 
   // Decode an intercepted system call.
   // Called when a thread reached a breakpoint on a system call.
   // This will only start the decoding. The display will be done when all the
   // needed information will be gathered.
-  void DecodeSyscall(InterceptingThreadObserver* thread_observer,
-                     zxdb::Thread* thread, Syscall* syscall);
+  void DecodeSyscall(InterceptingThreadObserver* thread_observer, zxdb::Thread* thread,
+                     Syscall* syscall);
 
   // Create the object which will decode the syscall.
-  virtual std::unique_ptr<SyscallDecoder> CreateDecoder(
-      InterceptingThreadObserver* thread_observer, zxdb::Thread* thread,
-      uint64_t thread_id, const Syscall* syscall) = 0;
+  virtual std::unique_ptr<SyscallDecoder> CreateDecoder(InterceptingThreadObserver* thread_observer,
+                                                        zxdb::Thread* thread, uint64_t thread_id,
+                                                        const Syscall* syscall) = 0;
 
   // Delete a decoder created by DecodeSyscall. Called when the syscall is
   // fully decoded and displayed or the syscalls had an error.
@@ -474,19 +438,16 @@ class SyscallDecoderDispatcher {
 
 class SyscallDisplayDispatcher : public SyscallDecoderDispatcher {
  public:
-  SyscallDisplayDispatcher(LibraryLoader* loader,
-                           const DisplayOptions& display_options,
+  SyscallDisplayDispatcher(LibraryLoader* loader, const DisplayOptions& display_options,
                            std::ostream& os)
       : message_decoder_dispatcher_(loader, display_options), os_(os) {}
 
-  MessageDecoderDispatcher& message_decoder_dispatcher() {
-    return message_decoder_dispatcher_;
-  }
+  MessageDecoderDispatcher& message_decoder_dispatcher() { return message_decoder_dispatcher_; }
   const Colors& colors() const { return message_decoder_dispatcher_.colors(); }
 
-  std::unique_ptr<SyscallDecoder> CreateDecoder(
-      InterceptingThreadObserver* thread_observer, zxdb::Thread* thread,
-      uint64_t thread_id, const Syscall* syscall) override;
+  std::unique_ptr<SyscallDecoder> CreateDecoder(InterceptingThreadObserver* thread_observer,
+                                                zxdb::Thread* thread, uint64_t thread_id,
+                                                const Syscall* syscall) override;
 
  private:
   // Class which can decode a FIDL message.
@@ -496,9 +457,8 @@ class SyscallDisplayDispatcher : public SyscallDecoderDispatcher {
 };
 
 template <typename Type>
-void Access<Type>::Display(SyscallDisplayDispatcher* dispatcher,
-                           SyscallDecoder* decoder, std::string_view name,
-                           std::ostream& os) const {
+void Access<Type>::Display(SyscallDisplayDispatcher* dispatcher, SyscallDecoder* decoder,
+                           std::string_view name, std::ostream& os) const {
   const Colors& colors = dispatcher->colors();
   switch (GetSyscallType()) {
     case SyscallType::kUint32:

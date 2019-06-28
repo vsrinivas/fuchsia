@@ -39,8 +39,7 @@ T LeToHost<T>::le_to_host(const T* bytes) {
     return le32toh(*bytes);
   } else if constexpr (std::is_same<T, uint64_t>::value) {
     return le64toh(*bytes);
-  } else if constexpr (std::is_same<T, uintptr_t>::value &&
-                       sizeof(T) == sizeof(uint64_t)) {
+  } else if constexpr (std::is_same<T, uintptr_t>::value && sizeof(T) == sizeof(uint64_t)) {
     // NB: On Darwin, uintptr_t and uint64_t are different things.
     return le64toh(*bytes);
   }
@@ -48,16 +47,13 @@ T LeToHost<T>::le_to_host(const T* bytes) {
 
 template <typename T>
 struct GetUnsigned {
-  using type = typename std::conditional<std::is_same<float, T>::value,
-                                         uint32_t, uint64_t>::type;
+  using type = typename std::conditional<std::is_same<float, T>::value, uint32_t, uint64_t>::type;
 };
 
 template <typename T, typename P>
 T MemoryFrom(P bytes) {
-  static_assert(std::is_pointer<P>::value,
-                "MemoryFrom can only be used on pointers");
-  using U = typename std::conditional<std::is_integral<T>::value,
-                                      std::make_unsigned<T>,
+  static_assert(std::is_pointer<P>::value, "MemoryFrom can only be used on pointers");
+  using U = typename std::conditional<std::is_integral<T>::value, std::make_unsigned<T>,
                                       GetUnsigned<T>>::type::type;
   union {
     U uval;

@@ -35,8 +35,7 @@ class MessageDecoderTest : public ::testing::Test {
     ASSERT_NE(loader_, nullptr);
     display_options_.pretty_print = true;
     display_options_.columns = 80;
-    decoder_ =
-        std::make_unique<MessageDecoderDispatcher>(loader_, display_options_);
+    decoder_ = std::make_unique<MessageDecoderDispatcher>(loader_, display_options_);
   };
   LibraryLoader* loader_;
   std::unique_ptr<MessageDecoderDispatcher> decoder_;
@@ -46,39 +45,34 @@ class MessageDecoderTest : public ::testing::Test {
   std::stringstream result_;
 };
 
-#define TEST_DECODE_MESSAGE(_interface, _iface, _expected, ...)               \
-  do {                                                                        \
-    fidl::MessageBuffer buffer;                                               \
-    fidl::Message message = buffer.CreateEmptyMessage();                      \
-    zx_handle_t handle = ZX_HANDLE_INVALID;                                   \
-    InterceptRequest<_interface>(message,                                     \
-                                 [&](fidl::InterfacePtr<_interface>& ptr) {   \
-                                   ptr->_iface(__VA_ARGS__);                  \
-                                 });                                          \
-    decoder_->DecodeMessage(process_koid_, handle, message.bytes().data(),    \
-                            message.bytes().size(), message.handles().data(), \
-                            message.handles().size(), read_, result_);        \
-    ASSERT_EQ(result_.str(), _expected)                                       \
-        << "expected = " << _expected << " actual = " << result_.str();       \
+#define TEST_DECODE_MESSAGE(_interface, _iface, _expected, ...)                                    \
+  do {                                                                                             \
+    fidl::MessageBuffer buffer;                                                                    \
+    fidl::Message message = buffer.CreateEmptyMessage();                                           \
+    zx_handle_t handle = ZX_HANDLE_INVALID;                                                        \
+    InterceptRequest<_interface>(                                                                  \
+        message, [&](fidl::InterfacePtr<_interface>& ptr) { ptr->_iface(__VA_ARGS__); });          \
+    decoder_->DecodeMessage(process_koid_, handle, message.bytes().data(), message.bytes().size(), \
+                            message.handles().data(), message.handles().size(), read_, result_);   \
+    ASSERT_EQ(result_.str(), _expected)                                                            \
+        << "expected = " << _expected << " actual = " << result_.str();                            \
   } while (0)
 
 TEST_F(MessageDecoderTest, TestStringLaunched) {
-  TEST_DECODE_MESSAGE(
-      FidlcatTestInterface, String,
-      "request test.fidlcat.examples/FidlcatTestInterface.String = {\n"
-      "  s: string = \"Hello World\"\n"
-      "}\n",
-      "Hello World");
+  TEST_DECODE_MESSAGE(FidlcatTestInterface, String,
+                      "request test.fidlcat.examples/FidlcatTestInterface.String = {\n"
+                      "  s: string = \"Hello World\"\n"
+                      "}\n",
+                      "Hello World");
 }
 
 TEST_F(MessageDecoderTest, TestStringAttached) {
   process_koid_ = 0x1234;
-  TEST_DECODE_MESSAGE(
-      FidlcatTestInterface, String,
-      "request test.fidlcat.examples/FidlcatTestInterface.String = {\n"
-      "  s: string = \"Hello World\"\n"
-      "}\n",
-      "Hello World");
+  TEST_DECODE_MESSAGE(FidlcatTestInterface, String,
+                      "request test.fidlcat.examples/FidlcatTestInterface.String = {\n"
+                      "  s: string = \"Hello World\"\n"
+                      "}\n",
+                      "Hello World");
 }
 
 TEST_F(MessageDecoderTest, TestEchoLaunched) {

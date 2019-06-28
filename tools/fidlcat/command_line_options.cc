@@ -83,38 +83,29 @@ const char kHelpHelp[] = R"(  --help
   -h
       Prints all command-line switches.)";
 
-cmdline::Status ParseCommandLine(int argc, const char* argv[],
-                                 CommandLineOptions* options,
+cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOptions* options,
                                  DisplayOptions* display_options,
                                  std::vector<std::string>* params) {
   cmdline::ArgsParser<CommandLineOptions> parser;
 
-  parser.AddSwitch("connect", 'r', kRemoteHostHelp,
-                   &CommandLineOptions::connect);
-  parser.AddSwitch("remote-pid", 'p', kRemotePidHelp,
-                   &CommandLineOptions::remote_pid);
-  parser.AddSwitch("remote-name", 'f', kRemoteNameHelp,
-                   &CommandLineOptions::remote_name);
-  parser.AddSwitch("fidl-ir-path", 0, kFidlIrPathHelp,
-                   &CommandLineOptions::fidl_ir_paths);
-  parser.AddSwitch("symbol-path", 's', kSymbolPathHelp,
-                   &CommandLineOptions::symbol_paths);
-  parser.AddSwitch("pretty-print", 0, kPrettyPrintHelp,
-                   &CommandLineOptions::pretty_print);
+  parser.AddSwitch("connect", 'r', kRemoteHostHelp, &CommandLineOptions::connect);
+  parser.AddSwitch("remote-pid", 'p', kRemotePidHelp, &CommandLineOptions::remote_pid);
+  parser.AddSwitch("remote-name", 'f', kRemoteNameHelp, &CommandLineOptions::remote_name);
+  parser.AddSwitch("fidl-ir-path", 0, kFidlIrPathHelp, &CommandLineOptions::fidl_ir_paths);
+  parser.AddSwitch("symbol-path", 's', kSymbolPathHelp, &CommandLineOptions::symbol_paths);
+  parser.AddSwitch("pretty-print", 0, kPrettyPrintHelp, &CommandLineOptions::pretty_print);
   parser.AddSwitch("colors", 0, kColorsHelp, &CommandLineOptions::colors);
   parser.AddSwitch("columns", 0, kColumnsHelp, &CommandLineOptions::columns);
   bool requested_help = false;
-  parser.AddGeneralSwitch("help", 'h', kHelpHelp,
-                          [&requested_help]() { requested_help = true; });
+  parser.AddGeneralSwitch("help", 'h', kHelpHelp, [&requested_help]() { requested_help = true; });
 
   cmdline::Status status = parser.Parse(argc, argv, options, params);
   if (status.has_error()) {
     return status;
   }
 
-  if (requested_help ||
-      (options->remote_name.empty() && !options->remote_pid &&
-       std::find(params->begin(), params->end(), "run") == params->end())) {
+  if (requested_help || (options->remote_name.empty() && !options->remote_pid &&
+                         std::find(params->begin(), params->end(), "run") == params->end())) {
     return cmdline::Status::Error(kHelpIntro + parser.GetHelp());
   }
 
@@ -135,8 +126,7 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[],
   }
 
   if (options->pretty_print) {
-    if ((options->colors == "always") ||
-        ((options->colors == "auto") && (ioctl_result != -1))) {
+    if ((options->colors == "always") || ((options->colors == "auto") && (ioctl_result != -1))) {
       display_options->needs_colors = true;
     } else {
       display_options->needs_colors = false;
@@ -157,10 +147,9 @@ bool EndsWith(const std::string& value, const std::string& suffix) {
 
 }  // namespace
 
-void ExpandFidlPathsFromOptions(
-    std::vector<std::string> cli_ir_paths,
-    std::vector<std::unique_ptr<std::istream>>& paths,
-    std::vector<std::string>& bad_paths) {
+void ExpandFidlPathsFromOptions(std::vector<std::string> cli_ir_paths,
+                                std::vector<std::unique_ptr<std::istream>>& paths,
+                                std::vector<std::string>& bad_paths) {
   // Strip out argfiles before doing path processing.
   for (int i = cli_ir_paths.size() - 1; i >= 0; i--) {
     std::string& path = cli_ir_paths[i];
@@ -179,8 +168,8 @@ void ExpandFidlPathsFromOptions(
       std::string jsonfile;
       while (infile >> jsonfile) {
         if (std::filesystem::path(jsonfile).is_relative()) {
-          jsonfile = enclosing_directory.string() +
-                     std::filesystem::path::preferred_separator + jsonfile;
+          jsonfile =
+              enclosing_directory.string() + std::filesystem::path::preferred_separator + jsonfile;
         }
 
         paths.push_back(std::make_unique<std::ifstream>(jsonfile));

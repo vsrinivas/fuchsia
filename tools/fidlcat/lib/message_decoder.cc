@@ -24,10 +24,10 @@ std::string DocumentToString(rapidjson::Document& document) {
   return output.GetString();
 }
 
-bool MessageDecoderDispatcher::DecodeMessage(
-    uint64_t process_koid, zx_handle_t handle, const uint8_t* bytes,
-    uint32_t num_bytes, const zx_handle_t* handles, uint32_t num_handles,
-    bool read, std::ostream& os, int tabs) {
+bool MessageDecoderDispatcher::DecodeMessage(uint64_t process_koid, zx_handle_t handle,
+                                             const uint8_t* bytes, uint32_t num_bytes,
+                                             const zx_handle_t* handles, uint32_t num_handles,
+                                             bool read, std::ostream& os, int tabs) {
   if (loader_ == nullptr) {
     return false;
   }
@@ -35,26 +35,24 @@ bool MessageDecoderDispatcher::DecodeMessage(
     FXL_LOG(WARNING) << "not enought data for message";
     return false;
   }
-  const fidl_message_header_t* header =
-      reinterpret_cast<const fidl_message_header_t*>(bytes);
+  const fidl_message_header_t* header = reinterpret_cast<const fidl_message_header_t*>(bytes);
   const InterfaceMethod* method = loader_->GetByOrdinal(header->ordinal);
   if (method == nullptr) {
-    FXL_LOG(WARNING) << "Protocol method with ordinal 0x" << std::hex
-                     << header->ordinal << " not found";
+    FXL_LOG(WARNING) << "Protocol method with ordinal 0x" << std::hex << header->ordinal
+                     << " not found";
     return false;
   }
 
   std::unique_ptr<Object> decoded_request;
-  bool matched_request = DecodeRequest(method, bytes, num_bytes, handles,
-                                       num_handles, &decoded_request);
+  bool matched_request =
+      DecodeRequest(method, bytes, num_bytes, handles, num_handles, &decoded_request);
 
   std::unique_ptr<Object> decoded_response;
-  bool matched_response = DecodeResponse(method, bytes, num_bytes, handles,
-                                         num_handles, &decoded_response);
+  bool matched_response =
+      DecodeResponse(method, bytes, num_bytes, handles, num_handles, &decoded_response);
 
   Direction direction = Direction::kUnknown;
-  auto handle_direction =
-      handle_directions_.find(std::make_tuple(handle, process_koid));
+  auto handle_direction = handle_directions_.find(std::make_tuple(handle, process_koid));
   if (handle_direction != handle_directions_.end()) {
     direction = handle_direction->second;
   } else {
@@ -75,12 +73,10 @@ bool MessageDecoderDispatcher::DecodeMessage(
       // process.
       if (read) {
         handle_directions_[std::make_tuple(handle, process_koid)] =
-            (method->request() != nullptr) ? Direction::kServer
-                                           : Direction::kClient;
+            (method->request() != nullptr) ? Direction::kServer : Direction::kClient;
       } else {
         handle_directions_[std::make_tuple(handle, process_koid)] =
-            (method->request() != nullptr) ? Direction::kClient
-                                           : Direction::kServer;
+            (method->request() != nullptr) ? Direction::kClient : Direction::kServer;
       }
       direction = handle_directions_[std::make_tuple(handle, process_koid)];
     }
@@ -90,18 +86,15 @@ bool MessageDecoderDispatcher::DecodeMessage(
     is_request = true;
   }
   if (direction != Direction::kUnknown) {
-    if ((is_request && !matched_request) ||
-        (!is_request && !matched_response)) {
-      if ((is_request && matched_response) ||
-          (!is_request && matched_request)) {
+    if ((is_request && !matched_request) || (!is_request && !matched_response)) {
+      if ((is_request && matched_response) || (!is_request && matched_request)) {
         // The first determination seems to be wrong. That is, we are expecting
         // a request but only a response has been successfully decoded or we are
         // expecting a response but only a request has been successfully
         // decoded.
         // Invert the deduction which should now be the right one.
         handle_directions_[std::make_tuple(handle, process_koid)] =
-            (direction == Direction::kClient) ? Direction::kServer
-                                              : Direction::kClient;
+            (direction == Direction::kClient) ? Direction::kServer : Direction::kClient;
         is_request = !is_request;
       }
     }
@@ -111,43 +104,36 @@ bool MessageDecoderDispatcher::DecodeMessage(
   rapidjson::Document actual_response;
   if (!display_options_.pretty_print) {
     if (decoded_request != nullptr) {
-      decoded_request->ExtractJson(actual_request.GetAllocator(),
-                                   actual_request);
+      decoded_request->ExtractJson(actual_request.GetAllocator(), actual_request);
     }
 
     if (decoded_response != nullptr) {
-      decoded_response->ExtractJson(actual_response.GetAllocator(),
-                                    actual_response);
+      decoded_response->ExtractJson(actual_response.GetAllocator(), actual_response);
     }
   }
 
   if (direction == Direction::kUnknown) {
-    os << colors_.red << "Can't determine request/response." << colors_.reset
-       << " it can be:\n";
+    os << colors_.red << "Can't determine request/response." << colors_.reset << " it can be:\n";
     ++tabs;
   }
 
   if (matched_request && (is_request || (direction == Direction::kUnknown))) {
-    os << std::string(tabs * kTabSize, ' ') << colors_.white_on_magenta
-       << "request" << colors_.reset << ' ' << colors_.green
-       << method->enclosing_interface().name() << '.' << method->name()
-       << colors_.reset << " = ";
+    os << std::string(tabs * kTabSize, ' ') << colors_.white_on_magenta << "request"
+       << colors_.reset << ' ' << colors_.green << method->enclosing_interface().name() << '.'
+       << method->name() << colors_.reset << " = ";
     if (display_options_.pretty_print) {
-      decoded_request->PrettyPrint(os, colors_, tabs, tabs * kTabSize,
-                                   display_options_.columns);
+      decoded_request->PrettyPrint(os, colors_, tabs, tabs * kTabSize, display_options_.columns);
     } else {
       os << DocumentToString(actual_request);
     }
     os << '\n';
   }
   if (matched_response && (!is_request || (direction == Direction::kUnknown))) {
-    os << std::string(tabs * kTabSize, ' ') << colors_.white_on_magenta
-       << "response" << colors_.reset << ' ' << colors_.green
-       << method->enclosing_interface().name() << '.' << method->name()
-       << colors_.reset << " = ";
+    os << std::string(tabs * kTabSize, ' ') << colors_.white_on_magenta << "response"
+       << colors_.reset << ' ' << colors_.green << method->enclosing_interface().name() << '.'
+       << method->name() << colors_.reset << " = ";
     if (display_options_.pretty_print) {
-      decoded_response->PrettyPrint(os, colors_, tabs, tabs * kTabSize,
-                                    display_options_.columns);
+      decoded_response->PrettyPrint(os, colors_, tabs, tabs * kTabSize, display_options_.columns);
     } else {
       os << DocumentToString(actual_response);
     }
@@ -156,9 +142,8 @@ bool MessageDecoderDispatcher::DecodeMessage(
   return matched_request || matched_response;
 }
 
-MessageDecoder::MessageDecoder(const uint8_t* bytes, uint32_t num_bytes,
-                               const zx_handle_t* handles, uint32_t num_handles,
-                               bool output_errors)
+MessageDecoder::MessageDecoder(const uint8_t* bytes, uint32_t num_bytes, const zx_handle_t* handles,
+                               uint32_t num_handles, bool output_errors)
     : start_byte_pos_(bytes),
       end_byte_pos_(bytes + num_bytes),
       end_handle_pos_(handles + num_handles),
@@ -166,8 +151,8 @@ MessageDecoder::MessageDecoder(const uint8_t* bytes, uint32_t num_bytes,
       handle_pos_(handles),
       output_errors_(output_errors) {}
 
-MessageDecoder::MessageDecoder(const MessageDecoder* container,
-                               uint64_t num_bytes, uint64_t num_handles)
+MessageDecoder::MessageDecoder(const MessageDecoder* container, uint64_t num_bytes,
+                               uint64_t num_handles)
     : start_byte_pos_(container->byte_pos_),
       end_byte_pos_(container->byte_pos_ + num_bytes),
       end_handle_pos_(container->handle_pos_ + num_handles),
@@ -177,8 +162,7 @@ MessageDecoder::MessageDecoder(const MessageDecoder* container,
 
 void MessageDecoder::ProcessSecondaryObjects() {
   for (size_t i = 0; i < secondary_objects_.size(); ++i) {
-    MessageDecoder decoder(this, end_byte_pos_ - byte_pos_,
-                           end_handle_pos_ - handle_pos_);
+    MessageDecoder decoder(this, end_byte_pos_ - byte_pos_, end_handle_pos_ - handle_pos_);
     secondary_objects_[i]->DecodeContent(&decoder);
     decoder.ProcessSecondaryObjects();
     GotoNextObjectOffset(decoder.byte_pos() - byte_pos_);
@@ -186,18 +170,15 @@ void MessageDecoder::ProcessSecondaryObjects() {
   }
 }
 
-std::unique_ptr<Object> MessageDecoder::DecodeMessage(
-    const Struct& message_format) {
-  std::unique_ptr<Object> result =
-      message_format.DecodeObject(this, /*name=*/"", /*type=*/nullptr,
-                                  /*offset=*/0, /*nullable=*/false);
+std::unique_ptr<Object> MessageDecoder::DecodeMessage(const Struct& message_format) {
+  std::unique_ptr<Object> result = message_format.DecodeObject(this, /*name=*/"", /*type=*/nullptr,
+                                                               /*offset=*/0, /*nullable=*/false);
   GotoNextObjectOffset(message_format.size());
   ProcessSecondaryObjects();
   return result;
 }
 
-std::unique_ptr<Field> MessageDecoder::DecodeField(std::string_view name,
-                                                   const Type* type) {
+std::unique_ptr<Field> MessageDecoder::DecodeField(std::string_view name, const Type* type) {
   std::unique_ptr<Field> result = type->Decode(this, name, 0);
   GotoNextObjectOffset(type->InlineSize());
   ProcessSecondaryObjects();

@@ -109,8 +109,7 @@ uint64_t GetRegisterValue(const std::vector<zxdb::Register>& general_registers,
   return 0;
 }
 
-void MemoryDumpToVector(const zxdb::MemoryDump& dump,
-                        std::vector<uint8_t>* output_vector) {
+void MemoryDumpToVector(const zxdb::MemoryDump& dump, std::vector<uint8_t>* output_vector) {
   output_vector->reserve(dump.size());
   for (const debug_ipc::MemoryBlock& block : dump.blocks()) {
     FXL_DCHECK(block.valid);
@@ -122,8 +121,7 @@ void MemoryDumpToVector(const zxdb::MemoryDump& dump,
 
 void SyscallUse::SyscallDecoded(SyscallDecoder* syscall) { syscall->Destroy(); }
 
-void SyscallUse::SyscallDecodingError(const SyscallDecoderError& error,
-                                      SyscallDecoder* syscall) {
+void SyscallUse::SyscallDecodingError(const SyscallDecoderError& error, SyscallDecoder* syscall) {
   FXL_LOG(ERROR) << error.message();
   syscall->Destroy();
 }
@@ -140,20 +138,16 @@ bool SyscallDecoder::LoadArgument(int argument_index, size_t size) {
   ++pending_request_count_;
   thread_->GetProcess()->ReadMemory(
       Value(argument_index), size,
-      [this, argument_index, size](const zxdb::Err& err,
-                                   zxdb::MemoryDump dump) {
+      [this, argument_index, size](const zxdb::Err& err, zxdb::MemoryDump dump) {
         --pending_request_count_;
         if (!err.ok()) {
           Error(SyscallDecoderError::Type::kCantReadMemory)
-              << "Can't load memory for argument " << argument_index << ": "
-              << err.msg();
+              << "Can't load memory for argument " << argument_index << ": " << err.msg();
         } else if ((dump.size() != size) || !dump.AllValid()) {
           Error(SyscallDecoderError::Type::kCantReadMemory)
-              << "Can't load memory for argument " << argument_index
-              << ": not enough data";
+              << "Can't load memory for argument " << argument_index << ": not enough data";
         } else {
-          MemoryDumpToVector(
-              dump, &decoded_arguments_[argument_index].loaded_values());
+          MemoryDumpToVector(dump, &decoded_arguments_[argument_index].loaded_values());
         }
         if (input_arguments_loaded_) {
           LoadOutputs();
@@ -190,18 +184,14 @@ void SyscallDecoder::Decode() {
   if (arch_ == debug_ipc::Arch::kX64) {
     abi = amd64_abi;
     register_count = sizeof(amd64_abi) / sizeof(debug_ipc::RegisterID);
-    entry_sp_ =
-        GetRegisterValue(general_registers, debug_ipc::RegisterID::kX64_rsp);
+    entry_sp_ = GetRegisterValue(general_registers, debug_ipc::RegisterID::kX64_rsp);
   } else if (arch_ == debug_ipc::Arch::kArm64) {
     abi = aarch64_abi;
     register_count = sizeof(aarch64_abi) / sizeof(debug_ipc::RegisterID);
-    entry_sp_ =
-        GetRegisterValue(general_registers, debug_ipc::RegisterID::kARMv8_sp);
-    return_address_ =
-        GetRegisterValue(general_registers, debug_ipc::RegisterID::kARMv8_lr);
+    entry_sp_ = GetRegisterValue(general_registers, debug_ipc::RegisterID::kARMv8_sp);
+    return_address_ = GetRegisterValue(general_registers, debug_ipc::RegisterID::kARMv8_lr);
   } else {
-    Error(SyscallDecoderError::Type::kUnknownArchitecture)
-        << "Unknown architecture";
+    Error(SyscallDecoderError::Type::kUnknownArchitecture) << "Unknown architecture";
     use_->SyscallDecodingError(error_, this);
     return;
   }
@@ -210,17 +200,14 @@ void SyscallDecoder::Decode() {
   decoded_arguments_.reserve(argument_count);
   register_count = std::min(argument_count, register_count);
   for (size_t i = 0; i < register_count; i++) {
-    decoded_arguments_.emplace_back(
-        GetRegisterValue(general_registers, abi[i]));
+    decoded_arguments_.emplace_back(GetRegisterValue(general_registers, abi[i]));
   }
 
   LoadStack();
 }
 
 void SyscallDecoder::LoadStack() {
-  size_t stack_size =
-      (syscall_->arguments().size() - decoded_arguments_.size()) *
-      sizeof(uint64_t);
+  size_t stack_size = (syscall_->arguments().size() - decoded_arguments_.size()) * sizeof(uint64_t);
   if (arch_ == debug_ipc::Arch::kX64) {
     stack_size += sizeof(uint64_t);
   }
@@ -249,8 +236,7 @@ void SyscallDecoder::LoadStack() {
             offset += sizeof(uint64_t);
           }
           while (offset < data.size()) {
-            decoded_arguments_.emplace_back(
-                GetValueFromBytes<uint64_t>(data, offset));
+            decoded_arguments_.emplace_back(GetValueFromBytes<uint64_t>(data, offset));
             offset += sizeof(uint64_t);
           }
         }
@@ -302,9 +288,9 @@ void SyscallDecoder::LoadSyscallReturnValue() {
   const std::vector<zxdb::Register>& general_registers =
       thread_->GetStack()[0]->GetGeneralRegisters();
 
-  debug_ipc::RegisterID result_register =
-      (arch_ == debug_ipc::Arch::kX64) ? debug_ipc::RegisterID::kX64_rax
-                                       : debug_ipc::RegisterID::kARMv8_x0;
+  debug_ipc::RegisterID result_register = (arch_ == debug_ipc::Arch::kX64)
+                                              ? debug_ipc::RegisterID::kX64_rax
+                                              : debug_ipc::RegisterID::kARMv8_x0;
   syscall_return_value_ = GetRegisterValue(general_registers, result_register);
 
   LoadOutputs();
@@ -318,8 +304,7 @@ void SyscallDecoder::LoadOutputs() {
     return;
   }
   for (const auto& output : syscall_->outputs()) {
-    if (output->error_code() ==
-        static_cast<zx_status_t>(syscall_return_value_)) {
+    if (output->error_code() == static_cast<zx_status_t>(syscall_return_value_)) {
       output->Load(this);
     }
   }
@@ -346,9 +331,8 @@ void SyscallDisplay::SyscallDecoded(SyscallDecoder* syscall) {
   const Colors& colors = dispatcher_->colors();
   // Displays the header and the inline input arguments.
   os_ << syscall->thread()->GetProcess()->GetName() << ' ' << colors.red
-      << syscall->thread()->GetProcess()->GetKoid() << colors.reset << ':'
-      << colors.red << syscall->thread_id() << colors.reset << ' '
-      << syscall->syscall()->name() << '(';
+      << syscall->thread()->GetProcess()->GetKoid() << colors.reset << ':' << colors.red
+      << syscall->thread_id() << colors.reset << ' ' << syscall->syscall()->name() << '(';
   const char* separator = "";
   for (const auto& input : syscall->syscall()->inputs()) {
     separator = input->DisplayInline(dispatcher_, syscall, separator, os_);
@@ -356,8 +340,7 @@ void SyscallDisplay::SyscallDecoded(SyscallDecoder* syscall) {
   os_ << ")\n";
   // Displays the outline input arguments.
   for (const auto& input : syscall->syscall()->inputs()) {
-    input->DisplayOutline(dispatcher_, syscall, /*tabs=*/1, /*read=*/false,
-                          os_);
+    input->DisplayOutline(dispatcher_, syscall, /*tabs=*/1, /*read=*/false, os_);
   }
   // Displays the returned value.
   os_ << "  -> ";
@@ -371,8 +354,7 @@ void SyscallDisplay::SyscallDecoded(SyscallDecoder* syscall) {
   // And the inline output arguments (if any).
   separator = " (";
   for (const auto& output : syscall->syscall()->outputs()) {
-    if (output->error_code() ==
-        static_cast<zx_status_t>(syscall->syscall_return_value())) {
+    if (output->error_code() == static_cast<zx_status_t>(syscall->syscall_return_value())) {
       separator = output->DisplayInline(dispatcher_, syscall, separator, os_);
     }
   }
@@ -382,10 +364,8 @@ void SyscallDisplay::SyscallDecoded(SyscallDecoder* syscall) {
   os_ << '\n';
   // Displays the outline output arguments.
   for (const auto& output : syscall->syscall()->outputs()) {
-    if (output->error_code() ==
-        static_cast<zx_status_t>(syscall->syscall_return_value())) {
-      output->DisplayOutline(dispatcher_, syscall, /*tabs=*/2, /*read=*/true,
-                             os_);
+    if (output->error_code() == static_cast<zx_status_t>(syscall->syscall_return_value())) {
+      output->DisplayOutline(dispatcher_, syscall, /*tabs=*/2, /*read=*/true, os_);
     }
   }
   os_ << '\n';
@@ -401,10 +381,9 @@ void SyscallDisplay::SyscallDecodingError(const SyscallDecoderError& error,
     size_t end = message.find('\n', pos);
     const Colors& colors = dispatcher_->colors();
     os_ << syscall->thread()->GetProcess()->GetName() << ' ' << colors.red
-        << syscall->thread()->GetProcess()->GetKoid() << colors.reset << ':'
-        << colors.red << syscall->thread_id() << colors.reset << ' '
-        << syscall->syscall()->name() << ": " << colors.red
-        << error.message().substr(pos, end) << colors.reset << '\n';
+        << syscall->thread()->GetProcess()->GetKoid() << colors.reset << ':' << colors.red
+        << syscall->thread_id() << colors.reset << ' ' << syscall->syscall()->name() << ": "
+        << colors.red << error.message().substr(pos, end) << colors.reset << '\n';
     if (end == std::string::npos) {
       break;
     }

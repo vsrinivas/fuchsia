@@ -18,8 +18,8 @@ TEST(LibraryLoader, LoadSimple) {
   fidlcat_test::ExampleMap examples;
   std::vector<std::unique_ptr<std::istream>> library_files;
   for (auto element : examples.map()) {
-    std::unique_ptr<std::istream> file = std::make_unique<std::istringstream>(
-        std::istringstream(element.second));
+    std::unique_ptr<std::istream> file =
+        std::make_unique<std::istringstream>(std::istringstream(element.second));
 
     library_files.push_back(std::move(file));
   }
@@ -31,26 +31,23 @@ TEST(LibraryLoader, LoadSimple) {
 
   std::string kDesiredInterfaceName = "fidl.test.frobinator/Frobinator";
   const Interface* found_interface = nullptr;
-  ASSERT_TRUE(
-      library_ptr->GetInterfaceByName(kDesiredInterfaceName, &found_interface));
+  ASSERT_TRUE(library_ptr->GetInterfaceByName(kDesiredInterfaceName, &found_interface));
 
-  ASSERT_NE(found_interface, nullptr)
-      << "Could not find interface " << kDesiredInterfaceName;
+  ASSERT_NE(found_interface, nullptr) << "Could not find interface " << kDesiredInterfaceName;
 
   std::string kDesiredFullMethodName = "fidl.test.frobinator/Frobinator.Frob";
   const InterfaceMethod* found_method = nullptr;
   found_interface->GetMethodByFullName(kDesiredFullMethodName, &found_method);
 
-  ASSERT_NE(found_method, nullptr)
-      << "Could not find method " << kDesiredFullMethodName;
+  ASSERT_NE(found_method, nullptr) << "Could not find method " << kDesiredFullMethodName;
 }
 
 TEST(LibraryLoader, LoadFromOrdinal) {
   fidlcat_test::ExampleMap examples;
   std::vector<std::unique_ptr<std::istream>> library_files;
   for (auto element : examples.map()) {
-    std::unique_ptr<std::istream> file = std::make_unique<std::istringstream>(
-        std::istringstream(element.second));
+    std::unique_ptr<std::istream> file =
+        std::make_unique<std::istringstream>(std::istringstream(element.second));
 
     library_files.push_back(std::move(file));
   }
@@ -63,25 +60,22 @@ TEST(LibraryLoader, LoadFromOrdinal) {
 
   std::string kDesiredInterfaceName = "test.fidlcat.sys/ComponentController";
   const Interface* found_interface = nullptr;
-  ASSERT_TRUE(
-      library_ptr->GetInterfaceByName(kDesiredInterfaceName, &found_interface));
+  ASSERT_TRUE(library_ptr->GetInterfaceByName(kDesiredInterfaceName, &found_interface));
 
   const InterfaceMethod* found_method = nullptr;
-  found_interface->GetMethodByFullName(
-      "test.fidlcat.sys/ComponentController.OnDirectoryReady", &found_method);
+  found_interface->GetMethodByFullName("test.fidlcat.sys/ComponentController.OnDirectoryReady",
+                                       &found_method);
 
   Ordinal64 correct_ordinal = found_method->ordinal();
   const InterfaceMethod* ordinal_method = loader.GetByOrdinal(correct_ordinal);
   ASSERT_NE(ordinal_method, nullptr);
-  ASSERT_EQ(kDesiredInterfaceName,
-            ordinal_method->enclosing_interface().name());
+  ASSERT_EQ(kDesiredInterfaceName, ordinal_method->enclosing_interface().name());
   ASSERT_EQ("OnDirectoryReady", ordinal_method->name());
 
   Ordinal64 correct_old_ordinal = found_method->old_ordinal();
   const InterfaceMethod* old_ordinal_method = loader.GetByOrdinal(correct_old_ordinal);
   ASSERT_NE(old_ordinal_method, nullptr);
-  ASSERT_EQ(kDesiredInterfaceName,
-            old_ordinal_method->enclosing_interface().name());
+  ASSERT_EQ(kDesiredInterfaceName, old_ordinal_method->enclosing_interface().name());
   ASSERT_EQ("OnDirectoryReady", old_ordinal_method->name());
 }
 

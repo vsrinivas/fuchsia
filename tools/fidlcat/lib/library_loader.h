@@ -126,18 +126,14 @@ class Union {
   const std::string& name() const { return name_; }
   uint64_t alignment() const { return alignment_; }
   uint32_t size() const { return size_; }
-  const std::vector<std::unique_ptr<UnionMember>>& members() const {
-    return members_;
-  }
+  const std::vector<std::unique_ptr<UnionMember>>& members() const { return members_; }
 
   const UnionMember* MemberWithTag(uint32_t tag) const;
 
   const UnionMember* MemberWithOrdinal(Ordinal32 ordinal) const;
 
-  std::unique_ptr<UnionField> DecodeUnion(MessageDecoder* decoder,
-                                          std::string_view name,
-                                          const Type* type, uint64_t offset,
-                                          bool nullable) const;
+  std::unique_ptr<UnionField> DecodeUnion(MessageDecoder* decoder, std::string_view name,
+                                          const Type* type, uint64_t offset, bool nullable) const;
 
  private:
   Union(const Library& enclosing_library, const rapidjson::Value& value);
@@ -188,13 +184,10 @@ class Struct {
   const Library& enclosing_library() const { return enclosing_library_; }
   const std::string& name() const { return name_; }
   uint32_t size() const { return size_; }
-  const std::vector<std::unique_ptr<StructMember>>& members() const {
-    return members_;
-  }
+  const std::vector<std::unique_ptr<StructMember>>& members() const { return members_; }
 
-  std::unique_ptr<Object> DecodeObject(MessageDecoder* decoder,
-                                       std::string_view name, const Type* type,
-                                       uint64_t offset, bool nullable) const;
+  std::unique_ptr<Object> DecodeObject(MessageDecoder* decoder, std::string_view name,
+                                       const Type* type, uint64_t offset, bool nullable) const;
 
  private:
   Struct(const Library& enclosing_library, const rapidjson::Value& value);
@@ -334,8 +327,7 @@ class Interface {
   }
 
   // Sets *|method| to the fully qualified |name|'s InterfaceMethod
-  bool GetMethodByFullName(const std::string& name,
-                           const InterfaceMethod** method) const;
+  bool GetMethodByFullName(const std::string& name, const InterfaceMethod** method) const;
 
   const std::vector<std::unique_ptr<InterfaceMethod>>& methods() const {
     return interface_methods_;
@@ -360,12 +352,9 @@ class Library {
 
   LibraryLoader* enclosing_loader() const { return enclosing_loader_; }
   const std::string name() { return name_; }
-  const std::vector<std::unique_ptr<Interface>>& interfaces() const {
-    return interfaces_;
-  }
+  const std::vector<std::unique_ptr<Interface>>& interfaces() const { return interfaces_; }
 
-  std::unique_ptr<Type> TypeFromIdentifier(bool is_nullable,
-                                           std::string& identifier,
+  std::unique_ptr<Type> TypeFromIdentifier(bool is_nullable, std::string& identifier,
                                            size_t inline_size);
 
   // The size of the type with name |identifier| when it is inline (e.g.,
@@ -403,8 +392,7 @@ class Library {
 //          should be one of the last objects we destroy).
 class LibraryLoader {
  public:
-  LibraryLoader(std::vector<std::unique_ptr<std::istream>>& library_streams,
-                LibraryReadError* err);
+  LibraryLoader(std::vector<std::unique_ptr<std::istream>>& library_streams, LibraryReadError* err);
 
   LibraryLoader& operator=(const LibraryLoader&) = delete;
   LibraryLoader(const LibraryLoader&) = delete;
@@ -435,8 +423,7 @@ class LibraryLoader {
  private:
   void Add(std::string& ir, LibraryReadError* err) {
     rapidjson::Document document;
-    err->parse_result =
-        document.Parse<rapidjson::kParseNumbersAsStringsFlag>(ir.c_str());
+    err->parse_result = document.Parse<rapidjson::kParseNumbersAsStringsFlag>(ir.c_str());
     // TODO: This would be a good place to validate that the resulting JSON
     // matches the schema in zircon/system/host/fidl/schema.json.  If there are
     // errors, we will currently get mysterious crashes.
@@ -445,9 +432,8 @@ class LibraryLoader {
       return;
     }
     std::string library_name = document["name"].GetString();
-    representations_.emplace(
-        std::piecewise_construct, std::forward_as_tuple(library_name),
-        std::forward_as_tuple(new Library(this, document, ordinal_map_)));
+    representations_.emplace(std::piecewise_construct, std::forward_as_tuple(library_name),
+                             std::forward_as_tuple(new Library(this, document, ordinal_map_)));
   }
 
   std::map<std::string, std::unique_ptr<Library>> representations_;

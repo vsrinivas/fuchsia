@@ -25,9 +25,8 @@ class CommandLineOptionsTest : public ::testing::Test {
 
   void TearDown() override {
     for (auto& file : files_) {
-      std::string full_filename = std::string(dir_.get()) +
-                                  std::filesystem::path::preferred_separator +
-                                  file;
+      std::string full_filename =
+          std::string(dir_.get()) + std::filesystem::path::preferred_separator + file;
       remove(full_filename.c_str());
     }
     remove(dir_.get());
@@ -42,8 +41,7 @@ TEST_F(CommandLineOptionsTest, ArgfileTest) {
   std::ofstream os;
   std::string dir = std::string(dir_.get());
   std::string argfilename = "out.txt";
-  std::string filename =
-      dir + std::filesystem::path::preferred_separator + argfilename;
+  std::string filename = dir + std::filesystem::path::preferred_separator + argfilename;
   files_ = {"foo.fidl.json", "bar.fidl.json"};
 
   // Write some content to each file, so that we have something to read to see
@@ -65,17 +63,14 @@ TEST_F(CommandLineOptionsTest, ArgfileTest) {
 
   // Parse the command line.
   std::string param = "@" + filename;
-  const char* argv[] = {"fakebinary", "--remote-pid", "3141", "--fidl-ir-path",
-                        param.c_str()};
+  const char* argv[] = {"fakebinary", "--remote-pid", "3141", "--fidl-ir-path", param.c_str()};
   int argc = sizeof(argv) / sizeof(argv[0]);
   CommandLineOptions options;
   DisplayOptions display_options;
   std::vector<std::string> params;
-  auto status =
-      ParseCommandLine(argc, argv, &options, &display_options, &params);
+  auto status = ParseCommandLine(argc, argv, &options, &display_options, &params);
   ASSERT_TRUE(status.ok());
-  ASSERT_EQ(0U, params.size())
-      << "Expected 0 params, got (at least) " << params[0];
+  ASSERT_EQ(0U, params.size()) << "Expected 0 params, got (at least) " << params[0];
 
   // Expand the FIDL paths.
   std::vector<std::unique_ptr<std::istream>> paths;
@@ -98,18 +93,15 @@ TEST_F(CommandLineOptionsTest, ArgfileTest) {
 // Test to ensure that non-existent files are reported accordingly.
 TEST_F(CommandLineOptionsTest, BadOptionsTest) {
   // Parse the command line.
-  const char* argv[] = {"fakebinary",    "--fidl-ir-path", "blah.fidl.json",
-                        "--remote-pid",  "3141",           "--fidl-ir-path",
-                        "@all_files.txt"};
+  const char* argv[] = {"fakebinary", "--fidl-ir-path", "blah.fidl.json", "--remote-pid",
+                        "3141",       "--fidl-ir-path", "@all_files.txt"};
   int argc = sizeof(argv) / sizeof(argv[0]);
   CommandLineOptions options;
   DisplayOptions display_options;
   std::vector<std::string> params;
-  auto status =
-      ParseCommandLine(argc, argv, &options, &display_options, &params);
+  auto status = ParseCommandLine(argc, argv, &options, &display_options, &params);
   ASSERT_TRUE(status.ok());
-  ASSERT_EQ(0U, params.size())
-      << "Expected 0 params, got (at least) " << params[0];
+  ASSERT_EQ(0U, params.size()) << "Expected 0 params, got (at least) " << params[0];
 
   std::vector<std::unique_ptr<std::istream>> paths;
   std::vector<std::string> bad_paths;
@@ -140,32 +132,27 @@ TEST_F(CommandLineOptionsTest, SimpleParseCommandLineTest) {
   CommandLineOptions options;
   DisplayOptions display_options;
   std::vector<std::string> params;
-  auto status =
-      ParseCommandLine(argc, argv, &options, &display_options, &params);
+  auto status = ParseCommandLine(argc, argv, &options, &display_options, &params);
   ASSERT_TRUE(status.ok());
-  ASSERT_EQ(2U, params.size())
-      << "Expected 0 params, got (at least) " << params[0];
+  ASSERT_EQ(2U, params.size()) << "Expected 0 params, got (at least) " << params[0];
   ASSERT_EQ(connect, *options.connect);
   ASSERT_EQ(remote_pid, *options.remote_pid);
   ASSERT_EQ(symbol_path, options.symbol_paths[0]);
   ASSERT_EQ(fidl_ir_path, options.fidl_ir_paths[0]);
-  ASSERT_TRUE(std::find(params.begin(), params.end(), "leftover") !=
-              params.end());
+  ASSERT_TRUE(std::find(params.begin(), params.end(), "leftover") != params.end());
   ASSERT_TRUE(std::find(params.begin(), params.end(), "args") != params.end());
 }
 
 TEST_F(CommandLineOptionsTest, CantHavePidAndFilter) {
   std::string remote_pid = "3141";
   std::string filter = "echo_client";
-  const char* argv[] = {"fakebinary",   "--remote_name",    filter.c_str(),
-                        "--remote-pid", remote_pid.c_str(), "leftover",
-                        "args"};
+  const char* argv[] = {"fakebinary",       "--remote_name", filter.c_str(), "--remote-pid",
+                        remote_pid.c_str(), "leftover",      "args"};
   int argc = sizeof(argv) / sizeof(argv[0]);
   CommandLineOptions options;
   DisplayOptions display_options;
   std::vector<std::string> params;
-  auto status =
-      ParseCommandLine(argc, argv, &options, &display_options, &params);
+  auto status = ParseCommandLine(argc, argv, &options, &display_options, &params);
   ASSERT_TRUE(!status.ok());
 }
 
@@ -174,21 +161,14 @@ TEST_F(CommandLineOptionsTest, NoActionMeansFailure) {
   std::string fidl_ir_path = "blah.fidl.json";
   std::string symbol_path = "path/to/debug/symbols";
   std::string connect = "localhost:8080";
-  const char* argv[] = {"fakebinary",
-                        "--fidl-ir-path",
-                        fidl_ir_path.c_str(),
-                        "-s",
-                        symbol_path.c_str(),
-                        "--connect",
-                        connect.c_str(),
-                        "leftover",
-                        "args"};
+  const char* argv[] = {
+      "fakebinary", "--fidl-ir-path", fidl_ir_path.c_str(), "-s",  symbol_path.c_str(),
+      "--connect",  connect.c_str(),  "leftover",           "args"};
   int argc = sizeof(argv) / sizeof(argv[0]);
   CommandLineOptions options;
   DisplayOptions display_options;
   std::vector<std::string> params;
-  auto status =
-      ParseCommandLine(argc, argv, &options, &display_options, &params);
+  auto status = ParseCommandLine(argc, argv, &options, &display_options, &params);
   ASSERT_TRUE(!status.ok());
 }
 

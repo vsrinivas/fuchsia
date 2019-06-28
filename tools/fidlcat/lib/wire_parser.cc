@@ -61,26 +61,22 @@ bool DecodeMessage(const Struct& str, const uint8_t* bytes, uint32_t num_bytes,
 
 }  // anonymous namespace
 
-bool DecodeRequest(const InterfaceMethod* method, const uint8_t* bytes,
-                   uint32_t num_bytes, const zx_handle_t* handles,
-                   uint32_t num_handles,
+bool DecodeRequest(const InterfaceMethod* method, const uint8_t* bytes, uint32_t num_bytes,
+                   const zx_handle_t* handles, uint32_t num_handles,
                    std::unique_ptr<Object>* decoded_object) {
   if (method->request() == nullptr) {
     return false;
   }
-  return DecodeMessage(*method->request(), bytes, num_bytes, handles,
-                       num_handles, decoded_object);
+  return DecodeMessage(*method->request(), bytes, num_bytes, handles, num_handles, decoded_object);
 }
 
-bool DecodeResponse(const InterfaceMethod* method, const uint8_t* bytes,
-                    uint32_t num_bytes, const zx_handle_t* handles,
-                    uint32_t num_handles,
+bool DecodeResponse(const InterfaceMethod* method, const uint8_t* bytes, uint32_t num_bytes,
+                    const zx_handle_t* handles, uint32_t num_handles,
                     std::unique_ptr<Object>* decoded_object) {
   if (method->response() == nullptr) {
     return false;
   }
-  return DecodeMessage(*method->response(), bytes, num_bytes, handles,
-                       num_handles, decoded_object);
+  return DecodeMessage(*method->response(), bytes, num_bytes, handles, num_handles, decoded_object);
 }
 
 }  // namespace fidlcat
