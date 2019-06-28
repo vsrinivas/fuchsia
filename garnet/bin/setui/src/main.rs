@@ -1,13 +1,18 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#![feature(async_await, await_macro)]
-
+#![feature(async_await, await_macro, vec_remove_item)]
+// TODO(brycelee): Remove once switchboard is fully integrated. Here to allow for
+// test code.
+#![allow(dead_code)]
 use {
     crate::default_store::DefaultStore,
     crate::json_codec::JsonCodec,
     crate::mutation::*,
+    crate::registry::registry_impl::RegistryImpl,
     crate::setting_adapter::{MutationHandler, SettingAdapter},
+    crate::switchboard::base::SettingAction,
+    crate::switchboard::switchboard_impl::SwitchboardImpl,
     failure::Error,
     fidl_fuchsia_settings::*,
     fidl_fuchsia_setui::*,
@@ -26,8 +31,10 @@ mod default_store;
 mod fidl_clone;
 mod json_codec;
 mod mutation;
+mod registry;
 mod setting_adapter;
 mod setui_handler;
+mod switchboard;
 mod system_handler;
 
 fn main() -> Result<(), Error> {
@@ -35,6 +42,15 @@ fn main() -> Result<(), Error> {
     fx_log_info!("Starting setui-service...");
 
     let mut executor = fasync::Executor::new()?;
+
+    let (action_tx, action_rx) = futures::channel::mpsc::unbounded::<SettingAction>();
+
+    // Creates switchboard, handed to interface implementations to send messages
+    // to handlers.
+    let (_switchboard_handle, event_tx) = SwitchboardImpl::create(action_tx);
+
+    // Creates registry, used to register handlers for setting types.
+    let _registry_handle = RegistryImpl::create(event_tx, action_rx);
 
     let mut fs = ServiceFs::new();
     let handler = Arc::new(SetUIHandler::new());
