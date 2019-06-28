@@ -216,7 +216,7 @@ zx_status_t RealtekStream::OnUnsolicitedResponseLocked(const CodecResponse& resp
       notif.hdr.cmd = AUDIO_STREAM_PLUG_DETECT_NOTIFY;
       notif.hdr.transaction_id = AUDIO_INVALID_TRANSACTION_ID;
       notif.flags = static_cast<audio_pd_notify_flags_t>(
-          (plug_state_ ? (uint32_t)AUDIO_PDNF_PLUGGED : 0) | AUDIO_PDNF_CAN_NOTIFY);
+          (plug_state_ ? static_cast<uint32_t>(AUDIO_PDNF_PLUGGED) : 0) | AUDIO_PDNF_CAN_NOTIFY);
       notif.plug_state_time = last_plug_time_;
 
       for (auto iter = plug_notify_targets_.begin(); iter != plug_notify_targets_.end();) {
@@ -383,8 +383,8 @@ void RealtekStream::OnPlugDetectLocked(dispatcher::Channel* response_channel,
     // Report the current plug detection state if the client expects a response.
     if (out_resp) {
       out_resp->flags = static_cast<audio_pd_notify_flags_t>(
-          (plug_state_ ? (uint32_t)AUDIO_PDNF_PLUGGED : 0) |
-          (pc_.async_plug_det ? (uint32_t)AUDIO_PDNF_CAN_NOTIFY : 0));
+          (plug_state_ ? static_cast<uint32_t>(AUDIO_PDNF_PLUGGED) : 0) |
+          (pc_.async_plug_det ? static_cast<uint32_t>(AUDIO_PDNF_CAN_NOTIFY) : 0));
       out_resp->plug_state_time = last_plug_time_;
     }
   } else {
@@ -616,7 +616,7 @@ zx_status_t RealtekStream::ProcessPinCaps(const Command& cmd, const CodecRespons
   pc_.pin_caps.raw_data_ = resp.data;
 
   // Sanity check out input/output configuration.
-  if ((is_input() ? pc_.pin_caps.can_input() : pc_.pin_caps.can_output()) == false) {
+  if (!(is_input() ? pc_.pin_caps.can_input() : pc_.pin_caps.can_output())) {
     const char* tag = is_input() ? "input" : "output";
     LOG("ERROR: Stream configured for %s, but pin complex cannot %s\n", tag, tag);
     return ZX_ERR_BAD_STATE;

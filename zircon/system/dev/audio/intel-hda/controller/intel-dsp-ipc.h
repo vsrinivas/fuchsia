@@ -72,7 +72,7 @@ class IntelDspIpc {
 
   // Process responses from DSP
   void ProcessIpc(const IpcMessage& message);
-  void ProcessIpcNotification(const IpcMessage& reply);
+  void ProcessIpcNotification(const IpcMessage& notif);
   void ProcessIpcReply(const IpcMessage& reply);
   void ProcessLargeConfigGetReply(Txn* txn);
 

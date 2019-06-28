@@ -68,7 +68,7 @@ class IntelHDAController : public fbl::RefCounted<IntelHDAController> {
 
   // DMA Streams
   fbl::RefPtr<IntelHDAStream> AllocateStream(IntelHDAStream::Type type) TA_EXCL(stream_pool_lock_);
-  void ReturnStream(fbl::RefPtr<IntelHDAStream>&& stream) TA_EXCL(stream_pool_lock_);
+  void ReturnStream(fbl::RefPtr<IntelHDAStream>&& ptr) TA_EXCL(stream_pool_lock_);
 
   static zx_status_t DriverInit(void** out_ctx);
   static zx_status_t DriverBind(void* ctx, zx_device_t* device);
@@ -90,7 +90,7 @@ class IntelHDAController : public fbl::RefCounted<IntelHDAController> {
   }
 
   // Internal stream bookkeeping.
-  void ReturnStreamLocked(fbl::RefPtr<IntelHDAStream>&& stream) TA_REQ(stream_pool_lock_);
+  void ReturnStreamLocked(fbl::RefPtr<IntelHDAStream>&& ptr) TA_REQ(stream_pool_lock_);
   uint8_t AllocateStreamTagLocked(bool input) TA_REQ(stream_pool_lock_);
   void ReleaseStreamTagLocked(bool input, uint8_t tag_num) TA_REQ(stream_pool_lock_);
 

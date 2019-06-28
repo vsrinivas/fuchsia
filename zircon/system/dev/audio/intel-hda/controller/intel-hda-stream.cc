@@ -19,15 +19,13 @@
 namespace audio {
 namespace intel_hda {
 
-constexpr size_t IntelHDAStream::MAX_BDL_LENGTH;
-
 namespace {
 // Note: these timeouts are arbitrary; the spec provides no guidance here.
 // That said, it is hard to imagine it taking more than a single audio
 // frame's worth of time, so 10mSec should be more then generous enough.
-static constexpr zx_time_t IHDA_SD_MAX_RESET_TIME_NSEC = 10000000u;  // 10mSec
-static constexpr zx_time_t IHDA_SD_RESET_POLL_TIME_NSEC = 100000u;   // 100uSec
-static constexpr zx_time_t IHDA_SD_STOP_HOLD_TIME_NSEC = 100000u;
+constexpr zx_time_t IHDA_SD_MAX_RESET_TIME_NSEC = 10000000u;  // 10mSec
+constexpr zx_time_t IHDA_SD_RESET_POLL_TIME_NSEC = 100000u;   // 100uSec
+constexpr zx_time_t IHDA_SD_STOP_HOLD_TIME_NSEC = 100000u;
 constexpr uint32_t DMA_ALIGN = 128;
 constexpr uint32_t DMA_ALIGN_MASK = DMA_ALIGN - 1;
 }  // namespace
@@ -89,7 +87,7 @@ zx_status_t IntelHDAStream::Initialize() {
 
   // Sanity checks.  At this point, everything should be allocated, mapped,
   // and should obey the alignment restrictions imposed by the HDA spec.
-  ZX_DEBUG_ASSERT(bdl_cpu_mem_.start() != 0);
+  ZX_DEBUG_ASSERT(bdl_cpu_mem_.start() != nullptr);
   ZX_DEBUG_ASSERT(!(reinterpret_cast<uintptr_t>(bdl_cpu_mem_.start()) & DMA_ALIGN_MASK));
   ZX_DEBUG_ASSERT(bdl_hda_mem_.region_count() == 1);
   ZX_DEBUG_ASSERT(!(bdl_hda_mem_.region(0).phys_addr & DMA_ALIGN_MASK));
@@ -226,7 +224,7 @@ void IntelHDAStream::Deactivate() {
       LOG(TRACE, "Bad " #_ioctl " response length (%u != %zu)\n", req_size, sizeof(req._payload)); \
       return ZX_ERR_INVALID_ARGS;                                                                  \
     }                                                                                              \
-    if (!_allow_noack && (req.hdr.cmd & AUDIO_FLAG_NO_ACK)) {                                      \
+    if (!(_allow_noack) && (req.hdr.cmd & AUDIO_FLAG_NO_ACK)) {                                    \
       LOG(TRACE, "NO_ACK flag not allowed for " #_ioctl "\n");                                     \
       return ZX_ERR_INVALID_ARGS;                                                                  \
     }                                                                                              \
@@ -512,10 +510,11 @@ zx_status_t IntelHDAStream::ProcessGetBufferLocked(const audio_proto::RingBufGet
         next_irq_pos += nominal_irq_spacing;
         ++irqs_inserted;
 
-        if (ipos <= amt_done)
+        if (ipos <= amt_done) {
           todo = fbl::min(todo, DMA_ALIGN);
-        else
+        } else {
           todo = fbl::min(todo, ipos - amt_done);
+        }
       }
     }
 

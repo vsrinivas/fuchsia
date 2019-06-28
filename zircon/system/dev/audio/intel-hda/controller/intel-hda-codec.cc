@@ -20,15 +20,6 @@
 namespace audio {
 namespace intel_hda {
 
-constexpr size_t IntelHDACodec::PROP_PROTOCOL;
-constexpr size_t IntelHDACodec::PROP_VID;
-constexpr size_t IntelHDACodec::PROP_DID;
-constexpr size_t IntelHDACodec::PROP_MAJOR_REV;
-constexpr size_t IntelHDACodec::PROP_MINOR_REV;
-constexpr size_t IntelHDACodec::PROP_VENDOR_REV;
-constexpr size_t IntelHDACodec::PROP_VENDOR_STEP;
-constexpr size_t IntelHDACodec::PROP_COUNT;
-
 #define SET_DEVICE_PROP(_prop, _value)                                               \
   do {                                                                               \
     static_assert(PROP_##_prop < countof(dev_props_), "Invalid Device Property ID"); \
@@ -294,13 +285,13 @@ zx_status_t IntelHDACodec::GetChannel(fidl_txn_t* txn) {
           sizeof(req._payload));                                               \
       return ZX_ERR_INVALID_ARGS;                                              \
     }                                                                          \
-    if (_req_ack && (req.hdr.cmd & IHDA_NOACK_FLAG)) {                         \
+    if ((_req_ack) && (req.hdr.cmd & IHDA_NOACK_FLAG)) {                       \
       LOG(TRACE, "Cmd " #_payload                                              \
                  " requires acknowledgement, but the "                         \
                  "NOACK flag was set!\n");                                     \
       return ZX_ERR_INVALID_ARGS;                                              \
     }                                                                          \
-    if (_req_driver_chan && !is_driver_channel) {                              \
+    if ((_req_driver_chan) && !is_driver_channel) {                            \
       LOG(TRACE, "Cmd " #_payload " requires a privileged driver channel.\n"); \
       return ZX_ERR_ACCESS_DENIED;                                             \
     }                                                                          \

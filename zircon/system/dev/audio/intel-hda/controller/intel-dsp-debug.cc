@@ -42,7 +42,7 @@ void IntelDsp::DumpNhlt(const nhlt_table_t* table, size_t length) {
     return;
   }
 
-  if (memcmp(table->header.signature, ACPI_NHLT_SIGNATURE, ACPI_NAME_SIZE)) {
+  if (memcmp(table->header.signature, ACPI_NHLT_SIGNATURE, ACPI_NAME_SIZE) != 0) {
     LOG(ERROR, "Invalid NHLT signature (expected '%s', got '%s')\n", ACPI_NHLT_SIGNATURE,
         table->header.signature);
     return;
@@ -71,8 +71,8 @@ void IntelDsp::DumpNhlt(const nhlt_table_t* table, size_t length) {
 
     desc = reinterpret_cast<const nhlt_descriptor_t*>(reinterpret_cast<const uint8_t*>(desc) +
                                                       desc->length);
-    if ((size_t)(reinterpret_cast<const uint8_t*>(desc) - reinterpret_cast<const uint8_t*>(table)) >
-        length) {
+    if (static_cast<size_t>(reinterpret_cast<const uint8_t*>(desc) -
+                            reinterpret_cast<const uint8_t*>(table)) > length) {
       LOG(ERROR, "descriptor at %p out of bounds\n", desc);
       break;
     }

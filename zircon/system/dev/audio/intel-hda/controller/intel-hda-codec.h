@@ -102,7 +102,7 @@ class IntelHDACodec : public fbl::RefCounted<IntelHDACodec> {
   zx_status_t ParseRevisionId(const CodecResponse& resp);
 
   // ZX_PROTOCOL_IHDA_CODEC Interface
-  zx_status_t CodecGetDispatcherChannel(zx_handle_t* channel_out);
+  zx_status_t CodecGetDispatcherChannel(zx_handle_t* remote_endpoint_out);
 
   // Thunks for interacting with clients and codec drivers.
   zx_status_t GetChannel(fidl_txn_t* txn);

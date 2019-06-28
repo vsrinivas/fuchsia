@@ -76,7 +76,7 @@ zx_status_t IntelDspCodeLoader::Initialize() {
 
   // Sanity checks.  At this point, everything should be allocated, mapped,
   // and should obey the alignment restrictions imposed by the HDA spec.
-  ZX_DEBUG_ASSERT(bdl_cpu_mem_.start() != 0);
+  ZX_DEBUG_ASSERT(bdl_cpu_mem_.start() != nullptr);
   ZX_DEBUG_ASSERT(!(reinterpret_cast<uintptr_t>(bdl_cpu_mem_.start()) & DMA_ALIGN_MASK));
   ZX_DEBUG_ASSERT(bdl_dsp_mem_.region_count() == 1);
   ZX_DEBUG_ASSERT(!(bdl_dsp_mem_.region(0).phys_addr & DMA_ALIGN_MASK));

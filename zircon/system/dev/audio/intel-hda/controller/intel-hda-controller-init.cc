@@ -20,13 +20,13 @@ namespace audio {
 namespace intel_hda {
 
 namespace {
-static constexpr zx_duration_t INTEL_HDA_RESET_HOLD_TIME_NSEC = ZX_USEC(100);  // Section 5.5.1.2
-static constexpr zx_duration_t INTEL_HDA_RESET_TIMEOUT_NSEC = ZX_SEC(2);       // Arbitrary
-static constexpr zx_duration_t INTEL_HDA_RING_BUF_RESET_TIMEOUT_NSEC = ZX_SEC(2);   // Arbitrary
-static constexpr zx_duration_t INTEL_HDA_RESET_POLL_TIMEOUT_NSEC = ZX_USEC(10);     // Arbitrary
-static constexpr zx_duration_t INTEL_HDA_CODEC_DISCOVERY_WAIT_NSEC = ZX_USEC(521);  // Section 4.3
+constexpr zx_duration_t INTEL_HDA_RESET_HOLD_TIME_NSEC = ZX_USEC(100);       // Section 5.5.1.2
+constexpr zx_duration_t INTEL_HDA_RESET_TIMEOUT_NSEC = ZX_SEC(2);            // Arbitrary
+constexpr zx_duration_t INTEL_HDA_RING_BUF_RESET_TIMEOUT_NSEC = ZX_SEC(2);   // Arbitrary
+constexpr zx_duration_t INTEL_HDA_RESET_POLL_TIMEOUT_NSEC = ZX_USEC(10);     // Arbitrary
+constexpr zx_duration_t INTEL_HDA_CODEC_DISCOVERY_WAIT_NSEC = ZX_USEC(521);  // Section 4.3
 
-static constexpr unsigned int MAX_CAPS = 10;  // Arbitrary number of capabilities to check
+constexpr unsigned int MAX_CAPS = 10;  // Arbitrary number of capabilities to check
 }  // namespace
 
 zx_status_t IntelHDAController::ResetControllerHW() {
@@ -240,9 +240,8 @@ zx_status_t IntelHDAController::SetupPCIInterrupts() {
     if (res != ZX_OK) {
       LOG(ERROR, "Failed to set IRQ mode (%d)!\n", res);
       return res;
-    } else {
-      LOG(ERROR, "Falling back on legacy IRQ mode!\n");
     }
+    LOG(ERROR, "Falling back on legacy IRQ mode!\n");
   }
 
   // Retrieve our PCI interrupt, then use it to activate our IRQ dispatcher.
@@ -402,7 +401,7 @@ zx_status_t IntelHDAController::SetupCommandBuffer() {
 
   // Physical memory for the CORB/RIRB should already have been allocated at
   // this point
-  ZX_DEBUG_ASSERT(cmd_buf_cpu_mem_.start() != 0);
+  ZX_DEBUG_ASSERT(cmd_buf_cpu_mem_.start() != nullptr);
 
   // Determine the ring buffer sizes.  If there are options, make them as
   // large as possible.
@@ -438,16 +437,16 @@ zx_status_t IntelHDAController::SetupCommandBuffer() {
   // Section 4.4.1.1; corb ring buffer base address must be 128 byte aligned.
   ZX_DEBUG_ASSERT(!(cmd_buf_paddr64 & 0x7F));
   auto cmd_buf_start = reinterpret_cast<uint8_t*>(cmd_buf_cpu_mem_.start());
-  REG_WR(&regs()->corblbase, ((uint32_t)(cmd_buf_paddr64 & 0xFFFFFFFF)));
-  REG_WR(&regs()->corbubase, ((uint32_t)(cmd_buf_paddr64 >> 32)));
+  REG_WR(&regs()->corblbase, (static_cast<uint32_t>(cmd_buf_paddr64 & 0xFFFFFFFF)));
+  REG_WR(&regs()->corbubase, (static_cast<uint32_t>(cmd_buf_paddr64 >> 32)));
   corb_ = reinterpret_cast<CodecCommand*>(cmd_buf_start);
 
   cmd_buf_paddr64 += HDA_CORB_MAX_BYTES;
 
   // Section 4.4.2.2; rirb ring buffer base address must be 128 byte aligned.
   ZX_DEBUG_ASSERT(!(cmd_buf_paddr64 & 0x7F));
-  REG_WR(&regs()->rirblbase, ((uint32_t)(cmd_buf_paddr64 & 0xFFFFFFFF)));
-  REG_WR(&regs()->rirbubase, ((uint32_t)(cmd_buf_paddr64 >> 32)));
+  REG_WR(&regs()->rirblbase, (static_cast<uint32_t>(cmd_buf_paddr64 & 0xFFFFFFFF)));
+  REG_WR(&regs()->rirbubase, (static_cast<uint32_t>(cmd_buf_paddr64 >> 32)));
   rirb_ = reinterpret_cast<CodecResponse*>(cmd_buf_start + HDA_CORB_MAX_BYTES);
 
   // Make sure our current view of the space available in the CORB is up-to-date.

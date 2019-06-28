@@ -151,13 +151,13 @@ zx_status_t IntelDsp::CodecGetDispatcherChannel(zx_handle_t* remote_endpoint_out
           sizeof(req._payload));                                               \
       return ZX_ERR_INVALID_ARGS;                                              \
     }                                                                          \
-    if (_req_ack && (req.hdr.cmd & IHDA_NOACK_FLAG)) {                         \
+    if ((_req_ack) && (req.hdr.cmd & IHDA_NOACK_FLAG)) {                       \
       LOG(TRACE, "Cmd " #_payload                                              \
                  " requires acknowledgement, but the "                         \
                  "NOACK flag was set!\n");                                     \
       return ZX_ERR_INVALID_ARGS;                                              \
     }                                                                          \
-    if (_req_driver_chan && !is_driver_channel) {                              \
+    if ((_req_driver_chan) && !is_driver_channel) {                            \
       LOG(TRACE, "Cmd " #_payload " requires a privileged driver channel.\n"); \
       return ZX_ERR_ACCESS_DENIED;                                             \
     }                                                                          \
@@ -423,7 +423,7 @@ zx_status_t IntelDsp::ParseNhlt() {
   static_assert(sizeof(nhlt->header.signature) >= ACPI_NAME_SIZE, "");
   static_assert(sizeof(ACPI_NHLT_SIGNATURE) >= ACPI_NAME_SIZE, "");
 
-  if (memcmp(nhlt->header.signature, ACPI_NHLT_SIGNATURE, ACPI_NAME_SIZE)) {
+  if (memcmp(nhlt->header.signature, ACPI_NHLT_SIGNATURE, ACPI_NAME_SIZE) != 0) {
     LOG(ERROR, "Invalid NHLT signature\n");
     return ZX_ERR_INTERNAL;
   }
@@ -504,7 +504,7 @@ zx_status_t IntelDsp::ParseNhlt() {
 
 void IntelDsp::DeviceShutdown() {
   if (state_ == State::INITIALIZING) {
-    thrd_join(init_thread_, NULL);
+    thrd_join(init_thread_, nullptr);
   }
 
   // Order is important below.

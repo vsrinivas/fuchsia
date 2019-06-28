@@ -30,7 +30,7 @@ namespace audio {
 namespace intel_hda {
 
 // static member variable declaration
-constexpr uint IntelHDAController::RIRB_RESERVED_RESPONSE_SLOTS;
+
 std::atomic_uint32_t IntelHDAController::device_id_gen_(0u);
 
 // Device FIDL thunks

@@ -62,7 +62,7 @@ class IntelDsp : public codecs::IntelHDACodecDriverBase {
   zx_status_t Suspend(uint32_t flags) override final;
 
   // ZX_PROTOCOL_IHDA_CODEC Interface
-  zx_status_t CodecGetDispatcherChannel(zx_handle_t* channel_out);
+  zx_status_t CodecGetDispatcherChannel(zx_handle_t* remote_endpoint_out);
 
  private:
   // Accessor for our mapped registers
@@ -121,7 +121,7 @@ class IntelDsp : public codecs::IntelHDACodecDriverBase {
 
   // Debug
   void DumpRegs();
-  void DumpNhlt(const nhlt_table_t* nhlt, size_t length);
+  void DumpNhlt(const nhlt_table_t* table, size_t length);
   void DumpFirmwareConfig(const TLVHeader* config, size_t length);
   void DumpHardwareConfig(const TLVHeader* config, size_t length);
   void DumpModulesInfo(const ModuleEntry* info, uint32_t count);
