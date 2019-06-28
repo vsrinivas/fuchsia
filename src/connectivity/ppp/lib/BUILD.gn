@@ -1,0 +1,33 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/package.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+executable("ppp-tests") {
+  testonly = true
+
+  output_name = "ppp-tests"
+
+  deps = [
+    "//src/connectivity/ppp/lib/hdlc:fcs-test",
+  ]
+}
+
+test_package("tests") {
+  package_name = "ppp-tests"
+
+  deps = [
+    ":ppp-tests",
+  ]
+
+  tests = [
+    {
+      name = "ppp-tests"
+      environments = basic_envs
+    },
+  ]
+}
