@@ -53,7 +53,7 @@
 #define DCMD_RESP_TIMEOUT_MSEC (2500)
 #define CTL_DONE_TIMEOUT_MSEC (2500)
 
-#ifdef DEBUG
+#if !defined(NDEBUG)
 
 #define BRCMF_TRAP_INFO_SIZE 80
 
@@ -100,7 +100,7 @@ struct rte_console {
     char cbuf[CBUF_LEN];
 };
 
-#endif /* DEBUG */
+#endif /* !defined(NDEBUG) */
 #include "chipcommon.h"
 
 #include "bus.h"
@@ -331,7 +331,7 @@ static uint prio2prec(uint32_t prio) {
     return (prio == PRIO_8021D_NONE || prio == PRIO_8021D_BE) ? (prio ^ 2) : prio;
 }
 
-#ifdef DEBUG
+#if !defined(NDEBUG)
 /* Device console log buffer state */
 struct brcmf_console {
     uint count;               /* Poll interval msec counter */
@@ -364,7 +364,7 @@ struct brcmf_trap_info {
     uint32_t r14; /* lr */
     uint32_t pc;  /* r15 */
 };
-#endif /* DEBUG */
+#endif /* !defined(NDEBUG) */
 
 struct sdpcm_shared {
     uint32_t flags;
@@ -372,7 +372,9 @@ struct sdpcm_shared {
     uint32_t assert_exp_addr;
     uint32_t assert_file_addr;
     uint32_t assert_line;
+#if !defined(NDEBUG)
     uint32_t console_addr; /* Address of struct rte_console */
+#endif  // !defined(NDEBUG)
     uint32_t msgtrace_addr;
     uint8_t tag[32];
     uint32_t brpt_addr;
@@ -384,7 +386,9 @@ struct sdpcm_shared_le {
     uint32_t assert_exp_addr;
     uint32_t assert_file_addr;
     uint32_t assert_line;
+#if !defined(NDEBUG)
     uint32_t console_addr; /* Address of struct rte_console */
+#endif  // !defined(NDEBUG)
     uint32_t msgtrace_addr;
     uint8_t tag[32];
     uint32_t brpt_addr;
@@ -486,11 +490,11 @@ struct brcmf_sdio {
     uint pollrate;  /* Ticks between device polls */
     uint polltick;  /* Tick counter */
 
-#ifdef DEBUG
+#if !defined(NDEBUG)
     uint console_interval;
     struct brcmf_console console; /* Console output polling support */
     uint console_addr;            /* Console address from shared struct */
-#endif                            /* DEBUG */
+#endif                            /* !defined(NDEBUG) */
 
     uint clkstate;    /* State of sd and backplane clock(s) */
     int32_t idletime;     /* Control for activity timeout */
@@ -536,9 +540,9 @@ struct brcmf_sdio {
 #define CLK_PENDING 2
 #define CLK_AVAIL 3
 
-#ifdef DEBUG
+#if !defined(NDEBUG)
 static int qcount[NUMPRIO];
-#endif /* DEBUG */
+#endif /* !defined(NDEBUG) */
 
 #define DEFAULT_SDIO_DRIVE_STRENGTH 6 /* in milliamps */
 
@@ -785,13 +789,13 @@ static zx_status_t brcmf_sdio_htclk(struct brcmf_sdio* bus, bool on, bool pendok
         bus->clkstate = CLK_AVAIL;
         BRCMF_DBG(SDIO, "CLKCTL: turned ON\n");
 
-#if defined(DEBUG)
+#if !defined(NDEBUG)
         if (!bus->alp_only) {
             if (SBSDIO_ALPONLY(clkctl)) {
                 BRCMF_ERR("HT Clock should be on\n");
             }
         }
-#endif /* defined (DEBUG) */
+#endif /* !defined(NDEBUG) */
 
     } else {
         clkreq = 0;
@@ -829,9 +833,9 @@ static zx_status_t brcmf_sdio_sdclk(struct brcmf_sdio* bus, bool on) {
 
 /* Transition SD and backplane clock readiness */
 static zx_status_t brcmf_sdio_clkctl(struct brcmf_sdio* bus, uint target, bool pendok) {
-#ifdef DEBUG
+#if !defined(NDEBUG)
     uint oldstate = bus->clkstate;
-#endif /* DEBUG */
+#endif /* !defined(NDEBUG) */
 
     BRCMF_DBG(SDIO, "Enter\n");
 
@@ -874,9 +878,9 @@ static zx_status_t brcmf_sdio_clkctl(struct brcmf_sdio* bus, uint target, bool p
         brcmf_sdio_sdclk(bus, false);
         break;
     }
-#ifdef DEBUG
+#if !defined(NDEBUG)
     BRCMF_DBG(SDIO, "%d -> %d\n", oldstate, bus->clkstate);
-#endif /* DEBUG */
+#endif /* !defined(NDEBUG) */
 
     return ZX_OK;
 }
@@ -930,7 +934,6 @@ done:
     return err;
 }
 
-#ifdef DEBUG
 static inline bool brcmf_sdio_valid_shared_address(uint32_t addr) {
     return !(addr == 0 || ((~addr >> 16) & 0xffff) == (addr & 0xffff));
 }
@@ -986,7 +989,9 @@ static zx_status_t brcmf_sdio_readshared(struct brcmf_sdio* bus, struct sdpcm_sh
     sh->assert_exp_addr = sh_le.assert_exp_addr;
     sh->assert_file_addr = sh_le.assert_file_addr;
     sh->assert_line = sh_le.assert_line;
+#if !defined(NDEBUG)
     sh->console_addr = sh_le.console_addr;
+#endif  // !defined(NDEBUG)
     sh->msgtrace_addr = sh_le.msgtrace_addr;
 
     if ((sh->flags & SDPCM_SHARED_VERSION_MASK) > SDPCM_SHARED_VERSION) {
@@ -1002,6 +1007,7 @@ fail:
     return rv;
 }
 
+#if !defined(NDEBUG)
 static void brcmf_sdio_get_console_addr(struct brcmf_sdio* bus) {
     struct sdpcm_shared sh;
 
@@ -1009,9 +1015,9 @@ static void brcmf_sdio_get_console_addr(struct brcmf_sdio* bus) {
         bus->console_addr = sh.console_addr;
     }
 }
-#else
+#else /* !defined(NDEBUG) */
 static void brcmf_sdio_get_console_addr(struct brcmf_sdio* bus) {}
-#endif /* DEBUG */
+#endif /* !defined(NDEBUG) */
 
 static uint32_t brcmf_sdio_hostmail(struct brcmf_sdio* bus) {
     struct brcmf_sdio_dev* sdiod = bus->sdiodev;
@@ -2319,10 +2325,10 @@ static void brcmf_sdio_dpc(struct brcmf_sdio* bus) {
         uint8_t clkctl;
         uint8_t devctl = 0;
 
-#ifdef DEBUG
+#if !defined(NDEBUG)
         /* Check for inconsistent device control */
         devctl = brcmf_sdiod_func1_rb(bus->sdiodev, SBSDIO_DEVICE_CTL, &err);
-#endif /* DEBUG */
+#endif /* !defined(NDEBUG) */
 
         /* Read CSR, if clock on switch to AVAIL, else ignore */
         clkctl = brcmf_sdiod_func1_rb(bus->sdiodev, SBSDIO_FUNC1_CHIPCLKCSR, &err);
@@ -2547,17 +2553,17 @@ static zx_status_t brcmf_sdio_bus_txdata(struct brcmf_device* dev, struct brcmf_
     pthread_mutex_unlock(&irq_callback_lock);
 
 
-#ifdef DEBUG
+#if !defined(NDEBUG)
     if (pktq_plen(&bus->txq, prec) > qcount[prec]) {
         qcount[prec] = pktq_plen(&bus->txq, prec);
     }
-#endif
+#endif  // !defined(NDEBUG)
 
     brcmf_sdio_trigger_dpc(bus);
     return ret;
 }
 
-#ifdef DEBUG
+#if !defined(NDEBUG)
 #define CONSOLE_LINE_MAX 192
 
 static zx_status_t brcmf_sdio_readconsole(struct brcmf_sdio* bus) {
@@ -2643,7 +2649,7 @@ break2:
 
     return ZX_OK;
 }
-#endif /* DEBUG */
+#endif /* !defined(NDEBUG) */
 
 static zx_status_t brcmf_sdio_bus_txctl(struct brcmf_device* dev, unsigned char* msg, uint msglen) {
     struct brcmf_bus* bus_if = dev_to_bus(dev);
@@ -2689,7 +2695,7 @@ static zx_status_t brcmf_sdio_bus_txctl(struct brcmf_device* dev, unsigned char*
     return ret;
 }
 
-#ifdef DEBUG
+#if !defined(NDEBUG)
 static zx_status_t brcmf_sdio_dump_console(struct seq_file* seq, struct brcmf_sdio* bus,
                                            struct sdpcm_shared* sh) {
     uint32_t addr, console_ptr, console_size, console_index;
@@ -2913,13 +2919,13 @@ static void brcmf_sdio_debugfs_create(struct brcmf_sdio* bus) {
     brcmf_debugfs_add_entry(drvr, "counters", brcmf_debugfs_sdio_count_read);
     brcmf_debugfs_create_u32_file("console_interval", 0644, dentry, &bus->console_interval);
 }
-#else
+#else /* !defined(NDEBUG) */
 static zx_status_t brcmf_sdio_checkdied(struct brcmf_sdio* bus) {
     return ZX_OK;
 }
 
 static void brcmf_sdio_debugfs_create(struct brcmf_sdio* bus) {}
-#endif /* DEBUG */
+#endif /* !defined(NDEBUG) */
 
 static zx_status_t brcmf_sdio_bus_rxctl(struct brcmf_device* dev, unsigned char* msg, uint msglen,
                                         int* rxlen_out) {
@@ -2980,7 +2986,7 @@ static zx_status_t brcmf_sdio_bus_rxctl(struct brcmf_device* dev, unsigned char*
     }
 }
 
-#ifdef DEBUG
+#if !defined(NDEBUG)
 static bool brcmf_sdio_verifymemory(struct brcmf_sdio_dev* sdiodev, uint32_t ram_addr,
                                     uint8_t* ram_data, uint ram_sz) {
     char* ram_cmp;
@@ -3021,12 +3027,12 @@ static bool brcmf_sdio_verifymemory(struct brcmf_sdio_dev* sdiodev, uint32_t ram
 
     return ret;
 }
-#else  /* DEBUG */
+#else  /* !defined(NDEBUG) */
 static bool brcmf_sdio_verifymemory(struct brcmf_sdio_dev* sdiodev, uint32_t ram_addr,
                                     uint8_t* ram_data, uint ram_sz) {
     return true;
 }
-#endif /* DEBUG */
+#endif /* !defined(NDEBUG) */
 
 static zx_status_t brcmf_sdio_download_code_file(struct brcmf_sdio* bus,
                                                  const struct brcmf_firmware* fw) {
@@ -3334,7 +3340,7 @@ static void brcmf_sdio_bus_watchdog(struct brcmf_sdio* bus) {
         /* Update interrupt tracking */
         bus->sdcnt.lastintrs = bus->sdcnt.intrcount;
     }
-#ifdef DEBUG
+#if !defined(NDEBUG)
     /* Poll for console output periodically */
     if (bus->sdiodev->state == BRCMF_SDIOD_DATA &&
         BRCMF_IS_ON(FWCON) && bus->console_interval != 0) {
@@ -3350,7 +3356,7 @@ static void brcmf_sdio_bus_watchdog(struct brcmf_sdio* bus) {
             sdio_release_host(bus->sdiodev->func1);
         }
     }
-#endif /* DEBUG */
+#endif /* !defined(NDEBUG) */
 
 // TODO(cphoenix): Turn "idle" back on once things are working, and see if anything breaks.
 #ifdef TEMP_DISABLE_DO_IDLE
@@ -3923,10 +3929,13 @@ static void brcmf_sdio_firmware_callback(struct brcmf_device* dev, zx_status_t e
 
     err = brcmf_sdio_readshared(bus, &sh);
     BRCMF_DBG(TEMP, "Readshared returned %d", err);
+
+#if !defined(NDEBUG)
     bus->console_addr = sh.console_addr;
     BRCMF_DBG(TEMP, "console_addr 0x%x", bus->console_addr);
     brcmf_sdio_readconsole(bus);
     BRCMF_DBG(TEMP, "Should have seen readconsole output");
+#endif  // !defined(NDEBUG)
 
     if (err == ZX_OK) {
         /* Allow full data communication using DPC from now on. */

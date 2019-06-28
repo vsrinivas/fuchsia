@@ -2729,10 +2729,12 @@ void brcmf_hook_start_scan(void* ctx, wlanif_scan_req_t* req) {
 void brcmf_hook_join_req(void* ctx, wlanif_join_req_t* req) {
     struct net_device* ndev = static_cast<decltype(ndev)>(ctx);
     struct brcmf_if* ifp = ndev_to_if(ndev);
+#if !defined(NDEBUG)
     const uint8_t* bssid = req->selected_bss.bssid;
 
     BRCMF_DBG(WLANIF, "Join request from SME. ssid: %.*s, bssid: " MAC_FMT_STR "\n",
               req->selected_bss.ssid.len, req->selected_bss.ssid.data, MAC_FMT_ARGS(bssid));
+#endif  // !defined(NDEBUG)
 
     memcpy(&ifp->bss, &req->selected_bss, sizeof(ifp->bss));
 
@@ -2818,9 +2820,11 @@ void brcmf_hook_auth_resp(void* ctx, wlanif_auth_resp_t* ind) {
     }
 
     if (ind->result_code == WLAN_AUTH_RESULT_SUCCESS) {
+#if !defined(NDEBUG)
         const uint8_t* mac = ind->peer_sta_address;
         BRCMF_DBG(CONN, "Successfully authenticated client %02x:%02x:%02x:%02x:%02x:%02x\n",
                   mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+#endif  // !defined(NDEBUG)
         return;
     }
 
@@ -2897,9 +2901,11 @@ void brcmf_hook_assoc_resp(void* ctx, wlanif_assoc_resp_t* ind) {
     }
 
     if (ind->result_code == WLAN_ASSOC_RESULT_SUCCESS) {
+#if !defined(NDEBUG)
         const uint8_t* mac = ind->peer_sta_address;
         BRCMF_DBG(CONN, "Successfully associated client %02x:%02x:%02x:%02x:%02x:%02x\n",
                   mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+#endif  // !defined(NDEBUG)
         return;
     }
 

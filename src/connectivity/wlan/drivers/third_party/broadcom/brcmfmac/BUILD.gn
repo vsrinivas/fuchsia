@@ -96,7 +96,6 @@ source_set("brcmfmac_drvr_srcs") {
   defines = [
     "CONFIG_BRCMFMAC_USB=1",
     "CONFIG_BRCMFMAC_SDIO=1",
-    "CONFIG_BRCMFMAC_DBG=1",
   ]
 
   sources = brcmf_core_srcs + [

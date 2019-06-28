@@ -64,7 +64,13 @@
 __PRINTFLIKE(2, 3) void __brcmf_err(const char* func, const char* fmt, ...);
 #define BRCMF_ERR(fmt, ...) __brcmf_err(__func__, fmt, ##__VA_ARGS__)
 
-#if defined(DEBUG) || defined(CONFIG_BRCMFMAC_DBG)
+#define THROTTLE(n, event)                        \
+    {                                             \
+        static std::atomic<unsigned long> times;  \
+        if (times.fetch_add(1) <= n) { event; }   \
+    }
+
+#if !defined(NDEBUG)
 
 __PRINTFLIKE(3, 4) void __brcmf_dbg(uint32_t filter, const char* func, const char* fmt, ...);
 #define BRCMF_DBG(filter, fmt, ...)                                      \
@@ -72,25 +78,19 @@ __PRINTFLIKE(3, 4) void __brcmf_dbg(uint32_t filter, const char* func, const cha
         __brcmf_dbg(BRCMF_##filter##_VAL, __func__, fmt, ##__VA_ARGS__); \
     } while (0)
 
-#define THROTTLE(n, event)                        \
-    {                                             \
-        static std::atomic<unsigned long> times;  \
-        if (times.fetch_add(1) <= n) { event; }   \
-    }
-
 // clang-format off
 
 #define BRCMF_IS_ON(filter) (brcmf_msg_filter & BRCMF_##filter##_VAL)
 
-#else /* defined(DEBUG) || defined(CONFIG_BRCMFMAC_DBG) */
+#else /* !defined(NDEBUG) */
 
-#define BRCMF_DBG(level, fmt, ...)
+#define BRCMF_DBG(level, fmt, ...) ((void)0)
 
-#define BRCMF_IS_ON(filter) 0
+#define BRCMF_IS_ON(filter) (0)
 
 // clang-format on
 
-#endif /* defined(DEBUG) || defined(CONFIG_BRCMFMAC_DBG) */
+#endif /* !defined(NDEBUG) */
 
 #define BRCMF_DBG_HEX_DUMP(test, data, len, fmt, ...)                \
     do {                                                             \
@@ -111,7 +111,7 @@ extern uint32_t brcmf_msg_filter;
 
 struct brcmf_bus;
 struct brcmf_pub;
-#ifdef DEBUG
+#if !defined(NDEBUG)
 void brcmf_debugfs_init(void);
 void brcmf_debugfs_exit(void);
 zx_status_t brcmf_debug_attach(struct brcmf_pub* drvr);
@@ -120,7 +120,7 @@ zx_handle_t brcmf_debugfs_get_devdir(struct brcmf_pub* drvr);
 zx_status_t brcmf_debugfs_add_entry(struct brcmf_pub* drvr, const char* fn,
                                     zx_status_t (*read_fn)(struct seq_file* seq, void* data));
 zx_status_t brcmf_debug_create_memdump(struct brcmf_bus* bus, const void* data, size_t len);
-#else
+#else  // !defined(NDEBUG)
 static inline void brcmf_debugfs_init(void) {}
 static inline void brcmf_debugfs_exit(void) {}
 static inline zx_status_t brcmf_debug_attach(struct brcmf_pub* drvr) {
@@ -136,6 +136,6 @@ static inline zx_status_t brcmf_debug_create_memdump(struct brcmf_bus* bus, cons
                                                      size_t len) {
     return ZX_OK;
 }
-#endif
+#endif  // !defined(NDEBUG)
 
 #endif /* BRCMFMAC_DEBUG_H */

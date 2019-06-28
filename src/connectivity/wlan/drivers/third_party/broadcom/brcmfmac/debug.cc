@@ -38,14 +38,16 @@
 // (WLAN-1176: Remove WLANIF once things have stabilized)
 uint32_t brcmf_msg_filter = BRCMF_WLANIF_VAL;
 
+#if !defined(NDEBUG)
 static zx_handle_t root_folder;
+#endif  // !defined(NDEBUG)
 
 bool __brcm_dbg_err_flag = false;
 void __brcm_dbg_set_err() { __brcm_dbg_err_flag = true; }
 bool brcm_dbg_has_err() { return __brcm_dbg_err_flag; }
 void brcm_dbg_clear_err() { __brcm_dbg_err_flag = false; }
 
-#if CONFIG_BRCMFMAC_DBG
+#if !defined(NDEBUG)
 
 void __brcmf_dbg(uint32_t filter, const char* func, const char* fmt, ...) {
     if (brcmf_msg_filter & filter) {
@@ -63,11 +65,7 @@ void __brcmf_dbg(uint32_t filter, const char* func, const char* fmt, ...) {
     }
 }
 
-#else
-
-void __brcmf_dbg(uint32_t filter, const char* fucn, const char* fmt, ...) {}
-
-#endif  // CONFIG_BRCMFMAC_DBG
+#endif  // !defined(NDEBUG)
 
 void __brcmf_err(const char* func, const char* fmt, ...) {
     char msg[512]; // Same value hard-coded throughout devhost.c
@@ -147,6 +145,7 @@ void BRCMF_DBG_STRING_DUMP(const void* buf, size_t len) {
     BRCMF_DBG(ALL, "%s", output);
 }
 
+#if !defined(NDEBUG)
 zx_status_t brcmf_debug_create_memdump(struct brcmf_bus* bus, const void* data, size_t len) {
     uint8_t* dump;
     size_t ramsize;
@@ -225,3 +224,4 @@ zx_status_t brcmf_debugfs_add_entry(struct brcmf_pub* drvr, const char* fn,
     ret = brcmf_debugfs_create_sequential_file(drvr->bus_if->dev, fn, drvr->dbgfs_dir, read_fn, &e);
     return ret;
 }
+#endif  // !defined(NDEBUG)

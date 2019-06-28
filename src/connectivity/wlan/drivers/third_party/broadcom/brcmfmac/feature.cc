@@ -29,12 +29,14 @@
 #include "fwil_types.h"
 #include "linuxisms.h"
 
+#if !defined(NDEBUG)
 /*
  * expand feature list to array of feature strings.
  */
 #define BRCMF_FEAT_DEF(_f) #_f,
 static const char* brcmf_feat_names[] = {BRCMF_FEAT_LIST};
 #undef BRCMF_FEAT_DEF
+#endif  // !defined(NDEBUG)
 
 struct brcmf_feat_fwcap {
     enum brcmf_feat_id feature;
@@ -47,7 +49,7 @@ static const struct brcmf_feat_fwcap brcmf_fwcap_map[] = {
     {BRCMF_FEAT_P2P, "p2p"},
 };
 
-#ifdef DEBUG
+#if !defined(NDEBUG)
 /*
  * expand quirk list to array of quirk strings.
  */
@@ -79,11 +81,11 @@ static zx_status_t brcmf_feat_debugfs_read(struct seq_file* seq, void* data) {
         }
     return ZX_OK;
 }
-#else
+#else /* !defined(NDEBUG) */
 static zx_status_t brcmf_feat_debugfs_read(struct seq_file* seq, void* data) {
     return ZX_OK;
 }
-#endif /* DEBUG */
+#endif /* !defined(NDEBUG) */
 
 /**
  * brcmf_feat_iovar_int_get() - determine feature through iovar query.

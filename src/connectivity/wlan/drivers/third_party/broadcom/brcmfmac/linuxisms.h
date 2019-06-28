@@ -221,8 +221,6 @@ LINUX_FUNCVI(dma_unmap_single) // PCI only
                                              a = nullptr;});1;)
 #define for_each_set_bit(a, b, c) for (({BRCMF_ERR("Calling for_each_set_bit"); a = 0;});1;)
 
-#define DEBUG                         // Turns on struct members that debug.c needs
-
 #define KBUILD_MODNAME "brcmfmac"
 
 #define IEEE80211_MAX_SSID_LEN (32)

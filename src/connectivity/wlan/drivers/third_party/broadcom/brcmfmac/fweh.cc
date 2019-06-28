@@ -58,7 +58,7 @@ struct brcmf_fweh_event_name {
     const char* name;
 };
 
-#ifdef DEBUG
+#if !defined(NDEBUG)
 #define BRCMF_ENUM_DEF(id, val) {BRCMF_E_##id, #id},
 
 /* array for mapping code to event name */
@@ -79,11 +79,11 @@ const char* brcmf_fweh_event_name(enum brcmf_fweh_event_code code) {
     }
     return "unknown";
 }
-#else
+#else  // !defined(NDEBUG)
 const char* brcmf_fweh_event_name(enum brcmf_fweh_event_code code) {
     return "nodebug";
 }
-#endif
+#endif  // !defined(NDEBUG)
 
 /**
  * brcmf_fweh_queue_event() - create and queue event.

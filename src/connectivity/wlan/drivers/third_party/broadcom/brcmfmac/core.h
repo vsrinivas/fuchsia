@@ -143,9 +143,9 @@ struct brcmf_pub {
     uint32_t chip_quirks;
 
     struct brcmf_rev_info revinfo;
-#ifdef DEBUG
+#if !defined(NDEBUG)
     zx_handle_t dbgfs_dir;
-#endif
+#endif  // !defined(NDEBUG)
 
     struct notifier_block inetaddr_notifier;
     struct brcmf_mp_device* settings;

@@ -65,12 +65,12 @@ MODULE_PARM_DESC(fcmode, "Mode of firmware signalled flow control")
 /* Do not use internal roaming engine */
 static bool brcmf_roamoff = 1;
 
-#ifdef DEBUG
+#if !defined(NDEBUG)
 /* always succeed brcmf_bus_started() */
 static int brcmf_ignore_probe_fail;
 module_param_named(ignore_probe_fail, brcmf_ignore_probe_fail, int, 0)
 MODULE_PARM_DESC(ignore_probe_fail, "always succeed probe for debugging")
-#endif
+#endif  // !defined(NDEBUG)
 
 struct brcmf_mp_global_t brcmf_mp_global;
 
@@ -443,9 +443,9 @@ struct brcmf_mp_device* brcmf_get_module_param(struct brcmf_device* dev,
     settings->feature_disable = brcmf_feature_disable;
     settings->fcmode = brcmf_fcmode;
     settings->roamoff = brcmf_roamoff;
-#ifdef DEBUG
+#if !defined(NDEBUG)
     settings->ignore_probe_fail = !!brcmf_ignore_probe_fail;
-#endif
+#endif  // !defined(NDEBUG)
 
     if (bus_type == BRCMF_BUSTYPE_SDIO) {
         // TODO(cphoenix): Do we really want to use default? (If so, delete =0 lines because calloc)

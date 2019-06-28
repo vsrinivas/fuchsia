@@ -100,7 +100,7 @@ enum brcmf_fws_tlv_len { BRCMF_FWS_TLV_DEFLIST };
 
 // clang-format-on
 
-#ifdef DEBUG
+#if !defined(NDEBUG)
 /*
  * brcmf_fws_tlv_names - array of tlv names.
  */
@@ -121,11 +121,7 @@ static const char* brcmf_fws_get_tlv_name(enum brcmf_fws_tlv_type id) {
 
     return "INVALID";
 }
-#else
-static const char* brcmf_fws_get_tlv_name(enum brcmf_fws_tlv_type id) {
-    return "NODEBUG";
-}
-#endif /* DEBUG */
+#endif /* !defined(NDEBUG) */
 
 /*
  * The PKTTAG tlv has additional bytes when firmware-signalling
@@ -2205,7 +2201,7 @@ static void brcmf_fws_dequeue_worker(struct work_struct* worker) {
     brcmf_fws_unlock(fws);
 }
 
-#ifdef DEBUG
+#if !defined(NDEBUG)
 static zx_status_t brcmf_debugfs_fws_stats_read(struct seq_file* seq, void* data) {
     struct brcmf_bus* bus_if = dev_to_bus(static_cast<brcmf_device*>(seq->private_data));
     struct brcmf_fws_stats* fwstats = &(drvr_to_fws(bus_if->drvr)->stats);
@@ -2248,11 +2244,11 @@ static zx_status_t brcmf_debugfs_fws_stats_read(struct seq_file* seq, void* data
 
     return ZX_OK;
 }
-#else
+#else  // !defined(NDEBUG)
 static zx_status_t brcmf_debugfs_fws_stats_read(struct seq_file* seq, void* data) {
     return ZX_OK;
 }
-#endif
+#endif  // !defined(NDEBUG)
 
 zx_status_t brcmf_fws_attach(struct brcmf_pub* drvr, struct brcmf_fws_info** fws_out) {
     struct brcmf_fws_info* fws;

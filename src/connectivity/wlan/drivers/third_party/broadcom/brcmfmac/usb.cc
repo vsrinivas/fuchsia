@@ -913,7 +913,10 @@ static bool brcmf_usb_dlneeded(struct brcmf_usbdev_info* devinfo) {
 
     /* Check if firmware downloaded already by querying runtime ID */
     id.chip = 0xDEAD;
-    zx_status_t result = brcmf_usb_dl_cmd(devinfo, DL_GETVER, &id, sizeof(id));
+#if !defined(NDEBUG)
+    zx_status_t result =
+#endif  // !defined(NDEBUG)
+        brcmf_usb_dl_cmd(devinfo, DL_GETVER, &id, sizeof(id));
     BRCMF_DBG(TEMP, "result from dl_cmd %d", result);
 
     chipid = id.chip;

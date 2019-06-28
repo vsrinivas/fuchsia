@@ -26,16 +26,10 @@ group("test") {
 executable("lifecycle_test") {
   output_name = "lifecycle_test"
   testonly = true
-
-  defines = [
-    "CONFIG_BRCMFMAC_DBG=1",
-    "CONFIG_BRCMFMAC_SIM=1",
-  ]
-
+  defines = [ "CONFIG_BRCMFMAC_SIM=1" ]
   sources = [
     "lifecycle_test.cc",
   ]
-
   deps = [
     "//garnet/lib/wlan/protocol",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:brcmfmac_test_srcs",
@@ -50,13 +44,9 @@ executable("lifecycle_test") {
 executable("netbuf_test") {
   output_name = "netbuf_test"
   testonly = true
-
-  defines = [ "CONFIG_BRCMFMAC_DBG=1" ]
-
   sources = [
     "netbuf_test.cc",
   ]
-
   deps = [
     "//garnet/lib/wlan/protocol",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:brcmfmac_test_srcs",
@@ -69,13 +59,9 @@ executable("netbuf_test") {
 executable("sdio_test") {
   output_name = "sdio_test"
   testonly = true
-
-  defines = [ "CONFIG_BRCMFMAC_DBG=1" ]
-
   sources = [
     "sdio_test.cc",
   ]
-
   deps = [
     "//garnet/lib/wlan/protocol",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:brcmfmac_test_srcs",
@@ -93,8 +79,6 @@ executable("sdio_test") {
 executable("workqueue_test") {
   output_name = "workqueue_test"
   testonly = true
-
-  defines = [ "CONFIG_BRCMFMAC_DBG=1" ]
 
   sources = [
     "workqueue_test.cc",

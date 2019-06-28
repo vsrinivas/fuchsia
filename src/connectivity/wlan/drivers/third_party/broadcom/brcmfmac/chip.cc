@@ -495,7 +495,9 @@ static zx_status_t brcmf_chip_cores_check(struct brcmf_chip_priv* ci) {
     bool need_socram = false;
     bool has_socram = false;
     bool cpu_found = false;
+#if !defined(NDEBUG)
     int idx = 1;
+#endif  // !defined(NDEBUG)
 
     list_for_every_entry(&ci->cores, core, struct brcmf_core_priv, list) {
         BRCMF_DBG(INFO, " [%-2d] core 0x%x:%-2d base 0x%08x wrap 0x%08x\n", idx++, core->pub.id,
