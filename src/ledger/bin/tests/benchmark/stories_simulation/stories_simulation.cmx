@@ -1,0 +1,13 @@
+{
+    "program": {
+        "binary": "bin/ledger_benchmark_stories_simulation"
+    },
+    "sandbox": {
+        "dev": [ "misc/sysinfo" ],
+        "services": [
+            "fuchsia.tracelink.Registry",
+            "fuchsia.tracing.provider.Registry",
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}

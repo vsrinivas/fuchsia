@@ -36,6 +36,7 @@ package("ledger_benchmarks") {
     "//src/ledger/bin/tests/benchmark/get_entry",
     "//src/ledger/bin/tests/benchmark/get_page",
     "//src/ledger/bin/tests/benchmark/put",
+    "//src/ledger/bin/tests/benchmark/stories_simulation",
     "//src/ledger/bin/tests/benchmark/sync",
     "//src/ledger/bin/tests/benchmark/update_entry",
   ]
@@ -81,6 +82,10 @@ package("ledger_benchmarks") {
       path = rebase_path("update_entry/update_entry.cmx")
       dest = "update_entry.cmx"
     },
+    {
+      path = rebase_path("stories_simulation/stories_simulation.cmx")
+      dest = "stories_simulation.cmx"
+    },
   ]
 
   binaries = [
@@ -114,6 +119,10 @@ package("ledger_benchmarks") {
 
     {
       name = "ledger_benchmark_put"
+    },
+
+    {
+      name = "ledger_benchmark_stories_simulation"
     },
 
     {
@@ -329,6 +338,11 @@ package("ledger_benchmarks") {
     {
       path = rebase_path("delete_entry/delete_big_entry.tspec")
       dest = "delete_big_entry.tspec"
+    },
+
+    {
+      path = rebase_path("stories_simulation/stories_single_active.tspec")
+      dest = "stories_single_active.tspec"
     },
   ]
 

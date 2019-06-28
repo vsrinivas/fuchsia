@@ -1,4 +1,4 @@
-# benchmark
+#benchmark
 
 ## Overview
 This directory contains Ledger [trace-based benchmarks]. Each benchmark is
@@ -120,6 +120,11 @@ page.
     * `delete_entry_transactions.tspec`: deletions are grouped in transactions
     * `disk_space_cleared_page.tspec`: how much space does ledger take after the
       page was cleared out (all the entries deleted in one transaction)?
+* __Story simulation__: How long does it take to create and edit a Modular
+  story?
+    * `stories_single_active.tspec`: a single story is active at all times. Once
+    editing is complete, the contents of the story (and any corresponding rows
+    in the root page) are removed.
 * __Disk space__: How much disk space does ledger use to store pages, objects
   and commits?
     * `disk_space_empty_ledger.tspec`: empty ledger (with no pages)
