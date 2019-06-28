@@ -16,6 +16,7 @@ import xml.etree.ElementTree as xml
 
 
 PETALS = [
+    ('experiences', 'https://fuchsia.googlesource.com/integration/+/master/flower?format=TEXT'),
     ('topaz', 'https://fuchsia.googlesource.com/integration/+/master/topaz/minimal?format=TEXT'),
     ('fuchsia', 'https://fuchsia.googlesource.com/integration/+/master/stem?format=TEXT'),
 ]
