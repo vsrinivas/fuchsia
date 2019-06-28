@@ -19,6 +19,8 @@
             "fuchsia.modular.Clipboard",
             "fuchsia.modular.ContextWriter",
             "fuchsia.modular.ModuleContext",
+            "fuchsia.posix.socket.Provider",
+            "fuchsia.net.NameLookup",
             "fuchsia.net.SocketProvider",
             "fuchsia.netstack.Netstack",
             "fuchsia.process.Launcher",
